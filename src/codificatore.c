@@ -48,9 +48,15 @@
  * qualita' inferiore e SCRIVERLO NEL REGISTRO — mai spedirlo.» */
 #define TETTO_FOTOGRAMMA (16u * 1024u * 1024u)
 
-/* ⛔ Quanti giri si concedono a un DELTA.  ⚠ A una CHIAVE non si applica, e la
- *    ragione sta nel riquadro dentro `codificatore_comprimi()`: §5.2 vieta di
- *    abbandonarla. */
+/* ⛔ Quante CODIFICHE si concedono in tutto a un DELTA — non quante discese: le
+ *    discese sono `RICODIFICHE_MASSIME - 1`, perche' la prima codifica e' quella
+ *    alla qualita' chiesta e non nasce da nessuna discesa.  ⇒ Con 3: QP 26, 35,
+ *    44, e la scala si ferma li'.
+ * ⛔ E l'ultimo scalino NON si applica se non lo si prova: il conto sta **prima**
+ *    di `abbassa_qualita()`, e il perche' e' nel riquadro dentro
+ *    `comprimi_comune()`.
+ * ⚠ A una CHIAVE non si applica affatto: §5.2 vieta di abbandonarla, e per lei
+ *   la scala si percorre fino in fondo. */
 #define RICODIFICHE_MASSIME 3
 
 /* Il primo scalino quando il tetto morde, e il passo dei successivi.
@@ -82,6 +88,361 @@
  *   margine **782x**.  ⇒ Difetto vero e dimostrato, e **non urgente**. */
 #define CRF_DI_EMERGENZA 24
 #define CRF_PASSO 9
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ E LA SCALA SI RISALE — fase 9, 23 agosto 2026.
+ *
+ * ⛔ IL DIFETTO: fino a qui `qualita_corrente` era monotona nel verso peggiore.
+ *    Quattro scritture in tutto (`codificatore_nuovo()` la semina, e le tre
+ *    dentro `abbassa_qualita()`), **tutte in discesa**, e nessun percorso che la
+ *    riportasse su — nemmeno `codificatore_ridimensiona()`, che richiude e
+ *    riapre il contesto **conservandola**.
+ *
+ *    ⇒ Un solo fotogramma d'eccezione — `[M]` il ripiego `libx264` a 7680x4320
+ *      su filmato granuloso fa **18,733 MiB**, 1 volta su 8 — lasciava il
+ *      codificatore a CRF 47 (o QP 51) **per tutta la sessione**: il desktop
+ *      fermo dell'utente usciva sgranato **per ore**, e nessuna riga di registro
+ *      diceva perche'.  ⚠ E' il *«mai sgranare»* di `DECISIONI.md` §3.3 perso
+ *      per inerzia invece che per decisione.
+ *
+ * ⛔ E NON E' SIMMETRICA ALLA DISCESA, DI PROPOSITO: si scende di piu' scalini in
+ *    un fotogramma solo, si risale di **UNO** ogni `RISALITA_ATTESA` fotogrammi
+ *    tranquilli, e mai oltre la qualita' **chiesta** dal chiamante.  ⚠ Perche'
+ *    ogni riapertura costa `[M]` 91-108 ms in hardware e 1,8-3,3 s in software:
+ *    una risalita che sbatte contro il tetto e ridiscende sarebbe **piu' cara
+ *    del difetto che cura**.
+ *
+ * ⛔⛔ E QUANTI SIANO «PIU' SCALINI» E' CAMBIATO IL 23 AGOSTO 2026, quindi chi
+ *      confronta i numeri di ieri con quelli di domani lo deve sapere:
+ *
+ *        prima   un DELTA sopra il tetto percorreva la scala **fino in fondo**
+ *                (da QP 26: 35, 44, 51 — **tre** discese), perche' il conto di
+ *                `RICODIFICHE_MASSIME` era codice morto.  ⚠ La riga d'avvio
+ *                intanto dichiarava che si fermava dopo tre ricodifiche.
+ *        adesso  un DELTA fa `RICODIFICHE_MASSIME` codifiche, cioe' **due**
+ *                discese (35, 44) e tutt'e due provate.  Una CHIAVE non cambia
+ *                di una virgola: §5.2 vieta di abbandonarla, e la scala se la
+ *                percorre tutta come prima.
+ *
+ *      ⇒ LA RISALITA HA DUE SCALINI DA RIFARE INVECE DI TRE, e i numeri qui
+ *        sotto **reggono lo stesso**, per questo conto: da QP 44 si torna a 35
+ *        dopo `RISALITA_ATTESA` (120) fotogrammi tranquilli, e da 35 a 26 dopo
+ *        il **doppio** (240), perche' 26 e' lo scalino su cui il tetto ha morso
+ *        (`qualita_fallita`) e li' non si rimette il piede alla svelta.  Totale
+ *        **360 fotogrammi, ~6 s a 60/s**, contro i **480 (~8 s)** che servivano
+ *        partendo da 51.  ⛔ Il cambio accorcia lo sgranato di ~2 s e non tocca
+ *        ne' il verso ne' la forma della risalita: **non c'e' ragione scritta
+ *        per ritarare `RISALITA_ATTESA`**, e senza ragione scritta non si tocca.
+ *        ⚠ `RISALITA_MARGINE` resta un ottavo del tetto = 2 MiB, e con due
+ *        scalini invece di tre il margine e' se mai **piu' largo**, non meno.
+ *
+ * ⛔⛔ IL CONTROLLO CHE DECIDE — LO SBATTIMENTO, e va scritto qui perche' e' il
+ *      guasto che farebbe cadere questa cura.  Una scena che vive **sul confine
+ *      del tetto** (`[M]` grana `alls=60` a 7680x4320 in hardware: **94,9 %**)
+ *      potrebbe far scendere e risalire in continuazione, pagando una
+ *      riapertura e una CHIAVE a ogni giro — e il prezzo lo pagherebbe il
+ *      **ritmo**, cioe' proprio l'invariante I1 che questa cura dice di servire.
+ *
+ *      ⭐ E' contro quello che sono scelti i due numeri, e la difesa e' DOPPIA:
+ *
+ *        1. `RISALITA_MARGINE` e' **un ottavo** del tetto, non il tetto.  Si
+ *           conta il fotogramma **comodamente** sotto, non il fotogramma
+ *           «sotto»: una scena al 94,9 % del tetto non produce **nemmeno un**
+ *           fotogramma tranquillo ⇒ `sotto_margine` resta a zero ⇒ **non si
+ *           risale mai**, e non c'e' niente da sbattere.  Perche' lo
+ *           sbattimento accada servirebbe una scena che alterna **8x** di
+ *           grandezza restando calma due secondi interi: quello non e' un
+ *           confine, e' un cambio di scena vero.
+ *        2. `risalita_attesa` **RADDOPPIA a ogni ricaduta** e non torna mai
+ *           giu'.  Anche nel caso peggiore la frequenza delle riaperture si
+ *           dimezza a ogni giro, e in `RISALITA_ATTESA_MAX` si ferma a una ogni
+ *           ~64 s.  ⚠ Il verso in cui sbagliare e' la pazienza.
+ *
+ *      ⇒ Se il banco di `fasi/09-la-qualita-e-la-degradazione.md` §5 (caso 2: piu' di 3
+ *        riaperture al minuto; caso 3: i fotogrammi/s **con** la cura piu' bassi
+ *        di quelli **senza**, appaiati sulla stessa scena) trovasse lo
+ *        sbattimento lo stesso, **questi tre numeri sono sbagliati** — o la cura
+ *        va tolta.
+ *
+ * ⚠ I tre numeri sono `[?]` **sufficienti, non giusti**, esattamente come
+ *   `CRF_PASSO` = 9: il punto di lavoro e' di questa fase, e a tararli e' il
+ *   banco, non questa riga.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#define RISALITA_MARGINE (TETTO_FOTOGRAMMA / 8u) /* 2 MiB: c'e' spazio per due scalini */
+#define RISALITA_ATTESA 120u                     /* ~2 s a 60/s */
+#define RISALITA_ATTESA_MAX 3840u                /* ~64 s: il fondo del raddoppio */
+
+/*
+ * ⛔ L'INTERRUTTORE, E NASCE SPENTO — invariante I6: *cio' che cambia quel che
+ *    si VEDE sta dietro un interruttore spento finche' l'utente non lo guarda*
+ *    (`CODER.md`, la tabella delle invarianti).  La risalita cambia quel che si
+ *    vede — un desktop che
+ *    torna nitido invece di restare sgranato — quindi non si accende da se'.
+ *
+ * ⚠ Statico e non per codificatore: e' una decisione del **server**, non del
+ *   client ne' del singolo flusso.  E' la stessa forma di `wt_ritmo_adattivo()`.
+ */
+static bool risalita_accesa;
+
+void codificatore_qualita_risale(bool accesa)
+{
+	risalita_accesa = accesa;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ IL TETTO DI BANDA — fase 9, 23 agosto 2026, e NASCE SPENTO
+ *
+ * ⛔ IL NUMERO CHE LO OBBLIGA, e fino a stamattina non c'era.  `[M]` macchina di
+ *    prova, tela **2560x1080**, `h264_vaapi` `EncSliceLP`, **QP 26 costante**
+ *    (cioe' quel che il prodotto fa oggi), 30 s per punto, linea larga
+ *    (`fasi/09-la-qualita-e-la-degradazione.md` §3.8):
+ *
+ *      scena                                  fot/s   video      quota di 20 Mbit/s
+ *      ferma                                   0,00   0          0 %
+ *      ⭐ il DESKTOP VERO dell'utente          23,10   0,204      **1,0 %**
+ *      bande a tinta piatta, tutto lo schermo  40,57   1,179      5,9 %
+ *      gradiente RETINATO, tutto lo schermo    34,93   21,356     ⛔ 106,8 %
+ *      ⛔ film con la GRANA, a schermo intero  23,44   58,668     ⛔ **293,3 %**
+ *
+ * ⇒ ⛔ Il caso duro chiede **tre volte il pavimento** e **nessuno gli dice di
+ *   no**: sotto CQP il quantizzatore e' fermo e la banda e' quel che esce.
+ * ⇒ ⭐ Ma il contenuto **vero** costa l'**1 %**.  Un tetto che mordesse **li'**
+ *   sarebbe l'errore per cui la fase 10 di v1 fu azzerata.
+ * ⇒ ⛔⛔ E il regolatore **non puo' guardare quanti pixel cambiano**: `pieno` e
+ *   `barra` muovono **gli stessi pixel** e costano **1,2 contro 21,4**.  La
+ *   grandezza giusta e' **i bit**, e a guardarli e' il regolatore del driver.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⭐⭐ PERCHE' **QVBR** E NON VBR — e non e' un'opinione, sono BYTE
+ *
+ * `[M]` 23 agosto 2026, **su questo portatile** (⚠ non la macchina di prova:
+ * stesso driver **Intel iHD 25.2.3**, GPU diversa), `h264_vaapi`
+ * `VAProfileH264High/EncSliceLP`, 2560x1080, 25 fps, 6 s, `bf 0`,
+ * `async_depth 1`, `idr_interval 0`.  Due scene: **ferma** (un fotogramma di
+ * `testsrc2` ripetuto) e **dura** (`testsrc2` + `noise=alls=60`):
+ *
+ *      modo               scena ferma        scena dura
+ *      CQP 26             0,193 Mbit/s       ⛔ **259,9 Mbit/s**
+ *      CBR 16M            ⛔ **15,98**        15,99
+ *      VBR 12/16M qp=26   0,686              11,13
+ *      VBR 12/16M SENZA qp 0,686             11,13   ⛔ **byte per byte identico**
+ *      ⭐ QVBR 12/16M qp=26 **0,218**         **11,14**
+ *
+ * ⛔⛔ **SOTTO VBR IL `qp` E' IGNORATO**, e la prova non e' un ragionamento: e'
+ *      che con e senza `qp=26` escono gli **stessi identici byte** (8 350 170 e
+ *      514 142, due volte su due).  ⇒ Col VBR **tutta la scala della
+ *      degradazione di questo file** (`abbassa_qualita()`, `CRF_PASSO`) e **la
+ *      risalita scritta stamattina** diventerebbero **no-op silenziosi**: un
+ *      componente che ignora un'opzione senza dirlo, cioe' la forma E2 che
+ *      questo file esiste per non subire.  **VBR e' fuori.**
+ *
+ * ⭐ **Sotto QVBR il `qp` e' il fattore di qualita' e la scala REGGE**, `[M]`
+ *    scena ferma: QP 26 → 0,218 · QP 35 → 0,125 · QP 44 → 0,076 Mbit/s.
+ *    ⚠ E a scena **dura** la scala non morde piu' (11,14 · 11,31 · 11,19):
+ *    quando il tetto e' in presa la qualita' la decide **il tetto**, non il QP.
+ *    Va detto, perche' un banco che cercasse li' l'effetto del QP non lo
+ *    troverebbe e concluderebbe male.
+ *
+ * ⛔ **E IL CBR E' SMASCHERATO SUL FERRO NOSTRO**: a scena ferma spende
+ *    **15,98 Mbit/s contro 0,193** del CQP — **83 volte** per niente.  R31 di v1
+ *    diceva 42x a 1440p; qui e' peggio.  ⇒ La lezione R31 non e' storia.
+ *
+ * ⭐ E il quarto rosso dello studio (`fasi/09-la-qualita-e-la-degradazione.md` §5) e'
+ *   **CADUTO**: dichiarando 16 Mbit/s ffmpeg stampa `Using level 5`, cioe' 5.0.
+ *   La banda **non** fa salire `level_idc`, e `avc1.640033` regge.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⛔ I TRE NUMERI, E NESSUNO E' SCRITTO A MANO — si derivano dal pavimento
+ *
+ * Il pavimento e' **20 Mbit/s** (`DECISIONI.md` §3.1-bis, `CODER.md` §1-bis).
+ * Accanto al video ci sta tutto il resto, e `[M]` §3.8 lo **misura**: a scena
+ * ferma, con **zero** video, sul filo passano **2,426 Mbit/s** (audio, input,
+ * appunti, il costo di QUIC).
+ *
+ *   `rc_max_rate` = **80 % del pavimento** = 16 Mbit/s.  ⇒ 16 + 2,4 misurati
+ *                   = 18,4, cioe' il **92 %** del pavimento: il margine c'e' e
+ *                   ha un numero sotto invece di essere prudenza.
+ *   `bit_rate`    = **75 % del filo** = 12 Mbit/s.  ⛔ **MAI uguale al filo**:
+ *                   e' R31 alla lettera — con `rc_max_rate == bit_rate` il
+ *                   driver Intel *deduceva* **CBR**, senza un errore, senza un
+ *                   avviso, senza una riga di registro, e c'era una bolletta.
+ *   `rc_buffer_size` = filo x **40 ms**.  ⛔ E QUESTO E' IL NUMERO CHE V1 HA
+ *                   SBAGLIATO SENZA CHE NESSUNO SE NE ACCORGESSE:
+ *                   `v1/remotix-c/src/codificatore.c:256` metteva
+ *                   `rc_buffer_size = bit_rate / 2`, che **non e' «meta'»: e'
+ *                   mezzo SECONDO** (un VBV si misura in bit, e `bit_rate/2`
+ *                   bit a `bit_rate` bit/s fanno 500 ms) — **dieci volte** il
+ *                   tetto di 50 ms che `CODER.md` §1-bis da' a **tutto** il
+ *                   pezzo nostro.  ⭐ Qui sono **40**, cioe' il *traguardo* e
+ *                   non il *tetto*: il verso in cui sbagliare e' lo scomodo.
+ *                   ⚠ E il numero non e' dedotto, e' **stampato da ffmpeg**:
+ *                   `[M]` *«RC target: 75 % of 16000000 bps over 40 ms»*.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⛔⛔ LA PREVISIONE, SCRITTA PRIMA DELLA MISURA SULLA MACCHINA DI PROVA
+ *
+ * Le cinque scene di §3.8, in Mbit/s di **carico video**, a tetto SPENTO (cioe'
+ * quel che si e' gia' misurato) e a tetto ACCESO a 20:
+ *
+ *      scena                       spento `[M]`   ⇒ acceso `[?]`
+ *      ferma                       0,000          **0,000**  (nessun fotogramma)
+ *      ⭐ desktop vero dell'utente  0,204          **0,20 – 0,45**
+ *      bande a tinta piatta        1,179          **1,1 – 1,6**
+ *      gradiente retinato          21,356         ⛔ **11 – 16**, e MAI sopra 16
+ *      ⛔ film con la grana         58,668         ⛔ **11 – 16**, e MAI sopra 16
+ *
+ * Il fondo dei due «11» e' `[M]`: la scena dura del portatile, col filo a 16,
+ * si e' assestata a **11,14**.
+ *
+ * ⛔ **E I ROSSI CHE MI SMENTIREBBERO** — due cambiano la conclusione:
+ *
+ *   1 ⭐⭐ il **desktop vero** a tetto acceso costa **meno** di 0,204
+ *          ⇒ il tetto sta **risparmiando dove non deve**, cioe' e' v1 che si
+ *          ripete (*«contento di risparmiare»*), e **questa cura si butta**.
+ *          `[M]` sul portatile QVBR spende il **13 % in piu'** del CQP a scena
+ *          ferma (0,218 contro 0,193), quindi la previsione e' *«non scende»* —
+ *          ed e' secca.
+ *   2 ⭐⭐ il **gradiente retinato** a tetto acceso resta **sopra** 20
+ *          ⇒ il driver **non ha obbedito**, e il testimone 2 era verde per
+ *          niente: e' R31 che vale **anche contro la richiesta esplicita**.
+ *          ⇒ Lo coglie solo il **terzo** testimone, i byte.
+ *   3      `avcodec_open2` fallisce con *«Driver does not support QVBR RC
+ *          mode»* ⇒ la macchina di prova non e' il portatile, e si rilegge la
+ *          maschera che `apri_dispositivo()` ha appena scritto nel registro.
+ *   4      i fotogrammi/s **calano** sulle scene facili ⇒ il regolatore costa
+ *          tempo dove non serve, e il prezzo lo paga I1.
+ *
+ * ⚠ E il numero che smaschera il CBR e' a scena **FERMA** (`[M]` 83x qui, 42x
+ *   in v1): a scena dura i modi regolati stanno tutti dentro l'1 % l'uno
+ *   dall'altro e un banco che misurasse solo li' **non misurerebbe niente**.
+ *   ⛔ Sul prodotto pero' «fermo» vuol dire **zero fotogrammi** (§3.8: 0,00
+ *   fot/s), quindi la scena che fa da controllo e' la seconda: il desktop vero,
+ *   che si muove e costa l'1 %.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⛔ L'INTERRUTTORE, E NASCE SPENTO — invariante I6.  Il tetto cambia quel che
+ *    si VEDE (sul caso duro l'immagine diventa piu' brutta: e' il suo mestiere),
+ *    e in v1 **questa identica modifica** fece dire all'utente *«siamo tornati
+ *    indietro»*.  Spento, il programma si comporta **esattamente** come oggi:
+ *    `rc_mode=CQP`, nessun `bit_rate`, nessun serbatoio.
+ *
+ * ⚠ Quel che qui NON si tocca, e va detto: `max_frame_size`.  `[M]` ffmpeg lo
+ *   rifiuta sotto CQP (*«Max frame size is invalid in CQP rate control mode»*) e
+ *   lo accetta sotto QVBR — darebbe **in un passaggio** quel che oggi costa fino
+ *   a `RICODIFICHE_MASSIME` riaperture da `[M]` 91-108 ms.  ⛔ Non si accende
+ *   oggi: e' una **seconda** leva sulla stessa grandezza, e due leve accese
+ *   insieme al primo giro darebbero due misure sotto la stessa etichetta.  ⭐ E
+ *   il serbatoio da 40 ms fa gia' quasi tutto il suo lavoro.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#define TETTO_VBV_MS 40u        /* il TRAGUARDO di CODER.md §1-bis, non il tetto di 50 */
+#define TETTO_QUOTA_FILO 80u    /* % del pavimento che va al video: il resto e' [M] 2,4 Mbit/s */
+#define TETTO_QUOTA_PUNTO 75u   /* % del filo: il punto di lavoro.  ⛔ MAI 100 — e' R31 */
+
+/*
+ * ⭐ La finestra del terzo testimone.  ⚠ Dieci secondi e non uno: piu' corta
+ *   misurerebbe il singolo fotogramma (che gia' si stampa altrove) invece della
+ *   **banda**, e piu' lunga arriverebbe dopo che il banco e' finito.  ⛔ E vale
+ *   a tetto SPENTO come a tetto acceso: un testimone che esistesse solo con la
+ *   cura accesa non potrebbe confrontare niente.
+ */
+#define BANDA_FINESTRA_US (10u * 1000u * 1000u)
+
+/*
+ * 0 = SPENTO, ed e' il valore di nascita.  Diverso da zero = il **pavimento**
+ * dichiarato in Mbit/s (20, oggi), da cui si derivano i tre numeri.
+ *
+ * ⚠ Statico e non per codificatore: e' una decisione del **server**, come la
+ *   risalita qui sopra e come `wt_ritmo_adattivo()`.
+ */
+static uint32_t tetto_pavimento_mbit;
+
+void codificatore_tetto_banda(uint32_t pavimento_mbit)
+{
+	tetto_pavimento_mbit = pavimento_mbit;
+}
+
+/*
+ * ⛔ I tre numeri si CALCOLANO in un posto solo, e chi li stampa nel registro
+ *    chiama queste, non riscrive il conto: due stesure dello stesso numero sono
+ *    un posto dove divergere in silenzio.
+ */
+static int64_t tetto_filo(void)
+{
+	return (int64_t) tetto_pavimento_mbit * 1000000 * TETTO_QUOTA_FILO / 100;
+}
+
+static int64_t tetto_punto(void)
+{
+	return tetto_filo() * TETTO_QUOTA_PUNTO / 100;
+}
+
+static int tetto_serbatoio_bit(void)
+{
+	return (int) (tetto_filo() * TETTO_VBV_MS / 1000);
+}
+
+/*
+ * ⭐⭐ IL MODO DEL BITRATE, CHIESTO PER NOME — e i due nomi stanno qui, insieme
+ *     al bit che il driver usa per dire di averlo.
+ *
+ * ⛔ R31, la lezione piu' cara del progetto: *«il modo di controllo del bitrate
+ *    non si sceglie: lo deduce il driver»*.  ⇒ `rc_mode=auto` e' vietato: `[M]`
+ *    ffmpeg su `auto` sceglie in base alle altre opzioni, e in v1 scelse **CBR**
+ *    perche' due numeri erano uguali.  Chiedere per nome fa **fallire**
+ *    `avcodec_open2` invece di far arrivare una bolletta.
+ */
+typedef struct {
+	int ffmpeg;         /* il valore dell'opzione `rc_mode` di h264_vaapi */
+	unsigned va_bit;    /* il bit con cui il driver lo DICHIARA */
+	const char *nome;
+} ModoBitrate;
+
+static ModoBitrate modo_bitrate_voluto(void)
+{
+	if (tetto_pavimento_mbit)
+		return (ModoBitrate){ 5, VA_RC_QVBR, "QVBR" };
+	return (ModoBitrate){ 1, VA_RC_CQP, "CQP" };
+}
+
+/*
+ * La maschera del driver, in chiaro.  ⚠ Tutti i bit che `va.h` conosce, non
+ * solo i quattro che ci interessano: un bit che non sappiamo nominare si stampa
+ * come numero, e non sparisce.
+ */
+static void nomi_modi_bitrate(unsigned maschera, char *fuori, size_t byte)
+{
+	static const struct {
+		unsigned bit;
+		const char *nome;
+	} NOTI[] = {
+		{ VA_RC_NONE, "NONE" },   { VA_RC_CBR, "CBR" },
+		{ VA_RC_VBR, "VBR" },     { VA_RC_VCM, "VCM" },
+		{ VA_RC_CQP, "CQP" },     { VA_RC_VBR_CONSTRAINED, "VBR_CONSTRAINED" },
+		{ VA_RC_ICQ, "ICQ" },     { VA_RC_MB, "MB" },
+		{ VA_RC_CFS, "CFS" },     { VA_RC_PARALLEL, "PARALLEL" },
+		{ VA_RC_QVBR, "QVBR" },   { VA_RC_AVBR, "AVBR" },
+		{ VA_RC_TCBRC, "TCBRC" },
+	};
+	if (!fuori || !byte)
+		return;
+	fuori[0] = 0;
+	unsigned restanti = maschera;
+	for (size_t i = 0; i < sizeof(NOTI) / sizeof(NOTI[0]); i++) {
+		if (!(maschera & NOTI[i].bit))
+			continue;
+		restanti &= ~NOTI[i].bit;
+		char pezzo[32];
+		snprintf(pezzo, sizeof(pezzo), "%s%s", fuori[0] ? "|" : "", NOTI[i].nome);
+		strncat(fuori, pezzo, byte - strlen(fuori) - 1);
+	}
+	if (restanti) {
+		char pezzo[32];
+		snprintf(pezzo, sizeof(pezzo), "%s0x%x(?)", fuori[0] ? "|" : "", restanti);
+		strncat(fuori, pezzo, byte - strlen(fuori) - 1);
+	}
+	if (!fuori[0])
+		strncat(fuori, "nessuno", byte - 1);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * IL LETTORE DI BIT — serve a rileggere quel che abbiamo appena prodotto
@@ -872,6 +1233,23 @@ struct Codificatore {
 	bool svuotato;                /* ⚠ e' stato messo in scarico: va riaperto */
 	int qualita_corrente;         /* CRF in vigore, dopo le eventuali ricodifiche */
 	ModoQualita modo_corrente;
+	/* ⭐ LA RISALITA (fase 9).  ⛔ Il pavimento NON sta qui: e' `richiesta.qualita`,
+	 *    che `codificatore_nuovo()` conserva intatta.  Un secondo campo con lo
+	 *    stesso numero dentro sarebbe la forma E2 — due misure sotto la stessa
+	 *    etichetta, e il giorno in cui divergono nessun banco se ne accorge. */
+	int qualita_fallita;          /* lo scalino su cui il tetto ha MORSO; 0 = mai */
+	uint32_t sotto_margine;       /* fotogrammi di fila comodamente sotto il tetto */
+	uint32_t risalita_attesa;     /* quanti ne servono ADESSO: raddoppia a ogni ricaduta */
+	bool risalito_da_poco;        /* per riconoscere la ricaduta, e solo per quello */
+	/* ⭐⭐⭐ IL TERZO TESTIMONE DEL BITRATE — I BYTE, e sono l'unico che avrebbe
+	 *      preso R31.  Vedi il riquadro del tetto di banda: il primo testimone
+	 *      dice che il modo **esiste**, il secondo che libavcodec l'ha
+	 *      **tenuto**, e in v1 sarebbero stati **verdi tutti e due** mentre
+	 *      usciva CBR.  ⛔ Solo questi quattro campi lo dicono. */
+	uint64_t banda_t0_us;         /* quando e' cominciata la finestra in corso */
+	uint64_t banda_byte;          /* quanti ne sono usciti dentro la finestra */
+	uint32_t banda_fotogrammi;
+	uint32_t banda_massimo;       /* il piu' grosso: e' il picco, non la media */
 	int64_t numero;               /* il pts, che qui e' il contatore dei fotogrammi */
 	bool pacchetto_in_mano;
 };
@@ -962,6 +1340,23 @@ static const char *nome_codec(CodecVideo codec)
 		return "AV1";
 	default:
 		return "codec ignoto";
+	}
+}
+
+/* ⚠ Il nome della GRANDEZZA, non del valore: CRF e QP non sono la stessa cosa
+ *   (vedi `ModoQualita`), e una riga di registro che dicesse solo il numero
+ *   metterebbe due misure diverse sotto la stessa etichetta. */
+static const char *nome_modo(ModoQualita modo)
+{
+	switch (modo) {
+	case CODIFICATORE_QUALITA_LOSSLESS:
+		return "senza perdita";
+	case CODIFICATORE_QUALITA_QP:
+		return "QP";
+	case CODIFICATORE_QUALITA_CRF:
+		return "CRF";
+	default:
+		return "modo ignoto";
 	}
 }
 
@@ -1182,9 +1577,11 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 *   scrivendolo.  ⛔ Rifiutare qui sarebbe decidere su un silenzio.
 	 * ═══════════════════════════════════════════════════════════════════════ */
 	{
-		VAConfigAttrib attr[2] = { { .type = VAConfigAttribMaxPictureWidth },
-			                   { .type = VAConfigAttribMaxPictureHeight } };
-		VAStatus st = vaGetConfigAttributes(va->display, profilo, voluto, attr, 2);
+		VAConfigAttrib attr[3] = { { .type = VAConfigAttribMaxPictureWidth },
+			                   { .type = VAConfigAttribMaxPictureHeight },
+			                   /* ⭐ il terzo e' di fase 9: vedi il blocco in fondo */
+			                   { .type = VAConfigAttribRateControl } };
+		VAStatus st = vaGetConfigAttributes(va->display, profilo, voluto, attr, 3);
 
 		if (st != VA_STATUS_SUCCESS) {
 			registro_dice(REG_CODIFICA,
@@ -1218,6 +1615,97 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			              "%ux%u ci sta — CHIESTO al driver, non dedotto dal nome",
 			              attr[0].value, attr[1].value, c->componente->name,
 			              c->conf.nodo, r->larghezza, r->altezza);
+		}
+
+		/* ═══════════════════════════════════════════════════════════════════
+		 * ⭐⭐⭐ PRIMO TESTIMONE DEL BITRATE: QUALI MODI IL DRIVER DICHIARA
+		 *
+		 * ⛔ E' **R31**, la lezione piu' cara del progetto, applicata dal capo
+		 *    giusto: *«il modo di controllo del bitrate non si sceglie: lo
+		 *    deduce il driver»*.  In v1 nessuno aveva chiesto CBR — il driver
+		 *    Intel lo **dedusse** da `rc_max_rate == bit_rate`, e *«nessun
+		 *    errore, nessun avviso, nessuna riga di registro: c'era una
+		 *    bolletta»*.
+		 *
+		 * ⛔⛔ E LA TRAPPOLA E' ARMATA DENTRO FFMPEG, `[M]` letta nella libreria
+		 *      installata (`libavcodec.so.61`, 7.1.5-0+deb13u1):
+		 *
+		 *        *«Driver does not report any supported rate control modes:
+		 *          assuming CQP only.»*
+		 *
+		 *      ⇒ **Se il driver tace, libavcodec deduce al posto suo.**  E'
+		 *      R31 in una veste nuova: non «il driver deduce», ma «ffmpeg deduce
+		 *      per conto del driver», **con lo stesso silenzio**.  ⚠ E quella
+		 *      riga oggi **non si vedrebbe**: `av_log_set_level` non compare da
+		 *      nessuna parte in `src/`, e il registro di ffmpeg resta ad
+		 *      `AV_LOG_INFO`, su `stderr` invece che nel nostro.
+		 *      ⇒ Per questo la domanda si fa **noi**, al driver, e la risposta
+		 *      finisce nel **nostro** registro accanto agli altri numeri.
+		 *
+		 * ⚠ TRE ESITI E NON DUE, come per gli entrypoint e per la misura
+		 *   massima.  Il secondo e' quello che inganna: `VA_ATTRIB_NOT_SUPPORTED`
+		 *   vuol dire *«il driver non lo dichiara»*, ⛔ **non** *«c'e' solo il
+		 *   CQP»* — e chi ci concludesse sopra farebbe la stessa deduzione che
+		 *   ffmpeg fa in silenzio due righe piu' in la'.
+		 *
+		 * `[M]` 23 agosto 2026, **su questo portatile** (⚠ non la macchina di
+		 * prova: stesso driver **Intel iHD 25.2.3**, GPU diversa),
+		 * `vainfo -a` su `VAProfileH264High/VAEntrypointEncSliceLP`:
+		 *
+		 *     CBR|VBR|CQP|MB|QVBR|TCBRC   (0x1496)
+		 *
+		 * ⇒ ⭐ **QVBR c'e'** — ed e' il modo che il tetto chiede.  ⚠ Sulla
+		 *   macchina di prova **non e' verificato**, e questa riga di registro e'
+		 *   esattamente quel che lo verifichera' al primo avvio.
+		 * ═══════════════════════════════════════════════════════════════════ */
+		ModoBitrate modo = modo_bitrate_voluto();
+		char modi[192];
+		if (st != VA_STATUS_SUCCESS) {
+			registro_dice(REG_CODIFICA,
+			              "⚠ su «%s» NON ho potuto chiedere al driver i modi di "
+			              "controllo del bitrate (vaGetConfigAttributes: %d): ⛔ NON e' "
+			              "«c'e' solo il CQP», e' «non ho guardato».  Si chiede %s per "
+			              "nome lo stesso, e se non c'e' l'apertura fallira' dicendolo",
+			              r->nodo_rendering, (int) st, modo.nome);
+		} else if (attr[2].value == VA_ATTRIB_NOT_SUPPORTED) {
+			registro_dice(REG_CODIFICA,
+			              "⚠ «%s» (%s), profilo %d, %s: il driver NON DICHIARA nessun "
+			              "modo di controllo del bitrate.  ⛔ E non si conclude che ce ne "
+			              "sia uno solo: da qui in poi libavcodec ASSUME il CQP "
+			              "(«assuming CQP only»), e quell'assunzione e' SUA, non del "
+			              "driver.  Si chiede %s per nome",
+			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+			              voluto == VAEntrypointEncSliceLP ? "EncSliceLP (bassa potenza)"
+			                                               : "EncSlice (piena)",
+			              modo.nome);
+		} else {
+			c->conf.modi_bitrate = attr[2].value;
+			c->conf.modi_bitrate_letti = true;
+			nomi_modi_bitrate(attr[2].value, modi, sizeof(modi));
+			if (!(attr[2].value & modo.va_bit)) {
+				/* ⛔ NON SI RIPIEGA: sarebbe R31 dall'altro capo — prendere «quel
+				 *    che c'e'» e' esattamente il gesto che in v1 fece uscire il
+				 *    CBR da una scelta che nessuno aveva fatto. */
+				di(errore, errore_byte,
+				   "«%s» su «%s» (%s), profilo %d, %s: si e' chiesto il modo di "
+				   "controllo del bitrate %s (0x%x) e il driver DICHIARA [%s] (0x%x) — "
+				   "⛔ NON c'e'.  Non si ripiega su un altro modo: sarebbe R31 dall'altro "
+				   "capo, cioe' un modo di bitrate scelto da nessuno",
+				   c->componente->name, r->nodo_rendering, c->conf.fornitore_va,
+				   (int) profilo,
+				   voluto == VAEntrypointEncSliceLP ? "EncSliceLP" : "EncSlice",
+				   modo.nome, modo.va_bit, modi, attr[2].value);
+				return -1;
+			}
+			registro_dice(REG_CODIFICA,
+			              "⭐ controllo del bitrate su «%s» (%s), profilo %d, %s: il "
+			              "driver DICHIARA [%s] (0x%x) · chiesto %s (0x%x) · c'e'.  "
+			              "⚠ Che ci sia non vuol dire che lo applichi: lo dicono i BYTE "
+			              "(terzo testimone), non questa riga",
+			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+			              voluto == VAEntrypointEncSliceLP ? "EncSliceLP (bassa potenza)"
+			                                               : "EncSlice (piena)",
+			              modi, attr[2].value, modo.nome, modo.va_bit);
 		}
 	}
 	return 0;
@@ -1300,17 +1788,48 @@ static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 		   c->qualita_corrente);
 		return -1;
 	}
-	/* CQP: il quantizzatore fermo.  ⚠ Si chiede PER NOME (`rc_mode=CQP`) e non
-	 * si lascia `auto`: `auto` sceglie in base alle altre opzioni, cioe' un
-	 * componente che decide da se' — `CODER.md` §3.9. */
-	if (av_opt_set_int(c->ctx->priv_data, "rc_mode", 1 /* CQP */, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato rc_mode=CQP", c->componente->name);
+	/* Il modo si chiede PER NOME (`CQP` a tetto spento, `QVBR` a tetto acceso) e
+	 * non si lascia `auto`: `auto` sceglie in base alle altre opzioni, cioe' un
+	 * componente che decide da se' — `CODER.md` §3.9, e in v1 quel che scelse fu
+	 * il CBR (R31).  ⭐ E il driver ha gia' detto, in `apri_dispositivo()`, se
+	 * questo modo ce l'ha: qui non si scopre niente, si conferma. */
+	ModoBitrate modo = modo_bitrate_voluto();
+	if (av_opt_set_int(c->ctx->priv_data, "rc_mode", modo.ffmpeg, 0) < 0) {
+		di(errore, errore_byte, "«%s» ha rifiutato rc_mode=%s (%d)",
+		   c->componente->name, modo.nome, modo.ffmpeg);
 		return -1;
 	}
+	/* ⭐ Il QP si chiede in tutt'e due i modi, e sotto QVBR **conta**: `[M]` e'
+	 *    il fattore di qualita', e la scala della degradazione regge (26 → 0,218
+	 *    · 35 → 0,125 · 44 → 0,076 Mbit/s a scena ferma).  ⛔ Sotto VBR invece
+	 *    sarebbe ignorato — byte per byte identico con e senza — ed e' la
+	 *    ragione per cui il tetto usa QVBR e non VBR. */
 	if (av_opt_set_int(c->ctx->priv_data, "qp", c->qualita_corrente, 0) < 0) {
 		di(errore, errore_byte, "«%s» ha rifiutato qp=%d", c->componente->name,
 		   c->qualita_corrente);
 		return -1;
+	}
+	if (tetto_pavimento_mbit) {
+		/* ⛔ I tre numeri stanno sul contesto GENERICO, non sul `priv_data`: sono
+		 *    di `AVCodecContext`, e metterli fra le opzioni del componente non
+		 *    darebbe un errore — darebbe silenzio. */
+		c->ctx->bit_rate = tetto_punto();
+		c->ctx->rc_max_rate = tetto_filo();
+		c->ctx->rc_buffer_size = tetto_serbatoio_bit();
+		/* ⛔⛔ IL CONTROLLO CHE VALE R31, e sta PRIMA dell'apertura: se questi
+		 *      due numeri fossero uguali il driver dedurrebbe **CBR** — e `[M]`
+		 *      il CBR su questo ferro spende **83 volte** il necessario a scena
+		 *      ferma.  Non e' una possibilita' teorica: e' quel che v1 fece. */
+		if (c->ctx->bit_rate >= c->ctx->rc_max_rate || c->ctx->rc_buffer_size <= 0) {
+			di(errore, errore_byte,
+			   "⛔ i numeri del tetto sono guasti: punto di lavoro %" PRId64 ", filo "
+			   "%" PRId64 ", serbatoio %d bit.  Il punto DEVE stare sotto il filo "
+			   "(con `rc_max_rate == bit_rate` il driver deduce CBR: e' R31) e il "
+			   "serbatoio DEVE essere positivo",
+			   (int64_t) c->ctx->bit_rate, (int64_t) c->ctx->rc_max_rate,
+			   c->ctx->rc_buffer_size);
+			return -1;
+		}
 	}
 	if (av_opt_set_int(c->ctx->priv_data, "async_depth", 1, 0) < 0) {
 		di(errore, errore_byte, "«%s» ha rifiutato async_depth=1", c->componente->name);
@@ -1683,6 +2202,35 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		    (av_opt_get_int(c->ctx->priv_data, "async_depth", 0, &v) == 0) ? (int) v : -1;
 		if (av_opt_get_int(c->ctx->priv_data, "low_power", 0, &v) == 0)
 			c->conf.bassa_potenza = v != 0;
+		/* ⭐⭐ SECONDO TESTIMONE DEL BITRATE: che cosa il CONTESTO ha tenuto.
+		 *
+		 * ⛔ E si dichiara subito che cosa NON prova, o vale meno di zero: dice
+		 *    che **libavcodec** ha tenuto quel che gli si e' chiesto, ⛔ **non
+		 *    che il driver l'abbia applicato**.  In v1 questo testimone sarebbe
+		 *    stato **verde**: `bit_rate` e `rc_max_rate` erano esattamente i
+		 *    numeri chiesti, e il CBR era il nome che il driver dava a quella
+		 *    coppia.  ⇒ A prenderlo furono i **byte**, e solo quelli. */
+		c->conf.modo_bitrate =
+		    (av_opt_get_int(c->ctx->priv_data, "rc_mode", 0, &v) == 0) ? (int) v : -1;
+		/* ⚠ TRE ESITI E NON DUE anche qui: `-1` e' **«non ho potuto rileggere»**,
+		 *   e non si spedisce nel mucchio di «ha disobbedito».  ⛔ Si dichiara e
+		 *   si va avanti: rifiutare su un silenzio sarebbe decidere su un
+		 *   silenzio, che e' la forma di R31 dall'altro capo. */
+		if (c->conf.modo_bitrate < 0)
+			registro_dice(REG_CODIFICA,
+			              "⚠ NON ho potuto rileggere `rc_mode` dal contesto dopo "
+			              "l'apertura: ⛔ NON e' «ha obbedito», e' «non ho guardato».  "
+			              "Restano il driver (prima) e i BYTE (dopo)");
+		c->conf.banda_punto = c->ctx->bit_rate;
+		c->conf.banda_filo = c->ctx->rc_max_rate;
+		c->conf.banda_serbatoio = c->ctx->rc_buffer_size;
+		/* ⭐ Il serbatoio si tiene anche in MILLISECONDI, ed e' quello il numero
+		 *    che `CODER.md` §1-bis giudica: in bit non si vede che v1 ne aveva
+		 *    **cinquecento**. */
+		c->conf.banda_serbatoio_ms =
+		    (c->ctx->rc_max_rate > 0 && c->ctx->rc_buffer_size > 0)
+		        ? (uint32_t) ((int64_t) c->ctx->rc_buffer_size * 1000 / c->ctx->rc_max_rate)
+		        : 0;
 	}
 
 	if (c->ctx->codec->id != id_di(r->codec))
@@ -1714,6 +2262,32 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		   "chiesta la codifica %s e il componente dice %s",
 		   r->potenza == CODIFICATORE_POTENZA_BASSA ? "a bassa potenza" : "piena",
 		   c->conf.bassa_potenza ? "bassa potenza" : "piena");
+	/* ⛔ R31: un modo di bitrate diverso da quello CHIESTO PER NOME non si
+	 *    spedisce — e' l'esatta condizione in cui v1 emise CBR senza saperlo. */
+	else if (c->hardware && c->conf.modo_bitrate >= 0 &&
+	         c->conf.modo_bitrate != modo_bitrate_voluto().ffmpeg)
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "il modo di controllo del bitrate riletto e' %d dopo aver chiesto %s "
+		   "(%d): e' R31, e non si spedisce su un modo che nessuno ha scelto",
+		   c->conf.modo_bitrate, modo_bitrate_voluto().nome,
+		   modo_bitrate_voluto().ffmpeg);
+	else if (c->hardware && tetto_pavimento_mbit &&
+	         (c->conf.banda_punto != tetto_punto() || c->conf.banda_filo != tetto_filo()))
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "il tetto riletto e' %" PRId64 "/%" PRId64 " bit/s e ne erano stati "
+		   "chiesti %" PRId64 "/%" PRId64,
+		   c->conf.banda_punto, c->conf.banda_filo, tetto_punto(), tetto_filo());
+	/* ⛔⛔ IL SERBATOIO, E IL NUMERO SI GIUDICA IN MILLISECONDI — e' il difetto
+	 *      di v1 che nessuno aveva mai nominato: `rc_buffer_size = bit_rate/2`
+	 *      sono **500 ms**, dieci volte il tetto di 50 di `CODER.md` §1-bis.  Un
+	 *      serbatoio e' un fotogramma trattenuto come lo e' `async_depth`, e qui
+	 *      si rifiuta con la stessa fermezza. */
+	else if (c->hardware && tetto_pavimento_mbit && c->conf.banda_serbatoio_ms > 50)
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "il serbatoio del regolatore e' %u ms (%d bit su %" PRId64 " bit/s): "
+		   "CODER.md §1-bis da' 50 ms a TUTTO il pezzo nostro, e un regolatore non "
+		   "puo' prenderseli tutti.  ⚠ In v1 erano 500, e non lo disse nessuno",
+		   c->conf.banda_serbatoio_ms, c->conf.banda_serbatoio, c->conf.banda_filo);
 
 	if (c->conf.perche_no[0]) {
 		c->conf.ha_obbedito = false;
@@ -1878,6 +2452,9 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	c->richiesta = *richiesta;
 	c->modo_corrente = richiesta->modo;
 	c->qualita_corrente = richiesta->qualita;
+	/* ⭐ Fase 9: l'attesa parte dal suo valore di riposo e da li' in poi solo
+	 *    raddoppia (`abbassa_qualita()`), mai il contrario. */
+	c->risalita_attesa = RISALITA_ATTESA;
 
 	const char *nome = richiesta->componente ? richiesta->componente
 	                                         : nome_predefinito(richiesta->codec);
@@ -1947,16 +2524,170 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
 		         c->componente->name);
 
+	/* ⭐ IL PUNTO DI LAVORO COL SUO NUMERO, non col suo nome.  ⛔ Fino al 23
+	 *    agosto 2026 questa riga diceva *«QP costante»* e taceva il **26**: chi
+	 *    rileggeva un banco non poteva sapere da quale scalino era partito, e
+	 *    `QP_HARDWARE` (`figlio.c:4052`) si provava solo ricompilando. */
+	char punto[48];
+	if (richiesta->modo == CODIFICATORE_QUALITA_LOSSLESS)
+		snprintf(punto, sizeof(punto), "senza perdita");
+	else
+		snprintf(punto, sizeof(punto), "%s %d%s", nome_modo(richiesta->modo),
+		         richiesta->qualita,
+		         richiesta->modo == CODIFICATORE_QUALITA_QP ? " costante" : "");
+
 	registro_dice(REG_CODIFICA, "aperto: %s · %ux%u · %s · chiavi %s%s", c->nome,
-	              richiesta->larghezza, richiesta->altezza,
-	              richiesta->modo == CODIFICATORE_QUALITA_LOSSLESS ? "senza perdita"
-	              : richiesta->modo == CODIFICATORE_QUALITA_QP     ? "QP costante"
-	                                                               : "CRF",
+	              richiesta->larghezza, richiesta->altezza, punto,
 	              richiesta->chiavi_ogni ? "periodiche" : "solo su richiesta",
 	              c->conf.promozione_8_a_10
 	                  ? " · ⚠ 8 bit della cattura PROMOSSI a 10: il desiderato di "
 	                    "SPECIFICHE.md §3.1 non passa da questa sorgente"
 	                  : "");
+
+	/*
+	 * ⭐⭐ LA SCALA DELLA DEGRADAZIONE, SCRITTA COI VALORI IN VIGORE.
+	 *
+	 * ⛔ Fino a qui `CRF_PASSO`, `CRF_DI_EMERGENZA` e `RICODIFICHE_MASSIME` non
+	 *    comparivano **in nessuna riga di registro**: la scala si conosceva solo
+	 *    leggendo il sorgente, e tararla voleva dire ricompilare **e** ricordarsi
+	 *    con quale valore era stata misurata la volta prima.  ⚠ Un numero che
+	 *    decide quel che si vede e non compare da nessuna parte e' un numero che
+	 *    prima o poi si misura sbagliato.
+	 *
+	 * ⚠ E si SIMULA `abbassa_qualita()` invece di scrivere la scala a mano: due
+	 *   stesure della stessa regola sono un posto dove divergere in silenzio, e
+	 *   qui divergerebbero proprio il giorno in cui qualcuno tara il passo.
+	 */
+	char scala[256];
+	size_t usati = 0;
+	ModoQualita m = richiesta->modo;
+	int q = richiesta->qualita;
+	/* ⛔ DOVE UN DELTA SI FERMA, dentro la stessa stringa — 23 agosto 2026.  La
+	 *    riga diceva *«un DELTA si abbandona dopo N ricodifiche»* e poi
+	 *    disegnava la scala INTERA: chi leggeva contava gli scalini e credeva
+	 *    che li percorresse tutti.  ⚠ E fino a oggi non ne percorreva N: li
+	 *    percorreva **tutti**, perche' il conto era codice morto (il riquadro in
+	 *    `comprimi_comune()`).  ⇒ Adesso un delta fa `RICODIFICHE_MASSIME`
+	 *    codifiche, e il segno nella scala dice esattamente su quale scalino
+	 *    smette.  ⭐ Una riga che dichiara una scala che il codice non percorre
+	 *    e' peggio di nessuna riga. */
+	bool delta_si_ferma = false;
+	scala[0] = 0;
+	for (unsigned i = 0; i <= RICODIFICHE_MASSIME; i++) {
+		if (i) {
+			if (m == CODIFICATORE_QUALITA_LOSSLESS) {
+				m = CODIFICATORE_QUALITA_CRF;
+				q = CRF_DI_EMERGENZA;
+			} else if (q >= 51) {
+				break; /* il fondo: sotto non c'e' piu' niente */
+			} else {
+				q += CRF_PASSO;
+				if (q > 51)
+					q = 51;
+			}
+		}
+		if (usati + 72 >= sizeof(scala))
+			break;
+		if (i) {
+			/* ⚠ `i == RICODIFICHE_MASSIME` e' il primo scalino che un delta NON
+			 *   prova: ci arriva solo una chiave. */
+			bool solo_chiave = (i == RICODIFICHE_MASSIME);
+			int sep = snprintf(scala + usati, sizeof(scala) - usati, "%s",
+			                   solo_chiave ? " ⟨qui un DELTA si ferma⟩ → " : " → ");
+			if (sep < 0)
+				break;
+			usati += (size_t) sep;
+			if (solo_chiave)
+				delta_si_ferma = true;
+		}
+		int n = (m == CODIFICATORE_QUALITA_LOSSLESS)
+		            ? snprintf(scala + usati, sizeof(scala) - usati, "%s", nome_modo(m))
+		            : snprintf(scala + usati, sizeof(scala) - usati, "%s %d", nome_modo(m), q);
+		if (n < 0)
+			break;
+		usati += (size_t) n;
+	}
+	registro_dice(REG_CODIFICA,
+	              "la scala della degradazione, coi valori in vigore: %s — passo %d "
+	              "(CRF_PASSO), fondo 51, uscita dal senza-perdita a CRF %d "
+	              "(CRF_DI_EMERGENZA).  ⛔ Un DELTA fa %d codifiche in tutto "
+	              "(RICODIFICHE_MASSIME), cioe' %d discese, e ognuna e' PROVATA: %s.  "
+	              "⚠ Una CHIAVE non si abbandona mai (RCP.md §5.2): per lei la scala si "
+	              "percorre fino in fondo.  ⭐ E ogni RIPROVO esce CHIAVE anche se il "
+	              "fotogramma era un delta: la discesa riapre il contesto e butta i "
+	              "riferimenti",
+	              scala, CRF_PASSO, CRF_DI_EMERGENZA, RICODIFICHE_MASSIME,
+	              RICODIFICHE_MASSIME - 1,
+	              delta_si_ferma
+	                  ? "il ⟨⟩ nella scala e' lo scalino su cui smette, e quelli alla "
+	                    "sua destra li vede solo una chiave"
+	                  : "la scala e' piu' corta di cosi', quindi un delta la percorre "
+	                    "TUTTA e, se nemmeno il fondo basta, non parte — il conto delle "
+	                    "codifiche non fa in tempo a mordere");
+
+	/*
+	 * ⛔⭐ E IL VALORE IN VIGORE DELL'INTERRUTTORE SI SCRIVE IN TUTT'E DUE I
+	 *     CASI, acceso **e** spento.  ⚠ Non e' zelo: una risalita spenta e una
+	 *     risalita che non ha mai avuto occasione di scattare producono lo
+	 *     **stesso** registro, cioe' nessuna riga — e chi rilegge un banco non
+	 *     saprebbe quale dei due ha misurato.  E' la ragione per cui `*come`
+	 *     esiste in `chiave_intervallo_ms()` (`webtransport.c`).
+	 */
+	registro_dice(REG_CODIFICA,
+	              risalita_accesa
+	                  ? "⭐ FASE 9: la RISALITA della qualita' e' ACCESA — dopo %u "
+	                    "fotogrammi di fila sotto %u byte si torna su di UNO scalino di "
+	                    "%d, e **mai** oltre il punto di lavoro chiesto (%s).  ⚠ Ogni "
+	                    "gradino, in giu' e in su', finisce nel registro (I1), e a ogni "
+	                    "ricaduta l'attesa RADDOPPIA fino a %u fotogrammi"
+	                  : "la risalita della qualita' e' SPENTA (invariante I6): scesa "
+	                    "una volta, la qualita' resta giu' per tutta la sessione — e "
+	                    "questa riga e' il perche', non «non ha mai dovuto scattare».  "
+	                    "⚠ Si accende con `codificatore_qualita_risale(true)`, e da "
+	                    "spenta questi numeri (%u fotogrammi, %u byte, scalino %d, "
+	                    "punto di lavoro %s, tetto d'attesa %u) non hanno nessun effetto",
+	              RISALITA_ATTESA, RISALITA_MARGINE, CRF_PASSO, punto, RISALITA_ATTESA_MAX);
+
+	/*
+	 * ⛔⭐ E ANCHE IL TETTO DI BANDA SI SCRIVE IN TUTT'E DUE I CASI, per la
+	 *     stessa ragione della risalita: un tetto spento e un tetto che non ha
+	 *     mai avuto occasione di mordere darebbero lo **stesso** registro, e chi
+	 *     rilegge un banco non saprebbe quale dei due ha misurato.
+	 *
+	 * ⚠ Vale solo in hardware: in software il ripiego resta a CRF, e dirgli
+	 *   «tetto acceso» sarebbe una misura sotto l'etichetta di un'altra.
+	 */
+	if (!c->hardware)
+		registro_dice(REG_CODIFICA,
+		              "il tetto di banda non tocca il ripiego in software: «%s» va a "
+		              "%s, e il controllo del bitrate di fase 9 e' del solo hardware",
+		              c->componente->name, punto);
+	else if (tetto_pavimento_mbit)
+		registro_dice(REG_CODIFICA,
+		              "⭐ FASE 9: il TETTO DI BANDA e' ACCESO su un pavimento di %u "
+		              "Mbit/s — modo %s (chiesto per nome, mai `auto`), punto di lavoro "
+		              "%" PRId64 " kbit/s, filo %" PRId64 " kbit/s (⛔ MAI uguali: e' "
+		              "R31), serbatoio %d bit = **%u ms** (CODER.md §1-bis ne concede 50 "
+		              "a TUTTO il pezzo nostro; v1 ne prendeva 500 e non lo disse "
+		              "nessuno).  ⚠ Il QP %d resta e sotto QVBR e' il fattore di "
+		              "qualita'.  ⭐ Che abbia obbedito lo dicono i BYTE, riga «banda del "
+		              "video» ogni %u s",
+		              tetto_pavimento_mbit, modo_bitrate_voluto().nome,
+		              tetto_punto() / 1000, tetto_filo() / 1000, tetto_serbatoio_bit(),
+		              (unsigned) ((uint64_t) tetto_serbatoio_bit() * 1000 / tetto_filo()),
+		              c->qualita_corrente, BANDA_FINESTRA_US / 1000000u);
+	else
+		registro_dice(REG_CODIFICA,
+		              "il tetto di banda e' SPENTO (invariante I6): modo %s, QP %d "
+		              "fermo, e ⛔ **nessuno dice di no alla banda** — `[M]` 23 agosto "
+		              "2026 un film con la grana a schermo intero chiede 58,7 Mbit/s, "
+		              "cioe' il 293 %% del pavimento di 20.  ⚠ E questa riga e' il "
+		              "perche', non «non ha mai dovuto mordere».  Si accende con "
+		              "`codificatore_tetto_banda(20)`, e da spento i suoi numeri (filo "
+		              "all'%u %% del pavimento, punto al %u %% del filo, serbatoio %u "
+		              "ms) non hanno nessun effetto",
+		              modo_bitrate_voluto().nome, c->qualita_corrente,
+		              TETTO_QUOTA_FILO, TETTO_QUOTA_PUNTO, TETTO_VBV_MS);
 	return c;
 }
 
@@ -2018,6 +2749,39 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 		return false;
 	}
 
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔ NON CON UN PACCHETTO IN MANO — e' l'UNICO posto del file in cui
+	 *      `chiudi_contesto()` poteva arrivarci senza guardia.
+	 *
+	 * `chiudi_contesto()` fa `av_packet_free()`: **libera**, non sgancia.  E
+	 * `comprimi_comune()` consegna `fuori->dati = c->pacchetto->data`, cioe' un
+	 * puntatore DENTRO quel pacchetto, valido fino a `codificatore_rilascia()`
+	 * (`codificatore.h:439`).  ⇒ Un chiamante che ridimensionasse tenendo ancora
+	 * il fotogramma leggerebbe memoria liberata, ed e' **la stessa forma** del
+	 * difetto che il 23 agosto 2026 ha ucciso il server nel trasporto: sotto una
+	 * certa dimensione la memoria liberata resta leggibile, e il guasto esce
+	 * altrove, molto dopo.
+	 *
+	 * ⭐ Oggi non e' raggiungibile — `figlio.c:7426` ridimensiona nel ciclo
+	 *   principale, e `codifica_e_manda()` rilascia a `figlio.c:4905` prima di
+	 *   tornare — ma «non e' raggiungibile» era vero anche per gli altri due, e
+	 *   qui non costava niente renderlo **impossibile** invece che fortunato.
+	 *
+	 * ⚠ Si RIFIUTA invece di fare `av_packet_unref()` di nascosto: l'unref
+	 *   lascerebbe comunque penzolare il puntatore del chiamante, e in piu' in
+	 *   silenzio.  Rifiutando, il pacchetto resta vivo e valido e chi chiama
+	 *   riceve un errore che lo nomina.
+	 * ═══════════════════════════════════════════════════════════════════════ */
+	if (c->pacchetto_in_mano) {
+		di(errore, errore_byte,
+		   "⛔ ridimensiona a %ux%u col fotogramma precedente ANCORA IN MANO: "
+		   "riaprire adesso libererebbe i byte che il chiamante sta leggendo.  "
+		   "⇒ `codificatore_rilascia()` PRIMA di ridimensionare",
+		   larghezza, altezza);
+		registro_dice(REG_CODIFICA, "%s", errore);
+		return false;
+	}
+
 	/* ⛔ Si riapre davvero.  Un codificatore aperto a una misura e alimentato a
 	 *    un'altra non protesta: taglia o riempie, e il difetto si vede solo
 	 *    nell'immagine.
@@ -2028,6 +2792,20 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	c->richiesta.altezza = altezza;
 	c->prima_codifica_fatta = false;
 	c->conf.letto_dal_flusso = false;
+	/* ⛔ E IL CONTO DELLA TRANQUILLITA' RIPARTE DA ZERO: 120 fotogrammi comodi a
+	 *    1280x720 non sono nessuna prova che ci sia spazio a 7680x4320.  ⚠ Senza
+	 *    questa riga il primo fotogramma alla tela nuova farebbe scattare una
+	 *    risalita **non misurata**, che e' precisamente quel che I1 vieta.
+	 *    ⭐ `qualita_fallita` invece si CONSERVA: dimenticarlo allargherebbe le
+	 *      maglie, e il verso in cui sbagliare e' la prudenza. */
+	c->sotto_margine = 0;
+	/* ⛔ E anche la finestra del terzo testimone riparte: 10 s di byte a
+	 *    1280x720 e 10 s a 7680x4320 sotto la stessa riga sarebbero due misure
+	 *    con la stessa etichetta. */
+	c->banda_t0_us = 0;
+	c->banda_byte = 0;
+	c->banda_fotogrammi = 0;
+	c->banda_massimo = 0;
 
 	if (apri_contesto(c, errore, errore_byte) < 0)
 		return false;
@@ -2640,12 +3418,45 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 	return true;
 }
 
-/* Riapre a qualita' inferiore, per il tetto dei 16 MiB. */
-static bool abbassa_qualita(Codificatore *c)
+/*
+ * Riapre a qualita' inferiore, per il tetto dei 16 MiB.
+ *
+ * ⭐ `prodotti` sono i BYTE che hanno fatto scattare la discesa, e non sono un
+ *    ornamento della riga di registro: sono la **prova**.  L'invariante I1
+ *    pretende che ogni discesa nasca da una misura e non da un sospetto, e
+ *    l'unico modo di verificarlo **da fuori**, senza fidarsi del codice, e'
+ *    trovare la misura scritta accanto alla soglia che ha superato.  ⇒ Una riga
+ *    in cui i byte fossero **sotto** il tetto sarebbe una discesa per prudenza,
+ *    e quella riga la denuncerebbe da sola.
+ *
+ * ⚠ Il chiamante li deve leggere PRIMA di `av_packet_unref()`: dopo, il numero
+ *   non c'e' piu' e la riga direbbe zero.
+ */
+static bool abbassa_qualita(Codificatore *c, uint32_t prodotti)
 {
 	char errore[256] = { 0 };
 	int prima = c->qualita_corrente;
 	ModoQualita modo_prima = c->modo_corrente;
+
+	/* ⛔ LA RICADUTA SI PAGA PRIMA DI SAPERE SE LA DISCESA RIESCE: se avevamo
+	 *    appena risalito e il tetto morde di nuovo, l'attesa raddoppia.  ⚠ Senza
+	 *    questo, una scena al confine farebbe sbattere la porta ogni due secondi
+	 *    a 91-108 ms il colpo — e il prezzo lo pagherebbe il RITMO, cioe'
+	 *    proprio l'invariante che questa cura dice di servire. */
+	c->sotto_margine = 0;
+	if (c->risalito_da_poco) {
+		uint32_t era = c->risalita_attesa;
+		c->risalita_attesa = era >= RISALITA_ATTESA_MAX / 2u ? RISALITA_ATTESA_MAX
+		                                                     : era * 2u;
+		c->risalito_da_poco = false;
+		registro_dice(REG_CODIFICA,
+		              "⚠ RICADUTA: il tetto ha morso subito dopo una risalita ⇒ la "
+		              "prossima si aspetta %u fotogrammi invece di %u.  ⛔ E' la difesa "
+		              "contro lo SBATTIMENTO: ogni giro costa una riapertura e una "
+		              "chiave, [M] 91-108 ms in hardware e 1,8-3,3 s in software",
+		              c->risalita_attesa, era);
+	}
+
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
 		/* ⚠ Il senza perdita esiste solo in software: il ripiego resta CRF. */
 		c->modo_corrente = CODIFICATORE_QUALITA_CRF;
@@ -2673,6 +3484,130 @@ static bool abbassa_qualita(Codificatore *c)
 		registro_dice(REG_CODIFICA, "⛔ i fotogrammi non si sono riaperti: %s", errore);
 		return false;
 	}
+
+	/*
+	 * ⛔⛔ LA DISCESA SI DICHIARA — e fino al 23 agosto 2026 NON si dichiarava.
+	 *
+	 * `abbassa_qualita()` riusciva **in silenzio**: l'unica riga che c'era
+	 * parlava delle CHIAVI, e per un delta la scala scendeva di tre scalini
+	 * senza che una sola riga lo dicesse.  ⚠ L'invariante I1 pretende che *ogni
+	 * discesa sia dichiarata nel registro*, e una discesa muta la rende non
+	 * verificabile da fuori.
+	 *
+	 * ⭐ E ACCANTO ALLA SOGLIA C'E' LA MISURA CHE L'HA SUPERATA.  La percentuale
+	 *    e' la prova: **sopra 100 la discesa e' misurata; a 100 o sotto sarebbe
+	 *    prudenza**, cioe' quel che I1 vieta — e la riga lo direbbe da sola,
+	 *    senza che nessuno debba rileggere questo file.
+	 *
+	 * ⚠ Si scrive al CAMBIO DI STATO e non a ogni fotogramma: una riga a 30/s e'
+	 *   il difetto dei 30,8 GB di registro del 14 agosto (`figlio.c`).
+	 */
+	registro_dice(REG_CODIFICA,
+	              "⛔ QUALITA' GIU': %s %d → %s %d — il fotogramma ha fatto %u byte "
+	              "contro i %u del tetto (RCP.md §6.2), cioe' il %u %% della soglia.  "
+	              "⚠ Se questa percentuale non fosse SOPRA il 100 la discesa sarebbe "
+	              "stata per prudenza, e I1 la vieta: la misura e' scritta qui perche' "
+	              "si possa verificarlo da fuori senza fidarsi del codice",
+	              nome_modo(modo_prima), prima, nome_modo(c->modo_corrente),
+	              c->qualita_corrente, prodotti, TETTO_FOTOGRAMMA,
+	              (unsigned) (((uint64_t) prodotti * 100u) / TETTO_FOTOGRAMMA));
+	return true;
+}
+
+/*
+ * ⭐⭐ UN SOLO SCALINO VERSO LA QUALITA' CHIESTA, E NON OLTRE — fase 9.
+ *
+ * ⛔ NON TORNA AL SENZA-PERDITA: `abbassa_qualita()` esce da LOSSLESS una volta
+ *    sola e per sempre, perche' rientrarci vorrebbe dire cambiare **grandezza** a
+ *    meta' sessione — la stessa ragione per cui il modo non cambia in discesa.
+ *
+ * ⛔⛔ E NON SI CHIAMA CON UN PACCHETTO IN MANO, ed e' il vincolo che decide
+ *      DOVE sta questa funzione: `chiudi_contesto()` fa `av_packet_free()` —
+ *      **libera** il pacchetto, non lo sgancia soltanto — e dopo il `break` di
+ *      `comprimi_comune()` il `fuori->dati` del chiamante punta li' dentro.
+ *      ⇒ Si CONTA alla consegna e si RISALE all'ingresso del fotogramma dopo.
+ *      ⭐ Effetto secondario buono: il costo della riapertura cade **fra** due
+ *        fotogrammi invece che in mezzo alla consegna di uno.
+ *
+ * Torna `false` solo se il contesto e' rimasto rotto: risalire e' facoltativo,
+ * e una cura che uccide la sessione quando fallisce e' peggio del difetto.
+ */
+static bool risali_qualita(Codificatore *c)
+{
+	char errore[256] = { 0 };
+
+	if (!risalita_accesa)
+		return true;                        /* ⛔ invariante I6: spenta di suo */
+	if (c->pacchetto_in_mano)
+		return true;                        /* ⛔ il vincolo qui sopra */
+	if (c->modo_corrente != c->richiesta.modo)
+		return true;                        /* usciti da LOSSLESS: non ci si rientra */
+	if (c->qualita_corrente <= c->richiesta.qualita)
+		return true;                        /* gia' al punto di lavoro chiesto */
+	if (c->sotto_margine < c->risalita_attesa)
+		return true;                        /* non ancora abbastanza tranquilli */
+
+	int prima = c->qualita_corrente;
+	int dopo = prima - CRF_PASSO;
+	/* ⛔ IL PAVIMENTO E' QUEL CHE E' STATO CHIESTO, e non serve un campo per
+	 *    ricordarlo: `c->richiesta` conserva la domanda intatta. */
+	if (dopo < c->richiesta.qualita)
+		dopo = c->richiesta.qualita;
+	/* ⛔ E non si rimette il piede sullo scalino su cui il tetto ha gia' morso
+	 *    finche' non e' passata il DOPPIO dell'attesa: quello non e' un sospetto,
+	 *    e' un numero MISURATO su questo contenuto. */
+	if (c->qualita_fallita && dopo <= c->qualita_fallita
+	    && c->sotto_margine < c->risalita_attesa * 2u)
+		return true;
+
+	uint32_t calmi = c->sotto_margine; /* ⚠ il numero VERO, non la soglia */
+	c->qualita_corrente = dopo;
+	c->sotto_margine = 0;
+	chiudi_contesto(c);
+	if (apri_contesto(c, errore, sizeof(errore)) < 0
+	    || apri_fotogrammi(c, errore, sizeof(errore)) < 0) {
+		/* ⚠ Risalire e' FACOLTATIVO: se il contesto non si riapre al valore
+		 *   nuovo si torna a quello che funzionava, e la sessione continua
+		 *   sgranata invece di morire. */
+		registro_dice(REG_CODIFICA,
+		              "⛔ non si e' riaperto risalendo a %s %d (%s): si torna a %d",
+		              nome_modo(c->modo_corrente), dopo, errore, prima);
+		c->qualita_corrente = prima;
+		chiudi_contesto(c);
+		if (apri_contesto(c, errore, sizeof(errore)) < 0
+		    || apri_fotogrammi(c, errore, sizeof(errore)) < 0) {
+			registro_dice(REG_CODIFICA,
+			              "⛔⛔ e nemmeno a %s %d: il contesto e' chiuso e non si "
+			              "spedisce piu' niente — %s",
+			              nome_modo(c->modo_corrente), prima, errore);
+			c->conf.ha_obbedito = false;
+			di(c->conf.perche_no, sizeof(c->conf.perche_no),
+			   "il contesto non si e' riaperto dopo un tentativo di risalita: %s",
+			   errore);
+			return false;
+		}
+		c->prossimo_chiave = true;
+		c->risalita_attesa = c->risalita_attesa >= RISALITA_ATTESA_MAX / 2u
+		                         ? RISALITA_ATTESA_MAX
+		                         : c->risalita_attesa * 2u;
+		return true;
+	}
+
+	c->risalito_da_poco = true;
+	/* ⛔ Contesto nuovo, nessun passato: `RCP.md` §5.2 vuole una chiave vera.
+	 *    `apri_contesto()` l'ha gia' preteso; la riga resta perche' la regola sta
+	 *    scritta qui, non altrove. */
+	c->prossimo_chiave = true;
+	registro_dice(REG_CODIFICA,
+	              "⭐ QUALITA' SU: %s %d → %d dopo %u fotogrammi di fila sotto %u byte "
+	              "(un ottavo del tetto), pavimento chiesto %d.  ⚠ Costa una riapertura "
+	              "e una CHIAVE — [M] 91-108 ms in hardware, 1,8-3,3 s in software — e "
+	              "per questo si sale di UNO scalino per volta e si aspetta il doppio a "
+	              "ogni ricaduta.  ⭐ E' DECISIONI.md §3.3 «mai sgranare»: senza questa "
+	              "riga un solo fotogramma d'eccezione lasciava la sessione sgranata "
+	              "per ore",
+	              nome_modo(c->modo_corrente), prima, dopo, calmi, RISALITA_MARGINE,
+	              c->richiesta.qualita);
 	return true;
 }
 
@@ -2731,6 +3666,93 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		registro_dice(REG_CODIFICA, "riaperto dopo lo scarico: il prossimo e' una chiave");
 	}
 	memset(fuori, 0, sizeof(*fuori));
+
+	/* ⭐ LA RISALITA STA QUI, PRIMA DI CODIFICARE, e non dopo la consegna: dopo
+	 *    il `break` il pacchetto e' in mano del chiamante e `chiudi_contesto()`
+	 *    lo LIBERA.  ⚠ Il conto invece si tiene alla consegna, piu' sotto: e' li'
+	 *    che si sa quanto e' venuto grosso. */
+	if (!risali_qualita(c))
+		return false;
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔ CHI E' QUESTO FOTOGRAMMA — E SI DECIDE **QUI**, PRIMA DELLA PRIMA
+	 *      DISCESA, non dentro il ciclo.
+	 *
+	 * ⛔ IL DIFETTO CHE QUESTA RIGA CURA (23 agosto 2026, fase 9).  Il conto
+	 *    delle ricodifiche leggeva `c->prossimo_chiave` **dentro** il ciclo, e
+	 *    `abbassa_qualita()` chiama `apri_contesto()`, che a `:2275` fa
+	 *    `c->prossimo_chiave = true` — *«dopo ogni apertura il primo e' una
+	 *    chiave»*, ed e' giusto che lo faccia: un contesto nuovo non ha
+	 *    riferimenti, e un delta dopo una riapertura sarebbe indecodificabile.
+	 *    ⇒ Dalla PRIMA discesa in poi `c->prossimo_chiave` era **sempre vero**,
+	 *      quindi `!c->prossimo_chiave && tentativo + 1 >= RICODIFICHE_MASSIME`
+	 *      era **sempre falso**: il ramo dell'abbandono del delta era **codice
+	 *      morto**, e `RICODIFICHE_MASSIME` non ha mai fermato un delta in vita
+	 *      sua.  Un delta sopra il tetto percorreva la scala **fino al fondo**,
+	 *      e usciva solo per il `break` (ci sta) o per «nemmeno in fondo alla
+	 *      scala».  ⚠ La riga d'avvio intanto dichiarava *«un DELTA si abbandona
+	 *      dopo 3 ricodifiche»*, cioe' una cosa che non succedeva mai.
+	 *
+	 * ⭐ E la stessa contaminazione rendeva bugiarda la riga «CHIAVE sopra il
+	 *   tetto»: la stampava anche per un fotogramma nato delta.
+	 *
+	 * ⚠ Il valore si legge DOPO `risali_qualita()` apposta: se la risalita ha
+	 *   riaperto il contesto, questo fotogramma **e' davvero** una chiave, e la
+	 *   scala gli spetta tutta.
+	 *
+	 * ───────────────────────────────────────────────────────────────────────
+	 * ⭐ LA TESTIMONIANZA CHE IL RAMO ERA MORTO, e non e' un ragionamento mio:
+	 *   `fasi/08-l-anello.md:2856` lo mette fra i `[?]` — *«il ramo "delta
+	 *   abbandonato": non percorso nemmeno col guasto innestato»* — e a
+	 *   `:2810-2812`, col tetto abbassato apposta, il registro dice **«CHIAVE
+	 *   sopra il tetto»** al tentativo 2 e al 3.  ⚠ E' la contaminazione, vista
+	 *   da fuori: chi rilegge quel banco stava guardando l'etichetta sbagliata.
+	 *
+	 * ⛔⛔ LA PREVISIONE FALSIFICABILE — `[?]`, e il ferro e' la Intel UHD 730
+	 *      integrata, non una scheda potente.  I numeri `[M]` sono dell'agente D,
+	 *      22 agosto 2026, 7680x4320 con contenuto quasi incomprimibile:
+	 *      chiave a QP 38 = 16,654 MiB · a QP 44 = 11,056 MiB · a QP 51 =
+	 *      1,771 MiB; ogni codifica+riapertura 91-108 ms in hardware.
+	 *
+	 *   CASO 1 — un delta che sfonda a QP 26 ma ENTRA a 44 (il caso che i numeri
+	 *   `[M]` rendono probabile): **prima e dopo sono identici**.  Tre codifiche
+	 *   (26 delta, 35 chiave, 44 chiave), due riaperture, ~450-540 ms, consegnato
+	 *   come CHIAVE a QP 44.  ⛔ Il conto non morde: il terzo tentativo entra.
+	 *
+	 *   CASO 2 — un delta che sfonda **anche a 44**, ed e' l'unico caso in cui la
+	 *   cura si vede:
+	 *     PRIMA  4 codifiche, 3 riaperture, ~640-750 ms, consegnato a QP 51, e
+	 *            la sessione resta a 51.
+	 *     DOPO   3 codifiche, 2 riaperture, ~450-540 ms — **~190-215 ms in
+	 *            meno** — il fotogramma NON parte, e la sessione resta a **44**.
+	 *            Il successivo e' una CHIAVE a 44 (la riapertura l'ha imposta), e
+	 *            `[M]` a 44 una chiave 8K fa 11,056 MiB: **entra**.
+	 *   ⇒ Si perde UN fotogramma e si guadagna UNO scalino di qualita' sulla
+	 *     sessione, piu' una riapertura.  ⚠ E lo scalino guadagnato la risalita
+	 *     non deve ririsalirlo: sono 120 fotogrammi (~2 s a 60/s) di sgranato in
+	 *     meno per ogni volta che il tetto morde.
+	 *
+	 *   SE LA CURA FOSSE SBAGLIATA, si vedrebbe cosi':
+	 *     a) *«delta abbandonato dopo 1 (o 2) codifiche»* nel registro ⇒ si
+	 *        abbandona PRIMA, ed e' una perdita.  ⛔ Non me l'aspetto: la soglia
+	 *        e' `tentativo + 1 >= RICODIFICHE_MASSIME` e `chiave_chiesta` e'
+	 *        falso **solo** per un fotogramma nato delta.
+	 *     b) *«delta abbandonato»* e poi il fotogramma dopo **non** e' una
+	 *        chiave ⇒ il client resta senza passato.  ⛔ Non puo' succedere:
+	 *        ogni discesa passa da `apri_contesto()`, che a `:2275` impone la
+	 *        chiave — e se un domani lo togliesse, e' QUESTO il sintomo da
+	 *        cercare.
+	 *     c) *«delta abbandonato»* che si ripete a ogni fotogramma per secondi ⇒
+	 *        e' una chiave per ogni delta abbandonato, cioe' **la spirale** che
+	 *        `RCP.md:1284-1286` nomina.  ⚠ Il rimedio non e' qui: e' calare i
+	 *        fotogrammi (`SPECIFICHE.md` §8.3) o il tetto di banda.  ⛔ Questa
+	 *        cura non la crea ne' la toglie — la spirale c'era gia', perche' la
+	 *        riapertura imponeva la chiave anche prima.
+	 *   ⚠ E il guadagno inatteso che qualcuno potrebbe sperare — «il delta passa
+	 *     invece di essere abbandonato» — **non arrivera'**: quando il conto
+	 *     morde, quel fotogramma ha gia' sfondato il tetto tre volte.
+	 * ═══════════════════════════════════════════════════════════════════════ */
+	const bool chiave_chiesta = c->prossimo_chiave;
 
 	for (uint32_t tentativo = 0;; tentativo++) {
 		uint64_t us_conv = 0, us_carico = 0;
@@ -2800,6 +3822,9 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		/* ───────────────────────────────────────────────────────────────────
 		 * ⛔ IL TETTO DEI 16 MiB — `RCP.md` §6.2, e vincola CHI SPEDISCE. */
 		if ((uint32_t) c->pacchetto->size > TETTO_FOTOGRAMMA) {
+			/* ⭐ La misura si legge PRIMA dell'`unref`, o la riga della discesa
+			 *    direbbe zero: e' la prova che la discesa e' misurata (I1). */
+			uint32_t prodotti = (uint32_t) c->pacchetto->size;
 			/* ⚠ Il tetto nel messaggio si STAMPA, non si scrive a mano: una
 			 *   riga di registro che dicesse «16 MiB» mentre la costante ne
 			 *   dice altri manderebbe la caccia dalla parte sbagliata. */
@@ -2809,6 +3834,13 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			              c->pacchetto->size, TETTO_FOTOGRAMMA, tentativo + 1);
 			av_packet_unref(c->pacchetto);
 			c->pacchetto_in_mano = false;
+
+			/* ⛔ LO SCALINO SU CUI IL TETTO HA MORSO e' quello del PRIMO
+			 *    tentativo: gli altri sono discese che una misura contro di loro
+			 *    non ce l'hanno ancora.  ⚠ Serve alla risalita, che su quello
+			 *    solo aspetta il doppio prima di rimetterci il piede. */
+			if (tentativo == 0)
+				c->qualita_fallita = c->qualita_corrente;
 
 			/* ═══════════════════════════════════════════════════════════════
 			 * ⛔⛔ E SU UNA **CHIAVE** NON CI SI ARRENDE — `RCP.md` §5.2, e
@@ -2836,7 +3868,48 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			 *   immagine brutta dura un fotogramma; un client rotto dura tutta
 			 *   la sessione.
 			 * ═══════════════════════════════════════════════════════════════ */
-			if (!abbassa_qualita(c)) {
+			/* ═══════════════════════════════════════════════════════════════
+			 * ⛔ IL CONTO DEI TENTATIVI VA **PRIMA** DELLA DISCESA, e non dopo.
+			 *
+			 * ⭐ La regola in una riga: **non si applica uno scalino che non si
+			 *   provera'**.  Ogni discesa richiude e riapre il contesto — `[M]`
+			 *   91-108 ms in hardware, 1,8-3,3 s in software — e pagarla per un
+			 *   fotogramma che si sta per abbandonare e' tempo tolto al RITMO
+			 *   senza nemmeno una misura in cambio.  ⚠ Il valore resta poi
+			 *   addosso alla sessione: l'immagine uscirebbe piu' brutta per uno
+			 *   scalino che nessuno ha mai provato, e la risalita dovrebbe
+			 *   ririsalirlo a 120 fotogrammi il gradino.
+			 *
+			 * ⇒ Un DELTA fa `RICODIFICHE_MASSIME` **codifiche** in tutto, cioe'
+			 *   `RICODIFICHE_MASSIME - 1` discese, e ognuna di quelle e'
+			 *   **provata**.
+			 *
+			 * ⛔ E ABBANDONARE QUI NON ROMPE §5.2, e la ragione e' un invariante
+			 *    che si puo' controllare: con `RICODIFICHE_MASSIME >= 2`
+			 *    l'abbandono arriva **dopo almeno una riapertura**, e ogni
+			 *    riapertura lascia `c->prossimo_chiave = true` (`:2275`).  ⇒ Il
+			 *    fotogramma dopo e' una CHIAVE, che e' esattamente quel che §5.2
+			 *    pretende dopo un delta abbandonato (*«il server DEVE mandare una
+			 *    chiave appena puo'»*).  ⚠ E se un giorno `RICODIFICHE_MASSIME`
+			 *    scendesse a 1, l'abbandono avverrebbe **senza** riapertura: li'
+			 *    il contesto e' intatto, il client ha ancora il suo passato, e va
+			 *    bene lo stesso.  I due casi sono coperti, e sono gli unici due.
+			 * ═══════════════════════════════════════════════════════════════ */
+			if (!chiave_chiesta && tentativo + 1 >= RICODIFICHE_MASSIME) {
+				registro_dice(REG_CODIFICA,
+				              "⚠ delta abbandonato dopo %u codifiche (RICODIFICHE_"
+				              "MASSIME) e %u discese PROVATE: a %s %d sta ancora sopra "
+				              "i %u byte.  ⭐ Non e' una chiave, quindi chi guarda ha "
+				              "ancora il suo passato — e il prossimo fotogramma e' "
+				              "comunque una CHIAVE (§5.2), perche' le discese hanno "
+				              "riaperto il contesto.  ⛔ Non si scende di un altro "
+				              "scalino: sarebbe applicato e mai provato",
+				              tentativo + 1, tentativo,
+				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
+				              c->qualita_corrente, TETTO_FOTOGRAMMA);
+				return false;
+			}
+			if (!abbassa_qualita(c, prodotti)) {
 				/* ⛔ Il fondo della scala: qui non e' «mi arrendo per un conto
 				 *    di tentativi», e' «non c'e' piu' niente da abbassare».  E'
 				 *    l'unico caso in cui una chiave non parte, e la riga dice
@@ -2850,30 +3923,60 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 				              c->qualita_corrente, TETTO_FOTOGRAMMA, tentativo + 1);
 				return false;
 			}
-			if (!c->prossimo_chiave && tentativo + 1 >= RICODIFICHE_MASSIME) {
-				/* ⚠ Un DELTA si abbandona, e va bene: chi lo perde ha ancora il
-				 *   suo passato e il prossimo delta lo raggiunge.  ⛔ Il conto
-				 *   dei tentativi vale QUI e solo qui. */
-				registro_dice(REG_CODIFICA,
-				              "⚠ delta abbandonato dopo %u ricodifiche: sta ancora sopra "
-				              "i %u byte.  ⭐ Non e' una chiave, quindi chi guarda ha "
-				              "ancora il suo passato",
-				              tentativo + 1, TETTO_FOTOGRAMMA);
-				return false;
-			}
-			if (c->prossimo_chiave)
-				registro_dice(REG_CODIFICA,
-				              "⚠ CHIAVE sopra il tetto: scendo a %s %d e RIPROVO "
-				              "(tentativo %u).  ⛔ Una chiave non si abbandona (§5.2): "
-				              "l'immagine uscira' piu' brutta, e questa riga e' la "
-				              "dichiarazione.  ⭐ `[M]` in fondo alla scala (51) una "
-				              "chiave 8K vale 1,771 MiB, cioe' il 10,6 %% del tetto",
-				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
-				              c->qualita_corrente, tentativo + 2);
+			/* ⚠ E IL RIPROVO E' UNA CHIAVE ANCHE SE IL FOTOGRAMMA ERA UN DELTA:
+			 *   `apri_contesto()` ha buttato i riferimenti, e un delta senza
+			 *   passato non lo decodifica nessuno.  ⛔ La riga lo dice invece di
+			 *   chiamarli tutt'e due «CHIAVE», che e' quel che faceva finche' il
+			 *   conto leggeva `c->prossimo_chiave` contaminato dalla riapertura. */
+			/* ⚠ Il tetto delle codifiche si STAMPA dalla costante, non si scrive
+			 *   a mano: e' la stessa regola della riga della scala all'avvio. */
+			char quante[72];
+			if (chiave_chiesta)
+				snprintf(quante, sizeof(quante),
+				         "quante ne ha la scala — una chiave non si abbandona");
+			else
+				snprintf(quante, sizeof(quante), "%d (RICODIFICHE_MASSIME)",
+				         RICODIFICHE_MASSIME);
+			registro_dice(REG_CODIFICA,
+			              "⚠ %s sopra il tetto: scendo a %s %d e RIPROVO (codifica %u di "
+			              "%s).  ⛔ Una chiave non si abbandona (§5.2): l'immagine "
+			              "uscira' piu' brutta, e questa riga e' la dichiarazione.  "
+			              "⭐ `[M]` in fondo alla scala (51) una chiave 8K vale 1,771 "
+			              "MiB, cioe' il 10,6 %% del tetto",
+			              chiave_chiesta ? "CHIAVE"
+			                             : "delta (e il riprovo sara' una CHIAVE: il "
+			                               "contesto e' nuovo e non ha piu' un passato)",
+			              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
+			              c->qualita_corrente, tentativo + 2, quante);
 			fuori->ricodifiche = tentativo + 1;
 			continue;
 		}
 		break;
+	}
+
+	/*
+	 * ⭐ IL CONTO DELLA TRANQUILLITA' — e si conta il fotogramma **comodamente**
+	 *    sotto il tetto, non il fotogramma «sotto»: uno che lo sfiora non e'
+	 *    nessuna prova che ci sia spazio per uno scalino di qualita' in piu'.
+	 *    ⛔ E' qui che si spegne lo SBATTIMENTO: una scena al 94,9 % del tetto
+	 *    (`[M]` grana `alls=60` a 7680x4320) non fa avanzare questo contatore
+	 *    **nemmeno di uno**, quindi non si risale mai e non c'e' niente che
+	 *    sbatta.
+	 *
+	 * ⚠ Si conta quel che il codificatore ha PRODOTTO, non quel che parte: la
+	 *   grandezza che decide e' «a questa qualita' il fotogramma ci sta», e non
+	 *   dipende da cosa ne faccia poi chi spedisce.
+	 */
+	if ((uint32_t) c->pacchetto->size <= RISALITA_MARGINE) {
+		if (c->sotto_margine < UINT32_MAX)
+			c->sotto_margine++;
+		/* La risalita ha retto fino al punto di lavoro chiesto: la prossima
+		 * morsicata non e' colpa sua, e l'attesa non raddoppia. */
+		if (c->risalito_da_poco && c->qualita_corrente <= c->richiesta.qualita
+		    && c->sotto_margine >= c->risalita_attesa)
+			c->risalito_da_poco = false;
+	} else {
+		c->sotto_margine = 0;
 	}
 
 	bool chiave = false;
@@ -2896,6 +3999,63 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		return false;
 	}
 
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⭐⭐⭐ IL TERZO TESTIMONE: I BYTE CHE ESCONO DAVVERO
+	 *
+	 * ⛔ Perche' esiste, in una riga: **in v1 i primi due testimoni sarebbero
+	 *    stati verdi.**  `bit_rate` e `rc_max_rate` erano esattamente i numeri
+	 *    chiesti e nessuno aveva chiesto CBR — il CBR era **il nome che il
+	 *    driver dava a quella coppia di numeri**.  ⇒ A dirlo fu solo la
+	 *    bolletta, e questa riga e' la bolletta stampata **prima** che arrivi.
+	 *
+	 * ⭐ E il numero che smaschera il CBR e' quello a scena **facile**: `[M]` su
+	 *   questo portatile, a scena ferma, CBR **15,98 Mbit/s** contro CQP
+	 *   **0,193** — **83 volte**.  A scena dura i modi regolati stanno tutti
+	 *   entro l'1 % l'uno dall'altro e non si distinguerebbe niente.
+	 *   ⚠ Sul prodotto la scena davvero ferma da' **zero fotogrammi** (`[M]`
+	 *   §3.8: 0,00 fot/s), quindi la finestra non si chiude e la riga non esce:
+	 *   giusto cosi', non c'e' niente da dichiarare.  La scena che fa da
+	 *   controllo e' **il desktop vero**, che si muove e costa l'1 %.
+	 *
+	 * ⚠ Si contano i byte che **partono**, dopo le ricodifiche e dopo i
+	 *   controlli di forma: e' la grandezza che paga chi guarda, non quella che
+	 *   il codificatore ha prodotto per strada.
+	 * ═══════════════════════════════════════════════════════════════════════ */
+	{
+		uint64_t adesso = adesso_us();
+		if (!c->banda_t0_us)
+			c->banda_t0_us = adesso;
+		c->banda_byte += (uint64_t) c->pacchetto->size;
+		c->banda_fotogrammi++;
+		if ((uint32_t) c->pacchetto->size > c->banda_massimo)
+			c->banda_massimo = (uint32_t) c->pacchetto->size;
+		uint64_t durata = adesso - c->banda_t0_us;
+		if (durata >= BANDA_FINESTRA_US) {
+			uint64_t kbit = c->banda_byte * 8u * 1000u / durata; /* µs ⇒ kbit/s */
+			char quota[128];
+			if (tetto_pavimento_mbit)
+				snprintf(quota, sizeof(quota),
+				         " · TETTO ACCESO: filo %" PRId64 " kbit/s, ne usa il %u %%",
+				         tetto_filo() / 1000,
+				         (unsigned) (kbit * 100u / (uint64_t) (tetto_filo() / 1000)));
+			else
+				snprintf(quota, sizeof(quota),
+				         " · tetto SPENTO (QP %d fermo): ⛔ nessuno gli dice di no",
+				         c->qualita_corrente);
+			registro_dice(REG_CODIFICA,
+			              "banda del video: %" PRIu64 " kbit/s su %" PRIu64 " ms — %u "
+			              "fotogrammi (%" PRIu64 " byte, il piu' grosso %u), modo %s%s.  "
+			              "⭐ E' il TERZO testimone: quel che il driver ha fatto DAVVERO, "
+			              "non quel che ha detto",
+			              kbit, durata / 1000u, c->banda_fotogrammi, c->banda_byte,
+			              c->banda_massimo, modo_bitrate_voluto().nome, quota);
+			c->banda_t0_us = adesso;
+			c->banda_byte = 0;
+			c->banda_fotogrammi = 0;
+			c->banda_massimo = 0;
+		}
+	}
+
 	if (!c->prima_codifica_fatta) {
 		c->prima_codifica_fatta = true;
 		registro_dice(REG_CODIFICA,
@@ -2915,6 +4075,42 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			              "BGRx [M], e l'etichetta del flusso dira' «Main 10» lo stesso");
 	}
 
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔ QUESTO PUNTATORE STA **DENTRO** IL PACCHETTO, E `chiudi_contesto()`
+	 *      IL PACCHETTO LO **LIBERA** (`av_packet_free`, `:1978`).
+	 *
+	 * ⚠ E' la terza volta in un giorno che qualcuno ci inciampa, quindi la prova
+	 *   sta scritta qui invece di essere rifatta a memoria.  Da qui fino a
+	 *   `codificatore_rilascia()` il chiamante tiene `fuori->dati`; nello stesso
+	 *   intervallo `chiudi_contesto()` **non deve** girare.  I posti da cui puo'
+	 *   partire sono SETTE, e ognuno ha la sua guardia:
+	 *
+	 *     `:2125` `:2140` `:2149` `:2265` `:2272`  le uscite d'errore di
+	 *         `apri_contesto()`.  ⛔ Non raggiungibili con un pacchetto in mano
+	 *         per costruzione: `apri_contesto()` si chiama solo **subito dopo**
+	 *         un `chiudi_contesto()` — o su un codificatore appena nato — e a
+	 *         `:2125`-`:2149` il pacchetto non e' nemmeno stato allocato (lo e' a
+	 *         `:2270`, in fondo).
+	 *     `:2681` `codificatore_libera()` — guardia a `:2668`: fa l'`unref`
+	 *         prima.  ⚠ Dopo `libera()` il `fuori` del chiamante non vale piu'
+	 *         niente comunque, ed e' il contratto di `codificatore.h:439`.
+	 *     `:2760` `codificatore_ridimensiona()` — guardia a `:2745`, entrata il
+	 *         23 agosto 2026: era **l'unico senza**, e rifiuta invece di
+	 *         liberare sotto i piedi di chi legge.
+	 *     `:3445` `abbassa_qualita()` — chiamata da un posto solo, il ciclo delle
+	 *         ricodifiche qui sopra, e li' l'`av_packet_unref()` e
+	 *         `pacchetto_in_mano = false` sono **due righe prima** (`:3753`), e
+	 *         `fuori->dati` non e' ancora stato scritto.
+	 *     `:3536` `:3546` `risali_qualita()` — guardia a `:3511`, e sta scritta
+	 *         nel suo riquadro: e' proprio il motivo per cui la risalita vive
+	 *         **all'ingresso** del fotogramma dopo e non dopo la consegna.
+	 *     `:3626` la riapertura dopo lo scarico — guardia a `:3617`, che rifiuta
+	 *         se il fotogramma precedente non e' stato rilasciato.
+	 *
+	 * ⇒ Non e' raggiungibile, e adesso non lo e' **per costruzione** invece che
+	 *   per fortuna.  ⚠ Chi aggiunge un `chiudi_contesto()` ottavo aggiunga anche
+	 *   la riga qui sopra, o toglie la prova a tutti.
+	 * ═══════════════════════════════════════════════════════════════════════ */
 	fuori->dati = c->pacchetto->data;
 	fuori->byte = (size_t) c->pacchetto->size;
 	fuori->chiave = chiave;

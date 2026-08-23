@@ -445,6 +445,20 @@ struct rcp_sessione {
 	 * campi non esistevano: il nome era riconosciuto come lecito in
 	 * `NOMI_NOTI` e il valore veniva buttato — rilievo B-1. */
 	uint32_t max_l, max_a;
+	/* ⛔⭐ IL LIVELLO DEL DECODIFICATORE — `video.livello` di §4.3, e fino al
+	 *     23 agosto 2026 era il GEMELLO NON CURATO di `max_l/max_a`: il nome
+	 *     stava in `NOMI_NOTI` e il valore veniva **buttato**, esattamente il
+	 *     rilievo B-1 un campo piu' in la'.
+	 *
+	 * ⛔ Sta in DECIMI: `5.1` ⇒ `51`, `5` ⇒ `50`.  Un `float` per un numero che
+	 *    esce da una stringa e finisce in un confronto sarebbe due modi di
+	 *    scrivere `5.1` che non si uguagliano — e il confronto e' tutto quel per
+	 *    cui questo campo esiste.
+	 * ⚠ `0` vuol dire «il client non l'ha dichiarato», e NON vuol dire «basso»:
+	 *   chi legge questo campo non deve sceglierne uno per conto suo.  §4.3
+	 *   impone al server di non SUPERARE quel che il client dichiara, e su un
+	 *   client che non dichiara niente non c'e' niente da non superare. */
+	uint32_t livello_x10;
 
 	/* ==================================================================== */
 	/* ⭐ IL CANALE VIDEO — §2.5, §5.1, §5.2, §6.2                          */
@@ -751,6 +765,20 @@ static void rilascia_al_distacco(rcp_sessione *s, const char *perche);
  * qui perche' i byte del client entrano da DUE porte (`rcp_ricevi()` e
  * `rcp_ricevi_input()`) e la seconda sta piu' in su della definizione. */
 static bool torna_a_parlare(rcp_sessione *s);
+
+/* ⛔⭐⭐ IL DEBITO DI CHIAVE SI ACCENDE E SI SPEGNE DA DUE FUNZIONI SOLE — 23
+ *      agosto 2026, e la ragione e' un commento che aveva gia' mentito DUE
+ *      volte.  Il riquadro del canale video diceva «acceso in TRE punti», e i
+ *      punti erano quattro; corretto in «CINQUE», e i punti erano nove.
+ *      ⇒ Un elenco tenuto a mano invecchia al primo ramo nuovo, e invecchia in
+ *      silenzio: nessun banco puo' accorgersene, perche' il numero non e'
+ *      un comportamento.  ⛔ La cura non e' contare meglio: e' togliere il
+ *      conto.  Da qui l'elenco lo fa il compilatore — `grep -n 'chiave_serve('
+ *      src/rcp.c` e' l'elenco, sempre e per costruzione.
+ * ⚠ Definite nella sezione del canale video, dov'e' il resto; dichiarate qui
+ *   perche' la prima accensione (`SESSIONE` spedita, §5.2) sta piu' in su. */
+static void chiave_serve(rcp_sessione *s, const char *perche);
+static void chiave_pagata(rcp_sessione *s);
 
 /* ------------------------------------------------------------------------ */
 /* ⛔ IL REGISTRO DELLE SESSIONI ATTACCATE — §8.2 motivo 0x0F
@@ -1753,6 +1781,63 @@ static bool misura_massima_legge(const char *v, uint32_t *l, uint32_t *a)
 }
 
 /* ------------------------------------------------------------------------ */
+/* ⛔⭐ `video.livello` — IL LIVELLO DEL DECODIFICATORE (§4.3)
+ *
+ * Legge `MAGGIORE` o `MAGGIORE.MINORE` — `5`, `5.1`, `3.0` — e restituisce il
+ * numero in DECIMI: `5.1` ⇒ `51`, `5` ⇒ `50`.  ⚠ `false` se la stringa non ha
+ * quella forma.
+ *
+ * ⛔ Perche' i decimi e non un `double`: perche' il valore serve a un
+ *    CONFRONTO, e due strade che scrivono `5.1` in virgola mobile possono dare
+ *    due numeri che non si uguagliano.  ⭐ E i decimi sono anche l'alfabeto in
+ *    cui il livello e' scritto nelle stringhe dei decodificatori: H.264 porta
+ *    `level_idc = maggiore*10 + minore` (`51` = `0x33`, la coda di
+ *    `avc1.640033`), HEVC porta `general_level_idc = (maggiore*10 +
+ *    minore) * 3` (`153` = `L153`).  ⇒ Un livello letto qui e uno letto
+ *    dall'SPS dall'altra parte si confrontano senza tabelle.
+ *
+ * ⚠ La forma si controlla cifra per cifra, e per la stessa ragione di
+ *   `misura_massima_legge()`: `sscanf("%u.%u")` prenderebbe per buono
+ *   `5.1.2` fermandosi al secondo punto, cioe' un livello che il client non
+ *   ha dichiarato.  ⛔ E la parte minore e' UNA cifra: `5.10` non e' una forma
+ *   che §4.3 definisca, e leggerla come `5.1` sarebbe indovinare.
+ *
+ * ⚠ Zero non e' un livello: nessun flusso lo puo' rispettare, e prenderlo per
+ *   buono farebbe scrivere «prodotto 4.0 > chiesto 0.0» a ogni sessione. */
+static bool livello_legge(const char *v, uint32_t *x10)
+{
+	unsigned maggiore = 0, minore = 0;
+	int cifre_ma = 0, cifre_mi = 0;
+	bool dopo_il_punto = false;
+
+	for (const char *p = v; *p; p++) {
+		if (*p == '.' && !dopo_il_punto) {
+			dopo_il_punto = true;
+			continue;
+		}
+		if (*p < '0' || *p > '9')
+			return false;
+		if (dopo_il_punto) {
+			if (cifre_mi > 0) /* `5.10`: §4.3 non definisce questa forma */
+				return false;
+			minore = (unsigned)(*p - '0');
+			cifre_mi++;
+		} else {
+			if (cifre_ma > 2) /* piu' di tre cifre: nessun livello esiste */
+				return false;
+			maggiore = maggiore * 10u + (unsigned)(*p - '0');
+			cifre_ma++;
+		}
+	}
+	if (cifre_ma == 0 || (dopo_il_punto && cifre_mi == 0))
+		return false;
+	if (maggiore == 0)
+		return false;
+	*x10 = maggiore * 10u + minore;
+	return true;
+}
+
+/* ------------------------------------------------------------------------ */
 /* Quanti nomi di capacita' SCONOSCIUTI questo server sa ricordare per il
  * controllo dei duplicati di §4.3 — vedi il riquadro dentro `tratta_ciao()`. */
 #define MAX_VISTI 64
@@ -1829,7 +1914,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	uint16_t visti_noti = 0;
 	bool detta_la_memoria_finita = false;
 	char c_codec[257] = "", c_prof[257] = "", c_audio[257] = "";
-	char c_misura[257] = "";
+	char c_misura[257] = "", c_livello[257] = "";
 	for (uint16_t k = 0; k < quante; k++) {
 		char nome[65], valore[257];
 		size_t ln = le_str(l, nome, sizeof nome);
@@ -1900,6 +1985,13 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			snprintf(c_audio, sizeof c_audio, "%s", valore);
 		else if (strcmp(nome, "video.misura_massima") == 0)
 			snprintf(c_misura, sizeof c_misura, "%s", valore);
+		/* ⛔⭐ `video.livello` — E FINO A OGGI QUESTA RIGA NON C'ERA.  Il nome
+		 *     era in `NOMI_NOTI` (cioe' il server lo sapeva RIPETUTO), il
+		 *     valore attraversava il ciclo e nessuno se lo teneva: la stessa
+		 *     forma esatta di B-1 su `video.misura_massima`, e con lo stesso
+		 *     sintomo muto di §4.3 — «il browser non apre il flusso». */
+		else if (strcmp(nome, "video.livello") == 0)
+			snprintf(c_livello, sizeof c_livello, "%s", valore);
 		/* ⭐⭐ §7.4 — `appunti.testo`, e fino al 17 agosto 2026 questo valore
 		 *     veniva riconosciuto come nome lecito e poi **buttato**: era
 		 *     esattamente la forma del rilievo B-1 su `video.misura_massima`.
@@ -1946,6 +2038,69 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			       "il valore si ignora, e la tela NON avra' nessun tetto",
 			    c_misura);
 		}
+	}
+
+	/* ⛔⭐⭐ `video.livello` — IL SECONDO TETTO DEL DECODIFICATORE, e fino al
+	 *      23 agosto 2026 il server NON LO LEGGEVA.
+	 *
+	 * `RCP.md` §4.3, riga 701 della tabella delle capacita': *«il livello
+	 * massimo che sa decodificare, es. `5.1`.  ⛔ Il server **DEVE** emettere
+	 * un flusso di livello non superiore, e **non lo indovina**: un livello
+	 * dichiarato troppo basso non da' un errore di rete, **fa rifiutare la
+	 * configurazione dal decodificatore** e il sintomo e' "il browser non apre
+	 * il flusso" (rilievo O12)»*.
+	 *
+	 * ⛔ ED E' PROPRIO PERCHE' IL SINTOMO E' MUTO CHE IL NUMERO SI SCRIVE.  Un
+	 *    livello sbagliato non produce un rosso da nessuna parte: produce uno
+	 *    schermo nero, e una caccia che parte dal codificatore o dalla rete —
+	 *    cioe' dalla parte sbagliata.  Queste righe sono l'unico posto in cui
+	 *    il numero CHIESTO compare, e senza di loro non c'e' niente da
+	 *    confrontare con quello prodotto.
+	 *
+	 * ⛔⚠ E IL CONFRONTO NON SI FA QUI, e non e' una dimenticanza: si dice
+	 *     dov'e' l'altra meta'.  Il livello PRODOTTO si legge dall'SPS
+	 *     (`codificatore.c`, `leggi_sps_h264`/`leggi_sps_hevc`) e vive nel
+	 *     FIGLIO, che e' un altro processo; questo modulo non vede un byte di
+	 *     flusso — `rcp_video_spedisci()` riceve dati opachi, e §4.3 e' l'unico
+	 *     documento che rcp.c conosce (vedi il riquadro di `rcp.h`).  ⇒ Il
+	 *     numero prodotto sta nella riga «PRIMO fotogramma codificato» del
+	 *     figlio, nello stesso registro, e le due righe si leggono in colonna.
+	 *     ⚠ Perche' il confronto DENTRO il programma non c'e' ancora: il
+	 *       livello chiesto dovrebbe attraversare il confine di processo, e la
+	 *       catena e' `rcp.h` (il gancio `video_chiedi`) → `rcp.c` → `main.c`
+	 *       → `figlio.h` (`figli_video`) → `figlio.c` (`struct corpo_video`,
+	 *       che ha ancora il suo byte `riempi` libero apposta).  E' la stessa
+	 *       catena che la PROFONDITA' negoziata ha percorso il 17 agosto 2026 —
+	 *       e quel giorno il difetto era identico: due numeri veri in due
+	 *       processi, e nessuno che li mettesse vicini.
+	 *
+	 * ⛔ Un valore FUORI FORMA non si prende per buono e non si butta in
+	 *    silenzio, come per `video.misura_massima`: §3 eccezione 1 permette di
+	 *    ignorarlo, e la riga sotto quella tabella impone di scriverlo. */
+	if (c_livello[0]) {
+		if (livello_legge(c_livello, &s->livello_x10)) {
+			reg(s, "il client dichiara video.livello=%s (= %u.%u, cioe' "
+			       "level_idc %u in H.264 e L%u in HEVC): §4.3 vieta al server "
+			       "di emettere un flusso PIU' ALTO di questo",
+			    c_livello, s->livello_x10 / 10u, s->livello_x10 % 10u,
+			    s->livello_x10, s->livello_x10 * 3u);
+			reg(s, "⚠ e il livello PRODOTTO non si legge da qui: sta nella riga "
+			       "«PRIMO fotogramma codificato» del figlio, campo «livello» "
+			       "(§4.3 riga 701) — il confronto lo fa chi legge il registro, "
+			       "il programma NON lo fa ancora");
+		} else {
+			s->livello_x10 = 0;
+			reg(s, "⚠ TOLLERANZA (§3 eccezione 1): video.livello=«%s» non ha la "
+			       "forma MAGGIORE.MINORE di §4.3 (es. «5.1») — il valore si "
+			       "ignora, e §4.3 non avra' nessun livello da far rispettare",
+			    c_livello);
+		}
+	} else {
+		/* ⚠ §4.3 non OBBLIGA il client a dichiararlo, e l'assenza si scrive
+		 *   lo stesso: «non dichiarato» e «dichiarato e buttato» hanno lo
+		 *   stesso aspetto nel registro di ieri, e sono due cose diverse. */
+		reg(s, "il client NON dichiara video.livello: §4.3 non lo obbliga, e "
+		       "il server non ne indovina uno — nessun tetto di livello");
 	}
 
 	/* ⛔ §4.3: `pcm` e `8` DEVONO essere dichiarati da ENTRAMBI — `pcm` e' la
@@ -2616,8 +2771,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 		s->sessione_spedita = true;
 		/* ⛔ §5.2, primo punto: «il primo fotogramma che il server spedisce
 		 * dopo `SESSIONE` DEVE essere una chiave». */
-		s->serve_chiave = true;
-		s->serve_chiave_perche = "e' il primo dopo SESSIONE (§5.2)";
+		chiave_serve(s, "e' il primo dopo SESSIONE (§5.2)");
 		s->mai_spedita_una_chiave = true;
 	}
 	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u vista=%ux%u "
@@ -2700,9 +2854,9 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 /*             ⇒ `s->tela_l/tela_a`, che chi chiama non puo' passare          */
 /*  P6  §5.2   il primo fotogramma dopo `SESSIONE` DEVE essere una chiave     */
 /*  P9  §5.2   e lo stesso a ogni cambio di tela                              */
-/*             ⇒ `s->serve_chiave`, acceso in CINQUE punti e spento in uno    */
-/*             ⚠ Diceva «tre» e i punti erano quattro; il quinto e' §2.3, il  */
-/*               delta saltato per mancanza di posto (difetto B-18)           */
+/*             ⇒ `s->serve_chiave`, che si accende SOLO da `chiave_serve()`   */
+/*               e si spegne SOLO da `chiave_pagata()` — vedi il riquadro     */
+/*               delle due funzioni qui sotto, che porta l'elenco delle cause */
 /*  §6.2       il tetto di 16 MiB vincola PRIMA chi spedisce                  */
 /*             ⇒ il controllo sta prima di aprire lo stream: non parte un byte*/
 /*  §6.2       FIN ⇒ completo · `RESET_STREAM` ⇒ si butta                     */
@@ -2717,6 +2871,72 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l)
 /*    toccare.  ⚠ La strada alternativa — passarli e controllarli — sarebbe   */
 /*    stata piu' corta e avrebbe messo la protezione dove si puo' perdere     */
 /*    (invariante I7, letta da dentro il programma).                          */
+
+/* ⛔⭐⭐⭐ IL DEBITO DI CHIAVE — E IL COMMENTO CHE AVEVA MENTITO DUE VOLTE.
+ *
+ * Questo riquadro diceva *«acceso in TRE punti e spento in uno»*, e i punti
+ * erano QUATTRO.  Corretto, diceva *«CINQUE»*, e le righe che lo accendono
+ * sono NOVE, per SETTE cause.  ⛔ Due correzioni a mano, due bugie: la terza
+ * era gia' comprata, perche' il numero non e' un comportamento — nessun banco
+ * puo' vedere che un elenco e' rimasto indietro, e il compilatore nemmeno.
+ *
+ * ⭐ ⇒ LA CURA NON E' CONTARE MEGLIO, E' TOGLIERE IL CONTO.  Il campo si
+ *      accende SOLO da `chiave_serve()` e si spegne SOLO da `chiave_pagata()`.
+ *      L'elenco autorevole e' quindi `grep -n 'chiave_serve(' src/rcp.c`, che
+ *      non puo' invecchiare: un ramo nuovo che accendesse il debito senza
+ *      passare di qui dovrebbe assegnare il campo a mano, e quello si vede in
+ *      una revisione — mentre un numero sbagliato dentro un commento non si
+ *      vede in nessuna.
+ *
+ * ⚠ E QUEL CHE UN BANCO PUO' VERIFICARE, se un giorno lo si vuole scritto:
+ *   non «quanti sono» — che e' quel che invecchia — ma che **il campo non si
+ *   tocchi fuori dalle due funzioni**.  Sono due righe di `grep` su questo
+ *   file, e stanno accanto al controllo `GEMELLATI` del `Makefile`, che gia'
+ *   confronta due copie dello stesso modulo:
+ *
+ *     grep -n 'serve_chiave *=' src/rcp.c   ⇒ DEVE dare 2 righe sole, e sono
+ *                                             le due dentro le funzioni qui
+ *                                             sotto
+ *     grep -n 'serve_chiave_perche *=' src/rcp.c   ⇒ le stesse 2
+ *
+ *   ⛔ Questo controllo NON invecchia con l'aggiunta di una causa: e' proprio
+ *      l'aggiunta di una causa che lo lascia verde, purche' passi dall'imbuto.
+ *
+ * ⛔ LE SETTE CAUSE, e la riga di ciascuna al 23 agosto 2026 (⚠ le righe sono
+ *    una cortesia per chi legge oggi, NON l'elenco autorevole — quello e' il
+ *    `grep` qui sopra):
+ *
+ *   1. §5.2  `SESSIONE` e' stata spedita: il primo fotogramma dopo di lei
+ *            DEVE essere una chiave                                 riga 2774
+ *   2. §5.2  la tela e' cambiata (`TELA` adattata): il primo alla misura
+ *            nuova DEVE essere una chiave                            riga 3234
+ *   3. §5.1  un delta e' stato abbandonato NELLA CODA a valle        riga 3601
+ *   4. §2.3  un delta e' stato SALTATO per mancanza di posto — difetto B-18,
+ *            ed e' la causa che il commento vecchio non aveva        riga 3663
+ *   5. §5.2  un delta e' stato abbandonato da `rcp_video_abbandona()` riga 3699
+ *   6. §5.2  un fotogramma si e' ROTTO A META' — ed e' UNA causa su TRE
+ *            righe, che e' precisamente il modo in cui il conto sbagliava:
+ *            l'intestazione di 28 byte non e' uscita intera (riga 3871), un
+ *            pezzo non e' uscito (riga 3883), il FIN e' arrivato con meno
+ *            byte del dichiarato (riga 3908)
+ *   7. §5.2  il client ha mandato `RICHIEDI_CHIAVE`                  riga 5689
+ *
+ * ⛔ E SI SPEGNE IN UNO SOLO: la chiave e' USCITA per intero (riga 3919).
+ *    ⚠ E si spegne li' e non all'apertura dello stream: un fotogramma aperto e
+ *      poi rotto non ha pagato niente, e spegnere il debito all'apertura
+ *      lascerebbe il client senza chiave con il server convinto del contrario.
+ */
+static void chiave_serve(rcp_sessione *s, const char *perche)
+{
+	s->serve_chiave = true;
+	s->serve_chiave_perche = perche;
+}
+
+static void chiave_pagata(rcp_sessione *s)
+{
+	s->serve_chiave = false;
+	s->serve_chiave_perche = NULL;
+}
 
 /* §6.2 — i due valori del campo `tipo`. */
 #define V_CHIAVE 0x0301
@@ -3011,8 +3231,7 @@ void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
 	s->tela_grazia_da = ora_ms;
 	s->tela_l = lar;
 	s->tela_a = alt;
-	s->serve_chiave = true;
-	s->serve_chiave_perche = "e' il primo alla misura nuova dopo TELA (§5.2)";
+	chiave_serve(s, "e' il primo alla misura nuova dopo TELA (§5.2)");
 	/* ⛔ E il messaggio esce DOPO che lo stato e' cambiato, non prima: i due
 	 *    campi di misura devono dire la tela **in vigore dopo**, ed e' l'unico
 	 *    ordine in cui possono dirla senza copiarla in una variabile a parte. */
@@ -3379,8 +3598,7 @@ bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave
 	    s->video_spediti, s->video_abbandonati);
 	/* ⛔ §5.2: «quando il server abbandona un delta, DEVE mandare un fotogramma
 	 * chiave appena puo' — senza aspettare che il client lo chieda». */
-	s->serve_chiave = true;
-	s->serve_chiave_perche = "un delta e' stato abbandonato nella coda (§5.1)";
+	chiave_serve(s, "un delta e' stato abbandonato nella coda (§5.1)");
 	return true;
 }
 
@@ -3427,9 +3645,13 @@ void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano)
 	 *      · il `numero` NON e' stato consumato (il riquadro qui sopra, §6.2),
 	 *        quindi nei numeri non resta **nessun buco** — ed e' l'unico segnale
 	 *        su cui §5.2 fa chiedere una chiave al client;
-	 *      · il codificatore gira a GOP infinito (`chiavi_ogni = 0`,
-	 *        `src/figlio.c:1568`), quindi un'altra chiave non arriverebbe **mai
-	 *        piu'** da sola.
+	 *      · il codificatore gira a GOP infinito (`chiavi_ogni = 0`, in
+	 *        `codificatore_di()` di `src/figlio.c` — riga 4220 al 23 agosto
+	 *        2026; ⚠ il riferimento diceva `src/figlio.c:1568`, che e' un punto
+	 *        del file che quel codice non abita da un pezzo: e' la stessa
+	 *        malattia del conto delle accensioni qui sotto, e per questo qui
+	 *        c'e' il NOME della funzione, che non scorre con le righe), quindi
+	 *        un'altra chiave non arriverebbe **mai piu'** da sola.
 	 *    ⇒ Senza questa riga, UN SOLO delta saltato per mancanza di posto
 	 *      sfascia l'immagine **per sempre e in silenzio**: nessun errore,
 	 *      nessuna riga, e il client che non ha modo di chiedere la cura.
@@ -3438,9 +3660,8 @@ void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano)
 	 *   nel caso vietato da R1.9: il ramo `chiave` qui sopra NON la butta —
 	 *   tiene il debito acceso e riprova al fotogramma dopo, che e' quel che
 	 *   §2.3 prescrive per le chiavi. */
-	s->serve_chiave = true;
-	s->serve_chiave_perche = "un delta e' stato saltato per mancanza di posto "
-	                         "(§2.3), e nei numeri non resta nessun buco";
+	chiave_serve(s, "un delta e' stato saltato per mancanza di posto (§2.3), e "
+	                "nei numeri non resta nessun buco");
 }
 
 /* ⛔ §5.1 — l'abbandono, e §5.2 vieta di abbandonare una CHIAVE. */
@@ -3475,8 +3696,7 @@ bool rcp_video_abbandona(rcp_sessione *s, const char *perche)
 	 * ⭐ E' l'unica cura che abbiamo: a un delta mancante il decodificatore
 	 * non solleva nessun errore, si limita a produrre immagini via via piu'
 	 * sfasciate. */
-	s->serve_chiave = true;
-	s->serve_chiave_perche = "un delta e' stato abbandonato (§5.2)";
+	chiave_serve(s, "un delta e' stato abbandonato (§5.2)");
 	return true;
 }
 
@@ -3648,8 +3868,7 @@ int rcp_video_pezzo(rcp_sessione *s, const uint8_t *dati, size_t len)
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
 		s->video_abbandonati++;
-		s->serve_chiave = true;
-		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	if (!s->g.video_scrivi(s->g.ctx, s->video_stream, dati, len)) {
@@ -3661,8 +3880,7 @@ int rcp_video_pezzo(rcp_sessione *s, const uint8_t *dati, size_t len)
 		       "che e' vero; con un FIN lo avrebbe consegnato al "
 		       "decodificatore, che e' falso",
 		    s->video_suo_numero, s->video_scritti, s->video_da_scrivere);
-		s->serve_chiave = true;
-		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	s->video_scritti += len;
@@ -3687,8 +3905,7 @@ int rcp_video_finisci(rcp_sessione *s)
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
 		s->video_abbandonati++;
-		s->serve_chiave = true;
-		s->serve_chiave_perche = "un fotogramma si e' rotto a meta' (§5.2)";
+		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	s->g.video_fin(s->g.ctx, s->video_stream);
@@ -3699,8 +3916,7 @@ int rcp_video_finisci(rcp_sessione *s)
 		 * all'apertura: un fotogramma aperto e poi rotto non ha pagato niente,
 		 * e spegnere il debito li' avrebbe lasciato il client senza chiave con
 		 * il server convinto di avergliela mandata. */
-		s->serve_chiave = false;
-		s->serve_chiave_perche = NULL;
+		chiave_pagata(s);
 		s->mai_spedita_una_chiave = false;
 		/* ⛔ §5.2 / §3 eccezione 5 — l'orologio dei 200 ms parte da QUI, cioe'
 		 * dalla chiave SPEDITA.  ⚠ E «spedita» vuol dire «i byte sono usciti
@@ -5470,8 +5686,7 @@ static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
 	reg(s, "RICHIEDI_CHIAVE(ultimo_numero=%u) accolta (§5.2): il prossimo "
 	       "fotogramma sara' una CHIAVE — ultimo spedito da noi: %u",
 	    ultimo, s->video_numero);
-	s->serve_chiave = true;
-	s->serve_chiave_perche = "il client ne ha chiesta una (§5.2)";
+	chiave_serve(s, "il client ne ha chiesta una (§5.2)");
 	return true;
 }
 

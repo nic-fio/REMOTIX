@@ -161,6 +161,28 @@ static void aiuto(const char *nome)
 	        "                    a pixel di F2.6\n"
 	        "  --parlantina      registro di dettaglio\n"
 	        "\n"
+	        "  ⭐ FASE 9 — le tre cure della taratura.  Nascono SPENTE tutte\n"
+	        "     e tre (invariante I6: cambiano quel che si VEDE), e il\n"
+	        "     valore in vigore finisce nel registro acceso E spento.\n"
+	        "  --sgombra-soglia-ms N\n"
+	        "                    §5.1: un delta fermo in coda si abbandona\n"
+	        "                    solo se la coda non si svuota entro N ms;\n"
+	        "                    sotto la soglia si TIENE.  0 = spenta (si\n"
+	        "                    abbandona a ogni fotogramma piu' recente,\n"
+	        "                    com'e' oggi).  Consigliato quando si accende:\n"
+	        "                    100.  La riga la scrive webtransport.c\n"
+	        "  --qualita-risale  la qualita' torna su di uno scalino dopo un\n"
+	        "                    po' di fotogrammi comodi sotto il tetto di\n"
+	        "                    §6.2.  Senza, scesa una volta resta giu' per\n"
+	        "                    tutta la sessione.  ⛔ Vive nel FIGLIO: la\n"
+	        "                    riga la scrive codificatore.c all'apertura\n"
+	        "  --tetto-banda-mbit N\n"
+	        "                    N e' il PAVIMENTO in Mbit/s (20, §3.1-bis),\n"
+	        "                    non il tetto: filo, punto di lavoro e\n"
+	        "                    serbatoio si derivano da li'.  0 = spento, e\n"
+	        "                    allora nessuno dice di no alla banda.  ⛔ Vive\n"
+	        "                    nel FIGLIO, e vale solo in hardware\n"
+	        "\n"
 	        "  ⛔ `--figlio-interno` NON si batte a mano: e' la riga con cui\n"
 	        "     questo stesso binario riparte come figlio di un utente\n"
 	        "     ammesso (DECISIONI.md §1.10-bis).  Se la vedi in `ps`, quello\n"
@@ -492,6 +514,32 @@ static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
 /* ⛔ Il tono di prova della fase 7: `0` = spento, ed e' il valore di ogni
  *    installazione normale (invariante I6). */
 static uint32_t audio_prova_hz;
+
+/* ⛔⭐⭐ I TRE INTERRUTTORI DELLA FASE 9, E NASCONO TUTT'E TRE SPENTI.
+ *
+ *      Invariante I6: cio' che cambia quel che si VEDE sta dietro un
+ *      interruttore spento finche' l'utente non l'ha guardato sul desktop
+ *      vero.  ⚠ Fino al 23 agosto 2026 le tre cure esistevano ma **nessuno le
+ *      chiamava**: un interruttore che non si puo' accendere non e' un
+ *      interruttore, e' codice morto — e la fase 9 non poteva misurare ne' il
+ *      prima ne' il dopo.
+ *
+ * ⛔ E DUE DELLE TRE NON VIVONO QUI.  La soglia della coda video e' del
+ *    trasporto, che sta in questo processo; la risalita della qualita' e il
+ *    tetto di banda sono del **codificatore**, che sta nel FIGLIO — un altro
+ *    programma, nato con `execve` e ambiente composto da zero.  ⇒ Non si
+ *    passano con una variabile d'ambiente (non arriverebbe): si passano nella
+ *    riga di comando del figlio, come `--parlantina` (`figlio.c`, il riquadro
+ *    in `diventa_ed_esegui()`), e `figli_fase9()` e' la porta. */
+static uint64_t sgombra_soglia_ms;  /* --sgombra-soglia-ms, 0 = spenta   */
+static bool qualita_risale;         /* --qualita-risale, assente = spenta */
+static uint32_t tetto_banda_mbit;   /* --tetto-banda-mbit, 0 = spento    */
+/* ⛔⭐ La QUARTA, ed e' la sola che sta nel TRASPORTO come la prima: il ritmo
+ *     lo decide chi vede la coda d'uscita.  ⚠ E dipende dalla prima — con
+ *     `--sgombra-soglia-ms 0` non scatta mai, e il server lo SCRIVE all'avvio
+ *     invece di lasciar misurare un anello morto (`webtransport.c`,
+ *     `wt_ritmo_adattivo()`). */
+static bool ritmo_adattivo;         /* --ritmo-adattivo, assente = spento */
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
@@ -939,6 +987,45 @@ int main(int argc, char **argv)
 		 *    il server lo SCRIVE nel registro a ogni sessione. */
 		else if (strcmp(a, "--audio-prova") == 0 && v)
 			audio_prova_hz = (uint32_t)strtoul(argv[++i], NULL, 10);
+		/* ⛔⭐⭐ LE TRE CURE DELLA FASE 9, e valgono tutte la stessa regola dei
+		 *      tre orologi qui sopra: il MECCANISMO si esercita a valori corti
+		 *      dalla riga di comando, il NUMERO in vigore si legge nella riga
+		 *      che il server (o il figlio) scrive all'avvio.
+		 *
+		 * ⚠ In MILLISECONDI e non in fotogrammi: la soglia e' un ritardo che
+		 *   si VEDE, e chi la accende sceglie quanto vecchia puo' essere
+		 *   l'immagine per una frazione di secondo (`webtransport.h`, il
+		 *   riquadro sopra `wt_sgombra_soglia`).  ⛔ `0` = spenta, ed e' il
+		 *   comportamento di oggi byte per byte. */
+		else if (strcmp(a, "--sgombra-soglia-ms") == 0 && v)
+			sgombra_soglia_ms = (uint64_t)strtoull(argv[++i], NULL, 10);
+		/* ⛔ Senza argomento, come `--parlantina`: e' un si'/no, e un numero
+		 *    accanto suggerirebbe una taratura che non c'e' (i tre numeri della
+		 *    risalita stanno in `codificatore.c` e li tara il banco). */
+		else if (strcmp(a, "--qualita-risale") == 0)
+			qualita_risale = true;
+		/* ⛔ L'argomento e' il PAVIMENTO in Mbit/s (20, quello di
+		 *    `DECISIONI.md` §3.1-bis), non il tetto: filo, punto di lavoro e
+		 *    serbatoio si derivano da li' in un posto solo (`codificatore.c`).
+		 *    ⚠ `0` = spento, e allora nessuno dice di no alla banda. */
+		else if (strcmp(a, "--tetto-banda-mbit") == 0 && v)
+			tetto_banda_mbit = (uint32_t)strtoul(argv[++i], NULL, 10);
+		/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO.  Senza argomento, come
+		 *      `--qualita-risale`: e' un si'/no, e un numero accanto
+		 *      suggerirebbe una taratura che non sta qui (i posti sono
+		 *      `WT_RITMO_POSTI` in `webtransport.c`, e li tara il banco).
+		 *
+		 * ⛔ Nasce SPENTO (I6) perche' cambia QUEL CHE SI VEDE: meno fotogrammi
+		 *    quando la linea non porta.  L'utente lo giudica sul desktop vero
+		 *    prima che diventi il comportamento normale — e' la lezione pagata
+		 *    con l'azzeramento della fase 10 di v1.
+		 *
+		 * ⚠⚠ E NON BASTA DA SOLO: senza `--sgombra-soglia-ms N` la coda dei
+		 *    delta si svuota a ogni fotogramma, l'arretrato non supera 1 e
+		 *    questo regolatore non scatta MAI.  Il server lo SCRIVE all'avvio,
+		 *    cosi' nessuno misura un anello morto credendolo vivo. */
+		else if (strcmp(a, "--ritmo-adattivo") == 0)
+			ritmo_adattivo = true;
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -1033,6 +1120,29 @@ int main(int argc, char **argv)
 	 *    non si legge piu'. */
 	wt_audio_prova(audio_prova_hz);
 
+	/* ⛔⭐ E LA SOGLIA DELLA CODA VIDEO SI DICHIARA SEMPRE, accesa **e** spenta
+	 *     — al contrario del tono di prova qui sopra, e la differenza non e'
+	 *     un capriccio: un tono che non suona non lo cerca nessuno, ma una
+	 *     soglia spenta e una soglia che non e' mai scattata producono lo
+	 *     stesso registro (zero abbandoni per soglia), e chi rilegge un banco
+	 *     non saprebbe quale dei due ha misurato.  ⇒ La riga la scrive
+	 *     `webtransport.c`, cioe' **chi il numero lo usa davvero**, e non
+	 *     questo file che l'ha solo letto dalla riga di comando. */
+	wt_sgombra_soglia(sgombra_soglia_ms);
+
+	/* ⛔⭐⭐ E IL REGOLATORE DEL RITMO SUBITO DOPO, E L'ORDINE NON E' UN CASO.
+	 *
+	 *      `wt_ritmo_adattivo()` scrive la sua riga d'avvio guardando la soglia
+	 *      GIA' IN VIGORE: se e' spenta, dichiara che il regolatore non potra'
+	 *      mai scattare — l'arretrato non supera 1 e i posti sono 2.  Invertire
+	 *      le due chiamate farebbe leggere zero, e quella riga direbbe il falso
+	 *      proprio nel giro in cui serve.
+	 *
+	 * ⛔ E la riga esce ACCESO E SPENTO che sia, come per la soglia e per la
+	 *    stessa ragione: un regolatore spento e un regolatore che non ha mai
+	 *    dovuto scattare producono lo stesso registro, cioe' nessuna riga. */
+	wt_ritmo_adattivo(ritmo_adattivo);
+
 	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
 	 *    protezione di un difetto noto sta nel programma, non in una riga di
 	 *    configurazione che si puo' perdere. */
@@ -1114,6 +1224,15 @@ int main(int argc, char **argv)
 		              "avra' un palco, e la fase 2 non ha oggetto.  Il server "
 		              "parte lo stesso (la fase 1 funziona), e il perche' e' "
 		              "nella riga qui sopra");
+	/* ⛔⭐⭐ LE DUE CURE CHE VIVONO NEL FIGLIO — e questa riga e' l'unica che
+	 *      le fa esistere.  ⚠ Qui NON si accende niente: si consegna alla
+	 *      tabella dei figli quel che ogni figlio dovra' ripetere a se stesso
+	 *      dopo l'`execve`, perche' il codificatore sta di la' e questo
+	 *      processo non lo apre mai.  ⛔ E chi dichiarera' il valore in vigore
+	 *      sara' `codificatore.c`, all'apertura di ogni codificatore: se
+	 *      l'opzione si perdesse per strada, quelle righe direbbero «spento»
+	 *      e il difetto si vedrebbe subito (forma D5). */
+	figli_fase9(prole, qualita_risale, tetto_banda_mbit);
 
 	/* ⛔ Chi possiede questo processo, scritto una volta e non dedotto dal
 	 *    lettore: da qui dipende se i figli potranno DAVVERO scendere a un

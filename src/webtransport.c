@@ -117,6 +117,52 @@ typedef struct {
 	 *
 	 *     ⇒ Chi finisce si marca morto; `testa` scorre sui morti in testa. */
 	bool morto;
+	/* ⛔⛔⭐ FASE 9 — «CONSEGNATO» NON E' «CONFERMATO», e la differenza fra le
+	 *      due parole e' il crollo del 23 agosto 2026 (`fasi/09-la-qualita-e-la-degradazione.md` §4).
+	 *
+	 *      `ngtcp2_conn_writev_stream()` **non copia i byte**: si tiene il
+	 *      NOSTRO puntatore nell'elenco dei pacchetti in volo, e quando un
+	 *      pacchetto viene dichiarato perduto lo **rilegge** per
+	 *      ritrasmettere.  Il contratto lo dice in una riga
+	 *      (`ngtcp2.h`, `ngtcp2_conn_writev_stream`):
+	 *
+	 *        «The caller must keep the portion of data covered by |*pdatalen|
+	 *         bytes **in tact** until `acked_stream_data_offset` indicates that
+	 *         they are acknowledged by a remote endpoint **or the stream is
+	 *         closed**.»
+	 *
+	 * ⛔ Qui si liberava alla SERIALIZZAZIONE — `off >= dati.n` ⇒ `free()` — che
+	 *    e' esattamente l'istante che il contratto vieta.  `[M]` 23 agosto 2026,
+	 *    08:28:09: `SEGV`, `error 4`, dentro `__memmove_avx_unaligned_erms`,
+	 *    sorgente `0x7f148e056fc2` — un fotogramma da 525 298 byte, il primo
+	 *    blocco del giro abbastanza grosso da essere servito con `mmap`, quindi
+	 *    il primo il cui `free()` abbia davvero **smappato** la regione.
+	 *
+	 * ⚠ E gli altri 45 004 fotogrammi dello stesso giro avevano lo STESSO
+	 *   difetto senza far rumore: sotto i 128 KiB glibc serve dal mucchio, la
+	 *   rilettura riesce e ngtcp2 ritrasmette **byte di spazzatura al posto dei
+	 *   pixel**, in silenzio e senza un errore.  ⛔ Il crollo era il sintomo
+	 *   raro; la corruzione muta era il difetto vero.
+	 *
+	 * ⭐ Da cui i due stati, che prima erano uno solo:
+	 *
+	 *      `consegnato` — tutti i byte sono dentro a ngtcp2.  Non si sceglie
+	 *                     piu' per la scrittura (`coda_scegli()`), non conta
+	 *                     piu' come «da spedire» (`coda_vuota()`,
+	 *                     `byte_in_coda`), ⛔ **ma i byte restano nostri e
+	 *                     restano allocati**;
+	 *      `morto`      — i byte sono liberati.  Ci si arriva SOLO da un
+	 *                     riscontro che li copre (`coda_conferma()`), dalla
+	 *                     chiusura dello stream (`wt_stream_chiuso()`) o dal suo
+	 *                     azzeramento (`coda_butta_stream()`, sempre accanto a
+	 *                     un `RESET_STREAM`).  Sono le due condizioni del
+	 *                     contratto, e non ce n'e' una terza.
+	 *
+	 * ⚠ `confermati` conta i byte di QUESTO elemento gia' riscontrati: gli ack
+	 *   arrivano a pezzi — un fotogramma da mezzo megabyte sono ~370 pacchetti
+	 *   — e un elemento si libera solo quando il conto copre `dati.n`. */
+	bool consegnato;
+	size_t confermati;
 } uscita;
 
 /* ⛔⭐ FASE 3 — GLI STREAM BLOCCATI DI **QUESTA PASSATA**, E PERCHE' NON E' PIU'
@@ -355,6 +401,64 @@ struct wt {
 	uint64_t chiave_byte, chiave_attesa_detta_ms;
 	uint32_t video_diffusi, video_saltati;
 
+	/* ⭐⭐ FASE 9 — LA SOGLIA SULLA CODA, e i tre conti che la rendono
+	 *     LEGGIBILE dal registro invece che dedotta.
+	 *
+	 * `sgombra_tenuti` — quante volte un delta e' rimasto in coda perche' la
+	 *    coda si svuota entro la soglia.  Si conta **per delta**, non per
+	 *    passata, perche' `sgombra_abbandoni` conta per delta: due numeri che
+	 *    si devono poter sottrarre.
+	 * `sgombra_abbandoni` — quante volte la soglia e' stata superata lo stesso
+	 *    e il delta se n'e' andato.
+	 * ⛔ `sgombra_credito` — i delta che non sono nemmeno ENTRATI in coda
+	 *    perche' §2.3 non aveva credito (`rcp.c:3441`, la causa 4 del debito di
+	 *    §5.2).  ⚠ E' LA FORMA INVISIBILE AL RICEVENTE, e sta qui per una
+	 *    ragione precisa: la cura di questa fase tocca **la causa 3**, non la
+	 *    4.  Se sotto congestione a tenere acceso il debito fosse la 4, la cura
+	 *    girerebbe a vuoto e i fotogrammi resterebbero tutti chiavi — con
+	 *    questo numero accanto agli altri due il banco sa **a chi** attribuire,
+	 *    senza di lui vedrebbe «la cura non ha funzionato» e sarebbe falso.
+	 *
+	 * ⚠ `sgombra_sopra` e' il fondo delle righe di registro: si scrive quando
+	 *   lo STATO cambia (sotto→sopra e sopra→sotto), non a trenta volte al
+	 *   secondo.  ⛔ E la riga d'avvio col valore in vigore la scrive
+	 *   `wt_sgombra_soglia()`, che `main.c` chiama sempre: «spento» e «non e'
+	 *   mai scattato» non devono avere la stessa faccia. */
+	uint32_t sgombra_tenuti, sgombra_abbandoni, sgombra_credito;
+	bool sgombra_sopra;
+
+	/* ⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e i suoi numeri.
+	 *
+	 * `video_ritmo_scesi` — quanti fotogrammi NON sono partiti perche' la coda
+	 *    non si svuotava.  ⛔ Non entra in `video_saltati`: quello conta i
+	 *    fotogrammi INAMMISSIBILI (tela sbagliata, credito finito, rifiuto di
+	 *    rcp), questo conta una DISCESA DI RITMO decisa da noi.  E' la lezione
+	 *    di `video_annunci_tela` (:331-343): due numeri per due fatti, o uno
+	 *    dei due mente con un valore che sembra sano.
+	 *
+	 * `ritmo_giu` / `ritmo_da_ms` / `ritmo_da_n` — se un episodio di discesa e'
+	 *    in corso, da quando e da che conto: servono a scrivere DUE righe per
+	 *    episodio invece di una per fotogramma saltato.  ⛔ A trenta al secondo
+	 *    la seconda forma e' il difetto dei 30,8 GB di registro.
+	 *
+	 * ⛔⭐ E I QUATTRO SEGUENTI NON DECIDONO NIENTE: sono lo STRUMENTO con cui
+	 *     si dimostra che il ritmo non cala a scena ferma.  `LEZIONI.md` §1.9:
+	 *     un contatore a zero su un ramo mai raggiunto non dimostra niente —
+	 *     «vuoto» e «proibito» hanno la stessa faccia.  ⇒ Si conta quante volte
+	 *     `arretrato` e' stato LETTO in ogni secondo, oltre a quanto valeva:
+	 *     zero letture vuol dire che il palco non ha consegnato niente (scena
+	 *     ferma), e NON «arretrato zero».  La riga la scrive `ritmo_ciclo()`,
+	 *     che gira col battito e quindi esce anche quando di fotogrammi non ne
+	 *     arriva nessuno. */
+	uint32_t video_ritmo_scesi;
+	bool     ritmo_giu;
+	uint64_t ritmo_da_ms;
+	uint32_t ritmo_da_n;
+	uint32_t ritmo_letture;
+	unsigned ritmo_max, ritmo_ultimo;
+	uint32_t ritmo_detti_n;
+	uint64_t ritmo_detto_ms;
+
 	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
 	 *
 	 *     Un fotogramma che RCP ha gia' chiuso con FIN puo' avere ancora tutti
@@ -471,8 +575,28 @@ struct wt {
 	 *    stessa faccia. */
 	ngtcp2_tstamp canale_entro;
 
-	/* ⛔ Quanti byte ci sono in coda, per il tetto di `coda_metti()`. */
+	/* ⛔ Quanti byte ci sono in coda, per il tetto di `coda_metti()`.
+	 * ⚠ FASE 9: conta i byte che devono ANCORA PARTIRE.  Un elemento
+	 *   consegnato a ngtcp2 esce da questo conto anche se la sua memoria e'
+	 *   ancora nostra — il tetto di `coda_metti()` regola l'ARRETRATO, e
+	 *   metterci dentro i byte in volo farebbe rifiutare fotogrammi buoni per
+	 *   colpa di roba che e' gia' sul filo. */
 	size_t byte_in_coda;
+	/* ⛔⭐ FASE 9 — IL PREZZO IN MEMORIA DELLA CURA, MISURATO E NON STIMATO.
+	 *
+	 *     I byte CONSEGNATI a ngtcp2 e non ancora confermati: fuori dal conto
+	 *     della coda (non devono piu' partire) ma ancora allocati, perche' il
+	 *     contratto di `writev_stream` pretende che lo siano finche' non
+	 *     arriva l'ack o non si chiude lo stream.
+	 *
+	 * ⭐ QUANTO E' — e il numero non lo decide questo file: sono i byte in volo
+	 *    su QUIC, cioe' al piu' la finestra di congestione piu' quel che e'
+	 *    perduto e non ancora ridichiarato.  Su una linea che porta e' l'ordine
+	 *    di decine-centinaia di KB per sessione; il tetto duro non e' nostro ma
+	 *    del pari — non puo' concederci piu' credito di `initial_max_data`.
+	 * ⛔ `byte_in_volo_max` e' la PUNTA, e si scrive alla chiusura: e' la
+	 *    grandezza che dice se la cura tiene o se sta trattenendo memoria. */
+	size_t byte_in_volo, byte_in_volo_max;
 	/* Quanti stream di troppo (§2.5) hanno gia' scritto: per non riempire il
 	 * registro con una riga per pacchetto. */
 	uint64_t scartati_stream, scartati_byte;
@@ -634,7 +758,22 @@ static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
 }
 
 /* ⛔ Un elemento muore qui e in nessun altro posto: e' l'unico punto in cui
- *    `byte_in_coda` cala, e due punti che lo calassero divergerebbero. */
+ *    `byte_in_coda` (e adesso `byte_in_volo`) cala, e due punti che lo
+ *    calassero divergerebbero.
+ *
+ * ⛔⭐ FASE 9 — E «MORIRE» VUOL DIRE `free()`, cioe' «da adesso ngtcp2 NON DEVE
+ *     piu' poter rileggere questi byte».  I tre soli chiamanti leciti sono le
+ *     due condizioni del contratto piu' la fine della connessione:
+ *
+ *       1. `coda_conferma()`     — l'ack copre i byte;
+ *       2. `wt_stream_chiuso()`  — lo stream e' chiuso (ngtcp2 dice testualmente
+ *          che «after stream_close ... application can free all unacknowledged
+ *          stream data»);
+ *       3. `coda_butta_stream()` — lo stream e' stato AZZERATO un attimo prima
+ *          (`ngtcp2_conn_shutdown_stream_write()`), e dopo un `RESET_STREAM`
+ *          ngtcp2 non rimette in coda i frame di quello stream.
+ *
+ * ⛔ «Serializzato» NON e' fra questi, ed era il difetto del 23 agosto. */
 static void coda_uccidi(wt *w, size_t i)
 {
 	uscita *u;
@@ -643,10 +782,19 @@ static void coda_uccidi(wt *w, size_t i)
 	u = &w->coda[i];
 	if (u->morto)
 		return;
-	if (w->byte_in_coda >= u->dati.n)
+	/* ⚠ I due conti sono ESCLUSIVI: chi e' consegnato e' gia' uscito da
+	 *   `byte_in_coda` ed e' entrato in `byte_in_volo`.  Calarli tutt'e due
+	 *   toglierebbe due volte gli stessi byte da grandezze diverse. */
+	if (u->consegnato) {
+		if (w->byte_in_volo >= u->dati.n)
+			w->byte_in_volo -= u->dati.n;
+		else
+			w->byte_in_volo = 0;
+	} else if (w->byte_in_coda >= u->dati.n) {
 		w->byte_in_coda -= u->dati.n;
-	else
+	} else {
 		w->byte_in_coda = 0;
+	}
 	bytes_libera(&u->dati);
 	u->morto = true;
 	/* I morti in testa non servono a nessuno: la testa scorre. */
@@ -656,12 +804,131 @@ static void coda_uccidi(wt *w, size_t i)
 		w->testa = w->ncoda = 0;
 }
 
+/* ⛔⭐ FASE 9 — «CONSEGNATO»: tutti i byte sono dentro a ngtcp2, e NON SI
+ *     LIBERANO.  E' quel che prima faceva `coda_uccidi()` a questo punto.
+ *
+ *     L'elemento esce dalla scelta (`coda_scegli()`) e dal conto dell'arretrato
+ *     (`byte_in_coda`, `coda_vuota()`) — non ha piu' niente da offrire — ma
+ *     resta in coda con i suoi byte, perche' sono quelli che ngtcp2 rileggera'
+ *     se un pacchetto va perduto. */
+static void coda_consegna(wt *w, size_t i)
+{
+	uscita *u;
+	if (i >= w->ncoda)
+		return;
+	u = &w->coda[i];
+	if (u->morto || u->consegnato)
+		return;
+	/* ⭐ Un elemento SENZA byte — il FIN di §6.2, che e' un elemento della coda
+	 *    come gli altri — non da' nessun puntatore a ngtcp2: non c'e' niente da
+	 *    tenere in vita.  ⛔ E tenerlo lo lascerebbe in coda PER SEMPRE: non
+	 *    occupa nessun offset dello stream, quindi nessun ack potrebbe mai
+	 *    coprirlo, e `coda_vuota()` non tornerebbe piu' vera. */
+	if (u->dati.n == 0) {
+		coda_uccidi(w, i);
+		return;
+	}
+	if (w->byte_in_coda >= u->dati.n)
+		w->byte_in_coda -= u->dati.n;
+	else
+		w->byte_in_coda = 0;
+	u->consegnato = true;
+	w->byte_in_volo += u->dati.n;
+	if (w->byte_in_volo > w->byte_in_volo_max)
+		w->byte_in_volo_max = w->byte_in_volo;
+}
+
+/* ⛔⭐ FASE 9 — L'ACK LIBERA, e prima non lo faceva nessuno.
+ *
+ *     `acked_stream_data_offset` arriva, dice `ngtcp2.h`, «sequentially in
+ *     increasing order of offset without any overlap»: e' l'AVANZAMENTO
+ *     CONTIGUO del riscontro su quello stream, ed e' la stessa grandezza che
+ *     `nghttp3_conn_add_ack_offset()` si aspetta.  ⇒ Sommare i `datalen` da'
+ *     quanti byte del flusso sono confermati, e si consumano contro gli
+ *     elementi di quello stream in ORDINE D'INSERIMENTO — che e' l'ordine in
+ *     cui sono usciti, perche' `coda_scegli()` scorre in quell'ordine.
+ *
+ * ⛔ E LO STREAM DELLA CONNECT (`w->sessione`) E' ESCLUSO — la ragione si vede
+ *    solo scrivendola: li' **non siamo gli unici a scrivere**.  nghttp3 ci mette
+ *    le intestazioni della risposta, agli offset piu' bassi, e i loro ack
+ *    entrerebbero in questo conto: la nostra capsula di chiusura verrebbe
+ *    liberata PRIMA di essere confermata, cioe' rifarebbe in piccolo il difetto
+ *    del 23 agosto.  ⇒ Su quello stream si aspetta l'ALTRA meta' del contratto,
+ *    la chiusura (`wt_stream_chiuso()`).  Sono nove byte, e quando entrano in
+ *    coda la sessione sta gia' finendo.
+ *
+ * ⭐ Su tutti gli altri l'esclusiva e' vera e si dimostra: gli stream del video
+ *    e degli appunti li APRIAMO NOI (`ngtcp2_conn_open_uni_stream()`, e nessun
+ *    altro ci scrive), e il canale di controllo (`rcp_stream`) e' giudicato
+ *    `G_WT` — i suoi byte tornano `E_MIO` da `smista()` e a nghttp3 non
+ *    arrivano mai.  ⇒ Su quegli stream il nostro primo byte sta all'offset 0 e
+ *    la somma dei `datalen` e' il nostro conto, esatto. */
+static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
+{
+	size_t i = w->testa;
+
+	if (id == w->sessione)
+		return;
+	while (quanti > 0 && i < w->ncoda) {
+		uscita *u = &w->coda[i];
+		size_t apertura;
+
+		if (u->morto || u->id != id) {
+			i++;
+			continue;
+		}
+		/* ⛔ Non si conferma piu' di quel che si e' consegnato: il riscontro
+		 *    non puo' correre davanti alla scrittura.  ⚠ Zero qui vuol dire
+		 *    che siamo arrivati alla frontiera di quello stream, e piu' avanti
+		 *    non c'e' niente di piu' vecchio: si smette. */
+		apertura = u->off - u->confermati;
+		if (apertura == 0)
+			break;
+		if ((uint64_t)apertura > quanti) {
+			u->confermati += (size_t)quanti;
+			return;
+		}
+		u->confermati += apertura;
+		quanti -= apertura;
+		if (u->consegnato && u->confermati >= u->dati.n) {
+			coda_uccidi(w, i);
+			/* ⚠ `coda_uccidi()` fa scorrere la testa e puo' azzerare la coda
+			 *   intera: il fondo del ciclo va riletto, non ricordato. */
+			if (w->ncoda == 0)
+				return;
+		}
+		i++;
+	}
+}
+
+/* ⛔⭐ FASE 9 — «VUOTA» VUOL DIRE «NIENTE DA SPEDIRE», non «niente in memoria».
+ *
+ *     Un elemento consegnato e non ancora confermato non ha piu' un byte da
+ *     mandare: contarlo qui terrebbe acceso `wt_ha_da_dire()` per sempre — il
+ *     server girerebbe a vuoto — e soprattutto il ramo `!coda_vuota` di
+ *     `wt_batti()` riazzererebbe `chiusura_da` a ogni battito, cioe' la capsula
+ *     di §3.1 punto 3 non partirebbe MAI.  ⛔ E' il difetto B-3, rifatto da
+ *     un'altra parte. */
 static bool coda_vuota(const wt *w)
 {
 	for (size_t i = w->testa; i < w->ncoda; i++)
-		if (!w->coda[i].morto)
+		if (!w->coda[i].morto && !w->coda[i].consegnato)
 			return false;
 	return true;
+}
+
+/* ⛔ Quanti elementi hanno ANCORA DA PARTIRE — e serve alle due righe di
+ *    registro che raccontano una chiusura che non matura.  ⚠ `ncoda - testa`,
+ *    che e' quel che scrivevano prima, da oggi conterebbe anche i consegnati:
+ *    manderebbe a cercare un arretrato che non c'e' proprio nel punto in cui
+ *    qualcuno sta cercando perche' la capsula non parte. */
+static size_t coda_da_spedire(const wt *w)
+{
+	size_t n = 0;
+	for (size_t i = w->testa; i < w->ncoda; i++)
+		if (!w->coda[i].morto && !w->coda[i].consegnato)
+			n++;
+	return n;
 }
 
 /* ⛔ Quanti byte di QUESTO stream non sono ancora usciti.  ⚠ Zero non vuol dire
@@ -680,7 +947,18 @@ static size_t coda_byte_stream(const wt *w, int64_t id)
 
 /* ⛔ §5.1: i byte non ancora spediti **non partono affatto**.  Si chiama solo
  *    accanto a un `RESET_STREAM`: buttare i byte senza azzerare lo stream
- *    lascerebbe il client ad aspettare una fine che non arriva. */
+ *    lascerebbe il client ad aspettare una fine che non arriva.
+ *
+ * ⛔⭐ FASE 9 — ED E' ANCHE IL POSTO IN CUI SI LIBERANO I CONSEGNATI, il che
+ *     rende quella regola piu' stretta di prima, non meno: azzerare lo stream
+ *     e' quel che **toglie a ngtcp2 il diritto di rileggerli** — dopo un
+ *     `RESET_STREAM` i frame di quello stream non tornano in coda di
+ *     ritrasmissione — ed e' l'altra meta' del contratto di `writev_stream`.
+ *     ⚠ `video_sgombra()` questa disciplina ce l'aveva gia' («PRIMA si azzera
+ *       lo stream, POI si buttano i byte»), ed e' la riga che dimostra che la
+ *       regola era conosciuta: mancava dove i byte se ne andavano per fine
+ *       spedizione.  ⛔ Chiamare questa funzione senza un `shutdown_stream_write`
+ *       (o una chiusura gia' avvenuta) accanto rifa' il difetto del 23 agosto. */
 static size_t coda_butta_stream(wt *w, int64_t id)
 {
 	size_t buttati = 0;
@@ -708,7 +986,12 @@ static bool stream_bloccato(const wt *w, int64_t id)
 static uscita *coda_scegli(wt *w, size_t *fuori)
 {
 	for (size_t i = w->testa; i < w->ncoda; i++) {
-		if (w->coda[i].morto)
+		/* ⛔ FASE 9: si saltano anche i CONSEGNATI.  Sono ancora in coda
+		 *    perche' i loro byte servono a ngtcp2 per ritrasmettere, ma non
+		 *    hanno piu' niente da offrire: sceglierli vorrebbe dire proporre un
+		 *    vettore di lunghezza zero a ogni passata, e con `MORE` acceso
+		 *    quella e' una passata che non finisce. */
+		if (w->coda[i].morto || w->coda[i].consegnato)
 			continue;
 		if (stream_bloccato(w, w->coda[i].id))
 			continue;
@@ -1083,6 +1366,20 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	if (w->dgram_rimando_ts == ts)
 		return false;
 
+	/* ⭐ FASE 9 — E QUI IL DIFETTO DEL 23 AGOSTO NON C'E', per due ragioni che
+	 *    vanno scritte perche' non si perdano:
+	 *
+	 *      1. `w->dgram[]` e' un anello di array FISSI dentro `wt`: non c'e'
+	 *         nessun `free()` che possa arrivare prima di ngtcp2 — la memoria
+	 *         muore con la sessione;
+	 *      2. §6.3: un datagram NON SI RITRASMETTE.  ngtcp2 lo serializza
+	 *         dentro il pacchetto durante QUESTA chiamata (`WRITE_MORE` vuol
+	 *         dire «e' gia' dentro») e non rilegge piu' la sorgente.
+	 *
+	 * ⚠ La casella si riusa (`dgram_accoda()` scavalca la piu' vecchia quando
+	 *   l'anello e' pieno), e regge solo per il punto 2: il giorno in cui i
+	 *   datagram diventassero ritrasmissibili, questo sarebbe lo stesso difetto
+	 *   di `coda_uccidi()` con un'altra faccia. */
 	v.base = w->dgram[w->dgram_testa].d;
 	v.len = w->dgram[w->dgram_testa].n;
 
@@ -2282,6 +2579,233 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
  *    dell'arbitro. */
 #define WT_UNI_RISERVA 2
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ FASE 9 — QUANDO UN DELTA E' «DAVVERO SENZA SPERANZA»: LA SOGLIA.
+ *
+ * ⛔ §5.1 dice **PUO'**, non DEVE (`RCP.md:1156`): abbandonare a ogni
+ *    fotogramma piu' recente e' una scelta NOSTRA, e la misura sul campo dice
+ *    che e' quella che fabbrica le chiavi.
+ *
+ * `[M]` 23 agosto 2026, gradino sulla macchina di prova (linea larga → 3 s a
+ *       10 Mbit/s → larga), scena `barra`, tela 1920x1080:
+ *
+ *       | secondo      | 7  | 8  | 9  | 10 | 11 | 12 |
+ *       | fotogrammi/s | 40 | 14 | 14 | 13 | 32 | 42 |
+ *       | di cui CHIAVE|  0 |  6 |  7 |  7 |  2 |  0 |
+ *       | abbandoni    |  0 |  7 |  6 |  7 |  2 |  0 |
+ *
+ *       ⛔ Abbandoni e chiavi stanno **uno a uno**, anche sulla linea larga
+ *       (3↔3, 1↔1).  ⇒ Non e' la linea povera a fabbricare le chiavi: e'
+ *       questa funzione.  La linea povera aggiunge solo occasioni.
+ *       ⚠ Controllo: lo stesso gradino con una scena che costa 3,7 Mbit/s —
+ *       sotto il buco — da' 0 chiavi, 0 abbandoni, 40/s in tutte le fasi: lo
+ *       strumento sa distinguere.
+ *
+ * ⭐ LA REGOLA NUOVA: un delta si abbandona **solo se la coda del video non si
+ *    svuota entro la soglia**, cioe' solo se non arriverebbe comunque in tempo
+ *    per servire a qualcosa.  Sotto la soglia si TIENE: gli stream sono
+ *    indipendenti (`RCP.md:1155`), quindi tenerlo non blocca quelli dopo.
+ *
+ * ⛔ IL NUMERO, E LA SUA RAGIONE — quattro vincoli, non un gusto:
+ *
+ *    1. dev'essere **piu' di un periodo di fotogramma**, o e' la regola di oggi
+ *       con un nome nuovo: `[M]` fase 8, il contenuto vero dell'utente va a
+ *       20,9 fotogrammi/s = **47,8 ms** di periodo (33,3 ms a 30/s);
+ *    2. dev'essere **meno del fondo con cui gia' si richiede una chiave** —
+ *       `WT_CHIAVE_RICHIESTA_MS` = 150 ms: oltre quel numero la coda
+ *       ritarderebbe piu' del ritmo che il prodotto ha gia' accettato;
+ *    3. deve **lasciar passare una CHIAVE piu' qualche delta** dove il difetto
+ *       morde: `[M]` fase 8 una chiave misura ~20 800 byte (mediana, QP 26); a
+ *       3 Mbit/s (375 byte/ms) esce in 56 ms, e nei 44 ms che restano ci
+ *       stanno tre delta;
+ *    4. il prezzo si somma all'anello: `[M]` fase 8 l'anello intero misura
+ *       **55,20 ms**, e 100 + 55 sta sotto il quinto di secondo.
+ *
+ * ⇒ **100 ms**, ed e' il valore consigliato QUANDO l'interruttore e' acceso.
+ *    ⚠ `[?]` Non e' dimostrato: e' derivato.  Il banco lo spazza (50 · 100 ·
+ *    200) e chi sceglie e' l'utente, perche' e' un prezzo che si VEDE. */
+#define WT_SGOMBRA_SOGLIA_CONSIGLIATA_MS 100
+
+/* ⛔ Il ripiego quando ngtcp2 non ha ancora ne' `smoothed_rtt` ne' `cwnd`: si
+ *    assume **il pavimento dichiarato**, 20 Mbit/s = 2 500 byte/ms
+ *    (`DECISIONI.md` §3.1-bis).  ⚠ Si DICHIARA invece di indovinare: un numero
+ *    inventato che passa per misurato e' la forma E1.  ⚠ E se la linea vera e'
+ *    piu' stretta il ripiego SOTTOSTIMA l'attesa e si tiene un delta di
+ *    troppo: dura finche' ngtcp2 non ha una misura, cioe' un giro di rete. */
+#define WT_PAVIMENTO_BYTE_MS 2500u
+
+/* ⛔⭐ INVARIANTE I6 — NASCE SPENTA.  `0` = si abbandona a ogni fotogramma piu'
+ *     recente, cioe' il comportamento di oggi **byte per byte**.  Questa cura
+ *     cambia quel che si VEDE, e I6 e' costata una fase intera in v1.
+ *
+ * ⚠ NON serve un secondo booleano «qualcuno l'ha toccata»: `main.c` chiama
+ *   `wt_sgombra_soglia()` **sempre**, all'avvio, col valore della riga di
+ *   comando (0 se l'opzione non c'era) ⇒ la riga d'avvio esce in tutt'e due i
+ *   casi per costruzione, non per una guardia da ricordarsi. */
+static uint64_t sgombra_soglia_ms;
+
+/* ⛔ La riga che dichiara il valore IN VIGORE, e si scrive **acceso e spento**.
+ *    «Spento» e «non e' mai scattato» non devono avere la stessa faccia: e'
+ *    esattamente la forma E1 («scritto non e' in vigore»), la stessa ragione
+ *    per cui i tre orologi di §5.3 si scrivono all'avvio. */
+static void sgombra_dichiara(const char *da_dove)
+{
+	registro_dice(REG_AVVIO,
+	              "⭐ FASE 9, soglia della coda video (§5.1): %llu ms%s — sopra "
+	              "la soglia un delta fermo si abbandona, sotto si TIENE.  "
+	              "Impostata da: %s",
+	              (unsigned long long)sgombra_soglia_ms,
+	              sgombra_soglia_ms
+	                  ? ""
+	                  : " (SPENTA: si abbandona a ogni fotogramma piu' recente, "
+	                    "com'e' oggi — invariante I6)",
+	              da_dove);
+}
+
+/* ⛔ La chiama `main.c` all'avvio, SEMPRE — anche con 0, che e' il caso in cui
+ *    l'opzione non c'era.  ⚠ Il ponte provvisorio che leggeva
+ *    `REMOTIX_SGOMBRA_SOGLIA_MS` dall'ambiente era dichiarato temporaneo ed e'
+ *    stato TOLTO il 23 agosto 2026, quando `--sgombra-soglia-ms` e' arrivata
+ *    davvero: due strade per accendere la stessa cura sono due numeri che
+ *    possono divergere. */
+void wt_sgombra_soglia(uint64_t ms)
+{
+	sgombra_soglia_ms = ms;
+	sgombra_dichiara("main.c, dalla riga di comando (--sgombra-soglia-ms; 0 "
+	                 "quando l'opzione non c'e')");
+}
+
+uint64_t wt_sgombra_soglia_letta(void)
+{
+	return sgombra_soglia_ms;
+}
+
+/* ⛔⭐ FASE 9 — IL REGOLATORE DEL RITMO: l'interruttore, e nasce SPENTO (I6).
+ *    Statico e non per sessione: e' una decisione del server, non del client. */
+static bool ritmo_adattivo;
+
+/* ⛔ Quanti fotogrammi delta si concede di avere indietro prima di saltarne uno.
+ *
+ * ⭐ E IL NUMERO NON E' UN OROLOGIO TRAVESTITO: e' la profondita' del tubo.
+ *    Con `POSTI = 1` si salterebbe ogni volta che il fotogramma di prima non e'
+ *    uscito INTERAMENTE entro l'arrivo del successivo — a 60/s sono 16 ms, e un
+ *    delta da 10 KB su una linea sana ne impiega di piu': sarebbe euristica
+ *    prudente, cioe' I1 rotta.  Con `POSTI = 2` si concede esattamente UN
+ *    fotogramma di sovrapposizione, e si salta solo quando ne sono rimasti
+ *    indietro due.
+ * ⚠ `[?]` Il valore va tarato sul banco, e la taratura e' falsificabile: a
+ *   20 Mbit/s con scena mossa `POSTI = 2` deve dare ZERO discese. */
+#define WT_RITMO_POSTI 2
+
+/* ⛔⛔⭐ LA CHIAMA `main.c` ALL'AVVIO, SEMPRE — acceso e spento — e la riga che
+ *      esce di qui e' meta' del valore di questa cura.
+ *
+ *      Un regolatore SPENTO e un regolatore che non ha mai dovuto scattare
+ *      producono LO STESSO REGISTRO, cioe' nessuna riga.  Chi rilegge un banco
+ *      senza questa riga non sa quale dei due ha misurato: e' la forma E1
+ *      («scritto non e' in vigore»), ed e' la stessa ragione per cui
+ *      `chiave_intervallo_ms()` porta `*come` e per cui `sgombra_dichiara()`
+ *      parla anche a zero.
+ *
+ * ⛔⛔ E QUI SI DICHIARA ANCHE LA DIPENDENZA FRA I DUE INTERRUTTORI, che e' il
+ *      fatto piu' facile da misurare male di tutta la fase.
+ *
+ *      `video_sgombra()` con la soglia SPENTA abbandona ogni delta che ha
+ *      ancora byte in coda, a ogni fotogramma piu' recente.  ⇒ Quando il
+ *      fotogramma N+1 arriva, l'unico delta che puo' avere ancora byte nostri
+ *      e' N: `arretrato` vale **0 o 1, mai 2**, per costruzione — e con
+ *      `WT_RITMO_POSTI = 2` questo regolatore **non scatta mai**.
+ *
+ *      ⛔ Un banco che accendesse solo `--ritmo-adattivo` misurerebbe zero
+ *      discese e leggerebbe «la linea porta».  Sono due fatti con la stessa
+ *      faccia, e la riga qui sotto e' quel che li separa PRIMA della misura
+ *      invece che dopo.
+ *
+ * ⇒ Il regolatore si prova con TUTT'E DUE accesi:
+ *      remotix --sgombra-soglia-ms 100 --ritmo-adattivo
+ *
+ * ⚠ E l'ordine in `main.c` non e' un caso: `wt_sgombra_soglia()` viene PRIMA,
+ *   cosi' questa riga legge il valore in vigore invece di prometterne uno.
+ *
+ * ⚠⚠ E l'ALGORITMO DI CONGESTIONE non e' mai stato scelto — `trasporto.c`
+ *     chiama `ngtcp2_settings_default()` e non tocca `cc_algo`, quindi si
+ *     prende il predefinito di ngtcp2 (CUBIC).  ⛔ NON si cambia in questo
+ *     giro, perche' sarebbe una seconda variabile nello stesso banco; ma va
+ *     nominato, perche' morde proprio qui: su WiFi un algoritmo A PERDITA
+ *     legge una perdita da radio come una congestione e dimezza la finestra —
+ *     cioe' fabbrica l'arretrato che questo regolatore poi misura.  `[?]` Da
+ *     provare come esperimento separato, dietro un interruttore suo. */
+void wt_ritmo_adattivo(bool acceso)
+{
+	ritmo_adattivo = acceso;
+	if (!acceso) {
+		registro_dice(REG_AVVIO,
+		              "il regolatore del ritmo e' SPENTO (invariante I6, "
+		              "`--ritmo-adattivo`): nessun fotogramma verra' mai saltato "
+		              "per la linea.  ⚠ E questa riga E' il perche' — non e' che "
+		              "non ha dovuto scattare");
+		return;
+	}
+	registro_dice(REG_AVVIO,
+	              "⭐ FASE 9: il regolatore del ritmo e' ACCESO "
+	              "(`--ritmo-adattivo`): un fotogramma NON parte quando %u delta "
+	              "in volo hanno ancora byte nella mia coda d'uscita.  ⚠ Ogni "
+	              "discesa finisce nel registro (I1), e non c'e' nessuna risalita "
+	              "da ricordare: `arretrato` si rilegge a ogni fotogramma",
+	              (unsigned)WT_RITMO_POSTI);
+	if (!sgombra_soglia_ms)
+		registro_dice(REG_AVVIO,
+		              "⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA "
+		              "(`--sgombra-soglia-ms 0`), e allora questo regolatore NON "
+		              "SCATTERA' MAI: `video_sgombra()` svuota la coda dei delta a "
+		              "ogni fotogramma, quindi `arretrato` non puo' superare 1 e i "
+		              "posti sono %u.  ⚠ Un banco fatto cosi' misura ZERO discese e "
+		              "sembra dire «la linea porta»: sono due fatti con la stessa "
+		              "faccia.  ⇒ Si accendono INSIEME: --sgombra-soglia-ms 100 "
+		              "--ritmo-adattivo",
+		              (unsigned)WT_RITMO_POSTI);
+	else
+		registro_dice(REG_AVVIO,
+		              "⭐ e la soglia della coda video e' accesa a %llu ms: e' il "
+		              "suo prerequisito — e' lei che lascia salire `arretrato` a "
+		              "2-3, cioe' nell'intervallo in cui i %u posti discriminano",
+		              (unsigned long long)sgombra_soglia_ms,
+		              (unsigned)WT_RITMO_POSTI);
+}
+
+/* ⛔ Quanti ms ci mette la banda MISURATA a portare via `byte` — gli stessi due
+ *    numeri di `chiave_intervallo_ms()`, che sono quelli con cui ngtcp2 decide
+ *    quanto spedire.  ⚠ Non e' la banda «della linea»: e' quella che il
+ *    controllo di congestione sta concedendo adesso.
+ *
+ * ⛔⛔ E QUESTA STIMA E' UN MINIMO, non una promessa — tre ragioni, dichiarate
+ *     perche' e' il falsificatore piu' importante del §5.3 della proposta:
+ *     (a) non conta i byte gia' consegnati a ngtcp2 e non ancora riscontrati,
+ *         che la coda non vede piu';
+ *     (b) la finestra la divide anche l'audio, che passa su datagram;
+ *     (c) una ritrasmissione ripaga la stessa banda due volte.
+ *     ⇒ Se il ritardo misurato dell'anello supera 55 + soglia ms, e' QUI che
+ *     ha ceduto: sarebbe un numero che *sembra* misurato. */
+static uint64_t coda_svuotamento_ms(const wt *w, size_t byte, const char **come)
+{
+	ngtcp2_conn_info info;
+
+	if (byte == 0) {
+		*come = "la coda del video e' vuota";
+		return 0;
+	}
+	memset(&info, 0, sizeof info);
+	if (w->conn)
+		ngtcp2_conn_get_conn_info(w->conn, &info);
+	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
+		*come = "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra, si assume "
+		        "il pavimento dichiarato di 20 Mbit/s (DECISIONI.md §3.1-bis)";
+		return (uint64_t)byte / WT_PAVIMENTO_BYTE_MS;
+	}
+	*come = "dalla banda misurata (cwnd/rtt)";
+	return (uint64_t)byte * info.smoothed_rtt / info.cwnd / NGTCP2_MILLISECONDS;
+}
+
 /* ------------------------------------------------------------------------ */
 /* ⭐ §5.1 — L'ABBANDONO, ED E' QUELLO CHE SI VEDE DAL LATO CHE RICEVE.       */
 
@@ -2328,27 +2852,166 @@ static void involo_pulisci(wt *w)
  *     La riga che si somiglia si conta a parte, o la diagnosi punta a monte di
  *     dove sta il difetto.
  *
- * ⇒ ⏳ **La cura vera sarebbe qui**, e non e' stata scritta: abbandonare un
- *   delta solo quando e' davvero senza speranza (una soglia sulla coda) invece
- *   che a ogni fotogramma piu' recente.  §5.1 lo **permette**, non lo
- *   **impone**.  Cosi' sotto congestione il video calerebbe di RITMO restando
- *   fatto di delta, invece di diventare un flusso di sole chiavi.
- *   ⛔ Non l'ho scritta perche' il coordinatore ha chiesto **una cura per
- *   volta**, e questa e' una decisione di prodotto che tocca §5.1.
+ * ⇒ ⭐ **LA CURA E' QUI SOTTO, dal 23 agosto 2026** (fase 9): abbandonare un
+ *   delta solo quando e' davvero senza speranza — una **soglia sulla coda** —
+ *   invece che a ogni fotogramma piu' recente.  §5.1 lo **permette**, non lo
+ *   **impone**.  Cosi' sotto congestione il video cala di RITMO restando fatto
+ *   di delta, invece di diventare un flusso di sole chiavi.
+ *   ⛔ E nasce SPENTA (I6): senza `--sgombra-soglia-ms N` questa funzione fa
+ *   quel che ha sempre fatto, byte per byte.
+ */
+/*
+ * ⛔⭐⭐ LA PREVISIONE FALSIFICABILE — scritta PRIMA di misurare, 23 ago 2026.
+ *
+ *       Stesso gradino della tabella qui sopra (linea larga → 3 s a 10 Mbit/s →
+ *       larga), scena `barra`, 1920x1080, con `--sgombra-soglia-ms 100`:
+ *
+ *       | grandezza                    | oggi (spenta) | previsione a 100 ms |
+ *       | fotogrammi/s nei secondi 8-10| 13-14         | **>= 25**           |
+ *       | di cui CHIAVE, al secondo    | 6-7           | **<= 2**            |
+ *       | abbandoni §5.1 al secondo    | 6-7           | **<= 2**            |
+ *       | secondi 7 e 12 (linea larga) | 40-42/s, 0 ch | **identici** (inerte)|
+ *       | ritorno, secondo 11          | 32/s          | **>= 32/s**         |
+ *       | conto finale                 | —             | TENUTI >> 0         |
+ *
+ *       ⭐ E fuori dal gradino la cura dev'essere INERTE: a 20 Mbit/s — il
+ *       pavimento di `DECISIONI.md` §3.1-bis — la coda non arriva mai a 100 ms,
+ *       quindi `abbandonati per soglia` = 0 e il ritardo dell'anello resta
+ *       quello di fase 8 (55,20 ms `[M]`).
+ *
+ * ⛔ I QUATTRO ROSSI CHE MI SMENTIREBBERO — e ognuno dice dove guardare:
+ *
+ *    1. **le chiavi restano 6-7/s mentre gli abbandoni §5.1 scendono a <= 2.**
+ *       ⇒ Il debito di §5.2 lo accende un'ALTRA delle sette cause, quasi
+ *       certamente la 4 (`rcp.c:3441`, il credito mancato — la forma invisibile
+ *       al ricevente), e la cura gira a vuoto.  ⚠ Il conto finale distingue le
+ *       due apposta: `abbandonati per soglia` contro `non accettati per credito
+ *       mancato`.  E' la lezione gia' pagata («105 richieste contro 346
+ *       rifiuti nello stesso giro»);
+ *    2. **i fotogrammi/s nei secondi 8-10 non salgono, o scendono sotto 13.**
+ *       ⇒ I delta tenuti arrivano troppo tardi per servire: la soglia e' troppo
+ *       alta e la coda sta comprando fluidita' vendendo risposta
+ *       (`SPECIFICHE.md:128-130`).  Si scende a 50 ms e si rimisura;
+ *    3. ⛔ **il ritardo misurato dell'anello supera 55 + soglia ms** (155 ms a
+ *       100).  ⇒ `coda_svuotamento_ms()` SOTTOSTIMA lo svuotamento per una
+ *       delle tre ragioni dichiarate accanto a lei, e la soglia non limita quel
+ *       che promette.  ⭐ E' il rosso piu' importante, perche' sarebbe **un
+ *       numero che sembra misurato**;
+ *    4. **il ritorno smette di essere sotto il secondo** (secondo 11 sotto
+ *       32/s).  ⇒ La coda tenuta ritarda la RIPRESA, cioe' la cura paga il
+ *       transitorio col ritorno: e' il contrario del suo scopo, e a quel punto
+ *       la soglia va spenta invece che tarata.
+ *
+ * ⚠⚠ IL PREZZO, IN MILLISECONDI — e' la cosa che l'utente deve giudicare, non
+ *     una misura: per una frazione di secondo, sotto congestione, l'immagine e'
+ *     **leggermente vecchia** invece che sfasciata.
+ *
+ *     | quando la linea porta (>= 20 Mbit/s)      | **0 ms** — mai a soglia  |
+ *     | al peggio, per costruzione                | **100 ms** (la soglia)   |
+ *     | + la grana del controllo (a ogni fotogr.) | **+33 … +48 ms**         |
+ *     | ⇒ peggio dichiarato, solo durante il calo | **~150 ms**              |
+ *     | + l'anello di fase 8 (55,20 ms `[M]`)     | **~205 ms** gesto→pixel  |
+ *     | **oggi**, nello stesso istante            | 0 ms aggiunti, ma il     |
+ *     |                                           | 100 % chiavi e i delta   |
+ *     |                                           | non arrivano affatto     |
+ *
+ *     ⚠ Concretamente: trascinando una finestra mentre la linea cala, la
+ *     finestra segue il puntatore con fino a un quinto di secondo di ritardo
+ *     per un attimo — invece di scattare da un'immagine all'altra a ritmo di
+ *     chiave.  ⛔ Quale delle due sia peggio non lo decide una misura: lo
+ *     decide lui.
+ *
+ * ⭐⭐ E QUESTA CURA E' IL PREREQUISITO DEL REGOLATORE DEL RITMO
+ *     (`fasi/09-la-qualita-e-la-degradazione.md` §6).  Quel disegno si aggancia ad
+ *     `arretrato` = quanti DELTA vivi hanno ancora byte nella nostra coda, e
+ *     ⛔ oggi quella grandezza e' **zero per costruzione**, perche' questa
+ *     funzione svuota tutto a ogni giro: un regolatore installato adesso non
+ *     scatterebbe mai e il banco lo leggerebbe come «la linea porta».
+ *     ⇒ Qui `arretrato` si conta con la definizione di §3.1 — vivo, NON chiave,
+ *     byte in coda > 0 — e si SCRIVE in ogni riga accanto alla soglia, cosi'
+ *     la grandezza del regolatore diventa leggibile invece di diventare
+ *     un'altra cosa ancora.  ⚠ A 100 ms e 20,9-30 fotogrammi/s `arretrato` puo'
+ *     salire a **2-3**, che e' esattamente l'intervallo in cui il `POSTI = 2`
+ *     di quel disegno discrimina.
  */
 static void video_sgombra(wt *w, const char *perche)
 {
+	size_t resto[WT_INVOLO_MAX];
+	size_t in_coda = 0;
+	unsigned arretrato = 0;
+	uint64_t attesa = 0;
+	const char *come = "l'interruttore e' spento (I6)";
+	char motivo[400];
+
 	if (!w->rcp || !w->conn)
 		return;
+
+	/* ⛔ PRIMA PASSATA — e non e' un giro in piu': chi non ha piu' byte esce
+	 * dall'elenco (non e' stato abbandonato, e' stato SPEDITO), e quel che
+	 * resta si somma.  La somma e' la coda del VIDEO — non `w->byte_in_coda`,
+	 * che conterrebbe anche il canale di controllo e l'audio.
+	 * ⚠ I byte si tengono in `resto[]` invece di rileggerli: fra le due
+	 *   passate non cambia niente, e `coda_byte_stream()` scorre tutta la coda
+	 *   ogni volta. */
 	for (size_t i = 0; i < w->ninvolo; i++) {
-		size_t rimasti;
+		resto[i] = 0;
 		if (!w->involo[i].vivo)
 			continue;
-		rimasti = coda_byte_stream(w, w->involo[i].stream);
-		if (rimasti == 0) {
+		resto[i] = coda_byte_stream(w, w->involo[i].stream);
+		if (resto[i] == 0) {
 			w->involo[i].vivo = false;
 			continue;
 		}
+		in_coda += resto[i];
+		/* ⭐ `arretrato` esclude le CHIAVI, ed e' la definizione di §3.1 del
+		 *    disegno del regolatore: una chiave lenta in coda non deve fermare
+		 *    la produzione di delta, ha gia' il suo regolatore in
+		 *    `chiave_intervallo_ms()`.  ⚠ Ma i suoi BYTE contano nella somma:
+		 *    occupano il tubo davvero, e il prezzo in ms deve dirlo. */
+		if (!w->involo[i].chiave)
+			arretrato++;
+	}
+
+	if (sgombra_soglia_ms) {
+		attesa = coda_svuotamento_ms(w, in_coda, &come);
+		if (attesa <= sgombra_soglia_ms) {
+			/* ⭐ SI TIENE — e non si scrive una riga per fotogramma: si conta,
+			 * e la riga esce solo quando lo STATO cambia.  ⚠ Trenta righe al
+			 * secondo renderebbero illeggibile il registro proprio dove serve:
+			 * e' la stessa ragione del fondo di `chiave_intervallo_ms()`. */
+			w->sgombra_tenuti += arretrato;
+			if (w->sgombra_sopra) {
+				w->sgombra_sopra = false;
+				registro_dice(REG_RCP,
+				              "⭐ %s: la coda del video torna SOTTO la soglia "
+				              "(%zu byte = %llu ms, soglia %llu ms, %s): i %u "
+				              "delta arretrati si TENGONO — §5.1 dice PUO', non "
+				              "DEVE",
+				              w->provenienza, in_coda,
+				              (unsigned long long)attesa,
+				              (unsigned long long)sgombra_soglia_ms, come,
+				              arretrato);
+			}
+			involo_pulisci(w);
+			return;
+		}
+		if (!w->sgombra_sopra) {
+			w->sgombra_sopra = true;
+			registro_dice(REG_RCP,
+			              "⛔ %s: la coda del video passa SOPRA la soglia (%zu "
+			              "byte = %llu ms, soglia %llu ms, %s), arretrato %u "
+			              "delta: da qui i piu' vecchi si abbandonano (§5.1), "
+			              "il minimo per rientrare",
+			              w->provenienza, in_coda, (unsigned long long)attesa,
+			              (unsigned long long)sgombra_soglia_ms, come,
+			              arretrato);
+		}
+	}
+
+	for (size_t i = 0; i < w->ninvolo; i++) {
+		size_t rimasti = resto[i];
+		if (!w->involo[i].vivo || rimasti == 0)
+			continue;
 		if (w->involo[i].chiave) {
 			/* ⛔ §5.2: «il server NON DEVE abbandonare un fotogramma chiave.
 			 * Abbandonare la cura non e' una cura».  ⚠ E si dice UNA volta,
@@ -2366,10 +3029,23 @@ static void video_sgombra(wt *w, const char *perche)
 			}
 			continue;
 		}
-		/* ⛔ La riga di registro, il conto e il debito della chiave sono di
-		 * `rcp.c`: due copie dello stesso stato divergono. */
+		/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro» — un
+		 * fotogramma perso in silenzio e uno abbandonato di proposito hanno lo
+		 * stesso aspetto dal lato che riceve.  ⭐ E il MOTIVO porta LA MISURA
+		 * ACCANTO ALLA SOGLIA: se la misura e' sotto la soglia, quella discesa
+		 * e' stata per prudenza, e la riga stessa lo dimostra.  Senza, il
+		 * registro direbbe «ne e' partito uno piu' recente» anche quando la
+		 * ragione vera e' un'altra, e racconterebbe la regola vecchia.
+		 * ⚠ La riga, il conto e il debito restano di `rcp.c`: due copie dello
+		 * stesso stato divergono. */
+		snprintf(motivo, sizeof motivo,
+		         "%s — e la coda del video non si svuota in tempo: %zu byte = "
+		         "%llu ms (%s), soglia %llu ms, arretrato %u delta",
+		         perche, in_coda, (unsigned long long)attesa, come,
+		         (unsigned long long)sgombra_soglia_ms, arretrato);
 		if (!rcp_video_abbandonato_a_valle(w->rcp, w->involo[i].numero, false,
-		                                   rimasti, perche))
+		                                   rimasti,
+		                                   sgombra_soglia_ms ? motivo : perche))
 			continue;
 		/* ⛔ PRIMA si azzera lo stream, POI si buttano i byte.  Al contrario
 		 * resterebbe una finestra — corta ma vera — in cui lo stream e' vivo e
@@ -2378,6 +3054,30 @@ static void video_sgombra(wt *w, const char *perche)
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, w->involo[i].stream, 0);
 		coda_butta_stream(w, w->involo[i].stream);
 		w->involo[i].vivo = false;
+		w->sgombra_abbandoni++;
+		/* ⭐ SI ABBANDONA IL MINIMO, e si scorre dal PIU' VECCHIO: l'elenco e'
+		 * in ordine d'inserimento (`involo_aggiungi()`), quindi il primo vivo
+		 * e' il piu' vecchio ed e' quello che serve meno.  ⛔ Appena la coda
+		 * rientra sotto la soglia si SMETTE: abbandonare anche gli altri
+		 * costerebbe una chiave per niente, ed e' precisamente la spirale che
+		 * `RCP.md:1284` nomina — «un fotogramma chiave per ogni delta
+		 * abbandonato e' la spirale».
+		 *
+		 * ⚠ E SI ESCE IN SILENZIO, senza una riga «bastava»: lo stato NON e'
+		 *   cambiato — la soglia sta ancora mordendo, e il rientro e' opera di
+		 *   questo abbandono, non della linea.  Scriverla qui vorrebbe dire
+		 *   due righe per fotogramma, cioe' sessanta al secondo mentre il
+		 *   gradino dura: e' il difetto che il fondo di `chiave_intervallo_ms()`
+		 *   esiste per non fare.  ⭐ `sgombra_sopra` torna falso solo quando una
+		 *   passata INTERA trova la coda sotto la soglia senza abbandonare
+		 *   niente: quello si' e' un cambio di stato. */
+		if (sgombra_soglia_ms) {
+			arretrato--;
+			in_coda -= rimasti;
+			attesa = coda_svuotamento_ms(w, in_coda, &come);
+			if (attesa <= sgombra_soglia_ms)
+				break;
+		}
 	}
 	involo_pulisci(w);
 }
@@ -2684,6 +3384,303 @@ static void video_regola(wt *w, uint64_t ora_ms)
 }
 
 /* ------------------------------------------------------------------------ */
+/* ⭐⭐ IL REGOLATORE DEL RITMO — fase 9, e il ritmo scende QUI.              */
+/*
+ * ⛔ LA REGOLA, INTERA: `arretrato == 0` ⇒ si spedisce; `arretrato >= POSTI`
+ *    ⇒ questo fotogramma NON parte.  Nient'altro.  Non c'e' nessun ritmo
+ *    target, nessuna banda calcolata, nessun riscontro del client, e
+ *    soprattutto nessun numero che debba risalire.
+ *
+ * ⛔ E LA DISCESA NON E' UN NUMERO CHE SI ABBASSA: e' un fotogramma che non
+ *    parte.  Il ritmo cala da se', tanto quanto la coda non si svuota, e
+ *    risale da se' quando si svuota — perche' la grandezza si RILEGGE, non si
+ *    ricorda.  ⭐ Nessun cricchetto: e' l'errore che `qualita_corrente` ha
+ *    fatto (scendeva e non risaliva piu') ed e' costato una cura a parte.
+ *
+ * ⛔ PERCHE' NON E' UN CRONOMETRO — ed e' la famiglia di errori
+ *    P8 → P11 → P13 → P14 → P19 → P20 di `RCP.md`, evitata invece che
+ *    ripetuta.  P13 diceva «per un secondo» e fu corretto due ore dopo:
+ *    *«il secondo era la grandezza sbagliata: quel che deve svuotarsi e' una
+ *    CODA, e quanto ci mette un fotogramma gia' in volo dipende dalla BANDA,
+ *    non dall'orologio»*.  P20 diceva «chi riceve un fotogramma prima di
+ *    SESSIONE», e la cura fu guardare quel che il pari aveva SPEDITO LUI:
+ *    locale, monotono, indipendente dalla consegna.  ⇒ `arretrato` ha
+ *    esattamente quella forma dal nostro lato: sono BYTE PRODOTTI DA NOI E
+ *    ANCORA IN CASA NOSTRA.  Nessun pacchetto perso, nessun riordino e nessun
+ *    silenzio del client possono falsarlo, perche' non si guarda niente che
+ *    venga da fuori.  ⭐ E la frase e' gia' nel codice, scritta per la stessa
+ *    ragione: *«una stima puo' sbagliare, un byte in coda no»*.
+ *
+ * ⛔ RIFIUTATA LA GRANDEZZA DI GNOME (i riscontri di fotogramma del client),
+ *    e sono tre ragioni indipendenti: (1) da noi NON ESISTONO — la tabella dei
+ *    messaggi di `RCP.md` non ha nessun riscontro di fotogramma, e aggiungerlo
+ *    vorrebbe dire un giro di rete DENTRO l'anello di controllo, cioe'
+ *    comprare reazione pagandola in ritardo (`SPECIFICHE.md:128-131` chiede di
+ *    giustificarlo in ms; `arretrato` costa **0 ms**, e' gia' in memoria
+ *    nostra); (2) il pari PUO' CONGELARLI e il regolatore si fermerebbe per
+ *    sempre — e un anello che il pari puo' congelare non diventa sicuro
+ *    perche' si aggiunge un `if`; (3) la loro soglia
+ *    (`rtt * refresh_rate / 1e6`) e' un orologio travestito, cioe' P13 con un
+ *    altro vestito.
+ *
+ * ⛔ E LE CHIAVI NON CONTANO — `RCP.md` §5.2 vieta di abbandonarle, §5.1 dice
+ *    che i delta che vengono dopo non sono bloccati da loro (gli stream sono
+ *    indipendenti), e il loro ritmo ce l'ha gia' `chiave_intervallo_ms()`.
+ *    Contarle qui fermerebbe la produzione di delta per tutta la durata di una
+ *    chiave lenta, che e' esattamente il contrario di `SPECIFICHE.md` §8.3.
+ *
+ * ⚠ IL PREZZO IN MILLISECONDI, dichiarato: **0**.  Questo regolatore non
+ *   aggiunge nessuna memoria intermedia, quindi non compra fluidita' e non
+ *   vende risposta (`SPECIFICHE.md:128-131`).  Toglie lavoro, non lo rimanda.
+ *
+ * ⚠ IL PREZZO CHE INVECE C'E': si taglia A VALLE del codificatore, quindi il
+ *   fotogramma saltato ha gia' pagato la GPU del figlio.  La leva vera — non
+ *   catturarlo affatto — sta nel figlio, e ⛔ NON si fa in fase 9 per una
+ *   ragione d'architettura: il palco e' UNO per utente e le sessioni sono N,
+ *   quindi un ritmo imposto al palco lo imporrebbe a tutte e la sessione sulla
+ *   linea buona pagherebbe per quella sulla linea cattiva.  `[?]` aperta.
+ *
+ * ⛔ IL FONDO DELLA SCALA E' UN VERDETTO, NON UN FRENO.  `DECISIONI.md` §2.1:
+ *    la linea e' 20 Mbit/s, l'immagine 480p·25.  Sotto i 25/s su una linea da
+ *    20 Mbit/s e' un DIFETTO, non una degradazione riuscita — e la cura NON e'
+ *    forzare un fotogramma dentro una coda che non si svuota, perche' quello
+ *    peggiora la coda e basta.  ⇒ Non c'e' nessun pavimento in questo codice:
+ *    c'e' il conto `video_ritmo_scesi` accanto ai fotogrammi consegnati, e chi
+ *    legge il registro DICHIARA il difetto invece di combatterlo.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⛔⭐⭐ LA PREVISIONE FALSIFICABILE — scritta PRIMA di qualunque misura.
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⭐ QUESTO E' UN PARAPETTO, E IL SUO COMPORTAMENTO CORRETTO E' NON FARE
+ *    NIENTE.  Un banco che dimostrasse solo che non scatta avrebbe dimostrato
+ *    meta' del lavoro; l'altra meta' e' dimostrare che l'anello e' stato
+ *    PERCORSO mentre non scattava.
+ *
+ * 1. IN REGIME, a 20 Mbit/s sul percorso vero, scena mossa, 1080p, H.264
+ *    hardware, con `--sgombra-soglia-ms 100 --ritmo-adattivo`:
+ *
+ *      | fotogrammi consegnati | **20-37/s** — quelli che la scena produce |
+ *      | byte in uscita        | **3-12 Mbit/s**, fra un sesto e la meta'  |
+ *      | `arretrato`           | **0, ogni tanto 1.  Mai 2**               |
+ *      | `video_ritmo_scesi`   | ⭐ **0** — zero discese                   |
+ *
+ * 2. SUL GRADINO — ed e' dove deve scattare.  Stesso gradino gia' misurato:
+ *    linea larga → **3 s a 10 Mbit/s** → larga, scena `barra`, 1920x1080.
+ *
+ *      | `arretrato` durante i 3 s   | sale a **2-3**                     |
+ *      | discese (`ritmo_scesi`)     | **> 0**, e concentrate nei 3 s     |
+ *      | righe di registro           | **2 per episodio** (SCENDE/RISALE),|
+ *      |                             | NON una per fotogramma             |
+ *      | fotogrammi/s nei 3 s        | **>= 25** e fatti di DELTA         |
+ *      | di cui CHIAVE, al secondo   | **<= 2** (senza regolatore: 6-7)   |
+ *      | secondi di linea larga      | **identici** a oggi: inerte        |
+ *      | il RISALE, dopo il gradino  | entro **1 s** dal ritorno          |
+ *
+ * 3. ⛔ CHE NON CALA A SCENA FERMA — e il controllo NON puo' essere «il
+ *    contatore e' zero»: vuoto e proibito hanno la stessa faccia
+ *    (`LEZIONI.md` §1.9), e uno zero su un ramo mai raggiunto non dimostra
+ *    niente.  ⭐ La dimostrazione strutturale viene prima: `arretrato` si
+ *    legge SOLO all'arrivo di un fotogramma dal palco, e a scena ferma un
+ *    compositore Wayland non ne consegna nessuno — `video_a_una()` non viene
+ *    nemmeno chiamata.  Una grandezza che misurasse byte/s, o ms di CPU, o
+ *    «da quanto non spedisco» sarebbe invece perfettamente capace di scendere
+ *    su un desktop immobile, ed e' la ferita di v1 (*«su un desktop poco mosso
+ *    scendeva a 2-6 Mbit/s, contento di risparmiare»*).
+ *
+ *    ⇒ IL CONTROLLO SPERIMENTALE SI FA A COPPIE, NELLO STESSO GIRO: meta'
+ *    scena ferma e meta' scena mossa, ALTERNATE, non due giri separati.  E la
+ *    riga che lo rende leggibile e' quella di `ritmo_ciclo()`, una al secondo,
+ *    che esce anche quando di fotogrammi non ne arriva nessuno.  ⭐ La forma
+ *    esatta, ed e' un contratto sul testo:
+ *
+ *      ritmo di IND:PORTA: arretrato LETTO 0 volte in quest'ultimo secondo,
+ *      massimo 0, ultimo 0, posti 2 — 0 fotogrammi non partiti in questo
+ *      secondo, 0 in tutto.  ⚠ ZERO LETTURE = il palco non ha consegnato
+ *      niente (scena ferma), e NON «arretrato zero»
+ *
+ *    Il verde e': `video_ritmo_scesi` INVARIATO per tutta la meta' ferma —
+ *    con le righe che dicono «LETTO 0 volte», cioe' che il ramo non e' stato
+ *    percorso — E `arretrato` letto almeno una volta al secondo nella meta'
+ *    mossa.  ⛔ Un giro che non soddisfa il secondo punto NON HA MISURATO
+ *    NIENTE, e va buttato invece che interpretato.
+ *
+ * ⛔ I ROSSI CHE MI SMENTIREBBERO, e ognuno dice dove guardare:
+ *
+ *  a. **discese a 20 Mbit/s con un desktop normale** ⇒ o `POSTI = 2` e'
+ *     troppo stretto, o un fotogramma costa molto piu' del misurato.  La riga
+ *     porta `cwnd`, `cwnd_left`, byte in volo e byte in coda: dice da se'
+ *     quale dei due;
+ *  b. ⛔⛔ **discese con la finestra di congestione LARGA** (`cwnd_left` alto)
+ *     ⇒ NON E' LA LINEA, e' il BROWSER: e' la sua finestra di flusso
+ *     (`initial_max_stream_data_uni` / `initial_max_data`, che decide lui e
+ *     noi non tocchiamo) oppure il pacer.  La cura sarebbe altrove e questo
+ *     regolatore starebbe frenando per un difetto che non e' suo.  E' il rosso
+ *     piu' importante, perche' produce un anello che SEMBRA lavorare bene;
+ *  c. **`video_saltati` che cresce mentre `arretrato` resta 0** ⇒ il collo e'
+ *     il credito di stream (§2.3, la causa 4 del debito), non la banda, e
+ *     questo regolatore non c'entra: si guarda `sgombra_credito`;
+ *  d. **zero discese e ZERO LETTURE nella meta' mossa** ⇒ non e' una
+ *     previsione confermata, e' un anello mai percorso.  Quasi certamente la
+ *     soglia della coda e' spenta (vedi `wt_ritmo_adattivo()`);
+ *  e. **il RISALE non arriva mai dopo il ritorno della linea** ⇒ qualcosa
+ *     trattiene byte in coda che non se ne vanno, e non e' il ritmo: si guarda
+ *     la punta di `byte_in_volo` e gli stream mai chiusi.
+ *
+ * ⇒ Ritorna `true` quando questo fotogramma NON deve partire.
+ */
+static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
+{
+	unsigned arretrato = 0;
+	size_t in_coda = 0;
+
+	if (!ritmo_adattivo)
+		return false;
+	/* ⛔ Le chiavi non passano di qui: §5.2 e `chiave_intervallo_ms()`. */
+	if (chiave)
+		return false;
+
+	/* ⛔ SI LEGGE PRIMA DI `video_sgombra()`, che poche righe piu' sotto quella
+	 *    coda la svuota: dopo, `arretrato` sarebbe sempre zero e questo anello
+	 *    non scatterebbe mai.  ⚠ `coda_byte_stream()` conta i byte che non sono
+	 *    ANCORA usciti da casa nostra — un elemento gia' consegnato a ngtcp2 ha
+	 *    `off == dati.n` e vale zero, anche se dopo la cura del 23 agosto la sua
+	 *    memoria e' ancora nostra.  ⇒ La grandezza e' rimasta quella. */
+	for (size_t i = 0; i < w->ninvolo; i++) {
+		size_t resto;
+		if (!w->involo[i].vivo || w->involo[i].chiave)
+			continue;
+		resto = coda_byte_stream(w, w->involo[i].stream);
+		if (resto == 0)
+			continue;
+		in_coda += resto;
+		arretrato++;
+	}
+
+	/* ⭐ LA LETTURA SI CONTA, sempre, anche quando vale zero: e' quel che
+	 *    distingue «l'anello e' stato percorso e l'arretrato era zero» da
+	 *    «l'anello non e' stato percorso affatto» (`LEZIONI.md` §1.9). */
+	w->ritmo_letture++;
+	w->ritmo_ultimo = arretrato;
+	if (arretrato > w->ritmo_max)
+		w->ritmo_max = arretrato;
+
+	if (arretrato >= WT_RITMO_POSTI) {
+		if (!w->ritmo_giu) {
+			ngtcp2_conn_info in;
+			uint64_t rtt_ms;
+			char rete[96];
+
+			memset(&in, 0, sizeof in);
+			ngtcp2_conn_get_conn_info(w->conn, &in);
+			rtt_ms = in.smoothed_rtt / NGTCP2_MILLISECONDS;
+			/* ⛔⭐ `smoothed_rtt - min_rtt` E' LA CODA DENTRO LA RETE, IN
+			 *     MILLISECONDI: e' il numero con cui `SPECIFICHE.md:128` —
+			 *     «ogni memoria intermedia compra fluidita' e vende risposta» —
+			 *     si onora invece di citarlo.  ⚠ Ed e' la prima volta che
+			 *     `min_rtt` viene letto: `ngtcp2_conn_get_conn_info()` la
+			 *     riempie da sempre e noi ne guardavamo due campi su sette.
+			 *
+			 * ⛔ MA `min_rtt` VALE `UINT64_MAX` FINCHE' NON E' ARRIVATO UN
+			 *    CAMPIONE, e la sottrazione darebbe un numero enorme che SEMBRA
+			 *    misurato — forma E1, la peggiore.  ⇒ Si dichiara «non ancora
+			 *    noto» invece di stampare spazzatura. */
+			if (in.min_rtt != UINT64_MAX && in.min_rtt != 0
+			    && in.smoothed_rtt >= in.min_rtt)
+				snprintf(rete, sizeof rete,
+				         "%llu ms di coda dentro la rete (rtt %llu - min %llu)",
+				         (unsigned long long)((in.smoothed_rtt - in.min_rtt)
+				                              / NGTCP2_MILLISECONDS),
+				         (unsigned long long)rtt_ms,
+				         (unsigned long long)(in.min_rtt / NGTCP2_MILLISECONDS));
+			else
+				snprintf(rete, sizeof rete,
+				         "coda dentro la rete NON ANCORA NOTA (min_rtt manca)");
+			w->ritmo_giu   = true;
+			w->ritmo_da_ms = ora_ms;
+			w->ritmo_da_n  = w->video_ritmo_scesi;
+			/* ⛔⭐ INVARIANTE I1: «il ritmo non cala mai per prudenza, per
+			 *     risparmio o perche' la scena e' ferma.  Cala solo quando la
+			 *     MISURA dimostra che la linea non porta, e ogni discesa e'
+			 *     dichiarata nel registro».
+			 *
+			 * ⭐ E LA RIGA PORTA LA MISURA ACCANTO ALLA SOGLIA: `arretrato` e i
+			 *    posti, uno accanto all'altro.  Se la misura fosse sotto la
+			 *    soglia, quella discesa sarebbe stata per prudenza — e la riga
+			 *    stessa lo dimostrerebbe, invece di lasciarlo dedurre.
+			 *
+			 * ⚠ UNA RIGA PER EPISODIO, non per fotogramma: a 60/s la seconda
+			 *   forma e' il difetto dei 30,8 GB di registro. */
+			registro_dice(REG_RCP,
+			              "⛔ %s: il ritmo SCENDE — arretrato %u delta contro %u "
+			              "posti, %zu byte fermi nella coda del video (%zu in "
+			              "tutto).  cwnd %llu, cwnd_left %llu, in volo per ngtcp2 "
+			              "%llu, miei consegnati e non riscontrati %zu, rtt %llu "
+			              "ms, %s.  ⭐ Non e' prudenza e non e' un orologio: e' la "
+			              "coda che non si svuota (I1).  ⚠ Se cwnd_left e' ALTO "
+			              "non e' la linea, e' la finestra del browser",
+			              w->provenienza, arretrato, (unsigned)WT_RITMO_POSTI,
+			              in_coda, w->byte_in_coda,
+			              (unsigned long long)in.cwnd,
+			              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+			              (unsigned long long)in.bytes_in_flight,
+			              w->byte_in_volo,
+			              (unsigned long long)rtt_ms, rete);
+		}
+		w->video_ritmo_scesi++;
+		return true; /* ⛔ questo fotogramma NON parte: E' la discesa */
+	}
+
+	/* ⭐ E LA FINE DELL'EPISODIO NON LA DECIDE NESSUNO: la coda si e' svuotata
+	 *    e l'arretrato e' tornato a zero.  Non c'e' nessun numero da rialzare,
+	 *    nessuna isteresi e nessun ritardo di risalita — e' il pregio della
+	 *    grandezza che si rilegge invece di ricordarsi. */
+	if (w->ritmo_giu && arretrato == 0) {
+		w->ritmo_giu = false;
+		registro_dice(REG_RCP,
+		              "⭐ %s: il ritmo RISALE — l'episodio e' durato %llu ms e sono "
+		              "restati indietro %u fotogrammi.  ⚠ Non l'ha deciso nessuno: "
+		              "la coda si e' svuotata e l'arretrato e' zero",
+		              w->provenienza,
+		              (unsigned long long)(ora_ms - w->ritmo_da_ms),
+		              w->video_ritmo_scesi - w->ritmo_da_n);
+	}
+	return false;
+}
+
+/* ⛔⭐ LA RIGA AL SECONDO CHE RENDE FALSIFICABILE «non cala a scena ferma».
+ *
+ *     Gira col BATTITO e non coi fotogrammi, apposta: se girasse coi
+ *     fotogrammi, a scena ferma non uscirebbe niente — e «l'anello non e'
+ *     stato percorso» avrebbe di nuovo la stessa faccia di «l'arretrato era
+ *     zero», che e' precisamente il difetto che questa riga esiste per togliere
+ *     (`LEZIONI.md` §1.9; ed e' la stessa cura della riga `ciclo:` del figlio,
+ *     che si scrive PRIMA di guardare l'esito della cattura).
+ *
+ * ⚠ Esce solo con l'interruttore acceso: e' lo strumento di un banco, non una
+ *   riga di prodotto, e a sessione ferma sarebbe una riga al secondo per
+ *   sempre. */
+static void ritmo_ciclo(wt *w, uint64_t ora_ms)
+{
+	if (!ritmo_adattivo || !w->rcp || w->chiusura >= 0)
+		return;
+	if (ora_ms - w->ritmo_detto_ms < 1000)
+		return;
+	w->ritmo_detto_ms = ora_ms;
+	registro_dice(REG_RCP,
+	              "ritmo di %s: arretrato LETTO %u volte in quest'ultimo secondo, "
+	              "massimo %u, ultimo %u, posti %u — %u fotogrammi non partiti in "
+	              "questo secondo, %u in tutto.  ⚠ ZERO LETTURE = il palco non ha "
+	              "consegnato niente (scena ferma), e NON «arretrato zero»",
+	              w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
+	              (unsigned)WT_RITMO_POSTI,
+	              w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);
+	w->ritmo_letture = 0;
+	w->ritmo_max = 0;
+	w->ritmo_detti_n = w->video_ritmo_scesi;
+}
+
+/* ------------------------------------------------------------------------ */
 /* ⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, CONSEGNATO A UNA SESSIONE.          */
 
 static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
@@ -2753,6 +3750,26 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 
 	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 
+	/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e sta QUI per due ragioni che
+	 *      vanno tutt'e due scritte:
+	 *
+	 *      1. PRIMA di `video_sgombra()`, che tre righe sotto quella coda la
+	 *         svuota.  Dopo, `arretrato` sarebbe zero per costruzione e questo
+	 *         anello non scatterebbe mai — e un regolatore muto e una linea
+	 *         sana hanno la stessa faccia;
+	 *      2. e il fotogramma frenato NON fa nemmeno lo sgombero.  ⭐ E' voluto:
+	 *         sgomberare vorrebbe dire abbandonare un delta, e ogni abbandono
+	 *         accende il debito di §5.2 dentro `rcp.c`, cioe' fabbrica una
+	 *         CHIAVE — che e' precisamente la spirale che questa fase cura.  Il
+	 *         regolatore smette di PRODURRE; non butta quel che c'e' gia'.
+	 *
+	 * ⚠ E l'`involo[]` non si sporca: gli elementi i cui byte se ne sono andati
+	 *   restano marcati vivi finche' una passata di `video_sgombra()` non li
+	 *   toglie, ma `ritmo_frena()` li conta rileggendo i BYTE — quindi
+	 *   `arretrato` cala lo stesso, e la frenata finisce da se'. */
+	if (ritmo_frena(w, chiave, ora_ms))
+		return;
+
 	/* ⛔ §5.1 — «ne e' gia' partito uno piu' recente»: i delta ancora fermi
 	 * nella coda si azzerano PRIMA di accodare questo, o la coda crescerebbe
 	 * col passato invece di portare il presente. */
@@ -2765,6 +3782,14 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	if (!chiave
 	    && ngtcp2_conn_get_streams_uni_left2(w->conn) <= WT_UNI_RISERVA) {
 		w->video_saltati++;
+		/* ⛔⭐ FASE 9 — e questo si conta A PARTE dagli abbandoni di §5.1.
+		 *     E' la CAUSA 4 del debito di §5.2 (`rcp.c:3441`), la forma **C**
+		 *     dell'abbandono: nessuno stream, nessun buco, nessun segnale — il
+		 *     ricevente non la vede affatto.  ⚠ La cura della soglia tocca la
+		 *     causa 3, non questa: se sotto congestione a tenere acceso il
+		 *     debito fosse questa, la cura girerebbe a vuoto e i numeri non si
+		 *     muoverebbero.  ⇒ Due contatori, o il banco non sa attribuire. */
+		w->sgombra_credito++;
 		rcp_video_niente_credito(w->rcp, false,
 		                         ngtcp2_conn_get_streams_uni_left2(w->conn));
 		return;
@@ -3376,12 +4401,18 @@ bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
 }
 
 void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
-                    uint32_t *spediti, uint32_t *abbandonati)
+                    uint32_t *spediti, uint32_t *abbandonati,
+                    uint32_t *ritmo_scesi)
 {
 	if (diffusi)
 		*diffusi = w ? w->video_diffusi : 0;
 	if (saltati)
 		*saltati = w ? w->video_saltati : 0;
+	/* ⭐ FASE 9 — il quinto numero, e sta qui e non in `rcp.c` perche' e' una
+	 *    decisione del TRASPORTO: rcp non sa niente di questo fotogramma, non
+	 *    gli e' mai stato offerto. */
+	if (ritmo_scesi)
+		*ritmo_scesi = w ? w->video_ritmo_scesi : 0;
 	rcp_video_conti(w ? w->rcp : NULL, spediti, abbandonati);
 }
 
@@ -3677,8 +4708,8 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	batti_fra(w, 100);
 	registro_dice(REG_WT,
 	              "chiusura della sessione RIMANDATA, codice 0x%02x (in coda: "
-	              "%zu elementi)",
-	              motivo, w->ncoda - w->testa);
+	              "%zu elementi ancora da spedire)",
+	              motivo, coda_da_spedire(w));
 }
 
 static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
@@ -4660,7 +5691,9 @@ void wt_libera(wt *w)
 	 *   esattamente la ragione per cui non poteva fare da conto. */
 	if (w->video_acceso) {
 		uint32_t diffusi = 0, saltati = 0, spediti = 0, abbandonati = 0;
-		wt_video_conti(w, &diffusi, &saltati, &spediti, &abbandonati);
+		uint32_t ritmo_scesi = 0;
+		wt_video_conti(w, &diffusi, &saltati, &spediti, &abbandonati,
+		               &ritmo_scesi);
 		registro_dice(REG_RCP,
 		              "video di %s, conto finale: %u fotogrammi consegnati a "
 		              "RCP, %u NON SPEDITI (tela che non combacia + credito "
@@ -4671,7 +5704,92 @@ void wt_libera(wt *w)
 		              "per fotogramma (§E2, B2 22 ago 2026) — codec %u",
 		              w->provenienza, diffusi, saltati, spediti, abbandonati,
 		              w->video_annunci_tela, w->video_codec);
+		/* ⛔⭐ FASE 9 — e il conto della SOGLIA sta a parte, per la ragione di
+		 *     tutta questa fase: «zero abbandoni» e «la cura e' spenta» non
+		 *     devono avere la stessa faccia.  ⚠ E i tre numeri contano tre
+		 *     fatti diversi: i delta TENUTI dicono che la cura ha lavorato,
+		 *     quelli abbandonati per soglia che non e' bastata, e quelli senza
+		 *     credito che il debito di §5.2 lo teneva acceso un'ALTRA causa —
+		 *     la 4, invisibile al ricevente.  Senza il terzo, una cura che gira
+		 *     a vuoto somiglia in tutto a una cura che non serve. */
+		registro_dice(REG_RCP,
+		              "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — "
+		              "delta TENUTI %u, abbandonati per soglia %u, e NON "
+		              "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
+		              "forma che il ricevente non vede)",
+		              sgombra_soglia_ms ? "ACCESA" : "spenta (I6)",
+		              (unsigned long long)sgombra_soglia_ms,
+		              w->sgombra_tenuti, w->sgombra_abbandoni,
+		              w->sgombra_credito);
+		/* ⛔⭐ FASE 9 — E IL CONTO DEL REGOLATORE DEL RITMO, che sta a parte
+		 *     dagli altri due per la ragione di tutta questa fase: «zero
+		 *     discese» e «il regolatore e' spento» non devono avere la stessa
+		 *     faccia.  ⚠ E il fondo della scala si DICHIARA qui invece di essere
+		 *     dedotto: `DECISIONI.md` §2.1 dice 480p·25, e sotto i 25/s su una
+		 *     linea da 20 Mbit/s e' un DIFETTO — non una degradazione riuscita.
+		 *     ⛔ Il regolatore non ha nessun pavimento da far rispettare, perche'
+		 *     forzare un fotogramma dentro una coda che non si svuota peggiora
+		 *     la coda: qui si scrivono i due numeri accanto e chi legge
+		 *     giudica. */
+		registro_dice(REG_RCP,
+		              "⭐ FASE 9, il regolatore del ritmo: %s — %u fotogrammi NON "
+		              "PARTITI perche' l'arretrato aveva raggiunto i %u posti, su "
+		              "%u consegnati a RCP.  ⚠ E' un numero SUO: non e' fra i «non "
+		              "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p "
+		              "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un "
+		              "DIFETTO da guardare, non una degradazione riuscita",
+		              ritmo_adattivo ? "ACCESO" : "spento (I6)",
+		              ritmo_scesi, (unsigned)WT_RITMO_POSTI, diffusi);
 	}
+	/* ⛔⛔⭐ FASE 9 — IL PREZZO DELLA CURA DELL'USO-DOPO-LA-LIBERAZIONE, E IL
+	 *      CONTROLLO CHE LA FA CADERE.
+	 *
+	 *      Si scrive SEMPRE, anche senza video: i byte tenuti per la
+	 *      ritrasmissione sono di tutti gli stream, non solo dei fotogrammi.
+	 *
+	 * ⭐ COME SI LEGGE, e sono due numeri con due mestieri diversi:
+	 *
+	 *    · la PUNTA e' il prezzo in memoria.  Deve stare nell'ordine della
+	 *      finestra di congestione — decine o centinaia di KB, al peggio un
+	 *      fotogramma intero (525 KB misurati il 23 agosto) — e con sedici
+	 *      sessioni si moltiplica per sedici.  ⛔ Se cresce per tutta la
+	 *      sessione invece di oscillare, la cura sta TRATTENENDO memoria: e'
+	 *      esattamente il guasto che la farebbe cadere.
+	 *
+	 *    · il RESIDUO alla chiusura deve essere **zero o quasi**.  Se non lo
+	 *      e', c'e' uno stream che si e' chiuso senza passare da
+	 *      `wt_stream_chiuso()`, cioe' il fondo della cura non ha tenuto e
+	 *      abbiamo barattato un uso dopo la liberazione con una perdita di
+	 *      memoria.  ⚠ Un residuo non nullo qui NON e' una perdita vera — la
+	 *      memoria la riprende `wt_libera()` venti righe piu' sotto — ma e' il
+	 *      segnale che il fondo non ha lavorato, e va guardato.
+	 *
+	 * ⭐⭐ E COME SI RIPRODUCE IL DIFETTO CURATO, perche' il banco lo possa fare
+	 *     (`fasi/09-la-qualita-e-la-degradazione.md` §4.5-4.6), su un binario SENZA questa cura:
+	 *
+	 *       1. `Environment=MALLOC_MMAP_THRESHOLD_=32768` nell'unita'.  ⭐
+	 *          Impostarla dall'ambiente SPEGNE l'adattamento dinamico di glibc
+	 *          (`no_dyn_threshold`): da quel momento ogni blocco sopra i 32 KiB
+	 *          e' `mmap`/`munmap` e il difetto smette di essere silenzioso PER
+	 *          SEMPRE, non solo la prima volta.  ⛔ Senza questa riga il difetto
+	 *          si nasconde da solo: dopo il primo blocco grosso liberato la
+	 *          soglia si alza e la corruzione torna muta.
+	 *       2. un fotogramma grosso (film con la grana, a schermo intero), e
+	 *          perdita di pacchetti: `tc qdisc add dev X root netem loss 5%`,
+	 *          oppure `kill -STOP` al browser per un secondo (nessun ack ⇒ PTO
+	 *          ⇒ ritrasmissione).
+	 *       3. previsione sul binario malato: `SEGV`, `error 4`, `ip` dentro
+	 *          `libc`, in `__memmove_avx_unaligned_erms`.  Con
+	 *          `-fsanitize=address -g -fno-omit-frame-pointer` esce
+	 *          `heap-use-after-free READ` con DUE pile: quella che legge (dentro
+	 *          `ngtcp2_pkt_encode_stream_frame`) e quella che ha liberato.
+	 *       4. con questa cura, lo stesso banco deve reggere e questa riga deve
+	 *          dire residuo zero.  ⛔ Se muore lo stesso, la cura e' sbagliata. */
+	registro_dice(REG_WT,
+	              "⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di "
+	              "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla "
+	              "chiusura %zu, e %zu byte ancora da spedire in coda",
+	              w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
 	/* ⛔⛔ E SI SPEGNE LA CATTURA DELL'AUDIO SE NESSUNO ASCOLTA PIU'.
 	 *
 	 *     `[M]` 17 agosto 2026, prima accensione dell'audio vero: la sessione si
@@ -4804,6 +5922,34 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 {
 	richiesta *r;
 
+	/* ⛔⛔⭐ FASE 9 — E QUI SI LIBERANO I BYTE TENUTI PER LA RITRASMISSIONE.
+	 *
+	 *      E' l'ALTRA META' del contratto di `ngtcp2_conn_writev_stream()`
+	 *      («... or the stream is closed»), e `ngtcp2.h` la scrive per esteso
+	 *      sotto `acked_stream_data_offset`: «After stream_close is called for a
+	 *      particular stream, conn does not touch data for the closed stream
+	 *      again, and application can free all unacknowledged stream data».
+	 *
+	 * ⛔⛔ ED E' IL FONDO CHE DECIDE SE LA CURA E' UN PROGRESSO O UN BARATTO.
+	 *      Senza questa riga, gli ultimi byte di ogni stream chiuso di netto —
+	 *      un `STOP_SENDING`, un reset del client, uno stream che finisce prima
+	 *      che l'ack arrivi — non riceverebbero MAI il loro riscontro: la stessa
+	 *      pagina di `ngtcp2.h` dice che «if a stream is closed prematurely, and
+	 *      stream data is still in-flight, this callback function is not called
+	 *      for those data».  ⇒ Resterebbero allocati fino alla morte della
+	 *      connessione, e una perdita di memoria al posto di un uso dopo la
+	 *      liberazione **non e' un progresso**.
+	 *
+	 * ⚠ Vale anche per i byte NON ancora spediti di quello stream, e va bene
+	 *   cosi': lo stream e' chiuso, non usciranno mai piu'.  Prima li buttava
+	 *   la passata dopo, sul ramo `NGTCP2_ERR_STREAM_SHUT_WR` di `wt_scrivi()`.
+	 *
+	 * ⛔ E sta PRIMA di tutto il resto, perche' venti righe piu' sotto
+	 *    `w->sessione` diventa `-1`: dopo, l'identificatore da cercare in coda
+	 *    non ci sarebbe piu' — ed e' proprio lo stream della CONNECT quello che
+	 *    `coda_conferma()` lascia apposta a questa funzione. */
+	coda_butta_stream(w, stream_id);
+
 	/* ⛔⭐ `RCP.md` §4.2: il canale di controllo si chiude, e IL SUO
 	 *     CHIUDERSI E' LA FINE DELLA SESSIONE.  Il posto nel registro (§8.2
 	 *     motivo 0x0F) va liberato QUI — e anche quando a chiudersi e' lo
@@ -4864,8 +6010,21 @@ int wt_stream_stop_sending(wt *w, int64_t stream_id)
 	return 0;
 }
 
+/* ⛔⛔⭐ FASE 9 — PRIMA I NOSTRI BYTE, POI nghttp3.
+ *
+ *      Questa funzione inoltrava a nghttp3 **e basta**, ed e' li' che si vede
+ *      tutto il difetto del 23 agosto 2026 in due righe: il riscontro serviva a
+ *      LORO — nghttp3 i suoi buffer li tiene fino all'ack, come il contratto di
+ *      `ngtcp2_conn_writev_stream()` pretende — e a NOI no, perche' i nostri li
+ *      liberavamo alla serializzazione.  Due politiche opposte per lo stesso
+ *      contratto, nello stesso modulo, sulla stessa chiamata.
+ *
+ * ⚠ E `!w->h3` non torna piu' subito: i NOSTRI elementi vanno confermati anche
+ *   quando lo strato HTTP/3 non c'e' (o non c'e' piu'), o gli ultimi byte di
+ *   una sessione in chiusura non verrebbero liberati da nessuno. */
 int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len)
 {
+	coda_conferma(w, stream_id, len);
 	if (!w->h3)
 		return 0;
 	nghttp3_conn_add_ack_offset(w->h3, stream_id, len);
@@ -4958,6 +6117,12 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	audio_regola(w);
 	tono_passo(w, ts);
 
+	/* ⛔⭐ FASE 9 — la riga al secondo del regolatore, e gira col BATTITO
+	 *     apposta: a scena ferma i fotogrammi non arrivano, e una riga che
+	 *     uscisse solo coi fotogrammi lascerebbe «l'anello non e' stato
+	 *     percorso» con la stessa faccia di «l'arretrato era zero». */
+	ritmo_ciclo(w, ts / NGTCP2_MILLISECONDS);
+
 	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
 	 *
 	 * ✅ `DECISIONI.md` §7.17, 11 agosto 2026: 5 s, poi `TEMPO_SCADUTO`.
@@ -5000,11 +6165,14 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 			uint8_t m = (uint8_t)w->chiusura;
 			registro_dice(REG_WT,
 			              "⛔ la coda d'uscita non si e' svuotata in 3 s "
-			              "(%zu elementi, %zu byte): la capsula di chiusura "
-			              "parte LO STESSO col codice 0x%02x — §3.1 punto 3 "
-			              "e' il motivo che salva le diagnosi, e aspettare "
-			              "per sempre vuol dire non eseguirlo mai",
-			              w->ncoda - w->testa, w->byte_in_coda, m);
+			              "(%zu elementi da spedire, %zu byte; e %zu byte "
+			              "consegnati a ngtcp2 in attesa di riscontro): la "
+			              "capsula di chiusura parte LO STESSO col codice "
+			              "0x%02x — §3.1 punto 3 e' il motivo che salva le "
+			              "diagnosi, e aspettare per sempre vuol dire non "
+			              "eseguirlo mai",
+			              coda_da_spedire(w), w->byte_in_coda,
+			              w->byte_in_volo, m);
 			w->chiusura = -1;
 			w->chiusura_da = 0;
 			w->chiusura_scadenza = 0;
@@ -5123,6 +6291,12 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		vcnt = (size_t)(sveccnt > 0 ? sveccnt : 0);
 
 		if (wt_orig) {
+			/* ⭐ FASE 9 — e neanche qui c'e' il difetto del 23 agosto:
+			 *    `impbuf` e' un array FISSO dentro `wt` (256 byte), scritto
+			 *    UNA VOLTA SOLA (`impostazioni_scritte`) e vivo quanto la
+			 *    connessione.  ⛔ Se un giorno le impostazioni si
+			 *    riscrivessero, riscriverlo mentre ngtcp2 tiene ancora questo
+			 *    puntatore sarebbe la stessa corruzione silenziosa. */
 			wtvec[0].base = w->impbuf + w->impbuf_off;
 			wtvec[0].len = w->impbuf_len - w->impbuf_off;
 			v = wtvec;
@@ -5227,7 +6401,24 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 					if (u->fin && w->rcp &&
 					    (u->id == w->rcp_stream || u->id == w->sessione))
 						rcp_canale_chiuso(w->rcp);
-					coda_uccidi(w, mio_i);
+					/* ⛔⛔⭐ FASE 9 — QUI C'ERA `coda_uccidi()`, ED E' LA RIGA
+					 *      CHE HA UCCISO IL SERVER IL 23 AGOSTO 2026 alle
+					 *      08:28:09.
+					 *
+					 *      `ndatalen` dice quanti byte sono finiti **in un
+					 *      pacchetto**, non quanti sono stati **confermati**.
+					 *      Liberarli qui e' liberarli mentre ngtcp2 tiene
+					 *      ancora il nostro puntatore per l'eventuale
+					 *      ritrasmissione: `fasi/09-la-qualita-e-la-degradazione.md` §4.2 segue la
+					 *      catena riga per riga fino al `ngtcp2_cpymem()` che
+					 *      rilegge la sorgente liberata.
+					 *
+					 * ⭐ Adesso si CONSEGNA e basta: l'elemento esce dalla
+					 *    scelta e dall'arretrato, i byte restano.  A liberarli
+					 *    e' l'ack (`coda_conferma()`) o la chiusura dello
+					 *    stream (`wt_stream_chiuso()`) — le due sole condizioni
+					 *    che il contratto di ngtcp2 ammette. */
+					coda_consegna(w, mio_i);
 				}
 			} else if (wt_orig) {
 				uint64_t c = (uint64_t)ndatalen;

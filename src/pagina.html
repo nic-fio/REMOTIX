@@ -5589,6 +5589,12 @@ function audio_conti() {
     scartati_corti: a.scartati_corti, scartati_tipo: a.scartati_tipo,
     scartati_pieno: a.scartati_pieno, errori: a.errori,
     mancati: a.mancati, mancati_volte: a.mancati_volte,
+    /* ⛔ E ANCHE QUESTI ESCONO DI QUI, per la ragione scritta due righe piu'
+       sotto: un banco che leggesse `fuori` come `null` scambierebbe «la cura
+       non e' servita» per «la cura ha funzionato», che e' la stessa misura e
+       la conclusione opposta. */
+    scartati_tardivi: a.scartati_tardivi, fuori_ordine: a.fuori_ordine,
+    doppioni: a.doppioni, recuperati: a.recuperati,
     /* ⛔ `riarmi` e `tirate` ESCONO DI QUI e non solo dalla riga del registro —
      *    21 agosto 2026, ed e' un difetto di banco che ha quasi comprato un
      *    verde falso.  `AUDIO` e' dichiarato con `let`, quindi **non e' una
@@ -5636,6 +5642,31 @@ function avvia_audio(wt) {
     ctx: null, prossimo: 0, codec: 0, dec: null,
     ricevuti: 0, suonati: 0, errori: 0,
     scartati_vecchi: 0, scartati_corti: 0, scartati_tipo: 0, scartati_pieno: 0,
+    /* ⛔ I QUATTRO CONTATORI DELLA FASE 9, e devono restare DISTINGUIBILI: dopo
+       la cura del riordino ci sono quattro modi diversi di non far suonare un
+       datagram, e un solo numero che li sommasse non direbbe piu' quale.
+       · `scartati_vecchi`  = il suo posto nel tempo era gia' passato SUL FILO
+         (§6.3 alla lettera) ⇒ era consumato davvero;
+       · `scartati_tardivi` = ce l'ha fatta a passare il filo, ma il suo posto
+         e' passato mentre lo decodificavamo: lo butta `suona()`.  ⚠ Non e' un
+         guasto, e' la rete di sicurezza — ⛔ ma se `tardivi ≈ vecchi di prima`
+         la cura non ha curato niente e il confine va rifatto;
+       · `fuori_ordine`     = arrivato dietro a uno piu' nuovo E SUONATO LO
+         STESSO — ⭐ e' il numero che dice se questa cura e' servita a qualcosa;
+       · `doppioni`         = lo STESSO `istante` due volte.  ⛔ Zero e' il
+         numero atteso (QUIC scarta da se' i pacchetti ripetuti), e serve
+         perche' il confronto di prima li fermava per caso e questo non piu'. */
+    scartati_tardivi: 0, fuori_ordine: 0, doppioni: 0,
+    /* I `mancati` che sono rientrati fuori ordine: senza ripagarli, ogni
+       sorpasso curato si presenterebbe come una perdita — la cura si
+       accuserebbe da sola. */
+    recuperati: 0,
+    /* Il massimo `istante` MESSO IN SCALETTA.  ⛔ Non e' `ult_ist_us`, che e'
+       l'ultimo blocco FINITO e a regime dista un cuscino intero: serve a
+       distinguere «un blocco sorpassato» da «tutta la riproduzione in ritardo»
+       — e a riparare la sentinella dell'ancora finta, che col confronto
+       sbagliato non poteva scattare mai. */
+    ist_max_us: 0,
     in_volo: [],
     detto_tipo: false, detto_corti: false, detto_pieno: false,
     /* ⭐ L'ANCORA: quanti secondi bisogna aggiungere all'`istante` del server
@@ -5826,6 +5857,34 @@ function avvia_audio(wt) {
     a.smetti_risveglio = smetti;
   }
 
+  /* ⭐⭐ «GIA' CONSUMATO», E NON «GIA' ARRIVATO» — `RCP.md` §6.3 alla lettera,
+   *      fase 9.
+   *
+   *      L'ancora (`a.base`) porta un `istante` dell'orologio del server
+   *      nell'orologio della scheda audio; `ctx.currentTime` e' la testina di
+   *      riproduzione.  ⇒ Il posto di questo blocco e' passato se `a.base +
+   *      istante` sta gia' dietro la testina.  ⛔ Non serve NESSUNA memoria
+   *      nuova per rappresentare «consumato»: sono due numeri che esistono da
+   *      prima della cura dell'ancora, e la frontiera si CALCOLA.
+   *
+   * ⚠ Perche' non `a.ult_ist_us`, che sarebbe il candidato naturale: si scrive
+   *   dentro `onended`, cioe' sul thread principale — lo stesso che si ferma a
+   *   decodificare i fotogrammi — e ci sono appesi sopra `ult_quando_perf` e
+   *   `aoff`, cioe' IL METRO DELLA DISTANZA AUDIO-VIDEO.  Usarlo come confine
+   *   farebbe dipendere il metro dal riordino.
+   *
+   * ⛔ Due casi in cui la risposta e' «no» e non «non lo so»:
+   *    · ancora non agganciata (`a.base === null`) ⇒ non e' stato consumato
+   *      NIENTE, e non si butta niente;
+   *    · orologio fermo (`state !== "running"`) ⇒ `currentTime` non avanza e il
+   *      confronto non vuol dire niente.  Li' ci pensa gia' `suona()`, che
+   *      butta il blocco e stacca l'ancora. */
+  function audio_posto_passato(a, ist_us) {
+    if (!(ist_us > 0) || a.base === null || !a.ctx) return false;
+    if (a.ctx.state !== "running") return false;
+    return a.base + ist_us / 1e6 < a.ctx.currentTime;
+  }
+
   /* ⛔ `ist_us` NON e' facoltativo: e' l'`istante` di §6.3 del primo campione
    *    del blocco, ed e' quel che ancora la riproduzione al tempo del server
    *    invece che alla successione degli arrivi.  ⚠ Se manca — non dovrebbe
@@ -5915,6 +5974,27 @@ function avvia_audio(wt) {
          suonare nel passato, e l'ancora si sposta in avanti di tutto il
          cuscino.  ⚠ E' l'unica cosa che RIALZA la coda, ed e' udibile. */
       if (quando < ora + 0.001) {
+        /* ⛔⭐ E QUI SONO DUE CASI, ed erano UNO SOLO — fase 9, e senza questa
+         *     riga la cura del riordino sarebbe peggio del difetto.
+         *
+         *     (a) questo blocco e' il piu' nuovo che abbiamo e il suo posto e'
+         *         gia' passato ⇒ e' TUTTA la riproduzione a essere in ritardo,
+         *         l'ancora si sposta, ed e' il BUCO di sempre (qui sotto);
+         *     (b) questo blocco e' arrivato DIETRO a uno gia' messo in
+         *         scaletta ⇒ e' un SORPASSATO, e in ritardo c'e' solo lui:
+         *         si butta LUI, e l'ancora NON si tocca.
+         *
+         * ⛔ Trattarli uguali costerebbe un riarmo per ogni sorpasso, cioe'
+         *    **250 ms di ritardo regalato per un blocco da 5** — e per giunta
+         *    a ogni sorpasso, cioe' proprio dove la cura dovrebbe guadagnare.
+         * ⚠ E spostare l'ancora INDIETRO per farcelo stare sarebbe il rilievo 3
+         *   del 17 agosto rifatto: blocchi sovrapposti, segnale raddoppiato. */
+        if (a.ist_max_us > ist_us) {
+          a.scartati_tardivi++;
+          scarto_dillo(a, "sorpassato, e il suo posto e' passato mentre lo "
+                        + "decodificavamo: si butta lui e l'ancora resta dov'e'");
+          return;
+        }
         a.riarmi = (a.riarmi || 0) + 1;
         a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
         quando = a.base + t;
@@ -6068,11 +6148,35 @@ function avvia_audio(wt) {
      * ⇒ Si contano i salti visti QUI e si confrontano con i `mancati` contati
      *   sul filo.  Se il filo dice «ne mancano 61» e qui non se ne vede
      *   nessuno, l'ipotesi e' falsa su questo motore e va scritto. */
-    if (a.ult_ist_us && ist_us > a.ult_ist_us && a.passo_us > 0) {
-      const salto = ist_us - a.ult_ist_us;
+    /* ⛔⛔ E QUESTA RIGA CONFRONTAVA COL BLOCCO SBAGLIATO, cioe' la sentinella
+     *      era MORTA — trovato leggendo, fase 9.
+     *
+     *      Diceva `a.ult_ist_us`, che e' l'ultimo blocco **FINITO**: a regime
+     *      dista da questo un CUSCINO INTERO, cioe' 250 ms.  ⇒ Con `passo_us`
+     *      da 5 000 il «salto» valeva ~50 passi **per ogni blocco sano** e
+     *      `salti_suono` guadagnava ~49 punti a testa.
+     *
+     * ⛔ Il danno non era il numero gonfio: era che `a.salti_suono === 0` qui
+     *    sotto non poteva essere vero mai ⇒ la sentinella che sorveglia
+     *    l'ipotesi su cui poggia TUTTA la cura dell'ancora non poteva scattare.
+     *
+     * ⭐ Il confronto giusto e' col massimo gia' MESSO IN SCALETTA, che a
+     *    regime dista esattamente un passo — che e' quel che il commento qui
+     *    sopra descrive e che il codice non faceva.
+     * ⚠ Un blocco fuori ordine non entra nel conto (`ist_us > a.ist_max_us` e'
+     *   falso) e non lo ripaga: puo' lasciare qui un punto in piu' del dovuto,
+     *   ⛔ che e' innocuo — la sentinella scatta su `salti === 0`, e un punto di
+     *   troppo non la fa gridare, la fa tacere solo dove tacere e' giusto. */
+    if (a.ist_max_us && ist_us > a.ist_max_us && a.passo_us > 0) {
+      const salto = ist_us - a.ist_max_us;
       if (salto > a.passo_us * 1.5)
         a.salti_suono += Math.round(salto / a.passo_us) - 1;
     }
+    /* ⛔ E il massimo si aggiorna QUI: dopo il vaglio del sorpassato e dopo il
+       conto dei salti, cioe' su quel che e' davvero finito in scaletta.
+       Aggiornarlo prima renderebbe il salto sempre zero — la sentinella morta
+       una seconda volta, in un altro modo. */
+    if (ist_us > a.ist_max_us) a.ist_max_us = ist_us;
     if (a.mancati > 0 && a.salti_suono === 0 && !a.detto_ancora_finta
         && a.suonati > 200) {
       a.detto_ancora_finta = true;
@@ -6111,10 +6215,17 @@ function avvia_audio(wt) {
       if (ctx.currentTime + 0.005 < fine) { a.tagliati++; return; }
       a.usciti++;
       /* ⭐ E SOLO QUI il metro si aggiorna: questo blocco e' arrivato in fondo,
-         cioe' si e' sentito davvero. */
-      a.ult_ist_us = ist_us;
-      a.ult_quando_perf = inizio_perf;
-      a.ult_aoff_perf = performance.now();
+         cioe' si e' sentito davvero.
+         ⛔ E SOLO SE VA AVANTI — fase 9: da quando i fuori ordine si suonano
+         invece di buttarli, due blocchi possono finire in ordine inverso, e
+         `ult_ist_us`/`ult_quando_perf` sono la coppia su cui poggia `aoff`,
+         cioe' il metro della distanza audio-video.  ⚠ Un metro che torna
+         indietro non e' impreciso: mente, e mente di un cuscino. */
+      if (ist_us >= a.ult_ist_us) {
+        a.ult_ist_us = ist_us;
+        a.ult_quando_perf = inizio_perf;
+        a.ult_aoff_perf = performance.now();
+      }
     };
     /* ⚠ `a.prossimo` non governa piu' la scaletta: resta perche' `coda_ms()`
        la legge, ed e' la fine dell'ultimo blocco messo in scaletta.  ⛔ E si
@@ -6203,6 +6314,12 @@ function avvia_audio(wt) {
      *     niente» costa zero e toglie un giro di domande all'utente. */
     const riga = "audio: ricevuti " + c.ricevuti + " suonati " + c.suonati
        + " BUCHI " + (a.riarmi || 0) + " vecchi " + c.scartati_vecchi
+       /* ⛔ I QUATTRO DELLA FASE 9, e stanno tutti e quattro sulla riga apposta:
+          `vecchi + tardivi + fuori` deve CONSERVARSI contro i `vecchi` di prima
+          della cura — se la somma non torna, ho sbagliato il confine.  ⭐ E
+          `fuori` da solo dice se la cura e' servita: a zero, non ha morso. */
+       + " tardivi " + c.scartati_tardivi + " fuori " + c.fuori_ordine
+       + " rec " + c.recuperati + " dop " + c.doppioni
        + " pieni " + c.scartati_pieno + " errori " + c.errori
        /* ⛔ `mancati` sta accanto a `ricevuti` apposta: sono la stessa
           grandezza vista dai due lati, e finche' il primo mancava «ricevuti
@@ -6338,45 +6455,114 @@ function avvia_audio(wt) {
        *    pezzo di passato IN MEZZO al presente: non un buco, un GLITCH — e
        *    sarebbe attribuito al codificatore. */
       const istante = v.getBigUint64(4);
-      if (a.ultimo_istante !== undefined && istante <= a.ultimo_istante) {
-        a.scartati_vecchi++;
-        scarto_dillo(a, "istante non piu' recente: la rete l'ha riordinato");
+      /* ⛔⭐⭐ E QUI §6.3 NON ERA APPLICATA ALLA LETTERA — fase 9.
+       *
+       *      La riga di prima diceva `istante <= a.ultimo_istante`, cioe'
+       *      confrontava con l'ultimo **ARRIVATO** (aggiornato su OGNI
+       *      datagram).  §6.3 dice **«gia' CONSUMATI»**, che e' un'altra cosa:
+       *      un blocco sorpassato di UN MILLISECONDO veniva distrutto — un buco
+       *      udibile da 5 ms (PCM) o 20 (Opus) — mentre 250 ms di cuscino gia'
+       *      pagato stavano fermi a non fare niente.  Fra il danno e la riserva
+       *      c'era uno squilibrio di 1 a 250.
+       *      `[M]` col `netem`: jitter ±2 ms ⇒ purezza 0,175, 1 004 scartati su
+       *      4 989.  Con 30 ms di ritardo FISSO (che non riordina) ⇒ 1,000.
+       *      ⇒ Non era il ritardo: era il riordino.
+       *
+       * ⛔⛔ E IL VAGLIO SI FA SOLO SUI BLOCCHI ARRETRATI, mai sul piu' nuovo —
+       *      e questa NON e' pignoleria, e' la riga che evita un guasto totale.
+       *
+       *   Se si buttasse anche il piu' nuovo perche' la frontiera l'ha
+       *   sorpassato, l'ancora andata alla deriva **non si riarmerebbe mai
+       *   piu'**: il riancoraggio vive dentro `suona()`, e `suona()` non
+       *   verrebbe piu' chiamata.  ⇒ Ogni blocco successivo sarebbe anche lui
+       *   dietro la frontiera, e la sessione resterebbe **muta per sempre** con
+       *   tutti i contatori verdi tranne uno.  E' `LEZIONI.md` §2.2.
+       *
+       *   ⇒ Gli stessi due casi di `suona()`, allo stesso modo: **arretrato**
+       *     ⇒ e' lui a essere in ritardo, e si vaglia; **piu' nuovo di tutti**
+       *     ⇒ e' la riproduzione a essere in ritardo, e passa a `suona()`, che
+       *     riarma come ha sempre fatto.
+       *
+       * ⭐ E cosi' la cura e' un ALLENTAMENTO PURO: ogni datagram che questa
+       *   riga butta, la riga di prima lo buttava gia'.  ⛔ Non ce n'e' nessuno
+       *   che prima si sentiva e adesso no — ed e' la ragione per cui non c'e'
+       *   nessun interruttore da girare (I6). */
+      const ist_us_arr = Number(istante);
+      if (a.ultimo_istante !== undefined && istante === a.ultimo_istante) {
+        /* ⚠ Lo STESSO `istante` due volte.  La riga di prima lo fermava per
+           caso, insieme ai riordini; adesso i riordini passano, e senza questa
+           riga un doppione verrebbe programmato SOPRA il suo gemello — segnale
+           raddoppiato, che §6.3 non ammette ed e' il modo peggiore di fallire.
+           ⛔ Zero e' il numero atteso: QUIC scarta da se' i pacchetti ripetuti,
+           quindi un doppione qui vuol dire che l'ha spedito il SERVER.
+           `[?]` Un doppione di un blocco piu' vecchio del massimo non si vede
+           di qui: costerebbe un elenco degli `istante` recenti, cioe' memoria
+           nuova, e non si compra per un caso che il trasporto gia' esclude. */
+        a.doppioni++;
+        scarto_dillo(a, "lo stesso `istante` due volte: non e' un riordino, e "
+                      + "suonarlo due volte raddoppierebbe il segnale");
         continue;
       }
-      /* ⛔⭐ E QUI SI CONTANO QUELLI CHE NON SONO ARRIVATI — 21 agosto 2026.
-       *
-       *     Fino a stamattina un datagram perduto **non era un evento da
-       *     questa parte**: `ricevuti` saliva un po' piu' piano e basta.  ⇒ Il
-       *     figlio diceva «8256 spediti, **0 persi**» (vero: la sua
-       *     spedizione non fallisce), la pagina diceva «vecchi 0, errori 0»
-       *     (vero: non ha buttato niente), ⛔ e in mezzo, `[M]` sulla sessione
-       *     del 21 agosto, **61 blocchi in 3 min 30 non sono mai arrivati** —
-       *     1,2 secondi di audio, e nella sessione di un'ora prima 684.
-       *
-       * ⭐ Il conto non chiede niente al protocollo: `istante` c'e' gia', e la
-       *    distanza fra due `istante` consecutivi dice quanti blocchi ci
-       *    stavano in mezzo.  ⚠ Il passo si prende dall'ultimo blocco
-       *    DECODIFICATO, non stimato dagli arrivi: stimarlo dagli arrivi
-       *    sarebbe circolare — e' l'errore che ha fatto sbagliare il primo
-       *    giro del banco `07-b61`, che accusava il prodotto di un difetto
-       *    suo. */
-      if (a.ultimo_istante !== undefined && a.passo_us > 0) {
-        const salto = Number(istante - a.ultimo_istante);
-        const quanti = Math.round(salto / a.passo_us) - 1;
-        /* ⚠ La soglia e' 1,5 passi e non «piu' di un passo»: l'`istante` e'
-           preso dalla cattura e non da un metronomo, e chiamare «perdita» un
-           passo di 21 ms invece di 20 riempirebbe il contatore di rumore. */
-        if (quanti >= 1 && salto > a.passo_us * 1.5) {
-          a.mancati += quanti;
-          a.mancati_volte++;
-          if (a.mancati_volte === 1 || a.mancati_volte % 100 === 0)
-            nota("⚠ " + quanti + " datagram audio non sono ARRIVATI (salto di "
-               + Math.round(salto / 1000) + " ms fra due `istante`) — in tutto "
-               + a.mancati + " in " + a.mancati_volte + " volte.  ⛔ Non sono "
-               + "scartati da noi: non sono mai arrivati");
+      if (a.ultimo_istante !== undefined && istante < a.ultimo_istante) {
+        if (audio_posto_passato(a, ist_us_arr)) {
+          a.scartati_vecchi++;
+          scarto_dillo(a, "il suo posto nel tempo e' gia' passato (§6.3): "
+                        + "questo si', e' consumato davvero");
+          continue;
         }
+        /* ⭐ FUORI ORDINE MA ANCORA SUONABILE, ED E' TUTTA LA CURA: il suo
+           posto nel tempo non e' passato, e l'ancora gli da' un posto assoluto
+           — non gli serve arrivare in ordine per finirci dentro.  ⛔ Zero coda
+           di riordino, zero ritardo aggiunto: `SPECIFICHE.md:128-131` sarebbe
+           il primo a vietarla, e sarebbe un cuscino pagato due volte. */
+        a.fuori_ordine++;
+        /* ⛔ E si RIPAGA il conto dei mancati, che il salto in avanti gli aveva
+           addebitato: se non si ripagasse, ogni sorpasso curato si presenterebbe
+           come una perdita — cioe' la cura si accuserebbe da sola.  ⚠ Solo se
+           c'e' un debito: `recuperati` dice quanti ne ha ripagati, o il calo di
+           `mancati` sarebbe indistinguibile da un difetto del conto. */
+        if (a.mancati > 0) { a.mancati--; a.recuperati++; }
+      } else {
+        /* ⛔⭐ E QUI SI CONTANO QUELLI CHE NON SONO ARRIVATI — 21 agosto 2026.
+         *
+         *     Fino a stamattina un datagram perduto **non era un evento da
+         *     questa parte**: `ricevuti` saliva un po' piu' piano e basta.  ⇒ Il
+         *     figlio diceva «8256 spediti, **0 persi**» (vero: la sua
+         *     spedizione non fallisce), la pagina diceva «vecchi 0, errori 0»
+         *     (vero: non ha buttato niente), ⛔ e in mezzo, `[M]` sulla sessione
+         *     del 21 agosto, **61 blocchi in 3 min 30 non sono mai arrivati** —
+         *     1,2 secondi di audio, e nella sessione di un'ora prima 684.
+         *
+         * ⭐ Il conto non chiede niente al protocollo: `istante` c'e' gia', e la
+         *    distanza fra due `istante` consecutivi dice quanti blocchi ci
+         *    stavano in mezzo.  ⚠ Il passo si prende dall'ultimo blocco
+         *    DECODIFICATO, non stimato dagli arrivi: stimarlo dagli arrivi
+         *    sarebbe circolare — e' l'errore che ha fatto sbagliare il primo
+         *    giro del banco `07-b61`, che accusava il prodotto di un difetto
+         *    suo. */
+        if (a.ultimo_istante !== undefined && a.passo_us > 0) {
+          const salto = Number(istante - a.ultimo_istante);
+          const quanti = Math.round(salto / a.passo_us) - 1;
+          /* ⚠ La soglia e' 1,5 passi e non «piu' di un passo»: l'`istante` e'
+             preso dalla cattura e non da un metronomo, e chiamare «perdita» un
+             passo di 21 ms invece di 20 riempirebbe il contatore di rumore. */
+          if (quanti >= 1 && salto > a.passo_us * 1.5) {
+            a.mancati += quanti;
+            a.mancati_volte++;
+            if (a.mancati_volte === 1 || a.mancati_volte % 100 === 0)
+              nota("⚠ " + quanti + " datagram audio non sono ARRIVATI (salto di "
+                 + Math.round(salto / 1000) + " ms fra due `istante`) — in tutto "
+                 + a.mancati + " in " + a.mancati_volte + " volte.  ⛔ Non sono "
+                 + "scartati da noi: non sono mai arrivati");
+          }
+        }
+        /* ⛔ SOLO IN AVANTI, ed e' l'altra meta' della cura: `a.ultimo_istante`
+           diventa un MASSIMO.  Riportarlo indietro su un fuori ordine farebbe
+           sembrare il datagram successivo un salto in avanti enorme, e il conto
+           dei mancati si riempirebbe di perdite finte — cioe' la cura del
+           riordino romperebbe il contatore delle perdite vere. */
+        a.ultimo_istante = istante;
       }
-      a.ultimo_istante = istante;
 
       a.ricevuti++;
       if (a.codec !== codec) {

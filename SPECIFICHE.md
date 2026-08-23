@@ -929,15 +929,23 @@ sommerebbe.
 
 ## 8. La rete e la degradazione
 
-### 8.1 Gli scenari da servire
+### 8.1 Gli scenari da servire — e il pavimento
 
-Il requisito è **l'adattamento**, non una soglia di banda:
+⭐ **La rete minima del prodotto è 20 Mbit/s**, ed è un **pavimento dichiarato**: sotto, REMOTIX
+non promette niente e non misura niente come requisito. *«Al di sotto di questo limite l'utente
+nemmeno riesce a navigare, figuriamoci usare remotix»* — l'utente, 23 agosto 2026
+(`DECISIONI.md` §3.1-bis).
+
+Sopra il pavimento il requisito resta **l'adattamento**, non una seconda soglia:
 
 | Collegamento | Banda | Ritardo e perdita | Che cosa fa il server |
 |---|---|---|---|
-| fisso buono | 30+ Mbps | bassi | punta al desiderato |
-| fisso modesto, WiFi | 5–15 Mbps | medi | **spende tutto quel che c'è** |
-| **mobile critico** | sotto i 2 Mbps, variabile | alti, con perdita | tiene il minimo, **e non stacca** |
+| fisso buono | **30+ Mbps** | bassi | punta al desiderato |
+| ⭐ **il pavimento** | **20 Mbps** | medi | **spende tutto quel che c'è**, e tiene il minimo |
+| ⚠ sotto il pavimento | < 20 Mbps | qualsiasi | **fuori dal promesso**: degrada e non stacca, ma non è un requisito |
+
+⚠ **Il divieto di staccare (§8.3) non si indebolisce**: vale anche sotto il pavimento. Quel che
+sotto il pavimento non c'è più è la **promessa**, non il comportamento.
 
 ### 8.2 La regola dell'adattamento — invariante I1
 

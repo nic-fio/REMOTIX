@@ -1186,6 +1186,23 @@ Il cambiamento è di **natura** più che di valore: il minimo smette di essere u
 inseguire e diventa il **livello sotto cui non si scende e non si stacca**, per quanto brutta
 sia la linea. Nasce dal caso della rete mobile (§3.1), non da una rinuncia sulla qualità.
 
+> ### ⭐ **CONFERMATO IL 23 AGOSTO 2026, e la ragione è cambiata** — *«480p/25fps è il pavimento»*
+>
+> ⚠ Il §3.1-bis aveva tolto a questo numero la sua ragione dichiarata: *«nasce dal caso della rete
+> mobile»*, e quel caso è uscito dagli scenari da servire. La domanda è stata posta all'utente —
+> **alzarlo o riqualificarlo** — e la risposta è che **il numero resta 480p · 25 fps**.
+>
+> ⛔ **Quel che cambia è da dove viene.** Non è più il livello a cui una linea povera costringe: è
+> ⭐ **il fondo della scala di degradazione** — il punto oltre il quale la fase 9 **non ha più il
+> permesso di scendere**, su una linea che il pavimento dei 20 Mbit/s dichiara buona.
+>
+> ⇒ ⭐⭐ **Ed è più stretto di prima, non più largo**: prima descriveva un caso limite che non
+> promettevamo di servire bene; adesso è **un vincolo sul nostro regolatore**. Un ritmo che scende
+> sotto i 25 al secondo su una linea da 20 Mbit/s **è un difetto**, non una degradazione riuscita.
+>
+> ⚠ E la nota di §2.5-bis qui sopra resta vera per la stessa ragione: *il minimo non si tocca —
+> resta lontanissimo* da quel che la macchina consegna.
+
 **Conseguenza già applicata** (`CODER.md` §1): la regola che governa le scelte tecniche è stata
 sdoppiata, perché un'asticella che ogni scelta supera non filtra più niente. Verso l'alto
 filtra il desiderato; verso il basso vincola il minimo.
@@ -1204,6 +1221,35 @@ qualità»*, e sotto quella parola stavano due leve distinte:
 | **4:4:4** | il testo colorato sfrangiato `[M]` v1 §5.2 | ~50 % di banda, **nessun decoder Android in hardware** |
 
 Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme**, in hardware.
+
+> ### ⭐⭐ IL 4K È UN LIMITE SUPERIORE, NON UNA PROMESSA AL PAVIMENTO — *23 agosto 2026*
+>
+> > *«Il 4K è il limite superiore, e non pretendo di averlo su connessioni a 20 mbps.»*
+>
+> ⛔ **La domanda era vera e stava per diventare un debito.** Aperto il pavimento di §3.1-bis, un
+> agente mandato a refutare ha fatto il conto: una tela **3840×2160 in movimento** chiede
+> `[?]` **36 Mbit/s** nel regime a sole chiavi e `[?]` **~158 Mbit/s** su un video a schermo intero
+> — mentre §3.1 prometteva *«fisso buono, 30+ Mbps ⇒ punta al desiderato»*. ⇒ Quella riga
+> **prometteva il desiderato su una banda che non lo porta**, e nessuno se n'era accorto perché il
+> 4K in movimento non è mai stato misurato.
+>
+> ⭐ **La decisione dell'utente scioglie il nodo senza togliere niente al prodotto:**
+>
+> | | |
+> |---|---|
+> | ⭐ **che cosa resta** | 4K · 60 fps · 10 bit è il **tetto di quel che il prodotto sa fare** — la misura più grande che si codifica e si consegna |
+> | ⛔ **che cosa NON è più** | una promessa **al pavimento**. A 20 Mbit/s il 4K **non è promesso in movimento**, e non è un difetto: è la scelta |
+> | ⚠ **e nemmeno a 30** | il conto dice che «fisso buono, 30+» **non compra** il 4K mosso. La riga di §3.1 che lo lasciava credere era già superata dal §3.1-bis, e questa voce lo dice per esteso |
+> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero, `[M]` 20,9 fotogrammi/s) — cioè **leggere e scrivere**, non guardare un video |
+>
+> ⇒ ⭐ **La banda a cui il 4K in movimento diventa servibile è una cosa da MISURARE e DICHIARARE,
+> non da promettere** — è `SPECIFICHE.md` §2.6 alla lettera. La misura è di questa fase.
+>
+> ⚠ **E un vincolo tecnico che si somma, e non è di banda**: `[M]` `h264_vaapi` su questo ferro si
+> ferma a **4096 px per lato** (3840 passa per un soffio), e il livello H.264 in vigore — 5.1 —
+> concede a 3840×2160 `[?]` **30,3 fotogrammi al secondo**, non 60. ⇒ ⛔ **Il «60 fps» del
+> desiderato non è raggiungibile a 4K nemmeno con banda infinita**, e questo va misurato e scritto
+> prima che qualcuno lo scopra dalla parte sbagliata.
 
 ### 2.3-bis 🔸 ⛔ Il primo indizio contrario ai 10 bit, e viene da Android
 
@@ -1578,6 +1624,12 @@ riscrivere niente.
 
 ### 3.1 ✅ I 30 Mbps non sono un pavimento: sono uno scenario
 
+> ⛔ **SUPERATA IN PARTE dal §3.1-bis — 23 agosto 2026.** La riga *«il requisito è
+> l'adattamento, non una soglia»* **resta vera e intatta**; ⛔ **la tabella degli scenari no**:
+> due righe su tre stanno sotto il pavimento che l'utente ha dichiarato. Sta qui sotto per intero
+> perché è la ragione per cui i 30 Mbps non sono mai stati un minimo — e quella ragione non è
+> cambiata. ⇒ **La tabella in vigore è quella del §3.1-bis.**
+
 *8 agosto 2026. «il server deve poter fare il suo meglio per offrire la migliore esperienza
 possibile a client che si collegano da connessioni critiche (come da una rete mobile).
 Ovviamente non pretendo i miracoli come 4K a 300 kbps».*
@@ -1592,6 +1644,63 @@ Gli scenari da servire:
 | fisso buono | 30+ Mbps | bassi | punta al desiderato |
 | fisso modesto, WiFi | 5–15 Mbps | medi | **spende tutto quel che c'è** |
 | mobile critico | < 2 Mbps, variabile | alti, con perdita | tiene il minimo, **e non stacca** |
+
+### 3.1-bis ✅⭐⭐ La rete minima è **20 Mbit/s**, ed è un **pavimento dichiarato**
+
+*23 agosto 2026, aprendo la fase 9. «ho letto nel piano di connessioni fino a 2 mbps. Mi ero
+tenuto più largo: ritengo che una connessione minima debba essere 20 mbps: al di sotto di questo
+limite l'utente nemmeno riesce a navigare, figuriamoci usare remotix».*
+
+⭐ **L'argomento è di prodotto, non di codice**: sotto i 20 Mbit/s non è REMOTIX a non
+funzionare — è il web a non funzionare. Un prodotto non si tara su una linea su cui **niente**
+è usabile.
+
+| | |
+|---|---|
+| ⛔ **che cosa dice** | **20 Mbit/s è il minimo su cui il prodotto promette qualcosa.** Sotto, REMOTIX **non promette niente e non misura niente come requisito** |
+| ⭐ **che cosa si misura, allora** | il banco della fase 9 lavora **a 20 Mbit/s e sopra**. La scala di degradazione serve a coprire i **cali temporanei** di una linea buona — non a servire una linea povera |
+| ⚠ **che cosa NON diventa** | non è un rifiuto: nessun codice controlla la banda per staccare qualcuno. **Il divieto di staccare resta intero** (§3.3, I1) — ma sotto i 20 è un comportamento del programma, **non una promessa sulla linea** |
+| ⛔ **che cosa esce** | la riga **«mobile critico, sotto i 2 Mbps»** esce dagli scenari da servire — qui e in `SPECIFICHE.md` §8.1 |
+
+**Gli scenari da servire, riscritti:**
+
+| Collegamento | Banda | Ritardo e perdita | Che cosa fa il server |
+|---|---|---|---|
+| fisso buono | **30+ Mbps** | bassi | punta al desiderato |
+| ⭐ **il pavimento** | **20 Mbps** | medi | **spende tutto quel che c'è**, e tiene il minimo dichiarato |
+| ⚠ sotto il pavimento | < 20 Mbps | qualsiasi | **fuori dal promesso.** Il programma degrada e non stacca, ma il risultato **non è un requisito e non si misura** |
+
+**Che cosa resta intatto**, e va detto perché non lo si creda travolto:
+
+- **§3.2 (I1)** — intatta alla lettera: il ritmo non cala per prudenza né a scena ferma. ⭐ Cambia
+  solo **il punto di lavoro** da cui si comincia a scendere, che va tarato ex novo in fase 9;
+- **§3.3** — intatta: si calano i **fotogrammi**, mai sgranare, mai staccare. ⚠ Cambia **quanto
+  spesso morde**: a 20 Mbit/s la corsa a fondo scala è un **caso di guasto**, non il caso normale;
+- **§5-quater.3** (il cuscino audio di 250 ms) — ⛔ **non c'entra niente con questa voce**: è un
+  problema di *thread*, non di banda. Chi attribuisse alla rete nuova quel merito sbaglierebbe.
+
+**Che cosa apre, e non lo chiude questa voce:**
+
+1. ✅ **CHIUSA lo stesso giorno — §2.1, il minimo resta 480p · 25 fps.** *«480p/25fps è il
+   pavimento»* — l'utente, 23 agosto 2026. ⛔ **Ma la ragione è cambiata**: non è più il livello a
+   cui una linea povera costringe, è **il fondo della scala di degradazione** — il punto oltre il
+   quale il regolatore della fase 9 non ha il permesso di scendere su una linea da 20 Mbit/s.
+   ⇒ Un ritmo sotto i 25 al secondo lassù **è un difetto**, non una degradazione riuscita.
+2. ❓ **un secondo budget, di rete, accanto a quello di GPU** (§4.6): dieci sessioni × 20 Mbit/s
+   sono **200 Mbit/s sul filo del server**. Da nominare in fase 9, da misurare in **fase 10**.
+3. ⚠ **§2.2/§2.3, il 4:4:4**: l'obiezione *«~50 % di banda»* si indebolisce. ⛔ Il rifiuto però
+   **regge lo stesso**, e per l'altra ragione: nessun decoder Android in hardware.
+4. ⚠ **`SPECIFICHE.md` §6.4**: il livello H.264 dichiarato è `avc1.640032` (High **5.0**), mentre
+   oltre i **40 Mbit/s** servirebbe il tier High con livello **5.1**. Un livello troppo basso non
+   dà errore: **fa rifiutare la configurazione dal decodificatore**. Con un tetto di banda più
+   alto questa riga diventa mordente.
+
+⭐ **E una coincidenza da dichiarare, non su cui appoggiarsi**: le misure di codifica dei quattro
+codec (§1.13-bis) erano già state fatte **«a 20 Mbit/s per tutti»**. ⚠ È il numero del banco che
+coincide col numero del prodotto **per caso**, non perché l'uno derivi dall'altro.
+
+*Conseguenze fuori da qui, già applicate il 23 agosto:* `SPECIFICHE.md` §8.1 (la tabella gemella),
+`PIANO.md` fase 9 (il banco era scritto **«a 2 Mbit/s»**), `CODER.md` §1-bis (i numeri del progetto).
 
 ### 3.2 🔸 L'invariante I1, riscritta
 

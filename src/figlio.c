@@ -497,6 +497,11 @@ struct figli {
 	uint32_t tela_l, tela_a;
 	char dir_rilievo[256];
 	bool c_e_rilievo;
+	/* ⭐ FASE 9 — quel che ogni figlio dovra' ripetere a se stesso dopo
+	 *    l'`execve`, perche' il codificatore sta di la'.  ⚠ Non si USA qui: si
+	 *    trascrive nella riga di comando del figlio (`diventa_ed_esegui()`). */
+	bool fase9_qualita_risale;
+	uint32_t fase9_tetto_banda_mbit;
 	char percorso_mio[512]; /* /proc/self/exe risolto, per l'`exec` */
 	FiglioSessioneFinita su_sessione_finita;
 	void *ctx_sessione_finita;
@@ -853,6 +858,37 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 	return f;
 }
 
+/* ⭐⭐ Il riquadro sta in `figlio.h`: qui si prende nota e basta, e chi non ha
+ *     una tabella dei figli (`figli_accendi()` fallito) non si rompe. */
+void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit)
+{
+	if (!f)
+		return;
+	f->fase9_qualita_risale = qualita_risale;
+	f->fase9_tetto_banda_mbit = tetto_banda_mbit;
+	/* ⛔ E QUESTA RIGA NON E' LA DICHIARAZIONE DEL VALORE IN VIGORE — e' il
+	 *    contrario: dice che cosa il padre si e' impegnato a PASSARE.  Il
+	 *    valore in vigore lo scrive `codificatore.c` all'apertura di ogni
+	 *    codificatore, dentro il figlio.  ⚠ Le due righe si leggono in coppia:
+	 *    se questa dice «acceso» e quella dice «spento», l'opzione e' caduta
+	 *    nel passaggio padre → figlio, e non e' la cura a non funzionare. */
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 9, quel che il padre PASSERA' a ogni figlio nella sua "
+	              "riga di comando: risalita della qualita' %s · tetto di banda "
+	              "%s.  ⚠ Il valore IN VIGORE lo scrive il figlio, riga "
+	              "«codificatore APERTO»: se li' dicesse un'altra cosa, il "
+	              "passaggio si e' perso",
+	              qualita_risale ? "ACCESA (--qualita-risale)"
+	                             : "spenta (I6, --qualita-risale assente)",
+	              tetto_banda_mbit ? "ACCESO" : "spento (I6, pavimento 0)");
+	if (tetto_banda_mbit)
+		registro_dice(REG_FIGLIO,
+		              "⭐ FASE 9, il tetto di banda: pavimento %u Mbit/s "
+		              "(--tetto-banda-mbit) — filo, punto di lavoro e serbatoio "
+		              "si derivano di la', e li scrive codificatore.c",
+		              tetto_banda_mbit);
+}
+
 /*
  * ⛔ La conversazione di PAM per l'apertura della sessione: NON deve chiedere
  *    niente.  `pam_open_session` non fa domande — e se ne facesse, rispondere a
@@ -884,11 +920,13 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
                               const gid_t *gruppi, int ngruppi)
 {
 	char a_utente[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_matr[40];
+	char a_tetto[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Undici: dieci parole piu' il NULL — e l'undicesima e' `--parlantina`,
-	 *   che si aggiunge solo se il padre ce l'ha (vedi sotto). */
-	char *argv[11];
+	/* ⚠ Quattordici: le nove fisse, il NULL, e le quattro parole facoltative in
+	 *   coda — `--parlantina`, `--qualita-risale`, `--tetto-banda-mbit` e il
+	 *   suo numero.  Si aggiungono solo se il padre le ha (vedi sotto). */
+	char *argv[14];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -1101,6 +1139,32 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 */
 	if (registro_parla_molto())
 		argv[na++] = (char *)"--parlantina";
+	/*
+	 * ⛔⭐⭐ E LE DUE CURE DELLA FASE 9 PASSANO DI QUI, per la stessa ragione
+	 *      esatta della parlantina qui sopra — e non e' un'analogia, e' lo
+	 *      stesso difetto.
+	 *
+	 * ⛔ `codificatore_qualita_risale()` e `codificatore_tetto_banda()` sono
+	 *    statiche del PROCESSO: chiamarle nel padre non accende niente, perche'
+	 *    il padre un codificatore non lo apre mai.  ⚠ E l'ambiente qui sopra e'
+	 *    composto da zero (punto 5): una `REMOTIX_...` non arriva dall'altra
+	 *    parte, e non lascerebbe nemmeno una riga a dire che non e' arrivata.
+	 *
+	 * ⇒ L'unico canale che attraversa l'`exec` insieme al socket e' questo, e
+	 *   il figlio le rilegge in `figlio_vive()`.
+	 *
+	 * ⚠ In coda e facoltative: il figlio legge le prime nove per posizione e
+	 *   scorre il resto per nome, quindi una riga di comando senza non si
+	 *   rompe.  ⭐ E compaiono in `/proc/<pid>/cmdline`: chi guarda un banco
+	 *   vede con che cosa quel figlio e' nato, senza fidarsi di un registro.
+	 */
+	if (f->fase9_qualita_risale)
+		argv[na++] = (char *)"--qualita-risale";
+	if (f->fase9_tetto_banda_mbit) {
+		snprintf(a_tetto, sizeof a_tetto, "%u", f->fase9_tetto_banda_mbit);
+		argv[na++] = (char *)"--tetto-banda-mbit";
+		argv[na++] = a_tetto;
+	}
 	argv[na] = NULL;
 
 	execve(f->percorso_mio, argv, envp);
@@ -4050,6 +4114,80 @@ static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
  *    dichiarato — il punto di lavoro fra qualita' e banda e' la fase 9, come il
  *    preset di x265. */
 #define QP_HARDWARE 26
+/* ⛔⭐ E IL CRF DEL RIPIEGO IN SOFTWARE ADESSO HA UN NOME — 23 agosto 2026.
+ *
+ *     Era il letterale `20` dentro `codificatore_di()`, e finche' nessuno lo
+ *     scriveva nel registro non dava fastidio a nessuno.  ⛔ Ma la riga dei
+ *     parametri in vigore (alla nascita, piu' giu') lo DEVE dire, e un numero
+ *     scritto in due posti e' un numero che prima o poi ne dice due: il
+ *     registro direbbe `20` mentre il codificatore chiede altro, ed e' la
+ *     forma peggiore — un numero **falso** che sembra misurato.
+ * ⚠ E NON e' «il QP con un altro nome»: CRF e QP sono due grandezze diverse
+ *   (vedi `ModoQualita`), e i due valori non si confrontano fra loro. */
+#define CRF_SOFTWARE 20
+
+/* ⛔ Il nome dell'entrypoint si STAMPA da `POTENZA_RENDERING`, non si scrive a
+ *    mano nella riga del registro: e' la stessa forma E2 del difetto del 22
+ *    agosto («hevc_vaapi» scritto dentro le virgolette mentre a fallire era
+ *    `h264_vaapi») — una riga giusta col nome sbagliato accanto manda la caccia
+ *    dalla parte sbagliata.  ⚠ `NON_DICHIARATA` c'e' perche' e' lo zero, cioe'
+ *    quel che si ottiene senza scriverlo: se comparisse nel registro sarebbe
+ *    gia' la diagnosi. */
+static const char *potenza_nome(PotenzaEntrypoint p)
+{
+	switch (p) {
+	case CODIFICATORE_POTENZA_PIENA:
+		return "EncSlice (piena)";
+	case CODIFICATORE_POTENZA_BASSA:
+		return "EncSliceLP (bassa potenza)";
+	default:
+		return "NON DICHIARATA (⛔ e cosi' non si apre niente)";
+	}
+}
+
+/* ⛔⭐⭐ `RCP.md` §4.3 (riga 701) — IL LIVELLO PRODOTTO, DETTO NELL'ALFABETO IN
+ *      CUI IL CLIENT LO CHIEDE.
+ *
+ *      §4.3: *«`video.livello`: il livello massimo che sa decodificare, es.
+ *      `5.1`.  ⛔ Il server DEVE emettere un flusso di livello non superiore, e
+ *      non lo indovina: un livello dichiarato troppo basso non da' un errore di
+ *      rete, fa RIFIUTARE LA CONFIGURAZIONE DAL DECODIFICATORE e il sintomo e'
+ *      "il browser non apre il flusso" (rilievo O12)»*.
+ *
+ * ⛔ E IL CONFRONTO NON SI PUO' FARE SUL NUMERO CRUDO, perche' i tre codec lo
+ *    scrivono in tre alfabeti diversi — ed e' il modo esatto in cui una riga di
+ *    registro puo' essere vera e illeggibile insieme:
+ *
+ *      H.264   `level_idc`         = maggiore*10 + minore   ⇒ 5.1 e' **51**
+ *      HEVC    `general_level_idc` = (maggiore*10+minore)*3 ⇒ 5.1 e' **153**
+ *      AV1     `seq_level_idx`     = (maggiore−2)*4+minore  ⇒ 5.1 e' **13**
+ *
+ *    ⇒ «livello 51» e «livello 153» sono lo STESSO livello, e chi legge il
+ *      registro accanto a un `video.livello=5.1` deve poterlo vedere senza una
+ *      tabella in mano.  Qui esce in DECIMI, che e' la forma di §4.3 e la
+ *      stessa in cui `rcp.c` legge la capacita' del client.
+ *
+ * ⚠ Restituisce 0 quando non sa tradurre — e lo zero NON e' «basso»: e' «non
+ *   lo so», e la riga che lo stampa lo scrive con quelle parole.  ⚠ H.264 ha
+ *   anche il livello «1b», che `level_idc` non distingue da 1.1 senza guardare
+ *   un altro campo: e' fuori da qualunque tela che questo prodotto serva, e si
+ *   dichiara qui invece di far finta che non esista. */
+static unsigned livello_in_decimi(CodecVideo codec, int livello_flusso)
+{
+	if (livello_flusso <= 0)
+		return 0;
+	switch (codec) {
+	case CODIFICATORE_H264:
+		return (unsigned)livello_flusso;
+	case CODIFICATORE_HEVC:
+		return (unsigned)livello_flusso / 3u;
+	case CODIFICATORE_AV1:
+		return ((unsigned)livello_flusso / 4u + 2u) * 10u
+		       + (unsigned)livello_flusso % 4u;
+	default:
+		return 0;
+	}
+}
 
 /* ⛔ Il numero di §6.2 e il codec del codificatore sono due alfabeti diversi, e
  *    la traduzione sta in UNA funzione: il giorno in cui divergessero, a
@@ -4136,7 +4274,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	/* ⛔ La cadenza e' UNA, e la stessa che si chiede alla cattura. */
 	r.fotogrammi_al_secondo = MOVIMENTO_FPS;
 	r.modo = CODIFICATORE_QUALITA_CRF;
-	r.qualita = 20;
+	r.qualita = CRF_SOFTWARE;
 	/* ⛔⭐⭐ QUI C'ERA `10`, SCRITTO A MANO — ed e' il difetto misurato il 17
 	 *      agosto 2026 su Firefox: si dichiarava 8 in `ECCOMI` (§4.3) e si
 	 *      mandavano 10 sul filo.  ⇒ Adesso e' quel che il padre ha negoziato,
@@ -4602,7 +4740,53 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 		              codificatore_nome(cod),
 		              fg.trattenuto ? " — ⚠ TRATTENUTO: il codificatore ha "
 		                              "messo un fotogramma di ritardo" : "");
-	else
+	/* ⛔⭐⭐ E IL LIVELLO SI DICHIARA UNA SECONDA VOLTA, IN CHIARO — §4.3,
+	 *      riga 701.  ⚠ Non e' una ripetizione della riga qui sopra: quella
+	 *      dice il numero CRUDO dell'SPS, che per HEVC e' il triplo e per AV1
+	 *      e' un indice.  Questa lo dice nella forma in cui il client lo chiede
+	 *      (`video.livello=5.1`), che e' l'unica in cui i due numeri si possono
+	 *      mettere in colonna.
+	 *
+	 * ⛔ L'ALTRA META' DEL CONFRONTO STA IN UN ALTRO PROCESSO, e si dice dove:
+	 *    il livello CHIESTO arriva nel `CIAO` (§4.3) e lo scrive `rcp.c`, che
+	 *    vive nel PADRE — «il client dichiara video.livello=…».  ⇒ Oggi il
+	 *    confronto lo fa **chi legge il registro**, mettendo insieme le due
+	 *    righe; il programma non lo fa, e questa riga lo dice invece di
+	 *    lasciarlo credere.  ⚠ Un livello prodotto piu' alto del chiesto non
+	 *    da' nessun errore: da' uno schermo nero, ed e' la ragione per cui il
+	 *    numero deve stare scritto da qualche parte.
+	 * ⚠ Perche' il confronto non e' dentro il programma: il numero chiesto
+	 *   dovrebbe attraversare il confine di processo, e la catena e' `rcp.h`
+	 *   (il gancio `video_chiedi`) → `rcp.c` → `main.c` → `figlio.h`
+	 *   (`figli_video`) → `struct corpo_video`, che ha ancora il byte `riempi`
+	 *   libero apposta.  E' la stessa catena che la PROFONDITA' negoziata ha
+	 *   percorso il 17 agosto 2026, per un difetto della stessa famiglia. */
+	if (ciclo_fotogrammi == 0) {
+		unsigned decimi = livello_in_decimi(codec, c->livello_flusso);
+		if (decimi)
+			registro_dice(REG_FIGLIO,
+			              "⭐⛔ §4.3 — LIVELLO PRODOTTO: %u.%u (nell'SPS e' %d, "
+			              "cioe' %s) · stringa per il decodificatore «%s».  ⛔ "
+			              "§4.3 vieta di superare il `video.livello` del "
+			              "client: il numero CHIESTO sta nella riga «il client "
+			              "dichiara video.livello=…» di `rcp`, e il confronto "
+			              "fra le due righe lo fa CHI LEGGE — il programma NON "
+			              "lo fa",
+			              decimi / 10u, decimi % 10u, c->livello_flusso,
+			              codec == CODIFICATORE_H264   ? "level_idc"
+			              : codec == CODIFICATORE_HEVC ? "general_level_idc, "
+			                                             "che e' il triplo"
+			                                           : "seq_level_idx",
+			              c->stringa_codec);
+		else
+			registro_dice(REG_FIGLIO,
+			              "⚠ §4.3 — LIVELLO PRODOTTO: NON LO SO (nell'SPS c'e' "
+			              "%d, e non so tradurlo per questo codec) — ⛔ e «non "
+			              "lo so» NON vuol dire «basso»: vuol dire che il tetto "
+			              "di `video.livello` oggi non e' verificabile",
+			              c->livello_flusso);
+	}
+	if (ciclo_fotogrammi != 0)
 		registro_dettaglio(REG_FIGLIO,
 		                   "codec %d: %zu byte, %s, caricamento %llu us, "
 		                   "codifica %llu us%s",
@@ -5575,6 +5759,10 @@ void figlio_vive(int argc, char **argv)
 	int uno = 1;
 	uid_t r, e, sv;
 	gid_t rg, eg, sg;
+	/* ⭐ FASE 9 — quel che il padre ha scritto nella riga di comando, e che
+	 *    questo processo deve ripetere a se stesso: vedi sotto. */
+	bool f9_risale = false;
+	uint32_t f9_tetto = 0;
 
 	/* `--figlio-interno <utente> <uid> <gid> <l> <a> <matricola> <rilievo>` */
 	if (argc < 9)
@@ -5598,9 +5786,29 @@ void figlio_vive(int argc, char **argv)
 	/* ⭐ La parlantina, se il padre ce l'ha passata: vedi il riquadro in
 	 *    `figli_esegui()`.  ⛔ Senza, ogni `registro_dettaglio` di questo file
 	 *    e' scritto e non arriva a nessuno. */
-	for (int i = 9; i < argc; i++)
+	/* ⛔⭐⭐ E LE DUE CURE DELLA FASE 9 SI ACCENDONO QUI, DENTRO IL FIGLIO.
+	 *
+	 *      Il riquadro che spiega perche' non possono venire da nessun'altra
+	 *      parte sta in `figlio.h`, sopra `figli_fase9()`: sono statiche del
+	 *      processo, e il processo che apre i codificatori e' questo.
+	 *
+	 * ⚠ PRIMA di `prendi_il_palco()`, che apre gia' il primo codificatore: due
+	 *   righe piu' in basso e la prima sessione nascerebbe senza la cura, con
+	 *   la riga d'avvio a dire «spento» — cioe' il difetto travestito da
+	 *   misura che tutta questa fase cerca di evitare.
+	 * ⚠ Si scorre per NOME e non per posizione, come la parlantina: le prime
+	 *   nove sono fisse, queste sono facoltative e possono mancare tutt'e due.
+	 */
+	for (int i = 9; i < argc; i++) {
 		if (strcmp(argv[i], "--parlantina") == 0)
 			registro_parlantina(true);
+		else if (strcmp(argv[i], "--qualita-risale") == 0)
+			f9_risale = true;
+		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)
+			f9_tetto = (uint32_t)strtoul(argv[++i], NULL, 10);
+	}
+	codificatore_qualita_risale(f9_risale);
+	codificatore_tetto_banda(f9_tetto);
 
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
@@ -5671,6 +5879,69 @@ void figlio_vive(int argc, char **argv)
 	              "non dedotto), %u descrittori aperti — la porta del server NON "
 	              "e' fra questi",
 	              utente, s.pid, s.euid, s.descrittori);
+
+	/* ⛔⭐⭐ I PARAMETRI DELLA FASE 9 SI SCRIVONO ALLA NASCITA — 23 agosto 2026.
+	 *
+	 *      La regola e' gia' scritta, e sta in `src/riavvia-7700.sh`: *«il
+	 *      valore IN VIGORE il server lo scrive all'avvio, cosi' non si prova
+	 *      un tetto credendo di provarne un altro»*.  ⛔ Valeva per i tre
+	 *      orologi di §5.3 e NON per quel che governa immagine e ritmo — cioe'
+	 *      proprio le due grandezze che la fase 9 va a tarare.
+	 *
+	 * ⛔ E LA TARATURA SENZA QUESTE RIGHE NON E' UNA MISURA.  «Ho provato QP
+	 *    26» e' una frase che vale solo se qualcuno ha scritto che era 26: un
+	 *    numero cambiato in un `#define` e dimenticato produce un banco intero
+	 *    di numeri veri attribuiti al valore sbagliato — e nessuno se ne
+	 *    accorge, perche' i fotogrammi escono lo stesso.
+	 *
+	 * ⚠ E QUI SI SCRIVE QUEL CHE IL FIGLIO **CHIEDE**, non quel che il
+	 *   codificatore **fa**: sono due cose diverse e vivono in due file.  Il QP
+	 *   accettato davvero, i tetti e la conferma dell'entrypoint li scrive
+	 *   `codificatore.c` quando apre — «scritto» non e' «in vigore»
+	 *   (`REVIEWER.md` E1), e queste righe sono la meta' «chiesto» del
+	 *   confronto, non il verdetto.
+	 *
+	 * ⚠ La tela e' quella della NASCITA: §4.5 la puo' cambiare a sessione
+	 *   aperta, e il valore nuovo lo scrive la riga «codificatore APERTO».
+	 * ⚠ La profondita' NON c'e' apposta: alla nascita non e' negoziata, e
+	 *   scriverne una qui sarebbe rimettere a mano la bugia del 17 agosto. */
+	registro_dice(REG_FIGLIO,
+	              "⭐⛔ PARAMETRI IN VIGORE (fase 9), quel che il figlio CHIEDE: "
+	              "cadenza %d/s · tela alla nascita %ux%u · GOP INFINITO "
+	              "(chiavi_ogni = 0: chiavi solo a richiesta, §5.2 — e' una "
+	              "scelta, non una dimenticanza)",
+	              MOVIMENTO_FPS, tela_l, tela_a);
+	registro_dice(REG_FIGLIO,
+	              "⭐⛔ PARAMETRI IN VIGORE (fase 9), qualita' e codificatore "
+	              "CHIESTI: QP %d in hardware · CRF %d sul ripiego in software "
+	              "(due grandezze diverse, non si confrontano) · nodo %s · "
+	              "entrypoint %s",
+	              QP_HARDWARE, CRF_SOFTWARE, NODO_RENDERING,
+	              potenza_nome(POTENZA_RENDERING));
+
+	/* ⛔⭐⭐ E QUESTA E' LA RIGA CHE FA CADERE LA FORMA D5 — «un binario stantio
+	 *      resta verde».
+	 *
+	 * ⛔ Un'opzione accettata dal padre e caduta nel passaggio padre → figlio
+	 *    ha ESATTAMENTE la stessa faccia di una cura che non funziona: il
+	 *    banco misura, non vede differenza, e il rosso finisce sull'imputato
+	 *    sbagliato.  ⇒ Chi dichiara di averla ricevuta e' il figlio, che l'ha
+	 *    letta dal proprio `argv` — non il padre, che l'ha solo scritta.
+	 *
+	 * ⚠ E' la meta' «ricevuto» di tre righe che si leggono in fila:
+	 *      1. `figli_fase9()` nel padre — «che cosa PASSERO'»;
+	 *      2. questa — «che cosa mi e' ARRIVATO»;
+	 *      3. `codificatore.c` all'apertura — «che cosa e' IN VIGORE».
+	 *    Se le tre non concordano, il punto in cui si perde e' fra le due che
+	 *    divergono, e non c'e' da indovinare. */
+	registro_dice(REG_FIGLIO,
+	              "⭐⛔ PARAMETRI IN VIGORE (fase 9), quel che il figlio ha "
+	              "RICEVUTO nella sua riga di comando: risalita della qualita' "
+	              "%s · tetto di banda %s (pavimento %u Mbit/s) — ⚠ chiesti al "
+	              "codificatore adesso, prima del primo palco.  Che li abbia "
+	              "presi lo dice la riga «codificatore APERTO»",
+	              f9_risale ? "ACCESA" : "spenta (I6)",
+	              f9_tetto ? "ACCESO" : "spento (I6)", f9_tetto);
 
 	if (!manda(MSG_SONO, &s, sizeof s, NULL, 0)) {
 		registro_dice(REG_FIGLIO, "⛔ non riesco a presentarmi al padre (%s)",

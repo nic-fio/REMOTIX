@@ -331,6 +331,38 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioDeposito deposita, FiglioCongedo congeda,
                      FiglioCursore cursore, FiglioTela tela, void *ctx);
 
+/*
+ * ⭐⭐⭐ LE DUE CURE DELLA FASE 9 CHE VIVONO DALL'ALTRA PARTE — 23 agosto 2026.
+ *
+ * ⛔ IL PROBLEMA CHE RISOLVE, ed e' l'unico motivo per cui questa funzione
+ *    esiste: `codificatore_qualita_risale()` e `codificatore_tetto_banda()`
+ *    sono decisioni del **server**, ma il codificatore non gira nel server —
+ *    gira nel FIGLIO, che non e' un `fork` ma un `execve` con l'ambiente
+ *    composto da zero (`figlio.c`, punto 5 di `diventa_ed_esegui()`).  ⇒ Una
+ *    variabile d'ambiente **non arriva**, e chiamare qui i due setter
+ *    accenderebbe la cura nel processo sbagliato: quello che un codificatore
+ *    non lo apre mai.
+ *
+ * ⭐ LA STRADA E' QUELLA DI `--parlantina`, gia' pagata a caro prezzo il 16
+ *    agosto 2026: il valore si mette nella **riga di comando del figlio**, e
+ *    il figlio se lo ripete a se stesso appena nato.  Nient'altro attraversa.
+ *
+ * `qualita_risale`     la qualita' risale invece di restare giu' (I6).
+ * `tetto_banda_mbit`   il **pavimento** in Mbit/s da cui il codificatore
+ *                      deriva filo, punto di lavoro e serbatoio; `0` = spento.
+ *
+ * ⚠ Si registra a parte invece di allungare `figli_accendi()`, per la ragione
+ *   gia' scritta sopra `FiglioSessioneFinita`: quella firma ha gia' quattro
+ *   richiami.
+ * ⛔ Vale per i figli che nascono DOPO: si chiama all'avvio, prima che PAM
+ *    possa dire si' a qualcuno.  ⚠ E chi dichiara il valore in vigore non e'
+ *    questo file ne' `main.c`, ma `codificatore.c` all'apertura di ogni
+ *    codificatore — cioe' chi lo usa davvero.  Un'opzione caduta nel passaggio
+ *    padre → figlio ha esattamente la stessa faccia di una cura che non
+ *    funziona, e quelle righe sono l'unico posto in cui le due si separano.
+ */
+void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit);
+
 /* ⛔ Spegne tutti i figli e aspetta che siano morti.  ⚠ ASPETTA, e va detto:
  * sta **dopo** l'ultimo giro del ciclo `poll`, come `aiutante_spegni()` —
  * `CODER.md` §4.4 vieta l'attesa DENTRO il ciclo, non dopo. */

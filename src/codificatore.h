@@ -395,6 +395,41 @@ typedef struct {
 	 */
 	int profondita_asincrona;
 
+	/*
+	 * ⭐⭐ IL CONTROLLO DEL BITRATE — e sono DUE testimoni su tre, perche' il
+	 *     terzo non e' un campo: sono i byte che escono (riga «banda del video»
+	 *     nel registro, ogni 10 s).
+	 *
+	 * ⛔ Perche' ce ne vogliono tre lo dice **R31**, la lezione piu' cara del
+	 *    progetto: in v1 i primi due sarebbero stati **verdi tutti e due** —
+	 *    `bit_rate` e `rc_max_rate` erano esattamente i numeri chiesti, e nessuno
+	 *    aveva chiesto CBR.  Il CBR era **il nome che il driver dava a quella
+	 *    coppia di numeri**, e a dirlo fu solo la bolletta.
+	 *
+	 * `modi_bitrate` e' la maschera `VA_RC_*` **dichiarata dal driver** per la
+	 * coppia (profilo, entrypoint), letta con `vaGetConfigAttributes` **prima**
+	 * di aprire.  ⚠ `modi_bitrate_letti == false` vuol dire **«non l'ho saputo
+	 * chiedere»** oppure **«il driver non lo dichiara»**, che NON e' «c'e' solo
+	 * il CQP»: e' esattamente la deduzione che libavcodec fa in silenzio
+	 * (*«assuming CQP only»*) e che non si copia (`LEZIONI.md` §1.9).
+	 *
+	 * ⚠ `banda_*` valgono solo col tetto acceso; a tetto spento sono zeri, e lo
+	 *   zero li' vuol dire **«non chiesto»**, non «nessun limite».
+	 */
+	uint32_t modi_bitrate;
+	bool modi_bitrate_letti;
+	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR */
+	int64_t banda_punto;          /* `bit_rate`, bit/s — il punto di lavoro */
+	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ MAI uguale al punto */
+	int banda_serbatoio;          /* `rc_buffer_size`, in **bit** */
+	/*
+	 * ⛔ Lo stesso serbatoio in MILLISECONDI, ed e' questo il numero che
+	 *    `CODER.md` §1-bis giudica: in bit non si vede che v1 ne aveva
+	 *    **cinquecento** (`rc_buffer_size = bit_rate/2` non e' «meta'», e' mezzo
+	 *    secondo) contro un tetto di **50** per tutto il pezzo nostro.
+	 */
+	uint32_t banda_serbatoio_ms;
+
 	/* ⚠ il ritardo, misurato invece che dedotto */
 	bool riordina;                /* un pacchetto con dts != pts */
 	uint32_t fotogrammi_in_volo;  /* quanti ne ha trattenuti prima del primo */
@@ -606,5 +641,64 @@ void codificatore_chiedi_chiave(Codificatore *cod);
  */
 bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t altezza,
                                char *errore, size_t errore_byte);
+
+/*
+ * ⭐⭐ LA RISALITA DELLA QUALITA' — e NASCE SPENTA (invariante I6).
+ *
+ * ⛔ IL DIFETTO CHE CURA: `qualita_corrente` scende quando il fotogramma sfonda
+ *    il tetto dei 16 MiB di `RCP.md` §6.2, e fino al 23 agosto 2026 **non
+ *    risaliva mai**.  Un solo fotogramma d'eccezione — `[M]` il ripiego
+ *    `libx264` a 7680x4320 su filmato granuloso fa 18,733 MiB, 1 volta su 8 —
+ *    lasciava il codificatore in fondo alla scala **per tutta la sessione**, e
+ *    il desktop fermo dell'utente usciva sgranato per ore.  ⚠ E' il *«mai
+ *    sgranare»* di `DECISIONI.md` §3.3 perso per inerzia.
+ *
+ * Accesa: dopo un certo numero di fotogrammi **di fila** usciti comodamente
+ * sotto il tetto si torna su di **UNO** scalino, e **mai** oltre la qualita'
+ * che il chiamante ha chiesto in `CodificatoreRichiesta.qualita`.  Ogni gradino,
+ * in giu' e in su', finisce nel registro con la **misura** accanto alla soglia.
+ *
+ * ⛔ Cambia quel che si VEDE ⇒ e' l'utente a decidere che diventi il
+ *    comportamento normale, dopo averla giudicata sul desktop vero.  Spenta, il
+ *    programma si comporta esattamente come prima, byte per byte.
+ *
+ * ⚠ E' una decisione del **server**, non del singolo codificatore: vale per
+ *   tutti quelli aperti dopo la chiamata, e il valore in vigore si scrive nel
+ *   registro all'apertura di ciascuno — **acceso e spento**, perche' «spento» e
+ *   «non e' mai scattato» non abbiano la stessa faccia.
+ */
+void codificatore_qualita_risale(bool accesa);
+
+/*
+ * ⭐⭐⭐ IL TETTO DI BANDA — fase 9, 23 agosto 2026.  **Nasce SPENTO** (0).
+ *
+ * ⛔ IL NUMERO CHE LO OBBLIGA: `[M]` macchina di prova, tela 2560x1080, QP 26
+ *    costante (quel che il prodotto fa oggi), un **film con la grana a schermo
+ *    intero** chiede **58,7 Mbit/s**, cioe' il **293 %** del pavimento di 20
+ *    dichiarato in `DECISIONI.md` §3.1-bis — e **nessuno gli dice di no**.
+ *
+ * ⭐ E IL NUMERO CHE NE LIMITA LA PORTATA, nella stessa misura: il **desktop
+ *    vero** dell'utente, a schermo intero e in movimento, costa **0,204 Mbit/s
+ *    = l'1 %**.  ⇒ Il tetto e' per il **caso duro**.  Un tetto che mordesse sul
+ *    contenuto normale sarebbe l'errore per cui la fase 10 di v1 fu azzerata, e
+ *    il rosso che lo direbbe e' secco: *«il desktop vero, a tetto acceso, costa
+ *    meno di prima»* ⇒ la cura si butta.
+ *
+ * L'argomento e' il **pavimento in Mbit/s** (20, oggi), e da li' si derivano il
+ * filo (80 %), il punto di lavoro (75 % del filo — ⛔ **mai uguale al filo**:
+ * con i due numeri uguali il driver deduce **CBR**, che e' R31) e il serbatoio
+ * del regolatore (**40 ms**, contro i 50 che `CODER.md` §1-bis da' a **tutto**
+ * il pezzo nostro; v1 ne prendeva **500** e non se ne accorse nessuno).
+ *
+ * ⛔ Cambia quel che si VEDE — sul caso duro l'immagine peggiora, ed e' il suo
+ *    mestiere — quindi **I6**: lo accende l'utente dopo averlo giudicato sul
+ *    desktop vero.  In v1 questa identica modifica gli fece dire *«siamo tornati
+ *    indietro»*.  Spento, il programma si comporta **esattamente** come oggi.
+ *
+ * ⚠ Vale solo per la codifica in **hardware** (`h264_vaapi`): il ripiego in
+ *   software resta al suo CRF, e il valore in vigore si scrive nel registro
+ *   all'apertura di ogni codificatore — **acceso e spento**.
+ */
+void codificatore_tetto_banda(uint32_t pavimento_mbit);
 
 #endif

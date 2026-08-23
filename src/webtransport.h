@@ -415,6 +415,70 @@ void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
 void wt_audio_prova(uint32_t hz);
 
 /*
+ * ⭐⭐ FASE 9 — LA SOGLIA oltre la quale un delta fermo in coda si considera
+ *     «davvero senza speranza» e si abbandona (§5.1, che dice **PUO'**, non
+ *     DEVE).  Sotto la soglia il delta si TIENE: gli stream sono indipendenti
+ *     (`RCP.md:1155`), quindi tenerlo non blocca quelli dopo.
+ *
+ * `0` = SPENTA, ed e' il predefinito: si abbandona a ogni fotogramma piu'
+ *     recente, com'e' sempre stato — byte per byte.  Il valore consigliato
+ *     quando si accende e' **100 ms**, e la sua derivazione (quattro vincoli
+ *     misurati) sta accanto a `WT_SGOMBRA_SOGLIA_CONSIGLIATA_MS`.
+ *
+ * ⛔ E' l'invariante I6: cambia quel che si VEDE — per una frazione di secondo
+ *    l'immagine e' leggermente vecchia invece che sfasciata, fino a ~150 ms
+ *    durante il calo e **0 quando la linea porta**.  ⇒ Nasce spenta, e il
+ *    valore in vigore il server lo SCRIVE all'avvio **in tutt'e due i casi**:
+ *    «spento» e «non e' mai scattato» non devono avere la stessa faccia.
+ *
+ * ⚠ In MILLISECONDI, perche' e' un ritardo che si vede: chi la accende sceglie
+ *   quanto vecchia puo' essere l'immagine per una frazione di secondo.
+ *   L'opzione e' `--sgombra-soglia-ms N`.
+ */
+void wt_sgombra_soglia(uint64_t ms);
+
+/*
+ * ⛔ Il valore IN VIGORE, e ce n'e' una copia sola — la forma gia' usata per
+ *    `rcp_inattivita()`.  Chi lo scrive nella riga d'avvio lo legge da qui
+ *    invece di tenersene una copia sua, o «scritto» e «in vigore» diventano
+ *    due numeri diversi (forma E1).
+ */
+uint64_t wt_sgombra_soglia_letta(void);
+
+/*
+ * ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e nasce SPENTO (invariante I6).
+ *
+ *      Acceso, un fotogramma NON PARTE quando due delta gia' in volo hanno
+ *      ancora byte nella nostra coda d'uscita.  Il ritmo cala da se', tanto
+ *      quanto la linea non porta, e non c'e' nessun numero da far risalire.
+ *
+ * ⛔ LA GRANDEZZA E' `arretrato`: quanti fotogrammi DELTA vivi hanno ancora
+ *    byte nella NOSTRA coda, letto quando ne arriva uno nuovo e PRIMA di
+ *    `video_sgombra()`.  E' locale, e' un fatto e non una stima, ed e' la forma
+ *    di P20 (`RCP.md:398`) applicata a chi manda invece che a chi riceve:
+ *    nessun pacchetto perso, nessun riordino e nessun silenzio del client
+ *    possono falsarla, perche' non si guarda niente che venga da fuori.
+ *
+ * ⛔ E NON C'E' NESSUNA RISALITA DA RICORDARE — e' il pregio, non una
+ *    mancanza: la grandezza si rilegge a ogni fotogramma.  Un anello che tiene
+ *    uno stato e' un anello che un giorno resta giu', ed e' gia' successo
+ *    (`codificatore.c`, `qualita_corrente`, curata il 23 agosto 2026).
+ *
+ * ⛔⛔ E DIPENDE DALLA SOGLIA QUI SOPRA — si veda `wt_ritmo_adattivo()` in
+ *      `webtransport.c`: con `--sgombra-soglia-ms 0` la coda dei delta si
+ *      svuota a ogni fotogramma, quindi `arretrato` non puo' superare **1** e
+ *      questo regolatore non scatta MAI.  ⇒ La riga d'avvio lo DICE, perche'
+ *      un anello morto e una linea sana hanno la stessa faccia.
+ *
+ * ⚠ E il valore in vigore si SCRIVE all'avvio in tutt'e due i casi, acceso e
+ *   spento: senza quella riga «la cura sta lavorando» e «la cura non e' accesa»
+ *   producono lo stesso registro, cioe' nessuna riga.
+ *
+ *   L'opzione e' `--ritmo-adattivo`, senza argomento, assente = spento.
+ */
+void wt_ritmo_adattivo(bool acceso);
+
+/*
  * ⭐⭐ LA CUCITURA DELL'AUDIO — la gemella di `wt_video_gancio`.
  *
  *     Chi sa che una sessione ha negoziato un codec audio: `rcp.c` (§4.3).
@@ -428,11 +492,19 @@ void wt_audio_prova(uint32_t hz);
 typedef void (*wt_audio_richiesta)(void *ctx, const char *utente, uint8_t codec);
 void wt_audio_gancio(wt_audio_richiesta f, void *ctx);
 
-/* I quattro numeri del video di una sessione, per il registro e per i banchi.
+/* I CINQUE numeri del video di una sessione, per il registro e per i banchi.
  * ⛔ Insieme, sempre: «zero abbandonati» detto da solo non distingue una linea
- *    che porta da un canale che non ha mai spedito niente. */
+ *    che porta da un canale che non ha mai spedito niente.
+ *
+ * ⭐ FASE 9 — il quinto e' `ritmo_scesi`: i fotogrammi che il regolatore del
+ *    ritmo NON ha fatto partire.  ⛔ E' un numero SUO e non entra in
+ *    `saltati`: quello conta i fotogrammi inammissibili (tela sbagliata,
+ *    credito finito, rifiuto di rcp), questo conta una DISCESA DI RITMO
+ *    decisa da noi, e sono due fatti diversi.  Sommarli darebbe un totale che
+ *    sembra sano e non dice niente. */
 void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
-                    uint32_t *spediti, uint32_t *abbandonati);
+                    uint32_t *spediti, uint32_t *abbandonati,
+                    uint32_t *ritmo_scesi);
 
 /* Per il registro e per i banchi. */
 const char *wt_stato_rcp(const wt *w);

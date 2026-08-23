@@ -4,7 +4,68 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **22 agosto 2026, sera**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **23 agosto 2026, sera**
+>
+> ## ⭐⭐ LA FASE 9 È APERTA — *la qualità e la degradazione*
+>
+> 📖 Il documento è **[`fasi/09-la-qualita-e-la-degradazione.md`](fasi/09-la-qualita-e-la-degradazione.md)**,
+> e **la sintesi della giornata sta in testa** (S.1 … S.6).
+>
+> ## ⛔⛔⛔ IL FATTO PIÙ GRAVE: **il prodotto è morto di `SEGV`, e la causa è provata**
+>
+> Alle **08:28:09** il server è morto sul fotogramma **185**, un delta da **525 298 byte**.
+> ⭐ **Causa trovata riga per riga**: si liberavano i byte di un fotogramma appena ngtcp2 li aveva
+> *serializzati*, mentre il contratto obbliga a tenerli **fino all'ack**. ⇒ **Uso dopo la
+> liberazione**, presente **a ogni fotogramma ritrasmesso, da sempre** — quello da 525 KB è stato
+> solo il primo abbastanza **grosso** perché `free()` restituisse le pagine al kernel (**1** blocco
+> `mmap` su **45 005**). Sotto i 128 KiB lo stesso errore mandava al client **byte di spazzatura in
+> silenzio**. ⭐ **La cura è applicata** (`src/webtransport.c`), ⛔ **e non è ancora riprodotta.**
+>
+> ## ⭐ LE CINQUE CURE DEL 23 AGOSTO — **tre nascono spente** (I6)
+>
+> | | interruttore |
+> |---|---|
+> | **il crollo**: si libera all'ack, non alla serializzazione | ⛔ nessuno: è la correzione di un difetto |
+> | **il riordino dell'audio**: si scarta sul *«già consumato»* (§6.3), non sul *«già arrivato»* | ⛔ nessuno: allentamento puro, **zero ms e zero memoria** |
+> | **la soglia sulla coda** in `video_sgombra()` — la spirale delle sole chiavi | `--sgombra-soglia-ms 100`, **spenta** |
+> | **la risalita della qualità** — era un cricchetto a senso unico | `--qualita-risale`, **spenta** |
+> | **il tetto di banda** — `QVBR`, i tre numeri derivati dal pavimento | `--tetto-banda-mbit 20`, **spento** |
+>
+> ⛔ **Nessuna delle cinque è stata misurata sulla macchina di prova**: sono state scritte dopo il
+> confronto appaiato delle 09:00.
+>
+> ## ⭐⭐⭐ E le due misure della giornata che cambiano il quadro
+>
+> - **il risveglio da fermo NON costa niente**: 180 colpi, quieti da 0,2 a 15 s ⇒ **13 ms** di
+>   mediana e **tutte** le misure fra 12,3 e 14,3. ⇒ L'arresto a scena ferma (0 fotogrammi in 30 s,
+>   perché **Mutter consegna solo sul cambiamento**) è una violazione **letterale** di I1 che **non
+>   costa niente a chi guarda**. ⚠ E l'**80 %** di quei 13 ms è attesa del compositore: la parte
+>   nostra sono **2,7 ms**;
+> - ⛔ **il caso duro chiede TRE VOLTE il pavimento**: un film con la grana a schermo intero a
+>   2560×1080 fa **58,7 Mbit/s = il 293 %** di 20. ⭐ **Ma il desktop VERO dell'utente, a schermo
+>   intero e in movimento, costa 0,204 Mbit/s = l'1 %.** ⇒ Il tetto è per il **caso duro**, e un
+>   regolatore che si accendesse sul contenuto normale **ripeterebbe l'errore di v1**.
+>
+> ## 🔸 E DUE COSE ASPETTANO L'UTENTE — *sono quelle che cambiano quel che si VEDE*
+>
+> | | il prezzo |
+> |---|---|
+> | **la soglia sulla coda** | trascinando una finestra mentre la linea cala, la finestra segue il puntatore con fino a **~150 ms** di ritardo per un attimo — ⛔ **invece di scattare da un'immagine all'altra a ritmo di chiave**, che è quel che fa oggi |
+> | **il tetto di banda** | sul **caso duro** l'immagine diventa più brutta: è il suo mestiere. Sul contenuto vero deve **non fare niente** |
+>
+> ⛔ **Quale delle due sia peggio non lo decide una misura**: è la lezione pagata con l'azzeramento
+> della fase 10 di v1.
+>
+> ## ⏳ E il lavoro che resta, nell'ordine
+>
+> **1.** riprodurre il crollo e armare la trappola · **2.** misurare le cinque cure appaiate ·
+> **3.** il banco che fa girare **la pagina** per l'audio (⛔ quello di oggi **misura se stesso**) ·
+> **4.** il **regolatore del ritmo**, disegnato e non scritto — ⛔ **e viene DOPO la soglia della
+> coda**, o `arretrato` è zero per costruzione e il regolatore non scatterebbe mai.
+>
+> ---
+>
+> # 📌 E IL PUNTO DI RIPRESA DI IERI — **22 agosto 2026, sera**
 >
 > ## ⭐⭐⭐ LA FASE 8 È CHIUSA, e l'ha chiusa l'utente guardando lo schermo
 >

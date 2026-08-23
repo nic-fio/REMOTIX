@@ -1181,14 +1181,60 @@ porta.
 era stata validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio dell'utente sul
 desktop vero fu *«siamo tornati indietro»*. La fase fu azzerata.
 
-**Il banco**: la rete strozzata a valori veri — 2 Mbit/s con perdita e giro lungo — e la verifica
-che il ritmo cali **senza mai bloccarsi** e senza mai staccare.
+**Il banco**: la rete strozzata a valori veri — ⭐ **20 Mbit/s, il pavimento dichiarato dall'utente
+il 23 agosto** (`DECISIONI.md` §3.1-bis), con perdita e giro lungo — e la verifica che il ritmo cali
+**senza mai bloccarsi** e senza mai staccare.
+
+> ⛔ **Il numero era «2 Mbit/s», ed è cambiato il 23 agosto 2026.** *«Mi ero tenuto più largo:
+> ritengo che una connessione minima debba essere 20 mbps: al di sotto di questo limite l'utente
+> nemmeno riesce a navigare, figuriamoci usare remotix».* ⇒ ⭐ **Cambia che cosa si sta tarando**:
+> la scala di degradazione copre i **cali temporanei di una linea buona**, non le linee povere.
+> ⚠ E cambia il verso di un rischio: a 20 Mbit/s il fondo scala non si raggiunge quasi mai, quindi
+> il difetto che si nasconde non è più «degrada male», ma **«degrada quando non dovrebbe»** — che
+> è l'invariante I1, ed è precisamente la prima cosa che questa fase verifica.
+>
+> ⭐ **Lo strumento per strozzare dal lato del client c'è**: `wondershaper` in `~/.local/bin` sul
+> tablet dell'utente — ⇒ si può strozzare **il percorso vero**, non solo `lo` con `netem`, che è
+> il limite dichiarato di `banchi/07-b64-rete.py`.
 
 ⛔ **La cosa che si verifica per prima**: che il ritmo **non** cali quando la scena è ferma. È
 l'invariante I1, ed è la ferita da cui nasce.
 
 ⚠ E ciò che cambia quel che si vede sta **dietro un interruttore spento** finché l'utente non l'ha
 guardato (I6).
+
+> ### ⛔⛔ CORREZIONI DEL **23 agosto 2026, sera** — quel che i fatti hanno superato
+>
+> *📖 Tutto in `fasi/09-la-qualita-e-la-degradazione.md`, la sintesi in testa.*
+>
+> **1. ⛔ «Strozzare a 20 Mbit/s» NON prova quel che questa fase deve provare.** `[M]` §3.10:
+> con la banda chiesta **sotto** il buco **non succede assolutamente niente**. ⇒ ⭐ **Serve un
+> GRADINO** — larga → 3 s stretti → larga — non un limite costante: un limite costante misura il
+> **regime**, e in regime la previsione è che non succeda niente. ⛔ E **tre secondi bastano**:
+> portano il ritmo da 40 a 13/s e fanno diventare **metà dei fotogrammi delle chiavi**.
+>
+> **2. ⭐⭐ «Che il ritmo non cali a scena ferma» è MISURATO, e la risposta è più netta della
+> domanda**: a scena ferma il ritmo **non cala, si FERMA** — 1 fotogramma in 30 s, poi zero.
+> ⛔ **E non è una nostra decisione**: `RecordVirtual` di Mutter consegna **solo sul cambiamento**
+> (123 attese a vuoto al secondo). ⭐ **E il risveglio non costa niente**: 180 colpi, **13 ms** di
+> mediana da 0,2 a 15 s di quiete, coda larga **2 ms**. ⇒ È una violazione **letterale** di I1 che
+> **non costa niente a chi guarda**, e **non è un difetto della fase**.
+>
+> **3. ⭐ Le due cose «già misurate» del riquadro qui sotto SONO STATE SCRITTE il 23 agosto**, con
+> altre tre: la cura di `video_sgombra()` (`--sgombra-soglia-ms`, spenta), il riordino dell'audio
+> (senza interruttore), la risalita della qualità (`--qualita-risale`, spenta), il tetto di banda
+> (`--tetto-banda-mbit`, spento) e ⛔ **la cura di un crollo**: il server è morto di `SEGV` alle
+> 08:28:09 per un **uso dopo la liberazione** in `webtransport.c`. ⚠ **Nessuna delle cinque è stata
+> misurata sulla macchina di prova.**
+>
+> **4. ⛔ E il difetto che si nasconde non è solo «degrada quando non dovrebbe».** `[M]` §3.8: con
+> QP 26 fisso e nessun tetto, un **film con la grana a schermo intero** chiede **58,7 Mbit/s = il
+> 293 % del pavimento**. ⭐ **Ma il desktop vero dell'utente ne chiede l'1 %.** ⇒ Il tetto è per il
+> **caso duro**, e la fase ha **due** bersagli, non uno.
+>
+> **5. ⛔ E il regolatore del ritmo ha un ordine obbligato**: viene **dopo** la soglia sulla coda.
+> Finché `video_sgombra()` svuota la coda a ogni fotogramma, la grandezza su cui il regolatore si
+> aggancia è **zero per costruzione** — e un regolatore muto e una linea sana hanno la stessa faccia.
 
 ⭐ **E questa fase adesso ha un secondo cliente, che prima non aveva**: la scala di degradazione è
 **il modo in cui si fa stare più gente sulla stessa macchina**. Un budget senza la scala sa dire
@@ -1567,6 +1613,13 @@ misura** — che è precisamente l'errore di §1.26. **Vanno spenti prima di mis
 
 ⭐ Vivi e voluti: **7730** (dell'utente) e **7790** (il prodotto con la fase 8 dentro, che l'utente
 ha giudicato).
+
+> ✅ **CHIUSA il 23 agosto 2026**: dopo il riavvio e la riprovisione la macchina aveva **una sola
+> porta 7xxx aperta, la 7900** — verificato con `ss -tuln` **prima** di misurare.
+> ⚠ E la regola che ne è uscita, pagata due volte nella giornata (`fasi/09` §3.17): fra due banchi
+> sullo stesso utente **si verifica che il posto sia libero** — nessun cliente vivo **e** nessun
+> palco — ⛔ **non si conta il tempo**. Un palco orfano non dà un rosso: dà **un numero plausibile**,
+> e quel giorno stava per far accusare tre cure innocenti.
 
 ## Come si riparte
 

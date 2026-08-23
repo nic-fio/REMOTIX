@@ -122,6 +122,12 @@ E la banda dichiarata è un **pavimento, non un budget**. Si spende, non si risp
 la banda non spesa non torna utile a nessuno, e la qualità persa si vede.
 (`LEZIONI.md` §7.2 — ottimizzare nella direzione sbagliata è peggio che non ottimizzare.)
 
+⭐ **E dal 23 agosto 2026 il pavimento ha un numero: 20 Mbit/s.** *«Al di sotto di questo limite
+l'utente nemmeno riesce a navigare, figuriamoci usare remotix»* — l'utente, `DECISIONI.md`
+§3.1-bis. ⇒ Sotto i 20 Mbit/s **non si promette niente e non si misura niente come requisito**;
+⚠ il divieto di staccare resta comunque intero. Chi tarasse una soglia su una linea da 2 Mbit/s
+starebbe tarando su un caso che il prodotto **non serve più**.
+
 > ### ⛔⛔ DOVE FINISCE LA MISURA — *13 agosto 2026, e vale 11 ms su 50*
 >
 > **La misura del ritardo finisce al DISEGNO FINITO, non al richiamo del decodificatore.**
