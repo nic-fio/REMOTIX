@@ -3036,3 +3036,93 @@ spenta, fuori da ogni sessione utente.
 negozia **H.264** (§14.1). ⛔ È il metro nuovo, e chi rilegge un numero vecchio deve guardare
 **quale codec** dice il registro di quel giro.
 
+---
+
+## §16 · ⭐⭐⭐ IL CASO DURO SUL PERCORSO VERO — *23 agosto 2026, 15:20-15:30, col browser dell'utente*
+
+⛔ **La prima misura della fase presa con un browser vero, sulla tela vera, sulla rete vera.** Tutte
+quelle di prima venivano dal cliente di prova su `lo`.
+
+**La scena**: un filmato di **grana pura** 2560×1080 a 30/s (`ffmpeg noise=alls=40:allf=t+u`, CRF 32,
+90 s in ciclo), riprodotto con `mpv --fullscreen` dentro la sessione di `prova` sulla **7920**
+(prodotto di `f90eb21`+, **nessun interruttore acceso**, tetto di banda SPENTO). Il client è
+**Chrome** dell'utente da 192.168.0.3. ⇒ È il caso peggiore che un desktop possa produrre.
+
+### 16.1 ⭐⭐ La banda: **21,5 – 23,1 Mbit/s**, cioè il **107-115 %** del pavimento
+
+| | kbit/s | fotogrammi in 10 s | il più grosso |
+|---|---|---|---|
+| `[M]` 15:2x | **21 542** | 306 | 365 133 byte |
+| `[M]` 15:2x | **23 092** | 299 | 355 169 byte |
+
+⛔ **E questo corregge §14.2 nel verso che conta**: il banco, con la sua scena sintetica, dava
+**44,574 Mbit/s = 223 %** del pavimento. Il caso duro **vero** ne chiede **la metà**.
+⇒ ⭐ **Il tetto di banda serve ancora — ma il margine da recuperare è di 2-3 Mbit/s, non di 25.**
+⚠ E resta `[?]` **quanto sia duro il caso più duro possibile**: la grana pura è un limite superiore
+sintetico anche lei; un film vero comprime meglio.
+
+### 16.2 ⭐⭐⭐ E il prodotto TIENE, senza nessuna cura accesa
+
+`[M]` dal verbale che la pagina manda da sé ogni 5 s, e dal registro del figlio:
+
+| | |
+|---|---|
+| fotogrammi | **7 125 consegnati → 7 125 dipinti** · `salt 0` · `buchi 0` · `ord 0` |
+| chiavi | ⭐ **1** in tutto il giro |
+| audio | **35 169 ricevuti → 35 169 suonati** · `vecchi 0 · tardivi 0 · fuori 0 · rec 0 · dop 0` |
+| coda audio | 238 ms |
+
+⇒ ⛔ **Nessuna spirale, nessun abbandono, nessuna degradazione** — a **interruttori tutti spenti**,
+sul caso peggiore, appena sopra il pavimento. ⭐ È la conferma più forte che la fase 9 potesse
+ricevere sul verso della decisione §3.1-bis: **a 20 Mbit/s il prodotto non ha bisogno di degradare.**
+
+### 16.3 ⭐ La cura del riordino audio (cura 4): **inerte sul percorso dell'utente, come previsto**
+
+`[M]` `vecchi 0 · tardivi 0 · fuori 0` sia a riposo (4 936/4 936) sia sotto il caso duro
+(35 169/35 169). ⇒ ⭐ **La metà che conta per il prodotto è dimostrata**: la cura **non ha cambiato
+niente per l'utente**. ⚠ **La metà che morde — la purezza sotto riordino ≥ 0,95 — resta `[?]`**: si
+può fare solo sporcando `enp7s0`, che è l'interfaccia dell'ssh e della sessione dell'utente, e non
+è stata toccata.
+
+### 16.4 ⛔⛔ LA DESINCRONIA AUDIO-VIDEO CRESCE SOTTO CARICO — ma **NON è giudicabile a occhio**
+
+`[M]` il campo `AV` del verbale della pagina: **+331 ms** a riposo → **+690 ms** sotto il caso duro.
+⇒ Il suono precede l'immagine di quasi **sette decimi di secondo**.
+
+⛔ **E qui il banco è stato l'occhio dell'utente, per due volte, e ha detto NO:**
+
+> *«non posso sapere se c'è disallineamento se il video è incomprensibile»* — sulla grana pura, che
+> non offre **nessun riferimento** fra quel che si vede e quel che si sente.
+>
+> *«ancora difficile giudicare il sync»* — sulla stessa scena con un **riferimento innestato**: tutto
+> lo schermo lampeggia in bianco per 0,12 s **una volta al secondo**, e nello stesso istante c'è un
+> **bip** (`sine=frequency=440:beep_factor=4`).
+
+⛔ **Due letture, e vanno tenute tutt'e due invece di scegliere quella comoda:**
+
+| | |
+|---|---|
+| ⭐ **una desincronia che non si riesce a giudicare è una desincronia che non morde** | ed è il metro del prodotto: `LEZIONI.md` §7.3, *«quando l'utente dice che va bene, va bene»* |
+| ⛔ **oppure lo STRUMENTO non serve, e allora il numero non è ancora stato messo alla prova** | 690 ms su un lampo a schermo intero **dovrebbero** vedersi. Se non si vedono, o `AV` non misura quel che crediamo, o il lampo si perde nella grana, o il bip non cade dove credo |
+
+⇒ ⏳ **Resta `[?]`, e la strada è una misura OGGETTIVA, non un altro giro d'occhio**: un riferimento
+che si possa **leggere** invece che giudicare — un lampo su fondo **calmo** (non grana), catturato
+insieme al suono, e i due istanti confrontati sul filo. ⛔ E prima di misurarlo va **certificato lo
+strumento**: `AV` va confrontato con un ritardo **noto e innestato**, o è un numero che nessuno ha
+mai verificato. ⚠ È la stessa forma di `DECISIONI.md` §7.19, dove la desincronia ~400 ms è aperta
+**da agosto** e non è mai stata chiusa.
+
+⚠ **E un difetto del metodo, dichiarato**: la scena di prova era **grana pura**, cioè il caso in cui
+l'occhio ha **meno** appigli possibili. Chiedere un giudizio di sincronia lì è stato un errore mio,
+e la seconda scena non l'ha corretto abbastanza.
+
+### 16.5 Che cosa resta acceso
+
+`[M]` la scena e `mpv` **fermati** alle 15:30. I due filmati restano in
+`/media/REMOTIX/tmp/09-scena/` (`duro.mp4` 209 MB, `duro-sync.mp4` 208 MB) — ⚠ su NVMe, **non** sul
+rootfs in RAM: il primo tentativo li aveva scritti in `/home/prova`, che vive in RAM, e a CRF 18
+faceva **4,1 GB**. Cancellato subito.
+⚠ Installati sulla macchina `mpv` e `ffmpeg` (il rootfs vive in RAM: dopo un riavvio vanno rimessi).
+⛔ **Firefox sulla macchina di prova NON parte** per l'utente `prova`: il profilo non viene mai
+creato (`~/.mozilla/firefox/` ha solo `Crash Reports` e `Pending Pings`). È lo stesso muro su cui si
+è fermato il banco dell'audio. ⏳ Non diagnosticato.
