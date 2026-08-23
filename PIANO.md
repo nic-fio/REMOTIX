@@ -1195,8 +1195,17 @@ porta.
 > **jitter** (`[?]` QUIC può scambiarlo per perdita e stringere la finestra **senza motivo**: se
 > succede il calo è **nostro**, non della rete).
 >
-> ⚠ **§3.1-bis non è annullata**: i 20 Mbit/s restano il pavimento dichiarato. Cambia il suo
-> mestiere — da **domanda** della fase a **premessa** su cui si misurano le altre tre.
+> ⚠ **§3.1-bis non è annullata**: il pavimento dichiarato resta — ⛔ **ed è passato a 30 Mbit/s la
+> notte stessa** (§3.1-sexies: *«ho già detto che il pavimento, per quanto riguarda la banda, è a
+> 30 mbps»*). Cambia il suo mestiere — da **domanda** della fase a **premessa** su cui si misurano
+> le altre tre.
+>
+> ⛔⭐⭐ **E la fase ha prodotto una decisione nuova, §3.1-quater**: una linea che perde **a raffiche**
+> si dichiara **morta** — 10 s senza pacchetti, o una perdita copiosa dentro 1-2 s — e ✅ **l'utente
+> rientra a mano**. Nasce dalla scelta fra due mali misurati: `[M]` senza cure lo schermo si congela
+> **14,26 s**, con le cure si muove con **4,5 s di ritardo**. ⇒ Nessuno dei due va servito.
+> ⛔ Prerequisito: **§3.1-quinquies**, il *fantasma* — rientrando, l'utente trova il proprio posto
+> occupato da sé stesso per 30,5 s, e con un messaggio che per lui è **falso**.
 >
 > ⛔ E il `netem` su `lo` diventa **risorsa unica con lucchetto** (`banchi/09-lucchetto.py`): la
 > disciplina si mette sulla radice dell'interfaccia, quindi due banchi che guastano insieme non si

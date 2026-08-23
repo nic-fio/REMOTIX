@@ -931,7 +931,7 @@ sommerebbe.
 
 ### 8.1 Gli scenari da servire — e il pavimento
 
-⭐ **La rete minima del prodotto è 20 Mbit/s**, ed è un **pavimento dichiarato**: sotto, REMOTIX
+⭐ **La rete minima del prodotto è 30 Mbit/s**, ed è un **pavimento dichiarato**: sotto, REMOTIX
 non promette niente e non misura niente come requisito. *«Al di sotto di questo limite l'utente
 nemmeno riesce a navigare, figuriamoci usare remotix»* — l'utente, 23 agosto 2026
 (`DECISIONI.md` §3.1-bis).
@@ -941,11 +941,30 @@ Sopra il pavimento il requisito resta **l'adattamento**, non una seconda soglia:
 | Collegamento | Banda | Ritardo e perdita | Che cosa fa il server |
 |---|---|---|---|
 | fisso buono | **30+ Mbps** | bassi | punta al desiderato |
-| ⭐ **il pavimento** | **20 Mbps** | medi | **spende tutto quel che c'è**, e tiene il minimo |
-| ⚠ sotto il pavimento | < 20 Mbps | qualsiasi | **fuori dal promesso**: degrada e non stacca, ma non è un requisito |
+| ⭐ **il pavimento** | **30 Mbps** | medi | **spende tutto quel che c'è**, e tiene il minimo |
+| ⚠ sotto il pavimento | < 30 Mbps | qualsiasi | **fuori dal promesso**: degrada e non stacca, ma non è un requisito |
 
 ⚠ **Il divieto di staccare (§8.3) non si indebolisce**: vale anche sotto il pavimento. Quel che
 sotto il pavimento non c'è più è la **promessa**, non il comportamento.
+
+> ⛔ **IL NUMERO ERA 20, ED È DIVENTATO 30 la notte del 23 agosto 2026** (`DECISIONI.md` §3.1-sexies):
+> *«ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps»*. ⚠ Le misure della
+> fase 9 sono tarate su 20 e **non si riscrivono**: `[M]` il caso duro sul percorso vero chiedeva
+> 21,5-23,1 Mbit/s, che col pavimento vecchio era il 107-115 % e col nuovo è il **72-77 %**.
+
+> ### ⛔⭐⭐ E LA BANDA NON È LA GRANDEZZA CHE DECIDE — `DECISIONI.md` §3.1-ter
+>
+> *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
+> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* — 23 agosto 2026.
+>
+> ⛔ E il numero che lo dimostra: `[M]` il prodotto regge il caso peggiore **a banda libera**, ma
+> **la spirale di chiavi parte allo 0,10 % di perdita** — cioè al primo pacchetto perso — e il calo
+> che l'utente **vede** arriva allo 0,53-0,75 %. ⇒ **Il pavimento di banda è una premessa, non un
+> requisito mordente**: il requisito mordente è il comportamento su una linea **sporca**.
+>
+> ⛔ E una linea che perde **a raffiche** si dichiara morta (§3.1-quater): 10 s senza pacchetti, o
+> una perdita copiosa dentro 1-2 s. ⚠ Non contraddice §8.3 — non si stacca *invece di degradare*: si
+> dichiara rotto un filo che **non porta più niente**, e l'utente rientra a mano.
 
 ### 8.2 La regola dell'adattamento — invariante I1
 

@@ -1662,7 +1662,13 @@ Gli scenari da servire:
 | fisso modesto, WiFi | 5–15 Mbps | medi | **spende tutto quel che c'è** |
 | mobile critico | < 2 Mbps, variabile | alti, con perdita | tiene il minimo, **e non stacca** |
 
-### 3.1-bis ✅⭐⭐ La rete minima è **20 Mbit/s**, ed è un **pavimento dichiarato**
+### 3.1-bis ✅⭐⭐ ~~La rete minima è **20 Mbit/s**~~ → **30**, ed è un **pavimento dichiarato**
+
+> ⛔ **IL NUMERO È STATO ALZATO LA SERA STESSA → §3.1-sexies.** *«Ho già detto che il pavimento,
+> per quanto riguarda la banda, è a 30 mbps»* — 23 agosto 2026, notte. ⭐ **Tutto il ragionamento di
+> questa voce resta valido alla lettera**: cambia il numero, non la natura di *pavimento dichiarato*.
+> ⚠ I «20» che seguono vanno letti come **30**; sono rimasti scritti perché le misure prese quel
+> giorno erano tarate su 20, e riscriverle a posteriori le renderebbe non rileggibili.
 
 *23 agosto 2026, aprendo la fase 9. «ho letto nel piano di connessioni fino a 2 mbps. Mi ero
 tenuto più largo: ritengo che una connessione minima debba essere 20 mbps: al di sotto di questo
@@ -1772,6 +1778,102 @@ quella verifica.
 la disciplina si mette sulla **radice** dell'interfaccia, quindi due banchi che guastano insieme
 non si dividono il lavoro — **il secondo cancella il guasto del primo, e il primo continua a
 misurare credendo di averlo**. ⚠ Non darebbe rosso: darebbe un numero plausibile.
+
+### 3.1-sexies ✅⭐ Il pavimento di banda è **30 Mbit/s**, non 20 — *23 agosto 2026, notte*
+
+*«Ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps.»*
+
+⚠ **E qui il registro va corretto, non lisciato**: la mattina del 23 agosto il numero dato era
+**20** (*«ritengo che una connessione minima debba essere 20 mbps»*, §3.1-bis), e la fase 9 ci è
+stata tarata sopra per una giornata intera. ⇒ Il numero è **30** da questa voce in avanti.
+
+⭐ **Che cosa NON cambia, e va detto perché non si creda travolto:**
+
+- **§3.1-bis resta valida alla lettera**: cambia il numero, non la natura di *pavimento dichiarato* —
+  sotto, il prodotto **non promette niente e non misura niente come requisito**, ma non rifiuta
+  nessuno e non stacca (§3.3, I1);
+- ⛔ **§3.1-ter è ancora più vera**: se 20 Mbit/s non erano una sfida, 30 lo sono ancora meno. Il
+  bersaglio della fase resta **perdita, fuori sequenza e jitter**, e questa voce **rafforza** quella
+  correzione invece di riaprirla;
+- ⛔ **le misure della giornata NON si riscrivono**: sono tarate su 20 e vanno lette per quello che
+  sono. `[M]` Il caso duro sul percorso vero (§16) chiedeva **21,5-23,1 Mbit/s**, che col pavimento
+  vecchio era il **107-115 %** e col nuovo è il **72-77 %**. ⇒ ⭐ **Col pavimento a 30 il caso duro
+  entra, e ci sta comodo**: la decisione sul tetto di banda si semplifica invece di complicarsi;
+- ⚠ **§2.1 (480p · 25 fps) non si muove**: è il fondo della **scala di degradazione**, non un
+  livello che la banda impone. Con più banda a disposizione, un ritmo sotto i 25/s è **ancora più**
+  chiaramente un difetto.
+
+*Conseguenze fuori da qui, applicate lo stesso giorno:* `SPECIFICHE.md` §8.1, `CODER.md` §1-bis,
+`PIANO.md` fase 9.
+
+### 3.1-quater ✅⭐⭐⭐ Una linea che perde a raffiche **si dichiara morta**, e l'utente rientra a mano
+
+*23 agosto 2026, notte, dopo aver visto i numeri della rete cattiva. «Se in 10 secondi non arrivano
+più pacchetti è chiaro che la connessione è morta. […] se all'interno di un intervallo di 1-2
+secondi c'è una perdita di pacchetti piuttosto copiosa direi di trattarla come il caso in cui la
+connessione è caduta.»*
+
+⛔ **Da dove nasce, ed è una scelta fra due mali misurati.** `[M]` §17.1 e §17.6: con perdita a
+raffiche pesanti (11,10 % vera, in raffiche da 4,5 pacchetti in media) il prodotto ha **due**
+comportamenti possibili, e sono brutti tutti e due:
+
+| | che cosa fa | che cosa vede l'utente |
+|---|---|---|
+| **senza** le cure della fase 9 | la consegna si ferma: 7 secondi su 25 hanno visto un fotogramma | ⛔ lo schermo **congelato per 14,26 s** |
+| **con** le cure | consegna tutti i 25 s, ma tenendo la coda | ⛔ l'immagine si muove **con 4,5 s di ritardo** |
+
+⇒ ⭐ **L'utente ha deciso che nessuno dei due va servito**: una linea così **non è una linea lenta,
+è una linea rotta**, e va chiamata col suo nome.
+
+| | |
+|---|---|
+| ⛔ **che cosa dice** | ① **10 secondi senza pacchetti in arrivo** = connessione morta. ② **perdita copiosa dentro una finestra di 1-2 s** = si tratta **come una connessione caduta** |
+| ⭐ **che cosa vede l'utente** | ✅ **il filo cade e si rientra a mano.** Scelta esplicita fra tre, il 23 agosto: non un riattacco automatico, non un ripristino invisibile |
+| ⚠ **l'obiezione che è stata fatta e superata** | *«su rete cattiva la diagnosi "è caduta la linea" è frequente, e farla pagare con un accesso a mano rende il prodotto inusabile proprio dove serve»*. ⛔ L'utente ha scelto lo stesso, e la decisione è sua |
+| ⛔ **il prerequisito** | ⇒ **§3.1-quinquies**: rientrando, l'utente trova **il proprio fantasma** che gli nega il posto. La cura del fantasma **non è più un di più: è la condizione perché questa decisione sia usabile** |
+
+**Che cosa comporta, e la parte difficile non è il codice:**
+
+1. ⛔ **«copiosa» è una parola e deve diventare un numero, con la ragione e i due margini.** I
+   confini misurati: **1,71 %** (`casa-cattiva`) è una linea che **regge** e non va dichiarata morta;
+   **11,10 %** (`raffica-forte`) non serve nessuno. ⚠ E la regola della famiglia P8→P20 vale qui più
+   che altrove: la grandezza dev'essere un **fatto osservabile**, mai un orologio — e una frazione
+   calcolata su pochi pacchetti **non è una frazione, è rumore**: sotto un minimo di pacchetti nella
+   finestra, il codice **non decide niente**;
+2. ⚠ **i 10 secondi non si mettono alla cieca**: `IDLE_MS` di QUIC è **30 000 ms**
+   (`SPECIFICHE.md` §5.3) ed è **negoziato col cliente**. ⛔ E c'è un caso da non rompere — la
+   scheda del browser finita in secondo piano, che il sistema rallenta o congela (`PIANO.md` A5):
+   **un cliente che tace 15 s non è un cliente morto**;
+3. ⛔ **nasce dietro un interruttore SPENTO** (I6): questa cura **butta fuori una sessione**, che è
+   il cambiamento più visibile che si possa fare. L'utente ha deciso il **comportamento**, non che
+   sia acceso senza averlo visto;
+4. ⛔ **ogni scatto si dichiara nel registro** con i numeri su cui la decisione è stata presa (I1).
+   Una sessione chiusa senza una riga che spieghi perché è indistinguibile da un difetto nostro.
+
+### 3.1-quinquies ✅⭐⭐ Il **fantasma** — dieci secondi, e la frase non deve mentire
+
+*23 agosto 2026, notte. «Se in 10 secondi non arrivano più pacchetti è chiaro che la connessione è
+morta.»*
+
+⛔ **Il fatto**, `[M]` misurato lo stesso giorno (§17.5): cade il filo, l'utente riprova a entrare, e
+per **30,5 secondi** gli viene detto **«hai già una sessione attiva altrove»**. ⚠ **Per chi la legge
+è falsa**: quella sessione è **la sua**, ed è morta un attimo prima. Il conto si chiude senza
+sporcare la rete — un addio **perso** e un addio **mai detto** sono lo stesso fatto — ed è
+`SILENZIO` (`src/rcp.c:263`, 30 000 ms).
+
+⛔ E il riquadro di `src/rcp.c:229-233` **dichiara** che quell'orologio *«fa sparire il caso "il
+telefono è morto in galleria"»*: non lo fa sparire, lo **dura trenta secondi**.
+
+⛔⛔ **E con §3.1-quater diventa il prerequisito, non un di più**: se una raffica di perdite fa
+cadere il filo e l'utente deve **rientrare a mano**, la prima cosa che trova rientrando è il proprio
+fantasma. Su una linea che perde a raffiche **si ripete**.
+
+| | |
+|---|---|
+| ⭐ **che cosa dice** | dieci secondi di silenzio bastano a dichiarare morto un occupante. ⚠ Come si ottenga — abbassare `SILENZIO` o aggiungere una regola più stretta fra client **dello stesso utente** — è di codice, e va scelto guardando **tutto** ciò che si appoggia a quel numero |
+| ⛔ **che cosa NON viola** | §8.2, *«nessun client attaccato e **vivo** viene mai spodestato»*: l'occupante qui è attaccato ma **non vivo**. La regola non contraddice §8.2, **la applica** — e va scritto, o il prossimo crederà che sia stata violata |
+| ⛔ **il caso che non si rompe** | vale **solo fra client dello stesso utente**. Uno sfratto fra utenti diversi sarebbe un buco di sicurezza, non una comodità |
+| ⚠ **e la frase cambia comunque** | *«hai già una sessione attiva altrove»* è una **diagnosi che il server non è in grado di fare**: non sa se l'altro client è un altro dispositivo o lo stesso utente appena caduto. ⇒ Deve dire **quel che sa** — che il posto risulta occupato, e da quanto l'occupante tace |
 
 ### 3.2 🔸 L'invariante I1, riscritta
 
