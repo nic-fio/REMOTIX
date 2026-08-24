@@ -117,3 +117,30 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 
 /* I due numeri del codificatore, per il registro: blocchi entrati e usciti. */
 void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
+
+/*
+ * ⛔⭐ LA CURA DEL SILENZIO DIGITALE — fase 9, e NASCE SPENTA (I6).
+ *
+ * Accesa, un blocco in cui **tutti** i campioni sono esattamente zero non
+ * diventa un datagram: `audio_cod_passa()` torna `false`, il chiamante non
+ * manda niente, e chi riceve — che mette i blocchi al loro `istante` assoluto
+ * (§6.3) — trova un buco.  ⭐ Un buco e' silenzio, cioe' quel che il blocco
+ * conteneva: non e' un'approssimazione, e' il non spedire lo zero.
+ *
+ * `[M]` 24 agosto 2026, `banchi/09-b84`: a desktop fermo e Opus negoziato sono
+ * **50 datagram al secondo da 3 byte** che si portano via **589 kbit/s** di
+ * pacchetti riempiti, cioe' il 99,8 % di riempimento — e la stessa finestra di
+ * congestione del video.
+ *
+ * ⚠ Il prezzo, e la ragione dell'interruttore, stanno nel riquadro in cima ad
+ *   `audio.c`.  ⛔ E l'interruttore oggi e' **di compilazione**
+ *   (`-DAUDIO_SILENZIO_PREDEFINITO=1`) perche' il codificatore vive nel figlio,
+ *   che non eredita l'ambiente: la riga di comando che manca si scrive in
+ *   `main.c` e in `figlio.c`, ed e' descritta li'.
+ */
+void audio_silenzio_taci(bool si);
+bool audio_silenzio_acceso(void);
+
+/* Quanti blocchi la cura ha taciuto.  ⛔ Sta a parte da `audio_cod_conti()`:
+ *    quella ha gia' un chiamante e la sua firma non e' di questo modulo. */
+uint64_t audio_cod_taciuti(const audio_cod *c);

@@ -4153,13 +4153,14 @@ congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-
 
 ## 19.4 ⚠ E DUE COSE CHE QUESTA SESSIONE NON HA POTUTO PROVARE
 
-1. ⛔ **Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**
-   `[M]` `mpv` parte, resta vivo, e il server continua a catturare un desktop **immobile** —
-   fotogrammi da 167 byte e il contatore fermo. ⚠ È lo **stesso muro** su cui si è fermato il banco
-   dell'audio (§14.7, §16.5: *«Firefox sulla macchina di prova NON parte»*), e l'utente lo ha
-   confermato di persona: *«non posso vedere video: firefox non funziona»*.
-   ⇒ ⏳ **Blocca ogni prova che richieda una scena pesante sul percorso vero**, e va diagnosticato:
-   non è la rete e non è questa fase.
+1. ⛔⛔ ~~**Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**~~
+   → **ERRATA, e la correzione è in §20.1.** `[M]` `mpv` **arriva eccome** — 241 fotogrammi in 8 s
+   su un banco controllato. Quando l'ho giudicato *«non arriva»* ⛔ **non c'era nessun cliente
+   attaccato**: il server non spediva, e il contatore era fermo **per costruzione**. I «167 byte»
+   erano gli ultimi valori di prima.
+   ⚠ **Ho giudicato con un metro che in quella scena non poteva dire niente**, ed è la stessa ferita
+   di §19.2 — la terza volta in due giorni. **Firefox** invece è rotto davvero, ma `[M]` **anche
+   fuori da REMOTIX**: non è nostro (§20.1).
 2. ⭐ **Le cure sono state provate a occhio** ⇒ **§19.6**, e il verdetto è che **fanno quel che
    promettevano e non basta**.
 
@@ -4236,3 +4237,261 @@ dei due va servito»* non era una preferenza: era la lettura giusta, e adesso ha
 3. ⚠ **e le soglie del banco vanno lette per quel che sono**: `[M]` misure su una sollecitazione
    **dieci volte più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va
    scritto accanto a ogni numero di §17 che qualcuno potrebbe prendere per una promessa.
+
+---
+
+# §20 · ⭐⭐⭐ I PUNTI APERTI, CHIUSI — *24 agosto 2026*
+
+⛔ **E due dei quattro hanno demolito una premessa che questo documento dava per buona.** Si scrive
+la correzione, non si liscia.
+
+## 20.1 ⛔⛔ «LE APPLICAZIONI NON ARRIVANO SULLO SCHERMO» — **era falso, ed era mio**
+
+`banchi/09-b82-mostra.sh` · binario `b86cf6df…` dall'albero di lavoro.
+
+⭐ **`mpv` arriva eccome.** `[M]` Con **solo** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
+fotogrammi in 8 s, 38 513 byte medi**. Con `systemd-run --user` (la strada del menu): **317**. E
+`WAYLAND_DISPLAY` **c'era già** nell'ambiente del gestore d'utente — ce lo scrive GNOME.
+
+⇒ ⛔ **La causa vera del caso di stamattina: non c'era nessuno che guardava.** `[M]` Il registro
+della 7920, minuto per minuto:
+
+```
+08:33   765 fotogrammi ·  49 battiti rete-quic
+08:34   708 fotogrammi ·  59 battiti
+08:35   228 fotogrammi ·  60 battiti
+08:36    13 fotogrammi ·  31 battiti   ← il cliente se ne va
+poi     NIENTE, solo «il legame regge» ogni minuto
+```
+
+Senza un cliente attaccato il server **non spedisce**, il contatore è fermo **per costruzione**, e i
+«167 byte» erano gli ultimi valori di prima. ⚠ **Ho giudicato in una scena in cui il metro non
+poteva dire niente** — la terza volta in due giorni (§19.2, §16.4).
+
+**Le tre ipotesi che avevo scritto sono tutte cadute** `[M]`: un solo compositore e un solo
+`wayland-0` (⚠ la data del 23 agosto che avevo letto era quella di `bus`, non del socket); **un
+monitor solo**, `Meta-0` «Virtual remote monitor» 2544×926 scala 1,000; l'ambiente **non** era
+incompleto.
+
+### 20.1-bis ⛔ E ANCHE IL METRO ERA SBAGLIATO — i byte non dicono quel che credevo
+
+`[M]` Calibrazione su finestre di 8 s:
+
+| scena | fotogrammi | byte medi |
+|---|---|---|
+| desktop fermo | 0-1 | 238-283 |
+| ⛔ una **bandiera a schermo intero** | **321** | **268** |
+| `film-grana.webm` | 226 | 18 600 |
+| `duro.mp4` | 240 | 37 081 |
+
+⇒ **Una finestra viva a schermo intero può produrre fotogrammi da 268 byte, cioè quanto un desktop
+fermo.** ⭐ **Il verdetto è il CONTO, non i byte**: i byte dicono *quanto* cambia, il conto dice *se*
+cambia. ⚠ E in §19.2 avevo usato i byte come metro: quel ragionamento regge sul merito (i suoi
+fotogrammi *erano* piccoli) ma il metro giusto era un altro.
+
+### 20.1-ter ✅ Firefox è rotto — **e non è nostro**
+
+`[M]` Firefox `140.14.0esr`: vivo (80 thread, 126 MB), **zero fotogrammi dopo 90 s**, mai attaccato
+al socket Wayland. Fallisce identico da `systemd-run --user`, con `--profile` esplicito, con
+`MOZ_CRASHREPORTER_DISABLE`, `MOZ_DISABLE_GPU_PROCESS`, `LIBGL_ALWAYS_SOFTWARE`,
+`MOZ_ENABLE_WAYLAND=0`, sandbox spente.
+
+⭐⭐ **Il controllo che chiude la questione**: `firefox --headless --screenshot` come **`nicfio`** —
+nessuna sessione REMOTIX, nessun Wayland, nessun monitor — **si pianta uguale** e viene ucciso a
+60 s col profilo vuoto. ⇒ **Firefox è rotto su questa macchina per tutti, dentro e fuori REMOTIX.**
+Non è un difetto del prodotto, e §14.7/§16.5 vanno lette così.
+
+⚠ Due indizi per chi lo riprenderà: `[GFX1-]: More than 1 GPU vendor detected via PCI, cannot deduce
+vendor` (Intel `0x8086/0x4680` + AMD `0x1002/0x73bf`), e `/dev/dri/renderD129` è del gruppo
+`remotix-nogpu` — la scheda AMD è recintata **apposta** (§4.6-ter).
+⭐ E il `[M]` del 23 agosto (*«il profilo non viene mai creato in `~/.mozilla/firefox/`»*) guardava
+**il posto sbagliato**: Debian `firefox-esr` usa `~/.mozilla/firefox-esr/`. ⚠ Anche quella resta
+vuota — il difetto c'è, la diagnosi no.
+
+### 20.1-quater ⭐ Lo strumento che mancava — `banchi/09-b82-mostra.sh`
+
+Lancia un comando dentro la sessione di un utente con `systemd-run --user` (cioè in `app.slice`,
+dove finirebbe scegliendolo dal menu), poi **conta i fotogrammi prima e dopo e dà il verdetto su quel
+numero** — ⛔ mai su *«il processo è vivo»*. Quattro guardie: un compositore solo · un monitor solo e
+nostro · l'ambiente **letto** da `systemctl --user show-environment` invece che inventato · e
+⭐⭐ **G4: c'è qualcuno che guarda?** — zero battiti `rete-quic` ⇒ **nessun verdetto**.
+
+⭐ **G4 è nata da un rosso su codice giusto**, ed è la guardia che avrebbe evitato le tre prove
+bloccate di stamattina. Provata nei tre versi: `mpv` 240 contro 0 (verde) · `gnome-terminal` 40
+contro 1 (verde) · `firefox` 0 contro 1 (rosso) · senza cliente, **si rifiuta di giudicare**.
+
+⛔ **E non c'era niente da curare in `src/`**: il figlio prepara la sessione bene — un compositore, un
+monitor, scala 1,0, ambiente completo. La cura era **nel modo di giudicare**.
+
+## 20.2 ⛔⛔⛔ L'AUDIO — la premessa era falsa, e sotto c'era di peggio
+
+### 20.2-bis ⛔ «Il 36 % dell'audio non raggiunge il filo» era una proprietà **del banco**
+
+`[M]` Il registro della 7920, **quattro attacchi su quattro** della sessione vera dell'utente:
+`negoziato … audio.codec=opus` → `canale audio ACCESO — codec 1 (Opus)`.
+
+⇒ ⛔ **L'utente non è mai stato su PCM.** `[R]` Il PCM lo impongono **i banchi**: `09-b68:191`,
+`09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` passano tutti `--audio-codec pcm`.
+⇒ **§17.2-quater e §18.5 vanno lette così**: il 36 % di rifiutati e i 2 463 kbit/s sono proprietà di
+una **configurazione di banco**, non del prodotto in uso.
+
+### 20.2-ter ⭐⭐⭐ E QUEL CHE C'ERA SOTTO: **si spendono 589 kbit/s per portare 1,2 kbit/s di silenzio**
+
+`[M]` Che cosa viene rifiutato, sulla sessione **vera**: `datagram di 16 byte` = 1 (prefisso) + 12
+(§6.3) + **3 di carico**. Riprodotto sul banco: `codec 1 (Opus), 3 byte di carico`, 1 248 su 1 248, e
+`suono.c` dice **`PICCO 0 su 32767`**. ⇒ **Si rifiuta il silenzio digitale.**
+
+`[M]` A desktop fermo, Opus: **48,0 datagram al secondo su 48,4 pacchetti** — il filo è *tutto*
+audio — e ogni pacchetto è **pieno**, 1 441 byte su 1 452, per il `PADDING`.
+
+**La cura** (`src/audio.c`, ⛔ nasce **spenta**, I6): un blocco in cui **tutti** i campioni sono
+esattamente zero **non diventa un datagram**. ⭐ La ragione per cui è lecito: §6.3 mette l'`istante`
+in ogni blocco e chi riceve lo rimette al posto assoluto ⇒ **un blocco non spedito è un buco, e un
+buco è silenzio** — che è esattamente quel che quel blocco conteneva. ⛔ Nessuna soglia: **solo lo
+zero digitale**, l'unico caso in cui «spedito» e «non spedito» suonano identici.
+
+| desktop fermo, Opus | sul filo | pacchetti/s | datagram/s | byte/pacchetto | carico utile |
+|---|---|---|---|---|---|
+| **spenta** | 557,6 kbit/s | 48,4 | 48,0 | 1 441 | 1,18 kbit/s |
+| ⭐ **accesa** | **5,5 kbit/s** | 0,5 | 0,0 | — | 0,00 |
+
+⇒ ⭐⭐ **102,1 volte**, e 1 248 blocchi taciuti su 1 248. **Oggi una sessione ferma spende 589 kbit/s
+per portare 1,2 kbit/s di silenzio: il 99,8 % è riempimento.**
+
+**Il controllo che protegge l'utente** (tono a 440 Hz nel sink, giudice di `07-b42`): copertura
+**1,0000 → 0,9996**, purezza del tono **1,000 → 1,000**, blocchi taciuti **1 su 5 001** — e quell'uno
+precede i primi campioni. ⚠ Prezzo dichiarato: i `mancati` del cliente vanno da 0 a 2 (un buco voluto
+lascia lo stesso salto di `istante` di uno perso).
+
+⚠ L'interruttore oggi è **di compilazione** (`-DAUDIO_SILENZIO_PREDEFINITO=1`): il codificatore vive
+nel figlio, che è un `execve` con l'ambiente composto **da zero** (`figlio.c:1145`). ⏳ La riga di
+comando che manca (`main.c` → coda di `argv` in `figlio.c`) è **descritta e non scritta**.
+
+### 20.2-quater ⛔ DUE DIFETTI TROVATI STRADA FACENDO, e nessuno dei due era cercato
+
+1. ⛔⭐ **`WT_DGRAM_RIMANDI_MAX` non misura quel che il suo commento dichiara.** `[R]`
+   `w->dgram_rimandi` è un campo di `struct wt`, cioè **della connessione**: sale a ogni passata
+   rifiutata e torna a zero solo su un successo. Il commento accanto dice *«quante passate di fila
+   **il blocco in testa** è stato rimandato»* — ⛔ ma la testa nel frattempo è stata sostituita
+   decine di volte. ⇒ **Non misura l'età del blocco: misura da quanto la connessione non spedisce
+   nulla.** `[M]` Ed è per questo che il primo rifiuto è avvenuto **a finestra aperta**
+   (`cwnd_left = 7 424`, e la riga stessa dice *«NON è la congestione»*).
+   ⭐ E i rifiuti sono **a raffica, non sparsi**: fuori dalla raffica 0,004 %, **dentro 100 %** — 100
+   rifiuti ogni 2,00 s = ogni blocco prodotto, per venti secondi. Non click sparsi: **venti secondi
+   di niente**.
+2. ⛔ **«L'audio non dev'essere affamato dal video» NON È SCRITTO DA NESSUNA PARTE.** `[R]` Cercato
+   in `SPECIFICHE.md` (§10 e gli invarianti), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **niente**.
+   L'unico posto in cui la domanda è decisa è il codice — `wt_scrivi():7286`, *«I DATAGRAM PRIMA
+   DEGLI STREAM»*. ⇒ ⚠ **Una decisione presa nel codice e mai messa a verbale**, ed è precisamente
+   il genere di cosa che questa fase esiste per scoprire.
+   `[M]` E oggi vince **l'audio**: a desktop fermo il filo è tutto suo; sulla sessione vera col
+   desktop in movimento tocca il **25-33 %** dei pacchetti.
+
+### 20.2-quinquies ⛔ E UNA PREVISIONE DELL'AGENTE CHE NON HA RETTO — scritta com'è
+
+`casa-cattiva`, scena col tono, stesso `netem`, cura spenta:
+
+| codec | sul filo | spediti | rifiutati | ‰ | **copertura** |
+|---|---|---|---|---|---|
+| PCM | 1 024,5 kbit/s | 3 135 | **1 880** | **375‰** | 0,6088 |
+| Opus | 366,3 kbit/s | 1 127 | **126** | **101‰** | **0,8803** |
+
+⭐ La copertura sale **0,61 → 0,88** (+27 punti di audio che arriva davvero). ⛔ Ma il predicato
+chiedeva *«Opus sotto 20‰»* e ha dato **rosso**: Opus divide il rifiuto per 3,7, **non lo toglie**.
+⇒ **Il codec è la cura del costo, non del rifiuto.** Il confine è stato lasciato dov'era e il rosso
+scritto nel banco, invece di ritarare la soglia dopo aver visto il numero.
+
+### 20.2-sexies ⏳ La mezza cura descritta e non scritta — il `PADDING`
+
+`dgram_scrivi_uno()`, righe **1613** e **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` va
+**condizionato** al fatto che ci sia davvero un lotto da comporre (più di un datagram in coda, o byte
+di video da infilare). Con **un** datagram solo e la coda video vuota il lotto GSO è di un pacchetto
+e il riempimento **non compra niente** — costa 1 425 byte su 1 441. ⛔ **Non si toglie, si
+condiziona**: il riquadro di `:1581` spiega perché c'è (un primo pacchetto corto fa collassare il
+lotto GSO).
+
+## 20.3 ⭐⭐⭐ IL DISALLINEAMENTO AUDIO-VIDEO — il numero regge, **la lettura no**, e si sente
+
+`banchi/09-b85-*` · binario `64258ca4…`. ⛔ **E il metro è stato certificato prima di misurare
+qualunque cosa**, in tre gradini, nessuno saltato.
+
+**(a) sul file**, 7 sfalsi noti iniettati con `-itsoffset`: ritrovati **−700,0 · −300,0 · −100,0 ·
+−0,0 · +100,0 · +300,0 · +700,0**. **(b) ricampionato a 40/s**, 4 fasi: bias **−2,3 ms**, ampiezza
+**4,0 ms**. **(c) ⭐⭐ attraverso il prodotto vero**, lo stesso film con l'audio spostato di ±300 ms
+noti, suonato nella sessione e ripreso dal filo:
+
+| messo | ritrovato (n=23) | errore |
+|---|---|---|
+| **+300** | **+288,5** | −11,5 |
+| **0** | **−12,6** | −12,6 |
+| **−300** | **−310,8** | −10,8 |
+
+⇒ **pendenza 0,9988, costante −11,6 ms.** Il metro ritrova quel che si sa di aver messo, col segno
+giusto, su tutta la catena.
+
+### 20.3-bis ⭐⭐ IL PRODOTTO È PULITO — **niente +331, niente +690, in nessun caso**
+
+`[M]` 24 agosto (segno: **positivo = il suono esce DOPO l'immagine**, la convenzione di
+`pagina.html:6398`):
+
+| caso | fps | Mbit/s video | **sfalso alla sorgente** | **sfalso in rete** | rete p90 |
+|---|---|---|---|---|---|
+| fermo | 40,1 | 0,30 | **−12,6** (n=23) | −5,8 | −3,9 |
+| sotto carico | 35,1 | **106,5** | **−7,8** (n=22) | −14,7 | −16,6 |
+| perdita 1 % | 36,5 | 0,30 | **−12,7** (n=22) | −6,1 | −9,8 |
+| perdita 5 % | 16,2 | 0,60 | **−17,2** (n=10) | −19,1 | **−94,9** |
+
+⇒ **Tutti e quattro entro ±6 ms dalla costante certificata.** Il prodotto marca i due flussi con lo
+stesso orologio e li marca bene: **lo sfalso non nasce prima del browser.**
+
+⭐ **E l'ipotesi «con la perdita peggiora» è smentita sulla mediana**, confermata solo sulla coda: a
+5 % la latenza video p90 va a **118,5 ms** contro 23,6 dell'audio (gli stream ritrasmettono, i
+datagram no) ⇒ **−94,9 ms**, cioè **l'audio che corre avanti**, non l'audio che resta indietro.
+⚠ E metà delle claquette sparisce: **11 lampi su 20 click**.
+
+### 20.3-ter ⭐⭐⭐ IL +331 NON È UN ARTEFATTO: **è il cuscino dell'audio, ed è scritto nel prodotto**
+
+`[R]` `src/pagina.html:5563` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
+`:5761` `aoff = (perf − ist/1000) + CUSCINO + u`.
+
+> ⇒ `AV ≈ cuscino + latenza d'uscita − ritardo di pittura`
+
+A riposo 250 → **~331**; sotto carico la coda supera i 600 e `a.base` **si riàncora** (`:6152`) →
+**~690**. ⭐ **I due numeri di §16.4 sono le due tacche del cuscino**, non due misure di un difetto.
+
+⛔⛔ **E §16.4 legge il segno alla rovescia.** Scrive *«il suono precede l'immagine»*; il prodotto
+dice *«positivo = il suono esce DOPO»*. ⇒ **L'audio è in RITARDO, non in anticipo** — e le due cose
+hanno soglie percettive **diversissime**.
+
+⚠ **E `AV` non può vedere la metà misurata qui**: elide l'`istante` del server da tutti e due gli
+addendi. ⇒ Un prodotto con `AV` verde può essere desincronizzato, e viceversa. Le due misure **non si
+sovrappongono**, e insieme dicono che lo sfalso vive **tutto dentro la pagina** — che è il posto dove
+costa meno curarlo.
+
+### 20.3-quater ⛔ SI SENTE — e la fonte è citata
+
+**Rec. ITU-R BT.1359-1** (*Relative timing of sound and vision for broadcasting*, 1998), clausola g)
+e Nota 1: *«detectability thresholds are about +45 ms to −125 ms and acceptability thresholds are
+about +90 ms to −185 ms on the average, a positive value indicates that sound is advanced with
+respect to vision»*.
+
+⚠ **Il segno dell'ITU è l'opposto del nostro**: per loro positivo = suono in **anticipo**. Il nostro
++331 (audio **in ritardo**) è l'ITU **−331 ms**.
+
+| | soglia ITU (audio in ritardo) | §16.4 a riposo (−331) | §16.4 sotto carico (−690) |
+|---|---|---|---|
+| **si nota** | −125 ms | ⛔ **2,6× oltre** | ⛔ **5,5× oltre** |
+| **è accettabile** | −185 ms | ⛔ **1,8× oltre** | ⛔ **3,7× oltre** |
+
+⇒ ⛔⛔ **Se il +331 è quel che l'utente riceve, si nota e non è accettabile.** ⚠ Che l'utente non
+l'abbia giudicato sulla grana **non dice che non morde**: dice che quella scena non permetteva di
+giudicarlo — ed è la **seconda** delle due letture tenute aperte in §16.4, non la prima.
+
+⏳ **Che cosa resta**: la metà `AV` non è stata rimisurata (vuole il browser, e su quella macchina
+Firefox non parte — §20.1-ter). Tutto quel che sta **prima** del browser è pulito; la conferma
+diretta del 331 aspetta quello strumento. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
+(nel repo non esiste un decodificatore Opus, `07-b42-giudice.py:121`).
+
+⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
+`/media/REMOTIX/tmp/09nr10/film/09-b85-claquette-calma-p000.mp4` (70 s, **34 attacchi**), coi gemelli
+`-p300`/`-m300` a sfalso noto, e `-dura-` per il caso sotto carico. Il server **7973 è acceso**.

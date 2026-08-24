@@ -27,10 +27,82 @@
  */
 #define AUDIO_OPUS_BITRATE 96000
 
+/*
+ * ⛔⭐⭐ IL SILENZIO NON SI SPEDISCE — cura della fase 9, 24 agosto 2026, e
+ *       NASCE SPENTA (I6).
+ *
+ * `[M]` 24 agosto 2026, `banchi/09-b84-audio-silenzio.py`, porta 7972, binario
+ * `b484d699…`: una sessione con **Opus** negoziato e il desktop FERMO consegna
+ *
+ *     50 datagram al secondo · **3 byte di carico ciascuno** · PICCO 0 su 32767
+ *
+ * cioe' **1,2 kbit/s** di suono vero.  ⛔ E sul filo quei 50 datagram costano
+ * **589 kbit/s**, perche' ognuno si porta via un pacchetto INTERO da 1444 byte
+ * (`webtransport.c`, `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`).  ⇒ Il **99,8 %** di
+ * quel traffico e' riempimento, e paga la stessa finestra di congestione del
+ * video.
+ *
+ * ⭐ E non c'e' niente da inventare per toglierlo.  `RCP.md` §6.3 mette
+ *    l'`istante` dentro ogni datagram e chi riceve rimette i blocchi al loro
+ *    posto ASSOLUTO.  ⇒ **Un blocco non spedito e' un buco, e un buco e'
+ *    silenzio** — che e' esattamente quel che quel blocco conteneva.  Non si
+ *    approssima niente: si smette di spedire lo zero.
+ *
+ * ⛔ E LA SOGLIA NON C'E', APPOSTA.  Si tace solo sul silenzio **digitale** —
+ *    tutti i campioni esattamente `0` — perche' quello non e' un giudizio: e'
+ *    l'unico caso in cui «spedito» e «non spedito» suonano IDENTICI.  Una
+ *    soglia («sotto -60 dB») sarebbe una decisione sul suono dell'utente presa
+ *    dal codice, cioe' precisamente la cosa che I6 vuole dietro un interruttore
+ *    e che questa fase non ha misurato.
+ *
+ * ⚠ IL PREZZO, DICHIARATO — due voci, e sono la ragione per cui l'interruttore
+ *   esiste invece di essere un'ovvieta':
+ *     1. su Opus il primo blocco dopo un tratto di silenzio riparte con lo
+ *        stato del codificatore lasciato PRIMA del tratto (qui il `pts` non
+ *        avanza, apposta, o libavcodec vedrebbe un salto).  E' quel che la DTX
+ *        di Opus fa da sempre; `[?]` inudibile, e da qui NON e' misurato;
+ *     2. chi riceve vede un salto di `istante` e i suoi contatori lo contano
+ *        come **`mancato`** — cioe' un numero che oggi vuol dire «perso»
+ *        comincerebbe a voler dire anche «non c'era niente da mandare».
+ *        ⛔ Il banco lo misura appaiato apposta, e lo dichiara.
+ *
+ * ⛔⛔ E L'INTERRUTTORE OGGI E' DI COMPILAZIONE, e va detto perche' non e' una
+ *      scelta di comodo: il codificatore vive nel **figlio**, che e' un
+ *      `execve` con l'ambiente **composto da zero** (`figlio.c`, il riquadro
+ *      delle due cure della fase 9) — una `REMOTIX_...` non lo raggiunge, e non
+ *      lascerebbe nemmeno una riga a dire che non e' arrivata.  L'unico canale
+ *      che attraversa l'`exec` e' la coda di `argv`, e quella si scrive in
+ *      `main.c` e in `figlio.c`, che **non sono di questo file**.
+ *
+ *      ⇒ Quel che serve, per chi possiede quei due file, e non e' scritto qui:
+ *        · `main.c`   riconoscere `--audio-silenzio` accanto a `--parlantina`
+ *                     (`:1020`) e tenerne un `bool`;
+ *        · `figlio.c` metterlo in coda ad `argv` come fa con la parlantina
+ *                     (`:1165`) e rileggerlo **per nome** in `figlio_vive()`
+ *                     (`:5938`), chiamando `audio_silenzio_taci(true)`;
+ *        · qui        non cambia niente: `audio_silenzio_taci()` c'e' gia'.
+ */
+#ifndef AUDIO_SILENZIO_PREDEFINITO
+#define AUDIO_SILENZIO_PREDEFINITO 0
+#endif
+
+static bool audio_taci_silenzio = AUDIO_SILENZIO_PREDEFINITO;
+
+void audio_silenzio_taci(bool si)
+{
+	audio_taci_silenzio = si;
+}
+
+bool audio_silenzio_acceso(void)
+{
+	return audio_taci_silenzio;
+}
+
 struct audio_cod {
 	uint8_t codec; /* 1 = Opus, 2 = PCM */
 	uint32_t blocco;
 	uint64_t entrati, usciti;
+	uint64_t taciuti; /* blocchi di silenzio digitale NON spediti (I6) */
 
 	/* solo per Opus */
 	AVCodecContext *ctx;
@@ -119,6 +191,16 @@ audio_cod *audio_cod_apri(uint8_t codec)
 		return NULL;
 	c->codec = codec;
 
+	/* ⛔ L'interruttore si DICHIARA anche quando e' spento: «la cura non c'e'»
+	 *    e «la cura c'e' e non ha fatto niente» devono avere due righe diverse
+	 *    (`CODER.md` §3.10).  ⚠ E' la riga su cui il banco appaiato controlla
+	 *    di aver davvero acceso due bracci diversi. */
+	registro_dice(REG_AUDIO,
+	              "cura del silenzio digitale (I6): %s",
+	              audio_taci_silenzio
+	                  ? "⭐ ACCESA — i blocchi tutti a zero non si spediscono"
+	                  : "spenta (predefinito) — si spedisce anche il silenzio");
+
 	if (codec == 2) {
 		c->blocco = AUDIO_BLOCCO_PCM;
 		registro_dice(REG_AUDIO,
@@ -148,6 +230,21 @@ void audio_cod_chiudi(audio_cod *c)
 {
 	if (!c)
 		return;
+	/* ⛔⭐ IL CONTO DELLA CURA SI SCRIVE ALLA CHIUSURA, ED E' L'UNICO ISTANTE IN
+	 *     CUI E' COMPLETO (`CODER.md` §3.10).  ⚠ La riga di dentro esce alla
+	 *     prima e poi una ogni mille: chi legge solo quella sa dire «almeno N»,
+	 *     non «N» — e un banco che confondesse le due cose scriverebbe un
+	 *     numero che sembra misurato.  ⭐ E si scrive **con dentro gli zero**:
+	 *     «la cura era spenta» e «la cura era accesa e non ha taciuto niente»
+	 *     sono due fatti diversi, ed e' la differenza su cui la scena col tono
+	 *     si giudica. */
+	registro_dice(REG_AUDIO,
+	              "conto della cura del silenzio (I6 %s): %llu blocchi taciuti "
+	              "su %llu entrati, %llu usciti sul filo — codec %u",
+	              audio_taci_silenzio ? "ACCESA" : "spenta",
+	              (unsigned long long)c->taciuti,
+	              (unsigned long long)c->entrati,
+	              (unsigned long long)c->usciti, c->codec);
 	if (c->pkt)
 		av_packet_free(&c->pkt);
 	if (c->frame)
@@ -178,6 +275,20 @@ static void pcm_scrivi(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fu
 	}
 }
 
+/* ⛔ Silenzio DIGITALE: tutti i campioni esattamente zero, senza soglie.  ⚠ Il
+ *    giro costa `blocco * 2` confronti su interi — 480 per un blocco PCM, 1920
+ *    per uno di Opus, cinquanta volte al secondo — ed e' meno lavoro della
+ *    `memcpy` che il codificatore fa subito dopo.  ⭐ E si esce al PRIMO
+ *    campione diverso da zero: sul suono vero il costo e' una lettura. */
+static bool tutto_zero(const int16_t *campioni, uint32_t fotogrammi)
+{
+	uint32_t n = fotogrammi * AUDIO_CANALI;
+	for (uint32_t i = 0; i < n; i++)
+		if (campioni[i] != 0)
+			return false;
+	return true;
+}
+
 bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
                      size_t *quanti)
 {
@@ -186,6 +297,33 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 	if (!c || !campioni || !fuori || !quanti)
 		return false;
 	c->entrati++;
+
+	/* ⛔⭐ LA CURA DEL SILENZIO — spenta di suo, e il riquadro sta in cima.
+	 *
+	 * ⚠ Si torna `false` **prima** del codificatore, ed e' quel che
+	 *   `audio.h` promette gia': *«Torna `false` quando non c'e' niente da
+	 *   spedire.  Il chiamante non manda niente e va avanti»*.  ⇒ Nessun
+	 *   chiamante cambia, e l'`istante` di §6.3 continua ad avanzare da solo
+	 *   in `figlio.c` — che e' quel che rende il buco un silenzio al posto
+	 *   giusto invece di uno spostamento di tutto quel che segue.
+	 *
+	 * ⛔ E il `pts` di Opus NON si sposta: libavcodec vedrebbe un salto, e un
+	 *    salto e' una cosa che non abbiamo misurato.  Qui il codificatore
+	 *    semplicemente non vede quei blocchi. */
+	if (audio_taci_silenzio && tutto_zero(campioni, c->blocco)) {
+		c->taciuti++;
+		/* ⚠ Con un fondo, o un desktop muto riempirebbe il registro invece di
+		 *   raccontarlo: la prima e poi una ogni mille (20 s di Opus, 5 di PCM). */
+		if (c->taciuti == 1 || c->taciuti % 1000 == 0)
+			registro_dice(REG_AUDIO,
+			              "⭐ silenzio DIGITALE: %llu blocchi non spediti su "
+			              "%llu entrati (I6, cura accesa).  ⚠ Chi riceve vedra' "
+			              "un salto di `istante` e lo contera' fra i «mancati»: "
+			              "e' un buco VOLUTO, non una perdita",
+			              (unsigned long long)c->taciuti,
+			              (unsigned long long)c->entrati);
+		return false;
+	}
 
 	if (c->codec == 2) {
 		size_t n = (size_t)c->blocco * AUDIO_CANALI * 2;
@@ -261,4 +399,12 @@ void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti)
 		*entrati = c ? c->entrati : 0;
 	if (usciti)
 		*usciti = c ? c->usciti : 0;
+}
+
+/* ⛔ Il terzo numero sta a parte e NON dentro `audio_cod_conti()`: quella
+ *    funzione ha gia' un chiamante (`webtransport.c:6891`) e cambiarle la
+ *    firma vorrebbe dire toccare un file che non e' di questo modulo. */
+uint64_t audio_cod_taciuti(const audio_cod *c)
+{
+	return c ? c->taciuti : 0;
 }
