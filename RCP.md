@@ -391,13 +391,35 @@ nessuna parte.*
 > cui il server aveva fatto tutto giusto — **I1 rotta perché la linea perde pacchetti**, cioè la
 > condizione che I1 esiste per proteggere.
 >
-> ⚠ *È la **sesta** della famiglia* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13). E
+> ⚠ *È la **sesta** della famiglia* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13, e
+> ⭐ la **settima** è del 24 agosto 2026 — vedi il riquadro subito sotto). E
 > anche la prima cura proposta — «solo se, quando il fotogramma arriva, i byte di `SESSIONE` non sono
 > ancora arrivati» — restava un sostituto: sposta la misura dal risveglio della coroutine ai byte, e
 > **i byte li ritarda la rete**. Sarebbe stata la settima stesura.*
 >
 > ⭐ **La grandezza vera è quel che il client ha spedito LUI** — `ATTACCA` — ed è la forma generale
-> del campo `numero` di P14: **locale, monotona, indipendente dalla consegna**. ⛔ E non l'ha trovata
+> del campo `numero` di P14: **locale, monotona, indipendente dalla consegna**.
+>
+> ### ⭐⭐ **P21** — *24 agosto 2026, fase 9*: la settima, e stavolta la famiglia ha colpito **il server**
+>
+> ⛔ La prima stesura della cura *«dichiara morta una linea che perde troppo»* usava
+> **`pkt_lost / pkt_sent`** di ngtcp2 dentro una finestra: due contatori **locali a chi manda**, che
+> sembravano rispettare la regola della famiglia alla lettera.
+>
+> ⛔⛔ **E ordinava i due casi al contrario.** `[M]` Una linea che **regge** dieci minuti (jitter
+> 40±20 ms, 2 % di perdita vera) ne dichiarava il **512‰**; una che **non regge** il **123‰**. ⇒
+> Nessuna soglia poteva separarle. La ragione è la stessa di sempre: **ngtcp2 conta un pacchetto
+> sorpassato come perso**, quindi su una linea che riordina quella frazione **misura il riordino**,
+> non la perdita. Era una **grandezza sostitutiva**, e non si vedeva perché è locale e monotona.
+>
+> ⭐ **La grandezza vera è quel che il server sa di NON aver fatto**: *da quanto tempo non esce un
+> fotogramma pur avendone da mandare* — lo **stallo dell'uscita**. `[M]` Separa i due casi di
+> sessanta volte (0,50 s contro 30,06 s), ed è locale, monotona e indipendente dalla consegna come
+> chiede la famiglia.
+>
+> ⇒ ⚠ **La lezione che P21 aggiunge alle sei prima**: *«locale e monotona»* **non basta**. Una
+> grandezza va provata **sui due estremi noti**, e deve **ordinarli nel verso giusto** — se non lo
+> fa, non è una taratura da rifare: è la grandezza sbagliata (`LEZIONI.md` §1.33). ⛔ E non l'ha trovata
 > una rilettura: l'ha trovata il **cliente di prova** al suo primo giro contro un server che
 > spedisce davvero.
 | **input** — unidirezionale | il client | **uno solo**, aperto ⛔ **dopo aver ricevuto `SESSIONE`** e tenuto aperto |

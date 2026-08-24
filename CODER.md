@@ -185,6 +185,27 @@ logicamente corretto.
 
 ---
 
+## 2-bis. ⭐ Le cure della fase 9 sono ACCESE — *24 agosto 2026*
+
+`DECISIONI.md` §3.1-septies. ⛔ **Chi tocca il trasporto o l'audio deve sapere che questi
+comportamenti sono il predefinito**, non un'opzione da banco:
+
+| cura | predefinito | si spegne **solo** con |
+|---|---|---|
+| silenzio dell'audio | acceso | `--niente-audio-silenzio` |
+| soglia sulla coda video | **100 ms** | `--sgombra-soglia-ms 0` |
+| regolatore del ritmo | acceso | `--niente-ritmo-adattivo` |
+| linea morta | accesa (stallo 5 s · silenzio 10 s) | `--niente-linea-morta` |
+| sfratto del fantasma | **15 000 ms** | `--sfratto-ms 0` |
+
+⛔ **Una strada sola per ciascuna**: niente variabili d'ambiente, niente interruttori di
+compilazione. Due modi di accendere la stessa cura sono **due numeri che divergono**, e questo
+progetto l'ha già pagato una volta.
+
+⚠ **E il prezzo va tenuto a mente quando si misura**: soglia + regolatore aggiungono `[M]` fino a
+**+160 ms** di deriva su rete cattiva (**zero** sulla linea sana). ⇒ Un banco che confronta col
+passato deve **spegnerle a mano** e dirlo.
+
 ## 3. Le regole di misura
 
 Il progetto non si è mai arenato su un problema difficile. Si è arenato, ogni volta,
@@ -205,6 +226,47 @@ scena dichiarata e sempre in movimento misura la scena, non il codice.
 Accerta che il banco sappia produrre il risultato atteso prima di puntarlo
 sull'incognita. Altrimenti un esito negativo è ambiguo fra «non funziona l'incognita»
 e «non funzionava il banco».
+
+### 3.3-bis ⭐⭐ Un banco non è finito finché non lo si è visto dare ROSSO
+
+⛔ `[M]` Fase 9, 23-24 agosto 2026: **nove difetti di banco, e nessuno faceva fallire un banco** —
+tutti e nove lo facevano **tacere o dare verde**. ⇒ Ogni predicato deve avere in `--certifica` il
+caso che lo fa **fallire**, e quel caso va **fatto girare**, non immaginato.
+
+E tre corollari, ciascuno pagato:
+1. ⛔ **`None` non è zero.** «Non ho potuto leggere» e «non è successo niente» non devono avere la
+   stessa faccia: chi non ha misurato torna `None`, e il banco **si rifiuta di giudicare**;
+2. ⛔ **La guardia va dove il numero SI CONSUMA**, non dove si produce — se un altro banco sostituisce
+   la tua funzione con la sua, la guardia dentro la tua non gira più;
+3. ⭐ **Non cercare una parola dentro un testo**: `"ACCESA" in dettaglio` è vero anche quando il
+   dettaglio dice *«nasce accesa, ed è spenta»*.
+
+### 3.3-ter ⛔⛔ Conta quanta sollecitazione è ARRIVATA, prima di chiedere un giudizio
+
+`[M]` Fase 9: tre prove di fila hanno prodotto un giudizio dell'utente **valido come frase e vuoto
+come misura** — una con fotogrammi da **242 byte** (la perdita non aveva niente da rompere), una con
+**221 pacchetti e 18 buttati** dentro il guasto. ⛔ **Diciotto pacchetti non sono una prova.**
+
+⇒ Prima di chiedere all'utente *«com'era?»*, misura **quanto guasto è passato davvero** e **quanto
+la scena chiedeva**. ⚠ E ricorda che il gradino non lo decide il guasto: lo decide **quanto la scena
+chiede** — fra un banco che pretende 40 fotogrammi/s di cambiamento continuo e un desktop vero che
+cambia a strappi `[M]` c'è **un ordine di grandezza**.
+
+### 3.3-quater ⭐ Porta il MECCANISMO accanto al SINTOMO, sempre
+
+`[M]` Fase 9: la spirale di chiavi parte al **primo pacchetto perso** (0,10 % di perdita), il calo
+dei fotogrammi/s che l'utente **vede** arriva allo **0,53-0,75 %**. ⇒ Un banco che guardasse solo i
+fotogrammi/s darebbe **verde fino allo 0,5 %**. Il sintomo dice quando l'utente se ne accorge; **il
+meccanismo dice quando è cominciato**, e fra i due può esserci un fattore cinque.
+
+### 3.3-quinquies ⛔ Una soglia irreversibile si mette SOPRA il centro, e il margine si scrive dai due lati
+
+Quando una soglia decide qualcosa che **non si rimedia** — chiudere una sessione, buttare fuori
+qualcuno — ⛔ **i due errori non costano uguale**: sbagliare dal lato prudente costa qualche secondo,
+sbagliare dall'altro **butta fuori chi stava lavorando**. ⇒ Si prende il caso peggiore che **regge**
+e il migliore che **non regge**, si dichiarano **tutti e due i margini**, e si sceglie **sopra** il
+centro. ⚠ E il lato stretto si àncora al **caso peggiore osservato**, non al più comodo: un margine
+scritto sul numero fortunato non è un margine.
 
 ### 3.4 Un banco che NON riproduce non è una prova di correttezza
 È il rovescio della 3.3, ed è più insidioso perché il banco è verde. Se il difetto è

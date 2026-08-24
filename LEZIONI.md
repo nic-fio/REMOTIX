@@ -2257,3 +2257,123 @@ nostra costante.
 
 Il tempo speso a certificare lo strumento è sempre stato meno di quello speso a inseguire le sue
 bugie.
+
+---
+
+### 1.29 ⛔⛔⛔ **«Silenzio invece di rosso»: la forma che hanno NOVE difetti di banco su nove**
+
+*23-24 agosto 2026, fase 9. In due giorni sono stati trovati nove difetti nei banchi. ⛔ **Non uno
+di essi faceva fallire un banco**: tutti e nove lo facevano **tacere, o dare verde**, e nessuno
+avrebbe mai attirato l'attenzione da solo.*
+
+| dove | che cosa |
+|---|---|
+| `07-b64` | `a_non_si_apre` guardava `ricevuti == 0` — ma il cliente stampa *«ricevuti 0»* **anche dal ramo `except`** ⇒ **ogni** modo di fallire dava **verde** |
+| `07-b64` | il primo profilo della griglia **disarmava il guardiano** ⇒ gli otto dopo giravano senza rete di sicurezza |
+| `07-b64` | `spediti_dal_server` a `None`: `None == 0` è **falso** ⇒ verde su un giro in cui il capo del server non era stato letto |
+| ⛔ `07-b64` | la riga di «conto finale» arriva **fino a 29 s tardi** quando il pacer ha coda ⇒ il giro dopo legge **il conto del giro prima**. `[M]` Tre profili di fila hanno riferito **gli stessi identici numeri**, e un predicato ha dato **rosso su un denominatore altrui** |
+| `09-b70` | `sudo -S` copre solo il **primo** anello della catena ⇒ il lettore della traccia **non si scriveva** |
+| ⛔ `09-b70` | un `< file` in coda **ruba lo stdin a `sudo -S`** ⇒ la funzione torna **0 in silenzio**, e il contatore diventa **cumulativo dall'accensione**: `[M]` 4 041 invece di 1 604 |
+| `09-b70` | un file non spedito dal terreno ⇒ giornale vuoto ⇒ **rosso su una sessione viva da 797 fotogrammi** |
+| `09-b76` | il predicato misurava **la durata della consegna** e la chiamava **«stacco»** |
+| `09-b84` | la riga dello stato **spento** conteneva la parola `ACCESA` (in *«dal 24 agosto nasce ACCESA»*) ⇒ il banco avrebbe letto **acceso su un braccio spento**, e quel predicato era **l'unica cintura** |
+
+⭐⭐ **La regola che ne esce, e non è «scrivete meglio i banchi»:**
+
+> ⛔ **Un banco non è finito finché non lo si è visto dare ROSSO.** Ogni predicato deve avere, in
+> `--certifica`, il caso che lo fa fallire — e quel caso va **fatto girare**, non immaginato.
+
+E tre corollari, ciascuno pagato:
+
+1. ⛔ **`None` non è zero, e «non ho letto» non è «non è successo niente».** Metà dei nove nascono
+   da questa confusione. Una funzione che non ha potuto misurare deve tornare **`None`** e il banco
+   deve **rifiutarsi di giudicare**, mai tirare dritto con uno zero;
+2. ⛔ **La guardia va dove il numero SI CONSUMA**, non dove si produce: se un altro banco sostituisce
+   la tua funzione con la sua, la guardia messa dentro la tua **non gira più**;
+3. ⭐ **Cercare una parola dentro un testo è fragile**: `"ACCESA" in dettaglio` è vero anche quando il
+   dettaglio spiega che *nasce* accesa **ed è spenta**. Ci si àncora alle **frasi di stato**, non alle
+   parole.
+
+### 1.30 ⛔⛔⭐ **Una prova che non morde dà un giudizio che sembra un risultato** — e si smaschera contando
+
+*24 agosto 2026, fase 9. Tre prove di fila hanno prodotto un giudizio dell'utente **valido come
+frase e vuoto come misura**, e nessuna delle tre lo dichiarava.*
+
+| la prova | il giudizio | ⛔ perché non valeva |
+|---|---|---|
+| perdita all'1 %, desktop vero | *«mi sembra ok»* | `[M]` i suoi fotogrammi pesavano **242-283 byte**: la perdita **non aveva niente da rompere** |
+| trascinare una finestra | — | `[M]` picco **3 801 byte**, contro i **25 000** su cui il banco crollava |
+| perdita al 5 % | *«è tutto fluido»* | `[M]` dentro il guasto erano passati **221 pacchetti, 18 buttati**. **Diciotto pacchetti non sono una prova** |
+
+⭐ **Il rimedio è banale e va messo PRIMA di chiedere il giudizio**: contare **quanta
+sollecitazione è davvero arrivata**. Qui: i pacchetti passati nel `netem` e i byte per fotogramma.
+`[M]` Rifatta con trenta secondi di movimento continuo, la stessa prova ha dato **7 596 pacchetti,
+423 buttati, fotogrammi fino a 77 KB** — e allora il *«è tutto fluido»* è diventato un risultato.
+
+⛔⛔ **E il corollario che vale più della lezione**: il gradino non lo decide **il guasto**, lo decide
+**quanto la scena chiede**. Un banco che pretende 40 fotogrammi/s di cambiamento continuo e un
+desktop vero che cambia a strappi **non sono la stessa sollecitazione**, e `[M]` fra i due c'è **un
+ordine di grandezza**: il banco metteva il crollo allo 0,9 % di perdita, l'utente lo ha trovato fra
+il 5 e il 10 %.
+
+### 1.31 ⭐⭐⭐ **Il difetto non comincia dove si vede — e la colonna che avvisa non è quella che si guarda**
+
+*24 agosto 2026, fase 9.* `[M]` La spirale di chiavi parte fra lo **0,00 % e lo 0,10 %** di perdita
+— cioè **al primo pacchetto perso** — mentre i fotogrammi al secondo restano buoni fino allo
+**0,53-0,75 %**.
+
+⇒ ⛔ **Un banco che guardasse solo i fotogrammi al secondo avrebbe dato verde fino allo 0,5 %**, con
+il prodotto che nel frattempo degenerava in sole chiavi — cioè degradava **nello spazio e nel tempo
+insieme**, che la specifica vieta.
+
+⭐ **La regola**: quando si misura un fenomeno con un **meccanismo** e un **sintomo**, si porta la
+colonna del meccanismo **accanto** a quella del sintomo, sempre. Il sintomo dice quando l'utente se
+ne accorge; **il meccanismo dice quando è cominciato**, e fra i due qui c'è un fattore **cinque**.
+
+### 1.32 ⭐⭐⭐ **«A volte succede» spesso vuol dire «succede sempre, aspetta solo il momento»**
+
+*24 agosto 2026, fase 9.* Un fenomeno appariva **bistabile**: stesso ingresso, stesso binario, stesso
+terreno, e a venti minuti di distanza **`0 chiavi · 40,16/s`** oppure **`24 chiavi · 33,84/s`**.
+
+⛔ **Cercarne la causa nei primi dieci secondi ha dato 43 prove negative su 43** — e la ragione era
+che **5 accensioni su 13 cadevano dopo il decimo secondo**: in quella finestra non c'era niente da
+trovare.
+
+⭐⭐ **La forma giusta era un'altra**: non due rami, ma **un innesco a senso unico con rischio
+costante**. `[M]` Provato a due durate — a **10 s** succede nel **35 %** dei giri (atteso 31 %), a
+**50 s** nel **90 %** (atteso 92 %) — con λ = **0,053 al secondo** e mediana **13 s**.
+
+> ⛔⛔ **E il conto che ne segue tocca ogni misura**: i banchi girano **venticinque secondi**, le
+> sessioni dell'utente durano **ore**. ⇒ Ogni numero preso vicino al bordo **sottostima**, e non di
+> poco: quel che al banco sembra *«a volte»*, in una sessione vera è **certo**.
+
+⭐ **La prova che distingue le due letture costa un'ora**: si ripete la stessa casella a **due
+durate** e si guarda se la frazione segue l'esposizione. Se la segue, «bistabile» è la parola
+sbagliata — e con essa ogni conclusione tratta da giri corti.
+
+### 1.33 ⛔⛔ **Il metro va tarato PRIMA, e i due errori non costano uguale**
+
+*24 agosto 2026, fase 9. Due misure della stessa giornata, e la differenza fra loro è tutta qui.*
+
+⭐ **Quella andata bene**: prima di misurare lo sfalso audio-video, si sono **iniettati sette ritardi
+noti** e verificato che il metodo li ritrovasse — sul file, poi ricampionato, poi ⭐ **attraverso il
+prodotto vero**. `[M]` Pendenza **0,9988**, costante **−11,6 ms**. ⇒ Da quel momento ogni numero
+aveva un errore dichiarato, e la misura ha potuto **smentire** la lettura precedente.
+
+⛔ **Quella andata male**: una soglia scelta su una grandezza **mai messa alla prova sui casi
+estremi**. `[M]` `pkt_lost/pkt_sent` ordinava i due casi **al contrario** — una linea che **regge**
+ne dichiarava il **512‰** contro il **123‰** di una che **non regge**, perché ngtcp2 conta un
+pacchetto **sorpassato** come perso. ⇒ **Nessuna soglia poteva separarli**: non era una taratura da
+rifare, era la grandezza sbagliata.
+
+⭐⭐ **E la regola sull'asimmetria, che è la parte trasferibile:**
+
+> ⛔ Quando una soglia decide qualcosa di **irreversibile** — chiudere una sessione, buttare fuori
+> qualcuno — **i due errori non costano uguale**. Sbagliare dal lato prudente costa qualche secondo
+> in più; sbagliare dall'altro **butta fuori chi stava lavorando**. ⇒ La soglia si mette **sopra** il
+> centro fra i due estremi misurati, e il margine si scrive **da tutt'e due i lati**.
+
+⚠ E il margine si àncora al **caso peggiore che regge**, non al più comodo: `[M]` il lato stretto è
+stato preso sul **più corto** dei due stalli osservati, perché un margine scritto sul numero
+fortunato non è un margine.
+
