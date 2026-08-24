@@ -4064,3 +4064,116 @@ prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggi
 4. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
 5. ⚠ **lo stallo e il buco non sono la stessa grandezza** (§18.2-ter): la derivazione è prudente, non
    esatta, e un giro che le misuri **insieme** la renderebbe esatta.
+
+---
+
+# §19 · ⭐⭐⭐ IL GIUDIZIO DELL'UTENTE SUL PERCORSO VERO — *24 agosto 2026, mattina*
+
+⛔ **È la sezione che conta più di tutte le altre**, e per la ragione scritta in testa al documento: in
+v1 la fase omologa fu validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio
+dell'utente sul desktop vero fu *«siamo tornati indietro»*. **La fase fu azzerata.**
+
+**Il banco**: sessione vera dell'utente, browser sul **portatile** (192.168.0.3, WiFi `wlo1`), server
+sulla macchina di prova, porta **7920**, binario `2792271f…` dall'albero di lavoro, tela
+**2544×926**, ⛔ **tutte le cure spente**, trappola di glibc **spenta** (il server gira alla velocità
+vera).
+
+⭐ **E la rete si è sporcata dal lato del CLIENTE**, non del server: il video arriva in **ingresso**
+su `wlo1`, quindi il guasto sta su un `ifb0` con `netem`, alimentato da un filtro `u32` sulla **sola
+porta UDP 7920 in arrivo**. ⛔ Sulla macchina di prova lo stesso traffico passerebbe da `enp7s0`,
+dove passa l'ssh, e quella non si tocca. L'ssh è TCP sulla 22 e non è filtrato.
+⚠ E il guasto **si disarma da sé** dopo N secondi, con un guardiano staccato: la stessa disciplina
+già usata su `lo`.
+
+## 19.1 ⭐⭐⭐ LA SCALA, E VIENE DAI SUOI OCCHI
+
+| perdita **misurata sul filo** | il suo giudizio |
+|---|---|
+| 1 % | *«mi sembra ok»* |
+| **5,6 %** | *«è tutto fluido»* |
+| ⛔ **10 %** | *«adesso si è bloccato»* |
+
+> ⇒ **Il confine dell'uso reale sta fra il 5 e il 10 per cento di perdita.**
+
+⛔⛔ **E questo CONTRADDICE il banco, di un ordine di grandezza.** §17.11 mette il dirupo dentro il
+primo punto percentuale: la spirale di chiavi parte allo **0,10 %** e il ritmo casca sotto il
+pavimento allo **0,53-0,75 %**. `[M]` Sul percorso vero, al **5,6 %** — cioè da **sette a
+cinquantasei volte** più perdita — l'utente non se ne accorge.
+
+## 19.2 ⛔ E LA PROVA È STATA RIFATTA DUE VOLTE, PERCHÉ LA PRIMA NON MORDEVA
+
+⚠ **Va scritto perché è un errore di metodo mio, ed è il terzo della stessa famiglia** (dopo il
+video pieno di grana di §16.4 e i nove «attesi» mai confrontati di R13): un giudizio su una prova che
+non sollecita non è un giudizio.
+
+`[M]` **Primo giro, e non valeva**: perdita all'1 % accesa e verificata (il server la vedeva:
+*«la linea perde»*, 27 pacchetti dichiarati persi, 22 datagram audio perduti), **zero fotogrammi
+abbandonati su 920**, **due chiavi in tutto**. ⇒ Nessuna spirale — ma la ragione era nel numero che
+non stavo guardando: ⛔ **i suoi fotogrammi pesavano 242-283 byte.** Duecento byte. Il banco crollava
+su una scena che riempiva il filo con 3 Mbit/s; qui la perdita **non aveva niente da rompere**.
+
+`[M]` **Secondo tentativo, il trascinamento di una finestra**: fotogrammi fino a **3 801 byte**,
+**zero chiavi** su 400, **2 abbandoni su 2 181**. ⇒ Ancora insufficiente: il banco lavorava su
+fotogrammi **sette volte più grossi**.
+
+`[M]` **E al 5 % il primo giudizio è stato RITIRATO prima di scriverlo**, contando i pacchetti
+passati davvero dentro il guasto: **221, con 18 buttati**. ⛔ Diciotto pacchetti non sono una prova.
+⇒ Rifatto con **trenta secondi senza mai fermarsi**, e allora sì: **7 596 pacchetti nel guasto, 423
+buttati = 5,6 % reale**.
+
+⭐ **Il numero che rende valido il giro buono** — e che mancava ai due precedenti: fotogrammi fino a
+**77 304 byte**, cioè ⭐ **tre volte più grossi di quelli su cui il banco crollava**. Con quelli:
+**chiavi 3,8 %** (23 su 600), **abbandoni 11 su 3 017** (0,36 %), e il giudizio *«è tutto fluido»*.
+
+⛔ **La lezione, e vale oltre questa fase**: il gradino non lo decide la perdita, lo decide **quanto
+la scena chiede**. Il banco produce una sollecitazione che pretende **quaranta fotogrammi al secondo
+di cambiamento continuo**; un desktop vero — anche mentre si trascina una finestra — cambia **a
+strappi**. ⇒ **Non è la stessa sollecitazione**, e le previsioni del banco **non si applicano al
+prodotto così com'è usato**.
+
+## 19.3 ⭐⭐ IL BLOCCO AL 10 %, COLTO NELL'ISTANTE — e il meccanismo è quello di §17.1-ter
+
+`[M]` Nel momento in cui l'utente ha detto *«si è bloccato»*, il registro del server diceva:
+
+| | |
+|---|---|
+| **`cwnd = 2 888 byte`** | ⛔ la finestra di congestione **collassata a due pacchetti** — dieci volte meno del minuto prima |
+| `cwnd_left = 2 888` · **in volo = 0** | ⛔⭐ **non è che il filo sia pieno: non c'è NIENTE in volo.** Il server *potrebbe* mandare, e non manda |
+| **27 fotogrammi `NON SPEDITO`** | e il contatore dei consegnati **fermo a 3 117** su tre letture di fila |
+| chiavi | salite da 4 a **16** |
+| `persi=664` · `dgram_persi=493` | `giudizio=⛔ la linea perde` |
+
+⇒ ⭐ **È esattamente la catena di §17.1-ter, vista sul percorso vero**: la finestra si chiude → i
+fotogrammi non partono → si chiedono chiavi → lo schermo si ferma. Il meccanismo del banco **è
+giusto**; sbagliato era **dove** lo collocava.
+
+⭐⭐ **E `cwnd_left = cwnd` con «in volo = 0» è la firma che assolve il filo e accusa noi**: non è
+congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-forte` (§17.9-quater,
+`cwnd` mediana 8 948 B, `cwnd_left` mediana 0) su una linea vera.
+
+## 19.4 ⚠ E DUE COSE CHE QUESTA SESSIONE NON HA POTUTO PROVARE
+
+1. ⛔ **Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**
+   `[M]` `mpv` parte, resta vivo, e il server continua a catturare un desktop **immobile** —
+   fotogrammi da 167 byte e il contatore fermo. ⚠ È lo **stesso muro** su cui si è fermato il banco
+   dell'audio (§14.7, §16.5: *«Firefox sulla macchina di prova NON parte»*), e l'utente lo ha
+   confermato di persona: *«non posso vedere video: firefox non funziona»*.
+   ⇒ ⏳ **Blocca ogni prova che richieda una scena pesante sul percorso vero**, e va diagnosticato:
+   non è la rete e non è questa fase.
+2. ⏳ **Le cure non sono state provate a occhio.** La scala di §19.1 è tutta a **cure spente**: adesso
+   si sa **dove** guardare — al **10 %**, dove il blocco c'è davvero — ma il confronto appaiato con le
+   cure accese non è ancora stato fatto.
+
+## 19.5 ⭐ Che cosa questa sezione cambia nelle decisioni
+
+1. ⭐⭐ **Le cure servono, ma non per il lavoro quotidiano dell'utente.** `[M]` Fino al 5,6 % di
+   perdita il prodotto **così com'è** è giudicato fluido. ⇒ Le cure servono al **caso a raffiche** e a
+   **chi guarda video**, non a chi lavora. ⚠ È un buon motivo per accenderle **con calma**, e non di
+   corsa — e I6 resta rispettata senza costi;
+2. ⛔ **Il pavimento di banda (§3.1-sexies, 30 Mbit/s) non c'entra niente con tutto questo.** `[M]`
+   Nel giro buono i fotogrammi grossi arrivavano a 77 KB e la linea non era mai satura: quel che si
+   chiudeva era la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma
+   più forte**: la banda è una premessa, la grandezza che decide è la **qualità** del filo;
+3. ⚠ **e le soglie del banco vanno lette per quel che sono**: `[M]` misure su una sollecitazione
+   **dieci volte più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va
+   scritto accanto a ogni numero di §17 che qualcuno potrebbe prendere per una promessa.
