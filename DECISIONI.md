@@ -1875,6 +1875,44 @@ fantasma. Su una linea che perde a raffiche **si ripete**.
 | ⛔ **il caso che non si rompe** | vale **solo fra client dello stesso utente**. Uno sfratto fra utenti diversi sarebbe un buco di sicurezza, non una comodità |
 | ⚠ **e la frase cambia comunque** | *«hai già una sessione attiva altrove»* è una **diagnosi che il server non è in grado di fare**: non sa se l'altro client è un altro dispositivo o lo stesso utente appena caduto. ⇒ Deve dire **quel che sa** — che il posto risulta occupato, e da quanto l'occupante tace |
 
+### 3.1-septies ✅⭐⭐⭐ Le cure della fase 9 si **ACCENDONO** — e il metro della fase è *«solidità, non miracoli»*
+
+*24 agosto 2026, dopo aver guardato. «Il prodotto cambia in meglio; questa fase era per rendere più
+solido il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli.»*
+
+⭐⭐ **È la frase che definisce quando la fase è finita**, e va letta come criterio, non come commento:
+il traguardo non era **salvare** l'esperienza su qualunque rete — era **non peggiorarla**, non
+mentire, e non fingere che una linea rotta sia una linea lenta. ⇒ Misurata contro questo metro, la
+fase **ha centrato il bersaglio**; misurata contro «funziona anche al 10 % di perdita», non lo
+avrebbe centrato mai, e nessuna quantità di lavoro l'avrebbe fatto.
+
+**Le cinque cure passano da spente ad accese di suo:**
+
+| cura | predefinito nuovo | che cosa compra | ⚠ che cosa costa |
+|---|---|---|---|
+| **silenzio dell'audio** | acceso | `[M]` **102× meno traffico** a schermo fermo (557,6 → 5,5 kbit/s); tono di prova puro **1,000** | i `mancati` del cliente +2 su 5 000 |
+| **sfratto del fantasma** | 15 000 ms | `[M]` il fantasma da **32,13 s / 14 rifiuti** a **16,83 s / 7** | nessuno che si veda; ⛔ non tocca `SILENZIO`, e vale solo fra client dello **stesso** utente |
+| **linea morta** | accesa (stallo 5 s · silenzio 10 s) | dice che il filo è rotto invece di lasciare uno schermo fermo che sembra un programma morto | ⛔ **chiude una sessione**: margine **10×** sopra la linea peggiore che regge, **2,9×** sotto quella che non serve |
+| **soglia sulla coda** + **regolatore del ritmo** | 100 ms · acceso | `[M]` chiavi da **51,7-88,1 %** a **0,0-5,6 %**; ritmo da **1,7 a 2,8 volte** | ⚠ **fino a +160 ms** di deriva su rete cattiva; **zero** sulla linea sana |
+
+⛔ **Perché erano spente, e perché adesso non lo sono più.** L'invariante **I6** — *ciò che cambia
+quel che l'utente vede resta dietro un interruttore spento finché non l'ha guardato* — è servita
+esattamente allo scopo per cui esiste: in v1 la fase omologa fu azzerata per aver consegnato numeri
+migliorati che il regista non aveva mai visto. ⭐ Il presupposto adesso è **soddisfatto**: l'utente
+ha guardato (§19.6 le cure al 10 %, §20.3 il sincronismo) e ha deciso.
+
+⚠ **E una parte dell'attesa era cerimonia, non processo** — va scritto perché non si ripeta: due
+delle cinque **non cambiano niente di quel che l'utente vede o sente**. Il silenzio dell'audio è
+inudibile *per misura*; lo sfratto del fantasma non aggiunge un messaggio, ⭐ **ne toglie uno falso**.
+Tenere spenta una cura che elimina una bugia non è prudenza. ⇒ **I6 vale per ciò che si vede, non per
+tutto ciò che si tocca**, e la prossima volta la distinzione va fatta prima.
+
+⛔ **Che cosa NON promettono**, e va scritto accanto ai numeri o qualcuno li leggerà come una
+promessa: `[M]` §19.6 — **al 10 % di perdita le cure non salvano l'esperienza.** Curano il
+meccanismo (la consegna continua invece di fermarsi, i fotogrammi mai spediti da 27 a 1) e l'utente
+dice *«bloccato»* lo stesso. ⇒ Sopra una certa perdita la scala di degradazione **non ha più niente
+da offrire**, e l'unica risposta onesta resta §3.1-quater: **dichiarare la linea morta**.
+
 ### 3.2 🔸 L'invariante I1, riscritta
 
 Il ritmo **non cala mai** per prudenza, per risparmio o perché la scena è ferma. Cala **solo**
