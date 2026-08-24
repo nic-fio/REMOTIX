@@ -4160,9 +4160,64 @@ congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-
    confermato di persona: *«non posso vedere video: firefox non funziona»*.
    ⇒ ⏳ **Blocca ogni prova che richieda una scena pesante sul percorso vero**, e va diagnosticato:
    non è la rete e non è questa fase.
-2. ⏳ **Le cure non sono state provate a occhio.** La scala di §19.1 è tutta a **cure spente**: adesso
-   si sa **dove** guardare — al **10 %**, dove il blocco c'è davvero — ma il confronto appaiato con le
-   cure accese non è ancora stato fatto.
+2. ⭐ **Le cure sono state provate a occhio** ⇒ **§19.6**, e il verdetto è che **fanno quel che
+   promettevano e non basta**.
+
+## 19.6 ⭐⭐⭐ LE CURE, GUARDATE — **fanno quel che promettevano, e non basta**
+
+`[M]` 24 agosto, stessa sessione, stesso binario, **stesso 10 % di perdita**, e a cambiare **solo
+gli interruttori del server** — verificati dalle righe d'avvio, non dalla riga di comando: soglia
+della coda **100 ms**, regolatore del ritmo **ACCESO**, ⛔ **linea morta e sfratto SPENTI di
+proposito** (se il filo cadesse non si saprebbe se è merito o colpa delle cure).
+
+Perdita **misurata sul filo**: 8 597 pacchetti passati, **905 buttati = 10,5 %**.
+
+| | **senza** cure | **con** le cure |
+|---|---|---|
+| fotogrammi consegnati | ⛔ **fermi** — stesso numero su tre letture di fila | ⭐ **continuano**: 1533 → 1552 → 1557 |
+| fotogrammi mai spediti | **27**, in una raffica | ⭐ **1** |
+| `cwnd` | 2 888 B | 3 652 B |
+| chiavi | 16 | 17 |
+| **il giudizio dell'utente** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
+
+⭐ **Le cure fanno esattamente quel che il banco prometteva**: senza, la consegna si **ferma**; con,
+va avanti a **cinque-venti fotogrammi al secondo**, e i fotogrammi mai spediti passano da 27 a **1**.
+Il meccanismo è curato.
+
+⛔⛔ **E non basta.** Per chi guarda, cinque fotogrammi al secondo con quel ritardo **sono un blocco
+lo stesso**. ⇒ Il numero migliora e **l'esperienza no**, ed è precisamente la distinzione che questa
+fase esisteva per proteggere (v1: *«siamo tornati indietro»* su numeri che erano migliorati).
+
+⭐⭐⭐ **E questo è l'argomento più forte a favore di §3.1-quater**, la decisione presa dall'utente
+la notte prima **senza avere questo numero**: al 10 % di perdita **non esiste una versione buona** —
+o lo schermo si ferma, o si muove in un modo che l'utente chiama **comunque bloccato**. ⇒ *«Nessuno
+dei due va servito»* non era una preferenza: era la lettura giusta, e adesso ha la prova.
+
+**La scala completa, tutta dai suoi occhi:**
+
+| perdita reale | **senza** cure | **con** cure |
+|---|---|---|
+| 1 % | *«mi sembra ok»* | — |
+| 5,6 % | *«è tutto fluido»* | — |
+| **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
+
+### 19.6-bis ⚠ E DUE COSE VISTE DI PASSAGGIO, che non erano nel programma
+
+1. ⭐ **La regola dei sessanta minuti ha scattato su una sessione vera, ed è la prima volta.**
+   `[M]` *«prova2 non tocca niente da 3 600 012 ms (tetto 3 600 000) — CHIUDO la sessione grafica»*
+   (`DECISIONI.md` §4.8). Ha chiesto l'uscita gentilmente e, **dopo dieci secondi**, l'ha chiusa a
+   forza (`Logout 1` → `Logout 2`). ⚠ E ha prodotto un falso allarme: l'utente ha visto lo schermo
+   fermo e ha detto *«il server è ancora bloccato»* — ⛔ **non lo era**: `NRestarts=0`, acceso da
+   un'ora e mezza, e il solo core presente era di **ieri**.
+2. ⛔⭐ **«Sessione viva e muta» è indistinguibile da «programma morto», e l'utente l'ha dimostrato
+   di persona** — due volte, dicendo *«si è bloccato»* e *«il server è ancora bloccato»* di un
+   server che stava benissimo. ⇒ È lo stesso fatto di §17.1-quater e §17.9-quater visto **dall'altro
+   lato**: là il banco chiamava «stacco» una consegna ferma, qui l'utente chiama «server bloccato»
+   la stessa cosa. ⭐ **Ed è la ragione per cui la cura della linea morta serve**: non perché
+   migliori l'immagine — non può — ma perché **dice la verità** invece di lasciare uno schermo fermo
+   che sembra un guasto del programma.
+   ⚠ E la sessione **si riprende da sé**: `[M]` tolta la perdita, `cwnd` risale da 2 888 a
+   **46 412 byte** (sedici volte) senza che nessuno tocchi niente.
 
 ## 19.5 ⭐ Che cosa questa sezione cambia nelle decisioni
 
@@ -4170,6 +4225,10 @@ congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-
    perdita il prodotto **così com'è** è giudicato fluido. ⇒ Le cure servono al **caso a raffiche** e a
    **chi guarda video**, non a chi lavora. ⚠ È un buon motivo per accenderle **con calma**, e non di
    corsa — e I6 resta rispettata senza costi;
+1-bis. ⛔ **E al 10 % non salvano l'esperienza** (§19.6): curano il meccanismo — consegna che continua
+   invece di fermarsi, fotogrammi mai spediti da 27 a 1 — ma il giudizio dell'utente **non cambia**.
+   ⇒ Sopra una certa perdita **la scala di degradazione non ha più niente da offrire**, e l'unica
+   risposta onesta è §3.1-quater: dichiarare la linea morta;
 2. ⛔ **Il pavimento di banda (§3.1-sexies, 30 Mbit/s) non c'entra niente con tutto questo.** `[M]`
    Nel giro buono i fotogrammi grossi arrivavano a 77 KB e la linea non era mai satura: quel che si
    chiudeva era la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma
