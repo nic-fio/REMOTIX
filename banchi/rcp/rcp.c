@@ -325,18 +325,30 @@ enum {
  *    vecchia di un paio di secondi, e questa soglia potrebbe scendere a 3.  Con
  *    quella in casa il fantasma dura un respiro; senza, dura meta' di prima.
  *
- * ⛔ SPENTO DI SUO — invariante I6.  ⚠ E l'interruttore NON e' per la frase
- *    falsa (quella si corregge sempre, piu' sotto): e' per lo SFRATTO, che e'
+ * ⛔ E' NATO SPENTO — invariante I6.  ⚠ E l'interruttore NON era per la frase
+ *    falsa (quella si corregge sempre, piu' sotto): era per lo SFRATTO, che e'
  *    un modo nuovo in cui il server toglie qualcosa a una sessione, e
  *    `DECISIONI.md` §4.1-bis dice che il server non butta fuori una sessione
  *    sana.  Se la soglia fosse tarata male butterebbe fuori uno vivo, che e'
  *    molto peggio di un messaggio sbagliato. ⇒ Lo accende chi ha guardato.
  *
- * ⛔ `0` = SPENTO, ed e' il predefinito: il comportamento e' quello di ieri
- *    byte per byte.  Il valore in vigore si SCRIVE all'avvio, come i tre
+ * ⭐⭐⭐ E CHI HA GUARDATO HA DECISO — 24 agosto 2026.  Dal 24 agosto il
+ *      predefinito e' **15 000 ms** (`SILENZIO / 2`, il numero del riquadro qui
+ *      sopra), e `0` resta l'unica strada per spegnerlo (`--sfratto-ms 0`).  ⇒
+ *      Il presupposto di I6 e' soddisfatto, non aggirato: l'interruttore c'e'
+ *      ancora, e' solo girato dall'altra parte.
+ *
+ * ⚠ IL PREZZO E IL GUADAGNO, DICHIARATI — `[M]` 23-24 agosto 2026: il fantasma
+ *   passa da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**.  ⛔ Cioe' la
+ *   meta' esatta, ed e' esattamente quel che il numero promette: sotto i 15 s
+ *   non si scende, perche' il keep-alive del browser tace `[M]` 15 s e si
+ *   sfratterebbe un client VIVO e fermo (⇒ I2 spenta su ogni scrivania ferma).
+ *
+ * ⛔ Il valore in vigore si SCRIVE all'avvio, acceso o spento, come i tre
  *    orologi di §5.3 — un tetto che nessuno puo' leggere e' la forma E1. */
 #define SFRATTO_PREDEFINITO (SILENZIO / 2) /* 15 s: vedi il riquadro */
-static uint64_t sfratto_ms; /* 0 = spento */
+static uint64_t sfratto_ms = SFRATTO_PREDEFINITO; /* 0 = spento, ⭐ dal 24 ago
+                                                   *    2026 nasce ACCESO */
 
 void rcp_sfratto_imposta(uint64_t ms)
 {
@@ -2812,7 +2824,9 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		       "di vita %llu ms fa, e lo sfratto %s",
 		    s->utente, s->provenienza, posti_occupati(),
 		    (unsigned long long)muto,
-		    sfratto_ms ? "NON e' scattato" : "e' SPENTO (--sfratto-ms)");
+		    sfratto_ms ? "NON e' scattato (soglia in vigore)"
+		               : "e' SPENTO a mano (--sfratto-ms 0; dal 24 ago 2026 il "
+		                 "predefinito e' 15000)");
 		/* ⛔⛔ E LA FRASE NON DIAGNOSTICA PIU' — 23 agosto 2026.
 		 *
 		 * Diceva «c'e' gia' un client attaccato a questa sessione», e il client

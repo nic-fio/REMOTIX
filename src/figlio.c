@@ -526,6 +526,11 @@ struct figli {
 	 *    trascrive nella riga di comando del figlio (`diventa_ed_esegui()`). */
 	bool fase9_qualita_risale;
 	uint32_t fase9_tetto_banda_mbit;
+	/* ⭐ La TERZA, 24 agosto 2026, e nasce ACCESA: un blocco d'audio tutto a
+	 *    zero non diventa un datagram.  ⚠ Si passa NEGATA nell'`argv` del
+	 *    figlio (`--niente-audio-silenzio`), perche' quel che si scrive in coda
+	 *    e' l'ECCEZIONE al predefinito, non il predefinito. */
+	bool fase9_audio_silenzio;
 	char percorso_mio[512]; /* /proc/self/exe risolto, per l'`exec` */
 	FiglioSessioneFinita su_sessione_finita;
 	void *ctx_sessione_finita;
@@ -884,12 +889,14 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 
 /* ⭐⭐ Il riquadro sta in `figlio.h`: qui si prende nota e basta, e chi non ha
  *     una tabella dei figli (`figli_accendi()` fallito) non si rompe. */
-void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit)
+void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
+                 bool audio_silenzio)
 {
 	if (!f)
 		return;
 	f->fase9_qualita_risale = qualita_risale;
 	f->fase9_tetto_banda_mbit = tetto_banda_mbit;
+	f->fase9_audio_silenzio = audio_silenzio;
 	/* ⛔ E QUESTA RIGA NON E' LA DICHIARAZIONE DEL VALORE IN VIGORE — e' il
 	 *    contrario: dice che cosa il padre si e' impegnato a PASSARE.  Il
 	 *    valore in vigore lo scrive `codificatore.c` all'apertura di ogni
@@ -905,6 +912,24 @@ void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit)
 	              qualita_risale ? "ACCESA (--qualita-risale)"
 	                             : "spenta (I6, --qualita-risale assente)",
 	              tetto_banda_mbit ? "ACCESO" : "spento (I6, pavimento 0)");
+	/* ⛔⭐⭐ E LA TERZA HA UNA RIGA SUA, perche' e' l'unica delle tre che nasce
+	 *      ACCESA — 24 agosto 2026, decisione dell'utente.  ⚠ Va scritta anche
+	 *      accesa: e' la riga da cui un banco legge lo stato del silenzio
+	 *      dell'audio **senza aprire una sessione**, e le altre due righe della
+	 *      terna (il figlio che dichiara di averla RICEVUTA, e `audio.c` che
+	 *      dichiara il valore IN VIGORE) arrivano solo col primo codificatore. */
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 9, il silenzio dell'audio che il padre PASSERA' a ogni "
+	              "figlio: %s.  ⚠ `[M]` 09-b84: 102,1 volte meno traffico a "
+	              "schermo fermo (557,6 → 5,5 kbit/s), 1 248 blocchi taciuti su "
+	              "1 248; il prezzo e' +2 «mancati» su 5 000 al cliente",
+	              audio_silenzio
+	                  ? "ACCESO, ed e' il PREDEFINITO dal 24 agosto 2026 "
+	                    "(decisione dell'utente) — si spegne con "
+	                    "`--niente-audio-silenzio`"
+	                  : "⛔ SPENTO a mano (`--niente-audio-silenzio`): si spedisce "
+	                    "anche il silenzio, cioe' il prodotto fino al 23 agosto "
+	                    "2026.  ⚠ E NON e' il predefinito");
 	if (tetto_banda_mbit)
 		registro_dice(REG_FIGLIO,
 		              "⭐ FASE 9, il tetto di banda: pavimento %u Mbit/s "
@@ -947,10 +972,12 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char a_tetto[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Quattordici: le nove fisse, il NULL, e le quattro parole facoltative in
-	 *   coda — `--parlantina`, `--qualita-risale`, `--tetto-banda-mbit` e il
-	 *   suo numero.  Si aggiungono solo se il padre le ha (vedi sotto). */
-	char *argv[14];
+	/* ⚠ Quindici: le nove fisse, il NULL, e le CINQUE parole facoltative in
+	 *   coda — `--parlantina`, `--qualita-risale`, `--tetto-banda-mbit` e il suo
+	 *   numero, e `--niente-audio-silenzio`.  Si aggiungono solo se il padre le
+	 *   ha (vedi sotto).  ⛔ Il conto si rifa' a ogni parola nuova: un `argv[]`
+	 *   troppo corto non da' un errore, scrive oltre la fine dello stack. */
+	char *argv[15];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -1164,9 +1191,10 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	if (registro_parla_molto())
 		argv[na++] = (char *)"--parlantina";
 	/*
-	 * ⛔⭐⭐ E LE DUE CURE DELLA FASE 9 PASSANO DI QUI, per la stessa ragione
+	 * ⛔⭐⭐ E LE **TRE** CURE DELLA FASE 9 PASSANO DI QUI, per la stessa ragione
 	 *      esatta della parlantina qui sopra — e non e' un'analogia, e' lo
-	 *      stesso difetto.
+	 *      stesso difetto.  ⚠ La terza (il silenzio dell'audio) e' arrivata il
+	 *      24 agosto 2026, e viaggia NEGATA: vedi il riquadro piu' sotto.
 	 *
 	 * ⛔ `codificatore_qualita_risale()` e `codificatore_tetto_banda()` sono
 	 *    statiche del PROCESSO: chiamarle nel padre non accende niente, perche'
@@ -1189,6 +1217,18 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 		argv[na++] = (char *)"--tetto-banda-mbit";
 		argv[na++] = a_tetto;
 	}
+	/* ⛔⭐⭐ E LA TERZA VIAGGIA NEGATA, che e' l'unica forma che non mente.
+	 *
+	 *      Le due qui sopra nascono spente: quel che si scrive in coda e'
+	 *      «accendila».  Questa nasce ACCESA (24 agosto 2026), quindi quel che
+	 *      si scrive e' «spegnila» — ⛔ e la parola in `argv` e' la STESSA che
+	 *      il server ha ricevuto (`--niente-audio-silenzio`), perche' chi guarda
+	 *      `/proc/<pid>/cmdline` di un figlio deve poterla confrontare a occhio
+	 *      con la riga di comando del padre.  ⚠ Se qui comparisse un
+	 *      `--audio-silenzio` positivo ci sarebbero DUE nomi per la stessa cura,
+	 *      ed e' esattamente quel che questa fase ha tolto. */
+	if (!f->fase9_audio_silenzio)
+		argv[na++] = (char *)"--niente-audio-silenzio";
 	argv[na] = NULL;
 
 	execve(f->percorso_mio, argv, envp);
@@ -5898,6 +5938,13 @@ void figlio_vive(int argc, char **argv)
 	 *    questo processo deve ripetere a se stesso: vedi sotto. */
 	bool f9_risale = false;
 	uint32_t f9_tetto = 0;
+	/* ⛔ `true`, e non `false` come le due qui sopra: questa cura nasce ACCESA
+	 *    (24 agosto 2026), quindi l'assenza della parola in coda vuol dire
+	 *    «accesa».  ⚠ E il figlio NON puo' chiedere il predefinito ad `audio.c`
+	 *    e basta: deve poter dichiarare che cosa gli e' ARRIVATO, o «l'opzione
+	 *    e' caduta nel passaggio» e «la cura non funziona» hanno la stessa
+	 *    faccia (forma D5). */
+	bool f9_audio_silenzio = true;
 
 	/* `--figlio-interno <utente> <uid> <gid> <l> <a> <matricola> <rilievo>` */
 	if (argc < 9)
@@ -5921,7 +5968,7 @@ void figlio_vive(int argc, char **argv)
 	/* ⭐ La parlantina, se il padre ce l'ha passata: vedi il riquadro in
 	 *    `figli_esegui()`.  ⛔ Senza, ogni `registro_dettaglio` di questo file
 	 *    e' scritto e non arriva a nessuno. */
-	/* ⛔⭐⭐ E LE DUE CURE DELLA FASE 9 SI ACCENDONO QUI, DENTRO IL FIGLIO.
+	/* ⛔⭐⭐ E LE **TRE** CURE DELLA FASE 9 SI ACCENDONO QUI, DENTRO IL FIGLIO.
 	 *
 	 *      Il riquadro che spiega perche' non possono venire da nessun'altra
 	 *      parte sta in `figlio.h`, sopra `figli_fase9()`: sono statiche del
@@ -5941,9 +5988,20 @@ void figlio_vive(int argc, char **argv)
 			f9_risale = true;
 		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)
 			f9_tetto = (uint32_t)strtoul(argv[++i], NULL, 10);
+		/* ⛔⭐ E QUESTA SI LEGGE NEGATA, perche' nasce ACCESA (24 ago 2026): la
+		 *     parola in coda e' l'ECCEZIONE al predefinito.  ⚠ Un'assenza qui
+		 *     vuol dire «acceso», che e' il contrario delle due righe sopra —
+		 *     ed e' il motivo per cui `f9_audio_silenzio` parte da `true`. */
+		else if (strcmp(argv[i], "--niente-audio-silenzio") == 0)
+			f9_audio_silenzio = false;
 	}
 	codificatore_qualita_risale(f9_risale);
 	codificatore_tetto_banda(f9_tetto);
+	/* ⛔ E il codificatore audio sta in QUESTO processo, come quello video: la
+	 *    riga del valore IN VIGORE la scrive `audio.c` all'apertura di ogni
+	 *    codificatore, ed e' la terza della terna (padre PASSERA' · figlio
+	 *    RICEVUTO · in vigore). */
+	audio_silenzio_taci(f9_audio_silenzio);
 
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
@@ -6072,11 +6130,16 @@ void figlio_vive(int argc, char **argv)
 	registro_dice(REG_FIGLIO,
 	              "⭐⛔ PARAMETRI IN VIGORE (fase 9), quel che il figlio ha "
 	              "RICEVUTO nella sua riga di comando: risalita della qualita' "
-	              "%s · tetto di banda %s (pavimento %u Mbit/s) — ⚠ chiesti al "
+	              "%s · tetto di banda %s (pavimento %u Mbit/s) · ⭐ silenzio "
+	              "dell'audio %s — ⚠ chiesti al "
 	              "codificatore adesso, prima del primo palco.  Che li abbia "
-	              "presi lo dice la riga «codificatore APERTO»",
+	              "presi lo dice la riga «codificatore APERTO» (video) e la riga "
+	              "«cura del silenzio digitale» (audio)",
 	              f9_risale ? "ACCESA" : "spenta (I6)",
-	              f9_tetto ? "ACCESO" : "spento (I6)", f9_tetto);
+	              f9_tetto ? "ACCESO" : "spento (I6)", f9_tetto,
+	              f9_audio_silenzio
+	                  ? "ACCESO (predefinito dal 24 ago 2026)"
+	                  : "SPENTO a mano (--niente-audio-silenzio)");
 
 	if (!manda(MSG_SONO, &s, sizeof s, NULL, 0)) {
 		registro_dice(REG_FIGLIO, "⛔ non riesco a presentarmi al padre (%s)",

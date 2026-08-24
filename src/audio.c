@@ -28,8 +28,9 @@
 #define AUDIO_OPUS_BITRATE 96000
 
 /*
- * ⛔⭐⭐ IL SILENZIO NON SI SPEDISCE — cura della fase 9, 24 agosto 2026, e
- *       NASCE SPENTA (I6).
+ * ⛔⭐⭐ IL SILENZIO NON SI SPEDISCE — cura della fase 9, e dal 24 agosto 2026
+ *       NASCE **ACCESA** (decisione dell'utente; fino al 23 nasceva spenta per
+ *       l'invariante I6).
  *
  * `[M]` 24 agosto 2026, `banchi/09-b84-audio-silenzio.py`, porta 7972, binario
  * `b484d699…`: una sessione con **Opus** negoziato e il desktop FERMO consegna
@@ -66,27 +67,39 @@
  *        comincerebbe a voler dire anche «non c'era niente da mandare».
  *        ⛔ Il banco lo misura appaiato apposta, e lo dichiara.
  *
- * ⛔⛔ E L'INTERRUTTORE OGGI E' DI COMPILAZIONE, e va detto perche' non e' una
+ * ⛔⛔⭐ E L'INTERRUTTORE NON E' PIU' DI COMPILAZIONE — 24 agosto 2026.
+ *
+ *      Fino al 23 agosto era `-DAUDIO_SILENZIO_PREDEFINITO=1`, e non era una
  *      scelta di comodo: il codificatore vive nel **figlio**, che e' un
  *      `execve` con l'ambiente **composto da zero** (`figlio.c`, il riquadro
  *      delle due cure della fase 9) — una `REMOTIX_...` non lo raggiunge, e non
  *      lascerebbe nemmeno una riga a dire che non e' arrivata.  L'unico canale
- *      che attraversa l'`exec` e' la coda di `argv`, e quella si scrive in
- *      `main.c` e in `figlio.c`, che **non sono di questo file**.
+ *      che attraversa l'`exec` e' la coda di `argv`.
  *
- *      ⇒ Quel che serve, per chi possiede quei due file, e non e' scritto qui:
- *        · `main.c`   riconoscere `--audio-silenzio` accanto a `--parlantina`
- *                     (`:1020`) e tenerne un `bool`;
- *        · `figlio.c` metterlo in coda ad `argv` come fa con la parlantina
- *                     (`:1165`) e rileggerlo **per nome** in `figlio_vive()`
- *                     (`:5938`), chiamando `audio_silenzio_taci(true)`;
- *        · qui        non cambia niente: `audio_silenzio_taci()` c'e' gia'.
+ *      ⇒ Adesso la strada c'e', ed e' quella di `--parlantina`:
+ *        · `main.c`   riconosce `--niente-audio-silenzio` e tiene un `bool`;
+ *        · `figlio.c` lo mette in coda ad `argv` (`diventa_ed_esegui()`) e lo
+ *                     rilegge **per nome** in `figlio_vive()`, chiamando
+ *                     `audio_silenzio_taci()`;
+ *        · qui        non cambia niente: `audio_silenzio_taci()` c'era gia'.
+ *
+ * ⛔⛔ E IL `-D` E' STATO TOLTO, non lasciato accanto: due strade per accendere
+ *      la stessa cura sono due numeri che possono divergere — la stessa ragione
+ *      per cui il ponte via ambiente di `wt_sgombra_soglia()` e' stato tolto il
+ *      23 agosto.  ⚠ Chi ricostruisse `09-b84-audio-silenzio.py` deve sapere
+ *      che il suo braccio B non si fa piu' con un `-D`, ma con la riga di
+ *      comando: il braccio SPENTO adesso e' `--niente-audio-silenzio`.
+ *
+ * ⭐⭐⭐ E NASCE ACCESA dal 24 agosto 2026 — decisione dell'utente, dopo aver
+ *      guardato (§19.6, §20.3).  ⚠ `[M]` 24 ago 2026, banco `09-b84`: **102,1
+ *      volte** meno traffico a schermo fermo (557,6 → 5,5 kbit/s), tono di prova
+ *      puro **1,000**, copertura **0,9996**, **1 248 blocchi taciuti su 1 248**.
+ *      ⚠ Il prezzo, dichiarato: i `mancati` del cliente salgono di **2 su
+ *      5 000** — un buco VOLUTO lascia lo stesso salto di `istante` di uno
+ *      perso, e un numero che voleva dire «perso» comincia a voler dire anche
+ *      «non c'era niente da mandare».
  */
-#ifndef AUDIO_SILENZIO_PREDEFINITO
-#define AUDIO_SILENZIO_PREDEFINITO 0
-#endif
-
-static bool audio_taci_silenzio = AUDIO_SILENZIO_PREDEFINITO;
+static bool audio_taci_silenzio = true;
 
 void audio_silenzio_taci(bool si)
 {
@@ -102,7 +115,7 @@ struct audio_cod {
 	uint8_t codec; /* 1 = Opus, 2 = PCM */
 	uint32_t blocco;
 	uint64_t entrati, usciti;
-	uint64_t taciuti; /* blocchi di silenzio digitale NON spediti (I6) */
+	uint64_t taciuti; /* blocchi di silenzio digitale NON spediti */
 
 	/* solo per Opus */
 	AVCodecContext *ctx;
@@ -196,10 +209,18 @@ audio_cod *audio_cod_apri(uint8_t codec)
 	 *    (`CODER.md` §3.10).  ⚠ E' la riga su cui il banco appaiato controlla
 	 *    di aver davvero acceso due bracci diversi. */
 	registro_dice(REG_AUDIO,
-	              "cura del silenzio digitale (I6): %s",
+	              "cura del silenzio digitale: %s",
 	              audio_taci_silenzio
-	                  ? "⭐ ACCESA — i blocchi tutti a zero non si spediscono"
-	                  : "spenta (predefinito) — si spedisce anche il silenzio");
+	                  ? "⭐ ACCESA — i blocchi tutti a zero non si spediscono.  "
+	                    "E' il PREDEFINITO dal 24 agosto 2026 (decisione "
+	                    "dell'utente).  `[M]` 09-b84: 102,1 volte meno traffico a "
+	                    "schermo fermo (557,6 → 5,5 kbit/s), 1 248 blocchi taciuti "
+	                    "su 1 248.  ⚠ Il prezzo: i «mancati» del cliente salgono "
+	                    "di 2 su 5 000.  ⛔ Si spegne con `--niente-audio-silenzio`"
+	                  : "⛔ SPENTA a mano (`--niente-audio-silenzio`) — si "
+	                    "spedisce anche il silenzio, cioe' il prodotto fino al 23 "
+	                    "agosto 2026.  ⚠ E NON e' il predefinito: dal 24 agosto "
+	                    "nasce ACCESA");
 
 	if (codec == 2) {
 		c->blocco = AUDIO_BLOCCO_PCM;
@@ -239,9 +260,11 @@ void audio_cod_chiudi(audio_cod *c)
 	 *     sono due fatti diversi, ed e' la differenza su cui la scena col tono
 	 *     si giudica. */
 	registro_dice(REG_AUDIO,
-	              "conto della cura del silenzio (I6 %s): %llu blocchi taciuti "
+	              "conto della cura del silenzio (%s): %llu blocchi taciuti "
 	              "su %llu entrati, %llu usciti sul filo — codec %u",
-	              audio_taci_silenzio ? "ACCESA" : "spenta",
+	              audio_taci_silenzio
+	                  ? "ACCESA, ed e' il predefinito dal 24 ago 2026"
+	                  : "SPENTA a mano, --niente-audio-silenzio",
 	              (unsigned long long)c->taciuti,
 	              (unsigned long long)c->entrati,
 	              (unsigned long long)c->usciti, c->codec);

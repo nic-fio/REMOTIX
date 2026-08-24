@@ -592,8 +592,12 @@ uint64_t rcp_inattivita(void);
  * mette il silenzio dei trenta secondi (`staccata`), e se torna a parlare se lo
  * sente dire con `0x0F` — e quella volta la frase e' vera.
  *
- * ⛔ `0` = SPENTO, ed e' il predefinito (invariante I6): senza questa chiamata
- *    il server si comporta come prima, byte per byte.
+ * ⭐⭐ DAL 24 AGOSTO 2026 IL PREDEFINITO E' **15 000 ms**, cioe' ACCESO —
+ *     decisione dell'utente, dopo averlo guardato (§19.6, §20.3).  ⛔ `0` =
+ *     SPENTO, ed e' l'unica strada per spegnerlo: `--sfratto-ms 0`.  ⚠ Fino al
+ *     23 agosto il predefinito era `0` per l'invariante I6.
+ * ⚠ `[M]` 23-24 ago 2026: il fantasma passa da 32,13 s / 14 rifiuti a 16,83 s /
+ *   7 rifiuti.
  * ⚠ Il valore CONSIGLIATO lo da' `rcp_sfratto_consigliato()` — 15 000 ms, cioe'
  *   meta' dell'orologio del silenzio — e la ragione (il keep-alive del browser,
  *   `[M]` 15 s) sta nel riquadro sopra `SFRATTO_PREDEFINITO` in `rcp.c`.  Sotto

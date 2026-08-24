@@ -57,7 +57,8 @@
  *   `linea_morta_giudica()`, dove la grandezza e' *«quanti pacchetti NOSTRI
  *   sono usciti senza che ne tornasse uno»* e il tempo e' solo la finestra in
  *   cui si guarda.  ⭐ Li' e' UNILATERALE — stacca noi, non insegna al client a
- *   mollare — sta dietro l'interruttore `--linea-morta` (I6), e scrive nel
+ *   mollare — ⭐ dal 24 agosto 2026 e' ACCESA di suo (decisione dell'utente;
+ *   si spegne con `--niente-linea-morta`), e scrive nel
  *   registro i numeri su cui ha deciso.
  *   ⚠ E l'ALTRA causa di quella cura non e' piu' la perdita di pacchetti: dal
  *     23 agosto 2026 e' lo STALLO DELL'USCITA — «da quanto tempo non esce un

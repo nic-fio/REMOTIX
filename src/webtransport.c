@@ -2522,7 +2522,8 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 #define WT_TIENILA_VIVA_NS (10ULL * NGTCP2_SECONDS)
 
 /* ========================================================================== */
-/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e nasce SPENTA (invariante I6).           */
+/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e dal 24 ago 2026 nasce ACCESA (decisione */
+/*          dell'utente; fino al 23 nasceva spenta per l'invariante I6).      */
 /*                                                                            */
 /* LA DECISIONE E' DELL'UTENTE, 23 agosto 2026: *«se in 10 secondi non         */
 /* arrivano piu' pacchetti e' chiaro che la connessione e' morta [...] se      */
@@ -2677,7 +2678,9 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 #define WT_LM_MIN_PROVE 2u
 
 /* ⛔⭐ L'interruttore e' STATICO e non per sessione: e' una decisione del
- *     server, come `ritmo_adattivo`.  Nasce spento, e i due numeri nascono coi
+ *     server, come `ritmo_adattivo`.  ⭐ Dal 24 agosto 2026 nasce ACCESO
+ *     (decisione dell'utente), e il valore lo porta `main.c`, che e' l'unico
+ *     posto in cui il predefinito e' scritto; i due numeri nascono coi
  *     predefiniti qui sopra — `main.c` chiama `wt_linea_morta()` SEMPRE, cosi'
  *     la riga d'avvio esce in tutt'e due i casi per costruzione. */
 static bool linea_morta_accesa;
@@ -3058,10 +3061,19 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
  *    4. il prezzo si somma all'anello: `[M]` fase 8 l'anello intero misura
  *       **55,20 ms**, e 100 + 55 sta sotto il quinto di secondo.
  *
- * ⇒ **100 ms**, ed e' il valore consigliato QUANDO l'interruttore e' acceso.
- *    ⚠ `[?]` Non e' dimostrato: e' derivato.  Il banco lo spazza (50 · 100 ·
- *    200) e chi sceglie e' l'utente, perche' e' un prezzo che si VEDE. */
-#define WT_SGOMBRA_SOGLIA_CONSIGLIATA_MS 100
+ * ⇒ **100 ms**, ed e' il PREDEFINITO dal 24 agosto 2026 (decisione dell'utente:
+ *    le cure della fase 9 si accendono nel prodotto).  ⚠ `[?]` Il numero non e'
+ *    dimostrato: e' derivato dai quattro vincoli qui sopra e poi MISURATO —
+ *    `[M]` 23-24 ago 2026, banco `09-b79`, tre bracci sulla linea sana: 39,85 /
+ *    40,19 / 39,63 fotogrammi/s, **zero chiavi** in tutt'e tre, deriva finale
+ *    0,1 / 0,2 / 0,9 ms.  ⇒ Sulla linea sana la cura NON COSTA NIENTE; su rete
+ *    cattiva il prezzo e' fino a **+160 ms** di deriva, ed e' quello che
+ *    l'utente ha guardato e accettato.
+ *
+ * ⛔ Il numero sta in `webtransport.h` (`WT_SGOMBRA_SOGLIA_MS`), non qui: `main.c`
+ *    ci inizializza la sua variabile, e una seconda copia sarebbe «il
+ *    predefinito del server» diverso da «il predefinito del trasporto» il
+ *    giorno che uno dei due si tara. */
 
 /* ⛔ Il ripiego quando ngtcp2 non ha ancora ne' `smoothed_rtt` ne' `cwnd`: si
  *    assume **il pavimento dichiarato**, 20 Mbit/s = 2 500 byte/ms
@@ -3071,36 +3083,65 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
  *    troppo: dura finche' ngtcp2 non ha una misura, cioe' un giro di rete. */
 #define WT_PAVIMENTO_BYTE_MS 2500u
 
-/* ⛔⭐ INVARIANTE I6 — NASCE SPENTA.  `0` = si abbandona a ogni fotogramma piu'
- *     recente, cioe' il comportamento di oggi **byte per byte**.  Questa cura
- *     cambia quel che si VEDE, e I6 e' costata una fase intera in v1.
+/* ⛔⭐⭐ NASCE ACCESA A `WT_SGOMBRA_SOGLIA_MS` DAL 24 AGOSTO 2026 — decisione
+ *      dell'utente.  ⚠ Fino al 23 nasceva SPENTA per l'invariante I6, che vuole
+ *      cio' che cambia quel che si VEDE dietro un interruttore spento **finche'
+ *      l'utente non l'ha guardato**: l'ha guardato (§19.6, §20.3) e ha deciso.
+ *      ⇒ Il presupposto di I6 e' soddisfatto, non aggirato.
+ *
+ * ⛔ `0` resta la strada per spegnerla (`--sgombra-soglia-ms 0`): si abbandona a
+ *    ogni fotogramma piu' recente, cioe' il prodotto di ieri **byte per byte**.
  *
  * ⚠ NON serve un secondo booleano «qualcuno l'ha toccata»: `main.c` chiama
- *   `wt_sgombra_soglia()` **sempre**, all'avvio, col valore della riga di
- *   comando (0 se l'opzione non c'era) ⇒ la riga d'avvio esce in tutt'e due i
- *   casi per costruzione, non per una guardia da ricordarsi. */
+ *   `wt_sgombra_soglia()` **sempre**, all'avvio, col valore in vigore ⇒ la riga
+ *   d'avvio esce in tutt'e due i casi per costruzione, non per una guardia da
+ *   ricordarsi.  ⛔ E qui non si ripete il numero: la copia sola sta nel .h, e
+ *   il valore arriva da `main.c`. */
 static uint64_t sgombra_soglia_ms;
 
-/* ⛔ La riga che dichiara il valore IN VIGORE, e si scrive **acceso e spento**.
- *    «Spento» e «non e' mai scattato» non devono avere la stessa faccia: e'
- *    esattamente la forma E1 («scritto non e' in vigore»), la stessa ragione
- *    per cui i tre orologi di §5.3 si scrivono all'avvio. */
+/* ⛔⭐ LA RIGA CHE DICHIARA IL VALORE IN VIGORE, E SI SCRIVE ACCESA E SPENTA.
+ *
+ *     «Spenta» e «non e' mai scattata» non devono avere la stessa faccia: e'
+ *     esattamente la forma E1 («scritto non e' in vigore»), la stessa ragione
+ *     per cui i tre orologi di §5.3 si scrivono all'avvio.
+ *
+ * ⛔⛔ E DAL 24 AGOSTO 2026 DEVE DIRE **LO STATO VERO E LA RAGIONE**, non piu'
+ *      «SPENTA (I6)».  Una riga che dicesse ancora «spenta (I6)» su una cura
+ *      accesa e' peggio di nessuna riga: chi rilegge un banco crederebbe di aver
+ *      misurato il prodotto di ieri.  ⇒ Tre cose in ogni riga: se e' accesa, il
+ *      NUMERO in vigore, e COME si spegne. */
 static void sgombra_dichiara(const char *da_dove)
 {
-	registro_dice(REG_AVVIO,
-	              "⭐ FASE 9, soglia della coda video (§5.1): %llu ms%s — sopra "
-	              "la soglia un delta fermo si abbandona, sotto si TIENE.  "
-	              "Impostata da: %s",
-	              (unsigned long long)sgombra_soglia_ms,
-	              sgombra_soglia_ms
-	                  ? ""
-	                  : " (SPENTA: si abbandona a ogni fotogramma piu' recente, "
-	                    "com'e' oggi — invariante I6)",
-	              da_dove);
+	/* ⚠ E il pezzo di testa — «soglia della coda video (§5.1): N ms» — NON si
+	 *   tocca: e' quel che i banchi della fase 9 leggono per verificare il
+	 *   braccio (`09-b79-cure.py:582`).  Cambia la CODA della riga, cioe' quel
+	 *   che la riga dice; il gancio resta dov'era. */
+	if (sgombra_soglia_ms)
+		registro_dice(REG_AVVIO,
+		              "⭐ FASE 9, soglia della coda video (§5.1): %llu ms — "
+		              "ACCESA: sopra la soglia un delta fermo si abbandona, sotto "
+		              "si TIENE.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
+		              "(decisione dell'utente: le cure della fase 9 si accendono "
+		              "nel prodotto; l'ha guardate sul desktop vero, §19.6 e "
+		              "§20.3).  ⚠ Il prezzo, `[M]` 09-b79: fino a +160 ms di "
+		              "deriva su rete cattiva, ZERO sulla linea sana (39,85 / "
+		              "40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre i "
+		              "bracci).  ⛔ Si SPEGNE con `--sgombra-soglia-ms 0`, ed e' "
+		              "l'unica strada.  Impostata da: %s",
+		              (unsigned long long)sgombra_soglia_ms, da_dove);
+	else
+		registro_dice(REG_AVVIO,
+		              "⛔ FASE 9, soglia della coda video (§5.1): 0 ms — SPENTA: "
+		              "si abbandona a ogni fotogramma piu' recente, cioe' il "
+		              "prodotto fino al 23 agosto 2026 byte per byte.  ⚠ E NON E' "
+		              "il predefinito: dal 24 agosto nasce ACCESA a %u ms, quindi "
+		              "qualcuno ha battuto `--sgombra-soglia-ms 0` apposta.  "
+		              "Impostata da: %s",
+		              (unsigned)WT_SGOMBRA_SOGLIA_MS, da_dove);
 }
 
 /* ⛔ La chiama `main.c` all'avvio, SEMPRE — anche con 0, che e' il caso in cui
- *    l'opzione non c'era.  ⚠ Il ponte provvisorio che leggeva
+ *    qualcuno l'ha spenta apposta.  ⚠ Il ponte provvisorio che leggeva
  *    `REMOTIX_SGOMBRA_SOGLIA_MS` dall'ambiente era dichiarato temporaneo ed e'
  *    stato TOLTO il 23 agosto 2026, quando `--sgombra-soglia-ms` e' arrivata
  *    davvero: due strade per accendere la stessa cura sono due numeri che
@@ -3108,8 +3149,8 @@ static void sgombra_dichiara(const char *da_dove)
 void wt_sgombra_soglia(uint64_t ms)
 {
 	sgombra_soglia_ms = ms;
-	sgombra_dichiara("main.c, dalla riga di comando (--sgombra-soglia-ms; 0 "
-	                 "quando l'opzione non c'e')");
+	sgombra_dichiara("main.c, dalla riga di comando (--sgombra-soglia-ms; "
+	                 "il predefinito e' 100, e 0 la spegne)");
 }
 
 uint64_t wt_sgombra_soglia_letta(void)
@@ -3117,8 +3158,13 @@ uint64_t wt_sgombra_soglia_letta(void)
 	return sgombra_soglia_ms;
 }
 
-/* ⛔⭐ FASE 9 — IL REGOLATORE DEL RITMO: l'interruttore, e nasce SPENTO (I6).
- *    Statico e non per sessione: e' una decisione del server, non del client. */
+/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO: l'interruttore, e dal 24 agosto 2026
+ *      nasce **ACCESO** (decisione dell'utente; fino al 23 nasceva spento per
+ *      l'invariante I6, e I6 e' servita: l'utente ha guardato §19.6 e §20.3
+ *      prima di decidere).  Si spegne con `--niente-ritmo-adattivo`.
+ *    Statico e non per sessione: e' una decisione del server, non del client.
+ * ⚠ Il valore lo porta `main.c`, che e' l'unico posto in cui il predefinito e'
+ *   scritto: qui non se ne tiene una seconda copia. */
 static bool ritmo_adattivo;
 
 /* ⛔ Quanti fotogrammi delta si concede di avere indietro prima di saltarne uno.
@@ -3153,13 +3199,15 @@ static bool ritmo_adattivo;
  *      e' N: `arretrato` vale **0 o 1, mai 2**, per costruzione — e con
  *      `WT_RITMO_POSTI = 2` questo regolatore **non scatta mai**.
  *
- *      ⛔ Un banco che accendesse solo `--ritmo-adattivo` misurerebbe zero
+ *      ⛔ Un banco che lasciasse acceso il solo regolatore (cioe' che battesse
+ *      `--sgombra-soglia-ms 0` senza `--niente-ritmo-adattivo`) misurerebbe zero
  *      discese e leggerebbe «la linea porta».  Sono due fatti con la stessa
  *      faccia, e la riga qui sotto e' quel che li separa PRIMA della misura
  *      invece che dopo.
  *
- * ⇒ Il regolatore si prova con TUTT'E DUE accesi:
- *      remotix --sgombra-soglia-ms 100 --ritmo-adattivo
+ * ⭐ Dal 24 agosto 2026 il caso normale e' che siano accesi TUTT'E DUE di suo:
+ *      remotix                       (i predefiniti: soglia 100 ms + regolatore)
+ *   e la coppia che non misura niente va CHIESTA apposta.
  *
  * ⚠ E l'ordine in `main.c` non e' un caso: `wt_sgombra_soglia()` viene PRIMA,
  *   cosi' questa riga legge il valore in vigore invece di prometterne uno.
@@ -3177,18 +3225,29 @@ void wt_ritmo_adattivo(bool acceso)
 	ritmo_adattivo = acceso;
 	if (!acceso) {
 		registro_dice(REG_AVVIO,
-		              "il regolatore del ritmo e' SPENTO (invariante I6, "
-		              "`--ritmo-adattivo`): nessun fotogramma verra' mai saltato "
-		              "per la linea.  ⚠ E questa riga E' il perche' — non e' che "
-		              "non ha dovuto scattare");
+		              "⛔ il regolatore del ritmo e' SPENTO da chi ha lanciato il "
+		              "server (`--niente-ritmo-adattivo`): nessun fotogramma "
+		              "verra' mai saltato per la linea, cioe' il prodotto fino al "
+		              "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: "
+		              "dal 24 agosto nasce ACCESO (decisione dell'utente), quindi "
+		              "qualcuno l'ha spento apposta.  ⚠ E questa riga E' il "
+		              "perche' — non e' che non ha dovuto scattare");
 		return;
 	}
 	registro_dice(REG_AVVIO,
-	              "⭐ FASE 9: il regolatore del ritmo e' ACCESO "
-	              "(`--ritmo-adattivo`): un fotogramma NON parte quando %u delta "
-	              "in volo hanno ancora byte nella mia coda d'uscita.  ⚠ Ogni "
-	              "discesa finisce nel registro (I1), e non c'e' nessuna risalita "
-	              "da ricordare: `arretrato` si rilegge a ogni fotogramma",
+	              "⭐ FASE 9: il regolatore del ritmo e' ACCESO — un fotogramma "
+	              "NON parte quando %u delta in volo hanno ancora byte nella mia "
+	              "coda d'uscita.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
+	              "(decisione dell'utente: le cure della fase 9 si accendono nel "
+	              "prodotto; l'ha guardate sul desktop vero, §19.6 e §20.3).  ⚠ Il "
+	              "prezzo, `[M]` 09-b79: soglia piu' regolatore costano fino a "
+	              "+160 ms di deriva su rete cattiva, ZERO sulla linea sana "
+	              "(39,85 / 40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre "
+	              "i bracci).  ⛔ Si SPEGNE con `--niente-ritmo-adattivo`, ed e' "
+	              "l'unica strada — il nome vecchio `--ritmo-adattivo` non esiste "
+	              "piu'.  ⚠ Ogni discesa finisce nel registro (I1), e non c'e' "
+	              "nessuna risalita da ricordare: `arretrato` si rilegge a ogni "
+	              "fotogramma",
 	              (unsigned)WT_RITMO_POSTI);
 	if (!sgombra_soglia_ms)
 		registro_dice(REG_AVVIO,
@@ -3198,8 +3257,10 @@ void wt_ritmo_adattivo(bool acceso)
 		              "ogni fotogramma, quindi `arretrato` non puo' superare 1 e i "
 		              "posti sono %u.  ⚠ Un banco fatto cosi' misura ZERO discese e "
 		              "sembra dire «la linea porta»: sono due fatti con la stessa "
-		              "faccia.  ⇒ Si accendono INSIEME: --sgombra-soglia-ms 100 "
-		              "--ritmo-adattivo",
+		              "faccia.  ⇒ Coi predefiniti del 24 agosto 2026 nascono accesi "
+		              "TUTT'E DUE: chi vede questa riga ha spento la soglia a mano "
+		              "e ha lasciato acceso il regolatore, che e' la combinazione "
+		              "che non misura niente",
 		              (unsigned)WT_RITMO_POSTI);
 	else
 		registro_dice(REG_AVVIO,
@@ -3216,9 +3277,12 @@ void wt_ritmo_adattivo(bool acceso)
  *      dovuto scattare producono LO STESSO REGISTRO, cioe' nessuna riga.
  *
  * ⛔⛔ E QUESTA E' LA PIU' VISIBILE DI TUTTE — butta fuori una sessione.  I6 non
- *      e' una formalita' qui: e' il passo che in v1 e' costato l'azzeramento di
- *      una fase intera.  ⇒ Nasce spenta, e l'utente la guarda sul desktop vero
- *      prima che diventi il comportamento normale.
+ *      e' stata una formalita' qui: e' il passo che in v1 e' costato
+ *      l'azzeramento di una fase intera.  ⇒ E' nata spenta, l'utente l'ha
+ *      guardata sul desktop vero (§19.6, §20.3), e il **24 agosto 2026** ha
+ *      deciso che diventa il comportamento normale.  ⭐ Il presupposto di I6 e'
+ *      soddisfatto — non aggirato: l'interruttore c'e' ancora, e' solo girato
+ *      dall'altra parte (`--niente-linea-morta`).
  *
  * `stallo_ms`  i millisecondi senza che esca un byte di video PUR AVENDONE da
  *              mandare.  `0` = spento, e allora nessuno stallo, per lungo che
@@ -3238,17 +3302,28 @@ void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 	linea_morta_silenzio_ms = silenzio_s * 1000;
 	if (!accesa) {
 		registro_dice(REG_AVVIO,
-		              "la LINEA MORTA e' SPENTA (invariante I6, `--linea-morta`): "
-		              "nessuna sessione verra' mai chiusa per stallo dell'uscita "
-		              "ne' per silenzio del client prima dei 30 s di QUIC (§5.3).  "
-		              "⚠ E questa riga E' il perche' — non e' che non ha dovuto "
-		              "scattare");
+		              "⛔ la LINEA MORTA e' SPENTA da chi ha lanciato il server "
+		              "(`--niente-linea-morta`): nessuna sessione verra' mai "
+		              "chiusa per stallo dell'uscita ne' per silenzio del client "
+		              "prima dei 30 s di QUIC (§5.3) — cioe' il prodotto fino al "
+		              "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: "
+		              "dal 24 agosto nasce ACCESA (decisione dell'utente), quindi "
+		              "qualcuno l'ha spenta apposta.  ⚠ E questa riga E' il "
+		              "perche' — non e' che non ha dovuto scattare");
 		return;
 	}
 	registro_dice(REG_AVVIO,
-	              "⛔⭐ FASE 9: la LINEA MORTA e' ACCESA (`--linea-morta`) — il "
+	              "⛔⭐ FASE 9: la LINEA MORTA e' ACCESA — il "
 	              "filo cade e l'utente rientra A MANO (decisione dell'utente, 23 "
-	              "agosto 2026).  DUE cause, e ognuna scrive la sua riga "
+	              "agosto 2026).  ⭐ E' il PREDEFINITO dal 24 agosto 2026, e si "
+	              "SPEGNE con `--niente-linea-morta` (unica strada; il nome "
+	              "vecchio `--linea-morta` non esiste piu').  ⛔⛔ E' LA CURA CHE "
+	              "CHIUDE UNA SESSIONE: se la soglia fosse tarata male butterebbe "
+	              "fuori chi sta lavorando — `[M]` 23-24 ago il margine e' >10x "
+	              "sopra `casa-cattiva`, la linea PEGGIORE che regge (stallo "
+	              "massimo < 500 ms su dieci minuti, zero scatti), e 2,9x sotto i "
+	              "14,26 s di `raffica-forte`, che non serve nessuno.  DUE cause, "
+	              "e ognuna scrive la sua riga "
 	              "`linea-morta` col conto su cui ha deciso (I1):  (1) STALLO: "
 	              "%llu ms senza che esca un byte di video mentre ne avevamo da "
 	              "mandare — e «avevo da mandare» vuol dire byte di fotogrammi "
@@ -3360,8 +3435,9 @@ static void involo_pulisci(wt *w)
  *   invece che a ogni fotogramma piu' recente.  §5.1 lo **permette**, non lo
  *   **impone**.  Cosi' sotto congestione il video cala di RITMO restando fatto
  *   di delta, invece di diventare un flusso di sole chiavi.
- *   ⛔ E nasce SPENTA (I6): senza `--sgombra-soglia-ms N` questa funzione fa
- *   quel che ha sempre fatto, byte per byte.
+ *   ⭐ E dal 24 agosto 2026 nasce ACCESA a 100 ms (decisione dell'utente; fino
+ *   al 23 nasceva spenta per l'invariante I6).  ⛔ Con `--sgombra-soglia-ms 0`
+ *   questa funzione torna a fare quel che ha sempre fatto, byte per byte.
  */
 /*
  * ⛔⭐⭐ LA PREVISIONE FALSIFICABILE — scritta PRIMA di misurare, 23 ago 2026.
@@ -3443,7 +3519,7 @@ static void video_sgombra(wt *w, const char *perche)
 	size_t in_coda = 0;
 	unsigned arretrato = 0;
 	uint64_t attesa = 0;
-	const char *come = "l'interruttore e' spento (I6)";
+	const char *come = "la soglia e' a 0 (spenta a mano: dal 24 ago 2026 il predefinito e' 100 ms)";
 	char motivo[400];
 
 	if (!w->rcp || !w->conn)
@@ -3963,7 +4039,7 @@ static void video_regola(wt *w, uint64_t ora_ms)
  *    PERCORSO mentre non scattava.
  *
  * 1. IN REGIME, a 20 Mbit/s sul percorso vero, scena mossa, 1080p, H.264
- *    hardware, con `--sgombra-soglia-ms 100 --ritmo-adattivo`:
+ *    hardware, coi predefiniti del 24 ago 2026 (soglia 100 ms + regolatore):
  *
  *      | fotogrammi consegnati | **20-37/s** — quelli che la scena produce |
  *      | byte in uscita        | **3-12 Mbit/s**, fra un sesto e la meta'  |
@@ -6778,7 +6854,8 @@ void wt_libera(wt *w)
 		              "delta TENUTI %u, abbandonati per soglia %u, e NON "
 		              "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
 		              "forma che il ricevente non vede)",
-		              sgombra_soglia_ms ? "ACCESA" : "spenta (I6)",
+		              sgombra_soglia_ms ? "ACCESA (predefinito dal 24 ago 2026)"
+		                                : "SPENTA a mano (--sgombra-soglia-ms 0)",
 		              (unsigned long long)sgombra_soglia_ms,
 		              w->sgombra_tenuti, w->sgombra_abbandoni,
 		              w->sgombra_credito);
@@ -6799,7 +6876,8 @@ void wt_libera(wt *w)
 		              "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p "
 		              "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un "
 		              "DIFETTO da guardare, non una degradazione riuscita",
-		              ritmo_adattivo ? "ACCESO" : "spento (I6)",
+		              ritmo_adattivo ? "ACCESO (predefinito dal 24 ago 2026)"
+		                             : "SPENTO a mano (--niente-ritmo-adattivo)",
 		              ritmo_scesi, (unsigned)WT_RITMO_POSTI, diffusi);
 	}
 	/* ⛔⛔⭐ FASE 9 — IL PREZZO DELLA CURA DELL'USO-DOPO-LA-LIBERAZIONE, E IL

@@ -119,7 +119,8 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
 
 /*
- * ⛔⭐ LA CURA DEL SILENZIO DIGITALE — fase 9, e NASCE SPENTA (I6).
+ * ⛔⭐ LA CURA DEL SILENZIO DIGITALE — fase 9, e dal 24 agosto 2026 NASCE
+ *     **ACCESA** (decisione dell'utente; fino al 23 nasceva spenta per I6).
  *
  * Accesa, un blocco in cui **tutti** i campioni sono esattamente zero non
  * diventa un datagram: `audio_cod_passa()` torna `false`, il chiamante non
@@ -133,10 +134,18 @@ void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
  * congestione del video.
  *
  * ⚠ Il prezzo, e la ragione dell'interruttore, stanno nel riquadro in cima ad
- *   `audio.c`.  ⛔ E l'interruttore oggi e' **di compilazione**
- *   (`-DAUDIO_SILENZIO_PREDEFINITO=1`) perche' il codificatore vive nel figlio,
- *   che non eredita l'ambiente: la riga di comando che manca si scrive in
- *   `main.c` e in `figlio.c`, ed e' descritta li'.
+ *   `audio.c`.  ⛔⭐ E l'interruttore NON e' piu' di compilazione: il `-D`
+ *   `AUDIO_SILENZIO_PREDEFINITO` **e' stato tolto** il 24 agosto 2026, e l'unica
+ *   strada e' `--niente-audio-silenzio` sulla riga di comando del server, che
+ *   `figlio.c` ricopia in coda all'`argv` del figlio (dove vive il
+ *   codificatore) come fa gia' con `--parlantina`.  ⚠ Due strade per la stessa
+ *   cura sono due numeri che divergono.
+ *
+ * ⛔ E VALE PER DUE PROCESSI: il codificatore vero sta nel figlio, ma il tono di
+ *    prova di `--audio-prova` apre un `audio_cod` nel SERVER (`webtransport.c`).
+ *    ⇒ `main.c` chiama questa funzione per se' **e** passa l'opzione ai figli:
+ *    se ne chiamasse una sola, il banco del tono e il banco della sessione vera
+ *    misurerebbero due prodotti diversi.
  */
 void audio_silenzio_taci(bool si);
 bool audio_silenzio_acceso(void);

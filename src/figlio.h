@@ -332,14 +332,16 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioCursore cursore, FiglioTela tela, void *ctx);
 
 /*
- * ⭐⭐⭐ LE DUE CURE DELLA FASE 9 CHE VIVONO DALL'ALTRA PARTE — 23 agosto 2026.
+ * ⭐⭐⭐ LE **TRE** CURE DELLA FASE 9 CHE VIVONO DALL'ALTRA PARTE — 23 agosto
+ *      2026, e la terza (il silenzio dell'audio) e' arrivata il 24.
  *
  * ⛔ IL PROBLEMA CHE RISOLVE, ed e' l'unico motivo per cui questa funzione
- *    esiste: `codificatore_qualita_risale()` e `codificatore_tetto_banda()`
- *    sono decisioni del **server**, ma il codificatore non gira nel server —
- *    gira nel FIGLIO, che non e' un `fork` ma un `execve` con l'ambiente
+ *    esiste: `codificatore_qualita_risale()`, `codificatore_tetto_banda()` e
+ *    `audio_silenzio_taci()` sono decisioni del **server**, ma ne' il
+ *    codificatore video ne' quello audio girano nel server — girano nel FIGLIO,
+ *    che non e' un `fork` ma un `execve` con l'ambiente
  *    composto da zero (`figlio.c`, punto 5 di `diventa_ed_esegui()`).  ⇒ Una
- *    variabile d'ambiente **non arriva**, e chiamare qui i due setter
+ *    variabile d'ambiente **non arriva**, e chiamare qui i setter
  *    accenderebbe la cura nel processo sbagliato: quello che un codificatore
  *    non lo apre mai.
  *
@@ -350,6 +352,13 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
  * `qualita_risale`     la qualita' risale invece di restare giu' (I6).
  * `tetto_banda_mbit`   il **pavimento** in Mbit/s da cui il codificatore
  *                      deriva filo, punto di lavoro e serbatoio; `0` = spento.
+ * `audio_silenzio`     ⭐ un blocco d'audio tutto a zero non diventa un
+ *                      datagram.  **`true` e' il predefinito** dal 24 agosto
+ *                      2026 (decisione dell'utente), e si spegne con
+ *                      `--niente-audio-silenzio`.  ⚠ `main.c` la chiama con lo
+ *                      STESSO valore che passa ad `audio_silenzio_taci()` per
+ *                      se': il tono di prova apre un codificatore nel server, e
+ *                      due valori diversi sarebbero due prodotti diversi.
  *
  * ⚠ Si registra a parte invece di allungare `figli_accendi()`, per la ragione
  *   gia' scritta sopra `FiglioSessioneFinita`: quella firma ha gia' quattro
@@ -361,7 +370,8 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
  *    padre → figlio ha esattamente la stessa faccia di una cura che non
  *    funziona, e quelle righe sono l'unico posto in cui le due si separano.
  */
-void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit);
+void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
+                 bool audio_silenzio);
 
 /* ⛔ Spegne tutti i figli e aspetta che siano morti.  ⚠ ASPETTA, e va detto:
  * sta **dopo** l'ultimo giro del ciclo `poll`, come `aiutante_spegni()` —

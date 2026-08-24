@@ -66,6 +66,11 @@
  *   una scommessa.
  */
 #include "aiutante.h"
+/* ⛔ Per `audio_silenzio_taci()`: il tono di prova di `--audio-prova` apre un
+ *    codificatore audio in QUESTO processo, non solo nel figlio.  ⚠ Se
+ *    l'interruttore lo ricevesse solo il figlio, il banco del tono e il banco
+ *    della sessione vera misurerebbero due prodotti diversi. */
+#include "audio.h"
 #include "certificati.h"
 #include "comando.h"
 #include "figlio.h"
@@ -161,16 +166,27 @@ static void aiuto(const char *nome)
 	        "                    a pixel di F2.6\n"
 	        "  --parlantina      registro di dettaglio\n"
 	        "\n"
-	        "  ⭐ FASE 9 — le tre cure della taratura.  Nascono SPENTE tutte\n"
-	        "     e tre (invariante I6: cambiano quel che si VEDE), e il\n"
-	        "     valore in vigore finisce nel registro acceso E spento.\n"
+	        "  ⭐⭐⭐ FASE 9 — LE CINQUE CURE, E DAL 24 AGOSTO 2026 SONO ACCESE\n"
+	        "     TUTT'E CINQUE (decisione dell'utente, dopo averle guardate\n"
+	        "     sul desktop vero: l'invariante I6 e' stata percorsa, non\n"
+	        "     aggirata).  ⛔ Ognuna resta spegnibile, e con UNA strada\n"
+	        "     sola; il valore in vigore finisce nel registro all'avvio,\n"
+	        "     acceso E spento.  Le cinque, e come si spengono:\n"
+	        "        soglia sulla coda video   --sgombra-soglia-ms 0\n"
+	        "        regolatore del ritmo      --niente-ritmo-adattivo\n"
+	        "        linea morta               --niente-linea-morta\n"
+	        "        sfratto del fantasma      --sfratto-ms 0\n"
+	        "        silenzio dell'audio       --niente-audio-silenzio\n"
 	        "  --sgombra-soglia-ms N\n"
 	        "                    §5.1: un delta fermo in coda si abbandona\n"
 	        "                    solo se la coda non si svuota entro N ms;\n"
-	        "                    sotto la soglia si TIENE.  0 = spenta (si\n"
+	        "                    sotto la soglia si TIENE.  ⭐ PREDEFINITO 100\n"
+	        "                    (acceso dal 24 ago 2026).  0 = SPENTA, e si\n"
 	        "                    abbandona a ogni fotogramma piu' recente,\n"
-	        "                    com'e' oggi).  Consigliato quando si accende:\n"
-	        "                    100.  La riga la scrive webtransport.c\n"
+	        "                    com'era fino al 23 ago.  ⚠ Il prezzo, `[M]`\n"
+	        "                    09-b79: fino a +160 ms di deriva su rete\n"
+	        "                    cattiva, ZERO sulla linea sana.  La riga la\n"
+	        "                    scrive webtransport.c\n"
 	        "  --qualita-risale  la qualita' torna su di uno scalino dopo un\n"
 	        "                    po' di fotogrammi comodi sotto il tetto di\n"
 	        "                    §6.2.  Senza, scesa una volta resta giu' per\n"
@@ -186,22 +202,45 @@ static void aiuto(const char *nome)
 	        "                    occupato da un client che tace da piu' di N\n"
 	        "                    ms, e a chiedere quel posto e' un client\n"
 	        "                    dello STESSO utente, il posto gli viene tolto\n"
-	        "                    e va a chi arriva.  Senza, il posto si libera\n"
-	        "                    solo all'orologio del silenzio (30 s), e chi\n"
-	        "                    rientra dopo una caduta si sente dire «hai\n"
-	        "                    gia' una sessione attiva altrove» — che e'\n"
-	        "                    LUI.  0 = spento.  Consigliato quando si\n"
-	        "                    accende: 15000, cioe' meta' del silenzio (sotto\n"
-	        "                    si rischia di sfrattare un client vivo e fermo:\n"
-	        "                    il keep-alive del browser tace 15 s)\n"
-	        "  --linea-morta     ⛔⭐ LA LINEA MORTA, e nasce SPENTA: accesa,\n"
-	        "                    una sessione viene CHIUSA quando la linea non\n"
-	        "                    si puo' piu' servire — il filo cade e si\n"
-	        "                    rientra a mano (decisione dell'utente, 23 ago\n"
-	        "                    2026).  DUE cause: lo STALLO dell'uscita e il\n"
-	        "                    SILENZIO del client.  Ogni scatto scrive nel\n"
-	        "                    registro una riga `linea-morta` coi numeri su\n"
-	        "                    cui ha deciso (I1)\n"
+	        "                    e va a chi arriva.  ⭐ PREDEFINITO 15000\n"
+	        "                    (acceso dal 24 ago 2026), cioe' meta'\n"
+	        "                    dell'orologio del silenzio: sotto non si\n"
+	        "                    scende, perche' il keep-alive del browser tace\n"
+	        "                    `[M]` 15 s e si sfratterebbe un client VIVO e\n"
+	        "                    fermo.  ⚠ `[M]` il fantasma passa da 32,13 s e\n"
+	        "                    14 rifiuti a 16,83 s e 7.  0 = SPENTO, e il\n"
+	        "                    posto si libera solo all'orologio del silenzio\n"
+	        "                    (30 s): chi rientra dopo una caduta si sente\n"
+	        "                    dire che il posto e' occupato — da se stesso\n"
+	        "  --niente-ritmo-adattivo\n"
+	        "                    ⭐⭐ SPEGNE il regolatore del ritmo, che dal 24\n"
+	        "                    ago 2026 e' ACCESO di suo: un fotogramma non\n"
+	        "                    parte quando due delta in volo hanno ancora\n"
+	        "                    byte nella coda d'uscita.  ⚠ Il nome vecchio\n"
+	        "                    `--ritmo-adattivo` NON esiste piu\'\n"
+	        "  --niente-linea-morta\n"
+	        "                    ⛔⭐ SPEGNE la LINEA MORTA, che dal 24 ago 2026\n"
+	        "                    e' ACCESA di suo: una sessione viene CHIUSA\n"
+	        "                    quando la linea non si puo\' piu\' servire — il\n"
+	        "                    filo cade e si rientra a mano (decisione\n"
+	        "                    dell\'utente, 23 ago 2026).  DUE cause: lo\n"
+	        "                    STALLO dell\'uscita e il SILENZIO del client;\n"
+	        "                    ogni scatto scrive nel registro una riga\n"
+	        "                    `linea-morta` coi numeri su cui ha deciso (I1).\n"
+	        "                    ⛔⛔ E\' LA CURA CHE CHIUDE UNA SESSIONE: `[M]`\n"
+	        "                    margine >10x sopra la linea peggiore che REGGE\n"
+	        "                    e 2,9x sotto quella che non serve nessuno.\n"
+	        "                    ⚠ Il nome vecchio `--linea-morta` NON esiste piu\'\n"
+	        "  --niente-audio-silenzio\n"
+	        "                    ⭐⭐ SPEGNE il SILENZIO DELL\'AUDIO, che dal 24\n"
+	        "                    ago 2026 e\' ACCESO di suo: un blocco in cui\n"
+	        "                    TUTTI i campioni sono esattamente zero non\n"
+	        "                    diventa un datagram.  ⚠ `[M]` 09-b84: 102,1\n"
+	        "                    volte meno traffico a schermo fermo (557,6 →\n"
+	        "                    5,5 kbit/s), 1 248 blocchi taciuti su 1 248; il\n"
+	        "                    prezzo e\' +2 «mancati» su 5 000 al cliente.\n"
+	        "                    ⛔ Fino al 23 ago era un `-D` di compilazione,\n"
+	        "                    e quel `-D` e\' stato TOLTO: una strada sola\n"
 	        "  --linea-morta-stallo-ms N\n"
 	        "                    da quanti ms non esce un fotogramma PUR\n"
 	        "                    AVENDONE da mandare.  ⛔ Le due meta' contano\n"
@@ -565,11 +604,36 @@ static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
  *    installazione normale (invariante I6). */
 static uint32_t audio_prova_hz;
 
-/* ⛔⭐⭐ I TRE INTERRUTTORI DELLA FASE 9, E NASCONO TUTT'E TRE SPENTI.
+/* ⛔⭐⭐⭐ GLI INTERRUTTORI DELLA FASE 9 — E IL 24 AGOSTO 2026 SI SONO GIRATI.
  *
- *      Invariante I6: cio' che cambia quel che si VEDE sta dietro un
- *      interruttore spento finche' l'utente non l'ha guardato sul desktop
- *      vero.  ⚠ Fino al 23 agosto 2026 le tre cure esistevano ma **nessuno le
+ *      **Decisione dell'utente**: *«il prodotto cambia in meglio; questa fase
+ *      era per rendere piu' solido il funzionamento di remotix su reti
+ *      degradate, senza pretendere di fare miracoli»*.  ⇒ Le cinque cure della
+ *      fase 9 nascono ACCESE, e ognuna resta spegnibile con UNA strada sola.
+ *
+ * ⛔ PERCHE' PRIMA ERANO SPENTE, e non e' burocrazia: l'invariante I6 — *cio'
+ *    che cambia quel che l'utente VEDE resta dietro un interruttore spento
+ *    finche' non l'ha guardato*.  ⚠ In v1 una fase intera fu AZZERATA per aver
+ *    consegnato miglioramenti che il regista non aveva mai visto.
+ * ⭐ E ADESSO IL PRESUPPOSTO E' SODDISFATTO: l'utente ha guardato (§19.6,
+ *    §20.3) e ha deciso.  ⇒ I6 non e' aggirata, e' stata percorsa fino in
+ *    fondo — l'interruttore c'e' ancora, e' solo girato dall'altra parte.
+ *
+ * ⛔⛔ E IL NOME DELL'INTERRUTTORE CONTA.  `--ritmo-adattivo` e `--linea-morta`
+ *      erano opzioni senza argomento che volevano dire «accendi»: col
+ *      predefinito acceso non vogliono piu' dire niente, e un'opzione che non
+ *      fa niente e' peggio di un'opzione che non c'e' (chi la batte crede di
+ *      aver tarato qualcosa).  ⇒ Sono state SOSTITUITE dal loro contrario —
+ *      `--niente-ritmo-adattivo`, `--niente-linea-morta`,
+ *      `--niente-audio-silenzio` — e i nomi vecchi rispondono con un messaggio
+ *      e un'uscita 2, non con un silenzio.
+ *
+ * ⛔ UNA STRADA SOLA PER CIASCUNA CURA: due modi di accendere la stessa cosa
+ *    sono due numeri che divergono, ed e' il motivo per cui il ponte via
+ *    ambiente e' gia' stato tolto una volta (23 agosto 2026) e per cui il `-D`
+ *    `AUDIO_SILENZIO_PREDEFINITO` e' stato tolto oggi.
+ *
+ *      Fino al 23 agosto 2026 le cure esistevano ma **nessuno le
  *      chiamava**: un interruttore che non si puo' accendere non e' un
  *      interruttore, e' codice morto — e la fase 9 non poteva misurare ne' il
  *      prima ne' il dopo.
@@ -581,25 +645,59 @@ static uint32_t audio_prova_hz;
  *    passano con una variabile d'ambiente (non arriverebbe): si passano nella
  *    riga di comando del figlio, come `--parlantina` (`figlio.c`, il riquadro
  *    in `diventa_ed_esegui()`), e `figli_fase9()` e' la porta. */
-static uint64_t sgombra_soglia_ms;  /* --sgombra-soglia-ms, 0 = spenta   */
+/* ⭐ ACCESA di suo a 100 ms (⚠ il numero sta in `webtransport.h`, copia sola).
+ * ⚠ IL PREZZO, `[M]` 09-b79 23-24 ago 2026: insieme al regolatore del ritmo,
+ *   fino a **+160 ms** di deriva su rete cattiva, e **zero** sulla linea sana —
+ *   39,85 / 40,19 / 39,63 fotogrammi/s nei tre bracci, **zero chiavi** in
+ *   tutt'e tre.  ⛔ Si spegne con `--sgombra-soglia-ms 0`. */
+static uint64_t sgombra_soglia_ms = WT_SGOMBRA_SOGLIA_MS;
+/* ⚠ Queste due NON sono fra le cinque che si accendono: restano spente (I6),
+ *   perche' l'utente non le ha ancora guardate. */
 static bool qualita_risale;         /* --qualita-risale, assente = spenta */
 static uint32_t tetto_banda_mbit;   /* --tetto-banda-mbit, 0 = spento    */
 /* ⛔⭐ La QUARTA, ed e' la sola che sta nel TRASPORTO come la prima: il ritmo
  *     lo decide chi vede la coda d'uscita.  ⚠ E dipende dalla prima — con
  *     `--sgombra-soglia-ms 0` non scatta mai, e il server lo SCRIVE all'avvio
  *     invece di lasciar misurare un anello morto (`webtransport.c`,
- *     `wt_ritmo_adattivo()`). */
-static bool ritmo_adattivo;         /* --ritmo-adattivo, assente = spento */
+ *     `wt_ritmo_adattivo()`).  ⭐ Coi predefiniti nascono accesi tutt'e due,
+ *     che e' l'unica combinazione in cui questo regolatore misura qualcosa.
+ * ⚠ IL PREZZO e' lo stesso della soglia, ed e' scritto qui sopra: le due cure
+ *   si sono misurate insieme e non hanno due prezzi separati. */
+static bool ritmo_adattivo = true;  /* ⭐ acceso; --niente-ritmo-adattivo spegne */
 /* ⛔⭐⭐ E LA QUINTA, che e' di un'altra specie: le altre quattro cambiano
  *      QUANTO BENE si vede, questa decide se la sessione ESISTE ancora.
  *      Decisione dell'utente del 23 agosto 2026: una linea che perde a raffiche
  *      non si serve, si dichiara morta — il filo cade e si rientra a mano.
  * ⛔ I due numeri partono dai predefiniti di `webtransport.h`, che sono l'unica
  *    copia; le opzioni servono al banco, che deve poterli muovere senza
- *    ricompilare. */
-static bool linea_morta;            /* --linea-morta, assente = spenta   */
+ *    ricompilare.
+ * ⚠⚠ IL PREZZO, ED E' IL PIU' CARO DEI CINQUE — `[M]` 23-24 agosto 2026:
+ *    margine **>10×** sopra `casa-cattiva`, la linea PEGGIORE che regge (dieci
+ *    minuti, stallo massimo < 500 ms, zero scatti), e **2,9×** sotto i 14,26 s
+ *    di `raffica-forte`, che non serve nessuno.  ⛔ E' LA CURA CHE CHIUDE UNA
+ *    SESSIONE: se la soglia fosse tarata male butterebbe fuori chi lavora.
+ *    ⇒ Chi tocca `WT_LM_STALLO_MS` rimisura quei due margini, o consegna un
+ *    prodotto che stacca la gente per un numero che nessuno ha verificato. */
+static bool linea_morta = true;     /* ⭐ accesa; --niente-linea-morta spegne */
 static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
+/* ⛔⭐⭐ E L'ULTIMA DELLE CINQUE CHE SI ACCENDONO, ed e' di un'altra specie
+ *      ancora: non tocca il video, tocca l'AUDIO.  Un blocco in cui
+ *      **tutti** i campioni sono esattamente zero non diventa un datagram.
+ *
+ * ⛔ NON VIVE QUI, e non vive nemmeno in un posto solo: il codificatore vero sta
+ *    nel FIGLIO (`figli_fase9()`), ma `--audio-prova` ne apre uno anche in
+ *    QUESTO processo (`webtransport.c`).  ⇒ Il valore si consegna a tutt'e due,
+ *    dallo stesso `bool`, o i due banchi misurerebbero due prodotti diversi.
+ * ⚠ `[M]` 24 ago 2026, 09-b84: **102,1 volte** meno traffico a schermo fermo
+ *   (557,6 → 5,5 kbit/s), tono di prova puro **1,000**, copertura **0,9996**,
+ *   **1 248 blocchi taciuti su 1 248**.  ⚠ Il prezzo: i `mancati` del cliente
+ *   salgono di **2 su 5 000** — un buco VOLUTO lascia lo stesso salto di
+ *   `istante` di uno perso.
+ * ⛔ Fino al 23 agosto l'interruttore era di COMPILAZIONE
+ *    (`-DAUDIO_SILENZIO_PREDEFINITO=1`), e quel `-D` e' stato tolto: una strada
+ *    sola. */
+static bool audio_silenzio = true;  /* ⭐ acceso; --niente-audio-silenzio spegne */
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
@@ -1089,30 +1187,64 @@ int main(int argc, char **argv)
 		 *      suggerirebbe una taratura che non sta qui (i posti sono
 		 *      `WT_RITMO_POSTI` in `webtransport.c`, e li tara il banco).
 		 *
-		 * ⛔ Nasce SPENTO (I6) perche' cambia QUEL CHE SI VEDE: meno fotogrammi
-		 *    quando la linea non porta.  L'utente lo giudica sul desktop vero
-		 *    prima che diventi il comportamento normale — e' la lezione pagata
-		 *    con l'azzeramento della fase 10 di v1.
+		 * ⛔ E' NATO SPENTO (I6) perche' cambia QUEL CHE SI VEDE: meno fotogrammi
+		 *    quando la linea non porta.  L'utente l'ha giudicato sul desktop vero
+		 *    (§19.6, §20.3) prima che diventasse il comportamento normale — e' la
+		 *    lezione pagata con l'azzeramento della fase 10 di v1.  ⭐ Il 24
+		 *    agosto 2026 ha deciso, e adesso nasce ACCESO: qui resta il solo
+		 *    contrario.
 		 *
 		 * ⚠⚠ E NON BASTA DA SOLO: senza `--sgombra-soglia-ms N` la coda dei
 		 *    delta si svuota a ogni fotogramma, l'arretrato non supera 1 e
 		 *    questo regolatore non scatta MAI.  Il server lo SCRIVE all'avvio,
-		 *    cosi' nessuno misura un anello morto credendolo vivo. */
-		else if (strcmp(a, "--ritmo-adattivo") == 0)
-			ritmo_adattivo = true;
+		 *    cosi' nessuno misura un anello morto credendolo vivo.  ⭐ Coi
+		 *    predefiniti nascono accesi tutt'e due, quindi il caso morto va
+		 *    chiesto apposta. */
+		else if (strcmp(a, "--niente-ritmo-adattivo") == 0)
+			ritmo_adattivo = false;
+		/* ⛔⭐ E IL NOME VECCHIO NON C'E' PIU', E NON TACE SUL PERCHE' — la
+		 *     stessa forma di `--sblocca` piu' sotto.  `--ritmo-adattivo`
+		 *     voleva dire «accendi»: col predefinito acceso non vuol dire
+		 *     niente, e accettarlo in silenzio sarebbe la SECONDA strada per la
+		 *     stessa cura.  ⚠ Un banco che lo batte deve leggere il cambio, non
+		 *     cercare un refuso. */
+		else if (strcmp(a, "--ritmo-adattivo") == 0) {
+			fprintf(stderr,
+			        "⛔ --ritmo-adattivo non esiste piu': dal 24 agosto 2026 il "
+			        "regolatore del ritmo e' ACCESO\n"
+			        "   di suo (decisione dell'utente).  Per SPEGNERLO: "
+			        "--niente-ritmo-adattivo\n");
+			return 2;
+		}
 		/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, decisione dell'utente del 23 agosto
 		 *      2026: una linea che perde a raffiche non si serve, si dichiara
 		 *      morta — il filo cade e l'utente rientra a mano.
 		 *
 		 * ⛔ E' l'interruttore piu' visibile del prodotto: BUTTA FUORI UNA
-		 *    SESSIONE.  Nasce spento (I6) e senza discussione: l'utente lo
-		 *    guarda sul desktop vero prima che diventi il comportamento
-		 *    normale.  ⚠ I due numeri hanno un'opzione ciascuno perche' il
-		 *    banco deve poterli muovere senza ricompilare — e sono l'UNICA
-		 *    strada, niente variabili d'ambiente (la ragione sta accanto a
-		 *    `wt_sgombra_soglia()`: due strade sono due numeri che divergono). */
-		else if (strcmp(a, "--linea-morta") == 0)
-			linea_morta = true;
+		 *    SESSIONE.  E' nato spento (I6) e senza discussione: l'utente l'ha
+		 *    guardato sul desktop vero (§19.6, §20.3) prima che diventasse il
+		 *    comportamento normale.  ⭐ Il 24 agosto 2026 ha deciso, e adesso
+		 *    nasce ACCESO: qui resta il solo contrario.  ⚠ I due numeri hanno
+		 *    un'opzione ciascuno perche' il banco deve poterli muovere senza
+		 *    ricompilare — e sono l'UNICA strada, niente variabili d'ambiente
+		 *    (la ragione sta accanto a `wt_sgombra_soglia()`: due strade sono
+		 *    due numeri che divergono).
+		 * ⚠ E i due `0` NON sono una seconda strada per spegnere la cura:
+		 *   spengono una CAUSA per volta, e la riga d'avvio dice quale resta.
+		 *   Chi vuole il prodotto di ieri batte `--niente-linea-morta`. */
+		else if (strcmp(a, "--niente-linea-morta") == 0)
+			linea_morta = false;
+		/* ⛔⭐ E ANCHE QUI IL NOME VECCHIO E' TOLTO E SPIEGATO, non lasciato a
+		 *     non fare niente: e' la stessa regola con cui il 23 agosto e'
+		 *     sparita `--linea-morta-permille`. */
+		else if (strcmp(a, "--linea-morta") == 0) {
+			fprintf(stderr,
+			        "⛔ --linea-morta non esiste piu': dal 24 agosto 2026 la "
+			        "linea morta e' ACCESA di suo\n"
+			        "   (decisione dell'utente; stallo 5000 ms, silenzio 10 s).  "
+			        "Per SPEGNERLA: --niente-linea-morta\n");
+			return 2;
+		}
 		/* ⛔⛔ E `--linea-morta-permille` NON C'E' PIU', ed e' un'opzione TOLTA
 		 *      apposta invece che lasciata a non fare niente — 23 agosto 2026.
 		 *      La frazione di perdita e' stata refutata dal suo banco
@@ -1129,6 +1261,31 @@ int main(int argc, char **argv)
 			linea_morta_stallo_ms = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--linea-morta-silenzio-s") == 0 && v)
 			linea_morta_silenzio_s = strtoull(argv[++i], NULL, 10);
+		/* ⛔⭐⭐ LA QUINTA CURA — IL SILENZIO DELL'AUDIO, e fino al 23 agosto
+		 *      2026 il suo interruttore era di COMPILAZIONE
+		 *      (`-DAUDIO_SILENZIO_PREDEFINITO=1`).
+		 *
+		 * ⛔ Il `-D` e' stato TOLTO, non lasciato accanto: due strade per la
+		 *    stessa cura sono due numeri che divergono.  ⚠ Chi ricostruisce
+		 *    `09-b84-audio-silenzio.py` deve saperlo — quel banco appaiava due
+		 *    binari con un solo `-D` di differenza, e adesso il braccio spento
+		 *    si fa con questa opzione, sullo STESSO binario (che e' meglio: un
+		 *    imputato in meno).
+		 *
+		 * ⚠ Senza argomento, come `--parlantina`: e' un si'/no, e la soglia non
+		 *   esiste apposta — si tace solo sul silenzio DIGITALE (tutti i
+		 *   campioni esattamente 0), che e' l'unico caso in cui «spedito» e
+		 *   «non spedito» suonano identici.  Una soglia («sotto -60 dB») sarebbe
+		 *   una decisione sul suono dell'utente presa dal codice.
+		 *
+		 * ⛔⛔ E VA CONSEGNATA A DUE PROCESSI: il codificatore vero vive nel
+		 *      FIGLIO (`figli_fase9()`, che la ricopia nell'`argv` del figlio
+		 *      perche' l'ambiente li' e' composto da zero), ma `--audio-prova`
+		 *      ne apre uno anche in QUESTO processo.  Consegnarla a uno solo
+		 *      farebbe misurare al banco del tono un prodotto diverso da quello
+		 *      del banco della sessione vera. */
+		else if (strcmp(a, "--niente-audio-silenzio") == 0)
+			audio_silenzio = false;
 		else if (strcmp(a, "--sblocca") == 0) {
 			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
 			 *     — rilievo R12.1, 10 agosto 2026 notte.
@@ -1219,16 +1376,32 @@ int main(int argc, char **argv)
 	/* ⛔⭐ E LO SFRATTO SI DICHIARA SEMPRE, acceso E spento — come la soglia
 	 *     della coda video e al contrario del tono di prova: qui «spento» non
 	 *     e' rumore, e' il fatto che chi legge il registro dopo un
-	 *     `GIA_ATTIVA_REMOTA` deve poter sapere subito. */
-	registro_dice(REG_AVVIO,
-	              "⭐ fase 9 — sfratto del fantasma: soglia %llu ms%s "
-	              "(--sfratto-ms; consigliato %llu, cioe' meta' dell'orologio "
-	              "del silenzio).  Quando e' acceso, il posto di un client che "
-	              "tace da piu' della soglia va a un client dello STESSO utente "
-	              "che lo chieda — ⛔ mai fra utenti diversi",
-	              (unsigned long long)rcp_sfratto(),
-	              rcp_sfratto() ? "" : " (SPENTO)",
-	              (unsigned long long)rcp_sfratto_consigliato());
+	 *     `GIA_ATTIVA_REMOTA` deve poter sapere subito.
+	 * ⛔⛔ E DAL 24 AGOSTO 2026 LA RIGA DICE LO STATO VERO E LA RAGIONE: una
+	 *      riga che dicesse ancora «SPENTO (I6)» su una cura accesa e' peggio di
+	 *      nessuna riga. */
+	if (rcp_sfratto())
+		registro_dice(REG_AVVIO,
+		              "⭐ fase 9 — sfratto del fantasma: soglia %llu ms, ACCESO. "
+		              " Il posto di un client che tace da piu' della soglia va a "
+		              "un client dello STESSO utente che lo chieda — ⛔ mai fra "
+		              "utenti diversi.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
+		              "(decisione dell'utente; e' meta' dell'orologio del "
+		              "silenzio, %llu ms).  ⚠ `[M]` il fantasma passa da 32,13 s "
+		              "e 14 rifiuti a 16,83 s e 7.  ⛔ Si SPEGNE con "
+		              "`--sfratto-ms 0`, ed e' l'unica strada",
+		              (unsigned long long)rcp_sfratto(),
+		              (unsigned long long)rcp_sfratto_consigliato());
+	else
+		registro_dice(REG_AVVIO,
+		              "⛔ fase 9 — sfratto del fantasma: soglia 0 ms, SPENTO a "
+		              "mano (`--sfratto-ms 0`).  Il posto si liberera' solo "
+		              "all'orologio del silenzio (30 s), e chi rientra dopo una "
+		              "caduta si sentira' dire che il posto e' occupato — da se "
+		              "stesso.  ⚠ E NON E' il predefinito: dal 24 agosto 2026 "
+		              "nasce ACCESO a %llu ms (decisione dell'utente), quindi "
+		              "qualcuno l'ha spento apposta",
+		              (unsigned long long)rcp_sfratto_consigliato());
 
 	/* ⛔ E il tono di prova si dichiara QUI, prima di ogni sessione: un server
 	 *    che suonasse un tono senza dirlo sarebbe un difetto travestito da
@@ -1236,6 +1409,16 @@ int main(int argc, char **argv)
 	 *    acceso, ed e' voluto: un registro che ripete «spento» a ogni avvio
 	 *    non si legge piu'. */
 	wt_audio_prova(audio_prova_hz);
+
+	/* ⛔⭐⭐ E IL SILENZIO DELL'AUDIO SI CONSEGNA A QUESTO PROCESSO, non solo ai
+	 *      figli.  `--audio-prova` apre un `audio_cod` qui dentro
+	 *      (`webtransport.c`): senza questa riga il tono di prova continuerebbe
+	 *      a spedire i suoi zero mentre la sessione vera li tace, e i due banchi
+	 *      misurerebbero due prodotti diversi con lo stesso md5.
+	 * ⚠ La riga del valore IN VIGORE la scrive `audio.c` all'apertura di ogni
+	 *   codificatore — qui non se ne scrive una seconda, o «impostato» e «in
+	 *   vigore» diventerebbero due fatti con la stessa faccia. */
+	audio_silenzio_taci(audio_silenzio);
 
 	/* ⛔⭐ E LA SOGLIA DELLA CODA VIDEO SI DICHIARA SEMPRE, accesa **e** spenta
 	 *     — al contrario del tono di prova qui sopra, e la differenza non e'
@@ -1351,12 +1534,14 @@ int main(int argc, char **argv)
 	/* ⛔⭐⭐ LE DUE CURE CHE VIVONO NEL FIGLIO — e questa riga e' l'unica che
 	 *      le fa esistere.  ⚠ Qui NON si accende niente: si consegna alla
 	 *      tabella dei figli quel che ogni figlio dovra' ripetere a se stesso
-	 *      dopo l'`execve`, perche' il codificatore sta di la' e questo
-	 *      processo non lo apre mai.  ⛔ E chi dichiarera' il valore in vigore
+	 *      dopo l'`execve`, perche' i codificatori stanno di la'.  ⚠ Il
+	 *      silenzio dell'audio fa eccezione a meta': il codificatore del TONO DI
+	 *      PROVA si apre anche qui, ed e' per questo che `audio_silenzio_taci()`
+	 *      qui sopra riceve lo STESSO `bool`.  ⛔ E chi dichiarera' il valore in vigore
 	 *      sara' `codificatore.c`, all'apertura di ogni codificatore: se
 	 *      l'opzione si perdesse per strada, quelle righe direbbero «spento»
 	 *      e il difetto si vedrebbe subito (forma D5). */
-	figli_fase9(prole, qualita_risale, tetto_banda_mbit);
+	figli_fase9(prole, qualita_risale, tetto_banda_mbit, audio_silenzio);
 
 	/* ⛔ Chi possiede questo processo, scritto una volta e non dedotto dal
 	 *    lettore: da qui dipende se i figli potranno DAVVERO scendere a un

@@ -3759,6 +3759,11 @@ su 20 core. ⇒ L'ipotesi «macchina carica» è **esclusa**, e quel che resta �
 ⇒ Non è una soglia: è un **punto di biforcazione**. Lo stesso ingresso dà due uscite, e quale delle
 due dipende da come è andata la prima manciata di secondi.
 
+> ⛔⭐⭐ **«BISTABILE» È LA PAROLA SBAGLIATA, e la correzione è in §21.2** — *24 agosto*. Non sono due
+> rami fra cui il prodotto sceglie: è **un innesco a senso unico**, con una probabilità **costante**
+> ogni secondo. I giri da 25 s non erano una moneta lanciata sul prodotto: erano **una moneta
+> lanciata su quanto a lungo avevamo guardato**.
+
 ### 17.11-ter ⭐⭐⭐ IL GRADINO È DOPPIO, e le due metà stanno lontanissime
 
 | | dove casca | che cos'è |
@@ -4495,3 +4500,151 @@ diretta del 331 aspetta quello strumento. ⚠ E il giro è a **PCM**: il termine
 ⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
 `/media/REMOTIX/tmp/09nr10/film/09-b85-claquette-calma-p000.mp4` (70 s, **34 attacchi**), coi gemelli
 `-p300`/`-m300` a sfalso noto, e `-dura-` per il caso sotto carico. Il server **7973 è acceso**.
+
+---
+
+# §21 · ⭐⭐⭐ LA CHIUSURA — *24 agosto 2026*: le cure si accendono, e la parola «bistabile» cade
+
+## 21.1 ⭐⭐ IL GIUDIZIO DELL'UTENTE SUL SINCRONISMO — **alla cieca, e il metro era il suo orecchio**
+
+⛔ **La prova di §16.4 era fallita per un errore di disegno mio**: avevo chiesto un giudizio sul
+sincronismo guardando **pura grana**, cioè l'immagine con meno appigli possibili. ⇒ Rifatta con la
+claquette di §20.3 — un cartello che sbatte, **34 volte in 70 s** — e ⭐ **alla cieca, con tre
+gemelli**, senza dire all'utente quale fosse quale.
+
+| ordine | che cosa c'era **nel file** | il suo giudizio |
+|---|---|---|
+| 1° | audio **321 ms in anticipo** | *«perfetto»* |
+| 2° | **allineato** (21 ms) | *«perfetto»* · *«il bip è in sincrono con il flash»* |
+| 3° | audio **279 ms in ritardo** | ⭐ *«il flash è in anticipo rispetto al bip»* |
+
+⭐⭐ **Ha riconosciuto il ritardo vero, con la direzione giusta, senza saperlo.** ⇒ Il suo orecchio è
+**tarato** su questa scala, e i suoi giudizi valgono — che è precisamente quel che mancava a §16.4.
+
+⛔ **E il verdetto è che il difetto non arriva.** Il filmato **allineato** gli è arrivato **in
+sincrono**. Se il prodotto aggiungesse davvero i **+331 ms** di §16.4, quel filmato gli sarebbe
+suonato **come il terzo** — riconoscibile, perché ha appena dimostrato di riconoscere 279 ms.
+⇒ **Il ritardo che raggiunge l'orecchio è sotto la soglia che lui sa riconoscere**, cioè **< ~280 ms**,
+e probabilmente molto meno.
+
+⚠ **Che cosa questo NON dice**, e va scritto: fra il 1° e il 2° non ha visto differenza, e sono
+distanti **321 ms**. ⇒ Dalla parte dell'**anticipo** la sua risoluzione è più grossa di 300 ms. Ma il
+cuscino spinge dalla parte del **ritardo**, ed è lì che discrimina. ⚠ E il giro è a PCM: il termine
+di Opus non c'è dentro.
+
+⇒ ⭐ **§20.3-quater va letta con questo accanto**: il conto con la soglia ITU dice *«si sentirebbe»*
+**se** i 331 ms arrivassero. `[M]` L'orecchio dice che **non arrivano**. Le due cose non si
+contraddicono: §20.3 misura il cuscino **dentro la pagina**, e la latenza di pittura del video lo
+compensa in gran parte — la parte che **nessuna delle due misure di ieri poteva vedere da sola**.
+
+⛔ **E una correzione mia, presa e ritirata in tre minuti**: dopo i primi due *«perfetto»* avevo
+concluso che `mpv` rimettesse in sincrono i flussi e che la prova fosse **nulla**. ⚠ Era una
+conclusione affrettata su due dati: **il terzo giudizio l'ha smentita**. Lo scrivo perché la fretta di
+dichiarare nullo uno strumento è lo stesso difetto della fretta di dichiararlo buono.
+
+## 21.2 ⭐⭐⭐ «BISTABILE» ERA LA PAROLA SBAGLIATA — è **un innesco a rischio costante**
+
+`banchi/09-b83-biforcazione.py` · `[M]` 24 agosto · casella `perdita-0,20` · **40 giri** a due durate
+· binario `56c62bb0…` · cure spente.
+
+**Prima campagna** (20 giri da 25 s): spirale **13 volte su 20**. Chiavi **0** in 7 giri, **≥ 5** in
+13, ⛔ **nessun giro fra 1 e 4**: due rami, non una distribuzione larga.
+
+⛔ **E il fatto che li distingue nei primi dieci secondi NON C'È: 43 prove su 43 negative**
+(soglia Bonferroni 0,05/43, permutazione esatta sulla somma dei ranghi). ⭐ **E si è capito perché** —
+gli istanti d'accensione (primo abbandono §5.1 a regime):
+
+> **3,1 · 3,2 · 4,3 · 4,5 · 5,3 · 8,0 · 8,8 · 9,5 · 10,5 · 11,4 · 18,4 · 18,6 · 24,9 s**
+
+⇒ **5 accensioni su 13 cadono DOPO i dieci secondi.** In quella finestra non c'era niente da trovare
+perché in quei giri la spirale **non era ancora partita**. ⚠ La finestra corta era un limite del
+**disegno**, dichiarato come tale e non attribuito al prodotto.
+
+### 21.2-bis ⭐⭐ LA PROVA A DUE DURATE — la previsione regge
+
+| durata del giro | spirale **osservata** | **attesa** dal rischio costante |
+|---|---|---|
+| **10 s** | **35 %** (7 su 20) | 31 % |
+| **50 s** | **90 %** (18 su 20) | 92 % |
+
+`[M]` λ = **0,0529 al secondo**. Le prove pre-registrate: **T3** — un solo λ spiega tutte e tre le
+durate? **p = 0,53**, non si rifiuta. **T4** — c'è una forma nel tempo? **p = 0,055**, sopra la
+soglia di 0,0125: nessuna forma.
+
+> ⇒ ⭐⭐⭐ **Non sono due comportamenti fra cui il prodotto sceglie. È un innesco A SENSO UNICO: ogni
+> secondo ha la stessa probabilità (~5 %) di accendersi, e una volta acceso non si spegne più.**
+
+⛔⛔ **E la conseguenza è la cosa che conta**, perché tocca ogni numero di §17:
+
+- tempo **mediano** perché si accenda: **13 secondi**;
+- in **un minuto** di lavoro su quella linea è quasi certo;
+- in **un'ora** — che è la durata vera di una sessione — è **certo**.
+
+⇒ ⚠ **I nostri banchi girano venticinque secondi; le sessioni durano ore.** Ogni misura presa vicino
+al bordo della perdita **sottostima, e non di poco**: quel che al banco appare come *«a volte
+succede»* sul desktop vero è **succede sempre, aspetta solo il momento**.
+⭐ E rilegge anche il *«è tutto fluido»* di §19.1: quei trenta secondi stavano dentro la finestra in
+cui, statisticamente, spesso non si è ancora acceso. ⛔ **Non lo smentisce** — ma dice che **una
+sessione lunga su quella linea andrebbe guardata prima di concludere**.
+
+**Le ipotesi, una per una** `[M]`: la perdita non era la stessa ⇒ **esclusa** (0,165-0,255 % in
+entrambe le famiglie) · l'avvio lento di CUBIC ⇒ **non verificata** (`ssthresh` lascia l'infinito a
+~2 s in tutt'e due) · la scena ⇒ **esclusa** (prima chiave 58,44-58,88 kB in entrambe) · la soglia
+dei tre pacchetti ⇒ **non verificata** · macchina carica ⇒ **esclusa** (CPU 5,1-6,5 % in tutti e 20).
+`[R]` L'algoritmo è **CUBIC** (ngtcp2 1.25, `trasporto.c:628` non tocca `cc_algo`) — ⚠ e la prova per
+contrasto **non è stata fatta**: non è esposto da nessuna opzione.
+
+⚠ **Che cosa non si sarebbe potuto vedere**, scritto prima: una separazione più piccola della
+dispersione interna; una terza modalità rara (36 % di probabilità di non incontrarla); e ⛔ **niente
+fra un secondo e l'altro** — `webtransport.c:4573` frena `rete_ciclo()` a una riga al secondo, quindi
+dell'avvio lento si vede il punto d'arrivo, **non la corsa**.
+
+## 21.3 ⭐⭐⭐ LE CURE SI ACCENDONO — e sulla linea sana **non peggiora niente**
+
+*⇒ `DECISIONI.md` §3.1-septies. «Il prodotto cambia in meglio; questa fase era per rendere più solido
+il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli.»*
+
+**Il contratto — e per ciascuna una strada sola:**
+
+| cura | predefinito | **unica** strada per spegnerla |
+|---|---|---|
+| soglia sulla coda video | **100 ms** | `--sgombra-soglia-ms 0` |
+| regolatore del ritmo | **acceso** | `--niente-ritmo-adattivo` |
+| linea morta | **accesa** (stallo 5 000 ms · silenzio 10 s) | `--niente-linea-morta` |
+| sfratto del fantasma | **15 000 ms** | `--sfratto-ms 0` |
+| silenzio dell'audio | **acceso** | `--niente-audio-silenzio` |
+
+⛔ `--ritmo-adattivo` e `--linea-morta` **non esistono più**: chi li batte riceve un messaggio che
+spiega il cambio e **uscita 2**, non un aiuto generico. ⛔ E il `-D AUDIO_SILENZIO_PREDEFINITO` è
+**tolto**: due strade per accendere la stessa cura sono due numeri che divergono.
+⭐ L'opzione dell'audio viaggia **negata** in coda all'`argv` del figlio — la strada di `--parlantina`
+— perché il figlio è un `execve` con l'ambiente composto **da zero**.
+
+⛔⛔ **Le righe d'avvio sono il verbale, e nessuna dice più «SPENTO (I6)».** Ognuna dichiara **stato ·
+numero in vigore · che è il predefinito dal 24 agosto per decisione dell'utente · come si spegne**, e
+`[M]` **il prezzo accanto**. Spente dicono *«SPENTA a mano … e NON è il predefinito»*.
+
+### 21.3-bis ⭐⭐ LA PROVA CHE CONTA — la ferita di v1, cercata apposta
+
+`banchi/09-b86-predefiniti.py` · porta 7980 · binario `14561dce…` · **29 casi di `--certifica`**.
+
+- **(a) acceso di suo** ✅ — server lanciato **senza nessuna opzione**, e le cinque cure risultano
+  attive ⛔ **lette dalle righe d'avvio del prodotto**, non dalla riga di comando;
+- **(b) ognuna si spegne ancora** ✅ — cinque riavvii, una per volta; e i due nomi vecchi **rifiutati**;
+- **(c) ⭐ il prodotto funziona acceso**, giro appaiato di 25 s a 1920×1080:
+
+| braccio | fotogrammi/s | chiavi | quota delta | deriva finale |
+|---|---|---|---|---|
+| tutte **spente** | 39,60 | **0** | 1,0000 | 0,0 ms |
+| ⭐ **predefiniti** | **39,69** | **0** | 1,0000 | 0,4 ms |
+| `[M]` l'ancora di §17.6 | 39,85 | 0 | — | 0,1 ms |
+
+⇒ **Nessun peggioramento**: −0,2 % contro le cure spente, −0,4 % contro l'ancora, **dentro il rumore
+dichiarato del 5 %**. Zero chiavi, zero buchi, **zero scatti della linea morta, zero sfratti**.
+⭐⭐ **Era la prova che poteva far ritirare tutto** — la ferita di v1 è esattamente «i numeri
+migliorano e l'esperienza peggiora» — ed è verde.
+
+⚠ **E due banchi si rompono per costruzione**, il che è voluto e va detto: `09-b79-cure.py` batteva
+`--ritmo-adattivo`, `09-b84-audio-silenzio.py` appaiava **due binari** compilati diversi. ⭐ Adesso
+il braccio spento si fa **dalla riga di comando sullo stesso identico binario**: un imputato in meno.
+⏳ In cura.

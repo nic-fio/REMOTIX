@@ -441,22 +441,39 @@ void wt_audio_prova(uint32_t hz);
  *     DEVE).  Sotto la soglia il delta si TIENE: gli stream sono indipendenti
  *     (`RCP.md:1155`), quindi tenerlo non blocca quelli dopo.
  *
- * `0` = SPENTA, ed e' il predefinito: si abbandona a ogni fotogramma piu'
- *     recente, com'e' sempre stato — byte per byte.  Il valore consigliato
- *     quando si accende e' **100 ms**, e la sua derivazione (quattro vincoli
- *     misurati) sta accanto a `WT_SGOMBRA_SOGLIA_CONSIGLIATA_MS`.
+ * ⭐⭐⭐ ACCESA DI SUO A **100 ms** DAL 24 AGOSTO 2026 — decisione dell'utente:
+ *      *«il prodotto cambia in meglio; questa fase era per rendere piu' solido
+ *      il funzionamento di remotix su reti degradate, senza pretendere di fare
+ *      miracoli»*.  ⛔ `0` = SPENTA, e resta l'unica strada per spegnerla
+ *      (`--sgombra-soglia-ms 0`): si abbandona a ogni fotogramma piu' recente,
+ *      com'era fino al 23 agosto — byte per byte.  La derivazione dei 100 ms
+ *      (quattro vincoli misurati) sta accanto a `WT_SGOMBRA_SOGLIA_MS` in
+ *      `webtransport.c`.
  *
- * ⛔ E' l'invariante I6: cambia quel che si VEDE — per una frazione di secondo
- *    l'immagine e' leggermente vecchia invece che sfasciata, fino a ~150 ms
- *    durante il calo e **0 quando la linea porta**.  ⇒ Nasce spenta, e il
- *    valore in vigore il server lo SCRIVE all'avvio **in tutt'e due i casi**:
- *    «spento» e «non e' mai scattato» non devono avere la stessa faccia.
+ * ⚠ IL PREZZO, DICHIARATO — `[M]` 23-24 agosto 2026, banco `09-b79`: insieme al
+ *   regolatore del ritmo costa **fino a +160 ms** di deriva su rete cattiva, e
+ *   **zero** sulla linea sana (39,85 / 40,19 / 39,63 fotogrammi/s nei tre
+ *   bracci, zero chiavi in tutt'e tre).
  *
- * ⚠ In MILLISECONDI, perche' e' un ritardo che si vede: chi la accende sceglie
+ * ⛔ PERCHE' PRIMA ERA SPENTA, e perche' adesso non lo e' piu': l'invariante I6
+ *    vuole che cio' che cambia quel che l'utente VEDE stia dietro un
+ *    interruttore spento **finche' non l'ha guardato**.  L'ha guardato (§19.6,
+ *    §20.3) e ha deciso.  ⇒ Il presupposto di I6 e' soddisfatto, non aggirato.
+ *    ⚠ E il valore in vigore il server lo SCRIVE all'avvio **in tutt'e due i
+ *    casi**: «spenta» e «non e' mai scattata» non devono avere la stessa
+ *    faccia.
+ *
+ * ⚠ In MILLISECONDI, perche' e' un ritardo che si vede: chi la tara sceglie
  *   quanto vecchia puo' essere l'immagine per una frazione di secondo.
- *   L'opzione e' `--sgombra-soglia-ms N`.
+ *   L'opzione e' `--sgombra-soglia-ms N`, ed e' l'UNICA strada.
  */
 void wt_sgombra_soglia(uint64_t ms);
+
+/* ⛔ IL PREDEFINITO, E CE N'E' UNA COPIA SOLA — sta qui perche' `main.c` ci
+ *    inizializza la sua variabile, come per i due `WT_LM_*` piu' sotto.  La
+ *    DERIVAZIONE (i quattro vincoli misurati) sta nel riquadro sopra
+ *    `WT_SGOMBRA_SOGLIA_MS` in `webtransport.c`, e non si duplica qui. */
+#define WT_SGOMBRA_SOGLIA_MS 100u
 
 /*
  * ⛔ Il valore IN VIGORE, e ce n'e' una copia sola — la forma gia' usata per
@@ -467,7 +484,8 @@ void wt_sgombra_soglia(uint64_t ms);
 uint64_t wt_sgombra_soglia_letta(void);
 
 /*
- * ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e nasce SPENTO (invariante I6).
+ * ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e dal 24 agosto 2026 nasce **ACCESO**
+ *      (decisione dell'utente; fino al 23 nasceva spento per l'invariante I6).
  *
  *      Acceso, un fotogramma NON PARTE quando due delta gia' in volo hanno
  *      ancora byte nella nostra coda d'uscita.  Il ritmo cala da se', tanto
@@ -489,18 +507,33 @@ uint64_t wt_sgombra_soglia_letta(void);
  *      `webtransport.c`: con `--sgombra-soglia-ms 0` la coda dei delta si
  *      svuota a ogni fotogramma, quindi `arretrato` non puo' superare **1** e
  *      questo regolatore non scatta MAI.  ⇒ La riga d'avvio lo DICE, perche'
- *      un anello morto e una linea sana hanno la stessa faccia.
+ *      un anello morto e una linea sana hanno la stessa faccia.  ⭐ Coi
+ *      predefiniti del 24 agosto 2026 nascono ACCESI TUTT'E DUE, che e' l'unica
+ *      combinazione in cui questo regolatore ha una grandezza su cui agganciarsi.
+ *
+ * ⚠ IL PREZZO, DICHIARATO — `[M]` 23-24 agosto 2026, banco `09-b79`: soglia piu'
+ *   regolatore costano **fino a +160 ms** di deriva su rete cattiva, e **zero**
+ *   sulla linea sana (39,85 / 40,19 / 39,63 fotogrammi/s nei tre bracci, zero
+ *   chiavi in tutt'e tre).
  *
  * ⚠ E il valore in vigore si SCRIVE all'avvio in tutt'e due i casi, acceso e
  *   spento: senza quella riga «la cura sta lavorando» e «la cura non e' accesa»
  *   producono lo stesso registro, cioe' nessuna riga.
  *
- *   L'opzione e' `--ritmo-adattivo`, senza argomento, assente = spento.
+ * ⛔⭐ L'OPZIONE E' `--niente-ritmo-adattivo`, senza argomento, e SPEGNE.  ⚠ Il
+ *     nome vecchio `--ritmo-adattivo` (che voleva dire «accendi») **non esiste
+ *     piu'**: con il predefinito acceso non vorrebbe dire niente, e un'opzione
+ *     che non fa niente e' peggio di un'opzione che non c'e'.  ⛔ Chi lo batte
+ *     riceve un messaggio che spiega il cambio e un'uscita 2, non un silenzio.
+ *     ⇒ UNA STRADA SOLA: due modi di accendere la stessa cura sono due numeri
+ *     che divergono (e' la ragione per cui il ponte via ambiente e' gia' stato
+ *     tolto una volta, il 23 agosto 2026).
  */
 void wt_ritmo_adattivo(bool acceso);
 
 /*
- * ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e nasce SPENTA (invariante I6).
+ * ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e dal 24 agosto 2026 nasce **ACCESA**
+ *       (decisione dell'utente; fino al 23 nasceva spenta per l'invariante I6).
  *
  *       Accesa, una sessione viene CHIUSA — il filo cade e l'utente rientra a
  *       mano — quando succede una di due cose, e ognuna si scrive nel registro
@@ -532,9 +565,18 @@ void wt_ritmo_adattivo(bool acceso);
  *    abbiamo niente da mandare il conto non parte nemmeno.
  *
  * ⛔⛔ E' LA COSA PIU' VISIBILE CHE IL PRODOTTO SAPPIA FARE — butta fuori una
- *      sessione.  ⇒ I6 alla lettera: nasce spenta, l'utente la guarda sul
- *      desktop vero prima che diventi il comportamento normale, e il valore in
- *      vigore si scrive all'avvio in TUTT'E DUE i casi.
+ *      sessione.  ⇒ I6 alla lettera: e' nata spenta, l'utente l'ha guardata sul
+ *      desktop vero (§19.6, §20.3) e il 24 agosto 2026 ha deciso che diventa il
+ *      comportamento normale.  ⚠ Il valore in vigore si scrive all'avvio in
+ *      TUTT'E DUE i casi, e adesso conta di piu': una sessione che sparisce
+ *      senza una riga che dica se la cura era accesa e con quali numeri e'
+ *      indistinguibile da un difetto nostro.
+ *
+ * ⚠⚠ IL PREZZO, DICHIARATO, ED E' IL PIU' CARO DEI CINQUE — `[M]` 23 agosto
+ *     2026: margine **10×** sopra la linea peggiore che REGGE e **2,9×** sotto
+ *     quella che non serve nessuno.  ⛔ E' la cura che CHIUDE UNA SESSIONE: se
+ *     la soglia fosse tarata male butterebbe fuori chi sta lavorando.  ⇒ Chi
+ *     tocca `WT_LM_STALLO_MS` tocca quel margine, e i due numeri vanno rimisurati.
  *
  * ⚠ La derivazione dei 5,0 s — i due margini, 5,0× sopra il secondo intero
  *   vuoto di `raffica-1` (che REGGE, 23,94 fotogrammi/s) e 2,9× sotto i 14,26 s
@@ -545,9 +587,18 @@ void wt_ritmo_adattivo(bool acceso);
  *     soglia del silenzio (5 s coi predefiniti), o «il client non risponde» e
  *     «al client non abbiamo ancora chiesto niente» avrebbero la stessa faccia.
  *
- *   Le opzioni sono `--linea-morta` (senza argomento, assente = spenta),
- *   `--linea-morta-stallo-ms N` (predefinito 5000; 0 = solo il silenzio) e
- *   `--linea-morta-silenzio-s N` (predefinito 10; 0 = solo lo stallo).
+ * ⛔⭐ LE OPZIONI, E SONO IL CONTRATTO DEI BANCHI:
+ *       `--niente-linea-morta`         senza argomento, e SPEGNE la cura intera;
+ *       `--linea-morta-stallo-ms N`    predefinito 5000; 0 = solo il silenzio;
+ *       `--linea-morta-silenzio-s N`   predefinito 10;   0 = solo lo stallo.
+ *
+ *     ⚠ Il nome vecchio `--linea-morta` (che voleva dire «accendi») **non
+ *       esiste piu'**: col predefinito acceso non vorrebbe dire niente.  Chi lo
+ *       batte riceve un messaggio che spiega il cambio e un'uscita 2.
+ *     ⚠ E i due `0` NON sono una seconda strada per spegnere la cura: spengono
+ *       una CAUSA per volta, e la riga d'avvio dice quale delle due resta.  Chi
+ *       vuole il prodotto di ieri batte `--niente-linea-morta`, che e' l'unica
+ *       strada che spenga il meccanismo.
  */
 /* ⛔ I DUE PREDEFINITI, E CE N'E' UNA COPIA SOLA: stanno qui perche' `main.c` ci
  *    inizializza le sue variabili e li passa a `wt_linea_morta()`.  Con un
