@@ -24,18 +24,48 @@ con `delta_non_spedito` a 550-800.  ⇒ La catena e':
 ⭐ E' **la spirale**, e a `perdita-3` fa 87 chiavi su 87 fotogrammi — la stessa
    faccia del difetto del 21 agosto (144/144).
 
-⭐⭐⭐ E LA CURA DI QUESTA SPIRALE E' GIA' SCRITTA, COLLAUDATA E SPENTA.  Due
-      interruttori, e hanno un ORDINE OBBLIGATO (`src/webtransport.c:2780`):
+⭐⭐⭐ E LA CURA DI QUESTA SPIRALE E' GIA' SCRITTA E COLLAUDATA.  Due
+      interruttori, e hanno un ORDINE OBBLIGATO (`src/webtransport.c`):
 
-  · `--sgombra-soglia-ms N` — la soglia sulla coda.  `video_sgombra()` oggi
-    abbandona i delta **a ogni fotogramma**; con la soglia li abbandona solo
-    quando la coda e' davvero senza speranza (`byte × smoothed_rtt / cwnd`
-    sopra N ms).  ⛔ E' il prerequisito dell'altro.
-  · `--ritmo-adattivo` — il regolatore del ritmo: invece di abbandonare,
-    rallenta la cattura.  ⛔ Viene DOPO la soglia, perche' finche'
-    `video_sgombra()` svuota la coda a ogni fotogramma la grandezza su cui si
-    aggancia (`arretrato`) e' **zero per costruzione**, e un regolatore muto e
-    una linea sana hanno la stessa faccia.
+  · la SOGLIA SULLA CODA.  `video_sgombra()` senza soglia abbandona i delta **a
+    ogni fotogramma**; con la soglia li abbandona solo quando la coda e' davvero
+    senza speranza (`byte × smoothed_rtt / cwnd` sopra N ms).  ⛔ E' il
+    prerequisito dell'altro.
+  · il REGOLATORE DEL RITMO: invece di abbandonare, rallenta la cattura.
+    ⛔ Viene DOPO la soglia, perche' finche' `video_sgombra()` svuota la coda a
+    ogni fotogramma la grandezza su cui si aggancia (`arretrato`) e' **zero per
+    costruzione**, e un regolatore muto e una linea sana hanno la stessa faccia.
+
+═══════════════════════════════════════════════════════════════════════════════
+⛔⛔⛔ IL 24 AGOSTO 2026 IL VERSO DEGLI INTERRUTTORI SI E' ROVESCIATO, E QUESTO
+      BANCO ERA **ROTTO** — non «da aggiornare»: rotto, cioe' incapace di dare
+      rosso
+═══════════════════════════════════════════════════════════════════════════════
+
+`DECISIONI.md` §3.1-septies: l'utente ha guardato le cure sul desktop vero e ha
+deciso che nascono **ACCESE** nel prodotto.  ⇒ Il contratto nuovo:
+
+    soglia sulla coda video   ACCESA a 100 ms   si spegne con `--sgombra-soglia-ms 0`
+    regolatore del ritmo      ACCESO            si spegne con `--niente-ritmo-adattivo`
+
+⛔ `--ritmo-adattivo` **non esiste piu'**: chi lo batte prende uscita 2 con un
+   messaggio che spiega il cambio (`main.c:1211`).  ⇒ Il braccio C di ieri —
+   quello che lo batteva — non avrebbe fatto partire il server, e un banco che
+   non parte non da' rosso: da' «terreno».  ⚠ E' la forma peggiore di guasto di
+   un banco, perche' assomiglia a un guasto della macchina.
+
+⇒ **I BRACCI SI SONO ROVESCIATI**, e il verso nuovo e' quello che segue.
+
+⭐⭐⭐ E C'E' UN GUADAGNO DA INCASSARE, che non e' cosmetico: **un imputato in
+     meno**.  Prima i due bracci erano lo stesso binario con opzioni diverse;
+     adesso lo sono ancora, ma il braccio SPENTO — il termine di paragone — si
+     ottiene **dalla riga di comando sullo stesso identico binario del prodotto
+     che si spedisce**.  ⛔ Prima il braccio «cure accese» chiedeva un'opzione
+     che il prodotto normale non usava mai: se il binario fosse stato quello
+     sbagliato, l'opzione sarebbe stata rifiutata e me ne sarei accorto — ma se
+     fosse stato quello GIUSTO e il predefinito diverso, no.  ⇒ Adesso il
+     braccio che rappresenta il prodotto e' `""`: nessuna opzione, nessuna
+     promessa, il prodotto e basta.
 
 ⇒ La domanda di questo banco: **quelle due cure spengono la spirale su una rete
   che perde e sfarfalla, e a che prezzo?**
@@ -45,11 +75,22 @@ con `delta_non_spedito` a 550-800.  ⇒ La catena e':
 ═══════════════════════════════════════════════════════════════════════════════
 
 Stesso profilo, stessa durata, stessa tela, stessa scena, **stesso binario**, e
-a cambiare solo gli interruttori del server.  Tre bracci per ogni profilo:
+a cambiare solo gli interruttori del server.  Tre bracci per ogni profilo, e dal
+24 agosto 2026 sono **rovesciati** rispetto a ieri:
 
-    A   (i predefiniti: le due cure SPENTE)
-    B   --sgombra-soglia-ms 100
-    C   --sgombra-soglia-ms 100 --ritmo-adattivo
+    A   --sgombra-soglia-ms 0 --niente-ritmo-adattivo
+        ⛔ il TERMINE DI PARAGONE: le due cure spente A MANO.  E' il prodotto
+           fino al 23 agosto 2026, byte per byte, ottenuto dal binario di oggi.
+    B   --sgombra-soglia-ms 100 --niente-ritmo-adattivo
+        ⭐ la sola soglia — il gradino di mezzo, che serve a dire QUALE delle due
+           cure fa il lavoro.
+    C   (nessuna opzione)
+        ⭐⭐ I PREDEFINITI, cioe' il prodotto che si spedisce.
+
+⭐ E la soglia si scrive per esteso anche in B, dove sarebbe il predefinito: una
+   riga di comando che dice quel che vuole si rilegge fra un mese; una che si
+   affida a un predefinito si rilegge sbagliata il giorno in cui il predefinito
+   cambia — che e' precisamente quel che e' successo oggi.
 
 ⛔⛔ E IL BRACCIO **A** SI RIMISURA OGGI, non si riprende dalla tabella di
     `09-b76`.  Quei numeri vengono da un altro binario (HEAD, che non ha
@@ -260,6 +301,11 @@ banco chiede **chi** ha staccato, e lo chiede a quattro testimoni indipendenti:
 ⭐⭐⭐ QUEL CHE E' USCITO — `[M]` 23 agosto 2026, porta 7940, Intel UHD 730
 ═══════════════════════════════════════════════════════════════════════════════
 
+⚠ E LE LETTERE DI QUESTA TABELLA VALGONO ANCORA, perche' il rovesciamento del
+  24 agosto ha cambiato **come** si ottiene un braccio, non **che cosa** e':
+  A resta «le due cure spente», B «la sola soglia», C «tutt'e due».  ⇒ Chi
+  rilegge non deve girare la testa: cambia la riga di comando, non la colonna.
+
 Binario **md5 `eee17f40b0a5ff79fe3b1b3d060a08ed`** (albero di lavoro, non HEAD;
 `webtransport.c` md5 `0f63542bf2ebf3617afa5b0a5bfe2371`), 25 s per casella,
 1920×1080, h264, banda libera, scena `barra`, un giro per casella.  Ogni braccio
@@ -341,6 +387,27 @@ sonda a ogni casella; nessuno attaccato alle porte non mie prima ne' dopo.
    fotogrammi**.  ⇒ Il rosso di `09-b76` e' giusto come numero e **sbagliato
    come parola**.  ⭐ E le cure lo cambiano: la consegna, che in A muore dopo
    4,4 s, in B e C **dura tutti i 25 s** (4,2/s con secondi vuoti dentro).
+
+═══════════════════════════════════════════════════════════════════════════════
+⭐ IL GIRO DEL 24 AGOSTO 2026 — bracci rovesciati, e il predicato che vale di piu'
+═══════════════════════════════════════════════════════════════════════════════
+
+`[M]` 24 agosto 2026, porta 7981, utente `provanr12`, binario md5
+`6ec170c03c6e908eb17d3b056b542813`, `ritardo-30`, 25 s per braccio, un giro per
+casella.  ⛔ Non e' una rimisura della griglia: e' la prova che il banco
+ROVESCIATO gira davvero fino in fondo e che i tre bracci vanno in vigore.
+
+  braccio   opzioni                                        fps    chiavi  deriva
+  A         --sgombra-soglia-ms 0 --niente-ritmo-adattivo  38,15   0,2 %   1,7 ms
+  B         --sgombra-soglia-ms 100 --niente-ritmo-adattivo 39,61  0,0 %  −0,7 ms
+  C         (nessuna opzione — i predefiniti)              39,78   0,0 %  −0,7 ms
+
+⭐ **S′ VERDE**: i tre bracci sono indistinguibili sulla linea sana (B e C al
+   104 % di A, dentro il rumore), zero chiavi, la deriva non si muove.
+⛔ E le tre righe d'avvio sono state rilette dal registro a ogni braccio: A
+   dichiara «0 ms — SPENTA» e «regolatore SPENTO», C dichiara «100 ms — ACCESA,
+   e' il PREDEFINITO» e «regolatore ACCESO».  ⇒ Il braccio senza opzioni **e'**
+   il prodotto, verificato e non promesso.
 
 I CODICI D'USCITA
     0   CONFORME · 1 NON CONFORME (c'e' un rosso) · 2 uso/terreno/rete
@@ -564,17 +631,36 @@ def _root_che_trascrive(comando, tetto=300):
 # ═══════════════════════════════════════════════════════════════════════════
 #
 #   (etichetta, opzioni del server, soglia attesa in ms, regolatore atteso)
+#
+# ⛔⛔⭐ IL VERSO E' ROVESCIATO DAL 24 AGOSTO 2026, e la riga che conta e' la
+#      terza: **il braccio C non ha opzioni**.  Fino al 23 agosto era il
+#      contrario — A era `""` (i predefiniti, allora spenti) e C batteva
+#      `--ritmo-adattivo`, un'opzione che oggi **non esiste piu'** e fa uscire
+#      il server con 2.  ⇒ Questo banco, non rovesciato, non avrebbe misurato
+#      niente: avrebbe detto «il server non e' partito», che assomiglia a un
+#      guasto della macchina e non a un banco da aggiornare.
+#
+# ⭐ E il rovesciamento porta un IMPUTATO IN MENO.  I tre bracci erano gia' lo
+#    stesso binario con opzioni diverse; adesso il braccio che rappresenta **il
+#    prodotto** e' quello **senza nessuna opzione**.  ⛔ Prima, per misurare il
+#    prodotto-col-le-cure, dovevo CHIEDERLE: e chiedere una cosa e' una promessa,
+#    non un fatto.  Adesso il fatto e' il predefinito del binario, e la promessa
+#    la fanno solo i due bracci spenti — che sono i termini di paragone, cioe'
+#    esattamente i posti in cui una promessa non mantenuta si vede subito
+#    (darebbero tre bracci identici).
+# ⚠ E la verifica dal registro resta identica e OBBLIGATORIA lo stesso: un
+#   binario vecchio nascerebbe con le cure spente e darebbe a C i numeri di A.
 BRACCI = [
-    ("A", "", 0, False,
-     "⛔ i PREDEFINITI, cioe' le due cure SPENTE (invariante I6): e' il termine "
-     "di paragone, e si rimisura OGGI"),
-    ("B", "--sgombra-soglia-ms 100", 100, False,
-     "⭐ la SOGLIA SULLA CODA: un delta fermo si abbandona solo quando la coda "
-     "e' senza speranza per piu' di 100 ms, non a ogni fotogramma"),
-    ("C", "--sgombra-soglia-ms 100 --ritmo-adattivo", 100, True,
-     "⭐⭐ la soglia PIU' il regolatore del ritmo: invece di abbandonare, si "
-     "rallenta la cattura.  ⛔ Viene dopo la soglia, o `arretrato` e' zero per "
-     "costruzione e il regolatore non scatta mai"),
+    ("A", "--sgombra-soglia-ms 0 --niente-ritmo-adattivo", 0, False,
+     "⛔ le due cure SPENTE A MANO: e' il termine di paragone, cioe' il prodotto "
+     "fino al 23 agosto 2026 — e si rimisura OGGI, sul binario di oggi"),
+    ("B", "--sgombra-soglia-ms 100 --niente-ritmo-adattivo", 100, False,
+     "⭐ la SOLA SOGLIA SULLA CODA: un delta fermo si abbandona solo quando la "
+     "coda e' senza speranza per piu' di 100 ms, non a ogni fotogramma"),
+    ("C", "", 100, True,
+     "⭐⭐ I PREDEFINITI dal 24 agosto 2026 (DECISIONI.md §3.1-septies): la "
+     "soglia PIU' il regolatore del ritmo, e NESSUNA opzione sulla riga di "
+     "comando — e' il prodotto che si spedisce"),
 ]
 
 # ⛔ Le due righe che il prodotto scrive all'avvio, SEMPRE, acceso e spento.
@@ -1043,14 +1129,23 @@ def certifica():
     print("\n  ── ⛔ «scritto non e' in vigore»: le due righe d'avvio ──\n")
     # ⚠ Qui non si tocca la macchina: si esercita il RICONOSCITORE sulle righe
     #   vere che il prodotto scrive (`sgombra_dichiara`, `wt_ritmo_adattivo`).
-    vere_A = ("⭐ FASE 9, soglia della coda video (§5.1): 0 ms (SPENTA: si "
-              "abbandona a ogni fotogramma piu' recente, com'e' oggi — "
-              "invariante I6) — sopra la soglia un delta fermo si abbandona\n"
-              "il regolatore del ritmo e' SPENTO (invariante I6, "
-              "`--ritmo-adattivo`): nessun fotogramma verra' mai saltato")
-    vere_C = ("⭐ FASE 9, soglia della coda video (§5.1): 100 ms — sopra la "
-              "soglia un delta fermo si abbandona, sotto si TIENE\n"
-              "⭐ FASE 9: il regolatore del ritmo e' ACCESO (`--ritmo-adattivo`)")
+    # ⛔ Aggiornate il 24 agosto 2026 sulle righe che il prodotto scrive ADESSO
+    #    (`sgombra_dichiara()` e `wt_ritmo_adattivo()` in `src/webtransport.c`).
+    #    ⚠ Non sono inventate: sono copiate dal registro di un server acceso.
+    vere_A = ("⛔ FASE 9, soglia della coda video (§5.1): 0 ms — SPENTA: si "
+              "abbandona a ogni fotogramma piu' recente, cioe' il prodotto fino "
+              "al 23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: dal "
+              "24 agosto nasce ACCESA a 100 ms, quindi qualcuno ha battuto "
+              "`--sgombra-soglia-ms 0` apposta.\n"
+              "⛔ il regolatore del ritmo e' SPENTO da chi ha lanciato il server "
+              "(`--niente-ritmo-adattivo`): nessun fotogramma verra' mai saltato "
+              "per la linea")
+    vere_C = ("⭐ FASE 9, soglia della coda video (§5.1): 100 ms — ACCESA: sopra "
+              "la soglia un delta fermo si abbandona, sotto si TIENE.  ⭐ E' il "
+              "PREDEFINITO dal 24 agosto 2026\n"
+              "⭐ FASE 9: il regolatore del ritmo e' ACCESO — un fotogramma NON "
+              "parte quando 2 delta in volo hanno ancora byte nella mia coda "
+              "d'uscita.  ⭐ E' il PREDEFINITO dal 24 agosto 2026")
 
     def riconosci(testo, soglia, ritmo):
         m = RE_SOGLIA.search(testo)

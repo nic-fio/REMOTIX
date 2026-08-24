@@ -230,40 +230,127 @@ typedef struct {
 #define WT_DGRAM_BYTE 1024
 #define WT_DGRAM_MAX 8
 
-/* ⛔⛔ IL TETTO DEI RIMANDI NON E' PIU' UN TEMPO: E' LA CODA, e basta.
+/* ⛔⛔⛔ IL TETTO DI UN BLOCCO E' LA SUA ETA', E FINO AL 24 AGOSTO 2026 NON LO ERA.
  *
- *      `[M]` 17 agosto 2026, dai contatori della PAGINA dell'utente — i primi
- *      che questo progetto abbia avuto dal lato che ascolta:
+ *      Qui c'era `WT_DGRAM_RIMANDI_MAX 4096`, e accanto un commento che diceva
+ *      *«quante PASSATE di fila **il blocco in testa** e' stato rimandato»*.
+ *      ⛔ Non era vero, e non per una parola imprecisa: il contatore
+ *      (`dgram_rimandi`) stava su **`struct wt`**, cioe' sulla CONNESSIONE.
+ *      Saliva a ogni passata rifiutata e tornava a zero solo su un successo —
+ *      e nel frattempo la testa era stata sostituita, perche' `dgram_accoda()`
+ *      scavalca la piu' vecchia quando l'anello e' pieno **senza toccare quel
+ *      contatore**.  ⇒ Non misurava l'eta' del blocco: misurava **da quanto la
+ *      connessione non spedisce nulla**.
  *
- *        ricevuti 1149 · suonati 1149 · BUCHI 23 · coda 191 ms
+ * ⛔⛔ E LA DIFFERENZA NON ERA ACCADEMICA: quel numero non aveva un'unita' STABILE.
  *
- *      ⭐ `ricevuti == suonati` sempre: la pagina suona tutto quel che le
- *      arriva, e non e' lei il difetto.  ⛔ Ma le arrivano **39,8 blocchi al
- *      secondo invece di 50**, e con quel deficit un cuscino di 250 ms si
- *      svuota in 1,25 s: **23 buchi in 30 secondi**, uno ogni 1,3 s.  Il conto
- *      chiude al decimale, e dice che il difetto e' tutto sul FILO.
+ *      `[M]` 24 agosto 2026, banco NR12, porta 7981, 25 s per giro:
  *
- *      ⇒ Un blocco buttato dopo N rinvii e' un buco garantito.  Il solo tetto
- *      onesto e' **la coda**: otto blocchi = 160 ms di Opus, e oltre quelli il
- *      piu' vecchio non serve piu' a nessuno (§6.3).  ⚠ Questo numero resta
- *      alto solo per non lasciare un ciclo senza fondo — non e' una politica.
+ *        linea sana (`lo` liscio, PCM):  0 rimandi          in 26 s
+ *        `casa-cattiva` (40±20 ms, 2 %): **2 201 582 rimandi** in 26,2 s
  *
- * ⛔ E la guardia sulla congestione e' uscita da qui: `cwnd_left` alto o basso
- *    non cambia che cosa conviene fare con un blocco che non e' ancora partito.
- *    ⚠ Era una condizione che buttava il blocco **proprio quando la finestra
- *    era stretta**, cioe' quando serviva di piu' aspettare.
+ *      ⇒ **84 700 passate di scrittura al secondo.**  Una «passata» e' una
+ *      chiamata di `scrivi_connessione()` (`trasporto.c:445`), e il ciclo degli
+ *      eventi la ripete finche' c'e' da scrivere: sotto pressione gira
+ *      quattrocento volte piu' spesso che a riposo.  ⇒ Lo stesso `4096` valeva
+ *      **~48 ms** sulla rete cattiva e **decine di secondi** sulla linea sana.
+ *      ⚠ Un tetto che cambia significato con il carico non e' un tetto: e' un
+ *      numero che qualcuno leggera' come una politica senza sapere quale.
  *
- * ⛔ Quante PASSATE di scrittura un blocco si puo' rimandare prima di buttarlo.
+ * ⛔⛔ E ERA DAVVERO LA POLITICA, contro quel che il commento dichiarava
+ *      (*«resta alto solo per non lasciare un ciclo senza fondo»*).  `[M]`
+ *      stesso giro su `casa-cattiva`: **2 258 blocchi buttati da questo tetto**
+ *      contro **9 buttati dalla coda piena** — il 99,6 % degli scarti usciva di
+ *      qui.  ⚠ Ed e' per questo che il primo rifiuto osservato e' avvenuto **a
+ *      finestra aperta** (`cwnd_left` = 7 424, e la riga stessa diceva «NON e'
+ *      la congestione»): non era la rete a decidere, era il contagiri.
  *
- * ⚠ Era **8**, e non bastava: `[M]` 17 agosto 2026 il giudice leggeva ancora
- *   **465 Hz invece di 440** — e quel numero E' la perdita, perche' concatenare
- *   i blocchi superstiti comprime il tempo (440 / (1 − 0,054) ≈ 465).
+ * ⛔⛔⛔ E LA PRIMA CURA CHE HO SCRITTO ERA QUELLA SBAGLIATA — si scrive perche'
+ *       e' la parte che insegna qualcosa, e perche' senza la misura l'avrei
+ *       spedita.
  *
- * ⛔ Il tetto vero non e' questo numero: e' **la coda**.  Otto blocchi di PCM
- *    sono 40 ms, e oltre quelli il piu' vecchio si butta comunque (§6.3).  ⇒ Un
- *    tetto basso sui rimandi non protegge da niente e butta un blocco che
- *    sarebbe partito: il ritardo lo governa gia' la coda. */
-#define WT_DGRAM_RIMANDI_MAX 4096
+ *       La strada ovvia era portare il conto **sull'elemento**: timbrare ogni
+ *       blocco quando entra in coda e buttarlo quando la sua ETA' passa un
+ *       tetto.  E' quel che il commento vecchio prometteva.  ⛔ Provata, e la
+ *       misura l'ha rifiutata due volte — `[M]` 24 agosto 2026, `casa-cattiva`
+ *       (40±20 ms, 2 %), PCM, quattro giri appaiati sullo stesso `netem`:
+ *
+ *         tetto sull'eta'   spediti  buttati(coda)  rifiutati  kbit/s  utili/filo
+ *         ---------------   -------  -------------  ---------  ------  ----------
+ *         250 ms              4 169        845           0     1 847     35 %
+ *          50 ms              4 194        819           3     1 838     35 %
+ *         (il prodotto)       3 203         14       1 781     1 415     42 %
+ *
+ *       ⇒ **A 50 ms non scatta piu' di quanto scatti a 250**, ed e' la CODA a
+ *       fare tutto il lavoro (14 → 830 scarti).  ⭐ La ragione e' un conto che
+ *       il file diceva gia' e che io non avevo creduto: la coda tiene OTTO
+ *       blocchi, e otto blocchi di PCM sono **40 ms**.  ⇒ La testa non puo'
+ *       quasi mai essere piu' vecchia di 40 ms, quindi un tetto sull'ETA' sopra
+ *       i 40 ms e' un tetto che non tocca niente.
+ *       ⚠ E il prezzo di quel «non tocca niente» si vede: 30 % di byte in piu'
+ *         sul filo (1 415 → 1 840 kbit/s), rubati alla stessa finestra del
+ *         video (⇒ «I DATAGRAM PRIMA DEGLI STREAM» in `wt_scrivi()`), per
+ *         portare l'11 % di blocchi utili in piu' (1 290 → 1 430) — perche' il
+ *         resto arriva **gia' vecchio** e lo butta il cliente (`scartati
+ *         vecchi` 1 800 → 2 650).
+ *
+ * ⭐⭐ LA CURA GIUSTA E' L'ALTRA: **si tiene la grandezza, se ne cambia l'UNITA'**.
+ *
+ *      Quel che il codice governa qui non e' l'eta' di un blocco: e' **da quanto
+ *      la connessione non riesce a mettere un datagram in un pacchetto**.  E'
+ *      una grandezza sensata — se in N ms non e' uscito NIENTE, il piu' vecchio
+ *      della coda non uscira' in tempo (§6.3) — ed e' esattamente quel che il
+ *      codice faceva.  ⇒ Il difetto non era la politica: era che la politica
+ *      aveva un nome falso e un'unita' che si muoveva.
+ *      ⇒ Il nome dice la cosa (`dgram_zitto_da`, «da quando sono muto») e il
+ *        tetto e' in MILLISECONDI.
+ *
+ * ⛔⛔⭐ E `4096` NON SI CONVERTE IN MILLISECONDI CON UNA DIVISIONE — ci ho
+ *       provato e la misura mi ha smentito una seconda volta.  La ragione e'
+ *       che il numero era **auto-referenziale**: quante passate si fanno al
+ *       secondo dipende da quanto spesso si BUTTA, e quanto spesso si butta
+ *       dipende dal tetto.  `[M]` stessi giri: col prodotto 2,1 milioni di
+ *       rimandi in 25 s, con il tetto a 50 ms **20 milioni** — dieci volte
+ *       tanto, perche' non buttando piu' il ciclo gira a vuoto.  ⇒ 4096 non
+ *       valeva «46 ms»: non valeva nessun tempo fisso.
+ *
+ * ⭐⭐⭐ IL VALORE SI E' TARATO SULLA MISURA, e il verde e' «indistinguibile dal
+ *      prodotto».  `[M]` 24 agosto 2026, `casa-cattiva`, PCM, giri appaiati
+ *      sullo stesso `netem`, due giri per il prodotto per avere la DISPERSIONE:
+ *
+ *        tetto        spediti  butt.(coda)  rifiut.  kbit/s  utili  utili/filo
+ *        -----------  -------  -----------  -------  ------  -----  ----------
+ *        prodotto      3 242        14       1 753   1 433   1 273    0,401
+ *        prodotto      2 912        16       2 084   1 312   1 223    0,432
+ *        10 ms         2 947        16       2 039   1 286   1 246    0,435
+ *         5 ms         2 999        15       1 995   1 327   1 246    0,424
+ *        50 ms         3 955       797         263   1 743   1 390    0,360
+ *
+ *      ⇒ **10 ms sta dentro la dispersione del prodotto su ogni colonna**, 5 ms
+ *      pure, e a 50 ms il tetto ha gia' smesso di mordere.  ⇒ La cura cambia
+ *      quel che il numero VUOL DIRE, non quel che il prodotto FA — ed e'
+ *      esattamente quel che si voleva.
+ *
+ * ⭐ E 10 ms ha anche una ragione che non e' il fitting: sono **due blocchi di
+ *    PCM** (5 ms l'uno).  Se nel tempo di due blocchi non e' uscito niente, il
+ *    piu' vecchio non ce la fa.
+ *
+ * ⚠ E LA TARATURA NON E' MIA.  Questo numero riproduce il prodotto misurato, non
+ *   lo migliora.  `[M]` la tabella dice che allentarlo compra l'8-11 % di
+ *   blocchi utili al prezzo del 20-30 % di banda tolta al video: e' una scelta
+ *   con due numeri accanto, e la fa chi decide il prodotto — non io qui.
+ *
+ * ⭐ E L'ETA' DEL BLOCCO NON SI BUTTA VIA: `dgram[].nato` resta, e finisce nella
+ *    riga di registro dello scarto.  ⛔ Non decide niente — la decide `zitto` —
+ *    ma e' la grandezza che il commento vecchio PROMETTEVA e nessuno aveva mai
+ *    letto: adesso chi legge il registro vede tutt'e due, «sono muto da N ms» e
+ *    «il blocco che butto ne ha M», e puo' accorgersi se un giorno divergono.
+ *
+ * ⚠ E la guardia sulla congestione resta FUORI di qui: `cwnd_left` alto o basso
+ *   non cambia che cosa conviene fare con un blocco che non e' ancora partito.
+ *   Era una condizione che buttava il blocco **proprio quando la finestra era
+ *   stretta**, cioe' quando serviva di piu' aspettare. */
+#define WT_DGRAM_ZITTO_MAX_MS 10
 
 /* ⛔ Il tono di prova (`--audio-prova`), `0` = spento.  Sta in cima e non
  *    accanto alla sua funzione perche' lo legge anche `wt_battito_ns()`, che
@@ -625,6 +712,21 @@ struct wt {
 	struct {
 		uint8_t d[WT_DGRAM_BYTE];
 		size_t n;
+		/* ⛔⭐ QUANDO E' ENTRATO IN CODA — e sta sull'ELEMENTO apposta.
+		 *
+		 *     L'eta' di un blocco e' un fatto SUO, e il contatore che stava
+		 *     sulla connessione non poteva dirla: la testa cambia sotto di lui
+		 *     senza che lui se ne accorga (⇒ il riquadro di
+		 *     `WT_DGRAM_ZITTO_MAX_MS`).
+		 * ⛔ E QUESTO CAMPO NON DECIDE NIENTE: finisce solo nella riga di
+		 *    registro dello scarto.  ⚠ E' li' apposta per farsi smentire — se
+		 *    un giorno l'eta' del blocco buttato divergesse dal silenzio della
+		 *    connessione, la coda avrebbe smesso di rinfrescarsi e lo si
+		 *    leggerebbe invece di dedurlo.
+		 * ⚠ La `ngtcp2_tstamp` e' la stessa che poi lo giudica
+		 *   (`dgram_scrivi_uno`): due orologi diversi darebbero una
+		 *   differenza che non e' un tempo. */
+		ngtcp2_tstamp nato;
 	} dgram[WT_DGRAM_MAX];
 	size_t ndgram, dgram_testa;
 	uint64_t dgram_id; /* l'identificativo che ngtcp2 riporta negli esiti */
@@ -644,10 +746,29 @@ struct wt {
 	 *    attimo dopo; il secondo e' «buttato».  Un contatore solo per due esiti
 	 *    opposti direbbe che l'audio si perde anche quando arriva tutto. */
 	uint64_t audio_rimandati;
-	/* Quante PASSATE di fila il blocco in testa e' stato rimandato. */
-	unsigned dgram_rimandi;
 	/* L'istante dell'ultimo rimando: dentro la stessa passata non si richiede. */
 	ngtcp2_tstamp dgram_rimando_ts;
+	/* ⛔⭐ DA QUANDO QUESTA CONNESSIONE NON METTE PIU' UN DATAGRAM IN UN PACCHETTO
+	 *     — `0` vuol dire «adesso non sono muto» (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
+	 *
+	 * ⚠ E' il campo che sostituisce `dgram_rimandi`, e la differenza sta tutta
+	 *   nell'unita': quello contava PASSATE (85 000 al secondo sotto carico,
+	 *   200 a riposo), questo conta millisecondi.  ⛔ Zero e «un istante fa»
+	 *   non devono avere la stessa faccia: si azzera a ogni successo e riparte
+	 *   al primo rifiuto, cosi' un orologio non partito non e' un orologio
+	 *   scaduto. */
+	ngtcp2_tstamp dgram_zitto_da;
+	/* ⛔⭐ L'OROLOGIO DELLA SESSIONE, e serve a una cosa sola: timbrare i
+	 *    blocchi d'audio quando entrano in coda (`dgram_accoda()`, che non
+	 *    riceve nessun `ts` dal suo chiamante).
+	 *
+	 * ⚠ Lo scrivono `wt_batti()` e `wt_scrivi()`, che sono i due soli posti in
+	 *   cui la `ngtcp2_tstamp` autorevole entra in questo file — e
+	 *   `audio_regola()`, che accoda, gira DENTRO `wt_batti()`, tre righe dopo
+	 *   che questo campo e' stato messo a giorno.
+	 * ⛔ Un `clock_gettime()` chiamato qui dentro sarebbe un SECONDO orologio, e
+	 *   la differenza fra due orologi non e' un tempo. */
+	ngtcp2_tstamp ts_ora;
 
 	/* Il tono di prova (`--audio-prova`), che di norma non esiste. */
 	audio_cod *tono_cod;
@@ -1498,6 +1619,10 @@ static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
 	coda = (w->dgram_testa + w->ndgram) % WT_DGRAM_MAX;
 	memcpy(w->dgram[coda].d, d, n);
 	w->dgram[coda].n = n;
+	/* ⭐ IL TIMBRO — vedi `WT_DGRAM_ZITTO_MAX_MS`.  ⛔ E' qui e non altrove
+	 *    perche' «quando e' entrato in coda» e' un fatto che esiste solo in
+	 *    questo punto: dopo, la casella si riusa e la memoria non ricorda. */
+	w->dgram[coda].nato = w->ts_ora;
 	w->ndgram++;
 	return true;
 }
@@ -1529,9 +1654,30 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	int accettato = 0;
 	ngtcp2_vec v;
 	ngtcp2_ssize nw;
+	uint64_t eta_ms, zitto_ms;
 
 	if (w->ndgram == 0)
 		return false;
+
+	/* ⛔⭐ LE DUE GRANDEZZE, E SOLO UNA DELLE DUE DECIDE — ⇒ il riquadro di
+	 *     `WT_DGRAM_ZITTO_MAX_MS`, che dice perche' non e' quella che sembra.
+	 *
+	 *   · `zitto_ms` — da quanto la CONNESSIONE non mette un datagram in un
+	 *     pacchetto.  E' quella su cui si butta.
+	 *   · `eta_ms`   — quanti ms ha il BLOCCO IN TESTA.  Non decide niente: va
+	 *     nella riga di registro, ed e' la grandezza che il commento vecchio
+	 *     prometteva e nessuno aveva mai letto.
+	 *
+	 * ⚠ Tutt'e due valgono ZERO quando il loro orologio non e' partito (`nato`
+	 *   o `dgram_zitto_da` a zero).  ⛔ Un orologio non partito e uno scaduto
+	 *   non devono avere la stessa faccia: la faccia sbagliata butterebbe il
+	 *   primo blocco d'audio di ogni sessione. */
+	eta_ms = (w->dgram[w->dgram_testa].nato && ts > w->dgram[w->dgram_testa].nato)
+	             ? (ts - w->dgram[w->dgram_testa].nato) / NGTCP2_MILLISECONDS
+	             : 0;
+	zitto_ms = (w->dgram_zitto_da && ts > w->dgram_zitto_da)
+	               ? (ts - w->dgram_zitto_da) / NGTCP2_MILLISECONDS
+	               : 0;
 
 	/* ⛔⭐ E NON SI RIPROVA DENTRO LA STESSA PASSATA — `[M]` 17 agosto 2026.
 	 *
@@ -1607,6 +1753,56 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	 *    insieme: l'audio non paga il riempimento quando c'e' traffico, e non
 	 *    strozza il lotto quando non ce n'e'.
 	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔⛔ CONDIZIONARE QUESTO `PADDING` E' STATO PROVATO IL 24 AGOSTO 2026, E
+	 *       **NON SI FA**.  Qui c'e' il perche', coi numeri, per il prossimo che
+	 *       ci ripensa — che sara' qualcuno con la stessa buona idea.
+	 * ═══════════════════════════════════════════════════════════════════════
+	 *
+	 * L'idea: quando in coda c'e' UN datagram solo e nessun byte di stream, il
+	 * lotto GSO e' di un pacchetto per costruzione, e riempirlo non protegge
+	 * niente — paga e basta.  ⚠ Il conto sembrava grosso: un blocco di Opus e'
+	 * ~290 byte dentro un pacchetto da 1 441, cioe' 1 150 byte buttati 50 volte
+	 * al secondo.  ⇒ Scritto (`w->ndgram > 1 || !coda_vuota(w)`), costruito,
+	 * misurato appaiato.  `[M]` 24 agosto 2026, banco NR12, porta 7981, `lo`
+	 * liscio, desktop FERMO col tono a 440 Hz — cioe' audio VERO e video
+	 * immobile, il solo caso in cui la condizione puo' mordere — 25 s per giro,
+	 * due giri per braccio, stesso binario a meno di questa riga:
+	 *
+	 *   codec  riempimento   kbit/s sul filo   byte/pacchetto   blocchi persi
+	 *   -----  ------------  ---------------   --------------   -------------
+	 *   Opus   sempre          557,7 / 556,5        1 441              0
+	 *   Opus   condizionato    556,9 / 555,8        1 441 / 1 442      0
+	 *   Opus   **MAI**         556,4                1 441              0
+	 *   PCM    sempre        2 221,7 / 2 222,0      1 443 / 1 442      0
+	 *   PCM    condizionato  1 988,0 / 1 987,4      1 292 / 1 290      0
+	 *
+	 * ⛔⛔ **SU OPUS IL GUADAGNO E' ZERO — e non «piccolo»: ZERO.**  La riga che
+	 *      lo dimostra e' la terza: con `PADDING` **mai** chiesto il pacchetto
+	 *      resta di 1 441 byte.  ⇒ Non e' questa riga a riempirlo.
+	 *
+	 * ⭐⭐⭐ E SI SA CHI LO RIEMPIE — `[R]`, ed e' la scoperta che questa prova ha
+	 *      comprato: `wt_scrivi()` chiede
+	 *      **`NGTCP2_WRITE_STREAM_FLAG_PADDING` a OGNI scrittura di stream**.
+	 *      Quando il datagram torna `NGTCP2_ERR_WRITE_MORE` il pacchetto resta
+	 *      APERTO, questa funzione torna `false`, e il ciclo degli stream
+	 *      subito dopo lo chiude — riempiendolo.  ⇒ Il riempimento di una
+	 *      sessione ferma **non e' del datagram: e' dello stream**, e chi
+	 *      volesse toglierlo deve andare li', non qui.
+	 *      ⚠ `09-b84-audio-silenzio.py` lo attribuiva a questa riga: era una
+	 *        deduzione, ed e' stata smentita.
+	 *
+	 * ⭐ Su PCM invece la condizione morde (−10,5 %), e si capisce perche': a 200
+	 *    blocchi al secondo il datagram CHIUDE il pacchetto da solo (`nw > 0`),
+	 *    questa funzione torna `true` e il ciclo degli stream non gira mai.
+	 *    ⚠ Ma il PCM non e' quel che il prodotto negozia (`[M]` la sessione vera
+	 *      dell'utente dice `audio.codec=opus` quattro volte su quattro), e il
+	 *      predefinito nuovo — il silenzio dell'audio ACCESO — toglie i datagram
+	 *      del tutto a desktop fermo: **0,0 datagram al secondo**, `[M]` 09-b84.
+	 *    ⇒ Una condizione in piu' da mantenere, dentro il riquadro piu' delicato
+	 *      del file, per un guadagno che sul codec vero e' zero e sull'altro vale
+	 *      un decimo di una banda che a desktop fermo non c'e'.  **Non si fa.**
+	 *
 	 * ⛔ `NGTCP2_ERR_WRITE_MORE` qui non e' un errore: vuol dire «il datagram e'
 	 *    dentro, continua a riempire il pacchetto».  Chi lo leggesse come un
 	 *    guasto butterebbe un blocco gia' spedito. */
@@ -1617,7 +1813,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	if (nw == NGTCP2_ERR_WRITE_MORE) {
 		/* ⭐ Il blocco e' nel pacchetto in composizione: si toglie dalla coda. */
 		w->audio_spediti++;
-		w->dgram_rimandi = 0;
+		w->dgram_zitto_da = 0; /* ⭐ non sono piu' muto */
 		dgram_togli_testa(w);
 
 		/* ⛔⛔⛔ E SI CONTINUA A INFILARNE, finche' ce ne stanno — `[M]` 17
@@ -1651,6 +1847,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				++w->dgram_id, &v2, 1, ts);
 			if (nw2 == NGTCP2_ERR_WRITE_MORE) {
 				w->audio_spediti++;
+				w->dgram_zitto_da = 0;
 				dgram_togli_testa(w);
 				continue; /* ce n'e' ancora posto: si prosegue */
 			}
@@ -1660,6 +1857,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *    SPEDITO — buttarlo porterebbe via i riscontri. */
 				if (acc2) {
 					w->audio_spediti++;
+					w->dgram_zitto_da = 0;
 					dgram_togli_testa(w);
 				}
 				*nfuori = nw2;
@@ -1689,9 +1887,9 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 
 	if (accettato) {
 		w->audio_spediti++;
-		w->dgram_rimandi = 0;
+		w->dgram_zitto_da = 0;
 		dgram_togli_testa(w);
-	} else if (w->dgram_rimandi < WT_DGRAM_RIMANDI_MAX) {
+	} else if (zitto_ms < WT_DGRAM_ZITTO_MAX_MS) {
 		/* ⛔⛔ NON SI BUTTA: SI RIMANDA — e la differenza vale il 38 % dell'audio.
 		 *
 		 *      `[M]` 17 agosto 2026, audio VERO in PCM con il video acceso:
@@ -1709,10 +1907,20 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		 *
 		 * ⚠ E il tetto resta: la coda tiene otto blocchi, e chi non ci sta si
 		 *   butta comunque (§6.3).  Rimandare non e' accumulare — sposta il
-		 *   blocco di qualche centinaio di microsecondi, non di mezzo secondo. */
-		w->dgram_rimandi++;
+		 *   blocco di qualche centinaio di microsecondi, non di mezzo secondo.
+		 *
+		 * ⭐ E DAL 24 AGOSTO 2026 LA CONDIZIONE QUI SOPRA E' UN TEMPO, non un
+		 *    contagiri delle passate (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
+		 *    `audio_rimandati` resta quel che e' sempre stato — quante volte il
+		 *    pacer ha detto «non adesso» — e ⚠ NON e' una grandezza per
+		 *    giudicare: `[M]` 24 agosto, `casa-cattiva`, **2,2 milioni in 26 s**,
+		 *    perche' conta le passate del ciclo degli eventi, non i blocchi. */
 		w->audio_rimandati++;
 		w->dgram_rimando_ts = ts;
+		/* ⛔ L'orologio del silenzio parte al PRIMO rifiuto, non a ogni
+		 *    rifiuto: qui si misura una durata, non un istante. */
+		if (!w->dgram_zitto_da)
+			w->dgram_zitto_da = ts;
 		/* ⛔⛔⛔ E NON SI TORNA SUBITO: SE UN PACCHETTO C'E', VA SPEDITO.
 		 *
 		 *       `[M]` 17 agosto 2026, e questo era il difetto che teneva in
@@ -1735,10 +1943,19 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		 *      finestra che non cresce e il ritmo a singhiozzo.  ⚠ Cioe' il
 		 *      difetto **fabbricava** i sintomi che stavo inseguendo. */
 	} else {
-		/* ⚠ Qui il rimando non si puo' piu' fare: o la congestione e' vera
-		 *   (`cwnd_left` sotto la misura del blocco), o si e' gia' rimandato
-		 *   troppe volte e il blocco e' vecchio.  ⛔ Allora si butta davvero,
-		 *   ed e' quel che §6.3 vuole: il suono in ritardo non serve. */
+		/* ⛔⭐ QUI IL RIMANDO NON SI PUO' PIU' FARE, E ADESSO SI SA PERCHE'.
+		 *
+		 *     Fino al 23 agosto 2026 questo ramo si raggiungeva quando un
+		 *     contagiri DELLA CONNESSIONE aveva superato 4096, e il commento
+		 *     diceva «il blocco e' vecchio» senza che nessuno avesse guardato
+		 *     l'eta' di quel blocco (⇒ il riquadro di `WT_DGRAM_ZITTO_MAX_MS`).
+		 * ⭐ Adesso ci si arriva per un fatto MISURATO IN MILLISECONDI: da
+		 *    `WT_DGRAM_ZITTO_MAX_MS` questa connessione non e' riuscita a mettere
+		 *    un solo datagram in un solo pacchetto.  ⇒ Il piu' vecchio della coda
+		 *    non uscira' in tempo, e si butta — ed e' quel che §6.3 vuole: il
+		 *    suono in ritardo non serve a nessuno.
+		 * ⚠ E la riga qui sotto porta ANCHE l'eta' vera del blocco, che non
+		 *   decide: e' li' per farsi smentire (⇒ il riquadro del tetto). */
 		w->audio_rifiutati++;
 		/* ⛔ `registro_dice` e non `registro_dettaglio`: il secondo e'
 		 *    SOPPRESSO quando la parlantina e' spenta, cioe' in ogni
@@ -1763,9 +1980,15 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			 *    **grande**, la causa e' un'altra e va cercata altrove. */
 			registro_dice(REG_WT,
 			              "⚠ %s: datagram di %zu byte NON messo nel pacchetto "
-			              "(destlen %zu) — buttato (§6.3).  Rifiutati %llu.  "
+			              "(destlen %zu) — buttato perche' non esce un datagram da "
+			              "%llu ms, e il tetto e' %u (§6.3).  ⚠ e il blocco che "
+			              "butto ne ha %llu, di ms: se i due numeri divergono, la "
+			              "coda non si sta rinfrescando.  Rifiutati %llu.  "
 			              "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s",
 			              w->provenienza, v.len, destlen,
+			              (unsigned long long)zitto_ms,
+			              (unsigned)WT_DGRAM_ZITTO_MAX_MS,
+			              (unsigned long long)eta_ms,
 			              (unsigned long long)w->audio_rifiutati,
 			              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 			              ngtcp2_conn_get_send_quantum(w->conn),
@@ -7243,6 +7466,11 @@ void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts)
 
 void wt_batti(wt *w, ngtcp2_tstamp ts)
 {
+	/* ⛔ PRIMA di tutto: `audio_regola()` qui sotto accoda blocchi d'audio, e
+	 *    `dgram_accoda()` li timbra con questo campo.  Un timbro vecchio di un
+	 *    battito darebbe a ogni blocco un'eta' falsa. */
+	w->ts_ora = ts;
+
 	if (w->rcp)
 		rcp_tempo(w->rcp, ts / NGTCP2_MILLISECONDS);
 
@@ -7352,6 +7580,10 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 {
 	nghttp3_vec vec[16];
 
+	/* ⛔ L'orologio della sessione: vedi `wt_batti()`.  ⚠ Qui serve perche' una
+	 *   scrittura puo' arrivare fra un battito e l'altro. */
+	w->ts_ora = ts;
+
 	/* ⭐ Una passata di scrittura comincia qui, e gli stream ripartono tutti
 	 *    SBLOCCATI: l'elenco vale per una passata sola.  ⚠ Sta fuori dal ciclo
 	 *    apposta — azzerarlo dentro rimetterebbe in gioco lo stesso elemento a
@@ -7359,12 +7591,59 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	w->nbloccati = 0;
 	w->troppi_bloccati = false;
 
-	/* ⭐ I DATAGRAM PRIMA DEGLI STREAM, e la ragione e' il ritardo.
+	/* ═══════════════════════════════════════════════════════════════════════
+	 * ⛔⛔⭐ I DATAGRAM PRIMA DEGLI STREAM — CIOE' **L'AUDIO VINCE SUL VIDEO**
+	 *       QUANDO LA FINESTRA SI STRINGE.  E' UNA DECISIONE, non un ordine di
+	 *       righe: sta qui perche' non e' scritta in nessun documento.
+	 * ═══════════════════════════════════════════════════════════════════════
 	 *
-	 * ⛔ Un blocco d'audio che aspetta la coda del video arriva in ritardo di
-	 *    un fotogramma, e in ritardo non serve (§6.3).  ⚠ E non affama gli
-	 *    stream: la coda dei datagram e' lunga otto, quindi al massimo otto
-	 *    pacchetti passano davanti — poi `w->ndgram` e' zero e si prosegue. */
+	 * ⛔ CHE COSA DECIDE.  Una passata di scrittura ha un solo `dest` e una sola
+	 *    finestra di congestione.  Chi scrive per primo se li prende.  Questa
+	 *    riga da' il primo posto ai DATAGRAM: se c'e' anche un solo blocco
+	 *    d'audio in coda, quello entra nel pacchetto prima di qualunque byte di
+	 *    video, e su una finestra da due o tre pacchetti (`[M]` la sessione vera
+	 *    dell'utente: `cwnd` 2 888 - 5 704 byte) «prima» vuol dire «invece».
+	 *
+	 * ⭐ PERCHE'.  I due carichi non si degradano allo stesso modo, e la
+	 *    differenza e' in `RCP.md` §6.3 contro §5.1:
+	 *      · un blocco d'audio in ritardo **non serve piu' a nessuno** — non si
+	 *        ritrasmette, non si riordina, e chi ascolta ha un cuscino di
+	 *        250 ms e poi un buco che si SENTE;
+	 *      · un fotogramma in ritardo e' ancora un fotogramma: gli stream sono
+	 *        affidabili, i byte restano in coda e partono la passata dopo, e
+	 *        l'occhio perdona un fotogramma in piu' di ritardo molto piu' di
+	 *        quanto l'orecchio perdoni un buco.
+	 *    ⇒ Dare la precedenza al carico che scade e' l'unica delle due scelte in
+	 *      cui il ritardo si paga con qualcosa che si puo' ancora recuperare.
+	 *
+	 * ⛔ L'ALTERNATIVA SCARTATA, e non era assurda: **gli stream per primi**,
+	 *    cioe' l'audio che viaggia nello spazio che il video lascia libero.
+	 *    ⚠ E' esattamente quel che fa il flag `MORE` dentro
+	 *    `dgram_scrivi_uno()`, e li' funziona; ma come ORDINE e' stata provata e
+	 *    ha una misura contro: `[M]` 17 agosto 2026, sessione vera dell'utente,
+	 *    **1 578 blocchi spediti e 1 606 rifiutati** con `cwnd_left = 0` — piu'
+	 *    della meta' dell'audio non partiva, perche' il video si prendeva la
+	 *    finestra intera e all'audio non restava un pacchetto suo.
+	 *    ⚠ La terza strada — una quota fissa per ciascuno — e' stata scartata
+	 *      senza misurarla: sarebbe un numero da tarare per scena, e §6.3 non
+	 *      da' nessun criterio per sceglierlo.
+	 *
+	 * ⚠ IL PREZZO, E NON E' TEORICO: e' banda tolta al video proprio quando ce
+	 *   n'e' poca.  ⭐ Ma e' LIMITATO per costruzione — la coda dei datagram e'
+	 *   lunga otto, quindi al massimo otto pacchetti passano davanti, poi
+	 *   `w->ndgram` e' zero e si prosegue con gli stream.
+	 *
+	 * ⭐⭐ E QUANTO PESI QUESTA PRECEDENZA DIPENDE DA COSA SUCCEDE SULLO SCHERMO,
+	 *     `[M]`:
+	 *       · desktop FERMO — il filo e' **tutto audio**: 48,0 datagram su 48,4
+	 *         pacchetti al secondo (`09-b84`, 24 agosto 2026, cura del silenzio
+	 *         spenta).  ⇒ Non c'e' nessun video a cui togliere niente;
+	 *       · sessione VERA in movimento — l'audio sta fra il **25 e il 33 %**
+	 *         dei pacchetti.  ⇒ Due terzi buoni della finestra restano al video
+	 *         anche nel caso peggiore.
+	 *     ⚠ Il primo numero e' anche il motivo per cui il silenzio dell'audio
+	 *       (`audio.c`) e' diventato un predefinito: la precedenza costa poco
+	 *       finche' l'audio non parla per non dire niente. */
 	{
 		ngtcp2_ssize ndg = 0;
 		if (dgram_scrivi_uno(w, path, pi, dest, destlen, ts, &ndg))

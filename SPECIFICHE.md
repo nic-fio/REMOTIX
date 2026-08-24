@@ -1040,6 +1040,34 @@ massimo; un cursore lasciato in basso non sopravvive alla riconnessione.
 monitor**, quindi chi cattura il monitor riceve il segnale a fondo scala qualunque cosa dica il
 cursore, **muto compreso**. La proprietà che sposta la presa esiste ma è spenta di suo.
 
+### 10.1 ⛔⭐⭐ Quando la finestra si stringe, **l'audio passa davanti al video** — *24 agosto 2026*
+
+⚠ **Questa riga arriva tardi**: la decisione era presa **nel codice** dall'inizio (`wt_scrivi()`) e
+**non era scritta da nessuna parte** — né qui, né in `RCP.md` §6.3, né in `DECISIONI.md`, né in
+`CODER.md`. È stata trovata cercando la causa dell'audio rifiutato su rete cattiva
+(`fasi/09` §20.2-quater), ed è precisamente il genere di cosa che una fase di misura esiste per
+scoprire: **una politica del prodotto che nessun documento dichiarava.**
+
+> ⛔ **In ogni passata di scrittura i datagram entrano nel pacchetto PRIMA dei byte di video**, e su
+> una finestra da due o tre pacchetti *«prima»* vuol dire **«invece»**.
+
+⭐ **La ragione è che i due carichi non si degradano allo stesso modo:**
+
+- un blocco d'**audio** in ritardo **non serve più a nessuno** — §6.3: nessuna ritrasmissione,
+  nessun riordino, e chi ascolta ha un cuscino di 250 ms e poi **un buco che si sente**;
+- un fotogramma in ritardo **è ancora un fotogramma**: gli stream sono affidabili, e i suoi byte
+  partono la passata dopo.
+
+⚠ **Il prezzo, dichiarato**: è banda tolta al video **proprio quando ce n'è poca**. ⭐ Ed è limitato
+**per costruzione**: la coda dei datagram è lunga **otto**, quindi al massimo otto pacchetti passano
+davanti.
+
+`[M]` 24 agosto 2026: a desktop fermo il filo è **tutto audio** (48,0 datagram su 48,4 pacchetti al
+secondo); sulla sessione vera dell'utente col desktop in movimento l'audio sta fra il **25 e il
+33 %** dei pacchetti.
+
+*(La decisione è scritta per esteso, alternativa scartata compresa, nel riquadro di `wt_scrivi()`.)*
+
 ---
 
 ## 11. I desktop e il sistema

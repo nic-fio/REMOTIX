@@ -15,7 +15,7 @@
 #     modifica avrebbe voluto dire misurare su un binario che nessuno aveva
 #     deciso di spedire.
 #     ⭐ Adesso quegli agenti hanno chiuso, e HEAD e' **vecchio**: non porta ne'
-#       `--sgombra-soglia-ms` ne' `--ritmo-adattivo` — cioe' le due cose che
+#       `--sgombra-soglia-ms` ne' `--niente-ritmo-adattivo` — cioe' le due cose che
 #       questo banco esiste per misurare — ne' i contatori `dgram_persi` /
 #       `dgram_falsi` e le righe `rete-quic` con `cwnd`, `srtt_us` e `giudizio=`.
 #     ⇒ Qui si spedisce l'albero di lavoro, e la sua identita' si DICHIARA con
@@ -100,7 +100,7 @@ porta)
 		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash -c \"
 		 echo md5 binario:      \\\$(md5sum $ALBERO/src/remotix | cut -d' ' -f1)
 		 echo md5 webtransport: \\\$(md5sum $ALBERO/src/webtransport.c | cut -d' ' -f1)
-		 for o in sgombra-soglia-ms ritmo-adattivo; do
+		 for o in sgombra-soglia-ms niente-ritmo-adattivo; do
 		   if grep -qa -- --\\\$o $ALBERO/src/remotix; then
 		     echo \\\"opzione --\\\$o: ⭐ C'E' nel binario\\\"
 		   else

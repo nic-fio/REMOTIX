@@ -26,31 +26,42 @@ e *«una sessione ferma costa 2 463 kbit/s di audio PCM»*, `[M]` `09-b81`.
 
 ═══ ⭐⭐⭐ E QUEL CHE C'E' DAVVERO E' PIU' GRAVE, NON MENO ══════════════════
 
-`[M]` 24 agosto 2026, questo banco, porta 7972, 25 s per braccio, binari
-`6c52adfc…` (spenta) e `02558a5c…` (accesa).  Sessione con **Opus** negoziato e
-desktop **fermo** (`suono.c`: `PICCO 0 su 32767`, cioe' silenzio DIGITALE):
+`[M]` 24 agosto 2026, RIMISURATO col banco a **un binario solo** (porta 7981,
+binario md5 `6ec170c0…`, 25 s per braccio; la prima misura era del 23-24 agosto
+sulla 7972 con due binari, e i numeri combaciano).  Sessione con **Opus**
+negoziato e desktop **fermo** (`suono.c`: `PICCO 0 su 32767`, cioe' silenzio
+DIGITALE):
 
   braccio | sul filo      | pacchetti/s | datagram/s | byte/pacchetto | carico
   --------|---------------|-------------|------------|----------------|--------
-  SPENTA  | 557,6 kbit/s  |  48,4       |  48,0      | 1 441          | 1,18 kbit/s
-  ACCESA  |   5,5 kbit/s  |   0,5       |   0,0      |  —             | 0,00 kbit/s
-                                                              ⇒ **102,1 volte**
+  SPENTA  | 557,5 kbit/s  |  48,4       |  48,0      | 1 441          | 1,18 kbit/s
+  ACCESA  |   5,7 kbit/s  |   0,5       |   0,0      |  —             | 0,00 kbit/s
+                                                              ⇒ **97,3 volte**
 
 ⇒ **Il 99,8 % di quel traffico e' riempimento.**  Ogni blocco di silenzio si
-porta via un pacchetto INTERO, perche' `webtransport.c:1613` scrive il datagram
-con `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`.  ⛔ E quel pacchetto lo paga la
-**stessa finestra di congestione del video**: `[M]` sulla sessione vera la
-finestra vale 2 888 - 5 704 byte, cioe' **due o tre pacchetti**, e l'audio ne
-chiede cinquanta al secondo per non dire niente.
+porta via un pacchetto INTERO da 1 441 byte per 3 byte di carico.  ⛔ E quel
+pacchetto lo paga la **stessa finestra di congestione del video**: `[M]` sulla
+sessione vera la finestra vale 2 888 - 5 704 byte, cioe' **due o tre
+pacchetti**, e l'audio ne chiede cinquanta al secondo per non dire niente.
+
+⛔⛔ E QUI C'ERA UNA CAUSA DEDOTTA, ED ERA SBAGLIATA.  Questa riga diceva
+    *«perche' `webtransport.c:1613` scrive il datagram con
+    `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`»*.  ⇒ Provato il 24 agosto: con quel
+    flag **mai** chiesto il pacchetto resta di 1 441 byte lo stesso.  `[R]` A
+    riempirlo e' `wt_scrivi()`, che chiede
+    `NGTCP2_WRITE_STREAM_FLAG_PADDING` a ogni scrittura di stream e chiude il
+    pacchetto che il datagram aveva lasciato aperto.  ⚠ Il numero era misurato,
+    la causa no: ⇒ §PADDING in fondo a questo file, con la tabella.
 
 ⭐ E la cura NON tocca il suono, misurato appaiato sulla scena col tono a 440 Hz
-   (PCM, giudice di `07-b42`): copertura **1,0000 → 0,9996**, purezza del tono
-   **1,000 → 1,000**, blocchi taciuti **1 su 5 001** — e quell'uno e' il primo
+   (PCM, giudice di `07-b42`): copertura **1,0000 → 1,0000**, purezza del tono
+   **1,000 → 1,000**, blocchi taciuti **1 su 5 002** — e quell'uno e' il primo
    blocco della sessione, che precede i primi campioni del tono.
 
-⚠ IL PREZZO, e si scrive: sulla scena col tono i `mancati` del cliente passano
-  da 0 a 2.  Un buco VOLUTO lascia lo stesso salto di `istante` di uno perso, e
-  quel contatore non distingue le due cose.
+⚠ IL PREZZO, e si scrive: su una scena col suono i `mancati` del cliente possono
+  salire (⇒ `[M]` 0 → 2 sulla prima misura; 0 → 0 sulla rimisura del 24 agosto).
+  Un buco VOLUTO lascia lo stesso salto di `istante` di uno perso, e quel
+  contatore non distingue le due cose.
 
 ⭐ LA CURA E' IN `src/audio.c`, E NASCE SPENTA (I6): un blocco in cui TUTTI i
    campioni sono esattamente zero non diventa un datagram.  §6.3 mette
@@ -58,22 +69,46 @@ chiede cinquanta al secondo per non dire niente.
    assoluto ⇒ **un blocco non spedito e' un buco, e un buco e' silenzio** —
    che e' quel che quel blocco conteneva.  Non e' un'approssimazione.
 
-⛔ E QUEL CHE **NON** SI E' SCRITTO, perche' non e' nostro: `src/webtransport.c`
-   e' di un altro.  La descrizione della sua meta' di cura sta in §PADDING, in
-   fondo a questo file, con funzione, riga, cambio e ragione.
+⛔ E LA META' DI CURA CHE QUESTO BANCO AVEVA CHIESTO A `src/webtransport.c` E'
+   STATA PROVATA IL 24 AGOSTO 2026 E **NON SI FA**: ⇒ §PADDING, in fondo a
+   questo file, con la tabella e il perche'.
 
-═══ ⛔ L'INTERRUTTORE E' DI COMPILAZIONE, E VA DETTO ════════════════════════
+═══ ⭐⭐⭐ DAL 24 AGOSTO 2026 I BRACCI SONO **UN BINARIO SOLO**, E IL CONFRONTO
+    E' DIVENTATO PIU' FORTE ════════════════════════════════════════════════
 
-Il codificatore vive nel **figlio**, che e' un `execve` con l'ambiente
-**composto da zero** (`figlio.c:1145`): una `REMOTIX_...` non lo raggiunge.
-L'unico canale che attraversa l'`exec` e' la coda di `argv`, e quella si scrive
-in `main.c` e in `figlio.c` — due file che non sono di questo mandato.
+Fino al 23 agosto l'interruttore era di COMPILAZIONE (`-DAUDIO_SILENZIO_PREDEFINITO=1`)
+e questo banco costruiva **due binari** dallo stesso albero, con un solo `-D` di
+differenza.  Era il meglio che si potesse fare allora, e va detto perche' non
+era gratis: **due binari sono due imputati**.  Due compilazioni possono
+divergere per una `INC` letta male, un oggetto rimasto indietro, un `make` che
+non ha rifatto quel che credevo — e la differenza fra i due bracci sarebbe
+finita nella colonna sbagliata senza una riga rossa da nessuna parte.  ⚠ Il
+banco poteva solo controllare che gli `md5` fossero DIVERSI: sapeva dire «non
+sono lo stesso file», non «differiscono per quel che credo».
 
-⇒ I due bracci sono **due binari dallo STESSO albero e dagli STESSI sorgenti**,
-  con **un solo `-D` di differenza** (`AUDIO_SILENZIO_PREDEFINITO=1`), e i loro
-  `md5` si stampano a ogni giro.  ⛔ E il banco CONTROLLA che siano diversi:
-  due copie dello stesso file darebbero «nessuna differenza», che e' la stessa
-  faccia di «la cura non serve» e la conclusione opposta.
+⭐ `DECISIONI.md` §3.1-septies ha tolto quel `-D`: la cura nasce **ACCESA** nel
+   prodotto e si spegne con **`--niente-audio-silenzio`**, che e' un'opzione
+   della riga di comando.
+
+⇒ **I due bracci sono lo STESSO IDENTICO BINARIO**, e a cambiare c'e' solo la
+  riga di comando del server:
+
+      ACCESA   (nessuna opzione — e' il prodotto che si spedisce)
+      SPENTA   --niente-audio-silenzio
+
+⛔⭐ **UN IMPUTATO IN MENO, e si scrive perche' e' un guadagno di metodo, non
+    una semplificazione.**  Prima, se i due bracci avessero dato numeri uguali,
+    le spiegazioni erano due: «la cura non serve» oppure «i due binari non erano
+    quelli che credevo».  Adesso e' una sola.  ⚠ E l'md5 si stampa lo stesso, a
+    ogni giro: serve a dire QUALE prodotto ho misurato, non piu' a distinguere i
+    bracci.
+
+⛔⛔ E QUEL CHE DISTINGUE I BRACCI ADESSO E' **SOLO IL REGISTRO DEL PRODOTTO** —
+    `a_la_cura_ha_parlato()`, che pretende `cura_dichiarata` «spenta» in uno e
+    «accesa» nell'altro.  Con due binari quel predicato era una cintura in piu';
+    con un binario solo e' **l'unica**, e senza di lui due giri identici col
+    nome di due sarebbero indistinguibili da una cura che non serve.
+    ⚠ `LEZIONI.md` E1: «scritto non e' in vigore».
 
 ═══ ⭐ LE GRANDEZZE, E QUELLA CHE CONTA NON E' «QUANTI NE BUTTO» ═══════════
 
@@ -107,7 +142,7 @@ in `main.c` e in `figlio.c` — due file che non sono di questo mandato.
 Uso (dal portatile):
     python3 banchi/09-b84-audio-silenzio.py --certifica    # ⛔ prima di tutto
     python3 banchi/09-b84-audio-silenzio.py terreno
-    python3 banchi/09-b84-audio-silenzio.py costruisci     # i due binari
+    python3 banchi/09-b84-audio-silenzio.py costruisci     # IL binario (uno)
     python3 banchi/09-b84-audio-silenzio.py muto  [--secondi 25]
     python3 banchi/09-b84-audio-silenzio.py tono  [--secondi 25]
     python3 banchi/09-b84-audio-silenzio.py costo [--secondi 25]
@@ -166,8 +201,11 @@ RETE = B77.RETE            # root(), guasta(), tono_accendi/spegni, guardiano_*
 LUCCHETTO = B77.LUCCHETTO
 
 CHI = "09-b84"
-BIN_SPENTA = "%s/src/remotix-spenta" % ALB
-BIN_ACCESA = "%s/src/remotix-accesa" % ALB
+# ⛔ UN binario solo, ed e' quello del prodotto: i bracci si fanno con
+#    `OPZIONI_SERVER` (⇒ l'intestazione, «un imputato in meno»).
+BINARIO = "%s/src/remotix" % ALB
+# ⭐ La riga di comando di ogni braccio, e il braccio ACCESO non ne ha una.
+OPZIONI = {"accesa": "", "spenta": "--niente-audio-silenzio"}
 
 
 def log(t):  print("\n\033[1m== %s\033[0m" % t)
@@ -492,11 +530,21 @@ def cura_del_registro(riga0):
     rc, out, _ = root("tail -n +%d %s/registro.log 2>/dev/null | grep -a "
                       "'cura del silenzio digitale' | tail -1" % (riga0 + 1, LAV))
     dett = out.strip()
+    # ⛔⛔ E SI CERCA LA FRASE INTERA, NON LA PAROLA — `[M]` 24 agosto 2026, e
+    #     questo banco ci sarebbe cascato.  Dal 24 agosto la riga del braccio
+    #     SPENTO contiene *«⚠ E NON e' il predefinito: dal 24 agosto nasce
+    #     ACCESA»*: un `if "ACCESA" in dett` avrebbe letto **accesa** su un
+    #     braccio spento, cioe' avrebbe dichiarato in vigore il contrario di
+    #     quel che era in vigore — e `a_la_cura_ha_parlato()`, che e' l'UNICA
+    #     cintura rimasta ora che i binari sono uno solo, avrebbe dato verde a
+    #     due bracci sbagliati.
+    # ⇒ Si ancora alle due frasi che il prodotto scrive per DIRE lo stato, e non
+    #   a una parola che compare anche nella spiegazione (`audio.c:212`).
     stato = None
-    if "ACCESA" in dett:
-        stato = "accesa"
-    elif "spenta" in dett:
+    if "SPENTA a mano" in dett:
         stato = "spenta"
+    elif "⭐ ACCESA" in dett:
+        stato = "accesa"
     # ⛔ IL CONTO ESATTO E' QUELLO DELLA CHIUSURA, non quello della riga di
     #    dentro: quella esce alla prima e poi una ogni mille, quindi dice
     #    «almeno N».  ⚠ Leggere quella e chiamarla `taciuti` sarebbe un numero
@@ -540,78 +588,64 @@ def md5(percorso):
     return s if len(s) == 32 else None
 
 
-def costruisci_due():
-    """⛔ I DUE BINARI: stesso albero, stessi sorgenti, un solo `-D`."""
-    log("I DUE BINARI — un solo `-D` di differenza")
-    copione = os.path.join(FUORI, "costruisci-due.sh")
-    with open(copione, "w") as f:
-        f.write(CORPO_COSTRUISCI)
-    subprocess.run(["scp", "-q", "-o", "BatchMode=yes", copione,
-                    "%s:%s/costruisci-due.sh" % (MACCHINA, ALB)], timeout=120)
-    rc, out, err = root("bash /media/REMOTIX/enter.sh --root 'ALB=%s bash "
-                        "%s/costruisci-due.sh'" % (DENTRO_ALB, DENTRO_ALB), 1200)
-    for r in (out + err).splitlines():
-        if ("md5" in r or "INC letta" in r or "⛔" in r or
-                r.strip().startswith(("5", "a", "0", "OK", "b", "c", "d", "e", "f"))
-                and "/srv/src" in r):
-            print("   %s" % r)
-    ms, ma = md5(BIN_SPENTA), md5(BIN_ACCESA)
-    if not ms or not ma:
-        ko("⛔ uno dei due binari non c'e' (spenta=%s accesa=%s)" % (ms, ma))
+def costruisci():
+    """⛔ IL BINARIO — uno solo, ed e' quello del prodotto.
+
+    ⭐ Dal 24 agosto 2026 non c'e' piu' niente da compilare due volte: il `-D`
+       `AUDIO_SILENZIO_PREDEFINITO` e' stato tolto e i bracci si fanno con
+       `--niente-audio-silenzio` (⇒ l'intestazione).  ⚠ Qui si costruisce e si
+       DICHIARA l'md5: non serve piu' a distinguere due bracci, serve a dire
+       quale prodotto ho misurato.
+    ⛔ I sorgenti devono essere gia' nell'albero: chi ce li porta e' il terreno
+       (`09-b79-terreno.sh porta` o `07-b64-terreno.sh porta`), e questo banco
+       non ne tiene una seconda copia."""
+    log("IL BINARIO — uno solo, ed e' il prodotto")
+    rc, out, err = root(
+        "bash /media/REMOTIX/enter.sh --root 'PREFISSO=/srv/src/b2/prefisso "
+        "NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 "
+        "bash %s/src/costruisci.sh 2>&1 | tail -6'" % DENTRO_ALB, 1200)
+    for r in (out + err).splitlines()[-6:]:
+        inf(r.strip()[:150])
+    m = md5(BINARIO)
+    if not m:
+        ko("⛔ il binario non c'e': %s" % BINARIO)
         return False
-    if ms == ma:
-        ko("⛔⛔ I DUE BINARI SONO IDENTICI (%s): il `-D` non ha morso, e due "
-           "giri con lo stesso binario direbbero «nessuna differenza»" % ms)
+    ok("binario md5 %s" % m)
+    # ⛔⭐ E SI CONTROLLA CHE PORTI L'INTERRUTTORE.  Un binario di prima del
+    #    24 agosto nasce con la cura SPENTA e RIFIUTA `--niente-audio-silenzio`:
+    #    darebbe «il server non parte» sul braccio spento, e un braccio acceso
+    #    che acceso non e'.
+    rc, out, _ = root("grep -qa -- --niente-audio-silenzio %s && echo si || "
+                      "echo no" % BINARIO)
+    if "si" not in out:
+        ko("⛔⛔ `--niente-audio-silenzio` NON e' in questo binario: e' di prima "
+           "del 24 agosto 2026, e i due bracci sarebbero tutt'e due «spenta»")
         return False
-    ok("spenta md5 %s" % ms)
-    ok("accesa md5 %s" % ma)
+    ok("`--niente-audio-silenzio` c'e' nel binario")
     return True
 
 
-CORPO_COSTRUISCI = r'''#!/bin/bash
-# ⛔ Le `INC`/`LIB` non si ricopiano: si LEGGONO da quel che `costruisci.sh`
-#    stampa, o i due bracci divergerebbero per una riga che nessuno ha guardato.
-set -uo pipefail
-ALB=${ALB:-/srv/src/09nr9-src}
-cd "$ALB/src" || exit 2
-USCITA=$(PREFISSO=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 \
-         NGHTTP3=/srv/src/b2/nghttp3 bash "$ALB/src/costruisci.sh" 2>&1)
-[ -x "$ALB/src/remotix" ] || { echo "⛔ il braccio SPENTO non si e' costruito"; exit 2; }
-cp -f "$ALB/src/remotix" "$ALB/src/remotix-spenta"
-INC=$(echo "$USCITA" | sed -n 's/^ *-- *intestazioni: //p' | head -1)
-LIB=$(echo "$USCITA" | sed -n 's/^ *-- *librerie: *//p' | head -1)
-[ -n "$INC" ] || { echo "⛔ INC non letta da costruisci.sh"; exit 2; }
-echo "INC letta: $INC"
-rm -f "$ALB/src"/*.o "$ALB/src/remotix"
-make -C "$ALB/src" GEMELLO="$ALB/banchi/rcp" \
-  CFLAGS="-O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter $INC -DAUDIO_SILENZIO_PREDEFINITO=1" \
-  LDFLAGS="$LIB" tutto 2>&1 | tail -2
-[ -x "$ALB/src/remotix" ] || { echo "⛔ il braccio ACCESO non si e' costruito"; exit 2; }
-cp -f "$ALB/src/remotix" "$ALB/src/remotix-accesa"
-cp -f "$ALB/src/remotix-spenta" "$ALB/src/remotix"
-md5sum "$ALB/src/remotix-spenta" "$ALB/src/remotix-accesa" "$ALB/src/audio.c"
-'''
-
-
 def accendi(braccio):
-    """⛔ Il binario si mette al posto di `remotix` e si riaccende l'unita'.
-       ⚠ E si VERIFICA quale ci sia: copiare e credere e' la forma E1."""
-    sorgente = BIN_ACCESA if braccio == "accesa" else BIN_SPENTA
-    voluto = md5(sorgente)
-    root("cp -f %s %s/src/remotix" % (sorgente, ALB))
-    messo = md5("%s/src/remotix" % ALB)
-    if messo != voluto:
-        ko("⛔ il binario messo (%s) non e' quello voluto (%s)" % (messo, voluto))
+    """⛔ Il server si riaccende sul SOLO binario, con la riga di comando del
+       braccio.  ⚠ E qui non si verifica lo stato della cura: la verifica e'
+       `LEZIONI.md` E1 e si fa DOPO, sul registro del prodotto
+       (`cura_del_registro()` + `a_la_cura_ha_parlato()`) — «l'ho scritto sulla
+       riga di comando» non e' «e' in vigore», ed e' l'unica cintura rimasta da
+       quando il binario e' uno solo."""
+    m = md5(BINARIO)
+    if m is None:
+        ko("⛔ il binario non c'e' (%s): «costruisci»" % BINARIO)
         return None
     subprocess.run(["bash", os.path.join(QUI, "07-b64-terreno.sh"), "accendi"],
                    capture_output=True, timeout=300,
-                   env=dict(os.environ, UNITA=UNITA))
+                   env=dict(os.environ, UNITA=UNITA,
+                            OPZIONI_SERVER=OPZIONI[braccio]))
     for _ in range(50):
         rc2, o, _ = root("ss -uln 2>/dev/null | grep -c ':%d '" % PORTA)
         if o.strip() not in ("", "0"):
             break
         time.sleep(0.2)
-    return voluto
+    return m
 
 
 def giro(braccio, scena, codec, secondi):
@@ -771,10 +805,8 @@ def terreno_controlla():
     rc, out, _ = root("test -s %s/parola && echo si || echo no" % LAV)
     if "si" not in out:
         guai.append("manca %s/parola (0600): D12 vieta la parola in argv" % LAV)
-    for b, nome in ((BIN_SPENTA, "spenta"), (BIN_ACCESA, "accesa")):
-        if not md5(b):
-            guai.append("manca il binario del braccio %s (%s): «costruisci»"
-                        % (nome, b))
+    if not md5(BINARIO):
+        guai.append("manca il binario (%s): «costruisci»" % BINARIO)
     conto = []
     for p in VIETATE:
         rc, o, _ = root("ss -uln 2>/dev/null | grep -c ':%s ' || true" % p)
@@ -841,7 +873,13 @@ def certifica():
     f = a_la_cura_ha_parlato()
     caso("spenta/accesa, 1249 taciuti", f,
          _n(cura_dichiarata="spenta"), _n(cura_dichiarata="accesa", taciuti=1249), True)
-    caso("⛔ tutt'e due i bracci sullo stesso binario", f,
+    # ⛔⛔ E DAL 24 AGOSTO 2026 QUESTO CASO E' IL PIU' IMPORTANTE DEI QUATTRO:
+    #     i due bracci SONO lo stesso binario per costruzione, quindi «due giri
+    #     identici col nome di due» non e' piu' un incidente da compilazione —
+    #     e' quel che succede se `--niente-audio-silenzio` non arriva al server.
+    #     ⇒ Questo predicato e' l'unica cosa che lo distingue da «la cura non
+    #     serve», che e' la conclusione opposta.
+    caso("⛔ tutt'e due i bracci dichiarano «spenta»: l'opzione non e' arrivata", f,
          _n(cura_dichiarata="spenta"), _n(cura_dichiarata="spenta", taciuti=0), False)
     caso("⛔ accesa ma zero taciuti", f,
          _n(cura_dichiarata="spenta"), _n(cura_dichiarata="accesa", taciuti=0), False)
@@ -1013,7 +1051,7 @@ def principale():
     if a.passo == "terreno":
         sys.exit(0 if terreno_controlla() else 2)
     if a.passo == "costruisci":
-        sys.exit(0 if costruisci_due() else 2)
+        sys.exit(0 if costruisci() else 2)
 
     if not terreno_controlla():
         ko("⛔ NON misuro su un terreno che non e' il mio")
@@ -1044,33 +1082,55 @@ def principale():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# §PADDING — ⛔ LA META' DI CURA CHE NON E' MIA, DESCRITTA E NON SCRITTA
+# §PADDING — ⛔⛔⛔ LA META' DI CURA CHE QUESTO BANCO AVEVA CHIESTO E' STATA
+#            PROVATA IL 24 AGOSTO 2026, **NON SI FA**, E LA MIA DIAGNOSI ERA
+#            SBAGLIATA.  Si lascia scritto per intero: e' la parte che insegna.
 #
-# `src/webtransport.c` e' di un altro agente.  Quel che segue e' la descrizione
-# precisa, perche' la misura e' qui e la cura e' li'.
+# ⛔ QUEL CHE AVEVO SCRITTO QUI: che i 557 kbit/s di una sessione ferma fossero
+#    riempimento chiesto da `dgram_scrivi_uno()` con
+#    `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` (`src/webtransport.c:1613` e `:1647`),
+#    e che bastasse condizionare quel flag al fatto che ci fosse un lotto da
+#    comporre.  ⚠ Era una DEDUZIONE — avevo il numero (48,0 datagram in 48,4
+#    pacchetti da 1 441 byte) e gli avevo attaccato accanto una causa che
+#    nessuno aveva misurato (`LEZIONI.md` §1.9).
 #
-#   dove      `dgram_scrivi_uno()`, `src/webtransport.c:1613` (e la seconda
-#             chiamata nel ciclo di riempimento, `:1647`)
-#   che cosa  `ngtcp2_conn_writev_datagram(..., NGTCP2_WRITE_DATAGRAM_FLAG_MORE |
-#             NGTCP2_WRITE_DATAGRAM_FLAG_PADDING, ...)`
-#   il cambio mettere `PADDING` **solo quando c'e' davvero un lotto da
-#             comporre** — cioe' quando la coda dei datagram ha piu' di un
-#             blocco, o quando il video ha byte in coda da infilare nello stesso
-#             pacchetto.  Con un datagram solo e la coda del video vuota, il
-#             lotto GSO e' di un pacchetto e il riempimento non compra niente.
-#   perche'   `[M]` 24 agosto 2026, questo banco: a desktop fermo e Opus
-#             negoziato sono **50 datagram/s da 3 byte** che escono in **51
-#             pacchetti/s da 1 444 byte** = **589 kbit/s** per **1,2 kbit/s** di
-#             suono.  Il riempimento e' il 99,8 %.
-#   il rischio ⚠ il riquadro di `:1581` dice perche' `PADDING` c'e': il manuale
-#             di ngtcp2 avverte che un primo pacchetto corto **fa collassare
-#             l'intero lotto GSO**.  ⇒ Non si toglie: si condiziona.  E la
-#             prova che serve e' la stessa di allora — i blocchi rifiutati con
-#             il video acceso, non solo la banda a riposo.
-#   ⭐ e non   La cura di `audio.c` (il silenzio che non si spedisce) toglie
-#     si       quei 50 datagram **alla radice**, quindi su una scena muta rende
-#     escludono il `PADDING` irrilevante.  Ma su una scena che SUONA il
-#              riempimento resta, e la' serve questa.
+# ⭐ COM'E' ANDATA, `[M]` 24 agosto 2026, banco NR12, porta 7981, `lo` liscio,
+#    desktop FERMO col tono a 440 Hz, 25 s per giro, due giri per braccio, e
+#    **lo stesso binario a meno di quella riga**:
+#
+#      codec  riempimento   kbit/s sul filo   byte/pacchetto
+#      -----  ------------  ---------------   --------------
+#      Opus   sempre          557,7 / 556,5        1 441
+#      Opus   condizionato    556,9 / 555,8        1 441
+#      Opus   **MAI**         556,4                1 441
+#      PCM    sempre        2 221,7 / 2 222,0      1 443
+#      PCM    condizionato  1 988,0 / 1 987,4      1 292
+#
+# ⛔⛔ **SU OPUS IL GUADAGNO E' ZERO**, e la riga che lo dimostra e' la terza:
+#      con `PADDING` **mai** chiesto il pacchetto resta di 1 441 byte.  ⇒ Non
+#      era quel flag a riempirlo, e la cura che avevo chiesto qui avrebbe
+#      cambiato una riga senza cambiare un byte.
+#
+# ⭐⭐⭐ E SI SA CHI LO RIEMPIE — `[R]`: `wt_scrivi()` chiede
+#      **`NGTCP2_WRITE_STREAM_FLAG_PADDING` a OGNI scrittura di stream**.
+#      Quando il datagram torna `NGTCP2_ERR_WRITE_MORE` il pacchetto resta
+#      APERTO e il ciclo degli stream, subito dopo, lo chiude riempiendolo.
+#      ⇒ Il riempimento di una sessione ferma **non e' del datagram: e' dello
+#      stream**, e chi volesse toglierlo deve andare li'.
+#
+# ⭐ Su PCM la condizione morde davvero (−10,5 %), perche' a 200 blocchi al
+#    secondo il datagram CHIUDE il pacchetto da solo e il ciclo degli stream non
+#    gira mai.  ⚠ Ma il PCM non e' quel che il prodotto negozia (⇒ l'intestazione
+#    di questo file, quattro sessioni vere su quattro dicono `audio.codec=opus`),
+#    e il predefinito nuovo — la cura del silenzio ACCESA — a desktop fermo
+#    toglie i datagram del tutto: **0,0 datagram al secondo**.
+#
+# ⇒ ⛔ **NON SI FA.**  Una condizione in piu' da mantenere dentro il riquadro
+#      piu' delicato di `webtransport.c`, per un guadagno che sul codec vero e'
+#      zero e sull'altro vale un decimo di una banda che a desktop fermo non
+#      c'e'.  ⚠ Il verbale sta in `src/webtransport.c`, nel riquadro
+#      `MORE`/`PADDING`, coi numeri qui sopra: chi ci ripensera' li trovera' la'
+#      prima di riscrivere la riga.
 # ═══════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":

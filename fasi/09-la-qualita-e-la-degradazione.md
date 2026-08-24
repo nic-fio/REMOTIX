@@ -4648,3 +4648,89 @@ migliorano e l'esperienza peggiora» — ed è verde.
 `--ritmo-adattivo`, `09-b84-audio-silenzio.py` appaiava **due binari** compilati diversi. ⭐ Adesso
 il braccio spento si fa **dalla riga di comando sullo stesso identico binario**: un imputato in meno.
 ⏳ In cura.
+
+## 21.4 ⭐⭐ LE CODE — e due delle tre si chiudono con un **no**
+
+### 21.4-bis I due banchi rotti dalla modifica, e un difetto trovato rimettendoli a posto
+
+`09-b79-cure.py`: bracci **rovesciati** — **A** = cure spente **a mano**, **C** = *nessuna opzione*.
+⭐ Il guadagno è scritto nel commento: **il braccio che rappresenta il prodotto adesso è quello a cui
+non si chiede niente**, e quindi non può promettere niente. `[M]` `--certifica` 21/21; giro vero su
+`ritardo-30`: fps **38,15 / 39,61 / 39,78**, chiavi 0,2 / 0,0 / 0,0 %, **S′ verde**.
+
+`09-b84-audio-silenzio.py`: da **due binari** a **uno**. ⭐ Due binari erano **due imputati** — se i
+bracci davano numeri uguali le spiegazioni erano due (*«la cura non serve»* oppure *«i binari non
+erano quelli che credevo»*); uno solo ne lascia una.
+⛔⭐ **E semplificandolo è saltato fuori un difetto vero**: la riga del braccio **spento** adesso
+contiene *«dal 24 agosto nasce ACCESA»*, e il banco cercava `"ACCESA" in dett` ⇒ **avrebbe letto
+«accesa» su un braccio spento**, dando verde a due bracci sbagliati **proprio ora che quel predicato
+è l'unica cintura**. Curato ancorandolo alle due frasi di stato.
+`[M]` `--certifica` 31/31; giro `muto` (Opus, fermo): **557,5 → 5,7 kbit/s = 97,3×**, 1 248 blocchi
+taciuti; giro `tono` (PCM): copertura **1,0000 → 1,0000**, purezza **1,000 → 1,000**, taciuti **1 su
+5 002**.
+
+### 21.4-ter ⛔⭐ `WT_DGRAM_RIMANDI_MAX` — **si tiene la grandezza, si cambia l'unità**
+
+`[M]` Il numero che spiega tutto: `casa-cattiva`, 25 s ⇒ **2,2 milioni di rimandi**, cioè **~85 000
+passate di scrittura al secondo** sotto carico contro **~200** a riposo. ⇒ Il tetto `4096` valeva
+**~48 ms** in un caso e **decine di secondi** nell'altro. ⛔ E non era un fusibile, **era la
+politica**: 2 258 blocchi buttati da quel tetto contro **9** dalla coda piena — il **99,6 %**.
+
+⭐⭐ **La strada ovvia è stata provata e la misura l'ha rifiutata.** Timbrare ogni blocco e buttarlo
+sull'**età vera**: `[M]` a 50 ms non scatta più di quanto scatti a 250, perché la coda tiene 8
+blocchi = 40 ms di PCM e **la testa non è quasi mai più vecchia di 40 ms**. Prezzo di quel «non tocca
+niente»: **+30 % di byte sul filo** (1 415 → 1 840 kbit/s, **rubati alla finestra del video**) per
+**+11 % di blocchi utili** — il resto arriva già vecchio e **lo butta il cliente**.
+
+⇒ Il campo diventa **`dgram_zitto_da`** («da quanto la connessione non mette un datagram in un
+pacchetto») e il tetto **`WT_DGRAM_ZITTO_MAX_MS`**, in millisecondi. ⛔ E `4096` **non si converte con
+una divisione**: è auto-referenziale — quante passate si fanno dipende da quanto si butta. `[M]` Col
+prodotto 2,1 M rimandi, col tetto a 50 ms **20 M**. ⇒ Il valore si è **tarato sulla misura**, e il
+verde è *«indistinguibile dal prodotto»*:
+
+| tetto | spediti | butt. (coda) | rifiutati | kbit/s | utili | utili/filo |
+|---|---|---|---|---|---|---|
+| **il prodotto** (5 giri) | 2 912-3 242 | 14-16 | 1 753-2 084 | 1 312-1 447 | 1 223-1 315 | 0,40-0,44 |
+| ⭐ **10 ms** | 2 947 | 16 | 2 039 | 1 286 | 1 246 | 0,435 |
+| 5 ms | 2 999 | 15 | 1 995 | 1 327 | 1 246 | 0,424 |
+| 50 ms | 3 955 | **797** | 263 | 1 743 | 1 390 | 0,360 |
+
+**10 ms** (= due blocchi di PCM) sta **dentro la dispersione del prodotto su ogni colonna**.
+⇒ ⭐ **La cura cambia quel che il numero vuol dire, non quel che il prodotto fa.** L'età vera del
+blocco resta registrata (`dgram[].nato`) ma ⛔ **non decide**: finisce nella riga di registro accanto
+al silenzio, **apposta per farsi smentire**.
+⏳ Da riportare in `rcp.c`: il «conto finale» dice ancora *«rifiutati da ngtcp2»*, e adesso sono
+*«buttati perché il filo era muto da N ms»*.
+
+### 21.4-quater ⛔ IL `PADDING` — **NON fatta, e la diagnosi era sbagliata**
+
+Scritta, costruita e misurata appaiata (desktop fermo col tono, `lo` liscio, stesso binario a meno di
+quella riga):
+
+| codec | riempimento | kbit/s | byte per pacchetto |
+|---|---|---|---|
+| Opus | sempre | 557,7 / 556,5 | 1 441 |
+| Opus | condizionato | 556,9 / 555,8 | 1 441 |
+| Opus | ⛔ **mai** | 556,4 | ⛔ **1 441** |
+| PCM | sempre | 2 221,7 | 1 443 |
+| PCM | condizionato | 1 988,0 | 1 292 |
+
+⛔⛔ **Su Opus il guadagno è ZERO, non «piccolo»**: col riempimento **mai chiesto** il pacchetto resta
+di **1 441 byte**. `[R]` **A riempirlo è `wt_scrivi()`**, che chiede il riempimento a *ogni* scrittura
+di stream e chiude il pacchetto che il datagram aveva lasciato aperto con `WRITE_MORE`. ⇒ **Il
+riempimento di una sessione ferma è dello STREAM, non del datagram**, e chi lo volesse togliere deve
+andare lì.
+
+⚠ Su PCM la condizione morde (**−10,5 %**) solo perché a 200 blocchi/s il datagram chiude il pacchetto
+da solo — ma il PCM **non è quel che il prodotto negozia**, e col silenzio acceso a desktop fermo i
+datagram sono **0,0/s**. ⇒ **Codice revertito**, e il verbale coi numeri resta nel riquadro
+`MORE`/`PADDING` di `webtransport.c`: ⭐ una cura che non compra niente è **codice in più da
+mantenere**, e va rifiutata con i numeri accanto invece che dimenticata.
+
+### 21.4-quinquies ✅ E la decisione mai messa a verbale è ora in `SPECIFICHE.md` §10.1
+
+⛔ *«Quando la finestra si stringe, l'audio passa davanti al video»* era una politica del prodotto
+presa **nel codice** (`wt_scrivi()`) e **scritta in nessun documento**. ⇒ Adesso è `SPECIFICHE.md`
+**§10.1**, con la ragione (i due carichi non si degradano allo stesso modo), il prezzo (banda tolta
+al video proprio quando ce n'è poca) e il limite **per costruzione** (la coda dei datagram è lunga
+otto ⇒ al massimo otto pacchetti passano davanti).
