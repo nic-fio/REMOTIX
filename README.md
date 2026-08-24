@@ -4,205 +4,87 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **23 agosto 2026, sera**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **24 agosto 2026**
 >
-> ## ⭐⭐ LA FASE 9 È APERTA — *la qualità e la degradazione*
+> ## ✅⭐⭐⭐ LA FASE 9 È CHIUSA — *la qualità e la degradazione*
 >
-> 📖 Il documento è **[`fasi/09-la-qualita-e-la-degradazione.md`](fasi/09-la-qualita-e-la-degradazione.md)**,
-> e **la sintesi della giornata sta in testa** (S.1 … S.6).
+> 📖 **[`fasi/09-la-qualita-e-la-degradazione.md`](fasi/09-la-qualita-e-la-degradazione.md)** — la
+> sintesi in testa, e **§17-§21** la parte che conta.
 >
-> ## ⛔⛔⛔ IL FATTO PIÙ GRAVE: **il prodotto è morto di `SEGV`, e la causa è provata**
+> **Chiusa sul giudizio dell'utente**: *«il prodotto cambia in meglio; questa fase era per rendere
+> più solido il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli»*.
+> ⭐ È il **criterio**, non un commento: il traguardo non era **salvare** l'esperienza su qualunque
+> rete — era **non peggiorarla, non mentire, e non fingere che una linea rotta sia una linea lenta**.
 >
-> Alle **08:28:09** il server è morto sul fotogramma **185**, un delta da **525 298 byte**.
-> ⭐ **Causa trovata riga per riga**: si liberavano i byte di un fotogramma appena ngtcp2 li aveva
-> *serializzati*, mentre il contratto obbliga a tenerli **fino all'ack**. ⇒ **Uso dopo la
-> liberazione**, presente **a ogni fotogramma ritrasmesso, da sempre** — quello da 525 KB è stato
-> solo il primo abbastanza **grosso** perché `free()` restituisse le pagine al kernel (**1** blocco
-> `mmap` su **45 005**). Sotto i 128 KiB lo stesso errore mandava al client **byte di spazzatura in
-> silenzio**. ⭐ **La cura è applicata** (`src/webtransport.c`), ⛔ **e non è ancora riprodotta.**
+> ## ⭐⭐ IL BERSAGLIO L'HA CORRETTO LUI, A FASE APERTA
 >
-> ## ⭐ LE CINQUE CURE DEL 23 AGOSTO — **tre nascono spente** (I6)
+> *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
+> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* (`DECISIONI.md`
+> §3.1-ter). ⇒ Ed era la grandezza giusta: **sulla banda il prodotto non cedeva; su un filo sporco
+> sì.** ⛔ Il pavimento di banda è passato a **30 Mbit/s** (§3.1-sexies) e conta come **premessa**.
 >
-> | | interruttore |
-> |---|---|
-> | **il crollo**: si libera all'ack, non alla serializzazione | ⛔ nessuno: è la correzione di un difetto |
-> | **il riordino dell'audio**: si scarta sul *«già consumato»* (§6.3), non sul *«già arrivato»* | ⛔ nessuno: allentamento puro, **zero ms e zero memoria** |
-> | **la soglia sulla coda** in `video_sgombra()` — la spirale delle sole chiavi | `--sgombra-soglia-ms 100`, **spenta** |
-> | **la risalita della qualità** — era un cricchetto a senso unico | `--qualita-risale`, **spenta** |
-> | **il tetto di banda** — `QVBR`, i tre numeri derivati dal pavimento | `--tetto-banda-mbit 20`, **spento** |
+> ## ⭐⭐⭐ LA SCALA CHE CHIUDE LA FASE — dai suoi occhi
 >
-> ⛔ **Nessuna delle cinque è stata misurata sulla macchina di prova**: sono state scritte dopo il
-> confronto appaiato delle 09:00.
->
-> ## ⭐⭐⭐ E le due misure della giornata che cambiano il quadro
->
-> - **il risveglio da fermo NON costa niente**: 180 colpi, quieti da 0,2 a 15 s ⇒ **13 ms** di
->   mediana e **tutte** le misure fra 12,3 e 14,3. ⇒ L'arresto a scena ferma (0 fotogrammi in 30 s,
->   perché **Mutter consegna solo sul cambiamento**) è una violazione **letterale** di I1 che **non
->   costa niente a chi guarda**. ⚠ E l'**80 %** di quei 13 ms è attesa del compositore: la parte
->   nostra sono **2,7 ms**;
-> - ⛔ **il caso duro chiede TRE VOLTE il pavimento**: un film con la grana a schermo intero a
->   2560×1080 fa **58,7 Mbit/s = il 293 %** di 20. ⭐ **Ma il desktop VERO dell'utente, a schermo
->   intero e in movimento, costa 0,204 Mbit/s = l'1 %.** ⇒ Il tetto è per il **caso duro**, e un
->   regolatore che si accendesse sul contenuto normale **ripeterebbe l'errore di v1**.
->
-> ## 🔸 E DUE COSE ASPETTANO L'UTENTE — *sono quelle che cambiano quel che si VEDE*
->
-> | | il prezzo |
-> |---|---|
-> | **la soglia sulla coda** | trascinando una finestra mentre la linea cala, la finestra segue il puntatore con fino a **~150 ms** di ritardo per un attimo — ⛔ **invece di scattare da un'immagine all'altra a ritmo di chiave**, che è quel che fa oggi |
-> | **il tetto di banda** | sul **caso duro** l'immagine diventa più brutta: è il suo mestiere. Sul contenuto vero deve **non fare niente** |
->
-> ⛔ **Quale delle due sia peggio non lo decide una misura**: è la lezione pagata con l'azzeramento
-> della fase 10 di v1.
->
-> ## ⏳ E il lavoro che resta, nell'ordine
->
-> **1.** riprodurre il crollo e armare la trappola · **2.** misurare le cinque cure appaiate ·
-> **3.** il banco che fa girare **la pagina** per l'audio (⛔ quello di oggi **misura se stesso**) ·
-> **4.** il **regolatore del ritmo**, disegnato e non scritto — ⛔ **e viene DOPO la soglia della
-> coda**, o `arretrato` è zero per costruzione e il regolatore non scatterebbe mai.
->
-> ---
->
-> # 📌 E IL PUNTO DI RIPRESA DI IERI — **22 agosto 2026, sera**
->
-> ## ⭐⭐⭐ LA FASE 8 È CHIUSA, e l'ha chiusa l'utente guardando lo schermo
->
-> > *«Il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»* · **«per me è ok»**
-> >
-> > *Al mattino, sulla stessa scena, lo stesso utente:* *«la distanza fra la freccia e la finestra è
-> > la metà della larghezza della barra del titolo»*.
->
-> | | ieri | ⭐ **oggi** |
+> | perdita reale | senza cure | con cure |
 > |---|---|---|
-> | l'anello **`input → vetro`**, appaiato | 89,86 ms | **55,20 ms** (−39 %) |
-> | il distacco, **nell'unità dell'utente** | 0,27 barre | **0,16** ⇒ da **2,1** a **1,23 × il locale** |
-> | ⭐ il **locale** — il pavimento, finalmente misurato | — | **0,142 barre** · 30,05 ms (n=254) |
-> | ⭐⭐ **i fotogrammi DIPINTI dalla pagina** | 834 · 870 | **942 · 926 (+9 %)** |
+> | 1 % | *«mi sembra ok»* | — |
+> | 5,6 % | *«è tutto fluido»* | — |
+> | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 >
-> 📖 **Il documento è [`fasi/08-l-anello.md`](fasi/08-l-anello.md)**, e la sintesi sta in testa
-> (§3, §4, §5): i rapporti per esteso dei nove agenti stanno sotto, in §4-A … §4-F4.
+> ⇒ **Sopra una certa perdita la scala di degradazione non ha più niente da offrire**, e l'unica
+> risposta onesta è **dichiarare la linea morta** (§3.1-quater) — la decisione che l'utente ha preso
+> **prima** di avere quel numero.
 >
-> ⭐ **La specifica era dell'utente**, e adesso è collaudabile: *«un'esperienza il più vicina
-> possibile a una situazione locale, ma non identica: quello è impossibile»* — `SPECIFICHE.md`
-> §3.2-bis. ⇒ **Il «locale» non è più un desiderio: è 0,142 barre.**
+> ## ⭐ LE CINQUE CURE SONO ACCESE — e la linea sana non paga niente
 >
-> ## ⛔⛔ E LA COSA CHE VALE PIÙ DEL RISULTATO — **l'occhio dell'utente ha battuto due nostri banchi**
+> | cura | predefinito | si spegne con |
+> |---|---|---|
+> | silenzio dell'audio | **acceso** | `--niente-audio-silenzio` |
+> | soglia sulla coda video | **100 ms** | `--sgombra-soglia-ms 0` |
+> | regolatore del ritmo | **acceso** | `--niente-ritmo-adattivo` |
+> | linea morta | **accesa** (stallo 5 s · silenzio 10 s) | `--niente-linea-morta` |
+> | sfratto del fantasma | **15 000 ms** | `--sfratto-ms 0` |
 >
-> Per tutta la giornata l'utente ha riferito **0,50 barre** mentre i banchi ne misuravano **0,28** e
-> **0,35**, e nel verso scomodo: **vedeva più distacco di quanto gli strumenti ne misurassero.**
+> `[M]` **La prova che poteva far ritirare tutto è verde**: linea sana **39,69** fotogrammi/s coi
+> predefiniti contro **39,60** a cure spente, zero chiavi in tutt'e due. ⭐ È la ferita per cui v1
+> perse questa fase — *i numeri migliorano e l'esperienza peggiora* — ed è stata cercata apposta.
 >
-> ⛔ La spiegazione comoda — *«avrà stimato male a occhio»* — **non è servita**. Tre candidate
-> abbattute con la misura (⛔ **i pixel: 0,301 · 0,294 · 0,301 barre a 1560 · 1920 · 2560 — il doppio
-> dei pixel, ZERO pendenza**; la velocità della mano; la larghezza della barra), e poi la somma di
-> quel che il banco **non può vedere**:
+> ## ⭐⭐ I TRE FATTI CHE VALGONO OLTRE LA FASE
 >
-> ```
-> 70,3 [M] + 11,6 [M] + [?]4-12 + [?]16-40 = 102-134 ms ⇒ 0,48-0,63 barre
->            ↑ la coda eventi del browser: nel banco vale 0,165 ms
->              perché la mano è SINTETICA
-> ```
+> 1. **Il difetto non comincia dove si vede.** La spirale di chiavi parte al **primo pacchetto
+>    perso** (0,10 % di perdita); il calo che l'utente **vede** arriva **cinque volte più in là**
+>    (0,53-0,75 %). ⇒ Un banco che guardi solo i fotogrammi/s dà **verde fino allo 0,5 %**.
+> 2. **L'innesco ha un rischio costante**: ~5 % al secondo, mediana **13 s**, e una volta acceso non
+>    si spegne. ⛔ I banchi girano 25 s, **le sessioni durano ore** ⇒ ogni misura presa vicino al
+>    bordo **sottostima**, e non di poco.
+> 3. **Il disordine viene scambiato per perdita — e ci è tornato addosso.** La prima «linea morta»
+>    era tarata su `pkt_lost`, e `[M]` una linea che **regge** ne dichiarava il **512‰** contro il
+>    **123‰** di una che **non regge**. Rifatta sullo **stallo dell'uscita** (5 s).
 >
-> ⭐⭐ **L'utente ne riferiva 0,50: il bordo basso dell'intervallo.** ⇒ **Il banco non sbagliava:
-> guardava un pezzo più corto dell'anello vero**, e il pezzo mancante era invisibile **proprio perché
-> la sua mano è finta**.
+> ## ⚠ E IL CONTO DEGLI ERRORI DI METODO — la parte più utile
 >
-> ## ⛔ E i quattro difetti veri trovati in fase 8 — **nessuno era il bersaglio**
+> `[M]` **Nove difetti nei banchi**, tutti della forma *«silenzio invece di rosso»* (uno faceva
+> leggere a un banco i numeri del banco **precedente**) · **tre prove che non mordevano**, scoperte
+> **contando i pacchetti** · **due conclusioni ritirate** (le applicazioni che «non arrivavano» — non
+> c'era nessuno che guardava; e la prova della claquette dichiarata «nulla» e smentita dal **terzo**
+> giudizio) · **due premesse false** ereditate e corrette (l'utente non è mai stato su **PCM**; i
+> **+331 ms** non raggiungono il suo orecchio).
 >
-> la **chiave abbandonata** (`RCP.md` §5.2 la vieta, ed era la spirale: ogni `RICHIEDI_CHIAVE` costa
-> tre ricodifiche che non producono niente) · la **scala delle ricodifiche corta di uno scalino** ·
-> il **passo non multiplo di 64**, che dava un desktop **inclinato senza nessun errore, coi
-> millisecondi già perfetti** · e il **cronometro del prodotto che misurava il banco**.
+> ## ⏳ CHE COSA RESTA APERTO
 >
-> ## ⛔⛔⛔ Le tre lezioni nuove — `LEZIONI.md` §1.26 · §1.27 · §1.28
+> ⛔ **Firefox non parte sulla macchina di prova** — `[M]` **anche fuori da REMOTIX**, headless e
+> senza Wayland: **non è nostro**, ma blocca le prove col browser (§20.1-ter) ·
+> ⚠ la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser) ·
+> ⚠ `rcp.c` dice ancora *«rifiutati da ngtcp2»* dove adesso sono *«buttati perché il filo era muto»* ·
+> `[?]` l'algoritmo di congestione è **CUBIC** e **non è mai stato scelto**: la prova per contrasto
+> non è stata fatta perché nessuna opzione lo espone.
 >
-> 1. **Due banchi sulla stessa MACCHINA si falsano in silenzio.** §1.24 parlava di quel che si
->    *ammazza*; questa di quel che **non** si ammazza — e ⛔ **non dà un rosso, dà un numero
->    plausibile.** `[M]` 8-17 ms sullo stesso anello, per un banco che non c'entra niente ⇒ ha fatto
->    promuovere a bersaglio della fase **un tratto che valeva un ventesimo** di quel che diceva;
-> 2. **Il colore medio è cieco**: un'immagine sbagliata **a ogni riga** ha le **stesse statistiche**
->    di quella giusta (`[M]` medie entro **0,17 livelli su 255**, mentre la marca non si legge su
->    **0 fotogrammi di 903**). ⇒ *Un controllo deve leggere una cosa che si può **sbagliare**, non una
->    che si può **mediare**.*
-> 3. ⭐⭐ **Due banchi che non concordano possono avere ragione tutti e due**: misurano due grandezze
->    diverse. Uno la **risposta**, l'altro la **vecchiaia** di quel che è sullo schermo.
+> ## ➡️ LA PROSSIMA È LA **FASE 10** — il multi-tenant
 >
-> ⚠ **E gli errori del coordinatore stanno scritti per primi** in §5.1 del documento di fase: ho
-> lanciato le misure in parallelo, ho scritto una riga che era un artefatto, e ho attribuito alla
-> contesa un numero che non era suo — **dentro una lezione**, che è il posto dove un errore dura di più.
->
-> ## ⚠ Pulizia da fare PRIMA di misurare
->
-> ⛔ Quattro server di prova degli agenti sono rimasti accesi (**7746, 7752, 7765-67, 7775**), e
-> girano da `root`. A riposo non danno fastidio, ⚠ **ma falserebbero la prossima misura** — che è
-> precisamente l'errore di §1.26.
-> ⭐ Vivi e voluti: **7730** (dell'utente) e **7790** (il prodotto con la fase 8 dentro, giudicato).
->
-> # ⭐⭐⭐⭐ E IL PUNTO DI RIPRESA DEL MATTINO, che vale ancora — **17 agosto 2026**
->
-> ## ⛔⛔ La decisione di ieri sera cambia che cosa È il prodotto: **il dynamic resolution è uscito**
->
-> *«Non voglio mettere delle eccezioni nel progetto. Il dynamic resolution esce dalle funzionalità
-> di Remotix.»* — l'utente, dopo averlo provato sul tablet. ⇒ `DECISIONI.md` **§5.1-bis**, ed è il
-> primo posto da leggere: la voce dice che cosa esce, che cosa resta, e perché la ragione è il
-> prodotto e non il codice.
->
-> | | |
-> |---|---|
-> | ⛔ **che cosa esce** | cambiare la misura della tela **mentre la sessione è viva**. Tolti da `src/pagina.html` l'interruttore `?adatta=segui`, `TELA_FONDO_MS`, `tela_forse_chiedi()` e il ramo del `resize` |
-> | ⭐ **che cosa resta** | la tela nasce con la misura della finestra **alla nascita e al riattacco** della sessione (§5.0-sexies, intatta). Poi il client riscala e il desktop non si tocca più |
-> | ⚠ **il prezzo, dichiarato** | se la finestra cambia **forma** o il tablet si **ruota**, le bande si vedono — e **non è un difetto da curare**: è la scelta. Per riavere la misura giusta ci si **riattacca** |
-> | ⛔ **quel che NON esce** | `ADATTA_TELA` resta nel protocollo e la catena server resta viva **per intero**: la usa il riattacco. Chi la togliesse credendola figlia dell'inseguimento **romperebbe il riattacco** |
-> | ⭐ **e la fase 11 (KDE) si alleggerisce** | non deve più portare il ridimensionamento «nella forma della negoziazione»: deve solo **dichiarare un rifiuto**, che su KWin ≤ 6.7.4 è il caso normale |
->
-> **Misurato dopo il taglio** (`fasi/06-...md` §4.3-bis): **12 combinazioni su 12 verdi**, sei scene
-> per due motori, zero rosse. ⏱ ~7 minuti a rifarla tutta.
->
-> ## ⏳ Le due cose che aspettano una tua parola
->
-> 1. ⛔ **il lanciatore `06-b37-lancia.sh tutti tutte` dà dodici rossi finti** — non riapre il
->    browser dopo la prima scena (`spegni_motore` uccide il pid sbagliato). Il prodotto è sano, il
->    banco no. ⇒ **finché non è curato, si lancia una scena per volta**;
-> 2. ⏳ **il prodotto dopo il taglio non l'hai ancora visto tu**: la prova sul DeX vero non è stata
->    fatta. Quel che è provato è che la funzione non c'è più e che nient'altro si è rotto.
->
-> ---
->
-> ## 📌 E il punto di ripresa di ieri, che vale ancora — **16 agosto 2026, sera**
->
-> *Deciso dall'utente: «per fase 6 apro una nuova sessione».*
->
-> ## Il primo gesto
->
-> ⛔ **Aprire `fasi/06-...md` PRIMA di scrivere una riga di codice** — `PIANO.md` §0.1: il documento
-> di fase si apre all'inizio e si riempie strada facendo. ⚠ La cartella `fasi/` **è vuota adesso**,
-> e non è un errore: ci sta solo la fase in corso.
->
-> ## Che cosa è successo oggi, e non è codice
->
-> | | |
-> |---|---|
-> | ✅ **la fase 5 è chiusa** | sul giudizio dell'utente, con un lavoro vero dentro — `FASI.md` §05-la-sessione |
-> | ⭐ **il piano è stato rivisto** | *«alcuni punti secondo me fuori sequenza»*. La **fase 8** non è più «l'accelerazione» ma **«la copia zero»** (la codifica in hardware era già entrata il 13 agosto); il **multi-tenant** passa davanti ai desktop nuovi ed **era la 12, è la 10** — KDE 11, XFCE/LXQt 12 (`DECISIONI.md` §4.6-sexies) |
-> | ⭐⭐ **la documentazione è passata da 111 file a 10** | gli otto studi in `STUDI.md`, i sei documenti di fase in `FASI.md`, i 94 rapporti degli agenti tolti, `SESSIONE.md` sciolto, il diario del `README` potato di 485 righe già dichiarate morte |
-> | ⭐ **e `v1/` ha una mappa** | `DECISIONI.md` §6.1 — ⛔ perché l'inventario **ometteva le due parti vive**: `v1/banco/enter.sh` e `v1/strumenti/sshpw.py` |
->
-> ## ⛔ Le tre cose da sapere prima di cercare qualcosa
->
-> 1. **i rapporti degli agenti non sono più su disco.** Un rimando che nomina `fasi/rapporti/…`
->    resta valido: si rilegge dalla storia, e la ricetta sta in testa a `FASI.md`;
-> 2. **gli studi si citano come `STUDI.md` §kde**, le fasi come `FASI.md` §03-movimento — le chiavi
->    sono i nomi che avevano i file;
-> 3. ⛔ **e non si producono nuovi file di rapporto**: quel che una fase misura va **nel documento
->    della fase**, che è l'unico posto da cui un numero sopravvive.
->
-> ## ⏳ Quel che resta aperto, e aspetta una parola
->
-> `v1/remotix-rust/` (7 163 righe, ramo chiuso, **una citazione**) e il resto di `v1/banchi/` (86
-> log, 8 png, 10 archivi). ⚠ Toglierli **non recupera spazio** — la storia li tiene comunque — e il
-> guadagno sarebbe solo di ordine.
-
+> ⭐ E questa fase le ha lasciato due cose: la **scala di degradazione**, che è il modo di far stare
+> più gente sulla stessa macchina (*«sì, più piccolo»* invece di *«no»*), e ⛔ il **budget di rete**
+> mai misurato — dieci sessioni × 30 Mbit/s sono **300 Mbit/s sul filo del server** (§3.1-bis
+> punto 2).
 ---
 
 > ## Stato al 13 agosto 2026 — ⭐⭐⭐ **LA FASE 2 È CHIUSA: il desktop è dentro una scheda**

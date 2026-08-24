@@ -1,5 +1,7 @@
 # Fase 9 — La qualità e la degradazione
-Aperta il **23 agosto 2026** · Chiusa il —
+Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
+*«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
+reti degradate, senza pretendere di fare miracoli»*
 
 > ⛔ **Questo documento si riempie strada facendo** (`PIANO.md` §0.1). Le misure hanno l'ora
 > accanto perché sono state scritte quando sono state prese.

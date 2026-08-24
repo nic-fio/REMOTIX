@@ -1173,7 +1173,48 @@ porta.
 
 ---
 
-## Fase 9 — La qualità e la degradazione
+## Fase 9 — La qualità e la degradazione ✅ **CHIUSA il 24 agosto 2026**
+
+> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli»*
+>
+> 📖 `fasi/09-la-qualita-e-la-degradazione.md` — la sintesi in testa, e §17-§21 la parte che conta.
+>
+> ⭐⭐ **Il bersaglio l'ha corretto lui a fase aperta** (`DECISIONI.md` §3.1-ter): non la **banda** —
+> *«30 mbps sono una connessione da metà anni 90»* — ma **la rete che perde, riordina e sfarfalla**.
+> Ed era la grandezza giusta: sulla banda il prodotto non cedeva, su un filo sporco sì.
+>
+> **La scala che chiude la fase, e viene dai suoi occhi** (§19.1, §19.6):
+>
+> | perdita reale | senza cure | con cure |
+> |---|---|---|
+> | 1 % | *«mi sembra ok»* | — |
+> | 5,6 % | *«è tutto fluido»* | — |
+> | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
+>
+> ⛔ **Sopra una certa perdita la scala di degradazione non ha più niente da offrire**, e l'unica
+> risposta onesta è dichiarare la linea morta (§3.1-quater) — che è la decisione che lui ha preso
+> **prima** di avere quel numero.
+>
+> **Le cinque cure sono ACCESE** (§3.1-septies), ognuna con una strada sola per spegnerla, e ⭐ **la
+> prova che poteva far ritirare tutto è verde**: `[M]` sulla linea sana 39,69 fotogrammi/s contro
+> 39,60 a cure spente — **nessun peggioramento**, che è la ferita per cui v1 perse questa fase.
+>
+> **I tre fatti che restano**, e valgono oltre la fase:
+> 1. ⭐⭐ **il difetto non comincia dove si vede**: la spirale di chiavi parte al **primo pacchetto
+>    perso** (0,10 %), il calo che l'utente **vede** arriva cinque volte più in là (0,53-0,75 %);
+> 2. ⭐⭐ **l'innesco ha un rischio costante** — ~5 % al secondo, mediana **13 s**, e una volta acceso
+>    non si spegne. ⛔ I banchi girano 25 s, **le sessioni durano ore**: ogni misura presa vicino al
+>    bordo **sottostima**;
+> 3. ⛔ **il disordine viene scambiato per perdita**, e ci è tornato addosso: la prima «linea morta»
+>    era tarata su `pkt_lost`, e `[M]` una linea che **regge** ne dichiarava il **512‰** contro il
+>    **123‰** di una che **non regge**. Rifatta sullo **stallo dell'uscita**.
+>
+> ⚠ **E il conto degli errori di metodo, che è la parte più utile**: `[M]` **nove difetti nei
+> banchi**, tutti della forma *«silenzio invece di rosso»* · **tre prove che non mordevano**, scoperte
+> contando i pacchetti · **due conclusioni mie ritirate** (le applicazioni che «non arrivavano», la
+> prova della claquette dichiarata «nulla» e smentita dal terzo giudizio) · e **due premesse false**
+> ereditate e corrette (l'utente non è mai stato su PCM; il +331 ms non raggiunge il suo orecchio).
+
 
 **Produce**: il controllo del ritmo, la scala di degradazione, il comportamento su rete cattiva.
 
@@ -1589,6 +1630,7 @@ restano senza nessun difetto vero aperto.*
 |---|---|
 | **fasi 6 e 7** | ⭐ nessun difetto vero aperto |
 | **fase 8** | ✅ **CHIUSA il 22 agosto**, `fasi/08-l-anello.md` |
+| **fase 9** | ✅ **CHIUSA il 24 agosto**, `fasi/09-la-qualita-e-la-degradazione.md` — e le cinque cure sono **accese** |
 | **`RCP.md` §5.2 e §6.2** | ✅ le due `[?]` chiuse con la misura: `EncSliceLP` **non** sa fare i sotto-livelli temporali · la chiave alla tela dell'utente sta allo **0,13 %** del tetto |
 | **il «puntatore doppio»** | ✅ **non esiste** — smentito dall'occhio dell'utente, e l'agente fermato dopo pochi minuti |
 | **i motori** | Linux Chrome ✅ · Linux Firefox ✅ · Windows Chrome ✅ · Android Chrome ✅ · ⛔ Android Firefox fuori · ⚠ **Firefox su Windows: NON PROVATO** |
