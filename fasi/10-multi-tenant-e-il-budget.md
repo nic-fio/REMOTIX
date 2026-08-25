@@ -3260,6 +3260,103 @@ ci sono **28 GB** liberi, il portale è attivo, e `gdb` mostra un ciclo `g_main_
 **annidato** — cioè il dialogo. ⭐ La pista che pesa è il **compositore di Firefox che muore**: se il
 processo GPU se ne va all'avvio, *«Profile Missing»* è **il sintomo, non la causa**.
 
+### 5.10 ⭐⭐⭐⭐⭐ **«FIREFOX NON FUNZIONA» — ed era `~/.cache` che punta a `/tmp`**
+
+*25 agosto 2026.* ⛔ **Il difetto non era di REMOTIX. Ma è il multi-tenant a renderlo CERTO invece
+che raro** — ed è per questo che sta in questa fase e non altrove.
+
+#### Il meccanismo, nudo — **senza browser, senza compositore, senza GPU**
+
+```
+$ mkdir -p ~/.cache/mozilla                    # da «provanic3»
+mkdir: cannot create directory '/home/provanic3/.cache/mozilla': Permission denied
+
+$ ls -ld /etc/skel/.cache
+lrwxrwxrwx  root root   /etc/skel/.cache -> /tmp          ← immagine base, 30 luglio
+$ ls -ld /tmp/mozilla
+drwx------  prova2 prova2  /tmp/mozilla                   ← creata il 23 agosto 08:03
+```
+
+⇒ `/etc/skel/.cache` è un **collegamento a `/tmp`**, e `src/provisiona.sh:64` crea gli utenti con
+`useradd -m`, che **copia lo scheletro** ⇒ ⛔ **ogni utente ha `~/.cache -> /tmp`**. Firefox tiene il
+profilo *locale* sotto `$HOME/.cache/mozilla`, cioè sotto **`/tmp/mozilla`**.
+
+⛔⛔ **Il PRIMO utente che apre il browser crea `/tmp/mozilla` a nome suo e a modo `0700`.** Da quel
+momento nessun altro ci può scrivere, `profiles.ini` **non nasce mai**, e il browser apre una
+finestra che dice *«Your Firefox profile cannot be loaded»*.
+
+> ### ⭐⭐⭐ E QUESTO È ESATTAMENTE IL TEMA DELLA FASE
+>
+> ⛔ **È un difetto che su una macchina a UN utente non si vede mai, e che su dieci ne blocca nove.**
+> Il multi-tenant non lo ha creato: **lo ha reso certo**. ⇒ *Un prodotto che passa da un inquilino a
+> dieci non eredita solo i suoi difetti: ne sveglia di dormienti.*
+
+#### ⭐ E il colpevole ha un nome e una data — **ed è il caso del regista**
+
+`[M]` `/tmp/mozilla` appartiene a **`prova2`**, creata il **23 agosto alle 08:03**. E **`prova`** —
+⭐ **l'utente con cui il regista entra** — aveva `~/.cache -> /tmp`.
+⇒ ⛔ **Ecco perché per lui non funzionava.** Non un caso, non una configurazione strana: **il turno**.
+
+#### Il rosso, il verde e il controllo negativo
+
+| | `[M]` |
+|---|---|
+| **ROSSO** — `~/.cache -> /tmp` | finestra vera che dice **«Profile Missing»**; `profiles.ini` **non nasce mai** |
+| ⭐ **VERDE** — `~/.cache` cartella vera | ![Firefox curato, con tre schede e una pagina resa](scatti/10-firefox-curato.png) barra, **tre schede**, campo indirizzo, **pagina resa** |
+| ⛔ **CONTROLLO NEGATIVO** — rimesso il collegamento | **torna rosso**: 30 s, nessun `profiles.ini` |
+| ⭐ **e su un secondo utente** (`provanic3`, `.mozilla` spazzata, **sotto lucchetto**) | verde uguale ⇒ **regge nel multi-tenant** |
+
+#### ⛔ La pista del compositore è REFUTATA, e con tre prove
+
+⚠ Sembrava buona: `MozCrashReason: "Compositor crashed ()"`, `SIGSEGV / SEGV_MAPERR`. ⛔ **E non
+era la causa:**
+
+1. il guasto si riproduce **headless, senza compositore, senza sessione, senza REMOTIX**;
+2. con la cura Firefox rende una pagina **coi predefiniti** — nessun `MOZ_DISABLE_GPU_PROCESS`,
+   nessun `LIBGL_ALWAYS_SOFTWARE`;
+3. nel profilo curato **zero dump di crash**.
+
+⇒ ⭐ *Un crash che c'è davvero non è per questo la causa di quel che si sta guardando* — è
+`LEZIONI.md` §1.35 dall'altro capo.
+
+#### La cura, e **dove** sta
+
+⭐ In **`src/provisiona.sh`** — cioè **nella macchina, non nel prodotto** (`SPECIFICHE.md` §5.9,
+parte A): a ogni utente una `~/.cache` **vera** se è un collegamento o manca. ⚠ **Non si tocca
+`/tmp/mozilla` di chi ce l'ha già**: non è nostro e non si sa chi lo usa.
+
+⛔ **E il predicato di verifica non guarda il collegamento: PROVA A SCRIVERE** — perché *«scritto non
+è in vigore»* (**E1**). `[M]` collegamento ⇒ rosso · cartella non scrivibile ⇒ rosso · curato ⇒
+verde, **4 su 4**.
+
+⚠ **E va rilanciato dopo ogni riavvio**: il rootfs della macchina di prova sta **in RAM**.
+
+### 5.11 ⚠ E UNA COSA CHE NESSUNO SI ASPETTAVA: **il desktop nasce dentro la PANORAMICA**
+
+![quel che si vede appena entrati: la panoramica delle Attività](scatti/10-appena-entrato-panoramica.png)
+
+⭐ **Questo è quel che l'utente vede nell'istante in cui entra**, guardato col testimone su una
+sessione appena nata: ⛔ **non un desktop, ma la panoramica delle Attività** — *«Type to search»*, il
+molo con Firefox e File, e lo spazio di lavoro in anteprima.
+
+⚠ È il comportamento **normale** di GNOME su una sessione senza finestre, e ⭐ **una strada usabile
+c'è** — si preme `Esc`, oppure si clicca un'icona nel molo. ⛔ **Ma per chi guarda, *«una finestra che
+non riesco a raggiungere»* e *«non funziona»* hanno la stessa faccia** — e in tutta la documentazione
+del progetto la parola **panoramica** non compare mai.
+
+⛔ **E qui la panoramica ha morso davvero due volte:**
+
+1. il coordinamento premeva `Esc` per uscirne prima di scattare — ⛔ **e `Esc` è lo stesso tasto che
+   chiude un dialogo modale.** ⇒ *«Firefox è vivo e disegna ma non ha nessuna finestra»* **era il
+   dialogo, chiuso dal nostro stesso `Esc`**;
+2. ⚠ e il regista, che di `Esc` non sapeva niente, ha visto **la panoramica** e un browser che non
+   parte.
+
+⇒ `[?]` **Se la sessione debba nascere sul desktop invece che nella panoramica è una decisione sua**,
+perché cambia **quel che l'utente vede** (**I6**, **I8**). ⛔ E la cura, qualunque sia, non può essere
+un trucco che vale **solo per GNOME**: le fasi 11 e 12 portano KDE, XFCE e LXQt
+(`DECISIONI.md` §4.6-sexies).
+
 ---
 
 ## §8 · Le decisioni prodotte
@@ -3344,7 +3441,11 @@ processo GPU se ne va all'avvio, *«Profile Missing»* è **il sintomo, non la c
 | ⛔ **La rete VERA**: i clienti girano sulla stessa macchina, su `lo` ⇒ il filo è **contato, non provato** | `wondershaper` sul percorso vero |
 | ⚠ **Il numero di §6.3 sulla scena dura**, che §6.14 misura **due volte più grande** | rifare quella cella col metro di §6.14 |
 | `[?]` **Un danno che sopravvive alla sua causa**: due sessioni restano a 7-9 fot/s **col guardiano a zero e le scene che disegnano** | meccanismo ignoto, riferito come **osservazione** |
-| ⛔⛔ **L'IMMAGINE** | ⭐ **nessun banco dice *«si vede peggio»*: quello lo dice il regista**, ed è §10 |
+| ⛔ **Perché Firefox non crea il profilo NEMMENO da solo**, cioè il crash `Compositor crashed ()` che resta nel registro anche col profilo curato | ⚠ È **un secondo difetto**, dichiarato e lasciato stare: la cura di §5.10 fa partire il browser, e questo non morde più |
+| ⛔ **«Si può cliccare e scrivere dentro»** | ⚠ `[M]` provato come *«si apre, disegna, rende una pagina»* — **non** come *«ci clicco dentro»*: il cliente di prova manda **solo `PUNTATORE`**, non ha bottoni né tasti (§7.3). ⇒ Va esteso il cliente |
+| ⚠ **La sessione nasce nella PANORAMICA** invece che sul desktop (§5.11) | ⛔ **è una decisione del regista**, non un `[?]` da misurare: cambia quel che l'utente vede |
+| ⚠ **Dieci `segfault` di `remotix` in `libei.so.1.3.901`** (`segfault at 50`, cioè NULL+0x50) fra il 24 e il 25 agosto | ⛔ **è nostro**, è `src/input.c`, ed è **fuori dalle cure di questa fase**: consegnato e non toccato |
+| ⛔⛔ **L'IMMAGINE** | ⭐ **Il testimone adesso c'è** (§5.8) e il desktop remoto **si è visto**: è perfetto. ⚠ Ma *«si vede peggio»* nessun banco lo dice — quello lo dice il regista, ed è §10 |
 
 ---
 
