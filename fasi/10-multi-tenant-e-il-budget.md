@@ -1,5 +1,12 @@
 # Fase 10 — Multi-tenant e il budget
 Aperta il **24 agosto 2026**, subito dopo la chiusura della fase 9.
+## ✅⭐⭐⭐⭐⭐ **CHIUSA il 25 agosto 2026**, sul giudizio dell'utente
+
+> *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. **Non credo che si
+> possa chiedere di più**.»*
+
+⭐ Il giudizio per intero, con i numeri della scena su cui è stato dato, sta in **§10**.
+⚠ E **due decisioni sono rimaste non prese**, dichiarate in **§10-bis**: valgono i predefiniti.
 
 > ⛔ **Questo documento si riempie strada facendo** (`PIANO.md` §0.1). Le misure hanno l'ora accanto
 > perché sono state scritte quando sono state prese, e le **previsioni di §2 sono state scritte
@@ -3564,12 +3571,43 @@ di **non mentire e non sbriciolarsi**, e sotto il pavimento dichiarato ha conseg
 visibili con la fluidità e il sincronismo intatti** — cioè ha speso il poco che aveva **dove
 l'utente se ne accorge di meno**.
 
+### ✅⭐⭐⭐⭐⭐ **E LA FASE SI CHIUDE QUI — 25 agosto 2026**
+
+> *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. **Non credo che si possa
+> chiedere di più**.»*
+
+⭐⭐ **«Una connessione del 1990» è una sua parola, e torna da lontano**: alla fase 9 aveva corretto il
+bersaglio dicendo *«30 mbps sono una connessione da metà anni 90»* (`DECISIONI.md` §3.1-ter) — ⇒ e
+oggi ha portato il prodotto **a un terzo di quella**, con un **video 4K** dentro, e l'ha giudicato
+**sufficiente**.
+
+⛔ **Ed è il metro giusto, non un abbuono.** *«Non credo che si possa chiedere di più»* non dice *«è
+perfetto»*: dice ⭐ **«ha speso bene quel poco che aveva»** — che è esattamente quel che
+`SPECIFICHE.md` §2 promette e quel che §4.6-decies ha appena messo per iscritto.
+
 ---
 
-## §10-bis · Che cosa manca ancora per chiudere
+## §10-bis · Le due decisioni NON prese — **e restano aperte, con i predefiniti in vigore**
 
-⛔ **Due decisioni, e sono sue** — stanno in fondo a **§8.2**: **QVBR** (accendere il tetto di banda
-della fase 9, oggi spento) e i **numeri di fabbrica** (tetto **10**, riserva **0,5**).
+⛔ **La fase si è chiusa senza che venissero decise, e questo si scrive invece di arrotondarlo.**
+⭐ Non sono state dimenticate: gli sono state messe davanti **tre volte**, e ha chiuso prima.
+⇒ ⚠ **Quel che vale oggi è il predefinito**, e chi riaprirà la questione parte da qui.
+
+| | che cos'è | ⚠ che cosa vale **oggi** |
+|---|---|---|
+| **QVBR** — il tetto di banda per sessione (§8.2, **P7**) | la cura della fase 9: `[M]` **esiste, funziona, obbedisce entro il 5 %**, e copre **8,8×** di banda | ⛔ **SPENTA.** Il predefinito è a qualità fissa |
+| **i numeri di fabbrica** | `--tetto-sessioni` e `--riserva` | **10** e **0,5** — `[M]` a 0,5: **0 falsi sì, 0 falsi no** |
+
+> ### ⭐ E la fase ha portato un argomento NUOVO su QVBR, che prima non c'era
+>
+> `[M]` **Il prodotto ha dimezzato la banda da solo** — 6,0 → **3,20 Mbit/s**, senza perdere un
+> fotogramma. ⇒ ⭐ **QVBR non serve a un utente solo**: il regolatore fa già il suo mestiere.
+>
+> ⛔ **Serve quando gli utenti sono dieci** — un tetto **per sessione** è quel che impedisce che
+> dieci si prendano il filo del server tutte insieme. ⇒ È la domanda che `DECISIONI.md` §3.1-bis
+> punto 2 aveva lasciato aperta — *«dieci sessioni × 30 Mbit/s sono 300 Mbit/s sul filo del
+> server»* — ⛔ **e che questa fase NON ha misurato**: i clienti giravano sulla stessa macchina, su
+> `lo`. Il filo è **contato, non provato** (§9).
 
 ---
 

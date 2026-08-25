@@ -1401,7 +1401,11 @@ che **dice perché**.
 in `rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che lo segue — dove `SPECIFICHE.md` §5.5
 promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade.
 
-> ## ⏳ APERTA IL 24 AGOSTO 2026, PRONTA PER IL GIUDIZIO IL 25
+> ## ✅ APERTA IL 24 AGOSTO 2026, **CHIUSA IL 25** sul giudizio dell'utente
+>
+> *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. Non credo che si
+> possa chiedere di più.»* ⚠ E **due decisioni non prese**, dichiarate: QVBR resta **spenta**,
+> tetto **10** e riserva **0,5**.
 >
 > 📖 **`fasi/10-multi-tenant-e-il-budget.md`**.
 >

@@ -6,7 +6,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 
 > # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **25 agosto 2026**
 >
-> ## ⏳ LA FASE 10 È PRONTA PER IL GIUDIZIO — *multi-tenant e il budget*
+> ## ✅⭐⭐⭐ LA FASE 10 È CHIUSA — *multi-tenant e il budget*
+>
+> **Chiusa il 25 agosto 2026, sul giudizio dell'utente**: *«sono soddisfatto — riprodotto audio e
+> video su una connessione del 1990; non credo che si possa chiedere di più»*. ⭐ Un **video 4K**
+> dentro il desktop remoto, con la banda del suo tablet strozzata a **10 Mbit/s**, cioè **un terzo
+> del pavimento dichiarato**. ⇒ E il metro che ne è uscito è `DECISIONI.md` **§4.6-decies**: sotto le
+> specifiche si perde **la nitidezza**, ⛔ **non la fluidità e non il sincronismo**.
 >
 > 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)** — la **sintesi**
 > in testa, **§5** le cure, **§6** le misure, **§8** le due decisioni che restano.
@@ -46,11 +52,18 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > remoto, tarato, con il terzo esito **«non ho guardato»** distinto da «era nero» (`LEZIONI.md`
 > §1.37).
 >
-> ### ⏳ Che cosa manca per chiudere
+> ### ⭐⭐ E IL PRODOTTO HA DIMEZZATO LA BANDA DA SOLO
 >
-> ⭐ **Il giudizio del regista sul prodotto vero**, e **due decisioni sue**: se accendere **QVBR**
-> (la cura di banda della fase 9 esiste, funziona, e nessuno la accende — copre **8,8×** di banda) e
-> se i **numeri di fabbrica** restano **tetto 10, riserva 0,5**.
+> `[M]` Stessa scena, filo strozzato: **38,5 → 37,4 fot/s** (uguali), **6,0 → 3,20 Mbit/s** (metà),
+> ⭐ **coda del filo VUOTA**, e il motore di composizione fermo sul **41-46 %** — cioè la scena si
+> muoveva come prima. ⇒ ⭐ **Non ha rallentato: ha compresso di più.**
+>
+> ### ⚠ E DUE DECISIONI SONO RIMASTE NON PRESE — valgono i predefiniti
+>
+> ⛔ **QVBR resta SPENTA** e i numeri di fabbrica restano **tetto 10, riserva 0,5**.
+> ⭐ E la fase ha portato un argomento nuovo: **QVBR non serve a un utente solo** — il regolatore fa
+> già il suo mestiere — ⛔ **serve quando sono dieci**, e quel giro non è stato fatto (i clienti
+> giravano su `lo`: il filo è **contato, non provato**).
 >
 > ---
 >
