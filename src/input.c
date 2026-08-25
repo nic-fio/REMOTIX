@@ -186,6 +186,10 @@
 #include <errno.h>
 #include <gio/gio.h>
 #include <libei.h>
+/* ⛔ Cura D4: serve per UNA domanda sola — «il compositore c'e' ancora?» — da
+ *    fare **prima** di `ei_dispatch()` su un canale non ancora maturo.  Vedi il
+ *    riquadro sopra `stacca_il_contesto()`. */
+#include <poll.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -280,7 +284,41 @@ struct input
 	gboolean guarigione_dovuta;
 	unsigned guarigioni;
 	gint64 ultima_guarigione_us;
+
+	/* ⛔⛔ LA STRETTA DI MANO DI `libei` — la cura D4, 25 agosto 2026.  Il
+	 *     riquadro sopra `stacca_il_contesto()` dice l'istruzione che cadeva e
+	 *     perche' questi quattro campi sono quel che serve a non passarci.
+	 *
+	 * ⭐ `stretta_fatta` NON e' un'euristica sui puntatori: e' `EI_EVENT_CONNECT`,
+	 *    cioe' il modo che `libei` ha di dire «il server ha approvato».  I
+	 *    dispositivi arrivano DOPO, e guardare loro direbbe «non ancora» anche
+	 *    su un contesto ormai maturo. */
+	gboolean stretta_fatta;
+	gint64 aperto_us;  /* quando il canale e' stato aperto (monotonico) */
+	gint64 stretta_us; /* quando la stretta e' arrivata; 0 = mai */
+	/* ⛔ Il descrittore che abbiamo dato a `libei`, tenuto da parte per UN solo
+	 *    caso: quello in cui il contesto va **abbandonato** invece che liberato,
+	 *    e allora il socket lo dobbiamo chiudere noi.  ⚠ Nel caso normale non si
+	 *    tocca: e' di `libei`, e chiuderlo in due posti e' un difetto che si
+	 *    manifesta a distanza. */
+	int fd_socket;
 };
+
+/* ⛔ Il conto dei contesti ABBANDONATI — il PREZZO della cura D4, e un prezzo
+ *    che non si conta e' un prezzo che nessuno scopre.  ⚠ E' del processo, non
+ *    del canale: l'`Input` che l'ha pagato e' gia' liberato quando il banco
+ *    legge il numero. */
+static unsigned contesti_abbandonati;
+
+/* ⭐ La finestra del banco `10-d4`.  ⛔ NON sta in `input.h` di proposito, come
+ *    `input_conto()` qui sotto: `input.h` e' il contratto del PRODOTTO, e questo
+ *    e' un testimone.  Il banco la dichiara `extern` da se'. */
+unsigned input_abbandoni(void);
+
+unsigned input_abbandoni(void)
+{
+	return contesti_abbandonati;
+}
 
 /* ⛔ Il fondo fra due guarigioni.  Non e' prudenza: e' che una guarigione che
  *    fallisse in modo ripetibile girerebbe a ogni giro del ciclo del figlio,
@@ -821,6 +859,28 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 
 	switch (tipo)
 	{
+		case EI_EVENT_CONNECT:
+			/*
+			 * ⛔⛔ QUESTA E' LA RIGA CHE RENDE SICURA LA CHIUSURA — cura D4, 25
+			 *     agosto 2026.  Il riquadro sopra `stacca_il_contesto()` dice
+			 *     l'istruzione che cadeva; qui si segna il solo fatto che
+			 *     distingue un canale che si puo' disconnettere da uno che
+			 *     ammazza il figlio.
+			 *
+			 * ⭐ `EI_EVENT_CONNECT` arriva **una volta sola** dopo la richiesta
+			 *    di connessione (`libei.h`: *«This event is only sent once after
+			 *    the initial connection request»*), e dove il server NON approva
+			 *    arriva `EI_EVENT_DISCONNECT` al suo posto.  ⇒ E' il predicato
+			 *    del PROTOCOLLO, non un sintomo.
+			 */
+			in->stretta_fatta = TRUE;
+			in->stretta_us = g_get_monotonic_time();
+			registro_dettaglio(AREA,
+			                   "la stretta di mano di libei e' ARRIVATA dopo %.1f ms: da adesso il "
+			                   "canale si puo' chiudere per la strada normale",
+			                   (double) (in->stretta_us - in->aperto_us) / 1000.0);
+			break;
+
 		case EI_EVENT_SEAT_ADDED:
 			/*
 			 * ⛔ Si CHIEDONO le capacita', e i dispositivi li crea il
@@ -921,6 +981,10 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char 
 	in->sessione = sessione;
 	in->tela_l = tela_l;
 	in->tela_a = tela_a;
+	/* ⛔ Cura D4: l'istante dell'apertura si segna QUI, perche' e' l'unico modo
+	 *    di dire quanto e' durata la finestra pericolosa quando si chiude. */
+	in->aperto_us = g_get_monotonic_time();
+	in->fd_socket = -1;
 
 	in->ei = ei_new_sender(in);
 	if (!in->ei)
@@ -950,6 +1014,11 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char 
 		g_free(in);
 		return NULL;
 	}
+	/* ⛔ Cura D4: da qui in poi il socket e' di `libei` — lo si tiene da parte
+	 *    per il SOLO caso in cui il contesto vada abbandonato.  ⚠ Il `dup` e'
+	 *    gia' fatto: questo e' il numero che `libei` possiede, non quello di
+	 *    `mutter.c`. */
+	in->fd_socket = fd;
 
 	/*
 	 * ⛔ QUI NON SI APRE NESSUNA DISPOSIZIONE, ed e' voluto.
@@ -980,6 +1049,123 @@ int input_descrittore(Input *in)
 	if (!in || !in->ei)
 		return -1;
 	return ei_get_fd(in->ei);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔⛔ IL CANALE APPENA NATO NON SI STACCA — la cura **D4**, 25 agosto 2026.
+ *
+ * ⛔ IL FATTO, `[M]` letto dal core il 25 agosto 2026 (`fasi/10-…md` §5.1):
+ *
+ *       #0  ei_disconnect ()          da libei.so.1
+ *       #2  input_chiudi (…)          at input.c
+ *       #3  smonta_il_palco (…)       at figlio.c
+ *
+ *   e dallo stesso core il **quando**: il canale EIS era stato aperto **33 ms
+ *   prima** e la stretta di mano non era ancora arrivata.  L'istruzione che
+ *   cadeva e' `mov 0x50(%rdi),%rdi` con `%rdi = 0`.
+ *
+ * ⭐⭐ E IL MECCANISMO E' ESATTO, non dedotto — `libei 1.3.901`, disassemblata:
+ *
+ *     `struct ei` tiene lo **stato** a +0xc8 e la **connessione** a +0x18.
+ *       0 = appena creato · 1 = socket messo, stretta CHIESTA e non ancora
+ *       arrivata · 2 = il server ha mandato `connection` · 3 = connesso
+ *       (⇒ `EI_EVENT_CONNECT`) · 4/5 = in chiusura / chiuso.
+ *
+ *     `ei_disconnect()` torna subito se lo stato e' 4 o 5, e salta la
+ *     disconnessione se lo stato e' **0**.  Per 1, 2 e 3 chiama
+ *
+ *         ei_connection_request_disconnect(ei->connection);   ⭐ controlla NULL
+ *         ei_connection_remove_pending_callbacks(ei->connection);  ⛔ NON lo fa
+ *
+ *     e la seconda comincia proprio con `mov 0x50(%rdi),%rdi`.
+ *   ⇒ ⛔⛔ **La buca e' lo stato 1, e uno solo**: connessione ancora NULL, e il
+ *     controllo che c'e' sulla riga sopra manca su quella sotto.
+ *
+ * ⛔⛔ E `ei_unref()` NON E' UNA VIA D'USCITA: il distruttore `ei_destroy()`
+ *      chiama `ei_disconnect()` come **prima istruzione**.  ⇒ Su un contesto
+ *      allo stato 1, `ei_unref()` da solo ammazza il figlio esattamente come
+ *      `ei_disconnect()`.  Non c'e' un modo di LIBERARLO senza passare di li'.
+ *
+ * ⇒ ⭐ LA CURA, in due mezze righe e un prezzo:
+ *
+ *   · **il predicato e' `EI_EVENT_CONNECT`** — il modo che `libei` ha di dire
+ *     «il server ha approvato» (`libei.h`).  ⛔ NON i puntatori `puntatore` /
+ *     `tastiera_dev` / `regione_nota` letti nel core: quelli sono **sintomi**,
+ *     arrivano molto dopo, e su un canale maturo senza dispositivi direbbero
+ *     «non e' mai comparso niente» su un contesto che invece va disconnesso.
+ *     ⚠ E' volutamente **piu' prudente del necessario**: fra lo stato 2 e il 3
+ *       c'e' un giro di `sync` in cui `ei_disconnect()` sarebbe gia' sicuro, e
+ *       li' si abbandona lo stesso.  In quella finestra non esiste nessun
+ *       dispositivo, quindi non si perde niente di visibile;
+ *
+ *   · **contesto maturo ⇒ chiusura VERA, invariata**: `ei_disconnect()` +
+ *     `ei_unref()`, che e' il messaggio di protocollo che fa girare
+ *     `drop_device()` in Mutter e fa sparire i dispositivi virtuali.  ⛔ Senza
+ *     questo ramo si perderebbe l'uscita pulita, che e' meta' del contratto;
+ *
+ *   · **contesto immaturo ⇒ si ABBANDONA**, e il prezzo si dichiara: il
+ *     `struct ei` si perde (poche centinaia di byte, una volta per palco morto
+ *     nei primi millisecondi), ⭐ ma i **due descrittori si chiudono a mano** —
+ *     il socket, che e' quello che dice al compositore «il cliente se n'e'
+ *     andato», e l'`epoll` di `libei`.  ⚠ Si possono chiudere proprio perche'
+ *     il contesto e' abbandonato: nessuno li tocchera' piu', quindi non c'e'
+ *     nessuna doppia chiusura.
+ *
+ * ⛔ QUEL CHE QUESTA CURA **NON** CURA, e va detto: la stessa buca sta anche
+ *    DENTRO `libei`.  `connection_dispatch()` chiama `ei_disconnect()` da se'
+ *    quando la lettura dal socket fallisce ⇒ se il compositore muore mentre lo
+ *    stato e' 1, e' `ei_dispatch()` a cadere, e da fuori non si puo' impedire.
+ *    ⚠ Fuori dal mandato: la cura vera e' in `libei`.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+static void stacca_il_contesto(Input *in, const char *chi)
+{
+	double vissuto_ms;
+	int epoll_di_libei;
+
+	if (!in || !in->ei)
+		return;
+
+	vissuto_ms = (double) (g_get_monotonic_time() - in->aperto_us) / 1000.0;
+
+	if (in->stretta_fatta)
+	{
+		/* ⭐ LA CHIUSURA VERA — questa riga e' quella di sempre, e deve
+		 *    restarci: e' `ei_disconnect()` a mandare il distacco di protocollo,
+		 *    ed e' quel messaggio (non la chiusura del socket) a far girare
+		 *    `drop_device()` in Mutter.  `[M]` guasti `RG3`/`RG4`, 21 ago 2026. */
+		ei_disconnect(in->ei);
+		ei_unref(in->ei);
+		in->ei = NULL;
+		in->fd_socket = -1; /* l'ha chiuso `libei` insieme al contesto */
+		registro_dettaglio(AREA,
+		                   "canale di input staccato da «%s»: stretta arrivata dopo %.1f ms, "
+		                   "vissuto %.1f ms, chiusura VERA (ei_disconnect + ei_unref)",
+		                   chi, (double) (in->stretta_us - in->aperto_us) / 1000.0, vissuto_ms);
+		return;
+	}
+
+	/* ⛔⛔ LA FINESTRA PERICOLOSA — e la si dichiara con `registro_dice`, non con
+	 *     `registro_dettaglio`: e' un evento raro con un prezzo, e chi legge il
+	 *     registro dopo un palco morto giovane deve trovarlo scritto. */
+	epoll_di_libei = ei_get_fd(in->ei);
+	contesti_abbandonati++;
+	registro_dice(AREA,
+	              "⛔ canale di input ABBANDONATO da «%s» dopo %.1f ms: la stretta di mano di "
+	              "libei non era mai arrivata, e disconnettere (o liberare) un contesto cosi' "
+	              "fa cadere la libreria.  ⇒ Si chiudono i descrittori e si perde il contesto "
+	              "(abbandoni finora: %u).  ⚠ Nessun dispositivo virtuale resta appeso: a "
+	              "questo punto non ne era ancora nato nessuno",
+	              chi, vissuto_ms, contesti_abbandonati);
+
+	/* ⛔ L'ordine: prima si perde il riferimento, poi si chiudono i descrittori.
+	 *    Al contrario ci sarebbe un istante in cui il contesto e' ancora
+	 *    raggiungibile con i suoi descrittori gia' chiusi. */
+	in->ei = NULL;
+	if (epoll_di_libei >= 0)
+		close(epoll_di_libei);
+	if (in->fd_socket >= 0)
+		close(in->fd_socket);
+	in->fd_socket = -1;
 }
 
 /*
@@ -1035,9 +1221,11 @@ static void guarisci(Input *in)
 	g_clear_pointer(&in->reg_per, g_free);
 	g_clear_pointer(&in->keymap_nome, g_free);
 
-	ei_disconnect(in->ei);
-	ei_unref(in->ei);
-	in->ei = NULL;
+	/* ⛔ Cura D4: la stessa porta di `input_chiudi()`, e non una copia.  ⚠ Qui
+	 *    la stretta e' quasi sempre arrivata (si guarisce dopo un ricambio di
+	 *    dispositivi, che dopo la stretta viene per forza), ma «quasi sempre»
+	 *    e' esattamente il modo in cui questa buca e' nata. */
+	stacca_il_contesto(in, "guarigione");
 
 	/* ⛔ E IL DISTACCO L'HA GIA' MANDATO `ei_disconnect()` qui sopra — `[M]` 21
 	 *    ago 2026, guasti `RG3`/`RG4`: e' quel messaggio di protocollo a far
@@ -1057,6 +1245,15 @@ static void guarisci(Input *in)
 		in->guarigione_dovuta = FALSE;
 		return;
 	}
+
+	/* ⛔ Cura D4: il canale NUOVO riparte da capo — stretta non ancora arrivata,
+	 *    e l'orologio della finestra pericolosa riazzerato.  ⚠ Dimenticarlo
+	 *    farebbe credere matura una connessione appena nata, cioe' rimetterebbe
+	 *    la buca al primo smontaggio dopo una guarigione. */
+	in->stretta_fatta = FALSE;
+	in->stretta_us = 0;
+	in->aperto_us = g_get_monotonic_time();
+	in->fd_socket = -1;
 
 	in->ei = ei_new_sender(in);
 	if (!in->ei)
@@ -1082,6 +1279,7 @@ static void guarisci(Input *in)
 		in->guarigione_dovuta = FALSE;
 		return;
 	}
+	in->fd_socket = fd; /* ⛔ Cura D4, come in `input_apri()`: serve se va abbandonato */
 
 	/*
 	 * ⛔⛔ E IL CONTO SI AZZERA, ORFANI COMPRESI, perche' adesso e' VERO:
@@ -1118,6 +1316,55 @@ int input_gira(Input *in)
 		return -1;
 	if (in->caduto)
 		return -1;
+
+	/*
+	 * ⛔⛔⛔ LA TERZA STRADA — *«il palco se n'e' andato»*, cura D4, 25 ago 2026.
+	 *
+	 * `[M]` **Misurato, non temuto** (banco `10-d4`, scena `caduta-immatura`):
+	 * se il compositore muore mentre la stretta di mano non e' ancora arrivata,
+	 * il figlio muore **dentro `ei_dispatch()`**, e la pila e' la stessa:
+	 *
+	 *     ei_disconnect+0xda ← connection_dispatch ← ei_dispatch
+	 *
+	 * ⇒ `libei` chiama `ei_disconnect()` **da se'** quando la lettura dal socket
+	 *   fallisce, e cade nello stesso posto.  ⛔ La cura di `input_chiudi()` non
+	 *   ci arriva: qui non ci si arriva nemmeno, a `input_chiudi()`.
+	 *
+	 * ⭐ L'unica difesa possibile da fuori e' NON ENTRARE: si chiede al socket —
+	 *    quello vero, non l'`epoll` che `ei_get_fd()` restituisce — se il
+	 *    compositore c'e' ancora, e se se n'e' andato si abbandona il canale
+	 *    invece di dispacciarlo.
+	 *
+	 * ⚠ `events = 0` e' voluto: `POLLHUP`/`POLLERR`/`POLLNVAL` tornano sempre,
+	 *   qualunque cosa si chieda, e qui NON si vuole svegliarsi per i dati —
+	 *   di quelli si occupa il chiamante come ha sempre fatto.
+	 * ⚠ E il prezzo, dichiarato: se la stretta fosse arrivata **insieme** alla
+	 *   chiusura, la si butterebbe.  ⛔ Ma un canale il cui compositore e' morto
+	 *   e' morto comunque: si perde una connessione gia' perduta.
+	 * ⛔ E la domanda si fa SOLO finche' la stretta non e' arrivata: dopo,
+	 *   `libei` la caduta la tratta bene da se', e intromettersi sarebbe un
+	 *   secondo modo di fare la stessa cosa.
+	 */
+	if (!in->stretta_fatta && in->ei && in->fd_socket >= 0)
+	{
+		struct pollfd sonda;
+
+		sonda.fd = in->fd_socket;
+		sonda.events = 0;
+		sonda.revents = 0;
+		if (poll(&sonda, 1, 0) > 0 && (sonda.revents & (POLLHUP | POLLERR | POLLNVAL)))
+		{
+			registro_dice(AREA,
+			              "⛔⛔ il compositore ha chiuso il canale EIS PRIMA della stretta di "
+			              "mano (dopo %.1f ms): NON lo dispaccio, perche' libei cadrebbe "
+			              "dentro il suo stesso ei_disconnect().  ⚠ Da adesso l'utente GUARDA "
+			              "e non comanda, e il palco si smonta per la strada normale",
+			              (double) (g_get_monotonic_time() - in->aperto_us) / 1000.0);
+			stacca_il_contesto(in, "caduta prima della stretta");
+			in->caduto = TRUE;
+			return -1;
+		}
+	}
 
 	ei_dispatch(in->ei);
 	while ((evento = ei_get_event(in->ei)) != NULL)
@@ -1608,11 +1855,15 @@ void input_chiudi(Input *in)
 		ei_device_unref(in->puntatore);
 	if (in->tastiera_dev)
 		ei_device_unref(in->tastiera_dev);
-	if (in->ei)
-	{
-		ei_disconnect(in->ei);
-		ei_unref(in->ei);
-	}
+	/* ⛔⛔ QUI STAVA LA BUCA — fino al 25 agosto 2026 queste righe erano
+	 *     `ei_disconnect(in->ei); ei_unref(in->ei);` senza domande, e su un
+	 *     canale EIS aperto da poche decine di millisecondi ammazzavano il
+	 *     figlio di SIGSEGV **prima del primo fotogramma**.
+	 * ⭐ La cura sta QUI e non nei tre `smonta_il_palco()` di `figlio.c`: la buca
+	 *    e' del canale, e chi la mettesse nei chiamanti la lascerebbe scoperta al
+	 *    quarto chiamante che nascera'.  Il riquadro sopra `stacca_il_contesto()`
+	 *    porta il meccanismo, letto nella libreria. */
+	stacca_il_contesto(in, "chiusura");
 	g_clear_pointer(&in->disposizione, tastiera_chiudi);
 	g_free(in->keymap_nome);
 	g_free(in->negoziata);
