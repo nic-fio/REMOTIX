@@ -3194,6 +3194,74 @@ funzione tornava** ⇒ cinque celle misurate hanno prodotto un file che diceva *
 
 ---
 
+### 5.8 ⭐⭐⭐⭐⭐ IL TESTIMONE CHE FA VEDERE — **e la prima immagine del desktop remoto**
+
+*25 agosto 2026, dopo che il regista aveva smesso di provare.* ⛔ **È il pezzo che teneva chiusa la
+fase**, e non era codice del prodotto: era **non saper guardare**.
+
+`[M]` Quattro strade provate e **nessuna dava il quadro** — lo scatto interno del figlio
+(`cattura.bgrx` **0 byte**), la fotografia dello schermo (⛔ GNOME non espone
+`wlr-screencopy`), la tela della pagina via Marionette (⛔ **ogni riattacco buttava giù la sessione
+RCP**), il conteggio dei fotogrammi (⛔ dice **quanti**, non **che cosa**).
+
+⭐ **La quinta ha funzionato al primo colpo**: `banchi/10-f1-testimone.py` — il **cliente di prova**
+prende i fotogrammi **dal filo** (`--video-scrivi`), `ffmpeg -update 1` decodifica **l'ultimo**, e
+ne esce un PNG. ⚠ Si dichiara **dove guarda**: **dopo il filo, prima del decodificatore del
+browser** — non sostituisce la tela, la **precede**.
+
+#### ⛔ Tarato, perché un PNG nero e il desktop hanno la stessa faccia dal lato del codice
+
+| controllo | `[M]` |
+|---|---|
+| ⭐ **positivo** | la marca di `04-b30-scena` ritrovata dal lettore certificato: giro **«f1-taratura»**, disegno **3783**, contrasto **0,997** ⇒ guarda **quel** desktop, in **quell'istante** |
+| ⛔ **negativo, sul vero** | fondo a `#000000` ⇒ **quasi-nero**, accesi **0,00121**; e **sotto la barra di GNOME il fotogramma è nero byte per byte** (accesi 0,00000000, luma massima 1). ⭐ Il metro sente **un pixel su ottocento**, e il desktop vero sta **800 volte** più su |
+| ⛔⛔ **il terzo esito** | sessione appena nata, palco che non ha ancora consegnato ⇒ ⭐ **«NON HO GUARDATO», uscita 3** — **non** «era nero» |
+| ⭐ **non rompe chi guarda** | con uno spettatore già attaccato il testimone è stato **RESPINTO** (`congedo 0x0f`, *«lo sfratto NON è scattato»*), e ⭐ **lo spettatore è rimasto attaccato** |
+
+⭐ **`--certifica`: 4 predicati, sano 4 → guasto 12 → risanato 4.** ⚠ E **due guasti hanno morso su
+codice del banco stesso**: G8 dichiarava «tinta unita» uno schermo nero **con la marca sopra**
+(contava i colori invece della frazione diversa dal fondo); G12 aveva la barra finta **troppo
+grossa** e passava per il motivo sbagliato. ⇒ ⭐ *Il metro è stato corretto dalla sua stessa
+taratura, prima di misurare qualsiasi cosa.*
+
+### 5.9 ⭐⭐⭐⭐⭐ E QUEL CHE SI VEDE — **il desktop remoto è perfetto, e Firefox si ferma su un dialogo**
+
+#### ⭐⭐ Il desktop: ![il desktop remoto con Nautilus aperto](scatti/10-desktop-remoto-nautilus.png)
+
+⭐ **GNOME completo, sfondo Debian, barra in alto, e Nautilus con una finestra vera, nitida** —
+`[M]` media da **75,2 a 114,0** quando la finestra si apre. ⇒ ⛔ **compositore, GTK, `wl_output`,
+mappatura, cattura, codifica, filo: tutta la catena regge.** Il prodotto fa quel che promette.
+
+#### ⛔ E Firefox: ![Firefox fermo sul dialogo «Profile Missing»](scatti/10-firefox-profile-missing.png)
+
+> **Profile Missing** — *«Your Firefox profile cannot be loaded. It may be missing or
+> inaccessible.»* **[OK]**
+
+`[M]` Riprodotto **tre volte**, anche con `~/.mozilla` **spazzato via** e ripartendo da zero.
+Premendo OK, Firefox **esce**. ⛔ **`profiles.ini` non viene mai creato**: in `~/.mozilla/firefox/`
+restano solo `Crash Reports` e `Pending Pings`. E il primo crash è **datato e nominato**:
+`MozCrashReason: "Compositor crashed ()"`, **`SIGSEGV / SEGV_MAPERR`**.
+
+> ### ⛔⛔ E LA TRAPPOLA CHE TENEVA NASCOSTO TUTTO ERA DEL BANCO
+>
+> L'**ESC** che si manda per uscire dalla vista d'insieme di GNOME è ⛔ **lo stesso tasto che chiude
+> un dialogo modale**. Con ESC prima dello scatto → **desktop vuoto**. Senza ESC → **il dialogo**.
+>
+> ⇒ ⭐⭐ *«Firefox è vivo e disegna ma non ha nessuna finestra»* — la diagnosi su cui il
+> coordinamento aveva girato per ore — **era il dialogo, chiuso dal nostro stesso ESC.**
+
+⚠ **E una seconda causa reale, trovata per strada, che riguarda i banchi**: l'ambiente composto da
+`giu()` (`env -i` con otto variabili) ⛔ **manca `XDG_SESSION_TYPE`** — Nautilus rifiutava con
+*«Unsupported or missing session type ''»*. Servono anche `XDG_CURRENT_DESKTOP=GNOME` e
+`GTK_A11Y=none`.
+
+⛔ **Che cosa resta `[?]`**: **perché** Firefox non riesce a creare il profilo. `HOME` è scrivibile,
+ci sono **28 GB** liberi, il portale è attivo, e `gdb` mostra un ciclo `g_main_context_iteration`
+**annidato** — cioè il dialogo. ⭐ La pista che pesa è il **compositore di Firefox che muore**: se il
+processo GPU se ne va all'avvio, *«Profile Missing»* è **il sintomo, non la causa**.
+
+---
+
 ## §8 · Le decisioni prodotte
 
 > ⛔ *Scritto dopo i due giri di misure, quando il prodotto non era ancora stato toccato: «nessuna di
