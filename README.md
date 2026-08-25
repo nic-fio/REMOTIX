@@ -6,6 +6,21 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 
 > # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **25 agosto 2026**
 >
+> ## ➡️ LA PROSSIMA È LA **FASE 11 — LA RETE DI SICUREZZA**, e l'ha decisa l'utente
+>
+> *«Prima è necessario mettere in sicurezza tutto quello che abbiamo sviluppato fino a oggi. Prima di
+> passare agli altri DE è necessaria una sessione dedicata per studiare una modalità che impedisca di
+> introdurre regressioni.»* — 25 agosto 2026, `DECISIONI.md` §4.6-duodecies.
+>
+> ⚠ **KDE, XFCE e LXQt scalano di uno** (fasi 12, 13, 14): le fasi non cambiano di una riga, cambia
+> il loro posto.
+>
+> ⭐⭐ **E il collaudo di quella fase è già scritto**: la rete va puntata contro il codice di oggi e
+> ⛔ **deve diventare rossa sulla «sessione che nasce cieca»** — senza che nessuno le abbia detto dove
+> guardare. **Se non la prende, non è una rete: è un rituale.**
+>
+> ---
+>
 > ## ✅⭐⭐⭐ LA FASE 10 È CHIUSA — *multi-tenant e il budget*
 >
 > **Chiusa il 25 agosto 2026, sul giudizio dell'utente**: *«sono soddisfatto — riprodotto audio e
@@ -57,6 +72,16 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > `[M]` Stessa scena, filo strozzato: **38,5 → 37,4 fot/s** (uguali), **6,0 → 3,20 Mbit/s** (metà),
 > ⭐ **coda del filo VUOTA**, e il motore di composizione fermo sul **41-46 %** — cioè la scena si
 > muoveva come prima. ⇒ ⭐ **Non ha rallentato: ha compresso di più.**
+>
+> ### ⛔⛔⛔ E UN DIFETTO RESTA APERTO, DICHIARATO — **la sessione che nasce cieca**
+>
+> `[M]` Su una sessione **appena nata** Mutter non annuncia nessun `wl_output` ⇒ ⛔ **nessuna
+> applicazione può aprire una finestra**: Firefox resta vivo e non dipinge, il compositore sta a
+> **0,0 %**, il palco consegna **zero fotogrammi**. ⚠ È **intermittente**: `provanic3` ha avuto il
+> monitor **2 volte e poi 6 volte no**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` **§7.4**.
+>
+> ⭐ **Non tocca i numeri di capacità** — quelli sono presi su sessioni che disegnavano davvero.
+> ⛔ **Tocca la consegna**: oggi una sessione nuova su tre-quattro nasce cieca.
 >
 > ### ⚠ E DUE DECISIONI SONO RIMASTE NON PRESE — valgono i predefiniti
 >

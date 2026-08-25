@@ -1425,7 +1425,75 @@ promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade
 
 ---
 
-## Fase 11 — KDE
+## Fase 11 — La rete di sicurezza
+
+> ## ⭐⭐⭐⭐⭐ DECISA DALL'UTENTE IL 25 AGOSTO 2026, a fase 10 appena chiusa
+>
+> *«Prima è necessario mettere in sicurezza tutto quello che abbiamo sviluppato fino a oggi. Prima di
+> passare agli altri DE è necessaria una sessione dedicata per studiare una modalità che impedisca di
+> introdurre regressioni man mano che verrà implementato il supporto ai nuovi DE.»*
+>
+> ⇒ `DECISIONI.md` **§4.6-duodecies**. ⚠ **KDE, XFCE e LXQt scalano di uno**: diventano le fasi 12,
+> 13 e 14. Le fasi **non cambiano di una riga** — cambia il loro posto, come già il 16 agosto.
+
+**Produce**: un modo di accorgersi **da soli** che qualcosa si è rotto, prima che lo scopra l'utente.
+
+**L'utente vede**: niente di nuovo sullo schermo — ⭐ **e questo è il punto**: vede che le cose che
+funzionavano **continuano a funzionare** quando arrivano i desktop nuovi.
+
+---
+
+### ⛔ Perché questa fase esiste — tre difetti veri, non un timore generico
+
+| il difetto | nascosto per | ⛔ perché era invisibile |
+|---|---|---|
+| **la sessione che nasce cieca** (fase 10 §7.4) | giorni | ⛔ **nessuno apriva una sessione NUOVA**: si riusavano quelle già aperte, che il monitor ce l'avevano |
+| **`~/.cache -> /tmp`** | **due fasi** | ⛔ e il controllo che *«chiudeva la questione»* girava da un utente **con lo stesso difetto** |
+| **cinque banchi che contavano zero fotogrammi** | un giro | ⛔ una cura al registro ne aveva rotto le espressioni, e la funzione tornava **0 invece di «non lo so»** |
+
+⇒ ⭐⭐ **Tutti e tre invisibili per la stessa ragione**: si guardava sempre **lo stesso pezzo di
+scena**, e si guardava **il processo invece del pixel**.
+
+---
+
+### Che cosa deve produrre, in concreto
+
+| # | | ⛔ e il perché sta in un difetto vero |
+|---|---|---|
+| **1** | ⭐ **Una prova di CONSEGNA che parte da zero**: macchina pulita → utente nuovo → sessione nuova → **un'immagine del desktop con una finestra dentro** | ⛔ è l'unica forma che avrebbe preso la sessione cieca. Una prova che riusa una sessione **non la prende mai** |
+| **2** | ⭐ **Invarianti eseguibili**, poche e vere: la sessione ha un monitor · una finestra si apre · i fotogrammi arrivano · **chi c'è già non peggiora** (I1) · le gemelle R12.3 combaciano · il registro dice **di chi** parla | ⚠ Poche. ⛔ Una rete con cento maglie che nessuno legge è cerimonia |
+| **3** | ⛔ **Che giri DA SOLA** dopo ogni modifica, senza che qualcuno se ne ricordi | ⛔ le tre volte di oggi nessuno se n'è ricordato — **e nessuno era distratto**: semplicemente non c'era il gancio |
+| **4** | ⭐⭐ **Che sia CERTIFICATA lei stessa** — `--certifica`, coi guasti innestati | ⛔ `LEZIONI.md` §1.36: *lo strato che coordina i banchi è un banco anche lui, e nessuno lo certifica*. `[M]` **sei difetti** trovati lì dentro in una fase sola |
+| **5** | ⭐⭐⭐ **Che sia CIECA AL DESKTOP** — le stesse invarianti puntate su GNOME, KDE, XFCE, LXQt senza riscriverle | ⛔ è l'intera ragione per cui la fase sta **prima** dei desktop nuovi: una rete scritta su misura di GNOME va riscritta quattro volte |
+| **6** | ⚠ **Che guardi la CONSEGNA, non solo il sorgente** | ⛔ `~/.cache -> /tmp` non era nel nostro codice: era nella **macchina**. Una rete che compila e prova solo `src/` non l'avrebbe presa mai |
+
+---
+
+### ⛔⛔ IL COLLAUDO DELLA FASE — ed è già scritto, oggi
+
+⭐⭐ **La rete si punta contro il codice del 25 agosto 2026, e DEVE diventare rossa su §7.4** — la
+sessione che nasce cieca — ⛔ **senza che nessuno le abbia detto dove guardare.**
+
+⚠ **E il secondo collaudo**: deve prendere anche `~/.cache -> /tmp`.
+
+⇒ ⛔ **Se non li prende, non è una rete: è un rituale.** ⭐ E il metro della fase non è *«quante prove
+girano»*: è **che cosa la rete PRENDE**.
+
+---
+
+### ⚠ Quel che questa fase NON è
+
+⛔ **Non è «scrivere più banchi».** Ce ne sono già più di cento, ⭐ e non sono serviti: i tre difetti
+di oggi sono passati **in mezzo a loro**. ⇒ Il problema non è la quantità delle prove — è ⭐ **da dove
+partono** (da zero, o da uno stato che funzionava già) e ⭐ **che cosa guardano** (il pixel, o il
+processo).
+
+⚠ **E non è una fase di ceremonia**: se alla fine la rete non ha preso niente che l'occhio non
+avrebbe preso, **la fase è fallita**, e va detto.
+
+---
+
+## Fase 12 — KDE
 
 ⚠ *Era la **fase 10** fino al 16 agosto 2026: il multi-tenant le è passato davanti, e la ragione sta
 nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambiato il suo posto.*
@@ -1512,7 +1580,11 @@ non si apre; niente `InaccessiblePaths=` nel drop-in.
 
 ---
 
-## Fase 12 — XFCE e LXQt
+## Fase 13 — XFCE e LXQt
+
+⚠ *Era la **fase 12** fino al 25 agosto 2026: **la rete di sicurezza** le è passata davanti
+(`DECISIONI.md` §4.6-duodecies). **La fase non è cambiata di una riga** — è cambiato il suo
+posto, come già il 16 agosto.*
 
 ⚠ *Era la **fase 11** fino al 16 agosto 2026 — stesso spostamento della 11, stessa ragione.*
 ⛔ **E qui una trappola di lettura**: `STUDI.md` §xfce e `STUDI.md` §lxqt portano in testa *«per la fase 11»*, ma
@@ -1526,7 +1598,9 @@ sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 
 ---
 
-## Fase 13 — Il servizio
+## Fase 14 — Il servizio
+
+⚠ *Era la **fase 13** fino al 25 agosto 2026, per lo stesso scalo.*
 
 **Produce**: unità systemd, confezionamento, installazione, il certificato generato all'avvio,
 la limitazione dei tentativi.

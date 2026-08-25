@@ -2632,6 +2632,53 @@ PROVA A SCRIVERE**, perché *«scritto non è in vigore»* (**E1**).
 non partiva, con la spiegazione *«non è nostro»* — ⇒ ⭐ **la spiegazione che non chiede di continuare
 a cercare.** La lezione di metodo è `LEZIONI.md` **§1.38**.
 
+### 4.6-duodecies ✅ ⭐⭐⭐⭐⭐ **Prima dei desktop nuovi: una fase per NON introdurre regressioni**
+
+*Deciso dall'utente il **25 agosto 2026**, subito dopo aver chiuso la fase 10:*
+
+> *«No, prima è necessario mettere in sicurezza tutto quello che abbiamo sviluppato fino a oggi.
+> Prima di passare agli altri DE è necessaria una sessione dedicata (magari una fase vera e propria)
+> per studiare una modalità che impedisca di introdurre regressioni man mano che verrà implementato
+> il supporto ai nuovi DE.»*
+
+⭐ **La fase 11 non è più KDE: è la rete di sicurezza.** KDE, XFCE e LXQt scalano di uno.
+
+#### ⛔ Perché adesso, e non dopo — e l'argomento non è prudenza generica
+
+`[M]` **La giornata del 25 agosto lo ha dimostrato tre volte**, e ogni volta con lo stesso modo di
+sbagliare:
+
+| il difetto | quanto è rimasto nascosto | ⛔ perché |
+|---|---|---|
+| **la sessione che nasce cieca** (§7.4) | giorni | ⛔ **nessuno ha mai aperto una sessione NUOVA e l'ha guardata**: tutte le prove riusavano sessioni già aperte, che il monitor ce l'avevano |
+| **`~/.cache -> /tmp`** | **due fasi** | ⛔ e la prova che *«chiudeva la questione»* girava da un utente che **aveva lo stesso difetto** |
+| **cinque banchi che contavano zero fotogrammi** | un giro | ⛔ una cura al registro aveva rotto le loro espressioni, e `resa()` tornava **0 invece di None** |
+
+⇒ ⭐⭐ **Nessuno dei tre era sottile.** Tutti e tre erano invisibili per la **stessa** ragione: si
+guardava sempre lo stesso pezzo di scena, e ⛔ **si guardava il processo invece del pixel.**
+
+#### ⛔⛔ E la ragione per cui va fatto PRIMA dei desktop, che è la stessa di §4.6-sexies
+
+> *«se il multi-tenant tocca la sessione o il budget, la modifica va riverificata su **quattro
+> desktop invece che su uno**»*
+
+⇒ ⭐ **Vale identica per il modo di sbagliare**: un difetto che oggi si trova una volta, con quattro
+desktop si troverà **quattro volte** — e nel caso peggiore su tre di essi **non si troverà affatto**,
+perché nessuno pensa a riprovare il primo. ⛔ *La rete si tende prima di camminare sul filo, non
+dopo.*
+
+#### ⭐ Il metro della fase, e non è «quante prove girano»
+
+⛔ **Una fase così può degenerare in cerimonia**, e il progetto lo sa (`LEZIONI.md`, la revisione si
+giustifica su **che cosa sopravvive**). ⇒ ⭐⭐ **Il metro è uno solo: che cosa la rete PRENDE.**
+
+⭐⭐ **E il collaudo della fase è già scritto oggi**: la rete va puntata contro **il codice di
+stamattina**, e ⛔ **deve diventare rossa su §7.4** — la sessione cieca — **senza che nessuno le
+abbia detto dove guardare.** Se non lo prende, non è una rete: è un rituale.
+
+⚠ **E il secondo collaudo**: deve prendere anche il difetto di `~/.cache`, che non è nel nostro
+codice ma **nella macchina**. ⇒ La rete guarda **la consegna**, non solo il sorgente.
+
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
 *Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «no, nessuno può spegnere,
