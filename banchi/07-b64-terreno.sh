@@ -284,7 +284,13 @@ porta)
 	ok "compilato"
 	exit 0 ;;
 utente)
-	remoto "UTENTE=$UTENTE UID_B=$UID_B PAROLA_UTENTE=$PAROLA_UTENTE LAV=$LAV" utente ;;
+	# ⛔ `RIFAI_PAROLA` DEVE ATTRAVERSARE L'ssh — 25 agosto 2026.
+	#   La cura di stamattina (non rifare la parola a un utente che esiste
+	#   gia') l'aveva messa nella meta' che gira SUL SERVER, ma la variabile
+	#   non era in questo elenco: `RIFAI_PAROLA=1` non arrivava di la' e non
+	#   faceva niente.  ⚠ E il modo in cui falliva e' il solito: nessun
+	#   errore, nessuna riga, la parola semplicemente non veniva rifatta.
+	remoto "UTENTE=$UTENTE UID_B=$UID_B PAROLA_UTENTE=$PAROLA_UTENTE LAV=$LAV RIFAI_PAROLA=${RIFAI_PAROLA:-0}" utente ;;
 accendi)
 	remoto "PORTA=$PORTA IND=$IND ALBERO=$ALBERO LAV=$LAV UNITA=$UNITA SENZA_RT=${SENZA_RT:-0} RTPRIO=${RTPRIO:-20} OPZIONI_SERVER='${OPZIONI_SERVER:-}'" accendi ;;
 sblocca)
