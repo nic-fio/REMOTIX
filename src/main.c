@@ -126,8 +126,18 @@
  *   RITARDO massimo fra «l'utente si e' seduto davanti alla macchina» e «la
  *   sessione remota cade» — che nessuno guarda col cronometro — ed e' anche il
  *   COSTO, perche' ogni ripasso e' una chiamata sincrona a logind dentro il
- *   ciclo che consegna i fotogrammi (`LEZIONI.md` §6.2-bis). */
+ *   ciclo che consegna i fotogrammi (`LEZIONI.md` §6.2-bis).
+ *
+ * ⭐ E DAL 25 AGOSTO 2026 IL COSTO NON DIPENDE PIU' DAGLI INQUILINI: il ripasso
+ *   fa **una** domanda per tutti (`sentinella_locali()`), non una per ciascuno.
+ *   `[M]` §6.13: era `N × D`, e a N=7 con logind a 286 ms ogni desktop crollava
+ *   a 1,3 fotogrammi/s senza che si scrivesse una riga. */
 #define RIPASSO_LOCALI_MS 2000
+
+/* ⭐ Ogni quanto si scrive il conto del guardiano — vedi il chiamante di
+ *   `sentinella_conti()` nel ciclo.  ⚠ Un minuto: e' un conto cumulativo, e a
+ *   ogni ripasso sarebbero 43 200 righe al giorno quasi tutte uguali. */
+#define CONTO_GUARDIANO_MS 60000
 
 static volatile sig_atomic_t si_ferma;
 
@@ -1032,6 +1042,24 @@ static bool chiedi_sessione_locale(void *ctx, const char *utente, char *quale,
 	return sentinella_locale((sentinella *)ctx, utente, quale, quanto);
 }
 
+/* ⭐⭐ §5.1 — l'adattatore del RIPASSO, e chiede per TUTTI gli inquilini in una
+ *     volta sola.  Il perche' — `[M]` §6.13, `N × D` che diventa `D` — sta per
+ *     intero in `sentinella.h` sopra `sentinella_locali()`.
+ *
+ * ⛔ E' un secondo adattatore e non un parametro in piu' sul primo perche' le
+ *    due domande hanno due mestieri diversi: quella sopra la fa `rcp.c`
+ *    all'`ATTACCA`, una volta per sessione, e li' il costo non si vede; questa
+ *    gira ogni due secondi **dentro il ciclo che consegna i fotogrammi**.
+ * ⭐ E resta la leva del banco: il guardiano finto si innesta QUI, e il
+ *    trasporto non si tocca. */
+static size_t ripassa_sessioni_locali(void *ctx, const char *const *utenti,
+                                      size_t quanti, bool *locale, char *quali,
+                                      size_t larghezza)
+{
+	return sentinella_locali((sentinella *)ctx, utenti, quanti, locale, quali,
+	                         larghezza);
+}
+
 static void tela_dal_palco(void *ctx, const char *utente, uid_t uid,
                            uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
                            uint32_t avuta_a)
@@ -1062,6 +1090,7 @@ int main(int argc, char **argv)
 	sentinella *guardiano = NULL;
 	time_t ultimo_controllo_cert;
 	uint64_t ultimo_ripasso_locali = 0;
+	uint64_t ultimo_conto_guardiano = 0;
 	int esito = 1;
 
 	/* ⛔⭐ E QUESTA E' LA PRIMA RIGA DEL PROGRAMMA, PRIMA DI QUALUNQUE ALTRA
@@ -1604,8 +1633,16 @@ int main(int argc, char **argv)
 	 *    lo dira' a ogni attacco.  ⚠ Non e' un motivo per non partire — I1: una
 	 *    sessione senza una regola vale piu' di nessuna sessione. */
 	guardiano = sentinella_apri();
-	if (guardiano)
+	if (guardiano) {
 		wt_locale_gancio(chiedi_sessione_locale, guardiano);
+		/* ⭐⭐ E IL RIPASSO HA IL SUO GANCIO, che chiede per TUTTI in una volta
+		 *     — la ragione, coi numeri, sta in `sentinella.h` sopra
+		 *     `sentinella_locali()`: `[M]` §6.13, il costo passa da `N × D` a
+		 *     `D` dentro il ciclo che consegna i fotogrammi.  ⛔ Si collegano
+		 *     tutt'e due o nessuno dei due: sono le due meta' della stessa
+		 *     regola, e mezza regola e' peggio di nessuna. */
+		wt_locali_gancio(ripassa_sessioni_locali, guardiano);
+	}
 
 	/* ⭐ §7.6 — e si collega qui con gli altri: la scorciatoia `Ctrl+Alt+Fine`
 	 *    puo' arrivare col primo pacchetto utile della sessione, e un gancio
@@ -1712,6 +1749,21 @@ int main(int argc, char **argv)
 		 *   stata scritta (la lezione di `regola_battito`, pagata l'11 agosto
 		 *   con B6). */
 		adesso = registro_ora_ms();
+		/* ⛔⭐⭐⭐ IL BATTITO DEL CICLO — e va PRIMA di tutto quel che giudica.
+		 *
+		 * `wt_giro_del_padre()` misura quanto e' passato dalla passata
+		 * precedente, cioe' **quanto siamo stati ciechi**: in quel tempo nessun
+		 * byte poteva uscire e nessun pacchetto del client poteva essere letto.
+		 * ⛔ Senza questa riga la linea morta legge quel buco come *«la linea e'
+		 *    MORTA»* e chiude sessioni sane con `persi=0` scritto accanto —
+		 *    `[M]` §6.7: un `SIGSTOP` di 5 s a UN figlio uccideva TUTTE le
+		 *    sessioni.  Il perche' per intero sta in `webtransport.c`, sopra
+		 *    `WT_GIRO_ATTESO_MS`.
+		 * ⚠ Sta qui e non dentro `poll()` perche' quel che conta e' la distanza
+		 *   fra due passate COMPLETE: un ciclo che si sveglia e poi resta
+		 *   bloccato dentro una chiamata sincrona non ha consegnato niente, e
+		 *   misurarlo dal risveglio direbbe che e' andato tutto bene. */
+		wt_giro_del_padre(adesso);
 		/* ⛔ §5.3, il terzo orologio: si guarda a OGNI passata, non quando
 		 *    arriva qualcosa.  Il caso che conta e' proprio quello in cui non
 		 *    arriva piu' niente. */
@@ -1752,6 +1804,38 @@ int main(int argc, char **argv)
 		if (guardiano && adesso - ultimo_ripasso_locali >= RIPASSO_LOCALI_MS) {
 			ultimo_ripasso_locali = adesso;
 			wt_sorveglia_locali();
+		}
+
+		/* ⛔⭐⭐ IL CONTO DEL RIPIEGO, UNA VOLTA AL MINUTO — e fino al 25 agosto
+		 *      2026 non lo emetteva NESSUNO.
+		 *
+		 * `sentinella.h` dichiara `sentinella_conti()` con scritto sopra che
+		 * serve *«perche' la scelta sincrona si possa RIMISURARE invece che
+		 * crederla»* — ⛔ e `sentinella_conti()` **non aveva un chiamante in
+		 * tutto `src/`**.  Un contatore che nessuno emette e' peggio di un
+		 * contatore che manca: chi legge il codice crede che la misura ci sia.
+		 * ⇒ Qui c'e' il chiamante, e la riga porta accanto i buchi del ciclo,
+		 *   perche' sono le due meta' della stessa domanda — *«quanto ci costa
+		 *   chiedere a logind dentro il ciclo che consegna?»*.
+		 * ⚠ Un minuto, non ogni ripasso: e' un conto cumulativo, e a due secondi
+		 *   sarebbero 43 200 righe al giorno che dicono quasi sempre la stessa
+		 *   cosa (il difetto dei 30,8 GB di registro della fase 8). */
+		if (guardiano && adesso - ultimo_conto_guardiano >= CONTO_GUARDIANO_MS) {
+			uint64_t chiamate = 0, peggior_ms = 0;
+			uint64_t fermi = 0, fermo_peggiore = 0;
+
+			ultimo_conto_guardiano = adesso;
+			sentinella_conti(guardiano, &chiamate, &peggior_ms);
+			wt_giri_fermi(&fermi, &fermo_peggiore);
+			registro_dice(REG_SESSIONE,
+			              "guardiano: chiamate=%llu peggiore_ms=%llu "
+			              "giri_fermi=%llu "
+			              "giro_peggiore_ms=%llu — ⭐ una chiamata per RIPASSO, "
+			              "non per inquilino (§6.13: era `N × D`, adesso e' `D`)",
+			              (unsigned long long)chiamate,
+			              (unsigned long long)peggior_ms,
+			              (unsigned long long)fermi,
+			              (unsigned long long)fermo_peggiore);
 		}
 
 		if (time(NULL) - ultimo_controllo_cert >= 60) {

@@ -665,6 +665,16 @@ struct wt {
 	uint64_t lm_pkt_recv;       /* `pkt_recv` di quella volta                 */
 	uint64_t lm_pkt_sent_vivo;  /* `pkt_sent` di quella volta = le PROVE      */
 	bool lm_scattata;           /* ⛔ una volta sola: dopo, il filo cade      */
+	/* ⛔⭐⭐ QUANTO CIECHI SIAMO STATI, e quanto ne ha gia' tenuto conto QUESTA
+	 *      sessione.  Le due grandezze su cui la linea morta decide — i byte
+	 *      usciti e i pacchetti ricevuti — si muovono SOLO mentre il ciclo del
+	 *      padre gira: se il ciclo si e' fermato, non si e' fermato il client,
+	 *      **ci siamo fermati noi**, e contare quel buco come silenzio suo
+	 *      significa accusare la sua rete di una cecita' nostra.
+	 * ⭐ Si tiene la fotografia del contatore GLOBALE invece di un flag: fra due
+	 *    giudizi possono esserci stati piu' buchi, e un flag ne perderebbe. */
+	uint64_t lm_fermo_visto;    /* `giro_fermo_ms` all'ultimo giudizio        */
+	uint64_t lm_fermo_saltati;  /* quanti giudizi ha saltato per un buco      */
 
 	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
 	 *
@@ -2396,6 +2406,17 @@ void wt_locale_gancio(wt_locale_richiesta f, void *ctx)
 	gancio_locale_ctx = ctx;
 }
 
+/* ⭐⭐ E IL RIPASSO HA IL SUO, che chiede per TUTTI in una volta: il perche' —
+ *     coi numeri — sta in `webtransport.h` sopra `wt_locali_ripasso`. */
+static wt_locali_ripasso gancio_locali;
+static void *gancio_locali_ctx;
+
+void wt_locali_gancio(wt_locali_ripasso f, void *ctx)
+{
+	gancio_locali = f;
+	gancio_locali_ctx = ctx;
+}
+
 static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
                                    size_t quanto)
 {
@@ -2909,6 +2930,91 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 static bool linea_morta_accesa;
 static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
+
+/* ========================================================================== */
+/* ⛔⭐⭐⭐ IL BUCO DEL CICLO DEL PADRE — «il nostro silenzio non e' il loro».  */
+/*         Fase 10, 25 agosto 2026, rilievi P2/P4/P5 di §8.2.                 */
+/*                                                                            */
+/* ⛔ IL FATTO, e sta in una riga: le DUE grandezze su cui la linea morta      */
+/*    decide non sono grandezze del filo, sono grandezze del NOSTRO CICLO.    */
+/*                                                                            */
+/*      `lm_usciti`  sale in `coda_consegna()`, cioe' quando SCRIVIAMO;       */
+/*      `pkt_recv`   sale quando `trasporto_leggi()` LEGGE il socket.         */
+/*                                                                            */
+/*    ⇒ Un ciclo fermo le congela tutt'e due, e i pacchetti del client, che    */
+/*      stanno arrivando benissimo, restano nel buffer del kernel senza che   */
+/*      nessuno li conti.  ⛔⛔ La linea morta leggeva quel congelamento come   */
+/*      *«il client non fa vedere un pacchetto da troppo tempo»* e chiudeva   */
+/*      la sessione con `persi=0` accanto — cioe' **con la prova, nella riga  */
+/*      stessa, che la rete non c'entrava**.                                  */
+/*                                                                            */
+/* ⛔ E LE TRE STRADE MISURATE PORTANO TUTTE QUI:                              */
+/*                                                                            */
+/*    · `[M]` §6.7 — un `SIGSTOP` di **5 s a UN figlio** ha ucciso **tutte e  */
+/*      quattro** le sessioni: `causa=stallo usciti_byte=0 coda_video=8862    */
+/*      persi=0`.  Un figlio fermo lascia byte fermi nella coda del PADRE.    */
+/*    · `[M]` §6.13 — il guardiano di logind sincrono nel ciclo: a N=7 con    */
+/*      D=286 ms il ciclo sta fermo **piu' di quanto duri il ripasso**.       */
+/*    · `[M]` §6.15 — **cinque client sfrattati in 1,3 s** a cinque sessioni: */
+/*      cinque sessioni indipendenti non tacciono nello stesso secondo per    */
+/*      cinque ragioni diverse.  ⚠ Che sia questo il meccanismo lo dira'      */
+/*      `fermo_ms=` nella riga, non questo commento: se uscisse ZERO, la      */
+/*      causa e' un'altra e questa cura non la copre.                         */
+/*                                                                            */
+/* ⭐⭐ LA FORMA DELLA CURA: un buco vale come un PROGRESSO — i conti           */
+/*     RIPARTONO.  ⛔ E NON «si sottrae il tempo perso», che sembra piu'       */
+/*     preciso e non lo e': un ciclo stabilmente lento terrebbe l'orologio    */
+/*     del servizio indietro **per sempre**, e allora un client davvero morto */
+/*     non verrebbe riconosciuto **mai**.  Ripartire costa al massimo UNA     */
+/*     soglia di ritardo sul morto, ed e' un prezzo limitato e dichiarato.    */
+/*                                                                            */
+/* ⛔ IL BUDGET, e perche' 1100 e non 1000: il `poll` di `main.c` dorme al     */
+/*    piu' **1000 ms** (`attesa`), quindi due passate distano normalmente     */
+/*    fino a un secondo.  ⭐ I 100 ms di margine servono a non contare come   */
+/*    «buco» il lavoro ORDINARIO di una passata piena — se fosse 1000 netti,  */
+/*    questo contatore direbbe «buco» su una macchina sana e la cura          */
+/*    scatterebbe sempre, cioe' spegnerebbe la linea morta di nascosto.       */
+/*    ⚠ E' un numero TARATO SUL CICLO, non sulla rete: se un giorno `attesa`  */
+/*      cambiasse, va cambiato con lei.                                       */
+/* ========================================================================== */
+#define WT_GIRO_ATTESO_MS 1100
+
+static uint64_t giro_ultimo_ms;    /* quando il ciclo del padre e' passato    */
+static uint64_t giro_fermo_ms;     /* ⛔ i millisecondi di buco, in tutto     */
+static uint64_t giro_fermi;        /* quanti buchi                            */
+static uint64_t giro_fermo_peggiore_ms;
+
+void wt_giro_del_padre(uint64_t ora_ms)
+{
+	uint64_t distanza;
+
+	/* ⛔ La prima passata non e' un buco: prima non c'era niente da confrontare,
+	 *    e «mai passato» non e' «passato tanto tempo fa» (`LEZIONI.md` §1.9). */
+	if (!giro_ultimo_ms || ora_ms <= giro_ultimo_ms) {
+		giro_ultimo_ms = ora_ms;
+		return;
+	}
+	distanza = ora_ms - giro_ultimo_ms;
+	giro_ultimo_ms = ora_ms;
+	if (distanza <= WT_GIRO_ATTESO_MS)
+		return;
+	giro_fermo_ms += distanza - WT_GIRO_ATTESO_MS;
+	giro_fermi++;
+	if (distanza > giro_fermo_peggiore_ms)
+		giro_fermo_peggiore_ms = distanza;
+	/* ⚠ Nessuna riga qui: la scrive chi ne subisce l'effetto, con accanto la
+	 *   sessione e i suoi numeri.  Una riga per buco, senza contesto, sarebbe
+	 *   rumore su una macchina carica — e il numero c'e' lo stesso, lo porta
+	 *   `wt_giri_fermi()` una volta al minuto. */
+}
+
+void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms)
+{
+	if (quanti)
+		*quanti = giro_fermi;
+	if (peggiore_ms)
+		*peggiore_ms = giro_fermo_peggiore_ms;
+}
 
 /* ⛔⛔⭐⭐ QUANTO SPESSO SI CHIEDE AL CLIENT DI FARSI VEDERE — e con la linea
  *       morta accesa NON sono piu' 10 s.  E' la riga che rende ONESTA la regola
@@ -4653,6 +4759,34 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 /*       sono i tre numeri su cui lo stallo si dimostra o si smentisce: quanti */
 /*       fotogrammi il palco ci ha dato, quanti byte di video sono usciti      */
 /*       davvero, e quanti sono rimasti in casa nostra.                        */
+/*                                                                            */
+/* ⭐⭐ E IL 25 AGOSTO 2026 NE SONO ENTRATI ALTRI TRE, tutti sulla stessa       */
+/*     domanda — *«e' stato il filo, o siamo stati noi?»*:                     */
+/*                                                                            */
+/*      · `fermo_ms=`      i millisecondi in cui il ciclo del padre NON ha    */
+/*                         girato da quando questa sessione e' nata.  ⛔ Se   */
+/*                         non e' zero, i due numeri su cui si decide erano   */
+/*                         congelati per colpa nostra per quel tanto.         */
+/*      · `giri_fermi=`    quanti buchi, in tutto.                            */
+/*      · `saltati=`       quanti giudizi questa sessione ha SALTATO perche'  */
+/*                         c'era stato un buco.  ⭐ E' il conto che rende la  */
+/*                         cura falsificabile: `saltati=0` in una sessione    */
+/*                         sfrattata vuol dire che il buco non c'entrava.     */
+/*                                                                            */
+/*   ⛔ Sono TESTIMONI, non giudici — la stessa promozione che ha fatto        */
+/*      `permille=` il 23 agosto: la decisione resta delle due cause.         */
+/*                                                                            */
+/* ⭐⭐ E ALTRI QUATTRO, PER L'ANELLO DI §6.15 — `ritmo_giu=`                   */
+/*     `ritmo_arretrato=` `ritmo_posti=` `ritmo_scesi=`.                      */
+/*                                                                            */
+/*   ⛔ §6.15 ha dovuto mettere accanto DUE righe scritte da due punti diversi */
+/*      del programma, e appaiarle a occhio sull'ora, per dire *«il regolatore */
+/*      stava trattenendo tutto quando la linea morta ha sfrattato»*.  ⇒ Con   */
+/*      questi campi la riga dello sfratto lo dice DA SOLA: `ritmo_giu=1` con  */
+/*      `usciti_byte=0` vuol dire che a non far uscire niente **eravamo noi**. */
+/*   ⚠ E anche qui sono testimoni: la decisione non cambia di una virgola.     */
+/*     ⭐ Ma la prossima volta che l'anello si riproduce, chi legge non deve   */
+/*        piu' dedurlo — e questo e' quel che serve per curarlo alla radice.   */
 /* ========================================================================== */
 
 static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
@@ -4670,7 +4804,9 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	              "silenzio_ms=%llu soglia_silenzio_ms=%llu prove=%llu "
 	              "minimo_prove=%u persi=%llu spediti=%llu permille=%u "
 	              "finestra_ms=%llu minimo_pacchetti=%u cwnd=%llu "
-	              "cwnd_left=%llu srtt_us=%llu giudizio=%s",
+	              "cwnd_left=%llu srtt_us=%llu fermo_ms=%llu giri_fermi=%llu "
+	              "saltati=%llu ritmo_giu=%d ritmo_arretrato=%u ritmo_posti=%u "
+	              "ritmo_scesi=%llu giudizio=%s",
 	              w->provenienza, causa,
 	              (unsigned long long)stallo_ms,
 	              (unsigned long long)linea_morta_stallo_ms,
@@ -4686,6 +4822,12 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	              (unsigned long long)in->cwnd,
 	              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 	              (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
+	              (unsigned long long)giro_fermo_ms,
+	              (unsigned long long)giro_fermi,
+	              (unsigned long long)w->lm_fermo_saltati,
+	              w->ritmo_giu ? 1 : 0, w->ritmo_ultimo,
+	              (unsigned)WT_RITMO_POSTI,
+	              (unsigned long long)w->video_ritmo_scesi,
 	              detto);
 	/* ⛔⭐ IL MOTIVO SI SCRIVE NELL'ERRORE DELLA CONNESSIONE, e non si INVENTA
 	 *     un motivo RCP nuovo: `RCP.md` §9 vieta di aggiungere un codice a
@@ -4734,6 +4876,55 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		w->lm_uscita_ms = ora_ms;
 		w->lm_usciti_visti = w->lm_usciti;
 		w->lm_offerti_visti = w->lm_offerti;
+		w->lm_fermo_visto = giro_fermo_ms;
+		return;
+	}
+
+	/* ── 0. ⛔⛔⭐ IL BUCO DEL CICLO — «il nostro silenzio non e' il loro» ──
+	 *
+	 * Il riquadro sopra `WT_GIRO_ATTESO_MS` porta il fatto e le tre misure che
+	 * ci portano.  Qui c'e' la regola, e sono due righe: se dall'ultimo giudizio
+	 * il ciclo del padre e' rimasto indietro, **i byte non potevano uscire e i
+	 * pacchetti del client non potevano essere letti** — quindi non c'e' niente
+	 * da giudicare, e i conti ripartono da adesso come se fosse arrivato un
+	 * progresso.  Perche' un progresso c'e' stato: il ciclo e' tornato a girare.
+	 *
+	 * ⛔ E NON si tocca `lm_scattata`, non si spegne niente e non si allarga
+	 *    nessuna soglia: la cura vale **solo** per il tempo in cui non abbiamo
+	 *    guardato.  Al giro dopo, se il client tace davvero, i dieci secondi
+	 *    ricominciano e la linea morta fa il suo mestiere.
+	 * ⚠ IL PREZZO, dichiarato: un client morto durante un buco viene riconosciuto
+	 *   fino a una soglia piu' tardi.  ⭐ E' il lato giusto dell'asimmetria di
+	 *   sempre (sopra `WT_LM_STALLO_MS`): sbagliare in alto costa secondi di
+	 *   schermo fermo, sbagliare in basso butta fuori chi sta lavorando. */
+	if (giro_fermo_ms != w->lm_fermo_visto) {
+		uint64_t buco = giro_fermo_ms - w->lm_fermo_visto;
+
+		w->lm_fermo_visto = giro_fermo_ms;
+		w->lm_fermo_saltati++;
+		w->lm_vivo_ms = ora_ms;
+		w->lm_pkt_recv = in->pkt_recv;
+		w->lm_pkt_sent_vivo = in->pkt_sent;
+		w->lm_uscita_ms = ora_ms;
+		w->lm_usciti_visti = w->lm_usciti;
+		w->lm_offerti_visti = w->lm_offerti;
+		/* ⛔ UNA RIGA, e non e' rumore: e' l'unica traccia di un difetto che
+		 *    altrimenti non ne lascia nessuna — il degrado SILENZIOSO di
+		 *    `CODER.md` §1-bis.  ⭐ E porta il buco accanto alla soglia, cosi'
+		 *    chi legge vede subito se il ciclo e' rimasto indietro di un pelo o
+		 *    di dieci secondi. */
+		registro_dice(REG_WT,
+		              "⚠ %s: il ciclo del padre e' rimasto indietro di %llu ms "
+		              "(%llu buchi in tutto, il peggiore %llu ms): la linea morta "
+		              "NON giudica questo giro e i suoi conti ripartono.  ⛔ In "
+		              "quel tempo nessun byte poteva uscire e nessun pacchetto del "
+		              "client poteva essere LETTO: contarlo come silenzio suo "
+		              "vorrebbe dire accusare la sua rete di una cecita' nostra "
+		              "(saltati %llu volte da questa sessione)",
+		              w->provenienza, (unsigned long long)buco,
+		              (unsigned long long)giro_fermi,
+		              (unsigned long long)giro_fermo_peggiore_ms,
+		              (unsigned long long)w->lm_fermo_saltati);
 		return;
 	}
 
@@ -5361,45 +5552,85 @@ static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	return wt_palco_misura(mio, l, a);
 }
 
+/* ⛔ Quante sessioni entrano in UNA domanda al guardiano.  ⚠ Non e' un tetto sul
+ *    numero di inquilini: se ce ne fossero di piu' si fanno due giri, e due
+ *    chiamate a logind restano un numero FISSO, non `N`.  ⭐ 32 sta sopra i
+ *    sedici posti di `rcp.c` con margine, cosi' il secondo giro oggi non
+ *    succede mai — ed e' la ragione per cui non e' 8. */
+#define WT_RIPASSO_INSIEME 32
+#define WT_RIPASSO_QUALE 160
+
 size_t wt_sorveglia_locali(void)
 {
 	size_t congedate = 0;
+	wt *dal = vive_prima;
 
-	if (!gancio_locale)
+	/* ⛔ Senza il gancio del RIPASSO non si ripiega su quello dell'`ATTACCA`, e
+	 *    non e' pigrizia: ripiegare vorrebbe dire rimettere in piedi in
+	 *    silenzio la domanda-per-inquilino che questo codice esiste per
+	 *    togliere — cioe' il difetto tornerebbe il giorno in cui qualcuno si
+	 *    dimentica di collegare il gancio, **senza una riga rossa**.  ⭐ Chi non
+	 *    lo collega non applica la meta' «sorvegliata» di §5.1, ed e' `main.c`
+	 *    che lo scrive nel registro all'avvio. */
+	if (!gancio_locali)
 		return 0;
 
 	/* ⛔ Si guarda la lista a ogni giro invece di tenere un elenco di utenti:
 	 *    una sessione puo' nascere e morire fra due ripassi, e un elenco che si
 	 *    aggiorna da solo e' un secondo stato da tenere d'accordo col primo —
 	 *    cioe' il modo in cui due verita' entrano in un programma. */
-	for (wt *w = vive_prima; w; w = w->viva_dopo) {
-		char quale[160];
-		const char *mio;
+	while (dal) {
+		const char *nomi[WT_RIPASSO_INSIEME];
+		wt *chi[WT_RIPASSO_INSIEME];
+		bool locale[WT_RIPASSO_INSIEME];
+		char quali[WT_RIPASSO_INSIEME][WT_RIPASSO_QUALE];
+		size_t quanti = 0;
+		wt *w;
 
-		if (!w->rcp || w->chiusura >= 0)
-			continue;
-		mio = rcp_utente(w->rcp);
-		if (!mio || !mio[0])
-			continue;
+		/* ── 1. CHI C'E', in memoria e senza chiedere niente a nessuno ── */
+		for (w = dal; w && quanti < WT_RIPASSO_INSIEME; w = w->viva_dopo) {
+			const char *mio;
 
-		quale[0] = '\0';
-		if (!gancio_locale(gancio_locale_ctx, mio, quale, sizeof quale))
-			continue;
+			if (!w->rcp || w->chiusura >= 0)
+				continue;
+			mio = rcp_utente(w->rcp);
+			if (!mio || !mio[0])
+				continue;
+			nomi[quanti] = mio;
+			chi[quanti] = w;
+			quanti++;
+		}
+		dal = w;
+		if (!quanti)
+			break;
 
-		/* ⛔⭐ §5.1: «ha una sessione grafica REMOTA attiva e ne apre una
-		 *     LOCALE ⇒ **la locale vince**: la remota viene chiusa».
-		 *
-		 * ⭐ Ed e' l'unico punto del prodotto in cui il server porta via una
-		 *    sessione SANA — `DECISIONI.md` §4.1-bis lo ammette **solo** con un
-		 *    motivo dicibile, ed e' per questo che `0x04` esiste. */
-		registro_dice(REG_WT,
-		              "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
-		              "sessione remota viene chiusa — §5.1, motivo 0x04",
-		              mio, quale[0] ? quale : "senza dettaglio");
-		wt_congeda(w, RCP_SESSIONE_LOCALE_PREVALSA,
-		           "e' stata aperta una sessione grafica locale su questa "
-		           "macchina");
-		congedate++;
+		/* ── 2. ⭐⭐ LA DOMANDA, e ce n'e' UNA per tutti quanti ────────
+		 * ⛔ Era una per inquilino, e il costo era `N × D` dentro il ciclo che
+		 *    consegna i fotogrammi: `[M]` §6.13, la frontiera si restringeva
+		 *    come 1/N e tagliava i 300 ms che `sentinella.c` si concede gia' a
+		 *    ~4 inquilini.  Qui il costo e' `D`, e non dipende piu' da N. */
+		gancio_locali(gancio_locali_ctx, nomi, quanti, locale,
+		              &quali[0][0], WT_RIPASSO_QUALE);
+
+		/* ── 3. E POI SI CONGEDA, che non costa niente a nessuno ─────── */
+		for (size_t k = 0; k < quanti; k++) {
+			if (!locale[k])
+				continue;
+			/* ⛔⭐ §5.1: «ha una sessione grafica REMOTA attiva e ne apre una
+			 *     LOCALE ⇒ **la locale vince**: la remota viene chiusa».
+			 *
+			 * ⭐ Ed e' l'unico punto del prodotto in cui il server porta via una
+			 *    sessione SANA — `DECISIONI.md` §4.1-bis lo ammette **solo** con
+			 *    un motivo dicibile, ed e' per questo che `0x04` esiste. */
+			registro_dice(REG_WT,
+			              "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
+			              "sessione remota viene chiusa — §5.1, motivo 0x04",
+			              nomi[k], quali[k][0] ? quali[k] : "senza dettaglio");
+			wt_congeda(chi[k], RCP_SESSIONE_LOCALE_PREVALSA,
+			           "e' stata aperta una sessione grafica locale su questa "
+			           "macchina");
+			congedate++;
+		}
 	}
 	return congedate;
 }

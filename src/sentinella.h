@@ -92,6 +92,60 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
                        size_t quanto);
 
 /*
+ * ⭐⭐⭐ «QUALI DI QUESTI UTENTI HANNO UNA SESSIONE GRAFICA LOCALE?» — UNA
+ *       DOMANDA SOLA PER TUTTI, e nasce da un difetto MISURATO.
+ *
+ * ⛔⛔ IL DIFETTO CHE QUESTA FUNZIONE ESISTE PER TOGLIERE — rilievo P4 di
+ *      `fasi/10-multi-tenant-e-il-budget.md` §8.2, misurato in §6.13.
+ *
+ *      Il ripasso di §5.1 (`wt_sorveglia_locali()`) chiamava `sentinella_locale()`
+ *      **una volta per inquilino attaccato**, e ogni chiamata e' un giro
+ *      SINCRONO su D-Bus dentro lo stesso `poll` che consegna i fotogrammi.
+ *      `[M]` 25 agosto 2026: le chiamate per ripasso sono **1 · 3 · 5 · 7** a
+ *      N = 1/3/5/7 — lineari negli inquilini — e a governare il danno e' il
+ *      PRODOTTO `P = N × D`, dove D e' quanto ci mette logind.
+ *      ⛔ La frontiera si restringe come **1/N** e taglia i **300 ms** che
+ *         `ATTESA_MS` qui sotto si concede gia' a ~4 inquilini: a **N=7 con
+ *         D=286 ms** ogni desktop crolla a **1,3 fotogrammi/s con un p95 di due
+ *         secondi**, ⛔⛔ *e non viene scritta una riga*, perche' non si stacca
+ *         nessuno.  Il degrado SILENZIOSO, che per `CODER.md` §1-bis pesa piu'
+ *         dei fotogrammi.
+ *
+ * ⭐⭐ E LA CURA STA NEI NUMERI, non nell'eleganza — `[M]` §6.13:
+ *
+ *      · `ListSessions` costa **2,4-2,6 ms** e ⛔ **NON cresce col numero di
+ *        sessioni di logind** (da 63 a 72 la mediana SCENDE, pendenza −34,6 µs
+ *        a sessione).  ⇒ Il costo non e' nella chiamata: e' nel FARLA N VOLTE.
+ *      · `ListSessions` restituisce **TUTTE** le sessioni della macchina.
+ *        ⇒ Una sola risposta contiene gia' quella di ogni inquilino.
+ *
+ *      ⇒ Il costo passa da `N × D` a **`D`**, ed e' un cambiamento di forma, non
+ *        una mitigazione: non c'e' nessuna cache da far scadere e nessun giro a
+ *        turno da tarare — cose che avrebbero aggiunto una seconda verita' sul
+ *        «adesso» (`LEZIONI.md` §1.9) per un difetto che si chiude alla radice.
+ *
+ * ⚠ IL COSTO CHE RESTA, dichiarato: le sessioni con un SEAT vanno aperte una per
+ *   una (`GetAll` sulle proprieta') per sapere se sono grafiche.  ⛔ Ma quelle
+ *   sono le sessioni **locali della macchina** — su una macchina headless sono
+ *   zero, e sono comunque indipendenti dal numero dei nostri inquilini.  ⇒ Il
+ *   termine che cresceva con N e' sparito; questo non c'era mai.
+ *
+ * `utenti`   — i nomi da cercare, `quanti` in tutto.  ⚠ Possono ripetersi: la
+ *              risposta e' per POSIZIONE, cosi' chi chiama non deve deduplicare.
+ * `locale`   — un vettore di `quanti` booleani, riempito da questa funzione.
+ * `quali`    — se non NULL, `quanti` fette da `larghezza` byte l'una, ciascuna
+ *              con la descrizione della sessione trovata (per il REGISTRO:
+ *              §8.2 vieta di dire al client i fatti delle sessioni altrui).
+ *
+ * ⛔ Ritorna quanti ne ha trovati con una locale.  ⚠ Se logind non risponde,
+ *    ritorna 0 e mette tutto a `false` — «non lo so» si tratta come «non c'e'»,
+ *    che e' l'unica scelta che non punisce chi non ha sbagliato niente
+ *    (invariante I1), ed e' la stessa che fa `sentinella_locale()`.
+ */
+size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti,
+                         bool *locale, char *quali, size_t larghezza);
+
+/*
  * ⭐ «LO SPEGNIMENTO E' DAVVERO VIETATO?» — `DECISIONI.md` §4.7, la verifica che
  * l'invariante I7 pretende: le tre cinture sono righe di configurazione, e una
  * protezione che vive in un file va **verificata**, non creduta.
@@ -121,7 +175,17 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
 
 /* Quante chiamate sono state fatte, e la piu' lenta in millisecondi — il numero
  * che dice se la scelta «sincrona» regge.  ⛔ Sta qui e non in un commento:
- * `CODER.md` §6 vuole che un ripiego si possa MISURARE, non credere. */
+ * `CODER.md` §6 vuole che un ripiego si possa MISURARE, non credere.
+ *
+ * ⛔⛔ E FINO AL 25 AGOSTO 2026 NON LA CHIAMAVA NESSUNO — rilievo di contorno di
+ *      §6.13.  Il contatore c'era, l'intestazione dichiarava perche' c'era, e
+ *      **nel registro non finiva niente**: la scelta «sincrona» si poteva
+ *      credere, non rimisurare.  E' la forma E1 del `REVIEWER.md` — uno
+ *      strumento che esiste e non parla e' peggio di uno strumento che manca,
+ *      perche' chi legge il codice crede che la misura ci sia.
+ *  ⇒ Da oggi la chiama `main.c`, che scrive **una riga al minuto** con questi
+ *    due numeri accanto al numero degli inquilini serviti: e' il conto con cui
+ *    la cura di §8.2 P4 si potra' **rifiutare** invece che ricordare. */
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,
                       uint64_t *peggior_ms);
 

@@ -30,8 +30,19 @@
 #define ATTESA_MS 300
 
 /* Oltre questa soglia la lentezza si scrive: e' il segnale che la scelta
- * «sincrona» va rifatta a processo aiutante, come PAM (`DECISIONI.md` §1.10). */
-#define LENTA_MS 20
+ * «sincrona» va rifatta a processo aiutante, come PAM (`DECISIONI.md` §1.10).
+ *
+ * ⛔⛔ ERA 20 ms, E NON AVREBBE PARLATO MAI — `[M]` 25 agosto 2026, §6.13: su
+ *      questa macchina `ListSessions` costa **2,4-2,6 ms** di mediana e la
+ *      chiamata peggiore vista ovunque e' **13,14 ms**.  ⇒ Una soglia a 20 sta
+ *      SOPRA il peggior caso misurato: e' un allarme che per costruzione non
+ *      suona, cioe' la forma E1 («uno strumento che esiste e non parla»).
+ * ⭐ 10 ms sta sopra la mediana di un fattore **quattro** — non e' rumore — e
+ *    sotto la peggiore misurata: la prima volta che logind rallenta davvero, la
+ *    riga esce.  ⚠ E non e' la sola cintura: `sentinella_conti()` porta la
+ *    PEGGIORE nel registro una volta al minuto, quindi il numero c'e' anche
+ *    quando questa soglia tace. */
+#define LENTA_MS 10
 
 /* ⚠ `mir` c'e' perche' c'era in v1: non lo serviamo, ma una sessione Mir e'
  *   grafica lo stesso, e contarla e' piu' prudente che ignorarla. */
@@ -140,8 +151,17 @@ static char *tipo_se_grafica(sentinella *s, const char *percorso)
 	return g_strdup(tipo);
 }
 
-bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
-                       size_t quanto)
+/*
+ * ⭐⭐⭐ IL CUORE, E CE N'E' UNO SOLO — `sentinella.h` porta il perche' per
+ *       intero (rilievo P4, §6.13: `N × D` che diventa `D`).
+ *
+ * ⛔ `sentinella_locale()` qui sotto e' questa stessa funzione con `quanti = 1`,
+ *    e non una seconda stesura: due stesure della stessa domanda sono due
+ *    verita' che il giorno in cui divergono non danno rosso, danno una risposta
+ *    diversa a seconda di chi chiede (`CODER.md` §2-bis, «una strada sola»).
+ */
+size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti,
+                         bool *locale, char *quali, size_t larghezza)
 {
 	g_autoptr(GVariant) risposta = NULL;
 	g_autoptr(GVariantIter) elenco = NULL;
@@ -149,12 +169,20 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
 	guint32 uid;
 	uint64_t inizio;
 	uint64_t costo;
-	bool trovata = false;
+	size_t trovate = 0;
+	size_t restano;
 
-	if (descrizione && quanto)
-		descrizione[0] = '\0';
-	if (!s || !s->bus || !utente || !utente[0])
-		return false;
+	/* ⛔ Si azzera SEMPRE e per primo: un vettore lasciato com'era direbbe a chi
+	 *    chiama la risposta del ripasso precedente, che e' la bugia peggiore —
+	 *    indistinguibile da una risposta fresca. */
+	for (size_t k = 0; k < quanti; k++) {
+		locale[k] = false;
+		if (quali && larghezza)
+			quali[k * larghezza] = '\0';
+	}
+	if (!s || !s->bus || !utenti || !quanti)
+		return 0;
+	restano = quanti;
 
 	inizio = registro_ora_ms();
 	risposta = chiama(s, PERCORSO_LOGIND, IFACE_MANAGER, "ListSessions", NULL,
@@ -170,7 +198,7 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
 			              ATTESA_MS);
 			s->muto_gia_detto = true;
 		}
-		return false;
+		return 0;
 	}
 	if (s->muto_gia_detto) {
 		registro_dice(REG_SESSIONE, "logind ha ripreso a rispondere");
@@ -178,28 +206,47 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
 	}
 
 	g_variant_get(risposta, "(a(susso))", &elenco);
-	while (!trovata &&
+	/* ⭐ Si esce appena TUTTI hanno risposta (`restano == 0`), non appena uno
+	 *    l'ha: la domanda adesso e' di N inquilini, e fermarsi al primo
+	 *    lascerebbe gli altri con un `false` che sembra una risposta. */
+	while (restano &&
 	       g_variant_iter_next(elenco, "(&su&s&s&o)", &id, &uid, &nome, &seat,
 	                           &percorso)) {
 		g_autofree char *tipo = NULL;
+		bool serve = false;
 
 		/* ⭐ Le due condizioni che scartano quasi tutto stanno GIA' nell'elenco,
 		 *    e si applicano senza aprire niente: l'utente sbagliato, e — ⛔ la
 		 *    riga che porta tutto il peso — **il seat vuoto**, che e' quel che
-		 *    rende locale una sessione e che le nostre non hanno. */
-		if (g_strcmp0(nome, utente) != 0)
-			continue;
+		 *    rende locale una sessione e che le nostre non hanno.
+		 * ⛔ E il confronto e' contro TUTTI i nomi chiesti, in memoria: e' il
+		 *    ciclo che ha sostituito le N chiamate a logind. */
 		if (!seat || !*seat)
 			continue;
+		for (size_t k = 0; k < quanti; k++)
+			if (!locale[k] && g_strcmp0(nome, utenti[k]) == 0)
+				serve = true;
+		if (!serve)
+			continue;
 
+		/* ⚠ E' l'unica chiamata che resta dentro il ciclo, e non cresce con gli
+		 *   inquilini: si fa solo per una sessione che ha GIA' un seat e un nome
+		 *   che ci interessa — cioe' per la sessione locale vera, che e' quel
+		 *   che stiamo cercando.  Su una macchina headless non accade mai. */
 		tipo = tipo_se_grafica(s, percorso);
 		if (!tipo)
 			continue;
 
-		trovata = true;
-		if (descrizione && quanto)
-			g_snprintf(descrizione, quanto, "sessione %s, %s su %s", id, tipo,
-			           seat);
+		for (size_t k = 0; k < quanti; k++) {
+			if (locale[k] || g_strcmp0(nome, utenti[k]) != 0)
+				continue;
+			locale[k] = true;
+			trovate++;
+			restano--;
+			if (quali && larghezza)
+				g_snprintf(quali + k * larghezza, larghezza,
+				           "sessione %s, %s su %s", id, tipo, seat);
+		}
 	}
 
 	costo = registro_ora_ms() - inizio;
@@ -209,11 +256,28 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
 	if (costo >= LENTA_MS)
 		registro_dice(REG_SESSIONE,
 		              "⚠ logind ha impiegato %llu ms per l'elenco delle "
-		              "sessioni: se si ripete, questa domanda va spostata su un "
-		              "processo aiutante come PAM",
-		              (unsigned long long) costo);
+		              "sessioni (%zu inquilini in una domanda sola): se si "
+		              "ripete, questa domanda va spostata su un processo "
+		              "aiutante come PAM",
+		              (unsigned long long) costo, quanti);
 
-	return trovata;
+	return trovate;
+}
+
+bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
+                       size_t quanto)
+{
+	bool locale = false;
+	const char *uno = utente;
+
+	if (descrizione && quanto)
+		descrizione[0] = '\0';
+	if (!utente || !utente[0])
+		return false;
+	/* ⛔ Una sola strada: la domanda per uno e' la domanda per tutti con N = 1.
+	 *    ⚠ `quali` puo' essere NULL, e allora `larghezza` non viene guardata. */
+	sentinella_locali(s, &uno, 1, &locale, descrizione, descrizione ? quanto : 0);
+	return locale;
 }
 
 /* ------------------------------------------------------------------------- */

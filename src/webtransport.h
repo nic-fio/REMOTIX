@@ -295,11 +295,61 @@ typedef bool (*wt_locale_richiesta)(void *ctx, const char *utente, char *quale,
                                     size_t quanto);
 void wt_locale_gancio(wt_locale_richiesta f, void *ctx);
 
-/* Il ripasso: per ogni sessione attaccata chiede al guardiano se quell'utente
- * ha aperto una sessione grafica locale, e in tal caso la congeda con `0x04`.
- * Restituisce quante ne ha congedate.  ⚠ Senza il gancio non fa niente e non si
- * lamenta: la lamentela l'ha gia' fatta `rcp.c` all'attacco, una volta sola. */
+/* ⭐⭐⭐ IL GANCIO DEL RIPASSO — **una domanda sola per tutti gli inquilini**.
+ *
+ * ⛔⛔ Perche' e' separato da quello sopra, e non e' simmetria: quello sopra e'
+ *      la domanda dell'`ATTACCA`, che si fa **una volta per sessione**, e li' il
+ *      costo non si vede.  Questo e' il RIPASSO, che gira ogni due secondi
+ *      dentro il ciclo che consegna i fotogrammi — e li' il costo si vede
+ *      eccome: `[M]` §6.13, a **N=7 inquilini con logind a 286 ms** ogni desktop
+ *      crollava a **1,3 fotogrammi/s con un p95 di due secondi**, e non veniva
+ *      staccato nessuno, quindi **non veniva scritta una riga**.
+ *
+ * ⭐ La forma e' quella che il costo impone: si passano TUTTI i nomi e si
+ *    ricevono TUTTE le risposte, cosi' chi sta sotto puo' rispondere con una
+ *    chiamata sola (`sentinella_locali()`, che lo fa).  ⛔ Un gancio per nome
+ *    non lo permetterebbe **a nessuna** implementazione, per quanto furba.
+ *
+ * `quali` — se non NULL, `quanti` fette da `larghezza` byte, per il REGISTRO.
+ * Ritorna quanti inquilini hanno una sessione grafica locale. */
+typedef size_t (*wt_locali_ripasso)(void *ctx, const char *const *utenti,
+                                    size_t quanti, bool *locale, char *quali,
+                                    size_t larghezza);
+void wt_locali_gancio(wt_locali_ripasso f, void *ctx);
+
+/* Il ripasso: chiede al guardiano — **in una domanda sola** — quali degli utenti
+ * attaccati hanno aperto una sessione grafica locale, e congeda quelli con
+ * `0x04`.  Restituisce quante ne ha congedate.  ⚠ Senza il gancio non fa niente
+ * e non si lamenta: la lamentela l'ha gia' fatta `rcp.c` all'attacco, una volta
+ * sola. */
 size_t wt_sorveglia_locali(void);
+
+/* ⛔⭐⭐⭐ L'OROLOGIO DEL SERVIZIO — «il tempo in cui non abbiamo girato non e'
+ *        silenzio del client».  La chiama `main.c` a ogni passata del ciclo.
+ *
+ * ⛔ IL DIFETTO CHE TOGLIE, misurato: la linea morta giudica su due grandezze —
+ *    i byte di video USCITI e i pacchetti RICEVUTI dal client — e tutt'e due
+ *    possono muoversi **solo mentre il ciclo del padre gira**.  Un ciclo fermo
+ *    (una chiamata sincrona lenta, un figlio bloccato che lascia byte fermi
+ *    nella coda del padre, `[M]` §6.7: un `SIGSTOP` di 5 s a UN figlio uccideva
+ *    **tutte e quattro** le sessioni) le congela tutt'e due, e la cura leggeva
+ *    quel congelamento come *«la linea e' MORTA»* — cioe' **accusava la rete
+ *    dell'utente di una cecita' nostra**, con `persi=0` scritto accanto.
+ *
+ * ⭐ Il rimedio non e' un orologio parallelo da tenere d'accordo col primo: e'
+ *    che un buco del ciclo vale come un PROGRESSO — i conti ripartono, e la
+ *    riga lo dice.  ⇒ Il prezzo, dichiarato: un client davvero morto viene
+ *    riconosciuto al piu' **una soglia piu' tardi**.  Sbagliare in alto costa
+ *    qualche secondo di schermo fermo; sbagliare in basso butta fuori chi sta
+ *    lavorando, e quello non e' rimediabile (la stessa asimmetria che ha scelto
+ *    i 5,0 s dello stallo). */
+void wt_giro_del_padre(uint64_t ora_ms);
+
+/* Quante volte il ciclo del padre e' rimasto indietro, e il buco peggiore in
+ * millisecondi.  ⛔ E' il numero che rende la cura qui sopra FALSIFICABILE: se
+ * fosse sempre zero, quella cura non avrebbe mai fatto niente e lo si vedrebbe;
+ * se e' grosso, il difetto e' nel ciclo e va curato la', non qui. */
+void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms);
 
 /* ⭐⭐ §7.6 — «L'UTENTE HA CHIESTO DI USCIRE», e non e' il congedo.
  *
