@@ -5410,10 +5410,18 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
  *   `rcp_tela_concessa()` se ne accorge e chiede al palco di venire dov'e' la
  *   tela in vigore.
  *
- * ⚠ Otto voci: `MAX_ATTACCATE` in `rcp.c` e' dello stesso ordine, e un utente
- *   in piu' che non trova posto perde solo questa comodita' — riparte come
- *   prima del 15 agosto 2026, cioe' concedendo quel che il client chiede. */
-#define WT_PALCHI 8
+ * ⛔⭐ UNA VOCE PER UTENTE, E IL NUMERO VIENE DA `rcp.h` — 25 agosto 2026.
+ *
+ *     Erano **otto** con la scusa che *«`MAX_ATTACCATE` e' dello stesso
+ *     ordine»*, e ⛔ «dello stesso ordine» vuol dire **che mordeva a nove**,
+ *     cioe' prima del dieci che `SPECIFICHE.md` §5.5 promette (rilievo
+ *     **R10-A6**).  Il nono e il decimo utente perdevano la cura del
+ *     ri-attacco, e ⛔ **in silenzio**, perche' il ripiego qui sotto si
+ *     dichiara **una volta sola** e la prima l'aveva gia' spesa l'ottavo.
+ *
+ * ⇒ Adesso e' `RCP_TETTO_SESSIONI`: e' la stessa grandezza — «uno per utente
+ *   servito» — e per costruzione non puo' piu' finire prima dei posti. */
+#define WT_PALCHI RCP_TETTO_SESSIONI
 static struct {
 	/* ⛔ 257 e non 64: e' la misura del campo `utente` di `rcp.c`.  ⚠ Con un
 	 *    campo piu' corto `snprintf` troncava in scrittura e `strcmp` confrontava

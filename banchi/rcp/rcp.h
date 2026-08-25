@@ -36,6 +36,46 @@ extern "C" {
 /* La versione maggiore che questo modulo parla — RCP.md §9. */
 #define RCP_VERSIONE 1
 
+/* ⛔⭐⭐ IL TETTO DELLE SESSIONI — UN NUMERO SOLO, E STA QUI.
+ *
+ *     Fino al 25 agosto 2026 questo numero era scritto a mano in QUATTRO
+ *     posti, e ⛔ **tre di quei posti dichiaravano per iscritto un legame che
+ *     il compilatore non conosceva**:
+ *
+ *       | dove                       | che cosa diceva il commento           |
+ *       |----------------------------|---------------------------------------|
+ *       | `rcp.c` `MAX_ATTACCATE`    | (l'originale, `static`, mai in questo header) |
+ *       | `figlio.c` `MAX_FIGLI`     | *«questo lo seguira' dallo stesso posto»* — e non lo seguiva |
+ *       | `aiutante.c` `MAX_IN_VOLO` | *«e' lo stesso `MAX_ATTACCATE` di `rcp.c`»* — e non lo era |
+ *       | `main.c` `QUANTI_PRESENTI` | (nessun legame dichiarato, stesso numero per caso) |
+ *
+ * ⛔ `[M]` §6.4 l'ha provato sul campo: compilando l'albero con
+ *    `MAX_ATTACCATE=2`, `MAX_FIGLI` e' rimasto **16** — cioe' la tabella dei
+ *    posti si riempiva a due mentre quella dei figli ne accettava ancora
+ *    quattordici, **per utenti che sarebbero stati respinti**.  ⇒ Quattro copie
+ *    a mano dello stesso numero sono la «seconda strada» che `CODER.md` §2-bis
+ *    vieta: quattro numeri che possono divergere, e divergono in silenzio.
+ *
+ * ⭐ Da qui in poi il numero e' UNO, e chi lo cambia lo cambia in un posto solo.
+ *    Le grandezze che lo seguono sono tutte **«uno per utente servito»**:
+ *      · `rcp.c` `MAX_ATTACCATE`   — i posti del registro delle sessioni;
+ *      · `figlio.c` `MAX_FIGLI`    — i processi/palchi, uno per utente (I2);
+ *      · `main.c` `QUANTI_PRESENTI`— l'orologio dell'abbandono, uno per utente;
+ *      · `webtransport.c` `WT_PALCHI` — la tela del palco per il ri-attacco.
+ *
+ * ⛔⛔ E `aiutante.c` `MAX_IN_VOLO` **NON lo segue, ed e' voluto**: quella e'
+ *      un'altra grandezza — le autenticazioni **in volo nello stesso
+ *      istante**, che si contano anche quando le sessioni attive sono ZERO.
+ *      La ragione per esteso sta accanto a quel `#define`, perche' e' li' che
+ *      qualcuno sara' tentato di rilegarlo.
+ *
+ * ⚠ E questo NON e' ancora il tetto configurabile della fase 10 (`--tetto-
+ *   sessioni`, §3.5 di `fasi/10-…md`): e' l'unificazione che quel tetto
+ *   richiede per poter esistere.  Finche' resta un `#define`, il motivo giusto
+ *   per «non ci sta» e' `0x0E` — un limite **amministrativo** — e non `0x06`,
+ *   che parla della capacita' **fisica** della macchina. */
+#define RCP_TETTO_SESSIONI 16
+
 /* I motivi di §8.2.  Il codice 0 NON DEVE essere usato (§3.1). */
 enum {
 	RCP_CHIUSO_DALL_UTENTE = 0x01,

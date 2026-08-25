@@ -338,11 +338,19 @@ struct ponte {
  *   **mentre** scorre il secondo fisso di §4.4-bis, che e' l'unico tempo
  *   garantito dal protocollo prima che la sessione arrivi a `SESSIONE`.
  *   ⛔ Nessuna delle due aspetta l'altra: `figli_assicura()` fa un `fork` e
- *   torna, `trasporto_verdetto()` fa scorrere lo stato.  Il ciclo non si ferma. */
+ *   torna, `trasporto_verdetto()` fa scorrere lo stato.  Il ciclo non si ferma.
+ *
+ * ⭐ E DAL 25 AGOSTO 2026 I PASSI SONO TRE, non due: prima si guarda **se un
+ *    palco ci sta**, poi il figlio, poi il verdetto — e se il palco non ci sta
+ *    esce un CONGEDO invece del silenzio.  E' la cura del difetto **P3**, e il
+ *    riquadro lungo sta sulla riga che la fa. */
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
                               const char *utente)
 {
 	struct ponte *p = (struct ponte *)ctx;
+	/* ⛔ Il congedo si manda DOPO `trasporto_verdetto()`: la ragione lunga sta
+	 *    in fondo alla funzione, sul riquadro «PERCHE' NON QUI». */
+	char senza_palco[192] = "";
 
 	if (ammesso && utente && utente[0]) {
 		/* ⛔ «C'era gia'» e «l'ho appena generato» sono due fatti diversi, e la
@@ -351,18 +359,82 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *    domanda produrrebbe un fotogramma doppio. */
 		bool c_era = figli_pid_di(p->f, utente) > 0;
 
-		if (!figli_assicura(p->f, utente))
-			/* ⚠ Il RIPIEGO SI DICHIARA (`CODER.md` §4.2): la sessione resta
-			 *   buona — la stretta di mano finisce, la pagina funziona — e
-			 *   semplicemente non c'e' nessun palco da mostrare.  ⛔ Il verdetto
-			 *   NON cambia: negare l'accesso perche' il palco non si e' montato
-			 *   vorrebbe dire far pagare a chi entra un difetto nostro. */
+		/* ⛔⛔⭐ IL NO SI DICE PRIMA DI FAR NASCERE IL FIGLIO — 25 agosto 2026,
+		 *      difetto **P3** / rilievo **R10-A1**, e questa e' la riga che lo
+		 *      cura.
+		 *
+		 * IL FATTO.  I due tetti si liberano su EVENTI DIVERSI: il posto di
+		 * `attaccate[]` torna libero al distacco (sei strade, tutte per
+		 * `posto_lascia()`), ⛔ **il figlio no** — e' l'invariante **I4**: il
+		 * palco appartiene alla sessione, non alla connessione, e muore solo
+		 * per logout esplicito o per abbandono a 60 minuti senza input.
+		 * ⇒ **La tabella dei figli puo' essere piena mentre quella dei posti e'
+		 *   vuota.**  Dieci inquilini entrano la mattina, lavorano, chiudono il
+		 *   browser: i dieci palchi restano vivi fino a un'ora, e l'undicesimo
+		 *   trova il posto libero e il palco no.
+		 *
+		 * ⛔⛔ IL SINTOMO CHE C'ERA PRIMA.  `figli_assicura()` tornava `false`,
+		 *      si scriveva una riga di registro — *«e' AMMESSO ma non ha un
+		 *      figlio: entra e non vede un pixel»* — e **sul filo non usciva
+		 *      NIENTE**: ne' `0x0E`, ne' `0x06`.  L'utente riceveva `AMMESSO`,
+		 *      riceveva `SESSIONE`, e guardava una **pagina nera senza
+		 *      spiegazione e senza nessun tempo dopo il quale migliorasse**.
+		 *      ⛔ Che e' precisamente il difetto per cui `posto_prendi()` era
+		 *      gia' stato curato (rilievo **R9.3**): un fatto del SERVER che
+		 *      arriva al client come silenzio.
+		 *
+		 * ⭐ IL MODELLO E' `posto_prendi()`, in `rcp.c`: distingue «occupato» da
+		 *    «niente piu' posti» e per il secondo manda `0x0E` col dettaglio nel
+		 *    corpo.  `[M]` §6.4 l'ha visto scattare 10 volte su 10, e §6.8 ha
+		 *    misurato che la capsula arriva al browser 10 su 10.  Questa e' la
+		 *    stessa cucitura, un passo piu' su.
+		 *
+		 * ⛔ E LA DOMANDA SI FA **PRIMA**, non dopo.  `[M]` §6.4 punto 6: a fine
+		 *    giro un utente **mai ammesso** aveva **42 processi e un
+		 *    `gnome-shell`** — cioe' PAM passata, figlio nato, sessione grafica
+		 *    accesa, e poi il rifiuto.  *«Rifiutare dopo aver acceso un desktop
+		 *    non e' rifiutare: e' fare login e poi cacciare.»*  Qui si guarda il
+		 *    tetto **davanti** a `figli_assicura()`, e chi non ci sta non fa
+		 *    nascere niente: ne' processo, ne' sessione logind, ne' compositore.
+		 *
+		 * ⚠ `figli_quanti()` e `figli_pid_di()` esistevano gia': non serve
+		 *   nessuna funzione nuova, serve **chiedere prima**. */
+		if (!c_era && figli_quanti(p->f) >= RCP_TETTO_SESSIONI) {
 			registro_dice(REG_FIGLIO,
-			              "⚠ «%s» e' AMMESSO ma non ha un figlio: entra e non "
-			              "vede un pixel.  Il perche' e' nella riga qui sopra, e "
-			              "il verdetto di PAM non si tocca",
-			              utente);
-		else if (c_era) {
+			              "⛔ «%s» ha superato PAM ma NON avra' un palco: i "
+			              "palchi sono %d su %d, e ⛔ il posto nel registro "
+			              "delle sessioni puo' essere LIBERO lo stesso — il "
+			              "palco sopravvive al client (I4), il posto no.  ⭐ Il "
+			              "figlio NON viene generato: niente sessione grafica "
+			              "per chi verra' congedato (§8.1 D6), e il no esce sul "
+			              "filo con 0x0E",
+			              utente, figli_quanti(p->f), RCP_TETTO_SESSIONI);
+			snprintf(senza_palco, sizeof senza_palco,
+			         "i palchi di questo server sono tutti impegnati (%d su "
+			         "%d): sono sessioni grafiche vive, che si liberano al "
+			         "logout o dopo l'abbandono",
+			         figli_quanti(p->f), RCP_TETTO_SESSIONI);
+		} else if (!figli_assicura(p->f, utente)) {
+			/* ⚠ Le ALTRE cinque strade per cui un figlio non nasce: nome che
+			 *   PAM ammette e NSS non risolve, uid 0, `socketpair`,
+			 *   `SO_PASSCRED`, `fork`.  ⛔ Nessuna di queste e' capacita': sono
+			 *   guasti nostri o di configurazione, e il perche' preciso e' nella
+			 *   riga che `figli_assicura()` ha appena scritto.
+			 * ⭐ Ma per chi sta dall'altro capo del filo l'esito e' identico —
+			 *   una pagina nera — quindi il congedo e' lo stesso, e il
+			 *   dettaglio dice a chi diagnostica dove guardare. */
+			registro_dice(REG_FIGLIO,
+			              "⛔ «%s» e' AMMESSO ma non ha un figlio, e NON per il "
+			              "tetto (palchi %d su %d): il perche' e' nella riga qui "
+			              "sopra.  ⭐ Viene congedato con 0x0E invece di entrare "
+			              "su una pagina nera",
+			              utente, figli_quanti(p->f), RCP_TETTO_SESSIONI);
+			snprintf(senza_palco, sizeof senza_palco,
+			         "il palco di «%s» non si e' montato e non e' un problema "
+			         "di capacita': la causa e' nella riga di registro "
+			         "precedente",
+			         utente);
+		} else if (c_era) {
 			/* ⛔ Un figlio che c'era gia' puo' avere il ciclo SPENTO — l'ultima
 			 *    sessione di quell'utente se n'era andata e il palco aveva
 			 *    smesso di catturare.  ⚠ Gli si chiede il fotogramma tenuto
@@ -375,6 +447,52 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		}
 	}
 	trasporto_verdetto(p->t, pratica, ammesso);
+
+	/* ⛔⭐ E IL CONGEDO ESCE QUI, DOPO IL VERDETTO — e l'ordine e' misurato, non
+	 *     estetico.  Tre ragioni, tutte necessarie:
+	 *
+	 *  1. ⛔ **`trasporto_verdetto()` e' l'unico posto in cui il conto di
+	 *     §4.4-bis si azzera** (`rcp_verdetto()` → `azzera_falliti()`).
+	 *     Congedando prima, la sessione sarebbe gia' `S_FINITA`, il verdetto non
+	 *     lo prenderebbe nessuno, e ⛔ **un utente che ha indovinato la parola
+	 *     resterebbe con i tentativi falliti addosso**: due sbagli e questo lo
+	 *     bannerebbero per dodici ore.
+	 *  2. ⭐ Cosi' il client **non vede mai `AMMESSO`**: `AMMESSO` non parte da
+	 *     qui, parte da `rcp_tempo()` quando il secondo fisso e' passato, e a
+	 *     quel punto la sessione e' gia' finita col suo motivo.  ⇒ Una verita'
+	 *     sola sul filo, non «entra» seguito da «esci».
+	 *  3. ⚠ §4.4-bis non e' violata.  Quella regola vuole che **il cronometro
+	 *     non distingua quel che il motivo non distingue**; qui il motivo
+	 *     distingue gia', ed e' una scelta dichiarata: chi supera PAM e non ha
+	 *     un palco riceve `0x0E`, chi sbaglia la parola riceve `0x07`.  ⛔ Si',
+	 *     questo dice a chi bussa che la parola era giusta — ed e' il prezzo,
+	 *     dichiarato, di non lasciarlo davanti a una pagina nera.  E' lo stesso
+	 *     prezzo che `posto_prendi()` paga gia' oggi a tabella piena.
+	 *
+	 * ⚠ E si passa per `wt_congeda_utente()` — la stessa strada di §7.6 — perche'
+	 *   e' `webtransport.c` a sapere quali sessioni sono di quell'utente.  ⛔ Le
+	 *   congeda TUTTE, ed e' giusto qui: se fossimo arrivati in questo ramo,
+	 *   quell'utente non ha un palco, quindi **nessuna** delle sue sessioni sta
+	 *   vedendo un pixel.  Non si sta portando via niente a nessuno.
+	 *
+	 * ⛔ QUEL CHE QUESTA CURA NON CURA: il motivo e' `0x0E`
+	 *    (`SESSIONE_NON_SERVIBILE`) e **non** `0x06` (`BUDGET_PIENO`), ed e' una
+	 *    scelta.  `0x06` dice *«questa macchina non ha piu' capacita' di
+	 *    codifica»*, cioe' un limite **fisico**; qui il limite e' un `#define`
+	 *    — una tabella piena di palchi che **nessuno sta guardando** — cioe' un
+	 *    limite **amministrativo**, che e' esattamente quel che `0x0E` gia' dice
+	 *    per la tabella dei posti.  ⭐ `fasi/10-…md` §8.1 D5: i due motivi si
+	 *    AGGIUNGONO, non si sostituiscono, e `0x06` e' del giro del budget. */
+	if (senza_palco[0]) {
+		size_t quante = wt_congeda_utente(utente, RCP_SESSIONE_NON_SERVIBILE,
+		                                  senza_palco, NULL);
+		registro_dice(REG_WT,
+		              "⛔ congedati %zu client di «%s» con 0x0E: %s.  ⚠ Se qui "
+		              "leggi ZERO, il no NON e' arrivato a nessuno e l'utente "
+		              "e' davanti a una pagina nera — e' il difetto P3, non la "
+		              "sua cura",
+		              quante, utente, senza_palco);
+	}
 }
 
 /* ⛔⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, E DOVE FINISCE.
@@ -710,10 +828,14 @@ static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
 static bool audio_silenzio = true;  /* ⭐ acceso; --niente-audio-silenzio spegne */
 
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
- *    client che se ne va — e' proprio il caso per cui esiste.  ⚠ Sedici bastano:
- *    §5.1 vuole un utente remoto per volta (I2), e il multi-tenant e' della
- *    fase 10. */
-#define QUANTI_PRESENTI 16
+ *    client che se ne va — e' proprio il caso per cui esiste.
+ * ⭐ E il numero viene da `rcp.h` (`RCP_TETTO_SESSIONI`), 25 agosto 2026: era
+ *    la quarta copia a mano dello stesso 16, l'unica che non dichiarasse
+ *    nemmeno un legame.  ⛔ Piu' utenti che posti nel registro delle sessioni
+ *    non possono esistere, quindi questa tabella non puo' traboccare **finche'
+ *    i due numeri restano lo stesso**: il riquadro in `rcp.h` e' quel che lo
+ *    garantisce, e il ripiego qui sotto e' la rete se qualcuno lo slega. */
+#define QUANTI_PRESENTI RCP_TETTO_SESSIONI
 static struct {
 	char utente[257];
 	uint64_t ultimo_input_ms;
@@ -737,9 +859,33 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 			return;
 		}
 	}
-	if (libero < 0)
-		return; /* ⛔ Non e' un guasto da fermare tutto: al peggio quell'utente
-		         *    non ha l'orologio dell'abbandono, e la sessione resta. */
+	if (libero < 0) {
+		/* ⛔⭐ IL RIPIEGO SI DICHIARA — `CODER.md` §4.2, 25 agosto 2026.
+		 *
+		 *     Qui c'era un `return` MUTO.  Il costo: il diciassettesimo utente
+		 *     non aveva l'orologio dell'abbandono, quindi la sua sessione
+		 *     grafica **non sarebbe mai scaduta a 60 minuti** — e nessuna riga
+		 *     lo diceva.  ⚠ Il sintomo, un'ora dopo, e' «a quell'utente il
+		 *     palco resta vivo per sempre», che nessuno collega a questa riga.
+		 *
+		 * ⚠ Una volta sola e non una per gesto: qui si passa a ogni movimento
+		 *   del mouse, ed e' il difetto dei 30,8 GB di registro.  ⛔ Il fatto
+		 *   non e' «e' successo di nuovo»: e' «da adesso c'e' un utente senza
+		 *   orologio», e si dice quando comincia. */
+		static bool presenti_pieni_detto;
+
+		if (!presenti_pieni_detto) {
+			presenti_pieni_detto = true;
+			registro_dice(REG_FIGLIO,
+			              "⚠ RIPIEGO DICHIARATO: la tabella della presenza e' "
+			              "piena (%d): «%s» non ci sta, e la sua sessione "
+			              "grafica NON scadra' per abbandono.  ⛔ Se questa "
+			              "riga esiste, i tetti di rcp.h e di main.c si sono "
+			              "slegati: non dovrebbe poter succedere",
+			              QUANTI_PRESENTI, utente);
+		}
+		return;
+	}
 	snprintf(presenti[libero].utente, sizeof presenti[libero].utente, "%s",
 	         utente);
 	presenti[libero].ultimo_input_ms = ora_ms;

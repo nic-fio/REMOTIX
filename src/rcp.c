@@ -883,7 +883,12 @@ static void chiave_pagata(rcp_sessione *s);
  * e vivo viene mai spodestato.  Qui basta un elenco piccolo: il banco ne apre
  * due o tre, e un server vero lo sostituira' con la sua tabella delle sessioni
  * — ma la REGOLA sta qui, non li'.                                          */
-#define MAX_ATTACCATE 16
+/* ⛔⭐ IL NUMERO NON E' PIU' QUI — 25 agosto 2026.  Sta in `rcp.h`
+ *     (`RCP_TETTO_SESSIONI`), insieme al riquadro che spiega perche' era
+ *     scritto a mano in quattro posti e perche' adesso e' uno solo.  ⚠ Il nome
+ *     locale resta: le cinque funzioni qui sotto lo usano, e cambiarlo
+ *     renderebbe illeggibile la storia del file senza cambiare niente. */
+#define MAX_ATTACCATE RCP_TETTO_SESSIONI
 static struct {
 	char utente[257];
 	bool usato;
