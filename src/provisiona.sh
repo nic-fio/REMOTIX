@@ -68,6 +68,51 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	ok "prova e prova2, in video e render"
 
 	# -------------------------------------------------------------------
+	# ⛔⛔ `~/.cache` DEV'ESSERE UNA CARTELLA SUA, non un collegamento a /tmp
+	#
+	# `[M]` 25 agosto 2026, incarico F2 — ed e' il difetto per cui il regista
+	# ha detto tre volte «Firefox non funziona».
+	#
+	# `/etc/skel/.cache` di questa macchina e' un COLLEGAMENTO a `/tmp`, e
+	# `useradd -m` copia lo scheletro ⇒ ogni utente ha `~/.cache -> /tmp`.
+	# Firefox tiene il profilo **locale** sotto `$HOME/.cache/mozilla`, cioe'
+	# sotto `/tmp/mozilla`.  ⛔ Il PRIMO utente che apre il browser crea
+	# `/tmp/mozilla` **a nome suo e a modo 0700**; da quel momento nessun altro
+	# utente ci puo' scrivere, `profiles.ini` non nasce mai, e il browser apre
+	# una finestra che dice *«Your Firefox profile cannot be loaded»* — cioe'
+	# **e' inutilizzabile per tutti tranne il primo**.
+	#
+	# ⭐⭐ ED E' IL MULTI-TENANT A RENDERLO CERTO, non a renderlo raro: e' un
+	#    difetto che su una macchina a un utente solo non si vede mai, e che su
+	#    dieci utenti morde nove.  ⇒ Sta QUI e non nel prodotto: e' la macchina
+	#    che dev'essere in ordine (`SPECIFICHE.md` §5.9, parte A).
+	#
+	# `[M]` La prova, senza browser di mezzo: da `provanic3`
+	#     `mkdir -p ~/.cache/mozilla`
+	#     → `Permission denied`, con `/tmp/mozilla` di `prova2`, modo 0700.
+	# `[M]` E col rimedio, headless e senza REMOTIX: `profiles.ini` nasce.
+	#
+	# ⚠ Non si tocca `/tmp/mozilla` di chi ce l'ha gia': non e' nostro e non si
+	#   sa chi lo usa.  Si da' a ogni utente una `~/.cache` vera, che e' quel
+	#   che ogni altra distribuzione ha di suo.
+	# -------------------------------------------------------------------
+	for u in prova prova2; do
+		c="/home/$u/.cache"
+		if [ -L "$c" ]; then
+			rm -f "$c"
+			mkdir -p "$c"
+			chown "$u:$u" "$c"
+			chmod 700 "$c"
+			inf "⚠ $u aveva ~/.cache come collegamento: rifatta cartella vera"
+		elif [ ! -d "$c" ]; then
+			mkdir -p "$c"
+			chown "$u:$u" "$c"
+			chmod 700 "$c"
+		fi
+	done
+	ok "~/.cache e' una cartella di ciascun utente: il browser puo' fare il suo profilo"
+
+	# -------------------------------------------------------------------
 	# ⛔⭐ IL LINGER, e non e' una comodita': e' 2,6 secondi per ogni login
 	#
 	# `[M]` 16 agosto 2026, misurato sul registro.  Senza linger, il gestore
@@ -180,6 +225,18 @@ for n in prova prova2; do
 		ok "$n ha il linger: il gestore d'utente non rinasce a ogni login"
 	else
 		ko "$n NON ha il linger: ogni login paghera' 2,6 s di gestore d'utente che nasce"
+	fi
+	# ⛔ E si guarda che `~/.cache` sia SUA: se e' un collegamento a `/tmp`, il
+	#    profilo del browser finisce in una cartella condivisa che il primo
+	#    utente si prende a modo 0700, e da li' in poi il browser non parte
+	#    piu' per nessun altro.  ⚠ Non basta guardare il collegamento: si prova
+	#    a SCRIVERCI, perche' «scritto non e' in vigore» (E1).
+	if [ -L "/home/$n/.cache" ]; then
+		ko "⛔ $n ha ~/.cache come COLLEGAMENTO a $(readlink "/home/$n/.cache"): il browser non fara' il profilo"
+	elif su -s /bin/sh -c "mkdir -p /home/$n/.cache/.prova-remotix && rmdir /home/$n/.cache/.prova-remotix" "$n" 2>/dev/null; then
+		ok "$n puo' scrivere nella sua ~/.cache (il profilo del browser ci sta)"
+	else
+		ko "⛔ $n NON puo' scrivere nella sua ~/.cache: il browser dira' «Profile Missing»"
 	fi
 done
 

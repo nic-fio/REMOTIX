@@ -147,9 +147,11 @@ vivo e qualcosa disegna, ma nessuno ha mai visto la sua finestra»*.
 
 import argparse
 import base64
+import glob
 import importlib.util
 import json
 import os
+import shlex
 import struct
 import subprocess
 import sys
@@ -441,7 +443,9 @@ SCRIPT_PRESA = r"""
 set -u
 LAV=%(lav_dentro)s
 CLIENTE=%(cliente)s
+TUTTI=%(tutti)s
 rm -f "$LAV/flusso.264" "$LAV/scatto.png" "$LAV/cliente.log"
+rm -f "$LAV"/scatto-[0-9][0-9][0-9].png
 timeout %(tetto)d python3 -u "$CLIENTE" \
     --indirizzo %(indirizzo)s --porta %(porta)d \
     --utente %(utente)s --parola-file %(parola)s \
@@ -458,6 +462,21 @@ if [ -s "$LAV/flusso.264" ]; then
            -vsync 0 -update 1 -y "$LAV/scatto.png"
     echo "rc=$?"
     ls -l "$LAV/scatto.png" 2>/dev/null || echo "⛔ nessuno scatto"
+    # ⭐⭐ E LA SEQUENZA, quando la si chiede (`--tutti`) — 25 agosto 2026.
+    #
+    # ⛔ Non e' un lusso: **l'ultimo fotogramma da solo mente per omissione.**
+    #    `[M]` Il dialogo «Profile Missing» di Firefox e' stato trovato cosi' —
+    #    compariva a meta' della presa e spariva prima della fine, e sull'ultimo
+    #    scatto non c'era.  ⇒ Un desktop che ATTRAVERSA uno stato non lo mostra
+    #    nell'istante finale, e chi guarda solo quello conclude «non c'e'
+    #    niente» — che e' un `[?]` spacciato per un `[M]`.
+    if [ -n "$TUTTI" ] && [ -s "$LAV/flusso.264" ]; then
+        echo "=== FFMPEG TUTTI ==="
+        ffmpeg -hide_banner -loglevel error -i "$LAV/flusso.264" \
+               -vsync 0 -y "$LAV/scatto-%%03d.png"
+        echo "rc=$?"
+        ls "$LAV"/scatto-*.png 2>/dev/null | wc -l
+    fi
 else
     echo "⛔ il flusso e' vuoto o non c'e': niente da decodificare"
 fi
@@ -467,7 +486,7 @@ fi
 def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
            albero=ALBERO, lav=LAV, parola_file=PAROLA_FILE,
            macchina=MACCHINA, parola_sudo=PAROLA_SUDO, sveglia=None,
-           loquace=False):
+           loquace=False, tutti=False):
     """⭐ Tira giu' un PNG del desktop remoto di `utente`, e lo scrive in `fuori`.
 
     Torna un dizionario con `png` e i conti della presa, oppure ⛔ **`None`** se
@@ -491,6 +510,7 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
         "tetto": int(resta) + 60,
         "indirizzo": indirizzo, "porta": porta, "utente": utente,
         "parola": _dentro(parola_file), "resta": resta, "altro": altro,
+        "tutti": "1" if tutti else "",
     }
     rc, out, err = _nel_contenitore(script, secondi=int(resta) + 120,
                                     macchina=macchina,
@@ -523,8 +543,28 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
                 "perche": "⛔ NON HO GUARDATO: lo scatto non e' arrivato qui (%s)"
                           % p.stderr.decode("utf-8", "replace").strip()[:200],
                 "registro": (out + err)[-1500:]}
+    sequenza = []
+    if tutti:
+        # ⭐ La sequenza sta ACCANTO allo scatto, con lo stesso nome piu' il
+        #   numero: chi guarda una cartella capisce da se' che sono lo stesso
+        #   giro.  ⚠ E se non arriva, NON si sporca l'esito dello scatto: lo
+        #   scatto e' arrivato, e questo e' un di piu' dichiarato.
+        radice = os.path.splitext(os.path.abspath(fuori))[0]
+        for vecchio in glob.glob(radice + "-[0-9][0-9][0-9].png"):
+            os.unlink(vecchio)
+        q = subprocess.run(["bash", "-c",
+                            "scp -o BatchMode=yes -q '%s:%s/scatto-[0-9][0-9][0-9].png' %s"
+                            % (macchina, lav, shlex.quote(
+                                os.path.dirname(radice) or "."))],
+                           capture_output=True, timeout=300)
+        if q.returncode == 0:
+            for f in sorted(glob.glob(os.path.join(
+                    os.path.dirname(radice) or ".", "scatto-[0-9][0-9][0-9].png"))):
+                nuovo = radice + "-" + os.path.basename(f).split("-")[1]
+                os.replace(f, nuovo)
+                sequenza.append(nuovo)
     return {"png": fuori, "conti": conti, "perche": None,
-            "registro": (out + err)[-1500:]}
+            "sequenza": sequenza, "registro": (out + err)[-1500:]}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -767,6 +807,13 @@ def main():
                         "rifare un fotogramma su un desktop immobile.  "
                         "⛔ Cambia quel che il desktop vede: spento per "
                         "predefinito, e chi lo accende lo dichiara")
+    p.add_argument("--tutti", action="store_true",
+                   help="⭐ tira giu' anche TUTTI i fotogrammi della presa, "
+                        "accanto allo scatto e con lo stesso nome piu' il "
+                        "numero.  ⛔ Serve quando il desktop ATTRAVERSA uno "
+                        "stato invece di restarci: `[M]` il dialogo «Profile "
+                        "Missing» di Firefox compariva a meta' della presa e "
+                        "sull'ultimo fotogramma non c'era piu'")
     p.add_argument("--json", default="", help="dove scrivere l'esito in JSON")
     p.add_argument("--loquace", action="store_true")
     p.add_argument("--certifica", action="store_true")
@@ -784,7 +831,7 @@ def main():
                indirizzo=a.indirizzo, albero=a.albero, lav=a.lav,
                parola_file=a.parola_file, macchina=a.macchina,
                parola_sudo=a.parola_sudo, sveglia=a.sveglia or None,
-               loquace=a.loquace)
+               loquace=a.loquace, tutti=a.tutti)
     fuori = {"utente": a.utente, "porta": a.porta, "resta": a.resta,
              "durata_s": round(time.time() - t0, 1),
              "sveglia": a.sveglia or None}
