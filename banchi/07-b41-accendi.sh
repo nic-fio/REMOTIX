@@ -39,12 +39,24 @@ PAROLA=${PAROLA:-nicfio}
 HZ=440
 PORTA=7710
 SPEGNI=0
+# ⛔⭐ QUEL CHE STA DOPO `--` VA AL SERVER, PAROLA PER PAROLA — 25 agosto 2026.
+#
+#    Serviva alla fase 10: il budget ha tre manopole (`--budget-mpixel-s`,
+#    `--tetto-sessioni`, `--riserva`) e ⛔ **il budget nasce SPENTO** (I6), cioe'
+#    senza un modo di passarle questo script accende un prodotto in cui la cura
+#    piu' importante della fase **non c'e'**.
+# ⚠ E si e' scelto il passaggio ALLA CIECA invece di una manopola per opzione:
+#   questo script non deve sapere che cosa il server accetta — se lo sapesse,
+#   ogni opzione nuova del prodotto sarebbe una modifica QUI, e prima o poi una
+#   dimenticanza.  ⭐ Il server rifiuta da se' quel che non conosce, e si vede.
+ALTRO=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--hz) HZ=$2; shift 2 ;;
 	--porta) PORTA=$2; shift 2 ;;
 	--spegni) SPEGNI=1; shift ;;
-	*) echo "⛔ argomento ignoto: $1" >&2; exit 2 ;;
+	--) shift; ALTRO="$*"; break ;;
+	*) echo "⛔ argomento ignoto: $1 — ⭐ quel che va al SERVER si mette dopo «--»" >&2; exit 2 ;;
 	esac
 done
 
@@ -119,6 +131,9 @@ if ! ssh -o BatchMode=yes "$MACCHINA" \
 fi
 
 echo "⏳ 3/3 · accendo il server sulla $PORTA, tono $HZ Hz"
+# ⛔ E si DICE che cosa si passa al server: un'opzione passata alla cieca che
+#    non comparisse qui sarebbe una differenza fra due giri che nessuno vede.
+[ -n "$ALTRO" ] && echo "   ⭐ e al server: $ALTRO"
 # shellcheck disable=SC2087
 # ⛔ IL COPIONE SI SPEDISCE COME FILE, non su `stdin`.
 #    Stessa trappola del passo 1, e la seconda volta e' peggio della prima:
@@ -192,7 +207,7 @@ systemd-run \
 	--comando-socket $LAV/comando.sock \
 	--rilievo $LAV/rilievo \
 	--audio-prova $HZ \
-	--parlantina >/dev/null
+	--parlantina $ALTRO >/dev/null
 
 i=0; PID=0
 while [ \$i -lt 50 ]; do
