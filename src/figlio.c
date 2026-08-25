@@ -6062,6 +6062,25 @@ void figlio_vive(int argc, char **argv)
 	if (argc < 9)
 		_exit(40);
 	utente = argv[2];
+	/* ⛔⭐ E DA QUI IN POI OGNI RIGA DI QUESTO PROCESSO DICE DI CHI E' — 25
+	 *     agosto 2026, R10-A4 / P6.  Il riquadro sta in `registro.h`.
+	 *
+	 *     ⭐ Questo processo serve **una** sessione sola: l'identita' e' del
+	 *        processo, non della riga, e si posa in un punto solo.  ⇒ Cura in
+	 *        un colpo le famiglie che `[M]` §6.7 misurava allo **0,0 %** —
+	 *        `ciclo-cattura` e `audio-blocchi` (359 righe in 90 s a quattro
+	 *        sessioni) — e con loro le **70** di `codificatore.c`, che di
+	 *        sessioni non sa niente e scrive nell'area `"video"`, ⛔ la STESSA
+	 *        stringa di `REG_VIDEO` del padre: senza questa riga quelle due
+	 *        famiglie non si distinguevano **nemmeno per area**.
+	 *
+	 * ⚠ PRIMA di qualunque altra cosa che possa scrivere, e in particolare
+	 *   prima del ricontrollo di uid piu' sotto: la riga «⛔⛔ NON SONO CHI
+	 *   DOVREI ESSERE» e' proprio una di quelle che si legge quando gli utenti
+	 *   sono dieci, e uscirebbe senza nome.
+	 * ⚠ E l'identita' NON attraversa l'`exec`: quella del padre e' rimasta
+	 *   nell'immagine di prima, e questa e' un'immagine nuova. */
+	registro_identita(utente);
 	atteso = (uid_t)strtoul(argv[3], NULL, 10);
 	atteso_g = (gid_t)strtoul(argv[4], NULL, 10);
 	tela_l = (uint32_t)strtoul(argv[5], NULL, 10);
