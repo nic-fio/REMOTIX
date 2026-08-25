@@ -368,6 +368,14 @@ void wt_termina_gancio(wt_termina_richiesta f, void *ctx);
 size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettaglio,
                          const wt *tranne);
 
+/* ⭐ Il tetto della tela che le sessioni di quell'utente sanno decodificare —
+ *    `video.misura_massima` di §4.3, la piu' larga se sono piu' d'una.
+ * ⛔ Serve al BUDGET (fase 10): a `consegna_verdetto()` la tela non e' ancora
+ *    decisa, ma il suo MAGGIORANTE si conosce fin dal `CIAO`, e il budget conta
+ *    il maggiorante.  ⚠ `false` = nessuna l'ha dichiarata — e non e' «zero»:
+ *    chi chiama ripiega sulla tela del palco, non su un costo nullo. */
+bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a);
+
 /* ⭐ §7.1 — «il palco non c'e' ANCORA»: rimanda il fondo dei tre secondi sulle
  * sessioni di quell'utente che stanno aspettando proprio quella misura.  ⛔ Non
  * manda niente sul filo: sposta una scadenza, e toglie al padre una deduzione

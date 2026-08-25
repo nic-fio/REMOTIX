@@ -69,12 +69,38 @@ extern "C" {
  *      La ragione per esteso sta accanto a quel `#define`, perche' e' li' che
  *      qualcuno sara' tentato di rilegarlo.
  *
- * ⚠ E questo NON e' ancora il tetto configurabile della fase 10 (`--tetto-
- *   sessioni`, §3.5 di `fasi/10-…md`): e' l'unificazione che quel tetto
- *   richiede per poter esistere.  Finche' resta un `#define`, il motivo giusto
- *   per «non ci sta» e' `0x0E` — un limite **amministrativo** — e non `0x06`,
- *   che parla della capacita' **fisica** della macchina. */
-#define RCP_TETTO_SESSIONI 16
+ * ⭐⭐ E DAL 25 AGOSTO 2026 (sera) IL NUMERO E' **CONFIGURABILE** — fase 10,
+ *     `--tetto-sessioni N`.  Il `#define` qui sotto resta, ed e' il
+ *     **PREDEFINITO**; il valore in vigore lo dice `rcp_tetto()`, e lo muove
+ *     `rcp_tetto_imposta()` una volta sola, all'avvio, prima che esista una
+ *     sessione.  ⇒ Le quattro tabelle si **allocano** su quel numero invece di
+ *     essere array di misura fissa: `[M]` §3.3 aveva verificato che le cinque
+ *     funzioni che percorrono `attaccate[]` fanno **solo scansioni lineari** e
+ *     che nessun invariante si appoggia al 16.
+ *
+ * ⛔⛔ E IL PREDEFINITO E' PASSATO DA 16 A **10**, che e' il numero di
+ *      `SPECIFICHE.md` §5.5 — l'unico che un documento abbia mai promesso.  Il
+ *      16 non era stato scelto: era il primo numero comodo di un elenco
+ *      «piccolo», copiato in quattro posti.  ⚠ Chi vuole i sedici di ieri
+ *      batte `--tetto-sessioni 16`, e la riga d'avvio lo dichiara.
+ *
+ * ⚠ E RESTA UN TETTO **AMMINISTRATIVO**, non un limite fisico: chi non ci sta
+ *   riceve `0x0E` («la tabella e' piena»), non `0x06` («questa macchina non ha
+ *   piu' capacita' di composizione»).  ⭐ I due si AGGIUNGONO — §8.1 **D5** — e
+ *   il gesto che l'utente puo' fare e' diverso: *«riprova, o chiedi di alzare
+ *   il tetto»* contro *«riprova, o entra chiedendo meno qualita'»*.  Il secondo
+ *   e' il budget, e vive in `budget.h`. */
+#define RCP_TETTO_SESSIONI 10
+
+/* Il tetto **in vigore**.  ⭐ Prima che qualcuno lo muova vale il predefinito
+ * qui sopra: chi legge questa funzione ha sempre una risposta, mai uno zero. */
+int rcp_tetto(void);
+
+/* ⛔ Lo muove, e **una volta sola**: torna `false` — dichiarandolo nel registro
+ *    — se le tabelle sono gia' state allocate, perche' allora ci sarebbero due
+ *    numeri in vigore nello stesso processo, che e' esattamente la «seconda
+ *    strada» che `CODER.md` §2-bis vieta. */
+bool rcp_tetto_imposta(int quante);
 
 /* I motivi di §8.2.  Il codice 0 NON DEVE essere usato (§3.1). */
 enum {
@@ -601,6 +627,21 @@ void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice);
  *    parlare e il posto e' libero, la sessione torna `attiva` da sola. */
 const char *rcp_stato_nome(const rcp_sessione *s);
 const char *rcp_utente(const rcp_sessione *s);
+
+/* ⛔⭐ IL TETTO DEL DECODIFICATORE DEL CLIENT — `video.misura_massima` di §4.3,
+ *     e fino al 25 agosto 2026 **non usciva da questo modulo**.
+ *
+ * ⭐ Serve al BUDGET (fase 10), ed e' il pezzo che gli mancava: a
+ *    `consegna_verdetto()` la tela della sessione **non e' ancora decisa** (si
+ *    decide a `SESSIONE`), ma il suo **tetto** e' noto fin dal `CIAO` —
+ *    §4.5 impone che la tela concessa non superi questo numero.  ⇒ Contando il
+ *    tetto si conta un **maggiorante** del costo del nuovo, che e' il verso
+ *    scomodo, cioe' quello giusto (`LEZIONI.md` §1.33).
+ *
+ * ⚠ Torna `false` quando il client **non l'ha dichiarata**, e non e' la stessa
+ *   cosa di «l'ha dichiarata zero»: chi riceve `false` ripiega sulla tela del
+ *   palco, e non su uno zero. */
+bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a);
 
 /* ⛔⭐ §5.3 — «il client e' ancora li'»: la chiama il TRASPORTO dopo ogni
  *     pacchetto DECIFRATO E AUTENTICATO, e da lei dipende l'orologio dei trenta

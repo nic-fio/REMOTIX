@@ -48,7 +48,7 @@
  */
 #include "figlio.h"
 
-/* ⛔ SOLO per `RCP_TETTO_SESSIONI` — vedi il riquadro sopra `MAX_FIGLI`.  ⚠ Il
+/* ⛔ SOLO per il tetto delle sessioni (`RCP_TETTO_SESSIONI`, `rcp_tetto()`).  ⚠ Il
  *    figlio NON parla RCP: parla col padre su un `SOCK_SEQPACKET`.  Questo
  *    include e' la dichiarazione del legame fra due tetti, non una dipendenza
  *    dal protocollo. */
@@ -100,7 +100,12 @@
  * ⇒ Adesso il numero viene da `rcp.h`, e il compilatore conosce il legame che
  *   il commento dichiarava.  ⚠ Questo file include `rcp.h` **solo** per questo:
  *   il figlio non parla RCP, parla col padre. */
-#define MAX_FIGLI RCP_TETTO_SESSIONI
+/* ⭐⭐ E DALLA SERA DEL 25 AGOSTO 2026 NON E' PIU' UNA MISURA FISSA: la tabella
+ *     si **alloca** sul tetto in vigore (`rcp_tetto()`, che `--tetto-sessioni`
+ *     muove all'avvio).  ⛔ Il `MAX_FIGLI` che stava qui e' sparito e non e'
+ *     stato lasciato accanto come «massimo»: sarebbe stato un secondo numero.
+ *     Il valore in vigore per QUESTA tabella e' `f->tetto`, ed e' letto una
+ *     volta sola, in `figli_accendi()`. */
 
 /* ⛔ Quanto si aspetta che un figlio appena nato dica CHI E'.  Oltre, si
  * dichiara guasto e si abbatte: un processo che gira come un utente e non
@@ -528,7 +533,12 @@ struct figlio {
 };
 
 struct figli {
-	struct figlio v[MAX_FIGLI];
+	/* ⛔ Allocata in `figli_accendi()` su `f->tetto` caselle, liberata in
+	 *    `figli_spegni()`.  ⚠ Tutte le `f->v[i]` restano scritte com'erano:
+	 *    a cambiare sono soltanto i LIMITI dei cicli, che passano da un
+	 *    `#define` a `f->tetto`. */
+	struct figlio *v;
+	int tetto;
 	uint64_t prossima_matricola;
 	uint32_t tela_l, tela_a;
 	char dir_rilievo[256];
@@ -823,7 +833,7 @@ static void figlio_congeda(struct figli *f, struct figlio *g, const char *perche
 
 static struct figlio *cerca(struct figli *f, const char *utente)
 {
-	for (int i = 0; i < MAX_FIGLI; i++)
+	for (int i = 0; i < f->tetto; i++)
 		if (f->v[i].usato && strcmp(f->v[i].utente, utente) == 0)
 			return &f->v[i];
 	return NULL;
@@ -848,7 +858,17 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 
 	if (!f)
 		return NULL;
-	for (int i = 0; i < MAX_FIGLI; i++)
+	/* ⛔ Il tetto si legge QUI, una volta sola: `--tetto-sessioni` l'ha gia'
+	 *    mosso (si batte prima che la tabella esista), e da qui in poi il
+	 *    numero in vigore per questa tabella e' `f->tetto` — rileggerlo piu'
+	 *    avanti vorrebbe dire due misure per lo stesso array. */
+	f->tetto = rcp_tetto();
+	f->v = (struct figlio *)calloc((size_t)f->tetto, sizeof *f->v);
+	if (!f->v) {
+		free(f);
+		return NULL;
+	}
+	for (int i = 0; i < f->tetto; i++)
 		f->v[i].fd = -1;
 	f->prossima_matricola = 1;
 	/* ⭐ Lo scatto a comando: il riquadro sta dentro `figli_muovi()`. */
@@ -889,13 +909,14 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
 		              "perche' non posso dimostrare quale programma girerebbe "
 		              "come l'utente",
 		              f->percorso_mio);
+		free(f->v);
 		free(f);
 		return NULL;
 	}
 	registro_dice(REG_FIGLIO,
 	              "⭐ tabella dei figli accesa: fino a %d, uno per utente (I2), "
 	              "tela %ux%u, binario «%s»",
-	              MAX_FIGLI, tela_l, tela_a, f->percorso_mio);
+	              f->tetto, tela_l, tela_a, f->percorso_mio);
 	return f;
 }
 
@@ -1276,7 +1297,7 @@ bool figli_assicura(figli *f, const char *utente)
 		return true;
 	}
 
-	for (int i = 0; i < MAX_FIGLI; i++)
+	for (int i = 0; i < f->tetto; i++)
 		if (!f->v[i].usato) {
 			libero = i;
 			break;
@@ -1286,7 +1307,7 @@ bool figli_assicura(figli *f, const char *utente)
 		              "⛔ %d figli gia' vivi: «%s» NON ne avra' uno, e quindi "
 		              "non avra' un palco.  E' un no dichiarato, non un forse "
 		              "(invariante I3)",
-		              MAX_FIGLI, utente);
+		              f->tetto, utente);
 		return false;
 	}
 
@@ -1406,7 +1427,7 @@ size_t figli_descrittori(figli *f, struct pollfd *fds, size_t max)
 	size_t n = 0;
 	if (!f)
 		return 0;
-	for (int i = 0; i < MAX_FIGLI && n < max; i++) {
+	for (int i = 0; i < f->tetto && n < max; i++) {
 		if (!f->v[i].usato || f->v[i].fd < 0)
 			continue;
 		fds[n].fd = f->v[i].fd;
@@ -1422,10 +1443,38 @@ int figli_quanti(const figli *f)
 	int n = 0;
 	if (!f)
 		return 0;
-	for (int i = 0; i < MAX_FIGLI; i++)
+	for (int i = 0; i < f->tetto; i++)
 		if (f->v[i].usato)
 			n++;
 	return n;
+}
+
+/* ⭐⭐ CHI E' DENTRO — fase 10, e serve al BUDGET.
+ *
+ * ⛔ «Chi e' dentro» per il budget NON e' «chi ha un posto nel registro delle
+ *    sessioni»: e' **chi ha un palco**.  I due insiemi non coincidono, ed e' il
+ *    fatto di §3.2: una sessione che ha lasciato il posto per silenzio
+ *    **codifica ancora** finche' il suo palco e' vivo — il *fantasma* — e
+ *    costa alla GPU esattamente quanto le altre.  ⇒ Un budget contato sui posti
+ *    **sottostima**, e sottostimare e' il verso che affama tutti (§1.33).
+ *
+ * ⚠ L'indice va da 0 a `figli_quanti() − 1` e **non e' stabile fra due
+ *   chiamate**: le caselle si liberano.  Serve a scorrere una volta, dentro lo
+ *   stesso giro del ciclo, e a niente altro. */
+const char *figli_utente_ennesimo(const figli *f, int quale)
+{
+	int n = 0;
+
+	if (!f || quale < 0)
+		return NULL;
+	for (int i = 0; i < f->tetto; i++) {
+		if (!f->v[i].usato)
+			continue;
+		if (n == quale)
+			return f->v[i].utente;
+		n++;
+	}
+	return NULL;
 }
 
 pid_t figli_pid_di(const figli *f, const char *utente)
@@ -1927,7 +1976,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 		int quale = scatto_da_inoltrare == 2 ? SIGUSR2 : SIGUSR1;
 
 		scatto_da_inoltrare = 0;
-		for (int i = 0; i < MAX_FIGLI; i++) {
+		for (int i = 0; i < f->tetto; i++) {
 			struct figlio *g = &f->v[i];
 
 			if (!g->usato || g->uscendo || g->pid <= 0)
@@ -1940,7 +1989,7 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms)
 		}
 	}
 
-	for (int i = 0; i < MAX_FIGLI; i++) {
+	for (int i = 0; i < f->tetto; i++) {
 		struct figlio *g = &f->v[i];
 		bool leggibile = false;
 
@@ -2100,7 +2149,7 @@ void figli_ricontrolla(figli *f, uint64_t ora_ms)
 {
 	if (!f)
 		return;
-	for (int i = 0; i < MAX_FIGLI; i++) {
+	for (int i = 0; i < f->tetto; i++) {
 		struct figlio *g = &f->v[i];
 		struct testa t;
 
@@ -2607,7 +2656,7 @@ void figli_spegni(figli *f)
 {
 	if (!f)
 		return;
-	for (int i = 0; i < MAX_FIGLI; i++) {
+	for (int i = 0; i < f->tetto; i++) {
 		struct figlio *g = &f->v[i];
 		if (!g->usato)
 			continue;
@@ -2633,6 +2682,7 @@ void figli_spegni(figli *f)
 		memset(g, 0, sizeof *g);
 		g->fd = -1;
 	}
+	free(f->v);
 	free(f);
 }
 
