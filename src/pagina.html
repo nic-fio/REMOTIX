@@ -691,7 +691,32 @@ const MOTIVO = {
   0x03: "la sessione e' stata abbandonata",
   0x04: "ha prevalso la sessione locale su quella macchina",
   0x05: "quell'utente e' gia' collegato localmente",
-  0x06: "il server e' pieno",
+  /* ⛔⭐⭐ 25 agosto 2026 — QUI C'ERA «il server e' pieno», E RACCONTAVA UN
+   *       CONTEGGIO.  `0x06` non e' una tabella che si riempie: e' la macchina
+   *       che non ce la fa piu' (`DECISIONI.md` §4.6-bis, `RCP.md` §8.2).  ⚠ E
+   *       «pieno» invita a chiedersi CHI occupa il posto — che e' la domanda
+   *       sbagliata, e per giunta e' la frase di `0x0E`.
+   *
+   * ⭐ TRE COSE, come ogni motivo deve dirne (§8.2): **che cosa e' successo**
+   *    (la capacita' e' finita), **di chi e' il limite** (di questo server, e
+   *    non ti hanno tolto niente: chi c'era continua), **che gesto puoi fare**.
+   *
+   * ⛔⛔ E IL GESTO NON E' «chiedi meno qualita'»: QUESTA PAGINA NON HA UNA
+   *      MANOPOLA DELLA QUALITA' — il modulo d'accesso ha due campi, utente e
+   *      parola d'ordine, e basta.  Un gesto che il prodotto non offre e' una
+   *      consolazione travestita, ed e' peggio del silenzio perche' manda
+   *      l'utente a cercare un comando che non esiste.
+   * ⭐ Il gesto VERO ce l'ha, ed e' la finestra: dal 16 agosto 2026 la tela
+   *    nasce grande quanto la finestra (`misura_vista()`, `ATTACCA` piu'
+   *    sotto), e `[M]` `fasi/10-…md` §8.1 D3 dice che **la moneta del budget e'
+   *    il PIXEL** — ai cedimenti i Mpixel/s coincidono entro lo 0,6 % al
+   *    variare della tela, mentre i fotogrammi/s differiscono del 74,9 %.
+   *    ⇒ Una finestra piu' piccola e' una tela piu' piccola, che e' meno
+   *    pixel, che e' meno budget: e' un gesto **misurato**, non un augurio.
+   * ⚠ E la dipendenza va dichiarata: se un giorno `0x06` venisse emesso su un
+   *   conto di TESTE invece che di pixel, la seconda meta' di questa frase
+   *   diventerebbe falsa e andrebbe tolta. */
+  0x06: "questo server non ha piu' capacita' per un altro desktop — le sessioni gia' aperte continuano: riprova fra un momento, oppure rimpicciolisci la finestra e riprova, perche' la tela nasce grande quanto la finestra e una tela piu' piccola costa meno",
   0x07: "utente o parola d'ordine non corretti",
   /* ⛔ Niente numeri qui dentro — rilievo R12.9b, 10 agosto 2026 notte.  Questa
      riga diceva «riprova fra dodici ore», ed era FALSA per chiunque non fosse
@@ -706,7 +731,36 @@ const MOTIVO = {
   0x0B: "errore di protocollo",
   0x0C: "il server si sta spegnendo",
   0x0D: "tempo scaduto durante la stretta di mano",
-  0x0E: "quella sessione non si puo' servire",
+  /* ⛔⭐⭐ 25 agosto 2026 — QUI C'ERA «quella sessione non si puo' servire», e
+   *       il soggetto era SBAGLIATO: diceva «quella SESSIONE», cioe' addossava
+   *       il limite all'utente, mentre `[M]` `fasi/10-…md` §6.4 e §5.4 hanno
+   *       letto quella frase dentro Firefox vero a tabella piena, 10 volte su
+   *       10, in una scena in cui il limite era **tutto del server**.  E non
+   *       dava nessun gesto: chi la legge non sa se aspettare, se ricaricare,
+   *       o se ha sbagliato lui.
+   *
+   * ⛔⛔ E RESTA GENERICA APPOSTA, perche' `0x0E` copre CINQUE strade diverse:
+   *      disposizione sconosciuta (`rcp.c` ~2760) · registro dei posti pieno
+   *      (~2865) · tela non concedibile sotto `video.misura_massima` (~2925) ·
+   *      memoria esaurita sul canale di controllo (~7255) · ⭐ e dal 25 agosto
+   *      **i palchi tutti impegnati** (`main.c` ~485, la cura di P3).
+   *      ⇒ Precisarla per una la renderebbe FALSA per le altre quattro.  E per
+   *      la stessa ragione il gesto non e' «chiedi di alzare il tetto»: un
+   *      tetto c'e' in due casi su cinque, e negli altri tre non c'e' niente da
+   *      alzare.
+   *
+   * ⛔⛔ IL DETTAGLIO DEL CORPO NON SI PUO' MOSTRARE, ed e' stato verificato
+   *      qui invece che dato per scontato: `RCP.md` §7.1 lo dichiara «per il
+   *      registro, non per l'utente» nel formato stesso del `CONGEDO`, e §8.2
+   *      lo ribadisce con un **NON DEVE**.  ⚠ E le cinque stringhe vere danno
+   *      ragione alla regola: *«video.misura_massima=1920x1080 e' sotto la tela
+   *      minima legale di 320x240 (§4.5)»* e *«memoria esaurita nell'accumulo
+   *      del canale di controllo»* sono diagnosi, non frasi da leggere; una
+   *      terza rimanda a *«la riga di registro precedente»*, che l'utente non
+   *      ha.  ⇒ La pagina **non** legge il dettaglio, e in cambio dice
+   *      **dov'e' finito** — che e' il massimo di preciso che si puo' dire
+   *      senza mentire in quattro casi su cinque. */
+  0x0E: "il server non ha potuto aprirti la sessione, e non e' un tuo errore: riprova fra un momento, e se si ripete chiedi a chi amministra il server — il perche' preciso e' nel suo registro",
   /* ⛔⭐ 23 agosto 2026 — LA FRASE DI PRIMA ERA UNA DIAGNOSI CHE IL SERVER NON
      PUO' FARE.  Diceva «quell'utente e' gia' collegato da un altro
      dispositivo», e `[M]` nel caso piu' frequente e' **falsa**: quella sessione

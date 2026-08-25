@@ -190,6 +190,25 @@ def registro_da(riga0):
     return out if rc == 0 else None
 
 
+def pagina_servita():
+    """⭐ La pagina COME IL SERVER LA SERVE, presa dal filo.
+
+    ⛔ Non `src/pagina.html` del repository e nemmeno il file sull'albero: si
+       chiede al server, perche' la sola voce che conta e' quella che l'utente
+       scarica.  ⚠ Un albero ricompilato a meta', un `--pagina` che punta
+       altrove, una copia vecchia: tutte e tre danno un file giusto sul disco e
+       una pagina sbagliata sul filo.
+
+    ⛔ `None` se non l'ho potuta leggere — e `None` non e' «pagina vuota».
+    """
+    p = subprocess.run(["curl", "-sk", "--max-time", "20",
+                        "https://%s:%d/" % (IND, PORTA)],
+                       capture_output=True, text=True)
+    if p.returncode != 0 or not p.stdout or "MOTIVO" not in p.stdout:
+        return None
+    return p.stdout
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐ IL BROWSER VERO — Firefox 140 ESR sul portatile, guidato da Marionette
 # ═══════════════════════════════════════════════════════════════════════════
@@ -678,6 +697,117 @@ def giudica_capsula(oss, testo_server, dove="browser"):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ⛔⭐⭐ LA FRASE CHE L'UTENTE LEGGE — e si legge NEL BROWSER, mai nel file
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⛔⛔ QUESTO E' IL PEZZO CHE ESISTE PER UN BUCO DICHIARATO.  `fasi/10-…md` §6.4
+#      ha misurato la frase di `0x0E` dentro Firefox vero, 10 su 10, e l'ha
+#      dichiarata *«byte-identica alla voce della pagina servita»* — ma quel
+#      confronto **l'ha fatto una persona guardando**, perche' la tabella dei
+#      motivi non si legge da dentro il browser (`const` di script non e'
+#      proprieta' di `window`).  ⇒ Qui il confronto lo fa il banco, e i due
+#      testi arrivano da **due strade diverse**: uno dal browser che l'ha
+#      dipinta, l'altro dal filo che ha servito il file.
+#
+# ⛔⛔ E LA FORMA D'ERRORE CHE SI VUOLE PRENDERE E' PRECISA: un banco che legge
+#      la frase **solo dal file servito** dichiara giusta una frase che il
+#      browser non ha mai mostrato.  Basta che il motivo sul filo sia un altro,
+#      o che la pagina costruisca l'esito da un'altra parte, e il banco e' verde
+#      su un prodotto rotto.  ⇒ `concordano` e' un predicato a se', e da'
+#      **rosso** quando i due testi non coincidono.
+#
+# ⚠ E I TRE PREDICATI DELLA FRASE SONO **LESSICALI**, e va detto invece che
+#   lasciato credere.  `RCP.md` §8.2 pretende che una frase dica tre cose — che
+#   cosa e' successo, DI CHI e' il limite, che GESTO fare — e un banco non sa
+#   leggere il senso.  ⇒ Si misura quel che si puo' misurare: che le parole ci
+#   siano.  ⛔ Un metro cosi' **si puo' ingannare** (una frase che nomina il
+#   server senza dire niente passa), ma **non si puo' aggirare**: una frase che
+#   quelle parole non le ha, quelle tre cose non le dice di sicuro.  ⇒ Vale come
+#   RETE, non come giudizio: il giudizio e' del regista (§10).
+
+# ⭐ Le parole con cui una frase puo' dire DI CHI e' il limite.  ⛔ «quella
+#    sessione non si puo' servire» non ne ha nessuna: il soggetto e' la sessione
+#    dell'utente, e il fatto e' del server.
+DI_CHI = ("il server", "questo server", "questa macchina", "il sistema",
+          "dal server", "del server")
+
+# ⭐ I gesti che il prodotto OFFRE DAVVERO.  ⛔ La lista e' chiusa apposta:
+#    «entra chiedendo meno qualita'» NON c'e', perche' `src/pagina.html` non ha
+#    una manopola della qualita' — il modulo ha due campi, utente e parola — e
+#    un gesto che il prodotto non offre e' una consolazione travestita.
+GESTI = ("riprova", "ricarica", "chiedi", "rientra", "rimpicciolisci",
+         "sblocca", "aspetta")
+
+VOCE = re.compile(r'^\s*0x([0-9A-Fa-f]{2})\s*:\s*(".*?"(?:\s*\+\s*".*?")*)\s*,',
+                  re.M)
+
+
+def voce_del_file(html, motivo):
+    """⭐ La frase che il FILE SERVITO dichiara per un motivo di §8.2.
+
+    Legge la tabella `MOTIVO` di `src/pagina.html` cosi' com'e' scritta — anche
+    quando la voce e' spezzata su piu' righe con `+`, come `0x02`.
+
+    ⛔ Torna `None` se il file non c'e' o la voce non c'e': «non l'ho letta» non
+       e' «non c'era».
+    """
+    if not html:
+        return None
+    for m in VOCE.finditer(html):
+        if int(m.group(1), 16) != motivo:
+            continue
+        pezzi = re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))
+        return "".join(p.replace('\\"', '"').replace("\\\\", "\\")
+                       for p in pezzi)
+    return None
+
+
+def giudica_frase(oss, html_servito, motivo_atteso):
+    """⛔⭐ LA FRASE, LETTA DOVE L'UTENTE LA LEGGE — e confrontata col file.
+
+    Torna un dizionario con:
+      `browser`     la frase che il browser ha DIPINTO (`None` = non letta)
+      `file`        la voce del motivo nel file SERVITO (`None` = non letta)
+      `concordano`  ⛔ i due testi coincidono byte per byte (`None` = non ho
+                    potuto confrontarli)
+      `dice_di_chi` la frase nomina il server — predicato lessicale
+      `da_un_gesto` la frase porta un gesto della lista chiusa `GESTI`
+      `verdetto`    `"verde"` / `"rosso"` / `None` (⛔ = non ho misurato)
+
+    ⛔ `None` non e' `False` in nessuno dei quattro: un browser che non ha
+       scritto niente **non ha mostrato una frase sbagliata**, non ha mostrato
+       niente, e un banco che li confonde produce rossi falsi.
+    """
+    esiti = (oss or {}).get("esiti") or []
+    b = esiti[-1]["testo"] if esiti else None
+    f = voce_del_file(html_servito, motivo_atteso)
+    r = {"browser": b, "file": f, "motivo": motivo_atteso}
+    if b is None:
+        r.update({"concordano": None, "dice_di_chi": None,
+                  "da_un_gesto": None, "verdetto": None,
+                  "perche": "il browser non ha dipinto nessun esito"})
+        return r
+    bb = b.lower()
+    r["dice_di_chi"] = any(x in bb for x in DI_CHI)
+    r["da_un_gesto"] = any(x in bb for x in GESTI)
+    if f is None:
+        r["concordano"] = None
+        r["perche"] = ("⛔ la pagina servita non e' stata letta, o non porta la "
+                       "voce 0x%02x: il confronto NON e' stato fatto"
+                       % motivo_atteso)
+    else:
+        r["concordano"] = (b == f)
+    # ⛔ Il verdetto e' verde solo se TUTTI e tre i predicati sono veri.  Un
+    #    `None` fra i tre non e' un rosso: e' «non ho misurato», e si dice.
+    tre = (r["concordano"], r["dice_di_chi"], r["da_un_gesto"])
+    if None in tre:
+        r["verdetto"] = None
+    else:
+        r["verdetto"] = "verde" if all(tre) else "rosso"
+    return r
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # ⛔ LA CERTIFICAZIONE — i guasti innestati, e fatti GIRARE
 # ═══════════════════════════════════════════════════════════════════════════
 def _oss(righe, esiti=None, schermo=None):
@@ -868,6 +998,112 @@ def certifica():
     caso("⛔ registro non letto ⇒ None", segnale_del_figlio(None), None)
     caso("⛔ una USCITA normale non e' un segnale",
          segnale_del_figlio("il figlio se n'e' andato: uscita 0"), None)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    _log("G-ter · ⭐⭐ `voce_del_file` e `giudica_frase` — LA FRASE CHE L'UTENTE LEGGE")
+    # ⭐ Un pezzo di pagina VERO nella forma, e minuscolo: la tabella `MOTIVO`
+    #   com'e' scritta, compresa una voce spezzata con `+` (e' `0x02`).
+    FILE_NUOVO = (
+        'const MOTIVO = {\n'
+        '  0x01: "la sessione e\' stata chiusa dall\'utente",\n'
+        '  0x02: "sei stato mezz\'ora senza toccare niente: per rientrare "\n'
+        '      + "servi tu, con la tua parola d\'ordine",\n'
+        '  /* un commento in mezzo, che non deve confondere il lettore */\n'
+        '  0x06: "questo server non ha piu\' capacita\' per un altro desktop — '
+        'le sessioni gia\' aperte continuano: riprova fra un momento, oppure '
+        'rimpicciolisci la finestra e riprova",\n'
+        '  0x0E: "il server non ha potuto aprirti la sessione, e non e\' un tuo '
+        'errore: riprova fra un momento, e se si ripete chiedi a chi amministra '
+        'il server — il perche\' preciso e\' nel suo registro",\n'
+        '  0x0F: "il posto di questa sessione risulta occupato da un altro '
+        'client — se eri tu e sei appena caduto, riprova fra qualche secondo",\n'
+        '};\n')
+    VECCHIA_0E = "quella sessione non si puo' servire"
+    FILE_VECCHIO = re.sub(r'(0x0E: )".*?"(?=,\n)',
+                          lambda m: m.group(1) + '"%s"' % VECCHIA_0E,
+                          FILE_NUOVO, flags=re.S)
+
+    caso("`voce_del_file` legge la voce 0x0E",
+         voce_del_file(FILE_NUOVO, 0x0E)[:20], "il server non ha pot")
+    caso("⭐ e ricuce una voce spezzata con `+` (0x02)",
+         voce_del_file(FILE_NUOVO, 0x02),
+         "sei stato mezz'ora senza toccare niente: per rientrare servi tu, "
+         "con la tua parola d'ordine")
+    caso("⛔ voce che non c'e' ⇒ None, non stringa vuota",
+         voce_del_file(FILE_NUOVO, 0x0C), None)
+    caso("⛔ file non letto ⇒ None", voce_del_file(None, 0x0E), None)
+
+    nuova_0e = voce_del_file(FILE_NUOVO, 0x0E)
+    nuova_06 = voce_del_file(FILE_NUOVO, 0x06)
+
+    def _osf(frase):
+        return _oss(SANE, esiti=[{"t": 1000.0, "testo": frase}] if frase else [])
+
+    # ── SANO ────────────────────────────────────────────────────────────────
+    g = giudica_frase(_osf(nuova_0e), FILE_NUOVO, 0x0E)
+    caso("SANO · browser e file concordano", g["concordano"], True)
+    caso("SANO · la frase dice DI CHI e' il limite", g["dice_di_chi"], True)
+    caso("SANO · la frase da' un gesto", g["da_un_gesto"], True)
+    caso("SANO · verdetto", g["verdetto"], "verde")
+    g6 = giudica_frase(_osf(nuova_06), FILE_NUOVO, 0x06)
+    caso("SANO · e lo stesso per 0x06", g6["verdetto"], "verde")
+
+    # ── GUASTO 1: la frase di IERI, quella che §6.4 ha letto nel browser ────
+    gv = giudica_frase(_osf(VECCHIA_0E), FILE_VECCHIO, 0x0E)
+    caso("⛔ GUASTO · la frase di ieri NON dice di chi e' il limite",
+         gv["dice_di_chi"], False)
+    caso("⛔ GUASTO · la frase di ieri NON da' nessun gesto",
+         gv["da_un_gesto"], False)
+    caso("⛔ GUASTO · e concorda col file lo stesso: ROSSO su una frase "
+         "che il file conferma", (gv["concordano"], gv["verdetto"]),
+         (True, "rosso"))
+
+    # ── GUASTO 2 ⛔⛔ IL BANCO SCRITTO MALE: il file dice una cosa, il browser
+    #    un'altra.  Chi legge SOLO il file dichiara verde.
+    gd = giudica_frase(_osf(voce_del_file(FILE_NUOVO, 0x0F)), FILE_NUOVO, 0x0E)
+    caso("⛔⛔ GUASTO · file 0x0E giusto ma browser mostra la voce 0x0F "
+         "⇒ NON concordano", gd["concordano"], False)
+    caso("⛔⛔ GUASTO · e il verdetto e' ROSSO, non verde",
+         gd["verdetto"], "rosso")
+    caso("⭐ e i due testi restano tutt'e due in mano, per diagnosticare",
+         (gd["file"] == nuova_0e, gd["browser"].startswith("il posto di questa")),
+         (True, True))
+
+    # ── GUASTO 3: una frase che nomina il server ma non da' nessun gesto ────
+    gs = giudica_frase(_osf("il server non ha potuto aprirti la sessione"),
+                       FILE_NUOVO, 0x0E)
+    caso("⛔ GUASTO · dice di chi ma non da' il gesto ⇒ rosso",
+         (gs["dice_di_chi"], gs["da_un_gesto"], gs["verdetto"]),
+         (True, False, "rosso"))
+
+    # ── GUASTO 4: il gesto che il prodotto NON offre non e' un gesto ────────
+    gq = giudica_frase(
+        _osf("il server e' pieno: entra chiedendo meno qualita'"),
+        FILE_NUOVO, 0x0E)
+    caso("⛔⛔ GUASTO · «entra chiedendo meno qualita'» NON conta come gesto: "
+         "la pagina non ha una manopola della qualita'", gq["da_un_gesto"], False)
+
+    # ── ⛔ `None` NON E' `False` — in tutti e quattro ────────────────────────
+    gn = giudica_frase(_osf(None), FILE_NUOVO, 0x0E)
+    caso("⛔ browser muto ⇒ NON HO MISURATO, non «frase sbagliata»",
+         (gn["browser"], gn["concordano"], gn["dice_di_chi"],
+          gn["da_un_gesto"], gn["verdetto"]),
+         (None, None, None, None, None))
+    gm = giudica_frase(_osf(nuova_0e), None, 0x0E)
+    caso("⛔ file servito non letto ⇒ concordano None e verdetto None, "
+         "anche se i due predicati lessicali sono VERI",
+         (gm["concordano"], gm["dice_di_chi"], gm["verdetto"]),
+         (None, True, None))
+    gp = giudica_frase(_osf(nuova_0e), FILE_NUOVO, 0x0C)
+    caso("⛔ voce assente dal file ⇒ non misurato, mai «non concordano»",
+         (gp["concordano"], gp["verdetto"]), (None, None))
+
+    # ── ⭐ E IL CONTROLLO POSITIVO DEL METRO LESSICALE: sa dire di no? ──────
+    caso("⭐ il metro lessicale NON e' sempre vero: «errore di protocollo» "
+         "fallisce tutt'e due i predicati",
+         (giudica_frase(_osf("errore di protocollo"), FILE_NUOVO, 0x0E)["dice_di_chi"],
+          giudica_frase(_osf("errore di protocollo"), FILE_NUOVO, 0x0E)["da_un_gesto"]),
+         (False, False))
 
     _log("H · il metro del filo (`10-b2-filo.py`) si certifica da se'")
     filo = _carica("b2filo", os.path.join(QUI, "10-b2-filo.py"))
@@ -1360,13 +1596,38 @@ def aspetta_posto(riga0, utente, tetto=90):
 
 def scena_capsula(o):
     _log("LA SCENA: tabella PIENA, e il respinto e' un browser vero che NON si stacca")
-    rc, out, _ = root("grep -h '^#define MAX_ATTACCATE' %s/src/rcp.c" % ALB)
+    # ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+    #     Qui si leggeva `#define MAX_ATTACCATE` in `rcp.c`, e adesso quella
+    #     riga dice `#define MAX_ATTACCATE RCP_TETTO_SESSIONI`: il modello
+    #     `"MAX_ATTACCATE 16"` non ci finisce piu' dentro, la guardia passa
+    #     SEMPRE, e il banco misurerebbe un server con sedici posti credendo di
+    #     misurarne uno con uno.  ⇒ E' la stessa forma che ha rotto il terreno
+    #     di `10-b93` (§5.4 conseguenza 1): un controllo che non morde piu' non
+    #     da' un errore, da' un verde.
+    rc, out, _ = root("grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h" % ALB)
     _inf("il binario in prova: %s" % (out or "").strip())
-    if "MAX_ATTACCATE 16" in (out or ""):
-        _ko("⛔ l'albero ha ancora MAX_ATTACCATE 16: riempirlo vorrebbe dire "
-            "sedici sessioni grafiche.  Ricompila con "
-            "`MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`")
+    m = re.search(r"RCP_TETTO_SESSIONI\s+(\d+)", out or "")
+    if m is None:
+        _ko("⛔ non ho letto il tetto da %s/src/rcp.h: NON MISURO" % ALB)
         return 2
+    if int(m.group(1)) > 2:
+        _ko("⛔ l'albero ha il tetto a %s: riempirlo vorrebbe dire %s sessioni "
+            "grafiche.  Ricompila con "
+            "`MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`"
+            % (m.group(1), m.group(1)))
+        return 2
+
+    # ⭐ LA PAGINA COME IL SERVER LA SERVE, presa UNA volta e prima dei giri:
+    #    il confronto con quel che il browser dipinge vale solo se i due testi
+    #    vengono da strade diverse.
+    html = pagina_servita()
+    if html is None:
+        _inf("⚠ la pagina servita NON e' stata letta: il confronto della frase "
+             "col file restera' «non misurato», non «sbagliato»")
+    else:
+        _inf("pagina servita letta dal filo: %d byte · voce 0x%02x = «%s»"
+             % (len(html), o.motivo_atteso,
+                voce_del_file(html, o.motivo_atteso)))
 
     riga0 = righe_registro()
     if riga0 is None:
@@ -1401,7 +1662,8 @@ def scena_capsula(o):
         for g in range(o.giri):
             r0 = righe_registro()
             b.carica()
-            b.entra(UTENTE_B[0], PAROLA_UTENTE)
+            b.entra(UTENTE_A[0] if o.respinto_uguale else UTENTE_B[0],
+                    PAROLA_UTENTE)
             t0 = time.time()
             oss = None
             while time.time() - t0 < 25:
@@ -1427,6 +1689,7 @@ def scena_capsula(o):
                 ritardo = e["t"] - t_cong
             esiti = oss.get("esiti") or []
             c["frase"] = esiti[-1]["testo"] if esiti else None
+            c["giudizio_frase"] = giudica_frase(oss, html, o.motivo_atteso)
             c["ritardo_dal_congedo_s"] = ritardo
             c["righe"] = [x["riga"] for x in oss.get("righe", [])]
             giri.append(c)
@@ -1476,11 +1739,63 @@ def scena_capsula(o):
     for f in frasi:
         _inf("la pagina ha mostrato: «%s»" % f)
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⛔⭐⭐ IL VERDETTO SULLA FRASE — ed e' quel che l'utente VEDE
+    # ═══════════════════════════════════════════════════════════════════════
+    _log("LA FRASE CHE L'UTENTE LEGGE — letta NEL BROWSER, e confrontata col file servito")
+    gf = [g.get("giudizio_frase") for g in giri if g.get("giudizio_frase")]
+    esito_frase = 0
+    if not gf:
+        _ko("⛔ nessuna frase giudicata: NON HO MISURATO")
+        esito_frase = 2
+    else:
+        def conta(chiave, valore):
+            return sum(1 for x in gf if x.get(chiave) is valore)
+
+        for chiave, testo in (
+                ("concordano",
+                 "⛔ la frase del BROWSER e la voce 0x%02x del FILE SERVITO "
+                 "coincidono byte per byte" % o.motivo_atteso),
+                ("dice_di_chi",
+                 "la frase dice DI CHI e' il limite (nomina il server) — "
+                 "predicato lessicale, vedi il riquadro"),
+                ("da_un_gesto",
+                 "la frase da' un GESTO che il prodotto offre davvero")):
+            si, no, nm = conta(chiave, True), conta(chiave, False), conta(chiave, None)
+            if nm:
+                _dub("%s: ⛔ NON MISURATO in %d giri su %d (si' %d · no %d)"
+                     % (testo, nm, len(gf), si, no))
+                esito_frase = max(esito_frase, 2)
+            elif si == len(gf):
+                _ok("%s — %d su %d" % (testo, si, len(gf)))
+            else:
+                _ko("%s — ⛔ solo %d su %d" % (testo, si, len(gf)))
+                esito_frase = max(esito_frase, 1)
+        # ⛔ E QUANDO I DUE TESTI NON COINCIDONO SI STAMPANO TUTT'E DUE: e' la
+        #    forma d'errore che questo pezzo esiste per prendere, e un rosso che
+        #    non fa vedere le due meta' non si puo' diagnosticare.
+        for x in gf:
+            if x.get("concordano") is False:
+                _ko("⛔⛔ IL BANCO CHE LEGGE IL FILE SAREBBE VERDE, IL BROWSER NO:")
+                _inf("    file servito (0x%02x): «%s»" % (x["motivo"], x["file"]))
+                _inf("    browser:              «%s»" % x["browser"])
+                break
+        verdi = sum(1 for x in gf if x.get("verdetto") == "verde")
+        rossi = sum(1 for x in gf if x.get("verdetto") == "rosso")
+        muti = sum(1 for x in gf if x.get("verdetto") is None)
+        (_ok if verdi == len(gf) else _ko)(
+            "verdetto sulla frase: ⭐ %d verdi · ⛔ %d rossi · %d non misurati "
+            "(su %d giri)" % (verdi, rossi, muti, len(gf)))
+
     os.makedirs(FUORI, exist_ok=True)
     with open(os.path.join(FUORI, "capsula.json"), "w") as fh:
-        json.dump({"giri": giri, "arrivate": arr, "su": len(giri)}, fh,
-                  indent=1, ensure_ascii=False)
-    return 0 if (giri and ign == 0) else 2
+        json.dump({"giri": giri, "arrivate": arr, "su": len(giri),
+                   "motivo_atteso": o.motivo_atteso,
+                   "voce_del_file": voce_del_file(html, o.motivo_atteso)},
+                  fh, indent=1, ensure_ascii=False)
+    if giri and ign == 0 and esito_frase == 0:
+        return 0
+    return 2
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1552,6 +1867,21 @@ def principale():
     a.add_argument("--durata", type=float, default=120.0)
     a.add_argument("--giri", type=int, default=10)
     a.add_argument("--marionette", type=int, default=2860)
+    # ⭐ Il motivo la cui voce si va a cercare nel file servito.  ⛔ Serve al
+    #    controllo negativo di punto 4: si tiene `0x0E` mentre si fa arrivare al
+    #    browser un congedo `0x0F`, e il banco DEVE accorgersi che il testo che
+    #    ha dichiarato giusto leggendo il file non e' quello che il browser ha
+    #    mostrato.  Un banco che legge solo il file non se ne accorge.
+    a.add_argument("--motivo-atteso", type=lambda s: int(s, 0),
+                   default=MOTIVO_PIENO,
+                   help="il motivo di §8.2 la cui voce si cerca nel file "
+                        "servito (predefinito 0x0E)")
+    # ⭐ Chi viene respinto.  ⛔ `--respinto-uguale` lo fa entrare con lo STESSO
+    #    utente dell'occupante: `posto_prendi()` allora risponde `0x0F` (posto
+    #    occupato) e non `0x0E` — due strade diverse, e la seconda serve
+    #    apposta a far divergere la frase dal file.
+    a.add_argument("--respinto-uguale", action="store_true",
+                   help="il respinto e' lo STESSO utente dell'occupante ⇒ 0x0F")
     a.add_argument("--con-schermo", action="store_true")
     a.add_argument("--senza-audio-silenzio", action="store_true",
                    help="⭐ il BRACCIO DI CONTROLLO: dichiara che il server e' "
