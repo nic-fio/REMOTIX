@@ -1401,6 +1401,24 @@ che **dice perché**.
 in `rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che lo segue — dove `SPECIFICHE.md` §5.5
 promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade.
 
+> ## ⏳ APERTA IL 24 AGOSTO 2026, PRONTA PER IL GIUDIZIO IL 25
+>
+> 📖 **`fasi/10-multi-tenant-e-il-budget.md`**.
+>
+> ⭐ **Il debito è saldato**: i `#define` a 16 erano **cinque, non due** (`MAX_ATTACCATE`,
+> `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — e quest'ultimo era **8**, un sesto numero ancora
+> diverso). Adesso scendono tutti da **`RCP_TETTO_SESSIONI`**, vale **dieci**, e si muove a caldo con
+> **`--tetto-sessioni N`**.
+>
+> ⛔⛔ **E la premessa della fase era sbagliata**: *«il budget del codificatore»*. `[M]` Il collo è la
+> **composizione** — **0,97 Gpixel/s** contro **1,86** — e a saturarlo è **`gnome-shell`**, non noi.
+> ⇒ `DECISIONI.md` **§4.6-nonies**.
+>
+> ⭐ **E quel che l'utente vede è stato prodotto**: due sessioni vere insieme (ne stanno **almeno
+> undici** sul desktop vero), e ⭐ **`BUDGET_PIENO 0x06` parte davvero**, con una frase che dice
+> *perché* — fino a questa fase era dichiarato in `rcp.h` e in `RCP.md` **e nessuna riga del server
+> lo mandava mai**.
+
 ---
 
 ## Fase 11 — KDE
