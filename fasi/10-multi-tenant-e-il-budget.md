@@ -137,7 +137,21 @@ fotogrammi chiave su 8 741**, anche dentro il crollo — a muoversi è il **rita
 ⇒ ⭐ La regola di `LEZIONI.md` §1.31 regge, **la colonna no**: quale sia il meccanismo **cambia col
 fenomeno**, e va cercato ogni volta (§1.34).
 
-## S.4 · ⛔ I quattro difetti di prodotto trovati, e **nessuno era il bersaglio**
+## S.4 · ⛔ I difetti di prodotto trovati, e **nessuno era il bersaglio**
+
+> ### ⛔⛔⛔ E I DUE PIÙ GRAVI SONO ARRIVATI PER ULTIMI — *25 agosto 2026, sera*
+>
+> | | |
+> |---|---|
+> | ⛔⛔⛔ **LA SESSIONE CHE NASCE CIECA** (§7.4) | `[M]` Su una sessione **appena nata** Mutter non annuncia nessun `wl_output` ⇒ **nessuna applicazione può aprire una finestra**. Firefox resta vivo e non dipinge mai; il compositore sta a **0,0 %**; zero fotogrammi. ⚠ **Intermittente**: `provanic3` ha avuto il monitor **2 volte e poi 6 volte no**; `provanic4/5/6` **mai**, su 98 · 55 · 50 tentativi. ⭐ Quattro ipotesi refutate una per una |
+> | ⛔⛔ **FERMARE IL SERVER PORTA VIA TUTTE LE SESSIONI** (§7.5) | `[M]` Aggiornando la 7730 alle **18:14:29**, la sessione dell'utente è morta con l'unità — finestre comprese. ⇒ **Oggi aggiornare il server significa buttare fuori tutti**, ed è il danno che `DECISIONI.md` §4.7 vieta a chiunque di provocare |
+>
+> ⭐⭐ **E li ha fatti emergere il REGISTA**, chiedendo una prova che obbligava a **partire da zero** —
+> ⛔ cosa che in tutta la fase **non era mai stata fatta**. La lezione è `LEZIONI.md` **§1.39**, ed è
+> la ragione della **fase 11**.
+>
+> ⚠ **Che cosa NON toccano**: i numeri di capacità di §6 e §10, presi su sessioni che **disegnavano
+> davvero**. ⛔ **Che cosa toccano**: la consegna.
 
 | | |
 |---|---|
@@ -156,11 +170,16 @@ fenomeno**, e va cercato ogni volta (§1.34).
 | `DECISIONI.md` §4.6 | «dieci sessioni GNOME ferme sono ~12 GB dei 31» | **1,8-1,9 GB** — sbagliata di **sei volte** |
 | `DECISIONI.md` §3.1-bis punto 2 | «dieci × 30 Mbit/s = 300 Mbit/s sul filo» | **22 Mbit/s**, lo **0,2 %** di una scheda da 10 Gbit/s |
 
-## S.6 · ⭐⭐⭐ COME SI SCRIVE IL BUDGET — e ⏳ il prodotto **non è ancora stato toccato**
+## S.6 · ⭐⭐⭐ COME SI SCRIVE IL BUDGET — **e poi è stato scritto**
 
-⭐ **Nessuna riga di `src/` è cambiata**: l'ordine del regista era *«prima si misura»*, e questi sono
-**due giri di sole misure**. Il disegno di dove mettere le mani sta in **§3**; le decisioni che
-aspettano, in **§8**.
+⛔ *Scritto dopo i due giri di sole misure, quando `src/` era ancora intatto: l'ordine del regista
+era «prima si misura».*
+
+> ### ⭐⭐ E POI: *«prima applica le patch, poi scrivi il prodotto e dopo rifai i test»*
+>
+> ⇒ Il budget **è nel prodotto** (`src/budget.c`, `src/budget.h`), con le sue tre manopole; i
+> `#define` a 16 sono diventati **uno**; `BUDGET_PIENO 0x06` **parte davvero**. Quel che è stato
+> costruito sta in **§5**, le cure in **§5.1-5.13**.
 
 ⭐⭐ **E la forma del budget adesso è misurata, non ipotizzata:**
 
@@ -3519,6 +3538,10 @@ servizio**: aggiornare senza fermare nessuno.
 
 ⭐ **E per intanto la regola pratica**: prima di riavviare il server **si guarda chi c'è**, come §4.7
 già impone a chi vorrebbe spegnere la macchina.
+
+⚠ **E oggi non costa niente, e va detto**: *«nessuno sta lavorando sul server, REMOTIX è
+ancora in sviluppo»* — l'utente, 25 agosto 2026. ⇒ ⭐ **Il rilievo non è un'emergenza: è un
+confine scritto adesso perché il giorno in cui ci sarà qualcuno dentro, si sappia già.**
 
 ---
 

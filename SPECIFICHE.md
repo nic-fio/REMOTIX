@@ -380,6 +380,10 @@ inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
 > ⭐ **Non è una promessa rotta: è un confine che non era tracciato.** Sta qui perché il giorno in cui
 > il prodotto diventerà un servizio da aggiornare senza fermare nessuno — **fase 14** — questo è il
 > punto da cui si riparte.
+>
+> ⚠ **E oggi non costa niente, e va detto**: *«nessuno sta lavorando sul server, REMOTIX è
+> ancora in sviluppo»* — l'utente, 25 agosto 2026. ⇒ ⭐ **Non è un'emergenza: è un confine
+> scritto adesso perché il giorno in cui ci sarà qualcuno dentro, si sappia già.**
 
 ### 5.2-bis ⭐ E finisce quando l'utente esce — le due uscite non sono la stessa
 
