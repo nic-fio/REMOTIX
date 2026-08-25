@@ -3506,4 +3506,73 @@ mancante, nessun accorgimento**: l'ambiente giusto e una `~/.cache` che è sua.
 
 ## §10 · Il giudizio dell'utente
 
+### ⭐⭐⭐⭐⭐ 25 agosto 2026, sera — **il prodotto vero, un video 4K, e un filo a 10 Mbit/s**
+
+> *«Sono dentro. Sto riproducendo un video di YouTube a 4K. **Perfetto**.»*
+>
+> *E poi, dopo aver strozzato lui stesso la banda del tablet:*
+>
+> *«Il video mostra degli artefatti, ma è normale: **siamo sotto le specifiche**. Però **audio e
+> video fluidi e in sync**.»*
+
+⭐ **La prova se l'è disegnata lui.** Alla proposta di strozzare a 30 Mbit/s è stato messo davanti il
+numero — `[M]` quel video viaggiava a **6,0 Mbit/s**, cioè trenta sono **cinque volte** quel che
+serve — e ha risposto **scendendo a 10** e strozzando ⭐ **il tablet**, non il server: cioè
+**il percorso vero**, dal lato del client, che è la scena che un utente vero produce.
+
+#### `[M]` Le due misure, prese dal registro **senza toccare la sua sessione**
+
+| | filo libero | ⭐ tablet a 10 Mbit/s |
+|---|---|---|
+| **fotogrammi consegnati** | 38,5/s | ⭐ **37,4/s** — *praticamente uguali* |
+| **byte a fotogramma** | 19 377 | ⭐ **10 680** — **la metà** |
+| **banda** | 6,0 Mbit/s | ⭐ **3,20 Mbit/s** — **la metà** |
+| **la coda sul filo** | vuota | ⭐ **vuota** — `arretrato massimo 0, posti 2` |
+| **il motore che COMPONE** (`rcs0`) | 41,3 % | **45,6 %** — *la scena si muove come prima* |
+
+⇒ ⭐⭐⭐ **Non ha rallentato: ha compresso di più.** Ha **dimezzato la banda senza perdere un
+fotogramma** e senza mettere niente in coda — ed è alla lettera il secondo principio di
+`SPECIFICHE.md`: ⭐ *«degradare, non fallire»*.
+
+⚠ E il margine che gli restava: **3,2 su 10 Mbit/s**, cioè il **32 %** del filo concesso.
+
+> ### ⛔ E UN NUMERO CHE STAVA PER DIVENTARE UN DIFETTO CHE NON C'È
+>
+> Il primo colpo d'occhio, **mentre il video si stava rimettendo in moto**, diceva **14,0 fot/s e
+> 0,17 Mbit/s**: sembrava un crollo, e con la coda vuota sembrava pure *«il prodotto si trattiene
+> da solo»*.
+>
+> ⛔ **Non lo era: era il transitorio.** ⭐ **Il testimone che l'ha smascherato è il motore di
+> disegno** — a **45,6 %**, cioè **la scena si stava muovendo eccome**. ⇒ Il calo non poteva essere
+> «non c'è niente da mandare».
+>
+> ⭐⭐ **La regola**: prima di attribuire un calo al prodotto, si guarda **quanta sollecitazione sta
+> arrivando** (`LEZIONI.md` §1.30). Qui la sollecitazione c'era, e la spiegazione era **un'altra
+> ancora**: il video non aveva ancora ripreso a scorrere.
+
+#### ⭐⭐ E questo giudizio chiude un `[?]` della FASE 9
+
+`fasi/09-la-qualita-e-la-degradazione.md` lasciava aperta la metà **AV** del sincronismo — *«non è
+rimisurata: vuole quel browser»* — ⛔ **e quel browser non partiva** (§20.1-ter, ora refutata).
+
+⇒ ⭐ **Adesso è stata giudicata**, sulla scena più dura che ci sia — **un video 4K su un filo sotto
+le specifiche** — e il verdetto è dell'utente: **«audio e video fluidi e in sync»**.
+
+⚠ **E la parola che conta è la sua**: *«artefatti, ma è normale: siamo sotto le specifiche»*.
+⇒ ⭐ **Non è indulgenza: è il metro giusto.** Il prodotto non ha promesso 4K a 10 Mbit/s; ha promesso
+di **non mentire e non sbriciolarsi**, e sotto il pavimento dichiarato ha consegnato **artefatti
+visibili con la fluidità e il sincronismo intatti** — cioè ha speso il poco che aveva **dove
+l'utente se ne accorge di meno**.
+
+---
+
+## §10-bis · Che cosa manca ancora per chiudere
+
+⛔ **Due decisioni, e sono sue** — stanno in fondo a **§8.2**: **QVBR** (accendere il tetto di banda
+della fase 9, oggi spento) e i **numeri di fabbrica** (tetto **10**, riserva **0,5**).
+
+---
+
+## §10-ter · *(il posto del giudizio, come era stato preparato)*
+
 *(la fase si chiude qui, e non prima)*

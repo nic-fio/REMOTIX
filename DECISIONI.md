@@ -2573,6 +2573,65 @@ capacità del codificatore. ⭐ **Il numero che governa il prodotto è quello de
 **desktop vero** — finestre, trascinamenti, strappi — `[M]` **almeno undici, e il soffitto non è
 stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
 
+### 4.6-decies ✅ ⭐⭐⭐⭐ **Il metro sotto le specifiche: «artefatti sì, fluidità e sincronismo no»**
+
+*Detto dall'utente il **25 agosto 2026**, davanti al prodotto vero — un video **4K** dentro il
+desktop remoto, con la banda del suo tablet strozzata a **10 Mbit/s**, cioè **sotto il pavimento
+dichiarato** di 30:*
+
+> *«Il video mostra degli artefatti, ma è normale: siamo sotto le specifiche. Però **audio e video
+> fluidi e in sync**.»*
+
+⭐⭐ **È una decisione, non un complimento: dice che cosa si può spendere quando non c'è abbastanza.**
+
+| ⭐ **si può perdere** | ⛔ **non si può perdere** |
+|---|---|
+| **la nitidezza** — artefatti di compressione visibili | ⛔ **la FLUIDITÀ**: il movimento a scatti si nota subito, e stanca |
+| il dettaglio nelle scene veloci | ⛔ **il SINCRONISMO** fra audio e video: sfasati, diventano insopportabili in pochi secondi |
+
+⇒ ⭐ **Sotto il pavimento il prodotto spende il poco che ha dove l'utente se ne accorge di meno**, e
+lo fa **in questo ordine**. ⛔ *Non è indulgenza: è il metro.* Il prodotto non ha mai promesso il 4K
+a 10 Mbit/s — ha promesso di **non mentire e non sbriciolarsi** (`SPECIFICHE.md` §2, *«degradare, non
+fallire»*), e sotto le specifiche quella promessa si onora **così**.
+
+> ### ⭐⭐ E la prova se l'è disegnata lui — con la correzione giusta, due volte
+>
+> 1. Alla proposta di scendere a **30 Mbit/s** gli è stato messo davanti il numero — `[M]` quel
+>    video viaggiava a **6,0 Mbit/s**, cioè trenta sono **cinque volte** quel che serve — e ⭐ **ha
+>    sceso a 10**;
+> 2. ⭐⭐ e ha strozzato **il tablet**, non il server: cioè **il percorso vero**, dal lato del client
+>    — che è la scena che un utente vero produce, e non quella comoda da fabbricare.
+>
+> `[M]` **E il prodotto ha risposto dimezzando la banda senza perdere un fotogramma**: 38,5 → **37,4
+> fot/s**, 6,0 → **3,20 Mbit/s**, ⭐ con la **coda del filo vuota** e il motore di composizione
+> **fermo sullo stesso 41-46 %** — cioè la scena si muoveva come prima.
+> ⇒ **Non ha rallentato: ha compresso di più.**
+
+⚠ **E questo giudizio chiude un `[?]` della fase 9**: la metà **AV** del sincronismo, rimasta aperta
+perché *«vuole quel browser»* — ⛔ e quel browser non partiva per una ragione che non era la sua
+(§4.6-undecies).
+
+### 4.6-undecies ✅ ⛔⛔ **Il difetto di un inquilino solo che ne blocca nove: `~/.cache -> /tmp`**
+
+*Trovato il **25 agosto 2026**, dopo che l'utente aveva detto tre volte «Firefox non funziona».*
+
+`/etc/skel/.cache` è un **collegamento a `/tmp`**, e `src/provisiona.sh` crea gli utenti con
+`useradd -m`, che **copia lo scheletro**. Firefox tiene il profilo *locale* sotto
+`$HOME/.cache/mozilla` = **`/tmp/mozilla`** ⇒ ⛔ **il PRIMO utente che apre il browser se la prende a
+modo `0700`, e per tutti gli altri il profilo non nasce.**
+
+⭐⭐ **E la decisione che ne discende, che vale oltre questo caso**: ⛔ **una macchina multi-tenant non
+eredita solo i difetti di quella a un utente: ne SVEGLIA di dormienti.** ⇒ Quel che è *«raro»* con un
+inquilino può essere ***certo*** con dieci, e va cercato **prima**, non aspettato.
+
+⚠ **La cura sta in `src/provisiona.sh`** — cioè **nella macchina, non nel prodotto**
+(`SPECIFICHE.md` §5.9, parte A) — e ⛔ **il predicato che la verifica non guarda il collegamento:
+PROVA A SCRIVERE**, perché *«scritto non è in vigore»* (**E1**).
+
+⛔ **E il costo, dichiarato**: quel difetto ha tenuto l'utente **due fasi** davanti a un browser che
+non partiva, con la spiegazione *«non è nostro»* — ⇒ ⭐ **la spiegazione che non chiede di continuare
+a cercare.** La lezione di metodo è `LEZIONI.md` **§1.38**.
+
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
 *Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «no, nessuno può spegnere,

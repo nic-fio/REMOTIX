@@ -4537,7 +4537,29 @@ giudicarlo — ed è la **seconda** delle due letture tenute aperte in §16.4, n
 
 ⏳ **Che cosa resta**: la metà `AV` non è stata rimisurata (vuole il browser, e su quella macchina
 Firefox non parte — §20.1-ter). Tutto quel che sta **prima** del browser è pulito; la conferma
-diretta del 331 aspetta quello strumento. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
+diretta del 331 aspetta quello strumento.
+
+> ### ⭐⭐⭐ E IL GIUDIZIO È ARRIVATO — **25 agosto 2026, fase 10**
+>
+> ⛔ *Il motivo per cui questo `[?]` era rimasto aperto era falso*: Firefox **non era rotto**, era
+> `~/.cache -> /tmp` (§20.1-ter, **refutata**). ⇒ Tolto quello, il browser parte, e la prova si è
+> potuta fare.
+>
+> ⭐ **E l'utente l'ha giudicata sulla scena più dura che ci sia** — un video **4K** dentro il
+> desktop remoto, con la banda del suo tablet strozzata a **10 Mbit/s**, cioè **sotto il pavimento
+> dichiarato**:
+>
+> > *«Il video mostra degli artefatti, ma è normale: siamo sotto le specifiche. Però **audio e video
+> > fluidi e in sync**.»*
+>
+> ⇒ ⭐ **La metà `AV` del sincronismo ha il suo giudizio.** ⚠ **Non un numero**: un giudizio — il
+> `[M]` dei **331 ms** e il termine di Opus restano `[?]`, e per quelli serve ancora lo strumento.
+> ⭐ Ma la domanda che contava — *«all'orecchio e all'occhio, stanno insieme?»* — ha una risposta, ed
+> è **sì**, presa dove il metro è l'utente (**I8**).
+>
+> `[M]` E accanto al giudizio ci sono i numeri della stessa scena, letti dal registro senza toccarla:
+> **37,4 fot/s**, **3,20 Mbit/s**, ⭐ **coda vuota** — la banda **dimezzata senza perdere un
+> fotogramma**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` §10. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
 (nel repo non esiste un decodificatore Opus, `07-b42-giudice.py:121`).
 
 ⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
