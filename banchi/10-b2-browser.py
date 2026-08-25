@@ -1360,12 +1360,28 @@ def aspetta_posto(riga0, utente, tetto=90):
 
 def scena_capsula(o):
     _log("LA SCENA: tabella PIENA, e il respinto e' un browser vero che NON si stacca")
-    rc, out, _ = root("grep -h '^#define MAX_ATTACCATE' %s/src/rcp.c" % ALB)
+    # ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+    #   Prima il tetto era `#define MAX_ATTACCATE 16` in `rcp.c`; ora e' UNO,
+    #   `RCP_TETTO_SESSIONI` in `rcp.h`, e `MAX_ATTACCATE` lo segue.  ⛔ La
+    #   guardia vecchia cercava la STRINGA «MAX_ATTACCATE 16»: non trovandola
+    #   piu' NON dava rosso — cieca nel verso permissivo — e misurava la scena
+    #   «tabella PIENA» su una tabella da sedici che un occupante non riempie.
+    #   ⇒ Adesso si legge il NUMERO EFFETTIVO da `rcp.h` e si pretende che sia
+    #     abbastanza piccolo perche' un occupante solo riempia la tabella.
+    rc, out, _ = root(
+        "grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h" % ALB)
     _inf("il binario in prova: %s" % (out or "").strip())
-    if "MAX_ATTACCATE 16" in (out or ""):
-        _ko("⛔ l'albero ha ancora MAX_ATTACCATE 16: riempirlo vorrebbe dire "
-            "sedici sessioni grafiche.  Ricompila con "
-            "`MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`")
+    m = re.search(r"^#define\s+RCP_TETTO_SESSIONI\s+(\d+)", (out or ""), re.M)
+    if m is None:
+        _ko("⛔ non ho potuto leggere RCP_TETTO_SESSIONI in %s/src/rcp.h: "
+            "NON MISURO (None non e' un tetto)" % ALB)
+        return 2
+    tetto = int(m.group(1))
+    if tetto != 1:
+        _ko("⛔ il tetto EFFETTIVO e' %d, non 1: con un occupante solo la "
+            "tabella non si riempie e la scena misurerebbe un server LIBERO.  "
+            "Ricompila con `MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`"
+            % tetto)
         return 2
 
     riga0 = righe_registro()

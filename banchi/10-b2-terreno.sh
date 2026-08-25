@@ -104,15 +104,33 @@ porta)
 	ok "sorgenti in $ALBERO"
 
 	if [ -n "$MAX_ATT" ]; then
-		log "2 · ⛔ IL SED, sulle DUE copie gemelle — MAX_ATTACCATE=$MAX_ATT"
-		ssh -o BatchMode=yes "$MACCHINA" "
-			set -e
-			for f in $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c; do
-				sed -i 's/^#define MAX_ATTACCATE 16\$/#define MAX_ATTACCATE $MAX_ATT/' \$f
-				grep -n '^#define MAX_ATTACCATE' \$f
-			done
-			cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle: uguali'
-		" || { ko "⛔ il sed non e' riuscito"; exit 2; }
+		log "2 · ⛔ IL SED, sulle DUE copie gemelle — RCP_TETTO_SESSIONI=$MAX_ATT"
+		# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+		#
+		#   Prima erano QUATTRO `#define` a 16 copiati a mano, e questo copione
+		#   sostituiva `#define MAX_ATTACCATE 16` in `rcp.c`.  ⛔ Dopo C3 quella
+		#   riga dice `#define MAX_ATTACCATE RCP_TETTO_SESSIONI`: il modello NON
+		#   c'e' piu', il `sed` usciva **0 senza sostituire**, il controllo
+		#   guardava solo il codice d'uscita, il terreno dichiarava «gemelle:
+		#   uguali» e COMPILAVA COL TETTO 16 — cioe' la scena «tabella PIENA»
+		#   misurata su una tabella da sedici che due clienti non riempiono mai.
+		#   ⇒ Adesso il numero e' UNO, `RCP_TETTO_SESSIONI` in `rcp.h`, e questo
+		#     `sed` CONTA se ha morso su tutt'e due le gemelle e si FERMA se no.
+		#     (E' la stessa cura di `10-b93-terreno.sh:112`, portata qui.)
+		ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe misurato una tabella da sedici"; exit 2; }
+set -e
+n=0
+for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
+	prima=\$(grep -c '^#define RCP_TETTO_SESSIONI 16\$' "\$f" || true)
+	sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $MAX_ATT/' "\$f"
+	dopo=\$(grep -c '^#define RCP_TETTO_SESSIONI $MAX_ATT\$' "\$f" || true)
+	echo "\$f: prima=\$prima dopo=\$dopo"
+	if [ "\$prima" = 1 ] && [ "\$dopo" = 1 ]; then n=\$((n+1)); fi
+done
+if [ "\$n" != 2 ]; then echo '⛔ il sed NON ha morso su tutt e due le gemelle'; exit 3; fi
+grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
+SED_FINE
 	else
 		log "2 · ⭐ NESSUN SED: l'albero e' quello del repository, intatto"
 	fi
@@ -129,8 +147,8 @@ porta)
 
 	log "4 · ⛔ CHE COSA HO COSTRUITO — letto dal BINARIO, non dai sorgenti"
 	ssh -o BatchMode=yes "$MACCHINA" "
-		echo \"#define src:      \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/src/rcp.c)\"
-		echo \"#define gemella:  \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/banchi/rcp/rcp.c)\"
+		echo \"#define src:      \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h)\"
+		echo \"#define gemella:  \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/banchi/rcp/rcp.h)\"
 		echo \"#define figli:    \$(grep -h '^#define MAX_FIGLI' $ALBERO/src/figlio.c)\"
 		echo \"md5 binario:      \$(md5sum $ALBERO/src/remotix | cut -d' ' -f1)\"
 		echo \"md5 rcp.c:        \$(md5sum $ALBERO/src/rcp.c | cut -d' ' -f1)\"
