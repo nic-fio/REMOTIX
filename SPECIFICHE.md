@@ -455,7 +455,18 @@ Più utenti possono avere ciascuno la propria sessione grafica remota, indipende
 sessioni sono facilissime o impossibili secondo la qualità che ciascuna chiede.
 
 Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — la sola integrata regge
-`[?]` una cinquantina di sessioni al minimo, **8-10 a 1080p30**, **una sola a 4K60**.
+~~`[?]` una cinquantina di sessioni al minimo, **8-10 a 1080p30**, **una sola a 4K60**.~~
+
+> ### ⛔⛔ MISURATA IL 24 AGOSTO 2026, E ERA SBAGLIATA IN TUTT'E TRE LE RIGHE
+>
+> 📖 `fasi/10-multi-tenant-e-il-budget.md` §6.2, §6.5, §6.6 — ⛔ **i numeri non si copiano qui**.
+>
+> ⭐ **Il codificatore regge molto di più** di quel che questa riga diceva. ⛔ **Ma il codificatore
+> non è il limite**: col desktop vero dietro, a cedere per prima è la **composizione** — il motore di
+> **rendering** della stessa scheda — e la macchina si ferma a **sei** sessioni sature.
+>
+> ⇒ ⛔ **La frase «il limite vero lo pone il codificatore» va corretta**, ed è la decisione **D1**
+> che quel documento matura e che aspetta l'utente.
 
 **Quando il budget è pieno si rifiuta, dichiarando il motivo.** Non si fa degradare chi sta già
 lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,

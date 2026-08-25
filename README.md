@@ -4,7 +4,79 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **24 agosto 2026**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **25 agosto 2026**
+>
+> ## ⏳⭐⭐⭐ LA FASE 10 È APERTA — *multi-tenant e il budget*, **due giri di misure**
+>
+> 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)** — la sintesi in
+> testa, §2.1 il verdetto sulle dieci previsioni, §6 le misure, §8 le decisioni che aspettano.
+>
+> ⭐ **L'ordine l'ha posto il regista**: *«prima si misura, e poi simuli 10 utenti veri»*. ⛔ **`src/`
+> non è stato toccato**: sono due giri di **sole misure**, e il disegno di dove mettere le mani (§3)
+> adesso ha i numeri accanto.
+>
+> ### ⭐⭐⭐⭐ IL COLLO NON È IL CODIFICATORE — **è la composizione**
+>
+> `DECISIONI.md` §4.6 costruisce tutto il budget su *«il limite vero lo pone il **codificatore**»*.
+> `[M]` **Su questo ferro non è vero.**
+>
+> | | soffitto |
+> |---|---|
+> | il **codificatore** | **1,86 Gpixel/s** in H.264 · ⭐ **2,33 in HEVC**, che è quel che il prodotto negozia **per primo** |
+> | ⭐⭐ **la COMPOSIZIONE** | ⛔ **0,97 Gpixel/s** — **la metà**. E a saturare quel motore è **`gnome-shell` al 99,5 %**, mentre `remotix` sta a **0,00 %** |
+>
+> ### ⭐⭐⭐ QUANTE NE STANNO — e dipende da **che cosa fanno**, non da quante sono
+>
+> | scena | quante | che cosa succede alla prima |
+> |---|---|---|
+> | **satura** (tutto lo schermo cambia a ogni fotogramma) | **6** | ⛔ l'ottava le porta tutte a **1,5 fot/s** |
+> | ⭐ **desktop vero** (finestre, trascinamenti, strappi) | ⭐ **almeno 11**, e ⛔ **il soffitto non è stato trovato: sono finiti gli utenti** | **−7,7 %**, e il ritardo **non si muove** |
+> | **ferme** | ⭐ **dieci accanto a una che lavora costano +0,2 %** | l'unica risorsa che consumano è la **memoria** |
+>
+> ⭐ Il giudizio del regista — *«sei RDP su un'integrata modesta non è un cattivo risultato»*
+> (`DECISIONI.md` **§4.6-septies**) — ⭐ **ne esce rafforzato**: sulla scena in cui vive l'utente ne
+> stanno almeno il doppio.
+> ⇒ ⛔⛔ **Un tetto che conta le TESTE sbaglia in tutt'e due i versi**: rifiuta dieci inquilini che non
+> costano niente, e ammette l'ottavo che fa crollare la macchina.
+>
+> ### ⭐⭐⭐⭐ IL DIRUPO HA UN MECCANISMO, e **il budget si può calcolare prima**
+>
+> ⭐ **La prova sta in una riga**: stessa popolazione — otto sessioni, otto desktop, otto figli — si
+> **spegne una sola scena**, e `[M]` **il ritmo torna da 1,6 a 33,4 fot/s**. Rimettendola, il dirupo
+> si riproduce.
+> ⇒ ⛔ **Non cade sul numero di sessioni: cade sui PIXEL COMPOSTI**, e `[M]` il confine (**873-953
+> Mpixel/s**) **combacia col soffitto della composizione misurato da un altro banco**.
+> ⭐ E la catena: i compositori saturano il motore di disegno → il figlio resta fermo dentro l'`ioctl`
+> della scheda → la cattura non consegna → ⛔ **il codificatore non ha più niente da fare: non
+> rallenta, si ferma.**
+>
+> ⛔ **Sei piste su sei erano false** e sono state refutate una per una — compresa **l'aritmetica dei
+> buffer, che sembrava la migliore, refutata da chi l'aveva proposta**.
+>
+> ⇒ ⭐⭐ **La moneta è il pixel** (ai cedimenti i Mpixel/s coincidono entro lo **0,6 %** fra 1080p e
+> 4K, i fot/s differiscono del **74,9 %**), ⛔ **ma prima dei pixel si guarda il RITARDO**, o il conto
+> dice *«c'è posto»* mentre tutti stanno a 1,5 fot/s.
+>
+> ### ⛔ SETTE DIFETTI DI PRODOTTO, e **cinque non c'entrano col multi-tenant**
+>
+> ⛔⛔⛔ **il figlio muore di SIGSEGV su una larghezza di finestra qualsiasi** — 1268, quella che
+> Firefox apre di suo: **3 su 3** · ⛔⛔⛔ **regolatore e linea morta formano un ANELLO CHIUSO che
+> sfratta chi lavora** (cinque client in 1,3 s; ⭐ spegnendo l'una **o** l'altra, 8 su 8
+> sopravvivono) · ⛔⛔ **l'undicesimo è AMMESSO e non vede un pixel**, e sul filo non esce niente ·
+> ⛔⛔ **il guardiano di logind è sincrono nel ciclo che consegna**: la frontiera si restringe come
+> **1/N** e taglia i 300 ms che il codice si concede **a quattro inquilini** · ⛔ **la linea morta
+> stacca su un buco di 10 s fra due scene** · ⚠ **il registro non dice di chi è** (solo il **4,2 %**
+> delle righe di diagnosi; ⭐ la cura è **tre righe**) · ⛔ **QVBR esiste, funziona, e nessuno lo
+> accende**.
+>
+> ### ⭐ E QUATTRO STIME DEI DOCUMENTI ERANO SBAGLIATE, tutte **nel verso comodo**
+>
+> «dieci sessioni GNOME ferme sono ~12 GB» → `[M]` **1,8-1,9 GB** · «dieci × 30 Mbit/s = 300 Mbit/s»
+> → `[M]` **22** · «1080p30: 8-10, giusto al limite» → **il 33 %** del codificatore · «~26 byte/s a
+> sessione ferma» → `[M]` **399-497**.
+> ⭐ **E una che era GIUSTA**: il **44,6 Mbit/s** della fase 9, rimisurato, dà **46,9** — il **6 %**.
+>
+> ---
 >
 > ## ✅⭐⭐⭐ LA FASE 9 È CHIUSA — *la qualità e la degradazione*
 >

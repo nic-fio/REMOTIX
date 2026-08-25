@@ -1356,7 +1356,50 @@ questa fase.
 
 ---
 
-## Fase 10 — Multi-tenant e il budget
+## Fase 10 — Multi-tenant e il budget ⏳ **APERTA il 24 agosto 2026**
+
+> ### ⛔⛔⛔ IL PRIMO GIRO DI MISURE HA SMENTITO LA PREMESSA — *24 agosto 2026, sera*
+>
+> 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)**, la sintesi in
+> testa. ⛔ Qui non si copiano i numeri: si dice che cosa cambia **per questo piano**.
+>
+> **Il banco che questa pagina prescrive** — *«si satura il codificatore di proposito e si verifica
+> che l'undicesimo riceva `BUDGET_PIENO`»* — ⛔ **è stato fatto, e ha trovato che il codificatore non
+> è la grandezza da saturare**: col desktop vero dietro, a cedere è il motore di **rendering**, e il
+> motore video non passa mai il **27 %**.
+>
+> ⇒ ⭐ **La fase resta questa, il numero da misurare no**: non «pixel al secondo di codifica», ma la
+> **capacità di comporre**.
+>
+> ⛔ E il resto della riga di questa pagina è misurato: `[M]` sulla **scena satura** ne stanno **sei**;
+> l'arrivo del settimo toglie il **28 %** a chi c'era già e l'ottavo li porta tutti a **1,5 fot/s** —
+> cioè *«che i dieci che stavano lavorando non peggiorino»* **è violato oggi**, con **104 rossi
+> appaiati**.
+>
+> ### ⭐⭐⭐ MA IL SECONDO GIRO HA SPOSTATO IL NUMERO — *25 agosto 2026*
+>
+> `[M]` Sul **desktop vero** — finestre, trascinamenti, strappi — **ne stanno almeno UNDICI senza un
+> graffio** (−7,7 %, ritardo fermo), e ⛔ **il soffitto non è stato trovato: sono finiti gli utenti,
+> non la macchina**. `[M]` E **dieci sessioni FERME accanto a una che lavora costano +0,2 %**.
+> ⇒ ⛔⛔ **Un tetto che conta le TESTE sbaglia in tutt'e due i versi**: rifiuta dieci inquilini che non
+> costano niente, e ammette l'ottavo che fa crollare la macchina.
+> ⭐ **Il tetto è un conto di LAVORO**, e la moneta è il **pixel composto**.
+>
+> ⭐⭐ **E il dirupo ha un meccanismo, misurato**: stessa popolazione, si spegne **una sola scena** e
+> `[M]` il ritmo torna **da 1,6 a 33,4 fot/s**. Il confine (**873-953 Mpixel/s composti**) **combacia
+> col soffitto della composizione** misurato per un'altra strada. ⇒ **Il prodotto deve fermarsi PRIMA
+> del dirupo, su una grandezza che sa calcolare.**
+>
+> ⛔ **E il giudizio del regista ha cambiato il metro della fase** (`DECISIONI.md` §4.6-septies):
+> *«sei RDP su un'integrata modesta non è un cattivo risultato»* ⇒ **la fase non deve far entrare
+> dieci: deve fermarsi dove si deve, DICENDOLO.** Il budget e il rifiuto motivato passano da contorno
+> a **cuore della fase**.
+>
+> ⚠ **Il debito con la scadenza scritta è più grosso di com'era scritto**: i `#define` a 16 sono
+> **quattro** (`rcp.c:886`, `figlio.c:91`, `aiutante.c:33`, `main.c:706`), tre dei quali **dichiarano
+> per iscritto un legame che il compilatore non conosce** — e ce n'è un **quinto a 8**
+> (`webtransport.c:5225 WT_PALCHI`) che **morde a nove**, cioè **prima del dieci promesso**.
+
 
 > ## ⭐⭐ SPOSTATA QUI DALLA CODA DEL PIANO — *16 agosto 2026, decisione dell'utente*
 >

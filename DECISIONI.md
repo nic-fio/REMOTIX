@@ -2290,6 +2290,19 @@ Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agos
 > ⭐ E la tabella del budget qui sopra resta `[?]` per un'altra ragione: `vainfo` dice **quali
 > profili** ci sono, non **quanti pixel al secondo**. Il numero di sessioni va misurato saturando,
 > ed è la fase 10.
+>
+> ### ✅⛔ SATURATO IL 24 AGOSTO 2026 — e la premessa di questa sezione **non ha retto**
+>
+> 📖 `fasi/10-multi-tenant-e-il-budget.md`, la sintesi in testa. ⛔ **I numeri non si copiano qui.**
+>
+> ⛔⛔ *«Il limite vero lo pone il **codificatore**»* — `[M]` **su questo ferro no**: il motore di
+> codifica non passa mai il **27 %** mentre il motore di **rendering** sta al **99,5 %**, e la
+> conversione di colore gira **sulle EU**, non sul motore che le sarebbe dedicato.
+> ⇒ ⭐ **Il budget resta un budget, come questa sezione ha deciso — ma di un'altra grandezza.**
+> È la decisione **D1** del documento di fase, e aspetta l'utente.
+>
+> ⚠ **E la stima della memoria di due righe più sotto è sbagliata di sei volte**, nel verso comodo:
+> *«dieci sessioni GNOME ferme sono ~12 GB dei 31»* — `[M]` sono **1,8-1,9 GB**.
 
 **Da cui il disegno**: nessun numero cablato nel programma. Il server tiene un **budget** — sa
 quanto sta già codificando e quanto può — e il dieci è il valore predefinito di un massimo
@@ -2473,6 +2486,39 @@ prima della copia zero è un budget da rifare.
 > qui né in `FASI.md` §05-la-sessione: era il numero di allora, e correggere una frase fra virgolette
 > è il modo più veloce per non sapere più che cosa è stato detto davvero.
 > ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
+
+### 4.6-septies ✅ ⭐⭐⭐ **Sei sessioni su un'integrata modesta NON sono un cattivo risultato** — il metro della fase 10
+
+*Posto dall'utente il **24 agosto 2026**, davanti al primo giro di misure: «tenendo conto che siamo
+su una scheda Intel integrata non particolarmente performante, 6 RDP attivi contemporaneamente non
+mi sembra un cattivo risultato».*
+
+⛔ **È il metro della fase, non un commento** — e cambia che cosa la fase deve andare a prendere.
+
+`[M]` Il banco aveva riferito *«ne stanno **sei**, non dieci»* e l'aveva marcato come una mancanza,
+perché `SPECIFICHE.md` §5.5 promette dieci. ⭐ **Il giudizio ribalta il segno**: dieci era un numero
+scritto **prima** che qualcuno avesse misurato il ferro, e il ferro è una **Intel UHD 730 integrata**
+— non una scheda potente. ⇒ **Sei sessioni grafiche vere, tutte a 38 fotogrammi al secondo con 10 ms
+di ritardo, sono la capacità onesta di questa macchina.**
+
+> ### ⇒ ⭐⭐ CHE COSA CAMBIA, E CHE COSA NO
+>
+> | | |
+> |---|---|
+> | ⭐ **cambia il bersaglio** | la fase non deve più *«far entrare dieci»*. Deve **fermarsi a sei dicendolo**: il budget e il rifiuto motivato passano da contorno a **cuore della fase** |
+> | ⛔ **non cambia il difetto** | `[M]` oggi il settimo **entra**, toglie il 28 % a chi c'era già, e l'ottavo porta tutti a 1,5 fotogrammi al secondo. Che sei sia un buon numero **rende più grave**, non meno, che il prodotto non sappia dire di no al settimo |
+> | ⭐ **e il numero non è del prodotto: è della macchina** | su un ferro più grosso sarà un altro. ⇒ Conferma §4.6 dove conta: **un budget, non un conteggio** — quel che va scritto nel codice è **come si misura la capacità**, non «sei» |
+>
+> ⚠ **E la grandezza da misurare resta quella nuova**: a cedere non è il codificatore ma la
+> **composizione** (vedi il riquadro di §4.6). Il numero «sei» è la conseguenza, non la causa.
+
+⭐ **E questa voce va letta insieme a `LEZIONI.md` §7.3 e all'invariante I8**: *il metro è quel che
+l'utente vede, non il numero che esce dal banco*. Un banco che confronta con una promessa scritta a
+tavolino dà **rosso su un buon risultato**, ed è esattamente quel che stava per succedere qui.
+
+⛔ **Corollario di metodo, che vale oltre questa fase**: ogni numero di prestazione di REMOTIX si
+dichiara **col ferro accanto**. *«Sei sessioni»* da solo non vuol dire niente; *«sei sessioni su una
+UHD 730 integrata»* è un risultato.
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 

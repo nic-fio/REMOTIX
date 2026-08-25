@@ -2377,3 +2377,141 @@ rifare, era la grandezza sbagliata.
 stato preso sul **più corto** dei due stalli osservati, perché un margine scritto sul numero
 fortunato non è un margine.
 
+
+
+### 1.34 ⭐⭐⭐ **La regola «il meccanismo accanto al sintomo» regge; la COLONNA no**
+
+*24 agosto 2026, fase 10.* La §1.31 era stata pagata in fase 9 con un fatto preciso: la **spirale di
+fotogrammi chiave** partiva **cinque volte prima** del calo che l'utente vedeva. ⇒ Da allora ogni
+banco porta la colonna delle chiavi accanto a quella dei fotogrammi/s.
+
+⛔ **In fase 10 quella colonna è rimasta a zero mentre il prodotto crollava**: `[M]` **0 chiavi su
+8 741 fotogrammi**, con la prima sessione passata da **39,60 a 0,96 fot/s**. A muoversi era il
+**ritardo** — da 10 ms a 1,2 s — cioè una grandezza che in fase 9 non era il primo avviso.
+
+⭐⭐ **La regola non era sbagliata, era stata capita male.** *«Porta il meccanismo accanto al
+sintomo»* non vuol dire *«porta sempre le chiavi»*: vuol dire che **per ogni fenomeno bisogna
+chiedersi quale sia il meccanismo**, e quello va cercato ogni volta. Una colonna che ha avvisato una
+volta diventa, il giro dopo, **una colonna che rassicura**.
+
+> ⛔ **Il segno che dice quando fermarsi**: se il sintomo peggiora e la colonna del meccanismo **non
+> si muove**, non è che il meccanismo non c'è — è che **si sta guardando quello dell'altra volta**.
+
+⚠ E il corollario che costa: le colonne **si accumulano**. Un banco della fase 10 porta fotogrammi/s,
+ritardo, chiavi, byte per fotogramma, occupazione di tre motori di GPU, CPU, memoria e filo — ⭐ ed è
+esattamente per questo che ha potuto attribuire il crollo al **motore di rendering** invece che al
+codificatore, che era l'imputato che tutti si aspettavano.
+
+### 1.35 ⭐⭐ **Un metro tarato serve anche a chi non l'ha scritto — e due banchi che non concordano vanno tenuti separati fino in fondo**
+
+*24 agosto 2026, fase 10.* Un agente ha tarato il metro dell'occupazione della GPU e ha scoperto che
+`drm-engine-video` misura **tempo occupato, non lavoro fatto**: `[M]` a parità di lavoro (30,00
+fotogrammi/s consegnati in tutt'e due i casi) dà **26,41 %** con la scheda a 300 MHz e **7,01 %** a
+1550 — **un fattore 3,8**.
+
+⭐ **Due conseguenze, e la seconda è quella che si trasferisce:**
+
+1. ⛔ **Una retta tirata a carico leggero non si estrapola**: il soffitto stimato da lì sarebbe stato
+   sbagliato **fino a un fattore quattro**. ⇒ **Un soffitto si misura a saturazione**, o bloccando la
+   grandezza che varia e **dichiarandolo**;
+2. ⭐⭐ **quel file ha evitato a un altro banco due difetti che non erano suoi**: la capacità del
+   motore letta come `100 %` invece di `200 %` (i motori sono due) e la trappola della frequenza.
+   ⇒ **Un metro tarato è un prodotto, non un attrezzo privato**, e va lasciato dove gli altri lo
+   trovino.
+
+⛔⛔ **E i tre banchi che hanno misurato lo stesso ferro hanno dato tre numeri diversi — tutti veri.**
+Il codificatore nudo regge **1,86 Gpixel/s**; con dieci desktop veri dietro si cede al **20 %** di
+quel numero. ⚠ La tentazione era **farli combaciare**. ⭐ Tenuti separati, la differenza si è
+spiegata da sé — la conversione di colore gira **sulle EU** e satura il motore di rendering — e la
+spiegazione **è il risultato della fase**. È §1.28, applicata prima di aver capito perché.
+
+
+### 1.36 ⭐⭐⭐ **Una grandezza che SATURA smette di informare — e allora si guarda la DOMANDA**
+
+*25 agosto 2026, fase 10.* Un banco cercava perché il prodotto, oltre una certa soglia, **precipitasse**
+invece di degradare. La colonna naturale era l'**occupazione** del motore di disegno della GPU.
+
+`[M]` **E l'occupazione non separava i due casi**: **99,2 %** nel braccio **sano**, **99,5 %** in
+quello **crollato**. ⛔ Sopra il 99 % quella colonna non dice più niente: è **satura in tutt'e due**.
+
+⭐⭐ **A discriminare era la DOMANDA**, cioè quanto lavoro veniva **chiesto**: `[M]` **808 Mpixel/s**
+nel caso sano contro **954** in quello crollato — e la prova che chiude è un braccio che fa **più
+disegni al secondo del caso che crolla** (480 contro 460) e **sta benissimo**, perché quei disegni
+sono **più piccoli**.
+
+> ⛔ **La regola**: quando una grandezza si avvicina al suo massimo, **cessa di essere un metro** e
+> diventa un semaforo acceso fisso. ⇒ Si passa alla grandezza **a monte** — quella che nessuno ha
+> ancora limitato — e la si misura **in unità di lavoro, non di eventi**.
+
+⚠ **E il corollario che è costato il numero giusto**: la stessa storia decide **in che unità si scrive
+il budget**. Contando **fotogrammi** la soglia sarebbe stata falsa (480 > 460 e non crolla); contando
+**pixel** è vera. `[M]` Ai punti di cedimento i Mpixel/s coincidono entro lo **0,6 %** al variare della
+tela, mentre i fotogrammi/s differiscono del **74,9 %**.
+
+⭐ Ed è la §1.34 vista da un altro lato: *la colonna che avvisa cambia col fenomeno* — qui cambia
+perché quella di prima **si è tappata**.
+
+### 1.37 ⛔⭐⭐ **Un difetto dedotto leggendo può azzeccare il MECCANISMO e sbagliare la CONSEGUENZA**
+
+*25 agosto 2026, fase 10.* Una lettura avversariale del codice aveva dedotto, senza toccare la
+macchina, che un guardiano interrogato **in modo sincrono** dentro il ciclo che consegna i fotogrammi
+avrebbe, a N inquilini, bloccato quel ciclo per `N × D` — e concludeva: *«butta fuori tutti e dieci»*.
+
+`[M]` Misurato: ⭐ **il meccanismo è giusto** (le chiamate per ripasso sono **1 · 3 · 5 · 7** a N =
+1/3/5/7: **lineare, come dedotto**) · ⭐ **la linearità è giusta** (a governare il danno è il prodotto
+`N × D`, e la sua composizione è irrilevante) · ⛔ **la conseguenza è sbagliata**: **zero sfratti in
+tutte e venti le celle**, fino a `P = 5 001 ms`. Lo sfratto si riproduce **una volta sola**, e solo
+come **transitorio**.
+
+⛔⛔ **E la conseguenza vera era peggiore di quella dedotta**: `[M]` a sette inquilini con un guardiano
+da **286 ms** — cioè **esattamente il bilancio che il codice si concede** — **ogni desktop crolla a
+1,3 fot/s e non viene scritta una riga**, perché non viene staccato nessuno. **Il degrado silenzioso
+non lascia traccia; lo sfratto almeno si vede.**
+
+> ⭐ **La regola**: una deduzione dal codice si valuta **in due pezzi separati** — *come funziona* e
+> *che cosa produce* — e il secondo **non si eredita dal primo**. ⛔ Un rilievo che li impacchetta
+> insieme si fa **ritirare per intero** quando il secondo cade, portandosi via anche il primo, che
+> era buono.
+
+⚠ E il banco se n'è accorto **solo perché contava quel che mordeva davvero** — chiamate arrivate,
+scene che disegnano, fotogrammi offerti — invece di aspettare che un rosso comparisse da sé (§1.30).
+
+### 1.38 ⛔⛔⛔ **Lo strato che COORDINA i banchi è un banco anche lui, e nessuno lo certifica**
+
+*24-25 agosto 2026, fase 10.* Dieci banchi in parallelo su **una** GPU si sono dati il turno con un
+lucchetto — lo stesso meccanismo, ben fatto, che la fase 9 aveva costruito per il `netem`. ⭐ **Il
+lucchetto ha fatto il suo mestiere**: nessuna misura è stata falsata da un vicino, e i banchi lo
+**dichiarano** invece di dedurlo. ⛔ **Ma il modo di aspettare il turno era rotto in cinque modi, e
+tutti e cinque della forma «silenzio invece di rosso».**
+
+| | il difetto | perché non si vedeva |
+|---|---|---|
+| 1 | ⛔ **è una corsa, non una coda**: vince chi arriva per primo dopo un rilascio, senza anzianità. `[M]` Un banco ha perso **cinque passaggi di mano** in due ore | il giro veniva **saltato** sotto un codice d'uscita che somigliava a un problema di terreno ⇒ **la domanda non veniva mai posta** |
+| 2 | ⛔⛔ **si può aspettare SÉ STESSI**: chi muore male lascia il lucchetto **col proprio nome**, e il successivo aspetta la propria scadenza. `[M]` **Ottanta minuti di GPU bloccati per tutti** | un lucchetto tenuto da **un nome vivo**: nessuno scassina, nessuno protesta |
+| 3 | ⛔ **i corridori orfani**: i pilota uccisi lasciavano vivo **l'aspettante**, che continuava a correre a loro nome. `[M]` Due vivi da **due ore** | se uno avesse vinto avrebbe tenuto la GPU **con nessuno a mollarla** |
+| 4 | ⛔⛔ **in bash i `trap` sono RIMANDATI** finché un figlio in primo piano non finisce ⇒ la pulizia **sembrava armata e dormiva** | si vedeva solo un pilota che *«non risponde»* |
+| 5 | ⛔ **una pulizia con modello globale**: `[M]` a fine giro combaciava con **24 clienti vivi di un altro banco, che stava misurando** | non li ha uccisi **solo per l'ordine in cui erano nati** |
+
+⭐⭐ **Le regole che ne escono, e la prima vale più di tutte:**
+
+> ⛔ **«Il turno non è arrivato» è un ESITO, e va distinto da «il terreno non regge» e da «non
+> giudico».** ⭐ **E solo lui si rimette in coda**: un **giudizio** non si rifà **mai**, o si finisce
+> per misurare due volte finché non esce il numero che piace.
+
+- ⭐ **Il rifiuto più tentante è quello da non concedere**: *«qualche casella non ha giudicato,
+  riprova»* è la strada esatta per il numero comodo;
+- ⛔ **Una scadenza sottostimata regala la GPU a metà misura**: il possesso si dichiara col margine
+  (§1.33 applicata alla durata — `[M]` 63 minuti stimati, **101 dichiarati**, tutt'e due stampati);
+- ⛔ **`pgrep -f` e `pkill -f` acchiappano la riga di comando che li esegue.** `[M]` **Tre** banchi si
+  sono uccisi il proprio pilota, e uno se n'è accorto perché il PID era quello della shell. ⇒ Il PID
+  è **quello che il pilota ha scritto di sé**, e i modelli si scrivono `campagn[a].sh`;
+- ⭐ **Un'unità vera batte `nohup`**: `[M]` un pilota è stato ucciso a metà verdetto perché **la
+  scadenza di una chiamata si è portata via l'intero gruppo di processi**;
+- ⛔ **Un file che esiste e non porta niente è peggio di un file che manca**: `[M]` un giro interrotto
+  ha scritto il suo file **senza i numeri**, perché la voce delle celle veniva assegnata solo se la
+  funzione tornava. **Sembra un risultato.**
+
+⚠⚠ **E la cosa più scomoda: due di queste cure erano GIÀ SCRITTE in questo progetto** — la trappola
+di `pgrep -f` sta in un banco della fase 10 stessa, e *«si chiudono SOLO le proprie sessioni»* era
+stato scritto pochi giorni prima. ⛔ **Il difetto non è la disattenzione: è che quelle cure vivono nei
+commenti dei banchi, e chi copia una riga non copia il riquadro.**
