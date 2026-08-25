@@ -90,10 +90,37 @@ def prendi(chi, secondi=900, attesa=0, dillo=True):
 
         altro, scad = stato()
         if scad is not None and scad > 0 and time.time() > scad:
-            # ⛔ Scaduto: si scassina, ma si DICHIARA chi e' stato scassinato.
+            # ⛔⛔ LO SCASSINO E' UNA CORSA, E VA FATTO CONFRONTANDO — 25 ago 2026.
+            #
+            #   Fra il `cat chi` di `stato()` e questo `rm -rf` passano centinaia
+            #   di millisecondi di rete.  In quella finestra **un altro
+            #   corridore puo' aver gia' scassinato e preso**, e allora questo
+            #   `rm -rf` cancellerebbe un lucchetto **valido e fresco**, non
+            #   quello scaduto che avevamo visto.
+            #
+            #   `[M]` 25 agosto: un banco ha stampato «SCASSINO «10-e2», scaduto
+            #   da 1 s» quaranta secondi dopo che uno `stato` diceva «10-e4,
+            #   scade fra 1802 s».  ⛔ Nessuno se n'e' accorto sul momento: due
+            #   banchi avrebbero potuto misurare insieme, e i due numeri
+            #   sarebbero stati **plausibili tutt'e due**.
+            #
+            # ⇒ Si rilegge il file e si cancella **solo se e' ancora lo stesso**
+            #   byte per byte.  E' un confronto-e-cancella: la finestra non si
+            #   chiude del tutto (non e' atomico nel nucleo), ma passa da
+            #   «centinaia di ms» a «il tempo di un comando».
             print("   ⚠   il lucchetto era di «%s», scaduto da %d s: SCASSINO"
                   % (altro, int(time.time() - scad)))
-            _root("rm -rf %s" % POSTO)
+            atteso = "%d %s" % (int(scad), altro)
+            # ⚠ Il confronto lo fa la macchina, in un comando solo: portarlo
+            #   qui vorrebbe dire riaprire la finestra che stiamo chiudendo.
+            cmd = (r"""bash -c 'letto=$(cat "POSTO/chi" 2>/dev/null); """
+                   r"""if [ "$letto" = "ATTESO" ]; then rm -rf "POSTO"; exit 0; """
+                   r"""else exit 4; fi'""")
+            cmd = cmd.replace("POSTO", POSTO).replace("ATTESO", atteso)
+            rc, _, _ = _root(cmd)
+            if rc == 4:
+                print("   ⭐  NON scassino: nel frattempo il lucchetto e'"
+                      " CAMBIATO — era di un altro, fresco.")
             continue
 
         if time.time() >= fine_attesa:

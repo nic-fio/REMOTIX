@@ -67,7 +67,24 @@ PAROLA_SUDO=${PAROLA_SUDO:-nicfio}
 export MACCHINA PAROLA_SUDO
 export IND=${IND:-192.168.0.2}
 export PORTA=${PORTA:-8150}
-export PAROLA_UTENTE=${PAROLA_UTENTE:-mt-dieci-2026}
+# ⛔⛔ LA PAROLA DEGLI UTENTI CONDIVISI E' UNA SOLA, E NON E' QUESTA — 25 ago 2026.
+#
+#   Questo copione dichiarava `mt-dieci-2026` **e la riposava a ogni giro**, e
+#   fintanto che ogni terreno riscriveva la parola l'ultimo che chiamava
+#   vinceva: sembrava che funzionasse.
+#
+#   ⛔ Dal 25 agosto il terreno **non rifa' piu' la parola a un utente che
+#     esiste gia'** (era la cura di un difetto peggiore: l'ultimo che chiamava
+#     buttava fuori tutti gli altri).  ⇒ Da allora vale **una parola sola**, ed
+#     e' quella con cui `provadec4/5/6` sono stati creati: `dec-pieno-2026`.
+#
+#   `[M]` Con `mt-dieci-2026` `provadec4` risponde `CONGEDO 0x07` su una
+#   macchina sana — e ⛔⛔ **ogni respinto brucia uno dei TRE tentativi del ban
+#   per INDIRIZZO, che dura DODICI ORE e mette fuori uso ogni altro banco.**
+#
+# ⚠ `provamt1` ha la sua (`mt-dieci-2026`): chi mescola le due famiglie passa
+#   `PAROLA_UTENTE=` a mano, per utente, invece di dichiararne una per tutti.
+export PAROLA_UTENTE=${PAROLA_UTENTE:-dec-pieno-2026}
 export ALBERO=${ALBERO:-/media/REMOTIX/src/10b5-src}
 export LAV=${LAV:-/media/REMOTIX/tmp/10b5}
 export DENTRO_ALB=${DENTRO_ALB:-/srv/src/10b5-src}
@@ -256,7 +273,7 @@ utenti)
 	log "I $QUANTI utenti — ⛔ ciascuno delegato a 07-b64-terreno.sh, che e' certificato"
 	inf "⛔ D12: la parola d'ordine NON passa da argv — file 0600 e chpasswd dallo stdin"
 	inf "⛔ gruppi render,video e enable-linger per ciascuno, o il desktop non parte"
-	inf "⚠ la parola e' «$PAROLA_UTENTE» per tutti e quattro: e' QUELLA DI provamt1,"
+	inf "⚠ la parola e' «$PAROLA_UTENTE» — quella di provadec4/5/6; ⛔ provamt1 ha la SUA"
 	inf "  che e' condiviso — riscriverla identica non toglie niente a nessuno"
 	for uu in $UTENTI; do
 		u=${uu%%:*}; n=${uu##*:}
