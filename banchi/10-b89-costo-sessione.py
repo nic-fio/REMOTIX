@@ -1078,8 +1078,13 @@ def chiudi(parla=True):
 def prepara():
     """Porta i copioni sulla macchina.  ⛔ Ognuno si verifica con l'md5: un
        file «arrivato» e un file arrivato UGUALE non sono la stessa cosa."""
+    # ⛔ `10-ambiente-sessione.sh` va con `10-b89-scena.sh`: quello lo INCLUDE
+    #    (l'ambiente di una sessione sta in un posto solo, 25 agosto 2026), e
+    #    senza il compagno il banco morirebbe alla prima riga invece di
+    #    misurare.
     for f in ("09-b71-sessione.sh", "09-b71-agente.py", "09-b72-tasto.py",
-              "10-b89-agente.py", "10-b89-scena.sh"):
+              "10-b89-agente.py", "10-ambiente-sessione.sh",
+              "10-b89-scena.sh"):
         b71.porta(f)
     print("   OK  i copioni sono sulla macchina, con l'md5 verificato")
 

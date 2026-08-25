@@ -8,17 +8,22 @@
 #
 # ⛔ NON RISCRIVE `07-b64-terreno.sh`: gli passa il MIO ambiente e lo chiama,
 #    come fanno `09-b86-terreno.sh` e `10-b93-terreno.sh`.  I passi tutti miei
-#    sono `porta` (il sed + la compilazione + la lettura di quel che ho
-#    costruito) e `utenti`.
+#    sono `porta` (il guasto + la compilazione + la lettura di quel che ho
+#    costruito), `accendi` (il tetto a caldo, e la sua verifica) e `utenti`.
 #
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔⭐⭐ IL TRUCCO, DICHIARATO — ed e' quello di `10-b93-terreno.sh`, SPOSTATO
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# Riempire una tabella da **16** vuol dire aprire sedici sessioni GRAFICHE vere
-# su un i5-13500T: costoso, lento, e misurerebbe la MACCHINA invece del
-# COMPORTAMENTO.  ⇒ Questo albero si compila col tetto **piccolo**
+# Riempire una tabella da **dieci** vuol dire aprire dieci sessioni GRAFICHE
+# vere su un i5-13500T: costoso, lento, e misurerebbe la MACCHINA invece del
+# COMPORTAMENTO.  ⇒ Il server si accende col tetto **piccolo**
 # (`TETTO=n`, predefinito **2**), e le tabelle si riempiono con due clienti.
+#
+# ⭐⭐ E DAL 25 AGOSTO 2026 IL TETTO NON SI COMPILA PIU': e' **`--tetto-sessioni
+#     N`**, un'opzione all'avvio, e le quattro tabelle si allocano sul valore in
+#     vigore.  ⇒ L'albero sulla macchina di prova e' quello del repository byte
+#     per byte (salvo i GUASTI, che restano un `sed` apposta).
 #
 # ⛔ **QUEL CHE SI MISURA E' IL COMPORTAMENTO AL RIEMPIMENTO, NON IL NUMERO.**
 #    Due non e' dieci e non e' sedici, e nessuna riga di questo banco pretende
@@ -134,17 +139,28 @@ porta)
 		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
 	ok "sorgenti in $ALBERO"
 
-	log "2 · ⛔ IL SED DEL TETTO, su UNA riga e su DUE copie gemelle"
+	log "2 · ⭐ NESSUN SED SUL TETTO: sara' «--tetto-sessioni $TETTO», a caldo"
+	# ⛔⛔ E QUI C'ERA UN `sed` CHE CAMBIAVA IL TETTO NEI SORGENTI — tolto il 25
+	#     agosto 2026, cura del difetto 5 dell'incarico F3.
+	#
+	#   ⭐ Il prodotto ha imparato a farlo da se': `--tetto-sessioni N` muove il
+	#      tetto **all'avvio**, e le quattro tabelle si allocano su `rcp_tetto()`
+	#      — cioe' sul valore IN VIGORE, non sul `#define`.  ⇒ Per la SCENA
+	#      (riempire le tabelle con due clienti) il `sed` non serve piu'.
+	#   ⛔ E toglierlo toglie con se' due cose che costavano: una
+	#      ricompilazione per giro, e le gemelle di R12.3 da riallineare a mano.
+	#
+	# ⚠⚠ E QUEL CHE NON SI PERDE, per non confondersi: il passo `definisci`
+	#    prova che i quattro `#define` **seguono** l'unico numero, e quella
+	#    prova la fa il PREPROCESSORE — funziona col predefinito esattamente
+	#    come funzionava col 2.  ⇒ Nessun predicato e' andato perso.
+	# ⛔ Il `sed` dei GUASTI, qui sotto, RESTA: quello non cambia una quantita',
+	#    rimette un DIFETTO, e un difetto non si innesta con un'opzione — va
+	#    compilato e fatto girare (`LEZIONI.md` §1.29).
 	ssh -o BatchMode=yes "$MACCHINA" "
-		set -e
-		for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
-			grep -q '^#define RCP_TETTO_SESSIONI 16\$' \$f || {
-				echo '⛔ il modello del tetto NON si trova in '\$f; exit 3; }
-			sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $TETTO/' \$f
-			grep -n '^#define RCP_TETTO_SESSIONI' \$f
-		done
-		cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle: uguali'
-	" || { ko "⛔ il sed del tetto non e' riuscito"; exit 2; }
+		grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+		cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle: uguali (e sono quelle del repository)'
+	" || { ko "⛔ non ho potuto rileggere le gemelle"; exit 2; }
 
 	if [ "$GUASTO" != nessuno ]; then
 		log "3 · ⛔⛔ IL GUASTO «$GUASTO» — innestato di proposito"
@@ -249,6 +265,32 @@ definisci)
 			printf 'DEFINE %-16s %-12s %s\n' "$f" "$nome" "$out"
 		fi
 	done
+	exit 0 ;;
+
+accendi)
+	# ⛔⭐⭐ IL TETTO ENTRA QUI, non nel compilatore — 25 agosto 2026.
+	# ⚠ Si APPENDE a `OPZIONI_SERVER`: chi chiama questo terreno puo' passare
+	#   gia' le sue opzioni, e mangiargliele misurerebbe un'altra scena.
+	export OPZIONI_SERVER="${OPZIONI_SERVER:-} --tetto-sessioni $TETTO"
+	bash "$QUI/banchi/07-b64-terreno.sh" accendi || exit 2
+
+	# ⛔ LA GUARDIA CHE PRIMA GUARDAVA IL `sed`: il tetto in vigore si legge DAL
+	#    SERVER ACCESO.  ⭐ Guarda il prodotto che gira, non il testo da cui e'
+	#    nato (`LEZIONI.md` §1.6).
+	log "5 · ⛔ IL TETTO IN VIGORE, letto dal SERVER ACCESO"
+	i=0; VISTO=""
+	while [ $i -lt 30 ]; do
+		VISTO=$(ssh -o BatchMode=yes "$MACCHINA" \
+			"grep -ao 'tetto AMMINISTRATIVO delle sessioni: \*\*[0-9]*\*\*' \
+			 $LAV/registro.log 2>/dev/null | tail -1 | grep -o '[0-9]*' || true")
+		[ -n "$VISTO" ] && break
+		i=$((i+1)); sleep 0.5
+	done
+	if [ "$VISTO" != "$TETTO" ]; then
+		ko "⛔ ho chiesto --tetto-sessioni $TETTO e il server dichiara «${VISTO:-nessun tetto}»"
+		exit 2
+	fi
+	ok "⭐ il server dichiara il tetto **$VISTO**, ed e' quello che ho chiesto"
 	exit 0 ;;
 
 *)

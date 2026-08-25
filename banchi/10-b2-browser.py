@@ -1596,34 +1596,37 @@ def aspetta_posto(riga0, utente, tetto=90):
 
 def scena_capsula(o):
     _log("LA SCENA: tabella PIENA, e il respinto e' un browser vero che NON si stacca")
-    # ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
-    #   Prima il tetto era `#define MAX_ATTACCATE 16` in `rcp.c`; ora e' UNO,
-    #   `RCP_TETTO_SESSIONI` in `rcp.h`, e `MAX_ATTACCATE` lo segue.  ⛔ La
-    #   guardia vecchia cercava la STRINGA «MAX_ATTACCATE 16»: non trovandola
-    #   piu' NON dava rosso — cieca nel verso permissivo — e misurava la scena
-    #   «tabella PIENA» su una tabella da sedici che un occupante non riempie.
-    #   ⇒ Adesso si legge il NUMERO EFFETTIVO da `rcp.h` e si pretende che sia
-    #     abbastanza piccolo perche' un occupante solo riempia la tabella.
+    # ⛔⛔ IL NUMERO SI E' SPOSTATO DUE VOLTE, e la seconda cambia DOVE si legge.
+    #
+    #   1. fino al 24 agosto il tetto era `#define MAX_ATTACCATE 16` in
+    #      `rcp.c`, e la guardia cercava quella STRINGA: dopo la cura C3 non la
+    #      trovava piu' e ⛔ NON dava rosso — cieca nel verso permissivo —
+    #      misurando «tabella PIENA» su una tabella da sedici;
+    #   2. ⭐ dal 25 agosto il tetto non si compila piu': lo muove
+    #      **`--tetto-sessioni N`** all'avvio (cura del difetto 5).  ⇒ Il
+    #      `#define` nel sorgente e' il **PREDEFINITO**, e leggerlo qui
+    #      rifarebbe lo stesso errore in una veste nuova: un numero letto dal
+    #      posto sbagliato, plausibile e falso.
+    #
+    # ⇒ ⛔ Il tetto IN VIGORE si legge dalla **riga d'avvio del server acceso**.
+    #     ⭐ Ed e' una guardia migliore: parla del prodotto che gira, non del
+    #        testo da cui e' nato (`LEZIONI.md` §1.6).
     rc, out, _ = root(
-        "grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h" % ALB)
-    _inf("il binario in prova: %s" % (out or "").strip())
-    m = re.search(r"^#define\s+RCP_TETTO_SESSIONI\s+(\d+)", (out or ""), re.M)
+        "grep -ao 'tetto AMMINISTRATIVO delle sessioni: [*][*][0-9]*[*][*]' "
+        "%s/registro.log 2>/dev/null | tail -1 || true" % LAV)
+    _inf("il tetto che il server dichiara: %s" % (out or "").strip())
+    m = re.search(r"\*\*(\d+)\*\*", out or "")
     if m is None:
-        _ko("⛔ non ho potuto leggere RCP_TETTO_SESSIONI in %s/src/rcp.h: "
-            "NON MISURO (None non e' un tetto)" % ALB)
+        _ko("⛔ il server acceso non dichiara nessun tetto nel suo registro: "
+            "NON MISURO (None non e' un tetto).  ⚠ Il server va acceso con "
+            "`MAX_ATT=1 bash banchi/10-b2-terreno.sh accendi`")
         return 2
     tetto = int(m.group(1))
     if tetto != 1:
-        _ko("⛔ il tetto EFFETTIVO e' %d, non 1: con un occupante solo la "
+        _ko("⛔ il tetto IN VIGORE e' %d, non 1: con un occupante solo la "
             "tabella non si riempie e la scena misurerebbe un server LIBERO.  "
-            "Ricompila con `MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`"
+            "Riaccendi con `MAX_ATT=1 bash banchi/10-b2-terreno.sh accendi`"
             % tetto)
-        return 2
-    if int(m.group(1)) > 2:
-        _ko("⛔ l'albero ha il tetto a %s: riempirlo vorrebbe dire %s sessioni "
-            "grafiche.  Ricompila con "
-            "`MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`"
-            % (m.group(1), m.group(1)))
         return 2
 
     # ⭐ LA PAGINA COME IL SERVER LA SERVE, presa UNA volta e prima dei giri:

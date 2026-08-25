@@ -185,7 +185,13 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
  *      perche' chi legge il codice crede che la misura ci sia.
  *  ⇒ Da oggi la chiama `main.c`, che scrive **una riga al minuto** con questi
  *    due numeri accanto al numero degli inquilini serviti: e' il conto con cui
- *    la cura di §8.2 P4 si potra' **rifiutare** invece che ricordare. */
+ *    la cura di §8.2 P4 si potra' **rifiutare** invece che ricordare.
+ *
+ * ⛔ E IL 25 AGOSTO 2026 QUESTA FRASE ERA ANCORA META' FALSA (rilievo R7 di
+ *    §5.5): la riga c'era, ⛔ **ma il numero degli inquilini no** — cioe'
+ *    mancava proprio il denominatore che rende la cura rifiutabile.  ⭐ Adesso
+ *    la riga porta `inquilini=` (da `wt_inquilini_serviti()`), e i tre numeri
+ *    si leggono insieme: `chiamate=` deve seguire i RIPASSI, non `inquilini=`. */
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,
                       uint64_t *peggior_ms);
 
