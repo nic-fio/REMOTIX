@@ -104,20 +104,20 @@ porta)
 	ok "sorgenti in $ALBERO"
 
 	if [ -n "$MAX_ATT" ]; then
-		log "2 · ⛔ IL SED, sulle DUE copie gemelle — tetto=$MAX_ATT"
+		log "2 · ⛔ IL SED, sulle DUE copie gemelle — RCP_TETTO_SESSIONI=$MAX_ATT"
 		# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
-		#   Erano QUATTRO `#define` a 16 copiati a mano e qui se ne sostituiva
-		#   uno solo, `MAX_ATTACCATE` in `rcp.c`.  Adesso il numero e' UNO —
-		#   `RCP_TETTO_SESSIONI` in `rcp.h` — e lo seguono `MAX_ATTACCATE`,
-		#   `MAX_FIGLI`, `QUANTI_PRESENTI` e `WT_PALCHI`.
-		# ⛔⛔ E IL MODO IN CUI QUESTO PASSO FALLIVA ERA IL PEGGIORE: un `sed`
-		#   su un modello che non c'e' piu' esce **0 senza sostituire**, il
-		#   terreno dichiarava successo, il tetto restava 16, e il banco finiva
-		#   in «non ho misurato» — un guasto che non morde travestito da terreno
-		#   sano.  ⇒ Adesso si CONTA se la sostituzione ha morso, e se non ha
-		#   morso su tutt'e due le gemelle il terreno si FERMA.
-		#   (E' la stessa cura gia' fatta a `10-b93-terreno.sh`.)
-		ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe detto «non ho misurato»"; exit 2; }
+		#
+		#   Prima erano QUATTRO `#define` a 16 copiati a mano, e questo copione
+		#   sostituiva `#define MAX_ATTACCATE 16` in `rcp.c`.  ⛔ Dopo C3 quella
+		#   riga dice `#define MAX_ATTACCATE RCP_TETTO_SESSIONI`: il modello NON
+		#   c'e' piu', il `sed` usciva **0 senza sostituire**, il controllo
+		#   guardava solo il codice d'uscita, il terreno dichiarava «gemelle:
+		#   uguali» e COMPILAVA COL TETTO 16 — cioe' la scena «tabella PIENA»
+		#   misurata su una tabella da sedici che due clienti non riempiono mai.
+		#   ⇒ Adesso il numero e' UNO, `RCP_TETTO_SESSIONI` in `rcp.h`, e questo
+		#     `sed` CONTA se ha morso su tutt'e due le gemelle e si FERMA se no.
+		#     (E' la stessa cura di `10-b93-terreno.sh:112`, portata qui.)
+		ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe misurato una tabella da sedici"; exit 2; }
 set -e
 n=0
 for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do

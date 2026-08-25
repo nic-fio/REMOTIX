@@ -1597,18 +1597,27 @@ def aspetta_posto(riga0, utente, tetto=90):
 def scena_capsula(o):
     _log("LA SCENA: tabella PIENA, e il respinto e' un browser vero che NON si stacca")
     # ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
-    #     Qui si leggeva `#define MAX_ATTACCATE` in `rcp.c`, e adesso quella
-    #     riga dice `#define MAX_ATTACCATE RCP_TETTO_SESSIONI`: il modello
-    #     `"MAX_ATTACCATE 16"` non ci finisce piu' dentro, la guardia passa
-    #     SEMPRE, e il banco misurerebbe un server con sedici posti credendo di
-    #     misurarne uno con uno.  ⇒ E' la stessa forma che ha rotto il terreno
-    #     di `10-b93` (§5.4 conseguenza 1): un controllo che non morde piu' non
-    #     da' un errore, da' un verde.
-    rc, out, _ = root("grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h" % ALB)
+    #   Prima il tetto era `#define MAX_ATTACCATE 16` in `rcp.c`; ora e' UNO,
+    #   `RCP_TETTO_SESSIONI` in `rcp.h`, e `MAX_ATTACCATE` lo segue.  ⛔ La
+    #   guardia vecchia cercava la STRINGA «MAX_ATTACCATE 16»: non trovandola
+    #   piu' NON dava rosso — cieca nel verso permissivo — e misurava la scena
+    #   «tabella PIENA» su una tabella da sedici che un occupante non riempie.
+    #   ⇒ Adesso si legge il NUMERO EFFETTIVO da `rcp.h` e si pretende che sia
+    #     abbastanza piccolo perche' un occupante solo riempia la tabella.
+    rc, out, _ = root(
+        "grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h" % ALB)
     _inf("il binario in prova: %s" % (out or "").strip())
-    m = re.search(r"RCP_TETTO_SESSIONI\s+(\d+)", out or "")
+    m = re.search(r"^#define\s+RCP_TETTO_SESSIONI\s+(\d+)", (out or ""), re.M)
     if m is None:
-        _ko("⛔ non ho letto il tetto da %s/src/rcp.h: NON MISURO" % ALB)
+        _ko("⛔ non ho potuto leggere RCP_TETTO_SESSIONI in %s/src/rcp.h: "
+            "NON MISURO (None non e' un tetto)" % ALB)
+        return 2
+    tetto = int(m.group(1))
+    if tetto != 1:
+        _ko("⛔ il tetto EFFETTIVO e' %d, non 1: con un occupante solo la "
+            "tabella non si riempie e la scena misurerebbe un server LIBERO.  "
+            "Ricompila con `MAX_ATT=1 bash banchi/10-b2-terreno.sh porta`"
+            % tetto)
         return 2
     if int(m.group(1)) > 2:
         _ko("⛔ l'albero ha il tetto a %s: riempirlo vorrebbe dire %s sessioni "

@@ -1359,55 +1359,48 @@ def i_due_numeri():
     """⛔ I due `#define`, letti DAI SORGENTI CHE HANNO PRODOTTO IL BINARIO.
 
     ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
-
-        Erano QUATTRO `#define` a 16 copiati a mano, e tre di essi
-        DICHIARAVANO PER ISCRITTO un legame che il compilatore non conosceva.
-        Adesso il numero e' UNO — `RCP_TETTO_SESSIONI` in `rcp.h` — e
-        `MAX_ATTACCATE` e `MAX_FIGLI` lo SEGUONO davvero.
-
-    ⛔ E il modo in cui questo lettore falliva era il solito: i due modelli non
-       trovavano piu' niente, i due numeri restavano `None`, il predicato
-       finiva fra i MUTI, la riga finale annunciava «una tabella da None»
-       — ⛔ **e `--certifica` restava verde**, perche' inietta i dizionari a
-       mano.  Strumento verde, misura spenta.
-
-    ⇒ Si legge il numero UNICO, e si tiene la lettura dei due nomi come
-      CONTROLLO: se uno dei due non rimanda al numero unico, il legame si e'
-      rotto di nuovo e va detto."""
+        Prima `MAX_ATTACCATE` (`rcp.c`) e `MAX_FIGLI` (`figlio.c`) erano due
+        letterali a 16 copiati a mano; ora entrambi dicono
+        `#define X RCP_TETTO_SESSIONI`, e il numero vero e' UNO, in `rcp.h`.
+        ⛔ Il vecchio `re.match(r"#define MAX_ATTACCATE (\\d+)")` non trovava
+        piu' un numero ⇒ tornava `None`, il predicato finiva fra i MUTI e la
+        riga finale annunciava «una tabella da None»: strumento verde, misura
+        spenta.  ⇒ Adesso si legge il tetto da `rcp.h` e si RISOLVE ogni
+        `#define`: se punta a `RCP_TETTO_SESSIONI` vale il tetto, se e' un
+        letterale vale quello — cosi' la divergenza (il difetto che C3 cura, e
+        il guasto `figli-slegati`) si vede ancora."""
     rc, out, _ = root(
         "grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h; "
         "grep -h '^#define MAX_ATTACCATE' %s/src/rcp.c; "
         "grep -h '^#define MAX_FIGLI' %s/src/figlio.c; "
-        "md5sum %s/src/rcp.h %s/src/rcp.c %s/src/figlio.c %s/src/remotix"
-        % (ALB, ALB, ALB, ALB, ALB, ALB, ALB))
-    n = {"max_attaccate": None, "max_figli": None, "tetto": None,
-         "seguono": None, "md5": {}}
-    segue_att = segue_fig = False
+        "md5sum %s/src/rcp.c %s/src/figlio.c %s/src/remotix"
+        % (ALB, ALB, ALB, ALB, ALB, ALB))
+    n = {"max_attaccate": None, "max_figli": None, "tetto": None, "md5": {}}
     for r in out.splitlines():
         m = re.match(r"#define RCP_TETTO_SESSIONI (\d+)", r.strip())
         if m:
             n["tetto"] = int(m.group(1))
-        m = re.match(r"#define MAX_ATTACCATE (\d+)", r.strip())
-        if m:
-            n["max_attaccate"] = int(m.group(1))
-        elif re.match(r"#define MAX_ATTACCATE\s+RCP_TETTO_SESSIONI", r.strip()):
-            segue_att = True
-        m = re.match(r"#define MAX_FIGLI (\d+)", r.strip())
-        if m:
-            n["max_figli"] = int(m.group(1))
-        elif re.match(r"#define MAX_FIGLI\s+RCP_TETTO_SESSIONI", r.strip()):
-            segue_fig = True
         m = re.match(r"([0-9a-f]{32})\s+(\S+)", r.strip())
         if m:
             n["md5"][os.path.basename(m.group(2))] = m.group(1)
-    # ⭐ Se seguono il numero unico, i due valori SONO quel numero: si scrivono,
-    #    cosi' tutto il resto del banco continua a leggerli come prima.
-    if n["tetto"] is not None:
-        if segue_att:
-            n["max_attaccate"] = n["tetto"]
-        if segue_fig:
-            n["max_figli"] = n["tetto"]
-    n["seguono"] = {"max_attaccate": segue_att, "max_figli": segue_fig}
+
+    def _risolvi(nome, riga):
+        """Il valore EFFETTIVO del `#define`: un letterale, o il tetto se
+        punta a `RCP_TETTO_SESSIONI`.  `None` se non l'ho letto affatto."""
+        m = re.match(r"#define %s (\d+)" % nome, riga.strip())
+        if m:
+            return int(m.group(1))
+        if re.match(r"#define %s RCP_TETTO_SESSIONI\b" % nome, riga.strip()):
+            return n["tetto"]        # ⭐ segue il tetto (puo' essere None se rcp.h non letto)
+        return None
+
+    for r in out.splitlines():
+        v = _risolvi("MAX_ATTACCATE", r)
+        if v is not None or r.strip().startswith("#define MAX_ATTACCATE"):
+            n["max_attaccate"] = v
+        v = _risolvi("MAX_FIGLI", r)
+        if v is not None or r.strip().startswith("#define MAX_FIGLI"):
+            n["max_figli"] = v
     return n
 
 
