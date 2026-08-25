@@ -169,7 +169,9 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⚠ *E la conclusione «non è nostro» era giusta a metà: il collegamento non è nostro, ma è il
 > nostro `useradd -m` a propagarlo, e sono i nostri dieci inquilini a renderlo certo.*
 > `fasi/10-multi-tenant-e-il-budget.md` §5.10 ·
-> ⚠ la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser) ·
+> ⭐ ~~la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser)~~ ⇒ **GIUDICATA il 25
+> agosto 2026**, su un video **4K** con la banda a **10 Mbit/s**: *«audio e video fluidi e in
+> sync»*. ⚠ Il `[M]` dei 331 ms resta `[?]` — quello è un numero, questo è un giudizio ·
 > ⚠ `rcp.c` dice ancora *«rifiutati da ngtcp2»* dove adesso sono *«buttati perché il filo era muto»* ·
 > `[?]` l'algoritmo di congestione è **CUBIC** e **non è mai stato scelto**: la prova per contrasto
 > non è stata fatta perché nessuna opzione lo espone.
