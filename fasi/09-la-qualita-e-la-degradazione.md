@@ -4296,7 +4296,48 @@ fermo.** ⭐ **Il verdetto è il CONTO, non i byte**: i byte dicono *quanto* cam
 cambia. ⚠ E in §19.2 avevo usato i byte come metro: quel ragionamento regge sul merito (i suoi
 fotogrammi *erano* piccoli) ma il metro giusto era un altro.
 
-### 20.1-ter ✅ Firefox è rotto — **e non è nostro**
+### 20.1-ter ⛔⛔⛔ ~~Firefox è rotto — e non è nostro~~ → **REFUTATA il 25 agosto 2026**
+
+> ## ⛔⛔⛔ QUESTA SEZIONE È SBAGLIATA, E LA PROVA CHE LA CHIUDEVA ERA VIZIATA
+>
+> *Refutata nella fase 10, `fasi/10-multi-tenant-e-il-budget.md` §5.10.* ⭐ **Firefox non è mai stato
+> rotto su questa macchina.**
+>
+> ⛔ **La causa vera**: `~/.cache` è un **collegamento a `/tmp`** (da `/etc/skel`, immagine base del
+> 30 luglio). Firefox tiene il profilo *locale* sotto `$HOME/.cache/mozilla` = **`/tmp/mozilla`**, e
+> `[M]` **`/tmp/mozilla` appartiene a `prova2`, modo `0700`, creata il 23 agosto alle 08:03** — cioè
+> **prima** di tutte le misure di questa sezione. ⇒ Per ogni altro utente il profilo **non nasce**.
+>
+> ### ⛔⛔ E il difetto di METODO è nel «controllo che chiude la questione»
+>
+> Diceva: *«`firefox --headless --screenshot` come **`nicfio`** — nessuna sessione REMOTIX, nessun
+> Wayland, nessun monitor — **si pianta uguale**»*.
+>
+> ⇒ ⛔ **Ma `nicfio` ha lo STESSO `~/.cache -> /tmp`**, e quindi lo stesso `/tmp/mozilla` di
+> `prova2`. `[M]` Verificato il 25 agosto: `lrwxrwxrwx nicfio -> /tmp`, e dentro
+> `drwx------ prova2 prova2`.
+>
+> ⭐⭐ **Il controllo CONDIVIDEVA il fattore che avrebbe dovuto escludere** — e un controllo così non
+> controlla niente: mostra lo stesso guasto per la stessa ragione, e chi lo legge conclude *«allora
+> non è la sessione»* quando invece **non era mai stata in prova la sessione**.
+>
+> ### ⭐ La rimisura, con la sola cosa cambiata
+>
+> `~/.cache` di `nicfio` rifatta **cartella vera**, e **niente altro** — stesso comando, stessa
+> macchina, stesso Firefox:
+>
+> | | fase 9, 24 agosto | ⭐ 25 agosto, dopo |
+> |---|---|---|
+> | `firefox --headless --screenshot` come `nicfio` | ⛔ **si pianta**, ucciso a **60 s**, profilo vuoto | ⭐ **`rc=0`**, e uno scatto da **5,5 MB** |
+>
+> ⚠ **Restano veri i due indizi in fondo alla sezione** (*«More than 1 GPU vendor detected»*, la
+> Radeon recintata): ⛔ **sono avvertimenti, non la causa** — la stessa riga esce anche adesso, col
+> browser che funziona.
+>
+> ⭐ **E quel che resta di giusto**: *«il difetto c'è, la diagnosi no»*, scritto qui in fondo il 24
+> agosto. ⇒ **Era la frase esatta**, ed è quella che andava seguita invece di chiudere con un ✅.
+
+### ~~20.1-ter~~ *(il testo originale, conservato)* ✅ Firefox è rotto — **e non è nostro**
 
 `[M]` Firefox `140.14.0esr`: vivo (80 thread, 126 MB), **zero fotogrammi dopo 90 s**, mai attaccato
 al socket Wayland. Fallisce identico da `systemd-run --user`, con `--profile` esplicito, con

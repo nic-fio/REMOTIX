@@ -72,8 +72,15 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ## ⏳ CHE COSA RESTA APERTO
 >
-> ⛔ **Firefox non parte sulla macchina di prova** — `[M]` **anche fuori da REMOTIX**, headless e
-> senza Wayland: **non è nostro**, ma blocca le prove col browser (§20.1-ter) ·
+> ⛔ ~~**Firefox non parte sulla macchina di prova** — `[M]` anche fuori da REMOTIX, headless e
+> senza Wayland: **non è nostro**, ma blocca le prove col browser (§20.1-ter)~~
+> ⭐⭐ **CHIUSA il 25 agosto 2026, e la causa era un'altra**: `~/.cache` è un **collegamento a
+> `/tmp`** (da `/etc/skel`), e il **primo** utente che apre il browser si prende `/tmp/mozilla` a
+> modo `0700` ⇒ **per tutti gli altri il profilo non nasce**. Curata in `src/provisiona.sh`, e
+> `[M]` **Firefox rende una pagina nel desktop remoto**.
+> ⚠ *E la conclusione «non è nostro» era giusta a metà: il collegamento non è nostro, ma è il
+> nostro `useradd -m` a propagarlo, e sono i nostri dieci inquilini a renderlo certo.*
+> `fasi/10-multi-tenant-e-il-budget.md` §5.10 ·
 > ⚠ la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser) ·
 > ⚠ `rcp.c` dice ancora *«rifiutati da ngtcp2»* dove adesso sono *«buttati perché il filo era muto»* ·
 > `[?]` l'algoritmo di congestione è **CUBIC** e **non è mai stato scelto**: la prova per contrasto

@@ -2491,3 +2491,45 @@ prodotto: ⇒ ⭐ **sprecarlo è sprecare l'unico strumento che non si può rico
 marca riconoscibile che deve ritrovare, e il controllo negativo che deve dire *«nero»* quando è
 nero. ⇒ E ⛔ **se non ha potuto guardare deve tornare «non lo so», mai un'immagine vuota**: *«non ho
 guardato»* non è *«è nero»*.
+
+---
+
+### 1.38 ⛔⛔⛔⭐ **Un controllo che CONDIVIDE il fattore che deve escludere non controlla niente**
+
+*25 agosto 2026, fase 10 — e refuta una conclusione della fase 9 che portava un ✅.*
+
+⛔ **La conclusione sbagliata**: *«Firefox è rotto su questa macchina per tutti, dentro e fuori
+REMOTIX. Non è un difetto del prodotto.»* Chiusa, spuntata, e ripetuta due volte nel `README.md`.
+
+⭐ **E il controllo che sembrava chiuderla era di quelli buoni**: si toglieva **tutto** — nessuna
+sessione REMOTIX, nessun Wayland, nessun monitor — e si lanciava il browser **da un altro utente**.
+Falliva uguale. ⇒ *«Allora non è la sessione.»*
+
+⛔⛔ **E invece i due lati condividevano la causa.** `~/.cache` è un collegamento a `/tmp` per
+**tutti** gli utenti di quella macchina, l'utente del controllo compreso; e il profilo del browser
+sta sotto `~/.cache/mozilla`, cioè **`/tmp/mozilla`** — ⛔ **una sola cartella, che il primo arrivato
+si era presa a modo `0700` due giorni prima.**
+
+⇒ ⭐ **Il controllo mostrava lo stesso guasto per la STESSA ragione, non per una ragione diversa.**
+
+| | fase 9 | ⭐ dopo aver tolto quel solo fattore |
+|---|---|---|
+| il browser headless, dall'utente del controllo | ⛔ **si pianta, ucciso a 60 s, profilo vuoto** | ⭐ **`rc=0`**, e uno scatto da **5,5 MB** |
+
+> ### ⭐⭐ La regola, e non è «fai più controlli»
+>
+> ⛔ **Prima di fidarsi di un controllo, si nomina il fattore che deve escludere e si verifica che il
+> controllo NON ce l'abbia.** Un controllo si sceglie per quel che **non** ha in comune col caso — e
+> quel *«non»* va **guardato**, non dato per scontato perché l'ambiente è diverso.
+>
+> ⚠ **La spia**: un controllo che *«fallisce uguale»* è **sospetto**, non rassicurante. Se togliendo
+> tutto il sintomo non cambia di un millimetro, la spiegazione più semplice non è *«la causa è
+> altrove»*: è ⛔ **«c'è qualcosa che non ho tolto»**.
+
+⭐ **E quel che il progetto aveva già scritto giusto**, in fondo alla stessa sezione e ignorato:
+*«il difetto c'è, la diagnosi no»*. ⇒ ⛔ **Quella frase e un ✅ non possono stare nella stessa
+sezione**: se la diagnosi non c'è, la sezione non è chiusa.
+
+⚠ E il costo, per essere onesti fino in fondo: quella conclusione ha tenuto il regista **due fasi**
+davanti a un browser che non partiva, con la spiegazione *«non è nostro»* — che è la spiegazione che
+⛔ **non chiede di continuare a cercare**.
