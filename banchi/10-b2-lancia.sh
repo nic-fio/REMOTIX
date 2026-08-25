@@ -24,7 +24,9 @@
 #   5  la sessione ferma, 300 s                 ⚠ i giri corti sottostimano (§1.32)
 #   6  il braccio di controllo, silenzio SPENTO ⛔ senza, non si attribuisce niente
 #   6-bis il difetto della FINESTRA, A/B su due altezze — trovato per caso
-#   7  la capsula, 10 giri, a tabella piena     `[?]` 2
+#   7  la capsula, 10 giri, a tabella piena     `[?]` 2 — ⭐ ed e' IL VERDE della frase
+#   7-bis ⛔ il ROSSO: la frase `0x0E` di IERI rimessa nella pagina servita
+#   7-ter ⛔⛔ il file dice una cosa e il browser un'altra (`0x0F` sul filo)
 #   8  si lascia la macchina come la si e' trovata, e lo si VERIFICA
 # ===========================================================================
 set -uo pipefail
@@ -95,12 +97,46 @@ $T spegni
 $T accendi || exit 2
 $B --scena finestra --giri "${GIRI_FINESTRA:-5}"
 
-titolo '7 · [?] 2 — LA CAPSULA DI CHIUSURA, a tabella piena (MAX_ATTACCATE=1)'
+titolo '7 · [?] 2 — LA CAPSULA DI CHIUSURA, a tabella piena (tetto = 1)'
 $T sgombra
 $T spegni
 MAX_ATT=1 $T porta || exit 2
 $T accendi || exit 2
 $B --scena capsula --giri "${GIRI:-10}"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⭐⭐ 7-bis e 7-ter — I DUE CONTROLLI NEGATIVI DELLA FRASE (incarico 10-d3)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ⛔ Il giro 7 qui sopra e' IL VERDE.  Un verde senza il rosso di prima non
+#    prova niente: prova solo che il banco sa dire di si'.  ⇒ Due giri ancora,
+#    e tutt'e due DEVONO finire ROSSI.
+#
+# 7-bis  si rimette nella pagina servita la frase `0x0E` di IERI — quella che
+#        `[M]` §6.4 ha letto dentro Firefox vero 10 su 10 — e il banco deve
+#        tornare rosso su «dice di chi» e «da' un gesto».
+# 7-ter  ⛔⛔ IL CASO CHE SMASCHERA I BANCHI SCRITTI MALE: pagina NUOVA e
+#        giusta, ma il respinto e' lo STESSO utente dell'occupante ⇒ sul filo
+#        arriva `0x0F`, non `0x0E`.  Un banco che dichiara la frase leggendo il
+#        FILE direbbe verde; questo legge il browser e dice rosso.
+
+titolo '7-bis · ⛔ IL ROSSO DI PRIMA — la frase 0x0E di IERI, rimessa nella pagina servita'
+$T sgombra
+$T spegni
+MAX_ATT=1 FRASE_VECCHIA="quella sessione non si puo' servire" $T porta || exit 2
+$T accendi || exit 2
+$B --scena capsula --giri "${GIRI_ROSSO:-5}" \
+	&& printf '    \033[1;31mNO\033[0m  ⛔ il banco NON e" tornato rosso sulla frase di ieri: non sta misurando la cura\n' \
+	|| printf '    \033[1;32mOK\033[0m  ⭐ rosso, come deve: il banco sa ancora dire di no\n'
+
+titolo '7-ter · ⛔⛔ IL FILE DICE UNA COSA E IL BROWSER UN"ALTRA (0x0F sul filo, 0x0E nel file)'
+$T sgombra
+$T spegni
+MAX_ATT=1 $T porta || exit 2
+$T accendi || exit 2
+$B --scena capsula --giri "${GIRI_PUNTO4:-3}" --respinto-uguale --motivo-atteso 0x0E \
+	&& printf '    \033[1;31mNO\033[0m  ⛔ il banco NON si e" accorto che i due testi divergono\n' \
+	|| printf '    \033[1;32mOK\033[0m  ⭐ rosso: i due testi divergono e il banco lo dice\n'
 
 titolo "8 · ⛔ LA MACCHINA SI LASCIA COME LA SI E' TROVATA"
 $T sgombra
@@ -108,7 +144,13 @@ $T spegni
 # ⛔ E L'ALBERO TORNA QUELLO DEL REPOSITORY: lasciarlo con `MAX_ATTACCATE 1`
 #    vorrebbe dire lasciare una trappola a chi lo trovera' domani — e il
 #    prossimo che ci misura sopra non avrebbe nessun modo di accorgersene.
-$T porta >/dev/null 2>&1 && printf '    --  albero rimesso a MAX_ATTACCATE 16\n'
-ssh -o BatchMode=yes "$MACCHINA" "ss -uln | grep -c ':$PORTA ' ; pgrep -af remotix | grep -c 10b2-src"
+$T porta >/dev/null 2>&1 && printf '    --  albero rimesso al tetto del repository (RCP_TETTO_SESSIONI 16)\n'
+# ⛔⛔ E IL MODELLO SI SCRIVE COL MORSO — 25 agosto 2026, e questo controllo
+#      diceva **1** su una macchina PULITA.  `pgrep -f` acchiappa la riga di
+#      comando che lo esegue, e qui la riga di comando contiene il modello: il
+#      controllo contava se stesso.  ⇒ `[r]emotix`, che come regola trova
+#      «remotix» e come testo non e' «remotix» — e `|| true` perche' `pgrep -c`
+#      esce 1 quando il conto e' zero, che e' proprio il caso buono.
+ssh -o BatchMode=yes "$MACCHINA" "ss -uln | grep -c ':$PORTA ' ; pgrep -c -f '$ALBERO/src/[r]emotix' || true"
 printf '\n⭐ finito (i due numeri qui sopra devono essere 0 e 0).\n'
 printf '⛔ Adesso MOLLA IL LUCCHETTO: gli altri aspettano.\n'

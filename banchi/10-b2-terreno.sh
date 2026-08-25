@@ -104,17 +104,81 @@ porta)
 	ok "sorgenti in $ALBERO"
 
 	if [ -n "$MAX_ATT" ]; then
-		log "2 · ⛔ IL SED, sulle DUE copie gemelle — MAX_ATTACCATE=$MAX_ATT"
-		ssh -o BatchMode=yes "$MACCHINA" "
-			set -e
-			for f in $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c; do
-				sed -i 's/^#define MAX_ATTACCATE 16\$/#define MAX_ATTACCATE $MAX_ATT/' \$f
-				grep -n '^#define MAX_ATTACCATE' \$f
-			done
-			cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle: uguali'
-		" || { ko "⛔ il sed non e' riuscito"; exit 2; }
+		log "2 · ⛔ IL SED, sulle DUE copie gemelle — tetto=$MAX_ATT"
+		# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+		#   Erano QUATTRO `#define` a 16 copiati a mano e qui se ne sostituiva
+		#   uno solo, `MAX_ATTACCATE` in `rcp.c`.  Adesso il numero e' UNO —
+		#   `RCP_TETTO_SESSIONI` in `rcp.h` — e lo seguono `MAX_ATTACCATE`,
+		#   `MAX_FIGLI`, `QUANTI_PRESENTI` e `WT_PALCHI`.
+		# ⛔⛔ E IL MODO IN CUI QUESTO PASSO FALLIVA ERA IL PEGGIORE: un `sed`
+		#   su un modello che non c'e' piu' esce **0 senza sostituire**, il
+		#   terreno dichiarava successo, il tetto restava 16, e il banco finiva
+		#   in «non ho misurato» — un guasto che non morde travestito da terreno
+		#   sano.  ⇒ Adesso si CONTA se la sostituzione ha morso, e se non ha
+		#   morso su tutt'e due le gemelle il terreno si FERMA.
+		#   (E' la stessa cura gia' fatta a `10-b93-terreno.sh`.)
+		ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe detto «non ho misurato»"; exit 2; }
+set -e
+n=0
+for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
+	prima=\$(grep -c '^#define RCP_TETTO_SESSIONI 16\$' "\$f" || true)
+	sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $MAX_ATT/' "\$f"
+	dopo=\$(grep -c '^#define RCP_TETTO_SESSIONI $MAX_ATT\$' "\$f" || true)
+	echo "\$f: prima=\$prima dopo=\$dopo"
+	if [ "\$prima" = 1 ] && [ "\$dopo" = 1 ]; then n=\$((n+1)); fi
+done
+if [ "\$n" != 2 ]; then echo '⛔ il sed NON ha morso su tutt e due le gemelle'; exit 3; fi
+grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
+SED_FINE
 	else
-		log "2 · ⭐ NESSUN SED: l'albero e' quello del repository, intatto"
+		log "2 · ⭐ NESSUN SED sul tetto: l'albero e' quello del repository"
+	fi
+
+	# ═══════════════════════════════════════════════════════════════════════
+	# ⛔⭐⭐ IL CONTROLLO NEGATIVO DELLA FRASE — `FRASE_VECCHIA=1`
+	# ═══════════════════════════════════════════════════════════════════════
+	#
+	# ⛔ Una cura senza il rosso di prima non e' una cura: e' una speranza
+	#    (`FASE10-GIRO3.md` §3).  ⇒ Qui si rimette nella pagina SERVITA la
+	#    frase di `0x0E` di ieri — quella che `[M]` §6.4 ha letto dentro
+	#    Firefox vero 10 volte su 10 — e il banco deve tornare ROSSO.
+	#
+	# ⭐ E si fa con un `sed` sulla PAGINA e non con una ricompilazione, perche'
+	#   `pagina.html` non e' compilata: il server la serve dal disco
+	#   (`main.c`, `--pagina`).  ⚠ Il che vuol dire che basta riaccendere il
+	#   server dopo, non ricostruirlo.
+	#
+	# ⛔ E COME SOPRA, SI CONTA SE HA MORSO.  Un `sed` che non sostituisce
+	#    lascerebbe la frase NUOVA in una prova che si chiama «la frase
+	#    vecchia», cioe' un controllo negativo che da' verde e sembra un
+	#    successo — la forma d'errore che questo file ha appena finito di
+	#    pagare due righe piu' su.
+	if [ -n "${FRASE_VECCHIA:-}" ]; then
+		log "2-bis · ⛔ IL CONTROLLO NEGATIVO: rimetto nella pagina SERVITA la frase 0x0E di IERI"
+		# ⚠ La frase passa in base64: porta un apostrofo, e un apostrofo dentro
+		#   una riga di `ssh` attraversa DUE shell prima di arrivare.  ⛔ Un
+		#   metro che si rompe sulle virgolette non e' un metro.
+		B64=$(printf '%s' "$FRASE_VECCHIA" | base64 -w0)
+		ssh -o BatchMode=yes "$MACCHINA" \
+			"ALB=$(printf %q "$ALBERO") B64=$B64 python3 -" <<'FRASE_FINE' || { ko "⛔ la frase NON e' stata rimessa: il rosso che dichiarerei non sarebbe quello"; exit 2; }
+import base64, json, os, re, sys
+f = os.environ["ALB"] + "/src/pagina.html"
+v = base64.b64decode(os.environ["B64"]).decode()
+t = open(f).read()
+n = len(re.findall(r'\n  0x0E: "', t))
+if n != 1:
+    print(u"⛔ la voce 0x0E non e' UNA sola nel file (%d)" % n)
+    sys.exit(3)
+t2 = re.sub(r'\n  0x0E: ".*?",\n', '\n  0x0E: %s,\n' % json.dumps(v), t,
+            count=1, flags=re.S)
+if t2 == t:
+    print(u"⛔ la sostituzione NON ha morso")
+    sys.exit(3)
+open(f, "w").write(t2)
+print(u"0x0E adesso: %s" % json.dumps(v))
+FRASE_FINE
+		ok "la pagina servita porta la frase VECCHIA — rosso atteso"
 	fi
 
 	log "3 · Compilo dentro il contenitore"
@@ -129,9 +193,11 @@ porta)
 
 	log "4 · ⛔ CHE COSA HO COSTRUITO — letto dal BINARIO, non dai sorgenti"
 	ssh -o BatchMode=yes "$MACCHINA" "
-		echo \"#define src:      \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/src/rcp.c)\"
-		echo \"#define gemella:  \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/banchi/rcp/rcp.c)\"
+		echo \"#define src:      \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h)\"
+		echo \"#define gemella:  \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/banchi/rcp/rcp.h)\"
 		echo \"#define figli:    \$(grep -h '^#define MAX_FIGLI' $ALBERO/src/figlio.c)\"
+		echo \"frase 0x0E:       \$(grep -h '^  0x0E: ' $ALBERO/src/pagina.html)\"
+		echo \"frase 0x06:       \$(grep -h '^  0x06: ' $ALBERO/src/pagina.html | cut -c1-90)…\"
 		echo \"md5 binario:      \$(md5sum $ALBERO/src/remotix | cut -d' ' -f1)\"
 		echo \"md5 rcp.c:        \$(md5sum $ALBERO/src/rcp.c | cut -d' ' -f1)\"
 		echo \"md5 pagina.html:  \$(md5sum $ALBERO/src/pagina.html | cut -d' ' -f1)\"
