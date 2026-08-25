@@ -213,6 +213,33 @@ if [ "${1:-}" = "--sul-server" ]; then
 		else
 			grep -E 'Max realtime|Max nice' "/proc/$PID/limits" | sed 's/^/        LIM /'
 		fi
+		# ⛔⛔ E «ACCESO» VUOL DIRE CHE QUALCUNO ASCOLTA — 25 agosto 2026.
+		#
+		#   `[M]` Con un'opzione che il binario non conosce, il server stampa la
+		#   propria guida ed esce: `systemd-run` ha gia' pubblicato un MainPID,
+		#   e questo passo diceva «OK server 1265806 sulla porta 8260» **uscendo
+		#   ZERO**, con l'unita' gia' `inactive/success` e **nessun ascoltatore**.
+		#
+		#   ⛔ Un banco che si fidasse di quell'uscita direbbe «acceso», poi «la
+		#     tabella non si riempie», e finirebbe per ACCUSARE IL PRODOTTO di un
+		#     difetto che era **un'opzione inesistente**.  E' «silenzio invece di
+		#     rosso» (`LEZIONI.md` §1.29) un piano piu' su: nel terreno.
+		#
+		# ⇒ Il terreno non dichiara acceso finche' non vede un ASCOLTATORE sulla
+		#   porta.  Se non c'e', si stampano le ultime righe del registro — che
+		#   sono quelle che dicono **perche'** — e si esce ROSSI.
+		i=0
+		while [ $i -lt 50 ]; do
+			ss -uln 2>/dev/null | grep -q ":$PORTA " && break
+			i=$((i+1)); sleep 0.1
+		done
+		if [ $i -ge 50 ]; then
+			ko "⛔⛔ NESSUNO ASCOLTA sulla $PORTA dopo 5 s: il server NON e' acceso"
+			inf "unita': $(systemctl is-active "$UNITA.service" 2>/dev/null) · le ultime righe:"
+			tail -25 "$LAV/registro.log" | sed 's/^/        /'
+			exit 2
+		fi
+		ok "⭐ qualcuno ascolta sulla $PORTA — questo, non il pid, e' «acceso»"
 		inf "$(vicini)"
 		exit 0 ;;
 
