@@ -4,7 +4,57 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **24 agosto 2026**
+> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **25 agosto 2026**
+>
+> ## ⏳ LA FASE 10 È PRONTA PER IL GIUDIZIO — *multi-tenant e il budget*
+>
+> 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)** — la **sintesi**
+> in testa, **§5** le cure, **§6** le misure, **§8** le due decisioni che restano.
+>
+> ### ⭐⭐⭐ Il numero che la fase cercava — **e non era quello che si credeva**
+>
+> | dove si spende | motore | soffitto `[M]` |
+> |---|---|---|
+> | il **codificatore** | i due VDBOX | **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
+> | ⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`** | ⭐ **0,97 Gpixel/s — la METÀ** |
+>
+> ⇒ ⛔⛔ **Il budget non è di codifica: è di composizione**, e a saturarlo è **`gnome-shell` al
+> 99,5 %** mentre **`remotix` sta a `0,00 %`** — cioè **una cosa che non è nostra**.
+> `DECISIONI.md` **§4.6-nonies** corregge §4.6.
+>
+> ### ⭐⭐ E quante ne stanno
+>
+> **Sei** sulla scena satura — *«tenendo conto che siamo su una scheda Intel integrata non
+> particolarmente performante, 6 RDP attivi contemporaneamente non mi sembra un cattivo risultato»*,
+> l'utente, §4.6-septies. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
+> stato trovato: sono finiti gli utenti, non la macchina**.
+>
+> ### ⭐⭐⭐⭐ E LA COSA PIÙ UTILE DELLA GIORNATA NON È UN NUMERO
+>
+> ⛔ Il regista ha provato il prodotto e ha detto tre volte **«Firefox non funziona»**, fino a
+> smettere. ⇒ **Era `~/.cache` che punta a `/tmp`**: il **primo** utente che apre il browser si
+> prende `/tmp/mozilla` a modo `0700`, e **per tutti gli altri il profilo non nasce**.
+> ⭐⭐ *Un difetto che su una macchina a UN utente non si vede mai, e che su dieci ne blocca nove* —
+> ed è esattamente il tema di questa fase. Curato in `src/provisiona.sh`.
+>
+> ⛔⛔ **E la fase 9 l'aveva chiuso con un ✅ sbagliato** (§20.1-ter, ora **refutata**): il controllo
+> che *«chiudeva la questione»* girava da un utente che **aveva lo stesso difetto**.
+> ⇒ `LEZIONI.md` **§1.38** — *un controllo che condivide il fattore che deve escludere non controlla
+> niente*.
+>
+> ⭐ **E adesso c'è il testimone che fa VEDERE** — `banchi/10-f1-testimone.py`, un PNG del desktop
+> remoto, tarato, con il terzo esito **«non ho guardato»** distinto da «era nero» (`LEZIONI.md`
+> §1.37).
+>
+> ### ⏳ Che cosa manca per chiudere
+>
+> ⭐ **Il giudizio del regista sul prodotto vero**, e **due decisioni sue**: se accendere **QVBR**
+> (la cura di banda della fase 9 esiste, funziona, e nessuno la accende — copre **8,8×** di banda) e
+> se i **numeri di fabbrica** restano **tetto 10, riserva 0,5**.
+>
+> ---
+>
+> # ✅ E PRIMA DI QUESTA — **24 agosto 2026**
 >
 > ## ✅⭐⭐⭐ LA FASE 9 È CHIUSA — *la qualità e la degradazione*
 >
