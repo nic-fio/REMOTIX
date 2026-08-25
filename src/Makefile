@@ -59,6 +59,7 @@ NOME    := remotix
 #    quinto anello, il canale video, NON compare: vive in `rcp.c`, che c'era
 #    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
+            budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c

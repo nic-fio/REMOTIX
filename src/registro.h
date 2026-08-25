@@ -34,6 +34,12 @@
  *   `Makefile` (`P2-1-sessione.md` §6.2 chiede questa riga). */
 #define REG_SESSIONE "sessione"
 #define REG_VIDEO "video"
+/* ⭐ L'area della fase 10 (25 agosto 2026): il budget di composizione.  ⚠ Ha
+ *   un'area sua e non `avvio` perche' scrive in tre momenti diversi — la riga
+ *   del valore in vigore, il verdetto su chi bussa, e il rifiuto — e chi cerca
+ *   *«perche' quell'utente e' stato respinto»* deve poter leggere una colonna
+ *   sola invece di setacciare `wt` e `figlio`. */
+#define REG_BUDGET "budget"
 
 void registro_dice(const char *area, const char *fmt, ...)
 	__attribute__((format(printf, 2, 3)));

@@ -405,6 +405,14 @@ void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms);
 /* Quanti figli sono vivi adesso.  Per il registro e per il banco. */
 int figli_quanti(const figli *f);
 
+/* ⭐⭐ Il nome dell'utente del `quale`-esimo palco vivo (0 … `figli_quanti()−1`),
+ *     o `NULL`.  ⛔ Serve al BUDGET (fase 10) per sapere **chi e' dentro**, e
+ *     l'insieme giusto e' questo e non i posti del registro RCP: una sessione
+ *     che ha lasciato il posto per silenzio **codifica ancora** finche' il suo
+ *     palco e' vivo (§3.2, il *fantasma*), e costa quanto le altre.
+ * ⚠ L'indice non e' stabile fra due chiamate: si scorre una volta sola. */
+const char *figli_utente_ennesimo(const figli *f, int quale);
+
 /* ⛔ Per il banco: il pid del figlio di quell'utente, o -1.  ⚠ Serve a
  * `banchi/02-figlio-*` per chiedere al NUCLEO chi e' quel processo
  * (`/proc/<pid>/status`) invece di dedurlo da `pgrep`, che troverebbe anche i

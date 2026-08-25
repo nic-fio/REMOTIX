@@ -71,6 +71,7 @@
  *    l'interruttore lo ricevesse solo il figlio, il banco del tono e il banco
  *    della sessione vera misurerebbero due prodotti diversi. */
 #include "audio.h"
+#include "budget.h"
 #include "certificati.h"
 #include "comando.h"
 #include "figlio.h"
@@ -241,6 +242,43 @@ static void aiuto(const char *nome)
 	        "                    margine >10x sopra la linea peggiore che REGGE\n"
 	        "                    e 2,9x sotto quella che non serve nessuno.\n"
 	        "                    ⚠ Il nome vecchio `--linea-morta` NON esiste piu\'\n"
+	        "\n"
+	        "  ⭐⭐⭐ FASE 10 — IL BUDGET DI COMPOSIZIONE, e nasce SPENTO (I6)\n"
+	        "  --budget-mpixel-s N\n"
+	        "                    i Mpixel/s di COMPOSIZIONE che questa macchina\n"
+	        "                    regge.  ⛔ 0 = SPENTO, ed e' il PREDEFINITO:\n"
+	        "                    senza, il server AMMETTE TUTTI e li affama\n"
+	        "                    insieme (`[M]` l'undicesimo entra e la prima\n"
+	        "                    sessione va da 39,60 a 0,96 fot/s, −97,6 %%).\n"
+	        "                    ⛔ NON e' il numero del CODIFICATORE: `[M]` su\n"
+	        "                    una UHD 730 il codificatore nudo regge 1,86\n"
+	        "                    Gpixel/s e la composizione 0,97 — a saturare e'\n"
+	        "                    il compositore, non noi.  Dare qui il primo\n"
+	        "                    ammetterebbe ~22 sessioni dove ne stanno sei.\n"
+	        "                    ⛔⛔ E NON SI AUTO-TARA: finche' la macchina\n"
+	        "                    non ha CEDUTO almeno una volta, il massimo che\n"
+	        "                    si e' letto e' un limite inferiore, non un\n"
+	        "                    soffitto.  Chi batte questa opzione dichiara di\n"
+	        "                    aver misurato.  Chi non ci sta riceve CONGEDO\n"
+	        "                    0x06 BUDGET_PIENO, prima che nasca il suo palco\n"
+	        "  --riserva F       0..1, quanta parte del caso peggiore di un\n"
+	        "                    inquilino FERMO si tiene da parte.  ⭐ 0,5 e' il\n"
+	        "                    PREDEFINITO: `[M]` 0 falsi si' e 0 falsi no,\n"
+	        "                    tetto 6 sature / 10 ferme.  0 = regola\n"
+	        "                    «consegnato» (6 sature, ferme illimitate: cieca\n"
+	        "                    al RISVEGLIO) · 1 = regola «peggiore» (5 e 6,\n"
+	        "                    con un falso no).  ⛔ Serve contro il risveglio:\n"
+	        "                    `[M]` otto ferme da 0,01 %% l'una si accendono\n"
+	        "                    in 19 ms e chiedono il 130 %% del motore\n"
+	        "  --tetto-sessioni N\n"
+	        "                    il tetto AMMINISTRATIVO (§4.6): quanti utenti\n"
+	        "                    serviti al massimo.  ⭐ PREDEFINITO 10\n"
+	        "                    (SPECIFICHE.md §5.5; era 16 fino al 25 ago\n"
+	        "                    2026, e non l'aveva scelto nessuno).  Da qui si\n"
+	        "                    dimensionano le quattro tabelle che contano un\n"
+	        "                    utente.  ⚠ Chi non ci sta riceve 0x0E, che e'\n"
+	        "                    un altro fatto da 0x06: la tabella e' piena, la\n"
+	        "                    macchina no\n"
 	        "  --niente-audio-silenzio\n"
 	        "                    ⭐⭐ SPEGNE il SILENZIO DELL\'AUDIO, che dal 24\n"
 	        "                    ago 2026 e\' ACCESO di suo: un blocco in cui\n"
@@ -325,6 +363,86 @@ struct ponte {
 	figli *f;
 };
 
+/* ⛔⭐⭐⭐ «CI STA?» — LA DOMANDA DEL BUDGET, fase 10 (25 agosto 2026).
+ *
+ *     ⛔ Il difetto che cura, `[M]` §S.2: il prodotto **non aveva un budget —
+ *     accettava tutti e affamava tutti insieme**.  L'undicesimo entrava con
+ *     `negati 0` e la prima sessione passava da **39,60 a 0,96 fot/s**
+ *     (−97,6 %), con 104 rossi appaiati contro l'invariante **I1**.
+ *
+ * ⛔ E LA GRANDEZZA E' LA **COMPOSIZIONE**, non la codifica.  `DECISIONI.md`
+ *    §4.6 dice *«il limite vero lo pone il codificatore»*: `[M]` su questo
+ *    ferro **non e' vero** — il codificatore nudo regge 1,86 Gpixel/s, la
+ *    composizione **0,97**, e a saturare `rcs0` e' `gnome-shell` al 99,5 %
+ *    mentre `remotix` sta a 0,00 % (§6.11, §6.15).  Il perche' di ogni numero
+ *    sta in `budget.h`, in testa: **qui c'e' solo la cucitura**.
+ *
+ * ⭐⭐ E «CHI E' DENTRO» SONO I **PALCHI**, non i posti del registro RCP: una
+ *     sessione che ha lasciato il posto per silenzio **codifica ancora**
+ *     finche' il suo palco e' vivo (§3.2, il *fantasma*), e costa alla GPU
+ *     quanto le altre.  ⇒ Contare i posti sottostimerebbe **proprio nella scena
+ *     in cui la macchina e' in affanno**, che e' il verso che affama tutti.
+ *
+ * ⛔ Torna `true` anche quando il budget e' SPENTO e quando dice «non so»: un
+ *    budget che rifiutasse per non aver saputo misurare farebbe pagare
+ *    all'utente un guasto nostro.  ⚠ Il «non so» si scrive, il si' no. */
+static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
+                         size_t perche_cap, uint8_t *motivo)
+{
+	struct budget_conto conto;
+	enum budget_esito e;
+	uint32_t tl = TELA_L, ta = TELA_A, ml, ma;
+	int quanti;
+
+	if (!budget_acceso())
+		return true;
+
+	/* ⭐ IL TETTO DELLA TELA DEL NUOVO, e si conosce fin dal `CIAO`.
+	 *
+	 * ⛔ Qui la tela non e' ancora decisa — si decide a `SESSIONE` — ma §4.5
+	 *    impone che quella concessa non superi `video.misura_massima` del
+	 *    client, e quel numero e' gia' arrivato.  ⇒ Si conta il **minimo fra la
+	 *    tela del palco e il tetto del client**, cioe' un maggiorante del costo
+	 *    vero: verso scomodo (`LEZIONI.md` §1.33).
+	 * ⚠ Se il client non l'ha dichiarata resta la tela del palco, che e' il
+	 *   maggiorante buono lo stesso — e NON uno zero. */
+	if (wt_misura_massima_di(utente, &ml, &ma) && ml && ma) {
+		if (ml < tl)
+			tl = ml;
+		if (ma < ta)
+			ta = ma;
+	}
+
+	budget_conto_apri(&conto);
+	quanti = figli_quanti(p->f);
+	for (int i = 0; i < quanti; i++) {
+		const char *chi = figli_utente_ennesimo(p->f, i);
+
+		if (chi && chi[0])
+			budget_conto_dentro(&conto, chi);
+	}
+	e = budget_conto_verdetto(&conto, utente, tl, ta, perche, perche_cap);
+	if (e == BUDGET_NON_REGGE) {
+		*motivo = RCP_BUDGET_PIENO;
+		return false;
+	}
+	if (e == BUDGET_NON_SO) {
+		/* ⛔ «Non ho potuto misurare» non e' «non regge»: si ammette, e si
+		 *    dichiara — un buco dichiarato vale piu' di un numero inventato. */
+		registro_dice(REG_BUDGET,
+		              "⚠ «%s» AMMESSO senza giudizio del budget: %s",
+		              utente, perche && perche[0] ? perche : "non ho misurato");
+		if (perche && perche_cap)
+			perche[0] = '\0';
+		return true;
+	}
+	registro_dettaglio(REG_BUDGET, "«%s» ci sta: %s", utente,
+	                   perche && perche[0] ? perche : "");
+	if (perche && perche_cap)
+		perche[0] = '\0';
+	return true;
+}
+
 /* ⛔⭐ IL PONTE FRA L'AIUTANTE, IL TRASPORTO E IL FIGLIO.
  *
  *     `DECISIONI.md` §1.10-bis: il figlio nasce **quando PAM ha detto si'**, e
@@ -350,7 +468,26 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	struct ponte *p = (struct ponte *)ctx;
 	/* ⛔ Il congedo si manda DOPO `trasporto_verdetto()`: la ragione lunga sta
 	 *    in fondo alla funzione, sul riquadro «PERCHE' NON QUI». */
-	char senza_palco[192] = "";
+	char senza_palco[320] = "";
+	/* ⛔⭐ E DAL 25 AGOSTO 2026 (sera) I MOTIVI SONO **DUE**, non uno — §8.1
+	 *     **D5**, e i due NON si sostituiscono:
+	 *
+	 *       `0x0E` SESSIONE_NON_SERVIBILE  «la tabella e' piena»
+	 *                                      ⇒ limite **amministrativo**
+	 *                                      ⇒ gesto: *«riprova, o chiedi di
+	 *                                        alzare il tetto»*
+	 *       `0x06` BUDGET_PIENO            «questa macchina non ha piu'
+	 *                                      capacita' di composizione»
+	 *                                      ⇒ limite **fisico**
+	 *                                      ⇒ gesto: *«riprova, o entra
+	 *                                        chiedendo meno qualita'»*
+	 *
+	 * ⚠ Due fatti diversi non possono avere lo stesso esito (rilievo R9.3): e'
+	 *   la stessa regola per cui `0x0F` era stato tolto da qui.  ⛔ E `0x06`
+	 *   era dichiarato in `rcp.h` dal primo giorno e **non l'aveva mai mandato
+	 *   nessuno** (`[M]` §3.4: `grep RCP_BUDGET_PIENO src/*.c` ⇒ zero
+	 *   chiamanti).  Questa e' la riga che gli da' il suo primo mittente. */
+	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
 
 	if (ammesso && utente && utente[0]) {
 		/* ⛔ «C'era gia'» e «l'ho appena generato» sono due fatti diversi, e la
@@ -399,7 +536,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *
 		 * ⚠ `figli_quanti()` e `figli_pid_di()` esistevano gia': non serve
 		 *   nessuna funzione nuova, serve **chiedere prima**. */
-		if (!c_era && figli_quanti(p->f) >= RCP_TETTO_SESSIONI) {
+		if (!c_era && figli_quanti(p->f) >= rcp_tetto()) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ «%s» ha superato PAM ma NON avra' un palco: i "
 			              "palchi sono %d su %d, e ⛔ il posto nel registro "
@@ -408,12 +545,38 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "figlio NON viene generato: niente sessione grafica "
 			              "per chi verra' congedato (§8.1 D6), e il no esce sul "
 			              "filo con 0x0E",
-			              utente, figli_quanti(p->f), RCP_TETTO_SESSIONI);
+			              utente, figli_quanti(p->f), rcp_tetto());
 			snprintf(senza_palco, sizeof senza_palco,
 			         "i palchi di questo server sono tutti impegnati (%d su "
 			         "%d): sono sessioni grafiche vive, che si liberano al "
 			         "logout o dopo l'abbandono",
-			         figli_quanti(p->f), RCP_TETTO_SESSIONI);
+			         figli_quanti(p->f), rcp_tetto());
+		} else if (!c_era && !c_e_capacita(p, utente, senza_palco,
+		                                   sizeof senza_palco, &no_motivo)) {
+			/* ⛔⭐⭐⭐ IL BUDGET — fase 10, ed e' la ragione della fase.
+			 *
+			 *     ⛔ Fino a stasera questa macchina **accettava tutti e li
+			 *     affamava insieme**: `[M]` §S.2 — sulla scena satura
+			 *     l'undicesimo entrava con `negati 0`, e la prima sessione
+			 *     passava da **39,60 a 0,96 fot/s** (−97,6 %), cioe' 104 rossi
+			 *     appaiati contro l'invariante **I1**.
+			 *
+			 * ⭐ La domanda si fa QUI e non piu' avanti, per la stessa ragione
+			 *    del ramo dei palchi: `[M]` §6.4 punto 6 — un utente **mai
+			 *    ammesso** aveva 42 processi e un `gnome-shell`.  *«Rifiutare
+			 *    dopo aver acceso un desktop non e' rifiutare: e' fare login e
+			 *    poi cacciare.»*
+			 * ⚠ E solo se `!c_era`: un utente che ha gia' un palco e' gia'
+			 *   dentro il conto — rifiutargli il ri-attacco sarebbe un falso NO
+			 *   su una capacita' che sta gia' spendendo comunque.
+			 * ⛔ Il perche' e la scena stanno in `budget.h`, in testa: qui c'e'
+			 *    la cucitura, non la taratura. */
+			registro_dice(REG_BUDGET,
+			              "⛔ «%s» ha superato PAM ma NON entra: %s.  ⭐ Il "
+			              "figlio NON viene generato (§8.1 D6) e il no esce sul "
+			              "filo con 0x06 BUDGET_PIENO — che e' un limite "
+			              "FISICO, non la tabella piena di 0x0E",
+			              utente, senza_palco);
 		} else if (!figli_assicura(p->f, utente)) {
 			/* ⚠ Le ALTRE cinque strade per cui un figlio non nasce: nome che
 			 *   PAM ammette e NSS non risolve, uid 0, `socketpair`,
@@ -428,7 +591,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "tetto (palchi %d su %d): il perche' e' nella riga qui "
 			              "sopra.  ⭐ Viene congedato con 0x0E invece di entrare "
 			              "su una pagina nera",
-			              utente, figli_quanti(p->f), RCP_TETTO_SESSIONI);
+			              utente, figli_quanti(p->f), rcp_tetto());
 			snprintf(senza_palco, sizeof senza_palco,
 			         "il palco di «%s» non si e' montato e non e' un problema "
 			         "di capacita': la causa e' nella riga di registro "
@@ -445,6 +608,14 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			 *    volte. */
 			figli_chiedi_palco(p->f, utente);
 		}
+		/* ⛔⭐ E QUI SI SCRIVE IL CONTO DEI NEGATI — una riga per verdetto,
+		 *     **anche quando il budget e' spento**, ed e' quello il caso che
+		 *     conta: `[M]` §S.2 descrive il difetto in due parole — *«entra con
+		 *     `negati 0`»* — e leggere quello zero e' il fatto che prova **I6**.
+		 * ⚠ Sta DOPO la catena e non dentro i suoi rami: un conto scritto in
+		 *   tre punti diversi e' un conto che un giorno ne dimentichera' uno. */
+		budget_riga_verdetto(utente, senza_palco[0] == '\0', no_motivo,
+		                     rcp_tetto(), senza_palco);
 	}
 	trasporto_verdetto(p->t, pratica, ammesso);
 
@@ -484,14 +655,13 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 *    per la tabella dei posti.  ⭐ `fasi/10-…md` §8.1 D5: i due motivi si
 	 *    AGGIUNGONO, non si sostituiscono, e `0x06` e' del giro del budget. */
 	if (senza_palco[0]) {
-		size_t quante = wt_congeda_utente(utente, RCP_SESSIONE_NON_SERVIBILE,
-		                                  senza_palco, NULL);
+		size_t quante = wt_congeda_utente(utente, no_motivo, senza_palco, NULL);
 		registro_dice(REG_WT,
-		              "⛔ congedati %zu client di «%s» con 0x0E: %s.  ⚠ Se qui "
+		              "⛔ congedati %zu client di «%s» con %#04x: %s.  ⚠ Se qui "
 		              "leggi ZERO, il no NON e' arrivato a nessuno e l'utente "
 		              "e' davanti a una pagina nera — e' il difetto P3, non la "
 		              "sua cura",
-		              quante, utente, senza_palco);
+		              quante, utente, no_motivo, senza_palco);
 	}
 }
 
@@ -543,6 +713,25 @@ static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
 	 *    direzione **scomoda**.
 	 * ⚠ E lo zero resta legittimo: §6.2 lo riserva a «nessuno», ed e' quel che
 	 *   vale finche' il client non ha aperto il suo canale di input. */
+	/* ⛔⭐⭐ E DA QUI PASSA ANCHE IL BUDGET — fase 10, 25 agosto 2026, e la
+	 *      riga sta PRIMA della diffusione apposta.
+	 *
+	 *     ⭐ Questo e' l'unico punto del programma in cui **ogni** fotogramma di
+	 *     **ogni** palco passa con larghezza, altezza e istante: e' esattamente
+	 *     l'accumulatore di cui il budget aveva bisogno, e per questo non e'
+	 *     servito nessun canale nuovo fra padre e figlio (§6.9 punto 5).
+	 *
+	 * ⛔⛔ E NON C'E' NESSUNA GUARDIA SU «QUALCUNO GUARDA», ed e' il punto: il
+	 *      figlio chiama questa funzione anche quando nessuna sessione e'
+	 *      attaccata (§3.2, il *fantasma*).  Quei pixel **sono stati composti e
+	 *      codificati davvero**, quindi costano davvero — e un budget che li
+	 *      saltasse sottostimerebbe proprio nella scena in cui la macchina e'
+	 *      in affanno.
+	 * ⚠ Prima di `wt_video_diffondi()` perche' il costo e' del PALCO e non
+	 *   della connessione: se lo si contasse solo per i fotogrammi che trovano
+	 *   un destinatario, si conterebbe la rete invece della GPU. */
+	budget_deposita(utente, larghezza, altezza, istante_us);
+
 	wt_video_diffondi(utente, codec, chiave, dati, byte, larghezza, altezza,
 	                  istante_us, input);
 }
@@ -827,6 +1016,33 @@ static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
  *    sola. */
 static bool audio_silenzio = true;  /* ⭐ acceso; --niente-audio-silenzio spegne */
 
+/* ⛔⭐⭐⭐ FASE 10 — IL BUDGET, E LE SUE TRE MANOPOLE (25 agosto 2026).
+ *
+ *     Sono TRE perche' sono TRE GRANDEZZE, e mescolarle e' il difetto che la
+ *     fase e' andata a curare:
+ *
+ *       `--budget-mpixel-s`  il limite **FISICO**: quanti Mpixel/s di
+ *                            COMPOSIZIONE questa macchina dichiara di reggere.
+ *                            ⛔ `0` = SPENTO, ed e' il predefinito (I6).
+ *       `--tetto-sessioni`   il tetto **AMMINISTRATIVO** di §4.6, e da lui si
+ *                            dimensionano le quattro tabelle.  Predefinito 10
+ *                            (`SPECIFICHE.md` §5.5).
+ *       `--riserva`          la manopola della regola: quanta parte del caso
+ *                            peggiore di un inquilino **fermo** si tiene da
+ *                            parte.  Predefinito 0,5, `[M]` §6.9.
+ *
+ * ⛔ Ognuna dichiara nella riga d'avvio il valore in vigore, ACCESO E SPENTO —
+ *    la stessa regola delle cinque cure della fase 9, e per la stessa ragione:
+ *    due modi di sapere se una cosa e' in vigore sono due numeri che divergono.
+ * ⛔⛔ E `--budget-mpixel-s` NON SI AUTO-TARA: `[M]` §6.9 — prima che la
+ *      macchina abbia ceduto **una volta**, la capacita' che si legge e' un
+ *      **limite inferiore, non un soffitto**.  ⇒ O glielo si da', o non c'e'
+ *      budget: un prodotto che deducesse da se' il proprio soffitto
+ *      rifiuterebbe utenti per un numero che nessuno ha verificato. */
+static double budget_mpixel_s;                        /* 0 = SPENTO (I6) */
+static double budget_riserva = BUDGET_RISERVA_PREDEFINITA;
+static int tetto_sessioni = RCP_TETTO_SESSIONI;
+
 /* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
  *    client che se ne va — e' proprio il caso per cui esiste.
  * ⭐ E il numero viene da `rcp.h` (`RCP_TETTO_SESSIONI`), 25 agosto 2026: era
@@ -835,11 +1051,32 @@ static bool audio_silenzio = true;  /* ⭐ acceso; --niente-audio-silenzio spegn
  *    non possono esistere, quindi questa tabella non puo' traboccare **finche'
  *    i due numeri restano lo stesso**: il riquadro in `rcp.h` e' quel che lo
  *    garantisce, e il ripiego qui sotto e' la rete se qualcuno lo slega. */
-#define QUANTI_PRESENTI RCP_TETTO_SESSIONI
-static struct {
+/* ⭐⭐ E dalla sera del 25 agosto 2026 si **alloca** su `rcp_tetto()`, che
+ *     `--tetto-sessioni` muove all'avvio: il `QUANTI_PRESENTI` che stava qui e'
+ *     sparito, e non e' stato lasciato accanto come «massimo» — sarebbe stato
+ *     un secondo numero, cioe' la seconda strada di `CODER.md` §2-bis. */
+static struct presente {
 	char utente[257];
 	uint64_t ultimo_input_ms;
-} presenti[QUANTI_PRESENTI];
+} *presenti;
+static int quanti_presenti;
+
+/* ⛔ Si alloca alla prima presenza da segnare, una volta sola.  ⚠ Se la memoria
+ *    non c'e', vale il ripiego che questa tabella gia' dichiara piu' sotto: gli
+ *    utenti non hanno l'orologio dell'abbandono, e si scrive. */
+static bool presenti_pronti(void)
+{
+	if (presenti)
+		return true;
+	quanti_presenti = rcp_tetto();
+	presenti = (struct presente *)calloc((size_t)quanti_presenti,
+	                                     sizeof *presenti);
+	if (!presenti) {
+		quanti_presenti = 0;
+		return false;
+	}
+	return true;
+}
 
 /* ⭐ «Qui c'e' stato un gesto adesso.»  Se l'utente non c'e' in tabella lo si
  *    aggiunge: il primo gesto e' anche il primo segno di presenza. */
@@ -848,7 +1085,21 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 	int libero = -1;
 	if (!utente || !utente[0])
 		return;
-	for (int i = 0; i < QUANTI_PRESENTI; i++) {
+	if (!presenti_pronti()) {
+		/* ⛔ Ripiego dichiarato: senza tabella non c'e' orologio, e il caso
+		 *    e' lo stesso della tabella piena qui sotto. */
+		static bool niente_tabella_detto;
+
+		if (!niente_tabella_detto) {
+			niente_tabella_detto = true;
+			registro_dice(REG_FIGLIO,
+			              "⚠ RIPIEGO DICHIARATO: non c'e' memoria per la "
+			              "tabella della presenza: NESSUNA sessione grafica "
+			              "scadra' per abbandono");
+		}
+		return;
+	}
+	for (int i = 0; i < quanti_presenti; i++) {
 		if (presenti[i].utente[0] == '\0') {
 			if (libero < 0)
 				libero = i;
@@ -882,7 +1133,7 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 			              "grafica NON scadra' per abbandono.  ⛔ Se questa "
 			              "riga esiste, i tetti di rcp.h e di main.c si sono "
 			              "slegati: non dovrebbe poter succedere",
-			              QUANTI_PRESENTI, utente);
+			              quanti_presenti, utente);
 		}
 		return;
 	}
@@ -895,7 +1146,7 @@ static void presenza_dimentica(const char *utente)
 {
 	if (!utente)
 		return;
-	for (int i = 0; i < QUANTI_PRESENTI; i++)
+	for (int i = 0; i < quanti_presenti; i++)
 		if (strcmp(presenti[i].utente, utente) == 0)
 			presenti[i].utente[0] = '\0';
 }
@@ -1035,7 +1286,7 @@ static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
 {
 	if (!abbandono_ms || !p || !p->f)
 		return;
-	for (int i = 0; i < QUANTI_PRESENTI; i++) {
+	for (int i = 0; i < quanti_presenti; i++) {
 		if (presenti[i].utente[0] == '\0')
 			continue;
 		if (ora_ms <= presenti[i].ultimo_input_ms)
@@ -1459,6 +1710,63 @@ int main(int argc, char **argv)
 		 *      ne apre uno anche in QUESTO processo.  Consegnarla a uno solo
 		 *      farebbe misurare al banco del tono un prodotto diverso da quello
 		 *      del banco della sessione vera. */
+		/* ⛔⭐⭐⭐ FASE 10 — IL BUDGET DI COMPOSIZIONE.
+		 *
+		 *     L'argomento sono i **Mpixel/s di COMPOSIZIONE** che questa
+		 *     macchina regge, e la grandezza e' quella e non un'altra: `[M]`
+		 *     §6.11 — il codificatore nudo regge **1,86 Gpixel/s**, la
+		 *     composizione **0,97**, e a saturare `rcs0` e' **`gnome-shell` al
+		 *     99,5 %** mentre `remotix` sta a **0,00 %**.  ⇒ Dare qui il numero
+		 *     del codificatore ammetterebbe `[M]` ~22 sessioni dove ne stanno
+		 *     sei.
+		 *
+		 * ⛔⛔ E IL NUMERO NON SI AUTO-TARA, ed e' scritto qui perche' e' qui
+		 *      che qualcuno sara' tentato di farglielo dedurre: `[M]` §6.9 —
+		 *      **finche' la macchina non ha ceduto almeno una volta, il massimo
+		 *      che si e' letto e' un LIMITE INFERIORE**, cioe' «il punto in cui
+		 *      si e' smesso di provare».  Un soffitto dedotto da una salita che
+		 *      non ha fatto cedere niente rifiuterebbe utenti per niente.
+		 *      ⇒ Chi batte questa opzione **dichiara** di aver misurato.
+		 *
+		 * ⭐ `0` = SPENTO, ed e' il PREDEFINITO: `CODER.md` I6 — il budget non
+		 *    cura un difetto d'aspetto, **acquista una funzione**, e un utente
+		 *    respinto e' la cosa piu' visibile che un server possa fare. */
+		else if (strcmp(a, "--budget-mpixel-s") == 0 && v)
+			budget_mpixel_s = strtod(argv[++i], NULL);
+		/* ⭐⭐ LA MANOPOLA DELLA REGOLA — §6.9, e la scala e' misurata:
+		 *
+		 *      `0`     regola «consegnato»: chi e' dentro costa quel che
+		 *              consegna adesso.  `[M]` tetto **6 sature**, ⛔ ferme
+		 *              **illimitate** — cioe' cieca al RISVEGLIO;
+		 *      `0,5`   ⭐ il predefinito: `[M]` **0 falsi si' e 0 falsi no**,
+		 *              tetto **6 sature / 10 ferme** — il dieci di
+		 *              `SPECIFICHE.md` §5.5 ritrovato per MISURA;
+		 *      `1`     regola «peggiore»: tutti al massimo. `[M]` 5 e 6, con
+		 *              **un falso no** (rifiuta la sesta, che reggeva).
+		 *
+		 * ⛔ Serve contro il RISVEGLIO, che e' la falla vera: `[M]` §6.16 —
+		 *    otto sessioni ferme ammesse quando costavano 0,01 % l'una si
+		 *    accendono in **19 ms** e chiedono il **130 %** di un motore che ne
+		 *    ha 100; chi lavorava perde il **95,9 %** del ritmo.  ⛔ E il
+		 *    regolatore della fase 9 non lo puo' rimediare: ferma fotogrammi
+		 *    **gia' composti e gia' codificati**. */
+		else if (strcmp(a, "--riserva") == 0 && v)
+			budget_riserva = strtod(argv[++i], NULL);
+		/* ⛔⭐ IL TETTO AMMINISTRATIVO — §4.6: *«dieci non e' il limite: e' il
+		 *     tetto amministrativo»*.  ⭐ Da lui si dimensionano le QUATTRO
+		 *     tabelle che contano un utente servito — `attaccate[]` (`rcp.c`),
+		 *     `v[]` (`figlio.c`), `palchi[]` (`webtransport.c`) e `presenti[]`
+		 *     (qui): fino a stamattina erano quattro `#define` copiati a mano,
+		 *     e `[M]` §6.4 li aveva visti **divergere** (tabella dei posti a 2,
+		 *     tabella dei figli rimasta a 16).
+		 *
+		 * ⛔ Si batte PRIMA che le tabelle esistano, e vale una volta sola: la
+		 *    riga d'avvio dice il numero in vigore.
+		 * ⚠ E NON e' il budget: chi non ci sta riceve `0x0E` («la tabella e'
+		 *   piena»), non `0x06` («la macchina non ha piu' capacita'»).  I due si
+		 *   AGGIUNGONO — §8.1 D5 — e il gesto dell'utente e' diverso. */
+		else if (strcmp(a, "--tetto-sessioni") == 0 && v)
+			tetto_sessioni = (int)strtol(argv[++i], NULL, 10);
 		else if (strcmp(a, "--niente-audio-silenzio") == 0)
 			audio_silenzio = false;
 		else if (strcmp(a, "--sblocca") == 0) {
@@ -1594,6 +1902,41 @@ int main(int argc, char **argv)
 	 *   codificatore — qui non se ne scrive una seconda, o «impostato» e «in
 	 *   vigore» diventerebbero due fatti con la stessa faccia. */
 	audio_silenzio_taci(audio_silenzio);
+
+	/* ⛔⭐⭐ FASE 10 — IL TETTO E IL BUDGET, e le righe si scrivono SEMPRE.
+	 *
+	 *     Il tetto si impone PRIMA di ogni altra cosa: le quattro tabelle si
+	 *     allocano su di lui alla prima richiesta, e da quel momento non si
+	 *     muove piu'.  ⚠ `figli_accendi()` piu' sotto lo legge: se qualcuno
+	 *     spostasse questa riga dopo di lui, la tabella dei figli nascerebbe
+	 *     col predefinito e le altre col numero chiesto — che e' esattamente
+	 *     la divergenza che `[M]` §6.4 aveva misurato. */
+	if (tetto_sessioni < 1) {
+		registro_dice(REG_AVVIO,
+		              "⛔ --tetto-sessioni %d non ha senso: resta %d",
+		              tetto_sessioni, rcp_tetto());
+	} else if (!rcp_tetto_imposta(tetto_sessioni)) {
+		registro_dice(REG_AVVIO,
+		              "⛔ --tetto-sessioni %d NON e' entrato in vigore (le "
+		              "tabelle erano gia' allocate): resta %d",
+		              tetto_sessioni, rcp_tetto());
+	}
+	registro_dice(REG_AVVIO,
+	              "⭐ fase 10 — tetto AMMINISTRATIVO delle sessioni: **%d** "
+	              "(predefinito %d, `SPECIFICHE.md` §5.5)%s.  ⭐ E' UN NUMERO "
+	              "SOLO: da qui si dimensionano i posti di rcp.c, i palchi di "
+	              "figlio.c, le tele di webtransport.c e la presenza di main.c "
+	              "— `[M]` §6.4 li aveva visti divergere (posti 2, figli 16). "
+	              " ⚠ Chi non ci sta riceve 0x0E, che e' un limite "
+	              "AMMINISTRATIVO: il limite FISICO e' `--budget-mpixel-s`, e "
+	              "dice 0x06",
+	              rcp_tetto(), RCP_TETTO_SESSIONI,
+	              rcp_tetto() == RCP_TETTO_SESSIONI ? ""
+	                                                : " — mosso a mano");
+
+	budget_caselle(rcp_tetto());
+	budget_accendi(budget_mpixel_s, budget_riserva, TELA_L, TELA_A);
+	budget_riga_avvio(rcp_tetto());
 
 	/* ⛔⭐ E LA SOGLIA DELLA CODA VIDEO SI DICHIARA SEMPRE, accesa **e** spenta
 	 *     — al contrario del tono di prova qui sopra, e la differenza non e'

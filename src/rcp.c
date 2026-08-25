@@ -885,11 +885,20 @@ static void chiave_pagata(rcp_sessione *s);
  * — ma la REGOLA sta qui, non li'.                                          */
 /* ⛔⭐ IL NUMERO NON E' PIU' QUI — 25 agosto 2026.  Sta in `rcp.h`
  *     (`RCP_TETTO_SESSIONI`), insieme al riquadro che spiega perche' era
- *     scritto a mano in quattro posti e perche' adesso e' uno solo.  ⚠ Il nome
- *     locale resta: le cinque funzioni qui sotto lo usano, e cambiarlo
- *     renderebbe illeggibile la storia del file senza cambiare niente. */
-#define MAX_ATTACCATE RCP_TETTO_SESSIONI
-static struct {
+ *     scritto a mano in quattro posti e perche' adesso e' uno solo.
+ *
+ * ⭐⭐ E DALLA SERA DEL 25 AGOSTO NON E' PIU' NEMMENO UNA MISURA FISSA: la
+ *     tabella si **alloca** sul tetto in vigore (`--tetto-sessioni`).  ⛔ Il
+ *     `MAX_ATTACCATE` che stava qui **e' sparito**, e non e' stato lasciato
+ *     accanto come «massimo»: sarebbe stato un secondo numero, cioe' la
+ *     seconda strada di `CODER.md` §2-bis.
+ * ⭐ `[M]` §3.3 aveva verificato che le cinque funzioni qui sotto fanno **solo
+ *    scansioni lineari con `strcmp`** — nessuna aritmetica di indice, nessun
+ *    invariante appoggiato al 16 — ed e' per questo che il cambio costa un
+ *    `calloc` e un contatore. */
+static int tetto_in_vigore = RCP_TETTO_SESSIONI;
+static int quanti_posti;   /* ⛔ 0 finche' la tabella non e' allocata */
+static struct posto {
 	char utente[257];
 	bool usato;
 	/* ⛔⭐ CHI occupa il posto, e non e' un doppione del nome — 23 agosto 2026,
@@ -904,11 +913,46 @@ static struct {
 	 *   aggiunge una sesta strada la fa passare di li', o questo puntatore
 	 *   diventa una lettura di memoria liberata. */
 	rcp_sessione *chi;
-} attaccate[MAX_ATTACCATE];
+} *attaccate;
+
+int rcp_tetto(void)
+{
+	return tetto_in_vigore;
+}
+
+bool rcp_tetto_imposta(int quante)
+{
+	if (quante < 1)
+		return false;
+	/* ⛔ Una volta sola, e prima che esista una sessione: se la tabella c'e'
+	 *    gia', muoverne il numero lascerebbe in vigore DUE tetti nello stesso
+	 *    processo — la misura allocata e il numero dichiarato — che e'
+	 *    precisamente il difetto che i quattro `#define` a 16 avevano. */
+	if (attaccate)
+		return false;
+	tetto_in_vigore = quante;
+	return true;
+}
+
+/* ⛔ La tabella si alloca alla prima richiesta di posto, e **una volta sola**.
+ * ⚠ Se `calloc` fallisce, il chiamante lo tratta come «niente piu' posti»: e'
+ *   un ripiego dichiarato, e il no arriva sul filo con un motivo invece che con
+ *   un segmentation fault. */
+static bool posti_pronti(void)
+{
+	if (attaccate)
+		return true;
+	attaccate = (struct posto *)calloc((size_t)tetto_in_vigore,
+	                                   sizeof *attaccate);
+	if (!attaccate)
+		return false;
+	quanti_posti = tetto_in_vigore;
+	return true;
+}
 
 static bool posto_occupato(const char *utente)
 {
-	for (int i = 0; i < MAX_ATTACCATE; i++)
+	for (int i = 0; i < quanti_posti; i++)
 		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0)
 			return true;
 	return false;
@@ -917,7 +961,7 @@ static bool posto_occupato(const char *utente)
 /* La sessione che occupa il posto di quell'utente, o NULL. */
 static rcp_sessione *posto_chi(const char *utente)
 {
-	for (int i = 0; i < MAX_ATTACCATE; i++)
+	for (int i = 0; i < quanti_posti; i++)
 		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0)
 			return attaccate[i].chi;
 	return NULL;
@@ -955,7 +999,10 @@ static enum esito_posto posto_prendi(rcp_sessione *s)
 
 	if (posto_occupato(utente))
 		return POSTO_OCCUPATO;
-	for (int i = 0; i < MAX_ATTACCATE; i++) {
+	/* ⛔ Qui — e solo qui — la tabella nasce: e' l'unico posto che AGGIUNGE. */
+	if (!posti_pronti())
+		return POSTO_NIENTE_PIU_POSTI;
+	for (int i = 0; i < quanti_posti; i++) {
 		if (!attaccate[i].usato) {
 			attaccate[i].usato = true;
 			attaccate[i].chi = s;
@@ -970,7 +1017,7 @@ static enum esito_posto posto_prendi(rcp_sessione *s)
 static int posti_occupati(void)
 {
 	int n = 0;
-	for (int i = 0; i < MAX_ATTACCATE; i++)
+	for (int i = 0; i < quanti_posti; i++)
 		if (attaccate[i].usato)
 			n++;
 	return n;
@@ -978,7 +1025,7 @@ static int posti_occupati(void)
 
 static void posto_lascia(const char *utente)
 {
-	for (int i = 0; i < MAX_ATTACCATE; i++)
+	for (int i = 0; i < quanti_posti; i++)
 		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0) {
 			attaccate[i].usato = false;
 			/* ⛔ E il puntatore si azzera QUI, insieme al posto: e' l'unico
@@ -1443,7 +1490,10 @@ int rcp_ban_carica(const char *percorso, uint64_t ora)
  * server vero non la chiama nessuno, ed e' scritto nell'intestazione. */
 void rcp_azzera_registro_sessioni(void)
 {
-	memset(attaccate, 0, sizeof attaccate);
+	/* ⚠ La tabella e' allocata (fase 10): si azzerano le caselle che ci sono,
+	 *   e se non c'e' ancora non c'e' niente da azzerare. */
+	if (attaccate)
+		memset(attaccate, 0, (size_t)quanti_posti * sizeof *attaccate);
 	memset(tentativi, 0, sizeof tentativi);
 }
 
@@ -2644,7 +2694,8 @@ static void applica_disposizione(rcp_sessione *s, const char *perche)
  *      `POSTO_OCCUPATO` implica gia' «stesso utente»; il controllo qui sotto e'
  *      ridondante **per costruzione, non per progetto**, e il giorno in cui il
  *      registro diventasse la tabella delle sessioni di un server vero
- *      (`MAX_ATTACCATE`, §4.6) sarebbe l'unica cosa a reggere.  Non si toglie.
+ *      (il tetto delle sessioni, §4.6) sarebbe l'unica cosa a reggere.  Non si
+ *      toglie.
  *
  * ⛔ E l'occupante NON viene congedato: lo si mette esattamente nello stato in
  *    cui lo mette il silenzio di §5.3 in `rcp_tempo()` — posto lasciato,
@@ -2866,7 +2917,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		reg(s, "⛔ posto NEGATO a %s da %s: il registro delle sessioni di "
 		       "questo server e' PIENO (%d su %d) — NON e' 0x0F, quest'utente "
 		       "non ha nessuna sessione altrove",
-		    s->utente, s->provenienza, posti_occupati(), MAX_ATTACCATE);
+		    s->utente, s->provenienza, posti_occupati(), tetto_in_vigore);
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE,
 		        "il registro delle sessioni di questo server e' pieno");
 		return false;
@@ -6175,6 +6226,28 @@ const char *rcp_stato_nome(const rcp_sessione *s)
 }
 
 const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : ""; }
+
+/* ⛔⭐ IL TETTO DEL DECODIFICATORE, PORTATO FUORI — fase 10, 25 agosto 2026.
+ *
+ *     `max_l`/`max_a` esistevano dal 10 agosto (rilievo B-1) e servivano a UNA
+ *     cosa sola: non concedere una tela che il client non sa decodificare
+ *     (§4.5).  ⭐ Il budget ne ha bisogno per un'altra: e' il **maggiorante del
+ *     costo** di chi sta bussando, e si conosce fin dal `CIAO` — cioe' molto
+ *     prima che la tela sia decisa.  ⇒ Nessun campo nuovo, nessun canale nuovo:
+ *     solo un accessore.
+ *
+ * ⚠ `false` = «il client non l'ha dichiarata», ed e' un fatto diverso da «zero»
+ *   (§4.5 vincola la tela concessa **solo se il client l'ha dichiarata**). */
+bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a)
+{
+	if (!s || !s->max_l || !s->max_a)
+		return false;
+	if (l)
+		*l = s->max_l;
+	if (a)
+		*a = s->max_a;
+	return true;
+}
 
 /* ⛔⭐ §5.3 — «IL CLIENT E' ANCORA LI'», e lo dice il TRASPORTO, non RCP.
  *

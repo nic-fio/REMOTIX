@@ -5438,10 +5438,13 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
  *     ri-attacco, e ⛔ **in silenzio**, perche' il ripiego qui sotto si
  *     dichiara **una volta sola** e la prima l'aveva gia' spesa l'ottavo.
  *
- * ⇒ Adesso e' `RCP_TETTO_SESSIONI`: e' la stessa grandezza — «uno per utente
- *   servito» — e per costruzione non puo' piu' finire prima dei posti. */
-#define WT_PALCHI RCP_TETTO_SESSIONI
-static struct {
+ * ⇒ Adesso e' il tetto delle sessioni: e' la stessa grandezza — «uno per utente
+ *   servito» — e per costruzione non puo' piu' finire prima dei posti.
+ *
+ * ⭐⭐ E dalla sera del 25 agosto 2026 si **alloca** su `rcp_tetto()`, che
+ *     `--tetto-sessioni` muove all'avvio: il `WT_PALCHI` che stava qui e'
+ *     sparito, e non e' stato lasciato accanto come «massimo». */
+static struct palco_misura {
 	/* ⛔ 257 e non 64: e' la misura del campo `utente` di `rcp.c`.  ⚠ Con un
 	 *    campo piu' corto `snprintf` troncava in scrittura e `strcmp` confrontava
 	 *    il nome INTERO con quello troncato: la voce non si ritrovava mai, se ne
@@ -5450,8 +5453,27 @@ static struct {
 	 *    Difetto trovato refutando, 15 agosto 2026. */
 	char utente[257];
 	uint32_t l, a;
-} palchi[WT_PALCHI];
+} *palchi;
+static int quanti_palchi;
 static bool palchi_pieni_detto;
+
+/* ⛔ Si alloca alla prima misura da segnare, una volta sola.  ⚠ Se la memoria
+ *    non c'e', il ripiego e' quello che questa tabella gia' dichiara: al
+ *    ri-attacco la tela viene concessa come la chiede il client.  Nessuno muore
+ *    per questo, ma si scrive. */
+static bool palchi_pronti(void)
+{
+	if (palchi)
+		return true;
+	quanti_palchi = rcp_tetto();
+	palchi = (struct palco_misura *)calloc((size_t)quanti_palchi,
+	                                       sizeof *palchi);
+	if (!palchi) {
+		quanti_palchi = 0;
+		return false;
+	}
+	return true;
+}
 
 static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 {
@@ -5459,7 +5481,9 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 
 	if (!utente || !utente[0] || !l || !a)
 		return;
-	for (int i = 0; i < WT_PALCHI; i++) {
+	if (!palchi_pronti())
+		return;
+	for (int i = 0; i < quanti_palchi; i++) {
 		if (palchi[i].utente[0] == '\0') {
 			if (libero < 0)
 				libero = i;
@@ -5483,7 +5507,7 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 			              "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la "
 			              "tela verra' concessa come la chiede il client invece "
 			              "che come il palco ce l'ha",
-			              WT_PALCHI, utente);
+			              quanti_palchi, utente);
 		}
 		return;
 	}
@@ -5504,7 +5528,7 @@ void wt_palco_dimentica(const char *utente)
 {
 	if (!utente || !utente[0])
 		return;
-	for (int i = 0; i < WT_PALCHI; i++) {
+	for (int i = 0; i < quanti_palchi; i++) {
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
 		registro_dice(REG_RCP,
@@ -5549,7 +5573,7 @@ static bool wt_palco_misura(const char *utente, uint32_t *l, uint32_t *a)
 {
 	if (!utente || !utente[0])
 		return false;
-	for (int i = 0; i < WT_PALCHI; i++) {
+	for (int i = 0; i < quanti_palchi; i++) {
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
 		if (!palchi[i].l || !palchi[i].a)
@@ -5696,6 +5720,52 @@ size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettagl
 		quante++;
 	}
 	return quante;
+}
+
+/* ⛔⭐ IL TETTO DELLA TELA DI CHI STA BUSSANDO — fase 10, e serve al BUDGET.
+ *
+ *     A `consegna_verdetto()` la tela della sessione **non e' ancora decisa**
+ *     (si decide a `SESSIONE`), ma il suo tetto e' noto fin dal `CIAO`:
+ *     `video.misura_massima` di §4.3, che §4.5 impone di rispettare.  ⇒ Il
+ *     costo del nuovo si conta su quel tetto — un **maggiorante**, cioe' il
+ *     verso scomodo, cioe' quello giusto (`LEZIONI.md` §1.33).
+ *
+ * ⚠ Si passa di qui e non da `rcp.h` direttamente perche' e' `webtransport.c` a
+ *   sapere **quali sessioni sono di quell'utente** — la stessa ragione, e la
+ *   stessa strada, di `wt_congeda_utente()` qui sopra.
+ * ⚠ E se le sessioni di quell'utente sono piu' d'una si prende **la piu'
+ *   larga**: contare la piu' stretta sarebbe scegliere il numero comodo.
+ * ⛔ `false` = nessuna delle sue sessioni l'ha dichiarata, e non e' «zero»: chi
+ *    chiama ripiega sulla tela del palco. */
+bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a)
+{
+	uint32_t ml = 0, ma = 0;
+
+	if (!utente || !utente[0])
+		return false;
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+		uint32_t sl, sa;
+
+		if (!w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || strcmp(mio, utente) != 0)
+			continue;
+		if (!rcp_misura_massima(w->rcp, &sl, &sa))
+			continue;
+		if ((uint64_t)sl * sa > (uint64_t)ml * ma) {
+			ml = sl;
+			ma = sa;
+		}
+	}
+	if (!ml || !ma)
+		return false;
+	if (l)
+		*l = ml;
+	if (a)
+		*a = ma;
+	return true;
 }
 
 void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
