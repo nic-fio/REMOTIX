@@ -216,9 +216,18 @@ def scena_spegni():
 
 
 # ── ⭐ LO SPOGLIO DEL REGISTRO — solo le righe NATE IN QUESTO GIRO ─────────
+# ⛔⛔ L'IDENTITA' FRA L'AREA E IL CORPO — 25 agosto 2026, cura C4 della fase 10.
+#
+#   Da quel giorno ogni riga che sa di chi e' porta `[nome] ` **in testa al
+#   corpo**, subito dopo l'area.  Un modello ancorato che non lo preveda
+#   ⛔ non trova piu' NIENTE — e il guaio non e' che si ferma: e' che il
+#   conto esce **zero**, cioe' un numero che ACCUSA il prodotto di non aver
+#   spedito un fotogramma mentre li spediva tutti.
+#   ⇒ Il gruppo qui sotto e' FACOLTATIVO apposta: cosi' il lettore funziona
+#     sui registri di prima **e** su quelli di adesso.
 R_SPED = re.compile(r"fotogramma (\d+) SPEDITO: (CHIAVE|delta) 0x0\d0\d, codec (\d+), "
                     r"(\d+)x(\d+), (\d+) byte di dati")
-R_CICLO = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) figlio  ciclo: (\d+) fotogrammi "
+R_CICLO = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) figlio\s+(?:\[[^\]]{1,48}\] )?ciclo: (\d+) fotogrammi "
                      r"consegnati \((\d+) chiavi\), (\d+) attese a vuoto", re.M)
 
 

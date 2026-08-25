@@ -152,7 +152,16 @@ MOTORI_NOMI = {"render": "rendering (il compositore disegna)",
                "video": "codifica (il codificatore codifica)",
                "copy": "copia", "video-enhance": "ritocco video"}
 
-R_SPED = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) rcp\s+fotogramma (\d+) SPEDITO: "
+# ⛔⛔ L'IDENTITA' FRA L'AREA E IL CORPO — 25 agosto 2026, cura C4 della fase 10.
+#
+#   Da quel giorno ogni riga che sa di chi e' porta `[nome] ` **in testa al
+#   corpo**, subito dopo l'area.  Un modello ancorato che non lo preveda
+#   ⛔ non trova piu' NIENTE — e il guaio non e' che si ferma: e' che il
+#   conto esce **zero**, cioe' un numero che ACCUSA il prodotto di non aver
+#   spedito un fotogramma mentre li spediva tutti.
+#   ⇒ Il gruppo qui sotto e' FACOLTATIVO apposta: cosi' il lettore funziona
+#     sui registri di prima **e** su quelli di adesso.
+R_SPED = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) rcp\s+(?:\[[^\]]{1,48}\] )?fotogramma (\d+) SPEDITO: "
                     r"(CHIAVE|delta) 0x0\d0\d, codec (\d+), (\d+)x(\d+), (\d+) byte", re.M)
 
 
@@ -552,10 +561,34 @@ def resa(reg_testo, durata):
             for m in R_SPED.finditer(reg_testo)]
     sped.sort()
     n = len(sped)
+
+    # ⛔⛔ IL METRO SI CONTROLLA DA SE' — 25 agosto 2026.
+    #
+    #   Il 25 agosto la cura del registro ha anteposto `[nome] ` al corpo di
+    #   ogni riga, e questo modello — ancorato su «ora + area + corpo» — ha
+    #   smesso di trovare qualunque cosa.  ⛔ Il guaio non e' che si e'
+    #   fermato: e' che ha restituito **zero fotogrammi** su un server che li
+    #   spediva tutti, cioe' un numero che ACCUSA il prodotto.
+    #
+    # ⇒ Si contano le occorrenze CRUDE della parola nel testo, e se ce ne sono
+    #   ma il modello non ne ha prese, il metro e' rotto e **lo dice**.  Uno
+    #   zero vero e uno zero da modello morto hanno la stessa faccia: l'unico
+    #   modo di distinguerli e' guardare il testo con occhi piu' grossolani.
+    crude = reg_testo.count(" SPEDITO:")
+    if crude and n == 0:
+        raise SystemExit(
+            "⛔⛔ IL METRO E' ROTTO: nel registro ci sono %d righe con « SPEDITO:» "
+            "e il modello R_SPED non ne ha presa NESSUNA.\n"
+            "    Non riferisco «zero fotogrammi»: sarebbe un'accusa al prodotto "
+            "per un difetto del banco.\n"
+            "    ⇒ Guarda R_SPED: la forma della riga e' cambiata." % crude)
+
     if n == 0:
         # ⛔ Zero fotogrammi e' un FATTO su una scena ferma e un GUASTO su una
         #    scena che si muove: qui si riporta il fatto, e a giudicare e' il
         #    predicato della scena, non questa funzione.
+        # ⭐ E adesso e' uno zero VERO: il controllo qui sopra ha escluso che
+        #    sia il modello a non vedere.
         return {"fotogrammi": 0, "fotogrammi_s": 0.0, "byte_totali": 0,
                 "byte_medio_fotogramma": None, "chiavi": 0, "delta": 0,
                 "tela": None, "mpixel_s": 0.0, "cadenza_ms": None,

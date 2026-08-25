@@ -112,10 +112,19 @@ def _t2s(t):
 
 # ── Il registro: tre anelli, tre forme di riga ──────────────────────────────
 
+# ⛔⛔ L'IDENTITA' FRA L'AREA E IL CORPO — 25 agosto 2026, cura C4 della fase 10.
+#
+#   Da quel giorno ogni riga che sa di chi e' porta `[nome] ` **in testa al
+#   corpo**, subito dopo l'area.  Un modello ancorato che non lo preveda
+#   ⛔ non trova piu' NIENTE — e il guaio non e' che si ferma: e' che il
+#   conto esce **zero**, cioe' un numero che ACCUSA il prodotto di non aver
+#   spedito un fotogramma mentre li spediva tutti.
+#   ⇒ Il gruppo qui sotto e' FACOLTATIVO apposta: cosi' il lettore funziona
+#     sui registri di prima **e** su quelli di adesso.
 _RE_FIGLIO = re.compile(
-    r"^(\d\d:\d\d:\d\d\.\d+) figlio\s+audio: (\d+) blocchi spediti, (\d+) persi")
+    r"^(\d\d:\d\d:\d\d\.\d+) figlio\s+(?:\[[^\]]{1,48}\] )?audio: (\d+) blocchi spediti, (\d+) persi")
 _RE_PAGINA = re.compile(
-    r"^(\d\d:\d\d:\d\d\.\d+) pagina\s+GET /diario\?(\S+)")
+    r"^(\d\d:\d\d:\d\d\.\d+) pagina\s+(?:\[[^\]]{1,48}\] )?GET /diario\?(\S+)")
 _RE_RIFIUTO = re.compile(
     r"^(\d\d:\d\d:\d\d\.\d+) wt\s+.*datagram di \d+ byte NON messo.*"
     r"Rifiutati (\d+)\.(.*)$")

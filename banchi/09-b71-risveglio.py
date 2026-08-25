@@ -65,7 +65,16 @@ LAV = b68.LAV
 FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
                                 "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/b71")
 
-R_SPED = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) rcp\s+fotogramma (\d+) SPEDITO: "
+# ⛔⛔ L'IDENTITA' FRA L'AREA E IL CORPO — 25 agosto 2026, cura C4 della fase 10.
+#
+#   Da quel giorno ogni riga che sa di chi e' porta `[nome] ` **in testa al
+#   corpo**, subito dopo l'area.  Un modello ancorato che non lo preveda
+#   ⛔ non trova piu' NIENTE — e il guaio non e' che si ferma: e' che il
+#   conto esce **zero**, cioe' un numero che ACCUSA il prodotto di non aver
+#   spedito un fotogramma mentre li spediva tutti.
+#   ⇒ Il gruppo qui sotto e' FACOLTATIVO apposta: cosi' il lettore funziona
+#     sui registri di prima **e** su quelli di adesso.
+R_SPED = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) rcp\s+(?:\[[^\]]{1,48}\] )?fotogramma (\d+) SPEDITO: "
                     r"(CHIAVE|delta) 0x0\d0\d, codec (\d+), (\d+)x(\d+), (\d+) byte", re.M)
 
 
@@ -295,7 +304,7 @@ def arm(etichetta, pulsazioni, quiete, accensione=0.30, fermo_ms=0,
 #      fine codifica → SPEDITO = la consegna al trasporto
 # ⚠ Il registro ha il millisecondo, non il microsecondo: i due tratti di fuori
 #   hanno +-1 ms di grana, e si dichiara invece di stampare tre decimali.
-R_CODIFICA = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) figlio  codec (\d+): "
+R_CODIFICA = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d\d\d) figlio\s+(?:\[[^\]]{1,48}\] )?codec (\d+): "
                         r"(\d+) byte, (CHIAVE|chiave|delta), caricamento (\d+) us, "
                         r"codifica (\d+) us", re.M)
 
