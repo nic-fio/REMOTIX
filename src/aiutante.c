@@ -26,10 +26,33 @@
  *    nipote**: nel processo che serve non viene piu' eseguita mai. */
 bool rcp_autentica(const char *utente, const char *parola);
 
-/* ⛔ Il tetto delle pratiche in volo, e non e' un numero arbitrario: e' lo
- * stesso `MAX_ATTACCATE` di `rcp.c`.  Oltre, `aiutante_chiedi` dice di no — e
- * un no e' una risposta conforme a I3, mentre una coda senza fondo sarebbe un
- * modo di far nascere processi finche' la macchina regge. */
+/* ⛔⛔ QUESTO NUMERO NON E' IL TETTO DELLE SESSIONI, E NON DEVE SEGUIRLO — 25
+ *      agosto 2026, e la riga qui sopra diceva il contrario.
+ *
+ *      Diceva: *«non e' un numero arbitrario: e' lo stesso `MAX_ATTACCATE` di
+ *      `rcp.c`»*.  ⛔ **Non lo era** — erano due letterali indipendenti — e
+ *      soprattutto **non doveva esserlo**: sono due grandezze diverse.
+ *
+ *        · `RCP_TETTO_SESSIONI` conta gli utenti **serviti**, e una sessione
+ *          dura ore;
+ *        · questo conta le autenticazioni **in volo nello stesso istante**, e
+ *          una pratica dura da 1,0 a 2,2 s (`[M]` B8).
+ *
+ *      ⇒ Con ZERO sessioni attive si possono avere diciassette pratiche in
+ *        volo — bastano diciassette persone che premono «entra» insieme — e il
+ *        diciassettesimo riceverebbe `CREDENZIALI_ERRATE`, ⛔ **indistinguibile
+ *        da una parola sbagliata** (rilievo **R10-A7**).  E per il verso
+ *        opposto: un tetto di sessioni alto non ha nessun motivo di allargare
+ *        una coda che si svuota in due secondi.
+ *
+ * ⛔ Percio' resta un numero SUO, scritto qui, e questo riquadro esiste perche'
+ *    il giorno in cui `RCP_TETTO_SESSIONI` diventera' configurabile qualcuno
+ *    aprira' questo file per «allinearlo».  Non si allinea: si dimensiona sul
+ *    picco di ARRIVI, che e' un'altra misura e oggi non c'e'.
+ *
+ * ⚠ Oltre il tetto `aiutante_chiedi` dice di no — un no e' una risposta
+ *   conforme a I3, mentre una coda senza fondo sarebbe un modo di far nascere
+ *   processi finche' la macchina regge. */
 #define MAX_IN_VOLO 16
 
 /* ⛔ Quanto si aspetta una risposta prima di chiamarla «no».  PAM, misurata,

@@ -48,6 +48,11 @@
  */
 #include "figlio.h"
 
+/* ⛔ SOLO per `RCP_TETTO_SESSIONI` — vedi il riquadro sopra `MAX_FIGLI`.  ⚠ Il
+ *    figlio NON parla RCP: parla col padre su un `SOCK_SEQPACKET`.  Questo
+ *    include e' la dichiarazione del legame fra due tetti, non una dipendenza
+ *    dal protocollo. */
+#include "rcp.h"
 #include "registro.h"
 
 #include <dirent.h>
@@ -84,11 +89,18 @@
 #include "mutter.h"
 #include "sessione.h"
 
-/* ⛔ Lo stesso tetto delle sessioni di `rcp.c` (`DECISIONI.md` §1.11: 16, fisso
- * in compilazione fino alla fase 3).  Un utente per figlio, quindi il numero e'
- * lo stesso — e quando quello diventera' un budget di pixel, questo lo seguira'
- * dallo stesso posto. */
-#define MAX_FIGLI 16
+/* ⛔⭐ LO STESSO TETTO DELLE SESSIONI DI `rcp.c`, E ADESSO E' VERO — 25 agosto
+ *     2026.  Un utente per figlio (I2), quindi il numero e' lo stesso.
+ *
+ * ⛔ Fino a ieri questo commento diceva *«quando quello diventera' un budget di
+ *    pixel, questo lo seguira' dallo stesso posto»*, e ⛔ **il legame non
+ *    esisteva**: `MAX_ATTACCATE` era un `static` di `rcp.c` e questo era un
+ *    letterale indipendente.  `[M]` §6.4 l'ha misurato: albero compilato con
+ *    `MAX_ATTACCATE=2`, e `MAX_FIGLI` e' rimasto **16**.
+ * ⇒ Adesso il numero viene da `rcp.h`, e il compilatore conosce il legame che
+ *   il commento dichiarava.  ⚠ Questo file include `rcp.h` **solo** per questo:
+ *   il figlio non parla RCP, parla col padre. */
+#define MAX_FIGLI RCP_TETTO_SESSIONI
 
 /* ⛔ Quanto si aspetta che un figlio appena nato dica CHI E'.  Oltre, si
  * dichiara guasto e si abbatte: un processo che gira come un utente e non
