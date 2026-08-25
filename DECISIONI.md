@@ -2474,6 +2474,40 @@ prima della copia zero è un budget da rifare.
 > è il modo più veloce per non sapere più che cosa è stato detto davvero.
 > ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
 
+### 4.6-octies ⏳ ✅ **Il ban per indirizzo NON si tocca in fase 10: va in un capitolo sulla sicurezza**
+
+*Deciso dall'utente il **25 agosto 2026**, davanti al rilievo della fase 10: «il discorso del ban
+rientrerà in un discorso più generale sulla sicurezza, che farà parte di un capitolo evolutivo».*
+
+⛔ **Il rilievo resta vero e misurato, e non si chiude: si RINVIA con un nome.**
+`fasi/10-multi-tenant-e-il-budget.md` §4.2 (**R10-A2**): `rcp.c:1004` dichiara *«IL NOME UTENTE NON
+CONTA. Tre nomi diversi contano tre»* — ed è la decisione di **§1.9**, presa quando il prodotto
+serviva **un inquilino**. ⇒ Con dieci inquilini **dietro lo stesso NAT** la chiave è **una sola**:
+`[M]` tre di loro che sbagliano **una volta a testa** in cinque minuti bannano l'indirizzo, e gli
+altri sette — **che non hanno sbagliato niente** — restano fuori **dodici ore**. ⛔ E l'unica uscita è
+il socket di comando, che è `0600` di **root**: un inquilino **non può sbloccarsi**.
+
+> ### ⭐ Perché il rinvio è la scelta giusta, e non un accantonamento
+>
+> ⛔ **La cura tocca una difesa, non una comodità.** Quel che il ban difende — *«chi prova parole
+> d'ordine non deve poter provare all'infinito»* — è una decisione dell'utente (§1.9), e ⭐ **una
+> difesa non si smonta dentro una fase che sta misurando la capacità**: si rifà quando si guarda la
+> sicurezza **per intero**, con davanti tutte le sue voci.
+>
+> ⚠ **E il pezzo di disegno già trovato resta scritto, per chi aprirà quel capitolo**: una chiave
+> `(indirizzo, utente)` con la soglia di §1.9 per coppia, **più** una soglia più larga sul solo
+> indirizzo (molti nomi diversi falliti ⇒ ban dell'indirizzo), conserva la difesa contro **l'attacco
+> vero** — che prova **molti nomi** — e toglie la punizione collettiva per **l'errore di battitura**.
+> ⛔ È un disegno, non una decisione: la decisione è di quel capitolo.
+>
+> ⭐ **E una cosa che la fase 10 ha già chiuso**, e che non va rimessa in discussione là: il difetto
+> **della chiave con la porta** — quello per cui il contatore *«valeva sempre 1»* — è **curato per
+> costruzione**, e la lente avversariale l'ha verificato riga alla mano (§4.3, pista 2).
+
+⚠ **E il prezzo del rinvio, dichiarato**: fino a quel capitolo, ⛔ **un ufficio dietro un NAT è una
+configurazione in cui il prodotto può chiudersi da solo per dodici ore**, e la fase 10 lo sa. ⭐ Non è
+un difetto nascosto: è un difetto **misurato, nominato e datato**.
+
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
 *Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «no, nessuno può spegnere,
