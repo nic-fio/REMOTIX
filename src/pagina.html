@@ -716,7 +716,17 @@ const MOTIVO = {
    * ⚠ E la dipendenza va dichiarata: se un giorno `0x06` venisse emesso su un
    *   conto di TESTE invece che di pixel, la seconda meta' di questa frase
    *   diventerebbe falsa e andrebbe tolta. */
-  0x06: "questo server non ha piu' capacita' per un altro desktop — le sessioni gia' aperte continuano: riprova fra un momento, oppure rimpicciolisci la finestra e riprova, perche' la tela nasce grande quanto la finestra e una tela piu' piccola costa meno",
+  /* ⛔⛔ NIENTE «RIMPICCIOLISCI LA FINESTRA» — 25 agosto 2026.
+     Questa riga lo diceva, e ⛔ **al cancello era FALSA**: il no di `0x06` si
+     decide prima che la tela sia stata decisa, e l'unico numero in mano al
+     server e' `video.misura_massima`, che e' il tetto del DECODIFICATORE del
+     client — non della finestra.  ⇒ Chi rimpiccioliva e riprovava riceveva lo
+     stesso identico no, cioe' ⛔ un gesto che il prodotto non offre: peggio del
+     silenzio, perche' manda l'utente a cercare un comando che non esiste.
+     ⭐ La leva vera, se un giorno la si vorra' dare, e' il DISPOSITIVO, non la
+     finestra — e finche' non c'e', l'unica cosa vera da dire e' quando la
+     capacita' torna. */
+  0x06: "questo server non ha piu' capacita' per un altro desktop: le sessioni gia' aperte continuano, e un posto si libera appena qualcuno esce — riprova fra un momento, e se si ripete chiedi a chi amministra il server",
   0x07: "utente o parola d'ordine non corretti",
   /* ⛔ Niente numeri qui dentro — rilievo R12.9b, 10 agosto 2026 notte.  Questa
      riga diceva «riprova fra dodici ore», ed era FALSA per chiunque non fosse
