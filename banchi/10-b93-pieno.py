@@ -1397,6 +1397,9 @@ def i_due_numeri():
             n["max_figli"] = int(m.group(1))
         elif re.match(r"#define MAX_FIGLI\s+RCP_TETTO_SESSIONI", r.strip()):
             segue_fig = True
+        m = re.match(r"([0-9a-f]{32})\s+(\S+)", r.strip())
+        if m:
+            n["md5"][os.path.basename(m.group(2))] = m.group(1)
     # ⭐ Se seguono il numero unico, i due valori SONO quel numero: si scrivono,
     #    cosi' tutto il resto del banco continua a leggerli come prima.
     if n["tetto"] is not None:
@@ -1405,9 +1408,6 @@ def i_due_numeri():
         if segue_fig:
             n["max_figli"] = n["tetto"]
     n["seguono"] = {"max_attaccate": segue_att, "max_figli": segue_fig}
-        m = re.match(r"([0-9a-f]{32})\s+(\S+)", r.strip())
-        if m:
-            n["md5"][os.path.basename(m.group(2))] = m.group(1)
     return n
 
 
