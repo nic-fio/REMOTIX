@@ -11,8 +11,23 @@
 
 static bool parlantina;
 
+/* ⭐ L'identita' di questo processo — il riquadro sta in `registro.h`.  ⚠ Una
+ *    COPIA e non un puntatore: chi la posa passa spesso un `argv`, e un
+ *    puntatore a memoria altrui e' un registro che mente il giorno in cui
+ *    quella memoria cambia. */
+static char identita[REG_IDENTITA_MAX + 1];
+
 void registro_parlantina(bool acceso) { parlantina = acceso; }
 bool registro_parla_molto(void) { return parlantina; }
+
+void registro_identita(const char *chi)
+{
+	if (!chi || !*chi) {
+		identita[0] = '\0';
+		return;
+	}
+	snprintf(identita, sizeof identita, "%s", chi);
+}
 
 uint64_t registro_ora_ms(void)
 {
@@ -21,7 +36,7 @@ uint64_t registro_ora_ms(void)
 	return (uint64_t)ts.tv_sec * 1000u + (uint64_t)(ts.tv_nsec / 1000000);
 }
 
-static void riga(const char *area, const char *fmt, va_list ap)
+static void riga(const char *area, const char *chi, const char *fmt, va_list ap)
 {
 	struct timespec ts;
 	struct tm tm;
@@ -60,8 +75,43 @@ static void riga(const char *area, const char *fmt, va_list ap)
 	 *    con un segno, invece di uscire intrecciato: una riga tagliata si
 	 *    vede, una riga intrecciata no.
 	 * ⭐ E in piu' e' async-signal-safe, che `fprintf` non e'. */
-	int n = snprintf(buf, sizeof buf, "%s.%03ld %-7s ", quando,
-	                 ts.tv_nsec / 1000000, area);
+	/* ⭐⭐ E QUI DENTRO SI DICE DI CHI E' LA RIGA — 25 agosto 2026, R10-A4.
+	 *
+	 *     L'identita' della singola riga batte quella del processo: nel padre
+	 *     un processo solo serve tutte le sessioni, e la seconda non c'e'.
+	 *     ⛔ Ma la parentesi si compone SOLO qui: il riquadro di `registro.h`
+	 *        dice perche', ed e' la ragione per cui i chiamanti passano il nome
+	 *        nudo invece della stringa gia' fatta.
+	 *
+	 * ⛔ In TESTA AL CORPO, non fra l'ora e l'area, e non e' estetica: chi
+	 *    legge il registro lo spezza in «ora · area · corpo» e un campo nuovo
+	 *    in mezzo gli sposta l'area sotto gli occhi.  In testa al corpo, un
+	 *    lettore vecchio continua a leggere, e uno nuovo la stacca.
+	 * ⚠ E i byte in piu' li pagano SOLO le righe che hanno qualcosa da dire:
+	 *   chi non sa tace, e non paga. */
+	const char *id = (chi && *chi) ? chi : identita;
+	char idsano[REG_IDENTITA_MAX + 1];
+	int n;
+	if (id && *id) {
+		/* ⛔ SI RIPULISCE, e non e' diffidenza verso PAM: un `]` o un a-capo
+		 *    dentro l'identificatore spezzerebbe la riga in due, e una riga
+		 *    spezzata e' **plausibile e falsa** — il difetto che la cura del
+		 *    21 agosto (una sola `write` per riga) ha appena finito di
+		 *    togliere.  ⚠ Si tiene solo quel che sta in un nome utente. */
+		size_t k = 0;
+		for (const char *p = id; *p && k < REG_IDENTITA_MAX; p++, k++) {
+			unsigned char c = (unsigned char)*p;
+			bool buono = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
+			             || (c >= 'a' && c <= 'z') || c == '.' || c == '_'
+			             || c == '-' || c == '@' || c == ':';
+			idsano[k] = buono ? (char)c : '_';
+		}
+		idsano[k] = '\0';
+		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s [%s] ", quando,
+		             ts.tv_nsec / 1000000, area, idsano);
+	} else
+		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s ", quando,
+		             ts.tv_nsec / 1000000, area);
 	if (n < 0)
 		return;
 	if ((size_t)n > sizeof buf - 2)
@@ -92,7 +142,7 @@ void registro_dice(const char *area, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	riga(area, fmt, ap);
+	riga(area, NULL, fmt, ap);
 	va_end(ap);
 }
 
@@ -102,6 +152,25 @@ void registro_dettaglio(const char *area, const char *fmt, ...)
 	if (!parlantina)
 		return;
 	va_start(ap, fmt);
-	riga(area, fmt, ap);
+	riga(area, NULL, fmt, ap);
+	va_end(ap);
+}
+
+void registro_dice_di(const char *area, const char *chi, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	riga(area, chi, fmt, ap);
+	va_end(ap);
+}
+
+void registro_dettaglio_di(const char *area, const char *chi, const char *fmt,
+                           ...)
+{
+	va_list ap;
+	if (!parlantina)
+		return;
+	va_start(ap, fmt);
+	riga(area, chi, fmt, ap);
 	va_end(ap);
 }

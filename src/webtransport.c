@@ -2113,10 +2113,29 @@ static void gancio_chiudi(void *ctx, uint8_t motivo)
 	chiudi_sessione((wt *)ctx, motivo);
 }
 
+/* ⛔⭐ QUI SI SMETTE DI BUTTARE IL CONTESTO — 25 agosto 2026, R10-A4 / P6.
+ *
+ *     Fino a ieri questa funzione faceva `(void)ctx;`: `rcp.c` le consegnava la
+ *     sessione e lei la gettava.  ⛔ E **163 righe su 163** di `rcp.c` passano
+ *     di qui (`reg(rcp_sessione *s, …)` e' l'unico imbuto), fra cui la piu'
+ *     voluminosa del prodotto — `fotogramma N SPEDITO`, ~38/s **per sessione**.
+ *     `[M]` §6.7: con quattro desktop veri erano attribuibili allo **0,0 %**,
+ *     e la prova cieca — spegni una scena, chiedi al registro chi si e' fermato
+ *     — dava il nome giusto **0 volte su 4**.
+ *
+ * ⇒ L'identita' c'era gia' in mano: `ctx` **e'** il `wt`, il `wt` porta la
+ *   sessione RCP, e `rcp_utente()` esisteva da sempre.  Si buttava in un punto
+ *   solo, e si rimette in un punto solo.
+ *
+ * ⚠ E prima dell'autenticazione il nome NON c'e': li' la riga esce **muta**.
+ *   Non ci si mette la provenienza al posto suo — non perche' non si sappia, ma
+ *   perche' il corpo di quelle righe la porta gia', e un secondo campo che dice
+ *   la stessa cosa e' volume, non diagnosi. */
 static void gancio_registra(void *ctx, const char *riga)
 {
-	(void)ctx;
-	registro_dice(REG_RCP, "%s", riga);
+	wt *w = (wt *)ctx;
+	const char *chi = (w && w->rcp) ? rcp_utente(w->rcp) : NULL;
+	registro_dice_di(REG_RCP, chi, "%s", riga);
 }
 
 /* ⛔⭐ QUESTO GANCIO E' IL RIPIEGO, DAL 12 AGOSTO 2026 — `DECISIONI.md` §1.10.
