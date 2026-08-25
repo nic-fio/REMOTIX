@@ -5919,6 +5919,106 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
 	}
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ E LA STRADA DEI PIXEL SI CAMBIA **SENZA SMONTARE IL PALCO** — 25
+ *       agosto 2026, ed e' la cura di `fasi/10-…md` §8.2 **P1**.
+ *
+ * ⛔⛔ IL FATTO, `[M]` 25 agosto 2026 (core letto con gdb, non dedotto):
+ *
+ *   con una vista larga **1268** — quella che Firefox apre di suo — il passo
+ *   del DMA-BUF esce **5072**, che non e' multiplo di 64; la guardia della
+ *   copia zero lo rifiuta (`codifica_e_manda`), si segnava
+ *   `scheda_da_abbandonare`, e il ciclo **smontava tutto il palco** per
+ *   rimontarlo sulla memoria.  ⇒ `smonta_il_palco()` → `input_chiudi()` →
+ *   **`ei_disconnect()`**, e li' il figlio moriva di **SIGSEGV**:
+ *
+ *       #0  ei_disconnect ()   da /lib/x86_64-linux-gnu/libei.so.1
+ *       #2  input_chiudi (in=…) at input.c:1613
+ *       #3  smonta_il_palco () at figlio.c
+ *
+ *   `[M]` E il pezzo che spiega il **quando**: nel core `in->puntatore` e
+ *   `in->tastiera_dev` erano **NULL** e `regione_nota` **falsa** — il canale
+ *   EIS era stato aperto **33 ms prima** e la stretta di mano non era ancora
+ *   arrivata.  ⇒ Chiudere un canale libei appena nato lo fa cadere dentro la
+ *   libreria.  ⭐ La prova all'incontrario e' misurata: con lo **stesso**
+ *   ripiego su una tela 1268 chiesta a palco **maturo** (20 s), il figlio
+ *   sopravvive e la memoria monta — 25 agosto 2026.
+ *
+ * ⇒ ⭐⭐ LA CURA E' LA STRADA GIUSTA, non un cerotto: **la strada dei pixel e'
+ *      una proprieta' del FLUSSO, non della sessione grafica.**  Il canale di
+ *      input, gli appunti e la sessione `RemoteDesktop` non c'entrano niente
+ *      con l'essere i pixel in un DMA-BUF o in un memfd: smontarli era
+ *      buttare via tre cose sane per cambiarne una.
+ *
+ * ⭐ E si guadagna piu' del difetto che si cura:
+ *     · il canale di input **non si ricrea** ⇒ niente ricambio dei dispositivi
+ *       di libei, cioe' niente del difetto che §7.1 combatte da giorni;
+ *     · gli appunti restano vivi;
+ *     · non si rifa' `CreateSession` su `RemoteDesktop`, che costa ~1 s;
+ *     · il padre non riceve nessun «il palco se n'e' andato», quindi **nessun
+ *       congedo** e nessuna pagina nera.
+ *
+ * ⛔ Quel che si rimonta e' quel che DEVE essere rimontato: la `Cattura` e la
+ *    sua cucitura del cursore (`cursore_apri()` vuole il destinatario
+ *    all'apertura, e l'apertura sta dentro `cattura_avvia()` — vedi il riquadro
+ *    delle tre cuciture in `prendi_il_palco()`).
+ *
+ * ⚠ E se il nodo di PipeWire non si riprende (il produttore l'ha ritirato),
+ *   si torna `false` **senza inventare niente**: chi chiama smonta il palco per
+ *   davvero, che e' la strada di prima — declassata da normale a ripiego.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
+                                    uint32_t a)
+{
+	GError *sbaglio = NULL;
+	Cattura *nuova;
+
+	if (!m || !c)
+		return false;
+
+	/* ⛔ Prima si ferma quella vecchia: due flussi sullo stesso nodo
+	 *    vorrebbero dire due consumatori, e il produttore consegnerebbe a
+	 *    tutt'e due — cioe' il doppio del lavoro di GPU per niente. */
+	if (*c) {
+		cattura_ferma(*c);
+		*c = NULL;
+	}
+
+	nuova = cattura_avvia(mutter_nodo(m), l, a, MOVIMENTO_FPS, strada_del_palco,
+	                      CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
+	if (!nuova) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ la cattura NON si e' riaperta sul nodo %u alla strada "
+		              "«%s» (%s): smonto il palco per intero, che e' il ripiego "
+		              "— ⚠ e costa la sessione grafica, non solo il flusso",
+		              mutter_nodo(m),
+		              strada_del_palco == CATTURA_STRADA_SCHEDA ? "SCHEDA"
+		                                                        : "MEMORIA",
+		              sbaglio ? sbaglio->message : "nessun dettaglio");
+		g_clear_error(&sbaglio);
+		return false;
+	}
+	g_clear_error(&sbaglio);
+	*c = nuova;
+	/* ⛔ La cucitura del cursore si rifa' SUBITO: il tubo verso il padre e'
+	 *    registrato sulla `Cattura`, e quella di prima non c'e' piu'.  ⚠ Senza
+	 *    questa riga il puntatore smetterebbe di cambiare forma **senza nessun
+	 *    errore**, e il sintomo comparirebbe ore dopo. */
+	cattura_cursore(*c, cursore_al_padre, NULL);
+	registro_dice(REG_FIGLIO,
+	              "⭐⭐ la STRADA DEI PIXEL e' cambiata in «%s» rimontando SOLO "
+	              "il flusso (nodo %u, tela %ux%u): la sessione grafica, il "
+	              "canale di input e gli appunti NON sono stati toccati.  ⛔ E "
+	              "questa e' la cura di P1: smontare il palco per cambiare "
+	              "strada chiudeva un canale EIS appena nato, e `ei_disconnect()` "
+	              "ammazzava il figlio con un SIGSEGV prima del primo fotogramma",
+	              strada_del_palco == CATTURA_STRADA_SCHEDA
+	                  ? "SCHEDA (DMA-BUF, copia zero)"
+	                  : "MEMORIA (i pixel si copiano)",
+	              mutter_nodo(m), l, a);
+	return true;
+}
+
 /* ⛔ L'ingresso del figlio.  `main.c` ci arriva PRIMA di qualunque altra cosa,
  *    e non torna mai. */
 void figlio_vive(int argc, char **argv)
@@ -7764,16 +7864,27 @@ void figlio_vive(int argc, char **argv)
 			cattura_fermo_libera(&fo);
 
 			/* ⛔ E se la scheda si e' rivelata impercorribile — codificatore in
-			 *    software — il palco si rimonta sulla memoria.  ⚠ Si fa QUI e non
-			 *    dentro `codifica_e_manda`: il fermo e' gia' rilasciato, e
-			 *    smontare con un buffer ancora in mano renderebbe un `pw_buffer`
-			 *    a una cattura che non c'e' piu'. */
+			 *    software, oppure un passo che non si puo' importare — la
+			 *    STRADA DEI PIXEL cambia.  ⚠ Si fa QUI e non dentro
+			 *    `codifica_e_manda`: il fermo e' gia' rilasciato, e rimontare
+			 *    con un buffer ancora in mano renderebbe un `pw_buffer` a una
+			 *    cattura che non c'e' piu'.
+			 *
+			 * ⛔⛔⛔ E DAL 25 AGOSTO 2026 SI RIMONTA **SOLO IL FLUSSO**, non il
+			 *      palco: il riquadro sopra `rimonta_solo_la_cattura()` porta il
+			 *      core e la pila.  In breve — smontare il palco chiudeva un
+			 *      canale EIS **appena nato**, e `ei_disconnect()` ammazzava il
+			 *      figlio con un SIGSEGV **prima del primo fotogramma**, per una
+			 *      finestra larga 1268 px.  ⚠ Lo smontaggio resta come RIPIEGO,
+			 *      per il solo caso in cui il nodo non si riprenda. */
 			if (scheda_da_abbandonare || scheda_da_riprovare) {
 				strada_del_palco = scheda_da_riprovare
 				                       ? CATTURA_STRADA_SCHEDA
 				                       : CATTURA_STRADA_MEMORIA;
 				scheda_da_abbandonare = false;
 				scheda_da_riprovare = false;
+				if (rimonta_solo_la_cattura(mut, &cat, tela_l, tela_a))
+					continue;
 				smonta_il_palco(&mut, &cat);
 				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
 				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
