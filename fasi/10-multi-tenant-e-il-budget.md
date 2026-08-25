@@ -5,7 +5,10 @@ Aperta il **24 agosto 2026**, subito dopo la chiusura della fase 9.
 > *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. **Non credo che si
 > possa chiedere di più**.»*
 
-⭐ Il giudizio per intero, con i numeri della scena su cui è stato dato, sta in **§10**.
+> *«Allora la sessione ha raggiunto il suo scopo: il multitenant. **10 utenti contemporaneamente
+> presenti su una GPU integrata è un risultato di assoluta eccellenza**.»*
+
+⭐ I due giudizi per intero, coi numeri delle scene su cui sono stati dati, stanno in **§10**.
 ⚠ E **due decisioni sono rimaste non prese**, dichiarate in **§10-bis**: valgono i predefiniti.
 
 > ⛔ **Questo documento si riempie strada facendo** (`PIANO.md` §0.1). Le misure hanno l'ora accanto
@@ -3419,6 +3422,77 @@ guardiano porta il **denominatore** che prima non c'era: `inquilini=0`.
 due schede, la barra degli indirizzi, e una pagina resa**. ⛔ **Nessun dialogo, nessun profilo
 mancante, nessun accorgimento**: l'ambiente giusto e una `~/.cache` che è sua.
 
+### 7.4 ⛔⛔⛔ **LA SESSIONE CHE NASCE CIECA — nessun `wl_output`, e nessuna finestra si apre**
+
+*Trovato il **25 agosto 2026, sera**, dalla prova che ha proposto il regista: «dieci subagenti che
+usano il desktop in modi diversi».* ⭐ **Il difetto è emerso PRIMA che la prova partisse**, perché la
+prova costringeva ad aprire **sessioni nuove** — ⛔ e nessuno l'aveva mai fatto.
+
+⛔⛔ **Su una sessione appena nata, Mutter non annuncia nessun `wl_output`.** ⇒ **Nessuna applicazione
+Wayland può aprire una finestra:**
+
+| | `[M]` |
+|---|---|
+| **Firefox** | resta vivo — **un processo solo**, mai quello di contenuto — e sputa **in continuo** `gdk_monitor_get_workarea: assertion 'GDK_IS_MONITOR (monitor)' failed` |
+| **mpv** | esce: *«No outputs found or compositor doesn't support wl_output (ver. 2)»*, **4 uscite video su 4** |
+| il compositore | ⭐ **0,0 %** del motore di disegno · il palco consegna **zero fotogrammi** |
+
+#### ⭐ Il prodotto SE NE ACCORGE e lo dichiara — non consegna nero in silenzio
+
+```
+sessione [provanic9] ⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione
+                        «viva, completa e NERA» di STUDI.md §gnome §3.1
+figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0 a 0 bit
+```
+
+#### ⛔ Che cosa NON è — quattro ipotesi refutate, una per una
+
+| ipotesi | ⛔ refutata da |
+|---|---|
+| *«è una corsa persa all'avvio»* | a **+73 s** mpv ancora non trova l'uscita (provato a +5, +11, +23, +43, +73) |
+| *«il cliente non dichiara la vista»* | `--adatta 1920x1080@1.0` **non cambia niente**: `provanic7` (senza) e `provanic8` (con) **identici** |
+| *«è il multi-tenant»* | con **tutte le sessioni chiuse**, una sessione **da sola** ha lo stesso `wl_output = 0` |
+| *«è degli utenti nuovi»* | ⭐⭐ **`provanic3` ha avuto il monitor 2 volte e poi 6 volte NO** — lo stesso utente |
+
+⇒ ⛔ **È intermittente**, e da un certo momento in poi non riesce più:
+
+| utente | riuscito | fallito |
+|---|---|---|
+| `prova`, `provanic1` | 1 | 0 |
+| ⭐ `provanic3` | **2** | ⛔ **6** |
+| `provanic4` · `provanic5` · `provanic6` | 0 | ⛔ **98** · **55** · **50** |
+
+⚠ E c'è un **terzo stato**: `monitor «» (0 prima, **2** dopo)` — una volta per utente ne nascono
+**due**, senza nome.
+
+#### ⭐ La pista che pesa, e sta nel nostro codice
+
+`src/sessione.c:744`, e il commento è del **14 agosto 2026**:
+
+> ⛔⛔ *E `--virtual-monitor` NON C'È PIÙ.* Fino a stamattina questa riga lo chiedeva, e **la sessione
+> nasceva con un monitor suo**. ⇒ Poi… *«il nostro `RecordVirtual` ne crea uno»*.
+
+⇒ Da allora il monitor **non lo chiediamo più**: si conta che lo crei `RecordVirtual`. ⛔ **E adesso
+non lo crea, o lo crea solo a volte.**
+
+⚠ **E c'è una guardia che rifiuta di rimetterlo** (`sessione.c:832`). ⇒ ⛔ *Chi curerà deve leggere le
+righe 740-840 per intero: è stato tolto per una ragione misurata, e rimetterlo alla cieca rifà il
+difetto che quella riga aveva curato.*
+
+#### ⛔⛔ E L'ERRORE DI METODO CHE L'HA NASCOSTO — **è il più grave della fase**
+
+⛔ **Nessuno ha mai aperto una sessione NUOVA e l'ha guardata.** Tutte le prove — quelle della fase
+comprese — hanno riusato sessioni **già aperte, che il monitor ce l'avevano**.
+
+⇒ ⭐⭐ **È `LEZIONI.md` §1.37 un piano più giù**: là il difetto era *«non si sapeva guardare»*; qui è
+*«si guardava sempre lo stesso pezzo di scena»*. ⚠ E il conto dei processi diceva **1** in tutt'e due
+i casi — ⛔ **finestra o non finestra, lo stesso numero.**
+
+⚠ **Che cosa NON tocca**: i numeri di capacità di §6 e §10 sono presi su sessioni che **disegnavano
+davvero** — fotogrammi contati e GPU letta. ⇒ ⭐ **Il «da sei a undici» resta valido.**
+⛔ **Che cosa tocca**: la consegna. *Oggi una sessione nuova su tre-quattro nasce cieca*, e chi la
+prende non vede aprirsi nessuna finestra.
+
 ---
 
 ## §8 · Le decisioni prodotte
@@ -3571,7 +3645,31 @@ di **non mentire e non sbriciolarsi**, e sotto il pavimento dichiarato ha conseg
 visibili con la fluidità e il sincronismo intatti** — cioè ha speso il poco che aveva **dove
 l'utente se ne accorge di meno**.
 
-### ✅⭐⭐⭐⭐⭐ **E LA FASE SI CHIUDE QUI — 25 agosto 2026**
+### ✅⭐⭐⭐⭐⭐ **LO SCOPO È RAGGIUNTO — il multi-tenant**
+
+> *«Allora la sessione ha raggiunto il suo scopo: il multitenant. **10 utenti contemporaneamente
+> presenti su una GPU integrata è un risultato di assoluta eccellenza**.»*
+
+⭐ **È il giudizio che chiude la fase**, e cade esattamente sul suo scopo dichiarato — *«più utenti
+insieme, il budget, il rifiuto motivato»* (`PIANO.md`, fase 10).
+
+`[M]` **I numeri su cui è stato dato**, e sono tutti misurati su sessioni che **disegnavano davvero**
+— fotogrammi contati e GPU letta:
+
+| | undici desktop veri insieme |
+|---|---|
+| quanto peggiora **chi già lavorava** | ⭐ **−7,7 %**, sotto la tolleranza |
+| il **ritardo** | ⭐ **non si muove**: 8,4 → 8,0 ms |
+| violazioni di **I1** (*«mai peggiorare chi c'è già»*) | ⭐ **zero su undici** — contro **37** sulla scena satura |
+| quanto costano alla GPU | ⭐ **22-24 %**: poco meno di **un quarto** della macchina |
+
+⇒ ⛔ **Il soffitto non è stato trovato: sono finiti gli utenti, non la macchina.**
+
+⚠ **E l'aritmetica accanto, dichiarata come aritmetica e non come scena provata**: dieci che lavorano
+≈ **23 %**; più **uno** che guarda un 4K a schermo intero ≈ **64 %** (ci sta); più **due** ≈ **105 %**
+(il bordo). ⇒ ⭐ *Dieci normali più uno o due video reggono; tre video a schermo intero no.*
+
+### ✅⭐⭐⭐⭐⭐ **E IL PRODOTTO È STATO GIUDICATO ANCHE SOTTO LE SPECIFICHE — 25 agosto 2026**
 
 > *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. **Non credo che si possa
 > chiedere di più**.»*
