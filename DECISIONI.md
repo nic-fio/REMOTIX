@@ -2681,6 +2681,25 @@ codice ma **nella macchina**. ⇒ La rete guarda **la consegna**, non solo il so
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
+> ### ⛔⛔ E IL 25 AGOSTO 2026 QUESTA DECISIONE HA TROVATO UN BUCO — **chi aggiorna**
+>
+> `[M]` Fermando l'unità del server per **aggiornarlo**, alle 18:14:29, **sono morte tutte le
+> sessioni degli utenti** — finestre comprese; quindici secondi dopo ne è nata una **nuova e vuota**.
+> La sessione grafica vive nell'**albero di processi del server** (`KillMode=mixed`).
+>
+> ⇒ ⭐⭐ **È esattamente il danno che questa decisione vieta** — *«spegnerla è l'unico gesto che porta
+> via tutte le sessioni insieme»* — ⛔ **ottenuto però da chi amministra, e senza che nessuna riga lo
+> dichiarasse.** Le tre cinture di sotto difendono dallo spegnimento della **macchina**; ⛔ **nessuna
+> difende dal riavvio del SERVIZIO.**
+>
+> ⚠ **Non si allarga qui la decisione**: il confine è stato tracciato in `SPECIFICHE.md` §5.2 (*«la
+> sessione sopravvive al client, NON al server»*), il rilievo sta in
+> `fasi/10-multi-tenant-e-il-budget.md` **§7.5**, e ⭐ **il posto dove si cura è la fase 14, il
+> servizio**: aggiornare senza fermare nessuno.
+>
+> ⭐ **E per intanto la regola pratica, che discende da questa decisione senza cambiarla**: prima di
+> riavviare il server **si guarda chi c'è**.
+
 *Decisa dall'utente il **15 agosto 2026**, all'apertura della fase 5: «no, nessuno può spegnere,
 riavviare, mettere in standby o sospensione il server, altrimenti si rischia di "buttare fuori"
 anche altri eventuali utenti collegati alla macchina».*

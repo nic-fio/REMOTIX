@@ -2533,3 +2533,66 @@ sezione**: se la diagnosi non c'è, la sezione non è chiusa.
 ⚠ E il costo, per essere onesti fino in fondo: quella conclusione ha tenuto il regista **due fasi**
 davanti a un browser che non partiva, con la spiegazione *«non è nostro»* — che è la spiegazione che
 ⛔ **non chiede di continuare a cercare**.
+
+---
+
+### 1.39 ⛔⛔⛔⭐ **Si riparte sempre dallo stesso punto, e quel punto era già a posto**
+
+*25 agosto 2026, fase 10. ⛔ È l'errore di metodo più costoso del progetto finora, e non è stato
+scoperto misurando: è stato scoperto perché il regista ha chiesto una prova che **obbligava a
+partire da zero**.*
+
+⛔ **Il difetto**: su una sessione remota **appena nata**, il compositore non annuncia nessun
+monitor ⇒ **nessuna applicazione può aprire una finestra**. È rimasto invisibile per giorni.
+
+⭐⭐ **E non era sottile.** Era invisibile per una ragione sola:
+
+> ⛔ **Tutte le prove — quelle del prodotto e quelle dei banchi — riusavano sessioni GIÀ APERTE**, che
+> il monitor ce l'avevano. Il pezzo di scena che si rompeva **non veniva mai attraversato**.
+
+#### ⛔ E il difetto ha una forma che si ripete — tre volte nella stessa fase
+
+| | nascosto per | ⛔ perché |
+|---|---|---|
+| la sessione senza monitor | giorni | ⛔ si ripartiva da una sessione già viva |
+| `~/.cache` condivisa fra utenti | **due fasi** | ⛔ e **il controllo che «chiudeva la questione» condivideva il difetto** (§1.38) |
+| cinque banchi che contavano zero fotogrammi | un giro | ⛔ una cura al registro ne aveva rotto le espressioni |
+
+⇒ ⭐⭐⭐ **Tutti e tre sono lo stesso errore visto da tre lati**: si guarda **sempre lo stesso pezzo di
+scena**, e si guarda **il processo invece del pixel**.
+
+> ### ⭐⭐ Le due regole, e sono corte
+>
+> 1. ⛔ **Almeno una prova deve partire da ZERO**: macchina pulita, utente nuovo, sessione nuova — e
+>    finire con **un'immagine**. Una prova che riusa uno stato che funzionava **non può trovare un
+>    difetto della nascita**, per costruzione.
+> 2. ⛔ **Non si conta il processo: si guarda il pixel.** `[M]` Il conto dei processi diceva **1** sia
+>    con la finestra sia senza — ⭐ **finestra o non finestra, lo stesso numero.**
+
+⚠ **E la contromisura non è «più prove».** Ce n'erano già più di cento, ⛔ **e i tre difetti sono
+passati in mezzo a loro.** Il problema non è la quantità: è **da dove partono** e **che cosa
+guardano**. ⇒ È per questo che l'utente ha deciso una fase apposta — `DECISIONI.md` §4.6-duodecies,
+la **rete di sicurezza** — prima dei desktop nuovi.
+
+---
+
+### 1.40 ⚠⭐ **`bash -n` passa su uno script che non fa quel che sembra**
+
+*25 agosto 2026, e costa dichiararlo perché è successo mentre si costruiva il banco.*
+
+```bash
+U=${1:?serve l'utente}      # ⛔ l'apostrofo APRE una virgoletta…
+PROFILO=${2:?serve il profilo}   # …e questa riga finisce DENTRO la stringa
+```
+
+`[M]` L'apostrofo di *«l'utente»* si è mangiato **quattro righe**, fino al `'` successivo — che stava
+in un commento (`E'`). ⇒ `PROFILO=` **non è mai stata eseguita**, e lo script è morto molto più in
+là con *«PROFILO: unbound variable»* su una riga che non c'entrava.
+
+⛔⛔ **E `bash -n` è passato.** La sintassi **era** valida: solo, non voleva dire quel che sembrava.
+
+> ⭐ **La regola**: `bash -n` dice *«si può leggere»*, non *«fa quel che credi»*. ⇒ Un controllo di
+> sintassi **non è una prova**, e uno script nuovo va **eseguito** almeno una volta prima di
+> fidarsene. ⚠ E dentro `${…:?…}` e le stringhe fra virgolette doppie, **niente apostrofi**: questo
+> progetto scrive già `e'` e `puo'` nei commenti, ⛔ e lì dentro quella convenzione è **obbligatoria**,
+> non stilistica.

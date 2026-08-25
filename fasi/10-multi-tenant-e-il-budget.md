@@ -3493,6 +3493,33 @@ davvero** — fotogrammi contati e GPU letta. ⇒ ⭐ **Il «da sei a undici» r
 ⛔ **Che cosa tocca**: la consegna. *Oggi una sessione nuova su tre-quattro nasce cieca*, e chi la
 prende non vede aprirsi nessuna finestra.
 
+### 7.5 ⛔⛔ **FERMARE IL SERVER PORTA VIA TUTTE LE SESSIONI** — anche per aggiornarlo
+
+*Trovato il **25 agosto 2026 alle 18:14**, aggiornando la 7730 su richiesta del regista.*
+
+`[M]` **La sequenza, dal giornale di sistema:**
+
+```
+18:14:29  Stopping remotix-7730.service …   Deactivated successfully.   Started …
+18:14:44  New session c686 of user prova    ← una sessione NUOVA E VUOTA
+```
+
+⇒ ⛔ **La sessione dell'utente è morta con l'unità**, con dentro il terminale e il browser che aveva
+aperto. Il palco vive **nell'albero di processi del server**, e l'unità ha `KillMode=mixed`.
+
+⭐ **`SPECIFICHE.md` §5.2 dice «la sessione sopravvive al CLIENT», ed è vero e misurato.**
+⛔ *«Sopravvive al server»* **non era mai stato promesso, e non è vero.**
+
+⇒ ⛔⛔ **Oggi aggiornare il server vuol dire buttare fuori tutti** — lo stesso danno che
+`DECISIONI.md` §4.7 vieta a chiunque di provocare spegnendo la macchina, ⚠ **fatto però da chi
+amministra, e senza che nessuno l'avesse dichiarato.**
+
+⚠ **Il confine è ora scritto** in `SPECIFICHE.md` §5.2, e il posto dove si cura è la **fase 14, il
+servizio**: aggiornare senza fermare nessuno.
+
+⭐ **E per intanto la regola pratica**: prima di riavviare il server **si guarda chi c'è**, come §4.7
+già impone a chi vorrebbe spegnere la macchina.
+
 ---
 
 ## §8 · Le decisioni prodotte

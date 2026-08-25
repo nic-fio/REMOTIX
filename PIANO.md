@@ -1602,6 +1602,19 @@ sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 
 ⚠ *Era la **fase 13** fino al 25 agosto 2026, per lo stesso scalo.*
 
+> ### ⛔⛔ E UNA COSA DA FARE QUI È GIÀ MISURATA — *25 agosto 2026*
+>
+> `[M]` **Fermare l'unità del server porta via TUTTE le sessioni degli utenti**, finestre
+> comprese: la sessione grafica vive nel suo albero di processi (`KillMode=mixed`). ⇒ ⛔ **Oggi
+> aggiornare il server significa buttare fuori tutti** — lo stesso danno che `DECISIONI.md` §4.7
+> vieta a chiunque di provocare spegnendo la macchina.
+>
+> ⭐ `SPECIFICHE.md` §5.2 promette *«la sessione sopravvive al CLIENT»*, ed è vero e misurato.
+> ⛔ *«Sopravvive al server»* **non era mai stato promesso, e non è vero.** ⇒ Il confine è ora
+> tracciato lì, e **questa è la fase che lo deve spostare**: aggiornare senza fermare nessuno.
+>
+> ⚠ Il rilievo per intero: `fasi/10-multi-tenant-e-il-budget.md` **§7.5**.
+
 **Produce**: unità systemd, confezionamento, installazione, il certificato generato all'avvio,
 la limitazione dei tentativi.
 

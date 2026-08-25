@@ -363,6 +363,24 @@ connessione**. Si chiude il client e la sessione resta viva; ci si ricollega, an
 dispositivo, e si ritrova tutto. È l'invariante I4, ed è il difetto che in v1 rendeva la sessione
 inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
 
+> ### ⛔⛔ MA NON SOPRAVVIVE AL **SERVER** — `[M]` 25 agosto 2026
+>
+> ⭐ *«Sopravvive al client»* è vero e misurato. ⛔ **«Sopravvive al server» non lo è, e non era mai
+> stato scritto da nessuna parte.**
+>
+> `[M]` Fermando l'unità del server alle **18:14:29** per aggiornarlo, **la sessione dell'utente è
+> morta con lei** — le sue finestre comprese; alle **18:14:44** ne è nata una **nuova e vuota**. La
+> ragione è che la sessione grafica vive **nell'albero di processi del server**, e l'unità ha
+> `KillMode=mixed`.
+>
+> ⇒ ⛔⛔ **Oggi aggiornare il server significa buttare fuori tutti** — ed è lo stesso danno che
+> `DECISIONI.md` §4.7 vieta a chiunque di provocare spegnendo la macchina, ⚠ **fatto però da chi
+> amministra, e senza che nessuno l'avesse dichiarato.**
+>
+> ⭐ **Non è una promessa rotta: è un confine che non era tracciato.** Sta qui perché il giorno in cui
+> il prodotto diventerà un servizio da aggiornare senza fermare nessuno — **fase 14** — questo è il
+> punto da cui si riparte.
+
 ### 5.2-bis ⭐ E finisce quando l'utente esce — le due uscite non sono la stessa
 
 *Deciso dall'utente il 15 agosto 2026 (`DECISIONI.md` §4.1-ter e §4.1-quater).*

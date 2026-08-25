@@ -374,6 +374,36 @@ non solo il suo numero. (`LEZIONI.md` §2.2.)
 
 ---
 
+## 4-bis. ⭐ Le due trappole degli SCRIPT, e tutt'e due sono passate da `bash -n`
+
+*Scritte il 25 agosto 2026, e tutt'e due sono costate un giro nella fase 10.*
+
+### ⛔⛔ Niente apostrofi dentro `${…:?…}` e dentro le stringhe fra virgolette doppie
+
+```bash
+U=${1:?serve l'utente}            # ⛔ l'apostrofo APRE una virgoletta…
+PROFILO=${2:?serve il profilo}    # …e questa riga finisce DENTRO la stringa
+```
+
+`[M]` L'apostrofo di *«l'utente»* si è mangiato **quattro righe**, fino al `'` successivo — che stava
+in un commento (`E'`). ⇒ `PROFILO=` **non è mai stata eseguita**, e lo script è morto molto più in là
+con *«PROFILO: unbound variable»*, su una riga **che non c'entrava**.
+
+⛔ **E `bash -n` è passato**: la sintassi **era** valida, solo non voleva dire quel che sembrava.
+
+⭐ Questo progetto scrive già `e'` e `puo'` nei commenti; ⛔ **dentro `${…}` e le stringhe quella
+convenzione non è stilistica: è obbligatoria.**
+
+### ⛔ Un controllo di sintassi NON è una prova
+
+⭐ `bash -n` dice *«si può leggere»*, non *«fa quel che credi»*. ⇒ **Uno script nuovo si esegue almeno
+una volta prima di fidarsene**, e ⛔ **si guarda che cosa ha PRODOTTO**, non che sia uscito con zero.
+
+⚠ E il caso peggiore è quello che è capitato: uno script che **parte, stampa le sue righe di
+successo, e non fa il suo lavoro**. `[M]` Il banco delle scene dichiarava *«⭐ palco aperto»* e
+*«⭐ parto»* su una scena **completamente vuota** — ⇒ ⭐ **l'ha preso solo la misura dello stimolo**
+(il compositore a **0,0 %**), che è §3 di questo documento applicato al banco stesso.
+
 ## 5. L'obbligo di aggiornamento
 
 Quando una misura contraddice questo documento, o `SPECIFICA.md`, o `REFERENCE.md`,
