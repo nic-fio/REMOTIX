@@ -140,6 +140,16 @@ os.environ.setdefault("DENTRO_ALB", "/srv/src/10c3-src")
 os.environ.setdefault("DENTRO_LAV", "/srv/remotix/tmp/10c3")
 os.environ.setdefault("UNITA", "remotix-8230")
 os.environ.setdefault("PAROLA_UTENTE", "dec-pieno-2026")
+# ⛔⭐ IL NOME CON CUI IL LUCCHETTO DEV'ESSERE MIO — 25 agosto 2026, quinto giro.
+#
+#     Era scritto a mano («10-c3») dentro il controllo del terreno, e la
+#     GUARDIA E' GIUSTA: due carichi di GPU insieme si falsano in silenzio.
+#     ⚠ Ma un incarico diverso che rifa' girare QUESTO banco sull'albero cucito
+#     tiene il lucchetto col PROPRIO nome, e il controllo gli darebbe rosso su
+#     una macchina perfettamente sua.  ⛔ La cura non e' spegnere la guardia:
+#     e' dirle **di chi** dev'essere, come fanno gia' `10-b96` e `10-c1` con
+#     `IO_SONO`.  ⇒ Chi non dichiara niente resta «10-c3», e nulla cambia.
+IO_SONO = os.environ.setdefault("IO_SONO", "10-c3")
 
 
 def _carica(nome, percorso):
@@ -759,12 +769,13 @@ def terreno_mio(B93):
         os.environ.setdefault("LUCCHETTO", "/media/REMOTIX/tmp/.lucchetto-gpu.d")
         luc.POSTO = os.environ["LUCCHETTO"]
         chi, scad = luc.stato()
-        if chi != "10-c3":
-            guai.append("⛔⛔ il lucchetto della GPU e' di «%s», non mio: due "
-                        "carichi di GPU insieme si falsano IN SILENZIO" % chi)
+        if chi != IO_SONO:
+            guai.append("⛔⛔ il lucchetto della GPU e' di «%s», non mio (%s): "
+                        "due carichi di GPU insieme si falsano IN SILENZIO"
+                        % (chi, IO_SONO))
         else:
-            _inf("⭐ il lucchetto e' mio (10-c3), scade fra %d s"
-                 % max(0, int((scad or 0) - time.time())))
+            _inf("⭐ il lucchetto e' mio (%s), scade fra %d s"
+                 % (IO_SONO, max(0, int((scad or 0) - time.time()))))
     except Exception as e:
         guai.append("⚠ non ho potuto leggere il lucchetto: %s" % e)
     for g in guai:
