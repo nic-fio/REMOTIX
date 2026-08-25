@@ -110,15 +110,34 @@ porta)
 	ok "sorgenti in $ALBERO"
 
 	log "2 · ⛔ IL SED, sulle DUE copie gemelle — e solo qui, mai nel repository"
-	ssh -o BatchMode=yes "$MACCHINA" "
-		set -e
-		for f in $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c; do
-			sed -i 's/^#define MAX_ATTACCATE 16\$/#define MAX_ATTACCATE $MAX_ATT/' \$f
-			grep -n '^#define MAX_ATTACCATE' \$f
-		done
-		grep -n '^#define MAX_FIGLI' $ALBERO/src/figlio.c
-		cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle: uguali'
-	" || { ko "⛔ il sed non e' riuscito"; exit 2; }
+	# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+	#
+	#   Prima erano QUATTRO `#define` a 16 copiati a mano, e questo copione ne
+	#   sostituiva uno solo, in `rcp.c`.  Adesso il numero e' UNO —
+	#   `RCP_TETTO_SESSIONI` in `rcp.h` — e lo seguono `MAX_ATTACCATE`,
+	#   `MAX_FIGLI`, `QUANTI_PRESENTI` e `WT_PALCHI`.
+	#
+	# ⛔⛔ E il modo in cui questo copione falliva era il PEGGIORE: un `sed` su
+	#   un modello che non c'e' piu' esce **0 senza sostituire**, il terreno
+	#   dichiarava successo, il tetto restava 16, e il banco finiva in «non ho
+	#   misurato» — cioe' un guasto che non morde travestito da terreno sano.
+	#   ⇒ Adesso si CONTA se la sostituzione ha morso, e se non ha morso su
+	#     tutt'e due le gemelle il terreno si FERMA.
+	ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe detto «non ho misurato»"; exit 2; }
+set -e
+n=0
+for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
+	prima=\$(grep -c '^#define RCP_TETTO_SESSIONI 16\$' "\$f" || true)
+	sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $MAX_ATT/' "\$f"
+	dopo=\$(grep -c '^#define RCP_TETTO_SESSIONI $MAX_ATT\$' "\$f" || true)
+	echo "\$f: prima=\$prima dopo=\$dopo"
+	if [ "\$prima" = 1 ] && [ "\$dopo" = 1 ]; then n=\$((n+1)); fi
+done
+if [ "\$n" != 2 ]; then echo '⛔ il sed NON ha morso su tutt e due le gemelle'; exit 3; fi
+grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
+cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle rcp.c: uguali'
+SED_FINE
 
 	log "3 · Compilo dentro il contenitore"
 	if ! ssh -o BatchMode=yes "$MACCHINA" \
@@ -142,8 +161,8 @@ porta)
 	#          cioe' che il banco avra' da dove leggerlo.
 	log "4 · ⛔ CHE COSA HO COSTRUITO"
 	ssh -o BatchMode=yes "$MACCHINA" "
-		echo \"#define src:     \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/src/rcp.c)\"
-		echo \"#define gemella: \$(grep -h '^#define MAX_ATTACCATE' $ALBERO/banchi/rcp/rcp.c)\"
+		echo \"#define src:     \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h)\"
+		echo \"#define gemella: \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/banchi/rcp/rcp.h)\"
 		echo \"#define figli:   \$(grep -h '^#define MAX_FIGLI' $ALBERO/src/figlio.c)\"
 		echo \"md5 rcp.c:       \$(md5sum $ALBERO/src/rcp.c | cut -d' ' -f1)\"
 		echo \"md5 figlio.c:    \$(md5sum $ALBERO/src/figlio.c | cut -d' ' -f1)\"

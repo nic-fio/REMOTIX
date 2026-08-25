@@ -72,7 +72,9 @@ if [ "${1:-}" = "--sul-server" ]; then
 	utente)
 		log "L'utente del banco: $UTENTE (uid $UID_B)"
 		inf "$(vicini)"
+		C_ERA_GIA=no
 		if id "$UTENTE" >/dev/null 2>&1; then
+			C_ERA_GIA=si
 			ok "c'e' gia' — non lo rifaccio"
 		else
 			useradd -m -u "$UID_B" -s /bin/bash "$UTENTE" || {
@@ -81,11 +83,28 @@ if [ "${1:-}" = "--sul-server" ]; then
 		fi
 		# ⛔ D12: la parola in un file 0600, mai in argv.  `chpasswd` la legge
 		#    dallo stdin, e il file lo cancelliamo subito dopo.
-		( umask 077; printf '%s:%s\n' "$UTENTE" "$PAROLA_UTENTE" > "$LAV/.chp" )
-		chmod 600 "$LAV/.chp"
-		chpasswd < "$LAV/.chp" || { ko "⛔ chpasswd fallito"; rm -f "$LAV/.chp"; exit 2; }
-		rm -f "$LAV/.chp"
-		ok "parola d'ordine posta (dallo stdin, mai in argv — D12)"
+		#
+		# ⛔⛔ E NON SI RIFA' A UN UTENTE CHE ESISTE GIA' — 25 agosto 2026.
+		#
+		#   `[M]` In fase 10 gli utenti sono CONDIVISI fra piu' banchi, e questo
+		#   passo riscriveva la parola a ogni chiamata: l'ultimo che chiamava
+		#   `utente` vinceva, e gli altri leggevano «credenziali errate» su una
+		#   macchina sana.
+		#   ⛔⛔ E ogni respinto consuma uno dei TRE tentativi del ban per
+		#     INDIRIZZO (`RCP.md` §4.4-bis), che dura DODICI ORE e mette fuori
+		#     uso ogni altro banco che parta da qui.
+		#
+		#   ⇒ Se l'utente c'era gia', la parola NON si tocca.  Chi ha davvero
+		#     bisogno di riposarla lo chiede: `RIFAI_PAROLA=1`.
+		if [ "${C_ERA_GIA:-no}" = si ] && [ "${RIFAI_PAROLA:-0}" != 1 ]; then
+			ok "⭐ parola NON toccata: l'utente c'era gia' (RIFAI_PAROLA=1 per forzare)"
+		else
+			( umask 077; printf '%s:%s\n' "$UTENTE" "$PAROLA_UTENTE" > "$LAV/.chp" )
+			chmod 600 "$LAV/.chp"
+			chpasswd < "$LAV/.chp" || { ko "⛔ chpasswd fallito"; rm -f "$LAV/.chp"; exit 2; }
+			rm -f "$LAV/.chp"
+			ok "parola d'ordine posta (dallo stdin, mai in argv — D12)"
+		fi
 		# ⛔ `render` e `video`: senza, il desktop non apre il nodo DRM.
 		usermod -aG render,video "$UTENTE" || { ko "⛔ usermod render/video fallito"; exit 2; }
 		ok "gruppi: $(id -nG "$UTENTE")"
