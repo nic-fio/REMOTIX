@@ -2257,6 +2257,12 @@ capiterà mai che ci sono 10 utenti contemporaneamente che si collegano con clie
 **codificatore**, e si misura in pixel al secondo — con lo stesso ferro, le stesse dieci sessioni
 sono facilissime o impossibili a seconda della qualità che ciascuna chiede.
 
+> ⛔⛔ **QUESTA RIGA È STATA CORRETTA IL 24 AGOSTO 2026, E DALLA MISURA: il limite NON lo pone il
+> codificatore.** Lo pone **la composizione**, che cede alla **metà** — e il resto della sezione,
+> tabella compresa, va letto con davanti **§4.6-nonies**. ⭐ La parte che regge è *«il limite è un
+> budget, non un conteggio»*: quella la misura l'ha **confermata**. ⛔ Quel che cade è **di quale
+> motore** sia il budget.
+
 Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agosto:
 
 | 10 sessioni a… | Da codificare | Sulla sola Intel |
@@ -2507,6 +2513,65 @@ il socket di comando, che è `0600` di **root**: un inquilino **non può sblocca
 ⚠ **E il prezzo del rinvio, dichiarato**: fino a quel capitolo, ⛔ **un ufficio dietro un NAT è una
 configurazione in cui il prodotto può chiudersi da solo per dodici ore**, e la fase 10 lo sa. ⭐ Non è
 un difetto nascosto: è un difetto **misurato, nominato e datato**.
+
+### 4.6-nonies ✅ ⭐⭐⭐⭐ **Il budget è di COMPOSIZIONE, non di codifica — e §4.6 va corretta, non integrata**
+
+*Misurato nella fase 10, il **24 agosto 2026**, dopo l'ordine del regista: «prima si misura, e poi
+simuli 10 utenti veri».*
+
+⛔⛔ **§4.6 diceva che il limite lo pone il codificatore. La misura dice di no.**
+
+| dove si spende | quale motore della GPU | soffitto `[M]` |
+|---|---|---|
+| il **codificatore** nudo, scena sintetica | i due VDBOX (`vcs0`, `vcs1`) | **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
+| ⭐⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`**, il motore di disegno | ⭐ **0,97 Gpixel/s — la METÀ** |
+
+⇒ ⛔ **Il collo è a monte di noi.** `[M]` A saturare `rcs0` è **`gnome-shell` al 99,5 %**, mentre
+**`remotix` sta a `0,00 %`**. ⭐ *Cioè: il prodotto non è lento — il prodotto sta aspettando il
+compositore*, e nessuna ottimizzazione del codificatore sposta quel numero.
+
+> ### ⭐⭐ La prova che lo inchioda sta in una riga sola
+>
+> `[M]` Stessa popolazione — **otto sessioni, otto desktop, otto figli** — e si **spegne una sola
+> scena**. **Il ritmo torna da 1,6 a 33,4 fot/s.** La si rimette, e il dirupo si riproduce.
+> ⭐ **Reversibile e ripetibile.**
+>
+> ⇒ ⛔⛔ **Il dirupo non cade sul NUMERO delle sessioni: cade su quanto si sta COMPONENDO** — `[M]`
+> fra **873 e 953 Mpixel/s**, che è **lo stesso soffitto trovato per un'altra strada**.
+>
+> ⚠ **E la colonna che lo tradiva non la guardava nessuno**: quando i compositori prendono il 100 %
+> del motore di disegno, `video-enhance` **crolla da 48,7 % a 0,4 %** ⇒ ⛔ **il codificatore non ha
+> più niente da fare. Non rallenta: si ferma.**
+
+#### ⭐ Che cosa cambia nel prodotto, in concreto
+
+⭐⭐ **Il budget resta calcolabile PRIMA di accettare** — ed è la ragione per cui la decisione di §4.6
+regge anche se la sua fisica era sbagliata: ⭐ **la moneta è il pixel COMPOSTO**, e il costo di una
+sessione si conosce dalla sua tela prima che la sessione esista.
+
+⛔ **Ma il pixel da solo non basta**, e questo la fase l'ha imparato misurando: si guarda **anche il
+ritardo di chi è già dentro** — `[M]` soglia **22,9 ms**, ricavata da sano **≤ 13,1** e rotto
+**≥ 39,9**, ⭐ **senza nessuna sovrapposizione fra le due popolazioni**.
+
+```
+regge(dentro, nuovo)  ⟺  domanda(dentro) + costo(nuovo)  ≤  C × tolleranza
+                          E  il ritardo di chi è dentro sta sotto la soglia
+```
+
+#### ⚠ E i numeri di §4.6 che erano sbagliati — tutt'e tre **per difetto**
+
+| 10 sessioni a… | §4.6 diceva | ⭐ `[M]` |
+|---|---|---|
+| 480p · 25 | «una cinquantina» | il soffitto sta a **~180** — e la scala si è fermata al **tetto del banco**, non a quello del ferro |
+| 1080p · 30 | «giusto al limite» | il numero (620 Mpixel/s) era **giusto**, ⛔ ma è il **33,2 %**: ne tengono **24** |
+| 4K · 60 | «**una sola** sessione» | ⛔ i 5 Gpixel/s **non esistono**: il soffitto è 1,86. Ne tengono **DUE** |
+
+⛔ **Ma sono numeri del motore che NON è il collo**, e vanno letti solo per quello che sono: la
+capacità del codificatore. ⭐ **Il numero che governa il prodotto è quello della composizione.**
+
+⇒ ⭐ **E per l'utente il numero vero è un altro ancora**: sulla scena satura ne stanno **sei**; sul
+**desktop vero** — finestre, trascinamenti, strappi — `[M]` **almeno undici, e il soffitto non è
+stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 

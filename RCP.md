@@ -2243,7 +2243,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minuti senza input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *Diceva «6 ore senza attacchi»: cambiato il 16 agosto 2026 — cambia il tetto **e** il criterio, perché chi guarda senza toccare non rinnova niente. Il codice e il nome restano* |
 | `0x04` | `SESSIONE_LOCALE_PREVALSA` | l'utente ha aperto una sessione grafica locale |
 | `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
-| `0x06` | `BUDGET_PIENO` | la macchina non ha più capacità di codifica |
+| `0x06` | `BUDGET_PIENO` | ⭐ **la macchina non ha più capacità di COMPOSIZIONE** — ⚠ *diceva «di codifica»: corretto il 24 agosto 2026, `DECISIONI.md` §4.6-nonies, perché `[M]` il collo è `rcs0` a **0,97 Gpixel/s**, la **metà** del codificatore. ⛔ E fino alla fase 10 questo codice **non è mai stato mandato da nessuna riga del server**: dalla fase 10 parte davvero* |
 | `0x07` | `CREDENZIALI_ERRATE` | |
 | `0x08` | `TROPPI_TENTATIVI` | ⭐ **l'indirizzo è bannato**: tre autenticazioni fallite, dodici ore (§4.4-bis). ⚠ *Diceva «limitazione della frequenza», ed era la forma precedente: dal 10 agosto 2026 non è più una frequenza, è un ban* |
 | `0x09` | `NIENTE_IN_COMUNE` | nessun codec condiviso |
@@ -2299,7 +2299,20 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 > agosto 2026, rilievo **R12C.2**.*
 
 ⛔ Ogni motivo **DEVE** essere mostrabile all'utente in una frase comprensibile. `BUDGET_PIENO`
-non è «errore 6»: è «questa macchina non ha più capacità di codifica».
+non è «errore 6».
+
+> ⭐ **E la frase che il client mostra davvero, dal 25 agosto 2026** (`src/pagina.html`):
+>
+> > *«questo server non ha più capacità per un altro desktop: le sessioni già aperte continuano,
+> > e un posto si libera appena qualcuno esce — riprova fra un momento, e se si ripete chiedi a
+> > chi amministra il server»*
+>
+> ⛔⛔ **E quel che NON dice, per scelta: «rimpicciolisci la finestra».** Ce l'aveva, ed era
+> **falsa**: al cancello la tela **non è ancora decisa**, e l'unico numero in mano al server è
+> `video.misura_massima`, che è il tetto del **DECODIFICATORE** del client — non della finestra.
+> ⇒ Chi rimpiccioliva e riprovava riceveva **lo stesso identico no**.
+> ⭐ *Una frase che promette un gesto che il prodotto non offre è peggio del silenzio: manda
+> l'utente a cercare un comando che non esiste.*
 
 ⛔ **La frase la costruisce il client**, dal codice. Il campo `dettaglio` **NON DEVE** essere
 mostrato all'utente: è per il registro, e contiene quel che serve a chi diagnostica.

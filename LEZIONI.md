@@ -2377,3 +2377,117 @@ rifare, era la grandezza sbagliata.
 stato preso sul **più corto** dei due stalli osservati, perché un margine scritto sul numero
 fortunato non è un margine.
 
+
+---
+
+### 1.34 ⭐⭐⭐ **Una grandezza che satura smette di informare — e allora si guarda la DOMANDA, non l'offerta**
+
+*24 agosto 2026, fase 10.*
+
+⛔ Il motore video della scheda è stato misurato al **99,5 %** in tutti e tre i cedimenti. ⇒ La
+colonna diceva *«pieno»* — ⛔ **e da lì in poi non ha più detto niente**: pieno al primo cedimento e
+pieno al terzo, con **tre carichi diversi** e tre soffitti diversi dietro.
+
+⭐⭐ **La cura è cambiare capo alla misura**: non *«quanto è occupato il motore»* — che si ferma a
+cento — ma ⭐ **quanti pixel al secondo gli sono stati CHIESTI**. Quella grandezza **non satura**, e
+continua a ordinare i casi anche oltre il punto in cui l'altra si è appiattita.
+
+`[M]` **Con la domanda al posto dell'offerta i tre cedimenti si sono allineati entro lo 0,6 %**
+(1855,9 · 1865,8 Mpixel/s a due risoluzioni diverse), dove i fotogrammi al secondo differivano del
+**74,9 %**. ⇒ ⭐ **La moneta giusta rende confrontabili scene che sembravano incomparabili.**
+
+> ⚠ **E il tranello che ci sta accanto**: una colonna satura invita a **estrapolare la retta** dai
+> punti di carico leggero. ⛔ Quella retta **non passa per il cedimento**: nella stessa fase
+> l'estrapolazione dava **~46 sessioni** dove il misurato ne dava **11**, cioè **quattro volte
+> fuori**. Un numero estrapolato oltre l'ultimo punto misurato **non si riferisce**.
+
+⭐ La forma generale: **quando un testimone sbatte contro il suo massimo, non è più un testimone.**
+Se ne cerca uno che quel massimo non ce l'ha.
+
+---
+
+### 1.35 ⛔⛔⭐ **Un difetto DEDOTTO può azzeccare il meccanismo e sbagliare la conseguenza**
+
+*24 agosto 2026, fase 10. Ed è una lezione sul modo di scrivere i rilievi, non sul difetto.*
+
+⭐ **Il meccanismo era giusto**: un guardiano chiamato **dentro** il ciclo che consegna i fotogrammi
+restringe la frontiera **come 1/N**, e con N inquilini si mangia i 300 ms che il codice si concede.
+Dedotto leggendo il codice, ⭐ e **confermato dalla misura**.
+
+⛔ **La conseguenza era sbagliata.** Il rilievo diceva *«e quindi gli inquilini vengono sfrattati»*.
+`[M]` **Non è l'esito ordinario**: l'esito ordinario è che **ogni desktop crolla a 1,3 fot/s e non
+si scrive una riga di registro** — cioè ⛔ **un degrado silenzioso**, che è **peggio** di uno sfratto,
+perché lo sfratto almeno lascia una traccia.
+
+> ⭐⭐ **La regola**: un rilievo dedotto dal codice ha **due metà** — *«come succede»* e *«che cosa si
+> vede»*. ⛔ **La prima si può dedurre; la seconda no.** Va misurata, o dichiarata `[?]`.
+>
+> ⚠ E quando la conseguenza dedotta è **più vistosa** di quella vera, il difetto vero rischia di
+> passare inosservato: si va a cercare lo sfratto, non lo si trova, e si archivia il rilievo — ⛔
+> **mentre il degrado silenzioso è ancora lì**.
+
+---
+
+### 1.36 ⛔⛔⛔ **Lo strato che coordina i banchi è un banco anche lui — e nessuno lo certifica**
+
+*24-25 agosto 2026, fase 10. `[M]` **Sei difetti**, tutti nello strato che fa girare i banchi, non
+nei banchi.*
+
+⭐ Il progetto certifica i banchi con `--certifica`: si inietta un guasto noto e si verifica che il
+banco lo veda. ⛔ **Ma il lucchetto della GPU, il terreno, gli script che accendono il server e il
+modulo che li accomuna NON hanno un `--certifica`** — e sono **il pavimento su cui poggia ogni
+misura**.
+
+`[M]` **Quel che è costato, in concreto:**
+
+| | |
+|---|---|
+| **146 banchi senza il bit di esecuzione** | un `exec "$0"` su un file non eseguibile ha ucciso una campagna **dopo** che aveva vinto il lucchetto della GPU: ⛔ **un'ora persa**, e il lucchetto tenuto per niente |
+| **il terreno diceva «acceso» guardando il PID** | ⛔ un server con il processo vivo e **nessuno in ascolto sulla porta** passava per acceso. Ora «acceso» vuol dire **qualcuno ascolta** |
+| **il terreno riscriveva la parola d'ordine** di un utente che esisteva già | ⛔ e ammazzava le sessioni di un altro banco in parallelo |
+| ⛔⛔ **il `pkill` globale** dentro due banchi | su una macchina con banchi in parallelo, uno **ammazza il lavoro degli altri** |
+| **il lucchetto scaduto si scassinava senza guardare** | ora **confronta prima di cancellare**: `[M]` scaduto ⇒ scassina; cambiato sotto ⇒ ⭐ **NON scassina, e il fresco sopravvive** |
+
+> ⭐⭐ **La regola**: *ogni cosa da cui dipende una misura è una cosa da certificare* — e **il fatto
+> che non produca numeri non la esenta**. Un lucchetto che si scassina di traverso e un banco che
+> conta male producono **lo stesso danno**: un numero che nessuno sa che è falso.
+
+⚠ **E la spia da riconoscere**: quando un guasto colpisce **banchi diversi allo stesso modo**, non è
+dei banchi. È di sotto.
+
+---
+
+### 1.37 ⛔⛔⛔⭐ **Una prova che non si può GUARDARE vale zero — e chiamare qualcuno a giudicarla è peggio che non provare**
+
+*25 agosto 2026, fase 10. ⛔ È la lezione più cara della fase, e non l'ha insegnata una misura:
+l'ha insegnata **il regista, spazientito**.*
+
+⛔ Il prodotto è stato costruito, cucito, misurato su **undici desktop veri**, e i numeri erano
+buoni. ⇒ È stato chiesto al regista di guardare. ⛔ **E il browser, dentro il desktop remoto, non si
+apriva.** Tre volte, finché lui ha smesso:
+
+> *«Io non faccio più niente, Firefox continua a non funzionare e io non posso fare test in queste
+> condizioni.»* · *«Senza Firefox nessun test di rilievo ha senso, quindi non chiamarmi se non
+> funziona.»*
+
+⛔⛔ **E la parte grave non è che il browser non funzionasse: è che non si sapeva.** Sono state
+provate **quattro strade** per vedere l'immagine di quel desktop — lo scatto interno, la fotografia
+dello schermo, la tela letta dalla pagina, il conteggio dei fotogrammi — e ⛔ **nessuna ha dato il
+quadro**. ⇒ La scena è stata dichiarata pronta **senza che nessuno l'avesse guardata**.
+
+> ⭐⭐⭐ **La regola, in una riga: la scena si prepara e si GUARDA prima di chiamare chi deve
+> giudicarla.**
+>
+> ⛔ E il contatore **non conta come guardare**. *«Sono passati 493 fotogrammi»* e *«si vede un
+> desktop con un browser aperto»* sono **due affermazioni diverse**, e la prima non implica la
+> seconda: 493 fotogrammi neri sono 493 fotogrammi.
+
+⚠ **E c'è un costo che non è tecnico.** Chi giudica ha una pazienza finita, ⛔ **e ogni chiamata a
+vuoto ne consuma un pezzo**. Il giudizio dell'utente è l'invariante **I8**, cioè il metro ultimo del
+prodotto: ⇒ ⭐ **sprecarlo è sprecare l'unico strumento che non si può ricostruire.**
+
+⭐ **Il rimedio è un pezzo di attrezzatura, non un proposito**: un testimone che tira giù
+**l'immagine** di quel che l'utente vedrebbe, ⛔ **tarato come ogni altro metro** (§1.33) — con la
+marca riconoscibile che deve ritrovare, e il controllo negativo che deve dire *«nero»* quando è
+nero. ⇒ E ⛔ **se non ha potuto guardare deve tornare «non lo so», mai un'immagine vuota**: *«non ho
+guardato»* non è *«è nero»*.

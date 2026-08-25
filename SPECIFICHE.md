@@ -454,12 +454,72 @@ Più utenti possono avere ciascuno la propria sessione grafica remota, indipende
 **budget** di pixel al secondo, e lo pone il codificatore. Con lo stesso ferro le stesse dieci
 sessioni sono facilissime o impossibili secondo la qualità che ciascuna chiede.
 
-Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — la sola integrata regge
-`[?]` una cinquantina di sessioni al minimo, **8-10 a 1080p30**, **una sola a 4K60**.
+Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — ⭐ **il numero è stato misurato
+nella fase 10**, e sta qui sotto.
 
 **Quando il budget è pieno si rifiuta, dichiarando il motivo.** Non si fa degradare chi sta già
 lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,
 cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
+
+> ### ⭐⭐⭐ IL BUDGET È MISURATO — 24 agosto 2026, fase 10
+>
+> ⛔ **E la prima cosa che ha smentito è che il collo fosse il codificatore.**
+>
+> | dove si spende | quale motore | soffitto misurato |
+> |---|---|---|
+> | il **codificatore** nudo | i due VDBOX | `[M]` **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
+> | ⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`**, il motore di disegno | `[M]` ⭐ **0,97 Gpixel/s — la METÀ** |
+>
+> ⇒ ⛔⛔ **Il budget non è di codifica: è di composizione**, e a saturarlo è **`gnome-shell`**
+> (`[M]` 99,5 % di `rcs0`, mentre `remotix` sta a **0,00 %**) — cioè **una cosa che non è nostra**.
+>
+> **E quante ne stanno, davvero:**
+>
+> | scena | quante | che cosa succede a chi già lavora |
+> |---|---|---|
+> | **satura** — tutto lo schermo cambia a ogni fotogramma | `[M]` **6** | ⛔ dal settimo cede: **−28 %**, e all'ottavo **1,5 fot/s** |
+> | ⭐⭐ **desktop vero** — finestre, trascinamenti, strappi | `[M]` ⭐ **almeno 11** | ⭐ **−7,7 %**, e il ritardo **non si muove** (8,4 → 8,0 ms). ⛔ Il soffitto **non è stato trovato: sono finiti gli utenti, non la macchina** |
+> | **ferma** | `[M]` **11 costano GPU ZERO** | RC6 100 %, GT 0 MHz: lì il vincolo è la **memoria** |
+>
+> ⭐ **La riga `[?]` che stava qui era sbagliata per DIFETTO in tutt'e tre i valori**: a 480p il
+> soffitto sta a **~180** sessioni e non a «una cinquantina»; a 1080p30 ne tengono **24** e non
+> «8-10»; e a 4K60 ne tengono **due**, non «una sola». ⚠ Ma sono numeri del **codificatore**, cioè
+> del motore che **non** è il collo: il numero che governa il prodotto è quello della composizione.
+>
+> ### ⛔ E il dirupo non cade sul NUMERO di sessioni
+>
+> `[M]` Stessa popolazione — otto sessioni, otto desktop — e si **spegne una sola scena**: il ritmo
+> torna **da 1,6 a 33,4 fot/s**. Rimettendola, il dirupo si riproduce. ⇒ ⭐ **cade su quanto si sta
+> COMPONENDO**, fra **873 e 953 Mpixel/s** — cioè esattamente sul soffitto di sopra, trovato per
+> un'altra strada.
+>
+> ⇒ ⭐⭐ **È per questo che il budget si può calcolare PRIMA di accettare**: la moneta è il pixel
+> composto, e il costo di una sessione si conosce dalla sua tela. ⛔ **Ma il pixel da solo non
+> basta**: si guarda anche **il ritardo di chi è già dentro** (`[M]` soglia **22,9 ms** — sano
+> ≤ 13,1, rotto ≥ 39,9, nessuna sovrapposizione).
+>
+> ### La regola, per intero
+>
+> ```
+> regge(dentro, nuovo)  ⟺  domanda(dentro) + costo(nuovo)  ≤  C × tolleranza
+>                           E  il ritardo di chi è dentro sta sotto la soglia
+> ```
+>
+> **Tre manopole**, `src/budget.c`:
+>
+> | | predefinito | |
+> |---|---|---|
+> | `--budget-mpixel-s N` | ⛔ **0, cioè SPENTO** | ⭐ perché **I6**: quel che cambia ciò che l'utente vede nasce spento |
+> | `--tetto-sessioni N` | **10** | e da qui scendono `MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — ⭐ **il ripiego dei `#define` a 16 è finito** |
+> | `--riserva F` | **0,5** | quanto si tiene da parte per chi è già dentro |
+>
+> ⭐ **E `BUDGET_PIENO 0x06` adesso parte davvero** — con la frase che dice *perché*, non un rifiuto
+> muto. Fino alla fase 10 era dichiarato in `src/rcp.h` e in `RCP.md` §8.2 **e nessuna riga lo
+> mandava mai**.
+>
+> ⚠ **Il giudizio dell'utente su questo numero è `DECISIONI.md` §4.6-septies**, e ne esce
+> rafforzato: *sei sessioni su una scheda integrata modesta non è un cattivo risultato* — ⭐ e sul
+> desktop vero, che è quel che gli utenti fanno davvero, sono **almeno undici**.
 
 > ### ⛔ Alla fase 1 questa riga NON è onorata, ed è un ripiego dichiarato
 >
@@ -483,12 +543,19 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > | la stretta di mano di chi arriva in quel momento | `[M]` **2262 ms** | ⭐ `[M]` **10 ms** |
 > | ⚠ quanto aspetta **chi si autentica** | `[M]` 2260 ms | **1844 ms** — ⭐ *e va bene così: quel numero lo governa PAM, e non doveva cambiare* |
 >
-> ⚠ **Quel che resta ripiego è il secondo**: `src/rcp.c` tiene **16** sessioni attaccate in una
-> tabella fissa in compilazione (`MAX_ATTACCATE`), dove qui il tetto è **dieci configurabile**.
+> ### ⭐⭐ E IL SECONDO RIPIEGO È FINITO — 24 agosto 2026, fase 10
 >
-> ⭐ **Non è una promessa rotta: è una promessa non ancora dovuta** — il multi-tenant è delle fasi da
-> 5 in poi. Sta qui perché il giorno in cui lo sarà, **questo è il posto da cui si riparte**: la
-> tabella delle sessioni smette di essere un `#define`.
+> ⛔ *Diceva: «`src/rcp.c` tiene **16** sessioni attaccate in una tabella fissa in compilazione
+> (`MAX_ATTACCATE`), dove qui il tetto è dieci configurabile».* ⭐ **Adesso il tetto è uno solo,
+> `RCP_TETTO_SESSIONI`, vale dieci, e si cambia a caldo con `--tetto-sessioni N`.**
+>
+> ⚠ Le copie a mano erano **cinque**, non una: `MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c`),
+> `QUANTI_PRESENTI` (`main.c`), `WT_PALCHI` (`webtransport.c`, era **8** — cioè **un sesto numero
+> ancora diverso**). ⭐ Tutte scendono dal tetto.
+>
+> ⛔ **E una è stata lasciata separata apposta**: `MAX_IN_VOLO` (`src/aiutante.c`) **non è** il numero
+> delle sessioni — è quante verifiche PAM stanno in volo insieme. ⇒ ⭐ *unificare per simmetria quel
+> che non è la stessa quantità è un difetto nuovo, non una cura.*
 > Il confine per intero sta in `FASI.md` §01-filo-nudo, «Che cosa è stato sviluppato».
 >
 > ### ⭐ E i due ripieghi hanno una scadenza, decisa dall'utente l'11 agosto 2026
