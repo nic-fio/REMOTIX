@@ -1268,6 +1268,189 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	_exit(37);
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * ⛔⭐⭐⭐ IL CONTROLLO CHE RENDE **RUMOROSO** IL DIFETTO PIU' VECCHIO DEL
+ *        PROGETTO — 27 agosto 2026, fase 11.
+ *
+ * ⛔ IL DIFETTO, `[M]` misurato sulla macchina vera il 27 agosto 2026: un
+ *    inquilino che NON sta nel gruppo del nodo della scheda (`video` e
+ *    `render` su questa macchina) fa nascere una sessione che **sembra viva e
+ *    non vede niente**.  Zero `formato negoziato`, zero fotogrammi, e il ciclo
+ *    che gira in tondo fra «ZERO MONITOR» e «monitor virtuale montato» per
+ *    ottantadue secondi.  ⭐ La misura: **0 su 4** senza i gruppi, **17 su 17**
+ *    con i gruppi, e la **controprova** sullo stesso utente (dati i due gruppi
+ *    e fatto rinascere il gestore d'utente ⇒ vede in 2,04 s).
+ *
+ * ⛔⛔ E `fasi/10-multi-tenant-e-il-budget.md` §7.4 — «la sessione che nasce
+ *      cieca», `provanic4/5/6` mai riusciti in **98 · 55 · 50** tentativi — e'
+ *      esattamente questo: quei tre utenti i due gruppi non ce li avevano, e
+ *      `prova` e `provanic1`, che videro sempre, si'.  ⇒ Il difetto ha bloccato
+ *      cinque prove e rinviato una fase **senza dare un solo errore**.
+ *
+ * ⭐⭐ QUINDI LA CURA CHE VALE DI PIU' NON E' NELLA PROVVISTA: e' QUI.  Uno
+ *     script di provvista si puo' dimenticare, e infatti si e' dimenticato —
+ *     `banchi/attrezzi-utenti.sh` e i terreni delle fasi 4/6/7/9 creano
+ *     inquilini **senza** i due gruppi.  ⛔ Un difetto che si presenta come
+ *     «non funziona e non si sa perche'» e' quello che costa i mesi: il
+ *     prodotto se ne deve **accorgere e dirlo**, alla nascita, con parole che
+ *     dicano anche la cura.
+ *
+ * ⭐ E IL GRUPPO SI LEGGE DAL NODO, non si inchioda ne' il nome ne' il numero:
+ *    si apre `/dev/dri`, si prende lo `st_gid` di ogni `cardN` e `renderDN`
+ *    (che e' lo `stat -c %g` della provvista, fatto in C) e si guarda se
+ *    l'inquilino e' in quei gruppi.  ⚠ Un gid inchiodato sarebbe falso sulla
+ *    macchina dopo, e un nome inchiodato (`render`) e' falso su una
+ *    distribuzione che lo chiami altrimenti.
+ *
+ * ⚠ PERCHE' L'APPARTENENZA E NON UN `access()`: il padre e' root, e a root il
+ *   nucleo dice sempre «si'».  L'unica domanda che si puo' fare da qui, e che
+ *   ha la stessa risposta che avra' il figlio, e' «questo utente e' in quel
+ *   gruppo?».  ⛔ E su un desktop normale l'accesso alla scheda lo darebbe
+ *   l'ACL di logind (tag udev `uaccess`) all'utente della sessione attiva **su
+ *   un seat** — ⇒ la nostra sessione un seat non ce l'ha di proposito
+ *   (`DECISIONI.md` §4.3-bis), quindi quell'ACL non arriva mai e il gruppo e'
+ *   l'unica strada.
+ *
+ * ⛔ E NON SI RIFIUTA LA SESSIONE, si dichiara: su un ferro diverso il ripiego
+ *    in software potrebbe essere lento invece che infinito (`[?]`, non
+ *    misurato), e un rifiuto trasformerebbe una degradazione dichiarata in un
+ *    «non entra» — cioe' rimetterebbe l'utente a indovinare, che e' il difetto
+ *    che questa riga cura.
+ * ---------------------------------------------------------------------------
+ */
+#define DIR_NODI_SCHEDA "/dev/dri"
+#define QUANTI_GRUPPI_SCHEDA 8
+
+static const char *nome_del_gruppo(gid_t g, char *dove, size_t cap)
+{
+	struct group gr, *ris = NULL;
+	char scorta[1024];
+
+	if (getgrgid_r(g, &gr, scorta, sizeof scorta, &ris) == 0 && ris)
+		snprintf(dove, cap, "%s", gr.gr_name);
+	else
+		snprintf(dove, cap, "gid %ld senza nome", (long)g);
+	return dove;
+}
+
+static bool sta_nel_gruppo(gid_t primario, const gid_t *gruppi, int ngruppi,
+                           gid_t cercato)
+{
+	if (primario == cercato)
+		return true;
+	for (int i = 0; i < ngruppi; i++)
+		if (gruppi[i] == cercato)
+			return true;
+	return false;
+}
+
+/* ⭐ Scrive nel registro se questo inquilino vedra' o no.  Non decide niente:
+ *    dichiara.  Torna `true` se sta in TUTTI i gruppi dei nodi della scheda. */
+static bool gruppi_della_scheda(const char *utente, gid_t primario,
+                                const gid_t *gruppi, int ngruppi)
+{
+	DIR *d;
+	struct dirent *e;
+	gid_t visti[QUANTI_GRUPPI_SCHEDA];
+	char nomi[QUANTI_GRUPPI_SCHEDA][64];
+	char nodi[QUANTI_GRUPPI_SCHEDA][96];
+	int nvisti = 0, mancanti = 0;
+	char elenco[256];
+	size_t usati = 0;
+
+	d = opendir(DIR_NODI_SCHEDA);
+	if (!d) {
+		registro_dice_di(REG_FIGLIO, utente,
+		                 "⚠ %s non si apre (%s): NON posso dire se questo "
+		                 "inquilino vedra'.  ⛔ Su una macchina senza nodi DRM "
+		                 "il compositore disegna in software, e la sessione "
+		                 "puo' nascere cieca senza dare un errore",
+		                 DIR_NODI_SCHEDA, strerror(errno));
+		return false;
+	}
+	while ((e = readdir(d)) != NULL) {
+		char percorso[96];
+		struct stat st;
+		bool gia = false;
+
+		/* ⚠ `cardN` (il gruppo `video`) e `renderDN` (il gruppo `render`): i
+		 *   due nodi hanno gruppi DIVERSI, e servono tutt'e due.  ⛔ E i
+		 *   numeri si scorrono invece di inchiodarli: `renderD128` e
+		 *   `renderD129` si scambiano fra due avvii (`provisiona.sh` §5). */
+		if (strncmp(e->d_name, "renderD", 7) != 0 &&
+		    strncmp(e->d_name, "card", 4) != 0)
+			continue;
+		/* ⚠ `%.32s` e non `%s`: `d_name` e' lungo 256 e il compilatore ha
+		 *   ragione a dirlo (`-Wformat-truncation`).  ⛔ Un nome di nodo piu'
+		 *   lungo di 32 non esiste (`renderD128` sono dieci lettere), e se
+		 *   esistesse il percorso troncato non si aprirebbe: lo `stat` qui
+		 *   sotto fallisce e quel nodo si salta — ⇒ mai un gruppo SBAGLIATO
+		 *   dichiarato per un percorso a meta'. */
+		snprintf(percorso, sizeof percorso, "%s/%.32s", DIR_NODI_SCHEDA,
+		         e->d_name);
+		if (stat(percorso, &st) != 0)
+			continue;
+		for (int i = 0; i < nvisti; i++)
+			if (visti[i] == st.st_gid) {
+				gia = true;
+				break;
+			}
+		if (gia || nvisti >= QUANTI_GRUPPI_SCHEDA)
+			continue;
+		visti[nvisti] = st.st_gid;
+		nome_del_gruppo(st.st_gid, nomi[nvisti], sizeof nomi[nvisti]);
+		snprintf(nodi[nvisti], sizeof nodi[nvisti], "%s", percorso);
+		nvisti++;
+	}
+	closedir(d);
+
+	if (nvisti == 0) {
+		registro_dice_di(REG_FIGLIO, utente,
+		                 "⚠ nessun nodo `cardN`/`renderDN` in %s: questa "
+		                 "macchina non ha una scheda da mostrare, e il "
+		                 "compositore disegnera' in SOFTWARE",
+		                 DIR_NODI_SCHEDA);
+		return false;
+	}
+
+	for (int i = 0; i < nvisti; i++) {
+		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i])) {
+			int n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s",
+			                 usati ? ", " : "", nomi[i]);
+			if (n > 0 && (size_t)n < sizeof elenco - usati)
+				usati += (size_t)n;
+			continue;
+		}
+		mancanti++;
+		/* ⛔⛔ LA RIGA CHE VALE TUTTO IL CONTROLLO.  Dice il difetto, la
+		 *     conseguenza VISIBILE («non vedra' niente»), e la cura per
+		 *     intero — compreso il `terminate-user`, senza il quale un
+		 *     `usermod` a gestore d'utente vivo NON entra in vigore. */
+		registro_dice_di(REG_FIGLIO, utente,
+		                 "⛔⛔ «%s» NON E' NEL GRUPPO DELLA SCHEDA «%s» (gid "
+		                 "%ld, il gruppo di %s): ⛔ QUESTA SESSIONE NASCERA' E "
+		                 "NON VEDRA' NIENTE — zero fotogrammi, nessuna finestra "
+		                 "si aprira', e il ciclo girera' in tondo fra «ZERO "
+		                 "MONITOR» e «monitor virtuale montato».  ⭐ LA CURA, in "
+		                 "due comandi da root: `usermod -aG %s %s` e poi "
+		                 "`loginctl terminate-user %s` — ⚠ il secondo NON e' "
+		                 "facoltativo: i gruppi arrivano al compositore solo "
+		                 "quando RINASCE il gestore d'utente.  (fase 10 §7.4, "
+		                 "misurato 27 ago 2026: 0 sessioni su 4 senza il "
+		                 "gruppo, 17 su 17 con)",
+		                 utente, nomi[i], (long)visti[i], nodi[i], nomi[i],
+		                 utente, utente);
+	}
+
+	if (mancanti == 0)
+		registro_dice_di(REG_FIGLIO, utente,
+		                 "⭐ e' nei gruppi della scheda (%s): la sessione puo' "
+		                 "vedere in hardware",
+		                 elenco);
+	return mancanti == 0;
+}
+
 bool figli_assicura(figli *f, const char *utente)
 {
 	struct figlio *g;
@@ -1346,6 +1529,15 @@ bool figli_assicura(figli *f, const char *utente)
 		              "Se qualcosa gli sara' negato, la causa e' questa riga",
 		              utente, ngruppi, ngruppi);
 	}
+
+	/* ⭐⭐⭐ E QUI SI DICE SE QUESTO INQUILINO VEDRA' — il riquadro sopra
+	 *      `gruppi_della_scheda()`.  ⛔ Il posto e' questo e non un altro: e'
+	 *      l'unico punto in cui il prodotto ha in mano **il nome dell'utente e
+	 *      i suoi gruppi insieme**, ed e' PRIMA del `fork` — cioe' la riga esce
+	 *      anche quando poi non nascera' nessun palco.  ⚠ Il valore di ritorno
+	 *      non si guarda: la sessione nasce lo stesso, e la degradazione e'
+	 *      dichiarata (I1). */
+	(void)gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi);
 
 	/* ⛔ `SOCK_SEQPACKET` per la stessa ragione dell'aiutante: i confini dei
 	 *    messaggi li tiene il nucleo.  Con uno stream l'inquadramento sarebbe
@@ -4033,6 +4225,16 @@ static void audio_regola_figlio(uint8_t codec)
  *    esce con `continue` quando nessuno guarda, e l'audio ci finirebbe dentro
  *    per caso — cioe' una sessione con l'audio acceso e il video spento non
  *    suonerebbe, e nessuna riga direbbe perche'.
+ *
+ * ⛔⭐ E SI CHIAMA DA DUE PUNTI, non da uno: l'altro e' il `continue` del ramo
+ *     «senza palco e QUALCUNO GUARDA», che salterebbe il primo per tutto il
+ *     tempo della nascita della sessione (`[M]` 27 agosto 2026: 4 631 505
+ *     fotogrammi traboccati, 96 489 ms).  ⚠ «A ogni giro» va mantenuto vero:
+ *     chi aggiunge un'uscita anticipata al ciclo deve passare di qui prima.
+ *
+ * ⭐ Ed e' sicura fuori dal palco: esce subito se l'audio non e' acceso, e non
+ *   tocca ne' la cattura ne' la tela — solo l'anello, il codificatore audio e
+ *   il socket col padre.
  */
 static void audio_svuota(void)
 {
@@ -5190,6 +5392,40 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	const char *crono_nome = "";
 	uint64_t crono_ms = 0;
 
+	/* ⛔⛔⭐ LA BUSTA SI AZZERA QUI, PRIMA DI QUALUNQUE VIA D'USCITA — e
+	 *       fino al 27 agosto 2026 questo `memset` stava TRECENTO righe piu'
+	 *       in basso, cioe' **dopo** un `manda(MSG_PALCO, &p, …)`.
+	 *
+	 * ⛔ Quel ramo — «aspetto la tela del cliente» — spediva al padre una
+	 *    struttura mai scritta: campo per campo, la memoria dello stack come
+	 *    l'aveva lasciata la chiamata di prima.
+	 *
+	 * `[M]` 27 agosto 2026, e ha gia' prodotto una diagnosi sbagliata che e'
+	 * durata mesi: il cosiddetto «terzo stato» del palco, la riga *«(0 prima,
+	 * 2 dopo)»*, era SPAZZATURA.  ⇒ Compariva anche su macchine dove nessun
+	 * monitor poteva essere nato, sempre e solo su quella riga, e con accanto
+	 * numeri che si smascheravano da soli (`stride 958311266`).  Per mesi quel
+	 * `2` e' stato letto come «due monitor comparsi»: era un numero che
+	 * nessuno aveva mai scritto.
+	 *
+	 * ⚠ E il commento qui sotto lo diceva gia' — «una via d'uscita anticipata
+	 *   avrebbe riferito senza aver guardato niente» — ma stava DOPO l'uscita
+	 *   anticipata che descriveva.  ⇒ E' la forma E8 dentro la riga che la
+	 *   deve smascherare, ed e' anche `LEZIONI.md` §1.50: un commento giusto
+	 *   nel posto sbagliato non protegge niente.
+	 *
+	 * ⛔ Chi aggiunge un'uscita anticipata a questa funzione non deve piu'
+	 *    pensarci: sopra questa riga non si spedisce, sotto la busta e' pulita
+	 *    e dichiara «non ho potuto guardare». */
+	memset(&p, 0, sizeof p);
+	/* ⛔ «Non ho potuto guardare» e' il valore di PARTENZA, non «sana»: con lo
+	 *    zero del `memset` una via d'uscita anticipata avrebbe riferito
+	 *    `SESSIONE_SANA` senza aver guardato niente — «vuoto» e «proibito» con
+	 *    la stessa faccia, la forma d'errore E8, dentro la riga che la deve
+	 *    smascherare.  `[M]` visto nel registro del 12 agosto 2026: il palco di
+	 *    «prova» diceva «sessione 0» e nessuno l'aveva letta. */
+	p.stato_sessione = (uint32_t)SESSIONE_NON_LETTA;
+
 	/*
 	 * ⭐ E PRIMA DI TUTTO: se qualcuno sta aspettando una tela, glielo si dice.
 	 *
@@ -5308,14 +5544,10 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              crono_nome, (unsigned long long)crono_durata); \
 	} while (0)
 
-	memset(&p, 0, sizeof p);
-	/* ⛔ «Non ho potuto guardare» e' il valore di PARTENZA, non «sana»: con lo
-	 *    zero del `memset` una via d'uscita anticipata avrebbe riferito
-	 *    `SESSIONE_SANA` senza aver guardato niente — «vuoto» e «proibito» con
-	 *    la stessa faccia, la forma d'errore E8, dentro la riga che la deve
-	 *    smascherare.  `[M]` visto nel registro del 12 agosto 2026: il palco di
-	 *    «prova» diceva «sessione 0» e nessuno l'aveva letta. */
-	p.stato_sessione = (uint32_t)SESSIONE_NON_LETTA;
+	/* ⚠ `memset(&p, …)` e `p.stato_sessione = SESSIONE_NON_LETTA` stavano QUI,
+	 *   e da qui non coprivano il `manda(MSG_PALCO, …)` del ramo «aspetto la
+	 *   tela del cliente», che sta piu' su.  ⇒ Spostati in cima alla funzione,
+	 *   27 agosto 2026: il perche' per esteso e' scritto la'. */
 
 	/* ⛔⭐ IL BUS, ED E' LA MISURA CHE DECIDE TUTTO IL MANDATO.  `[M]` root non
 	 *     si collega qui; questo processo e' l'utente, e o si collega o dice
@@ -7450,6 +7682,35 @@ void figlio_vive(int argc, char **argv)
 						                   (unsigned long long)palco_attesa_ms);
 						if (tela_voluta_l && tela_voluta_a)
 							attendi_tela(tela_voluta_l, tela_voluta_a);
+						/* ⛔⭐⭐ E SI SVUOTA L'ANELLO DELL'AUDIO PRIMA DI
+						 *       USCIRE DI QUI, perche' questo `continue`
+						 *       salta la riga di `audio_svuota()` che sta
+						 *       piu' sotto — ed e' un difetto vero del
+						 *       prodotto, non un caso di laboratorio.
+						 *
+						 * `[M]` 27 agosto 2026, dentro la scatola GNOME: una
+						 * sessione appena nata resta senza palco per un
+						 * tempo (~97 s li' per una ragione dell'ambiente,
+						 * ~2 s altrove), e per tutto quel tempo il giro
+						 * passava di qui.  ⇒ Il figlio lo dichiarava lui
+						 * stesso appena il palco arrivava: *«l'anello
+						 * dell'audio ha traboccato di 4 631 505 fotogrammi
+						 * (96 489 ms)»*, e il suono ripartiva a ~200
+						 * blocchi/s per smaltire l'arretrato.
+						 *
+						 * ⚠ La cattura del suono NON aspetta il palco: parte
+						 *   al `MSG_AUDIO`, cioe' appena qualcuno si
+						 *   collega, e da quell'istante PipeWire scrive
+						 *   nell'anello.  ⛔ Se nessuno lo legge, l'anello
+						 *   gira su se' stesso e i campioni si buttano.
+						 *
+						 * ⭐ E chiamarla qui non costa e non rischia:
+						 *   `audio_svuota()` esce subito se l'audio non e'
+						 *   acceso, e quel che tocca (anello, codificatore
+						 *   audio, socket col padre) non ha NIENTE a che
+						 *   fare con il palco — il sink e' un nodo PipeWire
+						 *   nostro, non una tela del compositore. */
+						audio_svuota();
 						continue;
 					}
 					if (palco_attesa_ms < PALCO_RIPROVA_MIN_MS)
@@ -7484,12 +7745,24 @@ void figlio_vive(int argc, char **argv)
 		}
 
 		/* ── 1-bis. l'audio ──────────────────────────────────────────── */
-		/* ⛔ PRIMA del `continue` della parte video, e non e' un dettaglio di
-		 *    ordine: quel `continue` scatta ogni volta che nessuno guarda, e
-		 *    l'audio ci finirebbe dentro per caso.  ⇒ Una sessione con l'audio
-		 *    acceso e il video spento **non suonerebbe**, e nessuna riga direbbe
-		 *    perche'.  ⚠ Il caso non e' teorico: e' quel che succede a chi
-		 *    ascolta musica con la scheda del browser in secondo piano. */
+		/* ⛔ QUESTA RIGA FA LA GUARDIA A UN `continue` SOLO: quello della
+		 *    parte video, qui sotto (§2).  ⚠ Sta PRIMA di lui e non e' un
+		 *    dettaglio di ordine — quel `continue` scatta ogni volta che
+		 *    nessuno guarda, e l'audio ci finirebbe dentro per caso.  ⇒ Una
+		 *    sessione con l'audio acceso e il video spento **non
+		 *    suonerebbe**, e nessuna riga direbbe perche'.  Il caso non e'
+		 *    teorico: e' quel che succede a chi ascolta musica con la scheda
+		 *    del browser in secondo piano.
+		 *
+		 * ⛔⭐ E GLI ALTRI `continue` DEL GIRO NON LI COPRE — il commento
+		 *     che diceva solo la prima meta' e' costato il difetto del 27
+		 *     agosto 2026: chi leggeva concludeva «l'audio e' al sicuro»,
+		 *     e il `continue` del ramo «senza palco e QUALCUNO GUARDA»
+		 *     (§1-ter, piu' su) saltava questa riga per tutta la nascita
+		 *     della sessione.  ⇒ Li' `audio_svuota()` si chiama a mano, e
+		 *     il perche' e' scritto accanto a quel `continue`.
+		 * ⚠ Chi aggiunge un `continue` in questo ciclo deve decidere lo
+		 *   stesso, e dirlo: sopra questa riga si passa di qui, sotto no. */
 		audio_svuota();
 
 		/* ── 2. il fotogramma ────────────────────────────────────────── */

@@ -2428,13 +2428,19 @@ static bool gancio_disposizione(void *ctx, const char *nome)
  *    non compila — che l'elenco fisso non guardava affatto. */
 static int gancio_disposizione_esiste(void *ctx, const char *nome)
 {
+	wt *w = (wt *)ctx;
 	Tastiera *t;
 	char *sbaglio = NULL;
 
-	(void)ctx;
 	if (!nome || !*nome)
 		return 0;
-	t = tastiera_apri(nome, &sbaglio);
+	/* ⭐ DI CHI E' LA RIGA — 27 agosto 2026, il rosso di C9.  Compilare una
+	 *   disposizione fa scrivere a `tastiera.c` due righe d'area `tastiera`, e
+	 *   qui siamo nel PADRE: senza un nome quelle due righe sono identiche per
+	 *   ogni inquilino che attacca, ⛔ e con due sessioni vive non si possono
+	 *   attribuire.  ⚠ Il nome e' quello di sempre — `wt_chi()`, cioe' quello
+	 *   che PAM ha ammesso su questa sessione, mai uno che venga dal filo. */
+	t = tastiera_apri_per(nome, wt_chi(w), &sbaglio);
 	if (!t) {
 		free(sbaglio);
 		return 0;

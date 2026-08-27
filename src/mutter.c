@@ -697,8 +697,20 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	 *    attivo.  Cercarlo qui vorrebbe dire scrivere «non e' comparso nessun
 	 *    monitor» su una sessione sana. */
 
-	registro_dice(AREA, "monitor virtuale montato: nodo PipeWire %u, flusso %s", sessione->nodo,
-	              sessione->flusso);
+	/* ⛔⭐ E LA RIGA DICE QUEL CHE C'E', NON QUEL CHE CI SARA' — 27 agosto
+	 *     2026.  Qui c'era scritto «monitor virtuale montato», due righe sotto
+	 *     il commento che dichiara che **il monitor non esiste ancora**: due
+	 *     affermazioni opposte a distanza di due righe, e quella che si legge
+	 *     nel registro era la falsa.  ⚠ Un messaggio che afferma un fatto che
+	 *     non e' vero e' peggio del silenzio: manda fuori strada chi legge, e
+	 *     il silenzio almeno non lo fa.  ⇒ Adesso dice il fatto vero — la
+	 *     sessione e' avviata e il flusso ha il suo nodo — e nomina quel che
+	 *     manca ancora. */
+	registro_dice(AREA,
+	              "sessione di cattura AVVIATA: nodo PipeWire %u, flusso %s.  ⚠ Il monitor "
+	              "virtuale NON e' ancora comparso: lo cerca `mutter_monitor_cerca()` quando "
+	              "il flusso consegna (vedi il riquadro qui sopra)",
+	              sessione->nodo, sessione->flusso);
 	return sessione;
 
 guasto:

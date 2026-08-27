@@ -44,6 +44,42 @@ SOLO_VERIFICA=${1:-}
 [ "$(id -u)" -eq 0 ] || { echo "⛔ vuole root"; exit 2; }
 
 # ---------------------------------------------------------------------------
+# ⭐⭐ I GRUPPI DELLA SCHEDA SI LEGGONO DAL NODO — 27 agosto 2026, fase 11.
+#
+# ⛔ Qui c'era `usermod -aG video,render`, cioe' DUE NOMI INCHIODATI.  Sono
+#    giusti su questa distribuzione e falsi sulla prossima: il gruppo di
+#    `/dev/dri/renderD128` e' quel che il nucleo e udev hanno deciso su QUESTA
+#    macchina, e l'unico modo di saperlo e' **chiederglielo** — `stat -c %g`.
+# ⛔ E si scorrono i nodi invece di inchiodare `renderD128`: `renderD128` e
+#    `renderD129` si scambiano fra due avvii (vedi il passo 5), e `cardN` e
+#    `renderDN` hanno gruppi DIVERSI (`video` e `render`) che servono tutt'e due.
+# ⚠ Un gid non si passa a `usermod -aG`: si passa il NOME, che si ricava dal
+#   numero con `getent group`.  Il numero resta quel che si VERIFICA, perche' un
+#   nome puo' cambiare di significato e un gid no.
+# ---------------------------------------------------------------------------
+gid_della_scheda() {
+	local n g
+	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
+		[ -e "$n" ] || continue
+		g=$(stat -c %g "$n" 2>/dev/null) || continue
+		printf '%s\n' "$g"
+	done | sort -un
+}
+
+nomi_della_scheda() {
+	local g nome nomi=""
+	for g in $(gid_della_scheda); do
+		nome=$(getent group "$g" | cut -d: -f1)
+		[ -n "$nome" ] || continue
+		case ",$nomi," in *",$nome,"*) continue ;; esac
+		nomi="${nomi:+$nomi,}$nome"
+	done
+	printf '%s' "$nomi"
+}
+
+GRUPPI_SCHEDA=$(nomi_della_scheda)
+
+# ---------------------------------------------------------------------------
 # 1. Gli utenti di prova, e ⛔ I LORO GRUPPI
 #
 # ⛔⛔ `video` e `render` NON sono una comodita' dell'ambiente di prova: sono un
@@ -56,16 +92,32 @@ SOLO_VERIFICA=${1:-}
 # `[M]` 15 agosto 2026: il sintomo e' «lento», non «rotto» — un comando nel
 # terminale che risponde dopo un secondo, e il compositore che compone a mano un
 # desktop di 2544x926.
+#
+# ⛔⛔⭐ E IL 27 AGOSTO 2026 IL SINTOMO SI E' RIVELATO PEGGIO DI «LENTO»: e'
+#      **CIECO**.  `[M]` Sulla macchina vera, un inquilino senza i due gruppi
+#      non vede MAI — **0 sessioni su 4**, zero fotogrammi, mai in 90 secondi —
+#      mentre gli inquilini coi gruppi vedono **17 su 17** in ~2,0 s.  ⭐ E la
+#      controprova, sullo stesso utente: dati i due gruppi e fatto rinascere il
+#      gestore d'utente ⇒ **2,04 s**.
+# ⛔⛔ E' `fasi/10-multi-tenant-e-il-budget.md` §7.4, «la sessione che nasce
+#      cieca»: `provanic4/5/6` mai riusciti in **98 · 55 · 50** tentativi, e
+#      sono esattamente e soltanto i tre utenti che i due gruppi non li avevano.
+#      ⇒ Ha bloccato cinque prove e rinviato una fase, e non ha mai dato un
+#      errore.  ⭐ Da oggi il PRODOTTO se ne accorge e lo scrive nel registro
+#      alla nascita di ogni sessione (`figlio.c`, `gruppi_della_scheda()`).
 # ---------------------------------------------------------------------------
 if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	tit "Gli utenti di prova, coi gruppi che l'headless ci fa perdere"
+	if [ -z "$GRUPPI_SCHEDA" ]; then
+		ko "⛔ nessun gruppo leggibile dai nodi /dev/dri: gli inquilini nasceranno CIECHI"
+	fi
 	for u in prova:1001 prova2:1002; do
 		n=${u%%:*}; i=${u##*:}
 		id -u "$n" >/dev/null 2>&1 || useradd -u "$i" -m -s /bin/bash "$n"
-		usermod -aG video,render "$n"
+		[ -n "$GRUPPI_SCHEDA" ] && usermod -aG "$GRUPPI_SCHEDA" "$n"
 	done
 	printf 'prova:prova2026\nprova2:prova2026\n' | chpasswd
-	ok "prova e prova2, in video e render"
+	ok "prova e prova2, nei gruppi LETTI DAI NODI: ${GRUPPI_SCHEDA:-nessuno}"
 
 	# -------------------------------------------------------------------
 	# ⛔⛔ `~/.cache` DEV'ESSERE UNA CARTELLA SUA, non un collegamento a /tmp
@@ -73,8 +125,13 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	# `[M]` 25 agosto 2026, incarico F2 — ed e' il difetto per cui il regista
 	# ha detto tre volte «Firefox non funziona».
 	#
-	# `/etc/skel/.cache` di questa macchina e' un COLLEGAMENTO a `/tmp`, e
-	# `useradd -m` copia lo scheletro ⇒ ogni utente ha `~/.cache -> /tmp`.
+	# `/etc/skel/.cache` di questa macchina e' un COLLEGAMENTO a `/tmp`.
+	# ⭐⭐ E NON E' UN GUASTO: e' una SCELTA VOLUTA dell'utente su come deve
+	#    funzionare il suo sistema operativo — *«.cache che punta a /tmp e' una
+	#    mia scelta voluta»*, 25 agosto 2026, `DECISIONI.md` §4.6-undecies.
+	#    ⛔ Quindi qui NON si ripara niente del sistema: la sua scelta resta.
+	# ⛔ Il difetto e' NOSTRO: `useradd -m` copia lo scheletro ⇒ i dieci utenti
+	#    che creiamo noi nascono TUTTI a scrivere nello stesso posto.
 	# Firefox tiene il profilo **locale** sotto `$HOME/.cache/mozilla`, cioe'
 	# sotto `/tmp/mozilla`.  ⛔ Il PRIMO utente che apre il browser crea
 	# `/tmp/mozilla` **a nome suo e a modo 0700**; da quel momento nessun altro
@@ -93,8 +150,9 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	# `[M]` E col rimedio, headless e senza REMOTIX: `profiles.ini` nasce.
 	#
 	# ⚠ Non si tocca `/tmp/mozilla` di chi ce l'ha gia': non e' nostro e non si
-	#   sa chi lo usa.  Si da' a ogni utente una `~/.cache` vera, che e' quel
-	#   che ogni altra distribuzione ha di suo.
+	#   sa chi lo usa.  ⛔ E non si tocca ne' `/etc/skel` ne' la home
+	#   dell'utente: quella e' casa sua.  Si da' una `~/.cache` vera SOLTANTO
+	#   agli utenti che creiamo noi.
 	# -------------------------------------------------------------------
 	for u in prova prova2; do
 		c="/home/$u/.cache"
@@ -208,6 +266,71 @@ CONF
 	else
 		ko "manca /media/REMOTIX/gpu-udev.sh"
 	fi
+
+	# -------------------------------------------------------------------
+	# 6. ⛔⭐⭐ I TRE REQUISITI CHE IL MULTI-TENANT VUOLE E CHE NON ERANO
+	#          SCRITTI DA NESSUNA PARTE — 27 agosto 2026, misurati sulla
+	#          macchina vera FACENDO la cosa, non ispezionandola.
+	#
+	#   1. ⛔ IL SERVER DEVE GIRARE DA **ROOT**, o il multi-tenant non esiste.
+	#      `[M]` Con `User=nicfio` il prodotto stesso scrive «questo processo
+	#      e' uid 1000: NON e' root — PAM potra' verificare solo il suo
+	#      utente», e ogni altro inquilino si prende `0x07
+	#      CREDENZIALI_ERRATE`.  Da root: «uid 0: puo' verificare con PAM la
+	#      parola di chiunque».
+	#   2. ⛔ IL BINARIO DEVE STARE DOVE L'INQUILINO PUO' ESEGUIRLO.  `[M]`
+	#      `/home/nicfio` e' `0700`: il figlio, che gira con l'uid
+	#      dell'inquilino, **non attraversa** quella cartella ed esce con 37 —
+	#      «non ha potuto eseguire il binario del server».
+	#   3. ⛔ `LD_LIBRARY_PATH` NON ARRIVA AL FIGLIO.  `figlio.c` compone
+	#      l'ambiente **da zero** e fa `execve` (CODER.md §4.5): una libreria
+	#      fuori dai percorsi di sistema fa uscire il figlio con **127**, e la
+	#      variabile del padre non lo raggiunge.  ⇒ La cura sta QUI, dove
+	#      vuole root: `/etc/ld.so.conf.d/` piu' `ldconfig`.
+	#
+	# ⚠ Il punto 1 lo SISTEMA questo script (un drop-in), i punti 2 e 3 li
+	#   VERIFICA facendoli — la consegna del binario non e' della provvista.
+	# -------------------------------------------------------------------
+	tit "I tre requisiti del multi-tenant (27 ago 2026)"
+	if systemctl cat remotix.service >/dev/null 2>&1; then
+		QUALE=$(systemctl show remotix.service -p User --value 2>/dev/null)
+		if [ -n "$QUALE" ] && [ "$QUALE" != "root" ]; then
+			install -d -m 755 /etc/systemd/system/remotix.service.d
+			cat > /etc/systemd/system/remotix.service.d/zz-remotix-root.conf <<'CONF'
+# ⛔⛔ IL SERVER GIRA DA ROOT, e non e' una comodita': e' la condizione del
+#     multi-tenant.  `[M]` 27 ago 2026: con `User=` non root, PAM puo'
+#     verificare la parola SOLO dell'utente del servizio, e ogni altro
+#     inquilino si prende `0x07 CREDENZIALI_ERRATE`.
+[Service]
+User=root
+Group=root
+CONF
+			systemctl daemon-reload >/dev/null 2>&1
+			ok "drop-in zz-remotix-root.conf scritto (era User=$QUALE)"
+			inf "⚠ il servizio NON e' stato riavviato: entra in vigore al prossimo riavvio del servizio"
+		else
+			ok "remotix.service gira gia' da root"
+		fi
+	else
+		inf "remotix.service non e' installato su questa macchina: niente da correggere"
+	fi
+
+	# ⭐ Le librerie fuori dai percorsi di sistema si REGISTRANO, perche' la
+	#   variabile d'ambiente non attraversa l'`execve` del figlio.
+	LIBRERIE=""
+	for c in /opt/remotix/lib /opt/remotix/solo "$QUI/lib-remotix"; do
+		[ -d "$c" ] || continue
+		LIBRERIE="$c"
+		break
+	done
+	if [ -n "$LIBRERIE" ]; then
+		printf '# ⛔ `LD_LIBRARY_PATH` non arriva al figlio (execve con ambiente da\n#    zero): le librerie del prodotto si registrano qui.\n%s\n' \
+			"$LIBRERIE" > /etc/ld.so.conf.d/zz-remotix.conf
+		ldconfig
+		ok "librerie del prodotto registrate: $LIBRERIE (ldconfig fatto)"
+	else
+		inf "nessuna cartella di librerie del prodotto da registrare"
+	fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -218,9 +341,43 @@ fi
 # ---------------------------------------------------------------------------
 tit "La verifica"
 
+# ⭐ Il binario si chiede al SERVIZIO, non si indovina: e' quello che girera'
+#   davvero.  ⚠ Se il servizio non c'e', si guarda quello dell'albero.
+BINARIO=$(systemctl show remotix.service -p ExecStart --value 2>/dev/null \
+	| sed -n 's/.*path=\([^ ;]*\).*/\1/p' | head -1)
+[ -n "$BINARIO" ] || BINARIO="$QUI/remotix"
+
+# ⛔⭐⭐ REQUISITO 1 — il server deve girare da ROOT, o il multi-tenant non c'e'.
+if systemctl cat remotix.service >/dev/null 2>&1; then
+	QUALE=$(systemctl show remotix.service -p User --value 2>/dev/null)
+	if [ -z "$QUALE" ] || [ "$QUALE" = "root" ]; then
+		ok "remotix.service gira da root: PAM puo' verificare la parola di CHIUNQUE"
+	else
+		ko "⛔⛔ remotix.service gira come «$QUALE»: PAM potra' verificare SOLO quell'utente, e ogni altro inquilino prendera' 0x07 CREDENZIALI_ERRATE"
+	fi
+else
+	inf "remotix.service non e' installato: il requisito «da root» resta a chi lo lancia a mano"
+fi
+
 for n in prova prova2; do
-	if id -nG "$n" 2>/dev/null | grep -qw render; then ok "$n e' in render"
-	else ko "$n NON e' in render: il compositore disegnera' in SOFTWARE"; fi
+	# ⛔⭐ SI VERIFICA IL **GID DEL NODO**, non il nome «render».  Un `grep -qw
+	#     render` su `id -nG` passa anche su una macchina dove il nodo
+	#     appartiene a un altro gruppo — cioe' direbbe OK a un inquilino che
+	#     nascera' cieco.  ⚠ E si guardano TUTTI i gid dei nodi: `cardN` e
+	#     `renderDN` ne hanno due diversi, e servono tutt'e due.
+	SUOI=" $(id -G "$n" 2>/dev/null) "
+	MANCA=""
+	for g in $(gid_della_scheda); do
+		case "$SUOI" in *" $g "*) ;; *) MANCA="${MANCA:+$MANCA }$(getent group "$g" | cut -d: -f1) (gid $g)" ;; esac
+	done
+	if [ -z "$(gid_della_scheda)" ]; then
+		ko "⛔ nessun nodo /dev/dri: non si puo' dire se $n vedra'"
+	elif [ -z "$MANCA" ]; then
+		ok "$n e' in TUTTI i gruppi dei nodi della scheda (${GRUPPI_SCHEDA})"
+	else
+		ko "⛔⛔ $n NON e' nei gruppi della scheda: $MANCA — la sua sessione NASCERA' CIECA (0 su 4 [M], 27 ago 2026, fase 10 §7.4)"
+		inf "   cura: usermod -aG ${GRUPPI_SCHEDA} $n  &&  loginctl terminate-user $n"
+	fi
 	if [ "$(loginctl show-user "$n" -p Linger --value 2>/dev/null)" = "yes" ]; then
 		ok "$n ha il linger: il gestore d'utente non rinasce a ogni login"
 	else
@@ -237,6 +394,32 @@ for n in prova prova2; do
 		ok "$n puo' scrivere nella sua ~/.cache (il profilo del browser ci sta)"
 	else
 		ko "⛔ $n NON puo' scrivere nella sua ~/.cache: il browser dira' «Profile Missing»"
+	fi
+
+	# ⛔⭐⭐ REQUISITI 2 E 3 IN UNA PROVA SOLA, e si FANNO invece di guardarli.
+	#
+	#   Si chiede al caricatore di elencare le librerie del binario **con
+	#   l'uid dell'inquilino e con l'ambiente A ZERO** — che e' esattamente la
+	#   condizione del figlio dopo l'`execve` di `figlio.c`.  ⇒ Una sola riga
+	#   risponde a tutt'e due le domande:
+	#     · il binario non si attraversa (home `0700`) ⇒ «Permission denied»,
+	#       ed e' l'uscita 37 del figlio;
+	#     · una libreria non si trova ⇒ «not found», ed e' l'uscita 127.
+	# ⚠ `LD_TRACE_LOADED_OBJECTS` fa elencare e NON eseguire: non parte nessun
+	#   server, e non si tocca niente di quel che sta girando.
+	if [ ! -e "$BINARIO" ]; then
+		inf "⚠ $BINARIO non c'e': la prova del caricatore per $n non si puo' fare"
+	else
+		ESCE=$(su -s /bin/sh -c "env -i LD_TRACE_LOADED_OBJECTS=1 '$BINARIO'" "$n" 2>&1)
+		if printf '%s' "$ESCE" | grep -q 'not found'; then
+			ko "⛔⛔ a $n MANCANO delle librerie ($(printf '%s' "$ESCE" | grep -c 'not found')): il figlio uscira' con 127.  ⚠ LD_LIBRARY_PATH NON lo raggiunge: la cura e' /etc/ld.so.conf.d + ldconfig"
+			printf '%s' "$ESCE" | grep 'not found' | sed 's/^/        /'
+		elif printf '%s' "$ESCE" | grep -qi 'permission denied\|cannot execute\|No such file'; then
+			ko "⛔⛔ $n NON puo' eseguire $BINARIO: il figlio uscira' con 37.  ⚠ Guarda i modi delle cartelle sul percorso — una home 0700 ferma tutto"
+			printf '%s' "$ESCE" | head -2 | sed 's/^/        /'
+		else
+			ok "$n esegue $BINARIO e ne risolve le librerie con l'ambiente A ZERO (come il figlio)"
+		fi
 	fi
 done
 

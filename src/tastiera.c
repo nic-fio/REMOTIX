@@ -135,6 +135,33 @@ struct tastiera
 	/* Il dirottamento del registro di xkbcommon, durante la compilazione. */
 	char primo_errore[256];
 	int errori;
+
+	/*
+	 * ⭐⭐ DI CHI E' LA RIGA — 27 agosto 2026, il rosso di C9.
+	 *
+	 * ⛔ Questo modulo scrive righe d'area `tastiera` da DUE processi di specie
+	 *    diversa (`registro.h`), e finora le trattava allo stesso modo:
+	 *
+	 *      · nel FIGLIO va gia' bene: `registro_identita()` e' posata
+	 *        all'`exec` e ogni riga del processo la porta;
+	 *      · nel PADRE no: `tastiera_apri()` lo chiama `webtransport.c` per
+	 *        rispondere a «questa disposizione esiste?» durante l'ATTACCA, e
+	 *        li' un processo solo serve TUTTE le sessioni.
+	 *
+	 * `[M]` 26 agosto 2026, maglia C9, due inquilini vivi insieme: le righe
+	 *      «modificatore N: si preferisce…» e «disposizione in vigore: …»
+	 *      uscivano DUE VOLTE, identiche parola per parola, ⛔ e non c'era modo
+	 *      di dire quale fosse di chi.
+	 *
+	 * ⇒ Il nome lo porta la TASTIERA, per tutta la durata dell'apertura: cosi'
+	 *   lo vedono anche le righe che escono da `xkb_parla()`, che non ha altro
+	 *   in mano che questa struttura.
+	 * ⚠ Vuoto e' la verita' quando non si sa: `registro.c` allora ripiega
+	 *   sull'identita' di PROCESSO, che nel figlio e' quella giusta.  ⇒ La
+	 *   `calloc()` lascia questo campo com'e', e la strada del figlio non
+	 *   cambia di una virgola.
+	 */
+	char chi[REG_IDENTITA_MAX + 1];
 };
 
 /* ------------------------------------------------------------------ *
@@ -160,10 +187,10 @@ static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const
 		t->errori++;
 		if (!t->primo_errore[0])
 			snprintf(t->primo_errore, sizeof t->primo_errore, "%s", riga);
-		registro_dettaglio(REG_TASTIERA, "xkbcommon: %s", riga);
+		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon: %s", riga);
 	}
 	else
-		registro_dettaglio(REG_TASTIERA, "xkbcommon (avviso): %s", riga);
+		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon (avviso): %s", riga);
 }
 
 /* ------------------------------------------------------------------ *
@@ -338,10 +365,10 @@ static void impara_i_modificatori(Tastiera *t)
 			gia_preferito[quale] = 1;
 			continue;
 		}
-		registro_dettaglio(REG_TASTIERA,
-		                   "modificatore %d: si preferisce il tasto %u a %u (una tastiera vera "
-		                   "ha il primo)",
-		                   quale, evdev, t->tasto_del_mod[quale]);
+		registro_dettaglio_di(REG_TASTIERA, t->chi,
+		                      "modificatore %d: si preferisce il tasto %u a %u (una tastiera "
+		                      "vera ha il primo)",
+		                      quale, evdev, t->tasto_del_mod[quale]);
 		t->tasto_del_mod[quale] = evdev;
 		gia_preferito[quale] = 1;
 	}
@@ -351,6 +378,14 @@ static void impara_i_modificatori(Tastiera *t)
  * L'apertura
  * ------------------------------------------------------------------ */
 Tastiera *tastiera_apri(const char *disposizione, char **errore)
+{
+	/* ⚠ `NULL` e' la verita' per chi non serve una sessione sola: le righe
+	 *   usciranno con l'identita' di PROCESSO, se c'e' (il figlio), e mute se
+	 *   non c'e'.  ⛔ Chi non sa tace (`registro.h`). */
+	return tastiera_apri_per(disposizione, NULL, errore);
+}
+
+Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **errore)
 {
 	Tastiera *t;
 	char layout[72], variante[72];
@@ -365,14 +400,18 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 		return NULL;
 	t->mod_maiuscole = XKB_MOD_INVALID;
 	t->mod_numeri = XKB_MOD_INVALID;
+	/* ⭐ Il nome si posa PRIMA di qualunque riga: la prima che puo' uscire e'
+	 *   quella della forma mal formata, tre righe piu' sotto. */
+	if (chi && *chi)
+		snprintf(t->chi, sizeof t->chi, "%s", chi);
 
 	if (disposizione &&
 	    !forma_valida(disposizione, layout, sizeof layout, variante, sizeof variante))
 	{
 		/* ⛔ `RCP.md` §4.5: questo e' ERRORE_PROTOCOLLO, non SESSIONE_NON_SERVIBILE. */
-		registro_dice(REG_TASTIERA,
-		              "disposizione mal formata, rifiutata senza nemmeno provarci: %.64s",
-		              disposizione);
+		registro_dice_di(REG_TASTIERA, t->chi,
+		                 "disposizione mal formata, rifiutata senza nemmeno provarci: %.64s",
+		                 disposizione);
 		if (errore)
 			*errore = strdup("forma: non e' un nome di disposizione XKB (RCP.md §4.5)");
 		free(t);
@@ -382,7 +421,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 	t->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!t->ctx)
 	{
-		registro_dice(REG_TASTIERA, "contesto xkbcommon non creato");
+		registro_dice_di(REG_TASTIERA, t->chi, "contesto xkbcommon non creato");
 		if (errore)
 			*errore = strdup("xkbcommon: contesto non creato");
 		free(t);
@@ -439,9 +478,9 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 		const char *perche =
 			t->primo_errore[0] ? t->primo_errore : "xkbcommon non ha detto perche'";
 
-		registro_dice(REG_TASTIERA,
-		              "disposizione «%s» NON caricata, e non si ripiega su nessun'altra: %s",
-		              chiesta, perche);
+		registro_dice_di(REG_TASTIERA, t->chi,
+		                 "disposizione «%s» NON caricata, e non si ripiega su nessun'altra: %s",
+		                 chiesta, perche);
 		if (errore)
 		{
 			/*
@@ -479,11 +518,11 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 	 *   userebbe solo la prima, in silenzio.  ⇒ Si dichiara subito.
 	 */
 	if (xkb_keymap_num_layouts(t->keymap) > 1)
-		registro_dice(REG_TASTIERA,
-		              "disposizione «%s»: la sessione ne porta %u, si usa SOLO la prima", chiesta,
-		              xkb_keymap_num_layouts(t->keymap));
+		registro_dice_di(REG_TASTIERA, t->chi,
+		                 "disposizione «%s»: la sessione ne porta %u, si usa SOLO la prima",
+		                 chiesta, xkb_keymap_num_layouts(t->keymap));
 
-	registro_dice(REG_TASTIERA, "disposizione in vigore: %s", t->nome);
+	registro_dice_di(REG_TASTIERA, t->chi, "disposizione in vigore: %s", t->nome);
 	return t;
 }
 

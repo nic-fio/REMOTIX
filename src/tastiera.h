@@ -32,6 +32,32 @@ typedef struct tastiera Tastiera;
 Tastiera *tastiera_apri(const char *disposizione, char **errore);
 
 /*
+ * ⭐⭐ LA STESSA APERTURA, MA DICENDO DI CHI E' — 27 agosto 2026, il rosso di
+ *     C9 (`banchi/11-scatole/11-c9-il-registro-dice-di-chi.py`).
+ *
+ * ⛔ IL DIFETTO, `[M]` con DUE inquilini vivi insieme: `webtransport.c` chiama
+ *    `tastiera_apri()` nel PADRE, per rispondere a «questa disposizione
+ *    esiste?» durante l'ATTACCA.  Le righe che ne uscivano — «modificatore N:
+ *    si preferisce…» e «disposizione in vigore: it [Italian]» — erano
+ *    **identiche parola per parola, una per inquilino**, e non c'era modo di
+ *    dire quale fosse di chi.  ⇒ Con un inquilino solo si attribuivano per
+ *    esclusione; col secondo la diagnosi diventava indovinare.
+ *
+ * ⭐ `chi` e' il nome che PAM ha ammesso su QUESTA sessione — nel padre lo
+ *    porta `rcp_utente()`, ed e' lo stesso che finisce nella riga `rcp` due
+ *    millisecondi dopo.  ⚠ NULL o "" ⇒ vale l'identita' di PROCESSO
+ *    (`registro.h`), che e' la risposta giusta nel figlio; e se non c'e'
+ *    nemmeno quella la riga esce muta, ⛔ che e' la verita'.
+ *
+ * ⚠ E la firma vecchia RESTA, invece di crescere di un parametro: la usa
+ *   `banchi/04-b25-tastiera.c`, e in questo modulo la usano le due aperture
+ *   interne di confronto (`tastiera_apri_da_keymap`, `tastiera_e_questa`) che
+ *   girano solo nel figlio.  ⇒ Chi non ha un inquilino da nominare non deve
+ *   scrivere `NULL` per dirlo.
+ */
+Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **errore);
+
+/*
  * ⛔⛔ E QUESTA E' LA STRADA BUONA — aggiunta il 14 agosto 2026, e non e' un
  *      di piu': e' la correzione di un difetto del contratto, sollevata
  *      dall'anello che lo attuava e accolta.
