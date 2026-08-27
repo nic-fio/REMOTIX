@@ -3289,10 +3289,26 @@ ci sono **28 GB** liberi, il portale è attivo, e `gdb` mostra un ciclo `g_main_
 **annidato** — cioè il dialogo. ⭐ La pista che pesa è il **compositore di Firefox che muore**: se il
 processo GPU se ne va all'avvio, *«Profile Missing»* è **il sintomo, non la causa**.
 
-### 5.10 ⭐⭐⭐⭐⭐ **«FIREFOX NON FUNZIONA» — ed era `~/.cache` che punta a `/tmp`**
+### 5.10 ⭐⭐⭐⭐⭐ **«FIREFOX NON FUNZIONA» — ed era il profilo del browser che non nasceva**
 
-*25 agosto 2026.* ⛔ **Il difetto non era di REMOTIX. Ma è il multi-tenant a renderlo CERTO invece
-che raro** — ed è per questo che sta in questa fase e non altrove.
+*25 agosto 2026.* ⛔ **Il difetto è di REMOTIX** — ed è per questo che sta in questa fase e non
+altrove.
+
+> #### ⭐⭐⭐ CORREZIONE DELL'UTENTE — *25 agosto 2026, sera*
+>
+> ⚠ *Questa sezione si intitolava «**ed era `~/.cache` che punta a `/tmp`**» e diceva «**il difetto
+> non era di REMOTIX**». ⛔ Tutt'e due sbagliate, e la seconda nel verso peggiore.*
+>
+> > *«`.cache` che punta a `/tmp` è una mia scelta voluta»* — l'utente. È una decisione su come deve
+> > funzionare **il sistema operativo della sua macchina**, e **non c'entra niente con REMOTIX**.
+>
+> ⇒ ⛔ **Quel collegamento non è un difetto, e non c'è niente da riparare nel sistema.** Su una
+> macchina a un utente solo non fa nessun danno.
+> ⭐⭐ **Il difetto è nostro**: è **il nostro `useradd -m`** a creare dieci utenti che nascono tutti a
+> scrivere nello stesso posto. ⇒ *Una scelta innocua diventa un blocco per nove **perché ci mettiamo
+> noi i dieci inquilini**.*
+> ⇒ `DECISIONI.md` **§4.6-undecies**, e il bersaglio della fase 11 cambia di conseguenza:
+> **«il secondo utente apre il browser?»**, non «le cartelle sono al posto canonico?».
 
 #### Il meccanismo, nudo — **senza browser, senza compositore, senza GPU**
 
@@ -3306,8 +3322,9 @@ $ ls -ld /tmp/mozilla
 drwx------  prova2 prova2  /tmp/mozilla                   ← creata il 23 agosto 08:03
 ```
 
-⇒ `/etc/skel/.cache` è un **collegamento a `/tmp`**, e `src/provisiona.sh:64` crea gli utenti con
-`useradd -m`, che **copia lo scheletro** ⇒ ⛔ **ogni utente ha `~/.cache -> /tmp`**. Firefox tiene il
+⇒ `/etc/skel/.cache` è un **collegamento a `/tmp`** — ⭐ **per scelta dell'utente**, vedi il riquadro
+in testa alla sezione — e `src/provisiona.sh:64` crea gli utenti con `useradd -m`, che **copia lo
+scheletro** ⇒ ⛔ **ogni utente che facciamo noi eredita `~/.cache -> /tmp`**. Firefox tiene il
 profilo *locale* sotto `$HOME/.cache/mozilla`, cioè sotto **`/tmp/mozilla`**.
 
 ⛔⛔ **Il PRIMO utente che apre il browser crea `/tmp/mozilla` a nome suo e a modo `0700`.** Da quel
@@ -3351,8 +3368,10 @@ era la causa:**
 #### La cura, e **dove** sta
 
 ⭐ In **`src/provisiona.sh`** — cioè **nella macchina, non nel prodotto** (`SPECIFICHE.md` §5.9,
-parte A): a ogni utente una `~/.cache` **vera** se è un collegamento o manca. ⚠ **Non si tocca
-`/tmp/mozilla` di chi ce l'ha già**: non è nostro e non si sa chi lo usa.
+parte A): **agli utenti che creiamo noi** una `~/.cache` **vera** se è un collegamento o manca.
+⚠ **Non si tocca `/tmp/mozilla` di chi ce l'ha già**: non è nostro e non si sa chi lo usa.
+⭐⭐ **E non si tocca né `/etc/skel` né la home dell'utente**: la sua scelta resta in piedi, e la cura
+vale **solo per i nostri inquilini**. ⇒ *È il modo giusto anche a correzione avvenuta.*
 
 ⛔ **E il predicato di verifica non guarda il collegamento: PROVA A SCRIVERE** — perché *«scritto non
 è in vigore»* (**E1**). `[M]` collegamento ⇒ rosso · cartella non scrivibile ⇒ rosso · curato ⇒
@@ -3441,7 +3460,49 @@ guardiano porta il **denominatore** che prima non c'era: `inquilini=0`.
 due schede, la barra degli indirizzi, e una pagina resa**. ⛔ **Nessun dialogo, nessun profilo
 mancante, nessun accorgimento**: l'ambiente giusto e una `~/.cache` che è sua.
 
-### 7.4 ⛔⛔⛔ **LA SESSIONE CHE NASCE CIECA — nessun `wl_output`, e nessuna finestra si apre**
+### 7.4 ✅⭐⭐⭐ **LA SESSIONE CHE NASCE CIECA — CHIUSA il 27 agosto 2026: erano i GRUPPI dell'inquilino**
+
+> ## ⭐⭐⭐ LA RISPOSTA, prima del racconto
+>
+> `[M]` **L'inquilino non era nei gruppi `video` e `render`.** Tutto qui.
+>
+> | | |
+> |---|---|
+> | inquilini **con** i due gruppi | `[M]` **17 sessioni su 17** vedono: 9 nuove e mai usate in **1,92–2,10 s**, 8 riattacchi in **1,03 s** |
+> | inquilini **senza** (creati come li creava `terreno10.sh`) | `[M]` **0 su 4** — mai in 90 s, zero fotogrammi, e la sessione gira in tondo fra *«ZERO MONITOR»* e *«monitor virtuale montato»* per **82 s** |
+> | ⭐ **la controprova** | dati i due gruppi **allo stesso inquilino** e fatto rinascere il gestore d'utente ⇒ **2,04 s**, 14 fotogrammi. ⭐⭐ **Una variabile sola, esito ribaltato** |
+>
+> ⭐⭐ **E la tabella qui sotto si spiega da sola**: `provanic4/5/6` — quelli che non videro **mai**, su
+> **98 · 55 · 50** tentativi — oggi **non hanno** né `video` né `render`. `prova` e `provanic1`, che
+> videro **sempre**, **li hanno**. ⇒ ⛔ Non era intermittente: erano **due popolazioni di inquilini**.
+>
+> ⚠ **E quel che ha reso il difetto così caro non è il difetto: è che non diceva niente.** Un
+> inquilino senza quei gruppi non produce nessun errore — produce una sessione che *sembra* nata e
+> non si vede. ⇒ La cura è in due pezzi:
+> · `src/provisiona.sh` legge adesso il gruppo **dal nodo** (`stat -c %g` sui `cardN`/`renderDN`),
+>   ⛔ non da un nome inchiodato — e la verifica confronta i **gid**, non la parola «render»;
+> · ⭐⭐ `src/figlio.c` controlla alla nascita di **ogni** sessione e, se il gruppo manca, scrive nel
+>   registro *«NON È NEL GRUPPO DELLA SCHEDA … QUESTA SESSIONE NASCERÀ E NON VEDRÀ NIENTE»* **con la
+>   cura completa dentro la riga**. ⛔ Dichiara, non rifiuta.
+>
+> ⛔ **E c'è una coda che tocca le misure del passato**: i **banchi** creavano inquilini per conto
+> loro — `banchi/attrezzi-utenti.sh` e nove terreni delle fasi 02, 04, 06, 07, 09 — ⛔ **senza quei
+> gruppi**. ⇒ Ogni banco che ha misurato su un inquilino così ha misurato **una sessione che non
+> vedeva, senza saperlo**.
+>
+> ⚠ **Due rilievi misurati che valgono per chiunque legga questo registro:**
+> · ⛔ **`ZERO MONITOR` è TRANSITORIO su ogni sessione sana** — `[M]` compare **173 ms** prima che il
+>   monitor esista. Chi lo legge come prova di cecità dà **falso rosso su tutte**;
+> · ⚠ al **riattacco** `formato negoziato` **non si ripete** se il formato non cambia. Non è cecità.
+>
+> ⛔ **E il «terzo stato» di questa sezione — la riga `(0 prima, 2 dopo)` — non esiste**: era
+> **memoria non inizializzata** (`src/figlio.c:5250` spediva la struttura prima del `memset` di
+> `:5311`). ⇒ `LEZIONI.md` §1.55. Curato.
+>
+> ⇒ Il racconto che segue resta **come fu scritto**, perché è la storia di una caccia e le quattro
+> ipotesi refutate valgono ancora. ⛔ Ma il difetto **è chiuso**, e la fase 11 §7-bis.19 ha i numeri.
+
+#### Il racconto originale, com'era scritto
 
 *Trovato il **25 agosto 2026, sera**, dalla prova che ha proposto il regista: «dieci subagenti che
 usano il desktop in modi diversi».* ⭐ **Il difetto è emerso PRIMA che la prova partisse**, perché la
