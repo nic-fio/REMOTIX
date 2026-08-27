@@ -139,7 +139,7 @@ porta()
 	#    puo' confrontare le due copie di `rcp.c` (R12.3).
 	tar -C "$RADICE" --exclude='*.o' --exclude='src/remotix' -czf - \
 		src banchi/rcp \
-		banchi/04-b32-terreno.sh banchi/04-b30-ponte.py \
+		banchi/attrezzi-gruppi-scheda.sh banchi/04-b32-terreno.sh banchi/04-b30-ponte.py \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/03-marca.py banchi/03-b17-ritardo.py banchi/03-solo.py \
 		banchi/04-b30-anello-input.py banchi/04-b30-scena.c \

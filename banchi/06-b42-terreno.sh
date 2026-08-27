@@ -95,6 +95,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
 for v in UTENTE UID_B PORTA LAV; do
 	if [ -z "${!v}" ]; then
 		ko "⛔ manca «$v» nell'ambiente: questo banco NON indovina l'identita'"
@@ -203,19 +217,10 @@ utente)
 		exit 2; }
 	rm -f "$PF"
 	ok "parola d'ordine posta (da file 0600, mai da argv — D12)"
-	for g in render video; do
-		if getent group "$g" >/dev/null 2>&1; then
-			usermod -aG "$g" "$UTENTE" && ok "nel gruppo «$g»"
-		else
-			ko "⛔ il gruppo «$g» non esiste"
-		fi
-	done
+	# ⛔ Qui c'erano i due nomi INCHIODATI, e un `usermod` fallito non fermava
+	#    niente: il banco tirava dritto e misurava una sessione cieca.
+	gruppi_scheda_dai_a "$UTENTE" || exit 3
 	inf "gruppi: $(id -nG "$UTENTE")"
-	# ⛔ SCRITTO NON E' IN VIGORE (forma E1): si rilegge.
-	case " $(id -nG "$UTENTE") " in
-	*" render "*) ok "⭐ «render» in vigore: la codifica sara' in HARDWARE" ;;
-	*) ko "⛔ «render» NON in vigore: misurerei il ripiego software"; exit 3 ;;
-	esac
 	loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }
 	ok "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato"
 	exit 0 ;;

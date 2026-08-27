@@ -121,8 +121,9 @@ porta()
 	metti /tmp/04-b30-src.tgz "$ALBERO/src.tgz" || return 1
 	fuori "cd $ALBERO && tar xzf src.tgz && ls src/input.c src/pagina.html banchi/rcp/rcp.c" || return 1
 	log "2. E i banchi, accanto agli altri"
+	# ⭐ `attrezzi-gruppi-scheda.sh` va CON il terreno (vedi il suo riquadro).
 	for f in 04-b30-anello-input.py 04-b30-ponte.py 04-b30-scena.c \
-	         04-b32-terreno.sh \
+	         attrezzi-gruppi-scheda.sh 04-b32-terreno.sh \
 	         03-marca.py 03-b17-ritardo.py 03-solo.py 02-pagina-misura-cdp.py; do
 		metti "$QUI/$f" "$FUORI/$f" || return 1
 	done

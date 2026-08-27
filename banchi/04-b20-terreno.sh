@@ -80,6 +80,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
 # ⛔ Le porte degli altri.  ⚠ 7700 e 7730 sono entrate il 22 agosto 2026: erano
 #    vive sulla macchina e questa riga non le contava — un elenco fermo al 14
 #    agosto e' un elenco che non protegge piu' niente.
@@ -200,6 +214,8 @@ utente)
 		ko "⛔ la parola d'ordine non e' stata posta: PAM dira' sempre di no"
 		exit 2; }
 	ok "parola d'ordine posta"
+	# ⛔⛔ QUI NON C'ERA NIENTE, e l'inquilino nasceva CIECO — fase 10 §7.4.
+	gruppi_scheda_dai_a "$UTENTE" || exit 3
 	# ⛔ `enable-linger`, o il gestore d'utente muore appena l'ultima sessione
 	#    logind se ne va, e con lui la sessione grafica.
 	loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }

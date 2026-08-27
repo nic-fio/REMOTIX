@@ -100,6 +100,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
 vicini() {
 	local r=""
 	if ! command -v ss >/dev/null; then
@@ -167,20 +181,11 @@ utente)
 		ko "⛔ la parola d'ordine non e' stata posta: PAM dira' sempre di no"
 		exit 2; }
 	ok "parola d'ordine posta"
-	# ⛔⛔ IL GRUPPO `render` — senza, la codifica ripiega in SOFTWARE e passa
-	#     da 4,8 ms a 100 ms.  ⚠ E si VERIFICA rileggendo `id`: `usermod` che
-	#     fallisce in silenzio darebbe un numero 20 volte peggiore senza una
-	#     riga rossa da nessuna parte.
-	for g in render video; do
-		getent group "$g" >/dev/null || { ko "⛔ il gruppo «$g» non esiste su questa macchina"; continue; }
-		usermod -aG "$g" "$UTENTE" || ko "⛔ usermod -aG $g non e' riuscito"
-	done
+	# ⛔ La verifica c'era gia' ed era la meta' giusta — ma cercava il NOME
+	#    «render»: su una macchina dove il nodo appartiene a un altro gruppo
+	#    avrebbe detto OK a un inquilino cieco.  Adesso confronta i NUMERI.
+	gruppi_scheda_dai_a "$UTENTE" || exit 3
 	inf "id: $(id "$UTENTE")"
-	case "$(id -Gn "$UTENTE")" in
-	*render*) ok "⭐ e' nel gruppo «render»: /dev/dri/renderD128 si apre, la codifica resta in HARDWARE" ;;
-	*)        ko "⛔ NON e' nel gruppo «render»: la codifica ripieghera' in software (100 ms invece di 4,8) e il numero sarebbe di un prodotto che non esiste"
-	          exit 2 ;;
-	esac
 	loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }
 	ok "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato"
 	ls -ld "/run/user/$UID_B" 2>&1 | sed 's/^/        /'

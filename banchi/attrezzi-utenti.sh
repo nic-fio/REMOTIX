@@ -52,6 +52,31 @@ PAROLA_DENTRO=$DENTRO/tmp/attrezzi-utenti-chpasswd
 ripulisci() { rm -f "$PAROLA_FUORI"; }
 trap ripulisci EXIT
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔⭐ QUESTO ATTREZZO CREAVA `prova` E `prova2` **CIECHI** — e non lo diceva
+#
+# ⛔ La `useradd` qui sotto non dava nessun gruppo, mentre `src/provisiona.sh`
+#    li dava: due posti che creano la stessa cosa, e sono divergiti.  Chi
+#    preparava la macchina con l'uno otteneva inquilini che vedono, con l'altro
+#    inquilini che non vedranno mai niente — `[M]` 0 sessioni su 4, zero
+#    fotogrammi in 90 s (fase 10 §7.4).
+#
+# ⭐ LA CURA STA IN UN FILE SOLO, `attrezzi-gruppi-scheda.sh`.  ⚠ Ma qui i
+#    comandi girano DENTRO il chroot di `enter.sh`, dove quel file non c'e':
+#    quindi il file **si stampa** (`--testo`) e il testo si infila nella
+#    stringa.  ⇒ La logica resta UNA, e non ce n'e' una copia scritta a mano.
+#
+# ⚠ E il chroot ha `/dev` in rbind ma un `/etc/group` tutto suo: leggere il
+#   **gid dal nodo** e chiedere il nome li' dentro e' proprio quel che serve —
+#   un `render` inchiodato di fuori potrebbe non esistere di dentro.
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: gli inquilini nascerebbero CIECHI"; exit 2; }
+# ⚠ Il testo entra in `"$GRUPPI_SCHEDA_TESTO"`, e la shell NON riespande il
+#   risultato di un'espansione: i `$` di la' dentro arrivano intatti.
+GRUPPI_SCHEDA_TESTO=$(bash "$GRUPPI_SCHEDA_SH" --testo)
+[ -n "$GRUPPI_SCHEDA_TESTO" ] || { ko "⛔ $GRUPPI_SCHEDA_SH --testo non ha stampato niente"; exit 2; }
+
 mkdir -p "$FUORI/tmp" || { ko "⛔ non si crea $FUORI/tmp"; exit 2; }
 
 crea() # $1 nome  $2 uid  $3 parola
@@ -81,11 +106,21 @@ crea() # $1 nome  $2 uid  $3 parola
     ok "parola di '$1' impostata da un file 0600 — mai in una riga di comando"
   else
     ko "⛔ chpasswd per '$1' esce $stato: la parola NON e' stata impostata"
+    return "$stato"
   fi
+  # ⭐⭐ I GRUPPI DELLA SCHEDA, LETTI DAI NODI DENTRO IL CHROOT.
+  # ⛔ E se non ci entra, questo attrezzo si FERMA: un `prova` cieco manda a
+  #    zero fotogrammi ogni banco che parte da qui, e nessuno se ne accorge.
+  bash $E --root "$GRUPPI_SCHEDA_TESTO
+gruppi_scheda_dai_a $1"
+  stato=$?
+  [ "$stato" -eq 0 ] || ko "⛔⛔ '$1' NON e' nei gruppi della scheda (uscita $stato): NON usare questo utente per misurare"
   return "$stato"
 }
 
-crea prova 1001 parola-di-prova
+# ⛔ E se 'prova' non nasce sano si esce: proseguire vorrebbe dire lasciare
+#    in giro un inquilino che i banchi useranno credendolo buono.
+crea prova 1001 parola-di-prova || exit 3
 
 if [ -f "$CRED" ] && grep -q '^prova2:' "$CRED" 2>/dev/null; then
   P2=$(sed -n 's/^prova2:[[:space:]]*//p' "$CRED" | head -1)
@@ -100,7 +135,7 @@ else
 fi
 # ⛔ `crea` e' una FUNZIONE, non un programma: questa chiamata non crea nessun
 #    `argv`, e la parola non esce dalla shell.
-crea prova2 1002 "$P2"
+crea prova2 1002 "$P2" || exit 3
 
 echo
 for u in prova prova2; do
@@ -110,5 +145,12 @@ for u in prova prova2; do
     ko "⛔ $u: NON ha una parola utilizzabile — PAM lo rifiutera'"
   fi
 done
+# ⭐ E si RILEGGE dal di dentro, che e' l'unico posto che conta (E1).
+bash $E --root "$GRUPPI_SCHEDA_TESTO
+for u in prova prova2; do
+  m=\$(gruppi_scheda_mancanti \$u)
+  if [ -z \"\$m\" ]; then echo \"    OK  ⭐ \$u e' nei gruppi dei nodi della scheda: \$(id -nG \$u)\"
+  else echo \"    NO  ⛔⛔ \$u NON e' nei gruppi \$m: la sua sessione NASCE CIECA\"; fi
+done"
 bash $E --root "getent passwd prova prova2"
 ls -l "$CRED"

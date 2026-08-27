@@ -29,6 +29,8 @@ UID_B=${UID_B:-1017}
 PAROLA=${PAROLA:-provav7-2026}
 PORTE_MIE="7771 7772 7773 7774 7775"
 PORTE_ALTRUI="7700 7730 7448"
+# ⭐ Da dove si prende il testo della cura dei gruppi (vedi il passo `utente`).
+QUI_B63=${QUI_B63:-$(cd "$(dirname "$0")" && pwd)}
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
@@ -66,13 +68,18 @@ chpasswd < "\$P"; rc=\$?
 shred -u "\$P" 2>/dev/null || rm -f "\$P"
 [ \$rc -eq 0 ] || { echo "    NO  chpasswd: PAM dira' sempre di no"; exit 2; }
 echo "    OK  parola d'ordine posta (da file 0600, mai dalla riga di comando)"
-usermod -aG render $UTENTE || { echo "    NO  gruppo render"; exit 2; }
-# ⛔ SCRITTO NON E' IN VIGORE: si rilegge.
-id $UTENTE | grep -q '(render)' || { echo "    NO  render NON risulta: il codificatore ripiegherebbe in software"; exit 3; }
-echo "    OK  gruppo render: \$(id $UTENTE)"
+# ⭐⭐ I GRUPPI DELLA SCHEDA — la cura sta in UN FILE SOLO, e qui si INFILA
+#    il suo testo perche' il copione gira sulla macchina di prova, dove
+#    `banchi/` non c'e'.  ⛔ Qui c'era il solo `render` INCHIODATO, e mancava
+#    `video` (il gruppo di `cardN`): meta' della cura di fase 10 §7.4.
+$(bash "$QUI_B63/attrezzi-gruppi-scheda.sh" --testo)
+gruppi_scheda_dai_a $UTENTE || exit 3
 loginctl enable-linger $UTENTE || { echo "    NO  enable-linger"; exit 2; }
 echo "    OK  linger acceso: \$(ls -ld /run/user/$UID_B 2>&1)"
 FINE
+	# ⛔ E il copione remoto puo' essere USCITO ROSSO: senza questa riga il
+	#    terreno diceva «fatto» anche quando l'inquilino era rimasto cieco.
+	[ $? -eq 0 ] || { ko "⛔⛔ il terreno di $UTENTE NON e' sano: non misurare niente"; exit 3; }
 	;;
 
 stato)

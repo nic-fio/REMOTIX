@@ -249,7 +249,7 @@ porta)
 		src banchi/rcp \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/01-b4-validatore.py \
-		banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py \
+		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py \
 		banchi/10-b91-terreno-dieci.sh banchi/10-b92-dieci.py | \
 		gzip | ssh -o BatchMode=yes "$MACCHINA" \
 		"mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {

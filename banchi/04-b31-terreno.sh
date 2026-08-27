@@ -67,6 +67,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
 vicini() {
 	local r=""
 	for p in 7448 7501 7561 7571 7601 7691; do
@@ -144,13 +158,9 @@ utente)
 		ko "⛔ la parola d'ordine non e' stata posta: PAM dira' sempre di no"
 		exit 2; }
 	ok "parola d'ordine posta"
-	# ⭐ `render`, o il codificatore ripiega in software: `[M]` 4,8 ms → 100 ms
-	#    per fotogramma, e il banco misurerebbe il ripiego.
-	if getent group render >/dev/null 2>&1; then
-		usermod -aG render "$UTENTE" && ok "nel gruppo «render» (codifica in hardware)"
-	else
-		ko "⛔ il gruppo «render» non esiste: la codifica sara' in SOFTWARE"
-	fi
+	# ⛔ Qui c'era il solo `render`, per NOME e senza rileggere: mancava `video`
+	#    (il gruppo di `cardN`), che e' meta' della cura di fase 10 §7.4.
+	gruppi_scheda_dai_a "$UTENTE" || exit 3
 	inf "gruppi: $(id -nG "$UTENTE")"
 	loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }
 	ok "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato"

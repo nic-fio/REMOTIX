@@ -65,7 +65,7 @@ porta)
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/01-b4-validatore.py \
 		banchi/09-b82-mostra.sh \
-		banchi/07-b64-terreno.sh | \
+		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh | \
 		ssh -o BatchMode=yes "$MACCHINA" \
 		"mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {
 		ko "⛔ i sorgenti non sono arrivati"; exit 2; }

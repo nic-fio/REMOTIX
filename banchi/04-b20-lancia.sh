@@ -166,7 +166,10 @@ porta)
 	(cd "$RADICE" && git archive HEAD src banchi/rcp) | tar -x -C "$T" || exit 2
 	cp "$RADICE/src/sessione.c" "$T/src/sessione.c" || exit 2
 	mkdir -p "$T/banchi"
-	cp "$QUI/04-b20-desktop-vero.py" "$QUI/04-b20-terreno.sh" \
+	# ⭐ `attrezzi-gruppi-scheda.sh` va CON il terreno: senza, `utente` si
+	#    ferma di la' con «manca …» (e fa bene: un inquilino cieco non si crea).
+	cp "$QUI/attrezzi-gruppi-scheda.sh" \
+	   "$QUI/04-b20-desktop-vero.py" "$QUI/04-b20-terreno.sh" \
 	   "$QUI/04-b20-nasci.c" "$QUI/04-b20-costruisci.sh" \
 	   "$QUI/04-b20-persistenza.sh" "$QUI/04-b20-stacco.sh" "$QUI/02-filo-cliente.py" \
 	   "$QUI/02-filo-fotogramma.py" "$QUI/01-b3-cliente.py" \

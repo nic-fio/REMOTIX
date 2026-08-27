@@ -55,6 +55,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # LA META' CHE GIRA SULLA MACCHINA DI PROVA, DA ROOT
 # ═══════════════════════════════════════════════════════════════════════════
 if [ "${1:-}" = "--sul-server" ]; then
@@ -105,8 +119,8 @@ if [ "${1:-}" = "--sul-server" ]; then
 			rm -f "$LAV/.chp"
 			ok "parola d'ordine posta (dallo stdin, mai in argv — D12)"
 		fi
-		# ⛔ `render` e `video`: senza, il desktop non apre il nodo DRM.
-		usermod -aG render,video "$UTENTE" || { ko "⛔ usermod render/video fallito"; exit 2; }
+		# ⛔ Qui c'erano i due nomi INCHIODATI e nessuna rilettura.
+		gruppi_scheda_dai_a "$UTENTE" || exit 3
 		ok "gruppi: $(id -nG "$UTENTE")"
 		loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }
 		ok "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato"
@@ -295,7 +309,7 @@ porta)
 		src banchi/rcp \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/07-b42-giudice.py \
-		banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py | \
+		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py | \
 		ssh -o BatchMode=yes "$MACCHINA" "mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {
 		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
 	ok "sorgenti in $ALBERO"

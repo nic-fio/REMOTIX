@@ -114,7 +114,7 @@ porta()
 	#     ⭐ Il controllo e' servito la prima volta che e' stato eseguito.
 	tar -C "$RADICE" --exclude='*.o' --exclude='src/remotix' -czf - \
 		src banchi/rcp \
-		banchi/04-b32-terreno.sh banchi/04-b30-ponte.py \
+		banchi/attrezzi-gruppi-scheda.sh banchi/04-b32-terreno.sh banchi/04-b30-ponte.py \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/03-marca.py banchi/03-b17-ritardo.py banchi/03-solo.py \
 		banchi/04-b30-anello-input.py banchi/04-b30-scena.c \

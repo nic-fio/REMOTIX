@@ -103,7 +103,7 @@ porta)
 	#    STESSI attrezzi del verde, o si confronterebbero due banchi.
 	tar -C "$QUI" -cf - \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
-		banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py \
+		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py \
 		banchi/10-c1-innesta.py | gzip | \
 		ssh -o BatchMode=yes "$MACCHINA" "tar -C $ALBERO -xzf -" || {
 		ko "⛔ gli attrezzi non sono arrivati"; exit 2; }

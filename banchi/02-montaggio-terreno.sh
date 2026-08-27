@@ -86,6 +86,20 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+#
+# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
+#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
+#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
+#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
+#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ═══════════════════════════════════════════════════════════════════════════
+GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+. "$GRUPPI_SCHEDA_SH"
+
+
 AZIONE=${1:-guarda}
 case "$AZIONE" in guarda|prepara) ;; *) echo "uso: $0 [guarda|prepara]"; exit 2 ;; esac
 
@@ -136,6 +150,27 @@ if [ "$AZIONE" = prepara ] && id -u "$UTENTE" >/dev/null 2>&1; then
 		if chpasswd < "$F"; then ok "parola d'ordine di «$UTENTE» impostata (dalla pubblica dei banchi)"
 		else ko "⛔ chpasswd e' fallito"; GUAI=$((GUAI+1)); fi
 		rm -f "$F"
+	fi
+fi
+
+# ⛔⛔ QUI NON C'ERA NIENTE: «$UTENTE» nasceva senza i gruppi dei nodi della
+#    scheda, cioe' CIECO (fase 10 §7.4).  In `verifica` non si tocca niente e
+#    si CONTA il guaio; in `prepara` si cura e si rilegge.
+if id -u "$UTENTE" >/dev/null 2>&1; then
+	if [ "$AZIONE" = prepara ]; then
+		gruppi_scheda_dai_a "$UTENTE" || GUAI=$((GUAI+1))
+	else
+		M=$(gruppi_scheda_mancanti "$UTENTE")
+		if [ -z "$M" ]; then
+			ok "⭐ «$UTENTE» e' nei gruppi dei nodi della scheda: la sua sessione puo' vedere"
+		else
+			for g in $M; do
+				ko "⛔⛔ «$UTENTE» NON e' nel gruppo «$(gruppi_scheda_nome "$g")» (gid $g,"
+				ko "   il gruppo di $(gruppi_scheda_nodo "$g")): la sua sessione NASCE CIECA"
+			done
+			ko "   ⭐ cura: bash $0 prepara"
+			GUAI=$((GUAI+1))
+		fi
 	fi
 fi
 

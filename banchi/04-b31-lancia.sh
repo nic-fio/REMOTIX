@@ -123,7 +123,9 @@ porta)
 		done
 	fi
 	mkdir -p "$T/banchi"
-	cp "$QUI/04-b31-cliente.py" "$QUI/04-b31-apparizione.py" \
+	# ⭐ `attrezzi-gruppi-scheda.sh` va CON il terreno (vedi il suo riquadro).
+	cp "$QUI/attrezzi-gruppi-scheda.sh" \
+	   "$QUI/04-b31-cliente.py" "$QUI/04-b31-apparizione.py" \
 	   "$QUI/04-b31-gemelli.py" "$QUI/04-b31-terreno.sh" \
 	   "$QUI/04-b31-costruisci.sh" "$QUI/04-b20-desktop-vero.py" \
 	   "$QUI/02-filo-cliente.py" "$QUI/02-filo-fotogramma.py" \
