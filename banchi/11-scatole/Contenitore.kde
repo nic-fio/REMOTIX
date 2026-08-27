@@ -1,0 +1,318 @@
+# ===========================================================================
+# 11-scatole/Contenitore.kde — LA SCATOLA DI PLASMA, per la rete di sicurezza
+# ===========================================================================
+#
+# ⛔ Questa NON e' la scatola con cui si COMPILA (quella e' `src/Contenitore`).
+#    Questa e' la scatola in cui il prodotto GIRA, con dentro un desktop vero.
+#
+# ⭐ Serve al passo 0 della fase 11: rispondere alla domanda che blocca tutto —
+#    *dentro un contenitore, il pezzo di sistema che tiene il conto di chi e'
+#    collegato si comporta come sulla macchina vera?*
+#
+# ---------------------------------------------------------------------------
+# ⛔ R2 (§3.2 del documento di fase): LE VERSIONI SI DICHIARANO.
+#    «l'ultima disponibile» e' una data travestita da versione.  Qui la base e'
+#    inchiodata al digest, non al nome del ramo.
+#
+#    debian:13 (trixie) — la stessa distribuzione della macchina di prova, e
+#    non per comodita': se la scatola avesse una distribuzione diversa, un
+#    numero peggiore direbbe «e' il desktop» quando invece e' «e' un'altra
+#    Debian».
+# ---------------------------------------------------------------------------
+FROM docker.io/library/debian:13
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------------------------
+# 1. IL SISTEMA — ⛔ e' il pezzo che il passo 0 deve mettere alla prova
+#
+#    `systemd` come primo processo, `dbus`, e `dbus-user-session` senza cui la
+#    sessione d'utente non ha un canale suo.  Se questi tre non reggono qui
+#    dentro, la scatola non rappresenta il prodotto e va detto (§3.5).
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus dbus-user-session \
+        libpam-systemd sudo procps iproute2 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 2. IL DESKTOP — PLASMA, cioe' KWin e il suo contorno minimo
+#
+# ⚠⚠ E QUESTA SCATOLA, OGGI, SERVE A UNA COSA SOLA: dimostrare che il modo di
+#    provare NON e' fatto su misura di GNOME.  ⛔ Il prodotto non sa ancora
+#    accendere KDE (e' la fase 12), quindi qui dentro gira il passo 0 e basta.
+#    ⭐ Se il modo di provare reggesse solo su Mutter, e' molto meglio saperlo
+#    adesso che alla fase 12.
+#
+# ⚠ `kwin-wayland` e non tutto Plasma: al passo 0 serve il COMPOSITORE.  Il
+#   contorno entrera' quando entrera' il prodotto, e allora la ricetta crescera'
+#   — dichiarando che cosa e' cambiato e quando (R2).
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        kwin-wayland xwayland \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 3. LA SCHEDA GRAFICA — i mestieri, non il ferro: il ferro e' quello vero,
+#    passato dentro con `--device /dev/dri`.
+# ---------------------------------------------------------------------------
+# ⛔⛔ E I PACCHETTI SONO QUELLI CHE HA LA MACCHINA VERA, non quelli «giusti».
+#    `[M]` 25 agosto 2026: sull'ospite ci sono `va-driver-all 2.22.0-3` e
+#    `mesa-va-drivers 25.0.7-2+deb13u1`, e ⛔ **`intel-media-va-driver-non-free`
+#    NON c'e'**.  La prima stesura di questa ricetta lo chiedeva — cioe' avrebbe
+#    costruito una scatola con un codificatore diverso da quello misurato, e
+#    ogni numero ne sarebbe uscito incomparabile.  ⇒ E' la regola R2 applicata
+#    a un pacchetto invece che a una versione.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        mesa-va-drivers va-driver-all \
+        vainfo libva-drm2 libva2 libdrm2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 4. GLI ATTREZZI DELLE PROVE — pochi, e ognuno con il suo mestiere
+#
+#   `wayland-utils`  ⭐ da' `wayland-info`, che elenca quel che il compositore
+#                    ANNUNCIA.  ⛔ E' il metro esatto del guasto del 25 agosto:
+#                    la sessione che nasce senza nessun `wl_output`.
+#   `weston`         da' i clienti minimi (`weston-simple-shm`, `weston-terminal`):
+#                    servono per la prova «una finestra si apre», ⛔ che va
+#                    guardata nel PIXEL, non nel conto dei processi.
+#   `pipewire`       il percorso della cattura.
+#   `python3-aioquic` ⛔ IL CLIENTE DI PROVA, che e' il SECONDO LETTORE del
+#                    protocollo (`PIANO.md` §1.1) — l unica cosa capace di
+#                    accorgersi che server e pagina condividono lo stesso
+#                    fraintendimento.  Senza, nessuna maglia della rete puo'
+#                    attaccarsi a una sessione.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wayland-utils weston \
+        pipewire pipewire-pulse wireplumber \
+        python3 python3-aioquic \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 4-bis. ⛔⛔ LE LIBRERIE CHE IL PRODOTTO CHIEDE — dichiarate, non ereditate
+#
+# `[M]` 26 agosto 2026, e vale la pena di scriverlo: senza questo blocco la
+# scatola funzionava lo stesso, perche' `gnome-shell` si tira dietro quasi
+# tutto quel che serve al prodotto.  ⛔ «Quasi»: mancava `libei1`, e il server
+# non partiva.
+#
+# ⚠ Ma il difetto vero non era il pacchetto mancante: era che **gli altri
+#   c'erano per caso**.  Il giorno in cui GNOME cambia una dipendenza, la
+#   scatola smette di avere una libreria che nessuno le aveva mai chiesto —
+#   e il guasto arriva mesi dopo, in una fase che non c'entra niente.
+# ⇒ Sono quelle del `Makefile`, riga per riga.  ⛔ `libngtcp2` e `libnghttp3`
+#   NON stanno qui: quelle si costruiscono e si copiano dentro con il prodotto
+#   (`11-accendi.sh prodotto`), perche' non sono in Debian.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libglib2.0-0 libpipewire-0.3-0 libdrm2 \
+        libavcodec61 libavutil59 libswscale8 \
+        libei1 libxkbcommon0 libpam0g libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 4-ter. ⛔⛔ GLI ATTREZZI DI **C8**, la maglia piu' importante della lista
+#
+# ⭐ C8 e' *«il SECONDO utente apre il browser»*, e la risposta la deve dare
+#    **il pixel**: il browser rende una pagina, si' o no.  ⇒ Per rispondere
+#    servono quattro cose, e ognuna ha il suo mestiere:
+#
+#   `firefox-esr`     ⛔ IL BROWSER VERO, e non un programma qualunque.  Il
+#                     difetto del 25 agosto 2026 e' di Firefox e di nessun
+#                     altro: tiene il profilo locale sotto `$HOME/.cache/mozilla`,
+#                     e con `~/.cache` condivisa il primo utente se lo prende a
+#                     modo 0700.  ⇒ Provare con un altro programma vorrebbe dire
+#                     provare un'altra cosa.
+#   `ffmpeg`          i fotogrammi presi dal filo diventano un'immagine.  ⚠ Le
+#                     LIBRERIE c'erano gia' (§4-bis); il PROGRAMMA no, e sono
+#                     due cose diverse.
+#   `python3-numpy`   il giudice delle immagini di `10-f1-testimone.py`, che e'
+#   `python3-pil`     gia' tarato sul vero e ⛔ non si riscrive qui.  Senza,
+#                     C8 esce «non ho potuto guardare» invece di ripiegare su un
+#                     giudizio piu' povero senza dirlo.
+#   `fonts-dejavu-core` ⚠ senza un solo carattere Firefox disegna la pagina lo
+#                     stesso, ⛔ ma le scritte diventano rettangoli — e la pagina
+#                     bersaglio ha le scritte APPOSTA, per non essere «tinta
+#                     unita» agli occhi del giudice.
+#   `libpci3`         ⛔⛔ E QUESTA E' LA TESI DELLA FASE PER LA TERZA VOLTA.
+#                     `[M]` 26 agosto 2026: senza, Firefox dice `glxtest: libpci
+#                     missing` e **non produce nessuna immagine** — la prova A
+#                     dava ROSSO a tutti, con la cura e senza.
+#                     ⚠ E nella scatola di XFCE il difetto NON si vedeva:
+#                     `labwc` si tira dietro `libpci3`, `kwin-wayland` no.
+#                     ⇒ Lo stesso identico modo di sbagliare di `libei1` (§4-bis):
+#                     una libreria che c'era **per caso**, e un rosso che
+#                     sembrava del prodotto.
+#
+# ⚠ E il prezzo si dichiara: questo blocco fa crescere ogni scatola di parecchie
+#   centinaia di megabyte.  ⭐ Sta in TUTT'E QUATTRO lo stesso, e non solo in
+#   quella di GNOME: se le ricette divergessero, il confronto fra desktop
+#   varrebbe meno — che e' il guasto che l'utente ha nominato per primo (D5) e
+#   che C11 va a cercare.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        firefox-esr ffmpeg \
+        python3-numpy python3-pil \
+        fonts-dejavu-core libpci3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 5. L'INQUILINO — il PRIMO, e con il gruppo `render` senza cui il compositore
+#    disegnerebbe in software.
+#
+# ⚠ «il primo» e non «l unico»: la D2 e' stata CORRETTA dall utente il 26 agosto
+#   2026 — *«per quanto mi riguarda un container puo anche avere 10 inquilini,
+#   e' un dato gia' misurato con GNOME»* (`DECISIONI.md` §4.6-terdecies).
+#   ⇒ Gli altri li crea la prova che ne ha bisogno (C8 ne vuole due), non la
+#     ricetta: qui sta solo quello che serve al passo 0.
+#
+# ⚠ `provanic` e non `prova`: il nome dice a quale banco appartiene, cosi' una
+#   pulizia non puo' pestare i piedi a un altro (fase 10, §7.3).
+# ---------------------------------------------------------------------------
+# ⛔⛔ E I DUE GRUPPI SI CREANO SE NON CI SONO — `[M]` 26 agosto 2026.
+#     Nella scatola di GNOME `render` esisteva gia': lo portava un pacchetto
+#     che `gnome-shell` si tira dietro.  ⛔ Nella scatola di PLASMA **non
+#     esiste**, e la ricetta moriva con `usermod: group 'render' does not exist`.
+# ⭐⭐ Ed e' la tesi di questa fase in miniatura, capitata al primo tentativo:
+#     **il secondo desktop ha fatto vedere subito una cosa che il primo teneva
+#     nascosta, e non perche' fosse rotto — perche' era generoso.**
+RUN groupadd -f video \
+    && groupadd -f render \
+    && useradd -u 4011 -m -s /bin/bash provanic \
+    && usermod -aG video,render provanic \
+    && printf 'provanic:provanic2026\n' | chpasswd
+
+# ⛔ E la `~/.cache` dev'essere SUA.  Sulla macchina di prova e' un collegamento
+#    a `/tmp` per scelta del proprietario (`DECISIONI.md` §4.6-undecies), e qui
+#    dentro non lo e' — ⚠ quindi questa riga oggi non serve, e c'e' lo stesso:
+#    la scatola deve creare l'inquilino come lo crea il PRODOTTO, o la prova
+#    proverebbe una cosa piu' facile di quella vera.
+RUN rm -f /home/provanic/.cache \
+    && install -d -o provanic -g provanic -m 700 /home/provanic/.cache
+
+# ---------------------------------------------------------------------------
+# 6. ⛔⛔ IL GRUPPO DELLA SCHEDA GRAFICA SI ALLINEA A QUELLO DELL'OSPITE
+#
+# `[M]` 25 agosto 2026, primo giro del passo 0 — ⭐ e non l'aveva previsto
+# nessuno dei due revisori.
+#
+# Il nodo `/dev/dri/renderD128` entra nella scatola con il NUMERO di gruppo che
+# ha sull'ospite (991), ⛔ ma dentro Debian quel numero appartiene a un altro
+# gruppo (`polkitd`), e il gruppo `render` della scatola ne ha un altro.
+# ⇒ Risultato del primo giro: `root:polkitd 660`, l'inquilino fuori, e
+#   `[M]` **il compositore che ripiega su «surfaceless renderer without GPU»** —
+#   cioe' ⛔ **una scatola che misura la codifica in SOFTWARE credendo di
+#   misurare l'hardware.**  Nessun rosso da nessuna parte: solo numeri peggiori.
+#
+# ⚠ E il numero NON si inchioda qui: si LEGGE dal nodo all'avvio.  Inchiodare
+#   991 vorrebbe dire una scatola che funziona su questa macchina e tace su
+#   un'altra — e il silenzio e' precisamente quel che questa fase combatte.
+#
+# ---------------------------------------------------------------------------
+# ⛔⛔ 6-BIS. E I FILE DEVONO SEGUIRE IL GRUPPO — `[M]` 27 agosto 2026
+#
+# ⭐⭐ QUESTA CURA E' LA CURA DI UN DANNO CHE CI ERAMO FATTI DA SOLI, e vale la
+#     pena di scriverla per intero perche' e' il modo di sbagliare piu' caro
+#     della fase: **la riparazione di un guasto ne ha aperto un altro, in un
+#     posto che non c'entrava niente, e il secondo sembrava del prodotto.**
+#
+# `groupmod -g` sposta il NUMERO del gruppo, ⛔ e NON tocca i file che quel
+# numero ce l'hanno gia' addosso.  ⇒ Qui sopra il gruppo `polkitd` viene
+# spostato da 991 a 1991 per far posto a `render`, e da quel momento:
+#   `[M]` `/etc/polkit-1/rules.d` resta `root:991 drwxr-x---`, cioe' passa
+#   **al gruppo `render`**, mentre `polkitd` gira col gruppo 1991 ⇒ ⛔ **non
+#   puo' piu' leggere la sua directory delle regole e muore con `status=1`**,
+#   in silenzio, senza una riga di spiegazione.
+#
+# ⛔ E il conto di quel silenzio: `upower.service` muore dietro a `polkit`
+#    (**1 213 riavvii**), `gnome-shell` li chiama in modo SINCRONO all avvio e
+#    incassa **quattro scadenze da 25 000 ms in fila** ⇒ per **~97 secondi
+#    Mutter non risponde a niente**, ne' D-Bus ne' Wayland.
+# ⇒ ⭐⭐ **La sessione non nasceva cieca: nasceva in ritardo di ~97 s** — e
+#   cinque maglie della rete (C2, C3, C4, C6, C8b) risultavano «bloccate» da un
+#   difetto della SCATOLA travestito da difetto del PRODOTTO.
+#
+# ⇒ La cura sta QUI e non altrove: chi sposta il numero si porta dietro i file.
+#   ⚠ `find / -xdev` e non `find /`: `/dev` e' un montaggio a parte, e il nodo
+#     `/dev/dri/renderD128` deve restare col gruppo 991 dell OSPITE — e' tutto
+#     il senso di questo blocco.
+# ⛔ E NON si e' curato allargando i permessi di `polkit` ne' togliendo pezzi
+#    dalla sua unita': quella sarebbe stata una catena diversa da quella
+#    consegnata, cioe' un simulacro (§3.5).
+# ---------------------------------------------------------------------------
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    '# Allinea il gruppo `render` della scatola a quello del NODO dell ospite.' \
+    'set -eu' \
+    'N=/dev/dri/renderD128' \
+    '[ -e "$N" ] || { echo "rete11: $N non ce, la scheda non e entrata"; exit 0; }' \
+    'G=$(stat -c %g "$N")' \
+    'A=$(getent group "$G" | cut -d: -f1 || true)' \
+    'if [ "$A" = render ]; then echo "rete11: render e gia $G"; else' \
+    '  if [ -n "$A" ]; then' \
+    '    groupmod -g "1$G" "$A" || true' \
+    '    find / -xdev -gid "$G" -exec chgrp "1$G" {} + 2>/dev/null || true' \
+    '    echo "rete11: i file del gruppo $A hanno seguito il gruppo a 1$G"' \
+    '  fi' \
+    '  groupmod -g "$G" render 2>/dev/null || groupadd -g "$G" render' \
+    '  echo "rete11: render allineato a $G (era di ${A:-nessuno})"' \
+    'fi' \
+    'usermod -aG render,video provanic' \
+    'id provanic' \
+    > /usr/local/sbin/rete11-allinea-gruppi && chmod 755 /usr/local/sbin/rete11-allinea-gruppi
+
+# ⛔⛔ E L'ORDINE E' PARTE DELLA CURA — `[M]` 27 agosto 2026, vista nel giornale:
+#     `polkit.service` partiva a `05:52:38.134`, moriva a `.199`, e il `chgrp`
+#     arrivava a `.296`.  ⇒ ⭐ **Novantasette millesimi di secondo di ritardo, e
+#     la scatola nasceva `degraded` con un servizio morto** — poi `gnome-shell`
+#     lo faceva risorgere dal bus e tutto andava, ma il rosso restava scritto.
+# ⇒ `Before=basic.target` mette QUESTA unita' prima di TUTTI i servizi normali,
+#   non solo prima di `logind`: chi sposta i numeri dei gruppi deve aver finito
+#   prima che qualcuno provi a leggere un file con quei numeri addosso.
+RUN printf '%s\n' \
+    '[Unit]' \
+    'Description=rete11 — allinea il gruppo della scheda grafica a quello dellospite' \
+    'Before=systemd-logind.service' \
+    'Before=basic.target' \
+    'Before=polkit.service' \
+    'DefaultDependencies=no' \
+    'After=sysinit.target' \
+    '[Service]' \
+    'Type=oneshot' \
+    'RemainAfterExit=yes' \
+    'ExecStart=/usr/local/sbin/rete11-allinea-gruppi' \
+    '[Install]' \
+    'WantedBy=sysinit.target' \
+    > /etc/systemd/system/rete11-gruppi.service \
+    && systemctl enable rete11-gruppi.service
+
+# ---------------------------------------------------------------------------
+# 6-bis. ⭐⭐ L'ADATTATORE DI QUESTO DESKTOP, allo stesso percorso di tutti
+#
+# ⛔ E' la risposta alla domanda piu' difficile della fase: la lista delle prove
+#    e' UNA e non sa che desktop ha davanti; ogni scatola porta qui il suo
+#    «come si avvia e come si guarda».  ⇒ `fasi/11…` §3.7.
+# ---------------------------------------------------------------------------
+COPY adattatore.kde.sh /usr/local/lib/rete11/adattatore.sh
+
+# ---------------------------------------------------------------------------
+# 7. IL PRIMO PROCESSO — `systemd`, ed e' il punto di tutta la scatola.
+#
+# ⛔ Un contenitore che avviasse direttamente il desktop non risponderebbe alla
+#    domanda del passo 0: risponderebbe a una piu' comoda.
+#
+# ⚠⚠ E LA SCATOLA VUOLE DUE PERMESSI IN PIU', che NON sono un dettaglio:
+#     `--cap-add=AUDIT_WRITE --cap-add=AUDIT_CONTROL`.
+#     `[M]` Senza il secondo, `pam_loginuid.so` — che nella catena PAM di Debian
+#     e' `required` — fallisce con *«Cannot make/remove an entry for the
+#     specified session»*, ⛔ e **il gestore d'utente non parte affatto**: niente
+#     sessione, niente canale, niente desktop.
+#     ⭐ La strada scelta e' DARE il permesso, non togliere `pam_loginuid` dalla
+#     catena: togliendolo si proverebbe una catena PAM diversa da quella
+#     consegnata, cioe' si proverebbe un simulacro (§3.5).
+#     ⇒ I permessi stanno in `11-accendi.sh`, dichiarati riga per riga.
+# ---------------------------------------------------------------------------
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

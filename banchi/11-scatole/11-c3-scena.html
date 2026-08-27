@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>REMOTIX — C3</title>
+<!--
+  ⭐⭐ LA SCENA DICHIARATA E IN MOVIMENTO che C3 mette sullo schermo.
+
+  ⛔ «Dichiarata» vuol dire: **e' questo file a decidere che cosa si muove e di
+     quanto**, non la semantica di un generatore di qualcun altro.  E' la stessa
+     regola che C5 si e' data per l'onda sonora (`11-c5…`, §«DA DOVE VIENE IL
+     SUONO»): `[M]` una sonda che faceva l'onda con `ffmpeg -f lavfi -i sine=…`
+     misuro' *«il percorso attenua di 21 dB»*, ⛔ e attenuava il GENERATORE.
+     ⇒ Una grandezza che dipende da un programma altrui e' una soglia che si
+       sposta senza dirlo.
+
+  ---------------------------------------------------------------------------
+  CHE COSA SI MUOVE, e perche' due cose e non una
+  ---------------------------------------------------------------------------
+
+  1. ⭐ **IL FONDO CAMBIA COLORE** fra `#0000FF` (blu) e `#FFFF00` (giallo) ogni
+     3 fotogrammi d'animazione.  ⛔ I due colori sono agli antipodi su tutti e
+     tre i canali: dopo una codifica H.264 in 4:2:0 — che sottocampia il croma —
+     restano distinguibili con una tolleranza larga.  ⚠ E servono anche a C3 per
+     rispondere alla domanda *«la scena che ho dichiarato e' davvero quella sullo
+     schermo?»*: se nessuno dei due colori copre una fetta larga, C3 dice «non ho
+     potuto guardare» invece di giudicare una scena che non e' la sua.
+
+  2. ⭐⭐ **UNA BANDA SCORRE**, e ⛔ questa e' la parte che conta di piu'.
+     Il fondo cambia ogni 3 fotogrammi: fra la cadenza dell'animazione e quella
+     della cattura, due fotogrammi consecutivi potrebbero cascare sullo stesso
+     colore — ⇒ e allora sembrerebbero identici **senza che niente sia rotto**,
+     cioe' un rosso falso.  La banda invece si sposta a **ogni** fotogramma:
+     ⭐ con lei, due fotogrammi consecutivi devono differire SEMPRE.
+     ⚠ La banda e' larga il 20 % dello schermo e avanza del **3 %** a fotogramma
+       ⇒ cambia ~6 % dei pixel, cioe' sei volte la soglia che C3 usa per dire
+       «questi due fotogrammi sono diversi» (1 %).  Il margine e' dichiarato
+       apposta: una scena che passa la soglia per un pelo non prova niente.
+
+  ⛔⛔ E IL «3 %» NON E' UN NUMERO QUALUNQUE — e' scelto per NON essere periodico.
+     Se la banda avanzasse del 4 %, tornerebbe al punto di partenza ogni 25
+     fotogrammi d'animazione: ⇒ due fotogrammi CATTURATI a 25 (o 50, o 75)
+     fotogrammi di distanza sarebbero **identici a scena sanissima**, e C3
+     direbbe «immagine congelata» su un prodotto che funziona.  ⚠ Con 25
+     fotogrammi d'animazione fra una cattura e l'altra il ritmo sarebbe
+     60/25 = 2,4 al secondo — sotto il pavimento che C3 pretende (4,0/s), ma
+     a **un solo passo** da li'.
+     ⭐ Con il 3 % il periodo diventa 100 fotogrammi d'animazione, cioe' un
+       ritmo di 0,6 al secondo: ⇒ il caso e' lontano quattro volte dal
+       pavimento invece che vicino, e chi domani abbassasse `--ritmo-minimo`
+       avrebbe molto piu' margine prima di aprire quella porta.
+
+  ---------------------------------------------------------------------------
+  ⛔ E le tre regole della pagina, come per `11-c2-finestra.html`:
+     · nessuna risorsa esterna: la scatola non ha rete verso fuori, e una pagina
+       che aspetta qualcosa che non arriva darebbe un rosso che non e' del
+       prodotto;
+     · niente scritte che si muovono da sole (l'ora, un contatore di secondi):
+       il movimento dev'essere QUELLO DICHIARATO e nessun altro;
+     · `requestAnimationFrame` e non un `setInterval`: si disegna quando il
+       compositore e' pronto a ricevere, che e' l'unica cadenza che ha senso qui.
+-->
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+  body { background:#0000FF; }
+  #banda { position:absolute; top:0; bottom:0; width:20%; background:#000;
+           opacity:0.85; }
+  #targa { position:absolute; left:0; right:0; top:45%;
+           text-align:center; font-family:monospace; font-size:5vw;
+           color:#000; }
+</style>
+<div id="banda"></div>
+<div id="targa">REMOTIX C3</div>
+<script>
+  // ⭐ I due colori sono DICHIARATI qui e ripetuti nel banco: se qualcuno ne
+  //    cambia uno qui e non la', C3 dira' «la scena che ho dichiarato non e'
+  //    sullo schermo» ⇒ ⛔ «non ho potuto guardare», non un rosso al prodotto.
+  var COLORI = ['#0000FF', '#FFFF00'];
+  var n = 0, x = 0;
+  var banda = document.getElementById('banda');
+  function giro() {
+    // il fondo cambia ogni 3 fotogrammi
+    if (n % 3 === 0) document.body.style.background = COLORI[(n / 3 | 0) % 2];
+    // la banda avanza del 3 % a OGNI fotogramma, e rientra dall'altro lato.
+    // ⛔ 3 e non 4: vedi il riquadro in testa — con 4 la scena sarebbe periodica
+    //    ogni 25 fotogrammi, e a un ritmo di 2,4/s C3 vedrebbe due fotogrammi
+    //    identici su una scena sanissima.
+    x = (x + 3) % 100;
+    banda.style.left = x + '%';
+    n++;
+    requestAnimationFrame(giro);
+  }
+  requestAnimationFrame(giro);
+</script>

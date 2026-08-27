@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>REMOTIX — C8</title>
+<!--
+  ⭐ LA PAGINA CHE C8 CHIEDE AL BROWSER DI DISEGNARE.
+
+  ⛔ Non e' una pagina qualunque, ed e' fatta cosi' per una ragione sola: dev'essere
+     RICONOSCIBILE NEI PIXEL senza sapere che aspetto abbia il desktop sotto.
+
+  · il fondo e' `#FF00FF`, un colore che ⛔ **nessun desktop mette da solo**: ne' GNOME,
+    ne' Plasma, ne' labwc.  ⇒ Se una fetta larga di schermo diventa di quel colore, il
+    browser ha disegnato — e non c'e' bisogno di sapere niente d'altro.
+  · le scritte nere ci sono APPOSTA: ⚠ una pagina tutta di un colore sarebbe «tinta
+    unita», cioe' proprio il verdetto che il giudice delle immagini usa per dire
+    «degenere».  ⛔ Un bersaglio che il giudice scarterebbe non e' un bersaglio.
+  · e la tolleranza sul colore la dichiara il banco, non questa pagina: i compositori
+    applicano profili e riscalamenti, e un `#FF00FF` puo' tornare indietro leggermente
+    diverso (`fasi/11…` §4.3, rilievo di Gemini, accolto).
+-->
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#FF00FF; }
+  body { display:flex; align-items:center; justify-content:center;
+         font-family: monospace; color:#000; }
+  h1 { font-size: 6vw; letter-spacing: 0.1em; }
+</style>
+<h1>REMOTIX C8</h1>

@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>REMOTIX — C2</title>
+<!--
+  ⭐ LA FINESTRA CHE C2 CHIEDE DI APRIRE.
+
+  ⛔ Dev'essere RICONOSCIBILE NEI PIXEL senza sapere che aspetto abbia il desktop
+     sotto: §4.3 del documento di fase — *nessuno sa che aspetto abbia un desktop*.
+
+  · il fondo e' `#00FFFF` (ciano), e ⛔ **non e' il magenta di C8, di proposito**.
+    Le due maglie girano nella stessa scatola e C8 lascia in giro delle finestre:
+    con un colore condiviso, una finestra di C8 rimasta accesa passerebbe per «la
+    finestra di C2» e questa maglia direbbe verde senza aver aperto niente.
+    ⚠ E' la stessa ragione per cui C2 pretende un MARGINE fra il primo e l'ultimo
+      fotogramma, invece di guardare solo l'ultimo.
+  · nessun desktop mette il ciano a schermo intero da solo: ne' GNOME, ne' Plasma,
+    ne' XFCE, ne' LXQt.
+  · le scritte nere ci sono APPOSTA: ⚠ una pagina tutta di un colore sarebbe «tinta
+    unita» per il giudice delle immagini, cioe' il verdetto con cui dichiara
+    «degenere» quel che guarda.  ⛔ Un bersaglio che il giudice scarterebbe non e'
+    un bersaglio.
+  · e la tolleranza sul colore la dichiara il banco, non questa pagina: la catena
+    passa per una codifica H.264 in 4:2:0 che sottocampiona il croma, e pretendere
+    il colore esatto vorrebbe dire una prova gia' morta (§4.3, rilievo di Gemini).
+  · ⛔ nessuna risorsa esterna, nessun tipo di carattere da scaricare: la scatola
+    non ha rete verso fuori, e una pagina che aspetta qualcosa che non arriva
+    darebbe un rosso che non e' del prodotto.
+-->
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#00FFFF; }
+  body { display:flex; align-items:center; justify-content:center;
+         font-family: monospace; color:#000; }
+  h1 { font-size: 6vw; letter-spacing: 0.1em; }
+</style>
+<h1>REMOTIX C2</h1>

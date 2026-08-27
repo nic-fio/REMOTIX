@@ -1,0 +1,29 @@
+# ===========================================================================
+# .gitattributes — ⭐ e per ora c'e' dentro una cosa sola, ma vale la pena
+# ===========================================================================
+#
+# ⭐⭐ IL QUADERNO DEL GANCIO — `banchi/11-scatole/11-gancio-registro.jsonl`
+#
+# Ogni volta che la rete anti-regressione gira, ci scrive una riga: che cosa e'
+# partito, che esito ha dato, quanto e' durato, e ⭐ **se un guasto innestato e'
+# stato visto**.  Su quel quaderno vivono tre maglie — C12 (il gancio e' vivo),
+# C13 (la rete sa ancora dare rosso) e C15 (la meta' remota gira davvero).
+#
+# ⛔ E il gancio ha DUE META' SU DUE MACCHINE: decide sul portatile (dove c'e'
+#    il deposito) ed esegue sulla macchina di prova (dove ci sono le scatole).
+#    ⇒ Senza il quaderno in deposito ci sarebbero **due memorie che non si
+#    parlano**, e la macchina che decide non saprebbe quel che ha fatto quella
+#    che esegue.  ⭐ Decisione dell'utente, 27 agosto 2026.
+#
+# ⚠ IL PREZZO, dichiarato: il file risulta **modificato a ogni giro**, anche
+#   quando nessuno ha toccato il codice.  E' il costo di avere una memoria sola.
+#
+# ⭐ `merge=union` e' la ragione per cui questa riga esiste: il quaderno e' fatto
+#   di righe che si **aggiungono** e non si correggono mai.  Due macchine che
+#   scrivono in giorni diversi non sono un conflitto da risolvere a mano: sono
+#   due pezzi della stessa storia, e vanno tenuti tutt'e due.
+# ⛔ Senza questa riga, il primo giro fatto su due macchine finirebbe in un
+#   conflitto che qualcuno risolverebbe **buttando via meta' della memoria** —
+#   e C13 direbbe «nessuno mette piu' alla prova la rete» senza che sia vero.
+# ===========================================================================
+banchi/11-scatole/11-gancio-registro.jsonl merge=union
