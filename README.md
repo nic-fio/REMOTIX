@@ -1,5 +1,53 @@
 # REMOTIX_V2
 
+> # ⏸ IL PROGETTO È IN PAUSA — dal 27 agosto 2026
+>
+> *L'utente ha un intervento chirurgico. Si riprende fra qualche settimana.*
+>
+> ⛔ **Non c'è niente da recuperare e niente lasciato a metà.** Questo riquadro serve a chi torna —
+> l'utente stesso, o un assistente che di questa giornata non ricorda nulla — per ripartire in
+> cinque minuti invece che in mezza giornata.
+>
+> ## ⭐ Dove eravamo, in tre righe
+>
+> **La fase 11 è chiusa**: esiste una rete anti-regressione di **sedici controlli** che gira su
+> quattro desktop. `[M]` 27 agosto, giro intero in 2 h 14: **58 verdetti verdi**, **3 rossi**, e
+> ⭐ **49 guasti innestati su 49 presi**.
+>
+> ⛔ **I tre rossi sono lo stesso rosso**: `C1` su kde, xfce e lxqt — il prodotto **sa avviare solo
+> GNOME** (`src/sessione.c:778`). ⇒ **Non è un difetto da riparare: è il mandato della fase 12.**
+> Il giorno che `C1(kde)` diventa verde, KDE è servito davvero.
+>
+> ## ⭐ La prima cosa da fare quando si torna
+>
+> ⚠ La macchina di prova ha la radice **in RAM**: un riavvio le porta via tutto. ⇒ Nell'ordine:
+>
+> 1. rimettere la chiave ssh e **provvedere** la macchina (`src/provisiona.sh`);
+> 2. riaccendere le quattro scatole: `bash banchi/11-scatole/11-accendi.sh accendi <gnome|kde|xfce|lxqt>`,
+>    poi `prodotto` e `server` per ciascuna;
+> 3. ⭐ **far girare la rete PRIMA di toccare qualsiasi cosa**:
+>    `bash banchi/11-scatole/11-gancio.sh gira --famiglia tutto`.
+>    ⛔ Se il risultato non è «58 verdi, 3 rossi, 49 guasti su 49», **qualcosa è cambiato sotto**, e
+>    quello si guarda prima di scrivere una riga di KDE. È esattamente il mestiere della rete.
+>
+> ## ⚠ Le tre cose che la fase 12 eredita, già misurate
+>
+> | | |
+> |---|---|
+> | ⭐ **un guasto suo** | `fasi/11-…` §3.6: *ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
+> | ⛔ **KWin non sa nascere cieco** | `[M]` con `--output-count 0` un'uscita la fa lo stesso ⇒ il disegno «zero monitor propri» **non si trasporta uguale** |
+> | ⚠ **il palco muore col cliente** | `[M]` il monitor virtuale muore con la connessione D-Bus del figlio. Su GNOME `C6` misura **verde** (le finestre si ritrovano); su un altro compositore non è detto ⇒ `DECISIONI.md` §4.6-teretvicies |
+>
+> ## ❓ Una domanda rimasta aperta, e non è urgente
+>
+> Il gancio è agganciato all'**invio** (`pre-push`), ⛔ ma il deposito **non ha un remoto**: quel
+> momento non arriva mai, quindi oggi la rete gira solo quando qualcuno la lancia. ⚠ La proposta sul
+> tavolo, non decisa: far partire **a ogni commit** la sola parte veloce (C10, C12, C13, C15 —
+> `[M]` **un secondo**), lasciando a comando le prove pesanti sulle scatole.
+>
+> ⇒ Tutto il resto è in `fasi/11-la-rete-di-sicurezza.md` §7-bis.19, e le lezioni della giornata in
+> `LEZIONI.md` §1.44–§1.57.
+
 Desktop remoto per Linux: un **server**, **nessun client da installare** — basta un browser
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
