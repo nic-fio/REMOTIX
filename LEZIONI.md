@@ -2510,6 +2510,14 @@ Falliva uguale. ⇒ *«Allora non è la sessione.»*
 sta sotto `~/.cache/mozilla`, cioè **`/tmp/mozilla`** — ⛔ **una sola cartella, che il primo arrivato
 si era presa a modo `0700` due giorni prima.**
 
+> ⚠ **E una precisazione che non cambia la lezione, ma cambia di chi è la colpa** *(25 agosto 2026,
+> corretto dall'utente)*: ⛔ **quel collegamento non è un guasto** — *«`.cache` che punta a `/tmp` è
+> una mia scelta voluta»*, ed è una decisione sul **suo** sistema operativo. ⇒ Il fattore condiviso
+> era una **configurazione legittima**, non un difetto — ⭐ e questo rende la lezione **più forte**,
+> non più debole: *il fattore che un controllo condivide non ha nessun bisogno di somigliare a un
+> guasto per rovinarlo.* Il difetto è **nostro**: siamo noi a creare dieci utenti che finiscono
+> tutti nella stessa cartella (`DECISIONI.md` §4.6-undecies).
+
 ⇒ ⭐ **Il controllo mostrava lo stesso guasto per la STESSA ragione, non per una ragione diversa.**
 
 | | fase 9 | ⭐ dopo aver tolto quel solo fattore |
@@ -2555,7 +2563,7 @@ monitor ⇒ **nessuna applicazione può aprire una finestra**. È rimasto invisi
 | | nascosto per | ⛔ perché |
 |---|---|---|
 | la sessione senza monitor | giorni | ⛔ si ripartiva da una sessione già viva |
-| `~/.cache` condivisa fra utenti | **due fasi** | ⛔ e **il controllo che «chiudeva la questione» condivideva il difetto** (§1.38) |
+| il browser che non nasce agli utenti dopo il primo ⚠ *(la `~/.cache` condivisa è una **scelta** dell'utente, non un guasto)* | **due fasi** | ⛔ e **il controllo che «chiudeva la questione» era nella stessa condizione** (§1.38) |
 | cinque banchi che contavano zero fotogrammi | un giro | ⛔ una cura al registro ne aveva rotto le espressioni |
 
 ⇒ ⭐⭐⭐ **Tutti e tre sono lo stesso errore visto da tre lati**: si guarda **sempre lo stesso pezzo di
@@ -2596,3 +2604,472 @@ là con *«PROFILO: unbound variable»* su una riga che non c'entrava.
 > fidarsene. ⚠ E dentro `${…:?…}` e le stringhe fra virgolette doppie, **niente apostrofi**: questo
 > progetto scrive già `e'` e `puo'` nei commenti, ⛔ e lì dentro quella convenzione è **obbligatoria**,
 > non stilistica.
+
+> ### ⛔ E IL 26 AGOSTO 2026 È SUCCESSO DI NUOVO — *ventiquattr'ore dopo, nello stesso progetto*
+>
+> `[M]` Un apostrofo dentro un **commento** in un blocco `sh -c '…'` ha chiuso la stringa a metà, e
+> la shell ha eseguito i pezzi rimasti come comandi: `MANCA: unbound variable`, `grep: dentro: No
+> such file or directory`, `sed: invalid option -- '8'`. ⛔ **`bash -n` è passato anche stavolta.**
+>
+> ⇒ ⭐⭐ **La cura non è ricordarsene**: i commenti si scrivono **fuori** dal blocco citato. Dentro un
+> `sh -c '…'` non ci va prosa — ci vanno comandi.
+
+---
+
+### 1.41 ⛔⛔⭐ **Il rovescio di «silenzio invece di rosso»: ROSSO INVECE DI NIENTE**
+
+*26 agosto 2026, fase 11, primo giro del banco che valida l'ambiente.*
+
+⛔ §1.29 dice che nove difetti di banco su nove avevano la forma *«silenzio invece di rosso»*.
+⭐ **Questo ha la forma opposta, e costa uguale.**
+
+`[M]` Il banco aveva otto verifiche. La **quarta** chiude la sessione dell'utente per vedere se i
+figli muoiono davvero — e chiudendola si porta via anche la cartella privata della sessione.
+⇒ ⛔ **Le verifiche 5, 6 e 7, che vengono dopo, trovavano il campo sgombro e davano TRE ROSSI
+FALSI**: *«la cartella non c'è»*, *«il canale non c'è»*, *«il compositore non parte»*.
+
+Il verdetto diceva **«LA SCATOLA NON REGGE»**, e la scatola reggeva benissimo.
+
+> ### ⭐⭐ Perché è grave quanto il silenzio
+>
+> ⛔ **Una rete che dà rossi a vuoto viene spenta da chi lavora** — e allora non c'è più nessuna
+> rete. ⇒ Il danno non è il rosso sbagliato: è che **il prossimo rosso, quello vero, nessuno lo
+> guarderà.**
+>
+> ⭐ **La regola**: *chi prova la chiusura ha il dovere di RIAPRIRE, e di verificare che la
+> riapertura sia riuscita prima di lasciar giudicare gli altri.* ⚠ E se non ci riesce, l'esito non è
+> rosso: è **«non lo so»**, e si ferma lì.
+
+⚠ **E il fratello minore, la stessa notte**: una verifica giudicava mentre il pezzo che stava
+misurando era ancora `activating`. ⇒ Diceva *«non regge»* dove la verità era *«non avevo ancora
+chiesto niente»*. ⭐ Si **prepara** come fa il prodotto, si aspetta l'evento, **poi** si giudica —
+e ⛔ **preparare non è barare: barare sarebbe saltare la verifica.**
+
+---
+
+### 1.42 ⛔⛔⛔ **Stesso nome, stessa versione apparente, COSA DIVERSA — e il sintomo esce dalla parte sbagliata**
+
+*26 agosto 2026, fase 11, mettendo il prodotto dentro la scatola.*
+
+`[M]` Il binario copiato era **quello giusto**, verificato con l'impronta. Le librerie sono state
+prese da `/lib` della macchina: `libngtcp2.so.16`. ⛔ **Ma il server vero non usa quella**: usa
+quella costruita a parte, e le due sono **16.2.9** contro **16.11.0** — *stesso nome di file, stesso
+numero di versione del formato, due programmi diversi*.
+
+| | |
+|---|---|
+| il server | ⭐ **è partito**: certificati generati, righe d'avvio complete, porta in ascolto |
+| ⛔ al **primo cliente** | è morto con `ngtcp2_settingslen_version: Unreachable` |
+| ⛔⛔ e il cliente | ha visto soltanto **«Idle timeout»** |
+
+> ### ⛔⛔ I due insegnamenti, e il secondo vale più del primo
+>
+> 1. **Un'impronta del binario non basta**: due macchine con lo stesso binario e librerie diverse
+>    sono due macchine diverse. ⇒ L'allineamento si verifica **sul binario E su quel che gli sta
+>    sotto**.
+> 2. ⭐⭐ **Il sintomo è uscito dalla parte sbagliata.** Chi guardava il cliente vedeva *«la rete non
+>    risponde»* — una diagnosi che manda a cercare nel posto sbagliato per ore. La riga vera stava
+>    nel registro **del server**, e ci è arrivata solo perché la si è andata a leggere.
+>    ⇒ È `CODER.md` §3.8 al rovescio: *si verifica dal lato che deve ricevere*, ⛔ **ma quando
+>    qualcosa non arriva, si va a leggere il lato che manda.**
+
+⚠ **E la stessa famiglia, due volte ancora nella stessa notte**: due pezzi funzionavano perché
+qualcun altro se li tirava dietro, e sono spariti appena la ricetta è cambiata. ⇒ ⭐ **Quel che serve
+si dichiara; quel che arriva per caso, per caso se ne va.**
+
+---
+
+### 1.43 ⛔⛔ **Un ambiente che RIPIEGA IN SILENZIO produce numeri peggiori e nessun rosso**
+
+*26 agosto 2026, fase 11, primo avvio della scatola.*
+
+`[M]` Il nodo della scheda grafica è entrato nel contenitore con il **numero** di gruppo dell'ospite,
+⛔ ma dentro quel numero apparteneva a un **altro gruppo**. L'inquilino è rimasto fuori, e il
+compositore ha scritto due righe che nessuno stava leggendo:
+
+```
+libEGL warning: failed to open /dev/dri/renderD128: Permission denied
+libmutter-Message: Created surfaceless renderer without GPU
+```
+
+⇒ ⛔⛔ **Un banco che misura la codifica in SOFTWARE credendo di misurare l'hardware.** Nessun errore,
+nessun rosso: **solo numeri peggiori**, che qualcuno avrebbe attribuito al desktop o al codice nuovo.
+
+> ⭐ **La regola** — è `CODER.md` §3.9 applicata all'**ambiente** invece che a un componente:
+> *chiedi il pezzo per nome, e verifica che l'abbia obbedito.* ⇒ Qui: dopo aver acceso la scatola si
+> **rilegge dal nodo** che l'inquilino sia davvero nel gruppo della scheda, e se non lo è **si dice**.
+>
+> ⚠ E la cura non inchioda il numero: lo **legge** dal nodo e vi si allinea, dichiarandolo. ⛔ Un
+> numero inchiodato avrebbe fatto una cosa che funziona su questa macchina e **tace** su un'altra.
+
+
+---
+
+### 1.44 ⛔⛔⛔ **Il predicato che non poteva dare rosso, e aveva l'aspetto di uno che passa**
+
+*26 agosto 2026, fase 11, prima stesura di C8.*
+
+Il difetto da prendere: dieci inquilini con `~/.cache` che punta tutta allo stesso posto, e il
+browser che dal **secondo** in poi non fa più il suo profilo. Il predicato scritto per verificarlo —
+e scritto **bene**, secondo la regola E1 *«non si guarda il collegamento, si prova a SCRIVERE»* —
+era:
+
+```
+mkdir -p ~/.cache/.prova && rmdir ~/.cache/.prova
+```
+
+⛔ **Non poteva fallire mai.** Con il collegamento, `~/.cache` **è `/tmp`**, e `/tmp` è scrivibile da
+chiunque (modo `1777`). ⇒ Il predicato diceva **«sa scrivere: sì»** anche all'inquilino che il
+browser non riusciva ad aprirlo.
+
+⭐ **Il posto che morde era un livello più sotto**: `~/.cache/**mozilla**`, che il **primo** inquilino
+si prende a modo `0700`. Ed era già scritto, con la sua misura, dentro `src/provisiona.sh`: *«da
+`provanic3`, `mkdir -p ~/.cache/mozilla` → Permission denied»*.
+
+> ### ⛔ La regola, e vale oltre questo caso
+>
+> **Applicare E1 non basta: bisogna applicarlo NEL POSTO CHE MORDE.** Un predicato che prova la cosa
+> giusta un livello troppo in alto ⛔ **ha esattamente lo stesso aspetto di un predicato che passa** —
+> ed è peggio di non averlo, perché rassicura.
+>
+> ⇒ ⭐ **La contro-prova che lo avrebbe preso in dieci secondi**: far girare il predicato **col guasto
+> innestato** e pretendere che dia rosso. È la stessa cosa che questa fase chiede a ogni maglia
+> (`--certifica`), ⛔ e vale anche per il singolo predicato dentro una maglia, non solo per la maglia.
+
+---
+
+### 1.45 ⛔⛔ **Il tetto di una prova prestato a un'altra — e il rosso che non distingue più niente**
+
+*26 agosto 2026, fase 11, primo giro vero di C8.*
+
+C8 fa due cose con tempi diversissimi: **aspettare che una pagina compaia su un desktop già acceso**
+(~25 s) e **far partire Firefox per la prima volta in una scatola fredda** (che crea il profilo, e
+passa abbondantemente i 25 s). ⛔ La prima stesura usava **lo stesso tetto** per tutt'e due.
+
+`[M]` Esito: **rosso a tutt'e due gli inquilini, con la cura e senza.**
+
+⇒ ⛔⛔ **E il danno vero non è il rosso falso: è che il COLLAUDO smette di valere.** Il senso di
+`--senza-cura` è *«col guasto innestato deve diventare rosso»*; ⚠ se è rosso **anche senza**, quel
+confronto non dimostra più niente, e una maglia che non sa distinguere il guasto dal proprio tetto
+⛔ **è indistinguibile da una maglia rotta**.
+
+> ⭐ **La regola**: ogni attesa ha un **nome suo** e un **valore suo**, e il valore si giustifica con
+> quel che si sta aspettando. ⛔ Riusare un tetto perché «è lì e più o meno va bene» è la stessa
+> forma d'errore di riusare un numero misurato in un'altra condizione.
+>
+> ⚠ E il segnale che avrebbe dovuto insospettire subito: **tutti rossi**. Un guasto che colpisce
+> *«dal secondo in poi»* e che invece colpisce **anche il primo** non è quel guasto — ⇒ e adesso è
+> C8 stessa a dirlo, invece di lasciarlo dedurre.
+
+---
+
+### 1.46 ⛔⛔⛔ **Il banco che non ha girato affatto — e ha detto «riuscito»**
+
+*26 agosto 2026, fase 11.*
+
+Un comando annidato **tre volte** — `ssh` → `systemd-run … /bin/bash -c "…"` → `podman exec … sh -c
+"cd … && python3 …"` — ha perso le virgolette per strada. ⛔ **Non ha eseguito niente**, non ha
+stampato niente, e ha restituito **`0`**.
+
+⇒ ⛔⛔ **Un verde che non ha nessuna misura sotto**, e che dal lato di chi legge il registro ha
+**esattamente lo stesso aspetto** di un giro riuscito. ⚠ È il rovescio peggiore di §1.41: là il banco
+gridava rosso senza avere guardato; qui **tace e dice sì**.
+
+> ### ⭐ Le due regole, e la seconda vale più della prima
+>
+> 1. ⛔ **Niente gusci in mezzo**: il programma si chiama **per percorso assoluto**, senza `sh -c`
+>    dentro `podman exec` dentro `systemd-run` dentro `ssh`. Ogni livello di virgolette è un posto
+>    dove il comando può sparire.
+> 2. ⭐⭐ **Un banco che non ha prodotto NESSUNA riga non è «riuscito»**: chi lo lancia deve
+>    pretendere di vedere l'intestazione e il conto finale, ⛔ e trattare il silenzio come *«non ho
+>    guardato»* (esito 3) — mai come verde. `LEZIONI.md` §1.30 lo dice per la sollecitazione; qui
+>    vale per il banco stesso.
+
+### 1.47 ⛔⛔ **Un confronto fra valori che nessuno sa dare è VERDE, e non ha guardato niente**
+
+*26 agosto 2026, fase 11, prima stesura di C11.*
+
+C11 confronta tredici cose fra le quattro scatole e dice *«sono allineate»* se ogni voce ha lo
+**stesso valore** dappertutto. ⛔ Tre voci chiedevano pacchetti con il nome sbagliato —
+`libssl3` e `libpipewire-0.3-0`, che in Debian 13 si chiamano `libssl3t64` e
+`libpipewire-0.3-0t64`. ⇒ Tutte e quattro le scatole rispondevano **`?`**.
+
+⭐⭐ **E `?` uguale a `?` è uguale.** Le tre voci **passavano il confronto**, e passavano ogni volta,
+per sempre. ⛔ Tre controlli su tredici non stavano guardando niente, e il verde diceva
+*«allineate»* con la stessa faccia di quando le guardava davvero.
+
+> ### ⭐ La regola
+>
+> ⛔ **Un confronto ha bisogno che almeno uno sappia rispondere.** Una voce a cui **nessuno** risponde
+> non è «uguale per tutti»: è **muta**, e va detta a parte.
+>
+> ⇒ C11 adesso le conta e le **stampa**: *«N voci a cui nessuna scatola sa rispondere — e una voce
+> muta passa il confronto senza aver guardato niente»*.
+>
+> ⚠ **È la stessa forma d'errore di §1.44** (il predicato che non poteva fallire) vista da un'altra
+> parte: là il predicato diceva sempre sì, qui il confronto dice sempre uguale. ⭐ In tutt'e due i
+> casi il segnale è lo stesso — **un controllo che non ha mai dato rosso in vita sua va guardato in
+> faccia**, non festeggiato.
+
+### 1.48 ⛔⛔ **Il ciclo delle opzioni si è mangiato l'argomento — e il messaggio ha detto «riuscito»**
+
+*26 agosto 2026, fase 11, il gancio.*
+
+`11-gancio.sh installa pre-commit` ⛔ **installava `pre-push`**, e stampava tranquillamente che era
+andata bene. Il ciclo che legge le opzioni consumava l'argomento e non lo passava a nessuno; il
+messaggio di conferma ripeteva **quel che era stato chiesto**, non quel che era stato fatto.
+
+⇒ ⭐⭐ **E questa è la regola, ed è più larga del bug**: un messaggio di riuscita che ripete
+l'intenzione **non è una verifica, è un'eco**. `CODER.md` §3.9 dice *chiedi il pezzo per nome, e
+verifica che l'abbia obbedito*: qui il pezzo eri tu stesso.
+
+> ⛔ **Il messaggio di conferma si costruisce RILEGGENDO il risultato**, non ricopiando la richiesta.
+> «Installato in `<percorso letto adesso dal disco>`», non «installato `<quello che mi hai chiesto>`».
+>
+> ⚠ È la stessa famiglia di §1.46 — là il comando non era stato eseguito affatto e il codice d'uscita
+> diceva `0`; qui è stato eseguito **su un bersaglio diverso** e il messaggio diceva sì. ⇒ In tutt'e
+> due i casi il difetto sta nel **punto in cui si riferisce**, non nel punto in cui si fa.
+
+---
+
+### 1.49 ⛔ **Un rosso che non si può far diventare verde è peggio di nessuna maglia**
+
+*26 agosto 2026, fase 11, C12.*
+
+C12 controlla che il gancio sia installato, e per trovarlo usava `git --git-path`. ⛔ Quel comando
+torna un percorso **relativo alla cartella data a `-C`**, non alla radice del deposito. ⇒ La maglia
+cercava il gancio in un posto che non esiste, e avrebbe detto **«non installato» per sempre**, anche
+subito dopo averlo installato.
+
+⭐ **Un rosso perpetuo non è prudenza: è rumore.** E il rumore, in una rete di sicurezza, finisce
+sempre allo stesso modo — §1.3 del documento di fase: *«una rete che dà rosso a vuoto viene spenta da
+chi lavora»*.
+
+> ### ⭐ Come si prende, e costa dieci secondi
+>
+> ⛔ **Prova a far diventare VERDE la maglia.** Un controllo va acceso in tutt'e due i versi: si
+> innesta il guasto e si pretende il rosso (che il progetto già fa, `--certifica`), ⚠ **e si toglie
+> il guasto e si pretende il verde**. La seconda metà si dimentica, ed è quella che prende questo.
+
+---
+
+### 1.50 ⛔⛔ **Il tetto governava l'USCITA, non il lavoro — e il commento descriveva un'altra cosa**
+
+*26 agosto 2026, fase 11 — trovata dal banco di C14, non da quello a cui apparteneva il difetto.*
+
+C8 fa scattare una fotografia al browser con un tetto di tempo, e il commento accanto diceva che
+serviva perché *«il primo avvio in una scatola fredda non ci sta dentro»*.
+
+`[M]` Messo il tetto a **un secondo**: Firefox viene ucciso, esce con **124**, ⛔ **e il PNG c'è lo
+stesso, 30 135 byte.** ⇒ Scrive l'immagine e **poi** indugia a chiudersi: quel tetto non limitava lo
+scatto, limitava **l'accomiatarsi del browser**.
+
+⭐⭐ **E il giudizio è sopravvissuto per la ragione giusta, che vale la pena isolare:**
+
+> ### ⛔ Si giudica il RISULTATO, non il codice d'uscita.
+>
+> C8 guarda **il file**, non come è morto il programma — *un browser che ha disegnato ha disegnato,
+> anche se poi è stato ucciso mentre si accomiatava*. ⚠ Una maglia che avesse creduto al `124`
+> avrebbe dato rosso su un lavoro **compiuto**.
+
+⚠ **E la cosa da correggere non era il codice: era il commento.** Un commento che descrive una
+grandezza diversa da quella che il codice governa ⛔ è una trappola per chi verrà dopo a tarare quel
+numero — e taratura al buio è esattamente come si perde una giornata.
+
+⭐ **E che l'abbia trovata un ALTRO banco è il fatto più importante di tutti**: nessuno dei quattro
+rossi falsi di §1.44–1.47 si era accorto di questo, perché tutti guardavano C8 **da dentro**.
+
+---
+
+### 1.51 ⛔⛔ **«Text file busy» — il rosso che viene dall'ORDINE dei comandi, non dal prodotto**
+
+`[M]` 26 agosto 2026, cucendo le quattro maglie nuove nella rete. L'azione `11-accendi.sh prodotto`
+copia il binario dentro la scatola. Con il **server acceso**, `cp` risponde:
+
+```
+cp: cannot create regular file '/opt/remotix/remotix': Text file busy
+  NO  non sono riuscito a mettere il prodotto dentro
+```
+
+⇒ L'azione falliva **tutt'intera** su tutte e quattro le scatole, e il messaggio che restava era
+*«non sono riuscito a mettere il prodotto dentro»* — che ha esattamente l'aria di un guasto del
+prodotto o della scatola, mentre è ⛔ **un guasto dell'ordine in cui si danno i comandi**.
+
+> ⭐ **La forma d'errore**: un banco che fallisce per una ragione sua e lascia un messaggio che
+> accusa quel che sta provando. È la stessa famiglia di §1.46 e §1.48 — solo che qui l'esito è un
+> rosso invece di un verde, e per questo è **meno** velenoso: almeno si vede.
+
+⛔ **E la prima cura era peggio del male.** L'idea ovvia — spegnere il server prima di copiare — è
+stata provata e **misurata**: `systemctl stop rete11-server` dentro la scatola **non torna** (oltre
+due minuti, poi il comando è stato ucciso da fuori). ⇒ L'azione non falliva più: **si piantava**, che
+è la forma peggiore, perché un banco appeso non dice niente a nessuno.
+
+⭐ **La cura giusta era di un'altra natura, e la dice il sistema operativo**: *sovrascrivere* un
+eseguibile in uso è vietato, **togliere** un eseguibile in uso è permesso. ⇒ `rm -f` e poi `cp`. Il
+server vecchio continua a girare col suo inode fino al prossimo `11-accendi.sh server`, ed è
+dichiarato nel file invece che scoperto da qualcuno fra sei mesi.
+
+> ⚠ **La lezione generale**: quando un banco fallisce, la prima domanda non è *«che cos'ha il
+> prodotto»* ma ⭐ *«questo comando poteva riuscire, nello stato in cui ho lasciato la macchina?»*.
+
+---
+
+### 1.52 ⛔⛔⛔ **La maglia col guasto innestato usciva col verdetto grezzo — e proprio nel giro del rosso avrebbe scritto «il guasto NON è stato visto»**
+
+`[M]` 26 agosto 2026, primo giro del cablaggio delle quattro maglie nuove. `11-gancio.sh` legge una
+maglia innestata **al contrario**: esce `0` quando il guasto **è stato visto**, e quello che finisce
+nel registro non è l'esito grezzo ma il fatto — `ha_visto_il_guasto`. È da lì che C13 sa dire se la
+rete è ancora capace di dare rosso.
+
+⛔ **C9 usciva col verdetto grezzo** (`1`, cioè rosso). ⇒ Nel giro col guasto innestato il gancio
+avrebbe scritto `ha_visto_il_guasto: false` **proprio quando il guasto era stato visto benissimo**, e
+C13 avrebbe cominciato a dire *«la rete non sa più dare rosso»* mentre lo sapeva fare.
+
+> ⭐ **E non l'ha preso nessuna certificazione, di nessuna delle due maglie.** La certificazione di
+> C9 provava **il giudice** (16 casi su 16, tutti giusti); quella di C13 provava **la lettura del
+> registro**. ⛔ Il difetto stava nel **giunto** fra le due: nel codice d'uscita, che non è di
+> nessuno dei due mestieri. ⇒ Si è visto solo **facendo girare il cablaggio vero**, ed è la stessa
+> famiglia di §1.46 e §1.40: `bash -n` passa, la certificazione passa, e la cosa non funziona.
+
+⭐⭐ **E la cura non era invertire l'esito — quella sarebbe stata la seconda trappola.** C9 oggi è
+rossa **anche senza guasto** (le due righe di `src/tastiera.c`, ⇒ `DECISIONI.md` §4.6-duoetvicies). Un
+semplice *«rosso ⇒ visto»* avrebbe detto «il guasto è stato visto» **anche se l'iniezione non avesse
+fatto niente**: un predicato che non può fallire, cioè §1.44 di nuovo, e stavolta a reggere la
+certificazione di tutta la rete.
+
+⇒ Si pretendono **due** cose insieme: il verdetto è rosso, **e** le righe senza nome sono di più di
+quante ne aveva lasciate il difetto vero. `[M]` senza guasto: 4 · col guasto `tutto`: 5 490.
+
+> ⛔ **La regola**: quando una maglia porta con sé un difetto **vero e già noto**, il suo guasto
+> innestato non si misura sul colore del verdetto — si misura sulla **differenza** che l'iniezione
+> ha prodotto. Altrimenti la rete si certifica su un guasto del prodotto invece che sul proprio.
+
+---
+
+### 1.53 ⛔⛔⛔ **Un rosso che non poteva diventare verde ha bloccato cinque prove e rinviato una fase**
+
+`[M]` 27 agosto 2026. La maglia C1 — *«la sessione nasce e si vede»* — diceva **dieci sessioni cieche su
+dieci**. Su quel verdetto poggiavano: cinque prove della rete dichiarate «bloccate» (C2, C3, C4, C6,
+C8b), il rinvio della fase 12, un difetto aperto nella fase 10, e una lista di lavoro.
+
+⛔ **C1 leggeva la riga sbagliata.** `sessione [chi] ⛔ ZERO MONITOR` il prodotto la scrive **nel
+passaggio obbligatorio di una nascita RIUSCITA** (`src/sessione.c:345-348`): dal 14 agosto *«zero
+monitor propri»* è **lo stato voluto** — il monitor lo monta la **cattura**, dopo.
+⛔ E il ramo verde era **irraggiungibile**: `sessione_stato()` non viene più chiamata dopo che il
+palco è preso, quindi `monitor N/N: connettore` non compare **mai** in una nascita sana.
+
+> ⇒ ⭐⭐ **C1 poteva dire soltanto «CIECA» o «non lo so». Non ha mai detto verde, e non poteva.**
+> `[M]` La controprova, sulla scatola curata: `formato negoziato` compare **8** volte, il palco dice
+> `monitor «Meta-0» (0 prima, **1** dopo) 1920x1080`, `monitor …: connettore` compare **0** volte —
+> **e C1 diceva ancora CIECA**.
+
+⛔⛔ **E la certificazione non l'ha preso perché imponeva il difetto come requisito**: due dei suoi
+casi (`11-c1…py:148-151`) avevano per registro **proprio quello di una nascita sana**, e pretendevano
+che il verdetto fosse rosso. ⇒ La certificazione non provava il giudice: ne **congelava l'errore**.
+
+> ⭐ **La regola che ne esce, e vale per ogni maglia**: ⛔ **una certificazione senza un caso che
+> finisce VERDE partendo da dati sani non è una certificazione.** È §1.44 applicata un livello sopra:
+> il predicato che non può fallire, stavolta protetto da un banco che gli dà ragione.
+>
+> ⚠ E la seconda: quando un verdetto **rosso** regge da giorni e nessuno riesce a farlo tornare
+> verde, ⛔ la prima domanda non è *«perché il prodotto è rotto»* ma **«questa maglia sa dire
+> verde?»**. Costa dieci minuti e qui ne è costati parecchi di più.
+
+---
+
+### 1.54 ⛔⛔ **La riparazione di una cosa apriva il guasto di un'altra — e il guasto sembrava del prodotto**
+
+`[M]` 27 agosto 2026. Dentro le scatole, una sessione impiegava **~97 secondi** a diventare utile.
+Sembrava il difetto della nascita: Mutter che non risponde, nessuna finestra, zero fotogrammi.
+
+La catena vera, e ha tre anelli:
+1. la scatola deve dare all'inquilino il **gruppo della scheda grafica**, altrimenti il compositore
+   ripiega sul software e i numeri sono falsi. ⇒ La ricetta **sposta** il gruppo `polkitd` da 991 a
+   1991 per liberare quel numero;
+2. ⛔ **`groupmod -g` non si porta dietro i file.** `/etc/polkit-1/rules.d` restava `root:991` ⇒
+   `polkitd` non poteva più leggerla, e moriva;
+3. `gnome-shell` chiama `polkit` e `upower` in modo **sincrono** all'avvio ⇒ incassava **quattro
+   scadenze da 25 000 ms in fila**.
+
+> ⇒ ⭐⭐ **La riparazione della scheda grafica apriva il guasto di polkit, e il guasto di polkit
+> aveva l'aspetto di un difetto del prodotto.**
+
+⭐ La cura sta tutta nella **ricetta**, e non ha chiesto nessun permesso nuovo: chi sposta il numero
+fa seguire i file (`find -gid … -exec chgrp`), e l'unità dei gruppi prende `Before=polkit.service`.
+⚠ `[M]` Col solo `chgrp` polkit moriva ancora, **battuto di 97 millesimi di secondo**.
+`[M]` Dopo: tre sessioni nuove negoziano il formato in **1,105 s · 0,998 s · 0,957 s** — da 97
+secondi a **uno**.
+
+> ⚠ **La lezione**: quando si cambia un identificatore di sistema per far posto a un altro, ⛔ la
+> domanda non è *«il numero è cambiato?»* ma **«che cosa apparteneva a quel numero?»**. E quando un
+> ambiente costruito da noi si comporta male, ⭐ **il primo sospettato è l'ambiente**, non il
+> prodotto — perché il prodotto non lo abbiamo scritto stanotte, la ricetta sì.
+
+---
+
+### 1.55 ⛔⛔ **Il numero letto per mesi era memoria non inizializzata**
+
+`[M]` 27 agosto 2026. La fase 10 §7.4 descriveva un *«terzo stato»* del palco — la riga
+`(0 prima, **2** dopo)` — e lo trattava come un fatto: due monitor comparsi.
+
+⛔ **Era spazzatura.** `src/figlio.c:5250` spediva la struttura al padre **prima** del `memset` di
+`:5311`. `[M]` Provato in due modi: quella riga compare anche su scatole dove **nessun monitor può
+essere nato** (lì il prodotto non sa nemmeno avviare il desktop), sempre e solo sul ramo *«aspetto la
+tela del cliente»*, con spazzatura evidente accanto (`stride 958311266`, `stride 306537694`); e nel
+codice macchina il vecchio ramo spediva **328 byte** avendone scritti **32**.
+
+> ⭐ **E il danno non è il difetto: è la diagnosi.** Quel `2` ha alimentato per mesi un'ipotesi —
+> *«a volte due monitor compaiono»* — che ha orientato la caccia. ⛔ Un numero mai scritto è peggio
+> di un numero mancante, perché **ha l'aria di essere un dato**.
+>
+> ⚠ La regola: una struttura che attraversa un confine (processo, socket, rete) si azzera **in cima
+> alla funzione**, prima di qualunque uscita anticipata — non «prima dell'uso», che è un posto che
+> si sposta a ogni modifica.
+
+---
+
+### 1.56 ⛔⛔ **Il banco provava quattro desktop, e il prodotto ne guidava uno**
+
+`[M]` 27 agosto 2026. La rete ha quattro scatole — GNOME, KDE, XFCE, LXQt — e la fase le ha
+presentate come la prova che *«le stesse prove girano su desktop diversi senza una riga cambiata»*.
+
+⛔ Poi C1 è stata fatta girare **dieci volte per scatola** sulle altre tre, e il conto è stato:
+**0 sane · 0 cieche · 30 «non ho potuto guardare»**. Il motivo lo dice il registro del prodotto:
+*«Mutter non espone RemoteDesktop»* — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c:778`,
+tutto `src/mutter.c`), e nelle altre tre scatole `gnome-shell` non c'è nemmeno.
+
+⭐ **Quel che le altre tre provano davvero è reale ma più piccolo**: l'ambiente (il passo 0), il
+suono (C5, che non passa dal desktop), i residui (C7), il registro (C9), l'allineamento (C11). ⛔ Non
+provano che il **prodotto** regga su quei desktop, perché lì il prodotto non ci gira.
+
+> ⚠ **La lezione**: ⛔ *«la prova gira su quattro ambienti»* e *«la prova dice qualcosa su quattro
+> ambienti»* sono due frasi diverse, e la seconda va **misurata**, non dedotta dalla prima. Il segno
+> che le distingue è l'esito **3**: una maglia che su tre ambienti su quattro non arriva mai a un
+> giudizio non li sta provando — li sta **visitando**.
+
+---
+
+### 1.57 ⚠ **Il binario ricostruito voleva una libreria che il banco non portava — e il banco l'ha detto**
+
+`[M]` 27 agosto 2026. Rimesso nelle quattro scatole il prodotto ricostruito con le cure della
+giornata, `11-accendi.sh prodotto` ha risposto su tutte e quattro:
+
+```
+  NO  1 librerie non si risolvono: il server morira e non si sapra perche
+  NO  il server non ha detto di essere pronto in 20 s
+```
+
+⇒ `ldd` dentro la scatola: **`libngtcp2_crypto_ossl.so.0 => not found`**. Il contenitore di
+costruzione sul portatile si era mosso — il binario nuovo si lega a una libreria che quello vecchio
+non usava — e il banco portava dentro solo la provvista vecchia.
+
+> ⭐ **E questa è una buona notizia, non un guasto**: è esattamente il controllo che `11-accendi.sh`
+> fa **apposta** dopo ogni consegna (`ldd | grep -c "not found"`), scritto quando si è imparato che
+> ⛔ *«il binario era giusto e le librerie no, e il sintomo era dalla parte sbagliata»* (fase 11
+> §7-bis.4). ⇒ Il difetto è stato **nominato in due secondi** invece di presentarsi tre ore dopo
+> come «il server muore e non si sa perché».
+>
+> ⚠ **La lezione che resta**: è la regola R2 — *«le versioni si dichiarano, mai «l'ultima
+> disponibile»»* — che ha ceduto dal lato del **contenitore di costruzione**, non da quello delle
+> scatole. ⛔ Un ambiente di costruzione non dichiarato è una dipendenza che cambia da sola, e la
+> rete se ne accorge **a valle**, quando il danno è già dentro l'immagine.

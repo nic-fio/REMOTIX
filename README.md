@@ -15,6 +15,33 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⚠ **KDE, XFCE e LXQt scalano di uno** (fasi 12, 13, 14): le fasi non cambiano di una riga, cambia
 > il loro posto.
 >
+> ## ⭐⭐⭐⭐⭐ E LA NOTTE DEL 25-26 AGOSTO 2026 IL **COLLAUDO A È PASSATO**
+>
+> `[M]` La rete, puntata contro il codice del 25 agosto dentro una scatola, su **sei utenti nuovi**,
+> è **diventata rossa da sola** sulla sessione che nasce cieca: ⛔ **3 su 6 nate CIECHE, 0 con un
+> monitor**, e nessuno le aveva detto dove guardare.
+>
+> ⭐ E prima ancora, il **passo 0** ha chiuso la `[?]` più pesante del disegno: **il contenitore
+> regge il sistema — 18 verdi su 18**, con la scheda grafica **vera** dentro (codificatore `iHD`,
+> 3 profili H.264) e **due permessi dichiarati** invece di un `--privileged`.
+>
+> ⭐⭐ **E la seconda scatola esiste già, con PLASMA dentro**: le **stesse identiche verifiche**, senza
+> una riga cambiata, danno **18 su 18** anche lì ⇒ la rete **non è fatta su misura di GNOME**, e
+> adesso è misurato invece che sperato. ⛔ E Plasma ha chiesto subito **due cose che GNOME non
+> chiedeva** — un gruppo che non esisteva e un permesso senza cui KWin non si avvia proprio: dieci
+> minuti adesso, mezza giornata e una diagnosi sbagliata dentro la fase 12.
+>
+> ⚠ **E quattro guasti sono venuti fuori dal lavoro stesso**, tutti scritti: il gruppo della scheda
+> che ripiegava **in silenzio** sul software · una libreria **con lo stesso nome e un'altra cosa
+> dentro** (il server partiva e moriva al primo cliente) · e **due difetti del banco**, uno dei
+> quali dava **tre rossi falsi**. ⇒ `LEZIONI.md` **§1.41, §1.42, §1.43**.
+>
+> 📖 **Il documento della fase è aperto dal 25 agosto 2026**:
+> **[`fasi/11-la-rete-di-sicurezza.md`](fasi/11-la-rete-di-sicurezza.md)** — il disegno completo,
+> ⭐ scritto **anche per chi non conosce il progetto**: **§2** i vincoli decisi dall'utente, **§4** la
+> lista dei controlli con *da dove parte* e *che cosa guarda*, **§7** il piano di lavoro (⛔ **una
+> scatola sola per prima, non quattro**), **§8** le domande aperte.
+>
 > ⭐⭐ **E il collaudo di quella fase è già scritto**: la rete va puntata contro il codice di oggi e
 > ⛔ **deve diventare rossa sulla «sessione che nasce cieca»** — senza che nessuno le abbia detto dove
 > guardare. **Se non la prende, non è una rete: è un rituale.**
@@ -53,13 +80,17 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ### ⭐⭐⭐⭐ E LA COSA PIÙ UTILE DELLA GIORNATA NON È UN NUMERO
 >
 > ⛔ Il regista ha provato il prodotto e ha detto tre volte **«Firefox non funziona»**, fino a
-> smettere. ⇒ **Era `~/.cache` che punta a `/tmp`**: il **primo** utente che apre il browser si
-> prende `/tmp/mozilla` a modo `0700`, e **per tutti gli altri il profilo non nasce**.
-> ⭐⭐ *Un difetto che su una macchina a UN utente non si vede mai, e che su dieci ne blocca nove* —
-> ed è esattamente il tema di questa fase. Curato in `src/provisiona.sh`.
+> smettere. ⇒ **Era il profilo del browser che non nasceva**: sulla sua macchina `~/.cache` punta a
+> `/tmp` — ⭐ **una sua scelta voluta**, non un guasto (`DECISIONI.md` §4.6-undecies) — e il
+> **primo** utente che apre il browser si prende `/tmp/mozilla` a modo `0700`.
+> ⭐⭐ *Una configurazione che su una macchina a UN utente non fa nessun danno, e che sui **dieci
+> utenti che creiamo noi** ne blocca nove* — ⛔ **il difetto è nostro, non suo**: è il nostro
+> `useradd -m` a farli nascere tutti nello stesso posto. Ed è esattamente il tema di questa fase.
+> Curato in `src/provisiona.sh`, ⭐ **senza toccare niente del sistema**: una `.cache` propria
+> soltanto agli utenti che creiamo noi.
 >
 > ⛔⛔ **E la fase 9 l'aveva chiuso con un ✅ sbagliato** (§20.1-ter, ora **refutata**): il controllo
-> che *«chiudeva la questione»* girava da un utente che **aveva lo stesso difetto**.
+> che *«chiudeva la questione»* girava da un utente **nella stessa condizione**.
 > ⇒ `LEZIONI.md` **§1.38** — *un controllo che condivide il fattore che deve escludere non controlla
 > niente*.
 >
@@ -162,12 +193,14 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⛔ ~~**Firefox non parte sulla macchina di prova** — `[M]` anche fuori da REMOTIX, headless e
 > senza Wayland: **non è nostro**, ma blocca le prove col browser (§20.1-ter)~~
-> ⭐⭐ **CHIUSA il 25 agosto 2026, e la causa era un'altra**: `~/.cache` è un **collegamento a
-> `/tmp`** (da `/etc/skel`), e il **primo** utente che apre il browser si prende `/tmp/mozilla` a
-> modo `0700` ⇒ **per tutti gli altri il profilo non nasce**. Curata in `src/provisiona.sh`, e
-> `[M]` **Firefox rende una pagina nel desktop remoto**.
-> ⚠ *E la conclusione «non è nostro» era giusta a metà: il collegamento non è nostro, ma è il
-> nostro `useradd -m` a propagarlo, e sono i nostri dieci inquilini a renderlo certo.*
+> ⭐⭐ **CHIUSA il 25 agosto 2026, e la causa era un'altra**: su questa macchina `~/.cache` è un
+> **collegamento a `/tmp`** — ⭐ **scelta voluta dell'utente**, `DECISIONI.md` §4.6-undecies — e il
+> **primo** utente che apre il browser si prende `/tmp/mozilla` a modo `0700` ⇒ **per tutti gli
+> altri il profilo non nasce**. Curata in `src/provisiona.sh`, e `[M]` **Firefox rende una pagina
+> nel desktop remoto**.
+> ⚠ *E la conclusione «non è nostro» era sbagliata nel verso peggiore: la configurazione è sua e va
+> benissimo, ⛔ **il difetto è nostro** — è il nostro `useradd -m` a far nascere dieci inquilini
+> tutti nello stesso posto.*
 > `fasi/10-multi-tenant-e-il-budget.md` §5.10 ·
 > ⭐ ~~la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser)~~ ⇒ **GIUDICATA il 25
 > agosto 2026**, su un video **4K** con la banda a **10 Mbit/s**: *«audio e video fluidi e in
@@ -1189,9 +1222,24 @@ come **server**, che era la leva vera.
 | **3** | [`RCP.md`](RCP.md) | **come parlano** i due lati. È l'arbitro: in v1 lo era `mstsc`, ora è questo file |
 | **4** | [`PIANO.md`](PIANO.md) | **le fasi**, in ordine, ciascuna col suo banco e il suo criterio di chiusura |
 | **5** | [`DECISIONI.md`](DECISIONI.md) | **perché**: ogni decisione con la data, chi l'ha presa, e con che grado di certezza |
+| **6** | [`MASTERPLAN.md`](MASTERPLAN.md) | ⭐ **quel che si fa alla FINE**, e non prima — deciso dall'utente il 25 agosto 2026. ⛔ Ogni voce deve dire **che cosa costa non farla MAI**: una voce che non costa niente si cancella |
 
 E per chi scrive o revisiona, prima di toccare qualcosa:
 [`CODER.md`](CODER.md) · [`REVIEWER.md`](REVIEWER.md)
+
+> ### ⭐⭐ E dal 27 agosto 2026 c'è una rete sotto: **`banchi/11-scatole/`**
+>
+> **Sedici controlli** che girano da soli prima di ogni invio, su **quattro desktop**. Dicono: la
+> sessione nasce e **si vede** · una finestra si apre · i fotogrammi **cambiano** · il tasto arriva
+> **fino allo schermo** · il suono non è silenzio · si stacca e **si ritrova** · si chiude e non resta
+> niente · il **secondo** utente apre il browser e la pagina **si vede dal cliente** · il registro dice
+> **di chi** parla · le copie gemelle combaciano — più **cinque** che sorvegliano la rete stessa.
+>
+> ⭐⭐ **E ognuno sa dimostrare di saper diventare rosso**: `[M]` giro intero del 27 agosto,
+> **49 guasti innestati e 49 presi**, 58 verdetti verdi, ⛔ nessun rosso del banco.
+>
+> ⇒ Si legge in [`fasi/11-la-rete-di-sicurezza.md`](fasi/11-la-rete-di-sicurezza.md), e si lancia con
+> `banchi/11-scatole/11-gancio.sh`.
 
 ---
 

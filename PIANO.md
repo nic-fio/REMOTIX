@@ -1436,7 +1436,31 @@ promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade
 > ⇒ `DECISIONI.md` **§4.6-duodecies**. ⚠ **KDE, XFCE e LXQt scalano di uno**: diventano le fasi 12,
 > 13 e 14. Le fasi **non cambiano di una riga** — cambia il loro posto, come già il 16 agosto.
 
+📖 **Il documento della fase è aperto**:
+[`fasi/11-la-rete-di-sicurezza.md`](fasi/11-la-rete-di-sicurezza.md) — ⭐ scritto **anche per chi non
+conosce il progetto**, perché l'utente lo sottopone a un secondo parere: **§2** i vincoli già decisi,
+**§4** la lista dei controlli, **§8** le domande aperte.
+
 **Produce**: un modo di accorgersi **da soli** che qualcosa si è rotto, prima che lo scopra l'utente.
+
+> ## ✅⭐⭐⭐⭐⭐ **FATTA — 27 agosto 2026**
+>
+> `[M]` **Sedici maglie**, quattro scatole, e il giro intero in **2 h 14**:
+>
+> | | |
+> |---|---|
+> | verdetti verdi | **58** |
+> | rossi | **3** — e sono **lo stesso rosso**: `C1` su kde/xfce/lxqt, perché ⛔ il prodotto sa avviare **solo GNOME** (`src/sessione.c:778`) ⇒ **è la fase 12** |
+> | ⭐⭐ **guasti innestati** | **49 su 49 visti** |
+> | rossi del **banco** | ⭐ **nessuno** |
+>
+> ⭐⭐⭐ **E il difetto più vecchio del progetto è caduto per strada**: *«la sessione che nasce
+> cieca»* (`fasi/10-…` §7.4) **non era del prodotto** — l'inquilino non era nei gruppi `video` e
+> `render`. `[M]` 17 sessioni su 17 vedono coi gruppi, **0 su 4** senza. ⇒ Le cinque prove dichiarate
+> «impossibili» non lo erano, e oggi girano tutte.
+>
+> ⚠ **E quel che la rete NON prende, dichiarato**: non confronta **ieri con oggi** (una lentezza che
+> non rompe niente passa), e su tre scatole su quattro prova **l'ambiente**, non il prodotto.
 
 **L'utente vede**: niente di nuovo sullo schermo — ⭐ **e questo è il punto**: vede che le cose che
 funzionavano **continuano a funzionare** quando arrivano i desktop nuovi.
@@ -1448,7 +1472,7 @@ funzionavano **continuano a funzionare** quando arrivano i desktop nuovi.
 | il difetto | nascosto per | ⛔ perché era invisibile |
 |---|---|---|
 | **la sessione che nasce cieca** (fase 10 §7.4) | giorni | ⛔ **nessuno apriva una sessione NUOVA**: si riusavano quelle già aperte, che il monitor ce l'avevano |
-| **`~/.cache -> /tmp`** | **due fasi** | ⛔ e il controllo che *«chiudeva la questione»* girava da un utente **con lo stesso difetto** |
+| **il browser che non parte al secondo utente** ⚠ *(non il collegamento `~/.cache`: quello è una **scelta** dell'utente, `DECISIONI.md` §4.6-undecies)* | **due fasi** | ⛔ e il controllo che *«chiudeva la questione»* girava da un utente **nella stessa condizione** |
 | **cinque banchi che contavano zero fotogrammi** | un giro | ⛔ una cura al registro ne aveva rotto le espressioni, e la funzione tornava **0 invece di «non lo so»** |
 
 ⇒ ⭐⭐ **Tutti e tre invisibili per la stessa ragione**: si guardava sempre **lo stesso pezzo di
@@ -1465,7 +1489,7 @@ scena**, e si guardava **il processo invece del pixel**.
 | **3** | ⛔ **Che giri DA SOLA** dopo ogni modifica, senza che qualcuno se ne ricordi | ⛔ le tre volte di oggi nessuno se n'è ricordato — **e nessuno era distratto**: semplicemente non c'era il gancio |
 | **4** | ⭐⭐ **Che sia CERTIFICATA lei stessa** — `--certifica`, coi guasti innestati | ⛔ `LEZIONI.md` §1.36: *lo strato che coordina i banchi è un banco anche lui, e nessuno lo certifica*. `[M]` **sei difetti** trovati lì dentro in una fase sola |
 | **5** | ⭐⭐⭐ **Che sia CIECA AL DESKTOP** — le stesse invarianti puntate su GNOME, KDE, XFCE, LXQt senza riscriverle | ⛔ è l'intera ragione per cui la fase sta **prima** dei desktop nuovi: una rete scritta su misura di GNOME va riscritta quattro volte |
-| **6** | ⚠ **Che guardi la CONSEGNA, non solo il sorgente** | ⛔ `~/.cache -> /tmp` non era nel nostro codice: era nella **macchina**. Una rete che compila e prova solo `src/` non l'avrebbe presa mai |
+| **6** | ⚠ **Che guardi la CONSEGNA sulla macchina COM'È** | ⛔ il browser che non parte non era nel nostro codice: nasceva dall'incontro fra **come l'utente ha configurato la sua macchina** — legittimamente — e **i dieci utenti che ci mettiamo noi**. Una rete che compila e prova solo `src/` non l'avrebbe presa mai. ⚠ E non deve **giudicare** la configurazione: non è affar suo |
 
 ---
 
@@ -1474,7 +1498,9 @@ scena**, e si guardava **il processo invece del pixel**.
 ⭐⭐ **La rete si punta contro il codice del 25 agosto 2026, e DEVE diventare rossa su §7.4** — la
 sessione che nasce cieca — ⛔ **senza che nessuno le abbia detto dove guardare.**
 
-⚠ **E il secondo collaudo**: deve prendere anche `~/.cache -> /tmp`.
+⚠ **E il secondo collaudo**: deve accorgersi che **al secondo utente il browser non si apre**.
+⛔ **Non** «deve trovare il collegamento `~/.cache`»: quello è una **scelta** dell'utente sul suo
+sistema, non un guasto — correzione del 25 agosto 2026, `DECISIONI.md` §4.6-undecies.
 
 ⇒ ⛔ **Se non li prende, non è una rete: è un rituale.** ⭐ E il metro della fase non è *«quante prove
 girano»*: è **che cosa la rete PRENDE**.
@@ -1501,6 +1527,21 @@ nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambi
 **Produce**: il secondo desktop.
 
 **L'utente vede**: la stessa cosa su Plasma.
+
+> ## ⭐⭐ E ADESSO C'È UNA RETE SOTTO — *e tre cose che questa fase eredita, misurate*
+>
+> ⭐ `[M]` 27 agosto: la fase 11 è chiusa, e il **solo rosso** che produce è proprio il mandato di
+> questa fase — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c:778`, tutto `src/mutter.c`).
+> ⇒ La rete misura già, oggi, se questa fase riesce: il giorno che `C1(kde)` diventa verde, KDE è
+> servito davvero.
+>
+> ⛔⛔ **Tre cose da mettere nel piano di questa fase, o si saltano:**
+>
+> | | |
+> |---|---|
+> | ⭐ **un guasto suo** | `fasi/11-…` §3.6 lo impone: *«ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare»*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
+> | ⛔ **KWin non sa nascere cieco** | `[M]` con `--output-count 0` un'uscita la fa lo stesso ⇒ il disegno *«zero monitor propri»* **non si trasporta uguale**, e va ripensato qui |
+> | ⚠ **il palco muore col cliente** | `[M]` il monitor virtuale muore con la connessione D-Bus del figlio. ⭐ Su GNOME `C6` misura verde (le finestre si ritrovano), ⛔ ma su un compositore diverso non è detto ⇒ `DECISIONI.md` §4.6-teretvicies |
 
 > ## ⛔⛔ La motivazione PRESTAZIONALE di questa fase è caduta — *13 agosto 2026*
 >

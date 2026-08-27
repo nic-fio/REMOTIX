@@ -159,6 +159,66 @@ batteria, la rete che cambia in tasca. Quelle arrivano tardi.
 
 ---
 
+### 0.4 ✅ ⭐⭐⭐ Le cose del «dopo» hanno un posto loro — `MASTERPLAN.md`
+
+*Deciso dall'utente il **25 agosto 2026**, mentre si apriva la fase 11:*
+
+> *«Per gli altri DE non ci portiamo dietro questo buco, per GNOME potremmo fare una manutenzione
+> evolutiva al termine del progetto, insieme all'integrazione di altre funzioni. Potrebbe essere
+> utile creare un documento `MASTERPLAN.md` dove annotare tutte queste cose da fare al termine del
+> progetto.»*
+
+⭐ Nasce **[`MASTERPLAN.md`](MASTERPLAN.md)**: l'elenco dei lavori che si affrontano **a prodotto
+finito** — migliorie, scelte rimandate apposta, funzioni che non erano nel patto iniziale.
+
+#### ⛔ Il problema vero che risolve, e non è l'ordine
+
+⛔ **Una cosa dichiarata e non messa in agenda diventa archeologia.** Il caso che ha prodotto questa
+decisione è §2.5-bis: il 13 agosto 2026 si scoprì che *«il tetto di GNOME non è di Mutter, è
+nostro»*, ⭐ **fu scritto onestamente lo stesso giorno**, e poi non ci tornò più nessuno — perché
+arrivarono le fasi 8, 9 e 10, ognuna col suo tema. ⇒ **Non era nascosto: era senza posto.**
+
+#### ⛔⛔ La regola che tiene in piedi quel documento
+
+> **Ogni voce dice che cosa costa NON farla mai** — ed è l'unica informazione che serve, perché è
+> quella che separa *«va fatto»* da *«sarebbe bello»*, e quella scelta la fa l'utente.
+>
+> ⚠ E il rovescio: **una voce il cui costo del «mai» è zero si cancella.** Un elenco del «dopo» che
+> cresce e non si accorcia mai è il cassetto dove le cose vanno a morire.
+
+⚠ **E non allarga il numero dei registri**: `MASTERPLAN.md` **non decide niente** e non copia niente.
+Le decisioni restano qui, una volta sola (§0 di `README.md`); il piano delle fasi resta in
+`PIANO.md`; ⛔ **quel che deve succedere PRIMA della fine non entra nel masterplan**, entra in una
+fase.
+
+### 0.5 ✅ ⭐⭐⭐ Il desiderato si chiede a TUTTI i desktop, uguale — e a chi non lo dà si torna dopo
+
+*Deciso dall'utente il **25 agosto 2026**, subito dopo §0.4:*
+
+> *«Rendiamola semplice: il 4K/60 fps è il tetto che chiediamo a tutti (desiderio). Per i prossimi DE
+> lo chiediamo, per GNOME dovremo tornarci.»*
+
+⭐ **Il bersaglio è uno solo per tutti e quattro**, ed è il **desiderato** già deciso l'8 agosto 2026
+(§2.2): **4K · 60 fotogrammi al secondo · 10 bit**. ⛔ **Nessun bersaglio su misura per
+compositore** — è §5.1-bis applicata ai numeri: *niente eccezioni per compositore*.
+
+| | |
+|---|---|
+| **i desktop nuovi** (KDE, XFCE, LXQt) | ⭐ **niente da fare**: il prodotto già chiede 60 a chiunque. Se lo consegnano, il buco su di loro **non esiste**. `[M]` KWin ne dà **58,9** senza che gli si chieda niente di speciale |
+| ⛔ **GNOME** | a 60 se ne dimezza (**31,5**), e per averne 60 bisognerebbe **chiedergliene 90** — che il prodotto non sa fare (§2.5-bis) ⇒ **si torna dopo**: `MASTERPLAN.md` **M1** |
+
+⚠ **Quel che questa decisione NON fa**: non promette 4K/60 su GNOME e non lo toglie dai traguardi.
+§2.5-bis resta in vigore così com'è — *«su GNOME il desiderato non si promette»* — ⛔ **con la ragione
+corretta**, che dal 13 agosto 2026 non è più *«Mutter non ce la fa»* ma *«noi non gliela chiediamo»*.
+
+⭐⭐ **E la parte che non aspetta la fine**: all'ingresso di ogni desktop nuovo — fasi 12, 13, 14 —
+si fa **una domanda sola e si scrive il numero**: *«ti chiedo 4K a 60: quanti me ne dai?»*
+⛔ Se ne dà la metà, **è un GNOME anche lui**, e lo si sa il primo giorno invece di scoprirlo per
+caso undici giorni dopo — che è **esattamente** com'è andata su GNOME. ⇒ Sta in `PIANO.md`, nelle tre
+fasi, e **non costa una riga di prodotto**.
+
+---
+
 ## 1. Il protocollo
 
 ### 1.1 ✅ RDP muore. Il protocollo è nostro.
@@ -2611,9 +2671,36 @@ fallire»*), e sotto le specifiche quella promessa si onora **così**.
 perché *«vuole quel browser»* — ⛔ e quel browser non partiva per una ragione che non era la sua
 (§4.6-undecies).
 
-### 4.6-undecies ✅ ⛔⛔ **Il difetto di un inquilino solo che ne blocca nove: `~/.cache -> /tmp`**
+### 4.6-undecies ✅ ⛔⛔ **Il difetto di un inquilino solo che ne blocca nove — e la causa NON è un guasto**
 
 *Trovato il **25 agosto 2026**, dopo che l'utente aveva detto tre volte «Firefox non funziona».*
+
+> #### ⭐⭐⭐ CORREZIONE DELL'UTENTE — *25 agosto 2026, sera*
+>
+> ⚠ *Il titolo di questa sezione diceva `**Il difetto di un inquilino solo che ne blocca nove:
+> `~/.cache -> /tmp`**`, e il testo qui sotto chiamava quel collegamento **il difetto**. ⛔ È
+> sbagliato, e l'ha corretto l'utente:*
+>
+> > *«`.cache` che punta a `/tmp` è una mia scelta voluta»* — *ed è una decisione su come deve
+> > funzionare **il sistema operativo della sua macchina**, che **non c'entra niente con REMOTIX**.*
+>
+> ⇒ ⛔ **Non c'è niente da riparare nel sistema.** Quel collegamento non è un guasto ereditato da
+> un'immagine base: è una configurazione **scelta**, e su una macchina a un utente solo non fa
+> nessun danno.
+>
+> ⭐⭐ **E quel che resta vero è NOSTRO, non suo**: è **il prodotto** che crea dieci utenti nuovi
+> con `useradd -m`, ed è il prodotto che li fa nascere tutti a scrivere **nello stesso posto**.
+> ⇒ ⛔ *Una scelta innocua su un utente diventa un blocco su dieci **perché ce li mettiamo noi**.*
+>
+> ⭐ **La cura già scritta è giusta così com'è, e va detto perché**: `src/provisiona.sh` **non
+> tocca `/etc/skel`, non tocca la home dell'utente, non tocca `/tmp/mozilla`** — dà una `.cache`
+> propria **soltanto agli utenti che creiamo noi**. ⇒ Il sistema resta come l'utente lo vuole, e
+> i nostri inquilini smettono di pestarsi i piedi.
+>
+> ⛔ **E il bersaglio della fase 11 cambia di conseguenza** (§4.6-duodecies): la rete **non**
+> controlla che le cartelle siano al posto canonico — non è affar suo, e l'utente ha deciso
+> diversamente **apposta**. Controlla che **il prodotto funzioni sulla macchina com'è
+> configurata**: *il secondo utente apre il browser, sì o no?*
 
 `/etc/skel/.cache` è un **collegamento a `/tmp`**, e `src/provisiona.sh` crea gli utenti con
 `useradd -m`, che **copia lo scheletro**. Firefox tiene il profilo *locale* sotto
@@ -2651,7 +2738,7 @@ sbagliare:
 | il difetto | quanto è rimasto nascosto | ⛔ perché |
 |---|---|---|
 | **la sessione che nasce cieca** (§7.4) | giorni | ⛔ **nessuno ha mai aperto una sessione NUOVA e l'ha guardata**: tutte le prove riusavano sessioni già aperte, che il monitor ce l'avevano |
-| **`~/.cache -> /tmp`** | **due fasi** | ⛔ e la prova che *«chiudeva la questione»* girava da un utente che **aveva lo stesso difetto** |
+| **il browser che non parte al secondo utente** (⚠ *non* il collegamento `~/.cache`, che è una **scelta** dell'utente — §4.6-undecies) | **due fasi** | ⛔ e la prova che *«chiudeva la questione»* girava da un utente che **aveva la stessa configurazione** |
 | **cinque banchi che contavano zero fotogrammi** | un giro | ⛔ una cura al registro aveva rotto le loro espressioni, e `resa()` tornava **0 invece di None** |
 
 ⇒ ⭐⭐ **Nessuno dei tre era sottile.** Tutti e tre erano invisibili per la **stessa** ragione: si
@@ -2676,8 +2763,307 @@ giustifica su **che cosa sopravvive**). ⇒ ⭐⭐ **Il metro è uno solo: che c
 stamattina**, e ⛔ **deve diventare rossa su §7.4** — la sessione cieca — **senza che nessuno le
 abbia detto dove guardare.** Se non lo prende, non è una rete: è un rituale.
 
-⚠ **E il secondo collaudo**: deve prendere anche il difetto di `~/.cache`, che non è nel nostro
-codice ma **nella macchina**. ⇒ La rete guarda **la consegna**, non solo il sorgente.
+⚠ **E il secondo collaudo**: deve accorgersi che **al secondo utente il browser non si apre**.
+⛔ **Non** «deve trovare il collegamento `~/.cache`» — quello è una **scelta dell'utente**, non un
+guasto (§4.6-undecies, correzione del 25 agosto 2026): la rete non giudica come è configurata la
+macchina. ⇒ ⭐ **Guarda la CONSEGNA sulla macchina com'è**, non il sorgente e non la configurazione.
+
+### 4.6-terdecies ✅ ⭐⭐ **Una scatola di prova può avere fino a DIECI inquilini** — il vincolo era sulla capienza, non sulla correttezza
+
+*Chiarito dall'utente il **26 agosto 2026**, dopo la notte del passo 0:*
+
+> *«Per quanto mi riguarda un container può anche avere 10 utenti, è un dato già misurato con
+> GNOME.»*
+
+⛔ **Corregge una lettura troppo stretta di §4.6-duodecies**, che questa sessione aveva riassunto in
+*«un utente per contenitore»*. ⇒ Quel vincolo nasceva da una cosa vera — **la capienza è già stata
+misurata**, sul caso peggiore, e non si rifà a ogni modifica — ⛔ **ma era stato applicato a una
+domanda diversa.**
+
+| tipo di prova | la domanda | si rifà? |
+|---|---|---|
+| **capienza** | *quanti inquilini ci stanno insieme prima che la macchina ceda?* | ⛔ **no**: `[M]` sei sulla scena satura, almeno undici sul desktop vero |
+| ⭐ **correttezza a più inquilini** | *il secondo riesce a fare quel che deve?* | ✅ **sì, ed è la rete** |
+
+⭐⭐ **E il rilievo era dei due revisori esterni**, che ci sono arrivati per due strade diverse: *«C8
+è la prova più importante ed è la più fragile»*. ⇒ Con questo chiarimento la prova del **secondo
+utente che apre il browser** — cioè il **collaudo B** della fase 11 — ⭐ **può stare dentro una
+scatola**, invece di essere l'unica cosa che vive sulla macchina vera e che quindi si esegue di rado.
+
+⚠ **E quel che questo NON autorizza**: rifare la campagna dei dieci a ogni modifica. Dieci inquilini
+*possono* stare in una scatola; ⛔ la rete anti-regressione ne usa **due**, perché la domanda è *«si è
+rotto qualcosa?»* e non *«quanti ce ne stanno?»*.
+
+### 4.6-quaterdecies ✅ ⭐⭐⭐ **Le quattro scatole esistono — e sono quattro scatole con TRE compositori**
+
+*`[M]` **26 agosto 2026**, notte. Costruite e verificate le scatole di GNOME, KDE, XFCE e LXQt: ⭐ il
+passo 0 dà **18 verdi su 18 in tutte e quattro**, con la stessa identica lista di prove e ⛔ **nessuna
+riga cambiata**. Ogni scatola porta allo stesso percorso un **adattatore** di quaranta righe.*
+
+⚠ **E una cosa scomoda, detta subito**: XFCE e LXQt non portano un compositore proprio su Wayland —
+portano una **sessione** e si appoggiano a uno di famiglia `wlroots`. Per tutt'e due la scelta è
+**labwc**, ⭐ che questo documento aveva già misurato sotto l'etichetta *«labwc (XFCE, LXQt)»*.
+
+⇒ ⛔ **La quarta scatola non mette alla prova un quarto compositore**: mette alla prova una quarta
+sessione, una quarta ricetta e dipendenze diverse. **Chi legge i risultati conti tre compositori e
+quattro scatole.**
+
+#### ⭐ E il terzo desktop non ha chiesto niente — *che è un risultato, non un non-evento*
+
+Il secondo aveva chiesto **due** cose che il primo non chiedeva (il gruppo `render`, il permesso
+`SYS_NICE`). Il terzo e il quarto: **zero**. ⚠ Va letto per quel che è: **un** desktop che non ha
+chiesto niente dopo **uno** che aveva chiesto due cose — cioè la ragione per cui la domanda si fa a
+ciascuno invece di generalizzare dal primo.
+
+#### ⛔⛔ E per la TERZA volta l'ambiente era generoso: `libpci3`
+
+`[M]` Firefox senza `libpci3` dice `glxtest: libpci missing` e **non produce nessuna immagine**. ⛔ Nella
+scatola di XFCE il difetto **non si vedeva**: `labwc` se lo tira dietro; `kwin-wayland` no.
+⇒ ⭐ **Lo stesso identico modo di sbagliare di `libei1`**: una libreria che c'era **per caso**, e un
+rosso che sembrava del prodotto. ⇒ Adesso è dichiarata nella ricetta, come le altre.
+
+### 4.6-quindecies ✅ ⭐⭐⭐ **C8 si è dovuta spezzare in due — e la metà che regge ha preso il difetto**
+
+*`[M]` **26 agosto 2026**. Il collaudo B della fase 11 è passato:*
+
+> **con la cura della provvista**: `c8u1` ⭐ la pagina copre il **98,7 %** · `c8u2` ⭐ **98,7 %**
+> **senza la cura** (il codice del 25 agosto): `c8u1` ⭐ **98,7 %** · ⛔ `c8u2` **NO** — *profilo: è di
+> «c8u1» · sa scrivere in `~/.cache/mozilla`: **NO***
+
+⭐⭐ **E l'asimmetria è quella giusta**: il primo apre il browser, il secondo no. ⛔ Un rosso su tutt'e
+due non sarebbe stato il difetto di §4.6-undecies — sarebbe stato il banco.
+
+| | che cosa guarda | oggi |
+|---|---|---|
+| ⭐ **C8a** | Firefox si fotografa da sé, da utente, sulla macchina com'è configurata. Il giudizio resta **nel pixel** (`#FF00FF`, tolleranza dichiarata) | ✅ **si misura** |
+| **C8b** | la stessa pagina, guardata **attraverso il prodotto** | ⚠ **oggi non si misura** |
+
+⛔⛔ **Perché C8b non si misura**: `[M]` **dieci sessioni GNOME nuove su dieci nascono senza monitor** —
+è il difetto **aperto** della fase 10 §7.4, che sta **a monte** di C8. ⇒ ⭐ Un desktop nero non
+testimonia sul browser.
+
+⭐ **E la spaccatura ha un guadagno non previsto**: C8a **non passa dal prodotto**, e quindi gira in
+**qualunque** scatola — il collaudo qui sopra è girato dentro quella di **PLASMA**.
+
+### 4.6-sexdecies ⛔⛔⛔ **E questo è il fatto che l'utente deve pesare prima della fase 12**
+
+`[M]` 26 agosto 2026: **zero sessioni nuove su dieci** nascono con un monitor. ⇒ ⛔ **C2, C3, C4, C6 e
+la metà B di C8 non possono misurare niente**: non c'è nessun pixel da guardare.
+
+| ⭐ quel che la rete **oggi** sa fare | ⛔ quel che **non** sa fare |
+|---|---|
+| dire che una sessione **nasce cieca** (C1) · che il **secondo inquilino** non apre il browser (C8a) · che l'**ambiente** regge su quattro desktop | dire *«e adesso si VEDE»* |
+
+⚠ **E la differenza conta**: non è un buco della rete — un buco si tura scrivendo un'altra maglia —
+⛔ **è un difetto del prodotto**, e si tura curando il prodotto. ⇒ La ragione per cui la fase 11 sta
+**prima** dei desktop nuovi è *«non rompere quel che funzionava»*: con le sessioni cieche non si
+riesce a **vedere** se GNOME continua a funzionare.
+
+⇒ ❓ **La scelta è dell'utente**, e sta scritta in `fasi/11-la-rete-di-sicurezza.md` §11.
+
+### 4.6-septendecies ✅ ⭐⭐⭐ **Le quattro scatole non si disturbano — misurato, non più affermato**
+
+*`[M]` **26 agosto 2026**.* La stessa prova fatta girare **una scatola per volta** e poi **tutte e
+quattro insieme** dà **lo stesso identico esito**, in tutt'e due i modi (con la cura `2 sì · 0 no`;
+col guasto innestato `1 sì · 1 no`).
+
+⇒ ⭐ **Si chiude la riga che `11-accendi.sh` portava aperta**: `--network=host` fa condividere alle
+quattro scatole le porte della macchina, e la separazione **per porta** è una separazione **vera** —
+ciascuna riconosce come propria solo la sua.
+
+⚠ **Il tempo è informazione, non verdetto**: `[M]` 6,6 s da sola → 7,0 s in parallelo (×1,06), e il
+totale scende da 26,2 s a 7,0 s. ⛔ E un tempo è stato **buttato dal banco stesso**: col guasto
+innestato i quattro tempi erano uguali a un decimo di secondo, perché quasi tutto era **attesa fissa
+nostra** e non lavoro. ⇒ Chiamarla «contesa» sarebbe stato misurare il proprio tetto.
+
+⛔ **E che cosa NON è misurato**: la contesa vera sulla **scheda grafica**. Vorrebbe quattro sessioni
+vive, e le sessioni oggi nascono cieche. ⇒ È misurato lo strato di sotto — le quattro scatole
+**aprono il codificatore nello stesso istante**, 3 profili H.264 ciascuna.
+
+### 4.6-octodecies ✅ ⭐⭐ **Il gancio esiste — e il tetto dei 3 minuti è pieno**
+
+*`[M]` **26 agosto 2026**.* La rete adesso parte da sé: si guarda **quali file sono cambiati** e da
+quelli discende che cosa gira. ⛔ Non si chiede a chi lavora — *un gancio che chiede è un gancio che
+il giorno in cui si ha fretta non gira, e i giorni in cui si ha fretta sono quelli in cui si rompono
+le cose.*
+
+> ### ⛔⛔ E IL TETTO È PIENO, CON SEI SECONDI DI MARGINE
+>
+> `[M]` La famiglia veloce — **C11 + due giri di C1** — è durata **174 secondi** su un tetto di
+> **180**. ⇒ ⭐ **Non c'è spazio per aggiungere niente.** Qualunque maglia in più va **scambiata** con
+> qualcosa che esce, non sommata.
+
+⇒ Le prove **tagliate**, e il costo di ciascuna, stanno in `fasi/11-la-rete-di-sicurezza.md` §7-bis.16.
+⛔ La più cara: **C8 non viene guardata a ogni modifica** — la maglia più importante della lista sta
+solo nel giro completo.
+
+⚠ **E si aggancia PRIMA DI MANDARE**, non a ogni salvataggio: tre minuti a ogni commit sono
+esattamente la cosa che fa spegnere un gancio.
+
+### 4.6-undevicesimo ✅ ⭐⭐⭐ **La rete sa dire di sé stessa se è ancora capace di dare rosso**
+
+*`[M]` **26 agosto 2026**, giro completo, 28 minuti.*
+
+⛔ Il guasto che questa maglia (C13) cerca è il più insidioso della lista: *una rete che non è più
+capace di dare rosso **ha esattamente l'aspetto di una rete che non trova niente**.*
+
+⇒ ⭐ E il momento che conta è successo davvero. **Durante** il giro C13 era **rossa**, e diceva il
+vero: *«negli ultimi giri nessun guasto è mai stato innestato»*. **Dopo** il giro — che il guasto
+innestato ce l'aveva dentro — è **verde**: *«un guasto è stato innestato ed è stato visto»*.
+
+⚠ **E lo dice col suo limite attaccato**: *sui guasti che CONOSCE*. ⛔ Ogni desktop nuovo dovrà
+entrare con **un guasto suo**, o questa maglia certificherà una capacità che non copre il terreno
+nuovo.
+
+### 4.6-novemdecies ⛔⛔ **Le due metà del gancio vivono in due macchine diverse**
+
+`[M]` 26 agosto 2026, primo giro vero, e non l'aveva previsto nessuno:
+
+| | dove sta |
+|---|---|
+| **decidere** che cosa far girare | vuole il deposito git ⇒ **il portatile** |
+| **far girare** | vuole le scatole e la scheda grafica ⇒ **la macchina di prova**, ⛔ dove il deposito **non c'è** |
+
+⇒ La prima stesura pretendeva git sempre, e usciva «terreno cattivo» **sull'unica macchina in grado
+di eseguire le maglie**. ⭐ Adesso: se la famiglia è chiesta per nome non c'è niente da decidere, e il
+deposito non serve.
+
+⚠ **E ne discende una cosa che va decisa dall'utente**: il registro del gancio — quello su cui vive
+la memoria di C13 — **nasce dove il gancio gira**. ⇒ Oggi ce n'è uno sulla macchina di prova e
+nessuno sul portatile. Metterlo in git gli darebbe una memoria sola per tutte le macchine; tenerlo
+fuori eviterebbe di avere quel file modificato a ogni giro. ⛔ **Non deciso.**
+
+### 4.6-vicies ✅ ⭐⭐⭐ **Quattro maglie nuove, e la rete adesso guarda anche quel che non è un pixel**
+
+`[M]` 26 agosto 2026, quattro agenti in parallelo, una scatola per ciascuno.
+
+| maglia | che cosa guarda | certificazione | costo |
+|---|---|---|---|
+| **C5** il suono non è silenzio | l'**RMS** dei campioni che arrivano al cliente, soglia dichiarata **328/32767** (−40 dBFS), tarata attraversando il confine nei due versi | **12 su 12** | `[M]` 38 s |
+| **C7** si chiude e non resta niente | impronta prima / sessione / chiusura / impronta dopo — processi, socket, unità, scheda | **13 su 13** | `[M]` 26 s |
+| **C9** il registro dice di chi parla | **due** inquilini vivi insieme, e ogni riga obbligata deve dire quale | **16 su 16** | `[M]` 50 s |
+| **C10** le copie gemelle | i tre file gemelli, byte per byte — ⭐ e l'elenco **letto da `src/Makefile`**, non ricopiato | **15 su 15** | `[M]` 0,04 s |
+
+⭐⭐ **E la scelta che le tiene insieme**: nessuna delle quattro giudica un **pixel**. ⇒ Sono le
+quattro che il difetto delle sessioni cieche **non blocca**, ed è per questo che sono state fatte
+adesso e non le altre.
+
+⚠ **Nessuna entra nella famiglia veloce**, e il taglio è dichiarato invece che subìto: `[M]` il tetto
+è a **153 s su 180**, e §5.1 dice che una maglia in più si **scambia**, non si somma. ⇒ C5, C7 e C9
+stanno in `tutto` e in `desktop-nuovo`, col loro guasto innestato accanto. ⛔ **Unica eccezione:
+C10**, che costa meno della risoluzione del cronometro.
+
+### 4.6-unetvicies ✅ ⭐⭐ **C10 sta in DUE famiglie, e il guasto innestato di C10 tiene in vita C13 sul portatile**
+
+Due cose che si sono viste solo cablando, e nessuna delle due era prevista:
+
+1. ⛔ **Il gemello vive metà in `src/` e metà in `banchi/rcp/`.** Un cambiamento alla copia del banco
+   fa scattare la famiglia `rete` — ed è **esattamente** il cambiamento che rompe il gemello. ⇒ Se
+   C10 stesse solo nella famiglia veloce, il caso che morde di più non la farebbe girare.
+2. ⭐⭐ **La metà del gancio che vive sul portatile non innestava nessun guasto** (§4.6-novemdecies:
+   le due metà stanno su due macchine). ⇒ C13, là, non avrebbe potuto **mai** diventare verde:
+   avrebbe detto per sempre *«nessun guasto è mai stato iniettato»*, che dall'esterno ha lo stesso
+   aspetto di una rete rotta. ⇒ C10 ha adesso un `--guasto-innestato` che copia i file **veri** in
+   una cartella temporanea, ne cambia **un byte** e pretende il rosso. Costa `[M]` **0,1 s**.
+
+`[M]` E il risultato si misura: sul portatile la famiglia `rete` fa **C10 verde · C12 verde · C13
+verde** in **1 secondo**, senza accendere niente.
+
+### 4.6-duoetvicies ⛔⛔⛔ **Il primo rosso che la rete tira fuori dal PRODOTTO — e sono due righe**
+
+`[M]` 26 agosto 2026. C9, su tutte le scatole provate: **4 righe obbligate su 5 490 non si possono
+attribuire a nessun inquilino**. Sono `src/tastiera.c:342` e `:486`, che scrivono nel **padre** senza
+`registro_dice_di()`. ⛔ Due righe identiche parola per parola, una per inquilino: **con due sessioni
+vive non si può dire quale sia di chi.**
+
+⭐ **E questo è il mestiere della rete, fatto per la prima volta su un difetto che nessuno cercava**:
+non è un guasto iniettato, non è un banco che sbaglia, è il prodotto. La cura è di due righe. ⛔ **Non
+applicata**: toccare `src/` obbliga a ricostruire e a rimettere il binario in quattro scatole, e
+l'ordine delle fasi è una decisione dell'utente (§4.6-sexdecies).
+
+⚠ **E un rilievo accanto, che NON è un rosso**: `[M]` **1 402 righe (25,5 %)** nominano l'inquilino
+solo nella prosa e non nella parentesi. Sono attribuibili, quindi C9 le conta e le stampa senza
+giudicarle. ⇒ Se la fase le volesse rosse, C9 diventerebbe rossa su un quarto del registro: è una
+decisione, non un difetto.
+
+### 4.6-teretvicies ⛔⛔⛔ **IL PALCO MUORE COL CLIENTE — e contraddice I4 in faccia**
+
+`[M]` 27 agosto 2026, provato per intero su un banco isolato con Mutter vero:
+
+| | |
+|---|---|
+| `--headless` da solo | ⛔ **zero `wl_output`**, ed è voluto: in headless Mutter non apre le schede |
+| il monitor virtuale | ⭐ nasce **solo quando un consumatore PipeWire si aggancia** al flusso — `[M]` 65–93 ms dopo l'aggancio, **mai prima** |
+| lo stacco del **consumatore** | ⭐ il monitor **sopravvive** (`[M]` 15 s, c'è ancora) |
+| la chiusura della **connessione D-Bus** di chi ha chiamato `RecordVirtual` | ⛔ **il monitor MUORE** |
+
+⛔⛔ E nel prodotto quella connessione è del **figlio**, e **il figlio muore col client**.
+
+> ⇒ ⭐⭐⭐ **Oggi il desktop ha uno schermo solo mentre qualcuno lo sta guardando.**
+> ⛔ Ed è la contraddizione diretta di **I4** — *«il palco appartiene alla sessione e sopravvive alla
+> disconnessione»* — che è una decisione dichiarata del progetto, non un dettaglio.
+
+⭐ **La cura è provata, non ipotizzata**: tenendo aperti connessione e flusso per la vita della
+sessione, con un consumatore agganciato **una volta sola**, `[M]` a client staccato un'applicazione
+apre la finestra, i pixel ci finiscono, e il client che arriva dopo la vede (**12 055 colori
+distinti**).
+
+⛔ **Ma non è una riga**: il flusso va tolto al figlio (`src/figlio.c:5334-5513`) e dato a qualcosa
+che viva quanto la sessione. ⇒ ❓ **È una decisione del regista**, e la maglia che la sorveglia è
+**C6**.
+
+⚠ E due strade sono **refutate**, non da rifare: `--virtual-monitor` all'avvio (⇒ due monitor, e dal
+filo non esce nessun fotogramma — il difetto del 14 agosto riprodotto) e la geometria (1920×1080 e
+1268×713 danno lo stesso esito).
+
+### 4.6-quaterque-vicies ✅ ⛔ **I ~97 secondi erano della SCATOLA, non del prodotto**
+
+⇒ `LEZIONI.md` §1.54. In una riga: la ricetta spostava il gruppo `polkitd` da 991 a 1991 per dare
+991 alla scheda grafica, ⛔ `groupmod -g` non si porta dietro i file, `polkitd` non poteva più
+leggere le sue regole e moriva, e `gnome-shell` incassava **quattro scadenze da 25 000 ms in fila**.
+
+⭐ Curato nella ricetta, **senza nessun permesso nuovo** oltre a `SYS_ADMIN`: chi sposta il numero fa
+seguire i file, e l'unità dei gruppi prende `Before=polkit.service`. `[M]` Da **~97 secondi** a
+**1,105 · 0,998 · 0,957 s**.
+
+### 4.6-quinquies-vicies ⛔⛔ **Il prodotto guida UN desktop, non quattro**
+
+`[M]` C1 fatta girare dieci volte per scatola su KDE, XFCE e LXQt: **0 sane · 0 cieche · 30 «non ho
+potuto guardare»**. Il registro lo dice: *«Mutter non espone RemoteDesktop»* ⇒ ⛔ `src/sessione.c:778`
+e tutto `src/mutter.c` sanno avviare **solo GNOME**, e nelle altre tre scatole `gnome-shell` non c'è.
+
+⭐ **Quel che le altre tre provano è reale ma più piccolo**: l'ambiente (passo 0), il suono (C5), i
+residui (C7), il registro (C9), l'allineamento (C11). ⛔ **Non** provano che il prodotto regga su quei
+desktop. ⇒ §3.7 della fase 11 va letto con questa correzione, e ❓ **tocca il senso della fase 12**.
+
+⚠ E una cosa che la fase 12 dovrà affrontare, misurata di passaggio: ⛔ **KWin non sa nascere cieco**
+— con `--output-count 0` un'uscita la fa lo stesso. ⇒ Il disegno *«zero monitor propri»* **non si
+trasporta uguale** a KDE.
+
+### 4.6-sexies-vicies ✅ ⭐⭐ **C15 — «la metà remota gira davvero»**, e il buco è misurato
+
+Il gancio ha due metà su due macchine (§4.6-novemdecies). ⛔ Finora, **se la macchina di prova fosse
+stata spenta per sempre, C12 e C13 sarebbero restate verdi**: il gancio girava sul portatile in un
+secondo e nessuno si accorgeva che le maglie vere non giravano più.
+
+⭐ `[M]` Il buco è **dimostrato**, non descritto: preso il registro vero e tolta l'unica riga eseguita
+sulle scatole, **C12 verde · C13 verde · C15 ROSSA** sullo stesso file. Certificazione **21 su 21**.
+
+⭐ E il segno non è il nome della macchina: è **una maglia che vuole una scatola e arriva a un
+GIUDIZIO (0/1) invece che a un 3**.
+
+⚠ **La famiglia `rete` dichiarava il falso** — *«nessuna accende una sessione»* — mentre C14 costa
+`[M]` ~800 s e prende tutte e quattro le scatole. ⇒ Divisa: **`rete`** (C10, C11, C12, C13, C15 —
+`[M]` ~11 s, e davvero non accende niente) e **`rete-intera`** (+ C14), chiamata da `tutto` e
+`desktop-nuovo`.
+
+### 4.6-septies-vicies ✅ ⛔ **`VA VELOCE` non si fa: §6 ha ragione, §3.4 è sbagliata**
+
+§3.4 dichiarava due famiglie; §6 dichiara che la rete **non è** una rete di prestazioni; e nel gancio
+`VA VELOCE` **non è mai esistita**. ⇒ La famiglia **non va creata**: le quattordici maglie sono tutte
+sì/no, e una famiglia di numeri duplicherebbe i ~40 banchi delle fasi 9 e 10 **fuori dalle condizioni
+in cui quei numeri valgono**. ⇒ §3.4 si riscrive, e il buco — ⛔ *«nessun banco confronta ieri con
+oggi»* — si **dichiara in §6**, dove stanno le cose che la rete non prende.
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
