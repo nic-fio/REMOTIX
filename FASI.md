@@ -913,7 +913,7 @@ Oppure dice **perché no**, con una frase comprensibile e non un numero (`RCP.md
 > grafica nasce alla fase 2, non c'è nessun compositore a cui chiedere, e `src/rcp.c` lo dichiara per
 > iscritto — `SESSIONE` porta `desktop=sconosciuto`. ⇒ **A cambiare è l'atteso, non il codice**:
 > era stato scritto prima che il prodotto esistesse. Prova e scena in
-> [`rapporti/GIUDIZIO-11-agosto.md`](fasi/rapporti/GIUDIZIO-11-agosto.md).
+> `rapporti/GIUDIZIO-11-agosto.md`.
 
 #### ⛔ Il confine della fase, e le quattro cose che produce senza sembrare
 
@@ -2993,7 +2993,7 @@ agosto — *«B11 ha dato verdetti diversi fra giri identici»* — con l'imputa
 > nuova, tela 1920×1080, desktop sconosciuto»*.
 
 ⭐ **La misura che chiude la fase ha una provenienza su disco**, e non è un ricordo:
-[`rapporti/GIUDIZIO-11-agosto.md`](fasi/rapporti/GIUDIZIO-11-agosto.md) — la scena, le impronte, il
+`rapporti/GIUDIZIO-11-agosto.md` — la scena, le impronte, il
 registro del server verbatim (`GET /` alle **12:45:44 UTC**, la stretta di mano alle
 **12:48:55-12:48:56 UTC**) e quel che la pagina ha mostrato.
 
@@ -3021,7 +3021,7 @@ scritti, o la prossima fase comincia credendo a misure che nessuno ha fatto cert
 
 Aperta il **12 agosto 2026** · ⭐⭐⭐ **CHIUSA il 13 agosto 2026, sul giudizio dell'utente** — la
 catena consegna, e l'utente ha guardato il proprio desktop dentro una scheda del browser.
-⭐ La provenienza sta in [`rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md): la scena,
+⭐ La provenienza sta in `rapporti/GIUDIZIO-13-agosto.md`: la scena,
 il registro del server verbatim, le impronte, e ⭐ **la misura fatta sui pixel dello scatto**.
 
 > ⚠ *Questa riga diceva «il banco esiste, il prodotto no», e con lei altri tre punti del documento
@@ -3059,16 +3059,16 @@ ciascuna affidata a un agente, che ha lavorato in parallelo agli altri. Il tagli
 della catena**, non delle fette arbitrarie: ogni sotto-fase possiede file suoi, una porta sua, e
 consegna alle altre attraverso una sezione dichiarata — **le cuciture**.
 
-Il mandato comune sta in [`rapporti/MANDATO-12-agosto-fase2.md`](fasi/rapporti/MANDATO-12-agosto-fase2.md).
+Il mandato comune sta in `rapporti/MANDATO-12-agosto-fase2.md`.
 
 | # | Sotto-fase | Rapporto | Banco | Porta |
 |---|---|---|---|---|
-| **F2.1** | La sessione GNOME headless | [`rapporti/F2-1-sessione.md`](fasi/rapporti/F2-1-sessione.md) | `banchi/02-sessione-*` | 7511 |
-| **F2.2** | La cattura | [`rapporti/F2-2-cattura.md`](fasi/rapporti/F2-2-cattura.md) | `banchi/02-cattura-*` | 7512 |
-| **F2.3** | La codifica HEVC in software | [`rapporti/F2-3-codifica.md`](fasi/rapporti/F2-3-codifica.md) | `banchi/02-codifica-*` | 7513 |
-| **F2.4** | Il filo | [`rapporti/F2-4-filo.md`](fasi/rapporti/F2-4-filo.md) | `banchi/02-filo-*` | 7514 |
-| **F2.5** | La pagina | [`rapporti/F2-5-pagina.md`](fasi/rapporti/F2-5-pagina.md) | `banchi/02-pagina-*` | 7515 |
-| **F2.6** | Il giudizio | [`rapporti/F2-6-giudizio.md`](fasi/rapporti/F2-6-giudizio.md) | `banchi/02-giudizio-*` | 7516 |
+| **F2.1** | La sessione GNOME headless | `rapporti/F2-1-sessione.md` | `banchi/02-sessione-*` | 7511 |
+| **F2.2** | La cattura | `rapporti/F2-2-cattura.md` | `banchi/02-cattura-*` | 7512 |
+| **F2.3** | La codifica HEVC in software | `rapporti/F2-3-codifica.md` | `banchi/02-codifica-*` | 7513 |
+| **F2.4** | Il filo | `rapporti/F2-4-filo.md` | `banchi/02-filo-*` | 7514 |
+| **F2.5** | La pagina | `rapporti/F2-5-pagina.md` | `banchi/02-pagina-*` | 7515 |
+| **F2.6** | Il giudizio | `rapporti/F2-6-giudizio.md` | `banchi/02-giudizio-*` | 7516 |
 
 ⛔ **E il giro del 12 agosto MATTINA non ha scritto una riga di prodotto**, per la regola di
 `PIANO.md` §0.4: il revisore interviene **appena il banco esiste**, prima che il prodotto esista,
@@ -3082,13 +3082,13 @@ documento **non sapeva che esistessero** (revisione **R13**, rilievo 1; è il da
 
 | # | Il prodotto dell'anello | Rapporto |
 |---|---|---|
-| **P2.1** | la sessione GNOME | [`rapporti/P2-1-sessione.md`](fasi/rapporti/P2-1-sessione.md) |
-| **P2.2** | la cattura | [`rapporti/P2-2-cattura.md`](fasi/rapporti/P2-2-cattura.md) |
-| **P2.3** | la codifica, HEVC **e** AV1 in software | [`rapporti/P2-3-codifica.md`](fasi/rapporti/P2-3-codifica.md) |
-| **P2.4** | il canale video, dentro `rcp.c` | [`rapporti/P2-4-filo.md`](fasi/rapporti/P2-4-filo.md) |
-| **P2.5** | la pagina che dipinge il fotogramma | [`rapporti/P2-5-pagina.md`](fasi/rapporti/P2-5-pagina.md) |
-| **P2.6** | il montaggio: i cinque anelli messi insieme | [`rapporti/P2-6-montaggio.md`](fasi/rapporti/P2-6-montaggio.md) |
-| **P2.7** | il figlio per utente (`DECISIONI.md` §1.10-bis) | [`rapporti/P2-7-figlio.md`](fasi/rapporti/P2-7-figlio.md) |
+| **P2.1** | la sessione GNOME | `rapporti/P2-1-sessione.md` |
+| **P2.2** | la cattura | `rapporti/P2-2-cattura.md` |
+| **P2.3** | la codifica, HEVC **e** AV1 in software | `rapporti/P2-3-codifica.md` |
+| **P2.4** | il canale video, dentro `rcp.c` | `rapporti/P2-4-filo.md` |
+| **P2.5** | la pagina che dipinge il fotogramma | `rapporti/P2-5-pagina.md` |
+| **P2.6** | il montaggio: i cinque anelli messi insieme | `rapporti/P2-6-montaggio.md` |
+| **P2.7** | il figlio per utente (`DECISIONI.md` §1.10-bis) | `rapporti/P2-7-figlio.md` |
 
 ---
 
@@ -3294,7 +3294,7 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 | ⛔ **il buffer della scheda sbagliata** | il banco della cattura **non lo vedrebbe**, e il suo verde **non lo assolve**. La macchina ha due GPU |
 | ✅ **che un fotogramma arrivi davvero sul filo** | ⭐ **chiusa il 13 agosto**: l'utente l'ha guardato, e il registro del server lo scrive — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
 | ⛔ **M5 — lo scarto di crominanza fra due decodificatori** | 0,9791 contro un limite di 0,98: è **l'unico rosso rimasto su catena sana** — M0 e M1 erano rossi ai giri delle 09:19-09:20, prima della cura del riscalamento. ⛔ **Non si riproduce sulla mira**, e **la soglia non è stata allargata**: il rosso non è stato curato, **è sparito quando è cambiata la scena** |
-| ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in [`rapporti/F2-4-filo.md`](fasi/rapporti/F2-4-filo.md) |
+| ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in `rapporti/F2-4-filo.md` |
 | ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **non lo copre nessun banco**, ed è il buco più grande della fase. `[M]` 13 agosto: il caso `senza-palco` di `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti al nucleo) **non** vede il desktop di `nicfio`, e il cliente RCP indipendente conta **zero** fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella macchina `prova` non ha mai fatto login — niente `/run/user/1001`, niente bus, niente palco — quindi **un prodotto che non consegnasse niente a nessuno passerebbe allo stesso modo**. La metà positiva regge oggi **solo per uid 1000**. ⚠ Guardati e scartati: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` si fermano tutti **all'autenticazione**, non al vedere |
 | ⚠ **`02-figlio-accendi.sh:165` conta i figli di tutti** | `pgrep -f -- "--figlio-interno" \| wc -l` non guarda **di chi** sono: allo spegnimento ha accusato due orfani che erano figli vivi di padri vivi (la 7693 di un altro banco e ⛔ **la 7561 dell'utente**). È la stessa forma che il file **vieta trenta righe più su** per l'azione `stato`. ⚠ Non cura, non ferma nessuno (`spegni` esce 0 lo stesso) — si accende solo quando due banchi girano in parallelo, e il 12 agosto infatti taceva. ⇒ ✅ **Curato in fase 3** (13 agosto 2026) — ⛔ **`[R]`, non eseguito**: la cura è letta nel codice e **non è stata girata**, quindi non porta la marca `[M]` |
 | ⛔ **la risoluzione del desktop, `1920×1080`** | ⛔ **ereditata dalla scena di un banco, senza decisione né misura** — `grep 1920 DECISIONI.md` non trova nessuna decisione che la fissi, e in v1 era **2560×1080**. ⚠ È la tela che l'utente vedrà: `LEZIONI.md` §2.3-quater la vuole scritta come **provvisoria**, ed è quel che questa riga fa. ⇒ ✅ **CHIUSA il 13 agosto 2026, e decisa dall'utente**: **1920×1080 resta**, con il prezzo misurato accanto (tela dipinta all'**86 %**, **912 px di nero**) e la ragione di metodo scritta — `DECISIONI.md` §5.0-quinquies. ⛔ E le bande nere **non sono la risoluzione**: sono la forma della finestra |
@@ -3525,7 +3525,7 @@ sempre zero, e con lui due costanti scritte a mano. ⇒ **erano 11 vivi più un 
 ⭐ Curato, **e la cura di una parola era sbagliata**: `azzerati > 0` è *il prodotto che si comporta
 bene*, quindi leggerlo lì avrebbe prodotto un **falso rosso**. La grandezza vera è l'invariante
 **`consegnati > completi`**. La storia intera, col controllo del falso rosso e con quel che la
-certificazione **non** dice, sta in [`rapporti/F2-6-giudizio.md`](fasi/rapporti/F2-6-giudizio.md) — qui non
+certificazione **non** dice, sta in `rapporti/F2-6-giudizio.md` — qui non
 si ricopia.
 
 #### ⛔ Il punto cieco che non è del metro: **a monte della cattura**
@@ -3610,7 +3610,7 @@ su un monitor largo **2560**. Non è un difetto del riscalamento — è la `[?]`
 ⚠ *Si scrive quel che è successo e non una frase che non è stata detta: il verdetto dell'11 agosto
 era una **citazione**, questo è una **decisione presa davanti a un elenco**. Le due cose hanno lo
 stesso valore e non la stessa forma.* ⇒
-[`rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md).
+`rapporti/GIUDIZIO-13-agosto.md`.
 
 
 ---
@@ -3758,7 +3758,7 @@ deve poterla rifiutare con un caso.
 | | |
 |---|---|
 | ⭐ **M6 si può chiudere** | «il fotogramma è del giro prima» è l'unico controllo che vede quel guasto, e **non è mai stato misurato sulla catena vera** perché mancava la cattura del giro precedente. In fase 3 i giri precedenti **ci sono** |
-| ⭐ **il `giro` di M8 si può riaprire** | oggi è dichiarato **NON APPLICABILE** perché il prodotto non conosce il nome del giro del banco. Con un `numero` che cresce a ogni fotogramma la domanda torna ponibile ⇒ [`rapporti/F2-6-giudizio.md`](fasi/rapporti/F2-6-giudizio.md) |
+| ⭐ **il `giro` di M8 si può riaprire** | oggi è dichiarato **NON APPLICABILE** perché il prodotto non conosce il nome del giro del banco. Con un `numero` che cresce a ogni fotogramma la domanda torna ponibile ⇒ `rapporti/F2-6-giudizio.md` |
 | ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto dove un orologio decide**. La fase 3 è tutta tempo — è qui che si scopre se regge |
 | ⛔ **il punto cieco a monte della cattura** | il metro non guarda prima della cattura, e con molti fotogrammi il punto cieco **si allarga** |
 | ⛔ **«due utenti, ciascuno vede la propria sessione»** | non lo copre nessun banco (metà positiva scoperta). Col movimento diventa **più caro** sbagliarlo, non meno |
@@ -4445,7 +4445,7 @@ guardava nessun banco.* Qui il proprietario ce l'hanno.
 
 `src/tastiera.c` su `xkbcommon` 1.7.0: dato un carattere Unicode e la disposizione, quali codici
 **evdev** premere e in che ordine. Rapporto in
-[`rapporti/F4-A5-tastiera.md`](fasi/rapporti/F4-A5-tastiera.md).
+`rapporti/F4-A5-tastiera.md`.
 
 ---
 
@@ -4765,7 +4765,7 @@ ne trovava cinque, ed erano **tutti commenti**. ⚠ *Pagata dentro il banco che 
 
 #### ⭐⭐⭐ O2 — IL NUMERO C'È: **~140 ms fra la mano e il pixel**, e sono **due giri che concordano**
 
-*14 agosto 2026, pomeriggio. Rapporto in [`rapporti/F4-O2-anello-input.md`](fasi/rapporti/F4-O2-anello-input.md).*
+*14 agosto 2026, pomeriggio. Rapporto in `rapporti/F4-O2-anello-input.md`.*
 
 `[M]` **139,40 ms** (n = **326 su 326**) e **141,60 ms** (n = **322 su 322**), due giri indipendenti
 che concordano entro **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **Il tetto è 50 ms: si sfora
@@ -5263,7 +5263,7 @@ secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = qua
 ## Fase 5 — La sessione
 
 ⭐ **Aperta il 15 agosto 2026**, col suo documento e prima di una riga di codice (questo documento).
-Il mandato di partenza è [`rapporti/F5-IN-0-mandato.md`](fasi/rapporti/F5-IN-0-mandato.md); il piano è
+Il mandato di partenza è `rapporti/F5-IN-0-mandato.md`; il piano è
 `PIANO.md` §«Fase 5 — La sessione».
 
 > **La scena che l'utente giudicherà**: *«chiude il client, va a pranzo, riapre — e ritrova tutto

@@ -65,7 +65,7 @@ in §12, dichiarato invece che dimenticato.
 > ### ⭐ Sette righe entrate il **12 agosto 2026**, dalla sotto-fase F2.4 della fase 2
 >
 > *Trovate scrivendo il banco del canale video **prima** del prodotto, e proposte in
-> [`fasi/rapporti/F2-4-filo.md`](fasi/rapporti/F2-4-filo.md) col testo pronto; applicate qui dal
+> `fasi/rapporti/F2-4-filo.md` col testo pronto; applicate qui dal
 > coordinatore. ⛔ **Nessuna aggiunge un tipo di messaggio, un motivo di congedo o un campo a un
 > messaggio esistente**: la clausola di §9 è consumata dal 10 agosto, e ogni riga sta dentro quel
 > divieto.*

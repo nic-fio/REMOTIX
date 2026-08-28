@@ -456,7 +456,9 @@ qualcun altro.
 
 ---
 
-> # ⭐⭐⭐ DA QUI SI RIPRENDE — **la caccia è chiusa, e adesso si attua** · 20 agosto 2026
+> # 📅 COM'ERA IL **20 agosto 2026** — *«la caccia è chiusa, e adesso si attua»*
+>
+> ⚠ **Non si riparte da qui**: il punto d'ingresso del progetto è il riquadro **⏸** in testa a `README.md`.
 >
 > *La caccia agli artefatti si è chiusa la sera del **17 agosto** con il giudizio dell'utente —
 > **«NIENTE ARTEFATTI!»** — su un banco. ⛔ **Nel prodotto la cura non c'è ancora**, e finché non
@@ -724,8 +726,8 @@ qualcun altro.
 > `prova` avviata **senza** `--virtual-monitor` (`GetCurrentState` → **0 monitor**, la sessione
 > *«viva, completa e nera»* di `STUDI.md` §gnome §3.1); collegato il client, `RecordVirtual` monta
 > **l'unico** monitor e ⭐ **la shell ci va sopra: barra, sfondo, dock**. La prova sta in
-> [`fasi/rapporti/F5-desktop-vero.md`](fasi/rapporti/F5-desktop-vero.md) e nell'immagine
-> `F3-verbali/desktop-vero-14ago.png`.
+> `fasi/rapporti/F5-desktop-vero.md` e nell'immagine
+> `F3-verbali/desktop-vero-14ago.png` ⚠ *(tolta dal disco come i rapporti; si riprende con `git show dea834d --stat` e `git checkout dea834d -- <percorso>`)*.
 >
 > ⚠ **Due cose da MISURARE prima di crederle, e non sono dettagli:**
 > 1. ⛔ **chi decide la misura del monitor** adesso che non la dà più la sessione: la dà

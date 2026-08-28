@@ -52,7 +52,9 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
-> # ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **25 agosto 2026**
+> # 📅 COM'ERA IL **25 agosto 2026** — *ripresa di allora, superata*
+>
+> ⚠ ⛔ **Non si riparte da qui.** Il punto d'ingresso e' il riquadro **⏸ IL PROGETTO E' IN PAUSA**, in testa a questo file. Questa intestazione resta perche' racconta da dove si ripartiva **quel giorno**.
 >
 > ## ➡️ LA PROSSIMA È LA **FASE 11 — LA RETE DI SICUREZZA**, e l'ha decisa l'utente
 >
@@ -275,7 +277,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > dichiara `vista=2545x927` alle 08:45:44 UTC; lo scatto, otto secondi dopo, ha la zona dipinta alta
 > **927 px** e larga **1648** — rapporto **1,7778** contro un 16:9 di **1,7778**. ⇒ La pagina riscala
 > alla vista **senza storcere di un pixel**: `SPECIFICHE.md` §6.1 misurata sul vetro.
-> ⭐ La provenienza sta in [`fasi/rapporti/GIUDIZIO-13-agosto.md`](fasi/rapporti/GIUDIZIO-13-agosto.md).
+> ⭐ La provenienza sta in `fasi/rapporti/GIUDIZIO-13-agosto.md`.
 >
 > ⛔ **E si chiude con SETTE cose dichiarate aperte**, messe davanti all'utente **prima** che
 > decidesse — perché un giudizio dato senza sapere che cosa manca è un'approvazione al buio. Stanno
@@ -293,7 +295,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ✅ **Chiusa la sera dell'11 agosto 2026, sul giudizio dell'utente**: *«Va bene, la stretta di mano
 > funziona: fase 1 approvata»* — dopo aver aperto `https://192.168.0.2:7448` **dal portatile**, in
 > **Chrome**, e aver letto *«Ammesso, sessione nuova, tela 1920×1080, desktop sconosciuto»*.
-> ⭐ La misura ha una **provenienza su disco**: [`fasi/rapporti/GIUDIZIO-11-agosto.md`](fasi/rapporti/GIUDIZIO-11-agosto.md)
+> ⭐ La misura ha una **provenienza su disco**: `fasi/rapporti/GIUDIZIO-11-agosto.md`
 > — la scena, le impronte, il registro del server verbatim. ⛔ E la fase si chiude **con del lavoro
 > dichiarato aperto**, che è la forma onesta: `PIANO.md` §0.2 la fa chiudere su *«una misura giudicata
 > dall'utente, non un documento completo»*.
@@ -627,7 +629,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > e i numeri che citavano stanno in `FASI.md`. ⛔ Se ne trovi uno che non ci sta, è un difetto —
 > e la riga qui sopra dice dove rileggerlo.
 
-> ### ⭐⭐⭐⭐⭐ DA QUI SI RIPRENDE — **15 agosto 2026, mattina.** ⇒ **LA CODA DELLA FASE 4 È CHIUSA: LA TELA È LA FINESTRA**
+> ### 📅 COM'ERA IL **15 agosto 2026, mattina** — *superata; si riparte dal riquadro in testa.* ⇒ **LA CODA DELLA FASE 4 È CHIUSA: LA TELA È LA FINESTRA**
 >
 > > ## *«Sia su Linux sia su Android (DeX) è tutto perfetto.»*
 > > — l'utente, 15 agosto 2026, dopo una notte di lavoro e tre difetti trovati da lui
@@ -656,7 +658,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > diciassette volte al secondo**, e ogni giro ricreava i dispositivi di `libei` (`[M]` 640 ricambi).
 >
 > 📖 **Il documento**: [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda), §«la coda della fase 4» ·
-> il rapporto tecnico [`fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`](fasi/rapporti/F4-IN-13-la-tela-che-cambia.md).
+> il rapporto tecnico `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
 > ⛔ **E QUESTA È LA FASE 4, NON LA 6** — corretto dall'utente il 15 agosto 2026, e la sua ragione
 > regge: il numero della fase lo dà il **perché** si è fatto il lavoro, non l'elenco delle cose
@@ -668,7 +670,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ### ⭐⭐ E LA PROSSIMA È LA **5 — LA SESSIONE**, in una sessione di lavoro NUOVA
 >
 > *Deciso dall'utente il 15 agosto 2026.* Il mandato è scritto, a macchina in ordine e server
-> acceso: 📖 **[`fasi/rapporti/F5-IN-0-mandato.md`](fasi/rapporti/F5-IN-0-mandato.md)** — dentro ci
+> acceso: 📖 **`fasi/rapporti/F5-IN-0-mandato.md`** — dentro ci
 > sono lo stato della macchina, **le due strade per costruire**, quel che della fase 5 è già vivo (e
 > va **provato**, non riscritto), e i quattro pezzi che mancano davvero.
 >
@@ -685,7 +687,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⛔⛔ **Ma il giudizio ha prodotto DUE difetti che nessun banco aveva trovato, e sono il lavoro che
 > viene adesso.** Il dettaglio sta in [`FASI.md` §03-movimento](FASI.md#03-movimento) §0-ter e
 > §0-quater; il conto della notte in
-> [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).
+> `fasi/rapporti/F3-sessione-13-sera.md`.
 >
 > | | il lavoro, in ordine | perché prima |
 > |---|---|---|
@@ -705,8 +707,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > *La fase 3 ha il suo numero **con la codifica in hardware**, e la codifica in hardware è **nel
 > prodotto**, non su una copia. ⏳ **Manca solo il giudizio dell'utente**, preparato in
-> [`fasi/rapporti/F3-giudizio-elenco.md`](fasi/rapporti/F3-giudizio-elenco.md). Il conto per intero
-> sta in [`fasi/rapporti/F3-sessione-13-sera.md`](fasi/rapporti/F3-sessione-13-sera.md).*
+> `fasi/rapporti/F3-giudizio-elenco.md`. Il conto per intero
+> sta in `fasi/rapporti/F3-sessione-13-sera.md`.*
 >
 > | | totale | codifica | **disegno** | fps | P1 |
 > |---|---|---|---|---|---|
@@ -768,7 +770,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ---
 >
-> ### ⭐ DA QUI SI RIPRENDE — **12 agosto 2026**, notte
+> ### 📅 COM'ERA IL **12 agosto 2026**, notte — *superata; si riparte dal riquadro in testa al README.*
 >
 > **Lo stato**: albero pulito (`636f088`), **14 banchi su 14 certificati e valgono oggi**, terreno
 > dell'innesto `14 su 14`. ⚠ Su NIC-OS restano accesi **due** server, e sono voluti: il **prodotto

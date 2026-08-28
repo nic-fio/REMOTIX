@@ -14,7 +14,9 @@ fase 7»*); ⛔ quel che resta della 6 **resta aperto e non si chiude da sé**.
 
 ---
 
-> # ⭐⭐⭐ DA QUI SI RIPRENDE — **17 agosto 2026, sera**
+> # 📅 COM'ERA IL **17 agosto 2026, sera** — *ripresa di allora*
+>
+> ⚠ **Non si riparte da qui**: il punto d'ingresso è il riquadro **⏸** in testa a `README.md`.
 >
 > *Deciso dall'utente: «per gli appunti apriamo una nuova sessione».*
 >
