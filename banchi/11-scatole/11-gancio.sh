@@ -175,6 +175,9 @@ COSTO_C12=5
 COSTO_C13=5
 COSTO_C14=800
 COSTO_C15=5
+# ⭐ C16 `[M]` **0,79 s** — mediana su cinque giri sul portatile, 28 ago 2026.
+#    Legge 17 documenti (48 000 righe) e l'elenco dei file del deposito.
+COSTO_C16=1
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ LE CINQUE MAGLIE NUOVE — 27 agosto 2026.  ⛔ NESSUNA sta nella famiglia
@@ -363,10 +366,23 @@ decidi_famiglia() {
 	#                        la sonda, cambia l'impronta che C14 confronta
 	#   `11-c14-*`           la maglia stessa
 	# ═══════════════════════════════════════════════════════════════════
-	local tocca_c14=0
+	# ═══════════════════════════════════════════════════════════════════
+	# ⭐⭐ E LE CARTE — 28 agosto 2026, e prima di oggi non decidevano NIENTE.
+	#
+	# ⛔ Un commit che toccava solo `*.md` cadeva nel ramo `niente`: la rete non
+	#    guardava le carte, mai.  ⇒ E' la ragione per cui una coordinata di riga
+	#    ha potuto marcire per tre giorni senza che nulla se ne accorgesse
+	#    (`MASTERPLAN.md`, `src/figlio.c:3290` → 3482).
+	# ⭐ Costa 0,79 s e non accende niente: rispetta il patto di §4.2 meglio di
+	#    qualunque altra maglia.
+	# ═══════════════════════════════════════════════════════════════════
+	local tocca_c14=0 tocca_carte=0
 	for f in "${_elenco[@]}"; do
 		case "$f" in
 		src/*|web/*)          tocca_prodotto=1 ;;
+		esac
+		case "$f" in
+		*.md)                 tocca_carte=1 ;;
 		esac
 		case "$f" in
 		*/11-accendi.sh|*/Contenitore.*|*/11-c8-*|*/11-c14-*) tocca_c14=1 ;;
@@ -384,6 +400,8 @@ decidi_famiglia() {
 		printf 'rete-intera'
 	elif [ $tocca_rete -eq 1 ]; then
 		printf 'rete'
+	elif [ $tocca_carte -eq 1 ]; then
+		printf 'carte'
 	else
 		printf 'niente'
 	fi
@@ -565,6 +583,20 @@ GIRA_P0()  { bash "$QUI/11-accendi.sh" passo0 "$1"; }
 # ---------------------------------------------------------------------------
 # LE FAMIGLIE
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ⭐ LE CARTE — la famiglia piu' piccola che c'e': una maglia sola, 0,79 s.
+#
+# ⛔ Serve perche' un commit di soli documenti prima non faceva girare niente,
+#    e le carte sono l'unica cosa del progetto che nessuno sorvegliava.
+# ---------------------------------------------------------------------------
+famiglia_carte() {
+	if trova_maglia c16; then
+		esegui_maglia C16 false GIRA_MAGLIA "$QUALE_MAGLIA"
+	else
+		salta_maglia C16 "il file non c e"
+	fi
+}
+
 famiglia_rete() {
 	# ═══════════════════════════════════════════════════════════════════
 	# ⛔⛔ QUI C'ERA DENTRO C14, E LA RIGA ACCANTO PROMETTEVA «costo quasi zero,
@@ -614,7 +646,7 @@ famiglia_rete() {
 	# ⭐ C15 guarda se la META' REMOTA gira davvero: legge il registro, costa
 	#   quanto C12 e C13, ⛔ e sulla macchina di prova esce **2** apposta (li' il
 	#   registro non e' la memoria unita, e sarebbe verde qualunque cosa succeda).
-	for n in c10 c11 c12 c13 c15; do
+	for n in c10 c11 c12 c13 c15 c16; do
 		local N=${n^^}
 		if trova_maglia "$n"; then
 			esegui_maglia "$N" false GIRA_MAGLIA "$QUALE_MAGLIA"
@@ -1274,6 +1306,7 @@ decidi|gira)
 	#    «C11-C14 + C10, che non accende niente»: ⛔ era la stessa promessa
 	#    falsa del commento, ma **stampata**, cioe' vista da qualcuno nel
 	#    momento esatto in cui contava.
+	carte)         log "le CARTE — solo C16  ⭐ [M] 0,79 s, e non accende niente"; famiglia_carte ;;
 	rete)          log "la RETE — C10, C11, C12, C13, C15  ⭐ [M] ~11 s, e nessuna accende una sessione"; famiglia_rete ;;
 	rete-intera)   log "la RETE **PIU' C14** — ⛔ [M] ~800 s, e si prende le QUATTRO scatole"; famiglia_rete_intera ;;
 	tutto)         log "TUTTO — prima di chiudere una fase"; famiglia_tutto ;;

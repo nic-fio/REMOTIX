@@ -1049,7 +1049,7 @@ contenga.
 > provenienza, cioè chi le esegue sa da quale lettura sono nate e quale domanda chiudono.*
 
 ⛔ **E dalla notte del 10 agosto gli esiti hanno un posto solo dove vivono**:
-[`web/rapporti/S-esiti-sonda.md`](web/rapporti/S-esiti-sonda.md) — la scena, l'ora in UTC, i
+`web/rapporti/S-esiti-sonda.md` — la scena, l'ora in UTC, i
 registri, e **la ricontata dell'11 agosto che dice quali numeri hanno una provenienza su disco e
 quali no**. ⚠ *Fino all'11 agosto quel rapporto non era nominato da **nessuno** dei dieci documenti
 (rilievo **R12C.15**): l'unico posto in cui i numeri di quella notte vivevano non era raggiungibile
@@ -2303,7 +2303,7 @@ l'obbligo di B13.2**.
 #### La sonda
 
 ⛔ **Gli esiti per esteso, con i registri e la ricontata dei numeri, stanno in
-[`web/rapporti/S-esiti-sonda.md`](web/rapporti/S-esiti-sonda.md)** — qui c'è il numero con la
+`web/rapporti/S-esiti-sonda.md`** — qui c'è il numero con la
 data, come vuole B0.6. ⚠ *Fino all'11 agosto 2026 queste sei celle erano **vuote** mentre tre delle
 misure erano state prese la notte del 10: chi leggeva questo documento credeva che la misura non ci
 fosse (rilievi **R12.7** e **R12C.7**, e la sonda lo aveva scritto di suo — voce S.6 del suo §9).*

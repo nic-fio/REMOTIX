@@ -1317,7 +1317,7 @@ avevamo scritto una specifica che si contraddiceva, e a trovarla è stato lui in
 d'uso.
 
 ⛔ **E accanto ai quattro, un quinto file che non è uno studio**:
-[`web/rapporti/S-esiti-sonda.md`](web/rapporti/S-esiti-sonda.md) — **gli esiti misurati** della sonda
+`web/rapporti/S-esiti-sonda.md` — **gli esiti misurati** della sonda
 del browser (S7 · S1b · S5 · e le tre che aspettano un dispositivo), con la scena accanto a ogni
 numero e la ricontata che dice quali numeri hanno una provenienza su disco. ⚠ *I «quattro rapporti»
 qui sopra restano quattro: sono i rapporti degli **studi**, ed è un denominatore dichiarato.*
