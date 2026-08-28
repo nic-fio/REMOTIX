@@ -550,6 +550,32 @@ il collaudo di §11 verifica **dal lato che riceve** che almeno una delle due si
 ⚠ Il codice **0** significa «chiusura senza motivo» e **NON DEVE** essere usato: ogni chiusura ha
 un motivo di §8.2.
 
+> ### ✅⭐ LA SECONDA STRADA È MISURATA — *25 agosto 2026, e il rilievo che la dava rotta è RITIRATO*
+>
+> *Fin qui il punto 3 era una promessa scritta: «il motivo viaggia comunque». ⛔ Il 24 agosto un
+> banco l'ha dichiarata **rotta** — «10 chiusure armate, 0 capsule messe in coda», e la connessione
+> terminata con lo **0** che questa sezione vieta. ⭐ Non era vero, e la lezione è del metodo.*
+>
+> `[M]` `fasi/10-…md` §6.8, tabella piena, **Firefox 140 ESR vero** come respinto, dieci giri:
+>
+> | | |
+> |---|---|
+> | la capsula di chiusura **arriva al browser** | ⭐ **10 su 10** |
+> | il codice che porta | **14 = `0x0E`**, tutte e dieci — ⭐ **mai `0`** |
+> | dopo quanto dal `CONGEDO` | mediano **0,593 s** |
+>
+> ⛔ **Perché la misura di prima diceva un'altra cosa: era letta DOVE LA CAPSULA PARTE invece che
+> DOVE ARRIVA.** Il registro del server dice *«messa in coda»*; il lato che riceve dice *«arrivata»*,
+> e solo il secondo è il collaudo che §8.1 impone. ⚠ E i *«0 spedite»* erano veri **per il cliente di
+> prova**: il server rimanda la capsula di 500 ms (è la cura di **B11**, perché un browser non butti
+> via il `CONGEDO` spedito subito prima della chiusura), e un cliente che si stacca ~2 ms dopo aver
+> letto il `CONGEDO` se ne va **498 ms prima** che la capsula parta. ⇒ La seconda strada **non è
+> rotta: è invisibile a chi se ne va subito.**
+>
+> ⭐ **E lo strumento è stato tarato prima di crederci**: server ucciso con `SIGKILL` — nessuna
+> capsula possibile — e il metro ha detto **«errore»**, non «capsula». Senza quella taratura
+> *«arrivata 10 su 10»* sarebbe una promessa di piattaforma, non una misura.
+
 ---
 
 ## 4. La stretta di mano
@@ -2243,7 +2269,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minuti senza input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *Diceva «6 ore senza attacchi»: cambiato il 16 agosto 2026 — cambia il tetto **e** il criterio, perché chi guarda senza toccare non rinnova niente. Il codice e il nome restano* |
 | `0x04` | `SESSIONE_LOCALE_PREVALSA` | l'utente ha aperto una sessione grafica locale |
 | `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
-| `0x06` | `BUDGET_PIENO` | la macchina non ha più capacità di codifica |
+| `0x06` | `BUDGET_PIENO` | ⭐ **la macchina non ha più capacità per un'altra sessione** — un limite **fisico**, misurato. ⛔ Si manda **prima di far nascere il desktop** e **DEVE** portare il dettaglio nel corpo. ⚠ *Diceva «capacità di codifica», e il 25 agosto 2026 una misura ha spostato il collo: vedi il riquadro* |
 | `0x07` | `CREDENZIALI_ERRATE` | |
 | `0x08` | `TROPPI_TENTATIVI` | ⭐ **l'indirizzo è bannato**: tre autenticazioni fallite, dodici ore (§4.4-bis). ⚠ *Diceva «limitazione della frequenza», ed era la forma precedente: dal 10 agosto 2026 non è più una frequenza, è un ban* |
 | `0x09` | `NIENTE_IN_COMUNE` | nessun codec condiviso |
@@ -2251,7 +2277,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x0B` | `ERRORE_PROTOCOLLO` | §3 |
 | `0x0C` | `SERVER_IN_CHIUSURA` | |
 | `0x0D` | `TEMPO_SCADUTO` | ⭐ *nuovo, 9 ago*: un tetto di §4.6 è scaduto |
-| `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *nuovo, 9 ago*: l'attacco è ben formato ma non si può servire — un compositore che non parte, una disposizione che il sistema non conosce. **DEVE** portare il dettaglio nel corpo |
+| `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *nuovo, 9 ago*: l'attacco è ben formato ma non si può servire — un compositore che non parte, una disposizione che il sistema non conosce. **DEVE** portare il dettaglio nel corpo. ⚠ **È il motivo LARGO**, e al 25 agosto 2026 copre **cinque** casi (disposizione sconosciuta · posti pieni · tela non concedibile · memoria esaurita · palchi tutti impegnati) ⇒ ⛔ **la frase che l'utente legge resta generica**, e la precisione la porta il dettaglio nel registro |
 | `0x0F` | `GIA_ATTIVA_REMOTA` | ⭐ *nuovo, 9 ago sera*: **c'è già un client attaccato a questa sessione**, e questa connessione viene **rifiutata** |
 | `0x10` | `SESSIONE_TERMINATA` | ⭐ *nuovo, 15 ago*: **l'utente è uscito dal desktop** («Esci/logout» dal menu di sistema). La sessione grafica è finita e i suoi programmi sono chiusi ⇒ ⛔ **non c'è niente a cui riattaccarsi**, e la pagina torna al **modulo di accesso** (`DECISIONI.md` §4.1-quater) |
 
@@ -2269,6 +2295,39 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 >
 > ⚠ **E chi riceve un `0x10` non deve riattaccare**: un client che ritentasse aprirebbe una sessione
 > **nuova**, non ritroverebbe la vecchia — che è esattamente ciò che l'utente ha chiesto di chiudere.
+
+> ### ⛔⭐ `0x06` contro `0x0E` — quando si manda l'uno e quando l'altro, *25 agosto 2026*
+>
+> *`0x06` è stato **dichiarato il 9 agosto 2026 e mai mandato da nessuno**: `[M]` `fasi/10-…md` §3.4,
+> `grep` a **zero chiamanti**. Sta per essere emesso per la prima volta, e un motivo che nasce
+> adesso deve nascere con scritto **quando** — o si aggiunge a `0x0E` senza un confine, e due motivi
+> senza confine sono un motivo solo con due nomi.*
+>
+> ⛔ **Il discrimine è che limite è**, e si legge in una riga:
+>
+> | | `0x0E SESSIONE_NON_SERVIBILE` | `0x06 BUDGET_PIENO` |
+> |---|---|---|
+> | che limite | **amministrativo**: un tetto scritto, una tabella piena, una richiesta che questa macchina non sa servire | **fisico**: la macchina **ha già ceduto una volta** su questo carico, e servirne un'altra peggiorerebbe chi c'è |
+> | chi lo decide | un numero deciso da chi amministra | ⭐ una **misura**, non un `#define` |
+> | quando cambia | quando qualcuno alza il tetto, o esce | quando cala il lavoro delle sessioni vive |
+> | il gesto dell'utente | riprovare; e se si ripete, chiedere a chi amministra | riprovare; ⭐ oppure **chiedere meno pixel**, che oggi vuol dire **rimpicciolire la finestra** — la tela nasce grande quanto lei |
+>
+> ⛔ **Un tetto di sessioni scritto a mano NON è `0x06`, nemmeno se si chiama «budget».** Finché il
+> numero è un `#define`, il motivo giusto è `0x0E`: è la ragione, scritta accanto alla riga, per cui
+> la cura di **P3** del 25 agosto 2026 congeda con `0x0E` chi supera PAM e non trova un palco.
+>
+> ⛔ **E `0x06` si manda PRIMA di far nascere il desktop.** `[M]` §6.4: un utente **mai ammesso**
+> aveva **42 processi e un `gnome-shell`** — cioè PAM passata, figlio nato, sessione grafica accesa,
+> e *poi* il rifiuto. ⚠ Chiedere il budget all'`ATTACCA` significa rifiutare **quando il budget è già
+> stato speso**: il costo che si voleva evitare è già a terra.
+>
+> ⚠ **E la riga della tabella diceva «capacità di CODIFICA», che dal 25 agosto 2026 è misurato
+> falso.** `[M]` §8.1 D1: il soffitto della **composizione** è **0,97 Gpixel/s** contro **1,86**
+> (H.264) e **2,33** (HEVC) del codificatore, e a saturare il motore è **`gnome-shell` al 99,5 %**
+> mentre `remotix` sta a **0,00 %**. ⇒ Il codificatore **non è il collo**, e un motivo che nomina il
+> sottosistema sbagliato manda chi diagnostica a guardare dalla parte sbagliata. ⭐ La riga dice
+> adesso *«capacità per un'altra sessione»*, che è quel che è stato misurato; **il codice e il nome
+> non cambiano** (§9 vieta di toccarli dentro una versione maggiore, e non c'è bisogno).
 
 > ### ⛔ Perché `0x0F` è stato aggiunto, e perché adesso — rilievo **R1.3**
 >
@@ -2299,10 +2358,37 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 > agosto 2026, rilievo **R12C.2**.*
 
 ⛔ Ogni motivo **DEVE** essere mostrabile all'utente in una frase comprensibile. `BUDGET_PIENO`
-non è «errore 6»: è «questa macchina non ha più capacità di codifica».
+non è «errore 6»: è «questo server non ha più capacità per un altro desktop».
+
+⛔ **E una frase comprensibile dice TRE cose** — *aggiunto il 25 agosto 2026, perché «comprensibile»
+da solo lasciava passare frasi vere e inutili:*
+
+1. **che cosa è successo**;
+2. ⛔ **di chi è il limite** — del server o di chi bussa. ⚠ Sbagliare questo è il difetto peggiore
+   dei tre: `[M]` `fasi/10-…md` §6.4, la frase di `0x0E` diceva *«quella sessione non si può
+   servire»* — soggetto **la sessione dell'utente** — in una scena in cui il limite era tutto del
+   server, ed è stata letta così dentro Firefox vero **10 volte su 10**;
+3. ⭐ **che gesto può fare l'utente.** ⛔ E dev'essere un gesto che il prodotto **offre davvero**:
+   *«chiedi meno qualità»* non è un gesto se il client non ha una manopola della qualità — è una
+   consolazione travestita, e manda l'utente a cercare un comando che non esiste.
+
+⚠ **E il gesto va scelto sul motivo, non sul caso**: `0x0E` copre **cinque** strade diverse, e un
+gesto giusto per una sola le rende false le altre quattro. ⭐ Quando il motivo è largo, il gesto è
+largo — *«riprova, e se si ripete chiedi a chi amministra»* — e la precisione la porta il registro.
 
 ⛔ **La frase la costruisce il client**, dal codice. Il campo `dettaglio` **NON DEVE** essere
 mostrato all'utente: è per il registro, e contiene quel che serve a chi diagnostica.
+
+> ⭐ **E la regola è stata rimessa alla prova il 25 agosto 2026, invece di essere ereditata.** La
+> domanda era: *può il client mostrare il dettaglio quando c'è, e la frase generica solo quando non
+> c'è?* ⛔ **No, e le stringhe vere danno ragione al divieto**: le cinque che il server manda con
+> `0x0E` sono *«video.misura_massima=…×… è sotto la tela minima legale di 320×240 (§4.5)»*,
+> *«memoria esaurita nell'accumulo del canale di controllo»*, *«disposizione sconosciuta a questa
+> macchina: …»* e una che rimanda a *«la riga di registro precedente»* — cioè a un testo che
+> l'utente non ha. Sono diagnosi: mostrarle vuol dire mostrare all'utente il nome di un campo di
+> protocollo e mandarlo a cercare un registro che non può leggere.
+> ⭐ **Quel che il client può fare, e deve**, è dire **dove il dettaglio è finito**: *«il perché
+> preciso è nel registro del server»*. Il dettaglio resta al suo posto, e l'utente sa a chi chiederlo.
 
 ---
 
