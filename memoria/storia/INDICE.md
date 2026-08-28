@@ -1,4 +1,4 @@
-# Indice delle note dell'epoca v1 — rifatto dalle descrizioni delle note stesse
+# Indice delle note di prima — rifatto dalle descrizioni delle note stesse
 
 > ⛔ Queste dieci note NON stanno nella memoria viva di Claude, e non ci devono tornare:
 > sono di quando il progetto era v1 (6-8 agosto 2026) e stava in `~/Documenti/REMOTIX`.
