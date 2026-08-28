@@ -28,7 +28,7 @@ macchina è piena, un messaggio che **dice perché**.
 |---|---|---|
 | 1 | **il numero vero del codificatore** — pixel/s su `renderD128` | ⛔ mai misurato: `vainfo` dice *quali* profili, non *quanti pixel al secondo* |
 | 2 | **il budget** al posto del conteggio | ⛔ due `#define` a **16**: `src/rcp.c:886 MAX_ATTACCATE`, `src/figlio.c:91 MAX_FIGLI` — dove `SPECIFICHE.md` §5.5 promette **dieci configurabile** |
-| 3 | **`BUDGET_PIENO 0x06`** col motivo nel corpo | ⛔ dichiarato in `src/rcp.h:46` e in `RCP.md` §8.2, **e nessuna riga del server lo manda mai** |
+| 3 | **`BUDGET_PIENO 0x06`** col motivo nel corpo | ⛔ dichiarato in `src/rcp.h` · `RCP_BUDGET_PIENO` e in `RCP.md` §8.2, **e nessuna riga del server lo manda mai** |
 | 4 | **chi già lavora non peggiora** quando arriva l'undicesimo | ⛔ mai provato — è `DECISIONI.md` §4.6-bis e l'invariante **I1** |
 | 5 | **il budget di RETE** accanto a quello di GPU | ⛔ mai nominato: `DECISIONI.md` §3.1-bis punto 2 lo lascia aperto con *«dieci sessioni × 30 Mbit/s sono 300 Mbit/s sul filo del server»* |
 
@@ -565,7 +565,7 @@ motivo*, cioè esattamente il difetto per cui `posto_prendi()` era già stato cu
 | ⛔ **R10-A5** | **Il tetto di banda è PER INQUILINO, e nessuno somma**: `--tetto-banda-mbit 30` con dieci inquilini non è un tetto di 30, è un tetto di **300**. In tutto `src/` **non esiste nessun contatore aggregato dei byte usciti** | `main.c:657` → `:1544` → `figlio.c:1215-1217` | ⚠ oggi non rompe; è il **punto 5 della fase**, confermato dal codice |
 | ⚠ **R10-A6** | **`WT_PALCHI` è OTTO e la fase punta a dieci**: il nono e il decimo non entrano in tabella e al ri-attacco ricevono la tela **come la chiede il client** invece che come il palco ce l'ha. ⛔ E il ripiego si dichiara **una volta sola** (`palchi_pieni_detto`): il nono e il decimo lo perdono **in silenzio** | `webtransport.c:5225`, `palco_misura_segna()` `:5238` | ⚠ **9** — brutto, non stacca |
 | ⚠ **R10-A7** | **`MAX_IN_VOLO` è 16 per copia, non per costruzione**, e il commento dichiara un legame che non esiste. Il giorno in cui il tetto sale, il diciassettesimo che si autentica **nello stesso momento** riceve `CREDENZIALI_ERRATE` — **indistinguibile da una parola sbagliata** | `aiutante.c:33` | ⚠ oggi no, ⛔ **il giorno del budget** |
-| ⚠ **R10-A8** | **La cartella dei rilievi è una sola e i nomi dei file sono FISSI**, e i terreni dei banchi la creano `1777` (uno addirittura `777` **senza sticky**). ⇒ (a) l'inquilino B può **leggere `cattura.bgrx` di A** — un fotogramma grezzo del suo desktop; (b) il secondo figlio fallisce la scrittura e ⛔ **chi diagnostica guarda il desktop sbagliato credendo che sia il suo** | `figlio.c:4055`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh:104` | ⚠ **difetto dei BANCHI**, non del prodotto — ⛔ ma la fase 10 fa girare dieci utenti proprio lì |
+| ⚠ **R10-A8** | **La cartella dei rilievi è una sola e i nomi dei file sono FISSI**, e i terreni dei banchi la creano `1777` (uno addirittura `777` **senza sticky**). ⇒ (a) l'inquilino B può **leggere `cattura.bgrx` di A** — un fotogramma grezzo del suo desktop; (b) il secondo figlio fallisce la scrittura e ⛔ **chi diagnostica guarda il desktop sbagliato credendo che sia il suo** | `figlio.c:4055`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **difetto dei BANCHI**, non del prodotto — ⛔ ma la fase 10 fa girare dieci utenti proprio lì |
 | ⚠ **R10-A9** | **Un inquilino ostile impedisce a un altro di aprire la sessione con un `touch`**: il registro della sessione è `/tmp/remotix-sessione-<uid>.log`, `/tmp` è scrivibile da tutti e l'uid si legge da `/etc/passwd`. Se il file esiste ed è di un altro, la ridirezione fallisce e la shell **esce prima di eseguire il compositore** — ⛔ e il fallimento è **muto**, perché `setsid --fork` esce `0` comunque | `sessione.c:881` | ⚠ richiede ostilità, ⛔ costo dell'attacco: **un comando**, effetto **permanente e senza sintomo** |
 | ⚠ **R10-A10** | **Nessun tetto al numero di connessioni QUIC**: `t->quante++` esiste **solo per la riga di registro**. Migliaia di connessioni che non mandano mai `CREDENZIALI` vivono 60 s a testa, **il ban non scatta mai** (nessuna autenticazione fallisce), e il costo delle undici scorse della lista lo pagano **i fotogrammi di tutti gli altri** | `trasporto.c:738`, `webtransport.c:6946` | ⚠ robustezza |
 
@@ -2345,7 +2345,7 @@ direzione.**
 
 #### ⛔⛔ QVBR: c'è, funziona — **e nessuno lo accende**
 
-`[M]` Letto in `src/codificatore.c:400`: due modi, chiesti **per nome**, mai `auto`. ⛔ **Il
+`[M]` Letto in `src/codificatore.c` · `modo_bitrate_voluto()`: due modi, chiesti **per nome**, mai `auto`. ⛔ **Il
 predefinito è CQP**: `main.c:657 tetto_banda_mbit = 0` (invariante **I6**), e il tetto **non è fra le
 cinque cure accese** di `CODER.md` §2-bis.
 ⇒ ⛔ **Oggi il prodotto QVBR non lo usa.** ⭐ La cura di banda della fase 9 **esiste, funziona, e non
@@ -3496,7 +3496,7 @@ mancante, nessun accorgimento**: l'ambiente giusto e una `~/.cache` che è sua.
 > · ⚠ al **riattacco** `formato negoziato` **non si ripete** se il formato non cambia. Non è cecità.
 >
 > ⛔ **E il «terzo stato» di questa sezione — la riga `(0 prima, 2 dopo)` — non esiste**: era
-> **memoria non inizializzata** (`src/figlio.c:5250` spediva la struttura prima del `memset` di
+> **memoria non inizializzata** (`src/figlio.c` · `codifica_e_manda()` spediva la struttura prima del `memset` di
 > `:5311`). ⇒ `LEZIONI.md` §1.55. Curato.
 >
 > ⇒ Il racconto che segue resta **come fu scritto**, perché è la storia di una caccia e le quattro
@@ -3547,7 +3547,7 @@ figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0
 
 #### ⭐ La pista che pesa, e sta nel nostro codice
 
-`src/sessione.c:744`, e il commento è del **14 agosto 2026**:
+`src/sessione.c` · la nota «`--virtual-monitor` non c'e' piu'», e il commento è del **14 agosto 2026**:
 
 > ⛔⛔ *E `--virtual-monitor` NON C'È PIÙ.* Fino a stamattina questa riga lo chiedeva, e **la sessione
 > nasceva con un monitor suo**. ⇒ Poi… *«il nostro `RecordVirtual` ne crea uno»*.

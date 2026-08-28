@@ -1111,7 +1111,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > *13 agosto 2026, notte. **Il prodotto ha codificato in software per giorni per una riga di un
 > banco**, e ogni pezzo della catena rispondeva correttamente alla domanda che gli era stata fatta.*
 >
-> `banchi/02-pagina-sonda-codec.py:121` passava `-x265-params …:**keyint=1**:…`, e `keyint=1` fa
+> `banchi/02-pagina-sonda-codec.py` · `x265-params` passava `-x265-params …:**keyint=1**:…`, e `keyint=1` fa
 > emettere a libx265 **«Main 10 Intra» — Rext, `profile_idc = 4`** — ⛔ **annullando il
 > `-profile:v main10` chiesto quattro righe sopra**. *Il profilo era stato chiesto e non applicato,
 > senza un errore.* ⚠ Ed è la forma d'errore che **il commento di quello stesso file descrive**.
@@ -1503,8 +1503,8 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 >
 > ⛔⛔ **Ma quella cura il prodotto oggi non la sa chiedere**, e va scritto qui o si scambia una
 > misura di banco per una prestazione: `MOVIMENTO_FPS 60` è una **costante di compilazione**
-> (`src/figlio.c:1465`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual` non prende
-> la frequenza** (`src/mutter.h:82`) — i quattro monitor virtuali sono tutti **1920×1080@60**. ⇒ Il
+> (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual` non prende
+> la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i quattro monitor virtuali sono tutti **1920×1080@60**. ⇒ Il
 > «monitor 120 / freno 90» è **`[M]` sul banco e zero in produzione**.
 >
 > ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
@@ -1578,8 +1578,8 @@ cosa sbagliata:
 > decimi» **non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**.
 >
 > ⛔⛔ **Ma la decisione dell'utente NON cambia oggi, e la ragione è che il prodotto non sa
-> chiedere quella cadenza**: `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`),
-> `main.c` non ha opzioni di cadenza, `RecordVirtual` non prende la frequenza (`src/mutter.h:82`) e
+> chiedere quella cadenza**: `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c` · `MOVIMENTO_FPS`),
+> `main.c` non ha opzioni di cadenza, `RecordVirtual` non prende la frequenza (`src/mutter.h` · la nota su `RecordVirtual`) e
 > i quattro monitor virtuali sono tutti **@60**. ⇒ Il 61,4 è `[M]` **sul banco** e **zero in
 > produzione**. Finché resta così, *«su GNOME il desiderato non si promette»* regge — ⛔ **ma la
 > ragione è cambiata: non è più «Mutter non ce la fa», è «noi non gliela chiediamo».** Sono due
@@ -1919,7 +1919,7 @@ morta.»*
 per **30,5 secondi** gli viene detto **«hai già una sessione attiva altrove»**. ⚠ **Per chi la legge
 è falsa**: quella sessione è **la sua**, ed è morta un attimo prima. Il conto si chiude senza
 sporcare la rete — un addio **perso** e un addio **mai detto** sono lo stesso fatto — ed è
-`SILENZIO` (`src/rcp.c:263`, 30 000 ms).
+`SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
 
 ⛔ E il riquadro di `src/rcp.c:229-233` **dichiara** che quell'orologio *«fa sparire il caso "il
 telefono è morto in galleria"»*: non lo fa sparire, lo **dura trenta secondi**.
@@ -2972,7 +2972,7 @@ verde** in **1 secondo**, senza accendere niente.
 ### 4.6-duoetvicies ⛔⛔⛔ **Il primo rosso che la rete tira fuori dal PRODOTTO — e sono due righe**
 
 `[M]` 26 agosto 2026. C9, su tutte le scatole provate: **4 righe obbligate su 5 490 non si possono
-attribuire a nessun inquilino**. Sono `src/tastiera.c:342` e `:486`, che scrivono nel **padre** senza
+attribuire a nessun inquilino**. Sono `src/tastiera.c` e `:486`, che scrivono nel **padre** senza
 `registro_dice_di()`. ⛔ Due righe identiche parola per parola, una per inquilino: **con due sessioni
 vive non si può dire quale sia di chi.**
 
@@ -3029,7 +3029,7 @@ seguire i file, e l'unità dei gruppi prende `Before=polkit.service`. `[M]` Da *
 ### 4.6-quinquies-vicies ⛔⛔ **Il prodotto guida UN desktop, non quattro**
 
 `[M]` C1 fatta girare dieci volte per scatola su KDE, XFCE e LXQt: **0 sane · 0 cieche · 30 «non ho
-potuto guardare»**. Il registro lo dice: *«Mutter non espone RemoteDesktop»* ⇒ ⛔ `src/sessione.c:778`
+potuto guardare»**. Il registro lo dice: *«Mutter non espone RemoteDesktop»* ⇒ ⛔ `src/sessione.c` · `scrivi_dropin()`
 e tutto `src/mutter.c` sanno avviare **solo GNOME**, e nelle altre tre scatole `gnome-shell` non c'è.
 
 ⭐ **Quel che le altre tre provano è reale ma più piccolo**: l'ambiente (passo 0), il suono (C5), i
@@ -3375,7 +3375,7 @@ l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.
 > ha aperto la porta.
 
 *13 agosto 2026, all'apertura della fase 3, **decisa dall'utente**. Era ereditata dalla scena di un
-banco e non era mai stata decisa da nessuno: `src/main.c:111` ha `TELA_L 1920` scritto a mano.*
+banco e non era mai stata decisa da nessuno: `src/main.c` · `TELA_L` ha `TELA_L 1920` scritto a mano.*
 
 La domanda è stata posta con il suo prezzo misurato accanto: sullo schermo dell'utente la tela
 viene dipinta all'**86 %**, cioè **912 px di nero**. Le tre alternative messe davanti:
@@ -3432,7 +3432,7 @@ aperta, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.m
 | **KWin** (KDE) | `[R]` nessuna validazione: né minimo, né massimo, né parità, né multipli | ⛔ solo su `master` — vedi §5.0-bis |
 | **il codificatore** | `[M]` il vincolo è **pari, e basta** — non multiplo di 8 né di 16 | — |
 
-⛔ **Il vincolo del pari è NOSTRO, non dei compositori**: è il 4:2:0 (`src/codificatore.c:1373` e
+⛔ **Il vincolo del pari è NOSTRO, non dei compositori**: è il 4:2:0 (`src/codificatore.c` · `croma_flusso` e
 `:1512`). `[M]` In 4:4:4 passa anche il dispari. ⇒ Si tronca in **giù** (2133 → 2132) e **lo si
 dichiara** con `TELA(ADATTATA)`: un pixel detto vale più di un pixel nascosto in una scala.
 
@@ -3449,7 +3449,7 @@ Tutte e tre scoperte misurando, e tutte e tre della stessa famiglia: **il silenz
    `roundf(2133/2) = 1067` e **1067×2 = 2134 ≠ 2133**. È lo spazio delle coordinate dell'**input**
    ⇒ **il puntatore va altrove e nessuno lo dice.** Cura: leggere la scala e **fallire** se non è
    `1,0`.
-3. **Chiesto contro concesso.** `[R]` `src/cattura.c:914` non confronta mai la misura **chiesta** a
+3. **Chiesto contro concesso.** `[R]` `src/cattura.c` · `chiesta_larghezza`/`chiesta_altezza` non confronta mai la misura **chiesta** a
    PipeWire con quella **negoziata**, e `codificatore_comprimi()` riceve i pixel e il passo ma
    **non** larghezza e altezza, quindi non può fare da testimone. ⛔ Oggi è irraggiungibile perché
    si chiede sempre 1920×1080: **è questa decisione a renderlo raggiungibile**, e va chiuso

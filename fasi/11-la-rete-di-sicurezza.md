@@ -577,7 +577,7 @@ primo rosso importante genererà una discussione, ⇒ **e la discussione costa p
 | **aggiornamenti dei desktop** | ⚠ **coperto solo a metà**: C11 vede che la ricetta è cambiata, ⛔ non che il desktop nuovo si comporta peggio |
 | **degrado termico** | fuori bersaglio |
 | ⛔⛔ **le regressioni di PRESTAZIONE** | ⭐ dichiarato il 27 ago 2026: **nessun banco confronta ieri con oggi**. Un fotogramma che diventa più lento senza che nulla smetta di funzionare **passa**. ⇒ §3.4 |
-| ⛔⛔ **il prodotto sugli altri tre desktop** | `[M]` 27 ago: il prodotto **sa avviare solo GNOME** (`src/sessione.c:778`) ⇒ su KDE, XFCE e LXQt la rete prova **l'ambiente, il suono, i residui, il registro e l'allineamento**, ⛔ **non il prodotto**. È materia della fase 12 |
+| ⛔⛔ **il prodotto sugli altri tre desktop** | `[M]` 27 ago: il prodotto **sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ su KDE, XFCE e LXQt la rete prova **l'ambiente, il suono, i residui, il registro e l'allineamento**, ⛔ **non il prodotto**. È materia della fase 12 |
 | ⛔ **le scelte mai fatte** | non si è **rotto** niente: quella roba sta in `MASTERPLAN.md` (D6), e la rete non la prenderà mai — **ed è giusto così** |
 
 > ### ⛔⛔⛔ E OGGI C'È UNA COSA IN PIÙ CHE LA RETE NON PRENDE, e non è per scelta — *26 agosto 2026*
@@ -1213,7 +1213,7 @@ fondo.
 ### ⛔⛔ IL PRIMO ROSSO CHE LA RETE TIRA FUORI DAL PRODOTTO — **due righe di `src/tastiera.c`**
 
 `[M]` C9, su **tutte e quattro** le scatole: 5 752 righe di registro, **5 490 obbligate**, e **4** che
-non si possono attribuire a nessun inquilino. Sono `src/tastiera.c:342` e `:486`, che scrivono nel
+non si possono attribuire a nessun inquilino. Sono `src/tastiera.c` e `:486`, che scrivono nel
 **padre** senza `registro_dice_di()`. ⛔ Due righe identiche parola per parola, una per inquilino:
 **con due sessioni vive non si può dire quale sia di chi.**
 
@@ -1390,7 +1390,7 @@ C15 ROSSA** sullo stesso file.
 | **C11** allineamento | ⭐ verde, 14 voci, stesso binario in tutte e quattro |
 | **C14** non si disturbano | ⭐ verde, **801 s**, impronta identica sola e in parallelo |
 
-⛔ **E i tre rossi sono il prodotto, ed è la fase 12**: `[R]` `src/sessione.c:778` — il prodotto sa
+⛔ **E i tre rossi sono il prodotto, ed è la fase 12**: `[R]` `src/sessione.c` · `scrivi_dropin()` — il prodotto sa
 avviare **solo GNOME**. ⇒ Su KDE, XFCE e LXQt la rete prova l'ambiente, il suono, i residui, il
 registro e l'allineamento; ⛔ **non il prodotto**, perché lì il prodotto non ci gira.
 
@@ -1464,7 +1464,7 @@ data per chiusa.
 | ~~`[?]`~~ ⭐ **`[M]`** | ~~se le quattro scatole davvero non si disturbano~~ ⇒ **misurato**: stesso esito sole e in parallelo, quattro su quattro (§7-bis.15). ⚠ **Resta fuori** la contesa vera sulla scheda grafica, che vuole sessioni vive |
 | `[?]` | se esista un taglio diverso fra contenitore e prodotto (§8.1) |
 | ~~❓ decide l'utente~~ ✅ **deciso** | il **registro del gancio** va in git — deciso dall'utente il 27 agosto 2026. ⭐ Con `merge=union` in `.gitattributes`: il quaderno è fatto di righe che si **aggiungono**, e due macchine che scrivono in giorni diversi non sono un conflitto da risolvere a mano. ⚠ Il prezzo, dichiarato: il file risulta modificato a ogni giro |
-| ⛔ **APERTO, ed è la fase 12** | ⭐ `[M]` **il prodotto sa avviare solo GNOME** (`src/sessione.c:778`) ⇒ C1 dà rosso su kde/xfce/lxqt, ed è **l'unico rosso** che il giro intero produce. ⚠ E una cosa che la fase 12 troverà: ⛔ **KWin non sa nascere cieco** — con `--output-count 0` un'uscita la fa lo stesso, quindi il disegno «zero monitor propri» **non si trasporta uguale** |
+| ⛔ **APERTO, ed è la fase 12** | ⭐ `[M]` **il prodotto sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ C1 dà rosso su kde/xfce/lxqt, ed è **l'unico rosso** che il giro intero produce. ⚠ E una cosa che la fase 12 troverà: ⛔ **KWin non sa nascere cieco** — con `--output-count 0` un'uscita la fa lo stesso, quindi il disegno «zero monitor propri» **non si trasporta uguale** |
 | ⚠ **debito dichiarato** | il **palco muore con la connessione D-Bus del figlio** ⇒ sulla carta contraddice I4. ⭐ Ma `[M]` C6 misura **verde**: le finestre si ritrovano. ⇒ Scritto, non curato — la cura è architetturale (`DECISIONI.md` §4.6-teretvicies) |
 | ~~⛔ aperto~~ ⭐ **chiuso** | ~~perché la scatola non si spegne da sola~~ ⇒ **era il SEGNALE, non un'unità appesa**: `[M]` SIGTERM (il predefinito di `podman stop`) lascia la scatola in piedi **30 s su 30** — `systemd` come primo processo lo ignora; `SIGRTMIN+3` la spegne in **3,1 s**. ⇒ I «quattro minuti» erano un tetto scaduto, non un'attesa. La cura (`STOPSIGNAL` nelle ricette) è in vigore, e ⛔ l'ipotesi *«la tiene su una sessione viva»* è **smentita**: con una sessione dentro lo spegnimento è quello pulito (§7-bis.18) |
 | ~~⛔⛔ APERTO~~ ⭐ **chiuso** | ~~C5 è rossa su GNOME~~ ⇒ **era la stessa radice della sessione cieca**: senza palco il prodotto non svuotava l'anello dell'audio (`[M]` **96 489 ms** di trabocco). Curato in `src/figlio.c`; `[M]` C5 verde su tutte e quattro le scatole. *(voce vecchia: `[M]` C5 rossa su GNOME e verde sugli altri tre*: al cliente arrivano **34–41** blocchi di suono in 25 s invece di **~4 878**, e quel che arriva è forte e giusto. ⛔ Non è la scatola invecchiata (rifatta da zero, stesso rosso) e non è la soglia. `[?]` La causa non è misurata (§7-bis.18) |
@@ -1504,7 +1504,7 @@ prima si cura la sessione che nasce cieca?»**
 | | |
 |---|---|
 | ✅ **il quaderno del gancio in git** | **deciso il 27 agosto**: sì, con `merge=union`. ⚠ Il prezzo è un file che risulta modificato a ogni giro |
-| ⭐ **la fase 12 è il prossimo passo, e non è più bloccata** | ⛔ Ma quel che troverà è già misurato: il prodotto **sa avviare solo GNOME** (`src/sessione.c:778`), ed è **l'unico rosso** che il giro intero produce. ⚠ E KWin **non sa nascere cieco**: il disegno «zero monitor propri» non si trasporta uguale |
+| ⭐ **la fase 12 è il prossimo passo, e non è più bloccata** | ⛔ Ma quel che troverà è già misurato: il prodotto **sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`), ed è **l'unico rosso** che il giro intero produce. ⚠ E KWin **non sa nascere cieco**: il disegno «zero monitor propri» non si trasporta uguale |
 | ⚠ **un debito, non un lavoro** | il palco muore con la connessione D-Bus del figlio ⇒ sulla carta contraddice I4, ⭐ ma C6 misura **verde**: le finestre si ritrovano. Curarlo è architetturale, e ⇒ `DECISIONI.md` §4.6-teretvicies |
 
 ---

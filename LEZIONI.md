@@ -925,7 +925,7 @@ ne ha scartate**. Un lettore che salta in silenzio le righe che non capisce è l
 
 ### 1.22 ⛔⛔⭐ **Un drop-in di systemd vince per NOME, e il nostro perde** — `zz-r` viene prima di `zz-s`
 
-*22 agosto 2026, trovato girando `04-b20` per intero. `fasi/04`, e riguarda `src/sessione.c:735`.*
+*22 agosto 2026, trovato girando `04-b20` per intero. `fasi/04`, e riguarda `src/sessione.c` · `scrivi_dropin()`.*
 
 `[M]` Il prodotto scrive il suo drop-in in `zz-remotix-monitor.conf`. Nella stessa cartella cinque
 banchi di **altri anelli** (`04-b31`, `04-b32`, `06-b33`, `06-b34`, `06-b35`) lasciano
@@ -3012,7 +3012,7 @@ secondi a **uno**.
 `[M]` 27 agosto 2026. La fase 10 §7.4 descriveva un *«terzo stato»* del palco — la riga
 `(0 prima, **2** dopo)` — e lo trattava come un fatto: due monitor comparsi.
 
-⛔ **Era spazzatura.** `src/figlio.c:5250` spediva la struttura al padre **prima** del `memset` di
+⛔ **Era spazzatura.** `src/figlio.c` · `codifica_e_manda()` spediva la struttura al padre **prima** del `memset` di
 `:5311`. `[M]` Provato in due modi: quella riga compare anche su scatole dove **nessun monitor può
 essere nato** (lì il prodotto non sa nemmeno avviare il desktop), sempre e solo sul ramo *«aspetto la
 tela del cliente»*, con spazzatura evidente accanto (`stride 958311266`, `stride 306537694`); e nel
@@ -3035,7 +3035,7 @@ presentate come la prova che *«le stesse prove girano su desktop diversi senza 
 
 ⛔ Poi C1 è stata fatta girare **dieci volte per scatola** sulle altre tre, e il conto è stato:
 **0 sane · 0 cieche · 30 «non ho potuto guardare»**. Il motivo lo dice il registro del prodotto:
-*«Mutter non espone RemoteDesktop»* — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c:778`,
+*«Mutter non espone RemoteDesktop»* — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`,
 tutto `src/mutter.c`), e nelle altre tre scatole `gnome-shell` non c'è nemmeno.
 
 ⭐ **Quel che le altre tre provano davvero è reale ma più piccolo**: l'ambiente (il passo 0), il

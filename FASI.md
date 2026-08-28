@@ -3660,7 +3660,7 @@ riga. Sciolte tutte e tre la mattina del 13 agosto, a codice ancora fermo.*
 La domanda era posta con il suo prezzo misurato accanto: sullo schermo dell'utente la tela viene
 dipinta all'**86 %**, cioè **912 px di nero**. Le alternative messe davanti erano tre — tenerla,
 portarla a 2560×1440 (lo schermo dell'utente), o accendere subito `SPECIFICHE.md` §6.1 (*la tela
-nasce dallo schermo del client*, che il prodotto oggi **non** fa: `src/main.c:111` ha `TELA_L 1920`
+nasce dallo schermo del client*, che il prodotto oggi **non** fa: `src/main.c` · `TELA_L` ha `TELA_L 1920`
 scritto a mano).
 
 ⭐ **Scelta la prima**, e la ragione è di metodo: la fase 3 misura il **tempo**, non la geometria.
@@ -4067,7 +4067,7 @@ perché quel giorno il numero si rifà senza riscrivere niente (`DECISIONI.md` �
 
 #### ⚠ 8. E le cose che non hanno funzionato senza essere colpa di nessuno
 
-- ⛔ **`src/pagina.c:243`**: `strcmp(percorso, "/")` ⇒ `/?qualunque-cosa` prende **404** (`[M]`: `/`
+- ⛔ **`src/pagina.c` · `servi()`**: `strcmp(percorso, "/")` ⇒ `/?qualunque-cosa` prende **404** (`[M]`: `/`
   → 200 / 166107 byte, `/?video=worker` → 404 / 9). ⇒ **`?tela=desincronizzata` non è MAI stato
   raggiungibile**, e il commento della pagina indica da sempre una strada che non esiste. Non visto
   da nessuno perché i banchi servono la pagina da un `http.server` di Python, che il `?` lo ignora;

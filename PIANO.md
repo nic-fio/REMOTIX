@@ -433,7 +433,7 @@ in `STUDI.md` §gnome §3 e valgono tutte al primo avvio, non dopo: `SHELL` va m
 `gnome-session` si ri-esegue dentro una shell di login e si riporta dentro `~/.profile` `[R]`;
 `--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
 **viva, completa e nera**; il drop-in dell'unità della Shell oggi si scrive **solo per KWin**
-(`src/sessione.c:671`), quindi su GNOME va scritto adesso.
+(`src/sessione.c` · `scrivi_dropin()`), quindi su GNOME va scritto adesso.
 
 ⭐ E una prova da fare **guasta di proposito** (M9 di `STUDI.md` §gnome §13): senza `--virtual-monitor`,
 per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
@@ -654,7 +654,7 @@ qualcun altro.
 > |---|---|
 > | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), intervallo mediano **16,66 ms** — cella **D**, pulita. ⚠ **Ma M3 di `STUDI.md` §gnome §13 NON è chiusa: è mezza**, perché la causa non è misurata |
 > | ⛔ **ma la causa scritta era sbagliata, e quella nuova è `[R]`** | non un **battimento** fra due orologi ma una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs — ⛔ **letta nel codice, non misurata**. E i «sei decimi» **non si riproducono**: la cella bassa dà **0,50 pulito** |
-> | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c:1465`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h:82`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
+> | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
 >
 > ⛔ **E il ritardo, che è il numero per cui la fase esisteva, SFORA**: `[M]` mediana **74,58 ms**
 > cattura → vetro, pezzo cieco 16-40 ms **escluso** ⇒ sullo schermo dell'utente **90-115 ms**,
@@ -716,9 +716,9 @@ qualcun altro.
 >
 > | | |
 > |---|---|
-> | `src/sessione.c:650` | crea la sessione con `--headless --no-x11 **--virtual-monitor %ux%u**` ⇒ GNOME mette la shell **su quel monitor** |
-> | `src/mutter.c:450` | cattura con **`RecordVirtual`**, che **ne monta un altro** e registra quello ⇒ **l'utente guarda il secondo, vuoto** |
-> | ⛔ **e la seconda metà della cura** | `src/sessione.c:668` **rilegge l'`ExecStart` in vigore e PRETENDE `--virtual-monitor %ux%u`** ⇒ tolta la bandiera, il controllo **fallirebbe**. *Il controllo è giusto, l'atteso no* |
+> | `src/sessione.c` · l'`ExecStart` della Shell | crea la sessione con `--headless --no-x11 **--virtual-monitor %ux%u**` ⇒ GNOME mette la shell **su quel monitor** |
+> | `src/mutter.c` · `RecordVirtual` | cattura con **`RecordVirtual`**, che **ne monta un altro** e registra quello ⇒ **l'utente guarda il secondo, vuoto** |
+> | ⛔ **e la seconda metà della cura** | `src/sessione.c` · il controllo sull'`ExecStart` in vigore **rilegge l'`ExecStart` in vigore e PRETENDE `--virtual-monitor %ux%u`** ⇒ tolta la bandiera, il controllo **fallirebbe**. *Il controllo è giusto, l'atteso no* |
 >
 > ⭐ **La tesi è già PROVATA, il 14 agosto, senza toccare il prodotto**: sessione dell'utente
 > `prova` avviata **senza** `--virtual-monitor` (`GetCurrentState` → **0 monitor**, la sessione
@@ -1063,12 +1063,12 @@ degli appunti tiene **un solo tipo MIME**.
 > **La codifica in hardware è entrata nel prodotto il 13 agosto 2026**, di proposito e con la
 > ragione scritta sopra alla fase 3: la catena si muoveva **da quel giorno**, quindi il *prima* e
 > il *dopo* si potevano misurare **con lo stesso banco e la stessa scena** — cosa che fra tre fasi
-> non sarebbe più stata vera. `src/codificatore.c:614` la chiama *«la fase 8 entrata di soppiatto
+> non sarebbe più stata vera. `src/codificatore.c` · la nota «la fase 8 entrata di soppiatto» la chiama *«la fase 8 entrata di soppiatto
 > nella fase 2»*.
 >
 > | la promessa di questa fase | dov'è finita |
 > |---|---|
-> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** `src/figlio.c:2434` chiede `hevc_vaapi` su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e il ripiego su `libx265` **scrive di essere un ripiego**. `[M]` il tratto della codifica **61,77 → 30,37 ms**, i fotogrammi **14,53 → 30,18 al secondo** (`F3-E`, stesso palco, notte del 14 agosto), e oggi la chiamata al codificatore vale **5,3 ms** dentro quel tratto (fase 4, `hev1.2.4.L120.B0`, nodo aperto dai soli processi nostri) |
+> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** `src/figlio.c` · `hevc_vaapi` chiede `hevc_vaapi` su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e il ripiego su `libx265` **scrive di essere un ripiego**. `[M]` il tratto della codifica **61,77 → 30,37 ms**, i fotogrammi **14,53 → 30,18 al secondo** (`F3-E`, stesso palco, notte del 14 agosto), e oggi la chiamata al codificatore vale **5,3 ms** dentro quel tratto (fase 4, `hev1.2.4.L120.B0`, nodo aperto dai soli processi nostri) |
 > | ⚠ **10 bit** | ⛔ **nominali, e il muro è a monte, non qui.** `DECISIONI.md` §2.3-ter `[M]`: dalla cattura di Mutter dieci bit veri **non escono per nessuna strada** — MemFd dà BGRx, il DMA-BUF pure, e chiedendo i formati a 10 bit da soli si prende `no more input formats` su tutt'e due. `Main10` da qui vuol dire **otto bit promossi a dieci**. ⇒ La domanda non è più *«il nostro codice sa fare 10 bit?»* ma *«esiste una sorgente che ce li dia?»*, ed è **una domanda per la cattura**, non per la codifica |
 > | ⛔ **la copia zero** | **intatta — e non anticipata di proposito** (`README.md`: *«la copia zero NON si anticipa: resta alla fase 8»*). È tutto quel che segue |
 >
@@ -1450,7 +1450,7 @@ conosce il progetto**, perché l'utente lo sottopone a un secondo parere: **§2*
 > | | |
 > |---|---|
 > | verdetti verdi | **58** |
-> | rossi | **3** — e sono **lo stesso rosso**: `C1` su kde/xfce/lxqt, perché ⛔ il prodotto sa avviare **solo GNOME** (`src/sessione.c:778`) ⇒ **è la fase 12** |
+> | rossi | **3** — e sono **lo stesso rosso**: `C1` su kde/xfce/lxqt, perché ⛔ il prodotto sa avviare **solo GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ **è la fase 12** |
 > | ⭐⭐ **guasti innestati** | **49 su 49 visti** |
 > | rossi del **banco** | ⭐ **nessuno** |
 >
@@ -1531,7 +1531,7 @@ nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambi
 > ## ⭐⭐ E ADESSO C'È UNA RETE SOTTO — *e tre cose che questa fase eredita, misurate*
 >
 > ⭐ `[M]` 27 agosto: la fase 11 è chiusa, e il **solo rosso** che produce è proprio il mandato di
-> questa fase — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c:778`, tutto `src/mutter.c`).
+> questa fase — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`, tutto `src/mutter.c`).
 > ⇒ La rete misura già, oggi, se questa fase riesce: il giorno che `C1(kde)` diventa verde, KDE è
 > servito davvero.
 >

@@ -475,7 +475,7 @@ colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
 > ⇒ ⭐ **Il codice resta in albero dietro `#video=worker`, SPENTO**, proprio perché il giorno della
 > GPU vera il numero si rifà senza riscrivere niente (`DECISIONI.md` §2.8).
 > ⚠ **E l'interruttore legge il FRAMMENTO, non la stringa di ricerca**, ed è una conseguenza di un
-> difetto: `?video=worker` prende **404** (`src/pagina.c:243`). La sintassi col `?` tornerà valida
+> difetto: `?video=worker` prende **404** (`src/pagina.c` · `servi()`). La sintassi col `?` tornerà valida
 > quando quel difetto sarà curato.
 
 ⚠ *La riga «e impone la forma della pagina: il video vive nel worker, l'input nel thread
@@ -659,7 +659,7 @@ Trixie. È l'ottavo studio del progetto, e chiude il giro dei quattro desktop.*
 
 | # | | |
 |---|---|---|
-| 1 | **il drop-in dell'unità della Shell** | `scrivi_dropin()` è chiamata **solo** `if (tipo == COMPOSITORE_KWIN)` (`src/sessione.c:671`). Su GNOME la Shell parte con `ExecStart=/usr/bin/gnome-shell` secco, **senza `--headless`** |
+| 1 | **il drop-in dell'unità della Shell** | `scrivi_dropin()` è chiamata **solo** `if (tipo == COMPOSITORE_KWIN)` (`src/sessione.c` · `scrivi_dropin()`). Su GNOME la Shell parte con `ExecStart=/usr/bin/gnome-shell` secco, **senza `--headless`** |
 | 2 | **l'inibizione dell'energia** | `energia_inibisci()` **ritorna NULL** su Mutter (`src/energia.c:112-113`) |
 | 3 | **il blocco schermo** | zero chiavi, zero recupero |
 | 4 | **le voci pericolose** | nessun lockdown — su KDE l'utente l'aveva chiesto e l'aveva avuto |
@@ -907,7 +907,7 @@ dell'inibizione, l'unica difesa che resta chiede il bit `SUSPEND`: è la forma a
 pagato su KDE. ⛔ **Mai il bit `LOGOUT(1)`**: ci renderebbe ostaggio dell'uscita dell'utente.
 
 ✅ **La precondizione quasi non si pone**: `Inhibit` sta sullo **stesso oggetto** di `RegisterClient`,
-che REMOTIX già chiama (`src/uscita.c:180`) — se la registrazione riesce, il nome c'è.
+che REMOTIX già chiama (⚠ **il file citato, `src/uscita.c`, non esiste e non e' mai esistito** — riferimento da rifare) — se la registrazione riesce, il nome c'è.
 
 ⭐ **Due buone notizie:**
 
@@ -1006,8 +1006,8 @@ quel che una griglia produce e un battimento no. ⭐ **Questa cella è pulita** 
 **61,4**, cioè quanto KWin. È costato tre celle e **zero righe di prodotto**, come previsto.
 
 ⛔⛔ **Ma il prodotto oggi non sa chiederlo, e va scritto qui**: `MOVIMENTO_FPS 60` è una costante di
-compilazione (`src/figlio.c:1465`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual`
-non prende la frequenza** (`src/mutter.h:82`) — i quattro monitor virtuali sono tutti
+compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual`
+non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i quattro monitor virtuali sono tutti
 **1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
 
 ⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Misurato

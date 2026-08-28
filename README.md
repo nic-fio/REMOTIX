@@ -15,7 +15,7 @@
 > ⭐ **49 guasti innestati su 49 presi**.
 >
 > ⛔ **I tre rossi sono lo stesso rosso**: `C1` su kde, xfce e lxqt — il prodotto **sa avviare solo
-> GNOME** (`src/sessione.c:778`). ⇒ **Non è un difetto da riparare: è il mandato della fase 12.**
+> GNOME** (`src/sessione.c` · `scrivi_dropin()`). ⇒ **Non è un difetto da riparare: è il mandato della fase 12.**
 > Il giorno che `C1(kde)` diventa verde, KDE è servito davvero.
 >
 > ## ⭐ La prima cosa da fare quando si torna

@@ -99,8 +99,8 @@ pezzo — il **canale di controllo** e la **negoziazione** — ma il lavoro si f
 | | stato | dove |
 |---|---|---|
 | ✅ la **negoziazione** di `audio.codec` | **fatta e viva**: `opus,pcm` dichiarati dai due lati, intersezione, scarto scritto nel registro, `pcm` obbligatorio per entrambi | `src/rcp.c:1513-1816`, `src/pagina.html:3247` |
-| ✅ la **negoziazione** di `appunti.testo` | dichiarata dai due lati (`si`) | `src/rcp.c:1527`, `src/pagina.html:3249` |
-| ✅ il **rifiuto** dell'audio su uno stream | il canale `0x04` su uno stream è `ERRORE_PROTOCOLLO`, e la riga di registro lo nomina | `src/webtransport.c:2618`, `src/rcp.c:4258` |
+| ✅ la **negoziazione** di `appunti.testo` | dichiarata dai due lati (`si`) | `src/rcp.c` · `T_APPUNTI_TESTO`, `src/pagina.html:3249` |
+| ✅ il **rifiuto** dell'audio su uno stream | il canale `0x04` su uno stream è `ERRORE_PROTOCOLLO`, e la riga di registro lo nomina | `src/webtransport.c`, `src/rcp.c` |
 | ✅ lo **scarto dichiarato** dei datagram | alla fase 1 si scartava scrivendolo nel registro, apposta perché *«la differenza fra "l'audio non arriva" e "l'audio arriva e lo butto" si vede solo se questa riga esiste da prima»* | `src/trasporto.c:333-357` |
 | ⛔ il **verso di uscita** dei datagram | **NON ESISTE**: nessuna funzione manda un datagram. `webtransport.h` non ne ha una, e `wt_scrivi` non li tocca | — |
 | ⛔ i **tre messaggi degli appunti** | **NON ESISTONO**: `0x0201/0x0202/0x0203` non compaiono in nessun file del prodotto. La pagina riceve uno stream `0x02` e scrive *«ricevuto e non usato»* | `src/pagina.html:3949` |

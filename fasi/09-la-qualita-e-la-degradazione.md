@@ -2439,7 +2439,7 @@ domani.
 13:41:54.365 video primo fotogramma: hev1.1.6.L150.B0 · … HEVC 8 bit via hevc_vaapi
 ```
 
-⛔ **`banchi/01-b3-cliente.py:1752` dichiara `--video-codec` con predefinito `hevc,av1`**, e il
+⛔ **`banchi/01-b3-cliente.py` · `--video-codec` dichiara `--video-codec` con predefinito `hevc,av1`**, e il
 server sceglie **HEVC**. ⇒ **Tutti i numeri di banda di §3.8 e della prima parte di questa sezione —
 0,204 · 1,179 · 21,36 · 58,668 Mbit/s — sono numeri HEVC.**
 
@@ -3393,7 +3393,7 @@ DATAGRAM frame might be acknowledged later»*. ⇒ Stesso `dgram_id` visto prima
 come **riscontrato** = pacchetto **arrivato fuori sequenza**, dichiarato perduto dalla soglia dei
 tre pacchetti e riscontrato dopo.
 
-⛔ Fino a stasera `ngtcp2_callbacks` (`src/trasporto.c:498`) registrava `recv_datagram` **e basta**:
+⛔ Fino a stasera `ngtcp2_callbacks` (`src/trasporto.c` · `ngtcp2_callbacks`) registrava `recv_datagram` **e basta**:
 i datagram in arrivo si contavano (rilievo B-10), quelli in **partenza** — cioè l'audio — sparivano
 nel filo senza lasciare traccia. *«L'audio non è arrivato»* e *«è arrivato e il cliente l'ha
 buttato»* avevano la stessa faccia, ed è lo stesso difetto di allora dall'altro verso.
@@ -3436,7 +3436,7 @@ secondo che si vede **non è la rete**, è il ritardo fisso di §4.4-bis contro 
 I massimi della stretta di mano stanno a 212 e 613 ms — **uno e due PTO**.
 
 Le cinque ipotesi, tutte smentite una per una: il cliente non si arrende (**0 giri su 70** hanno
-superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c:2605` conta solo verdetti PAM su
+superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c` · il conteggio dei verdetti PAM conta solo verdetti PAM su
 `CREDENZIALI`, e una stretta di mano non ci arriva); ngtcp2 riprova (`handshake_timeout` resta
 `UINT64_MAX`, `trasporto.c:544`); il `netem` non è applicato due volte (i due filtri prendono i due
 **versi**, quindi un **giro** paga `1-(1-p)²` e un **datagram**, che fa un verso solo, paga `p` —
@@ -3472,7 +3472,7 @@ altro client di questo stesso utente»*.
 
 ⛔ **Il conto si chiude senza `netem`**, perché un addio **perso** e un addio **mai detto** sono lo
 stesso fatto: ucciso il cliente con `-9`, `[M]` **11 rifiuti di fila, e il posto torna libero a
-+30,5 s** — cioè `SILENZIO` (`src/rcp.c:263`, 30 000 ms).
++30,5 s** — cioè `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
 
 ⚠ **La frase che il client costruisce è falsa per chi la legge**: quella sessione è **la sua**, ed è
 morta un attimo prima. E il riquadro di `src/rcp.c:229-233` dichiara che quell'orologio *«fa

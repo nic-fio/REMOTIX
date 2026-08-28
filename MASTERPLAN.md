@@ -79,7 +79,7 @@ Non si tiene per rispetto: si toglie, e il documento resta corto abbastanza da e
 **Che cos'è, in una riga.** ⛔ **Per farsi dare 60 fotogrammi da GNOME bisogna chiedergliene 90** —
 e il prodotto non sa chiedere un numero che non sia 60.
 
-Quel numero è **scritto dentro il programma** — `MOVIMENTO_FPS 60`, `src/figlio.c:3290` `[M]`
+Quel numero è **scritto dentro il programma** — `MOVIMENTO_FPS 60`, `src/figlio.c` · `MOVIMENTO_FPS` `[M]`
 verificato il 25 agosto 2026 — e non esiste nessun modo di cambiarlo: né da riga di comando, né da
 nessun'altra parte. ⚠ **Chiedere 60 va benissimo con chi obbedisce**: il difetto si vede solo con
 chi, a 60, se ne dimezza.
