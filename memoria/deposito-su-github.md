@@ -18,7 +18,8 @@ Finche' ci sono quelle righe il deposito non si puo' aprire — e cancellarle do
 non basta, la storia di git non dimentica. Si toglie cambiando la parola d'ordine
 sul server e facendogliela leggere da un file. ⇒ Lavoro da fare col server acceso.
 
-⭐ **v1 e' dentro il deposito, sotto `fondamenta/`, e NON e' un archivio**:
+⭐ **Quel che era v1 sta sotto `fondamenta/`** (rinominata il 28 ago 2026: «non voglio
+riferimenti a cose passate»)** e NON e' un archivio, e NON e' un archivio**:
 `fondamenta/strumenti/sshpw.py` (39 richiami), `fondamenta/remotix-c/src` (34), `fondamenta/banco/enter.sh`
 e i filmati di `fondamenta/calibrazione/` sono attrezzatura viva dei banchi.
 Vedi [[costruire-serve-il-contenitore]] e [[riavvio-perde-la-chiave-ssh]].
@@ -35,3 +36,11 @@ controllano. Vedi [[progetto-in-pausa-agosto-2026]].
 
 ⚠ Fuori dal deposito e NON su GitHub: `~/SERVER.ssh` e `~/.ssh/id_ed25519`,
 preparate in `~/DA-SALVARE/` prima della pulizia del tablet.
+
+⛔⛔ **IL GANCIO PORTA UN PERCORSO ASSOLUTO, e sta FUORI dal deposito.**
+`.git/hooks/pre-push` non e' versionato e contiene il percorso scritto per esteso:
+rinominare la cartella del progetto lo **uccide in silenzio**, e da quel momento
+`git push` viene RIFIUTATO (il gancio esce 127). ⚠ E con `git push --quiet` il
+messaggio non si vede: sembra andata, e il commit resta a casa.
+⇒ Dopo ogni spostamento della cartella: `bash banchi/11-scatole/11-gancio.sh installa pre-push`,
+e poi si CONTROLLA che il commit sia su GitHub — non ci si fida dell'uscita del comando.
