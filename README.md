@@ -34,7 +34,7 @@
 >
 > | | |
 > |---|---|
-> | ⭐ **un guasto suo** | `fasi/11-…` §3.6: *ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
+> | ⭐ **un guasto suo** | `fasi/11-…` `fasi/11-la-rete-di-sicurezza.md` §3.6: *ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
 > | ⛔ **KWin non sa nascere cieco** | `[M]` con `--output-count 0` un'uscita la fa lo stesso ⇒ il disegno «zero monitor propri» **non si trasporta uguale** |
 > | ⚠ **il palco muore col cliente** | `[M]` il monitor virtuale muore con la connessione D-Bus del figlio. Su GNOME `C6` misura **verde** (le finestre si ritrovano); su un altro compositore non è detto ⇒ `DECISIONI.md` §4.6-teretvicies |
 >
@@ -124,7 +124,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > **Sei** sulla scena satura — *«tenendo conto che siamo su una scheda Intel integrata non
 > particolarmente performante, 6 RDP attivi contemporaneamente non mi sembra un cattivo risultato»*,
-> l'utente, §4.6-septies. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
+> l'utente, `fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`DECISIONI.md` §4.6-septies», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)*. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
 > stato trovato: sono finiti gli utenti, non la macchina**.
 >
 > ### ⭐⭐⭐⭐ E LA COSA PIÙ UTILE DELLA GIORNATA NON È UN NUMERO
@@ -340,8 +340,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | ⭐⭐ **B3: cinque giri su cinque** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⭐ **la 3ª con il certificato ruotato, adesso PIENA** `[M]` **10 agosto, ore 18:5x**: la pagina ritira l'impronta nuova e apre su tutt'e due i motori, ⭐ **e il server risponde davvero** — `CIAO` → `ECCOMI` letto sul filo — ⛔ e con la vecchia tutt'e due **rifiutano**. ⚠ *La prima stesura di questo giro mandava la parola `ciao` aspettando l'eco dello strato WebTransport: una prova nata quando il server non parlava ancora RCP. Con RCP innestato quella parola non è un messaggio, il server ne aspettava il resto e la pagina restava appesa — ed è **quello** il «lo stream non ha funzionato» del mattino, non il certificato* |
 >
-> | ⭐⭐ **B5: quarantaquattro violazioni su quarantaquattro** | tipo sconosciuto · lunghezza in più e in meno · **4 GiB annunciati** · oltre 1 MiB · stato sbagliato · versione · nomi e valori di capacità · credenziali fuori intervallo · tela dispari e fuori limiti · disposizione malformata **contro** disposizione ignota (`SESSIONE_NON_SERVIBILE`) · secondo stream bidirezionale · tre canali nel verso sbagliato su stream unidirezionali. ⛔ Il motivo giusto ogni volta, **per tutt'e due le strade di §3.1**, e dopo **ciascuna** una connessione nuova arriva a `ECCOMI` |
-> | ⭐ **e i cinque casi che DEVONO passare** | `hevc,vp9` → si sceglie `hevc` e **lo scarto si scrive** · **vista 300×801** e **1×1** (§7.1) · `BANCO_MARCA` a funzione spenta → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **senza chiudere** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Senza di loro, «il server chiude su tutto» darebbe **36 verdi su 36**. ⚠ *I casi che DEVONO passare sono **otto**, non cinque, e i 44 casi di B5 sono **36 violazioni + 8 verdi attesi**: la riga finale diceva «44 su 44», che è vera per costruzione (rilievo **R7.14**)* |
+> | ⭐⭐ **B5: quarantaquattro violazioni su quarantaquattro** | tipo sconosciuto · lunghezza in più e in meno · **4 GiB annunciati** · oltre 1 MiB · stato sbagliato · versione · nomi e valori di capacità · credenziali fuori intervallo · tela dispari e fuori limiti · disposizione malformata **contro** disposizione ignota (`SESSIONE_NON_SERVIBILE`) · secondo stream bidirezionale · tre canali nel verso sbagliato su stream unidirezionali. ⛔ Il motivo giusto ogni volta, **per tutt'e due le strade di `RCP.md` §3.1**, e dopo **ciascuna** una connessione nuova arriva a `ECCOMI` |
+> | ⭐ **e i cinque casi che DEVONO passare** | `hevc,vp9` → si sceglie `hevc` e **lo scarto si scrive** · **vista 300×801** e **1×1** (`RCP.md` §7.1) · `BANCO_MARCA` a funzione spenta → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **senza chiudere** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Senza di loro, «il server chiude su tutto» darebbe **36 verdi su 36**. ⚠ *I casi che DEVONO passare sono **otto**, non cinque, e i 44 casi di B5 sono **36 violazioni + 8 verdi attesi**: la riga finale diceva «44 su 44», che è vera per costruzione (rilievo **R7.14**)* |
 > | ⭐⭐ **B5 ha trovato un difetto che nessun altro banco vedeva** | il contatore **per indirizzo** di §4.4-bis era chiavato sulla provenienza **con la porta**, e con un solo tentativo per connessione la porta cambia ogni volta: quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta**. ⚠ *Il **sesto** era la regola di quel giorno: dalla sera del 10 agosto il ban scatta al **quarto** (`DECISIONI.md` §1.9), e la misura resta scritta com'era perché porta la data della regola che misurava* |
 > | ⭐ **e una seconda contraddizione in `RCP.md`** | §2.2 dice che `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice di scegliere *«la più alta che non superi quella del `CIAO`»*. **Byte diversi per lo stesso ingresso.** Vince §2.2; §9 adesso la nomina. ⚠ *La cura del 10 agosto mandava a §2.4, che è «La porta» e non nomina né percorsi né versioni: corretta lo stesso giorno, rilievo **R11.2*** |
 >
@@ -476,8 +476,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⭐⭐ **E in fondo alla stessa serata è stata APPLICATA e RIMISURATA**, `[M]` **due giri per
 > motore**: `pagehide` scatta con la guardia **PRESENTE**, `congeda()` viene chiamata, e al server
-> arrivano **tutt'e due** le strade di §3.1 col motivo **`0x01`** — su Firefox **e** su Chrome, dove
-> la chiusura col codice `0x0` che §3.1 vieta **non compare più**. L'ancora di `congeda_corrente`
+> arrivano **tutt'e due** le strade di `RCP.md` §3.1 col motivo **`0x01`** — su Firefox **e** su Chrome, dove
+> la chiusura col codice `0x0` che `RCP.md` §3.1 vieta **non compare più**. L'ancora di `congeda_corrente`
 > non è più *«il tentativo è finito»* ma ***«la sessione è finita»***: la azzera `wt.closed`, e solo
 > se il riferimento è ancora il proprio. ✅ **Ed è un cambiamento di prodotto dopo la chiusura della
 > fase 1, quindi è stato messo a verbale**: `DECISIONI.md` §1.12 — la cura è **fuori fase**, ⛔ la
@@ -490,16 +490,16 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >    era lo schermo finto**: un'accusa per **un gesto mai fatto**. Difetto del banco, vero.
 > 2. **L'arbitrato che ne è seguito ha ASSOLTO la pagina** — ⛔ **e sbagliava**: contava la riga
 >    *«la pagina ha chiuso la sessione, motivo»* **senza guardare il motivo**, e il motivo era
->    `0x0`, cioè **lo smontaggio di Chrome, che §3.1 vieta**. Una violazione contata come congedo,
->    e stampata come *«⭐⭐ la pagina fa quel che §8.1 le impone»*.
+>    `0x0`, cioè **lo smontaggio di Chrome, che `RCP.md` §3.1 vieta**. Una violazione contata come congedo,
+>    e stampata come *«⭐⭐ la pagina fa quel che `RCP.md` §8.1 le impone»*.
 > 3. ⭐ **La terza misura ha attribuito davvero**, con una copia strumentata della pagina e un
 >    portatore che non passa da WebTransport: `pagehide` **scatta**, e non c'è più niente da
 >    chiamare. **Gecko è scagionato per misura** — la stessa `congeda()` chiamata da lì consegna
->    tutt'e due le strade di §3.1.
+>    tutt'e due le strade di `RCP.md` §3.1.
 >
 > ⇒ ⛔ **I due motori non erano opposti: era lo stesso difetto visto da due smontaggi**, e su uno il
 > banco è inciampato nel proprio contatore. ⚠ **E il server lo diceva**: la riga
-> `⛔ VIOLAZIONE §3.1 … A verbale va ERRORE_PROTOCOLLO` la scrive lui, ed era nel registro.
+> `⛔ VIOLAZIONE `RCP.md` §3.1 … A verbale va ERRORE_PROTOCOLLO` la scrive lui, ed era nel registro.
 >
 > #### ⭐ E un'accusa al prodotto che invece era davvero del banco
 >
@@ -527,7 +527,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > #### ⚠ QUEL CHE RESTA STORTO, detto invece che taciuto
 >
-> - ⛔ ~~**Su Firefox il congedo di §8.1 non esce**~~ — **separato, curato e rimisurato la stessa
+> - ⛔ ~~**Su Firefox il congedo di `RCP.md` §8.1 non esce**~~ — **separato, curato e rimisurato la stessa
 >   notte**. ⚠ *«La pagina non spedisce»* e *«Firefox butta via quel che la pagina spedisce dentro
 >   `pagehide`»* arrivavano **identici** al registro del server, e a separarli è servito il registro
 >   **del browser**: `banchi/01-p5-ff-*`, con un portatore che non passa da WebTransport. ⇒
@@ -545,12 +545,12 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   ⭐ **La scena di P5 è curata la stessa notte** — due schede, così `ctrl+w` chiude **la scheda** e
 >   non fa uscire Firefox — e con lei il contatore che l'avrebbe resa inutile: `01-p5-registro.py`
 >   pretende adesso **`motivo 0x01`** invece di *«una chiusura qualunque»*, e conta la riga di
->   **violazione §3.1** con atteso zero. ⚠ *Provato su registri veri: il segmento pre-cura di Chrome
->   — quello su cui il banco vecchio stampava «la pagina fa quel che §8.1 le impone» — adesso è
+>   **violazione `RCP.md` §3.1** con atteso zero. ⚠ *Provato su registri veri: il segmento pre-cura di Chrome
+>   — quello su cui il banco vecchio stampava «la pagina fa quel che `RCP.md` §8.1 le impone» — adesso è
 >   **rosso con due guasti**.*
 >   ⭐⭐ **E curando la scena è saltato fuori un terzo difetto**: sulla strada del `CONGEDO` il server
 >   liberava il posto **senza scriverlo nel registro** (l'unico dei quattro punti a non farlo). Il
->   posto si liberava davvero — ⛔ ma l'invariante **§8.2 `0x0F` non era più osservabile**, e P5
+>   posto si liberava davvero — ⛔ ma l'invariante **`RCP.md` §8.2 `0x0F` non era più osservabile**, e P5
 >   avrebbe dato un rosso a un server sano. Curato e misurato (`DECISIONI.md` §1.12): il giudice di
 >   P5 passa da **1 guasto falso** a **0**, due giri per motore.
 > - ⛔ ~~La parola d'ordine nei registri sporchi~~ — **chiusa**: cura verificata con un giro nuovo,
@@ -751,7 +751,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | | perché **prima** |
 > |---|---|---|
 > | **1** | ⛔⛔ **IL PALCO**: i banchi browser **misurano sul desktop dell'utente** credendo di essere su uno schermo finto. Chrome ignora `DISPLAY` e va su Wayland da `XDG_SESSION_TYPE`. `[M]` `xlsclients` sull'Xvfb dice **0 clienti**, la pagina dice `screen 2560×1080` | finché non è fatto, **ogni numero di ritardo porta dentro la contesa col desktop dell'utente** — e il prossimo «prima» nascerebbe già sbagliato. ⚠ E ha già fatto **una vittima**: la certificazione di `03-b16` non si rigira, perché su una finestra da 2560 il caso `V3s` non trova più il difetto |
-> | **2** | ⛔ **LA PAGINA**: HEVC **viene offerto e negoziato** ma **non dipinge nella sessione vera**, e il suo fallimento trascina `video.misura_massima` a **320×240** ⇒ tela 320×240 contro cattura 1920×1080, e il prodotto (correttamente, §6.2) **non spedisce**. **Zero fotogrammi** | senza, **nessun banco può esercitare il codificatore hardware**: non ci arriva un fotogramma, e la fase non si chiude |
+> | **2** | ⛔ **LA PAGINA**: HEVC **viene offerto e negoziato** ma **non dipinge nella sessione vera**, e il suo fallimento trascina `video.misura_massima` a **320×240** ⇒ tela 320×240 contro cattura 1920×1080, e il prodotto (correttamente, `RCP.md` §6.2) **non spedisce**. **Zero fotogrammi** | senza, **nessun banco può esercitare il codificatore hardware**: non ci arriva un fotogramma, e la fase non si chiude |
 > | **3** | ⭐ **IL NUMERO**: l'anello con la codifica in hardware, `03-b17-ritardo.py`, **stessa scena** | è il numero su cui la fase si chiude, e i due precedenti sono le sue precondizioni |
 >
 > ⚠ **E `/srv/src/03-B-src/` porta la pagina VECCHIA**: chi accendesse quell'albero così com'è
@@ -812,7 +812,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⛔ **E il guasto dimostra meno di quel che il suo titolo dice — va letto prima di credere alla
 > riga sopra.** Con l'impronta falsa nella pagina, le gambe `p-sessione` restano **CONFORMI**: la
-> sessione WebTransport **si apre lo stesso**. ⭐ La ragione è del prodotto, ed è §4.1-bis applicato:
+> sessione WebTransport **si apre lo stesso**. ⭐ La ragione è del prodotto, ed è `RCP.md` §4.1-bis applicato:
 > `pagina.html` **ritira `/impronta` prima di ogni tentativo** e usa quella, tenendo l'impronta
 > servita solo come ripiego — e quando le due divergono **lo dice**. ⇒ Il guasto prova che **P5 vede
 > la divergenza**, che è ciò per cui P5 esiste; **non** prova che la divergenza uccida la sessione,
@@ -931,7 +931,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⭐ **Sostituisce la forma che avevo scritto io** — 5 in 5 minuti, finestra che raddoppia fino a 15
 > minuti, due contatori — e ⛔ **il filo non guadagna un byte**: `TROPPI_TENTATIVI` esisteva già.
-> ⚠ **Il prezzo è dichiarato in §1.9** e non lo paga chi indovina: dietro un NAT tre errori di una
+> ⚠ **Il prezzo è dichiarato in `DECISIONI.md` §1.9** e non lo paga chi indovina: dietro un NAT tre errori di una
 > persona chiudono la porta a tutti per dodici ore, e il primo a inciamparci è chi digita una parola
 > lunga sulla tastiera di un telefono.
 >
@@ -1026,21 +1026,21 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⭐ **B11 ha trovato sei difetti veri, e nessuno era visibile al cliente di prova**:
 >
-> 1. il **posto** (§8.2 `0x0F`) si liberava solo alla morte della *connessione* — e un browser
+> 1. il **posto** (`RCP.md` §8.2 `0x0F`) si liberava solo alla morte della *connessione* — e un browser
 >    chiude la *sessione* tenendo viva la connessione. Ora si libera alla chiusura del canale di
 >    controllo;
 > 2. un messaggio spedito **subito prima** di chiudere la sessione, **il browser lo butta**: la
->    pagina non vedeva `RESPINTO`, vedeva silenzio. ⭐ È la prova che il punto 3 di §3.1 — *il
+>    pagina non vedeva `RESPINTO`, vedeva silenzio. ⭐ È la prova che il punto 3 di `RCP.md` §3.1 — *il
 >    motivo dentro il codice di chiusura* — **non è ridondanza**. Curato dai due lati;
-> 3. ⛔ la pagina **chiudeva senza congedarsi**, e §8.1 dice che chi chiude *DEVE* mandare `CONGEDO`
+> 3. ⛔ la pagina **chiudeva senza congedarsi**, e `RCP.md` §8.1 dice che chi chiude *DEVE* mandare `CONGEDO`
 >    con un motivo — anche quando è una chiusura volontaria. Aggiunto: su Chrome i falliti sono
 >    passati da 8 a 4;
 > 4. ⛔ **il posto non si liberava quando a chiudere il canale era il SERVER.** Da lì in poi non
->    arrivava più un byte che potesse liberarlo, e la pagina non poteva rimediare: §4.2 le vieta di
+>    arrivava più un byte che potesse liberarlo, e la pagina non poteva rimediare: `RCP.md` §4.2 le vieta di
 >    spedire dopo la fine. Visto **solo su Chrome** — su Firefox il trasporto chiudeva lo stream in
 >    tempo e il posto se ne andava lo stesso. ⭐ **Il difetto viveva nella differenza fra due
 >    motori**, ed è quello che chiude i tre casi rossi di Chrome;
-> 5. ⛔ **il server contava come «byte spediti dopo la fine» anche il `CONGEDO`** che §8.1 *impone*
+> 5. ⛔ **il server contava come «byte spediti dopo la fine» anche il `CONGEDO`** che `RCP.md` §8.1 *impone*
 >    a chi chiude. Il rosso finiva sulla pagina mentre faceva quel che deve. ⭐ Da lì il
 >    chiarimento di `RCP.md` §4.4: dopo `RESPINTO` il divieto è di **riprovare**, non di
 >    congedarsi;
@@ -1053,13 +1053,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > canale di controllo; **Firefox azzera il canale e butta quei byte**, e il motivo arriva solo
 > dentro il codice di chiusura della sessione. ⛔ Fino a stasera il server **quella capsula non la
 > leggeva**: di Firefox si sarebbe detto *«non si congeda»*, che è falso. È la prova, misurata, che
-> il punto 3 di §3.1 non è ridondanza — **è l'altra strada**, e senza di essa metà dei browser
+> il punto 3 di `RCP.md` §3.1 non è ridondanza — **è l'altra strada**, e senza di essa metà dei browser
 > sembrerebbe scortese.
 >
 > ⛔ **E due trappole nuove nel banco, tutt'e due sui denominatori**: il registro del server era
 > tagliato a `tail -60`, e **aggiungere una riga al filtro ha fatto scendere «i guasti serviti» da
 > 26 a 21** senza che il server cambiasse niente — un denominatore che dipende da quanto si parla.
-> E il caso `respinto-poi-congedo` faceva **correre** la chiusura di §3.1 contro la risposta della
+> E il caso `respinto-poi-congedo` faceva **correre** la chiusura di `RCP.md` §3.1 contro la risposta della
 > pagina: Chrome ha perso la corsa in un giro su cinque. ⭐ Adesso quel guasto **non chiude**, e a
 > chiudere è la pagina — che è proprio la cosa che il caso vuole vedere.
 >

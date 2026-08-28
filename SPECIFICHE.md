@@ -539,7 +539,7 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > muto. Fino alla fase 10 era dichiarato in `src/rcp.h` e in `RCP.md` §8.2 **e nessuna riga lo
 > mandava mai**.
 >
-> ⚠ **Il giudizio dell'utente su questo numero è `DECISIONI.md` §4.6-septies**, e ne esce
+> ⚠ **Il giudizio dell'utente su questo numero è `fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`DECISIONI.md` §4.6-septies», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)*», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)***, e ne esce
 > rafforzato: *sei sessioni su una scheda integrata modesta non è un cattivo risultato* — ⭐ e sul
 > desktop vero, che è quel che gli utenti fanno davvero, sono **almeno undici**.
 

@@ -2637,7 +2637,7 @@ capacità del codificatore. ⭐ **Il numero che governa il prodotto è quello de
 
 ⇒ ⭐ **E per l'utente il numero vero è un altro ancora**: sulla scena satura ne stanno **sei**; sul
 **desktop vero** — finestre, trascinamenti, strappi — `[M]` **almeno undici, e il soffitto non è
-stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
+stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **`fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`DECISIONI.md` §4.6-septies», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)***.
 
 ### 4.6-decies ✅ ⭐⭐⭐⭐ **Il metro sotto le specifiche: «artefatti sì, fluidità e sincronismo no»**
 

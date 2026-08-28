@@ -90,7 +90,7 @@ stanno.
 
 > *«Tenendo conto che siamo su una scheda Intel integrata non particolarmente performante, 6 RDP
 > attivi contemporaneamente non mi sembra un cattivo risultato»* — l'utente, **24 agosto 2026**,
-> `DECISIONI.md` **§4.6-septies**. ⇒ ⭐ **Il giudizio ne esce rafforzato, non smentito.**
+> ⚠ *(citato qui come `DECISIONI.md` §4.6-septies: ⛔ **quella sezione non è mai stata scritta** — la numerazione salta da `-sexies` a `-octies`. Il giudizio, con la data e le parole esatte, è §S.2 di questo documento.)* ⇒ ⭐ **Il giudizio ne esce rafforzato, non smentito.**
 
 | scena | quante ci stanno | che cosa succede alla prima |
 |---|---|---|
@@ -2547,7 +2547,7 @@ accese.
 > macchina** — undici sessioni stanno al **22-24 %** della GPU. ⚠ L'estrapolazione direbbe `[?]`
 > ~46 sessioni, **ed è quattro volte fuori dal misurato: non si riferisce come numero.**
 >
-> ⭐ Il giudizio del regista (§4.6-septies) — *«sei su un'integrata modesta non è un cattivo
+> ⭐ Il giudizio del regista (`fasi/10-multi-tenant-e-il-budget.md` §S.2) — *«sei su un'integrata modesta non è un cattivo
 > risultato»* — ne esce **rafforzato**, non smentito: sulla scena in cui vive l'utente ne stanno
 > **almeno undici, senza che il primo se ne accorga**.
 

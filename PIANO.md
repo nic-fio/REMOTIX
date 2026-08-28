@@ -167,7 +167,7 @@ lo perda.
 sparito del tutto — per una ragione più forte.*
 
 Il secondo client serviva a una cosa sola: accorgersi che **server e client condividono lo stesso
-fraintendimento** (§0.4). Prima ce n'erano due e la difesa era debole; adesso **ce n'è uno solo**,
+fraintendimento** (`DECISIONI.md` §0.4). Prima ce n'erano due e la difesa era debole; adesso **ce n'è uno solo**,
 e senza un secondo lettore il protocollo sarebbe validato da **una sola** implementazione, scritta
 dalla stessa mano che ha scritto il server.
 
@@ -239,7 +239,7 @@ WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` �
 >
 > | che cosa ha trovato | |
 > |---|---|
-> | ⭐⭐ **il cursore lo veste il browser** (`css("cursor", "url(…) x y, auto")`), e la cattura del puntatore è **un bottone**, non un automatismo | ✅ **adottato lo stesso giorno** — e ha smontato §7.1, che contraddiceva §7.5 |
+> | ⭐⭐ **il cursore lo veste il browser** (`css("cursor", "url(…) x y, auto")`), e la cattura del puntatore è **un bottone**, non un automatismo | ✅ **adottato lo stesso giorno** — e ha smontato `SPECIFICHE.md` §7.1, ch`SPECIFICHE.md` e contraddiceva §7.5 |
 > | ⭐⭐ **il primo fotogramma si CHIEDE** (`buffer_refresh` con `refresh-now`), non si aspetta | ⏳ **è il lavoro sul tempo di apparizione del desktop**, `[M]` 4,10 s su 5,21 spesi ad aspettare |
 > | ⭐ **il client dice la sua misura e il server ridimensiona** (`configure_display`) | ✅ **fatto, ma solo a un capo**: la misura si dice e si prende **all'attacco e al riattacco** (`RCP.md` §4.5, `ADATTA_TELA`). ⛔ *Durante* la sessione no — uscito il 17 agosto 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra qui fa una cosa che noi **abbiamo deciso di non fare**, non una che ci manca |
 >
@@ -291,7 +291,7 @@ adesso, non solo alla fase 13 — perché è adesso che la macchina viene rimess
 > un'applicazione da costruire, e la sonda è **una pagina web**.
 >
 > ⭐ **Il telefono vero resta**, ed è più importante di prima: è lo strumento di misura di **S2** e
-> **S4** (§1.2). Ma ci si arriva **aprendo un indirizzo nel browser**, che è la cosa più economica
+> **S4** (§1.2 *(di questo documento)*). Ma ci si arriva **aprendo un indirizzo nel browser**, che è la cosa più economica
 > che questo progetto abbia mai chiesto a un dispositivo di prova.
 >
 > ⚠ *Il riquadro sull'emulatore che segue è tenuto per storia: la sua conclusione — «nessun numero
@@ -345,7 +345,7 @@ input.
 **L'utente vede**: ⭐ **apre un indirizzo nel browser**, digita utente e password, e la pagina dice
 *«ammesso, sessione nuova, tela 1920×1080, desktop GNOME»*. O dice perché no.
 
-⛔ **E prima di tutto il resto, la sonda del browser** (§1.2): quattro misure che decidono la forma
+⛔ **E prima di tutto il resto, la sonda del browser** (§1.2 *(di questo documento)*): quattro misure che decidono la forma
 di quel che si scrive dopo — a cominciare da **quale libreria QUIC**, che adesso deve portare
 HTTP/3 e WebTransport (`DECISIONI.md` §6.4).
 
@@ -367,7 +367,7 @@ desktop che non arriva mai** (`RCP.md` §2.4).
 **Controllo positivo del validatore**: gli si dà una registrazione **con un errore dentro** e si
 verifica che lo veda. Uno strumento che non ha mai trovato niente non è pulito: è non certificato.
 
-⭐ **E qui nasce il cliente di prova** (§1.1): la stretta di mano scritta **una seconda volta**, in
+⭐ **E qui nasce il cliente di prova** (§1.1 *(di questo documento)*): la stretta di mano scritta **una seconda volta**, in
 un linguaggio diverso, **leggendo solo `RCP.md`**. Chi lo scrive non guarda il C né la pagina — se
 li guardasse ne erediterebbe i fraintendimenti, e non servirebbe più a niente. Cresce di fase in
 fase insieme al protocollo.
@@ -446,7 +446,7 @@ in `STUDI.md` §gnome §3 e valgono tutte al primo avvio, non dopo: `SHELL` va m
 per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
 scambia per un difetto di cattura, e si cerca per mezza giornata dalla parte sbagliata.
 
-⛔ **E qui la sonda del browser torna, sul serio invece che in prova** (§1.2): il primo fotogramma
+⛔ **E qui la sonda del browser torna, sul serio invece che in prova** (§1.2 *(di questo documento)*): il primo fotogramma
 vero dato a `VideoDecoder` **sul telefono**, per sapere se lo decodifica in hardware e se
 restituisce davvero **10 bit**.
 
@@ -482,13 +482,13 @@ qualcun altro.
 > ⛔ **Le otto ipotesi morte non si rifanno**: le sette del riquadro precedente (flusso AV1 rotto ·
 > allineamento 962→968 · misura sbagliata alla pagina · errori del decodificatore · percorso di
 > disegno della pagina · profondità 10/8 · xrdp+RemoteFX) ⛔ **più il `VideoDecoder`**, scagionato
-> da `copyTo` contro la verità. Ognuna ha la sua misura in §4.9.
+> da `copyTo` contro la verità. Ognuna ha la sua misura in `fasi/06-la-tela-e-la-vista.md` §4.9.
 >
 > ## ⭐ IL LAVORO CHE VIENE, in quest'ordine
 >
 > **1. ⭐⭐ La cura dentro `src/pagina.html`** — ⭐ **FATTA il 20 agosto 2026**, ed è in servizio
 > sulla **7730**: `dipinti == consegnati`, `tard 0`, `err 0`, tela nitida a 1:1 col testimone
-> Marionette (`fasi/06` §4.9-bis). ⏳ **Aspetta il giudizio dell'utente**, che è l'unica cosa che
+> Marionette (`fasi/06-la-tela-e-la-vista.md` §4.9). ⏳ **Aspetta il giudizio dell'utente**, che è l'unica cosa che
 > può chiuderla: nessun banco vede questo difetto. ⚠ E resta `[?]` **quanto costa
 > `createImageBitmap`** — il conto da battere è 34,03 ms del `drawImage` che sostituisce.
 >
@@ -505,7 +505,7 @@ qualcun altro.
 > `pagina.html` la scala di preferenza e il flusso di prova della sonda. ⚠ Con dentro la `[?]`
 > della **scala di colore** del decodificatore hardware: +8 livelli sulle zone chiare.
 >
-> **3. ⚠ E resta la fase 6 aperta**: il suo §8 aspetta ancora il giudizio su due scene — il
+> **3. ⚠ E resta la fase 6 aperta**: il suo `fasi/06-la-tela-e-la-vista.md` §8 aspetta ancora il giudizio su due scene — il
 > trascinamento del bordo e il clic tenuto giù.
 >
 > ## ⚙ Lo stato della macchina — verificato il 20 agosto 2026
@@ -750,7 +750,7 @@ qualcun altro.
 >    nessuno che la catturi**.
 >
 > ⚠ **E l'utente `prova` si conserva** (deciso il 14 agosto): è l'unico posto dove oggi il desktop
-> vero si vede, perché `nicfio` ha già una sessione con un monitor suo e §5.1 ne ammette **una sola
+> vero si vede, perché `nicfio` ha già una sessione con un monitor suo e `SPECIFICHE.md` §5.1 ne ammette **una sola
 > per utente**.
 
 **Produce**: ⭐ **il desktop vero** (qui sopra) · il canale di input, il puntatore disegnato dalla pagina, le lettere e le posizioni —
@@ -803,7 +803,7 @@ assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza 
 > |---|---|
 > | ⭐ **l'accesso** | `[M]` **2087 ms** di mediana su venti giri dal browser, **187 ms** di dispersione; peggiore caso a freddo **2353 ms**. ⛔ La mattina era 3211 ms di mediana con **p90 17255** e max **18158** |
 > | ⭐ **la coda dei 17 secondi** | trovata: il palco nasceva alla tela di ripiego e il ridimensionamento **non si compie su una scena ferma**. ⇒ il figlio aspetta la tela del cliente |
-> | ⭐ **§7.3, il rilascio al distacco** | provato sul **desktop vero** con un testimone che conta le battute: un tasto rimasto giù si ripete **33 volte al secondo**, e il rilascio lo ferma in **15-28 ms** |
+> | ⭐ **`RCP.md` §7.3, il rilascio al distacco** | provato sul **desktop vero** con un testimone che conta le battute: un tasto rimasto giù si ripete **33 volte al secondo**, e il rilascio lo ferma in **15-28 ms** |
 > | ⭐ **i tre orologi** | il silenzio contava **l'utente invece del client** (un secondo dispositivo entrava sul desktop di chi stava leggendo: **I2 rotta**) ⇒ riparato sui pacchetti · l'inattività (`0x02`) **non esisteva** ⇒ fatta · le 6 ore diventano **60 minuti**, per decisione dell'utente su una misura di memoria |
 > | ⭐ **`0x0F`** | il secondo dispositivo è respinto, provato **da un telefono vero** — mai uscito prima su una connessione vera |
 > | ⭐ **la sessione senza nessuno che guarda** | costa **0,017 %** di un nucleo e **477 MB** che non crescono. In v1 `libmutter` andava in asserzione fallita |
@@ -916,7 +916,7 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 >   geometria `libei` **ricrea davvero** i dispositivi assoluti («regione del puntatore per chiave»,
 >   quattro volte di fila), e che `input.c` li riaggancia — ⚠ ma a battere un tasto dopo il
 >   riattacco **non ci ha ancora provato nessuno**;
-> - il **multi-monitor** e tutto il resto di §6.5.
+> - il **multi-monitor** e tutto il resto di `SPECIFICHE.md` §6.5.
 
 **L'utente vede**: ridimensiona la finestra e l'immagine si adatta **senza che le finestre dentro
 si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la sessione adattata.
@@ -955,12 +955,12 @@ questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
 > ## ⭐⭐ E GLI APPUNTI FUNZIONANO — **«clipboard funziona in entrambi i versi»**
 >
 > *Giudizio dell'utente col browser, 17 agosto 2026 sera, porta 7730.* Solo testo, nei due versi:
-> `appunti.c` nuovo, i tre messaggi di §7.4 nel filo, la cucitura nei due processi e il lato
+> `appunti.c` nuovo, i tre messaggi di `RCP.md` §7.4 nel filo, la cucitura nei due processi e il lato
 > browser. ⇒ 📖 `fasi/07-audio-e-appunti.md` §4.5, §6.9, §9.2-bis.
 >
 > ⛔ **E l'arbitro esterno del banco NON ESISTE**: `gnome-shell` gira con `--no-x11`, quindi `xclip`
 > non ha nessuna sponda a cui parlare, e un client Wayland senza fuoco non possiede la selezione.
-> ⇒ Quel giudizio è **l'unica prova** che questa metà della fase abbia — e la riga di §2.4 che
+> ⇒ Quel giudizio è **l'unica prova** che questa metà della fase abbia — e la riga di `fasi/07-audio-e-appunti.md` §2.4 che
 > prometteva un arbitro gratis è stata riscritta.
 >
 > ⭐ *E la richiesta d'apertura diceva «testo formattato»: chiesto all'utente, che ha confermato
@@ -1117,7 +1117,7 @@ degli appunti tiene **un solo tipo MIME**.
 > ~25 ms ⇒ nessuna cura singola porta 140 a 50: è lavoro della fase 8»*.
 >
 > ⛔ **E una strada è chiusa prima di aprirsi**: mettere l'anello in parallelo comprerebbe
-> fotogrammi pagandoli in ritardo ⇒ **allargherebbe l'elastico**. §3.2 lo vietava già: *«una scelta
+> fotogrammi pagandoli in ritardo ⇒ **allargherebbe l'elastico**. `SPECIFICHE.md` §3.2 lo vietava già: *«una scelta
 > che alza il ritmo peggiorando il ritardo non si fa»*.
 >
 > ⏳ **Il primo numero del banco** non è più un tratto: è **`input → vetro` rimisurato sulla scena
@@ -1317,7 +1317,7 @@ guardato (I6).
 > 08:28:09 per un **uso dopo la liberazione** in `webtransport.c`. ⚠ **Nessuna delle cinque è stata
 > misurata sulla macchina di prova.**
 >
-> **4. ⛔ E il difetto che si nasconde non è solo «degrada quando non dovrebbe».** `[M]` §3.8: con
+> **4. ⛔ E il difetto che si nasconde non è solo «degrada quando non dovrebbe».** `[M]` `fasi/09-la-qualita-e-la-degradazione.md` §3.8: con
 > QP 26 fisso e nessun tetto, un **film con la grana a schermo intero** chiede **58,7 Mbit/s = il
 > 293 % del pavimento**. ⭐ **Ma il desktop vero dell'utente ne chiede l'1 %.** ⇒ Il tetto è per il
 > **caso duro**, e la fase ha **due** bersagli, non uno.
@@ -1343,10 +1343,10 @@ questa fase.
 >
 > **1 · ⛔ Il motore della spirale: `video_sgombra()` abbandona i delta a OGNI fotogramma.**
 > `[M]` Su linea larga non abbandona quasi mai; su linea stretta un delta non esce in 33 ms, quindi
-> viene abbandonato **sempre**, e ogni abbandono riaccende il debito di §5.2 — il registro lo dice
+> viene abbandonato **sempre**, e ogni abbandono riaccende il debito di `RCP.md` §5.2 — il registro lo dice
 > **28 volte al secondo**. ⇒ Il video degenera in **un flusso di sole chiavi**, che è la forma
 > peggiore di degradazione: pesante, a scatti, e affama l'audio.
-> ⭐ **La cura è nominata e §5.1 la permette senza imporla**: abbandonare un delta solo quando è
+> ⭐ **La cura è nominata e `RCP.md` §5.1 la permette senza imporla**: abbandonare un delta solo quando è
 > *davvero senza speranza* (una soglia sulla coda) invece che a ogni fotogramma più recente. Così
 > sotto congestione il video calerebbe di **ritmo** restando fatto di delta.
 > ⚠ **Il prezzo va giudicato dall'utente**, ed è esattamente il mestiere di questa fase: per una
@@ -1470,7 +1470,7 @@ conosce il progetto**, perché l'utente lo sottopone a un secondo parere: **§2*
 > | rossi del **banco** | ⭐ **nessuno** |
 >
 > ⭐⭐⭐ **E il difetto più vecchio del progetto è caduto per strada**: *«la sessione che nasce
-> cieca»* (`fasi/10-…` §7.4) **non era del prodotto** — l'inquilino non era nei gruppi `video` e
+> cieca»* (`fasi/10-…` `fasi/10-multi-tenant-e-il-budget.md` §7.4) **non era del prodotto** — l'inquilino non era nei gruppi `video` e
 > `render`. `[M]` 17 sessioni su 17 vedono coi gruppi, **0 su 4** senza. ⇒ Le cinque prove dichiarate
 > «impossibili» non lo erano, e oggi girano tutte.
 >
@@ -1486,7 +1486,7 @@ funzionavano **continuano a funzionare** quando arrivano i desktop nuovi.
 
 | il difetto | nascosto per | ⛔ perché era invisibile |
 |---|---|---|
-| **la sessione che nasce cieca** (fase 10 §7.4) | giorni | ⛔ **nessuno apriva una sessione NUOVA**: si riusavano quelle già aperte, che il monitor ce l'avevano |
+| **la sessione che nasce cieca** (fase 10 `fasi/10-multi-tenant-e-il-budget.md` §7.4) | giorni | ⛔ **nessuno apriva una sessione NUOVA**: si riusavano quelle già aperte, che il monitor ce l'avevano |
 | **il browser che non parte al secondo utente** ⚠ *(non il collegamento `~/.cache`: quello è una **scelta** dell'utente, `DECISIONI.md` §4.6-undecies)* | **due fasi** | ⛔ e il controllo che *«chiudeva la questione»* girava da un utente **nella stessa condizione** |
 | **cinque banchi che contavano zero fotogrammi** | un giro | ⛔ una cura al registro ne aveva rotto le espressioni, e la funzione tornava **0 invece di «non lo so»** |
 
@@ -1510,7 +1510,7 @@ scena**, e si guardava **il processo invece del pixel**.
 
 ### ⛔⛔ IL COLLAUDO DELLA FASE — ed è già scritto, oggi
 
-⭐⭐ **La rete si punta contro il codice del 25 agosto 2026, e DEVE diventare rossa su §7.4** — la
+⭐⭐ **La rete si punta contro il codice del 25 agosto 2026, e DEVE diventare rossa su `fasi/10-multi-tenant-e-il-budget.md` §7.4** — la
 sessione che nasce cieca — ⛔ **senza che nessuno le abbia detto dove guardare.**
 
 ⚠ **E il secondo collaudo**: deve accorgersi che **al secondo utente il browser non si apre**.
@@ -1554,7 +1554,7 @@ nel riquadro della fase 10. **La fase non è cambiata di una riga** — è cambi
 >
 > | | |
 > |---|---|
-> | ⭐ **un guasto suo** | `fasi/11-…` §3.6 lo impone: *«ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare»*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
+> | ⭐ **un guasto suo** | `fasi/11-…` `fasi/11-la-rete-di-sicurezza.md` §3.6 lo impone: *«ogni desktop nuovo entra con almeno un guasto suo, inventato e fatto girare»*. I collaudi di oggi sono quelli che GNOME ci ha insegnato |
 > | ⛔ **KWin non sa nascere cieco** | `[M]` con `--output-count 0` un'uscita la fa lo stesso ⇒ il disegno *«zero monitor propri»* **non si trasporta uguale**, e va ripensato qui |
 > | ⚠ **il palco muore col cliente** | `[M]` il monitor virtuale muore con la connessione D-Bus del figlio. ⭐ Su GNOME `C6` misura verde (le finestre si ritrovano), ⛔ ma su un compositore diverso non è detto ⇒ `DECISIONI.md` §4.6-teretvicies |
 
@@ -1625,7 +1625,7 @@ non si apre; niente `InaccessiblePaths=` nel drop-in.
 >
 > ⚠ **Quel che questa fase deve ancora fare, e che non è la stessa cosa**: rispondere
 > `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` all'`ADATTA_TELA` che il client manda **all'attacco e al
-> riattacco**, così che la pagina riscali e lo dichiari (§6.3). ⭐ E su KDE è il **caso normale**,
+> riattacco**, così che la pagina riscali e lo dichiari (`SPECIFICHE.md` §6.3). ⭐ E su KDE è il **caso normale**,
 > non il ramo povero: KWin ≤ 6.7.4 prende la misura dalla riga di avvio (`--virtual --width W
 > --height H`) e non la cambia più. Il percorso di codice esiste già ed è provato sull'ospite
 > finto (caso 11 di `banchi/04-b31`).
@@ -1717,8 +1717,8 @@ esiste perché nessuno lo perda, ed è l'unico posto in cui è scritto dove è f
 
 | Fase sciolta | Dove è finito il suo lavoro |
 |---|---|
-| **A1** — il filo su Android | **fase 1**: la pagina *è* il client, e la stretta di mano si scrive una volta sola. Il mestiere di secondo lettore passa al **cliente di prova** (§1.1) |
-| **A2** — il video, MediaCodec | **fase 2**, con `VideoDecoder` al posto di MediaCodec — e la domanda *«il telefono ce la fa?»* la risolve la sonda (§1.2, misura **S2**) |
+| **A1** — il filo su Android | **fase 1**: la pagina *è* il client, e la stretta di mano si scrive una volta sola. Il mestiere di secondo lettore passa al **cliente di prova** (§1.1 *(di questo documento)*) |
+| **A2** — il video, MediaCodec | **fase 2**, con `VideoDecoder` al posto di MediaCodec — e la domanda *«il telefono ce la fa?»* la risolve la sonda (§1.2 *(di questo documento)*, misura **S2**) |
 | **A3** — mouse e tastiera, il modo classico | **fase 4**, che diventa la fase dove si scrive **l'interfaccia classica della pagina**: `Pointer Lock` al posto di *Pointer Capture*, e le scorciatoie con il loro limite dichiarato (`SPECIFICHE.md` §7.3-bis) |
 | **A4** — il tocco e la tastiera a schermo | **fase 4** anch'essa, come **seconda disposizione della stessa pagina**: i sette gesti restano quelli, e il passaggio fra le due resta **automatico sul contesto** (`DECISIONI.md` §5-bis.0-bis) |
 | **A5** — la vita dell'applicazione | ⚠ **si sparpaglia, e una parte va sorvegliata**: la migrazione QUIC da WiFi a rete mobile è **fase 9** (è la ragione migliore per cui QUIC è stato scelto); il riattacco è **fase 5**. ⛔ **Quel che cambia natura è lo sfondo**: una scheda del browser che finisce dietro viene rallentata o congelata dal sistema, e non è più un ciclo di vita che governiamo noi — è una cosa da **misurare e dichiarare** |
@@ -1750,7 +1750,7 @@ mestiere di secondo lettore resta al **cliente di prova** della fase 1, che è p
 proprietà che conta: **è scritto dalla specifica, non dal codice**.
 
 ⭐ **E una cosa arriva prima di tutto il resto, che prima non c'era**: la **sonda del browser**
-(§1.2). Non perché sia urgente in sé, ma perché **decide che cosa si scrive**: la libreria QUIC
+(§1.2 *(di questo documento)*). Non perché sia urgente in sé, ma perché **decide che cosa si scrive**: la libreria QUIC
 dipende da WebTransport, il predefinito del certificato dipende da una misura, e quel che la pagina
 deve dichiarare spento dipende dal motore. Una fase che comincia prima di quelle risposte scrive
 codice che poi si butta.
@@ -1802,7 +1802,7 @@ restano senza nessun difetto vero aperto.*
 
 ## ⛔ E i quattro difetti veri trovati in fase 8 — **nessuno era il bersaglio**
 
-la **chiave abbandonata** (§5.2 la vieta, ed era la spirale) · la **scala delle ricodifiche corta di
+la **chiave abbandonata** (`RCP.md` §5.2 la vieta, ed era la spirale) · la **scala delle ricodifiche corta di
 uno scalino** · il **passo non multiplo di 64** che dava un desktop **inclinato senza errori, coi
 millisecondi già perfetti** · e il **cronometro del prodotto che misurava il banco**.
 
