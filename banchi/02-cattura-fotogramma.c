@@ -4,7 +4,7 @@
  *
  * ⛔ PERCHE' ESISTE, VISTO CHE `misura-cattura` C'E' GIA'
  *
- * Lo strumento della fase 0 (`v1/banchi/banco-compositori/misura-cattura.c`) e'
+ * Lo strumento della fase 0 (`fondamenta/banchi/banco-compositori/misura-cattura.c`) e'
  * certificato, riproduce i 36 ± 2 fotogrammi di Mutter, e resta il controllo
  * positivo storico di tutto il progetto.  ⛔ Ma non guarda **mai** dentro il
  * buffer: conta i fotogrammi, legge il tipo di dato, il danno, la fence e gli
@@ -111,7 +111,7 @@
  * ⭐ E il confronto fra i due risponde a una domanda che i documenti oggi si
  *    contraddicono su:
  *
- *   - `v1/remotix-c/src/cattura.h` dice: *«in zero-copy Mutter ricicla i propri
+ *   - `fondamenta/remotix-c/src/cattura.h` dice: *«in zero-copy Mutter ricicla i propri
  *     buffer e vi ridipinge dentro SOLO la parte cambiata; fuori da quelle
  *     regioni ci sono i pixel del fotogramma che aveva usato quel buffer
  *     prima»*;

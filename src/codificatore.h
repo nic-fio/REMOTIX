@@ -87,7 +87,7 @@
  *    `codificatore_nuovo()` **verifica** che sia spento dopo l'apertura, e
  *    `codificatore_comprimi()` verifica **sui byte** che i parameter set siano
  *    davanti a ogni chiave.  E' lo stesso divieto che v1 aveva gia' pagato
- *    (`v1/remotix-c/src/codificatore.c:268-272`, *«su RDP i parametri di
+ *    (`fondamenta/remotix-c/src/codificatore.c:268-272`, *«su RDP i parametri di
  *    sequenza devono viaggiare NEL flusso, davanti all'IDR»*): li' la ragione
  *    era RDP, qui e' `VideoDecoder`, e il **sintomo e' identico** — schermo nero
  *    con i fotogrammi che arrivano.
@@ -119,7 +119,7 @@
  * ⛔ E2 — IL COMPONENTE CHE DECIDE DA SE': SI CHIEDE PER NOME, E SI VERIFICA
  *
  * `CODER.md` §3.9.  E la riga che v1 aveva scritto dopo averlo pagato
- * (`v1/remotix-c/src/codificatore.c:550-566`):
+ * (`fondamenta/remotix-c/src/codificatore.c:550-566`):
  *
  *     ⛔ *«CHIESTO PER NOME, NESSUN RIPIEGO.  Chi indica un codificatore sta
  *        misurando: ripiegare su un altro darebbe due misure diverse con la

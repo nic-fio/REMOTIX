@@ -145,7 +145,7 @@ utente_systemctl()
 # agosto (vedi la §6 qui sotto, ed e' la stessa storia).
 #
 # ⇒ La cura DEFINITIVA e' di prodotto e sta scritta nel rapporto di F2.1:
-#   `v1/remotix-c/src/sessione.c:671` scrive il drop-in del monitor **solo se il
+#   `fondamenta/remotix-c/src/sessione.c:671` scrive il drop-in del monitor **solo se il
 #   compositore e' KWin**, e sul ramo GNOME `larghezza` e `altezza` entrano in
 #   `sessione_assicura()` e si perdono.  Finche' quella riga non cambia, la
 #   protezione sta qui — e qui si dichiara mezza, invece di far credere che sia

@@ -45,7 +45,7 @@ fase 7»*); ⛔ quel che resta della 6 **resta aperto e non si chiude da sé**.
 >   `DisableClipboard` è **a senso unico** (non si chiama mai); la firma di `mime-types` è
 >   **asimmetrica** e chi legge col tipo sbagliato ottiene `NULL` **senza errore**; il gestore
 >   interno tiene **un solo tipo MIME**;
-> - **si riusa** `v1/remotix-c/src/appunti_mutter.c` (450 righe, GNOME);
+> - **si riusa** `fondamenta/remotix-c/src/appunti_mutter.c` (450 righe, GNOME);
 > - ⚠ e la clipboard **si svuota all'inizio di ogni giro**, o quel che resta dal giro prima viene
 >   annunciato e sembra un risultato (`LEZIONI.md` §2.3-quinquies).
 >
@@ -110,14 +110,14 @@ pezzo — il **canale di controllo** e la **negoziazione** — ma il lavoro si f
 
 | file | righe | che cosa vale |
 |---|---|---|
-| `v1/remotix-c/src/suono.c` + `.h` | 582 + 87 | ⭐⭐ **il pezzo più riusabile della fase**: crea il sink virtuale (`support.null-audio-sink`) e ne cattura il **monitor**. Non tocca RDP in nessuna riga |
-| `v1/remotix-c/src/altoparlante.c` + `.h` | 892 + 117 | ⛔ **RDP dentro fino al collo** (`WTSVirtualChannelWrite`, `SendSamples2`, i formati di MS-RDPEA). ⭐ **Ma la forma si eredita**: la coda fra il thread PipeWire e il ciclo della connessione, il buttare **i campioni più vecchi**, il blocco intero per giro |
-| `v1/remotix-c/src/appunti.c` + `.h` | 115 + 136 | lo smistamento fra le due strade |
-| `v1/remotix-c/src/appunti_mutter.c` + `.h` | 450 + 28 | **GNOME**, che è il desktop di questa fase |
-| `v1/remotix-c/src/appunti_wlr.c` | 796 | KDE, XFCE e LXQt — **fasi 11 e 12**, non questa |
+| `fondamenta/remotix-c/src/suono.c` + `.h` | 582 + 87 | ⭐⭐ **il pezzo più riusabile della fase**: crea il sink virtuale (`support.null-audio-sink`) e ne cattura il **monitor**. Non tocca RDP in nessuna riga |
+| `fondamenta/remotix-c/src/altoparlante.c` + `.h` | 892 + 117 | ⛔ **RDP dentro fino al collo** (`WTSVirtualChannelWrite`, `SendSamples2`, i formati di MS-RDPEA). ⭐ **Ma la forma si eredita**: la coda fra il thread PipeWire e il ciclo della connessione, il buttare **i campioni più vecchi**, il blocco intero per giro |
+| `fondamenta/remotix-c/src/appunti.c` + `.h` | 115 + 136 | lo smistamento fra le due strade |
+| `fondamenta/remotix-c/src/appunti_mutter.c` + `.h` | 450 + 28 | **GNOME**, che è il desktop di questa fase |
+| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | KDE, XFCE e LXQt — **fasi 11 e 12**, non questa |
 
 ⛔ **E la divisione che v1 aveva già trovato, e che qui vale identica**: *«il sink è della
-SESSIONE, la cattura è della CONNESSIONE»* (`v1/…/suono.h`). È la stessa forma di I4: un
+SESSIONE, la cattura è della CONNESSIONE»* (`fondamenta/…/suono.h`). È la stessa forma di I4: un
 dispositivo audio che compare e sparisce a ogni riconnessione lascia le applicazioni già aperte
 su un dispositivo morto.
 
@@ -331,7 +331,7 @@ di `FiglioDeposito`, che già porta i fotogrammi.
 ⚠ **E la regola di v1 vale identica qui, ed è la ragione per cui c'è una coda**: il thread di
 PipeWire gira **in tempo reale**, e chi ci scrive dentro una chiamata che aspetta *«non ferma
 soltanto l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del desktop compresa»*
-(`v1/…/suono.h`). Si copia e si torna.
+(`fondamenta/…/suono.h`). Si copia e si torna.
 
 ⛔ **E la priorità è del sistema, non del processo**: `LEZIONI.md` §5 — *«il percorso audio vuole
 tempo reale, e va concesso dall'unità di sistema; un processo senza quel permesso non può
@@ -467,7 +467,7 @@ giudizio; questa sezione è quel che è stato scritto dopo.*
 
 | file | che cosa porta |
 |---|---|
-| ⭐ `src/appunti.h` + `.c` (**nuovi**, ~640 righe) | il lato **Mutter**, portato da `v1/…/appunti_mutter.c` con le quattro trappole disinnescate sul posto. ⛔ Solo testo: i tipi MIME vivono lì dentro e non escono |
+| ⭐ `src/appunti.h` + `.c` (**nuovi**, ~640 righe) | il lato **Mutter**, portato da `fondamenta/…/appunti_mutter.c` con le quattro trappole disinnescate sul posto. ⛔ Solo testo: i tipi MIME vivono lì dentro e non escono |
 | `src/figlio.c` | quattro messaggi nuovi sul socket padre↔figlio (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), il **terzo tavolo di montaggio** e il **fondo di tempo** di chi incolla |
 | `src/rcp.c` + `.h` | i tre messaggi di §7.4, la tabella degli stream in arrivo, i cinque ganci nuovi, e la **cura della corsa con `Ctrl+V`** |
 | `src/webtransport.c` + `.h` | il canale `0x02` in arrivo (`G_UNI_APPUNTI`) e i tre ganci che aprono uno stream verso il client |

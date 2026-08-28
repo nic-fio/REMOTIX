@@ -6,7 +6,7 @@
  *    ferma — non lo aggira.  *(I due punti in cui e' stato detto stanno in
  *    `fasi/rapporti/F4-A4-iniezione.md` §5.)*
  *
- * ⛔ RIPORTATO da `v1/remotix-c/src/input.c` (906 righe), e non ricopiato.  Di
+ * ⛔ RIPORTATO da `fondamenta/remotix-c/src/input.c` (906 righe), e non ricopiato.  Di
  *    v1 resta ⭐ **la meccanica di libei** — il ciclo `poll`/`ei_dispatch`, la
  *    presa dei dispositivi, `start_emulating`, `ei_device_frame` dopo ogni
  *    evento — che e' il patrimonio vero.  ⛔ Cade tutto il contorno RDP

@@ -279,7 +279,7 @@ fai_caso1() {
 	if [ "$v1" -eq 0 ] && [ "$v2" -eq 0 ]; then
 		ok "controllo positivo VERDE: il banco sa produrre l'atteso"
 	else
-		ko "⛔ il controllo positivo NON e' verde ($v1/$v2): quel che segue non vale"
+		ko "⛔ il controllo positivo NON e' verde ($fondamenta/$v2): quel che segue non vale"
 	fi
 	registra "{\"caso\":\"1\",\"verdetto_a\":$v1,\"verdetto_b\":$v2,\"ricambi\":[$r0,$r1],\"carico\":\"$(carico)\",\"quando\":\"$(date -Iseconds)\"}"
 }

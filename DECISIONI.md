@@ -227,7 +227,7 @@ fasi, e **non costa una riga di prodotto**.
 
 La riga `== NO WINDOWS ==` non è una nota a margine: è la leva che toglie i tre muri contro
 cui v1 si è fermato, e che erano tutti e tre di RDP e non del problema — il tetto a H.264
-(`v1/documenti/SPECIFICA.md` §5.1), il client Android che decodificava in software, e il
+(`fondamenta/documenti/SPECIFICA.md` §5.1), il client Android che decodificava in software, e il
 colore pieno irraggiungibile.
 
 **Il prezzo, accettato:** il protocollo va progettato oltre che scritto, e i client vanno
@@ -235,7 +235,7 @@ scritti da zero — quello Android è un progetto a sé, non una funzionalità.
 
 **Che cosa decade con RDP:** EGFX, `MapSurfaceToOutput`, RemoteFX Progressive, AVC444, NLA e
 CredSSP, MS-RDPEDISP, `ERRINFO_*`, FreeRDP 3 come vincolo, la matrice dei tre client altrui,
-e `v1/documenti/REFERENCE.md` quasi per intero.
+e `fondamenta/documenti/REFERENCE.md` quasi per intero.
 
 ### 1.2 ✅ Il protocollo si chiama RCP — *Remotix Control Protocol*
 
@@ -2376,7 +2376,7 @@ tardi» e basta.
 
 *Sul ferro dell'utente REMOTIX usa **l'Intel**; la Radeon RX 6800 è riservata all'inferenza.*
 
-Il meccanismo esiste già: `v1/banco/gpu-udev.sh`, e la sua intestazione spiega perché non ce ne
+Il meccanismo esiste già: `fondamenta/banco/gpu-udev.sh`, e la sua intestazione spiega perché non ce ne
 sono di più semplici:
 
 - **KWin prende la prima scheda che riesce ad aprire** e non guarda nessuna variabile
@@ -2440,7 +2440,7 @@ installata, `/etc/udev/rules.d` era vuota — i gruppi `video`/`render` danno ac
 due**, e `[M]` il compositore aveva preso la **Radeon**. ⇒ La misura dell'Aquarium delle 22:09 —
 60 fps inchiodati — è stata fatta **sulla scheda sbagliata**, e va rifatta.
 
-**La cura è quella già decisa in §4.6-ter, finalmente applicata**: `v1/banco/gpu-udev.sh` con
+**La cura è quella già decisa in §4.6-ter, finalmente applicata**: `fondamenta/banco/gpu-udev.sh` con
 l'indirizzo da **escludere**, che sposta il nodo in un gruppo senza membri. ⭐ `[M]` dopo il
 riavvio del gestore d'utente e della sessione, `gnome-shell` apre **6 descrittori su `renderD128`**:
 l'integrata, e solo quella.
@@ -3909,7 +3909,7 @@ peggiorato le cose**.
 *9 agosto 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
 
 ⚠ **In v1 RDM aveva un ruolo diverso**: era il **client da servire** — *«se non funziona qui, non
-funziona»* (`v1/documenti/client-android.md` §1.2). In V2 il client lo scriviamo noi, quindi
+funziona»* (`fondamenta/documenti/client-android.md` §1.2). In V2 il client lo scriviamo noi, quindi
 cambia mestiere: da **vincolo** a **riferimento**.
 
 ⛔ **E il confine è netto, perché RDM è proprietario** (Devolutions,
@@ -4204,8 +4204,8 @@ canale RDP che li trasportava, non il modo di parlare col desktop.
 
 | | Righe | Copre |
 |---|---|---|
-| `v1/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `STUDI.md` §xfce §8 lo dà per funzionante così com'è |
-| `v1/remotix-c/src/appunti_mutter.c` | 450 | GNOME, che ha una via sua |
+| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `STUDI.md` §xfce §8 lo dà per funzionante così com'è |
+| `fondamenta/remotix-c/src/appunti_mutter.c` | 450 | GNOME, che ha una via sua |
 
 ### 5-ter.3 🔸 Di chi sono gli appunti cambia per desktop, e una trappola è già disinnescata
 
@@ -4253,7 +4253,7 @@ perché non c'è niente da scegliere»*. Per l'HTML servirebbe quel campo, e `RC
 aggiungere campi a messaggi esistenti dentro una versione maggiore: **la finestra è chiusa dal 10
 agosto 2026**. ⇒ Sarebbe stato **RCP/2**, più quattro documenti da correggere.
 
-⭐ E v1 l'HTML lo portava (`v1/remotix-c/src/scambio.c:56`, il formato registrato «HTML Format»):
+⭐ E v1 l'HTML lo portava (`fondamenta/remotix-c/src/scambio.c:56`, il formato registrato «HTML Format»):
 non è una cosa impossibile, è una cosa **lasciata fuori di proposito**.
 
 ### 5-ter.5 🔸 La corsa fra `Ctrl+V` e l'annuncio: la richiesta ASPETTA, e i tasti non si ritardano
@@ -4421,18 +4421,18 @@ seconda copia. Verificato per impronta SHA-256, 103 file su 103.
 
 | | |
 |---|---|
-| `v1/remotix-c/` | **17.481 righe di C**, 26 moduli |
-| `v1/remotix-c/prove/` | **4.563 righe di banchi**, uno script per fase |
-| `v1/banchi/` | **262 file** dell'indagine sulla fase 11, `misura-cattura.c` compreso |
-| `v1/remotix-rust/` | 7.163 righe, ramo IronRDP chiuso il 3 agosto |
-| `v1/documenti/` | PIANO, SPECIFICA, REFERENCE, protocollo-rdp, client-android, xrdp |
-| `v1/calibrazione/` | le tre scene della taratura del 1 agosto |
+| `fondamenta/remotix-c/` | **17.481 righe di C**, 26 moduli |
+| `fondamenta/remotix-c/prove/` | **4.563 righe di banchi**, uno script per fase |
+| `fondamenta/banchi/` | **262 file** dell'indagine sulla fase 11, `misura-cattura.c` compreso |
+| `fondamenta/remotix-rust/` | 7.163 righe, ramo IronRDP chiuso il 3 agosto |
+| `fondamenta/documenti/` | PIANO, SPECIFICA, REFERENCE, protocollo-rdp, client-android, xrdp |
+| `fondamenta/calibrazione/` | le tre scene della taratura del 1 agosto |
 
-> ### ⛔⛔ E QUESTA TABELLA OMETTEVA LE DUE SOLE PARTI DI `v1/` CHE SONO VIVE — *corretto il 16 agosto 2026*
+> ### ⛔⛔ E QUESTA TABELLA OMETTEVA LE DUE SOLE PARTI DI `fondamenta/` CHE SONO VIVE — *corretto il 16 agosto 2026*
 >
-> *Trovato censendo `v1/` file per file, su richiesta dell'utente. La tabella qui sopra ha **sei
-> righe** e le lascio com'erano — ⛔ ma `v1/banco/` e `v1/strumenti/` non ci sono, e sono
-> **l'attrezzatura corrente del progetto**. Chi leggeva questo paragrafo per sapere che cos'è `v1/`
+> *Trovato censendo `fondamenta/` file per file, su richiesta dell'utente. La tabella qui sopra ha **sei
+> righe** e le lascio com'erano — ⛔ ma `fondamenta/banco/` e `fondamenta/strumenti/` non ci sono, e sono
+> **l'attrezzatura corrente del progetto**. Chi leggeva questo paragrafo per sapere che cos'è `fondamenta/`
 > si portava a casa che era tutto archivio. Non lo è.*
 >
 > ## La mappa vera: che cosa è **vivo**, che cosa è **archivio**, che cosa non serve a nessuno
@@ -4441,16 +4441,16 @@ seconda copia. Verificato per impronta SHA-256, 103 file su 103.
 >
 > | | file | MB | citazioni | |
 > |---|---|---|---|---|
-> | ⭐⭐ **`v1/banco/`** | 13 | 0,2 | **enter.sh: 193** | **VIVO, e regge tutto**: `enter.sh` è il modo in cui si entra nella macchina di prova. Con `provision.sh`, `provision-server.sh`, `gpu-udev.sh` (applicato il 15 agosto, §4.6-ter), `server.sh`, `vm.sh` |
-> | ⭐⭐ **`v1/strumenti/sshpw.py`** | 1 | 0,01 | **81** | **VIVO**: lo chiamano decine di banchi di V2 |
-> | ⭐ `v1/remotix-c/` | 70 | 1,0 | 37 file su 70 | **archivio con valore**: è la miniera del riuso — `kwin.c` (822 righe) e `appunti_wlr.c` (796) sono nel piano delle fasi 11 e 12 |
-> | ⭐ `v1/banchi/banco-compositori/` | 74 | 0,7 | 4 | **archivio con valore**: le misure di KWin, wlroots e Mutter, che le fasi 11 e 12 rifaranno |
-> | ⭐ `v1/documenti/` | 6 | 0,5 | tutti e sei | **archivio con valore**: la storia del prezzo pagato (`LEZIONI.md` §0) |
-> | ⚠ `v1/calibrazione/` | 10 | ⛔ **90,2** | la cartella 1 volta, i file **0** | le tre scene a tre risoluzioni — **il 96 % del peso del progetto**. Vedi il riquadro sotto |
-> | ⚠ `v1/remotix-rust/` | 23 | 0,4 | **1**, ed è questa tabella | il ramo IronRDP, **chiuso il 3 agosto**. La lezione è scritta qui; il codice non la aggiunge |
-> | ⛔ `v1/banchi/` *(resto)* | ~190 | 4,1 | 17 | 86 `.log`, 8 `.png`, 10 archivi `.tgz/.gz/.xz`, 2 `.so`, gli esiti di esecuzioni del 1-8 agosto |
-> | ⛔ ~~`v1/tracce/`~~ | 8 | 0,4 | **0** | flussi `.h264` e log di provisioning **RDP** — e RDP è morto con §1.6. ✅ **Tolti il 16 agosto 2026** |
-> | ⛔ ~~`v1/banco/*.prima*`, `*.rust`~~ | 4 | 0,05 | **0** | **copie a mano** di `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, fatte prima di una modifica. ⚠ Una copia di riserva accanto all'originale è una trappola, non una rete: la rete è git. ✅ **Tolte il 16 agosto 2026** |
+> | ⭐⭐ **`fondamenta/banco/`** | 13 | 0,2 | **enter.sh: 193** | **VIVO, e regge tutto**: `enter.sh` è il modo in cui si entra nella macchina di prova. Con `provision.sh`, `provision-server.sh`, `gpu-udev.sh` (applicato il 15 agosto, §4.6-ter), `server.sh`, `vm.sh` |
+> | ⭐⭐ **`fondamenta/strumenti/sshpw.py`** | 1 | 0,01 | **81** | **VIVO**: lo chiamano decine di banchi di V2 |
+> | ⭐ `fondamenta/remotix-c/` | 70 | 1,0 | 37 file su 70 | **archivio con valore**: è la miniera del riuso — `kwin.c` (822 righe) e `appunti_wlr.c` (796) sono nel piano delle fasi 11 e 12 |
+> | ⭐ `fondamenta/banchi/banco-compositori/` | 74 | 0,7 | 4 | **archivio con valore**: le misure di KWin, wlroots e Mutter, che le fasi 11 e 12 rifaranno |
+> | ⭐ `fondamenta/documenti/` | 6 | 0,5 | tutti e sei | **archivio con valore**: la storia del prezzo pagato (`LEZIONI.md` §0) |
+> | ⚠ `fondamenta/calibrazione/` | 10 | ⛔ **90,2** | la cartella 1 volta, i file **0** | le tre scene a tre risoluzioni — **il 96 % del peso del progetto**. Vedi il riquadro sotto |
+> | ⚠ `fondamenta/remotix-rust/` | 23 | 0,4 | **1**, ed è questa tabella | il ramo IronRDP, **chiuso il 3 agosto**. La lezione è scritta qui; il codice non la aggiunge |
+> | ⛔ `fondamenta/banchi/` *(resto)* | ~190 | 4,1 | 17 | 86 `.log`, 8 `.png`, 10 archivi `.tgz/.gz/.xz`, 2 `.so`, gli esiti di esecuzioni del 1-8 agosto |
+> | ⛔ ~~`fondamenta/tracce/`~~ | 8 | 0,4 | **0** | flussi `.h264` e log di provisioning **RDP** — e RDP è morto con §1.6. ✅ **Tolti il 16 agosto 2026** |
+> | ⛔ ~~`fondamenta/banco/*.prima*`, `*.rust`~~ | 4 | 0,05 | **0** | **copie a mano** di `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, fatte prima di una modifica. ⚠ Una copia di riserva accanto all'originale è una trappola, non una rete: la rete è git. ✅ **Tolte il 16 agosto 2026** |
 >
 > ## ⛔⛔ E la cosa che cambia il ragionamento sui 90 MB: **toglierli non recupera niente**
 >
@@ -4471,7 +4471,7 @@ seconda copia. Verificato per impronta SHA-256, 103 file su 103.
 > ⇒ **Decisione: i `.mp4` restano.** ⚠ E si scrive qui perché nessuno riapra la questione contando
 > di nuovo i megabyte senza contare gli hash.
 >
-> ⭐ **Con un fatto che vale per la fase 9**: le scene **si rigenerano**, `v1/banco/calibrazione.sh`
+> ⭐ **Con un fatto che vale per la fase 9**: le scene **si rigenerano**, `fondamenta/banco/calibrazione.sh`
 > le produce con `ffmpeg` alle tre risoluzioni native. ⚠ **Ma non byte per byte**: un `ffmpeg`
 > diverso dà un file diverso, e il confronto con i numeri del 1 agosto si romperebbe. ⇒ Chi alla
 > fase 9 volesse confrontarsi con la taratura di v1 **usi questi file**, non quelli che si
@@ -4495,7 +4495,7 @@ Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings`
 *8 agosto 2026. «Confermo il C».*
 
 ⚠ **Non è un'eredità: è una decisione nuova che ripete la vecchia.** Il vincolo di v1
-(`v1/documenti/SPECIFICA.md` §8-bis) aveva una ragione sola — *«gnome-remote-desktop smette di
+(`fondamenta/documenti/SPECIFICA.md` §8-bis) aveva una ragione sola — *«gnome-remote-desktop smette di
 essere un riferimento da cui trarre ispirazione e diventa un riferimento da cui trarre
 codice»* — e **quella ragione è morta con RDP**: non c'è più niente da trapiantare, perché
 nessuno ha scritto RCP prima di noi. La questione è stata riaperta a occhi aperti e richiusa
@@ -5029,7 +5029,7 @@ non sono viaggiano come posizioni. E la domanda si è allargata da Android a ent
 Quel che segue è il ragionamento che ci ha portati lì, tenuto perché la conclusione da sola non
 si capisce.
 Il passeggero del touch, e pesa di più. *«Una tastiera Android non è una tastiera fisica: non
-ha scancode, ha un IME che produce testo»* (`v1/documenti/client-android.md` §5.2). Il client
+ha scancode, ha un IME che produce testo»* (`fondamenta/documenti/client-android.md` §5.2). Il client
 manda quindi **Unicode** per i caratteri stampabili e **scancode** per i tasti di controllo —
 Invio, Tab, frecce, modificatori.
 

@@ -60,7 +60,7 @@
 #     ⚠ **E non regala niente**: `nicfio` ha gia' `sudo`, cioe' root pieno.
 #       Questa riga gli da' un sottoinsieme stretto di quel che ha gia'.
 #     ⛔ E non sopravvive al riavvio: il rootfs di questa macchina e' live in
-#       RAM (`v1/strumenti/sshpw.py`, riquadro in testa) — che e' anche il
+#       RAM (`fondamenta/strumenti/sshpw.py`, riquadro in testa) — che e' anche il
 #       motivo per cui questo file esiste invece di essere un comando battuto
 #       a mano una volta.  Una cura a mano torna.
 #

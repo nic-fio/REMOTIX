@@ -12,7 +12,7 @@
 # ===========================================================================
 # ⛔ PERCHE' QUESTO BANCO ESISTE, VISTO CHE LA FASE 0 GIA' MISURA LA CATTURA
 #
-# `v1/banchi/banco-compositori/misura-cattura` e' certificato, riproduce i
+# `fondamenta/banchi/banco-compositori/misura-cattura` e' certificato, riproduce i
 # 36 ± 2 fotogrammi al secondo di Mutter, e resta il controllo positivo storico
 # di tutto il progetto (`FASI.md` §00-ambiente).  ⛔ Ma i pixel non li guarda mai:
 # legge tipo, fd, stride, danno e sequenza, e rimette il buffer in coda senza
@@ -226,7 +226,7 @@ elenco()
 
      un fotogramma con danno PARZIALE e' comunque INTERO?
 
-       `v1/remotix-c/src/cattura.h`  dice di NO: *«Mutter ricicla i propri
+       `fondamenta/remotix-c/src/cattura.h`  dice di NO: *«Mutter ricicla i propri
                                      buffer e vi ridipinge dentro SOLO la parte
                                      cambiata; fuori da quelle regioni ci sono i
                                      pixel del fotogramma di prima»*

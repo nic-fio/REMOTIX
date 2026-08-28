@@ -12,7 +12,7 @@
 #
 # Alla fase 0 il prodotto non c'e' ancora, e il controllo positivo dell'intero
 # progetto — i ~37 fotogrammi di Mutter — vuole una sessione viva.  Questo banco
-# fa il minimo per averla, con la stessa ricetta che `v1/remotix-c/src/sessione.c`
+# fa il minimo per averla, con la stessa ricetta che `fondamenta/remotix-c/src/sessione.c`
 # usa nel prodotto: l'ambiente si COMPONE da zero, una variabile per volta.
 #
 # ---------------------------------------------------------------------------

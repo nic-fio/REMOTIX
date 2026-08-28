@@ -400,7 +400,7 @@ bash "$ENTRA" --root \
 sleep 2
 PID=$(cat "$FUORI/b11-server.pid" 2>/dev/null)
 # ⚠ `/proc/$PID` si legge di qui e non da dentro, ed e' corretto: quello di
-#   `enter.sh` e' un `chroot` (`v1/banco/enter.sh`), che condivide lo spazio dei
+#   `enter.sh` e' un `chroot` (`fondamenta/banco/enter.sh`), che condivide lo spazio dei
 #   PID dell'ospite — non un contenitore con un suo spazio.
 if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
 	ko "il server guasto non e' partito:"

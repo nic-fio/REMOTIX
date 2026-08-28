@@ -39,7 +39,7 @@ set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(dirname "$QUI")
-SSH="python3 $RADICE/v1/strumenti/sshpw.py"
+SSH="python3 $RADICE/fondamenta/strumenti/sshpw.py"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }

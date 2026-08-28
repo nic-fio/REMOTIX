@@ -50,7 +50,7 @@ set -uo pipefail
 
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
 RADICE=$(cd -- "$QUI/.." && pwd)
-SSHPW="$RADICE/v1/strumenti/sshpw.py"
+SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 
 FUORI=/media/REMOTIX/src
 DENTRO=/srv/src

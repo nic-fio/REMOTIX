@@ -209,7 +209,7 @@ COPIE=${COPIE:-$QUI/01-p5-copie}
 #     veniva SALTATA in silenzio** — cioe' il giro restava senza il controllo che
 #     dice NO sull'autenticazione, che e' meta' del mestiere di questo banco.
 #
-# ⭐ Adesso i portatori sono DUE, e non e' pignoleria: `v1/strumenti/sshpw.py`
+# ⭐ Adesso i portatori sono DUE, e non e' pignoleria: `fondamenta/strumenti/sshpw.py`
 #    digita la password su un pty — quindi `sudo` passa — ⛔ ma lascia nel
 #    proprio stdout due righe di preambolo (la richiesta della password, con la
 #    password tolta, e un avviso di `tput`).  Usarlo anche per SCARICARE il
@@ -219,7 +219,7 @@ COPIE=${COPIE:-$QUI/01-p5-copie}
 #      SSH       legge (il registro del server) — vuole uno stdout PULITO
 #      SSH_ROOT  comanda (lo sblocco, che passa da `sudo`) — vuole la password
 #
-#      SSH_ROOT="python3 v1/strumenti/sshpw.py" bash banchi/01-p5-lancia.sh
+#      SSH_ROOT="python3 fondamenta/strumenti/sshpw.py" bash banchi/01-p5-lancia.sh
 #
 # ⚠ I predefiniti NON cambiano — `SSH_ROOT` vale `SSH` se nessuno lo dice — e
 #   chi lancia come prima misura quel che misurava: il salto di N2 resta

@@ -853,7 +853,7 @@ che §4.4 vieta.
 ⚠ **Una nota che non è normativa e che vale il tempo di scriverla**: la parola d'ordine sta in
 chiaro nella memoria di chi la riceve. Va azzerata appena PAM ha risposto, e **non** deve comparire
 in nessun registro a nessun livello — nemmeno in `traccia`, che in v1 è un registratore di battitura
-(`v1/remotix-c/src/registro.h`).
+(`fondamenta/remotix-c/src/registro.h`).
 
 ### 4.4-bis ✅ Il ban dell'indirizzo — tre tentativi, poi dodici ore
 

@@ -2,7 +2,7 @@
  * autenticazione.c — PAM, e la guardia che parte da negato.
  *
  * ---------------------------------------------------------------------------
- * ⭐ DERIVATO DA `v1/remotix-c/src/autenticazione.c` (144 righe), CON DUE
+ * ⭐ DERIVATO DA `fondamenta/remotix-c/src/autenticazione.c` (144 righe), CON DUE
  *    CAMBIAMENTI, E IL PRIMO E' QUELLO CHE `PIANO.md` FASE 1 CHIAMA
  *    «NON UN DETTAGLIO»:
  *

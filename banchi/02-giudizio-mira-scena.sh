@@ -59,7 +59,7 @@ set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(cd "$QUI/.." && pwd)
-SSHPW=$RADICE/v1/strumenti/sshpw.py
+SSHPW=$RADICE/fondamenta/strumenti/sshpw.py
 IND=${IND:-192.168.0.2}
 PORTA=${PORTA:-7561}
 # ⚠ I due valori di PRIMA, letti dalla macchina il 13 agosto 2026 e scritti qui

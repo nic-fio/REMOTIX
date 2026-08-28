@@ -65,7 +65,7 @@ righe piu' NUOVE della piu' recente gia' presente.**
 
 Le righe arrivano da `sshpw.py --get`, cioe' da uno `scp`: ⭐ **mai** dallo
 stdout di un `cat` remoto, dove finisce anche la richiesta di password
-(`v1/strumenti/sshpw.py`, e c'e' scritto perche').  ⇒ Restano comunque possibili
+(`fondamenta/strumenti/sshpw.py`, e c'e' scritto perche').  ⇒ Restano comunque possibili
 righe vuote o troncate (un giro interrotto a meta' scrittura).
 ⛔ Una riga che non si lascia leggere **non si butta in silenzio**: si conta e si
    stampa.  ⚠ E se NON si lascia leggere **nessuna** riga, non e' «zero righe

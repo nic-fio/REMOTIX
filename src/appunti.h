@@ -18,7 +18,7 @@
  *
  * *«Per la clipboard ho idea precisa: solo testo»* (utente, 9 agosto 2026), e
  * confermato il 17.  Niente immagini, niente file, niente formati ricchi.  ⚠ v1
- * portava anche `text/html` e le immagini (`v1/remotix-c/src/scambio.c`): qui
+ * portava anche `text/html` e le immagini (`fondamenta/remotix-c/src/scambio.c`): qui
  * non ci sono **di proposito**, e chi le rimettesse dovrebbe prima riaprire
  * §5-ter.1 e `RCP.md` §7.4 — che non ha nemmeno un campo per dire il tipo.
  *

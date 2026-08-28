@@ -97,7 +97,7 @@ def principale():
         for _ in range(8):
             r = subprocess.run(
                 ["python3", os.path.join(os.path.dirname(QUI),
-                                         "v1/strumenti/sshpw.py"),
+                                         "fondamenta/strumenti/sshpw.py"),
                  "sudo -S -p 'Password sudo: ' bash %s scena-avvia" % a.terreno],
                 capture_output=True, text=True, timeout=240)
             if r.returncode == 0:

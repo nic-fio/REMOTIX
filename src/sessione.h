@@ -5,7 +5,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ PERCHE' QUESTO FILE ESISTE IN V2, E PERCHE' NON E' UNA COPIA DI QUELLO DI v1
  *
- * `v1/remotix-c/src/sessione.c:671` e':
+ * `fondamenta/remotix-c/src/sessione.c:671` e':
  *
  *     if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(larghezza, altezza, sbaglio))
  *
@@ -35,7 +35,7 @@
  *      configurazione che si puo' perdere.»
  *
  * Fino al 12 agosto 2026 il monitor virtuale di GNOME lo metteva
- * `v1/banco/provision-server.sh`, cioe' una riga in `/etc/systemd/user/` su un
+ * `fondamenta/banco/provision-server.sh`, cioe' una riga in `/etc/systemd/user/` su un
  * rootfs che vive in RAM.  Quella riga si e' persa — e la macchina e' stata nera
  * due giorni.  D4 l'ha rimessa, ⛔ **ma una riga rimessa e' ancora una riga che
  * si puo' perdere**: qui il monitor lo chiede il PROGRAMMA, a ogni nascita di

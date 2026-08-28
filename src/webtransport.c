@@ -730,7 +730,7 @@ struct wt {
 	 *     parte NON si conserva: si BUTTA, e si conta.
 	 *
 	 * ⭐ E si buttano i PIU' VECCHI, non i piu' nuovi — e' la regola che v1
-	 *    aveva gia' trovato (`v1/remotix-c/src/altoparlante.h`): «il suono in
+	 *    aveva gia' trovato (`fondamenta/remotix-c/src/altoparlante.h`): «il suono in
 	 *    ritardo non serve a nessuno, e una coda che cresce all'infinito
 	 *    finirebbe per mangiare la memoria del server per riprodurre un rumore
 	 *    di mezzo minuto fa».

@@ -1,7 +1,7 @@
 /*
  * mutter — la sequenza obbligata che apre un monitor virtuale e il suo flusso.
  *
- * ⛔ RIPORTATO DA `v1/remotix-c/src/mutter.c` (353 righe), e non ricopiato:
+ * ⛔ RIPORTATO DA `fondamenta/remotix-c/src/mutter.c` (353 righe), e non ricopiato:
  *    quel file portava dentro `sessione.h` e il registro di v1, e chiamava
  *    `ConnectToEIS` per l'input — che in fase 2 non esiste ancora.  Qui resta
  *    ⭐ **la sequenza D-Bus**, che e' il pezzo prezioso, e le due punizioni
@@ -40,7 +40,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ IL MONITOR VIRTUALE LO MONTA IL PROGRAMMA, ED E' L'INVARIANTE I7
  *
- * `v1/remotix-c/src/sessione.c:671` e' `if (tipo == COMPOSITORE_KWIN && …)`: sul
+ * `fondamenta/remotix-c/src/sessione.c:671` e' `if (tipo == COMPOSITORE_KWIN && …)`: sul
  * ramo GNOME larghezza e altezza **entravano nella funzione e si perdevano**, e
  * il monitor virtuale finiva in una riga di `provision-server.sh` — cioe' in una
  * configurazione che si puo' perdere.  ⛔ E si e' persa: `[M]` 12 agosto 2026,

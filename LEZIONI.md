@@ -20,15 +20,15 @@
 > **Che cosa cambia forma** e' marcato dove capita, con la data, e sono tre punti soli: la regola dei
 > tre client (§2.1), due dei vicoli ciechi (§8) e il conto del client Android (§7.4).
 >
-> **Dove stanno i documenti citati.** Il progetto v1 vive sotto `v1/`, e i rimandi qui sotto vanno
+> **Dove stanno i documenti citati.** Il progetto v1 vive sotto `fondamenta/`, e i rimandi qui sotto vanno
 > letti con questa tabella accanto:
 >
 > | Citato come | Sta in | Quanto vale in V2 |
 > |---|---|---|
-> | `REFERENCE.md` | `v1/documenti/REFERENCE.md` | erano le regole di compatibilita' con i client RDP altrui. **In V2 decade quasi per intero**, perche' i client sono nostri. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
-> | `PIANO.md`, `SPECIFICA.md` | `v1/documenti/` | il piano e la specifica di v1, chiusi alla fase 11 |
+> | `REFERENCE.md` | `fondamenta/documenti/REFERENCE.md` | erano le regole di compatibilita' con i client RDP altrui. **In V2 decade quasi per intero**, perche' i client sono nostri. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
+> | `PIANO.md`, `SPECIFICA.md` | `fondamenta/documenti/` | il piano e la specifica di v1, chiusi alla fase 11 |
 > | `kde.md`, `gnome.md`, `xfce.md`, `lxqt.md` — e `cinnamon.md`, `web.md`, `xpra.md`, `gnome-remote-desktop.md` | ⭐ **capitoli di `STUDI.md`**, al livello di V2: cuciti in un documento solo il 16 agosto 2026, ⛔ senza togliere una riga | intatti: parlano di compositori, non di protocollo. ⚠ Si citano `STUDI.md` §kde, §gnome, §xfce, §lxqt — **le chiavi sono i nomi che avevano i file** |
-> | i banchi e i programmi di misura | `v1/banchi/` | intatti, e sono la cosa piu' riutilizzabile che v1 lascia |
+> | i banchi e i programmi di misura | `fondamenta/banchi/` | intatti, e sono la cosa piu' riutilizzabile che v1 lascia |
 >
 > ⚠ **E una avvertenza sul riuso**, che e' §1.11 rivolta a noi: che una lezione sia scritta qui non
 > vuol dire che sia stata verificata su RCP. Una lezione di **metodo** si riusa senza ridiscuterla;
@@ -1800,7 +1800,7 @@ librerie ha caricato — non fidarsi di quel che il compositore scrive nel propr
 > **no**: un output virtuale ha un solo modo, immutabile, e va chiuso e ricreato (`STUDI.md` §kde §8). È la
 > **dodicesima domanda**, e chi apre il prossimo desktop la faccia insieme alla quinta.
 
-**Gli strumenti per rispondere esistono già** e stanno in `v1/banchi/banco-compositori/` — portati
+**Gli strumenti per rispondere esistono già** e stanno in `fondamenta/banchi/banco-compositori/` — portati
 qui dal server l'8 agosto 2026, quando la macchina di prova è stata ripulita: sorgenti, script e
 binari già compilati, fuori dal prodotto:
 

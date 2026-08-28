@@ -3853,7 +3853,7 @@ static uint64_t ora_monotona_us(void)
  *      l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del
  *      desktop compresa**.  ⚠ Cioe' l'audio si porterebbe via i fotogrammi, e
  *      il sintomo sarebbe «il video scatta», che non nomina l'audio.
- *      (`v1/remotix-c/src/suono.h`, e `LEZIONI.md` §5.)
+ *      (`fondamenta/remotix-c/src/suono.h`, e `LEZIONI.md` §5.)
  *
  * ⇒ Fra il thread di PipeWire e il ciclo del figlio ci sta un **anello a un
  *   produttore e un consumatore**, senza lucchetti: il produttore muove solo
@@ -3961,7 +3961,7 @@ static uint32_t audio_pronti(void)
  *              non muore piu' finche' vive il figlio.  ⚠ Farlo sparire a ogni
  *              distacco interromperebbe il suono a chi ascolta **dentro** la
  *              sessione e lascerebbe le applicazioni gia' aperte su un
- *              dispositivo morto (`v1/remotix-c/src/suono.h`);
+ *              dispositivo morto (`fondamenta/remotix-c/src/suono.h`);
  *      `acod`  il CODIFICATORE, e' della **connessione**: dipende dal codec
  *              che quella connessione ha negoziato (§4.3), e si rifa' quando
  *              il codec cambia. */

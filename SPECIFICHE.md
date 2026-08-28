@@ -36,7 +36,7 @@ il protocollo intero.
 
 È l'evoluzione di REMOTIX v1, che si è fermato alla fase 11 dopo aver servito GNOME e KDE
 parlando RDP. Il patrimonio di v1 — 17.481 righe di C, 4.563 righe di banchi, cinque studi dei
-desktop e il registro delle lezioni — sta sotto `v1/` ed è la base su cui V2 poggia
+desktop e il registro delle lezioni — sta sotto `fondamenta/` ed è la base su cui V2 poggia
 (`DECISIONI.md` §6).
 
 ### 1.1 Perché RDP muore, in una riga

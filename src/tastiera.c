@@ -16,14 +16,14 @@
  * ---------------------------------------------------------------------------
  * ⭐ CHE COSA SI E' RIUSATO DA v1, E CHE COSA NO
  *
- * `v1/remotix-c/src/tastiera.c` faceva gia' questo giro (372 righe, xkbcommon),
+ * `fondamenta/remotix-c/src/tastiera.c` faceva gia' questo giro (372 righe, xkbcommon),
  * e la sua struttura e' quella di qui: si scandisce la disposizione tasto per
  * tasto e livello per livello, e si cerca chi produce il simbolo voluto.  Tre
  * cose sono cambiate, e ciascuna per una ragione MISURATA il 14 agosto 2026:
  *
  *  1. ⛔ **i modificatori non si indovinano piu'.**  v1 aveva la regoletta
  *     «livello 1 = Maiusc, livello 2 = AltGr, livello 3 = tutt'e due»
- *     (`v1/.../tastiera.c:251`).  E' vera per le disposizioni ordinarie e falsa
+ *     (`fondamenta/.../tastiera.c:251`).  E' vera per le disposizioni ordinarie e falsa
  *     per le altre.  ⭐ `[M]` 14 agosto 2026, misurato su `de(neo)`:
  *
  *       U+00E4 «ä» ⇒ 46                 (nessun modificatore)

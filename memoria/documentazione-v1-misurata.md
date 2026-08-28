@@ -31,7 +31,7 @@ versione l'audio funzionava, esamina quella cartella»*.
 **How to apply:** è il **punto 0 della ricetta** di `LEZIONI.md` §9 — *«chi, al
 mondo, fa già questa cosa?»* — nella variante che conta di più: **chi, in casa
 nostra, l'ha già risolta?** Prima di scrivere un pezzo che v1 aveva, si cerca
-qui. ⚠ Il codice di v1 sta altrove (`REMOTIX/v1/remotix-c/src/`): questa
+qui. ⚠ Il codice di v1 sta altrove (`REMOTIX/fondamenta/remotix-c/src/`): questa
 cartella sono le **misure**.
 
 Vedi [[misura-anche-chi-ascolta]], [[remotix-convenzioni]].

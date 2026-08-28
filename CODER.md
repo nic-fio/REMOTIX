@@ -34,9 +34,9 @@ Il fondamento condiviso, che qui si richiama ma non si riscrive:
 >
 > | Citato qui come | Sta in | Quanto vale in V2 |
 > |---|---|---|
-> | `SPECIFICA.md` | `v1/documenti/SPECIFICA.md` | ⛔ **si legge `SPECIFICHE.md`**, al livello di V2, che la sostituisce per intero. I §x.y citati qui sotto puntano alla vecchia, e la corrispondenza va cercata per argomento |
-> | `REFERENCE.md` | `v1/documenti/REFERENCE.md` | erano le regole di compatibilità con i client RDP altrui. **In V2 decade quasi per intero**: i client sono nostri e l'arbitro è `RCP.md`. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
-> | `PIANO.md` di v1 | `v1/documenti/PIANO.md` | chiuso alla fase 11. Il piano vivo è `PIANO.md` al livello di V2 |
+> | `SPECIFICA.md` | `fondamenta/documenti/SPECIFICA.md` | ⛔ **si legge `SPECIFICHE.md`**, al livello di V2, che la sostituisce per intero. I §x.y citati qui sotto puntano alla vecchia, e la corrispondenza va cercata per argomento |
+> | `REFERENCE.md` | `fondamenta/documenti/REFERENCE.md` | erano le regole di compatibilità con i client RDP altrui. **In V2 decade quasi per intero**: i client sono nostri e l'arbitro è `RCP.md`. Le citazioni restano valide come **storia del prezzo pagato**, non come regole da applicare |
+> | `PIANO.md` di v1 | `fondamenta/documenti/PIANO.md` | chiuso alla fase 11. Il piano vivo è `PIANO.md` al livello di V2 |
 >
 > ⚠ **E i tre documenti che in V2 non esistevano affatto**, e che qui non sono citati perché sono
 > nati dopo: `RCP.md` (l'arbitro del filo), `DECISIONI.md` (il perché di ogni scelta, con la

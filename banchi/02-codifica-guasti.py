@@ -110,7 +110,7 @@ GUASTI = {
                     "CODIFICATORE=prodotto bash banchi/02-codifica-lancia.sh"),
         "dimostra":
             "⛔ E' il difetto che v1 aveva gia' comprato una volta "
-            "(`v1/remotix-c/src/codificatore.c:268-272`), ed e' quello che nessun "
+            "(`fondamenta/remotix-c/src/codificatore.c:268-272`), ed e' quello che nessun "
             "giro a UN fotogramma puo' vedere: con una chiave sola i parameter "
             "set ci sono per forza.  ⭐ Il passo 6 ne codifica TRE, e li' i gruppi "
             "cadono da 3 a 1.  ⚠ Il sintomo vero, in fase 3, sarebbe «schermo "

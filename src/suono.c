@@ -2,7 +2,7 @@
  * suono.c — vedi `suono.h` per il mandato, la divisione sessione/connessione e
  * la scelta di NON accumulare i blocchi qui dentro.
  *
- * ⚠ Portato da v1 (`v1/remotix-c/src/suono.c`) il 17 agosto 2026.  Le sole
+ * ⚠ Portato da v1 (`fondamenta/remotix-c/src/suono.c`) il 17 agosto 2026.  Le sole
  *   differenze volute rispetto a quel file:
  *     · niente GLib — `bool` di `<stdbool.h>`, il registro di `registro.h`, e
  *       chi fallisce torna `false`/NULL dopo aver scritto il perche';

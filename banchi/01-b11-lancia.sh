@@ -49,7 +49,7 @@ set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(dirname "$QUI")
-SSH="python3 $RADICE/v1/strumenti/sshpw.py"
+SSH="python3 $RADICE/fondamenta/strumenti/sshpw.py"
 PORTA_PAGINA=8899
 IND=${IND:-192.168.0.2}
 PORTA=${PORTA:-7447}

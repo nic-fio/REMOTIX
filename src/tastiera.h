@@ -82,7 +82,7 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
  *   la degradazione e' morbida — «una disposizione vecchia non produce mai
  *   caratteri sbagliati».  ⛔ E' vero SOLO usando la keymap della sessione.
  *
- * ⭐ E v1 lo faceva gia' cosi' (`v1/remotix-c/src/tastiera.c:69`): e' l'unico
+ * ⭐ E v1 lo faceva gia' cosi' (`fondamenta/remotix-c/src/tastiera.c:69`): e' l'unico
  *    pezzo di v1 che il primo contratto di V2 non aveva ripreso.
  *
  * `testo`/`lunghezza` sono la keymap che `libei` porta col dispositivo tastiera

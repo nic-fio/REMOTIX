@@ -5,11 +5,11 @@
  *    stanno in `appunti.h`, e non si ripetono qui: questo file le ATTUA, e ogni
  *    punto in cui una di esse morde e' segnato sul posto.
  *
- * ⭐ Discende da `v1/remotix-c/src/appunti_mutter.c` (450 righe, misurato il 5
+ * ⭐ Discende da `fondamenta/remotix-c/src/appunti_mutter.c` (450 righe, misurato il 5
  *    agosto 2026 contro GNOME 48.7).  ⛔ Le differenze, tutte volute:
  *
  *      · **solo testo**: v1 scambiava elenchi di tipi MIME con chi cuce e
- *        portava anche immagini e `text/html` (`v1/…/scambio.c`).  Qui i tipi
+ *        portava anche immagini e `text/html` (`fondamenta/…/scambio.c`).  Qui i tipi
  *        vivono in `TIPI_TESTO` e non escono da questo file;
  *      · **si legge qui**, sul thread degli appunti, invece di consegnare i
  *        tipi e farsi richiamare: l'annuncio di §7.4 porta la lunghezza, e la

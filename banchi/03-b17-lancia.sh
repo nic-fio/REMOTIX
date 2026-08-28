@@ -19,7 +19,7 @@
 #
 #   · ⛔ **MAI una redirezione ATTORNO a `ssh` o a `enter.sh`** — pagata SEI
 #     volte: la richiesta della parola di `sudo` va sullo stderr, e una
-#     redirezione la mangia.  ⇒ Si passa da `v1/strumenti/sshpw.py`;
+#     redirezione la mangia.  ⇒ Si passa da `fondamenta/strumenti/sshpw.py`;
 #   · ⛔ **un file non ha livelli di virgolette**: quel che deve girare sul
 #     server sta in uno SCRIPT (`03-b17-accendi.sh`), non dentro
 #     `ssh → enter.sh → bash -c`;
@@ -40,7 +40,7 @@ set -uo pipefail
 
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
 RADICE=$(cd -- "$QUI/.." && pwd)
-SSHPW="$RADICE/v1/strumenti/sshpw.py"
+SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 FUORI=/media/REMOTIX/src
 ALBERO=$FUORI/03-b17-src
 DENTRO=/srv/src

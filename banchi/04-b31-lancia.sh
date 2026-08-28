@@ -24,7 +24,7 @@
 #   · ⛔ **MAI una redirezione ATTORNO a `ssh` o a `enter.sh`**: la richiesta di
 #     parola d'ordine di `sudo` va sullo stderr, e una redirezione la mangia —
 #     il comando resta appeso per sempre, in silenzio.  ⇒ Si passa da
-#     `v1/strumenti/sshpw.py`;
+#     `fondamenta/strumenti/sshpw.py`;
 #   · ⛔ **un file non ha livelli di virgolette**: quel che deve girare dentro il
 #     contenitore sta in uno script sul server;
 #   · le porte sono le **7711-7715**, di questo anello e di nessun altro.  ⛔ La
@@ -49,7 +49,7 @@ set -uo pipefail
 
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
 RADICE=$(cd -- "$QUI/.." && pwd)
-SSHPW="$RADICE/v1/strumenti/sshpw.py"
+SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 
 FUORI=/media/REMOTIX/src
 ALBERO=$FUORI/04-o1-src

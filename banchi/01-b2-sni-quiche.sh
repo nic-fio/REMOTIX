@@ -88,7 +88,7 @@ inf "rustc    $(rustc --version 2>/dev/null || echo MANCA)"
 inf "go       $(go version 2>/dev/null || echo MANCA)"
 inf "cmake    $(cmake --version 2>/dev/null | head -1 || echo MANCA)"
 if ! command -v cargo >/dev/null; then
-	ko "cargo manca: sta in v1/banco/provision.sh, non si installa a mano"
+	ko "cargo manca: sta in fondamenta/banco/provision.sh, non si installa a mano"
 	exit 2
 fi
 [ -d "$Q" ] && inf "quiche gia' clonato" || inf "quiche da clonare"

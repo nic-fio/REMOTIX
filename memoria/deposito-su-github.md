@@ -18,9 +18,9 @@ Finche' ci sono quelle righe il deposito non si puo' aprire — e cancellarle do
 non basta, la storia di git non dimentica. Si toglie cambiando la parola d'ordine
 sul server e facendogliela leggere da un file. ⇒ Lavoro da fare col server acceso.
 
-⭐ **v1 e' dentro il deposito, sotto `v1/`, e NON e' un archivio**:
-`v1/strumenti/sshpw.py` (39 richiami), `v1/remotix-c/src` (34), `v1/banco/enter.sh`
-e i filmati di `v1/calibrazione/` sono attrezzatura viva dei banchi.
+⭐ **v1 e' dentro il deposito, sotto `fondamenta/`, e NON e' un archivio**:
+`fondamenta/strumenti/sshpw.py` (39 richiami), `fondamenta/remotix-c/src` (34), `fondamenta/banco/enter.sh`
+e i filmati di `fondamenta/calibrazione/` sono attrezzatura viva dei banchi.
 Vedi [[costruire-serve-il-contenitore]] e [[riavvio-perde-la-chiave-ssh]].
 
 ⚠ **I registri di misura non sono stati rinominati**: `*.jsonl` e `*.log` portano

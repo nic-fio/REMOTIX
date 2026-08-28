@@ -61,7 +61,7 @@ def log(t): print(f"\n\033[1m== {t}\033[0m", flush=True)
 
 
 def sshpw(comando, attesa=200):
-    return subprocess.run(["python3", os.path.join(RADICE, "v1/strumenti/sshpw.py"),
+    return subprocess.run(["python3", os.path.join(RADICE, "fondamenta/strumenti/sshpw.py"),
                            comando], capture_output=True, text=True, timeout=attesa)
 
 

@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------------------
  * ⛔ CHE COSA E' STATO PORTATO DA v1, E CHE COSA E' STATO LASCIATO LI'
  *
- * Portato (`v1/remotix-c/src/sessione.c`, 797 righe vere):
+ * Portato (`fondamenta/remotix-c/src/sessione.c`, 797 righe vere):
  *   · `sessione_bus()`            — la connessione nostra, senza «exit-on-close»
  *   · `componi_ambiente()`        — l'ambiente da zero, ramo GNOME (408-540)
  *   · `locale_utf8()`             — la locale che dev'ESISTERE, non solo dirsi

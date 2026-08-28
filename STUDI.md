@@ -4973,7 +4973,7 @@ macchina da server.
 >
 > La (A) è il premio e la (B) è la rete di sicurezza. **La misura si fa nell'ordine
 > (A) → (B)**, e la (A) non si dichiara riuscita perché il processo sta in piedi: si dichiara
-> riuscita quando `misura-cattura` (in `v1/banchi/banco-compositori/`) conta fotogrammi su una
+> riuscita quando `misura-cattura` (in `fondamenta/banchi/banco-compositori/`) conta fotogrammi su una
 > scena dichiarata e sempre in movimento. È `LEZIONI.md` §1.1 e §3.2 di `CODER.md`.
 
 ---
@@ -5008,7 +5008,7 @@ NotifyPointerMotionRelative · NotifyPointerMotionAbsolute
 NotifyTouchDown · NotifyTouchMotion · NotifyTouchUp
 ```
 
-⛔ **Niente `ConnectToEIS`**, quindi **niente libei** — e `v1/remotix-c/src/input.c` (906 righe) è
+⛔ **Niente `ConnectToEIS`**, quindi **niente libei** — e `fondamenta/remotix-c/src/input.c` (906 righe) è
 scritto per libei, deciso il 4 agosto 2025 chiudendo la fase 3 di v1.
 
 Le tre conseguenze:
@@ -5094,7 +5094,7 @@ e qui le tre che contano stanno in un'esecuzione.
 ### 9. Il piano di misure, in ordine
 
 Il minimo per decidere «dentro o fuori». Serve una macchina con Cinnamon 6.7 e i banchi di
-`v1/banchi/banco-compositori/`.
+`fondamenta/banchi/banco-compositori/`.
 
 | # | Che cosa | Come si dichiara riuscita |
 |---|---|---|

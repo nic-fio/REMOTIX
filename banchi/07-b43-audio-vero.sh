@@ -230,7 +230,7 @@ IND=${IND:-192.168.0.2}
 PORTA=${PORTA:-7720}
 UTENTE=${UTENTE:-prova2}
 UID_B=${UID_B:-1002}
-SINK=${SINK:-remotix}          # `v1/remotix-c/src/suono.c`: `#define NOME_SINK "remotix"`
+SINK=${SINK:-remotix}          # `fondamenta/remotix-c/src/suono.c`: `#define NOME_SINK "remotix"`
 ALBERO=${ALBERO:-/media/REMOTIX/src/07-vero-src}
 LAV=${LAV:-/media/REMOTIX/tmp/07-vero}
 DENTRO_ALB=${DENTRO_ALB:-/srv/src/07-vero-src}
@@ -964,7 +964,7 @@ if [ "$CANCELLO" = 4 ]; then
 	printf '\n'
 	printf '   Nel binario appena compilato non compaiono ne «support.null-audio-sink»\n'
 	printf '   ne «monitor.channel-volumes», cioe le due stringhe che il sink della\n'
-	printf '   sessione porta con se (`v1/remotix-c/src/suono.c`).  Il tono che il\n'
+	printf '   sessione porta con se (`fondamenta/remotix-c/src/suono.c`).  Il tono che il\n'
 	printf '   server sa produrre oggi e `--audio-prova`, che lo fabbrica LUI: non e\n'
 	printf '   il suono del desktop, ed e proprio quel che questo banco NON misura.\n'
 	printf '\n'

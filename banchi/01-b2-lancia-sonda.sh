@@ -57,7 +57,7 @@ MOTORI=${1:-tutti}
 # ---------------------------------------------------------------------------
 log "1. Il server minimo, sull'altra macchina"
 inf "si accende e RESTA acceso finche' questo script non ha finito"
-python3 "$RADICE/v1/strumenti/sshpw.py" \
+python3 "$RADICE/fondamenta/strumenti/sshpw.py" \
 	"bash /media/REMOTIX/src/01-b2-lancia-wt.sh accendi $IND $PORTA" > "$TEMP/acceso.log" 2>&1
 STATO=$?
 sed 's/^/        /' "$TEMP/acceso.log"
@@ -67,7 +67,7 @@ if [ "$STATO" -ne 0 ]; then
 fi
 
 spegni() {
-	python3 "$RADICE/v1/strumenti/sshpw.py" \
+	python3 "$RADICE/fondamenta/strumenti/sshpw.py" \
 		"bash /media/REMOTIX/src/01-b2-lancia-wt.sh spegni" >/dev/null 2>&1
 }
 trap spegni EXIT

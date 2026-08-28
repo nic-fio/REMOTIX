@@ -150,7 +150,7 @@ LOG_DENTRO=${LOG_DENTRO:-/srv/src/attrezzi-allinea-prodotto-costr.log}
 
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new $UTE@$IND"
 SCP="scp -q -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
-SSH_ROOT=${SSH_ROOT:-python3 $RADICE/v1/strumenti/sshpw.py}
+SSH_ROOT=${SSH_ROOT:-python3 $RADICE/fondamenta/strumenti/sshpw.py}
 
 VERDE=$'\033[1;32m'; ROSSO=$'\033[1;31m'; GIALLO=$'\033[1;33m'; GRIGIO=$'\033[0m'
 ok()  { printf '    %sOK%s  %s\n' "$VERDE" "$GRIGIO" "$*"; }

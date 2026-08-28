@@ -45,7 +45,7 @@
  * ---------------------------------------------------------------------------
  * ⚠ PERCHE' SINCRONO, e non un thread come in v1
  *
- * v1 (`v1/remotix-c/src/sentinella.c`, 307 righe) teneva un `GMainLoop` in un
+ * v1 (`fondamenta/remotix-c/src/sentinella.c`, 307 righe) teneva un `GMainLoop` in un
  * thread suo, con `SessionNew`/`SessionRemoved`.  ⛔ Li' il server girava DENTRO
  * la sessione di UNA persona e la domanda era «c'e' una locale?»; qui il server
  * e' di sistema e la domanda e' «c'e' una locale **di quest'utente**?», che si

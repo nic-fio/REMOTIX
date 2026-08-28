@@ -68,7 +68,7 @@
 # ⛔ IL GUASTO — E' IL CODICE DI v1, RIMESSO DOV'ERA
 # ===========================================================================
 #
-# Il guasto non e' inventato: e' `v1/remotix-c/src/sessione.c:671` rimesso in
+# Il guasto non e' inventato: e' `fondamenta/remotix-c/src/sessione.c:671` rimesso in
 # piedi su una copia del sorgente,
 #
 #     if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(larghezza, altezza, sbaglio))

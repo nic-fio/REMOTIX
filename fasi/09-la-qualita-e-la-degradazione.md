@@ -259,12 +259,12 @@ era stata validata con PSNR»*: è vero come *fase omologa*, ⚠ ma chi cercasse
 `LEZIONI.md` troverebbe **la ferita sbagliata** (la CPU). `LEZIONI.md` §2.4 e §7.2 e
 `DECISIONI.md` §3.2 dicono correttamente **fase 10**.
 
-### 0.2 ⛔ Il racconto esatto dell'azzeramento — `v1/documenti/PIANO.md:1410-1442`
+### 0.2 ⛔ Il racconto esatto dell'azzeramento — `fondamenta/documenti/PIANO.md:1410-1442`
 
 > *«La fase 10 va azzerata e ricominciare da zero.»* — Il codice è tornato allo stato di chiusura
 > della fase 9. **I banchi sono stati rimossi.**
 
-⛔ **`v1/documenti/PIANO.md:1418`: «l'errore non è stato tecnico».** Le tre ragioni, testuali:
+⛔ **`fondamenta/documenti/PIANO.md:1418`: «l'errore non è stato tecnico».** Le tre ragioni, testuali:
 
 1. **Si è spedita a chi guarda una modifica a quel che si vede, validata solo sul banco.** Il
    passaggio a **VBR** aveva PSNR, SSIM e un fotogramma fermo guardato a occhio; **non aveva il
@@ -275,7 +275,7 @@ era stata validata con PSNR»*: è vero come *fase omologa*, ⚠ ma chi cercasse
 3. **Non si è controllato lo stato della macchina prima di cominciare** — l'utente si è preso in
    faccia un difetto noto a metà giornata.
 
-⭐ **Il fatto tecnico che innescò tutto** (`v1/documenti/SPECIFICA.md:93-96`): il controllo di
+⭐ **Il fatto tecnico che innescò tutto** (`fondamenta/documenti/SPECIFICA.md:93-96`): il controllo di
 bitrate spedito *«su un desktop poco mosso scendeva a 2–6 Mbit/s, contento di risparmiare»*. ⚠ E
 il testo della specifica **si prestava alla lettura opposta** — cioè una fase è stata azzerata
 anche per **l'ambiguità di una riga di specifica**.
@@ -352,7 +352,7 @@ degrada). Resta il **qp**, di cui non esiste nessuna scala definita.
 - ⛔ **si misurano tutte e tre le grandezze** — ms di CPU · fotogrammi/s · **ritardo** — **più i
   byte in uscita**, e il lavoro si fissa prima del confronto (`LEZIONI.md` §6.2, §1.26);
 - ⚠ **PSNR/SSIM si possono usare come strumento di lavoro, mai come verdetto**, e prima si
-  certificano contro le tre trappole di `v1/documenti/REFERENCE.md:2437` (l'fps del muxer, la
+  certificano contro le tre trappole di `fondamenta/documenti/REFERENCE.md:2437` (l'fps del muxer, la
   scena che finisce prima del filmato, il croma non esercitato).
 
 ⚠ **Pulizia prima di misurare**: quattro server di prova degli agenti sono rimasti accesi da root
@@ -1408,7 +1408,7 @@ pavimento: il margine ha un numero sotto invece di essere prudenza) · `bit_rate
 ⛔ **mai uguale al filo, è R31 alla lettera** · `rc_buffer_size` = filo × **40 ms**.
 
 ⛔⛔ **E quella terza riga è quella che v1 sbagliò senza che nessuno se ne accorgesse**:
-`v1/remotix-c/src/codificatore.c:256` metteva `rc_buffer_size = bit_rate / 2`, che **non è «metà»:
+`fondamenta/remotix-c/src/codificatore.c:256` metteva `rc_buffer_size = bit_rate / 2`, che **non è «metà»:
 è mezzo SECONDO** — un VBV si misura in bit, e `bit_rate/2` bit a `bit_rate` bit/s fanno **500 ms**,
 cioè **dieci volte** il tetto di 50 ms che `CODER.md` §1-bis dà a **tutto** il pezzo nostro.
 ⭐ Qui sono **40**, cioè il *traguardo* e non il *tetto*: si sbaglia nel verso scomodo. ⚠ E il

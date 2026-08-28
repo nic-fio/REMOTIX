@@ -669,7 +669,7 @@ else
 		ko "     §4.6-quinquies la chiude APPOSTA.  In fase 5 il compositore"
 		ko "     l'aveva presa senza che nessuno lo avesse chiesto, e una misura"
 		ko "     intera e' stata fatta sulla scheda sbagliata."
-		ko "     Si rimette con:  sudo bash v1/banco/gpu-udev.sh $PCI_DISCRETA"
+		ko "     Si rimette con:  sudo bash fondamenta/banco/gpu-udev.sh $PCI_DISCRETA"
 	fi
 fi
 

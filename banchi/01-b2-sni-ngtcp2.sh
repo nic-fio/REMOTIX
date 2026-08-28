@@ -81,7 +81,7 @@ if [ -f /usr/include/ev.h ]; then
 	ok "ev.h presente"
 else
 	inf "assente: la installo adesso, ma il posto dove deve stare e'"
-	inf "v1/banco/provision.sh — dove e' gia' stata aggiunta (LEZIONI.md §2.5-bis:"
+	inf "fondamenta/banco/provision.sh — dove e' gia' stata aggiunta (LEZIONI.md §2.5-bis:"
 	inf "una dipendenza installata a mano diventa invisibile in un giorno)"
 	# ⚠ Niente `2>/dev/null`: se apt fallisce si deve vedere il perche'.
 	apt-get install -y --no-install-recommends libev-dev

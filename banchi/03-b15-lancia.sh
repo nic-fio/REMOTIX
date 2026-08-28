@@ -19,7 +19,7 @@
 #   · ⛔ **MAI una redirezione ATTORNO a `ssh` o a `enter.sh`** — pagata SEI
 #     volte.  La richiesta di parola d'ordine di `sudo` va sullo stderr, e una
 #     redirezione la mangia: il comando resta appeso per sempre, in silenzio.
-#     ⇒ Si passa da `v1/strumenti/sshpw.py`, e non si redirige niente;
+#     ⇒ Si passa da `fondamenta/strumenti/sshpw.py`, e non si redirige niente;
 #   · ⛔ **un file non ha livelli di virgolette**: quel che deve girare dentro
 #     il contenitore sta in uno script SUL SERVER, non dentro
 #     `ssh → enter.sh → bash -c`.  In particolare `&` dentro tre livelli di
@@ -37,7 +37,7 @@ set -uo pipefail
 
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
 RADICE=$(cd -- "$QUI/.." && pwd)
-SSHPW="$RADICE/v1/strumenti/sshpw.py"
+SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 FUORI=/media/REMOTIX/src
 ALBERO=$FUORI/03-b15-src
 DENTRO=/srv/src

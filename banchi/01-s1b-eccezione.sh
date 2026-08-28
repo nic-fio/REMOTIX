@@ -124,7 +124,7 @@ log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
-ssh_()  { python3 "$RADICE/v1/strumenti/sshpw.py" "$@"; }
+ssh_()  { python3 "$RADICE/fondamenta/strumenti/sshpw.py" "$@"; }
 
 PID_X=
 congedo()

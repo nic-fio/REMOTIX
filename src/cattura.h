@@ -4,7 +4,7 @@
  * ⛔ IL MANDATO DI QUESTO FILE, IN UNA RIGA: **un fotogramma consegnato in
  *    memoria con il tipo di buffer DICHIARATO, non dedotto.**
  *
- * ⛔ RIPORTATO da `v1/remotix-c/src/cattura.c` (1060 righe) e NON ricopiato.
+ * ⛔ RIPORTATO da `fondamenta/remotix-c/src/cattura.c` (1060 righe) e NON ricopiato.
  *    Quel file portava dentro l'apparato RDP che in V2 non esiste — la strada
  *    che si gira a cattura viva perche' AVC420 vuole la GPU e RemoteFX la CPU,
  *    la misura negoziabile per KWin 6.8, il ridimensionamento della fase 6 — e
@@ -59,7 +59,7 @@
  * ⛔ IL DANNO E' UN'INFORMAZIONE SU QUANTO E' CAMBIATO — NON LA CONDIZIONE PER
  *    CUI IL BUFFER SI PUO' LEGGERE
  *
- * ⚠ In `v1/remotix-c/src/cattura.h` c'era scritto il contrario, e la misura lo ha
+ * ⚠ In `fondamenta/remotix-c/src/cattura.h` c'era scritto il contrario, e la misura lo ha
  *   smentito.  Diceva: *«in zero-copy Mutter ricicla i propri buffer e vi
  *   ridipinge dentro SOLO la parte cambiata; fuori da quelle regioni ci sono i
  *   pixel del fotogramma che aveva usato quel buffer prima»* (7 agosto 2026).
@@ -75,7 +75,7 @@
  * virtuale come `CoglOffscreen` persistente.  Le due strade concordano.
  *
  * ⛔ E LA CONSEGUENZA CHE E' ANCORA VIVA NEL CODICE EREDITATO: in
- *    `v1/remotix-c/src/palco.c:598-628` la copia zero nasce **spenta su GNOME**
+ *    `fondamenta/remotix-c/src/palco.c:598-628` la copia zero nasce **spenta su GNOME**
  *    con questa ragione, e questa ragione **e' morta**.  ⚠ Il che NON dice che
  *    la copia zero su GNOME funzioni: dice che il motivo per cui era spenta non
  *    c'e' piu', e che la decisione va ripresa **su una misura** invece che su

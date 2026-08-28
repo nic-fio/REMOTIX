@@ -267,10 +267,10 @@ tutto il progetto**. Se il banco non sa riprodurre un numero che sappiamo vero, 
 > questa fase va rifatto **contro le celle pulite di `banchi/03-b14-esiti.jsonl`**, non contro il
 > numero.*
 
-**Il banco**: `v1/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
+**Il banco**: `fondamenta/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
 scene con `ffmpeg -f lavfi -i testsrc2`.
 
-**Si riusa**: tutto `v1/banchi/` (262 file), `v1/banco/` per il provisioning.
+**Si riusa**: tutto `fondamenta/banchi/` (262 file), `fondamenta/banco/` per il provisioning.
 
 ⛔ **Passo zero, e senza di questo la fase non parte: GNOME non è più installato sul server**
 `[M]` — `dpkg-query` dice *not-installed*, non c'è una `gnome.desktop` (`STUDI.md` §gnome §2). Il
@@ -1150,7 +1150,7 @@ porta.
 > ### ✅ ⭐ La trappola della GPU è CHIUSA, e va detto perché nessuno la ricerchi — *15 agosto 2026*
 >
 > *Qui stava scritto: «con due schede, il compositore che disegna su quella sbagliata dà
-> composizione in software **senza un errore**. La regola udev di `v1/banco/gpu-udev.sh` va
+> composizione in software **senza un errore**. La regola udev di `fondamenta/banco/gpu-udev.sh` va
 > applicata e verificata».*
 >
 > ⛔ **Ed era peggio di un rischio: era già successo.** `[M]` `/etc/udev/rules.d` era **vuota**, i

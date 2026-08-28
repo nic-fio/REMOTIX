@@ -16,7 +16,7 @@
  *
  * Mutter espone anche i vecchi metodi `Notify*` su D-Bus, e da li' uno scatto
  * si manda in una riga di `gdbus`.  ⛔ Ma il prodotto inietta con **libei**
- * (`v1/remotix-c/src/input.c`, `ei_device_scroll_discrete`), e il segno e'
+ * (`fondamenta/remotix-c/src/input.c`, `ei_device_scroll_discrete`), e il segno e'
  * proprio la cosa che le due strade potrebbero non condividere: misurare sulla
  * strada che il prodotto non usa sarebbe la forma **E10** — un numero preso su
  * un motore diverso da quello del prodotto.
@@ -89,7 +89,7 @@ static bool assoluto;                   /* la regione c'e': si va al centro */
  * ⛔ La connessione al bus e' NOSTRA, non quella condivisa di `g_bus_get_sync`.
  *    Sulla condivisa GIO tiene acceso «exit-on-close» e chiama `raise(SIGTERM)`
  *    per conto nostro quando il bus si chiude: e' il difetto del 4 agosto 2026
- *    citato in `v1/remotix-c/src/sessione.h`, e qui produrrebbe un iniettore
+ *    citato in `fondamenta/remotix-c/src/sessione.h`, e qui produrrebbe un iniettore
  *    che muore da solo a meta' misura senza che niente lo dica.
  */
 static GDBusConnection *apri_bus(GError **sbaglio)
@@ -106,7 +106,7 @@ static GDBusConnection *apri_bus(GError **sbaglio)
 /* ------------------------------------------------------------------------ *
  * La sessione RemoteDesktop di Mutter, e il descrittore EIS.
  *
- * ⚠ L'ordine e' quello del riferimento e di `v1/remotix-c/src/mutter.c`:
+ * ⚠ L'ordine e' quello del riferimento e di `fondamenta/remotix-c/src/mutter.c`:
  *   CreateSession → ConnectToEIS → Start.  `ConnectToEIS` si chiede sulla
  *   sessione NON ancora avviata.
  * ------------------------------------------------------------------------ */
@@ -228,7 +228,7 @@ static void al_centro(void)
 
 /* ------------------------------------------------------------------------ *
  * Gli eventi di libei.  Nomi e ordine sono quelli gia' provati in
- * `v1/remotix-c/src/input.c`, che gira su questo stesso Mutter.
+ * `fondamenta/remotix-c/src/input.c`, che gira su questo stesso Mutter.
  * ------------------------------------------------------------------------ */
 static void tratta_evento(struct ei_event *evento)
 {

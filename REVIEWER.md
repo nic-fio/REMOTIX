@@ -9,7 +9,7 @@ letto questo documento e le sezioni di `SPECIFICA.md` che l'area tocca.
 
 > ⚠ **Dove stanno i documenti citati** *(aggiunto il 9 agosto 2026)*. Anche questo documento è
 > arrivato da v1 **senza rinumerazione**, e cita i nomi vecchi: `SPECIFICA.md` e `REFERENCE.md`
-> stanno sotto `v1/documenti/`. In V2 si legge **`SPECIFICHE.md`** al loro posto, e chi revisiona
+> stanno sotto `fondamenta/documenti/`. In V2 si legge **`SPECIFICHE.md`** al loro posto, e chi revisiona
 > il filo ha un arbitro che v1 non aveva: **`RCP.md`**. La tabella completa sta in `CODER.md` §0 —
 > le due vanno lette in coppia, come tutto il resto di questi due documenti.
 

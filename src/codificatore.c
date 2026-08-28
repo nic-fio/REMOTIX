@@ -268,7 +268,7 @@ void codificatore_qualita_risale(bool accesa)
  *                   avviso, senza una riga di registro, e c'era una bolletta.
  *   `rc_buffer_size` = filo x **40 ms**.  ⛔ E QUESTO E' IL NUMERO CHE V1 HA
  *                   SBAGLIATO SENZA CHE NESSUNO SE NE ACCORGESSE:
- *                   `v1/remotix-c/src/codificatore.c:256` metteva
+ *                   `fondamenta/remotix-c/src/codificatore.c:256` metteva
  *                   `rc_buffer_size = bit_rate / 2`, che **non e' «meta'»: e'
  *                   mezzo SECONDO** (un VBV si misura in bit, e `bit_rate/2`
  *                   bit a `bit_rate` bit/s fanno 500 ms) — **dieci volte** il
@@ -2322,7 +2322,7 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 * ⛔⛔ QUI NON SI ACCENDE `AV_CODEC_FLAG_GLOBAL_HEADER`, E LA RIGA E'
 	 *     SCRITTA IN NEGATIVO DI PROPOSITO.
 	 *
-	 * v1 l'aveva gia' pagato (`v1/remotix-c/src/codificatore.c:268-272`): coi
+	 * v1 l'aveva gia' pagato (`fondamenta/remotix-c/src/codificatore.c:268-272`): coi
 	 * parameter set messi da parte il client riceve un flusso che non sa
 	 * decodificare, e ⛔ **il sintomo e' schermo nero con i fotogrammi
 	 * riscontrati** — cioe' non nomina ne' i parameter set ne' il codificatore.

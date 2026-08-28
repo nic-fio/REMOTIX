@@ -7,7 +7,7 @@
 #   sudo bash src/provisiona.sh verifica   solo i controlli, non tocca niente
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔ PERCHE' NON SI USA PIU' `v1/banco/provision-server.sh`
+# ⛔⛔ PERCHE' NON SI USA PIU' `fondamenta/banco/provision-server.sh`
 #
 # `[M]` La notte del 15 agosto 2026 quello script, rieseguito dopo un riavvio,
 # ha rimesso in piedi lo stato SBAGLIATO e ci e' costato una serata.  In tre

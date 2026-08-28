@@ -12,7 +12,7 @@
 ═══════════════════════════════════════════════════════════════════════════════
 
  1. ⛔⛔ **In v1 la fase omologa (la 10) fu AZZERATA**, e non per un difetto
-    tecnico (`v1/documenti/PIANO.md:1418`): fu validata con PSNR, SSIM e un
+    tecnico (`fondamenta/documenti/PIANO.md:1418`): fu validata con PSNR, SSIM e un
     fotogramma guardato a occhio dallo sviluppatore, e il giudizio dell'utente
     sul desktop vero fu *«siamo tornati indietro»*.  ⇒ **Questo banco non
     produce un verdetto sull'immagine e non ha il permesso di produrlo.**

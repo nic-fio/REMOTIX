@@ -76,7 +76,7 @@ SOCK=${SOCK:-/srv/src/tmp/sera-ff.sock}
 #    non quello del server: un ban di §4.4-bis sta sulla chiave di CHI TENTA.
 IND_CLIENTE=${IND_CLIENTE:-192.168.0.3}
 LOG_SERVER=${LOG_SERVER:-/media/REMOTIX/src/tmp/sera-ff-server.log}
-SSHPW="python3 $QUI/../v1/strumenti/sshpw.py"
+SSHPW="python3 $QUI/../fondamenta/strumenti/sshpw.py"
 
 MOTORE=${1:-firefox}
 SOLO=${2:-tutte}

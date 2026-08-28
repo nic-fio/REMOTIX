@@ -2997,7 +2997,7 @@ def _sshpw(comando, silenzioso=False, attesa=300):
     """⛔ MAI una redirezione ATTORNO a `ssh`: la richiesta della parola di
     `sudo` va sullo stderr, e una redirezione la mangia — il comando resta
     appeso per sempre, in silenzio.  Pagata sei volte."""
-    r = subprocess.run(["python3", os.path.join(RADICE, "v1/strumenti/sshpw.py"),
+    r = subprocess.run(["python3", os.path.join(RADICE, "fondamenta/strumenti/sshpw.py"),
                         comando], capture_output=True, text=True, timeout=attesa)
     if not silenzioso and r.returncode != 0:
         dub("ssh ha risposto %d: %s" % (r.returncode, (r.stderr or "")[-200:]))

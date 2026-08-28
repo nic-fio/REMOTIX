@@ -27,7 +27,7 @@
 # file, e' chiedere il MONITOR:
 #
 #   ⛔ `00-sessione-gnome.sh` non nomina mai `--virtual-monitor`, e nemmeno
-#      `--headless`: si affida al drop-in che `v1/banco/provision-server.sh`
+#      `--headless`: si affida al drop-in che `fondamenta/banco/provision-server.sh`
 #      (righe 224-231) scrive in /etc/systemd/user, che mette `--headless
 #      --no-x11` e **basta**.  ⇒ Ogni sessione avviata cosi' e' NERA.
 #
@@ -117,7 +117,7 @@ REGISTRO=$RUNTIME/remotix-sessione.log
 REGISTRO_SHELL=$RUNTIME/mutter.log
 DROPIN_DIR=$RUNTIME/systemd/user.control/org.gnome.Shell@wayland.service.d
 DROPIN=$DROPIN_DIR/zz-f21-monitor.conf
-# ⛔ Il drop-in PERSISTENTE, quello che scrive `v1/banco/provision-server.sh`.
+# ⛔ Il drop-in PERSISTENTE, quello che scrive `fondamenta/banco/provision-server.sh`.
 #    Il nostro sta in $XDG_RUNTIME_DIR e sparisce da se' al riavvio — che e'
 #    giusto per un banco, ed e' esattamente il motivo per cui va guardato anche
 #    quest'altro: se il monitor lo tiene in piedi SOLO il nostro, la macchina

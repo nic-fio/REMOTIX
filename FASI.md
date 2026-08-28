@@ -170,7 +170,7 @@ di v1, che sono state buttate tutte (`LEZIONI.md` §1.1).
 
 | | |
 |---|---|
-| **lo strumento** | `v1/banchi/banco-compositori/misura-cattura` — consumatore PipeWire che conta i fotogrammi e dice tipo di buffer, danno, buffer riciclati, se il disegno era finito, e la distribuzione degli intervalli. Sa montare da sé lo schermo virtuale di Mutter |
+| **lo strumento** | `fondamenta/banchi/banco-compositori/misura-cattura` — consumatore PipeWire che conta i fotogrammi e dice tipo di buffer, danno, buffer riciclati, se il disegno era finito, e la distribuzione degli intervalli. Sa montare da sé lo schermo virtuale di Mutter |
 | **la scena** | ⛔ **dichiarata, e in movimento a ogni ridisegno**: a schermo intero, opaca, che ridisegna a ogni *frame callback* del compositore. Non una scena ferma, non una mossa a colpi di tastiera (`LEZIONI.md` §1.1). ⚠ *Qui era nominato `weston-simple-egl -f -o`: `[M]` **il 13 agosto 2026 non è installato**, e dalla fase 3 la scena è la nostra — `banchi/03-scena.c`, che porta una marca e **conta le proprie attese***. ⛔ **E c'è un terzo requisito, imparato in fase 3**: la scena deve stare **sul monitor che si sta catturando** |
 | **il controllo che dice di chi è il tetto** | ⛔ **quanto disegna il client**, contato accanto a quanto consegna la cattura. Senza, un tetto della scena viene attribuito al compositore — e viceversa |
 | **la durata** | ⚠ **almeno 300 fotogrammi, e si scartano i primi**: i primi dieci sono l'avvio, quando tutto viene ridipinto, e su di essi il rapporto si ribalta (`LEZIONI.md` §1.4) |
@@ -223,16 +223,16 @@ nuove, che sono banco.
 
 | | |
 |---|---|
-| `v1/banco/provision-server.sh` | il ripristino della macchina, rieseguito il 9 agosto: GNOME 48.7, `vainfo`, `libei1`, e l'utente nei gruppi `render`/`video` |
-| ⭐ `v1/banco/provision.sh`, passo **5-bis** | **gli utenti di prova dell'autenticazione, dichiarati l'11 agosto 2026** — vedi il riquadro qui sotto |
-| `v1/banchi/banco-compositori/` | portato sul ferro in `/media/REMOTIX/tmp/`, ricompilato nel `devroot` |
+| `fondamenta/banco/provision-server.sh` | il ripristino della macchina, rieseguito il 9 agosto: GNOME 48.7, `vainfo`, `libei1`, e l'utente nei gruppi `render`/`video` |
+| ⭐ `fondamenta/banco/provision.sh`, passo **5-bis** | **gli utenti di prova dell'autenticazione, dichiarati l'11 agosto 2026** — vedi il riquadro qui sotto |
+| `fondamenta/banchi/banco-compositori/` | portato sul ferro in `/media/REMOTIX/tmp/`, ricompilato nel `devroot` |
 | ⭐ `banchi/00-sessione-gnome.sh` | **nuovo**: avvia una sessione GNOME senza monitor con l'ambiente composto da zero, e **verifica** che sia headless invece di sperarlo (`DECISIONI.md` §4.3-bis) |
 | ⭐ `banchi/00-c1-wlroots.sh` | **nuovo**: la certificazione di `misura-wlroots`, il terzo banco, su sway e labwc |
 | ⭐ `banchi/00-c1-kwin.sh` | **nuovo**: la certificazione C1 — lo stesso strumento su KWin, con l'atteso di `STUDI.md` §kde §5.7 stampato prima della misura |
 | ⭐ `banchi/00-rimetti-macchina.sh` | **nuovo**: rimette in piedi la macchina partendo da **prima del disco**, che è il passo che nessuno script conteneva |
-| ⭐ `v1/banchi/banco-compositori/misura-cattura.c` | **corretto**: ora distingue lo zero dal fallimento |
-| ⭐ `v1/banchi/banco-compositori/banco.sh` | **corretto** due volte: `stdbuf -oL` sulla scena, e la verifica che la scena sia viva prima di credere al numero |
-| ⭐ `v1/banchi/banco-compositori/provision-banco.sh` | **corretto**: prende le credenziali con `sudo -v -S -p`, come l'altro script di ripristino |
+| ⭐ `fondamenta/banchi/banco-compositori/misura-cattura.c` | **corretto**: ora distingue lo zero dal fallimento |
+| ⭐ `fondamenta/banchi/banco-compositori/banco.sh` | **corretto** due volte: `stdbuf -oL` sulla scena, e la verifica che la scena sia viva prima di credere al numero |
+| ⭐ `fondamenta/banchi/banco-compositori/provision-banco.sh` | **corretto**: prende le credenziali con `sudo -v -S -p`, come l'altro script di ripristino |
 
 ⚠ La sessione si avvia con `gnome-session --session=gnome` e l'ambiente di `sessione.c`; il
 congedo è **`Logout(2)`**, non `systemctl --user stop`.
@@ -1683,7 +1683,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > ##### ⭐⭐ B11: certificato — e il difetto era una CORSA, non una divergenza
 >
 > ⚠ Non era «mai provato»: era **mai lanciato**. E va lanciato **dalla macchina di chi guarda**, non
-> dal server — `01-b11-lancia.sh` cerca `v1/strumenti/sshpw.py`, che sul server non c'è. Lanciato di
+> dal server — `01-b11-lancia.sh` cerca `fondamenta/strumenti/sshpw.py`, che sul server non c'è. Lanciato di
 > là muore prima di applicare qualsiasi guasto (verificato: zero marche nei sorgenti e nel binario,
 > porta 7447 libera).
 >
@@ -2014,7 +2014,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > | | |
 > |---|---|
 > | ⭐⭐ **`p-sessione`: CONFORME, Chrome E Firefox** | 15 controlli, **0 guasti**: congedo per **tutt'e due** le strade col motivo `0x01`, `violazione-31` a **zero**, posto **preso e lasciato**. ⇒ Il punto che teneva P5 fuori dal verde **non c'è più** |
-> | ⭐ **e la gamba N2 gira, per la prima volta da quando esiste** | bastava poter passare da `sudo`: `SSH_ROOT` sceglie il portatore dei comandi privilegiati (`v1/strumenti/sshpw.py` digita la password su un pty), e lo sblocco di §4.4-bis risponde `PONG`. ⛔ E i due portatori restano **due**: `sshpw.py` lascia due righe di preambolo nel proprio stdout, e usarlo anche per **scaricare** il registro sporcherebbe la prova con lo strumento che la raccoglie |
+> | ⭐ **e la gamba N2 gira, per la prima volta da quando esiste** | bastava poter passare da `sudo`: `SSH_ROOT` sceglie il portatore dei comandi privilegiati (`fondamenta/strumenti/sshpw.py` digita la password su un pty), e lo sblocco di §4.4-bis risponde `PONG`. ⛔ E i due portatori restano **due**: `sshpw.py` lascia due righe di preambolo nel proprio stdout, e usarlo anche per **scaricare** il registro sporcherebbe la prova con lo strumento che la raccoglie |
 >
 > ⛔ **E due difetti del PILOTA sono venuti fuori uno dopo l'altro, tutti e due trovati da una
 > FOTOGRAFIA** — cioè dalla cosa che questo banco scatta dicendo *«materiale per chi legge, NON un
@@ -2244,7 +2244,7 @@ fase dichiara i propri confini.*
 | ⭐ `banchi/01-b2-sonda-sni.py` | **nuovo, 10 agosto**: la sonda del criterio nuovo di `DECISIONI.md` §6.4. Due gambe (senza SNI · con SNI), e ⛔ **due gradini per gamba**: la stretta di mano riesce **e** l'impronta del certificato ricevuto combacia con quella del file |
 | ⭐ `banchi/01-b2-sni-quiche.sh` | **nuovo, 10 agosto**: la terza candidata. ⛔ **Due azioni separate — `leggi` e `costruisci`** — perché se leggere e misurare stanno nello stesso comando la previsione la si scrive **dopo** aver visto il risultato, cioè non la si scrive. ⭐ E **sceglie la versione**: confronta il `rust-version` di ogni etichetta col compilatore presente, e dice quale e perché |
 | ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **nuovo, 10 agosto**: ⭐ **la stretta di mano di RCP/1 E IL BAN DELL'INDIRIZZO, in C** — `[M]` **11 agosto 2026** (`wc -l` su questo albero, codice fermo alle 00:36): `rcp.c` **2.566 righe / 1.418 di codice**, `rcp.h` **197 / 54**. ⚠ *Diceva «**1292 righe / 875 di codice**, `rcp.h` **131 / 49**», `[M]` delle **ore 16:30 del 10 agosto**, e alle 23:48 il file ne misurava già 2.339: lo scarto era dell'**81 %** — rilievo **R12C.12**. E prima ancora diceva «807 righe, 662 di codice», il conto della mattina. ⛔ **La cura era già in questa tabella, tre righe più giù**, applicata a un numero della stessa natura (la riga del collante di B2, che porta «alle 08:00 la stessa misura dava 456/329»): una cura applicata in un posto solo, dentro la stessa tabella.* ⛔ **E la riga non nominava il ban**, che è il lavoro della notte del 10 — `FINESTRA` di 5 minuti, `BAN_DURATA` di 12 ore, `salva_ban`, `rcp_ban_carica`, `rcp_sblocca`, `rcp_bannato`, la tabella da 256 posti con lo sfratto che non butta mai una voce bannata — cioè la decisione dell'utente del giorno (`DECISIONI.md` §1.9). ⛔ **E questo numero non c'entra con quello dello strato WebTransport**: il protocollo **non dipende da ngtcp2** — riceve byte, restituisce byte, e non entra in nessuna delle misure di collante di B2. ⛔ **Non sa che sotto c'è QUIC**: riceve byte, restituisce byte, e il tempo glielo passa chi lo ospita. È la ragione per cui potrà passare al server vero senza riscritture, e per cui §6.4 — se si riaprisse — non porterebbe via il protocollo |
-| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: `[M]` **99 righe / 52 di codice** (ore 16:30) — PAM, derivato da `v1/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
+| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: `[M]` **99 righe / 52 di codice** (ore 16:30) — PAM, derivato da `fondamenta/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
 | ⭐ `banchi/01-b3-rcp-innesta.py` | **nuovo, 10 agosto**: ⛔ **un innesto SEPARATO da quello di B2**, perché quel numero misura WebTransport e farlo crescere con RCP dentro renderebbe due misure diverse sotto la stessa etichetta (E2) |
 | ⭐ `banchi/01-b3-cliente.py` | **nuovo, 10 agosto**: **il cliente di prova** — la stretta di mano scritta una seconda volta, in un linguaggio diverso, e **registra** nel formato di §11.1 con la parola d'ordine oscurata |
 | ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **nuovi, 10 agosto**: le tre connessioni di B3, e ⛔ **ogni traccia passa dal validatore di B4** — non si collauda il server contro il client |
@@ -2261,8 +2261,8 @@ fase dichiara i propri confini.*
 | `banchi/01-b2-sonda.html` | **corretto**: `?avvia=1` fa partire la prova da sé. ⛔ Un banco che ha bisogno di una mano **non si può rifare uguale**, e rifarlo uguale è l'unico modo di sapere se una misura è cambiata perché è cambiato il server |
 | `banchi/01-b2-raccogli.py` | **corretto**: registra **ogni richiesta**. Prima taceva, «il rumore non serve» — ed è quel silenzio che ha reso indistinguibili «il browser non ha caricato la pagina» e «l'ha caricata e la prova è fallita» |
 | ⭐ `banchi/01-b2-lancia-sni.sh` | **nuovo, 10 agosto**: conduce la prova sui **tre** bersagli — `ngtcp2`, `quiche`, e `lsquic` come **controllo negativo** in coda, che a ogni esecuzione ridimostra che la sonda sa vedere un rifiuto. ⛔ Verifica che le porte siano libere **prima**, che i server ascoltino davvero (`ss`, non solo «il processo è vivo»), e li ferma **per PID** |
-| `v1/banco/provision.sh` | **corretto**: `libev-dev` fra i pacchetti — è quel che serve agli esempi di `ngtcp2`, ed è **un'altra libreria** da `libevent-dev` che c'era già. ⚠ Senza, cmake mette `LIBEV_LIBRARY-NOTFOUND` e **salta gli esempi senza dire niente** |
-| `v1/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
+| `fondamenta/banco/provision.sh` | **corretto**: `libev-dev` fra i pacchetti — è quel che serve agli esempi di `ngtcp2`, ed è **un'altra libreria** da `libevent-dev` che c'era già. ⚠ Senza, cmake mette `LIBEV_LIBRARY-NOTFOUND` e **salta gli esempi senza dire niente** |
+| `fondamenta/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
 
 > #### ⛔ E i banchi che questa tabella non nominava — undici, contati
 >
@@ -2461,7 +2461,7 @@ e la terza spiega perché le prime due erano rimaste invisibili.*
   che è il peggior punto in cui fermarsi. ⚠ Da un terminale interattivo è **invisibile** finché il
   credito di `sudo` regge: morde solo sui giri lunghi, cioè quelli che costano di più da rifare.
   ⇒ È la **quinta veste** della regola pagata il 10 agosto, e stavolta dentro i suoi stessi guardiani.
-- ⛔⭐ **E la causa vera stava nello strumento, non nei banchi**: `v1/strumenti/sshpw.py` rispondeva
+- ⛔⭐ **E la causa vera stava nello strumento, non nei banchi**: `fondamenta/strumenti/sshpw.py` rispondeva
   ad al massimo **64** richieste di parola d'ordine, e un giro di certificazione di B8 — **tre**
   esecuzioni del banco, una sessantina di ingressi nel contenitore ciascuna — ne chiede **oltre
   200**. Il giro si fermava a metà del passo «guasto», ⚠ **e il sintomo era di nuovo quello che
@@ -3158,7 +3158,7 @@ sarebbe stata la cattura.
   `[M]`, provato involontariamente e dichiarato.
 - ⛔ **La cura di oggi non sopravvive a un riavvio**: il drop-in vive in `$XDG_RUNTIME_DIR`. Si
   rimette con `bash banchi/02-sessione-lancia.sh sano`.
-- ⛔ **E la cura vera è di prodotto**: `v1/remotix-c/src/sessione.c:671` è
+- ⛔ **E la cura vera è di prodotto**: `fondamenta/remotix-c/src/sessione.c:671` è
   `if (tipo == COMPOSITORE_KWIN && …)` — sul ramo GNOME `larghezza` e `altezza` **entrano nella
   funzione e si perdono**. Che il monitor virtuale stia in `provision-server.sh` invece che nel
   programma è l'invariante **I7** violato.
@@ -4878,7 +4878,7 @@ DIVERSO**, che `RCP.md` §7.3 vieta. E nessuno collegherebbe il sintomo alla dis
 ⚠ **E rende falsa una riga che credevamo vera**: `DECISIONI.md` §5-bis.7 dice che la degradazione è
 morbida — *«mai caratteri sbagliati, al massimo un paio di accenti irraggiungibili»*. È vero **solo**
 usando la keymap della sessione.
-⭐ **E v1 lo faceva già così** (`v1/remotix-c/src/tastiera.c:69`): è l'unico pezzo di v1 che il primo
+⭐ **E v1 lo faceva già così** (`fondamenta/remotix-c/src/tastiera.c:69`): è l'unico pezzo di v1 che il primo
 contratto di V2 non aveva ripreso.
 
 ⇒ ✅ **Accolto il 14 agosto 2026**: `tastiera_apri_da_keymap()` è in `src/tastiera.h`, e
@@ -5499,7 +5499,7 @@ nell'intestazione e che nessuno spedisce. ⭐ E la pagina **è già pronta a leg
 **Quel che serve:**
 
 - **chi guarda le sessioni locali — logind.** Oggi l'unico file che lo nomina è `sessione.c`, di
-  sfuggita. Il pezzo da riportare è `v1/remotix-c/src/sentinella.c` (307 righe): `ListSessions` +
+  sfuggita. Il pezzo da riportare è `fondamenta/remotix-c/src/sentinella.c` (307 righe): `ListSessions` +
   i segnali `SessionNew` / `SessionRemoved`, e le proprietà `Type`, `Remote`, `Active`;
 - ⛔⛔ **la definizione di «sessione grafica locale», scritta prima del codice — e la prima stesura
   ovvia è SBAGLIATA.** Il criterio che viene in mente è `Type ∈ {wayland, x11}` **e**
@@ -5575,7 +5575,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
    Suspending soon because of inactivity»** compare in due schermate del desktop remoto.
    `sleep-inactive-ac-type` vale `suspend` a **900 s**. La cura è una chiamata:
    `SessionManager.Inhibit(…, 12)` = `SUSPEND|IDLE` **insieme**, ⛔ **mai** il bit `LOGOUT`.
-   ⚠ `energia.c` **non esiste in `src/`**: va portato da `v1/remotix-c/src/energia.c`.
+   ⚠ `energia.c` **non esiste in `src/`**: va portato da `fondamenta/remotix-c/src/energia.c`.
    ⚠ E senza questa, il banco delle **sei ore** non misura niente.
 3. ✅ **L'headless si dichiara e si verifica dopo l'avvio** — `[M]` 16 agosto, **20 giri su 20**: il
    figlio scrive *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ Non è più «per

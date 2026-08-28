@@ -1057,7 +1057,7 @@ meta_remota() {
 
 	# ⭐ Il log si porta a casa con scp (`--get`), ⛔ mai catturando lo stdout di
 	#   un `cat` remoto: li' dentro finisce anche la richiesta di password
-	#   (`v1/strumenti/sshpw.py`, e c'e' scritto perche').
+	#   (`fondamenta/strumenti/sshpw.py`, e c'e' scritto perche').
 	local tana
 	tana=$(mktemp -d)
 	sshpw --get "$log" "$tana/remoto.log" >/dev/null 2>&1
@@ -1341,7 +1341,7 @@ remoto)
 		ko "  comando e' «gira --famiglia <nome>», e lo lancia il portatile"
 		exit 2
 	fi
-	SSHPW="$RADICE/v1/strumenti/sshpw.py"
+	SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 	if [ ! -f "$SSHPW" ]; then
 		ko "non trovo $SSHPW: senza non si arriva alla macchina di prova"
 		exit 2

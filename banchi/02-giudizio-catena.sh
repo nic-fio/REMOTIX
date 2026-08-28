@@ -45,13 +45,13 @@
 #
 # ===========================================================================
 # ⛔ MAI UNA REDIREZIONE ATTORNO A `ssh` — pagata sei volte.  Si passa da
-#    `v1/strumenti/sshpw.py`, che la parola la scrive sul pty solo a chi la
+#    `fondamenta/strumenti/sshpw.py`, che la parola la scrive sul pty solo a chi la
 #    chiede.  ⚠ Qui di la' non serve nessun `sudo`: si legge e basta.
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(cd "$QUI/.." && pwd)
-SSHPW=$RADICE/v1/strumenti/sshpw.py
+SSHPW=$RADICE/fondamenta/strumenti/sshpw.py
 IND=${IND:-192.168.0.2}
 PORTA=${PORTA:-7561}
 SCHERMO=${SCHERMO:-:103}

@@ -829,7 +829,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > bash /media/REMOTIX/enter.sh --root "bash /srv/src/01-p5-accendi.sh accendi"
 >
 > # il giro, DA CHUWI (i browser stanno di qua)
-> SSH_ROOT="python3 v1/strumenti/sshpw.py" \
+> SSH_ROOT="python3 fondamenta/strumenti/sshpw.py" \
 >   IND=192.168.0.2 PORTA=7501 SOCK=/srv/src/tmp/sera-p15.sock \
 >   LOG_SERVER=/media/REMOTIX/src/tmp/sera-p15-browser.log \
 >   SCHERMO=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
@@ -1329,7 +1329,7 @@ morto decade quasi per intero, ed è scritto su una versione che Trixie non ha (
 
 ## Le cartelle
 
-⚠ *Questa tabella elencava **tre** voci — `fasi/`, `v1/`, `reference-*/` — e non aveva né `src/` né
+⚠ *Questa tabella elencava **tre** voci — `fasi/`, `fondamenta/`, `reference-*/` — e non aveva né `src/` né
 `banchi/` né `web/`: **la cartella che contiene il prodotto non compariva nella tabella che dice che
 cosa contengono le cartelle**. Completata l'11 agosto 2026, rilievo **R12C.1**.*
 
@@ -1339,7 +1339,7 @@ cosa contengono le cartelle**. Completata l'11 agosto 2026, rilievo **R12C.1**.*
 | ⭐ `banchi/` | **i banchi della fase 1** e la sonda del browser, più `banchi/rcp/` — la copia **gemella** di `rcp.c`/`rcp.h`/`autenticazione.c`, oggi identica a quella di `src/` byte per byte. ⚠ Qui il bersaglio è **l'innesto** dentro `bsslserver`, non `src/` |
 | `fasi/` | ⚠ **c'è solo mentre una fase è aperta**, e contiene il documento di quella fase soltanto: alla chiusura diventa un capitolo di [`FASI.md`](FASI.md) e la cartella torna vuota (`PIANO.md` §0.1) |
 | ⛔ ~~`web/rapporti/`, `fasi/rapporti/`~~ | **tolte il 16 agosto 2026** per decisione dell'utente — 94 file di rapporti degli agenti. ⭐ Restano per intero nella storia: come si rilegge o si recupera un rapporto sta in **`FASI.md`**, in testa |
-| `v1/` | ⚠ **non è solo archivio, e questa riga lo diceva male**: l'eredità di REMOTIX v1 — 17.481 righe di C, i banchi, i documenti, le scene di taratura — ⭐ **ma dentro ci sono due cose VIVE**, `v1/banco/enter.sh` (il modo in cui si entra nella macchina di prova, **193 citazioni**) e `v1/strumenti/sshpw.py` (**81**, lo chiamano i banchi di V2). La mappa completa — vivo, archivio, morto, con le citazioni contate — sta in **`DECISIONI.md` §6.1** |
+| `fondamenta/` | ⚠ **non è solo archivio, e questa riga lo diceva male**: l'eredità di REMOTIX v1 — 17.481 righe di C, i banchi, i documenti, le scene di taratura — ⭐ **ma dentro ci sono due cose VIVE**, `fondamenta/banco/enter.sh` (il modo in cui si entra nella macchina di prova, **193 citazioni**) e `fondamenta/strumenti/sshpw.py` (**81**, lo chiamano i banchi di V2). La mappa completa — vivo, archivio, morto, con le citazioni contate — sta in **`DECISIONI.md` §6.1** |
 | `reference-*/` | cloni dei progetti di riferimento — **non versionati**, si rifanno con `git clone` |
 
 ---
@@ -1389,7 +1389,7 @@ ma non è niente.
 ## La macchina di prova
 
 `192.168.0.2` — i5-13500T, 31 GB, Intel UHD 730 (per REMOTIX) e Radeon RX 6800 (riservata
-all'inferenza). Ci si arriva con `v1/strumenti/sshpw.py`, che legge le credenziali da
+all'inferenza). Ci si arriva con `fondamenta/strumenti/sshpw.py`, che legge le credenziali da
 `~/SERVER.ssh`.
 
 Là vivono il `devroot` per compilare e provare, la VM, e la cache dei pacchetti. **I sorgenti no**:
