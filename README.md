@@ -124,7 +124,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > **Sei** sulla scena satura — *«tenendo conto che siamo su una scheda Intel integrata non
 > particolarmente performante, 6 RDP attivi contemporaneamente non mi sembra un cattivo risultato»*,
-> l'utente, `fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`DECISIONI.md` §4.6-septies», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)*. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
+> l'utente, `DECISIONI.md` §4.6-septies. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
 > stato trovato: sono finiti gli utenti, non la macchina**.
 >
 > ### ⭐⭐⭐⭐ E LA COSA PIÙ UTILE DELLA GIORNATA NON È UN NUMERO

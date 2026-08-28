@@ -2546,6 +2546,43 @@ prima della copia zero è un budget da rifare.
 > è il modo più veloce per non sapere più che cosa è stato detto davvero.
 > ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
 
+### 4.6-septies ✅ ⭐⭐⭐ **Sei sessioni su una scheda integrata sono un buon risultato — la fase 10 si chiude**
+
+*Giudizio dell'utente, **24 agosto 2026**, davanti al primo giro di misure del multi-tenant:*
+
+> *«Tenendo conto che siamo su una scheda Intel integrata non particolarmente performante, 6 RDP
+> attivi contemporaneamente non mi sembra un cattivo risultato»*
+
+*⭐ **Riconfermato il 28 agosto 2026** — «confermo quel mio giudizio» — quando si è scoperto che
+questa sezione era citata da cinque documenti e **non era mai stata scritta**.*
+
+⇒ ⭐ **Il numero misurato è accettato così com'è**: non si apre una caccia per farlo salire, e la
+fase 10 si chiude sul giudizio invece che su un bersaglio numerico. È la stessa forma della
+decisione della fase 10 di v1 sulla qualità — *«va bene così»* — e vale per la stessa ragione:
+⛔ **il metro è l'utente, non il numero.**
+
+⚠ **E il giudizio è dato sul caso PEGGIORE.** Le misure stanno in
+`fasi/10-multi-tenant-e-il-budget.md` §S.2 e §6.12, e non si ricopiano qui:
+
+| scena | quante ci stanno |
+|---|---|
+| **satura** — tutto lo schermo cambia a ogni fotogramma | `[M]` **6** ← *il numero giudicato* |
+| ⭐ **desktop vero** — finestre, trascinamenti, lavoro normale | `[M]` **almeno 11**, e il soffitto **non è stato trovato**: sono finiti gli utenti, non la macchina |
+
+⇒ ⭐⭐ **Il giudizio ne esce rafforzato, non smentito**: quel che gli utenti fanno davvero costa meno
+della scena peggiore, e undici è un limite dello strumento di misura, non della macchina.
+
+⛔ **E il ferro va detto ogni volta** che si cita questo numero: Intel UHD 730 **integrata**, non una
+scheda dedicata. Un «sei» senza il ferro accanto è un numero che qualcuno confronterà con l'hardware
+sbagliato.
+
+> ### ⚠ E questa sezione ha una storia che vale la pena tenere
+>
+> ⛔ È stata **citata da cinque documenti — `SPECIFICHE.md` compresa, e da `DECISIONI.md` stessa —
+> per quattro giorni prima di esistere.** La numerazione saltava da `-sexies` a `-octies` e nessuno
+> se n'era accorto: il giudizio era scritto in tre posti, ma **non dove le decisioni vivono**.
+> ⇒ ⭐ È il difetto che `C16` adesso prende, ed è il motivo per cui quella maglia esiste.
+
 ### 4.6-octies ⏳ ✅ **Il ban per indirizzo NON si tocca in fase 10: va in un capitolo sulla sicurezza**
 
 *Deciso dall'utente il **25 agosto 2026**, davanti al rilievo della fase 10: «il discorso del ban
@@ -2637,7 +2674,7 @@ capacità del codificatore. ⭐ **Il numero che governa il prodotto è quello de
 
 ⇒ ⭐ **E per l'utente il numero vero è un altro ancora**: sulla scena satura ne stanno **sei**; sul
 **desktop vero** — finestre, trascinamenti, strappi — `[M]` **almeno undici, e il soffitto non è
-stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **`fasi/10-multi-tenant-e-il-budget.md` §S.2 ⚠ *(citato per anni come «`DECISIONI.md` §4.6-septies», che ⛔ **non è mai stata scritta**: la numerazione salta da `-sexies` a `-octies`)***.
+stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
 
 ### 4.6-decies ✅ ⭐⭐⭐⭐ **Il metro sotto le specifiche: «artefatti sì, fluidità e sincronismo no»**
 
