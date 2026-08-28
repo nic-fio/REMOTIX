@@ -1,31 +1,37 @@
 ---
 name: deposito-su-github
-description: dal 28 ago 2026 il deposito vive su GitHub, privato — nic-fio/REMOTIX, ramo predefinito fase-10-cure
+description: dal 28 ago 2026 il progetto si chiama REMOTIX (non piu' _V2), sta in ~/Documenti/REMOTIX e su github.com/nic-fio/REMOTIX, privato
 metadata:
   type: project
 ---
 
-Il deposito di REMOTIX non sta piu' solo sul tablet: e' su **GitHub, PRIVATO**,
-a `https://github.com/nic-fio/REMOTIX` — ramo predefinito `fase-10-cure`
-(`master` e' fermo al 9 agosto e non e' il ramo di lavoro).
+**Il progetto si chiama REMOTIX.** Il «_V2» e' caduto il 28 agosto 2026: serviva
+a distinguerlo da v1, e v1 non esiste piu' come progetto a se'.
 
-Spinto il 28 agosto 2026: 19 rami, 440 commit, 146 MB. Privato per decisione
-di Nic — *«e' presto per mostrare le carte al pubblico»*: nei documenti ci sono
-gli indirizzi della sua rete di casa.
+- cartella: `~/Documenti/REMOTIX`
+- deposito: `https://github.com/nic-fio/REMOTIX` — **PRIVATO**, ramo predefinito
+  `fase-10-cure` (`master` e' fermo al 9 agosto, non e' il ramo di lavoro)
 
-Due rami che esistono solo perche' quel giorno si e' fatta la raccolta:
-- `cassetto-25-agosto` — uno `stash` del 25 agosto (documenti fase 10) messo su
-  un ramo invece che applicato, perche' il README di oggi lo supera.
-- i 14 `worktree-agent-*` — le copie di lavoro degli agenti; in 4 c'era lavoro
-  non committato (fra cui `src/main.c` e `src/webtransport.c`), raccolto com'era.
+⛔ **Perche' resta privato**: la parola d'ordine `sudo` della macchina di prova
+e' scritta in chiaro in 9 file dei banchi (`printf 'nicfio\n' | sudo -S ...`).
+Finche' ci sono quelle righe il deposito non si puo' aprire — e cancellarle dopo
+non basta, la storia di git non dimentica. Si toglie cambiando la parola d'ordine
+sul server e facendogliela leggere da un file. ⇒ Lavoro da fare col server acceso.
 
-⭐ **Il progetto v1 non esiste piu' come cartella a se'**: `~/Documenti/REMOTIX`
-e' stato svuotato in V2 e cancellato il 28 agosto. Quel che vale e' sotto `v1/`
-dentro il deposito — e NON e' un archivio: `v1/strumenti/sshpw.py` (39 richiami),
-`v1/remotix-c/src` (34), `v1/banco/enter.sh` e i filmati di `v1/calibrazione/`
-sono attrezzatura viva dei banchi di V2. Vedi [[costruire-serve-il-contenitore]]
-e [[riavvio-perde-la-chiave-ssh]].
+⭐ **v1 e' dentro il deposito, sotto `v1/`, e NON e' un archivio**:
+`v1/strumenti/sshpw.py` (39 richiami), `v1/remotix-c/src` (34), `v1/banco/enter.sh`
+e i filmati di `v1/calibrazione/` sono attrezzatura viva dei banchi.
+Vedi [[costruire-serve-il-contenitore]] e [[riavvio-perde-la-chiave-ssh]].
 
-⚠ Fuori dal deposito, e quindi NON su GitHub: la memoria di Claude, `~/SERVER.ssh`,
-la chiave `~/.ssh/id_ed25519`. Le credenziali non ci vanno nemmeno in un deposito
-privato. Vedi [[progetto-in-pausa-agosto-2026]].
+⚠ **I registri di misura non sono stati rinominati**: `*.jsonl` e `*.log` portano
+ancora «REMOTIX_V2», e devono. Sono verbali di misure fatte, e dicono con che nome
+girava il prodotto quel giorno. ⭐ Un registro si aggiunge, non si corregge.
+
+⚠ **Il rebranding non e' stato riprovato sul ferro** (macchina in assistenza dal
+27 agosto): al ritorno del server, il primo giro della rete anti-regressione vale
+anche come collaudo. La marca d'avvio e' cambiata su tutt'e due i lati insieme —
+`src/main.c` la scrive, `01-b0-bersaglio`, `10-b96`, `10-b90` e `11-c9` la
+controllano. Vedi [[progetto-in-pausa-agosto-2026]].
+
+⚠ Fuori dal deposito e NON su GitHub: `~/SERVER.ssh` e `~/.ssh/id_ed25519`,
+preparate in `~/DA-SALVARE/` prima della pulizia del tablet.
