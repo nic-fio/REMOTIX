@@ -110,7 +110,7 @@ PORTA = int(os.environ.setdefault("PORTA", "8160"))
 LAV = os.environ.setdefault("LAV", "/media/REMOTIX/tmp/10b6")
 ALB = os.environ.setdefault("ALBERO", "/media/REMOTIX/src/10b6-src")
 os.environ.setdefault("DENTRO_ALB", "/srv/src/10b6-src")
-os.environ.setdefault("DENTRO_LAV", "/srv/remotix/tmp/10b6")
+DENTRO_LAV = os.environ.setdefault("DENTRO_LAV", "/srv/remotix/tmp/10b6")
 UNITA = os.environ.setdefault("UNITA", "remotix-%d" % PORTA)
 os.environ.setdefault("LUCCHETTO", "/media/REMOTIX/tmp/.lucchetto-gpu.d")
 os.environ.setdefault("QUANTI", "7")
@@ -762,8 +762,27 @@ def sgombra(quanti=QUANTI_MAX, dillo=True):
     b92.root("printf 'sgombro -1\\n' > %s" % FILE_RITARDO)
     for i in range(1, quanti + 1):
         b92.root("pkill -u %d -f '04-b30-scena' ; true" % b92.uid(i))
-    b92.root("pkill -f -- '--giornale [/]srv/remotix/tmp/10b6/' ; true")
-    b92.root("pkill -f '10-b92-cliente[.]py --cliente' ; true")
+    # ⛔⛔ I DUE MODELLI PORTANO LA MIA CARTELLA — 25 agosto 2026, §7.3 quinta
+    #     trappola, e qui erano sbagliati **tutt'e due nel verso peggiore**:
+    #
+    #       · il primo aveva `/srv/remotix/tmp/10b6/` **scritto a mano**: chi
+    #         gira questo banco con un `DENTRO_LAV` suo ammazzava i clienti di
+    #         **quell'altra** cartella — cioe' di un vicino — e ⛔ lasciava vivi
+    #         i propri, che e' il doppio danno;
+    #       · il secondo era **globale**: quel nome di cliente lo usa OGNI banco
+    #         della fase, e `[M]` §7.3 a fine giro un modello cosi' combaciava
+    #         con **24 clienti VIVI di un altro banco che stava misurando**.
+    #
+    # ⇒ Adesso lo sgombero combacia **solo con la propria cartella di lavoro**.
+    # ⚠ `DENTRO_LAV`: i clienti girano nel contenitore, e la riga di comando che
+    #   `pkill` legge porta il percorso di dentro.
+    # ⛔ E LA CLASSE DI CARATTERI RESTA: `pkill -f` acchiappa la riga di comando
+    #    che lo esegue (§7.3, terza trappola — `[M]` **due** incarichi si sono
+    #    uccisi il proprio pilota).  `[/]srv/…` combacia con `/srv/…` e NON con
+    #    se stesso.
+    b92.root("pkill -f -- '--giornale [%s]%s/' ; true"
+             % (DENTRO_LAV[0], DENTRO_LAV[1:]))
+    b92.root("pkill -f '%s/10-b92-cliente[.]py --cliente' ; true" % DENTRO_LAV)
     time.sleep(2)
     b92.chiudi_palchi(quanti, dillo=dillo)
 

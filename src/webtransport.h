@@ -324,6 +324,22 @@ void wt_locali_gancio(wt_locali_ripasso f, void *ctx);
  * sola. */
 size_t wt_sorveglia_locali(void);
 
+/* ⛔⭐ QUANTI UTENTI SERVITI CI SONO ADESSO — 25 agosto 2026, rilievo R7 di §5.5.
+ *
+ *     `sentinella.h` prometteva, sopra `sentinella_conti()`, che `main.c`
+ *     avrebbe scritto i suoi due numeri *«accanto al numero degli inquilini
+ *     serviti»*.  ⛔ Nella riga quel numero **non c'era**, ed e' proprio il
+ *     DENOMINATORE: senza `N`, «una chiamata per RIPASSO e non per inquilino»
+ *     non si puo' ne' verificare ne' **rifiutare** — a un inquilino solo le due
+ *     forme danno lo stesso conto.
+ *
+ * ⚠ Si conta qui e non in `rcp.c` perche' e' il trasporto a sapere quali
+ *   connessioni sono vive e autenticate, ed e' la stessa lista che il ripasso
+ *   percorre: due conti diversi della stessa cosa sarebbero due verita'.
+ * ⛔ Una connessione senza sessione RCP, senza utente o in chiusura NON si
+ *    conta: non e' un inquilino servito, e' uno che sta bussando o uscendo. */
+size_t wt_inquilini_serviti(void);
+
 /* ⛔⭐⭐⭐ L'OROLOGIO DEL SERVIZIO — «il tempo in cui non abbiamo girato non e'
  *        silenzio del client».  La chiama `main.c` a ogni passata del ciclo.
  *

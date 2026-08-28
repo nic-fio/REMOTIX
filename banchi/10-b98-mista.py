@@ -463,17 +463,40 @@ def fetta_mista(i, t0, t1, durata, con_giornale=False):
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐ LE SCENE DEI RUOLI — e `F` non ne ha nessuna, che e' il punto
 # ═══════════════════════════════════════════════════════════════════════════
+def _ambiente(n, u):
+    """⛔⭐ L'AMBIENTE DI UNA SESSIONE STA IN UN POSTO SOLO — 25 agosto 2026.
+
+    Era scritto a mano qui, un'altra volta piu' sotto (le scene del risveglio),
+    in `10-b92-dieci.py` e in `10-b89-scena.sh`: **quattro copie**, ⛔ e a
+    tutt'e quattro mancavano le tre variabili senza cui **Nautilus non parte
+    affatto** — cioe' il braccio «desktop vero» misurava uno schermo vuoto.
+    Il riquadro coi numeri sta in `banchi/10-ambiente-sessione.sh`.
+
+    ⚠ Il frammento si compone QUI SUL PORTATILE, leggendo l'unico file: non
+      serve spedirlo, e non c'e' un giro di `ssh` in piu' per riga lanciata.
+    ⛔ E se il file non c'e', si ALZA: un ambiente composto a meta' non da'
+      rosso, da' un desktop vuoto che sembra un desktop.
+    """
+    p = subprocess.run(
+        ["bash", os.path.join(QUI, "10-ambiente-sessione.sh"), str(n), u],
+        capture_output=True, text=True)
+    frammento = p.stdout.strip()
+    if p.returncode != 0 or "XDG_SESSION_TYPE=wayland" not in frammento:
+        raise SystemExit("⛔ non ho potuto comporre l'ambiente della sessione "
+                         "da «10-ambiente-sessione.sh»: %s"
+                         % (p.stderr.strip() or frammento)[:200])
+    return frammento
+
+
 def _giu(n, u, comando, log):
-    """L'ambiente si COMPONE da zero, una variabile per volta (`CODER.md` §4.5),
-       e il redirect vive nella shell di ROOT (in una cartella di root la shell
+    """Accende `comando` DENTRO la sessione di `u`.
+
+    ⛔ Il redirect vive nella shell di ROOT (in una cartella di root la shell
        di `nicfio` non potrebbe scrivere, e il processo morirebbe col registro
        VUOTO — la ragione per cui `10-b89-scena.sh` esiste)."""
     return B.root(
-        "setsid nohup setpriv --reuid=%d --regid=%d --init-groups env -i "
-        "HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
-        "XDG_RUNTIME_DIR=/run/user/%d WAYLAND_DISPLAY=wayland-0 "
-        "GDK_BACKEND=wayland DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus "
-        "%s >> %s 2>&1 & echo avviato" % (n, n, u, u, n, n, comando, log), 90)
+        "setsid nohup %s %s >> %s 2>&1 & echo avviato"
+        % (_ambiente(n, u), comando, log), 90)
 
 
 def finestre_vere(i):
@@ -1358,15 +1381,16 @@ def risveglio(quante_sature, quante_ferme, durata, resta, dopo_s):
     pezzi = []
     for i in range(quante_sature + 1, quanti + 1):
         n, u = B.uid(i), B.utente(i)
+        # ⛔ La SECONDA copia a mano dell'ambiente stava qui, e adesso passa
+        #    dall'unico posto (`_ambiente`, e sotto di lui
+        #    `10-ambiente-sessione.sh`).  ⚠ Il frammento si compone prima di
+        #    entrare nella riga del risveglio: quella riga NON tollera un `%`
+        #    di formattazione in piu' (il riquadro qui sotto dice perche').
         pezzi.append(
-            "setsid nohup setpriv --reuid=%d --regid=%d --init-groups env -i "
-            "HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
-            "XDG_RUNTIME_DIR=/run/user/%d WAYLAND_DISPLAY=wayland-0 "
-            "GDK_BACKEND=wayland "
-            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus "
+            "setsid nohup %s "
             "%s --uscita %s --movimento pieno --shm %s-%d --giro b98r-%d "
             ">> %s/scena-%d.log 2>&1 &"
-            % (n, n, u, u, n, n, B.SCENA_BIN, uscite[i], SHM, i, i, B.LAV, i))
+            % (_ambiente(n, u), B.SCENA_BIN, uscite[i], SHM, i, i, B.LAV, i))
     # ⭐ L'istante zero: l'orologio monotono della macchina letto **dalla stessa
     #   shell** che accende le scene, nella stessa riga.  ⚠ Un `time.time()` del
     #   portatile sarebbe un altro orologio, piu' il giro di `ssh`.

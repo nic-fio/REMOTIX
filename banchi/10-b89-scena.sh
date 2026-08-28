@@ -26,15 +26,20 @@ LAV=${LAV:-/media/REMOTIX/tmp/10a3}
 FINESTRA=${FINESTRA:-1280x720}
 LOG=$LAV/b89-scena.log
 
+# ⛔⭐ L'AMBIENTE STA IN UN POSTO SOLO — 25 agosto 2026.
+#     Era scritto a mano qui, e in altri tre posti, e ⛔ mancavano a tutt'e
+#     quattro le tre variabili senza cui **Nautilus non parte affatto**.  Il
+#     riquadro con i numeri sta in `10-ambiente-sessione.sh`.
+# ⚠ Il file dev'essere accanto a questo sulla macchina: lo porta `prepara()` di
+#   `10-b89-costo-sessione.py`, insieme a tutti gli altri copioni.
+. "$(dirname "$0")/10-ambiente-sessione.sh"
+
 giu() {
-	# l'ambiente si COMPONE da zero, una variabile per volta (`CODER.md` §4.5)
-	setsid nohup setpriv --reuid="$UID_B" --regid="$UID_B" --init-groups \
-		env -i HOME="/home/$UTENTE" USER="$UTENTE" LANG=C.UTF-8 \
-		PATH=/usr/local/bin:/usr/bin:/bin \
-		XDG_RUNTIME_DIR="/run/user/$UID_B" WAYLAND_DISPLAY=wayland-0 \
-		GDK_BACKEND=wayland \
-		DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$UID_B/bus" \
-		"$@" >>"$LOG" 2>&1 &
+	# ⚠ `$(ambiente_di …)` NON si quota: e' una lista di parole (setpriv, env, e
+	#   le variabili), non un argomento solo.  ⛔ Nessuna di quelle parole puo'
+	#   contenere spazi — l'uid e' un numero e il nome utente e' un nome utente.
+	# shellcheck disable=SC2046
+	setsid nohup $(ambiente_di "$UID_B" "$UTENTE") "$@" >>"$LOG" 2>&1 &
 }
 
 PASSO=$1

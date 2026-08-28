@@ -1286,15 +1286,29 @@ I_LARG, I_ALT, I_PID = 16, 17, 25
 FINESTRE = "nautilu[s]|gnome-termina[l]"
 
 
-def giu(uid, utente, argomenti, log):
-    """L'ambiente si COMPONE da zero, una variabile per volta (`CODER.md` §4.5)."""
-    riga = ("setsid nohup setpriv --reuid=%d --regid=%d --init-groups "
-            "env -i HOME=/home/%s USER=%s LANG=C.UTF-8 "
-            "PATH=/usr/local/bin:/usr/bin:/bin XDG_RUNTIME_DIR=/run/user/%d "
-            "WAYLAND_DISPLAY=wayland-0 GDK_BACKEND=wayland "
-            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus %s >>%s 2>&1 &"
-            % (uid, uid, utente, utente, uid, uid, argomenti, log))
-    subprocess.run(["bash", "-c", riga])
+def giu(uid, utente, argomenti, log, lav):
+    """Accende `argomenti` DENTRO la sessione di `utente`.
+
+    ⛔⭐ L'AMBIENTE STA IN UN POSTO SOLO — 25 agosto 2026.  Era scritto a mano
+        qui, in `10-b98-mista.py` (due volte) e in `10-b89-scena.sh`: quattro
+        copie, ⛔ e a tutt'e quattro mancavano le tre variabili senza cui
+        **Nautilus non parte affatto** — cioe' il braccio «desktop vero»
+        accendeva DUE finestre che morivano subito e misurava uno schermo
+        vuoto.  Il riquadro coi numeri sta in `10-ambiente-sessione.sh`, che
+        `terreno()` spedisce in `lav` insieme agli altri attrezzi.
+
+    ⛔ E se il frammento non si compone, si ALZA invece di lanciare con
+       l'ambiente monco: un'applicazione che non parte non da' rosso — da' un
+       desktop vuoto che sembra un desktop (`LEZIONI.md` §1.30).
+    """
+    p = subprocess.run(["bash", "%s/10-ambiente-sessione.sh" % lav,
+                        str(uid), utente], capture_output=True)
+    amb = p.stdout.decode("utf-8", "replace").strip()
+    if p.returncode != 0 or "XDG_SESSION_TYPE=wayland" not in amb:
+        raise SystemExit("⛔ ambiente non composto da %s/10-ambiente-sessione.sh: %s"
+                         % (lav, (p.stderr.decode("utf-8", "replace") or amb)[:200]))
+    subprocess.run(["bash", "-c",
+                    "setsid nohup %s %s >>%s 2>&1 &" % (amb, argomenti, log)])
 
 
 def quanti(modello, uid):
@@ -1483,7 +1497,7 @@ elif passo == "accendi":
         # 1. le finestre VERE, e si CONTA chi e' vivo: un'applicazione che muore
         #    subito e una che non c'e' hanno la stessa faccia (`LEZIONI.md` §1.9)
         for a in ("nautilus", "gnome-terminal"):
-            giu(uid, utente, a, log)
+            giu(uid, utente, a, log, lav)
         time.sleep(6.0)
         fuori["finestre_vive"] = quanti(FINESTRE, uid)
         if fuori["finestre_vive"] == 0:
@@ -1501,7 +1515,7 @@ elif passo == "accendi":
         argomenti = ("%s --uscita %s --movimento pieno --shm /%s --giro b92-%d"
                      % (scenabin, monitor, shm, i))
 
-    giu(uid, utente, argomenti, log)
+    giu(uid, utente, argomenti, log, lav)
     time.sleep(2.5)
     p = subprocess.run(["pgrep", "-u", str(uid), "-f", "04-b30-scen[a] --"],
                        capture_output=True)
@@ -2671,6 +2685,21 @@ def terreno(quanti):
                        (SCENE, "10-b92-scene.py")):
         if not spedisci(sorg, nome):
             guai.append("«%s» non si e' scritto in %s" % (nome, LAV))
+    # ⛔⭐ L'AMBIENTE DELLA SESSIONE — `10-ambiente-sessione.sh`, e si spedisce
+    #     **il file vero** per la stessa ragione di `09-b72-tasto.py` qui sotto:
+    #     una copia che diverge e' un attrezzo che mente (`LEZIONI.md` §1.35).
+    #     ⚠ Senza di lui `giu()` si alza invece di lanciare con l'ambiente
+    #       monco — e un'applicazione che non parte non da' rosso, da' un
+    #       desktop vuoto che sembra un desktop.
+    perc_amb = os.path.join(QUI, "10-ambiente-sessione.sh")
+    if not os.path.exists(perc_amb):
+        guai.append("manca «%s»: l'ambiente della sessione sta in un posto "
+                    "solo, e questo e' quel posto" % perc_amb)
+    else:
+        with open(perc_amb) as f:
+            if not spedisci(f.read(), "10-ambiente-sessione.sh"):
+                guai.append("«10-ambiente-sessione.sh» non si e' scritto in %s"
+                            % LAV)
     # ⛔ E l'ESC che esce dalla vista d'insieme e' `09-b72-tasto.py`, che non e'
     #    scritto qui dentro: si spedisce **il file vero**, non una copia.  ⚠ Una
     #    copia che diverge e' un attrezzo che mente (`LEZIONI.md` §1.35).
@@ -4485,9 +4514,13 @@ def principale():
             esiti, rossi, muti = giro_legge(a.durata, quanto)
         finally:
             _log("⛔ LA MACCHINA SI RIMETTE COM'ERA")
-            root("pkill -f '10-b92-scene[.]py strappi'; true")
+            # ⛔ I MODELLI PORTANO LA MIA CARTELLA — §7.3, la quinta trappola:
+            #    il riquadro sta in fondo a `principale()`, ed e' lo stesso
+            #    difetto.  ⚠ `LAV` per la scena (gira sulla macchina) e
+            #    `DENTRO_LAV` per il cliente (gira nel contenitore).
+            root("pkill -f '%s/10-b92-scene[.]py strappi'; true" % LAV)
             spegni_scene(1)
-            root("pkill -f '10-b92-cliente[.]py --cliente'; true")
+            root("pkill -f '%s/10-b92-cliente[.]py --cliente'; true" % DENTRO_LAV)
             time.sleep(2)
             chiudi_palchi(a.quanti)
             if luc:
@@ -4580,7 +4613,16 @@ def principale():
         # ⛔ La stessa classe di caratteri del riquadro di
         #    `cerca_giornale`: senza, `pkill` ammazzerebbe la shell che lo sta
         #    eseguendo, e la pulizia finirebbe a meta' in silenzio.
-        root("pkill -f '10-b92-cliente[.]py --cliente'; true")
+        # ⛔⛔ E IL MODELLO PORTA LA MIA CARTELLA — 25 agosto 2026, §7.3 quinta
+        #     trappola.  Fino a ieri era `'10-b92-cliente[.]py --cliente'`, un
+        #     modello **globale**: quel nome di cliente lo usa OGNI banco della
+        #     fase, e `[M]` a fine giro combaciava con **24 clienti VIVI di un
+        #     altro banco** — quello che aveva appena preso il lucchetto e
+        #     **stava misurando**.  Non li ha uccisi solo perche' quel giro
+        #     aveva sgomberato prima che nascessero.
+        # ⚠ `DENTRO_LAV` e non `LAV`: il cliente gira DENTRO il contenitore, e
+        #   la riga di comando che `pkill` legge porta il percorso di dentro.
+        root("pkill -f '%s/10-b92-cliente[.]py --cliente'; true" % DENTRO_LAV)
         time.sleep(3)
         chiudi_palchi(a.quanti)
         if luc:

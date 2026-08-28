@@ -33,9 +33,18 @@ che stavano lavorando non peggiorino»*.
 ⛔⭐⭐ IL TRUCCO, DICHIARATO IN TESTA COME SI DEVE
 ═══════════════════════════════════════════════════════════════════════════════
 
-L'albero sulla macchina di prova e' compilato con **`MAX_ATTACCATE` piccolo**
-(`10-b93-terreno.sh`, predefinito **2**), cosi' la tabella si riempie con due
-clienti invece che con sedici sessioni grafiche vere.
+Il server della prova si accende con un **tetto piccolo** —
+`--tetto-sessioni 2` (`10-b93-terreno.sh`, predefinito **2**) — cosi' la tabella
+si riempie con due clienti invece che con dieci sessioni grafiche vere.
+
+⭐⭐ E DAL 25 AGOSTO 2026 NON SI RICOMPILA PIU' NIENTE: fino a ieri il terreno
+    faceva un `sed` sui sorgenti e ricostruiva il prodotto, con le due copie
+    gemelle da riallineare a mano (R12.3).  ⛔ Adesso il tetto e' **un'opzione
+    all'avvio**, l'albero sulla macchina e' quello del repository byte per byte,
+    e il valore in vigore si legge **dalla riga d'avvio del server acceso**.
+⚠ ⇒ Il `#define` nel sorgente e' il **PREDEFINITO**, e leggerlo al posto del
+    valore in vigore direbbe «una tabella da 10» su una tabella da 2: un numero
+    plausibile e falso.  `i_due_numeri()` legge tutt'e due e li tiene distinti.
 
 ⛔ **QUEL CHE SI MISURA E' IL COMPORTAMENTO AL RIEMPIMENTO, NON IL NUMERO.**
    Due non e' dieci e non e' sedici; nessuna riga di questo file pretende il
@@ -1368,21 +1377,48 @@ def i_due_numeri():
         spenta.  ⇒ Adesso si legge il tetto da `rcp.h` e si RISOLVE ogni
         `#define`: se punta a `RCP_TETTO_SESSIONI` vale il tetto, se e' un
         letterale vale quello — cosi' la divergenza (il difetto che C3 cura, e
-        il guasto `figli-slegati`) si vede ancora."""
+        il guasto `figli-slegati`) si vede ancora.
+
+    ⛔⛔ E IL 25 AGOSTO 2026 IL NUMERO SI E' SPOSTATO UNA SECONDA VOLTA, per la
+        cura del difetto 5: il terreno **non ricompila piu'** con un `sed`, il
+        tetto lo muove `--tetto-sessioni N` **all'avvio**.  ⇒ Il `#define` nel
+        sorgente e' il **PREDEFINITO**, non il valore in vigore: leggerlo e
+        basta vorrebbe dire annunciare «una tabella da 10» misurando su una
+        tabella da 2, cioe' ⛔ **un numero plausibile e falso** — la forma
+        esatta del difetto che questa funzione ha gia' pagato una volta.
+        ⇒ Il tetto IN VIGORE si legge dalla riga d'avvio del **server acceso**,
+          e il `#define` resta come predefinito e come termine di confronto.
+    ⚠ Se la riga d'avvio non si legge, `tetto` torna `None` e i predicati che
+      ne dipendono NON giudicano: «non ho letto» non e' «vale il predefinito».
+    """
     rc, out, _ = root(
         "grep -h '^#define RCP_TETTO_SESSIONI' %s/src/rcp.h; "
         "grep -h '^#define MAX_ATTACCATE' %s/src/rcp.c; "
         "grep -h '^#define MAX_FIGLI' %s/src/figlio.c; "
         "md5sum %s/src/rcp.c %s/src/figlio.c %s/src/remotix"
         % (ALB, ALB, ALB, ALB, ALB, ALB))
-    n = {"max_attaccate": None, "max_figli": None, "tetto": None, "md5": {}}
+    n = {"max_attaccate": None, "max_figli": None, "tetto": None,
+         "tetto_predefinito": None, "md5": {}}
     for r in out.splitlines():
         m = re.match(r"#define RCP_TETTO_SESSIONI (\d+)", r.strip())
         if m:
-            n["tetto"] = int(m.group(1))
+            n["tetto_predefinito"] = int(m.group(1))
         m = re.match(r"([0-9a-f]{32})\s+(\S+)", r.strip())
         if m:
             n["md5"][os.path.basename(m.group(2))] = m.group(1)
+
+    # ⛔ IL TETTO IN VIGORE, DAL SERVER ACCESO — la riga d'avvio di `main.c`
+    #    dice «tetto AMMINISTRATIVO delle sessioni: **N** (predefinito M…)».
+    rc, out2, _ = root(
+        "grep -ao 'tetto AMMINISTRATIVO delle sessioni: [*][*][0-9]*[*][*]' "
+        "%s/registro.log 2>/dev/null | tail -1 || true" % LAV)
+    m = re.search(r"\*\*(\d+)\*\*", out2 or "")
+    if m:
+        n["tetto"] = int(m.group(1))
+    else:
+        # ⚠ Nessuna riga d'avvio: il tetto in vigore NON si sa.  ⛔ Non si
+        #   ripiega sul predefinito — sarebbe indovinare, e nel verso comodo.
+        n["tetto"] = None
 
     def _risolvi(nome, riga):
         """Il valore EFFETTIVO del `#define`: un letterale, o il tetto se
@@ -1934,7 +1970,9 @@ def giro_vero(o):
 
     numeri = i_due_numeri()
     esiti["numeri"] = numeri
-    _log("I DUE NUMERI, letti dai sorgenti che hanno prodotto il binario")
+    _log("I DUE NUMERI — i `#define` dai sorgenti, il TETTO dal server acceso")
+    _inf("tetto IN VIGORE (riga d'avvio): %s · predefinito (`rcp.h`): %s"
+         % (numeri["tetto"], numeri["tetto_predefinito"]))
     _inf("MAX_ATTACCATE = %s · MAX_FIGLI = %s" % (numeri["max_attaccate"],
                                                   numeri["max_figli"]))
     _inf("md5: %s" % numeri["md5"])

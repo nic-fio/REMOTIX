@@ -100,8 +100,10 @@ $B --scena finestra --giri "${GIRI_FINESTRA:-5}"
 titolo '7 · [?] 2 — LA CAPSULA DI CHIUSURA, a tabella piena (tetto = 1)'
 $T sgombra
 $T spegni
-MAX_ATT=1 $T porta || exit 2
-$T accendi || exit 2
+# ⭐ Il tetto NON ricompila piu' niente: e' «--tetto-sessioni 1» all'accensione
+#    (cura del 25 agosto 2026), e il terreno verifica che sia in vigore
+#    leggendolo dal server acceso.
+MAX_ATT=1 $T accendi || exit 2
 $B --scena capsula --giri "${GIRI:-10}"
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -123,8 +125,10 @@ $B --scena capsula --giri "${GIRI:-10}"
 titolo '7-bis · ⛔ IL ROSSO DI PRIMA — la frase 0x0E di IERI, rimessa nella pagina servita'
 $T sgombra
 $T spegni
-MAX_ATT=1 FRASE_VECCHIA="quella sessione non si puo' servire" $T porta || exit 2
-$T accendi || exit 2
+# ⚠ `FRASE_VECCHIA` resta a `porta`: quella tocca la PAGINA servita, che non e'
+#   compilata — il tetto invece entra ad `accendi`, a caldo.
+FRASE_VECCHIA="quella sessione non si puo' servire" $T porta || exit 2
+MAX_ATT=1 $T accendi || exit 2
 $B --scena capsula --giri "${GIRI_ROSSO:-5}" \
 	&& printf '    \033[1;31mNO\033[0m  ⛔ il banco NON e" tornato rosso sulla frase di ieri: non sta misurando la cura\n' \
 	|| printf '    \033[1;32mOK\033[0m  ⭐ rosso, come deve: il banco sa ancora dire di no\n'
@@ -132,8 +136,8 @@ $B --scena capsula --giri "${GIRI_ROSSO:-5}" \
 titolo '7-ter · ⛔⛔ IL FILE DICE UNA COSA E IL BROWSER UN"ALTRA (0x0F sul filo, 0x0E nel file)'
 $T sgombra
 $T spegni
-MAX_ATT=1 $T porta || exit 2
-$T accendi || exit 2
+$T porta || exit 2
+MAX_ATT=1 $T accendi || exit 2
 $B --scena capsula --giri "${GIRI_PUNTO4:-3}" --respinto-uguale --motivo-atteso 0x0E \
 	&& printf '    \033[1;31mNO\033[0m  ⛔ il banco NON si e" accorto che i due testi divergono\n' \
 	|| printf '    \033[1;32mOK\033[0m  ⭐ rosso: i due testi divergono e il banco lo dice\n'
@@ -141,10 +145,13 @@ $B --scena capsula --giri "${GIRI_PUNTO4:-3}" --respinto-uguale --motivo-atteso 
 titolo "8 · ⛔ LA MACCHINA SI LASCIA COME LA SI E' TROVATA"
 $T sgombra
 $T spegni
-# ⛔ E L'ALBERO TORNA QUELLO DEL REPOSITORY: lasciarlo con `MAX_ATTACCATE 1`
-#    vorrebbe dire lasciare una trappola a chi lo trovera' domani — e il
-#    prossimo che ci misura sopra non avrebbe nessun modo di accorgersene.
-$T porta >/dev/null 2>&1 && printf '    --  albero rimesso al tetto del repository (RCP_TETTO_SESSIONI 16)\n'
+# ⭐⭐ E L'ALBERO NON VA PIU' RIMESSO A POSTO, perche' non e' mai stato toccato:
+#     dal 25 agosto 2026 il tetto e' «--tetto-sessioni», un'opzione all'avvio.
+#     ⛔ Prima qui c'era una ricompilazione di rimessa in ordine, e con lei il
+#        rischio di lasciare a chi trovava l'albero domani un binario col tetto
+#        di ieri **senza nessun modo di accorgersene**.  ⇒ Quel rischio non
+#        esiste piu': si spegne il server, e il tetto se ne va con lui.
+printf '    --  albero INTATTO: nessun sed, nessuna ricompilazione (tetto a caldo)\n'
 # ⛔⛔ E IL MODELLO SI SCRIVE COL MORSO — 25 agosto 2026, e questo controllo
 #      diceva **1** su una macchina PULITA.  `pgrep -f` acchiappa la riga di
 #      comando che lo esegue, e qui la riga di comando contiene il modello: il

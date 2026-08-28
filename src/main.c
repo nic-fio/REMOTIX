@@ -2132,6 +2132,35 @@ int main(int argc, char **argv)
 		 *     regola, e mezza regola e' peggio di nessuna. */
 		wt_locali_gancio(ripassa_sessioni_locali, guardiano);
 	}
+	/* ⛔⛔ E LA RIGA CHE DICE SE LA SORVEGLIANZA E' IN VIGORE — 25 agosto 2026,
+	 *      rilievo R7 di §5.5, e fino a stamattina NON LA SCRIVEVA NESSUNO.
+	 *
+	 *      `webtransport.c`, sopra `wt_sorveglia_locali()`, si difendeva dal
+	 *      ripiego silenzioso con queste parole: *«il difetto tornerebbe il
+	 *      giorno in cui qualcuno si dimentica di collegare il gancio, senza
+	 *      una riga rossa — chi non lo collega non applica la meta'
+	 *      «sorvegliata» di §5.1, ed e' `main.c` che lo scrive nel registro
+	 *      all'avvio»*.  ⛔ `main.c` non lo scriveva: il commento dichiarava una
+	 *      rete che non c'era, ed e' la forma E1 del `REVIEWER.md` — chi legge
+	 *      il codice crede che la guardia ci sia.
+	 *
+	 * ⇒ ⭐ Adesso c'e', e dice il valore in vigore **acceso E spento**
+	 *      (`CODER.md` §2-bis): «collegato» e «NON collegato» sono due righe
+	 *      diverse, e la seconda e' quella che si cerca quando §5.1 non morde.
+	 * ⚠ E si scrive DOPO l'`if`, non dentro: cosi' la riga esce anche quando il
+	 *   guardiano non c'e' — che e' proprio il caso in cui serve. */
+	registro_dice(REG_SESSIONE,
+	              "§5.1, la meta' SORVEGLIATA (il ripasso periodico delle "
+	              "sessioni locali): %s.  ⚠ L'altra meta' — la domanda "
+	              "all'`ATTACCA` — %s",
+	              guardiano ? "COLLEGATA, una domanda a logind per ripasso "
+	                          "(§6.13: era `N × D`, adesso e' `D`)"
+	                        : "⛔ NON collegata: nessuno si accorgera' che un "
+	                          "utente ha aperto una sessione locale mentre la "
+	                          "sua remota lavora",
+	              guardiano ? "e' collegata anche lei"
+	                        : "⛔ non e' collegata: logind non risponde, e la "
+	                          "regola NON e' in vigore su questo server");
 
 	/* ⭐ §7.6 — e si collega qui con gli altri: la scorciatoia `Ctrl+Alt+Fine`
 	 *    puo' arrivare col primo pacchetto utile della sessione, e un gancio
@@ -2316,13 +2345,24 @@ int main(int argc, char **argv)
 			ultimo_conto_guardiano = adesso;
 			sentinella_conti(guardiano, &chiamate, &peggior_ms);
 			wt_giri_fermi(&fermi, &fermo_peggiore);
+			/* ⛔⛔ E `inquilini=` E' ENTRATO IL 25 AGOSTO 2026 — rilievo R7.
+			 *
+			 *      `sentinella.h` prometteva questi due numeri *«accanto al
+			 *      numero degli inquilini serviti»* e ⛔ **nella riga non
+			 *      c'era**.  ⭐ E' il DENOMINATORE: senza `N` la frase qui in
+			 *      fondo — «una chiamata per ripasso, non per inquilino» — non
+			 *      si puo' **rifiutare**, perche' a un inquilino solo `N × D` e
+			 *      `D` danno lo stesso conto.  ⇒ Con `inquilini=7` e
+			 *      `chiamate=` che cresce di 1 per ripasso, la cura si legge
+			 *      dalla riga invece che dal commento. */
 			registro_dice(REG_SESSIONE,
 			              "guardiano: chiamate=%llu peggiore_ms=%llu "
-			              "giri_fermi=%llu "
+			              "inquilini=%zu giri_fermi=%llu "
 			              "giro_peggiore_ms=%llu — ⭐ una chiamata per RIPASSO, "
 			              "non per inquilino (§6.13: era `N × D`, adesso e' `D`)",
 			              (unsigned long long)chiamate,
 			              (unsigned long long)peggior_ms,
+			              wt_inquilini_serviti(),
 			              (unsigned long long)fermi,
 			              (unsigned long long)fermo_peggiore);
 		}

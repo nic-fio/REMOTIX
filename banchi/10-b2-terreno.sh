@@ -23,9 +23,11 @@
 # ⛔⭐ IL TRUCCO, DICHIARATO — e vale SOLO per la scena della tabella piena
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# `MAX_ATT=n` ricompila l'albero con `#define MAX_ATTACCATE n` (il `sed` su
-# **tutt'e due** le copie gemelle, o il Makefile rifiuta — R12.3).  Senza
-# `MAX_ATT` **non si tocca niente**: l'albero e' quello del repository.
+# `MAX_ATT=n` accende il server con **`--tetto-sessioni n`**.  ⭐ Dal 25 agosto
+# 2026 non si ricompila piu' niente: l'albero sulla macchina di prova e' quello
+# del repository **byte per byte**, e il tetto si muove **a caldo**.
+# ⚠ `MAX_ATT` si dichiara al passo `porta` (per il racconto) ma morde ad
+#   `accendi`, che e' dove l'opzione entra e dove si verifica che sia in vigore.
 #
 # ⛔ La scena della **sessione ferma** (`--scena viva`) si misura sull'albero
 #    INTATTO: `MAX_ATTACCATE` non c'entra niente con le cure della fase 9, ma
@@ -37,9 +39,9 @@
 #
 # Uso (dal portatile):
 #     bash banchi/10-b2-terreno.sh utenti      # tutt'e due
-#     bash banchi/10-b2-terreno.sh porta       # albero INTATTO
-#     MAX_ATT=1 bash banchi/10-b2-terreno.sh porta
+#     bash banchi/10-b2-terreno.sh porta       # l'albero e' SEMPRE intatto
 #     bash banchi/10-b2-terreno.sh accendi     # OPZIONI_SERVER='…' per le cure
+#     MAX_ATT=1 bash banchi/10-b2-terreno.sh accendi   # tetto a caldo
 #     bash banchi/10-b2-terreno.sh stato
 #     bash banchi/10-b2-terreno.sh spegni
 # ===========================================================================
@@ -103,37 +105,34 @@ porta)
 		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
 	ok "sorgenti in $ALBERO"
 
+	# ⛔⛔ E QUI C'ERA UN `sed` CHE RICOMPILAVA IL PRODOTTO — tolto il 25 agosto
+	#     2026, cura del difetto 5 dell'incarico F3.
+	#
+	#   La storia, perche' e' istruttiva: erano quattro `#define` a 16 copiati a
+	#   mano; la cura C3 li ha unificati in `RCP_TETTO_SESSIONI`; il `sed`
+	#   andava su un modello **che non c'era piu'**, usciva **0 senza
+	#   sostituire**, e il terreno dichiarava «gemelle: uguali» compilando col
+	#   tetto vecchio — cioe' misurava *«tabella PIENA»* su una tabella che due
+	#   clienti non riempiono mai.  Ci fu messa una guardia che CONTAVA.
+	#
+	# ⇒ ⭐ Ma nel frattempo il prodotto ha imparato a farlo da se':
+	#     **`--tetto-sessioni N`** lo muove **all'avvio**.  ⇒ Niente `sed`,
+	#     niente ricompilazione, niente gemelle da riallineare a mano (R12.3), e
+	#     ⭐ l'albero sulla macchina e' quello del repository **byte per byte**.
+	# ⛔ E LA GUARDIA NON SPARISCE, CAMBIA POSTO: adesso e' `accendi` a
+	#    verificare il tetto **sul server acceso**, leggendolo dalla riga
+	#    d'avvio.  Guardare il prodotto che gira e' meglio che guardare il testo
+	#    da cui nascera' (`LEZIONI.md` §1.6).
 	if [ -n "$MAX_ATT" ]; then
-		log "2 · ⛔ IL SED, sulle DUE copie gemelle — RCP_TETTO_SESSIONI=$MAX_ATT"
-		# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
-		#
-		#   Prima erano QUATTRO `#define` a 16 copiati a mano, e questo copione
-		#   sostituiva `#define MAX_ATTACCATE 16` in `rcp.c`.  ⛔ Dopo C3 quella
-		#   riga dice `#define MAX_ATTACCATE RCP_TETTO_SESSIONI`: il modello NON
-		#   c'e' piu', il `sed` usciva **0 senza sostituire**, il controllo
-		#   guardava solo il codice d'uscita, il terreno dichiarava «gemelle:
-		#   uguali» e COMPILAVA COL TETTO 16 — cioe' la scena «tabella PIENA»
-		#   misurata su una tabella da sedici che due clienti non riempiono mai.
-		#   ⇒ Adesso il numero e' UNO, `RCP_TETTO_SESSIONI` in `rcp.h`, e questo
-		#     `sed` CONTA se ha morso su tutt'e due le gemelle e si FERMA se no.
-		#     (E' la stessa cura di `10-b93-terreno.sh:112`, portata qui.)
-		ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe misurato una tabella da sedici"; exit 2; }
-set -e
-n=0
-for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
-	prima=\$(grep -c '^#define RCP_TETTO_SESSIONI 16\$' "\$f" || true)
-	sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $MAX_ATT/' "\$f"
-	dopo=\$(grep -c '^#define RCP_TETTO_SESSIONI $MAX_ATT\$' "\$f" || true)
-	echo "\$f: prima=\$prima dopo=\$dopo"
-	if [ "\$prima" = 1 ] && [ "\$dopo" = 1 ]; then n=\$((n+1)); fi
-done
-if [ "\$n" != 2 ]; then echo '⛔ il sed NON ha morso su tutt e due le gemelle'; exit 3; fi
-grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
-cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
-SED_FINE
+		log "2 · ⭐ NESSUN SED: il tetto sara' «--tetto-sessioni $MAX_ATT», a caldo"
+		inf "il valore in vigore si legge dal server acceso, nel passo «accendi»"
 	else
-		log "2 · ⭐ NESSUN SED sul tetto: l'albero e' quello del repository"
+		log "2 · ⭐ NESSUN SED e nessun tetto chiesto: vale il predefinito"
 	fi
+	ssh -o BatchMode=yes "$MACCHINA" "
+		grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+		cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali (e sono quelle del repository)'
+	" || { ko "⛔ non ho potuto rileggere le gemelle"; exit 2; }
 
 	# ═══════════════════════════════════════════════════════════════════════
 	# ⛔⭐⭐ IL CONTROLLO NEGATIVO DELLA FRASE — `FRASE_VECCHIA=1`
@@ -235,6 +234,38 @@ sgombra)
 		 for u in provadec1 provadec1b; do
 		   echo \"\$u: \$(pgrep -u \$u -c . 2>/dev/null) processi, gnome-shell: \$(pgrep -u \$u -c gnome-shell 2>/dev/null)\"
 		 done'" || { ko "⛔ lo sgombero non e' riuscito"; exit 2; }
+	exit 0 ;;
+
+accendi)
+	# ⛔⭐⭐ IL TETTO ENTRA QUI, E NON NEL COMPILATORE — 25 agosto 2026.
+	#     `--tetto-sessioni N` e' un'opzione del prodotto, sul modello delle
+	#     altre: una strada sola (`CODER.md` §2-bis).
+	# ⚠ Si APPENDE a `OPZIONI_SERVER`: `10-b2-lancia.sh` ci passa gia'
+	#   `--niente-audio-silenzio`, e mangiargliela misurerebbe un'altra scena.
+	if [ -n "$MAX_ATT" ]; then
+		export OPZIONI_SERVER="${OPZIONI_SERVER:-} --tetto-sessioni $MAX_ATT"
+	fi
+	bash "$QUI/banchi/07-b64-terreno.sh" accendi || exit 2
+	if [ -n "$MAX_ATT" ]; then
+		# ⛔ LA GUARDIA CHE PRIMA GUARDAVA IL `sed`: il tetto in vigore si legge
+		#    DAL SERVER ACCESO.  Se non e' quello chiesto ci si FERMA — il banco
+		#    misurerebbe «tabella piena» su un'altra tabella, e ⛔ non darebbe
+		#    rosso: direbbe «non ho misurato».
+		log "2-ter · ⛔ IL TETTO IN VIGORE, letto dal SERVER ACCESO"
+		i=0; VISTO=""
+		while [ $i -lt 30 ]; do
+			VISTO=$(ssh -o BatchMode=yes "$MACCHINA" \
+				"grep -ao 'tetto AMMINISTRATIVO delle sessioni: \*\*[0-9]*\*\*' \
+				 $LAV/registro.log 2>/dev/null | tail -1 | grep -o '[0-9]*' || true")
+			[ -n "$VISTO" ] && break
+			i=$((i+1)); sleep 0.5
+		done
+		if [ "$VISTO" != "$MAX_ATT" ]; then
+			ko "⛔ ho chiesto --tetto-sessioni $MAX_ATT e il server dichiara «${VISTO:-nessun tetto}»"
+			exit 2
+		fi
+		ok "⭐ il server dichiara il tetto **$VISTO**, ed e' quello che ho chiesto"
+	fi
 	exit 0 ;;
 
 *)

@@ -674,6 +674,22 @@ struct wt {
 	 * ⭐ Si tiene la fotografia del contatore GLOBALE invece di un flag: fra due
 	 *    giudizi possono esserci stati piu' buchi, e un flag ne perderebbe. */
 	uint64_t lm_fermo_visto;    /* `giro_fermo_ms` all'ultimo giudizio        */
+	/* ⛔⛔ IL PUNTO ZERO DI QUESTA SESSIONE — 25 agosto 2026, rilievo R5.
+	 *
+	 *     `giro_fermo_ms` e' un contatore GLOBALE che cresce da quando il
+	 *     server e' acceso, e la riga dello sfratto lo stampava come
+	 *     `fermo_ms=` con accanto un commento che diceva *«da quando questa
+	 *     sessione e' nata»*.  ⛔ `[M]` §5.5 R5: una riga ha attribuito **54,5
+	 *     secondi** di cecita' nostra a una sessione **che allora non era
+	 *     ancora nata**.  ⇒ Chi legge ASSOLVE la rete quando la rete c'entrava,
+	 *     cioe' l'errore ESATTAMENTE INVERSO di quello che la cura esiste per
+	 *     togliere.  Un testimone che accusa chi non c'era e' peggio di nessun
+	 *     testimone: manda la diagnosi dalla parte sbagliata (`LEZIONI.md`
+	 *     §1.37).
+	 *
+	 * ⭐ Si segna quanto valeva il contatore globale al PRIMO giro in cui
+	 *    questa sessione e' stata guardata, e la riga stampa la differenza. */
+	uint64_t lm_fermo_nato;     /* `giro_fermo_ms` al primo giro di QUESTA     */
 	uint64_t lm_fermo_saltati;  /* quanti giudizi ha saltato per un buco      */
 
 	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
@@ -860,6 +876,41 @@ struct wt {
 	 *    per poterlo SCRIVERE nel registro quando cambia. */
 	bool tienila_viva;
 };
+
+/* ⛔⛔⭐ DI CHI E' LA RIGA, NEL PADRE — 25 agosto 2026, rilievo R4 di §5.5.
+ *
+ *     La cura del 25 agosto (R10-A4) ha dato un nome a **163 righe su 163** di
+ *     `rcp.c`, che passano da un imbuto solo (`gancio_registra`).  ⛔ Ma le
+ *     righe che `webtransport.c` scrive DI SUO non passano di li': erano
+ *     **93 chiamate mute contro una sola che nominava**, e fra le mute c'era
+ *     la piu' importante della fase 9 — **la riga dello sfratto**, quella che
+ *     dice chi e' stato buttato fuori e perche'.
+ *
+ * ⇒ ⭐ *La riga piu' importante della fase non si sapeva di chi parlasse.*
+ *
+ * ⭐ L'identita' era gia' in mano, come in `gancio_registra`: il `wt` porta la
+ *    sessione RCP, e `rcp_utente()` esiste da sempre.  Qui c'e' l'unica strada
+ *    per prenderla, cosi' i punti di stampa non la compongono ciascuno a modo
+ *    suo — la stessa ragione per cui la parentesi si scrive in `registro.c`.
+ *
+ * ⚠ E CHI NON SA TACE (`registro.h`): prima dell'autenticazione `w->rcp` non
+ *   ha ancora un utente, `rcp_utente()` torna `""`, e `registro_dice_di()`
+ *   scrive la riga **senza parentesi**.  ⛔ Non ci si mette la provenienza al
+ *   posto suo: il corpo di quelle righe la porta gia' (`w->provenienza`), e un
+ *   secondo campo che dice la stessa cosa e' volume, non diagnosi.
+ * ⚠ `NULL` regge apposta: `wt_libera()` scrive righe con la sessione RCP gia'
+ *   sganciata, e li' il nome non c'e' piu' — meglio muto che sbagliato.
+ *
+ * ⛔ E UNDICI RIGHE DI QUESTO FILE RESTANO MUTE APPOSTA, e vanno lasciate cosi':
+ *    le dieci di `REG_AVVIO` (le tre cure della fase 9 che dichiarano il valore
+ *    in vigore, accese E spente) e quella del tono di prova.  ⭐ Parlano del
+ *    SERVER, non di un inquilino: attaccarci un nome vorrebbe dire promettere a
+ *    chi legge che quella riga riguarda una sessione sola, e sarebbe la stessa
+ *    bugia di `fermo_ms=` — un testimone che indica la persona sbagliata. */
+static const char *wt_chi(const wt *w)
+{
+	return (w && w->rcp) ? rcp_utente(w->rcp) : NULL;
+}
 
 /* ------------------------------------------------------------------------ */
 /* Gli interi variabili di QUIC (RFC 9000 §16).  Servono tre volte e non ci   */
@@ -1358,10 +1409,10 @@ static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
 {
 	uscita *u;
 	if (w->byte_in_coda + n > WT_CODA_MAX) {
-		registro_dice(REG_WT,
-		              "⛔ la coda d'uscita ha toccato il tetto (%zu byte in "
-		              "coda + %zu, tetto %u): non accodo",
-		              w->byte_in_coda, n, WT_CODA_MAX);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ la coda d'uscita ha toccato il tetto (%zu byte in "
+		                 "coda + %zu, tetto %u): non accodo",
+		                 w->byte_in_coda, n, WT_CODA_MAX);
 		return false;
 	}
 	if (w->ncoda == w->capcoda) {
@@ -1418,12 +1469,12 @@ static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
 {
 	if (coda_metti(w, id, d, n, false))
 		return true;
-	registro_dice(REG_WT,
-	              "⛔⛔ %zu byte per lo stream %ld NON entrano in coda: la "
-	              "sessione NON prosegue.  Un canale affidabile non butta i "
-	              "byte, e mezzo messaggio sul filo sarebbe una violazione "
-	              "fabbricata dal server (§6.1)",
-	              n, (long)id);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "⛔⛔ %zu byte per lo stream %ld NON entrano in coda: la "
+	                 "sessione NON prosegue.  Un canale affidabile non butta i "
+	                 "byte, e mezzo messaggio sul filo sarebbe una violazione "
+	                 "fabbricata dal server (§6.1)",
+	                 n, (long)id);
 	w->guasto = true;
 	return false;
 }
@@ -1613,11 +1664,11 @@ static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
 		 *    scattato**.  Il giorno in cui arriva il secondo chiamante — e con
 		 *    `figlio.c` sta arrivando — un blocco sparirebbe senza traccia. */
 		w->audio_buttati++;
-		registro_dice(REG_WT,
-		              "⛔ %s: blocco d'audio di %zu byte oltre il tetto di %u — "
-		              "BUTTATO.  ⚠ Se questa riga compare, il tetto e' stato "
-		              "controllato in due posti e uno dei due sbaglia",
-		              w->provenienza, n, (unsigned)WT_DGRAM_BYTE);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ %s: blocco d'audio di %zu byte oltre il tetto di %u — "
+		                 "BUTTATO.  ⚠ Se questa riga compare, il tetto e' stato "
+		                 "controllato in due posti e uno dei due sbaglia",
+		                 w->provenienza, n, (unsigned)WT_DGRAM_BYTE);
 		return false;
 	}
 
@@ -1883,13 +1934,13 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		 *    sarebbe una punizione della rete, non del mittente» — e la stessa
 		 *    ragione vale in uscita: un blocco d'audio che non parte non e' un
 		 *    motivo per togliere il desktop a chi lo sta usando. */
-		registro_dice(REG_WT,
-		              "⛔ %s: datagram di %zu byte NON scritto (%s) — il blocco "
-		              "si BUTTA (§6.3: nessuna ritrasmissione).  Spediti %llu, "
-		              "buttati %llu",
-		              w->provenienza, v.len, ngtcp2_strerror((int)nw),
-		              (unsigned long long)w->audio_spediti,
-		              (unsigned long long)(w->audio_buttati + 1));
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ %s: datagram di %zu byte NON scritto (%s) — il blocco "
+		                 "si BUTTA (§6.3: nessuna ritrasmissione).  Spediti %llu, "
+		                 "buttati %llu",
+		                 w->provenienza, v.len, ngtcp2_strerror((int)nw),
+		                 (unsigned long long)w->audio_spediti,
+		                 (unsigned long long)(w->audio_buttati + 1));
 		w->audio_buttati++;
 		dgram_togli_testa(w);
 		return false;
@@ -1988,23 +2039,23 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			 *    allora buttare e' la cosa sbagliata da fare — quel blocco
 			 *    entrerebbe fra qualche centinaio di microsecondi.  Se e'
 			 *    **grande**, la causa e' un'altra e va cercata altrove. */
-			registro_dice(REG_WT,
-			              "⚠ %s: datagram di %zu byte NON messo nel pacchetto "
-			              "(destlen %zu) — buttato perche' non esce un datagram da "
-			              "%llu ms, e il tetto e' %u (§6.3).  ⚠ e il blocco che "
-			              "butto ne ha %llu, di ms: se i due numeri divergono, la "
-			              "coda non si sta rinfrescando.  Rifiutati %llu.  "
-			              "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s",
-			              w->provenienza, v.len, destlen,
-			              (unsigned long long)zitto_ms,
-			              (unsigned)WT_DGRAM_ZITTO_MAX_MS,
-			              (unsigned long long)eta_ms,
-			              (unsigned long long)w->audio_rifiutati,
-			              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
-			              ngtcp2_conn_get_send_quantum(w->conn),
-			              ngtcp2_conn_get_cwnd_left(w->conn) < v.len
-			                  ? " ⇒ E' LA CONGESTIONE: il blocco non ci sta ADESSO"
-			                  : " ⇒ NON e' la congestione: guarda il quanto");
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⚠ %s: datagram di %zu byte NON messo nel pacchetto "
+			                 "(destlen %zu) — buttato perche' non esce un datagram da "
+			                 "%llu ms, e il tetto e' %u (§6.3).  ⚠ e il blocco che "
+			                 "butto ne ha %llu, di ms: se i due numeri divergono, la "
+			                 "coda non si sta rinfrescando.  Rifiutati %llu.  "
+			                 "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s",
+			                 w->provenienza, v.len, destlen,
+			                 (unsigned long long)zitto_ms,
+			                 (unsigned)WT_DGRAM_ZITTO_MAX_MS,
+			                 (unsigned long long)eta_ms,
+			                 (unsigned long long)w->audio_rifiutati,
+			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+			                 ngtcp2_conn_get_send_quantum(w->conn),
+			                 ngtcp2_conn_get_cwnd_left(w->conn) < v.len
+			                     ? " ⇒ E' LA CONGESTIONE: il blocco non ci sta ADESSO"
+			                     : " ⇒ NON e' la congestione: guarda il quanto");
 		dgram_togli_testa(w);
 	}
 
@@ -2029,10 +2080,10 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 
 	for (size_t i = 0; i < veccnt; i++) {
 		if (origlen + vec[i].len > sizeof orig) {
-			registro_dice(REG_WT,
-			              "⛔ il SETTINGS di nghttp3 e' piu' lungo di "
-			              "%zu byte: non lo riscrivo",
-			              sizeof orig);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⛔ il SETTINGS di nghttp3 e' piu' lungo di "
+			                 "%zu byte: non lo riscrivo",
+			                 sizeof orig);
 			return 0;
 		}
 		memcpy(orig + origlen, vec[i].base, vec[i].len);
@@ -2048,18 +2099,18 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	 *    nghttp3. */
 	n = varint_leggi(&tipo_stream, orig, origlen);
 	if (n == 0 || tipo_stream != 0x00) {
-		registro_dice(REG_WT,
-		              "⛔ lo stream di controllo non comincia per 0x00 (e' "
-		              "%llu): non tocco niente",
-		              (unsigned long long)tipo_stream);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ lo stream di controllo non comincia per 0x00 (e' "
+		                 "%llu): non tocco niente",
+		                 (unsigned long long)tipo_stream);
 		return 0;
 	}
 	p = n;
 
 	n = varint_leggi(&tipo_frame, orig + p, origlen - p);
 	if (n == 0 || tipo_frame != 0x04) {
-		registro_dice(REG_WT, "⛔ il primo frame non e' SETTINGS (e' %llu)",
-		              (unsigned long long)tipo_frame);
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ il primo frame non e' SETTINGS (e' %llu)",
+		                 (unsigned long long)tipo_frame);
 		return 0;
 	}
 	p += n;
@@ -2071,8 +2122,8 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 
 	if (p + lung != origlen) {
 		/* C'e' altro dopo SETTINGS, oppure SETTINGS e' arrivato a pezzi. */
-		registro_dice(REG_WT, "⛔ SETTINGS non e' tutto qui (%zu + %llu != %zu)",
-		              p, (unsigned long long)lung, origlen);
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS non e' tutto qui (%zu + %llu != %zu)",
+		                 p, (unsigned long long)lung, origlen);
 		return 0;
 	}
 
@@ -2086,7 +2137,7 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	t += varint_scrivi(testa + t, lung + a);
 
 	if (t + lung + a > sizeof w->impbuf) {
-		registro_dice(REG_WT, "⛔ SETTINGS troppo grande per il buffer");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS troppo grande per il buffer");
 		return 0;
 	}
 
@@ -2099,10 +2150,10 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	o += a;
 	w->impbuf_len = o;
 
-	registro_dice(REG_WT,
-	              "⭐ SETTINGS riscritto — %zu byte di nghttp3 + %zu nostri "
-	              "(ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)",
-	              origlen, a);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "⭐ SETTINGS riscritto — %zu byte di nghttp3 + %zu nostri "
+	                 "(ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)",
+	                 origlen, a);
 	return origlen;
 }
 
@@ -2492,13 +2543,13 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	 *   unidirezionali, e allora si dice quanti gliene restano invece di
 	 *   scrivere «non si e' potuto». */
 	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
-		registro_dettaglio(REG_WT,
-		              "nessuno stream unidirezionale per il fotogramma: il "
-		              "client ne concede ancora %llu (§2.5 ne vuole uno PER "
-		              "fotogramma).  ⚠ La riga che decide — delta si butta, "
-		              "chiave si aspetta — la scrive `rcp.c` (§2.3)",
-		              (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
-			              w->conn));
+		registro_dettaglio_di(REG_WT, wt_chi(w),
+		                      "nessuno stream unidirezionale per il fotogramma: il "
+		                      "client ne concede ancora %llu (§2.5 ne vuole uno PER "
+		                      "fotogramma).  ⚠ La riga che decide — delta si butta, "
+		                      "chiave si aspetta — la scrive `rcp.c` (§2.3)",
+		                      (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
+			                      w->conn));
 		return false;
 	}
 
@@ -2508,12 +2559,12 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	 *    un cliente che dichiarava `initial_max_streams_uni = 6` ha chiuso con
 	 *    `STREAM_LIMIT_ERROR` dopo che avevamo aperto 11 stream, e senza questa
 	 *    riga di chi fosse il conto sbagliato si poteva solo indovinare. */
-	registro_dettaglio(REG_WT,
-	                   "stream uni %ld aperto per un fotogramma; ngtcp2 dice che "
-	                   "ne restano %llu",
-	                   (long)id,
-	                   (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
-		                   w->conn));
+	registro_dettaglio_di(REG_WT, wt_chi(w),
+	                           "stream uni %ld aperto per un fotogramma; ngtcp2 dice che "
+	                           "ne restano %llu",
+	                           (long)id,
+	                           (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
+		                           w->conn));
 
 	n += varint_scrivi(pre + n, 0x54);
 	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
@@ -2525,10 +2576,10 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 		 *    diventa mai un fotogramma: e' la forma «vuoto e proibito hanno la
 		 *    stessa faccia», dal lato di chi aspetta. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, id, 0);
-		registro_dice(REG_WT,
-		              "⛔ il preambolo di WebTransport (%zu byte) non entra in "
-		              "coda: stream %ld azzerato, nessun fotogramma",
-		              n, (long)id);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ il preambolo di WebTransport (%zu byte) non entra in "
+		                 "coda: stream %ld azzerato, nessun fotogramma",
+		                 n, (long)id);
 		return false;
 	}
 	*stream = id;
@@ -2558,10 +2609,10 @@ static void gancio_video_fin(void *ctx, int64_t stream)
 	 *    stream mentre i suoi byte sono ancora in coda — cioe' consegnerebbe
 	 *    un fotogramma troncato marcato «completo». */
 	if (!coda_metti(w, stream, NULL, 0, true))
-		registro_dice(REG_WT,
-		              "⛔ il FIN dello stream %ld non entra in coda: il "
-		              "fotogramma e' uscito ma non e' dichiarato completo",
-		              (long)stream);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ il FIN dello stream %ld non entra in coda: il "
+		                 "fotogramma e' uscito ma non e' dichiarato completo",
+		                 (long)stream);
 }
 
 static void gancio_video_azzera(void *ctx, int64_t stream)
@@ -2612,12 +2663,12 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 		*restano = ngtcp2_conn_get_streams_uni_left2(w->conn);
 
 	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
-		registro_dettaglio(REG_WT,
-		                   "nessuno stream unidirezionale per gli appunti: il "
-		                   "client ne concede ancora %llu (§2.5 ne vuole uno per "
-		                   "trasferimento)",
-		                   (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
-			                   w->conn));
+		registro_dettaglio_di(REG_WT, wt_chi(w),
+		                           "nessuno stream unidirezionale per gli appunti: il "
+		                           "client ne concede ancora %llu (§2.5 ne vuole uno per "
+		                           "trasferimento)",
+		                           (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
+			                           w->conn));
 		return false;
 	}
 
@@ -2628,10 +2679,10 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 		/* ⛔ Stesso trattamento del video: uno stream aperto e muto tiene un
 		 *    posto nel conto del client e non diventa mai un messaggio. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, id, 0);
-		registro_dice(REG_WT,
-		              "⛔ il preambolo di WebTransport (%zu byte) non entra in "
-		              "coda: stream %ld azzerato, nessun trasferimento di appunti",
-		              n, (long)id);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ il preambolo di WebTransport (%zu byte) non entra in "
+		                 "coda: stream %ld azzerato, nessun trasferimento di appunti",
+		                 n, (long)id);
 		return false;
 	}
 	*stream = id;
@@ -2650,10 +2701,10 @@ static void gancio_appunti_fin(void *ctx, int64_t stream)
 	/* ⛔ Il FIN e' un elemento della coda come gli altri, e NON si scrive
 	 *    subito: deve uscire DOPO i byte che lo precedono. */
 	if (!coda_metti(w, stream, NULL, 0, true))
-		registro_dice(REG_WT,
-		              "⛔ il FIN dello stream %ld degli appunti non entra in "
-		              "coda: il messaggio e' uscito e lo stream resta aperto",
-		              (long)stream);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ il FIN dello stream %ld degli appunti non entra in "
+		                 "coda: il messaggio e' uscito e lo stream resta aperto",
+		                 (long)stream);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -3131,22 +3182,22 @@ static void regola_tienila_viva(wt *w, const char *stato)
 	 *    un numero DIVERSO di argomenti da quando l'intervallo si stampa, e un
 	 *    `%llu` che non c'e' e' un difetto che si vede solo al primo stacco. */
 	if (serve)
-		registro_dice(REG_WT,
-		              "⭐ PING del trasporto ACCESI ogni %llu s con %s: il segno "
-		              "di vita di §5.3 lo produciamo NOI, non il keep-alive del "
-		              "browser (che dava 15 s su 30 di tetto)%s",
-		              (unsigned long long)(tienila_viva_ns() / NGTCP2_SECONDS),
-		              w->provenienza,
-		              linea_morta_accesa && linea_morta_silenzio_ms
-		                  ? ".  ⚠ Sono la META' della soglia del silenzio della "
-		                    "linea morta: quando scade, le domande senza risposta "
-		                    "sono due"
-		                  : "");
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⭐ PING del trasporto ACCESI ogni %llu s con %s: il segno "
+		                 "di vita di §5.3 lo produciamo NOI, non il keep-alive del "
+		                 "browser (che dava 15 s su 30 di tetto)%s",
+		                 (unsigned long long)(tienila_viva_ns() / NGTCP2_SECONDS),
+		                 w->provenienza,
+		                 linea_morta_accesa && linea_morta_silenzio_ms
+		                     ? ".  ⚠ Sono la META' della soglia del silenzio della "
+		                       "linea morta: quando scade, le domande senza risposta "
+		                       "sono due"
+		                     : "");
 	else
-		registro_dice(REG_WT,
-		              "PING del trasporto spenti con %s: la sessione e' finita, "
-		              "non c'e' piu' niente da tenere vivo",
-		              w->provenienza);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "PING del trasporto spenti con %s: la sessione e' finita, "
+		                 "non c'e' piu' niente da tenere vivo",
+		                 w->provenienza);
 }
 
 static void regola_battito(wt *w)
@@ -3909,29 +3960,29 @@ static void video_sgombra(wt *w, const char *perche)
 			w->sgombra_tenuti += arretrato;
 			if (w->sgombra_sopra) {
 				w->sgombra_sopra = false;
-				registro_dice(REG_RCP,
-				              "⭐ %s: la coda del video torna SOTTO la soglia "
-				              "(%zu byte = %llu ms, soglia %llu ms, %s): i %u "
-				              "delta arretrati si TENGONO — §5.1 dice PUO', non "
-				              "DEVE",
-				              w->provenienza, in_coda,
-				              (unsigned long long)attesa,
-				              (unsigned long long)sgombra_soglia_ms, come,
-				              arretrato);
+				registro_dice_di(REG_RCP, wt_chi(w),
+				                 "⭐ %s: la coda del video torna SOTTO la soglia "
+				                 "(%zu byte = %llu ms, soglia %llu ms, %s): i %u "
+				                 "delta arretrati si TENGONO — §5.1 dice PUO', non "
+				                 "DEVE",
+				                 w->provenienza, in_coda,
+				                 (unsigned long long)attesa,
+				                 (unsigned long long)sgombra_soglia_ms, come,
+				                 arretrato);
 			}
 			involo_pulisci(w);
 			return;
 		}
 		if (!w->sgombra_sopra) {
 			w->sgombra_sopra = true;
-			registro_dice(REG_RCP,
-			              "⛔ %s: la coda del video passa SOPRA la soglia (%zu "
-			              "byte = %llu ms, soglia %llu ms, %s), arretrato %u "
-			              "delta: da qui i piu' vecchi si abbandonano (§5.1), "
-			              "il minimo per rientrare",
-			              w->provenienza, in_coda, (unsigned long long)attesa,
-			              (unsigned long long)sgombra_soglia_ms, come,
-			              arretrato);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "⛔ %s: la coda del video passa SOPRA la soglia (%zu "
+			                 "byte = %llu ms, soglia %llu ms, %s), arretrato %u "
+			                 "delta: da qui i piu' vecchi si abbandonano (§5.1), "
+			                 "il minimo per rientrare",
+			                 w->provenienza, in_coda, (unsigned long long)attesa,
+			                 (unsigned long long)sgombra_soglia_ms, come,
+			                 arretrato);
 		}
 	}
 
@@ -3947,12 +3998,12 @@ static void video_sgombra(wt *w, const char *perche)
 			 * proprio quando serve. */
 			if (!w->involo[i].detto) {
 				w->involo[i].detto = true;
-				registro_dice(REG_RCP,
-				              "⚠ %s: la CHIAVE %u tiene ancora %zu byte in coda "
-				              "e §5.2 vieta di abbandonarla: si ASPETTA.  ⭐ E i "
-				              "delta che vengono dopo non sono bloccati da lei — "
-				              "gli stream sono indipendenti (§5.1)",
-				              w->provenienza, w->involo[i].numero, rimasti);
+				registro_dice_di(REG_RCP, wt_chi(w),
+				                 "⚠ %s: la CHIAVE %u tiene ancora %zu byte in coda "
+				                 "e §5.2 vieta di abbandonarla: si ASPETTA.  ⭐ E i "
+				                 "delta che vengono dopo non sono bloccati da lei — "
+				                 "gli stream sono indipendenti (§5.1)",
+				                 w->provenienza, w->involo[i].numero, rimasti);
 			}
 			continue;
 		}
@@ -4019,10 +4070,10 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
 		 *   sara' abbandonabile, e chi legge il registro deve saperlo — un
 		 *   abbandono che non avviene perche' una tabella e' piena somiglia in
 		 *   tutto a un abbandono che nessuno ha chiesto. */
-		registro_dice(REG_WT,
-		              "⚠ %s: %u fotogrammi gia' in volo: il %u non entra "
-		              "nell'elenco e NON potra' essere abbandonato (§5.1)",
-		              w->provenienza, WT_INVOLO_MAX, numero);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⚠ %s: %u fotogrammi gia' in volo: il %u non entra "
+		                 "nell'elenco e NON potra' essere abbandonato (§5.1)",
+		                 w->provenienza, WT_INVOLO_MAX, numero);
 		return;
 	}
 	w->involo[w->ninvolo].stream = stream;
@@ -4160,22 +4211,22 @@ static uint64_t chiave_intervallo_ms(wt *w, const char **come)
 	        ? ms - w->chiave_attesa_detta_ms
 	        : w->chiave_attesa_detta_ms - ms) >= 100) {
 		w->chiave_attesa_detta_ms = ms;
-		registro_dice(REG_RCP,
-		              "🔸 %s: la CHIAVE si potra' richiedere ogni %llu ms invece "
-		              "di %u — l'ultima misurava %llu byte e la banda MISURATA e' "
-		              "%llu kbit/s (cwnd %llu byte / rtt %llu ms, i due numeri "
-		              "che ngtcp2 usa per decidere quanto spedire).  ⛔ IL PREZZO: "
-		              "su linea stretta l'immagine resta rotta piu' a lungo dopo "
-		              "una perdita.  ⭐ In cambio l'audio passa: chiedere la "
-		              "chiave nuova prima che la vecchia sia uscita teneva "
-		              "`cwnd_left` a zero e distruggeva i datagram (banco 07-b65)",
-		              w->provenienza, (unsigned long long)ms,
-		              (unsigned)WT_CHIAVE_RICHIESTA_MS,
-		              (unsigned long long)w->chiave_byte,
-		              (unsigned long long)(info.cwnd * 8ull * NGTCP2_SECONDS
-		                                   / info.smoothed_rtt / 1000ull),
-		              (unsigned long long)info.cwnd,
-		              (unsigned long long)(info.smoothed_rtt / NGTCP2_MILLISECONDS));
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "🔸 %s: la CHIAVE si potra' richiedere ogni %llu ms invece "
+		                 "di %u — l'ultima misurava %llu byte e la banda MISURATA e' "
+		                 "%llu kbit/s (cwnd %llu byte / rtt %llu ms, i due numeri "
+		                 "che ngtcp2 usa per decidere quanto spedire).  ⛔ IL PREZZO: "
+		                 "su linea stretta l'immagine resta rotta piu' a lungo dopo "
+		                 "una perdita.  ⭐ In cambio l'audio passa: chiedere la "
+		                 "chiave nuova prima che la vecchia sia uscita teneva "
+		                 "`cwnd_left` a zero e distruggeva i datagram (banco 07-b65)",
+		                 w->provenienza, (unsigned long long)ms,
+		                 (unsigned)WT_CHIAVE_RICHIESTA_MS,
+		                 (unsigned long long)w->chiave_byte,
+		                 (unsigned long long)(info.cwnd * 8ull * NGTCP2_SECONDS
+		                                      / info.smoothed_rtt / 1000ull),
+		                 (unsigned long long)info.cwnd,
+		                 (unsigned long long)(info.smoothed_rtt / NGTCP2_MILLISECONDS));
 	}
 	return ms;
 }
@@ -4199,10 +4250,10 @@ static void audio_regola(wt *w)
 	if (codec == 0) {
 		if (!w->audio_detto) {
 			w->audio_detto = true;
-			registro_dice(REG_RCP,
-			              "%s: nessun codec audio negoziato (§4.3) — questa "
-			              "sessione non ha audio",
-			              w->provenienza);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "%s: nessun codec audio negoziato (§4.3) — questa "
+			                 "sessione non ha audio",
+			                 w->provenienza);
 		}
 		return;
 	}
@@ -4218,17 +4269,17 @@ static void audio_regola(wt *w)
 	 *    registro un'ora dopo vedeva «canale audio acceso» e **non aveva modo
 	 *    di sapere che quel che l'utente sente e' un segnale di banco**.
 	 *    L'interruttore di I6 c'era; la dichiarazione che deve seguirlo no. */
-	registro_dice(REG_RCP,
-	              "⭐ FASE 7: canale audio ACCESO per «%s» da %s — codec %u (%s), "
-	              "48 000 Hz, 2 canali (§5.3).  Il pari accetta datagram di %llu "
-	              "byte%s",
-	              utente, w->provenienza, codec,
-	              codec == 1 ? "Opus" : "PCM",
-	              (unsigned long long)dgram_tetto_del_pari(w),
-	              audio_prova_hz
-	                  ? "  ⚠⚠ E QUEL CHE SI SENTIRA' E' IL TONO DI PROVA, non il "
-	                    "desktop: `--audio-prova` e' acceso (funzione di banco, I6)"
-	                  : "");
+	registro_dice_di(REG_RCP, wt_chi(w),
+	                 "⭐ FASE 7: canale audio ACCESO per «%s» da %s — codec %u (%s), "
+	                 "48 000 Hz, 2 canali (§5.3).  Il pari accetta datagram di %llu "
+	                 "byte%s",
+	                 utente, w->provenienza, codec,
+	                 codec == 1 ? "Opus" : "PCM",
+	                 (unsigned long long)dgram_tetto_del_pari(w),
+	                 audio_prova_hz
+	                     ? "  ⚠⚠ E QUEL CHE SI SENTIRA' E' IL TONO DI PROVA, non il "
+	                       "desktop: `--audio-prova` e' acceso (funzione di banco, I6)"
+	                     : "");
 
 	/* ⛔ E si chiede al figlio di catturare — ma NON col tono di prova acceso:
 	 *    li' la sorgente e' questo processo, e accendere anche la cattura vera
@@ -4262,10 +4313,10 @@ static void video_regola(wt *w, uint64_t ora_ms)
 			/* ⚠ Non e' un difetto: un client della fase 1 non dichiara nessun
 			 *   codec, e §4.3 gli da' ragione. */
 			w->video_detto = true;
-			registro_dice(REG_RCP,
-			              "%s: nessun codec negoziato (§4.3) — questa sessione "
-			              "non ha video, ed e' quel che la fase 1 faceva",
-			              w->provenienza);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "%s: nessun codec negoziato (§4.3) — questa sessione "
+			                 "non ha video, ed e' quel che la fase 1 faceva",
+			                 w->provenienza);
 		}
 		return;
 	}
@@ -4278,11 +4329,11 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		w->video_acceso = true;
 		w->video_codec = codec;
 		w->chiave_chiesta_ms = ora_ms;
-		registro_dice(REG_RCP,
-		              "⭐ FASE 3: canale video ACCESO per «%s» da %s — codec %u, "
-		              "tela %ux%u.  Chiedo al palco di catturare di continuo, e "
-		              "§5.2 vuole che il PRIMO sia una CHIAVE",
-		              utente, w->provenienza, codec, l, a);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⭐ FASE 3: canale video ACCESO per «%s» da %s — codec %u, "
+		                 "tela %ux%u.  Chiedo al palco di catturare di continuo, e "
+		                 "§5.2 vuole che il PRIMO sia una CHIAVE",
+		                 utente, w->provenienza, codec, l, a);
 		if (gancio_palco)
 			gancio_palco(gancio_palco_ctx, utente, codec,
 			             rcp_profondita_negoziata(w->rcp),
@@ -4302,12 +4353,12 @@ static void video_regola(wt *w, uint64_t ora_ms)
 				gancio_palco(gancio_palco_ctx, utente, codec,
 				             rcp_profondita_negoziata(w->rcp),
 				             rcp_livello_negoziato(w->rcp), true);
-			registro_dettaglio(REG_RCP,
-			                   "%s: §5.2 vuole una CHIAVE — richiesta girata al "
-			                   "palco di «%s» (codec %u), dopo %llu ms di attesa "
-			                   "(%s)",
-			                   w->provenienza, utente, codec,
-			                   (unsigned long long)attesa, come);
+			registro_dettaglio_di(REG_RCP, wt_chi(w),
+			                           "%s: §5.2 vuole una CHIAVE — richiesta girata al "
+			                           "palco di «%s» (codec %u), dopo %llu ms di attesa "
+			                           "(%s)",
+			                           w->provenienza, utente, codec,
+			                           (unsigned long long)attesa, come);
 		}
 	}
 }
@@ -4540,21 +4591,21 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 			 *
 			 * ⚠ UNA RIGA PER EPISODIO, non per fotogramma: a 60/s la seconda
 			 *   forma e' il difetto dei 30,8 GB di registro. */
-			registro_dice(REG_RCP,
-			              "⛔ %s: il ritmo SCENDE — arretrato %u delta contro %u "
-			              "posti, %zu byte fermi nella coda del video (%zu in "
-			              "tutto).  cwnd %llu, cwnd_left %llu, in volo per ngtcp2 "
-			              "%llu, miei consegnati e non riscontrati %zu, rtt %llu "
-			              "ms, %s.  ⭐ Non e' prudenza e non e' un orologio: e' la "
-			              "coda che non si svuota (I1).  ⚠ Se cwnd_left e' ALTO "
-			              "non e' la linea, e' la finestra del browser",
-			              w->provenienza, arretrato, (unsigned)WT_RITMO_POSTI,
-			              in_coda, w->byte_in_coda,
-			              (unsigned long long)in.cwnd,
-			              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
-			              (unsigned long long)in.bytes_in_flight,
-			              w->byte_in_volo,
-			              (unsigned long long)rtt_ms, rete);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "⛔ %s: il ritmo SCENDE — arretrato %u delta contro %u "
+			                 "posti, %zu byte fermi nella coda del video (%zu in "
+			                 "tutto).  cwnd %llu, cwnd_left %llu, in volo per ngtcp2 "
+			                 "%llu, miei consegnati e non riscontrati %zu, rtt %llu "
+			                 "ms, %s.  ⭐ Non e' prudenza e non e' un orologio: e' la "
+			                 "coda che non si svuota (I1).  ⚠ Se cwnd_left e' ALTO "
+			                 "non e' la linea, e' la finestra del browser",
+			                 w->provenienza, arretrato, (unsigned)WT_RITMO_POSTI,
+			                 in_coda, w->byte_in_coda,
+			                 (unsigned long long)in.cwnd,
+			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+			                 (unsigned long long)in.bytes_in_flight,
+			                 w->byte_in_volo,
+			                 (unsigned long long)rtt_ms, rete);
 		}
 		w->video_ritmo_scesi++;
 		return true; /* ⛔ questo fotogramma NON parte: E' la discesa */
@@ -4566,13 +4617,13 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 	 *    grandezza che si rilegge invece di ricordarsi. */
 	if (w->ritmo_giu && arretrato == 0) {
 		w->ritmo_giu = false;
-		registro_dice(REG_RCP,
-		              "⭐ %s: il ritmo RISALE — l'episodio e' durato %llu ms e sono "
-		              "restati indietro %u fotogrammi.  ⚠ Non l'ha deciso nessuno: "
-		              "la coda si e' svuotata e l'arretrato e' zero",
-		              w->provenienza,
-		              (unsigned long long)(ora_ms - w->ritmo_da_ms),
-		              w->video_ritmo_scesi - w->ritmo_da_n);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⭐ %s: il ritmo RISALE — l'episodio e' durato %llu ms e sono "
+		                 "restati indietro %u fotogrammi.  ⚠ Non l'ha deciso nessuno: "
+		                 "la coda si e' svuotata e l'arretrato e' zero",
+		                 w->provenienza,
+		                 (unsigned long long)(ora_ms - w->ritmo_da_ms),
+		                 w->video_ritmo_scesi - w->ritmo_da_n);
 	}
 	return false;
 }
@@ -4596,14 +4647,14 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 	if (ora_ms - w->ritmo_detto_ms < 1000)
 		return;
 	w->ritmo_detto_ms = ora_ms;
-	registro_dice(REG_RCP,
-	              "ritmo di %s: arretrato LETTO %u volte in quest'ultimo secondo, "
-	              "massimo %u, ultimo %u, posti %u — %u fotogrammi non partiti in "
-	              "questo secondo, %u in tutto.  ⚠ ZERO LETTURE = il palco non ha "
-	              "consegnato niente (scena ferma), e NON «arretrato zero»",
-	              w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
-	              (unsigned)WT_RITMO_POSTI,
-	              w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);
+	registro_dice_di(REG_RCP, wt_chi(w),
+	                 "ritmo di %s: arretrato LETTO %u volte in quest'ultimo secondo, "
+	                 "massimo %u, ultimo %u, posti %u — %u fotogrammi non partiti in "
+	                 "questo secondo, %u in tutto.  ⚠ ZERO LETTURE = il palco non ha "
+	                 "consegnato niente (scena ferma), e NON «arretrato zero»",
+	                 w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
+	                 (unsigned)WT_RITMO_POSTI,
+	                 w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);
 	w->ritmo_letture = 0;
 	w->ritmo_max = 0;
 	w->ritmo_detti_n = w->video_ritmo_scesi;
@@ -4786,7 +4837,27 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 /*                         girato da quando questa sessione e' nata.  ⛔ Se   */
 /*                         non e' zero, i due numeri su cui si decide erano   */
 /*                         congelati per colpa nostra per quel tanto.         */
-/*      · `giri_fermi=`    quanti buchi, in tutto.                            */
+/*        ⛔⛔ E FINO AL 25 AGOSTO 2026 QUESTA RIGA MENTIVA — rilievo R5 di   */
+/*           §5.5.  Il commento diceva «da quando questa sessione e' nata»    */
+/*           e il codice stampava `giro_fermo_ms`, cioe' il contatore         */
+/*           **GLOBALE** da quando il server e' acceso.  `[M]` una riga ha    */
+/*           attribuito **54,5 s** di cecita' nostra a una sessione che       */
+/*           allora **non era ancora nata**.  ⇒ Su un server acceso da un     */
+/*           giorno, uno sfratto dopo dieci secondi avrebbe detto             */
+/*           `fermo_ms=40000` e chi legge avrebbe **assolto la rete quando    */
+/*           la rete c'entrava** — l'errore INVERSO di quello che la cura     */
+/*           esiste per togliere.                                            */
+/*        ⭐ SI E' SCELTO DI CAMBIARE IL CODICE, non il nome, e la ragione e' */
+/*           che questo campo sta nella riga di UNA sessione e risponde a     */
+/*           «e' stato il filo, o siamo stati noi, **con lei viva**?».  Un    */
+/*           `fermo_globale_ms=` avrebbe detto il vero senza rispondere       */
+/*           alla domanda — e il numero globale non si perde: lo porta        */
+/*           `giri_fermi=` qui sotto, e la riga al minuto di `main.c`.        */
+/*      · `giri_fermi=`    quanti buchi, in tutto.  ⚠ E' GLOBALE, apposta —   */
+/*                         il ciclo e' uno solo e la sua salute e' un fatto   */
+/*                         della MACCHINA.  ⇒ I due si leggono in coppia:     */
+/*                         `fermo_ms=` dice quanto e' toccato a lei,          */
+/*                         `giri_fermi=` quanto ne ha visto il server.        */
 /*      · `saltati=`       quanti giudizi questa sessione ha SALTATO perche'  */
 /*                         c'era stato un buco.  ⭐ E' il conto che rende la  */
 /*                         cura falsificabile: `saltati=0` in una sessione    */
@@ -4817,37 +4888,40 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	static const uint8_t motivo[] = "linea morta";
 
 	w->lm_scattata = true;
-	registro_dice(REG_WT,
-	              "linea-morta %s causa=%s stallo_ms=%llu soglia_stallo_ms=%llu "
-	              "offerti=%llu usciti_byte=%llu coda_video=%llu "
-	              "silenzio_ms=%llu soglia_silenzio_ms=%llu prove=%llu "
-	              "minimo_prove=%u persi=%llu spediti=%llu permille=%u "
-	              "finestra_ms=%llu minimo_pacchetti=%u cwnd=%llu "
-	              "cwnd_left=%llu srtt_us=%llu fermo_ms=%llu giri_fermi=%llu "
-	              "saltati=%llu ritmo_giu=%d ritmo_arretrato=%u ritmo_posti=%u "
-	              "ritmo_scesi=%llu giudizio=%s",
-	              w->provenienza, causa,
-	              (unsigned long long)stallo_ms,
-	              (unsigned long long)linea_morta_stallo_ms,
-	              (unsigned long long)offerti, (unsigned long long)usciti,
-	              (unsigned long long)coda_video,
-	              (unsigned long long)silenzio_ms,
-	              (unsigned long long)linea_morta_silenzio_ms,
-	              (unsigned long long)prove, (unsigned)WT_LM_MIN_PROVE,
-	              (unsigned long long)w->lm_persi_v,
-	              (unsigned long long)w->lm_spediti_v, w->lm_permille,
-	              (unsigned long long)w->lm_durata_v,
-	              (unsigned)WT_LM_MIN_PACCHETTI,
-	              (unsigned long long)in->cwnd,
-	              (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
-	              (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
-	              (unsigned long long)giro_fermo_ms,
-	              (unsigned long long)giro_fermi,
-	              (unsigned long long)w->lm_fermo_saltati,
-	              w->ritmo_giu ? 1 : 0, w->ritmo_ultimo,
-	              (unsigned)WT_RITMO_POSTI,
-	              (unsigned long long)w->video_ritmo_scesi,
-	              detto);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "linea-morta %s causa=%s stallo_ms=%llu soglia_stallo_ms=%llu "
+	                 "offerti=%llu usciti_byte=%llu coda_video=%llu "
+	                 "silenzio_ms=%llu soglia_silenzio_ms=%llu prove=%llu "
+	                 "minimo_prove=%u persi=%llu spediti=%llu permille=%u "
+	                 "finestra_ms=%llu minimo_pacchetti=%u cwnd=%llu "
+	                 "cwnd_left=%llu srtt_us=%llu fermo_ms=%llu giri_fermi=%llu "
+	                 "saltati=%llu ritmo_giu=%d ritmo_arretrato=%u ritmo_posti=%u "
+	                 "ritmo_scesi=%llu giudizio=%s",
+	                 w->provenienza, causa,
+	                 (unsigned long long)stallo_ms,
+	                 (unsigned long long)linea_morta_stallo_ms,
+	                 (unsigned long long)offerti, (unsigned long long)usciti,
+	                 (unsigned long long)coda_video,
+	                 (unsigned long long)silenzio_ms,
+	                 (unsigned long long)linea_morta_silenzio_ms,
+	                 (unsigned long long)prove, (unsigned)WT_LM_MIN_PROVE,
+	                 (unsigned long long)w->lm_persi_v,
+	                 (unsigned long long)w->lm_spediti_v, w->lm_permille,
+	                 (unsigned long long)w->lm_durata_v,
+	                 (unsigned)WT_LM_MIN_PACCHETTI,
+	                 (unsigned long long)in->cwnd,
+	                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
+	                 (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
+	                 /* ⛔ R5, 25 agosto 2026: la DIFFERENZA, non il contatore
+	                  *    globale — vedi `lm_fermo_nato` e il campo `fermo_ms=`
+	                  *    nel riquadro qui sopra. */
+	                 (unsigned long long)(giro_fermo_ms - w->lm_fermo_nato),
+	                 (unsigned long long)giro_fermi,
+	                 (unsigned long long)w->lm_fermo_saltati,
+	                 w->ritmo_giu ? 1 : 0, w->ritmo_ultimo,
+	                 (unsigned)WT_RITMO_POSTI,
+	                 (unsigned long long)w->video_ritmo_scesi,
+	                 detto);
 	/* ⛔⭐ IL MOTIVO SI SCRIVE NELL'ERRORE DELLA CONNESSIONE, e non si INVENTA
 	 *     un motivo RCP nuovo: `RCP.md` §9 vieta di aggiungere un codice a
 	 *     §8.2 dentro una versione maggiore, e nessuno dei sedici dice «la
@@ -4896,6 +4970,10 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		w->lm_usciti_visti = w->lm_usciti;
 		w->lm_offerti_visti = w->lm_offerti;
 		w->lm_fermo_visto = giro_fermo_ms;
+		/* ⛔ R5: il punto zero di `fermo_ms=`, e si segna QUI perche' qui c'e'
+		 *    il primo istante in cui questa sessione e' stata guardata — prima
+		 *    di questo giro non c'era niente da attribuirle. */
+		w->lm_fermo_nato = giro_fermo_ms;
 		return;
 	}
 
@@ -4932,18 +5010,18 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		 *    `CODER.md` §1-bis.  ⭐ E porta il buco accanto alla soglia, cosi'
 		 *    chi legge vede subito se il ciclo e' rimasto indietro di un pelo o
 		 *    di dieci secondi. */
-		registro_dice(REG_WT,
-		              "⚠ %s: il ciclo del padre e' rimasto indietro di %llu ms "
-		              "(%llu buchi in tutto, il peggiore %llu ms): la linea morta "
-		              "NON giudica questo giro e i suoi conti ripartono.  ⛔ In "
-		              "quel tempo nessun byte poteva uscire e nessun pacchetto del "
-		              "client poteva essere LETTO: contarlo come silenzio suo "
-		              "vorrebbe dire accusare la sua rete di una cecita' nostra "
-		              "(saltati %llu volte da questa sessione)",
-		              w->provenienza, (unsigned long long)buco,
-		              (unsigned long long)giro_fermi,
-		              (unsigned long long)giro_fermo_peggiore_ms,
-		              (unsigned long long)w->lm_fermo_saltati);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⚠ %s: il ciclo del padre e' rimasto indietro di %llu ms "
+		                 "(%llu buchi in tutto, il peggiore %llu ms): la linea morta "
+		                 "NON giudica questo giro e i suoi conti ripartono.  ⛔ In "
+		                 "quel tempo nessun byte poteva uscire e nessun pacchetto del "
+		                 "client poteva essere LETTO: contarlo come silenzio suo "
+		                 "vorrebbe dire accusare la sua rete di una cecita' nostra "
+		                 "(saltati %llu volte da questa sessione)",
+		                 w->provenienza, (unsigned long long)buco,
+		                 (unsigned long long)giro_fermi,
+		                 (unsigned long long)giro_fermo_peggiore_ms,
+		                 (unsigned long long)w->lm_fermo_saltati);
 		return;
 	}
 
@@ -5181,44 +5259,44 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 
 	da_ms = w->rete_detto_ms ? ora_ms - w->rete_detto_ms : 0;
 
-	registro_dice(REG_WT,
-	              "rete-quic %s da_ms=%llu persi=%llu persi_d=%llu "
-	              "byte_persi=%llu byte_persi_d=%llu spediti=%llu spediti_d=%llu "
-	              "byte_spediti=%llu ricevuti=%llu ricevuti_d=%llu "
-	              "scartati=%llu scartati_d=%llu cwnd=%llu cwnd_left=%llu "
-	              "ssthresh=%llu involo=%llu srtt_us=%llu latest_us=%llu "
-	              "rttvar_us=%llu min_rtt_us=%s coda_rete_us=%s pto_us=%llu "
-	              "dgram_persi=%llu dgram_persi_d=%llu dgram_ok=%llu "
-	              "dgram_falsi=%llu dgram_falsi_d=%llu giudizio=%s",
-	              w->provenienza,
-	              (unsigned long long)da_ms,
-	              (unsigned long long)in.pkt_lost,
-	              (unsigned long long)(in.pkt_lost - w->rete_pkt_lost),
-	              (unsigned long long)in.bytes_lost,
-	              (unsigned long long)(in.bytes_lost - w->rete_bytes_lost),
-	              (unsigned long long)in.pkt_sent,
-	              (unsigned long long)(in.pkt_sent - w->rete_pkt_sent),
-	              (unsigned long long)in.bytes_sent,
-	              (unsigned long long)in.pkt_recv,
-	              (unsigned long long)(in.pkt_recv - w->rete_pkt_recv),
-	              (unsigned long long)in.pkt_discarded,
-	              (unsigned long long)(in.pkt_discarded - w->rete_pkt_discarded),
-	              (unsigned long long)in.cwnd,
-	              (unsigned long long)cwnd_left,
-	              (unsigned long long)in.ssthresh,
-	              (unsigned long long)in.bytes_in_flight,
-	              (unsigned long long)(in.smoothed_rtt / NGTCP2_MICROSECONDS),
-	              (unsigned long long)(in.latest_rtt / NGTCP2_MICROSECONDS),
-	              (unsigned long long)(in.rttvar / NGTCP2_MICROSECONDS),
-	              minimo, coda,
-	              (unsigned long long)(ngtcp2_conn_get_pto(w->conn)
-	                                   / NGTCP2_MICROSECONDS),
-	              (unsigned long long)w->dgram_persi,
-	              (unsigned long long)(w->dgram_persi - w->rete_dgram_persi),
-	              (unsigned long long)w->dgram_riscontrati,
-	              (unsigned long long)w->dgram_falsi,
-	              (unsigned long long)(w->dgram_falsi - w->rete_dgram_falsi),
-	              detto);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "rete-quic %s da_ms=%llu persi=%llu persi_d=%llu "
+	                 "byte_persi=%llu byte_persi_d=%llu spediti=%llu spediti_d=%llu "
+	                 "byte_spediti=%llu ricevuti=%llu ricevuti_d=%llu "
+	                 "scartati=%llu scartati_d=%llu cwnd=%llu cwnd_left=%llu "
+	                 "ssthresh=%llu involo=%llu srtt_us=%llu latest_us=%llu "
+	                 "rttvar_us=%llu min_rtt_us=%s coda_rete_us=%s pto_us=%llu "
+	                 "dgram_persi=%llu dgram_persi_d=%llu dgram_ok=%llu "
+	                 "dgram_falsi=%llu dgram_falsi_d=%llu giudizio=%s",
+	                 w->provenienza,
+	                 (unsigned long long)da_ms,
+	                 (unsigned long long)in.pkt_lost,
+	                 (unsigned long long)(in.pkt_lost - w->rete_pkt_lost),
+	                 (unsigned long long)in.bytes_lost,
+	                 (unsigned long long)(in.bytes_lost - w->rete_bytes_lost),
+	                 (unsigned long long)in.pkt_sent,
+	                 (unsigned long long)(in.pkt_sent - w->rete_pkt_sent),
+	                 (unsigned long long)in.bytes_sent,
+	                 (unsigned long long)in.pkt_recv,
+	                 (unsigned long long)(in.pkt_recv - w->rete_pkt_recv),
+	                 (unsigned long long)in.pkt_discarded,
+	                 (unsigned long long)(in.pkt_discarded - w->rete_pkt_discarded),
+	                 (unsigned long long)in.cwnd,
+	                 (unsigned long long)cwnd_left,
+	                 (unsigned long long)in.ssthresh,
+	                 (unsigned long long)in.bytes_in_flight,
+	                 (unsigned long long)(in.smoothed_rtt / NGTCP2_MICROSECONDS),
+	                 (unsigned long long)(in.latest_rtt / NGTCP2_MICROSECONDS),
+	                 (unsigned long long)(in.rttvar / NGTCP2_MICROSECONDS),
+	                 minimo, coda,
+	                 (unsigned long long)(ngtcp2_conn_get_pto(w->conn)
+	                                      / NGTCP2_MICROSECONDS),
+	                 (unsigned long long)w->dgram_persi,
+	                 (unsigned long long)(w->dgram_persi - w->rete_dgram_persi),
+	                 (unsigned long long)w->dgram_riscontrati,
+	                 (unsigned long long)w->dgram_falsi,
+	                 (unsigned long long)(w->dgram_falsi - w->rete_dgram_falsi),
+	                 detto);
 
 	w->rete_detto_ms      = ora_ms;
 	w->rete_pkt_lost      = in.pkt_lost;
@@ -5285,12 +5363,12 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 			 *    gia' contato `video_saltati` tre righe sopra.  Due numeri per
 			 *    due fatti, e la riga di chiusura li scrive tutt'e due. */
 			w->video_annunci_tela++;
-			registro_dice(REG_RCP,
-			              "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
-			              "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
-			              "direbbe una misura e i pixel ne porterebbero un'altra.  "
-			              "⚠ Al palco si sta richiedendo la tela in vigore",
-			              w->provenienza, tl, ta, l, a);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
+			                 "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
+			                 "direbbe una misura e i pixel ne porterebbero un'altra.  "
+			                 "⚠ Al palco si sta richiedendo la tela in vigore",
+			                 w->provenienza, tl, ta, l, a);
 		}
 		return;
 	}
@@ -5502,12 +5580,12 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 		 *    non torna» per quel solo utente. */
 		if (!palchi_pieni_detto) {
 			palchi_pieni_detto = true;
-			registro_dice(REG_RCP,
-			              "⚠ RIPIEGO DICHIARATO: la tabella delle tele dei palchi "
-			              "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la "
-			              "tela verra' concessa come la chiede il client invece "
-			              "che come il palco ce l'ha",
-			              quanti_palchi, utente);
+			registro_dice_di(REG_RCP, utente,
+			                 "⚠ RIPIEGO DICHIARATO: la tabella delle tele dei palchi "
+			                 "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la "
+			                 "tela verra' concessa come la chiede il client invece "
+			                 "che come il palco ce l'ha",
+			                 quanti_palchi, utente);
 		}
 		return;
 	}
@@ -5531,11 +5609,11 @@ void wt_palco_dimentica(const char *utente)
 	for (int i = 0; i < quanti_palchi; i++) {
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
-		registro_dice(REG_RCP,
-		              "la tela del palco di «%s» (%ux%u) si dimentica: quel palco "
-		              "non c'e' piu', e un numero vecchio spacciato per fatto e' "
-		              "peggio di nessun numero",
-		              utente, palchi[i].l, palchi[i].a);
+		registro_dice_di(REG_RCP, utente,
+		                 "la tela del palco di «%s» (%ux%u) si dimentica: quel palco "
+		                 "non c'e' piu', e un numero vecchio spacciato per fatto e' "
+		                 "peggio di nessun numero",
+		                 utente, palchi[i].l, palchi[i].a);
 		memset(&palchi[i], 0, sizeof palchi[i]);
 		palchi_pieni_detto = false;
 		return;
@@ -5603,12 +5681,52 @@ static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	return wt_palco_misura(mio, l, a);
 }
 
-/* ⛔ Quante sessioni entrano in UNA domanda al guardiano.  ⚠ Non e' un tetto sul
- *    numero di inquilini: se ce ne fossero di piu' si fanno due giri, e due
- *    chiamate a logind restano un numero FISSO, non `N`.  ⭐ 32 sta sopra i
- *    sedici posti di `rcp.c` con margine, cosi' il secondo giro oggi non
- *    succede mai — ed e' la ragione per cui non e' 8. */
+/* ⛔⭐⭐ QUANTE SESSIONI ENTRANO IN **UNA** DOMANDA AL GUARDIANO — e ⛔ NON e' il
+ *      tetto delle sessioni, per quanto ci somigli.  Rilievo R8 di §5.5,
+ *      guardato e **deciso** il 25 agosto 2026.
+ *
+ * ⛔ IL RILIEVO ERA: *«e' la QUINTA copia a mano del tetto, nata proprio nel
+ *    giro che ne ha unificate quattro»*.  ⇒ La domanda giusta non e' «si puo'
+ *    unificare», e' **«e' la stessa quantita'?»**.
+ *
+ * ⭐⭐ LA RISPOSTA E' NO, e per due ragioni indipendenti — quindi **non si
+ *     unifica**, esattamente come `MAX_IN_VOLO` in `aiutante.c` (rilievo
+ *     R10-A7), che e' stato lasciato separato per la stessa ragione:
+ *
+ *   1. ⛔ **E' la misura di un LOTTO, non di una capienza.**  `RCP_TETTO_SESSIONI`
+ *      dice *«quanti utenti si servono»*: chi non ci sta **viene respinto**
+ *      (`0x0E`).  Questo dice *«quanti nomi stanno in una domanda a logind»*:
+ *      chi non ci sta **entra nel giro dopo** — il `while (dal)` qui sotto
+ *      esiste per questo.  ⇒ Superarlo non toglie niente a nessuno; e la
+ *      proprieta' che il codice difende non e' «una chiamata», e' **un numero
+ *      FISSO di chiamate invece di `N`**: a 64 inquilini sono due, non 64.
+ *   2. ⛔ **Deve essere una costante di compilazione**, e il tetto non lo e'
+ *      piu': `--tetto-sessioni N` lo muove all'avvio (`rcp_tetto()`), mentre
+ *      qui sotto ci sono quattro array **sullo stack** — fra cui
+ *      `quali[][160]`, che a 32 pesa gia' 5 KiB.  Legarli a un numero che
+ *      arriva a caldo vorrebbe dire un VLA di dimensione scelta dalla riga di
+ *      comando dentro il ciclo che consegna i fotogrammi: un difetto NUOVO,
+ *      non una cura.  ⚠ *Unificare per simmetria quando e' un'altra cosa
+ *      peggiora il codice e lo fa sembrare migliore.*
+ *
+ * ⭐ MA IL COMMENTO DI PRIMA MENTIVA, e quella meta' si cura: diceva «32 sta
+ *    sopra i **sedici** posti di `rcp.c`» — ⛔ un **letterale**, e per giunta
+ *    invecchiato di un giorno (dal 25 agosto il predefinito e' **10**).  ⇒ Il
+ *    legame che c'e' davvero e' una **disuguaglianza in un verso solo**, ed e'
+ *    scritta qui sotto dove il compilatore la puo' far valere invece che in un
+ *    commento che nessuno rilegge. */
 #define WT_RIPASSO_INSIEME 32
+
+/* ⛔ La sola cosa che deve valere: col tetto PREDEFINITO il secondo giro non
+ *    succede mai, cioe' un ripasso = una chiamata.  ⚠ Se un giorno
+ *    `RCP_TETTO_SESSIONI` superasse questo numero, il codice resterebbe
+ *    CORRETTO (due giri, due chiamate) ma il conto di §6.13 andrebbe rifatto:
+ *    ⭐ meglio accorgersene qui, alla compilazione, che leggendo `chiamate=` il
+ *    doppio del previsto sei mesi dopo. */
+_Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI,
+               "il lotto del ripasso e' piu' piccolo del tetto predefinito "
+               "delle sessioni: un ripasso costerebbe piu' di UNA chiamata a "
+               "logind gia' nella configurazione di serie (§6.13)");
 #define WT_RIPASSO_QUALE 160
 
 size_t wt_sorveglia_locali(void)
@@ -5622,7 +5740,14 @@ size_t wt_sorveglia_locali(void)
 	 *    togliere — cioe' il difetto tornerebbe il giorno in cui qualcuno si
 	 *    dimentica di collegare il gancio, **senza una riga rossa**.  ⭐ Chi non
 	 *    lo collega non applica la meta' «sorvegliata» di §5.1, ed e' `main.c`
-	 *    che lo scrive nel registro all'avvio. */
+	 *    che lo scrive nel registro all'avvio.
+	 * ⛔⛔ E FINO AL 25 AGOSTO 2026 QUESTA FRASE ERA FALSA (rilievo R7 di §5.5):
+	 *      `main.c` **non scriveva niente**, e la rete che questo commento
+	 *      dichiarava non esisteva.  ⭐ Adesso la riga c'e' davvero — cerca
+	 *      «la meta' SORVEGLIATA» nel registro d'avvio — e dice il valore in
+	 *      vigore **acceso E spento**.  ⚠ Un commento che promette una guardia
+	 *      inesistente e' peggio di nessuna guardia: chi legge smette di
+	 *      cercarla. */
 	if (!gancio_locali)
 		return 0;
 
@@ -5673,10 +5798,10 @@ size_t wt_sorveglia_locali(void)
 			 * ⭐ Ed e' l'unico punto del prodotto in cui il server porta via una
 			 *    sessione SANA — `DECISIONI.md` §4.1-bis lo ammette **solo** con
 			 *    un motivo dicibile, ed e' per questo che `0x04` esiste. */
-			registro_dice(REG_WT,
-			              "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
-			              "sessione remota viene chiusa — §5.1, motivo 0x04",
-			              nomi[k], quali[k][0] ? quali[k] : "senza dettaglio");
+			registro_dice_di(REG_WT, nomi[k],
+			                 "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
+			                 "sessione remota viene chiusa — §5.1, motivo 0x04",
+			                 nomi[k], quali[k][0] ? quali[k] : "senza dettaglio");
 			wt_congeda(chi[k], RCP_SESSIONE_LOCALE_PREVALSA,
 			           "e' stata aperta una sessione grafica locale su questa "
 			           "macchina");
@@ -5684,6 +5809,26 @@ size_t wt_sorveglia_locali(void)
 		}
 	}
 	return congedate;
+}
+
+/* ⛔ Il riquadro sta in `webtransport.h`: e' il DENOMINATORE che mancava alla
+ *    riga del guardiano (rilievo R7).  ⚠ Le stesse tre guardie del ripasso qui
+ *    sopra, nello stesso ordine: chi non e' un inquilino servito non si conta. */
+size_t wt_inquilini_serviti(void)
+{
+	size_t quanti = 0;
+
+	for (wt *w = vive_prima; w; w = w->viva_dopo) {
+		const char *mio;
+
+		if (!w->rcp || w->chiusura >= 0)
+			continue;
+		mio = rcp_utente(w->rcp);
+		if (!mio || !mio[0])
+			continue;
+		quanti++;
+	}
+	return quanti;
 }
 
 void wt_tela_rimanda(const char *utente, uint32_t voluta_l, uint32_t voluta_a)
@@ -5789,11 +5934,11 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
 
 		if (detto != codec) {
 			detto = codec;
-			registro_dice(REG_WT,
-			              "⛔ fotogramma con codec %u BUTTATO: §6.2 ne definisce "
-			              "%u (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ La riga si "
-			              "scrive una volta per numero, non una per fotogramma",
-			              codec, (unsigned) RCP_CODEC_VIDEO_MAX);
+			registro_dice_di(REG_WT, utente,
+			                 "⛔ fotogramma con codec %u BUTTATO: §6.2 ne definisce "
+			                 "%u (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ La riga si "
+			                 "scrive una volta per numero, non una per fotogramma",
+			                 codec, (unsigned) RCP_CODEC_VIDEO_MAX);
 		}
 		return;
 	}
@@ -5837,13 +5982,13 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	if (tetto == 0) {
 		if (!w->dgram_negati_detto) {
 			w->dgram_negati_detto = true;
-			registro_dice(REG_RCP,
-			              "⛔ %s: il pari NON accetta datagram "
-			              "(`max_datagram_frame_size` = 0) — questa sessione non "
-			              "avra' audio.  ⚠ `RCP.md` §2.2 li PRETENDE, ma §6.3 "
-			              "vieta di chiudere per un fatto dei datagram: si "
-			              "dichiara e si tace",
-			              w->provenienza);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "⛔ %s: il pari NON accetta datagram "
+			                 "(`max_datagram_frame_size` = 0) — questa sessione non "
+			                 "avra' audio.  ⚠ `RCP.md` §2.2 li PRETENDE, ma §6.3 "
+			                 "vieta di chiudere per un fatto dei datagram: si "
+			                 "dichiara e si tace",
+			                 w->provenienza);
 		}
 		return;
 	}
@@ -5857,13 +6002,13 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	if (p + 12 + byte > sizeof buf || (uint64_t)(p + 12 + byte) > tetto) {
 		w->audio_buttati++;
 		if (w->audio_buttati == 1 || w->audio_buttati % 100 == 0)
-			registro_dice(REG_WT,
-			              "⛔ %s: blocco d'audio di %zu byte troppo grande "
-			              "(prefisso %zu + 12 + %zu, tetto del pari %llu) — "
-			              "buttato.  Buttati %llu",
-			              w->provenienza, byte, p, byte,
-			              (unsigned long long)tetto,
-			              (unsigned long long)w->audio_buttati);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⛔ %s: blocco d'audio di %zu byte troppo grande "
+			                 "(prefisso %zu + 12 + %zu, tetto del pari %llu) — "
+			                 "buttato.  Buttati %llu",
+			                 w->provenienza, byte, p, byte,
+			                 (unsigned long long)tetto,
+			                 (unsigned long long)w->audio_buttati);
 		return;
 	}
 	buf[p++] = 0x04;
@@ -6217,7 +6362,7 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	 *    riga.  Nell'innesto questo mancava, e un client che apriva il canale
 	 *    e poi taceva restava appeso per sempre (`[M]` B6). */
 	regola_battito(w);
-	registro_dice(REG_RCP, "canale di controllo = stream %ld", (long)stream_id);
+	registro_dice_di(REG_RCP, wt_chi(w), "canale di controllo = stream %ld", (long)stream_id);
 }
 
 static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
@@ -6330,13 +6475,13 @@ static void chiudi_adesso(wt *w, uint8_t motivo)
 	b[n++] = motivo;
 
 	if (!coda_metti(w, w->sessione, b, n, true)) {
-		registro_dice(REG_WT, "⛔ la capsula di chiusura non entra in coda");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ la capsula di chiusura non entra in coda");
 		return;
 	}
-	registro_dice(REG_WT,
-	              "chiusa la sessione WebTransport, codice 0x%02x (%zu byte: "
-	              "2 di frame DATA + 7 di capsula)",
-	              motivo, n);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "chiusa la sessione WebTransport, codice 0x%02x (%zu byte: "
+	                 "2 di frame DATA + 7 di capsula)",
+	                 motivo, n);
 }
 
 static void chiudi_sessione(wt *w, uint8_t motivo)
@@ -6394,10 +6539,10 @@ static void chiudi_sessione(wt *w, uint8_t motivo)
 	 *    messaggio il client tace, nessuno ripassa di qui e la capsula non
 	 *    parte mai.  ⚠ E' il difetto misurato da B5 — 22 su 36. */
 	batti_fra(w, 100);
-	registro_dice(REG_WT,
-	              "chiusura della sessione RIMANDATA, codice 0x%02x (in coda: "
-	              "%zu elementi ancora da spedire)",
-	              motivo, coda_da_spedire(w));
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "chiusura della sessione RIMANDATA, codice 0x%02x (in coda: "
+	                 "%zu elementi ancora da spedire)",
+	                 motivo, coda_da_spedire(w));
 }
 
 static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
@@ -6432,14 +6577,14 @@ static void scarta_stream_di_troppo(wt *w, int64_t stream_id, size_t len)
 	w->scartati_stream++;
 	w->scartati_byte += len;
 	if (w->scartati_stream <= 3 || (w->scartati_stream % 256) == 0)
-		registro_dice(REG_WT,
-		              "⛔ %zu byte BUTTATI dallo stream %ld: non e' il canale "
-		              "di controllo (§2.5, la violazione e' gia' a verbale) — "
-		              "%llu blocchi, %llu byte in tutto, e il credito NON si "
-		              "riapre",
-		              len, (long)stream_id,
-		              (unsigned long long)w->scartati_stream,
-		              (unsigned long long)w->scartati_byte);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ %zu byte BUTTATI dallo stream %ld: non e' il canale "
+		                 "di controllo (§2.5, la violazione e' gia' a verbale) — "
+		                 "%llu blocchi, %llu byte in tutto, e il credito NON si "
+		                 "riapre",
+		                 len, (long)stream_id,
+		                 (unsigned long long)w->scartati_stream,
+		                 (unsigned long long)w->scartati_byte);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -6464,20 +6609,20 @@ static void chiusa_dal_client(wt *w, uint32_t codice)
 	valido = codice >= (uint32_t)RCP_CHIUSO_DALL_UTENTE &&
 	         codice <= (uint32_t)RCP_GIA_ATTIVA_REMOTA;
 	if (!valido)
-		registro_dice(REG_RCP,
-		              "⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione "
-		              "col codice 0x%x, che non e' un motivo di §8.2 "
-		              "(0 = «senza motivo», ed e' vietato).  A verbale va "
-		              "ERRORE_PROTOCOLLO",
-		              codice);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione "
+		                 "col codice 0x%x, che non e' un motivo di §8.2 "
+		                 "(0 = «senza motivo», ed e' vietato).  A verbale va "
+		                 "ERRORE_PROTOCOLLO",
+		                 codice);
 	motivo = (uint8_t)(valido ? codice : (uint32_t)RCP_ERRORE_PROTOCOLLO);
 
 	if (w->rcp && rcp_e_finita(w->rcp))
-		registro_dice(REG_RCP,
-		              "⭐ il motivo e' arrivato per la seconda strada di "
-		              "§3.1 (il codice di chiusura): 0x%02x — i byte sul "
-		              "canale non erano piu' spedibili",
-		              motivo);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⭐ il motivo e' arrivato per la seconda strada di "
+		                 "§3.1 (il codice di chiusura): 0x%02x — i byte sul "
+		                 "canale non erano piu' spedibili",
+		                 motivo);
 	/* ⛔ E il POSTO si lascia adesso: §4.2, la sessione e' finita perche' lo
 	 *    dice il client.  Aspettare lo smontaggio del trasporto vuol dire
 	 *    tenerlo occupato addosso a chi si ricollega subito. */
@@ -6536,12 +6681,12 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 		if (lung > WT_CAPSULA_MAX) {
 			uint64_t qui = w->capsbuf.n - a - b;
 			uint64_t presi = qui < lung ? qui : lung;
-			registro_dice(REG_WT,
-			              "capsula 0x%llx lunga %llu byte, oltre il "
-			              "tetto di %d: si SALTA senza tenerla (RFC "
-			              "9297 §3.2; RCP.md §6.1)",
-			              (unsigned long long)tipo,
-			              (unsigned long long)lung, WT_CAPSULA_MAX);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "capsula 0x%llx lunga %llu byte, oltre il "
+			                 "tetto di %d: si SALTA senza tenerla (RFC "
+			                 "9297 §3.2; RCP.md §6.1)",
+			                 (unsigned long long)tipo,
+			                 (unsigned long long)lung, WT_CAPSULA_MAX);
 			w->capsalta = lung - presi;
 			bytes_togli_testa(&w->capsbuf, a + b + (size_t)presi);
 			if (w->capsalta > 0)
@@ -6557,10 +6702,10 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 			                  ((uint32_t)corpo[1] << 16) |
 			                  ((uint32_t)corpo[2] << 8) |
 			                  (uint32_t)corpo[3];
-			registro_dice(REG_WT,
-			              "la pagina ha CHIUSO la sessione "
-			              "WebTransport: codice 0x%x",
-			              codice);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "la pagina ha CHIUSO la sessione "
+			                 "WebTransport: codice 0x%x",
+			                 codice);
 			chiusa_dal_client(w, codice);
 		}
 		bytes_togli_testa(&w->capsbuf, a + b + (size_t)lung);
@@ -6580,10 +6725,10 @@ static void fin_dal_client(wt *w, int64_t stream_id)
 {
 	if (!w->rcp || stream_id != w->rcp_stream)
 		return;
-	registro_dice(REG_RCP,
-	              "⛔ FIN del CLIENT sul canale di controllo (stream %ld): "
-	              "§4.2, la sessione e' finita",
-	              (long)stream_id);
+	registro_dice_di(REG_RCP, wt_chi(w),
+	                 "⛔ FIN del CLIENT sul canale di controllo (stream %ld): "
+	                 "§4.2, la sessione e' finita",
+	                 (long)stream_id);
 	rcp_canale_chiuso(w->rcp);
 }
 
@@ -6728,21 +6873,21 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	            : canale == 0x01 ? G_UNI_INPUT
 	            : canale == 0x02 ? G_UNI_APPUNTI
 	                             : G_UNI_OK;
-	registro_dice(REG_WT,
-	              "stream unidirezionale %ld del client, sessione %llu, tipo "
-	              "0x%04x, canale 0x%02x — %s",
-	              (long)stream_id, (unsigned long long)sessione, tipo, canale,
-	              guasto ? "VIOLAZIONE"
-	              : canale == 0x01
-	                     ? "⭐ INPUT, e da oggi si SERVE: i byte vanno a "
-	                       "rcp_ricevi_input() (§7.3)"
-	              : canale == 0x02
-	                     ? "⭐ APPUNTI, e dalla fase 7 si SERVONO: i byte vanno "
-	                       "a rcp_ricevi_appunti() (§7.4).  ⚠ Uno stream per "
-	                       "trasferimento, quindi di questi ce n'e' piu' d'uno"
-	                     : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i "
-	                       "byte si contano nel credito e si scartano, e "
-	                       "questa riga e' la tolleranza dichiarata (§3)");
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "stream unidirezionale %ld del client, sessione %llu, tipo "
+	                 "0x%04x, canale 0x%02x — %s",
+	                 (long)stream_id, (unsigned long long)sessione, tipo, canale,
+	                 guasto ? "VIOLAZIONE"
+	                 : canale == 0x01
+	                        ? "⭐ INPUT, e da oggi si SERVE: i byte vanno a "
+	                          "rcp_ricevi_input() (§7.3)"
+	                 : canale == 0x02
+	                        ? "⭐ APPUNTI, e dalla fase 7 si SERVONO: i byte vanno "
+	                          "a rcp_ricevi_appunti() (§7.4).  ⚠ Uno stream per "
+	                          "trasferimento, quindi di questi ce n'e' piu' d'uno"
+	                        : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i "
+	                          "byte si contano nel credito e si scartano, e "
+	                          "questa riga e' la tolleranza dichiarata (§3)");
 	if (guasto) {
 		if (w->rcp) {
 			rcp_violazione(w->rcp, guasto);
@@ -6753,9 +6898,9 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			 *   secondo condizionale di §3.1 all'opera: pretendere
 			 *   tutt'e tre i punti sempre darebbe rosso sul codice
 			 *   giusto. */
-			registro_dice(REG_WT,
-			              "⚠ nessun canale di controllo: il motivo "
-			              "viaggia solo nella chiusura della sessione");
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⚠ nessun canale di controllo: il motivo "
+			                 "viaggia solo nella chiusura della sessione");
 			chiudi_sessione(w, RCP_ERRORE_PROTOCOLLO);
 		}
 	} else if (canale == 0x01) {
@@ -6878,27 +7023,27 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 		 *    basso manda a cercare il difetto nel client, che li' non ha
 		 *    sbagliato niente. */
 		if (stream_id < w->rcp_stream)
-			registro_dice(REG_WT,
-			              "⛔ due stream bidirezionali dal client dentro "
-			              "la sessione: %ld e %ld — e il PRIMO APERTO "
-			              "era il %ld, arrivato per secondo: il canale "
-			              "di controllo e' stato eletto per ordine "
-			              "d'arrivo, non per numero",
-			              (long)w->rcp_stream, (long)stream_id,
-			              (long)stream_id);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⛔ due stream bidirezionali dal client dentro "
+			                 "la sessione: %ld e %ld — e il PRIMO APERTO "
+			                 "era il %ld, arrivato per secondo: il canale "
+			                 "di controllo e' stato eletto per ordine "
+			                 "d'arrivo, non per numero",
+			                 (long)w->rcp_stream, (long)stream_id,
+			                 (long)stream_id);
 		else
-			registro_dice(REG_WT,
-			              "⛔ due stream bidirezionali dal client dentro "
-			              "la sessione: il controllo e' il %ld, e il %ld "
-			              "e' di troppo",
-			              (long)w->rcp_stream, (long)stream_id);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⛔ due stream bidirezionali dal client dentro "
+			                 "la sessione: il controllo e' il %ld, e il %ld "
+			                 "e' di troppo",
+			                 (long)w->rcp_stream, (long)stream_id);
 		if (w->rcp)
 			rcp_violazione(w->rcp,
 			               "due stream bidirezionali dal client dentro "
 			               "la sessione (§2.5)");
 	}
-	registro_dice(REG_WT, "stream %ld e' WebTransport, sessione %llu",
-	              (long)stream_id, (unsigned long long)sessione);
+	registro_dice_di(REG_WT, wt_chi(w), "stream %ld e' WebTransport, sessione %llu",
+	                 (long)stream_id, (unsigned long long)sessione);
 
 	if (consumati > 2 + n) {
 		const uint8_t *resto = g->pref.d + 2 + n;
@@ -7048,8 +7193,8 @@ static int risposta_secca(wt *w, int64_t stream_id, const char *stato)
 
 	rv = nghttp3_conn_submit_response(w->h3, stream_id, nv, 2, NULL);
 	if (rv != 0)
-		registro_dice(REG_WT, "⛔ nghttp3_conn_submit_response: %s",
-		              nghttp3_strerror(rv));
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_submit_response: %s",
+		                 nghttp3_strerror(rv));
 	return rv;
 }
 
@@ -7065,10 +7210,10 @@ static int apri_sessione(wt *w, richiesta *r)
 	 *    si scrive nel registro: e' §3 applicata al primo byte, prima ancora
 	 *    che RCP cominci. */
 	if (strcmp(r->uri, "/rcp/1") != 0) {
-		registro_dice(REG_WT,
-		              "⛔ sessione WebTransport RIFIUTATA, percorso «%s» "
-		              "(atteso /rcp/1 — §2.2): 404",
-		              r->uri);
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ sessione WebTransport RIFIUTATA, percorso «%s» "
+		                 "(atteso /rcp/1 — §2.2): 404",
+		                 r->uri);
 		return risposta_secca(w, r->id, "404");
 	}
 
@@ -7088,8 +7233,8 @@ static int apri_sessione(wt *w, richiesta *r)
 
 	rv = nghttp3_conn_submit_response(w->h3, r->id, nv, 2, &dr);
 	if (rv != 0) {
-		registro_dice(REG_WT, "⛔ nghttp3_conn_submit_response: %s",
-		              nghttp3_strerror(rv));
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_submit_response: %s",
+		                 nghttp3_strerror(rv));
 		return rv;
 	}
 
@@ -7108,11 +7253,11 @@ static int apri_sessione(wt *w, richiesta *r)
 	                  + WT_TETTO_CANALE_NS;
 	batti_fra(w, 100);
 
-	registro_dice(REG_WT, "⭐ sessione WebTransport APERTA su %s (stream %ld) — "
-	              "il canale di controllo va aperto entro %llu ms (§4.6, "
-	              "DECISIONI.md §7.17)",
-	              r->uri, (long)r->id,
-	              (unsigned long long)(WT_TETTO_CANALE_NS / NGTCP2_MILLISECONDS));
+	registro_dice_di(REG_WT, wt_chi(w), "⭐ sessione WebTransport APERTA su %s (stream %ld) — "
+	                 "il canale di controllo va aperto entro %llu ms (§4.6, "
+	                 "DECISIONI.md §7.17)",
+	                 r->uri, (long)r->id,
+	                 (unsigned long long)(WT_TETTO_CANALE_NS / NGTCP2_MILLISECONDS));
 	return 0;
 }
 
@@ -7134,10 +7279,10 @@ static int cb_end_headers(nghttp3_conn *conn, int64_t stream_id, int fin,
 	/* ⚠ Tutto il resto NON e' servito da questo ascoltatore: la pagina la
 	 *   serve il TCP (`RCP.md` §2.4).  Un 404 e' la risposta esatta, e si
 	 *   dichiara invece di lasciare la richiesta appesa. */
-	registro_dice(REG_WT,
-	              "richiesta HTTP/3 %s %s sullo stream %ld: 404 (su UDP si "
-	              "serve solo la sessione WebTransport)",
-	              r->metodo, r->uri, (long)stream_id);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "richiesta HTTP/3 %s %s sullo stream %ld: 404 (su UDP si "
+	                 "serve solo la sessione WebTransport)",
+	                 r->metodo, r->uri, (long)stream_id);
 	return risposta_secca(w, stream_id, "404") == 0
 	         ? 0
 	         : NGHTTP3_ERR_CALLBACK_FAILURE;
@@ -7203,9 +7348,9 @@ static int apri_http3(wt *w)
 	if (w->h3)
 		return 0;
 	if (ngtcp2_conn_get_streams_uni_left2(w->conn) < 3) {
-		registro_dice(REG_WT,
-		              "⛔ il client non concede nemmeno 3 stream "
-		              "unidirezionali: HTTP/3 non si apre");
+		registro_dice_di(REG_WT, wt_chi(w),
+		                 "⛔ il client non concede nemmeno 3 stream "
+		                 "unidirezionali: HTTP/3 non si apre");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 
@@ -7219,8 +7364,8 @@ static int apri_http3(wt *w)
 	rv = nghttp3_conn_server_new(&w->h3, &callbacks, &settings,
 	                             nghttp3_mem_default(), w);
 	if (rv != 0) {
-		registro_dice(REG_WT, "⛔ nghttp3_conn_server_new: %s",
-		              nghttp3_strerror(rv));
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_server_new: %s",
+		                 nghttp3_strerror(rv));
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 
@@ -7231,7 +7376,7 @@ static int apri_http3(wt *w)
 	if (ngtcp2_conn_open_uni_stream(w->conn, &ctrl, NULL) != 0 ||
 	    ngtcp2_conn_open_uni_stream(w->conn, &enc, NULL) != 0 ||
 	    ngtcp2_conn_open_uni_stream(w->conn, &dec, NULL) != 0) {
-		registro_dice(REG_WT, "⛔ non apro i tre stream di servizio di HTTP/3");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ non apro i tre stream di servizio di HTTP/3");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 
@@ -7242,11 +7387,11 @@ static int apri_http3(wt *w)
 
 	if (nghttp3_conn_bind_control_stream(w->h3, ctrl) != 0 ||
 	    nghttp3_conn_bind_qpack_streams(w->h3, enc, dec) != 0) {
-		registro_dice(REG_WT, "⛔ non lego gli stream di servizio a nghttp3");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ non lego gli stream di servizio a nghttp3");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
-	registro_dettaglio(REG_WT, "HTTP/3 aperto: controllo=%ld qpack=%ld/%ld",
-	                   (long)ctrl, (long)enc, (long)dec);
+	registro_dettaglio_di(REG_WT, wt_chi(w), "HTTP/3 aperto: controllo=%ld qpack=%ld/%ld",
+	                           (long)ctrl, (long)enc, (long)dec);
 	return 0;
 }
 
@@ -7312,15 +7457,15 @@ void wt_libera(wt *w)
 		uint64_t sp, bu, ri;
 		size_t coda;
 		wt_audio_conti(w, &sp, &bu, &ri, &coda);
-		registro_dice(REG_RCP,
-		              "audio di %s, conto finale: %llu blocchi spediti, %llu "
-		              "buttati (coda piena o troppo grandi), %llu rifiutati da "
-		              "ngtcp2, %llu RIMANDATI dal pacer e poi partiti, %zu "
-		              "ancora in coda — codec %u",
-		              w->provenienza, (unsigned long long)sp,
-		              (unsigned long long)bu, (unsigned long long)ri,
-		              (unsigned long long)w->audio_rimandati, coda,
-		              w->audio_codec);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "audio di %s, conto finale: %llu blocchi spediti, %llu "
+		                 "buttati (coda piena o troppo grandi), %llu rifiutati da "
+		                 "ngtcp2, %llu RIMANDATI dal pacer e poi partiti, %zu "
+		                 "ancora in coda — codec %u",
+		                 w->provenienza, (unsigned long long)sp,
+		                 (unsigned long long)bu, (unsigned long long)ri,
+		                 (unsigned long long)w->audio_rimandati, coda,
+		                 w->audio_codec);
 	}
 	/* ⛔⛔⭐ E I CONTI DEL VIDEO, CHE NON LI LEGGEVA NESSUNO — 22 agosto 2026,
 	 *       trovato da B2, ed e' **lo stesso difetto del riquadro qui sopra sul
@@ -7382,16 +7527,16 @@ void wt_libera(wt *w)
 		uint32_t ritmo_scesi = 0;
 		wt_video_conti(w, &diffusi, &saltati, &spediti, &abbandonati,
 		               &ritmo_scesi);
-		registro_dice(REG_RCP,
-		              "video di %s, conto finale: %u fotogrammi consegnati a "
-		              "RCP, %u NON SPEDITI (tela che non combacia + credito "
-		              "finito + rifiuto di rcp), %u spediti sul filo, %u "
-		              "abbandonati a valle (§5.1) — ⚠ e %u ANNUNCI di tela "
-		              "discorde, che e' un NUMERO DIVERSO dai non spediti: il "
-		              "registro ne scrive uno per ogni misura nuova, non uno "
-		              "per fotogramma (§E2, B2 22 ago 2026) — codec %u",
-		              w->provenienza, diffusi, saltati, spediti, abbandonati,
-		              w->video_annunci_tela, w->video_codec);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "video di %s, conto finale: %u fotogrammi consegnati a "
+		                 "RCP, %u NON SPEDITI (tela che non combacia + credito "
+		                 "finito + rifiuto di rcp), %u spediti sul filo, %u "
+		                 "abbandonati a valle (§5.1) — ⚠ e %u ANNUNCI di tela "
+		                 "discorde, che e' un NUMERO DIVERSO dai non spediti: il "
+		                 "registro ne scrive uno per ogni misura nuova, non uno "
+		                 "per fotogramma (§E2, B2 22 ago 2026) — codec %u",
+		                 w->provenienza, diffusi, saltati, spediti, abbandonati,
+		                 w->video_annunci_tela, w->video_codec);
 		/* ⛔⭐ FASE 9 — e il conto della SOGLIA sta a parte, per la ragione di
 		 *     tutta questa fase: «zero abbandoni» e «la cura e' spenta» non
 		 *     devono avere la stessa faccia.  ⚠ E i tre numeri contano tre
@@ -7400,16 +7545,16 @@ void wt_libera(wt *w)
 		 *     credito che il debito di §5.2 lo teneva acceso un'ALTRA causa —
 		 *     la 4, invisibile al ricevente.  Senza il terzo, una cura che gira
 		 *     a vuoto somiglia in tutto a una cura che non serve. */
-		registro_dice(REG_RCP,
-		              "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — "
-		              "delta TENUTI %u, abbandonati per soglia %u, e NON "
-		              "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
-		              "forma che il ricevente non vede)",
-		              sgombra_soglia_ms ? "ACCESA (predefinito dal 24 ago 2026)"
-		                                : "SPENTA a mano (--sgombra-soglia-ms 0)",
-		              (unsigned long long)sgombra_soglia_ms,
-		              w->sgombra_tenuti, w->sgombra_abbandoni,
-		              w->sgombra_credito);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — "
+		                 "delta TENUTI %u, abbandonati per soglia %u, e NON "
+		                 "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
+		                 "forma che il ricevente non vede)",
+		                 sgombra_soglia_ms ? "ACCESA (predefinito dal 24 ago 2026)"
+		                                   : "SPENTA a mano (--sgombra-soglia-ms 0)",
+		                 (unsigned long long)sgombra_soglia_ms,
+		                 w->sgombra_tenuti, w->sgombra_abbandoni,
+		                 w->sgombra_credito);
 		/* ⛔⭐ FASE 9 — E IL CONTO DEL REGOLATORE DEL RITMO, che sta a parte
 		 *     dagli altri due per la ragione di tutta questa fase: «zero
 		 *     discese» e «il regolatore e' spento» non devono avere la stessa
@@ -7420,16 +7565,16 @@ void wt_libera(wt *w)
 		 *     forzare un fotogramma dentro una coda che non si svuota peggiora
 		 *     la coda: qui si scrivono i due numeri accanto e chi legge
 		 *     giudica. */
-		registro_dice(REG_RCP,
-		              "⭐ FASE 9, il regolatore del ritmo: %s — %u fotogrammi NON "
-		              "PARTITI perche' l'arretrato aveva raggiunto i %u posti, su "
-		              "%u consegnati a RCP.  ⚠ E' un numero SUO: non e' fra i «non "
-		              "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p "
-		              "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un "
-		              "DIFETTO da guardare, non una degradazione riuscita",
-		              ritmo_adattivo ? "ACCESO (predefinito dal 24 ago 2026)"
-		                             : "SPENTO a mano (--niente-ritmo-adattivo)",
-		              ritmo_scesi, (unsigned)WT_RITMO_POSTI, diffusi);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⭐ FASE 9, il regolatore del ritmo: %s — %u fotogrammi NON "
+		                 "PARTITI perche' l'arretrato aveva raggiunto i %u posti, su "
+		                 "%u consegnati a RCP.  ⚠ E' un numero SUO: non e' fra i «non "
+		                 "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p "
+		                 "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un "
+		                 "DIFETTO da guardare, non una degradazione riuscita",
+		                 ritmo_adattivo ? "ACCESO (predefinito dal 24 ago 2026)"
+		                                : "SPENTO a mano (--niente-ritmo-adattivo)",
+		                 ritmo_scesi, (unsigned)WT_RITMO_POSTI, diffusi);
 	}
 	/* ⛔⛔⭐ FASE 9 — IL PREZZO DELLA CURA DELL'USO-DOPO-LA-LIBERAZIONE, E IL
 	 *      CONTROLLO CHE LA FA CADERE.
@@ -7475,11 +7620,11 @@ void wt_libera(wt *w)
 	 *          `ngtcp2_pkt_encode_stream_frame`) e quella che ha liberato.
 	 *       4. con questa cura, lo stesso banco deve reggere e questa riga deve
 	 *          dire residuo zero.  ⛔ Se muore lo stesso, la cura e' sbagliata. */
-	registro_dice(REG_WT,
-	              "⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di "
-	              "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla "
-	              "chiusura %zu, e %zu byte ancora da spedire in coda",
-	              w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
+	registro_dice_di(REG_WT, wt_chi(w),
+	                 "⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di "
+	                 "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla "
+	                 "chiusura %zu, e %zu byte ancora da spedire in coda",
+	                 w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
 	/* ⛔⛔ E SI SPEGNE LA CATTURA DELL'AUDIO SE NESSUNO ASCOLTA PIU'.
 	 *
 	 *     `[M]` 17 agosto 2026, prima accensione dell'audio vero: la sessione si
@@ -7499,11 +7644,11 @@ void wt_libera(wt *w)
 	if (w->audio_acceso && w->rcp && gancio_audio) {
 		const char *mio = rcp_utente(w->rcp);
 		if (mio && mio[0] && !wt_audio_qualcuno_ascolta(mio, NULL)) {
-			registro_dice(REG_RCP,
-			              "l'ultima sessione di «%s» se ne va: la cattura "
-			              "dell'audio si ferma (il sink resta, e' l'invariante "
-			              "I4)",
-			              mio);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "l'ultima sessione di «%s» se ne va: la cattura "
+			                 "dell'audio si ferma (il sink resta, e' l'invariante "
+			                 "I4)",
+			                 mio);
 			gancio_audio(gancio_audio_ctx, mio, 0);
 		}
 	}
@@ -7518,26 +7663,26 @@ void wt_libera(wt *w)
 		 *    numeri lo dicono. */
 		uint64_t entrati = 0, usciti = 0;
 		audio_cod_conti(w->tono_cod, &entrati, &usciti);
-		registro_dice(REG_RCP,
-		              "codificatore audio di %s: %llu blocchi entrati, %llu "
-		              "usciti%s",
-		              w->provenienza, (unsigned long long)entrati,
-		              (unsigned long long)usciti,
-		              entrati == usciti
-		                  ? " — ⭐ uno per uno: l'`istante` di §6.3 appartiene "
-		                    "al blocco che parte"
-		                  : " — ⛔ NON uno per uno: l'`istante` scritto sul filo "
-		                    "puo' non essere quello del blocco spedito");
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "codificatore audio di %s: %llu blocchi entrati, %llu "
+		                 "usciti%s",
+		                 w->provenienza, (unsigned long long)entrati,
+		                 (unsigned long long)usciti,
+		                 entrati == usciti
+		                     ? " — ⭐ uno per uno: l'`istante` di §6.3 appartiene "
+		                       "al blocco che parte"
+		                     : " — ⛔ NON uno per uno: l'`istante` scritto sul filo "
+		                       "puo' non essere quello del blocco spedito");
 		audio_cod_chiudi(w->tono_cod);
 		w->tono_cod = NULL;
 	}
 	if (w->video_acceso && w->rcp && gancio_palco) {
 		const char *mio = rcp_utente(w->rcp);
 		if (mio && mio[0] && !wt_video_qualcuno_guarda(mio, NULL)) {
-			registro_dice(REG_RCP,
-			              "l'ultima sessione di «%s» se ne va: il palco smette "
-			              "di catturare (il figlio resta, e' l'invariante I4)",
-			              mio);
+			registro_dice_di(REG_RCP, wt_chi(w),
+			                 "l'ultima sessione di «%s» se ne va: il palco smette "
+			                 "di catturare (il figlio resta, e' l'invariante I4)",
+			                 mio);
 			/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
 			 *   lui non vuol dire niente. */
 			gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
@@ -7595,8 +7740,8 @@ int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
 	nconsumed = nghttp3_conn_read_stream2(w->h3, stream_id, dati, len, fin,
 	                                      ngtcp2_conn_get_timestamp(w->conn));
 	if (nconsumed < 0) {
-		registro_dice(REG_WT, "⛔ nghttp3_conn_read_stream2: %s",
-		              nghttp3_strerror((int)nconsumed));
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_read_stream2: %s",
+		                 nghttp3_strerror((int)nconsumed));
 		ngtcp2_ccerr_set_application_error(
 			w->ultimo_errore,
 			nghttp3_err_infer_quic_app_error_code((int)nconsumed), NULL, 0);
@@ -7652,10 +7797,10 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 	 *   sessione che non esiste piu' — SETTE `posto NEGATO` su nove
 	 *   tentativi, `[M]` B11 con Chrome. */
 	if (w->rcp && (stream_id == w->rcp_stream || stream_id == w->sessione)) {
-		registro_dice(REG_RCP,
-		              "chiuso lo stream %ld: la sessione e' finita, il posto "
-		              "si libera",
-		              (long)stream_id);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "chiuso lo stream %ld: la sessione e' finita, il posto "
+		                 "si libera",
+		                 (long)stream_id);
 		rcp_libera(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
@@ -7673,8 +7818,8 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 	if (con_codice) {
 		int rv = nghttp3_conn_close_stream(w->h3, stream_id, codice);
 		if (rv != 0 && rv != NGHTTP3_ERR_STREAM_NOT_FOUND) {
-			registro_dice(REG_WT, "⛔ nghttp3_conn_close_stream: %s",
-			              nghttp3_strerror(rv));
+			registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_close_stream: %s",
+			                 nghttp3_strerror(rv));
 			ngtcp2_ccerr_set_application_error(
 				w->ultimo_errore,
 				nghttp3_err_infer_quic_app_error_code(rv), NULL, 0);
@@ -7757,11 +7902,11 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
 		return;
 	}
 	if (w->sessione != -1 && w->chiusura < 0) {
-		registro_dice(REG_RCP,
-		              "⚠ %s: nessuna sessione RCP viva, il motivo %#04x "
-		              "viaggia solo nel codice di chiusura della sessione "
-		              "(§3.1, seconda strada)",
-		              w->provenienza, motivo);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⚠ %s: nessuna sessione RCP viva, il motivo %#04x "
+		                 "viaggia solo nel codice di chiusura della sessione "
+		                 "(§3.1, seconda strada)",
+		                 w->provenienza, motivo);
 		chiudi_sessione(w, motivo);
 	}
 }
@@ -7839,17 +7984,17 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 	 *    cui succede: senza §7.15 questa riga dovrebbe spedire un byte su un
 	 *    canale mai nato. */
 	if (w->canale_entro && ts >= w->canale_entro && w->chiusura < 0) {
-		registro_dice(REG_RCP,
-		              "⛔ %s: sessione WebTransport aperta e canale di "
-		              "controllo MAI aperto entro %llu ms — congedo "
-		              "%#04x TEMPO_SCADUTO (§4.6, DECISIONI.md §7.17).  "
-		              "⚠ nessun CONGEDO sul canale: il canale non esiste, "
-		              "il motivo viaggia nel codice di chiusura (§3.1 punto "
-		              "3, e §7.15 lo consente)",
-		              w->provenienza,
-		              (unsigned long long)(WT_TETTO_CANALE_NS
-		                                   / NGTCP2_MILLISECONDS),
-		              RCP_TEMPO_SCADUTO);
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⛔ %s: sessione WebTransport aperta e canale di "
+		                 "controllo MAI aperto entro %llu ms — congedo "
+		                 "%#04x TEMPO_SCADUTO (§4.6, DECISIONI.md §7.17).  "
+		                 "⚠ nessun CONGEDO sul canale: il canale non esiste, "
+		                 "il motivo viaggia nel codice di chiusura (§3.1 punto "
+		                 "3, e §7.15 lo consente)",
+		                 w->provenienza,
+		                 (unsigned long long)(WT_TETTO_CANALE_NS
+		                                      / NGTCP2_MILLISECONDS),
+		                 RCP_TEMPO_SCADUTO);
 		w->canale_entro = 0;
 		chiudi_sessione(w, RCP_TEMPO_SCADUTO);
 	}
@@ -7865,16 +8010,16 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 		 *    esattamente il difetto che questa riga toglie. */
 		if (w->chiusura_scadenza && ts >= w->chiusura_scadenza) {
 			uint8_t m = (uint8_t)w->chiusura;
-			registro_dice(REG_WT,
-			              "⛔ la coda d'uscita non si e' svuotata in 3 s "
-			              "(%zu elementi da spedire, %zu byte; e %zu byte "
-			              "consegnati a ngtcp2 in attesa di riscontro): la "
-			              "capsula di chiusura parte LO STESSO col codice "
-			              "0x%02x — §3.1 punto 3 e' il motivo che salva le "
-			              "diagnosi, e aspettare per sempre vuol dire non "
-			              "eseguirlo mai",
-			              coda_da_spedire(w), w->byte_in_coda,
-			              w->byte_in_volo, m);
+			registro_dice_di(REG_WT, wt_chi(w),
+			                 "⛔ la coda d'uscita non si e' svuotata in 3 s "
+			                 "(%zu elementi da spedire, %zu byte; e %zu byte "
+			                 "consegnati a ngtcp2 in attesa di riscontro): la "
+			                 "capsula di chiusura parte LO STESSO col codice "
+			                 "0x%02x — §3.1 punto 3 e' il motivo che salva le "
+			                 "diagnosi, e aspettare per sempre vuol dire non "
+			                 "eseguirlo mai",
+			                 coda_da_spedire(w), w->byte_in_coda,
+			                 w->byte_in_volo, m);
 			w->chiusura = -1;
 			w->chiusura_da = 0;
 			w->chiusura_scadenza = 0;
@@ -8002,8 +8147,8 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			sveccnt = nghttp3_conn_writev_stream(w->h3, &stream_id, &fin,
 			                                     vec, 16);
 			if (sveccnt < 0) {
-				registro_dice(REG_WT, "⛔ nghttp3_conn_writev_stream: %s",
-				              nghttp3_strerror((int)sveccnt));
+				registro_dice_di(REG_WT, wt_chi(w), "⛔ nghttp3_conn_writev_stream: %s",
+				                 nghttp3_strerror((int)sveccnt));
 				ngtcp2_ccerr_set_application_error(
 					w->ultimo_errore,
 					nghttp3_err_infer_quic_app_error_code((int)sveccnt),
@@ -8105,12 +8250,12 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 						 *   funzionare, e' questa tabella a essere
 						 *   piena. */
 						w->troppi_bloccati = true;
-						registro_dice(REG_WT,
-						              "⚠ %u stream bloccati nella stessa "
-						              "passata: la coda si ferma qui.  Non "
-						              "e' §5.1 che non vale, e' il tetto "
-						              "di WT_BLOCCATI_MAX",
-						              WT_BLOCCATI_MAX);
+						registro_dice_di(REG_WT, wt_chi(w),
+						                 "⚠ %u stream bloccati nella stessa "
+						                 "passata: la coda si ferma qui.  Non "
+						                 "e' §5.1 che non vale, e' il tetto "
+						                 "di WT_BLOCCATI_MAX",
+						                 WT_BLOCCATI_MAX);
 					}
 					continue;
 				}
@@ -8129,8 +8274,8 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			case NGTCP2_ERR_WRITE_MORE:
 				break;
 			default:
-				registro_dice(REG_WT, "⛔ ngtcp2_conn_writev_stream: %s",
-				              ngtcp2_strerror((int)nwrite));
+				registro_dice_di(REG_WT, wt_chi(w), "⛔ ngtcp2_conn_writev_stream: %s",
+				                 ngtcp2_strerror((int)nwrite));
 				ngtcp2_ccerr_set_liberr(w->ultimo_errore, (int)nwrite,
 				                        NULL, 0);
 				return NGTCP2_ERR_CALLBACK_FAILURE;
@@ -8191,11 +8336,11 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				 *    politiche opposte per lo stesso esito, nello
 				 *    stesso modulo. */
 				if (c > w->impbuf_len - w->impbuf_off) {
-					registro_dice(REG_WT,
-					              "⛔ impostazioni, conto impossibile "
-					              "(%llu presi su %zu offerti)",
-					              (unsigned long long)c,
-					              w->impbuf_len - w->impbuf_off);
+					registro_dice_di(REG_WT, wt_chi(w),
+					                 "⛔ impostazioni, conto impossibile "
+					                 "(%llu presi su %zu offerti)",
+					                 (unsigned long long)c,
+					                 w->impbuf_len - w->impbuf_off);
 					w->guasto = true;
 					return NGTCP2_ERR_CALLBACK_FAILURE;
 				}
@@ -8218,9 +8363,9 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				int rv = nghttp3_conn_add_write_offset(w->h3, stream_id,
 				                                       (uint64_t)ndatalen);
 				if (rv != 0) {
-					registro_dice(REG_WT,
-					              "⛔ nghttp3_conn_add_write_offset: %s",
-					              nghttp3_strerror(rv));
+					registro_dice_di(REG_WT, wt_chi(w),
+					                 "⛔ nghttp3_conn_add_write_offset: %s",
+					                 nghttp3_strerror(rv));
 					ngtcp2_ccerr_set_application_error(
 						w->ultimo_errore,
 						nghttp3_err_infer_quic_app_error_code(rv), NULL,

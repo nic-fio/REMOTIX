@@ -25,14 +25,16 @@
 #    appeso dopo un rifiuto.  ⛔ **NON** si misura il NUMERO: due non e' dieci e
 #    non e' sedici, e nessuna riga di questo banco pretende il contrario.
 #
-# ⛔ E LA MODIFICA VIVE SOLO QUI, SULLA MACCHINA DI PROVA: `src/rcp.c` del
-#    repository non si tocca.  Il `sed` gira DOPO lo scaricamento del tar, sulla
-#    copia in `$ALBERO`.
+# ⭐⭐ E DAL 25 AGOSTO 2026 NON SI RICOMPILA PIU' NIENTE: il tetto e'
+#     **`--tetto-sessioni N`**, un'opzione all'avvio.  ⇒ L'albero sulla macchina
+#     di prova e' quello del repository **byte per byte**, non ci sono gemelle
+#     da riallineare a mano (R12.3), e la guardia guarda il **server acceso**
+#     invece del testo da cui nascera'.
 #
-# ⛔⛔ E VA FATTO SU TUTT'E DUE LE COPIE — `src/rcp.c` **e** `banchi/rcp/rcp.c`:
-#      il Makefile confronta le gemelle (rilievo R12.3) e si RIFIUTA di
-#      compilare se divergono.  Un `sed` su una sola delle due non da' un
-#      binario con 16: da' un errore di compilazione.
+# ⛔ Il `sed` che stava qui e' stato tolto perche' non serviva piu', e la
+#    ragione per cui era pericoloso resta scritta accanto al passo `porta`: un
+#    `sed` su un modello che non c'e' esce **0 senza sostituire**, e il terreno
+#    dichiara successo su un binario che non e' quello che si crede.
 #
 # ⚠ `MAX_FIGLI` (`figlio.c:91`) **non** si tocca, ed e' voluto: il commento
 #   accanto dichiara che «segue» `MAX_ATTACCATE`, ma sono due `#define`
@@ -109,35 +111,38 @@ porta)
 		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
 	ok "sorgenti in $ALBERO"
 
-	log "2 · ⛔ IL SED, sulle DUE copie gemelle — e solo qui, mai nel repository"
-	# ⛔⛔ IL NUMERO SI E' SPOSTATO — 25 agosto 2026, cura C3 della fase 10.
+	log "2 · ⭐ NESSUN SED: il tetto si muove A CALDO con «--tetto-sessioni $MAX_ATT»"
+	# ⛔⛔ E QUI C'ERA UN `sed` CHE RICOMPILAVA IL PRODOTTO — tolto il 25 agosto
+	#     2026, ed e' la cura del difetto 5 dell'incarico F3.
 	#
-	#   Prima erano QUATTRO `#define` a 16 copiati a mano, e questo copione ne
-	#   sostituiva uno solo, in `rcp.c`.  Adesso il numero e' UNO —
-	#   `RCP_TETTO_SESSIONI` in `rcp.h` — e lo seguono `MAX_ATTACCATE`,
-	#   `MAX_FIGLI`, `QUANTI_PRESENTI` e `WT_PALCHI`.
+	#   La storia in tre righe, perche' e' istruttiva:
+	#     1. erano QUATTRO `#define` a 16 copiati a mano, e questo copione ne
+	#        sostituiva uno solo in `rcp.c`;
+	#     2. la cura C3 li ha unificati in `RCP_TETTO_SESSIONI`, e il `sed`
+	#        andava su un modello **che non c'era piu'**: usciva **0 senza
+	#        sostituire**, il terreno dichiarava successo, il tetto restava 16 e
+	#        il banco misurava «tabella piena» su una tabella da sedici.  ⇒ Ci
+	#        fu messa una guardia che CONTAVA se aveva morso;
+	#     3. ⭐ ma nel frattempo il prodotto ha imparato a farlo da se':
+	#        **`--tetto-sessioni N`** lo muove **all'avvio**, e la riga d'avvio
+	#        dichiara il valore in vigore accanto al predefinito.
 	#
-	# ⛔⛔ E il modo in cui questo copione falliva era il PEGGIORE: un `sed` su
-	#   un modello che non c'e' piu' esce **0 senza sostituire**, il terreno
-	#   dichiarava successo, il tetto restava 16, e il banco finiva in «non ho
-	#   misurato» — cioe' un guasto che non morde travestito da terreno sano.
-	#   ⇒ Adesso si CONTA se la sostituzione ha morso, e se non ha morso su
-	#     tutt'e due le gemelle il terreno si FERMA.
-	ssh -o BatchMode=yes "$MACCHINA" "bash -s" <<SED_FINE || { ko "⛔ il sed non ha morso: il tetto sarebbe rimasto 16 e il banco avrebbe detto «non ho misurato»"; exit 2; }
-set -e
-n=0
-for f in $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h; do
-	prima=\$(grep -c '^#define RCP_TETTO_SESSIONI 16\$' "\$f" || true)
-	sed -i 's/^#define RCP_TETTO_SESSIONI 16\$/#define RCP_TETTO_SESSIONI $MAX_ATT/' "\$f"
-	dopo=\$(grep -c '^#define RCP_TETTO_SESSIONI $MAX_ATT\$' "\$f" || true)
-	echo "\$f: prima=\$prima dopo=\$dopo"
-	if [ "\$prima" = 1 ] && [ "\$dopo" = 1 ]; then n=\$((n+1)); fi
-done
-if [ "\$n" != 2 ]; then echo '⛔ il sed NON ha morso su tutt e due le gemelle'; exit 3; fi
-grep -n '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
-cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
-cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle rcp.c: uguali'
-SED_FINE
+	# ⇒ ⭐ Un `sed` che ricompila non serve piu', e toglierlo toglie con se':
+	#     una ricompilazione per giro · la gemella R12.3 da tenere allineata a
+	#     mano · e soprattutto ⛔ **un albero che non e' piu' quello del
+	#     repository**, cioe' un binario da spiegare invece che da leggere.
+	# ⛔ E LA GUARDIA NON SPARISCE, CAMBIA POSTO: prima verificava che il `sed`
+	#    avesse morso sui SORGENTI; adesso `accendi` verifica che il tetto sia
+	#    in vigore nel SERVER ACCESO, leggendolo dalla riga d'avvio.  ⭐ E' una
+	#    guardia migliore: guarda il prodotto che gira, non il testo da cui
+	#    nascera' (`LEZIONI.md` §1.6).
+	ssh -o BatchMode=yes "$MACCHINA" "
+		grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h
+		cmp -s $ALBERO/src/rcp.h $ALBERO/banchi/rcp/rcp.h && echo 'gemelle rcp.h: uguali'
+		cmp -s $ALBERO/src/rcp.c $ALBERO/banchi/rcp/rcp.c && echo 'gemelle rcp.c: uguali'
+	" || { ko "⛔ non ho potuto rileggere le gemelle"; exit 2; }
+	inf "⭐ l'albero e' quello del repository, byte per byte: il tetto lo muove"
+	inf "   l'opzione all'accensione, non una ricompilazione"
 
 	log "3 · Compilo dentro il contenitore"
 	if ! ssh -o BatchMode=yes "$MACCHINA" \
@@ -160,6 +165,9 @@ SED_FINE
 	#          giro fatto: qui si controlla solo che il formato sia nel binario,
 	#          cioe' che il banco avra' da dove leggerlo.
 	log "4 · ⛔ CHE COSA HO COSTRUITO"
+	inf "⚠ i due «#define» qui sotto sono il PREDEFINITO, non il valore in"
+	inf "  vigore: quello lo muove «--tetto-sessioni» e lo dichiara il server"
+	inf "  acceso — si legge nel passo «accendi»"
 	ssh -o BatchMode=yes "$MACCHINA" "
 		echo \"#define src:     \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/src/rcp.h)\"
 		echo \"#define gemella: \$(grep -h '^#define RCP_TETTO_SESSIONI' $ALBERO/banchi/rcp/rcp.h)\"
@@ -179,6 +187,46 @@ SED_FINE
 			echo \"⛔ la riga «PIENO (%d su %d)» NON c'e' nel binario\"
 		fi
 	" || { ko "non ho potuto rileggere il binario"; exit 2; }
+	exit 0 ;;
+
+accendi)
+	# ⛔⭐⭐ IL TETTO ENTRA QUI, E NON NEL COMPILATORE — 25 agosto 2026.
+	#
+	#     `--tetto-sessioni N` e' un'opzione del prodotto (`main.c`), sul modello
+	#     delle altre: una strada sola, nessuna variabile d'ambiente, nessun
+	#     interruttore di compilazione (`CODER.md` §2-bis).
+	# ⚠ Si APPENDE a `OPZIONI_SERVER` invece di sostituirlo: chi chiama questo
+	#   terreno passa gia' le opzioni delle cure, e mangiargliele sarebbe un
+	#   guasto silenzioso — misurerebbe una scena diversa da quella chiesta.
+	export OPZIONI_SERVER="${OPZIONI_SERVER:-} --tetto-sessioni $MAX_ATT"
+	bash "$QUI/banchi/07-b64-terreno.sh" accendi || exit 2
+
+	# ⛔⛔ E QUI STA LA GUARDIA CHE PRIMA GUARDAVA IL `sed`: il tetto in vigore
+	#     si legge DAL SERVER ACCESO, non dai sorgenti.  Se non e' quello
+	#     chiesto, il terreno si FERMA — perche' il banco misurerebbe «tabella
+	#     piena» su una tabella di un'altra misura, e ⛔ **non darebbe rosso**:
+	#     direbbe «non ho misurato», che e' il guasto travestito da terreno sano
+	#     (la forma che questo file ha gia' pagato una volta).
+	log "4-bis · ⛔ IL TETTO IN VIGORE, letto dal SERVER ACCESO"
+	i=0
+	VISTO=""
+	while [ $i -lt 30 ]; do
+		VISTO=$(ssh -o BatchMode=yes "$MACCHINA" \
+			"grep -ao 'tetto AMMINISTRATIVO delle sessioni: \*\*[0-9]*\*\*' \
+			 $LAV/registro.log 2>/dev/null | tail -1 | grep -o '[0-9]*' || true")
+		[ -n "$VISTO" ] && break
+		i=$((i+1)); sleep 0.5
+	done
+	if [ -z "$VISTO" ]; then
+		ko "⛔ il server non ha dichiarato nessun tetto: NON so su che tabella"
+		ko "   sto per misurare, e un numero che non so non e' un numero"
+		exit 2
+	fi
+	if [ "$VISTO" != "$MAX_ATT" ]; then
+		ko "⛔ ho chiesto --tetto-sessioni $MAX_ATT e il server dichiara $VISTO"
+		exit 2
+	fi
+	ok "⭐ il server dichiara il tetto **$VISTO**, ed e' quello che ho chiesto"
 	exit 0 ;;
 
 *)
