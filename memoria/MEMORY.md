@@ -1,0 +1,29 @@
+- [Nic è il regista, non il programmatore](nic-regista-non-programmatore.md) — spiegare concreto, una domanda per volta
+- [Le convenzioni di REMOTIX_V2](remotix-v2-convenzioni.md) — italiano, le marche, e le decisioni in un posto solo
+- [Processo proporzionato, non cerimonia](processo-proporzionato-non-cerimonia.md) — la revisione si giustifica su cosa sopravvive alla fase
+- [Via libera permanente](via-libera-permanente.md) — si prosegue da soli e si riferisce dopo; ci si ferma solo sulle sue decisioni
+- [Banchi in parallelo](banchi-in-parallelo-isolamento.md) — porta, ban-file e socket propri, o il ban di uno ferma tutti
+- [Agenti mandati a refutare](agenti-a-refutare.md) — il parallelismo è richiesto; e il mandato che rende è «prova a smentirmi»
+- [L'utente «prova» si conserva](utente-prova-si-conserva.md) — sessione senza monitor propri, ed è l'unico modo di vedere il desktop vero
+- [Il mouse sul DeX: è noVNC #1727](dex-mouse-aperto.md) — non è nostro; la cura «due tele 1:1» è scritta e misurata
+- [Come si costruisce](costruire-serve-il-contenitore.md) — due strade: podman sul portatile per compilare, enter.sh sulla macchina di prova per far girare
+- [Il testimone sul desktop vero](testimone-sul-desktop-vero.md) — come si misura col browser, e le due reti da togliere alla pagina
+- [La prova la fa l'utente](la-prova-la-fa-lutente.md) — un desktop vuoto non testimonia; e non riavviare mai il server mentre lui misura
+- [I documenti si accorpano](documenti-si-accorpano.md) — pochi documenti grossi; i rapporti degli agenti non si conservano
+- [Le prestazioni si dichiarano col ferro](prestazioni-sul-ferro-modesto.md) — sempre: sono su una Intel UHD 730 integrata, non su una scheda potente
+- [Niente eccezioni per compositore](niente-eccezioni-per-compositore.md) — se non si può fare su tutti i desktop, esce dal prodotto invece di stare dietro un interruttore
+- [Monitorare una sessione vera, byte per byte](misura-anche-chi-ascolta.md) — è la diagnosi migliore; e servono TUTTI gli anelli, quello che ascolta compreso
+- [La documentazione di v1 è misurata](documentazione-v1-misurata.md) — ~/Documenti/REMOTIX: si legge prima di rifare quel che v1 aveva
+- [Come Nic guarda lo schermo](come-guarda-nic-lo-schermo.md) — da stasera è davanti alla macchina: Wayland locale, il quinto anello NON c'è più
+- [Le prove le eseguo io](le-prove-le-eseguo-io.md) — i banchi da browser li guido con Marionette; a lui resta il giudizio
+- [AV1 esce, entra H.264](av1-esce-entra-h264.md) — Firefox Android non ha né HEVC né AV1; `avc1.640032` è già verificato
+- [I quadrati sono della tela 2D](i-quadrati-sono-della-tela-2d.md) — non erano nostri: `bitmaprenderer` è pulito, e la caccia è chiusa
+- [Android si prova sull'emulatore](emulatore-android-per-provare.md) — c'è Firefox 154 sul portatile; il telefono di Nic serve al giudizio, non alla diagnosi
+- [Parlare come al regista](parlare-come-al-regista.md) — italiano semplice nei rapporti; i dettagli restano nei documenti
+- [Taratura, non caccia al difetto](taratura-non-caccia-al-difetto.md) — «ottimizzazione» e «non funziona» sono due registri, e la parola la sceglie lui
+- [Parlato al minimo](parlato-al-minimo.md) — dalla fase 9: i risultati, non il racconto del lavoro
+- [wondershaper sul tablet](wondershaper-sul-tablet.md) — per strozzare il percorso vero, non `lo`
+- [Il riavvio perde la chiave ssh](riavvio-perde-la-chiave-ssh.md) — rootfs in RAM: chiave → provisiona → verifica → misura
+- [Il banco si prepara prima](il-banco-si-prepara-prima.md) — la scena si GUARDA prima di chiamarlo, e un contatore non è guardare
+- [Il progetto è in pausa](progetto-in-pausa-agosto-2026.md) — dal 27 ago 2026, intervento; si riprende da KDE, e prima si fa girare la rete
+- [Il deposito è su GitHub](deposito-su-github.md) — privato, nic-fio/REMOTIX_V2; e v1 non è più una cartella a sé
