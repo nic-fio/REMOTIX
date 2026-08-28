@@ -4,8 +4,16 @@ Le regole da rispettare mentre si scrive codice, perché il prodotto si avvicini
 ai numeri dichiarati e non si allontani da ciò che l'utente vede.
 
 ⛔ **Regola vincolante.** Non si scrive una sola riga di codice senza aver prima
-letto questo documento e le sezioni di `SPECIFICA.md` che l'area tocca. È la stessa
-regola di `REFERENCE.md` §7.0, estesa a tutto il lavoro e non solo al protocollo.
+letto questo documento e le sezioni di **`SPECIFICHE.md`** che l'area tocca — e
+**`RCP.md`** se si tocca il filo. È la stessa regola che in v1 era di `⟨v1⟩ REFERENCE.md`
+§7.0, estesa a tutto il lavoro e non solo al protocollo.
+
+> ⚠ **I nomi vecchi che trovi qui sotto.** Questo documento è arrivato da v1 e cita
+> ancora `⟨v1⟩ SPECIFICA.md` e `⟨v1⟩ REFERENCE.md`, che sono le carte del **prodotto
+> superato**: stanno in `fondamenta/documenti/` e qui portano la marca **⟨v1⟩**.
+> ⛔ **Non governano più niente**: quel che vale oggi è `SPECIFICHE.md` e `RCP.md`.
+> Si leggono per capire *perché* una regola esiste, non per sapere che cosa fare.
+> La tabella completa è in §0.
 
 ---
 
@@ -23,8 +31,8 @@ nessuno ha detto di fare. Entrambi i casi sono un difetto della coppia.
 
 Il fondamento condiviso, che qui si richiama ma non si riscrive:
 - `LEZIONI.md` — il metodo: come si misura, come si prova, come si impara.
-- `SPECIFICA.md` §3.1 — i due numeri che ogni scelta tecnica deve avvicinare.
-- `REFERENCE.md` — le regole di compatibilità con i client, per chi tocca il filo.
+- `SPECIFICHE.md` §3.1 — i due numeri che ogni scelta tecnica deve avvicinare.
+- `RCP.md` — il protocollo, per chi tocca il filo. *(In v1 era `⟨v1⟩ REFERENCE.md`.)*
 
 > ## ⛔ Dove stanno i documenti citati — si legge prima di andare a cercarli
 >
@@ -51,7 +59,7 @@ peggio di nessun riferimento.
 ## 1. Il principio fondante: i numeri li pone l'utente
 
 > «Le soluzioni tecniche devono essere prese in funzione di questi vincoli,
-> non il contrario.» — `SPECIFICA.md` §3.1
+> non il contrario.» — `⟨v1⟩ SPECIFICA.md` §3.1
 
 |         | Valore                                     |
 |---------|--------------------------------------------|
@@ -73,7 +81,7 @@ peggio di nessun riferimento.
 > | Leva | Che difetto cura | Prezzo |
 > |---|---|---|
 > | **10 bit per canale** | le strisce sulle sfumature morbide | quasi nulla, e in hardware ovunque — decoder Android compreso |
-> | **4:4:4** (colore a piena risoluzione) | il testo colorato sfrangiato — il difetto misurato in v1, `SPECIFICA.md` §5.2 | ~50 % di banda, **nessun decoder Android in hardware**: rimetterebbe il telefono in software, cioè il muro che V2 nasce per abbattere |
+> | **4:4:4** (colore a piena risoluzione) | il testo colorato sfrangiato — il difetto misurato in v1, `⟨v1⟩ SPECIFICA.md` §5.2 | ~50 % di banda, **nessun decoder Android in hardware**: rimetterebbe il telefono in software, cioè il muro che V2 nasce per abbattere |
 >
 > **Scelto il 10 bit** — la massima qualità ottenibile su entrambi i client insieme, in
 > hardware, senza compromessi.
@@ -175,12 +183,12 @@ logicamente corretto.
 | # | Invariante | Dove sta scritto |
 |---|-----------|------------------|
 | I1 | Il ritmo non cala mai per prudenza, per risparmio o perché la scena è ferma: cala **solo** quando la misura dimostra che la linea non porta, e ogni discesa è dichiarata nel registro. Sotto il minimo si continua a calare i **fotogrammi** — mai a sgranare l'immagine, e **mai a staccare**. | `SPECIFICHE.md`, deciso l'8 agosto 2026 |
-| I2 | Una sola sessione grafica per utente; la sessione locale vince sull'RDP; la seconda connessione è rifiutata con messaggio esplicito. | `SPECIFICA.md` §3.4 |
-| I3 | La guardia dell'autenticazione parte da negato. Chi non passa dal validatore non riceve un pixel e non comanda nulla. | `REFERENCE.md` R14 |
-| I4 | Il palco (cattura, controllo, monitor virtuale) appartiene alla sessione, non alla connessione. Sopravvive al distacco. | `SPECIFICA.md` §3.3-ter |
-| I5 | Il volume appartiene alla sessione. Chi si collega trova il livello al massimo; un cursore lasciato in basso non sopravvive alla riconnessione. | `REFERENCE.md` §7.5 |
+| I2 | Una sola sessione grafica per utente; la sessione locale vince sull'RDP; la seconda connessione è rifiutata con messaggio esplicito. | `⟨v1⟩ SPECIFICA.md` §3.4 |
+| I3 | La guardia dell'autenticazione parte da negato. Chi non passa dal validatore non riceve un pixel e non comanda nulla. | `⟨v1⟩ REFERENCE.md` R14 |
+| I4 | Il palco (cattura, controllo, monitor virtuale) appartiene alla sessione, non alla connessione. Sopravvive al distacco. | `⟨v1⟩ SPECIFICA.md` §3.3-ter |
+| I5 | Il volume appartiene alla sessione. Chi si collega trova il livello al massimo; un cursore lasciato in basso non sopravvive alla riconnessione. | `⟨v1⟩ REFERENCE.md` §7.5 |
 | I6 | Ciò che cambia quel che si VEDE sta dietro un interruttore spento finché l'utente non lo guarda. | `LEZIONI.md` §2.4 |
-| I7 | La protezione di un difetto noto sta nel programma, non in una riga di configurazione che si può perdere. | `LEZIONI.md` §2.5, `REFERENCE.md` R29 |
+| I7 | La protezione di un difetto noto sta nel programma, non in una riga di configurazione che si può perdere. | `LEZIONI.md` §2.5, `⟨v1⟩ REFERENCE.md` R29 |
 | I8 | Il metro è quel che l'utente vede, non il numero che esce dal banco. | `LEZIONI.md` §0.5, §7.3 |
 
 ---
@@ -314,7 +322,7 @@ Queste governano la forma del codice, indipendentemente da cosa misura.
 
 ### 4.1 Dipendere, non riscrivere
 Ogni componente che scriviamo è un componente da mantenere per sempre. Si usano i
-meccanismi di sistema esistenti. (`SPECIFICA.md` §2.)
+meccanismi di sistema esistenti. (`⟨v1⟩ SPECIFICA.md` §2.)
 
 ### 4.1-bis Si dipende dal compositore, non dal suo contorno
 *Posta dall'utente l'8 agosto 2026: «voglio evitare di smettere di correre dietro ai
@@ -350,22 +358,22 @@ contatore e un congedo.*
 ### 4.2 Degradare, non fallire
 Ogni dipendenza mancante ha un ripiego. Il servizio funziona comunque, con meno.
 Ma il ripiego si dichiara: un ripiego silenzioso produce due comportamenti sotto la
-stessa etichetta. (`SPECIFICA.md` §2, regola 3.9.)
+stessa etichetta. (`⟨v1⟩ SPECIFICA.md` §2, regola 3.9.)
 
 ### 4.3 Parlare direttamente al compositore
 Si evita il portale quando questo implica richieste di autorizzazione a video,
-inaccettabili per un servizio non presidiato. (`SPECIFICA.md` §2.)
+inaccettabili per un servizio non presidiato. (`⟨v1⟩ SPECIFICA.md` §2.)
 
 ### 4.4 Non aspettare mai dentro il ciclo asincrono
 Né esplicitamente, né in un distruttore che aspetta la fine di un thread. Un'attesa
 nascosta ferma tutte le connessioni affidate a quel thread, non solo la propria.
-(`LEZIONI.md` §5, `SPECIFICA.md` §5.7 regola 7.)
+(`LEZIONI.md` §5, `⟨v1⟩ SPECIFICA.md` §5.7 regola 7.)
 
 ### 4.5 L'ambiente di una sessione si compone da zero, una variabile per volta
 Chi avvia una sessione le regala tutto il proprio ambiente, comprese le variabili che
 non c'entrano. Una locale sbagliata ereditata da uno script può impedire a tutte le
 applicazioni di partire. Non passare il tuo ambiente: componilo. (`LEZIONI.md` §5,
-`SPECIFICA.md` §5.9-bis.)
+`⟨v1⟩ SPECIFICA.md` §5.9-bis.)
 
 ### 4.6 Il silenzio non è zero, e il verde non è vero
 Un banco verde mentre il difetto è vivo è la peggiore delle prove, perché dà fiducia.
@@ -406,7 +414,7 @@ successo, e non fa il suo lavoro**. `[M]` Il banco delle scene dichiarava *«⭐
 
 ## 5. L'obbligo di aggiornamento
 
-Quando una misura contraddice questo documento, o `SPECIFICA.md`, o `REFERENCE.md`,
+Quando una misura contraddice questo documento, o `⟨v1⟩ SPECIFICA.md`, o `⟨v1⟩ REFERENCE.md`,
 si aggiorna il documento **nello stesso momento**, con la data e la marca della fonte.
 
 Le marche:

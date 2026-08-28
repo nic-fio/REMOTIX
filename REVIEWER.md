@@ -5,7 +5,8 @@ contraddizioni nel punto in cui il progetto si è già fatto male — e non dove
 prodotto è già solido.
 
 ⛔ **Regola vincolante.** Non si approva una sola riga di codice senza aver prima
-letto questo documento e le sezioni di `SPECIFICA.md` che l'area tocca.
+letto questo documento e le sezioni di **`SPECIFICHE.md`** che l'area tocca — e
+**`RCP.md`** se la revisione tocca il filo.
 
 > ⚠ **Dove stanno i documenti citati** *(aggiunto il 9 agosto 2026)*. Anche questo documento è
 > arrivato da v1 **senza rinumerazione**, e cita i nomi vecchi: `SPECIFICA.md` e `REFERENCE.md`
@@ -74,15 +75,15 @@ già pagati. Le usi come lista di caccia. Ciascuna ha accanto dove si è già pr
 | # | Forma dell'errore | Come si presenta | Già pagata in |
 |---|-------------------|------------------|---------------|
 | E1 | Necessario scambiato per sufficiente | «Ha aperto un render node ⇒ rende in GPU», «consegna MemFd ⇒ è in software». Una condizione necessaria usata come se fosse sufficiente. | `LEZIONI.md` §1.11 |
-| E2 | Un componente che decide da sé | Il codificatore che ripiega in CPU senza dirlo, il driver che deduce il modo di controllo del bitrate. Due misure diverse sotto la stessa etichetta. | `LEZIONI.md` §1.8, `REFERENCE.md` R27, R31 |
-| E3 | Una funzione fa più di quel che dice il nome | `freerdp_set_error_info` registra ma non spedisce; `SendSamples` passa dal DSP anche quando non c'è niente da convertire. | `REFERENCE.md` R12, R24 |
-| E4 | Ordine assunto permutabile | Una sequenza che ammette un solo ordine, e ogni permuta è punita con un errore diverso che non dice «hai sbagliato l'ordine». | `SPECIFICA.md` §7.3, §5.8 regola 1 |
+| E2 | Un componente che decide da sé | Il codificatore che ripiega in CPU senza dirlo, il driver che deduce il modo di controllo del bitrate. Due misure diverse sotto la stessa etichetta. | `LEZIONI.md` §1.8, `⟨v1⟩ REFERENCE.md` R27, R31 |
+| E3 | Una funzione fa più di quel che dice il nome | `freerdp_set_error_info` registra ma non spedisce; `SendSamples` passa dal DSP anche quando non c'è niente da convertire. | `⟨v1⟩ REFERENCE.md` R12, R24 |
+| E4 | Ordine assunto permutabile | Una sequenza che ammette un solo ordine, e ogni permuta è punita con un errore diverso che non dice «hai sbagliato l'ordine». | `⟨v1⟩ SPECIFICA.md` §7.3, §5.8 regola 1 |
 | E5 | Un "fatto" che era una deduzione mai misurata | Una decisione scritta con accanto una ragione che nessuno ha verificato. | `LEZIONI.md` §2.3-quater |
-| E6 | Il mittente dedotto invece che chiesto | Tre diagnosi sbagliate su chi uccideva il server, perché il mittente non era mai stato chiesto al nucleo. | `LEZIONI.md` §1.6, `SPECIFICA.md` §7.4 |
-| E7 | Si verifica dal lato che invia, non da quello che riceve | Il registro dice «ho chiamato la funzione», non «il byte è arrivato». | `LEZIONI.md` §1.7, `REFERENCE.md` R12 |
-| E8 | Il silenzio scambiato per zero | «Vuoto» e «proibito» hanno lo stesso aspetto. Una lettura negata letta come «non c'è niente». | `LEZIONI.md` §1.9, `REFERENCE.md` R32 |
-| E9 | Un campione dell'avvio preso per il regime | La distribuzione del danno sui primi fotogrammi non è quella del regime. | `LEZIONI.md` §1.4, `REFERENCE.md` R29 |
-| E10 | Una prova verde sul client sbagliato | Una prova che non riproduce il difetto, o che collauda l'unico client che lo tollera. | `LEZIONI.md` §0.3, §2.1, `SPECIFICA.md` §5.9 |
+| E6 | Il mittente dedotto invece che chiesto | Tre diagnosi sbagliate su chi uccideva il server, perché il mittente non era mai stato chiesto al nucleo. | `LEZIONI.md` §1.6, `⟨v1⟩ SPECIFICA.md` §7.4 |
+| E7 | Si verifica dal lato che invia, non da quello che riceve | Il registro dice «ho chiamato la funzione», non «il byte è arrivato». | `LEZIONI.md` §1.7, `⟨v1⟩ REFERENCE.md` R12 |
+| E8 | Il silenzio scambiato per zero | «Vuoto» e «proibito» hanno lo stesso aspetto. Una lettura negata letta come «non c'è niente». | `LEZIONI.md` §1.9, `⟨v1⟩ REFERENCE.md` R32 |
+| E9 | Un campione dell'avvio preso per il regime | La distribuzione del danno sui primi fotogrammi non è quella del regime. | `LEZIONI.md` §1.4, `⟨v1⟩ REFERENCE.md` R29 |
+| E10 | Una prova verde sul client sbagliato | Una prova che non riproduce il difetto, o che collauda l'unico client che lo tollera. | `LEZIONI.md` §0.3, §2.1, `⟨v1⟩ SPECIFICA.md` §5.9 |
 | ⭐ **E12** | **Una deduzione al posto di un messaggio** | Un pezzo ricava da un **effetto collaterale** quel che un altro pezzo sa già e potrebbe dire. Regge finché gli eventi sono uno per volta e **cade appena se ne accavallano due**. ⛔ Il segnale che la smaschera: chiedersi *«e se ne fossero DUE in volo, a quale risponde questo?»* — se la risposta non è ovvia, la deduzione è un difetto che aspetta. | `LEZIONI.md` §7.5 (il padre che indovinava dai fotogrammi a quale `ADATTA_TELA` rispondeva) |
 | ⭐ **E13** | **Un'attesa dimensionata su un anello, pagata da tutti gli altri** | Un ciclo aspetta per il suo lavoro principale, e **tutto il resto che passa di lì** eredita quell'attesa come ritardo. Non compare in nessun conto, perché il ciclo è stato scritto guardando un anello solo. ⛔ La domanda che la smaschera si fa **prima**: *«che altro entra da qui, e quanto lo faccio aspettare?»* | `LEZIONI.md` §6.2-bis (250 ms di attesa del fotogramma = 136 ms di mediana su ogni clic) |
 | E11 | Ci si appoggia a un meccanismo che esiste in quattro versioni | Una dipendenza presa dal **contorno** del desktop — blocca-schermo, demone di inattività, gestore dell'energia, display manager — invece che dal compositore. Il sintomo che la smaschera: la cura è una **riga di configurazione**, diversa su ciascun desktop, e su almeno uno viene riscritta dal demone stesso al primo avvio. | `CODER.md` §4.1-bis, `DECISIONI.md` §4.3, `STUDI.md` §lxqt (`enableIdlenessWatcher`) |
@@ -117,7 +118,7 @@ sentimento. Un rilievo senza «come si dimostra» è un'ipotesi, non un difetto.
 
 ```
 DOVE:        file e riga, o funzione
-COSA CONTRADDICE: una lezione (LEZIONI.md §x), una regola (REFERENCE.md Rx),
+COSA CONTRADDICE: una lezione (LEZIONI.md §x), una regola (⟨v1⟩ REFERENCE.md Rx),
                   un invariante (I1..I8), o un altro pezzo di codice
 COME SI DIMOSTRA: il caso concreto che fa emergere la contraddizione — un input,
                   non un'ipotesi
@@ -147,7 +148,7 @@ Il destino di ciascuna marca:
 - **Non supplisci.** Se il codice omette un'informazione e un altro pezzo la supplisce
   in silenzio, la segnali comunque. È la forma che ha prodotto i difetti peggiori —
   il client indulgente che nasconde l'omissione. L'indulgenza che nasconde è
-  esattamente ciò che devi togliere. (`LEZIONI.md` §2.1, `SPECIFICA.md` §5.4.)
+  esattamente ciò che devi togliere. (`LEZIONI.md` §2.1, `⟨v1⟩ SPECIFICA.md` §5.4.)
 
 ---
 
