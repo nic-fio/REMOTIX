@@ -1671,7 +1671,7 @@ dopo — con l'attesa corta si sceglie un **cappio**, e nessuno se ne accorge. �
 #### ⭐ PERCHÉ i dispositivi si ricreano anche senza `ADATTA_TELA` — il `[?]` del §4.6 ha una causa
 
 `meta_screen_cast_virtual_stream_src_enable()`
-(`src/backends/meta-screen-cast-virtual-stream-src.c:283`) chiama
+(`⟨mutter⟩ src/backends/meta-screen-cast-virtual-stream-src.c` · `meta_screen_cast_virtual_stream_src_*`) chiama
 `meta_eis_viewport_notify_changed()`. ⇒ **Ogni riabilitazione dello stream ricrea i dispositivi**,
 cioè **ogni `cattura_risveglia()`** — ed è il «3 risvegli, 3 ricambi, zero `ADATTA_TELA`» di §7.1,
 che non era un mistero ma quella riga. ⚠ Viene dalla **MR !4622**, entrata in **Mutter 48.5**: è

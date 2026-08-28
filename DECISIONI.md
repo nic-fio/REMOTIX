@@ -4623,7 +4623,7 @@ fa con un banco davanti, non su carta.
 >
 > ### ⛔ E leggendo oltre i simboli: `lsquic` parla la bozza **02**, i browser di oggi no
 >
-> *`[R]` `src/liblsquic/lsquic_hcso_writer.c`, dove il server scrive le impostazioni sullo stream di
+> *`[R]` `⟨lsquic⟩ src/liblsquic/lsquic_hcso_writer.c`, dove il server scrive le impostazioni sullo stream di
 > controllo HTTP/3.* Ecco **tutte** quelle che emette:
 >
 > | Impostazione | Valore | |

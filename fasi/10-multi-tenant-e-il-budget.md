@@ -3323,7 +3323,7 @@ drwx------  prova2 prova2  /tmp/mozilla                   ← creata il 23 agost
 ```
 
 ⇒ `/etc/skel/.cache` è un **collegamento a `/tmp`** — ⭐ **per scelta dell'utente**, vedi il riquadro
-in testa alla sezione — e `src/provisiona.sh:64` crea gli utenti con `useradd -m`, che **copia lo
+in testa alla sezione — e `src/provisiona.sh` · `useradd -m` crea gli utenti con `useradd -m`, che **copia lo
 scheletro** ⇒ ⛔ **ogni utente che facciamo noi eredita `~/.cache -> /tmp`**. Firefox tiene il
 profilo *locale* sotto `$HOME/.cache/mozilla`, cioè sotto **`/tmp/mozilla`**.
 

@@ -5,6 +5,17 @@ sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quell
 riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nessuna misura, nessuna
 marca e nessuna data sono state toccate.*
 
+> ⚠ **COME SI LEGGONO I PERCORSI QUI DENTRO** *(convenzione aggiunta il 28 agosto 2026)*
+>
+> Questo documento cita file **di altri**, e per anni li ha scritti con la stessa notazione dei
+> nostri — `grd-session.c`, `include/lsquic.h`, perfino `src/backends/...` col **nostro** prefisso
+> `src/`. ⛔ Chi legge non poteva distinguere un file che puo' aprire da uno che non c'e'.
+>
+> ⇒ Da qui in avanti: un percorso **marcato ⟨nome⟩** (`⟨mutter⟩`, `⟨gnome⟩`, `⟨lsquic⟩`) sta
+> nell'albero di **quel progetto**, che si riclona con `git clone` e **non e' nel deposito**
+> (`reference-gnome/`, `reference-kde/`… sono in `.gitignore`: pesano 682 MB e sono versionate a
+> monte). Un percorso **senza marca** e' nostro e si apre qui.
+
 > ## ⛔ Che cos'è questo documento, e che cosa NON è
 >
 > **Non è documentazione di REMOTIX.** È lo studio del codice **di altri** — compositori, browser,
@@ -2753,7 +2764,7 @@ OK  l'eco e' arrivata ed e' stata riconosciuta
 guasti: 0
 ```
 
-Sta in **`src/appunti_wlr.c`**, e il nome dice `wlr` non `kwin` di proposito: il protocollo è di
+Sta in **`fondamenta/remotix-c/src/appunti_wlr.c`**, e il nome dice `wlr` non `kwin` di proposito: il protocollo è di
 wlroots, quindi il file serve già anche i compositori di XFCE e LXQt (§3.8 di `SPECIFICA.md`). La
 porta `appunti.h` è rimasta una, con `appunti.c` ridotto a smistamento e la strada di Mutter spostata
 in `appunti_mutter.c` — la stessa forma di `compositore.c`.
