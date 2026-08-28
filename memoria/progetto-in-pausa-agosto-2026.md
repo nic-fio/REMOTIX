@@ -1,32 +1,42 @@
 ---
 name: progetto-in-pausa-agosto-2026
-description: "Dal 27 agosto 2026 il progetto è fermo per un intervento chirurgico di Nic; si riprende da KDE, e la prima mossa è far girare la rete"
-metadata: 
-  node_type: memory
+description: in pausa dal 27 ago 2026 (intervento); il 28 il progetto e' passato su GitHub e la documentazione e' stata bonificata. Si riprende da KDE, col server che torna dall'assistenza
+metadata:
   type: project
-  originSessionId: 5d851c2d-522d-4f85-b6a7-a7fa000732b0
-  modified: 2026-08-27T19:48:28.207Z
 ---
 
-Il 27 agosto 2026 Nic ha fermato REMOTIX per affrontare un **intervento chirurgico**. La pausa
-prevista è di **qualche settimana**. Macchina di prova e tablet sono stati spenti, il deposito è
-pulito e tutto è committato sul ramo `fase-10-cure`.
+**REMOTIX e' in pausa dal 27 agosto 2026** — Nic ha un intervento chirurgico. Si
+riprende fra qualche settimana. ⛔ Non c'e' niente lasciato a meta': la fase 11 e'
+chiusa, e il punto d'ingresso e' il riquadro ⏸ in testa a `README.md`.
 
-**Al ritorno si riprende dalla fase 12 (KDE)** — non da altro: la fase 11 è chiusa.
+## Che cosa e' successo il 28 agosto, a progetto fermo
 
-⭐ **La prima mossa non è scrivere codice: è far girare la rete anti-regressione**
-(`banchi/11-scatole/11-gancio.sh gira --famiglia tutto`). ⛔ Se non dice **58 verdetti verdi, 3
-rossi, 49 guasti innestati su 49 visti**, qualcosa è cambiato sotto e va guardato **prima** di
-toccare KDE. I tre rossi attesi sono `C1` su kde/xfce/lxqt: non sono guasti, sono il mandato della
-fase 12.
+⭐ Due cose, e Nic le ha chiamate *«un compito non piu' rimandabile»*:
 
-⚠ La macchina di prova ha la radice **in RAM** ⇒ dopo lo spegnimento va rifatta da capo: chiave ssh,
-`src/provisiona.sh`, poi le quattro scatole. Vedi [[riavvio-perde-la-chiave-ssh]] e
-[[costruire-serve-il-contenitore]].
+1. **Il progetto e' uscito dal tablet.** Vive su `github.com/nic-fio/REMOTIX`,
+   privato. Il tablet e' stato svuotato: v1 cancellato, credenziali cancellate,
+   41 → 33 GB. Vedi [[deposito-su-github]] e [[credenziali-da-rigenerare]].
 
-⛔ **Non ricostruire il contesto dalla memoria**: il riquadro in testa a `README.md` è scritto apposta
-per chi torna e non ricorda nulla, e contiene i numeri, l'ordine delle operazioni e le tre cose che
-la fase 12 eredita già misurate. Si legge quello per primo.
+2. **La documentazione e' stata bonificata.** 272 coordinate di riga marce, 78
+   rimandi ciechi, 36 link rotti, 2 documenti vincolanti che mandavano alla
+   specifica di v1, 4 affermazioni che il codice aveva gia' smentito, e una
+   sezione (`DECISIONI.md` §4.6-septies) citata da cinque documenti e **mai
+   scritta**. ⇒ Tutto chiuso, e ⭐ **la rete adesso ha `C16`**, che da' rosso da
+   sola se una carta ricomincia a mentire — anche su un commit di soli documenti,
+   che prima non faceva scattare niente.
 
-⇒ Vale ancora tutto di [[la-prova-la-fa-lutente]] e [[le-prove-le-eseguo-io]]: al ritorno il giudizio
-resta suo, ma i banchi li guido io.
+## Quando il server torna dall'assistenza, nell'ordine
+
+1. Rifare le credenziali — [[credenziali-da-rigenerare]]. ⛔ Finche' non ci sono,
+   i 46 richiami di `sshpw.py` non raggiungono la macchina: **e' voluto, non e' un
+   guasto**.
+2. Nello stesso giro, togliere la parola d'ordine `sudo` in chiaro dai 9 banchi —
+   e' l'unica cosa che tiene il deposito privato per forza.
+3. ⭐ Il primo giro della rete anti-regressione vale anche come **collaudo del
+   rebranding e della bonifica**: nessuna delle due e' stata riprovata sul ferro.
+4. Poi si riprende il lavoro vero: **la fase 12, KDE** — i tre rossi di `C1` su
+   kde/xfce/lxqt non sono un difetto, sono il mandato.
+
+⚠ Resta aperto, e non e' urgente: 23 banchi della fase 8 non sono mai stati
+committati ⇒ quelle misure non sono riproducibili. ⭐ Decisione di Nic: *«le
+misure tienile come stanno»*. Sta scritto in `banchi/11-scatole/11-c16-eccezioni.txt`.
