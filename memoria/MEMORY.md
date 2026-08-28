@@ -27,3 +27,4 @@
 - [Il banco si prepara prima](il-banco-si-prepara-prima.md) — la scena si GUARDA prima di chiamarlo, e un contatore non è guardare
 - [Il progetto è in pausa](progetto-in-pausa-agosto-2026.md) — dal 27 ago 2026, intervento; si riprende da KDE, e prima si fa girare la rete
 - [Il progetto si chiama REMOTIX](deposito-su-github.md) — ~/Documenti/REMOTIX e github.com/nic-fio/REMOTIX, privato; e v1 sta dentro, vivo
+- [Le credenziali sono state cancellate](credenziali-da-rigenerare.md) — si rifanno col server; e i 46 richiami di sshpw.py finche' non ci sono NON raggiungono la macchina

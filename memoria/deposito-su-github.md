@@ -35,7 +35,7 @@ anche come collaudo. La marca d'avvio e' cambiata su tutt'e due i lati insieme �
 controllano. Vedi [[progetto-in-pausa-agosto-2026]].
 
 ⚠ Fuori dal deposito e NON su GitHub: `~/SERVER.ssh` e `~/.ssh/id_ed25519`,
-preparate in `~/DA-SALVARE/` prima della pulizia del tablet.
+CANCELLATE il 28 ago 2026: vedi [[credenziali-da-rigenerare]].
 
 ⛔⛔ **IL GANCIO PORTA UN PERCORSO ASSOLUTO, e sta FUORI dal deposito.**
 `.git/hooks/pre-push` non e' versionato e contiene il percorso scritto per esteso:
