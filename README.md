@@ -139,7 +139,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > Curato in `src/provisiona.sh`, ⭐ **senza toccare niente del sistema**: una `.cache` propria
 > soltanto agli utenti che creiamo noi.
 >
-> ⛔⛔ **E la fase 9 l'aveva chiuso con un ✅ sbagliato** (§20.1-ter, ora **refutata**): il controllo
+> ⛔⛔ **E la fase 9 l'aveva chiuso con un ✅ sbagliato** (`fasi/09-la-qualita-e-la-degradazione.md` §20.1-ter, ora **refutata**): il controllo
 > che *«chiudeva la questione»* girava da un utente **nella stessa condizione**.
 > ⇒ `LEZIONI.md` **§1.38** — *un controllo che condivide il fattore che deve escludere non controlla
 > niente*.
@@ -201,7 +201,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 >
 > ⇒ **Sopra una certa perdita la scala di degradazione non ha più niente da offrire**, e l'unica
-> risposta onesta è **dichiarare la linea morta** (§3.1-quater) — la decisione che l'utente ha preso
+> risposta onesta è **dichiarare la linea morta** (`DECISIONI.md` §3.1-quater) — la decisione che l'utente ha preso
 > **prima** di avere quel numero.
 >
 > ## ⭐ LE CINQUE CURE SONO ACCESE — e la linea sana non paga niente
@@ -242,7 +242,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ## ⏳ CHE COSA RESTA APERTO
 >
 > ⛔ ~~**Firefox non parte sulla macchina di prova** — `[M]` anche fuori da REMOTIX, headless e
-> senza Wayland: **non è nostro**, ma blocca le prove col browser (§20.1-ter)~~
+> senza Wayland: **non è nostro**, ma blocca le prove col browser (`fasi/09-la-qualita-e-la-degradazione.md` §20.1-ter)~~
 > ⭐⭐ **CHIUSA il 25 agosto 2026, e la causa era un'altra**: su questa macchina `~/.cache` è un
 > **collegamento a `/tmp`** — ⭐ **scelta voluta dell'utente**, `DECISIONI.md` §4.6-undecies — e il
 > **primo** utente che apre il browser si prende `/tmp/mozilla` a modo `0700` ⇒ **per tutti gli
@@ -263,7 +263,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⭐ E questa fase le ha lasciato due cose: la **scala di degradazione**, che è il modo di far stare
 > più gente sulla stessa macchina (*«sì, più piccolo»* invece di *«no»*), e ⛔ il **budget di rete**
-> mai misurato — dieci sessioni × 30 Mbit/s sono **300 Mbit/s sul filo del server** (§3.1-bis
+> mai misurato — dieci sessioni × 30 Mbit/s sono **300 Mbit/s sul filo del server** (`DECISIONI.md` §3.1-bis
 > punto 2).
 ---
 
@@ -503,7 +503,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > #### ⭐ E un'accusa al prodotto che invece era davvero del banco
 >
-> **B8** scriveva *«la pagina del ban non si carica»* — cioè **proprio il silenzio che §4.4-bis
+> **B8** scriveva *«la pagina del ban non si carica»* — cioè **proprio il silenzio che `RCP.md` §4.4-bis
 > vieta** — su un server che la pagina la serve: `leggi_pagina()` parlava **TLS a un innesto che
 > risponde in chiaro**, e la causa era **la cura del giorno prima**, scritta per il prodotto.
 >
@@ -644,7 +644,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > |---|---|
 > | ⭐ **il numero della fase** | la tela concordata all'attacco: `[M]` **1264×800** = la finestra, scala **1,000**, `pixelated` |
 > | ⭐ **login → desktop** | `[M]` **4,4 s → 311 ms** — e la cura non è il ridimensionamento: è che **riavviare il flusso consegna un buffer** quando una chiave è dovuta e la scena è ferma |
-> | ⭐⭐ **clic → fotogramma spedito** | `[M]` **136 ms → 41 ms** (peggiore 502 → 47), su scena FERMA. ⚠ Non è il numero di §1-bis (quello è su scena in movimento, 139 ms, e resta della fase 8): è l'anello che nessuno aveva misurato |
+> | ⭐⭐ **clic → fotogramma spedito** | `[M]` **136 ms → 41 ms** (peggiore 502 → 47), su scena FERMA. ⚠ Non è il numero di `CODER.md` §1-bis (quello è su scena in movimento, 139 ms, e resta della fase 8): è l'anello che nessuno aveva misurato |
 > | ⭐ **il ridimensionamento a caldo** | `[M]` **6 ms** dalla risposta del palco alla chiave spedita. ⚠ **E dal 17 agosto 2026 non è più una funzione dell'utente**: la tela si adatta all'attacco e al **riattacco** — che è dove questi 6 ms si pagano — e mai a sessione viva (`DECISIONI.md` §5.1-bis) |
 > | ⛔ **e il blocco della costruzione** | sciolto **senza chiedere all'utente**: `src/Contenitore` (podman da utente, sul portatile) e l'errore di percorso in `enter.sh` |
 >
@@ -821,7 +821,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ⛔ **E il primo tentativo di giro sano è uscito ROSSO con tutt'e quattro le gambe CONFORMI**: il
 > registro del server aveva un buco di **37.120 byte NUL** — `svuota-registro` chiamato con il server
 > vivo — e `grep`, diventato cieco, leggeva «NON LETTO» dove c'era il nostro indirizzo, mandando lo
-> sblocco di §4.4-bis **sul server stesso**. Tre cure, tutte rimisurate; la lezione sta in
+> sblocco di `RCP.md` §4.4-bis **sul server stesso**. Tre cure, tutte rimisurate; la lezione sta in
 > `LEZIONI.md` §1.9 punto 9.
 >
 > **Come si rifà**, se serve rieseguirla:
@@ -853,7 +853,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > `[M]` **11 agosto 2026** (`wc -l`, codice fermo alle 00:36): **22 file**, **9.647 righe**, di cui
 > **5.248 di codice**. ⭐ **La stretta di mano di RCP/1 arriva fino a `SESSIONE` con un browser
-> vero** — con i due certificati di §4.1-bis, il ban di §4.4-bis su file e il suo comando di
+> vero** — con i due certificati di §4.1-bis, il ban di `RCP.md` §4.4-bis su file e il suo comando di
 > sblocco. ⛔ Niente video, niente audio, niente input: quelle sono le fasi da 2 in poi.
 > ⚠ *Questa riga diceva* «**un browser vero apre `https://192.168.0.2:7447`**, l'utente digita nome
 > e parola d'ordine … **la pagina servita dal server stesso**», *e il registro di quel giro non ne
@@ -970,7 +970,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | | |
 > |---|---|
-> | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` mediana **2636 ms** su 42 tentativi respinti, dove §4.4-bis vuole ~1000. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
+> | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` mediana **2636 ms** su 42 tentativi respinti, dove `RCP.md` §4.4-bis vuole ~1000. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
 > | ⚠ **il giro pieno di B8 si pianta al nono blocco su dieci** | resta fermo su qualcosa che nessuno gli dà. Il giro corto (`… 01-b8-lancia.sh 2`) arriva in fondo. ⛔ Va lanciato **staccato** dalla sessione di chi lo comanda, non attraverso di essa |
 > | ⭐ **B6 ha chiuso R3.27, e con DUE risposte** | **la prima**: il cronometro parte dall'**apertura del canale di controllo**, non dalla fine del TLS ⇒ **`RCP.md` §4.6 riga 1 è cambiata di una parola**, l'11 agosto 2026. ⛔ **La seconda, e dice che curare la parola non basta**: chi apre una sessione WebTransport e **non apre mai il canale** non ha addosso **nessun tetto** e resta lì — §4.6 non aveva una riga per quello stato, adesso ce l'ha ed è ❓ (`DECISIONI.md` §7.17) |
 | ⚠ **i tre tetti di B6 non hanno un registro** | scattano a **5,0 · 60,1 · 10,0 s** — ⛔ ma **non esiste nessun `.jsonl` di B6**, la scena di quel giro non è dichiarata da nessuna parte, e questi tre numeri **non sono riverificabili**. ⚠ *Stavano qui senza marca, senza data, senza scena e senza dispositivo, mentre `[M]` è definito più sotto come «misurato da noi, sul ferro, **con la data**» — rilievo **R12C.11**. Si rifanno col registro, oppure restano tre numeri di cui si sa solo l'ordine di grandezza.* |

@@ -698,7 +698,7 @@ qualcun altro.
 > | ⭐ **il numero della fase** | l'anello **input → vetro**: `[M]` **139,40 ms** (n=326) e **141,60** (n=322), due giri indipendenti che concordano entro **2,2 ms** |
 > | ⛔ **il tetto** | **SFORA** — 139 contro 50, e **160-193 ms** sul vetro coi due pezzi ciechi |
 > | ⛔⛔ **e nessun tratto domina** | sei tratti da ~25 ms ⇒ **nessuna cura singola porta 140 a 50**: è lavoro della **fase 8** |
-> | ⭐ **il login → desktop** | **5,11 s → 1,04-1,13 s**, e di quel secondo **1,00 è il fisso di §4.4-bis** |
+> | ⭐ **il login → desktop** | **5,11 s → 1,04-1,13 s**, e di quel secondo **1,00 è il fisso di `RCP.md` §4.4-bis** |
 > | ⭐⭐ **e il ritardo non cresce più** | prima **+108 ms al secondo** (⛔ 4,6 s di ritardo dopo 43 s, **con tutti i contatori verdi**); adesso **−2 ms/s** |
 >
 > ⭐⭐ **E il giudizio dell'utente ha trovato SETTE difetti che nessuno dei dieci banchi vedeva** —
@@ -1197,7 +1197,7 @@ porta.
 > *«30 mbps sono una connessione da metà anni 90»* — ma **la rete che perde, riordina e sfarfalla**.
 > Ed era la grandezza giusta: sulla banda il prodotto non cedeva, su un filo sporco sì.
 >
-> **La scala che chiude la fase, e viene dai suoi occhi** (§19.1, §19.6):
+> **La scala che chiude la fase, e viene dai suoi occhi** (`fasi/09-la-qualita-e-la-degradazione.md` §19.1, `fasi/09-la-qualita-e-la-degradazione.md` §19.6):
 >
 > | perdita reale | senza cure | con cure |
 > |---|---|---|
@@ -1206,7 +1206,7 @@ porta.
 > | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 >
 > ⛔ **Sopra una certa perdita la scala di degradazione non ha più niente da offrire**, e l'unica
-> risposta onesta è dichiarare la linea morta (§3.1-quater) — che è la decisione che lui ha preso
+> risposta onesta è dichiarare la linea morta (`DECISIONI.md` §3.1-quater) — che è la decisione che lui ha preso
 > **prima** di avere quel numero.
 >
 > **Le cinque cure sono ACCESE** (§3.1-septies), ognuna con una strada sola per spegnerla, e ⭐ **la
@@ -1250,16 +1250,16 @@ porta.
 > **jitter** (`[?]` QUIC può scambiarlo per perdita e stringere la finestra **senza motivo**: se
 > succede il calo è **nostro**, non della rete).
 >
-> ⚠ **§3.1-bis non è annullata**: il pavimento dichiarato resta — ⛔ **ed è passato a 30 Mbit/s la
+> ⚠ **`DECISIONI.md` §3.1-bis non è annullata**: il pavimento dichiarato resta — ⛔ **ed è passato a 30 Mbit/s la
 > notte stessa** (§3.1-sexies: *«ho già detto che il pavimento, per quanto riguarda la banda, è a
 > 30 mbps»*). Cambia il suo mestiere — da **domanda** della fase a **premessa** su cui si misurano
 > le altre tre.
 >
-> ⛔⭐⭐ **E la fase ha prodotto una decisione nuova, §3.1-quater**: una linea che perde **a raffiche**
+> ⛔⭐⭐ **E la fase ha prodotto una decisione nuova, `DECISIONI.md` §3.1-quater**: una linea che perde **a raffiche**
 > si dichiara **morta** — 10 s senza pacchetti, o una perdita copiosa dentro 1-2 s — e ✅ **l'utente
 > rientra a mano**. Nasce dalla scelta fra due mali misurati: `[M]` senza cure lo schermo si congela
 > **14,26 s**, con le cure si muove con **4,5 s di ritardo**. ⇒ Nessuno dei due va servito.
-> ⛔ Prerequisito: **§3.1-quinquies**, il *fantasma* — rientrando, l'utente trova il proprio posto
+> ⛔ Prerequisito: **`DECISIONI.md` §3.1-quinquies**, il *fantasma* — rientrando, l'utente trova il proprio posto
 > occupato da sé stesso per 30,5 s, e con un messaggio che per lui è **falso**.
 >
 > ⛔ E il `netem` su `lo` diventa **risorsa unica con lucchetto** (`banchi/09-lucchetto.py`): la
@@ -1388,7 +1388,7 @@ questa fase.
 > | ⭐⭐ **la profondità prima della larghezza** | se il multi-tenant tocca la sessione o il budget, la modifica va riverificata **su quattro desktop invece che su uno**. È «misurarle due volte», moltiplicato per quattro |
 > | ⛔ **e il budget è un budget di GPU, e la GPU è UNA** | il numero si misura su `renderD128` — la stessa iGPU che compone **ogni** desktop. È una proprietà **della macchina**, non del desktop: misurata una volta, le fasi 11 e 12 la ereditano. Misurata dopo, non si sa più quale numero appartenga a che cosa |
 > | ⭐ **e la dipendenza inversa non esiste** | niente qui dentro ha bisogno di KDE, XFCE o LXQt |
-> | ⚠ **e la macchina di prova è GIÀ multi-utente** | `nicfio` locale + `prova` remoto che devono convivere: §4.6-quater lo chiama *«lo stato normale della macchina, non uno scenario da inventare»* |
+> | ⚠ **e la macchina di prova è GIÀ multi-utente** | `nicfio` locale + `prova` remoto che devono convivere: `DECISIONI.md` §4.6-quater lo chiama *«lo stato normale della macchina, non uno scenario da inventare»* |
 >
 > ⚠ **E quel che questa fase NON evita, detto per intero**: l'architettura c'è già in buona parte —
 > `figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non si sta scansando
@@ -1396,7 +1396,7 @@ questa fase.
 >
 > ⛔ **E la precedenza che resta, e va rispettata**: questa fase sta **dopo la 8**. La copia zero
 > cambia **quanto costa una sessione** in memoria e banda di GPU — e il budget misurato prima della
-> copia zero è un budget da rifare. È §4.6-quater alla lettera, e non è cambiato niente.
+> copia zero è un budget da rifare. È `DECISIONI.md` §4.6-quater alla lettera, e non è cambiato niente.
 >
 > ⚠ **Le parole dell'utente del 15 agosto dicevano «fase 12»** (`DECISIONI.md` §4.6-quater,
 > `FASI.md` §05-la-sessione), e **restano scritte così** dove sono citate: era il numero di allora.
@@ -1834,7 +1834,7 @@ millisecondi già perfetti** · e il **cronometro del prodotto che misurava il b
 9. `[?]` **su DeX lo schermo risponde col monitor esterno o col telefono?** Serve il telefono dell'utente;
 10. **Firefox su Windows**, mai provato;
 11. ⚠ **il tetto dei 50 ms non è verificato**, e non perché manchi poco: **55,20 sta su un confine
-    diverso**. I due numeri **non si confrontano** — §1.28 applicata a noi stessi.
+    diverso**. I due numeri **non si confrontano** — `LEZIONI.md` §1.28 applicata a noi stessi.
 
 ## 🔸 Le decisioni che aspettano l'utente
 
@@ -1851,14 +1851,14 @@ millisecondi già perfetti** · e il **cronometro del prodotto che misurava il b
 
 ⛔ **Quattro server di prova degli agenti sono rimasti accesi** sulla macchina (porte **7746, 7752,
 7765-67, 7775**), e girano da `root`. Non danno fastidio a riposo, ⚠ **ma falserebbero la prossima
-misura** — che è precisamente l'errore di §1.26. **Vanno spenti prima di misurare.**
+misura** — che è precisamente l'errore di `LEZIONI.md` §1.26. **Vanno spenti prima di misurare.**
 
 ⭐ Vivi e voluti: **7730** (dell'utente) e **7790** (il prodotto con la fase 8 dentro, che l'utente
 ha giudicato).
 
 > ✅ **CHIUSA il 23 agosto 2026**: dopo il riavvio e la riprovisione la macchina aveva **una sola
 > porta 7xxx aperta, la 7900** — verificato con `ss -tuln` **prima** di misurare.
-> ⚠ E la regola che ne è uscita, pagata due volte nella giornata (`fasi/09` §3.17): fra due banchi
+> ⚠ E la regola che ne è uscita, pagata due volte nella giornata (`fasi/09` `fasi/09-la-qualita-e-la-degradazione.md` §3.17): fra due banchi
 > sullo stesso utente **si verifica che il posto sia libero** — nessun cliente vivo **e** nessun
 > palco — ⛔ **non si conta il tempo**. Un palco orfano non dà un rosso: dà **un numero plausibile**,
 > e quel giorno stava per far accusare tre cure innocenti.
@@ -1878,4 +1878,4 @@ python3 banchi/04-b30-anello-input.py --certifica  # 57 su 57, 18 guasti su 18
 ```
 
 ⚠ **Due trappole che hanno morso oggi**: il posto della sessione è **uno** e quello di prima resta
-attaccato una ventina di secondi · e ⛔ **non si misura in due sulla stessa macchina** (§1.26).
+attaccato una ventina di secondi · e ⛔ **non si misura in due sulla stessa macchina** (`LEZIONI.md` §1.26).
