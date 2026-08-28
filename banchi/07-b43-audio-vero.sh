@@ -536,7 +536,7 @@ FINE
 		#    sentisse, sarebbe verde senza che la sessione suoni.
 		# shellcheck disable=SC2086
 		systemd-run \
-			--unit="$UNITA" --collect --description="REMOTIX_V2, banco 07-b43 (audio VERO)" \
+			--unit="$UNITA" --collect --description="REMOTIX, banco 07-b43 (audio VERO)" \
 			--working-directory="$ALBERO/src" \
 			--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 			--property=StandardOutput=append:$LAV/registro.log \

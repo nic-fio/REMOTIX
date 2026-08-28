@@ -1,6 +1,6 @@
 ---
 name: nic-regista-non-programmatore
-description: "Nic dirige REMOTIX_V2 ma non è programmatore — decide su spiegazioni in italiano piano, una domanda per volta"
+description: "Nic dirige REMOTIX ma non è programmatore — decide su spiegazioni in italiano piano, una domanda per volta"
 metadata: 
   node_type: memory
   type: user
@@ -48,4 +48,4 @@ con la macchina da scrivere e i martelletti, ha capito subito e ha isolato da s�
 - ⚠ e quando un dubbio non cambia niente di visibile per chi usa il programma, **non è suo**: si
   prende come 🔸 e gli si restituisce il tempo. Vedi [[via-libera-permanente]].
 
-Vedi [[remotix-v2-convenzioni]].
+Vedi [[remotix-convenzioni]].

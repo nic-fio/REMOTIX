@@ -171,7 +171,7 @@ def _carica(nome, percorso):
 #   trovato QUI» sono due fatti diversi, e il secondo e' quello che serve a chi
 #   legge il rapporto.
 ALTRI_BANCHI = os.environ.get("ALTRI_BANCHI",
-                              "/home/nicfio/Documenti/REMOTIX_V2/banchi")
+                              "/home/nicfio/Documenti/REMOTIX/banchi")
 
 
 def _trova(nome):

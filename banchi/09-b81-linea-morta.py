@@ -206,7 +206,7 @@ os.environ.setdefault("PORTE_SONDA", "7969,7968,7967,7966,7965")
 os.environ.setdefault("SHM", "/09nr6")
 QUI = os.path.dirname(os.path.abspath(__file__))
 FUORI = os.environ.setdefault(
-    "FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+    "FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
              "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/09-b81")
 UNITA = os.environ.get("UNITA", "remotix-%d" % PORTA)
 

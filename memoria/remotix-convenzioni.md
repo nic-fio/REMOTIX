@@ -1,6 +1,6 @@
 ---
-name: remotix-v2-convenzioni
-description: "In REMOTIX_V2 si scrive in italiano, ogni affermazione porta una marca, e le decisioni stanno in DECISIONI.md una sola volta"
+name: remotix-convenzioni
+description: "In REMOTIX si scrive in italiano, ogni affermazione porta una marca, e le decisioni stanno in DECISIONI.md una sola volta"
 metadata: 
   node_type: memory
   type: project

@@ -171,7 +171,7 @@ PAROLA_UTENTE = os.environ.get("PAROLA_UTENTE", "nr9-audio-2026")
 MACCHINA = os.environ.get("MACCHINA", "nicfio@192.168.0.2")
 IND = os.environ.get("IND", "192.168.0.2")
 FUORI = os.environ.get("FUORI", os.path.join(
-    "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+    "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
     "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad", "b84"))
 
 # ⛔ Le porte che NON sono mie.  Si contano, non si toccano.

@@ -664,7 +664,7 @@ def certifica():
         # ⛔ §1.44: solo righe d'avvio.  «Tutte» direbbe rosso; «quelle che ce
         #    l'hanno» direbbe verde.  ⭐ La risposta giusta e' «non lo so».
         ("⛔ solo righe d'AVVIO: nessuna obbligata ⇒ «non lo so» (§1.44)",
-         "15:20:51.193 avvio   REMOTIX_V2 — fase 1, il filo nudo\n"
+         "15:20:51.193 avvio   REMOTIX — fase 1, il filo nudo\n"
          "15:20:51.195 cert    ⭐ due certificati, due impronte\n"
          "15:20:51.196 quic    ascolto UDP su 0.0.0.0:8514\n", 2, 3, None),
         # ⛔⛔ IL CASO CHE SPIEGA PERCHE' LA FINESTRA E' LA FETTA, e va letto.
@@ -677,7 +677,7 @@ def certifica():
         #       DOPO il segno, e quella riga non ci entra mai.  Con `--da-file`
         #       ci entra, ed e' il prezzo dichiarato di quella modalita'.
         ("⛔ con --da-file l'AVVIO entra in finestra e da' rosso: e' il prezzo",
-         "15:20:51.193 avvio   REMOTIX_V2 — fase 1, il filo nudo\n"
+         "15:20:51.193 avvio   REMOTIX — fase 1, il filo nudo\n"
          "15:20:51.194 figlio  ⭐ tabella dei figli accesa: fino a 10\n" + sano,
          2, 1, lambda c: len(c.senza) == 1 and c.esenti_area == 1),
         # ⛔ La riga di riepilogo del guardiano: esente, o sarebbe un rosso al

@@ -232,7 +232,7 @@ impronta_sorgenti()
 	IMP_SORG=$( (cd "$SORG" && printf '%s\n' "$elenco" | xargs sha256sum) | sha256sum | cut -d' ' -f1 )
 }
 
-MARCHE=("REMOTIX_V2 — fase 1" "Cross-Origin-Embedder-Policy" \
+MARCHE=("REMOTIX — fase 1" "Cross-Origin-Embedder-Policy" \
         "Cross-Origin-Opener-Policy" "/rcp/1" "/impronta" \
         "NON-BANNATO" "PING del trasporto" "/etc/pam.d/remotix")
 # ⭐ Le ultime tre sono le cure della notte del 10 agosto: il binario delle

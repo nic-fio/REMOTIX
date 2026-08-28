@@ -49,4 +49,4 @@ sospensione senza che nessuno lo colleghi al risultato.
 `XDG_SESSION_TYPE=wayland`). ⛔ **E poi si uccide il figlio del prodotto rimasto senza palco**, o
 l'invariante I2 continuerà a consegnare quello rotto a ogni login.
 
-Il dettaglio sta in `fasi/rapporti/F5-desktop-vero.md`; vedi anche [[remotix-v2-convenzioni]].
+Il dettaglio sta in `fasi/rapporti/F5-desktop-vero.md`; vedi anche [[remotix-convenzioni]].

@@ -971,7 +971,7 @@ def fabbrica(utenti, secondi=40, t0=12 * 3600000, avvio=True, muta=None,
 
     ms = t0
     if avvio:
-        agg(ms, "avvio", "REMOTIX_V2 — fase 1, il filo nudo", None)
+        agg(ms, "avvio", "REMOTIX — fase 1, il filo nudo", None)
         for u in vivi:
             ms += 120
             agg(ms, "figlio", "⭐ figlio generato per «%s»: pid %d, uid %d, "

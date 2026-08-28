@@ -183,7 +183,7 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	/* La marca: «questo l'abbiamo scritto noi».  Vedi certificati.h. */
 	f = fopen(marca, "w");
 	if (f) {
-		fprintf(f, "generato da REMOTIX_V2\n");
+		fprintf(f, "generato da REMOTIX\n");
 		fclose(f);
 	}
 

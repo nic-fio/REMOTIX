@@ -38,4 +38,4 @@ udev (`DECISIONI.md` §4.6-ter e §4.6-quinquies).
 (VA-API). Se il compositore disegna sull'integrata e il codificatore cercasse la discreta — chiusa —
 il ripiego è in CPU, e va **dichiarato** invece che subito.
 
-Vedi [[remotix-v2-convenzioni]], [[la-prova-la-fa-lutente]] e [[utente-prova-si-conserva]].
+Vedi [[remotix-convenzioni]], [[la-prova-la-fa-lutente]] e [[utente-prova-si-conserva]].

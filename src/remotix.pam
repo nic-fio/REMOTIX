@@ -1,4 +1,4 @@
-# remotix — il servizio PAM del server REMOTIX_V2.
+# remotix — il servizio PAM del server REMOTIX.
 #
 #   si installa in /etc/pam.d/remotix   (lo fa `costruisci.sh`)
 #

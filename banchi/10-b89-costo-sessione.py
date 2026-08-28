@@ -90,7 +90,7 @@ os.environ.setdefault("DENTRO_ALB", "/srv/src/10a3-src")
 os.environ.setdefault("DENTRO_LAV", "/srv/remotix/tmp/10a3")
 os.environ.setdefault("ALB_NOME", "10a3-src")
 os.environ.setdefault("LUCCHETTO", "/media/REMOTIX/tmp/.lucchetto-gpu.d")
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "ab31ac36-86ed-4f24-8d71-e41da4a7da6e/scratchpad/b89")
 os.environ["FUORI"] = FUORI
 os.makedirs(FUORI, exist_ok=True)

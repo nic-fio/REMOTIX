@@ -1,6 +1,6 @@
 # DECISIONI — il registro di quel che è stato deciso, e da chi
 
-*Aperto l'8 agosto 2026, al primo giorno di REMOTIX_V2.*
+*Aperto l'8 agosto 2026, al primo giorno di REMOTIX.*
 
 Questo documento non spiega e non convince: **registra**. A che serve, in una riga: una
 decisione presa a voce e non scritta è una decisione che fra due settimane nessuno sa più

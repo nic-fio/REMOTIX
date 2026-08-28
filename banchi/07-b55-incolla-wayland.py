@@ -19,7 +19,7 @@ Come: due Firefox sullo stesso compositore annidato.  Il primo copia (ed e'
   `[M]` Con la clipboard posseduta dallo STESSO browser (in-page copy) il verso
   funziona anche qui — vedi `07-b54 --wayland`."""
 import importlib.util as iu, json, os, subprocess, sys, time
-sp = iu.spec_from_file_location("m", "/home/nicfio/Documenti/REMOTIX_V2/banchi/07-b46-marionette.py")
+sp = iu.spec_from_file_location("m", "/home/nicfio/Documenti/REMOTIX/banchi/07-b46-marionette.py")
 M = iu.module_from_spec(sp); sp.loader.exec_module(M)
 
 WAY = os.environ.get("WAY", "wayland-1")

@@ -76,7 +76,7 @@ inf() { printf '    --  %s\n' "$*"; }
 #   muore non resta un **corridore orfano** che vince la corsa a nome mio e poi
 #   tiene la GPU con nessuno a mollarla (la quarta trappola di §7.3).
 CORRIDORE="$QUI/banchi/10-b9d-corri-al-lucchetto.sh"
-[ -f "$CORRIDORE" ] || CORRIDORE=/home/nicfio/Documenti/REMOTIX_V2/banchi/10-b9d-corri-al-lucchetto.sh
+[ -f "$CORRIDORE" ] || CORRIDORE=/home/nicfio/Documenti/REMOTIX/banchi/10-b9d-corri-al-lucchetto.sh
 PY_LUC="$QUI/banchi/09-lucchetto.py"
 
 prendi_lucchetto() {

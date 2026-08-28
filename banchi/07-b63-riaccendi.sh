@@ -47,7 +47,7 @@ mkdir -p $LAV
 : > $LAV/registro.log
 
 systemd-run \
-	--unit=$UNITA --collect --description="REMOTIX_V2, banco 07-b63 (video)" \
+	--unit=$UNITA --collect --description="REMOTIX, banco 07-b63 (video)" \
 	--working-directory="\$SRC" \
 	--setenv=LD_LIBRARY_PATH="\$LD_LIBRARY_PATH" \
 	--property=StandardOutput=append:$LAV/registro.log \

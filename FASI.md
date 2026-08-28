@@ -141,7 +141,7 @@ il testimone peggiore possibile per la domanda «è sopravvissuta?».
 
 Aperta il **9 agosto 2026** · **Chiusa il 9 agosto 2026**
 
-> Prima fase di REMOTIX_V2, e l'unica che non produce prodotto. Il modello di questo documento sta
+> Prima fase di REMOTIX, e l'unica che non produce prodotto. Il modello di questo documento sta
 > in [`PIANO.md`](PIANO.md) §0.2; le decisioni stanno in
 > [`DECISIONI.md`](DECISIONI.md) e qui si **rimanda**, non si copia.
 

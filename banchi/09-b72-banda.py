@@ -59,7 +59,7 @@ b71 = importlib.util.module_from_spec(_s2); _s2.loader.exec_module(b71)
 
 root, rem = b68.root, b68.rem
 LAV = b68.LAV
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/b72")
 
 # ⛔⛔ L'IDENTITA' FRA L'AREA E IL CORPO — 25 agosto 2026, cura C4 della fase 10.

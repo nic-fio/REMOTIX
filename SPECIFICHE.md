@@ -1,4 +1,4 @@
-# SPECIFICHE — che cosa è REMOTIX_V2, e che cosa promette
+# SPECIFICHE — che cosa è REMOTIX, e che cosa promette
 
 *Riscritta il 9 agosto 2026, incorporando le 44 decisioni prese l'8 e il 9 agosto.*
 
@@ -15,7 +15,7 @@
 
 ## 1. Che cos'è
 
-REMOTIX_V2 è un sistema di **desktop remoto per Linux**, composto da un server e da **una pagina
+REMOTIX è un sistema di **desktop remoto per Linux**, composto da un server e da **una pagina
 web**, che parlano un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*.
 
 | | |

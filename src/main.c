@@ -1,5 +1,5 @@
 /*
- * main.c — REMOTIX_V2, il server.
+ * main.c — REMOTIX, il server.
  *
  * ---------------------------------------------------------------------------
  * ⛔ CHE COS'E' QUESTO PROGRAMMA, E CHE COSA NON E' ANCORA
@@ -151,7 +151,7 @@ static void al_segnale(int s)
 static void aiuto(const char *nome)
 {
 	fprintf(stderr,
-	        "REMOTIX_V2 — il server (fase 1: il filo nudo)\n"
+	        "REMOTIX — il server (fase 1: il filo nudo)\n"
 	        "\n"
 	        "  %s [opzioni]\n"
 	        "\n"
@@ -1832,7 +1832,7 @@ int main(int argc, char **argv)
 	signal(SIGTERM, al_segnale);
 	signal(SIGPIPE, SIG_IGN);
 
-	registro_dice(REG_AVVIO, "REMOTIX_V2 — fase 1, il filo nudo");
+	registro_dice(REG_AVVIO, "REMOTIX — fase 1, il filo nudo");
 
 	/* ⛔⭐ I TRE OROLOGI DI §5.3 SI SCRIVONO ALL'AVVIO, e non e' decorazione.
 	 *

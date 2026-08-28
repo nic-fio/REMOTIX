@@ -1,6 +1,6 @@
 ---
 name: costruire-serve-il-contenitore
-description: "Come si costruisce REMOTIX_V2: due strade, podman sul portatile per compilare ed enter.sh sulla macchina di prova per far girare"
+description: "Come si costruisce REMOTIX: due strade, podman sul portatile per compilare ed enter.sh sulla macchina di prova per far girare"
 metadata:
   node_type: memory
   type: project

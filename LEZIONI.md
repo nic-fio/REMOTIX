@@ -2,7 +2,7 @@
 
 *Scritto il 7 agosto 2026, chiudendo il supporto a GNOME (fasi 0–10), prima di aprire la fase 11.*
 
-> ## ⛔ Portato in REMOTIX_V2 l'8 agosto 2026 — si legge prima di tutto il resto
+> ## ⛔ Portato in REMOTIX l'8 agosto 2026 — si legge prima di tutto il resto
 >
 > Questo e' il **fondamento condiviso** di [`CODER.md`](CODER.md) e [`REVIEWER.md`](REVIEWER.md), che
 > lo citano **29 volte su 20 sezioni diverse**. Arriva qui **senza una sola rinumerazione**: ogni

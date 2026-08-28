@@ -24,7 +24,7 @@
 set -uo pipefail
 
 ALBERO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-LAVORO=${LAVORO:-/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/04-b31}
+LAVORO=${LAVORO:-/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/04-b31}
 CC=${CC:-gcc}
 CFLAGS="-O1 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter -D_GNU_SOURCE"
 

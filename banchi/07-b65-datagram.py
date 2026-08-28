@@ -115,7 +115,7 @@ ALB = os.environ.get("ALBERO", "/media/REMOTIX/src/07-r-src")
 DENTRO_ALB = os.environ.get("DENTRO_ALB", "/srv/src/07-r-src")
 DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/07-r")
 QUI = os.path.dirname(os.path.abspath(__file__))
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "84687524-93d6-4003-8cd1-1ed07aa63454/scratchpad/r7")
 
 VIETATA = "enp7s0"   # ci passano l'ssh e la 7730 dell'utente

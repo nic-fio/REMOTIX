@@ -349,7 +349,7 @@ UNITA = os.environ.get("UNITA", "remotix-%d" % PORTA)
 NOME = os.environ.get("CHI", "10-a4")
 
 QUI = os.path.dirname(os.path.abspath(__file__))
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "ab31ac36-86ed-4f24-8d71-e41da4a7da6e/scratchpad/b90")
 
 DEV = "lo"
@@ -1827,7 +1827,7 @@ def cure_lette(righe_testa=60):
     # ⛔ L'ULTIMA accensione, non la prima: il registro non si azzera fra un
     #    braccio e l'altro, e leggere la testa del file darebbe le cure di
     #    mezz'ora fa con la faccia di quelle di adesso.
-    rc, out, _ = root("bash -c \"awk '/avvio +REMOTIX_V2/{n=NR} {r[NR]=\\$0} "
+    rc, out, _ = root("bash -c \"awk '/avvio +REMOTIX/{n=NR} {r[NR]=\\$0} "
                       "END{for(i=n;i<=NR && i<n+%d;i++) print r[i]}' %s\""
                       % (righe_testa, registro()), 60)
     if not out.strip():

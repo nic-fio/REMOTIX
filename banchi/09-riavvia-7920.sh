@@ -123,7 +123,7 @@ fi
 # ── ⭐ si parte come UNITA' DI SISTEMA, fuori da ogni sessione utente (A6) ──
 # shellcheck disable=SC2086
 systemd-run \
-  --unit="$UNITA" --collect --description="REMOTIX_V2, banco della porta $PORTA — fase 9, la cura della memoria" \
+  --unit="$UNITA" --collect --description="REMOTIX, banco della porta $PORTA — fase 9, la cura della memoria" \
   --working-directory="$SRC" \
   --setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   $TRAPPOLA \

@@ -250,7 +250,7 @@ accendi)
 	#      misura» — un rosso che non e' del prodotto.
 	#
 	# `[M]` Alle 06:17:38 del 22 agosto 2026 l'unita' `remotix-7801.service`,
-	#       mia, e' stata fermata e rimpiazzata da *«REMOTIX_V2, banco 07-b64
+	#       mia, e' stata fermata e rimpiazzata da *«REMOTIX, banco 07-b64
 	#       (A8)»*: una misura da trenta minuti troncata a 745 s, ⛔ e la mia
 	#       sonda che ha continuato a bussare **al server dell'altro** con
 	#       credenziali che lui rifiutava — quindici autenticazioni fallite, e
@@ -292,7 +292,7 @@ accendi)
 	# ⛔ `--parlantina`: il figlio senza tace IN SILENZIO, e l'assenza di una
 	#    riga non e' la prova che il ramo non e' scattato.
 	systemd-run \
-		--unit="$UNITA" --collect --description="REMOTIX_V2, banco 06-b43 (i tetti)" \
+		--unit="$UNITA" --collect --description="REMOTIX, banco 06-b43 (i tetti)" \
 		--working-directory="$D" \
 		--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 		--property=StandardOutput=append:"$LOG" \

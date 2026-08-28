@@ -182,7 +182,7 @@ MANCA=0
 #     NON-BANNATO         il comando di sblocco su socket c'e' davvero (R12.1)
 #     PING del trasporto  la cura di §4.6 e' dentro questo binario (B-2)
 #     pam.d/remotix       il servizio PAM e' quello di SPECIFICHE.md §4.2 (B-11)
-for marca in "REMOTIX_V2 — fase 1" "Cross-Origin-Embedder-Policy" \
+for marca in "REMOTIX — fase 1" "Cross-Origin-Embedder-Policy" \
              "Cross-Origin-Opener-Policy" "/rcp/1" "/impronta" \
              "NON-BANNATO" "PING del trasporto" "/etc/pam.d/remotix"; do
 	if cerca "$QUI/remotix" "$marca"; then

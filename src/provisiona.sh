@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# provisiona.sh — la macchina che ospita REMOTIX_V2, messa nello stato che il
+# provisiona.sh — la macchina che ospita REMOTIX, messa nello stato che il
 # prodotto si aspetta.  ⛔ E si VERIFICA alla fine, invece di crederci.
 #
 #   sudo bash src/provisiona.sh            tutto

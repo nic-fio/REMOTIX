@@ -1,12 +1,12 @@
 ---
 name: deposito-su-github
-description: dal 28 ago 2026 il deposito vive su GitHub, privato — nic-fio/REMOTIX_V2, ramo predefinito fase-10-cure
+description: dal 28 ago 2026 il deposito vive su GitHub, privato — nic-fio/REMOTIX, ramo predefinito fase-10-cure
 metadata:
   type: project
 ---
 
-Il deposito di REMOTIX_V2 non sta piu' solo sul tablet: e' su **GitHub, PRIVATO**,
-a `https://github.com/nic-fio/REMOTIX_V2` — ramo predefinito `fase-10-cure`
+Il deposito di REMOTIX non sta piu' solo sul tablet: e' su **GitHub, PRIVATO**,
+a `https://github.com/nic-fio/REMOTIX` — ramo predefinito `fase-10-cure`
 (`master` e' fermo al 9 agosto e non e' il ramo di lavoro).
 
 Spinto il 28 agosto 2026: 19 rami, 440 commit, 146 MB. Privato per decisione

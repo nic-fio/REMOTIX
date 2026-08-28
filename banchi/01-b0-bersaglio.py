@@ -125,7 +125,7 @@ PROFILO = {
         #     protezione di §4.4-bis spenta».
         "ban_illeggibile_parte": False,
         "impronta": r"^\d\d:\d\d:\d\d\.\d\d\d (avvio|quic|wt|rcp|pagina|cert) ",
-        "controllo": "REMOTIX_V2 — fase 1, il filo nudo",
+        "controllo": "REMOTIX — fase 1, il filo nudo",
         # ⛔ NESSUNA ECO.  `src/webtransport.c`, `scarta_stream_di_troppo()`:
         #    «i byte di uno stream di troppo si buttano, e NON si rimandano
         #    indietro».  ⚠ Nessuno dei quattro banchi deve **aspettare** byte di

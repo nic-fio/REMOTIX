@@ -4402,7 +4402,7 @@ che abbiamo trovato su KDE — dopo KRdp, krfb e il portale — **e l'unico fuor
 | librerie e tema Qt | `liblxqt/` 2.1.0, `libqtxdg/` 4.1.0, `lxqt-qtplugin/` 2.1.0, `lxqt-themes/` 2.1.0 | |
 | il menu | `lxqt-menu-data/` 2.1.0 | |
 | ⚠ **il lanciatore Wayland** | `lxqt-wayland-session/` | **0.4.1 — NON è la versione di Trixie** |
-| il compositore e i protocolli | `../REMOTIX_V2/reference-xfce/` (labwc 0.8.3, wlroots 0.18.2, wlr-protocols, wayland-protocols 1.38) | |
+| il compositore e i protocolli | `../REMOTIX/reference-xfce/` (labwc 0.8.3, wlroots 0.18.2, wlr-protocols, wayland-protocols 1.38) | |
 
 ⛔ **Attenzione al clone di `lxqt-wayland-session`**: è **0.4.1** (maggio 2026) e richiede **LXQt ≥
 2.4.0** e una labwc molto più nuova. **Si legge come specifica delle intenzioni, non si copia**: i

@@ -1,4 +1,4 @@
-# Makefile — REMOTIX_V2, il server.
+# Makefile — REMOTIX, il server.
 #
 # -----------------------------------------------------------------------------
 # ⛔ LE DIPENDENZE, DICHIARATE — non «quelle che c'erano sulla macchina»

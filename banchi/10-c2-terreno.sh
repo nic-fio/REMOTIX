@@ -104,7 +104,7 @@ accendi)
 	      systemctl reset-failed $UNITA.service 2>/dev/null || true
 	      i=0; while ss -uln 2>/dev/null | grep -q \":$PORTA \" && [ \$i -lt 50 ]; do i=\$((i+1)); sleep 0.2; done
 	      systemd-run --unit=$UNITA --collect \
-	        --description=\"REMOTIX_V2, incarico 10-c2 (SIGSEGV del figlio)\" \
+	        --description=\"REMOTIX, incarico 10-c2 (SIGSEGV del figlio)\" \
 	        --working-directory=$ALBERO/src \
 	        --setenv=LD_LIBRARY_PATH=$LDP \
 	        --property=StandardOutput=append:$LAV/registro.log \

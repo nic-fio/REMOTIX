@@ -32,7 +32,7 @@ SCATTO al server e tira giu' nello stesso istante:
 ⇒ Tre immagini dello stesso momento, e il primo che ha i blocchi e' l'imputato.
 """
 import importlib.util as iu, base64, os, subprocess, sys, time
-sp = iu.spec_from_file_location("m", "/home/nicfio/Documenti/REMOTIX_V2/banchi/07-b46-marionette.py")
+sp = iu.spec_from_file_location("m", "/home/nicfio/Documenti/REMOTIX/banchi/07-b46-marionette.py")
 M = iu.module_from_spec(sp); sp.loader.exec_module(M)
 FUORI = sys.argv[1]; os.makedirs(FUORI, exist_ok=True)
 SSH = ["ssh", "-o", "BatchMode=yes", "192.168.0.2"]

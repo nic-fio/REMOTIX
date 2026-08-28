@@ -75,7 +75,7 @@ DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/07-r")
 ALB = os.environ.get("ALBERO", "/media/REMOTIX/src/07-r-src")
 UID_B = int(os.environ.get("UID_B", "1018"))
 QUI = os.path.dirname(os.path.abspath(__file__))
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "84687524-93d6-4003-8cd1-1ed07aa63454/scratchpad/r7")
 
 # ⛔ L'interfaccia che NON si tocca, scritta qui perche' si veda:

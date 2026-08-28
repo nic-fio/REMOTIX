@@ -29,4 +29,4 @@ processo serviva, ma serviva **quello mirato**.
 - al revisore si dà il codice e le regole, **mai il proprio ragionamento** (`PIANO.md` §0.4,
   pratica 1): àncora, e trasforma la caccia alle contraddizioni in verifica di coerenza.
 
-Vedi [[nic-regista-non-programmatore]] e [[remotix-v2-convenzioni]].
+Vedi [[nic-regista-non-programmatore]] e [[remotix-convenzioni]].

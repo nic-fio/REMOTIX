@@ -69,7 +69,7 @@ DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/09")
 # e non quelli del gemello.
 ALB_NOME = os.environ.get("ALB_NOME", "09-src")
 SCENA = "/media/REMOTIX/src/04-b30-scena-lav/04-b30-scena"
-FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX-V2/"
+FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/b68")
 
 

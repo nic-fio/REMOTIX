@@ -1,4 +1,4 @@
-# REMOTIX_V2
+# REMOTIX
 
 > # ⏸ IL PROGETTO È IN PAUSA — dal 27 agosto 2026
 >

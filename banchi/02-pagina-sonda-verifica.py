@@ -12,7 +12,7 @@
 import http.server, json, os, re, shutil, socketserver, subprocess, sys, threading, time
 
 BASE = "/home/nicfio/K-prova-sonde"
-PAGINA_HTML = "/home/nicfio/Documenti/REMOTIX_V2/src/pagina.html"
+PAGINA_HTML = "/home/nicfio/Documenti/REMOTIX/src/pagina.html"
 
 t = open(PAGINA_HTML).read()
 i = t.index("const SONDE = {")

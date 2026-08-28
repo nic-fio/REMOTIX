@@ -26,4 +26,4 @@ E tre regole di convivenza che sono costate meno di quanto avrebbero potuto:
 - i guasti di certificazione si innestano su una **copia** dell'albero del prodotto, o
   per qualche minuto gli altri misurano un binario bugiardo.
 
-Vedi [[remotix-v2-convenzioni]] e [[via-libera-permanente]].
+Vedi [[remotix-convenzioni]] e [[via-libera-permanente]].

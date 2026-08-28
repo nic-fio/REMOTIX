@@ -132,7 +132,7 @@ while ss -uln 2>/dev/null | grep -q ':7910 ' && [ $i -lt 50 ]; do i=$((i+1)); sl
 
 # ── ⭐ si parte come UNITA' DI SISTEMA, fuori da ogni sessione utente ────────
 systemd-run \
-  --unit="$UNITA" --collect --description="REMOTIX_V2, banco della porta 7910 — fase 9" \
+  --unit="$UNITA" --collect --description="REMOTIX, banco della porta 7910 — fase 9" \
   --working-directory="$SRC" \
   --setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   --property=StandardOutput=append:"$LAV/registro.log" \

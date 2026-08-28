@@ -1,5 +1,5 @@
 - [Nic è il regista, non il programmatore](nic-regista-non-programmatore.md) — spiegare concreto, una domanda per volta
-- [Le convenzioni di REMOTIX_V2](remotix-v2-convenzioni.md) — italiano, le marche, e le decisioni in un posto solo
+- [Le convenzioni di REMOTIX](remotix-convenzioni.md) — italiano, le marche, e le decisioni in un posto solo
 - [Processo proporzionato, non cerimonia](processo-proporzionato-non-cerimonia.md) — la revisione si giustifica su cosa sopravvive alla fase
 - [Via libera permanente](via-libera-permanente.md) — si prosegue da soli e si riferisce dopo; ci si ferma solo sulle sue decisioni
 - [Banchi in parallelo](banchi-in-parallelo-isolamento.md) — porta, ban-file e socket propri, o il ban di uno ferma tutti
@@ -26,4 +26,4 @@
 - [Il riavvio perde la chiave ssh](riavvio-perde-la-chiave-ssh.md) — rootfs in RAM: chiave → provisiona → verifica → misura
 - [Il banco si prepara prima](il-banco-si-prepara-prima.md) — la scena si GUARDA prima di chiamarlo, e un contatore non è guardare
 - [Il progetto è in pausa](progetto-in-pausa-agosto-2026.md) — dal 27 ago 2026, intervento; si riprende da KDE, e prima si fa girare la rete
-- [Il deposito è su GitHub](deposito-su-github.md) — privato, nic-fio/REMOTIX_V2; e v1 non è più una cartella a sé
+- [Il deposito è su GitHub](deposito-su-github.md) — privato, nic-fio/REMOTIX; e v1 non è più una cartella a sé

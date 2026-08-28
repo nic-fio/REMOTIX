@@ -36,7 +36,7 @@ i=0
 while ss -uln 2>/dev/null | grep -q ":$PORTA " && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
 
 systemd-run \
-	--unit="$UNITA" --collect --description="REMOTIX_V2 — F2, il browser dentro il desktop remoto" \
+	--unit="$UNITA" --collect --description="REMOTIX — F2, il browser dentro il desktop remoto" \
 	--working-directory="$SRC" \
 	--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 	--property=StandardOutput=append:"$LAV/registro.log" \

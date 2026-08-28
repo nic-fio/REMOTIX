@@ -78,7 +78,7 @@ UTENTE_SESSIONE=${UTENTE_SESSIONE:-}
 UNITA=remotix-$PORTA
 # ⭐ La descrizione dice CHI E', albero compreso: e' l'unica cosa che
 #    distingue due banchi sulla stessa porta.
-DESCRIZIONE_L="REMOTIX_V2, banco 07-b41 su $(basename "$ALBERO")"
+DESCRIZIONE_L="REMOTIX, banco 07-b41 su $(basename "$ALBERO")"
 
 if [ "$SPEGNI" = 1 ]; then
 	ssh -o BatchMode=yes "$MACCHINA" \

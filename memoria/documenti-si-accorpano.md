@@ -25,4 +25,4 @@ restano i nomi che avevano i file, così i rimandi vecchi si ritrovano.
 ⛔ E un doppione si riconosce **dai numeri, non dai titoli**: undici sezioni su quattordici di
 `SESSIONE.md` erano copie, tre no — e dai titoli sembravano tutte uguali.
 
-Vedi [[processo-proporzionato-non-cerimonia]] e [[remotix-v2-convenzioni]].
+Vedi [[processo-proporzionato-non-cerimonia]] e [[remotix-convenzioni]].

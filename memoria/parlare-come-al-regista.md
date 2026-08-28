@@ -54,4 +54,4 @@ il disegno della fase.
 «si chiama **re-scaling**» — quello diventa il nome, nei rapporti e nei
 documenti.
 
-Vedi [[nic-regista-non-programmatore]], [[remotix-v2-convenzioni]].
+Vedi [[nic-regista-non-programmatore]], [[remotix-convenzioni]].

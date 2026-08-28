@@ -173,7 +173,7 @@ if [ "${1:-}" = "--sul-server" ]; then
 		# ⭐ `--parlantina`: il figlio senza parlantina TACE IN SILENZIO.
 		# shellcheck disable=SC2086
 		systemd-run \
-			--unit="$UNITA" --collect --description="REMOTIX_V2, banco 07-b64 (A8)" \
+			--unit="$UNITA" --collect --description="REMOTIX, banco 07-b64 (A8)" \
 			--working-directory="$ALBERO/src" \
 			--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 			--property=StandardOutput=append:$LAV/registro.log \

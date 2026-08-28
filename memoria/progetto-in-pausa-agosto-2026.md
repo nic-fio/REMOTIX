@@ -8,7 +8,7 @@ metadata:
   modified: 2026-08-27T19:48:28.207Z
 ---
 
-Il 27 agosto 2026 Nic ha fermato REMOTIX_V2 per affrontare un **intervento chirurgico**. La pausa
+Il 27 agosto 2026 Nic ha fermato REMOTIX per affrontare un **intervento chirurgico**. La pausa
 prevista è di **qualche settimana**. Macchina di prova e tablet sono stati spenti, il deposito è
 pulito e tutto è committato sul ramo `fase-10-cure`.
 

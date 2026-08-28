@@ -178,7 +178,7 @@ prodotto)
 	#    «REMOTIX B3», e nessuna riga dell'innesto porta questa forma: le due
 	#    impronte si escludono a vicenda, ed e' quel che le rende utili.
 	B_IMPRONTA='^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9][0-9][0-9] (avvio|quic|wt|rcp|pagina|cert) '
-	B_CONTROLLO='REMOTIX_V2 — fase 1, il filo nudo'
+	B_CONTROLLO='REMOTIX — fase 1, il filo nudo'
 	# ⛔ IL TETTO D'INATTIVITA' NON SI SCEGLIE: `src/trasporto.c` ha
 	#    `#define IDLE_MS 30000` e nessuna opzione lo tocca (verificato col
 	#    grep l'11 agosto 2026: nessun `getenv` in tutto `src/`).  ⚠ Chiedere

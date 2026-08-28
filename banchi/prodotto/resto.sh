@@ -52,11 +52,11 @@ rm -rf $C; mkdir -p $C
 # il longevo, nostro
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
   -keyout $C/pagina.key -out $C/pagina.pem -days 365 -nodes -subj "/CN=$IND" \
-  -addext "subjectAltName=IP:$IND" >/dev/null 2>&1 && echo "generato da REMOTIX_V2" > $C/pagina.nostro
+  -addext "subjectAltName=IP:$IND" >/dev/null 2>&1 && echo "generato da REMOTIX" > $C/pagina.nostro
 # il breve, a UN giorno: sotto il margine di 2
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
   -keyout $C/sessione.key -out $C/sessione.pem -days 1 -nodes -subj "/CN=$IND" \
-  -addext "subjectAltName=IP:$IND" >/dev/null 2>&1 && echo "generato da REMOTIX_V2" > $C/sessione.nostro
+  -addext "subjectAltName=IP:$IND" >/dev/null 2>&1 && echo "generato da REMOTIX" > $C/sessione.nostro
 chmod 600 $C/*.key
 VECCHIA=$(openssl x509 -in $C/sessione.pem -outform der | openssl dgst -sha256 -binary | base64 -w0)
 echo "    impronta PRIMA: $VECCHIA"
