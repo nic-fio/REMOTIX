@@ -361,7 +361,7 @@ la misura non cambi niente non lo garantisce nessuno — il lucchetto è l'unica
 | **Q4** | ⛔⛔ **Chi era dentro PEGGIORA quando arriva chi si aggiunge**, e in modo che i fotogrammi/s non mostrano subito: la **quota di chiavi** salirà prima del calo visibile, com'è successo in fase 9 (fattore cinque fra meccanismo e sintomo) | `10-b92` mostra la prima sessione ferma su tutte le colonne fino al decimo gradino |
 | **Q5** | ⛔ Le **cure della fase 9 si voltano contro il multi-tenant**: dieci sessioni che si contendono lo stesso filo si vedono a vicenda **come una rete cattiva**, ognuna cala il ritmo, e la **linea morta** può arrivare a **staccare** qualcuno perché il vicino sta lavorando — dove *«mai staccare»* è l'unico obbligo che vale ovunque | `10-b90`/`10-b92` non mostrano nessuna discesa attribuibile al vicino |
 | **Q6** | ⛔ Il **ban per indirizzo** di §4.4-bis è un difetto vero del multi-tenant: dieci inquilini dietro lo stesso NAT sono **un solo indirizzo**, e uno che sbaglia la parola tre volte butta fuori gli altri nove **per dodici ore** | la lettura del codice mostra che è chiavato anche sull'utente, o che il caso non si presenta |
-| **Q7** | `MAX_FIGLI` **non segue davvero** `MAX_ATTACCATE`: sono due `#define` separati e il legame vive solo nel commento di `figlio.c:88` | `10-b93` mostra che cambiando l'uno cambia l'altro |
+| **Q7** | `MAX_FIGLI` **non segue davvero** `MAX_ATTACCATE`: sono due `#define` separati e il legame vive solo nel commento di `figlio.c` | `10-b93` mostra che cambiando l'uno cambia l'altro |
 | **Q8** | ⛔ Il rifiuto a tabella piena arriva **dopo** che qualcosa è già stato acceso — *rifiutare dopo aver acceso un desktop non è rifiutare* | `10-b93` mostra che il no arriva prima della nascita del figlio |
 | **Q9** | Il **budget di rete** morde **prima** di quello di GPU: se il caso duro in H.264 chiede **44,6 Mbit/s** (fase 9 §14.2), dieci non fanno 300 Mbit/s ma **quasi mezzo gigabit**, e il tetto vero non è il rame — è la **CPU che cifra** | `10-b90` misura un costo per sessione molto sotto i 30 Mbit/s sulle scene vere |
 | **Q10** | ⚠ Le **righe di registro** non dicono di chi sono, e con dieci sessioni il registro — che è lo strumento con cui in questo progetto si diagnostica tutto — diventa illeggibile | il campionamento mostra che la maggioranza delle righe porta l'utente o l'identificatore di sessione |
@@ -375,7 +375,7 @@ la misura non cambi niente non lo garantisce nessuno — il lucchetto è l'unica
 | **Q3** | ⛔ **SMENTITA** | ne stanno **SEI**, non dieci (§6.5) |
 | **Q4** | ⭐ **CONFERMATA**, e nel modo peggiore | −97,6 % alla prima sessione. ⚠ **Ma non per la strada prevista**: le chiavi **non si accendono mai**, il degrado passa dal **ritardo** (§6.5) |
 | **Q5** | ⭐ **CONFERMATA nella sostanza, corretta nel meccanismo** | a staccare non è il regolatore ma la **linea morta**, e per la strada del **silenzio** (§6.3) |
-| **Q6** | ⭐ **CONFERMATA** per lettura | *«IL NOME UTENTE NON CONTA»*, `rcp.c:1004` (§4.2) |
+| **Q6** | ⭐ **CONFERMATA** per lettura | *«IL NOME UTENTE NON CONTA»*, `rcp.c` · `posto_prendi()` (§4.2) |
 | **Q7** | ⭐ **CONFERMATA** | 2 contro 16, misurato sul binario (§6.4) |
 | **Q8** | ⭐ **CONFERMATA, e peggio** | non «rifiutare dopo aver acceso un desktop»: **il desktop si accende anche a chi non sarà mai ammesso** (§6.4) |
 | **Q9** | ⛔ **SMENTITA** | dieci sessioni sature fanno **22 Mbit/s** su una scheda da 10 Gbit/s: **lo 0,2 % del filo** (§6.3, §6.5) |
@@ -398,18 +398,18 @@ La catena, con quel che esiste già dopo ogni passo:
 | `CIAO` | `rcp.c:1972 tratta_ciao()` | niente: l'utente non ha ancora un nome |
 | `ECCOMI` | `rcp.c:1833 manda_eccomi()` | ⭐ codec, profondità e livello negoziati: **il tetto del decodificatore del client è già noto qui** |
 | `CREDENZIALI` | `rcp.c:2284 tratta_credenziali()` | il nome utente (`s->utente`, riga 2333); PAM **chiesta**, non risposta |
-| verdetto PAM | `main.c:332 consegna_verdetto()` | ⛔⛔ **`figli_assicura()` a `main.c:344` — il figlio NASCE QUI**, prima che `AMMESSO` esca sul filo |
-| `AMMESSO` | `rcp.c:7483` | il figlio ha già `fork`+`exec`ato, è già sceso all'uid, ha già aperto la sessione logind e ha già preso il palco (`figlio.c:6158` → `figlio.c:5115`) |
-| `ATTACCA` | `rcp.c:2702 tratta_attacca()` | **qui** si prende il posto: `posto_prendi()`, `rcp.c:2808` |
-| `SESSIONE` | `rcp.c:2992` | tela decisa, canale video acceso |
-| il codificatore | `webtransport.c:4117 video_regola()` → `main.c:466 figli_video()` → `MSG_VIDEO` → `figlio.c:4306 codificatore_di()` | ⭐ **il contesto VA-API si apre solo qui**, su `renderD128` (`figlio.c:4202`) |
+| verdetto PAM | `main.c:332 consegna_verdetto()` | ⛔⛔ **`figli_assicura()` a `main.c` · `guarda_il_servizio_pam()` — il figlio NASCE QUI**, prima che `AMMESSO` esca sul filo |
+| `AMMESSO` | `rcp.c` · `rcp_verdetto()` | il figlio ha già `fork`+`exec`ato, è già sceso all'uid, ha già aperto la sessione logind e ha già preso il palco (`figlio.c` · `figlio_vive()` → `figlio.c`) |
+| `ATTACCA` | `rcp.c:2702 tratta_attacca()` | **qui** si prende il posto: `posto_prendi()`, `rcp.c` · `tratta_attacca()` |
+| `SESSIONE` | `rcp.c` · `tratta_attacca()` | tela decisa, canale video acceso |
+| il codificatore | `webtransport.c:4117 video_regola()` → `main.c:466 figli_video()` → `MSG_VIDEO` → `figlio.c:4306 codificatore_di()` | ⭐ **il contesto VA-API si apre solo qui**, su `renderD128` (`figlio.c`) |
 
-⛔ **Da cui il fatto che decide il disegno.** `POSTO_NIENTE_PIU_POSTI` scatta a `rcp.c:2856`, cioè
+⛔ **Da cui il fatto che decide il disegno.** `POSTO_NIENTE_PIU_POSTI` scatta a `rcp.c` · `tratta_attacca()`, cioè
 quando l'utente è **già autenticato**, il figlio è **già nato**, `pam_open_session` è **già** passata
 e mutter e PipeWire stanno **già** catturando. ⇒ **Rifiutare lì non è rifiutare: è fare login e poi
 cacciare.** ⭐ **La previsione Q8 è confermata, e per lettura.**
 
-⭐ Il posto giusto per il no di capacità è **prima di `figli_assicura()`** (`main.c:344`); il secondo
+⭐ Il posto giusto per il no di capacità è **prima di `figli_assicura()`** (`main.c` · `guarda_il_servizio_pam()`); il secondo
 migliore è dentro `tratta_attacca()` **prima** di `posto_prendi()`, e costa un desktop montato per
 niente. ⭐ E fra `AMMESSO` e `SESSIONE` c'è una finestra in cui **il desktop è acceso ma la GPU no**.
 
@@ -419,13 +419,13 @@ Il regolatore vive nel **padre** (`webtransport.c:4190+`, `WT_RITMO_POSTI` a `:3
 fotogramma **non parte**. ⛔ Ma quel fotogramma **è già stato codificato dal figlio**.
 
 ⇒ **Una sessione su rete pessima costa alla GPU esattamente quanto una sessione su fibra.** E i
-conti dei fotogrammi spediti esistono già (`wt_video_conti()`, `webtransport.c:5763`), quindi
+conti dei fotogrammi spediti esistono già (`wt_video_conti()`, `webtransport.c`), quindi
 agganciarci il budget è la cosa naturale da fare — ⛔ **e direbbe che c'è posto proprio quando non
 ce n'è**. Il numero da contare sta **dall'altra parte del confine di processo**: `us_codifica` in
-`tratti_conta()`, `figlio.c:4718`, e oggi finisce **solo nel registro**.
+`tratti_conta()`, `figlio.c` · `tratti_mediana()`, e oggi finisce **solo nel registro**.
 
 ⛔ **E il fantasma continua a codificare.** La cattura si ferma solo quando muore l'ultima sessione
-WebTransport di quell'utente (`webtransport.c:7208`, guardia `wt_video_qualcuno_guarda()` a `:5747`,
+WebTransport di quell'utente (`webtransport.c` · `apri_http3()`, guardia `wt_video_qualcuno_guarda()` a `:5747`,
 che guarda `video_acceso` e **non** lo stato RCP). Un client silenzioso da 30 s ha **lasciato il
 posto** (`rcp.c:7529 posto_lascia()`) e **codifica ancora**. ⇒ **posti occupati ≠ carico di GPU**, e
 un conto tenuto su `attaccate[]` **sottostima** — proprio nella scena in cui la macchina è in affanno.
@@ -437,10 +437,10 @@ un conto tenuto su `attaccate[]` **sottostima** — proprio nella scena in cui l
 | 1 | `rcp.c:886 MAX_ATTACCATE 16` — `attaccate[]` a `:902` | posti RCP | 17 |
 | 2 | `figlio.c:91 MAX_FIGLI 16` — `v[MAX_FIGLI]` a `:519` | processi/palchi | 17 |
 | 3 | `aiutante.c:33 MAX_IN_VOLO 16` | ⚠ **autenticazioni in volo**, non sessioni | 17 **simultanee**, con 0 sessioni attive |
-| 4 | `main.c:706 QUANTI_PRESENTI 16` — `presenti[]` a `:709` | orologio dell'abbandono | 17, ⛔ **in silenzio** (`main.c:730`: `return` senza riga) |
+| 4 | `main.c:706 QUANTI_PRESENTI 16` — `presenti[]` a `:709` | orologio dell'abbandono | 17, ⛔ **in silenzio** (`main.c` · `deposita_fotogramma()`: `return` senza riga) |
 | ⛔ | `webtransport.c:5225 WT_PALCHI 8` — `palchi[]` | tela del palco per il ri-attacco | ⛔⛔ **9 — cioè prima del dieci promesso** |
 
-⭐⭐ **La previsione Q7 è confermata, e peggio di com'era scritta.** Il commento di `figlio.c:88` —
+⭐⭐ **La previsione Q7 è confermata, e peggio di com'era scritta.** Il commento di `figlio.c` —
 *«quando quello diventerà un budget di pixel, questo lo seguirà dallo stesso posto»* — descrive un
 legame **che nel codice non esiste**: `MAX_ATTACCATE` è `static` in `rcp.c` e non compare in
 `rcp.h`; `MAX_FIGLI` è un letterale indipendente. Lo stesso vale per `aiutante.c:29-32` (*«è lo
@@ -451,18 +451,18 @@ il compilatore non conosce.**
 ⭐ E smontarle costa poco: le cinque funzioni che percorrono `attaccate[]` (`posto_occupato` 904,
 `posto_chi` 913, `posto_prendi` 947, `posti_occupati` 965, `posto_lascia` 974) fanno **solo scansioni
 lineari con `strcmp`** — nessuna aritmetica di indice, nessun invariante sul 16. Un `calloc` e un
-contatore di modulo. ⛔ **Il vincolo vero è un altro**: `figli_descrittori()` (`figlio.c:1392`)
-riempie l'array del `poll` del padre, e quello è `MAX_POLL 64` (`main.c:121`) — vedi §3.6 voce 10.
+contatore di modulo. ⛔ **Il vincolo vero è un altro**: `figli_descrittori()` (`figlio.c`)
+riempie l'array del `poll` del padre, e quello è `MAX_POLL 64` (`main.c` · `TELA_A`) — vedi §3.6 voce 10.
 
 ### 3.4 `BUDGET_PIENO 0x06` — e ⛔ **la pagina oggi dice la frase di un conteggio**
 
-`[M]` `grep RCP_BUDGET_PIENO src/*.c` → **nessun risultato**: dichiarato a `rcp.h:46` e in `RCP.md`
-§8.2, **zero chiamanti**. Il modello per mandarlo esiste: `congeda()` (`rcp.c:1635`) scrive motivo +
+`[M]` `grep RCP_BUDGET_PIENO src/*.c` → **nessun risultato**: dichiarato a `rcp.h` · `RCP_VERSIONE` e in `RCP.md`
+§8.2, **zero chiamanti**. Il modello per mandarlo esiste: `congeda()` (`rcp.c` · `utf8_valido()`) scrive motivo +
 dettaglio (righe 1658-1659), e `POSTO_NIENTE_PIU_POSTI` lo usa già a `rcp.c:2856-2867`.
 
-⛔ **E `src/pagina.html:694` dice `0x06: "il server e' pieno"`** — non è falsa, è la frase di un
+⛔ **E `src/pagina.html` · `MOTIVO()` dice `0x06: "il server e' pieno"`** — non è falsa, è la frase di un
 **conteggio**, dove §4.6-bis ha deciso *«questa macchina non ha più capacità di codifica»*.
-⛔⛔ Peggio: `0x0E` a `pagina.html:709` è *«quella sessione non si può servire»*, ed è **quella** che
+⛔⛔ Peggio: `0x0E` a `pagina.html` · `MOTIVO()` è *«quella sessione non si può servire»*, ed è **quella** che
 l'utente legge oggi a tabella piena — una frase che parla della **sua** sessione mentre il fatto
 riguarda il **server**.
 ⭐ Il resto della pagina regge: sei punti consultano la tabella `MOTIVO`, c'è sempre un ripiego
@@ -485,7 +485,7 @@ violerebbe `CODER.md` §2-bis è **lasciare in piedi i quattro `#define`**: quel
 strada, e sono già quattro numeri che possono divergere.
 
 ⛔⭐ **E c'è un terzo tetto che oggi non esiste: quello di rete.** `--tetto-banda-mbit`
-(`main.c:1183`) è un **pavimento per figlio**: `figli_fase9()` (`figlio.c:892`) lo ricopia identico
+(`main.c` · `input_al_figlio()`) è un **pavimento per figlio**: `figli_fase9()` (`figlio.c` · `figli_accendi()`) lo ricopia identico
 nell'`argv` di **ogni** figlio, e `codificatore.c:357 tetto_pavimento_mbit` è una statica **di
 processo**. ⇒ Dieci figli × 20 Mbit/s = **200 Mbit/s sul filo del server, e nessuno lo sa.** Il
 punto 5 della fase non ha oggi **nessuna riga di codice**.
@@ -494,18 +494,18 @@ punto 5 della fase non ha oggi **nessuna riga di codice**.
 
 | # | che cosa | dove | morde a |
 |---|---|---|---|
-| 1 | ⛔⛔ **`WT_PALCHI 8`**: dal nono utente la tela del palco non si registra, e al ri-attacco `SESSIONE` concede quel che chiede il client invece di quel che il palco ha ⇒ §6.2 fa **buttare ogni fotogramma** finché non arriva `ADATTA_TELA` — *«riattacco e non vedo niente per un secondo»* | `webtransport.c:5225`, `palco_misura_segna()` `:5238` | ⛔ **9** |
-| 2 | il **fantasma che codifica** (§3.2): il budget contato sui posti sottostima il carico vero | `webtransport.c:5747`, `:7208` | **subito** |
-| 3 | il **regolatore non tocca la GPU** (§3.2) | `webtransport.c:4190+` vs `figlio.c:4718` | **subito** |
-| 4 | `--tetto-banda-mbit` **replicato per figlio** (§3.5) | `figlio.c:892` → `:5998` → `codificatore.c:357` | **subito**, visibile a 3-4 |
-| 5 | il **rifiuto dopo il login** (§3.1) | `main.c:344` vs `rcp.c:2856` | a ogni rifiuto |
-| 6 | ⛔ la **cartella dei rilievi è condivisa** e i nomi dei file sono **fissi** (`cattura.bgrx`, `flusso-h264.264`, `scatto-*.bgrx`): due figli con `--rilievo` acceso **si sovrascrivono a vicenda**, e `SIGUSR1` è inoltrato a **tutti** ⇒ il rilievo attribuisce a un utente i pixel di un altro | `figlio.c:4055`, `:5595-5637`, `:1918-1929` | **2 utenti** (solo con `--rilievo`) |
-| 7 | ⛔ le **righe di registro non dicono di chi sono**: l'intestazione è `HH:MM:SS.mmm %-7s`, cioè **solo l'area**, e padre e figli **appendono allo stesso file**. Dieci righe *«TRATTO cattura → byte fuori: mediana 3,2 ms»* al secondo, **indistinguibili** ⚠ e l'atomicità è garantita solo sotto `PIPE_BUF` (4096), a cui le righe lunghe di questo prodotto arrivano vicino | `registro.c:63`, riquadro `:37-58` | ⛔ **2**, illeggibile a 10 — ⭐ **Q10 confermata** |
-| 8 | `presenti[]` **trabocca in silenzio**: il 17° utente non ha l'orologio dell'abbandono e **nessuna riga lo dice** | `main.c:706`, `presenza_segna()` `:713`, `return` muto a `:730` | 17 |
-| 9 | `MAX_IN_VOLO` è **un'altra grandezza** sotto lo stesso numero | `aiutante.c:33` | 17 simultanee, 0 sessioni |
-| 10 | ⛔ **`MAX_POLL 64` e il troncamento MUTO dei figli**: `figli_descrittori()` si ferma a `max` **senza scrivere niente**. Conto peggiore oggi 36 su 64, i 16 figli ci stanno — ⛔ ma oltre ~28 figli, o con la pagina affollata, **un figlio resta fuori dal `poll` e il suo utente non vede più un pixel, senza una riga** | `main.c:121`, `figlio.c:1392` | >28, e **in silenzio** |
-| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (`[M]` ~22 ms contro ~3, `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c:4306`, `:4470` | `[?]`, dipende dal driver |
-| 12 | ⭐ il **file dei ban e il socket di comando NON si rompono** (un solo scrittore, un solo socket) ⚠ ma il ban è **per indirizzo**: dieci utenti dietro lo stesso NAT condividono i tre tentativi | `main.c:1103`, `comando.c:305` | 1 NAT |
+| 1 | ⛔⛔ **`WT_PALCHI 8`**: dal nono utente la tela del palco non si registra, e al ri-attacco `SESSIONE` concede quel che chiede il client invece di quel che il palco ha ⇒ §6.2 fa **buttare ogni fotogramma** finché non arriva `ADATTA_TELA` — *«riattacco e non vedo niente per un secondo»* | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⛔ **9** |
+| 2 | il **fantasma che codifica** (§3.2): il budget contato sui posti sottostima il carico vero | `webtransport.c`, `:7208` | **subito** |
+| 3 | il **regolatore non tocca la GPU** (§3.2) | `webtransport.c:4190+` vs `figlio.c` · `tratti_mediana()` | **subito** |
+| 4 | `--tetto-banda-mbit` **replicato per figlio** (§3.5) | `figlio.c` · `figli_accendi()` → `:5998` → `codificatore.c` · `BANDA_FINESTRA_US` | **subito**, visibile a 3-4 |
+| 5 | il **rifiuto dopo il login** (§3.1) | `main.c` · `guarda_il_servizio_pam()` vs `rcp.c` · `tratta_attacca()` | a ogni rifiuto |
+| 6 | ⛔ la **cartella dei rilievi è condivisa** e i nomi dei file sono **fissi** (`cattura.bgrx`, `flusso-h264.264`, `scatto-*.bgrx`): due figli con `--rilievo` acceso **si sovrascrivono a vicenda**, e `SIGUSR1` è inoltrato a **tutti** ⇒ il rilievo attribuisce a un utente i pixel di un altro | `figlio.c` · `dichiara_priorita_audio()`, `:5595-5637`, `:1918-1929` | **2 utenti** (solo con `--rilievo`) |
+| 7 | ⛔ le **righe di registro non dicono di chi sono**: l'intestazione è `HH:MM:SS.mmm %-7s`, cioè **solo l'area**, e padre e figli **appendono allo stesso file**. Dieci righe *«TRATTO cattura → byte fuori: mediana 3,2 ms»* al secondo, **indistinguibili** ⚠ e l'atomicità è garantita solo sotto `PIPE_BUF` (4096), a cui le righe lunghe di questo prodotto arrivano vicino | `registro.c` · `riga()`, riquadro `:37-58` | ⛔ **2**, illeggibile a 10 — ⭐ **Q10 confermata** |
+| 8 | `presenti[]` **trabocca in silenzio**: il 17° utente non ha l'orologio dell'abbandono e **nessuna riga lo dice** | `main.c` · `deposita_fotogramma()`, `presenza_segna()` `:713`, `return` muto a `:730` | 17 |
+| 9 | `MAX_IN_VOLO` è **un'altra grandezza** sotto lo stesso numero | `aiutante.c` · `rcp_autentica()` | 17 simultanee, 0 sessioni |
+| 10 | ⛔ **`MAX_POLL 64` e il troncamento MUTO dei figli**: `figli_descrittori()` si ferma a `max` **senza scrivere niente**. Conto peggiore oggi 36 su 64, i 16 figli ci stanno — ⛔ ma oltre ~28 figli, o con la pagina affollata, **un figlio resta fuori dal `poll` e il suo utente non vede più un pixel, senza una riga** | `main.c` · `TELA_A`, `figlio.c` | >28, e **in silenzio** |
+| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (`[M]` ~22 ms contro ~3, `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, dipende dal driver |
+| 12 | ⭐ il **file dei ban e il socket di comando NON si rompono** (un solo scrittore, un solo socket) ⚠ ma il ban è **per indirizzo**: dieci utenti dietro lo stesso NAT condividono i tre tentativi | `main.c` · `presenza_segna()`, `comando.c` · `comando_descrittori()` | 1 NAT |
 
 ### 3.7 Le `[?]` che la lettura non chiude
 
@@ -513,9 +513,9 @@ punto 5 della fase non ha oggi **nessuna riga di codice**.
 |---|---|
 | **quanti pixel/s regge davvero `renderD128`** — nessuna riga del codice lo sa | il saturatore `10-b88` |
 | **la grandezza giusta: pixel/s oppure occupazione del motore** | due giri a **pari pixel/s** con codec diversi, e uno in hardware contro uno ripiegato: se il numero di sessioni ammissibili cambia, la grandezza giusta è l'**occupazione** |
-| **quando il driver Intel smette di dare contesti VA-API** | aprirne N in N processi finché `codificatore_nuovo()` fallisce, e leggere la riga di ripiego di `figlio.c:4470` — è l'incarico di `10-b94` |
+| **quando il driver Intel smette di dare contesti VA-API** | aprirne N in N processi finché `codificatore_nuovo()` fallisce, e leggere la riga di ripiego di `figlio.c` · `codificatore_di()` — è l'incarico di `10-b94` |
 | **se `cattura_avvia()` costa GPU mentre nessuno guarda** | un figlio vivo senza sessioni, e `drm-engine-*` su `gnome-shell` |
-| ⚠ **il commento invecchiato di `figlio.c:4319`** dice *«non ci si arriva nella pratica»* e **ci si arriva**: `prendi_il_palco(primo=true)` chiama `codifica_e_manda()` tre volte prima di ogni `MSG_VIDEO` | una riga di registro alla nascita di un figlio |
+| ⚠ **il commento invecchiato di `figlio.c` · `potenza_nome()`** dice *«non ci si arriva nella pratica»* e **ci si arriva**: `prendi_il_palco(primo=true)` chiama `codifica_e_manda()` tre volte prima di ogni `MSG_VIDEO` | una riga di registro alla nascita di un figlio |
 
 ---
 
@@ -537,13 +537,13 @@ cuciture**, e **due rompono il prodotto a dieci**.
 ### 4.1 ⛔⛔ R10-A1 · L'undicesimo è **AMMESSO** e non vede un pixel — e sul filo non esce niente
 
 **Il fatto**: i due `16` **si liberano su eventi diversi.** Il posto di `attaccate[]` si libera al
-distacco (`posto_lascia()`, sei strade); ⛔ **il figlio no** — è l'invariante **I4** (`figlio.h:69`):
-muore solo per logout esplicito o per abbandono a **60 minuti** senza input (`main.c:601`).
+distacco (`posto_lascia()`, sei strade); ⛔ **il figlio no** — è l'invariante **I4** (`figlio.h`):
+muore solo per logout esplicito o per abbandono a **60 minuti** senza input (`main.c` · `consegna_verdetto()`).
 ⇒ **La tabella dei figli può essere piena mentre quella dei posti è vuota.**
 
 **La scena**: mattina, dieci inquilini entrano, lavorano, chiudono il browser. I dieci palchi restano
 vivi fino a un'ora. L'undicesimo supera PAM, riceve `AMMESSO`, riceve `SESSIONE`, il posto in
-`attaccate[]` **è libero** — e `figli_assicura()` (`main.c:344`) torna `false`. Il codice non cambia
+`attaccate[]` **è libero** — e `figli_assicura()` (`main.c` · `guarda_il_servizio_pam()`) torna `false`. Il codice non cambia
 il verdetto (è dichiarato, ed è difendibile) e scrive una riga sola: *«è AMMESSO ma non ha un figlio:
 entra e non vede un pixel»*. ⛔⛔ **Sul filo non esce niente**: né `0x0E`, né `0x06`. L'utente vede
 una **pagina nera senza spiegazione**, e non c'è nessun tempo dopo il quale migliora.
@@ -558,16 +558,16 @@ motivo*, cioè esattamente il difetto per cui `posto_prendi()` era già stato cu
 
 | # | che cosa | dove | morde |
 |---|---|---|---|
-| ⛔⛔ **R10-A2** | **Il ban è per INDIRIZZO e dieci inquilini dietro un NAT sono un indirizzo solo.** `rcp.c:1004` lo dichiara: *«IL NOME UTENTE NON CONTA. Tre nomi diversi contano tre»*. Tre inquilini **diversi** che sbagliano una volta a testa in cinque minuti **bannano l'indirizzo**: gli altri sette restano fuori **12 ore** senza aver sbagliato niente, e l'unica uscita è il socket di comando, che è `0600` di **root** | `rcp.c:1052-1055`, `rcp_chiave_indirizzo()` `:1159`, controllo `:2364` | ⛔ **10 utenti in un ufficio**. ⭐ **Q6 confermata** |
-| ⛔ **R10-A2-bis** | **Un accesso riuscito toglie il ban dalla memoria ma NON dal file: il riavvio lo resuscita.** `azzera_falliti()` fa `memset` di tutta la voce, `bannato_fino` compreso, e ⛔ **non chiama `salva_ban()`** — dove il gemello `rcp_sblocca()` lo chiama | `rcp.c:1328` vs `rcp.c:1375` | ⚠ non rompe subito, **mente dopo**: due verità sullo stesso fatto (**I7**) |
-| ⛔⛔ **R10-A3** | **Dieci inquilini moltiplicano l'attesa di logind, e la LINEA MORTA li stacca tutti.** `wt_sorveglia_locali()` cicla su **tutte** le sessioni e per ognuna fa una chiamata **sincrona** a D-Bus, **dentro lo stesso `poll` che consegna i fotogrammi**; `ATTESA_MS` è 300. A un inquilino il peggio è 300 ms ogni 2 s; ⛔ **a dieci è 3 s ogni 2 s**. Mentre il ciclo è fermo, `lm_usciti` non sale per **nessuna** sessione e `lm_offerti` continua a salire ⇒ superati i 5 s **`linea_morta_scatta()` butta fuori tutti e dieci**, ognuno con la frase *«la linea è MORTA»* — che **accusa la rete dell'utente per un difetto della macchina** | `webtransport.c:5364`, `main.c:1029`, `sentinella.c:30`, `webtransport.c:4707` | ⛔ **10 utenti**, ⚠ **condizionato** a un logind lento — ma la condizione la fa scattare **il numero degli inquilini** |
-| ⛔ **R10-A4** | **Il registro non dice di chi è.** `gancio_registra()` riceve il contesto della sessione e **lo butta** (`(void)ctx;`); il formato è `ora + area` e basta — niente pid, niente utente; i figli **non ridirigono `stderr`** e appendono tutti e dieci allo stesso file, con la **stessa area**. `[M]` censimento statico: **79 %** delle righe di `rcp.c`, **63 %** di `webtransport.c`, **64 %** di `figlio.c` e ⛔ **100 %** di `codificatore.c` **senza identificatore** | `webtransport.c:2116`, `registro.c:63`, `figlio.c:1004`, `figlio.h:105` | ⛔ **2 utenti**, illeggibile a 10. ⭐ **Q10 confermata, e con un numero** |
-| ⛔ **R10-A5** | **Il tetto di banda è PER INQUILINO, e nessuno somma**: `--tetto-banda-mbit 30` con dieci inquilini non è un tetto di 30, è un tetto di **300**. In tutto `src/` **non esiste nessun contatore aggregato dei byte usciti** | `main.c:657` → `:1544` → `figlio.c:1215-1217` | ⚠ oggi non rompe; è il **punto 5 della fase**, confermato dal codice |
-| ⚠ **R10-A6** | **`WT_PALCHI` è OTTO e la fase punta a dieci**: il nono e il decimo non entrano in tabella e al ri-attacco ricevono la tela **come la chiede il client** invece che come il palco ce l'ha. ⛔ E il ripiego si dichiara **una volta sola** (`palchi_pieni_detto`): il nono e il decimo lo perdono **in silenzio** | `webtransport.c:5225`, `palco_misura_segna()` `:5238` | ⚠ **9** — brutto, non stacca |
-| ⚠ **R10-A7** | **`MAX_IN_VOLO` è 16 per copia, non per costruzione**, e il commento dichiara un legame che non esiste. Il giorno in cui il tetto sale, il diciassettesimo che si autentica **nello stesso momento** riceve `CREDENZIALI_ERRATE` — **indistinguibile da una parola sbagliata** | `aiutante.c:33` | ⚠ oggi no, ⛔ **il giorno del budget** |
-| ⚠ **R10-A8** | **La cartella dei rilievi è una sola e i nomi dei file sono FISSI**, e i terreni dei banchi la creano `1777` (uno addirittura `777` **senza sticky**). ⇒ (a) l'inquilino B può **leggere `cattura.bgrx` di A** — un fotogramma grezzo del suo desktop; (b) il secondo figlio fallisce la scrittura e ⛔ **chi diagnostica guarda il desktop sbagliato credendo che sia il suo** | `figlio.c:4055`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **difetto dei BANCHI**, non del prodotto — ⛔ ma la fase 10 fa girare dieci utenti proprio lì |
-| ⚠ **R10-A9** | **Un inquilino ostile impedisce a un altro di aprire la sessione con un `touch`**: il registro della sessione è `/tmp/remotix-sessione-<uid>.log`, `/tmp` è scrivibile da tutti e l'uid si legge da `/etc/passwd`. Se il file esiste ed è di un altro, la ridirezione fallisce e la shell **esce prima di eseguire il compositore** — ⛔ e il fallimento è **muto**, perché `setsid --fork` esce `0` comunque | `sessione.c:881` | ⚠ richiede ostilità, ⛔ costo dell'attacco: **un comando**, effetto **permanente e senza sintomo** |
-| ⚠ **R10-A10** | **Nessun tetto al numero di connessioni QUIC**: `t->quante++` esiste **solo per la riga di registro**. Migliaia di connessioni che non mandano mai `CREDENZIALI` vivono 60 s a testa, **il ban non scatta mai** (nessuna autenticazione fallisce), e il costo delle undici scorse della lista lo pagano **i fotogrammi di tutti gli altri** | `trasporto.c:738`, `webtransport.c:6946` | ⚠ robustezza |
+| ⛔⛔ **R10-A2** | **Il ban è per INDIRIZZO e dieci inquilini dietro un NAT sono un indirizzo solo.** `rcp.c` · `posto_prendi()` lo dichiara: *«IL NOME UTENTE NON CONTA. Tre nomi diversi contano tre»*. Tre inquilini **diversi** che sbagliano una volta a testa in cinque minuti **bannano l'indirizzo**: gli altri sette restano fuori **12 ore** senza aver sbagliato niente, e l'unica uscita è il socket di comando, che è `0600` di **root** | `rcp.c:1052-1055`, `rcp_chiave_indirizzo()` `:1159`, controllo `:2364` | ⛔ **10 utenti in un ufficio**. ⭐ **Q6 confermata** |
+| ⛔ **R10-A2-bis** | **Un accesso riuscito toglie il ban dalla memoria ma NON dal file: il riavvio lo resuscita.** `azzera_falliti()` fa `memset` di tutta la voce, `bannato_fino` compreso, e ⛔ **non chiama `salva_ban()`** — dove il gemello `rcp_sblocca()` lo chiama | `rcp.c` · `salva_ban()` vs `rcp.c` · `segna_fallito()` | ⚠ non rompe subito, **mente dopo**: due verità sullo stesso fatto (**I7**) |
+| ⛔⛔ **R10-A3** | **Dieci inquilini moltiplicano l'attesa di logind, e la LINEA MORTA li stacca tutti.** `wt_sorveglia_locali()` cicla su **tutte** le sessioni e per ognuna fa una chiamata **sincrona** a D-Bus, **dentro lo stesso `poll` che consegna i fotogrammi**; `ATTESA_MS` è 300. A un inquilino il peggio è 300 ms ogni 2 s; ⛔ **a dieci è 3 s ogni 2 s**. Mentre il ciclo è fermo, `lm_usciti` non sale per **nessuna** sessione e `lm_offerti` continua a salire ⇒ superati i 5 s **`linea_morta_scatta()` butta fuori tutti e dieci**, ognuno con la frase *«la linea è MORTA»* — che **accusa la rete dell'utente per un difetto della macchina** | `webtransport.c` · `video_a_una()`, `main.c` · `ABBANDONO_PREDEFINITO_MS`, `sentinella.c` · `ATTESA_MS`, `webtransport.c` · `WT_RETE_PERDE` | ⛔ **10 utenti**, ⚠ **condizionato** a un logind lento — ma la condizione la fa scattare **il numero degli inquilini** |
+| ⛔ **R10-A4** | **Il registro non dice di chi è.** `gancio_registra()` riceve il contesto della sessione e **lo butta** (`(void)ctx;`); il formato è `ora + area` e basta — niente pid, niente utente; i figli **non ridirigono `stderr`** e appendono tutti e dieci allo stesso file, con la **stessa area**. `[M]` censimento statico: **79 %** delle righe di `rcp.c`, **63 %** di `webtransport.c`, **64 %** di `figlio.c` e ⛔ **100 %** di `codificatore.c` **senza identificatore** | `webtransport.c` · `gancio_manda()`, `registro.c` · `riga()`, `figlio.c` · `diventa_ed_esegui()`, `figlio.h` · `REG_FIGLIO` | ⛔ **2 utenti**, illeggibile a 10. ⭐ **Q10 confermata, e con un numero** |
+| ⛔ **R10-A5** | **Il tetto di banda è PER INQUILINO, e nessuno somma**: `--tetto-banda-mbit 30` con dieci inquilini non è un tetto di 30, è un tetto di **300**. In tutto `src/` **non esiste nessun contatore aggregato dei byte usciti** | `main.c` · `consegna_verdetto()` → `:1544` → `figlio.c:1215-1217` | ⚠ oggi non rompe; è il **punto 5 della fase**, confermato dal codice |
+| ⚠ **R10-A6** | **`WT_PALCHI` è OTTO e la fase punta a dieci**: il nono e il decimo non entrano in tabella e al ri-attacco ricevono la tela **come la chiede il client** invece che come il palco ce l'ha. ⛔ E il ripiego si dichiara **una volta sola** (`palchi_pieni_detto`): il nono e il decimo lo perdono **in silenzio** | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⚠ **9** — brutto, non stacca |
+| ⚠ **R10-A7** | **`MAX_IN_VOLO` è 16 per copia, non per costruzione**, e il commento dichiara un legame che non esiste. Il giorno in cui il tetto sale, il diciassettesimo che si autentica **nello stesso momento** riceve `CREDENZIALI_ERRATE` — **indistinguibile da una parola sbagliata** | `aiutante.c` · `rcp_autentica()` | ⚠ oggi no, ⛔ **il giorno del budget** |
+| ⚠ **R10-A8** | **La cartella dei rilievi è una sola e i nomi dei file sono FISSI**, e i terreni dei banchi la creano `1777` (uno addirittura `777` **senza sticky**). ⇒ (a) l'inquilino B può **leggere `cattura.bgrx` di A** — un fotogramma grezzo del suo desktop; (b) il secondo figlio fallisce la scrittura e ⛔ **chi diagnostica guarda il desktop sbagliato credendo che sia il suo** | `figlio.c` · `dichiara_priorita_audio()`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **difetto dei BANCHI**, non del prodotto — ⛔ ma la fase 10 fa girare dieci utenti proprio lì |
+| ⚠ **R10-A9** | **Un inquilino ostile impedisce a un altro di aprire la sessione con un `touch`**: il registro della sessione è `/tmp/remotix-sessione-<uid>.log`, `/tmp` è scrivibile da tutti e l'uid si legge da `/etc/passwd`. Se il file esiste ed è di un altro, la ridirezione fallisce e la shell **esce prima di eseguire il compositore** — ⛔ e il fallimento è **muto**, perché `setsid --fork` esce `0` comunque | `sessione.c` · `avvia()` | ⚠ richiede ostilità, ⛔ costo dell'attacco: **un comando**, effetto **permanente e senza sintomo** |
+| ⚠ **R10-A10** | **Nessun tetto al numero di connessioni QUIC**: `t->quante++` esiste **solo per la riga di registro**. Migliaia di connessioni che non mandano mai `CREDENZIALI` vivono 60 s a testa, **il ban non scatta mai** (nessuna autenticazione fallisce), e il costo delle undici scorse della lista lo pagano **i fotogrammi di tutti gli altri** | `trasporto.c` · `accetta()`, `webtransport.c` | ⚠ robustezza |
 
 ### 4.3 ⭐ Le dieci piste **verificate e scartate** — valgono quanto i rilievi
 
@@ -575,9 +575,9 @@ motivo*, cioè esattamente il difetto per cui `posto_prendi()` era già stato cu
 stato guardato. Riga alla mano:
 
 1. ⛔⛔ **«Il secondo fisso mette dieci utenti in fila, l'ultimo aspetta dieci secondi» — È FALSO**, ed
-   è la pista più importante da chiudere. `RITARDO_FISSO` (`rcp.c:209`) esiste ancora e vale ancora
+   è la pista più importante da chiudere. `RITARDO_FISSO` (`rcp.c` · `RITARDO_FISSO`) esiste ancora e vale ancora
    anche per gli ammessi, ⭐ **ma non è un'attesa**: è un **pavimento per sessione** controllato in
-   `rcp_tempo()` (`rcp.c:7478`) con un confronto di orologio che **ritorna subito**. Il filo non si
+   `rcp_tempo()` (`rcp.c` · `rcp_verdetto()`) con un confronto di orologio che **ritorna subito**. Il filo non si
    ferma mai. ⇒ Dieci utenti che entrano insieme aspettano **un secondo ciascuno, in parallelo**.
    ⚠ **La frase della fase 1 descrive un prodotto che non esiste più: va cancellata, non
    riverificata.**
@@ -587,7 +587,7 @@ stato guardato. Riga alla mano:
    chiama mai PAM**, forca un nipote per pratica, socket `SEQPACKET`. A 10 regge con sei posti
    d'avanzo.
 4. ⭐⭐ **L'invariante I2 e la domanda del guardiano** — ⛔ **il codice pone la domanda GIUSTA**:
-   `sentinella.c:190` scarta le sessioni **di altri utenti** prima di guardare qualunque cosa. Il
+   `sentinella.c` · `sentinella_locali()` scarta le sessioni **di altri utenti** prima di guardare qualunque cosa. Il
    timore di `DECISIONI.md` §4.6-quater — *«c'è una sessione grafica locale?»* invece di *«…di questo
    utente?»* — **non si è avverato**. ⚠ Il problema del guardiano non è la domanda: è il **costo
    moltiplicato** (R10-A3).
@@ -619,7 +619,7 @@ stato guardato. Riga alla mano:
 | `[?]` | perché resta aperta |
 |---|---|
 | **il registro vero a dieci sessioni** | il censimento è **statico** (chiamate nel sorgente), non un campione girato con dieci utenti. La conclusione strutturale non dipende dal campione; ⚠ la **frazione esatta** sì |
-| **il costo di dieci sessioni abbandonate** | `[M]` una costa **477 MB (PSS)** e ~0,017 % di un nucleo (`main.c:587`). Dieci sarebbero ~4,8 GB **se fosse lineare** — ⛔ e non va assunto lineare: dieci `gnome-shell` condividono pagine. È un numero che la fase deve prendere |
+| **il costo di dieci sessioni abbandonate** | `[M]` una costa **477 MB (PSS)** e ~0,017 % di un nucleo (`main.c` · `consegna_verdetto()`). Dieci sarebbero ~4,8 GB **se fosse lineare** — ⛔ e non va assunto lineare: dieci `gnome-shell` condividono pagine. È un numero che la fase deve prendere |
 | **il motore di codifica condiviso** | nessuna riga di codice lo governa: non c'è niente da refutare leggendo |
 | **la soglia vera di R10-A3** | quanto deve essere lento logind è aritmetica (`N × 300 ms` contro 5000); ⚠ il caso peggiore reale di `ListSessions` con dieci sessioni aperte **non è misurato** |
 
@@ -1196,7 +1196,7 @@ i `negati` a ogni verdetto **anche a budget spento**.
 
 **«Rimpicciolisci la finestra» era FALSA al cancello.** Il `0x06` si decide **prima che nasca il
 palco**, e lì l'unico numero di tela in mano è `video.misura_massima`, che è il tetto del
-**DECODIFICATORE del client** — non della finestra (`pagina.html:1021` lo scrive a lettere, e `:1608`
+**DECODIFICATORE del client** — non della finestra (`pagina.html` · `VIA_MSE()` lo scrive a lettere, e `:1608`
 lo misura con `VideoDecoder.isConfigSupported`). ⇒ ⛔ **Chi rimpiccioliva e riprovava riceveva lo
 stesso identico no.**
 ⭐ La moneta resta il **pixel** — mai le teste, che sono l'altro ramo — ⛔ **ma la leva è il
@@ -1324,7 +1324,7 @@ QP 26 · bframes 0 · copia zero (DMA-BUF da GBM) · terreno `10-b0` **21 su 21 
 `testsrc2`, ⛔ **non un desktop vero: il ritmo vale, i Mbit/s no**.
 ⚠⚠ **E la premessa del codec è stata corretta da §6.10**: questa rampa è in **H.264**, che il primo
 giro credeva *«quel che il prodotto negozia davvero»* — ⛔ **il prodotto negozia HEVC per primo**
-(`rcp.c:1829`, `pagina.html:831`), e in HEVC il soffitto è **2,33 Gpixel/s**, il **+25 %**.
+(`rcp.c` · `prima_comune()`, `pagina.html` · `inquadra()`), e in HEVC il soffitto è **2,33 Gpixel/s**, il **+25 %**.
 ⭐ E l'isolamento **misurato, non supposto**: mentre girava, sulla macchina erano vivi i server di
 altri quattro banchi — `[M]` **gli estranei sul motore video sono stati `0,0 %` in tutti i 59 giri**.
 
@@ -1779,7 +1779,7 @@ iniettati** · *«non ho letto»* ≠ zero.
 ⛔ **La rete vera**: i clienti girano sulla stessa macchina, su `lo` (MTU 65536) ⇒ il budget di rete
 è **contato, non provato** · ⛔ **l'immagine**: il banco non dice *«si vede peggio»*, e quello lo dice
 l'utente · la GPU al primo gradino, annullata dal sesto difetto di banco · **le «attese a vuoto» per
-sessione**: `figlio.c:7343` non dice **di quale figlio** è la riga, e con dieci figli si leggono solo
+sessione**: `figlio.c` · `figlio_vive()` non dice **di quale figlio** è la riga, e con dieci figli si leggono solo
 in somma (⭐ è il rilievo R10-A4 di §4.2, ritrovato dall'altro capo) · **il desktop medio**: la scena
 satura di proposito; il caso leggero vale `[M]` 2 448 B/fotogramma e 0,77 Mbit/s.
 
@@ -2197,8 +2197,8 @@ codificati** (§3.2). ⭐ La riserva al 50 % limita lo sforamento a **2×**.
 
 #### ⭐⭐ 4 · Il meccanismo del dirupo — la pista dei buffer è **verificata e CORRETTA**
 
-Verificato sul codice: `cattura.c:586` chiede `RANGE(6, 4, 8)` · `cattura.c:578` *«al massimo DUE»* ·
-`cattura.h:198` `buffer_distinti` **si conta già** · `codificatore.c:3334` `vaSyncSurface`, che il
+Verificato sul codice: `cattura.c` · `parametri_di_consumo()` chiede `RANGE(6, 4, 8)` · `cattura.c` · `parametri_di_consumo()` *«al massimo DUE»* ·
+`cattura.h` · `REMOTIX_CATTURA_H` `buffer_distinti` **si conta già** · `codificatore.c` · `converti_sulla_gpu()` `vaSyncSurface`, che il
 commento accanto chiama *«il rilascio»*.
 
 ⛔ **E la previsione dedotta dai tempi è SMENTITA**: si era dedotto `buffer_distinti ∈ {3,4}`; `[M]`
@@ -2219,22 +2219,22 @@ dello stesso giro hanno piste diverse del 50 %, e il prodotto non lo sa.**
 
 > ##### ⛔ E il rilascio del buffer è **DOPO TUTTA la codifica**, non dopo la conversione — *correzione*
 >
-> Il primo racconto diceva, sulla fede del commento di `codificatore.c:3335`, che il buffer di Mutter
+> Il primo racconto diceva, sulla fede del commento di `codificatore.c` · `converti_sulla_gpu()`, che il buffer di Mutter
 > torna appena la conversione ha finito. ⛔ **Il codice dice un'altra cosa**: il rilascio è a
-> **`figlio.c:7763`**, **dopo `codifica_e_manda()` per intero** — e il commento accanto lo vuole lì
+> **`figlio.c`**, **dopo `codifica_e_manda()` per intero** — e il commento accanto lo vuole lì
 > apposta: *«si chiama DOPO la codifica… spostarla di due righe più in su rimetterebbe in piedi le due
 > schermate che si alternano»*.
 >
 > ⇒ ⭐ **La finestra in cui il buffer del compositore è NOSTRO non è la sola conversione: è
 > conversione + codifica + SPEDIZIONE** — e la spedizione è un `send()` **bloccante**
-> (`figlio.c:2741`). ⇒ La soglia è **più facile da sfondare** di come era stata raccontata, e — cosa
+> (`figlio.c` · `figli_spegni()`). ⇒ La soglia è **più facile da sfondare** di come era stata raccontata, e — cosa
 > che conta di più — è fatta delle **tre voci del TRATTO che il banco già legge**: ⭐ **i due lati
 > della disuguaglianza si misurano nello stesso giro.**
 >
 > ⭐⭐ **E i due «due» sono letti dalla struttura, non dai commenti**: `cattura->posto` è **una casella
 > sola** e chi arriva rende subito quel che trova (`cattura.c:1160-1165`); `cattura_prendi()` porta
 > via il fotogramma (`:2054`) e chi consuma lo rende in `cattura_fermo_libera()` (`:2197`) ⇒ **uno
-> nella casella, uno in mano a chi legge**. E i 6 di `cattura.c:586` sono un **minimo chiesto**, non
+> nella casella, uno in mano a chi legge**. E i 6 di `cattura.c` · `parametri_di_consumo()` sono un **minimo chiesto**, non
 > un ordine: quanti ne dia il produttore lo dice `buffer_distinti`, che si **conta**.
 >
 > ⇒ ⭐⭐⭐ **soglia = (buffer − 2) × periodo**, e la taratura mostra la cosa che vale: `[M]` con 6
@@ -2247,11 +2247,11 @@ dello stesso giro hanno piste diverse del 50 %, e il prodotto non lo sa.**
 Otto predicati verificati sul `src/` vero, **non ripetuti da §3.2**:
 
 - ⭐ `main.c:394 deposita_fotogramma()` riceve **ogni** fotogramma con larghezza, altezza, istante e
-  byte; `figlio.c:1517` lo chiama **senza guardie** su «qualcuno guarda» ⇒ **il padre vede anche i
+  byte; `figlio.c` lo chiama **senza guardie** su «qualcuno guarda» ⇒ **il padre vede anche i
   fantasmi** di §3.2;
-- ⭐ il tetto del nuovo c'è già **al `CIAO`** (`video.misura_massima` → `rcp.c:543`), ⛔ **ma non è
+- ⭐ il tetto del nuovo c'è già **al `CIAO`** (`video.misura_massima` → `rcp.c` · `MAX_ACCUMULO`), ⛔ **ma non è
   esposto da `rcp.h`**;
-- `main.c:332` il verdetto ha in mano trasporto e figli, e da lì si risale alla sessione RCP del
+- `main.c` · `aiuto()` il verdetto ha in mano trasporto e figli, e da lì si risale alla sessione RCP del
   nuovo ⇒ ⭐ **il no si può dire dove va detto**;
 - ⛔ nessun contatore di pixel/s esiste in `src/`; `us_codifica` non esce dal figlio — ⭐ **e non
   serve**.
@@ -2621,7 +2621,7 @@ dice *«si vede peggio»* — ⭐ **quello lo dice il regista**.
 ### 6.13 ⭐⭐⭐ IL GUARDIANO DI LOGIND — **il difetto è vero, il moltiplicatore no**, e morde molto prima di staccare
 
 `banchi/10-b97-guardiano.py` (+ `10-b97-terreno.sh`, `10-b97-innesta.py`), `[M]` 25 agosto 2026, con
-il **guardiano finto** innestato solo sull'adattatore che `main.c:1028` dichiara di aver messo apposta
+il **guardiano finto** innestato solo sull'adattatore che `main.c` · `ABBANDONO_PREDEFINITO_MS` dichiara di aver messo apposta
 per questo. ⛔ `src/` del repository **non toccato**, i due `md5` dichiarati.
 
 #### ⭐ Il difetto **si riproduce**, con la firma dedotta leggendo
@@ -2881,7 +2881,7 @@ ipotizzati.
 carico: `[M]` **0 % (5S) → 10 % (6S) → 28 % (7S) → 38 % (8S)**, e **22 % appena si spegne una scena**.
 
 ⇒ ⭐⭐ **La catena, per intero**: otto compositori saturano `rcs0` → il `vaSyncSurface` del VPP
-(`codificatore.c:3335`) non torna → il figlio resta dentro l'`ioctl` DRM → la cattura non consegna →
+(`codificatore.c` · `converti_sulla_gpu()`) non torna → il figlio resta dentro l'`ioctl` DRM → la cattura non consegna →
 ⛔ **il codificatore non riceve più niente**. ⭐ E *«`GPU video` che crolla»* era **il sintomo giusto,
 letto al contrario**.
 
@@ -3555,7 +3555,7 @@ figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0
 ⇒ Da allora il monitor **non lo chiediamo più**: si conta che lo crei `RecordVirtual`. ⛔ **E adesso
 non lo crea, o lo crea solo a volte.**
 
-⚠ **E c'è una guardia che rifiuta di rimetterlo** (`sessione.c:832`). ⇒ ⛔ *Chi curerà deve leggere le
+⚠ **E c'è una guardia che rifiuta di rimetterlo** (`sessione.c` · `scrivi_dropin()`). ⇒ ⛔ *Chi curerà deve leggere le
 righe 740-840 per intero: è stato tolto per una ragione misurata, e rimetterlo alla cieca rifà il
 difetto che quella riga aveva curato.*
 

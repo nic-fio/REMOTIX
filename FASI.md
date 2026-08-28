@@ -1903,7 +1903,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 >
 > ⛔ **L'imputato è la pagina, e Gecko è scagionato per misura.** Chiudendo la scheda con `ctrl+w`
 > **a browser vivo**, su Firefox 140.13.0esr `pagehide` **scatta** — e la traccia della pagina dice
-> `congeda_corrente NULLA`. ⇒ Il gestore di `src/pagina.html:331` è **codice morto**: il `finally`
+> `congeda_corrente NULLA`. ⇒ Il gestore di `src/pagina.html` è **codice morto**: il `finally`
 > del gestore di `submit` (riga **620**) azzera `congeda_corrente` **un millisecondo dopo
 > `SESSIONE`**, perché `collega()` ritorna lì. Il posto se ne va dopo `STACCATO per silenzio:
 > 30060 ms`.
@@ -1926,7 +1926,7 @@ i due scoperti erano i banchi dei due difetti più cari di v1 (R3.7, R4.6).*
 > la pagina ha chiuso la sessione, motivo 0x0b
 > ```
 >
-> ⛔ `01-p5-congedo.sh:318` conta la riga *«la pagina ha chiuso la sessione, motivo»* **senza
+> ⛔ `01-p5-congedo.sh` conta la riga *«la pagina ha chiuso la sessione, motivo»* **senza
 > guardare il motivo**: ha contato **una violazione di §3.1 come un congedo**, e ha stampato
 > *«⭐⭐ LA PAGINA FA QUEL CHE §8.1 LE IMPONE»*. ⇒ ⭐⭐ **I due motori non erano opposti: mostravano
 > lo STESSO difetto della pagina attraverso due smontaggi diversi**, e su uno dei due il banco è
@@ -2917,7 +2917,7 @@ perfetta.
 | ⛔ **la formula della tela, dopo S5** | `screen.width × devicePixelRatio` non è invariante allo zoom su Chrome 151, e lo zoom di pagina **non è leggibile da JavaScript in modo portabile**. Non è una `[?]` da misurare: è una **cura da trovare**, in `SPECIFICHE.md` §6.1-bis |
 | ⛔ **S5 su DeX, e S2, S3a, S6** | quattro misure che aspettano un **dispositivo**, non un'idea: il telefono Android, il DeX, una rete LTE vera. ⭐ I banchi sono pronti e girano il giorno che il ferro c'è (`web/rapporti/S-esiti-sonda.md` §4-§6) |
 | ⏳ **il numero di S1b** | l'orologio è in moto dal 10 agosto 21:10 UTC: il verdetto è il **17-18 agosto 2026**. Fino ad allora S1b dice *«a N giorni l'eccezione c'è ancora»*, e il `[R]` dei sette giorni **non è confermato dal comportamento** — solo dalla contabilità di Chrome |
-| ⛔⛔ ~~**il congedo di §8.1 su FIREFOX**~~ — **NON È PIÙ UNA `[?]`: È UN DIFETTO DI PRODOTTO, CON UN NOME** | ⭐ **Attribuito la sera stessa** (`banchi/01-p5-ff-*`, due giri per motore): **è della PAGINA**, e su **tutt'e due i motori**. `src/pagina.html:620` azzera `congeda_corrente` un millisecondo dopo `SESSIONE`, e il gestore di `pagehide` (riga 331) è **codice morto**. ⇒ Chiudendo la scheda, il client **non manda nessun congedo** dove §8.1 lo impone senza condizioni, e il posto se ne va per il tetto dei 30 s. ⛔ **Gecko è scagionato per misura**: la stessa `congeda()` chiamata da dentro `pagehide` consegna **tutt'e due** le strade di §3.1. ⛔ E su Chrome quel che sembrava un congedo era **lo smontaggio col codice `0x0`, che §3.1 vieta** — il banco lo contava senza leggere il motivo. ⭐⭐ **E la cura è APPLICATA E RIMISURATA la tarda serata dell'11**, `[M]` **due giri per motore**: `pagehide` scatta con la guardia **PRESENTE**, `congeda()` viene chiamata, e al server arrivano **tutt'e due** le strade di §3.1 col motivo `0x01` — su Firefox **e** su Chrome, dove la chiusura col codice `0x0` **non compare più**. Il riquadro di P5 porta i numeri. ✅ **E la dichiarazione c'è**: `DECISIONI.md` §1.12 — la cura è **fuori fase**, la fase 1 **non si riapre** e resta a **12 su 14**; alla fase 2 passa la ricertificazione di P5 |
+| ⛔⛔ ~~**il congedo di §8.1 su FIREFOX**~~ — **NON È PIÙ UNA `[?]`: È UN DIFETTO DI PRODOTTO, CON UN NOME** | ⭐ **Attribuito la sera stessa** (`banchi/01-p5-ff-*`, due giri per motore): **è della PAGINA**, e su **tutt'e due i motori**. `src/pagina.html` · `registro_visibile()` azzera `congeda_corrente` un millisecondo dopo `SESSIONE`, e il gestore di `pagehide` (riga 331) è **codice morto**. ⇒ Chiudendo la scheda, il client **non manda nessun congedo** dove §8.1 lo impone senza condizioni, e il posto se ne va per il tetto dei 30 s. ⛔ **Gecko è scagionato per misura**: la stessa `congeda()` chiamata da dentro `pagehide` consegna **tutt'e due** le strade di §3.1. ⛔ E su Chrome quel che sembrava un congedo era **lo smontaggio col codice `0x0`, che §3.1 vieta** — il banco lo contava senza leggere il motivo. ⭐⭐ **E la cura è APPLICATA E RIMISURATA la tarda serata dell'11**, `[M]` **due giri per motore**: `pagehide` scatta con la guardia **PRESENTE**, `congeda()` viene chiamata, e al server arrivano **tutt'e due** le strade di §3.1 col motivo `0x01` — su Firefox **e** su Chrome, dove la chiusura col codice `0x0` **non compare più**. Il riquadro di P5 porta i numeri. ✅ **E la dichiarazione c'è**: `DECISIONI.md` §1.12 — la cura è **fuori fase**, la fase 1 **non si riapre** e resta a **12 su 14**; alla fase 2 passa la ricertificazione di P5 |
 | ⛔ **il prodotto contro i banchi** | nessun banco ha mai acceso `src/`. Finché non lo fa, *«il server fa X»* è vero **dell'innesto**, e di `src/` è **letto** |
 | `[?]` **il rinnovo del credito degli stream unidirezionali** | dichiarato dal prodotto stesso; si misura alla **fase 4**, col carico che lo provoca |
 | ⚠ **perché `lsquic` con l'SNI cada su ALPN** | `[M]` 10 agosto: avviso TLS **120**, `no suitable application protocol`, **dopo** che il certificato è stato trovato. ⛔ **Non indagato di proposito**: `lsquic` è fuori per un motivo che non dipende da questo, e la riga esiste perché nessuno lo riscopra credendolo nuovo |
@@ -3296,7 +3296,7 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 | ⛔ **M5 — lo scarto di crominanza fra due decodificatori** | 0,9791 contro un limite di 0,98: è **l'unico rosso rimasto su catena sana** — M0 e M1 erano rossi ai giri delle 09:19-09:20, prima della cura del riscalamento. ⛔ **Non si riproduce sulla mira**, e **la soglia non è stata allargata**: il rosso non è stato curato, **è sparito quando è cambiata la scena** |
 | ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in `rapporti/F2-4-filo.md` |
 | ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **non lo copre nessun banco**, ed è il buco più grande della fase. `[M]` 13 agosto: il caso `senza-palco` di `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti al nucleo) **non** vede il desktop di `nicfio`, e il cliente RCP indipendente conta **zero** fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella macchina `prova` non ha mai fatto login — niente `/run/user/1001`, niente bus, niente palco — quindi **un prodotto che non consegnasse niente a nessuno passerebbe allo stesso modo**. La metà positiva regge oggi **solo per uid 1000**. ⚠ Guardati e scartati: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` si fermano tutti **all'autenticazione**, non al vedere |
-| ⚠ **`02-figlio-accendi.sh:165` conta i figli di tutti** | `pgrep -f -- "--figlio-interno" \| wc -l` non guarda **di chi** sono: allo spegnimento ha accusato due orfani che erano figli vivi di padri vivi (la 7693 di un altro banco e ⛔ **la 7561 dell'utente**). È la stessa forma che il file **vieta trenta righe più su** per l'azione `stato`. ⚠ Non cura, non ferma nessuno (`spegni` esce 0 lo stesso) — si accende solo quando due banchi girano in parallelo, e il 12 agosto infatti taceva. ⇒ ✅ **Curato in fase 3** (13 agosto 2026) — ⛔ **`[R]`, non eseguito**: la cura è letta nel codice e **non è stata girata**, quindi non porta la marca `[M]` |
+| ⚠ **`02-figlio-accendi.sh` conta i figli di tutti** | `pgrep -f -- "--figlio-interno" \| wc -l` non guarda **di chi** sono: allo spegnimento ha accusato due orfani che erano figli vivi di padri vivi (la 7693 di un altro banco e ⛔ **la 7561 dell'utente**). È la stessa forma che il file **vieta trenta righe più su** per l'azione `stato`. ⚠ Non cura, non ferma nessuno (`spegni` esce 0 lo stesso) — si accende solo quando due banchi girano in parallelo, e il 12 agosto infatti taceva. ⇒ ✅ **Curato in fase 3** (13 agosto 2026) — ⛔ **`[R]`, non eseguito**: la cura è letta nel codice e **non è stata girata**, quindi non porta la marca `[M]` |
 | ⛔ **la risoluzione del desktop, `1920×1080`** | ⛔ **ereditata dalla scena di un banco, senza decisione né misura** — `grep 1920 DECISIONI.md` non trova nessuna decisione che la fissi, e in v1 era **2560×1080**. ⚠ È la tela che l'utente vedrà: `LEZIONI.md` §2.3-quater la vuole scritta come **provvisoria**, ed è quel che questa riga fa. ⇒ ✅ **CHIUSA il 13 agosto 2026, e decisa dall'utente**: **1920×1080 resta**, con il prezzo misurato accanto (tela dipinta all'**86 %**, **912 px di nero**) e la ragione di metodo scritta — `DECISIONI.md` §5.0-quinquies. ⛔ E le bande nere **non sono la risoluzione**: sono la forma della finestra |
 | ⚠ **`VideoEncoder.flush()` in headless** | aggirato, non capito |
 | ⚠ **le soglie M1b e M3 del metro** | **calcolate**, non tarate sul campo |
@@ -3559,7 +3559,7 @@ perdita del codificatore deve stare **10 dB sotto** il rumore della tela a 8 bit
 **7,01** (55,08 contro 62,09). Il numero grezzo esiste — **54,11 dB** — ma non è un giudizio.
 
 > ⚠ **E si dichiara un difetto dello strumento**: il messaggio che finisce nel file di esiti dice
-> *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py:610`).
+> *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py` · `m2_catena_intera()`).
 > La soglia vera è quella del codice; il messaggio è rimasto alla prima stesura.
 
 #### 2. I dieci bit sono **otto promossi**, e lo sono **a tutt'e due i capi**
@@ -3762,7 +3762,7 @@ deve poterla rifiutare con un caso.
 | ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto dove un orologio decide**. La fase 3 è tutta tempo — è qui che si scopre se regge |
 | ⛔ **il punto cieco a monte della cattura** | il metro non guarda prima della cattura, e con molti fotogrammi il punto cieco **si allarga** |
 | ⛔ **«due utenti, ciascuno vede la propria sessione»** | non lo copre nessun banco (metà positiva scoperta). Col movimento diventa **più caro** sbagliarlo, non meno |
-| ⚠ **`02-figlio-accendi.sh:165`** | conta i figli **di tutti** invece dei propri: si accende solo quando due banchi girano in parallelo, **e in fase 3 girano** |
+| ⚠ **`02-figlio-accendi.sh`** | conta i figli **di tutti** invece dei propri: si accende solo quando due banchi girano in parallelo, **e in fase 3 girano** |
 
 #### Gli esiti delle sei eredità, alla chiusura
 
@@ -3773,7 +3773,7 @@ deve poterla rifiutare con un caso.
 | ⛔ **P15**, il secondo di grazia | ⏳ non è quel che ha morso. L'orologio che ha fatto danni in questa fase è stato un altro: quello **del banco**, non del protocollo (§P1 a blocchi, `LEZIONI.md` §1.13) |
 | ⛔ **il punto cieco a monte della cattura** | ⛔ **si è allargato come previsto, e adesso ha un numero**: 16-40 ms non compresi nel 74,58. ⚠ E **su Xvfb non esiste**: la stima vale per l'utente, non per il banco |
 | ⛔ **«due utenti, ciascuno vede la propria sessione»** | ⭐ **il prezzo è stato pagato, non rinviato**: il deposito del video è sparito **del tutto** — non «uno per sessione», **nessuno**. ⏳ Il banco che copre la metà positiva **resta da scrivere** |
-| ⚠ **`02-figlio-accendi.sh:165`** | ✅ **curato** `[R]` — ⛔ **e non eseguito**: la cura è letta nel codice, non girata. Non porta la marca `[M]` |
+| ⚠ **`02-figlio-accendi.sh`** | ✅ **curato** `[R]` — ⛔ **e non eseguito**: la cura è letta nel codice, non girata. Non porta la marca `[M]` |
 
 ---
 
@@ -3899,7 +3899,7 @@ prima, e scritta con la fermezza di una misura ripetuta — *«`[M]` 5 giri vali
 `isConfigSupported` è `false` per tutte le stringhe HEVC. E la causa vera: su **Xvfb non c'è GPU
 affatto** ⇒ non è un problema di codec, è un problema di PALCO»*.
 
-⛔⛔ **Era la bandiera `--disable-gpu` del banco stesso** (`03-b17-ritardo.py:626`). La sonda
+⛔⛔ **Era la bandiera `--disable-gpu` del banco stesso** (`03-b17-ritardo.py` · `leggi_celle()`). La sonda
 chiedeva a un browser **accecato da lei** se vedesse.
 
 | Chrome, stesso Xvfb, stesso script, **una sola variabile** | webgl | HEVC |
@@ -3916,7 +3916,7 @@ detto HEVC = true con GPU, e non si è più riprodotto (0 su 5 successivi)»*, c
 **anomalia da inseguire**. ⇒ Era **l'unico giro giusto**. *Un esito che non si riproduce una volta
 su sei non è rumore: è una **variabile non dichiarata**.*
 
-⭐ **Quel che NON è successo, e va detto perché era il rischio grosso**: `03-b17-ritardo.py:582` ha
+⭐ **Quel che NON è successo, e va detto perché era il rischio grosso**: `03-b17-ritardo.py` · `leggi_celle()` ha
 **`gpu=True` di default** — `--senza-gpu` è opt-in ⇒ ⛔ **il numero della fase, i 74,58 ms, NON era
 misurato al buio.** Era **la sonda dei codec** a esserlo, non la misura.
 
@@ -4179,7 +4179,7 @@ tolleranza su una grandezza che nessuno ha misurato (`LEZIONI.md` §1.13).
 #### Che cos'è
 
 `rcp_video_serve_chiave()` **non ha nessun chiamante in `src/`**: il debito di chiave arriva al
-codificatore solo per una strada laterale (`webtransport.c:1352`), **strozzata a una richiesta al
+codificatore solo per una strada laterale (`webtransport.c`), **strozzata a una richiesta al
 secondo**. Il prodotto è **conforme** a `RCP.md` §5.2 — la chiave arriva — ma paga il ritardo.
 
 ⛔ **E il numero non è quel che sembra: `[M]` 343 delta buttati in un giro solo NON sono 343
@@ -4510,7 +4510,7 @@ che è stato scartato**.
 
 | | |
 |---|---|
-| ⛔ **`sessione.c:650` non lo esegue nessuno** | `sessione_assicura()` **non è chiamata dal prodotto**. Su questa macchina `--virtual-monitor` lo impone un drop-in scritto a mano ⇒ **I7 violato**, e il desktop di `prova` si vedeva grazie a un file di configurazione, non al prodotto |
+| ⛔ **`sessione.c` · `esegui()` non lo esegue nessuno** | `sessione_assicura()` **non è chiamata dal prodotto**. Su questa macchina `--virtual-monitor` lo impone un drop-in scritto a mano ⇒ **I7 violato**, e il desktop di `prova` si vedeva grazie a un file di configurazione, non al prodotto |
 | ⛔ **la cura è in QUATTRO posti, non due** | coi due soli, `sessione_assicura()` avrebbe **ucciso la sessione giusta a ogni chiamata** (0 monitor = `SESSIONE_NERA` = «fai rinascere»). La macchina a stati è stata rovesciata, e dichiarato |
 | ⛔ **la tela concessa è una promessa che nessuno mantiene** | client a 1280×720: il server la concede, il palco cattura a 1920×1080 (costante di compilazione), `rcp` rifiuta ogni fotogramma — `[M]` **145 prodotti, 0 spediti, client nero senza errori**. ⚠ E la misura la decide il **nostro** formato PipeWire `[R]`, non `RecordVirtual`: la `[?]` n. 1 di questo documento è **risolta, e la risposta era un'altra** |
 
@@ -5289,7 +5289,7 @@ alla sessione remota»* — e **nessuna riga di codice la mantiene**.
 
 | strada | che cosa fa davvero |
 |---|---|
-| ❌ `org.gnome.desktop.lockdown disable-log-out` | fa sparire Spegni **e** Riavvia — ⛔ **ma fa sparire anche «Esci…»**, e fa rifiutare `org.gnome.SessionManager.Logout` con `GSM_MANAGER_ERROR_LOCKED_DOWN`. Cioè ci porta via **il punto 1.2 dell'utente** *e* il congedo che `sessione.c:789` usa oggi per fermare la sessione |
+| ❌ `org.gnome.desktop.lockdown disable-log-out` | fa sparire Spegni **e** Riavvia — ⛔ **ma fa sparire anche «Esci…»**, e fa rifiutare `org.gnome.SessionManager.Logout` con `GSM_MANAGER_ERROR_LOCKED_DOWN`. Cioè ci porta via **il punto 1.2 dell'utente** *e* il congedo che `sessione.c` · `scrivi_dropin()` usa oggi per fermare la sessione |
 | ✅ **regola polkit `no`** su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` (e le varianti `*-multiple-sessions`, `*-ignore-inhibit`) | `[R]` `gsm-manager.c`: `CanShutdown = !lockdown && (can_stop ‖ can_restart ‖ can_suspend ‖ can_hibernate)`, e ciascuno dei quattro è vero solo se logind risponde `yes` o `challenge` (`gsm-systemd.c:698-803`). Con tutt'e quattro a `no` ⇒ `CanShutdown` falso ⇒ gnome-shell nasconde **Spegni** e **Riavvia** (`systemActions.js:340-359`), e **Sospendi** cade per conto suo (`loginManager` `CanSuspend`). ⭐ **«Esci…» resta**, perché dipende solo da `disable-log-out` |
 
 ⛔ **`no`, mai `auth_admin`**: `"challenge"` **mostra** la voce — vale su GNOME e su KDE
@@ -5330,7 +5330,7 @@ lega `can-*` a `visible`.
   il fallimento;
 - ⚠ **root resta, e deve restare**: `systemctl --force poweroff` parla con PID 1 e salta logind.
   ⭐ È la strada dell'amministratore, e i client attaccati lo vengono a sapere con
-  `SERVER_IN_CHIUSURA 0x0C` — ⭐ già emesso da `main.c:850`, cura del rilievo B-7. ⇒ **questo
+  `SERVER_IN_CHIUSURA 0x0C` — ⭐ già emesso da `main.c` · `main()`, cura del rilievo B-7. ⇒ **questo
   percorso va provato in questa fase**: adesso è l'unico spegnimento legittimo che esista;
 - gli altri desktop arrivano con le loro fasi (KDE è la 10): la regola polkit è **la stessa per
   tutti e quattro** — `STUDI.md` §xfce §618 dice che su XFCE non esiste nessuna chiave e restano solo
@@ -5370,7 +5370,7 @@ lega `can-*` a `visible`.
 
 | caso | oggi | che cosa manca |
 |---|---|---|
-| **1 · il filo cade** — scheda chiusa, browser chiuso, ⭐ **il PC dell'utente spento o riavviato** | ⭐ **vivo e misurato**: `pagina.html:2504` aggancia `pagehide` (⛔ non `beforeunload`) e spedisce `CONGEDO 0x01` prima di morire — `[M]` il server l'ha visto arrivare. Il posto si libera, **la sessione sopravvive** (I4, `SPECIFICHE.md` §5.2). ⚠ E quando il PC muore di colpo il `CONGEDO` non parte affatto: allora è l'orologio del **silenzio** a liberare il posto, 30 s (§5.3) — ⭐ **stesso esito, altra strada** | il **banco** che lo provi, e lo provi **due volte di fila** (`LEZIONI.md` §2.3-ter) |
+| **1 · il filo cade** — scheda chiusa, browser chiuso, ⭐ **il PC dell'utente spento o riavviato** | ⭐ **vivo e misurato**: `pagina.html` · `MP4_DURATA_MAX()` aggancia `pagehide` (⛔ non `beforeunload`) e spedisce `CONGEDO 0x01` prima di morire — `[M]` il server l'ha visto arrivare. Il posto si libera, **la sessione sopravvive** (I4, `SPECIFICHE.md` §5.2). ⚠ E quando il PC muore di colpo il `CONGEDO` non parte affatto: allora è l'orologio del **silenzio** a liberare il posto, 30 s (§5.3) — ⭐ **stesso esito, altra strada** | il **banco** che lo provi, e lo provi **due volte di fila** (`LEZIONI.md` §2.3-ter) |
 | **2 · l'utente sceglie «Esci…» nel menu del desktop** | ⛔ **non è definito da nessuna parte e non è gestito**: `gnome-session` esce, Mutter muore, il palco cade — e sul filo **non parte nessun motivo**. Il client vede una connessione che si spegne, cioè esattamente la forma di guasto del rilievo **B-7** | tutto quel che segue |
 
 **Quel che il caso 2 richiede, in ordine:**
@@ -5489,8 +5489,8 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
 |---|---|---|
 | remota viva + un **secondo dispositivo** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **vivo e provato** `[M]`: il registro dei posti in `rcp.c`, e il caso 18 del banco `04-b31` |
 | remota **muta da 30 s** + un altro dispositivo | *(entra)* | vivo: `torna_a_parlare()` |
-| ⛔ **locale già attiva**, arriva la remota | `0x05 GIA_ATTIVA_LOCALE` | **definito in `rcp.h:45` e MAI EMESSO da nessun `.c`** |
-| ⛔ remota viva, **si apre la locale** | `0x04 SESSIONE_LOCALE_PREVALSA` | **definito in `rcp.h:44` e MAI EMESSO** |
+| ⛔ **locale già attiva**, arriva la remota | `0x05 GIA_ATTIVA_LOCALE` | **definito in `rcp.h` · `rcp_tetto_imposta()` e MAI EMESSO da nessun `.c`** |
+| ⛔ remota viva, **si apre la locale** | `0x04 SESSIONE_LOCALE_PREVALSA` | **definito in `rcp.h` · `rcp_tetto_imposta()` e MAI EMESSO** |
 
 ⛔ È la stessa forma di guasto di `RCP_SERVER_IN_CHIUSURA` (rilievo **B-7**): un motivo che esiste
 nell'intestazione e che nessuno spedisce. ⭐ E la pagina **è già pronta a leggerli**
@@ -5504,7 +5504,7 @@ nell'intestazione e che nessuno spedisce. ⭐ E la pagina **è già pronta a leg
 - ⛔⛔ **la definizione di «sessione grafica locale», scritta prima del codice — e la prima stesura
   ovvia è SBAGLIATA.** Il criterio che viene in mente è `Type ∈ {wayland, x11}` **e**
   `Remote = false`; ⛔ ma `[R]` **noi non chiamiamo `pam_set_item(PAM_RHOST, …)` da nessuna parte**
-  — `autenticazione.c:176` fa `pam_start` e basta — quindi `pam_systemd` crea le **nostre** sessioni
+  — `autenticazione.c` · `rcp_autentica()` fa `pam_start` e basta — quindi `pam_systemd` crea le **nostre** sessioni
   senza host remoto e logind le segna con ogni probabilità `Remote=no`. ⇒ ⭐ **con quel criterio la
   nostra sessione remota conterebbe come locale, e ci rifiuteremmo da soli con `0x05`.**
 
@@ -5554,8 +5554,9 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 ⇒ ⭐ **Il banco di `0x04`/`0x05` si scrive su quella coppia** — locale `nicfio` e remota `prova`, che
 **devono convivere senza toccarsi** — e costa quanto costerebbe comunque.
 
-⚠ **E il ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** (`rcp.c:568`) dove
-§5.5 promette **dieci configurabile**. Oggi non morde, e la sua scadenza è la fase 10.
+⚠ ~~**E il ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** dove §5.5 promette
+**dieci configurabile**. Oggi non morde, e la sua scadenza è la fase 10.~~ ✅ **PAGATO il 25 agosto
+2026** (fase 10): `RCP_TETTO_SESSIONI` in `src/rcp.h`, e **`--tetto-sessioni N`** lo cambia.
 
 ---
 
@@ -5699,7 +5700,7 @@ nessun rifiuto), e il figlio ha scritto tre volte
 > > impostate.»*
 >
 > ⭐ **Ha ragione, e la ragione è strutturale**: quelle variabili le imposta `pam_systemd` al login,
-> e ⛔ **noi il login non lo facciamo** — `figlio.c:2428` dichiara fuori mandato far nascere la
+> e ⛔ **noi il login non lo facciamo** — `figlio.c` · `scatto_chiudi()` dichiara fuori mandato far nascere la
 > sessione. ⇒ Nessuno le imposta, e noi le **componiamo a mano**.
 >
 > **Quel che c'è oggi**, letto nel codice:
@@ -5715,7 +5716,7 @@ nessun rifiuto), e il figlio ha scritto tre volte
 >
 > ⚠ **Quel che nessuno imposta, e che ricade sui predefiniti in silenzio**: `XDG_DATA_DIRS`,
 > `XDG_CONFIG_DIRS`, `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`,
-> `XDG_SESSION_CLASS`. ⛔ E `XDG_SESSION_ID` **di proposito** (`sessione.c:523`).
+> `XDG_SESSION_CLASS`. ⛔ E `XDG_SESSION_ID` **di proposito** (`sessione.c` · `locale_utf8()`).
 >
 > ⇒ **Il lavoro che ne nasce, per questa fase:**
 > 1. un posto solo che compone l'ambiente **e lo verifica**, scrivendo per ogni variabile **da dove
@@ -5737,7 +5738,7 @@ aggiunto io, quindi andava esclusa per prima:
 | sospetto | misura |
 |---|---|
 | il **ripasso di logind** ogni 2 s, sincrono nel ciclo dei fotogrammi | ⭐ `[M]` 200 chiamate: **mediana 0,125 ms**, p95 0,226, **max 0,351 ms**. ⇒ Non è quello, e il ripiego «sincrono» di `sentinella.c` regge |
-| il **danno degenerato** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 avvisi in tutto, non continui. ⚠ E la lettura del sorgente di Mutter (`meta-screen-cast-stream-src.c:891`) dice che **non** sono i buffer PipeWire: sono i **posti-regione** nel metadato `VideoDamage`, che chiediamo `×4` con tetto `×16` (`cattura.c:419`). Quando le regioni sono di più, Mutter dichiara **tutto il fotogramma danneggiato**. ⏳ Difetto vero, piccolo, da curare — ma non è questo il lag |
+| il **danno degenerato** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 avvisi in tutto, non continui. ⚠ E la lettura del sorgente di Mutter (`meta-screen-cast-stream-src.c:891`) dice che **non** sono i buffer PipeWire: sono i **posti-regione** nel metadato `VideoDamage`, che chiediamo `×4` con tetto `×16` (`cattura.c` · `parametri_di_consumo()`). Quando le regioni sono di più, Mutter dichiara **tutto il fotogramma danneggiato**. ⏳ Difetto vero, piccolo, da curare — ma non è questo il lag |
 
 ⛔ **La causa era il compositore che disegnava IN SOFTWARE**, e l'ho introdotta io: `[M]`
 `gnome-shell` non aveva **nessun** nodo `/dev/dri/*` aperto. Ricreando l'utente `prova` dopo il

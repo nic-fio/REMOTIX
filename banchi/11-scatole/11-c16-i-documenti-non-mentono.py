@@ -108,7 +108,16 @@ def eccezioni_dichiarate(percorso=ECCEZIONI):
         return []
     return fuori
 
-RX_RIGA  = re.compile(r'`(?:src|banchi)/[A-Za-z0-9_./-]+\.(?:c|h|py|sh):[0-9]+`')
+# ⛔ La prima stesura chiedeva il prefisso `src/`, e ⭐ **si e' lasciata sfuggire
+#    222 coordinate su 272** — quelle scritte `figlio.c:1145`, senza cartella.
+#    ⇒ Adesso prende qualunque `nome.ext:numero`, e a decidere se conta e' se il
+#    file **esiste e si muove** (vedi CONGELATO qui sotto).
+RX_RIGA  = re.compile(r'`([A-Za-z0-9_./-]+\.(?:c|h|py|sh|html)):([0-9]+)`')
+
+# ⭐ IL CODICE CONGELATO — `fondamenta/` e' il prodotto v1, chiuso e fermo.
+#    Una coordinata li' dentro **non invecchia**, perche' non c'e' niente che la
+#    muova.  ⇒ Vietare anche quelle sarebbe una regola senza un difetto dietro.
+CONGELATO = ("fondamenta/",)
 RX_PERC  = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:c|h|py|sh|md|html|json|jsonl|pam|rs))`')
 RX_LINK  = re.compile(r'\[[^\]]+\]\(([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|png|jpg|sh|py|c|h))\)')
 RX_RIPR  = re.compile(r'DA QUI SI RIPRENDE')
@@ -147,7 +156,13 @@ def guarda(radice, eccezioni=None):
             continue
         for n, riga in enumerate(righe, 1):
             for m in RX_RIGA.finditer(riga):
-                coord.append(f"{d}:{n}  {m.group(0)}")
+                f_cit = m.group(1)
+                if f_cit.startswith(CONGELATO):
+                    continue
+                vivo = any(os.path.exists(os.path.join(radice, x))
+                           for x in (f_cit, "src/" + f_cit, "banchi/" + f_cit))
+                if vivo:
+                    coord.append(f"{d}:{n}  {m.group(0)}")
             if RX_RIPR.search(riga) and riga.lstrip("> ").startswith("#"):
                 riprese.append(f"{d}:{n}")
             # i percorsi marcati ⟨…⟩ sono dichiarati di altri: non si rincorrono
@@ -223,6 +238,11 @@ def giro(radice, silenzioso=False, eccezioni=None):
 def certifica():
     """⛔ una maglia che non e' mai stata vista fallire non e' una maglia"""
     print("== certificazione di C16 — sa dare rosso? ==\n")
+    # ⚠ 28 ago 2026: il terreno del primo guasto deve contenere DAVVERO `src/main.c`.
+    #    ⛔ Quando il controllo 1 e' passato da «qualunque coordinata» a «solo verso
+    #    file che esistono e si muovono», il guasto finto ha smesso di essere visto
+    #    — e ⭐ **la certificazione se n'e' accorta subito**: e' esattamente il suo
+    #    mestiere, ed e' la ragione per cui non si scrive una maglia senza.
     guasti = {
         "una coordinata di riga":      ("g1.md", "vedi `src/main.c:111` per il resto.\n"),
         "un percorso che non esiste":  ("g2.md", "sta in `src/inventato_dal_nulla.c`.\n"),
@@ -235,7 +255,10 @@ def certifica():
             subprocess.run(["git", "-C", t, "init", "-q"], check=True)
             with open(os.path.join(t, "sano.md"), "w", encoding="utf-8") as f:
                 f.write("Un documento onesto: cita `sano.md` e basta.\n")
-            subprocess.run(["git", "-C", t, "add", "sano.md"], check=True)
+            os.makedirs(os.path.join(t, "src"), exist_ok=True)
+            with open(os.path.join(t, "src", "main.c"), "w", encoding="utf-8") as f:
+                f.write("int main(void) { return 0; }\n" * 200)
+            subprocess.run(["git", "-C", t, "add", "sano.md", "src/main.c"], check=True)
             if giro(t, silenzioso=True, eccezioni=[]) != 0:
                 print(f"  ⛔ il terreno SANO non e' verde: la certificazione non vale")
                 return 2

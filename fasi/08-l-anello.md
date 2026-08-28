@@ -646,7 +646,7 @@ questa fase: non con un numero nostro, ma con una previsione che il suo occhio p
    schermo), ma **il rimedio (`rm -f`) è nella testa di chi lancia**, non nel banco.
 
 5. ⛔ **Il banco di A non si può girare alla tela dell'utente**, quindi il confronto A↔F2 è a
-   **1460/1560**, non a 2560. `[R]` `04-b30-anello-input.py:3381` costruisce il palco con
+   **1460/1560**, non a 2560. `[R]` `04-b30-anello-input.py` costruisce il palco con
    `finestra=(1500, 1000)` **scritto nel sorgente**, e l'Xvfb nasce di conseguenza a 1600×1200: una
    finestra da 2600 non ci sta e `forza.py` non può allargare uno schermo. ⇒ `[?]` **Il numero di A
    a 2560×1080 non esiste** — e visto che i pixel non contano (F2.2 punto 1) sarebbe **~110 ms**,
@@ -2373,9 +2373,9 @@ d'uscita 3**, «non ho niente da giudicare». Q2, Q3, Q4, Q5, Q6, Q7, Q8 tutti *
 Il resto della catena era sano: codifica in hardware, scena su `Meta-0`, input arrivato al desktop.
 
 `[R]` **La causa, letta nel codice e non dedotta.** Dal 20 agosto (`DECISIONI.md` §5.4,
-`src/pagina.html:2432`) la strada normale è `bitmaprenderer` + `createImageBitmap`. Su quella strada:
+`src/pagina.html` · `MP4_DURATA_MAX()`) la strada normale è `bitmaprenderer` + `createImageBitmap`. Su quella strada:
 
-- **il deposito 2D non esiste** (`src/pagina.html:2518`: `this.deposito = null; this.deposito_p =
+- **il deposito 2D non esiste** (`src/pagina.html` · `MP4_DURATA_MAX()`: `this.deposito = null; this.deposito_p =
   null;`), e il prologo del banco legge i pixel **esattamente da lì** ⇒ zero marche lette;
 - **`drawImage` non viene mai chiamato** ⇒ i tratti 9 e 10 non esistono e Q8 non gira;
 - ⛔⛔ **e c'è di peggio, ed è la trappola vera**: il banco prende `t_dip` — il confine **scomodo**,
@@ -2834,7 +2834,7 @@ sotto i 6 000 byte da soli. `[?]` Resta non percorso.
 4. ⛔ **Il banco della scansione mentiva**: `-O2` aveva cancellato il ciclo e il banco diceva
    **0,000 ms** — nella direzione che avrebbe chiuso la caccia.
 5. ⛔ **Il primo tentativo di costruire i due binari e' uscito con lo STESSO md5**:
-   `costruisci.sh:110` fa `rm -f remotix *.o`, quindi la `cattura.o` compilata col `-D` spariva.
+   `costruisci.sh` fa `rm -f remotix *.o`, quindi la `cattura.o` compilata col `-D` spariva.
    ⚠ Senza il controllo degli md5 il confronto avrebbe detto *«la cura non cambia niente»* misurando
    **due volte la stessa cosa**. ⇒ Il controllo resta nel banco.
 6. ⛔ **La copia zero non e' stata fatta.** Vedi C.2.
@@ -3267,7 +3267,7 @@ ha funzionato», punto 4). Un banco che avesse guardato solo il codice di uscita
 I sotto-livelli servivano a *«buttare certi fotogrammi senza rompere niente»*. **Quel risultato lì
 `EncSliceLP` lo dà**, per un'altra strada: le **figure non di riferimento** — in HEVC i NAL di tipo
 `TRAIL_N` — che compaiono appena si chiede `-bf ≥ 1` (nel prodotto è `c->ctx->max_b_frames`,
-`codificatore.c:1377`, oggi **0**).
+`codificatore.c` ⚠ *(il codice citato non c'e' piu': da rileggere)*, oggi **0**).
 
 `[M]` `banchi/08-D1-costo.py`, sorgente **grezza NV12 a cadenza fissa**, 120 fotogrammi
 2560×1080 della scena dell'utente, `hevc_vaapi` `EncSliceLP` QP 26 (`entrypoint` **confessato da
@@ -3296,7 +3296,7 @@ cattura e l'uscita — `[M]` **67 ms** a 30/s — cioè **da solo sfonda i 50 ms
 ⇒ ⭐ **La riga di `RCP.md` §5.2 — «ogni abbandono costa una chiave» — resta in vigore, e adesso ha
 una misura sotto invece di una `[?]`.**
 
-⚠ *E il prodotto è già protetto se qualcuno provasse a toccare quel numero*: `codificatore.c:2182`
+⚠ *E il prodotto è già protetto se qualcuno provasse a toccare quel numero*: `codificatore.c` · `comprimi_comune()`
 guarda `dts ≠ pts` e **scrive nel registro** che il codificatore riordina. La riga
 `max_b_frames = 0` è giusta com'è: ⛔ **non si tocca.**
 
@@ -3323,7 +3323,7 @@ togliendo **sei** figure su 120. Il banco distingue.
 **Il tetto è 16 777 216 byte** (`RCP.md` §6.2). Metodo: **ogni** fotogramma è una chiave (`-g 1`,
 `idr_interval 0`), e si misura l'**accesso intero** — VPS+SPS+PPS+SEI+IDR — cioè quel che il
 protocollo mette in un chunk `key`, non il solo slice. Regime del prodotto: `EncSliceLP`,
-`rc_mode=CQP`, **QP 26** (`figlio.c:3978`); ripiego in software **CRF 20** (`figlio.c:4065`).
+`rc_mode=CQP`, **QP 26** (`figlio.c` · `QP_HARDWARE`); ripiego in software **CRF 20** (`figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)*).
 
 ⛔ **I 10 bit qui sono OTTO PROMOSSI, e si dichiara**: `DECISIONI.md` §2.3-ter ha misurato che dalla
 cattura di Mutter i 10 bit veri non escono per nessuna strada. Le righe `main10` qui sotto misurano
@@ -3399,7 +3399,7 @@ rumore di laboratorio.
 
 ### D.2.4 ⛔⛔ E qui c'è il difetto vero: **la scala delle ricodifiche è corta di UNO scalino**
 
-`[R]` `codificatore.c:41` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
+`[R]` `codificatore.c` · `RICODIFICHE_MASSIME` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
 La scala è dunque **QP 26 → 32 → 38** (hardware) e **CRF 20 → 26 → 32** (software), e dopo il terzo
 tentativo `:2203` **restituisce `false`: il fotogramma NON parte.**
 
@@ -3485,9 +3485,9 @@ Alla tela dell'utente, mai (§D.2.1). ⇒ È un difetto **vero e dimostrato**, n
 
 | # | dove | che cosa, e perché |
 |---|---|---|
-| **1** | `codificatore.c:41` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware e **19,895 MiB** in software, e il quarto ce l'avrebbe fatta. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware e **1,8-3,3 s** in software, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
+| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware e **19,895 MiB** in software, e il quarto ce l'avrebbe fatta. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware e **1,8-3,3 s** in software, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
 | **2** | `codificatore.c:2203-2207` — la resa | ⛔⛔ Quando si arrende restituisce `false` **anche per una CHIAVE**, e `RCP.md` §5.2 vieta di abbandonare le chiavi. ⇒ Per una chiave non ci si può arrendere: si continua a scendere finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si scrive nel registro che l'immagine è uscita brutta. Abbandonarla lascia il client rotto **per sempre**, e ogni `RICHIEDI_CHIAVE` che segue costa tre ricodifiche **che non producono niente**: è la spirale di §5.2 |
-| **3** | `codificatore.c:1377` `c->ctx->max_b_frames = 0` | ⛔ **Non si tocca, e adesso c'è il numero accanto**: metterlo a 1 darebbe `[M]` 59 figure buttabili su 120 e −16 % di banda a qualità invariata, **ma 67 ms di riordino** — da solo oltre i 50 ms di `DECISIONI.md` §2.4. ⭐ Il commento «deciso, non ereditato» merita la misura sotto |
+| **3** | `codificatore.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* `c->ctx->max_b_frames = 0` | ⛔ **Non si tocca, e adesso c'è il numero accanto**: metterlo a 1 darebbe `[M]` 59 figure buttabili su 120 e −16 % di banda a qualità invariata, **ma 67 ms di riordino** — da solo oltre i 50 ms di `DECISIONI.md` §2.4. ⭐ Il commento «deciso, non ereditato» merita la misura sotto |
 | **4** | *nessuna riga: è una cosa che non esiste* | ⚠ `-max_frame_size` **non** è utilizzabile come tetto: `[M]` `hevc_vaapi` lo rifiuta in CQP, 3/3. Se qualcuno ci pensasse, è già misurato che non c'è |
 | **5** | ⚠ **fuori da `codificatore.c`** — riguarda `figlio.c` / la trattativa della tela | `[M]` `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**: **4096×2160 sì, 4112×2160 no**. La tela legale di `RCP.md` §4.5 arriva a **7680×4320** ⇒ oltre i 4096 il ripiego `libx264` non è un'eventualità, è **la regola**, e a 8K costa `[M]` **309 ms** per chiave sul desktop e **1,2-3,3 s** sul granuloso. `hevc_vaapi` invece regge fino a 16384×4320 `[M]`. ⇒ Vale la pena leggerlo dal driver invece di scoprirlo al primo fotogramma |
 

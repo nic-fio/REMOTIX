@@ -144,8 +144,8 @@ e i commenti nel codice sono la sede della ragione.
 |---|---|---|---|---|
 | **1** | ⛔⭐ **il crollo**: si libera all'**ack**, non alla serializzazione | `webtransport.c:745-870`, `:5929` | ⛔ **nessuno** — è la correzione di un difetto | ⛔ **no**: la ricetta di §4.5 non è stata eseguita |
 | **2** | **la soglia sulla coda** in `video_sgombra()`: un delta si abbandona solo se la coda non si svuota entro la soglia | `webtransport.c:2705-2800` | `--sgombra-soglia-ms N`, **0 = spenta** | ⛔ no |
-| **3** | **la risalita della qualità**: `qualita_corrente` era un cricchetto a senso unico | `codificatore.c:3446` (`risali_qualita()`), `:141-143` | `--qualita-risale`, **spenta** | ⛔ no |
-| **4** | **il riordino dell'audio**: si scarta sul *«già consumato»* (§6.3), non sul *«già arrivato»* | `pagina.html:5882` (`audio_posto_passato`), `:5992`, `:6507` | ⛔ **nessuno** — è un allentamento puro, non aggiunge un ms | ⛔ **no, e il banco NON PUÒ vederla** — §3.16 |
+| **3** | **la risalita della qualità**: `qualita_corrente` era un cricchetto a senso unico | `codificatore.c` (`risali_qualita()`), `:141-143` | `--qualita-risale`, **spenta** | ⛔ no |
+| **4** | **il riordino dell'audio**: si scarta sul *«già consumato»* (§6.3), non sul *«già arrivato»* | `pagina.html` · `avvia_audio()` (`audio_posto_passato`), `:5992`, `:6507` | ⛔ **nessuno** — è un allentamento puro, non aggiunge un ms | ⛔ **no, e il banco NON PUÒ vederla** — §3.16 |
 | **5** | **il tetto di banda**: `QVBR` con filo, punto di lavoro e serbatoio derivati dal pavimento | `codificatore.c:200-340`, `:1786-1800` | `--tetto-banda-mbit N`, **0 = spento** | ⛔ no sulla macchina di prova (sì sul portatile) |
 | **6** | ⭐⭐ **il regolatore del ritmo**: un fotogramma non parte quando **2 delta** in volo hanno ancora byte nella nostra coda | `webtransport.c` — `ritmo_frena()`, `ritmo_ciclo()`, `wt_ritmo_adattivo()`; la chiamata è in `video_a_una()` **prima** di `video_sgombra()` | `--ritmo-adattivo`, **spento** ⛔ **e non basta da solo: vedi qui sotto** | ⛔ no — nessuna misura, solo la previsione scritta nel codice |
 
@@ -181,7 +181,7 @@ era scritto da nessuna parte. Il controllo è in §3.12, e la 7900 non ha nessun
 
 1. ⛔⛔ **Il banco prescritto per l'audio non può vedere la cura 4, e il numero lo dimostra.**
    `07-b64-rete.py` misura il **trasporto**; la cura vive nella **pagina**. Il cliente di prova ha
-   la **sua** copia della regola vecchia (`01-b3-cliente.py:743`), identica byte per byte nei due
+   la **sua** copia della regola vecchia (`01-b3-cliente.py` ⚠ *(il codice citato non c'e' piu': da rileggere)*), identica byte per byte nei due
    alberi (`md5 13e68d19…`). ⇒ La previsione *«0,175 → ≥ 0,95»* è uscita **0,1149 → 0,1235**, cioè
    niente — ⛔ **e non smentisce la cura: smentisce il banco.** §3.16;
 2. ⛔ **`VBR` è fuori, e non per opinione**: sotto VBR il `qp` è **ignorato** — con e senza `qp=26`
@@ -290,14 +290,14 @@ risoluzione adattiva **fuori**, AVC444 **fuori**, codifica per regioni **fuori**
 | | oggi |
 |---|---|
 | controllo di **bitrate** del video | ⛔ **non esiste**: `grep bit_rate\|maxrate\|bufsize codificatore.c` → **zero occorrenze** |
-| **QP** | `figlio.c:4052` `QP_HARDWARE 26` **fisso**, `rc_mode = CQP` — e il commento lo dichiara: *«il valore è di comodo: il punto di lavoro fra qualità e banda è la fase 9»* |
+| **QP** | `figlio.c` · `scatto_chiudi()` `QP_HARDWARE 26` **fisso**, `rc_mode = CQP` — e il commento lo dichiara: *«il valore è di comodo: il punto di lavoro fra qualità e banda è la fase 9»* |
 | algoritmo di **congestione** | ⛔ **mai scelto**: `grep cc_algo\|NGTCP2_CC` → **zero**. Si prende il default di ngtcp2 |
-| l'**unico** anello di reazione alla banda | `webtransport.c:2459` `chiave_intervallo_ms()` — regola **ogni quanto si può CHIEDERE una chiave**, non quanto costa un fotogramma |
-| la degradazione che il prodotto **ha davvero** | `webtransport.c:2339` `video_sgombra()` |
+| l'**unico** anello di reazione alla banda | `webtransport.c` · `wt_video_gancio()` `chiave_intervallo_ms()` — regola **ogni quanto si può CHIEDERE una chiave**, non quanto costa un fotogramma |
+| la degradazione che il prodotto **ha davvero** | `webtransport.c` · `WT_TIENILA_VIVA_NS` `video_sgombra()` |
 
 ⛔⛔ **E `video_sgombra()` va all'incontrario di quel che §3.3 chiede.** Chiamata a **ogni**
-fotogramma (`webtransport.c:2759`): su linea stretta un delta non esce in 33 ms, quindi viene
-abbandonato **sempre**; ogni abbandono riaccende il debito di `RCP.md` §5.2 (`rcp.c:3358` →
+fotogramma (`webtransport.c` · `wt_ritmo_adattivo()`): su linea stretta un delta non esce in 33 ms, quindi viene
+abbandonato **sempre**; ogni abbandono riaccende il debito di `RCP.md` §5.2 (`rcp.c` →
 `:3382`) ⇒ il flusso degenera in **sole chiavi**. ⇒ **Degrada nello spazio E nel tempo insieme**,
 invece di calare il ritmo tenendo i delta. ⭐ La cura è **nominata nel codice**, permessa da §5.1,
 e **non è mai stata scritta**: abbandonare un delta solo quando è *davvero senza speranza* — una
@@ -371,9 +371,9 @@ nessuna scusa — **il ritmo cala quando la scena è ferma?**
 | **la sessione** | `banchi/01-b3-cliente.py` **dentro il contenitore** (`enter.sh --root`): `aioquic` sta lì, non fuori. È il mestiere di `07-b65-datagram.py`, non una strada nuova |
 | **la scena** | `04-b30-scena` già costruita, in tre stati: **ferma** (nessuna scena) · **barra** (una barra che scorre) · **pieno** (bande a schermo intero). ⛔ Vuole il monitor **per nome**, e il nome lo dice il registro (`monitor «Meta-0»`) |
 | **il palco** | nasce col **primo** cliente e sopravvive al distacco (I4) ⇒ senza una sessione aperta prima, `--uscita` non trova nessun monitor |
-| **i fotogrammi, chiave contro delta** | dalla riga per fotogramma `rcp.c:3711` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
-| **il ritmo al secondo** | dalla riga `figlio.c:6841`, che il figlio scrive **ogni secondo** e che porta anche le **attese a vuoto** |
-| **gli abbandoni** | `§5.1` `rcp.c:3376` · la chiave trattenuta `§5.2` `webtransport.c:2360` · `RICHIEDI_CHIAVE … accolta (§5.2)` `rcp.c:5470` |
+| **i fotogrammi, chiave contro delta** | dalla riga per fotogramma `rcp.c` · `rcp_video_apri()` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
+| **il ritmo al secondo** | dalla riga `figlio.c`, che il figlio scrive **ogni secondo** e che porta anche le **attese a vuoto** |
+| **gli abbandoni** | `§5.1` `rcp.c` · la chiave trattenuta `§5.2` `webtransport.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* · `RICHIEDI_CHIAVE … accolta (§5.2)` `rcp.c` · `appunti_posto_libera()` |
 | ⭐ **i byte sul filo** | **si contano, non si deducono**: `/proc/net/dev` su `lo`. `[M]` `lo` **a riposo fa 0 byte in 5 s** su questa macchina (l'ssh passa da `enp7s0`, il resto è su socket unix) ⇒ contatore pulito, e **non serve toccare `tc`**. ⚠ È un vantaggio del momento, non una legge: si rimisura il riposo a ogni giro |
 
 ⛔ **I byte del filo NON sono i byte dei fotogrammi**: la riga `SPEDITO` conta il **carico utile**,
@@ -404,7 +404,7 @@ il primo fotogramma che esce?**
 | | |
 |---|---|
 | **il colpo** | la scena `04-b30-scena` si **congela** (`SIGSTOP`) e si **risveglia** (`SIGCONT`). ⛔ Non si spegne e si riaccende il processo: l'avvio di un client Wayland (connessione, superficie, primo buffer) costa decine di ms che **non sono il risveglio del prodotto** e si sommerebbero al numero senza che nessuno se ne accorga |
-| ⭐ **l'istante del pixel** | **si legge, non si deduce**: `ultimo_disegno_us` nel blocco condiviso della scena (CLOCK_MONOTONIC, scritto al commit, `04-b30-scena.c:1367`). Il colpo **non è** il momento in cui il pixel cambia: in mezzo c'è il risveglio della scena, e si riporta a parte |
+| ⭐ **l'istante del pixel** | **si legge, non si deduce**: `ultimo_disegno_us` nel blocco condiviso della scena (CLOCK_MONOTONIC, scritto al commit, `04-b30-scena.c` · `disegna_una_volta()`). Il colpo **non è** il momento in cui il pixel cambia: in mezzo c'è il risveglio della scena, e si riporta a parte |
 | **il battitore sta sulla macchina** | `banchi/09-b71-agente.py`, da root: batte il colpo e sorprende il primo disegno leggendo `/dev/shm` a ~2 kHz. ⛔ Da `ssh` non si può: il giro di rete è **cento volte** il numero cercato |
 | ⭐ **i due orologi si ancorano** | il registro scrive `HH:MM:SS.mmm` **senza data e senza fuso**. L'agente misura lo stesso istante nei due modi (epoch + locale) e il banco **ricava** lo scarto invece di indovinarlo. ⛔ Se fosse sbagliato i risvegli uscirebbero negativi o di ore: si vedrebbe, non si insinuerebbe |
 | **che cosa è misurato** | `SPECIFICHE.md` §2.4: il tratto **primo pixel → byte fuori dal server**. ⚠ **Non** l'anello intero — mancano il volo sul filo, la decodifica e la pittura sulla pagina, che sono fase 8 e **si sommano, non si confondono** |
@@ -499,7 +499,7 @@ barra  40 40 40 40 39 41 40 40 40 40 41 40 40 38 39 38 38 40 40 40 41 39 40 40 4
 pieno  40 39 40 40 38 38 37 38 38 39 37 40 37 40 40 39 40 40 39 39 40 40 39 40 40 41 39 41 40
 ```
 
-⭐⭐ **E LA CAUSA È SCRITTA NEL REGISTRO DAL PRODOTTO STESSO**, `figlio.c:6841`, ogni secondo:
+⭐⭐ **E LA CAUSA È SCRITTA NEL REGISTRO DAL PRODOTTO STESSO**, `figlio.c`, ogni secondo:
 
 > *«N fotogrammi consegnati (K chiavi), **M attese a vuoto (scena ferma: Mutter consegna solo
 > quando qualcosa cambia)**»*
@@ -857,7 +857,7 @@ fare da fuori**: uno dei due numeri non era scritto da nessuna parte.
 | `" tardivi " + c.scartati_tardivi` sulla riga di stato | **1** | **0** |
 
 ⇒ ⭐ La pagina curata **è quella che il server del dopo consegna**: `curl https://192.168.0.2:7910/`
-la porta, `…:7900/` no. ⚠ La pagina si legge **una volta all'avvio** (`pagina.c:627`) — questo è
+la porta, `…:7900/` no. ⚠ La pagina si legge **una volta all'avvio** (`pagina.c` · `pagina_muovi()`) — questo è
 il controllo che quel riavvio è servito.
 
 ### 3.13 ⭐⭐⭐ IL RISVEGLIO: **identico** — *7900 alle 09:07–09:09, 7910 alle 09:18–09:20*
@@ -987,7 +987,7 @@ nel **cliente vero**, cioè nella pagina. Le due metà non si toccano.
 ⭐ **Che forma avrebbe quel banco**, perché la prossima volta non si ricominci da capo: un
 **browser vero** che apre `https://192.168.0.2:PORTA`, entra come `prova`, e i cui contatori si
 leggono **senza chiedere niente all'utente** — la pagina li manda già da sé al server ogni 5 s
-(`pagina.html:6402`, `fetch("/diario?" + riga)`), e la riga porta tutt'e quattro i numeri nuovi.
+(`pagina.html` · `avvia_audio()`, `fetch("/diario?" + riga)`), e la riga porta tutt'e quattro i numeri nuovi.
 ⇒ Il registro del server diventa il verbale. ⛔ **Il pezzo che manca è dove far girare il
 browser**: sulla macchina Firefox 140 ESR c'è, ma vive **solo dentro una sessione di REMOTIX**
 (non c'è `Xvfb`), e puntarlo al server che lo sta catturando è uno specchio; e il `netem` deve
@@ -1046,7 +1046,7 @@ appena ngtcp2 li aveva *serializzati*. Il contratto di `ngtcp2_conn_writev_strea
 > endpoint or the stream is closed.»*
 
 ⇒ **Uso dopo la liberazione.** `ndatalen` dice quanti byte sono finiti **in un pacchetto**, non
-quanti sono **confermati**. La callback dell'ack **esisteva** (`trasporto.c:506`) ma inoltrava a
+quanti sono **confermati**. La callback dell'ack **esisteva** (`trasporto.c` · `accetta()`) ma inoltrava a
 nghttp3 e basta: nessuno la consultava prima del `free`.
 
 ⭐⭐ **E il difetto c'era a OGNI fotogramma ritrasmesso, da sempre.** Quello da 525 298 byte è
@@ -1223,7 +1223,7 @@ non la tocca affatto**.
 
 **«Calare i fotogrammi tenendo i delta» — `RCP.md:1284` e `SPECIFICHE.md` §8.3 — NON si può fare in
 `webtransport.c`, e questa cura non lo fa.** Il codificatore gira a **GOP infinito**
-(`chiavi_ogni = 0`, `figlio.c:4146` — ⚠ `[R]` `rcp.c:3431` lo cita ancora come `figlio.c:1568`, che
+(`chiavi_ogni = 0`, `figlio.c` — ⚠ `[R]` `rcp.c` lo cita ancora come `figlio.c`, che
 oggi è un'altra funzione: **riferimento scaduto**): ogni delta predice dal fotogramma **codificato**
 prima, non da quello **spedito**. ⇒ Qualunque fotogramma il trasporto salti — abbandonandolo (forme
 A/B) o non accettandolo (forma C) — **rompe la catena e costa una chiave lo stesso**.
@@ -1237,7 +1237,7 @@ temporali** l'Intel non li produce (`EncRateControlExt` assente su **7 profili s
 nascerebbe sopra un trasporto che abbandona comunque a ogni fotogramma, e non si potrebbe misurare
 che cosa ha fatto.
 
-### 5.3 Cura 3 — la risalita della qualità · `codificatore.c:3446`, `:141-143`
+### 5.3 Cura 3 — la risalita della qualità · `codificatore.c`, `:141-143`
 
 **Il difetto** `[R]`: `qualita_corrente` era **monotòna nel verso peggiore**. Quattro scritture in
 tutto (`:1880` la semina, e le tre dentro `abbassa_qualita()`), **tutte in discesa**. Cercata e non
@@ -1293,7 +1293,7 @@ riapertura ogni 2 secondi, **e quello sì sarebbe I1**.
 confine**. In software basterebbero pochi giri (1,8-3,3 s ciascuno) perché **la cura costi più del
 difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
 
-### 5.4 Cura 4 — il riordino dell'audio · `pagina.html:5882`, `:5992`, `:6507`
+### 5.4 Cura 4 — il riordino dell'audio · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
 
 **Il difetto**: `pagina.html` scartava confrontando con l'**ultimo datagram ARRIVATO**, mentre
 `RCP.md` §6.3 dice *«già **consumati**»*. ⇒ **si buttava materiale che ci starebbe cinquanta volte
@@ -1458,10 +1458,10 @@ insieme al primo giro darebbero **due misure sotto la stessa etichetta**.
 
 #### ⛔ E il difetto trovato strada facendo, che non era il bersaglio dello studio
 
-`[R]` **Il server non legge mai `video.livello`.** `rcp.c:1823` lo elenca fra i nomi noti, e il ciclo
+`[R]` **Il server non legge mai `video.livello`.** `rcp.c` · `livello_legge()` lo elenca fra i nomi noti, e il ciclo
 cattura `c_codec`, `c_prof`, `c_audio`, `c_misura` — **non il livello**. `RCP.md:701` dice che il
 server **DEVE** emettere un flusso di livello non superiore: **quel DEVE non era implementato**. Il
-resto della catena c'era già (il livello **vero** letto dai byte a `codificatore.c:384`, stampato al
+resto della catena c'era già (il livello **vero** letto dai byte a `codificatore.c` · `tetto_serbatoio_bit()`, stampato al
 primo fotogramma) ⇒ ⭐ **mancava UN confronto fra due numeri che il prodotto ha già in mano.**
 Dal 23 agosto **le due righe si scrivono** (§3.12) — ⛔ ma **il confronto lo fa ancora chi legge, non
 il programma**.
@@ -1484,7 +1484,7 @@ non parte, senza un rosso da nessuna parte**. Stessa famiglia di R31.
   minimo — è la ragione, mai scritta, per cui il banco `07-b48` verificò proprio `avc1.640032`.
   ⛔ E **a 3840×2160 il 5.0 non ci sta affatto**: serve il 5.1, che concede `[?]` **30,3 fot/s**
   ⇒ **il «60 fps» del desiderato non è raggiungibile a 4K nemmeno con banda infinita**;
-- ⚠ `[R]` **il prodotto dichiara 5.1, non 5.0** (`pagina.html:829`) ⇒ `avc1.640033`. Il 5.0 vive in
+- ⚠ `[R]` **il prodotto dichiara 5.1, non 5.0** (`pagina.html` · `LIVELLO_DICHIARATO()`) ⇒ `avc1.640033`. Il 5.0 vive in
   **due commenti**, e uno dei due (`codificatore.c:1559-1560`) è **stantìo**.
 
 ---
@@ -1787,7 +1787,7 @@ legge non può dire se sia giusta. ⇒ ⭐ **Non va scritta.** Quel che va scrit
    controllo ha stampato *«il contatore delle `RICHIEDI_CHIAVE` non si muove: il banco è cieco»* —
    e accusava il banco, mentre a non essere avvenuto era lo **stimolo**: nel cliente
    `--chiave-dopo` vive **dentro il ramo di `--puntatore-vecchia`**
-   (`01-b3-cliente.py:1463`), e senza il puntatore la richiesta non parte mai. ⇒ Cura: la tela va
+   (`01-b3-cliente.py`), e senza il puntatore la richiesta non parte mai. ⇒ Cura: la tela va
    prima **rimpicciolita** (`--adatta 1280x720@3 --puntatore-vecchia 0.3 --chiave-dopo 2`).
    ⭐ **La lezione**: un controllo positivo che dà rosso ha *due* imputati, e il primo da guardare
    è se il colpo è stato battuto.
@@ -1941,17 +1941,17 @@ per rispondere ad A/B, e **col gradino** per misurare la cura: sono **due giri, 
 | ✅ **il tetto di banda: quale, e su che grandezza — DECISO il 23 agosto**: `QVBR`, con filo · punto di lavoro · serbatoio derivati dal pavimento, `--tetto-banda-mbit`, **spento**. ⛔ Resta `[?]` la misura sulla macchina di prova (P4) | §5.5 · `codificatore.c:200-340` |
 | ⏳ `[?]` **il film con la grana non si misura oltre i 25 s su questa macchina**: la decodifica VP8 software a 2560x1080 affama il **cliente**, che sta sulla stessa macchina, e QUIC cade per *idle timeout*. ⇒ il numero di §3.8 è buono, ma un giro lungo vuole un cliente su un'altra macchina | §3.8 |
 | ✅ la cura di **`video_sgombra()`** — ⭐ **scritta il 23 agosto**, dietro `--sgombra-soglia-ms`, **spenta**. ⛔ Resta `[?]` la misura (P3) e ⛔⛔ **il prezzo, che lo giudica l'utente**: ~150 ms di immagine leggermente vecchia sotto congestione | §5.2 · `webtransport.c:2705-2800` |
-| ✅ la **finestra di riordino dell'audio** — ⭐ **scritta il 23 agosto**, senza interruttore (allentamento puro). ⛔ Resta `[?]` **la verifica, e il banco prescritto NON PUÒ farla**: misura se stesso — serve un banco che faccia girare **la pagina** | §5.4 · §3.16 · `pagina.html:5882` |
+| ✅ la **finestra di riordino dell'audio** — ⭐ **scritta il 23 agosto**, senza interruttore (allentamento puro). ⛔ Resta `[?]` **la verifica, e il banco prescritto NON PUÒ farla**: misura se stesso — serve un banco che faccia girare **la pagina** | §5.4 · §3.16 · `pagina.html` · `avvia_audio()` |
 | ⏳ `[?]` **il riordino su Opus**: la misura è in **PCM da 5 ms**, con Opus la soglia di sorpasso è **4 volte più alta** e il difetto morde 4 volte meno ⇒ il percorso vero è Opus, e su Opus il numero non c'è. ⚠ E `[?]` se il decodificatore Opus tolleri i timestamp non monotòni: **non verificato** | §5.4 · P6 |
 | ⏳ `[?]` la qualità di **`EncSliceLP`** contro l'entrypoint pieno a parità di banda — **mai misurata**, e ⚠ **sul ferro di casa non si può fare**: serve l'AMD | `PIANO.md:1197` |
 | ⏳ `[?]` i **sotto-livelli temporali** su `EncSliceLP` — `[M]` il driver non dichiara `EncRateControlExt` su 7 profili su 7 ⇒ *«ogni abbandono costa una chiave» resta in vigore* | `RCP.md:1261` |
-| ✅ `[R]` **`qualita_corrente` era un cricchetto a senso unico** — ⭐ **curato il 23 agosto** (`risali_qualita()`), dietro `--qualita-risale`, **spenta**. ⛔ Resta `[?]` la misura, e il controllo che decide è lo **SBATTIMENTO** (P5) | §5.3 · `codificatore.c:3446` |
+| ✅ `[R]` **`qualita_corrente` era un cricchetto a senso unico** — ⭐ **curato il 23 agosto** (`risali_qualita()`), dietro `--qualita-risale`, **spenta**. ⛔ Resta `[?]` la misura, e il controllo che decide è lo **SBATTIMENTO** (P5) | §5.3 · `codificatore.c` |
 | ⏳ ⛔ **il regolatore del ritmo — disegnato, NON scritto**: è il lavoro che resta, e ⛔ **l'ordine è obbligato** (prima la soglia della coda, o `arretrato` è zero per costruzione) | §6 |
 | ⏳ ⛔ **il registro delle discese** (`🔻`/`🔺 RITMO`) — progettato, non applicato. E ⛔ **il pavimento (480p·25 e 20 Mbit/s) non esiste ancora nel codice** | §7.1 · §7.2 |
 | ⏳ `[?]` **l'algoritmo di congestione non è mai stato scelto**: si prende CUBIC di ngtcp2. ⚠ Su WiFi CUBIC legge una perdita **da radio** come congestione; BBR lavora su banda di collo di bottiglia e `min_rtt`. ⛔ **Esperimento separato, dietro il suo interruttore** — non due variabili nello stesso banco | §6.3 |
 | ⏳ `[R]` il **confronto `livello_flusso` ≤ `video.livello`**: le due righe adesso ci sono, ⛔ **ma il confronto lo fa chi legge, non il programma** | §5.5 · P9 |
-| ⏳ `[?]` il valore di **`CRF_PASSO`** (9 è *sufficiente, non giusto*); la scala effettiva è **26 → 35 → 44 → 51** | `codificatore.c:84` |
-| ⏳ **`AUDIO_CUSCINO_MS = 250`** non abbassato: deve coprire **il jitter d'arrivo, che nessuno ha misurato**. ⚠ E **non c'entra con la banda**: è un problema di thread | `pagina.html:5543` |
+| ⏳ `[?]` il valore di **`CRF_PASSO`** (9 è *sufficiente, non giusto*); la scala effettiva è **26 → 35 → 44 → 51** | `codificatore.c` · `RICODIFICHE_MASSIME` |
+| ⏳ **`AUDIO_CUSCINO_MS = 250`** non abbassato: deve coprire **il jitter d'arrivo, che nessuno ha misurato**. ⚠ E **non c'entra con la banda**: è un problema di thread | `pagina.html` · `AUDIO_CUSCINO_MS()` |
 | ⏳ la **migrazione QUIC** da WiFi a rete mobile — *«la ragione migliore per cui QUIC è stato scelto»* | `PIANO.md:1437` |
 | ⏳ il **datagram audio su rete non locale**, mai misurato (sonda `banchi/07-b40`) | `RCP.md:1329` |
 | ✅ *chiusa il 23 ago* — **§2.1, il minimo resta 480p · 25 fps**: *«480p/25fps è il pavimento»*. ⛔ Cambia la ragione: è **il fondo della scala di degradazione**, non più il livello a cui una linea povera costringe ⇒ **un ritmo sotto i 25 su una linea da 20 Mbit/s è un DIFETTO** | `DECISIONI.md` §2.1 |
@@ -2027,7 +2027,7 @@ Gli altri sorgenti sono identici nei due alberi e al commit:
 
 ⛔ **La forma della prova**, e non è negoziabile: *«il curato non è morto»* non è un risultato — ha
 la stessa faccia di uno stimolo che non stimola. ⇒ **stessa porta, stessa cartella di lavoro,
-stessa scena, stessa perdita**, e l'unica variabile è la riga `webtransport.c:6421`.
+stessa scena, stessa perdita**, e l'unica variabile è la riga `webtransport.c` · `wt_scrivi()`.
 
 ⭐ **La trappola di glibc è verificata nel processo VIVO**, non nel copione:
 `MALLOC_MMAP_THRESHOLD_=32768 MALLOC_PERTURB_=165` letti da `/proc/PID/environ`.
@@ -2100,7 +2100,7 @@ perdita**. ⇒ *«il curato non è morto»* qui **non** ha la faccia di uno stim
 
 ### 13.1.3 ⭐ LA GRANDEZZA CHE DICE SE LA CURA PERDE MEMORIA — e non ne perde
 
-La riga della chiusura, `13:25:35.869` (`webtransport.c:5789`):
+La riga della chiusura, `13:25:35.869` (`webtransport.c` · `wt_libera()`):
 
 ```
 ⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di ngtcp2_conn_writev_stream):
@@ -2473,7 +2473,7 @@ H.264  → primo fotogramma: (non letto)      …   stringa per il decodificator
 ```
 
 ⛔ Sotto H.264 il server **non compone** la stringa `avc1.<profilo><vincoli><livello>` (il commento
-che la descrive sta in `codificatore.c:715`), e scrive `(non letto)`. ⚠ **Il livello lo legge lo
+che la descrive sta in `codificatore.c` · `salta_liste_scala()`), e scrive `(non letto)`. ⚠ **Il livello lo legge lo
 stesso** (`livello 51`, poi `52`): manca la **stringa**. `[?]` Se è quella che va al browser, è la
 famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione»*.
 
@@ -2509,14 +2509,14 @@ figlio §4.3 — LIVELLO PRODOTTO: 5.2 (nell'SPS e' 52) … il confronto fra le 
 ```
 
 ⛔⛔ **Il server ha emesso 5.2 dove il client ammetteva 5.1, e nessuno ha detto niente.** È
-esattamente il difetto che §5.5 aveva trovato leggendo il codice (`rcp.c:1823` non cattura il
+esattamente il difetto che §5.5 aveva trovato leggendo il codice (`rcp.c` · `livello_legge()` non cattura il
 livello) e che **P9** prevedeva: *«un livello troppo basso non dà un errore di rete: fa rifiutare la
 configurazione, cioè schermo che non parte senza un rosso»*. ⭐ Adesso non è più una lettura del
 codice: **è successo, alle 13:50:48, e le due righe sono nel registro.**
 
 ⚠ **E la stima di §5.5 era sbagliata in un altro modo ancora**: diceva *«a 4K serve il 5.1, che
 concede `[?]` 30,3 fot/s»*. `[M]` L'`h264_vaapi` non ha scelto 5.1: **ha scelto 5.2**. ⇒ il numero
-da mettere in `pagina.html:829` non è `avc1.640033` (5.1) ma `avc1.640034` (5.2) **se si vuole
+da mettere in `pagina.html` · `LIVELLO_DICHIARATO()` non è `avc1.640033` (5.1) ma `avc1.640034` (5.2) **se si vuole
 davvero il 4K** — ⛔ e va verificato che Firefox Android accetti il 5.2, perché altrimenti la scelta
 è **fra il 4K e quel browser**.
 
@@ -2718,7 +2718,7 @@ codificatore.c:4065  c->conf.stringa_codec[0] ? … : "(non letto)"
 scrive `(non letto)` e `«»`.
 
 ⭐⭐ **Ma NON è la famiglia di R31, e questo cambia la sua gravità.** L'unico uso di
-`stringa_codec` fuori dal codificatore è `figlio.c:4735` e `:4780`, e sono **due righe di
+`stringa_codec` fuori dal codificatore è `figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* e `:4780`, e sono **due righe di
 registro**: la stringa **non parte mai verso il browser**. Quella che il browser usa davvero se la
 compone la pagina da sé, dal livello che **lei** dichiara:
 
@@ -3324,13 +3324,13 @@ tardi. Una cura che tenesse tutto non sarebbe una cura: sarebbe la rimozione di 
 
 ### 17.2-bis ⛔⛔ IL `[M]` DEL «0,175» — il conteggio regge, **la sua purezza no**
 
-`src/pagina.html:6474` portava: *«jitter ±2 ms ⇒ purezza 0,175, 1 004 scartati su 4 989»*.
+`src/pagina.html` · `avvia_audio()` portava: *«jitter ±2 ms ⇒ purezza 0,175, 1 004 scartati su 4 989»*.
 `[M]` stasera, stesso profilo: **1 002 buttati su 4 989 sul filo**. ⇒ Lo **stesso denominatore**,
 due blocchi di differenza: il **conteggio** di quel `[M]` è solido.
 
 ⛔ **Ma la sua «purezza 0,175» non è confrontabile con niente**, ed è stato fermato prima che
 diventasse un trionfo. La frazione che usano i banchi della pagina è `suonati/ricevuti`
-(`09-b74:300`), e `a.ricevuti++` sta **dopo** i rami di scarto (`pagina.html:6574`): il denominatore
+(`09-b74:300`), e `a.ricevuti++` sta **dopo** i rami di scarto (`pagina.html` · `avvia_audio()`): il denominatore
 conta **solo i sopravvissuti**, quindi quel rapporto vale ~1,000 **con tutt'e due le regole**, su
 una successione anche distrutta. ⚠ È vero nel codice **prima** e **dopo** la cura, verificato su
 `f90eb216^`: da dove venisse quello 0,175 **non si sa**, ed è un numero di cui non si conosce la
@@ -3438,7 +3438,7 @@ I massimi della stretta di mano stanno a 212 e 613 ms — **uno e due PTO**.
 Le cinque ipotesi, tutte smentite una per una: il cliente non si arrende (**0 giri su 70** hanno
 superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c` · il conteggio dei verdetti PAM conta solo verdetti PAM su
 `CREDENZIALI`, e una stretta di mano non ci arriva); ngtcp2 riprova (`handshake_timeout` resta
-`UINT64_MAX`, `trasporto.c:544`); il `netem` non è applicato due volte (i due filtri prendono i due
+`UINT64_MAX`, `trasporto.c` · `accetta()`); il `netem` non è applicato due volte (i due filtri prendono i due
 **versi**, quindi un **giro** paga `1-(1-p)²` e un **datagram**, che fa un verso solo, paga `p` —
 `[M]` 3 235/3 607 = 89,7 %).
 
@@ -3449,7 +3449,7 @@ def a_non_si_apre(n):
     return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
 ```
 
-⛔ `01-b3-cliente.py:1286` stampa `[audio] ricevuti 0` **anche dal ramo `except`**, prima di
+⛔ `01-b3-cliente.py` · `_capsula_chiusura()` stampa `[audio] ricevuti 0` **anche dal ramo `except`**, prima di
 rilanciare. ⇒ **Ogni** modo di fallire — un `CONGEDO`, un tetto scaduto, un `NameError` del banco —
 faceva passare quel gradino di **verde**. Il banco non misurava *«non si apre»*: misurava *«non ho
 ricevuto»*, e le due cose hanno la stessa faccia.
@@ -3484,7 +3484,7 @@ secondi**, e la perdita di pacchetti è precisamente quel che lo rende **normale
 `0x0F` guardare l'`ultima_vita` dell'occupante: se tace da più di una soglia breve (~3 s) **mentre
 un altro client dello stesso utente sta chiedendo il posto**, sfrattarlo. §8.2 dice *«nessun client
 attaccato e **vivo** viene mai spodestato»* — l'occupante qui è attaccato ma **non vivo**, e oggi
-l'unico orologio che lo distingue è quello da 30 s. `torna_a_parlare()` (`rcp.c:6921`) gestisce già
+l'unico orologio che lo distingue è quello da 30 s. `torna_a_parlare()` (`rcp.c` · `drena()`) gestisce già
 lo sfrattato che torna. ⛔ Non toccherebbe `SILENZIO`, che resta 30 s per tutto il resto.
 
 ## 17.6 ⭐⭐⭐ LE DUE CURE, APPAIATE — **la spirale si spegne, e solo con tutt'e due**
@@ -3692,7 +3692,7 @@ un pacchetto**. ⛔ Quel che **non** si poteva più dire era **dove** stesse il 
 
 ### 17.9-sexies ⭐ LA RIVERIFICA DI `09-b79` — **nessun numero era sporcato**, e sono tre prove lette
 
-`09-b79-cure.py:379` avvolgeva `RETE.root` invece della catena curata. ⚠ E **non bastava scrivere
+`09-b79-cure.py` avvolgeva `RETE.root` invece della catena curata. ⚠ E **non bastava scrivere
 `B70.root`**: quando b79 arriva, `B70.root` è **già** stato sostituito da `09-b76:416` con un
 avvolgimento che a sua volta chiama `RETE.root`. ⇒ La catena si ricostruisce dai pezzi
 (`RETE.rem(B70.catena_root(c))`), e se `catena_root` non c'è **il banco si ferma invece di
@@ -3707,7 +3707,7 @@ misurare**.
    **dentro** `bash -c`. `[M]` E la firma nei dati lo conferma: su tutte e **36** le caselle
    `attese_a_vuoto` sta fra 1 973 e 2 156 — **costante, non in salita** (su `ritardo-30` A/B/C:
    2 015 / 2 006 / 2 016). Il cumulativo di b70 era 4 041 contro 1 604, **in salita**: qui non c'è;
-3. `[R]` **il conto di un altro giro è strutturalmente impossibile**: `07-b64-terreno.sh:106` fa
+3. `[R]` **il conto di un altro giro è strutturalmente impossibile**: `07-b64-terreno.sh` fa
    `: > registro.log` a ogni `accendi`, e questo banco **riaccende il server a ogni braccio**.
    `[M]` Controprova: nessuna coppia di caselle porta numeri identici dal registro, e tre caselle
    hanno detto «NIENTE DA LEGGERE» invece del numero del vicino — ⭐ prova che **nella finestra non
@@ -4411,9 +4411,15 @@ per portare 1,2 kbit/s di silenzio: il 99,8 % è riempimento.**
 precede i primi campioni. ⚠ Prezzo dichiarato: i `mancati` del cliente vanno da 0 a 2 (un buco voluto
 lascia lo stesso salto di `istante` di uno perso).
 
-⚠ L'interruttore oggi è **di compilazione** (`-DAUDIO_SILENZIO_PREDEFINITO=1`): il codificatore vive
-nel figlio, che è un `execve` con l'ambiente composto **da zero** (`figlio.c:1145`). ⏳ La riga di
-comando che manca (`main.c` → coda di `argv` in `figlio.c`) è **descritta e non scritta**.
+⚠ ~~L'interruttore oggi è **di compilazione** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ la riga di
+comando è **descritta e non scritta**.~~
+> ✅ **SCRITTA, il 24 agosto 2026** *(riallineato al codice il 28)*. Il `-D` **è stato tolto**, e
+> l'unica strada è **`--niente-audio-silenzio`** sulla riga di comando del server, che `figlio.c`
+> ricopia in coda all'`argv` del figlio come fa già con `--parlantina`. ⛔ E vale per **due
+> processi**: il codificatore vero sta nel figlio, ma il tono di `--audio-prova` apre un `audio_cod`
+> nel server — se se ne accendesse uno solo, i due banchi misurerebbero due prodotti diversi.
+> ⚠ La ragione per cui non ce ne sono due: *«due strade per la stessa cura sono due numeri che
+> divergono»* (`src/audio.h`).
 
 ### 20.2-quater ⛔ DUE DIFETTI TROVATI STRADA FACENDO, e nessuno dei due era cercato
 
@@ -4480,7 +4486,7 @@ giusto, su tutta la catena.
 ### 20.3-bis ⭐⭐ IL PRODOTTO È PULITO — **niente +331, niente +690, in nessun caso**
 
 `[M]` 24 agosto (segno: **positivo = il suono esce DOPO l'immagine**, la convenzione di
-`pagina.html:6398`):
+`pagina.html` · `avvia_audio()`):
 
 | caso | fps | Mbit/s video | **sfalso alla sorgente** | **sfalso in rete** | rete p90 |
 |---|---|---|---|---|---|
@@ -4499,7 +4505,7 @@ datagram no) ⇒ **−94,9 ms**, cioè **l'audio che corre avanti**, non l'audio
 
 ### 20.3-ter ⭐⭐⭐ IL +331 NON È UN ARTEFATTO: **è il cuscino dell'audio, ed è scritto nel prodotto**
 
-`[R]` `src/pagina.html:5563` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
+`[R]` `src/pagina.html` · `AUDIO_CUSCINO_MS()` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
 `:5761` `aoff = (perf − ist/1000) + CUSCINO + u`.
 
 > ⇒ `AV ≈ cuscino + latenza d'uscita − ritardo di pittura`
@@ -4560,7 +4566,7 @@ diretta del 331 aspetta quello strumento.
 > `[M]` E accanto al giudizio ci sono i numeri della stessa scena, letti dal registro senza toccarla:
 > **37,4 fot/s**, **3,20 Mbit/s**, ⭐ **coda vuota** — la banda **dimezzata senza perdere un
 > fotogramma**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` §10. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
-(nel repo non esiste un decodificatore Opus, `07-b42-giudice.py:121`).
+(nel repo non esiste un decodificatore Opus, `07-b42-giudice.py` · `main()`).
 
 ⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
 `/media/REMOTIX/tmp/09nr10/film/09-b85-claquette-calma-p000.mp4` (70 s, **34 attacchi**), coi gemelli
@@ -4656,12 +4662,12 @@ sessione lunga su quella linea andrebbe guardata prima di concludere**.
 entrambe le famiglie) · l'avvio lento di CUBIC ⇒ **non verificata** (`ssthresh` lascia l'infinito a
 ~2 s in tutt'e due) · la scena ⇒ **esclusa** (prima chiave 58,44-58,88 kB in entrambe) · la soglia
 dei tre pacchetti ⇒ **non verificata** · macchina carica ⇒ **esclusa** (CPU 5,1-6,5 % in tutti e 20).
-`[R]` L'algoritmo è **CUBIC** (ngtcp2 1.25, `trasporto.c:628` non tocca `cc_algo`) — ⚠ e la prova per
+`[R]` L'algoritmo è **CUBIC** (ngtcp2 1.25, `trasporto.c` · `accetta()` non tocca `cc_algo`) — ⚠ e la prova per
 contrasto **non è stata fatta**: non è esposto da nessuna opzione.
 
 ⚠ **Che cosa non si sarebbe potuto vedere**, scritto prima: una separazione più piccola della
 dispersione interna; una terza modalità rara (36 % di probabilità di non incontrarla); e ⛔ **niente
-fra un secondo e l'altro** — `webtransport.c:4573` frena `rete_ciclo()` a una riga al secondo, quindi
+fra un secondo e l'altro** — `webtransport.c` · `linea_morta_giudica()` frena `rete_ciclo()` a una riga al secondo, quindi
 dell'avvio lento si vede il punto d'arrivo, **non la corsa**.
 
 ## 21.3 ⭐⭐⭐ LE CURE SI ACCENDONO — e sulla linea sana **non peggiora niente**

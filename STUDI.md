@@ -420,7 +420,7 @@ colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
 | ⭐ dipingere **dentro la callback del decodificatore**, non su `requestAnimationFrame` | ✅ **regge, ed è la metà che vale** |
 | ⭐ la **decodifica** fuori dal thread principale | ✅ **VALE, ed è misurato**: `[M]` **−3,44 ms** (7,17 → 3,73) |
 | ⛔ la **tela** fuori dal thread principale | ⛔⛔ **AFFONDA IL CONTO**: `[M]` **+17,6 ms** sul disegno, più **+10,2** sulla consegna dello stream |
-| il canvas 2D **desincronizzato** | ⚠ **non è mai stato acceso nel prodotto**: `src/pagina.html:407` ha `desynchronized` **spento** `[R]`, e la strada per accenderlo (`?tela=desincronizzata`) **non esiste** — non è un interruttore spento, è un interruttore che non c'è. ⇒ Non è una prescrizione respinta: è una prescrizione **mai eseguita**, e il guadagno resta `[?]` |
+| il canvas 2D **desincronizzato** | ⚠ **non è mai stato acceso nel prodotto**: `src/pagina.html` ha `desynchronized` **spento** `[R]`, e la strada per accenderlo (`?tela=desincronizzata`) **non esiste** — non è un interruttore spento, è un interruttore che non c'è. ⇒ Non è una prescrizione respinta: è una prescrizione **mai eseguita**, e il guadagno resta `[?]` |
 
 > #### ⛔⛔ Il worker: attuato, misurato — e **sbagliato A METÀ, non per intero**
 >
@@ -3074,7 +3074,7 @@ in ordine di quanto morderebbero noi.*
 | **14** | **La rotella con `angleDelta/120`**, divisione **intera** | `PortalSession.cpp:161` | qualunque scatto sotto una tacca **si perde**. Conferma §7.2: si usa `ei_device_scroll_discrete(±120)` e si passa il valore quasi com'è |
 
 > ⭐ **E il difetto più istruttivo di tutti sta nel rapporto 14 §2.2**: nella 6.3.6 **il verso di
-> pressione e rilascio dei tasti era invertito**. È lo stesso punto che nel nostro `input.c:218`
+> pressione e rilascio dei tasti era invertito**. È lo stesso punto che nel nostro `input.c` · `manda_bottone()`
 > abbiamo verificato essere giusto (`gboolean premuto = !(flags & KBD_FLAGS_RELEASE)`). Un server RDP
 > maturo, dentro KDE, ha spedito per una release un difetto che si vede alla prima parola digitata:
 > **la prova sui tre client non è burocrazia.**

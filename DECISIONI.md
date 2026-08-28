@@ -810,7 +810,7 @@ sessione.*
 > perché `remotix.pam` chiude con `common-session-noninteractive` — che su Debian 13 `[M]` **non**
 > contiene `pam_systemd`, mentre `common-session` sì.
 >
-> ⛔ **La premessa era falsa**: il prodotto **non apre nessuna sessione PAM**. `figlio.c:2428` lo
+> ⛔ **La premessa era falsa**: il prodotto **non apre nessuna sessione PAM**. `figlio.c` · `codifica_e_manda()` lo
 > dichiara per esteso — *«`sessione_assicura()` farebbe NASCERE una sessione … quella è la strada
 > del login vero (`pam_open_session` → `pam_systemd`), e non è di questo mandato»* — e `grep` lo
 > conferma: in `src/` non esiste nessuna chiamata a `pam_open_session`. ⇒ Quale pila di sessione
@@ -1126,7 +1126,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > | `isConfigSupported` | **`true`** | sì: risponde **alla stringa** |
 > | il decodificatore | `EncodingError` **sui byte** | sì |
 > | `pagina.html` | *«HEVC non arriva al pixel»* ⇒ fuori dal `CIAO` | sì, dato quel che vedeva |
-> | `rcp.c:1128` `prima_comune()` | prende la prima voce **dell'elenco del client** ⇒ `av1` = **2** | sì |
+> | `rcp.c` · `prima_comune()` `prima_comune()` | prende la prima voce **dell'elenco del client** ⇒ `av1` = **2** | sì |
 >
 > ⭐ **La cura è di due righe** — tolto `keyint=1`, sonde rigenerate — **e il protocollo non si
 > tocca**. `[M]` `ffprobe` dà adesso `profile=Main` e `profile=Main 10` (erano Rext), e
@@ -1165,7 +1165,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 >
 > > ⛔⭐ **AGGIORNAMENTO 23 agosto 2026 — la stringa in vigore NON è più quella: è
 > > `avc1.640033`.** `banchi/07-b48` misurò il **5.0** (`32`); da allora
-> > `src/pagina.html:829` dichiara `LIVELLO_DICHIARATO = "5.1"`, perché la scala di
+> > `src/pagina.html` · `LIVELLO_DICHIARATO()` dichiara `LIVELLO_DICHIARATO = "5.1"`, perché la scala di
 > > `video.misura_massima` arriva a **3840×2160** e il 5.0 non ci arriva. ⇒ La pagina compone
 > > `avc1.6400` + il livello in esadecimale = **`avc1.640033`** (`0x33` = 51 = 5.1), ed è quella
 > > che passa a `configure()`.
@@ -2076,7 +2076,7 @@ gesti**, e che portano a due posti diversi.
 
 ⭐ **Il guadagno di questa distinzione è che toglie lavoro invece di aggiungerne**: il lato client non
 deve rilevare niente — spegnimento, riavvio e chiusura della scheda sono **la stessa cosa già
-implementata e misurata** (`pagehide` → `CONGEDO`, `pagina.html:2504`).
+implementata e misurata** (`pagehide` → `CONGEDO`, `pagina.html` · `canale_corrente()`).
 
 **E tre conseguenze che non sono state scelte, sono cadute da sole:**
 
@@ -2492,10 +2492,16 @@ budget». Il confine, deciso:
 > di `0x04`/`0x05` si scrive su quella coppia — locale `nicfio` e remota `prova`, che **devono
 > convivere senza toccarsi** — e costa quanto costerebbe comunque.
 
-⚠ **E quel che resta ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** in
-`rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che dichiara di seguirlo — dove `SPECIFICHE.md`
-§5.5 promette **dieci configurabile**. Oggi non morde — 16 > 10 — e la sua scadenza è la fase 10.
-⚠ *Il riferimento diceva `rcp.c:490`, e il `#define` sta a **568**: corretto il 16 agosto 2026
+⚠ ~~**E quel che resta ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16**, e
+`MAX_FIGLI` a 16, che dichiara di seguirlo — dove `SPECIFICHE.md` §5.5 promette **dieci
+configurabile**. Oggi non morde — 16 > 10 — e la sua scadenza è la fase 10.~~
+> ✅ **PAGATO il 25 agosto 2026, sera — fase 10** *(riallineato al codice il 28 agosto)*. Il numero
+> adesso è **uno solo**: `RCP_TETTO_SESSIONI` in `src/rcp.h`, vale **10**, e si cambia con
+> **`--tetto-sessioni N`**. Il `#define` è il predefinito; il valore in vigore lo dice `rcp_tetto()`.
+> ⭐ E le quattro tabelle (`MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI`) ora si
+> **allocano** su quel numero invece di essere quattro copie a mano che divergono in silenzio —
+> il difetto che `src/rcp.h` racconta per esteso, e che `[M]` §6.4 aveva provato sul campo.
+⚠ *Il riferimento diceva `rcp.c` · `MAX_ACCUMULO`, e il `#define` sta a **568**: corretto il 16 agosto 2026
 rileggendo il file. ⛔ Un numero di riga invecchia in silenzio — è il motivo per cui accanto c'è
 anche il nome della costante.*
 
@@ -2525,7 +2531,7 @@ budget prima del codificatore hardware vuol dire misurarlo due volte»* (`LEZION
 desktop invece che su uno**.
 
 ⚠ **E quel che questa decisione NON compra, detto per intero**: l'architettura multi-tenant c'è già
-in buona parte — `figlio.c:80` dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non
+in buona parte — `figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non
 si sta scansando una riscrittura strutturale; si sta evitando una misura ripetuta quattro volte.
 È un argomento più debole di quel che sembra, e tira nella stessa direzione lo stesso.
 
@@ -2546,7 +2552,7 @@ prima della copia zero è un budget da rifare.
 rientrerà in un discorso più generale sulla sicurezza, che farà parte di un capitolo evolutivo».*
 
 ⛔ **Il rilievo resta vero e misurato, e non si chiude: si RINVIA con un nome.**
-`fasi/10-multi-tenant-e-il-budget.md` §4.2 (**R10-A2**): `rcp.c:1004` dichiara *«IL NOME UTENTE NON
+`fasi/10-multi-tenant-e-il-budget.md` §4.2 (**R10-A2**): `rcp.c` · `posto_prendi()` dichiara *«IL NOME UTENTE NON
 CONTA. Tre nomi diversi contano tre»* — ed è la decisione di **§1.9**, presa quando il prodotto
 serviva **un inquilino**. ⇒ Con dieci inquilini **dietro lo stesso NAT** la chiave è **una sola**:
 `[M]` tre di loro che sbagliano **una volta a testa** in cinque minuti bannano l'indirizzo, e gli
@@ -3152,7 +3158,7 @@ non di un utente. ⇒ La promessa esatta, da scrivere così e non più larga:
 
 ⭐ **E questa regola dà finalmente un mestiere a `0x0C SERVER_IN_CHIUSURA`**: se l'unico spegnimento
 legittimo è quello dell'amministratore, allora **quella è l'unica strada su cui i client vanno
-avvisati**, e la cura del rilievo B-7 (`main.c:850`, `trasporto_congeda_tutte`) smette di essere una
+avvisati**, e la cura del rilievo B-7 (`main.c` · `main()`, `trasporto_congeda_tutte`) smette di essere una
 riparazione e diventa **il percorso normale**.
 
 ⚠ **E le tre cinture sono tutte righe di configurazione, cioè quel che l'invariante I7 vieta**: vanno
@@ -3537,7 +3543,7 @@ studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` e rilegg
 > |---|---|---|
 > | `RCP_TELA_ATTESA_MS` | **3000 ms** | il fondo oltre cui si risponde `NON_ORA` comunque: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`, e §6.2 fa **trattenere fotogrammi** al client finché aspetta |
 > | `RCP_TELA_RICHIAMO_MS` | 500 ms, che raddoppia fino a 8 s | ogni quanto si **richiede** al palco di tornare alla tela in vigore, quando ne ha una sua |
-> | `TELA_FONDO_MS` (client) | 250 ms | chi trascina un bordo produce decine di `resize` al secondo, e ogni richiesta girata al palco costa un fotogramma |
+> | ~~`TELA_FONDO_MS` (client)~~ ⛔ **USCITO il 17 agosto 2026** *(riallineato il 28)* | ~~250 ms~~ | chi trascina un bordo produce decine di `resize` al secondo — ⭐ ma il fondo è uscito **con la funzione che serviva** (`tela_forse_chiedi()`): `src/pagina.html` ne tiene la lapide, perché la cura andrebbe rimessa solo se qualcuno rimettesse l'inseguimento |
 > | `RISVEGLIO_MS` (figlio) | 400 ms | ogni quanto si riavvia il flusso quando **una chiave è dovuta e la scena è ferma** — è la cura dei 4,4 secondi |
 >
 > ⛔ **E una cosa che il server NON fa, per una riga che manca a `RCP.md`**: quando il palco cambia
@@ -3564,7 +3570,7 @@ non è ancora uscita».
 *Portata all'utente come una delle due decisioni che aspettavano lui. ⛔ **E gliel'avevo posta con
 una premessa falsa**: «chi si collega eredita la finestra di chi c'era prima». Non c'è nessun «chi
 c'era prima» — il multi-tenant è la **fase 10** e non esiste, e la sessione grafica è **una per
-utente** (invariante **I2**, `sessione.c:1474`). ⭐ **L'ha rilevato l'utente**, e la voce sta qui
+utente** (invariante **I2**, `sessione.c` · `sessione_assicura()`). ⭐ **L'ha rilevato l'utente**, e la voce sta qui
 anche per quello.*
 
 **Che cosa sopravvive davvero**: non la sessione di un altro, ma **la misura del palco** lasciata
@@ -4109,7 +4115,7 @@ sospetto sia raro ma non l'ha misurato nessuno.
 >
 > *Misurato sul prodotto vivo, utente `provat6`, porta 7721, con un testimone dentro la sessione
 > grafica: la disposizione che il client dichiara in `ATTACCA` viene **convalidata**
-> (`rcp.c:2013-2027`), **scritta nel registro** (`rcp.c:2237`), **e lì finisce**. Non arriva mai
+> (`rcp.c:2013-2027`), **scritta nel registro** (`rcp.c` · `tratta_attacca()`), **e lì finisce**. Non arriva mai
 > alla tastiera.*
 >
 > | scena | atteso se la decisione fosse attuata | `[M]` misurato |
@@ -4121,8 +4127,8 @@ sospetto sia raro ma non l'ha misurato nessuno.
 > ⇒ ⭐ **Quel che regge è la metà difficile**: quando la disposizione **della sessione** cambia,
 > Mutter distrugge e ricrea il dispositivo tastiera e `tastiera.c` rilegge la keymap nuova — le
 > lettere escono giuste. ⛔ **Quel che manca è la metà facile**: nessuno prende la disposizione
-> *del client* e la dà alla sessione. `input.c:429` passa `NULL` dove andrebbe la negoziata, e la
-> riga `RIPIEGO DICHIARATO` di `tastiera.c:693` **non compare in nessun giro** — cioè chi cercasse
+> *del client* e la dà alla sessione. `input.c` · `leggi_regione()` passa `NULL` dove andrebbe la negoziata, e la
+> riga `RIPIEGO DICHIARATO` di `tastiera.c` · `tastiera_apri_da_keymap()` **non compare in nessun giro** — cioè chi cercasse
 > quella riga nel registro concluderebbe *«combaciano sempre»*, che è diverso da *«non ho
 > guardato»*.
 >

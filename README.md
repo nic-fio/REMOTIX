@@ -469,7 +469,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > **Il difetto**: chiudendo la scheda del browser, la pagina **non manda nessun `CONGEDO`**, dove
 > `RCP.md` §8.1 lo impone senza condizioni. Il posto se ne va dopo **30 secondi di silenzio**.
-> ⛔ **Su tutt'e due i motori.** La causa ha un nome: `src/pagina.html:620` azzera
+> ⛔ **Su tutt'e due i motori.** La causa ha un nome: `src/pagina.html` · `TASTI_ULTIMO()` azzera
 > `congeda_corrente` **un millisecondo dopo `SESSIONE`**, e il gestore di `pagehide` (riga 331) è
 > **codice morto**. ⭐ **La cura è di tre righe ed è scritta** in `FASI.md` §01-filo-nudo, riquadro
 > P5.

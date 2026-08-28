@@ -401,7 +401,7 @@ codice**, e le altre quattro scene la leggono. Una regressione lì non l'avrebbe
 | come si guarisce | ⭐ solo riaccendendo il server (che forza `drop_device`) |
 | la catena, tutta `[R]` **dentro Mutter** | `remove_viewport_devices()` (`meta-eis-client.c:197-206`) **non passa da `drop_device()`** · `handle_button()` (`:612-621`) **ingoia in silenzio** il rilascio per un pulsante non premuto *su quel* dispositivo · `update_button_count()` (`meta-seat-impl.c:899-908`) è **del posto**: il press del dispositivo morto lo tiene a 1, e **non scende mai a zero** |
 | ⇒ | ⭐ È *«su Android il mouse non prende più i click»* (l'utente, 15 agosto) **per una causa diversa da quella curata allora** |
-| la cura | **una riga**: `input_rilascia_tutto()` **prima** di `cattura_ridimensiona()` — applicata, `figlio.c:3964` |
+| la cura | **una riga**: `input_rilascia_tutto()` **prima** di `cattura_ridimensiona()` — applicata, `figlio.c` · `codificatore_di()` |
 | ⛔ **e non basta** | `[M]` i dispositivi si ricreano **anche senza cambiare misura**: ogni `cattura_risveglia()` (400 ms, scena ferma e chiave dovuta) è seguito 8-24 ms dopo da un ricambio — **3 risvegli, 3 ricambi**, con **zero `ADATTA_TELA`**. ⇒ Cioè **proprio mentre l'utente tiene premuto il mouse su un desktop fermo**, e la cura ovvia (rilasciare a ogni risveglio) **distruggerebbe ogni trascinamento** |
 
 ### 4.7 · ⭐⭐ La decisione dell'utente ATTUATA — `Ctrl+Z` da una tastiera tedesca
@@ -458,12 +458,12 @@ e cinque codificatori** sullo stesso iGPU.*
 | ⭐ **C · la tastiera che comanda** | **`1a`** | ⭐ **`1a`**, con la catena intera nel registro: `§5-bis.7 «de» chiesta` → `tastiera TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
 | ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | la tela girata al palco **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
 
-⭐ **E il controllo positivo ha reso dove contava**: spenta la riga di `figlio.c:3964` e ricompilato,
+⭐ **E il controllo positivo ha reso dove contava**: spenta la riga di `figlio.c` · `codificatore_di()` e ricompilato,
 il caso del clic torna **DIFETTO_VIVO** — nel secondo giro **non arriva più nessun bottone**, solo i
 tasti, cioè §4.6 alla lettera. Riaccesa, torna tutto.
 
 ⛔⛔ **Ma sul trascinamento il controllo positivo NON ha reso, e va detto forte**: togliendo la cura
-della 6.4 (`rcp.c:2847`, il richiamo alla misura **in volo**) escono **ancora 0 su 18**. ⇒ **Non è
+della 6.4 (`rcp.c` · `tela_richiama_il_palco()`, il richiamo alla misura **in volo**) escono **ancora 0 su 18**. ⇒ **Non è
 quella cura a tenere questa scena**, e i **4 su 18** misurati dalla 6.3 **non sono stati
 riprodotti** — né a 10-35 ms, né a 5 ms, né sotto carico CPU 10,9. ⚠ La differenza che resta fra le
 due misure è la **contesa sulla GPU**: quel giorno c'erano cinque codificatori sullo stesso iGPU, e
@@ -1023,7 +1023,7 @@ cliente, quindi sessione e palco non si toccano.
 
 #### ⛔ Un fatto nuovo che tocca la certificazione di `06-b33`
 
-Con la cura di `figlio.c:3964`, `segna_orfani()` **non gira nemmeno nel prodotto sano** ⇒ **G3 non è
+Con la cura di `figlio.c` · `codificatore_di()`, `segna_orfani()` **non gira nemmeno nel prodotto sano** ⇒ **G3 non è
 più certificabile in `06-b33`**: la sua scena vive adesso in `06-b33-risveglio.sh tenuto` (caso T1).
 ⏳ Quel banco **non ha ancora una certificazione con guasto innestato**, ed è il buco più grosso di
 questa consegna — dichiarato dall'autore per primo.
@@ -1712,7 +1712,7 @@ ancora far scendere il conto. ⏳ Da misurare, non da dedurre.
 
 #### ⛔ La nostra cura di oggi copre l'altro cammino
 
-`input_rilascia_tutto()` prima di `cattura_ridimensiona()` (`figlio.c:3964`) copre il **cambio di
+`input_rilascia_tutto()` prima di `cattura_ridimensiona()` (`figlio.c` · `codificatore_di()`) copre il **cambio di
 geometria**. ⛔ **Non** copre `cattura_risveglia()`. ⇒ La «seconda porta» di §7.1 è aperta proprio
 dove la cura non arriva.
 
@@ -1767,7 +1767,7 @@ la decide l'utente.
   per cui sembrava impossibile era sbagliata**: la grazia parte dal `TELA`, **non dalla connessione**,
   quindi i 1500 ms della stretta di mano non c'entrano. 📖 §5.10;
 - ✅ ~~**codice mai esercitato su Mutter**: il ramo «concesso diverso da chiesto» e
-  `MISURA DIVERGENTE`~~ — **SMENTITO il 22 agosto**: ⭐ `MISURA DIVERGENTE` (oggi `cattura.c:608`)
+  `MISURA DIVERGENTE`~~ — **SMENTITO il 22 agosto**: ⭐ `MISURA DIVERGENTE` (oggi `cattura.c` · `su_parametri()`)
   **si raggiunge dall'esterno** — `[M]` **43 colpi su 480 catene**, tre spazzolate su tre. ⛔ La porta
   non è il produttore, **è il tempo**: due ridimensionamenti incatenati — *l'utente che trascina il
   bordo* — e la risposta del primo torna quando la richiesta porta già la seconda. Finestra: fra
@@ -1797,8 +1797,8 @@ la decide l'utente.
 | `DISPOSIZIONE` a sessione aperta chiude la connessione | ⭐ **connessione viva**, `KEYMAP CAMBIATA → de [German]`, nessun messaggio sul filo |
 
 ⇒ Li aveva chiusi la cucitura del **16 agosto**: la domanda «esiste?» va a XKB
-(`webtransport.c:1626` → `tastiera.c`), la variante ci entra perché `it(nonesiste)` non compila, e
-`T_DISPOSIZIONE` ha il suo `case` (`rcp.c:6207`). ⚠ Nessuno aveva riletto questa sezione, ed è la
+(`webtransport.c` · `gancio_disposizione_esiste()` → `tastiera.c`), la variante ci entra perché `it(nonesiste)` non compila, e
+`T_DISPOSIZIONE` ha il suo `case` (`rcp.c` · `drena()`). ⚠ Nessuno aveva riletto questa sezione, ed è la
 stessa specie di difetto di `fasi/07` §8: **un documento fermo a quattro giorni fa manda a cercare un
 guasto dove non c'è**.
 
@@ -1820,7 +1820,7 @@ disposizione/variante di `evdev.lst`: **589 si compilano**, e **nove hanno una m
 client è rotto»* e manda a cercare il guasto dall'altra parte del filo. E `it()` (variante vuota)
 prendeva `0x0E` su una stringa **fuori forma**: i due guasti di §4.5 uniti.
 
-⇒ **Curato** (`rcp.c:2155`, e il gemello allineato byte per byte): un solo
+⇒ **Curato** (`rcp.c` · `tratta_credenziali()`, e il gemello allineato byte per byte): un solo
 `disposizione_carattere_ammesso()` con l'alfabeto **identico** a quello di `tastiera.c`, più il
 rifiuto della variante vuota. ⚠ Due controlli di forma scritti due volte davano due risposte sotto
 la stessa etichetta: è la forma **E2**. La difesa non si allenta — punto, barra, virgola e

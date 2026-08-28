@@ -431,9 +431,16 @@ chiama più «l'accelerazione»: si chiama **«la copia zero»**, ed è quel che
 ⛔ **E qui nasce la sessione GNOME, che v1 avviava senza mai averla studiata** — le trappole sono
 in `STUDI.md` §gnome §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
 `gnome-session` si ri-esegue dentro una shell di login e si riporta dentro `~/.profile` `[R]`;
-`--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
-**viva, completa e nera**; il drop-in dell'unità della Shell oggi si scrive **solo per KWin**
-(`src/sessione.c` · `scrivi_dropin()`), quindi su GNOME va scritto adesso.
+~~`--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
+**viva, completa e nera**~~; il drop-in dell'unità della Shell si scrive in
+`src/sessione.c` · `scrivi_dropin()`.
+> ⛔⛔ **ROVESCIATO il 14 agosto 2026, fase 4 · A1** *(riallineato al codice il 28)*. Oggi il
+> prodotto **NON chiede** `--virtual-monitor`, e anzi **rifiuta** un `ExecStart` che lo chieda
+> ancora: se lo trova, scrive a registro che *«c'è un drop-in che vince sul mio»* e torna `FALSE`.
+> ⭐ La ragione è misurata (`[M]` 14 agosto, banco `04-b20`): col monitor chiesto, `RecordVirtual`
+> ne montava un **secondo** e registrava quello — GNOME lasciava barra, dock e finestre sul primo,
+> e **l'utente guardava uno schermo vuoto**. Senza, `RecordVirtual` monta **l'unico** monitor e la
+> shell ci va sopra.
 
 ⭐ E una prova da fare **guasta di proposito** (M9 di `STUDI.md` §gnome §13): senza `--virtual-monitor`,
 per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
@@ -715,6 +722,11 @@ qualcun altro.
 > schermo vuoto.
 >
 > **Il difetto, e la cura è in DUE posti non uno:**
+>
+> > ✅ **CURATO il 14 agosto 2026 (A1)** *(riquadro aggiunto il 28 agosto, riallineando al codice)*.
+> > ⛔ La tabella qui sotto descrive **com'era prima della cura**, ed è al presente perché è stata
+> > scritta come mandato. Oggi il prodotto non chiede `--virtual-monitor` e **rifiuta** un
+> > `ExecStart` che lo chieda: `src/sessione.c`, il controllo su `vigore`.
 >
 > | | |
 > |---|---|
@@ -1379,7 +1391,7 @@ questa fase.
 > | ⚠ **e la macchina di prova è GIÀ multi-utente** | `nicfio` locale + `prova` remoto che devono convivere: §4.6-quater lo chiama *«lo stato normale della macchina, non uno scenario da inventare»* |
 >
 > ⚠ **E quel che questa fase NON evita, detto per intero**: l'architettura c'è già in buona parte —
-> `figlio.c:80` dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non si sta scansando
+> `figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* dichiara *«un utente per figlio»*, un processo per sessione. ⇒ Non si sta scansando
 > una riscrittura strutturale; si sta evitando di **misurare un numero di macchina quattro volte**.
 >
 > ⛔ **E la precedenza che resta, e va rispettata**: questa fase sta **dopo la 8**. La copia zero
@@ -1399,9 +1411,10 @@ che **dice perché**.
 **Il banco**: si satura il codificatore di proposito e si verifica che l'undicesimo riceva
 `BUDGET_PIENO` — e che **i dieci che stavano lavorando non peggiorino** (`DECISIONI.md` §4.6-bis).
 
-⚠ **E il debito con la scadenza scritta è di questa fase**: `MAX_ATTACCATE` è un `#define` a **16**
-in `rcp.c:568` — e `MAX_FIGLI` a 16 in `figlio.c:83`, che lo segue — dove `SPECIFICHE.md` §5.5
-promette **dieci configurabile**. Oggi non morde, perché 16 > 10. ⭐ Qui scade.
+⚠ ~~**E il debito con la scadenza scritta è di questa fase**: `MAX_ATTACCATE` è un `#define` a
+**16** — e `MAX_FIGLI` a 16, che lo segue — dove `SPECIFICHE.md` §5.5 promette **dieci
+configurabile**.~~ ✅ **SCADUTO E PAGATO il 25 agosto 2026** *(riallineato al codice il 28)*: il
+numero è uno solo, `RCP_TETTO_SESSIONI` in `src/rcp.h`, e si cambia con **`--tetto-sessioni N``**.
 
 > ## ✅ APERTA IL 24 AGOSTO 2026, **CHIUSA IL 25** sul giudizio dell'utente
 >
