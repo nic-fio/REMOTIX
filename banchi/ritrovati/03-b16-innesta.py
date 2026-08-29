@@ -13,7 +13,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-CATALOGO = Path("/home/nicfio/Documenti/REMOTIX_V2/banchi/01-b12-guasti.py")
+CATALOGO = Path("/home/nicfio/Documenti/REMOTIX/banchi/01-b12-guasti.py")
 PAGINA = Path("/home/nicfio/b16-albero/src/pagina.html")
 DI_CASA = "ec169e5d7232ca6a17202593983e61451bc3df9e3b6b90e5f227394945739962"
 

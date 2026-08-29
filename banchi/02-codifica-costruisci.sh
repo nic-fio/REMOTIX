@@ -68,7 +68,7 @@ mkdir -p "$LAV" || { ko "non si crea $LAV"; exit 2; }
 # Le tre dipendenze, chieste a `pkg-config` e non indovinate.
 CFLAGS_AV=""
 MANCA=""
-for P in libavcodec libavutil libswscale; do
+for P in libavcodec libavutil libswscale libdrm libva; do
 	if V=$(pkg-config --modversion "$P" 2>/dev/null); then
 		ok "$P $V"
 		CFLAGS_AV="$CFLAGS_AV $(pkg-config --cflags "$P")"
@@ -123,7 +123,7 @@ fi
 #   ne' area.
 AVVERTIMENTI="-Wall -Wextra -Wno-unused-parameter"
 CFLAGS_TUTTI="-O2 -g -std=gnu11 -D_GNU_SOURCE $AVVERTIMENTI $CFLAGS_AV"
-LIBS="-lavcodec -lavutil -lswscale"
+LIBS="-lavcodec -lavutil -lswscale -lva"
 
 printf '\n\033[1m== compilo il codificatore\033[0m\n'
 if ! $CC $CFLAGS_TUTTI -c -o "$LAV/codificatore.o" "$SRC/codificatore.c" 2> "$LAV/cc.log"; then
