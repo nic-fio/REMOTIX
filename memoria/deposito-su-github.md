@@ -1,6 +1,6 @@
 ---
 name: deposito-su-github
-description: dal 28 ago 2026 il progetto si chiama REMOTIX (non piu' _V2), sta in ~/Documenti/REMOTIX e su github.com/nic-fio/REMOTIX, privato
+description: dal 28 ago 2026 il progetto si chiama REMOTIX (non piu' _V2), sta in ~/Documenti/REMOTIX e su github.com/nic-fio/REMOTIX, PUBBLICO dal 29 ago 2026
 metadata:
   type: project
 ---
@@ -9,14 +9,25 @@ metadata:
 a distinguerlo da v1, e v1 non esiste piu' come progetto a se'.
 
 - cartella: `~/Documenti/REMOTIX`
-- deposito: `https://github.com/nic-fio/REMOTIX` — **PRIVATO**, ramo predefinito
+- deposito: `https://github.com/nic-fio/REMOTIX` — **PUBBLICO dal 29 agosto 2026**, ramo predefinito
   `fase-10-cure` (`master` e' fermo al 9 agosto, non e' il ramo di lavoro)
 
-⛔ **Perche' resta privato**: la parola d'ordine `sudo` della macchina di prova
-e' scritta in chiaro in 9 file dei banchi (`printf 'nicfio\n' | sudo -S ...`).
-Finche' ci sono quelle righe il deposito non si puo' aprire — e cancellarle dopo
-non basta, la storia di git non dimentica. Si toglie cambiando la parola d'ordine
-sul server e facendogliela leggere da un file. ⇒ Lavoro da fare col server acceso.
+⛔ **APERTO IL 29 AGOSTO 2026, con la parola d'ordine ancora dentro.** Scelta
+dichiarata dall'utente quel giorno: quella parola d'ordine **non conta piu'**.
+
+⚠ Quel che e' pubblico, detto per intero — non erano 9 file, erano **117**, e
+la storia ne porta **62 commit**: la riga `printf 'nicfio\n' | sudo -S ...` si
+legge oggi da chiunque, nell'albero e all'indietro. ⛔ Cancellarla adesso non
+basta e non e' mai bastato: la storia di git non dimentica, e il deposito e'
+gia' stato letto pubblicamente.
+
+⇒ **La parola d'ordine `nicfio` della macchina di prova va considerata bruciata
+per sempre**, non «da cambiare quando capita». Al ritorno del server: cambiarla,
+e da li' in poi farla leggere da un file fuori dal deposito — mai piu' una
+parola d'ordine dentro un file che si committa.
+
+⚠ Il conto dei «9 file» stava scritto qui ed era sbagliato di dodici volte. `[M]`
+29 ago 2026: `git grep -Il "sudo -S" | wc -l` ⇒ 117.
 
 ⭐ **Quel che era v1 sta sotto `fondamenta/`** (rinominata il 28 ago 2026: «non voglio
 riferimenti a cose passate»)** e NON e' un archivio, e NON e' un archivio**:
