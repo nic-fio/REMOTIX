@@ -1,6 +1,6 @@
 ---
 name: deposito-su-github
-description: dal 28 ago 2026 il progetto si chiama REMOTIX (non piu' _V2), sta in ~/Documenti/REMOTIX e su github.com/nic-fio/REMOTIX, PUBBLICO dal 29 ago 2026
+description: dal 28 ago 2026 il progetto si chiama REMOTIX (non piu' _V2); dal 29 ago 2026 NON ha copia locale — fonte unica github.com/nic-fio/REMOTIX, pubblico
 metadata:
   type: project
 ---
@@ -8,26 +8,31 @@ metadata:
 **Il progetto si chiama REMOTIX.** Il «_V2» e' caduto il 28 agosto 2026: serviva
 a distinguerlo da v1, e v1 non esiste piu' come progetto a se'.
 
-- cartella: `~/Documenti/REMOTIX`
+- ⛔ **NESSUNA cartella locale.** `~/Documenti/REMOTIX` e' stata cancellata il
+  29 agosto 2026: «l'unica fonte di verita' e' il repository GitHub», per non
+  avere doppioni sparsi sul tablet. ⇒ Per lavorarci **si clona**.
 - deposito: `https://github.com/nic-fio/REMOTIX` — **PUBBLICO dal 29 agosto 2026**, ramo predefinito
   `fase-10-cure` (`master` e' fermo al 9 agosto, non e' il ramo di lavoro)
+- ⚠ Dopo ogni clone il gancio **non c'e'**: `.git/hooks/` non e' versionato.
+  ⇒ `bash banchi/11-scatole/11-gancio.sh installa pre-push`, altrimenti le
+  spinte passano senza nessun controllo — e stavolta **in silenzio**, perche' un
+  gancio assente non esce 127: semplicemente non c'e'.
 
-⛔ **APERTO IL 29 AGOSTO 2026, con la parola d'ordine ancora dentro.** Scelta
-dichiarata dall'utente quel giorno: quella parola d'ordine **non conta piu'**.
+⭐ **APERTO IL 29 AGOSTO 2026 — e la parola d'ordine resta dentro, per scelta.**
 
-⚠ Quel che e' pubblico, detto per intero — non erano 9 file, erano **117**, e
-la storia ne porta **62 commit**: la riga `printf 'nicfio\n' | sudo -S ...` si
-legge oggi da chiunque, nell'albero e all'indietro. ⛔ Cancellarla adesso non
-basta e non e' mai bastato: la storia di git non dimentica, e il deposito e'
-gia' stato letto pubblicamente.
+⛔ **NON e' un problema aperto, e non va riproposto.** La riga
+`printf 'nicfio\n' | sudo -S ...` sta in **117 file** dei banchi e in **62
+commit** della storia, e ci resta. La macchina di prova vive su una **rete
+locale chiusa**: non e' raggiungibile da fuori, quindi quella parola d'ordine
+non apre niente a nessuno. Deciso dall'utente il 29 agosto 2026.
 
-⇒ **La parola d'ordine `nicfio` della macchina di prova va considerata bruciata
-per sempre**, non «da cambiare quando capita». Al ritorno del server: cambiarla,
-e da li' in poi farla leggere da un file fuori dal deposito — mai piu' una
-parola d'ordine dentro un file che si committa.
+⚠ Questa nota diceva il contrario fino a stamattina — «resta privato», «va
+cambiata al ritorno del server». ⛔ Era la valutazione sbagliata, e valeva su
+un rischio che qui non c'e'.
 
-⚠ Il conto dei «9 file» stava scritto qui ed era sbagliato di dodici volte. `[M]`
-29 ago 2026: `git grep -Il "sudo -S" | wc -l` ⇒ 117.
+⚠ Il conto dei «9 file» che stava scritto qui era sbagliato di dodici volte.
+`[M]` 29 ago 2026: `git grep -Il "sudo -S" | wc -l` ⇒ **117**. ⭐ Il numero si
+verifica, non si cita a memoria — vale per ogni conto in queste note.
 
 ⭐ **Quel che era v1 sta sotto `fondamenta/`** (rinominata il 28 ago 2026: «non voglio
 riferimenti a cose passate»)** e NON e' un archivio, e NON e' un archivio**:
