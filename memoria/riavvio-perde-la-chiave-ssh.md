@@ -33,10 +33,10 @@ Quel giorno `/media/REMOTIX` **non c'era più**: l'aveva cancellato l'utente ste
    `enter.sh "bash /srv/src/04-vero-src/src/costruisci.sh"`. Le tre librerie vanno **copiate** in
    `src/04-vero-src/src/lib-remotix/`, che `provisiona.sh` registra con `ldconfig`.
 5. **pacchetti dell'ospite**: l'elenco `PKGS` di `fondamenta/banco/provision-server.sh` + `podman
-   crun netavark fuse-overlayfs uidmap python3 nftables rsync`, con la cache in
+   crun netavark fuse-overlayfs uidmap python3 nftables rsync git`, con la cache in
    `/media/REMOTIX/cache/apt-host`.
 6. `sudo bash src/provisiona.sh` e poi `… verifica` ⇒ deve dire «la macchina e' nello stato che il
-   prodotto si aspetta». ⚠ `gpu-udev.sh` deve essere **eseguibile** in `/media/REMOTIX/`.
+   prodotto si aspetta» (dal 18 set scrive anche la regola dei **quattro comandi senza password** dei banchi, ✅ decisa dall'utente: senza, il gancio remoto si blocca al primo `sudo`). ⚠ `gpu-udev.sh` deve essere **eseguibile** in `/media/REMOTIX/`.
 7. **scatole**: `/etc/containers/storage.conf` con `graphroot = /media/REMOTIX/contenitori/storage`
    (così le immagini **sopravvivono** al riavvio; il file in `/etc` no, va riscritto);
    `/media/REMOTIX/rete11/` = `banchi/11-scatole/*` + `10-f1-testimone.py` +

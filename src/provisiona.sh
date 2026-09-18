@@ -251,6 +251,33 @@ CONF
 	ok "/etc/pam.d/remotix"
 
 	# -------------------------------------------------------------------
+	# 4-bis. ⛔ I BANCHI GUIDANO IL SERVIZIO SENZA FERMARSI A CHIEDERE
+	#
+	# ✅ Deciso dall'utente il 18 settembre 2026: «metti lo script».
+	# `[M]` Quel giorno, primo giro dopo la pausa, `11-gancio.sh remoto` si e'
+	# fermato per SEMPRE al primo comando.  Manda `sudo -S … systemctl
+	# reset-failed … 2>/dev/null`: la richiesta della parola d'ordine va sullo
+	# standard error, lo standard error va nel nulla, `sshpw.py` non vede
+	# niente a cui rispondere, e `sudo` aspetta.
+	# ⇒ Funzionava perche' `provision-server.sh` (§3-bis) scriveva questa
+	#   regola, e passando a questo script la regola si era PERSA.
+	# ⚠ Ristretta ai quattro comandi che i banchi usano davvero, e `tee` a UN
+	#   file: `sudo tee` senza vincoli equivale a `sudo` intero.  Vive nel
+	#   rootfs in RAM: sparisce da se' al riavvio.
+	# -------------------------------------------------------------------
+	tit "I banchi guidano il servizio senza password"
+	UTENTE_BANCHI=${SUDO_USER:-nicfio}
+	printf '%s ALL=(root) NOPASSWD: /usr/bin/systemctl, /usr/bin/loginctl, /usr/sbin/nft, /usr/bin/tee /etc/default/remotix\n' \
+		"$UTENTE_BANCHI" > /etc/sudoers.d/remotix-banchi
+	chmod 440 /etc/sudoers.d/remotix-banchi
+	if visudo -c -q -f /etc/sudoers.d/remotix-banchi; then
+		ok "$UTENTE_BANCHI: quattro comandi senza password"
+	else
+		rm -f /etc/sudoers.d/remotix-banchi
+		ko "regola sudoers non valida: tolta"
+	fi
+
+	# -------------------------------------------------------------------
 	# 5. ⛔ LA SCHEDA: si misura sull'INTEGRATA — §4.6-quinquies
 	#
 	# «I test vanno fatti sulla GPU integrata, altrimenti trucchiamo il gioco»
@@ -436,6 +463,8 @@ done
 
 [ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix c'e'" \
 	|| ko "/etc/pam.d/remotix manca"
+[ -f /etc/sudoers.d/remotix-banchi ] && ok "i banchi guidano il servizio senza password" \
+	|| ko "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo"
 grep -q pam_systemd /etc/pam.d/remotix 2>/dev/null && ok "e chiama pam_systemd" \
 	|| ko "⛔ NON chiama pam_systemd: senza, la sessione logind non nasce e il compositore non parte"
 
