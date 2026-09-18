@@ -1038,7 +1038,11 @@ attendi_remoto() {
 		*) printf '%s' "$risposta"; return 0 ;;
 		esac
 		speso=$((speso + 60))
-		inf "  … la meta' remota sta ancora girando (${speso}s)"
+		# ⛔ Su STDERR: questa funzione si chiama dentro `$(…)`, e quel che va
+		#    sullo stdout E' la risposta.  `[M]` 18 set 2026: la meta' remota ha
+		#    impiegato 77 s, questa riga e' finita davanti allo «0», e un giro
+		#    verde e' stato registrato come «3 — non ho potuto guardare».
+		inf "  … la meta' remota sta ancora girando (${speso}s)" >&2
 	done
 	printf 'ATTESA'
 	return 1
