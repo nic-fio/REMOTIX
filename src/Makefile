@@ -62,7 +62,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
-            input.c tastiera.c cursore.c sentinella.c appunti.c
+            input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -175,6 +175,19 @@ F4_CFLAGS := $(shell pkg-config --cflags libei-1.0 xkbcommon)
 F4_LIBS   := $(shell pkg-config --libs   libei-1.0 xkbcommon)
 override CFLAGS += $(F4_CFLAGS)
 
+# ⭐ FASE 12 — il palco su KDE (`kwin.c`): il protocollo Wayland
+#    `zkde_screencast_unstable_v1`, il cui XML sta in `protocolli/` (preso da
+#    `fondamenta/remotix-c/src/protocolli/` di v1, che lo aveva da
+#    plasma-wayland-protocols).  Il codice del protocollo lo genera
+#    `wayland-scanner` a ogni costruzione: nel deposito c'e' solo l'XML.
+# ⚠ Su Debian Trixie: `apt install libwayland-dev` (porta `wayland-scanner`).
+F12_CFLAGS := $(shell pkg-config --cflags wayland-client)
+F12_LIBS   := $(shell pkg-config --libs   wayland-client)
+override CFLAGS += $(F12_CFLAGS) -I.
+SCANNER    ?= wayland-scanner
+PROTOCOLLI := zkde-screencast-unstable-v1
+GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
+
 ifneq ($(PREFISSO),)
 CFLAGS  += -I$(PREFISSO)/include
 LDFLAGS += -L$(PREFISSO)/lib -Wl,-rpath,$(PREFISSO)/lib
@@ -185,7 +198,8 @@ endif
 # ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
-        -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS)
+        -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
+        $(F12_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -234,14 +248,22 @@ impronte:
 	fi; \
 	exit $$stato
 
-$(NOME): $(OGGETTI)
-	$(CC) $(CFLAGS) -o $@ $(OGGETTI) $(LDFLAGS) $(LIBS)
+$(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
+	$(CC) $(CFLAGS) -o $@ $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+kwin.o: $(PROTOCOLLI:%=%-client-protocol.h)
+
+%-client-protocol.h: protocolli/%.xml
+	$(SCANNER) client-header $< $@
+
+%-protocol.c: protocolli/%.xml
+	$(SCANNER) private-code $< $@
+
 pulisci:
-	rm -f $(OGGETTI) $(NOME)
+	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o)
 
 # ⛔ Il controllo delle dipendenze DICE che cosa manca, invece di far fallire il
 #    compilatore su un `#include` che nessuno collega alla libreria assente.

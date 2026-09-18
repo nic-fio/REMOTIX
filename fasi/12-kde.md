@@ -55,6 +55,7 @@ del 18 settembre, `[R]`):
 |---|---|---|---|
 | **0** | la baseline | la rete intera | ✅ **PASS** 18 set |
 | **1** | la sessione Plasma **nasce** per un utente nuovo | nessuna ancora verde: C1(kde) resta rossa (manca la cattura) — si prova con la misura di I1 qui sotto | ✅ CP1 · CP2 · CP3 · CP4 · client (Firefox, Chrome) · rete — ⚠ Android del banco aperto |
+| **2** | l'immagine di Plasma arriva al browser | ⭐ **C1(kde)** | ✅ CP1 · CP2 · CP3 · CP4 · client · rete — ⭐ **C1(kde) VERDE** |
 
 ### Incremento 1 — la sessione Plasma nasce
 
@@ -156,6 +157,71 @@ quale desktop ha acceso.
 
 ⇒ **Incremento 1: CRITERIO soddisfatto** su KDE, GNOME e rete; la gamba Android del banco è
 rossa per un motivo che c'era già (controllo fatto) ed è dichiarata aperta.
+
+### Incremento 2 — l'immagine di Plasma arriva al browser
+
+| | |
+|---|---|
+| **OBIETTIVO** | nella sessione Plasma dell'incremento 1 il figlio prende i fotogrammi da KWin e li manda al cliente: il browser **vede** il desktop KDE. ⛔ Niente input (incremento 3), niente appunti |
+| **INVARIANTE** | su GNOME il palco si monta **come oggi**: stessa sequenza verso Mutter, stesse righe di registro, stessi tempi di C1. La scelta KWin/Mutter si fa **una volta**, con `sessione_desktop()` dell'incremento 1 — nessun secondo modo di riconoscere il desktop |
+| **MODULI** | ⭐ nuovo `src/kwin.c` — da `fondamenta/remotix-c/src/kwin.c` di v1: il protocollo Wayland `zkde_screencast_unstable_v1` (`stream_output` sull'uscita `Virtual-0` ⇒ nodo PipeWire), cursore METADATO · `src/figlio.c` (monta/smonta il palco: Mutter **o** KWin; dopo, `cattura_avvia(nodo)` è la stessa) · `src/Makefile` (`wayland-scanner`, `wayland-client`) · il permesso: un `.desktop` con `X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1`, com'era in v1 · `src/cattura.c` **solo se** CP2 misura che serve (v1: la fence di KWin, 830 buffer su 830 non pronti) |
+| **PROVA KDE** | ⭐ **C1(kde)×10 VERDE** — la maglia di sempre, nessuna maglia nuova: 10 utenti nuovi, sessione nata **con un monitor** e fotogrammi entro il tetto. E una fotografia del desktop Plasma presa dal browser |
+| **PROVA CLIENT** | Firefox e Chrome Linux sulla scatola **kde** (a·b·c·d·f·g verdi; (e) input resta rosso/3, è l'incremento 3) e sulla scatola **gnome** (come l'incremento 1). Android: vedi la decisione aperta |
+| **REGRESSIONI GNOME** | la rete intera; in particolare C1, C3, C6 (il palco si rimonta dopo lo stacco), C8b |
+| **CRITERIO** | C1(kde) verde · client su kde vedono Plasma · rete intera come dopo I1 **tranne** C1(kde) verde · GNOME invariato · guasti tutti presi. ⚠ I cancelli «solo gnome» di C3/C8b **non** si aprono qui se richiedono input |
+
+#### CP2 — osservato (`[M]` 18 set 2026, dentro `rete11-kde`, `banchi/12-i2-cancello.sh`)
+
+| | GNOME | KDE |
+|---|---|---|
+| chi dà il nodo PipeWire | Mutter, D-Bus `ScreenCast.RecordVirtual` (`mutter.c`) — un monitor **nuovo** della misura chiesta | KWin 6.3.6, protocollo **Wayland** `zkde_screencast_unstable_v1` **v5**, `stream_output` sull'uscita che c'è già (`Virtual-0`) |
+| il cancello | nessuno | ⛔ il global **non c'è** per un client qualunque (58 altri sì); ⭐ c'è con un `.desktop` in `/usr/share/applications` che dichiara `X-KDE-Wayland-Interfaces` e ha `Exec=` sull'eseguibile canonico — **anche scritto a sessione già viva** (+3 s). `XDG_MENU_PREFIX=plasma-` nell'ambiente di KWin: sì (dall'incremento 1) |
+| la misura | segue la tela chiesta | ⛔ **fissa**: l'uscita è della misura del primo cliente e KWin 6.3.6 non la ridimensiona (v1: `kwin!7932`, atteso per 6.8). `[M]` chiedere 1384x912 a un'uscita 1388x914 ⇒ PipeWire `no more input formats` ⇒ palco **mai più** montato |
+| il primo fotogramma | la Shell | ⭐ la **schermata d'avvio di Plasma** («Plasma made by KDE», 99 % nero + logo) per ~2,4 s, poi il desktop. `[M]` aspettare `org.kde.plasmashell` sul bus **non** la evita (il nome arriva prima) ⇒ provato e **tolto** |
+| il resto della strada | `cattura.c` → `codificatore.c` | ⭐ **la stessa**: dal nodo in poi niente cambia. `cattura.c` scarta già i buffer `SPA_CHUNK_FLAG_CORRUPTED` (i buffer di solo cursore di KWin, v1 §4.7) |
+
+⚠ **Non misurato e dichiarato**: la *fence* di KWin (v1: 830 buffer su 830 arrivano col disegno
+in corso). Le fotografie prese dal browser non mostrano strappi, ma una fotografia non è una
+misura: resta aperto per quando si guarderanno i numeri.
+
+#### CP3 — la modifica
+
+| file | che cosa | GNOME |
+|---|---|---|
+| ⭐ `src/kwin.c`, `src/kwin.h` (nuovi) | da `fondamenta/remotix-c/src/kwin.c` di v1, **solo la cattura**: registry, uscita, `stream_output` col cursore METADATO, attesa del nodo (5 s), pompa Wayland, chiusura; e `kwin_scrivi_permesso()` | non chiamato |
+| `src/protocolli/zkde-screencast-unstable-v1.xml`, `src/Makefile` | l'XML di v1; `wayland-scanner` genera il codice a ogni costruzione; `wayland-client` fra le librerie | una libreria in più nel binario (c'è in tutte e quattro le scatole: `ldd` 0 mancanti) |
+| `src/main.c` | all'avvio, **solo su KDE**: il server scrive `/usr/share/applications/org.kde.remotix.desktop` con `Exec=` sul proprio binario (il figlio è un `execve` dello stesso) | niente |
+| `src/figlio.c` | `palco_kwin` accanto a `mut`: su KDE `kwin_apri()` al posto di `mutter_apri()`, poi `cattura_avvia(nodo)` com'era; `misura_del_palco()`: su KDE la cattura chiede la misura dell'uscita, e il cambio di tela risponde con quella («la pagina riscala», §4.5) | ⭐ il ramo `else` è il codice di prima, testuale; `nodo_del_palco(mut)` = `mutter_nodo(mut)` |
+
+#### CP4 — le prove KDE (`[M]` 18 set 2026, binario `8694ec33`)
+
+| | misurato |
+|---|---|
+| C1(kde)×3 (`11-accendi.sh c1 kde 3`) | ⭐ **VERDE** 3 su 3, monitor «Virtual-0» (1 dopo), ~150 fotogrammi — la prima volta |
+| Firefox Linux, utente nuovo, scatola `kde` | ⭐ **PASS** 7 su 7: schermata d'avvio a 0,9 s, desktop Plasma a 3,3 s; riconnessione in 0,3 s |
+| Chrome Linux, stessa sessione | a·b·c·e·f·g verdi · ⛔ (d) 0 fotogrammi muovendo il mouse — ⭐ **atteso**: l'input arriva al server (e) ma non ancora a KWin (incremento 3), e il cursore lo disegna la pagina ⇒ il desktop non cambia |
+| ⚠ (e) su KDE | il banco prova che l'input arriva **al server**, non al desktop: su KDE il figlio dice *«il canale di input NON si apre»*. Il verde di (e) qui **non** vuol dire «si comanda» |
+| prima della cura della misura (`b835dc63`) | ⛔ la riconnessione di Chrome chiedeva 1384x912: `no more input formats`, palco mai più montato, 0 fotogrammi in 30 s ⇒ curato con `misura_del_palco()` |
+
+⚠ **Il banco dei client è cambiato** (`12-client-veri.py` (c)): una fotografia sola a +1 s giudicava
+la schermata d'avvio di Plasma; ora si fotografa **fino al tetto** e si scrive quando è arrivato il
+desktop e quante fotografie degeneri l'hanno preceduto. Ricertificato (`--certifica`: porta vuota,
+parola sbagliata, giudice dei pixel — tutti presi). ⚠ Il ramo «degenere fino al tetto» non ha una
+prova di certificazione sua: è dichiarato.
+
+#### La rete intera (`[M]` 18→19 set 2026, 22:41→00:50, binario `8694ec33`, 7 710 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ tutto verde **tranne C9** — ⛔ e C9 era **mio**: l'unica riga senza padrone era *««i1cli» ricontrollato…»*, cioè la sessione della prova client lasciata viva nella scatola mentre C9 contava i suoi due inquilini (classe **C**). ⭐ Chiusa la sessione, **C9(gnome) da sola: esito 0**, 631 righe obbligate su 631 col nome |
+| ⭐ **kde** | **C1(kde)×10 VERDE** — 10 su 10 nate con «Virtual-0», 155-174 fotogrammi; C5, C7, C8, C9 verdi, guasti visti |
+| xfce · lxqt | come la baseline: solo C1×10 rosso |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| guasti innestati | ⭐ 24 visti sulle scatole + 1 sul portatile |
+
+⇒ **Incremento 2: CRITERIO soddisfatto.** ⚠ Lezione di metodo: gli utenti delle prove a mano si
+chiudono **prima** di lanciare la rete — la rete guarda il registro intero, anche quel che non è suo.
 
 ## Le misure
 

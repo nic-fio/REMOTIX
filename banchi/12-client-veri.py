@@ -895,23 +895,47 @@ class Prova:
                            "schermo=%s)" % (self.o.tetto_s, s.get("dipinti"),
                                             s.get("consegnati"), s.get("acceso"))), s
         dopo = time.time() - t0
-        time.sleep(1.0)            # il vetro: la fotografia dopo almeno un quadro
-        try:
-            png, perche = self.g.fotografa_tela()
-        except Exception as e:                   # noqa: BLE001
-            png, perche = None, "fotografia fallita: %s" % str(e)[:200]
-        if not png:
-            return CIECO, ("dipinti=%d in %.1f s, ma i pixel non li ho potuti "
-                           "guardare: %s" % (s["dipinti"], dopo, perche)), s
-        if self.o.salva:
-            with open(os.path.join(self.o.salva, "%s-%d.png" % (self.g.nome, int(time.time()))),
-                      "wb") as f:
-                f.write(png)
-        degenere, desc = giudica_pixel(png)
-        if degenere is None:
-            return CIECO, "dipinti=%d, pixel non giudicabili: %s" % (s["dipinti"], desc), s
-        if degenere:
-            return ROSSO, "dipinti=%d ma la tela e' DEGENERE: %s" % (s["dipinti"], desc), s
+        # ⛔ «ENTRO IL TETTO», come dice la testa di questo file — e non una
+        #    fotografia sola a +1 s.  `[M]` 18 set 2026 su KDE: il primo
+        #    fotogramma di una sessione appena nata e' la schermata d'avvio di
+        #    Plasma («Plasma made by KDE», 99 % nero + logo), cioe' il desktop
+        #    vero che si accende, e dopo arriva il desktop.  ⇒ Si fotografa fino
+        #    al tetto; il verde dice QUANDO e' arrivato il primo non degenere, e
+        #    quante fotografie degeneri l'hanno preceduto.  ⛔ Una tela che resta
+        #    nera fino al tetto e' ancora ROSSO (la certificazione lo prova).
+        degeneri = 0
+        prima_desc = ""
+        while True:
+            time.sleep(1.0)        # il vetro: la fotografia dopo almeno un quadro
+            try:
+                png, perche = self.g.fotografa_tela()
+            except Exception as e:               # noqa: BLE001
+                png, perche = None, "fotografia fallita: %s" % str(e)[:200]
+            if not png:
+                return CIECO, ("dipinti=%d in %.1f s, ma i pixel non li ho potuti "
+                               "guardare: %s" % (s["dipinti"], dopo, perche)), s
+            if self.o.salva:
+                with open(os.path.join(self.o.salva, "%s-%d.png"
+                                       % (self.g.nome, int(time.time() * 1000))), "wb") as f:
+                    f.write(png)
+            degenere, desc = giudica_pixel(png)
+            if degenere is None:
+                return CIECO, "dipinti=%d, pixel non giudicabili: %s" % (s["dipinti"], desc), s
+            if not degenere:
+                break
+            degeneri += 1
+            prima_desc = prima_desc or desc
+            if time.time() >= fine:
+                return ROSSO, ("dipinti=%d ma la tela e' DEGENERE fino al tetto di %d s "
+                               "(%d fotografie): %s" % (s["dipinti"], self.o.tetto_s,
+                                                        degeneri, desc)), s
+        s = self.stato()
+        visto = time.time() - t0
+        if degeneri:
+            return VERDE, ("dipinti=%d · primo fotogramma a %.1f s, desktop NON degenere a "
+                           "%.1f s dopo %d fotografie degeneri (la prima: %s) · %s"
+                           % (s.get("dipinti") or 0, dopo, visto, degeneri, prima_desc,
+                              desc)), s
         return VERDE, "dipinti=%d dopo %.1f s · %s" % (s["dipinti"], dopo, desc), s
 
     def centro(self, s, fx=0.5, fy=0.5):

@@ -87,6 +87,7 @@
 #include "codificatore.h"
 #include "input.h"
 #include "mutter.h"
+#include "kwin.h"
 #include "sessione.h"
 
 /* ⛔⭐ LO STESSO TETTO DELLE SESSIONI DI `rcp.c`, E ADESSO E' VERO — 25 agosto
@@ -2903,6 +2904,56 @@ static uint32_t input_non_producibili;
  *     compositore parla questo processo (`src/appunti.h`). */
 static Appunti *palco_appunti;
 
+/* ⭐ FASE 12, INCREMENTO 2 — il palco su KDE.  Su GNOME resta NULL e il
+ *    `MutterSessione` fa tutto come prima; su KDE `mut` resta NULL e il nodo
+ *    PipeWire lo da' KWin (`kwin.h`).  ⚠ Uno per figlio, come gli altri due
+ *    qui sopra: un figlio ha un palco solo. */
+static KwinSessione *palco_kwin;
+
+static void chiudi_palco_kwin(void)
+{
+	if (palco_kwin) {
+		kwin_chiudi(palco_kwin);
+		palco_kwin = NULL;
+	}
+}
+
+/* Il nodo PipeWire del palco, da chiunque venga. */
+static uint32_t nodo_del_palco(const MutterSessione *m)
+{
+	return m ? mutter_nodo(m) : kwin_nodo(palco_kwin);
+}
+
+/*
+ * ⛔⭐ LA MISURA DA CHIEDERE ALLA CATTURA, SU KDE, E' QUELLA DELL'USCITA DI KWIN.
+ *
+ * Su GNOME Mutter fa un monitor NUOVO della misura chiesta (`RecordVirtual`).
+ * Su KDE l'uscita `Virtual-0` nasce con la sessione, della misura del PRIMO
+ * cliente (incremento 1, CP2), e KWin 6.3.6 non la ridimensiona a caldo
+ * (`kwin!7932`, atteso per 6.8 — `LEZIONI.md` di v1).  `[M]` 18 set 2026:
+ * chiedere 1384x912 a un'uscita di 1388x914 ⇒ `no more input formats`, e il
+ * palco non si monta MAI piu' — la sessione resta al buio.
+ * ⇒ Su KDE si cattura l'uscita com'e', e la pagina riscala: e' quel che §4.5
+ *   del protocollo prevede quando la tela concessa non e' quella chiesta.
+ * Su GNOME questa funzione non cambia niente.
+ */
+static void misura_del_palco(uint32_t *l, uint32_t *a)
+{
+	uint32_t kl = 0, ka = 0;
+
+	if (!palco_kwin)
+		return;
+	kwin_misura(palco_kwin, &kl, &ka);
+	if (!kl || !ka || (kl == *l && ka == *a))
+		return;
+	registro_dice(REG_FIGLIO,
+	              "⚠ la tela chiesta e' %ux%u ma l'uscita di KWin e' %ux%u, e KWin "
+	              "non la ridimensiona: catturo %ux%u e la pagina riscala (§4.5)",
+	              *l, *a, kl, ka, kl, ka);
+	*l = kl;
+	*a = ka;
+}
+
 /* ⛔⛔⭐ L'OFFERTA CHE E' ARRIVATA TROPPO PRESTO, E CHE SI RIFA' — 21 agosto
  *      2026, difetto misurato col banco `07-b56`.
  *
@@ -5714,6 +5765,23 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		return false;
 	}
 
+	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
+		/* ⭐ Su KDE il monitor c'e' gia' (`kwin_wayland --virtual`, nato con la
+		 *    sessione): si chiede a KWin il flusso di quello.  Il ramo GNOME
+		 *    qui sotto non si tocca. */
+		chiudi_palco_kwin();
+		CRONO_INIZIO("monta il palco (kwin_apri)");
+		palco_kwin = kwin_apri(&sbaglio);
+		CRONO_FINE();
+		if (!palco_kwin) {
+			snprintf(p.guasto, sizeof p.guasto, "KWin: %s",
+			         sbaglio ? sbaglio->message : "(nessun dettaglio)");
+			registro_dice(REG_FIGLIO, "⛔ nessun flusso da KWin: %s", p.guasto);
+			g_clear_error(&sbaglio);
+			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			return false;
+		}
+	} else {
 	CRONO_INIZIO("monta il palco (mutter_apri)");
 	mut = mutter_apri(&sbaglio);
 	CRONO_FINE();
@@ -5725,6 +5793,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		g_clear_error(&sbaglio);
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
+	}
 	}
 
 	/* ⛔ La cadenza si chiede UNA volta e con UN nome: `MOVIMENTO_FPS`.  Qui
@@ -5742,7 +5811,8 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	                  ? " — ⚠ vale solo se il codificatore e' in hardware, e se non "
 	                    "lo e' questo palco si rimonta sulla memoria dichiarandolo"
 	                  : "");
-	cat = cattura_avvia(mutter_nodo(mut), tela_l, tela_a, MOVIMENTO_FPS,
+	misura_del_palco(&tela_l, &tela_a);
+	cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
 	                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 	                    NULL, &sbaglio);
 	if (!cat) {
@@ -5751,6 +5821,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		registro_dice(REG_FIGLIO, "⛔ la cattura non si apre: %s", p.guasto);
 		g_clear_error(&sbaglio);
 		mutter_chiudi(mut);
+		chiudi_palco_kwin();
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
 	}
@@ -5784,6 +5855,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		cattura_fermo_libera(&fo);
 		cattura_ferma(cat);
 		mutter_chiudi(mut);
+		chiudi_palco_kwin();
 		*fuori_c = NULL;
 		*fuori_m = NULL;
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
@@ -5792,7 +5864,15 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 
 	/* ⛔ Il nome del monitor DOPO il primo fotogramma, non dopo `cattura_avvia`:
 	 *    la cucitura corretta il 12 agosto 2026 (`P2-6-montaggio.md` §5.1). */
-	if (mutter_monitor_cerca(mut)) {
+	if (!mut && palco_kwin) {
+		/* ⭐ Su KDE il monitor e' quello della sessione, e la scala l'ha gia'
+		 *    detta `kwin.c` se non e' 1.  «Prima» e «dopo» sono lo stesso
+		 *    numero: il palco non ne aggiunge nessuno. */
+		p.monitor_prima = p.monitor_dopo = kwin_quante_uscite(palco_kwin);
+		snprintf(p.monitor, sizeof p.monitor, "%s",
+		         kwin_nome_uscita(palco_kwin) ? kwin_nome_uscita(palco_kwin)
+		                                      : "(senza nome)");
+	} else if (mutter_monitor_cerca(mut)) {
 		guint prima = 0, dopo = 0;
 		double scala;
 
@@ -6211,6 +6291,7 @@ static void smonta_il_palco(MutterSessione **m, Cattura **c)
 		mutter_chiudi(*m);
 		*m = NULL;
 	}
+	chiudi_palco_kwin();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -6267,7 +6348,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	GError *sbaglio = NULL;
 	Cattura *nuova;
 
-	if (!m || !c)
+	if ((!m && !palco_kwin) || !c)
 		return false;
 
 	/* ⛔ Prima si ferma quella vecchia: due flussi sullo stesso nodo
@@ -6278,14 +6359,15 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 		*c = NULL;
 	}
 
-	nuova = cattura_avvia(mutter_nodo(m), l, a, MOVIMENTO_FPS, strada_del_palco,
+	misura_del_palco(&l, &a);
+	nuova = cattura_avvia(nodo_del_palco(m), l, a, MOVIMENTO_FPS, strada_del_palco,
 	                      CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
 	if (!nuova) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ la cattura NON si e' riaperta sul nodo %u alla strada "
 		              "«%s» (%s): smonto il palco per intero, che e' il ripiego "
 		              "— ⚠ e costa la sessione grafica, non solo il flusso",
-		              mutter_nodo(m),
+		              nodo_del_palco(m),
 		              strada_del_palco == CATTURA_STRADA_SCHEDA ? "SCHEDA"
 		                                                        : "MEMORIA",
 		              sbaglio ? sbaglio->message : "nessun dettaglio");
@@ -6309,7 +6391,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	              strada_del_palco == CATTURA_STRADA_SCHEDA
 	                  ? "SCHEDA (DMA-BUF, copia zero)"
 	                  : "MEMORIA (i pixel si copiano)",
-	              mutter_nodo(m), l, a);
+	              nodo_del_palco(m), l, a);
 	return true;
 }
 
@@ -7229,6 +7311,17 @@ void figlio_vive(int argc, char **argv)
 							registro_dettaglio(REG_FIGLIO,
 							                   "§7.1: niente da rilasciare prima "
 							                   "del ridimensionamento (%d)", giu);
+					}
+					/* ⭐ FASE 12 — su KDE l'uscita non si ridimensiona
+					 *    (`misura_del_palco()`): si risponde con la misura
+					 *    che c'e', e la pagina riscala.  Chiederne un'altra
+					 *    alla cattura la farebbe cadere per sempre. */
+					if (palco_kwin) {
+						uint32_t kl = tela_voluta_l, ka = tela_voluta_a;
+
+						misura_del_palco(&kl, &ka);
+						rispondi_tela(tela_voluta_l, tela_voluta_a, kl, ka);
+						continue;
 					}
 					r = cattura_ridimensiona(cat, tela_voluta_l, tela_voluta_a);
 					if (r == CATTURA_RITELA_CHIESTA) {

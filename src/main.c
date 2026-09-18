@@ -83,6 +83,7 @@
 #include "trasporto.h"
 #include "webtransport.h"
 #include "sessione.h"
+#include "kwin.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -1839,6 +1840,22 @@ int main(int argc, char **argv)
 	 *    scoprirla da un desktop che non e' quello atteso
 	 *    (`DECISIONI.md` §4.6-duodetricies). */
 	registro_dice(REG_AVVIO, "il desktop di questa macchina: %s", sessione_desktop_spiega());
+	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si scrive
+	 *    QUI, dal server, prima che nasca qualunque sessione: KWin mostra
+	 *    `zkde_screencast_unstable_v1` solo a un eseguibile dichiarato in un
+	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  Su GNOME non si scrive
+	 *    niente. */
+	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
+		char perche[640];
+
+		if (kwin_scrivi_permesso(perche, sizeof perche))
+			registro_dice(REG_AVVIO, "⭐ il permesso della cattura per KWin: %s", perche);
+		else
+			registro_dice(REG_AVVIO,
+			              "⛔ il permesso della cattura per KWin NON c'e' (%s): "
+			              "le sessioni Plasma nasceranno ma non si vedranno",
+			              perche);
+	}
 
 	/* ⛔⭐ I TRE OROLOGI DI §5.3 SI SCRIVONO ALL'AVVIO, e non e' decorazione.
 	 *
