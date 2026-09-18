@@ -202,6 +202,27 @@ stima dell'8 agosto 2026, mai rifatta.
 
 ---
 
+## M5 · Scegliere il desktop quando sulla macchina ce n'è più d'uno
+
+**Che cos'è.** Oggi una macchina ha **un** desktop, e REMOTIX accende quello. Con GNOME e KDE
+installati insieme, nessuno può dire «a me KDE»: né l'utente dalla pagina, né chi amministra il server.
+
+**Da dove viene.** Fase 12, aprendo KDE — `DECISIONI.md` **§4.6-duodetricies**, 18 settembre 2026:
+*«la funzionalità di scelta di desktop multipli la lasciamo per una futura implementazione»*.
+
+**Che cosa costa se non si fa MAI.** Su una macchina con un desktop solo, **niente**. Su una con due,
+il secondo **non è raggiungibile** da REMOTIX: vince GNOME, sempre, per tutti gli utenti. ⚠ Chi
+installa KDE accanto a GNOME e si aspetta di usarlo da remoto resta deluso senza un messaggio chiaro —
+per questo il server lo scrive nel registro all'avvio.
+
+**Che cosa serve prima.** Che l'utente dica **chi** sceglie (l'amministratore per la macchina, o ogni
+utente per sé). ⛔ La seconda tocca la pagina e il protocollo, e cambia `RCP.md`.
+
+**Quanto pesa.** `[?]` Con la scelta per macchina, poco: un'impostazione. Con la scelta per utente,
+una funzione nuova.
+
+---
+
 # ⚠ Le cose che qualcuno potrebbe voler mettere qui, e NON ci vanno
 
 ⛔ Perché il documento resti corto, va detto anche che cosa **rifiuta**.

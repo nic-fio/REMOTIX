@@ -29,3 +29,4 @@
 - [Il progetto si chiama REMOTIX](deposito-su-github.md) — ~/Documenti/REMOTIX e github.com/nic-fio/REMOTIX, privato; e v1 sta dentro, vivo
 - [Le credenziali sono state cancellate](credenziali-da-rigenerare.md) — RIFATTE il 18 set 2026; parola d'ordine invariata
 - [Le prove si fanno sul server](le-prove-si-fanno-sul-server.md) — sul tablet si scrive e si compila; là si fa girare, e le dipendenze si installano là
+- [Fase 12: KDE sotto la rete](fase-12-kde-sotto-la-rete.md) — incrementi piccoli, rete completa dopo ognuno, checkpoint-cancello, Fable 5 sui blocchi

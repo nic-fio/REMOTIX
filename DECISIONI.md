@@ -3108,6 +3108,20 @@ sì/no, e una famiglia di numeri duplicherebbe i ~40 banchi delle fasi 9 e 10 **
 in cui quei numeri valgono**. ⇒ §3.4 si riscrive, e il buco — ⛔ *«nessun banco confronta ieri con
 oggi»* — si **dichiara in §6**, dove stanno le cose che la rete non prende.
 
+### 4.6-duodetricies ✅ **Un desktop per macchina — la scelta fra più desktop è rimandata**
+
+*18 settembre 2026, aprendo la fase 12. Alla domanda «se su una macchina ci sono GNOME e KDE, chi
+sceglie quale accendere?» l'utente ha risposto:* *«Al momento la funzionalità di scelta di desktop
+multipli la lasciamo per una futura implementazione».*
+
+⇒ ✅ Il prodotto **non** offre una scelta del desktop: né all'utente, né come impostazione.
+La macchina ha **il** suo desktop, e il server accende quello.
+⇒ 🔸 *Derivato, correggibile senza discussione*: il server riconosce il desktop **da quel che è
+installato**. Se ci sono tutti e due, resta **GNOME** — cioè quel che il prodotto fa già oggi, e
+nessuna macchina servita cambia comportamento. ⚠ Il caso «tutti e due» è quindi **ambiguo per
+costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silenzio.
+⇒ La funzione rimandata sta in `MASTERPLAN.md` **M5**.
+
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
 > ### ⛔⛔ E IL 25 AGOSTO 2026 QUESTA DECISIONE HA TROVATO UN BUCO — **chi aggiorna**
