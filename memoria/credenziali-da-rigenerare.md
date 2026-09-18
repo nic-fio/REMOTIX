@@ -1,11 +1,13 @@
 ---
 name: credenziali-da-rigenerare
-description: 28 ago 2026 le credenziali del server sono state CANCELLATE dal tablet; si rifanno quando la macchina torna, e finche' non si rifanno i banchi non la raggiungono
+description: 28 ago 2026 le credenziali del server erano state CANCELLATE dal tablet; RIFATTE il 18 set 2026 (chiave nuova, parola d'ordine invariata)
 metadata:
   type: project
 ---
 
-**Sul tablet non c'e' piu' nessuna credenziale del server.** Cancellate il 28 agosto
+⭐ **RIFATTE il 18 settembre 2026**: `~/SERVER.ssh` (righe `host:` `user:` `pass:`), chiave `ed25519` nuova, installata sul server. La parola d'ordine del server e' **rimasta `nicfio`** — vedi [[deposito-su-github]]. La ricetta completa sta in [[riavvio-perde-la-chiave-ssh]].
+
+~~Sul tablet non c'e' piu' nessuna credenziale del server.~~ (vero dal 28 ago al 18 set 2026) Cancellate il 28 agosto
 2026 per decisione di Nic — *«le rigenereremo quando il server tornera' disponibile»* —
 prima della pulizia della macchina.
 

@@ -12,10 +12,10 @@ senza accorgersene. Decisione di Nic, 28 agosto 2026.
 
 ## Come si rimette al suo posto su una macchina nuova
 
-    cp memoria/*.md ~/.claude/projects/-home-nicfio-Documenti-REMOTIX/memory/
+    cp memoria/*.md ~/.claude/projects/-home-nicfio-REMOTIX/memory/
 
 ⚠ Il nome di quella cartella e' ricavato dal **percorso** del progetto. Se un
-giorno il deposito non stara' piu' in `/home/nicfio/Documenti/REMOTIX`, il
+giorno il deposito non stara' piu' in `/home/nicfio/REMOTIX`, il
 nome cambia: si guarda quale cartella esiste sotto `~/.claude/projects/` e si
 copia li'.
 

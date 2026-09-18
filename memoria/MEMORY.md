@@ -23,9 +23,9 @@
 - [Taratura, non caccia al difetto](taratura-non-caccia-al-difetto.md) — «ottimizzazione» e «non funziona» sono due registri, e la parola la sceglie lui
 - [Parlato al minimo](parlato-al-minimo.md) — dalla fase 9: i risultati, non il racconto del lavoro
 - [wondershaper sul tablet](wondershaper-sul-tablet.md) — per strozzare il percorso vero, non `lo`
-- [Il riavvio perde la chiave ssh](riavvio-perde-la-chiave-ssh.md) — rootfs in RAM: chiave → provisiona → verifica → misura
+- [Il riavvio perde la chiave ssh](riavvio-perde-la-chiave-ssh.md) — rootfs in RAM; e la ricetta per rifare il server DA ZERO (18 set 2026)
 - [Il banco si prepara prima](il-banco-si-prepara-prima.md) — la scena si GUARDA prima di chiamarlo, e un contatore non è guardare
-- [Il progetto è in pausa](progetto-in-pausa-agosto-2026.md) — dal 27 ago 2026, intervento; si riprende da KDE, e prima si fa girare la rete
+- [Il progetto è in pausa](progetto-in-pausa-agosto-2026.md) — pausa 27 ago–18 set 2026; si riprende da KDE, e prima si fa girare la rete
 - [Il progetto si chiama REMOTIX](deposito-su-github.md) — ~/Documenti/REMOTIX e github.com/nic-fio/REMOTIX, privato; e v1 sta dentro, vivo
-- [Le credenziali sono state cancellate](credenziali-da-rigenerare.md) — si rifanno col server; e i 46 richiami di sshpw.py finche' non ci sono NON raggiungono la macchina
+- [Le credenziali sono state cancellate](credenziali-da-rigenerare.md) — RIFATTE il 18 set 2026; parola d'ordine invariata
 - [Le prove si fanno sul server](le-prove-si-fanno-sul-server.md) — sul tablet si scrive e si compila; là si fa girare, e le dipendenze si installano là

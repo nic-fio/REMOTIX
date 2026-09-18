@@ -39,3 +39,11 @@ udev (`DECISIONI.md` §4.6-ter e §4.6-quinquies).
 il ripiego è in CPU, e va **dichiarato** invece che subito.
 
 Vedi [[remotix-convenzioni]], [[la-prova-la-fa-lutente]] e [[utente-prova-si-conserva]].
+
+⛔⛔ **18 settembre 2026, ribadito dall'utente: «niente RADEON. Si rimane inchiodati sulla Intel
+Integrata».** Detto quando è venuto fuori che l'esclusione valeva solo sull'ospite: nelle scatole
+della rete entrava `--device /dev/dri` intero, e gli inquilini finivano anche nel gruppo della
+Radeon. ⇒ Adesso nelle scatole entrano **solo** `card0` e `renderD128` della Intel (trovati per
+indirizzo PCI), `gpu-udev.sh` chiude anche il nodo `card` della Radeon, e `provisiona.sh` non
+mette più nessuno nel gruppo `remotix-nogpu`. ⚠ Qualunque strada nuova verso la scheda va
+controllata contro questa regola **dentro** l'ambiente dove gira, non solo sull'ospite.

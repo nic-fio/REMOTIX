@@ -1,11 +1,13 @@
 ---
 name: progetto-in-pausa-agosto-2026
-description: in pausa dal 27 ago 2026 (intervento); il 28 il progetto e' passato su GitHub e la documentazione e' stata bonificata. Si riprende da KDE, col server che torna dall'assistenza
+description: in pausa dal 27 ago al 18 set 2026 (intervento); RIPRESO il 18 set col server rifatto da zero; il 28 il progetto e' passato su GitHub e la documentazione e' stata bonificata. Si riprende da KDE, col server che torna dall'assistenza
 metadata:
   type: project
 ---
 
-**REMOTIX e' in pausa dal 27 agosto 2026** — Nic ha un intervento chirurgico. Si
+⭐ **RIPRESO il 18 settembre 2026**: server riprovisionato da zero ([[riavvio-perde-la-chiave-ssh]]), e il primo giro della rete e' il collaudo.
+
+**REMOTIX e' stato in pausa dal 27 agosto 2026** — Nic ha un intervento chirurgico. Si
 riprende fra qualche settimana. ⛔ Non c'e' niente lasciato a meta': la fase 11 e'
 chiusa, e il punto d'ingresso e' il riquadro ⏸ in testa a `README.md`.
 

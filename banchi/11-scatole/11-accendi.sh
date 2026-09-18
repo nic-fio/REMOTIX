@@ -210,11 +210,45 @@ accendi)
 	# ⭐ E NON allontana la scatola dalla macchina vera: la avvicina.  Sulla
 	#   macchina vera un tetto ai fili non c e affatto.
 	# ═══════════════════════════════════════════════════════════════════
+	# ═══════════════════════════════════════════════════════════════════
+	# ⛔⛔ NIENTE RADEON — SOLO LA INTEL INTEGRATA ENTRA NELLA SCATOLA.
+	#
+	# ✅ Decisione dell'utente, 18 settembre 2026: *«niente RADEON. Si rimane
+	#    inchiodati sulla Intel Integrata»*.  Qui c'era `--device /dev/dri`, cioe'
+	#    TUTTI i nodi: dentro la scatola c'era anche la Radeon (`renderD129`,
+	#    gruppo `remotix-nogpu`), e `attrezzi-gruppi-scheda.sh` — che legge tutti
+	#    i nodi — metteva l'inquilino ANCHE in quel gruppo.  `[M]` 18 set 2026,
+	#    C1: «c1u1 messo nei gruppi LETTI DAI NODI: video remotix-nogpu render».
+	#    ⇒ L'esclusione di `gpu-udev.sh` valeva sull'ospite e NON nelle scatole.
+	#
+	# ⭐ La cura e' alla radice: la Radeon dentro NON ESISTE.  Si passano solo
+	#   i due nodi della scheda col driver `i915`/`xe`, trovati per INDIRIZZO
+	#   PCI e non per nome — `renderD128` e `renderD129` si scambiano fra due
+	#   avvii — e dentro prendono SEMPRE i nomi `card0` e `renderD128`, quelli
+	#   che il passo 0 e le maglie si aspettano.
+	# ═══════════════════════════════════════════════════════════════════
+	INTEL_CARD=""; INTEL_RENDER=""
+	for C in /sys/class/drm/card[0-9]*; do
+		case "$C" in *-*) continue ;; esac
+		[ -e "$C/device/driver" ] || continue
+		case "$(basename "$(readlink -f "$C/device/driver")")" in i915|xe) ;; *) continue ;; esac
+		PCI=$(basename "$(readlink -f "$C/device")")
+		INTEL_CARD=$(readlink -f "/dev/dri/by-path/pci-$PCI-card" 2>/dev/null)
+		INTEL_RENDER=$(readlink -f "/dev/dri/by-path/pci-$PCI-render" 2>/dev/null)
+		break
+	done
+	if [ ! -e "$INTEL_CARD" ] || [ ! -e "$INTEL_RENDER" ]; then
+		ko "⛔ non trovo la Intel integrata (driver i915/xe): NON accendo — la scatola non nasce su un'altra scheda"
+		exit 1
+	fi
+	ok "scheda: solo la Intel integrata — $INTEL_CARD → card0, $INTEL_RENDER → renderD128"
+
 	podman run -d --replace --name "$NOME" \
 		--systemd=always \
 		--pids-limit 16384 \
 		--network=host \
-		--device /dev/dri \
+		--device "$INTEL_CARD:/dev/dri/card0" \
+		--device "$INTEL_RENDER:/dev/dri/renderD128" \
 		--cap-add=AUDIT_WRITE \
 		--cap-add=AUDIT_CONTROL \
 		$CAPS \
@@ -252,7 +286,8 @@ accendi)
 	# ⚠ E si crea il GRUPPO soltanto: chi ci debba entrare lo decide
 	#   l attrezzo, non questo file.
 	# ═══════════════════════════════════════════════════════════════════
-	for N in /dev/dri/card* /dev/dri/renderD*; do
+	# ⛔ Solo i due nodi della Intel: sono gli unici che dentro esistono.
+	for N in "$INTEL_CARD" "$INTEL_RENDER"; do
 		[ -e "$N" ] || continue
 		G=$(stat -c %g "$N" 2>/dev/null) || continue
 		[ -n "$G" ] || continue
@@ -270,13 +305,23 @@ accendi)
 
 	# La prova che l'allineamento dei gruppi e' avvenuto DAVVERO — «scritto non
 	# e' in vigore»: si rilegge dal nodo, non dal registro dell'unita'.
-	G_NODO=$(stat -c %g /dev/dri/renderD128 2>/dev/null)
+	G_NODO=$(stat -c %g "$INTEL_RENDER" 2>/dev/null)
 	G_DENTRO=$(podman exec "$NOME" sh -c 'id -G provanic' 2>/dev/null)
 	if printf '%s\n' $G_DENTRO | grep -qx "$G_NODO"; then
 		ok "l'inquilino e' nel gruppo della scheda ($G_NODO)"
 	else
 		ko "l'inquilino NON e' nel gruppo della scheda ($G_NODO): i suoi gruppi sono $G_DENTRO"
 		ko "⛔ cosi' il compositore ripiegherebbe sul software, e i numeri sarebbero falsi"
+	fi
+
+	# ⛔ «Scritto non e' in vigore»: si GUARDA dentro che la Radeon non ci sia.
+	DENTRO=$(podman exec "$NOME" sh -c 'ls /dev/dri | tr "\n" " "' 2>/dev/null)
+	if [ "$DENTRO" = "card0 renderD128 " ]; then
+		ok "dentro ci sono solo i nodi della Intel: $DENTRO"
+	else
+		ko "⛔ dentro /dev/dri c'e' «$DENTRO», non solo card0 e renderD128: spengo"
+		podman rm -f -t 0 "$NOME" >/dev/null 2>&1
+		exit 1
 	fi
 	;;
 

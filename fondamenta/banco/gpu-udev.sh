@@ -40,6 +40,11 @@ NODO=$(readlink -f "/dev/dri/by-path/pci-$PCI-render" 2>/dev/null || true)
 [ -n "$NODO" ] || { echo "nessun nodo di rendering all'indirizzo $PCI"; exit 1; }
 echo "escludo $PCI (oggi e' $NODO)"
 
+# ⛔ Anche il nodo `card*`, non solo `renderD*` — 18 settembre 2026, decisione
+#    dell'utente: «niente RADEON».  `[M]` Con la sola regola sul nodo di calcolo,
+#    `card1` della Radeon restava al gruppo `video`, in cui gli utenti di prova
+#    stanno: un compositore poteva ancora aprirla.
+
 cat > "$REGOLA" <<CONF
 # REMOTIX — questa scheda non va usata dal compositore della sessione remota.
 #
@@ -47,7 +52,7 @@ cat > "$REGOLA" <<CONF
 # e l'utente del servizio non lo apre.  KWin allora passa alla scheda dopo.
 #
 # ⚠ Vale per TUTTA la sessione dell'utente, non solo per il compositore.
-KERNEL=="renderD*", SUBSYSTEM=="drm", ENV{ID_PATH}=="pci-$PCI", GROUP="remotix-nogpu", MODE="0660"
+KERNEL=="renderD*|card[0-9]*", SUBSYSTEM=="drm", ENV{ID_PATH}=="pci-$PCI", GROUP="remotix-nogpu", MODE="0660"
 CONF
 
 getent group remotix-nogpu >/dev/null || groupadd --system remotix-nogpu

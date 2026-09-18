@@ -56,12 +56,23 @@ SOLO_VERIFICA=${1:-}
 # ⚠ Un gid non si passa a `usermod -aG`: si passa il NOME, che si ricava dal
 #   numero con `getent group`.  Il numero resta quel che si VERIFICA, perche' un
 #   nome puo' cambiare di significato e un gid no.
+# ⛔⛔ E SI SALTA IL NODO ESCLUSO — 18 settembre 2026, al primo riprovisioning
+#    dopo la pausa.  `gpu-udev.sh` mette la discreta nel gruppo `remotix-nogpu`
+#    proprio perche' NESSUNO ci stia dentro.  `[M]` Letti tutti i nodi senza
+#    distinzione, al secondo giro questo script avrebbe messo `prova` e `prova2`
+#    in `remotix-nogpu`, cioe' riaperto la Radeon agli utenti di prova — e la
+#    verifica lo pretendeva: «prova NON e' nei gruppi della scheda:
+#    remotix-nogpu».  ⇒ Si misurerebbe sulla scheda sbagliata senza saperlo.
 # ---------------------------------------------------------------------------
+GRUPPO_ESCLUSO=remotix-nogpu
+
 gid_della_scheda() {
-	local n g
+	local n g escluso
+	escluso=$(getent group "$GRUPPO_ESCLUSO" | cut -d: -f3)
 	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$n" ] || continue
 		g=$(stat -c %g "$n" 2>/dev/null) || continue
+		[ -n "$escluso" ] && [ "$g" = "$escluso" ] && continue
 		printf '%s\n' "$g"
 	done | sort -un
 }
