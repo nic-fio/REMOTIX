@@ -47,9 +47,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ⚠ `kwin-wayland` e non tutto Plasma: al passo 0 serve il COMPOSITORE.  Il
 #   contorno entrera' quando entrera' il prodotto, e allora la ricetta crescera'
 #   — dichiarando che cosa e' cambiato e quando (R2).
+#
+# ⭐ R2 — 18 settembre 2026, fase 12 incremento 1: IL CONTORNO E' ENTRATO.
+#   Il prodotto accende una sessione PLASMA (`startplasma-wayland`), non un
+#   KWin nudo ⇒ `plasma-workspace` (startplasma, ksmserver, plasmashell, le
+#   unita' `plasma-*.service`) e `plasma-desktop` (il desktop che l'utente
+#   vede).  `--no-install-recommends` come sopra: [M] 278 pacchetti in piu'.
+#   ⚠ Fra questi entra `polkitd` (lo tira `polkit-kde-agent-1`): la ricetta
+#   dei gruppi qui sotto lo tratta gia' (`Before=polkit.service`, §1.54).
+#   ⇒ Il passo 0 resta quello di prima: accende `kwin_wayland` nudo.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         kwin-wayland xwayland \
+        plasma-workspace plasma-desktop \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------

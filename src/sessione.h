@@ -101,6 +101,42 @@
 #define SESSIONE_UNITA_DBUS "gnome-session-restart-dbus.service"
 
 /*
+ * ⭐ FASE 12 — IL SECONDO DESKTOP: PLASMA.  `fasi/12-kde.md`, incremento 1.
+ *
+ * ✅ `DECISIONI.md` §4.6-duodetricies: **un desktop per macchina**, e il
+ *    server lo riconosce da quel che e' installato.  ⛔ La scelta fra piu'
+ *    desktop e' rimandata (`MASTERPLAN.md` M5).
+ *
+ * ⚠ Le stesse tre cose di GNOME, con i nomi di Plasma — ⛔ non un'eccezione:
+ *   la FUNZIONE e' la stessa (la sessione nasce, si riconosce, finisce), cambia
+ *   **come** la si chiede.  `startplasma-wayland` non lancia KWin: fa partire
+ *   `plasma-kwin_wayland.service`, il cui `ExecStart` si sovrascrive col drop-in
+ *   (`STUDI.md` §kde §6.1-§6.2), esattamente come l'unita' della Shell.
+ */
+#define SESSIONE_COMANDO_KDE "exec startplasma-wayland"
+#define SESSIONE_UNITA_KWIN "plasma-kwin_wayland.service"
+#define SESSIONE_UNITA_PLASMA "plasma-workspace.target"
+
+typedef enum {
+	SESSIONE_DESKTOP_GNOME = 0,
+	SESSIONE_DESKTOP_KDE = 1,
+} SessioneDesktop;
+
+/*
+ * Quale desktop ha questa macchina — deciso UNA volta per processo.
+ *
+ * ⛔ KDE **solo** se c'e' `startplasma-wayland` e NON c'e' `gnome-session`.
+ *    In ogni altro caso GNOME, cioe' quel che il prodotto faceva prima della
+ *    fase 12: nessuna macchina servita cambia comportamento per questa riga, e
+ *    il caso «tutti e due» (ambiguo per costruzione) si DICHIARA — vedi
+ *    `sessione_desktop_spiega()`.
+ */
+SessioneDesktop sessione_desktop(void);
+
+/* La scelta a parole, con il perche' — per la riga di avvio del server. */
+const char *sessione_desktop_spiega(void);
+
+/*
  * ⛔ IL MONITOR SI SCEGLIE PER NOME, E IL NOME E' QUESTO.
  *
  * `[M]` 12 agosto 2026: su questa macchina sono stati visti **due** monitor

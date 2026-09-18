@@ -82,6 +82,7 @@
 #include "tls.h"
 #include "trasporto.h"
 #include "webtransport.h"
+#include "sessione.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -1833,6 +1834,11 @@ int main(int argc, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 
 	registro_dice(REG_AVVIO, "REMOTIX — fase 1, il filo nudo");
+	/* ⭐ FASE 12 — quale desktop accendera' questo server, detto all'avvio: con
+	 *    GNOME e KDE insieme la scelta e' ambigua, e si legge qui invece di
+	 *    scoprirla da un desktop che non e' quello atteso
+	 *    (`DECISIONI.md` §4.6-duodetricies). */
+	registro_dice(REG_AVVIO, "il desktop di questa macchina: %s", sessione_desktop_spiega());
 
 	/* ⛔⭐ I TRE OROLOGI DI §5.3 SI SCRIVONO ALL'AVVIO, e non e' decorazione.
 	 *

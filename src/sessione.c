@@ -260,6 +260,64 @@ static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const c
 	                                   NULL, sbaglio);
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐ FASE 12 — QUALE DESKTOP.  Il criterio e il perche' stanno in `sessione.h`.
+ *
+ * ⚠ Si guarda il PATH del processo: il figlio lo ha fisso
+ *   (`/usr/local/bin:/usr/bin:/bin`), quindi padre e figlio danno la stessa
+ *   risposta senza doversela passare.
+ */
+static SessioneDesktop desktop_scelto;
+static const char *desktop_spiegato;
+
+static void riconosci_desktop(void)
+{
+	static gsize fatto;
+
+	if (g_once_init_enter(&fatto)) {
+		g_autofree char *gnome = g_find_program_in_path("gnome-session");
+		g_autofree char *plasma = g_find_program_in_path("startplasma-wayland");
+
+		if (plasma && !gnome) {
+			desktop_scelto = SESSIONE_DESKTOP_KDE;
+			desktop_spiegato = "KDE Plasma (c'e' startplasma-wayland, non c'e' "
+			                   "gnome-session)";
+		} else if (plasma && gnome) {
+			desktop_scelto = SESSIONE_DESKTOP_GNOME;
+			desktop_spiegato = "GNOME — ⚠ AMBIGUO: su questa macchina ci sono GNOME e "
+			                   "KDE, e vince GNOME.  La scelta fra piu' desktop non c'e' "
+			                   "ancora (DECISIONI.md §4.6-duodetricies, MASTERPLAN.md M5)";
+		} else if (gnome) {
+			desktop_scelto = SESSIONE_DESKTOP_GNOME;
+			desktop_spiegato = "GNOME (c'e' gnome-session)";
+		} else {
+			desktop_scelto = SESSIONE_DESKTOP_GNOME;
+			desktop_spiegato = "GNOME per ripiego — ⛔ non trovo NE' gnome-session NE' "
+			                   "startplasma-wayland: nessuna sessione grafica potra' "
+			                   "nascere";
+		}
+		g_once_init_leave(&fatto, 1);
+	}
+}
+
+SessioneDesktop sessione_desktop(void)
+{
+	riconosci_desktop();
+	return desktop_scelto;
+}
+
+const char *sessione_desktop_spiega(void)
+{
+	riconosci_desktop();
+	return desktop_spiegato;
+}
+
+static gboolean e_kde(void)
+{
+	return sessione_desktop() == SESSIONE_DESKTOP_KDE;
+}
+
 bool sessione_viva(void)
 {
 	g_autoptr(GDBusConnection) bus = NULL;
@@ -268,6 +326,12 @@ bool sessione_viva(void)
 	bus = sessione_bus(NULL);
 	if (!bus)
 		return false;
+
+	/* ⭐ Su Plasma la domanda debole e' il nome di KWin: non e' attivabile (lo
+	 *    prende il compositore quando parte), e la debolezza e' la stessa
+	 *    dichiarata in `sessione.h` — «viva» non vuol dire «pronta». */
+	if (e_kde())
+		return nome_ha_padrone(bus, "org.kde.KWin");
 
 	/*
 	 * ⛔ NON BASTA CHE IL NOME SIA OCCUPATO, per due ragioni diverse e tutte e
@@ -461,6 +525,27 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 		return SESSIONE_NON_LETTA;
 	}
 
+	/*
+	 * ⭐ FASE 12 — su Plasma.  KWin col backend `--virtual` nasce con
+	 *    **un'uscita sola, della misura scritta nel drop-in** (`STUDI.md` §kde
+	 *    §5.2; `[M]` 18 set 2026: `Virtual-0` 1600x900, una sola `wl_output`) —
+	 *    e `scrivi_dropin()` ha gia' riletto quella riga IN VIGORE prima della
+	 *    nascita.  ⇒ Nome presente = SANA.
+	 * ⚠ E si dichiara quel che NON si guarda: l'uscita non la rileggo dal
+	 *   compositore (serve un cliente Wayland, e arriva con la cattura).
+	 */
+	if (e_kde()) {
+		if (!nome_ha_padrone(bus, "org.kde.KWin")) {
+			registro_dice(REG_SESSIONE,
+			              "nessun KWin sul bus: la sessione Plasma non c'e'");
+			return SESSIONE_MORTA;
+		}
+		registro_dettaglio(REG_SESSIONE,
+		                   "KWin c'e' sul bus: la sessione Plasma e' viva, con l'uscita "
+		                   "del drop-in (verificato alla nascita, non riletto qui)");
+		return SESSIONE_SANA;
+	}
+
 	risposta = chiedi_a_mutter(bus, "org.gnome.Mutter.DisplayConfig",
 	                           "/org/gnome/Mutter/DisplayConfig",
 	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", &sbaglio);
@@ -587,6 +672,26 @@ static char **componi_ambiente(void)
 	g_ptr_array_add(ambiente, g_strdup_printf("XDG_RUNTIME_DIR=%s", runtime));
 	g_ptr_array_add(ambiente, g_strdup_printf("DBUS_SESSION_BUS_ADDRESS=%s", bus));
 
+	/*
+	 * ⭐ FASE 12 — su Plasma il mezzo dell'ambiente e' un altro, e piu' corto
+	 *    (`STUDI.md` §kde §6.1, la ricetta di v1 `[M]` 7-8 agosto 2026):
+	 *
+	 *   · `XDG_MENU_PREFIX=plasma-` — ⛔ senza, `kbuildsycoca6` costruisce un
+	 *     indice VUOTO e KWin nega la cattura senza dire perche' (§3.3-bis).
+	 *     `startplasma` la mette da se', ma un processo che ricostruisce
+	 *     l'indice prima di lui lo sovrascrive: si mette qui, per tutto l'albero;
+	 *   · ⛔ NIENTE `XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE`, `DISPLAY`,
+	 *     `WAYLAND_DISPLAY`, `QT_QPA_PLATFORM`: con una di queste KWin sceglie il
+	 *     backend ANNIDATO invece di `--virtual` (`main_wayland.cpp:452-463`),
+	 *     e Plasma le mette da se' (`startplasma.cpp:353-414`);
+	 *   · ⛔ niente `SHELL=`: la trappola della shell di login e' di
+	 *     `gnome-session`, e `startplasma-wayland` non la ha.
+	 */
+	if (e_kde()) {
+		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=plasma-"));
+		goto la_coda;
+	}
+
 	/* La sessione deve DICHIARARSI, o le applicazioni di GNOME non si
 	 * riconoscono a casa propria e si fermano da sole. */
 	g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=GNOME"));
@@ -622,6 +727,7 @@ static char **componi_ambiente(void)
 	 *   agosto 2026 non la porta.  Resta `[?]` che cosa succeda quando REMOTIX
 	 *   gira come unita' di sistema.
 	 */
+la_coda:
 	g_ptr_array_add(ambiente, g_strdup_printf("LANG=%s", locale_utf8()));
 	g_ptr_array_add(ambiente, g_strdup_printf("HOME=%s", g_get_home_dir()));
 	g_ptr_array_add(ambiente, g_strdup_printf("USER=%s", g_get_user_name()));
@@ -709,14 +815,55 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	g_autofree char *atteso = NULL;
 	g_autofree char *vigore = NULL;
 	g_autoptr(GError) sbaglio = NULL;
+	/* ⭐ FASE 12: cambiano l'unita' e la riga, NON se scriverla — il riquadro qui
+	 *    sopra lo chiedeva, e il ramo Plasma e' qui sotto, dopo la cartella. */
+	const gboolean kde = e_kde();
+	const char *unita = kde ? SESSIONE_UNITA_KWIN : SESSIONE_UNITA_SHELL;
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
 	char *mostra[] = { "systemctl",   "--user", "show", "-p", "ExecStart",
-		           "--value", (char *) SESSIONE_UNITA_SHELL, NULL };
+		           "--value", (char *) unita, NULL };
 
 	if (!runtime || !*runtime) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ XDG_RUNTIME_DIR non impostata: non so dove scrivere il drop-in");
 		return FALSE;
+	}
+
+	cartella = g_build_filename(runtime, "systemd", "user.control",
+	                            kde ? SESSIONE_UNITA_KWIN ".d" : SESSIONE_UNITA_SHELL ".d",
+	                            NULL);
+	percorso = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
+
+	/*
+	 * ⭐ FASE 12 — LA RIGA DI PLASMA, e qui la misura ENTRA davvero.
+	 *
+	 * ⛔ KWin su una macchina senza seat parte solo col backend `--virtual`
+	 *    (`STUDI.md` §kde §5.2, `[M]` M2: `--drm` esce con stato 1), e con quel
+	 *    backend l'uscita la decide **la riga di avvio**, una e della misura
+	 *    data: `stream_virtual_output` risponde «Could not find output» a ogni
+	 *    misura.  ⇒ Il disegno «zero monitor propri» di GNOME qui non esiste —
+	 *    l'uscita nasce con la sessione, della misura del cliente che la fa
+	 *    nascere.  `[M]` 18 set 2026, rete11-kde: `Virtual-0` 1600x900, una sola.
+	 *   · `--xwayland`: obbligatorio, ksmserver forza xcb (`STUDI.md` §kde §6.4);
+	 *   · `--no-lockscreen`: il blocco e' di REMOTIX (§4.3), non del desktop.
+	 */
+	if (kde) {
+		g_autofree char *involucro = g_find_program_in_path("kwin_wayland_wrapper");
+
+		if (!involucro) {
+			involucro = g_strdup("/usr/bin/kwin_wayland_wrapper");
+			registro_dice(REG_SESSIONE,
+			              "⚠ «kwin_wayland_wrapper» non e' nel PATH: ripiego "
+			              "dichiarato su %s, e se non e' li' l'unita' non partira'",
+			              involucro);
+		}
+		contenuto = g_strdup_printf("[Service]\n"
+		                            "ExecStart=\n"
+		                            "ExecStart=%s --xwayland --virtual --width %u "
+		                            "--height %u --no-lockscreen\n",
+		                            involucro, larghezza, altezza);
+		atteso = g_strdup_printf("--virtual --width %u --height %u", larghezza, altezza);
+		goto scrivi;
 	}
 
 	/* ⚠ Un ripiego, e si dichiara (`CODER.md` §4.2): il percorso della Shell si
@@ -730,9 +877,6 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 		              shell);
 	}
 
-	cartella = g_build_filename(runtime, "systemd", "user.control",
-	                            SESSIONE_UNITA_SHELL ".d", NULL);
-	percorso = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
 	/*
 	 * ⚠ `--no-x11` c'e' e non si toglie a cuor leggero: e' la riga che la
 	 *   macchina misurata sana il 12 agosto 2026 aveva davvero, e cambiarla
@@ -779,7 +923,9 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	                            shell);
 	(void) larghezza;
 	(void) altezza;
+	atteso = g_strdup_printf("--headless --no-x11");
 
+scrivi:
 	g_mkdir_with_parents(cartella, 0700);
 	if (!g_file_set_contents(percorso, contenuto, -1, &sbaglio)) {
 		registro_dice(REG_SESSIONE, "⛔ drop-in non scritto (%s): %s", percorso,
@@ -813,7 +959,6 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	 *     `--virtual-monitor`, la sessione nascerebbe col difetto e ci si ferma
 	 *     qui invece di scoprirlo dallo schermo vuoto dell'utente.
 	 */
-	atteso = g_strdup_printf("--headless --no-x11");
 	vigore = chiedi(mostra);
 	if (!vigore) {
 		registro_dice(REG_SESSIONE,
@@ -837,8 +982,17 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 		              "la sessione nascerebbe con un monitor SUO, la cattura ne "
 		              "monterebbe un secondo, e l'utente guarderebbe uno schermo VUOTO.  "
 		              "ExecStart in vigore: %s",
-		              SESSIONE_UNITA_SHELL, vigore);
+		              unita, vigore);
 		return FALSE;
+	}
+
+	if (kde) {
+		registro_dice(REG_SESSIONE,
+		              "⭐ la sessione Plasma nascera' con UN'uscita sola, %ux%u, e lo "
+		              "chiede il PROGRAMMA (%s).  ⚠ Con `--virtual` la misura non "
+		              "cambiera' piu' finche' la sessione vive.  ExecStart in vigore: %s",
+		              larghezza, altezza, percorso, vigore);
+		return TRUE;
 	}
 
 	registro_dice(REG_SESSIONE,
@@ -860,6 +1014,7 @@ static gboolean avvia(void)
 	 * REMOTIX viene riavviato, il desktop dell'utente non se ne accorge. */
 	char *argv[] = { "setsid", "--fork", "sh", "-c", NULL, NULL };
 	int stato = 0;
+	const char *comando = e_kde() ? SESSIONE_COMANDO_KDE : SESSIONE_COMANDO_GNOME;
 
 	ambiente = componi_ambiente();
 	if (!ambiente)
@@ -879,11 +1034,11 @@ static gboolean avvia(void)
 	 *   nome porta l'uid perche' due utenti non si sovrascrivano a vicenda.
 	 */
 	registro = g_strdup_printf("/tmp/remotix-sessione-%ld.log", (long)getuid());
-	riga = g_strdup_printf("exec >>'%s' 2>&1; %s", registro, SESSIONE_COMANDO_GNOME);
+	riga = g_strdup_printf("exec >>'%s' 2>&1; %s", registro, comando);
 	argv[4] = riga;
 
 	registro_dice(REG_SESSIONE, "avvio la sessione grafica: %s (il suo registro va in %s)",
-	              SESSIONE_COMANDO_GNOME, registro);
+	              comando, registro);
 	if (!g_spawn_sync(g_get_home_dir(), argv, ambiente, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL,
 	                  NULL, &stato, &sbaglio) ||
 	    !g_spawn_check_wait_status(stato, &sbaglio)) {
@@ -950,6 +1105,12 @@ static gboolean unita_inattiva(void)
 	 *   non «non piu' attiva» — applicata a un secondo pezzo che nessuno aveva
 	 *   guardato perche' nessuno sapeva che esistesse.
 	 */
+	/* ⭐ FASE 12 — su Plasma le due unita' sono il compositore e il target della
+	 *    sessione.  ⛔ E serve gia' alla NASCITA, non solo all'uscita: e' la
+	 *    guardia contro una seconda Plasma quando KWin ci mette piu' della
+	 *    briglia del figlio a farsi vedere sul bus. */
+	if (e_kde())
+		return unita_ferma(SESSIONE_UNITA_KWIN) && unita_ferma(SESSIONE_UNITA_PLASMA);
 	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
@@ -969,10 +1130,63 @@ static gboolean aspetta_che_finisca(void)
 	return FALSE;
 }
 
+/*
+ * ⭐ FASE 12 — l'uscita di Plasma, portata da v1 (`fondamenta/remotix-c/src/sessione.c`
+ * 725-770) e misurata la' l'8 agosto 2026 (`STUDI.md` §kde §6.5, M9).
+ *
+ *   ordinata   `org.kde.Shutdown.logout()` — ⛔ non `LogoutPrompt`, che chiede
+ *              una conferma che in una sessione non presidiata nessuno da'
+ *   a forza    `StopUnit("plasma-workspace.target", "fail")` — ⛔ `Logout(2)`
+ *              su KDE non esiste; e' quel che fa `plasma-shutdown` alla fine
+ */
+static gboolean esci_kde(gboolean a_forza)
+{
+	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!bus)
+		return FALSE;
+	if (a_forza)
+		risposta = g_dbus_connection_call_sync(
+			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+			"org.freedesktop.systemd1.Manager", "StopUnit",
+			g_variant_new("(ss)", SESSIONE_UNITA_PLASMA, "fail"), NULL,
+			G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+	else
+		risposta = g_dbus_connection_call_sync(
+			bus, "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logout", NULL,
+			NULL, G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+	if (!risposta)
+		registro_dice(REG_SESSIONE, "⛔ l'uscita di Plasma (%s) non e' passata: %s",
+		              a_forza ? "StopUnit a forza" : "Shutdown.logout",
+		              sbaglio ? sbaglio->message : "senza motivo");
+	return risposta != NULL;
+}
+
 bool sessione_termina(void)
 {
 	if (!sessione_viva()) {
 		registro_dice(REG_SESSIONE, "non c'era nessuna sessione da fermare");
+		return false;
+	}
+
+	if (e_kde()) {
+		registro_dice(REG_SESSIONE,
+		              "chiedo alla sessione Plasma di uscire (org.kde.Shutdown.logout)");
+		if (esci_kde(FALSE) && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita");
+			return true;
+		}
+		registro_dice(REG_SESSIONE,
+		              "⚠ la sessione non esce: la chiudo a forza (StopUnit %s), cio' "
+		              "che non e' stato salvato va perduto",
+		              SESSIONE_UNITA_PLASMA);
+		if (esci_kde(TRUE) && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita, a forza");
+			return true;
+		}
+		registro_dice(REG_SESSIONE, "⛔ la sessione grafica non e' uscita nemmeno a forza");
 		return false;
 	}
 
@@ -1096,6 +1310,17 @@ static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
 
 void sessione_impostazioni(void)
 {
+	/* ⛔ FASE 12 — prima di aprire uno schema: su Plasma queste chiavi non
+	 *    esistono, e le leve di Plasma (blocco, sospensione, menu) sono lavoro
+	 *    degli incrementi dopo.  ⚠ Il blocco del desktop e' gia' spento dalla
+	 *    riga di avvio (`--no-lockscreen`, `scrivi_dropin`). */
+	if (e_kde()) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: le impostazioni della sessione (sospensione, menu) "
+		              "non le metto ancora — fase 12, incrementi dopo il primo.  Il "
+		              "blocco del desktop e' spento dalla riga di avvio");
+		return;
+	}
 	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
 	struct schema_aperto shell = apri_schema("org.gnome.shell");
 	struct schema_aperto energia = apri_schema("org.gnome.settings-daemon.plugins.power");
@@ -1203,6 +1428,16 @@ guint32 sessione_inibisci(void)
 
 	if (!bus)
 		return 0;
+
+	/* ⛔ FASE 12 — su Plasma il gestore di sessione non e' questo, e
+	 *    l'inibizione passa da powerdevil (`STUDI.md` §kde §10.2): e' lavoro di
+	 *    un incremento dopo, e si dice invece di fallire in silenzio. */
+	if (e_kde()) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: l'inibizione della sospensione non la chiedo ancora "
+		              "(powerdevil, fase 12, incrementi dopo il primo)");
+		return 0;
+	}
 
 	risposta = g_dbus_connection_call_sync(
 		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
@@ -1333,7 +1568,7 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "(«%s» non e' inattiva): non ne faccio nascere una seconda "
 		              "adesso — nascerebbe dentro quella che muore.  ⭐ Si riprova "
 		              "fra poco",
-		              SESSIONE_UNITA_GESTORE);
+		              e_kde() ? SESSIONE_UNITA_KWIN : SESSIONE_UNITA_GESTORE);
 		return false;
 	}
 

@@ -54,6 +54,108 @@ del 18 settembre, `[R]`):
 | # | obiettivo | maglia che lo prova | stato |
 |---|---|---|---|
 | **0** | la baseline | la rete intera | ✅ **PASS** 18 set |
+| **1** | la sessione Plasma **nasce** per un utente nuovo | nessuna ancora verde: C1(kde) resta rossa (manca la cattura) — si prova con la misura di I1 qui sotto | ✅ CP1 · CP2 · CP3 · CP4 · client (Firefox, Chrome) · rete — ⚠ Android del banco aperto |
+
+### Incremento 1 — la sessione Plasma nasce
+
+| | |
+|---|---|
+| **OBIETTIVO** | un utente che si collega per la prima volta, su una macchina che ha **solo** Plasma, ottiene dal prodotto una sessione Plasma **sua**, senza schermo fisico, della misura della finestra del suo browser — e il prodotto la **riconosce viva**. ⛔ Niente cattura, niente input: sono gli incrementi dopo |
+| **INVARIANTE** | su una macchina con GNOME **nulla cambia**: stesso stato letto, stesso drop-in, stesso comando, stessi tempi. E su KDE nessuna seconda sessione, nessun residuo dopo la chiusura (C7) |
+| **MODULI** | `src/sessione.c` (riconoscere il desktop installato; far nascere Plasma; dire «viva» leggendo KWin) · `banchi/11-scatole/Contenitore.kde` (la scatola riceve Plasma, dichiarandolo) |
+| **PROVA KDE** | nella scatola `kde`, un cliente vero (`01-b3-cliente.py`) entra con un utente nuovo ⇒ entro il tetto di C1 (26 s): `kwin_wayland --virtual --width W --height H` **con la misura del cliente**, `plasmashell` vivo, **una** `wl_output` W×H (`wayland-info` sul socket dell'utente), e il registro del prodotto che dice la sessione viva. **Controllo negativo**: col binario di oggi, sulla stessa scena, niente di tutto questo |
+| **PROVA CLIENT** | l'immagine su KDE non c'è ancora ⇒ su KDE il browser non ha niente da mostrare. ⚠ Ma `sessione.c` è sul percorso di **ogni** nascita ⇒ Chrome e Firefox su Linux e Chrome sull'emulatore si collegano alla scatola **GNOME** e devono vedere il desktop come prima |
+| **REGRESSIONI GNOME** | la rete intera; in particolare C1(gnome)×10 (nascita e tempi), C6 (stacco e riattacco: lo stato della sessione), C7 (chiusura) |
+| **CRITERIO** | PROVA KDE verde e controllo negativo rosso · client su GNOME verdi · rete intera come la baseline, **tranne** quel che l'incremento cambia apposta — e C1(kde) che può cambiare motivo del rosso («nata, ma senza immagine»), non colore |
+
+
+#### CP2 — osservato, non dedotto (`[M]` 18 set 2026, dentro `rete11-kde`)
+
+| | GNOME (dal prodotto, baseline) | KDE (ricetta di v1 a mano con `banchi/12-i1-osserva-plasma.sh`, poi dal prodotto) |
+|---|---|---|
+| chi nasce | `gnome-session` → `org.gnome.Shell@wayland` col drop-in `--headless --no-x11` | `startplasma-wayland` → `plasma-kwin_wayland.service` col drop-in `--xwayland --virtual --width W --height H --no-lockscreen` |
+| monitor alla nascita | ⛔ **zero**: il monitor lo monta la cattura (`RecordVirtual`) | ⭐ **uno**, `Virtual-0`, della misura della riga — `[M]` 1600x900 chiesto ⇒ 1600x900, una sola `wl_output` |
+| quanto ci mette | ~1 s (C1) | KWin sul bus **0,79 s**, `plasmashell` **1,31 s** |
+| la scheda | Intel | `OpenGL renderer string: Mesa Intel(R) UHD Graphics 770` — ⭐ GPU, non llvmpipe |
+| la chiusura | `loginctl terminate-user` pulisce | ⭐ **0 processi in 529 ms**, `/run/user` sparita |
+
+⇒ **DIFFERENZA**: su KDE l'uscita nasce con la sessione e la misura è quella del **primo** cliente;
+non si cambia più finché la sessione vive. ⇒ **DECISIONE**: il prodotto scrive la misura nel drop-in
+alla nascita (su GNOME la riga non la porta, e resta così).
+
+⛔ **Un vicolo cieco di osservazione, scritto perché non lo si ripaghi**: il primo tentativo è stato
+installare Plasma **a mano dentro la scatola accesa** (`apt-get install`). ⇒ `polkitd` è nato fuori
+dalla ricetta dei gruppi (`LEZIONI.md` §1.54) ed è morto, e `loginctl` ha cominciato a rispondere
+*«Connection timed out»*: `terminate-user` non chiudeva più niente (20 processi vivi dopo 55 s).
+⭐ Con la scatola **ricostruita dalla ricetta** (R2 in `Contenitore.kde`) il difetto non c'è.
+⇒ Non era Plasma: era la scatola fatta a mano.
+
+#### CP3 — la modifica minima
+
+| file | che cosa | GNOME |
+|---|---|---|
+| `src/sessione.h` | `SessioneDesktop`, `sessione_desktop()`, le tre costanti di Plasma | niente |
+| `src/sessione.c` | `sessione_desktop()` (una volta per processo: KDE **solo** se c'è `startplasma-wayland` e non `gnome-session`); `sessione_viva`/`sessione_stato` su KWin; ambiente (`XDG_MENU_PREFIX=plasma-`, niente variabili GNOME); drop-in dell'unità di KWin **con la misura**; comando; unità da aspettare; uscita (`org.kde.Shutdown.logout`, poi `StopUnit` a forza); impostazioni e inibizione **dichiarate rimandate** | ⭐ ogni ramo GNOME è testualmente com'era: le righe nuove stanno **prima** e tornano, o scelgono un nome |
+| `src/main.c` | una riga d'avvio: quale desktop, e perché | una riga in più nel registro (`avvio`, non area di sessione ⇒ C9 non la guarda) |
+| `Contenitore.kde` | `plasma-workspace plasma-desktop` (R2) | niente |
+
+⚠ **Rimandato, e dichiarato nel registro del prodotto**: le impostazioni di Plasma (sospensione,
+menu KIOSK) e l'inibizione via powerdevil. Il blocco del desktop è già spento dalla riga di avvio.
+
+#### CP4 — la prova KDE (`[M]` 18 set 2026, binario `6693555c`)
+
+Prova a mano con `banchi/12-i1-nasce-plasma.sh` (dentro la scatola: un cliente `01-b3-cliente.py` vero, utente nuovo `ki1`):
+
+| | atteso | misurato |
+|---|---|---|
+| `plasmashell` dell'utente | entro 26 s | ⭐ **2,59 s** dall'avvio del cliente |
+| KWin | `--virtual`, misura del cliente | ⭐ `Virtual-0` **1920x1080** = la tela dichiarata dal cliente |
+| sessioni nate | una | ⭐ **una** (`startplasma-wayland` ×1) — la guardia delle unità regge |
+| il prodotto la vede viva | sì | ⭐ ultima «nessun KWin sul bus» a +0,8 s, poi più nessuna |
+| la chiusura | niente resti | ⭐ 0 processi in 527 ms |
+| ⛔ **controllo negativo**: binario di baseline `bfc5936a`, stessa scatola, stessa scena | niente | ⭐ `plasmashell` **MAI**, 0 processi Plasma |
+
+⇒ Dopo la nascita il figlio prova a montare la cattura e dice *«Mutter non espone RemoteDesktop»*:
+**atteso**, è l'incremento 2.
+
+#### I client veri su GNOME (`[M]` 18 set 2026, binario `6693555c`, `banchi/12-client-veri.py`)
+
+Utente nuovo `i1cli` nella scatola `gnome` (porta 8511), scena `muovi`, headless, registro del server letto con `--registro-cmd`. Il banco è stato **certificato** prima (`--certifica`): porta vuota ⇒ rosso su tutti e tre, parola sbagliata ⇒ rosso per rifiuto su Firefox e Chrome, giudice dei pixel ⇒ nero degenere e sfumatura no.
+
+| browser | a · b · c · d · e · f · g | verdetto |
+|---|---|---|
+| Firefox 140 ESR (Linux) | 0 · 0 · 0 · 0 · 0 · 0 · 0 — 7 righe d'input nel registro del server, fotografia = il desktop GNOME | ⭐ **PASS** |
+| Chrome 153 (Linux) | 0 · 0 · 0 · 0 · 0 · 0 · 0 — 8 righe d'input nel registro del server | ⭐ **PASS** |
+| Chrome 113 sull'emulatore Android 14 | 0 · **1** · 3 · 3 · 3 · **1** · 3 — *«Opening handshake failed»*, `net::ERR_METHOD_NOT_SUPPORTED` su `/rcp/1` | ⛔ **FAIL — classe C, c'era già** |
+
+⇒ **Android, perché non è una regressione**: il server apre la sessione WebTransport e il Chrome
+dell'emulatore non apre mai il canale di controllo (congedo `0x0d` dopo 5 s): il guasto sta
+**prima** dell'accesso, dove `sessione.c` non arriva. ⭐ **Controllo**: rimesso nella scatola il
+binario di baseline `bfc5936a`, stessa scena ⇒ **stesso FAIL, stesse righe**. Poi rimesso
+`6693555c` (md5 uguale nelle quattro scatole). ⇒ È il Chrome 113 dell'immagine di sistema
+dell'emulatore, quaranta versioni indietro rispetto al Chrome da tavolo. ⚠ **Aperto**, è un buco
+del banco e non del prodotto: la gamba Android va rifatta (decisione dell'utente, vedi sotto).
+
+⚠ Due difetti del banco, trovati e curati nella stessa prova: Marionette non ha
+`WebDriver:TakeElementScreenshot` (si usa `TakeScreenshot` con `id`) ⇒ Firefox dava 3 su (c) e (g);
+e senza `--registro-cmd` Chrome dava 3 su (e). Né l'uno né l'altro è un verde regalato: erano 3.
+
+⚠ La pagina scrive *«desktop sconosciuto»* anche su GNOME: è fisso in `src/rcp.c` («in fase 1 non
+c'è compositore»), non toccato da questo incremento. ⇒ Da rivedere quando il prodotto saprà dire
+quale desktop ha acceso.
+
+#### La rete intera (`[M]` 18 set 2026, 19:53→22:06, binario `6693555c`, 7 969 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde**, come la baseline |
+| kde · xfce · lxqt | come la baseline: ⛔ solo C1×10 rosso. ⭐ **C1(kde) ha cambiato motivo, non colore**: 10 su 10 *«la sessione è partita e nessun testimone del monitor ha parlato»* (CIECA) — è «nata, ma senza immagine», il criterio di I1. C7(kde) verde **con Plasma che adesso nasce davvero** |
+| rete, sul server | C11 · C13 · C14 verdi (md5 uguale nelle quattro) |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| guasti innestati | ⭐ **25 su 25 visti** (24 sulle scatole, 1 sul portatile) |
+
+⇒ **Incremento 1: CRITERIO soddisfatto** su KDE, GNOME e rete; la gamba Android del banco è
+rossa per un motivo che c'era già (controllo fatto) ed è dichiarata aperta.
 
 ## Le misure
 
