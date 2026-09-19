@@ -486,4 +486,29 @@ sulle scatole (34 verdetti + 24 guasti visti), 3 rossi, e i guasti presi sono 25
 
 ## Che cosa resta [?]
 
+### Lo schermo che cambia misura a sessione viva — la strada per il futuro (`[R]` 19 set 2026)
+
+Chiesto dall'utente: *«credo che nelle ultime versioni di KWin questo problema sia stato superato»*.
+⭐ **In parte sì**: KWin **6.8** (uscita prevista il 14 ottobre 2026) rende **ridimensionabili i
+monitor virtuali della cattura** — commit `452707eb` «screencast: Resizable Virtual Monitors» di
+David Edmundson, bug KDE 512620, *fixed in 6.8.0*. Il meccanismo è quello di GNOME: la misura si
+**rinegozia nel formato PipeWire** fra chi cattura e KWin (con i cambi gemelli in KPipeWire e KRDP).
+Prima la misura era fissa a 1920×1080, e rinegoziarla congelava il flusso.
+
+⛔ **Ma per noi non basta da solo, e va detto perché** — due condizioni da verificare quando arriva:
+1. **il backend.** Il fix vale per `stream_virtual_output`, cioè per un monitor virtuale CREATO dalla
+   cattura. Noi siamo sul backend `--virtual` (una macchina senza seat), e lì `stream_virtual_output`
+   **non esiste**: `VirtualBackend` non ridefinisce `createVirtualOutput()` ⇒ «Could not find output»
+   (`STUDI.md` §kde, riga di `stream_virtual_output`, verificato). Serve che 6.8 lo aggiunga al
+   backend virtuale, oppure che l'uscita `Virtual-0` accetti un modo nuovo (i «modi personalizzati
+   per gli schermi virtuali», Plasma 6.6, sono da leggere per questo);
+2. **la distribuzione.** Il server ha la KWin di Debian Trixie, **6.3.6**: 6.8 arriva solo con
+   una distribuzione nuova o con i backport.
+
+⭐ **Dalla nostra parte il lavoro sarebbe piccolo**: `misura_del_palco()` chiede già a KWin la misura
+vera e la cattura rinegozia già la misura su GNOME ⇒ si tratterebbe di chiedere la misura nuova
+invece di riscalare nella pagina. Fonti: blog KDE «This Week in Plasma: Emoji Resizing» (1 ago
+2026), bug KDE 512620.
+
+
 ## Il giudizio dell'utente
