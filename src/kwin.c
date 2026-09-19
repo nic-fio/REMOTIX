@@ -279,7 +279,7 @@ static gpointer thread_pompa(gpointer dati)
 /* ⛔ Il socket non si puo' ricordare: e' il primo `wayland-N` libero, e il
  *    figlio nasce con l'ambiente composto da zero (`WAYLAND_DISPLAY` non c'e').
  *    ⇒ Si prova in ordine dentro `XDG_RUNTIME_DIR`. */
-static struct wl_display *apri_il_display(char *quale, size_t quanto)
+struct wl_display *kwin_display_apri(char *quale, size_t quanto)
 {
 	const char *dichiarato = getenv("WAYLAND_DISPLAY");
 	const char *runtime = getenv("XDG_RUNTIME_DIR");
@@ -343,7 +343,7 @@ KwinSessione *kwin_apri(GError **sbaglio)
 	sessione->sveglia[0] = sessione->sveglia[1] = -1;
 	sessione->eis = -1;
 
-	sessione->display = apri_il_display(socket, sizeof socket);
+	sessione->display = kwin_display_apri(socket, sizeof socket);
 	if (!sessione->display) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 		            "nessun compositore Wayland raggiungibile in XDG_RUNTIME_DIR=%s",

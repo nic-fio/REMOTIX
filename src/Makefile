@@ -62,7 +62,8 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
-            input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c
+            input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
+            appunti_kde.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -185,7 +186,7 @@ F12_CFLAGS := $(shell pkg-config --cflags wayland-client)
 F12_LIBS   := $(shell pkg-config --libs   wayland-client)
 override CFLAGS += $(F12_CFLAGS) -I.
 SCANNER    ?= wayland-scanner
-PROTOCOLLI := zkde-screencast-unstable-v1
+PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 ifneq ($(PREFISSO),)
@@ -254,7 +255,7 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kwin.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o appunti_kde.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 %-client-protocol.h: protocolli/%.xml
 	$(SCANNER) client-header $< $@

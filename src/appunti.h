@@ -154,6 +154,11 @@ typedef void (*AppuntiSuRichiesta)(uint32_t serial, void *dati);
  */
 Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
                       GError **sbaglio);
+/* ⭐ FASE 12 — gli stessi appunti su KDE Plasma (`appunti_kde.h`): nessun bus
+ *    da passare, KWin si raggiunge sul socket Wayland dell'utente.  Da li' in
+ *    poi si usano le stesse funzioni di sotto. */
+Appunti *appunti_apri_kde(GError **sbaglio);
+
 void appunti_chiudi(Appunti *appunti);
 
 /* Chi ascolta le due richiamate.  Con richiamate a NULL si smette di

@@ -102,7 +102,19 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 CASA = os.path.expanduser("~")
 ADB = os.path.join(CASA, "Android/Sdk/platform-tools/adb")
 EMU = os.path.join(CASA, "Android/Sdk/emulator/emulator")
-CHROME_ANDROID = "com.android.chrome"
+# ⛔ 19 set 2026 — NON il Chrome dell'immagine di sistema (113): WebCodecs su
+#    Chrome per Android c'e' dalla 147 (`DECISIONI.md` riga ~425), e `[M]` il
+#    113 cade gia' a WebTransport (`ERR_METHOD_NOT_SUPPORTED`).  ⇒ Chromium per
+#    Android dall'archivio ufficiale delle build di Chromium (AndroidDesktop_x64,
+#    `ChromePublic.apk`, 156.0.8067.0, in `~/Android/chromium/`), dichiarato
+#    come Chromium.  ⛔ Firefox per Android e' NON supportato (§7.18).
+#    ⚠ E Chromium NON va: `[M]` le build pubbliche non hanno H.264
+#    (`isConfigSupported` no a `avc1.*`) ⇒ la pagina non ha nessun codec.
+#    ⇒ Si usa il Chrome VERO dell'immagine Android 17 (`remotix37`, Chrome
+#    145.0.7632.218).  Tutt'e due si cambiano senza toccare il file:
+#    `REMOTIX_ANDROID_PACCHETTO`, `REMOTIX_AVD`.
+CHROME_ANDROID = os.environ.get("REMOTIX_ANDROID_PACCHETTO", "com.android.chrome")
+AVD = os.environ.get("REMOTIX_AVD", "remotix37")
 
 
 def _carica(nome, file):
@@ -575,8 +587,8 @@ class GuidaAndroid(GuidaCdp):
         self.acceso_da_me = False
         self.lascia = lascia_acceso
         if "\tdevice" not in adb("devices"):
-            print("   ⏳ accendo l'emulatore «remotix»…", flush=True)
-            subprocess.Popen([EMU, "-avd", "remotix", "-no-window", "-no-audio",
+            print("   ⏳ accendo l'emulatore «%s»…" % AVD, flush=True)
+            subprocess.Popen([EMU, "-avd", AVD, "-no-window", "-no-audio",
                               "-no-boot-anim", "-gpu", "swiftshader_indirect",
                               "-no-snapshot", "-accel", "on", "-memory", "3072"],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -607,8 +619,9 @@ class GuidaAndroid(GuidaCdp):
     def palco(self):
         v = adb("shell", "dumpsys", "package", CHROME_ANDROID)
         ver = v.split("versionName=")[1].split()[0] if "versionName=" in v else "?"
-        return ("Chrome %s su Android %s (emulatore, GPU swiftshader: SOFTWARE)"
-                % (ver, adb("shell", "getprop", "ro.build.version.release").strip()))
+        return ("%s %s su Android %s (emulatore «%s», GPU swiftshader: SOFTWARE)"
+                % ("Chromium" if "chromium" in CHROME_ANDROID else "Chrome", ver,
+                   adb("shell", "getprop", "ro.build.version.release").strip(), AVD))
 
     def muovi(self, x, y):
         # ⚠ Su Android il «mouse» e' un dito: un movimento e' un trascinamento

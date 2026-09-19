@@ -57,3 +57,9 @@ void kwin_chiudi(KwinSessione *sessione);
  * `/usr/share/applications/org.kde.remotix.desktop`, con `Exec=` sul binario
  * che sta girando.  false con `perche` scritto. */
 bool kwin_scrivi_permesso(char *perche, size_t quanto);
+
+/* Il socket Wayland dell'utente: `WAYLAND_DISPLAY` se risponde, altrimenti il
+ * primo `wayland-N` di `XDG_RUNTIME_DIR` che risponde (il figlio nasce con
+ * l'ambiente composto da zero).  Lo usano anche gli appunti (`appunti_kde.c`). */
+struct wl_display;
+struct wl_display *kwin_display_apri(char *quale, size_t quanto);

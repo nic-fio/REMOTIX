@@ -28,6 +28,11 @@ sbagliato (⛔ mai come scorciatoia).
 
 ## Le decisioni prodotte
 
+- **19 settembre 2026, dell'utente**: *«adesso ci occupiamo di KDE, LXQt verrà dopo — togli XFCE e
+  LXQt»* ⇒ finché si lavora su KDE la rete gira con `--scatola "gnome kde"`: le maglie per desktop
+  solo su GNOME (il guardiano) e KDE (il lavoro). ⚠ Il prezzo, dichiarato: per quel tempo non si
+  vede se una modifica tocca xfce e lxqt. C11 e C14 restano sulle quattro scatole (allineamento e
+  isolamento). Si torna alle quattro quando si apre il desktop successivo.
 - `DECISIONI.md` §4.6-duodetricies — **un desktop per macchina**; la scelta fra più desktop è
   rimandata (`MASTERPLAN.md` M5).
 
@@ -58,6 +63,7 @@ del 18 settembre, `[R]`):
 | **2** | l'immagine di Plasma arriva al browser | ⭐ **C1(kde)** | ✅ CP1 · CP2 · CP3 · CP4 · client · rete — ⭐ **C1(kde) VERDE** |
 | **3** | mouse e tastiera arrivano a Plasma | ⭐ **C4(kde)**, e C3 · C6 su kde | ✅ CP1 · CP2 · CP4 · client · rete — ⭐ **C4(kde) VERDE** |
 | **4** | il banco guarda KDE come GNOME | ⭐ **C2(kde)**, **C8b(kde)** | ✅ cura · certificazioni · prove · rete — ⭐ **KDE: tutte le maglie** |
+| **5** | gli appunti su KDE | `07-b54 --scatola rete11-kde` + controprova | ✅ prove · rete |
 
 ### Incremento 1 — la sessione Plasma nasce
 
@@ -313,6 +319,25 @@ schermata d'avvio): curarlo vuol dire spostare l'istante dell'innesto, ed è un 
 | guasti innestati | ⭐ **31 visti** sulle scatole (erano 28: i 3 nuovi sono C2 ×2 e C8b su KDE) + 1 sul portatile |
 
 ⇒ **Incremento 4: CRITERIO soddisfatto.**
+
+### Incremento 5 — gli appunti su KDE
+
+| | |
+|---|---|
+| **OBIETTIVO** | copia e incolla di testo nei due versi, browser ↔ desktop Plasma, come su GNOME (decisione dell'utente, 19 set) |
+| **INVARIANTE** | su GNOME gli appunti restano `appunti.c` com'era: il guscio passa la mano a KDE con una riga in cima a ogni funzione pubblica, solo se `kde` c'è |
+| **MODULI** | ⭐ `src/appunti_kde.c/.h` (da `fondamenta/remotix-c/src/appunti_wlr.c` di v1: `zwlr_data_control_manager_v1`, **nessun** permesso da chiedere) · `src/appunti.c/.h` (`appunti_apri_kde()` e i passa-mano) · `src/kwin.c/.h` (`kwin_display_apri()` esportata) · `src/figlio.c` (quale aprire) · `src/Makefile` + `src/protocolli/wlr-data-control-unstable-v1.xml` · il banco: R3 `wl-clipboard` nelle ricette gnome e kde, `07-b54-appunti-due-versi.py --scatola` |
+| **FORMA** | la stessa di GNOME: SOLO TESTO (`DECISIONI.md` §5-ter.1), la stessa fila dei tipi, lo stesso tetto, la stessa memoria dell'ultimo testo, e se il client non ha niente si rende alla sessione il SUO testo. Le trappole di v1 portate: l'eco (criterio di stato), il giro completo prima di leggere, `POLLHUP` = pronto, il passo minimo verso klipper, mai `x-kde-onlyReplaceEmpty` |
+
+| `[M]` 19 set 2026, binario `954a208c` | esito |
+|---|---|
+| `07-b54 --scatola rete11-kde`, Firefox e Chrome | ⭐ **sessione→client ⭐ · client→sessione ⭐ · tastiera dopo l'incolla ⭐**, tutt'e due |
+| ⛔ **controprova**: binario `a77366b2` (senza appunti KDE), stessa scena | ⭐ **rosso nei due versi** — il banco distingue |
+| `07-b54 --scatola rete11-gnome` | Chrome ⭐⭐⭐ · Firefox: verso A ⛔ — ⚠ **c'era già**: stesso rosso col binario `a77366b2` ×2, e con Chrome **da solo** su sessione nuova. ⇒ È «la PRIMA connessione su una sessione GNOME appena nata»: la copia di `wl-copy` non arriva nemmeno al registro (Mutter non annuncia niente). Ipotesi, **non dimostrata**: `wl-copy` su Mutter non ha data-control e senza una superficie col fuoco non copia ⇒ banco. **Aperto**, fuori da KDE |
+| rete intera, binario `954a208c` (08:07→11:05, 10 637 s) | GNOME e KDE **tutto verdi**, xfce/lxqt come la baseline, C11 · C13 · C14 verdi, **31 guasti visti** |
+
+⚠ **Non ancora nella rete**: gli appunti non hanno una maglia della fase 11. Sono provati da `07-b54`
+con la controprova, e il giorno che entrano nella rete sarà una maglia sua.
 
 ## Le misure
 

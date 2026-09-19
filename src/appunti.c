@@ -20,6 +20,7 @@
  *        che serve a chi si ricollega, ed e' gia' pronto da spedire.
  */
 #include "appunti.h"
+#include "appunti_kde.h"
 
 #include <gio/gunixfdlist.h>
 #include <glib-unix.h>
@@ -60,6 +61,11 @@ static const char *const TIPI_TESTO[] = {
 
 struct Appunti
 {
+	/* ⭐ FASE 12 — su KDE tutto il lavoro lo fa `appunti_kde.c`, e questo
+	 *    guscio passa la mano in cima a ogni funzione pubblica: il ramo GNOME
+	 *    qui sotto resta com'era, riga per riga. */
+	AppuntiKde *kde;
+
 	GDBusConnection *bus;
 	char *controllo;
 
@@ -427,6 +433,10 @@ void appunti_leggi_adesso(Appunti *appunti)
 
 	if (!appunti)
 		return;
+	if (appunti->kde) {
+		appunti_kde_leggi_adesso(appunti->kde);
+		return;
+	}
 
 	testo = leggi_il_testo(appunti, &byte);
 	if (!testo)
@@ -581,12 +591,26 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 	return appunti;
 }
 
+Appunti *appunti_apri_kde(GError **sbaglio)
+{
+	AppuntiKde *kde = appunti_kde_apri(sbaglio);
+	Appunti *appunti;
+
+	if (!kde)
+		return NULL;
+	appunti = g_new0(Appunti, 1);
+	appunti->kde = kde;
+	return appunti;
+}
+
 char *appunti_ultimo_testo(Appunti *appunti, size_t *byte)
 {
 	char *copia;
 
 	if (!appunti)
 		return NULL;
+	if (appunti->kde)
+		return appunti_kde_ultimo_testo(appunti->kde, byte);
 	g_mutex_lock(&appunti->lucchetto);
 	copia = appunti->ultimo ? g_strdup(appunti->ultimo) : NULL;
 	if (byte)
@@ -600,6 +624,10 @@ void appunti_ascolta(Appunti *appunti, AppuntiSuTesto su_testo,
 {
 	if (!appunti)
 		return;
+	if (appunti->kde) {
+		appunti_kde_ascolta(appunti->kde, su_testo, su_richiesta, dati);
+		return;
+	}
 	g_mutex_lock(&appunti->lucchetto);
 	appunti->su_testo = su_testo;
 	appunti->su_richiesta = su_richiesta;
@@ -611,6 +639,11 @@ void appunti_chiudi(Appunti *appunti)
 {
 	if (!appunti)
 		return;
+	if (appunti->kde) {
+		appunti_kde_chiudi(appunti->kde);
+		g_free(appunti);
+		return;
+	}
 
 	/* Prima si smette di ascoltare — e la chiamata aspetta chi e' a meta'
 	 * strada — poi si spegne il ciclo, poi si tolgono le sottoscrizioni. */
@@ -659,6 +692,8 @@ gboolean appunti_offri(Appunti *appunti, GError **sbaglio)
 
 	if (!appunti)
 		return FALSE;
+	if (appunti->kde)
+		return appunti_kde_offri(appunti->kde, sbaglio);
 
 	/* ⛔ `as` e non `(as)`: nei METODI i tipi non stanno in una tupla — l'altra
 	 *    meta' della trappola 2, e questa e' la meta' che sbaglia in silenzio
@@ -688,6 +723,10 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 
 	if (!appunti)
 		return;
+	if (appunti->kde) {
+		appunti_kde_rispondi(appunti->kde, serial, testo, byte);
+		return;
+	}
 
 	/* ⛔⛔⭐ SE IL CLIENT NON HA NIENTE, SI RENDE AL DESKTOP QUEL CHE AVEVA —
 	 *      21 agosto 2026, e nasce dalla direttiva dell'utente: «l'esperienza

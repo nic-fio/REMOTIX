@@ -309,5 +309,17 @@ COPY adattatore.gnome.sh /usr/local/lib/rete11/adattatore.sh
 #     consegnata, cioe' si proverebbe un simulacro (§3.5).
 #     ⇒ I permessi stanno in `11-accendi.sh`, dichiarati riga per riga.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ⭐ R3 — 19 settembre 2026, fase 12 (gli appunti su KDE): UNO STRUMENTO DEL
+#   BANCO, non del prodotto.  `wl-clipboard` (`wl-copy`, `wl-paste`) serve a
+#   `banchi/07-b54-appunti-due-versi.py --scatola` per copiare e incollare
+#   DENTRO la sessione e guardare che cosa ha ricevuto il desktop.  Il prodotto
+#   non lo usa.  Nessun demone: due eseguibili e la libreria Wayland che c'e'.
+#   ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wl-clipboard \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

@@ -73,6 +73,13 @@ a.add_argument("--schermo", default="")
 #   annidato, es. `cage`): e' l'ambiente dell'utente, e la clipboard di Wayland
 #   non si comporta come quella di X11.
 a.add_argument("--wayland", default="")
+# ⭐ FASE 12 (19 set 2026) — `--scatola rete11-kde` (o `rete11-gnome`): il
+#   server e la sessione stanno DENTRO la scatola della rete.  I copioni della
+#   sessione passano da `podman exec` (il copione sta in `/rete11`, che e' la
+#   cartella della rete montata nella scatola), e il registro e'
+#   `/var/lib/rete11/registro.log` della scatola.  ⚠ `wl-clipboard` c'e' dalla
+#   ricetta R3 delle scatole gnome e kde.  Senza `--scatola`, tutto come prima.
+a.add_argument("--scatola", default="")
 # ⛔⛔ E L'UTENTE DELLA SESSIONE ATTRAVERSA ANCHE IL LATO SESSIONE — 21 ago 2026.
 #
 #     Questo banco era parametrico da un lato (l'accesso dal browser) e FISSO
@@ -145,11 +152,15 @@ def nella_sessione(copione, *argomenti, riprove=1):
       `ssh` — il banco moriva di attesa su un prodotto sano.  ⛔ E la riprova e'
       UNA e si dichiara: un banco che riprovasse in silenzio nasconderebbe una
       fragilita' vera."""
+    dove = "/media/REMOTIX/rete11/b54.sh" if o.scatola else "/tmp/b54.sh"
     subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA,
-                    "cat > /tmp/b54.sh && chmod +x /tmp/b54.sh"],
+                    "cat > %s && chmod +x %s" % (dove, dove)],
                    input=copione, text=True, capture_output=True)
-    c = ("printf 'nicfio\\n' | sudo -S -p '' timeout 12 runuser -u " + o.utente + " -- "
-         "/tmp/b54.sh " + " ".join(json.dumps(x) for x in argomenti)
+    dentro = ("podman exec " + o.scatola + " timeout 12 runuser -u " + o.utente
+              + " -- /rete11/b54.sh ") if o.scatola else (
+              "timeout 12 runuser -u " + o.utente + " -- /tmp/b54.sh ")
+    c = ("printf 'nicfio\\n' | sudo -S -p '' " + dentro
+         + " ".join(json.dumps(x) for x in argomenti)
          # ⛔ NIENTE `< /dev/null` qui: quello stdin E' la parola d'ordine di
          #    `sudo -S`, e togliendolo il banco riceveva «sudo: a password is
          #    required» come se fosse il testo incollato dal desktop remoto.
@@ -191,8 +202,12 @@ def righe_nuove_di(prima, dopo):
 
 
 def registro(n=200):
-    c = ("printf 'nicfio\\n' | sudo -S -p '' tail -n %d %s/registro.log" %
-         (n, o.lavoro))
+    if o.scatola:
+        c = ("printf 'nicfio\\n' | sudo -S -p '' podman exec %s tail -n %d "
+             "/var/lib/rete11/registro.log" % (o.scatola, n))
+    else:
+        c = ("printf 'nicfio\\n' | sudo -S -p '' tail -n %d %s/registro.log" %
+             (n, o.lavoro))
     return subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, c],
                           capture_output=True, text=True).stdout
 

@@ -6121,9 +6121,12 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	{
 		GError *sbaglio_app = NULL;
 
-		palco_appunti = appunti_apri(mutter_bus(mut),
-		                             mutter_percorso_controllo(mut),
-		                             &sbaglio_app);
+		/* ⭐ FASE 12 — su KDE gli appunti passano da KWin (`appunti_kde.c`). */
+		palco_appunti = palco_kwin
+		                    ? appunti_apri_kde(&sbaglio_app)
+		                    : appunti_apri(mutter_bus(mut),
+		                                   mutter_percorso_controllo(mut),
+		                                   &sbaglio_app);
 		if (palco_appunti) {
 			appunti_ascolta(palco_appunti, appunti_dalla_sessione,
 			                appunti_vuole_incollare, NULL);
