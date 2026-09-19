@@ -924,6 +924,43 @@ def finestra_bastante(secondi_prima, ritmo_sano, ritmo_minimo=RITMO_MINIMO):
     return secondi_prima * ritmo_sano / float(ritmo_minimo)
 
 
+def aspetta_che_il_desktop_si_fermi(leggi, tetto, soglia=SOGLIA_CPU,
+                                    passo=PASSO_CPU):
+    """⭐ FASE 12 (19 set 2026) — PRIMA DI ACCENDERE LA SCENA, il desktop FERMO.
+
+    ⛔ `[M]` Su KDE la sessione nasce con la schermata d'avvio di Plasma, che
+       si ANIMA per ~2,4 s: il codificatore lavora gia', `aspetta_che_i_
+       fotogrammi_arrivino` passa sull'animazione e non sulla scena, e il
+       SIGSTOP del guasto «codificatore fermo» cadeva sul nero ⇒ la maglia non
+       giudicava (3).  ⚠ Spostare l'innesto piu' in la' non si puo': il ritmo e'
+       LORDO (`finestra_bastante`), e piu' scena in vista prima dell'innesto
+       vuol dire un guasto che non si vede piu'.
+    ⭐ Si sposta invece l'ACCENSIONE della scena: si aspetta che il lavoro del
+       codificatore scenda sotto la soglia per un passo intero — il desktop non
+       ha piu' niente da dire — e solo allora si accende.  Su GNOME al montaggio
+       il desktop e' gia' fermo ⇒ un passo solo, com'era.  Vale per ogni
+       desktop, senza chiedere quale sia.
+
+    Torna `(fermo, secondi_attesi)` — `fermo` e' `True`, `False` (tetto
+    scaduto: si prosegue DICENDOLO) oppure `None` (lavoro illeggibile).
+    """
+    partito = time.time()
+    prima = leggi()
+    if prima is None:
+        return None, 0.0
+    while time.time() - partito < tetto:
+        t0 = time.time()
+        time.sleep(passo)
+        dopo = leggi()
+        quanto = lavoro_al_secondo(prima, dopo, time.time() - t0)
+        prima = dopo
+        if quanto is None:
+            return None, round(time.time() - partito, 1)
+        if quanto < soglia:
+            return True, round(time.time() - partito, 1)
+    return False, round(time.time() - partito, 1)
+
+
 def aspetta_che_i_fotogrammi_arrivino(leggi, tetto, soglia=SOGLIA_CPU,
                                       passo=PASSO_CPU):
     """⭐⭐ ASPETTA CHE LA SCENA SI VEDA MUOVERE — e non un tempo fisso.
@@ -1809,6 +1846,15 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
     """La parte del giro che sta dentro il `try/finally` dell'iniezione."""
     # ── 4. la scena ────────────────────────────────────────────────────────
     if not a.scena_ferma:
+        fermo, attesi = aspetta_che_il_desktop_si_fermi(
+            lambda: cpu_del_codificatore(chi, a.nome_figlio),
+            a.attesa_scena, a.soglia_cpu, a.passo_cpu)
+        esito["desktop_fermo_s"] = attesi
+        print("           %s il desktop %s prima della scena (%.1f s)"
+              % ("⭐" if fermo else "⚠",
+                 "e' fermo" if fermo else ("NON si e' fermato entro il tetto"
+                                          if fermo is False else
+                                          "non so se sia fermo"), attesi))
         display, err = accendi_la_scena(chi, a)
         if display is None:
             esito["motivo"] = "scena-non-accesa"
@@ -1837,6 +1883,21 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
                  a.soglia_cpu, quanto,
                  "non lo so" if esito["secondi_prima"] is None
                  else "%.1f" % esito["secondi_prima"]))
+        # ⭐ FASE 12 (19 set 2026) — UN RESPIRO PRIMA DELL'INNESTO, e si CONTA.
+        #   `[M]` Su KDE il SIGSTOP 2 s dopo il lavoro del codificatore cadeva
+        #   a meta' dell'apertura della finestra (scena al 58 % del colore e una
+        #   striscia nera): l'ultimo fotogramma non era «la scena» e la maglia
+        #   non giudicava.  ⇒ Si aspetta `--respiro-innesco` in piu', su ogni
+        #   desktop, ⛔ e lo si AGGIUNGE ai secondi di scena in vista: il ritmo e'
+        #   lordo (`finestra_bastante`), e un respiro non contato sarebbe un
+        #   guasto che smette di vedersi senza dirlo.
+        if visto and a.respiro_innesco > 0:
+            time.sleep(a.respiro_innesco)
+            if esito["secondi_prima"] is not None:
+                esito["secondi_prima"] += a.respiro_innesco
+            print("           ⭐ respiro prima dell'innesto: %.1f s (scena in vista, "
+                  "contata: al piu' %.1f s)" % (a.respiro_innesco,
+                                               esito["secondi_prima"] or -1))
         esito["scena_viva_prima"] = la_scena_e_viva(chi, a.applicazione)
     else:
         # ⚠ IL CONTROLLO NEGATIVO: non si accende niente, e si guarda un
@@ -2419,6 +2480,10 @@ def main():
     p.add_argument("--scena", default="/opt/remotix/11-c3-scena.html",
                    help="⭐ LA SCENA DICHIARATA: e' questo file a decidere che "
                         "cosa si muove e di quanto")
+    p.add_argument("--respiro-innesco", type=float, default=2.0,
+                   help="secondi fra «il codificatore lavora» e l'innesto, CONTATI "
+                        "nella scena in vista: su KDE la finestra finisce di "
+                        "comparire (fase 12)")
     p.add_argument("--applicazione", default="firefox-esr",
                    help="⚠ oggi il browser, perche' e' l'unico programma della "
                         "scatola che sappia dipingere una scena che decidiamo "

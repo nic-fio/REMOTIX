@@ -28,6 +28,20 @@ sbagliato (⛔ mai come scorciatoia).
 
 ## Le decisioni prodotte
 
+- **19 settembre 2026, dell'utente**: *emulatore Android sul server*. ⚠ Cambia la regola d'agosto
+  «SDK ed emulatore restano sul tablet» (`DECISIONI.md` §5-bis.0-ter): `[M]` il tablet (7,5 GB) non
+  regge Android 17 — memoria libera a 170 MB, Chrome mai partito. Il server ha KVM, 20 processori,
+  22 GB liberi. ⇒ L'SDK sta in `/media/REMOTIX/android` (disco: il sistema del server vive in RAM).
+  ⛔ Firefox per Android resta NON supportato (§7.18); si prova il **Chrome** dell'immagine
+  Android 17 (145), e Chromium no (niente H.264).
+  ⛔ **Dove si è arrivati, `[M]` 19 set**: SDK in `/media/REMOTIX/android`, KVM «installed and
+  usable», AVD `remotix37` visto; ma **Chrome 145 non parte**: il fuoco resta al launcher, nessun
+  socket `chrome_devtools_remote`, e la grafica emulata abortisce (`Assertion failed:
+  !rcEnc->featureInfo()->hasReadColorBufferDma`) con `-gpu swiftshader_indirect`; con `-gpu guest`
+  l'emulatore non arriva nemmeno ad `adb`. Stesso blocco sul tablet ⇒ non è la memoria.
+- **19 settembre 2026, dell'utente**: *«alla fine farò io stesso i test come ultima verifica e
+  validazione finale»* ⇒ la prova Android sull'emulatore si **ferma qui** (dichiarato, non
+  nascosto): Android lo valida l'utente col suo Chrome. Se si riprende, si parte dalla riga sopra.
 - **19 settembre 2026, dell'utente**: *«adesso ci occupiamo di KDE, LXQt verrà dopo — togli XFCE e
   LXQt»* ⇒ finché si lavora su KDE la rete gira con `--scatola "gnome kde"`: le maglie per desktop
   solo su GNOME (il guardiano) e KDE (il lavoro). ⚠ Il prezzo, dichiarato: per quel tempo non si
@@ -326,7 +340,7 @@ schermata d'avvio): curarlo vuol dire spostare l'istante dell'innesto, ed è un 
 |---|---|
 | **OBIETTIVO** | copia e incolla di testo nei due versi, browser ↔ desktop Plasma, come su GNOME (decisione dell'utente, 19 set) |
 | **INVARIANTE** | su GNOME gli appunti restano `appunti.c` com'era: il guscio passa la mano a KDE con una riga in cima a ogni funzione pubblica, solo se `kde` c'è |
-| **MODULI** | ⭐ `src/appunti_kde.c/.h` (da `fondamenta/remotix-c/src/appunti_wlr.c` di v1: `zwlr_data_control_manager_v1`, **nessun** permesso da chiedere) · `src/appunti.c/.h` (`appunti_apri_kde()` e i passa-mano) · `src/kwin.c/.h` (`kwin_display_apri()` esportata) · `src/figlio.c` (quale aprire) · `src/Makefile` + `src/protocolli/wlr-data-control-unstable-v1.xml` · il banco: R3 `wl-clipboard` nelle ricette gnome e kde, `07-b54-appunti-due-versi.py --scatola` |
+| **MODULI** | ⭐ `src/appunti_kde.c` e `src/appunti_kde.h` (da `fondamenta/remotix-c/src/appunti_wlr.c` di v1: `zwlr_data_control_manager_v1`, **nessun** permesso da chiedere) · `src/appunti.c` e `src/appunti.h` (`appunti_apri_kde()` e i passa-mano) · `src/kwin.c` e `src/kwin.h` (`kwin_display_apri()` esportata) · `src/figlio.c` (quale aprire) · `src/Makefile` + `src/protocolli/wlr-data-control-unstable-v1.xml` · il banco: R3 `wl-clipboard` nelle ricette gnome e kde, `07-b54-appunti-due-versi.py --scatola` |
 | **FORMA** | la stessa di GNOME: SOLO TESTO (`DECISIONI.md` §5-ter.1), la stessa fila dei tipi, lo stesso tetto, la stessa memoria dell'ultimo testo, e se il client non ha niente si rende alla sessione il SUO testo. Le trappole di v1 portate: l'eco (criterio di stato), il giro completo prima di leggere, `POLLHUP` = pronto, il passo minimo verso klipper, mai `x-kde-onlyReplaceEmpty` |
 
 | `[M]` 19 set 2026, binario `954a208c` | esito |
@@ -338,6 +352,42 @@ schermata d'avvio): curarlo vuol dire spostare l'istante dell'innesto, ed è un 
 
 ⚠ **Non ancora nella rete**: gli appunti non hanno una maglia della fase 11. Sono provati da `07-b54`
 con la controprova, e il giorno che entrano nella rete sarà una maglia sua.
+
+### Incremento 6 — il guasto «codificatore fermo» di C3 anche su KDE
+
+| | |
+|---|---|
+| **OBIETTIVO** | l'ultimo guasto chiuso a `kde` (decisione dell'utente, 19 set: «anche questo punto va fatto») |
+| **LA CAUSA** | la schermata d'avvio di Plasma si anima per ~2,4 s: `aspetta_che_i_fotogrammi_arrivino` passava sull'animazione, e il SIGSTOP cadeva sul nero |
+| **LA CURA** | nel banco, non nel prodotto: `11-c3` aspetta che il codificatore **si fermi** (`aspetta_che_il_desktop_si_fermi`) prima di accendere la scena, più un respiro di 2 s prima dell'innesto (`--respiro-innesco`), contato in `secondi_prima`. Su GNOME il desktop è già fermo ⇒ un passo solo. Nessuna domanda sul desktop |
+| **IL CANCELLO** | `11-gancio.sh` apre a `kde` il guasto «codificatore fermo» |
+
+#### La rete (`[M]` 19 set 2026, 13:21→15:51, binario `954a208c`, `--scatola "gnome kde"`, 9 028 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde**, C3 «codificatore fermo» compreso (col banco nuovo) |
+| ⭐ **kde** | **tutto verde, e adesso nessun guasto è saltato**: passo 0, C1×10, C2, C3 (+ scena ferma), C4, C5, C6, C7, C8, C8b, C9 — ⭐ **C3 «codificatore fermo» visto** |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto — ⚠ C16 era rosso per tre percorsi abbreviati (`src/kwin.c/.h`) in questo documento: classe C, scritti per intero |
+
+### La sospensione — era già chiusa, e per tutti i desktop
+
+L'utente (19 set) propone: *«perché non si fa in modo che remotix disabiliti alla radice standby,
+reboot e suspend della macchina per tutti gli utenti normali, cioè tutti eccetto root?»* ⇒ ⭐ **è
+già così**, e da una decisione sua: `DECISIONI.md` §4.7 (15 agosto), tre cinture messe da
+`src/provisiona.sh` — polkit (12 azioni, `*-multiple-sessions` comprese), `AllowSuspend=no`,
+logind sui tasti. Nessuna delle tre sa quale desktop giri.
+
+`[M]` 19 set 2026, sul server, da `nicfio`: `CanSuspend` · `CanReboot` · `CanPowerOff` ·
+`CanHibernate` = **«no»** tutte e quattro.
+
+⚠ **Il monitor fisico del server** può continuare ad andare in standby (chiarito con l'utente): le
+sessioni remote hanno ciascuna il proprio schermo virtuale.
+
+⚠ **Resta un pezzo, ed è un altro**: lo schermo **della sessione remota** di Plasma, che
+powerdevil spegne dopo 10 minuti di inattività (su GNOME la stessa cosa è spenta da
+`sessione_impostazioni()`). È il ramo KDE di `sessione_inibisci()` — incremento 7.
 
 ## Le misure
 

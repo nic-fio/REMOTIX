@@ -789,7 +789,7 @@ le_cinque_nuove() {
 	#   su `kde` C3, C4 e C6 sono `[M]` VERDI coi loro guasti visti
 	#   (`fasi/12-kde.md`).  ⇒ Il cancello si apre per quelle tre; e con
 	#   l'incremento 4 anche per C2 e C8b, adattate alla schermata d'avvio di
-	#   Plasma.  ⚠ Resta chiuso su kde il solo guasto «codificatore fermo» di C3.
+	#   Plasma; e dal 19 set anche il guasto «codificatore fermo» di C3.
 	if [ "$d" != gnome ] && [ "$d" != kde ]; then
 		salta_maglia "C2($d) C3 C4 C6 C8b" \
 			"il prodotto sa avviare solo GNOME e KDE (src/sessione.c, sessione_desktop)"
@@ -813,17 +813,9 @@ le_cinque_nuove() {
 	esegui_maglia "C3($d)" false GIRA_C3 "$d" "${P[@]}"
 	esegui_maglia "C3($d) scena ferma" false GIRA_C3 "$d" "${P[@]}" --scena-ferma
 	esegui_maglia "C3($d) guasto innestato" true GIRA_C3 "$d" "${P[@]}" --fotogramma-ripetuto
-	if [ "$d" = gnome ]; then
+	# ⭐ Da C3 del 19 set 2026 (il desktop fermo prima della scena, e un respiro
+	#   CONTATO prima dell'innesto) questo guasto si vede anche su KDE.
 	esegui_maglia "C3($d) guasto innestato (codificatore fermo)" true GIRA_C3 "$d" "${P[@]}" --codificatore-fermo
-	else
-		# ⚠ `[M]` 19 set 2026: su KDE l'innesto (SIGSTOP 2 s dopo che il
-		#   codificatore lavora) cade sulla schermata d'avvio di Plasma — che fa
-		#   lavorare il codificatore — e l'ultimo fotogramma e' quasi nero ⇒ la
-		#   maglia NON giudica (3).  Non e' un rosso ne' un verde: si salta
-		#   dicendolo, e il guasto di C3 su KDE resta `--fotogramma-ripetuto`.
-		salta_maglia "C3($d) guasto innestato (codificatore fermo)" \
-			"l'innesto cade sulla schermata d'avvio di Plasma e la maglia non giudica (fasi/12-kde.md, incremento 3)"
-	fi
 
 	# ⭐ C4 — il tasto arriva fino allo schermo.  ⛔ E' l unica maglia che
 	#   giudica un PIXEL attraversando il prodotto ANDATA E RITORNO: C8 giudica

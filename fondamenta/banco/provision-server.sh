@@ -257,6 +257,12 @@ PKGS=(
     pulseaudio-utils
     # i banchi degli appunti (prove/fase11-appunti.sh): i due versi della clipboard
     wl-clipboard xclip
+    # ⭐ fase 12 (19 set 2026): la prova Android gira SUL SERVER (decisione
+    #    dell'utente) — `banchi/12-client-veri.py` giudica le fotografie con PIL.
+    #    L'SDK e l'emulatore NON sono pacchetti: stanno su disco, in
+    #    `/media/REMOTIX/android` (`~/Android` e' un collegamento da rifare), e
+    #    `/dev/kvm` va dato a nicfio (`setfacl -m u:nicfio:rw /dev/kvm`) a ogni avvio.
+    python3-pil
 )
 
 # ---------------------------------------------------------------------------
