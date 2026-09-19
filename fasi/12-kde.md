@@ -369,7 +369,7 @@ con la controprova, e il giorno che entrano nella rete sarà una maglia sua.
 | GNOME | ⭐ **tutto verde**, C3 «codificatore fermo» compreso (col banco nuovo) |
 | ⭐ **kde** | **tutto verde, e adesso nessun guasto è saltato**: passo 0, C1×10, C2, C3 (+ scena ferma), C4, C5, C6, C7, C8, C8b, C9 — ⭐ **C3 «codificatore fermo» visto** |
 | rete, sul server | C11 · C13 · C14 verdi |
-| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto — ⚠ C16 era rosso per tre percorsi abbreviati (`src/kwin.c/.h`) in questo documento: classe C, scritti per intero |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto — ⚠ C16 era rosso per tre percorsi abbreviati (del tipo «kwin.c/.h») in questo documento: classe C, scritti per intero |
 
 ### La sospensione — era già chiusa, e per tutti i desktop
 
@@ -388,6 +388,39 @@ sessioni remote hanno ciascuna il proprio schermo virtuale.
 ⚠ **Resta un pezzo, ed è un altro**: lo schermo **della sessione remota** di Plasma, che
 powerdevil spegne dopo 10 minuti di inattività (su GNOME la stessa cosa è spenta da
 `sessione_impostazioni()`). È il ramo KDE di `sessione_inibisci()` — incremento 7.
+
+### Incremento 7 — lo schermo della sessione remota di Plasma non si spegne
+
+| | |
+|---|---|
+| **OBIETTIVO** | powerdevil non spegne lo schermo della sessione remota dopo 10 minuti (su GNOME lo fa già `sessione_impostazioni()`) |
+| **MODULI** | `src/sessione.c`: `guardia_di_powerdevil()`, un filo che ogni 2 s guarda chi possiede `org.kde.Solid.PowerManagement` e chiede `PolicyAgent.AddInhibition(4)` ogni volta che il proprietario **cambia** · il banco: `banchi/12-i7-schermo.sh` · la scatola: R4 `powerdevil` in `Contenitore.kde`, `--cap-add=WAKE_ALARM` in `11-accendi.sh` |
+| **INVARIANTE** | su GNOME `sessione_inibisci()` resta com'era: il filo nasce solo se `e_kde()` |
+
+⛔ **Due scoperte**, `[M]` 19 set 2026:
+1. **nella scatola powerdevil non partiva**: il suo eseguibile porta `cap_wake_alarm=ep`, fuori dal
+   limite del contenitore ⇒ 203/EXEC «Operation not permitted». Classe C: `--cap-add=WAKE_ALARM`,
+   che avvicina la scatola alla macchina vera.
+2. **una chiamata sola arriva troppo presto** (binario `6a41a28e`): quando il palco è pronto
+   powerdevil non c'è ancora («ServiceUnknown» — è un'unità di `plasma-core.target`, non si attiva
+   dal bus). E il figlio non ha un ciclo GLib ⇒ un filo che guarda, invece di `g_bus_watch_name`.
+
+| `[M]` 19 set 2026, `12-i7-schermo.sh`, giudice **powerdevil stesso** (`HasInhibition`) | esito |
+|---|---|
+| ⛔ controprova: binario `954a208c` (senza il ramo) | **false** — lo schermo si spegnerebbe |
+| binario `6a41a28e` (una chiamata sola) | **false** — «ServiceUnknown» |
+| ⭐ binario `c7b228c5` (il filo) | **true** |
+| ⭐ `c7b228c5`, powerdevil ucciso a sessione viva | systemd lo fa ripartire ⇒ **true** di nuovo, il figlio l'ha richiesta al nuovo proprietario |
+
+#### La rete (`[M]` 19 set 2026, 15:59→18:30, binario `c7b228c5`, `--scatola "gnome kde"`, 9 030 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde** |
+| ⭐ **kde** | **tutto verde**, nessun guasto saltato — e nel registro della scatola **20** inibizioni chieste a powerdevil, **0** rifiutate, **0** «non è comparso» |
+| rete, sul server | C13 · C14 verdi · ⛔ **C11 rossa, classe C**: il binario nuovo era messo solo in gnome e kde, xfce e lxqt avevano ancora `954a208c` — la maglia ha fatto il suo lavoro. Messo `c7b228c5` anche là ⇒ C11 **verde** |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+
 
 ## Le misure
 

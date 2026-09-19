@@ -1398,6 +1398,100 @@ void sessione_impostazioni(void)
 
 /* ------------------------------------------------------------------------- */
 /*
+ * ⭐ FASE 12 — LO SCHERMO DELLA SESSIONE REMOTA DI PLASMA NON SI SPEGNE.
+ *
+ * Su Plasma il comandante dell'inattivita' e' powerdevil, e `[R]` (`STUDI.md`
+ * §kde §10.2) ha **«spegni lo schermo dopo 10 minuti» acceso per difetto**: in
+ * una sessione remota vuol dire il desktop che diventa nero a chi guarda.
+ * ⇒ `PolicyAgent.AddInhibition(types=4)`: 4 = `ChangeScreenSettings`, che
+ * IMPLICA `InterruptSession` (`powerdevilpolicyagent.cpp:737-745`); nessun
+ * controllo di permesso, e si rilascia da se' alla caduta del nostro nome.
+ * ⚠ NON `org.freedesktop.PowerManagement.Inhibit`: mappa solo
+ *   `InterruptSession`, e lo schermo si spegnerebbe lo stesso.
+ * ⚠ La sospensione della MACCHINA non e' qui: la fermano le cinture di sistema
+ *   di `DECISIONI.md` §4.7 (polkit e `AllowSuspend=no`), per tutti i desktop.
+ *
+ * ⛔⛔ PERCHE' UN FILO, e non una chiamata sola — `[M]` 19 set 2026, scatola
+ *     `kde`, binario `6a41a28e`: chiamato quando il palco e' pronto, powerdevil
+ *     **non c'e' ancora** («ServiceUnknown»: e' un'unita' di `plasma-core.target`,
+ *     non si attiva dal bus).  E il figlio non ha un ciclo GLib, quindi niente
+ *     `g_bus_watch_name`: si guarda chi possiede il nome ogni 2 s, e si chiede
+ *     l'inibizione ogni volta che il proprietario CAMBIA — alla prima comparsa
+ *     e se powerdevil riparte (l'inibizione vecchia e' morta con lui).
+ *     Il filo vive quanto il figlio, cioe' quanto la sessione.
+ */
+#define POWERDEVIL "org.kde.Solid.PowerManagement"
+#define POWERDEVIL_PASSO_US (2 * G_USEC_PER_SEC)
+#define POWERDEVIL_PAZIENZA_S 120
+
+static char *proprietario_di(GDBusConnection *bus, const char *nome)
+{
+	g_autoptr(GVariant) risposta = g_dbus_connection_call_sync(
+		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+		"GetNameOwner", g_variant_new("(s)", nome), G_VARIANT_TYPE("(s)"),
+		G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL, NULL);
+	char *chi = NULL;
+
+	if (risposta)
+		g_variant_get(risposta, "(s)", &chi);
+	return chi;
+}
+
+static gpointer guardia_di_powerdevil(gpointer dati)
+{
+	g_autofree char *ultimo = NULL;
+	const gint64 partito = g_get_monotonic_time();
+	gboolean detto_assente = FALSE;
+
+	(void) dati;
+	for (;;) {
+		g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+		g_autofree char *chi = bus ? proprietario_di(bus, POWERDEVIL) : NULL;
+
+		if (!chi && !ultimo && !detto_assente &&
+		    g_get_monotonic_time() - partito > POWERDEVIL_PAZIENZA_S * G_USEC_PER_SEC) {
+			detto_assente = TRUE;
+			registro_dice(REG_SESSIONE,
+			              "⚠ Plasma: powerdevil non e' comparso in %d s: nessuno "
+			              "spegne lo schermo, e continuo a guardare",
+			              POWERDEVIL_PAZIENZA_S);
+		}
+		if (chi && g_strcmp0(chi, ultimo) != 0) {
+			g_autoptr(GVariant) risposta = NULL;
+			g_autoptr(GError) sbaglio = NULL;
+			guint32 gettone = 0;
+
+			risposta = g_dbus_connection_call_sync(
+				bus, POWERDEVIL, "/org/kde/Solid/PowerManagement/PolicyAgent",
+				"org.kde.Solid.PowerManagement.PolicyAgent", "AddInhibition",
+				g_variant_new("(uss)", 4u, "REMOTIX",
+			                      "una sessione remota e' viva: lo schermo non si "
+			                      "spegne e la sessione non e' inattiva"),
+				G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS,
+				NULL, &sbaglio);
+			if (risposta) {
+				g_variant_get(risposta, "(u)", &gettone);
+				registro_dice(REG_SESSIONE,
+				              "⭐ Plasma: schermo e inattivita' INIBITI a powerdevil "
+				              "%s (gettone %u, types 4 = ChangeScreenSettings ⊃ "
+				              "InterruptSession)%s",
+				              chi, gettone, ultimo ? " — powerdevil era ripartito" : "");
+				g_free(ultimo);
+				ultimo = g_steal_pointer(&chi);
+			} else {
+				registro_dice(REG_SESSIONE,
+				              "⛔ Plasma: l'inibizione a powerdevil %s NON e' passata "
+				              "(%s): riprovo fra 2 s",
+				              chi, sbaglio ? sbaglio->message : "senza motivo");
+			}
+		}
+		g_usleep(POWERDEVIL_PASSO_US);
+	}
+	return NULL;
+}
+
+/* ------------------------------------------------------------------------- */
+/*
  * ⭐⭐ L'INIBIZIONE DELLA SOSPENSIONE — `DECISIONI.md` §4.7, terza cintura.
  *
  * ⛔ IL FATTO CHE LA RENDE NECESSARIA, misurato: `[M]` 15 agosto 2026, nel
@@ -1429,13 +1523,14 @@ guint32 sessione_inibisci(void)
 	if (!bus)
 		return 0;
 
-	/* ⛔ FASE 12 — su Plasma il gestore di sessione non e' questo, e
-	 *    l'inibizione passa da powerdevil (`STUDI.md` §kde §10.2): e' lavoro di
-	 *    un incremento dopo, e si dice invece di fallire in silenzio. */
+	/* ⭐ FASE 12 — su Plasma il gestore di sessione non e' questo: lo schermo
+	 *    lo tiene acceso un filo che aspetta powerdevil
+	 *    (`guardia_di_powerdevil`, qui sopra). */
 	if (e_kde()) {
+		g_thread_unref(g_thread_new("powerdevil", guardia_di_powerdevil, NULL));
 		registro_dice(REG_SESSIONE,
-		              "⚠ Plasma: l'inibizione della sospensione non la chiedo ancora "
-		              "(powerdevil, fase 12, incrementi dopo il primo)");
+		              "Plasma: l'inibizione dello schermo la chiedo a powerdevil "
+		              "appena compare sul bus");
 		return 0;
 	}
 

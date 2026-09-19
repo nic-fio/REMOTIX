@@ -336,5 +336,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wl-clipboard \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R4 — 19 settembre 2026, fase 12 (la sospensione su KDE): POWERDEVIL.
+#   Il gestore dell'energia di Plasma.  `--no-install-recommends` lo lasciava
+#   fuori, ⛔ ma una macchina KDE vera (`task-kde-desktop`) ce l'ha — ed e' lui
+#   che spegne lo schermo dopo 10 minuti (`STUDI.md` §kde §10.2).  ⇒ Senza, la
+#   scatola non potrebbe mostrare il difetto che il prodotto deve curare.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        powerdevil \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

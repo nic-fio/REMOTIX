@@ -110,7 +110,12 @@ esac
 CAPS_COMUNI="--cap-add=SYS_ADMIN"
 
 case "$DESKTOP" in
-  kde) CAPS="$CAPS_COMUNI --cap-add=SYS_NICE" ;;
+  # ⭐ WAKE_ALARM (fase 12, 19 set 2026): `org_kde_powerdevil` porta la
+  #   capacita' di file `cap_wake_alarm=ep`, e un eseguibile con una capacita'
+  #   FUORI dal limite del contenitore non si esegue affatto ⇒ `[M]` 203/EXEC
+  #   «Operation not permitted», powerdevil morto a ogni sessione.  Stessa
+  #   ragione di sopra: sulla macchina vera parte, e il permesso la AVVICINA.
+  kde) CAPS="$CAPS_COMUNI --cap-add=SYS_NICE --cap-add=WAKE_ALARM" ;;
   *)   CAPS="$CAPS_COMUNI" ;;
 esac
 
