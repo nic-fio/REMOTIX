@@ -530,11 +530,12 @@ c8)
 
 c8b)
 	log "C8b — e la stessa pagina si vede DAL CLIENTE (dentro $NOME)"
-	# ⛔ SOLO GNOME: il prodotto sa avviare solo lui (src/sessione.c:778).
-	#    Sulle altre scatole questa maglia direbbe «non ho potuto guardare»
-	#    per sempre, che e il cugino del rosso perpetuo (LEZIONI.md §1.49).
-	if [ "$DESKTOP" != gnome ]; then
-		log "C8b non gira su $DESKTOP: il prodotto avvia solo GNOME"
+	# ⛔ SOLO GNOME E KDE: il prodotto sa avviare solo loro (src/sessione.c,
+	#    `sessione_desktop`; KDE dalla fase 12).  Sulle altre scatole questa
+	#    maglia direbbe «non ho potuto guardare» per sempre, che e il cugino
+	#    del rosso perpetuo (LEZIONI.md §1.49).
+	if [ "$DESKTOP" != gnome ] && [ "$DESKTOP" != kde ]; then
+		log "C8b non gira su $DESKTOP: il prodotto avvia solo GNOME e KDE"
 		exit 3
 	fi
 	# ⛔ `--senza-cura` e il COLLAUDO: l esito si legge al contrario.

@@ -1922,10 +1922,15 @@ def main():
                         "Firefox in una scatola fredda passa i 25 s, e qui la "
                         "scatola e' fredda davvero — `crea()` fa `userdel -r`, "
                         "quindi nessun profilo esiste")
-    p.add_argument("--fotogrammi-prima", type=int, default=12,
+    # ⭐ FASE 12 (19 set 2026): da 12 a 240.  `[M]` Su KDE la schermata
+    #   d'avvio di Plasma dura ~2,4 s e manda ~140 fotogrammi neri: con 12 il
+    #   «prima» su KDE era «non lo so» per sempre.  Su GNOME il primo
+    #   disegnato arriva comunque fra i primi, e la scelta non cambia.
+    p.add_argument("--fotogrammi-prima", type=int, default=240,
                    help="quanti fotogrammi iniziali si guardano per trovare il "
                         "«prima» disegnato. ⛔ Uno solo darebbe «non lo so» per "
-                        "sempre se il primo fosse nero (LEZIONI.md §1.49)")
+                        "sempre se il primo fosse nero (LEZIONI.md §1.49); 12 "
+                        "non bastano alla schermata d'avvio di Plasma")
     p.add_argument("--coda", type=float, default=15.0,
                    help="quanto il cliente resta attaccato DOPO che la finestra "
                         "e' stata giudicata pronta, per portarsi via i fotogrammi")

@@ -57,6 +57,7 @@ del 18 settembre, `[R]`):
 | **1** | la sessione Plasma **nasce** per un utente nuovo | nessuna ancora verde: C1(kde) resta rossa (manca la cattura) — si prova con la misura di I1 qui sotto | ✅ CP1 · CP2 · CP3 · CP4 · client (Firefox, Chrome) · rete — ⚠ Android del banco aperto |
 | **2** | l'immagine di Plasma arriva al browser | ⭐ **C1(kde)** | ✅ CP1 · CP2 · CP3 · CP4 · client · rete — ⭐ **C1(kde) VERDE** |
 | **3** | mouse e tastiera arrivano a Plasma | ⭐ **C4(kde)**, e C3 · C6 su kde | ✅ CP1 · CP2 · CP4 · client · rete — ⭐ **C4(kde) VERDE** |
+| **4** | il banco guarda KDE come GNOME | ⭐ **C2(kde)**, **C8b(kde)** | ✅ cura · certificazioni · prove · rete — ⭐ **KDE: tutte le maglie** |
 
 ### Incremento 1 — la sessione Plasma nasce
 
@@ -274,6 +275,44 @@ registro; xfce e lxqt restano chiuse.
 | client su GNOME, binario `a77366b2` | Firefox e Chrome **PASS** 7 su 7 |
 
 ⇒ **Incremento 3: CRITERIO soddisfatto.**
+
+### Incremento 4 — il banco guarda KDE come GNOME (C2, C8b)
+
+⛔ **Solo banco, niente prodotto**: il binario resta `a77366b2`.
+
+| | |
+|---|---|
+| **OBIETTIVO** | C2 e C8b giudicano anche su KDE |
+| **LA CAUSA, `[M]`** | tutt'e due prendevano il «prima» dai primissimi fotogrammi del flusso, e su KDE quelli sono la schermata d'avvio di Plasma (~2,4 s, 100-200 fotogrammi neri). C2 ne guardava 12, C8b 1 ⇒ «non lo so» per sempre |
+| **LA CURA** | la stessa regola in tutt'e due, e vale per ogni desktop: il «prima» è il **primo fotogramma non nero** fra i primi 240. C2 la aveva già (`scegli_il_prima`) — si alza solo il numero, da 12 a 240; C8b la riceve (`estrai(…, giudice)`). ⛔ Se sono tutti neri resta «a monte» / «non lo so», come prima; se il primo non nero è già la pagina, «già magenta» e non si giudica |
+| **GNOME** | ⭐ invariato: il primo disegnato è il fotogramma **1** (C2 lo scrive: *«fotogrammi guardati per il prima: 1»*) |
+| **certificazioni** | `--certifica` di C2 e di C8b: uscita 0 |
+
+| `[M]` 19 set 2026 | esito |
+|---|---|
+| C8b(kde) | ⭐ **VERDE**, 2 su 2 vedono la pagina dal cliente — il «prima» è il fotogramma 181 |
+| C8b(kde) `--senza-cura` | ⭐ guasto **visto** (1 su 2 non la vede, e il primo sì) |
+| C8b(gnome) | ⭐ VERDE, 2 su 2 |
+| C2(kde) | ⭐ **VERDE** — il «prima» fra 204 fotogrammi |
+| C2(kde) `--applicazione-che-muore` · `--finestra-che-non-si-apre` | ⭐ tutt'e due **visti** |
+| C2(gnome) | ⭐ VERDE, «prima» = fotogramma 1 |
+
+⇒ I cancelli: `11-gancio.sh` apre C2 e C8b a `kde`; `11-accendi.sh` lascia girare C8b su `gnome` e
+`kde`. ⚠ Resta chiuso su KDE il solo guasto «codificatore fermo» di C3 (l'innesto cade durante la
+schermata d'avvio): curarlo vuol dire spostare l'istante dell'innesto, ed è un passo suo.
+
+#### La rete intera (`[M]` 19 set 2026, 04:50→07:48, binario `a77366b2`, 10 645 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde** (C2 e C8b col banco nuovo: il «prima» resta il fotogramma 1) |
+| ⭐ **kde** | **tutto verde, e adesso ci sono tutte e dieci le maglie**: passo 0, C1×10, **C2**, C3 (+ scena ferma), C4, C5, C6, C7, C8, **C8b**, C9 — guasti visti. Saltato, dichiarato: il solo guasto «codificatore fermo» di C3 |
+| xfce · lxqt | come la baseline: solo C1×10 rosso |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| guasti innestati | ⭐ **31 visti** sulle scatole (erano 28: i 3 nuovi sono C2 ×2 e C8b su KDE) + 1 sul portatile |
+
+⇒ **Incremento 4: CRITERIO soddisfatto.**
 
 ## Le misure
 

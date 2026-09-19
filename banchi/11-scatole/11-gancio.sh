@@ -787,10 +787,9 @@ le_cinque_nuove() {
 	local d=$1
 	# ⭐ FASE 12, INCREMENTO 3 (19 set 2026) — il prodotto accende anche KDE, e
 	#   su `kde` C3, C4 e C6 sono `[M]` VERDI coi loro guasti visti
-	#   (`fasi/12-kde.md`).  ⇒ Il cancello si apre per quelle tre, e SOLO per
-	#   quelle: C2 e C8b su KDE non giudicano ancora per ragioni del BANCO
-	#   (C2: la schermata d'avvio di Plasma e' il suo «prima»; C8b: il cancello
-	#   in `11-accendi.sh`), e si aprono quando saranno adattate.
+	#   (`fasi/12-kde.md`).  ⇒ Il cancello si apre per quelle tre; e con
+	#   l'incremento 4 anche per C2 e C8b, adattate alla schermata d'avvio di
+	#   Plasma.  ⚠ Resta chiuso su kde il solo guasto «codificatore fermo» di C3.
 	if [ "$d" != gnome ] && [ "$d" != kde ]; then
 		salta_maglia "C2($d) C3 C4 C6 C8b" \
 			"il prodotto sa avviare solo GNOME e KDE (src/sessione.c, sessione_desktop)"
@@ -801,14 +800,11 @@ le_cinque_nuove() {
 	#   diceva 1 in tutt e due i casi (fasi/10… §7.4), e `--finestra-che-non-si-apre`
 	#   lo dimostra invece di affermarlo — l applicazione resta VIVA e non dipinge.
 	local P=(--attesa-palco "$TETTO_PALCO_C2C3")
-	if [ "$d" = gnome ]; then
+	# ⭐ Incremento 4: C2 guarda 240 fotogrammi per il «prima», e la
+	#   schermata d'avvio di Plasma non la ferma piu' — aperta a kde.
 	esegui_maglia "C2($d)" false GIRA_C2 "$d" "${P[@]}"
 	esegui_maglia "C2($d) guasto innestato" true GIRA_C2 "$d" "${P[@]}" --applicazione-che-muore
 	esegui_maglia "C2($d) guasto innestato (finestra cieca)" true GIRA_C2 "$d" "${P[@]}" --finestra-che-non-si-apre
-	else
-		salta_maglia "C2($d)" \
-			"i primi fotogrammi di Plasma sono la schermata d'avvio, e C2 li prende per il suo «prima» (fasi/12-kde.md, incremento 3)"
-	fi
 
 	# ⭐ C3 — i fotogrammi arrivano e la scena CAMBIA.
 	# ⚠ `--scena-ferma` NON e' un guasto innestato: e' il controllo NEGATIVO, e
@@ -846,13 +842,10 @@ le_cinque_nuove() {
 	# ⭐ C8b — e la stessa pagina si vede DAL CLIENTE.  ⛔ C8a non passa dal
 	#   prodotto: guarda il browser dentro la sessione.  Questa guarda i pixel
 	#   che arrivano al cliente.
-	if [ "$d" = gnome ]; then
+	# ⭐ Incremento 4: il «prima» di C8b e' il primo fotogramma non nero —
+	#   aperta a kde.
 	esegui_maglia "C8b($d)" false GIRA_C8B "$d"
 	esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
-	else
-		salta_maglia "C8b($d)" \
-			"11-accendi.sh la ferma fuori da gnome: si apre quando e' adattata (fasi/12-kde.md, incremento 3)"
-	fi
 }
 
 famiglia_tutto() {

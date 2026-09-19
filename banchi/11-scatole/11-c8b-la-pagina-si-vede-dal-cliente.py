@@ -575,19 +575,56 @@ def ffmpeg(c8a, comando):
     return c8a.sh(comando, secondi=240)
 
 
-def estrai(c8a, flusso, primo, ultimo):
-    """Dal flusso H.264 tira fuori il PRIMO e l'ULTIMO fotogramma.
+# ── quanti fotogrammi d'apertura si guardano per il «prima» ──────────────────
+# ⭐ FASE 12 (19 set 2026).  `[M]` Su KDE il primo fotogramma di una sessione
+#   nuova e' la schermata d'avvio di Plasma (99 % nero + logo, ~2,4 s): e' il
+#   desktop VERO che si accende, e col solo primo fotogramma C8b lo chiamava
+#   «guasto a monte» per sempre.  ⇒ Il «prima» e' il PRIMO fotogramma NON NERO
+#   fra i primi `APERTURA` — che su GNOME e' il primo, cioe' com'era.
+# ⛔ E non regala niente: se sono tutti neri il «prima» resta il primo (⇒
+#    «a monte», come prima); se il primo non nero e' gia' la pagina, il giudizio
+#    del «prima» dice «gia' magenta» e la maglia non giudica il dopo.
+APERTURA = 240
 
-    ⛔ Sono due domande diverse e servono due comandi: `-frames:v 1` prende il
-       fotogramma d'apertura (il desktop **prima** del browser), `-update 1`
-       riscrive sempre lo stesso file e quindi vince l'ULTIMO decodificato — che
-       e' quel che il desktop mostra adesso.
+
+def estrai(c8a, flusso, primo, ultimo, giudice=None):
+    """Dal flusso H.264 tira fuori il «PRIMA» e l'ULTIMO fotogramma.
+
+    ⛔ Sono due domande diverse e servono due comandi: i fotogrammi d'apertura
+       (il desktop **prima** del browser), e `-update 1`, che riscrive sempre lo
+       stesso file e quindi vince l'ULTIMO decodificato — che e' quel che il
+       desktop mostra adesso.
+    ⭐ Il «prima» e' il primo NON NERO fra i primi `APERTURA` (vedi sopra);
+       senza giudice, il primo in assoluto.
     """
     for f in (primo, ultimo):
         if os.path.exists(f):
             os.unlink(f)
+    cartella = os.path.dirname(primo) or "."
+    radice = os.path.splitext(os.path.basename(primo))[0]
+    modello = os.path.join(cartella, "%s-apertura-%%03d.png" % radice)
+    c8a.sh("rm -f %s" % os.path.join(cartella, "%s-apertura-*.png" % radice))
     ffmpeg(c8a, "ffmpeg -hide_banner -loglevel error -i %s -vsync 0 "
-                "-frames:v 1 -y %s" % (flusso, primo))
+                "-frames:v %d -y %s" % (flusso, APERTURA if giudice else 1, modello))
+    scelto = None
+    for i in range(1, (APERTURA if giudice else 1) + 1):
+        p = modello % i
+        if not (os.path.exists(p) and os.path.getsize(p)):
+            break
+        if scelto is None:
+            scelto = p              # il primo, se nessuno e' meglio
+        if giudice is None:
+            break
+        g = giudice.giudica(p)
+        if g and g.get("verdetto") not in ("nero", "quasi-nero"):
+            scelto = p
+            if i > 1:
+                print("           ⭐ il «prima» e' il fotogramma %d: i %d prima di lui "
+                      "erano neri (su KDE: la schermata d'avvio di Plasma)" % (i, i - 1))
+            break
+    if scelto:
+        c8a.sh("cp %s %s" % (scelto, primo))
+    c8a.sh("rm -f %s" % os.path.join(cartella, "%s-apertura-*.png" % radice))
     ffmpeg(c8a, "ffmpeg -hide_banner -loglevel error -i %s -vsync 0 "
                 "-update 1 -y %s" % (flusso, ultimo))
     return (primo if os.path.exists(primo) and os.path.getsize(primo) else None,
@@ -758,7 +795,7 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
 
     primo, ultimo = estrai(c8a, flusso,
                            os.path.join(a.lavoro, "%s-prima.png" % chi),
-                           os.path.join(a.lavoro, "%s-dopo.png" % chi))
+                           os.path.join(a.lavoro, "%s-dopo.png" % chi), giudice)
     if primo is None or ultimo is None:
         esito["perche"] = ("%d fotogrammi sono arrivati ma ffmpeg non ne ha "
                            "fatto un'immagine" % esito["fotogrammi"])
