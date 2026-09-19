@@ -422,6 +422,43 @@ powerdevil spegne dopo 10 minuti di inattività (su GNOME la stessa cosa è spen
 | rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
 
 
+### Incremento 8 — gli appunti entrano nella rete (C17), e un difetto di tutti i desktop
+
+| | |
+|---|---|
+| **OBIETTIVO** | gli appunti di KDE controllati a ogni rete, non più solo a mano (`07-b54`) |
+| **LA MAGLIA** | `banchi/11-scatole/11-c17-gli-appunti-vanno-nei-due-versi.py`: tre fatti col loro nome — **A** dispositivo → sessione (`wl-paste` legge quel che il cliente ha annunciato) · **B** sessione → dispositivo (`wl-copy`, e il server lo annuncia al cliente attaccato) · **R** chi si riattacca lo riceve. Guasto innestato `--senza-copia` ⇒ tre rossi |
+| **L'ARBITRO** | `wl-clipboard` vuole `zwlr_data_control_manager_v1` (o `ext_…`): KWin ce l'ha, Mutter no. ⛔ `[M]` su GNOME `wl-paste` e `wl-copy` restano appesi (uscita 124) mentre il server scrive «22 byte consegnati alla sessione» ⇒ la maglia lo chiede a `wayland-info` e, se manca, esce **3** dicendolo. Nessun cancello per desktop nel gancio |
+
+⛔⛔ **Il difetto trovato, ed è di TUTTI i desktop** (`src/rcp.c`, copia gemella in `banchi/rcp/`):
+un cliente che si riattacca a un figlio vivo fa rileggere la clipboard del desktop, ma la lettura
+arriva quando la sessione RCP è ancora in `attesa-verdetto`. Il testo si teneva «per chi si
+attaccherà» e **nessuno lo annunciava mai**: chi rientrava non sapeva che cosa c'era negli
+appunti. ⇒ `annuncia_il_tenuto()`, chiamata appena la sessione passa ad `S_ATTIVA` (§2.5: dopo
+`SESSIONE`).
+
+| `[M]` 19 set 2026, scatola `kde` | A | B | R |
+|---|---|---|---|
+| ⛔ controprova: binario `c7b228c5` (senza la cura) | ⭐ | ⭐ | ⛔ «None» |
+| ⭐ binario `2563cb22` (la cura) | ⭐ | ⭐ | ⭐ |
+| `2563cb22`, `--senza-copia` | ⛔ | ⛔ | ⛔ — il guasto si vede |
+| prova a mano, 5 giri | 5/5 | — | 5/5 |
+| scatola `gnome` | esito **3**: l'arbitro non c'è su Mutter | | |
+
+#### La rete (`[M]` 19 set 2026, 19:56→22:28, binario `2563cb22`, `--scatola "gnome kde"`, 9 116 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde** (la cura di `rcp.c` vale anche qui) · C17(gnome) **3** e 3 col guasto: l'arbitro non c'è, detto |
+| ⭐ **kde** | **tutto verde**, C17 compresa · ⛔ **C17 guasto innestato «NON REGGE», classe C**: il guasto era VISTO (A, B, R rossi) ma la maglia usciva 1, e nella rete col guasto l'esito si legge al contrario (0 = visto). Corretta, e rifatta da sola: kde verde · guasto visto con esito 0 · gnome 3 e 3 |
+| ⚠ e in più | la maglia aspetta che il compositore risponda (`wl_compositor`) prima di dire «l'arbitro non c'è»: un 3 su una sessione sana non deve poter capitare |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+
+⚠ **Resta aperto, dichiarato**: su GNOME gli appunti non hanno ancora un arbitro nella rete. Serve
+un client Wayland con `wl_data_device` e il fuoco (GTK), come diceva `07-b45`: è lavoro di GNOME,
+non di questa fase.
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |

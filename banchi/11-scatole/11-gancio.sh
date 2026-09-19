@@ -574,6 +574,7 @@ GIRA_C8B() { bash "$QUI/11-accendi.sh" c8b "$1" "${@:2}"; }
 GIRA_C5()  { bash "$QUI/11-accendi.sh" c5 "$1" "${@:2}"; }
 GIRA_C7()  { bash "$QUI/11-accendi.sh" c7 "$1" "${@:2}"; }
 GIRA_C9()  { bash "$QUI/11-accendi.sh" c9 "$1" "${@:2}"; }
+GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -838,6 +839,14 @@ le_cinque_nuove() {
 	#   aperta a kde.
 	esegui_maglia "C8b($d)" false GIRA_C8B "$d"
 	esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
+
+	# ⭐ C17 — gli appunti nei due versi, e chi si riattacca (fase 12, 19 set
+	#   2026).  ⚠ Nessun cancello per desktop QUI: l'arbitro (`wl-clipboard`)
+	#   lo cerca la maglia stessa nel compositore, e dove non c'e' — Mutter —
+	#   esce 3 e lo dice.  `[M]` 19 set: kde verde, e rosso sul solo «R» col
+	#   binario di prima della cura.
+	esegui_maglia "C17($d)" false GIRA_C17 "$d"
+	esegui_maglia "C17($d) guasto innestato" true GIRA_C17 "$d" --senza-copia
 }
 
 famiglia_tutto() {

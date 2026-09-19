@@ -15,6 +15,7 @@
 #   bash 11-accendi.sh c5         [gnome] [--senza-sorgente]  il suono non e' silenzio
 #   bash 11-accendi.sh c7         [gnome] [--solo-distacco|--lascia-un-processo]
 #   bash 11-accendi.sh c9         [gnome]     il registro dice DI CHI parla
+#   bash 11-accendi.sh c17        [gnome] [--senza-copia]  gli appunti nei due versi
 #   bash 11-accendi.sh c10                    le copie gemelle (NON vuole la scatola)
 #   bash 11-accendi.sh impronta   [gnome]     stampa l'impronta (R3)
 #   bash 11-accendi.sh spegni     [gnome]
@@ -383,6 +384,7 @@ prodotto)
 		cp /rete11/11-c5-il-suono-non-e-silenzio.py /opt/remotix/
 		cp /rete11/11-c7-si-chiude-e-non-resta-niente.py /opt/remotix/
 		cp /rete11/11-c9-il-registro-dice-di-chi.py /opt/remotix/
+		cp /rete11/11-c17-gli-appunti-vanno-nei-due-versi.py /opt/remotix/
 		cp /rete11/10-f1-testimone.py        /opt/remotix/
 		# ⭐⭐ L ATTREZZO DEI GRUPPI DELLA SCHEDA — 27 agosto 2026.
 		# `[M]` Il difetto piu vecchio del progetto, «la sessione nasce cieca»,
@@ -580,6 +582,16 @@ c9)
 	#   COPIA in memoria della fetta: il registro sul disco non si tocca.
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c9-il-registro-dice-di-chi.py \
+		--porta "$PORTA" "$@"
+	exit $?
+	;;
+
+c17)
+	log "C17 — gli appunti vanno nei due versi (dentro $NOME)"
+	# ⛔ `--senza-copia` e' il COLLAUDO: nessuno copia niente, e i tre fatti
+	#    (A, B, R) devono venire rossi.
+	shift 2 2>/dev/null || shift $#
+	podman exec "$NOME" python3 -u /opt/remotix/11-c17-gli-appunti-vanno-nei-due-versi.py \
 		--porta "$PORTA" "$@"
 	exit $?
 	;;

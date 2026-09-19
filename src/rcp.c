@@ -701,6 +701,10 @@ struct rcp_sessione {
 	 *   con ogni copia. */
 	char *app_testo;
 	size_t app_testo_n;
+	/* ⛔ Il testo qui sopra e' arrivato PRIMA di `SESSIONE` e non e' ancora
+	 *    stato annunciato: lo si annuncia appena la sessione e' aperta
+	 *    (`annuncia_il_tenuto`). */
+	bool app_tenuto;
 
 	/* ⛔ I serial delle richieste della SESSIONE in attesa del testo del client.
 	 *
@@ -874,6 +878,7 @@ static bool torna_a_parlare(rcp_sessione *s);
  * ⚠ Definite nella sezione del canale video, dov'e' il resto; dichiarate qui
  *   perche' la prima accensione (`SESSIONE` spedita, §5.2) sta piu' in su. */
 static void chiave_serve(rcp_sessione *s, const char *perche);
+static void annuncia_il_tenuto(rcp_sessione *s);
 static void chiave_pagata(rcp_sessione *s);
 
 /* ------------------------------------------------------------------------ */
@@ -3077,6 +3082,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	       "disposizione=%s",
 	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
+	annuncia_il_tenuto(s);
 
 	/* ⛔⭐⭐ E ADESSO LA DISPOSIZIONE SI APPLICA — `DECISIONI.md` §5-bis.7,
 	 *      decisa l'8 agosto 2026 e CONFERMATA dall'utente il 16.
@@ -5259,6 +5265,34 @@ static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	return true;
 }
 
+/*
+ * ⛔⭐ IL TESTO TENUTO SI ANNUNCIA QUANDO LA SESSIONE SI APRE — 19 set 2026.
+ *
+ * `[M]` fase 12, scatola `kde`: un client che si RIATTACCA a un figlio vivo fa
+ * rileggere la clipboard del desktop (`figlio.c`, il ramo del riattacco), e la
+ * lettura arriva quando la sessione RCP e' ancora in `attesa-verdetto`.  Il
+ * testo si teneva — «per chi si attacchera'» — ⛔ ma nessuno lo annunciava mai
+ * dopo: il client entrava e non sapeva che cosa c'era negli appunti.
+ * ⇒ Si annuncia qui, dopo `SESSIONE` (§2.5: nessuno stream prima).
+ */
+static void annuncia_il_tenuto(rcp_sessione *s)
+{
+	uint8_t corpo[A_ANNUNCIO];
+	scrittore w = {corpo, sizeof corpo, 0, false};
+
+	if (!s->app_tenuto || !s->app_testo || !s->sessione_spedita)
+		return;
+	s->app_tenuto = false;
+	sc_u32(&w, s->app_mio_id);
+	sc_u32(&w, (uint32_t)s->app_testo_n);
+	if (w.pieno || !manda_appunti(s, T_APPUNTI_ANNUNCIO, corpo, w.len, NULL, 0))
+		return;
+	s->app_annunciati++;
+	reg(s, "⭐ APPUNTI §7.4: annunciato al client il trasferimento %u — %zu byte "
+	       "copiati nella sessione PRIMA che si aprisse, e tenuti fin qui",
+	    s->app_mio_id, s->app_testo_n);
+}
+
 bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 {
 	uint8_t corpo[A_ANNUNCIO];
@@ -5319,8 +5353,11 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 	s->app_mio_id = s->app_mio_id == 0xFFFFFFFFu ? 1u : s->app_mio_id + 1u;
 	s->app_mio_len = byte;
 
-	if (!s->sessione_spedita || s->stato == S_FINITA)
+	if (!s->sessione_spedita || s->stato == S_FINITA) {
+		s->app_tenuto = s->stato != S_FINITA;
 		return false;
+	}
+	s->app_tenuto = false;
 
 	sc_u32(&w, s->app_mio_id);
 	sc_u32(&w, (uint32_t)byte);
