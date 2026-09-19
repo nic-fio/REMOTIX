@@ -6060,7 +6060,12 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	}
 	{
 		char *sbaglio_input = NULL;
-		palco_input = input_apri(mut, tela_l, tela_a, &sbaglio_input);
+		/* ⭐ FASE 12, INCREMENTO 3 — su KDE il canale lo da' KWin, sulla
+		 *    misura dell'uscita (`tela_l`/`tela_a` le ha gia' allineate
+		 *    `misura_del_palco()`). */
+		palco_input = palco_kwin
+		                  ? input_apri_kwin(palco_kwin, tela_l, tela_a, &sbaglio_input)
+		                  : input_apri(mut, tela_l, tela_a, &sbaglio_input);
 		if (palco_input && disposizione_in_attesa[0]) {
 			/* ⛔ Prima di dire che il canale e' aperto: la disposizione
 			 *    chiesta all'attacco era arrivata a palco chiuso, e se non

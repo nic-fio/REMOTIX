@@ -2,13 +2,14 @@
  * kwin — il palco su KDE Plasma: il flusso dello schermo chiesto a KWin.
  *
  * ⛔ RIPORTATO DA `fondamenta/remotix-c/src/kwin.c` di v1 (822 righe), e non
- *    ricopiato: qui resta ⭐ **la cattura** — il protocollo Wayland
+ *    ricopiato: qui restano ⭐ **la cattura** — il protocollo Wayland
  *    `zkde_screencast_unstable_v1` (versione 5 su KWin 6.3.6) che, chiesto
  *    sull'uscita `Virtual-0`, risponde col numero di un nodo PipeWire.  Dal nodo
  *    in poi la strada e' quella di GNOME: `cattura_avvia(nodo)`.
- *    ⚠ L'input (`org.kde.KWin.EIS.RemoteDesktop.connectToEIS`) e lo stato dei
- *    lucchetti (`org_kde_kwin_keystate`) sono di v1 e NON sono qui: sono
- *    l'incremento 3 della fase 12 (`fasi/12-kde.md`).
+ *    ⭐ E il canale di INPUT (incremento 3): `org.kde.KWin.EIS.RemoteDesktop.
+ *    connectToEIS(7)` ⇒ un descrittore libei, lo stesso tipo di canale che
+ *    Mutter da' con `ConnectToEIS` — `input.c` non vede la differenza.
+ *    ⚠ Lo stato dei lucchetti (`org_kde_kwin_keystate`) di v1 NON e' qui.
  *
  * Il ruolo e' quello di `mutter.h` su GNOME, e la scelta fra i due la fa
  * `sessione_desktop()` UNA volta per processo — nessun secondo modo di
@@ -42,6 +43,14 @@ const char *kwin_nome_uscita(const KwinSessione *sessione);
 /* Quante uscite ha annunciato il compositore (con un modo). */
 unsigned kwin_quante_uscite(const KwinSessione *sessione);
 bool kwin_chiuso(const KwinSessione *sessione);
+
+/* Il canale di input: il descrittore EIS di KWin, chiesto la prima volta che
+ * serve e poi tenuto qui (come `mutter_eis_fd()`: chi lo usa ne fa un `dup`).
+ * -1 con `sbaglio` scritto. */
+int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio);
+/* La guarigione: si stacca il vecchio contesto (col gettone) e se ne chiede
+ * uno nuovo.  Stessa forma di `mutter_eis_riattacca()`. */
+int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio);
 void kwin_chiudi(KwinSessione *sessione);
 
 /* Il `.desktop` che apre il cancello, scritto dal SERVER (root) all'avvio in

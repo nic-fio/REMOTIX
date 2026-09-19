@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <gio/gio.h>
+#include <gio/gunixfdlist.h>
 #include <glib-unix.h>
 #include <poll.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #include "zkde-screencast-unstable-v1-client-protocol.h"
 
 #include "registro.h"
+#include "sessione.h"
 
 #define AREA "cattura"
 
@@ -77,6 +79,11 @@ struct KwinSessione
 	 *    connessione che nessuno serve non consegna `closed`. */
 	GThread *pompa;
 	int sveglia[2];
+
+	/* Il canale di input: il descrittore e il gettone di `connectToEIS`. */
+	int eis;
+	gint gettone_eis;
+	bool gettone_noto;
 };
 
 /* ------------------------------------------------------------------ *
@@ -334,6 +341,7 @@ KwinSessione *kwin_apri(GError **sbaglio)
 	gint64 scadenza;
 
 	sessione->sveglia[0] = sessione->sveglia[1] = -1;
+	sessione->eis = -1;
 
 	sessione->display = apri_il_display(socket, sizeof socket);
 	if (!sessione->display) {
@@ -452,6 +460,92 @@ bool kwin_chiuso(const KwinSessione *sessione)
 	return sessione ? sessione->chiuso : true;
 }
 
+/* ------------------------------------------------------------------ *
+ * Il canale di input
+ * ------------------------------------------------------------------ */
+/* Tastiera 1, puntatore 2, tocco 4 — la maschera del portale xdg
+ * (`xdg-desktop-portal-kde/src/remotedesktop.cpp:457-460`). */
+#define EIS_CAPACITA 7
+
+static void stacca_eis(KwinSessione *sessione)
+{
+	/* ⛔ Col gettone: KWin lega il contesto EIS alla vita del NOME D-Bus del
+	 *    chiamante, quindi lasciarlo funziona solo finche' il processo vive — e
+	 *    in una guarigione il processo resta vivo, con un dispositivo in piu'. */
+	if (sessione->gettone_noto) {
+		GDBusConnection *bus = sessione_bus(NULL);
+
+		if (bus) {
+			GVariant *r = g_dbus_connection_call_sync(
+			    bus, "org.kde.KWin", "/org/kde/KWin/EIS/RemoteDesktop",
+			    "org.kde.KWin.EIS.RemoteDesktop", "disconnect",
+			    g_variant_new("(i)", sessione->gettone_eis), NULL,
+			    G_DBUS_CALL_FLAGS_NONE, 2000, NULL, NULL);
+			if (r)
+				g_variant_unref(r);
+			g_object_unref(bus);
+		}
+		sessione->gettone_noto = false;
+	}
+	if (sessione->eis >= 0) {
+		close(sessione->eis);
+		sessione->eis = -1;
+	}
+}
+
+static int chiedi_eis(KwinSessione *sessione, GError **sbaglio)
+{
+	GDBusConnection *bus;
+	GUnixFDList *descrittori = NULL;
+	GVariant *risposta;
+	gint indice = -1;
+
+	bus = sessione_bus(sbaglio);
+	if (!bus)
+		return -1;
+	/* ⛔ IL DESCRITTORE VIAGGIA IN UNA LISTA A PARTE: `h` e' un INDICE in
+	 *    quella lista, e lo zero letto dal corpo sarebbe lo standard input. */
+	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
+	    bus, "org.kde.KWin", "/org/kde/KWin/EIS/RemoteDesktop",
+	    "org.kde.KWin.EIS.RemoteDesktop", "connectToEIS", g_variant_new("(i)", EIS_CAPACITA),
+	    G_VARIANT_TYPE("(hi)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &descrittori, NULL,
+	    sbaglio);
+	g_object_unref(bus);
+	if (!risposta)
+		return -1;
+	g_variant_get(risposta, "(hi)", &indice, &sessione->gettone_eis);
+	g_variant_unref(risposta);
+	sessione->eis = g_unix_fd_list_get(descrittori, indice, sbaglio);
+	g_object_unref(descrittori);
+	if (sessione->eis < 0)
+		return -1;
+	sessione->gettone_noto = true;
+	registro_dice(AREA, "⭐ KWin ha concesso il canale di input (connectToEIS, gettone %d, "
+	                    "descrittore %d)", sessione->gettone_eis, sessione->eis);
+	return sessione->eis;
+}
+
+int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio)
+{
+	if (!sessione) {
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "nessun palco KWin");
+		return -1;
+	}
+	if (sessione->eis >= 0)
+		return sessione->eis;
+	return chiedi_eis(sessione, sbaglio);
+}
+
+int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio)
+{
+	if (!sessione) {
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "nessun palco KWin");
+		return -1;
+	}
+	stacca_eis(sessione);
+	return chiedi_eis(sessione, sbaglio);
+}
+
 void kwin_chiudi(KwinSessione *sessione)
 {
 	if (!sessione)
@@ -473,6 +567,7 @@ void kwin_chiudi(KwinSessione *sessione)
 	if (sessione->sveglia[1] >= 0)
 		close(sessione->sveglia[1]);
 
+	stacca_eis(sessione);
 	if (sessione->flusso)
 		zkde_screencast_stream_unstable_v1_close(sessione->flusso);
 	if (sessione->screencast)

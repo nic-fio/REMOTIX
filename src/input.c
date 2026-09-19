@@ -194,6 +194,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "kwin.h"
 #include "mutter.h"
 #include "registro.h"
 #include "tastiera.h"
@@ -230,6 +231,11 @@
 struct input
 {
 	MutterSessione *sessione;
+	/* ⭐ FASE 12, INCREMENTO 3 — su KDE il canale lo da' KWin, e `sessione` e'
+	 *    NULL.  Cambiano tre cose sole: da dove viene il descrittore (e la
+	 *    guarigione), la regione (KWin non mette il mapping-id: si sceglie per
+	 *    geometria) e la rotella (`scroll_discrete`, vedi `UNITA_PER_DELTA`). */
+	KwinSessione *kwin;
 	struct ei *ei;
 
 	/* La TELA di `RCP.md` §4.5, cioe' l'intervallo in cui `rcp.c` ha gia'
@@ -498,7 +504,9 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
  */
 static void leggi_regione(Input *in, struct ei_device *dispositivo)
 {
-	const char *chiave = mutter_mapping_id_pubblicato(in->sessione);
+	/* Su KWin la chiave non c'e' (`eis_region_set_mapping_id` non e' mai
+	 * chiamato): restano la geometria e «unica». */
+	const char *chiave = in->kwin ? NULL : mutter_mapping_id_pubblicato(in->sessione);
 	struct ei_region *per_chiave = NULL, *per_geometria = NULL, *unica = NULL;
 	size_t quante = 0;
 	struct ei_region *scelta = NULL;
@@ -942,15 +950,15 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 /* ------------------------------------------------------------------ *
  *  Il contratto
  * ------------------------------------------------------------------ */
-Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char **errore)
+static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l,
+                   uint32_t tela_a, char **errore)
 {
-	MutterSessione *sessione = sessione_mutter;
 	Input *in;
 	int fd;
 
 	if (errore)
 		*errore = NULL;
-	if (!sessione)
+	if (!sessione && !kwin)
 	{
 		if (errore)
 			*errore = g_strdup("nessuna sessione di Mutter: il canale di input non ha a chi parlare");
@@ -965,7 +973,23 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char 
 		return NULL;
 	}
 
-	fd = mutter_eis_fd(sessione);
+	if (kwin)
+	{
+		GError *sbaglio = NULL;
+
+		fd = kwin_eis_fd(kwin, &sbaglio);
+		if (fd < 0)
+		{
+			if (errore)
+				*errore = g_strdup_printf("KWin non ha concesso il canale di input "
+				                          "(connectToEIS): %s",
+				                          sbaglio ? sbaglio->message : "senza motivo");
+			g_clear_error(&sbaglio);
+			return NULL;
+		}
+	}
+	else
+		fd = mutter_eis_fd(sessione);
 	if (fd < 0)
 	{
 		/* ⛔ E si dice PERCHE', non «non si apre»: la riga di `mutter.c` che
@@ -979,6 +1003,7 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char 
 
 	in = g_new0(Input, 1);
 	in->sessione = sessione;
+	in->kwin = kwin;
 	in->tela_l = tela_l;
 	in->tela_a = tela_a;
 	/* ⛔ Cura D4: l'istante dell'apertura si segna QUI, perche' e' l'unico modo
@@ -1044,6 +1069,22 @@ Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char 
  *
  * ⛔ -1 vuol dire «niente da mettere nel poll», non «errore».
  */
+Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char **errore)
+{
+	return apri(sessione_mutter, NULL, tela_l, tela_a, errore);
+}
+
+Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, char **errore)
+{
+	if (!kwin)
+	{
+		if (errore)
+			*errore = g_strdup("nessun palco KWin: il canale di input non ha a chi parlare");
+		return NULL;
+	}
+	return apri(NULL, kwin, tela_l, tela_a, errore);
+}
+
 int input_descrittore(Input *in)
 {
 	if (!in || !in->ei)
@@ -1233,7 +1274,8 @@ static void guarisci(Input *in)
 	 * ⇒ Quel che serve da `mutter.c` e' un descrittore NUOVO: dopo il distacco
 	 *   quello messo da parte e' morto, e una `ConnectToEIS` vuole il bus e il
 	 *   percorso della sessione, che questo file non ha (e non deve avere). */
-	nuovo = mutter_eis_riattacca(in->sessione, &sbaglio);
+	nuovo = in->kwin ? kwin_eis_riattacca(in->kwin, &sbaglio)
+	                 : mutter_eis_riattacca(in->sessione, &sbaglio);
 	if (nuovo < 0)
 	{
 		registro_dice(AREA,
@@ -1683,6 +1725,13 @@ int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 	 *   parti.  Non e' una simmetria dedotta — e' misurato dal banco
 	 *   `04-b24-iniezione` nei due versi, come il verticale.
 	 */
+	/* ⭐ Su KWin lo scatto e' `scroll_discrete` in unita' da 120, cioe' quelle
+	 *    di `RCP.md` §7.3 cosi' come arrivano: `scroll_delta` KWin lo traduce
+	 *    con `deltaV120 = 0` e nessuno scatto (`STUDI.md` §kde §7.2, v1
+	 *    `input.c:227-251`).  Il verso e' la stessa convenzione di sotto. */
+	if (in->kwin)
+		ei_device_scroll_discrete(in->puntatore, asse_x, -asse_y);
+	else
 	ei_device_scroll_delta(in->puntatore, (double) asse_x / UNITA_PER_DELTA,
 	                       (double) -asse_y / UNITA_PER_DELTA);
 	batti_cornice(in, in->puntatore);

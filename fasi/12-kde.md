@@ -56,6 +56,7 @@ del 18 settembre, `[R]`):
 | **0** | la baseline | la rete intera | ✅ **PASS** 18 set |
 | **1** | la sessione Plasma **nasce** per un utente nuovo | nessuna ancora verde: C1(kde) resta rossa (manca la cattura) — si prova con la misura di I1 qui sotto | ✅ CP1 · CP2 · CP3 · CP4 · client (Firefox, Chrome) · rete — ⚠ Android del banco aperto |
 | **2** | l'immagine di Plasma arriva al browser | ⭐ **C1(kde)** | ✅ CP1 · CP2 · CP3 · CP4 · client · rete — ⭐ **C1(kde) VERDE** |
+| **3** | mouse e tastiera arrivano a Plasma | ⭐ **C4(kde)**, e C3 · C6 su kde | ✅ CP1 · CP2 · CP4 · client · rete — ⭐ **C4(kde) VERDE** |
 
 ### Incremento 1 — la sessione Plasma nasce
 
@@ -222,6 +223,57 @@ prova di certificazione sua: è dichiarato.
 
 ⇒ **Incremento 2: CRITERIO soddisfatto.** ⚠ Lezione di metodo: gli utenti delle prove a mano si
 chiudono **prima** di lanciare la rete — la rete guarda il registro intero, anche quel che non è suo.
+
+### Incremento 3 — mouse e tastiera arrivano a Plasma
+
+| | |
+|---|---|
+| **OBIETTIVO** | quel che l'utente fa nel browser (puntatore, pulsanti, tasti, rotella) arriva al desktop Plasma |
+| **INVARIANTE** | su GNOME il canale di input nasce e guarisce come oggi (`mutter_eis_fd`, `mutter_eis_riattacca`, la regione per chiave, la rotella con `UNITA_PER_DELTA`) |
+| **MODULI** | `src/kwin.c` (`connectToEIS(7)` di v1, il gettone, la guarigione) · `src/input.c` (tre punti: il descrittore, la regione, la rotella) · `src/figlio.c` (quale canale aprire) · il banco: il cancello «solo gnome» di `11-gancio.sh` |
+| **PROVA KDE** | ⭐ **C4(kde) verde** — il tasto arriva fino allo schermo, la maglia di sempre — e i suoi due guasti visti |
+| **PROVA CLIENT** | Firefox e Chrome Linux su `kde` e su `gnome`: 7 su 7 |
+| **REGRESSIONI GNOME** | la rete intera; in particolare C4, C6 (la guarigione dell'input), C8b |
+| **CRITERIO** | C4(kde) verde · le maglie che ora possono essere verdi su KDE lo sono, e i loro guasti si vedono · GNOME invariato |
+
+#### CP2 — osservato (`[M]` 19 set 2026, binario `a77366b2`, scatola `kde`)
+
+| | GNOME | KDE |
+|---|---|---|
+| chi dà il canale | Mutter, `RemoteDesktop.Session.ConnectToEIS` | ⭐ KWin, `org.kde.KWin.EIS.RemoteDesktop.connectToEIS(7)` ⇒ descrittore + gettone — concesso al primo colpo, nessun permesso da chiedere |
+| la regione | per chiave (`mapping-id`) | ⭐ *«regione del puntatore per geometria: 0,0 1384x912 (di 1, mapping-id «assente»)»* — il ramo che `input.c` aveva già |
+| la rotella | `scroll_delta` / 12 | `scroll_discrete` in unità da 120 (v1: `scroll_delta` su KWin non fa scatti) — ⚠ **non ancora misurata** da una maglia |
+
+#### CP4 — le prove KDE
+
+| | misurato |
+|---|---|
+| Chrome e Firefox Linux su `kde` | ⭐ **PASS 7 su 7** tutt'e due; (d) muovendo il mouse **76** fotogrammi nuovi in 8 s (prima dell'input: 0) |
+| ⭐ **C4(kde)** | **VERDE**: la zona attesa passa dal colore di partenza a quello d'arrivo al 100 %, la cornice cambia dello 0 % |
+| C4(kde) guasti | `--senza-tasto` ⭐ visto · `--scena-sorda` ⭐ visto |
+| ⭐ **C3(kde)** | **VERDE** (10 994 fotogrammi in 187 s, 60 coppie su 60 diverse); `--fotogramma-ripetuto` ⭐ visto; `--scena-ferma` regge |
+| ⚠ C3(kde) `--codificatore-fermo` | **3**, non giudica: l'innesto (SIGSTOP 2 s dopo che il codificatore lavora) cade sulla schermata d'avvio di Plasma e l'ultimo fotogramma è quasi nero ⇒ **saltato su KDE, dichiarato** nel gancio. Il guasto di C3 su KDE resta `--fotogramma-ripetuto` |
+| ⭐ **C6(kde)** | **VERDE** (si ritrova); `--uccidi-la-sessione` ⭐ visto (*«specie: un'altra sessione»*) |
+| C2(kde) | **3**: i primi 12 fotogrammi sono la schermata d'avvio, e C2 li prende per il suo «prima» ⇒ **saltata su KDE, dichiarato**: si adatta il banco in un incremento suo |
+| C8b(kde) | ferma da `11-accendi.sh` (*«il prodotto avvia solo GNOME»*) ⇒ **saltata, dichiarato**: stesso incremento |
+
+⇒ **Il banco**: `11-gancio.sh` `le_cinque_nuove` apre `kde` per C3, C4, C6 (coi guasti che si vedono) e lo
+tiene chiuso per C2, C8b e per il guasto «codificatore fermo», ciascuno con la sua ragione nel
+registro; xfce e lxqt restano chiuse.
+
+#### La rete intera (`[M]` 19 set 2026, 01:33→03:58, binario `a77366b2`, 8 698 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde**, C9 compresa (utenti delle prove a mano chiusi prima) |
+| ⭐ **kde** | **tutto verde**: passo 0, C1×10, C3 (+ scena ferma), **C4**, C5, **C6**, C7, C8, C9 — e i guasti di C3, C4 (×2), C6, C5, C7, C8, C9 visti. Saltate, dichiarato: C2, C8b, C3 «codificatore fermo» |
+| xfce · lxqt | come la baseline: solo C1×10 rosso |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| guasti innestati | ⭐ **28 visti** sulle scatole (erano 24: i 4 nuovi sono di KDE) + 1 sul portatile |
+| client su GNOME, binario `a77366b2` | Firefox e Chrome **PASS** 7 su 7 |
+
+⇒ **Incremento 3: CRITERIO soddisfatto.**
 
 ## Le misure
 

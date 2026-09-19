@@ -785,9 +785,15 @@ famiglia_veloce() {
 # ═══════════════════════════════════════════════════════════════════════════
 le_cinque_nuove() {
 	local d=$1
-	if [ "$d" != gnome ]; then
+	# ⭐ FASE 12, INCREMENTO 3 (19 set 2026) — il prodotto accende anche KDE, e
+	#   su `kde` C3, C4 e C6 sono `[M]` VERDI coi loro guasti visti
+	#   (`fasi/12-kde.md`).  ⇒ Il cancello si apre per quelle tre, e SOLO per
+	#   quelle: C2 e C8b su KDE non giudicano ancora per ragioni del BANCO
+	#   (C2: la schermata d'avvio di Plasma e' il suo «prima»; C8b: il cancello
+	#   in `11-accendi.sh`), e si aprono quando saranno adattate.
+	if [ "$d" != gnome ] && [ "$d" != kde ]; then
 		salta_maglia "C2($d) C3 C4 C6 C8b" \
-			"il prodotto sa avviare solo GNOME (src/sessione.c:778)"
+			"il prodotto sa avviare solo GNOME e KDE (src/sessione.c, sessione_desktop)"
 		return
 	fi
 
@@ -795,9 +801,14 @@ le_cinque_nuove() {
 	#   diceva 1 in tutt e due i casi (fasi/10… §7.4), e `--finestra-che-non-si-apre`
 	#   lo dimostra invece di affermarlo — l applicazione resta VIVA e non dipinge.
 	local P=(--attesa-palco "$TETTO_PALCO_C2C3")
+	if [ "$d" = gnome ]; then
 	esegui_maglia "C2($d)" false GIRA_C2 "$d" "${P[@]}"
 	esegui_maglia "C2($d) guasto innestato" true GIRA_C2 "$d" "${P[@]}" --applicazione-che-muore
 	esegui_maglia "C2($d) guasto innestato (finestra cieca)" true GIRA_C2 "$d" "${P[@]}" --finestra-che-non-si-apre
+	else
+		salta_maglia "C2($d)" \
+			"i primi fotogrammi di Plasma sono la schermata d'avvio, e C2 li prende per il suo «prima» (fasi/12-kde.md, incremento 3)"
+	fi
 
 	# ⭐ C3 — i fotogrammi arrivano e la scena CAMBIA.
 	# ⚠ `--scena-ferma` NON e' un guasto innestato: e' il controllo NEGATIVO, e
@@ -806,7 +817,17 @@ le_cinque_nuove() {
 	esegui_maglia "C3($d)" false GIRA_C3 "$d" "${P[@]}"
 	esegui_maglia "C3($d) scena ferma" false GIRA_C3 "$d" "${P[@]}" --scena-ferma
 	esegui_maglia "C3($d) guasto innestato" true GIRA_C3 "$d" "${P[@]}" --fotogramma-ripetuto
+	if [ "$d" = gnome ]; then
 	esegui_maglia "C3($d) guasto innestato (codificatore fermo)" true GIRA_C3 "$d" "${P[@]}" --codificatore-fermo
+	else
+		# ⚠ `[M]` 19 set 2026: su KDE l'innesto (SIGSTOP 2 s dopo che il
+		#   codificatore lavora) cade sulla schermata d'avvio di Plasma — che fa
+		#   lavorare il codificatore — e l'ultimo fotogramma e' quasi nero ⇒ la
+		#   maglia NON giudica (3).  Non e' un rosso ne' un verde: si salta
+		#   dicendolo, e il guasto di C3 su KDE resta `--fotogramma-ripetuto`.
+		salta_maglia "C3($d) guasto innestato (codificatore fermo)" \
+			"l'innesto cade sulla schermata d'avvio di Plasma e la maglia non giudica (fasi/12-kde.md, incremento 3)"
+	fi
 
 	# ⭐ C4 — il tasto arriva fino allo schermo.  ⛔ E' l unica maglia che
 	#   giudica un PIXEL attraversando il prodotto ANDATA E RITORNO: C8 giudica
@@ -825,8 +846,13 @@ le_cinque_nuove() {
 	# ⭐ C8b — e la stessa pagina si vede DAL CLIENTE.  ⛔ C8a non passa dal
 	#   prodotto: guarda il browser dentro la sessione.  Questa guarda i pixel
 	#   che arrivano al cliente.
+	if [ "$d" = gnome ]; then
 	esegui_maglia "C8b($d)" false GIRA_C8B "$d"
 	esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
+	else
+		salta_maglia "C8b($d)" \
+			"11-accendi.sh la ferma fuori da gnome: si apre quando e' adattata (fasi/12-kde.md, incremento 3)"
+	fi
 }
 
 famiglia_tutto() {

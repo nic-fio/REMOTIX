@@ -67,6 +67,12 @@ typedef struct input Input;
 Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a,
                   char **errore);
 
+/* ⭐ FASE 12 — lo stesso, con il canale chiesto a KWin (`kwin_eis_fd()`).
+ *    `tela_l`/`tela_a` sono la misura dell'uscita di KWin. */
+struct KwinSessione;
+Input *input_apri_kwin(struct KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a,
+                       char **errore);
+
 /*
  * ⛔ I ricambi silenziosi di `libei`, che `STUDI.md` §gnome §9 misura: un cambio di
  *    keymap distrugge e ricrea il dispositivo tastiera, un cambio di geometria
