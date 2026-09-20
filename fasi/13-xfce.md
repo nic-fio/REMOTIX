@@ -306,6 +306,50 @@ cade ancora nel ramo di Mutter e scrive *«Mutter non espone RemoteDesktop»* �
 un innocente. È lo stesso punto in cui si fermò l'incremento 1 di KDE, ed è il primo che
 l'incremento 2 toglie di mezzo.
 
+### Incremento 2 — l'immagine di XFCE arriva al browser *(CP1, 21 set 2026 — non ancora cominciato)*
+
+| | |
+|---|---|
+| **OBIETTIVO** | un cliente attaccato alla sessione XFCE **vede il desktop**: fotogrammi veri, che cambiano. La maglia che lo prova è **C1(xfce)**, la stessa che lo provò per Plasma |
+| **INVARIANTE** | su GNOME e su KDE **nulla cambia**: stessa strada (PipeWire), stessi numeri, stesso libro del danno. ⛔ E il consumatore del DMA-BUF delle fasi 8-9 **si riusa, non si riscrive** |
+| **LA DECISIONE CHE LO GOVERNA** | ✅ cattura **diretta** (`zwlr_screencopy_manager_v1` v3), dell'utente, 20 set 2026 |
+
+#### ⛔ La differenza che fa il lavoro, e non è il protocollo: è il verso
+
+Su GNOME e su KDE il compositore **spinge**: monta un flusso PipeWire e i fotogrammi arrivano da
+soli. Tutto `src/cattura.c` (2 348 righe) è costruito su quel verso, e `figlio.c` lo usa in **35
+punti** attraverso dieci funzioni (`cattura_avvia` ×7, `cattura_prendi` ×5, `cattura_fermo_libera`
+×7, `cattura_ridimensiona` ×3, `cattura_risveglia` ×3, …).
+
+⛔ Su wlroots si **tira**: `capture_output → frame → copy → ready`, **una richiesta per
+fotogramma**, e nessun nodo PipeWire da nessuna parte. ⇒ Il ritmo non è una proprietà del
+compositore: **è il nostro ciclo** — che è precisamente quel che la decisione dell'utente ha
+comprato.
+
+⚠ **E la domanda di progetto da sciogliere in CP3** è una sola, e va posta bene: la seconda sorgente
+entra **accanto** a `Cattura` (una sorgente che si sceglie, e i trentacinque punti di `figlio.c`
+restano dove sono) oppure **sotto** di lei? ⛔ La risposta non si sceglie per gusto: la si sceglie
+misurando quante delle dieci funzioni hanno senso sul verso a tiro. `cattura_ridimensiona`, per
+esempio, su wlroots **non è la stessa cosa**: lì la misura si cambia sull'output, non sul flusso.
+
+#### Quel che è già stato misurato, e non va rimisurato
+
+| | `[M]` 20 set 2026, dentro `rete11-xfce` |
+|---|---|
+| il protocollo | `zwlr_screencopy_manager_v1` **v3** — e c'è anche `zwlr_export_dmabuf_manager_v1` v1, una seconda strada che `STUDI.md` non aveva pesato |
+| il permesso | ✅ **non esiste**: nessun `.desktop`, nessun portale, nessun dialogo |
+| il buffer della scheda | `zwp_linux_dmabuf_v1` **v4** |
+| ⛔ le fence esplicite | **assenti** (`wp_linux_drm_syncobj_manager_v1` non c'è) ⇒ la sincronizzazione va risolta per un'altra strada, e va misurata |
+| ⛔ il successore | `ext_image_copy_capture_manager_v1` **assente** su Trixie ⇒ si scrive contro screencopy, sapendolo |
+| ⛔ la misura dell'uscita | nasce **1280×720** cablata, e il cliente ne chiede 1920×1080 |
+
+#### ⚠ E l'ordine con l'incremento 6 va deciso qui, non subito
+
+Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1920×1080** non è
+«l'immagine che arriva»: è un'immagine sbagliata. ⇒ O l'incremento 2 si prende anche
+`zwlr_output_manager_v1` (che c'è, v4), o C1(xfce) resterà rossa per una ragione che non è la
+cattura. **Si decide col primo fotogramma in mano**, non prima.
+
 ---
 
 ## 🔸 Le scelte che aspettano l'utente
@@ -315,13 +359,26 @@ Le cinque di `STUDI.md` §xfce §13, più le tre uscite dal sopralluogo del 20 s
 
 | # | la scelta | quando si pone |
 |---|---|---|
-| **1** | ⭐⭐ **cattura diretta (`zwlr_screencopy`) o ponte PipeWire?** diretta: ~1 200 righe nuove, ma il ritmo, il cursore e la misura restano nostri, e si riusa intero il consumatore DMA-BUF delle fasi 8-9. Ponte: meno righe, ⛔ nessuna delle tre, e quattro processi sul budget di 16,6 ms | incremento 2 |
+| ~~**1**~~ | ✅ **DECISA il 20 set 2026, dall'utente: cattura DIRETTA.** *«Li chiediamo noi»* — il ritmo, il cursore e la misura restano nostri, e si riusa intero il consumatore DMA-BUF delle fasi 8-9. ⛔ Il ponte PipeWire è escluso: quattro processi dentro un budget di 16,6 ms, e nessuna delle tre cose sopra | ⭐ fatta |
 | **2** | il ridimensionamento a caldo si accende subito o dopo? | incremento 6 |
 | **3** | il cursore dentro l'immagine o sul canale del puntatore? | incremento 3 |
 | **4** | il bus di sessione: `dbus-run-session` (privato) o bus d'utente? ⛔ Col privato la vitalità della sessione è **cieca** per il prodotto com'è scritto oggi | incremento 1, dopo CP2 |
 | **5** | le voci pericolose del pannello: quante se ne tolgono? | incremento 4 |
 | **6** | «viva» = il nome sul bus, oppure `StateChanged(0→1)`? Il primo è un ramo di due righe; il secondo è un **sorvegliante di segnali**, che in `sessione.c` non esiste | incremento 1, dopo CP2 |
 | **7** | quanto cresce `Contenitore.xfce`: pannello e scrivania già nell'incremento 1? | incremento 1 |
+
+⚠ **E una cosa che la decisione 1 si porta dietro, saputa dal primo giorno.** L'XML di
+`wlr-screencopy-unstable-v1` — messo in deposito in `src/protocolli/` il 20 set 2026, e verificato
+rigenerandoci sopra il codice: le tabelle escono **identiche** a quelle che v1 aveva generato — porta
+in testa una riga nuova rispetto ad allora:
+
+> *«This protocol is deprecated and not intended for production use. The ext-image-copy-capture-v1
+> protocol should be used instead.»*
+
+⛔ Ma `[M]` 20 set 2026 labwc su Trixie **non espone** `ext_image_copy_capture_manager_v1`: non c'è
+niente da usare al suo posto. ⇒ Si scrive contro screencopy **sapendolo**, e `STUDI.md` §xfce §4.6
+dice già come: il codice si scrive perché il secondo attuatore possa entrare accanto al primo, non
+al suo posto.
 
 ---
 

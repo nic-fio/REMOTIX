@@ -186,7 +186,19 @@ F12_CFLAGS := $(shell pkg-config --cflags wayland-client)
 F12_LIBS   := $(shell pkg-config --libs   wayland-client)
 override CFLAGS += $(F12_CFLAGS) -I.
 SCANNER    ?= wayland-scanner
-PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1
+# ⭐ FASE 13: `wlr-screencopy-unstable-v1` — la cattura su wlroots (labwc, e
+#    quindi XFCE e LXQt).  L'XML NON è pacchettizzato in Debian: sta nel
+#    sorgente di wlr-protocols, e qui è in deposito come gli altri due.
+# ⭐⭐ E che sia QUELLO GIUSTO non è stato creduto: rigenerandoci sopra il
+#     codice del protocollo, le tabelle escono **identiche** a quelle che v1
+#     aveva generato nel 2026 (`fondamenta/banchi/banco-compositori/`).  Le
+#     sole differenze sono nei commenti — fra cui, e va saputo:
+#     ⚠ *«This protocol is deprecated … ext-image-copy-capture-v1 should be
+#       used instead»*.  ⛔ Ma `[M]` 20 set 2026 labwc su Trixie **non espone**
+#       `ext_image_copy_capture_manager_v1`: si scrive contro screencopy, e lo
+#       si sa dal primo giorno invece di scoprirlo (`STUDI.md` §xfce §4.6).
+PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
+              wlr-screencopy-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 ifneq ($(PREFISSO),)
