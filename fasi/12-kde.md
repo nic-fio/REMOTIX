@@ -549,6 +549,34 @@ peggiore: **si collega e non vede niente**, senza un errore. La decisione e la m
 | rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
 | ⚠ la delega | il tetto d'attesa di `remoto` è **2 400 s** e la famiglia `tutto` ne vuole ~9 000: la metà locale dichiara «non ha finito entro 2 400 s» mentre di là il giro prosegue e finisce bene. Da allargare quando servirà |
 
+### Incremento 12 — il rosso intermittente, e il muro degli appunti su GNOME
+
+**1. Il rosso intermittente di `07-b54` era del BANCO** (`[M]` 20 set 2026: un giro su tre diceva
+«la tastiera è morta dopo il Ctrl+V», i due dopo erano verdi). ⛔ Guardava il registro **una volta
+sola**, 2 s dopo la lettera: se la riga arrivava un attimo più tardi, il banco misurava il proprio
+ritardo e lo chiamava guasto del prodotto. ⇒ Adesso aspetta fino a 8 s, e si ferma appena la riga
+c'è. **Cinque giri di fila verdi.** ⚠ Un rosso intermittente fa spegnere la maglia: è il motivo per
+cui non si archivia.
+
+**2. L'arbitro degli appunti per GNOME: `banchi/11-scatole/appunti-gtk.py`** — GTK (`python3-gi`),
+cioè `wl_data_device`, la stessa strada delle applicazioni vere, con una finestra presentata perché
+su Wayland la clipboard si concede a chi ha il fuoco.
+
+⛔⛔ **E il muro, misurato** (scatola `gnome`, sessione viva, client attaccato):
+
+| chi prova | esito |
+|---|---|
+| `wl-copy` (senza ucciderlo: resta vivo apposta) | ⛔ il prodotto non vede nessuna copia |
+| `wl-paste`, 20 s, anche con `gnome-terminal` aperto | ⛔ resta appeso (uscita 124) |
+| `appunti-gtk.py copia` | ⭐ copia **dentro di sé** … ⛔ e nessun altro la vede |
+| `appunti-gtk.py incolla` | ⛔ legge vuoto |
+| ⭐ il PRODOTTO | consegna i byte e **chiude il tubo** (verificato in `appunti.c`: `close(fd)` prima di `SelectionWriteDone`) |
+
+⇒ Il blocco è **come Mutter concede gli appunti alle applicazioni in una sessione senza seat**:
+senza fuoco non li concede, e lì il fuoco non c'è mai davvero. ⚠ Non è un difetto del prodotto e
+non è del banco: è la scena. ⇒ C17 su GNOME resta **esito 3, dichiarato**, e gli appunti di GNOME
+restano provati a mano (`07-b54`). Si riapre quando si aprirà il lavoro su GNOME.
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |

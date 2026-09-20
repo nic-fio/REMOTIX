@@ -397,9 +397,20 @@ def giro(nome, g, n):
     #    una tastiera viva.
     coda_prima = registro(400)
     g.tasti(False, "x")
-    time.sleep(2.0)
-    nuove_input = [r for r in righe_nuove_di(coda_prima, registro(600))
-                   if "input id=" in r]
+    # ⛔⭐ E SI ASPETTA FINCHE' ARRIVA, invece di guardare UNA volta dopo due
+    #    secondi.  `[M]` 20 set 2026: un giro su tre diceva «la tastiera e'
+    #    morta» e i due giri dopo, identici, erano verdi — il registro del
+    #    server aveva scritto la riga un attimo piu' tardi.  ⚠ Un banco che
+    #    misura il PROPRIO ritardo e lo chiama guasto del prodotto e' peggio di
+    #    nessun banco: il rosso intermittente fa spegnere la maglia.
+    nuove_input = []
+    scaduta = time.time() + 8.0
+    while time.time() < scaduta:
+        time.sleep(0.7)
+        nuove_input = [r for r in righe_nuove_di(coda_prima, registro(600))
+                       if "input id=" in r]
+        if nuove_input:
+            break
     v["tastiera_dopo_incolla"] = {"righe_input_nuove": len(nuove_input),
                                   "esempio": nuove_input[-1][:120] if nuove_input else None}
     if not nuove_input:
