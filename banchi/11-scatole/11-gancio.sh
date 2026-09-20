@@ -134,7 +134,22 @@ UNITA_REMOTA=rete11-gancio
 # ⛔ Il tetto d'attesa della meta' remota.  ⚠ NON e' il tetto dei 3 minuti: e'
 #   quanto si sta ad aspettare prima di dire «non ho potuto guardare».  La
 #   famiglia `tutto` costa `[M]` 1 704 s (§7-bis.16), quindi non puo' essere 180.
-ATTESA_REMOTA=2400
+#
+# ⛔⛔ ED ERA 2 400, CIOE' UN QUARTO DI QUEL CHE SERVE — 20 settembre 2026.
+#
+# `[M]` Quel numero e' del 27 agosto, quando la famiglia `tutto` costava 1 704 s
+# su due scatole e meno maglie.  Da allora la fase 12 ha misurato giri da
+# **9 075 s** (incremento 11, 20 set) e **10 645 s** (incremento 4, 19 set) —
+# `fasi/12-kde.md`.  ⇒ Con 2 400 questa meta' molla dopo 40 minuti e scrive
+# «non ho potuto guardare» **mentre la' il giro sta ancora misurando**: un 3
+# che non parla del prodotto ma dell'orologio di chi aspetta.  Il punto era
+# gia' scritto come aperto in `fasi/12-kde.md` (il tetto della delega remota).
+#
+# ⭐ E il tetto non e' la protezione: la protezione e' la domanda sull'unita'
+#   dentro `attendi_remoto` — se la' muore, si torna subito, tetto o non tetto.
+#   ⇒ Il tetto serve solo a non aspettare in eterno un'unita' viva e muta, e
+#     percio' puo' stare largo: quattro ore, contro giri da tre.
+ATTESA_REMOTA=14400
 
 # ⛔ Il tetto sta QUI, dichiarato, e si stampa in ogni giro: un verdetto senza
 #    il suo metro e' un'opinione.

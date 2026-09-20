@@ -117,19 +117,98 @@
 #define SESSIONE_UNITA_KWIN "plasma-kwin_wayland.service"
 #define SESSIONE_UNITA_PLASMA "plasma-workspace.target"
 
+/*
+ * ⭐ FASE 13 — IL TERZO DESKTOP: XFCE.  `fasi/13-xfce.md`, incremento 1.
+ *
+ * ⛔⛔ E QUI CADE LA FORMA DEI PRIMI DUE, non si ripete.  GNOME porta Mutter e
+ *     KDE porta KWin; **XFCE non porta un compositore**: su Wayland si appoggia
+ *     a `labwc`, della famiglia `wlroots` (`STUDI.md` §xfce §1).
+ *
+ * ⇒ Le conseguenze che cambiano il codice, e non sono di stile:
+ *
+ *   1. ⛔ **Non c'e' nessuna unita' systemd d'utente da scavalcare.**  Su GNOME
+ *      si riscrive l'`ExecStart` di `org.gnome.Shell@wayland.service`, su KDE
+ *      quello di `plasma-kwin_wayland.service`; qui il compositore è un
+ *      processo che avviamo noi, e `scrivi_dropin()` **non ha oggetto**.
+ *   2. ⛔ **La misura NON entra nella nascita.**  `[M]` 20 set 2026, dentro
+ *      `rete11-xfce`: l'uscita nasce `HEADLESS-1 1280x720`, cablata, e nessun
+ *      protocollo ne crea una della misura voluta.  La misura si da' **dopo**,
+ *      da cliente Wayland (`zwlr_output_manager_v1` v4, che c'e').
+ *   3. ⭐ **La riga di avvio deve contenere `labwc` E `--session`**, e non per
+ *      gusto: `xfce4-session` legge `XFCE4_SESSION_COMPOSITOR` e, se non ci
+ *      trova tutt'e due, al logout esegue `loginctl terminate-session ''` —
+ *      cioe' ammazza **la sessione logind di REMOTIX** (`STUDI.md` §xfce §9.2).
+ *      ⇒ `--session` fa anche il lavoro buono: rende `xfce4-session` il client
+ *        primario di labwc, quindi quando esce lui **labwc termina da se'**.
+ */
+/* ⚠ La riga si scrive UNA volta e si usa DUE: come comando (con `exec`) e
+ *   dentro `XFCE4_SESSION_COMPOSITOR` (senza).  ⛔ Scriverla due volte vorrebbe
+ *   dire poterle far divergere, e divergendo scatterebbe la trappola del
+ *   logout senza che nessuna riga lo dica. */
+#define SESSIONE_RIGA_XFCE "labwc --session xfce4-session"
+#define SESSIONE_COMANDO_XFCE "exec " SESSIONE_RIGA_XFCE
+/* ⛔ Il processo del compositore, per nome: su XFCE la guardia contro la
+ *    seconda sessione non puo' chiedere a systemd — vedi `unita_inattiva()`. */
+#define SESSIONE_PROCESSO_XFCE "labwc"
+/* Il gestore di sessione sul bus D'UTENTE — `[M]` 20 set 2026: compare li', non
+ * su un bus privato, perche' `labwc` lo avviamo noi senza `dbus-run-session`.
+ * ⚠ Il nome non è l'interfaccia: `org.xfce.Session.Manager` (con un punto in
+ * piu') — `STUDI.md` §xfce §9.5. */
+#define SESSIONE_BUS_XFCE "org.xfce.SessionManager"
+
+/*
+ * ⛔⛔ E IL QUARTO VALORE NON E' UN DESKTOP: E' L'ONESTA'.
+ *
+ * Fino alla fase 12 una macchina che non aveva ne' GNOME ne' KDE veniva
+ * dichiarata **GNOME per ripiego**, e il prodotto provava ad avviare
+ * `gnome-session` che li' non esiste.  `[M]` 20 set 2026, `rete11-xfce`: il
+ * guasto non arrivava dove ci si aspetta — `scrivi_dropin()` rileggeva
+ * l'`ExecStart` di un'unita' inesistente, otteneva il vuoto, e scriveva
+ * «**un altro drop-in vince sul mio**»; poi la cattura accusava «**Mutter non
+ * espone RemoteDesktop**».  ⇒ Due innocenti accusati, e la causa vera —
+ * *GNOME non c'e'* — scritta una volta sola, all'avvio del server, dove il
+ * banco non la legge.
+ *
+ * ⭐ Con «un desktop per macchina» (`DECISIONI.md` §0.6) quel ripiego era
+ *   **l'unico posto in cui il prodotto poteva sbagliare desktop, e sbagliava in
+ *   silenzio**.  ⇒ Non si aggiunge XFCE all'elenco lasciandolo li': si toglie.
+ *   Altrimenti il giorno di LXQt si ripete identico.
+ *
+ * ⚠ I numeri vanno IN CODA: `SessioneDesktop` viaggia come `uint32_t` fra il
+ *   padre e il figlio, e spostare 0 o 1 romperebbe quel confine.
+ */
 typedef enum {
 	SESSIONE_DESKTOP_GNOME = 0,
 	SESSIONE_DESKTOP_KDE = 1,
+	SESSIONE_DESKTOP_XFCE = 2,
+	SESSIONE_DESKTOP_NESSUNO = 3,
 } SessioneDesktop;
 
 /*
  * Quale desktop ha questa macchina — deciso UNA volta per processo.
  *
- * ⛔ KDE **solo** se c'e' `startplasma-wayland` e NON c'e' `gnome-session`.
- *    In ogni altro caso GNOME, cioe' quel che il prodotto faceva prima della
- *    fase 12: nessuna macchina servita cambia comportamento per questa riga, e
- *    il caso «tutti e due» (ambiguo per costruzione) si DICHIARA — vedi
- *    `sessione_desktop_spiega()`.
+ * ⭐ È una RICERCA, non un arbitrato: `DECISIONI.md` §0.6 — una macchina, un
+ *   desktop; le macchine con piu' desktop installati sono **fuori scopo**.
+ *
+ * L'ordine, e ogni riga ha la sua ragione:
+ *
+ *   1. `startplasma-wayland` **e non** `gnome-session`  → KDE
+ *   2. tutti e due                                      → GNOME, e si DICHIARA
+ *      ambiguo (fuori scopo: si sceglie e si dice, non si cura)
+ *   3. `gnome-session`                                  → GNOME
+ *   4. `xfce4-session`                                  → XFCE   ⭐ fase 13
+ *   5. nessuno                                          → **NESSUNO**, e non
+ *      nasce niente — vedi il riquadro dell'enum
+ *
+ * ⚠ L'ordine NON è libero: i primi tre rami restano testualmente quelli della
+ *   fase 12, quindi **nessuna macchina servita oggi cambia comportamento**.  Il
+ *   ramo di XFCE si infila fra l'ultimo desktop conosciuto e il ripiego.
+ *
+ * ⛔ E il marcatore di XFCE è `xfce4-session`, **non `labwc`**: labwc è il
+ *    compositore di FAMIGLIA, lo stesso che usa LXQt, e riconoscere su di lui
+ *    confonderebbe due desktop diversi.  `labwc` resta una **precondizione**, e
+ *    la sua assenza si dichiara alla nascita invece di scoprirla da un `exec`
+ *    fallito.
  */
 SessioneDesktop sessione_desktop(void);
 

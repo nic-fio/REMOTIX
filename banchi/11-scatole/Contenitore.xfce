@@ -321,5 +321,32 @@ COPY adattatore.xfce.sh /usr/local/lib/rete11/adattatore.sh
 #     consegnata, cioe' si proverebbe un simulacro (§3.5).
 #     ⇒ I permessi stanno in `11-accendi.sh`, dichiarati riga per riga.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ⭐ R6 — 20 settembre 2026, incremento 1 della fase 13: IL DESKTOP VERO.
+#
+# ⛔ La §2 qui sopra diceva: *«il contorno grafico NO: entrera' quando entrera'
+#    il prodotto, e allora la ricetta crescera' dichiarando che cosa e' cambiato
+#    e quando»*.  ⇒ **E' adesso**: la fase 13 fa nascere una sessione XFCE, e
+#    una sessione senza pannello e senza scrivania non e' XFCE — e' un
+#    compositore con dentro niente.
+#
+# ⚠ E non e' solo estetica: `[R]` `STUDI.md` §xfce §10.5 — `xfdesktop` esce con
+#   `exit(1)` se non trova `zwlr_layer_shell_v1`, e `xfce4-panel` esce senza far
+#   niente se `n_monitors == 0`.  ⇒ Senza di loro **quei due guasti non si
+#   possono nemmeno vedere**, e sono due dei modi in cui la nascita fallisce.
+#
+# ⭐ E la stessa coppia che l'utente ha chiesto su GNOME e su KDE — un terminale
+#   e un gestore di file, cioe' quel che serve per LAVORARE dentro la sessione
+#   invece di guardare uno sfondo: qui sono `xfce4-terminal` e `thunar`, e `nano`.
+#   ⛔ Sono del BANCO, non del prodotto: REMOTIX non li apre e non li nomina.
+#
+# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xfce4-panel xfdesktop4 \
+        xfce4-terminal thunar \
+        nano \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

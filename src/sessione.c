@@ -45,8 +45,13 @@
 #include "registro.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <locale.h>
+#include <signal.h>
 #include <string.h>
+/* ⚠ `g_stat`, `g_open`, `g_close`: la famiglia di GLib, non quella di POSIX —
+ *   è quella che `nodo_della_scheda()` e `processi_miei()` usano. */
+#include <glib/gstdio.h>
 
 /* Su questa macchina, senza accelerazione, la sessione ci mette una decina di
  * secondi: il margine e' per le macchine piu' lente. */
@@ -279,6 +284,8 @@ static void riconosci_desktop(void)
 	if (g_once_init_enter(&fatto)) {
 		g_autofree char *gnome = g_find_program_in_path("gnome-session");
 		g_autofree char *plasma = g_find_program_in_path("startplasma-wayland");
+		g_autofree char *xfce = g_find_program_in_path("xfce4-session");
+		g_autofree char *labwc = g_find_program_in_path(SESSIONE_PROCESSO_XFCE);
 
 		if (plasma && !gnome) {
 			desktop_scelto = SESSIONE_DESKTOP_KDE;
@@ -292,11 +299,33 @@ static void riconosci_desktop(void)
 		} else if (gnome) {
 			desktop_scelto = SESSIONE_DESKTOP_GNOME;
 			desktop_spiegato = "GNOME (c'e' gnome-session)";
+		} else if (xfce) {
+			/* ⭐ FASE 13.  Il marcatore è `xfce4-session`, non `labwc`: vedi
+			 *    `sessione.h`.  `labwc` è una PRECONDIZIONE, e la sua assenza
+			 *    si dice subito invece di farla scoprire a un `exec` fallito. */
+			desktop_scelto = SESSIONE_DESKTOP_XFCE;
+			desktop_spiegato =
+				labwc ? "XFCE (c'e' xfce4-session, e labwc per farlo girare)"
+				      : "XFCE (c'e' xfce4-session) — ⛔ ma NON c'e' labwc, e XFCE "
+				        "su Wayland non porta un compositore suo: la sessione non "
+				        "potra' nascere finche' non lo si installa";
 		} else {
-			desktop_scelto = SESSIONE_DESKTOP_GNOME;
-			desktop_spiegato = "GNOME per ripiego — ⛔ non trovo NE' gnome-session NE' "
-			                   "startplasma-wayland: nessuna sessione grafica potra' "
-			                   "nascere";
+			/*
+			 * ⛔⛔ QUI C'ERA IL RIPIEGO SU GNOME, ed è stato TOLTO — fase 13,
+			 *     incremento 1.  La ragione per esteso sta in `sessione.h`,
+			 *     sul quarto valore dell'enum; in una riga: dichiararsi GNOME
+			 *     su una macchina che GNOME non ce l'ha faceva accusare due
+			 *     innocenti — un drop-in altrui e Mutter — mentre la causa
+			 *     vera era scritta una volta sola, dove nessuno la leggeva.
+			 * ⚠ È un cambiamento di comportamento, ed è voluto: su una
+			 *   macchina senza desktop prima si provava e si falliva male,
+			 *   adesso non si prova e si dice perche'.
+			 */
+			desktop_scelto = SESSIONE_DESKTOP_NESSUNO;
+			desktop_spiegato = "⛔ NESSUN DESKTOP RICONOSCIUTO — non trovo "
+			                   "gnome-session, ne' startplasma-wayland, ne' "
+			                   "xfce4-session: nessuna sessione grafica potra' "
+			                   "nascere, e non ne provo nessuna";
 		}
 		g_once_init_leave(&fatto, 1);
 	}
@@ -319,6 +348,135 @@ static gboolean e_kde(void)
 	return sessione_desktop() == SESSIONE_DESKTOP_KDE;
 }
 
+/*
+ * ⛔⛔ PERCHE' TRE PREDICATI E NON UN `!e_kde()` — fase 13.
+ *
+ * In questo file non esiste nemmeno un `!e_kde()` scritto per esteso: la
+ * negazione è sempre un `else` o una **caduta in fondo** — sette punti, e li
+ * si legge come «GNOME».  ⚠ Aggiungere un terzo valore all'enum li trasforma
+ * TUTTI INSIEME in «GNOME **o** XFCE», e il compilatore non dice niente.
+ *
+ * ⇒ Percio' ogni punto guadagna un `if (e_xfce())` **davanti** al blocco di
+ *   GNOME, che resta testualmente quello di prima e torna con `goto`/`return`.
+ *   Chi aggiunge il quarto desktop rifaccia lo stesso giro: la lista dei punti
+ *   sta in `fasi/13-xfce.md`, incremento 1.
+ */
+/*
+ * Il nodo di rendering da dare a wlroots — ⛔ CERCATO, non inchiodato.
+ *
+ * ⚠ `renderD128` e `renderD129` si scambiano fra due avvii (`provisiona.sh`
+ *   §5), e sulla macchina vera il secondo nodo è una scheda **esclusa apposta**.
+ *   ⇒ Si prende il primo `renderD*` che si riesce ad APRIRE: aprire è la
+ *     domanda giusta, perche' è esattamente quel che farà wlroots.
+ *
+ * ⛔⛔ E questo non è zelo: se l'apertura fallisce, wlroots **non dice niente**
+ *     e ripiega su pixman, cioe' sul software.  Il sintomo per l'utente è «è
+ *     lento», e nessuna riga lo spiega — la stessa forma del codificatore che
+ *     ripiegava in software, con l'aggravante che lì almeno lo dichiarava.
+ *
+ * Torna NULL se non ce n'è nessuno: chi chiama lo dice nel registro.
+ */
+static char *nodo_della_scheda(void)
+{
+	g_autoptr(GDir) dri = g_dir_open("/dev/dri", 0, NULL);
+	const char *voce;
+	g_autofree char *primo = NULL;
+
+	if (!dri)
+		return NULL;
+	while ((voce = g_dir_read_name(dri))) {
+		g_autofree char *percorso = NULL;
+		int fd;
+
+		if (!g_str_has_prefix(voce, "renderD"))
+			continue;
+		percorso = g_build_filename("/dev/dri", voce, NULL);
+		fd = g_open(percorso, O_RDWR | O_CLOEXEC, 0);
+		if (fd < 0)
+			continue;
+		g_close(fd, NULL);
+		/* ⚠ Il primo in ordine di nome, per avere una risposta STABILE fra due
+		 *   avvii invece di quella che l'ordine del filesystem regala. */
+		if (!primo || g_strcmp0(voce, primo) < 0) {
+			g_free(primo);
+			primo = g_strdup(voce);
+		}
+	}
+	return primo ? g_build_filename("/dev/dri", primo, NULL) : NULL;
+}
+
+static gboolean e_xfce(void)
+{
+	return sessione_desktop() == SESSIONE_DESKTOP_XFCE;
+}
+
+static gboolean e_nessuno(void)
+{
+	return sessione_desktop() == SESSIONE_DESKTOP_NESSUNO;
+}
+
+/*
+ * Il nome corto del desktop, per le righe di registro che ne nominavano UNO.
+ *
+ * ⚠ `LEZIONI.md` §1.9, quinta regola: *una riga scritta quando esisteva un solo
+ *   chiamante diventa falsa al secondo, e nessun compilatore lo dice*.  `[M]` 20
+ *   set 2026, prima prova di XFCE: il tema del cursore — scritto per KWin e
+ *   riusato da labwc — annunciava «⭐ **Plasma**: tema remotix-invisibile» dentro
+ *   una sessione XFCE.  ⇒ La riga non si duplica: si fa dire il nome giusto.
+ */
+static const char *nome_desktop(void)
+{
+	switch (sessione_desktop()) {
+	case SESSIONE_DESKTOP_KDE:
+		return "Plasma";
+	case SESSIONE_DESKTOP_XFCE:
+		return "XFCE";
+	case SESSIONE_DESKTOP_NESSUNO:
+		return "nessun desktop";
+	default:
+		return "GNOME";
+	}
+}
+
+/*
+ * Quanti processi di QUESTO utente si chiamano cosi'.
+ *
+ * ⛔ Serve perche' su XFCE il compositore non è un'unita' systemd: la domanda
+ *    «la sessione di prima è finita?» non si puo' fare a systemd, e la risposta
+ *    che systemd darebbe — `inactive` per un'unita' che non esiste — sarebbe
+ *    un **sì** (`[M]` 20 set 2026, dentro `rete11-xfce`: codice 4, «inactive»).
+ *    ⇒ La guardia non fallirebbe: sparirebbe.  Qui si guarda un fatto.
+ * ⚠ Si legge `/proc` invece di chiamare `pgrep`: un attrezzo in meno da avere
+ *   installato, e nessuna riga di comando da citare male.
+ */
+static int processi_miei(const char *nome)
+{
+	g_autoptr(GDir) proc = g_dir_open("/proc", 0, NULL);
+	const char *voce;
+	uid_t mio = getuid();
+	int quanti = 0;
+
+	if (!proc)
+		return -1;
+	while ((voce = g_dir_read_name(proc))) {
+		g_autofree char *comm = NULL;
+		g_autofree char *percorso = NULL;
+		GStatBuf st;
+
+		if (!g_ascii_isdigit(voce[0]))
+			continue;
+		percorso = g_build_filename("/proc", voce, "comm", NULL);
+		if (g_stat(percorso, &st) != 0 || st.st_uid != mio)
+			continue;
+		if (!g_file_get_contents(percorso, &comm, NULL, NULL))
+			continue;
+		g_strstrip(comm);
+		if (g_strcmp0(comm, nome) == 0)
+			quanti++;
+	}
+	return quanti;
+}
+
 bool sessione_viva(void)
 {
 	g_autoptr(GDBusConnection) bus = NULL;
@@ -333,6 +491,16 @@ bool sessione_viva(void)
 	 *    dichiarata in `sessione.h` — «viva» non vuol dire «pronta». */
 	if (e_kde())
 		return nome_ha_padrone(bus, "org.kde.KWin");
+
+	/* ⭐ FASE 13 — su XFCE la domanda debole è il nome del gestore di sessione.
+	 *    `[M]` 20 set 2026: compare sul bus D'UTENTE, perche' `labwc` lo
+	 *    avviamo noi senza `dbus-run-session` — cioe' proprio il bus che
+	 *    `sessione_bus()` già apre.  ⚠ E la debolezza è la stessa dichiarata per
+	 *    gli altri due, con un margine piu' largo: fra il nome e la sessione
+	 *    USABILE ci sono fino a 8 s per gruppo di priorità, e sono strutturali
+	 *    (`STARTUP_TIMEOUT_WAYLAND`, `STUDI.md` §xfce §9.4). */
+	if (e_xfce())
+		return nome_ha_padrone(bus, SESSIONE_BUS_XFCE);
 
 	/*
 	 * ⛔ NON BASTA CHE IL NOME SIA OCCUPATO, per due ragioni diverse e tutte e
@@ -547,6 +715,28 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 		return SESSIONE_SANA;
 	}
 
+	/*
+	 * ⭐ FASE 13 — su XFCE, stessa disciplina di KDE e una dichiarazione in piu'.
+	 *
+	 * ⛔ Qui l'uscita NON è della misura chiesta, e non lo sarà alla nascita:
+	 *    `[M]` 20 set 2026 nasce `HEADLESS-1 1280x720` cablata, e la misura si
+	 *    dà dopo col protocollo (`zwlr_output_manager_v1`).  ⇒ «sana» qui vuol
+	 *    dire «c'è», non «della misura giusta», e chi legge deve saperlo.
+	 */
+	if (e_xfce()) {
+		if (!nome_ha_padrone(bus, SESSIONE_BUS_XFCE)) {
+			registro_dice(REG_SESSIONE,
+			              "nessun " SESSIONE_BUS_XFCE " sul bus: la sessione XFCE "
+			              "non c'e'");
+			return SESSIONE_MORTA;
+		}
+		registro_dettaglio(REG_SESSIONE,
+		                   "il gestore di sessione XFCE c'e' sul bus: la sessione e' "
+		                   "viva — ⚠ e la sua uscita NON è della misura chiesta: su "
+		                   "wlroots nasce cablata e si ridimensiona dopo");
+		return SESSIONE_SANA;
+	}
+
 	risposta = chiedi_a_mutter(bus, "org.gnome.Mutter.DisplayConfig",
 	                           "/org/gnome/Mutter/DisplayConfig",
 	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", &sbaglio);
@@ -696,7 +886,7 @@ static gboolean scrivi_cursore_vuoto(const char *percorso)
 }
 
 /* Torna la cartella da mettere in `XCURSOR_PATH`, o NULL (detto nel registro). */
-static char *scrivi_tema_cursore_kde(const char *runtime)
+static char *scrivi_tema_cursore(const char *runtime)
 {
 	/* I nomi che i programmi chiedono davvero: non e' l'elenco completo — non
 	 * esiste — ma copre Breeze e Adwaita, e quel che manca resta invisibile,
@@ -730,9 +920,9 @@ static char *scrivi_tema_cursore_kde(const char *runtime)
 	                         "dentro l'immagine catturata, e il client disegna il suo\n",
 	                         -1, NULL)) {
 		registro_dice(REG_SESSIONE,
-		              "⚠ Plasma: tema del cursore NON scritto in %s: chi guarda vedra' "
+		              "⚠ %s: tema del cursore NON scritto in %s: chi guarda vedra' "
 		              "DUE puntatori (il suo, e quello del desktop che insegue)",
-		              tema);
+		              nome_desktop(), tema);
 		return NULL;
 	}
 	for (unsigned i = 0; i < G_N_ELEMENTS(FORME); i++) {
@@ -743,14 +933,15 @@ static char *scrivi_tema_cursore_kde(const char *runtime)
 	}
 	if (scritte == 0) {
 		registro_dice(REG_SESSIONE,
-		              "⚠ Plasma: nessuna forma del cursore scritta: KWin ripieghera' sul "
-		              "tema visibile, e i puntatori resteranno due");
+		              "⚠ %s: nessuna forma del cursore scritta: il compositore "
+		              "ripieghera' sul tema visibile, e i puntatori resteranno due",
+		              nome_desktop());
 		return NULL;
 	}
 	registro_dice(REG_SESSIONE,
-	              "⭐ Plasma: tema «%s» con %u forme trasparenti in %s — il cursore di "
-	              "KWin non si vedra' nell'immagine, e chi guarda ne avra' UNO solo",
-	              TEMA_CURSORE, scritte, tema);
+	              "⭐ %s: tema «%s» con %u forme trasparenti in %s — il cursore del "
+	              "compositore non si vedra' nell'immagine, e chi guarda ne avra' UNO solo",
+	              nome_desktop(), TEMA_CURSORE, scritte, tema);
 	return g_steal_pointer(&base);
 }
 
@@ -880,7 +1071,7 @@ static char **componi_ambiente(void)
 	 */
 	if (e_kde()) {
 		g_autofree char *regole = scrivi_regole_menu_kde(runtime);
-		g_autofree char *icone = scrivi_tema_cursore_kde(runtime);
+		g_autofree char *icone = scrivi_tema_cursore(runtime);
 
 		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=plasma-"));
 		/* ⚠ DAVANTI a `/etc/xdg`, non al suo posto: da li' viene
@@ -895,6 +1086,88 @@ static char **componi_ambiente(void)
 		 *    perche' il tema sta in `XDG_RUNTIME_DIR`, che nessuna ricerca
 		 *    predefinita guarda — con le cartelle di sistema in coda, per non
 		 *    togliere i temi veri a chi li cerca per altro. */
+		if (icone) {
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" TEMA_CURSORE));
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_SIZE=24"));
+			g_ptr_array_add(ambiente,
+			                g_strdup_printf("XCURSOR_PATH=%s:%s", icone,
+			                                "/usr/share/icons:/usr/local/share/icons"));
+		}
+		goto la_coda;
+	}
+
+	/*
+	 * ⭐⭐ FASE 13 — L'AMBIENTE DI XFCE, e ogni riga ha pagato il suo posto
+	 *      (`STUDI.md` §xfce §9.3, §10.1; `[M]` provato dentro `rete11-xfce` il
+	 *      20 set 2026: sessione intera viva, pannello e scrivania compresi).
+	 *
+	 * ⭐ La colonna «da togliere» è già gratis: `componi_ambiente()` costruisce
+	 *   da zero e non eredita niente tranne `PATH` — `DISPLAY`,
+	 *   `WAYLAND_DISPLAY`, `SESSION_MANAGER` non ci sono per costruzione.  ⛔ Il
+	 *   pericolo è solo quel che si AGGIUNGE, ed è il blocco di GNOME qui sotto
+	 *   in cui XFCE cadrebbe senza questo `if`.
+	 */
+	if (e_xfce()) {
+		g_autofree char *icone = scrivi_tema_cursore(runtime);
+
+		/* ⛔ SECCO e maiuscolo, senza suffissi: labwc ci metterebbe
+		 *    `labwc:wlroots`, e garcon non spezza sui `:` — con un suffisso le
+		 *    voci `OnlyShowIn=XFCE;` **spariscono** dal menu. */
+		g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=XFCE"));
+		g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_DESKTOP=xfce"));
+		g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_TYPE=wayland"));
+		/* ⚠ Non perche' manchi — garcon ha un ripiego — ma per non EREDITARNE
+		 *   una sbagliata: il controllo là dentro è `prefix != NULL`. */
+		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=xfce-"));
+		/* ⛔ Il «senza schermo» di questa famiglia.  Con `headless` non nasce
+		 *    nessuna `wlr_session` e libseat non viene sfiorato: il muro su cui
+		 *    KWin moriva qui non esiste. */
+		g_ptr_array_add(ambiente, g_strdup("WLR_BACKENDS=headless"));
+		g_ptr_array_add(ambiente, g_strdup("WLR_LIBINPUT_NO_DEVICES=1"));
+		/* ⛔⛔ SENZA RIPIEGO: se questo nodo non si apre, wlroots ripiega su
+		 *     pixman — **software, in silenzio**.  È la stessa forma del
+		 *     codificatore che ripiega e lo dichiara, ma qui non lo dichiara
+		 *     nessuno: l'unico modo di accorgersene è che i numeri crollino. */
+		{
+			g_autofree char *nodo = nodo_della_scheda();
+
+			if (nodo) {
+				g_ptr_array_add(ambiente,
+				                g_strdup_printf("WLR_RENDER_DRM_DEVICE=%s", nodo));
+				registro_dice(REG_SESSIONE,
+				              "⭐ XFCE: la scheda che do a wlroots è %s (aperta, non "
+				              "dedotta)", nodo);
+			} else {
+				registro_dice(REG_SESSIONE,
+				              "⛔ XFCE: nessun nodo /dev/dri/renderD* apribile — NON "
+				              "passo WLR_RENDER_DRM_DEVICE, e wlroots sceglierà da sé. "
+				              "⚠ Se ripiega su pixman lo fa IN SILENZIO: i numeri "
+				              "crolleranno e questa è l'unica riga che lo spiega");
+			}
+		}
+		/* ⛔ OBBLIGATORIA: senza, su headless labwc **non propaga**
+		 *    `WAYLAND_DISPLAY` al bus e a systemd, e lo fa in silenzio ⇒ le
+		 *    applicazioni della sessione non trovano il compositore. */
+		g_ptr_array_add(ambiente, g_strdup("LABWC_UPDATE_ACTIVATION_ENV=1"));
+		/* ⛔ SECCO: `wayland,x11` fa risorgere il salvaschermo su Xwayland e
+		 *    riaccende XSETTINGS e i grab — due comportamenti sotto una sola
+		 *    etichetta, che è quel che rende una misura incomparabile. */
+		g_ptr_array_add(ambiente, g_strdup("GDK_BACKEND=wayland"));
+		/*
+		 * ⛔⛔ LA CINTURA DEL LOGOUT, e non è una variabile decorativa.
+		 *
+		 * `xfce4-session` legge QUESTA, non quel che abbiamo eseguito davvero, e
+		 * se non ci trova **sia** `labwc` **sia** `--session` al logout esegue
+		 * `loginctl terminate-session ''` — cioe' ammazza la sessione logind di
+		 * REMOTIX (`STUDI.md` §xfce §9.2).  ⇒ Ci si mette la riga ESATTA che si
+		 *   esegue, togliendo l'`exec` davanti che qui non c'entra.
+		 */
+		g_ptr_array_add(ambiente,
+		                g_strdup("XFCE4_SESSION_COMPOSITOR=" SESSIONE_RIGA_XFCE));
+		/* Il cursore: la stessa cura di KDE (tema 1x1 ad alfa zero), con un
+		 * vincolo in meno — `XCURSOR_SIZE` qui non è obbligatoria.  ⛔ Ma il
+		 * tema deve ESSERCI: con un tema vuoto wlroots ripiega su uno
+		 * incorporato e VISIBILE, che è il contrario di quel che si voleva. */
 		if (icone) {
 			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" TEMA_CURSORE));
 			g_ptr_array_add(ambiente, g_strdup("XCURSOR_SIZE=24"));
@@ -1035,6 +1308,31 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
 	char *mostra[] = { "systemctl",   "--user", "show", "-p", "ExecStart",
 		           "--value", (char *) unita, NULL };
+
+	/*
+	 * ⛔⛔ FASE 13 — SU XFCE QUESTA FUNZIONE NON HA OGGETTO, e non è un ramo in
+	 *     meno: è un presupposto che cade.
+	 *
+	 * Questa funzione esiste perche' su GNOME e su KDE **il compositore è
+	 * un'unità systemd d'utente** di cui si riscrive l'`ExecStart` — ed è li'
+	 * che la misura entra nella nascita.  Su XFCE il compositore lo lanciamo
+	 * noi, unità non ce n'è, e `[M]` 20 set 2026 l'uscita nasce comunque
+	 * `1280x720` cablata: **la misura non può entrare nella nascita**, per
+	 * nessuna strada.
+	 *
+	 * ⚠ E si DICE, invece di tornare `TRUE` in silenzio: una funzione che
+ *   ha ricevuto una misura e non ne ha fatto niente, senza una riga, è il
+	 *   modo in cui due numeri si perdono e nessuno se ne accorge.
+	 */
+	if (e_xfce()) {
+		registro_dice(REG_SESSIONE,
+		              "XFCE: nessun drop-in da scrivere — il compositore non è "
+		              "un'unità di systemd, lo avvio io.  ⛔ E la tela chiesta "
+		              "(%ux%u) NON entra nella nascita: su wlroots l'uscita nasce "
+		              "cablata e si ridimensiona dopo, col protocollo",
+		              larghezza, altezza);
+		return TRUE;
+	}
 
 	if (!runtime || !*runtime) {
 		registro_dice(REG_SESSIONE,
@@ -1227,7 +1525,14 @@ static gboolean avvia(void)
 	 * REMOTIX viene riavviato, il desktop dell'utente non se ne accorge. */
 	char *argv[] = { "setsid", "--fork", "sh", "-c", NULL, NULL };
 	int stato = 0;
-	const char *comando = e_kde() ? SESSIONE_COMANDO_KDE : SESSIONE_COMANDO_GNOME;
+	/* ⚠ A TRE VIE, e non un ternario annidato: chi aggiunge il quarto desktop
+	 *   deve vedere l'elenco, non doverlo districare. */
+	const char *comando = SESSIONE_COMANDO_GNOME;
+
+	if (e_kde())
+		comando = SESSIONE_COMANDO_KDE;
+	else if (e_xfce())
+		comando = SESSIONE_COMANDO_XFCE;
 
 	ambiente = componi_ambiente();
 	if (!ambiente)
@@ -1324,6 +1629,42 @@ static gboolean unita_inattiva(void)
 	 *    briglia del figlio a farsi vedere sul bus. */
 	if (e_kde())
 		return unita_ferma(SESSIONE_UNITA_KWIN) && unita_ferma(SESSIONE_UNITA_PLASMA);
+
+	/*
+	 * ⛔⛔ FASE 13 — SU XFCE QUESTA GUARDIA NON FALLIREBBE: SPARIREBBE.
+	 *
+	 * `[M]` 20 set 2026, dentro `rete11-xfce`: `systemctl --user is-active` su
+	 * un'unità **che non esiste** risponde **`inactive`**, codice 4.  E
+	 * `unita_ferma()` qui sopra accetta `inactive` ⇒ su XFCE, dove unità non
+	 * ce n'è nessuna, la domanda risponderebbe **sì sempre**: la protezione
+	 * contro una seconda sessione — pagata il 16 agosto 2026 — non darebbe un
+	 * rosso, non darebbe una riga, semplicemente non ci sarebbe piu'.
+	 *
+	 * ⇒ Si guarda un FATTO, e ce ne vogliono due perche' nessuno dei due basta:
+	 *   il nome sul bus può essere già sparito mentre il compositore sta ancora
+	 *   morendo, e un `labwc` può esistere un istante prima di prendere il nome.
+	 */
+	if (e_xfce()) {
+		int quanti = processi_miei(SESSIONE_PROCESSO_XFCE);
+
+		if (quanti < 0) {
+			/* ⛔ «non ho potuto guardare» non è «è libero»: si dice di no,
+			 *    e chi chiama riprova. */
+			registro_dice(REG_SESSIONE,
+			              "⛔ XFCE: non riesco a leggere /proc, quindi non so se "
+			              "c'è ancora un " SESSIONE_PROCESSO_XFCE " mio — e «non "
+			              "lo so» qui vale «no»");
+			return FALSE;
+		}
+		if (quanti > 0) {
+			registro_dice(REG_SESSIONE,
+			              "XFCE: ci sono ancora %d " SESSIONE_PROCESSO_XFCE
+			              " miei: la sessione di prima non è finita", quanti);
+			return FALSE;
+		}
+		return TRUE;
+	}
+
 	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
@@ -1377,10 +1718,102 @@ static gboolean esci_kde(gboolean a_forza)
 	return risposta != NULL;
 }
 
+/*
+ * ⭐ FASE 13 — L'USCITA DI XFCE.  Due mosse, e la seconda non è `StopUnit`.
+ *
+ * ⛔ Su GNOME e su KDE la forza è systemd, che ferma un'unità.  Qui unità non
+ *    ce n'è: la forza è un segnale al processo del compositore.
+ * ⭐ E basta quello, perche' la riga di avvio porta `--session`: `xfce4-session`
+ *   è il client primario di labwc ⇒ morto labwc, la sessione va con lui, e
+ *   morto `xfce4-session`, labwc esce da sé.  `[M]` 20 set 2026, provato dentro
+ *   `rete11-xfce`: ucciso `labwc`, di `xfce4-session`, del pannello e della
+ *   scrivania non è rimasto niente.
+ * ⚠ Il nome sul bus è `org.xfce.SessionManager`, l'interfaccia è
+ *   `org.xfce.Session.Manager` — con un punto in piu'.  Confonderli dà
+ *   «metodo sconosciuto», che somiglia a «la sessione non risponde».
+ */
+static gboolean esci_xfce(void)
+{
+	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!bus)
+		return FALSE;
+	/* (show_dialog, allow_save) — tutt'e due falsi: nessuno può rispondere a un
+	 * dialogo dentro una sessione remota che stiamo chiudendo. */
+	risposta = g_dbus_connection_call_sync(
+		bus, SESSIONE_BUS_XFCE, "/org/xfce/SessionManager",
+		"org.xfce.Session.Manager", "Logout", g_variant_new("(bb)", FALSE, FALSE),
+		NULL, G_DBUS_CALL_FLAGS_NO_AUTO_START, ATTESA_RISPOSTA_MS, NULL, &sbaglio);
+	if (!risposta) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ XFCE: Logout non è passato (%s)",
+		              sbaglio ? sbaglio->message : "senza motivo");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static gboolean uccidi_xfce(void)
+{
+	g_autoptr(GDir) proc = g_dir_open("/proc", 0, NULL);
+	const char *voce;
+	uid_t mio = getuid();
+	int colpiti = 0;
+
+	if (!proc)
+		return FALSE;
+	while ((voce = g_dir_read_name(proc))) {
+		g_autofree char *comm = NULL;
+		g_autofree char *percorso = NULL;
+		GStatBuf st;
+
+		if (!g_ascii_isdigit(voce[0]))
+			continue;
+		percorso = g_build_filename("/proc", voce, "comm", NULL);
+		if (g_stat(percorso, &st) != 0 || st.st_uid != mio)
+			continue;
+		if (!g_file_get_contents(percorso, &comm, NULL, NULL))
+			continue;
+		g_strstrip(comm);
+		if (g_strcmp0(comm, SESSIONE_PROCESSO_XFCE) != 0)
+			continue;
+		/* ⚠ SIGTERM, non SIGKILL: labwc chiude i suoi client, e un SIGKILL
+		 *   lascerebbe dietro proprio quel che C7 va a cercare. */
+		if (kill((pid_t) g_ascii_strtoll(voce, NULL, 10), SIGTERM) == 0)
+			colpiti++;
+	}
+	registro_dice(REG_SESSIONE,
+	              "XFCE: mandato SIGTERM a %d " SESSIONE_PROCESSO_XFCE " miei", colpiti);
+	return colpiti > 0;
+}
+
 bool sessione_termina(void)
 {
 	if (!sessione_viva()) {
 		registro_dice(REG_SESSIONE, "non c'era nessuna sessione da fermare");
+		return false;
+	}
+
+	if (e_xfce()) {
+		registro_dice(REG_SESSIONE,
+		              "chiedo alla sessione XFCE di uscire "
+		              "(org.xfce.Session.Manager.Logout)");
+		if (esci_xfce() && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita");
+			return true;
+		}
+		registro_dice(REG_SESSIONE,
+		              "⚠ la sessione non esce: la chiudo a forza (SIGTERM a "
+		              SESSIONE_PROCESSO_XFCE "), cio' che non e' stato salvato va "
+		              "perduto — ⛔ e qui la forza non è systemd: su XFCE il "
+		              "compositore non è un'unità");
+		if (uccidi_xfce() && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita, a forza");
+			return true;
+		}
+		registro_dice(REG_SESSIONE, "⛔ la sessione grafica non e' uscita nemmeno a forza");
 		return false;
 	}
 
@@ -1532,6 +1965,62 @@ void sessione_impostazioni(void)
 		              "⚠ Plasma: le impostazioni della sessione (sospensione, menu) "
 		              "non le metto ancora — fase 12, incrementi dopo il primo.  Il "
 		              "blocco del desktop e' spento dalla riga di avvio");
+		return;
+	}
+	/*
+	 * ⭐ FASE 13 — su XFCE: una cosa sola adesso, e le altre dichiarate.
+	 *
+	 * ⛔ LA CINTURA DEL LOGOUT, che è l'unica che non può aspettare: se
+	 *    `xfce4-session` decide che il compositore non va bene, al logout esegue
+	 *    `loginctl terminate-session ''` e **ammazza la sessione logind di
+	 *    REMOTIX**.  L'ambiente porta già `XFCE4_SESSION_COMPOSITOR` scritta
+	 *    bene; questa è la seconda cintura, e ha la precedenza sulla prima.
+	 *
+	 * ⛔⛔ E SI RILEGGE.  `xfconf-query` esce con **zero anche quando il demone
+	 *     ha rifiutato** e rimesso il valore di prima: l'API è asincrona e la
+	 *     cache locale risponde per prima.  ⇒ Una scrittura riuscita non è una
+	 *     configurazione applicata (`STUDI.md` §xfce §10.6), ed è
+	 *     `LEZIONI.md` §1.9 spostata dalla misura alla configurazione.
+	 */
+	if (e_xfce()) {
+		char *scrivi[] = { "xfconf-query", "-c", "xfce4-session", "-p",
+		                   "/general/WaylandLogoutCommand", "-n", "-t", "string",
+		                   "-s", "/bin/true", NULL };
+		char *rileggi[] = { "xfconf-query", "-c", "xfce4-session", "-p",
+		                    "/general/WaylandLogoutCommand", NULL };
+		g_autofree char *letto = NULL;
+
+		esegui(scrivi);
+		letto = chiedi(rileggi);
+		if (letto)
+			g_strstrip(letto);
+		if (g_strcmp0(letto, "/bin/true") == 0)
+			registro_dice(REG_SESSIONE,
+			              "⭐ XFCE: WaylandLogoutCommand = /bin/true, RILETTA — la "
+			              "seconda cintura contro il logout che ammazzerebbe la "
+			              "sessione di REMOTIX è in vigore");
+		else
+			registro_dice(REG_SESSIONE,
+			              "⛔ XFCE: WaylandLogoutCommand NON è in vigore (rileggo "
+			              "«%s»): resta la prima cintura, "
+			              "XFCE4_SESSION_COMPOSITOR.  ⚠ Se cadesse anche quella, al "
+			              "logout xfce4-session eseguirebbe «loginctl "
+			              "terminate-session» e porterebbe via la sessione di REMOTIX",
+			              letto ? letto : "non lo so");
+
+		/* ⚠ La sessione salvata è legata al NOME DEL SOCKET: una salvata su un
+		 *   altro schermo risorge con geometrie di quello.  Si cancella. */
+		{
+			g_autofree char *cache = g_build_filename(g_get_home_dir(), ".cache",
+			                                          "sessions", NULL);
+			char *via[] = { "rm", "-rf", cache, NULL };
+
+			esegui(via);
+		}
+		registro_dice(REG_SESSIONE,
+		              "⚠ XFCE: le altre impostazioni (energia, blocco, voci del "
+		              "pannello, menu) non le metto ancora — fase 13, incrementi "
+		              "dopo il primo");
 		return;
 	}
 	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
@@ -1746,6 +2235,22 @@ guint32 sessione_inibisci(void)
 		              "appena compare sul bus");
 		return 0;
 	}
+	/*
+	 * ⭐ FASE 13 — su XFCE NON si inibisce, ed è una scelta con una misura
+	 *    dietro, non una dimenticanza: `xfce4-session` **non consulta
+	 *    l'inibitore** quando esegue `Logout` (`STUDI.md` §xfce §9.5), quindi
+	 *    chiedere un'inibizione qui darebbe un ⛔ falso nel registro e
+	 *    zero protezione.
+	 * ⚠ Chi spegne davvero l'output su questo desktop è `xfce4-power-manager`,
+	 *   dopo 10 minuti, e si tratta nell'incremento dell'energia.
+	 */
+	if (e_xfce()) {
+		registro_dice(REG_SESSIONE,
+		              "XFCE: non chiedo nessuna inibizione — xfce4-session non "
+		              "consulta l'inibitore, e chi spegne l'output è "
+		              "xfce4-power-manager (incremento dell'energia, non questo)");
+		return 0;
+	}
 
 	risposta = g_dbus_connection_call_sync(
 		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
@@ -1795,7 +2300,28 @@ guint32 sessione_inibisci(void)
  */
 bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 {
-	SessioneStato stato = sessione_stato(larghezza, altezza, NULL);
+	SessioneStato stato;
+
+	/*
+	 * ⛔⛔ PRIMA DI TUTTO: SE NON C'E' NESSUN DESKTOP, NON SI PROVA — fase 13.
+	 *
+	 * Fino a ieri qui si arrivava lo stesso, perche' una macchina senza desktop
+	 * si dichiarava **GNOME per ripiego**; poi si falliva tre volte accusando
+	 * qualcun altro (`[M]` 20 set 2026: «un altro drop-in vince sul mio»,
+	 * «Mutter non espone RemoteDesktop»).  ⇒ Adesso si dice qui, dove chi
+	 * guarda la fetta di registro di QUESTO inquilino la trova — e non una
+	 * volta sola all'avvio del server, dove nessun banco la legge.
+	 */
+	if (e_nessuno()) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ non faccio nascere niente: %s.  ⚠ Non è «la sessione è "
+		              "nata cieca», è «non c'è nessun desktop da accendere»: sono "
+		              "due guasti diversi e qui è il secondo",
+		              sessione_desktop_spiega());
+		return false;
+	}
+
+	stato = sessione_stato(larghezza, altezza, NULL);
 
 	if (stato != SESSIONE_MORTA) {
 		registro_dice(REG_SESSIONE,
@@ -1876,7 +2402,9 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "(«%s» non e' inattiva): non ne faccio nascere una seconda "
 		              "adesso — nascerebbe dentro quella che muore.  ⭐ Si riprova "
 		              "fra poco",
-		              e_kde() ? SESSIONE_UNITA_KWIN : SESSIONE_UNITA_GESTORE);
+		              e_kde()    ? SESSIONE_UNITA_KWIN
+		              : e_xfce() ? "il processo " SESSIONE_PROCESSO_XFCE
+		                         : SESSIONE_UNITA_GESTORE);
 		return false;
 	}
 

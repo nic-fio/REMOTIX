@@ -1926,7 +1926,36 @@ def main():
     #   d'avvio di Plasma dura ~2,4 s e manda ~140 fotogrammi neri: con 12 il
     #   «prima» su KDE era «non lo so» per sempre.  Su GNOME il primo
     #   disegnato arriva comunque fra i primi, e la scelta non cambia.
-    p.add_argument("--fotogrammi-prima", type=int, default=240,
+    #
+    # ⛔⛔ E 240 NON BASTAVA — 20 settembre 2026, baseline della fase 13.
+    #
+    # `[M]` Dentro il giro completo C2(kde) e' uscita **3** tre volte su tre
+    # («i primi 240 fotogrammi sono tutti neri o quasi»), ⛔ e non era il
+    # prodotto: la finestra si era aperta e copriva il 98,7 % dello schermo —
+    # l'immagine «dopo» e' quella giusta.  Il banco non aveva il **termine di
+    # paragone**, quindi si e' astenuto.
+    #
+    # `[M]` Rimisurato subito dopo, sulla stessa scatola, **tre volte**:
+    #   186 · 186 (scatola rifatta da zero) · 189 (⭐ e con la cache
+    #   dell'ospite svuotata, `drop_caches`, per togliere di mezzo il sospetto
+    #   che fosse il disco freddo).  ⇒ Il numero vero sta intorno a **187**,
+    #   ed e' **stabile**: il margine su 240 era di 54 fotogrammi, il 29 %.
+    #
+    # `[?]` Perche' dentro il giro completo ne servano di piu' (379 fotogrammi
+    #   in tutto contro 249) non e' misurato.  Il sospetto sta scritto:
+    #   `PIANO.md` — fra due banchi sullo stesso posto **il posto di prima
+    #   resta attaccato una ventina di secondi**, e C2(kde) nel giro viene
+    #   subito dopo C9(kde), che di sessioni ne ha fatte due.
+    #
+    # ⭐ E la cura giusta e' un tetto che **non morda**, non un tetto ritarato
+    #   al pelo: cercare il «prima» si **ferma al primo fotogramma disegnato**
+    #   (`scegli_il_prima`), quindi alzarlo non costa niente quando il desktop
+    #   dipinge presto — costa solo a ffmpeg qualche PNG in piu' da estrarre,
+    #   e solo nel caso in cui senza di essi la maglia direbbe «non lo so».
+    #   ⇒ 900: piu' di quanti ne abbia mai avuti il flusso (379), cioe'
+    #     «guardali tutti».  ⛔ Il giudizio non cambia di una virgola: il
+    #     metro resta il colore che cresce di 20 punti e copre il 25 %.
+    p.add_argument("--fotogrammi-prima", type=int, default=900,
                    help="quanti fotogrammi iniziali si guardano per trovare il "
                         "«prima» disegnato. ⛔ Uno solo darebbe «non lo so» per "
                         "sempre se il primo fosse nero (LEZIONI.md §1.49); 12 "

@@ -54,3 +54,8 @@ banchi/07-b48-dati/
 # ⛔ Le copie di lavoro degli agenti: sono depositi git a se stanti, e un
 #    `git add -A` distratto le infila nell indice come sotto-moduli.
 .claude/worktrees/
+
+# Le intestazioni dei protocolli Wayland le genera `wayland-scanner` a ogni
+# costruzione dai `.xml` in `src/protocolli/`, che quelli sì sono in deposito.
+# ⛔ Una copia versionata sarebbe una copia che invecchia in silenzio.
+src/*-client-protocol.h

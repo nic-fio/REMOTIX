@@ -217,6 +217,36 @@ si fa **una domanda sola e si scrive il numero**: *«ti chiedo 4K a 60: quanti m
 caso undici giorni dopo — che è **esattamente** com'è andata su GNOME. ⇒ Sta in `PIANO.md`, nelle tre
 fasi, e **non costa una riga di prodotto**.
 
+### 0.6 ✅ ⭐⭐ Una macchina, UN desktop — le macchine con più desktop insieme sono fuori scopo
+
+*Deciso dall'utente il **20 settembre 2026**, all'apertura della fase 13:*
+
+> *«le' stato attuale remotix e' destinato a sistemi con un solo DE installato. I sistemi con DE
+> multipli installato sono per il momento fuori scope»*
+
+⭐ **Che cosa si guadagna, ed è il motivo per cui la decisione vale**: `sessione.c` riconosce il
+desktop **guardando il PATH** (`riconosci_desktop()`, `src/sessione.c:275-303`). Con un desktop solo
+per macchina quel riconoscimento è una **domanda con una risposta sola** — non c'è niente da
+arbitrare, niente preferenza da configurare, nessuna opzione `--compositore` da rimettere (l'aveva
+v1, `fondamenta/remotix-c/src/main.c:456-459`; v2 l'ha tolta e **non la si rimette**).
+
+⚠ **Il caso ambiguo resta, e resta com'è**: se sulla macchina ci fossero due desktop, il prodotto
+ne sceglie uno e **lo dichiara nel registro** (`src/sessione.c:287-291`). ⛔ Non è una cura e non
+deve diventarlo: è una **riga che dice la verità** su una macchina che sta fuori dallo scopo.
+
+⛔⛔ **Ma quel che questa decisione NON copre è il difetto che apre la fase 13**, e non va confuso
+con lei: una macchina che ha **solo XFCE** oggi non è un caso ambiguo — è un caso **vuoto**. Cade
+nell'ultimo ramo di `riconosci_desktop()` (`src/sessione.c:295-299`), il prodotto **ripiega in
+silenzio su GNOME** e poi lancia `gnome-session`, che su quella macchina non esiste. ⇒ Un desktop
+solo, riconosciuto giusto, è **precisamente** quel che questa decisione pretende, ed è il cuore
+dell'incremento 1.
+
+⭐ **E non è una voce nuova: è la stessa di §4.6-duodetricies, allargata.** Il 18 settembre si
+era deciso che il prodotto **non offre una scelta** fra desktop; oggi si dice di più — le macchine
+con più desktop **non sono un bersaglio**. ⇒ §4.6-duodetricies resta in vigore per il come (si
+riconosce da quel che è installato, e l'ambiguo si dichiara nel registro); questa dice il **quanto
+lontano**, e la funzione rimandata sta sempre in `MASTERPLAN.md` **M5**.
+
 ---
 
 ## 1. Il protocollo
@@ -3121,6 +3151,8 @@ installato**. Se ci sono tutti e due, resta **GNOME** — cioè quel che il prod
 nessuna macchina servita cambia comportamento. ⚠ Il caso «tutti e due» è quindi **ambiguo per
 costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silenzio.
 ⇒ La funzione rimandata sta in `MASTERPLAN.md` **M5**.
+⭐ **Allargata il 20 settembre 2026** — §0.6: le macchine con più desktop installati sono
+**fuori scopo**, non soltanto prive di scelta.
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
