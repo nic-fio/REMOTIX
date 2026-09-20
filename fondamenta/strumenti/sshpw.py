@@ -11,6 +11,7 @@ di comando: viene scritta sul pty solo quando ssh la chiede.
 """
 import os
 import pty
+import subprocess
 import re
 import select
 import sys
@@ -119,10 +120,26 @@ def main():
     host, utente, password = leggi_credenziali()
     comuni = [
         "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "PreferredAuthentications=password",
-        "-o", "PubkeyAuthentication=no",
         "-o", "ConnectTimeout=10",
     ]
+    # ⭐ LA CHIAVE, SE C'E', VINCE SULLA PASSWORD — 20 settembre 2026.
+    #
+    # ⛔ `[M]` Oggi la delega remota del gancio (`11-gancio.sh remoto`) non
+    #    partiva: «Permission denied», tre volte, e la riga diceva solo «non
+    #    sono riuscito a lanciare il giro».  La causa: questo strumento
+    #    IMPONEVA la password (`PubkeyAuthentication=no`), scritta quando il
+    #    riavvio del server aveva cancellato `authorized_keys`; la chiave e'
+    #    stata rimessa, la password del conto no.
+    # ⇒ Si PROVA la chiave, e solo se non regge si torna alla password — che
+    #   resta, perche' il rootfs del server vive in RAM e al prossimo riavvio
+    #   la chiave sparisce di nuovo (`LEZIONI.md`, il riavvio perde la chiave).
+    con_chiave = subprocess.run(
+        ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new",
+         "-o", "ConnectTimeout=10", f"{utente}@{host}", "true"],
+        capture_output=True).returncode == 0
+    if not con_chiave:
+        comuni += ["-o", "PreferredAuthentications=password",
+                   "-o", "PubkeyAuthentication=no"]
     if sys.argv[1:2] == ["--put"]:
         locale, remoto = sys.argv[2], sys.argv[3]
         argv = ["scp"] + comuni + [locale, f"{utente}@{host}:{remoto}"]

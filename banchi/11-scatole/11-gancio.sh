@@ -1087,9 +1087,28 @@ meta_remota() {
 	local opz="" risposta="" prima dopo
 
 	[ "$SECCO" = 1 ] && opz="$opz --secco"
-	[ -n "$SCATOLA_CHIESTA" ] && opz="$opz --scatola $SCATOLA_CHIESTA"
+	# ⚠ Fra apici: `--scatola "gnome kde"` porta uno SPAZIO, e senza gli apici
+	#   la meta' remota riceve «kde» come comando suo.  `[M]` 20 set 2026: il
+	#   giro non partiva e la riga diceva solo «non sono riuscito a lanciare».
+	[ -n "$SCATOLA_CHIESTA" ] && opz="$opz --scatola \"$SCATOLA_CHIESTA\""
 
 	prima=$SECONDS
+	# ⛔⛔ PRIMA DI TUTTO: UN GIRO GIA' IN CORSO NON SI TOCCA — 20 set 2026.
+	#
+	# `[M]` Il `pre-push` di stamattina ha trovato l'unita' occupata da una rete
+	# lanciata a mano, non e' riuscito a lanciare la sua (giusto), ⛔ ma aveva
+	# GIA' CANCELLATO il log — e il giro in corso ha continuato a scrivere in un
+	# file che non esisteva piu'.  ⇒ Si guarda prima, e se gira si esce 3
+	# dicendolo: «occupato» e «non ci arrivo» sono due diagnosi diverse.
+	if sshpw "systemctl is-active --quiet $UNITA_REMOTA" >/dev/null 2>&1; then
+		R_ESITO=3
+		R_NOTA="sulla macchina di prova un giro e' GIA' in corso ($UNITA_REMOTA)"
+		ko "⛔ $R_NOTA"
+		inf "  ⇒ non lancio niente e non tocco il suo log: una scatola per volta"
+		inf "    (§3.4, il lucchetto della scheda).  Si riprova quando ha finito"
+		M_SECONDI=$((SECONDS - prima))
+		return 3
+	fi
 	# ⛔ Il log e il file d'esito si cancellano PRIMA: un esito vecchio letto
 	#    come se fosse di questo giro e' un giro che riferisce di un altro.
 	sshpw "$S systemctl reset-failed $UNITA_REMOTA 2>/dev/null; $S rm -f $log $esito_f" >/dev/null 2>&1

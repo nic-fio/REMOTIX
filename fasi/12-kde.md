@@ -513,6 +513,42 @@ e `nano` su kde; `gnome-terminal`, `nautilus` e `nano` su gnome. Sono del banco,
 audio, video e appunti. ⚠ Un giro su tre di `07-b54` (Firefox su Wayland) ha dato rosso sulla
 **tastiera dopo l'incolla**: intermittente, da tenere d'occhio.
 
+### Incremento 11 — i gruppi della scheda, messi da REMOTIX (decisione dell'utente, 20 set 2026)
+
+Domanda dell'utente: *«REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
+Normalmente le distro non ce li mettono: potrebbe essere un problema?»* ⇒ Sì, e il sintomo è il
+peggiore: **si collega e non vede niente**, senza un errore. La decisione e la misura stanno in
+`DECISIONI.md` §7.21; qui restano i moduli e l'esito.
+
+| | |
+|---|---|
+| **all'installazione** | `src/provisiona.sh`: tutte le persone della macchina (`UID_MIN..UID_MAX` letti da `/etc/login.defs`, solo chi ha una shell vera) |
+| **in esercizio** | `src/figlio.c`: `iscrivi_ai_gruppi_della_scheda()` — dopo il sì di PAM, prima del `fork`, con `usermod` e il gestore d'utente fatto rinascere. ⚠ `raccogli_gruppi_scheda()` estratta: i nodi si leggono in **un posto solo** |
+| ⛔ **e cambia I7** | il prodotto adesso tocca i gruppi, non solo la sessione. Le due garanzie: solo dopo PAM, e ogni iscrizione nel registro |
+
+| `[M]` 20 set 2026, scatola `kde`, utente `senzagr` creato senza gruppi | esito |
+|---|---|
+| ⛔ binario `836a88b6` (senza la cura) | `id -nG` = «senzagr» · **zero fotogrammi** |
+| ⭐ binario `9e3154a6` (la cura) | «PRIMA CONNESSIONE: ce lo metto io» · `id -nG` = «senzagr video render» · **105 fotogrammi consegnati** |
+| ⭐ sul server vero, `provisiona.sh` | **3 persone** iscritte · `nicfio` da «nicfio sudo» a «nicfio sudo video render» |
+
+⭐ **E due riparazioni del banco**, trovate dal `pre-push` dell'utente:
+1. `11-gancio.sh remoto` passava `--scatola gnome kde` **senza apici**: la metà remota riceveva
+   «kde» come comando suo e il giro non partiva;
+2. ⛔ e quando non riusciva a lanciare, **aveva già cancellato il log** del giro in corso — che ha
+   continuato a scrivere in un file inesistente. ⇒ Adesso guarda PRIMA se l'unità è attiva, e in
+   quel caso non tocca niente ed esce 3 dicendolo.
+3. `fondamenta/strumenti/sshpw.py` imponeva la password (`PubkeyAuthentication=no`), scritta quando
+   un riavvio aveva cancellato la chiave: ⇒ prova la chiave e tiene la password come ripiego.
+
+#### La rete (`[M]` 20 set 2026, 10:02→12:45, binario `9e3154a6`, `--scatola "gnome kde"`)
+
+| | |
+|---|---|
+| GNOME · **kde** | ⭐ **tutto verde**, nessun rosso · esito remoto **0** |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| ⚠ la delega | il tetto d'attesa di `remoto` è **2 400 s** e la famiglia `tutto` ne vuole ~9 000: la metà locale dichiara «non ha finito entro 2 400 s» mentre di là il giro prosegue e finisce bene. Da allargare quando servirà |
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |
@@ -558,6 +594,15 @@ Prima la misura era fissa a 1920×1080, e rinegoziarla congelava il flusso.
    per gli schermi virtuali», Plasma 6.6, sono da leggere per questo);
 2. **la distribuzione.** Il server ha la KWin di Debian Trixie, **6.3.6**: 6.8 arriva solo con
    una distribuzione nuova o con i backport.
+
+⭐ **E LA PRIMA DELLE DUE CONDIZIONI E' GIA' CADUTA** — `[R]` 20 set 2026, letto nel codice di KWin
+(`master`): `VirtualBackend` **dichiara** `createVirtualOutput(const QString &name, const QString
+&description, const QSize &size, qreal scale)`, con la stessa firma della base
+(`OutputBackend::createVirtualOutput`, virtuale con implementazione predefinita). ⇒ Il «Could not
+find output» del backend `--virtual` — che nella 6.3.6 veniva dalla base che tornava `nullptr` —
+**su KWin nuovo non c'è più**: anche senza seat si può chiedere uno schermo virtuale alla cattura,
+e dalla 6.8 quello schermo si ridimensiona. ⇒ Resta solo la seconda condizione: la **versione**
+(Trixie ha la 6.3.6).
 
 ⭐ **Dalla nostra parte il lavoro sarebbe piccolo**: `misura_del_palco()` chiede già a KWin la misura
 vera e la cattura rinegozia già la misura su GNOME ⇒ si tratterebbe di chiedere la misura nuova

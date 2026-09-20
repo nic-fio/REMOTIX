@@ -1470,6 +1470,113 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
 	return mancanti == 0;
 }
 
+/*
+ * ⭐⭐ L'ISCRIZIONE AI GRUPPI DELLA SCHEDA, ALLA PRIMA CONNESSIONE.
+ *     *[Deciso dall'utente il 20 settembre 2026: «la procedura di installazione
+ *       aggiunge gli utenti presenti nel sistema; una volta in esercizio, ogni
+ *       nuovo utente alla prima connessione viene aggiunto ai gruppi».]*
+ *
+ * ⛔ IL FATTO CHE LA RENDE NECESSARIA: su un desktop normale il permesso sulla
+ *    scheda lo da' logind con un'ACL a chi siede davanti; la nostra sessione un
+ *    posto fisico non ce l'ha, quindi restano i gruppi — e senza, `[M]` 27 ago
+ *    2026, la sessione nasce CIECA (0 su 4) e **nessun errore lo dice**.
+ *    ⇒ `provisiona.sh` iscrive chi c'e' al momento dell'installazione; ⛔ ma chi
+ *    viene creato dopo resterebbe fuori, e l'amministratore vedrebbe una pagina
+ *    bianca senza sapere perche'.
+ *
+ * ⛔⭐ E SI FA QUI, non prima: siamo nel padre, che gira da root, **dopo** che
+ *     PAM ha detto di si' — cioe' non si concede niente a chi bussa e basta —
+ *     e **prima** del `fork`, quindi il figlio nasce coi gruppi nuovi.
+ * ⚠ E cambia una divisione dichiarata (I7: «il prodotto tocca la sessione, la
+ *   macchina la tocca `provisiona.sh`»): il prodotto adesso tocca i gruppi.
+ *   E' la decisione dell'utente, e si scrive nel registro ogni volta.
+ * ⚠ Il gestore d'utente gia' vivo NON prende i gruppi nuovi: si fa rinascere
+ *   con `loginctl terminate-user`, ed e' sicuro perche' qui un figlio per
+ *   quest'utente non c'e' (I2) — nessuna sessione grafica da buttare giu'.
+ *
+ * Torna `true` se ha cambiato qualcosa (e allora i gruppi vanno riletti).
+ */
+static bool comando_da_root(const char *quale, char *const argv[], const char *utente)
+{
+	pid_t p = fork();
+	int stato = 0;
+
+	if (p < 0)
+		return false;
+	if (p == 0) {
+		execv(quale, argv);
+		_exit(127);
+	}
+	if (waitpid(p, &stato, 0) != p)
+		return false;
+	if (!WIFEXITED(stato) || WEXITSTATUS(stato) != 0) {
+		registro_dice_di(REG_FIGLIO, utente, "⛔ «%s» non e' andato (stato %d)", quale,
+		                 WIFEXITED(stato) ? WEXITSTATUS(stato) : -1);
+		return false;
+	}
+	return true;
+}
+
+static bool iscrivi_ai_gruppi_della_scheda(const char *utente, gid_t primario,
+                                           const gid_t *gruppi, int ngruppi)
+{
+	gid_t visti[QUANTI_GRUPPI_SCHEDA];
+	char nomi[QUANTI_GRUPPI_SCHEDA][64];
+	char nodi[QUANTI_GRUPPI_SCHEDA][96];
+	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	char elenco[256] = "";
+	size_t usati = 0;
+	char *argv_mod[6];
+	char *argv_term[4];
+
+	if (nvisti == 0 || geteuid() != 0)
+		return false;
+	for (int i = 0; i < nvisti; i++) {
+		int n;
+
+		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i]))
+			continue;
+		n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s", usati ? "," : "",
+		             nomi[i]);
+		if (n > 0 && (size_t)n < sizeof elenco - usati)
+			usati += (size_t)n;
+	}
+	if (!usati)
+		return false;
+
+	registro_dice_di(REG_FIGLIO, utente,
+	                 "⭐ PRIMA CONNESSIONE: «%s» non e' nei gruppi della scheda (%s) e "
+	                 "ce lo METTO io, adesso — decisione dell'utente del 20 set 2026.  "
+	                 "⚠ Senza, questa sessione nascerebbe CIECA",
+	                 utente, elenco);
+	argv_mod[0] = (char *)"usermod";
+	argv_mod[1] = (char *)"-aG";
+	argv_mod[2] = elenco;
+	argv_mod[3] = (char *)utente;
+	argv_mod[4] = NULL;
+	if (!comando_da_root("/usr/sbin/usermod", argv_mod, utente) &&
+	    !comando_da_root("/sbin/usermod", argv_mod, utente)) {
+		registro_dice_di(REG_FIGLIO, utente,
+		                 "⛔ non ho potuto iscrivere «%s» a «%s»: la sessione nascera' "
+		                 "CIECA, e la cura a mano e' `usermod -aG %s %s`",
+		                 utente, elenco, elenco, utente);
+		return false;
+	}
+	/* ⚠ E il gestore d'utente si fa RINASCERE, o i gruppi nuovi non arrivano al
+	 *   compositore (`[M]` 27 ago 2026).  Qui non c'e' nessuna sessione grafica
+	 *   da buttare giu': il figlio di quest'utente non esiste ancora. */
+	argv_term[0] = (char *)"loginctl";
+	argv_term[1] = (char *)"terminate-user";
+	argv_term[2] = (char *)utente;
+	argv_term[3] = NULL;
+	(void)comando_da_root("/usr/bin/loginctl", argv_term, utente);
+	registro_dice_di(REG_FIGLIO, utente,
+	                 "⭐ «%s» iscritto a «%s» e gestore d'utente fatto rinascere: da "
+	                 "adesso vede la scheda",
+	                 utente, elenco);
+	return true;
+}
+
 bool figli_assicura(figli *f, const char *utente)
 {
 	struct figlio *g;
@@ -1556,6 +1663,15 @@ bool figli_assicura(figli *f, const char *utente)
 	 *      anche quando poi non nascera' nessun palco.  ⚠ Il valore di ritorno
 	 *      non si guarda: la sessione nasce lo stesso, e la degradazione e'
 	 *      dichiarata (I1). */
+	/* ⭐ E se manca qualcosa, si RIMEDIA prima del `fork` (decisione
+	 *    dell'utente, 20 set 2026): iscritto, si rileggono i gruppi e si
+	 *    dichiara di nuovo — la riga che l'amministratore legge dev'essere
+	 *    quella VERA di questa sessione, non quella di prima della cura. */
+	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi)) {
+		ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
+		if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngruppi) < 0)
+			ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
+	}
 	(void)gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi);
 
 	/* ⛔ `SOCK_SEQPACKET` per la stessa ragione dell'aiutante: i confini dei

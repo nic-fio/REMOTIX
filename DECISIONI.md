@@ -5618,6 +5618,40 @@ cose che RCP/1 lascia aperte. ⭐ **Non serve nessun tipo di messaggio nuovo** �
 con la seconda, §4.6 guadagna comunque **la riga che dichiara lo stato**, perché un buco dichiarato e
 un buco dimenticato non si distinguono dopo tre mesi.
 
+### 7.21 ✅ ⭐ **I gruppi della scheda li mette REMOTIX** — deciso dall'utente, 20 settembre 2026
+
+*Domanda dell'utente: «REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
+Normalmente le distro non ce li mettono, potrebbe essere un problema?» — e la risposta è sì, oggi
+quell'utente **si collega e non vede niente**: `[M]` 27 ago 2026, 0 sessioni su 4 senza i gruppi,
+17 su 17 con. ⛔ E nessun errore lo dice: si vede una pagina bianca.*
+
+**La causa, ed è strutturale:** su un desktop normale il permesso sui nodi `/dev/dri` lo dà logind
+con un'ACL (`uaccess`) a chi occupa un **seat**. ⇒ Una sessione remota un seat non ce l'ha di
+proposito, quindi quell'ACL non arriva mai e restano **solo i gruppi**.
+
+**La decisione dell'utente, in due pezzi:**
+
+| quando | chi | che cosa |
+|---|---|---|
+| **all'installazione** | `src/provisiona.sh` | iscrive **tutte le persone già sulla macchina** — `UID_MIN..UID_MAX` LETTI da `/etc/login.defs`, e solo chi ha una shell vera: gli account di servizio restano fuori |
+| **in esercizio** | il prodotto (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`) | ogni utente nuovo, **alla prima connessione**, viene iscritto e il suo gestore d'utente fatto rinascere |
+
+⛔ **E cambia una divisione che era scritta** (I7: *«il prodotto mette quel che riguarda la SESSIONE;
+i conti, i gruppi, polkit e PAM stanno in `provisiona.sh`»*). Da oggi il prodotto tocca anche i
+gruppi. ⇒ Le due garanzie che tengono la cosa onesta, e sono nel codice:
+1. si fa **dopo** che PAM ha detto di sì — non si concede niente a chi bussa e basta;
+2. **ogni iscrizione si scrive nel registro**, con nome e gruppi: un permesso dato in silenzio è un
+   permesso che nessuno ricorda di avere dato.
+
+⚠ E i nomi dei gruppi non sono inchiodati: si chiedono ai nodi (`stat -c %g`), perché `video` e
+`render` sono i nomi di **questa** distribuzione.
+
+`[M]` 20 set 2026, scatola `kde`: utente `senzagr` creato senza gruppi ⇒ col binario di prima
+**zero fotogrammi**; col binario nuovo il registro dice «PRIMA CONNESSIONE: ce lo metto io»,
+`id -nG` passa da `senzagr` a `senzagr video render`, e arrivano **105 fotogrammi**. Sul server
+vero, `provisiona.sh` ha iscritto **3 persone** e `nicfio` è passato da `nicfio sudo` a
+`nicfio sudo video render`.
+
 ---
 
 ## Come si tiene questo documento

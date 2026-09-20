@@ -131,6 +131,35 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	ok "prova e prova2, nei gruppi LETTI DAI NODI: ${GRUPPI_SCHEDA:-nessuno}"
 
 	# -------------------------------------------------------------------
+	# ⭐⭐ E TUTTE LE PERSONE GIA' SULLA MACCHINA — deciso dall'utente il 20
+	#     settembre 2026: «la procedura di installazione aggiunge gli utenti
+	#     presenti nel sistema ai gruppi video e render».
+	#
+	# ⛔ Le PERSONE, non gli account di servizio: `www-data`, `systemd-*` e
+	#    compagnia non aprono sessioni grafiche, e dare loro la scheda sarebbe
+	#    un permesso regalato a chi non lo usera' mai.  ⇒ Il confine e' quello
+	#    che usa la distribuzione: `UID_MIN`..`UID_MAX` di `/etc/login.defs`,
+	#    LETTI da li' e non inchiodati (stessa regola dei gruppi: si chiede
+	#    alla macchina).  ⚠ `nobody` (65534) resta fuori da se'.
+	# ⚠ Chi viene creato DOPO non passa di qui: a quello ci pensa il prodotto
+	#   alla prima connessione (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
+	# -------------------------------------------------------------------
+	if [ -n "$GRUPPI_SCHEDA" ]; then
+		MIN=$(awk '$1 == "UID_MIN"  { print $2 }' /etc/login.defs 2>/dev/null)
+		MAX=$(awk '$1 == "UID_MAX"  { print $2 }' /etc/login.defs 2>/dev/null)
+		QUANTI=0; GIA=0
+		for n in $(getent passwd | awk -F: -v a="${MIN:-1000}" -v b="${MAX:-60000}" \
+		           '$3 >= a && $3 <= b && $7 !~ /(nologin|false)$/ { print $1 }'); do
+			if id -nG "$n" | tr ' ' '\n' | grep -qxF "$(printf '%s' "$GRUPPI_SCHEDA" | cut -d, -f1)"; then
+				GIA=$((GIA + 1))
+			fi
+			usermod -aG "$GRUPPI_SCHEDA" "$n" && QUANTI=$((QUANTI + 1))
+		done
+		ok "persone della macchina nei gruppi della scheda: $QUANTI (uid ${MIN:-1000}..${MAX:-60000}, con shell vera)"
+		inf "⚠ chi verra' creato dopo lo iscrive il prodotto alla PRIMA connessione"
+	fi
+
+	# -------------------------------------------------------------------
 	# ⛔⛔ `~/.cache` DEV'ESSERE UNA CARTELLA SUA, non un collegamento a /tmp
 	#
 	# `[M]` 25 agosto 2026, incarico F2 — ed e' il difetto per cui il regista
