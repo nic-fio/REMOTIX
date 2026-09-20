@@ -351,13 +351,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ⭐ R5 — 20 settembre 2026, chiesto dall'utente durante la sua prova: UN
 #   TERMINALE E UN GESTORE DI FILE dentro la sessione, cioe' quel che serve per
 #   LAVORARE davvero invece di guardare uno sfondo.  Su Plasma sono `konsole` e
-#   `dolphin`, e `nano` per scrivere un file senza cercarlo.  ⛔ Sono del BANCO, non del prodotto: REMOTIX non li apre e non
+#   `dolphin`, e `nano` per scrivere un file senza cercarlo; e `python3-gi`+GTK4, che e' l'arbitro degli appunti del banco (`appunti-gtk.py`).  ⛔ Sono del BANCO, non del prodotto: REMOTIX non li apre e non
 #   li nomina — e' l'utente che li apre dal menu.
 #   ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         konsole dolphin \
         nano \
+        python3-gi gir1.2-gtk-4.0 \
     && rm -rf /var/lib/apt/lists/*
 
 STOPSIGNAL SIGRTMIN+3

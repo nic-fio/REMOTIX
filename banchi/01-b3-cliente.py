@@ -126,6 +126,8 @@ NOME = {v: k for k, v in T.items()}
 #    sbagliato.  ⚠ E i canali sono due davvero: §2.5, byte alto `0x00` contro
 #    `0x01`.
 T_PUNTATORE = 0x0101            # §7.3
+T_PULSANTE = 0x0102             # §7.3
+BOTTONE_SINISTRO = 0x110        # evdev BTN_LEFT
 # I due esiti e i tre motivi di `TELA` — §7.1.
 TELA_ESITO = {1: "ADATTATA", 2: "RIFIUTATA"}
 TELA_MOTIVO = {0: "-", 1: "COMPOSITORE_INCAPACE", 2: "MISURA_FUORI_LIMITI",
@@ -833,6 +835,30 @@ class Cliente(QuicConnectionProtocol):
             self.reg.aggiungi(CLIENT, b, canale=0x01, stream=sid)
             ms = self.reg.blocchi[-1][6]
         return self.inp_id, ms
+
+    def manda_pulsante(self, premuto, codice=BOTTONE_SINISTRO):
+        """⭐ `PULSANTE` — §7.3, codice **evdev**, premuto/rilasciato.
+
+        ⛔ Serve per una ragione sola e va scritta: **dare il FUOCO a una
+           finestra del desktop remoto**.  `[M]` 20 set 2026, scatola `gnome`:
+           su Mutter la clipboard si concede a chi ha la finestra attiva, e in
+           una sessione remota nessuno clicca ⇒ ne' `wl-copy` ne' `wl-paste` ne'
+           un'applicazione GTK riescono a toccare gli appunti, e la maglia degli
+           appunti non poteva giudicare.  ⭐ Col clic, mandato di qui —
+           attraverso il prodotto, non scavalcandolo — il fuoco arriva e gli
+           appunti si comportano come per una persona.
+        """
+        sid = self.apri_input()
+        self.inp_id += 1
+        ist_us = int(time.monotonic() * 1_000_000)
+        b = inquadra(T_PULSANTE,
+                     struct.pack("!IQHB", self.inp_id, ist_us, codice,
+                                 1 if premuto else 0))
+        self._quic.send_stream_data(sid, b, end_stream=False)
+        self.transmit()
+        if self.reg is not None:
+            self.reg.aggiungi(CLIENT, b, canale=0x01, stream=sid)
+        return self.inp_id
 
     # ══════════════════════════════════════════════════════════════════════
     # GLI APPUNTI — §7.4, e i tre messaggi letti da `RCP.md` e non dal C
@@ -1871,6 +1897,32 @@ async def principale(a) -> int:
         #    il segnale dice «sono attaccato», e il lato che copia con `xclip`
         #    aspetta proprio quello.  Annunciare prima vorrebbe dire annunciare
         #    quando l'altro lato non e' ancora pronto a guardare.
+        if a.clic:
+            # ⛔ Si aspetta: la finestra dev'essere gia' sullo schermo, o il clic
+            #    cade sullo sfondo e il fuoco non lo prende nessuno.
+            px, _, py = a.clic.partition(",")
+            print(f"   [clic] aspetto {a.clic_dopo} s, poi clicco in ({px},{py})")
+            await asyncio.sleep(a.clic_dopo)
+            cli.manda_puntatore(int(px), int(py))
+            await asyncio.sleep(0.2)
+            cli.manda_pulsante(True)
+            await asyncio.sleep(0.12)
+            cli.manda_pulsante(False)
+            print("   [clic] ⭐ fatto: quella finestra adesso ha il fuoco")
+
+            if a.clic_ogni > 0:
+                async def ancora():
+                    while True:
+                        await asyncio.sleep(a.clic_ogni)
+                        cli.manda_puntatore(int(px), int(py))
+                        await asyncio.sleep(0.15)
+                        cli.manda_pulsante(True)
+                        await asyncio.sleep(0.1)
+                        cli.manda_pulsante(False)
+
+                asyncio.ensure_future(ancora())
+                print(f"   [clic] e lo rifaccio ogni {a.clic_ogni} s")
+
         if a.appunti_copia:
             cli.appunti_annuncia(a.appunti_copia)
 
@@ -2502,6 +2554,20 @@ if __name__ == "__main__":
     p.add_argument("--vivo", type=float, default=0)
     p.add_argument("--segnale",
                    help="file da scrivere quando la sessione e' aperta")
+    # ⭐ Il clic che da' il fuoco — vedi `manda_pulsante()`.
+    p.add_argument("--clic", default="", metavar="X,Y",
+                   help="dopo `--clic-dopo` secondi, muove il puntatore li' e "
+                        "fa un clic sinistro: serve a dare il FUOCO a una "
+                        "finestra del desktop remoto (senza, su GNOME gli "
+                        "appunti della sessione non si toccano)")
+    p.add_argument("--clic-dopo", type=float, default=10.0,
+                   help="quanto aspettare prima del clic, perche' la finestra "
+                        "dev'esserci gia'")
+    p.add_argument("--clic-ogni", type=float, default=0.0,
+                   help="ogni quanti secondi RIFARE il clic (0 = una volta "
+                        "sola).  ⛔ Serve quando le finestre da mettere a fuoco "
+                        "sono piu' d'una, una dopo l'altra: il fuoco si da' a "
+                        "quella che c'e' in quel momento")
     a = p.parse_args()
 
     # ⭐ `--certifica` esce QUI: non tocca la rete, non chiede la parola

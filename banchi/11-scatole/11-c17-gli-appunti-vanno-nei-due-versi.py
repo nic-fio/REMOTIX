@@ -29,12 +29,16 @@
    (`src/rcp.c`, `annuncia_il_tenuto`) ⇒ il fatto R.
 
 ⛔ Due implementazioni ai due lati, e nessuna e' il server: `01-b3-cliente.py`
-   (che ha letto solo `RCP.md`) e `wl-clipboard` (un client Wayland che non ha
-   mai sentito parlare di RCP).
-⚠ `wl-clipboard` parla `zwlr_data_control_manager_v1`: KWin ce l'ha, Mutter
-   no, e su GNOME `wl-copy` ripiega sul trucco della finestra col fuoco.  Se
-   su GNOME l'arbitro non regge, e' l'arbitro — e lo si dice (esito 3), non si
-   chiama rosso il prodotto.
+   (che ha letto solo `RCP.md`) e **GTK** (`appunti-gtk.py`), che non e' nostro
+   e non ha mai sentito parlare di RCP.
+⭐⭐ E L'ARBITRO E' LO STESSO SUI DUE DESKTOP — 20 set 2026.  Prima erano
+   `wl-copy`/`wl-paste`, che parlano `zwlr_data_control_manager_v1`: KWin ce
+   l'ha, ⛔ Mutter no, e su GNOME la maglia usciva 3 («non ho potuto
+   guardare»).  ⇒ Adesso si fa come fa una PERSONA: si apre una finestra vera,
+   ⭐ **le si da' il fuoco con un clic mandato attraverso il prodotto**
+   (`01-b3-cliente.py --clic`), e da li' in poi gli appunti si toccano — su
+   GNOME come su KDE.  ⚠ E se il clic non arrivasse, il rosso sarebbe del
+   prodotto che non consegna l'input: e' la stessa strada di C4.
 
 Esiti: 0 verde · 1 rosso · 3 non ho potuto guardare (⛔ NON e' un rosso).
 ⛔ Con `--senza-copia` si legge al contrario: 0 = il guasto e' stato VISTO.
@@ -52,6 +56,42 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 CLIENTE = os.path.join(QUI, "01-b3-cliente.py")
 PAROLA = "provanic2026"
+# ⭐ L'arbitro esterno: GTK, cioe' `wl_data_device` — la clipboard delle
+#    applicazioni vere.  ⛔ Vuole il FUOCO, e il fuoco lo da' il clic del
+#    cliente (`--clic`).  Sta accanto a questa maglia dentro la scatola.
+# ⚠ Dove l'arbitro racconta la sua copia: il banco lo LEGGE invece di dormire
+#   un tempo fisso — con GTK la copia parte quando arriva il fuoco, e il fuoco
+#   arriva col clic del cliente (ogni 4 s), non a un'ora decisa da noi.
+PROVA_COPIA = "/tmp/remotix-arbitro-copia.log"
+ARBITRO_GTK = ("env GDK_BACKEND=wayland python3 " +
+               os.path.join(QUI, "appunti-gtk.py"))
+
+
+def arbitro(chi):
+    """⭐ L'arbitro che QUESTO desktop permette — e si CHIEDE, non si indovina.
+
+    ⛔ `[M]` 20 set 2026, misurato su tutt'e due le scatole:
+      · dove c'e' `zwlr_data_control_manager_v1` (KWin) `wl-clipboard` legge e
+        scrive senza bisogno del fuoco, ed e' la strada piu' corta;
+      · dove non c'e' (Mutter) `wl-copy` e `wl-paste` restano APPESI, e l'unica
+        strada e' quella delle applicazioni vere: GTK piu' il fuoco, che arriva
+        col clic mandato dal cliente (`--clic`).
+    ⚠ La differenza e' del BANCO, non del prodotto: il prodotto su tutt'e due i
+      desktop fa la stessa cosa, e le due strade portano allo stesso giudizio.
+    """
+    elenco = nella_sessione(chi, "wayland-info 2>/dev/null | grep -c -E "
+                                 "'zwlr_data_control_manager_v1|"
+                                 "ext_data_control_manager_v1'") or "0"
+    if elenco.strip().lstrip("0"):
+        return {"nome": "wl-clipboard",
+                "incolla": "timeout 8 wl-paste -n 2>/dev/null",
+                "copia": "pkill -x wl-copy; printf %%s '%s' | timeout 90 wl-copy "
+                         ">" + PROVA_COPIA + " 2>&1 &",
+                "attesa_copia": 3, "dice": ""}
+    return {"nome": "GTK col fuoco (il clic del cliente)",
+            "incolla": ARBITRO_GTK + " incolla 2>/dev/null",
+            "copia": ARBITRO_GTK + " copia '%s' 60 >" + PROVA_COPIA + " 2>&1 &",
+            "attesa_copia": 30, "dice": "copiato A FUOCO"}
 
 
 def carica_c1():
@@ -84,6 +124,17 @@ def sgombera(chi):
         time.sleep(0.25)
     corri(["pkill", "-KILL", "-u", chi], 5)
     corri(["userdel", "-r", chi], 15)
+
+
+def socket_wayland(chi):
+    """Il socket del compositore dell'inquilino, o `None` se non c'e' ancora."""
+    r = corri(["id", "-u", chi], 5)
+    run = "/run/user/%s" % (r.stdout.strip() if r else "")
+    if not os.path.isdir(run):
+        return None
+    nomi = sorted(f for f in os.listdir(run)
+                  if f.startswith("wayland-") and f[8:].isdigit())
+    return nomi[0] if nomi else None
 
 
 def nella_sessione(chi, copione, tempo=15):
@@ -139,7 +190,10 @@ def main():
 
     try:
         # ── il primo cliente: annuncia A, resta, e ascolta gli annunci ─────
-        argv = cliente(chi, a.porta, "--segnale", segnale, "--resta", "25",
+        # ⭐ `--clic`: il fuoco alle finestre dell'arbitro, e si RIFA' ogni 4 s
+        #    perche' le finestre sono due, una dopo l'altra (leggere, copiare).
+        argv = cliente(chi, a.porta, "--segnale", segnale, "--resta", "75",
+                       "--clic", "960,540", "--clic-dopo", "3", "--clic-ogni", "4",
                        "--appunti-scrivi", esito_a)
         if not a.senza_copia:
             argv += ["--appunti-copia", testo_a]
@@ -154,40 +208,34 @@ def main():
             print("⛔ il cliente non si e' attaccato (ammesso: %s) ⇒ non ho potuto guardare" % amm)
             return 3
 
-        # ⛔ L'ARBITRO C'E'?  `[M]` 19 set 2026, scatola `gnome`: senza il
-        #    protocollo `wl-paste` e `wl-copy` restano APPESI fino al `timeout`
-        #    (uscita 124) — aspettano un fuoco che una sessione senza schermo
-        #    non da' mai — mentre il registro del server dice «22 byte
-        #    consegnati alla sessione».  ⇒ Non e' il prodotto: si esce 3.
-        # ⚠ E si decide solo quando il compositore RISPONDE (`wl_compositor`
-        #   nell'elenco): un `wayland-info` fallito a compositore non pronto
-        #   darebbe un elenco vuoto, e un 3 su una sessione sana.
-        protocolli = None
-        for _ in range(30):
-            elenco = nella_sessione(chi, "wayland-info 2>/dev/null | grep -o -E "
-                                         "'wl_compositor|zwlr_data_control_manager_v1|"
-                                         "ext_data_control_manager_v1' | sort -u")
-            if elenco and "wl_compositor" in elenco:
-                protocolli = elenco.replace("wl_compositor", "")
-                break
-            time.sleep(1)
-        if protocolli is None:
-            print("   ⚠ il compositore non risponde a `wayland-info` in 30 s ⇒ non ho potuto guardare")
-            return 3
-        if not protocolli or not protocolli.strip():
-            print("   ⚠ il compositore non offre ne' `zwlr_data_control_manager_v1` ne'")
-            print("     `ext_data_control_manager_v1`: `wl-clipboard` qui NON e' un arbitro")
-            print("     ⇒ non ho potuto guardare — ⛔ e NON e' un rosso del prodotto")
-            return 3
-        print("   l'arbitro c'e': %s" % " ".join(protocolli.split()))
-
+        # ⭐ IL CLIC LO MANDA IL CLIENTE (`--clic`): qui si aspetta solo che
+        #    la finestra dell'arbitro sia in piedi e col fuoco.
         # A — dispositivo → sessione
-        visto, t0 = None, time.time()
-        while time.time() - t0 < a.attesa:
-            visto = nella_sessione(chi, "timeout 5 wl-paste -n 2>/dev/null")
+        # ⚠ Una chiamata sola e generosa, non un giro di chiamate: l'arbitro
+        #   apre la sua finestra e ASPETTA il fuoco (che arriva col clic del
+        #   cliente, ogni 4 s), poi legge.  Chiamarlo dieci volte vorrebbe dire
+        #   dieci finestre che si rubano il fuoco a vicenda.
+        t0 = time.time()
+        # ⛔ Prima il SOCKET: il segnale del cliente dice «sono attaccato», non
+        #    «la sessione grafica c'e'».  Chiedere l'arbitro prima del
+        #    compositore darebbe «None» e un rosso che non e' del prodotto.
+        while time.time() - t0 < 90 and socket_wayland(chi) is None:
+            time.sleep(1)
+        if socket_wayland(chi) is None:
+            print("   ⚠ nessun socket Wayland in 90 s: la sessione non c'e'"
+                  " ⇒ non ho potuto guardare")
+            return 3
+        # ⚠ Qualche tentativo, uno alla volta: l'offerta del prodotto alla
+        #   sessione arriva quando gli appunti si aprono, che e' dopo il palco.
+        #   ⛔ Non in parallelo: due finestre si ruberebbero il fuoco.
+        arb = arbitro(chi)
+        print("   l'arbitro di questo desktop: %s" % arb["nome"])
+        visto = None
+        for _ in range(5):
+            visto = nella_sessione(chi, arb["incolla"], 60)
             if visto == testo_a:
                 break
-            time.sleep(1)
+            time.sleep(4)
         ok_a = visto == testo_a
         print("   A  dispositivo → sessione : %s  (atteso «%s», la sessione incolla «%s», %.0f s)"
               % ("⭐ SI" if ok_a else "⛔ NO", testo_a, visto, time.time() - t0))
@@ -197,9 +245,32 @@ def main():
 
         # B — sessione → dispositivo, a cliente attaccato
         if not a.senza_copia:
-            nella_sessione(chi, "pkill -x wl-copy; printf %%s '%s' | timeout 90 wl-copy "
-                                ">/dev/null 2>&1 &" % testo_b)
-        uscita = primo.communicate(timeout=60)[0]
+            nella_sessione(chi, "rm -f " + PROVA_COPIA)
+            nella_sessione(chi, arb["copia"] % testo_b)
+            # ⚠ Si aspetta che la copia sia AVVENUTA, non un tempo fisso: con GTK
+            #   parte quando arriva il fuoco, e il fuoco arriva col clic del
+            #   cliente.  ⛔ Un'attesa a orologio dava un rosso intermittente
+            #   (`[M]` 20 set 2026, la rete: B e R rossi, gli stessi giri verdi
+            #   a mano un minuto prima).
+            t1 = time.time()
+            while time.time() - t1 < arb["attesa_copia"]:
+                time.sleep(1)
+                if not arb["dice"]:
+                    break
+                detto = nella_sessione(chi, "cat " + PROVA_COPIA + " 2>/dev/null") or ""
+                if arb["dice"] in detto:
+                    print("   la copia nella sessione e' avvenuta dopo %.0f s"
+                          % (time.time() - t1))
+                    break
+            else:
+                if arb["dice"]:
+                    print("   ⚠ in %d s l'arbitro non ha detto «%s»: la copia "
+                          "nella sessione non e' partita"
+                          % (arb["attesa_copia"], arb["dice"]))
+            time.sleep(2)
+        # ⚠ Il tetto e' piu' largo di `--resta` del cliente (75 s), o si
+        #   scadrebbe aspettando un cliente che sta facendo il suo mestiere.
+        uscita = primo.communicate(timeout=150)[0]
         # ⚠ Dall'uscita del cliente e non dal suo file: il file lo scrive PRIMA
         #   di restare attaccato (`scrivi_appunti` sta prima di `--resta`), e
         #   l'annuncio di B arriva dopo.

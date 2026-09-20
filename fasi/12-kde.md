@@ -577,6 +577,38 @@ senza fuoco non li concede, e lì il fuoco non c'è mai davvero. ⚠ Non è un d
 non è del banco: è la scena. ⇒ C17 su GNOME resta **esito 3, dichiarato**, e gli appunti di GNOME
 restano provati a mano (`07-b54`). Si riapre quando si aprirà il lavoro su GNOME.
 
+### Incremento 13 — gli appunti nella rete ANCHE su GNOME: il clic che dà il fuoco
+
+⛔ **Il muro di ieri**: su Mutter nessuna applicazione della sessione riusciva a toccare gli
+appunti, quindi C17 su GNOME usciva 3. ⭐ **La quarta strada, indicata dall'utente**: si fa come
+fa una persona — **si clicca**. E il clic si manda **attraverso il prodotto** (`RCP.md` §7.3), come
+fa C4 col tasto: se non arrivasse, il rosso sarebbe del prodotto che non consegna l'input.
+
+| pezzo | che cosa |
+|---|---|
+| `banchi/01-b3-cliente.py` | `manda_pulsante()` + `--clic X,Y`, `--clic-dopo`, `--clic-ogni`: il clic che dà il FUOCO a una finestra del desktop remoto |
+| `banchi/11-scatole/appunti-gtk.py` | l'arbitro esterno: GTK (`wl_data_device`), finestra presentata, e ⭐ **aspetta il fuoco** prima di copiare o leggere |
+| `11-c17` | ⭐ **chiede al desktop quale arbitro può usare**: `wl-clipboard` dove c'è `zwlr_data_control` (KWin), GTK+clic dove non c'è (Mutter). ⚠ La differenza è del banco; il prodotto fa la stessa cosa sui due desktop |
+| le scatole | `python3-gi` + `gir1.2-gtk-4.0` nelle due ricette, e `appunti-gtk.py` copiato dal passo `prodotto` |
+
+| `[M]` 20 set 2026 | kde | gnome |
+|---|---|---|
+| C17 normale | ⭐ VERDE (A · B · R) | ⭐ VERDE (A · B · R) |
+| C17 `--senza-copia` | ⭐ il guasto è VISTO | ⭐ il guasto è VISTO |
+
+⛔ **E un rosso intermittente, preso dentro la rete e curato**: C17(gnome) rossa su B e R con
+un'attesa a orologio (12 s) perché la finestra della copia prendesse il fuoco. ⇒ Adesso il banco
+**aspetta che la copia sia avvenuta** (l'arbitro lo dichiara nel suo registro): `[M]` avvenuta dopo
+**1 s**. ⚠ Nessuna regressione del prodotto: le maglie di GNOME erano tutte verdi, e il binario è
+quello già passato alle 12:45.
+
+⛔ **Una cura provata e RITIRATA, e va detta**: su KDE l'anti-eco di `appunti_kde.c` può scambiare
+per eco una copia vera fatta da un'applicazione con i nostri stessi tipi. Ho provato a leggere il
+testo e confrontarlo — ⛔ ma leggere dentro la richiamata blocca la pompa degli eventi (la nostra
+sorgente viene servita dalla stessa pompa) e il giro è peggiorato. ⇒ Ritirata subito, codice
+tornato a quello provato. ⚠ `[M]` fuori da quella scena il prodotto **vede** le copie GTK su KDE.
+Resta come punto aperto, con la misura.
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |

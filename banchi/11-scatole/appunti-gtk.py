@@ -42,18 +42,40 @@ def finestra(app):
     return f
 
 
+def al_fuoco(f, fatto):
+    """⭐⭐ SI ASPETTA IL FUOCO, E NON SI FA NIENTE PRIMA — 20 set 2026.
+
+    ⛔ `[M]` Su GNOME la clipboard si concede a chi ha la finestra ATTIVA, e in
+       una sessione remota nessuno clicca: la finestra c'e' e il fuoco no, quindi
+       copiare e incollare falliscono in silenzio.  ⇒ Il banco il clic lo manda
+       davvero, passando da REMOTIX (come C4 col tasto), e qui si aspetta che
+       arrivi: `is-active` e' Mutter che dice «adesso sei tu».
+    ⚠ Su KWin il fuoco alla sola finestra arriva da se': la stessa riga vale per
+      tutt'e due i desktop.
+    """
+    if f.is_active():
+        fatto()
+        return
+    f.connect("notify::is-active", lambda *_: f.is_active() and fatto())
+
+
 def copia(testo, secondi):
-    """Mette il testo negli appunti e RESTA vivo a servirlo.
+    """Mette il testo negli appunti QUANDO ha il fuoco, e RESTA vivo a servirlo.
 
     ⛔ Non si esce subito: su Wayland la selezione la serve il processo che la
        offre — chi esce se la porta via, ed e' il difetto che fa dire «copiato»
        a un desktop che non ha piu' niente.
     """
     def avviato(app):
-        finestra(app)
-        Gdk.Display.get_default().get_clipboard().set(testo)
-        print("copiato: %d caratteri, resto vivo %g s" % (len(testo), secondi),
-              flush=True)
+        f = finestra(app)
+
+        def adesso():
+            Gdk.Display.get_default().get_clipboard().set(testo)
+            print("copiato A FUOCO: %d caratteri, resto vivo %g s"
+                  % (len(testo), secondi), flush=True)
+
+        print("finestra aperta, aspetto il fuoco", flush=True)
+        al_fuoco(f, adesso)
         GLib.timeout_add_seconds(int(secondi), lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.copia")
@@ -66,7 +88,7 @@ def incolla():
     esito = {"testo": ""}
 
     def avviato(app):
-        finestra(app)
+        f = finestra(app)
 
         def letto(clip, ris):
             try:
@@ -75,7 +97,12 @@ def incolla():
                 print("⛔ non ho potuto leggere: %s" % e.message, file=sys.stderr)
             app.quit()
 
-        Gdk.Display.get_default().get_clipboard().read_text_async(None, letto)
+        def adesso():
+            Gdk.Display.get_default().get_clipboard().read_text_async(None, letto)
+
+        print("finestra aperta, aspetto il fuoco", file=sys.stderr, flush=True)
+        al_fuoco(f, adesso)
+        GLib.timeout_add_seconds(25, lambda: (app.quit(), False)[1])
 
     app = Gtk.Application(application_id="org.remotix.appunti.incolla")
     app.connect("activate", avviato)

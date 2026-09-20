@@ -385,6 +385,7 @@ prodotto)
 		cp /rete11/11-c7-si-chiude-e-non-resta-niente.py /opt/remotix/
 		cp /rete11/11-c9-il-registro-dice-di-chi.py /opt/remotix/
 		cp /rete11/11-c17-gli-appunti-vanno-nei-due-versi.py /opt/remotix/
+		cp /rete11/appunti-gtk.py             /opt/remotix/
 		cp /rete11/10-f1-testimone.py        /opt/remotix/
 		# ⭐⭐ L ATTREZZO DEI GRUPPI DELLA SCHEDA — 27 agosto 2026.
 		# `[M]` Il difetto piu vecchio del progetto, «la sessione nasce cieca»,
