@@ -347,5 +347,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         powerdevil \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R5 — 20 settembre 2026, chiesto dall'utente durante la sua prova: UN
+#   TERMINALE E UN GESTORE DI FILE dentro la sessione, cioe' quel che serve per
+#   LAVORARE davvero invece di guardare uno sfondo.  Su Plasma sono `konsole` e
+#   `dolphin`, e `nano` per scrivere un file senza cercarlo.  ⛔ Sono del BANCO, non del prodotto: REMOTIX non li apre e non
+#   li nomina — e' l'utente che li apre dal menu.
+#   ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        konsole dolphin \
+        nano \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

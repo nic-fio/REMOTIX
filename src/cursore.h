@@ -66,6 +66,23 @@ Cursore *cursore_apri(CursoreArrivata quando_cambia, void *chi);
  */
 int cursore_metadato(Cursore *, const void *spa_meta_cursor, size_t dimensione);
 
+/*
+ * ⛔⭐ «QUI NON SI NASCONDE MAI» — fase 12, 20 settembre 2026, su Plasma.
+ *
+ * Su KWin `--virtual` il cursore lo disegna il compositore DENTRO l'immagine, e
+ * la sessione parte apposta con un tema di forme trasparenti
+ * (`sessione.c`, `scrivi_tema_cursore_kde`).  ⇒ Da li' in poi il metadato dice
+ * sempre «nessuna immagine», che per §5.5 vuol dire NASCOSTO — e la pagina, a
+ * cursore nascosto, toglie anche quello del browser: `[M]` la prova
+ * dell'utente, «non si vede piu' il puntatore», che e' peggio di vederne due.
+ * ⇒ Con questo interruttore il nascondimento NON si consegna: chi guarda tiene
+ *   il puntatore del suo sistema, che e' il disegno di v1.
+ * ⚠ E il prezzo, dichiarato: su Plasma un'applicazione che nasconde il cursore
+ *   (un gioco, un lettore a schermo pieno) non lo nasconde a chi guarda — non
+ *   si puo' distinguere dal nostro tema invisibile, che e' sempre in vigore.
+ */
+void cursore_mai_nascondere(Cursore *, const char *perche);
+
 void cursore_chiudi(Cursore *);
 
 #endif /* REMOTIX_CURSORE_H */

@@ -1346,19 +1346,22 @@ static bool sta_nel_gruppo(gid_t primario, const gid_t *gruppi, int ngruppi,
 	return false;
 }
 
-/* ⭐ Scrive nel registro se questo inquilino vedra' o no.  Non decide niente:
- *    dichiara.  Torna `true` se sta in TUTTI i gruppi dei nodi della scheda. */
-static bool gruppi_della_scheda(const char *utente, gid_t primario,
-                                const gid_t *gruppi, int ngruppi)
+/*
+ * ⭐ I GRUPPI DEI NODI DELLA SCHEDA, LETTI DALLA MACCHINA — in un posto solo.
+ *
+ * Torna quanti ne ha trovati (0 = nessun nodo, o la cartella non si apre: chi
+ * chiama lo DICHIARA, ciascuno con le sue parole).  ⚠ Due funzioni lo usano —
+ * chi si limita a dirlo e chi ci iscrive l'inquilino — e un secondo scorrimento
+ * copiato sarebbe un secondo posto da cui divergere (`LEZIONI.md` §1.47).
+ */
+static int raccogli_gruppi_scheda(gid_t visti[QUANTI_GRUPPI_SCHEDA],
+                                  char nomi[QUANTI_GRUPPI_SCHEDA][64],
+                                  char nodi[QUANTI_GRUPPI_SCHEDA][96],
+                                  const char *utente)
 {
 	DIR *d;
 	struct dirent *e;
-	gid_t visti[QUANTI_GRUPPI_SCHEDA];
-	char nomi[QUANTI_GRUPPI_SCHEDA][64];
-	char nodi[QUANTI_GRUPPI_SCHEDA][96];
-	int nvisti = 0, mancanti = 0;
-	char elenco[256];
-	size_t usati = 0;
+	int nvisti = 0;
 
 	d = opendir(DIR_NODI_SCHEDA);
 	if (!d) {
@@ -1368,7 +1371,7 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
 		                 "il compositore disegna in software, e la sessione "
 		                 "puo' nascere cieca senza dare un errore",
 		                 DIR_NODI_SCHEDA, strerror(errno));
-		return false;
+		return 0;
 	}
 	while ((e = readdir(d)) != NULL) {
 		char percorso[96];
@@ -1400,11 +1403,26 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
 		if (gia || nvisti >= QUANTI_GRUPPI_SCHEDA)
 			continue;
 		visti[nvisti] = st.st_gid;
-		nome_del_gruppo(st.st_gid, nomi[nvisti], sizeof nomi[nvisti]);
-		snprintf(nodi[nvisti], sizeof nodi[nvisti], "%s", percorso);
+		nome_del_gruppo(st.st_gid, nomi[nvisti], 64);
+		snprintf(nodi[nvisti], 96, "%s", percorso);
 		nvisti++;
 	}
 	closedir(d);
+	return nvisti;
+}
+
+/* ⭐ Scrive nel registro se questo inquilino vedra' o no.  Non decide niente:
+ *    dichiara.  Torna `true` se sta in TUTTI i gruppi dei nodi della scheda. */
+static bool gruppi_della_scheda(const char *utente, gid_t primario,
+                                const gid_t *gruppi, int ngruppi)
+{
+	gid_t visti[QUANTI_GRUPPI_SCHEDA];
+	char nomi[QUANTI_GRUPPI_SCHEDA][64];
+	char nodi[QUANTI_GRUPPI_SCHEDA][96];
+	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	int mancanti = 0;
+	char elenco[256];
+	size_t usati = 0;
 
 	if (nvisti == 0) {
 		registro_dice_di(REG_FIGLIO, utente,
@@ -5833,6 +5851,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 		return false;
 	}
+	/* ⭐ FASE 12 — su Plasma il tema del cursore e' invisibile apposta
+	 *    (`sessione.c`), quindi il metadato dira' sempre «nessuna immagine»:
+	 *    quel nascondimento NON si consegna, o chi guarda resta senza puntatore
+	 *    (`cursore.h`, e `[M]` la prova dell'utente del 20 set 2026). */
+	if (palco_kwin)
+		cattura_cursore_mai_nascondere(cat, "KWin --virtual: il tema del cursore "
+		                                    "della sessione e' invisibile");
 	*fuori_m = mut;
 	*fuori_c = cat;
 
@@ -6378,6 +6403,9 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	misura_del_palco(&l, &a);
 	nuova = cattura_avvia(nodo_del_palco(m), l, a, MOVIMENTO_FPS, strada_del_palco,
 	                      CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
+	if (nuova && palco_kwin)
+		cattura_cursore_mai_nascondere(nuova, "KWin --virtual: il tema del cursore "
+		                                      "della sessione e' invisibile");
 	if (!nuova) {
 		registro_dice(REG_FIGLIO,
 		              "⛔ la cattura NON si e' riaperta sul nodo %u alla strada "

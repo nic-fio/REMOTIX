@@ -183,6 +183,22 @@
                    white-space: pre-line; }
   #dichiarazione:empty { display: none; }
 
+  /* ⛔⭐ IL SUGGERIMENTO SULLA TELA — 20 settembre 2026, deciso dall'utente
+     dopo la sua prova: «su Firefox la clipboard non invia dal client al
+     server».  `[M]` Il registro diceva che la pagina serviva 0 byte perche'
+     Firefox le NEGA la lettura, e l'unica strada e' il `Ctrl+V` — ⛔ ma la
+     pagina lo scriveva solo nel suo diario, e chi guardava il desktop vedeva
+     silenzio.  ⇒ Adesso lo dice DOVE l'utente sta guardando.
+     ⚠ `pointer-events: none`: e' un cartello, non un pulsante — non deve
+       mangiarsi un clic diretto al desktop remoto. */
+  #suggerimento { position: fixed; left: 50%; bottom: 2.2rem; z-index: 20;
+                  transform: translateX(-50%); pointer-events: none;
+                  max-width: min(46rem, 92vw); padding: .6rem 1rem;
+                  border-radius: .5rem; font-size: .95rem; line-height: 1.35;
+                  background: rgba(0, 0, 0, .82); color: #fff;
+                  border: 1px solid rgba(255, 255, 255, .35); }
+  #suggerimento:empty { display: none; }
+
   /* ⛔ La tela sta SOTTO il modulo e non sopra: `STUDI.md` §web §1.2 C (rilievo S4) —
      niente elementi sopra la tela, o cadono il percorso overlay e la tela
      desincronizzata.  ⚠ Alla fase 2 non c'e' ancora ne' l'uno ne' l'altra, ma
@@ -410,6 +426,10 @@
 <main>
   <h1>REMOTIX</h1>
   <div id="avviso">__AVVISO__</div>
+  <!-- ⭐ Il suggerimento che compare SULLA TELA e sparisce da se': oggi serve a
+       una cosa sola — dire che su Firefox si incolla col `Ctrl+V` — e si
+       nasconde quando e' vuoto, come `#avviso` e `#dichiarazione`. -->
+  <div id="suggerimento" aria-live="polite"></div>
 
   <form id="modulo">
     <label for="utente">Utente</label>
@@ -6742,6 +6762,20 @@ function avvia_audio(wt) {
  *   chiederlo all'utente e' chiedergli una cosa che non si puo' fare.  ⚠ E' la
  *   stessa ragione, con le stesse parole, per cui l'audio manda i suoi conti.
  */
+/* ⭐ Un cartello di pochi secondi sulla tela.  ⛔ Sempre accompagnato da una
+ *    riga di diario: quel che l'utente vede e quel che il banco legge devono
+ *    essere lo stesso fatto, o si misura una cosa e se ne vede un'altra. */
+let sugg_timer = null;
+function suggerisci(testo, quanto_ms) {
+  const d = document.getElementById("suggerimento");
+
+  if (!d) return;
+  d.textContent = testo || "";
+  if (sugg_timer) clearTimeout(sugg_timer);
+  sugg_timer = setTimeout(() => { d.textContent = ""; sugg_timer = null; },
+                          quanto_ms || 6000);
+}
+
 function app_diario(riga) {
   nota("appunti · " + riga);
   try {
@@ -7031,6 +7065,16 @@ async function appunti_rileggi_prima_di_servire() {
                + (navigator.userActivation
                   ? navigator.userActivation.isActive : "sconosciuta")
                + ": servo quel che ho");
+    /* ⛔⭐ E LO SI DICE A CHI STA GUARDANDO, non solo al diario: qualcuno di la'
+     *     sta incollando e da qui non parte niente.  ⚠ Solo se non abbiamo
+     *     NIENTE da servire: con un testo in mano il silenzio non c'e'. */
+    if (!APPUNTI.mio_testo) {
+      suggerisci("Per incollare qui quello che hai copiato sul tuo computer, "
+                 + "premi Ctrl+V su questa pagina: il tuo browser lascia "
+                 + "leggere gli appunti solo in quel momento.", 7000);
+      app_diario("suggerito all'utente il Ctrl+V (la lettura e' negata e non "
+                 + "ho testo da servire)");
+    }
   });
 
   let scaduta = false;

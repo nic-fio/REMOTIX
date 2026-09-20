@@ -702,6 +702,10 @@ gboolean cattura_attiva(Cattura *cattura);
 /* Il guasto dichiarato dal produttore, o NULL. */
 const char *cattura_guasto(Cattura *cattura);
 
+/* ⭐ Gira l'interruttore di `cursore_mai_nascondere()` sul cursore di questa
+ *    cattura: lo chiede il figlio su Plasma, dove il tema e' invisibile. */
+void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche);
+
 void cattura_ferma(Cattura *cattura);
 
 /* --- la misura ammessa: NON sta qui, e la ragione va detta ------------ *

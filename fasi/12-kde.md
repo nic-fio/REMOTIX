@@ -489,6 +489,30 @@ e la cura è che adesso ciascuna ha un banco (`banchi/12-i9-logout.sh`, `banchi/
 | rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
 | rossi | **nessuno** |
 
+### Incremento 10 — la seconda tornata della prova dell'utente (20 set 2026)
+
+L'utente riprova e trova **tre cose**, due sue e una che chiude un buco vecchio.
+
+| che cosa vedeva | la causa | la cura |
+|---|---|---|
+| **nessun puntatore** (dopo il tema invisibile) | il tema invisibile arriva anche nel METADATO: il client si vestiva di una forma invisibile. ⛔ Peggio di due puntatori | `cursore.c`: una bitmap tutta trasparente è «nascosto» (§5.5) · e su Plasma il nascondimento NON si consegna (`cursore_mai_nascondere`, acceso dal figlio quando il palco è KWin) ⇒ chi guarda tiene il puntatore del suo sistema |
+| **le finestre non si ridimensionano** | Plasma nasce con `BorderSizeAuto`: bordi di pochi pixel. Al monitor si prendono perché il cursore cambia forma, ⛔ in remoto il cursore del desktop è invisibile apposta | `sessione.c`: `kwinrc` nella stessa cartella delle regole, `BorderSize=Normal` — ⚠ **senza** `[$i]`: è un punto di partenza, e da Impostazioni di sistema l'utente lo cambia |
+| **su Firefox la clipboard non va dal client al server** | ⭐ **non è un difetto**: Firefox concede la lettura degli appunti **solo** nell'istante del `Ctrl+V` sulla pagina. Con «Incolla» dal menu del desktop remoto la pagina serve 0 byte — `[M]` il registro: «rilettura negata … servo quel che ho» | `pagina.html`: un cartello di 7 s sulla tela — «premi Ctrl+V su questa pagina» — quando la lettura è negata e non c'è testo da servire (deciso dall'utente) |
+
+⭐ **E nelle scatole entrano gli strumenti per lavorare** (chiesti dall'utente): `konsole`, `dolphin`
+e `nano` su kde; `gnome-terminal`, `nautilus` e `nano` su gnome. Sono del banco, non del prodotto.
+
+#### La rete (`[M]` 20 set 2026, 07:20→09:52, binario `836a88b6` + pagina `4eb65ca2`, 9 087 s)
+
+| | |
+|---|---|
+| GNOME · **kde** | ⭐ **tutto verde**, nessun rosso in nessuna maglia |
+| rete, sul server e sul portatile | C10 · C11 · C12 · C13 · C14 · C15 · C16 verdi |
+
+⭐ **E LA PROVA DELL'UTENTE È COMPLETA**: Chrome e Firefox su Linux, **Chrome su Android** —
+audio, video e appunti. ⚠ Un giro su tre di `07-b54` (Firefox su Wayland) ha dato rosso sulla
+**tastiera dopo l'incolla**: intermittente, da tenere d'occhio.
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |

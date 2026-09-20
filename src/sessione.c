@@ -801,6 +801,36 @@ static char *scrivi_regole_menu_kde(const char *runtime)
 	              "⭐ Plasma: regole del menu in %s — niente «Blocca», niente «Cambia "
 	              "utente» (KIOSK); «Esci» resta",
 	              percorso);
+
+	/*
+	 * ⭐ E NELLA STESSA CARTELLA, IL BORDO DELLE FINESTRE — 20 set 2026, la
+	 *    prova dell'utente: «in KDE non si riescono a ridimensionare le
+	 *    finestre».  `[M]` Plasma nasce con `BorderSizeAuto`, che con Breeze
+	 *    vuol dire bordi laterali di pochi pixel: al monitor si prendono perche'
+	 *    il cursore cambia forma, ⛔ in una sessione remota no — il cursore del
+	 *    desktop e' invisibile apposta (vedi sopra), quindi il bordo non si
+	 *    annuncia e non si aggancia.
+	 * ⚠ E si scrive SENZA `[$i]`, al contrario delle regole del menu: e' un
+	 *   PUNTO DI PARTENZA, non un divieto — il `kwinrc` dell'utente sta piu' in
+	 *   alto e vince, cioe' da Impostazioni di sistema si cambia e resta.
+	 */
+	g_autofree char *kwinrc = g_build_filename(cartella, "kwinrc", NULL);
+
+	if (g_file_set_contents(kwinrc,
+	                        "[org.kde.kdecoration2]\n"
+	                        "BorderSize=Normal\n"
+	                        "BorderSizeAuto=false\n",
+	                        -1, NULL))
+		registro_dice(REG_SESSIONE,
+		              "⭐ Plasma: bordo delle finestre «Normal» come partenza (%s): in "
+		              "una sessione remota il bordo va AGGANCIATO, e quello automatico "
+		              "di Breeze e' troppo sottile.  ⚠ L'utente lo puo' cambiare",
+		              kwinrc);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: bordo delle finestre non scritto (%s): resta quello "
+		              "automatico, e ridimensionare col mouse sara' difficile",
+		              kwinrc);
 	return g_steal_pointer(&cartella);
 }
 

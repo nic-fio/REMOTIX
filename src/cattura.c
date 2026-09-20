@@ -2272,6 +2272,15 @@ void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
 	g_mutex_unlock(&cattura->lucchetto);
 }
 
+void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche)
+{
+	if (!cattura)
+		return;
+	g_mutex_lock(&cattura->lucchetto);
+	cursore_mai_nascondere(cattura->cursore, perche);
+	g_mutex_unlock(&cattura->lucchetto);
+}
+
 void cattura_ferma(Cattura *cattura)
 {
 	if (!cattura)

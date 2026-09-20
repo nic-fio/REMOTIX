@@ -321,5 +321,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wl-clipboard \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R4 — 20 settembre 2026, chiesto dall'utente: UN TERMINALE E UN GESTORE DI
+#   FILE dentro la sessione, come su KDE (`konsole`, `dolphin`).  Su GNOME sono
+#   `gnome-terminal`, `nautilus` e `nano`.  ⛔ Sono del BANCO, non del prodotto.
+#   ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gnome-terminal nautilus \
+        nano \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

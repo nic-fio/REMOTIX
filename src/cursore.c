@@ -91,6 +91,8 @@ struct cursore
 
 	int consegnata; /* si e' gia' consegnato qualcosa?              */
 	int nascosto;   /* l'ultima consegnata era 0x0                  */
+	int mai_nascondere; /* §kde: il tema e' invisibile, vedi cursore.h  */
+	int detto_mai;      /* la riga del registro si scrive una volta sola */
 
 	/*
 	 * L'ultima forma VISIBILE conosciuta.  ⛔ Sopravvive al nascondimento
@@ -162,6 +164,17 @@ static int consegna_nascosto(Cursore *c, const char *motivo)
 {
 	CursoreForma forma;
 
+	if (c->mai_nascondere) {
+		if (!c->detto_mai) {
+			c->detto_mai = 1;
+			registro_dice(AREA,
+			              "il puntatore sarebbe NASCOSTO (%s) e NON lo consegno: su "
+			              "questo desktop il tema del cursore e' invisibile apposta, e "
+			              "chi guarda deve tenere il puntatore suo (cursore.h)",
+			              motivo);
+		}
+		return 0;
+	}
 	if (c->consegnata && c->nascosto)
 		return 0;
 
@@ -473,6 +486,38 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	}
 
 	/*
+	 * --- 6-bis. ⛔⭐ TUTTA TRASPARENTE VUOL DIRE «NASCOSTO» — 20 set 2026.
+	 *
+	 * ⛔ `[M]` La prova dell'utente su KDE: per togliere il cursore che KWin
+	 *    disegna DENTRO l'immagine (backend `--virtual`) la sessione parte con
+	 *    un tema di forme 1x1 ad alfa zero (`sessione.c`,
+	 *    `scrivi_tema_cursore_kde`).  ⇒ Quel tema arriva anche QUI, nel
+	 *    metadato, e il client si vestiva di una forma invisibile: **nessun
+	 *    puntatore**, che e' peggio di due.
+	 * ⭐ Un'immagine in cui nessun pixel si vede NON e' una forma: e' lo stesso
+	 *    fatto che §5.5 chiama «nascosto», detto con piu' byte.  ⇒ Si consegna
+	 *    `0x0`, e il client mette il SUO puntatore (`pagina.html`,
+	 *    `forma_vuota`).
+	 * ⚠ E si guarda il banco di lavoro, DOPO la conversione: `alfa_piena`
+	 *   riempie l'alfa, e una bitmap senza canale alfa non e' trasparente.
+	 */
+	{
+		size_t i;
+		int si_vede = 0;
+
+		for (i = 3; i < byte; i += 4)
+			if (c->scratch[i]) {
+				si_vede = 1;
+				break;
+			}
+		if (!si_vede) {
+			c->conto.vuote++;
+			return consegna_nascosto(c, "tutti i pixel trasparenti (il tema del "
+			                            "cursore e' invisibile: lo disegna il client)");
+		}
+	}
+
+	/*
 	 * --- 7. ⛔ E' CAMBIATA DAVVERO? --------------------------------------
 	 *
 	 * Il metadato arriva a OGNI buffer.  Senza questo confronto si rimanderebbe
@@ -516,6 +561,15 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	forma.immagine = c->immagine;
 
 	return consegna(c, &forma);
+}
+
+void cursore_mai_nascondere(Cursore *c, const char *perche)
+{
+	if (!c || c->mai_nascondere)
+		return;
+	c->mai_nascondere = 1;
+	registro_dice(AREA, "il nascondimento del puntatore NON si consegnera' piu': %s",
+	              perche ? perche : "senza motivo");
 }
 
 void cursore_chiudi(Cursore *c)
