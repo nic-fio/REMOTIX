@@ -459,6 +459,36 @@ appunti. ⇒ `annuncia_il_tenuto()`, chiamata appena la sessione passa ad `S_ATT
 un client Wayland con `wl_data_device` e il fuoco (GTK), come diceva `07-b45`: è lavoro di GNOME,
 non di questa fase.
 
+### Incremento 9 — quel che ha trovato la prova dell'utente (19-20 set 2026)
+
+L'utente prova KDE da Chrome sul suo portatile, e in un'ora tira fuori **quattro cose**. ⭐ Tre
+erano decisioni già prese e **perdute nel passaggio da v1 a v2**: è il prezzo del riporto selettivo,
+e la cura è che adesso ciascuna ha un banco (`banchi/12-i9-logout.sh`, `banchi/12-i10-menu-e-puntatore.sh`).
+
+| | che cosa vedeva l'utente | la causa | la cura |
+|---|---|---|---|
+| **1. si poteva spegnere** | dal menu di Plasma «Spegni» e «Riavvia» | ⛔ **la scatola**, non il prodotto: le tre cinture di §4.7 le mette `src/provisiona.sh` sulla macchina vera, e nelle scatole non c'erano mai state — `CanPowerOff` diceva «challenge» invece di «no» | le stesse righe, negli stessi file, nella preparazione della scatola (`11-accendi.sh`) |
+| **2. «Blocca» e «Cambia utente»** | voci che non fanno niente | le regole KIOSK di v1 (`scrivi_regole_menu`) non riportate | `scrivi_regole_menu_kde()`: `lock_screen`, `start_new_session`, `switch_user` a `false` in `$XDG_RUNTIME_DIR/remotix/xdg/kdeglobals`, davanti a `/etc/xdg`. ⛔ `logout` non si tocca |
+| **3. il logout non chiudeva** | dopo «Esci» la pagina restava sull'ultima immagine | ⛔ **del prodotto**: su Plasma la sessione muore in SILENZIO — KWin non chiude il flusso, il nodo PipeWire sparisce e la presa torna «zero» per sempre. E `vista_viva` era una `static` accesa solo dalla lettura dello stato, che su KDE non si fa mai ⇒ il figlio credeva la sessione «non ancora nata» e la faceva RINASCERE | `kwin.c`: la caduta della connessione Wayland segna `chiuso`. `figlio.c`: se `kwin_chiuso()` si smonta il palco, e `vista_viva` si accende anche col palco di KWin ⇒ §7.6 fa il resto (congedo `0x10`, la pagina torna al modulo d'accesso) |
+| **4. la coda del puntatore** | due puntatori, il secondo che insegue | ⛔ con `--virtual` KWin disegna il cursore DENTRO l'immagine (`STUDI.md` §kde, misurato l'8 ago 2026). La cura di v1 — tema del cursore trasparente — non riportata | `scrivi_tema_cursore_kde()`: 68 forme 1×1 ad alfa zero in `$XDG_RUNTIME_DIR/remotix/icons`, più `XCURSOR_THEME`+`SIZE`+`PATH` (KWin guarda il tema **solo** se c'è anche `SIZE`) |
+
+| `[M]` 19-20 set 2026, scatola `kde` | vecchio `2563cb22` | nuovo `d7a5db20` |
+|---|---|---|
+| `12-i9`: la pagina dopo «Esci» | ⛔ attaccata, nessun `0x10`, dopo 30 s ancora lì | ⭐ chiusa dopo **2 s** col codice `0x10`, e KWin **non rinasce** |
+| `12-i10` 1. cursore invisibile | ⛔ NO (XCURSOR_* 0/3, 0 forme) | ⭐ SI (3/3, **68 forme**, 0 ripieghi) |
+| `12-i10` 2. menu senza blocco | ⛔ NO (0/1, regole assenti) | ⭐ SI (regole 3/3) |
+| `12-i10` 3. nessuno spegne | ⭐ SI (4/4 «no») — è della scatola, e infatti non cambia col binario | ⭐ SI |
+
+#### La rete (`[M]` 20 set 2026, 02:21→04:52, binario `d7a5db20`, `--scatola "gnome kde"`, 9 119 s)
+
+| | |
+|---|---|
+| GNOME | ⭐ **tutto verde** — le tre cure toccano `sessione.c`, `kwin.c` e `figlio.c`, e GNOME non se n'è accorto |
+| ⭐ **kde** | **tutto verde**, C17 compresa: il cursore invisibile non disturba le maglie che guardano i pixel, e il menu ridotto non disturba niente |
+| rete, sul server | C11 · C13 · C14 verdi |
+| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| rossi | **nessuno** |
+
 ## Le misure
 
 | che cosa | atteso | misurato | data |

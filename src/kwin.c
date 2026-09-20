@@ -269,7 +269,15 @@ static gpointer thread_pompa(gpointer dati)
 
 	while (gira(sessione, -1))
 		;
-	registro_dettaglio(AREA, "la connessione Wayland a KWin si e' chiusa");
+	/* ⛔ E SI SEGNA — `[M]` 19 set 2026, il logout dell'utente su KDE: KWin
+	 *    muore con la sessione SENZA chiudere il flusso con garbo, quindi
+	 *    `su_flusso_chiuso` non arriva; e il nodo PipeWire che sparisce NON
+	 *    manda la cattura in errore — la presa torna «zero» per sempre, come
+	 *    una scena ferma.  ⇒ La caduta della connessione e' l'unico segno, e
+	 *    il figlio lo legge con `kwin_chiuso()`. */
+	sessione->chiuso = true;
+	registro_dice(AREA, "la connessione Wayland a KWin si e' chiusa: il compositore "
+	                    "non c'e' piu'");
 	return NULL;
 }
 

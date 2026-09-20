@@ -3737,6 +3737,15 @@ static uint32_t scheda_negata_l, scheda_negata_a;
  *    cui l'utente dice «rivoglio un desktop».
  */
 static bool sessione_chiusa_dall_utente;
+/* ⭐ «La sessione grafica l'ho VISTA viva»: e' quel che separa «non e' ancora
+ *    nata» da «c'era e l'utente e' uscito» (§7.6, qui sotto in `prendi_il_palco`).
+ * ⛔ FASE 12 — era una `static` dentro quella funzione, e la metteva a vero
+ *    solo la lettura dello stato: su GNOME si legge a ogni montaggio, su KDE
+ *    il palco si monta DIRETTAMENTE da KWin e lo stato SANA non si leggeva mai.
+ *    `[M]` 19 set 2026: dopo il logout il figlio diceva «non c'e' ancora, l'ho
+ *    gia' chiesta» e aspettava di farla RINASCERE — cioe' impediva di uscire.
+ *    ⇒ Anche un palco di KWin montato vuol dire «vista viva». */
+static bool vista_viva;
 
 /* Quando si riprova, e quanto si e' aspettato l'ultima volta. */
 static uint64_t palco_riprova_ms;
@@ -5673,8 +5682,6 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *   lo stesso — dirlo a chi guarda invece di far ricomparire un
 		 *   desktop che l'utente aveva chiuso.
 		 */
-		static bool vista_viva;
-
 		if (p.stato_sessione != SESSIONE_MORTA &&
 		    p.stato_sessione != SESSIONE_NON_LETTA)
 			vista_viva = true;
@@ -5781,6 +5788,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
 			return false;
 		}
+		vista_viva = true;
 	} else {
 	CRONO_INIZIO("monta il palco (mutter_apri)");
 	mut = mutter_apri(&sbaglio);
@@ -8030,6 +8038,27 @@ void figlio_vive(int argc, char **argv)
 				}
 			}
 
+			/* ⛔⭐ FASE 12 — SU PLASMA LA SESSIONE MUORE IN SILENZIO.  `[M]` 19
+			 *    set 2026, il logout dell'utente: KWin se ne va, e la presa
+			 *    torna «zero» per sempre — il figlio risvegliava il flusso ogni
+			 *    400 ms e la pagina restava ferma sull'ultima immagine invece di
+			 *    tornare al modulo d'accesso (`DECISIONI.md` §4.1-quater).
+			 *    ⇒ Si guarda la connessione a KWin, e se e' caduta si prende la
+			 *    stessa strada di «il palco se n'e' andato»: smontato, il
+			 *    rimontaggio chiede `sessione_stato()`, che dice MORTA. */
+			if (palco_kwin && kwin_chiuso(palco_kwin)) {
+				registro_dice(REG_FIGLIO,
+				              "⛔⛔ KWIN NON C'E' PIU': la sessione Plasma e' finita "
+				              "(logout, o il compositore e' morto).  Smonto il "
+				              "palco, e il prossimo tentativo sapra' dire se la "
+				              "sessione e' chiusa");
+				g_clear_error(&sbaglio);
+				cattura_fermo_libera(&fo);
+				smonta_il_palco(&mut, &cat);
+				palco_attesa_ms = PALCO_RIPROVA_MIN_MS;
+				palco_riprova_ms = registro_ora_ms() + palco_attesa_ms;
+				continue;
+			}
 			if (presa == CATTURA_PRESA_ZERO) {
 				/* ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE, e questo e' lo
 				 *    zero: il flusso e' stato attivo per tutta l'attesa e non

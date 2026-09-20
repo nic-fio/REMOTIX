@@ -44,6 +44,7 @@
 
 #include "registro.h"
 
+#include <errno.h>
 #include <locale.h>
 #include <string.h>
 
@@ -644,6 +645,166 @@ static const char *locale_utf8(void)
 }
 
 /*
+ * ⭐⭐ FASE 12 — LA CURA DEL DOPPIO PUNTATORE: IL CURSORE DI KDE DIVENTA
+ *      TRASPARENTE.  ⛔ Riportata da v1 (`fondamenta/remotix-c/src/sessione.c`,
+ *      `scrivi_tema_cursore` + `scrivi_cursore_vuoto`), misurata l'8 agosto
+ *      2026 (`STUDI.md` §kde) e rimasta fuori dal passaggio a v2: `[M]` 19 set
+ *      2026, la prova dell'utente — «la coda del puntatore».
+ *
+ * ⛔ IL FATTO: con il backend `--virtual` KWin disegna il cursore DENTRO
+ *    l'immagine catturata, e non c'e' leva per impedirglielo.  ⇒ Chi guarda ne
+ *    vede DUE: quello del browser, immediato, e quello del desktop, che arriva
+ *    col video e insegue — la «coda».
+ * ⭐ E la cura non e' impedirglielo: basta che quel che disegna NON SI VEDA.
+ *    KWin legge `XCURSOR_THEME` **solo se c'e' anche `XCURSOR_SIZE`**
+ *    (`cursor.cpp:134-145`), e l'ambiente della sessione lo componiamo noi.
+ * ⚠ IL TEMA DEVE CARICARSI DAVVERO: se il tema risulta vuoto KWin ripiega su
+ *   quello predefinito (`pointer_input.cpp:1183-1196`), cioe' RIMETTE il
+ *   cursore visibile.  Per questo le forme si scrivono tutte, non solo
+ *   `left_ptr`, e niente `Inherits=` nell'indice.
+ * ⚠ E il prezzo, dichiarato: si perde il CAMBIO di forma dentro l'immagine (la
+ *   I sul testo, le frecce di ridimensionamento).  La forma vera viaggia gia'
+ *   per conto suo — `CURSORE_FORMA` (§7.2) — e la disegna il client, come su
+ *   GNOME.
+ */
+#define TEMA_CURSORE "remotix-invisibile"
+
+/* Un cursore che esiste ed e' trasparente: Xcursor 1.0, un'immagine 1x1 ad alfa
+ * zero.  Il formato e' 16 byte d'intestazione, 12 d'indice e 36 di blocco piu'
+ * i pixel — tutto little-endian, e non merita una dipendenza. */
+static gboolean scrivi_cursore_vuoto(const char *percorso)
+{
+	guint32 dati[] = {
+		GUINT32_TO_LE(0x72756358u), /* «Xcur» */
+		GUINT32_TO_LE(16u),         /* quanto e' lunga l'intestazione */
+		GUINT32_TO_LE(0x00010000u), /* versione 1.0 */
+		GUINT32_TO_LE(1u),          /* un solo elemento nell'indice */
+		GUINT32_TO_LE(0xfffd0002u), GUINT32_TO_LE(24u), GUINT32_TO_LE(28u),
+		GUINT32_TO_LE(36u),         /* lunghezza dell'intestazione del blocco */
+		GUINT32_TO_LE(0xfffd0002u), /* tipo: immagine */
+		GUINT32_TO_LE(24u),         /* misura nominale */
+		GUINT32_TO_LE(1u),          /* versione del blocco */
+		GUINT32_TO_LE(1u),          /* larghezza */
+		GUINT32_TO_LE(1u),          /* altezza */
+		GUINT32_TO_LE(0u),          /* punto caldo x */
+		GUINT32_TO_LE(0u),          /* punto caldo y */
+		GUINT32_TO_LE(0u),          /* ritardo, per le animazioni */
+		GUINT32_TO_LE(0u),          /* l'unico pixel: ARGB tutto zero */
+	};
+
+	return g_file_set_contents(percorso, (const char *) dati, sizeof dati, NULL);
+}
+
+/* Torna la cartella da mettere in `XCURSOR_PATH`, o NULL (detto nel registro). */
+static char *scrivi_tema_cursore_kde(const char *runtime)
+{
+	/* I nomi che i programmi chiedono davvero: non e' l'elenco completo — non
+	 * esiste — ma copre Breeze e Adwaita, e quel che manca resta invisibile,
+	 * che e' dove si voleva arrivare. */
+	static const char *FORME[] = {
+		"left_ptr", "default", "arrow", "top_left_arrow", "pointer", "hand", "hand1", "hand2",
+		"pointing_hand", "text", "xterm", "ibeam", "wait", "watch", "progress",
+		"left_ptr_watch", "crosshair", "cross", "tcross", "help", "question_arrow",
+		"whats_this", "not-allowed", "forbidden", "crossed_circle", "no-drop", "dnd-none",
+		"dnd-copy", "dnd-move", "dnd-link", "copy", "move", "link", "alias", "grab",
+		"grabbing", "openhand", "closedhand", "all-scroll", "fleur", "size_hor", "size_ver",
+		"size_fdiag", "size_bdiag", "col-resize", "row-resize", "ew-resize", "ns-resize",
+		"nesw-resize", "nwse-resize", "sb_h_double_arrow", "sb_v_double_arrow", "top_side",
+		"bottom_side", "left_side", "right_side", "top_left_corner", "top_right_corner",
+		"bottom_left_corner", "bottom_right_corner", "zoom-in", "zoom-out", "cell",
+		"context-menu", "vertical-text", "up_arrow", "center_ptr", "X_cursor",
+	};
+	g_autofree char *base = g_build_filename(runtime, "remotix", "icons", NULL);
+	g_autofree char *tema = g_build_filename(base, TEMA_CURSORE, NULL);
+	g_autofree char *cursori = g_build_filename(tema, "cursors", NULL);
+	g_autofree char *indice = g_build_filename(tema, "index.theme", NULL);
+	unsigned scritte = 0;
+
+	g_mkdir_with_parents(cursori, 0700);
+	/* ⚠ Niente `Inherits=`: ereditare da un tema vero rimetterebbe i cursori
+	 *   visibili per ogni forma che qui non c'e'. */
+	if (!g_file_set_contents(indice,
+	                         "[Icon Theme]\n"
+	                         "Name=REMOTIX (invisibile)\n"
+	                         "Comment=Cursore vuoto: su KWin --virtual il cursore sta "
+	                         "dentro l'immagine catturata, e il client disegna il suo\n",
+	                         -1, NULL)) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: tema del cursore NON scritto in %s: chi guarda vedra' "
+		              "DUE puntatori (il suo, e quello del desktop che insegue)",
+		              tema);
+		return NULL;
+	}
+	for (unsigned i = 0; i < G_N_ELEMENTS(FORME); i++) {
+		g_autofree char *percorso = g_build_filename(cursori, FORME[i], NULL);
+
+		if (scrivi_cursore_vuoto(percorso))
+			scritte++;
+	}
+	if (scritte == 0) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: nessuna forma del cursore scritta: KWin ripieghera' sul "
+		              "tema visibile, e i puntatori resteranno due");
+		return NULL;
+	}
+	registro_dice(REG_SESSIONE,
+	              "⭐ Plasma: tema «%s» con %u forme trasparenti in %s — il cursore di "
+	              "KWin non si vedra' nell'immagine, e chi guarda ne avra' UNO solo",
+	              TEMA_CURSORE, scritte, tema);
+	return g_steal_pointer(&base);
+}
+
+/*
+ * ⭐ FASE 12 — «BLOCCA» E «CAMBIA UTENTE» TOLTI DAL MENU DI PLASMA.
+ *
+ * ⛔ Riportato da v1 (`fondamenta/remotix-c/src/sessione.c`,
+ *    `scrivi_regole_menu`), chiesto dall'utente l'8 agosto 2026 e rimasto
+ *    fuori dal passaggio a v2: `[M]` 19 set 2026, la prova dell'utente su KDE,
+ *    le due voci c'erano.  In una sessione servita da REMOTIX non funzionano, ed
+ *    e' GIUSTO: il blocco e' nostro (`DECISIONI.md` §4.3, e KWin parte con
+ *    `--no-lockscreen`), e cambiare utente vorrebbe un display manager che qui
+ *    non c'e'.  ⛔ Ma una voce che non fa niente e' peggio di una che manca.
+ *
+ * La leva e' KIOSK (`KAuthorized`), coi nomi che Plasma interroga davvero:
+ *   `SessionManagement::canLock()`       → `lock_screen`
+ *   `SessionManagement::canSwitchUser()` → `start_new_session`
+ *   `SessionsModel::canSwitchUser()`     → `switch_user`
+ * ⚠ `switch_user` e `start_new_session` servono tutti e due (l'elenco e il
+ *   pulsante), e `[$i]` impedisce al `kdeglobals` dell'utente di rimetterle.
+ * ⛔ `logout` NON si tocca: e' l'unica porta per chiudere la sessione (§4.1-ter).
+ * ⭐ Sotto `XDG_RUNTIME_DIR` e non in `~/.config`: vale per la sessione che
+ *    serviamo, sparisce con lei, e non tocca la configurazione dell'utente ne'
+ *    chi siede davanti alla macchina.
+ *
+ * Torna la cartella da mettere in `XDG_CONFIG_DIRS`, o NULL (detto nel registro).
+ */
+static char *scrivi_regole_menu_kde(const char *runtime)
+{
+	g_autofree char *cartella = g_build_filename(runtime, "remotix", "xdg", NULL);
+	g_autofree char *percorso = g_build_filename(cartella, "kdeglobals", NULL);
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_file_set_contents(percorso,
+	                         "[KDE Action Restrictions][$i]\n"
+	                         "action/lock_screen=false\n"
+	                         "action/start_new_session=false\n"
+	                         "action/switch_user=false\n",
+	                         -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: regole del menu NON scritte in %s (%s): «Blocca» e "
+		              "«Cambia utente» resteranno nel menu",
+		              cartella, sbaglio ? sbaglio->message : g_strerror(errno));
+		return NULL;
+	}
+	registro_dice(REG_SESSIONE,
+	              "⭐ Plasma: regole del menu in %s — niente «Blocca», niente «Cambia "
+	              "utente» (KIOSK); «Esci» resta",
+	              percorso);
+	return g_steal_pointer(&cartella);
+}
+
+/*
  * L'ambiente della sessione, composto da zero: quel che non serve non passa.
  * Dieci variabili, una per volta (`CODER.md` §4.5).
  */
@@ -688,7 +849,29 @@ static char **componi_ambiente(void)
 	 *     `gnome-session`, e `startplasma-wayland` non la ha.
 	 */
 	if (e_kde()) {
+		g_autofree char *regole = scrivi_regole_menu_kde(runtime);
+		g_autofree char *icone = scrivi_tema_cursore_kde(runtime);
+
 		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=plasma-"));
+		/* ⚠ DAVANTI a `/etc/xdg`, non al suo posto: da li' viene
+		 *   `menus/plasma-applications.menu`, il file che il prefisso qui sopra
+		 *   va a cercare — sostituirlo spegnerebbe la cattura (§3.3-bis). */
+		if (regole)
+			g_ptr_array_add(ambiente,
+			                g_strdup_printf("XDG_CONFIG_DIRS=%s:%s", regole,
+			                                g_getenv("XDG_CONFIG_DIRS") ?: "/etc/xdg"));
+		/* ⛔ LE TRE VARIABILI VANNO INSIEME: `XCURSOR_THEME` da sola non basta
+		 *    (KWin la guarda solo con `XCURSOR_SIZE`), e `XCURSOR_PATH` serve
+		 *    perche' il tema sta in `XDG_RUNTIME_DIR`, che nessuna ricerca
+		 *    predefinita guarda — con le cartelle di sistema in coda, per non
+		 *    togliere i temi veri a chi li cerca per altro. */
+		if (icone) {
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_THEME=" TEMA_CURSORE));
+			g_ptr_array_add(ambiente, g_strdup("XCURSOR_SIZE=24"));
+			g_ptr_array_add(ambiente,
+			                g_strdup_printf("XCURSOR_PATH=%s:%s", icone,
+			                                "/usr/share/icons:/usr/local/share/icons"));
+		}
 		goto la_coda;
 	}
 

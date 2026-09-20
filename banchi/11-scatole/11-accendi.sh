@@ -398,6 +398,18 @@ prodotto)
 		#   tutto il resto di quella cartella.
 		cp /rete11/attrezzi-gruppi-scheda.sh /opt/remotix/
 		cp /rete11/prodotto/remotix.pam      /etc/pam.d/remotix
+		# ⭐ LE TRE CINTURE DI DECISIONI.md §4.7 — fase 12, 19 settembre 2026.
+		# `[M]` La prova dell utente su KDE: dal menu di Plasma si poteva
+		# spegnere, perche la scatola rispondeva «challenge» e la macchina vera
+		# risponde «no».  Le mette `src/provisiona.sh` sulla macchina vera, e
+		# nessuno le aveva mai messe nelle scatole: la scatola era DIVERSA.
+		# ⚠ Stesse righe di provisiona.sh, stessi file: niente copia della logica.
+		install -D -m 644 /rete11/prodotto/remotix-niente-spegnimento.rules /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules
+		install -D -m 644 /rete11/prodotto/remotix-tasti.conf /etc/systemd/logind.conf.d/remotix-tasti.conf
+		mkdir -p /etc/systemd/sleep.conf.d
+		printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" > /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+		systemctl restart polkit >/dev/null 2>&1 || true
+		systemctl reload systemd-logind >/dev/null 2>&1 || true
 		rm -f /opt/remotix/lib/*
 		cp -a /rete11/prodotto/lib/* /opt/remotix/lib/
 		echo /opt/remotix/lib > /etc/ld.so.conf.d/rete11.conf
