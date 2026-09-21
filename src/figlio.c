@@ -6619,6 +6619,56 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	GError *sbaglio = NULL;
 	Cattura *nuova;
 
+	/*
+	 * ⭐ FASE 13 — XFCE (wlroots): qui la sorgente È la cattura.  Non c'è un
+	 *    nodo PipeWire né una sessione Mutter/KWin da riprendere: rimontare
+	 *    vuol dire fermare la `Cattura` e riaprirla con `cattura_avvia_wlr()`
+	 *    sulla strada nuova.  ⛔ Input (`input_apri_wlr`) e appunti restano
+	 *    vivi: sono del palco, non del flusso.
+	 * ⛔ Il ramo sta DAVANTI e torna sempre: sotto, il percorso di GNOME e KDE
+	 *    resta quello di prima, parola per parola.  Senza questo ramo `m` e
+	 *    `palco_kwin` sono NULL su XFCE, la guardia qui sotto tornava `false`
+	 *    e il chiamante smontava il palco INTERO (input e appunti compresi).
+	 */
+	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE) {
+		if (!c)
+			return false;
+		if (*c) {
+			cattura_ferma(*c);
+			*c = NULL;
+		}
+		misura_del_palco(&l, &a);
+		nuova = cattura_avvia_wlr(l, a, MOVIMENTO_FPS, strada_del_palco,
+		                          CATTURA_COLORE_BGRX, &sbaglio);
+		if (!nuova) {
+			registro_dice(REG_FIGLIO,
+			              "⛔ wlroots: la cattura NON si e' riaperta alla strada "
+			              "«%s» (%s): smonto il palco per intero, che e' il "
+			              "ripiego",
+			              strada_del_palco == CATTURA_STRADA_SCHEDA ? "SCHEDA"
+			                                                        : "MEMORIA",
+			              sbaglio ? sbaglio->message : "nessun dettaglio");
+			g_clear_error(&sbaglio);
+			return false;
+		}
+		g_clear_error(&sbaglio);
+		*c = nuova;
+		/* ⚠ La stessa cucitura di `prendi_il_palco()`: su wlroots la
+		 *   registrazione si accetta e non richiama mai (il puntatore è nei
+		 *   pixel), ma si fa lo stesso — un palco rimontato deve essere
+		 *   uguale a uno montato. */
+		cattura_cursore(*c, cursore_al_padre, NULL);
+		registro_dice(REG_FIGLIO,
+		              "⭐⭐ wlroots: la STRADA DEI PIXEL e' cambiata in «%s» "
+		              "rimontando SOLO la cattura (tela %ux%u): input e appunti "
+		              "NON sono stati toccati",
+		              strada_del_palco == CATTURA_STRADA_SCHEDA
+		                  ? "SCHEDA (DMA-BUF, copia zero)"
+		                  : "MEMORIA (i pixel si copiano)",
+		              l, a);
+		return true;
+	}
+
 	if ((!m && !palco_kwin) || !c)
 		return false;
 
