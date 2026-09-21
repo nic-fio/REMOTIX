@@ -217,6 +217,11 @@ si fa **una domanda sola e si scrive il numero**: *«ti chiedo 4K a 60: quanti m
 caso undici giorni dopo — che è **esattamente** com'è andata su GNOME. ⇒ Sta in `PIANO.md`, nelle tre
 fasi, e **non costa una riga di prodotto**.
 
+⛔ **SOSPESA il 21 settembre 2026, dall'utente**, insieme a M1: *«sì, saltala. Poi una volta che
+avremo completato il progetto, penseremo alla sua evoluzione, ma l'obiettivo primario è arrivare ad
+avere un prodotto funzionante sui 4 DE principali»*. ⇒ Su XFCE e LXQt la domanda **non si fa**; il
+numero di KDE (58,9) resta scritto.
+
 ### 0.6 ✅ ⭐⭐ Una macchina, UN desktop — le macchine con più desktop insieme sono fuori scopo
 
 *Deciso dall'utente il **20 settembre 2026**, all'apertura della fase 13:*
