@@ -169,7 +169,7 @@ desktop, ed è dichiarato.
 #### ⛔ I tre pericoli che il sopralluogo ha trovato, e che non sono rami da aggiungere
 
 1. ⛔⛔ **Una guardia che evapora, senza una riga di registro.** `unita_inattiva()`
-   (`src/sessione.c:1325`) protegge dalla seconda sessione chiedendo a systemd se l'unità del
+   (in `src/sessione.c`) protegge dalla seconda sessione chiedendo a systemd se l'unità del
    compositore è ferma; `unita_ferma()` (`:1290-1300`) accetta `unknown` ⇒ **risponde vero per
    un'unità che non esiste**. Su XFCE, dove unità non ce n'è, la protezione pagata il 16 agosto 2026
    **non fallirebbe: sparirebbe**. Serve un fatto vero (nome assente dal bus **e** nessun `labwc`
@@ -460,7 +460,7 @@ wlroots. La modifica è di cinque file e non tocca il protocollo:
 - `appunti_kde.c`: l'apertura diventa `apri_su(compositore)`, con due porte —
   `appunti_kde_apri()` («KWin») e `appunti_kde_apri_wlroots()` («labwc»). Il nome serve **solo** alle
   tre righe di registro; su KDE escono uguali lettera per lettera;
-- `appunti.c/.h`: `appunti_apri_wlroots()`, lo stesso involucro di `appunti_apri_kde()`;
+- `src/appunti.c` e `src/appunti.h`: `appunti_apri_wlroots()`, lo stesso involucro di `appunti_apri_kde()`;
 - `figlio.c`: se `sessione_desktop() == SESSIONE_DESKTOP_XFCE` si apre quella, **prima**; il ramo
   KWin/Mutter di sotto è quello di prima.
 
