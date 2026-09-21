@@ -59,88 +59,6 @@ Non si tiene per rispetto: si toglie, e il documento resta corto abbastanza da e
 
 # Le voci
 
-## M1 · ⭐⭐⭐ GNOME non arriva al desiderato — e per arrivarci bisognerebbe chiedergli un numero diverso
-
-> ### ⭐⭐⭐ LA REGOLA CHE SEMPLIFICA QUESTA VOCE — *l'utente, 25 agosto 2026*
->
-> > *«Rendiamola semplice: il 4K/60 fps è il tetto che chiediamo a tutti (desiderio). Per i prossimi
-> > DE lo chiediamo, per GNOME dovremo tornarci.»*
->
-> ⇒ ⭐ **Il bersaglio è uno solo per tutti**, ed è il **desiderato** che era già deciso l'8 agosto
-> 2026 (`DECISIONI.md` §2.2): **4K · 60 fotogrammi al secondo · 10 bit**. Nessun bersaglio su misura
-> per compositore.
->
-> ⭐⭐ **E per i desktop nuovi non c'è niente da fare**, e va detto perché è la parte lieta: il
-> prodotto **già chiede 60 a chiunque**. Se KDE, XFCE e LXQt li consegnano, ⇒ **su di loro il buco
-> non esiste proprio**. `[M]` KWin ne consegna **58,9** senza che gli si chieda niente di speciale.
->
-> ⛔ **Il buco è di GNOME soltanto**, e questa voce è la sua.
-
-**Che cos'è, in una riga.** ⛔ **Per farsi dare 60 fotogrammi da GNOME bisogna chiedergliene 90** —
-e il prodotto non sa chiedere un numero che non sia 60.
-
-Quel numero è **scritto dentro il programma** — `MOVIMENTO_FPS 60`, `src/figlio.c` · `MOVIMENTO_FPS` `[M]`
-verificato il 25 agosto 2026 — e non esiste nessun modo di cambiarlo: né da riga di comando, né da
-nessun'altra parte. ⚠ **Chiedere 60 va benissimo con chi obbedisce**: il difetto si vede solo con
-chi, a 60, se ne dimezza.
-
-**Da dove viene.** Messo il **13 agosto 2026** (primo commit che lo contiene: `92105b5`), quando il
-multi-tenant non era ancora in discussione. ⛔ **Non è stata una scelta: è il numero ovvio** — lo
-schermo va a 60, il browser disegna a 60. `DECISIONI.md` **§2.5-bis**.
-
-**E il fatto che lo rende una voce e non una curiosità.** `[M]` 13 agosto: chiedendo alla **stessa**
-Mutter, sulla stessa macchina e con la stessa scena, un ritmo diverso (monitor 120, freno 90), ne
-sono usciti **61,4** invece di **31,5** — cioè **quanto KWin**. ⇒ ⛔ *Il tetto di GNOME non è di
-Mutter: è nostro.* La ragione della decisione «su GNOME il desiderato non si promette» è cambiata il
-13 agosto, e **la decisione non è mai stata rimessa in discussione**.
-
-⚠ **Il perché è `[R]`, letto e non misurato**: nel codice di Mutter il freno tronca una divisione
-(16666 invece di 16666,67), e chi cade sotto perde un tick intero. ⛔ E una riga che diceva *«legge
-verificata su 13 punti»* **era falsa**, corretta il 13 agosto: il file di misura conteneva due celle,
-tutt'e due non valide.
-
-**Che cosa costa se non si fa MAI.**
-⭐ **Poco, e va detto chiaro perché nessuno si spaventi.** Il prodotto funziona, i numeri sono onesti,
-e la fluidità di GNOME l'utente l'ha giudicata accettabile **due volte** — il 9 agosto (§2.5-bis) e
-il 25 agosto davanti a un video 4K. ⇒ **REMOTIX esce lo stesso.** Il costo è **un'occasione persa**:
-su GNOME si resta a circa metà dei fotogrammi che quella macchina saprebbe dare — ⛔ e **su un solo
-desktop dei quattro**, che è quel che rende questa voce rimandabile invece che urgente.
-⛔ **E un costo che non è di fluidità**: finché il numero non si può chiedere, **una scelta
-dell'utente la sta facendo una costante** — *più fluidità a testa* o *più gente insieme* — e la sta
-facendo in silenzio.
-
-**Che cosa serve prima.** ⛔ **Una misura che non esiste**: `[?]` quanto costa in **capienza** un
-fotogramma in più a testa. Il tetto trovato nella fase 10 è **il lavoro di composizione**
-(0,97 Gpixel/s, §6.11), quindi raddoppiare i fotogrammi per sessione dovrebbe **dimezzare** quante
-sessioni ci stanno — ⚠ **ragionamento, non misura**.
-
-**Quanto pesa.** `[?]` Non stimato. ⭐ Ma è **un lavoro solo, non quattro**: la costante è nostra e
-condivisa, quindi il giorno che diventa chiedibile lo diventa **per tutti e quattro i desktop
-insieme**. ⇒ È la ragione per cui questa voce sta qui e non dentro le fasi dei desktop nuovi:
-`DECISIONI.md` §0.4 e la **regola di raccolta** qui sotto.
-
-> ### ⛔⛔ E LA PARTE CHE **NON** ASPETTA LA FINE — la regola di raccolta
->
-> ⭐ *«Per gli altri DE non ci portiamo dietro questo buco»* — l'utente, 25 agosto 2026.
->
-> ⛔ **Non può voler dire una strada diversa per ogni compositore**: sarebbe un'eccezione per
-> compositore, che il prodotto non ammette (`DECISIONI.md` §5.1-bis). ⇒ Quel che non ci si porta
-> dietro **non è la cura: è l'ignoranza.**
->
-> ⭐⭐ **All'ingresso di ogni desktop nuovo — fasi 12, 13, 14 — mezz'ora di prova e UNA domanda:
-> *«ti chiedo 4K a 60: quanti me ne dai?»*** ⇒ Se ne dà 60, si scrive e si va avanti. ⛔ **Se ne dà
-> la metà, è un GNOME anche lui**, e lo si sa il primo giorno invece che undici giorni dopo.
-> ⚠ Il numero si scrive e basta: **nessuna riga di prodotto**.
->
-> ⇒ Così il giorno di M1 ci sono **quattro numeri già in tasca** e si fa **una** modifica, invece di
-> aprire **quattro indagini**. ⛔ E soprattutto non si scopre la stessa cosa quattro volte, per caso,
-> ogni volta undici giorni dopo — che è **esattamente** com'è andata su GNOME.
->
-> ⚠ **Questo pezzo sta in `PIANO.md`, nelle fasi 12-13-14**, non qui: è lavoro che succede **prima**
-> della fine, e questo documento non è il posto delle cose che non aspettano.
-
----
-
 ## M2 · ⚠ QVBR non è mai stata accesa, e la prova che servirebbe non è stata fatta
 
 **Che cos'è.** Un modo diverso di far lavorare il codificatore. Oggi è **spenta**, e valgono i numeri
@@ -176,29 +94,6 @@ sono il tema su cui l'utente ha corretto il bersaglio della fase 9.
 **Che cosa serve prima.** Un'opzione che lo esponga, e due giri sullo stesso filo sporco.
 
 **Quanto pesa.** `[?]` Piccolo il lavoro, **incerta** la resa.
-
----
-
-## M4 · ⚠ Due client sullo stesso desktop nello stesso momento
-
-**Che cos'è.** Oggi un utente ha **un** posto: chi arriva secondo viene respinto. Due schermi che
-guardano lo stesso desktop insieme — per assistenza, per mostrare qualcosa a qualcuno — **non si può
-fare**.
-
-**Da dove viene.** `DECISIONI.md` **§7.3**: la terza possibilità che *non è mai stata chiesta da
-nessuno*, e che è rimasta fuori senza essere discussa.
-
-**Che cosa costa se non si fa MAI.** ⭐ **Niente al prodotto com'è**: nessuno l'ha chiesta, e
-l'invariante I2 (un posto per utente) è stata **decisa apposta**. ⇒ È una **funzione nuova**, non un
-buco.
-⛔ **Ma cambia il protocollo**, e questo la rende diversa dalle altre: va decisa **prima** di
-scriverlo, non dopo — e il protocollo è già scritto.
-
-**Che cosa serve prima.** Che l'utente dica se la vuole. ⛔ Nient'altro: qui non manca una misura,
-manca una decisione.
-
-**Quanto pesa.** `[?]` Il palco persistente c'è già, quindi *«costerebbe poco»* (§7.3) — ⚠ ma è una
-stima dell'8 agosto 2026, mai rifatta.
 
 ---
 
@@ -248,3 +143,15 @@ una funzione nuova.
    `DECISIONI.md` e il lavoro in `PIANO.md`; qui resta il rimando.
 5. ⭐ **Si rilegge alla chiusura di ogni fase**, insieme al `README.md` — è l'unico modo perché un
    elenco del «dopo» non diventi archeologia.
+
+---
+
+## Le voci tolte
+
+⭐ **21 settembre 2026, decisione dell'utente**: *«M2, M3 e M5 sono gli unici punti da conservare
+nel masterplan»*. ⇒ Tolte, e i numeri **non** si riusano (regola 3):
+
+| | che cos'era | perché è uscita |
+|---|---|---|
+| **M1** | GNOME consegna ~31 fotogrammi invece di 60 (per averne 60 bisognerebbe chiedergliene 90, e `MOVIMENTO_FPS` è una costante) | deciso dall'utente: non è più un lavoro del «dopo». Il fatto resta scritto in `DECISIONI.md` §2.5-bis |
+| **M4** | due client sullo stesso desktop nello stesso momento | deciso dall'utente: non è un lavoro del «dopo». L'invariante I2 (un posto per utente) resta com'è, `DECISIONI.md` §7.3 |

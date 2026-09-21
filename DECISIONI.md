@@ -205,7 +205,7 @@ compositore** — è §5.1-bis applicata ai numeri: *niente eccezioni per compos
 | | |
 |---|---|
 | **i desktop nuovi** (KDE, XFCE, LXQt) | ⭐ **niente da fare**: il prodotto già chiede 60 a chiunque. Se lo consegnano, il buco su di loro **non esiste**. `[M]` KWin ne dà **58,9** senza che gli si chieda niente di speciale |
-| ⛔ **GNOME** | a 60 se ne dimezza (**31,5**), e per averne 60 bisognerebbe **chiedergliene 90** — che il prodotto non sa fare (§2.5-bis) ⇒ **si torna dopo**: `MASTERPLAN.md` **M1** |
+| ⛔ **GNOME** | a 60 se ne dimezza (**31,5**), e per averne 60 bisognerebbe **chiedergliene 90** — che il prodotto non sa fare (§2.5-bis) ⇒ ⚠ era `MASTERPLAN.md` **M1**, ⛔ **tolta dall'utente il 21 set 2026** (*«M2, M3 e M5 sono gli unici punti da conservare nel masterplan»*): il fatto resta, il lavoro del «dopo» no |
 
 ⚠ **Quel che questa decisione NON fa**: non promette 4K/60 su GNOME e non lo toglie dai traguardi.
 §2.5-bis resta in vigore così com'è — *«su GNOME il desiderato non si promette»* — ⛔ **con la ragione
