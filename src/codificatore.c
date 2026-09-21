@@ -2567,6 +2567,8 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 	enum AVPixelFormat sorgente;
 	if (r->formato == CODIFICATORE_PIXEL_BGRX)
 		sorgente = AV_PIX_FMT_BGR0;
+	else if (r->formato == CODIFICATORE_PIXEL_RGBX)
+		sorgente = AV_PIX_FMT_RGB0; /* ⭐ fase 13: labwc, `R G B x` */
 	else
 		sorgente = AV_PIX_FMT_YUV420P10LE;
 
@@ -2588,13 +2590,13 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 		 *   dichiararlo pieno lo schiarirebbe di un passo a ogni giro. */
 		const int *tavola = sws_getCoefficients(SWS_CS_ITU709);
 		sws_setColorspaceDetails(c->conversione, tavola,
-		                         r->formato == CODIFICATORE_PIXEL_BGRX ? 1 : 0,
+		                         FORMATO_PIXEL_IMPACCHETTATO(r->formato) ? 1 : 0,
 		                         tavola, 0 /* uscita: limitato */, 0, 1 << 16, 1 << 16);
 	}
 	/* ⚠ La sorgente ha 8 bit veri (`[M]` F2.2): il Main10 che ne esce e' 8 bit
 	 *   PROMOSSI, e la promozione si dichiara invece di subirla. */
 	c->conf.promozione_8_a_10 =
-	    (r->formato == CODIFICATORE_PIXEL_BGRX && r->profondita == 10);
+	    (FORMATO_PIXEL_IMPACCHETTATO(r->formato) && r->profondita == 10);
 	return 0;
 }
 
@@ -3430,7 +3432,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 	if (c->conversione) {
 		const uint8_t *piani[4] = { NULL, NULL, NULL, NULL };
 		int passi[4] = { 0, 0, 0, 0 };
-		if (c->richiesta.formato == CODIFICATORE_PIXEL_BGRX) {
+		if (FORMATO_PIXEL_IMPACCHETTATO(c->richiesta.formato)) {
 			piani[0] = pixel;
 			passi[0] = (int) passo;
 		} else {

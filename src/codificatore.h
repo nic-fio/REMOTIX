@@ -207,9 +207,31 @@ typedef enum {
  *   il codificatore **senza** misurare insieme la conversione di colore.
  */
 typedef enum {
-	CODIFICATORE_PIXEL_BGRX,       /* 4 byte per pixel, B G R x */
-	CODIFICATORE_PIXEL_YUV420P10LE /* tre piani, 2 byte per campione */
+	CODIFICATORE_PIXEL_BGRX,        /* 4 byte per pixel, B G R x */
+	CODIFICATORE_PIXEL_YUV420P10LE, /* tre piani, 2 byte per campione */
+	/*
+	 * ⭐ FASE 13 — il terzo ingresso vero: **R G B x**, quel che consegna
+	 *    labwc (`[M]` 21 set 2026: `XBGR8888`, l'unico formato offerto).
+	 *
+	 * ⛔⛔ E STA IN CODA APPOSTA, e non è generalità: è la cura di un difetto
+	 *     trovato dal revisore avversario.  La prima stesura credeva di poter
+	 *     SCEGLIERE fra i formati offerti; ma l'evento `buffer` di screencopy
+	 *     arriva **una volta sola** per fotogramma, e labwc offre soltanto
+	 *     `R G B x`.  ⇒ Senza questo valore il codificatore leggeva quei byte
+	 *     come `B G R x` e l'utente vedeva **il rosso e il blu scambiati**, senza
+	 *     un errore da nessuna parte.
+	 * ⭐ E non costa niente: la conversione verso il formato del codificatore
+	 *   c'è comunque, e cambia solo come si legge la sorgente.
+	 */
+	CODIFICATORE_PIXEL_RGBX         /* 4 byte per pixel, R G B x */
 } FormatoPixel;
+
+/* Un ingresso di un piano solo, quattro byte per pixel, a intervallo PIENO:
+ * è la domanda che il codificatore faceva a `== BGRX`, e che da quando c'è
+ * RGBX ha DUE risposte vere.  ⛔ Chiederla con `== BGRX` in un posto solo
+ * vorrebbe dire trattare RGBX come se fosse YUV — cioè un'immagine rotta. */
+#define FORMATO_PIXEL_IMPACCHETTATO(f) \
+	((f) == CODIFICATORE_PIXEL_BGRX || (f) == CODIFICATORE_PIXEL_RGBX)
 
 /*
  * Come si chiede la qualita'.

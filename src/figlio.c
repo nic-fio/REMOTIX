@@ -3993,6 +3993,20 @@ static uint8_t codif_prof[CODEC_MAX];
  *    diverso dal primo — senza questa memoria il codificatore resterebbe al
  *    tetto del PRIMO, che e' esattamente il difetto che si sta curando. */
 static uint8_t codif_liv[CODEC_MAX];
+/*
+ * ⭐ FASE 13 — L'ORDINE DEI CANALI CHE ARRIVA DALLA CATTURA.
+ *
+ * ⛔⛔ Era `CODIFICATORE_PIXEL_BGRX` inchiodato dentro `codificatore_di()`, ed
+ *     era vero per GNOME e KDE (Mutter e KWin danno BGRx).  `[M]` 21 set 2026:
+ *     labwc dà **XBGR8888**, cioè `R G B x`, e lo dà come UNICO formato —
+ *     l'evento `buffer` di screencopy arriva una volta sola.  ⇒ Con l'ordine
+ *     inchiodato l'utente vedeva **il rosso e il blu scambiati**.  Trovato dal
+ *     revisore avversario, non da un'immagine: C1 non guarda i colori.
+ * ⇒ L'ordine lo dice il FOTOGRAMMA (`formato_drm`), e se cambia il
+ *   codificatore si rifa' — lo stesso schema di `codif_liv`.
+ */
+static FormatoPixel formato_ingresso = CODIFICATORE_PIXEL_BGRX;
+static FormatoPixel codif_fmt[CODEC_MAX];
 static uint64_t ciclo_fotogrammi, ciclo_chiavi, ciclo_zero, ciclo_guasti;
 /* ⛔ CONTATO A PARTE da `ciclo_guasti`, e non e' pignoleria: quel contatore
  *    entra nel criterio «il ciclo non ha nemmeno provato a catturare» della riga
@@ -4812,6 +4826,20 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *     secondo client che dichiara un tetto diverso dal primo si porta
 	 *     dietro un codificatore nuovo, o vedrebbe il tetto del PRIMO — e il
 	 *     sintomo, di nuovo, sarebbe uno schermo nero senza una riga. */
+	if (codif[indice] && codif_fmt[indice] != formato_ingresso) {
+		registro_dice(REG_FIGLIO,
+		              "⭐ l'ordine dei canali della cattura è cambiato (%s → %s): "
+		              "rifaccio il codificatore %u, e il prossimo fotogramma sarà "
+		              "una CHIAVE (§5.2)",
+		              codif_fmt[indice] == CODIFICATORE_PIXEL_RGBX ? "RGBx" : "BGRx",
+		              formato_ingresso == CODIFICATORE_PIXEL_RGBX ? "RGBx" : "BGRx",
+		              indice);
+		codificatore_libera(codif[indice]);
+		codif[indice] = NULL;
+		codif_prof[indice] = 0;
+		codif_liv[indice] = 0;
+		debito_chiave[indice] = true;
+	}
 	if (codif[indice] && codif_liv[indice] != livello_chiesto_x10) {
 		registro_dice(REG_FIGLIO,
 		              "⭐ §4.3: il tetto di livello e' cambiato (%u.%u → %u.%u, "
@@ -4882,7 +4910,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *   tetto, il codificatore sceglie, e il livello scelto si SCRIVE lo
 	 *   stesso — chi legge il registro deve sapere che cosa e' uscito. */
 	r.livello_x10 = (int) livello_chiesto_x10;
-	r.formato = CODIFICATORE_PIXEL_BGRX;
+	r.formato = formato_ingresso;
 	r.chiavi_ogni = 0;
 
 	/*
@@ -4937,6 +4965,7 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	if (codif[indice]) {
 		codif_prof[indice] = prof;
 		codif_liv[indice] = livello_chiesto_x10;
+		codif_fmt[indice] = formato_ingresso;
 	}
 	if (!codif[indice]) {
 		/* ⛔ L'attesa cresce, e la riga lo DICE: senza, questo ramo scriveva il
@@ -5226,6 +5255,30 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	CodificatoreFotogramma fg;
 	Codificatore *cod;
 	const CodificatoreConfessione *c;
+
+	/* ⭐ FASE 13 — l'ordine dei canali si legge dal fotogramma, non si
+	 *    suppone.  ⚠ Solo `XBGR8888`/`ABGR8888` sono `R G B x`: tutto il resto
+	 *    resta BGRx, cioè esattamente quel che GNOME e KDE avevano prima
+	 *    (Mutter e KWin danno BGRx, e sulla strada della scheda questo campo non
+	 *    decide niente). */
+	{
+		const uint32_t xb24 = (uint32_t)'X' | ((uint32_t)'B' << 8) |
+		                      ((uint32_t)'2' << 16) | ((uint32_t)'4' << 24);
+		const uint32_t ab24 = (uint32_t)'A' | ((uint32_t)'B' << 8) |
+		                      ((uint32_t)'2' << 16) | ((uint32_t)'4' << 24);
+		FormatoPixel visto = (!fo->sulla_scheda &&
+		                      (fo->formato_drm == xb24 || fo->formato_drm == ab24))
+		                         ? CODIFICATORE_PIXEL_RGBX
+		                         : CODIFICATORE_PIXEL_BGRX;
+
+		if (visto != formato_ingresso) {
+			registro_dice(REG_FIGLIO,
+			              "⭐ la cattura consegna i pixel in ordine %s: lo dico al "
+			              "codificatore invece di lasciarlo supporre",
+			              visto == CODIFICATORE_PIXEL_RGBX ? "R G B x" : "B G R x");
+			formato_ingresso = visto;
+		}
+	}
 
 	cod = codificatore_di(codec, numero, tela_l, tela_a);
 	if (!cod)

@@ -117,6 +117,7 @@ struct Cattura
 	WlrPalco *wlr;
 	WlrFotogramma wlr_ultimo;
 	gboolean wlr_ultimo_noto;
+	gboolean wlr_detto_il_testimone, wlr_detto_y;
 
 	struct pw_thread_loop *ciclo;
 	struct pw_context *contesto;
@@ -1582,18 +1583,6 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 	              "per richiesta, nessun nodo PipeWire.  Il ritmo lo decide il nostro "
 	              "ciclo, non il compositore",
 	              wlr_uscita_nome(c->wlr));
-	/*
-	 * ⛔⛔ E LA RIGA DEL FORMATO SI DICE ANCHE QUI, con le stesse parole.
-	 *
-	 * Non è decorazione: «`formato negoziato: LxA`» è **il testimone** che C1
-	 * legge per dire che il monitor è nato (`11-c1-nasce-e-si-vede.py`).  ⚠ Sul
-	 * verso a spinta la scrive la richiamata del formato di PipeWire, che qui
-	 * non esiste — e senza questa riga la maglia direbbe «nata cieca» di una
-	 * sessione che si vede benissimo.
-	 * ⇒ Stesse parole, perché chi le cerca ne conosce una sola forma.
-	 */
-	registro_dice(AREA, "formato negoziato: %ux%u %s (%d bit per canale), modificatore 0x0",
-	              uscita_l, uscita_a, "wlroots-shm", 8);
 	return c;
 }
 
@@ -2218,13 +2207,43 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		cattura->wlr_ultimo_noto = TRUE;
 		cattura->formato_noto = TRUE;
 
+		/*
+		 * ⛔⛔ IL TESTIMONE SI SCRIVE QUI, AL PRIMO FOTOGRAMMA VERO — e non
+		 *     all'apertura, dove stava fino al 21 settembre 2026.
+		 *
+		 * «`formato negoziato: LxA`» è la riga che C1 legge per dire che il
+		 * monitor è nato.  La prima stesura la scriveva in `cattura_avvia_wlr`,
+		 * PRIMA di qualunque `capture_output`, con formato, bit e modificatore
+		 * scritti fissi nel testo.  ⇒ Il revisore avversario l'ha detto per
+		 * nome: *una sessione XFCE in cui screencopy fallisce sempre usciva
+		 * VERDE* — la riga provava solo che labwc era vivo.
+		 * ⭐ Qui invece c'è un fotogramma in mano: misura, stride e formato
+		 *   sono quelli dell'evento `buffer`, e il verde di C1 torna a voler dire
+		 *   quel che dice.
+		 */
+		if (!cattura->wlr_detto_il_testimone) {
+			char nome[5];
+
+			cattura->wlr_detto_il_testimone = TRUE;
+			memcpy(nome, &w.formato, 4);
+			nome[4] = 0;
+			registro_dice(AREA,
+			              "formato negoziato: %ux%u %s (8 bit per canale), modificatore "
+			              "0x0 — ⭐ wlroots: detto al PRIMO fotogramma preso, con "
+			              "la misura e il formato che il compositore ha davvero dato",
+			              w.larghezza, w.altezza, nome);
+		}
+
 		/* ⚠ `y_invertita`: se il compositore dice che le righe vanno lette dal
 		 *   basso e nessuno lo onora, l'immagine esce capovolta — un guasto che
 		 *   somiglia a un guasto del codificatore.  ⛔ Qui si DICHIARA e non si
 		 *   gira: girare 8 MB a ogni fotogramma costerebbe più della cattura, e
 		 *   il posto giusto è il codificatore, che sa farlo senza copiare.
 		 *   `[M]` 21 set 2026 su labwc headless la bandiera non si è mai accesa. */
-		if (w.y_invertita)
+		/* ⚠ UNA volta sola: dentro il ramo di ogni presa sarebbero sessanta
+		 *   righe al secondo, la forma che ha già prodotto i 30,8 GB di
+		 *   registro (il revisore, 21 set 2026). */
+		if (w.y_invertita && !cattura->wlr_detto_y && (cattura->wlr_detto_y = TRUE))
 			registro_dice(AREA,
 			              "⛔ wlroots: il compositore dichiara Y INVERTITA e questa "
 			              "stesura non la gira — l'immagine uscirà capovolta, e la "
