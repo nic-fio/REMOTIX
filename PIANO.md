@@ -1654,7 +1654,44 @@ sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 
 ---
 
-## Fase 14 — Il servizio
+## Fase 14 — Il registro
+
+⭐ *Inserita il **21 settembre 2026**, per decisione dell'utente:*
+
+> *«Attualmente la fase 14 riguarda l'installer, ma la spostiamo in fase 15, alla fase 14 inseriamo
+> un sistema di logging serio, che ci siamo dimenticati di realizzare.»*
+
+**Produce**: un sistema di registro serio: quello che serve a chi amministra il server per sapere
+che cosa è successo, a chi, e quando, senza dover leggere il codice.
+
+**Da dove si parte** `[R]` 21 set 2026: il registro di oggi è nato per **i banchi e per chi
+sviluppa**, non per chi amministra.
+- ⭐ C'è già **un imbuto solo**, `src/registro.c`: ogni riga ha l'istante e l'area (`avvio`, `quic`,
+  `rcp`, `sessione`, `video`, `budget`…), e dalla fase 10 dice **di chi** parla. È anche quel che
+  permette a B13.2 di garantire che la parola d'ordine non finisca in nessuna riga.
+- ⛔ Le righe vanno tutte sull'uscita d'errore, e le raccoglie chi ha lanciato il programma. Non c'è
+  un **livello** (errore, avviso, informazione): c'è solo «normale» e «parlantina».
+- ⛔ Le righe sono scritte **per chi sviluppa**: marche, rimandi ai documenti, gergo interno.
+
+**Le domande da porre all'utente all'apertura della fase** — ⛔ nessuna è decisa:
+1. **chi legge** il registro: l'amministratore del server, chi fa assistenza, o tutti e due?
+2. **dove va**: il giornale di sistema (`journalctl -u remotix`), un file suo con la rotazione, o
+   tutti e due?
+3. **i livelli**: quanti, e quale si vede di serie;
+4. **il registro degli accessi**: chi è entrato, da dove, quando, e chi è stato respinto e perché.
+   È una cosa distinta dal registro di diagnosi, e ha domande sue (per quanto si conserva);
+5. **la lingua** delle righe per l'amministratore.
+
+**Il banco**: ⛔ le maglie della rete leggono il registro di oggi (le righe «input id=…», i
+testimoni). ⇒ Cambiare il registro senza la rete sotto vorrebbe dire romperle senza saperlo: le
+maglie si adeguano **nella stessa modifica**, e la rete completa gira dopo ogni incremento.
+
+---
+
+## Fase 15 — Il servizio
+
+⚠ *Era la **fase 14** fino al 21 settembre 2026: il registro le è passato davanti, per decisione
+dell'utente.*
 
 > ### ⏳ ⭐ LE DUE COSE IN SOSPESO DOPO LXQt — *l'utente, 21 settembre 2026*
 >

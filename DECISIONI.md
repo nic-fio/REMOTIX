@@ -3184,7 +3184,7 @@ costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silen
 >
 > ⚠ **Non si allarga qui la decisione**: il confine è stato tracciato in `SPECIFICHE.md` §5.2 (*«la
 > sessione sopravvive al client, NON al server»*), il rilievo sta in
-> `fasi/10-multi-tenant-e-il-budget.md` **§7.5**, e ⭐ **il posto dove si cura è la fase 14, il
+> `fasi/10-multi-tenant-e-il-budget.md` **§7.5**, e ⭐ **il posto dove si cura è la fase 15 (era la 14 fino al 21 set 2026), il
 > servizio**: aggiornare senza fermare nessuno.
 >
 > ⭐ **E per intanto la regola pratica, che discende da questa decisione senza cambiarla**: prima di

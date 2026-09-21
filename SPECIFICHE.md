@@ -378,7 +378,7 @@ inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
 > amministra, e senza che nessuno l'avesse dichiarato.**
 >
 > ⭐ **Non è una promessa rotta: è un confine che non era tracciato.** Sta qui perché il giorno in cui
-> il prodotto diventerà un servizio da aggiornare senza fermare nessuno — **fase 14** — questo è il
+> il prodotto diventerà un servizio da aggiornare senza fermare nessuno — **fase 15** (era la 14 fino al 21 set 2026) — questo è il
 > punto da cui si riparte.
 >
 > ⚠ **E oggi non costa niente, e va detto**: *«nessuno sta lavorando sul server, REMOTIX è

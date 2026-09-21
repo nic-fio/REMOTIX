@@ -124,7 +124,7 @@ una funzione nuova.
 
 | | dove va invece | perché |
 |---|---|---|
-| aggiornare il server senza buttare fuori nessuno | **`PIANO.md`, fase 14** | è già una fase. Non aspetta la fine |
+| aggiornare il server senza buttare fuori nessuno | **`PIANO.md`, fase 15** | è già una fase. Non aspetta la fine |
 | il ritardo che sfora il tetto | resta `[?]` in `DECISIONI.md` §2.5 | è una **grandezza dichiarata**, non un lavoro rimandato |
 | il ridimensionamento a caldo | ⛔ **fuori dal prodotto** (`DECISIONI.md` §5.1-bis) | tolto **per decisione dell'utente**. Rimandare è diverso da togliere, e questa è tolta |
 | la sessione che nasce cieca | **fase 11**, il collaudo della rete | è un **guasto vivo**. Un guasto non aspetta la fine del progetto |
