@@ -1656,6 +1656,16 @@ sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 
 ## Fase 14 — Il servizio
 
+> ### ⏳ ⭐ LE DUE COSE IN SOSPESO DOPO LXQt — *l'utente, 21 settembre 2026*
+>
+> *«Una volta completato LXQt rimangono 2 cose in sospeso: il discorso degli utenti che devono
+> appartenere ai gruppi render/video e la procedura di installazione di Remotix.»*
+>
+> | | dove sta oggi |
+> |---|---|
+> | **i gruppi `video`/`render`** | ✅ deciso e scritto il 20 set 2026, `DECISIONI.md` §7.21: `provisiona.sh` all'installazione, il prodotto alla prima connessione. `[M]` solo sulla scatola `kde`. ⚠ Da riprendere con l'utente: che cosa resta aperto |
+> | **la procedura d'installazione** | è il cuore di questa fase: *«confezionamento, installazione»* qui sotto |
+
 ⚠ *Era la **fase 13** fino al 25 agosto 2026, per lo stesso scalo.*
 
 > ### ⛔⛔ E UNA COSA DA FARE QUI È GIÀ MISURATA — *25 agosto 2026*
