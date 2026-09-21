@@ -296,6 +296,26 @@ struct WlrPalco {
 	uint32_t f_nanosecondi;
 
 	bool detto_il_formato;
+	/*
+	 * ⭐⭐ IL DANNO — 21 settembre 2026, e l'ha trovato la rete.
+	 *
+	 * `[M]` La prima stesura chiedeva `copy`: il compositore copia l'uscita
+	 * SUBITO, cambiata o no.  ⇒ Col desktop fermo il figlio produceva **~60
+	 * fotogrammi identici al secondo** (247 nei primi 5 s, prima che la scena
+	 * partisse), li codificava e li spediva.  Su GNOME e KDE il prodotto
+	 * consegna solo quando qualcosa cambia; qui bruciava banda e scheda per
+	 * niente — e la maglia C3 non vedeva più il suo guasto «codificatore
+	 * fermo», perché prima del fermo erano già passati mille fotogrammi di
+	 * desktop immobile.
+	 * ⇒ `copy_with_damage` (screencopy v2+): il compositore risponde solo
+	 *   quando l'uscita è CAMBIATA.  È lo stesso contratto della spinta.
+	 * ⚠ Ma una CHIAVE a volte serve subito anche su un desktop fermo (un
+	 *   cliente che si attacca, una richiesta §5.2): `forza_intero` fa sì che
+	 *   il PROSSIMO giro usi `copy`, e lo mette `wlr_forza_intero()`.  Il primo
+	 *   giro in assoluto è intero anche lui: chi si attacca deve vedere subito.
+	 */
+	bool forza_intero, detto_il_danno;
+	bool copia_col_danno; /* la copia in volo è `copy_with_damage` */
 	WlrConteggi conteggi;
 
 	/* ------------------------------------------------------------------ *
@@ -1381,6 +1401,7 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
 		p->buffer_sporco = true;
 	}
 	p->copia_partita = false;
+	p->copia_col_danno = false;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1391,6 +1412,7 @@ WlrPalco *wlr_apri(GError **sbaglio)
 	const char *nome = g_getenv("WAYLAND_DISPLAY");
 
 	p->fd = -1;
+	p->forza_intero = true; /* il primo giro: chi si attacca deve vedere subito */
 	/* ⛔ I descrittori della scheda a -1 SUBITO: lo zero di `g_new0` è lo
 	 *    standard input, e una chiusura per sbaglio lo chiuderebbe. */
 	p->drm_fd = -1;
@@ -1467,6 +1489,12 @@ void wlr_misura(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza)
 const char *wlr_uscita_nome(const WlrPalco *palco)
 {
 	return palco && palco->uscita_nome ? palco->uscita_nome : "";
+}
+
+void wlr_forza_intero(WlrPalco *palco)
+{
+	if (palco)
+		palco->forza_intero = true;
 }
 
 void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori)
@@ -1725,6 +1753,20 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	 * quella.  Buttarla voleva dire gettare un fotogramma quasi pronto e
 	 * riallocare 8 MB, a ogni scadenza, cioè quasi sempre.
 	 */
+	/*
+	 * ⛔⛔ UNA COPIA COL DANNO IN ATTESA NON FA PASSARE UNA RICHIESTA INTERA —
+	 *     21 settembre 2026, `[M]` C4(xfce) «non ho potuto guardare».
+	 *
+	 * `wlr_forza_intero()` alza la bandiera per la copia che PARTE; ma se una
+	 * copia col danno è già in volo, su uno schermo fermo non torna mai, e
+	 * la copia intera non parte mai: il cliente che si attacca aspetta un
+	 * fotogramma che non arriva (C4: *«il dopo non si è fatto guardare:
+	 * nessun fotogramma in 8 s»*).  ⇒ Si abbandona quella in attesa — col buffer
+	 * marcato, perché la copia era partita — e se ne apre una intera.
+	 */
+	if (palco->frame && palco->forza_intero && palco->copia_col_danno)
+		chiudi_frame(palco, true);
+
 	if (!palco->frame) {
 		palco->visto_buffer = palco->visto_buffer_done = false;
 		palco->pronto = palco->fallito = false;
@@ -1785,7 +1827,23 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 				}
 				dove = palco->buffer;
 			}
-			zwlr_screencopy_frame_v1_copy(palco->frame, dove);
+			/* ⭐ Col danno, se il compositore lo sa fare e nessuno ha chiesto un
+			 *    fotogramma intero: vedi `forza_intero` nella struttura. */
+			if (!palco->forza_intero &&
+			    zwlr_screencopy_frame_v1_get_version(palco->frame) >= 2) {
+				zwlr_screencopy_frame_v1_copy_with_damage(palco->frame, dove);
+				palco->copia_col_danno = true;
+				if (!palco->detto_il_danno) {
+					palco->detto_il_danno = true;
+					registro_dice(AREA,
+					              "⭐ wlroots: da qui i fotogrammi si chiedono COL "
+					              "DANNO — il compositore risponde solo quando lo "
+					              "schermo è cambiato, come sulla spinta di GNOME e KDE");
+				}
+			} else {
+				zwlr_screencopy_frame_v1_copy(palco->frame, dove);
+				palco->forza_intero = false;
+			}
 			palco->copia_partita = true;
 		}
 		if (g_get_monotonic_time() >= scadenza) {

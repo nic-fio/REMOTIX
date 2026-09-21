@@ -1942,11 +1942,15 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 
 gboolean cattura_risveglia(Cattura *cattura)
 {
-	/* ⭐ Sul verso a tiro il risveglio non serve: ogni fotogramma è già una
-	 *    richiesta nostra.  ⚠ Si torna TRUE perché la domanda è «posso
-	 *    chiedere?», e la risposta è sì — non perché «si è fatto qualcosa». */
-	if (cattura && cattura->wlr)
+	/* ⭐ Sul verso a tiro il risveglio è chiedere il prossimo fotogramma INTERO.
+	 *    ⛔ Fino al 21 set 2026 qui non si faceva niente, perché ogni giro era
+	 *    già una copia intera; da quando i fotogrammi si chiedono COL DANNO
+	 *    (`wlroots.c`, `forza_intero`), su un desktop fermo non ne arriverebbe
+	 *    nessuno — proprio quando serve una chiave. */
+	if (cattura && cattura->wlr) {
+		wlr_forza_intero(cattura->wlr);
 		return TRUE;
+	}
 	uint8_t spazio[2048];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[5];

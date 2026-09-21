@@ -235,4 +235,13 @@ typedef struct {
 
 void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori);
 
+/*
+ * ⭐ Il PROSSIMO fotogramma sarà intero, anche se lo schermo non è cambiato.
+ *
+ * Di solito i fotogrammi si chiedono col danno (il compositore risponde solo
+ * quando qualcosa cambia).  ⚠ Ma una chiave a volte serve subito su un desktop
+ * fermo: è il risveglio di `cattura.h`, e su questa famiglia è questa riga.
+ */
+void wlr_forza_intero(WlrPalco *palco);
+
 void wlr_chiudi(WlrPalco *palco);
