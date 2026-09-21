@@ -2019,11 +2019,15 @@ static gboolean xfconf_metti(const char *canale, const char *chiave, const char 
  * ⛔ Si tolgono SOLO le quattro famiglie nominate: il blocco, la sospensione
  *    (con ibernazione e sonno ibrido, che sono la stessa famiglia), il riavvio
  *    e lo spegnimento.  «Esci» (`logout`, `logout-dialog`) RESTA — §4.1-ter, è
- *    l'unica porta — e «Cambia utente» resta com'è: l'utente non l'ha nominato.
+ *    l'unica porta.
+ * ⭐ E dal 21 set 2026, sera, anche «Cambia utente» (`switch-user`) — decisione
+ *    dell'utente: *«togli anche Cambia utente per rendere omogeneo il
+ *    comportamento tra tutti i DE: l'unica voce che deve rimanere è logout»*.
+ *    KDE la toglie dalla fase 12 (KIOSK), GNOME col lockdown di dconf.
  */
-static const char *AZIONI_DA_TOGLIERE[] = { "lock-screen", "suspend", "hibernate",
-	                                    "hybrid-sleep", "restart",  "shutdown",
-	                                    NULL };
+static const char *AZIONI_DA_TOGLIERE[] = { "lock-screen", "switch-user", "suspend",
+	                                    "hibernate",   "hybrid-sleep", "restart",
+	                                    "shutdown",    NULL };
 
 /* ⚠ Il default di serie, `actions_plugin_default_array()` (`actions.c:1437`):
  *   serve quando la proprietà `items` non c'è ancora — ed è il caso normale
@@ -2325,9 +2329,12 @@ void sessione_impostazioni(void)
 		 * restano **grigi**, e grigi per la cintura 1 di §4.7 (polkit dice
 		 * `no`), che il figlio VERIFICA a ogni sessione.  ⚠ Anche il KIOSK di
 		 * XFCE (`Shutdown=`) li farebbe solo grigi, e sta in `/etc`.
-		 * ⛔ «Esci» resta (§4.1-ter) e «Cambia utente» resta (`ShowSwitchUser`
-		 *    non si tocca): l'utente non l'ha nominato.
+		 * ⛔ «Esci» resta (§4.1-ter): è l'UNICA voce che resta.  ⭐ «Cambia
+		 *    utente» esce anche da qui (`ShowSwitchUser`) — decisione
+		 *    dell'utente del 21 set 2026, sera: omogeneo con GNOME e KDE.
 		 */
+		xfconf_metti("xfce4-session", "/shutdown/ShowSwitchUser", "bool", "false",
+		             "niente «Cambia utente» nel dialogo di uscita");
 		xfconf_metti("xfce4-session", "/shutdown/ShowSuspend", "bool", "false",
 		             "niente «Sospendi» nel dialogo di uscita");
 		xfconf_metti("xfce4-session", "/shutdown/ShowHibernate", "bool", "false",
@@ -2346,6 +2353,7 @@ void sessione_impostazioni(void)
 	struct schema_aperto energia = apri_schema("org.gnome.settings-daemon.plugins.power");
 	struct schema_aperto sessione = apri_schema("org.gnome.desktop.session");
 	struct schema_aperto salvaschermo = apri_schema("org.gnome.desktop.screensaver");
+	struct schema_aperto blocchi = apri_schema("org.gnome.desktop.lockdown");
 	const char *vuoto[] = { NULL };
 	int tolte = 0;
 
@@ -2408,12 +2416,27 @@ void sessione_impostazioni(void)
 		              "REMOTIX, e su GNOME quello del desktop ci REVOCA cattura e "
 		              "input invece di mostrare un blocco)");
 
+	/*
+	 * ⛔ «CAMBIA UTENTE» ESCE — decisione dell'utente del 21 set 2026, sera:
+	 *    *«l'unica voce che deve rimanere è logout»*, uguale su tutti i desktop
+	 *    (KDE la toglie col KIOSK dalla fase 12, XFCE dal pannello e dal
+	 *    dialogo).  Su GNOME la voce compare quando la macchina ha piu' utenti
+	 *    e GDM, cioe' proprio sulla macchina condivisa.
+	 * ⚠ Solo `disable-user-switching`: `disable-log-out` resta com'e'.
+	 */
+	if (c_e_la_chiave(&blocchi, "disable-user-switching", "org.gnome.desktop.lockdown") &&
+	    g_settings_set_boolean(blocchi.impostazioni, "disable-user-switching", TRUE))
+		registro_dice(REG_SESSIONE,
+		              "⭐ «Cambia utente» tolto (disable-user-switching): l'unica voce "
+		              "che resta e' «Esci…»");
+
 	g_settings_sync();
 	chiudi_schema(&wayland);
 	chiudi_schema(&shell);
 	chiudi_schema(&energia);
 	chiudi_schema(&sessione);
 	chiudi_schema(&salvaschermo);
+	chiudi_schema(&blocchi);
 }
 
 /* ------------------------------------------------------------------------- */

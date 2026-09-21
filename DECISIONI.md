@@ -3164,7 +3164,7 @@ costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silen
 > ⚠ Su XFCE **non esiste un KIOSK** come su KDE (`STUDI.md` §xfce §10.4): le voci si tolgono
 > per ogni strada da cui si raggiungono (menu, pulsante del pannello, dialogo di uscita, gestore
 > dell'energia), e ⛔ **ogni chiave scritta si rilegge** (§10.6: `xfconf-query` esce con zero
-> anche quando il demone ha rifiutato). ⚠ «Cambia utente» non è stato nominato: resta aperto.
+> anche quando il demone ha rifiutato). ⭐ **«Cambia utente» esce anche lui** — deciso dall'utente il 21 set 2026, sera: *«togli anche «Cambia utente» per rendere omogeneo il comportamento tra tutti i DE: l'unica voce che deve rimanere è logout»*. KDE col KIOSK (fase 12), GNOME con `org.gnome.desktop.lockdown disable-user-switching`, XFCE dal pannello e con `ShowSwitchUser=false`.
 
 > ### ⛔⛔ E IL 25 AGOSTO 2026 QUESTA DECISIONE HA TROVATO UN BUCO — **chi aggiorna**
 >

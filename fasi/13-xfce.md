@@ -655,8 +655,10 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 ## Che cosa resta [?]
 
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
-- 🔸 **«Cambia utente»** resta nel menu del pannello: non è fra le voci della decisione 5, e la
-  domanda è sua.
+- ✅ **«Cambia utente»** — ⭐ DECISO dall'utente il 21 set 2026, sera: esce **su tutti i desktop**,
+  resta solo «Esci». `[M]` binario `eb327ffd`: XFCE `-switch-user` nel pannello e
+  `ShowSwitchUser=false`; GNOME `disable-user-switching=true` con `always-show-log-out=true`; KDE
+  già dalla fase 12. ⏳ la rete completa dopo la modifica (GNOME è stato toccato).
 - `[?]` **La sessione del prodotto è `closing` dalla nascita**, su ogni desktop («logged out.
   Waiting for processes to exit» nel giornale subito dopo «New session»). Non è di questa fase né
   una regressione (GNOME è uguale), ma con `KillUserProcesses=yes` logind potrebbe trattarla da
