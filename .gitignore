@@ -59,3 +59,8 @@ banchi/07-b48-dati/
 # costruzione dai `.xml` in `src/protocolli/`, che quelli sì sono in deposito.
 # ⛔ Una copia versionata sarebbe una copia che invecchia in silenzio.
 src/*-client-protocol.h
+
+# ⛔ I banchi COMPILATI della fase 13: si rifanno con `make -C src banco-w1`
+#    e sono legati alle librerie di chi li ha costruiti (come `src/remotix`).
+banchi/13-w1-un-fotogramma
+banchi/13-w3-input-wlr
