@@ -130,13 +130,15 @@ XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventa
 
 | # | obiettivo | maglia che lo prova | stato |
 |---|---|---|---|
-| **0** | la baseline sulle **quattro** scatole | la rete intera | ⏳ in corso, 20 set |
+| **0** | la baseline sulle **quattro** scatole | la rete intera | ✅ **PASS** 20 set — 32 guasti su 32 |
 | **1** | la sessione XFCE **nasce** per un utente nuovo | nessuna ancora verde: C1(xfce) resta rossa (manca la cattura) — si prova con la misura di I1 | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · rete intera |
-| **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ⏳ |
-| **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | ⏳ |
-| **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | ⏳ |
+| **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ✅ C1(xfce) VERDE, 530 fotogrammi · ⛔ **colori scambiati** trovati dal revisore e curati · ⏳ prova dei colori (C2) e rete |
+| **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | 🔧 scritto (agente, 21 set), `[M]` **provato sul portatile** contro labwc 0.8.3 — ⏳ sulla macchina |
+| **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | 🔧 cancelli aperti per capacità (`11-capacita-del-prodotto.sh`), C17 dà 3 e non rosso — ⏳ sulla macchina |
 | **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | 🔧 scritto e costruito, **non provato** (21 set) |
-| **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | ⏳ |
+| **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | 🔧 `zwlr_output_manager` v4 scritto dentro l'incremento 2 — ⏳ sulla macchina |
+| — | energia, blocco, voci pericolose (decisione dell'utente del 21 set) | la prova degli 11 minuti | 🔧 scritto (agente) — ⏳ sulla macchina |
+| — | la strada della SCHEDA per la cattura (copia zero, `gbm`) | tratto e CPU di labwc | 🔧 scritto (agente), `[M]` sul portatile: CPU di labwc **dimezzata** — ⚠ **da portare a mano** sopra il `wlroots.c` riscritto |
 
 ⚠ **L'ordine 2-3 può invertirsi**, e la ragione va scritta il giorno che si decide: su KDE la
 cattura è venuta prima dell'input perché era la più piccola; qui sono **tutte e due grosse**, e la
