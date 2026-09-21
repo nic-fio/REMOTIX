@@ -5975,7 +5975,20 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		                   "XFCE: nessun palco da aprire — su questa famiglia la "
 		                   "cattura parla col compositore senza passare da un "
 		                   "flusso montato");
-		vista_viva = true;
+		/*
+		 * ⛔⛔ E QUI NON SI SCRIVE `vista_viva = true` — 21 set 2026, e
+		 *     costava il congedo dell'utente.
+		 *
+		 * `[M]` La prima stesura lo scriveva, per analogia col ramo di KDE.  Ma
+		 * su KDE arriva DOPO `kwin_apri()` riuscita, cioè dopo un fatto; qui
+		 * arrivava prima di qualunque fatto.  ⇒ La cattura provava ad aprirsi
+		 * mezzo secondo prima che labwc fosse pronto, falliva, e al giro dopo
+		 * lo stato diceva MORTA con `vista_viva` già vero: *«la sessione
+		 * c'era e adesso non c'è più — l'utente è uscito»*, congedo 0x10,
+		 * e il cliente buttato fuori da un desktop che stava nascendo.
+		 * ⭐ Su XFCE «vista viva» la mette già la lettura dello stato, quando
+		 *   il gestore di sessione compare sul bus: è il fatto giusto, e basta.
+		 */
 	} else if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
 		/* ⭐ Su KDE il monitor c'e' gia' (`kwin_wayland --virtual`, nato con la
 		 *    sessione): si chiede a KWin il flusso di quello.  Il ramo GNOME

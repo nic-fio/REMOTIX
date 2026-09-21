@@ -50,6 +50,14 @@
 #   loro guasti visti (`fasi/13-xfce.md`, la baseline).
 # ⭐ xfce: SOLO l'immagine — fase 13, incremento 2 (21 set 2026, C1(xfce)
 #   verde).  L'input e' l'incremento 3, gli appunti il 5.
+# ⭐⭐ E DAL 21 SETTEMBRE 2026, MATTINA, ANCHE L'INPUT E GLI APPUNTI — aperti
+#     solo DOPO la misura, non prima: `[M]` binario `0c0634dd`, scatola xfce
+#     rifatta da zero, lanciate a mano con `11-accendi.sh`:
+#       C4(xfce)  VERDE · guasti `--senza-tasto` e `--scena-sorda` VISTI
+#       C6(xfce)  VERDE · guasto `--uccidi-la-sessione` VISTO
+#       C17(xfce) VERDE (A · B · R, arbitro wl-clipboard) · `--senza-copia` VISTO
+#     ⛔ Una capacità si apre qui quando la maglia che la giudica ha dato VERDE
+#        e ha visto il suo guasto — non quando il codice c'è.
 # ⛔ lxqt: NIENTE.  `[R]` `src/sessione.c`, `sessione_desktop`: il prodotto non
 #   lo riconosce, e dice «NESSUN DESKTOP RICONOSCIUTO».
 # ---------------------------------------------------------------------------
@@ -59,7 +67,7 @@ capacita_del_desktop() {
 	case "$1" in
 	gnome) printf 'immagine input appunti' ;;
 	kde)   printf 'immagine input appunti' ;;
-	xfce)  printf 'immagine' ;;
+	xfce)  printf 'immagine input appunti' ;;
 	*)     printf '' ;;
 	esac
 }
