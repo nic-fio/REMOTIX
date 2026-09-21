@@ -99,10 +99,12 @@ Letture del 20 settembre 2026, `[R]`:
    `11-c17:150` prende `stdout` senza guardare il codice d'uscita, quindi `wl-paste: command not
    found` diventa `""`, la guardia di `:242` (che controlla `None`) non scatta, e la maglia stampa
    **ROSSO** invece di «non ho potuto guardare». ⛔ Un attrezzo che manca deve dare 3.
-6. ⚠ **C1 dice la causa sbagliata**: su xfce esce *«nata CIECA»* (`11-c1:611-612`, `:1148-1149`),
-   ⛔ ma il fatto è *«mai nata, perché il prodotto cercava `gnome-session`»*. La riga vera
-   (`src/main.c:1842`, «GNOME per ripiego») è scritta **una volta sola all'avvio del server**, cioè
-   **fuori dalla fetta di registro** che C1 legge. ⇒ Due diagnosi con la stessa faccia.
+6. ~~⚠ **C1 dice la causa sbagliata**: su xfce esce *«nata CIECA»* mentre il fatto è *«mai nata,
+   perché il prodotto cercava `gnome-session`»*.~~ ✅ **CHIUSA dall'incremento 1, e senza toccare
+   il banco.** ⭐ La diagnosi era falsa perché lo era il prodotto: adesso la sessione **nasce
+   davvero** e l'immagine non c'è, quindi *«nata cieca»* è esatta alla lettera. ⇒ Era un difetto
+   del prodotto travestito da difetto del banco — e il modo di scoprirlo è stato curare il
+   prodotto, non ritarare la maglia.
 7. ⚠ **C7(xfce) oggi è verde in parte a vuoto**, e il banco lo stampa (`11-c7:1184-1204`): la voce
    `/dev/dri` è vuota in tutt'e tre le impronte *«perché senza compositore nessuno apre la scheda»*.
    ⇒ Il giorno che XFCE si accende, C7 diventa **più severa** — e può diventare rossa per ragioni
@@ -129,7 +131,7 @@ XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventa
 | # | obiettivo | maglia che lo prova | stato |
 |---|---|---|---|
 | **0** | la baseline sulle **quattro** scatole | la rete intera | ⏳ in corso, 20 set |
-| **1** | la sessione XFCE **nasce** per un utente nuovo | nessuna ancora verde: C1(xfce) resta rossa (manca la cattura) — si prova con la misura di I1 | ✅ CP1 · CP2 · CP3 · CP4 — ⏳ rete in corso |
+| **1** | la sessione XFCE **nasce** per un utente nuovo | nessuna ancora verde: C1(xfce) resta rossa (manca la cattura) — si prova con la misura di I1 | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · rete intera |
 | **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ⏳ |
 | **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | ⏳ |
 | **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | ⏳ |
@@ -305,6 +307,23 @@ di GNOME e torna con `goto la_coda` o `return`, così i rami vecchi restano test
 cade ancora nel ramo di Mutter e scrive *«Mutter non espone RemoteDesktop»* — ⛔ una riga che accusa
 un innocente. È lo stesso punto in cui si fermò l'incremento 1 di KDE, ed è il primo che
 l'incremento 2 toglie di mezzo.
+
+#### La rete intera (`[M]` 20→21 set 2026, 23:48→03:00, binario `48c87296`, 11 460 s)
+
+| | |
+|---|---|
+| **GNOME** | ⭐ **tutto verde**, C17 compresa — identico al CP0 |
+| **KDE** | ⭐ **tutto verde**, e ⭐⭐ **C2(kde) è tornata a giudicare**: 0 · 0 · 0 dove al CP0 dava 3 · 3 · 3. La cura del «prima» (240→900) regge, e i suoi **due guasti innestati sono visti** |
+| **xfce** | passo0, C5, C7, C8, C9 verdi coi guasti · ⛔ **C1 rosso** — ed è l'incremento 2, dichiarato |
+| **lxqt** | uguale a xfce — ⚠ e il suo C1 rosso adesso ha una causa **nuova e giusta**: il prodotto le dice in faccia che **non riconosce nessun desktop** |
+| la rete | C11 verde (stesso binario nelle quattro) · C13 verde · C14 verde, 786 s |
+| ⭐ **guasti innestati** | **34 su 34 visti** — due in piu' del CP0, e sono proprio i due di C2(kde) che il CP0 non aveva potuto certificare |
+| rossi | **2**, e sono i due dichiarati |
+
+⇒ ⭐ **L'incremento 1 passa il cancello**: XFCE ha guadagnato la nascita della sessione, GNOME e KDE
+non hanno perso niente, e la rete sa ancora dare rosso.
+
+---
 
 ### Incremento 2 — l'immagine di XFCE arriva al browser *(CP1, 21 set 2026 — non ancora cominciato)*
 
