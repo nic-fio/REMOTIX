@@ -655,6 +655,10 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 ## Che cosa resta [?]
 
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
+- ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
+  gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
+  l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre
+  ricette. ⚠ Le immagini si rifanno **dopo** la rete in corso, non durante.
 - ✅ **«Cambia utente»** — ⭐ DECISO dall'utente il 21 set 2026, sera: esce **su tutti i desktop**,
   resta solo «Esci». `[M]` binario `eb327ffd`: XFCE `-switch-user` nel pannello e
   `ShowSwitchUser=false`; GNOME `disable-user-switching=true` con `always-show-log-out=true`; KDE

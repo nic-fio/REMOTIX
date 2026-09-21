@@ -367,5 +367,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-gi gir1.2-gtk-4.0 \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ L'INQUILINO DELL'UTENTE — 21 set 2026, chiesto dall'utente prima di LXQt:
+#   *«per non impazzire con nomi utente e password crea nei container l'utente
+#   nictest:nictest e inseriscilo nel gruppo sudo»*.  E' per le SUE prove a
+#   mano (Firefox, terminale, gestore di file sono gia' negli strati sopra).
+# ⚠ `video` e `render` come `provanic`: senza, la sessione non apre la scheda.
+# ⛔ Nessuna maglia lo usa: le maglie creano inquilini loro (`c1u…`, `c17u…`),
+#   cosi' le prove dell'utente e la rete non si pestano i piedi.
+# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN useradd -m -s /bin/bash nictest \
+    && usermod -aG sudo,video,render nictest \
+    && printf 'nictest:nictest\n' | chpasswd
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
