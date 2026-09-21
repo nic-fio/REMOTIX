@@ -112,11 +112,13 @@ apposta per questa maglia, ⛔ **e non lo e'**:
   3 ⚠ **Quante scatole hanno risposto?**  ⛔ **Si STAMPA, non si giudica**, e la
       ragione va scritta o qualcuno lo trasformera' in un rosso: la famiglia
       veloce guarda **la sola GNOME per scelta dichiarata** (`11-gancio.sh`,
-      `for d in gnome`), e il prodotto oggi sa accendere **un desktop solo**
-      (§7-bis, KDE e' la fase 12).  ⇒ Pretendere quattro scatole vorrebbe dire
-      un rosso perpetuo per una decisione presa apposta: `LEZIONI.md` §1.49.
-      ⭐ Il conto e' informazione, e diventera' un giudizio quando il prodotto
-      sapra' accendere piu' di un desktop — non prima.
+      `for d in gnome`).  ⇒ Pretendere quattro scatole vorrebbe dire un rosso
+      perpetuo per una decisione presa apposta: `LEZIONI.md` §1.49.
+      ⚠ Qui c'era scritto *«il prodotto oggi sa accendere un desktop solo»*:
+      ⛔ non e' piu' vero — `[R]` 21 set 2026 ne accende tre (gnome, kde,
+      xfce; `11-capacita-del-prodotto.sh`).  ⭐ Il conto resta informazione
+      lo stesso, per la ragione di sopra: la famiglia veloce guarda gnome e
+      basta.  Farlo diventare un giudizio e' una decisione, e non e' presa.
 
 ---------------------------------------------------------------------------
 ⚠⚠ IL METRO, e **da dove viene** — ⛔ nessuno dei due numeri e' mio
@@ -729,8 +731,7 @@ def main():
     print("   ⚠ scatole viste      : %d  (%s)"
           % (len(r["scatole"]), ", ".join(r["scatole"]) if r["scatole"] else "nessuna col nome scritto"))
     print("     ⛔ e' informazione, NON un giudizio: la famiglia veloce guarda la")
-    print("        sola GNOME per scelta dichiarata, e il prodotto oggi sa")
-    print("        accendere un desktop solo")
+    print("        sola GNOME per scelta dichiarata")
     print("   ⚠ macchine nel registro: %s"
           % (", ".join(r["macchine"]) if r["macchine"] else "nessuna lo dice"))
     print()

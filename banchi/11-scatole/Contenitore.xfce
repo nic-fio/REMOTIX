@@ -348,5 +348,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         nano \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R7 — 21 settembre 2026, fase 13: GLI ARBITRI DEGLI APPUNTI, come su gnome
+#   e kde.  `wl-clipboard` (`wl-copy`, `wl-paste`) e `python3-gi`+GTK4 (per
+#   `appunti-gtk.py`) sono gli attrezzi con cui C17 guarda gli appunti DENTRO
+#   la sessione.  ⛔ Sono del BANCO, non del prodotto: REMOTIX non li usa.
+# ⛔ Senza, C17 su questa scatola non poteva guardare — e fino al 21 set lo
+#   diceva col colore sbagliato: ROSSO invece di 3 (`fasi/13-xfce.md`, «Il
+#   banco», punto 5).  ⚠ Messi qui anche se il prodotto su XFCE gli appunti
+#   non li da' ancora (incremento 5): la scatola si prepara
+#   PRIMA, come la macchina vera, non il giorno che serve.
+# ⭐ E li guarda C11 (`11-c11-allineamento.py`, `DEVE_COMBACIARE`): stessa
+#   versione in tutte e quattro le scatole.
+# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wl-clipboard \
+        python3-gi gir1.2-gtk-4.0 \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

@@ -115,6 +115,20 @@ QUI=$(cd "$(dirname "$0")" && pwd)
 RADICE=$(git -C "$QUI" rev-parse --show-toplevel 2>/dev/null)
 REGISTRO="$QUI/11-gancio-registro.jsonl"
 
+# ⭐⭐ CHE COSA IL PRODOTTO SA FARE, E SU QUALE DESKTOP — la lista sta in UN
+#    posto solo, letto anche da `11-accendi.sh` (fase 13, 21 set 2026: prima
+#    erano due whitelist scritte a mano, e disallineate).
+# ⛔ E se il file mancasse il cancello resta CHIUSO e lo dice: nessuna maglia
+#    del prodotto gira «perche' non c'era la lista», e nessuna resta muta.
+if [ -r "$QUI/11-capacita-del-prodotto.sh" ]; then
+	. "$QUI/11-capacita-del-prodotto.sh"
+else
+	prodotto_pronto() {
+		printf 'manca 11-capacita-del-prodotto.sh accanto al gancio: non so che cosa il prodotto sa fare'
+		return 1
+	}
+fi
+
 # ⚠ Ogni riga di registro dice SU QUALE MACCHINA e' stata scritta.  ⛔ Non e' un
 #   ornamento: da quando i giri di due macchine finiscono nello stesso file
 #   (`11-registro-unisci.py`), una riga senza questo campo e' una riga di cui non
@@ -200,8 +214,11 @@ COSTO_C16=1
 #    §5.1 dice che una maglia in piu' si SCAMBIA, non si somma.  Qui non c e
 #    niente da scambiare: la meno cara di queste costa piu' dell intera
 #    famiglia veloce.  ⇒ Stanno in `tutto` e in `desktop-nuovo`.
-# ⚠ E girano SOLO su gnome: `[R]` il prodotto sa avviare solo GNOME
-#   (`src/sessione.c:778`, tutto `src/mutter.c`).  Sulle altre tre danno 3.
+# ⚠ E NON girano su ogni scatola: ciascuna gira dove il prodotto da' le
+#   capacita' che lei vuole (immagine, input, appunti), e altrimenti SALTA
+#   dicendo quale manca.  La lista sta in `11-capacita-del-prodotto.sh`.
+#   `[R]` 21 set 2026: gnome e kde tutto; xfce la sola immagine (fase 13,
+#   incremento 2); lxqt niente — il prodotto non la riconosce.
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐ `[M]` 27 agosto 2026, scatola rete11-gnome curata, giro normale cronometrato
 #   dal sistema.  ⚠ Col guasto innestato C2 apre DUE inquilini e costa il doppio
@@ -771,6 +788,11 @@ famiglia_veloce() {
 		salta_maglia "C1x$GIRI_VELOCE" "restano ${rimasto}s e ne servono ~${costo}s (tetto ${TETTO_VELOCE}s)"
 	else
 		local d
+		# ⚠ `gnome` e basta per il TETTO, non perche' il prodotto non sappia
+		#   fare altro: oggi accende anche kde e xfce
+		#   (`11-capacita-del-prodotto.sh`), ma due giri di C1 da `[M]` 74 s
+		#   l'uno ne prendono gia' 148 su 180, e una scatola in piu' si SCAMBIA, non si somma
+		#   (§5.1).  ⛔ Aggiungerne una e' una decisione sul tetto, non qui.
 		for d in gnome; do
 			esegui_maglia "C1($d)x$GIRI_VELOCE" false GIRA_C1 "$d" "$GIRI_VELOCE"
 		done
@@ -793,24 +815,40 @@ famiglia_veloce() {
 #    sono due elenchi che il giorno dopo non lo sono piu' — e nessuno se ne
 #    accorge, perche' tutt e due continuano a girare (`LEZIONI.md` §1.46).
 #
-# ⚠ E il `if` sul desktop non e' prudenza: `[R]` il prodotto sa avviare solo
-#   GNOME (`src/sessione.c:778`).  Sulle altre scatole queste cinque
-#   spenderebbero minuti per dire «non ho potuto guardare» — e un 3 che si
-#   ripete per una decisione presa apposta e' il cugino del rosso perpetuo
-#   (§1.49).  ⇒ Si SALTANO, e la ragione finisce nel registro.
+# ⚠ E oggi sono SEI, non cinque: C17 (fase 12, 19 set 2026) sta qui dentro
+#   da allora — e fino al 21 set stava DOPO il `return` del cancello, cioe'
+#   saltava senza essere nominata nel registro (`fasi/13-xfce.md`, «Il banco»,
+#   punto 1).  Il nome della funzione e' rimasto per chi la cerca.
+#
+# ⭐⭐ IL CANCELLO — fase 13, 21 set 2026: UNA MAGLIA PER VOLTA, e per
+#     CAPACITA', non per nome di desktop.
+#   Prima c'era un `if` solo, *«il prodotto sa avviare solo GNOME e KDE»*, che
+#   saltava tutto in blocco con quella frase.  ⛔ Da quando XFCE nasce e si vede
+#   (C1(xfce) verde, incremento 2) la frase e' falsa: le maglie che guardano
+#   PIXEL possono giudicare, quelle che vogliono l'input o gli appunti ancora
+#   no.  ⇒ Ogni maglia chiede a `prodotto_pronto` (in
+#   `11-capacita-del-prodotto.sh`, letto anche da `11-accendi.sh`) se il
+#   desktop ha quel che lei vuole; se manca qualcosa SALTA, col suo nome e con
+#   la capacita' che manca scritti nel registro.
+# ⚠ E saltare non e' prudenza: su una scatola dove il prodotto non da' una
+#   capacita' queste maglie spenderebbero minuti per dire «non ho potuto
+#   guardare» — e un 3 che si ripete per una decisione presa apposta e' il
+#   cugino del rosso perpetuo (§1.49).
+# ⛔ E il cancello non tocca NESSUN metro: una maglia che passa gira con gli
+#   stessi argomenti, le stesse soglie e gli stessi guasti innestati di prima.
+#   `[R]` Su gnome e kde (tutte le capacita') la sequenza e' identica a quella
+#   di prima riga per riga: C2×3, C3×4, C4×3, C6×2, C8b×2, C17×2.
 # ═══════════════════════════════════════════════════════════════════════════
 le_cinque_nuove() {
-	local d=$1
+	local d=$1 perche
 	# ⭐ FASE 12, INCREMENTO 3 (19 set 2026) — il prodotto accende anche KDE, e
 	#   su `kde` C3, C4 e C6 sono `[M]` VERDI coi loro guasti visti
-	#   (`fasi/12-kde.md`).  ⇒ Il cancello si apre per quelle tre; e con
-	#   l'incremento 4 anche per C2 e C8b, adattate alla schermata d'avvio di
-	#   Plasma; e dal 19 set anche il guasto «codificatore fermo» di C3.
-	if [ "$d" != gnome ] && [ "$d" != kde ]; then
-		salta_maglia "C2($d) C3 C4 C6 C8b" \
-			"il prodotto sa avviare solo GNOME e KDE (src/sessione.c, sessione_desktop)"
-		return
-	fi
+	#   (`fasi/12-kde.md`).  E con l'incremento 4 anche C2 e C8b, adattate alla
+	#   schermata d'avvio di Plasma; e dal 19 set anche il guasto «codificatore
+	#   fermo» di C3.
+	# ⭐ FASE 13, INCREMENTO 2 (21 set 2026) — su `xfce` l'immagine arriva:
+	#   si aprono C2, C3 e C8b.  ⛔ C4, C6 e C17 restano chiuse, e dicono quale
+	#   capacita' manca (`11-capacita-del-prodotto.sh`).
 
 	# ⭐ C2 — una finestra si apre.  ⛔ Guarda IL PIXEL: il conto dei processi
 	#   diceva 1 in tutt e due i casi (fasi/10… §7.4), e `--finestra-che-non-si-apre`
@@ -818,50 +856,80 @@ le_cinque_nuove() {
 	local P=(--attesa-palco "$TETTO_PALCO_C2C3")
 	# ⭐ Incremento 4: C2 guarda 240 fotogrammi per il «prima», e la
 	#   schermata d'avvio di Plasma non la ferma piu' — aperta a kde.
-	esegui_maglia "C2($d)" false GIRA_C2 "$d" "${P[@]}"
-	esegui_maglia "C2($d) guasto innestato" true GIRA_C2 "$d" "${P[@]}" --applicazione-che-muore
-	esegui_maglia "C2($d) guasto innestato (finestra cieca)" true GIRA_C2 "$d" "${P[@]}" --finestra-che-non-si-apre
+	if ! perche=$(prodotto_pronto C2 "$d"); then
+		salta_maglia "C2($d)" "${perche:-il cancello non ha risposto} — saltati con lei i suoi 2 guasti innestati"
+	else
+		esegui_maglia "C2($d)" false GIRA_C2 "$d" "${P[@]}"
+		esegui_maglia "C2($d) guasto innestato" true GIRA_C2 "$d" "${P[@]}" --applicazione-che-muore
+		esegui_maglia "C2($d) guasto innestato (finestra cieca)" true GIRA_C2 "$d" "${P[@]}" --finestra-che-non-si-apre
+	fi
 
 	# ⭐ C3 — i fotogrammi arrivano e la scena CAMBIA.
 	# ⚠ `--scena-ferma` NON e' un guasto innestato: e' il controllo NEGATIVO, e
 	#   con la scena ferma C3 non deve dare rosso (`[M]` fasi/09… §3.1: a scena
 	#   ferma escono 0,03 fotogrammi/s, ed e' un RISULTATO).
-	esegui_maglia "C3($d)" false GIRA_C3 "$d" "${P[@]}"
-	esegui_maglia "C3($d) scena ferma" false GIRA_C3 "$d" "${P[@]}" --scena-ferma
-	esegui_maglia "C3($d) guasto innestato" true GIRA_C3 "$d" "${P[@]}" --fotogramma-ripetuto
-	# ⭐ Da C3 del 19 set 2026 (il desktop fermo prima della scena, e un respiro
-	#   CONTATO prima dell'innesto) questo guasto si vede anche su KDE.
-	esegui_maglia "C3($d) guasto innestato (codificatore fermo)" true GIRA_C3 "$d" "${P[@]}" --codificatore-fermo
+	if ! perche=$(prodotto_pronto C3 "$d"); then
+		salta_maglia "C3($d)" "${perche:-il cancello non ha risposto} — saltati con lei la scena ferma e i suoi 2 guasti innestati"
+	else
+		esegui_maglia "C3($d)" false GIRA_C3 "$d" "${P[@]}"
+		esegui_maglia "C3($d) scena ferma" false GIRA_C3 "$d" "${P[@]}" --scena-ferma
+		esegui_maglia "C3($d) guasto innestato" true GIRA_C3 "$d" "${P[@]}" --fotogramma-ripetuto
+		# ⭐ Da C3 del 19 set 2026 (il desktop fermo prima della scena, e un respiro
+		#   CONTATO prima dell'innesto) questo guasto si vede anche su KDE.
+		esegui_maglia "C3($d) guasto innestato (codificatore fermo)" true GIRA_C3 "$d" "${P[@]}" --codificatore-fermo
+	fi
 
 	# ⭐ C4 — il tasto arriva fino allo schermo.  ⛔ E' l unica maglia che
 	#   giudica un PIXEL attraversando il prodotto ANDATA E RITORNO: C8 giudica
 	#   il browser da solo, C5 giudica byte.
-	esegui_maglia "C4($d)" false GIRA_C4 "$d"
-	esegui_maglia "C4($d) guasto innestato" true GIRA_C4 "$d" --senza-tasto
-	esegui_maglia "C4($d) guasto innestato (coda)" true GIRA_C4 "$d" --scena-sorda
+	if ! perche=$(prodotto_pronto C4 "$d"); then
+		salta_maglia "C4($d)" "${perche:-il cancello non ha risposto} — saltati con lei i suoi 2 guasti innestati"
+	else
+		esegui_maglia "C4($d)" false GIRA_C4 "$d"
+		esegui_maglia "C4($d) guasto innestato" true GIRA_C4 "$d" --senza-tasto
+		esegui_maglia "C4($d) guasto innestato (coda)" true GIRA_C4 "$d" --scena-sorda
+	fi
 
 	# ⭐⭐ C6 — si stacca e si ritrova.  ⚠ NON contraddice C7 `--solo-distacco`:
 	#   C7 chiede «il figlio e' vivo?», C6 chiede «e quel che il figlio teneva in
 	#   piedi si RITROVA?».  ⛔ Chi, vedendo C6 rossa, rendesse rossa anche C7
 	#   «per coerenza», romperebbe la maglia sana.
-	esegui_maglia "C6($d)" false GIRA_C6 "$d"
-	esegui_maglia "C6($d) guasto innestato" true GIRA_C6 "$d" --uccidi-la-sessione
+	if ! perche=$(prodotto_pronto C6 "$d"); then
+		salta_maglia "C6($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C6($d)" false GIRA_C6 "$d"
+		esegui_maglia "C6($d) guasto innestato" true GIRA_C6 "$d" --uccidi-la-sessione
+	fi
 
 	# ⭐ C8b — e la stessa pagina si vede DAL CLIENTE.  ⛔ C8a non passa dal
 	#   prodotto: guarda il browser dentro la sessione.  Questa guarda i pixel
 	#   che arrivano al cliente.
 	# ⭐ Incremento 4: il «prima» di C8b e' il primo fotogramma non nero —
 	#   aperta a kde.
-	esegui_maglia "C8b($d)" false GIRA_C8B "$d"
-	esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
+	# ⚠ `11-accendi.sh c8b` ha un cancello suo (per chi la lancia a mano), ⭐ ma
+	#   legge la STESSA lista: i due non possono piu' dire cose diverse.
+	if ! perche=$(prodotto_pronto C8b "$d"); then
+		salta_maglia "C8b($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C8b($d)" false GIRA_C8B "$d"
+		esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
+	fi
 
 	# ⭐ C17 — gli appunti nei due versi, e chi si riattacca (fase 12, 19 set
-	#   2026).  ⚠ Nessun cancello per desktop QUI: l'arbitro (`wl-clipboard`)
-	#   lo cerca la maglia stessa nel compositore, e dove non c'e' — Mutter —
-	#   esce 3 e lo dice.  `[M]` 19 set: kde verde, e rosso sul solo «R» col
-	#   binario di prima della cura.
-	esegui_maglia "C17($d)" false GIRA_C17 "$d"
-	esegui_maglia "C17($d) guasto innestato" true GIRA_C17 "$d" --senza-copia
+	#   2026).  `[M]` 19 set: kde verde, e rosso sul solo «R» col binario di
+	#   prima della cura; dal 20 set verde anche su gnome (l'arbitro GTK col
+	#   fuoco dato dal clic del cliente).
+	# ⛔ Fino al 21 set qui c'era scritto *«Nessun cancello per desktop QUI»*,
+	#   ed era falso: queste due righe stavano DOPO il `return` del cancello,
+	#   e su xfce e lxqt C17 saltava senza essere nominata.  ⇒ Adesso ha il
+	#   cancello suo, come le altre: vuole l'immagine, l'INPUT (il clic che da'
+	#   il fuoco all'arbitro passa dal prodotto) e gli appunti.
+	if ! perche=$(prodotto_pronto C17 "$d"); then
+		salta_maglia "C17($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C17($d)" false GIRA_C17 "$d"
+		esegui_maglia "C17($d) guasto innestato" true GIRA_C17 "$d" --senza-copia
+	fi
 }
 
 famiglia_tutto() {
@@ -898,8 +966,9 @@ famiglia_tutto() {
 		esegui_maglia "C9($d)" false GIRA_C9 "$d"
 		esegui_maglia "C9($d) guasto innestato" true GIRA_C9 "$d" --togli-nome tutto
 
-		# ⭐⭐ E le cinque nuove del 27 agosto — solo su gnome, e la ragione
-		#    sta scritta dentro `le_cinque_nuove`.
+		# ⭐⭐ E le maglie del prodotto — ciascuna dove il prodotto le da' quel
+		#    che vuole, e la ragione di ogni salto sta scritta dentro
+		#    `le_cinque_nuove` (e in `11-capacita-del-prodotto.sh`).
 		le_cinque_nuove "$d"
 	done
 	# ⭐ `rete_intera`, cioe' **con C14** — e qui e' giusto: questa e' la
@@ -921,11 +990,11 @@ famiglia_desktop_nuovo() {
 	esegui_maglia "C7($nuovo) guasto innestato" true GIRA_C7 "$nuovo" --lascia-un-processo --attesa-chiusura 10
 	esegui_maglia "C9($nuovo)" false GIRA_C9 "$nuovo"
 	esegui_maglia "C9($nuovo) guasto innestato" true GIRA_C9 "$nuovo" --togli-nome tutto
-	# ⭐⭐ Le cinque nuove.  ⚠ Oggi, su un desktop nuovo che non e' gnome, si
-	#    saltano tutte e la ragione finisce nel registro — ⛔ ed e' proprio il
-	#    posto dove la si vuole leggere: il giorno che il prodotto sapra' avviare
-	#    un secondo desktop, questa riga comincia a girare DA SOLA, senza che
-	#    nessuno debba ricordarsi di aggiungerla.
+	# ⭐⭐ Le maglie del prodotto.  ⚠ Un desktop nuovo non sta in
+	#    `11-capacita-del-prodotto.sh` ⇒ si saltano tutte, e la ragione finisce
+	#    nel registro — ⛔ ed e' proprio il posto dove la si vuole leggere: il
+	#    giorno che il prodotto sapra' avviarlo si scrive la sua riga LI', e
+	#    questa comincia a girare senza che nessuno debba toccarla.
 	le_cinque_nuove "$nuovo"
 	log "e la REGRESSIONE sui vecchi — ⭐ senza riscrivere una riga della lista"
 	for d in $DESKTOP_NOTI; do
@@ -1296,15 +1365,16 @@ while [ $# -gt 0 ]; do
 	--famiglia) FAMIGLIA_CHIESTA=${2:-}; shift ;;
 	# ⛔⛔ E SI PUO CHIEDERE UNA SCATOLA SOLA, ed e una necessita, non un lusso.
 	#    `[M]` 26 agosto 2026: la famiglia `tutto` gira le maglie del PRODOTTO su
-	#    tutt e quattro i desktop, ⛔ ma il prodotto oggi ne sa accendere UNO
-	#    (KDE e la fase 12, XFCE e LXQt la 13).  ⇒ Sulle altre tre le maglie del
-	#    prodotto non possono che dire «non ho potuto guardare», e un giro che
-	#    per tre quarti non giudica costa un ora e insegna niente.
+	#    tutt e quattro i desktop, ⛔ e allora il prodotto ne sapeva accendere
+	#    UNO: un giro che per tre quarti non giudica costa un ora e insegna
+	#    niente.  ⚠ Oggi (21 set 2026) ne accende TRE — gnome, kde e xfce, xfce
+	#    con la sola immagine — e lxqt resta fuori (`11-capacita-del-prodotto.sh`).
+	#    ⭐ L opzione serve ancora: una scatola sola costa un quarto.
 	# ⚠ E NON si mette un «se il desktop e gnome» dentro le famiglie: quello
 	#   sarebbe un eccezione per compositore travestita (`DECISIONI.md` §5.1-bis).
 	#   ⭐ Qui e chi lancia a dire su quale scatola vuole girare, e resta scritto
-	#     nel registro — cosi il giorno che il prodotto sapra accendere KDE non
-	#     c e niente da togliere: si smette di passare l opzione.
+	#     nel registro.  ⛔ Quel che il prodotto sa fare su ciascuna NON si
+	#     decide qui: sta in `11-capacita-del-prodotto.sh`, per capacita'.
 	--scatola)  DESKTOP_NOTI=${2:-}; SCATOLA_CHIESTA=${2:-}; shift ;;
 	--innesco)  INNESCO=${2:-mano}; shift ;;
 	# ⚠ Il nome dell'unita' della meta' remota — serve a far girare due giri

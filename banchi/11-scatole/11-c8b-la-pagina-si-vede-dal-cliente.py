@@ -54,10 +54,12 @@ browser.py`, o un file suo?*  ⚠ Le due strade avevano argomenti veri.
 
   · **girano in posti diversi.**  C8a ⭐ non passa dal prodotto e gira in
     QUALUNQUE scatola (il collaudo del 26 agosto e' girato in quella di PLASMA).
-    C8b passa dal prodotto, ⛔ e il prodotto sa avviare **solo GNOME**
-    (`[R]` `src/sessione.c:778` scrive un drop-in per `gnome-shell`, e tutto
-    `src/mutter.c` parla con Mutter).  ⇒ Nella scatola di KDE C8b direbbe «non
-    ho potuto guardare» per sempre — il cugino del rosso perpetuo di §1.49.
+    C8b passa dal prodotto, ⛔ e il prodotto allora (27 ago 2026) sapeva
+    avviare **solo GNOME** ⇒ nella scatola di KDE C8b avrebbe detto «non ho
+    potuto guardare» per sempre — il cugino del rosso perpetuo di §1.49.
+    ⚠ Oggi (21 set 2026) il prodotto da' l'immagine su gnome, kde e xfce, e
+    dove C8b gira lo decide `11-capacita-del-prodotto.sh`; la ragione per
+    tenere i due file separati resta intera.
   · **costano in modo diverso.**  C8a: `[M]` due inquilini, un paio di minuti.
     C8b: `[S]` **~6 minuti** — ogni inquilino tiene un filo attaccato per
     `26 + 120 + 30 = 176 s` (il tetto del palco di C1, quello del browser, il

@@ -20,9 +20,12 @@
 #   bash 11-accendi.sh impronta   [gnome]     stampa l'impronta (R3)
 #   bash 11-accendi.sh spegni     [gnome]
 #
-# ⚠ C2 · C3 · C4 · C6 · C8b girano UTILMENTE solo su gnome: il prodotto sa
-#   avviare solo GNOME (`src/sessione.c:778`, tutto `src/mutter.c`).  Sulle
-#   altre tre scatole danno **3** — «non ho potuto guardare» — ed e' giusto.
+# ⚠ C2 · C3 · C4 · C6 · C8b · C17 girano UTILMENTE solo dove il prodotto da'
+#   quel che vogliono (immagine, input, appunti): la lista, per desktop e per
+#   maglia, sta in `11-capacita-del-prodotto.sh` — la stessa che legge il
+#   gancio.  `[R]` 21 set 2026: gnome e kde tutto; xfce la sola immagine;
+#   lxqt niente.  Lanciate a mano dove manca qualcosa danno **3** — «non ho
+#   potuto guardare» — ed e' giusto.
 #
 # ⛔ Si esegue SULLA MACCHINA DI PROVA, da amministratore.
 # ===========================================================================
@@ -61,6 +64,16 @@ BASE=$(cd "$(dirname "$0")" && pwd)
 NOME="rete11-$DESKTOP"
 IMMAGINE="rete11/$DESKTOP:p0"
 RICETTA="$BASE/Contenitore.$DESKTOP"
+# ⭐ Che cosa il prodotto sa fare, e su quale desktop: la STESSA lista del
+#   gancio, in un posto solo.  ⛔ Se manca, il cancello resta CHIUSO e lo dice.
+if [ -r "$BASE/11-capacita-del-prodotto.sh" ]; then
+	. "$BASE/11-capacita-del-prodotto.sh"
+else
+	prodotto_pronto() {
+		printf 'manca 11-capacita-del-prodotto.sh accanto a 11-accendi.sh: non so che cosa il prodotto sa fare'
+		return 1
+	}
+fi
 # ⚠ Una porta per scatola: con `--network=host` le quattro scatole condividono
 #   le porte dell ospite, quindi due sulla stessa porta si pesterebbero i piedi
 #   in un modo che somiglia a un guasto del prodotto.
@@ -495,7 +508,7 @@ c2)
 	# ⭐ Il secondo e quello che vale: l applicazione resta VIVA e non dipinge
 	#    niente ⇒ il conto dei processi dice 1 come nel caso sano, e il pixel
 	#    dice NO.
-	# ⚠ Gira solo su gnome: il prodotto sa avviare solo GNOME.
+	# ⚠ Vuole l'IMMAGINE: gnome, kde, xfce (`11-capacita-del-prodotto.sh`).
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c2-una-finestra-si-apre.py \
 		--porta "$PORTA" "$@"
@@ -508,7 +521,7 @@ c3)
 	# ⭐ `--scena-ferma` e il controllo NEGATIVO: con la scena ferma la maglia
 	#    NON deve dare rosso (a scena ferma Mutter non consegna niente, ed e un
 	#    RISULTATO — src/figlio.c:3373).
-	# ⚠ Gira solo su gnome: il prodotto sa avviare solo GNOME.
+	# ⚠ Vuole l'IMMAGINE: gnome, kde, xfce (`11-capacita-del-prodotto.sh`).
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c3-i-fotogrammi-cambiano.py \
 		--porta "$PORTA" "$@"
@@ -519,7 +532,8 @@ c4)
 	log "C4 — il tasto arriva fino allo schermo (dentro $NOME)"
 	# ⛔ `--senza-tasto` (testa) e `--scena-sorda` (coda) sono i COLLAUDI: col
 	#    guasto innestato l esito si legge al contrario, e il verde diventa un rosso.
-	# ⚠ Il prodotto sa avviare solo GNOME: sulle altre scatole C4 dara 3, ed e giusto.
+	# ⚠ Vuole l'IMMAGINE e l'INPUT: gnome e kde (`11-capacita-del-prodotto.sh`).
+	#   Su xfce l input e l incremento 3: lanciata a mano li' dara 3, ed e giusto.
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c4-il-tasto-arriva-allo-schermo.py \
 		--porta "$PORTA" "$@"
@@ -530,8 +544,8 @@ c6)
 	log "C6 — si stacca e si ritrova (dentro $NOME)"
 	# ⛔ `--uccidi-la-sessione` e il COLLAUDO: col guasto innestato l esito si
 	#    legge al contrario, e il verde diventa un rosso.
-	# ⚠ Gira solo su gnome: il prodotto sa avviare solo GNOME (src/sessione.c:778),
-	#    e sulle altre scatole dara 3 dopo l attesa del compositore.
+	# ⚠ Il piano la vuole con l INPUT: gnome e kde (`11-capacita-del-prodotto.sh`,
+	#    dove sta scritto anche perche' quella dipendenza va riguardata).
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c6-si-stacca-e-si-ritrova.py \
 		--porta "$PORTA" "$@"
@@ -550,12 +564,15 @@ c8)
 
 c8b)
 	log "C8b — e la stessa pagina si vede DAL CLIENTE (dentro $NOME)"
-	# ⛔ SOLO GNOME E KDE: il prodotto sa avviare solo loro (src/sessione.c,
-	#    `sessione_desktop`; KDE dalla fase 12).  Sulle altre scatole questa
-	#    maglia direbbe «non ho potuto guardare» per sempre, che e il cugino
-	#    del rosso perpetuo (LEZIONI.md §1.49).
-	if [ "$DESKTOP" != gnome ] && [ "$DESKTOP" != kde ]; then
-		log "C8b non gira su $DESKTOP: il prodotto avvia solo GNOME e KDE"
+	# ⛔ SOLO DOVE IL PRODOTTO DA' L'IMMAGINE.  Altrove questa maglia direbbe
+	#    «non ho potuto guardare» per sempre, che e il cugino del rosso
+	#    perpetuo (LEZIONI.md §1.49).
+	# ⭐ Fino al 21 set 2026 qui c'era una whitelist sua («gnome o kde»),
+	#   GEMELLA di quella del gancio ma disallineata: copriva solo C8b.  ⇒ Ora
+	#   legge la STESSA lista del gancio (`11-capacita-del-prodotto.sh`), e i
+	#   due non possono piu' dire cose diverse.
+	if ! perche=$(prodotto_pronto C8b "$DESKTOP"); then
+		log "C8b non gira su $DESKTOP: ${perche:-il cancello non ha risposto}"
 		exit 3
 	fi
 	# ⛔ `--senza-cura` e il COLLAUDO: l esito si legge al contrario.

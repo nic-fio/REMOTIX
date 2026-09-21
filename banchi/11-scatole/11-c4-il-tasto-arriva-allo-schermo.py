@@ -575,9 +575,11 @@ ATTESA_PRIMO_FOTOGRAMMA = 30.0
 ATTESA_SCENA = 90.0
 ATTESA_TASTO = 8.0
 
-# ⚠ La scatola in cui questa maglia gira: **gnome**, porta 8511.  ⛔ Il prodotto
-#   sa avviare solo GNOME (`src/sessione.c:778`, tutto `src/mutter.c`): sulle
-#   altre scatole C4 dara' **3**, e sara' giusto — non un rosso.
+# ⚠ La porta predefinita e' quella di **gnome** (8511); il gancio passa quella
+#   della scatola.  ⛔ C4 vuole l'immagine E l'input: oggi (21 set 2026) il
+#   prodotto li da' su gnome e kde (`11-capacita-del-prodotto.sh`); su xfce
+#   l'input e' l'incremento 3 della fase 13, su lxqt il prodotto non nasce.
+#   Li', lanciata a mano, C4 dara' **3**, e sara' giusto — non un rosso.
 PORTA_PREDEFINITA = 8511
 
 
