@@ -63,7 +63,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
-            appunti_kde.c wlroots.c
+            appunti_kde.c wlroots.c wlr_input.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -200,8 +200,15 @@ SCANNER    ?= wayland-scanner
 # ⭐ FASE 13 — `wlr-output-management-unstable-v1`: la MISURA dell'uscita.
 #    ⛔ Su wlroots la tela non si negozia col flusso (lì non c'è flusso): si
 #    cambia all'uscita, e questo è il protocollo che lo fa.  `[M]` v4 su labwc.
+# ⭐ FASE 13, INCREMENTO 3 — l'INPUT su wlroots: libei lì non esiste (`[✗]`
+#    `STUDI.md` §xfce §7), e la strada sono due protocolli Wayland, `[M]`
+#    annunciati da labwc: `zwp_virtual_keyboard_manager_v1` v1 (di Purism, e
+#    ⚠ nonostante il prefisso `zwp_` NON sta in wayland-protocols: sta nel
+#    sorgente di wlroots, `protocol/`) e `zwlr_virtual_pointer_manager_v1` v2
+#    (da wlr-protocols).  Stanno in `protocolli/` come gli altri.
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
-              wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1
+              wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
+              virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 ifneq ($(PREFISSO),)
@@ -270,7 +277,7 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kwin.o appunti_kde.o wlroots.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
 # ⭐ IL BANCO DELLA CATTURA SU WLROOTS — `banchi/13-w1-un-fotogramma.c`.

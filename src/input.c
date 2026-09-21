@@ -198,6 +198,7 @@
 #include "mutter.h"
 #include "registro.h"
 #include "tastiera.h"
+#include "wlr_input.h"
 
 #define AREA "input"
 
@@ -308,7 +309,29 @@ struct input
 	 *    tocca: e' di `libei`, e chiuderlo in due posti e' un difetto che si
 	 *    manifesta a distanza. */
 	int fd_socket;
+
+	/* ⭐ FASE 13, INCREMENTO 3 — su wlroots il trasporto e' `wlr_input.c`, e
+	 *    `ei`, `sessione`, `kwin`, `puntatore` e `tastiera_dev` restano NULL.
+	 *    ⛔ Non-NULL vuol dire «questo Input e' di wlroots» per TUTTA la sua
+	 *    vita: dopo una caduta si tiene il morto finche' il riattacco non lo
+	 *    sostituisce, cosi' nessuna funzione cade per sbaglio nei rami libei.
+	 *    Il riquadro «WLROOTS» in fondo al file dice il resto. */
+	WlrInput *wlr;
+	gint64 wlr_ultimo_riattacco_us;
+	unsigned wlr_riattacchi;
+	gboolean wlr_riattacco_fallito_detto;
 };
+
+/* ⭐ FASE 13 — i rami di wlroots, scritti in fondo al file (riquadro
+ *    «WLROOTS»).  ⛔ Ciascuno sta in CIMA alla funzione pubblica e torna: il
+ *    percorso di GNOME e KDE sotto di lui non cambia di una riga. */
+static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto);
+static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto);
+static int gira_wlr(Input *in);
+static int disposizione_wlr(Input *in, const char *nome);
+static int lettera_wlr(Input *in, uint32_t carattere);
+static void chiudi_wlr(Input *in);
+static void riattacca_wlr(Input *in);
 
 /* ⛔ Il conto dei contesti ABBANDONATI — il PREZZO della cura D4, e un prezzo
  *    che non si conta e' un prezzo che nessuno scopre.  ⚠ E' del processo, non
@@ -374,6 +397,8 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 		              codice, MAX_TASTO - 1);
 		return -1;
 	}
+	if (in->wlr)
+		return manda_tasto_wlr(in, codice, premuto);
 	if (!in->tastiera_dev || !in->tastiera_attiva)
 		return -1;
 
@@ -425,6 +450,8 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 		registro_dice(AREA, "⚠ codice di pulsante 0x%X fuori dal massimo: rifiutato", codice);
 		return -1;
 	}
+	if (in->wlr)
+		return manda_bottone_wlr(in, codice, premuto);
 	if (!in->puntatore || !in->puntatore_attivo)
 		return -1;
 
@@ -1087,6 +1114,9 @@ Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, cha
 
 int input_descrittore(Input *in)
 {
+	/* ⭐ wlroots: il descrittore del filo Wayland, e -1 se e' caduto. */
+	if (in && in->wlr)
+		return wlr_input_descrittore(in->wlr);
 	if (!in || !in->ei)
 		return -1;
 	return ei_get_fd(in->ei);
@@ -1356,6 +1386,8 @@ int input_gira(Input *in)
 
 	if (!in)
 		return -1;
+	if (in->wlr)
+		return gira_wlr(in);
 	if (in->caduto)
 		return -1;
 
@@ -1426,6 +1458,12 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 {
 	double fx, fy;
 
+	/* ⭐ wlroots: il protocollo e' NORMALIZZATO sull'estensione che gli si da'
+	 *    (la tela), e l'uscita e' quella a cui il puntatore e' legato — niente
+	 *    regione da cercare.  ⛔ E nessuna trasformazione: le coordinate vanno
+	 *    come arrivano, con la tela come metro. */
+	if (in && in->wlr)
+		return wlr_input_assoluto(in->wlr, x, y, in->tela_l, in->tela_a);
 	if (!in || !in->puntatore || !in->puntatore_attivo)
 		return -1;
 	if (!in->regione_nota)
@@ -1561,6 +1599,11 @@ int input_disposizione(Input *in, const char *nome)
 
 	if (!in || !nome || !*nome)
 		return -1;
+	/* ⭐ wlroots: niente GSettings — la disposizione diventa la keymap della
+	 *    nostra tastiera virtuale.  ⛔ Il ramo sotto e' di GNOME (lo dice il
+	 *    suo riquadro) e su XFCE scriverebbe in uno schema che nessuno legge. */
+	if (in->wlr)
+		return disposizione_wlr(in, nome);
 
 	/*
 	 * ⛔⛔ NON SI CHIEDE DUE VOLTE LA STESSA COSA — ⚠ E LA DOMANDA GIUSTA E'
@@ -1708,6 +1751,11 @@ int input_pulsante(Input *in, uint16_t codice, int premuto)
 
 int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 {
+	/* ⭐ wlroots: stesso verso di sotto — il verticale si inverte QUI, una
+	 *    volta sola (vedi il riquadro), e `wlr_input_rotella()` riceve la
+	 *    convenzione di Wayland.  Gli scatti interi li fa lui (§7.2 n.1). */
+	if (in && in->wlr)
+		return wlr_input_rotella(in->wlr, asse_x, -asse_y);
 	if (!in || !in->puntatore || !in->puntatore_attivo)
 		return -1;
 
@@ -1746,6 +1794,8 @@ int input_lettera(Input *in, uint32_t carattere)
 
 	if (!in)
 		return -1;
+	if (in->wlr)
+		return lettera_wlr(in, carattere);
 	if (!in->disposizione)
 	{
 		/* ⛔ E NON e' il caso «non producibile»: quello e' 1, e vuol dire che la
@@ -1888,6 +1938,11 @@ void input_chiudi(Input *in)
 {
 	if (!in)
 		return;
+	if (in->wlr)
+	{
+		chiudi_wlr(in);
+		return;
+	}
 
 	/* ⚠ Una rete, non la regola: chi cuce chiama `input_rilascia_tutto()` al
 	 *   distacco (e' nel contratto).  Se non l'ha fatto, qui il conto e' ancora
@@ -1957,6 +2012,379 @@ void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned 
 		*ricambi_puntatore = in ? in->ricambi_puntatore : 0;
 	if (ricambi_tastiera)
 		*ricambi_tastiera = in ? in->ricambi_tastiera : 0;
+	if (pronto && in && in->wlr)
+	{
+		*pronto = !wlr_input_caduto(in->wlr);
+		return;
+	}
 	if (pronto)
 		*pronto = in && in->puntatore_attivo && in->regione_nota;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ WLROOTS — FASE 13, INCREMENTO 3: lo stesso contratto, un altro trasporto.
+ *
+ * ⛔ `libei` su wlroots NON esiste (`STUDI.md` §xfce §7, `[✗]`).  Il trasporto
+ *    e' `wlr_input.c` — tastiera e puntatore virtuali di Wayland — e qui resta
+ *    quel che su GNOME e KDE e' gia' stato pagato e misurato: **il conto** di
+ *    `RCP.md` §11, il rilascio al distacco, le lettere, la disposizione.
+ *
+ * ⭐ LA FORMA: ogni funzione pubblica passa la mano IN CIMA e torna (come gli
+ *    appunti con `appunti_apri_kde()`, come la cattura con
+ *    `cattura_avvia_wlr()`).  ⛔ Nessun ramo di GNOME o KDE e' stato
+ *    trasformato: i rami nuovi stanno sopra e non ci ricadono.
+ *
+ * ⚠ LE DIFFERENZE, contate, rispetto a libei:
+ *
+ *   · **niente ricambi, niente orfani**: i dispositivi sono NOSTRI, il
+ *     compositore non li distrugge per un cambio di geometria o di keymap.  ⇒
+ *     `tasti_orfani`/`bottoni_orfani` restano a zero per costruzione;
+ *   · **la disposizione non passa da GSettings**: diventa la keymap della
+ *     nostra tastiera, e labwc la consegna alle applicazioni coi nostri tasti
+ *     (§7.4).  ⭐ E' §5-bis.7 nella sua forma piu' diretta: le scorciatoie
+ *     combaciano perche' la keymap che le interpreta e' quella che le traduce;
+ *   · **la caduta del filo si ripara riattaccandosi** (vedi `riattacca_wlr`),
+ *     ed e' l'analogo della cura «C»: col filo muore il nostro puntatore, e
+ *     ⛔ `wlr_pointer_finish()` NON rilascia i pulsanti (§7.2 n.5) — il
+ *     rilascio lo porta il dispositivo nuovo.
+ *
+ * ⛔ E cio' che resta scoperto, detto: le scorciatoie di labwc si applicano
+ *    anche ai tasti virtuali (§7.5, `match_keybinding(..., is_virtual)`) — un
+ *    `Alt+F4` o un `Super` mandati dal browser li prende labwc, non
+ *    l'applicazione.  `[M]` 21 set 2026, portatile, labwc headless: `Alt+F4`
+ *    dal nostro canale CHIUDE la finestra del testimone, che vede l'Alt e mai
+ *    l'F4.  Non e' un difetto di questo file: e' il desktop, e su XFCE e' anche
+ *    cio' che l'utente si aspetta.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * ⛔ La `Tastiera` delle lettere si apre dallo STESSO testo che il compositore
+ *    ha ricevuto (`wlr_input_keymap()`): le posizioni si calcolano sulla keymap
+ *    con cui verranno rilette.  E' la regola di `leggi_keymap()`, e la riga del
+ *    registro e' la stessa, perche' chi cerca «KEYMAP CAMBIATA» la trovi su
+ *    tutti e tre i desktop.
+ */
+static void riapri_disposizione_wlr(Input *in)
+{
+	size_t misura = 0;
+	const char *testo = wlr_input_keymap(in->wlr, &misura);
+	g_autofree char *sbaglio = NULL;
+	g_autofree char *impronta = NULL;
+	Tastiera *nuova;
+
+	if (!testo || misura == 0)
+		return;
+	impronta = g_strdup_printf("%zu byte, impronta %08x", misura, (unsigned) g_str_hash(testo));
+	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
+	if (!nuova)
+		registro_dice(AREA, "⚠ la keymap della tastiera virtuale non si apre per le lettere (%s): %s",
+		              sbaglio ?: "senza motivo dichiarato",
+		              in->disposizione ? "tengo quella di prima" : "le LETTERE restano spente");
+	else
+	{
+		g_clear_pointer(&in->disposizione, tastiera_chiudi);
+		in->disposizione = nuova;
+	}
+	if (g_strcmp0(impronta, in->keymap_nome) != 0)
+	{
+		registro_dice(AREA, "KEYMAP CAMBIATA: %s (era: %s) → disposizione «%s», dalla %s (wlroots)",
+		              impronta, in->keymap_nome ?: "nessuna",
+		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna",
+		              wlr_input_keymap_origine(in->wlr));
+		g_free(in->keymap_nome);
+		in->keymap_nome = g_steal_pointer(&impronta);
+	}
+}
+
+Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
+{
+	GError *sbaglio = NULL;
+	WlrInput *w;
+	Input *in;
+
+	if (errore)
+		*errore = NULL;
+	if (tela_l == 0 || tela_a == 0)
+	{
+		if (errore)
+			*errore = g_strdup_printf("tela degenere %ux%u: le coordinate assolute non avrebbero "
+			                          "un intervallo",
+			                          tela_l, tela_a);
+		return NULL;
+	}
+	w = wlr_input_apri(&sbaglio);
+	if (!w)
+	{
+		if (errore)
+			*errore = g_strdup_printf("wlroots: %s", sbaglio ? sbaglio->message : "senza motivo");
+		g_clear_error(&sbaglio);
+		return NULL;
+	}
+
+	in = g_new0(Input, 1);
+	in->wlr = w;
+	in->tela_l = tela_l;
+	in->tela_a = tela_a;
+	in->aperto_us = g_get_monotonic_time();
+	in->fd_socket = -1;
+	riapri_disposizione_wlr(in);
+
+	registro_dice(AREA,
+	              "canale di input aperto verso il compositore (wlroots: tastiera e puntatore "
+	              "virtuali), tela %ux%u",
+	              tela_l, tela_a);
+	return in;
+}
+
+/* ⛔ Il conto si tiene come in `manda_tasto()`: DOPO l'invio, e solo se e'
+ *    partito — segnare un tasto che non e' partito farebbe rilasciare al
+ *    distacco qualcosa che nessuno ha premuto. */
+static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto)
+{
+	/* ⛔ Filo caduto ⇒ si prova a riattaccarsi PRIMA di dire -1.  Non e'
+	 *    zelo: `input_rilascia_tutto()` su un invio fallito CANCELLA il bit, e
+	 *    un pulsante cancellato dal conto e' un pulsante che il riattacco non
+	 *    rilascera' piu'.  ⚠ Col fondo di un secondo: dentro quel secondo il
+	 *    buco resta, ed e' detto. */
+	if (wlr_input_caduto(in->wlr))
+		riattacca_wlr(in);
+	if (wlr_input_tasto(in->wlr, codice, premuto != 0) != 0)
+		return -1;
+	if ((premuto != 0) != bit_leggi(in->tasti, codice))
+	{
+		bit_scrivi(in->tasti, codice, premuto != 0);
+		if (premuto)
+			in->quanti_tasti++;
+		else if (in->quanti_tasti)
+			in->quanti_tasti--;
+	}
+	return 0;
+}
+
+static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto)
+{
+	if (wlr_input_caduto(in->wlr))
+		riattacca_wlr(in); /* vedi `manda_tasto_wlr()` */
+	if (wlr_input_pulsante(in->wlr, codice, premuto != 0) != 0)
+		return -1;
+	if ((premuto != 0) != bit_leggi(in->bottoni, codice))
+	{
+		bit_scrivi(in->bottoni, codice, premuto != 0);
+		if (premuto)
+			in->quanti_bottoni++;
+		else if (in->quanti_bottoni)
+			in->quanti_bottoni--;
+	}
+	return 0;
+}
+
+/* La stessa di `input_lettera()`, senza il dispositivo di libei. */
+static int lettera_wlr(Input *in, uint32_t carattere)
+{
+	uint16_t codici[TASTIERA_MAX_POSIZIONI];
+	size_t quante = 0;
+	int esito;
+
+	if (!in->disposizione)
+	{
+		registro_dice(AREA, "⚠ LETTERA U+%04X non mandata: nessuna disposizione (la keymap della "
+		                    "tastiera virtuale non si e' aperta)",
+		              carattere);
+		return -1;
+	}
+	if (wlr_input_caduto(in->wlr))
+		return -1;
+
+	esito = tastiera_posizioni_per(in->disposizione, carattere, codici, &quante);
+	if (esito < 0)
+		return -1;
+	if (esito == 0 || quante == 0)
+		return 1; /* ⛔ non producibile: la riga la scrive `tastiera.c` */
+
+	/* I modificatori prima, il tasto per ultimo; si rilascia all'incontrario.
+	 * ⭐ E' qui che i modificatori di `wlr_input.c` fanno il loro lavoro: il
+	 *    Maiusc premuto aggiorna il NOSTRO stato, e il compositore lo riceve
+	 *    come `modifiers` prima della lettera. */
+	for (size_t i = 0; i < quante; i++)
+		if (manda_tasto(in, codici[i], 1) < 0)
+		{
+			for (size_t j = i; j > 0; j--)
+				manda_tasto(in, codici[j - 1], 0);
+			return -1;
+		}
+	for (size_t i = quante; i > 0; i--)
+		manda_tasto(in, codici[i - 1], 0);
+	return 0;
+}
+
+static int disposizione_wlr(Input *in, const char *nome)
+{
+	g_autoptr(GError) sbaglio = NULL;
+
+	/* ⛔ La domanda e' «che cosa c'e' adesso?», come nel ramo di GNOME: la
+	 *    keymap vera e' quella che la tastiera virtuale porta, non la memoria. */
+	if (in->disposizione && tastiera_e_questa(in->disposizione, nome) == 1)
+	{
+		g_free(in->negoziata);
+		in->negoziata = g_strdup(nome);
+		registro_dettaglio(AREA,
+		                   "disposizione «%s»: la tastiera virtuale la ha GIA' (verificato sulla "
+		                   "keymap), non la rimando",
+		                   nome);
+		return 0;
+	}
+
+	/* ⚠ La negoziata si segna PRIMA dell'esito: se il filo e' caduto, e' il
+	 *   riattacco che la rimette — e deve sapere quale. */
+	g_free(in->negoziata);
+	in->negoziata = g_strdup(nome);
+
+	/* ⛔⛔ PRIMA si rilascia tutto: i modificatori dipendono dalla keymap, e un
+	 *     Maiusc premuto con la vecchia e rilasciato con la nuova resta giu'
+	 *     nello stato del compositore (`RCP.md` §11).  E la riga si scrive
+	 *     anche con zero, come sempre. */
+	input_rilascia_tutto(in);
+
+	if (wlr_input_keymap_da_nome(in->wlr, nome, &sbaglio) != 0)
+	{
+		registro_dice(AREA,
+		              "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata mandata alla "
+		              "tastiera virtuale (%s) — resta «%s».  ⛔ Le LETTERE usciranno giuste lo "
+		              "stesso, le SCORCIATOIE no (RCP.md §7.3)",
+		              nome, sbaglio ? sbaglio->message : "senza motivo",
+		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna");
+		return -1;
+	}
+	riapri_disposizione_wlr(in);
+	/* ⚠ «Mandata», non «in vigore»: che labwc l'abbia girata alle applicazioni
+	 *   lo dice solo un testimone dentro la sessione.  `[?]` Non misurato. */
+	registro_dice(AREA,
+	              "disposizione «%s» MANDATA al compositore come keymap della tastiera "
+	              "virtuale — §5-bis.7 su wlroots, senza toccare le impostazioni della sessione",
+	              nome);
+	return 0;
+}
+
+/*
+ * ⛔⛔ IL RIATTACCO — quando il filo con labwc cade e il compositore c'e' ancora.
+ *
+ * Senza, un filo caduto vuol dire un desktop che si VEDE e non si COMANDA fino
+ * al prossimo rimontaggio del palco.  Con, torna da se' entro un secondo.
+ *
+ * `[M]` 21 settembre 2026, SUL PORTATILE (labwc 0.8.3 headless privato, lo
+ * stesso di Trixie; testimone `banchi/06-b33-testimone.c`), tagliando il SOLO
+ * nostro socket con `shutdown()` mentre erano giu' `BTN_LEFT` e Maiusc:
+ *   · ⭐ il Maiusc lo rilascia labwc da se' alla caduta (il testimone vede
+ *     `TASTO 42 premuto 0`): la tastiera e' a posto senza di noi (§7.2 n.5);
+ *   · il pulsante NON lo rilascia nessuno — ma col nostro unico puntatore il
+ *     seat perde la capacita' «puntatore» (`POSTO_PUNTATORE mollato`), e dopo
+ *     il riattacco un clic fresco arriva intero;
+ *   · ⛔ e arriva intero **anche togliendo** il rilascio forzato qui sotto
+ *     (guasto innestato, stesso esito).  ⇒ In QUESTA configurazione — nessun
+ *     altro puntatore nel seat, che e' la sessione remota headless — la
+ *     trappola 5 alla caduta non morde.
+ * ⚠ Il rilascio forzato resta lo stesso, ed e' `[?]`: serve solo se nel seat
+ *   c'e' un ALTRO puntatore che tiene viva la capacita' (un mouse vero), caso
+ *   che non e' stato misurato.  Costa un evento; toglierlo costerebbe una
+ *   diagnosi il giorno che quel caso esiste.
+ *
+ * ⚠ Il fondo e' quello della cura «C» (`GUARIGIONE_FONDO_US`): se il compositore
+ *   non c'e' piu' davvero, il tentativo costa un `connect()` fallito al
+ *   secondo, e la riga esce una volta sola.
+ */
+static void riattacca_wlr(Input *in)
+{
+	gint64 ora = g_get_monotonic_time();
+	g_autoptr(GError) sbaglio = NULL;
+	WlrInput *nuovo;
+	unsigned pulsanti = 0, tasti = 0;
+
+	if (in->wlr_ultimo_riattacco_us && ora - in->wlr_ultimo_riattacco_us < GUARIGIONE_FONDO_US)
+		return;
+	in->wlr_ultimo_riattacco_us = ora;
+
+	nuovo = wlr_input_apri(&sbaglio);
+	if (!nuovo)
+	{
+		if (!in->wlr_riattacco_fallito_detto)
+			registro_dice(AREA,
+			              "⛔ wlroots: il riattacco dell'input non riesce (%s) — riprovo ogni "
+			              "secondo, e questa riga non si ripete.  ⚠ Intanto il desktop si "
+			              "VEDE e non si COMANDA",
+			              sbaglio ? sbaglio->message : "senza motivo");
+		in->wlr_riattacco_fallito_detto = TRUE;
+		return;
+	}
+
+	/* La disposizione negoziata torna quella di prima; senza, resta quella che
+	 * la sessione ha ridato al riattacco. */
+	if (in->negoziata)
+	{
+		g_autoptr(GError) sb = NULL;
+
+		if (wlr_input_keymap_da_nome(nuovo, in->negoziata, &sb) != 0)
+			registro_dice(AREA, "⚠ al riattacco la disposizione «%s» non si rimette (%s)",
+			              in->negoziata, sb ? sb->message : "senza motivo");
+	}
+
+	for (uint32_t c = 0; c < MAX_BOTTONE; c++)
+		if (bit_leggi(in->bottoni, c))
+		{
+			(void) wlr_input_rilascia_forzato(nuovo, (uint16_t) c);
+			bit_scrivi(in->bottoni, c, FALSE);
+			if (in->quanti_bottoni)
+				in->quanti_bottoni--;
+			pulsanti++;
+		}
+	for (uint32_t c = 0; c < MAX_TASTO; c++)
+		if (bit_leggi(in->tasti, c))
+		{
+			bit_scrivi(in->tasti, c, FALSE);
+			if (in->quanti_tasti)
+				in->quanti_tasti--;
+			tasti++;
+		}
+
+	wlr_input_chiudi(in->wlr);
+	in->wlr = nuovo;
+	in->wlr_riattacchi++;
+	in->wlr_riattacco_fallito_detto = FALSE;
+	riapri_disposizione_wlr(in);
+	registro_dice(AREA,
+	              "⭐ wlroots: input RIATTACCATO (n. %u).  %u pulsanti rimasti giu' rilasciati dal "
+	              "dispositivo nuovo (`[?]` non misurato che il seat li accetti), %u tasti gia' "
+	              "rilasciati dal compositore alla caduta",
+	              in->wlr_riattacchi, pulsanti, tasti);
+}
+
+static int gira_wlr(Input *in)
+{
+	if (!wlr_input_caduto(in->wlr))
+	{
+		int n = wlr_input_gira(in->wlr);
+
+		if (n >= 0)
+			return n;
+	}
+	riattacca_wlr(in);
+	return wlr_input_caduto(in->wlr) ? -1 : 0;
+}
+
+static void chiudi_wlr(Input *in)
+{
+	/* ⚠ La stessa rete di `input_chiudi()`: chi cuce ha gia' rilasciato; se non
+	 *   l'ha fatto, la riga lo dice e si rilascia qui. */
+	if (in->quanti_tasti || in->quanti_bottoni)
+	{
+		registro_dice(AREA, "⛔ chiusura con %u tasti e %u pulsanti ANCORA PREMUTI: chi cuce non ha "
+		                    "chiamato input_rilascia_tutto()",
+		              in->quanti_tasti, in->quanti_bottoni);
+		input_rilascia_tutto(in);
+	}
+	wlr_input_chiudi(in->wlr);
+	g_clear_pointer(&in->disposizione, tastiera_chiudi);
+	g_free(in->keymap_nome);
+	g_free(in->negoziata);
+	g_free(in->reg_per);
+	g_free(in);
 }

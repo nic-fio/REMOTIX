@@ -6247,6 +6247,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		/* ⭐ FASE 12, INCREMENTO 3 — su KDE il canale lo da' KWin, sulla
 		 *    misura dell'uscita (`tela_l`/`tela_a` le ha gia' allineate
 		 *    `misura_del_palco()`). */
+		/* ⭐ FASE 13, INCREMENTO 3 — su XFCE (wlroots) `libei` non esiste:
+		 *    tastiera e puntatore virtuali di Wayland, con lo stesso contratto
+		 *    (`input.h`).  ⛔ Il ramo sta PRIMA e non tocca la riga di GNOME e
+		 *    KDE qui sotto. */
+		if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+			palco_input = input_apri_wlr(tela_l, tela_a, &sbaglio_input);
+		else
 		palco_input = palco_kwin
 		                  ? input_apri_kwin(palco_kwin, tela_l, tela_a, &sbaglio_input)
 		                  : input_apri(mut, tela_l, tela_a, &sbaglio_input);

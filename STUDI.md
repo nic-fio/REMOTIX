@@ -3812,7 +3812,7 @@ alcun permesso (wlroots non filtra; labwc e sway filtrano solo i client in sandb
 | 2 | **`value` non deve mai essere 0** | con `value == 0` parte un `axis_stop` e lo scatto sparisce (`wlr_seat_pointer.c:369-391`). wayvnc usa **15.0**, «valore magico misurato con `wev`» |
 | 3 | **Senza `frame` non arriva niente** | gli assi restano nel buffer (`wlr_virtual_pointer_v1.c:109-122`), e `frame` serve a **tutti** gli eventi, non solo alla rotella |
 | 4 | **I modificatori li mandiamo noi, sempre** | wlroots costruisce l'evento con `update_state = false` (`:92`) e non aggiorna `xkb_state`: **senza `modifiers`, Shift+A dà `a`**. Serve un `xkb_state` nostro |
-| 5 | **`wlr_pointer_finish()` non rilascia i pulsanti** (`types/wlr_pointer.c:38-42`) | alla disconnessione dobbiamo mandare noi `button(release)` + `frame` prima di `destroy`, o **il desktop resta col tasto sinistro premuto**. La tastiera invece li rilascia da sola |
+| 5 | **`wlr_pointer_finish()` non rilascia i pulsanti** (`types/wlr_pointer.c:38-42`) | alla disconnessione dobbiamo mandare noi `button(release)` + `frame` prima di `destroy`, o **il desktop resta col tasto sinistro premuto**. La tastiera invece li rilascia da sola. ⚠ `[M]` 21 set 2026, portatile, labwc headless: la tastiera sì (Maiusc rilasciato alla caduta del nostro socket); e con il **nostro come unico puntatore** il seat perde la capacità e un clic fresco dopo il riattacco arriva intero **anche senza** il rilascio — la trappola morde solo se nel seat c'è un altro puntatore `[?]` |
 
 ⚠ **Il verso della rotella**: verticale **invertito** rispetto a Wayland, orizzontale no — e **nessuno
 lo corregge per noi**, perché su un device virtuale labwc salta libinput (`scroll_factor = 1.0`,
@@ -3844,6 +3844,13 @@ giusta**: fare `wl_seat.get_keyboard` — wlroots manda `keymap` subito, senza f
 (`seat/wlr_seat_keyboard.c:412-417`) — e **rigirare quel contenuto**. È meglio di wayvnc, che la
 genera da configurazione, e c'è una ragione forte: su labwc **ogni tasto** fa
 `wlr_seat_set_keyboard`, che **rimanda la keymap a tutti i client**.
+
+⛔ **`[M]` 21 settembre 2026, sul portatile (labwc 0.8.3 headless, fase 13 incremento 3): su una
+sessione SENZA tastiera vera la copia dal filo non si può fare.** Il seat dichiara capacità **0**
+finché non esiste una tastiera, quindi `get_keyboard` non ha niente da consegnare. ⇒ `wlr_input.c`
+la tenta e, se non arriva, presenta quella dell'**ambiente** dichiarandolo; la disposizione giusta
+la porta subito dopo quella **negoziata** col client, che su wlroots diventa la keymap della nostra
+tastiera (labwc la gira alle applicazioni insieme ai nostri tasti — `[M]` il testimone la riceve).
 
 ✅ **La ripetizione non la facciamo noi**: nessuno ripete lato compositore, i `key down` ripetuti di
 RDP sono comunque **scartati** da wlroots (`wlr_keyboard.c:68-83`), e la ripetizione la fa
