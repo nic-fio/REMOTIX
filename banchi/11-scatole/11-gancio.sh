@@ -932,12 +932,246 @@ le_cinque_nuove() {
 	fi
 }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐⭐ LE SCATOLE SI RIFANNO ALL'INIZIO DI `tutto` — 21 settembre 2026
+#
+# ⛔ Fino a qui un giro completo partiva dalle scatole COME LE TROVAVA.
+#    `[M]` 21 set 2026: dopo ~14 ore e centinaia di sessioni nella stessa
+#    scatola C17 e' diventata ROSSA su gnome e kde (verso «sessione →
+#    dispositivo»).  Bisezione: col binario di ieri (verde ieri) nella scatola
+#    vecchia era rossa lo stesso; col binario nuovo nella scatola rifatta da
+#    zero, verde 2 su 2.  ⇒ Categoria C: lo stato accumulato dalla scatola ha
+#    rotto una maglia, e la rete ha accusato il prodotto di un rosso non suo.
+#
+# `[?]` CHE COSA SI ACCUMULA, letto dal codice (non si e' potuto entrare):
+#   · ⭐ `/tmp/remotix-arbitro-copia.log` — UN nome fisso scritto e tolto
+#     dall'INQUILINO di C17, mai tolto alla fine ⇒ resta all'uid del primo
+#     `c17uNNN`; /tmp e' «sticky», e un inquilino con un altro uid non lo
+#     toglie e non lo riscrive ⇒ il comando della copia non parte ⇒ B e R
+#     rossi.  E' la causa piu' probabile, ed e' CURATA in C17 (il nome porta
+#     l'inquilino, e si toglie alla fine).
+#   · gli uid che salgono: `useradd` da' max+1, quindi l'uid di un inquilino
+#     dipende da CHI E' RIMASTO.  `[M]` in kde `user@4024` e `user@4025`
+#     falliti, con `provanic` a 4011: inquilini sopravvissuti a un giro morto
+#     (un `userdel` che fallisce con un processo ancora vivo).  ⇒ E' quel che
+#     sposta l'uid di C17 e fa mordere il file qui sopra.
+#   · le unita' `user@…` FALLITE restano elencate finche' nessuno fa
+#     `reset-failed`: il passo 0 le mostra, e la scatola e' «degraded».
+#   · `/tmp/mozilla` del primo inquilino (C2 lo dice gia', e la cura sta nelle
+#     maglie da agosto); i file per-inquilino in /tmp (`c4-…`, `c5-…`, `c8-…`)
+#     che non si tolgono; `/var/lib/rete11/rilievo`, che cresce a ogni sessione.
+#
+# ⭐ LA CURA: la famiglia `tutto` (e `desktop-nuovo`) comincia RIFACENDO ogni
+#   scatola su cui gira — `accendi` (il contenitore si ricrea dall'immagine,
+#   e con lui sparisce tutto quel che c'era), `prodotto`, `server` — e lo
+#   DICHIARA: nel registro, campo `scatole`, con i secondi e l'eta' che la
+#   scatola aveva prima di essere buttata.
+# ⛔ La famiglia veloce (`funziona`, tetto 180 s) NON rifa' niente: una scatola
+#   costa `[?]` 15-40 s (l'attesa di systemd dentro fino a 30 s, i server fino
+#   a 20 s), e il tetto e' pieno.  ⇒ La' parla la GUARDIA (`11-accendi.sh`,
+#   `riga_eta`): una riga, non un rosso, se la scatola ha passato le sue ore o
+#   le sue sessioni.
+# ⚠ IL COSTO in `tutto`: `[?]` 1-3 minuti per quattro scatole, contro giri da
+#   `[M]` 9 075-10 645 s (fase 12) ⇒ ~1-2 %.  Diventa `[M]` al primo giro: i
+#   secondi di ciascuna finiscono nel registro.
+# ⛔ E prende le scatole: una sessione aperta dentro muore.  E' gia' il prezzo
+#   di `tutto` (C14 prende le quattro scatole e riaccende i server).
+#
+# ⛔⛔ IL BINARIO RESTA LO STESSO NELLE QUATTRO (C11 lo controlla): `prodotto`
+#     copia da `/rete11/prodotto`, cioe' dalla STESSA cartella per tutte.  Con
+#     `--scatola X` si rifa' solo X, ⚠ e nelle altre accese si rimette soltanto
+#     il prodotto (non si rifanno e non si riaccendono i loro server), cosi' C11
+#     e C14 a fine giro confrontano quattro binari uguali.  Una spenta si dice.
+# ═══════════════════════════════════════════════════════════════════════════
+DESKTOP_TUTTI="gnome kde xfce lxqt"
+SCATOLE_JSON=""
+
+annota_scatola() {
+	local d=$1 cosa=$2 secondi=$3 riuscita=$4 dice=$5
+	[ -n "$SCATOLE_JSON" ] && SCATOLE_JSON="$SCATOLE_JSON,"
+	SCATOLE_JSON="$SCATOLE_JSON{\"desktop\":$(json_stringa "$d"),\"cosa\":$(json_stringa "$cosa"),\"secondi\":$secondi,\"riuscita\":$riuscita,\"dice\":$(json_stringa "$dice")}"
+}
+
+# ⚠ `11-accendi.sh` stampa anche i suoi «OK/NO»: si tiene SOLO la riga che ha
+#   la forma attesa, o si dice che non si sa.  ⛔ Un «va eseguito da
+#   amministratore» letto come eta' sarebbe una misura inventata.
+riga_da_accendi() {
+	local azione=$1 d=$2 forma=$3 r
+	r=$(bash "$QUI/11-accendi.sh" "$azione" "$d" 2>/dev/null | grep -E "^($forma|spenta)" | tail -1)
+	printf '%s' "${r:-ignota}"
+}
+
+scatola_accesa() {
+	[ "$(podman inspect --format '{{.State.Running}}' "rete11-$1" 2>/dev/null)" = true ]
+}
+
+rifai_una_scatola() {
+	local d=$1 prima passo t0 s fallito=""
+	prima=$(riga_da_accendi eta "$d" 'ore=')
+	if [ "$SECCO" = 1 ]; then
+		inf "(a vuoto) rifarei la scatola $d  (adesso: $prima)"
+		return 0
+	fi
+	# ⛔ Senza immagine NON si butta giu' niente: `accendi` toglierebbe la
+	#    scatola che c'e' senza poterla rifare.  Si usa com'e', e si dice.
+	if ! command -v podman >/dev/null 2>&1 || ! podman image exists "rete11/$d:p0" 2>/dev/null; then
+		ko "la scatola $d NON e' stata rifatta: qui non c'e' l'immagine rete11/$d:p0"
+		inf "  ⇒ le sue maglie girano sulla scatola COME LA TROVANO ($prima)"
+		annota_scatola "$d" "rifatta" 0 false "manca l'immagine: usata com'era ($prima)"
+		return 1
+	fi
+	inf "la scatola $d prima di essere buttata: $prima"
+	t0=$SECONDS
+	for passo in accendi prodotto server; do
+		if ! bash "$QUI/11-accendi.sh" "$passo" "$d"; then
+			fallito=$passo
+			break
+		fi
+	done
+	s=$((SECONDS - t0))
+	if [ -z "$fallito" ]; then
+		ok "scatola $d rifatta da zero — accendi, prodotto, server — in ${s}s"
+		annota_scatola "$d" "rifatta" "$s" true "era: $prima"
+	else
+		ko "scatola $d: «$fallito» non e' riuscito (${s}s) ⇒ le sue maglie diranno «non ho potuto guardare»"
+		annota_scatola "$d" "rifatta" "$s" false "fallito «$fallito»; era: $prima"
+	fi
+}
+
+rifai_le_scatole() {
+	local d t0 chieste=" $* "
+	log "le scatole si RIFANNO da zero prima di misurare: $*"
+	inf "⛔ un giro completo non parte piu' dallo sporco dei giri prima (21 set 2026, C17)"
+	for d in "$@"; do
+		rifai_una_scatola "$d"
+	done
+	# ⛔ Lo stesso binario nelle quattro: le altre, se accese, prendono il
+	#    prodotto di questo giro (e basta: niente server riacceso, niente
+	#    scatola buttata — non sono state chieste).
+	for d in $DESKTOP_TUTTI; do
+		case "$chieste" in *" $d "*) continue ;; esac
+		if [ "$SECCO" = 1 ]; then
+			inf "(a vuoto) rimetterei il prodotto in $d, senza rifarla"
+			continue
+		fi
+		if ! scatola_accesa "$d"; then
+			inf "⚠ $d e' spenta: non rifatta e non allineata ⇒ C11 dira' se il binario differisce"
+			continue
+		fi
+		t0=$SECONDS
+		if bash "$QUI/11-accendi.sh" prodotto "$d" >/dev/null 2>&1; then
+			inf "⭐ $d non rifatta (non chiesta), ma col prodotto di questo giro ($((SECONDS - t0))s)"
+			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" true "non chiesta: non rifatta, binario allineato"
+		else
+			ko "$d: non sono riuscito a rimetterci il prodotto ⇒ C11 dira' se il binario differisce"
+			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" false "prodotto non rimesso"
+		fi
+	done
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔ E IL RIFACIMENTO NON DEVE NASCONDERE UNA PERDITA DEL PRODOTTO.
+#
+# ⚠ Rifare le scatole cancella lo sporco della scatola, ⛔ ma cancellerebbe
+#   anche i segni di un prodotto che perde qualcosa a ogni sessione: la rete
+#   sarebbe verde per sempre, perche' non vivrebbe mai abbastanza da vederlo.
+# ⭐ Percio' ogni scatola ha un BILANCIO subito prima e subito dopo le sue
+#   maglie (`11-accendi.sh bilancio`), sullo stesso server — nessuna maglia
+#   del giro lo riaccende, solo C14 che viene dopo.  ~40-50 sessioni in mezzo.
+#   E il bilancio e' diviso per PADRONE:
+#     · il SERVER (descrittori, fili, figli): se cresce, e' il PRODOTTO — e
+#       nessun rifacimento lo cura.  ⚠ Una riga gialla, a voce alta.
+#     · la SCATOLA (inquilini rimasti, sessioni, unita' fallite, /tmp senza
+#       padrone): se cresce, e' sporco dei banchi o di systemd — ed e'
+#       quel che il rifacimento toglie al giro dopo.
+# ⚠ Non e' un rosso: una misura nuova senza guasto innestato non giudica
+#   (§3.6).  `[?]` Il primo giro dira' se il server torna al suo pavimento
+#   quando l'ultima sessione e' chiusa; da li' si potra' farne una maglia.
+# ⭐ E la guardia dell'eta' resta accesa FUORI da `tutto`: chi lavora con la
+#   famiglia veloce o a mano sulle scatole vecchie vede la riga, e se un rosso
+#   sparisce rifacendo la scatola il bilancio dice da quale colonna veniva.
+# ═══════════════════════════════════════════════════════════════════════════
+BILANCIO_PRIMA=""
+
+valore_di() {
+	local x=" $1 "
+	case "$x" in *" $2="*) ;; *) return 0 ;; esac
+	x=${x#* $2=}
+	printf '%s' "${x%% *}"
+}
+
+bilancio_prima() {
+	BILANCIO_PRIMA=""
+	[ "$SECCO" = 1 ] && return 0
+	BILANCIO_PRIMA=$(riga_da_accendi bilancio "$1" 'server_pid=')
+}
+
+bilancio_dopo() {
+	local d=$1 dopo k a b del_prodotto="" della_scatola="" nota=""
+	[ "$SECCO" = 1 ] && return 0
+	dopo=$(riga_da_accendi bilancio "$d" 'server_pid=')
+	case "$BILANCIO_PRIMA$dopo" in
+	*ignota*|*spenta*)
+		inf "⚠ bilancio($d): non leggibile (prima «$BILANCIO_PRIMA», dopo «$dopo»)"
+		annota_scatola "$d" "bilancio" 0 false "prima: $BILANCIO_PRIMA; dopo: $dopo"
+		return 0 ;;
+	esac
+	a=$(valore_di "$BILANCIO_PRIMA" server_pid); b=$(valore_di "$dopo" server_pid)
+	if [ "$b" = 0 ] && [ "$a" != 0 ]; then
+		nota="il server NON C'E' PIU' a fine maglie"
+	elif [ "$a" != "$b" ]; then
+		nota="il server e' cambiato nel mezzo ($a→$b): la colonna del prodotto non si confronta"
+	else
+		for k in server_fd server_fili server_figli; do
+			a=$(valore_di "$BILANCIO_PRIMA" "$k"); b=$(valore_di "$dopo" "$k")
+			case "$a$b" in ''|*[!0-9]*) continue ;; esac
+			[ "$b" -gt "$a" ] && del_prodotto="$del_prodotto $k $a→$b"
+		done
+	fi
+	for k in inquilini sessioni fallite user_fallite tmp_orfani; do
+		a=$(valore_di "$BILANCIO_PRIMA" "$k"); b=$(valore_di "$dopo" "$k")
+		case "$a$b" in ''|*[!0-9]*) continue ;; esac
+		[ "$b" -gt "$a" ] && della_scatola="$della_scatola $k $a→$b"
+	done
+	inf "bilancio($d) prima: $BILANCIO_PRIMA"
+	inf "bilancio($d) dopo : $dopo"
+	[ -n "$nota" ] && printf '  \033[1;33m⚠\033[0m  bilancio(%s): %s\n' "$d" "$nota"
+	if [ -n "$del_prodotto" ]; then
+		printf '  \033[1;33m⚠\033[0m  bilancio(%s): il SERVER e'"'"' cresciuto fra la prima e l'"'"'ultima maglia:%s — puo'"'"' essere una perdita del PRODOTTO, e rifare la scatola NON la cura\n' "$d" "$del_prodotto"
+	fi
+	[ -n "$della_scatola" ] && inf "⚠ bilancio($d): la SCATOLA si e' sporcata:$della_scatola — banchi o systemd, non il server"
+	annota_scatola "$d" "bilancio" 0 true "prima: $BILANCIO_PRIMA; dopo: $dopo; prodotto:${del_prodotto:- niente}${nota:+ ($nota)}; scatola:${della_scatola:- niente}"
+}
+
+# ⭐ LA GUARDIA a fine giro: l'eta' di ogni scatola nel registro, e UNA riga
+#   a voce se ha passato la soglia (le soglie stanno in `11-accendi.sh`).
+#   ⚠ Si chiama DOPO aver fermato il cronometro: `[?]` ~1 s per quattro
+#   scatole, che nella famiglia veloce non deve entrare nel tetto.
+guardia_delle_scatole() {
+	local d riga
+	[ "$SECCO" = 1 ] && return 0
+	command -v podman >/dev/null 2>&1 || return 0
+	for d in "$@"; do
+		riga=$(riga_da_accendi eta "$d" 'ore=')
+		case "$riga" in spenta|ignota) continue ;; esac
+		annota_scatola "$d" "eta a fine giro" 0 true "$riga"
+		case "$riga" in
+		*guardia=SUPERATA*)
+			printf '  \033[1;33m⚠\033[0m  scatola %s VECCHIA: %s — non e'"'"' un rosso; se qualcosa e'"'"' rosso, si rifa'"'"' la scatola e si riprova prima di accusare il prodotto\n' "$d" "$riga" ;;
+		esac
+	done
+}
+
 famiglia_tutto() {
 	# ⛔ Nessun tetto qui: e' la famiglia di prima di chiudere una fase, e §3.4
 	#    dice UNA SCATOLA PER VOLTA, in fila, per il lucchetto della scheda.
 	local d
+	# ⭐ Da scatole PULITE, e dichiarato (vedi `rifai_le_scatole`).
+	# shellcheck disable=SC2086
+	rifai_le_scatole $DESKTOP_NOTI
 	for d in $DESKTOP_NOTI; do
 		log "scatola $d"
+		bilancio_prima "$d"
 		esegui_maglia "passo0($d)" false GIRA_P0 "$d"
 		esegui_maglia "C1($d)x10" false GIRA_C1 "$d" 10
 		esegui_maglia "C8($d)" false GIRA_C8 "$d" --senza-sessione
@@ -970,6 +1204,9 @@ famiglia_tutto() {
 		#    che vuole, e la ragione di ogni salto sta scritta dentro
 		#    `le_cinque_nuove` (e in `11-capacita-del-prodotto.sh`).
 		le_cinque_nuove "$d"
+		# ⛔ E il bilancio: se il SERVER e' cresciuto, il rifacimento non lo
+		#    avrebbe mai fatto vedere — lo dice questa riga.
+		bilancio_dopo "$d"
 	done
 	# ⭐ `rete_intera`, cioe' **con C14** — e qui e' giusto: questa e' la
 	#   famiglia di prima di chiudere una fase, i 786 s sono gia' a bilancio
@@ -980,6 +1217,14 @@ famiglia_tutto() {
 famiglia_desktop_nuovo() {
 	local nuovo=$1 d
 	log "il desktop nuovo: $nuovo"
+	# ⭐ Da scatole PULITE anche qui: il nuovo e i vecchi della regressione.
+	local da_rifare="$nuovo"
+	for d in $DESKTOP_NOTI; do
+		[ "$d" = "$nuovo" ] || da_rifare="$da_rifare $d"
+	done
+	# shellcheck disable=SC2086
+	rifai_le_scatole $da_rifare
+	bilancio_prima "$nuovo"
 	esegui_maglia "passo0($nuovo)" false GIRA_P0 "$nuovo"
 	esegui_maglia "C1($nuovo)x10" false GIRA_C1 "$nuovo" 10
 	esegui_maglia "C8($nuovo)" false GIRA_C8 "$nuovo" --senza-sessione
@@ -996,6 +1241,7 @@ famiglia_desktop_nuovo() {
 	#    giorno che il prodotto sapra' avviarlo si scrive la sua riga LI', e
 	#    questa comincia a girare senza che nessuno debba toccarla.
 	le_cinque_nuove "$nuovo"
+	bilancio_dopo "$nuovo"
 	log "e la REGRESSIONE sui vecchi — ⭐ senza riscrivere una riga della lista"
 	for d in $DESKTOP_NOTI; do
 		[ "$d" = "$nuovo" ] && continue
@@ -1291,6 +1537,10 @@ scrivi_registro() {
 		printf '"secco":%s,' "$([ "$SECCO" = 1 ] && echo true || echo false)"
 		printf '"cambiati":%s,' "$(json_elenco "$@")"
 		printf '"maglie":[%s],' "$eseguiti_json"
+		# ⭐ Le scatole: rifatte (con i secondi), bilanci, eta' a fine giro.
+		#   ⚠ Fuori da `maglie` apposta: non sono giudizi, e C12, C13 e C15
+		#   non devono contarle ne' come verdi ne' come rosse.
+		printf '"scatole":[%s],' "$SCATOLE_JSON"
 		printf '"guasto_innestato":%s,' "$guasto"
 		printf '"ha_dato_rosso":%s,' "$rosso"
 		printf '"secondi":%s,' "$secondi"
@@ -1442,6 +1692,14 @@ decidi|gira)
 	*)             ko "famiglia sconosciuta: $FAMIGLIA"; exit 2 ;;
 	esac
 	DURATA=$SECONDS
+
+	# ⭐ LA GUARDIA DELL'ETA' — dopo il cronometro, apposta (vedi
+	#   `guardia_delle_scatole`): una riga se una scatola e' vecchia, mai un rosso.
+	# shellcheck disable=SC2086
+	case "${FAMIGLIA%%:*}" in
+	funziona|rete-intera|tutto) guardia_delle_scatole $DESKTOP_NOTI ;;
+	desktop-nuovo)              guardia_delle_scatole "${FAMIGLIA##*:}" $DESKTOP_NOTI ;;
+	esac
 
 	# ⛔ «ha dato rosso» vuol dire ESITO 1 — un giudizio.  ⚠ Il 3 NON e' un
 	#    rosso (§4.5), e contarlo come tale renderebbe C13 verde per sbaglio.

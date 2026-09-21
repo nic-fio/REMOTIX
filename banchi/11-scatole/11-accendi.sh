@@ -18,6 +18,8 @@
 #   bash 11-accendi.sh c17        [gnome] [--senza-copia]  gli appunti nei due versi
 #   bash 11-accendi.sh c10                    le copie gemelle (NON vuole la scatola)
 #   bash 11-accendi.sh impronta   [gnome]     stampa l'impronta (R3)
+#   bash 11-accendi.sh eta        [gnome]     quanto e' vecchia la scatola (la guardia)
+#   bash 11-accendi.sh bilancio   [gnome]     server, inquilini, /tmp: che cosa c'e' adesso
 #   bash 11-accendi.sh spegni     [gnome]
 #
 # ⚠ C2 · C3 · C4 · C6 · C8b · C17 girano UTILMENTE solo dove il prodotto da'
@@ -174,6 +176,92 @@ fi
 [ "$(id -u)" = 0 ] || { ko "va eseguito da amministratore"; exit 2; }
 [ -f "$RICETTA" ] || { ko "non trovo la ricetta $RICETTA"; exit 2; }
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ QUANTO E' VECCHIA UNA SCATOLA — la guardia, 21 settembre 2026
+#
+# `[M]` 21 set 2026: dopo ~14 ore e centinaia di sessioni nella stessa
+# scatola C17 e' diventata ROSSA su gnome e kde; col binario di ieri (che era
+# verde) nella scatola vecchia era rossa lo stesso, e col binario nuovo in una
+# scatola RIFATTA da zero era verde 2 su 2.  ⇒ Lo stato che una scatola
+# accumula ha rotto una maglia, ⛔ e la rete ha accusato il prodotto.
+# ⭐ La causa trovata (`[?]`, dal codice) e curata sta in C17: un file fisso in
+#   /tmp.  ⚠ Ma la categoria resta, e questa guardia e' li' perche' non torni
+#   in silenzio: ogni lancio di una maglia che accende sessioni si CONTA dentro
+#   la scatola, e se la scatola e' troppo vecchia lo si dice — ⛔ UNA RIGA, non
+#   un rosso: l'eta' della scatola non e' un giudizio sul prodotto.
+#
+# ⚠ Il contatore vive DENTRO la scatola, apposta: `accendi` ricrea il
+#   contenitore dall'immagine, e con lui sparisce il contatore ⇒ nessun
+#   azzeramento da ricordarsi, e nessun numero che sopravvive alla scatola.
+# ⚠ Conta i LANCI fatti passando da qui — dal gancio E a mano, perche' tutt'e
+#   due passano da `11-accendi.sh cN`.  ⛔ Non conta C14 (entra da sola con
+#   `podman exec`): e' un pavimento, non un conto esatto, e lo si dice.
+#   «sessioni» = i lanci, con C1 che vale i suoi giri; ⚠ ancora un pavimento:
+#   C8 e C9 ne accendono due.
+#
+# ⛔ LE SOGLIE sono della GUARDIA e di nient'altro: non toccano nessuna maglia.
+#   `[?]` Circa meta' di quel che ha rotto C17 (~14 h, «centinaia» di
+#   sessioni): la guardia deve parlare PRIMA del difetto, non accanto.
+#   Un giro `tutto` su una scatola vale `[R]` ~36 lanci e ~45 sessioni, in
+#   meno di 3 ore ⇒ un giro che parte da una scatola rifatta non la fa scattare.
+# ═══════════════════════════════════════════════════════════════════════════
+GUARDIA_ORE=8
+GUARDIA_SESSIONI=100
+CONTATORE=/var/lib/rete11/lanci-dalla-nascita
+NASCITA=/var/lib/rete11/nascita
+
+# ⭐ L'eta' in ore (con un decimale), o «ignota».  Prima il file che `accendi`
+#   scrive; ⚠ per le scatole accese PRIMA di questa cura, la data di creazione
+#   del contenitore (`[?]` il campo `.Created.Unix` di podman non e' stato
+#   provato su questa macchina: se non risponde un numero, si dice «ignota»).
+eta_in_ore() {
+	local nata adesso
+	nata=$(podman exec "$NOME" cat "$NASCITA" 2>/dev/null)
+	case "$nata" in ''|*[!0-9]*) nata=$(podman inspect --format '{{.Created.Unix}}' "$NOME" 2>/dev/null) ;; esac
+	case "$nata" in ''|*[!0-9]*) printf 'ignota'; return ;; esac
+	adesso=$(date +%s)
+	awk -v a="$adesso" -v n="$nata" 'BEGIN { printf "%.1f", (a - n) / 3600 }'
+}
+
+# ⭐ Una riga sola, da macchina: `ore=… lanci=… sessioni=… guardia=entro|SUPERATA`
+#   (o `spenta`).  La legge il gancio e la scrive nel registro.
+riga_eta() {
+	local conti lanci sessioni ore guardia=entro
+	if [ "$(podman inspect --format '{{.State.Running}}' "$NOME" 2>/dev/null)" != true ]; then
+		printf 'spenta'; return
+	fi
+	conti=$(podman exec "$NOME" sh -c "test -r $CONTATORE && awk '{ n++; s += \$3 } END { print n+0, s+0 }' $CONTATORE || echo ignoti ignoti" 2>/dev/null)
+	lanci=${conti%% *}; sessioni=${conti##* }
+	case "$lanci" in ''|*[!0-9]*) lanci=ignoti; sessioni=ignoti ;; esac
+	case "$sessioni" in ''|*[!0-9]*) sessioni=ignoti ;; esac
+	ore=$(eta_in_ore)
+	case "$ore" in ignota) : ;; *) awk -v o="$ore" -v g="$GUARDIA_ORE" 'BEGIN { exit !(o >= g) }' && guardia=SUPERATA ;; esac
+	case "$sessioni" in ignoti) : ;; *) [ "$sessioni" -ge "$GUARDIA_SESSIONI" ] && guardia=SUPERATA ;; esac
+	printf 'ore=%s lanci=%s sessioni=%s guardia=%s' "$ore" "$lanci" "$sessioni" "$guardia"
+}
+
+# ⭐ Conta un lancio e, se la scatola e' vecchia, lo DICE — una riga.
+#   ⛔ Se il conto non riesce (scatola spenta) si tace: la maglia lo dira' da
+#   sola, e un secondo messaggio sullo stesso guasto sarebbe rumore.
+#   ⚠ Costo `[?]` due o tre `podman exec`, sotto il secondo: contro i `[M]`
+#   74 s di un giro di C1 non muove il tetto della famiglia veloce.
+conta_un_lancio() {
+	local maglia=$1 quante=$2 riga
+	case "$quante" in ''|*[!0-9]*) quante=1 ;; esac
+	podman exec "$NOME" sh -c "mkdir -p /var/lib/rete11 && echo $(date +%s) $maglia $quante >> $CONTATORE" >/dev/null 2>&1 || return 0
+	riga=$(riga_eta)
+	case "$riga" in
+	*guardia=SUPERATA*)
+		printf '  \033[1;33m⚠\033[0m  scatola %s VECCHIA (%s; guardia: %s ore o %s sessioni) — un rosso qui puo'"'"' essere della SCATOLA: «11-accendi.sh accendi|prodotto|server %s» e si riprova\n' \
+			"$NOME" "$riga" "$GUARDIA_ORE" "$GUARDIA_SESSIONI" "$DESKTOP" ;;
+	esac
+}
+
+case "${1:-}" in
+c1)                                     conta_un_lancio c1 "${3:-5}" ;;
+c2|c3|c4|c5|c6|c7|c8|c8b|c9|c17|passo0) conta_un_lancio "$1" 1 ;;
+esac
+
 case "${1:-}" in
 
 costruisci)
@@ -282,6 +370,10 @@ accendi)
 		sleep 0.5
 	done
 	ok "$NOME accesa (stato interno: ${S:-ignoto})"
+	# ⭐ La data di nascita, per la guardia dell'eta' (vedi `riga_eta`).  ⚠ Il
+	#   contatore dei lanci NON si azzera: e' nato col contenitore, cioe' adesso.
+	podman exec "$NOME" sh -c "mkdir -p /var/lib/rete11 && date +%s > $NASCITA" >/dev/null 2>&1 \
+		|| ko "non ho potuto scrivere la data di nascita: la guardia dell'eta' ripieghera' su podman"
 
 	# ═══════════════════════════════════════════════════════════════════
 	# ⭐⭐ OGNI NODO DELLA SCHEDA DEVE AVERE, DENTRO, UN GRUPPO CON UN NOME.
@@ -630,6 +722,56 @@ passo0)
 	log "Il passo 0 dentro $NOME"
 	podman exec "$NOME" bash /rete11/11-passo0.sh
 	exit $?
+	;;
+
+eta)
+	# ⭐ La guardia, da macchina: una riga `ore=… lanci=… sessioni=… guardia=…`.
+	riga_eta; printf '\n'
+	;;
+
+bilancio)
+	# ═══════════════════════════════════════════════════════════════════
+	# ⭐⭐ IL BILANCIO — quel che c'e' nella scatola ADESSO, in una riga.
+	#
+	# ⛔ Serve a NON NASCONDERE una perdita vera del prodotto.  Rifare le
+	#    scatole all'inizio di `tutto` toglie lo sporco della scatola, ⚠ ma
+	#    toglierebbe anche i sintomi di un prodotto che perde qualcosa a ogni
+	#    sessione (un descrittore, un filo, un figlio, un utente).  ⇒ Il gancio
+	#    prende questo bilancio subito prima e subito dopo le maglie di una
+	#    scatola — sullo STESSO server, che nel mezzo non si riaccende — e
+	#    confronta.  ⭐ E le voci sono divise per PADRONE:
+	#      server_*   del PRODOTTO: il processo del server e i suoi figli
+	#      il resto   della SCATOLA o dei BANCHI: inquilini rimasti, unita'
+	#                 fallite, file in /tmp senza padrone, sessioni di logind
+	#    ⇒ «la scatola si sporca» e «il prodotto perde» cadono in due colonne
+	#      diverse invece che in un rosso solo.
+	# ⚠ NON giudica (niente esito 1): e' una misura nuova senza guasto
+	#   innestato, e §3.6 non ammette un giudizio senza.  Stampa e scrive.
+	# ⚠ E NIENTE APOSTROFI nel copione qui sotto (`CODER.md` §4-bis): passa da
+	#   `sh -s`, ma la regola vale per ogni copione mandato dentro.
+	# ═══════════════════════════════════════════════════════════════════
+	podman exec -i "$NOME" sh -s <<'COPIONE' 2>/dev/null || printf 'spenta\n'
+P=$(systemctl show -p MainPID --value rete11-server 2>/dev/null)
+case "$P" in ''|0|*[!0-9]*) P=0 ;; esac
+[ -d "/proc/$P" ] || P=0
+if [ "$P" != 0 ]; then
+	FD=$(ls "/proc/$P/fd" 2>/dev/null | wc -l)
+	FILI=$(awk '/^Threads:/ { print $2 }' "/proc/$P/status" 2>/dev/null)
+	RSS=$(awk '/^VmRSS:/ { print $2 }' "/proc/$P/status" 2>/dev/null)
+	FIGLI=$(pgrep -P "$P" 2>/dev/null | wc -l)
+else
+	FD=-; FILI=-; RSS=-; FIGLI=-
+fi
+INQ=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $1 != "provanic" { n++ } END { print n + 0 }')
+SES=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
+PROC=$(ls -d /proc/[0-9]* 2>/dev/null | wc -l)
+FALL=$(systemctl --failed --no-legend --plain 2>/dev/null | wc -l)
+UFALL=$(systemctl --failed --no-legend --plain 2>/dev/null | grep -c "^user@")
+TMP=$(find /tmp -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
+ORF=$(find /tmp -mindepth 1 -maxdepth 1 -nouser 2>/dev/null | wc -l)
+RIL=$(find /var/lib/rete11/rilievo -type f 2>/dev/null | wc -l)
+echo "server_pid=$P server_fd=${FD:--} server_fili=${FILI:--} server_rss_kb=${RSS:--} server_figli=${FIGLI:--} inquilini=$INQ sessioni=$SES processi=$PROC fallite=$FALL user_fallite=$UFALL tmp=$TMP tmp_orfani=$ORF rilievo=$RIL"
+COPIONE
 	;;
 
 impronta)
