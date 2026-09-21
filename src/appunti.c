@@ -603,6 +603,20 @@ Appunti *appunti_apri_kde(GError **sbaglio)
 	return appunti;
 }
 
+/* ⭐ FASE 13 — lo stesso involucro di `appunti_apri_kde()`: da qui in poi ogni
+ *    funzione passa la mano a `appunti_kde_*` come su KDE. */
+Appunti *appunti_apri_wlroots(GError **sbaglio)
+{
+	AppuntiKde *wlr = appunti_kde_apri_wlroots(sbaglio);
+	Appunti *appunti;
+
+	if (!wlr)
+		return NULL;
+	appunti = g_new0(Appunti, 1);
+	appunti->kde = wlr;
+	return appunti;
+}
+
 char *appunti_ultimo_testo(Appunti *appunti, size_t *byte)
 {
 	char *copia;

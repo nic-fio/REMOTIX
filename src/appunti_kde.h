@@ -21,6 +21,10 @@
 typedef struct AppuntiKde AppuntiKde;
 
 AppuntiKde *appunti_kde_apri(GError **sbaglio);
+/* ⭐ FASE 13 — lo stesso protocollo su labwc (XFCE): `zwlr_data_control_manager_v1`
+ *    e' di wlroots, e li' siamo in casa sua (`STUDI.md` §xfce §8).  Cambia solo
+ *    il nome del compositore nelle righe di registro. */
+AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio);
 void appunti_kde_chiudi(AppuntiKde *appunti);
 void appunti_kde_ascolta(AppuntiKde *appunti, AppuntiSuTesto su_testo,
                          AppuntiSuRichiesta su_richiesta, void *dati);
