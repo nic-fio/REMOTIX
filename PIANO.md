@@ -1663,7 +1663,7 @@ sono già in `STUDI.md` §xfce §12 e `STUDI.md` §lxqt.
 >
 > | | dove sta oggi |
 > |---|---|
-> | **i gruppi `video`/`render`** | ✅ deciso e scritto il 20 set 2026, `DECISIONI.md` §7.21: `provisiona.sh` all'installazione, il prodotto alla prima connessione. `[M]` solo sulla scatola `kde`. ⚠ Da riprendere con l'utente: che cosa resta aperto |
+> | **i gruppi `video`/`render`** | ✅ deciso e scritto il 20 set 2026, `DECISIONI.md` §7.21: `provisiona.sh` all'installazione, il prodotto alla prima connessione. `[M]` solo sulla scatola `kde`. ⛔ **ANTICIPATO: una sessione apposita PRIMA di LXQt** — *«deve funzionare per tutti i DE, non solo per KDE»* (l'utente, 21 set 2026) |
 > | **la procedura d'installazione** | è il cuore di questa fase: *«confezionamento, installazione»* qui sotto |
 
 ⚠ *Era la **fase 13** fino al 25 agosto 2026, per lo stesso scalo.*

@@ -655,6 +655,10 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 ## Che cosa resta [?]
 
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
+- ⏳ ⛔ **PRIMA DI LXQt, i gruppi `video`/`render` su TUTTI i desktop** — l'utente, 21 set 2026:
+  *«deve funzionare per tutti i DE, non solo per KDE»*. Oggi `[M]` solo su kde
+  (`DECISIONI.md` §7.21); le maglie mettono i loro inquilini nei gruppi da sole, quindi la rete
+  **non lo guarda**. Una sessione apposita.
 - ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
   gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
   l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre
