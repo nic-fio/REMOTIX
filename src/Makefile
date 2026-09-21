@@ -63,7 +63,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
-            appunti_kde.c
+            appunti_kde.c wlroots.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -218,7 +218,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
 #   con un errore che non nomina la fase che l'ha introdotto.
 
-.PHONY: tutto pulisci dipendenze impronte
+.PHONY: tutto pulisci dipendenze impronte banco-w1
 
 tutto: impronte $(NOME)
 
@@ -267,7 +267,26 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kwin.o appunti_kde.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o appunti_kde.o wlroots.o: $(PROTOCOLLI:%=%-client-protocol.h)
+
+# -----------------------------------------------------------------------------
+# ⭐ IL BANCO DELLA CATTURA SU WLROOTS — `banchi/13-w1-un-fotogramma.c`.
+#
+# ⛔ Lega gli STESSI oggetti del prodotto (`wlroots.o`, `registro.o`), non una
+#    copia: e' la regola R12.3 applicata a un modulo nuovo — un banco che
+#    compilasse un secondo `wlroots.c` misurerebbe un codice diverso da quello
+#    che gira, ed e' il difetto che quella regola esiste per impedire.
+# ⚠ Sta qui e non in `banchi/`: il Makefile del prodotto e' l'unico posto che
+#   sa come si generano le intestazioni dei protocolli.
+# -----------------------------------------------------------------------------
+BANCO_W1 := ../banchi/13-w1-un-fotogramma
+
+$(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
+             wlr-screencopy-unstable-v1-protocol.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client
+
+banco-w1: $(BANCO_W1)
+
 
 %-client-protocol.h: protocolli/%.xml
 	$(SCANNER) client-header $< $@

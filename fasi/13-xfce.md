@@ -362,6 +362,34 @@ esempio, su wlroots **non è la stessa cosa**: lì la misura si cambia sull'outp
 | ⛔ il successore | `ext_image_copy_capture_manager_v1` **assente** su Trixie ⇒ si scrive contro screencopy, sapendolo |
 | ⛔ la misura dell'uscita | nasce **1280×720** cablata, e il cliente ne chiede 1920×1080 |
 
+#### CP2/CP4 del primo passo — `[M]` 21 set 2026: **i pixel arrivano**
+
+⭐⭐ Il modulo `src/wlroots.c` + `src/wlroots.h` esiste, e il banco
+`banchi/13-w1-un-fotogramma.c` lo prova dentro una sessione XFCE viva.
+
+| che cosa | misurato |
+|---|---|
+| fotogrammi tirati | ⭐ **10 su 10**, poi 3 su 3 — nessun fallito, nessuno scaduto |
+| l'uscita | `HEADLESS-1`, **1280×720**, stride 5120 |
+| il formato | **XB24** (`XBGR8888`) — ⚠ **non** quello che si sarebbe dato per scontato |
+| il contenuto | **199-201 colori distinti**, 6,1 % dei campioni non nero ⇒ è un desktop vero, non uno schermo spento |
+| il tempo per fotogramma | `[M]` **8,8-14,9 ms** in media, 16,5 ms il peggiore — ⚠ ed è il giro INTERO col copiamento in memoria, su Intel UHD 730 |
+| il puntatore | **dentro l'immagine** (`overlay_cursor = 1`), come previsto: su questa famiglia non c'è un canale per la sua forma |
+
+#### ⛔⛔ E una trappola pagata subito, che vale piu' del fotogramma
+
+`[M]` La prima stesura del banco scriveva i canali nell'ordine di `XRGB8888`.
+L'immagine è uscita **con le cartelle arancioni** — e sembrava giusta: un desktop
+Xfce con le icone color zucca è perfettamente plausibile. ⛔ Ma labwc dichiara
+**XBGR8888**, che in memoria è `R G B X`: erano **R e B scambiati**, e le cartelle
+vere di Adwaita sono **blu**.
+
+⇒ ⭐ È `LEZIONI.md` §1.9 nella sua forma peggiore: **un controllo che dà un
+risultato plausibile non è un controllo**. Il fatto si chiede al formato — che lo
+dice — invece di dedurlo da come appare. ⚠ E se fosse arrivato fino al
+codificatore, l'utente avrebbe visto un desktop blu senza che una riga lo
+spiegasse.
+
 #### ⚠ E l'ordine con l'incremento 6 va deciso qui, non subito
 
 Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1920×1080** non è
