@@ -114,7 +114,12 @@ typedef enum {
 
 typedef struct {
 	uint32_t larghezza, altezza, stride;
-	uint32_t formato;   /* il fourcc di `wl_shm` tradotto in DRM */
+	/* ⚠ Sempre un fourcc DRM, ma da due numerazioni diverse: in memoria è il
+	 *   formato di `wl_shm` TRADOTTO (`[M]` labwc: XB24, cioè R G B x); sulla
+	 *   scheda è quello dell'evento `linux_dmabuf`, già DRM (`[M]` XR24, cioè
+	 *   B G R x).  ⛔ Chi legge l'ordine dei canali lo legge da qui, per
+	 *   fotogramma: le due strade non danno lo stesso. */
+	uint32_t formato;
 	const uint8_t *pixel; /* ⛔ vivi finché non si chiede il fotogramma dopo */
 	gsize byte;
 	/* ⭐ I due che il verso a tiro regala, e che sulla spinta si stimano:
@@ -125,6 +130,34 @@ typedef struct {
 	 *   basso. ⛔ Ignorarlo dà un'immagine capovolta, che è un guasto che
 	 *   somiglia a un guasto del codificatore. */
 	bool y_invertita;
+
+	/* ------------------------------------------------------------------ *
+	 * ⭐⭐ LA STRADA DELLA SCHEDA — vedi il riquadro in cima a `wlroots.c`.
+	 *
+	 * ⛔ Quando `sulla_scheda` è vero `pixel` è **NULL**: l'immagine sta in un
+	 *    DMA-BUF nostro (una «lastra»), e si arriva ai pixel da `fd`.  È la
+	 *    stessa regola di `CatturaFermo`: chi legge guarda `sulla_scheda`
+	 *    PRIMA di `pixel`.
+	 * ⛔⛔ E LA LASTRA È IN MANO A CHI HA RICEVUTO IL FOTOGRAMMA finché non la
+	 *      rende con `wlr_rendi()`.  Fino ad allora il compositore NON ci
+	 *      riscrive dentro — nessun `copy` la nomina.  ⚠ Chi non la rende
+	 *      finisce le lastre, e il fotogramma dopo si ferma DICENDOLO: non
+	 *      si ricicla mai una lastra in mano (`LEZIONI.md` §8).
+	 * ------------------------------------------------------------------ */
+	bool sulla_scheda;
+	int fd;                /* ⛔ di `wlroots.c`: non si chiude              */
+	uint32_t offset;
+	uint64_t modificatore; /* `[R]` sempre LINEARE: vedi `wlroots.c`         */
+	/* ⛔ Cambia ogni volta che una lastra nasce o muore: i numeri di
+	 *    descrittore si riciclano, e chi mette in cache l'importazione di un
+	 *    `fd` (il codificatore) deve buttarla — `cattura.h`, `generazione`. */
+	uint64_t generazione;
+	void *lastra;          /* ⛔ opaco: si passa a `wlr_rendi()` e basta     */
+	/* ⭐ Quanto si è aspettata la GPU del compositore dopo `ready`, e se
+	 *    l'attesa era VERA (la fence estratta dal DMA-BUF) o se non si è
+	 *    potuto e ci si affida alla sincronizzazione implicita. */
+	uint64_t us_attesa_gpu;
+	bool attesa_esplicita;
 } WlrFotogramma;
 
 /*
@@ -136,6 +169,34 @@ typedef struct {
  */
 WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
                         GError **sbaglio);
+
+/*
+ * ⭐⭐ ACCENDE LA STRADA DELLA SCHEDA — e dice di no, per scritto, se non si può.
+ *
+ * ⛔ Non è un'opzione di `wlr_apri()` apposta: «il compositore c'è» e «la
+ *    scheda c'è» sono due diagnosi, e un `apri` che fallisse per la seconda
+ *    toglierebbe anche la prima strada, che funziona.
+ *
+ * Vero: da qui ogni fotogramma si prova a prenderlo sulla scheda, e ciascuno
+ * dice in `sulla_scheda` dove è finito DAVVERO.  Falso con `sbaglio` scritto:
+ * la strada resta la memoria, e chi chiama DEVE scriverlo nel registro.
+ */
+bool wlr_chiedi_la_scheda(WlrPalco *palco, GError **sbaglio);
+
+/* La strada in vigore ADESSO.  ⚠ Può diventare falsa da sola: tre `failed`
+ * di fila sulla scheda la spengono, e `wlroots.c` lo scrive. */
+bool wlr_sulla_scheda(const WlrPalco *palco);
+
+/* ⛔ Rende la lastra di un fotogramma della scheda: da qui il compositore ci
+ *    può riscrivere.  Si chiama SOLO quando chi leggeva ha FINITO (per il
+ *    codificatore: quando `codificatore_comprimi_scheda()` è tornata).
+ * ⚠ `lastra` NULL non fa niente: è il fotogramma della memoria. */
+void wlr_rendi(WlrPalco *palco, void *lastra);
+
+/* ⚠ Da mettere attorno a una lettura della CPU dentro la lastra (`mmap`):
+ *   `DMA_BUF_IOCTL_SYNC`, perché i byte visti dalla CPU siano quelli scritti
+ *   dalla GPU.  Un solo posto lo usa — il primo fotogramma guardato. */
+void wlr_lettura_cpu(int fd, bool inizio);
 
 /*
  * ⭐⭐ LA MISURA DELL'USCITA — e su questa famiglia si può, a differenza di KDE.
@@ -167,6 +228,9 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
  * registro e per il manifesto: ⛔ un conteggio non è una dichiarazione. */
 typedef struct {
 	guint64 chiesti, presi, falliti, scaduti;
+	/* ⛔ Le DUE strade contate a parte: un numero senza la sua strada è un
+	 *    numero che mentirà.  `presi == sulla_scheda + in_memoria`. */
+	guint64 sulla_scheda, in_memoria;
 } WlrConteggi;
 
 void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori);

@@ -72,6 +72,16 @@ RUN git clone --depth 1 -b v1.25.0 --recursive \
     && ninja -C /tmp/ngtcp2/build install \
     && rm -rf /tmp/ngtcp2
 
+# ⭐ FASE 13 — `libgbm-dev`: la strada della SCHEDA su wlroots (`src/wlroots.c`).
+#    Il buffer in cui labwc copia il fotogramma sulla GPU lo allochiamo NOI, e
+#    `gbm` e' l'unica API generica per allocarlo su un nodo `renderD*`.
+#    ⚠ In uno strato SUO, in fondo, e non nella riga di `apt` qui sopra: cosi'
+#    lo strato di ngtcp2 resta in cache e l'immagine si rifa' in secondi, non
+#    in quattro minuti.  ⛔ Il `libgbm1` di esecuzione c'era gia' (lo tira
+#    dentro `libva-wayland2`): mancava solo l'intestazione.
+RUN apt-get update && apt-get install -y --no-install-recommends libgbm-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN ldconfig
 ENV PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 

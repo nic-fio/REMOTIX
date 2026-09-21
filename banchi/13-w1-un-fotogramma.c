@@ -6,7 +6,14 @@
  *    cattura non ha cancelli su questa famiglia, ma l'uid sì
  *    (`/run/user/<uid>` è `drwx------`).
  *
- *   13-w1 [quanti] [attesa_s]
+ *   13-w1 [quanti] [attesa_s] [larghezza altezza]
+ *   W1_STRADA=scheda 13-w1 …     ⭐ la strada della SCHEDA (21 set 2026)
+ *
+ * ⭐ Con `W1_STRADA=scheda` il fotogramma si prende in una lastra DMA-BUF nostra
+ *    (`wlroots.c`, il riquadro della scheda), e il tempo per fotogramma è quello
+ *    da mettere contro gli 8,8-14,9 ms della memoria (`fasi/13-xfce.md`).  ⛔ Il
+ *    CONTENUTO si guarda lo stesso, mappando la lastra: un tempo bello su un
+ *    fotogramma nero è il difetto che questo banco esiste per non dare verde.
  *
  * Scrive l'ultimo fotogramma in `/tmp/13-w1.ppm` — ⚠ PPM e non PNG di
  * proposito: nessuna libreria in mezzo fra i byte del compositore e il file che
@@ -27,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 
 /* ⚠ I due formati che wl_shm numera 0 e 1 invece che col fourcc. */
 #define WL_SHM_ARGB8888 0
@@ -131,6 +139,34 @@ static bool scrivi_ppm(const WlrFotogramma *f, const char *dove)
 	return true;
 }
 
+/*
+ * ⭐ La lastra della scheda, prestata alla CPU per guardarla.  ⛔ Col SYNC del
+ *    DMA-BUF attorno (`wlr_lettura_cpu`), e la mappa si smonta con
+ *    `presta_fine()`: il fotogramma `f` torna a non avere `pixel`.
+ */
+static void *presta_inizio(WlrFotogramma *f)
+{
+	void *m;
+
+	if (!f->sulla_scheda)
+		return NULL;
+	m = mmap(NULL, f->offset + f->byte, PROT_READ, MAP_SHARED, f->fd, 0);
+	if (m == MAP_FAILED)
+		return NULL;
+	wlr_lettura_cpu(f->fd, true);
+	f->pixel = (const uint8_t *)m + f->offset;
+	return m;
+}
+
+static void presta_fine(WlrFotogramma *f, void *m)
+{
+	if (!m)
+		return;
+	wlr_lettura_cpu(f->fd, false);
+	munmap(m, f->offset + f->byte);
+	f->pixel = NULL;
+}
+
 int main(int argc, char **argv)
 {
 	int quanti = argc > 1 ? atoi(argv[1]) : 10;
@@ -140,8 +176,21 @@ int main(int argc, char **argv)
 	WlrFotogramma f;
 	uint32_t l = 0, a = 0;
 	gint64 primo_us = 0;
-	int presi = 0;
-	double peggiore = 0, totale = 0;
+	int presi = 0, sulla_scheda = 0;
+	double peggiore = 0, totale = 0, attesa_gpu = 0;
+	bool scheda = g_strcmp0(g_getenv("W1_STRADA"), "scheda") == 0;
+	bool ultima_in_mano = false;
+	/* ⭐ Le due prove «a smentire» del porting sul fotogramma PENDENTE:
+	 *   W1_RIPRENDI=1  una scadenza NON è un fotogramma perso: si richiama e
+	 *                  si riprende lo stesso (è il ciclo del figlio con 8 ms);
+	 *   W1_TIENI=1     la lastra di prima si tiene IN MANO mentre si prende la
+	 *                  dopo, come il codificatore che non ha ancora finito, e
+	 *                  si controlla che la dopo sia un'ALTRA lastra — più una
+	 *                  resa doppia, che deve restare senza effetto. */
+	bool riprendi = g_strcmp0(g_getenv("W1_RIPRENDI"), "1") == 0;
+	bool tieni = g_strcmp0(g_getenv("W1_TIENI"), "1") == 0;
+	int riprese = 0, stessa_lastra = 0;
+	gint64 inizio_fotogramma = 0;
 
 	printf("== 13-w1 — il primo fotogramma tirato da wlroots ==\n");
 	printf("   %d fotogrammi, attesa %.1f s ciascuno\n\n", quanti, attesa);
@@ -154,6 +203,15 @@ int main(int argc, char **argv)
 	}
 	wlr_misura(palco, &l, &a);
 	printf("   uscita «%s», %ux%u\n", wlr_uscita_nome(palco), l, a);
+	if (scheda) {
+		if (wlr_chiedi_la_scheda(palco, &sbaglio))
+			printf("   ⭐ strada della SCHEDA accesa\n");
+		else
+			printf("   ⛔ strada della SCHEDA NEGATA: %s — si misura la MEMORIA, "
+			       "e questa riga lo dice\n",
+			       sbaglio->message);
+		g_clear_error(&sbaglio);
+	}
 
 	/*
 	 * ⭐ LA MISURA, SE È STATA CHIESTA — e il giudizio lo dà la RILETTURA.
@@ -187,9 +245,45 @@ int main(int argc, char **argv)
 	}
 
 	for (int i = 0; i < quanti; i++) {
-		gint64 prima = g_get_monotonic_time();
-		WlrEsito e = wlr_fotogramma(palco, attesa, &f, &sbaglio);
-		double ms = (g_get_monotonic_time() - prima) / 1000.0;
+		gint64 prima;
+		WlrEsito e;
+		double ms;
+
+		/* ⛔ La lastra di prima si RENDE prima di chiedere la dopo: è quel che
+		 *    fa il prodotto (`cattura_fermo_libera()`), e un banco che le
+		 *    tenesse tutte finirebbe le lastre e misurerebbe il suo difetto. */
+		WlrFotogramma tenuto = f;
+
+		if (ultima_in_mano && !tieni) {
+			wlr_rendi(palco, f.lastra);
+			ultima_in_mano = false;
+		}
+		prima = g_get_monotonic_time();
+		if (!inizio_fotogramma)
+			inizio_fotogramma = prima;
+		e = wlr_fotogramma(palco, attesa, &f, &sbaglio);
+		/* ⚠ Con la ripresa il tempo di un fotogramma è dalla PRIMA chiamata,
+		 *   non dall'ultima: le scadenze sono dentro. */
+		ms = (g_get_monotonic_time() - inizio_fotogramma) / 1000.0;
+
+		/* ⚠ Con un tetto: un compositore muto non deve fermare il banco. */
+		if (e == WLR_FOTOGRAMMA_SCADUTO && riprendi && riprese < quanti * 1000) {
+			riprese++;
+			g_clear_error(&sbaglio);
+			i--;
+			continue;
+		}
+		inizio_fotogramma = 0;
+		if (tieni && ultima_in_mano) {
+			/* ⛔ La lastra tenuta non deve essere quella appena riempita:
+			 *    vorrebbe dire che labwc ci ha copiato dentro mentre era «in
+			 *    mano».  Poi si rende DUE volte: la seconda non fa niente. */
+			if (e == WLR_FOTOGRAMMA_PRESO && f.sulla_scheda && f.lastra == tenuto.lastra)
+				stessa_lastra++;
+			wlr_rendi(palco, tenuto.lastra);
+			wlr_rendi(palco, tenuto.lastra);
+			ultima_in_mano = false;
+		}
 
 		if (e != WLR_FOTOGRAMMA_PRESO) {
 			printf("  ⛔ fotogramma %d: %s — %s\n", i + 1,
@@ -201,6 +295,11 @@ int main(int argc, char **argv)
 			continue;
 		}
 		presi++;
+		if (f.sulla_scheda) {
+			sulla_scheda++;
+			attesa_gpu += f.us_attesa_gpu / 1000.0;
+			ultima_in_mano = true;
+		}
 		totale += ms;
 		if (ms > peggiore)
 			peggiore = ms;
@@ -208,11 +307,19 @@ int main(int argc, char **argv)
 			guint colori = 0;
 			double non_zero = 0;
 
+			void *m = presta_inizio(&f);
+
 			primo_us = g_get_monotonic_time();
-			guarda_i_pixel(&f, &colori, &non_zero);
-			printf("   primo fotogramma: %ux%u stride %u formato %s%s\n", f.larghezza,
-			       f.altezza, f.stride, nome_formato(f.formato),
-			       f.y_invertita ? " ⚠ Y INVERTITA" : "");
+			if (f.pixel)
+				guarda_i_pixel(&f, &colori, &non_zero);
+			presta_fine(&f, m);
+			printf("   primo fotogramma: %ux%u stride %u formato %s%s — %s\n",
+			       f.larghezza, f.altezza, f.stride, nome_formato(f.formato),
+			       f.y_invertita ? " ⚠ Y INVERTITA" : "",
+			       f.sulla_scheda ? (f.attesa_esplicita
+			                             ? "sulla SCHEDA (lastra lineare, fence estratta)"
+			                             : "sulla SCHEDA (⚠ senza fence: implicita)")
+			                      : "in MEMORIA");
 			printf("   ⭐ il CONTENUTO: %u colori distinti, %.1f%% dei campioni non "
 			       "è nero\n",
 			       colori, non_zero);
@@ -220,12 +327,20 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (presi) {
+	if (presi && (!f.sulla_scheda || ultima_in_mano)) {
 		guint colori = 0;
 		double non_zero = 0;
+		void *m = presta_inizio(&f);
 
-		guarda_i_pixel(&f, &colori, &non_zero);
-		scrivi_ppm(&f, "/tmp/13-w1.ppm");
+		if (f.pixel) {
+			guarda_i_pixel(&f, &colori, &non_zero);
+			scrivi_ppm(&f, "/tmp/13-w1.ppm");
+		}
+		presta_fine(&f, m);
+		if (ultima_in_mano) {
+			wlr_rendi(palco, f.lastra);
+			ultima_in_mano = false;
+		}
 		printf("\n   ultimo fotogramma: %u colori distinti, %.1f%% non nero "
 		       "⇒ /tmp/13-w1.ppm\n",
 		       colori, non_zero);
@@ -240,9 +355,24 @@ int main(int argc, char **argv)
 	if (presi)
 		printf("   tempo per fotogramma: %.1f ms in media, %.1f ms il peggiore\n",
 		       totale / presi, peggiore);
+	/* ⛔ La strada si dice ACCANTO al numero: un tempo senza la sua strada è
+	 *    un tempo che mentirà. */
+	printf("   strada: %d sulla SCHEDA, %d in MEMORIA", sulla_scheda, presi - sulla_scheda);
+	if (sulla_scheda)
+		printf(" — attesa della GPU dopo `ready` %.2f ms in media", attesa_gpu / sulla_scheda);
+	printf("\n");
+	if (riprendi)
+		printf("   riprese dopo una scadenza: %d (il fotogramma PENDENTE)\n", riprese);
+	if (tieni)
+		printf("   lastra tenuta in mano e riempita di nuovo: %d %s\n", stessa_lastra,
+		       stessa_lastra ? "⛔⛔ labwc ha scritto in una lastra IN MANO" : "⭐");
 
 	wlr_chiudi(palco);
 
+	if (stessa_lastra) {
+		printf("\n  ⛔⛔ ROSSO — una lastra in mano è stata riusata %d volte\n", stessa_lastra);
+		return 1;
+	}
 	if (presi != quanti) {
 		printf("\n  ⛔⛔ ROSSO — %d fotogrammi su %d\n", presi, quanti);
 		return 1;

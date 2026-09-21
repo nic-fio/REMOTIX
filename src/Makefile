@@ -38,6 +38,19 @@
 #                             di prova c'era gia' (7:7.1.5-0+deb13u1, stesso
 #                             pacchetto sorgente di `libavcodec-dev`)
 #
+# ⭐ E LA SETTIMA, della FASE 13 (21 settembre 2026):
+#
+#   gbm                       `src/wlroots.c`, la strada della SCHEDA su labwc:
+#                             il buffer in cui il compositore copia il
+#                             fotogramma sulla GPU lo allochiamo NOI, su un
+#                             nodo `renderD*`, e `gbm` e' l'unica API generica
+#                             che lo fa.  ⛔ Senza, su XFCE i pixel passano per
+#                             la memoria: `glReadPixels` nel compositore (che
+#                             BLOCCA il suo ciclo, `STUDI.md` §xfce §4.4) piu'
+#                             la nostra `memcpy`.  ⚠ Su Trixie `libgbm-dev`
+#                             per costruire; `libgbm1` per girare, e c'e' gia'
+#                             ovunque giri labwc (wlroots la vuole per se').
+#
 # Su Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libavcodec-dev`, `libavutil-dev`,
 # `libswscale-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
@@ -184,6 +197,11 @@ override CFLAGS += $(F4_CFLAGS)
 # ⚠ Su Debian Trixie: `apt install libwayland-dev` (porta `wayland-scanner`).
 F12_CFLAGS := $(shell pkg-config --cflags wayland-client)
 F12_LIBS   := $(shell pkg-config --libs   wayland-client)
+# ⭐ FASE 13 — `gbm`: vedi il riquadro in cima.  ⛔ Una riga sua, e non dentro
+#    F12: il giorno che mancasse, l'errore deve nominare LEI.
+F13_CFLAGS := $(shell pkg-config --cflags gbm)
+F13_LIBS   := $(shell pkg-config --libs   gbm)
+override CFLAGS += $(F13_CFLAGS)
 override CFLAGS += $(F12_CFLAGS) -I.
 SCANNER    ?= wayland-scanner
 # ⭐ FASE 13: `wlr-screencopy-unstable-v1` — la cattura su wlroots (labwc, e
@@ -206,9 +224,14 @@ SCANNER    ?= wayland-scanner
 #    ⚠ nonostante il prefisso `zwp_` NON sta in wayland-protocols: sta nel
 #    sorgente di wlroots, `protocol/`) e `zwlr_virtual_pointer_manager_v1` v2
 #    (da wlr-protocols).  Stanno in `protocolli/` come gli altri.
+# ⭐ FASE 13 — `linux-dmabuf-unstable-v1`: il `wl_buffer` della SCHEDA.  È in
+#    `wayland-protocols`, che il contenitore NON ha: l'XML sta in deposito come
+#    gli altri, copiato da wayland-protocols 1.44.  ⚠ Si lega al massimo la v4
+#    (`[M]` labwc la annuncia): è quella del `main_device`.
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
-              virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1
+              virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
+              linux-dmabuf-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 ifneq ($(PREFISSO),)
@@ -222,7 +245,7 @@ endif
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS)
+        $(F12_LIBS) $(F13_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -293,8 +316,10 @@ BANCO_W1 := ../banchi/13-w1-un-fotogramma
 
 $(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
              wlr-screencopy-unstable-v1-protocol.o \
-             wlr-output-management-unstable-v1-protocol.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client
+             wlr-output-management-unstable-v1-protocol.o \
+             linux-dmabuf-unstable-v1-protocol.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client \
+	      $(F13_LIBS)
 
 banco-w1: $(BANCO_W1)
 
@@ -316,7 +341,7 @@ dipendenze:
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
 	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h \
-	         libavutil/hwcontext_vaapi.h va/va.h; do \
+	         libavutil/hwcontext_vaapi.h va/va.h gbm.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
