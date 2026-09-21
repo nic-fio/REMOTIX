@@ -109,8 +109,9 @@ Il prodotto porta DUE cinture (`src/sessione.c`):
        dopo averla tolta si RILEGGE (§xfce §10.6: la scrittura riesce anche
        quando non riesce);
      · «la sessione e' caduta» vale solo col «No session … known» di
-       `loginctl`, o con `State=closing`; e prima del logout la stessa
-       lettura deve aver detto `active`/`online`.
+       `loginctl`, o col figlio (il Leader) morto; e prima del logout la
+       stessa lettura deve averla descritta col figlio vivo.  ⚠ NON con
+       `State=closing`: e' lo stato normale del prodotto su ogni desktop.
 
 ---------------------------------------------------------------------------
 ⭐ COME SI INNESTANO I GUASTI — e perche' non si tocca il prodotto
@@ -922,10 +923,19 @@ def giro(a, modo):
                 if not e_il_figlio_di(prop.get("Leader", "0"), chi):
                     perche.append("il Leader %s non e' il remotix-figlio di «%s»"
                                   % (prop.get("Leader"), chi))
-                if prop.get("State") not in ("active", "online"):
-                    perche.append("State=%s gia' prima del logout — il "
-                                  "controllo positivo di «viva» manca"
-                                  % prop.get("State"))
+                # ⚠ `closing` e' lo stato NORMALE di una sessione del
+                #   prodotto, su OGNI desktop: `[M]` 21 set 2026, GNOME
+                #   (baseline) e XFCE danno `Service=remotix State=closing`
+                #   col figlio vivo.  ⇒ «viva» = logind la descrive E il suo
+                #   Leader (il figlio, provato sopra) e' vivo.
+                ld = prop.get("Leader", "0")
+                if prop.get("State") not in ("active", "online", "closing") \
+                        or not (ld.isdigit() and vivo(int(ld))):
+                    perche.append("State=%s, Leader %s %s gia' prima del "
+                                  "logout — il controllo positivo di «viva» "
+                                  "manca" % (prop.get("State"), ld,
+                                             "vivo" if ld.isdigit()
+                                             and vivo(int(ld)) else "andato"))
             if pid_lw is None:
                 perche.append("non trovo UN labwc di «%s» (%d)"
                               % (chi, len(labwc)))
@@ -1004,12 +1014,17 @@ def giro(a, modo):
                 p = proprieta_sessione(s)
                 if p is None:
                     mute += 1
-                elif p.get("_sparita") or p.get("State") == "closing":
+                elif p.get("_sparita") or not (leader and leader.isdigit()
+                                                and vivo(int(leader))):
+                    # ⛔ `State=closing` NON e' piu' un segnale: e' lo stato
+                    #   di sempre (vedi sopra).  Caduta = logind l'ha
+                    #   dimenticata, o il figlio che la tiene e' morto.
                     ultima = "caduta"
                     print("   la sessione %s: ⛔ CADUTA dopo %.1f s dal logout "
                           "(%s)" % (s, time.time() - t_logout,
                                     "logind non la conosce piu'"
-                                    if p.get("_sparita") else "State=closing"))
+                                    if p.get("_sparita") else
+                                    "il figlio (Leader %s) e' morto" % leader))
                     break
                 else:
                     lette += 1

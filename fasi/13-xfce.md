@@ -568,8 +568,101 @@ disegnato**, quindi alzare il tetto non costa niente quando il desktop dipinge p
    misurando**. ⇒ `ATTESA_REMOTA` a 14 400, e scritto che la protezione vera non è il tetto ma la
    domanda sull'unità remota.
 
+### ⭐ La certificazione — binario di `4cd86a0`, 21 set 2026, 14 697 s
+
+Giro `tutto` sulle quattro scatole **rifatte da zero**, innesco `fase13-danno-scheda`, lanciato sul
+server alle 13:26 UTC e chiuso alle 17:31 UTC.
+
+| | |
+|---|---|
+| ⭐ **XFCE** | **27 maglie su 27 verdi**: passo0, C1×10, C2 (+2 guasti), C3 (+scena ferma +2 guasti, **compreso «codificatore fermo»**), C4 (+2), C5, C6, C7, C8, C8b, C9, **C17 (+guasto)** |
+| **GNOME · KDE** | nessuna regressione: verdi come a CP0 |
+| **lxqt** | come a CP0: il prodotto non lo riconosce, e le maglie del prodotto saltano dicendolo |
+| **la rete** | C11 C13 C14 verdi sul server · ⭐ **C10 C12 C15 C16 fatte girare sul portatile, dove il deposito c'è: tutte verdi** |
+| ⭐ **guasti innestati** | **43 su 43 visti** |
+
+⇒ **XFCE è nel perimetro protetto**, accanto a GNOME e KDE.
+
+#### Le due cure che la rete ha chiesto prima di dare verde
+
+1. ⛔ **C3(xfce) non vedeva il guasto «codificatore fermo»** (rete delle 10:27): labwc consegnava
+   **60 fotogrammi identici al secondo** su un desktop fermo, e un flusso che non cambia non
+   distingue un codificatore fermo da uno sano. ⇒ **`copy_with_damage`** (screencopy v2+): il
+   compositore risponde solo quando lo schermo cambia. ⚠ Che ha rotto subito C4(xfce): una copia
+   «col danno» pendente bloccava il fotogramma intero forzato ⇒ se il palco deve dare un fotogramma
+   intero e c'è una copia col danno in sospeso, **la si abbandona**. `[M]` Poi: 62 fps sulla strada
+   della scheda, C3 e C4 verdi coi loro guasti.
+2. ⛔ **C17 rossa su tutti e tre i desktop** — classificata **C (difetto del banco)**: il file
+   dell'arbitro in `/tmp` aveva un nome fisso, apparteneva a un altro utente, e le mie prove a mano
+   l'avevano sporcato. Provato per bisezione (il binario di ieri era rosso anche lui nella scatola
+   sporca; il nuovo verde in una scatola pulita). ⇒ Nome per utente, tolto alla fine.
+
+### ⭐ I client veri — 21 set 2026, sera, porta 8513
+
+`banchi/12-client-veri.py`, **certificato prima** (porta vuota e parola sbagliata visti su tutt'e
+due i browser):
+
+| browser | verdetto | che cosa |
+|---|---|---|
+| **Firefox 140** Linux | ⭐ **PASS** | modulo · ammesso · primo fotogramma in 1,0 s · 84 fotogrammi in 8 s · tasto e mouse nel registro del server · 0 errori · riconnessione |
+| **Chrome 153** Linux | ⭐ **PASS** | idem: 85 fotogrammi in 8 s, primo fotogramma subito, riconnessione |
+| **Chrome Android** | ⏳ **all'utente** | l'emulatore non lo lancia già dalla fase 12: la validazione resta sua, come per KDE |
+
+`[M]` La fotografia del desktop: pannello in alto, icone Home e File System, il dock in basso, le
+cartelle **blu** (i canali sono giusti). ⚠ Lo sfondo è **nero**: alla scatola manca il pacchetto
+degli sfondi — è la scatola, non il prodotto.
+⚠ La pagina dice «desktop sconosciuto» su XFCE — ⛔ **e lo dice anche su GNOME e KDE**: il server
+manda la stringa fissa della fase 1 (`src/rcp.c`, messaggio `SESSIONE`). Non è di questa fase, e
+toccarlo toccherebbe GNOME e KDE: resta com'è.
+
+### ⭐ Le voci che spengono — decisione 5
+
+`[M]` Nella scatola, a sessione accesa:
+
+| | |
+|---|---|
+| menu utente del pannello | `-lock-screen`, `-suspend`, `-hibernate`, `-hybrid-sleep`, `-shutdown`, `-restart` · ⭐ **`+logout` c'è** · `+switch-user` c'è |
+| xfce4-session | `LockCommand=/bin/false` · `ShowSuspend/Hibernate/HybridSleep=false` · `WaylandLogoutCommand=/bin/true` |
+| xfce4-power-manager | `dpms-enabled=false` · inattività 0 |
+| la finestra «Log Out» del menu Applications | riavvia e spegni **grigi**: la regola polkit `50-remotix-niente-spegnimento.rules` c'è, logind nega `CanPowerOff`/`CanReboot` e dice `CanSuspend=no` (`sleep.conf`) — la cintura 1 di `DECISIONI.md` §4.7, la stessa di tutti i desktop |
+| ⭐ **11 minuti di sessione ferma** | lo schermo è **ancora il desktop**: niente blocco, niente nero, nessun salvaschermo in giro |
+
+### ⭐ La trappola del logout — `banchi/13-w2`
+
+| modo | esito |
+|---|---|
+| `--certifica` (il giudice a secco) | ⭐ 0 |
+| sano | ⭐ **VERDE**: il desktop sparisce in 0,3 s, la sessione logind resta viva per tutti i 20 s |
+| `--senza-xfconf` | ⭐ guasto **visto** |
+| `--senza-variabile` | ⭐ guasto **visto** |
+| `--senza-cinture` | ⚠ **3**, dichiarato: la sessione non cade |
+
+⭐⭐ **Perché la trappola non morde** `[M]`: nel binario `xfce4-session` 4.20.2 di Trixie il comando
+è scritto **`loginctl terminanate-session`** — un errore di battitura a monte. Il comando fallisce, e
+la sessione si salva da sola. ⇒ **Oggi la trappola dorme**; le due cinture restano, per il giorno in
+cui a monte correggeranno la parola. ⛔ E il 3 di `--senza-cinture` resta un 3: il banco non può
+dimostrare una difesa contro un colpo che non parte.
+
+⚠ **E una correzione al banco, misurata prima di farla.** La prima stesura pretendeva che la
+sessione del prodotto fosse `active` prima del logout, e usava `State=closing` come «caduta». `[M]`
+Ma **su GNOME (baseline) e su XFCE** la sessione del prodotto è `Service=remotix State=closing` **dal
+primo istante**, col figlio vivo: è lo stato di sempre, non un segnale. ⇒ «Viva» adesso vuol dire
+logind la descrive **e** il suo Leader (il figlio) è vivo; «caduta» vuol dire logind l'ha
+dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
+
 ## ⛔ Che cosa NON ha funzionato
 
 ## Che cosa resta [?]
+
+- ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
+- 🔸 **«Cambia utente»** resta nel menu del pannello: non è fra le voci della decisione 5, e la
+  domanda è sua.
+- `[?]` **La sessione del prodotto è `closing` dalla nascita**, su ogni desktop («logged out.
+  Waiting for processes to exit» nel giornale subito dopo «New session»). Non è di questa fase né
+  una regressione (GNOME è uguale), ma con `KillUserProcesses=yes` logind potrebbe trattarla da
+  sessione finita. ⇒ Da guardare in una fase sua.
+- `[?]` Le scelte 2, 3, 4, 6, 7 della tabella sopra sono state **affrontate nel codice** dagli
+  incrementi (ridimensionamento acceso, bus d'utente, vitalità dai fatti di `/proc` e del bus) e
+  vanno rilette con l'utente, non date per decise.
 
 ## Il giudizio dell'utente
