@@ -1954,6 +1954,252 @@ static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
 	return FALSE;
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 13 — LE LEVE DI XFCE: SCRIVI, RILEGGI, DI' SE È IN VIGORE.
+ *
+ * È lo schema della cintura del logout (`WaylandLogoutCommand`, qui sotto in
+ * `sessione_impostazioni()`) fatto funzione, perché le chiavi adesso sono otto
+ * e non una.
+ *
+ * ⛔⛔ E SI RILEGGE SEMPRE: `xfconf-query` esce con **zero anche quando il
+ *     demone rifiuta** — l'API è asincrona, la cache locale risponde per prima
+ *     e il valore vecchio torna dopo (`STUDI.md` §xfce §10.6).  ⇒ Lo stato
+ *     d'uscita di chi scrive non dice niente: dice il vero solo la rilettura.
+ *
+ * ⭐ E SCRIVERE PRIMA CHE LA SESSIONE NASCA FUNZIONA — la domanda che questa
+ *    funzione doveva superare: `xfconfd` **ha** l'attivazione D-Bus (§10.6), e
+ *    `xfconf-query` parla al bus d'utente, che è lo stesso della sessione
+ *    (`sessione_viva()`: `labwc` parte senza `dbus-run-session`).  ⇒ La
+ *    scrittura sveglia il demone che la sessione troverà già vivo.  `[M]` 20 set
+ *    2026: la cintura del logout, scritta prima di `avvia()`, si RILEGGE.
+ * ⚠ E vale anche DOPO: le tre componenti toccate qui (`xfce4-session`,
+ *   `xfce4-power-manager`, libxfce4ui) sono legate a xfconf e reagiscono alla
+ *   modifica a caldo `[R]` (`xfpm-dpms.c` `settings_changed`,
+ *   `xfce-screensaver.c:342-346`, il dialogo di logout legge alla creazione).
+ *
+ * Torna TRUE se la rilettura dà esattamente il valore scritto.
+ */
+static gboolean xfconf_metti(const char *canale, const char *chiave, const char *tipo,
+                             const char *valore, const char *perche)
+{
+	char *scrivi[] = { "xfconf-query", "-c",       (char *) canale, "-p",
+		           (char *) chiave, "-n",       "-t",            (char *) tipo,
+		           "-s",            (char *) valore, NULL };
+	char *rileggi[] = { "xfconf-query", "-c", (char *) canale, "-p", (char *) chiave, NULL };
+	g_autofree char *letto = NULL;
+
+	esegui(scrivi);
+	letto = chiedi(rileggi);
+	if (letto)
+		g_strstrip(letto);
+	if (g_strcmp0(letto, valore) == 0) {
+		registro_dice(REG_SESSIONE, "⭐ XFCE: %s %s = %s, RILETTA — %s", canale, chiave,
+		              valore, perche);
+		return TRUE;
+	}
+	registro_dice(REG_SESSIONE,
+	              "⛔ XFCE: %s %s NON è in vigore (scritto «%s», rileggo «%s») — "
+	              "quindi NON vale: %s",
+	              canale, chiave, valore, letto ? letto : "non lo so", perche);
+	return FALSE;
+}
+
+/*
+ * ⭐ LE VOCI DEL PULSANTE D'AZIONE DEL PANNELLO — decisione dell'utente, 21 set
+ *   2026: *«anche in XFCE vanno disabilitate le voci di standby, lockscreen,
+ *   reset e spegnimento»*.
+ *
+ * `[R]` `xfce4-panel` 4.20.4, `plugins/actions/actions.c`: il plugin legge
+ * `/plugins/plugin-<N>/items`, un array di stringhe con `+`/`-` davanti; una
+ * voce col `-` **non viene creata affatto** (`:1318`, `:1518`), mentre una col
+ * `+` non permessa resta **visibile e grigia** (`:1347`).  ⇒ In XFCE non
+ * esiste un KIOSK che le tolga (`STUDI.md` §xfce §10.4): si tolgono QUI.
+ *
+ * ⛔ Si tolgono SOLO le quattro famiglie nominate: il blocco, la sospensione
+ *    (con ibernazione e sonno ibrido, che sono la stessa famiglia), il riavvio
+ *    e lo spegnimento.  «Esci» (`logout`, `logout-dialog`) RESTA — §4.1-ter, è
+ *    l'unica porta — e «Cambia utente» resta com'è: l'utente non l'ha nominato.
+ */
+static const char *AZIONI_DA_TOGLIERE[] = { "lock-screen", "suspend", "hibernate",
+	                                    "hybrid-sleep", "restart",  "shutdown",
+	                                    NULL };
+
+/* ⚠ Il default di serie, `actions_plugin_default_array()` (`actions.c:1437`):
+ *   serve quando la proprietà `items` non c'è ancora — ed è il caso normale
+ *   del pannello appena nato, perché `default.xml` non la scrive. */
+static const char *AZIONI_DI_SERIE[] = { "+lock-screen", "+switch-user",  "+separator",
+	                                 "+suspend",     "-hibernate",    "-hybrid-sleep",
+	                                 "-separator",   "+shutdown",     "-restart",
+	                                 "+separator",   "+logout",       NULL };
+
+/* Le voci di un array come le stampa `xfconf-query`: una riga di intestazione
+ * (tradotta, quindi NON si legge), una riga vuota, poi una voce per riga.  ⇒ Si
+ * prende quel che segue la prima riga vuota.  NULL se non è un array. */
+static char **voci_di_array(const char *uscita)
+{
+	const char *dopo = uscita ? strstr(uscita, "\n\n") : NULL;
+	g_autoptr(GPtrArray) voci = NULL;
+	g_auto(GStrv) righe = NULL;
+
+	if (!dopo)
+		return NULL;
+	voci = g_ptr_array_new_with_free_func(g_free);
+	righe = g_strsplit(dopo + 2, "\n", -1);
+	for (int i = 0; righe[i]; i++)
+		if (righe[i][0])
+			g_ptr_array_add(voci, g_strdup(righe[i]));
+	g_ptr_array_add(voci, NULL);
+	return (char **) g_ptr_array_free(g_steal_pointer(&voci), FALSE);
+}
+
+static gboolean da_togliere(const char *voce)
+{
+	return voce[0] == '+' && g_strv_contains(AZIONI_DA_TOGLIERE, voce + 1);
+}
+
+/* Un plugin «actions»: le voci da togliere passano da `+` a `-`, le altre
+ * restano identiche e nel loro ordine.  Scritto e RILETTO. */
+static gboolean sistema_azioni_del_pannello(const char *base)
+{
+	g_autofree char *chiave = g_strdup_printf("%s/items", base);
+	char *leggi[] = { "xfconf-query", "-c", "xfce4-panel", "-p", chiave, NULL };
+	g_autofree char *prima = chiedi(leggi);
+	g_auto(GStrv) vecchie = voci_di_array(prima);
+	g_autoptr(GPtrArray) scrivi = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(GPtrArray) nuove = g_ptr_array_new_with_free_func(g_free);
+	g_autofree char *riletto = NULL;
+	g_auto(GStrv) rilette = NULL;
+	const char *const *da = vecchie ? (const char *const *) vecchie
+	                                : (const char *const *) AZIONI_DI_SERIE;
+	int tolte = 0;
+	gboolean uguali;
+
+	for (int i = 0; da[i]; i++) {
+		if (da_togliere(da[i])) {
+			g_ptr_array_add(nuove, g_strdup_printf("-%s", da[i] + 1));
+			tolte++;
+		} else {
+			g_ptr_array_add(nuove, g_strdup(da[i]));
+		}
+	}
+	g_ptr_array_add(nuove, NULL);
+	if (tolte == 0) {
+		registro_dice(REG_SESSIONE,
+		              "⭐ XFCE: %s — nessuna voce da togliere, erano già tolte",
+		              chiave);
+		return TRUE;
+	}
+
+	/* ⚠ `--set=-lock-screen` e non `-s -lock-screen`: un valore che comincia
+	 *   col trattino, scritto staccato, si legge come un'opzione. */
+	g_ptr_array_add(scrivi, g_strdup("xfconf-query"));
+	g_ptr_array_add(scrivi, g_strdup("-c"));
+	g_ptr_array_add(scrivi, g_strdup("xfce4-panel"));
+	g_ptr_array_add(scrivi, g_strdup("-p"));
+	g_ptr_array_add(scrivi, g_strdup(chiave));
+	g_ptr_array_add(scrivi, g_strdup("-n"));
+	g_ptr_array_add(scrivi, g_strdup("-a"));
+	for (guint i = 0; i + 1 < nuove->len; i++) {
+		g_ptr_array_add(scrivi, g_strdup("--type=string"));
+		g_ptr_array_add(scrivi,
+		                g_strdup_printf("--set=%s", (char *) g_ptr_array_index(nuove, i)));
+	}
+	g_ptr_array_add(scrivi, NULL);
+	esegui((char **) scrivi->pdata);
+
+	riletto = chiedi(leggi);
+	rilette = voci_di_array(riletto);
+	uguali = rilette && g_strv_equal((const char *const *) rilette,
+	                                 (const char *const *) nuove->pdata);
+	if (uguali)
+		registro_dice(REG_SESSIONE,
+		              "⭐ XFCE: %s RILETTA — %d voci tolte dal pulsante d'azione "
+		              "(blocco, sospensione, riavvio, spegnimento); «Esci» e «Cambia "
+		              "utente» restano come erano",
+		              chiave, tolte);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⛔ XFCE: %s NON è in vigore (la rilettura non coincide): le voci "
+		              "di blocco, sospensione, riavvio e spegnimento restano nel "
+		              "pulsante d'azione.  ⚠ Riavvio e spegnimento restano GRIGI "
+		              "(polkit dice no), la sospensione no: la toglie sleep.conf",
+		              chiave);
+	return uguali;
+}
+
+/*
+ * ⛔⛔ PERCHE' UN FILO, e non una scrittura prima della nascita — ed è la
+ *     domanda «prova a smentirti» che qui ha risposto SÌ.
+ *
+ * Le chiavi di `xfce4-session` e `xfce4-power-manager` hanno un nome fisso, e
+ * si scrivono prima (`xfconf_metti`).  Queste NO: il plugin si chiama
+ * `plugin-<N>`, e `N` lo sa solo il canale `xfce4-panel` — che per un utente
+ * che non ha mai aperto XFCE **è vuoto finché il pannello non parte** e non vi
+ * migra la disposizione di serie (`migrate/main.c`).  ⇒ Scritte prima, per un
+ * utente nuovo, non avrebbero un bersaglio: non «perse», peggio — **mai
+ * scritte**, e senza una riga che lo dica.
+ *
+ * ⇒ Si guarda il canale ogni 2 s finché compare un plugin `actions`, e lo si
+ *   sistema.  ⭐ Il pannello lega `items` a xfconf (`panel_properties_bind`) e
+ *   sulla modifica rifà i pulsanti (`actions.c:428-434`): vale a caldo.
+ * ⚠ Per l'utente che ha già un pannello il plugin c'è subito, e il primo giro
+ *   lo sistema — di solito prima ancora che il pannello lo mostri.
+ * ⚠ Dichiarato quel che NON copre: un plugin `actions` aggiunto a mano DOPO,
+ *   dentro la sessione, resta col suo default.  Riavvio e spegnimento restano
+ *   comunque grigi (polkit), la sospensione non c'è (sleep.conf), e il blocco
+ *   non blocca (`LockCommand`).
+ */
+#define PANNELLO_XFCE_PASSO_US (2 * G_USEC_PER_SEC)
+#define PANNELLO_XFCE_PAZIENZA_S 120
+
+static gpointer guardia_del_pannello_xfce(gpointer dati)
+{
+	const gint64 partito = g_get_monotonic_time();
+
+	(void) dati;
+	for (;;) {
+		char *elenca[] = { "xfconf-query", "-c", "xfce4-panel", "-l", "-v", NULL };
+		g_autofree char *elenco = chiedi(elenca);
+		g_auto(GStrv) righe = g_strsplit(elenco ? elenco : "", "\n", -1);
+		int trovati = 0, sistemati = 0;
+
+		/* Una riga di `-l -v` è «proprietà  valore», allineata con spazi. */
+		for (int i = 0; righe[i]; i++) {
+			g_auto(GStrv) parti = g_strsplit_set(g_strstrip(righe[i]), " \t", 2);
+			const char *numero;
+
+			if (!parti[0] || !parti[1] ||
+			    !g_str_has_prefix(parti[0], "/plugins/plugin-"))
+				continue;
+			numero = parti[0] + strlen("/plugins/plugin-");
+			if (!*numero || strspn(numero, "0123456789") != strlen(numero))
+				continue;
+			if (g_strcmp0(g_strstrip(parti[1]), "actions") != 0)
+				continue;
+			trovati++;
+			if (sistema_azioni_del_pannello(parti[0]))
+				sistemati++;
+		}
+		if (trovati) {
+			registro_dice(REG_SESSIONE,
+			              "%s XFCE: pulsanti d'azione del pannello: %d trovati, %d "
+			              "sistemati e riletti",
+			              sistemati == trovati ? "⭐" : "⛔", trovati, sistemati);
+			return NULL;
+		}
+		if (g_get_monotonic_time() - partito > PANNELLO_XFCE_PAZIENZA_S * G_USEC_PER_SEC) {
+			registro_dice(REG_SESSIONE,
+			              "⚠ XFCE: in %d s nessun pulsante d'azione nel canale "
+			              "xfce4-panel — non tolgo niente, perché non c'è niente da "
+			              "togliere (o il pannello non è partito).  Smetto di guardare",
+			              PANNELLO_XFCE_PAZIENZA_S);
+			return NULL;
+		}
+		g_usleep(PANNELLO_XFCE_PASSO_US);
+	}
+}
+
 void sessione_impostazioni(void)
 {
 	/* ⛔ FASE 12 — prima di aprire uno schema: su Plasma queste chiavi non
@@ -1968,7 +2214,8 @@ void sessione_impostazioni(void)
 		return;
 	}
 	/*
-	 * ⭐ FASE 13 — su XFCE: una cosa sola adesso, e le altre dichiarate.
+	 * ⭐ FASE 13 — su XFCE: la cintura del logout, l'energia, il blocco e il
+	 *    dialogo di uscita; le voci del pannello le toglie `sessione_inibisci()`.
 	 *
 	 * ⛔ LA CINTURA DEL LOGOUT, che è l'unica che non può aspettare: se
 	 *    `xfce4-session` decide che il compositore non va bene, al logout esegue
@@ -2017,10 +2264,81 @@ void sessione_impostazioni(void)
 
 			esegui(via);
 		}
+
+		/*
+		 * ⛔⛔ L'USCITA NON SI SPEGNE — `STUDI.md` §xfce §10.2.
+		 *
+		 * `[R]` `xfce4-power-manager` 4.20.0 nasce con `dpms-enabled` VERO e
+		 * `dpms-on-ac-sleep` = **10 minuti** (`common/xfpm-config.h`), e su
+		 * Wayland li traduce in `zwlr_output_power_v1(OFF)`: labwc spegne
+		 * l'uscita, e la cattura riceve `failed`.  ⇒ Con `dpms-enabled` falso
+		 * `refresh()` (`xfpm-dpms.c`) non arma NESSUN tempo, e la modifica vale
+		 * anche a caldo (`settings_changed`).
+		 * ⭐ PERCHE' xfconf e non `org.freedesktop.PowerManagement.Inhibit`:
+		 *    xfce4-power-manager **non ha attivazione D-Bus** — l'inibizione
+		 *    chiesta prima che parta fallirebbe (è il `ServiceUnknown` di
+		 *    powerdevil su KDE) e vivrebbe quanto la nostra connessione.  La
+		 *    chiave c'è prima che il demone nasca, e lui la legge nascendo.
+		 * ⚠ Il prezzo, dichiarato: è scritta nel canale DELL'UTENTE.  Se lo
+		 *   stesso utente apre XFCE davanti alla macchina, il suo schermo non
+		 *   si spegne più da solo.
+		 */
+		xfconf_metti("xfce4-power-manager", "/xfce4-power-manager/dpms-enabled", "bool",
+		             "false",
+		             "lo schermo della sessione non si spegne dopo 10 minuti (DPMS "
+		             "di xfce4-power-manager, che su wlroots SPEGNE l'uscita e fa "
+		             "fallire la cattura)");
+		/* ⚠ Sono già 0 («mai») di serie: si scrivono per non ereditare quel che
+		 *   l'utente ha messo lui.  La sospensione la ferma comunque sleep.conf
+		 *   (§4.7) — questa toglie la BUGIA, cioè il tentativo che fallisce. */
+		xfconf_metti("xfce4-power-manager", "/xfce4-power-manager/inactivity-on-ac", "uint",
+		             "0", "nessuna sospensione per inattività, su rete elettrica");
+		xfconf_metti("xfce4-power-manager", "/xfce4-power-manager/inactivity-on-battery",
+		             "uint", "0", "nessuna sospensione per inattività, a batteria");
+
+		/*
+		 * ⛔ IL BLOCCO — `STUDI.md` §xfce §10.3, e decisione dell'utente del 21
+		 *    set 2026.  `[R]` libxfce4ui 4.20.1, `xfce_screensaver_lock()`
+		 *    (`xfce-screensaver.c:564-596`): se `LockCommand` c'è, lo esegue e
+		 *    **torna il suo esito senza provare nient'altro**.  ⇒ Con
+		 *    `/bin/false` non blocca `xflock4` (che chiama `Lock` di
+		 *    xfce4-session e guarda la risposta), non blocca il metodo D-Bus,
+		 *    non blocca il pulsante del pannello, e non blocca prima di una
+		 *    sospensione (`lock-screen-suspend-hibernate`).
+		 * ⚠ `/bin/false` e non `/bin/true`: chi chiede un blocco deve sentirsi
+		 *   dire «non è bloccato», non «fatto».  E NON la stringa vuota: vale
+		 *   «non impostata», e la catena D-Bus riprende (`:299-305`).
+		 * ✅ Gli altri due bloccatori non partono qui: `xfce4-screensaver` è X11
+		 *    puro ed esce se GDK non è X11, e `GDK_BACKEND=wayland` è secco;
+		 *    `light-locker` vuole LightDM e X11.
+		 */
+		xfconf_metti("xfce4-session", "/general/LockCommand", "string", "/bin/false",
+		             "il blocco schermo è spento: il blocco è di REMOTIX (§4.3)");
+
+		/*
+		 * ⛔ IL DIALOGO DI «ESCI» — decisione dell'utente del 21 set 2026.
+		 *
+		 * `[R]` xfce4-session 4.20.2, `xfsm-logout-dialog.c:263-374`: Sospendi,
+		 * Iberna e Sonno ibrido hanno una chiave che li TOGLIE; ⛔ **Riavvia e
+		 * Spegni no** — sono sempre disegnati, e l'unica cosa che decide è
+		 * `can_restart && auth_restart`, cioè logind, cioè polkit.  ⇒ Quei due
+		 * restano **grigi**, e grigi per la cintura 1 di §4.7 (polkit dice
+		 * `no`), che il figlio VERIFICA a ogni sessione.  ⚠ Anche il KIOSK di
+		 * XFCE (`Shutdown=`) li farebbe solo grigi, e sta in `/etc`.
+		 * ⛔ «Esci» resta (§4.1-ter) e «Cambia utente» resta (`ShowSwitchUser`
+		 *    non si tocca): l'utente non l'ha nominato.
+		 */
+		xfconf_metti("xfce4-session", "/shutdown/ShowSuspend", "bool", "false",
+		             "niente «Sospendi» nel dialogo di uscita");
+		xfconf_metti("xfce4-session", "/shutdown/ShowHibernate", "bool", "false",
+		             "niente «Iberna» nel dialogo di uscita");
+		xfconf_metti("xfce4-session", "/shutdown/ShowHybridSleep", "bool", "false",
+		             "niente «Sonno ibrido» nel dialogo di uscita");
+
 		registro_dice(REG_SESSIONE,
-		              "⚠ XFCE: le altre impostazioni (energia, blocco, voci del "
-		              "pannello, menu) non le metto ancora — fase 13, incrementi "
-		              "dopo il primo");
+		              "XFCE: le voci del pulsante d'azione del pannello le tolgo "
+		              "quando il pannello esiste (sessione_inibisci): prima, per un "
+		              "utente nuovo, il suo plugin non ha ancora un numero");
 		return;
 	}
 	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
@@ -2242,13 +2560,19 @@ guint32 sessione_inibisci(void)
 	 *    chiedere un'inibizione qui darebbe un ⛔ falso nel registro e
 	 *    zero protezione.
 	 * ⚠ Chi spegne davvero l'output su questo desktop è `xfce4-power-manager`,
-	 *   dopo 10 minuti, e si tratta nell'incremento dell'energia.
+	 *   dopo 10 minuti: lo ferma `dpms-enabled=false`, scritta e riletta in
+	 *   `sessione_impostazioni()` prima della nascita.
+	 * ⭐ E qui, dove il palco c'è, parte il filo che toglie le voci pericolose
+	 *    dal pulsante d'azione del pannello (`guardia_del_pannello_xfce`): il
+	 *    suo bersaglio esiste solo dopo che il pannello è nato.
 	 */
 	if (e_xfce()) {
+		g_thread_unref(g_thread_new("pannello-xfce", guardia_del_pannello_xfce, NULL));
 		registro_dice(REG_SESSIONE,
 		              "XFCE: non chiedo nessuna inibizione — xfce4-session non "
-		              "consulta l'inibitore, e chi spegne l'output è "
-		              "xfce4-power-manager (incremento dell'energia, non questo)");
+		              "consulta l'inibitore, e l'uscita la tiene accesa "
+		              "dpms-enabled=false.  Guardo il pannello per togliergli "
+		              "blocco, sospensione, riavvio e spegnimento");
 		return 0;
 	}
 
