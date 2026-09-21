@@ -118,6 +118,8 @@ struct Cattura
 	WlrFotogramma wlr_ultimo;
 	gboolean wlr_ultimo_noto;
 	gboolean wlr_detto_il_testimone, wlr_detto_y;
+	gboolean wlr_detto_ripiego;      /* «chiesta la scheda, arrivata la memoria» */
+	gboolean wlr_guardato_il_primo;  /* il primo fotogramma della scheda, mappato */
 
 	struct pw_thread_loop *ciclo;
 	struct pw_context *contesto;
@@ -1571,12 +1573,24 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 			              uscita_l, uscita_a);
 	}
 
-	if (strada == CATTURA_STRADA_SCHEDA)
-		registro_dice(AREA,
-		              "⚠ wlroots: è stata chiesta la strada della SCHEDA, e questa "
-		              "stesura prende i pixel dalla MEMORIA — dichiarato in "
-		              "`wlroots.c`.  ⛔ La copia c'è, e i numeri del tratto la "
-		              "portano dentro");
+	/*
+	 * ⭐⭐ LA STRADA DELLA SCHEDA — `wlroots.c`, il riquadro in cima.
+	 *
+	 * ⛔ Il «no» NON fa fallire la nascita: la memoria funziona, ed è il
+	 *    ripiego.  Ma si DICE, con il perché — e `c->strada` resta quella
+	 *    chiesta, così `cattura_consegna()` mostra la coppia «chiesta SCHEDA,
+	 *    arrivata MEMORIA» invece di riscrivere la domanda per farla tornare.
+	 */
+	if (strada == CATTURA_STRADA_SCHEDA) {
+		g_autoptr(GError) perche = NULL;
+
+		if (!wlr_chiedi_la_scheda(c->wlr, &perche))
+			registro_dice(AREA,
+			              "⛔ wlroots: è stata chiesta la strada della SCHEDA e NON "
+			              "si può — %s.  ⇒ RIPIEGO DICHIARATO: i pixel passano per "
+			              "la MEMORIA, e i numeri del tratto portano dentro la copia",
+			              perche ? perche->message : "senza motivo");
+	}
 
 	registro_dice(AREA,
 	              "⭐ wlroots: sorgente a TIRO aperta sull'uscita «%s» — un fotogramma "
@@ -2166,10 +2180,11 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 
 	/*
 	 * ⭐⭐ FASE 13 — IL VERSO A TIRO: qui non si ASPETTA un fotogramma, si
-	 *      CHIEDE.  ⚠ E la copia c'è, dichiarata: questa stesura prende i pixel
-	 *      dalla memoria, e i microsecondi della copia stanno in `us_copia`
-	 *      come su ogni altra strada — un tratto senza il suo costo è un tratto
-	 *      che mentirà.
+	 *      CHIEDE.  ⚠ Due strade: sulla MEMORIA la copia c'è, e i
+	 *      microsecondi stanno in `us_copia` come su ogni altra strada — un
+	 *      tratto senza il suo costo è un tratto che mentirà; sulla SCHEDA
+	 *      (dal 21 set 2026) i pixel restano in una lastra e il fotogramma
+	 *      esce come `PIXEL_ALTROVE`, più sotto.
 	 */
 	if (cattura->wlr) {
 		WlrFotogramma w;
@@ -2196,10 +2211,44 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		fuori->byte = w.byte;
 		fuori->pts = (int64_t)(w.secondi * 1000000000ull + w.nanosecondi);
 		fuori->seq_nota = FALSE;
-		fuori->sulla_scheda = FALSE;
 		fuori->formato_drm = w.formato;
-		fuori->pixel = g_malloc(w.byte);
-		memcpy(fuori->pixel, w.pixel, w.byte);
+		if (w.sulla_scheda) {
+			/*
+			 * ⭐⭐ LA SCHEDA: niente copia nostra, e la lastra resta TRATTENUTA.
+			 *
+			 * ⛔ `ritenuta` + `padrone` sono gli stessi due campi della
+			 *    ritenuta di PipeWire: `cattura_fermo_libera()` li vede, e il
+			 *    suo preambolo `wlr` rende la lastra a `wlroots.c` — DOPO
+			 *    `codificatore_comprimi_scheda()`, quando la GPU ha finito di
+			 *    leggere.  ⇒ Il compositore non ci riscrive dentro prima
+			 *    (`LEZIONI.md` §8).
+			 * ⚠ `us_copia` qui è il giro INTERO — richiesta, blit sulla GPU
+			 *   del compositore, attesa della fence — come sulla memoria è il
+			 *   giro intero più la `memcpy`: stessa grandezza sulle due strade.
+			 */
+			fuori->sulla_scheda = TRUE;
+			fuori->pixel = NULL;
+			fuori->fd = w.fd;
+			fuori->offset = w.offset;
+			fuori->modificatore = w.modificatore;
+			fuori->generazione = w.generazione;
+			fuori->ritenuta = w.lastra;
+			fuori->padrone = cattura;
+		} else {
+			/* ⛔ Chiesta la scheda e arrivata la memoria: si DICE, una volta. */
+			if (cattura->strada == CATTURA_STRADA_SCHEDA && !cattura->wlr_detto_ripiego) {
+				cattura->wlr_detto_ripiego = TRUE;
+				registro_dice(AREA,
+				              "⛔ wlroots: chiesta la SCHEDA, e questo fotogramma è "
+				              "arrivato in MEMORIA — RIPIEGO DICHIARATO (il perché è "
+				              "nelle righe `wlroots:` qui sopra).  La riga non si "
+				              "ripete; i conteggi della chiusura dicono quanti per "
+				              "strada");
+			}
+			fuori->sulla_scheda = FALSE;
+			fuori->pixel = g_malloc(w.byte);
+			memcpy(fuori->pixel, w.pixel, w.byte);
+		}
 		dopo = g_get_monotonic_time();
 		fuori->us_copia = (uint64_t)(dopo - prima);
 
@@ -2229,9 +2278,13 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			nome[4] = 0;
 			registro_dice(AREA,
 			              "formato negoziato: %ux%u %s (8 bit per canale), modificatore "
-			              "0x0 — ⭐ wlroots: detto al PRIMO fotogramma preso, con "
-			              "la misura e il formato che il compositore ha davvero dato",
-			              w.larghezza, w.altezza, nome);
+			              "0x%" G_GINT64_MODIFIER "x — ⭐ wlroots: detto al PRIMO "
+			              "fotogramma preso, con la misura e il formato che il "
+			              "compositore ha davvero dato, %s",
+			              w.larghezza, w.altezza, nome,
+			              (guint64)(w.sulla_scheda ? w.modificatore : 0),
+			              w.sulla_scheda ? "sulla SCHEDA (wlroots-dmabuf)"
+			                             : "in MEMORIA (wlroots-shm)");
 		}
 
 		/* ⚠ `y_invertita`: se il compositore dice che le righe vanno lette dal
@@ -2250,7 +2303,62 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			              "causa è questa riga, non il codificatore");
 
 		cattura_consegna(cattura, &fuori->consegna);
-		return CATTURA_PRESA_FATTA;
+		if (!w.sulla_scheda)
+			return CATTURA_PRESA_FATTA;
+
+		/* ⭐ Il PRIMO fotogramma della scheda si guarda, mappando la lastra —
+		 *    la stessa regola della scheda su PipeWire: una volta sola, e gli
+		 *    altri portano `pixel_misurati` FALSE («non ho guardato»).  ⚠ Col
+		 *    SYNC del DMA-BUF attorno: i byte che vede la CPU devono essere
+		 *    quelli scritti dalla GPU. */
+		/* ⛔⛔ E LA NUMERAZIONE, trovata rileggendo il porting: `misura_i_pixel`
+		 *     legge l'ordine dei canali da `formato_grezzo` con i numeri di
+		 *     SPA, e qui `formato_grezzo` è un fourcc DRM.  Passato così, la
+		 *     misura esce SUBITO senza guardare niente — e
+		 *     `guarda_i_pixel_del_dmabuf` scrive lo stesso `pixel_misurati =
+		 *     TRUE`: un «non nero» su un fotogramma mai guardato, cioè il
+		 *     verde falso di `LEZIONI.md` §1.9.  ⇒ Per la durata della misura
+		 *     si presta il numero SPA che dice lo stesso ordine; se non ce
+		 *     n'è uno, NON si guarda, e lo si dice. */
+		if (!cattura->wlr_guardato_il_primo) {
+			uint64_t tm = adesso_us();
+			uint32_t grezzo = fuori->consegna.formato_grezzo;
+			uint32_t spa = (w.formato == DRM_FORMAT_XRGB8888) ? SPA_VIDEO_FORMAT_BGRx
+			               : (w.formato == DRM_FORMAT_ARGB8888) ? SPA_VIDEO_FORMAT_BGRA
+			               : (w.formato == DRM_FORMAT_XBGR8888) ? SPA_VIDEO_FORMAT_RGBx
+			               : (w.formato == DRM_FORMAT_ABGR8888) ? SPA_VIDEO_FORMAT_RGBA
+			                                                   : SPA_VIDEO_FORMAT_UNKNOWN;
+
+			cattura->wlr_guardato_il_primo = TRUE;
+			if (spa != SPA_VIDEO_FORMAT_UNKNOWN) {
+				fuori->consegna.formato_grezzo = spa;
+				wlr_lettura_cpu(fuori->fd, TRUE);
+				guarda_i_pixel_del_dmabuf(cattura, fuori);
+				wlr_lettura_cpu(fuori->fd, FALSE);
+				fuori->consegna.formato_grezzo = grezzo;
+			} else {
+				registro_dice(AREA,
+				              "⚠ wlroots: il primo fotogramma della SCHEDA NON è "
+				              "stato guardato — il fourcc 0x%08x non ha un ordine "
+				              "dei canali che la misura conosca.  `pixel_misurati` "
+				              "resta FALSE: «non ho guardato», non «non è nero»",
+				              w.formato);
+			}
+			fuori->us_misura = adesso_us() - tm;
+			if (fuori->consegna.pixel_misurati)
+				registro_dice(AREA,
+				              "⭐ wlroots: il PRIMO fotogramma della SCHEDA guardato "
+				              "mappando la lastra: %s (%.2f ms, attesa della GPU "
+				              "%.2f ms, %s)",
+				              fuori->consegna.nero       ? "⛔ NERO"
+				              : fuori->consegna.uniforme ? "⚠ UNIFORME"
+				                                         : "non nero",
+				              fuori->us_misura / 1000.0, w.us_attesa_gpu / 1000.0,
+				              w.attesa_esplicita
+				                  ? "fence estratta dal DMA-BUF"
+				                  : "⚠ senza fence: sincronizzazione implicita");
+		}
+		return CATTURA_PRESA_PIXEL_ALTROVE;
 	}
 
 	if (cattura->stato != PW_STREAM_STATE_STREAMING && cattura->stato != PW_STREAM_STATE_PAUSED)
@@ -2431,6 +2539,16 @@ void cattura_fermo_libera(CatturaFermo *fermo)
 {
 	if (!fermo)
 		return;
+	/* ⭐ FASE 13 — la lastra della scheda di wlroots torna a `wlroots.c`.
+	 *    ⚠ Prima del ramo di PipeWire, e azzerando `ritenuta`: quel ramo non
+	 *    deve vedere un puntatore che non e' un `pw_buffer`.  ⛔ Scatta SOLO
+	 *    con `->wlr`: per GNOME e KDE `padrone->wlr` e' NULL e il rilascio
+	 *    qui sotto resta quello di prima, parola per parola. */
+	if (fermo->ritenuta && fermo->padrone && ((Cattura *) fermo->padrone)->wlr)
+	{
+		wlr_rendi(((Cattura *) fermo->padrone)->wlr, fermo->ritenuta);
+		fermo->ritenuta = NULL;
+	}
 	/* ⭐⭐ IL RILASCIO — e sta qui perche' qui e' l'unico posto in cui si sa che
 	 *     chi leggeva ha finito.  ⛔ Prima di questa riga il `pw_buffer` e'
 	 *     nostro e Mutter non ci ridipinge dentro; dopo, e' suo.
@@ -2464,8 +2582,13 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 		 *    «dichiara», si SA.  ⚠ E non si scrive MEMFD per analogia con
 		 *    PipeWire: è la stessa cosa (un memfd condiviso), e chiamarla con il
 		 *    nome che il lettore già conosce vale più di un nome nuovo. */
-		fuori->buffer_chiesto = CATTURA_BUFFER_MEMFD;
-		fuori->buffer_dichiarato = CATTURA_BUFFER_MEMFD;
+		/* ⭐ E dal 21 set 2026 le strade sono due: il tipo lo dice il
+		 *    FOTOGRAMMA (`sulla_scheda`), la domanda la dice `strada`. */
+		fuori->buffer_chiesto = cattura->strada == CATTURA_STRADA_SCHEDA
+		                            ? CATTURA_BUFFER_DMABUF
+		                            : CATTURA_BUFFER_MEMFD;
+		fuori->buffer_dichiarato =
+		    w->sulla_scheda ? CATTURA_BUFFER_DMABUF : CATTURA_BUFFER_MEMFD;
 		fuori->buffer_dichiarato_grezzo = 0;
 		fuori->buffer_distinti = 1;
 		fuori->formato_grezzo = w->formato;
@@ -2477,7 +2600,7 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 		fuori->stride = w->stride;
 		fuori->stride_letto = TRUE;
 		fuori->byte = w->byte;
-		fuori->modificatore = 0;
+		fuori->modificatore = w->sulla_scheda ? w->modificatore : 0;
 		/* ⛔ Il colore: il compositore non dichiara né range né matrice, e
 		 *    qui NON si inventa.  `pixel_misurati` resta FALSE: chi legge
 		 *    `nero`/`uniforme` deve trovarli non guardati, non falsi. */
@@ -2605,9 +2728,11 @@ void cattura_ferma(Cattura *cattura)
 		wlr_conteggi(cattura->wlr, &w);
 		registro_dice(AREA,
 		              "wlroots: cattura chiusa — chiesti %" G_GUINT64_FORMAT
-		              ", presi %" G_GUINT64_FORMAT ", falliti %" G_GUINT64_FORMAT
+		              ", presi %" G_GUINT64_FORMAT " (sulla SCHEDA %" G_GUINT64_FORMAT
+		              ", in MEMORIA %" G_GUINT64_FORMAT "), falliti %" G_GUINT64_FORMAT
 		              ", scaduti %" G_GUINT64_FORMAT,
-		              w.chiesti, w.presi, w.falliti, w.scaduti);
+		              w.chiesti, w.presi, w.sulla_scheda, w.in_memoria, w.falliti,
+		              w.scaduti);
 		wlr_chiudi(cattura->wlr);
 		g_free(cattura);
 		return;
