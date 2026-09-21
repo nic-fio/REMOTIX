@@ -92,6 +92,21 @@ DEVE_COMBACIARE = [
     ("libssl3t64", "pacchetto"),
     ("libei1", "pacchetto"),
     ("libpci3", "pacchetto"),
+    # ⭐ Aggiunte il 21 set 2026 (fase 13): gli ARBITRI degli appunti di C17 —
+    #   `wl-clipboard` dove il compositore ha `data-control`, GTK4 (per
+    #   `appunti-gtk.py`) dove non ce l'ha.  Fino a ieri stavano solo in gnome
+    #   e kde, e ⛔ C11 non lo vedeva: non erano in questa lista.
+    # ⚠ LA SCELTA, scritta: dentro la lista, e non «basta metterli in tutte e
+    #   quattro le ricette».  Una ricetta non e' la scatola (E1): due scatole
+    #   ricostruite in giorni diversi possono avere l'arbitro in versioni
+    #   diverse, e allora il verde di C17 su una e il rosso sull'altra non
+    #   direbbero piu' «e' il desktop».  ⛔ Il PREZZO, dichiarato: finche'
+    #   `rete11-xfce` e `rete11-lxqt` non si ricostruiscono dalla ricetta
+    #   nuova, qui rispondono «(non c e)» e C11 da' ROSSO — ed e' un rosso
+    #   vero: quelle due scatole non sono allineate alle altre.
+    ("wl-clipboard", "pacchetto"),
+    ("python3-gi", "pacchetto"),
+    ("gir1.2-gtk-4.0", "pacchetto"),
     ("il prodotto (md5)", "prodotto"),
 ]
 

@@ -137,8 +137,36 @@ def socket_wayland(chi):
     return nomi[0] if nomi else None
 
 
-def nella_sessione(chi, copione, tempo=15):
-    """Un copione dentro la sessione Wayland dell'inquilino.  `None` = non c'e'."""
+# ═══════════════════════════════════════════════════════════════════════════
+# ⛔⛔ UN ATTREZZO CHE MANCA NON E' UN ROSSO — 21 set 2026, fase 13.
+#
+# `[R]` Qui si prendeva lo `stdout` del copione senza guardare il codice
+#   d'uscita.  ⇒ Nella scatola xfce (e lxqt), dove `wl-clipboard` non c'era,
+#   `wl-paste: command not found` diventava `""`, la guardia di A (che guarda
+#   `None`) non scattava, e la maglia stampava **ROSSO**: un difetto del BANCO
+#   con la faccia di un difetto del prodotto (§1.51).
+# ⛔ E col guasto innestato era peggio: A, B e R tutti «NO» per mancanza
+#   d'attrezzi ⇒ «IL GUASTO INNESTATO E' STATO VISTO», esito 0 ⇒ una
+#   certificazione per C13 che non aveva guardato niente.
+# ⇒ Due reti, una sotto l'altra:
+#   1. ⭐ un controllo POSITIVO prima di cominciare (`attrezzo_che_manca`):
+#      ogni pezzo che l'arbitro scelto userà si CHIEDE alla sessione;
+#   2. e qui, per quel che sfugge: il guscio che esce 126/127 (comando non
+#      trovato / non eseguibile) non da' uno stdout, da' `AttrezzoMancante`.
+# ⚠ E il resto NON cambia: un attrezzo presente che risponde `""` (appunti
+#   vuoti) resta un «NO», come prima — e' il caso che la maglia deve vedere.
+# ═══════════════════════════════════════════════════════════════════════════
+class AttrezzoMancante(Exception):
+    """Nella sessione manca un pezzo del BANCO ⇒ esito 3, mai 1 e mai 0."""
+
+
+# `[R]` POSIX, «Command Search and Execution»: 127 = non trovato, 126 =
+#   trovato ma non eseguibile.  `timeout` e `env` li ripassano uguali.
+NON_TROVATO = (126, 127)
+
+
+def nella_sessione_rc(chi, copione, tempo=15):
+    """Come `nella_sessione`, ma torna `(codice, stdout)`.  `None` = non c'e'."""
     uid = corri(["id", "-u", chi], 5).stdout.strip()
     run = "/run/user/%s" % uid
     socket = sorted(f for f in os.listdir(run)
@@ -147,7 +175,59 @@ def nella_sessione(chi, copione, tempo=15):
         return None
     r = corri(["runuser", "-u", chi, "--", "env", "XDG_RUNTIME_DIR=" + run,
                "WAYLAND_DISPLAY=" + socket[0], "sh", "-c", copione], tempo)
-    return None if r is None else r.stdout
+    return None if r is None else (r.returncode, r.stdout)
+
+
+def nella_sessione(chi, copione, tempo=15):
+    """Un copione dentro la sessione Wayland dell'inquilino.  `None` = non c'e'.
+
+    ⛔ Se il guscio dice «comando non trovato» (126/127) solleva
+       `AttrezzoMancante` invece di tornare uno stdout vuoto (vedi sopra).
+    """
+    r = nella_sessione_rc(chi, copione, tempo)
+    if r is None:
+        return None
+    codice, uscita = r
+    if codice in NON_TROVATO:
+        raise AttrezzoMancante("«%s» esce %d (comando non trovato o non eseguibile)"
+                               % (copione, codice))
+    return uscita
+
+
+# ⭐ I pezzi che ciascun arbitro usa — e come si CHIEDE se ci sono.
+#   ⚠ `wayland-info` sta in tutti e due: e' lui che SCEGLIE l'arbitro, e se
+#     mancasse la scelta cadrebbe su GTK in silenzio (`grep -c` risponde «0»).
+#   ⚠ Per GTK non basta `command -v`: `python3` c'e' sempre, e' `import gi`
+#     con GTK 4 che manca ⇒ lo si importa davvero, come fa `appunti-gtk.py`.
+ATTREZZI_COMUNI = [
+    ("wayland-info (wayland-utils)", "command -v wayland-info"),
+]
+ATTREZZI = {
+    "wl-clipboard": [
+        ("wl-paste (wl-clipboard)", "command -v wl-paste"),
+        ("wl-copy (wl-clipboard)", "command -v wl-copy"),
+    ],
+    "GTK": [
+        ("appunti-gtk.py", "test -r " + os.path.join(QUI, "appunti-gtk.py")),
+        ("python3-gi + gir1.2-gtk-4.0",
+         "python3 -c 'import gi; gi.require_version(\"Gtk\", \"4.0\"); "
+         "gi.require_version(\"Gdk\", \"4.0\"); "
+         "from gi.repository import Gdk, Gtk'"),
+    ],
+}
+
+
+def attrezzo_che_manca(chi, elenco):
+    """⭐ Il controllo POSITIVO: torna il nome del primo pezzo che manca, o `None`.
+
+    ⛔ Un pezzo di cui la sessione non risponde (niente socket, tempo scaduto)
+       conta come mancante: non so se c'e', e allora non guardo.
+    """
+    for nome, prova in elenco:
+        r = nella_sessione_rc(chi, prova + " >/dev/null 2>&1", 30)
+        if r is None or r[0] != 0:
+            return nome
+    return None
 
 
 def cliente(chi, porta, *altro):
@@ -188,6 +268,7 @@ def main():
         if os.path.exists(f):
             os.unlink(f)
 
+    primo = None
     try:
         # ── il primo cliente: annuncia A, resta, e ascolta gli annunci ─────
         # ⭐ `--clic`: il fuoco alle finestre dell'arbitro, e si RIFA' ogni 4 s
@@ -228,8 +309,20 @@ def main():
         # ⚠ Qualche tentativo, uno alla volta: l'offerta del prodotto alla
         #   sessione arriva quando gli appunti si aprono, che e' dopo il palco.
         #   ⛔ Non in parallelo: due finestre si ruberebbero il fuoco.
-        arb = arbitro(chi)
-        print("   l'arbitro di questo desktop: %s" % arb["nome"])
+        # ⛔ PRIMA si chiede se gli attrezzi ci sono (vedi `AttrezzoMancante`):
+        #    uno che manca e' «non ho potuto guardare», ⛔ mai un rosso.
+        manca = attrezzo_che_manca(chi, ATTREZZI_COMUNI)
+        arb = arbitro(chi) if manca is None else None
+        if arb is not None:
+            print("   l'arbitro di questo desktop: %s" % arb["nome"])
+            chiave = "wl-clipboard" if arb["nome"] == "wl-clipboard" else "GTK"
+            manca = attrezzo_che_manca(chi, ATTREZZI[chiave])
+        if manca is not None:
+            print("   ⛔ nella sessione manca «%s»: e' un attrezzo del BANCO, non del"
+                  " prodotto ⇒ non ho potuto guardare" % manca)
+            if primo.poll() is None:
+                primo.kill()
+            return 3
         visto = None
         for _ in range(5):
             visto = nella_sessione(chi, arb["incolla"], 60)
@@ -309,6 +402,14 @@ def main():
             return 0
         print("⛔⛔ ROSSO — %s" % ", ".join(n for n, v in (("A", ok_a), ("B", ok_b), ("R", ok_r)) if not v))
         return 1
+    except AttrezzoMancante as e:
+        # ⛔ La seconda rete: un attrezzo sfuggito al controllo di prima.
+        #    ⇒ 3, anche col guasto innestato (dove altrimenti sarebbe stato 0).
+        print("   ⛔ un attrezzo del BANCO manca nella sessione: %s"
+              " ⇒ non ho potuto guardare" % e)
+        if primo is not None and primo.poll() is None:
+            primo.kill()
+        return 3
     finally:
         sgombera(chi)
         for f in (esito_a, esito_r, segnale):
