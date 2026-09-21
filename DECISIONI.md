@@ -3156,6 +3156,16 @@ costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silen
 
 ### 4.7 ✅ ⛔⛔ Nessuno spegne il server — e «nessuno» comprende chi è davanti alla macchina
 
+> ### ⭐ 21 SETTEMBRE 2026 — E VALE ANCHE PER XFCE, detto dall'utente
+>
+> *«ricorda che anche in XFCE vanno disabilitate le voci di standby, lockscreen, reset e
+> spegnimento»* ⇒ le stesse quattro di GNOME e KDE: **sospensione, blocco schermo, riavvio,
+> spegnimento**. ⛔ **«Esci» resta** — §4.1-ter, è l'unico gesto che termina la sessione.
+> ⚠ Su XFCE **non esiste un KIOSK** come su KDE (`STUDI.md` §xfce §10.4): le voci si tolgono
+> per ogni strada da cui si raggiungono (menu, pulsante del pannello, dialogo di uscita, gestore
+> dell'energia), e ⛔ **ogni chiave scritta si rilegge** (§10.6: `xfconf-query` esce con zero
+> anche quando il demone ha rifiutato). ⚠ «Cambia utente» non è stato nominato: resta aperto.
+
 > ### ⛔⛔ E IL 25 AGOSTO 2026 QUESTA DECISIONE HA TROVATO UN BUCO — **chi aggiorna**
 >
 > `[M]` Fermando l'unità del server per **aggiornarlo**, alle 18:14:29, **sono morte tutte le

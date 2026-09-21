@@ -463,7 +463,7 @@ Le cinque di `STUDI.md` §xfce §13, più le tre uscite dal sopralluogo del 20 s
 | **2** | il ridimensionamento a caldo si accende subito o dopo? | incremento 6 |
 | **3** | il cursore dentro l'immagine o sul canale del puntatore? | incremento 3 |
 | **4** | il bus di sessione: `dbus-run-session` (privato) o bus d'utente? ⛔ Col privato la vitalità della sessione è **cieca** per il prodotto com'è scritto oggi | incremento 1, dopo CP2 |
-| **5** | le voci pericolose del pannello: quante se ne tolgono? | incremento 4 |
+| ~~**5**~~ | ✅ **DECISA il 21 set 2026, dall'utente**: *«anche in XFCE vanno disabilitate le voci di standby, lockscreen, reset e spegnimento»* — le stesse di GNOME e KDE (`DECISIONI.md` §4.7). ⛔ **«Esci» resta** (§4.1-ter): è l'unico gesto che termina la sessione. ⚠ «Cambia utente» non è stato nominato: resta aperto | in corso |
 | **6** | «viva» = il nome sul bus, oppure `StateChanged(0→1)`? Il primo è un ramo di due righe; il secondo è un **sorvegliante di segnali**, che in `sessione.c` non esiste | incremento 1, dopo CP2 |
 | **7** | quanto cresce `Contenitore.xfce`: pannello e scrivania già nell'incremento 1? | incremento 1 |
 
