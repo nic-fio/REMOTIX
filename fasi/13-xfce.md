@@ -662,11 +662,13 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 - ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
   gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
   l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre
-  ricette. ⚠ Le immagini si rifanno **dopo** la rete in corso, non durante.
+  ricette. ⭐ `[M]` 21 set 2026, sera: immagini rifatte, `nictest` in `sudo video render` nelle tre
+  scatole, `sudo` risponde, e Firefox entra come `nictest` su **8511 · 8512 · 8513**: PASS su tutti e
+  tre. ⏳ Restano le prove dell'utente.
 - ✅ **«Cambia utente»** — ⭐ DECISO dall'utente il 21 set 2026, sera: esce **su tutti i desktop**,
   resta solo «Esci». `[M]` binario `eb327ffd`: XFCE `-switch-user` nel pannello e
   `ShowSwitchUser=false`; GNOME `disable-user-switching=true` con `always-show-log-out=true`; KDE
-  già dalla fase 12. ⏳ la rete completa dopo la modifica (GNOME è stato toccato).
+  già dalla fase 12. ⭐ `[M]` rete **gnome+xfce** (ridotta per decisione dell'utente: KDE non passa dal codice toccato), innesco `fase13-cambia-utente`, 9 275 s: **GNOME 27/27 · XFCE 27/27 · guasti 26/26 visti**, C10 C12 C15 C16 verdi sul portatile.
 - `[?]` **La sessione del prodotto è `closing` dalla nascita**, su ogni desktop («logged out.
   Waiting for processes to exit» nel giornale subito dopo «New session»). Non è di questa fase né
   una regressione (GNOME è uguale), ma con `KillUserProcesses=yes` logind potrebbe trattarla da
