@@ -390,6 +390,59 @@ dice — invece di dedurlo da come appare. ⚠ E se fosse arrivato fino al
 codificatore, l'utente avrebbe visto un desktop blu senza che una riga lo
 spiegasse.
 
+#### CP3/CP4 — `[M]` 21 set 2026: **C1(xfce) è VERDE**
+
+⭐⭐ **La seconda sorgente entra SOTTO la porta della cattura, non accanto.** Come gli appunti, che
+in casa hanno già due costruttori dietro una porta sola. ⇒ `figlio.c` usa quell'interfaccia in **35
+punti e non ne cambia nessuno**: GNOME e KDE restano testualmente quelli di prima.
+
+| file | che cosa |
+|---|---|
+| `src/wlroots.c` · `.h` | il client Wayland: `zwlr_screencopy` v3 (i fotogrammi) e `zwlr_output_manager` v4 (la misura) |
+| `src/cattura.h` | `cattura_avvia_wlr()`: il costruttore dell'altro verso |
+| `src/cattura.c` | il campo `wlr` in cima a `struct Cattura`, e una guardia in cima a ogni funzione pubblica |
+| `src/figlio.c` | il terzo ramo del palco: su XFCE **non c'è niente da aprire**, la sorgente è la cattura |
+| `banchi/13-w1-un-fotogramma.c` | il banco, che lega **gli stessi oggetti del prodotto** (R12.3) |
+
+| la prova | misurato |
+|---|---|
+| **C1(xfce)** | ⭐⭐ **VERDE**, 3 sessioni su 3 |
+| C1(gnome) · C1(kde) | ⭐ verdi, 3 su 3 ciascuna |
+| i fotogrammi **veri** | ⭐ **530 consegnati, 19 chiavi, 0 guasti** |
+
+⛔ **E quell'ultima riga è quella che conta**: C1 legge una riga di registro, e una riga si può
+scrivere. I fotogrammi no. ⇒ Si contano apposta, perché il verde di una maglia che guarda il
+registro non vale finché non si è visto passare il traffico.
+
+#### ⛔⛔ Tre difetti trovati PROVANDO, e due RILEGGENDO
+
+Provando:
+1. `mutter_monitor_cerca(NULL)` — un'asserzione fallita nel registro. Rumore che somiglia a un
+   guasto: su wlroots il monitor è l'uscita del compositore, e non c'è nessuna sessione di Mutter.
+2. Il testimone *«formato negoziato: LxA»* lo scriveva la richiamata di PipeWire, che qui non
+   esiste. ⇒ Senza, la maglia avrebbe detto *«nata cieca»* di una sessione che si vede benissimo.
+3. La divergenza fra tela **chiesta** (1920×1080) e uscita **vera** (1280×720): adesso si dichiara
+   alla prima riga.
+
+⭐ Rileggendo il proprio codice, **prima che si vedessero**:
+
+4. **Il buffer riusato dopo una copia abbandonata.** Mollato un fotogramma dopo aver mandato `copy`,
+   il compositore può scriverci dentro **più tardi**: riusarlo dà un fotogramma vecchio in mezzo ai
+   nuovi — ⛔ non un errore, uno **sfarfallio**. È `LEZIONI.md` §8 (non era *acquire*, era
+   *release*). ⇒ Chi abbandona dopo `copy` marca il buffer.
+5. ⛔⛔ **Il canale scambiato, arrivato fino al codificatore.** `figlio.c` dichiara
+   `CODIFICATORE_PIXEL_BGRX` — `B G R x` in memoria, inchiodato dalla fase 2 — e labwc offre per
+   primo **XBGR8888**, che è `R G B x`. ⇒ **L'utente avrebbe visto il desktop con il rosso e il blu
+   scambiati**, senza una riga che lo spiegasse.
+   ⭐ E la cura non è insegnare un formato nuovo al codificatore, che GNOME e KDE usano: è
+   **chiedere quello che si sa già leggere**. Su screencopy v3 il compositore ne offre più d'uno
+   apposta, e `buffer_done` esiste per questo. ⚠ E l'elenco offerto finisce nel registro, perché il
+   giorno che i canali escono storti la prima domanda è *«che cosa offriva il compositore?»*.
+
+⭐ **La stessa trappola, due volte in un giorno, e la seconda non è arrivata all'utente.** La prima
+l'aveva pagata il banco (cartelle **arancioni** che sembravano giuste, e invece erano blu). ⇒ È
+`LEZIONI.md` §1.9 nella forma peggiore: **un risultato plausibile non è una conferma**.
+
 #### ⚠ E l'ordine con l'incremento 6 va deciso qui, non subito
 
 Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1920×1080** non è
