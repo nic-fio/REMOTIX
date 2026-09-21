@@ -6305,12 +6305,18 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	{
 		GError *sbaglio_app = NULL;
 
-		/* ⭐ FASE 12 — su KDE gli appunti passano da KWin (`appunti_kde.c`). */
-		palco_appunti = palco_kwin
-		                    ? appunti_apri_kde(&sbaglio_app)
-		                    : appunti_apri(mutter_bus(mut),
-		                                   mutter_percorso_controllo(mut),
-		                                   &sbaglio_app);
+		/* ⭐ FASE 13 — su XFCE gli appunti passano da labwc, con lo stesso
+		 *    protocollo di wlroots che KDE usa gia' (`appunti_kde.c`).  ⛔ Il
+		 *    ramo nuovo viene PRIMA, e i due di sotto sono quelli di prima.
+		 * ⭐ FASE 12 — su KDE gli appunti passano da KWin (`appunti_kde.c`). */
+		if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+			palco_appunti = appunti_apri_wlroots(&sbaglio_app);
+		else
+			palco_appunti = palco_kwin
+			                    ? appunti_apri_kde(&sbaglio_app)
+			                    : appunti_apri(mutter_bus(mut),
+			                                   mutter_percorso_controllo(mut),
+			                                   &sbaglio_app);
 		if (palco_appunti) {
 			appunti_ascolta(palco_appunti, appunti_dalla_sessione,
 			                appunti_vuole_incollare, NULL);

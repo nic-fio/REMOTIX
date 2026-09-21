@@ -135,7 +135,7 @@ XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventa
 | **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ⏳ |
 | **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | ⏳ |
 | **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | ⏳ |
-| **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | ⏳ |
+| **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | 🔧 scritto e costruito, **non provato** (21 set) |
 | **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | ⏳ |
 
 ⚠ **L'ordine 2-3 può invertirsi**, e la ragione va scritta il giorno che si decide: su KDE la
@@ -451,6 +451,35 @@ Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1
 cattura. **Si decide col primo fotogramma in mano**, non prima.
 
 ---
+
+### Incremento 5 — gli appunti su XFCE *(scritto e costruito il 21 set 2026; C17(xfce) non ancora girata)*
+
+⭐ **Il modulo c'era già**: `src/appunti_kde.c` parla `zwlr_data_control_manager_v1`, che è di
+wlroots. La modifica è di cinque file e non tocca il protocollo:
+
+- `appunti_kde.c`: l'apertura diventa `apri_su(compositore)`, con due porte —
+  `appunti_kde_apri()` («KWin») e `appunti_kde_apri_wlroots()` («labwc»). Il nome serve **solo** alle
+  tre righe di registro; su KDE escono uguali lettera per lettera;
+- `appunti.c/.h`: `appunti_apri_wlroots()`, lo stesso involucro di `appunti_apri_kde()`;
+- `figlio.c`: se `sessione_desktop() == SESSIONE_DESKTOP_XFCE` si apre quella, **prima**; il ramo
+  KWin/Mutter di sotto è quello di prima.
+
+⚠ **`kwin_display_apri()` resta**, dichiarato: prende `WAYLAND_DISPLAY` o il primo `wayland-0..9` che
+risponde, senza guardare chi c'è dietro `[R]` (`kwin.c`). Spostarlo in un file neutro vorrebbe dire
+toccare `kwin.c`, che porta il video di KDE, per guadagnare solo un nome. ⇒ La riserva 1 di
+`STUDI.md` §xfce §8 è **chiusa**.
+
+**Le altre riserve, rilette sul sorgente di wlroots 0.18.2** (`sources.debian.org`, 21 set 2026):
+
+| riserva | esito |
+|---|---|
+| l'eco | ⭐ **certa, e la guardia regge** `[R]`: ogni device è iscritto a `set_selection` senza filtro (`wlr_data_control_v1.c:459-468`); `wlr_seat_set_selection` distrugge la sorgente vecchia (⇒ `cancelled`, `:145`) **prima** di emettere il segnale, e le due notizie viaggiano sulla stessa connessione |
+| MIME duplicati ⇒ ciclo | ⭐ **non può scattare** `[R]`: wlroots scarta solo i duplicati `strcmp`-uguali (`:38-45`), e noi offriamo sempre e solo i tre tipi di `TIPI_TESTO`, tutti diversi. Era un rischio di v1, che rigirava l'elenco del client. ⚠ E se la guardia saltasse non ci sarebbe comunque un ciclo: la lettura della nostra sorgente dalla pompa che la serve scade in 5 s senza consegnare niente |
+| `onlyReplaceEmpty` | ⭐ **nessun danno** `[R]`: non lo offriamo e non lo leggiamo mai |
+| la selezione che muore con chi ha copiato | ⚠ **vera, e non è nostra**: in XFCE su Wayland non c'è gestore. Arriva `selection(NULL)` ⇒ al client non si manda niente, e il client tiene l'ultimo testo. La **nostra** sorgente (il testo del client) vive quanto il figlio |
+
+⛔ **Per provarlo** (C17 su xfce) la scatola deve avere gli attrezzi degli appunti — vedi il punto 5
+del banco qui sopra: senza `wl-clipboard` la maglia legge `""` e non lo dice.
 
 ## 🔸 Le scelte che aspettano l'utente
 

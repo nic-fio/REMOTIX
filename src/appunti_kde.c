@@ -28,7 +28,10 @@
 
 /* La stessa fila di `appunti.c`, e nello stesso ordine: il primo dichiara la
  * codifica.  ⛔ Mai `application/x-kde-onlyReplaceEmpty`: KWin annullerebbe in
- * silenzio la selezione (`seat.cpp:200-226`). */
+ * silenzio la selezione (`seat.cpp:200-226`).
+ * ⭐ FASE 13 — su labwc quel tipo non esiste affatto (`STUDI.md` §xfce §8.3):
+ *    e noi non lo offriamo e non lo leggiamo mai (questa fila e' l'unica), ⇒
+ *    nessun danno possibile, `[R]`. */
 static const char *const TIPI_TESTO[] = {
 	"text/plain;charset=utf-8",
 	"UTF8_STRING",
@@ -42,6 +45,10 @@ typedef struct {
 } Offerta;
 
 struct AppuntiKde {
+	/* ⭐ FASE 13 — chi c'e' dall'altra parte, SOLO per le righe di registro:
+	 *    «KWin» su KDE (le righe restano quelle di prima, lettera per lettera),
+	 *    «labwc» su XFCE.  ⛔ Nessun ramo del protocollo lo guarda. */
+	const char *compositore;
 	struct wl_display *display;
 	char socket[64];
 	struct wl_registry *registro;
@@ -93,7 +100,21 @@ static bool offerta_ha(const Offerta *offerta, const char *mime)
 	return false;
 }
 
-/* L'annuncio e' il nostro?  Stessi tipi, tutti e soli. */
+/* L'annuncio e' il nostro?  Stessi tipi, tutti e soli.
+ *
+ * ⭐ FASE 13 — la riserva di `STUDI.md` §xfce §8.2 («wlroots scarta i MIME
+ *    duplicati e la guardia salta ⇒ ciclo») qui NON puo' scattare, `[R]`:
+ *    · wlroots scarta un `offer` solo se e' `strcmp`-uguale a uno gia' dato
+ *      (`wlr_data_control_v1.c:38-45`, 0.18.2), e ripete i tipi all'offerta
+ *      senza filtro (`:346-351`);
+ *    · i tipi che offriamo sono SEMPRE e SOLO `TIPI_TESTO`, tre stringhe
+ *      diverse anche senza badare alle maiuscole: nessun duplicato da
+ *      scartare ⇒ l'eco torna con tre tipi, e il conto `len == 3` regge.
+ *    La riserva era di v1, che rigirava l'elenco dei tipi del CLIENT.
+ *    ⚠ E anche se la guardia saltasse non ci sarebbe un ciclo: leggere la
+ *      nostra sorgente dalla pompa che la serve non consegna niente (5 s di
+ *      attesa, poi «non ha scritto niente»), quindi al client non risale
+ *      nessun testo da ri-offrire. */
 static bool tipi_nostri(const Offerta *offerta)
 {
 	guint quanti = 0;
@@ -145,6 +166,20 @@ static void su_selezione(void *dati, struct zwlr_data_control_device_v1 *disposi
 	 *    di v1 e' di STATO: finche' la sorgente e' ancora nostra (nessun
 	 *    `cancelled`), un annuncio coi nostri tipi e' il nostro.  Quando
 	 *    qualcun altro copia, il `cancelled` arriva PRIMA dell'annuncio.
+	 * ⭐ FASE 13 — su labwc (wlroots 0.18.2) lo stesso, `[R]` sul sorgente:
+	 *    ogni device e' iscritto a `seat->events.set_selection` senza filtro
+	 *    sull'originatore (`wlr_data_control_v1.c:459-468`) ⇒ l'eco e' certa;
+	 *    e `wlr_seat_set_selection` DISTRUGGE la sorgente vecchia (⇒
+	 *    `cancelled`, `wlr_data_control_v1.c:145`) prima di emettere il
+	 *    segnale, nella stessa funzione (`wlr_data_device.c`).  Le due
+	 *    notizie viaggiano sulla stessa connessione ⇒ arrivano in quell'ordine.
+	 * ⚠ Quando chi aveva copiato MUORE, arriva `selection(NULL)`: qui sotto
+	 *   `corrente` diventa NULL e `in_arrivo` resta NULL ⇒ al client non si
+	 *   manda niente, e `ultimo` resta il testo di prima (e' quello che si
+	 *   rende alla sessione se il client non ha niente).  In XFCE su Wayland
+	 *   non c'e' gestore degli appunti: la clipboard del desktop muore con
+	 *   chi ha copiato, e NON e' compito nostro tenerla viva.  La NOSTRA
+	 *   sorgente invece vive quanto il figlio.
 	 */
 	if (appunti->nostra && tipi_nostri(offerta)) {
 		g_mutex_unlock(&appunti->stato);
@@ -170,8 +205,11 @@ static void su_selezione_primaria(void *dati, struct zwlr_data_control_device_v1
 
 static void su_finito(void *dati, struct zwlr_data_control_device_v1 *dispositivo)
 {
-	registro_dice(REG_APPUNTI, "⛔ KWin ha chiuso il canale degli appunti: niente piu' "
-	                           "copia-incolla in questa sessione");
+	const AppuntiKde *appunti = dati;
+
+	registro_dice(REG_APPUNTI, "⛔ %s ha chiuso il canale degli appunti: niente piu' "
+	                           "copia-incolla in questa sessione",
+	              appunti->compositore);
 }
 
 static const struct zwlr_data_control_device_v1_listener ascolto_dispositivo = {
@@ -480,10 +518,17 @@ static gpointer thread_pompa(gpointer dati)
 /* ------------------------------------------------------------------ *
  * La porta
  * ------------------------------------------------------------------ */
-AppuntiKde *appunti_kde_apri(GError **sbaglio)
+/* ⭐ FASE 13 — la stessa apertura per le due famiglie: cambia solo il nome
+ *    nelle righe.  ⚠ `kwin_display_apri()` resta, e su labwc va bene cosi'
+ *    com'e': prende `WAYLAND_DISPLAY` o il primo `wayland-0..9` che risponde,
+ *    SENZA guardare chi c'e' dietro (`kwin.c`, `[R]`).  Spostarla in un file
+ *    neutro vorrebbe dire toccare `kwin.c`, che porta il video di KDE, per
+ *    guadagnare solo un nome. */
+static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 {
 	AppuntiKde *appunti = g_new0(AppuntiKde, 1);
 
+	appunti->compositore = compositore;
 	appunti->sveglia[0] = appunti->sveglia[1] = -1;
 	g_mutex_init(&appunti->stato);
 	g_mutex_init(&appunti->lucchetto);
@@ -501,7 +546,7 @@ AppuntiKde *appunti_kde_apri(GError **sbaglio)
 	wl_display_roundtrip(appunti->display);
 	if (!appunti->gestore) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "KWin non espone zwlr_data_control_manager_v1");
+		            "%s non espone zwlr_data_control_manager_v1", compositore);
 		goto guasto;
 	}
 	if (!appunti->seat) {
@@ -527,14 +572,24 @@ AppuntiKde *appunti_kde_apri(GError **sbaglio)
 		appunti->sveglia[0] = appunti->sveglia[1] = -1;
 	appunti->pompa = g_thread_new("remotix-appunti", thread_pompa, appunti);
 
-	registro_dice(REG_APPUNTI, "⭐ appunti agganciati a KWin sul socket «%s» con "
+	registro_dice(REG_APPUNTI, "⭐ appunti agganciati a %s sul socket «%s» con "
 	                           "zwlr_data_control_manager_v1 v%u",
-	              appunti->socket, appunti->versione_gestore);
+	              compositore, appunti->socket, appunti->versione_gestore);
 	return appunti;
 
 guasto:
 	appunti_kde_chiudi(appunti);
 	return NULL;
+}
+
+AppuntiKde *appunti_kde_apri(GError **sbaglio)
+{
+	return apri_su("KWin", sbaglio);
+}
+
+AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio)
+{
+	return apri_su("labwc", sbaglio);
 }
 
 void appunti_kde_chiudi(AppuntiKde *appunti)

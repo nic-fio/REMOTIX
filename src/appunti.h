@@ -158,6 +158,9 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
  *    da passare, KWin si raggiunge sul socket Wayland dell'utente.  Da li' in
  *    poi si usano le stesse funzioni di sotto. */
 Appunti *appunti_apri_kde(GError **sbaglio);
+/* ⭐ FASE 13 — e su XFCE (labwc): lo stesso modulo di KDE, che parla gia' il
+ *    protocollo di wlroots (`appunti_kde.h`). */
+Appunti *appunti_apri_wlroots(GError **sbaglio);
 
 void appunti_chiudi(Appunti *appunti);
 
