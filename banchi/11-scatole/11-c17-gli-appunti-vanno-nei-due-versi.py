@@ -62,7 +62,30 @@ PAROLA = "provanic2026"
 # ⚠ Dove l'arbitro racconta la sua copia: il banco lo LEGGE invece di dormire
 #   un tempo fisso — con GTK la copia parte quando arriva il fuoco, e il fuoco
 #   arriva col clic del cliente (ogni 4 s), non a un'ora decisa da noi.
-PROVA_COPIA = "/tmp/remotix-arbitro-copia.log"
+#
+# ⛔⛔ E IL FILE E' DELL'INQUILINO, non uno per tutti — 21 set 2026.
+#   Qui c'era `PROVA_COPIA = "/tmp/remotix-arbitro-copia.log"`: UN nome fisso,
+#   scritto e cancellato DALL'INQUILINO (il copione gira con `runuser -u chi`),
+#   e ⛔ mai tolto alla fine.  `[R]` dal codice, e la stessa forma di
+#   `/tmp/mozilla` (C2): il primo `c17uNNN` lo crea, `userdel` lo lascia a un
+#   uid senza nome, e `/tmp` ha il bit «sticky» ⇒ un inquilino con un ALTRO uid
+#   non puo' ne' toglierlo (`rm -f` fallisce in silenzio) ne' riscriverlo
+#   (`>` rifiutato) ⇒ il guscio non esegue il comando della copia ⇒ ⛔ **B e R
+#   rossi, cioe' «il server non annuncia la copia fatta nel desktop»**, mentre
+#   nessuno aveva copiato niente.
+#   ⚠ E morde SOLO in una scatola vecchia: finche' gli utenti restano gli stessi
+#     `useradd` ridà a ogni `c17u` lo stesso uid (4012) e il file resta suo;
+#     ⛔ basta un inquilino rimasto da un giro morto (`[M]` 21 set: in kde
+#     `user@4024` e `user@4025` falliti, cioe' uid ben oltre 4012) e l'uid di
+#     C17 si sposta.  `[?]` il nesso diretto non e' stato misurato dentro la
+#     scatola vecchia: e' la sola scrittura condivisa fra inquilini diversi
+#     che C17 fa, e combacia con la bisezione (scatola nuova ⇒ verde 2 su 2).
+# ⭐ Ora il nome porta l'inquilino, come `esito_a` ed `esito_r`, e si toglie
+#   alla fine: nessun giro lascia niente al giro dopo.
+def prova_copia(chi):
+    return "/tmp/%s-arbitro-copia.log" % chi
+
+
 ARBITRO_GTK = ("env GDK_BACKEND=wayland python3 " +
                os.path.join(QUI, "appunti-gtk.py"))
 
@@ -86,11 +109,11 @@ def arbitro(chi):
         return {"nome": "wl-clipboard",
                 "incolla": "timeout 8 wl-paste -n 2>/dev/null",
                 "copia": "pkill -x wl-copy; printf %%s '%s' | timeout 90 wl-copy "
-                         ">" + PROVA_COPIA + " 2>&1 &",
+                         ">" + prova_copia(chi) + " 2>&1 &",
                 "attesa_copia": 3, "dice": ""}
     return {"nome": "GTK col fuoco (il clic del cliente)",
             "incolla": ARBITRO_GTK + " incolla 2>/dev/null",
-            "copia": ARBITRO_GTK + " copia '%s' 60 >" + PROVA_COPIA + " 2>&1 &",
+            "copia": ARBITRO_GTK + " copia '%s' 60 >" + prova_copia(chi) + " 2>&1 &",
             "attesa_copia": 30, "dice": "copiato A FUOCO"}
 
 
@@ -264,7 +287,7 @@ def main():
         print("⛔ %s ⇒ non ho potuto guardare" % perche)
         sgombera(chi)
         return 3
-    for f in (esito_a, esito_r, segnale):
+    for f in (esito_a, esito_r, segnale, prova_copia(chi)):
         if os.path.exists(f):
             os.unlink(f)
 
@@ -338,7 +361,7 @@ def main():
 
         # B — sessione → dispositivo, a cliente attaccato
         if not a.senza_copia:
-            nella_sessione(chi, "rm -f " + PROVA_COPIA)
+            nella_sessione(chi, "rm -f " + prova_copia(chi))
             nella_sessione(chi, arb["copia"] % testo_b)
             # ⚠ Si aspetta che la copia sia AVVENUTA, non un tempo fisso: con GTK
             #   parte quando arriva il fuoco, e il fuoco arriva col clic del
@@ -350,7 +373,7 @@ def main():
                 time.sleep(1)
                 if not arb["dice"]:
                     break
-                detto = nella_sessione(chi, "cat " + PROVA_COPIA + " 2>/dev/null") or ""
+                detto = nella_sessione(chi, "cat " + prova_copia(chi) + " 2>/dev/null") or ""
                 if arb["dice"] in detto:
                     print("   la copia nella sessione e' avvenuta dopo %.0f s"
                           % (time.time() - t1))
@@ -412,7 +435,7 @@ def main():
         return 3
     finally:
         sgombera(chi)
-        for f in (esito_a, esito_r, segnale):
+        for f in (esito_a, esito_r, segnale, prova_copia(chi)):
             if os.path.exists(f):
                 os.unlink(f)
 
