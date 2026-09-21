@@ -74,6 +74,27 @@ Input *input_apri_kwin(struct KwinSessione *kwin, uint32_t tela_l, uint32_t tela
                        char **errore);
 
 /*
+ * ⭐ FASE 13, INCREMENTO 3 — lo stesso contratto su wlroots (labwc, XFCE).
+ *
+ * ⛔ Qui `libei` NON esiste (`STUDI.md` §xfce §7, `[✗]`): il trasporto sono la
+ *    tastiera e il puntatore virtuali di Wayland (`wlr_input.h`).  Non serve
+ *    nessuna sessione da cui chiedere il canale: ci si collega al compositore
+ *    dell'utente come qualunque suo client.
+ *
+ * ⭐ Le altre funzioni di questo file NON cambiano firma: chi cuce (`figlio.c`)
+ *    cambia in un punto solo, il costruttore.  Dentro, le funzioni pubbliche
+ *    passano la mano in cima, come fanno gli appunti con `appunti_apri_kde()`.
+ *
+ * ⚠ E le due differenze di comportamento che chi cuce deve sapere:
+ *   · `input_disposizione()` NON tocca le impostazioni della sessione: la
+ *     disposizione diventa la keymap della NOSTRA tastiera virtuale, che labwc
+ *     consegna alle applicazioni insieme ai nostri tasti (§7.4);
+ *   · non ci sono ricambi di dispositivo né orfani: su wlroots i dispositivi
+ *     sono nostri, e il compositore non li ricrea.
+ */
+Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore);
+
+/*
  * ⛔ I ricambi silenziosi di `libei`, che `STUDI.md` §gnome §9 misura: un cambio di
  *    keymap distrugge e ricrea il dispositivo tastiera, un cambio di geometria
  *    tutti i dispositivi assoluti — e il puntatore al dispositivo vecchio
