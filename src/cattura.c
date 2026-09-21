@@ -16,6 +16,8 @@
 #include "cursore.h"
 #include "registro.h"
 
+
+#include "wlroots.h"
 #define AREA "cattura"
 
 /* ⛔ Lo STESSO orologio di `figlio.c` (`ora_monotona_us`) e di `codificatore.c`
@@ -103,6 +105,19 @@ static uint64_t adesso_us(void)
 
 struct Cattura
 {
+	/*
+	 * ⭐⭐ FASE 13 — LA SECONDA SORGENTE, e sta IN CIMA apposta.
+	 *
+	 * Quando questo campo c'è, la `Cattura` non è un flusso PipeWire: è un
+	 * client Wayland che TIRA i fotogrammi (`wlroots.h`).  ⛔ Tutti i campi
+	 * qui sotto restano a zero e non si toccano, e ogni funzione pubblica
+	 * passa la mano in cima — così il codice di GNOME e di KDE resta
+	 * testualmente quello di prima.
+	 */
+	WlrPalco *wlr;
+	WlrFotogramma wlr_ultimo;
+	gboolean wlr_ultimo_noto;
+
 	struct pw_thread_loop *ciclo;
 	struct pw_context *contesto;
 	struct pw_core *nucleo;
@@ -1481,6 +1496,74 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
  *  Ciclo di vita
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ *  ⭐⭐ LA SECONDA SORGENTE — wlroots, il verso a tiro.  `cattura.h`.
+ * ------------------------------------------------------------------ */
+
+Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
+                           uint32_t fotogrammi_al_secondo, CatturaStrada strada,
+                           CatturaColore colore, GError **sbaglio)
+{
+	Cattura *c = g_new0(Cattura, 1);
+	uint32_t uscita_l = 0, uscita_a = 0;
+
+	c->wlr = wlr_apri(sbaglio);
+	if (!c->wlr) {
+		g_free(c);
+		return NULL;
+	}
+	c->strada = strada;
+	c->colore = colore;
+	c->chiesta_larghezza = larghezza;
+	c->chiesta_altezza = altezza;
+	c->chiesti_al_secondo = fotogrammi_al_secondo;
+
+	/*
+	 * ⛔⛔ E LA DIVERGENZA SI DICHIARA SUBITO, non quando si vedrà lo schermo
+	 *     della misura sbagliata.
+	 *
+	 * `[M]` 20 set 2026: un'uscita headless di labwc nasce **1280×720**
+	 * cablata, e nessun protocollo ne crea una della misura voluta.  ⇒ Se il
+	 * cliente ne ha chiesta un'altra, i pixel che arriveranno **non sono di
+	 * quella misura** — e chi legge il registro deve saperlo dalla prima riga,
+	 * non dedurlo da un'immagine che non torna.
+	 */
+	wlr_misura(c->wlr, &uscita_l, &uscita_a);
+	if (uscita_l != larghezza || uscita_a != altezza)
+		registro_dice(AREA,
+		              "⛔ wlroots: la tela CHIESTA è %ux%u ma l'uscita È %ux%u — su "
+		              "questa famiglia la misura non entra nella nascita, si dà dopo "
+		              "col protocollo dell'uscita.  ⚠ Fino ad allora i fotogrammi "
+		              "sono di %ux%u, e non è un guasto del codificatore",
+		              larghezza, altezza, uscita_l, uscita_a, uscita_l, uscita_a);
+
+	if (strada == CATTURA_STRADA_SCHEDA)
+		registro_dice(AREA,
+		              "⚠ wlroots: è stata chiesta la strada della SCHEDA, e questa "
+		              "stesura prende i pixel dalla MEMORIA — dichiarato in "
+		              "`wlroots.c`.  ⛔ La copia c'è, e i numeri del tratto la "
+		              "portano dentro");
+
+	registro_dice(AREA,
+	              "⭐ wlroots: sorgente a TIRO aperta sull'uscita «%s» — un fotogramma "
+	              "per richiesta, nessun nodo PipeWire.  Il ritmo lo decide il nostro "
+	              "ciclo, non il compositore",
+	              wlr_uscita_nome(c->wlr));
+	/*
+	 * ⛔⛔ E LA RIGA DEL FORMATO SI DICE ANCHE QUI, con le stesse parole.
+	 *
+	 * Non è decorazione: «`formato negoziato: LxA`» è **il testimone** che C1
+	 * legge per dire che il monitor è nato (`11-c1-nasce-e-si-vede.py`).  ⚠ Sul
+	 * verso a spinta la scrive la richiamata del formato di PipeWire, che qui
+	 * non esiste — e senza questa riga la maglia direbbe «nata cieca» di una
+	 * sessione che si vede benissimo.
+	 * ⇒ Stesse parole, perché chi le cerca ne conosce una sola forma.
+	 */
+	registro_dice(AREA, "formato negoziato: %ux%u %s (%d bit per canale), modificatore 0x0",
+	              uscita_l, uscita_a, "wlroots-shm", 8);
+	return c;
+}
+
 Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
                        uint32_t fotogrammi_al_secondo, CatturaStrada strada, CatturaColore colore,
                        CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
@@ -1667,6 +1750,18 @@ guasto:
 
 CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza)
 {
+	/* ⛔ FASE 13 — su wlroots la misura NON si cambia al flusso: si cambia
+	 *    all'uscita, con un altro protocollo (`zwlr_output_manager_v1`, `[M]`
+	 *    v4 su labwc).  ⇒ Qui si dice di no **dicendolo**, invece di tornare
+	 *    un esito che farebbe credere a chi chiama di aver ottenuto qualcosa. */
+	if (cattura && cattura->wlr) {
+		registro_dice(AREA,
+		              "⛔ wlroots: %ux%u chiesta, ma su questa famiglia la misura si "
+		              "cambia all'USCITA e non al flusso — e quel pezzo non c'è "
+		              "ancora.  La cattura resta a quella di adesso",
+		              larghezza, altezza);
+		return CATTURA_RITELA_GUASTO;
+	}
 	uint8_t spazio[2048];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[5];
@@ -1793,6 +1888,11 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 
 gboolean cattura_risveglia(Cattura *cattura)
 {
+	/* ⭐ Sul verso a tiro il risveglio non serve: ogni fotogramma è già una
+	 *    richiesta nostra.  ⚠ Si torna TRUE perché la domanda è «posso
+	 *    chiedere?», e la risposta è sì — non perché «si è fatto qualcosa». */
+	if (cattura && cattura->wlr)
+		return TRUE;
 	uint8_t spazio[2048];
 	struct spa_pod_builder costruttore = SPA_POD_BUILDER_INIT(spazio, sizeof spazio);
 	const struct spa_pod *parametri[5];
@@ -1849,6 +1949,19 @@ void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *alt
 
 gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza)
 {
+	/* Su wlroots la misura «negoziata» è quella dell'uscita, e si sa subito. */
+	if (cattura && cattura->wlr) {
+		uint32_t l = 0, a = 0;
+
+		wlr_misura(cattura->wlr, &l, &a);
+		if (!l || !a)
+			return FALSE;
+		if (larghezza)
+			*larghezza = l;
+		if (altezza)
+			*altezza = a;
+		return TRUE;
+	}
 	if (!cattura || !cattura->formato_noto)
 		return FALSE; /* ⛔ «non e' stato negoziato», non «e' 0x0» */
 	if (larghezza)
@@ -2010,6 +2123,65 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 
 	g_return_val_if_fail(cattura != NULL && fuori != NULL, CATTURA_PRESA_GUASTO);
 	memset(fuori, 0, sizeof *fuori);
+
+	/*
+	 * ⭐⭐ FASE 13 — IL VERSO A TIRO: qui non si ASPETTA un fotogramma, si
+	 *      CHIEDE.  ⚠ E la copia c'è, dichiarata: questa stesura prende i pixel
+	 *      dalla memoria, e i microsecondi della copia stanno in `us_copia`
+	 *      come su ogni altra strada — un tratto senza il suo costo è un tratto
+	 *      che mentirà.
+	 */
+	if (cattura->wlr) {
+		WlrFotogramma w;
+		gint64 prima = g_get_monotonic_time(), dopo;
+		WlrEsito e = wlr_fotogramma(cattura->wlr, attesa_s, &w, sbaglio);
+
+		switch (e) {
+		case WLR_FOTOGRAMMA_SCADUTO:
+			/* ⛔ «non è arrivato niente» su una sorgente a tiro è uno ZERO
+			 *    legittimo, non un guasto: il desktop può essere fermo, e il
+			 *    compositore risponde lo stesso.  ⚠ Ma l'errore resta scritto. */
+			return CATTURA_PRESA_ZERO;
+		case WLR_FOTOGRAMMA_FALLITO:
+		case WLR_FOTOGRAMMA_ROTTO:
+			return CATTURA_PRESA_GUASTO;
+		case WLR_FOTOGRAMMA_PRESO:
+			break;
+		}
+
+		fuori->us_arrivo = (uint64_t)prima;
+		fuori->larghezza = w.larghezza;
+		fuori->altezza = w.altezza;
+		fuori->stride = w.stride;
+		fuori->byte = w.byte;
+		fuori->pts = (int64_t)(w.secondi * 1000000000ull + w.nanosecondi);
+		fuori->seq_nota = FALSE;
+		fuori->sulla_scheda = FALSE;
+		fuori->formato_drm = w.formato;
+		fuori->pixel = g_malloc(w.byte);
+		memcpy(fuori->pixel, w.pixel, w.byte);
+		dopo = g_get_monotonic_time();
+		fuori->us_copia = (uint64_t)(dopo - prima);
+
+		cattura->wlr_ultimo = w;
+		cattura->wlr_ultimo_noto = TRUE;
+		cattura->formato_noto = TRUE;
+
+		/* ⚠ `y_invertita`: se il compositore dice che le righe vanno lette dal
+		 *   basso e nessuno lo onora, l'immagine esce capovolta — un guasto che
+		 *   somiglia a un guasto del codificatore.  ⛔ Qui si DICHIARA e non si
+		 *   gira: girare 8 MB a ogni fotogramma costerebbe più della cattura, e
+		 *   il posto giusto è il codificatore, che sa farlo senza copiare.
+		 *   `[M]` 21 set 2026 su labwc headless la bandiera non si è mai accesa. */
+		if (w.y_invertita)
+			registro_dice(AREA,
+			              "⛔ wlroots: il compositore dichiara Y INVERTITA e questa "
+			              "stesura non la gira — l'immagine uscirà capovolta, e la "
+			              "causa è questa riga, non il codificatore");
+
+		cattura_consegna(cattura, &fuori->consegna);
+		return CATTURA_PRESA_FATTA;
+	}
 
 	if (cattura->stato != PW_STREAM_STATE_STREAMING && cattura->stato != PW_STREAM_STATE_PAUSED)
 	{
@@ -2210,6 +2382,42 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 	g_return_val_if_fail(cattura != NULL && fuori != NULL, FALSE);
 
 	memset(fuori, 0, sizeof *fuori);
+
+	if (cattura->wlr) {
+		const WlrFotogramma *w = &cattura->wlr_ultimo;
+
+		if (!cattura->wlr_ultimo_noto)
+			return FALSE; /* nessun fotogramma ancora: «non lo so» */
+		fuori->noto = TRUE;
+		fuori->strada_chiesta = cattura->strada;
+		/* ⛔ Il buffer è un `wl_shm` che abbiamo creato noi: il tipo non si
+		 *    «dichiara», si SA.  ⚠ E non si scrive MEMFD per analogia con
+		 *    PipeWire: è la stessa cosa (un memfd condiviso), e chiamarla con il
+		 *    nome che il lettore già conosce vale più di un nome nuovo. */
+		fuori->buffer_chiesto = CATTURA_BUFFER_MEMFD;
+		fuori->buffer_dichiarato = CATTURA_BUFFER_MEMFD;
+		fuori->buffer_dichiarato_grezzo = 0;
+		fuori->buffer_distinti = 1;
+		fuori->formato_grezzo = w->formato;
+		fuori->formato = cattura_colore_nome(w->formato);
+		fuori->bit_per_canale = 8;
+		fuori->fonte_bit = CATTURA_FONTE_FORMATO;
+		fuori->larghezza = w->larghezza;
+		fuori->altezza = w->altezza;
+		fuori->stride = w->stride;
+		fuori->stride_letto = TRUE;
+		fuori->byte = w->byte;
+		fuori->modificatore = 0;
+		/* ⛔ Il colore: il compositore non dichiara né range né matrice, e
+		 *    qui NON si inventa.  `pixel_misurati` resta FALSE: chi legge
+		 *    `nero`/`uniforme` deve trovarli non guardati, non falsi. */
+		fuori->fonte_range = CATTURA_FONTE_NON_DICHIARATA;
+		fuori->fonte_matrice = CATTURA_FONTE_NON_DICHIARATA;
+		fuori->range_misurato = CATTURA_RANGE_NON_MISURATO;
+		fuori->pixel_misurati = FALSE;
+		return TRUE;
+	}
+
 	if (!cattura->formato_noto)
 		return FALSE; /* ⛔ «non lo so ancora», e non «e' tutto a zero» */
 
@@ -2248,12 +2456,33 @@ gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori)
 
 void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori)
 {
+	if (cattura && cattura->wlr) {
+		WlrConteggi w;
+
+		wlr_conteggi(cattura->wlr, &w);
+		memset(fuori, 0, sizeof *fuori);
+		fuori->arrivati = w.presi;
+		/* ⚠ Gli altri campi restano a zero, e NON perché valgano zero: su
+		 *   questa sorgente non esistono (il libro del danno, il canale del
+		 *   cursore, i tipi di buffer di PipeWire).  Chi li legge trova zero e
+		 *   deve sapere che vuol dire «qui non c'è questa grandezza». */
+		return;
+	}
 	g_return_if_fail(cattura != NULL && fuori != NULL);
 	*fuori = cattura->conto;
 }
 
+const char *cattura_uscita_nome(Cattura *cattura)
+{
+	if (cattura && cattura->wlr)
+		return wlr_uscita_nome(cattura->wlr);
+	return NULL;
+}
+
 gboolean cattura_attiva(Cattura *cattura)
 {
+	if (cattura && cattura->wlr)
+		return TRUE;
 	return cattura && cattura->stato == PW_STREAM_STATE_STREAMING;
 }
 
@@ -2264,6 +2493,18 @@ const char *cattura_guasto(Cattura *cattura)
 
 void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
 {
+	/* ⛔ FASE 13 — su questa famiglia un canale per la FORMA del puntatore non
+	 *    esiste: c'è solo `overlay_cursor`, e il puntatore sta DENTRO
+	 *    l'immagine.  ⇒ La registrazione si accetta e non si richiamerà mai, e
+	 *    la riga lo dice — un silenzio qui sarebbe indistinguibile da un
+	 *    puntatore che non si muove. */
+	if (cattura && cattura->wlr) {
+		registro_dice(AREA,
+		              "wlroots: nessun canale per la forma del puntatore — su questa "
+		              "famiglia il puntatore è DENTRO i pixel (overlay_cursor).  Chi "
+		              "si è registrato non verrà richiamato, e non è un guasto");
+		return;
+	}
 	if (!cattura)
 		return;
 	g_mutex_lock(&cattura->lucchetto);
@@ -2274,6 +2515,8 @@ void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
 
 void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche)
 {
+	if (cattura && cattura->wlr)
+		return; /* niente canale del cursore: non c'è niente da non nascondere */
 	if (!cattura)
 		return;
 	g_mutex_lock(&cattura->lucchetto);
@@ -2285,6 +2528,20 @@ void cattura_ferma(Cattura *cattura)
 {
 	if (!cattura)
 		return;
+
+	if (cattura->wlr) {
+		WlrConteggi w;
+
+		wlr_conteggi(cattura->wlr, &w);
+		registro_dice(AREA,
+		              "wlroots: cattura chiusa — chiesti %" G_GUINT64_FORMAT
+		              ", presi %" G_GUINT64_FORMAT ", falliti %" G_GUINT64_FORMAT
+		              ", scaduti %" G_GUINT64_FORMAT,
+		              w.chiesti, w.presi, w.falliti, w.scaduti);
+		wlr_chiudi(cattura->wlr);
+		g_free(cattura);
+		return;
+	}
 
 	/*
 	 * Prima si ferma il thread, poi si distrugge il resto: fermandolo per primo

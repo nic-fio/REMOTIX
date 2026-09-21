@@ -437,6 +437,39 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
                        CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
                        GError **sbaglio);
 
+/*
+ * ⭐⭐ FASE 13 — LA SECONDA SORGENTE: wlroots, cioè XFCE e LXQt.
+ *
+ * ⛔⛔ E NON È UN SECONDO `cattura_avvia` CON UN PARAMETRO IN PIÙ: è l'altro
+ *     VERSO.  Da PipeWire i fotogrammi **arrivano**; da `zwlr_screencopy` si
+ *     **chiedono**, uno per uno.  Tutto quel che sta a valle di questa porta —
+ *     `cattura_prendi`, `cattura_consegna`, i conteggi — non vede la
+ *     differenza, ed è esattamente il punto: `figlio.c` usa questa interfaccia
+ *     in **trentacinque punti**, e rifarli a due vie vorrebbe dire mettere a
+ *     rischio GNOME e KDE per servire il desktop nuovo.
+ *
+ * ⭐ La forma ha un precedente in casa, e si copia da lì: gli **appunti** hanno
+ *   due costruttori (`appunti_apri()` e `appunti_apri_kde()`) e le funzioni
+ *   pubbliche passano la mano in cima.  Qui uguale.
+ *
+ * ⚠ Due cose NON mappano sull'altro verso, e non si fingono:
+ *   · **il cursore**: screencopy non ha un canale per la forma del puntatore.
+ *     Il puntatore sta DENTRO l'immagine, e chi si registra riceve una riga che
+ *     lo dice invece di un silenzio;
+ *   · **il ridimensionamento**: qui non si rinegozia un flusso, si cambia la
+ *     misura dell'**uscita** — un altro protocollo, e un altro incremento.
+ *
+ * ⛔ `nodo` non c'è perché non esiste: su questa famiglia non c'è nessun nodo
+ *    PipeWire da nessuna parte.
+ */
+Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
+                           uint32_t fotogrammi_al_secondo, CatturaStrada strada,
+                           CatturaColore colore, GError **sbaglio);
+
+/* Il nome dell'uscita che si sta guardando, o NULL se questa sorgente non ne
+ * ha uno da dire (su PipeWire il nome lo sa il produttore, non noi). */
+const char *cattura_uscita_nome(Cattura *cattura);
+
 /* ------------------------------------------------------------------ *
  *  ⭐⭐ IL CAMBIO DI MISURA A CALDO — `DECISIONI.md` §5.0-sexies
  * ------------------------------------------------------------------ */

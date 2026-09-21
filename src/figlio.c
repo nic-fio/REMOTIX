@@ -5906,7 +5906,24 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		return false;
 	}
 
-	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
+	/*
+	 * ⭐⭐ FASE 13 — SU XFCE NON C'E' NESSUN PALCO DA APRIRE PRIMA.
+	 *
+	 * Su GNOME si chiede a Mutter un monitor virtuale; su KDE si chiede a KWin
+	 * il flusso di quello che c'è.  ⛔ Su wlroots non c'è nessun flusso da
+	 * montare: si parla direttamente col compositore, e la sorgente è la
+	 * cattura stessa (`cattura_avvia_wlr`, più sotto).
+	 *
+	 * ⇒ Qui non si fa niente, e si dice perché: un ramo vuoto senza una riga
+	 *   somiglia a un ramo dimenticato.
+	 */
+	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE) {
+		registro_dettaglio(REG_FIGLIO,
+		                   "XFCE: nessun palco da aprire — su questa famiglia la "
+		                   "cattura parla col compositore senza passare da un "
+		                   "flusso montato");
+		vista_viva = true;
+	} else if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
 		/* ⭐ Su KDE il monitor c'e' gia' (`kwin_wayland --virtual`, nato con la
 		 *    sessione): si chiede a KWin il flusso di quello.  Il ramo GNOME
 		 *    qui sotto non si tocca. */
@@ -5954,9 +5971,15 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	                    "lo e' questo palco si rimonta sulla memoria dichiarandolo"
 	                  : "");
 	misura_del_palco(&tela_l, &tela_a);
-	cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
-	                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
-	                    NULL, &sbaglio);
+	/* ⭐ FASE 13 — l'altra porta: la sorgente a tiro.  ⛔ `nodo_del_palco()` non
+	 *    si chiama nemmeno, perché su questa famiglia un nodo non esiste. */
+	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
+		                        CATTURA_COLORE_BGRX, &sbaglio);
+	else
+		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
+		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
+		                    NULL, &sbaglio);
 	if (!cat) {
 		snprintf(p.guasto, sizeof p.guasto, "cattura: %s",
 		         sbaglio ? sbaglio->message : "(nessun dettaglio)");
@@ -6021,6 +6044,18 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		snprintf(p.monitor, sizeof p.monitor, "%s",
 		         kwin_nome_uscita(palco_kwin) ? kwin_nome_uscita(palco_kwin)
 		                                      : "(senza nome)");
+	} else if (!mut) {
+		/* ⭐ FASE 13 — su wlroots non c'è né una sessione di Mutter né un palco
+		 *    di KWin: il monitor è l'uscita del compositore, e la cattura l'ha
+		 *    già detto.  ⛔ Senza questo ramo si chiamava `mutter_monitor_cerca(NULL)`,
+		 *    che è un'asserzione fallita nel registro — rumore che somiglia a un
+		 *    guasto, `[M]` 21 set 2026. */
+		uint32_t l = 0, a = 0;
+
+		cattura_misura_negoziata(cat, &l, &a);
+		p.monitor_prima = p.monitor_dopo = 1;
+		snprintf(p.monitor, sizeof p.monitor, "%s",
+		         cattura_uscita_nome(cat) ?: "(l'uscita del compositore)");
 	} else if (mutter_monitor_cerca(mut)) {
 		guint prima = 0, dopo = 0;
 		double scala;
