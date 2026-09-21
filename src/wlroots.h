@@ -137,6 +137,32 @@ typedef struct {
 WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
                         GError **sbaglio);
 
+/*
+ * ⭐⭐ LA MISURA DELL'USCITA — e su questa famiglia si può, a differenza di KDE.
+ *
+ * ⛔⛔ E «LA VERITÀ LA DICE IL FOTOGRAMMA, NON L'ESITO DELLA RICHIESTA»
+ *     (`DECISIONI.md` §5.0-sexies, la regola rubata a neatvnc).
+ *
+ *     `[M]` 14 agosto 2026: chiedere a labwc la misura che l'uscita **ha già**
+ *     risponde «riuscito» e non manda nessun evento; un serial vecchio
+ *     risponde «annullato» e non fa niente. ⛔ `wayvnc` tratta *riuscito*,
+ *     *fallito* e *annullato* nello stesso ramo — da non copiare.
+ *
+ * ⇒ Questa funzione dice soltanto **se la richiesta è stata accettata**. Che
+ *   l'uscita sia cambiata lo dirà `wlr_misura()` dopo il fotogramma seguente,
+ *   ed è l'unico testimone che conta.
+ */
+typedef enum {
+	WLR_MISURA_CHIESTA = 0, /* la richiesta è partita e il compositore ha detto sì */
+	WLR_MISURA_GIA_COSI,    /* l'uscita è già di quella misura: niente da chiedere */
+	WLR_MISURA_RIFIUTATA,   /* `failed`: il compositore ha detto no                */
+	WLR_MISURA_ANNULLATA,   /* `cancelled`: il serial era vecchio — si può riprovare */
+	WLR_MISURA_IMPOSSIBILE  /* il compositore non annuncia il gestore delle uscite */
+} WlrMisuraEsito;
+
+WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
+                                 double attesa_s, GError **sbaglio);
+
 /* Quanti fotogrammi sono stati chiesti, presi, falliti. Per le righe di
  * registro e per il manifesto: ⛔ un conteggio non è una dichiarazione. */
 typedef struct {

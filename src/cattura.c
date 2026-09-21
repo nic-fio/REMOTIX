@@ -1529,13 +1529,46 @@ Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
 	 * non dedurlo da un'immagine che non torna.
 	 */
 	wlr_misura(c->wlr, &uscita_l, &uscita_a);
-	if (uscita_l != larghezza || uscita_a != altezza)
+	if (uscita_l != larghezza || uscita_a != altezza) {
+		g_autoptr(GError) misura_sbaglio = NULL;
+		WlrMisuraEsito e;
+
 		registro_dice(AREA,
-		              "⛔ wlroots: la tela CHIESTA è %ux%u ma l'uscita È %ux%u — su "
-		              "questa famiglia la misura non entra nella nascita, si dà dopo "
-		              "col protocollo dell'uscita.  ⚠ Fino ad allora i fotogrammi "
-		              "sono di %ux%u, e non è un guasto del codificatore",
-		              larghezza, altezza, uscita_l, uscita_a, uscita_l, uscita_a);
+		              "wlroots: la tela chiesta è %ux%u e l'uscita è %ux%u — la "
+		              "chiedo al compositore (su questa famiglia la misura non "
+		              "entra nella nascita: si dà dopo, col protocollo dell'uscita)",
+		              larghezza, altezza, uscita_l, uscita_a);
+		e = wlr_misura_chiedi(c->wlr, larghezza, altezza, 2.0, &misura_sbaglio);
+		wlr_misura(c->wlr, &uscita_l, &uscita_a);
+		/*
+		 * ⛔⛔ E IL GIUDIZIO LO DÀ LA MISURA RILETTA, NON L'ESITO.
+		 *
+		 * `DECISIONI.md` §5.0-sexies: chiedere la misura che l'uscita ha già
+		 * risponde «riuscito» senza mandare niente, e un serial vecchio
+		 * risponde «annullato» senza fare niente.  ⇒ Si guarda l'uscita.
+		 */
+		if (uscita_l == larghezza && uscita_a == altezza)
+			registro_dice(AREA,
+			              "⭐ wlroots: l'uscita è ADESSO %ux%u, la misura chiesta dal "
+			              "cliente — e non lo dico perché la richiesta è riuscita, "
+			              "lo dico perché l'ho riletta",
+			              uscita_l, uscita_a);
+		else
+			registro_dice(AREA,
+			              "⛔ wlroots: ho chiesto %ux%u e l'uscita è rimasta %ux%u "
+			              "(esito della richiesta: %s%s%s).  ⚠ I fotogrammi saranno "
+			              "di %ux%u, e NON è un guasto del codificatore: è questa "
+			              "riga",
+			              larghezza, altezza, uscita_l, uscita_a,
+			              e == WLR_MISURA_CHIESTA      ? "accettata ma senza effetto"
+			              : e == WLR_MISURA_GIA_COSI   ? "già così (e non lo era)"
+			              : e == WLR_MISURA_RIFIUTATA  ? "rifiutata"
+			              : e == WLR_MISURA_ANNULLATA  ? "annullata (serial vecchio)"
+			                                           : "il compositore non sa cambiarla",
+			              misura_sbaglio ? " — " : "",
+			              misura_sbaglio ? misura_sbaglio->message : "",
+			              uscita_l, uscita_a);
+	}
 
 	if (strada == CATTURA_STRADA_SCHEDA)
 		registro_dice(AREA,
@@ -1755,11 +1788,29 @@ CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_
 	 *    v4 su labwc).  ⇒ Qui si dice di no **dicendolo**, invece di tornare
 	 *    un esito che farebbe credere a chi chiama di aver ottenuto qualcosa. */
 	if (cattura && cattura->wlr) {
+		g_autoptr(GError) sbaglio = NULL;
+		uint32_t l = 0, a = 0;
+		WlrMisuraEsito e;
+
+		/* ⭐ Su questa famiglia la misura si cambia all'USCITA, non al flusso —
+		 *    ed è la cosa che su KDE non si poteva fare.  ⛔ E l'esito vero lo
+		 *    dà la rilettura, non la risposta alla richiesta. */
+		e = wlr_misura_chiedi(cattura->wlr, larghezza, altezza, 2.0, &sbaglio);
+		cattura->chiesta_larghezza = larghezza;
+		cattura->chiesta_altezza = altezza;
+		wlr_misura(cattura->wlr, &l, &a);
+		if (l == larghezza && a == altezza) {
+			registro_dice(AREA,
+			              "⭐ wlroots: l'uscita è adesso %ux%u — riletta, non "
+			              "creduta", l, a);
+			return CATTURA_RITELA_CHIESTA;
+		}
+		if (e == WLR_MISURA_GIA_COSI)
+			return CATTURA_RITELA_GIA_COSI;
 		registro_dice(AREA,
-		              "⛔ wlroots: %ux%u chiesta, ma su questa famiglia la misura si "
-		              "cambia all'USCITA e non al flusso — e quel pezzo non c'è "
-		              "ancora.  La cattura resta a quella di adesso",
-		              larghezza, altezza);
+		              "⛔ wlroots: chiesto %ux%u, l'uscita è %ux%u%s%s",
+		              larghezza, altezza, l, a, sbaglio ? " — " : "",
+		              sbaglio ? sbaglio->message : "");
 		return CATTURA_RITELA_GUASTO;
 	}
 	uint8_t spazio[2048];

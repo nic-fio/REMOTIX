@@ -197,8 +197,11 @@ SCANNER    ?= wayland-scanner
 #       used instead»*.  ⛔ Ma `[M]` 20 set 2026 labwc su Trixie **non espone**
 #       `ext_image_copy_capture_manager_v1`: si scrive contro screencopy, e lo
 #       si sa dal primo giorno invece di scoprirlo (`STUDI.md` §xfce §4.6).
+# ⭐ FASE 13 — `wlr-output-management-unstable-v1`: la MISURA dell'uscita.
+#    ⛔ Su wlroots la tela non si negozia col flusso (lì non c'è flusso): si
+#    cambia all'uscita, e questo è il protocollo che lo fa.  `[M]` v4 su labwc.
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
-              wlr-screencopy-unstable-v1
+              wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 ifneq ($(PREFISSO),)
@@ -282,7 +285,8 @@ kwin.o appunti_kde.o wlroots.o: $(PROTOCOLLI:%=%-client-protocol.h)
 BANCO_W1 := ../banchi/13-w1-un-fotogramma
 
 $(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
-             wlr-screencopy-unstable-v1-protocol.o
+             wlr-screencopy-unstable-v1-protocol.o \
+             wlr-output-management-unstable-v1-protocol.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client
 
 banco-w1: $(BANCO_W1)

@@ -155,6 +155,37 @@ int main(int argc, char **argv)
 	wlr_misura(palco, &l, &a);
 	printf("   uscita «%s», %ux%u\n", wlr_uscita_nome(palco), l, a);
 
+	/*
+	 * ⭐ LA MISURA, SE È STATA CHIESTA — e il giudizio lo dà la RILETTURA.
+	 *
+	 * ⛔ `DECISIONI.md` §5.0-sexies: chiedere la misura che l'uscita ha già
+	 *    risponde «riuscito» senza mandare niente, e un serial vecchio risponde
+	 *    «annullato» senza fare niente. ⇒ Qui non si guarda l'esito: si
+	 *    richiede la misura e si confronta.
+	 */
+	if (argc > 4) {
+		uint32_t vl = (uint32_t)atoi(argv[3]), va = (uint32_t)atoi(argv[4]);
+		uint32_t dopo_l = 0, dopo_a = 0;
+		WlrMisuraEsito e = wlr_misura_chiedi(palco, vl, va, 3.0, &sbaglio);
+
+		wlr_misura(palco, &dopo_l, &dopo_a);
+		printf("   misura chiesta %ux%u — esito della RICHIESTA: %s\n", vl, va,
+		       e == WLR_MISURA_CHIESTA       ? "accettata"
+		       : e == WLR_MISURA_GIA_COSI    ? "era già così"
+		       : e == WLR_MISURA_RIFIUTATA   ? "rifiutata"
+		       : e == WLR_MISURA_ANNULLATA   ? "annullata (serial vecchio)"
+		                                     : "il compositore non sa cambiarla");
+		g_clear_error(&sbaglio);
+		if (dopo_l == vl && dopo_a == va)
+			printf("   ⭐ e l'uscita RILETTA è %ux%u: la misura è cambiata davvero\n",
+			       dopo_l, dopo_a);
+		else
+			printf("   ⛔ ma l'uscita RILETTA è %ux%u: NON è cambiata\n", dopo_l,
+			       dopo_a);
+		l = dopo_l;
+		a = dopo_a;
+	}
+
 	for (int i = 0; i < quanti; i++) {
 		gint64 prima = g_get_monotonic_time();
 		WlrEsito e = wlr_fotogramma(palco, attesa, &f, &sbaglio);
