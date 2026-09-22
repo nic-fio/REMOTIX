@@ -660,17 +660,18 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   fotogramma parte, e la cache delle superfici si butta una volta al secondo. Curato a mano chiudendo
   la sessione. Il server nuovo dovrebbe adottare la misura della sessione che trova (come faceva il
   vecchio: tela 2544x926 con vista 2560x963). Registri in `/media/REMOTIX/tmp/registri-22set/`.
+- ⏳ ⛔ **FIREFOX (Linux, 140) SMETTE DI LEGGERE IL VIDEO** — 22 set 2026 su KDE: la pagina conta 402
+  fotogrammi consegnati e poi si ferma, mentre l'audio continua e QUIC riceve e conferma tutto (14,5 MB,
+  0 persi). Il blocco è fra `incomingUnidirectionalStreams` e il worker del video (`src/pagina.html`
+  `avvia_video`). Da riprodurre col banco Marionette.
 - ⏳ **Tre «linee morte» in 13 minuti su KDE** (22 set, 12:30·12:41·12:42 locali), con Chrome e con
   Firefox: il browser tace del tutto per 10 s e smette anche il diario della pagina. Chrome dipingeva
   1097 fotogrammi su 3882. Causa da trovare: ping continuo tablet→server acceso per la prossima.
 
-- ⏳ ⛔ **LA RETE DOPO LA CURA DEI FANTASMI NON È ANCORA GIRATA** — 22 set 2026: la prova a mano
-  dell'utente su KDE (Chrome Linux) ha trovato lo schermo che lampeggiava dopo «Esci» e un nuovo
-  accesso; curato in `e1e9fa7` (la generazione dei buffer è del processo), banco `13-w4` ROSSO col
-  binario di prima e VERDE col binario `defc5ad5`, installato nelle tre scatole. La rete
-  `gnome kde xfce` è stata fermata dopo pochi minuti per lasciare le scatole alle prove dell'utente:
-  ⇒ va rifatta. 🔸 E `13-w4` va proposto come maglia fissa della rete.
-
+- ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
+  xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
+  ⚠ La rete usa il cliente Python, non un browser: il blocco del video in **Firefox** qui sotto NON lo
+  vede. 🔸 E `13-w4` va proposto come maglia fissa della rete.
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
 - ⏳ ⛔ **PRIMA DI LXQt, i gruppi `video`/`render` su TUTTI i desktop** — l'utente, 21 set 2026:
   *«deve funzionare per tutti i DE, non solo per KDE»*. Oggi `[M]` solo su kde
