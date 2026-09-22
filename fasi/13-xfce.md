@@ -683,6 +683,24 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
   ⚠ La rete usa il cliente Python, non un browser: il blocco del video in **Firefox** qui sotto NON lo
   vede. 🔸 E `13-w4` va proposto come maglia fissa della rete.
+- ⏳ ⛔ **LA RETE SPORCA LE SCATOLE E NON LO GIUDICA** — 22 set 2026, letto nel codice.
+  Le maglie cancellano l'inquilino **prima** di crearlo, non dopo: solo C6, C7 e C17 fanno `userdel`
+  a fine giro (per questo mancavano proprio `c6u1`, `c7u1`, `c17u*`). C1 non sgombera affatto
+  (`creati` riempita e mai usata, `11-c1`:907/951). C7 non se ne accorge **di proposito**: guarda solo
+  il proprio uid. Chi lo vede è `bilancio_dopo` (`11-gancio.sh`:1109-1143) — nel giro del 22 set ha
+  scritto «la SCATOLA si e' sporcata: inquilini 1→23 … tmp_orfani 0→20» in tutte e tre — ma è una riga
+  `inf`, annotata `riuscita=true`: la cura scelta è rifare le scatole all'inizio, non pulire alla fine.
+  ⛔ E il processo in stato `T` in tutte e tre: `11-c3`:1647 ferma col modello `pkill -STOP -f remotix`,
+  che prende anche il **browser della scena**; `runuser` (root) rispecchia lo stop e il `-CONT` di
+  `11-c3`:1564 tocca solo i processi dell'inquilino ⇒ resta fermo, col Firefox zombie sotto. Lo stesso
+  modello ambiguo conta la CPU del browser come CPU del codificatore (`11-c3`:832-848), cioè la misura
+  che decide quando innestare il guasto.
+  🔸 Cura proposta, in ordine: (1) in C3 selezionare il figlio per eseguibile esatto (`pgrep -x remotix`);
+  (2) in C3 rimettere in moto e chiudere anche il `runuser`; (3) **una sgomberata sola** in
+  `esegui_maglia` (`11-gancio.sh`:464-486) sullo spazio di nomi della maglia, invece di undici pulizie;
+  (4) fare dello sporco un **verdetto** (maglia nuova col guasto innestato), ⚠ contando che `bilancio`
+  esclude solo `provanic`, quindi `nictest` conta come inquilino; (5) nella stessa spazzata le unità
+  `user@…` fallite e gli orfani di `/tmp`.
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
 - ⏳ ⛔ **PRIMA DI LXQt, i gruppi `video`/`render` su TUTTI i desktop** — l'utente, 21 set 2026:
   *«deve funzionare per tutti i DE, non solo per KDE»*. Oggi `[M]` solo su kde
