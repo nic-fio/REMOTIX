@@ -839,13 +839,25 @@ def somma_lavoro(testo, nome):
     ⚠ E si somma **solo** chi ha `nome` nella riga di comando: contare tutti i
       processi dell'inquilino sarebbe un predicato un livello troppo in alto
       (`LEZIONI.md` §1.44), lo stesso difetto di `ferma_il_codificatore`.
+
+    ⛔⛔ E «ha `nome` nella riga di comando» NON BASTA — 22 settembre 2026.
+        Il browser della scena si apre su `file:///opt/remotix/11-c3-scena.html`
+        ⇒ la parola `remotix` ce l'ha anche lui, e il suo lavoro finiva nella
+        somma del codificatore: la misura che decide QUANDO innestare il guasto
+        contava il consumo del browser.  ⚠ La prova qui sotto non lo prendeva
+        perche' la riga finta del browser non nominava la cartella vera.
+    ⇒ Si confronta il **nome dell'eseguibile** (`argv[0]`, senza percorso), non
+      una sottostringa della riga.
     """
     if not testo:
         return None
     totale = None
     for riga in testo.splitlines():
         pezzi = riga.split(None, 1)
-        if len(pezzi) < 2 or nome not in pezzi[1]:
+        if len(pezzi) < 2:
+            continue
+        argv0 = pezzi[1].split(None, 1)[0]
+        if os.path.basename(argv0) != nome:
             continue
         try:
             secondi = int(pezzi[0])
@@ -1305,7 +1317,11 @@ def certifica():
           cpu_dalla_riga("", 100.0), None)
     ps_vero = ("   12 /opt/remotix/remotix --sessione c3u1\n"
                "    3 /opt/remotix/remotix --sessione c3u1 --figlio\n"
-               "  400 /usr/lib/firefox-esr/firefox-esr --kiosk file:///x.html\n")
+               # ⛔ LA RIGA VERA del browser della scena, quella che il 22 set
+               #    2026 finiva nella somma: la parola `remotix` sta nel
+               #    PERCORSO DELLA PAGINA, non nel nome del programma.
+               "  400 /usr/lib/firefox-esr/firefox-esr --kiosk "
+               "file:///opt/remotix/11-c3-scena.html\n")
     prova("⭐ il lavoro del CODIFICATORE, e solo suo: 12+3 ⇒ 15 s di CPU",
           somma_lavoro(ps_vero, "remotix"), 15.0)
     prova("⛔ il browser non e' il codificatore: non entra nella somma",
@@ -1562,9 +1578,16 @@ def sgombra(chi, attesa):
     #    T, e un processo fermato non se ne va da solo.  ⚠ E si sgombra SOLO la
     #    propria roba, per nome (fase 10 §7.3).
     sh("pkill -CONT -u %s 2>/dev/null" % chi)
+    # ⛔ E ANCHE IL PADRE, che e' di root e non dell'inquilino: la scena si apre
+    #    con `runuser -u <chi> -- … firefox-esr`, e `runuser` rispecchia lo stop
+    #    del figlio.  ⚠ Un `-CONT` che guarda i soli processi dell'inquilino lo
+    #    lascia fermo in `T` per sempre, col browser zombie sotto (22 set 2026).
+    #    ⭐ Il modello resta DELIMITATO al proprio inquilino, §7.3 della fase 10.
+    sh("pkill -CONT -f 'runuser -u %s ' 2>/dev/null" % chi)
     sh("loginctl terminate-user %s 2>/dev/null" % chi)
     time.sleep(1.0)
     sh("pkill -KILL -u %s 2>/dev/null" % chi)
+    sh("pkill -KILL -f 'runuser -u %s ' 2>/dev/null" % chi)
     scadenza = time.time() + attesa
     while time.time() < scadenza:
         viva = sh("loginctl show-user %s >/dev/null 2>&1" % chi).returncode == 0
@@ -1644,7 +1667,15 @@ def ferma_il_codificatore(chi, nome):
     #   da fermare, ed e' la differenza fra «ho fermato il codificatore» e
     #   «non c'era niente da fermare».  ⛔ Buttarlo via vorrebbe dire fidarsi
     #   di un comando senza guardare se e' stato eseguito (`LEZIONI.md` §1.46).
-    k = sh("pkill -STOP -u %s -f %s" % (chi, nome))
+    # ⛔⛔ `-x` SUL NOME DEL PROGRAMMA, non `-f` sulla riga di comando — 22
+    #     settembre 2026.  Con `-f remotix` il modello prendeva anche il
+    #     **browser della scena**, aperto su `file:///opt/remotix/…`: si fermava
+    #     lui insieme al codificatore, e il `-CONT` di `sgombra` — che guarda i
+    #     soli processi dell'inquilino — non risvegliava il `runuser` di root
+    #     che gli faceva da padre.  `[M]` 22 set 2026: in tutte e tre le scatole
+    #     un `runuser` in stato `T` con un `firefox-esr` zombie sotto, tre ore
+    #     dopo la fine del giro.
+    k = sh("pkill -STOP -u %s -x %s" % (chi, nome))
     preso = (k.returncode == 0)
     time.sleep(1.0)
     r = sh("ps -u %s -o stat=,comm=" % chi)

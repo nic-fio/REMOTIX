@@ -461,6 +461,59 @@ M_SECONDI=0
 ESITO_C10=3
 eseguiti_json=""
 
+# ---------------------------------------------------------------------------
+# ⛔⛔ LA SGOMBERATA, IN UN POSTO SOLO — 22 settembre 2026
+#
+# ⚠ Le maglie cancellano il loro inquilino **prima** di crearlo, non dopo: e'
+#   voluto («da zero comprende anche da zero rispetto a me stesso di ieri»),
+#   ⛔ ma vuol dire che fra un giro e l'altro l'inquilino RESTA.  `[M]` 22 set
+#   2026, dopo `--famiglia tutto`: 22-24 inquilini vivi in ognuna delle tre
+#   scatole, con le loro `/home`, piu' unita' `user@…` fallite e orfani in
+#   `/tmp`.  Solo C6, C7 e C17 sgomberavano davvero.
+#
+# ⭐ E si fa QUI, non undici volte: chi aggiunge una maglia domani non deve
+#    ricordarsi niente.  ⛔ Il modello e' DELIMITATO allo spazio di nomi della
+#    rete — `c<numero>[b]u<numero>` — e non e' un `pkill` globale: §7.3 della
+#    fase 10 resta rispettata, `nictest` e `provanic` non si toccano.
+# ⚠ E il `runuser` che fa da padre agli inquilini e' di **root**: va ripreso
+#   (`-CONT`) prima di chiuderlo, o resta fermo in `T` con un figlio zombie —
+#   il residuo trovato in tutte e tre le scatole (vedi `11-c3`).
+# ---------------------------------------------------------------------------
+sgombera_inquilini() {
+	local d=$1 tolti
+	[ "$SECCO" = 1 ] && return 0
+	scatola_accesa "$d" || return 0
+	tolti=$(podman exec "rete11-$d" sh -c '
+		tolti=""
+		for u in $(awk -F: "\$1 ~ /^c[0-9]+b?u[0-9]+$/ {print \$1}" /etc/passwd); do
+			id=$(id -u "$u" 2>/dev/null)
+			loginctl terminate-user "$u" >/dev/null 2>&1
+			pkill -CONT -f "runuser -u $u " >/dev/null 2>&1
+			pkill -CONT -u "$u" >/dev/null 2>&1
+			pkill -KILL -f "runuser -u $u " >/dev/null 2>&1
+			pkill -KILL -u "$u" >/dev/null 2>&1
+			sleep 0.2
+			userdel -r "$u" >/dev/null 2>&1 || userdel "$u" >/dev/null 2>&1
+			[ -n "$id" ] && systemctl reset-failed "user@$id.service" >/dev/null 2>&1
+			[ -n "$id" ] && find /tmp -maxdepth 1 -uid "$id" -exec rm -rf {} + 2>/dev/null
+			tolti="$tolti $u"
+		done
+		printf "%s" "$tolti"
+	' 2>/dev/null)
+	[ -n "$tolti" ] && inf "sgomberati da $d:$tolti"
+	return 0
+}
+
+# ⚠ Le maglie che non nominano una scatola (C10, C11, C14, C16) lasciano
+#   inquilini nelle scatole che hanno toccato: si spazza dove si e' lavorato.
+sgombera_dopo_la_maglia() {
+	local nome=$1 d
+	case "$nome" in
+	*\(*\)*) d=${nome#*(}; d=${d%%)*}; sgombera_inquilini "$d" ;;
+	*)         for d in $DESKTOP_NOTI; do sgombera_inquilini "$d"; done ;;
+	esac
+}
+
 esegui_maglia() {
 	local nome=$1 guasto=$2; shift 2
 	local prima dopo
@@ -554,6 +607,10 @@ esegui_maglia() {
 			;;
 		esac
 	fi
+
+	# ⭐ E QUI SI SPAZZA, comunque sia andata: una maglia che esce male e' quella
+	#   che lascia piu' roba dietro.
+	sgombera_dopo_la_maglia "$nome"
 
 	[ -n "$eseguiti_json" ] && eseguiti_json="$eseguiti_json,"
 	eseguiti_json="$eseguiti_json{\"nome\":$(json_stringa "$nome"),\"esito\":$M_ESITO,\"secondi\":$M_SECONDI,\"guasto_innestato\":$guasto_scritto$visto}"
