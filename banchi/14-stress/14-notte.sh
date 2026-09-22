@@ -237,6 +237,50 @@ schermo_sveglio() {
 	return 0
 }
 
+# ---------------------------------------------------------------------------
+# ⭐⭐ LO SCHERMO DEVE ESSERE IL NOSTRO, NON DELL ALTRO UTENTE DEL TABLET.
+# ⛔ Misurato il 22 set 2026: se la sessione ATTIVA di `seat0` e' quella
+#    dell altro utente (tty3), una finestra nuova non si mappa e Firefox resta
+#    appeso a `NewSession` per 180 s — ogni giro col browser visibile muore.
+#    ⚠ Una finestra GIA' aperta continua a dipingere: e' solo l apertura che
+#      non riesce.  ⇒ Non e' un difetto nostro, e non si cura col codice.
+# ⭐ Quindi non si BRUCIA il giro: si ASPETTA, dicendolo, perche' la notte e'
+#   ripartibile e un giro rimandato vale piu' di un giro finto.  ⛔ E non si
+#   strappa il video a Nic con `loginctl activate`: se sta usando il tablet,
+#   comanda lui.
+# ---------------------------------------------------------------------------
+LA_MIA_SESSIONE=""
+la_mia_sessione() {
+	[ -n "$LA_MIA_SESSIONE" ] && { printf '%s' "$LA_MIA_SESSIONE"; return 0; }
+	LA_MIA_SESSIONE=$(loginctl list-sessions --no-legend 2>/dev/null |
+		awk -v u="$(id -un)" '$3==u && $4=="seat0" {print $1; exit}')
+	printf '%s' "$LA_MIA_SESSIONE"
+}
+
+schermo_e_nostro() {
+	local mia attiva
+	mia=$(la_mia_sessione)
+	[ -z "$mia" ] && return 0            # ⚠ niente seat: non e' il tablet, non giudico
+	attiva=$(loginctl show-seat seat0 -p ActiveSession --value 2>/dev/null)
+	[ -z "$attiva" ] && return 0
+	[ "$attiva" = "$mia" ]
+}
+
+# Aspetta che lo schermo torni nostro.  Torna 0 se e' nostro, 1 se ha rinunciato.
+ASPETTA_IL_PRIMO_PIANO_MAX=${ASPETTA_IL_PRIMO_PIANO_MAX:-1200}
+aspetta_il_primo_piano() {
+	[ "$SECCO" = 1 ] && return 0
+	schermo_e_nostro && return 0
+	local t=0
+	inf "lo schermo del tablet e' dell altro utente: aspetto invece di bruciare il giro"
+	while [ "$t" -lt "$ASPETTA_IL_PRIMO_PIANO_MAX" ]; do
+		sleep 20; t=$(( t + 20 ))
+		schermo_e_nostro && { ok "lo schermo e' tornato nostro dopo ${t}s"; return 0; }
+		[ $(( t % 300 )) -eq 0 ] && inf "aspetto ancora lo schermo (${t}s)"
+	done
+	return 1
+}
+
 rimetti_lo_schermo() {
 	[ "$SECCO" = 1 ] && return 0
 	gsettings set org.gnome.desktop.session idle-delay 600 2>/dev/null
@@ -348,6 +392,13 @@ un_giro() {
 
 	printf '\n\033[1;34m==> %s · %s · %s\033[0m  (stima %ss, tetto %ss)\n' \
 		"$scenario" "$d" "$m" "$durata" "$tetto"
+
+	if ! aspetta_il_primo_piano; then
+		ko "$scenario · $d · $m — lo schermo e' rimasto dell altro utente: giro rimandato"
+		riga_di_ripiego "$scenario" "$d" "$m" 3 $(( SECONDS - t0 )) \
+			"non ho potuto guardare: lo schermo del tablet era dell altro utente"
+		return 0
+	fi
 
 	if ! scatola_sana "$d"; then
 		ko "scatola $d: $SCATOLA_DICE — il giro non parte"
