@@ -654,6 +654,13 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 
 ## Che cosa resta [?]
 
+- ⏳ ⛔ **LA RETE DOPO LA CURA DEI FANTASMI NON È ANCORA GIRATA** — 22 set 2026: la prova a mano
+  dell'utente su KDE (Chrome Linux) ha trovato lo schermo che lampeggiava dopo «Esci» e un nuovo
+  accesso; curato in `e1e9fa7` (la generazione dei buffer è del processo), banco `13-w4` ROSSO col
+  binario di prima e VERDE col binario `defc5ad5`, installato nelle tre scatole. La rete
+  `gnome kde xfce` è stata fermata dopo pochi minuti per lasciare le scatole alle prove dell'utente:
+  ⇒ va rifatta. 🔸 E `13-w4` va proposto come maglia fissa della rete.
+
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
 - ⏳ ⛔ **PRIMA DI LXQt, i gruppi `video`/`render` su TUTTI i desktop** — l'utente, 21 set 2026:
   *«deve funzionare per tutti i DE, non solo per KDE»*. Oggi `[M]` solo su kde
