@@ -1315,11 +1315,34 @@ restituisci:
  *   che sa che cosa ha importato, e una invalidazione fatta da qui sarebbe una
  *   decisione presa dove non si hanno i fatti.
  */
+/*
+ * ⛔⛔ LA GENERAZIONE E' DEL PROCESSO, NON DELLA CATTURA — 22 set 2026, la prova
+ *      dell'utente su KDE: lo schermo LAMPEGGIAVA fra tre immagini (il desktop,
+ *      la schermata d'uscita della sessione PRIMA, e il nero).
+ *
+ * `[M]` Il contatore stava nella `Cattura` e ripartiva da 0 a ogni `g_new0`.
+ *   Dopo «Esci» e un nuovo accesso la sessione rinasce NELLO STESSO figlio: la
+ *   cattura e' nuova, il codificatore no.  Sei `add_buffer` davano 6 alla
+ *   vecchia e 6 alla nuova ⇒ `importa_dmabuf` non vedeva nessun cambio, non
+ *   buttava la cache, e i descrittori riciclati coi numeri di prima
+ *   ritrovavano le superfici della sessione morta.  Registro della scatola
+ *   `kde`: alle due rinascite buone «butto le 4 superfici importate», alle due
+ *   cattive nessuna riga.
+ * ⇒ Un contatore solo per tutto il processo: due catture non possono piu'
+ *   avere la stessa generazione, qualunque cosa succeda in mezzo.
+ */
+static uint64_t generazione_nuova(void)
+{
+	static uint64_t ultima;
+
+	return __atomic_add_fetch(&ultima, 1, __ATOMIC_RELAXED);
+}
+
 static void su_buffer_aggiunto(void *dati, struct pw_buffer *pacco)
 {
 	Cattura *cattura = dati;
 	(void) pacco;
-	cattura->generazione_buffer++;
+	cattura->generazione_buffer = generazione_nuova();
 }
 
 /*
@@ -1351,7 +1374,7 @@ static void su_buffer_tolto(void *dati, struct pw_buffer *pacco)
 		cattura->posto_pieno = FALSE;
 		cattura->ritenuti_resi++;
 	}
-	cattura->generazione_buffer++;
+	cattura->generazione_buffer = generazione_nuova();
 	g_mutex_unlock(&cattura->lucchetto);
 }
 

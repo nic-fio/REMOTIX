@@ -984,6 +984,24 @@ static char *nodo_come_sessione(void)
 
 /* --- le lastre ------------------------------------------------------------ */
 
+/*
+ * ⛔⛔ LA GENERAZIONE E' DEL PROCESSO, NON DEL PALCO — 22 set 2026: su KDE il
+ *      contatore ripartiva da 0 con ogni cattura nuova, e dopo «Esci» e un
+ *      nuovo accesso il codificatore (che resta) ritrovava in cache le
+ *      superfici della sessione morta: lo schermo lampeggiava.  Vedi
+ *      `generazione_nuova()` in `cattura.c`.  ⇒ Qui lo stesso, perche' un
+ *      palco nuovo nasce a ogni rinascita della sessione XFCE.
+ * ⚠ Parte da 2^62, e non da 0: `cattura.c` ha il suo contatore (questo file
+ *   si lega anche al banco 13-w1, senza `cattura.o`), e i due intervalli non
+ *   si toccano.
+ */
+static uint64_t generazione_nuova(void)
+{
+	static uint64_t ultima = UINT64_C(1) << 62;
+
+	return __atomic_add_fetch(&ultima, 1, __ATOMIC_RELAXED);
+}
+
 /* ⛔ «Il fotogramma in corso è sulla scheda?» — e la bandiera prima
  *    dell'indice: prima di `wlr_chiedi_la_scheda()` l'indice è lo zero di
  *    `g_new0`, cioè una lastra che non esiste. */
@@ -1006,7 +1024,7 @@ static void lastra_butta(WlrPalco *p, WlrLastra *l)
 	l->fd = -1;
 	/* ⛔ Regola 3: una lastra che muore cambia la generazione. */
 	if (cera)
-		p->generazione++;
+		p->generazione = generazione_nuova();
 }
 
 /*
@@ -1118,7 +1136,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	}
 	/* ⛔ La lastra è già nata qui, anche se il `wl_buffer` non c'è ancora: la
 	 *    generazione cambia ADESSO (regola 3). */
-	p->generazione++;
+	p->generazione = generazione_nuova();
 
 	p->creato = NULL;
 	p->params_finito = p->params_fallito = false;
