@@ -366,6 +366,12 @@ un_giro() {
 		return 0
 	fi
 
+	# ⛔ Prima ancora di partire: se e' rimasto vivo un Firefox di prova di un
+	#   giro andato male (o di una notte interrotta), `NewSession` non risponde
+	#   piu' — la finestra si apre e la sessione non arriva mai (22 set 2026,
+	#   misurato: tre residui bastano).  ⇒ Si sgombera PRIMA, non solo dopo.
+	chiudi_i_browser_di_prova
+
 	timeout -k 20 "$tetto" python3 "$QUI/_lancia.py" \
 		--scenario "$percorso" --desktop "$d" --marca "$m" \
 		--porta "$(porta_di "$d")" --host "$HOST" \
