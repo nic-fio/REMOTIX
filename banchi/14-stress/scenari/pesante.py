@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""pesante — un video a schermo intero per cinque minuti.
+
+⛔ IL DIFETTO CHE QUESTO SCENARIO ESISTE PER PRENDERE, e l'ha trovato l'utente
+   il 22 settembre 2026 con un YouTube 4K dentro KDE: la pagina si FERMA.  Non
+   rallenta — si ferma, e non riparte piu'.
+   `[M]` Firefox su KDE: 173 buchi in 3,4 minuti, tutti e 173 per fotogrammi
+   arrivati DOPO il loro successore; la pagina bloccata a 41 fotogrammi
+   consegnati su 8810 stream ricevuti; poi linea morta.
+
+⭐ I QUATTRO GIUDICI, e nessuno di loro guarda un totale:
+   1. il contatore dei fotogrammi CONSEGNATI sale per TUTTO il tempo (un totale
+      alto e un contatore fermo a meta' danno lo stesso numero: la differenza e'
+      precisamente il difetto);
+   2. nessuna linea morta;
+   3. i buchi stanno sotto una soglia DICHIARATA;
+   4. la tela a meta' prova non e' sbavata a strisce — e si MISURA
+      (`_comune.strisce`), non si guarda.
+
+⚠ Quel che questo scenario NON giudica: quanti fotogrammi il browser riesca a
+  dipingere.  `[M]` 22 set 2026 Firefox su questo tablet ne riceve 48/s e ne
+  dipinge 37: e' il suo tetto, non un difetto del prodotto, e si RIPORTA senza
+  bocciare.
+"""
+import time
+
+import _comune as C
+
+NOME = "pesante"
+DURATA_S = 300
+TETTO_S = 480
+
+
+def gira(desktop, marca, nucleo, opzioni=None):
+    o = dict(opzioni or {})
+    durata = float(o.get("durata_s", DURATA_S))
+    soglia_buchi = int(o.get("soglia_buchi", 20))
+    soglia_strisce = float(o.get("soglia_strisce", 30.0))
+    fermo_massimo = float(o.get("fermo_massimo_s", 25.0))
+    tetto = C.Tetto(o.get("tetto_s", TETTO_S))
+    chi = o.get("chi") or C.nome_inquilino("pe")
+    b = C.Banco(nucleo, desktop, marca, chi, misura=o.get("misura", (1400, 1000)),
+                dove=o.get("dove"))
+    try:
+        cod, perche = b.apparecchia("pesante")
+        if cod != C.VERDE:
+            return C.esito(NOME, desktop, marca, cod, perche, secondi=tetto.passati())
+
+        # ⭐ La fotografia di RIFERIMENTO, presa appena la scena e' viva: serve a
+        #   dire se le strisce c'erano gia' o sono nate sotto carico.
+        time.sleep(10)
+        riferimento = C.strisce(b.foto("tela-prima.png") or b"")
+
+        meta = {}
+
+        def a_meta(n, storia):
+            if not meta and tetto.passati() > durata / 2:
+                meta["strisce"] = C.strisce(b.foto("tela-meta.png") or b"")
+
+        storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 60),
+                              passo=5.0, tetto=tetto, ogni_giro=a_meta)
+        if "strisce" not in meta:
+            meta["strisce"] = C.strisce(b.foto("tela-meta.png") or b"")
+
+        primo, ultimo = storia[0], storia[-1]
+        sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
+        srv = b.server()
+        cresciuta = C.cresciuti(primo, ultimo)
+        C.salva(o.get("dove"), "storia-pesante.json", storia)
+
+        misure = {
+            "consegnati": ultimo.get("consegnati"),
+            "dipinti": ultimo.get("dipinti"),
+            "buchi": ultimo.get("buchi"),
+            "cresciuti": cresciuta.get("consegnati"),
+            "fermo_piu_lungo_s": fermo,
+            "strisce_prima": riferimento,
+            "strisce_meta": meta.get("strisce"),
+            "server": srv,
+            "errori_della_pagina":
+                (nucleo.conta_dalla_pagina(b.browser) or {}).get("errori_testo", [])[-3:],
+        }
+        regole = {"fermo_massimo_s": fermo_massimo, "soglia_buchi": soglia_buchi,
+                  "soglia_strisce": soglia_strisce}
+
+        guasti = []
+        if not cresciuta.get("consegnati"):
+            guasti.append("nessun fotogramma consegnato in %.0f s" % durata)
+        elif not sempre:
+            guasti.append("il contatore si e' fermato per %.1f s (tetto %.0f)"
+                          % (fermo, fermo_massimo))
+        if srv.get("linee_morte"):
+            guasti.append("linea morta %d volte" % srv["linee_morte"])
+        if (ultimo.get("buchi") or 0) > soglia_buchi:
+            guasti.append("%d buchi (soglia %d)" % (ultimo["buchi"], soglia_buchi))
+        if meta.get("strisce") is not None and meta["strisce"] > soglia_strisce:
+            guasti.append("la tela e' sbavata: dispersione %.1f (soglia %.1f)"
+                          % (meta["strisce"], soglia_strisce))
+
+        if guasti:
+            return C.rosso(NOME, desktop, marca, "; ".join(guasti),
+                           misure=misure, regole=regole, secondi=tetto.passati())
+        return C.verde(NOME, desktop, marca,
+                       "%d fotogrammi consegnati e %d dipinti in %.0f s, mai "
+                       "fermi piu' di %.1f s, %d buchi, tela pulita (%.1f)"
+                       % (cresciuta.get("consegnati", 0),
+                          cresciuta.get("dipinti", 0), durata, fermo,
+                          ultimo.get("buchi") or 0, meta.get("strisce") or -1),
+                       misure=misure, regole=regole, secondi=tetto.passati())
+    except Exception as e:
+        return C.non_so(NOME, desktop, marca, "lo strumento si e' rotto: %s"
+                        % str(e)[:200], secondi=tetto.passati())
+    finally:
+        b.chiudi_tutto()
