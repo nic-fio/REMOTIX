@@ -68,6 +68,10 @@ def main():
     a = p.parse_args()
 
     sys.path.insert(0, QUI)
+    # ⛔ E anche la cartella dello scenario: gli scenari si appoggiano a un
+    #    modulo comune accanto a loro (`_comune`), e senza questo l import
+    #    fallisce per un dettaglio di come li carico io, non per colpa loro.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(a.scenario)))
     os.makedirs(a.dove, exist_ok=True)
 
     try:

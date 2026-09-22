@@ -119,10 +119,16 @@ leggi_credenziali() {
 #     provato con la parola sbagliata: il giro non finiva piu'.
 #     ⇒ 90 secondi e si va avanti; quel che non risponde si dichiara.
 sul_server() {
+	# ⛔⛔ E LA PAROLA SI TOGLIE DALL USCITA: il terminale la rimanda indietro
+	#     come PRIMA RIGA, e chi legge «la prima riga» legge la parola invece
+	#     della risposta.  `[M]` 22 set 2026: la sonda della scatola diceva «non
+	#     risponde» mentre la scatola rispondeva benissimo.
+	#     ⇒ Stessa cura di `fondamenta/strumenti/sshpw.py`: la riga uguale alla
+	#       parola non esce.
 	printf '%s\n' "$PAROLA" | timeout "${SSH_TETTO:-90}" ssh -tt \
 		-o BatchMode=yes -o ConnectTimeout=10 \
 		"nicfio@$HOST" "sudo -S -p '' -v 2>/dev/null; $*" 2>/dev/null \
-		| tr -d '\r' | grep -v 'tput: No value'
+		| tr -d '\r' | grep -v 'tput: No value' | grep -vxF "$PAROLA"
 }
 
 # ---------------------------------------------------------------------------
@@ -133,14 +139,28 @@ sul_server() {
 #   inquilini della rete?  Le ultime due si curano e si DICE che si e' curato.
 # ---------------------------------------------------------------------------
 SCATOLA_DICE=""
+
+# ⛔⛔ IL COPIONE VIAGGIA IN BASE64, e non e' vezzo: fra `ssh`, `sudo`, `podman
+#     exec` e `sh -c` le virgolette si mangiano a vicenda, e un copione che
+#     arriva storto non da' un errore — da' una risposta vuota, che si legge
+#     come «la scatola non risponde».  `[M]` 22 set 2026: e' successo qui.
+dentro_la_scatola() {
+	local d=$1 copione=$2 b64
+	b64=$(printf '%s' "$copione" | base64 -w0)
+	sul_server "echo $b64 | base64 -d | sudo podman exec -i rete11-$d sh -s"
+}
+
 scatola_sana() {
-	local d=$1 p r
+	local d=$1 p r ascolta fermi inquilini
 	p=$(porta_di "$d")
 	SCATOLA_DICE=""
 	[ "$SECCO" = 1 ] && { SCATOLA_DICE="(a vuoto) non ho guardato"; return 0; }
 
-	r=$(sul_server "sudo podman exec rete11-$d sh -c 'ss -ltn 2>/dev/null | grep -c :$p; ps -eo stat= | grep -c \"^[TZ]\"; getent passwd | awk -F: \"\\\$1 ~ /^c[0-9]+b?u[0-9]+\$/\" | wc -l'")
-	local ascolta fermi inquilini
+	r=$(dentro_la_scatola "$d" "
+ss -ltn 2>/dev/null | grep -c :$p
+ps -eo stat= | grep -c \"^[TZ]\"
+getent passwd | cut -d: -f1 | grep -cE \"^c[0-9]+b?u[0-9]+\$\"
+")
 	ascolta=$(printf '%s\n' "$r" | sed -n 1p | tr -dc '0-9')
 	fermi=$(printf '%s\n' "$r" | sed -n 2p | tr -dc '0-9')
 	inquilini=$(printf '%s\n' "$r" | sed -n 3p | tr -dc '0-9')
@@ -156,7 +176,19 @@ scatola_sana() {
 	if [ "${fermi:-0}" != 0 ] || [ "${inquilini:-0}" != 0 ]; then
 		# ⛔ Si pulisce e si DICE: una scatola rimessa in ordine in silenzio
 		#    toglie la prova che qualcuno la sporca.
-		sul_server "sudo podman exec rete11-$d sh -c 'for u in \$(getent passwd | awk -F: \"\\\$1 ~ /^c[0-9]+b?u[0-9]+\$/ {print \\\$1}\"); do m=\"runuser -u [\$(printf %s \$u | cut -c1)]\$(printf %s \$u | cut -c2-) \"; loginctl terminate-user \$u >/dev/null 2>&1; pkill -CONT -f \"\$m\" >/dev/null 2>&1; pkill -CONT -u \$u >/dev/null 2>&1; pkill -KILL -f \"\$m\" >/dev/null 2>&1; pkill -KILL -u \$u >/dev/null 2>&1; userdel -r \$u >/dev/null 2>&1 || userdel \$u >/dev/null 2>&1; done'" >/dev/null 2>&1
+		# ⚠ `[c]3u2` invece di `c3u2`: `pkill -f` pescherebbe anche il guscio
+		#   che lo sta eseguendo (22 set 2026, costato un ora).
+		dentro_la_scatola "$d" "
+for u in \$(getent passwd | cut -d: -f1 | grep -E \"^c[0-9]+b?u[0-9]+\$\"); do
+	m=\"runuser -u [\$(printf %s \$u | cut -c1)]\$(printf %s \$u | cut -c2-) \"
+	loginctl terminate-user \$u >/dev/null 2>&1
+	pkill -CONT -f \"\$m\" >/dev/null 2>&1
+	pkill -CONT -u \$u >/dev/null 2>&1
+	pkill -KILL -f \"\$m\" >/dev/null 2>&1
+	pkill -KILL -u \$u >/dev/null 2>&1
+	userdel -r \$u >/dev/null 2>&1 || userdel \$u >/dev/null 2>&1
+done
+" >/dev/null 2>&1
 		SCATOLA_DICE="ripulita prima del giro: ${fermi:-0} processi fermi o zombie, ${inquilini:-0} inquilini della rete rimasti"
 		return 0
 	fi
@@ -247,6 +279,11 @@ qui = sys.argv[1]
 cartella = os.path.join(qui, "scenari")
 if not os.path.isdir(cartella):
     sys.exit(0)
+# ⛔ La cartella degli scenari entra in `sys.path`: fra loro si importano per
+#    nome (`_comune`), e caricarli «per percorso» senza questo li romperebbe
+#    tutti insieme con un «No module named».
+sys.path.insert(0, cartella)
+sys.path.insert(0, qui)
 for f in sorted(os.listdir(cartella)):
     if not f.endswith(".py") or f.startswith("_"):
         continue
