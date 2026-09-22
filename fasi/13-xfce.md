@@ -660,10 +660,15 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   fotogramma parte, e la cache delle superfici si butta una volta al secondo. Curato a mano chiudendo
   la sessione. Il server nuovo dovrebbe adottare la misura della sessione che trova (come faceva il
   vecchio: tela 2544x926 con vista 2560x963). Registri in `/media/REMOTIX/tmp/registri-22set/`.
-- ⏳ ⛔ **FIREFOX (Linux, 140) SMETTE DI LEGGERE IL VIDEO** — 22 set 2026 su KDE: la pagina conta 402
-  fotogrammi consegnati e poi si ferma, mentre l'audio continua e QUIC riceve e conferma tutto (14,5 MB,
-  0 persi). Il blocco è fra `incomingUnidirectionalStreams` e il worker del video (`src/pagina.html`
-  `avvia_video`). Da riprodurre col banco Marionette.
+- ✅ **IL VIDEO PESANTE NON INCHIODA PIÙ LA PAGINA** — 22 set 2026, `a50b389`, binario `f1807378`: era la
+  spirale della chiave (RCP.md §5.2), non Firefox. `[M]` Firefox 140 e Chrome 153 veri e visibili sul
+  tablet, scena da 86–264 Mbit/s per ~190 s, tre desktop: contatore sempre in salita, nessuna linea morta.
+  ⏳ ⛔ **Resta, solo Firefox**: molti buchi (KDE 342 in 3,4 min contro 14 di Chrome; XFCE 10) e la tela
+  **sbavata a strisce** dove ci sono stati buchi — delta decodificati su un riferimento sbagliato. Causa da
+  cercare. Firefox usa già VA-API (`IsHardwareAccelerated=1`): le preferenze non cambiano niente.
+  ⚠ Firefox headless non dipinge sotto carico (277 su 6527): quel giro non vale.
+  ⚠ In KDE restano inquilini lasciati dalla rete (c1u1–c1u10, c2u*, c3u*, c4u1, c5u1, c8u2, c9u*): C7 non li
+  ha tolti — da guardare.
 - ⏳ **Tre «linee morte» in 13 minuti su KDE** (22 set, 12:30·12:41·12:42 locali), con Chrome e con
   Firefox: il browser tace del tutto per 10 s e smette anche il diario della pagina. Chrome dipingeva
   1097 fotogrammi su 3882. Causa da trovare: ping continuo tablet→server acceso per la prossima.
