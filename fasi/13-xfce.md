@@ -654,6 +654,16 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 
 ## Che cosa resta [?]
 
+- ⏳ ⛔ **KDE NON RIPARTE DOPO UN RIAVVIO DEL SERVER SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
+  prova dell'utente: la sessione Plasma sopravvive al server (nata 2544x926), il client rientra con
+  tela 2560x962, KWin `--virtual` non ridimensiona ⇒ «il palco non e' alla tela in vigore», nessun
+  fotogramma parte, e la cache delle superfici si butta una volta al secondo. Curato a mano chiudendo
+  la sessione. Il server nuovo dovrebbe adottare la misura della sessione che trova (come faceva il
+  vecchio: tela 2544x926 con vista 2560x963). Registri in `/media/REMOTIX/tmp/registri-22set/`.
+- ⏳ **Tre «linee morte» in 13 minuti su KDE** (22 set, 12:30·12:41·12:42 locali), con Chrome e con
+  Firefox: il browser tace del tutto per 10 s e smette anche il diario della pagina. Chrome dipingeva
+  1097 fotogrammi su 3882. Causa da trovare: ping continuo tablet→server acceso per la prossima.
+
 - ⏳ ⛔ **LA RETE DOPO LA CURA DEI FANTASMI NON È ANCORA GIRATA** — 22 set 2026: la prova a mano
   dell'utente su KDE (Chrome Linux) ha trovato lo schermo che lampeggiava dopo «Esci» e un nuovo
   accesso; curato in `e1e9fa7` (la generazione dei buffer è del processo), banco `13-w4` ROSSO col
