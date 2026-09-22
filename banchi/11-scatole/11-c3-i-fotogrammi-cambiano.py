@@ -891,28 +891,50 @@ def cpu_del_codificatore(chi, nome):
 
 
 def secondi_in_vista(quanto, passo, soglia, cpu_al_s):
-    """⭐⭐ QUANTA SCENA E' PASSATA IN VISTA PRIMA DELL'INNESTO — un TETTO, e
-    ricavato da misure invece che scelto.
+    """⭐⭐ QUANTA SCENA E' PASSATA IN VISTA PRIMA DELL'INNESTO — un TETTO.
 
     ⛔ E' il termine che sporca il ritmo lordo: i fotogrammi nati fra l'istante
        in cui la scena ha cominciato a dipingere e l'istante dell'innesto
        arrivano **anche col guasto**, perche' il guasto e' venuto dopo.
 
-    Come si limita, senza inventare:
-      · nell'intervallo in cui il lavoro ha ATTRAVERSATO la soglia la scena
-        puo' aver dipinto per tutto l'intervallo ⇒ al piu' `passo` secondi;
-      · in tutti gli intervalli PRIMA il lavoro stava **sotto la soglia**, cioe'
-        sotto `soglia / cpu_al_s` della consegna piena ⇒ al piu'
-        `soglia × (quanto − passo) / cpu_al_s` secondi equivalenti.
+    ⛔⛔ E IL TETTO E' `quanto`, cioe' TUTTO il tempo passato da quando la scena
+        e' stata accesa — 22 settembre 2026, e il vecchio tetto e' stato
+        SMENTITO DA UNA MISURA.
 
-    ⇒ Torna la somma.  ⛔ `None` se uno dei numeri non si sa: un tetto inventato
-      sarebbe peggio di nessun tetto.
+        Fino a oggi si pesava quel tempo col lavoro del codificatore: negli
+        intervalli in cui la CPU stava sotto la soglia si supponeva che la
+        scena avesse consegnato **in proporzione**, cioe' al piu'
+        `soglia / cpu_al_s` della consegna piena.  ⇒ `[M]` KDE, 22 set 2026:
+        tetto stimato **4,8 s** (443 fotogrammi al ritmo sano di 65,1/s), ⛔ ma
+        nella finestra ne sono arrivati **1167**, cioe' 17,9 s di consegna
+        piena su 18,1 s trascorsi.  La scena dipingeva a pieno ritmo **da
+        subito**: a stare sotto la soglia era la MISURA, non il lavoro —
+        `ps -o times=` conta i secondi interi, e nei primi secondi un
+        codificatore che lavora appare fermo.
+    ⇒ Un tetto che il fatto attraversa non e' un tetto: si torna a quello che
+      non si puo' sbagliare — la scena, al piu', ha dipinto per tutto il tempo
+      in cui e' stata accesa.
+    ⚠ `passo`, `soglia` e `cpu_al_s` restano nella firma perche' il chiamante
+      li ha e perche' servono a dire «non lo so»: senza il lavoro del
+      codificatore non si sa nemmeno se la scena fosse accesa.
+
+    ⛔ `None` se uno dei numeri non si sa: un tetto inventato sarebbe peggio di
+      nessun tetto.
     """
     if quanto is None or cpu_al_s is None or not cpu_al_s or cpu_al_s <= 0:
         return None
     if passo is None or soglia is None or passo <= 0 or soglia < 0:
         return None
-    return passo + soglia * max(0.0, quanto - passo) / float(cpu_al_s)
+    return max(float(quanto), float(passo))
+
+
+# ⭐ La finestra CHIESTA per i due giri del «codificatore fermo», e il suo
+#   tetto.  ⛔ Il numero giusto non e' uno: dipende dal ritmo della scatola, e
+#   `finestra_bastante()` lo calcola.  Questo e' solo il punto di partenza.
+FINESTRA_GUASTO = 90.0
+# ⚠ E un tetto ci vuole: una scatola lentissima chiederebbe una finestra che
+#   non finisce piu', e un banco che non finisce e' un banco che si spegne.
+FINESTRA_GUASTO_TETTO = 400.0
 
 
 def finestra_bastante(secondi_prima, ritmo_sano, ritmo_minimo=RITMO_MINIMO):
@@ -1343,6 +1365,27 @@ def certifica():
                        "/opt/remotix/remotix\n", "remotix"), 7.0)
     prova("⛔ nessuna riga affatto ⇒ «non lo so»", somma_lavoro("", "remotix"),
           None)
+
+    # ── il modello che sceglie CHI fermare ────────────────────────────────
+    # ⛔ E' la riga che il 22 settembre 2026 ha fermato il browser della scena
+    #    per mezza giornata: qui si prova su righe VERE, prese da `ps`.
+    def prende(riga):
+        return re.match(modello_del_prodotto("remotix"), riga) is not None
+
+    prova("⭐ il figlio che si rinomina («remotix-figlio …») SI prende",
+          prende("remotix-figlio --figlio-interno c3u2 4013 4013 1920 1080 2 -"),
+          True)
+    prova("⭐ il binario chiamato per percorso SI prende",
+          prende("/opt/remotix/remotix --indirizzo 0.0.0.0 --porta 8512"), True)
+    prova("⛔⛔ il BROWSER DELLA SCENA non si prende, e la sua riga nomina "
+          "«remotix»",
+          prende("/usr/lib/firefox-esr/firefox-esr --kiosk "
+                 "file:///opt/remotix/11-c3-scena.html"), False)
+    prova("⛔ ne' il guscio che esegue la ricerca (la trappola del pkill -f)",
+          prende("/bin/sh -c pgrep -u c3u2 -f '^(remotix|/[^ ]*/remotix)'"),
+          False)
+    prova("⛔ ne' un altro programma che comincia uguale",
+          prende("/usr/bin/remotixaltro --x"), False)
     prova("il lavoro al secondo fra due letture (1,0 ⇒ 3,0 in 2 s) ⇒ 1,00/s",
           lavoro_al_secondo(1.0, 3.0, 2.0), 1.0)
     prova("⛔ una lettura che manca ⇒ «non lo so», e non zero",
@@ -1351,9 +1394,10 @@ def certifica():
           lavoro_al_secondo(1.0, 3.0, 0.0), None)
     prova("⚠ un conto all'indietro non e' una misura ⇒ 0, mai un negativo",
           lavoro_al_secondo(5.0, 3.0, 2.0), 0.0)
-    prova("⭐ la scena in vista prima dell'innesto: 27 s d'attesa, 0,60 CPU/s "
-          "⇒ al piu' 6,17 s",
-          round(secondi_in_vista(27.0, 2.0, 0.10, 0.60), 2), 6.17)
+    prova("⭐ la scena in vista prima dell'innesto: 27 s d'attesa ⇒ al piu' "
+          "27 s (⛔ non 6,17: il vecchio tetto pesato sulla CPU e' stato "
+          "smentito, 22 set 2026)",
+          round(secondi_in_vista(27.0, 2.0, 0.10, 0.60), 2), 27.0)
     prova("⭐ se i fotogrammi arrivano al primo colpo, e' solo il passo ⇒ 2,00 s",
           round(secondi_in_vista(2.0, 2.0, 0.10, 0.60), 2), 2.0)
     prova("⛔ senza il lavoro del cliente non si finge un tetto ⇒ «non lo so»",
@@ -1682,6 +1726,40 @@ def la_scena_e_viva(chi, applicazione):
     return r.returncode == 0
 
 
+def modello_del_prodotto(nome):
+    """⭐ L'espressione che prende i processi DEL PRODOTTO e nient'altro.
+
+    ⛔⛔ E qui ci sono due nomi per la stessa cosa, che il 22 settembre 2026 sono
+        costati mezza giornata.  Il figlio **si rinomina**: `src/figlio.c:1193`
+        gli mette `argv[0] = "remotix-figlio"`, mentre `comm` resta `remotix`
+        perche' viene dall'eseguibile (`execve(/opt/remotix/remotix, …)`).
+        ⇒ `pkill -f remotix` prendeva anche il **browser della scena**, che ha
+          `file:///opt/remotix/11-c3-scena.html` nella riga di comando, e lo
+          lasciava in stato `T` insieme al suo `runuser`;
+        ⇒ `pkill -x remotix` non e' l'inverso sicuro: guarda `comm`, che il
+          prodotto non controlla — il giorno che il binario cambia nome non
+          prende piu' niente, **in silenzio**.
+    ⭐ Percio' si ancora all'INIZIO della riga di comando, che e' l'unico posto
+      dove il prodotto sta e il browser non puo' stare:
+        `remotix-figlio …`      il figlio che si e' rinominato
+        `/opt/remotix/remotix …`  il binario chiamato per percorso
+    ⚠ E l'ancora protegge anche da se stessa: la riga di comando del guscio che
+      esegue questa ricerca comincia con `/bin/sh`, quindi non si pesca da solo
+      (la trappola del `pkill -f` — vedi `sgombra`).
+    """
+    return "^(%s|/[^ ]*/%s)([ -]|$)" % (nome, nome)
+
+
+def pid_del_codificatore(chi, nome):
+    """I pid dei processi del prodotto che appartengono a «chi».  ⛔ Mai altri."""
+    r = sh("pgrep -u %s -f '%s'" % (chi, modello_del_prodotto(nome)))
+    pid = []
+    for riga in (r.stdout or "").split():
+        if riga.isdigit():
+            pid.append(riga)
+    return pid
+
+
 def ferma_il_codificatore(chi, nome):
     """⛔ IL GUASTO VERO: SIGSTOP al processo dell'inquilino che consegna.
 
@@ -1693,34 +1771,25 @@ def ferma_il_codificatore(chi, nome):
     nessuno e' finito in stato **T**, l'iniezione non ha toccato niente e un
     eventuale rosso e' di qualcun altro (`LEZIONI.md` §1.52).
     """
-    # ⭐ L'ESITO DEL `pkill` SI GUARDA: dice esattamente se ha trovato qualcosa
-    #   da fermare, ed e' la differenza fra «ho fermato il codificatore» e
-    #   «non c'era niente da fermare».  ⛔ Buttarlo via vorrebbe dire fidarsi
-    #   di un comando senza guardare se e' stato eseguito (`LEZIONI.md` §1.46).
-    # ⛔⛔ `-x` SUL NOME DEL PROGRAMMA, non `-f` sulla riga di comando — 22
-    #     settembre 2026.  Con `-f remotix` il modello prendeva anche il
-    #     **browser della scena**, aperto su `file:///opt/remotix/…`: si fermava
-    #     lui insieme al codificatore, e il `-CONT` di `sgombra` — che guarda i
-    #     soli processi dell'inquilino — non risvegliava il `runuser` di root
-    #     che gli faceva da padre.  `[M]` 22 set 2026: in tutte e tre le scatole
-    #     un `runuser` in stato `T` con un `firefox-esr` zombie sotto, tre ore
-    #     dopo la fine del giro.
-    k = sh("pkill -STOP -u %s -x %s" % (chi, nome))
-    preso = (k.returncode == 0)
+    # ⭐ L'ESITO SI GUARDA: dice esattamente se c'era qualcosa da fermare, ed e'
+    #   la differenza fra «ho fermato il codificatore» e «non c'era niente da
+    #   fermare».  ⛔ Buttarlo via vorrebbe dire fidarsi di un comando senza
+    #   guardare se e' stato eseguito (`LEZIONI.md` §1.46).
+    pid = pid_del_codificatore(chi, nome)
+    preso = bool(pid)
+    for p in pid:
+        sh("kill -STOP %s 2>/dev/null" % p)
     time.sleep(1.0)
-    r = sh("ps -u %s -o stat=,comm=" % chi)
+    # ⭐⭐ E SI VERIFICA **QUEI** PID, non «qualcuno in stato T»: e' la firma del
+    #     guasto (`LEZIONI.md` §1.52), e un guasto che non si e' potuto innestare
+    #     deve poter dire di non esserci stato.
     fermati = []
-    for riga in (r.stdout or "").splitlines():
-        pezzi = riga.split(None, 1)
-        if len(pezzi) < 2 or not pezzi[0].startswith("T"):
-            continue
-        fermati.append(pezzi[1].strip())
-    # ⚠ E si conta CHI e' fermo, non «quanti processi sono fermi»: un inquilino
-    #   appena nato non ha altri processi in stato T, ⛔ ma contare tutti sarebbe
-    #   un predicato un livello troppo in alto — §1.44, la forma esatta del
-    #   difetto di C8 col `~/.cache` invece di `~/.cache/mozilla`.
-    miei = [c for c in fermati if nome in c or c in nome]
-    return len(miei), miei, preso
+    for p in pid:
+        s = sh("ps -o stat=,comm= -p %s" % p)
+        pezzi = (s.stdout or "").split(None, 1)
+        if len(pezzi) == 2 and pezzi[0].startswith("T"):
+            fermati.append(pezzi[1].strip())
+    return len(fermati), fermati, preso
 
 
 def estrai_i_fotogrammi(flusso, dove, larghezza, altezza, tetto=900.0):
@@ -1765,7 +1834,7 @@ def quanti_fotogrammi_dice_il_cliente(coda):
 # ═══════════════════════════════════════════════════════════════════════════
 # UN GIRO
 # ═══════════════════════════════════════════════════════════════════════════
-def un_giro(chi, modo, a, giudice, lettore):
+def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
     """`modo` = None (sano) | "fermo" (SIGSTOP al codificatore).
 
     ⛔⛔ L'ORDINE DELLE MOSSE — ed e' la ragione per cui questa maglia oggi si
@@ -1896,14 +1965,15 @@ def un_giro(chi, modo, a, giudice, lettore):
     try:
         return _il_resto_del_giro(chi, modo, a, giudice, lettore, esito,
                                   cliente, chiudi_il_cliente, flusso, lavoro,
-                                  partito, resta)
+                                  partito, resta, ritmo_sano)
     finally:
         if modo == "fermo":
             sh("pkill -CONT -u %s 2>/dev/null" % chi)
 
 
 def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
-                       chiudi_il_cliente, flusso, lavoro, partito, resta):
+                       chiudi_il_cliente, flusso, lavoro, partito, resta,
+                       ritmo_sano=None):
     """La parte del giro che sta dentro il `try/finally` dell'iniezione."""
     # ── 4. la scena ────────────────────────────────────────────────────────
     if not a.scena_ferma:
@@ -1981,12 +2051,49 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
                  (" (%s)" % ", ".join(sorted(set(chi_fermato))[:6]))
                  if chi_fermato else ""))
 
+    # ⭐⭐ E LA FINESTRA SI ALLUNGA QUANTO SERVE — 22 settembre 2026.
+    #
+    # ⛔ Il ritmo di questa maglia e' LORDO: dentro la finestra ci sono anche i
+    #    fotogrammi nati PRIMA dell'innesto, e finche' bastano loro a tenerlo
+    #    sopra la soglia il guasto non puo' mordere.  `finestra_bastante()` sa
+    #    da che secondo in poi puo' mordere, e finora il banco lo diceva **dopo
+    #    aver misurato**, con un «rilancia con --finestra-guasto N» che nessuno
+    #    rilanciava: nella rete usciva un 3 — «non ho potuto guardare» — e la
+    #    maglia non certificava piu' niente.
+    # ⚠ Prima del 22 set il difetto non si vedeva per una ragione sbagliata: il
+    #   modello del `pkill` fermava anche il BROWSER della scena, quindi la
+    #   scena stessa smetteva di muoversi e il ritmo crollava molto prima.
+    #   ⇒ Curato l'innesto, questo e' venuto a galla.
+    # ⭐ Il numero non si inventa: e' quello che il banco stampava nel suo
+    #   consiglio (`serve × 2 + 10`), e si scrive sempre a voce.
+    finestra = a.finestra
+    if modo == "fermo":
+        serve = finestra_bastante(esito.get("secondi_prima"), ritmo_sano,
+                                  a.ritmo_minimo)
+        chiesta_a_mano = abs(a.finestra_guasto - FINESTRA_GUASTO) > 0.001
+        if serve is not None and finestra <= serve and not chiesta_a_mano:
+            finestra = min(serve * 1.25 + 10.0, FINESTRA_GUASTO_TETTO)
+            print("           ⭐ la finestra si allunga a %.0f s: col ritmo "
+                  "sano di %.1f/s e %.1f s di scena in vista prima "
+                  "dell'innesto, sotto i %.0f s il guasto non potrebbe "
+                  "mordere%s"
+                  % (finestra, ritmo_sano, esito.get("secondi_prima") or -1,
+                     serve,
+                     " (⚠ TETTO: e non basta)"
+                     if finestra >= FINESTRA_GUASTO_TETTO
+                     and serve * 1.25 + 10.0 > FINESTRA_GUASTO_TETTO else ""))
+        elif serve is not None and finestra <= serve:
+            print("           ⚠ la finestra chiesta a mano (%.0f s) e' piu' "
+                  "corta dei %.0f s che servirebbero: la lascio come l'hai "
+                  "chiesta, e il giudizio dira' che non ha potuto mordere"
+                  % (finestra, serve))
+
     # ⭐⭐ QUI SI APRE LA FINESTRA DI MISURA, e l'istante si SEGNA — e' il
     #     denominatore del ritmo, e un denominatore che nessuno segna e' un
     #     numero che dice quel che capita.
     inizio_finestra = time.time()
     cpu_apertura = cpu_del_cliente(cliente.pid)
-    time.sleep(a.finestra)
+    time.sleep(finestra)
     # ⛔ E IL LAVORO DEL CLIENTE SI RILEGGE **PRIMA** CHE IL CLIENTE MUOIA:
     #    dopo, `/proc/<pid>` non c'e' piu' e la misura sarebbe «non lo so» per
     #    un difetto del banco.
@@ -2437,7 +2544,7 @@ def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
             r.append("   a tenere il ritmo lordo sopra la soglia ⇒ il guasto "
                      "non poteva mordere, e non l'ho collaudato.")
             r.append("   ⛔ Esito 3, non un rosso. ⇒ Si rilancia con "
-                     "`--finestra-guasto %d`." % int(serve * 2 + 10))
+                     "`--finestra-guasto %d`." % int(serve * 1.25 + 10))
             return 3, r
 
     if rotto["stato"] == "cambia":
@@ -2590,7 +2697,7 @@ def main():
     #   veri del giro: se la finestra non e' bastata lo dice, ed esce 3.
     # ⚠ E vale per **tutt'e due** i giri del collaudo, il sano e il guastato:
     #   due finestre diverse renderebbero i due ritmi non confrontabili.
-    p.add_argument("--finestra-guasto", type=float, default=90.0,
+    p.add_argument("--finestra-guasto", type=float, default=FINESTRA_GUASTO,
                    help="⭐ la finestra dei DUE giri di `--codificatore-fermo`: "
                         "misurare un'assenza costa tempo")
     p.add_argument("--coda", type=float, default=10.0)
@@ -2766,7 +2873,8 @@ def main():
     if a.codificatore_fermo:
         sano = un_giro("%s1" % a.utente_base, None, a, giudice, lettore)
         stampa(sano)
-        rotto = un_giro("%s2" % a.utente_base, "fermo", a, giudice, lettore)
+        rotto = un_giro("%s2" % a.utente_base, "fermo", a, giudice, lettore,
+                        ritmo_sano=sano.get("ritmo"))
         stampa(rotto)
         print()
         esito, righe = collauda_il_fermo(sano, rotto, QUOTA_GUASTO,
