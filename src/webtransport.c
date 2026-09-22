@@ -518,6 +518,11 @@ struct wt {
 	 *   mai scattato» non devono avere la stessa faccia. */
 	uint32_t sgombra_tenuti, sgombra_abbandoni, sgombra_credito;
 	bool sgombra_sopra;
+	/* ⛔ 22 set 2026 — delta TENUTI perche' davanti c'e' una CHIAVE ancora in
+	 *    coda (vedi `video_sgombra()`, «LA SPIRALE DELLA CHIAVE»), e il fondo
+	 *    della riga che lo dice una volta per chiave. */
+	uint32_t sgombra_dietro_chiave;
+	uint32_t sgombra_chiave_detta;
 
 	/* ⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e i suoi numeri.
 	 *
@@ -3937,6 +3942,9 @@ static void video_sgombra(wt *w, const char *perche)
 	 * ⚠ I byte si tengono in `resto[]` invece di rileggerli: fra le due
 	 *   passate non cambia niente, e `coda_byte_stream()` scorre tutta la coda
 	 *   ogni volta. */
+	bool chiave_in_coda = false;
+	uint32_t chiave_numero = 0;
+
 	for (size_t i = 0; i < w->ninvolo; i++) {
 		resto[i] = 0;
 		if (!w->involo[i].vivo)
@@ -3947,6 +3955,10 @@ static void video_sgombra(wt *w, const char *perche)
 			continue;
 		}
 		in_coda += resto[i];
+		if (w->involo[i].chiave) {
+			chiave_in_coda = true;
+			chiave_numero = w->involo[i].numero;
+		}
 		/* ⭐ `arretrato` esclude le CHIAVI, ed e' la definizione di §3.1 del
 		 *    disegno del regolatore: una chiave lenta in coda non deve fermare
 		 *    la produzione di delta, ha gia' il suo regolatore in
@@ -3958,6 +3970,36 @@ static void video_sgombra(wt *w, const char *perche)
 
 	if (sgombra_soglia_ms) {
 		attesa = coda_svuotamento_ms(w, in_coda, &come);
+		/* ⛔⛔ LA SPIRALE DELLA CHIAVE — 22 set 2026, prova dell'utente con un
+		 *     video 4K su KDE, Chrome e Firefox.  Una chiave da ~300 KB in coda
+		 *     porta l'attesa sopra la soglia DA SOLA; abbandonare i delta che
+		 *     le vengono dietro non la accorcia (la chiave non si abbandona,
+		 *     §5.2), ma apre un buco ⇒ RICHIEDI_CHIAVE ⇒ un'altra chiave
+		 *     grossa ⇒ un altro delta abbandonato.  `[M]` «abbandonati» saliva
+		 *     di uno a ogni chiave, 7→13 in 6 s, e poi linea morta: la spirale
+		 *     che `RCP.md` §5.2 nomina.  ⇒ Finche' una chiave e' in coda i
+		 *     delta si TENGONO: a frenare la produzione ci pensa il regolatore
+		 *     del ritmo, non l'abbandono. */
+		if (attesa > sgombra_soglia_ms && chiave_in_coda) {
+			w->sgombra_tenuti += arretrato;
+			w->sgombra_dietro_chiave += arretrato;
+			if (w->sgombra_chiave_detta != chiave_numero + 1) {
+				w->sgombra_chiave_detta = chiave_numero + 1;
+				registro_dice_di(REG_RCP, wt_chi(w),
+				                 "⭐ %s: la coda del video e' sopra la soglia "
+				                 "(%zu byte = %llu ms, soglia %llu ms) ma c'e' "
+				                 "la CHIAVE %u davanti: i %u delta dietro di "
+				                 "lei si TENGONO — abbandonarli aprirebbe un "
+				                 "buco e chiederebbe un'altra chiave (la "
+				                 "spirale di RCP.md §5.2)",
+				                 w->provenienza, in_coda,
+				                 (unsigned long long)attesa,
+				                 (unsigned long long)sgombra_soglia_ms,
+				                 chiave_numero, arretrato);
+			}
+			involo_pulisci(w);
+			return;
+		}
 		if (attesa <= sgombra_soglia_ms) {
 			/* ⭐ SI TIENE — e non si scrive una riga per fotogramma: si conta,
 			 * e la riga esce solo quando lo STATO cambia.  ⚠ Trenta righe al
@@ -7555,12 +7597,13 @@ void wt_libera(wt *w)
 		                 "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — "
 		                 "delta TENUTI %u, abbandonati per soglia %u, e NON "
 		                 "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
-		                 "forma che il ricevente non vede)",
+		                 "forma che il ricevente non vede) — dei tenuti, %u "
+		                 "dietro una CHIAVE ancora in coda",
 		                 sgombra_soglia_ms ? "ACCESA (predefinito dal 24 ago 2026)"
 		                                   : "SPENTA a mano (--sgombra-soglia-ms 0)",
 		                 (unsigned long long)sgombra_soglia_ms,
 		                 w->sgombra_tenuti, w->sgombra_abbandoni,
-		                 w->sgombra_credito);
+		                 w->sgombra_credito, w->sgombra_dietro_chiave);
 		/* ⛔⭐ FASE 9 — E IL CONTO DEL REGOLATORE DEL RITMO, che sta a parte
 		 *     dagli altri due per la ragione di tutta questa fase: «zero
 		 *     discese» e «il regolatore e' spento» non devono avere la stessa

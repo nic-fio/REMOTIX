@@ -1302,6 +1302,15 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   parte mai. Durante una raffica di perdite le richieste arrivano a decine, e ogni chiave costa
   dieci volte un delta: assecondarle peggiorerebbe esattamente la condizione che le ha provocate.
   ⭐ **È l'eccezione 5 di §3, ed è dichiarata lì.**
+  ⛔ **La grazia vale solo per i doppioni** (22 set 2026): una `RICHIEDI_CHIAVE` il cui
+  `ultimo_numero` è uguale o più nuovo dell'ultima chiave spedita dice che il client quella chiave
+  l'ha già decodificata — il buco è venuto dopo — e il server **DEVE** accoglierla. `[M]` Ignorarla
+  lasciava la pagina ferma per sempre con un video pesante, su Firefox e su Chrome;
+- ⛔ il client manda **una** `RICHIEDI_CHIAVE` per buco; se la chiave non arriva entro **1 s** ne
+  manda un'altra (22 set 2026). Una al secondo, non una per fotogramma: la spirale resta chiusa;
+- ⛔ finché una **chiave** è ancora nella coda d'uscita, il server **NON** abbandona i delta che le
+  vengono dietro per la soglia della coda (§5.1): non la accorcerebbero, e ogni delta abbandonato
+  apre un buco che chiede un'altra chiave (22 set 2026, `[M]` la spirale vista con un video 4K).
 
 ⚠ **E una conseguenza che tocca la fase 9**: se la linea è così cattiva da far abbandonare in
 continuazione, il rimedio **non** è mandare chiavi in continuazione — è **calare i fotogrammi**,

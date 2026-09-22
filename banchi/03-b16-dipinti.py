@@ -285,8 +285,8 @@ GUASTI = {
         "    if (!completo) {\n      /* ⛔ §6.2: uno stream AZZERATO",
         "    if (false) {\n      /* ⛔ §6.2: uno stream AZZERATO", 1),
     "spirale": (
-        "    if (this.sospeso) {\n      this.riga(\"buco: \"",
-        "    if (false) {\n      this.riga(\"buco: \"", 1),
+        "    if (this.sospeso) {\n      const ora = performance.now();",
+        "    if (false) {\n      const ora = performance.now();", 1),
     "trattieni-sempre": (
         "    if (this.attese_tela <= 0)",
         "    if (false)", 1),

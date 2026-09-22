@@ -2812,13 +2812,31 @@ class Schermo {
      * puo' ignorare una richiesta entro 200 ms dall'ultima chiave spedita), ma
      * appoggiarsi allo smorzatore dell'altro lato e' chiedere all'altro di
      * curare un difetto nostro. */
+    /* ⛔⛔ E SE LA CHIAVE NON ARRIVA, SI RICHIEDE — 22 set 2026, prova
+     *     dell'utente con un video 4K su KDE.  Il server puo' ignorare una
+     *     richiesta (§5.2, la grazia dei 200 ms), e con la regola di sopra la
+     *     pagina restava sospesa PER SEMPRE: `[M]` Firefox fermo a 41
+     *     consegnati per 150 s mentre QUIC consegnava tutto.  ⇒ Una sola
+     *     richiesta per buco resta la regola; dopo 1 s senza chiave se ne
+     *     manda un'altra, ed e' un secondo, non un fotogramma: la spirale del
+     *     caso T11 resta chiusa. */
     if (this.sospeso) {
+      const ora = performance.now();
+      if (this.su_chiave && ora - this.chiave_chiesta_t >= 1000) {
+        this.chiave_chiesta_t = ora;
+        this.conti.chiavi_chieste++;
+        this.riga("buco: " + perche + " — la chiave chiesta non e' arrivata in "
+                  + "1 s: la RICHIEDO (§5.2)");
+        this.su_chiave(this.ultimo_consegnato === null ? 0 : this.ultimo_consegnato);
+        return;
+      }
       this.riga("buco: " + perche + " — e ce n'e' gia' uno aperto: la chiave e' "
                 + "gia' stata chiesta, non se ne chiede una seconda (§5.2)");
       return;
     }
     this.conti.buchi++;
     this.sospeso = true;
+    this.chiave_chiesta_t = performance.now();
     this.riga("buco: " + perche + " ⇒ RICHIEDI_CHIAVE, e fino alla chiave si "
               + "tiene l'ultimo fotogramma buono (§5.2)");
     if (this.su_chiave) {

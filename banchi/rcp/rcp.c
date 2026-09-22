@@ -626,6 +626,10 @@ struct rcp_sessione {
 	 * spostano l'orologio all'infinito e la chiave non parte mai. */
 	uint64_t ultima_chiave_ms;
 	bool mai_spedita_una_chiave;
+	/* ⛔ 22 set 2026 — il `numero` dell'ultima chiave spedita: la grazia dei
+	 *    200 ms vale solo per chi quella chiave NON l'ha ancora vista
+	 *    (`tratta_richiedi_chiave()`). */
+	uint32_t ultima_chiave_numero;
 
 	/* Il fotogramma aperto adesso — §5.1, uno stream per fotogramma.
 	 * ⛔ `video_aperto` e non «`stream` vale -1»: `0` e' un identificatore di
@@ -4257,6 +4261,7 @@ int rcp_video_finisci(rcp_sessione *s)
 		 * da noi», non «e' arrivata»: vedi il rilievo P17 nel rapporto, che
 		 * dichiara la differenza invece di correggerla di testa propria. */
 		s->ultima_chiave_ms = s->video_aperto_ms;
+		s->ultima_chiave_numero = s->video_suo_numero;
 	}
 	reg(s, "fotogramma %u SPEDITO: %s, codec %u, %ux%u, %zu byte di dati, "
 	       "stream %lld, FIN (§6.2: completo) — spediti %u, abbandonati %u",
@@ -6038,7 +6043,18 @@ static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
 	/* ⛔ §7.1: «`ultimo_numero`: l'ultimo fotogramma decodificato, **0 se
 	 * nessuno**».  E' il significato che P2 ha riservato allo zero in §6.2:
 	 * qui si legge, non si indovina. */
-	if (!s->mai_spedita_una_chiave && ora - s->ultima_chiave_ms < V_GRAZIA_CHIAVE) {
+	/* ⛔⛔ 22 set 2026 — LA GRAZIA E' PER I DOPPIONI, non per i buchi nuovi.
+	 *     Una richiesta con `ultimo_numero` uguale o piu' nuovo dell'ultima
+	 *     chiave spedita dice che il client quella chiave l'ha GIA'
+	 *     decodificata: il buco e' venuto dopo, e ignorarla lo lascia fermo per
+	 *     sempre (la pagina non ne chiede una seconda per lo stesso buco).
+	 *     `[M]` Firefox su KDE, video pesante: «ignorata — 157 ms» con
+	 *     `ultimo_numero` = la chiave appena arrivata, e la pagina congelata
+	 *     finche' la linea e' morta.  ⚠ Confronto in aritmetica di numeri di
+	 *     serie: il `numero` di §6.2 gira. */
+	bool gia_vista = (int32_t)(ultimo - s->ultima_chiave_numero) >= 0;
+	if (!s->mai_spedita_una_chiave && !gia_vista &&
+	    ora - s->ultima_chiave_ms < V_GRAZIA_CHIAVE) {
 		/* ⛔ §3: «ogni tolleranza va scritta nel registro.  Una tolleranza
 		 * silenziosa e' indistinguibile da un difetto».  E' l'eccezione 5. */
 		reg(s, "⚠ TOLLERANZA DICHIARATA (§3 eccezione 5, §5.2): "
