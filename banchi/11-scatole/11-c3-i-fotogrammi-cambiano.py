@@ -856,8 +856,13 @@ def somma_lavoro(testo, nome):
         pezzi = riga.split(None, 1)
         if len(pezzi) < 2:
             continue
-        argv0 = pezzi[1].split(None, 1)[0]
-        if os.path.basename(argv0) != nome:
+        argv0 = os.path.basename(pezzi[1].split(None, 1)[0])
+        # ⚠ Il figlio del prodotto SI RINOMINA — `remotix-figlio --figlio-interno
+        #   …` — quindi «uguale al nome» non basta: vale anche il nome seguito da
+        #   `-` o `:`, che e' come i processi si danno un titolo.  ⛔ E non vale
+        #   il contrario: `firefox-esr` non diventa mai `remotix`.
+        if argv0 != nome and not argv0.startswith(nome + "-") \
+           and not argv0.startswith(nome + ":"):
             continue
         try:
             secondi = int(pezzi[0])
@@ -1324,6 +1329,11 @@ def certifica():
                "file:///opt/remotix/11-c3-scena.html\n")
     prova("⭐ il lavoro del CODIFICATORE, e solo suo: 12+3 ⇒ 15 s di CPU",
           somma_lavoro(ps_vero, "remotix"), 15.0)
+    prova("⭐ il figlio che SI RINOMINA «remotix-figlio» conta lo stesso",
+          somma_lavoro("    9 remotix-figlio --figlio-interno c3u2 4013 4013\n",
+                       "remotix"), 9.0)
+    prova("⛔ un nome che comincia uguale ma e' un altro programma NON conta",
+          somma_lavoro("    9 /usr/bin/remotixaltro --x\n", "remotix"), None)
     prova("⛔ il browser non e' il codificatore: non entra nella somma",
           somma_lavoro(ps_vero, "remotix") != somma_lavoro(ps_vero, ""), True)
     prova("⛔ nessun processo con quel nome ⇒ «non lo so», e ⛔ NON zero",
@@ -1583,11 +1593,18 @@ def sgombra(chi, attesa):
     #    del figlio.  ⚠ Un `-CONT` che guarda i soli processi dell'inquilino lo
     #    lascia fermo in `T` per sempre, col browser zombie sotto (22 set 2026).
     #    ⭐ Il modello resta DELIMITATO al proprio inquilino, §7.3 della fase 10.
-    sh("pkill -CONT -f 'runuser -u %s ' 2>/dev/null" % chi)
+    # ⛔⛔ E IL MODELLO NON DEVE TROVARE SE STESSO — 22 settembre 2026.
+    #     `pkill -f "runuser -u c3u2 "` prende anche il `/bin/sh -c` che sta
+    #     eseguendo quel comando, perche' quella stringa sta nella SUA riga di
+    #     comando: col `-KILL` il guscio moriva a meta' del lavoro e il
+    #     `runuser` sopravviveva.  ⭐ Le parentesi quadre sono la cura classica:
+    #     `[c]3u2` come **espressione** vale `c3u2`, ma come **testo** non si
+    #     assomiglia, quindi il comando non pesca se stesso.
+    sh("pkill -CONT -f 'runuser -u [%s]%s ' 2>/dev/null" % (chi[0], chi[1:]))
     sh("loginctl terminate-user %s 2>/dev/null" % chi)
     time.sleep(1.0)
     sh("pkill -KILL -u %s 2>/dev/null" % chi)
-    sh("pkill -KILL -f 'runuser -u %s ' 2>/dev/null" % chi)
+    sh("pkill -KILL -f 'runuser -u [%s]%s ' 2>/dev/null" % (chi[0], chi[1:]))
     scadenza = time.time() + attesa
     while time.time() < scadenza:
         viva = sh("loginctl show-user %s >/dev/null 2>&1" % chi).returncode == 0
@@ -1638,9 +1655,22 @@ def accendi_la_scena(chi, a):
         return None, ("in %s non c'e' nessun socket wayland: non c'e' un "
                       "compositore a cui la scena possa parlare" % rtd)
     args = a.argomenti % {"pagina": a.scena}
-    sh("runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
+    # ⛔⛔ `setsid`, E NON E' UN ORNAMENTO — 22 settembre 2026.
+    #     Messa in fondo con `&`, la scena finisce in un gruppo di processi di
+    #     SFONDO del terminale che ha lanciato il banco (la rete gira da `ssh
+    #     -tt`).  Appena il browser tocca il terminale — `tcsetattr`, e lo fa
+    #     all'avvio — il nucleo gli manda **SIGTTOU** e lo ferma: `[M]` 22 set
+    #     2026, `firefox-esr` in stato `T` dal primo istante, cioe' PRIMA che il
+    #     guasto innestato mandasse il suo SIGSTOP, e `runuser` fermo con lui.
+    #     ⇒ La scena che «non si muove» non era un guasto del prodotto: era il
+    #       banco che la fermava, e restava fermo in tutte e tre le scatole
+    #       anche a giro finito.
+    # ⭐ Con `setsid` la scena non ha piu' terminale di controllo: niente
+    #    SIGTTOU, niente SIGTTIN.  ⚠ E lo stdin si chiude su /dev/null per la
+    #    stessa ragione.
+    sh("setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
        "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
-       "%s %s > /home/%s/.c3-scena.log 2>&1 &"
+       "%s %s < /dev/null > /home/%s/.c3-scena.log 2>&1 &"
        % (chi, rtd, display, chi, a.applicazione, args, chi), secondi=30)
     return display, ""
 

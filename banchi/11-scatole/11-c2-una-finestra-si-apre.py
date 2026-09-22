@@ -1309,9 +1309,13 @@ def accendi_l_applicazione(chi, applicazione, argomenti, pagina):
                       "modello si scrive `%%(pagina)s`, e un `%%` letterale va "
                       "raddoppiato" % (argomenti, sbaglio))
     comando = (
-        "runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
+        # ⛔ `setsid` + stdin chiuso: senza, il browser finisce in un gruppo di
+        #    processi di SFONDO del terminale che ha lanciato la rete e il primo
+        #    `tcsetattr` se lo prende un SIGTTOU ⇒ resta in stato `T` dal primo
+        #    istante (22 set 2026, visto in C3 su tutte e tre le scatole).
+        "setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
         "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
-        "%s %s > %s 2>&1 &"
+        "%s %s < /dev/null > %s 2>&1 &"
         % (chi, rtd, display, chi, applicazione, args, registro_applicazione(chi)))
     r = sh(comando, secondi=30)
     if r.returncode != 0:

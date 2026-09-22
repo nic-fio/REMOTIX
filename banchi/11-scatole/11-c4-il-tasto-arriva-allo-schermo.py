@@ -1301,9 +1301,13 @@ def apri_la_scena(chi, browser, pagina, registro):
     if not display:
         return None, ("in %s non c'e' nessun socket wayland: la sessione non ha "
                       "un compositore a cui il browser possa parlare" % rtd)
-    sh("runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
+    # ⛔ `setsid` + stdin chiuso: senza, il browser finisce in un gruppo di
+    #    processi di SFONDO del terminale che ha lanciato la rete e il primo
+    #    `tcsetattr` se lo prende un SIGTTOU ⇒ resta in stato `T` dal primo
+    #    istante (22 set 2026, visto in C3 su tutte e tre le scatole).
+    sh("setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
        "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
-       "%s --kiosk file://%s > %s 2>&1 &"
+       "%s --kiosk file://%s < /dev/null > %s 2>&1 &"
        % (chi, rtd, display, chi, browser, pagina, registro), secondi=30)
     return display, None
 

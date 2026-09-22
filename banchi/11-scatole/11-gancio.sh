@@ -487,10 +487,15 @@ sgombera_inquilini() {
 		tolti=""
 		for u in $(awk -F: "\$1 ~ /^c[0-9]+b?u[0-9]+$/ {print \$1}" /etc/passwd); do
 			id=$(id -u "$u" 2>/dev/null)
+			# ⛔ Il modello NON deve pescare se stesso: la riga di comando di
+			#    questo guscio contiene «runuser -u <u>», e un `pkill -f` la
+			#    prenderebbe.  `[c]3u2` vale `c3u2` come espressione e non come
+			#    testo (22 set 2026, il guscio si uccideva da solo).
+			m="runuser -u [$(printf %s "$u" | cut -c1)]$(printf %s "$u" | cut -c2-) "
 			loginctl terminate-user "$u" >/dev/null 2>&1
-			pkill -CONT -f "runuser -u $u " >/dev/null 2>&1
+			pkill -CONT -f "$m" >/dev/null 2>&1
 			pkill -CONT -u "$u" >/dev/null 2>&1
-			pkill -KILL -f "runuser -u $u " >/dev/null 2>&1
+			pkill -KILL -f "$m" >/dev/null 2>&1
 			pkill -KILL -u "$u" >/dev/null 2>&1
 			sleep 0.2
 			userdel -r "$u" >/dev/null 2>&1 || userdel "$u" >/dev/null 2>&1
