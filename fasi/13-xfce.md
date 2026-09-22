@@ -702,10 +702,19 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   esclude solo `provanic`, quindi `nictest` conta come inquilino; (5) nella stessa spazzata le unità
   `user@…` fallite e gli orfani di `/tmp`.
 - ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
-- ⏳ ⛔ **PRIMA DI LXQt, i gruppi `video`/`render` su TUTTI i desktop** — l'utente, 21 set 2026:
-  *«deve funzionare per tutti i DE, non solo per KDE»*. Oggi `[M]` solo su kde
-  (`DECISIONI.md` §7.21); le maglie mettono i loro inquilini nei gruppi da sole, quindi la rete
-  **non lo guarda**. Una sessione apposita.
+- ✅ **I gruppi `video`/`render` su TUTTI i desktop** — chiuso il 22 set 2026, e la cura non serviva:
+  il codice che iscrive (`src/figlio.c`, `iscrivi_ai_gruppi_della_scheda`) sta nel **padre**, gira da
+  root dopo PAM e **prima del `fork`** ⇒ non sa nemmeno quale compositore nascerà, e vale su ogni
+  desktop. Era **misurato** solo su kde, non fatto solo per kde.
+  `[M]` 22 set 2026, inquilini creati SENZA gruppi, browser **veri** e finestra vera: gnome Firefox 140
+  **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In tutti e quattro il
+  registro dice «PRIMA CONNESSIONE … ce lo METTO io» e poi «è nei gruppi della scheda … può vedere in
+  hardware», `id -nG` passa da «solo se stesso» a «video render», e il primo fotogramma arriva in
+  0,6–1,6 s. (kde era già `[M]` il 20 set, `DECISIONI.md` §7.21.)
+  ⭐ **E adesso la rete lo guarda**: maglia **C18** «i gruppi della scheda li mette il prodotto»,
+  l'unica che NON chiama `garantisci_i_gruppi` — tutte le altre glieli mettono da sé e così
+  **nascondevano** quel pezzo di prodotto. Guasto innestato `--senza-usermod` (si nasconde `usermod`
+  per la durata del giro, e si rimette sempre): `[M]` VERDE e guasto VISTO su gnome e xfce.
 - ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
   gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
   l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre

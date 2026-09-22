@@ -669,6 +669,7 @@ GIRA_C5()  { bash "$QUI/11-accendi.sh" c5 "$1" "${@:2}"; }
 GIRA_C7()  { bash "$QUI/11-accendi.sh" c7 "$1" "${@:2}"; }
 GIRA_C9()  { bash "$QUI/11-accendi.sh" c9 "$1" "${@:2}"; }
 GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
+GIRA_C18() { bash "$QUI/11-accendi.sh" c18 "$1" "${@:2}"; }
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -1262,6 +1263,15 @@ famiglia_tutto() {
 		esegui_maglia "C9($d)" false GIRA_C9 "$d"
 		esegui_maglia "C9($d) guasto innestato" true GIRA_C9 "$d" --togli-nome tutto
 
+		# ⭐⭐ C18 — i gruppi della scheda li mette il PRODOTTO (§7.21), e
+		#    questa e' l'unica maglia che arriva SENZA gruppi: tutte le altre
+		#    glieli mettono da se' (`garantisci_i_gruppi`) e cosi' nascondono
+		#    quel pezzo.  ⛔ Come C1, C5, C7, C9 non passa dal cancello delle
+		#    capacita': l'iscrizione sta nel padre, prima del `fork`, e non sa
+		#    nemmeno quale compositore nascera' — ⇒ vale su OGNI desktop.
+		esegui_maglia "C18($d)" false GIRA_C18 "$d"
+		esegui_maglia "C18($d) guasto innestato" true GIRA_C18 "$d" --senza-usermod
+
 		# ⭐⭐ E le maglie del prodotto — ciascuna dove il prodotto le da' quel
 		#    che vuole, e la ragione di ogni salto sta scritta dentro
 		#    `le_cinque_nuove` (e in `11-capacita-del-prodotto.sh`).
@@ -1297,6 +1307,8 @@ famiglia_desktop_nuovo() {
 	esegui_maglia "C7($nuovo) guasto innestato" true GIRA_C7 "$nuovo" --lascia-un-processo --attesa-chiusura 10
 	esegui_maglia "C9($nuovo)" false GIRA_C9 "$nuovo"
 	esegui_maglia "C9($nuovo) guasto innestato" true GIRA_C9 "$nuovo" --togli-nome tutto
+	esegui_maglia "C18($nuovo)" false GIRA_C18 "$nuovo"
+	esegui_maglia "C18($nuovo) guasto innestato" true GIRA_C18 "$nuovo" --senza-usermod
 	# ⭐⭐ Le maglie del prodotto.  ⚠ Un desktop nuovo non sta in
 	#    `11-capacita-del-prodotto.sh` ⇒ si saltano tutte, e la ragione finisce
 	#    nel registro — ⛔ ed e' proprio il posto dove la si vuole leggere: il

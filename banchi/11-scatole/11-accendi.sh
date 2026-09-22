@@ -16,6 +16,7 @@
 #   bash 11-accendi.sh c7         [gnome] [--solo-distacco|--lascia-un-processo]
 #   bash 11-accendi.sh c9         [gnome]     il registro dice DI CHI parla
 #   bash 11-accendi.sh c17        [gnome] [--senza-copia]  gli appunti nei due versi
+#   bash 11-accendi.sh c18        [gnome] [--senza-usermod]  i gruppi li mette il prodotto
 #   bash 11-accendi.sh c10                    le copie gemelle (NON vuole la scatola)
 #   bash 11-accendi.sh impronta   [gnome]     stampa l'impronta (R3)
 #   bash 11-accendi.sh eta        [gnome]     quanto e' vecchia la scatola (la guardia)
@@ -259,7 +260,7 @@ conta_un_lancio() {
 
 case "${1:-}" in
 c1)                                     conta_un_lancio c1 "${3:-5}" ;;
-c2|c3|c4|c5|c6|c7|c8|c8b|c9|c17|passo0) conta_un_lancio "$1" 1 ;;
+c2|c3|c4|c5|c6|c7|c8|c8b|c9|c17|c18|passo0) conta_un_lancio "$1" 1 ;;
 esac
 
 case "${1:-}" in
@@ -490,6 +491,7 @@ prodotto)
 		cp /rete11/11-c7-si-chiude-e-non-resta-niente.py /opt/remotix/
 		cp /rete11/11-c9-il-registro-dice-di-chi.py /opt/remotix/
 		cp /rete11/11-c17-gli-appunti-vanno-nei-due-versi.py /opt/remotix/
+		cp /rete11/11-c18-i-gruppi-li-mette-il-prodotto.py /opt/remotix/
 		cp /rete11/appunti-gtk.py             /opt/remotix/
 		cp /rete11/10-f1-testimone.py        /opt/remotix/
 		# ⭐⭐ L ATTREZZO DEI GRUPPI DELLA SCHEDA — 27 agosto 2026.
@@ -704,6 +706,19 @@ c9)
 	#   COPIA in memoria della fetta: il registro sul disco non si tocca.
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c9-il-registro-dice-di-chi.py \
+		--porta "$PORTA" "$@"
+	exit $?
+	;;
+
+c18)
+	log "C18 — i gruppi della scheda li mette il PRODOTTO (dentro $NOME)"
+	# ⭐ L'UNICA maglia che NON mette i gruppi al suo inquilino: e' il fatto che
+	#   guarda (§7.21).  ⛔ Tutte le altre glieli danno con `garantisci_i_gruppi`,
+	#   e cosi' facendo nascondono questo pezzo di prodotto.
+	# ⚠ Il guasto si chiede con `--senza-usermod`: `usermod` sparisce per la
+	#   durata del giro e si rimette sempre, anche se il giro muore.
+	shift 2 2>/dev/null || shift $#
+	podman exec "$NOME" python3 -u /opt/remotix/11-c18-i-gruppi-li-mette-il-prodotto.py \
 		--porta "$PORTA" "$@"
 	exit $?
 	;;

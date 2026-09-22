@@ -5699,6 +5699,23 @@ gruppi. ⇒ Le due garanzie che tengono la cosa onesta, e sono nel codice:
 vero, `provisiona.sh` ha iscritto **3 persone** e `nicfio` è passato da `nicfio sudo` a
 `nicfio sudo video render`.
 
+⭐ **E VALE SU TUTTI I DESKTOP** — chiesto dall'utente il 21 set 2026 (*«deve funzionare per tutti i
+DE, non solo per KDE»*) e misurato il 22. ⚠ Non c'era niente da estendere: l'iscrizione sta nel
+**padre**, prima del `fork`, e il compositore non lo conosce nemmeno — era la **misura** a fermarsi a
+kde. `[M]` 22 set 2026, inquilini senza gruppi, **browser veri** con finestra vera
+(`banchi/12-client-veri.py --visibile`):
+
+| scatola | Firefox 140 | Chrome 153 | che cosa ha fatto il prodotto |
+|---|---|---|---|
+| **gnome** | ⭐ PASS (1° fotogramma 1,6 s) | ⭐ PASS (1,2 s) | `id -nG`: `sgruppig`/`sgruppic` → `… video render` |
+| **xfce** | ⭐ PASS (0,6 s) | ⭐ PASS (0,9 s) | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
+
+⛔ **E la rete non lo guardava**, perché **ogni maglia mette i gruppi al suo inquilino da sé**
+(`garantisci_i_gruppi`): quando il cliente arriva, il prodotto non ha più niente da iscrivere ⇒ la
+rete poteva essere tutta verde con questo pezzo rotto. ⇒ Maglia **C18**
+(`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), l'unica che arriva **senza** gruppi;
+guasto innestato `--senza-usermod`. `[M]` 22 set 2026: VERDE e guasto VISTO su gnome e xfce.
+
 ---
 
 ## Come si tiene questo documento
