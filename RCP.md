@@ -1771,6 +1771,24 @@ giorno in cui `DECISIONI.md` §5.0-ter venisse chiusa. L'unico messaggio che cam
 > non sollecitato **fa chiudere una sessione sana**: il server oggi non lo manda, e RICHIEDE invece
 > al palco di tornare alla tela in vigore, con un'attesa che cresce. Funziona, ⚠ ma è una regola del
 > prodotto che l'arbitro non nomina.
+>
+> ### ⭐ LA RIGA, SCRITTA IL 22 SETTEMBRE 2026 — e la richiesta non basta sempre
+>
+> ⛔ Il server **PUÒ** mandare **un** `TELA(ADATTATA)` non sollecitato, e **solo** quando in quella
+> sessione **non è ancora uscito nessun fotogramma**: lì il client non ha visto un pixel a quella
+> tela, non ne ha nessuno in volo, e non c'è nessuna corsa fra stream da arbitrare — il `TELA` è
+> l'unica verità che avrà mai avuto. ⛔ **Dopo il primo fotogramma resta vietato**, e vale la regola
+> di sopra: si richiede al palco, con un'attesa che cresce.
+>
+> ⚠ *Perché serve, e non è un'astrazione*: `[M]` 22 settembre 2026, prova a mano dell'utente su KDE.
+> Il server si riavvia, la sessione Plasma gli **sopravvive** (I4) col palco a 2544×926, e il client
+> rientra da una finestra di un'altra misura chiedendo 2560×962. La tabella delle tele dei palchi
+> vive nel processo ⇒ col riavvio si azzera, e il ripiego di §4.5 — «si concede quel che il palco
+> **ha**» — non ha niente da concedere. Tela in vigore 2560×962, palco 2544×926, §6.2 vieta di
+> spedire un fotogramma di misura diversa: **schermo nero per sempre**, perché **KWin `--virtual`
+> non ridimensiona** e la richiesta non può riuscire né oggi né fra un'ora. ⇒ «Richiedere al palco»
+> è una cura che presuppone un palco capace di obbedire, e questa riga dice che cosa fare quando non
+> lo è.
 
 > ⚠ *Chiarito il 9 agosto 2026, e non era una sfumatura.* Questa riga diceva «serve al server per
 > sapere **a che misura codificare**», e ci sono due voci di `DECISIONI.md` che si contraddicono

@@ -3820,6 +3820,64 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 		return;
 	}
 
+	/* ═══════════════════════════════════════════════════════════════════
+	 * ⛔⛔ 4. IL PALCO ERA GIA' LI' E NON SI MUOVE — e il video non e' mai
+	 *      partito.  22 settembre 2026, prova a mano dell'utente su KDE.
+	 *
+	 * ⛔ LA SCENA, e l'ha trovata lui: il server si riavvia, la sessione
+	 *    Plasma gli SOPRAVVIVE (invariante I4) col suo palco a 2544x926, e il
+	 *    client rientra da una finestra di un'altra misura chiedendo
+	 *    2560x962.  ⚠ La tabella delle tele dei palchi vive nel PROCESSO: col
+	 *    riavvio si azzera, quindi il ripiego di `ATTACCA` — «si concede quel
+	 *    che il palco HA» — non ha niente da concedere e passa la misura del
+	 *    client.  ⇒ Tela in vigore 2560x962, palco 2544x926, e §6.2 vieta di
+	 *    spedire un fotogramma di misura diversa: **schermo nero per sempre**,
+	 *    mentre il registro ripete «gli richiedo 2560x962» con un'attesa che
+	 *    raddoppia.  ⛔ E KWin `--virtual` non ridimensiona: la richiesta non
+	 *    puo' riuscire ne' oggi ne' fra un'ora.  `[M]` curato a mano chiudendo
+	 *    la sessione dell'utente, che e' il contrario di quel che I4 promette.
+	 *
+	 * ⭐ LA CURA: si adotta la misura del palco, esattamente come fa `ATTACCA`
+	 *    quando la sa — ⛔ ma SOLO finche' non e' uscito nemmeno un fotogramma.
+	 *    Prima del primo fotogramma il client non ha visto un pixel a questa
+	 *    tela, non ne ha nessuno in volo, e non c'e' nessuna corsa fra stream
+	 *    da arbitrare: il `TELA` che parte adesso e' l'unica verita' che avra'
+	 *    mai avuto.  ⚠ Dopo il primo fotogramma NON si tocca niente e si
+	 *    continua a richiedere, perche' li' un `TELA` non sollecitato
+	 *    contraddirebbe fotogrammi gia' consegnati (§6.2) — e la regola sta
+	 *    scritta in `RCP.md` §7.1 invece che solo qui.
+	 *
+	 * ⚠ E i limiti si ricontrollano, come nel ramo 3: §4.5 e il tetto del
+	 *   decodificatore di QUESTO client.  Un palco fuori limiti non si adotta
+	 *   — si continua a richiedere, e lo schermo nero resta dichiarato. */
+	if (!s->video_spediti && !s->tela_volo
+	    && (avuta_l != s->tela_l || avuta_a != s->tela_a)) {
+		uint32_t pl = 0, pa = 0;
+		if (!rcp_misura_ammessa(avuta_l, avuta_a, &pl, &pa)
+		    || pl != avuta_l || pa != avuta_a) {
+			reg(s, "⚠ il palco e' a %ux%u, che §4.5 non ammette: NON la adotto "
+			       "e continuo a richiedere la tela in vigore %ux%u",
+			    avuta_l, avuta_a, s->tela_l, s->tela_a);
+		} else if (s->max_l && (avuta_l > s->max_l || avuta_a > s->max_a)) {
+			reg(s, "⚠ il palco e' a %ux%u, oltre il video.misura_massima di "
+			       "questo client (%ux%u): NON la adotto e continuo a "
+			       "richiedere la tela in vigore %ux%u",
+			    avuta_l, avuta_a, s->max_l, s->max_a, s->tela_l, s->tela_a);
+		} else {
+			reg(s, "⭐ §7.1: il palco era gia' a %ux%u quando questa sessione e' "
+			       "nata (tela in vigore %ux%u) e NESSUN fotogramma e' ancora "
+			       "uscito: ADOTTO la sua misura invece di richiedergliene una "
+			       "che non sa dare.  ⛔ Senza questa riga un compositore che "
+			       "non ridimensiona (KWin --virtual) lascia lo schermo nero "
+			       "per sempre dopo un riavvio del server",
+			    avuta_l, avuta_a, s->tela_l, s->tela_a);
+			s->tela_disaccordo_da = 0;
+			s->tela_disaccordo_attesa = 0;
+			rcp_tela_adattata_ora(s, avuta_l, avuta_a, ora_ms);
+			return;
+		}
+	}
+
 	/* ⛔ Nessuna richiesta nostra, o una richiesta diversa: il palco e' altrove
 	 *    di suo.  ⚠ Puo' essere un rimontaggio dopo una caduta della sessione
 	 *    grafica, o il fotogramma in ritardo di una richiesta gia' scaduta.  ⇒ Si

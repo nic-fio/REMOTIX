@@ -654,12 +654,25 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 
 ## Che cosa resta [?]
 
-- ⏳ ⛔ **KDE NON RIPARTE DOPO UN RIAVVIO DEL SERVER SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
-  prova dell'utente: la sessione Plasma sopravvive al server (nata 2544x926), il client rientra con
-  tela 2560x962, KWin `--virtual` non ridimensiona ⇒ «il palco non e' alla tela in vigore», nessun
-  fotogramma parte, e la cache delle superfici si butta una volta al secondo. Curato a mano chiudendo
-  la sessione. Il server nuovo dovrebbe adottare la misura della sessione che trova (come faceva il
-  vecchio: tela 2544x926 con vista 2560x963). Registri in `/media/REMOTIX/tmp/registri-22set/`.
+- ✅ **KDE RIPARTE DOPO UN RIAVVIO DEL SERVER ANCHE SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
+  binario `1c592928`. Trovato dall'utente: la sessione Plasma sopravvive al server (I4), ⛔ ma la tabella
+  delle tele dei palchi vive nel PROCESSO e col riavvio si azzera ⇒ il ripiego di §4.5 («si concede quel
+  che il palco **ha**») non aveva niente da concedere e passava la misura del client; KWin `--virtual`
+  non ridimensiona, §6.2 vieta di spedire un fotogramma di misura diversa, e lo schermo restava **nero
+  per sempre** mentre il registro ripeteva «gli richiedo» con un'attesa che raddoppia.
+  ⭐ Cura in `src/rcp.c` (`rcp_tela_dal_palco()`, ramo 4): finché **non è uscito nessun fotogramma** il
+  server **adotta** la misura del palco e la annuncia con un `TELA(ADATTATA)`; dopo il primo fotogramma
+  resta vietato. `RCP.md` §7.1 chiude così la `⏳` del 15 agosto («che cosa fa il server quando il palco
+  cambia misura senza che nessun `ADATTA_TELA` gliel'abbia chiesto»).
+  `[M]` browser VERI sulla 8512, sessione nata a 1548x862 e rientro da una finestra di altra misura:
+
+  | browser | prima (`f1807378`) | dopo (`1c592928`) |
+  |---|---|---|
+  | **Firefox 140** | ⛔ schermo mai acceso, **0** fotogrammi in 60 s | ⭐ acceso in **2,0 s**, **+3324** fotogrammi, 0 buchi |
+  | **Chrome 153** | ⛔ schermo mai acceso, **0** fotogrammi in 40 s | ⭐ acceso, **+2273** fotogrammi, 0 buchi |
+
+  ⚠ In tutti e quattro i giri la tela adottata è quella del palco (1548x862), non quella chiesta dalla
+  finestra (1228x722 · 1240x692): è il `TELA` che lo dice, e i fotogrammi partono da lì.
 - ✅ **IL VIDEO PESANTE: CURATO IN DUE COLPI** — 22 set 2026, binario `f1807378` + pagina `e2b8c43`.
   (1) `a50b389` la **spirale della chiave** (RCP.md §5.2): la pagina non si inchioda più — prima si fermava
   a 41 consegnati su 8810 stream. (2) `e2b8c43` **l'ordine di consegna**: gli stream si leggono incatenati,
