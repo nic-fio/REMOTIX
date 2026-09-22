@@ -7743,6 +7743,30 @@ function avvia_video(wt, congeda) {
     let lettore;
     try { lettore = wt.incomingUnidirectionalStreams.getReader(); }
     catch (e) { nota("niente stream unidirezionali: " + e); return; }
+    /* ⛔⛔ SI CONSEGNA NELL'ORDINE IN CUI IL SERVER HA APERTO GLI STREAM — 22
+     *     settembre 2026, e questo e' il difetto che sembrava «Firefox».
+     *
+     * Gli stream sono indipendenti (§5.1) e i loro byte si intrecciano: un
+     * delta piccolo puo' FINIRE prima di un delta piu' vecchio e piu' grosso.
+     * Leggendoli in parallelo, la pagina giudicava l'ordine sul momento in cui
+     * lo stream finisce, non su quello in cui il server l'ha aperto, e
+     * dichiarava un BUCO per un fotogramma che stava arrivando.  `[M]` 22 set
+     * 2026, Firefox 140 su KDE, scena a 245 Mbit/s: 173 buchi su 173 erano
+     * fotogrammi arrivati DOPO il loro successore (il 203 da 512 876 byte
+     * completava 2 ms dopo il 204 da 3 763), e da ognuno nasceva una
+     * RICHIEDI_CHIAVE inutile — 347 al minuto.  Chrome fa lo stesso, piu' di
+     * rado: 14 buchi e 23 arrivi fuori ordine nella stessa scena.
+     *
+     * ⭐ Il server apre uno stream per fotogramma in ordine di `numero` (§5.1),
+     *    quindi incatenare le letture RICOSTRUISCE l'ordine: non serve un
+     *    riordino con i numeri, ne' una finestra d'attesa.
+     * ⚠ E il prezzo, dichiarato: un fotogramma grosso trattiene quelli dopo
+     *   di lui finche' non e' completo — ma e' l'attesa che il decodificatore
+     *   avrebbe comunque, perche' un delta non si decodifica prima del suo
+     *   predecessore.  ⛔ Ci passano anche gli APPUNTI (§7.4, stesso canale):
+     *   un trasferimento di testo aspetta il fotogramma in corso, che e'
+     *   decimi di secondo, non secondi. */
+    let catena = Promise.resolve();
     for (;;) {
       let r;
       try { r = await lettore.read(); }
@@ -7754,7 +7778,15 @@ function avvia_video(wt, congeda) {
          (`STUDI.md` §web §6.1).  ⛔ Quel che resta di qua, per fotogramma, e' il
          `read()` qui sopra e questo trasferimento. */
       if (VW) { VW.manda_flusso(r.value); continue; }
-      leggi_uno_stream(r.value, congeda);
+      const flusso = r.value;
+      catena = catena.then(function () {
+        return leggi_uno_stream(flusso, congeda);
+      }).catch(function (e) {
+        /* ⛔ La catena NON si spezza per un errore di uno stream: il prossimo
+         *    fotogramma deve poter arrivare lo stesso. */
+        nota("⛔ la lettura di uno stream del video e' fallita: "
+             + (e && (e.message || e)));
+      });
     }
   })();
 }
@@ -7840,6 +7872,7 @@ let devicePixelRatio = 1;          /* ⛔ nel worker non esiste: lo manda il di 
 let __vista = [1, 1];              /* la vista MISURATA dal thread principale */
 let __oc = null, schermo = null;
 let __gia_detto = false;           /* il guasto del video si dice UNA volta */
+let __catena = Promise.resolve();  /* l'ordine di consegna, §5.1 (22 set 2026) */
 
 /* ⚠ \`trasferisci\` e' arrivato con la fase 7: un testo di appunti puo' pesare un
    milione di byte (§5.4), e copiarlo fra i due thread sarebbe un megabyte in
@@ -8015,7 +8048,12 @@ self.onmessage = function (ev) {
    * ⛔ Si dice UNA volta e non a ogni fotogramma: trenta righe al secondo
    *    sarebbero un secondo silenzio. */
   if (m.t === "flusso") {
-    leggi_uno_stream(m.flusso, congeda).catch(function (e) {
+    /* ⛔ Stessa regola del thread principale: si consegna nell'ordine in cui il
+     *    server ha aperto gli stream, non in quello in cui finiscono — vedi
+     *    \`avvia_video\`.  I \`postMessage\` arrivano gia' in quell'ordine. */
+    __catena = __catena.then(function () {
+      return leggi_uno_stream(m.flusso, congeda);
+    }).catch(function (e) {
       if (__gia_detto) return;
       __gia_detto = true;
       nota("⛔ il percorso del video nel worker si e' rotto, e da qui in poi "
