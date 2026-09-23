@@ -298,7 +298,15 @@ class Finto(object):
     def sgombera(self, desktop, chi):
         return None
 
-    def scena(self, desktop, quale, chi, secondi=40):
+    def scena(self, desktop, quale, chi, secondi=40, giri=1, passo=5.0):
+        """⚠ `giri` e `passo` ci sono perche' CI SONO NEL VERO (23 set 2026).
+
+        Nel nucleo vero sono il giro d attesa per la corsa col compositore: la
+        sessione grafica dell inquilino nasce nell istante dell accesso e il
+        socket wayland non c e ancora.  ⛔ Qui non c e nessun compositore da
+        aspettare, quindi non si dorme — ma la FIRMA dev essere quella vera, o
+        questo finto torna a non provare niente.
+        """
         if quale not in self.SCENE:
             return False, ("scena «%s» che non conosco (per finta: %s)"
                            % (quale, ", ".join(sorted(self.SCENE))))

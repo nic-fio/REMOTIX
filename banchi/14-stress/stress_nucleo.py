@@ -146,6 +146,26 @@ def conti_dalla_riga_diario(testo):
     due cose diverse, ed e' la regola di tutto questo progetto.
 
     Torna `{}` se nel testo non c e nessuna riga `audio: …`.
+
+    ═══════════════════════════════════════════════════════════════════════
+    ⛔⛔ E SI LEGGE UN NOME PER VOLTA, NON LA RIGA INTERA — 23 settembre 2026
+    ═══════════════════════════════════════════════════════════════════════
+    La prima stesura aveva UNA espressione che pretendeva tutta la coda del
+    video in fila (`video A→B salt … buchi … ord … mis … tard … err …`).
+    ⛔ Il giorno in cui `src/pagina.html` ha infilato quattro contatori nuovi
+       in mezzo (`fuori`, `dentro`, `coda_dec`, `bmp` — commit `4a06829`),
+       quella espressione non ha piu' combaciato: ⇒ **`consegnati` e `dipinti`
+       sono spariti in silenzio**, e nessuno ha visto un errore.  E' lo stesso
+       difetto di sempre in una veste nuova: non fallisce, TACE.
+    ⇒ Adesso ogni contatore si legge per conto suo, e quel che non c e resta
+      `None`.  Aggiungere un contatore alla pagina non rompe piu' niente, e
+      toglierne uno si vede subito come «non lo so».
+
+    ⚠ E i nomi si cercano nel PEZZO GIUSTO della riga: `fuori` esiste sia
+      nell audio (`fuori 0`) sia nel video (`fuori 6123`), e `buchi` esiste in
+      minuscolo nel video e in MAIUSCOLO nell audio.  ⛔ Cercarli sulla riga
+      intera farebbe leggere il numero di un altro flusso — un numero
+      sbagliato e' peggio di un numero mancante.
     """
     righe = [r for r in (testo or "").splitlines() if "audio: ricevuti" in r]
     if not righe:
@@ -153,22 +173,41 @@ def conti_dalla_riga_diario(testo):
     r = righe[-1]
     c = {}
 
-    def num(nome, chiave=None, dentro=r):
-        m = re.search(r"(?<![\w-])" + re.escape(nome) + r"\s+(-?\d+)", dentro)
-        c[chiave or nome] = int(m.group(1)) if m else None
+    # ⭐ Il taglio in due: da `video A→B` in poi e' roba del VIDEO, e finisce
+    #   dove comincia il metro della distanza (`voff`) o il fuoco.
+    taglio = re.search(r"(?<![\w-])video\s+(\d+)→(\d+)", r)
+    parte_audio = r[:taglio.start()] if taglio else r
+    if taglio:
+        fine = re.search(r"\s(?:voff|fuoco)\b", r[taglio.end():])
+        parte_video = r[taglio.end():taglio.end() + (fine.start() if fine else len(r))]
+    else:
+        parte_video = ""
+
+    def num(nome, chiave=None, dentro=parte_audio):
+        """Il numero che segue `nome`; `?` e «non c e» valgono tutti e due None."""
+        m = re.search(r"(?<![\w-])" + re.escape(nome) + r"\s+(\?|-?\d+)", dentro)
+        c[chiave or nome] = (int(m.group(1)) if m and m.group(1) != "?" else None)
 
     for n in ("ricevuti", "suonati", "BUCHI", "vecchi", "tardivi", "fuori",
               "mancati", "usciti", "tagliati", "sospesi", "salti"):
         num(n, "audio_" + n.lower())
     # ⚠ `video A→B`: A e' quel che il FILO ha portato, B quel che e' arrivato al
     #   vetro.  Se divergono, la distanza dice DOVE si perde (pagina.html ~6463).
-    m = re.search(r"video (\d+)→(\d+) salt (\d+) buchi (\d+) ord (\d+) "
-                  r"mis (\d+) tard (\d+) err (\S+)", r)
-    if m:
-        c.update(consegnati=int(m.group(1)), dipinti=int(m.group(2)),
-                 salt=int(m.group(3)), buchi=int(m.group(4)),
-                 ord=int(m.group(5)), mis=int(m.group(6)), tard=int(m.group(7)),
-                 err=(int(m.group(8)) if m.group(8).isdigit() else None))
+    if taglio:
+        c["consegnati"] = int(taglio.group(1))
+        c["dipinti"] = int(taglio.group(2))
+        # ⭐⭐ I QUATTRO PASSAGGI DEL 23 SET 2026 (`src/pagina.html`, `4a06829`):
+        #   `fuori`    quanti ne ha consegnati il decodificatore;
+        #   `dentro`   quanti gliene abbiamo dato e non sono usciti
+        #              (`consegnati − fuori`) — ⚠ se cresce senza che `voff`
+        #              cresca con lui NON e' una coda: e' roba buttata;
+        #   `coda_dec` quanti ne dichiara LUI (`decodeQueueSize`);
+        #   `bmp`      quante `createImageBitmap` sono in volo.
+        # ⛔ Su `?mse` la pagina scrive `?` per tutti e quattro (non c e nessun
+        #    decodificatore da contare): ⇒ `None`, e non zero.
+        for n in ("fuori", "dentro", "coda_dec", "bmp",
+                  "salt", "buchi", "ord", "mis", "tard", "err"):
+            num(n, dentro=parte_video)
     m = re.search(r"\bAV (\?|[+-]?\d+)ms", r)
     c["av_ms"] = None if (not m or m.group(1) == "?") else int(m.group(1))
     m = re.search(r"\bdipinti (\d+)", r)
@@ -360,7 +399,22 @@ def _ssh(comando, secondi=180, pty=False):
     v = ["ssh"] + (["-tt"] if pty else []) + ["-o", "BatchMode=yes",
                                               "%s@%s" % (UTENTE_SSH, HOST), comando]
     try:
-        r = subprocess.run(v, capture_output=True, text=True, timeout=secondi)
+        # ⛔⛔ `errors="replace"`, E NON E' PRUDENZA — 23 settembre 2026.
+        #
+        #     Il registro del server e' pieno di caratteri multibyte (⭐ ⛔ ⚠ →)
+        #     e chi lo porta fuori lo TAGLIA: `cut -c`, `tail -c`, `[:400]`
+        #     dentro la scatola.  Un taglio cade in mezzo a una lettera da tre
+        #     byte ⇒ `text=True` da solo alza `UnicodeDecodeError` **qui**, e
+        #     il banco non torna un errore: MUORE.
+        # `[M]` 23 set 2026: la sessione lunga da 20 minuti e' morta cosi' alla
+        #     fine, dopo aver misurato tutto, e i numeri del server si sono
+        #     dovuti raccogliere a mano.  ⛔ Perdere una misura gia' fatta per
+        #     mezza lettera e' il peggior rapporto fra danno e causa che questo
+        #     progetto abbia pagato.
+        # ⇒ Un byte mutilato diventa «�» e la riga si legge lo stesso: il
+        #   registro e' una cosa da LEGGERE, non un protocollo da validare.
+        r = subprocess.run(v, capture_output=True, text=True,
+                           errors="replace", timeout=secondi)
     except subprocess.TimeoutExpired:
         return 124, "", "scaduto dopo %d s" % secondi
     # ⚠ `tput: No value for $TERM` lo scrive il profilo della macchina, non noi.
@@ -453,7 +507,10 @@ COPIONE_CREA = r"""
 import sys, subprocess, importlib.util, os
 chi, parola = sys.argv[1], sys.argv[2]
 def sh(c):
-    return subprocess.run(["/bin/sh", "-c", c], capture_output=True, text=True)
+    # errors="replace": le uscite di sistema portano accenti, e un banco non
+    # deve morire su una lettera (la trappola del 23 set 2026)
+    return subprocess.run(["/bin/sh", "-c", c], capture_output=True, text=True,
+                          errors="replace")
 # da zero comprende da zero rispetto a me stesso di ieri
 sh("loginctl terminate-user %s 2>/dev/null; pkill -KILL -u %s 2>/dev/null; "
    "userdel -r %s 2>/dev/null; rm -rf /home/%s" % (chi, chi, chi, chi))
@@ -520,7 +577,7 @@ SCENE = {
 }
 
 
-def scena(desktop, quale, chi, secondi=40):
+def scena(desktop, quale, chi, secondi=40, giri=1, passo=5.0):
     """⭐ Accende la scena chiesta DENTRO la sessione dell inquilino.
 
     Torna `(accesa, perche)`.  ⛔ «ferma» non accende niente ed e' un caso
@@ -531,7 +588,44 @@ def scena(desktop, quale, chi, secondi=40):
       il banco e il primo `tcsetattr` se lo prende un SIGTTOU — `[M]` 22 set
       2026, `firefox-esr` in stato `T` dal primo istante, in tutte e tre le
       scatole, e la scena «ferma» che sembrava un difetto del prodotto.
+
+    ═══════════════════════════════════════════════════════════════════════
+    ⛔⛔ LA CORSA COL COMPOSITORE — `giri` e `passo`, 23 settembre 2026
+    ═══════════════════════════════════════════════════════════════════════
+    Chi chiama questa funzione SUBITO dopo l accesso perde una corsa: il
+    compositore dell inquilino lo fa nascere il prodotto, e nell istante in
+    cui il client e' ammesso il socket wayland **non c e ancora**.  ⇒ La scena
+    non si accende, e chi non guarda il valore di ritorno **misura un desktop
+    fermo credendo di misurare una scena in movimento**.
+    ⛔ `[M]` 23 set 2026, la misura del congedo: un giro intero buttato, con
+       numeri che sembravano buoni e non dicevano niente.
+    ⭐⭐ E' il difetto peggiore che un banco possa avere: non fallisce, MENTE.
+
+    ⚠ Il valore predefinito resta **un giro solo**, perche' chi ha gia' il suo
+      giro d attesa (`scenari/_comune.accendi_la_scena`, 30 × 2 s) non deve
+      ritrovarsi due cicli annidati — 30 × 12 × 5 s sarebbero ore.
+      ⇒ Chi chiama a mano passa `giri=12, passo=5` (12 × 5 s = un minuto, la
+        misura che ha incontrato il difetto).
+    ⛔ E il giro di attesa NON basta: il chiamante deve **guardare il primo
+       valore di ritorno e fermarsi**, come fa `prova_viva()`.
     """
+    # ⛔ LE DUE RISPOSTE DEFINITIVE STANNO PRIMA DEL GIRO: una scena che non
+    #    conosco e la scena «ferma» non sono corse col compositore, e
+    #    riprovarle dodici volte sarebbe solo un minuto buttato.
+    if quale not in SCENE:
+        return False, "scena «%s» che non conosco (%s)" % (quale, ", ".join(SCENE))
+    if SCENE[quale][0] is None:
+        return True, "scena «ferma»: %s" % SCENE[quale][1]
+    for _resta in range(max(1, int(giri)) - 1, -1, -1):
+        accesa, dice = _scena_un_colpo(desktop, quale, chi, secondi)
+        if accesa or _resta == 0:
+            return accesa, dice
+        time.sleep(passo)
+    return False, "la scena non si e' accesa"          # non ci si arriva
+
+
+def _scena_un_colpo(desktop, quale, chi, secondi=40):
+    """Un solo tentativo — ⛔ il giro d attesa sta in `scena()`."""
     if quale not in SCENE:
         return False, "scena «%s» che non conosco (%s)" % (quale, ", ".join(SCENE))
     pagina, che_cos_e = SCENE[quale]
@@ -831,7 +925,8 @@ def _spegni_chi_tiene_la_porta(p):
     """
     try:
         u = subprocess.run(["ss", "-lptnH", "sport = :%d" % int(p)],
-                           capture_output=True, text=True, timeout=10).stdout
+                           capture_output=True, text=True, errors="replace",
+                           timeout=10).stdout
     except Exception:                            # noqa: BLE001
         return
     for pid in set(re.findall(r"pid=(\d+)", u or "")):
@@ -895,6 +990,17 @@ NOMI_IN_VISTA = {
     "dipinti":        ("dipinti", "video_dipinti", "pagina_dipinti"),
     "buchi":          ("buchi", "pagina_buchi"),
     "saltati":        ("saltati", "saltati_coda", "pagina_salt"),
+    # -- ⭐⭐ DOVE SI PERDONO I FOTOGRAMMI, e prima del 23 set 2026 non lo
+    #    diceva nessuno: fra `consegnati` e `dipinti` ci sono QUATTRO passaggi
+    #    e se ne contava uno.  `fuori` = quanti ne ha consegnati il
+    #    decodificatore · `dentro` = quanti gliene abbiamo dato e non sono
+    #    usciti · `coda_dec` = quanti ne dichiara LUI · `bmp` = le conversioni
+    #    in volo (`src/pagina.html`, `4a06829`).  ⛔ Senza questi sulla riga, la
+    #    differenza `consegnati − dipinti` resta un numero senza padrone.
+    "fuori":          ("fuori", "pagina_fuori"),
+    "dentro":         ("dentro", "pagina_dentro"),
+    "coda_dec":       ("coda_dec", "pagina_coda_dec"),
+    "bmp":            ("bmp", "pagina_bmp"),
     "chiavi_chieste": ("chiavi_chieste",),
     "errori_pagina":  ("errori_pagina", "errori", "pagina_err"),
     # -- quel che ha fatto il SERVER (il capo che produce)
@@ -1097,6 +1203,9 @@ def prova(nome, ottenuto, atteso):
                               "" if bene else "⇒ %r (volevo %r)" % (ottenuto, atteso)))
 
 
+# ⚠ LA RIGA VECCHIA — quella che la pagina scriveva PRIMA del commit `4a06829`.
+#   ⛔ Si tiene: i registri gia' raccolti la contengono, e un lettore che
+#      smette di leggere il passato butta via misure gia' pagate.
 DIARIO_VERO = (
     "12:34:56 qualcosa\n"
     "audio: ricevuti 573 suonati 568 BUCHI 0 vecchi 0 tardivi 0 fuori 0 rec 0 "
@@ -1104,6 +1213,27 @@ DIARIO_VERO = (
     "salti 34 risv 0 coda 0ms usc 40ms aoff -1802061 ctx running | tasti 16 "
     "ultimo Enter classico si schermo acceso dipinti 146 video 190→146 salt 44 "
     "buchi 2 ord 0 mis 0 tard 0 err 0 voff -1802061 AV +73ms fuoco si\n")
+
+# ⭐ LA RIGA VERA DI OGGI — `src/pagina.html` dopo `4a06829`, coi quattro
+#   passaggi del decodificatore in mezzo.  ⛔ E' la riga su cui l espressione
+#   vecchia NON combaciava piu', e perdeva `consegnati` e `dipinti` in silenzio.
+DIARIO_NUOVO = (
+    "audio: ricevuti 9012 suonati 9000 BUCHI 1 vecchi 0 tardivi 0 fuori 3 rec 0 "
+    "dop 0 pieni 0 errori 0 mancati 12 volte 1 usciti 8997 tagliati 2 sospesi 0 "
+    "salti 12 risv 0 coda 0ms usc 40ms aoff -1802061 ctx running | tasti 4 "
+    "ultimo a classico si schermo acceso dipinti 6434 video 6749→6434 "
+    "fuori 6700 dentro 49 coda_dec 2 bmp 3 salt 180 buchi 0 ord 0 mis 0 "
+    "tard 0 err 0 voff -1802108 AV +47ms fuoco si\n")
+
+# ⚠ E LA STESSA RIGA SU `?mse`, dove un decodificatore da contare non c e:
+#   la pagina scrive `?`, ⛔ e `?` dev essere «non lo so», non zero.
+DIARIO_MSE = (
+    "audio: ricevuti 10 suonati 10 BUCHI 0 vecchi 0 tardivi 0 fuori 0 rec 0 "
+    "dop 0 pieni 0 errori 0 mancati 0 volte 0 usciti 10 tagliati 0 sospesi 0 "
+    "salti 0 risv 0 coda 0ms usc 40ms aoff -1 ctx running | tasti 0 ultimo - "
+    "classico si schermo acceso dipinti 300 video 512→300 fuori ? dentro ? "
+    "coda_dec ? bmp ? salt 0 buchi 0 ord 0 mis 0 tard 0 err 0 voff -1 "
+    "AV ?ms fuoco NO\n")
 
 REGISTRO_VERO = (
     "10:41:43.007 rcp     [prova] sessione aperta utente=prova via=[192.168.0.3]:1 tela=100x100\n"
@@ -1152,6 +1282,49 @@ def certifica():
           conti_dalla_riga_diario(DIARIO_VERO + "audio: ricevuti 999 suonati 9\n")
           .get("audio_ricevuti"), 999)
 
+    # ═══════════════════════════════════════════════════════════════════════
+    print("\n── ⛔⛔ LA RIGA DI OGGI: i quattro passaggi del decodificatore ──")
+    # ⛔ Il 23 set 2026 `src/pagina.html` (`4a06829`) ha infilato `fuori`,
+    #    `dentro`, `coda_dec` e `bmp` FRA `video A→B` e `salt`.  L espressione
+    #    vecchia pretendeva `salt` subito dopo la freccia ⇒ non combaciava piu',
+    #    e `consegnati`/`dipinti` sparivano SENZA UN ERRORE.
+    n = conti_dalla_riga_diario(DIARIO_NUOVO)
+    prova("⛔ consegnati e dipinti si leggono ANCORA (era questo a sparire)",
+          (n.get("consegnati"), n.get("dipinti")), (6749, 6434))
+    prova("⭐ `fuori`: quanti ne ha consegnati il decodificatore", n.get("fuori"), 6700)
+    prova("⭐ `dentro`: quanti gliene abbiamo dato e non sono usciti",
+          n.get("dentro"), 49)
+    prova("⭐ `coda_dec`: quanti ne dichiara lui", n.get("coda_dec"), 2)
+    prova("⭐ `bmp`: le createImageBitmap in volo", n.get("bmp"), 3)
+    prova("⚠ e i vecchi non si sono persi per strada",
+          (n.get("salt"), n.get("buchi"), n.get("tard"), n.get("err")),
+          (180, 0, 0, 0))
+    prova("⛔⛔ `fuori` del VIDEO non e' `fuori` dell AUDIO (stesso nome, due flussi)",
+          (n.get("fuori"), n.get("audio_fuori")), (6700, 3))
+    prova("⛔ e `buchi` minuscolo del video non e' `BUCHI` dell audio",
+          (n.get("buchi"), n.get("audio_buchi")), (0, 1))
+    prova("⭐ il conto del prodotto chiude: consegnati = fuori + dentro",
+          n["fuori"] + n["dentro"], n["consegnati"])
+    prova("⭐ lo scarto A/V della riga nuova", n.get("av_ms"), 47)
+
+    m_ = conti_dalla_riga_diario(DIARIO_MSE)
+    prova("⛔ su ?mse i quattro passaggi valgono «non lo so», ⛔ non zero",
+          (m_.get("fuori"), m_.get("dentro"), m_.get("coda_dec"), m_.get("bmp")),
+          (None, None, None, None))
+    prova("⚠ ma quel che c e si legge lo stesso",
+          (m_.get("consegnati"), m_.get("dipinti"), m_.get("salt")), (512, 300, 0))
+    prova("⛔ e `fuoco NO` non diventa un si", m_.get("fuoco"), False)
+
+    prova("⭐ LA RIGA VECCHIA SI LEGGE ANCORA (i registri gia' raccolti)",
+          (conti_dalla_riga_diario(DIARIO_VERO).get("consegnati"),
+           conti_dalla_riga_diario(DIARIO_VERO).get("salt")), (190, 44))
+    prova("⚠ e su quella vecchia i quattro nuovi sono «non lo so»",
+          [conti_dalla_riga_diario(DIARIO_VERO).get(k)
+           for k in ("fuori", "dentro", "coda_dec", "bmp")], [None] * 4)
+    prova("⛔ `video ?` (la pagina non sa ancora niente) non inventa numeri",
+          [conti_dalla_riga_diario("audio: ricevuti 1 suonati 1 video ? fuoco si")
+           .get(k) for k in ("consegnati", "dipinti", "fuori")], [None] * 3)
+
     print("\n── i fatti dal registro del server ──")
     r = conti_dal_registro(REGISTRO_VERO, "prova")
     prova("⭐ spediti solo dell inquilino chiesto (l altro non entra)", r["spediti"], 2)
@@ -1185,6 +1358,22 @@ def certifica():
           r2.get("pagina_consegnati"), 190)
     prova("⭐ e lo scarto A/V, che dal DOM a volte non si puo' leggere",
           r2.get("pagina_av_ms"), 73)
+    # ⭐⭐ E LA RIGA DI OGGI ATTRAVERSO IL REGISTRO DEL SERVER: e' la strada per
+    #    cui i quattro contatori nuovi arrivano alla notte, perche' il riquadro
+    #    della diagnostica nella pagina e' spento di suo e dal DOM a volte non
+    #    si leggono.  ⛔ Se questa prova cade, i numeri nuovi non arrivano da
+    #    nessuna parte — ed e' esattamente com era prima della cura.
+    import urllib.parse as _up
+    diario_nuovo_srv = ("10:41:51.000 pagina  📄 la pagina di 192.168.0.3:1 dice: "
+                        + _up.quote(DIARIO_NUOVO.strip()) + "\n")
+    r3 = conti_dal_registro(REGISTRO_VERO + diario_nuovo_srv, "prova")
+    prova("⭐ i quattro passaggi arrivano fino al registro del server",
+          (r3.get("pagina_fuori"), r3.get("pagina_dentro"),
+           r3.get("pagina_coda_dec"), r3.get("pagina_bmp")), (6700, 49, 2, 3))
+    prova("⭐ e con loro consegnati/dipinti della riga NUOVA",
+          (r3.get("pagina_consegnati"), r3.get("pagina_dipinti")), (6749, 6434))
+    prova("⛔ «la pagina di» e' fra i MOTIVI: il taglio nella scatola non la mangia",
+          any(m in diario_nuovo_srv for m in MOTIVI_REGISTRO), True)
     prova("⚠ senza righe del diario non ci sono chiavi «pagina_» inventate",
           [k for k in conti_dal_registro(REGISTRO_VERO).keys() if k.startswith("pagina_")], [])
     prova("⭐ il taglio dentro la scatola da' gli STESSI numeri del registro intero",
@@ -1243,6 +1432,59 @@ def certifica():
     prova("⭐ «ferma» e' una scena legittima: non accende niente",
           scena("gnome", "ferma", "x"), (True, "scena «ferma»: niente: il desktop com e'"))
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⛔⛔ LA CORSA COL COMPOSITORE — e si prova col colpo FINTO, perche' il
+    #     vero parla con la scatola.  Il difetto del 23 set 2026: la sessione
+    #     dell inquilino non ha ancora il socket wayland, la scena non si
+    #     accende, e il banco misurava un desktop fermo credendo di misurare
+    #     una scena in movimento.  ⭐ Non fallisce: MENTE.
+    globali = globals()
+    vero = globali["_scena_un_colpo"]
+    try:
+        conta = {"n": 0}
+
+        def finto_sempre_no(desktop, quale, chi, secondi=40):
+            conta["n"] += 1
+            return False, "la sessione di «%s» non ha ancora un socket wayland" % chi
+
+        globali["_scena_un_colpo"] = finto_sempre_no
+        accesa, dice = scena("gnome", "normale", "x", giri=4, passo=0)
+        prova("⛔ quattro giri chiesti, quattro tentativi fatti", conta["n"], 4)
+        prova("⛔⛔ e dopo l ultimo DICE di no (non torna un si silenzioso)",
+              accesa, False)
+        prova("⭐ e dice PERCHE': il socket wayland non c e ancora",
+              "socket wayland" in dice, True)
+
+        conta["n"] = 0
+
+        def finto_al_terzo(desktop, quale, chi, secondi=40):
+            conta["n"] += 1
+            if conta["n"] < 3:
+                return False, "niente socket wayland"
+            return True, "scena «%s» accesa" % quale
+
+        globali["_scena_un_colpo"] = finto_al_terzo
+        accesa, dice = scena("gnome", "normale", "x", giri=12, passo=0)
+        prova("⭐ se il compositore arriva al terzo giro, la scena si accende",
+              (accesa, conta["n"]), (True, 3))
+        prova("⛔ e non si insiste dopo che e' accesa", conta["n"] < 12, True)
+
+        conta["n"] = 0
+        globali["_scena_un_colpo"] = finto_sempre_no
+        scena("gnome", "normale", "x")
+        prova("⚠ il predefinito e' UN giro solo (chi ha gia' il suo ciclo non "
+              "se ne ritrova due annidati)", conta["n"], 1)
+
+        conta["n"] = 0
+        scena("gnome", "lunare", "x", giri=12, passo=99)
+        prova("⛔ una scena che non conosco non si riprova nemmeno una volta",
+              conta["n"], 0)
+    finally:
+        globali["_scena_un_colpo"] = vero
+
+    prova("⭐ e il banco ha un modo di DIRE «la scena era spenta»",
+          issubclass(_ScenaSpenta, Exception), True)
+
     print("\n── le forme che il nucleo pretende ──")
     prova("le tre porte dei desktop", (PORTE["gnome"], PORTE["kde"], PORTE["xfce"]),
           (8511, 8512, 8513))
@@ -1272,6 +1514,23 @@ def certifica():
           r.get("spediti") == 6795, True)
     prova("⭐ e si dice da quale ramo viene ogni numero",
           r["numeri_da"]["dipinti"], "misure/pesante/server")
+
+    # ⛔⛔ E I QUATTRO PASSAGGI DEVONO ARRIVARE FINO ALLA RIGA: se restano
+    #     dentro `misure`, la tabella del mattino non li vede e la differenza
+    #     `consegnati − dipinti` torna a essere un numero senza padrone.
+    r_dec = completa_la_riga({
+        "scenario": "lunga", "marca": "firefox", "esito": 0,
+        "misure": {"pesante": {"server": {"pagina_consegnati": 28698,
+                                          "pagina_dipinti": 27684,
+                                          "pagina_fuori": 28696,
+                                          "pagina_dentro": 2,
+                                          "pagina_coda_dec": 1,
+                                          "pagina_bmp": 1}}}})
+    prova("⭐ `fuori`/`dentro`/`coda_dec`/`bmp` salgono sulla riga",
+          (r_dec.get("fuori"), r_dec.get("dentro"),
+           r_dec.get("coda_dec"), r_dec.get("bmp")), (28696, 2, 1, 1))
+    prova("⭐ e il conto chiude anche li': consegnati = fuori + dentro",
+          r_dec["fuori"] + r_dec["dentro"], r_dec["consegnati"])
     prova("⭐ il verdetto e' in parole", r.get("verdetto"), "REGGE")
 
     # ⛔ Quel che la riga dice gia' non si tocca: un numero calcolato dallo
@@ -1318,6 +1577,15 @@ def _errore_di(f):
 # ═══════════════════════════════════════════════════════════════════════════
 #  LA PROVA VIVA — ⛔ «uno script nuovo si esegue almeno una volta» (CODER §4-bis)
 # ═══════════════════════════════════════════════════════════════════════════
+class _ScenaSpenta(Exception):
+    """⛔ La scena non si e' accesa ⇒ non c e niente da misurare.
+
+    ⚠ Non e' un errore del prodotto e non e' un guasto dello strumento: e' il
+      banco che DICE di non aver potuto guardare, invece di misurare un
+      desktop fermo e chiamarlo verde (23 settembre 2026).
+    """
+
+
 def prova_viva(desktop="gnome", marca="firefox", secondi=60, quale_scena="normale",
                chi="stressviva", parola="stressviva"):
     print("\n══ prova viva: %s · %s · scena «%s» · %d s ═══════════"
@@ -1348,12 +1616,22 @@ def prova_viva(desktop="gnome", marca="firefox", secondi=60, quale_scena="normal
                 esito, perche = (e if e != ROSSO else ROSSO), dice
             else:
                 # la sessione grafica nasce adesso: la scena aspetta il compositore
-                for _ in range(30):
-                    ok, dice = scena(desktop, quale_scena, chi)
-                    if ok:
-                        break
-                    time.sleep(2)
-                print("   scena: %s" % dice)
+                ok, dice = scena(desktop, quale_scena, chi, giri=30, passo=2.0)
+                print("   scena: %s — %s" % ("ACCESA" if ok else "⛔ SPENTA", dice))
+                if not ok:
+                    # ⛔⛔ E QUI CI SI FERMA — 23 settembre 2026.
+                    #     Prima si andava avanti in silenzio: si misurava un
+                    #     desktop FERMO e si giudicava come se ci fosse una
+                    #     scena in movimento.  `[M]` e' successo davvero, nella
+                    #     misura del congedo.  ⇒ Una misura senza scena non e'
+                    #     un rosso (il prodotto non c entra) ed e' ancor meno un
+                    #     verde: e' un 3, «non ho potuto guardare», e lo si DICE.
+                    esito, perche = CIECO, ("la scena «%s» non si e' accesa in "
+                                            "60 s: %s ⇒ non misuro un desktop "
+                                            "fermo spacciandolo per una scena"
+                                            % (quale_scena, dice))
+                    print("   ⛔ %s" % perche)
+                    raise _ScenaSpenta(perche)
                 time.sleep(secondi)
                 pagina = conta_dalla_pagina(b)
                 server = conta_dal_server(desktop, da, chi)
@@ -1371,6 +1649,10 @@ def prova_viva(desktop="gnome", marca="firefox", secondi=60, quale_scena="normal
                     ("server", ("esatto", "linee_morte", 0), "il filo non e' caduto"),
                 ])
                 print("   giudizio: %s — %s" % (esito, perche))
+    except _ScenaSpenta:
+        # ⭐ `esito` e `perche` sono gia' quelli giusti: qui si esce, si
+        #   sparecchia (il `finally`) e si scrive la riga col 3.
+        pass
     except Exception as e:                       # noqa: BLE001
         esito, perche = CIECO, "il nucleo e' caduto: %r" % e
         print("   ⛔ %s" % perche)

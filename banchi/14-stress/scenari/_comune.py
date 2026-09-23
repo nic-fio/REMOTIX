@@ -323,7 +323,11 @@ def _ssh_ospite(comando, secondi=300):
     r = subprocess.run(["ssh", "-tt", "-o", "BatchMode=yes",
                         "-o", "ConnectTimeout=10",
                         "%s@%s" % (UTENTE_SERVER, SERVER), pieno],
-                       capture_output=True, text=True, timeout=secondi)
+                       # ⛔ `errors="replace"`: qui passa anche la coda del
+                       #    registro, e un taglio a meta' di ⭐/⛔/→ faceva
+                       #    MORIRE il banco (23 set 2026).
+                       capture_output=True, text=True, errors="replace",
+                       timeout=secondi)
     pulito = "\n".join(l for l in (r.stdout or "").splitlines()
                        if "tput:" not in l and "Connection to" not in l)
     return r.returncode, pulito.strip()

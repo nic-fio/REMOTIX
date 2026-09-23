@@ -783,7 +783,12 @@ def leggi_registro(cmd):
     if not cmd:
         return None, "nessun --registro-cmd"
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+        # ⛔ `errors="replace"`: il registro porta ⭐ ⛔ ⚠ →, e chi lo taglia
+        #    (`cut -c`, `tail -c`) spezza le lettere da tre byte.  `[M]` 23 set
+        #    2026: con l utf-8 stretto il banco MUORE di `UnicodeDecodeError`
+        #    invece di tornare un errore — e si perde la misura gia' fatta.
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                           errors="replace", timeout=60)
     except Exception as e:                       # noqa: BLE001
         return None, "il comando del registro non ha risposto: %s" % e
     if r.returncode != 0 and not r.stdout:
