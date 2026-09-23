@@ -688,9 +688,57 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   il browser presenta gli stream, non i `numero` — si chiuderebbero solo con un riordino e una breve attesa.
   ⚠ In KDE gli inquilini lasciati dalla rete sono stati tolti a mano (restano `nictest` e `provanic`): C7 non
   li toglie, e in GNOME e XFCE ci sono ancora.
-- ⏳ **Tre «linee morte» in 13 minuti su KDE** (22 set, 12:30·12:41·12:42 locali), con Chrome e con
-  Firefox: il browser tace del tutto per 10 s e smette anche il diario della pagina. Chrome dipingeva
-  1097 fotogrammi su 3882. Causa da trovare: ping continuo tablet→server acceso per la prossima.
+- ✅ **Tre «linee morte» in 13 minuti su KDE: CHI TACEVA È IL BROWSER, ed era già stato CHIUSO** —
+  23 set 2026, dai registri del 22 (`registri-22set/kde-1045.log`, che va da 10:27 a 10:45 **UTC** =
+  12:27-12:45 locali) messi accanto al **giornale del tablet** (`journalctl`, ora locale). ⭐ La prova
+  che chiude il punto sono gli **scope di systemd**: il processo del browser muore PRIMA del silenzio,
+  non dopo.
+
+  | | ultima parola del client (registro, UTC) | il processo del browser esce (giornale del tablet, locale) | linea morta |
+  |---|---|---|---|
+  | **12:30** Chrome 153 | 10:30:11.698 «il client si congeda, motivo=0x01 **la scheda è stata chiusa**» | `app-…Chrome-4339.scope` **12:30:11** (1,8 G di picco) | 10:30:22.330 |
+  | **12:41** Firefox 140 | 10:41:26.73 ultimo pacchetto · 10:41:27.834 ultimo diario | `app-…firefox-esr-5792.scope` **12:41:28** (7min 9s CPU, 1,7 G) | 10:41:36.874 |
+  | **12:42** Firefox 140 | 10:42:33.47 ultimo pacchetto | `app-…firefox-esr-6666.scope` **12:42:33** (830 M) | 10:42:44.297 |
+
+  ⇒ In tutti e tre il client parlava fino **all'istante in cui il processo è uscito**: nessun
+  congelamento di 10 s del browser, nessun OOM, nessun messaggio del kernel, nessun evento WiFi nella
+  finestra. Le tre righe `causa=silenzio` portano tutte `offerti=0 usciti_byte=0 coda_video=0
+  persi=0`: non aspettavamo niente di nostro, **non c'era più nessuno dall'altra parte**. ⇒ (a) rete,
+  (c) tablet e (d) server sono **esclusi con la misura**; il ping continuo non serviva.
+
+  ⭐ **E il difetto vero stava PRIMA, ed è quello che l'utente ha poi curato lo stesso pomeriggio.**
+  Il diario della pagina (ogni 5 s, sempre puntuale al millisecondo ⇒ il filo principale della pagina
+  NON era bloccato) tiene i contatori **fermi**, mentre il server continua a spedire ~58 fotogrammi/s
+  e 1,5 MB/s:
+  - sessione Firefox delle 12:39-12:41: `dipinti 1097 video 3882→1097 salt 2785` **identico per 50 s**
+    (10:40:37.788 → 10:41:27.834). Si ferma esattamente sul **video pesante**: il fotogramma 3882 è
+    l'ultimo contato, e subito dopo arrivano il 3886 da **131 238 byte** e la CHIAVE 3888 da **152 074
+    byte**, chiesta dalla pagina a 10:40:34.583 (§5.2) perché i `buchi` erano appena passati da 1 a 3.
+  - sessione Firefox delle 12:41-12:42: `dipinti 146 video 190→146` **fermo per 40 s**, e il
+    fotogramma 190 pesa **144 305 byte**, il 193 è la CHIAVE da **152 901 byte** chiesta a 10:41:49.283.
+  ⇒ È **la spirale della chiave**, parola per parola come la racconta `a50b389` («la pagina restava
+  ferma sull'ultima immagine buona, con Firefox e con Chrome, **finché la linea moriva**»): curata il
+  22 set alle **17:08** (`a50b389`) e alle **18:55** (`e2b8c43`), cioè **4 ore e mezza dopo** questi
+  tre episodi. La riga di «che cosa resta» era rimasta indietro. Il `[M]` post-cura (190 s, browser
+  veri, ~236 Mbit/s, «nessuna linea morta») è già qui sopra.
+  ⛔ **Due correzioni alla vecchia riga**: i 1097 su 3882 erano di **Firefox 140**, non di Chrome —
+  Chrome, nella stessa mezz'ora, dipingeva `817 video 817→817 salt 0 buchi 0`; e la linea morta non è
+  un sintomo del blocco, è la **coda** del browser che l'utente chiudeva perché lo schermo era fermo.
+
+- ⏳ **Una linea morta ⛔ la scriviamo anche quando il client ci ha appena salutato** — 23 set 2026,
+  ed è l'unico residuo nostro dei tre episodi (diagnosi, **non curata**: `src/` è di un altro).
+  Episodio delle 12:30: 10:30:11.698 la pagina si congeda (`motivo=0x01`, scheda chiusa) → 10:30:11.798
+  **noi stessi** scriviamo «PING del trasporto spenti: la sessione è finita, **non c'è più niente da
+  tenere vivo**» → 10:30:12.199 spediamo la capsula di chiusura → e poi teniamo aperta la connessione
+  QUIC, spedendo 2 pacchetti ogni secondo o due a un browser che non c'è più, finché a 10:30:22.330
+  esce un ⛔ **LINEA MORTA** che si legge come un guasto del prodotto.
+  ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va in **9 ms**
+  (10:39:11.675 congedo → 10:39:11.684 «connessione chiusa»): il comportamento dipende dal client, e
+  Chrome che esce non saluta a livello QUIC.
+  ⇒ Il guardiano è `linea_morta_giudica()`, `src/webtransport.c:5027`: si ferma su `!w->rcp ||
+  w->chiusura >= 0`, **ma non guarda lo stato `"finita"`** — lo stesso stato su cui
+  `regola_tienila_viva()` (`src/webtransport.c:~3185`) spegne i PING. 🔸 La cura minima è quella
+  condizione in più (o chiudere la connessione quando se ne va l'ultima sessione).
 
 - ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
   xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
