@@ -86,7 +86,9 @@ def gira(desktop, marca, nucleo, opzioni=None):
                 consegnati = b.numeri().get("consegnati", 0) or 0
                 if consegnati > 0:
                     break
-                time.sleep(1.0)
+                # ⭐ e si aspetta da cliente: col mouse che si muove (il
+                #   difetto del 23 set teneva ferma proprio la chiave)
+                C.pausa(b, 1.0)
 
             c, t = C.dentro(nucleo, desktop,
                             "grep -a '\\[%s\\]' %s | grep -c 'ADOTTO la sua misura'"

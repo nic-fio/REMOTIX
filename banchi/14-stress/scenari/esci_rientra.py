@@ -76,8 +76,13 @@ def gira(desktop, marca, nucleo, opzioni=None):
     #     accusarne il prodotto.  L'immagine, in questo scenario, la giudica la
     #     luminanza; l'occhio tornera' il giorno che i due giudici sapranno
     #     dividersi la tela.
+    # ⛔ E PER LA STESSA RAGIONE NON PRENDE IL TOPO: il giudice dei fantasmi
+    #   vuole il desktop FERMO, e un puntatore che corre sullo schermo e' un
+    #   cambio di luminanza fatto dal banco.  ⚠ Il cliente che non sta fermo
+    #   qui manca, e si dice: il rientro col mouse in moto lo provano
+    #   `stacca_riattacca` e `riavvio_del_server` (`C.pausa`).
     b = C.Banco(nucleo, desktop, marca, chi, misura=o.get("misura", (1280, 900)),
-                dove=o.get("dove"), occhio=False)
+                dove=o.get("dove"), occhio=False, topo=False)
     fatti = []
     try:
         cod, perche = b.apparecchia("normale")

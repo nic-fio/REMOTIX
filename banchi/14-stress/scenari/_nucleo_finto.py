@@ -30,6 +30,11 @@
                    chiave a ricucire
      "rotto"       il browser non si accende           ⇒ atteso 3 (non lo so)
 
+   ⭐ E con QUALUNQUE `come`, il guasto innestato del topo
+     (`REMOTIX_SCHERMO_CONGELATO`): il finto riconosce i copioni del
+     `Congelatore` e, finche' il compositore e' «fermo», la pagina non riceve
+     fotogrammi nuovi — come sul ferro.
+
 ⭐⭐ E «a_mosaico» E' IL GUASTO CHE QUESTA SUITE NON SAPEVA VEDERE.  La notte
    fra il 22 e il 23 settembre 2026 due giri hanno dato VERDE con ~7000
    fotogrammi consegnati, 7000 dipinti, zero buchi e zero linee morte — mentre
@@ -213,6 +218,8 @@ class Finto(object):
         self.comandi = []
         self.scena_accesa = None
         self.chi = None
+        self.congelato_fino = 0.0
+        self.congelamenti = 0
         # ⛔ Le scene sono QUELLE DEL NUCLEO VERO, non una lista inventata: cosi'
         #    una scena che nella notte non esiste qui non si accende, invece di
         #    sembrare accesa e non far vedere niente.
@@ -227,6 +234,22 @@ class Finto(object):
         """⚠ TRE valori, come il vero: (codice, uscita, errore)."""
         self.comandi.append(copione)
         c = copione
+        # ⭐⭐ LO SCHERMO CONGELATO (il guasto innestato del topo).  Il finto fa
+        #   quel che fa il ferro: col compositore in SIGSTOP non esce nessun
+        #   fotogramma nuovo finche' non arriva il SIGCONT — dal tablet, o dal
+        #   cane da guardia allo scadere.  ⛔ Queste prove vengono PRIMA di
+        #   tutte: i copioni del congelatore si riconoscono dalla prima riga.
+        testa = c.splitlines()[0] if c else ""
+        if "cerca-il-compositore" in testa:
+            return 0, "COMPOSITORE 4242 kwin_wayland /run/user/4099/wayland-0\n", ""
+        if "# congela-il-compositore" in testa:
+            m = re.search(r"sleep (\d+); kill -CONT", c)
+            self.congelato_fino = time.time() + (int(m.group(1)) if m else 30)
+            self.congelamenti += 1
+            return 0, "STATO 4242 Tl\n", ""
+        if "scongela-il-compositore" in testa:
+            self.congelato_fino = 0.0
+            return 0, "STATO 4242 Sl\n", ""
         # ⭐ Il deposito della scena testimone: la scatola risponde con quanti
         #   byte ha scritto, che e' quel che `deposita_scena()` legge.
         #   ⛔ Questa prova viene PRIMA delle altre: il resto del copione e' un
@@ -339,7 +362,8 @@ class Finto(object):
 
     def conta_dalla_pagina(self, browser):
         fermo = (self.come == "fermo" and (time.time() - self.t0) > 20)
-        if not fermo and not self.schermo_nero:
+        congelato = time.time() < self.congelato_fino
+        if not fermo and not self.schermo_nero and not congelato:
             self.consegnati += self.passo
             # ⭐⭐ Col mosaico i contatori sono PERFETTI: consegnati == dipinti,
             #   zero buchi.  ⛔ E' il punto di tutta la storia — la notte del 22

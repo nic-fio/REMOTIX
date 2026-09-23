@@ -77,7 +77,9 @@ def gira(desktop, marca, nucleo, opzioni=None):
                 adesso = b.numeri().get("consegnati", 0) or 0
                 if adesso > prima:
                     break
-                time.sleep(1.0)
+                # ⭐ e si aspetta da cliente: col mouse che si muove (il
+                #   difetto del 23 set teneva ferma proprio la chiave)
+                C.pausa(b, 1.0)
             nuovi = adesso - prima
             fatti.append({"giro": giro, "finestra": list(misura), "nuovi": nuovi,
                           "secondi": round(tetto.passati(), 1)})

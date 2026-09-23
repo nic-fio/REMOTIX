@@ -71,7 +71,7 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #   ⛔ gli episodi di corruzione durano meno di mezzo secondo.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 60),
                               passo=5.0, tetto=tetto, ogni_giro=a_meta,
-                              occhio=b.occhio)
+                              occhio=b.occhio, topo=b.topo)
         if "strisce" not in meta:
             meta["strisce"], meta["si_giudica"], meta["dove"] = \
                 C.misura_le_strisce(b, b.foto("tela-meta.png"))
@@ -117,6 +117,10 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #   I quattro di sopra contano fotogrammi; questo GUARDA quel che c'e'
         #   sul vetro e lo confronta con la scena dichiarata.  ⛔ Un «non lo so»
         #   non diventa un rosso.
+        # ⭐⭐ E il giudice del CLIENTE CHE NON STA FERMO: il blocco piu' lungo
+        #   senza fotogrammi nuovi mentre il mouse si muoveva (23 set 2026).
+        #   ⛔ Un «non lo so» non diventa un rosso.
+        C.vede_il_topo(b, misure, guasti)
         C.vede_l_occhio(b, misure, guasti)
         # ⭐ E la seconda rete, sui soli numeri.  ⚠ Da qui in poi il browser e'
         #   chiuso e l'inquilino e' uscito: e' l'unico momento in cui il server

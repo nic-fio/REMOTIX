@@ -88,7 +88,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
             #   che qualcuno lo tarera' sulla linea stretta.
             storia = C.guarda_per(nucleo, b.browser,
                                   min(per_gradino, max(30.0, tetto.resta() - 120)),
-                                  passo=5.0, tetto=tetto, occhio=b.occhio)
+                                  passo=5.0, tetto=tetto, occhio=b.occhio,
+                                  topo=b.topo)
             sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
             cresciuta = C.cresciuti(storia[0], storia[-1])
             srv = C.dal_server(nucleo, desktop, segno, chi)
@@ -133,6 +134,11 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #       ⛔ una soglia messa a occhio qui fabbrica rossi falsi, ed e' la
         #       stessa trappola scritta sopra `giudizio_dei_numeri`.
         misure = {"gradini": misurati}
+        # ⚠ E il topo come l'occhio: il mouse si muove e il blocco piu' lungo
+        #   si MISURA, ma non si giudica — ⛔ a 1 Mbit/s un blocco lungo puo'
+        #   essere la linea, e la soglia di 10 s e' tarata (quando lo sara')
+        #   a banda piena.
+        C.vede_il_topo(b, misure, guasti=None, giudica=False)
         C.vede_l_occhio(b, misure, guasti=None, giudica=False)
         C.conta_il_ritmo(b, misure, guasti=None, giudica=False)
         return C.verde(NOME, desktop, marca,

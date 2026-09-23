@@ -15,7 +15,11 @@
    · ⭐⭐ l'OCCHIO (`Occhio`, `vede_l_occhio`, `conta_il_ritmo`): il giudice che
      GUARDA l'immagine invece di contarla.  ⛔ Senza di lui la suite ha dato
      verde due volte su un'immagine a mosaico — era il difetto piu' grave del
-     23 settembre 2026, e non era nel prodotto.
+     23 settembre 2026, e non era nel prodotto;
+   · ⭐⭐ il TOPO (`Topo`, `vede_il_topo`, `pausa`): il cliente che NON sta
+     fermo — muove il mouse mentre si guarda, e giudica il blocco piu' lungo
+     senza fotogrammi nuovi.  ⛔ Senza di lui lo schermo fermo per minuti del
+     23 settembre 2026 passava verde in tutti gli scenari.
 
 ⛔⛔ E NON C'E' UN SECONDO NUCLEO.  Tutto quel che tocca la scatola, la pagina e
     il registro passa da `stress_nucleo.py`, con le SUE firme:
@@ -70,8 +74,29 @@ except Exception as _perche_no_occhio:             # noqa: BLE001
     O = None
     OCCHIO_PERCHE = "«stress_occhio» non si importa: %s" % str(_perche_no_occhio)[:160]
 
+# ⭐⭐ LE MANI DEL CLIENTE, e il giudice che le guarda: vengono dal banco che le
+#    ha inventate (`14-il-cliente-che-non-sta-fermo.py`), ⛔ non se ne fa una
+#    copia.  Il 23 settembre 2026 un difetto che teneva lo schermo fermo per
+#    minuti e' stato invisibile a TUTTI gli scenari, perche' nessuno muoveva il
+#    mouse (memoria «il cliente educato»).  ⇒ Da qui il mouse si muove SEMPRE
+#    mentre uno scenario guarda: e' il comportamento normale di un cliente.
+#    ⚠ Se il banco non si importa, il giro va avanti senza topo e LO DICE (3).
+try:
+    import importlib.util as _iu
+    _s14 = _iu.spec_from_file_location(
+        "cliente_che_non_sta_fermo",
+        os.path.join(_SOPRA, "14-il-cliente-che-non-sta-fermo.py"))
+    B14 = _iu.module_from_spec(_s14)
+    sys.modules["cliente_che_non_sta_fermo"] = B14
+    _s14.loader.exec_module(B14)
+    TOPO_PERCHE = ""
+except Exception as _perche_no_topo:               # noqa: BLE001
+    B14 = None
+    TOPO_PERCHE = ("«14-il-cliente-che-non-sta-fermo» non si importa: %s"
+                   % str(_perche_no_topo)[:160])
+
 VERDE, ROSSO, CIECO = 0, 1, 3
-PORTE = {"gnome": 8511, "kde": 8512, "xfce": 8513, "lxqt": 8514}
+PORTE ={"gnome": 8511, "kde": 8512, "xfce": 8513, "lxqt": 8514}
 REGISTRO = "/var/lib/rete11/registro.log"
 SERVER = os.environ.get("REMOTIX_SERVER", "192.168.0.2")
 UTENTE_SERVER = os.environ.get("REMOTIX_UTENTE", "nicfio")
@@ -527,7 +552,7 @@ def misura_le_strisce(banco, png):
 # 5 · GUARDARE NEL TEMPO
 # ═══════════════════════════════════════════════════════════════════════════
 def guarda_per(nucleo, browser, secondi, passo=5.0, tetto=None, ogni_giro=None,
-               occhio=None):
+               occhio=None, topo=None):
     """Guarda i contatori della pagina per `secondi` e torna la STORIA.
 
     ⭐ La storia, non il totale: «e' salito per tutto il tempo» e «e' salito e
@@ -540,41 +565,81 @@ def guarda_per(nucleo, browser, secondi, passo=5.0, tetto=None, ogni_giro=None,
        del browser (Marionette o CDP) e' una conversazione sola su un socket
        solo, e due comandi insieme la sfasano.  ⇒ Qui il giro diventa di un
        secondo, e i contatori si leggono ogni `passo` come prima.
+
+    ⭐⭐ E se c'e' un `topo` (il cliente che non sta fermo), a ogni giro:
+       · legge `consegnati` — UNA volta al secondo, per il giudice sul blocco
+         piu' lungo (la `storia` resta ogni `passo`, com'era);
+       · e riempie il RESTO del secondo muovendo il mouse (`B14.muovi`).
+    ⛔ Sempre dallo stesso filo: il mouse passa dallo stesso guidatore delle
+       fotografie, e un secondo filo lo sfaserebbe.
     """
     storia = []
     fine = time.time() + float(secondi)
     prossimo_conto = 0.0
-    while time.time() < fine:
-        if tetto is not None and tetto.scaduto():
-            break
-        giro = time.time()
-        if giro >= prossimo_conto:
-            n = numeri(nucleo, browser)
-            n["t"] = round(time.time(), 1)
-            storia.append(n)
-            prossimo_conto = giro + float(passo)
-            if ogni_giro:
-                try:
-                    ogni_giro(n, storia)
-                except Exception:                # noqa: BLE001
-                    pass
-        if occhio is None:
-            dorme = float(passo)
-        else:
-            occhio.scatta()
-            # ⛔ UNA FOTOGRAFIA AL SECONDO, non ogni cinque.  `[M]` 23 set 2026:
-            #    gli episodi di corruzione durano meno di mezzo secondo — lo
-            #    stesso giro rotto letto uno ogni 60 dava «zero celle guaste»,
-            #    letto fitto ne mostrava sette fotogrammi devastati.
-            dorme = max(0.0, occhio.cadenza - (time.time() - giro))
-        dorme = min(dorme, max(0.0, fine - time.time()))
-        if dorme > 0:
-            time.sleep(dorme)
+    if topo is not None:
+        topo.comincia(fine)
+    try:
+        while time.time() < fine:
+            if tetto is not None and tetto.scaduto():
+                break
+            giro = time.time()
+            n = None
+            if giro >= prossimo_conto:
+                n = numeri(nucleo, browser)
+                n["t"] = round(time.time(), 1)
+                storia.append(n)
+                prossimo_conto = giro + float(passo)
+                if ogni_giro:
+                    try:
+                        ogni_giro(n, storia)
+                    except Exception:            # noqa: BLE001
+                        pass
+            if topo is not None:
+                topo.conta(n)
+            if occhio is None:
+                dorme = topo.cadenza if topo is not None else float(passo)
+            else:
+                occhio.scatta()
+                # ⛔ UNA FOTOGRAFIA AL SECONDO, non ogni cinque.  `[M]` 23 set
+                #    2026: gli episodi di corruzione durano meno di mezzo secondo
+                #    — lo stesso giro rotto letto uno ogni 60 dava «zero celle
+                #    guaste», letto fitto ne mostrava sette fotogrammi devastati.
+                dorme = occhio.cadenza
+            # ⭐ Il mouse riempie quel che resta del giro: contatori e fotografia
+            #   PRIMA, il movimento DOPO — cosi' la cadenza dell'occhio resta
+            #   quella, e il mouse non si ferma mai piu' di un attimo.
+            if topo is not None:
+                topo.muovi_fino(min(giro + dorme, fine))
+            dorme = max(0.0, dorme - (time.time() - giro))
+            dorme = min(dorme, max(0.0, fine - time.time()))
+            if dorme > 0:
+                time.sleep(dorme)
+    finally:
+        # ⛔ Il guasto innestato non sopravvive alla misura che lo guarda.
+        if topo is not None:
+            topo.rilascia()
     if not storia or (time.time() - storia[-1]["t"]) > 1.0:
         n = numeri(nucleo, browser)
         n["t"] = round(time.time(), 1)
         storia.append(n)
     return storia
+
+
+def pausa(banco, secondi):
+    """⭐ Un'attesa da CLIENTE, non da banco: si aspetta muovendo il mouse.
+
+    ⚠ Per le attese degli scenari che non guardano con `guarda_per` («e'
+      ripartita l'immagine dopo il rientro?»): ⛔ il difetto del 23 settembre
+      teneva ferma proprio la richiesta della chiave, e un rientro atteso col
+      mouse fermo non l'avrebbe mai visto.  Senza topo e' un `sleep`.
+    """
+    fine = time.time() + float(secondi)
+    topo = getattr(banco, "topo", None)
+    if topo is not None:
+        topo.muovi_fino(fine)
+    resta = fine - time.time()
+    if resta > 0:
+        time.sleep(resta)
 
 
 def sempre_in_salita(storia, chiave="consegnati", buco_massimo_s=25.0):
@@ -921,6 +986,219 @@ def conta_il_ritmo(banco, misure=None, guasti=None, giudica=True):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# 6-bis · IL TOPO — ⭐⭐ il cliente che non sta fermo, e il giudice che lo guarda
+#
+# ⛔⛔ PERCHE' ESISTE, e costa dirlo: il 23 settembre 2026 `batti_fra()`
+#     rimandava il battito del server a ogni messaggio di input, e con lui la
+#     richiesta della chiave ⇒ schermo fermo per minuti, mouse alla mano.
+#     Nessuno scenario lo vedeva: **tutti avevano un cliente educato**, che
+#     entrava e stava a guardare (`14-il-cliente-che-non-sta-fermo.py`).
+#
+# ⭐ Che cosa fa, in tre righe:
+#   · muove il mouse di continuo mentre lo scenario guarda (`guarda_per`, ~20
+#     movimenti al secondo, il gesto del banco 14 — Firefox e Chrome);
+#   · legge `consegnati` una volta al secondo, e segna quanti movimenti sono
+#     partiti in quel secondo;
+#   · alla fine GIUDICA il blocco piu' lungo senza fotogrammi nuovi
+#     (`B14.giudica_il_blocco`: 0 · 1 · 3, soglia `[?]` da tarare sul ferro).
+# ⛔ E il GUASTO INNESTATO, senza ricompilare: `REMOTIX_SCHERMO_CONGELATO=25`
+#    (o `_lancia.py --schermo-congelato`) congela il compositore dell'inquilino
+#    per 25 s a meta' misura, e lo rilascia SEMPRE.  Col guasto il giudice DEVE
+#    dare 1, e la riga dice se il guasto e' stato visto.
+# ═══════════════════════════════════════════════════════════════════════════
+def topo_acceso():
+    """⚠ `REMOTIX_TOPO=no` lo spegne da fuori — ⭐ ed e' la controprova: il
+    cliente educato di prima del 23 settembre.  Si legge ogni volta."""
+    return (os.environ.get("REMOTIX_TOPO", "si").strip().lower()
+            not in ("no", "0", "off", "spento", "false"))
+
+
+def schermo_congelato():
+    """`(secondi, dopo_s)` del guasto innestato, o `(None, None)`.
+
+    ⚠ Viaggia nell'AMBIENTE, come `REMOTIX_OCCHIO`: cosi' arriva al `Banco`
+      di ognuno degli scenari senza toccarne le chiamate.  ⛔ E la riga lo dice
+      comunque (`misure.topo.guasto_innestato`), quindi un giro col guasto non
+      puo' somigliare a uno sano.
+    """
+    try:
+        s = float(os.environ.get("REMOTIX_SCHERMO_CONGELATO", "") or 0)
+    except ValueError:
+        s = 0.0
+    if s <= 0:
+        return None, None
+    try:
+        dopo = float(os.environ.get("REMOTIX_SCHERMO_CONGELATO_DOPO", "") or 20.0)
+    except ValueError:
+        dopo = 20.0
+    return s, dopo
+
+
+class Topo(object):
+    """⭐⭐ Muove il mouse, conta i secondi, e (se chiesto) congela lo schermo.
+
+    ⛔ Non e' un secondo filo di esecuzione: `conta()` e `muovi_fino()` li chiama
+       `guarda_per`, dallo stesso filo che parla col browser.
+    ⚠ Il browser si legge dal `banco` OGNI volta: dopo un rientro e' un altro.
+    """
+
+    CADENZA_S = 1.0
+    PASSO_MS = 50                 # ⭐ il ritmo del banco 14: 20 movimenti al secondo
+
+    def __init__(self, banco, congela_s=None, congela_dopo_s=20.0):
+        self.banco = banco
+        self.cadenza = self.CADENZA_S
+        self.serie = []
+        self.passo = 0
+        self.mosse = 0
+        self.mosse_ora = 0
+        self.errori = 0
+        self.ultimo_errore = ""
+        self.tratto = 0
+        self.fine = None
+        self.da = None
+        self.congela_s = congela_s
+        self.congela_dopo_s = float(congela_dopo_s or 0.0)
+        self.congelatore = None
+        self.perche_non_congelato = ""
+
+    def comincia(self, fine):
+        """Un tratto di misura nuovo: ⚠ i blocchi non si cuciono fra due tratti."""
+        self.tratto += 1
+        self.fine = fine
+        if self.da is None:
+            self.da = time.time()
+
+    # ── la lettura, una al secondo ────────────────────────────────────────
+    def conta(self, n=None):
+        """⭐ Una lettura di `consegnati`, con i movimenti del secondo PRIMA.
+
+        ⚠ Se chi chiama ha gia' letto i contatori in questo giro li passa, e non
+          si rilegge: una chiamata in meno al guidatore."""
+        try:
+            if n is None:
+                n = numeri(self.banco.n, self.banco.browser)
+            valore = (n or {}).get("consegnati")
+        except Exception:                        # noqa: BLE001
+            valore = None                        # ⚠ «non lo so» non e' «fermo»
+        self.serie.append({"t": round(time.time(), 2), "consegnati": valore,
+                           "mosse": self.mosse_ora, "tratto": self.tratto,
+                           "ora": time.strftime("%H:%M:%S")})
+        self.mosse_ora = 0
+        self._il_guasto()
+
+    # ── il mouse ──────────────────────────────────────────────────────────
+    def muovi_fino(self, istante):
+        """Muove il mouse fino a `istante`.  ⛔ Un errore del guidatore non ferma
+        la misura: si conta, e il giudice lo vedra' come secondi senza mouse."""
+        browser = getattr(self.banco, "browser", None)
+        quanti = int((istante - time.time()) * 1000.0 / self.PASSO_MS)
+        if browser is None or quanti < 1 or B14 is None:
+            return 0
+        self.passo += 1
+        try:
+            fatte = B14.muovi(browser, self.passo, quanti, self.PASSO_MS)
+        except Exception as e:                   # noqa: BLE001
+            self.errori += 1
+            self.ultimo_errore = str(e)[:160]
+            return 0
+        self.mosse += fatte
+        self.mosse_ora += fatte
+        return fatte
+
+    # ── il guasto innestato ───────────────────────────────────────────────
+    def _il_guasto(self):
+        if not self.congela_s or B14 is None:
+            return
+        adesso = time.time()
+        if self.congelatore is None:
+            if self.da is None or adesso - self.da < self.congela_dopo_s:
+                return
+            # ⛔ Si congela solo se il tratto dura ABBASTANZA da vedere il
+            #    congelamento intero e ancora qualche secondo dopo: un guasto
+            #    tagliato dalla fine della misura non prova la guardia.
+            if self.fine is None or (self.fine - adesso) < self.congela_s + 5.0:
+                self.perche_non_congelato = (
+                    "la misura era troppo corta per un congelamento di %.0f s "
+                    "dopo %.0f s" % (self.congela_s, self.congela_dopo_s))
+                return
+            self.perche_non_congelato = ""
+            self.congelatore = B14.Congelatore(self.banco.n, self.banco.desktop,
+                                               self.banco.chi, self.congela_s)
+            try:
+                self.congelatore.innesta()
+            except Exception as e:               # noqa: BLE001
+                self.congelatore.perche = "il guasto non si e' innestato: %s" % str(e)[:160]
+        elif self.congelatore.e_ora():
+            self.rilascia()
+
+    def rilascia(self):
+        """⛔ Sta nei `finally`: non solleva mai, e si puo' chiamare sempre."""
+        if self.congelatore is not None:
+            try:
+                self.congelatore.rilascia()
+            except Exception:                    # noqa: BLE001
+                pass
+
+    # ── il verdetto, DOPO ─────────────────────────────────────────────────
+    def giudizio(self):
+        """`(esito, perche, numeri)` — ⛔ e un 3 non diventa mai un rosso."""
+        esito, perche, numeri_topo = B14.giudica_il_blocco(self.serie)
+        scena = getattr(self.banco, "scena_accesa", None)
+        if esito != CIECO and (not scena or scena == "ferma"):
+            # ⛔ A scena ferma lo schermo non ha niente da mandare: un blocco
+            #    lungo li' e' giusto, e un verde non direbbe niente.
+            esito, perche = CIECO, ("la scena era «%s»: senza una scena che si "
+                                    "muove un blocco non vuol dire niente"
+                                    % (scena or "nessuna"))
+        chiesto = bool(self.congela_s)
+        innestato = bool(self.congelatore is not None and self.congelatore.fermati)
+        esito, frase = B14.esito_col_guasto(esito, chiesto, innestato)
+        numeri_topo.update({"topo_mosse": self.mosse,
+                            "topo_errori_mouse": self.errori})
+        if self.ultimo_errore:
+            numeri_topo["topo_ultimo_errore"] = self.ultimo_errore
+        if chiesto:
+            numeri_topo["guasto_innestato"] = (
+                self.congelatore.rapporto() if self.congelatore is not None else
+                {"chiesto_s": self.congela_s, "innestato": False,
+                 "perche": self.perche_non_congelato or "non e' mai partito"})
+            numeri_topo["guasto_visto"] = bool(innestato and esito == ROSSO)
+        return esito, perche + frase, numeri_topo
+
+
+def vede_il_topo(banco, misure=None, guasti=None, giudica=True):
+    """⭐⭐ IL VERDETTO DEL TOPO ENTRA NEL GIRO.  Torna `(esito, perche)`.
+
+    ⛔⛔ Come l'occhio: un **3 non diventa mai un rosso**, e il numero si scrive
+        lo stesso.  ⚠ `giudica=False` dove la soglia non ha senso (la rete
+        strozzata: li' un blocco lungo puo' essere la linea, non il difetto).
+    ⭐ La serie al secondo si salva accanto all'esito (`topo-serie.json`): il
+       blocco che ha fatto il rosso si deve poter RILEGGERE.
+    """
+    fuori = misure if isinstance(misure, dict) else {}
+    topo = getattr(banco, "topo", None)
+    if topo is None:
+        fuori["topo"] = {"esito": CIECO,
+                         "perche": getattr(banco, "topo_perche", "")
+                         or "il mouse non si muoveva in questo giro"}
+        return CIECO, fuori["topo"]["perche"]
+    try:
+        esito, perche, numeri_topo = topo.giudizio()
+    except Exception as e:                       # noqa: BLE001
+        esito, perche, numeri_topo = CIECO, ("il giudice del topo si e' rotto: %s"
+                                             % str(e)[:160]), {}
+    numeri_topo["esito"] = esito
+    numeri_topo["perche"] = perche
+    numeri_topo["giudica"] = bool(giudica)
+    fuori["topo"] = numeri_topo
+    salva(getattr(banco, "dove", None), "topo-serie-%s.json" % banco.chi, topo.serie)
+    if esito == ROSSO and giudica and guasti is not None:
+        guasti.append("⛔ IL CLIENTE CHE NON STA FERMO — %s" % perche)
+    return esito, perche
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # 7 · IL BANCO — inquilino, browser e scena, e si sparecchia SEMPRE
 # ═══════════════════════════════════════════════════════════════════════════
 class Banco(object):
@@ -931,7 +1209,7 @@ class Banco(object):
     """
 
     def __init__(self, nucleo, desktop, marca, chi, parola="stress2026",
-                 misura=(1400, 1000), dove=None, occhio=True):
+                 misura=(1400, 1000), dove=None, occhio=True, topo=True):
         self.n, self.desktop, self.marca = nucleo, desktop, marca
         self.chi, self.parola, self.misura, self.dove = chi, parola, misura, dove
         self.browser = None
@@ -942,6 +1220,27 @@ class Banco(object):
         self.occhio = None
         self.occhio_perche = ""
         self.scena_accesa = None
+        # ⭐⭐ E anche il TOPO e' la norma: un cliente vero muove il mouse.
+        self.vuole_il_topo = bool(topo)
+        self.topo = None
+        self.topo_perche = ""
+
+    def prepara_il_topo(self):
+        """⭐ Il cliente che non sta fermo.  ⛔ Se non c'e', il giro va avanti
+        col mouse fermo e lo DICE — non ferma la misura e non accusa nessuno."""
+        if not self.vuole_il_topo:
+            self.topo_perche = "questo scenario non ha chiesto il topo"
+            return False, self.topo_perche
+        if B14 is None or not topo_acceso():
+            self.topo_perche = (TOPO_PERCHE if B14 is None else
+                                "spento da fuori (REMOTIX_TOPO=no): il cliente "
+                                "educato di prima del 23 settembre")
+            return False, self.topo_perche
+        secondi, dopo = schermo_congelato()
+        self.topo = Topo(self, congela_s=secondi, congela_dopo_s=dopo)
+        return True, ("mouse in moto%s" % ("" if not secondi else
+                      " ⛔ col GUASTO INNESTATO: schermo congelato %.0f s dopo "
+                      "%.0f s" % (secondi, dopo)))
 
     def prepara_l_occhio(self):
         """⭐ Scrive la scena TESTIMONE dentro la scatola e accende l'occhio.
@@ -994,6 +1293,7 @@ class Banco(object):
         accesa, dice = self.accendi_la_scena(scena_quale)
         if not accesa:
             return CIECO, dice
+        self.prepara_il_topo()
         return VERDE, perche
 
     def accendi_la_scena(self, quale, giri=30, passo=2.0):
@@ -1083,7 +1383,13 @@ class Banco(object):
         """⚠ Si puo' chiamare due volte: `conta_il_ritmo()` la chiama apposta
         PRIMA della fine (le righe di riepilogo escono all'uscita), e il
         `finally` dello scenario la richiama comunque.  ⛔ Il secondo giro non
-        deve rifare lo sgombero — sarebbe un minuto buttato a ogni scenario."""
+        deve rifare lo sgombero — sarebbe un minuto buttato a ogni scenario.
+
+        ⛔⛔ E IL COMPOSITORE SI RILASCIA PER PRIMO: uno sgombero che trova
+            processi fermi (stato T) non li fa morire col TERM, e il guasto
+            innestato di questo giro diventerebbe il guasto del giro dopo."""
+        if self.topo is not None:
+            self.topo.rilascia()
         if self.browser is not None:
             chiudi(self.browser)
             self.browser = None

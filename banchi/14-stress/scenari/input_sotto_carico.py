@@ -135,7 +135,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #   dell'input che non guarda lo schermo lascia meta' della domanda fuori.
         storia = C.guarda_per(nucleo, b.browser,
                               min(durata, max(30.0, tetto.resta() - 90)),
-                              passo=5.0, tetto=tetto, occhio=b.occhio)
+                              passo=5.0, tetto=tetto, occhio=b.occhio,
+                              topo=b.topo)
         cresciuta = C.cresciuti(storia[0], storia[-1])
 
         c, t = C.dentro(nucleo, desktop,
@@ -184,6 +185,10 @@ def gira(desktop, marca, nucleo, opzioni=None):
             guasti.append("il testo copiato NELLA SESSIONE non e' arrivato alla "
                           "pagina: %s (§7.4)" % appunti.get("perche"))
 
+        # ⭐⭐ E il giudice del CLIENTE CHE NON STA FERMO: il blocco piu' lungo
+        #   senza fotogrammi nuovi mentre il mouse si muoveva (23 set 2026).
+        #   ⛔ Un «non lo so» non diventa un rosso.
+        C.vede_il_topo(b, misure, guasti)
         C.vede_l_occhio(b, misure, guasti)
         C.conta_il_ritmo(b, misure, guasti)
 

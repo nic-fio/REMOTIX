@@ -69,7 +69,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #      settembre ha dato verde due volte mentre l'utente guardava
         #      un'immagine a mosaico: i contatori erano perfetti.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 90),
-                              passo=5.0, tetto=tetto, occhio=b.occhio)
+                              passo=5.0, tetto=tetto, occhio=b.occhio,
+                              topo=b.topo)
         sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
         cresciuta = C.cresciuti(storia[0], storia[-1])
         srv_pesante = C.dal_server(nucleo, desktop, b.segno, pesante)
@@ -114,6 +115,10 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #   pesante (le righe di riepilogo escono alla chiusura della
         #   sessione): tutto quel che si doveva leggere dal server e dal
         #   registro e' gia' stato letto qui sopra.
+        # ⭐⭐ E il giudice del CLIENTE CHE NON STA FERMO: il blocco piu' lungo
+        #   senza fotogrammi nuovi mentre il mouse si muoveva (23 set 2026).
+        #   ⛔ Un «non lo so» non diventa un rosso.
+        C.vede_il_topo(b, misure, guasti)
         C.vede_l_occhio(b, misure, guasti)
         C.conta_il_ritmo(b, misure, guasti)
 

@@ -77,7 +77,20 @@ def main():
     #   serve a provare che la riga arriva completa fino al rapporto, senza
     #   accendere un browser sullo schermo di nessuno.
     p.add_argument("--finto", default=None)
+    # ⛔ IL GUASTO INNESTATO DEL TOPO: il compositore dell'inquilino si congela
+    #    (SIGSTOP) per SECONDI a meta' misura, e si rilascia sempre.  Il giudice
+    #    sul blocco piu' lungo DEVE dare rosso, e la riga dice se l'ha visto.
+    #    ⚠ Passa agli scenari per l'ambiente (`_comune.schermo_congelato`).
+    p.add_argument("--schermo-congelato", type=float, nargs="?", const=25.0,
+                   default=None, metavar="SECONDI")
+    p.add_argument("--congela-dopo", type=float, default=20.0,
+                   help="dopo quanti secondi di misura si congela")
     a = p.parse_args()
+    if a.schermo_congelato:
+        os.environ["REMOTIX_SCHERMO_CONGELATO"] = str(a.schermo_congelato)
+        os.environ["REMOTIX_SCHERMO_CONGELATO_DOPO"] = str(a.congela_dopo)
+        print("⛔⛔ GUASTO INNESTATO: schermo congelato %.0f s dopo %.0f s di misura "
+              "— questo giro DEVE dare rosso" % (a.schermo_congelato, a.congela_dopo))
 
     sys.path.insert(0, QUI)
     # ⛔ E anche la cartella dello scenario: gli scenari si appoggiano a un
@@ -146,6 +159,9 @@ def main():
         r.setdefault("porta", a.porta)
         if a.finto:
             r["col_nucleo_finto"] = a.finto
+        if a.schermo_congelato:
+            # ⛔ Un giro col guasto non deve MAI somigliare a uno sano.
+            r["guasto_innestato"] = "schermo congelato %.0f s" % a.schermo_congelato
         try:
             nucleo.completa_la_riga(r)
         except Exception as e:                   # noqa: BLE001
@@ -182,6 +198,11 @@ def main():
     esito, perche = esito_dal_risultato(r)
     if perche:
         print("   %s" % perche)
+    if a.schermo_congelato and isinstance(r, dict):
+        topo = (r.get("misure") or {}).get("topo") or {}
+        print("   %s" % ("⭐ il guasto innestato e' stato visto" if topo.get("guasto_visto")
+                         else "⛔ il guasto innestato NON e' stato visto: %s"
+                         % str(topo.get("perche") or "il topo non c'era")[-200:]))
     print("   %s · %s · %s ⇒ esito %d in %.0f s"
           % (getattr(scenario, "NOME", "?"), a.desktop, a.marca, esito,
              time.time() - t0))

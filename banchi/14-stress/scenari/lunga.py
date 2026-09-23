@@ -65,7 +65,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
         #   celle guaste»: una cadenza lenta non e' una misura piu' comoda, e'
         #   una misura cieca.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 120),
-                              passo=60.0, tetto=tetto, occhio=b.occhio)
+                              passo=60.0, tetto=tetto, occhio=b.occhio,
+                              topo=b.topo)
         n_dopo = b.numeri()
         dopo = _bilancio(nucleo, desktop)
         srv = b.server()
@@ -102,6 +103,10 @@ def gira(desktop, marca, nucleo, opzioni=None):
         # ⭐⭐ E il terzo giudice: l'immagine e' viva, ma e' anche GIUSTA?
         #   ⛔ Un server che non cresce e un contatore che sale sono compatibili
         #      con venti minuti di mosaico.
+        # ⭐⭐ E il giudice del CLIENTE CHE NON STA FERMO: il blocco piu' lungo
+        #   senza fotogrammi nuovi mentre il mouse si muoveva (23 set 2026).
+        #   ⛔ Un «non lo so» non diventa un rosso.
+        C.vede_il_topo(b, misure, guasti)
         C.vede_l_occhio(b, misure, guasti)
         C.conta_il_ritmo(b, misure, guasti)
 

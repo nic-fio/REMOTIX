@@ -40,15 +40,21 @@ import _comune as C                                    # noqa: E402
 import _nucleo_finto as F                              # noqa: E402
 
 # scenario · guasto che deve vedere · opzioni per fare in fretta
+# ⚠ I due «fermo» hanno il tetto LARGO, e il perche' e' del finto: il suo
+#   contatore cresce A OGNI LETTURA fino a 20 s dall'accensione.  Da quando il
+#   topo legge una volta al secondo, l'ultima crescita cade piu' tardi, e col
+#   tetto di 90 s si guardavano solo ~20 s ⇒ il fermo misurava 9,5 s contro una
+#   soglia di 10, e passava verde (`[M]` 23 set 2026, stesso caso a 120 s: 29,6
+#   s, rosso).  ⛔ Il giudice non e' cambiato: e' cambiato quanto si guarda.
 CASI = [
-    ("pesante", "fermo", {"durata_s": 40, "tetto_s": 90, "fermo_massimo_s": 10}),
+    ("pesante", "fermo", {"durata_s": 40, "tetto_s": 120, "fermo_massimo_s": 10}),
     ("pesante", "morto", {"durata_s": 20, "tetto_s": 90}),
     ("pesante", "strisce", {"durata_s": 20, "tetto_s": 90}),
     ("lunga", "cresce", {"durata_s": 20, "tetto_s": 90}),
     ("esci_rientra", "fantasma", {"giri": 1, "tetto_s": 90}),
     ("stacca_riattacca", "nero", {"giri": 2, "tetto_s": 90, "tetto_immagine_s": 3}),
     ("riavvio_del_server", "nero", {"giri": 1, "tetto_s": 90, "tetto_immagine_s": 3}),
-    ("due_inquilini", "fermo", {"durata_s": 40, "tetto_s": 120, "fermo_massimo_s": 10}),
+    ("due_inquilini", "fermo", {"durata_s": 40, "tetto_s": 150, "fermo_massimo_s": 10}),
     ("rete_strozzata", "spirale", {"gradini": [5000], "per_gradino_s": 15,
                                    "tetto_s": 90}),
     ("input_sotto_carico", "muto", {"durata_s": 15, "tetto_s": 90}),
@@ -245,6 +251,63 @@ print("       [M] ritmo: %s buttati, %s chiavi oltre a quella d'apertura ⇒ esi
 if ritmo.get("esito") != 1:
     falliti.append("pesante (catena): il giudice sui numeri non ha detto ROSSO "
                    "(%s) — e le righe di riepilogo c'erano" % ritmo.get("perche"))
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ IL CLIENTE CHE NON STA FERMO — il topo e il suo guasto innestato
+#
+# ⛔ Il difetto del 23 settembre 2026 (schermo fermo per minuti mentre il mouse
+#    si muoveva) passava verde in TUTTI gli scenari: nessuno muoveva il mouse.
+#    Qui si prova che adesso (1) il mouse si muove davvero in ogni giro che
+#    guarda, (2) il giudice sul blocco piu' lungo da' VERDE sul sano, e (3) col
+#    compositore congelato da' ROSSO — ⭐ e lo da' LUI SOLO: il blocco di 14 s
+#    sta sotto il tetto di 25 s del giudice di prima, che quindi taceva.
+# ═══════════════════════════════════════════════════════════════════════════
+print("\n  ⭐⭐ IL CLIENTE CHE NON STA FERMO")
+r = prova("pesante", 0, "sano", {"durata_s": 45, "tetto_s": 150}, "topo-sano")
+topo = ((r.get("misure") or {}).get("topo") or {}) if isinstance(r, dict) else {}
+print("       [M] topo: esito %s · blocco piu' lungo %s s su %s s guardati · "
+      "%s movimenti · mouse nel %s%% dei secondi"
+      % (topo.get("esito"), topo.get("topo_blocco_s"), topo.get("topo_guardati_s"),
+         topo.get("topo_mosse"), topo.get("topo_col_mouse_per_cento")))
+if topo.get("esito") != 0:
+    falliti.append("pesante (topo-sano): il giudice del topo non ha dato VERDE "
+                   "sul sano (%s)" % topo.get("perche"))
+
+print("      ⛔ e col COMPOSITORE CONGELATO 14 s (il guasto innestato) ⇒ ROSSO")
+os.environ["REMOTIX_SCHERMO_CONGELATO"] = "14"
+os.environ["REMOTIX_SCHERMO_CONGELATO_DOPO"] = "5"
+try:
+    r = prova("pesante", 1, "sano", {"durata_s": 45, "tetto_s": 150}, "congelato")
+finally:
+    os.environ.pop("REMOTIX_SCHERMO_CONGELATO", None)
+    os.environ.pop("REMOTIX_SCHERMO_CONGELATO_DOPO", None)
+topo = ((r.get("misure") or {}).get("topo") or {}) if isinstance(r, dict) else {}
+g = topo.get("guasto_innestato") or {}
+print("       [M] topo: esito %s · blocco %s s · guasto: innestato %s, rilasciato %s, "
+      "visto %s" % (topo.get("esito"), topo.get("topo_blocco_s"), g.get("innestato"),
+                    g.get("rilasciato"), topo.get("guasto_visto")))
+print("       %s" % str(topo.get("perche"))[-90:])
+if not (topo.get("esito") == 1 and topo.get("guasto_visto") is True):
+    falliti.append("pesante (congelato): il guasto innestato NON e' stato visto "
+                   "dal topo (%s)" % topo.get("perche"))
+if g.get("rilasciato") is not True:
+    falliti.append("pesante (congelato): il compositore NON risulta rilasciato")
+altri = [x for x in ((r.get("guasti") or []) if isinstance(r, dict) else [])
+         if "NON STA FERMO" not in str(x.get("che_cosa", x))]
+if altri:
+    falliti.append("pesante (congelato): il rosso non e' solo del topo: %s"
+                   % str(altri)[:120])
+
+print("      ⚠ e se la misura e' troppo corta per il congelamento ⇒ 3, non verde")
+os.environ["REMOTIX_SCHERMO_CONGELATO"] = "25"
+try:
+    r = prova("pesante", 0, "sano", {"durata_s": 20, "tetto_s": 90}, "corto")
+finally:
+    os.environ.pop("REMOTIX_SCHERMO_CONGELATO", None)
+topo = ((r.get("misure") or {}).get("topo") or {}) if isinstance(r, dict) else {}
+print("       [M] topo: esito %s — %s" % (topo.get("esito"), str(topo.get("perche"))[-80:]))
+if topo.get("esito") != 3:
+    falliti.append("pesante (corto): un guasto chiesto e non innestato non ha dato 3")
 
 # ⭐ E la terza domanda, che e' la piu' importante delle tre: quando l'occhio
 #   NON riconosce la propria scena, deve dire «non lo so» — ⛔ mai rosso.
