@@ -203,6 +203,15 @@ def main():
         print("   %s" % ("⭐ il guasto innestato e' stato visto" if topo.get("guasto_visto")
                          else "⛔ il guasto innestato NON e' stato visto: %s"
                          % str(topo.get("perche") or "il topo non c'era")[-200:]))
+        # ⛔⛔ UN GIRO COL GUASTO NON E' MAI UN VERDE.  `[M]` 23 set 2026, gnome:
+        #     il compositore non si era congelato, il topo diceva 3 («non prova
+        #     niente») e il giro usciva **0** perche' gli altri giudici erano
+        #     verdi.  ⇒ Col guasto chiesto e non visto l'esito e' 3: la guardia
+        #     non e' stata messa alla prova, e non si puo' dire che regga.
+        if esito == 0 and not topo.get("guasto_visto"):
+            esito = 3
+            print("   ⇒ esito 3: col guasto chiesto e non visto questo giro non "
+                  "certifica niente")
     print("   %s · %s · %s ⇒ esito %d in %.0f s"
           % (getattr(scenario, "NOME", "?"), a.desktop, a.marca, esito,
              time.time() - t0))

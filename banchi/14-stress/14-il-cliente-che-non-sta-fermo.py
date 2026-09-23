@@ -140,7 +140,15 @@ def fermi(serie, chiave="consegnati"):
 #    vuoto fra il peggiore dei sani e il guasto innestato — come e' stato fatto
 #    per l'occhio (`stress_occhio.SOGLIE`).  Fino a quel giorno questo numero e'
 #    una scelta DICHIARATA, e ogni riga lo porta con se' (`topo_soglia_s`).
-SOGLIA_BLOCCO_S = 10.0          # [?] oltre: ROSSO — da tarare sul ferro
+# ⭐ TARATA sul ferro, 23 set 2026 notte, binario e681a262, 4K, mouse in moto:
+#    SANI  blocco piu' lungo **0 s** in tutti e sei i giri misurati — gnome
+#          Firefox e Chrome e xfce Firefox e Chrome da 20 minuti, piu' due giri
+#          da 2 minuti su gnome;
+#    GUASTI 24,4 s (gnome-shell) · 24,6 s (kwin) · 24,8 s (labwc) col
+#          compositore congelato 25 s, 25,5 s nello scenario `pesante` su kde;
+#    il DIFETTO vero del 23 set: 46 s di `da_ms`, blocchi fino a 370 s.
+# ⇒ 10 s sta lontano da tutt'e due i lati.
+SOGLIA_BLOCCO_S = 10.0          # [M] oltre: ROSSO
 # `[?]` Sotto mezzo minuto guardato il giudice non giudica: un blocco di dieci
 #   secondi in una serie di quindici non si distingue dall'accensione.
 MINIMO_GUARDATO_S = 30.0        # [?]
@@ -286,9 +294,20 @@ for riga in open("/proc/net/unix").read().splitlines()[1:]:
         inodi["socket:[%s]" % p[6]] = p[7]
 if not inodi:
     print("NESSUNO nessun-socket-in-ascolto-in-%s" % cartella); sys.exit(0)
+trovati = 0
 for pid in sorted((d for d in os.listdir("/proc") if d.isdigit()), key=int):
+    # ⛔ L'utente si legge da `status`, NON da `os.stat("/proc/<pid>")`: `[M]`
+    #    23 set 2026, gnome-shell (e kwin_wayland) hanno una capacita' di file
+    #    (`cap_sys_nice`) ⇒ sono «non dumpable» e la loro cartella in /proc e'
+    #    di ROOT.  Col `stat` il compositore non si trovava MAI, e il guasto
+    #    innestato non si innestava.
     try:
-        if os.stat("/proc/" + pid).st_uid != uid:
+        reale = None
+        for r in open("/proc/%s/status" % pid):
+            if r.startswith("Uid:"):
+                reale = int(r.split()[1])
+                break
+        if reale != uid:
             continue
         fd = os.listdir("/proc/%s/fd" % pid)
     except OSError:
@@ -301,7 +320,28 @@ for pid in sorted((d for d in os.listdir("/proc") if d.isdigit()), key=int):
         if dove in inodi:
             nome = open("/proc/%s/comm" % pid).read().strip()
             print("COMPOSITORE %s %s %s" % (pid, nome, inodi[dove]))
+            trovati += 1
             break
+# ⛔⛔ IL RIPIEGO PER NOME, dichiarato.  `[M]` 23 set 2026, gnome: gnome-shell
+#     (come kwin_wayland) ha una capacita' di file ⇒ e' «non dumpable», e
+#     anche root DENTRO la scatola non puo' leggere `/proc/<pid>/fd`
+#     («Permission denied»): la strada del socket non lo vede MAI.
+#     ⇒ Se il socket non ha trovato nessuno, si cerca fra i processi
+#       dell'inquilino per nome, coi tre compositori che il prodotto stesso
+#       conosce (`src/sessione.c`).  Si dice che e' il ripiego.
+if not trovati:
+    for pid in sorted((d for d in os.listdir("/proc") if d.isdigit()), key=int):
+        try:
+            nome = open("/proc/%s/comm" % pid).read().strip()
+            reale = None
+            for r in open("/proc/%s/status" % pid):
+                if r.startswith("Uid:"):
+                    reale = int(r.split()[1])
+                    break
+        except OSError:
+            continue
+        if reale == uid and nome in ("gnome-shell", "kwin_wayland", "labwc"):
+            print("COMPOSITORE %s %s per-nome(il-socket-non-si-legge)" % (pid, nome))
 """
 
 

@@ -80,7 +80,16 @@ def schermo_in_primo_piano():
 
     ⚠ Il confronto e' sull'UTENTE, non sul numero di sessione: un banco lanciato
       da `ssh` sta in una sessione senza posto, e il numero non combacerebbe
-      mai.  Nel dubbio si dice di si', per non fermare chi funzionava."""
+      mai.  Nel dubbio si dice di si', per non fermare chi funzionava.
+
+    ⭐ E col compositore ANNIDATO la domanda non ha oggetto: `[M]` 23 set 2026,
+      notte, un `labwc` senza schermo (`WLR_BACKENDS=headless`) sul tablet
+      mentre in primo piano c'era l'utente «user» — quattro sessioni da 20
+      minuti con Firefox e Chrome VISIBILI dentro di lui, finestre mappate e
+      contatori pieni.  ⇒ Chi lancia lo DICHIARA con
+      `REMOTIX_SCHERMO_ANNIDATO=1` (e `WAYLAND_DISPLAY` sul suo socket)."""
+    if os.environ.get("REMOTIX_SCHERMO_ANNIDATO") == "1" and os.environ.get("WAYLAND_DISPLAY"):
+        return True, ""
     try:
         def _chiedi(*a):
             return subprocess.run(["loginctl"] + list(a) + ["--value"],

@@ -661,8 +661,8 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
 | # | punto | stato |
 |---|---|---|
 | 1 | **C20 non guarda** («non ho potuto guardare» dopo «Esci») | ✅ **CAPITO E CURATO** — non era «Esci» né il desktop: il **secondo fisso** di §4.4-bis durava **999 ms** (sotto) |
-| 2 | **sessioni lunghe** coi browser veri solo su kde/Firefox | ⏳ **in corso stanotte**: gnome e xfce, Firefox e Chrome, 20 min, 4K, mouse in moto |
-| 3 | **la guardia del battito** non è permanente | 🔸 **scritta** (`32511f9`), certificata a banco; ⏳ taratura e guasto innestato sul ferro stanotte |
+| 2 | **sessioni lunghe** coi browser veri solo su kde/Firefox | ✅ **VERDI**: gnome e xfce, Firefox e Chrome, 20 min in 4K col mouse in moto, blocco più lungo **0 s** in tutti e quattro |
+| 3 | **la guardia del battito** non è permanente | ✅ **FATTA E PROVATA SUL FERRO**: mouse in tutti gli scenari, soglia 10 s tarata, guasto innestato VISTO su gnome, kde e xfce |
 | 4 | Chrome Android su XFCE | ⏳ dell'utente |
 
 - ✅ **LA RETE DEL 23 SET SERA — nessun rosso** — binario `3fa352a2`, `--famiglia tutto`, gnome + kde +
@@ -708,8 +708,31 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   `--schermo-congelato` ferma il compositore dell'inquilino (SIGSTOP, trovato dal suo socket Wayland,
   non per nome) per ~25 s e lo rilascia sempre. Certificazioni pure: banco 14 **53 prove 0 guai**,
   scenari **45 OK**, nucleo 91, occhio 37.
-  ⏳ Sul ferro mancano la **taratura** (le quattro sessioni lunghe di stanotte danno il blocco più lungo
-  sano) e un giro **col guasto** per desktop.
+  ✅ **E SUL FERRO REGGE** — 23 set 2026, notte, binario `e681a262`:
+
+  | | giro sano (blocco più lungo) | col compositore congelato 25 s |
+  |---|---|---|
+  | **gnome** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ ROSSO, 24,4 s — guasto VISTO |
+  | **kde** | *(il 23 pomeriggio, curato: 0 s su 340)* | ⭐ ROSSO, 24,6 s — e nello scenario `pesante` 25,5 s |
+  | **xfce** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ ROSSO, 24,8 s — guasto VISTO |
+
+  ⇒ La soglia di **10 s** diventa `[M]`: i sani stanno a 0, i guasti a 24-25, il difetto vero a 46-370.
+  ⚠ Quattro difetti **del banco** trovati facendolo girare, tutti curati: (1) gnome-shell e kwin
+  hanno una capacità di file ⇒ la loro cartella in `/proc` è di root, e anche root **dentro la
+  scatola** non legge i loro `fd` ⇒ il compositore non si trovava mai: ora l'utente si legge da
+  `status`, e se il socket non si può leggere si ripiega **per nome** sui tre compositori che il
+  prodotto conosce, dichiarandolo; (2) un giro col guasto chiesto e **non** innestato usciva **0**
+  da `_lancia.py`: ora è 3; (3) Firefox visibile rifiutava di partire quando in primo piano c'è un
+  altro utente, anche dentro il compositore annidato: `REMOTIX_SCHERMO_ANNIDATO=1` lo dichiara;
+  (4) ⛔ **due banchi lanciati insieme sullo stesso inquilino `c43u1`** si sono rubati la sessione
+  e hanno dato due «blocchi» da 51 e 58 s che **non erano del prodotto** — rifatto da solo: 0 s.
+  È la lezione di sempre sui banchi in parallelo.
+
+- 🔸 **CHROME HA BUCHI CHE FIREFOX NON HA** — 23 set 2026, notte, sessioni lunghe in 4K: Chrome
+  **34 buchi** in 20 min su gnome e **88** su xfce, ognuno recuperato con una richiesta di chiave;
+  Firefox 1 e 0. Lo schermo **non** si ferma mai (blocco più lungo 0 s), ma in 4K ogni chiave è
+  grossa. ⏳ I registri del server delle due sessioni Chrome sono salvati in
+  `~/REMOTIX-misure/lunghe/registri/` per capire da che cosa nasce ciascun buco.
 
 - ✅ **KDE RIPARTE DOPO UN RIAVVIO DEL SERVER ANCHE SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
   binario `1c592928`. Trovato dall'utente: la sessione Plasma sopravvive al server (I4), ⛔ ma la tabella
