@@ -62,6 +62,44 @@ class Marionette:
         return self.chiama("WebDriver:TakeScreenshot", {"full": False})
 
 
+def schermo_in_primo_piano():
+    """⭐ Chi e' davanti allo schermo?  Torna `(va_bene, spiegazione)`.
+
+    ⛔ Su Wayland una finestra NUOVA non si mappa se la sessione grafica in
+       primo piano sul posto non e' la nostra: Firefox parte, apre la porta
+       Marionette, e poi **non risponde piu'** — `WebDriver:NewSession` resta
+       appeso fino al tetto del socket (180 s).
+
+    `[M]` 23 settembre 2026, portatile CHUWI, due condizioni a confronto nello
+    stesso quarto d'ora, Firefox 140.16 ESR:
+      · sessione di `nicfio` in primo piano  →  NewSession in **1,39 s**;
+      · sessione di un ALTRO utente in primo piano →  **3 tentativi su 3 in
+        timeout**, e nel frattempo lo stesso Firefox `--headless` rispondeva in
+        1,40 s e lo stesso Firefox VISIBILE su `Xvfb :99` in **1,63 s**.
+    ⇒ Non e' Firefox, non e' la memoria: e' lo schermo.
+
+    ⚠ Il confronto e' sull'UTENTE, non sul numero di sessione: un banco lanciato
+      da `ssh` sta in una sessione senza posto, e il numero non combacerebbe
+      mai.  Nel dubbio si dice di si', per non fermare chi funzionava."""
+    try:
+        def _chiedi(*a):
+            return subprocess.run(["loginctl"] + list(a) + ["--value"],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL,
+                                  timeout=5).stdout.decode().strip()
+        attiva = _chiedi("show-seat", "seat0", "-p", "ActiveSession")
+        if not attiva:
+            return True, ""
+        di_chi = _chiedi("show-session", attiva, "-p", "User")
+        if not di_chi or di_chi == str(os.getuid()):
+            return True, ""
+        nome = _chiedi("show-session", attiva, "-p", "Name") or di_chi
+        return False, ("in primo piano c'e' la sessione %s dell'utente «%s», "
+                       "non la tua" % (attiva, nome))
+    except Exception:                          # noqa: BLE001
+        return True, ""                        # non so dirlo: non ostacolo
+
+
 def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
             schermo=None):
     """⭐ `schermo=":99"` accende un Firefox VERO su uno schermo virtuale.
@@ -71,6 +109,19 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     modificabile a fuoco, e su un browser con schermo NO.  ⇒ Un difetto della
     clipboard che l'utente vede si puo' misurare solo qui."""
     """Accende un Firefox con un profilo nuovo e Marionette aperta."""
+    # ⭐ Il banco si guarda la scena PRIMA di accendere: una finestra vera sul
+    #   desktop dell'utente vuole quel desktop in primo piano.  Meglio un
+    #   verdetto in zero secondi che tre minuti di attesa cieca.
+    if not headless and not schermo:
+        ok, perche = schermo_in_primo_piano()
+        if not ok:
+            raise RuntimeError(
+                "⛔ Firefox VISIBILE non puo' partire: %s.  Su Wayland la "
+                "finestra non si mappa e `WebDriver:NewSession` non risponde "
+                "(tetto 180 s).  ⇒ tre strade: torna sulla tua sessione "
+                "grafica; oppure accendi uno schermo virtuale (`Xvfb :99 "
+                "-screen 0 1600x1200x24` e poi `schermo=\":99\"`); oppure "
+                "`headless=True` dove basta." % perche)
     profilo = tempfile.mkdtemp(prefix="remotix-ff-")
     prefs = {
         "browser.startup.homepage_override.mstone": "ignore",
