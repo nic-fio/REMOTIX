@@ -690,6 +690,16 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   ⚠ In KDE gli inquilini lasciati dalla rete sono stati tolti a mano (restano `nictest` e `provanic`): C7 non
   li toglie, e in GNOME e XFCE ci sono ancora.
 
+- ✅ **I FOTOGRAMMI DI FIREFOX: CHIUSO, E FIREFOX È SCAGIONATO** — misurato il 23 set 2026,
+  pomeriggio, con Firefox 140 **vero e visibile** su `rete11-kde`, 20 minuti, contatori nuovi letti
+  al secondo: `consegnati 25 880 = fuori 25 880 + dentro 1`. ⇒ Il decodificatore di Firefox **non**
+  si mangia niente in silenzio (`dentro` al massimo **5**, mediana 0), e non siamo noi a trattenerli
+  (`bmp` al massimo **1**: `createImageBitmap` si risolve sempre). ⛔ **Le due previsioni scritte
+  prima erano smentite tutte e due**; regge la terza strada, quella marcata `⚠`: il residuo del 22
+  era un artefatto dei binari di quel giorno, curato da `a50b389`/`e2b8c43`.
+  ⭐ E su 110 intervalli da 5 s, **zero** intervalli che perdono ≥16 %: le raffiche non ci sono più.
+  ⇒ Il conto chiude senza ignoti: 25 880 − 24 998 = 882 = `saltati_coda` + `tardive` + 1 in volo.
+
 - ⏳ **I fotogrammi che «spariscono» in Firefox NON sono in coda: sono buttati, e a RAFFICHE** —
   23 set 2026, riletti i diari del 22 (nessuna misura nuova: solo aritmetica su registri già in mano),
   pagina `src/pagina.html`.
@@ -847,6 +857,17 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   fotogrammi/s sono **venti secondi di codifica in più per ogni client che se ne va**, su una
   macchina che ha altri inquilini. La misura sotto carico è nella sessione lunga.
 
+- ✅ **IL PALCO SMETTE DI CATTURARE AL CONGEDO — CURATO E MISURATO** — 23 set 2026, `103280f`,
+  binario `cd8a3aec`. La cura si aggancia allo **stato** della sessione (`"finita"`), non alle tre
+  porte da cui ci si arriva — le strade sono **sette** e tre sole ne lasciavano quattro scoperte.
+  ⛔ E curava anche un caso peggiore trovato scrivendo: il client che chiudeva **per bene** lo
+  stream della CONNECT non fermava il palco **mai**, nemmeno alla morte della connessione.
+  `[M]` Tutte e cinque le previsioni scritte prima reggono: **zero** righe `⛔ NIENTE VIDEO`, il
+  palco si ferma **+100 ms** dopo il congedo (prima: +30 s), figli 2→2→2 e RSS fermo (I4 regge),
+  al rientro `canale video ACCESO` e 404 fotogrammi subito dopo, zero coppie acceso/spento.
+  ⚠ P5 (l'audio) regge per metà: lo spegnimento è esatto, ma in quella sessione non suonava
+  niente, quindi «audio muto al rientro» non è stato né confermato né smentito.
+
 - ⏳ **Il palco smette di catturare quando muore il TRASPORTO, non quando il client si CONGEDA** —
   23 set 2026, trovato curando la linea morta. Al congedo liberiamo il posto (`posto LASCIATO …
   occupati adesso: 0`) ma **non** spegniamo la cattura: quella si ferma solo quando se ne va la
@@ -922,6 +943,16 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   (b) il controllo «lo schermo è nero» stava **prima** di quello sul lampeggio ⇒ la scena di C3, che
   è scura (mediana 17), faceva uscire **3** invece che rosso. ⭐ Uno schermo che alterna non è mai
   ambiguo, per quanto scuro: è il nero **fermo** che non si distingue da un'immagine congelata.
+- 🔸 **La rete non guarda i browser veri sotto carico — MEZZO CHIUSO** — 23 set 2026. ⭐ Adesso
+  l'attrezzo c'è: `banchi/14-stress/stress_occhio.py`, il giudice che **guarda l'immagine** invece
+  di contare i fotogrammi, agganciato a quattro scenari (`ac59daf`, `99a4a74`). `[M]` Col guasto
+  innestato i contatori sono PERFETTI (320 consegnati, 320 dipinti, 0 buchi) e l'occhio dà **ROSSO**
+  su tutti e quattro, dove con l'occhio spento davano **VERDE** — cioè quel che la suite vedeva la
+  notte fra il 22 e il 23 mentre l'utente guardava un mosaico.
+  ⏳ Resta aperto: la suite non ha mai girato per intero (decisione dell'utente il 23 set: la prova
+  sotto stress la disegna lui, dopo LXQt), e la **rete** continua a usare il cliente Python.
+  ⛔⛔ E il 23 set si è scoperto quanto conta: il difetto più grave della giornata (58 % di schermo
+  fermo) era invisibile perché **nessun banco muoveva il mouse**. Vedi la voce del battito.
 - ⏳ **La rete non guarda i browser veri sotto carico** — 22 set 2026, e per questo la spirale della
   chiave è passata: la rete usa il cliente Python, e `12-client-veri.py` prova Firefox e Chrome veri
   per **8 s a desktop fermo**. 🔸 Serve un giro con un video a schermo intero per minuti, coi contatori
@@ -959,3 +990,35 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   vanno rilette con l'utente, non date per decise.
 
 ## Il giudizio dell'utente
+
+- ⛔⛔ **IL BATTITO SI POTEVA RIMANDARE ALL'INFINITO — il difetto più grave del progetto, e stava lì da
+  sempre** — trovato e curato il 23 set 2026 (`2be9527`, `2737d56`), binario `3fa352a2`.
+  `batti_fra()` spostava **in avanti** la scadenza del battito a ogni chiamata, e `regola_battito()`
+  gira in fondo a `rcp_passa_input()`, cioè **a ogni messaggio di input del client**. Un browser vero
+  che segue il mouse ne manda ~40 al secondo ⇒ il battito **non maturava mai**. E col battito fermo
+  non gira `video_regola()`, l'unico posto da cui si chiede la CHIAVE al palco — né `rcp_tempo()`,
+  cioè l'orologio del silenzio (§5.3) e i tetti di §4.6: ⛔ **per sei minuti nessuna protezione
+  poteva scattare**.
+  `[M]` Firefox vero e visibile, `rete11-kde`, 20 minuti, scena in movimento: **698 s su 1199 (58 %)**
+  senza un solo fotogramma nuovo, sette blocchi (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
+  fotogrammi codificati e buttati (~13 GB per nessuno su una UHD 730). ⭐ E **l'immagine non si rompe
+  mai** (1146 fotografie, 0 celle guaste): non era corruzione, era un **blocco**. Il blocco finiva
+  quando si smetteva di muovere il mouse per un secondo — è nel registro.
+  ⭐ Cura a due cinture: `batti_fra()` fissa un **tetto** e non un appuntamento (una scadenza più
+  vicina resta dov'è); e se il debito di §5.2 è acceso da oltre 1000 ms la chiave si richiede dal
+  rifiuto del fotogramma, per una strada che non passa dal battito.
+  `[M]` Dopo: **0 secondi fermi su 340**, blocco più lungo **0 s**, battiti da 22 in 3 min a 508 in
+  8 min, `da_ms` più lungo da **46 192 ms** a **1 102 ms**, richieste di chiave 0,76/s (non 6-7/s:
+  sarebbe la spirale di `07-b65`).
+  ⛔⛔ **PERCHÉ ERA INVISIBILE, ed è la lezione che vale più della cura**: la rete usa il cliente
+  Python, che non manda input, e i banchi coi browser veri aprivano la pagina e **guardavano**. Tutti
+  i nostri clienti erano *educati*. ⇒ La rete intera era passata **verde** su quello stesso binario
+  poche ore prima. Il banco che l'ha trovato fa una cosa sola: muove il mouse
+  (`banchi/14-stress/14-il-cliente-che-non-sta-fermo.py`).
+  ⚠ E un difetto che ha bisogno di **due** condizioni insieme (input fitto **e** debito acceso) non si
+  esclude con nessun verde: il giro di controllo sul binario rotto, senza la seconda, non ha bloccato
+  niente.
+  🔸 Resta da fare: portare il movimento del mouse **dentro gli scenari che già esistono**, tarare la
+  soglia sul blocco più lungo (fra 46 s col difetto e 1,1 s curato c'è un fattore quaranta, quindi non
+  è delicata), e solo alla fine il guasto innestato. ⛔ Finché mancano i primi due, metterlo in rete
+  vorrebbe dire aggiungere una guardia che non sa diventare rossa.
