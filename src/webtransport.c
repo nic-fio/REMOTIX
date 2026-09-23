@@ -1585,7 +1585,39 @@ static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
  *
  * ⛔ Chi tocca questa funzione si chieda una cosa sola: *«un evento che il
  *    client puo' ripetere a volonta' puo' impedire a questa scadenza di
- *    maturare?»*  Se si', il difetto e' tornato. */
+ *    maturare?»*  Se si', il difetto e' tornato.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⭐⭐ IL PRIMA/DOPO, MISURATO — 23 set 2026, banco `prova-battito.py`
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⛔ Il banco fa LA COSA CHE ROMPE, ed e' la ragione per cui la rete era verde:
+ *    muove il mouse di continuo (20 `pointerMove` al secondo, Firefox VERO e
+ *    visibile).  Senza quello la misura e' verde e non dice niente.
+ *
+ * | binario              | input | battiti | `da_ms` PIU' LUNGO |
+ * |---|---|---|---|
+ * | `cd8a3aec` (prima), gnome, 3 min | 14 639 | **22** | **46 192 ms** |
+ * | `3fa352a2` (dopo),  kde,  8 min | 27 797 | **508** | **1 102 ms** |
+ *
+ * ⚠ I due `da_ms=2000` del giro curato non sono un battito saltato: e' la riga
+ *   al secondo che cade a 999 ms e si rimanda di uno (`ritmo_ciclo()` vuole
+ *   `>= 1000`).  Il battito c'era.
+ *
+ * ⭐ E il numero che guarda l'utente: **0 secondi su 340** senza un fotogramma
+ *    nuovo (28 844 consegnati, 3,5 % mancati), contro **698 su 1199 (58 %)**
+ *    della sessione che ha aperto la caccia.  Blocco piu' lungo: **0 s**.
+ *
+ * ⭐ La seconda cintura non e' decorativa: in 8 minuti e' entrata **2 volte**
+ *    («il debito … e' acceso da 1004 ms»), e la chiave e' uscita **19 ms dopo**
+ *    invece di aspettare il battito.
+ *
+ * ⚠ E il giro di controllo NON ha bloccato lo schermo: il debito di §5.2 non
+ *   si e' acceso in quei 3 minuti.  ⛔ E' il punto del difetto — servono DUE
+ *   cose insieme, e per questo un verde non basta mai a escluderlo.  Quel che
+ *   il controllo prova e' il MECCANISMO: 46 secondi senza battito, cioe' 46
+ *   secondi in cui nessuno poteva richiedere una chiave (ne' far scadere §5.3
+ *   o §4.6). */
 static void batti_fra(wt *w, uint64_t ms)
 {
 	ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
