@@ -725,8 +725,8 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   Chrome, nella stessa mezz'ora, dipingeva `817 video 817→817 salt 0 buchi 0`; e la linea morta non è
   un sintomo del blocco, è la **coda** del browser che l'utente chiudeva perché lo schermo era fermo.
 
-- ⏳ **Una linea morta ⛔ la scriviamo anche quando il client ci ha appena salutato** — 23 set 2026,
-  ed è l'unico residuo nostro dei tre episodi (diagnosi, **non curata**: `src/` è di un altro).
+- ✅ **Una linea morta ⛔ non si scrive più su un client che ci ha appena salutato** — 23 set 2026,
+  binario `ad1587b3`, ed era l'ultimo residuo nostro dei tre episodi.
   Episodio delle 12:30: 10:30:11.698 la pagina si congeda (`motivo=0x01`, scheda chiusa) → 10:30:11.798
   **noi stessi** scriviamo «PING del trasporto spenti: la sessione è finita, **non c'è più niente da
   tenere vivo**» → 10:30:12.199 spediamo la capsula di chiusura → e poi teniamo aperta la connessione
@@ -735,23 +735,68 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va in **9 ms**
   (10:39:11.675 congedo → 10:39:11.684 «connessione chiusa»): il comportamento dipende dal client, e
   Chrome che esce non saluta a livello QUIC.
-  ⇒ Il guardiano è `linea_morta_giudica()`, `src/webtransport.c:5027`: si ferma su `!w->rcp ||
-  w->chiusura >= 0`, **ma non guarda lo stato `"finita"`** — lo stesso stato su cui
-  `regola_tienila_viva()` (`src/webtransport.c:~3185`) spegne i PING. 🔸 La cura minima è quella
-  condizione in più (o chiudere la connessione quando se ne va l'ultima sessione).
+  ⇒ Il guardiano è `linea_morta_giudica()`, `src/webtransport.c:5027`: si fermava su `!w->rcp ||
+  w->chiusura >= 0`, **ma non guardava lo stato `"finita"`** — lo stesso stato su cui
+  `regola_tienila_viva()` (`src/webtransport.c:~3185`) spegne i PING. ⛔ `w->rcp` non si azzera al
+  congedo: lo azzera solo `wt_stream_chiuso()`, cioè il CLIENT che chiude lo stream — e un browser
+  che esce non lo chiude mai. ⇒ **Cura: una riga, `if (rcp_e_finita(w->rcp)) return;`**.
+
+  ⭐ **Delle due strade possibili è stata scelta la prima, e la seconda è stata rifiutata con le
+  ragioni in chiaro.** Chiudere la connessione QUIC quando se ne va l'ultima sessione sarebbe parso
+  più onesto, ma «sessione finita, connessione ancora viva» è uno stato **previsto due volte in
+  questo stesso file**, e tutt'e due le volte la scelta fu liberare il POSTO e lasciare il trasporto
+  in piedi: `fin_dal_client()` («la pagina che chiude la parte scrivente del canale e tiene viva la
+  connessione») e `chiusa_dal_client()` («il posto si lascia adesso … aspettare lo smontaggio del
+  trasporto vuol dire tenerlo occupato addosso a chi si ricollega subito»). E `wt_stream_chiuso()`
+  rimette `w->sessione` a `-1` apposta perché una sessione nuova possa aprirsi lì sopra. ⇒ La
+  seconda strada disferebbe una decisione presa due volte; la prima non è un cerotto, è **il
+  commento che c'era già che diventa vero**. E lo spreco non c'è: i PING sono già spenti, e il
+  trasporto se ne va da solo col `max_idle_timeout` di 30 s (`src/trasporto.c:74`).
+
+  `[M]` **23 set 2026, scatola `gnome` (8511), binario `ad1587b3`, Chrome 153 VERO headless** — due
+  giri identici con **una sola differenza**: se il client saluta prima di sparire.
+
+  | giro | che cosa fa il client | linea morta | come finisce la connessione |
+  |---|---|---|---|
+  | **A** | `about:blank` (⇒ congedo `0x01` «la scheda è stata chiusa») e **300 ms dopo `SIGKILL`** — niente `CONNECTION_CLOSE`, come Chrome il 22 set | ⭐ **NESSUNA**, in 30 s di silenzio | 05:08:12.276 «**trenta secondi di silenzio, staccato (§2.2)**» — un motivo VERO al posto di un allarme falso |
+  | **B** | **`SIGKILL` e basta**, con la sessione ATTIVA | ⛔ **SCATTA**, `causa=silenzio silenzio_ms=10017 prove=13` | 05:08:42.064, la connessione si chiude come deve |
+
+  ⇒ La cura toglie **solo** il falso positivo: chi muore non saluta, e il guardiano lo prende ancora.
+  In A il registro percorre tutta la sequenza del 22 settembre — congedo 05:07:41.775, PING spenti
+  05:07:41.875, capsula 05:07:42.276, `ricevuti` fermo a 40 per 30 s — e **non scrive nessun ⛔**.
+  ⚠ Resta una riga ⛔ che non è di questa cura e non è nuova: `⛔ NIENTE VIDEO: «SESSIONE» non è stata
+  spedita (stato finita)`, che il palco produce mentre offre fotogrammi a una sessione già chiusa.
 
 - ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
   xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
   ⚠ La rete usa il cliente Python, non un browser: il blocco del video in **Firefox** qui sotto NON lo
-  vede. 🔸 E `13-w4` va proposto come maglia fissa della rete.
-- 🔸 **LA RETE SPORCA LE SCATOLE: sgomberata fatta, il VERDETTO no** — 22 set 2026. ✅ Fatto
-  (`08172a6`, `d0406fd`): sgombera il **gancio** dopo ogni maglia, sullo spazio di nomi della rete
-  (utenti, home, unità `user@` fallite, orfani di `/tmp`); la scena si lancia con `setsid`; C3 ferma
-  solo il processo del prodotto (il figlio si rinomina `remotix-figlio`) e non più il browser.
-  ⏳ Resta: **farne un verdetto** — oggi `bilancio_dopo` (`11-gancio.sh`:1109-1143) scrive «la SCATOLA
-  si e' sporcata» come riga `inf`, annotata `riuscita=true`. Una maglia «a fine giro non sopravvive
-  nessun inquilino della rete» col suo guasto innestato, ⚠ contando che `bilancio` esclude solo
-  `provanic`, quindi `nictest` conta come inquilino.
+  vede. ✅ E `13-w4` **è diventato una maglia fissa della rete** — 23 set 2026, vedi `C20` qui sotto.
+- ✅ **LA RETE SPORCA LE SCATOLE: adesso è un VERDETTO** — chiuso il 23 set 2026. La sgomberata era
+  già fatta (22 set, `08172a6`, `d0406fd`): il **gancio** sgombera dopo ogni maglia, sullo spazio di
+  nomi della rete (utenti, home, unità `user@` fallite, orfani di `/tmp`); la scena si lancia con
+  `setsid`; C3 ferma solo il processo del prodotto e non più il browser.
+  ⭐ Mancava il giudizio, ed è **C19** (`banchi/11-scatole/11-c19-la-scatola-resta-pulita.py`,
+  `la_scatola_resta_pulita` nel gancio, **ultima maglia di ogni scatola** in `tutto` e in
+  `desktop-nuovo`): *«a fine giro non sopravvive nessun inquilino della rete»*. Prima la sporcizia era
+  una riga `inf` annotata `riuscita=true`, cioè ⛔ la rete poteva lasciare venti inquilini dentro una
+  scatola e dirsi verde lo stesso.
+  ⭐⭐ **L'insidia di `nictest` è risolta contando per NOME, non per uid.** `bilancio` conta
+  `uid>=1000` escluso il solo `provanic` ⇒ per lui `nictest` è un inquilino; C19 conta sullo **spazio
+  di nomi della rete** (`^c[0-9]+b?u[0-9]+$`, lo stesso di `sgombera_inquilini`) ⇒ `nictest`,
+  `provanic` e gli utenti di sistema non ci cascano dentro **per forma**, non per una lista di
+  eccezioni. I due restano diversi apposta: `bilancio` è una misura per chi diagnostica, C19 è il
+  giudizio.
+  ⚠ Giudica **U** (utenti), **C** (case rimaste, cioè il `userdel` senza `-r`) e **P** (processi);
+  unità `user@` fallite orfane e orfani di `/tmp` restano **rilievo**, non verdetto — sono la
+  spazzatura degli inquilini, non gli inquilini, e un rosso perpetuo per un file in `/tmp` sarebbe un
+  interruttore che qualcuno spegne (§1.49). Chi vuole misurarli lo chiede: `--anche-lo-sporco`.
+  `[M]` 23 set 2026, binario `9b5df38b`, scatole **kde** e **xfce**: giro sano **VERDE** su tutt'e due
+  (0 inquilini, 0 case, 0 processi; rilievo kde 8 unità fallite · 0 orfani, xfce 10 · 49), e i **due**
+  guasti innestati **VISTI** su tutt'e due — `--lascia-un-inquilino` (U·C·P rossi) e
+  `--lascia-una-casa` (solo C rosso: ⭐ il residuo che nessun `pgrep` e nessun `getent` vedrebbero).
+  ⚠ E un rilievo che la maglia stampa e nessuno guardava: in kde c'era `occhio2`, in xfce `corrx1` e
+  `corrx2` — inquilini di altri banchi **fuori** dallo spazio di nomi, quindi né sgomberati dal gancio
+  né contati da C19. 🔸 I banchi nuovi diano ai loro inquilini un nome `c<n>u<n>`, come fa C20.
 - ⏳ **La rete non guarda i browser veri sotto carico** — 22 set 2026, e per questo la spirale della
   chiave è passata: la rete usa il cliente Python, e `12-client-veri.py` prova Firefox e Chrome veri
   per **8 s a desktop fermo**. 🔸 Serve un giro con un video a schermo intero per minuti, coi contatori
