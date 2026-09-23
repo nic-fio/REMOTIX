@@ -2725,6 +2725,52 @@ class Schermo {
                       salissero, la strada asincrona costa piu' di quel che
                       rende e la riga di §5.4 va riletta. */
                    tardive: 0,
+                   /* ⭐⭐⭐ I DUE CONTATORI CHE MANCAVANO — 23 set 2026.
+                    *
+                    * ⛔ IL DIFETTO DEI CONTI VECCHI: fra `consegnati` («l'ho dato
+                    *    al decodificatore») e `dipinti` («l'ho messo sul vetro»)
+                    *    ci sono QUATTRO passaggi, e di uno solo — il salto della
+                    *    coda — si teneva il conto.  ⇒ La differenza
+                    *    `consegnati − dipinti` era un numero senza padrone: ci si
+                    *    leggeva dentro quel che si voleva.  `[M]` 22 set,
+                    *    Firefox 140 su KDE: 8952 consegnati, 6929 dipinti,
+                    *    `salt` 16, `tard` 0, `err` 0 ⇒ **2007 fotogrammi senza
+                    *    nome**, e nessuna riga del registro li nominava.
+                    *
+                    * ⭐ `usciti` si segna nella PRIMA riga di `dipingi()`, che e'
+                    *   il richiamo del decodificatore: e' l'unico posto in cui
+                    *   «il decodificatore ha consegnato» si puo' dire.
+                    *   ⇒ `consegnati − usciti` e' quanto sta DENTRO al
+                    *   decodificatore — o quanto il decodificatore ha buttato
+                    *   senza dirlo, e i due casi si distinguono con `voff`: se
+                    *   fosse una coda, `voff` crescerebbe con lei.
+                    *
+                    * ⭐ `in_bmp` e' l'altra meta': le `createImageBitmap` chieste
+                    *   e non ancora risolte.  ⛔ Serve perche' una promessa che
+                    *   non si risolve MAI non lascia traccia da nessuna parte —
+                    *   ne' in `dipinti`, ne' in `tardive`, ne' in `errori` — e
+                    *   in piu' TRATTIENE il `VideoFrame`, che si chiude solo nel
+                    *   `.then`/`.catch`: sarebbe una perdita nostra travestita da
+                    *   difetto del browser.
+                    *
+                    * ⇒ ⭐ E COSI' IL CONTO TORNA, dentro una sessione sola:
+                    *     `consegnati = usciti + dentro`
+                    *     `usciti = saltati_coda + dipinti + tardive + in_bmp + errori bmp`
+                    *   Se un giorno non tornasse, manca un passaggio che nessuno
+                    *   guarda — ed e' esattamente il difetto che questi due
+                    *   contatori esistono per non far ripetere.
+                    * ⚠ E il conto chiude sulla strada del prodotto
+                    *   (`bitmaprenderer`, §5.4).  Sul RIPIEGO 2D restano due
+                    *   uscite senza nome — il deposito che fallisce e `componi()`
+                    *   che dice di no — e su `?mse` un decodificatore non c'e'
+                    *   proprio: percio' `tratti()` dichiara sempre `strada`, e i
+                    *   numeri si leggono insieme a quella.
+                    *
+                    * ⚠ E IL COSTO SI DICHIARA: tre somme di interi per
+                    *   fotogramma (`usciti++`, `in_bmp++`, `in_bmp--`), niente
+                    *   allocazioni, niente orologi.  A 60/s e' sotto il rumore
+                    *   dei due `performance.now()` che questa classe gia' paga. */
+                   usciti: 0, in_bmp: 0, bmp_falliti: 0,
                    ricomposizioni: 0, viste: 0 };
     /* I richiami verso il canale di controllo, messi da `collega()`. */
     this.su_chiave = null;
@@ -3131,7 +3177,20 @@ class Schermo {
      *    motore ci mettesse un indice di presentazione, `voff` scapperebbe). */
     const ist_us = f.timestamp;
 
+    /* ⭐⭐ LA CONVERSIONE E' PARTITA, e da qui il `VideoFrame` e' TRATTENUTO:
+     *    si chiude nel `.then` o nel `.catch`, e in nessun altro posto.
+     * ⛔ Una promessa che non si risolvesse mai non lascerebbe traccia da
+     *    nessuna parte — ne' `dipinti`, ne' `tardive`, ne' `errori` — e in piu'
+     *    terrebbe fermo un fotogramma del decodificatore.  ⇒ `in_bmp` e' l'unico
+     *    modo di distinguere «il decodificatore non li consegna» da «li
+     *    consegna e siamo NOI a non finire di disegnarli». */
+    this.conti.in_bmp++;
     createImageBitmap(f).then((bmp) => {
+      /* ⛔ Si scala SOLO se la sessione e' ancora questa: `riparti()` azzera
+         tutti i conti, e un ritardatario di una sessione morta che scalasse qui
+         porterebbe `in_bmp` SOTTO ZERO — un contatore negativo e' peggio di uno
+         assente, perche' sembra un numero. */
+      if (e0 === this.epoca) this.conti.in_bmp--;
       /* ⛔ Si segna PRIMA di qualunque scarto: un'immagine buttata perche'
          tardiva e' costata comunque il suo tempo, e non contarla farebbe
          sembrare la strada piu' rapida di quel che e'. */
@@ -3235,6 +3294,11 @@ class Schermo {
                        fotogramma: [fl, fa], scala: 1 };
       document.body.dataset.schermo = "acceso";
     }).catch((e) => {
+      if (e0 === this.epoca) this.conti.in_bmp--;
+      /* ⚠ Contato a parte: `errori` tiene TUTTI gli errori della sessione, e
+         senza questa riga il conto di §5.4 non si potrebbe chiudere su
+         `usciti` — si saprebbe che qualcosa e' fallito, non QUANTI. */
+      this.conti.bmp_falliti++;
       try { f.close(); } catch (e2) { /* gia' chiuso */ }
       this.errori.push("createImageBitmap: " + e);
       this.riga("⛔ il fotogramma non e' diventato un'immagine: " + e);
@@ -3508,7 +3572,20 @@ class Schermo {
        *    a 240 voci: un decodificatore che smettesse di consegnare farebbe
        *    crescere questa pagina per sempre, e sarebbe una perdita di memoria
        *    che nessun registro nomina. */
-      if (this.t_dec.size > 240) this.t_dec.clear();
+      /* ⛔⭐ E SI BUTTA LA VOCE PIU' VECCHIA, NON TUTTE — 23 set 2026.
+       *
+       *    Qui c'era `this.t_dec.clear()`.  ⚠ La mappa cresce quando il
+       *    decodificatore NON consegna, cioe' esattamente nella condizione che
+       *    il tratto 8 dovrebbe misurare: svuotarla tutta buttava via anche le
+       *    240 voci buone, e `dec_ms` restava a `n = 0` proprio nel momento in
+       *    cui serviva.  ⭐ Una `Map` conserva l'ordine d'inserimento: si toglie
+       *    la piu' vecchia e le recenti restano appaiabili.
+       * ⚠ Il tetto resta, ed e' quello che conta: senza, un decodificatore muto
+       *   farebbe crescere questa pagina per sempre. */
+      if (this.t_dec.size >= 240) {
+        const primo = this.t_dec.keys().next();
+        if (!primo.done) this.t_dec.delete(primo.value);
+      }
       this.t_dec.set(i.istante, performance.now());
       this.dec.decode(new EncodedVideoChunk({
         type: chiave ? "key" : "delta", timestamp: i.istante, data: dati }));
@@ -4013,6 +4090,12 @@ class Schermo {
     /* ⭐ IL TRATTO 8 SI CHIUDE QUI, ed e' la prima riga: qualunque cosa venga
      *   dopo e' gia' tempo del cliente, non del decodificatore. */
     const t_out = performance.now();
+    /* ⭐⭐ IL FOTOGRAMMA E' USCITO DAL DECODIFICATORE, e si segna QUI — prima
+     *    di ogni scarto, di ogni bivio e di ogni misura.  ⛔ Segnarlo piu' in
+     *    basso vorrebbe dire contare «i fotogrammi usciti che ci siamo tenuti»,
+     *    che e' un'altra grandezza: il conto di §5.4 non chiuderebbe piu' e la
+     *    differenza tornerebbe a essere un numero senza padrone. */
+    this.conti.usciti++;
     const t_d = this.t_dec.get(f.timestamp);
     if (t_d !== undefined) {
       this.t_dec.delete(f.timestamp);
@@ -4504,6 +4587,17 @@ function tratti() {
                                                : "tela2d-ripiego"),
     tela: [s.tela_l, s.tela_a],
     dipinti: s.conti ? s.conti.dipinti : null,
+    /* ⭐ Gli stessi numeri della riga del diario, con gli stessi nomi: un banco
+       che ne legge uno qui e uno la' leggerebbe due grandezze diverse sotto la
+       stessa parola, ed e' la forma E2 di `REVIEWER.md`.
+       ⇒ `consegnati = fuori + dentro` e
+          `fuori = saltati_coda + dipinti + tardive + in_bmp + bmp_falliti`. */
+    consegnati: s.conti ? s.conti.consegnati : null,
+    fuori: s.conti ? s.conti.usciti : null,
+    dentro: s.conti ? (s.conti.consegnati - s.conti.usciti) : null,
+    coda_dec: s.dec ? s.dec.decodeQueueSize : null,
+    in_bmp: s.conti ? s.conti.in_bmp : null,
+    bmp_falliti: s.conti ? s.conti.bmp_falliti : null,
     saltati_coda: s.conti ? s.conti.saltati_coda : null,
     tardive: s.conti ? s.conti.tardive : null,
     "8_decode_richiamo": __tratto(s.dec_ms),
@@ -6478,6 +6572,35 @@ function avvia_audio(wt) {
         *   vetro.  Se divergono, la distanza fra le due dice DOVE si perde. */
        + (schermo && schermo.conti
             ? " video " + schermo.conti.consegnati + "→" + schermo.conti.dipinti
+              /* ⭐⭐⭐ IL PASSAGGIO CHE NESSUNO CONTAVA — 23 set 2026, e sta
+               *    QUI perche' questa e' l'unica riga che arriva al server.
+               *
+               * ⛔ `consegnati→dipinti` da solo non basta: fra i due ci sono
+               *    quattro passaggi e se ne contava uno.  ⇒ Adesso la riga dice
+               *    il passaggio VERO:
+               *      `fuori`     quanti ne ha consegnati il decodificatore;
+               *      `dentro`    quanti gliene abbiamo dato e non sono usciti
+               *                  (`consegnati − fuori`) — e se cresce senza che
+               *                  `voff` cresca con lui, NON e' una coda: e'
+               *                  roba buttata senza dirlo;
+               *      `coda_dec`  quanti ne dichiara LUI (`decodeQueueSize`) —
+               *                  il motivo, quando il browser lo dice.  ⚠ E' il
+               *                  numero su cui si regge il salto del disegno:
+               *                  `[M]` 22 set Firefox lo teneva sotto 3 con
+               *                  1800 fotogrammi mancanti all'appello, cioe'
+               *                  la guardia era CIECA e nessuno poteva saperlo;
+               *      `bmp`       quante `createImageBitmap` sono in volo — la
+               *                  meta' del buco che sarebbe NOSTRA.
+               * ⚠ Sono quattro interi gia' pronti: la riga non calcola niente. */
+              /* ⛔ E SU `?mse` NON C'E' NESSUN DECODIFICATORE DA CONTARE
+                 (§7.18): stampare `fuori 0 dentro 8000` sarebbe un numero che
+                 sembra una diagnosi e invece e' la strada sbagliata.  ⇒ `?`,
+                 che vuol dire «non lo so», e non zero. */
+              + (VIA_MSE ? " fuori ? dentro ? coda_dec ? bmp ?"
+                 : " fuori " + schermo.conti.usciti
+                   + " dentro " + (schermo.conti.consegnati - schermo.conti.usciti)
+                   + " coda_dec " + (schermo.dec ? schermo.dec.decodeQueueSize : "?")
+                   + " bmp " + schermo.conti.in_bmp)
               + " salt " + schermo.conti.saltati_coda
               + " buchi " + schermo.conti.buchi
               + " ord " + schermo.conti.scartati_ordine

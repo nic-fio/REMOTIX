@@ -684,10 +684,77 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   cattura→byte fuori 16,4–16,9 ms, come prima.
   ⏳ **Aperti, e nessuno dei due è di oggi**: (a) Firefox riceve 48/s e ne dipinge 37/s — 1858 fotogrammi
   spariscono dentro il suo decodificatore, senza errori e senza che **nessuno li conti** (serve un contatore
-  `decode()` contro fotogrammi in uscita); (b) restano 3 buchi in 190 s: la catena rispetta l'ordine in cui
+  `decode()` contro fotogrammi in uscita) → ⭐ **il (a) è stato riletto il 23 set, e non è quel che
+  sembrava: vedi la voce qui sotto**; (b) restano 3 buchi in 190 s: la catena rispetta l'ordine in cui
   il browser presenta gli stream, non i `numero` — si chiuderebbero solo con un riordino e una breve attesa.
   ⚠ In KDE gli inquilini lasciati dalla rete sono stati tolti a mano (restano `nictest` e `provanic`): C7 non
   li toglie, e in GNOME e XFCE ci sono ancora.
+
+- ⏳ **I fotogrammi che «spariscono» in Firefox NON sono in coda: sono buttati, e a RAFFICHE** —
+  23 set 2026, riletti i diari del 22 (nessuna misura nuova: solo aritmetica su registri già in mano),
+  pagina `src/pagina.html`.
+
+  ⛔ **La sottrazione vecchia era ambigua, e andava disfatta prima di tutto.** Fra `consegnati` («l'ho
+  dato a `decode()`») e `dipinti` («è sul vetro») ci sono **quattro** passaggi e se ne contava **uno**
+  (`saltati_coda`). ⇒ `consegnati − dipinti` non era «persi dal decodificatore»: era un numero senza
+  padrone. `[M]` La **maggioranza** dei casi si spiega già oggi da sola: su 477 righe di diario con
+  `consegnati − dipinti − salt − tard` fra 0 e 2, il resto è solo il fotogramma **in volo** all'istante
+  della lettura (i due contatori si leggono in momenti diversi — la domanda era giusta). E l'episodio
+  `dipinti 1097 video 3882→1097 salt 2785` chiude **esattamente**: 3882 − 1097 = 2785 = `salt`, zero
+  ignoti. ⇒ Il buco vero è solo quello che resta **dopo** aver tolto `salt` e `tard`: lo chiamo **residuo**.
+
+  ⭐⭐ **E IL RESIDUO NON È UN RITARDO — la prova è `voff`, che era già sulla stessa riga.**
+  `voff` = (ora del client al vetro) − (`istante` del server di quel fotogramma): se il residuo fosse
+  una coda, `voff` dovrebbe crescere **con lei**, di `residuo / ritmo`.
+
+  | `[M]` 22 set, 190-200 s per giro | residuo finale | crescita di `voff` attesa **se fosse una coda** | crescita di `voff` **misurata** |
+  |---|---|---|---|
+  | Firefox 140, KDE (`n-ff-kde`) | **2007** | **+45 600 ms** | **+47 ms** |
+  | Firefox 140, KDE (`h-ff-kde-base`) | **1757** | **+39 900 ms** | **+3 ms** |
+  | Firefox 140, XFCE (`v-fi-xfce`) | **937** (piatto per 60 s) | **+21 300 ms** | **+155 ms** |
+  | Firefox 140, GNOME (`v-fi-gnome`) | **1** | +23 ms | +32 ms |
+  | Chrome 153, KDE (`n-cr-kde`) | **0** su 10 066 | 0 | +106 ms |
+
+  ⇒ **Mille fotogrammi di residuo e zero millisecondi di ritardo.** La pagina dipinge sempre
+  l'immagine **corrente**: quei fotogrammi non stanno aspettando da nessuna parte, **non esistono più**.
+
+  ⭐ **E la forma è una raffica, non un tasso.** `[M]` Su 39 intervalli da 5 s di `n-ff-kde`, **17 perdono
+  esattamente 0** e altri 6 perdono 1-2 fotogrammi (il volo); i **16** che restano perdono dal 16 %
+  all'**88 %**: `t18` = 261 entrati, **31 dipinti**. ⇒ La media
+  «48 riceve / 37 dipinge» **nasconde il difetto invece di dirlo**: quel che l'utente vede non è un ritmo
+  più basso, sono **congelamenti di 1-4 secondi** più volte al minuto, con il desktop che poi riparte
+  dall'immagine giusta. ⚠ È lo stesso difetto che la fase 9 chiamava `F4-CODA-DEL-DECODIFICATORE`, e
+  **la guardia è cieca**: `saltati_coda` scatta su `dec.decodeQueueSize > 2`, e Firefox teneva
+  `decodeQueueSize` **sotto 3 con 1800 fotogrammi mancanti all'appello**. Un interruttore che non si
+  accende mai è peggio di uno che non c'è.
+
+  ⭐ **IL CONTATORE, scritto oggi** (`src/pagina.html`, `conti.usciti` + `conti.in_bmp`), sulla riga del
+  diario accanto agli altri: `video C→D **fuori U dentro N coda_dec Q bmp B** salt … tard … err …`.
+  `fuori` si segna nella **prima riga di `dipingi()`**, che è il richiamo del decodificatore; `dentro` =
+  `C − U`; `coda_dec` è quel che dichiara **lui**; `bmp` sono le `createImageBitmap` in volo. Costo: **tre
+  somme di interi per fotogramma**, nessuna allocazione, nessun orologio. Il conto adesso **chiude**:
+  `consegnati = fuori + dentro` e `fuori = salt + dipinti + tard + bmp + bmp_falliti`. Gli stessi nomi
+  escono da `REMOTIX.tratti()`. ⚠ Curata nello stesso punto una riga che **falsificava il tratto 8**:
+  `t_dec` si svuotava **tutta** oltre le 240 voci — cioè proprio quando il decodificatore non consegna —
+  e adesso butta solo la più vecchia.
+
+  ⭐⭐ **LA PREVISIONE, scritta PRIMA della misura sul ferro** (Intel UHD 730 integrata, non una scheda
+  potente), e con dichiarato che cosa mi smentirebbe. Le due ipotesi sono separabili perché il contatore
+  le separa:
+  - **Prevedo `dentro` ≈ residuo e `bmp` ≈ 0-2**, con `coda_dec` ≤ 3 per tutto il giro. Vorrebbe dire che
+    il decodificatore di Firefox **prende `decode()` e non produce nulla**, in silenzio: il difetto è suo,
+    la nostra catena è pulita, e la cura è di rinunciare a quei fotogrammi **sapendolo** (cioè: `dentro`
+    che cresce diventa un verdetto rosso, non un silenzio).
+  - ⛔ **MI SMENTISCE: `bmp` che sale a centinaia e resta su.** Vorrebbe dire il contrario — che il
+    decodificatore consegna e siamo **noi** a non finire di disegnare, con le `createImageBitmap` che non
+    si risolvono mai e trattengono il `VideoFrame`. In quel caso il difetto è **nostro**, sta in
+    `mostra()`, ed è la stessa famiglia della «perdita che nessun registro nomina».
+  - ⚠ Mi smentisce anche `dentro ≈ 0` con `fuori ≈ dipinti` e il residuo sparito: vorrebbe dire che il
+    residuo del 22 era un artefatto dei binari di quel giorno, curato da `a50b389`/`e2b8c43`.
+
+  ⇒ **La misura vera la fa l'utente quando la rete libera il campo**: Firefox visibile su KDE, ~190 s di
+  scena in movimento, e si leggono `dentro` e `bmp` sulla riga del diario. Fino ad allora questo punto
+  resta ⏳.
 - ✅ **Tre «linee morte» in 13 minuti su KDE: CHI TACEVA È IL BROWSER, ed era già stato CHIUSO** —
   23 set 2026, dai registri del 22 (`registri-22set/kde-1045.log`, che va da 10:27 a 10:45 **UTC** =
   12:27-12:45 locali) messi accanto al **giornale del tablet** (`journalctl`, ora locale). ⭐ La prova
