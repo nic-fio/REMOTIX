@@ -144,7 +144,11 @@ GLI ESITI (§4.5 del documento di fase)
   3  ⛔ non ho potuto guardare: `GEMELLATI` illeggibile o vuoto, la cartella
      gemella non c'e', un file dichiarato manca da una parte
      — ⛔ **e non e' un rosso**
-  2  il terreno non regge, o l'uso e' sbagliato
+  2  il terreno non regge, o l'uso e' sbagliato — ⭐ e ci sta anche **«questa
+     macchina non e' il deposito»** (la macchina di prova: niente git, niente
+     `src/Makefile`).  ⛔ Non e' un 3: un 3 dice «avrei dovuto guardare e non
+     ci sono riuscito», e qui non c'e' niente da guardare per costruzione.
+     ⇒ E' la stessa cosa che dicono C12, C15 e C16 nello stesso posto.
 ===========================================================================
 """
 import argparse
@@ -590,10 +594,8 @@ def certifica():
 
 
 # ---------------------------------------------------------------------------
-def radice_del_deposito(qui):
-    """⚠ Si chiede a git, e se git non c'e' si sale di due cartelle — questo
-       file sta in `banchi/11-scatole/`.  ⛔ Non e' un ripiego silenzioso: il
-       percorso scelto si STAMPA, e se le cartelle non ci sono l'esito e' 3."""
+def git_dice_la_radice(qui):
+    """⭐ La radice secondo git, o None se git non sa rispondere."""
     try:
         p = subprocess.run(["git", "-C", qui, "rev-parse", "--show-toplevel"],
                            capture_output=True, text=True, timeout=30)
@@ -604,7 +606,50 @@ def radice_del_deposito(qui):
     #    gancio leggeva ROSSO su un guasto del banco (`LEZIONI.md` §1.51).
     except (OSError, subprocess.SubprocessError):
         pass
-    return os.path.abspath(os.path.join(qui, "..", ".."))
+    return None
+
+
+def radice_del_deposito(qui):
+    """⚠ Si chiede a git, e se git non c'e' si sale di due cartelle — questo
+       file sta in `banchi/11-scatole/`.  ⛔ Non e' un ripiego silenzioso: il
+       percorso scelto si STAMPA, e se le cartelle non ci sono l'esito e' 3."""
+    return git_dice_la_radice(qui) or os.path.abspath(
+        os.path.join(qui, "..", ".."))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ IL TERRENO — «questa macchina e' il deposito?», e si chiede PRIMA.
+#
+# ⛔ 23 set 2026, e lo ha tirato fuori la rete intera: sulla macchina di prova
+#    C10 usciva **3, «non ho potuto guardare»** — la maglia compariva fra
+#    quelle che NON HANNO GUARDATO, accanto a un vero guasto, e chi leggeva
+#    doveva indovinare che li' non c'era niente da guardare per costruzione.
+#    `[M]` Il deposito su quella macchina non c'e' affatto: niente `src/`,
+#    niente `banchi/rcp/`, e la radice indovinata veniva fuori `/media`.
+#
+# ⭐ Le tre sorelle che vivono la stessa vita — C12, C15, C16 — lo dicono da
+#   sempre nel modo giusto: *«non sono dentro un deposito git ⇒ il terreno non
+#   regge»*, ed escono **2**.  ⇒ C10 era l'unica rimasta indietro, e adesso
+#   dice la stessa cosa nello stesso modo (`DECISIONI.md` §4.6-novemdecies:
+#   decidere vuole il deposito, far girare vuole le scatole).
+#
+# ⛔⛔ E LA DISTINZIONE CHE NON VA PERSA: il **2** si da' SOLO quando git non
+#     sa dire dove sia il deposito **e** nel posto indovinato non c'e' il
+#     `Makefile`.  Se git risponde — cioe' sul portatile — un `GEMELLATI`
+#     illeggibile resta un **3**: la' e' un guasto vero, ed e' quello che il 3
+#     serve a gridare.  ⇒ Questo non fa tacere nessun difetto: sposta soltanto
+#     il caso in cui non c'e', per costruzione, niente da guardare.
+# ═══════════════════════════════════════════════════════════════════════════
+def qui_c_e_il_deposito(qui, radice):
+    """⭐ (c'e', perche') — e il «perche'» e' quel che si stampa."""
+    if git_dice_la_radice(qui):
+        return True, ""
+    if os.path.isfile(os.path.join(radice, MAKEFILE)):
+        # ⚠ Un deposito senza `.git` (una copia, un archivio scompattato) e'
+        #   un deposito lo stesso: quel che conta e' che ci sia da guardare.
+        return True, ""
+    return False, ("non sono dentro un deposito git, e in «%s» non c'e' "
+                   "nemmeno %s" % (radice, MAKEFILE))
 
 
 # ---------------------------------------------------------------------------
@@ -759,6 +804,21 @@ def main():
 
     qui = os.path.dirname(os.path.abspath(__file__))
     radice = a.radice or radice_del_deposito(qui)
+
+    # ⭐⭐ IL TERRENO PRIMA DI TUTTO — e ⛔ `--radice` lo scavalca apposta: chi
+    #    lo passa sta dicendo dove guardare, e se sbaglia deve vedere un 3.
+    if not a.radice:
+        c_e, perche = qui_c_e_il_deposito(qui, radice)
+        if not c_e:
+            print("⛔ %s." % perche)
+            print("   ⇒ se questa e' la macchina di prova, qui le due copie")
+            print("     gemelle NON CI SONO: non c'e' niente da confrontare, e")
+            print("     non e' «non ho potuto guardare» — e' «questa domanda")
+            print("     non si fa qui».")
+            print("   ⭐ Il deposito sta sul portatile, e li' va fatta girare")
+            print("     (DECISIONI.md §4.6-novemdecies).")
+            print("   ⇒ il terreno non regge")
+            return 2
 
     if a.guasto_innestato:
         return guasto_innestato(radice)

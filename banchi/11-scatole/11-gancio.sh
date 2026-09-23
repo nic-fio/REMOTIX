@@ -536,6 +536,11 @@ esegui_maglia() {
 		case "$M_ESITO" in
 		0) ok  "$nome — regge  (${M_SECONDI}s)" ;;
 		1) ko  "$nome — NON REGGE  (${M_SECONDI}s)" ;;
+		# ⭐ 23 set 2026: il 2 aveva un nome solo nel codice, e nel rapporto
+		#   usciva come «esito 2» — che chi legge deve andare a cercare.
+		#   ⛔ E' l uscita di C10, C12, C15 e C16 sulla macchina di prova: la
+		#   domanda li' non si fa, e va scritto cosi invece che a numero.
+		2) inf "?   $nome — il terreno non regge  (${M_SECONDI}s)" ;;
 		3) inf "?   $nome — non ho potuto guardare  (${M_SECONDI}s)" ;;
 		4) inf "?   $nome — il turno non e mai arrivato  (${M_SECONDI}s)" ;;
 		*) inf "?   $nome — esito $M_ESITO  (${M_SECONDI}s)" ;;
@@ -765,7 +770,7 @@ famiglia_rete() {
 		if [ "${ESITO_C10:-3}" = 0 ] || [ "${ESITO_C10:-3}" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha potuto guardare: qui non c e il deposito"
+			salta_maglia "C10 guasto innestato" "C10 non ha guardato (qui non c e il deposito): non c e niente su cui innestare"
 		fi
 	fi
 }
@@ -826,7 +831,7 @@ famiglia_veloce() {
 		if [ "$M_ESITO" = 0 ] || [ "$M_ESITO" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha potuto guardare: qui non c e il deposito"
+			salta_maglia "C10 guasto innestato" "C10 non ha guardato (qui non c e il deposito): non c e niente su cui innestare"
 		fi
 	else
 		salta_maglia C10 "il file non c e (o ce n e piu di uno)"
@@ -1429,7 +1434,7 @@ meta_locale() {
 		if [ "$M_ESITO" = 0 ] || [ "$M_ESITO" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha potuto guardare"
+			salta_maglia "C10 guasto innestato" "C10 non ha guardato: non c e niente su cui innestare"
 		fi
 	elif [ "$QUALE_MAGLIA" = TROPPE ]; then
 		salta_maglia C10 "ce ne sono PIU DI UNA con questo numero: non tiro a indovinare"

@@ -74,8 +74,10 @@ scritto per una sera da una maglia che gira da sola per mesi:
      tre nomi di UN desktop dentro la lista delle prove, che e' precisamente
      quel che questa rete non ammette (`fasi/11…` §3.7).
      ⇒ Adesso: la nascita si legge dal REGISTRO DEL PRODOTTO (`formato
-       negoziato`, la stessa riga di C1), la fine pure (`la sessione grafica
-       di «…» E' FINITA`, `src/figlio.c:2134`), ⭐ e il gesto «Esci» si
+       negoziato`, la stessa riga di C1), la fine pure — ⚠ e in DUE forme,
+       perche' il prodotto ne ha due e quale delle due esca dipende da chi
+       muore col gesto (vedi `RIGHE_FINITA` e `giudica_il_registro`) — ⭐ e
+       il gesto «Esci» si
        CHIEDE ALLA MACCHINA invece di indovinarlo — con la stessa domanda che
        fa il prodotto (`src/sessione.c:285-310`: c'e' `startplasma-wayland`?
        c'e' `gnome-session`? c'e' `xfce4-session`?).
@@ -177,9 +179,43 @@ SCENA_CHE_LAMPEGGIA = os.path.join(QUI, "11-c3-scena.html")
 # ⭐ Le righe del prodotto che questa maglia legge, in un posto solo: se il
 #   prodotto le cambia, si cambia QUI (§1.47).
 RIGA_NASCITA = "formato negoziato"          # src/cattura.c
-RIGA_FINITA = "E' FINITA"                   # src/figlio.c:2134
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ LA FINE DELLA SESSIONE GRAFICA IL PRODOTTO LA DICE IN DUE MODI — e
+#     quale dei due dipende da **chi muore col gesto «Esci»**, non dal nome
+#     del desktop.
+#
+#   · il figlio SOPRAVVIVE al gesto  (KDE, XFCE: muore il compositore, non la
+#     sessione di logind)  ⇒ se ne accorge LUI, «c'era e adesso non c'e' piu'»
+#         «la sessione grafica di «…» E' FINITA»          src/figlio.c:2134
+#   · il figlio MUORE col gesto  (GNOME: e' lui il processo GUIDA della
+#     sessione di logind — la apre con `pam_open_session` — e `gnome-session`
+#     se lo porta via col segnale 15)  ⇒ ⛔ non puo' riferire un fatto che lo
+#     uccide, e lo dice il PADRE nel momento in cui lo raccoglie
+#         «il palco di «…» se n'e' andato ⇒ la sessione grafica e' finita»
+#                                                          src/main.c:1418
+#
+# ⛔⛔ E LA SECONDA NON E' UN RIPIEGO PER FAR PASSARE GNOME: sta scritta nel
+#     prodotto, in `src/main.c:1384-1396`, che al logout il figlio muore col
+#     segnale 15 e che **per questo la riga del figlio «non e' mai scattata»**.
+#     ⇒ Chiederne una sola voleva dire pretendere che il prodotto dicesse la
+#       cosa nel modo di UN desktop — ed e' esattamente il difetto di `13-w4`
+#       che questa maglia era nata per non rifare (punto 2 in testa al file).
+# `[M]` 23 set 2026, rete11-gnome: il gesto risponde, il palco se ne va in
+#   0,1 s, il padre scrive la sua riga — e la maglia aspettava l'altra per
+#   120 s e usciva «non ho potuto guardare».
+# ═══════════════════════════════════════════════════════════════════════════
+RIGHE_FINITA = (
+    ("E' FINITA", "il figlio e' sopravvissuto e se n'e' accorto"),
+    ("se n'e' andato ⇒ la sessione grafica e' finita",
+     "⛔ il figlio e' morto col gesto, e l'ha detto il padre raccogliendolo"),
+)
 RIGA_RINASCITA = "RIAVVIO LA CATTURA"       # src/figlio.c:8011
 RIGA_BUTTA = re.compile(r"butto le (\d+) superfici importate")  # src/codificatore.c
+# ⭐ Chi serve una sessione: «figlio generato per «X»: pid N … matricola M»
+#   (`src/figlio.c:1744`).  ⛔ Serve per DIRE, e non per dedurre, che il
+#   secondo accesso gira in un processo DIVERSO da quello del primo.
+RIGA_FIGLIO = re.compile(r"figlio generato per «([^»]+)»: pid (\d+).*?"
+                         r"matricola (\d+)")
 
 # ⚠ I numeri del giudice dei pixel — vedi il riquadro in testa.
 SOGLIA_SALTO = 8
@@ -331,10 +367,81 @@ def giudica_i_pixel(luminanze):
     return 0, salti, ("a desktop fermo la luminanza e' una — " + dice)
 
 
-def giudica_il_registro(fetta, chi):
-    """⭐ (esito, quante, perche) dalle righe di registro di QUESTO inquilino."""
+def chi_serviva(fetta, chi):
+    """⭐ Il pid del figlio che serve «chi» in questa fetta di registro — o None.
+
+    ⚠ Se ce n'e' piu' d'uno si prende l'ULTIMO: e' quello che sta servendo
+      adesso.
+    """
+    if not fetta:
+        return None
+    pid = None
+    for r in fetta:
+        m = RIGA_FIGLIO.search(r)
+        if m and m.group(1) == chi:
+            pid = m.group(2)
+    return pid
+
+
+def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
+    """⭐ (esito, quante, perche) dalle righe di registro di QUESTO inquilino.
+
+    ═══════════════════════════════════════════════════════════════════════
+    ⭐⭐ E LA DOMANDA E' DIVERSA NEI DUE CASI, perche' e' diverso il PERICOLO.
+    ⛔ Non e' una soglia allentata per far passare GNOME: e' la stessa prova
+       chiesta al fatto che c'e' davvero da provare.
+
+    `src/cattura.c:1318-1332`, la diagnosi del difetto vero (22 set 2026, la
+    prova dell'utente su KDE): *«dopo «Esci» e un nuovo accesso la sessione
+    rinasce NELLO STESSO figlio: la cattura e' nuova, il codificatore no»* —
+    ⇒ i descrittori riciclati ritrovavano le superfici della sessione morta.
+
+      · **il figlio e' SOPRAVVISSUTO** (KDE, XFCE) ⇒ il codificatore e' lo
+        STESSO OGGETTO di prima, e il pericolo c'e' tutto: si pretende che
+        abbia buttato la cache — «butto le N superfici importate».
+        ⛔ Se non l'ha buttata e' ROSSO, ed e' il difetto vero.
+
+      · **il figlio e' MORTO col gesto** (GNOME: e' lui il processo guida
+        della sessione di logind) ⇒ il codificatore e' morto con lui, e ⛔ non
+        c'e' NESSUNA cache da buttare: le superfici della sessione di prima
+        stanno in un processo che non esiste piu'.
+        ⭐ Ma non basta dirlo: si PRETENDE LA PROVA, e cioe' che il secondo
+          accesso sia servito da un figlio col **pid diverso** da quello del
+          primo.  ⛔ Senza quel pid non si giudica (3), e se il pid fosse lo
+          stesso il figlio non sarebbe morto affatto — ⇒ 3, la premessa della
+          maglia non regge.
+
+    ⛔⛔ E NON SI GUARDA «RIAVVIO LA CATTURA» NEL SECONDO CASO: `[M]` 23 set
+        2026 su rete11-gnome quella riga C'E' lo stesso — la scrive il figlio
+        NUOVO che al primo tentativo non trova il palco e al secondo si' —
+        ⇒ guardarla vorrebbe dire leggere un verde da una riga che parla
+        d'altro, che e' il modo esatto in cui una maglia smette di guardare.
+    ═══════════════════════════════════════════════════════════════════════
+    """
     if fetta is None:
         return 3, 0, "non ho potuto leggere il registro del server"
+
+    if figlio_morto:
+        pid_adesso = chi_serviva(fetta, chi)
+        if pid_adesso is None:
+            return 3, 0, ("il figlio di «%s» era morto col gesto «Esci» e nel "
+                          "registro del secondo accesso non ne nasce nessun "
+                          "altro: non so chi stia servendo questa sessione"
+                          % chi)
+        if pid_di_prima is None:
+            return 3, 0, ("non ho letto il pid del figlio del PRIMO accesso: "
+                          "senza non posso dire che questo (%s) sia un altro"
+                          % pid_adesso)
+        if pid_adesso == pid_di_prima:
+            return 3, 0, ("il secondo accesso e' servito dallo STESSO figlio "
+                          "del primo (pid %s), e il prodotto aveva detto che "
+                          "era morto: la premessa non regge" % pid_adesso)
+        return 0, 0, ("il figlio e' morto col gesto e il secondo accesso gira "
+                      "in un figlio NUOVO (pid %s, prima %s): il codificatore "
+                      "della sessione morta non esiste piu', e le sue "
+                      "superfici nemmeno"
+                      % (pid_adesso, pid_di_prima))
+
     mie = [r for r in fetta if ("[%s]" % chi) in r]
     if not any(RIGA_RINASCITA in r for r in mie):
         return 3, 0, ("nel registro non c'e' nessuna rinascita della cattura "
@@ -399,21 +506,32 @@ def leggi(percorso):
         return None
 
 
-def aspetta_la_riga(percorso, segno, chi, pezzo, tetto):
-    """⭐ Si aspetta l'EVENTO, non l'orologio.  Torna (visto, fetta)."""
+def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
+    """⭐ Si aspetta l'EVENTO, non l'orologio.  Torna (quale, fetta).
+
+    ⚠ `pezzi` e' un pezzo di riga oppure un elenco di pezzi: il primo che si
+      vede vince, e si torna **quello** — cosi' chi chiama puo' DIRE quale
+      forma ha usato il prodotto invece di scrivere solo «l'ho visto».
+    ⛔ Un elenco non e' una soglia allentata: e' la stessa domanda posta al
+       prodotto nelle forme in cui il prodotto sa rispondere (RIGHE_FINITA).
+    """
+    if isinstance(pezzi, str):
+        pezzi = (pezzi,)
     scadenza = time.time() + tetto
     fetta = []
     while time.time() < scadenza:
         righe = leggi(percorso)
         fetta = righe[segno:] if righe is not None else []
-        if any(("[%s]" % chi) in r and pezzo in r for r in fetta):
-            return True, fetta
-        # ⚠ La riga «E' FINITA» porta il nome fra virgolette basse, non fra
-        #   parentesi quadre: si guarda anche quella forma.
-        if any(("«%s»" % chi) in r and pezzo in r for r in fetta):
-            return True, fetta
+        for pezzo in pezzi:
+            # ⚠ Il nome sta fra parentesi quadre nelle righe marcate per
+            #   inquilino, e fra virgolette basse in quelle del padre (la
+            #   riga «E' FINITA» e quella del palco che se ne va): si
+            #   guardano tutt'e due le forme.
+            for r in fetta:
+                if pezzo in r and (("[%s]" % chi) in r or ("«%s»" % chi) in r):
+                    return pezzo, fetta
         time.sleep(0.5)
-    return False, fetta
+    return None, fetta
 
 
 def il_cliente_c_e(porta, chi):
@@ -570,6 +688,7 @@ def certifica():
 
     buono = ["figlio  [c20u1] ⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato",
              "codifica [c20u1] ⭐ butto le 4 superfici importate: generazione"]
+    # ⭐ IL FIGLIO SOPRAVVISSUTO — KDE, XFCE: il codificatore e' lo stesso.
     casi_reg = [
         ("⭐ rinata, e la cache buttata ⇒ VERDE", buono, 0),
         ("⛔ rinata e la cache NON buttata ⇒ ROSSO", buono[:1], 1),
@@ -579,10 +698,33 @@ def certifica():
         ("⚠ il registro non si legge ⇒ 3", None, 3),
     ]
     for nome, dato, atteso in casi_reg:
-        e = giudica_il_registro(dato, "c20u1")[0]
+        e = giudica_il_registro(dato, "c20u1", False, "111")[0]
         if e != atteso:
             guai += 1
         print("  %s REGISTRO %-62s esito %s (atteso %s)"
+              % ("OK " if e == atteso else "NO ", nome, e, atteso))
+
+    # ⭐⭐ IL FIGLIO MORTO COL GESTO — GNOME.  ⛔ Qui il verde NON si regala:
+    #     si pretende il pid di un figlio NUOVO, e senza quello e' 3.
+    nuovo = ["figlio  ⭐ figlio generato per «c20u1»: pid 222, uid 4014, gid "
+             "4014, matricola 3.  ⛔ Che sia DAVVERO quell'uid",
+             "figlio  [c20u1] ⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato"]
+    casi_morto = [
+        ("⭐ figlio NUOVO (pid 222 ≠ 111) ⇒ VERDE", nuovo, "111", 0),
+        ("⛔ nessun figlio nuovo nel registro ⇒ 3, ⛔ non un verde",
+         nuovo[1:], "111", 3),
+        ("⛔ lo STESSO pid di prima ⇒ 3: non era morto affatto",
+         nuovo, "222", 3),
+        ("⚠ non so il pid del primo accesso ⇒ 3", nuovo, None, 3),
+        ("⚠ il figlio nuovo e' di un ALTRO inquilino ⇒ 3",
+         [r.replace("c20u1", "c20u9") for r in nuovo], "111", 3),
+        ("⚠ il registro non si legge ⇒ 3", None, "111", 3),
+    ]
+    for nome, dato, prima, atteso in casi_morto:
+        e = giudica_il_registro(dato, "c20u1", True, prima)[0]
+        if e != atteso:
+            guai += 1
+        print("  %s REG/MORTO %-61s esito %s (atteso %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
     casi_somma = [
@@ -719,15 +861,21 @@ def main():
         sh("setsid python3 -u %s --indirizzo 127.0.0.1 --porta %d --utente %s "
            "--parola %s --resta %s < /dev/null > %s/uno.txt 2>&1 &"
            % (CLIENTE, a.porta, chi, PAROLA, a.primo, dove), 30)
-        nato, _ = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
-                                  a.attesa_nascita)
+        nato, fetta_uno = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
+                                          a.attesa_nascita)
         if not nato:
             print("   ⛔ in %d s il registro non ha detto «%s» per «%s»: la "
                   "sessione non e' nata\n      ⇒ non ho potuto guardare"
                   % (a.attesa_nascita, RIGA_NASCITA, chi))
             return 3
+        # ⭐ SI SEGNA CHI STA SERVENDO ADESSO, e serve dopo: se il gesto
+        #   «Esci» uccide il figlio (GNOME), l'unica prova che le superfici
+        #   della sessione morta non possono sopravvivere e' che il secondo
+        #   accesso giri in un processo con un pid DIVERSO da questo.
+        pid_di_prima = chi_serviva(fetta_uno, chi)
         print("   ⭐ primo accesso: la sessione di «%s» e' nata, e il cliente "
-              "guarda" % chi)
+              "guarda (la serve il figlio pid %s)"
+              % (chi, pid_di_prima or "?"))
         time.sleep(10)
 
         # ── 2. «ESCI», il gesto del menu ───────────────────────────────────
@@ -743,14 +891,22 @@ def main():
                   % (desktop, ((r.stderr or r.stdout).strip().replace("\n", " ")[:120])
                      if r else "nessuna risposta"))
             return 3
-        finita, _ = aspetta_la_riga(a.registro, segno, chi, RIGA_FINITA,
+        finita, _ = aspetta_la_riga(a.registro, segno, chi,
+                                    [p for p, _d in RIGHE_FINITA],
                                     a.attesa_uscita)
         if not finita:
             print("   ⛔ %d s dopo «Esci» il prodotto non ha dichiarato la "
-                  "sessione finita\n      («%s») ⇒ non ho potuto guardare"
-                  % (a.attesa_uscita, RIGA_FINITA))
+                  "sessione finita ⇒ non ho potuto guardare\n"
+                  "      e le ho aspettate tutt'e due: %s"
+                  % (a.attesa_uscita,
+                     " · ".join("«%s»" % p for p, _d in RIGHE_FINITA)))
             return 3
-        print("   ⭐ «Esci»: il prodotto ha visto finire la sessione grafica")
+        # ⭐ Si DICE quale delle due forme ha usato il prodotto: e' la
+        #   differenza fra «il figlio e' vivo» e «il figlio e' morto col
+        #   gesto», e il giudice del registro qui sotto ne dipende.
+        figlio_morto = (finita != RIGHE_FINITA[0][0])
+        print("   ⭐ «Esci»: il prodotto ha visto finire la sessione grafica "
+              "— %s" % dict(RIGHE_FINITA)[finita])
         # ⛔⛔ E QUI SI ASPETTA CHE IL PRIMO CLIENTE SE NE SIA ANDATO DAVVERO.
         #    `[M]` 23 set 2026, primo giro: l'attesa era di 30 s fissi, il
         #    cliente e' rimasto attaccato fino ai suoi `--resta`, ⇒ il secondo
@@ -812,7 +968,7 @@ def main():
             except OSError:
                 luminanze = None
         pixel = giudica_i_pixel(luminanze)
-        registro = giudica_il_registro(fetta, chi)
+        registro = giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima)
         esito = giudizio(pixel, registro)
         print("   P %-3s %s" % ("SI" if pixel[0] == 0 else
                                 ("NO" if pixel[0] == 1 else "?"), pixel[2]))
@@ -835,8 +991,12 @@ def main():
                   "verde lo stesso.")
             return 1
         if esito == 0:
+            # ⚠ E il secondo giudice si cita con le SUE parole: dire «la cache
+            #   e' stata buttata» dove il figlio era morto col gesto sarebbe
+            #   raccontare un fatto che non e' successo (su GNOME non c'era
+            #   nessuna cache da buttare — ⭐ c'era un processo nuovo).
             print("⭐ VERDE — dopo «Esci» e il nuovo accesso lo schermo e' "
-                  "pulito, e la cache del\n   codificatore e' stata buttata")
+                  "pulito\n   ⭐ e %s" % registro[2])
         elif esito == 1:
             print("⛔⛔ ROSSO — %s"
                   % (pixel[2] if pixel[0] == 1 else registro[2]))
