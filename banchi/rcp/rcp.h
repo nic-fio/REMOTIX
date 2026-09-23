@@ -817,6 +817,32 @@ bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave
  * se'; e' qui perche' un banco possa nominarla. */
 void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano);
 
+/* ⛔⭐⭐ IL FOTOGRAMMA GIA' CODIFICATO CHE NON PARTE — e chi lo butta DEVE
+ *      passare di qui, sempre.
+ *
+ * E' la **terza forma** di §5.1, quella che `RCP.md` chiama «non osservabile
+ * affatto»: nessuno stream aperto, nessun byte uscito, e il `numero` non
+ * consumato ⇒ al client arriva una numerazione **senza buchi**, e §5.2 gli fa
+ * chiedere una chiave solo su un buco.  ⛔ Nessun contatore, ne' suo ne' nostro,
+ * puo' vedere questo scarto: la riga del registro e il debito della chiave sono
+ * l'unica cura, e la chiama questa funzione.
+ *
+ * ⚠ NON e' `rcp_video_abbandonato_a_valle()`: quella e' la forma A (stream
+ *   azzerato, byte gia' spesi) e scriverebbe nel registro una forma al posto di
+ *   un'altra.  ⚠ E NON tocca `video_abbandonati`, per la ragione che il
+ *   riquadro di `rcp_video_niente_credito()` dichiara: sul filo non c'e' niente
+ *   da azzerare.
+ *
+ * ⛔ I DUE CHIAMANTI, al 23 settembre 2026, e sono tutt'e due in
+ *    `webtransport.c` perche' e' lui che decide se un fotogramma parte:
+ *      · il REGOLATORE DEL RITMO della fase 9 (`ritmo_frena()` ⇒ `true`);
+ *      · la TELA CHE NON COMBACIA (§6.2), il fotogramma catturato a una misura
+ *        che non e' quella in vigore.
+ *    ⚠ Un terzo ramo che butti un fotogramma gia' codificato senza chiamare
+ *      questa funzione rifa' il difetto del 23 settembre 2026 per intero. */
+void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
+                                       const char *perche);
+
 /* Quanti fotogrammi questa sessione ha spedito e quanti ne ha abbandonati.
  * ⛔ I due numeri insieme, sempre: «zero abbandonati» detto da solo non
  * distingue una linea che porta da un canale che non ha mai spedito niente. */

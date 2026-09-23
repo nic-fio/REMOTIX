@@ -4656,6 +4656,43 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 			                 (unsigned long long)rtt_ms, rete);
 		}
 		w->video_ritmo_scesi++;
+		/* ⛔⛔⭐ E LA DISCESA PAGA LA CHIAVE — 23 settembre 2026, e senza questa
+		 *      riga il regolatore della fase 9 sfasciava l'immagine in silenzio.
+		 *
+		 *      Il fotogramma che si butta qui il figlio l'ha **gia' codificato**:
+		 *      arriva da `wt_video_diffondi()` come byte di flusso, e il
+		 *      codificatore ha gia' fatto avanzare i suoi riferimenti.  ⇒ Il
+		 *      delta che viene dopo si appoggia a un fotogramma che il client non
+		 *      ricevera' mai, e il decodificatore non solleva nessun errore: si
+		 *      limita a produrre immagini via via piu' sfasciate (§5.2).
+		 *
+		 * ⛔ E NESSUNO SE NE ACCORGE, da nessuna delle due parti: il `numero`
+		 *    nasce in `rcp_video_apri()`, che di qui non si raggiunge, quindi la
+		 *    numerazione che arriva al client resta CONTINUA e §5.2 gli fa
+		 *    chiedere una chiave solo su un buco.  `[M]` 23 set 2026,
+		 *    `due-inquilini` su `rete11-gnome`: 27 e 38 fotogrammi buttati qui,
+		 *    **0 buchi** nella numerazione, **1 sola chiave** in tutta la
+		 *    sessione, **0** `RICHIEDI_CHIAVE` — e l'utente che vedeva l'immagine
+		 *    a tessere con tutti i contatori verdi.
+		 *
+		 * ⚠ E il commento in cima a questa funzione PROMETTEVA il contrario —
+		 *   «il regolatore smette di PRODURRE; non butta quel che c'e' gia'» —
+		 *   ma il freno sta a valle, dopo la codifica, e `ritmo_giu` non esce mai
+		 *   da questo file.  ⏳ Portarlo fino al figlio e' la cura del COSTO
+		 *   (meno scarti ⇒ meno chiavi) ed e' un secondo passo: qui si compra la
+		 *   CORRETTEZZA, che non e' negoziabile.
+		 *
+		 * ⭐ Il prezzo NON e' una chiave per fotogramma frenato: `serve_chiave` e'
+		 *    un booleano (`rcp.c`), si spegne solo quando la chiave e' uscita
+		 *    intera, quindi un episodio di frenata costa UNA chiave.  E i delta
+		 *    dietro quella chiave non si abbandonano (la cura della spirale,
+		 *    a50b389), che e' proprio il caso della chiave spedita sotto
+		 *    congestione. */
+		rcp_video_scartato_prima_del_filo(
+		    w->rcp, chiave,
+		    "il regolatore del ritmo lo ha frenato (fase 9: l'arretrato ha "
+		    "raggiunto i posti) — ma il figlio lo aveva gia' CODIFICATO, e i "
+		    "riferimenti del codificatore sono andati avanti senza di lui");
 		return true; /* ⛔ questo fotogramma NON parte: E' la discesa */
 	}
 
@@ -5418,6 +5455,31 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 			                 "⚠ Al palco si sta richiedendo la tela in vigore",
 			                 w->provenienza, tl, ta, l, a);
 		}
+		/* ⛔⛔⭐ E ANCHE QUESTO PAGA LA CHIAVE — 23 settembre 2026, ed e' lo
+		 *      STESSO difetto del regolatore del ritmo, trovato accanto a lui.
+		 *
+		 *      Il fotogramma che si butta qui il figlio l'ha **gia' codificato**
+		 *      e i riferimenti del codificatore sono andati avanti; il `numero`
+		 *      pero' non e' stato consumato — `rcp_video_apri()` di qui non si
+		 *      raggiunge — quindi al client arriva una numerazione CONTINUA e
+		 *      §5.2 non gli da' nessun appiglio per chiedere la cura.
+		 *
+		 * ⚠ E NON BASTAVA CHE LA TELA TORNASSE A COMBACIARE: i fotogrammi
+		 *   buttati nel frattempo mancano per sempre, e con il GOP infinito la
+		 *   chiave successiva non arriva mai da sola.  ⇒ Senza questa riga, un
+		 *   ridimensionamento di finestra sotto carico lasciava l'immagine a
+		 *   tessere per tutto il resto della sessione.
+		 *
+		 * ⭐ Sta DENTRO il fondo dell'annuncio apposta: `serve_chiave` e' un
+		 *    fermo che si spegne solo a chiave USCITA, e finche' la tela non
+		 *    combacia non esce nessun fotogramma — quindi nemmeno la chiave, e
+		 *    quindi il debito resta acceso da se'.  ⛔ Chiamarla fuori dal fondo
+		 *    vorrebbe dire percorrerla a 60/s per niente. */
+		rcp_video_scartato_prima_del_filo(
+		    w->rcp, chiave,
+		    "il fotogramma catturato non porta la tela in vigore (§6.2) — ma "
+		    "era gia' CODIFICATO, e i riferimenti del codificatore sono andati "
+		    "avanti senza di lui");
 		return;
 	}
 	/* ⭐ Tela e fotogramma sono d'accordo: il fondo del messaggio di sopra si

@@ -4096,6 +4096,115 @@ bool rcp_video_abbandona(rcp_sessione *s, const char *perche)
 	return true;
 }
 
+/* ⛔⭐⭐⭐ IL FOTOGRAMMA BUTTATO **PRIMA DEL FILO** — la forma che il ricevente
+ *        non vede, e che fino al 23 settembre 2026 NON PAGAVA LA CHIAVE.
+ *
+ * `RCP.md` §5.1 elenca DUE forme osservabili dell'abbandono — lo stream
+ * azzerato (A) e il buco nei `numero` (B) — e poi ne nomina una terza che
+ * «non e' osservabile affatto», il delta buttato per mancanza di credito
+ * (§2.3, causa 4).  ⛔ Di quella terza forma ce n'erano **tre istanze**, e una
+ * sola pagava il debito:
+ *
+ *   | chi butta                          | numero consumato | debito pagato |
+ *   |---|---|---|
+ *   | §2.3, il credito finito            | no | ✅ `rcp_video_niente_credito()` |
+ *   | ⛔ il REGOLATORE DEL RITMO (fase 9) | no | ⛔ **nessuno** |
+ *   | ⛔ la TELA CHE NON COMBACIA (§6.2)  | no | ⛔ **nessuno** |
+ *
+ * ⭐⭐ E' §1.20 un'altra volta: *«una cura si cerca dovunque valga, non dove e'
+ *     stata trovata»*.  La cura di causa 4 fu scritta per il credito, e i due
+ *     rami nati dopo — il regolatore della fase 9 e il controllo della tela —
+ *     buttano un fotogramma **gia' codificato** nello stesso identico modo
+ *     senza che nessuno l'abbia notato.
+ *
+ * ⛔⛔ IL DANNO, E PERCHE' NESSUN CONTATORE LO VEDE — `[M]` 23 settembre 2026,
+ *      scatola `rete11-gnome`, scenario `due-inquilini`, 180 s, due giri:
+ *
+ *      | | Firefox (H.264) | Chrome (HEVC) |
+ *      |---|---|---|
+ *      | fotogrammi spediti | 6938, numerati 1…6938 | 7351, numerati 1…7351 |
+ *      | **buchi nella numerazione** | **0** | **0** |
+ *      | fotogrammi mai partiti per il ritmo | **27** | **38** |
+ *      | CHIAVI spedite in tutta la sessione | **1** | **1** |
+ *      | `RICHIEDI_CHIAVE` ricevute | **0** | **0** |
+ *
+ *      ⇒ 65 fotogrammi codificati buttati, e il client non poteva accorgersene
+ *        in nessun modo: la numerazione che gli arriva e' CONTINUA, perche' il
+ *        `numero` nasce in `rcp_video_apri()` e quei fotogrammi non ci
+ *        arrivano mai.  ⛔ E il codificatore gira a GOP infinito
+ *        (`chiavi_ogni = 0`, `codificatore_di()` in `src/figlio.c`): dopo la
+ *        chiave 1 un'altra chiave non arriva **mai piu'** da sola.
+ *      ⇒ L'utente vedeva l'immagine A TESSERE — le zone ferme (le icone)
+ *        restavano il mosaico sbagliato, quelle in movimento si ridipingevano
+ *        e sembravano sane — con **tutti i contatori verdi**.  E' esattamente
+ *        quel che §5.2 descrive: *«a un delta mancante il decodificatore non
+ *        solleva nessun errore, si limita a produrre immagini via via piu'
+ *        sfasciate fino alla chiave successiva»*.
+ *
+ * ⚠ PERCHE' UNA FUNZIONE NUOVA E NON `rcp_video_abbandonato_a_valle()`: quella
+ *   e' la forma **A**, e la sua riga dice «ABBANDONATO NELLA CODA (§5.1,
+ *   RESET_STREAM): N byte non sono usciti».  Qui di stream non ne e' mai nato
+ *   uno e di byte non ne e' uscito nessuno: usarla scriverebbe nel registro una
+ *   forma al posto di un'altra — la forma E8 che `RCP.md` §11.1 (rilievo P7)
+ *   esiste per togliere — e farebbe crescere `video_abbandonati`, che il
+ *   riquadro di `rcp_video_niente_credito()` qui sopra vieta espressamente
+ *   («qui lo stream non e' mai nato, quindi non c'e' niente da azzerare sul
+ *   filo e il `numero` non e' stato consumato»).
+ *
+ * ⚠ E il debito si accende SEMPRE, anche se quel che si butta era una CHIAVE:
+ *   una chiave buttata prima del filo non e' una chiave «abbandonata» ai sensi
+ *   di §5.2 — non le e' stato negato niente, semplicemente non poteva partire
+ *   con quei numeri (tela sbagliata).  ⛔ Lasciare il debito spento li'
+ *   vorrebbe dire nessuna chiave mai piu', che e' il guasto peggiore dei due.
+ *
+ * ⭐ E si passa dall'imbuto: `chiave_serve()`.  Il campo `serve_chiave` non si
+ *    tocca a mano — vedi il riquadro delle due funzioni, e il controllo
+ *    `grep -n 'serve_chiave *=' src/rcp.c` che deve dare DUE righe sole. */
+void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
+                                       const char *perche)
+{
+	if (!s)
+		return;
+	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
+	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
+	 * dal lato che riceve».  ⭐ E QUI VALE DOPPIO, perche' dal lato che riceve
+	 * questo non ha **nessun** aspetto: la riga del registro e' l'unico posto
+	 * al mondo in cui questo fatto esiste.
+	 *
+	 * ⚠ MA UNA RIGA PER EPISODIO, NON PER FOTOGRAMMA: sotto congestione questo
+	 *   ramo si percorre a 60/s, e sessanta righe al secondo sono il difetto dei
+	 *   30,8 GB di registro — quello che `chiave_intervallo_ms()` e la riga
+	 *   «il ritmo SCENDE» esistono gia' per non rifare.  ⭐ E l'episodio ha un
+	 *   confine NATURALE e non un orologio: finche' il debito e' acceso la cura
+	 *   e' gia' in viaggio e il fatto non e' cambiato; quando si spegne vuol
+	 *   dire che una chiave e' USCITA INTERA (`chiave_pagata()`), e il prossimo
+	 *   scarto e' un fatto nuovo che merita la sua riga.
+	 * ⛔ E IL CONTO NON SI PERDE: quanti fotogrammi siano stati buttati lo
+	 *    sanno gia' i contatori di `webtransport.c` — `video_ritmo_scesi` per il
+	 *    regolatore e `video_saltati` per la tela — e li scrivono la riga
+	 *    «ritmo di …» (una al secondo) e il «conto finale» della sessione.
+	 *    ⇒ Qui la riga porta la CAUSA, che li' non c'e'; il numero sta li', che
+	 *      qui non ci sta. */
+	if (!s->serve_chiave)
+		reg(s, "⛔ fotogramma %s BUTTATO PRIMA DEL FILO (la terza forma di §5.1, "
+		       "quella che il ricevente non vede): %s.  ⚠ Nessuno stream aperto, "
+		       "nessun byte uscito, e il `numero` NON e' stato consumato — dopo "
+		       "il %u ne arrivera' uno di seguito, quindi nei numeri non resta "
+		       "nessun buco e il client non puo' chiedere niente.  ⭐ §5.2: il "
+		       "debito della CHIAVE si accende qui, o l'immagine resta sfasciata "
+		       "per sempre.  ⚠ Una riga per EPISODIO di debito: quanti ne siano "
+		       "stati buttati lo dicono `video_ritmo_scesi` e `video_saltati` "
+		       "nella riga «ritmo di …» e nel conto finale",
+		    chiave ? "CHIAVE" : "delta", perche ? perche : "non dichiarato",
+		    s->video_numero);
+	/* ⛔ E IL DEBITO SI ACCENDE SEMPRE, riga o non riga: e' un booleano, costa
+	 *    zero riaccenderlo, e legarlo alla riga vorrebbe dire legare una cura a
+	 *    una decisione di volume del registro — che e' il modo di perdere la
+	 *    cura il giorno in cui qualcuno tocca il fondo. */
+	chiave_serve(s, "un fotogramma e' stato buttato prima del filo, e nei "
+	                "numeri non resta nessun buco (§5.1 terza forma, §5.2)");
+}
+
 int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
                    uint64_t istante_us, uint32_t input, uint64_t ora_ms)
 {
