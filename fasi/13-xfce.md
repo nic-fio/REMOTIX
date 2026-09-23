@@ -770,8 +770,25 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   ⇒ La cura toglie **solo** il falso positivo: chi muore non saluta, e il guardiano lo prende ancora.
   In A il registro percorre tutta la sequenza del 22 settembre — congedo 05:07:41.775, PING spenti
   05:07:41.875, capsula 05:07:42.276, `ricevuti` fermo a 40 per 30 s — e **non scrive nessun ⛔**.
-  ⚠ Resta una riga ⛔ che non è di questa cura e non è nuova: `⛔ NIENTE VIDEO: «SESSIONE» non è stata
-  spedita (stato finita)`, che il palco produce mentre offre fotogrammi a una sessione già chiusa.
+  ⚠⚠ **E IL PREZZO DELLA CURA, DICHIARATO invece che scoperto dopo.** La linea morta, sbagliando,
+  faceva anche una cosa utile: chiudendo la connessione a +10 s fermava **il palco**. Il registro lo
+  dice in tutt'e due i casi — 22 set, congedo 10:30:11.698 → «il palco smette di catturare»
+  10:30:22.330 (**+10,6 s**); 23 set col binario curato, congedo 05:07:41.775 → «il palco smette di
+  catturare» 05:08:12.276 (**+30,5 s**, cioè al `max_idle_timeout`). ⇒ La finestra in cui **si
+  cattura e si codifica per nessuno** passa da ~10 s a ~30 s.
+  ⭐ Sul desktop fermo della prova costa niente (11 fotogrammi in tutto), ma su una scena viva a 58
+  fotogrammi/s sono **venti secondi di codifica in più per ogni client che se ne va**, su una
+  macchina che ha altri inquilini. La misura sotto carico è nella sessione lunga.
+
+- ⏳ **Il palco smette di catturare quando muore il TRASPORTO, non quando il client si CONGEDA** —
+  23 set 2026, trovato curando la linea morta. Al congedo liberiamo il posto (`posto LASCIATO …
+  occupati adesso: 0`) ma **non** spegniamo la cattura: quella si ferma solo quando se ne va la
+  connessione QUIC. Nel mezzo ogni fotogramma viene catturato, codificato, offerto, **rifiutato** da
+  `rcp_video_apri()` (`src/rcp.c:4229`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) e messo a verbale come
+  `⛔ NIENTE VIDEO: «SESSIONE» non è stata spedita (stato finita)`.
+  ⇒ È lavoro fatto per nessuno **e** una riga ⛔ che somiglia a un guasto. 🔸 La cura sensata è
+  spegnere il ciclo dei fotogrammi sullo stesso evento che libera il posto — ⚠ ma va guardata contro
+  I4 («il palco resta in piedi»), che è un'altra cosa: fermare la *cattura* non è smontare il palco.
 
 - ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
   xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
