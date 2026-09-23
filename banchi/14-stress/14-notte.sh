@@ -426,7 +426,7 @@ un_giro() {
 	timeout -k 20 "$tetto" python3 "$QUI/_lancia.py" \
 		--scenario "$percorso" --desktop "$d" --marca "$m" \
 		--porta "$(porta_di "$d")" --host "$HOST" \
-		--dove "$DOVE_QUI" --tetto "$tetto"
+		--dove "$DOVE_QUI" --tetto "$tetto" --durata "$durata"
 	GIRO_ESITO=$?
 	t1=$SECONDS
 	secondi=$(( t1 - t0 ))
@@ -465,6 +465,16 @@ salva_il_registro() {
 	return 0
 }
 
+# ⭐⭐ COMPLETA LA RIGA DEL GIRO, O LA SCRIVE LEI.  Il nome e' rimasto quello
+#    vecchio perche' la chiamano in cinque posti, ma adesso fa due cose:
+#      · se lo scenario la sua riga l ha scritta, ci AGGIUNGE quel che solo la
+#        regia sa — il bilancio del server prima e dopo il giro, e i secondi
+#        veri di orologio.  ⛔ Prima li buttava: `crescita()` nel rapporto
+#        trovava `server_prima`/`server_dopo` SOLO sulle righe dei giri morti,
+#        cioe' proprio dove non servivano (23 set 2026);
+#      · se la riga non c e', la scrive lei — e dice scenario, scatola, MARCA
+#        del browser e perche'.  ⛔ Un giro morto per strada che non lascia
+#        niente domattina somiglia a un giro mai partito.
 riga_di_ripiego() {
 	# ⛔ A vuoto NON si scrive niente: una riga finta in `esiti.jsonl` sarebbe
 	#    una misura che nessuno ha fatto, ed e' peggio di una riga mancante.
@@ -476,18 +486,41 @@ prima = sys.argv[8] if len(sys.argv) > 8 else ""
 dopo = sys.argv[9] if len(sys.argv) > 9 else ""
 linee_prima = int(sys.argv[10]) if len(sys.argv) > 10 and sys.argv[10] else 0
 os.makedirs(os.path.dirname(percorso), exist_ok=True)
+
+def completa(r):
+    """Quel che solo la regia sa, aggiunto SENZA toccare quel che c e' gia'."""
+    cambiato = False
+    for chiave, valore in (("server_prima", prima), ("server_dopo", dopo)):
+        if valore and not r.get(chiave):
+            r[chiave] = valore
+            cambiato = True
+    # ⚠ I secondi dello scenario contano il suo tetto; questi contano
+    #   l orologio della regia (browser acceso e spento compresi): sono due
+    #   cose diverse e stanno tutt e due sulla riga.
+    if r.get("secondi_della_regia") is None:
+        r["secondi_della_regia"] = int(secondi or 0)
+        cambiato = True
+    if r.get("secondi") is None and secondi:
+        r["secondi"] = int(secondi)
+        cambiato = True
+    if not r.get("browser") and r.get("marca"):
+        r["browser"] = r["marca"]
+        cambiato = True
+    if not r.get("marca") and r.get("browser"):
+        r["marca"] = r["browser"]
+        cambiato = True
+    return cambiato
+
 # ⛔ Se lo scenario la sua riga l ha gia' scritta, la regia NON ne aggiunge una
 #    seconda: due righe per lo stesso giro sarebbero due verita' sullo stesso
-#    fatto, e la tabella non saprebbe quale credere.
+#    fatto, e la tabella non saprebbe quale credere.  ⇒ La COMPLETA.
 # ⭐ «Di questo giro» si riconosce dalla POSIZIONE: le righe nate dopo quelle
 #   che c erano all inizio del giro.  ⚠ Non dall orologio, che non tutti
 #   scrivono.
 if os.path.exists(percorso):
-    for n, riga in enumerate(open(percorso, encoding="utf-8", errors="replace")):
-        if n < linee_prima:
-            continue
-        riga = riga.strip()
-        if not riga:
+    righe = open(percorso, encoding="utf-8", errors="replace").read().splitlines()
+    for n, riga in enumerate(righe):
+        if n < linee_prima or not riga.strip():
             continue
         try:
             r = json.loads(riga)
@@ -495,9 +528,21 @@ if os.path.exists(percorso):
             continue
         if (r.get("scenario") == scenario and r.get("desktop") == desktop
                 and r.get("marca", r.get("browser")) == marca):
+            if completa(r):
+                righe[n] = json.dumps(r, ensure_ascii=False)
+                # ⚠ Si riscrive prima a fianco e poi si sposta: un file di
+                #   esiti troncato a meta' notte sarebbe la notte persa.
+                accanto = percorso + ".nuovo"
+                with open(accanto, "w", encoding="utf-8") as f:
+                    f.write("\n".join(righe) + "\n")
+                os.replace(accanto, percorso)
             sys.exit(0)
-r = {"scenario": scenario, "desktop": desktop, "marca": marca,
+r = {"scenario": scenario, "desktop": desktop,
+     "marca": marca, "browser": marca,
      "esito": int(esito), "secondi": int(secondi), "perche": perche,
+     "verdetto": {0: "REGGE", 1: "NON REGGE", 3: "non ho potuto guardare"}
+                 .get(int(esito), "esito %s" % esito),
+     "quando": time.strftime("%Y-%m-%dT%H:%M:%S"),
      "quando_finito": time.time(), "scritta_dalla_regia": True}
 if prima:
     r["server_prima"] = prima

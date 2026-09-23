@@ -42,7 +42,16 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
+
+# ⛔ Il nucleo sta nella cartella SOPRA questa.  Senza questa riga, `esito()`
+#    non puo' chiedergli di completare la riga quando gli scenari girano fuori
+#    da `_lancia.py` (per esempio sotto `_prova_scenari.py`), e la riga esce
+#    senza i numeri in vista — che e' il difetto del 23 set 2026.
+_SOPRA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _SOPRA not in sys.path:
+    sys.path.append(_SOPRA)
 
 VERDE, ROSSO, CIECO = 0, 1, 3
 PORTE = {"gnome": 8511, "kde": 8512, "xfce": 8513, "lxqt": 8514}
@@ -59,17 +68,48 @@ SCHEDA_DEL_TABLET = os.environ.get("REMOTIX_SCHEDA", "wlo1")
 # 1 · IL GIUDIZIO — in un posto solo
 # ═══════════════════════════════════════════════════════════════════════════
 def esito(scenario, desktop, marca, codice, perche, misure=None, secondi=None,
-          regole=None):
+          regole=None, pagina=None, server=None, guasti=None, registro=None):
     """L'unica forma di risposta che uno scenario puo' dare.
 
     ⛔ Il `perche'` non e' facoltativo nemmeno sul verde: un verde senza ragione
        non si rilegge sei mesi dopo.
+
+    ⭐ `marca` finisce nella riga anche come `browser`: sono la stessa cosa, e
+       chi legge la riga domattina non deve sapere quale dei due nomi ha usato
+       chi l'ha scritta.  ⛔⛔ 23 set 2026: e' esattamente cosi' che due righe
+       piene di misure sono arrivate alla tabella con «browser: None».
+
+    ⚠ `pagina` e `server` sono i numeri del PROTAGONISTA del giro, quando lo
+      scenario ne ha uno solo: messi li', salgono alla radice della riga senza
+      che nessuno debba indovinare in che ramo di `misure` stavano.
+      `guasti` e' l'elenco per il paragrafo 3 del rapporto: ⛔ ognuno con la sua
+      riga di registro, o e' un'opinione.
     """
-    return {"scenario": scenario, "desktop": desktop, "marca": marca,
-            "esito": int(codice), "perche": perche,
-            "misure": misure or {}, "regole": regole or {},
-            "secondi": round(secondi, 1) if secondi is not None else None,
-            "quando": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    r = {"scenario": scenario, "desktop": desktop,
+         "marca": marca, "browser": marca,
+         "esito": int(codice), "perche": perche,
+         "misure": misure or {}, "regole": regole or {},
+         "secondi": round(secondi, 1) if secondi is not None else None,
+         "quando": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    if pagina:
+        r["pagina"] = pagina
+    if server:
+        r["server"] = server
+    if guasti:
+        r["guasti"] = [g if isinstance(g, dict) else {"che_cosa": str(g)}
+                       for g in guasti]
+    if registro:
+        r["registro"] = registro
+    # ⛔ I numeri in vista li tira su IL NUCLEO, non una seconda copia qui: il
+    #    vocabolario della riga sta in `stress_nucleo.NOMI_IN_VISTA`, e basta
+    #    una sola tabella di nomi al mondo.  ⚠ Col nucleo finto l'import non
+    #    c'e': la riga resta com'e', e la completa chi la scrive (`_lancia.py`).
+    try:
+        import stress_nucleo
+        stress_nucleo.completa_la_riga(r)
+    except Exception:                            # noqa: BLE001
+        pass
+    return r
 
 
 def verde(sc, d, m, perche, **k):

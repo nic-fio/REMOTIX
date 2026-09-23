@@ -75,7 +75,8 @@ def firme():
     guai = 0
     for nome in ("dentro", "crea_inquilino", "sgombera", "scena",
                  "istante_nella_scatola", "conta_dalla_pagina",
-                 "conta_dal_server", "avvia_browser", "modello_senza_se_stesso"):
+                 "conta_dal_server", "avvia_browser", "modello_senza_se_stesso",
+                 "completa_la_riga", "numeri_in_vista"):
         f_vero = getattr(vero, nome, None)
         f_finto = getattr(finto, nome, None)
         if f_vero is None or f_finto is None:

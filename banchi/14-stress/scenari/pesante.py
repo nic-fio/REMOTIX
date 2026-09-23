@@ -97,16 +97,20 @@ def gira(desktop, marca, nucleo, opzioni=None):
             guasti.append("la tela e' sbavata: dispersione %.1f (soglia %.1f)"
                           % (meta["strisce"], soglia_strisce))
 
+        # ⭐ Un solo inquilino: i suoi numeri vanno anche in vista sulla riga.
+        in_vista = dict(pagina=ultimo, server=srv)
         if guasti:
             return C.rosso(NOME, desktop, marca, "; ".join(guasti),
-                           misure=misure, regole=regole, secondi=tetto.passati())
+                           misure=misure, regole=regole, secondi=tetto.passati(),
+                           guasti=guasti, **in_vista)
         return C.verde(NOME, desktop, marca,
                        "%d fotogrammi consegnati e %d dipinti in %.0f s, mai "
                        "fermi piu' di %.1f s, %d buchi, tela pulita (%.1f)"
                        % (cresciuta.get("consegnati", 0),
                           cresciuta.get("dipinti", 0), durata, fermo,
                           ultimo.get("buchi") or 0, meta.get("strisce") or -1),
-                       misure=misure, regole=regole, secondi=tetto.passati())
+                       misure=misure, regole=regole, secondi=tetto.passati(),
+                       **in_vista)
     except Exception as e:
         return C.non_so(NOME, desktop, marca, "lo strumento si e' rotto: %s"
                         % str(e)[:200], secondi=tetto.passati())

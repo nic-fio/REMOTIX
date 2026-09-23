@@ -839,8 +839,146 @@ def avvia_browser(marca, porta, misura=(1600, 1000), tetto_s=40):
 # ═══════════════════════════════════════════════════════════════════════════
 #  LA RIGA DEL GIRO
 # ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ IL VOCABOLARIO DELLA RIGA — i pochi numeri che la tabella del mattino
+#    legge, e i nomi con cui possono presentarsi.  ⛔ Sta QUI, in un posto solo:
+#    e' la lezione del 23 set 2026 (vedi `completa_la_riga`).
+#    L ordine dei sinonimi e' una preferenza: il primo che c e' vince.
+NOMI_IN_VISTA = {
+    # -- quel che ha visto la PAGINA (il capo che consuma)
+    "consegnati":     ("consegnati", "video_consegnati", "pagina_consegnati"),
+    "dipinti":        ("dipinti", "video_dipinti", "pagina_dipinti"),
+    "buchi":          ("buchi", "pagina_buchi"),
+    "saltati":        ("saltati", "saltati_coda", "pagina_salt"),
+    "chiavi_chieste": ("chiavi_chieste",),
+    "errori_pagina":  ("errori_pagina", "errori", "pagina_err"),
+    # -- quel che ha fatto il SERVER (il capo che produce)
+    "spediti":        ("spediti",),
+    "chiavi":         ("chiavi",),
+    "linee_morte":    ("linee_morte",),
+    "rc_ignorate":    ("rc_ignorate",),
+    "tela_non_combacia": ("tela_non_combacia",),
+    "errori_rossi":   ("errori_rossi",),
+    "banda_max_kbit": ("banda_max_kbit",),
+    # -- e quanto e' cresciuto il server sotto i piedi
+    "server_pid":     ("server_pid",),
+    "server_rss_kb":  ("server_rss_kb",),
+    "server_fd":      ("server_fd",),
+    "server_figli":   ("server_figli",),
+}
+
+# ⭐ CHI PARLA PER IL GIRO.  In `misure` ci sono spesso piu' inquilini o piu'
+#   giri: i numeri in vista sono quelli del PROTAGONISTA, e il protagonista e'
+#   il pesante, non il secondo inquilino.  ⚠ Questo non nasconde niente: il
+#   dettaglio resta intero dentro `misure`, in vista ci va il capofila.
+RAMI_PRIMA = ("pagina", "protagonista", "pesante", "principale", "mio", "io")
+RAMI_DOPO = ("normale", "secondo", "altro", "vicino", "bilancio_prima",
+             "prima", "dopo_lo_sgombero")
+
+
+def _pesca(roba, penale=0, strada=(), fuori=None):
+    """Raccoglie ogni numero conosciuto dentro `roba`, con quanto «costa».
+
+    ⚠ Ricorsiva apposta: `misure` cambia forma da scenario a scenario (un
+      dizionario per inquilino, una lista di giri, una lista di gradini), e un
+      lettore che conosca una forma sola perde i numeri di sei scenari su otto.
+    """
+    if fuori is None:
+        fuori = {}
+    if isinstance(roba, dict):
+        for nostro, suoi in NOMI_IN_VISTA.items():
+            for rango, k in enumerate(suoi):
+                v = roba.get(k)
+                if isinstance(v, bool) or not isinstance(v, (int, float)):
+                    continue
+                costo = penale + rango
+                vecchio = fuori.get(nostro)
+                # ⭐ A parita' di costo vince l ULTIMO trovato: dentro una lista
+                #   di giri e' la lettura finale, che e' quella che conta.
+                if vecchio is None or costo <= vecchio[0]:
+                    fuori[nostro] = (costo, v, "/".join(strada) or "riga")
+                break
+        for k, v in roba.items():
+            if not isinstance(v, (dict, list, tuple)):
+                continue
+            if k in RAMI_PRIMA:
+                p = penale
+            elif k == "server":
+                p = penale + 1
+            elif k in RAMI_DOPO:
+                p = penale + 60
+            else:
+                p = penale + 10
+            _pesca(v, p, strada + (str(k),), fuori)
+    elif isinstance(roba, (list, tuple)):
+        for i, v in enumerate(roba):
+            if isinstance(v, (dict, list, tuple)):
+                _pesca(v, penale, strada + ("%d" % i,), fuori)
+    return fuori
+
+
+def numeri_in_vista(roba):
+    """⭐ I numeri del giro, tirati fuori da dove sono finiti.
+
+    Torna `(numeri, da_dove)`: il secondo dice PER OGNI numero da quale ramo di
+    `misure` viene — ⛔ un numero senza provenienza, in un file che si rilegge
+    fra sei mesi, e' un numero di cui non ci si puo' fidare.
+    """
+    trovati = _pesca(roba or {})
+    numeri = {k: v[1] for k, v in trovati.items()}
+    da_dove = {k: v[2] for k, v in trovati.items()}
+    return numeri, da_dove
+
+
+def completa_la_riga(riga):
+    """⭐⭐ LA RIGA SI COMPLETA PRIMA DI SCRIVERLA, e si completa QUI.
+
+    ⛔⛔ IL DIFETTO DEL 23 SET 2026, e costa dirlo: la notte ha scritto due righe
+        con dentro tutto — marca del browser, contatori della pagina, contatori
+        del server — e la tabella del mattino le mostrava VUOTE.  Nessuno aveva
+        perso una misura: erano tre formati diversi per la stessa riga.
+          · il nucleo scriveva `browser` + `pagina` + `server` (piatti);
+          · gli scenari tornavano `marca` + `misure` (annidati, e la forma di
+            `misure` cambia da scenario a scenario);
+          · la tabella cercava `consegnati`, `dipinti`, `buchi`… alla RADICE,
+            che e' un quarto formato ancora, e non lo scriveva nessuno.
+        ⇒ La cura non e' insegnare alla tabella i tre formati: e' che chi
+          SCRIVE la riga la completi, una volta sola, qui dentro.
+
+    Che cosa fa, e solo dove manca — ⛔ non sovrascrive mai un valore gia' detto:
+      · `marca` e `browser` si rispecchiano (chi legge non deve sapere quale);
+      · i numeri in vista salgono alla radice da `pagina`, `server` e `misure`;
+      · `verdetto` e `quando` ci sono sempre.
+    """
+    if not isinstance(riga, dict):
+        return riga
+    # -- 1. la MARCA del browser, con tutti e due i nomi
+    marca = riga.get("marca") or riga.get("browser")
+    if marca:
+        riga.setdefault("marca", marca)
+        riga["browser"] = riga.get("browser") or marca
+        riga["marca"] = riga.get("marca") or marca
+    # -- 2. il verdetto in parole e l ora
+    riga.setdefault("verdetto", {VERDE: "REGGE", ROSSO: "NON REGGE",
+                                 CIECO: "non ho potuto guardare"}
+                    .get(riga.get("esito"), "esito %s" % riga.get("esito")))
+    riga.setdefault("quando", time.strftime("%Y-%m-%dT%H:%M:%S"))
+    # -- 3. i numeri, tirati su da dove sono
+    fondo = {k: riga.get(k) for k in ("pagina", "server", "misure")
+             if riga.get(k)}
+    numeri, da_dove = numeri_in_vista(fondo)
+    saliti = {}
+    for k, v in numeri.items():
+        if riga.get(k) is None:
+            riga[k] = v
+            saliti[k] = da_dove[k]
+    if saliti:
+        riga["numeri_da"] = saliti
+    return riga
+
+
 def riga_di_esito(scenario, desktop, browser, esito, perche, pagina=None,
-                  server=None, secondi=None, extra=None, dove=ESITI):
+                  server=None, secondi=None, extra=None, dove=ESITI,
+                  misure=None, regole=None, guasti=None, registro=None):
     """⭐⭐ UNA RIGA, SCRITTA APPENA IL GIRO FINISCE.
 
     ⛔ Non alla fine della notte: se alle tre qualcosa si inchioda, tutto quel
@@ -851,18 +989,30 @@ def riga_di_esito(scenario, desktop, browser, esito, perche, pagina=None,
 
     Torna la riga (dizionario), anche quando non si e' potuta scrivere: ⛔ un
     esito che non si riesce a salvare non si butta, si dice.
+
+    ⭐ `browser` e' la MARCA (`firefox` / `chrome`), e finisce nella riga con
+       tutti e due i nomi (`browser` e `marca`) — vedi `completa_la_riga`.
+       `misure`, `regole`, `guasti`, `registro` sono in coda apposta: le
+       chiamate vecchie (posizionali fino a `dove`) continuano a funzionare.
     """
     riga = {
-        "quando": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "scenario": scenario, "desktop": desktop, "browser": browser,
+        "marca": browser,
         "esito": esito,
-        "verdetto": {VERDE: "REGGE", ROSSO: "NON REGGE",
-                     CIECO: "non ho potuto guardare"}.get(esito, "esito %s" % esito),
         "perche": perche, "secondi": secondi,
         "pagina": pagina or {}, "server": server or {},
+        "misure": misure or {}, "regole": regole or {},
     }
+    if guasti:
+        riga["guasti"] = guasti
+    if registro:
+        riga["registro"] = registro
     if extra:
         riga.update(extra)
+    # ⛔ Si completa PRIMA di scrivere: una riga a cui manca la marca o i numeri
+    #    e' una misura che domattina non si legge piu' (23 set 2026).
+    completa_la_riga(riga)
+    riga.setdefault("quando_finito", time.time())
     testo = json.dumps(riga, ensure_ascii=False, default=str)
     import base64
     b = base64.b64encode((testo + "\n").encode("utf-8")).decode("ascii")
@@ -1044,6 +1194,56 @@ def certifica():
           (8511, 8512, 8513))
     prova("⛔ un browser che non esiste si rifiuta subito",
           _errore_di(lambda: avvia_browser("safari", 8511)), True)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    print("\n── ⛔⛔ LA RIGA PORTA I NUMERI, o la notte non si legge ──")
+    # ⚠ Le righe di prova hanno la FORMA di quelle vere: la prima e' quella che
+    #   la notte del 23 set 2026 e' arrivata al rapporto vuota.
+    r = completa_la_riga({
+        "scenario": "due-inquilini", "desktop": "gnome", "marca": "firefox",
+        "esito": 0, "perche": "due inquilini per 180 s",
+        "misure": {"pesante": {"consegnati": 6749,
+                               "server": {"spediti": 6795, "chiavi": 1,
+                                          "linee_morte": 0,
+                                          "pagina_dipinti": 6434,
+                                          "server_rss_kb": 30992}},
+                   "normale": {"server": {"spediti": 15, "chiavi": 2}}}})
+    prova("⭐ la marca del browser c e' con tutti e due i nomi",
+          (r.get("browser"), r.get("marca")), ("firefox", "firefox"))
+    prova("⭐ i numeri della pagina salgono in vista",
+          (r.get("consegnati"), r.get("dipinti")), (6749, 6434))
+    prova("⭐ e anche quelli del server",
+          (r.get("spediti"), r.get("chiavi"), r.get("linee_morte")), (6795, 1, 0))
+    prova("⛔ il protagonista e' il PESANTE, non il secondo inquilino",
+          r.get("spediti") == 6795, True)
+    prova("⭐ e si dice da quale ramo viene ogni numero",
+          r["numeri_da"]["dipinti"], "misure/pesante/server")
+    prova("⭐ il verdetto e' in parole", r.get("verdetto"), "REGGE")
+
+    # ⛔ Quel che la riga dice gia' non si tocca: un numero calcolato dallo
+    #    scenario vale piu' di uno pescato da noi.
+    r2 = completa_la_riga({"marca": "chrome", "esito": 1, "consegnati": 7,
+                           "pagina": {"consegnati": 999}})
+    prova("⛔ un numero gia' sulla riga non si sovrascrive", r2["consegnati"], 7)
+    prova("⭐ e il verdetto rosso si legge", r2["verdetto"], "NON REGGE")
+
+    # ⚠ Una riga che non ha nessun numero non ne deve INVENTARE.
+    r3 = completa_la_riga({"browser": "firefox", "esito": 3,
+                           "perche": "morto per strada"})
+    prova("⛔ senza misure non si inventa uno zero",
+          (r3.get("consegnati"), r3.get("spediti")), (None, None))
+    prova("⭐ ma la marca del browser c e' lo stesso", r3.get("marca"), "firefox")
+    prova("⭐ e «non ho potuto guardare» si legge",
+          r3.get("verdetto"), "non ho potuto guardare")
+
+    # ⚠ `misure` cambia forma da scenario a scenario: una LISTA di giri deve
+    #   dare l ultima lettura, non la prima.
+    r4 = completa_la_riga({"marca": "chrome", "esito": 0,
+                           "misure": {"giri": [{"consegnati": 10},
+                                               {"consegnati": 90}]}})
+    prova("⭐ da una lista di giri vale l ultimo", r4.get("consegnati"), 90)
+    prova("⛔ una riga che non e' un dizionario non fa cadere niente",
+          completa_la_riga("non sono una riga"), "non sono una riga")
 
     print("\n%s  %d prove, %d guai"
           % ("⭐ IL NUCLEO SA DIRE DI NO, e lo dice per la ragione giusta."

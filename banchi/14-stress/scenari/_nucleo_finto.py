@@ -26,10 +26,21 @@
      "rotto"       il browser non si accende           ⇒ atteso 3 (non lo so)
 """
 import io
+import os
 import re
+import sys
 import time
 
 VERDE, ROSSO, CIECO = 0, 1, 3
+
+
+def _vero():
+    """Il nucleo VERO, per le poche cose che non ha senso imitare."""
+    sopra = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if sopra not in sys.path:
+        sys.path.append(sopra)
+    import stress_nucleo
+    return stress_nucleo
 
 
 def _png(sbavata=False, lato=256, chiaro=0.0):
@@ -176,6 +187,17 @@ class Finto(object):
 
     def modello_senza_se_stesso(self, chi):
         return "[%s]%s" % (chi[0], chi[1:])
+
+    # ── la riga del giro ──────────────────────────────────────────────────
+    # ⛔ QUESTE DUE NON SI IMITANO: sono pure (nessun server, nessuna scatola),
+    #    e il finto chiama le VERE.  ⚠ Rifarle qui vorrebbe dire provare gli
+    #    scenari contro un vocabolario che nella notte non esiste — lo stesso
+    #    difetto delle firme inventate, un piano piu' su.
+    def completa_la_riga(self, riga):
+        return _vero().completa_la_riga(riga)
+
+    def numeri_in_vista(self, roba):
+        return _vero().numeri_in_vista(roba)
 
     # ── il browser e la pagina ────────────────────────────────────────────
     def avvia_browser(self, marca, porta, misura=(1600, 1000), tetto_s=40):

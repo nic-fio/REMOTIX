@@ -159,12 +159,17 @@ def gira(desktop, marca, nucleo, opzioni=None):
                   "ritardo": "⚠ non misurato: la grana dei tempi del client e' "
                              "grossa (§7.3)"}
         regole = {"tasti_mandati": quanti_tasti, "mosse_mandate": quante_mosse}
+        # ⭐ Anche qui l'immagine si guarda: uno scenario sull'input che non
+        #   dicesse quanti fotogrammi sono arrivati nel frattempo lascerebbe
+        #   meta' della prova fuori dalla riga.
+        in_vista = dict(pagina=storia[-1], server=b.server())
+        misure["server"] = in_vista["server"]
 
         if conti.get("tasti") is None and conti.get("puntatore") is None:
             return C.non_so(NOME, desktop, marca,
                             "non ho potuto leggere il registro del server: "
                             "dell'input non so niente", misure=misure,
-                            secondi=tetto.passati())
+                            secondi=tetto.passati(), **in_vista)
         guasti = []
         if not conti.get("puntatore"):
             guasti.append("nessun movimento del puntatore e' arrivato al server")
@@ -178,7 +183,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
 
         if guasti:
             return C.rosso(NOME, desktop, marca, "; ".join(guasti), misure=misure,
-                           regole=regole, secondi=tetto.passati())
+                           regole=regole, secondi=tetto.passati(), guasti=guasti,
+                           **in_vista)
         return C.verde(NOME, desktop, marca,
                        "sotto carico sono arrivati %s movimenti e %s tasti su "
                        "%d+%d mandati, appunti: %s, e nel frattempo sono arrivati "
@@ -189,7 +195,8 @@ def gira(desktop, marca, nucleo, opzioni=None):
                           if appunti.get("arrivato") else
                           "non misurato: %s" % (appunti.get("perche") or "?"),
                           cresciuta.get("consegnati")),
-                       misure=misure, regole=regole, secondi=tetto.passati())
+                       misure=misure, regole=regole, secondi=tetto.passati(),
+                       **in_vista)
     except Exception as e:                       # noqa: BLE001
         return C.non_so(NOME, desktop, marca, "lo strumento si e' rotto: %s"
                         % str(e)[:200], secondi=tetto.passati())

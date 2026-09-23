@@ -64,16 +64,40 @@ def trova_il_file(argomento):
     return giu if r.returncode == 0 and os.path.exists(giu) else None
 
 
+def completatore():
+    """⭐ Il completatore del NUCLEO, per le righe scritte prima della cura.
+
+    ⛔ Non e' un secondo giudice e non calcola niente: tira su i numeri che
+       stanno dentro `misure` e mette la marca del browser dove il lettore la
+       cerca — esattamente quel che oggi fa chi scrive la riga.  Serve alle
+       righe vecchie, che nessuno riscrive.  ⚠ Se il nucleo non si importa, si
+       legge quel che c e' e basta.
+    """
+    try:
+        sys.path.insert(0, QUI)
+        import stress_nucleo
+        return stress_nucleo.completa_la_riga
+    except Exception:                            # noqa: BLE001
+        return lambda r: r
+
+
 def leggi(percorso):
     righe = []
+    completa = completatore()
     for n, riga in enumerate(open(percorso, encoding="utf-8", errors="replace"), 1):
         riga = riga.strip()
         if not riga:
             continue
         try:
-            righe.append(json.loads(riga))
+            d = json.loads(riga)
         except Exception as e:
             print("⚠ riga %d illeggibile e saltata: %s" % (n, e))
+            continue
+        try:
+            completa(d)
+        except Exception:                        # noqa: BLE001
+            pass
+        righe.append(d)
     return righe
 
 
@@ -111,6 +135,13 @@ def crescita(r):
     """
     prima, dopo = r.get("server_prima"), r.get("server_dopo")
     if not prima or not dopo or "server_pid=" not in str(prima):
+        # ⚠ Senza le due righe del bilancio si dice quello che si sa: la foto
+        #   del server ALLA FINE del giro.  ⛔ Non e' una crescita, e non si
+        #   spaccia per tale.
+        rss, fd = r.get("server_rss_kb"), r.get("server_fd")
+        if rss or fd:
+            return "alla fine: %s MB, %s descrittori" % (
+                "%.0f" % (rss / 1024.0) if rss else "?", testo(fd))
         return None
     def valore(riga, campo):
         for pezzo in str(riga).split():
@@ -204,6 +235,15 @@ def main():
     print("   %d reggono · %d NON reggono · %d non ho potuto guardare"
           % (conta.get(0, 0), conta.get(1, 0), conta.get(3, 0)))
     print("   dal file: %s" % percorso)
+    # ⛔ Una riga fatta col nucleo FINTO non e' una misura del prodotto: si dice
+    #    in cima, o domattina si legge una tabella che non parla di REMOTIX.
+    finte = sorted({r.get("col_nucleo_finto") for r in per.values()
+                    if r.get("col_nucleo_finto")})
+    if finte:
+        print((ROSSO if colore else "")
+              + "   ⚠⚠ %d giri fatti col NUCLEO FINTO (%s): non misurano il prodotto"
+              % (sum(1 for r in per.values() if r.get("col_nucleo_finto")),
+                 ", ".join(finte)) + (FINE if colore else ""))
 
     print()
     print("── 1. CHI REGGE E CHI NO ──")
@@ -215,23 +255,40 @@ def main():
     if not stretto:
         print()
         print("── 2. I NUMERI, GIRO PER GIRO ──")
-        print("   %-14s %-6s %-8s %10s %7s %7s %7s  %s"
-              % ("scenario", "dove", "browser", "viste→vetro", "buchi", "chiavi",
-                 "cadute", "il server e' cresciuto"))
+        # ⭐ I NOMI SI CERCANO IN PIU' MODI apposta: la riga la puo' aver
+        #   scritta lo scenario, il nucleo o la regia, e i tre non usavano gli
+        #   stessi nomi.  ⛔ Da oggi li completa `stress_nucleo.completa_la_riga`
+        #   prima di scriverla — i sinonimi qui restano per le righe VECCHIE.
+        capo = "   %-14s %-6s %-8s %9s %13s %6s %6s %6s %6s  %s"
+        print(capo % ("scenario", "dove", "browser", "spediti", "viste→vetro",
+                      "buchi", "chiavi", "cadute", "durata",
+                      "il server e' cresciuto"))
+        vuote = 0
         for s in scenari:
             for d, m in colonne:
                 r = per.get((s, d, m))
                 if r is None:
                     continue
-                cons = numero(r, "consegnati", "video_consegnati")
-                dip = numero(r, "dipinti", "video_dipinti")
+                cons = numero(r, "consegnati", "video_consegnati", "pagina_consegnati")
+                dip = numero(r, "dipinti", "video_dipinti", "pagina_dipinti")
                 viste = "%s→%s" % (testo(cons), testo(dip))
-                print("   %-14s %-6s %-8s %10s %7s %7s %7s  %s"
-                      % (s, d, m, viste,
-                         testo(numero(r, "buchi")),
-                         testo(numero(r, "chiavi_chieste")),
-                         testo(numero(r, "linee_morte")),
-                         testo(crescita(r))))
+                sec = numero(r, "secondi")
+                if cons is None and dip is None and numero(r, "spediti") is None:
+                    vuote += 1
+                print(capo % (s, d, m,
+                              testo(numero(r, "spediti")), viste,
+                              testo(numero(r, "buchi", "pagina_buchi")),
+                              testo(numero(r, "chiavi_chieste", "chiavi")),
+                              testo(numero(r, "linee_morte")),
+                              "%ds" % sec if sec is not None else "?",
+                              testo(crescita(r))))
+        if vuote:
+            # ⛔ Una riga senza NESSUN numero non e' una misura: si dice, invece
+            #    di lasciarla passare per una riga come le altre (23 set 2026).
+            print()
+            print("   ⚠ %d giri non portano nemmeno un numero: la riga e' arrivata"
+                  % vuote)
+            print("     senza le misure, e quel giro non si legge senza rifarlo.")
 
     # ⭐⭐ I GUASTI, DAL PIU' GRAVE — con la riga che li dimostra accanto.
     guasti = []
@@ -268,13 +325,16 @@ def main():
 
     # ⚠ E si dice quando la riga l ha scritta la regia invece dello scenario: e'
     #   il segno che il giro e' morto per strada, non che sia andato bene.
-    morti = [k for k, r in per.items() if r.get("scritta_dalla_regia")]
+    morti = [k for k, r in per.items()
+             if r.get("scritta_dalla_regia") or r.get("morto_per_strada")]
     if morti:
         print()
-        print("── ⚠ GIRI MORTI PER STRADA (la riga l ha scritta la regia) ──")
+        print("── ⚠ GIRI MORTI PER STRADA (la riga non l ha scritta lo scenario) ──")
         for s, d, m in sorted(morti):
             r = per[(s, d, m)]
-            print("   %s · %s · %s — %s" % (s, d, m, r.get("perche", "non lo so")))
+            chi = "la regia" if r.get("scritta_dalla_regia") else "il lanciatore"
+            print("   %s · %s · %s (%s) — %s"
+                  % (s, d, m, chi, r.get("perche", "non lo so")))
 
     print()
     return 0

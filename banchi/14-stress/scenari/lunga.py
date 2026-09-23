@@ -94,16 +94,19 @@ def gira(desktop, marca, nucleo, opzioni=None):
             guasti.append("alla fine l'immagine non arriva piu': i fotogrammi "
                           "consegnati non sono saliti nell'ultimo giro")
 
+        in_vista = dict(pagina=n_dopo, server=srv)
         if guasti:
             return C.rosso(NOME, desktop, marca, "; ".join(guasti), misure=misure,
-                           regole=regole, secondi=tetto.passati())
+                           regole=regole, secondi=tetto.passati(),
+                           guasti=guasti, **in_vista)
         return C.verde(NOME, desktop, marca,
                        "%.0f minuti: il server non e' cresciuto oltre il concesso "
                        "(%s) e l'immagine e' ancora viva"
                        % (tetto.passati() / 60.0,
                           ", ".join("%s +%d" % (k, v) for k, v in sorted(cresciuta.items()))
                           or "niente"),
-                       misure=misure, regole=regole, secondi=tetto.passati())
+                       misure=misure, regole=regole, secondi=tetto.passati(),
+                       **in_vista)
     except Exception as e:
         return C.non_so(NOME, desktop, marca, "lo strumento si e' rotto: %s"
                         % str(e)[:200], secondi=tetto.passati())

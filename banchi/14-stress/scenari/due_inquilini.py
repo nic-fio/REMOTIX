@@ -106,16 +106,22 @@ def gira(desktop, marca, nucleo, opzioni=None):
         if not vivo_il_normale:
             guasti.append("la sessione del normale e' morta nel mezzo")
 
+        # ⭐ Il PROTAGONISTA del giro e' il pesante: i suoi numeri vanno anche
+        #   in vista sulla riga (`pagina`/`server`), cosi' la tabella del
+        #   mattino non deve indovinare in quale ramo di `misure` stavano.
+        in_vista = dict(pagina=storia[-1], server=srv_pesante)
         if guasti:
             return C.rosso(NOME, desktop, marca, "; ".join(guasti), misure=misure,
-                           regole=regole, secondi=tetto.passati())
+                           regole=regole, secondi=tetto.passati(),
+                           guasti=guasti, **in_vista)
         return C.verde(NOME, desktop, marca,
                        "due inquilini insieme per %.0f s: il pesante ha ricevuto "
                        "%d fotogrammi senza fermarsi piu' di %.1f s, al normale ne "
                        "sono partiti %s, e il registro non mescola le righe"
                        % (durata, cresciuta.get("consegnati", 0), fermo,
                           srv_normale.get("spediti")),
-                       misure=misure, regole=regole, secondi=tetto.passati())
+                       misure=misure, regole=regole, secondi=tetto.passati(),
+                       **in_vista)
     except Exception as e:
         return C.non_so(NOME, desktop, marca, "lo strumento si e' rotto: %s"
                         % str(e)[:200], secondi=tetto.passati())
