@@ -127,7 +127,7 @@ class Scatola:
     def come_utente(self, chi, comando, secondi=60):
         return self.dentro(
             "u=$(id -u %s) && runuser -u %s -- env XDG_RUNTIME_DIR=/run/user/$u "
-            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus %s"
+            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus %s 2>&1"
             % (chi, chi, comando), secondi)
 
     def accendi_scena(self, chi):
@@ -173,6 +173,24 @@ def luminanza(png):
         return None
 
 
+def desktop_scuro_ma_vivo(e, m, s):
+    """⭐ (esito, motivo) del primo fotogramma, con la tolleranza del 4K.
+
+    ⛔ `[M]` 23 set 2026, xfce in 4K: lo sfondo della scatola e' NERO, e a
+       3840x2160 pannello, icone e orologio coprono il 2,7 % ⇒ il giudice di
+       `12-client-veri` (dominante >= 97 %) lo chiamava «degenere» — ma la
+       fotografia mostrava il desktop vero.  ⇒ Qui un desktop con fotogrammi
+       dipinti e ALMENO 40 colori distinti e' vivo: il giudizio vero di questo
+       banco e' la scena accesa dopo, non il primo fotogramma."""
+    if e == VERDE:
+        return e, m
+    import re
+    c = re.search(r"colori distinti (\d+)", m or "")
+    if (s or {}).get("dipinti") and c and int(c.group(1)) >= 40:
+        return VERDE, "desktop scuro ma vivo (%s colori distinti): %s" % (c.group(1), m)
+    return e, m
+
+
 def aspetta_riga(sc, segno, chi, forme, tetto):
     fine = time.time() + tetto
     while time.time() < fine:
@@ -184,12 +202,44 @@ def aspetta_riga(sc, segno, chi, forme, tetto):
     return None, None
 
 
+def dimensiona(g, nome, largo, alto):
+    """⭐ La finestra alla misura delle specifiche (4K), e si RILEGGE.
+
+    ⚠ Le guide di `12-client-veri.py` nascono a 1400x1000; qui la misura si
+      chiede dopo, e quel che vale e' `innerWidth` letto dalla pagina."""
+    try:
+        if nome == "firefox":
+            g.m.chiama("WebDriver:SetWindowRect",
+                       {"x": 0, "y": 0, "width": largo, "height": alto})
+        elif nome == "chrome":
+            # ⚠ `[M]` 23 set 2026, dentro labwc: la misura chiesta coi numeri
+            #   Chrome la ignora (restava 1376x888); lo stato «massimizzata» lo
+            #   onora il compositore.  Si chiede prima quello, poi i numeri.
+            w = g.cdp.chiama("Browser.getWindowForTarget")
+            wid = w.get("windowId") if isinstance(w, dict) else None
+            if wid is None and isinstance(w, dict):
+                wid = (w.get("result") or {}).get("windowId")
+            g.cdp.chiama("Browser.setWindowBounds", windowId=wid,
+                         bounds={"windowState": "maximized"})
+    except Exception as e:                       # noqa: BLE001
+        return "⚠ misura non cambiata: %s" % str(e)[:120]
+    time.sleep(1)
+    try:
+        return "finestra %sx%s (dpr %s)" % tuple(g.js(
+            "return [innerWidth, innerHeight, devicePixelRatio]"))
+    except Exception as e:                       # noqa: BLE001
+        return "⚠ misura non riletta: %s" % str(e)[:120]
+
+
 def un_browser(nome, o, sc, chi, gesto):
     print("\n══ %s ══════════════════════════════" % nome.upper(), flush=True)
     esito = {"browser": nome}
     g = VERI.accendi_guida(nome, o)
     try:
         print("   palco: %s" % g.palco(), flush=True)
+        if o.largo:
+            esito["finestra"] = dimensiona(g, nome, o.largo, o.alto)
+            print("   %s" % esito["finestra"], flush=True)
         pr = VERI.Prova(g, o, o.url, o.parola)
 
         # ── 1. il primo accesso ────────────────────────────────────────────
@@ -200,6 +250,7 @@ def un_browser(nome, o, sc, chi, gesto):
         if e != VERDE:
             return dict(esito, esito=CIECO, perche="primo accesso: " + m)
         e, m, s = pr.primo_fotogramma()
+        e, m = desktop_scuro_ma_vivo(e, m, s)
         print("   ⭐ primo accesso: %s" % m, flush=True)
         if e != VERDE:
             return dict(esito, esito=CIECO, perche="primo accesso senza immagine: " + m)
@@ -211,8 +262,8 @@ def un_browser(nome, o, sc, chi, gesto):
             return dict(esito, esito=CIECO, perche="non leggo il registro del server")
         c, t = sc.come_utente(chi, gesto)
         if c != 0:
-            return dict(esito, esito=CIECO, perche="il gesto «Esci» non ha risposto: %s"
-                        % t[-200:])
+            return dict(esito, esito=CIECO, perche="il gesto «Esci» non ha risposto "
+                        "(codice %s): %s" % (c, t[-300:]))
         t_esci = time.time()
         forma, riga = aspetta_riga(sc, segno, chi, [p for p, _d in C20.RIGHE_FINITA],
                                    o.attesa_uscita)
@@ -256,6 +307,7 @@ def un_browser(nome, o, sc, chi, gesto):
             return dict(esito, esito=ROSSO, perche="dopo «Esci» NON RIENTRA: %s" % m,
                         pagina=coda, server=sc.registro_da(segno2, chi)[-25:])
         e, m, s = pr.primo_fotogramma()
+        e, m = desktop_scuro_ma_vivo(e, m, s)
         print("   %s secondo accesso: %s" % ("⭐" if e == VERDE else "⛔", m), flush=True)
         if e != VERDE:
             return dict(esito, esito=ROSSO if e == ROSSO else CIECO,
@@ -318,6 +370,10 @@ def main():
     a.add_argument("--passo-s", type=float, default=0.2)
     a.add_argument("--tetto-s", type=int, default=45)
     a.add_argument("--porte-base", type=int, default=2951)
+    # ⭐ Le specifiche sono 4K (l'utente, 23 set 2026): la finestra si porta a
+    #   3840x2160.  `--largo 0` lascia la misura delle guide (1400x1000).
+    a.add_argument("--largo", type=int, default=3840)
+    a.add_argument("--alto", type=int, default=2160)
     o = a.parse_args()
     # ⚠ i campi che le guide e `Prova` di 12-client-veri si aspettano
     o.url = "https://%s:%d/" % (o.host, PORTE[o.scatola])

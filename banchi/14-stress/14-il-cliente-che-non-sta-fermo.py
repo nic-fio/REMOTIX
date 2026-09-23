@@ -518,6 +518,8 @@ def gira(o):
     try:
         print("== il browser VERO e VISIBILE ==", flush=True)
         b = nucleo.avvia_browser(o.browser, porta)
+        if o.largo:
+            print("   finestra: %s" % a_misura(b, o.largo, o.alto), flush=True)
         ok, perche = b.apri()
         print("   apri: %s — %s" % (ok, perche), flush=True)
         if not ok:
@@ -872,6 +874,34 @@ def certifica():
     return 1 if guai[0] else 0
 
 
+def a_misura(b, largo, alto):
+    """⭐ La finestra alla misura delle specifiche (4K), RILETTA dalla pagina.
+
+    ⚠ `[M]` 23 set 2026, dentro labwc: Chrome ignora la misura chiesta coi
+      numeri (restava 1376x888) e onora «massimizzata»; Firefox onora i
+      numeri.  ⇒ Prima i numeri, poi, se non bastano, massimizzata."""
+    b.misura(largo, alto)
+    def letta():
+        try:
+            return b.g.js("return [innerWidth, innerHeight]")
+        except Exception:                        # noqa: BLE001
+            return None
+    m = letta()
+    if not m or m[0] < largo * 0.9:
+        try:
+            if b.marca == "firefox":
+                b.g.m.chiama("WebDriver:MaximizeWindow", {})
+            else:
+                w = b.g.cdp.chiama("Browser.getWindowForTarget")
+                b.g.cdp.chiama("Browser.setWindowBounds", windowId=w["windowId"],
+                               bounds={"windowState": "maximized"})
+            time.sleep(1.0)
+        except Exception as e:                   # noqa: BLE001
+            return "⚠ non massimizzata: %s (misura %s)" % (str(e)[:100], m)
+        m = letta()
+    return "%sx%s" % tuple(m) if m else "⚠ misura non riletta"
+
+
 def main():
     a = argparse.ArgumentParser(
         description="un cliente che muove il mouse di continuo, e misura se "
@@ -885,6 +915,10 @@ def main():
     a.add_argument("--parola", default="prova-lunga-2026")
     a.add_argument("--scena", default="testimone")
     a.add_argument("--attesa-scena", type=float, default=25.0)
+    # ⭐ Le specifiche sono 4K (l'utente, 23 set 2026).  `--largo 0` lascia la
+    #   misura con cui il browser nasce.
+    a.add_argument("--largo", type=int, default=3840)
+    a.add_argument("--alto", type=int, default=2160)
     # ⛔ IL GUASTO INNESTATO: il compositore dell'inquilino si congela per
     #    questi secondi (25 se non si dice) — e il giudice DEVE dare 1.
     a.add_argument("--schermo-congelato", type=float, nargs="?", const=CONGELA_S,
