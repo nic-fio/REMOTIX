@@ -162,6 +162,27 @@ su un desktop tranquillo.  ⚠ E il campo testimone cambia tutte le sue 240 cell
 ⭐ E un guasto INNESTATO che si governa, accanto: 83 delta tolti dal flusso
    registrato (un NAL ogni 40, mai una chiave) ⇒ **peggiore 55,0 %, ROSSO**.
 
+⭐⭐ E LA FOTOGRAFIA VERA, che e' il pezzo che chiude il giro.  I due numeri di
+   sopra vengono da un decodificatore terzo; questi vengono da `fotografa_tela()`
+   di un browser VERO sul tablet, cioe' dalla tela che l'utente guarda.
+   `[M]` 23 settembre 2026, `rete11-kde`, binario `9b5df38b`, scena testimone
+   col motore, una fotografia **al secondo** per 60 s:
+
+    browser    tela      fotografia   viste  celle    guaste   peggiore  esito
+    ──────────────────────────────────────────────────────────────────────────
+    Firefox   1448x862   1368 px      35     8 400      0       0,00 %   VERDE
+    Chrome    1460x888    609 px      37     8 880      0       0,00 %   VERDE
+
+⛔ Le due strade di `fotografa_tela()` sono diverse davvero — Marionette
+   consegna l'elemento a misura piena, Chrome lo riduce a 640 px con `clip` e
+   `scala` — e la cornice trovata lo dice: **1368 px contro 609**, un fattore
+   2,25.  ⭐ L'occhio non se ne accorge: la geometria se la fa dire dalla scena
+   invece di indovinarla.
+⚠ E delle 51 e 53 fotografie prese, 14 per parte sono «non ho guardato»: e' il
+  browser della scena che deve ancora comparire dentro la sessione (a freddo,
+  dentro una scatola, ci mette una ventina di secondi).  ⇒ Chi aggancia questo
+  modulo dia alla scena il tempo di salire, o quelle fotografie sono esito 3.
+
 ═══════════════════════════════════════════════════════════════════════════════
 ⭐ E UN SECONDO GIUDICE, sui soli NUMERI, che costa quasi zero
 ═══════════════════════════════════════════════════════════════════════════════
@@ -841,6 +862,34 @@ def deposita_scena(nucleo, desktop, dove=DOVE_NELLA_SCATOLA):
                                         "controllo negativo di §1.49")
     return True, ("scena testimone in %s (%d byte), registrata come «%s» e «%s»"
                   % (dove, byte, NOME_SCENA, NOME_SCENA_SCARICA))
+
+
+def foto(browser):
+    """⭐ Una fotografia della TELA, in byte, comunque il guidatore la dia.
+
+    ⛔⛔ E QUESTO NON E' UN DOPPIONE DI `_comune.foto()` — 23 set 2026.
+       `Browser.fotografa()` gira a `fotografa_tela()` dei due guidatori, e
+       tutt'e due tornano una **coppia** `(byte, perche)` (`12-client-veri.py`
+       righe ~447 e ~708).  `scenari/_comune.py:foto()` prova `bytes`, prova
+       `str`, e per tutto il resto torna `None` ⇒ **su una coppia torna sempre
+       `None`**: chi la usa non ha mai una fotografia, e non lo scopre perche'
+       `None` e' anche il modo legittimo di dire «non ho potuto guardare».
+       ⚠ Segnalato a chi tiene `_comune.py`; qui si scarta la coppia e basta,
+         perche' un occhio che non riceve mai un pixel non e' un occhio.
+    """
+    d = browser.fotografa()
+    if isinstance(d, tuple):                     # ⭐ (byte, perche)
+        d = d[0]
+    if isinstance(d, (bytes, bytearray)):
+        return bytes(d)
+    if isinstance(d, str):
+        if d.startswith("data:"):
+            d = d.split(",", 1)[1]
+        try:
+            return base64.b64decode(d)
+        except Exception:                        # noqa: BLE001
+            return None
+    return None
 
 
 def guarda_per(foto, quante=None, cornice=None):
