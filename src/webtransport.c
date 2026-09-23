@@ -4693,6 +4693,14 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 		    "il regolatore del ritmo lo ha frenato (fase 9: l'arretrato ha "
 		    "raggiunto i posti) — ma il figlio lo aveva gia' CODIFICATO, e i "
 		    "riferimenti del codificatore sono andati avanti senza di lui");
+		/* ⛔⛔⭐ E LA CHIAVE SI CHIEDE ADESSO, NON AL PROSSIMO BATTITO — 23 set
+		 *      2026, ed e' il prezzo della cura di stamattina misurato e tolto.
+		 *
+		 *      Con il debito acceso `rcp_video_apri()` rifiuta OGNI delta
+		 *      (`rcp.c`, il ramo `RCP_VIDEO_SERVE_UNA_CHIAVE`): finche' la
+		 *      chiave non esce, lo schermo dell'utente e' FERMO.  ⇒ Quanto dura
+		 *      quel buio non e' un dettaglio, e' il ritmo. */
+		video_regola(w, ora_ms);
 		return true; /* ⛔ questo fotogramma NON parte: E' la discesa */
 	}
 
@@ -5039,6 +5047,51 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	/* ⛔ Solo con una sessione RCP viva: prima non c'e' niente da buttare
 	 *    fuori, e in chiusura il motivo l'ha gia' scelto qualcun altro. */
 	if (!w->rcp || w->chiusura >= 0)
+		return;
+	/* ⛔⭐ E «VIVA» NON E' `w->rcp != NULL`: UNA SESSIONE FINITA C'E' ANCORA.
+	 *
+	 *    `w->rcp` si azzera solo in `wt_stream_chiuso()`, cioe' quando il
+	 *    CLIENT chiude lo stream della CONNECT o il canale di controllo.  Se
+	 *    il client si congeda e poi **sparisce** — la scheda si chiude e il
+	 *    processo del browser esce, che e' il caso normale — quello stream non
+	 *    si chiude mai: `rcp_chiusa_dal_client()` porta la sessione a
+	 *    `"finita"` e libera il posto, ma il puntatore resta.  ⇒ Qui si
+	 *    continuava a giudicare una connessione che NOI stessi avevamo appena
+	 *    dichiarato conclusa, e dieci secondi dopo usciva un ⛔ `LINEA MORTA`
+	 *    su un client che aveva salutato per bene.
+	 *
+	 * ⛔ E' esattamente lo stato su cui `regola_tienila_viva()` spegne i PING
+	 *    scrivendo «la sessione e' finita, non c'e' piu' niente da tenere
+	 *    vivo»: due giudizi opposti sullo stesso fatto, a dieci secondi di
+	 *    distanza, nello stesso registro.  ⇒ Questa riga li riallinea, e non
+	 *    e' una politica nuova: e' il commento qui sopra che diventa vero.
+	 *
+	 * `[M]` 22 set 2026, 10:30:11.698-10:30:22.330 UTC (`registri-22set/
+	 *       kde-1045.log`): congedo `motivo=0x01` «la scheda e' stata chiusa»
+	 *       → PING spenti a 10:30:11.798 → capsula di chiusura a 10:30:12.199
+	 *       → ⛔ `LINEA MORTA causa=silenzio` a 10:30:22.330, con
+	 *       `offerti=0 usciti_byte=0 coda_video=0 persi=0`.  Il giornale del
+	 *       tablet data l'uscita del processo di Chrome alle 12:30:11 locali,
+	 *       cioe' PRIMA del silenzio.
+	 *
+	 * ⚠ E NON TOGLIE NIENTE ALLA CURA, perche' chi muore non saluta: un client
+	 *   ucciso (`kill -9`, il browser chiuso di forza, la rete che cade) lascia
+	 *   la sessione `"attiva"` e la linea morta scatta come prima — e' la
+	 *   PROVA 3 di `banchi/09-b81-linea-morta.py`, e sono due dei tre episodi
+	 *   del 22 settembre (12:41 e 12:42), che restano scatti GIUSTI.
+	 *
+	 * ⛔ E la connessione NON si chiude qui: «sessione finita, connessione
+	 *    ancora viva» e' uno stato PREVISTO due volte in questo file —
+	 *    `fin_dal_client()` («la pagina che chiude la parte scrivente del
+	 *    canale e tiene viva la connessione») e `chiusa_dal_client()` («il
+	 *    posto si lascia adesso ... aspettare lo smontaggio del trasporto vuol
+	 *    dire tenerlo occupato addosso a chi si ricollega subito»).  In tutt'e
+	 *    due la scelta fu liberare il POSTO e lasciare il trasporto in piedi,
+	 *    e `wt_stream_chiuso()` rimette `w->sessione` a -1 apposta perche' una
+	 *    sessione nuova possa aprirsi li' sopra.  ⇒ Chiudere la connessione
+	 *    disferebbe quella decisione; e i PING sono gia' spenti, quindi il
+	 *    trasporto se ne va da solo col `max_idle_timeout` di 30 s. */
+	if (rcp_e_finita(w->rcp))
 		return;
 
 	/* ⛔ Il primo giro FOTOGRAFA e non giudica: senza questa riga la prima
@@ -5480,6 +5533,14 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 		    "il fotogramma catturato non porta la tela in vigore (§6.2) — ma "
 		    "era gia' CODIFICATO, e i riferimenti del codificatore sono andati "
 		    "avanti senza di lui");
+		/* ⛔ La chiave si chiede ADESSO, per la stessa ragione del gemello in
+		 *    `ritmo_frena()`: col debito acceso ogni delta viene rifiutato, e
+		 *    aspettare il battito vuol dire tenere lo schermo fermo.
+		 * ⚠ E `ora_ms` qui non e' ancora stato letto — lo si legge adesso
+		 *   invece di spostare la riga piu' in su: quella sta DOPO i tre
+		 *   controlli «questo fotogramma e' mio?» apposta (vedi il riquadro di
+		 *   `lm_offerti`), e muoverla cambierebbe un'altra cosa. */
+		video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 		return;
 	}
 	/* ⭐ Tela e fotogramma sono d'accordo: il fondo del messaggio di sopra si
