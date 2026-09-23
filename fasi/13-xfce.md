@@ -735,7 +735,7 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va in **9 ms**
   (10:39:11.675 congedo → 10:39:11.684 «connessione chiusa»): il comportamento dipende dal client, e
   Chrome che esce non saluta a livello QUIC.
-  ⇒ Il guardiano è `linea_morta_giudica()`, `src/webtransport.c:5027`: si fermava su `!w->rcp ||
+  ⇒ Il guardiano è `linea_morta_giudica()` (`src/webtransport.c`): si fermava su `!w->rcp ||
   w->chiusura >= 0`, **ma non guardava lo stato `"finita"`** — lo stesso stato su cui
   `regola_tienila_viva()` (`src/webtransport.c:~3185`) spegne i PING. ⛔ `w->rcp` non si azzera al
   congedo: lo azzera solo `wt_stream_chiuso()`, cioè il CLIENT che chiude lo stream — e un browser
@@ -751,7 +751,7 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   rimette `w->sessione` a `-1` apposta perché una sessione nuova possa aprirsi lì sopra. ⇒ La
   seconda strada disferebbe una decisione presa due volte; la prima non è un cerotto, è **il
   commento che c'era già che diventa vero**. E lo spreco non c'è: i PING sono già spenti, e il
-  trasporto se ne va da solo col `max_idle_timeout` di 30 s (`src/trasporto.c:74`).
+  trasporto se ne va da solo col `max_idle_timeout` di 30 s (`src/trasporto.c`).
 
   `[M]` **23 set 2026, scatola `gnome` (8511), binario `5f0be589`, Chrome 153 VERO headless** — due
   giri identici con **una sola differenza**: se il client saluta prima di sparire.
@@ -784,7 +784,7 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   23 set 2026, trovato curando la linea morta. Al congedo liberiamo il posto (`posto LASCIATO …
   occupati adesso: 0`) ma **non** spegniamo la cattura: quella si ferma solo quando se ne va la
   connessione QUIC. Nel mezzo ogni fotogramma viene catturato, codificato, offerto, **rifiutato** da
-  `rcp_video_apri()` (`src/rcp.c:4229`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) e messo a verbale come
+  `rcp_video_apri()` (`src/rcp.c`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) e messo a verbale come
   `⛔ NIENTE VIDEO: «SESSIONE» non è stata spedita (stato finita)`.
   ⇒ È lavoro fatto per nessuno **e** una riga ⛔ che somiglia a un guasto. 🔸 La cura sensata è
   spegnere il ciclo dei fotogrammi sullo stesso evento che libera il posto — ⚠ ma va guardata contro
