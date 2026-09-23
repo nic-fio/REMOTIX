@@ -262,6 +262,15 @@ def foto(browser):
       worker, e li' la lettura dal documento non vede niente.
     """
     d = browser.fotografa()
+    # ⛔⛔ `fotografa_tela()` torna una COPPIA `(byte, perche')` in tutt e due i
+    #     guidatori (`12-client-veri.py`, Marionette e CDP) ⇒ senza questa riga
+    #     si cadeva nel `return None` finale e questa funzione non ha MAI
+    #     restituito un pixel.  `[M]` 23 set 2026, provata con `(b'ciao', '')`.
+    # ⚠ E il difetto era invisibile perche' `None` e' ANCHE il modo legittimo di
+    #   dire «non ho potuto guardare»: chi la usava non vedeva niente e non
+    #   aveva nessun motivo di sospettare.
+    if isinstance(d, tuple):
+        d = d[0]
     if isinstance(d, (bytes, bytearray)):
         return bytes(d)
     if isinstance(d, str):
