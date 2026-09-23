@@ -737,7 +737,7 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   Chrome che esce non saluta a livello QUIC.
   ⇒ Il guardiano è `linea_morta_giudica()` (`src/webtransport.c`): si fermava su `!w->rcp ||
   w->chiusura >= 0`, **ma non guardava lo stato `"finita"`** — lo stesso stato su cui
-  `regola_tienila_viva()` (`src/webtransport.c:~3185`) spegne i PING. ⛔ `w->rcp` non si azzera al
+  `regola_tienila_viva()` (`src/webtransport.c`) spegne i PING. ⛔ `w->rcp` non si azzera al
   congedo: lo azzera solo `wt_stream_chiuso()`, cioè il CLIENT che chiude lo stream — e un browser
   che esce non lo chiude mai. ⇒ **Cura: una riga, `if (rcp_e_finita(w->rcp)) return;`**.
 
