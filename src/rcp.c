@@ -7773,7 +7773,13 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		}
 		if (s->verdetto_atteso)
 			return true; /* PAM sta ancora rispondendo, e il filo intanto gira */
-		if (ora - s->cred_arrivo < RITARDO_FISSO)
+		/* ⛔ `<=` e non `<`: `ora` e `cred_arrivo` sono millisecondi TRONCATI,
+		 *    quindi una differenza di 1000 puo' essere 999,x ms veri.  `[M]` 23
+		 *    set 2026: 15 ammessi su 50 a 999 ms su gnome, 16 su 50 su kde — e
+		 *    il cliente di prova, che §4.4-bis la guarda, se ne andava dicendo
+		 *    «meno di un secondo» (C20 «non ho potuto guardare» su gnome e kde).
+		 *    Il secondo fisso e' un PAVIMENTO: si paga al massimo 1 ms in piu'. */
+		if (ora - s->cred_arrivo <= RITARDO_FISSO)
 			return true;
 		reg(s, "il secondo fisso e' passato (%llu ms)",
 		    (unsigned long long)(ora - s->cred_arrivo));
