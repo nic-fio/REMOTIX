@@ -654,6 +654,63 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
 
 ## Che cosa resta [?]
 
+### ⭐ Lo stato al 23 settembre 2026, sera — i quattro punti prima di LXQt
+
+L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e come sono adesso:
+
+| # | punto | stato |
+|---|---|---|
+| 1 | **C20 non guarda** («non ho potuto guardare» dopo «Esci») | ✅ **CAPITO E CURATO** — non era «Esci» né il desktop: il **secondo fisso** di §4.4-bis durava **999 ms** (sotto) |
+| 2 | **sessioni lunghe** coi browser veri solo su kde/Firefox | ⏳ **in corso stanotte**: gnome e xfce, Firefox e Chrome, 20 min, 4K, mouse in moto |
+| 3 | **la guardia del battito** non è permanente | 🔸 **scritta** (`32511f9`), certificata a banco; ⏳ taratura e guasto innestato sul ferro stanotte |
+| 4 | Chrome Android su XFCE | ⏳ dell'utente |
+
+- ✅ **LA RETE DEL 23 SET SERA — nessun rosso** — binario `3fa352a2`, `--famiglia tutto`, gnome + kde +
+  xfce, **14 571 s** (4 h 03). Ogni scatola **18 su 18** nei controlli di base, tutti i guasti innestati
+  VISTI, C14 (le tre scatole sole e insieme) regge, «nessun rosso, né qui né là».
+  ⚠ L'unico buco: **C20 «non ho potuto guardare» su tutte e tre**, nei due giri. È la voce qui sotto.
+
+- ✅ **IL SECONDO FISSO ERA DI 999 MS** — trovato e curato il 23 set 2026, sera (`612b0ed`), binario
+  **`e681a262`**. `ora - cred_arrivo < RITARDO_FISSO` confrontava millisecondi **troncati**: una
+  differenza di 1000 può essere 999,x ms veri, e `AMMESSO` partiva **prima** del secondo.
+  `[M]` Dai registri delle scatole: **gnome 15 ammessi su 50 a 999 ms, kde 16 su 50**.
+  ⇒ Il cliente di prova, che §4.4-bis la guarda, se ne andava dicendo «meno di un secondo», e C20 al
+  secondo accesso restava senza cliente: su gnome la maglia, arrendendosi, faceva `terminate-user` —
+  **il segnale 15 che nel giornale sembrava logind** —, su kde e xfce nessuno si riattaccava e il
+  prodotto, giustamente, non rifaceva il desktop. ⭐ La cura è `<=`: si paga al massimo 1 ms.
+  ⚠ **Per l'utente vero l'effetto era nullo**: i browser non fanno quel controllo. Era la rete a non
+  poter guardare — cioè una guardia cieca su uno dei difetti che l'utente aveva trovato a mano.
+
+- ✅ **C20 COI BROWSER VERI, IN 4K: VERDE OVUNQUE** — 23 set 2026, sera (`b3b8f5b`), binario
+  `e681a262`. Nuovo banco `banchi/12-c20-veri.py`: accesso, «Esci» dal menu, **nuovo accesso dalla
+  stessa pagina**, la scena di C20, e la tela fotografata e giudicata col giudice di C20. Finestre vere
+  dentro un **labwc annidato senza schermo a 3840x2160** (le specifiche sono 4K — l'utente, 23 set).
+
+  | | Firefox 140 | Chrome 154 |
+  |---|---|---|
+  | **gnome** | ⭐ VERDE, 0 salti | ⭐ VERDE, 0 salti |
+  | **kde** | ⭐ VERDE, 0 salti | ⭐ VERDE, 0 salti |
+  | **xfce** | ⭐ VERDE ×3, 0 salti | ⭐ VERDE, 0 salti |
+
+  In tutti: dopo «Esci» la pagina torna al modulo con *«la sessione e' terminata: i programmi sono
+  stati chiusi»*, e il nuovo accesso ha l'immagine in 0,3–1,6 s. ⚠ Tre difetti **del banco**, trovati
+  facendolo girare, sono nel messaggio di `b3b8f5b` (Chrome dentro labwc vuole «massimizzata»; xfce
+  in 4K ha lo sfondo nero e il giudice di `12-client-veri` lo chiamava degenere; il gesto «Esci» di
+  xfce lanciato senza raccogliere lo stderr).
+  ⚠ La **maglia** C20 della rete resta col cliente Python: coi 999 ms curati torna a poter guardare,
+  e lo dirà la rete di stanotte.
+
+- 🔸 **LA GUARDIA DEL BATTITO È SCRITTA** — 23 set 2026 (`32511f9`). Il mouse che si muove è entrato
+  in **tutti** gli scenari di `banchi/14-stress` che guardano lo schermo, come comportamento normale del
+  cliente (`scenari/_comune.py`, il `Topo`; `REMOTIX_TOPO=no` lo spegne per la controprova). Il giudice
+  `giudica_il_blocco`: soglia **`[?]` 10 s** sul blocco più lungo senza fotogrammi nuovi, ad almeno 30 s
+  guardati e mouse in moto in metà dei secondi. Il guasto innestato **senza ricompilare**:
+  `--schermo-congelato` ferma il compositore dell'inquilino (SIGSTOP, trovato dal suo socket Wayland,
+  non per nome) per ~25 s e lo rilascia sempre. Certificazioni pure: banco 14 **53 prove 0 guai**,
+  scenari **45 OK**, nucleo 91, occhio 37.
+  ⏳ Sul ferro mancano la **taratura** (le quattro sessioni lunghe di stanotte danno il blocco più lungo
+  sano) e un giro **col guasto** per desktop.
+
 - ✅ **KDE RIPARTE DOPO UN RIAVVIO DEL SERVER ANCHE SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
   binario `1c592928`. Trovato dall'utente: la sessione Plasma sopravvive al server (I4), ⛔ ma la tabella
   delle tele dei palchi vive nel PROCESSO e col riavvio si azzera ⇒ il ripiego di §4.5 («si concede quel
