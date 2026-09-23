@@ -505,6 +505,11 @@ struct wt {
 	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
 	 * fondo di una richiesta ripetuta verso il palco. */
 	uint64_t chiave_chiesta_ms;
+	/* ⛔⭐ LA SECONDA CINTURA del 23 set 2026 (vedi `batti_fra()` e
+	 *     `video_rifiutato_per_chiave()`): il debito di §5.2 acceso da troppo
+	 *     tempo si dice UNA volta per episodio, non 45 278.  Si spegne quando
+	 *     una chiave riparte. */
+	bool debito_detto;
 	/* ⭐ Quanto misurava l'ultima CHIAVE spedita, in byte, e l'ultimo intervallo
 	 *    che le e' stato applicato — servono a `chiave_intervallo_ms()`, e il
 	 *    secondo esiste solo per non ripetere la stessa riga di registro
@@ -1513,10 +1518,84 @@ static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
 
 /* ------------------------------------------------------------------------ */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔⛔⭐⭐ IL BATTITO E' UNA SCADENZA, NON UN RINVIO — 23 set 2026, e questa
+ *         riga sola vale **698 secondi di schermo fermo su 1199**.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * `[M]` Sessione VERA di 20 minuti, Firefox visibile su `rete11-kde`, scena in
+ *       movimento, binario `cd8a3aec`:
+ *
+ *         · 698 s su 1199 (il **58 %**) senza un solo fotogramma nuovo;
+ *         · sette blocchi sopra i 20 s: 74 · 56 · 62 · 25 · **370** · 53 · 56;
+ *         · dentro i blocchi **45 278** fotogrammi catturati, composti,
+ *           codificati e buttati prima del filo (~13 GB di codifica per
+ *           nessuno, su una Intel UHD 730 integrata);
+ *         · l'immagine non si rompe MAI (1146 fotografie, zero celle guaste):
+ *           ⇒ non era corruzione, era un **blocco**.
+ *
+ * ⛔ E LA CAUSA NON E' DOVE LA SI CERCAVA.  L'ipotesi in campo era una corsa
+ *    fra due richieste di chiave («la chiave che esce paga il debito sbagliato»).
+ *    **Falsa**: nel registro ogni richiesta ha la sua chiave, il figlio
+ *    risponde sempre entro ~17 ms, e §5.2 si comporta come dichiarato.
+ *
+ * ⭐⭐ LA CAUSA E' QUI.  `batti_fra()` **spostava in avanti** la scadenza a
+ *     ogni chiamata, e `regola_battito()` — che la chiama — sta in fondo a
+ *     `rcp_passa_input()`, cioe' gira **a ogni messaggio di input del client**.
+ *     Un browser vero che segue il mouse ne manda ~40 al secondo.
+ *
+ *       ⇒ scadenza a 1000 ms, rimandata 40 volte al secondo ⇒ **non matura MAI**
+ *
+ *     E con lei non gira `wt_batti()`, cioe' NON girano:
+ *       · `video_regola()`  — l'unico che RIchiede la chiave al palco (§5.2);
+ *       · `rcp_tempo()`     — l'orologio del silenzio §5.3 e i tetti di §4.6;
+ *       · `audio_regola()`, `ritmo_ciclo()`, `rete_ciclo()`.
+ *
+ * `[M]` LA PROVA, dal registro della sessione vera, e non lascia scampo:
+ *
+ *         13:26:29.990  un delta frenato riaccende il debito di §5.2
+ *                       (`rcp_video_scartato_prima_del_filo()`), e la richiesta
+ *                       in linea cade nel fondo dei 150 ms — 35 ms troppo presto
+ *         13:26:30 → 13:32:39   **nessuna** riga `rete-quic`, **nessuna** riga
+ *                       `ritmo di`, **nessuna** richiesta di chiave: il battito
+ *                       non e' mai maturato.  L'input, intanto, scorre a ~40/s
+ *         13:32:38.615  **ultimo** messaggio di input del client
+ *         13:32:39.615  battito, **esattamente 1000 ms dopo** — e con lui
+ *                       `rete-quic … da_ms=370927`, la richiesta di chiave, e
+ *                       13:32:39.640 il fotogramma 7975 SPEDITO: CHIAVE
+ *
+ *       ⇒ Il blocco non e' finito «da se'»: e' finito quando l'utente ha
+ *         smesso di muovere il mouse per un secondo.  ⭐ `da_ms=370927` e'
+ *         il battito che confessa per iscritto quanto e' stato fermo.
+ *
+ * ⛔ E LA RETE NON L'AVEVA VISTO — passata verde sullo stesso binario: il
+ *    cliente Python non manda 40 input al secondo, e i giri sono corti.
+ *    ⇒ Un verde non e' una prova quando il banco non fa la cosa che rompe.
+ *
+ * ⭐ LA CURA: chi chiede «battimi fra X» fissa un TETTO, non un appuntamento.
+ *    Una scadenza gia' fissata e piu' VICINA resta dov'e'; solo una piu'
+ *    vicina la puo' spostare.  Cosi' nessuna sequenza di eventi, per fitta che
+ *    sia, puo' allontanare il battito all'infinito.
+ *
+ * ⚠ E il caso «e' appena scattato» non si perde: quando `wt_batti()` chiama
+ *   `regola_battito()`, la scadenza vecchia e' <= adesso — quindi NON e' nel
+ *   futuro, non vince, e il battito si riarma regolarmente.  Senza quella
+ *   condizione la scadenza resterebbe nel passato e il ciclo girerebbe a
+ *   vuoto al 100 % di CPU (e' lo stesso difetto scritto in `wt_battito_ns()`).
+ *
+ * ⛔ Chi tocca questa funzione si chieda una cosa sola: *«un evento che il
+ *    client puo' ripetere a volonta' puo' impedire a questa scadenza di
+ *    maturare?»*  Se si', il difetto e' tornato. */
 static void batti_fra(wt *w, uint64_t ms)
 {
+	ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
+	ngtcp2_tstamp quando = ora + ms * NGTCP2_MILLISECONDS;
+
+	if (w->battito_ms && w->battito > ora && w->battito < quando)
+		quando = w->battito;
+
 	w->battito_ms = ms;
-	w->battito = ngtcp2_conn_get_timestamp(w->conn) + ms * NGTCP2_MILLISECONDS;
+	w->battito = quando;
 }
 
 ngtcp2_tstamp wt_battito_ns(const wt *w)
@@ -3502,6 +3581,31 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
  *    stima e che nel frattempo passa anche l'audio. */
 #define WT_CHIAVE_MARGINE_PC 120
 
+/* ⛔⭐⭐ LA SECONDA CINTURA — «il debito e' acceso da troppo, e nessuno chiede
+ *       piu' niente» — 23 set 2026.
+ *
+ *       La cura vera del blocco da 370 s sta in `batti_fra()`: il battito non
+ *       si puo' piu' rimandare all'infinito, quindi `video_regola()` torna a
+ *       girare **almeno una volta al secondo** e la chiave si richiede da se'.
+ *
+ * ⛔ Ma quella cura dipende da UN solo anello — il battito.  E la lezione di
+ *    oggi e' esattamente questa: *un sistema che dipende dal fatto che due
+ *    eventi non si accavallino mai e' un sistema che si blocca.*  ⇒ Serve una
+ *    strada che NON passi dal battito.
+ *
+ * ⭐ E ce n'e' una perfetta: i fotogrammi rifiutati.  Mentre il debito e'
+ *    acceso il figlio continua a consegnare (`[M]` ~123 Mbit/s di codifica
+ *    buttata), e ogni rifiuto e' un'occasione per accorgersene.  ⇒ Se dal
+ *    l'ultima richiesta al palco e' passato piu' di questo tempo e il debito
+ *    e' ancora acceso, si richiede la chiave DA LI'.
+ *
+ * ⚠ Un secondo, non 150 ms: e' il passo del battito nello stato `attiva`, cioe'
+ *   il ritmo che la richiesta di chiave ha GIA' oggi quando tutto funziona.
+ *   Metterlo piu' stretto farebbe chiedere chiavi 6-7 volte al secondo sotto
+ *   congestione, che e' la spirale di §5.2 misurata sul banco `07-b65`.
+ *   ⇒ Questa cintura non cambia il ritmo: cambia solo il «per sempre». */
+#define WT_CHIAVE_DEBITO_TETTO_MS 1000
+
 /* ⛔ Quanti stream uni servono al video PRIMA di dire «senza credito»: `RCP.md`
  *    §2.3 vuole che l'input ne trovi sempre uno, e il video non deve mangiarsi
  *    l'ultimo posto.  ⚠ Il numero e' il minimo che §2.3 riserva a RCP diviso a
@@ -4548,6 +4652,37 @@ static void video_regola(wt *w, uint64_t ora_ms)
 			                           (unsigned long long)attesa, come);
 		}
 	}
+}
+
+/* ⛔⭐⭐ LA SECONDA CINTURA, e la chiama chi PAGA il blocco: il fotogramma
+ *       rifiutato.  Il perche' e i numeri stanno su `WT_CHIAVE_DEBITO_TETTO_MS`
+ *       e su `batti_fra()`.
+ *
+ * ⚠ Non richiede niente da se': chiama `video_regola()`, che e' l'unico posto
+ *   in cui la richiesta al palco si fa — cosi' il fondo di
+ *   `chiave_intervallo_ms()` continua a valere e non nascono due politiche per
+ *   la stessa cosa.
+ *
+ * ⛔ E la riga si scrive UNA volta per episodio: il registro della sessione
+ *    misurata ne aveva **45 278** dello stesso rifiuto, cioe' 40 MB in cui il
+ *    blocco era invisibile proprio perche' urlava sempre. */
+static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
+{
+	if (ora_ms - w->chiave_chiesta_ms < WT_CHIAVE_DEBITO_TETTO_MS)
+		return;
+	if (!w->debito_detto) {
+		w->debito_detto = true;
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "⛔ %s: il debito della CHIAVE (§5.2) e' acceso da %llu ms "
+		                 "e nessuna chiave e' arrivata — ogni delta viene rifiutato, "
+		                 "cioe' lo SCHERMO E' FERMO.  ⭐ Richiedo la chiave al palco "
+		                 "di qui, senza aspettare il battito: e' la seconda cintura "
+		                 "del 23 set 2026, e la prima (`batti_fra()`) evidentemente "
+		                 "non e' bastata",
+		                 w->provenienza,
+		                 (unsigned long long)(ora_ms - w->chiave_chiesta_ms));
+	}
+	video_regola(w, ora_ms);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -5768,14 +5903,24 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 		 *    prende QUI, dov'e' un fatto, invece di stimarla da una media —
 		 *    `[M]` sul banco 07-b65 una chiave a 1080p misura ~60 000 byte, ma
 		 *    dipende dalla scena e una costante mentirebbe sulla meta' di esse. */
-		if (chiave)
+		if (chiave) {
 			w->chiave_byte = (uint64_t)byte;
+			/* ⭐ L'episodio del debito e' chiuso: la prossima volta la riga
+			 *    ⛔ della seconda cintura si potra' riscrivere. */
+			w->debito_detto = false;
+		}
 		involo_aggiungi(w, w->video_stream_ultimo,
 		                rcp_video_ultimo_numero(w->rcp), chiave);
 		return;
 	}
 
 	w->video_saltati++;
+	/* ⛔⭐⭐ E SE IL RIFIUTO E' «serve una CHIAVE», QUESTA E' LA STRADA CHE NON
+	 *       PASSA DAL BATTITO.  `[M]` 23 set 2026: 370 s di schermo fermo e
+	 *       45 278 fotogrammi buttati mentre il battito non maturava mai —
+	 *       il racconto intero sta su `batti_fra()`. */
+	if (e == RCP_VIDEO_SERVE_UNA_CHIAVE)
+		video_rifiutato_per_chiave(w, ora_ms);
 	/* ⛔ E il rifiuto NON e' un errore fatale: §2.3 — «il server DEVE reggere
 	 * il rifiuto di aprire uno stream invece di considerarlo un errore
 	 * fatale».  ⚠ Le righe le ha gia' scritte `rcp.c`, che sa quale delle sette
