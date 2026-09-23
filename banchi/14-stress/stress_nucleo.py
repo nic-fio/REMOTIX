@@ -821,6 +821,27 @@ def _porta_libera(base):
     return clienti().porta_vuota()
 
 
+def _spegni_chi_tiene_la_porta(p):
+    """Uccide il processo in ascolto sulla porta `p`, e i suoi figli.
+
+    ⚠ Silenziosa di proposito: e' una pulizia di soccorso lungo la strada di
+      un errore, e un errore DENTRO la pulizia non deve coprire l errore vero.
+    ⛔ Niente `pkill -f`: pescherebbe il guscio che la sta eseguendo (lezione
+       del 22 set 2026).  Qui si va di pid, presi da `ss`.
+    """
+    try:
+        u = subprocess.run(["ss", "-lptnH", "sport = :%d" % int(p)],
+                           capture_output=True, text=True, timeout=10).stdout
+    except Exception:                            # noqa: BLE001
+        return
+    for pid in set(re.findall(r"pid=(\d+)", u or "")):
+        for quali in (["pkill", "-KILL", "-P", pid], ["kill", "-KILL", pid]):
+            try:
+                subprocess.run(quali, capture_output=True, timeout=10)
+            except Exception:                    # noqa: BLE001
+                pass
+
+
 def avvia_browser(marca, porta, misura=(1600, 1000), tetto_s=40):
     """⭐⭐ Apre il browser VERO e lo porta fino al modulo d accesso.
 
@@ -836,7 +857,25 @@ def avvia_browser(marca, porta, misura=(1600, 1000), tetto_s=40):
         raise ValueError("browser «%s»: qui ci sono firefox e chrome" % marca)
     url = "https://%s:%d/" % (HOST, porta)
     p = _porta_libera(2860 if marca == "firefox" else 9360)
-    guida = (C.GuidaFirefox(p, True) if marca == "firefox" else C.GuidaChrome(p, True))
+    try:
+        guida = (C.GuidaFirefox(p, True) if marca == "firefox"
+                 else C.GuidaChrome(p, True))
+    except Exception:                            # noqa: BLE001
+        # ⛔⛔ IL BROWSER SI SPEGNE ANCHE QUANDO NON SI ACCENDE.  Se
+        #     `NewSession` non risponde entro il tetto, il browser E' GIA'
+        #     PARTITO e l eccezione risale dal costruttore ⇒ nessuno ha in mano
+        #     l oggetto per chiuderlo, e resta un orfano vivo con i suoi figli,
+        #     la sua porta e la sua RAM.  `[M]` 23 set 2026: un giro fallito ha
+        #     lasciato SETTE processi.  ⚠ In una notte che ripete decine di
+        #     giri non e' un residuo: e' la ragione per cui i giri dopo
+        #     falliscono a loro volta (tre Firefox vivi bastano a far tacere
+        #     `NewSession`), cioe' un difetto che si propaga e sembra del
+        #     prodotto.
+        # ⭐ Si uccide per PORTA, non per modello: la porta l abbiamo scelta
+        #   noi in questo istante, quindi e' l unica cosa che identifica
+        #   ESATTAMENTE questo tentativo e nessun browser di Nic.
+        _spegni_chi_tiene_la_porta(p)
+        raise
     b = Browser(guida, marca, porta, url)
     if misura:
         b.misura(*misura)
