@@ -726,7 +726,7 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   un sintomo del blocco, è la **coda** del browser che l'utente chiudeva perché lo schermo era fermo.
 
 - ✅ **Una linea morta ⛔ non si scrive più su un client che ci ha appena salutato** — 23 set 2026,
-  binario `ad1587b3`, ed era l'ultimo residuo nostro dei tre episodi.
+  binario `5f0be589`, ed era l'ultimo residuo nostro dei tre episodi.
   Episodio delle 12:30: 10:30:11.698 la pagina si congeda (`motivo=0x01`, scheda chiusa) → 10:30:11.798
   **noi stessi** scriviamo «PING del trasporto spenti: la sessione è finita, **non c'è più niente da
   tenere vivo**» → 10:30:12.199 spediamo la capsula di chiusura → e poi teniamo aperta la connessione
@@ -753,8 +753,14 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   commento che c'era già che diventa vero**. E lo spreco non c'è: i PING sono già spenti, e il
   trasporto se ne va da solo col `max_idle_timeout` di 30 s (`src/trasporto.c:74`).
 
-  `[M]` **23 set 2026, scatola `gnome` (8511), binario `ad1587b3`, Chrome 153 VERO headless** — due
+  `[M]` **23 set 2026, scatola `gnome` (8511), binario `5f0be589`, Chrome 153 VERO headless** — due
   giri identici con **una sola differenza**: se il client saluta prima di sparire.
+  ⭐ `5f0be589` è il binario che in questo momento gira su **tutte e tre** le scatole (`md5sum
+  /proc/<pid>/exe` su gnome, kde e xfce), e contiene **tutte e tre** le cure di stamattina: `7e0c0e2`
+  (il fotogramma già codificato paga la chiave), `f5527c2` (la chiave si chiede quando nasce il
+  debito) e questa. Il server della scatola gnome è nato alle 05:06:34 UTC, cioè **prima** dei due
+  giri qui sotto, e in tutto il suo registro c'è **esattamente una** riga `linea-morta`: quella del
+  giro B.
 
   | giro | che cosa fa il client | linea morta | come finisce la connessione |
   |---|---|---|---|
