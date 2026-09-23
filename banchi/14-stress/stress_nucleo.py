@@ -582,7 +582,14 @@ def sgombera(desktop, chi):
         "id=$(id -u $u 2>/dev/null)\n"
         "userdel -r $u 2>/dev/null || userdel $u 2>/dev/null\n"
         "[ -n \"$id\" ] && systemctl reset-failed user@$id.service 2>/dev/null\n"
-        "[ -n \"$id\" ] && find /tmp -maxdepth 1 -uid $id -exec rm -rf {} + 2>/dev/null\n"
+        # ⛔⛔ `-mindepth 1`, E NON E' UN DETTAGLIO: `-maxdepth 1` da solo fa
+        #     entrare NELLA LISTA anche `/tmp` stesso, e nella scatola kde `/tmp`
+        #     risulta di proprieta' dell inquilino ⇒ lo sgombero cancellava
+        #     `/tmp` INTERO.  `[M]` 23 set 2026: si e' portato via la
+        #     registrazione di un banco in corso.  ⚠ Un banco che pulisce non
+        #     deve poter fare piu' danni del difetto che cerca.
+        "[ -n \"$id\" ] && find /tmp -mindepth 1 -maxdepth 1 -uid $id"
+        " -exec rm -rf {} + 2>/dev/null\n"
         "rm -rf /home/$u\n"
         "resta=$(id -u $u 2>/dev/null || echo no)\n"
         "fermi=$(ps -eo stat= | grep -c '^[TZ]')\n"
