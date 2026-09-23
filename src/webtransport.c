@@ -457,6 +457,25 @@ struct wt {
 	 * codec e' negoziato, e al figlio e' stato chiesto di catturare. */
 	bool video_acceso;
 	uint8_t video_codec;
+	/* ⛔⭐⭐ AL PALCO E' GIA' STATO DETTO DI SMETTERE — e NON e' il contrario
+	 *      di `video_acceso`: sono due fatti diversi, e un campo solo per due
+	 *      fatti ne spegne uno (e' la lezione scritta su `tela_detta_*` venti
+	 *      righe piu' sotto, e qui vale identica).
+	 *
+	 *      `video_acceso`  = «questa sessione HA un canale video».  Resta vero
+	 *                        fino alla fine, perche' e' lui a far uscire il
+	 *                        CONTO FINALE in `wt_libera()`: spegnerlo al
+	 *                        congedo vorrebbe dire perdere quella riga.
+	 *      `video_fermo`   = «al figlio ho gia' chiesto di NON catturare piu'».
+	 *
+	 * ⛔ E torna a `false` in `video_regola()` quando una sessione nuova fa
+	 *    ripartire il ciclo: senza quel ritorno la cura dello spreco
+	 *    romperebbe il RIAGGANCIO — una sessione nuova sulla stessa
+	 *    connessione (stato previsto due volte in questo file) troverebbe
+	 *    `video_acceso` gia' vero, non chiederebbe niente al palco, e
+	 *    l'utente resterebbe davanti a uno schermo fermo per sempre.  ⚠ E'
+	 *    molto peggio dello spreco che si sta curando. */
+	bool video_fermo;
 	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha video»: una volta
 	 *    sola, e il perche' e' nella riga scritta allora. */
 	bool video_detto;
@@ -764,6 +783,14 @@ struct wt {
 
 	bool audio_acceso;
 	uint8_t audio_codec;
+	/* ⛔ Il gemello di `video_fermo`, e il riquadro sta li': «al figlio ho gia'
+	 *    chiesto di non catturare piu'».  ⚠ Si cura QUI insieme al video e non
+	 *    un altro giorno perche' il difetto e' lo stesso e la forma e' la
+	 *    stessa — e' la lezione §1.20 scritta in questo file sui conti
+	 *    dell'audio e del video: *«una cura si cerca dovunque vale, non dove
+	 *    e' stata trovata»*, e quella volta il gemello resto' indietro cinque
+	 *    giorni. */
+	bool audio_fermo;
 	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha audio»: una volta
 	 *    sola, come `video_detto`, e per la stessa ragione. */
 	bool audio_detto;
@@ -2168,6 +2195,9 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 
 static void manda_controllo(wt *w, const uint8_t *dati, size_t len);
 static void chiudi_sessione(wt *w, uint8_t motivo);
+/* ⛔ Dichiarata qui perche' `regola_battito()` la chiama e il corpo sta dopo il
+ *    censimento di chi guarda (`video_guarda_qualcuno()`), che le serve. */
+static void cattura_spegni_se_sola(wt *w, const char *perche);
 
 static void gancio_manda(void *ctx, const uint8_t *dati, size_t len)
 {
@@ -3216,6 +3246,56 @@ static void regola_battito(wt *w)
 	const char *stato = w->rcp ? rcp_stato_nome(w->rcp) : NULL;
 
 	regola_tienila_viva(w, stato);
+
+	/* ⛔⛔⭐⭐ E SULLO STESSO STATO SI SPEGNE ANCHE IL CICLO DEI FOTOGRAMMI.
+	 *
+	 *        `fasi/13-xfce.md`, 23 set 2026: *«il palco smette di catturare
+	 *        quando muore il TRASPORTO, non quando il client si CONGEDA»*.  Al
+	 *        congedo il POSTO si lasciava subito (§4.2, `chiusa_dal_client()`)
+	 *        ma la cattura andava avanti: ogni fotogramma veniva catturato,
+	 *        composto, codificato, offerto e **rifiutato** da
+	 *        `rcp_video_apri()` (`RCP_VIDEO_PRIMA_DI_SESSIONE`), con a verbale
+	 *        `⛔ NIENTE VIDEO: «SESSIONE» non e' stata spedita (stato finita)`.
+	 *        ⇒ Lavoro della scheda video per NESSUNO, e una riga rossa che
+	 *        somiglia a un guasto.
+	 *
+	 * `[M]` La finestra durava **~30 s** — il `max_idle_timeout`, cioe' quanto
+	 *       ci mette il trasporto a morire da solo dopo che i PING sono spenti.
+	 *       Su un desktop fermo sono 11 fotogrammi; a 58 fot/s sono **venti
+	 *       secondi di codifica sprecata per ogni client che se ne va**, su una
+	 *       macchina che intanto serve altri inquilini.
+	 *
+	 * ⭐ PERCHE' PROPRIO QUI, accanto ai PING, e non dentro `fin_dal_client()`,
+	 *    `chiusa_dal_client()` e `wt_stream_chiuso()`: le strade per arrivare a
+	 *    `"finita"` sono SETTE in `rcp.c` (la capsula di chiusura, il FIN sul
+	 *    canale di controllo, il congedo del server, il ban, i tre tetti di
+	 *    §4.6...).  Cucire la cura su tre di quelle sette vorrebbe dire quattro
+	 *    strade scoperte e una politica scritta in tre punti — *«un conto
+	 *    scritto in tre punti diversi e' un conto che un giorno ne
+	 *    dimentichera' uno»*.  ⇒ Ci si aggancia allo STATO, che e' il punto in
+	 *    cui tutte e sette confluiscono, e che questa funzione gia' guarda a
+	 *    ogni battito.  `regola_tienila_viva()` e' la prova che l'evento esiste
+	 *    ed e' gia' riconosciuto: spegne i PING sullo stesso `"finita"`, e
+	 *    `[M]` lo fa **100 ms** dopo il congedo (22 set, 10:30:11.698 →
+	 *    10:30:11.798).  ⇒ La finestra dello spreco passa da ~30 s a ~0,1 s.
+	 *
+	 * ⛔ E NON SMONTA IL PALCO — invariante **I4**.  Quel che si spegne e' la
+	 *    richiesta di fotogrammi al figlio (`figli_video()` con codec 0, che
+	 *    `figlio.h` dichiara come «smetti di catturare»); il figlio, la
+	 *    sessione grafica e le finestre aperte restano esattamente dove sono,
+	 *    e chi si ricollega ritrova il suo desktop.  E' la stessa distinzione
+	 *    gia' scritta per l'audio: *«a spegnersi e' il consumo del monitor, non
+	 *    il dispositivo su cui le applicazioni suonano»*.
+	 *
+	 * ⚠ E `"staccata-per-silenzio"` NON entra qui, ed e' una scelta: anche
+	 *   quello stato lascia il posto, ma da li' `torna_a_parlare()` puo'
+	 *   resuscitare la stessa sessione, e nello sfratto del fantasma il client
+	 *   che ARRIVA non ha ancora spedito `SESSIONE` — spegnere li' vorrebbe
+	 *   dire fermare e riaccendere la cattura in mezzo a un passaggio di
+	 *   consegne.  Il costo dei 30 s lo paga solo chi si CONGEDA, ed e' quello
+	 *   il caso misurato. */
+	if (stato && strcmp(stato, "finita") == 0)
+		cattura_spegni_se_sola(w, "il client si e' congedato");
 
 	if (!stato) {
 		/* Nessuna sessione RCP: si batte se c'e' una chiusura da far
@@ -4285,7 +4365,16 @@ static void audio_regola(wt *w)
 	uint8_t codec;
 	const char *utente;
 
-	if (!w->rcp || w->chiusura >= 0 || w->audio_acceso)
+	/* ⚠ `audio_fermo` fa qui lo stesso mestiere che `video_fermo` fa nel
+	 *   gemello: se la cattura era stata spenta perche' non ascoltava piu'
+	 *   nessuno, una sessione nuova deve poterla far ripartire.  Senza, il
+	 *   riaggancio sarebbe muto. */
+	if (!w->rcp || w->chiusura >= 0 || (w->audio_acceso && !w->audio_fermo))
+		return;
+	/* ⛔ La stessa trappola del gemello, e il riquadro sta su `video_regola()`:
+	 *    `rcp_tela_in_vigore()` non guarda lo stato, quindi senza questa riga
+	 *    una sessione finita riaccenderebbe la cattura a ogni battito. */
+	if (rcp_e_finita(w->rcp))
 		return;
 
 	/* ⛔ Invariante I3: niente suono prima che `SESSIONE` sia partita.  E' la
@@ -4311,6 +4400,7 @@ static void audio_regola(wt *w)
 		return;
 
 	w->audio_acceso = true;
+	w->audio_fermo = false;
 	w->audio_codec = codec;
 	/* ⛔ E IL TONO DI PROVA SI NOMINA QUI, a ogni sessione — rilievo 8.
 	 *    `wt_audio_prova()` scrive una riga sola, all'avvio: chi legge il
@@ -4347,6 +4437,35 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	if (!w->rcp || w->chiusura >= 0)
 		return;
 
+	/* ⛔⛔⭐⭐ E UNA SESSIONE FINITA NON RIACCENDE NIENTE — 23 set 2026, ed e'
+	 *        la riga senza la quale la cura dello spreco DIVENTA UNO SPRECO
+	 *        PEGGIORE.  Trovata leggendo, non misurando, e vale la pena
+	 *        scriverla per esteso perche' la trappola e' fatta apposta per non
+	 *        vedersi:
+	 *
+	 *        `rcp_tela_in_vigore()` qui sotto NON guarda lo stato — guarda
+	 *        `sessione_spedita`, che una volta vero **resta vero anche dopo la
+	 *        fine**.  ⇒ Su una sessione «finita» questa funzione arriva fino in
+	 *        fondo come se niente fosse.  Prima non faceva danno (`video_acceso`
+	 *        era gia' vero e il ramo dell'accensione non si percorreva); da
+	 *        oggi, con `video_fermo` acceso, lo percorrerebbe — e in `wt_batti()`
+	 *        `video_regola()` sta PRIMA di `regola_battito()`.
+	 *
+	 *        ⇒ Ogni battito: riaccendi, rispegni.  Due messaggi al figlio e due
+	 *        righe di registro al secondo, per tutti i 30 s del
+	 *        `max_idle_timeout` — cioe' esattamente il difetto che si sta
+	 *        curando, con in piu' un registro illeggibile.
+	 *
+	 * ⚠ E non toglie niente al RIAGGANCIO: una sessione nuova sulla stessa
+	 *   connessione ha un `w->rcp` NUOVO (`rcp_avvia()` gira solo con
+	 *   `rcp_stream == -1`, e `wt_stream_chiuso()` azzera tutti e due insieme),
+	 *   quindi `rcp_e_finita()` e' falsa e la cattura riparte come deve.
+	 *   ⛔ `S_FINITA` e' terminale: da li' non si torna indietro — solo
+	 *   `S_STACCATA` puo' resuscitare (`torna_a_parlare()`), e quella non passa
+	 *   di qui. */
+	if (rcp_e_finita(w->rcp))
+		return;
+
 	/* ⛔ P1 / §2.5 / invariante I3 — «nessuno stream video prima di aver
 	 *    SPEDITO `SESSIONE`».  `rcp_tela_in_vigore()` risponde `false` finche'
 	 *    `SESSIONE` non e' partita, e non scrive niente nel registro: chiamare
@@ -4373,14 +4492,34 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	if (!utente || !utente[0])
 		return;
 
-	if (!w->video_acceso) {
+	/* ⛔⭐⭐ E `video_fermo` E' LA META' CHE FA RIPARTIRE LA CATTURA.
+	 *
+	 *      Da quando il ciclo si spegne al congedo (vedi `regola_battito()`),
+	 *      «il canale e' acceso» non implica piu' «il palco sta catturando».
+	 *      ⛔ Senza questa condizione la cura dello spreco romperebbe il
+	 *      RIAGGANCIO: una sessione nuova sulla stessa connessione — stato
+	 *      previsto due volte in questo file, e `wt_stream_chiuso()` rimette
+	 *      `w->sessione` a -1 apposta perche' possa aprirsi — troverebbe
+	 *      `video_acceso` gia' vero, salterebbe questo ramo, e al figlio non
+	 *      chiederebbe MAI di ricominciare.  L'utente resterebbe davanti a uno
+	 *      schermo fermo.
+	 *
+	 * ⚠ Si passa di qui appena `SESSIONE` della sessione nuova e' partita
+	 *   (`rcp_tela_in_vigore()` qui sopra), e si ricomincia con una CHIAVE —
+	 *   che e' quel che §5.2 vuole comunque dal primo fotogramma. */
+	if (!w->video_acceso || w->video_fermo) {
+		bool ripartenza = w->video_fermo;
 		w->video_acceso = true;
+		w->video_fermo = false;
 		w->video_codec = codec;
 		w->chiave_chiesta_ms = ora_ms;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ FASE 3: canale video ACCESO per «%s» da %s — codec %u, "
+		                 "⭐ FASE 3: canale video %s per «%s» da %s — codec %u, "
 		                 "tela %ux%u.  Chiedo al palco di catturare di continuo, e "
 		                 "§5.2 vuole che il PRIMO sia una CHIAVE",
+		                 ripartenza ? "RIACCESO (il ciclo era fermo: non lo "
+		                              "guardava piu' nessuno)"
+		                            : "ACCESO",
 		                 utente, w->provenienza, codec, l, a);
 		if (gancio_palco)
 			gancio_palco(gancio_palco_ctx, utente, codec,
@@ -5459,7 +5598,13 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	const char *mio;
 	int e;
 
-	if (!w->video_acceso || w->video_codec != codec)
+	/* ⚠ `video_fermo` = al palco ho gia' detto di smettere, e quel che arriva
+	 *   adesso e' la CODA di quel che era gia' in volo quando gliel'ho detto.
+	 *   ⛔ Senza questa condizione quei due o tre fotogrammi percorrerebbero
+	 *   tutto il cammino per farsi rifiutare da `rcp_video_apri()` con
+	 *   `RCP_VIDEO_PRIMA_DI_SESSIONE`, cioe' con la stessa riga ⛔ che la cura
+	 *   del 23 set esiste per togliere — solo tre volte invece di mille. */
+	if (!w->video_acceso || w->video_fermo || w->video_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
@@ -6134,7 +6279,9 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	uint64_t tetto;
 	const char *mio;
 
-	if (!w->audio_acceso || w->audio_codec != codec)
+	/* ⚠ Il gemello di `video_fermo` in `video_a_una()`: la coda di quel che era
+	 *   gia' in volo quando al figlio e' stato detto di smettere. */
+	if (!w->audio_acceso || w->audio_fermo || w->audio_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
@@ -6359,11 +6506,36 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
 	return false;
 }
 
-bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
+/* ⛔⭐⭐ IL CENSIMENTO DI CHI ASCOLTA, e le TRE esclusioni che lo rendono vero.
+ *
+ *      1. `tranne` — la sessione per cui si sta decidendo.  Prima bastava
+ *         chiamare il censimento DOPO l'uscita dall'elenco delle vive (il
+ *         riquadro in `wt_libera()` lo dice: *«o troverebbe se stessa e non
+ *         spegnerebbe mai»*), ma da oggi si decide anche al CONGEDO, e li' la
+ *         sessione e' ancora nell'elenco a pieno titolo.  ⇒ L'esclusione si
+ *         scrive invece di dipendere dall'ordine di due righe lontane.
+ *      2. `rcp_e_finita()` — ⛔ una sessione finita NON ascolta.  Il puntatore
+ *         `w->rcp` resta in piedi finche' il client non chiude lo stream — e
+ *         se il browser saluta e sparisce quello stream non si chiude mai —
+ *         quindi senza questa riga un FANTASMA terrebbe acceso il microfono
+ *         del desktop per tutti gli altri.  E' la stessa riga, per la stessa
+ *         ragione, che `linea_morta_giudica()` ha gia'.
+ *      3. `audio_fermo` — a chi ha gia' detto «smetti» non si chiede di nuovo.
+ *
+ * ⚠ Restano dentro le sessioni VIVE dello stesso utente su ALTRE connessioni:
+ *   e' il caso che I2 prevede, e se una di quelle guarda la cattura non si
+ *   ferma.  E' precisamente il motivo per cui questa non e' «spegni al
+ *   congedo» ma «spegni se sei rimasta sola». */
+static bool audio_ascolta_qualcuno(const char *utente, const wt *tranne,
+                                   uint8_t *codec)
 {
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
 		const char *mio;
-		if (!w->audio_acceso || !w->rcp || w->chiusura >= 0)
+		if (w == tranne)
+			continue;
+		if (!w->audio_acceso || w->audio_fermo || !w->rcp || w->chiusura >= 0)
+			continue;
+		if (rcp_e_finita(w->rcp))
 			continue;
 		mio = rcp_utente(w->rcp);
 		if (!mio || !utente || strcmp(mio, utente) != 0)
@@ -6373,6 +6545,11 @@ bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
 		return true;
 	}
 	return false;
+}
+
+bool wt_audio_qualcuno_ascolta(const char *utente, uint8_t *codec)
+{
+	return audio_ascolta_qualcuno(utente, NULL, codec);
 }
 
 void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
@@ -6388,11 +6565,18 @@ void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
 		*in_coda = w ? w->ndgram : 0;
 }
 
-bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
+/* ⚠ Il gemello del censimento dell'audio, e le tre esclusioni sono le stesse:
+ *   il riquadro sta li', e i due si leggono insieme. */
+static bool video_guarda_qualcuno(const char *utente, const wt *tranne,
+                                  uint8_t *codec)
 {
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
 		const char *mio;
-		if (!w->video_acceso || !w->rcp || w->chiusura >= 0)
+		if (w == tranne)
+			continue;
+		if (!w->video_acceso || w->video_fermo || !w->rcp || w->chiusura >= 0)
+			continue;
+		if (rcp_e_finita(w->rcp))
 			continue;
 		mio = rcp_utente(w->rcp);
 		if (!mio || !utente || strcmp(mio, utente) != 0)
@@ -6402,6 +6586,75 @@ bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
 		return true;
 	}
 	return false;
+}
+
+bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
+{
+	return video_guarda_qualcuno(utente, NULL, codec);
+}
+
+/* ------------------------------------------------------------------------ */
+/* ⛔⭐⭐ SI SMETTE DI CATTURARE QUANDO NON GUARDA E NON ASCOLTA PIU' NESSUNO. */
+/*
+ * ⭐ E' UNA FUNZIONE SOLA PER TRE OCCASIONI, e sono tre perche' una sessione
+ *    puo' finire in tre modi che non passano l'uno per l'altro:
+ *
+ *      1. `regola_battito()` — la sessione e' `"finita"`: il client si e'
+ *         CONGEDATO.  E' l'occasione nuova, quella che paga i ~30 s, e copre
+ *         tutte e sette le strade con cui `rcp.c` arriva a quello stato.
+ *      2. `wt_stream_chiuso()` — il client chiude lo stream della CONNECT o il
+ *         canale di controllo.  ⛔ Li' `w->rcp` viene LIBERATO e azzerato: da
+ *         quel momento il nome dell'utente non si puo' piu' chiedere a
+ *         nessuno, e infatti prima di oggi quella strada non spegneva la
+ *         cattura MAI — nemmeno alla morte della connessione, perche' il
+ *         blocco in `wt_libera()` pretende `w->rcp` non nullo.  ⇒ Si chiama
+ *         PRIMA di `rcp_libera()`, finche' il nome c'e' ancora.
+ *      3. `wt_libera()` — la connessione se ne va senza che il client abbia
+ *         salutato (`kill -9`, la rete che cade, il `max_idle_timeout`).  E'
+ *         l'occasione che c'era gia', e resta: chi muore non si congeda.
+ *
+ * ⛔ In tutte e tre il PALCO RESTA IN PIEDI — invariante **I4**.  Si spegne il
+ *    consumo, non la sessione grafica: `figli_video()` con codec 0 e
+ *    `figli_audio()` con codec 0 vogliono dire «smetti di catturare», non
+ *    «smonta».  Il figlio, le finestre e il sink restano dove sono, e chi si
+ *    ricollega ritrova il suo desktop — che e' tutto il punto di I4.
+ *
+ * ⚠ Ed e' idempotente per costruzione (`video_fermo` / `audio_fermo`): le tre
+ *   occasioni possono benissimo scattare in fila sulla stessa sessione — un
+ *   congedo, poi lo stream chiuso, poi la connessione che muore — e al figlio
+ *   il «basta» arriva una volta sola.
+ */
+static void cattura_spegni_se_sola(wt *w, const char *perche)
+{
+	const char *mio;
+
+	if (!w->rcp)
+		return;
+	mio = rcp_utente(w->rcp);
+	if (!mio || !mio[0])
+		return;
+
+	if (w->audio_acceso && !w->audio_fermo && gancio_audio
+	    && !audio_ascolta_qualcuno(mio, w, NULL)) {
+		w->audio_fermo = true;
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "%s e non ascolta piu' nessuno «%s»: la cattura "
+		                 "dell'audio si ferma (il sink resta, e' l'invariante "
+		                 "I4)",
+		                 perche, mio);
+		gancio_audio(gancio_audio_ctx, mio, 0);
+	}
+	if (w->video_acceso && !w->video_fermo && gancio_palco
+	    && !video_guarda_qualcuno(mio, w, NULL)) {
+		w->video_fermo = true;
+		registro_dice_di(REG_RCP, wt_chi(w),
+		                 "%s e non guarda piu' nessuno «%s»: il palco smette "
+		                 "di catturare (il figlio resta, e' l'invariante I4)",
+		                 perche, mio);
+		/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
+		 *   lui non vuol dire niente. */
+		gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
+	}
 }
 
 void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
@@ -7797,7 +8050,8 @@ void wt_libera(wt *w)
 	                 "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla "
 	                 "chiusura %zu, e %zu byte ancora da spedire in coda",
 	                 w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
-	/* ⛔⛔ E SI SPEGNE LA CATTURA DELL'AUDIO SE NESSUNO ASCOLTA PIU'.
+	/* ⛔⛔ E SI SPEGNE LA CATTURA — DELL'AUDIO E DEI PIXEL — SE NON RESTA
+	 *     NESSUNO.
 	 *
 	 *     `[M]` 17 agosto 2026, prima accensione dell'audio vero: la sessione si
 	 *     era chiusa alle 07:49:58 — «conto finale: 397 blocchi» — e il figlio
@@ -7805,25 +8059,23 @@ void wt_libera(wt *w)
 	 *     secondo, per nessuno.  ⚠ Non lo diceva nessun errore: lo diceva la
 	 *     riga di riassunto del figlio, che esiste apposta.
 	 *
-	 * ⛔ E' la stessa forma dello spegnimento del palco qui sotto, per la stessa
-	 *    ragione: cattura e codifica esistono solo perche' qualcuno guarda o
-	 *    ascolta.  ⚠ E come li', il SINK resta in piedi (I4): a spegnersi e' il
-	 *    consumo del monitor, non il dispositivo su cui le applicazioni suonano.
+	 * ⛔ Cattura e codifica esistono solo perche' qualcuno guarda o ascolta.  ⚠ E
+	 *    il SINK resta in piedi (I4), come il figlio: a spegnersi e' il consumo
+	 *    del monitor, non il dispositivo su cui le applicazioni suonano.
 	 *
-	 * ⭐ Sta DOPO l'uscita dall'elenco delle vive, in cima a questa funzione, o
-	 *    `wt_audio_qualcuno_ascolta()` troverebbe se stessa e non spegnerebbe
-	 *    mai — che e' il difetto che il palco ha gia' evitato cosi'. */
-	if (w->audio_acceso && w->rcp && gancio_audio) {
-		const char *mio = rcp_utente(w->rcp);
-		if (mio && mio[0] && !wt_audio_qualcuno_ascolta(mio, NULL)) {
-			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "l'ultima sessione di «%s» se ne va: la cattura "
-			                 "dell'audio si ferma (il sink resta, e' l'invariante "
-			                 "I4)",
-			                 mio);
-			gancio_audio(gancio_audio_ctx, mio, 0);
-		}
-	}
+	 * ⛔⭐ E DAL 23 SET 2026 QUESTA NON E' PIU' LA PRIMA OCCASIONE, E' L'ULTIMA.
+	 *     Le due politiche stavano qui in due blocchi gemelli; adesso stanno
+	 *     tutte e due in `cattura_spegni_se_sola()`, che `regola_battito()`
+	 *     chiama gia' al CONGEDO — cioe' ~30 s prima di qui.  ⇒ Qui si arriva
+	 *     solo per chi se ne va SENZA salutare (`kill -9`, la rete che cade, il
+	 *     `max_idle_timeout`), e la chiamata e' idempotente: se il congedo
+	 *     l'aveva gia' fatto, questa non dice niente a nessuno.
+	 *
+	 * ⭐ E sta DOPO l'uscita dall'elenco delle vive, in cima a questa funzione:
+	 *    non serve piu' — il censimento esclude `w` per nome proprio — ma
+	 *    l'ordine resta quello, e la ragione per cui era necessario e' scritta
+	 *    sul censimento. */
+	cattura_spegni_se_sola(w, "la connessione se ne va senza un congedo");
 	/* Il codificatore del tono di prova, se questa sessione ne aveva uno. */
 	if (w->tono_cod) {
 		/* ⭐ E i conti del CODIFICATORE, che rispondono a una domanda che i
@@ -7848,18 +8100,10 @@ void wt_libera(wt *w)
 		audio_cod_chiudi(w->tono_cod);
 		w->tono_cod = NULL;
 	}
-	if (w->video_acceso && w->rcp && gancio_palco) {
-		const char *mio = rcp_utente(w->rcp);
-		if (mio && mio[0] && !wt_video_qualcuno_guarda(mio, NULL)) {
-			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "l'ultima sessione di «%s» se ne va: il palco smette "
-			                 "di catturare (il figlio resta, e' l'invariante I4)",
-			                 mio);
-			/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
-			 *   lui non vuol dire niente. */
-			gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
-		}
-	}
+	/* ⛔ Qui c'era il gemello dello spegnimento del palco: adesso lo fa la
+	 *    chiamata sola qui sopra, insieme all'audio.  ⚠ Erano due blocchi che
+	 *    dicevano la stessa cosa in due modi, e uno dei due non passava per il
+	 *    congedo — che e' esattamente il difetto curato oggi. */
 	if (w->rcp)
 		rcp_libera(w->rcp);
 	if (w->h3)
@@ -7973,6 +8217,17 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 		                 "chiuso lo stream %ld: la sessione e' finita, il posto "
 		                 "si libera",
 		                 (long)stream_id);
+		/* ⛔⭐ E LA CATTURA SI SPEGNE ADESSO, PRIMA DI `rcp_libera()`, perche'
+		 *     dopo il nome dell'utente non lo sa piu' NESSUNO: `w->rcp`
+		 *     diventa nullo due righe sotto, e il blocco di `wt_libera()`
+		 *     pretende `w->rcp` non nullo.  ⇒ Prima di oggi questa strada —
+		 *     il client che chiude per bene lo stream della CONNECT — non
+		 *     fermava il palco MAI, nemmeno alla morte della connessione: il
+		 *     figlio restava a catturare finche' l'utente non usciva.
+		 * ⚠ Non e' il caso dei ~30 s misurati (quello passa da `"finita"` e
+		 *   dal battito): e' un caso PEGGIORE che si chiude con la stessa
+		 *   riga, ed e' venuto fuori scrivendola. */
+		cattura_spegni_se_sola(w, "il client ha chiuso il canale di controllo");
 		rcp_libera(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
