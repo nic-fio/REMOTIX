@@ -233,8 +233,15 @@ def main():
     #   `subprocess` da' `FileNotFoundError`.  Si chiede a podman se c e'.
     try:
         subprocess.run(["podman", "--version"], capture_output=True, timeout=30)
-    except OSError:
-        print("⛔ podman non c'e': ⇒ non ho potuto guardare")
+    # ⛔ `subprocess.TimeoutExpired` NON discende da `OSError`: senza
+    #    nominarla, un comando che si pianta fa una traccia ⇒ Python esce **1**
+    #    ⇒ il gancio legge ROSSO su un guasto del BANCO (`LEZIONI.md` §1.51, e
+    #    la cura che C10 ha gia' in `radice_del_deposito()`).
+    # ⚠ E questa maglia sta nella famiglia `rete`, cioe' scatta a OGNI
+    #   cambiamento, e fa ~76 `podman exec` su quattro scatole: e' proprio
+    #   quella dove un comando lento e' piu' probabile.
+    except (OSError, subprocess.SubprocessError):
+        print("⛔ podman non c'e' o non risponde: ⇒ non ho potuto guardare")
         sys.exit(3)
 
     nomi = [a.prefisso + d for d in a.desktop.split(",") if d]

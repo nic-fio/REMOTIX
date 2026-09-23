@@ -206,7 +206,11 @@ def ganci_installati():
     try:
         p = subprocess.run(["git", "-C", QUI, "rev-parse", "--git-path", "hooks"],
                            capture_output=True, text=True, timeout=30)
-    except OSError:
+    # ⛔ `subprocess.TimeoutExpired` NON discende da `OSError`: senza nominarla,
+    #    un `git` che si pianta faceva una traccia ⇒ Python usciva **1** ⇒ il
+    #    gancio leggeva ROSSO su un guasto del BANCO (`LEZIONI.md` §1.51).
+    #    E' la stessa cura che C10 ha gia' in `radice_del_deposito()`.
+    except (OSError, subprocess.SubprocessError):
         return None
     if p.returncode != 0:
         return None
