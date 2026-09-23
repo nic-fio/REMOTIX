@@ -820,6 +820,41 @@ dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
   ⚠ E un rilievo che la maglia stampa e nessuno guardava: in kde c'era `occhio2`, in xfce `corrx1` e
   `corrx2` — inquilini di altri banchi **fuori** dallo spazio di nomi, quindi né sgomberati dal gancio
   né contati da C19. 🔸 I banchi nuovi diano ai loro inquilini un nome `c<n>u<n>`, come fa C20.
+- ✅ **`13-w4` È DIVENTATO C20, MAGLIA FISSA DELLA RETE** — 23 set 2026.
+  `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, dentro `le_cinque_nuove` (cioè in
+  `tutto` e in `desktop-nuovo`), col cancello delle capacità: vuole l'**immagine**.
+  Sorveglia il difetto che l'utente ha trovato il 22 set su KDE con Chrome — dopo «Esci» e un nuovo
+  accesso lo schermo alternava desktop, schermata d'uscita e nero — e che `src/codificatore.c`
+  descrive come *«un'immagine VECCHIA, senza nessun errore»*: ⛔ proprio perché non c'è errore, se ne
+  accorge solo chi **guarda**.
+  ⭐ Entrando nella rete ha preso tre cose che da banco di una sera non aveva:
+  (1) **il guasto innestato** `--scena-che-lampeggia` (senza, il giorno che il giudice smettesse di
+  guardare direbbe verde per sempre); (2) **non sa più che cosa sia Plasma** — nascita e fine della
+  sessione le legge dal registro del prodotto (`formato negoziato`, `la sessione grafica … E' FINITA`)
+  e il gesto «Esci» se lo cerca con la stessa domanda di `src/sessione.c` (`org.kde.Shutdown` ·
+  `org.gnome.SessionManager` · `xfce4-session-logout`); (3) l'inquilino si chiama **`c20u<n>`**,
+  dentro lo spazio di nomi della rete, così il gancio lo sgombera e C19 lo vede.
+  ⛔⛔ **E ha dovuto mettere lei una scena, come C3** — è la misura che ha riscritto la maglia. A
+  desktop fermo, nel secondo accesso: **kde 1 800 fotogrammi in 45 s** (KWin consegna sempre),
+  **xfce 7 in 60 s** (labwc, come ogni wlroots, consegna solo sul danno) ⇒ su xfce e lxqt la maglia
+  sarebbe stata **3 per sempre**. La cura è `banchi/11-scatole/11-c20-scena.html`: una banda scura che
+  scorre su fondo chiaro, **due** bande a 100 punti di distanza così che in vista ci sia sempre
+  esattamente il 20 % di scuro ⇒ ⭐ ogni fotogramma è diverso (c'è danno, quindi consegna) **e la
+  luminanza media non si muove**. `[M]` misurata: **156**, e un **solo valore distinto** su 2 166
+  fotogrammi.
+  `[M]` 23 set 2026, binario `9b5df38b`, con la scena dichiarata:
+
+  | | giro sano | guasto innestato (`--scena-che-lampeggia`) |
+  |---|---|---|
+  | **kde** | ⭐ VERDE (esito 0) — 4 332 fotogrammi, coda 2 166, **0 salti**, luminanza **156**, 1 valore distinto; cache: 4 superfici buttate | ⭐ VISTO (esito 0) — **762 salti** su una coda di 2 167, 26 valori distinti (14…234) |
+  | **xfce** | ⭐ VERDE (esito 0) — 4 454 fotogrammi, coda 2 227, **0 salti**, luminanza **156**, 1 valore distinto; cache: 5 superfici | ⭐ VISTO (esito 0) — **766 salti** su una coda di 2 229, 25 valori distinti |
+
+  ⚠ Due insidie trovate mentre si certificava, e tutt'e due erano del BANCO:
+  (a) il browser non dipingeva perché `/tmp/mozilla` era di un altro inquilino — è la cura della
+  provvista che C3 paga dal 27 agosto, e adesso C20 la chiama (⛔ non se ne fa una copia);
+  (b) il controllo «lo schermo è nero» stava **prima** di quello sul lampeggio ⇒ la scena di C3, che
+  è scura (mediana 17), faceva uscire **3** invece che rosso. ⭐ Uno schermo che alterna non è mai
+  ambiguo, per quanto scuro: è il nero **fermo** che non si distingue da un'immagine congelata.
 - ⏳ **La rete non guarda i browser veri sotto carico** — 22 set 2026, e per questo la spirale della
   chiave è passata: la rete usa il cliente Python, e `12-client-veri.py` prova Firefox e Chrome veri
   per **8 s a desktop fermo**. 🔸 Serve un giro con un video a schermo intero per minuti, coi contatori

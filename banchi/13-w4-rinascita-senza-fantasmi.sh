@@ -4,6 +4,24 @@
 #
 #   podman exec rete11-kde bash /opt/remotix/13-w4-rinascita-senza-fantasmi.sh [PORTA]
 #
+# ⭐⭐ QUESTO BANCO E' DIVENTATO UNA MAGLIA DELLA RETE — 23 settembre 2026.
+#    ⇒ `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, che gira
+#      da se' a ogni `--famiglia tutto` su tutte le scatole dove il prodotto
+#      da' l'immagine.  Entrando nella rete ha preso tre cose che qui non
+#      c'erano, e sono quelle che separano un banco di una sera da una maglia:
+#        1. ⛔ il GUASTO INNESTATO (`--scena-che-lampeggia`): senza, il giorno
+#           che il giudice dei pixel smettesse di guardare direbbe verde per
+#           sempre e nessuno lo saprebbe;
+#        2. ⛔ non sa piu' che cosa sia Plasma: la nascita e la fine della
+#           sessione le legge dal REGISTRO del prodotto, e il gesto «Esci» se
+#           lo cerca con la stessa domanda di `src/sessione.c`;
+#        3. ⛔ l'inquilino si chiama `c20u<n>`, dentro lo spazio di nomi della
+#           rete — `w4u$$` qui sotto sta FUORI, quindi il gancio non lo
+#           sgombera e C19 non lo vede.
+#    ⚠ Questo file RESTA: e' il documento della misura del 22 settembre, e la
+#      diagnosi (i tre fotogrammi alternati, i descrittori riciclati) non sta
+#      scritta da nessun'altra parte.  ⛔ Per sorvegliare il difetto si usa C20.
+#
 # ⛔ IL DIFETTO — 22 set 2026, la prova dell'utente su KDE con Chrome: dopo
 #    «Esci» e un nuovo accesso lo schermo alternava TRE immagini (il desktop,
 #    la schermata d'uscita della sessione di PRIMA, il nero).  `[M]` La

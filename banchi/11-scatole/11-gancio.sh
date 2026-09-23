@@ -670,6 +670,8 @@ GIRA_C7()  { bash "$QUI/11-accendi.sh" c7 "$1" "${@:2}"; }
 GIRA_C9()  { bash "$QUI/11-accendi.sh" c9 "$1" "${@:2}"; }
 GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
 GIRA_C18() { bash "$QUI/11-accendi.sh" c18 "$1" "${@:2}"; }
+GIRA_C19() { bash "$QUI/11-accendi.sh" c19 "$1" "${@:2}"; }
+GIRA_C20() { bash "$QUI/11-accendi.sh" c20 "$1" "${@:2}"; }
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -878,10 +880,11 @@ famiglia_veloce() {
 #    sono due elenchi che il giorno dopo non lo sono piu' — e nessuno se ne
 #    accorge, perche' tutt e due continuano a girare (`LEZIONI.md` §1.46).
 #
-# ⚠ E oggi sono SEI, non cinque: C17 (fase 12, 19 set 2026) sta qui dentro
+# ⚠ E oggi sono SETTE, non cinque: C17 (fase 12, 19 set 2026) sta qui dentro
 #   da allora — e fino al 21 set stava DOPO il `return` del cancello, cioe'
 #   saltava senza essere nominata nel registro (`fasi/13-xfce.md`, «Il banco»,
-#   punto 1).  Il nome della funzione e' rimasto per chi la cerca.
+#   punto 1); e C20 dal 23 set 2026.  Il nome della funzione e' rimasto per chi
+#   la cerca.
 #
 # ⭐⭐ IL CANCELLO — fase 13, 21 set 2026: UNA MAGLIA PER VOLTA, e per
 #     CAPACITA', non per nome di desktop.
@@ -993,6 +996,53 @@ le_cinque_nuove() {
 		esegui_maglia "C17($d)" false GIRA_C17 "$d"
 		esegui_maglia "C17($d) guasto innestato" true GIRA_C17 "$d" --senza-copia
 	fi
+
+	# ⭐⭐ C20 — la rinascita dopo «Esci» non porta fantasmi (23 set 2026).
+	#   ⛔ E' il difetto che l'UTENTE ha trovato il 22 set su KDE con Chrome:
+	#     dopo «Esci» e un nuovo accesso lo schermo alternava tre immagini, e
+	#     ⛔ **senza nessun errore da nessuna parte** — il prodotto non se ne
+	#     accorge, il cliente non se ne accorge, se ne accorge solo chi guarda.
+	#   ⭐ Viene da `banchi/13-w4-rinascita-senza-fantasmi.sh`, che l'ha
+	#     misurato; entrando nella rete ha preso il suo guasto innestato
+	#     (`--scena-che-lampeggia`), ha smesso di sapere che cosa sia Plasma, e
+	#     ha preso un nome della rete per il suo inquilino (`c20u<n>`) — ⇒ cosi'
+	#     C19 lo vede e la sgomberata del gancio lo toglie.
+	#   ⚠ Vuole l'IMMAGINE, e il gesto «Esci» se lo cerca da se': se in quella
+	#     scatola non c'e' nessuno dei tre menu, dice 3 e nomina quello che
+	#     manca — ⛔ e un 3 non e' un verde.
+	if ! perche=$(prodotto_pronto C20 "$d"); then
+		salta_maglia "C20($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C20($d)" false GIRA_C20 "$d"
+		esegui_maglia "C20($d) guasto innestato" true GIRA_C20 "$d" --scena-che-lampeggia
+	fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐⭐ E L'ULTIMA MAGLIA DI OGNI SCATOLA — C19, «della rete non resta dentro
+#      nessuno».  23 settembre 2026, `fasi/13-xfce.md` «Che cosa resta».
+#
+# ⛔⛔ VA IN FONDO, E NON E' UN DETTAGLIO DI GUSTO: questa maglia non prepara
+#     niente e non prova niente da sola — ⭐ **giudica il lavoro di tutte le
+#     altre**.  Lanciata su una scatola appena rifatta direbbe verde e non
+#     avrebbe guardato niente.  ⇒ Sta dopo l'ultima maglia che apre una
+#     sessione, e prima del bilancio.
+#
+# ⚠ E il suo verde dipende dalla SGOMBERATA che `esegui_maglia` fa dopo ogni
+#   maglia: se qualcuno togliesse quella, C19 diventerebbe rossa il giorno
+#   dopo — ⭐ ed e' precisamente il motivo per cui esiste.  Prima di lei la
+#   sporcizia era una riga `inf` annotata `riuscita=true`, cioe' la rete
+#   poteva lasciare venti inquilini dentro una scatola e dirsi verde.
+# ═══════════════════════════════════════════════════════════════════════════
+la_scatola_resta_pulita() {
+	local d=$1
+	esegui_maglia "C19($d)" false GIRA_C19 "$d"
+	# ⛔ I due guasti innestati, e sono DUE perche' guardano due residui
+	#    diversi: un inquilino VIVO (che `pgrep` e `getent` vedono) e ⭐ una
+	#    CASA SENZA UTENTE — il `userdel` senza `-r`, che nessun conto di
+	#    processi e nessun conto di utenti prenderebbe mai.
+	esegui_maglia "C19($d) guasto innestato" true GIRA_C19 "$d" --lascia-un-inquilino
+	esegui_maglia "C19($d) guasto innestato (solo la casa)" true GIRA_C19 "$d" --lascia-una-casa
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1150,6 +1200,20 @@ rifai_le_scatole() {
 # ⚠ Non e' un rosso: una misura nuova senza guasto innestato non giudica
 #   (§3.6).  `[?]` Il primo giro dira' se il server torna al suo pavimento
 #   quando l'ultima sessione e' chiusa; da li' si potra' farne una maglia.
+#
+# ⭐⭐ E PER LA COLONNA DELLA SCATOLA QUEL GIORNO E' ARRIVATO — 23 set 2026.
+#     La riga *«la SCATOLA si e' sporcata»* qui sotto resta una riga `inf`
+#     annotata `riuscita=true`, ⛔ ma non e' piu' l'unica cosa che guarda quel
+#     fatto: **C19** (`la_scatola_resta_pulita`, subito prima di questo
+#     bilancio) ne fa un VERDETTO, col suo guasto innestato.
+#   ⚠ E i due contano in modo DIVERSO, apposta:
+#     · `bilancio` conta per **uid** (`>= 1000`, escluso `provanic`) ⇒ per lui
+#       ⛔ `nictest` e' un inquilino, e va benissimo: e' una misura, non un
+#       giudizio, e chi diagnostica vuole vedere tutto.
+#     · C19 conta per **NOME**, sullo spazio di nomi della rete
+#       (`c<n>[b]u<n>`) ⇒ `nictest` non ci casca dentro per forma, e la maglia
+#       non da' mai rosso per l'utente delle prove a mano.
+#   ⛔ Se un giorno i due dicessero cose diverse, quello che giudica e' C19.
 # ⭐ E la guardia dell'eta' resta accesa FUORI da `tutto`: chi lavora con la
 #   famiglia veloce o a mano sulle scatole vecchie vede la riga, e se un rosso
 #   sparisce rifacendo la scatola il bilancio dice da quale colonna veniva.
@@ -1276,6 +1340,9 @@ famiglia_tutto() {
 		#    che vuole, e la ragione di ogni salto sta scritta dentro
 		#    `le_cinque_nuove` (e in `11-capacita-del-prodotto.sh`).
 		le_cinque_nuove "$d"
+		# ⭐⭐ E L'ULTIMA: della rete, qui dentro, non deve restare nessuno.
+		#    ⛔ Dopo tutte le altre, o non giudicherebbe il loro lavoro.
+		la_scatola_resta_pulita "$d"
 		# ⛔ E il bilancio: se il SERVER e' cresciuto, il rifacimento non lo
 		#    avrebbe mai fatto vedere — lo dice questa riga.
 		bilancio_dopo "$d"
@@ -1315,6 +1382,7 @@ famiglia_desktop_nuovo() {
 	#    giorno che il prodotto sapra' avviarlo si scrive la sua riga LI', e
 	#    questa comincia a girare senza che nessuno debba toccarla.
 	le_cinque_nuove "$nuovo"
+	la_scatola_resta_pulita "$nuovo"
 	bilancio_dopo "$nuovo"
 	log "e la REGRESSIONE sui vecchi — ⭐ senza riscrivere una riga della lista"
 	for d in $DESKTOP_NOTI; do

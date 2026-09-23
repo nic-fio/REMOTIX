@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>REMOTIX — C20</title>
+<!--
+  ⭐⭐ LA SCENA DICHIARATA DI C20: **si muove, e la sua luce NON cambia.**
+
+  ⛔⛔ PERCHE' NE SERVE UNA NUOVA, e non bastava quella di C3 — 23 set 2026.
+
+  C20 chiede: *«dopo «Esci» e un nuovo accesso, lo schermo non lampeggia»*, e
+  lo giudica sulla LUMINANZA MEDIA dei fotogrammi: a schermo sano e' una sola,
+  col fantasma alterna fra valori lontani.  ⇒ La scena di C3 non puo' servire:
+  lei cambia il fondo fra blu e giallo APPOSTA, cioe' lampeggia — ⛔ e' il
+  GUASTO INNESTATO di C20, non il suo giro sano.
+
+  ⚠ E il desktop fermo non puo' servire nemmeno lui.  `[M]` 23 settembre 2026,
+  secondo accesso, stessa maglia, stesso binario:
+
+    | scatola | compositore | fotogrammi consegnati |
+    |---|---|---|
+    | **kde**  | KWin   | **1 800 in 45 s** — consegna anche a desktop fermo |
+    | **xfce** | labwc  | ⛔ **7 in 60 s** — wlroots consegna solo sul DANNO  |
+
+  ⇒ Su xfce (e su lxqt, che usa lo stesso labwc) un desktop fermo non da'
+    abbastanza fotogrammi per avere una coda da guardare: la maglia usciva
+    **3 per sempre**, ⛔ che e' il cugino del rosso perpetuo (§1.49).
+
+  ⭐⭐ LA CURA E' LA STESSA DI C3: **la scena la mette la maglia, e la
+      dichiara** — ma qui deve muoversi SENZA cambiare la luce.
+
+  ---------------------------------------------------------------------------
+  CHE COSA SI MUOVE, e perche' la luce resta ferma
+  ---------------------------------------------------------------------------
+
+  Una **banda scura scorre** su un fondo chiaro, e avanza del 3 % dello schermo
+  a ogni fotogramma d'animazione.  ⇒ Ogni fotogramma e' diverso dal precedente
+  (c'e' danno, quindi il compositore consegna), ⭐ ma l'istogramma dei pixel
+  non cambia mai: la stessa quantita' di scuro e la stessa quantita' di chiaro,
+  solo spostate.  ⇒ **La luminanza media e' una costante.**
+
+  ⛔⛔ E LE BANDE SONO DUE, e questa e' la parte che si sbaglia.
+     Con UNA banda sola, quando arriva al bordo esce dallo schermo: a `left:
+     90%` se ne vede solo la meta', ⇒ il fondo chiaro guadagna il 10 % dello
+     schermo e ⛔ **la luminanza media sale** — un salto periodico su una scena
+     sanissima, cioe' un rosso falso a ogni giro della banda.
+     ⭐ La seconda banda sta sempre 100 punti percentuali piu' a sinistra:
+     quel che esce da destra rientra da sinistra nello stesso istante, e la
+     quantita' di scuro in vista e' **esattamente il 20 %** sempre.
+
+  ⚠ Il 3 % e' lo stesso passo di `11-c3-scena.html`, e per la stessa ragione
+    scritta li': con il 4 % la scena tornerebbe al punto di partenza ogni 25
+    fotogrammi d'animazione, e due fotogrammi catturati a quella distanza
+    sarebbero identici a scena sanissima.
+
+  ---------------------------------------------------------------------------
+  ⛔ E le tre regole della pagina, come per `11-c2-finestra.html` e
+     `11-c3-scena.html`:
+     · nessuna risorsa esterna: la scatola non ha rete verso fuori;
+     · niente scritte che si muovono da sole (l'ora, un contatore): il
+       movimento dev'essere QUELLO DICHIARATO e nessun altro;
+     · `requestAnimationFrame` e non un `setInterval`: si disegna quando il
+       compositore e' pronto a ricevere.
+
+  ⭐ LA LUCE CHE QUESTA PAGINA PRODUCE, dichiarata: fondo `#C0C0C0` (luminanza
+     BT.601 ≈ 192) per l'80 % dello schermo, bande `#101010` (≈ 16) per il
+     20 % ⇒ media attesa ≈ **157**.  `[M]` 23 set 2026, kde, secondo accesso:
+     **156**, e ⭐ **un solo valore distinto su 2 166 fotogrammi** — cioe' la
+     scena fa quel che dichiara.  ⚠ Il banco non pretende quel numero —
+     pannelli e bordi del desktop ne mangiano un po' — ⛔ ma pretende che lo
+     schermo **non sia nero**: se la mediana resta sotto 40, la scena non e'
+     arrivata e la maglia dice «non ho potuto guardare» invece di regalare un
+     verde a uno schermo spento.
+-->
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+  body { background:#C0C0C0; }
+  .banda { position:absolute; top:0; bottom:0; width:20%; background:#101010; }
+  #targa { position:absolute; left:0; right:0; top:45%;
+           text-align:center; font-family:monospace; font-size:4vw;
+           color:#606060; }
+</style>
+<div class="banda" id="a"></div>
+<div class="banda" id="b"></div>
+<div id="targa">REMOTIX C20</div>
+<script>
+  // ⛔ DUE bande, e la seconda insegue la prima a 100 punti di distanza: quel
+  //    che esce da destra rientra da sinistra nello stesso istante.  ⇒ In vista
+  //    c'e' SEMPRE il 20 % di scuro, e la luminanza media non si muove.
+  var a = document.getElementById('a');
+  var b = document.getElementById('b');
+  var x = 0;
+  function giro() {
+    x = (x + 3) % 100;
+    a.style.left = x + '%';
+    b.style.left = (x - 100) + '%';
+    requestAnimationFrame(giro);
+  }
+  requestAnimationFrame(giro);
+</script>

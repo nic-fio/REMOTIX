@@ -17,6 +17,10 @@
 #   bash 11-accendi.sh c9         [gnome]     il registro dice DI CHI parla
 #   bash 11-accendi.sh c17        [gnome] [--senza-copia]  gli appunti nei due versi
 #   bash 11-accendi.sh c18        [gnome] [--senza-usermod]  i gruppi li mette il prodotto
+#   bash 11-accendi.sh c19        [gnome] [--lascia-un-inquilino|--lascia-una-casa]
+#                                         della rete non resta dentro nessuno
+#   bash 11-accendi.sh c20        [gnome] [--scena-che-lampeggia]
+#                                         la rinascita dopo «Esci» non porta fantasmi
 #   bash 11-accendi.sh c10                    le copie gemelle (NON vuole la scatola)
 #   bash 11-accendi.sh impronta   [gnome]     stampa l'impronta (R3)
 #   bash 11-accendi.sh eta        [gnome]     quanto e' vecchia la scatola (la guardia)
@@ -492,6 +496,9 @@ prodotto)
 		cp /rete11/11-c9-il-registro-dice-di-chi.py /opt/remotix/
 		cp /rete11/11-c17-gli-appunti-vanno-nei-due-versi.py /opt/remotix/
 		cp /rete11/11-c18-i-gruppi-li-mette-il-prodotto.py /opt/remotix/
+		cp /rete11/11-c19-la-scatola-resta-pulita.py /opt/remotix/
+		cp /rete11/11-c20-la-rinascita-non-porta-fantasmi.py /opt/remotix/
+		cp /rete11/11-c20-scena.html                        /opt/remotix/
 		cp /rete11/appunti-gtk.py             /opt/remotix/
 		cp /rete11/10-f1-testimone.py        /opt/remotix/
 		# ⭐⭐ L ATTREZZO DEI GRUPPI DELLA SCHEDA — 27 agosto 2026.
@@ -719,6 +726,35 @@ c18)
 	#   durata del giro e si rimette sempre, anche se il giro muore.
 	shift 2 2>/dev/null || shift $#
 	podman exec "$NOME" python3 -u /opt/remotix/11-c18-i-gruppi-li-mette-il-prodotto.py \
+		--porta "$PORTA" "$@"
+	exit $?
+	;;
+
+c19)
+	log "C19 — della rete non resta dentro nessuno (dentro $NOME)"
+	# ⭐⭐ NESSUN CANCELLO, ed e' voluto: questa maglia non chiede NIENTE al
+	#    prodotto — guarda la scatola, e la scatola c'e' su ogni desktop.
+	#    ⇒ Come C1, C5, C7, C9, C18 non passa da `11-capacita-del-prodotto.sh`.
+	# ⛔ E va lanciata DOPO le altre, non prima: giudica quel che le altre
+	#    hanno lasciato.  Lanciata su una scatola appena rifatta dice verde e
+	#    non prova niente — e' il gancio che la mette al posto giusto.
+	shift 2 2>/dev/null || shift $#
+	podman exec "$NOME" python3 -u /opt/remotix/11-c19-la-scatola-resta-pulita.py "$@"
+	exit $?
+	;;
+
+c20)
+	log "C20 — la rinascita dopo «Esci» non porta fantasmi (dentro $NOME)"
+	# ⛔ SOLO DOVE IL PRODOTTO DA' L'IMMAGINE: il primo giudice sono i PIXEL
+	#    del secondo accesso, e senza immagine non c'e' niente da guardare.
+	if ! perche=$(prodotto_pronto C20 "$DESKTOP"); then
+		log "C20 non gira su $DESKTOP: ${perche:-il cancello non ha risposto}"
+		exit 3
+	fi
+	# ⛔ `--scena-che-lampeggia` e' il COLLAUDO: l esito si legge al contrario.
+	shift 2 2>/dev/null || shift $#
+	podman exec "$NOME" python3 -u \
+		/opt/remotix/11-c20-la-rinascita-non-porta-fantasmi.py \
 		--porta "$PORTA" "$@"
 	exit $?
 	;;

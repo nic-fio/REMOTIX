@@ -87,6 +87,22 @@ capacita_del_desktop() {
 #   C6   si stacca e si ritrova         ⚠ vedi sotto             ⇒ + input
 #   C17  gli appunti nei due versi      il fuoco col CLIC del cliente
 #                                       (`--clic`) e gli appunti ⇒ + input + appunti
+#   C20  la rinascita dopo «Esci»       guarda il PIXEL          ⇒ immagine
+#
+# ⚠⚠ C20 E IL GESTO «ESCI» — dichiarato, perche' NON e' una capacita' del
+#   prodotto.  Uscire dal menu e' un gesto del DESKTOP (`org.kde.Shutdown`,
+#   `org.gnome.SessionManager`, `xfce4-session-logout`), e la maglia se lo
+#   cerca da se' con la stessa domanda che fa `src/sessione.c` — se in quella
+#   scatola non c'e' nessuno dei tre, dice **3** e spiega quale manca.
+#   ⛔ Non si mette qui una capacita' «uscita»: qui ci va quel che il PRODOTTO
+#     da', e il prodotto non da' il menu.  Quel che il prodotto deve dare e'
+#     accorgersi che la sessione e' finita — e senza immagine non si potrebbe
+#     comunque giudicare la sessione che rinasce.
+#
+# ⛔ C19 NON sta qui: non chiede niente al prodotto.  Guarda la SCATOLA (chi e'
+#   rimasto dentro), e la scatola c'e' su ogni desktop — come C1, C5, C7, C9,
+#   C18.  ⇒ Metterci un cancello vorrebbe dire non guardare lo sporco proprio
+#   sui desktop dove il prodotto fa meno, che e' il contrario di quel che serve.
 #
 # ⚠⚠ C6 E L'INPUT — dichiarato, perche' NON l'ho letto nel codice.
 #   `[R]` 21 set 2026: il cliente di C6 (`attacca`) non manda ne' tasti ne'
@@ -99,7 +115,7 @@ capacita_del_desktop() {
 # ---------------------------------------------------------------------------
 capacita_della_maglia() {
 	case "$1" in
-	C2|C3|C8b) printf 'immagine' ;;
+	C2|C3|C8b|C20) printf 'immagine' ;;
 	C4|C6)     printf 'immagine input' ;;
 	C17)       printf 'immagine input appunti' ;;
 	# ⛔ Una maglia che non conosco non e' «libera»: vuole una capacita' che
