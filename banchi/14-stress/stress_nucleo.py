@@ -905,6 +905,14 @@ NOMI_IN_VISTA = {
     "tela_non_combacia": ("tela_non_combacia",),
     "errori_rossi":   ("errori_rossi",),
     "banda_max_kbit": ("banda_max_kbit",),
+    # -- ⭐⭐ e quel che ha visto L OCCHIO, che e' l unico capo che guarda
+    #    l IMMAGINE invece di contarla (`stress_occhio.py`).  ⛔ Senza questi
+    #    quattro numeri sulla riga, un giro che ha visto sette fotogrammi
+    #    devastati si rilegge domattina uguale a uno pulito.
+    "occhio_foto":    ("occhio_foto",),
+    "occhio_guaste":  ("occhio_guaste",),
+    "occhio_devastate": ("occhio_devastate",),
+    "occhio_peggiore_per_cento": ("occhio_peggiore_per_cento",),
     # -- e quanto e' cresciuto il server sotto i piedi
     "server_pid":     ("server_pid",),
     "server_rss_kb":  ("server_rss_kb",),

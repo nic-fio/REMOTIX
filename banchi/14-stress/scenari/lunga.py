@@ -59,8 +59,13 @@ def gira(desktop, marca, nucleo, opzioni=None):
         prima = _bilancio(nucleo, desktop)
         n_prima = b.numeri()
 
+        # ⭐⭐ Venti minuti sono il posto migliore della suite per l'occhio: i
+        #   contatori qui si leggono ogni MINUTO, l'immagine si guarda ogni
+        #   SECONDO.  ⛔ `[M]` lo stesso giro rotto letto uno ogni 60 dava «zero
+        #   celle guaste»: una cadenza lenta non e' una misura piu' comoda, e'
+        #   una misura cieca.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 120),
-                              passo=60.0, tetto=tetto)
+                              passo=60.0, tetto=tetto, occhio=b.occhio)
         n_dopo = b.numeri()
         dopo = _bilancio(nucleo, desktop)
         srv = b.server()
@@ -93,6 +98,12 @@ def gira(desktop, marca, nucleo, opzioni=None):
         if not vivo:
             guasti.append("alla fine l'immagine non arriva piu': i fotogrammi "
                           "consegnati non sono saliti nell'ultimo giro")
+
+        # ⭐⭐ E il terzo giudice: l'immagine e' viva, ma e' anche GIUSTA?
+        #   ⛔ Un server che non cresce e un contatore che sale sono compatibili
+        #      con venti minuti di mosaico.
+        C.vede_l_occhio(b, misure, guasti)
+        C.conta_il_ritmo(b, misure, guasti)
 
         in_vista = dict(pagina=n_dopo, server=srv)
         if guasti:

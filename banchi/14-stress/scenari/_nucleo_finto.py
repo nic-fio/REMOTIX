@@ -23,7 +23,21 @@
      "nero"        dopo il rientro non arriva niente   ⇒ atteso ROSSO
      "spirale"     una chiave ogni pochi fotogrammi    ⇒ atteso ROSSO
      "muto"        l'input non arriva al server        ⇒ atteso ROSSO
+     "a_mosaico"   ⭐⭐ i contatori sono PERFETTI e      ⇒ atteso ROSSO
+                   l'immagine e' a tessere sfalsate         (solo con l'occhio)
+     "catena_rotta" il server butta fotogrammi gia'    ⇒ atteso ROSSO
+                   codificati e non esce nessuna            (la rete sui numeri)
+                   chiave a ricucire
      "rotto"       il browser non si accende           ⇒ atteso 3 (non lo so)
+
+⭐⭐ E «a_mosaico» E' IL GUASTO CHE QUESTA SUITE NON SAPEVA VEDERE.  La notte
+   fra il 22 e il 23 settembre 2026 due giri hanno dato VERDE con ~7000
+   fotogrammi consegnati, 7000 dipinti, zero buchi e zero linee morte — mentre
+   l'utente guardava un'immagine a mosaico.  ⇒ Qui il finto fa esattamente
+   quello: **nessun contatore sbagliato**, e la tela che torna dal browser e' la
+   scena testimone con dentro, ogni tanto, un pezzo di fotogramma vecchio.
+   ⛔ Con `REMOTIX_OCCHIO=no` questo guasto torna a passare VERDE: e' la misura
+      di quanto valeva il giudizio di ieri notte.
 """
 import io
 import os
@@ -41,6 +55,54 @@ def _vero():
         sys.path.append(sopra)
     import stress_nucleo
     return stress_nucleo
+
+
+def _occhio():
+    """Il modulo dell'occhio — ⛔ non se ne rifa' la scena: e' il SUO disegno che
+    il finto restituisce, o il banco si proverebbe con una scena che non e'
+    quella che il giudice legge."""
+    sopra = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if sopra not in sys.path:
+        sys.path.append(sopra)
+    import stress_occhio
+    return stress_occhio
+
+
+# ⭐ Ogni 25 fotografie, DUE escono col pezzo di fotogramma vecchio incollato
+#   dentro: l'8 % — ⚠ ed e' lo stesso ordine di grandezza del guasto vero
+#   (`[M]` 26 fotografie sopra soglia su 313, cioe' l'8,3 %).
+MOSAICO_OGNI = 25
+MOSAICO_QUANTE = 2
+
+
+def _png_testimone(passo, rotta=False, scala=0.5):
+    """⭐ La scena TESTIMONE come la vedrebbe il browser, sana o a mosaico.
+
+    ⛔ Il guasto e' quello vero, non uno a caso: una fascia rimasta a un
+       fotogramma di PRIMA — che e' quel che fa un decodificatore quando applica
+       i delta su un riferimento che non ha mai ricevuto.  ⚠ Pulitissima e
+       completamente falsa: e' il guasto che la dispersione delle strisce non
+       vede e che le celle DISCORDI vedono.
+    """
+    try:
+        O = _occhio()
+        import numpy as np                        # noqa: F401
+    except Exception:                             # noqa: BLE001
+        return None
+
+    def vecchio(a):
+        indietro = O._disegna((passo + 3) % O.PASSI, scala=scala, rumore=False)
+        b = a.copy()
+        h = a.shape[0]
+        b[int(h * 0.30):int(h * 0.52), :, :] = \
+            indietro[int(h * 0.30):int(h * 0.52), :, :]
+        return b
+
+    try:
+        return O._png(O._disegna(passo, guasto=(vecchio if rotta else None),
+                                 scala=scala, rumore=False))
+    except Exception:                             # noqa: BLE001
+        return None
 
 
 def _png(sbavata=False, lato=256, chiaro=0.0):
@@ -88,6 +150,19 @@ class Browser(object):
         return True, ""
 
     def fotografa(self):
+        # ⭐⭐ Se sullo schermo c'e' la scena TESTIMONE, la fotografia e' quella:
+        #   l'occhio deve poterla leggere e dire VERDE quando e' sana, o non si
+        #   sarebbe provato niente di lui.  ⛔ E quando la scena e' un'altra si
+        #   torna al rumore di prima: il giudice della LUMINANZA di
+        #   `esci-rientra` misura quello, e una scena che cambia colore quindici
+        #   volte al secondo gli fabbricherebbe i fantasmi (`[M]` 8,6 livelli).
+        if (self.f.scena_accesa or "").startswith("testimone"):
+            self.f.scatti += 1
+            rotta = (self.f.come in ("a_mosaico", "strisce")
+                     and (self.f.scatti % MOSAICO_OGNI) < MOSAICO_QUANTE)
+            png = _png_testimone(self.f.scatti % 6, rotta=rotta)
+            if png:
+                return png
         # ⭐ Col fantasma la luminanza ALTERNA: e' il lampeggio che `esci-rientra`
         #   deve vedere.
         chiaro = 0.0
@@ -136,12 +211,51 @@ class Finto(object):
         self.fd = 100
         self.copiato = ""
         self.comandi = []
+        self.scena_accesa = None
+        self.chi = None
+        # ⛔ Le scene sono QUELLE DEL NUCLEO VERO, non una lista inventata: cosi'
+        #    una scena che nella notte non esiste qui non si accende, invece di
+        #    sembrare accesa e non far vedere niente.
+        try:
+            self.SCENE = dict(_vero().SCENE)
+        except Exception:                        # noqa: BLE001
+            self.SCENE = {"pesante": (None, ""), "normale": (None, ""),
+                          "ferma": (None, "")}
 
     # ── la scatola ────────────────────────────────────────────────────────
     def dentro(self, desktop, copione, interprete="sh", argomenti=None, secondi=180):
         """⚠ TRE valori, come il vero: (codice, uscita, errore)."""
         self.comandi.append(copione)
         c = copione
+        # ⭐ Il deposito della scena testimone: la scatola risponde con quanti
+        #   byte ha scritto, che e' quel che `deposita_scena()` legge.
+        #   ⛔ Questa prova viene PRIMA delle altre: il resto del copione e' un
+        #      blocco base64 lungo, e ci si puo' trovare dentro per caso una
+        #      qualunque delle parole cercate piu' sotto.
+        # ⭐ Le righe di RIEPILOGO del ritmo, quelle che il server scrive alla
+        #   CHIUSURA della sessione e che legge `stress_occhio.conti_del_ritmo`.
+        #   ⛔ I due casi sono le due misure VERE del 23 settembre 2026, prima e
+        #      dopo la cura `7e0c0e2`: 24 fotogrammi buttati con UNA sola chiave
+        #      (la catena rotta e mai ricucita) contro 0 buttati e 8 chiavi.
+        if "il regolatore del ritmo" in c:
+            chi = self.chi or "ignoto"
+            if self.come == "catena_rotta":
+                buttati, chiavi = 24, 1
+            else:
+                buttati, chiavi = 0, 8
+            righe = ["04:45:57 rcp [%s] il regolatore del ritmo: ACCESO — %d "
+                     "fotogrammi NON PARTITI perche' l'arretrato" % (chi, buttati),
+                     "04:45:57 rcp [%s] la soglia della coda video: ACCESA — delta "
+                     "TENUTI 3, abbandonati per soglia 0, e NON ACCETTATI per "
+                     "credito mancato 0 (§2.3)" % chi]
+            righe += ["04:4%d:0%d rcp [%s] fotogramma %d SPEDITO: CHIAVE 0x0301"
+                      % (i % 6, i % 10, chi, 1 + i * 300) for i in range(chiavi)]
+            return 0, "\n".join(righe), ""
+        if "14-scena-testimone" in c:
+            try:
+                return 0, str(len(_occhio().scena_html().encode("utf-8"))), ""
+            except Exception as e:               # noqa: BLE001
+                return 1, "", "la scena non si scrive (per finta): %s" % e
         if "date" in c:
             return 0, time.strftime("%H:%M:%S"), ""
         if "id -u" in c:
@@ -174,12 +288,21 @@ class Finto(object):
         return 0, "", ""
 
     def crea_inquilino(self, desktop, chi, parola):
+        # ⚠ Il nome del PRIMO inquilino serve alle righe del registro: il
+        #   lettore del ritmo tiene solo le righe marcate `[chi]`, e righe
+        #   marcate con un altro nome verrebbero buttate via — che e' proprio
+        #   quel che devono fare.
+        self.chi = self.chi or chi
         return True, "inquilino «%s» pronto in %s (per finta)" % (chi, desktop)
 
     def sgombera(self, desktop, chi):
         return None
 
     def scena(self, desktop, quale, chi, secondi=40):
+        if quale not in self.SCENE:
+            return False, ("scena «%s» che non conosco (per finta: %s)"
+                           % (quale, ", ".join(sorted(self.SCENE))))
+        self.scena_accesa = quale
         return True, "scena «%s» accesa (per finta)" % quale
 
     def istante_nella_scatola(self, desktop):
@@ -210,7 +333,11 @@ class Finto(object):
         fermo = (self.come == "fermo" and (time.time() - self.t0) > 20)
         if not fermo and not self.schermo_nero:
             self.consegnati += self.passo
-            self.dipinti += self.passo - 1
+            # ⭐⭐ Col mosaico i contatori sono PERFETTI: consegnati == dipinti,
+            #   zero buchi.  ⛔ E' il punto di tutta la storia — la notte del 22
+            #   la pagina diceva «7000 consegnati, 7000 dipinti, zero buchi» e
+            #   sullo schermo c'era un'immagine a tessere sfalsate.
+            self.dipinti += self.passo if self.come == "a_mosaico" else self.passo - 1
         if self.come == "strisce":
             self.buchi = 40
         return {"sessione": True, "esito": "Ammesso", "sospeso": False,

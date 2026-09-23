@@ -8,7 +8,15 @@
    arrivati DOPO il loro successore; la pagina bloccata a 41 fotogrammi
    consegnati su 8810 stream ricevuti; poi linea morta.
 
-⭐ I QUATTRO GIUDICI, e nessuno di loro guarda un totale:
+⭐⭐ E IL GIUDICE CHE IERI NOTTE MANCAVA, ed e' il primo della lista da oggi:
+   **l'OCCHIO** (`stress_occhio.py`).  La scena e' quella DICHIARATA, si
+   fotografa la tela **una volta al secondo** e si conta quante celle non sono
+   quelle che la scena dice.  ⛔ Senza di lui questo scenario conta fotogrammi e
+   non li guarda — e un fotogramma sbagliato conta come uno giusto.
+   ⚠ Con la scena dell'occhio le STRISCE non si giudicano piu' (si misurano e
+     si riportano): il perche', misurato, sta in `_comune.misura_le_strisce`.
+
+⭐ GLI ALTRI QUATTRO GIUDICI, e nessuno di loro guarda un totale:
    1. il contatore dei fotogrammi CONSEGNATI sale per TUTTO il tempo (un totale
       alto e un contatore fermo a meta' danno lo stesso numero: la differenza e'
       precisamente il difetto);
@@ -49,18 +57,24 @@ def gira(desktop, marca, nucleo, opzioni=None):
         # ⭐ La fotografia di RIFERIMENTO, presa appena la scena e' viva: serve a
         #   dire se le strisce c'erano gia' o sono nate sotto carico.
         time.sleep(10)
-        riferimento = C.strisce(b.foto("tela-prima.png") or b"")
+        riferimento, _, _ = C.misura_le_strisce(b, b.foto("tela-prima.png"))
 
         meta = {}
 
         def a_meta(n, storia):
             if not meta and tetto.passati() > durata / 2:
-                meta["strisce"] = C.strisce(b.foto("tela-meta.png") or b"")
+                meta["strisce"], meta["si_giudica"], meta["dove"] = \
+                    C.misura_le_strisce(b, b.foto("tela-meta.png"))
 
+        # ⭐⭐ E QUI DENTRO L'OCCHIO FOTOGRAFA LA TELA UNA VOLTA AL SECONDO: i
+        #   contatori restano a cinque secondi, l'immagine si guarda fitta —
+        #   ⛔ gli episodi di corruzione durano meno di mezzo secondo.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 60),
-                              passo=5.0, tetto=tetto, ogni_giro=a_meta)
+                              passo=5.0, tetto=tetto, ogni_giro=a_meta,
+                              occhio=b.occhio)
         if "strisce" not in meta:
-            meta["strisce"] = C.strisce(b.foto("tela-meta.png") or b"")
+            meta["strisce"], meta["si_giudica"], meta["dove"] = \
+                C.misura_le_strisce(b, b.foto("tela-meta.png"))
 
         primo, ultimo = storia[0], storia[-1]
         sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
@@ -76,6 +90,7 @@ def gira(desktop, marca, nucleo, opzioni=None):
             "fermo_piu_lungo_s": fermo,
             "strisce_prima": riferimento,
             "strisce_meta": meta.get("strisce"),
+            "strisce_dove": meta.get("dove") or "",
             "server": srv,
             "errori_della_pagina":
                 (nucleo.conta_dalla_pagina(b.browser) or {}).get("errori_testo", [])[-3:],
@@ -93,9 +108,20 @@ def gira(desktop, marca, nucleo, opzioni=None):
             guasti.append("linea morta %d volte" % srv["linee_morte"])
         if (ultimo.get("buchi") or 0) > soglia_buchi:
             guasti.append("%d buchi (soglia %d)" % (ultimo["buchi"], soglia_buchi))
-        if meta.get("strisce") is not None and meta["strisce"] > soglia_strisce:
+        if (meta.get("si_giudica") and meta.get("strisce") is not None
+                and meta["strisce"] > soglia_strisce):
             guasti.append("la tela e' sbavata: dispersione %.1f (soglia %.1f)"
                           % (meta["strisce"], soglia_strisce))
+
+        # ⭐⭐ IL QUINTO GIUDICE, ed e' quello che ieri notte mancava: **l'occhio**.
+        #   I quattro di sopra contano fotogrammi; questo GUARDA quel che c'e'
+        #   sul vetro e lo confronta con la scena dichiarata.  ⛔ Un «non lo so»
+        #   non diventa un rosso.
+        C.vede_l_occhio(b, misure, guasti)
+        # ⭐ E la seconda rete, sui soli numeri.  ⚠ Da qui in poi il browser e'
+        #   chiuso e l'inquilino e' uscito: e' l'unico momento in cui il server
+        #   ha gia' scritto le righe di riepilogo del ritmo.
+        C.conta_il_ritmo(b, misure, guasti)
 
         # ⭐ Un solo inquilino: i suoi numeri vanno anche in vista sulla riga.
         in_vista = dict(pagina=ultimo, server=srv)
@@ -105,10 +131,11 @@ def gira(desktop, marca, nucleo, opzioni=None):
                            guasti=guasti, **in_vista)
         return C.verde(NOME, desktop, marca,
                        "%d fotogrammi consegnati e %d dipinti in %.0f s, mai "
-                       "fermi piu' di %.1f s, %d buchi, tela pulita (%.1f)"
+                       "fermi piu' di %.1f s, %d buchi; e l'occhio: %s"
                        % (cresciuta.get("consegnati", 0),
                           cresciuta.get("dipinti", 0), durata, fermo,
-                          ultimo.get("buchi") or 0, meta.get("strisce") or -1),
+                          ultimo.get("buchi") or 0,
+                          (misure.get("occhio") or {}).get("perche", "non c'era")),
                        misure=misure, regole=regole, secondi=tetto.passati(),
                        **in_vista)
     except Exception as e:

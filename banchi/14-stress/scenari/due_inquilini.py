@@ -64,8 +64,12 @@ def gira(desktop, marca, nucleo, opzioni=None):
                             "il secondo inquilino non ha aperto una sessione "
                             "grafica: non sono in due", secondi=tetto.passati())
 
+        # ⭐⭐ E L'OCCHIO GUARDA LA TELA DEL PESANTE, una fotografia al secondo.
+        #   ⛔ E' proprio QUESTO scenario che la notte fra il 22 e il 23
+        #      settembre ha dato verde due volte mentre l'utente guardava
+        #      un'immagine a mosaico: i contatori erano perfetti.
         storia = C.guarda_per(nucleo, b.browser, min(durata, tetto.resta() - 90),
-                              passo=5.0, tetto=tetto)
+                              passo=5.0, tetto=tetto, occhio=b.occhio)
         sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
         cresciuta = C.cresciuti(storia[0], storia[-1])
         srv_pesante = C.dal_server(nucleo, desktop, b.segno, pesante)
@@ -105,6 +109,13 @@ def gira(desktop, marca, nucleo, opzioni=None):
                           % mescolate)
         if not vivo_il_normale:
             guasti.append("la sessione del normale e' morta nel mezzo")
+
+        # ⭐⭐ L'occhio, e la rete sui numeri.  ⚠ `conta_il_ritmo` fa USCIRE il
+        #   pesante (le righe di riepilogo escono alla chiusura della
+        #   sessione): tutto quel che si doveva leggere dal server e dal
+        #   registro e' gia' stato letto qui sopra.
+        C.vede_l_occhio(b, misure, guasti)
+        C.conta_il_ritmo(b, misure, guasti)
 
         # ⭐ Il PROTAGONISTA del giro e' il pesante: i suoi numeri vanno anche
         #   in vista sulla riga (`pagina`/`server`), cosi' la tabella del

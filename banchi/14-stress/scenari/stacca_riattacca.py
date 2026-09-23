@@ -40,7 +40,16 @@ def gira(desktop, marca, nucleo, opzioni=None):
     tetto = C.Tetto(o.get("tetto_s", TETTO_S))
     chi = o.get("chi") or C.nome_inquilino("sr")
     misure = (o.get("misure") or MISURE)[:giri]
-    b = C.Banco(nucleo, desktop, marca, chi, misura=misure[0], dove=o.get("dove"))
+    # ⛔ NIENTE OCCHIO QUI, e si dice perche': il giro e' fatto di dieci
+    #   distacchi, e fra un rientro e l'altro si aspetta solo che il contatore
+    #   riparta — spesso un secondo o due.  ⚠ L'occhio vuole che la scena
+    #   SALGA (25 s) prima di contare qualcosa: qui non guarderebbe mai niente,
+    #   e le fotografie subito dopo un rientro sono la finestra che si riapre,
+    #   non il prodotto (`[M]` 10,8 % di celle guaste su una ripresa sana).
+    #   ⇒ Si aggancia il giorno che ci sara' il ferro per misurare quanto dura
+    #     davvero la risalita dopo un rientro.
+    b = C.Banco(nucleo, desktop, marca, chi, misura=misure[0],
+                dove=o.get("dove"), occhio=False)
     fatti = []
     try:
         cod, perche = b.apparecchia("normale")

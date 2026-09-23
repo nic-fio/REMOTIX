@@ -37,7 +37,12 @@ def gira(desktop, marca, nucleo, opzioni=None):
     #   apriva il difetto.
     nasce = tuple(o.get("misura_alla_nascita", (1548, 862)))
     torna = tuple(o.get("misura_al_ritorno", (1400, 1000)))
-    b = C.Banco(nucleo, desktop, marca, chi, misura=nasce, dove=o.get("dove"))
+    # ⛔ NIENTE OCCHIO QUI, stessa ragione di `stacca-riattacca`: il giro e' fatto
+    #   di riavvii e di rientri, e la finestra in cui si guarda l'immagine e'
+    #   l'attesa del primo fotogramma — che dura quanto deve durare, non i 25 s
+    #   che l'occhio vuole per essere sicuro di guardare la SUA scena.
+    b = C.Banco(nucleo, desktop, marca, chi, misura=nasce, dove=o.get("dove"),
+                occhio=False)
     fatti = []
     try:
         cod, perche = b.apparecchia("normale")

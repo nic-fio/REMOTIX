@@ -62,8 +62,22 @@ def gira(desktop, marca, nucleo, opzioni=None):
     salto_massimo = float(o.get("salto_massimo", 8.0))   # livelli di luminanza
     tetto = C.Tetto(o.get("tetto_s", TETTO_S))
     chi = o.get("chi") or C.nome_inquilino("es")
+    # ⛔⛔ QUESTO SCENARIO NON PRENDE L'OCCHIO, e il motivo e' un numero.
+    #   Il giudice dei FANTASMI qui sopra dice: «a desktop fermo la luminanza
+    #   media dev'essere UNA», e boccia se due fotografie a un secondo l'una
+    #   distano piu' di 8 livelli.  ⚠ La scena testimone dell'occhio fa avanzare
+    #   TUTTE le celle di un passo quindici volte al secondo, apposta (un campo
+    #   che non si muove e' cieco al guasto che l'occhio cerca).
+    #   `[M]` 23 set 2026, calcolato sulla tavola vera (240 celle, 6 colori):
+    #   la luminanza media del campo cambia di **15,6 livelli** fra un passo e
+    #   l'altro, e il campo occupa il **55 %** della tela ⇒ **8,6 livelli** su
+    #   tutto lo schermo, contro una soglia di **8,0**.
+    #   ⇒ Accendere qui l'occhio vorrebbe dire fabbricare FANTASMI col banco e
+    #     accusarne il prodotto.  L'immagine, in questo scenario, la giudica la
+    #     luminanza; l'occhio tornera' il giorno che i due giudici sapranno
+    #     dividersi la tela.
     b = C.Banco(nucleo, desktop, marca, chi, misura=o.get("misura", (1280, 900)),
-                dove=o.get("dove"))
+                dove=o.get("dove"), occhio=False)
     fatti = []
     try:
         cod, perche = b.apparecchia("normale")

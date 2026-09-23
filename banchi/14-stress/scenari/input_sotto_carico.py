@@ -130,9 +130,12 @@ def gira(desktop, marca, nucleo, opzioni=None):
         except Exception as e:                   # noqa: BLE001
             appunti["perche"] = "non ho potuto provare gli appunti: %s" % str(e)[:120]
 
+        # ⭐ E mentre l'input viaggia, l'occhio guarda la tela: ⛔ «i tasti sono
+        #   arrivati» non vuol dire «l'immagine e' giusta», e una prova
+        #   dell'input che non guarda lo schermo lascia meta' della domanda fuori.
         storia = C.guarda_per(nucleo, b.browser,
                               min(durata, max(30.0, tetto.resta() - 90)),
-                              passo=5.0, tetto=tetto)
+                              passo=5.0, tetto=tetto, occhio=b.occhio)
         cresciuta = C.cresciuti(storia[0], storia[-1])
 
         c, t = C.dentro(nucleo, desktop,
@@ -180,6 +183,9 @@ def gira(desktop, marca, nucleo, opzioni=None):
         if appunti.get("arrivato") is False:
             guasti.append("il testo copiato NELLA SESSIONE non e' arrivato alla "
                           "pagina: %s (§7.4)" % appunti.get("perche"))
+
+        C.vede_l_occhio(b, misure, guasti)
+        C.conta_il_ritmo(b, misure, guasti)
 
         if guasti:
             return C.rosso(NOME, desktop, marca, "; ".join(guasti), misure=misure,

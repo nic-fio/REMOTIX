@@ -82,9 +82,13 @@ def gira(desktop, marca, nucleo, opzioni=None):
                                 % (kbit, perche[:120]),
                                 misure={"gradini": misurati}, secondi=tetto.passati())
             segno = C.istante(nucleo, desktop)
+            # ⚠ L'occhio guarda anche qui, ma il suo verdetto in questo scenario
+            #   si MISURA e non si giudica (vedi in fondo): la cadenza delle
+            #   fotografie resta quella giusta, cosi' il numero c'e' il giorno
+            #   che qualcuno lo tarera' sulla linea stretta.
             storia = C.guarda_per(nucleo, b.browser,
                                   min(per_gradino, max(30.0, tetto.resta() - 120)),
-                                  passo=5.0, tetto=tetto)
+                                  passo=5.0, tetto=tetto, occhio=b.occhio)
             sempre, fermo = C.sempre_in_salita(storia, "consegnati", fermo_massimo)
             cresciuta = C.cresciuti(storia[0], storia[-1])
             srv = C.dal_server(nucleo, desktop, segno, chi)
@@ -119,12 +123,24 @@ def gira(desktop, marca, nucleo, opzioni=None):
                                misure={"gradini": misurati}, secondi=tetto.passati())
 
         C.salva(o.get("dove"), "gradini-rete.json", misurati)
+        # ⛔⛔ QUI L'OCCHIO SI MISURA MA NON GIUDICA, e la ragione e' che le sue
+        #     soglie non sono MAI state tarate su una linea strozzata: `[M]` le
+        #     soglie di `stress_occhio` vengono da un giro a banda piena, dove
+        #     il sano sta a **0 celle guaste su 66 000**.  A 1 Mbit/s con la
+        #     scena pesante il codificatore e' affamato per costruzione, e non
+        #     si sa se una cella impastata sia il difetto o la linea.
+        #     ⇒ Il numero si scrive, il verdetto lo dara' chi lo avra' tarato:
+        #       ⛔ una soglia messa a occhio qui fabbrica rossi falsi, ed e' la
+        #       stessa trappola scritta sopra `giudizio_dei_numeri`.
+        misure = {"gradini": misurati}
+        C.vede_l_occhio(b, misure, guasti=None, giudica=False)
+        C.conta_il_ritmo(b, misure, guasti=None, giudica=False)
         return C.verde(NOME, desktop, marca,
                        "la linea stretta DEGRADA senza bloccare: %s"
                        % "; ".join("%d kbit/s → %s fotogrammi, %s%% chiavi"
                                    % (m["kbit"], m["cresciuti"],
                                       m["chiavi_per_cento"]) for m in misurati),
-                       misure={"gradini": misurati},
+                       misure=misure,
                        regole={"gradini": gradini, "per_gradino_s": per_gradino,
                                "chiavi_per_cento": chiavi_per_cento},
                        secondi=tetto.passati())

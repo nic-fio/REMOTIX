@@ -17,11 +17,24 @@
 import importlib
 import inspect
 import os
+import shutil
 import sys
 import time
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, QUI)
+
+# ⚠ L'OCCHIO, QUI, GUARDA IN FRETTA — e si dice perche'.  Nella notte aspetta 25
+#   secondi che il browser dentro la scatola compaia, e fotografa una volta al
+#   secondo; qui non c'e' nessuna scatola che debba salire, e una prova che
+#   dorme 25 s per ognuno dei suoi quindici casi non la lancia piu' nessuno.
+#   ⛔ Quel che NON si tocca e' il giudizio: soglie, riscaldamento e regole sono
+#      quelli veri.  ⭐ E i due numeri finiscono comunque nelle misure di ogni
+#      giro, percio' una ripresa fatta cosi' lo dichiara da sola.
+os.environ.setdefault("REMOTIX_OCCHIO_ATTESA", "2")
+os.environ.setdefault("REMOTIX_OCCHIO_CADENZA", "0.4")
+# ⛔ E le fotografie NON vanno in `/tmp`: sul tablet e' in RAM.
+DOVE = os.path.expanduser("~/.cache/remotix-prova-scenari")
 
 import _comune as C                                    # noqa: E402
 import _nucleo_finto as F                              # noqa: E402
@@ -39,6 +52,22 @@ CASI = [
     ("rete_strozzata", "spirale", {"gradini": [5000], "per_gradino_s": 15,
                                    "tetto_s": 90}),
     ("input_sotto_carico", "muto", {"durata_s": 15, "tetto_s": 90}),
+]
+
+# ⭐⭐ IL GUASTO CHE IERI NOTTE PASSAVA VERDE, e questa e' la prova che oggi non
+#   passa piu'.  Col finto «a_mosaico» **tutti i contatori sono perfetti** —
+#   consegnati == dipinti, zero buchi, zero linee morte, nessuna spirale — e
+#   l'unica cosa che non va e' l'IMMAGINE.  ⇒ Solo l'occhio puo' dire di no.
+#   ⛔ E la controprova si fa con gli STESSI giri e `REMOTIX_OCCHIO=no`: danno
+#      VERDE, che e' esattamente quel che e' successo la notte fra il 22 e il
+#      23 settembre 2026.
+A_MOSAICO = [
+    ("pesante", {"durata_s": 40, "tetto_s": 120}),
+    ("due_inquilini", {"durata_s": 40, "tetto_s": 150}),
+    # ⚠ `lunga` vuole il tetto largo: si concede da sola 120 s di margine
+    #   (`tetto.resta() - 120`) e con un tetto stretto non guarderebbe NIENTE.
+    ("lunga", {"durata_s": 40, "tetto_s": 240}),
+    ("input_sotto_carico", {"durata_s": 40, "tetto_s": 150}),
 ]
 SANI = [
     ("pesante", {"durata_s": 20, "tetto_s": 90}),
@@ -129,6 +158,8 @@ def prova(quale, atteso, come, opzioni, etichetta):
     mod = importlib.import_module(quale)
     f = _finto(come)
     t0 = time.time()
+    opzioni = dict(opzioni)
+    opzioni.setdefault("dove", DOVE)
     try:
         r = mod.gira("kde", "firefox", f, opzioni)
     except Exception as e:
@@ -149,6 +180,20 @@ def prova(quale, atteso, come, opzioni, etichetta):
           % ("OK " if ok else "NO ", quale, etichetta,
              ESITI.get(r.get("esito"), "?"), secondi,
              str(r.get("perche"))[:70]))
+    # ⭐ E quando c'e' di mezzo l'occhio si stampano i suoi numeri: un verdetto
+    #   senza il numero che lo regge non si rilegge domani.
+    occhio = ((r.get("misure") or {}).get("occhio")
+              if isinstance(r, dict) else None)
+    if occhio:
+        print("       [M] occhio: %s fotografie viste, %s sopra soglia, %s "
+              "devastate, peggiore %s%% · cadenza %ss, attesa %ss%s"
+              % (occhio.get("occhio_foto"), occhio.get("occhio_guaste"),
+                 occhio.get("occhio_devastate"),
+                 occhio.get("occhio_peggiore_per_cento"),
+                 occhio.get("cadenza_s"),
+                 occhio.get("attesa_prima_di_guardare_s"),
+                 "" if occhio.get("giudica", True) else " (misurato, NON giudicato)"))
+    return r
 
 
 print("== la certificazione degli scenari — col nucleo FINTO, nessun prodotto\n")
@@ -166,6 +211,57 @@ for quale, come, opzioni in CASI:
 print("\n  ⚠ e se il browser non si accende, e' 3 — non un rosso")
 for quale, opzioni in SANI[:3]:
     prova(quale, 3, "rotto", opzioni, "rotto")
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐⭐ L'OCCHIO: IL GUASTO CHE I CONTATORI NON VEDONO
+#
+# ⛔ Questa e' la prova che il difetto piu' grave del 23 settembre 2026 — il
+#    GIUDICE, non il prodotto — non si puo' ripetere.  Gli stessi giri, con lo
+#    stesso finto, due volte: con l'occhio e senza.
+# ═══════════════════════════════════════════════════════════════════════════
+print("\n  ⛔⛔ IL MOSAICO: contatori perfetti, immagine sbagliata")
+print("      ⇒ con l'occhio dev'essere ROSSO")
+os.environ["REMOTIX_OCCHIO"] = "si"
+for quale, opzioni in A_MOSAICO:
+    prova(quale, 1, "a_mosaico", opzioni, "a_mosaico")
+
+print("\n      ⚠ e con l'occhio SPENTO (com'era ieri notte) gli stessi giri")
+print("        devono dare VERDE: e' la misura di che cosa mancava.")
+os.environ["REMOTIX_OCCHIO"] = "no"
+try:
+    for quale, opzioni in A_MOSAICO:
+        prova(quale, 0, "a_mosaico", opzioni, "cieco")
+finally:
+    os.environ["REMOTIX_OCCHIO"] = "si"
+
+print("\n  ⭐ e la SECONDA RETE, quella sui soli numeri: il server butta")
+print("     fotogrammi gia' codificati e nessuna chiave li ricuce ⇒ ROSSO")
+r = prova("pesante", 1, "catena_rotta", {"durata_s": 25, "tetto_s": 120},
+          "catena")
+ritmo = ((r.get("misure") or {}).get("ritmo") or {}) if isinstance(r, dict) else {}
+print("       [M] ritmo: %s buttati, %s chiavi oltre a quella d'apertura ⇒ esito %s"
+      % (ritmo.get("buttati_in_tutto"), ritmo.get("chiavi_riparatrici"),
+         ritmo.get("esito")))
+if ritmo.get("esito") != 1:
+    falliti.append("pesante (catena): il giudice sui numeri non ha detto ROSSO "
+                   "(%s) — e le righe di riepilogo c'erano" % ritmo.get("perche"))
+
+# ⭐ E la terza domanda, che e' la piu' importante delle tre: quando l'occhio
+#   NON riconosce la propria scena, deve dire «non lo so» — ⛔ mai rosso.
+#   Il finto «fermo» tiene la scena testimone accesa ma i contatori si
+#   inchiodano: il rosso deve venire da LORO, non dall'occhio.
+print("\n  ⭐ e un occhio che non ha guardato non accusa nessuno")
+r = prova("pesante", 1, "fermo",
+          {"durata_s": 40, "tetto_s": 120, "fermo_massimo_s": 10}, "fermo")
+occhio = ((r.get("misure") or {}).get("occhio") or {}) if isinstance(r, dict) else {}
+if occhio.get("esito") == 1:
+    falliti.append("pesante (fermo): il rosso l'ha dato l'OCCHIO, e li' il "
+                   "guasto e' dei contatori")
+
+try:
+    shutil.rmtree(DOVE, ignore_errors=True)
+except OSError:
+    pass
 
 print()
 if falliti:
