@@ -677,6 +677,13 @@ GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
 GIRA_C18() { bash "$QUI/11-accendi.sh" c18 "$1" "${@:2}"; }
 GIRA_C19() { bash "$QUI/11-accendi.sh" c19 "$1" "${@:2}"; }
 GIRA_C20() { bash "$QUI/11-accendi.sh" c20 "$1" "${@:2}"; }
+# ⭐ C24 «Esci dieci volte» (fase 14-15): non e' nel passo «prodotto» di
+#   11-accendi.sh, quindi si copia da se' nella scatola prima di girare.
+GIRA_C24() {
+	local p; case "$1" in gnome) p=8511;; kde) p=8512;; xfce) p=8513;; lxqt) p=8514;; esac
+	podman cp "$QUI/11-c24-l-esci-chiude-sempre.py" "rete11-$1:/opt/remotix/" &&
+	podman exec "rete11-$1" python3 -u /opt/remotix/11-c24-l-esci-chiude-sempre.py --porta "$p" "${@:2}"
+}
 # ⭐ C21 (fase 14, 24 set 2026) NON gira dentro la scatola: vuole i BROWSER VERI,
 #   che stanno sull'ospite dentro il labwc senza schermo dell'utente dei banchi.
 #   ⇒ Si lancia come quell'utente (i browser da amministratore non partono) e
@@ -1055,6 +1062,8 @@ le_cinque_nuove() {
 	else
 		esegui_maglia "C20($d)" false GIRA_C20 "$d"
 		esegui_maglia "C20($d) guasto innestato" true GIRA_C20 "$d" --scena-che-lampeggia
+		esegui_maglia "C24($d)" false GIRA_C24 "$d"
+		esegui_maglia "C24($d) guasto innestato" true GIRA_C24 "$d" --rientra-subito
 	fi
 	# ⭐ C21 — sul bordo la forma cambia (fase 14, decisione dell'utente del 24
 	#   set: la forma vera del puntatore su tutti e quattro i desktop).  Vuole
