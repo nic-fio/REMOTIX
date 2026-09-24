@@ -122,6 +122,37 @@ di nascita** e il resto è nero. Col cliente Python (1920x1080) riempiva tutto. 
 
 ---
 
+### Incremento 3 — lo sfondo nasce della misura del cliente
+
+`[M]` La causa, con il cliente Python e senza browser: **una gara alla nascita**. labwc nasce con
+l'uscita 1280x720 e il prodotto la ridimensiona ~200 ms dopo; pcmanfm-qt parte ~160 ms dopo labwc.
+`[R]` pcmanfm-qt 2.1.0 calcola lo sfondo da `screen->size()` e lo ricalcola solo su `resizeEvent`: se
+Qt aggiorna lo schermo dopo la finestra, lo sfondo resta 1280x720 per sempre.
+**Cura** (`e4ecfbb`, solo ramo LXQt): il client primario di labwc diventa `sh -c` che dà all'uscita la
+misura del cliente con `wlr-randr` **prima** di `exec lxqt-session` (`;` e non `&&`: se fallisce,
+resta la richiesta tardiva di prima). `wlr-randr` passa da attrezzo diagnostico a dipendenza del
+prodotto su LXQt. `[M]` 1400x914: **prima 1 difetto su 20, dopo 0 su 20**; e 0 su 5 a 1920x1080, 0 su
+5 a 3840x2160.
+
+### La cura di Firefox (decisione dell'utente: «curarlo subito»)
+
+`ec9c561`: la **larghezza** della tela chiesta si tronca a multiplo di 16 (l'altezza resta pari),
+per tutti i browser, senza rami. `[M]` Firefox: striscia da 8 e 12 px → **0**, margine dell'ultima
+icona uguale a Chrome (7 px); Chrome invariato. Il prezzo: bande nere di al più 7-8 px ai lati.
+
+### CP0 — la baseline, chiusa
+
+`[M]` 24 set 2026, 07:36 → 12:00, binario `e681a262` (quello di prima della fase), `--famiglia tutto`
+sulle quattro scatole: **un solo rosso, `C1(lxqt)×10`**, quello atteso (il binario vecchio non
+riconosce LXQt); **117 guasti innestati visti su 117**; C14 regge; C10 C12 C15 C16 «il terreno non
+regge» dal server, come sempre. ⇒ nessuna differenza inattesa rispetto al checkpoint del 24 notte.
+
+### Client veri col binario finale **`c0e8f010`** e pagina **`d77177f1`**
+
+`[M]` sulla scatola di sviluppo, **Firefox 140 e Chrome 154 PASS** a finestra 1400x914 (tela
+1392x828) **e in 4K** (tela 3840x2014): a–g tutti verdi. La foto 4K di Firefox: sfondo pieno, 0 %
+nero, l'ultima colonna è sfondo (1,81,129) e non la striscia.
+
 ## ⛔ Un difetto trovato per strada, che NON è di LXQt — Firefox e il riempimento del codificatore
 
 `[M]` 24 set 2026, da 380 fotografie di tela (`c20veri` del 23 set, `topo`, `veri-lxqt`): **Firefox 140
