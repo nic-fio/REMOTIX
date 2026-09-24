@@ -2043,7 +2043,7 @@ function misura_vista() {
    *   quella riga diceva il vero e questa la contraddiceva.
    *
    * ⚠ Il prezzo, dichiarato: la vista puo' uscire di 1 pixel piu' piccola del
-   *   vero, e la tela fino a 2 in altezza (1 di troncatura + 1 di parita') e
+   *   vero, e la tela fino a 15 in altezza (troncatura a multiplo di 16) e
    *   fino a 16 in larghezza (il multiplo di 16 di `tela_da_chiedere()`, cura
    *   del 24 settembre 2026).  A dpr 1 non cambia niente — `clientWidth × 1`
    *   e' gia' esatto. */
@@ -2096,8 +2096,16 @@ function misura_vista() {
  *    Firefox quel ritaglio in ORIZZONTALE non lo onora: disegna la striscia di
  *    riempimento — verde, (0,76,0) — larga quanto manca al multiplo (8 px a
  *    tela 1400, 4 a 3788, 12 a 1348) **e schiaccia l'immagine** dentro la
- *    larghezza dichiarata (1408 codificati → 1400 mostrati).  In ALTEZZA il
- *    ritaglio lo onora.  Chrome 154: nessun difetto.
+ *    larghezza dichiarata (1408 codificati → 1400 mostrati).  Chrome 154: nessun
+ *    difetto.
+ * ⛔ E IN ALTEZZA NON E' VERO CHE LO ONORA — `[M]` 24 set 2026, sera, trovato
+ *    dall'utente a mano («con Firefox l'area di sensibilita' del puntatore sembra
+ *    spostata di qualche millimetro»): sulla strada della decodifica IN HARDWARE
+ *    (quella del tablet, «H.264 High=si/HW») Firefox schiaccia anche in
+ *    verticale — tela 962 righe, codificate 976, il punto remoto y mostrato a
+ *    y·962/976 ⇒ il clic agisce fino a 13-14 px PIU' IN ALTO di quel che si
+ *    vede, in fondo allo schermo.  In decodifica software (il banco sul server)
+ *    il ritaglio in altezza lo onora, ed e' per questo che non si era visto.
  *
  * ⇒ Una larghezza multipla di 16 non ha niente da ritagliare in orizzontale, e
  *   il difetto non ha dove succedere — su nessun motore.  ⭐ E' codice comune:
@@ -2113,11 +2121,12 @@ function misura_vista() {
  * ⚠ I limiti restano compatibili: 320 e 7680 sono multipli di 16, e il 4K
  *   (3840) pure — li' non cambia niente.  Il server (`rcp_misura_ammessa()`)
  *   chiede solo il PARI, e un multiplo di 16 lo e'.
- * ⚠ L'ALTEZZA resta al pari: la' il ritaglio funziona su tutti e due i motori,
- *   e troncarla costerebbe righe di desktop senza curare niente. */
+ * ⭐ E dal 24 set sera anche l'ALTEZZA a multiplo di 16 (vedi sopra): la tela
+ *   puo' uscire fino a 15 righe piu' BASSA della finestra, con bande di al piu'
+ *   7-8 px sopra e sotto.  240, 2160 e 4320 sono gia' multipli di 16. */
 const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 7680;
 const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 4320;
-const TELA_L_PASSO = 16, TELA_A_PASSO = 2;
+const TELA_L_PASSO = 16, TELA_A_PASSO = 16;
 function tela_da_chiedere() {
   const v = misura_vista();
   const p = (n, min, max, passo) => {
