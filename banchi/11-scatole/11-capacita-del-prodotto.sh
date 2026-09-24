@@ -43,6 +43,8 @@
 # 1. ⭐ I DESKTOP CHE IL PRODOTTO SA ACCENDERE, e che cosa ne sa fare.
 #
 #   immagine   la cattura arriva al cliente     (C1 verde su quella scatola)
+#   forma      la forma vera del puntatore       (C21 verde; fase 14: su gnome
+#              c'era gia', kde/xfce/lxqt si aprono quando C21 e' verde li')
 #   input      tastiera e mouse arrivano         (C4 verde)
 #   appunti    gli appunti nei due versi         (C17 verde)
 #
@@ -69,7 +71,7 @@ DESKTOP_COL_PRODOTTO="gnome kde xfce lxqt"
 
 capacita_del_desktop() {
 	case "$1" in
-	gnome) printf 'immagine input appunti' ;;
+	gnome) printf 'immagine input appunti forma' ;;
 	kde)   printf 'immagine input appunti' ;;
 	xfce)  printf 'immagine input appunti' ;;
 	lxqt)  printf 'immagine input appunti' ;;
@@ -123,6 +125,7 @@ capacita_della_maglia() {
 	C2|C3|C8b|C20) printf 'immagine' ;;
 	C4|C6)     printf 'immagine input' ;;
 	C17)       printf 'immagine input appunti' ;;
+	C21)       printf 'immagine input forma' ;;
 	# ⛔ Una maglia che non conosco non e' «libera»: vuole una capacita' che
 	#   nessun desktop ha, e cosi' salta dicendolo invece di girare a caso.
 	*)         printf 'sconosciuta' ;;
@@ -146,6 +149,8 @@ perche_manca() {
 		printf 'l input su XFCE e l incremento 3 della fase 13 (virtual-keyboard, virtual-pointer: fasi/13-xfce.md)' ;;
 	xfce:appunti)
 		printf 'gli appunti su XFCE sono l incremento 5 della fase 13 (fasi/13-xfce.md)' ;;
+	*:forma)
+		printf 'la forma vera del puntatore non arriva al browser su %s (C21, fase 14)' "$desktop" ;;
 	*:sconosciuta)
 		printf 'la maglia non e dichiarata in 11-capacita-del-prodotto.sh: non so che cosa vuole' ;;
 	*)

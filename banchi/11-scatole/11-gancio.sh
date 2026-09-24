@@ -677,6 +677,23 @@ GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
 GIRA_C18() { bash "$QUI/11-accendi.sh" c18 "$1" "${@:2}"; }
 GIRA_C19() { bash "$QUI/11-accendi.sh" c19 "$1" "${@:2}"; }
 GIRA_C20() { bash "$QUI/11-accendi.sh" c20 "$1" "${@:2}"; }
+# ⭐ C21 (fase 14, 24 set 2026) NON gira dentro la scatola: vuole i BROWSER VERI,
+#   che stanno sull'ospite dentro il labwc senza schermo dell'utente dei banchi.
+#   ⇒ Si lancia come quell'utente (i browser da amministratore non partono) e
+#   dall'albero intero dei banchi, perche' importa `12-c20-veri.py` e
+#   `12-client-veri.py` (importati, non copiati).  ⚠ Se il labwc senza schermo
+#   non c'e', C21 dice 3 e lo nomina: un 3 non e' un verde.
+BANCHI_VERI=${REMOTIX_BANCHI_VERI:-/media/REMOTIX/src/controllo/banchi}
+UTENTE_VERI=${REMOTIX_UTENTE_VERI:-nicfio}
+GIRA_C21() {
+	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
+	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
+		WAYLAND_DISPLAY="${REMOTIX_WAYLAND_VERI:-wayland-0}" \
+		REMOTIX_SCHERMO_ANNIDATO=1 REMOTIX_SUL_SERVER=1 \
+		REMOTIX_CHROME_OPZIONI=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1 \
+		python3 "$BANCHI_VERI/11-scatole/11-c21-sul-bordo-la-forma-cambia.py" \
+		--scatola "$1" --visibile "${@:2}"
+}
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -1020,6 +1037,16 @@ le_cinque_nuove() {
 	else
 		esegui_maglia "C20($d)" false GIRA_C20 "$d"
 		esegui_maglia "C20($d) guasto innestato" true GIRA_C20 "$d" --scena-che-lampeggia
+	fi
+	# ⭐ C21 — sul bordo la forma cambia (fase 14, decisione dell'utente del 24
+	#   set: la forma vera del puntatore su tutti e quattro i desktop).  Vuole
+	#   la capacita' «forma»; il guasto `--forma-sbagliata` e' giudicato dai
+	#   PIXEL della forma, non da un contatore.
+	if ! perche=$(prodotto_pronto C21 "$d"); then
+		salta_maglia "C21($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C21($d)" false GIRA_C21 "$d"
+		esegui_maglia "C21($d) guasto innestato" true GIRA_C21 "$d" --forma-sbagliata
 	fi
 }
 
