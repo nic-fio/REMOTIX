@@ -531,6 +531,12 @@ TASTI = {
 }
 
 
+# ⭐ La misura della finestra dei due browser, «LxA».  ⚠ Si cambia con
+#   `--finestra`: `[M]` 24 set 2026, la striscia verde di Firefox dipende dalla
+#   LARGHEZZA (8 px a 1400, 12 a 1348), e un banco a finestra fissa ne vede una.
+FINESTRA = [1400, 1000]
+
+
 class GuidaChrome(GuidaCdp):
     def __init__(self, porta, visibile):
         super().__init__(porta, "chrome")
@@ -539,7 +545,7 @@ class GuidaChrome(GuidaCdp):
         cmd = ["google-chrome", "--remote-debugging-port=%d" % porta,
                "--user-data-dir=" + self.profilo, "--no-first-run",
                "--no-default-browser-check", "--disable-sync",
-               "--password-store=basic", "--window-size=1400,1000",
+               "--password-store=basic", "--window-size=%d,%d" % tuple(FINESTRA),
                "--remote-allow-origins=*"]
         if not visibile:
             cmd.append("--headless=new")
@@ -661,7 +667,7 @@ class GuidaFirefox:
         self.nome = "firefox"
         self.visibile = visibile
         self.p, self.m, self.profilo = MARIONETTE.accendi(
-            porta=porta, headless=not visibile, largo=1400, alto=1000)
+            porta=porta, headless=not visibile, largo=FINESTRA[0], alto=FINESTRA[1])
         # ⚠ `acceptInsecureCerts` va dato ANCHE fuori da `alwaysMatch`: `[M]` 18
         #   settembre 2026, Firefox 140 con la sola forma di `07-b46`
         #   (`sessione()`) rifiuta il certificato autofirmato («insecure
@@ -1320,12 +1326,15 @@ def main():
                    help="solo movimento, niente clic (desktop con cose delicate)")
     a.add_argument("--registro-cmd", default="",
                    help="comando shell che stampa il registro del server")
+    a.add_argument("--finestra", default="1400x1000",
+                   help="misura della finestra dei browser, LxA")
     a.add_argument("--salva", default="", help="cartella dove lasciare le fotografie")
     a.add_argument("--porte-base", type=int, default=2851)
     a.add_argument("--lascia-acceso", action="store_true",
                    help="non spegnere l'emulatore se l'ha acceso il banco")
     a.add_argument("--certifica", action="store_true")
     o = a.parse_args()
+    FINESTRA[:] = [int(x) for x in o.finestra.lower().split("x")]
     o.clic = [float(x) for x in o.clic.split(",")]
     if o.salva:
         os.makedirs(o.salva, exist_ok=True)
