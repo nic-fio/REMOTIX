@@ -123,7 +123,7 @@ capacita_del_desktop() {
 capacita_della_maglia() {
 	case "$1" in
 	C2|C3|C8b|C20) printf 'immagine' ;;
-	C4|C6)     printf 'immagine input' ;;
+	C4|C6|C23) printf 'immagine input' ;;
 	C17)       printf 'immagine input appunti' ;;
 	C21)       printf 'immagine input forma' ;;
 	# ⛔ Una maglia che non conosco non e' «libera»: vuole una capacita' che

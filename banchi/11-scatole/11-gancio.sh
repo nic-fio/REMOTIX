@@ -694,6 +694,15 @@ GIRA_C21() {
 		python3 "$BANCHI_VERI/11-scatole/11-c21-sul-bordo-la-forma-cambia.py" \
 		--scatola "$1" --visibile "${@:2}"
 }
+GIRA_C23() {
+	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
+	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
+		WAYLAND_DISPLAY="${REMOTIX_WAYLAND_VERI:-wayland-0}" \
+		REMOTIX_SCHERMO_ANNIDATO=1 REMOTIX_SUL_SERVER=1 \
+		REMOTIX_CHROME_OPZIONI=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1 \
+		python3 "$BANCHI_VERI/11-scatole/11-c23-maiusc-e-frecce-selezionano.py" \
+		--scatola "$1" --visibile "${@:2}"
+}
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -1047,6 +1056,15 @@ le_cinque_nuove() {
 	else
 		esegui_maglia "C21($d)" false GIRA_C21 "$d"
 		esegui_maglia "C21($d) guasto innestato" true GIRA_C21 "$d" --forma-sbagliata
+	fi
+	# ⭐ C23 — Maiusc e frecce selezionano (fase 14: l'utente, 24 set, «la
+	#   selezione con Maiusc+frecce su tutti i DE»).  Il giudizio si fa sulla
+	#   FOTOGRAFIA del campo, non su un contatore.
+	if ! perche=$(prodotto_pronto C23 "$d"); then
+		salta_maglia "C23($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C23($d)" false GIRA_C23 "$d"
+		esegui_maglia "C23($d) guasto innestato" true GIRA_C23 "$d" --senza-maiusc
 	fi
 }
 
