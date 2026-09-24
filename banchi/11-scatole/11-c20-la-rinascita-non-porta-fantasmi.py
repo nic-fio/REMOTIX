@@ -299,6 +299,31 @@ DESKTOP_E_GESTO = (
      "org.gnome.SessionManager Logout u 1"),
     ("XFCE", "xfce4-session", None,
      "xfce4-session-logout --logout --fast"),
+    # ⭐ LXQt — 24 set 2026, fase 14.  `[R]` Il gesto e' il metodo D-Bus che il
+    #   menu «Esci» di LXQt raggiunge, pubblicato da `lxqt-session` 2.1.1
+    #   (quella di trixie, 2.1.1-1):
+    #     servizio `org.lxqt.session`, oggetto `/LXQtSession`
+    #       https://github.com/lxqt/lxqt-session/blob/2.1.1/lxqt-session/src/sessionapplication.cpp
+    #     interfaccia `org.lxqt.session`, metodo `logout()` (Q_NOREPLY), che
+    #     chiama `m_manager->logout(true)`
+    #       https://github.com/lxqt/lxqt-session/blob/2.1.1/lxqt-session/src/sessiondbusadaptor.h
+    # ⛔ NON `lxqt-leave --logout`: apre una CONFERMA modale e aspetta un clic
+    #    che nessuno da' ⇒ la maglia uscirebbe 3 per un dialogo, non per il
+    #    prodotto.
+    # ⚠ L'ORDINE non e' un caso: sta IN CODA, cosi' le tre voci sopra si
+    #   provano come prima e scelgono come prima.  E i marcatori non si
+    #   pestano: nella scatola lxqt non c'e' `xfce4-session` (ne'
+    #   `gnome-session`, ne' `startplasma-wayland`), e nelle altre tre non
+    #   c'e' `lxqt-session` — ⇒ nessuna voce cattura il desktop di un'altra.
+    # ⚠ `--expect-reply=no`: il metodo e' `Q_NOREPLY`, e Qt risponde (se
+    #   risponde) solo DOPO che `logout(true)` ha fermato i moduli — cioe'
+    #   quando `lxqt-session` sta gia' uscendo.  `[?]` Aspettando la risposta,
+    #   busctl rischierebbe «Remote peer disconnected» e un codice ≠ 0 ⇒ C20
+    #   direbbe «il gesto non ha risposto» a un gesto riuscito.  Da misurare
+    #   sulla scatola.
+    ("LXQt", "lxqt-session", None,
+     "busctl --user --expect-reply=no call org.lxqt.session /LXQtSession "
+     "org.lxqt.session logout"),
 )
 
 
@@ -315,8 +340,8 @@ def come_si_esce():
             continue
         return nome, gesto
     return None, ("in questa scatola non c'e' ne' startplasma-wayland, ne' "
-                  "gnome-session, ne' xfce4-session: non so come si dice "
-                  "«Esci» qui dentro")
+                  "gnome-session, ne' xfce4-session, ne' lxqt-session: non "
+                  "so come si dice «Esci» qui dentro")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -743,7 +768,7 @@ def certifica():
 
     # ⭐ E il gesto: la tavola dei desktop si prova per forma, non per fiducia.
     print("  %s la tavola dei gesti «Esci» ha %d desktop: %s"
-          % ("OK " if len(DESKTOP_E_GESTO) == 3 else "NO ",
+          % ("OK " if len(DESKTOP_E_GESTO) == 4 else "NO ",
              len(DESKTOP_E_GESTO),
              ", ".join(d[0] for d in DESKTOP_E_GESTO)))
     print()
