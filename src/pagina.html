@@ -9438,8 +9438,29 @@ function cl_su_mousedown(ev) {
    *   clic cancella la posizione in sospeso e **porta la propria**.
    *
    * ⚠ Non costa un messaggio in piu' quando non serve: `cl_manda_puntatore()`
-   *   tace se il pixel non e' cambiato. */
-  cl_su_mousemove(ev);
+   *   tace se il pixel non e' cambiato.
+   *
+   * ⛔⭐ MA NON SI RICALCOLA DAL PUNTO CHE IL MOVIMENTO HA GIA' DATO MEGLIO —
+   *     24 settembre 2026.  `[M]` Chrome, tela a mezzo pixel (bordo sinistro a
+   *     x=0,5): `PUNTATORE 1255` e subito dopo `PULSANTE` a 1254; 1323 poi 1322.
+   *     Firefox no.  `[R]` `pointermove` porta `clientX` FRAZIONARIO, il
+   *     `mousedown` di Chrome lo porta INTERO: ricalcolando dal secondo, il
+   *     mezzo pixel del bordo spinge il clic nel pixel accanto — e sui bordi da
+   *     afferrare, larghi pochi pixel, un pixel e' la differenza fra prendere
+   *     la finestra e no.
+   *
+   * ⇒ Se il punto del clic sta a MENO DI UN PIXEL CSS dall'ultimo punto grezzo
+   *   del movimento, e' LO STESSO punto detto con meno cifre: vale quello del
+   *   movimento, gia' spedito.  ⭐ Nessun ramo per browser: dove `clientX` e'
+   *   frazionario anche nel clic (Firefox) la distanza e' zero e non cambia
+   *   niente.
+   * ⚠ E la cura del 14 agosto resta intera: senza movimento prima (primo clic,
+   *   `cl_grezzo_x` a -1) o col movimento perso (DeX, il clic lontano dal punto
+   *   vecchio) la distanza supera il pixel e il clic porta la propria posizione.
+   *   Agganciati il punto grezzo non conta: si passa come prima. */
+  if (cl_agganciato || cl_grezzo_x < 0
+      || Math.abs(ev.clientX - cl_grezzo_x) >= 1
+      || Math.abs(ev.clientY - cl_grezzo_y) >= 1) cl_su_mousemove(ev);
   /* ⛔⭐ QUI SI CHIEDEVA LA CATTURA, e non si chiede piu': il primo clic sulla
    *     tela agganciava il puntatore con `Pointer Lock`.
    *
