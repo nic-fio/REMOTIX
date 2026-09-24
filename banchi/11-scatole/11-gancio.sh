@@ -694,6 +694,15 @@ GIRA_C21() {
 		python3 "$BANCHI_VERI/11-scatole/11-c21-sul-bordo-la-forma-cambia.py" \
 		--scatola "$1" --visibile "${@:2}"
 }
+GIRA_C22() {
+	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
+	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
+		WAYLAND_DISPLAY="${REMOTIX_WAYLAND_VERI:-wayland-0}" \
+		REMOTIX_SCHERMO_ANNIDATO=1 REMOTIX_SUL_SERVER=1 \
+		REMOTIX_CHROME_OPZIONI=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1 \
+		python3 "$BANCHI_VERI/11-scatole/11-c22-il-bordo-si-trascina.py" \
+		--scatola "$1" --visibile "${@:2}"
+}
 GIRA_C23() {
 	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
 	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
@@ -1056,6 +1065,15 @@ le_cinque_nuove() {
 	else
 		esegui_maglia "C21($d)" false GIRA_C21 "$d"
 		esegui_maglia "C21($d) guasto innestato" true GIRA_C21 "$d" --forma-sbagliata
+	fi
+	# ⭐ C22 — trascinando il bordo la finestra si allarga (fase 14: l'utente,
+	#   24 set, «il ridimensionamento con il trascinamento del bordo su tutti i
+	#   DE»).  Giudicata dalla FOTOGRAFIA: il bordo destro si sposta, gli altri no.
+	if ! perche=$(prodotto_pronto C22 "$d"); then
+		salta_maglia "C22($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+	else
+		esegui_maglia "C22($d)" false GIRA_C22 "$d"
+		esegui_maglia "C22($d) guasto innestato" true GIRA_C22 "$d" --senza-pulsante
 	fi
 	# ⭐ C23 — Maiusc e frecce selezionano (fase 14: l'utente, 24 set, «la
 	#   selezione con Maiusc+frecce su tutti i DE»).  Il giudizio si fa sulla
