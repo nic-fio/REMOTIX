@@ -2565,7 +2565,9 @@ static void impostazioni_lxqt(void)
 		              "per non buttare le chiavi dell'utente.  ⚠ Il sorvegliante di "
 		              "inattività resta com'è",
 		              file, sbaglio->message);
-		return;
+		/* ⚠ `goto` e non `return`: le voci pericolose del menu si nascondono
+		 *   anche se l'inattività non si è potuta scrivere. */
+		goto voci;
 	}
 	g_key_file_set_value(chiavi, "General", "enableIdlenessWatcher", "false");
 	g_key_file_set_value(chiavi, "General", "runCheckLevel", "1");
@@ -2576,7 +2578,7 @@ static void impostazioni_lxqt(void)
 		              "⛔ LXQt: %s NON scritto (%s): il sorvegliante di inattività "
 		              "resta com'è",
 		              file, sbaglio ? sbaglio->message : g_strerror(errno));
-		return;
+		goto voci;
 	}
 
 	/* ⛔ E SI RILEGGE, come su XFCE: scritto non è in vigore finché non lo si
@@ -2600,6 +2602,117 @@ static void impostazioni_lxqt(void)
 	              "LXQt: non scrivo «compositor=» (col nostro lanciatore non ha "
 	              "lettori), né un comando di blocco (è già inerte, e /bin/false "
 	              "aprirebbe una finestra modale)");
+
+	/*
+	 * ⭐⭐ FASE 14, incremento 2 — LE VOCI PERICOLOSE DEL MENU SI NASCONDONO.
+	 *     `DECISIONI.md` §4.7 (commit af9a19e): via sospensione, blocco,
+	 *     riavvio, spegnimento.  ⛔ «Esci» RESTA (§4.1-ter): `lxqt-logout`
+	 *     NON è nella lista, apposta.
+	 *
+	 * ⭐ COME: un `.desktop` con lo STESSO NOME nella cartella dell'utente
+	 *   `~/.local/share/applications`, con `Hidden=true` e `NoDisplay=true`.
+	 *   `[R]` libqtxdg 4.1.0:
+	 *   · `xdgmenureader.cpp:320-325` — la cartella dell'utente viene PER
+	 *     PRIMA fra le `AppDir`, quindi il suo file copre quello di sistema
+	 *     con lo stesso id;
+	 *   · `xdgmenuapplinkprocessor.cpp:156-167` — per ogni id vince il primo
+	 *     trovato, e le voci scartate non entrano nel menu;
+	 *   · `xdgdesktopfile.cpp:1346-1373` — `NoDisplay` e `Hidden` veri ⇒ la
+	 *     voce è scartata.
+	 *   `[R]` lxqt-menu-data 2.1.0 `lxqt-applications.menu:206-223`: è la
+	 *   cartella «Leave» del menu, dove stanno queste sei.
+	 * ⭐ `~/.local/share` e non `g_get_user_data_dir()`: stesso ragionamento
+	 *   di `~/.config` qui sopra — l'ambiente della sessione non porta
+	 *   `XDG_DATA_HOME`, quindi LXQt guarda lì.
+	 * ⚠ Il prezzo, dichiarato come per l'inattività: è la cartella
+	 *   DELL'UTENTE.  Se lo stesso utente apre LXQt davanti alla macchina,
+	 *   quelle sei voci non le vede più.  La chiave `X-REMOTIX` dice di chi è
+	 *   il file: un file SENZA quella chiave è dell'utente, e NON si tocca.
+	 *
+	 * ⛔ I DUE RESIDUI CHE QUI NON SI CURANO, dichiarati:
+	 *   1. il pulsante «Leave» dentro il fancymenu è CODICE FISSO, non una
+	 *      voce di menu (`[R]` lxqt-panel `lxqtfancymenuwindow.cpp:165-169`):
+	 *      apre `lxqt-leave`, dove Spegni/Riavvia/Sospendi/Iberna sono GRIGI
+	 *      perché polkit/logind dicono di no (cintura 1 di §4.7, come su
+	 *      XFCE);
+	 *   2. lì dentro «Blocca schermo» è cliccabile ma INERTE:
+	 *      `lock_command_wayland` è vuoto (`[R]` liblxqt
+	 *      `lxqtscreensaver.cpp:281-289`), vedi qui sopra.
+	 * [?] Da misurare nella scatola: il menu del pannello senza la cartella
+	 *     delle sei, e «Esci» ancora lì.
+	 */
+voci:
+	{
+		static const char *const PERICOLOSE[] = {
+			"lxqt-leave", "lxqt-lockscreen", "lxqt-suspend",
+			"lxqt-hibernate", "lxqt-shutdown", "lxqt-reboot", NULL
+		};
+		const int quante = G_N_ELEMENTS(PERICOLOSE) - 1;
+		g_autofree char *applicazioni = g_build_filename(g_get_home_dir(), ".local",
+		                                                 "share", "applications", NULL);
+		int nascoste = 0;
+
+		if (g_mkdir_with_parents(applicazioni, 0700) != 0) {
+			registro_dice(REG_SESSIONE,
+			              "⛔ LXQt: %s non si crea (%s): 0/%d voci nascoste — "
+			              "sospensione, blocco, riavvio e spegnimento restano nel "
+			              "menu (grigi per polkit, ma visibili)",
+			              applicazioni, g_strerror(errno), quante);
+			return;
+		}
+		for (int i = 0; PERICOLOSE[i]; i++) {
+			g_autofree char *nome = g_strconcat(PERICOLOSE[i], ".desktop", NULL);
+			g_autofree char *voce = g_build_filename(applicazioni, nome, NULL);
+			g_autofree char *contenuto = NULL;
+			g_autoptr(GKeyFile) com_era = g_key_file_new();
+			g_autoptr(GKeyFile) rilegge = g_key_file_new();
+			g_autoptr(GError) guasto = NULL;
+			gboolean dell_utente = FALSE;
+
+			/* ⚠ Se c'è già ed è SENZA `X-REMOTIX`, è dell'utente (o non si
+			 *   legge): non si sovrascrive, si dice. */
+			if (g_file_test(voce, G_FILE_TEST_EXISTS))
+				dell_utente = !g_key_file_load_from_file(com_era, voce, G_KEY_FILE_NONE,
+				                                         NULL) ||
+				              !g_key_file_has_key(com_era, "Desktop Entry", "X-REMOTIX",
+				                                  NULL);
+			if (dell_utente) {
+				registro_dice(REG_SESSIONE,
+				              "⚠ LXQt: %s c'è già e NON è di REMOTIX (niente "
+				              "X-REMOTIX) — è dell'utente: non lo sovrascrivo",
+				              voce);
+			} else {
+				contenuto = g_strdup_printf("[Desktop Entry]\n"
+				                            "Type=Application\n"
+				                            "Name=%s\n"
+				                            "Hidden=true\n"
+				                            "NoDisplay=true\n"
+				                            "X-REMOTIX=nascosta da REMOTIX "
+				                            "(DECISIONI.md §4.7)\n",
+				                            PERICOLOSE[i]);
+				if (!g_file_set_contents(voce, contenuto, -1, &guasto))
+					registro_dice(REG_SESSIONE, "⛔ LXQt: %s NON scritto (%s)",
+					              voce, guasto->message);
+			}
+
+			/* ⛔ E SI RILEGGE: scritto non è in vigore finché non lo si
+			 *    rilegge dal file.  Conta chi dice Hidden=true, di chiunque
+			 *    sia il file. */
+			if (g_key_file_load_from_file(rilegge, voce, G_KEY_FILE_NONE, NULL) &&
+			    g_key_file_get_boolean(rilegge, "Desktop Entry", "Hidden", NULL))
+				nascoste++;
+		}
+		if (nascoste == quante)
+			registro_dice(REG_SESSIONE,
+			              "⭐ LXQt: %d/%d voci nascoste, RILETTE; resta \"Esci\"",
+			              nascoste, quante);
+		else
+			registro_dice(REG_SESSIONE,
+			              "⛔ LXQt: %d/%d voci nascoste, RILETTE — ne mancano %d, "
+			              "e restano nel menu (grigie per polkit, ma visibili); "
+			              "resta \"Esci\"",
+			              nascoste, quante, quante - nascoste);
+	}
 }
 
 void sessione_impostazioni(void)
