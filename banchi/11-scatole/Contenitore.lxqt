@@ -335,5 +335,75 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-gi gir1.2-gtk-4.0 \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R2 — 24 settembre 2026, fase 14: IL DESKTOP VERO, speculare a R6 di xfce.
+#
+# ⛔ `[R]` Fino a oggi la §2 installava solo `labwc lxqt-session xwayland`, e
+#    con `--no-install-recommends` ⇒ **nella scatola non c'era un desktop
+#    LXQt**: niente pannello, niente gestore di file, niente terminale, e
+#    niente `qt6-wayland` — cioe' i programmi Qt non potevano nemmeno aprire
+#    una finestra Wayland.  Una sessione cosi' e' un compositore con dentro
+#    niente, e i guasti di nascita del pannello non si potrebbero vedere.
+#
+# ⭐ Che cosa entra (versioni `[R]` di trixie, packages.debian.org /
+#   qa.debian.org/madison, 24 set 2026):
+#   `lxqt-core` 33.2          il metapacchetto: nelle Depends tira dentro
+#                             `lxqt-panel` 2.1.4-1, `pcmanfm-qt` 2.1.0-2,
+#                             `qterminal` 2.1.0-1, `lxqt-session` 2.1.1-1,
+#                             `lxqt-config` 2.1.1-1, `lxqt-qtplugin` 2.1.0-1+b1,
+#                             `lxqt-themes` 2.1.0-1, `lxqt-globalkeys` 2.1.0-2,
+#                             `lxqt-notificationd` 2.1.1-1, `lxqt-policykit`
+#                             2.1.0-1, `lxqt-runner` 2.1.2-1, `lxqt-system-theme`
+#                             2.1.0-1, `qtxdg-tools`, `desktop-file-utils`.
+#   `qt6-wayland` 6.8.2-4     ⛔ senza, ogni programma Qt 6 ripiega su XWayland
+#                             o non parte: e' la piattaforma Wayland di Qt.
+#   `lxqt-menu-data` 2.1.0-1  i menu `.menu` del pannello e di pcmanfm-qt.
+#   `lxqt-powermanagement` 2.1.0-2  e' IL demone d'inattivita' di LXQt, quello
+#                             che `DECISIONI.md` da' per diverso da XFCE: senza,
+#                             la scatola non vedrebbe il comportamento vero.
+#                             ⚠ Si tira dietro `upower` (e `polkit`): la cura
+#                             del §6-bis e' gia' qui sopra, ma va guardato.
+#   `nano`                    come su xfce, per le prove a mano.
+#
+# ⛔⛔ E che cosa NON entra, APPOSTA (sono Recommends di `lxqt-core` o di
+#     `lxqt-session`; `--no-install-recommends` li lascia fuori, e qui si
+#     scrive PERCHE', cosi' nessuno li rimette «per completezza»):
+#   ⛔ `lxqt-branding-debian`  mette `lxqt-leave` nel lancio rapido del
+#                             pannello: un bottone che chiude la sessione
+#                             a portata di un clic sbagliato di una prova.
+#   ⛔ `qlipper`              riporta negli appunti l'ultimo elemento quando
+#                             si svuotano: ⇒ **sporcherebbe C17**, che deve
+#                             vedere negli appunti SOLO quel che ci mette lei.
+#   ⛔ `swayidle` `swaylock` `wlopm` `kanshi`  sono gli attrezzi wlroots per
+#                             inattivita', blocco, spegnimento e disposizione
+#                             degli schermi: ognuno cambierebbe da solo lo
+#                             stato della sessione (schermo bloccato o spento,
+#                             uscite rimescolate) sotto una maglia che misura.
+#                             E non sono di LXQt: LXQt ha `lxqt-powermanagement`.
+#
+# ⚠ Ultimo strato apposta (prima dell'inquilino): gli strati sopra restano
+#   quelli di prima, e la cache delle immagini non si butta.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        lxqt-core qt6-wayland \
+        lxqt-menu-data lxqt-powermanagement \
+        nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# ⭐ R3 — L'INQUILINO DELL'UTENTE, identico a quello di `Contenitore.xfce`.
+#   21 set 2026, chiesto dall'utente prima di LXQt: *«per non impazzire con
+#   nomi utente e password crea nei container l'utente nictest:nictest e
+#   inseriscilo nel gruppo sudo»*.  E' per le SUE prove a mano (Firefox,
+#   terminale, gestore di file sono gia' negli strati sopra).
+# ⚠ `video` e `render` come `provanic`: senza, la sessione non apre la scheda.
+# ⛔ Nessuna maglia lo usa: le maglie creano inquilini loro (`c1u…`, `c17u…`),
+#   cosi' le prove dell'utente e la rete non si pestano i piedi.
+# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN useradd -m -s /bin/bash nictest \
+    && usermod -aG sudo,video,render nictest \
+    && printf 'nictest:nictest\n' | chpasswd
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
