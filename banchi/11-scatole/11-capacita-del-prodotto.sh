@@ -72,9 +72,9 @@ DESKTOP_COL_PRODOTTO="gnome kde xfce lxqt"
 capacita_del_desktop() {
 	case "$1" in
 	gnome) printf 'immagine input appunti forma' ;;
-	kde)   printf 'immagine input appunti' ;;
-	xfce)  printf 'immagine input appunti' ;;
-	lxqt)  printf 'immagine input appunti' ;;
+	kde)   printf 'immagine input appunti forma' ;;
+	xfce)  printf 'immagine input appunti forma' ;;
+	lxqt)  printf 'immagine input appunti forma' ;;
 	*)     printf '' ;;
 	esac
 }
