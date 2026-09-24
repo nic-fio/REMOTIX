@@ -2576,6 +2576,239 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
 
 /* ------------------------------------------------------------------------- */
 /*
+ * ⭐⭐ FASE 14, INCREMENTO 4 — SU LXQt NON C'È PIÙ NESSUN «Lock screen».
+ *     `DECISIONI.md` §4.7: via blocco, sospensione, riavvio e spegnimento;
+ *     ⛔ «Esci» RESTA (§4.1-ter).  L'utente, dopo l'incremento 2: «l'icona
+ *     del lockscreen sembra ancora attiva e visibile».
+ *
+ * `[M]`/`[R]` DOVE STAVA: nella finestra di `lxqt-leave`, che apre il
+ * pulsante «Leave» FISSO in fondo al fancymenu (lxqt-panel 2.1.4
+ * `plugin-fancymenu/lxqtfancymenuwindow.cpp:165-169, 315-318`) — codice, non
+ * una voce di menu, e nessuna chiave lo toglie.  ⛔ E cliccato era PEGGIO che
+ * inerte: `lxqt-leave` restava appeso (vedi i residui in
+ * `impostazioni_lxqt()`).
+ *
+ * Due cure, ognuna con la sua lettura e la sua rilettura:
+ *   A) `pannello_lxqt()` — il pannello usa `mainmenu` invece di `fancymenu`:
+ *      il menu classico NON ha pulsanti fissi, e legge lo stesso
+ *      `lxqt-applications.menu`, quindi le sei voci nascoste
+ *      dall'incremento 2 restano nascoste e «Leave» contiene solo «Logout»;
+ *   B) `blocco_lxqt()` — la rete di riserva: `lock_command_wayland=true`,
+ *      per chi lancia `lxqt-leave` a mano (o da una scorciatoia).
+ */
+
+/*
+ * ⚠ I FILE DI QSettings NON SONO SEMPRE KEY FILE: `QSettings` scrive le
+ *   chiavi di primo livello PRIMA di ogni gruppo (`[M]` il
+ *   `/usr/share/lxqt/panel.conf` di Trixie comincia con `panels=panel1`), e
+ *   GKeyFile quel file lo rifiuta.  ⇒ Si mette davanti un `[General]`, che è
+ *   il nome che QSettings dà a quel gruppo; se il file ha già un `[General]`,
+ *   GKeyFile unisce i due.
+ */
+static gboolean leggi_ini_qt(GKeyFile *chiavi, const char *file, GError **sbaglio)
+{
+	g_autofree char *dentro = NULL;
+	g_autofree char *con_testa = NULL;
+
+	if (!g_file_get_contents(file, &dentro, NULL, sbaglio))
+		return FALSE;
+	con_testa = g_strconcat("[General]\n", dentro, NULL);
+	return g_key_file_load_from_data(chiavi, con_testa, -1,
+	                                 G_KEY_FILE_KEEP_COMMENTS |
+	                                         G_KEY_FILE_KEEP_TRANSLATIONS,
+	                                 sbaglio);
+}
+
+/*
+ * ⭐ IL VALORE CHE QSettings VEDE DAVVERO: quello dell'utente se c'è, se no il
+ *   primo dei file di sistema, nell'ordine di `XDG_CONFIG_DIRS`.  ⚠ `[R]` i
+ *   file dell'utente di LXQt sono SPARSI: `LXQt::Settings` crea il file con il
+ *   solo `__userfile__=true` (liblxqt 2.1.0 `lxqtsettings.cpp:53-59`), e il
+ *   resto arriva dal sistema.  ⇒ Guardare il solo file dell'utente
+ *   direbbe «nessun fancymenu» a un utente che ce l'ha.
+ */
+static char *valore_effettivo(GKeyFile *utente, GPtrArray *sistema, const char *gruppo,
+                              const char *chiave)
+{
+	char *valore = g_key_file_get_value(utente, gruppo, chiave, NULL);
+
+	for (guint i = 0; !valore && i < sistema->len; i++)
+		valore = g_key_file_get_value(g_ptr_array_index(sistema, i), gruppo, chiave, NULL);
+	return valore;
+}
+
+/*
+ * Conta i plugin del pannello che, visti come li vede lxqt-panel, sono di tipo
+ * `tipo`; con `cambia` vero, a quelli di tipo `fancymenu` scrive nel file
+ * dell'utente `type=mainmenu`.
+ * `[R]` lxqt-panel 2.1.4: `panels` è la lista dei pannelli (se vuota,
+ * `panel1`), `<pannello>/plugins` la lista dei NOMI DI GRUPPO dei plugin, e
+ * `<nome>/type` il tipo (`panelpluginsmodel.cpp:229`).  ⇒ Il nome del gruppo
+ * resta `fancymenu`: conta solo `type`.
+ */
+static int plugin_di_tipo(GKeyFile *utente, GPtrArray *sistema, const char *tipo,
+                          gboolean cambia)
+{
+	g_autofree char *pannelli = valore_effettivo(utente, sistema, "General", "panels");
+	g_auto(GStrv) quali = g_strsplit(pannelli && *pannelli ? pannelli : "panel1", ",", -1);
+	int trovati = 0;
+
+	for (int p = 0; quali[p]; p++) {
+		g_autofree char *elenco = valore_effettivo(utente, sistema, g_strstrip(quali[p]),
+		                                           "plugins");
+		g_auto(GStrv) nomi = g_strsplit(elenco ? elenco : "", ",", -1);
+
+		for (int n = 0; nomi[n]; n++) {
+			const char *nome = g_strstrip(nomi[n]);
+			g_autofree char *e = *nome ? valore_effettivo(utente, sistema, nome, "type")
+			                           : NULL;
+
+			if (g_strcmp0(e, tipo) != 0)
+				continue;
+			trovati++;
+			if (cambia && g_strcmp0(tipo, "fancymenu") == 0)
+				g_key_file_set_value(utente, nome, "type", "mainmenu");
+		}
+	}
+	return trovati;
+}
+
+/*
+ * A) IL PANNELLO: `fancymenu` → `mainmenu`.
+ *
+ * ⭐ Il file dell'utente NON si copia dal sistema, anche se non esiste: basta
+ *   scrivere `[fancymenu] type=mainmenu`, e il resto lxqt-panel lo prende dal
+ *   file di sistema come fa già oggi (`XDG_CONFIG_DIRS=/etc:/etc/xdg:
+ *   /usr/share`, che mettiamo noi al lancio).  Così si tocca SOLO quella
+ *   chiave, come per l'inattività.
+ * ⚠ Il prezzo, dichiarato come per le altre: è il file DELL'UTENTE.  Se lo
+ *   stesso utente apre LXQt davanti alla macchina, trova il menu classico e
+ *   non quello «fancy».
+ * ⚠ Se il file c'è e non si sa leggere, NON si riscrive: si dice, e il
+ *   pulsante «Leave» resta (con la rete di riserva B sotto).
+ */
+static void pannello_lxqt(void)
+{
+	static const char *const SISTEMA[] = {
+		"/etc/lxqt/panel.conf", "/etc/xdg/lxqt/panel.conf", "/usr/share/lxqt/panel.conf",
+		NULL
+	};
+	g_autofree char *cartella = g_build_filename(g_get_home_dir(), ".config", "lxqt", NULL);
+	g_autofree char *file = g_build_filename(cartella, "panel.conf", NULL);
+	g_autoptr(GKeyFile) utente = g_key_file_new();
+	g_autoptr(GKeyFile) riletto = g_key_file_new();
+	g_autoptr(GPtrArray) sistema = g_ptr_array_new_with_free_func((GDestroyNotify) g_key_file_unref);
+	g_autoptr(GError) sbaglio = NULL;
+	gboolean c_era = g_file_test(file, G_FILE_TEST_EXISTS);
+	int fancy, menu;
+
+	if (c_era && !leggi_ini_qt(utente, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s c'è ma non lo so leggere (%s) — NON lo riscrivo.  "
+		              "⚠ Il pannello resta col fancymenu, e col suo pulsante «Leave»",
+		              file, sbaglio->message);
+		return;
+	}
+	for (int i = 0; SISTEMA[i]; i++) {
+		GKeyFile *uno = g_key_file_new();
+
+		if (g_file_test(SISTEMA[i], G_FILE_TEST_EXISTS) && leggi_ini_qt(uno, SISTEMA[i], NULL))
+			g_ptr_array_add(sistema, uno);
+		else
+			g_key_file_unref(uno);
+	}
+
+	fancy = plugin_di_tipo(utente, sistema, "fancymenu", TRUE);
+	if (fancy == 0) {
+		registro_dice(REG_SESSIONE,
+		              "⭐ LXQt: nel pannello (%s%s) nessun fancymenu — non c'è "
+		              "niente da cambiare",
+		              file, c_era ? "" : ", che non c'è");
+		return;
+	}
+	g_clear_error(&sbaglio);
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_key_file_save_to_file(utente, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s NON scritto (%s): il pannello resta col fancymenu, "
+		              "e col suo pulsante «Leave»",
+		              file, sbaglio ? sbaglio->message : g_strerror(errno));
+		return;
+	}
+
+	/* ⛔ E SI RILEGGE, e si conta come lo conta lxqt-panel. */
+	if (!leggi_ini_qt(riletto, file, NULL)) {
+		registro_dice(REG_SESSIONE, "⛔ LXQt: %s scritto ma NON si rilegge", file);
+		return;
+	}
+	menu = plugin_di_tipo(riletto, sistema, "mainmenu", FALSE);
+	if (plugin_di_tipo(riletto, sistema, "fancymenu", FALSE) == 0 && menu >= fancy)
+		registro_dice(REG_SESSIONE,
+		              "⭐ LXQt: fancymenu→mainmenu, RILETTO (%s, %d plugin%s) — il "
+		              "menu classico non ha il pulsante «Leave» fisso",
+		              file, fancy, c_era ? "" : ", file nuovo");
+	else
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: fancymenu→mainmenu NON in vigore (%s: rileggo %d "
+		              "mainmenu su %d fancymenu)",
+		              file, menu, fancy);
+}
+
+/*
+ * B) LA RETE DI RISERVA: `lock_command_wayland=true`.
+ *
+ * `[R]` liblxqt 2.1.0 `lxqtscreensaver.cpp:153-161`: su Wayland il comando è
+ * `[Screensaver] lock_command_wayland` di `lxqt.conf`, SENZA default, e
+ * `session.conf` (chiave di primo livello con lo stesso nome) ha la
+ * precedenza — nessun file spedito la mette.  Con `true`: il processo esce
+ * con 0 ⇒ `activated` e `done` (`:196-207`) ⇒ `lxqt-leave` si chiude, e
+ * NESSUNA finestra d'errore.  ⛔ Vuoto lo lasciava appeso; `/bin/false`
+ * aprirebbe la modale «Screen Saver Error».
+ * ⚠ «Lock screen» dice «fatto» e non blocca: è una bugia, ma il blocco è di
+ *   REMOTIX (§4.3), e la cura vera è A, che quel pulsante non lo mostra più.
+ * ⚠ Il prezzo, dichiarato: è `~/.config/lxqt/lxqt.conf` DELL'UTENTE.
+ */
+static void blocco_lxqt(void)
+{
+	g_autofree char *cartella = g_build_filename(g_get_home_dir(), ".config", "lxqt", NULL);
+	g_autofree char *file = g_build_filename(cartella, "lxqt.conf", NULL);
+	g_autoptr(GKeyFile) chiavi = g_key_file_new();
+	g_autoptr(GKeyFile) riletto = g_key_file_new();
+	g_autoptr(GError) sbaglio = NULL;
+	g_autofree char *letto = NULL;
+
+	if (g_file_test(file, G_FILE_TEST_EXISTS) && !leggi_ini_qt(chiavi, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s c'è ma non lo so leggere (%s) — NON lo riscrivo.  "
+		              "⚠ «Lock screen», se qualcuno apre lxqt-leave a mano, lo "
+		              "lascia appeso",
+		              file, sbaglio->message);
+		return;
+	}
+	g_key_file_set_value(chiavi, "Screensaver", "lock_command_wayland", "true");
+	g_clear_error(&sbaglio);
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_key_file_save_to_file(chiavi, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE, "⛔ LXQt: %s NON scritto (%s)", file,
+		              sbaglio ? sbaglio->message : g_strerror(errno));
+		return;
+	}
+	if (leggi_ini_qt(riletto, file, NULL))
+		letto = g_key_file_get_value(riletto, "Screensaver", "lock_command_wayland", NULL);
+	if (g_strcmp0(letto, "true") == 0)
+		registro_dice(REG_SESSIONE,
+		              "⭐ LXQt: %s [Screensaver] lock_command_wayland=true, RILETTO — "
+		              "«Lock screen» chiude lxqt-leave senza bloccare e senza "
+		              "finestre d'errore",
+		              file);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: lock_command_wayland NON in vigore (rileggo «%s»)",
+		              letto ? letto : "non lo so");
+}
+
+/* ------------------------------------------------------------------------- */
+/*
  * ⭐⭐ FASE 14 — LE IMPOSTAZIONI DI LXQt: SCRIVI, RILEGGI, DI' SE È IN VIGORE.
  *
  * ⛔⛔ L'INATTIVITÀ, e la trappola è `LEZIONI.md` §1.9 in forma pura: scrivere
@@ -2603,9 +2836,9 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
  *     vuoto lo lancia LO SCRIPT upstream (`labwc -S lxqt-config-session`),
  *     non `lxqt-session`, che in 2.1.1 quella chiave non la legge
  *     (`lxqtmodman.cpp`).  Col nostro lanciatore la chiave non ha lettori;
- *   · il blocco — `lock_command_wayland` è letta **senza default** e nessun
- *     file spedito la imposta: il blocco è già inerte (`STUDI.md` §lxqt §6.2).
- *     ⛔ E `/bin/false` qui aprirebbe una finestra MODALE: non si scrive;
+ *   · il blocco a `/bin/false` — ⛔ aprirebbe una finestra MODALE («Screen
+ *     Saver Error»): non si scrive.  ⚠ Il blocco SI scrive, ma a `true`
+ *     (incremento 4, `blocco_lxqt()` più sotto): vuoto NON era inerte.
  *   · l'inibizione D-Bus — non esiste (`sessione_inibisci()`).
  */
 static void impostazioni_lxqt(void)
@@ -2662,8 +2895,8 @@ static void impostazioni_lxqt(void)
 		              file, attivo ? attivo : "non lo so", livello ? livello : "non lo so");
 	registro_dice(REG_SESSIONE,
 	              "LXQt: non scrivo «compositor=» (col nostro lanciatore non ha "
-	              "lettori), né un comando di blocco (è già inerte, e /bin/false "
-	              "aprirebbe una finestra modale)");
+	              "lettori); il comando di blocco lo scrivo più sotto a «true», "
+	              "perché /bin/false aprirebbe una finestra modale");
 
 	/*
 	 * ⭐⭐ FASE 14, incremento 2 — LE VOCI PERICOLOSE DEL MENU SI NASCONDONO.
@@ -2691,17 +2924,20 @@ static void impostazioni_lxqt(void)
 	 *   quelle sei voci non le vede più.  La chiave `X-REMOTIX` dice di chi è
 	 *   il file: un file SENZA quella chiave è dell'utente, e NON si tocca.
 	 *
-	 * ⛔ I DUE RESIDUI CHE QUI NON SI CURANO, dichiarati:
+	 * ⛔ I DUE RESIDUI CHE QUESTE SEI NON CURANO — curati dall'incremento 4,
+	 *    `pannello_lxqt()` e `blocco_lxqt()` in fondo a questa funzione:
 	 *   1. il pulsante «Leave» dentro il fancymenu è CODICE FISSO, non una
-	 *      voce di menu (`[R]` lxqt-panel `lxqtfancymenuwindow.cpp:165-169`):
-	 *      apre `lxqt-leave`, dove Spegni/Riavvia/Sospendi/Iberna sono GRIGI
-	 *      perché polkit/logind dicono di no (cintura 1 di §4.7, come su
-	 *      XFCE);
-	 *   2. lì dentro «Blocca schermo» è cliccabile ma INERTE:
-	 *      `lock_command_wayland` è vuoto (`[R]` liblxqt
-	 *      `lxqtscreensaver.cpp:281-289`), vedi qui sopra.
-	 * [?] Da misurare nella scatola: il menu del pannello senza la cartella
-	 *     delle sei, e «Esci» ancora lì.
+	 *      voce di menu (`[R]` lxqt-panel 2.1.4 `lxqtfancymenuwindow.cpp:
+	 *      165-169, 315-318`, e nessuna chiave lo toglie): apre `lxqt-leave`,
+	 *      dove Spegni/Riavvia/Sospendi/Iberna sono GRIGI perché polkit/logind
+	 *      dicono di no (cintura 1 di §4.7, come su XFCE);
+	 *   2. ⛔⛔ lì dentro «Lock screen» è SEMPRE attivo (`[R]` lxqt-session
+	 *      2.1.1 `lxqt-leave/leavedialog.cpp:76-78`), e NON era «inerte» come
+	 *      diceva questo commento: con `lock_command_wayland` vuoto
+	 *      `lockScreen()` esce SENZA emettere `done` (`[R]` liblxqt 2.1.0
+	 *      `lxqtscreensaver.cpp:281-292`), e `lxqt-leave` resta APPESO nel suo
+	 *      `loop.exec()` (`leavedialog.cpp:113-118`) — `[M]` ancora vivo 34 s
+	 *      dopo il clic.
 	 */
 voci:
 	{
@@ -2720,7 +2956,9 @@ voci:
 			              "sospensione, blocco, riavvio e spegnimento restano nel "
 			              "menu (grigi per polkit, ma visibili)",
 			              applicazioni, g_strerror(errno), quante);
-			return;
+			/* ⚠ `goto` e non `return`: il pannello e il blocco si curano
+			 *   anche se le voci non si sono potute nascondere. */
+			goto pannello;
 		}
 		for (int i = 0; PERICOLOSE[i]; i++) {
 			g_autofree char *nome = g_strconcat(PERICOLOSE[i], ".desktop", NULL);
@@ -2775,6 +3013,9 @@ voci:
 			              "resta \"Esci\"",
 			              nascoste, quante, quante - nascoste);
 	}
+pannello:
+	pannello_lxqt();
+	blocco_lxqt();
 }
 
 void sessione_impostazioni(void)
@@ -2922,8 +3163,9 @@ void sessione_impostazioni(void)
 		return;
 	}
 	/*
-	 * ⭐ FASE 14 — su LXQt: una sola leva, l'inattività.  E tre cose che NON si
-	 *    scrivono, ognuna con la sua ragione.
+	 * ⭐ FASE 14 — su LXQt: l'inattività, le voci del menu, il pannello
+	 *    (fancymenu→mainmenu) e il comando di blocco a `true`.  E le cose che
+	 *    NON si scrivono, ognuna con la sua ragione.
 	 */
 	if (e_lxqt()) {
 		impostazioni_lxqt();
