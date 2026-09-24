@@ -80,6 +80,12 @@ log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
 SECCO=0
 DA_CAPO=0
+# ⛔ lxqt NON sta qui, apposta (24 set 2026, fase 14): la regia non ha un
+#    cancello che guardi se una scatola e' certificata, ⇒ metterla nell'elenco
+#    vorrebbe dire una notte di stress su un desktop che la rete non ha ancora
+#    dato verde.  `scenari/_comune.py` lxqt lo conosce gia' (compositore e
+#    gesto «Esci»): si prova a mano con `--scatola lxqt`, e si aggiunge QUI il
+#    giorno che lxqt e' certificata.
 SCATOLE="gnome kde xfce"
 MARCHE="firefox chrome"
 SOLO_SCENARIO=""

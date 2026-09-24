@@ -392,7 +392,9 @@ def uid_di(nucleo, desktop, chi):
 
 def compositore_vivo(nucleo, desktop, chi):
     """C'e' ancora un compositore per quell'inquilino? (il nome cambia per DE)"""
-    nomi = {"kde": "kwin_wayland", "gnome": "gnome-shell", "xfce": "labwc"}
+    # ⚠ lxqt: il compositore e' lo STESSO di xfce, `labwc` (`Contenitore.lxqt` §2).
+    nomi = {"kde": "kwin_wayland", "gnome": "gnome-shell", "xfce": "labwc",
+            "lxqt": "labwc"}
     c, t = dentro(nucleo, desktop,
                   "pgrep -u %s -x %s >/dev/null && echo SI || echo NO"
                   % (chi, nomi.get(desktop, "")), 90)
@@ -419,6 +421,12 @@ def esci_dalla_sessione(nucleo, desktop, chi):
         "xfce": "busctl --user call org.xfce.SessionManager "
                 "/org/xfce/SessionManager org.xfce.Session.Manager Logout "
                 "bb false false",
+        # ⭐ lxqt: lo stesso gesto di C20 (`11-c20-…py`, `DESKTOP_E_GESTO`,
+        #   dove stanno le fonti di lxqt-session 2.1.1).  ⛔ NON
+        #   `lxqt-leave --logout`: apre una conferma modale.  ⚠ Il metodo e'
+        #   `Q_NOREPLY` ⇒ `--expect-reply=no` `[?]`.
+        "lxqt": "busctl --user --expect-reply=no call org.lxqt.session "
+                "/LXQtSession org.lxqt.session logout",
     }
     if desktop not in gesti:
         return False, "non so come si esce da %s" % desktop
