@@ -197,6 +197,29 @@ Guardia del battito col guasto `--schermo-congelato` (SIGSTOP a labwc trovato pe
 | **rete** | «nessun rosso», nessun guasto sfuggito, C14 regge; guardia del battito vede il guasto su LXQt |
 | **fuori da LXQt, curato** | la striscia verde di Firefox (tutti i desktop), decisione dell'utente |
 
+## ⭐ LA SERA DEL 24 SETTEMBRE — la prova a mano dell'utente, e i sei difetti che ha trovato
+
+L'utente ha provato a mano (tablet, Firefox e Chrome) e ha trovato quello che la rete non vedeva.
+Tutti curati, misurati coi browser veri, e ognuno con una maglia nuova che lo sorveglia:
+
+| # | difetto `[M]` | desktop | cura | prova |
+|---|---|---|---|---|
+| 1 | l'icona «Lock screen» ancora attiva (finestra lxqt-leave dal pulsante fisso di fancymenu; cliccata restava APPESA) | LXQt | pannello col menu classico (`mainmenu`), `lock_command_wayland=true` calcolato come liblxqt (`efb1840`, `83ea7b4`) | foto, misure c94u* |
+| 2 | non si ridimensionano le finestre dal bordo: la zona è FUORI dal bordo e da REMOTIX non arrivava la freccia doppia | tutti | la **forma vera del puntatore** su tutti e quattro (decisione dell'utente): tema codificato + dizionario (`src/forma.c`), KDE dal metadato (`bd8a529`), labwc con la «sonda» 3x3 (`95d5f54`, +1,4 % CPU a labwc) | **C21** (forma sul bordo), **C22** (il bordo si trascina) |
+| 3 | Maiusc+freccia non seleziona (il Maiusc da solo non partiva) | tutti | la pagina risincronizza sempre il Maiusc e lo restituisce prima della LETTERA (`694f77f`) | **C23** |
+| 4 | con Chrome il clic cade 1 px a sinistra a tela di mezzo pixel | tutti | il clic non ricalcola il punto del movimento (`72d12f2`) | misura 8/8 |
+| 5 | con Firefox (decodifica hardware) la zona sensibile spostata di «qualche mm» in basso | tutti | anche l'**altezza** della tela a multiplo di 16 (`fc0fbff`) | confermato dall'utente |
+| 6 | «Esci» fa RINASCERE la sessione (13-16 volte su 20; 1 su 20 col binario del mattino) | LXQt | su wlroots non si monta finché il gestore di sessione non è sul bus (`43345ea`): **20 uscite su 20**, XFCE 12/12, +210 ms alla prima immagine | C20, e C24 «Esci dieci volte» (in scrittura) |
+
+⚠ Il puntino di 1 px sotto la punta del puntatore (il prezzo della forma su KDE e labwc) **si vede**: da
+giudicare dall'utente. ⚠ Eccezione dichiarata dall'utente: su KDE (KWin < 6.8) al riattacco a misura
+diversa la tela resta quella vecchia e il browser riscala.
+
+**Stato alla consegna** (24 set, ~23:30): binario **`7dfd6a96`** e pagina **`87268f13`** nelle quattro
+`rete11-*` e nella 8524; l'utente ha confermato a mano su LXQt ridimensionamento e logout, Firefox e
+Chrome. ⛔ La rete intera NON è stata rifatta su questo binario: per decisione dell'utente la sostituisce
+la **suite funzionale della fase 15**, che parte in una sessione nuova.
+
 ## ⛔ Un difetto trovato per strada, che NON è di LXQt — Firefox e il riempimento del codificatore
 
 `[M]` 24 set 2026, da 380 fotografie di tela (`c20veri` del 23 set, `topo`, `veri-lxqt`): **Firefox 140
