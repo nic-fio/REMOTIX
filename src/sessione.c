@@ -42,6 +42,7 @@
  */
 #include "sessione.h"
 
+#include "forma.h"
 #include "registro.h"
 
 #include <errno.h>
@@ -923,97 +924,36 @@ static const char *locale_utf8(void)
  *   quello predefinito (`pointer_input.cpp:1183-1196`), cioe' RIMETTE il
  *   cursore visibile.  Per questo le forme si scrivono tutte, non solo
  *   `left_ptr`, e niente `Inherits=` nell'indice.
- * ⚠ E il prezzo, dichiarato: si perde il CAMBIO di forma dentro l'immagine (la
- *   I sul testo, le frecce di ridimensionamento).  La forma vera viaggia gia'
- *   per conto suo — `CURSORE_FORMA` (§7.2) — e la disegna il client, come su
- *   GNOME.
+ * ⚠ E il prezzo, com'era fino al 24 set 2026: si perdeva il CAMBIO di forma
+ *   (la I sul testo, le frecce di ridimensionamento) — ⭐ curato qui sotto.
  */
-#define TEMA_CURSORE "remotix-invisibile"
-
-/* Un cursore che esiste ed e' trasparente: Xcursor 1.0, un'immagine 1x1 ad alfa
- * zero.  Il formato e' 16 byte d'intestazione, 12 d'indice e 36 di blocco piu'
- * i pixel — tutto little-endian, e non merita una dipendenza. */
-static gboolean scrivi_cursore_vuoto(const char *percorso)
-{
-	guint32 dati[] = {
-		GUINT32_TO_LE(0x72756358u), /* «Xcur» */
-		GUINT32_TO_LE(16u),         /* quanto e' lunga l'intestazione */
-		GUINT32_TO_LE(0x00010000u), /* versione 1.0 */
-		GUINT32_TO_LE(1u),          /* un solo elemento nell'indice */
-		GUINT32_TO_LE(0xfffd0002u), GUINT32_TO_LE(24u), GUINT32_TO_LE(28u),
-		GUINT32_TO_LE(36u),         /* lunghezza dell'intestazione del blocco */
-		GUINT32_TO_LE(0xfffd0002u), /* tipo: immagine */
-		GUINT32_TO_LE(24u),         /* misura nominale */
-		GUINT32_TO_LE(1u),          /* versione del blocco */
-		GUINT32_TO_LE(1u),          /* larghezza */
-		GUINT32_TO_LE(1u),          /* altezza */
-		GUINT32_TO_LE(0u),          /* punto caldo x */
-		GUINT32_TO_LE(0u),          /* punto caldo y */
-		GUINT32_TO_LE(0u),          /* ritardo, per le animazioni */
-		GUINT32_TO_LE(0u),          /* l'unico pixel: ARGB tutto zero */
-	};
-
-	return g_file_set_contents(percorso, (const char *) dati, sizeof dati, NULL);
-}
+/*
+ * ⭐⭐ FASE 14 — E IL TEMA NON E' PIU' INVISIBILE: E' CODIFICATO (24 set 2026,
+ *      decisione dell'utente: la forma vera del puntatore su tutti e quattro i
+ *      desktop).  Ogni forma e' ancora un'immagine 1x1, ma OPACA e di un colore
+ *      solo suo: il colore torna nel metadato e dice QUALE forma l'applicazione
+ *      ha chiesto.  ⛔ Il tema lo scrive `forma.c`, che tiene anche il
+ *      dizionario colore ⇒ forma: le due meta' non devono poter divergere.
+ * ⚠ Il NOME resta `remotix-invisibile`: e' quello che l'ambiente qui sotto
+ *   dichiara da sempre, e cambiarlo non cura niente.
+ */
+#define TEMA_CURSORE FORMA_TEMA
 
 /* Torna la cartella da mettere in `XCURSOR_PATH`, o NULL (detto nel registro). */
 static char *scrivi_tema_cursore(const char *runtime)
 {
-	/* I nomi che i programmi chiedono davvero: non e' l'elenco completo — non
-	 * esiste — ma copre Breeze e Adwaita, e quel che manca resta invisibile,
-	 * che e' dove si voleva arrivare. */
-	static const char *FORME[] = {
-		"left_ptr", "default", "arrow", "top_left_arrow", "pointer", "hand", "hand1", "hand2",
-		"pointing_hand", "text", "xterm", "ibeam", "wait", "watch", "progress",
-		"left_ptr_watch", "crosshair", "cross", "tcross", "help", "question_arrow",
-		"whats_this", "not-allowed", "forbidden", "crossed_circle", "no-drop", "dnd-none",
-		"dnd-copy", "dnd-move", "dnd-link", "copy", "move", "link", "alias", "grab",
-		"grabbing", "openhand", "closedhand", "all-scroll", "fleur", "size_hor", "size_ver",
-		"size_fdiag", "size_bdiag", "col-resize", "row-resize", "ew-resize", "ns-resize",
-		"nesw-resize", "nwse-resize", "sb_h_double_arrow", "sb_v_double_arrow", "top_side",
-		"bottom_side", "left_side", "right_side", "top_left_corner", "top_right_corner",
-		"bottom_left_corner", "bottom_right_corner", "zoom-in", "zoom-out", "cell",
-		"context-menu", "vertical-text", "up_arrow", "center_ptr", "X_cursor",
-	};
-	g_autofree char *base = g_build_filename(runtime, "remotix", "icons", NULL);
-	g_autofree char *tema = g_build_filename(base, TEMA_CURSORE, NULL);
-	g_autofree char *cursori = g_build_filename(tema, "cursors", NULL);
-	g_autofree char *indice = g_build_filename(tema, "index.theme", NULL);
-	unsigned scritte = 0;
-
-	g_mkdir_with_parents(cursori, 0700);
-	/* ⚠ Niente `Inherits=`: ereditare da un tema vero rimetterebbe i cursori
-	 *   visibili per ogni forma che qui non c'e'. */
-	if (!g_file_set_contents(indice,
-	                         "[Icon Theme]\n"
-	                         "Name=REMOTIX (invisibile)\n"
-	                         "Comment=Cursore vuoto: su KWin --virtual il cursore sta "
-	                         "dentro l'immagine catturata, e il client disegna il suo\n",
-	                         -1, NULL)) {
+	if (!forma_tema_scrivi(runtime)) {
 		registro_dice(REG_SESSIONE,
-		              "⚠ %s: tema del cursore NON scritto in %s: chi guarda vedra' "
-		              "DUE puntatori (il suo, e quello del desktop che insegue)",
-		              nome_desktop(), tema);
-		return NULL;
-	}
-	for (unsigned i = 0; i < G_N_ELEMENTS(FORME); i++) {
-		g_autofree char *percorso = g_build_filename(cursori, FORME[i], NULL);
-
-		if (scrivi_cursore_vuoto(percorso))
-			scritte++;
-	}
-	if (scritte == 0) {
-		registro_dice(REG_SESSIONE,
-		              "⚠ %s: nessuna forma del cursore scritta: il compositore "
-		              "ripieghera' sul tema visibile, e i puntatori resteranno due",
+		              "⚠ %s: tema del cursore NON scritto: il compositore ripieghera' "
+		              "sul tema visibile, e chi guardera' vedra' DUE puntatori",
 		              nome_desktop());
 		return NULL;
 	}
 	registro_dice(REG_SESSIONE,
-	              "⭐ %s: tema «%s» con %u forme trasparenti in %s — il cursore del "
-	              "compositore non si vedra' nell'immagine, e chi guarda ne avra' UNO solo",
-	              nome_desktop(), TEMA_CURSORE, scritte, tema);
-	return g_steal_pointer(&base);
+	              "⭐ %s: tema «%s» codificato — il cursore del compositore e' un pixel, "
+	              "e la sua forma vera la disegna chi guarda",
+	              nome_desktop(), TEMA_CURSORE);
+	return g_build_filename(runtime, "remotix", "icons", NULL);
 }
 
 /*
