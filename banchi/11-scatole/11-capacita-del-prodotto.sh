@@ -58,16 +58,21 @@
 #       C17(xfce) VERDE (A · B · R, arbitro wl-clipboard) · `--senza-copia` VISTO
 #     ⛔ Una capacità si apre qui quando la maglia che la giudica ha dato VERDE
 #        e ha visto il suo guasto — non quando il codice c'è.
-# ⛔ lxqt: NIENTE.  `[R]` `src/sessione.c`, `sessione_desktop`: il prodotto non
-#   lo riconosce, e dice «NESSUN DESKTOP RICONOSCIUTO».
+# ⭐ lxqt: TUTTE E TRE dal 24 settembre 2026 — fase 14 (`fasi/14-lxqt.md`).  Fino
+#   ad allora NIENTE: il prodotto diceva «NESSUN DESKTOP RICONOSCIUTO».  Aperte
+#   solo DOPO la misura, `[M]` sulla scatola di sviluppo `rete14-lxqt` (binari
+#   `404f9907` → `1a10a66e`), lanciate a mano con `11-accendi.sh`:
+#     C1(lxqt)×3 VERDE · C2 C3 C4 C6 C8b C17 C20 VERDI · 16 guasti su 16 VISTI
+#     (`--senza-tasto` `--scena-sorda` `--uccidi-la-sessione` `--senza-copia` …)
 # ---------------------------------------------------------------------------
-DESKTOP_COL_PRODOTTO="gnome kde xfce"
+DESKTOP_COL_PRODOTTO="gnome kde xfce lxqt"
 
 capacita_del_desktop() {
 	case "$1" in
 	gnome) printf 'immagine input appunti' ;;
 	kde)   printf 'immagine input appunti' ;;
 	xfce)  printf 'immagine input appunti' ;;
+	lxqt)  printf 'immagine input appunti' ;;
 	*)     printf '' ;;
 	esac
 }
