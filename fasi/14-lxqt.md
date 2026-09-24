@@ -122,4 +122,21 @@ di nascita** e il resto è nero. Col cliente Python (1920x1080) riempiva tutto. 
 
 ---
 
+## ⛔ Un difetto trovato per strada, che NON è di LXQt — Firefox e il riempimento del codificatore
+
+`[M]` 24 set 2026, da 380 fotografie di tela (`c20veri` del 23 set, `topo`, `veri-lxqt`): **Firefox 140
+mostra a destra una striscia verde (0,76,0) larga quanto manca a un multiplo di 16** (8 px a 1400,
+4 px a 3788, 12 px a 1348), e **schiaccia in orizzontale** l'immagine (1408 → 1400: l'orologio del
+pannello LXQt sta 6 px più a sinistra che in Chrome). In altezza il ritaglio lo onora. (0,76,0) è
+esattamente YUV (0,0,0) letto BT.709 limitato ⇒ è il riempimento del codificatore che arriva allo
+schermo. **Chrome 154: nessuna striscia**, su nessun desktop. `[R]` il server dichiara il ritaglio
+nell'SPS (`frame_cropping_flag`); la pagina disegna con `createImageBitmap(f)` su `bitmaprenderer`
+(`pagina.html:3188`), che per specifica deve rispettare il rettangolo visibile: Chrome lo fa, Firefox
+a destra no.
+- ⇒ **su GNOME, KDE, XFCE e LXQt**, ogni volta che la tela non è larga un multiplo di 16; c'era già il
+  23 settembre ⇒ **non è una regressione della fase 14**, e non si cura dentro la fase 14 senza una
+  decisione: la cura minima (larghezza della tela troncata a multiplo di 16 in `tela_da_chiedere()`)
+  cambia la tela **per tutti** i browser, al prezzo di fino a 15 px di bordo.
+- ⚠ i contatori di `12-client-veri` erano verdi: lo si è visto solo **guardando** la fotografia.
+
 ## Che cosa resta [?]
