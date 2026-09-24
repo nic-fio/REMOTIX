@@ -62,6 +62,7 @@
  */
 #include "cursore.h"
 
+#include "forma.h"
 #include "registro.h"
 
 #include <spa/buffer/meta.h>
@@ -121,7 +122,10 @@ struct cursore
 		uint64_t malformate;
 		uint64_t forma_ignota; /* visibile, ma la forma non l'abbiamo mai vista */
 		uint64_t rifiutate;    /* chi riceve ha detto no                 */
+		uint64_t codificate;   /* un colore del tema codificato (forma.h) */
 	} conto;
+
+	int ultimo_indice;     /* l'ultima forma codificata vista, per il registro */
 
 	/* I guai che si dicono UNA volta e non a ogni fotogramma. */
 	int detto_formato;
@@ -270,6 +274,7 @@ Cursore *cursore_apri(CursoreArrivata quando_cambia, void *chi)
 	}
 	c->quando_cambia = quando_cambia;
 	c->chi = chi;
+	c->ultimo_indice = -1;
 	return c;
 }
 
@@ -500,7 +505,62 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	 *    `forma_vuota`).
 	 * ⚠ E si guarda il banco di lavoro, DOPO la conversione: `alfa_piena`
 	 *   riempie l'alfa, e una bitmap senza canale alfa non e' trasparente.
+	 *
+	 * ⭐⭐ FASE 14, 24 set 2026 — PRIMA DI TUTTO, IL TEMA CODIFICATO (`forma.h`).
+	 *      Il tema della sessione non e' piu' trasparente: ogni forma e' un
+	 *      pixel OPACO di un colore suo.  ⇒ Se TUTTA la bitmap e' di un solo
+	 *      colore e il dizionario lo riconosce (1x1, o scalata dal compositore:
+	 *      un colore solo resta un colore solo), quella non e' la forma da
+	 *      mandare — e' il NOME della forma.  Si mette nel banco di lavoro
+	 *      l'immagine VERA presa dal tema reale, e si prosegue al confronto
+	 *      del passo 7 come per una bitmap qualsiasi.
+	 * ⛔ Se il tema reale manca (`forma_immagine` FALSE, gia' detto nel
+	 *    registro) si scende al controllo di sotto, che su un pixel opaco NON
+	 *    scatta: il client riceverebbe il pixel colorato.  ⇒ In quel caso si
+	 *    tratta come il tema invisibile di prima — «nascosto», cioe' con
+	 *    `mai_nascondere` il client tiene la SUA freccia, come fino a ieri.
+	 * ⭐ `[R]` GNOME NON PASSA DI QUI: nel ramo di GNOME `sessione.c` non mette
+	 *    nessun `XCURSOR_*`, e Mutter manda la bitmap del suo tema (Adwaita),
+	 *    fatta di nero, bianco e sfumature — mai tutta di un colore solo, e il
+	 *    rosso dei nostri (0x40-0x83) con verde e blu esatti non e' un colore
+	 *    di Adwaita.  Solo KDE (KWin, metadato zkde, modo 4) legge il nostro tema
+	 *    e poi arriva qui; labwc ha la sua strada (`wlroots.c`).
 	 */
+	{
+		size_t i;
+		int indice = forma_da_pixel(c->scratch[0], c->scratch[1], c->scratch[2],
+		                            c->scratch[3]);
+
+		for (i = 4; indice >= 0 && i < byte; i += 4)
+			if (memcmp(c->scratch + i, c->scratch, 4) != 0)
+				indice = -1;
+		if (indice >= 0) {
+			CursoreForma vera;
+
+			c->conto.codificate++;
+			memset(&vera, 0, sizeof vera);
+			if (!forma_immagine(indice, &vera)) {
+				c->conto.vuote++;
+				return consegna_nascosto(c, "forma codificata ma tema reale assente");
+			}
+			larghezza = vera.larghezza;
+			altezza = vera.altezza;
+			attivo_x = vera.attivo_x;
+			attivo_y = vera.attivo_y;
+			byte = (size_t) larghezza * (size_t) altezza * 4u;
+			memcpy(c->scratch, vera.immagine, byte);
+			if (indice != c->ultimo_indice) {
+				c->ultimo_indice = indice;
+				/* ⚠ Una riga a CAMBIO di forma, non a buffer: e' il ritmo della
+				 *   mano di chi usa il desktop, e la prova che il dizionario
+				 *   lavora si legge solo qui. */
+				registro_dice(AREA, "forma codificata %d «%s» ⇒ %ux%u, punto %d,%d",
+				              indice, forma_nome(indice), (unsigned) larghezza,
+				              (unsigned) altezza, (int) attivo_x, (int) attivo_y);
+			}
+			goto confronto;
+		}
+	}
 	{
 		size_t i;
 		int si_vede = 0;
@@ -517,6 +577,7 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		}
 	}
 
+confronto:
 	/*
 	 * --- 7. ⛔ E' CAMBIATA DAVVERO? --------------------------------------
 	 *
@@ -570,6 +631,17 @@ void cursore_mai_nascondere(Cursore *c, const char *perche)
 	c->mai_nascondere = 1;
 	registro_dice(AREA, "il nascondimento del puntatore NON si consegnera' piu': %s",
 	              perche ? perche : "senza motivo");
+	/* ⭐ FASE 14 — e il dizionario si carica ADESSO, fuori dal thread di
+	 *    PipeWire: sono 68 file del tema reale letti da disco, e farlo alla
+	 *    prima forma codificata vorrebbe dire farlo sul thread di tempo reale
+	 *    della cattura.  ⚠ Si chiama solo su KDE (chi usa il tema codificato
+	 *    col metadato), quindi GNOME non paga questa lettura. */
+	{
+		CursoreForma prima;
+
+		memset(&prima, 0, sizeof prima);
+		(void) forma_immagine(0, &prima);
+	}
 }
 
 void cursore_chiudi(Cursore *c)
@@ -581,11 +653,11 @@ void cursore_chiudi(Cursore *c)
 	              ", con bitmap %" PRIu64 " (uguali %" PRIu64 ", vuote %" PRIu64
 	              ") ⇒ CURSORE_FORMA consegnate %" PRIu64 "; tagliate %" PRIu64
 	              ", punto fuori %" PRIu64 ", malformate %" PRIu64 ", rifiutate %" PRIu64
-	              ", forma ignota %" PRIu64,
+	              ", forma ignota %" PRIu64 ", codificate %" PRIu64,
 	              c->conto.visti, c->conto.id_zero, c->conto.senza_bitmap, c->conto.con_bitmap,
 	              c->conto.uguali, c->conto.vuote, c->conto.cambi, c->conto.tagliate,
 	              c->conto.punto_fuori, c->conto.malformate, c->conto.rifiutate,
-	              c->conto.forma_ignota);
+	              c->conto.forma_ignota, c->conto.codificate);
 	free(c->immagine);
 	free(c->scratch);
 	free(c);
