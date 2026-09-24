@@ -286,6 +286,8 @@ static void riconosci_desktop(void)
 		g_autofree char *plasma = g_find_program_in_path("startplasma-wayland");
 		g_autofree char *xfce = g_find_program_in_path("xfce4-session");
 		g_autofree char *labwc = g_find_program_in_path(SESSIONE_PROCESSO_XFCE);
+		/* ⭐ FASE 14 — si cerca sempre, ma decide solo DOPO XFCE: vedi il ramo. */
+		g_autofree char *lxqt = g_find_program_in_path(SESSIONE_MARCATORE_LXQT);
 
 		if (plasma && !gnome) {
 			desktop_scelto = SESSIONE_DESKTOP_KDE;
@@ -309,6 +311,24 @@ static void riconosci_desktop(void)
 				      : "XFCE (c'e' xfce4-session) — ⛔ ma NON c'e' labwc, e XFCE "
 				        "su Wayland non porta un compositore suo: la sessione non "
 				        "potra' nascere finche' non lo si installa";
+			/* ⭐ FASE 14 — XFCE e LXQt insieme: AMBIGUO, come GNOME+KDE.  Si
+			 *    sceglie XFCE, cioe' quel che la macchina faceva ieri, e si DICE:
+			 *    la scelta cambia solo la spiegazione, mai il desktop. */
+			if (lxqt)
+				desktop_spiegato =
+					"XFCE — ⚠ AMBIGUO: su questa macchina ci sono XFCE e LXQt "
+					"(xfce4-session e lxqt-session), e vince XFCE.  La scelta fra "
+					"piu' desktop non c'e' ancora (DECISIONI.md "
+					"§4.6-duodetricies, MASTERPLAN.md M5)";
+		} else if (lxqt) {
+			/* ⭐ FASE 14.  Stessa disciplina di XFCE: il marcatore è la
+			 *    SESSIONE, `labwc` la precondizione, detta subito. */
+			desktop_scelto = SESSIONE_DESKTOP_LXQT;
+			desktop_spiegato =
+				labwc ? "LXQt (c'e' lxqt-session, e labwc per farlo girare)"
+				      : "LXQt (c'e' lxqt-session) — ⛔ ma NON c'e' labwc, e LXQt "
+				        "su Wayland non porta un compositore suo: la sessione non "
+				        "potra' nascere finche' non lo si installa";
 		} else {
 			/*
 			 * ⛔⛔ QUI C'ERA IL RIPIEGO SU GNOME, ed è stato TOLTO — fase 13,
@@ -324,7 +344,8 @@ static void riconosci_desktop(void)
 			desktop_scelto = SESSIONE_DESKTOP_NESSUNO;
 			desktop_spiegato = "⛔ NESSUN DESKTOP RICONOSCIUTO — non trovo "
 			                   "gnome-session, ne' startplasma-wayland, ne' "
-			                   "xfce4-session: nessuna sessione grafica potra' "
+			                   "xfce4-session, ne' lxqt-session: nessuna sessione "
+			                   "grafica potra' "
 			                   "nascere, e non ne provo nessuna";
 		}
 		g_once_init_leave(&fatto, 1);
@@ -416,6 +437,23 @@ static gboolean e_nessuno(void)
 }
 
 /*
+ * ⭐ FASE 14 — il quarto predicato, e il giro del riquadro «PERCHE' TRE
+ *    PREDICATI» rifatto: ogni punto che aveva un `if (e_xfce())` davanti al
+ *    blocco di GNOME ha adesso anche un ramo LXQt ESPLICITO — fuso con quello
+ *    di XFCE dove il fatto è di labwc (famiglia), separato dove è della
+ *    sessione.  ⛔ Nessun punto lascia cadere LXQt nel blocco di GNOME.
+ */
+static gboolean e_lxqt(void)
+{
+	return sessione_desktop() == SESSIONE_DESKTOP_LXQT;
+}
+
+bool sessione_su_wlroots(void)
+{
+	return e_xfce() || e_lxqt();
+}
+
+/*
  * Il nome corto del desktop, per le righe di registro che ne nominavano UNO.
  *
  * ⚠ `LEZIONI.md` §1.9, quinta regola: *una riga scritta quando esisteva un solo
@@ -431,6 +469,8 @@ static const char *nome_desktop(void)
 		return "Plasma";
 	case SESSIONE_DESKTOP_XFCE:
 		return "XFCE";
+	case SESSIONE_DESKTOP_LXQT:
+		return "LXQt";
 	case SESSIONE_DESKTOP_NESSUNO:
 		return "nessun desktop";
 	default:
@@ -501,6 +541,17 @@ bool sessione_viva(void)
 	 *    (`STARTUP_TIMEOUT_WAYLAND`, `STUDI.md` §xfce §9.4). */
 	if (e_xfce())
 		return nome_ha_padrone(bus, SESSIONE_BUS_XFCE);
+
+	/* ⭐ FASE 14 — su LXQt, la stessa domanda debole: il nome di `lxqt-session`
+	 *    sul bus d'utente (labwc parte senza `dbus-run-session`, come su XFCE).
+	 * ⚠ E la debolezza è dichiarata a monte (`STUDI.md` §lxqt §3.4): il nome
+	 *   compare nel COSTRUTTORE, prima dei moduli.  La prontezza vera sarebbe
+	 *   il segnale `moduleStateChanged("lxqt-panel.desktop", true)`, ma il figlio
+	 *   non ha un ciclo GLib per ascoltarlo.  [?] Da misurare sulla scatola:
+	 *   quanto passa fra il nome e il pannello, e se in quel mezzo la cattura
+	 *   su labwc fallisce e riprova (come su XFCE) o fa altro. */
+	if (e_lxqt())
+		return nome_ha_padrone(bus, SESSIONE_BUS_LXQT);
 
 	/*
 	 * ⛔ NON BASTA CHE IL NOME SIA OCCUPATO, per due ragioni diverse e tutte e
@@ -734,6 +785,26 @@ SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonit
 		                   "il gestore di sessione XFCE c'e' sul bus: la sessione e' "
 		                   "viva — ⚠ e la sua uscita NON è della misura chiesta: su "
 		                   "wlroots nasce cablata e si ridimensiona dopo");
+		return SESSIONE_SANA;
+	}
+
+	/* ⭐ FASE 14 — su LXQt, la disciplina di XFCE parola per parola: stesso
+	 *    compositore, stessa uscita cablata; cambia solo il nome sul bus.
+	 * ⚠ «Sana» qui vuol dire «lxqt-session c'è», e il nome precede i moduli
+	 *   (vedi `sessione_viva()`).  [?] Se la scatola mostra che la cattura
+	 *   parte troppo presto, la domanda giusta è `listModules()` o il segnale
+	 *   del pannello — non un'attesa a tempo. */
+	if (e_lxqt()) {
+		if (!nome_ha_padrone(bus, SESSIONE_BUS_LXQT)) {
+			registro_dice(REG_SESSIONE,
+			              "nessun " SESSIONE_BUS_LXQT " sul bus: la sessione LXQt "
+			              "non c'e'");
+			return SESSIONE_MORTA;
+		}
+		registro_dettaglio(REG_SESSIONE,
+		                   "lxqt-session c'e' sul bus: la sessione e' viva — ⚠ e la "
+		                   "sua uscita NON è della misura chiesta: su wlroots nasce "
+		                   "cablata e si ridimensiona dopo");
 		return SESSIONE_SANA;
 	}
 
@@ -1107,18 +1178,70 @@ static char **componi_ambiente(void)
 	 *   pericolo è solo quel che si AGGIUNGE, ed è il blocco di GNOME qui sotto
 	 *   in cui XFCE cadrebbe senza questo `if`.
 	 */
-	if (e_xfce()) {
+	/*
+	 * ⭐⭐ FASE 14 — E L'AMBIENTE DI LXQt STA NELLO STESSO BLOCCO, perche' metà
+	 *      delle righe sono di LABWC e non del desktop: `WLR_*`, la scheda,
+	 *      `LABWC_UPDATE_ACTIVATION_ENV`, il cursore.  ⛔ Scriverle due volte
+	 *      vorrebbe dire poterle far divergere.  Le righe del DESKTOP stanno
+	 *      in due rami separati, e il ramo di XFCE è quello di prima.
+	 */
+	if (e_xfce() || e_lxqt()) {
 		g_autofree char *icone = scrivi_tema_cursore(runtime);
 
-		/* ⛔ SECCO e maiuscolo, senza suffissi: labwc ci metterebbe
-		 *    `labwc:wlroots`, e garcon non spezza sui `:` — con un suffisso le
-		 *    voci `OnlyShowIn=XFCE;` **spariscono** dal menu. */
-		g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=XFCE"));
-		g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_DESKTOP=xfce"));
-		g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_TYPE=wayland"));
-		/* ⚠ Non perche' manchi — garcon ha un ripiego — ma per non EREDITARNE
-		 *   una sbagliata: il controllo là dentro è `prefix != NULL`. */
-		g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=xfce-"));
+		if (e_xfce()) {
+			/* ⛔ SECCO e maiuscolo, senza suffissi: labwc ci metterebbe
+			 *    `labwc:wlroots`, e garcon non spezza sui `:` — con un suffisso le
+			 *    voci `OnlyShowIn=XFCE;` **spariscono** dal menu. */
+			g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=XFCE"));
+			g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_DESKTOP=xfce"));
+			g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_TYPE=wayland"));
+			/* ⚠ Non perche' manchi — garcon ha un ripiego — ma per non EREDITARNE
+			 *   una sbagliata: il controllo là dentro è `prefix != NULL`. */
+			g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=xfce-"));
+		} else {
+			/*
+			 * ⭐ FASE 14 — LE RIGHE DI LXQt (`STUDI.md` §lxqt §3.2), e ogni valore
+			 *    è quello del lanciatore upstream coetaneo, ramo `labwc`:
+			 *    `[R]` lxqt-wayland-session 0.1.1 `startlxqtwayland.in`.
+			 *
+			 * ⛔⛔ `XDG_CURRENT_DESKTOP` NON SECCA, al contrario di XFCE: il
+			 *     pannello sceglie il backend delle finestre **dai token** (`wlroots`
+			 *     il più forte), e con `LXQt` secco casca sul backend `dummy` —
+			 *     taskbar vuota, tutto inerte, un solo `qWarning`.  E i moduli hanno
+			 *     `OnlyShowIn=LXQt;`: senza `LXQt` la sessione è viva e NERA.
+			 * ⭐ `LXQt:labwc:wlroots` e non `LXQt:wlroots`: è la forma che lo script
+			 *    upstream dà a chi HA configurato labwc (`"LXQt:$COMPOSITOR:wlroots"`);
+			 *    `LXQt:wlroots` la usa solo per il primo avvio, quello che apre il
+			 *    wizard.  Tutt'e due portano `LXQt` e `wlroots`; `STUDI.md` §lxqt §3.2
+			 *    sceglie la prima, e qui la si tiene.
+			 * ⚠ labwc la mette solo se manca (`setenv(…, 0)`, `[R]` labwc 0.8.3
+			 *   `src/config/session.c:256`): la nostra resta. */
+			g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots"));
+			g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_DESKTOP=lxqt"));
+			/* ⛔ Non cosmetica: il pannello sceglie il backend da QUESTA, non da
+			 *    `platformName()` (`STUDI.md` §lxqt §3.2). */
+			g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_TYPE=wayland"));
+			/* ⛔ Nessun ripiego cablato in libqtxdg: senza, il menu non c'è. */
+			g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=lxqt-"));
+			/* ⛔ Deve contenere `/usr/share`: i default di LXQt stanno in
+			 *    `/usr/share/lxqt/<modulo>.conf`, e senza spariscono IN SILENZIO.  Il
+			 *    valore è quello dello script upstream, parola per parola, con
+			 *    `/etc/xdg` (il ritocco di Debian, `lxqt-branding-debian`) davanti a
+			 *    `/usr/share`.  [?] Quale dei due vinca davvero è la misura M6. */
+			g_ptr_array_add(ambiente, g_strdup("XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share"));
+			/* ⛔ SECCO (`STUDI.md` §lxqt §3.2, `LEZIONI.md` §1.8): con xcb
+			 *    `lxqt-session` diventa un'altra sessione — un secondo window
+			 *    manager, un dialogo modale, un secondo comandante della
+			 *    risoluzione.  ⚠ Lo script upstream NON la mette: è una scelta
+			 *    nostra, e il prezzo è dichiarato — un'applicazione Qt senza il
+			 *    plugin wayland muore (`qFatal`) invece di ripiegare su Xwayland.
+			 *    [?] Da guardare sulla scatola: chi muore così (qlipper è Qt5). */
+			g_ptr_array_add(ambiente, g_strdup("QT_QPA_PLATFORM=wayland"));
+			/* Il tema Qt di LXQt (`lxqt-qtplugin`): icone, stile e font del
+			 * desktop.  Lo mette lo script upstream; senza, il desktop parte con
+			 * l'aspetto nudo di Qt. */
+			g_ptr_array_add(ambiente, g_strdup("QT_QPA_PLATFORMTHEME=lxqt"));
+		}
 		/* ⛔ Il «senza schermo» di questa famiglia.  Con `headless` non nasce
 		 *    nessuna `wlr_session` e libseat non viene sfiorato: il muro su cui
 		 *    KWin moriva qui non esiste. */
@@ -1135,35 +1258,49 @@ static char **componi_ambiente(void)
 				g_ptr_array_add(ambiente,
 				                g_strdup_printf("WLR_RENDER_DRM_DEVICE=%s", nodo));
 				registro_dice(REG_SESSIONE,
-				              "⭐ XFCE: la scheda che do a wlroots è %s (aperta, non "
-				              "dedotta)", nodo);
+				              "⭐ %s: la scheda che do a wlroots è %s (aperta, non "
+				              "dedotta)", nome_desktop(), nodo);
 			} else {
 				registro_dice(REG_SESSIONE,
-				              "⛔ XFCE: nessun nodo /dev/dri/renderD* apribile — NON "
+				              "⛔ %s: nessun nodo /dev/dri/renderD* apribile — NON "
 				              "passo WLR_RENDER_DRM_DEVICE, e wlroots sceglierà da sé. "
 				              "⚠ Se ripiega su pixman lo fa IN SILENZIO: i numeri "
-				              "crolleranno e questa è l'unica riga che lo spiega");
+				              "crolleranno e questa è l'unica riga che lo spiega",
+				              nome_desktop());
 			}
 		}
 		/* ⛔ OBBLIGATORIA: senza, su headless labwc **non propaga**
 		 *    `WAYLAND_DISPLAY` al bus e a systemd, e lo fa in silenzio ⇒ le
 		 *    applicazioni della sessione non trovano il compositore. */
 		g_ptr_array_add(ambiente, g_strdup("LABWC_UPDATE_ACTIVATION_ENV=1"));
-		/* ⛔ SECCO: `wayland,x11` fa risorgere il salvaschermo su Xwayland e
-		 *    riaccende XSETTINGS e i grab — due comportamenti sotto una sola
-		 *    etichetta, che è quel che rende una misura incomparabile. */
-		g_ptr_array_add(ambiente, g_strdup("GDK_BACKEND=wayland"));
 		/*
-		 * ⛔⛔ LA CINTURA DEL LOGOUT, e non è una variabile decorativa.
-		 *
-		 * `xfce4-session` legge QUESTA, non quel che abbiamo eseguito davvero, e
-		 * se non ci trova **sia** `labwc` **sia** `--session` al logout esegue
-		 * `loginctl terminate-session ''` — cioe' ammazza la sessione logind di
-		 * REMOTIX (`STUDI.md` §xfce §9.2).  ⇒ Ci si mette la riga ESATTA che si
-		 *   esegue, togliendo l'`exec` davanti che qui non c'entra.
+		 * ⭐ FASE 14 — le due righe qui sotto sono di XFCE e restano SOLO sue:
+		 *   · `GDK_BACKEND` secco cura il salvaschermo di XFCE su Xwayland, che
+		 *     in LXQt non c'è; lo script upstream di LXQt non la mette, e GTK
+		 *     prende da sé wayland per primo.  [?] Da guardare se
+		 *     un'applicazione GTK finisce su Xwayland dentro LXQt;
+		 *   · `XFCE4_SESSION_COMPOSITOR` la legge solo `xfce4-session`: su LXQt
+		 *     la trappola del `loginctl terminate-session` non esiste
+		 *     (`STUDI.md` §lxqt §3.3, `[✗]`).
 		 */
-		g_ptr_array_add(ambiente,
-		                g_strdup("XFCE4_SESSION_COMPOSITOR=" SESSIONE_RIGA_XFCE));
+		if (e_xfce()) {
+			/* ⛔ SECCO: `wayland,x11` fa risorgere il salvaschermo su Xwayland e
+			 *    riaccende XSETTINGS e i grab — due comportamenti sotto una sola
+			 *    etichetta, che è quel che rende una misura incomparabile. */
+			g_ptr_array_add(ambiente, g_strdup("GDK_BACKEND=wayland"));
+			/*
+			 * ⛔⛔ LA CINTURA DEL LOGOUT, e non è una variabile decorativa.
+			 *
+			 * `xfce4-session` legge QUESTA, non quel che abbiamo eseguito
+			 * davvero, e se non ci trova **sia** `labwc` **sia** `--session` al
+			 * logout esegue `loginctl terminate-session ''` — cioe' ammazza la
+			 * sessione logind di REMOTIX (`STUDI.md` §xfce §9.2).  ⇒ Ci si mette
+			 *   la riga ESATTA che si esegue, togliendo l'`exec` davanti che qui
+			 *   non c'entra.
+			 */
+			g_ptr_array_add(ambiente,
+			                g_strdup("XFCE4_SESSION_COMPOSITOR=" SESSIONE_RIGA_XFCE));
+		}
 		/* Il cursore: la stessa cura di KDE (tema 1x1 ad alfa zero), con un
 		 * vincolo in meno — `XCURSOR_SIZE` qui non è obbligatoria.  ⛔ Ma il
 		 * tema deve ESSERCI: con un tema vuoto wlroots ripiega su uno
@@ -1324,13 +1461,15 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
  *   ha ricevuto una misura e non ne ha fatto niente, senza una riga, è il
 	 *   modo in cui due numeri si perdono e nessuno se ne accorge.
 	 */
-	if (e_xfce()) {
+	/* ⭐ FASE 14 — su LXQt vale la stessa cosa, e per la stessa ragione: il
+	 *    compositore è lo stesso labwc, lanciato da noi. */
+	if (e_xfce() || e_lxqt()) {
 		registro_dice(REG_SESSIONE,
-		              "XFCE: nessun drop-in da scrivere — il compositore non è "
+		              "%s: nessun drop-in da scrivere — il compositore non è "
 		              "un'unità di systemd, lo avvio io.  ⛔ E la tela chiesta "
 		              "(%ux%u) NON entra nella nascita: su wlroots l'uscita nasce "
 		              "cablata e si ridimensiona dopo, col protocollo",
-		              larghezza, altezza);
+		              nome_desktop(), larghezza, altezza);
 		return TRUE;
 	}
 
@@ -1515,6 +1654,88 @@ scrivi:
 }
 
 /* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 14 — LA CARTELLA DI labwc PER LXQt: NOSTRA, e riscritta a ogni
+ *      nascita (I7: la protezione sta nel programma, non in un file che si
+ *      può perdere o che qualcuno ha già scritto male).
+ *
+ * ⛔ PERCHE' NON `~/.config/labwc`: lo script upstream ci COPIA, una volta
+ *    sola (`if [ ! -d … ]`), un `autostart` che lancia
+ *    `swayidle -w timeout 300 "wlopm --off *"` — l'uscita spenta a 5 minuti,
+ *    cioè la cattura che riceve `failed` (`STUDI.md` §lxqt §6.2).  E l'`rc.xml`
+ *    che propone lega `W-l` a `lxqt-leave --lockscreen` (§5): labwc mangerebbe
+ *    il tasto.  ⇒ Una cartella che non scriviamo noi non la controlliamo.
+ * ⭐ Con `-C` labwc guarda SOLO questa cartella (`[R]` labwc 0.8.3
+ *    `src/common/dir.c:151-157`): quel che l'utente ha in `~/.config/labwc` e
+ *    in `/etc/xdg/labwc` non entra.
+ *
+ * I due file, e perché sono così corti:
+ *   · `rc.xml` — solo `<decoration>server</decoration>`, che è quel che LXQt
+ *     spedisce e che `STUDI.md` §lxqt §7 dice di non toccare (una barra sola,
+ *     nessun lampo).  ⭐ NIENTE `<keyboard>`: senza keybind labwc carica le
+ *     sue di serie (`[R]` `src/config/rcxml.c:1685-1687`,
+ *     `include/config/default-bindings.h`), e fra quelle **non c'è** nessun
+ *     blocco schermo — `W-l` resta dell'utente;
+ *   · `autostart` — VUOTO di proposito, con la ragione scritta dentro:
+ *     `lxqt-session` avvia da sé i suoi moduli da `/etc/xdg/autostart`, e
+ *     quel che LXQt ci metterebbe (swayidle, swaybg) o spegne l'uscita o non
+ *     serve.
+ *
+ * Torna la cartella, o NULL (detto nel registro).
+ */
+static char *scrivi_config_labwc_lxqt(const char *runtime)
+{
+	g_autofree char *cartella = NULL;
+	g_autofree char *rc = NULL;
+	g_autofree char *autostart = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!runtime || !*runtime) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: XDG_RUNTIME_DIR non impostata — non so dove scrivere "
+		              "la configurazione di labwc");
+		return NULL;
+	}
+	cartella = g_build_filename(runtime, "remotix", "labwc-lxqt", NULL);
+	rc = g_build_filename(cartella, "rc.xml", NULL);
+	autostart = g_build_filename(cartella, "autostart", NULL);
+
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_file_set_contents(rc,
+	                         "<?xml version=\"1.0\"?>\n"
+	                         "<!-- REMOTIX: scritto a ogni nascita della sessione "
+	                         "LXQt, non modificare.\n"
+	                         "     Nessuna <keyboard>: labwc usa le sue "
+	                         "scorciatoie di serie, senza blocco schermo. -->\n"
+	                         "<labwc_config>\n"
+	                         "  <core>\n"
+	                         "    <decoration>server</decoration>\n"
+	                         "  </core>\n"
+	                         "</labwc_config>\n",
+	                         -1, &sbaglio) ||
+	    !g_file_set_contents(autostart,
+	                         "# REMOTIX: scritto a ogni nascita della sessione LXQt, "
+	                         "non modificare.\n"
+	                         "# VUOTO DI PROPOSITO: niente swayidle/wlopm (spegnerebbero "
+	                         "l'uscita\n"
+	                         "# catturata); i moduli li avvia lxqt-session da "
+	                         "/etc/xdg/autostart.\n",
+	                         -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: configurazione di labwc NON scritta in %s (%s) — non "
+		              "faccio nascere la sessione: senza la NOSTRA cartella labwc "
+		              "leggerebbe quella dell'utente, dove lo script di LXQt mette "
+		              "swayidle a spegnere l'uscita dopo 5 minuti",
+		              cartella, sbaglio ? sbaglio->message : g_strerror(errno));
+		return NULL;
+	}
+	registro_dice(REG_SESSIONE,
+	              "⭐ LXQt: configurazione di labwc in %s — rc.xml senza blocco "
+	              "schermo, autostart vuoto (niente swayidle/wlopm)",
+	              cartella);
+	return g_steal_pointer(&cartella);
+}
+
 static gboolean avvia(void)
 {
 	g_auto(GStrv) ambiente = NULL;
@@ -1528,11 +1749,26 @@ static gboolean avvia(void)
 	/* ⚠ A TRE VIE, e non un ternario annidato: chi aggiunge il quarto desktop
 	 *   deve vedere l'elenco, non doverlo districare. */
 	const char *comando = SESSIONE_COMANDO_GNOME;
+	/* ⭐ FASE 14 — la riga di LXQt si compone (la cartella di `-C` sta sotto
+	 *    `XDG_RUNTIME_DIR`): vive qui, e `comando` la punta. */
+	g_autofree char *comando_lxqt = NULL;
 
 	if (e_kde())
 		comando = SESSIONE_COMANDO_KDE;
 	else if (e_xfce())
 		comando = SESSIONE_COMANDO_XFCE;
+	else if (e_lxqt()) {
+		g_autofree char *cartella = scrivi_config_labwc_lxqt(g_getenv("XDG_RUNTIME_DIR"));
+
+		if (!cartella)
+			return FALSE;
+		/* ⚠ `SESSIONE_PROCESSO_XFCE` è `labwc`: il compositore di FAMIGLIA,
+		 *   lo stesso eseguibile — il nome della costante è della fase 13. */
+		comando_lxqt = g_strdup_printf("exec " SESSIONE_PROCESSO_XFCE " -C '%s' -S "
+		                               SESSIONE_PRIMARIO_LXQT,
+		                               cartella);
+		comando = comando_lxqt;
+	}
 
 	ambiente = componi_ambiente();
 	if (!ambiente)
@@ -1644,22 +1880,28 @@ static gboolean unita_inattiva(void)
 	 *   il nome sul bus può essere già sparito mentre il compositore sta ancora
 	 *   morendo, e un `labwc` può esistere un istante prima di prendere il nome.
 	 */
-	if (e_xfce()) {
+	/* ⭐ FASE 14 — su LXQt il fatto è lo stesso processo, `labwc`: unità non ce
+	 *    n'è, e la trappola dell'`inactive` per un'unità inesistente è identica.
+	 * ⚠ Una sola cosa: un `labwc` mio conta anche se è di un altro desktop —
+	 *   ma «un desktop per macchina» (§0.6) lo esclude. */
+	if (e_xfce() || e_lxqt()) {
 		int quanti = processi_miei(SESSIONE_PROCESSO_XFCE);
 
 		if (quanti < 0) {
 			/* ⛔ «non ho potuto guardare» non è «è libero»: si dice di no,
 			 *    e chi chiama riprova. */
 			registro_dice(REG_SESSIONE,
-			              "⛔ XFCE: non riesco a leggere /proc, quindi non so se "
+			              "⛔ %s: non riesco a leggere /proc, quindi non so se "
 			              "c'è ancora un " SESSIONE_PROCESSO_XFCE " mio — e «non "
-			              "lo so» qui vale «no»");
+			              "lo so» qui vale «no»",
+			              nome_desktop());
 			return FALSE;
 		}
 		if (quanti > 0) {
 			registro_dice(REG_SESSIONE,
-			              "XFCE: ci sono ancora %d " SESSIONE_PROCESSO_XFCE
-			              " miei: la sessione di prima non è finita", quanti);
+			              "%s: ci sono ancora %d " SESSIONE_PROCESSO_XFCE
+			              " miei: la sessione di prima non è finita",
+			              nome_desktop(), quanti);
 			return FALSE;
 		}
 		return TRUE;
@@ -1785,8 +2027,52 @@ static gboolean uccidi_xfce(void)
 			colpiti++;
 	}
 	registro_dice(REG_SESSIONE,
-	              "XFCE: mandato SIGTERM a %d " SESSIONE_PROCESSO_XFCE " miei", colpiti);
+	              "%s: mandato SIGTERM a %d " SESSIONE_PROCESSO_XFCE " miei", nome_desktop(),
+	              colpiti);
 	return colpiti > 0;
+}
+
+/*
+ * ⭐ FASE 14 — L'USCITA DI LXQt.  Le stesse due mosse di XFCE, con un altro
+ *    bersaglio D-Bus per la prima (`STUDI.md` §lxqt §3.4).
+ *
+ *   ordinata   `org.lxqt.session.logout()` su `/LXQtSession` — ⛔ mai
+ *              `lxqt-leave --logout`, che apre una conferma modale.
+ *              ✅ Il logout di LXQt non consulta inibitori, non mostra niente,
+ *              non si annulla (`STUDI.md` §lxqt §3.3, `[✗]`)
+ *   a forza    SIGTERM a labwc (`uccidi_xfce`): con `-S` `lxqt-session` è il
+ *              client primario, e morto labwc va via con lui
+ *
+ * ⛔⛔ E SI MANDA SENZA ASPETTARE RISPOSTA, perche' risposta non ne arriva:
+ *     `logout()` è `Q_NOREPLY` (`[R]` lxqt-session 2.1.1
+ *     `sessiondbusadaptor.h`).  Una chiamata sincrona resterebbe appesa fino
+ *     al tetto e direbbe «non è passata» a un logout riuscito — la forma E8
+ *     rovesciata.  ⇒ Messaggio con `NO_REPLY_EXPECTED`, e il verdetto lo dà
+ *     `aspetta_che_finisca()`, cioe' un fatto.
+ * [?] Che `logout()` porti davvero `lxqt-session` all'uscita (e quindi labwc)
+ *     entro i 10 s di `ATTESA_USCITA_MS` è da misurare: se no si cade nella
+ *     forza, e il registro lo dice.
+ */
+static gboolean esci_lxqt(void)
+{
+	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GDBusMessage) messaggio = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!bus)
+		return FALSE;
+	messaggio = g_dbus_message_new_method_call(SESSIONE_BUS_LXQT, "/LXQtSession",
+	                                           SESSIONE_BUS_LXQT, "logout");
+	g_dbus_message_set_flags(messaggio, G_DBUS_MESSAGE_FLAGS_NO_REPLY_EXPECTED |
+	                                            G_DBUS_MESSAGE_FLAGS_NO_AUTO_START);
+	if (!g_dbus_connection_send_message(bus, messaggio, G_DBUS_SEND_MESSAGE_FLAGS_NONE, NULL,
+	                                    &sbaglio) ||
+	    !g_dbus_connection_flush_sync(bus, NULL, &sbaglio)) {
+		registro_dice(REG_SESSIONE, "⚠ LXQt: logout() non è partito (%s)",
+		              sbaglio ? sbaglio->message : "senza motivo");
+		return FALSE;
+	}
+	return TRUE;
 }
 
 bool sessione_termina(void)
@@ -1808,6 +2094,28 @@ bool sessione_termina(void)
 		              "⚠ la sessione non esce: la chiudo a forza (SIGTERM a "
 		              SESSIONE_PROCESSO_XFCE "), cio' che non e' stato salvato va "
 		              "perduto — ⛔ e qui la forza non è systemd: su XFCE il "
+		              "compositore non è un'unità");
+		if (uccidi_xfce() && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita, a forza");
+			return true;
+		}
+		registro_dice(REG_SESSIONE, "⛔ la sessione grafica non e' uscita nemmeno a forza");
+		return false;
+	}
+
+	/* ⭐ FASE 14 — LXQt: la forma di XFCE, col bersaglio di LXQt davanti. */
+	if (e_lxqt()) {
+		registro_dice(REG_SESSIONE,
+		              "chiedo alla sessione LXQt di uscire (org.lxqt.session.logout, "
+		              "senza attendere risposta: è Q_NOREPLY)");
+		if (esci_lxqt() && aspetta_che_finisca()) {
+			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita");
+			return true;
+		}
+		registro_dice(REG_SESSIONE,
+		              "⚠ la sessione non esce: la chiudo a forza (SIGTERM a "
+		              SESSIONE_PROCESSO_XFCE "), cio' che non e' stato salvato va "
+		              "perduto — ⛔ e qui la forza non è systemd: su LXQt il "
 		              "compositore non è un'unità");
 		if (uccidi_xfce() && aspetta_che_finisca()) {
 			registro_dice(REG_SESSIONE, "la sessione grafica e' uscita, a forza");
@@ -2204,6 +2512,96 @@ static gpointer guardia_del_pannello_xfce(gpointer dati)
 	}
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 14 — LE IMPOSTAZIONI DI LXQt: SCRIVI, RILEGGI, DI' SE È IN VIGORE.
+ *
+ * ⛔⛔ L'INATTIVITÀ, e la trappola è `LEZIONI.md` §1.9 in forma pura: scrivere
+ *     `enableIdlenessWatcher=false` NON BASTA.  `[R]` lxqt-powermanagement
+ *     2.1.0 `src/powermanagementd.cpp`: se `runCheckLevel` < 1 il demone
+ *     esegue `performRunCheck()`, che fa `setIdlenessWatcherEnabled(true)` —
+ *     cioè **riscrive a vero** la nostra chiave al primo avvio (e mostra una
+ *     notifica «primo avvio»).  ⇒ Si scrivono TUTT'E DUE: `runCheckLevel=1`
+ *     (= `CURRENT_RUNCHECK_LEVEL`) spegne il controllo, e la chiave resta.
+ *     https://raw.githubusercontent.com/lxqt/lxqt-powermanagement/2.1.0/src/powermanagementd.cpp
+ * ⚠ Le chiavi sono di primo livello in `LXQt::Settings("lxqt-powermanagement")`
+ *   (`config/powermanagementsettings.cpp`), cioè `[General]` nel formato INI di
+ *   QSettings, nel file dell'utente `~/.config/lxqt/lxqt-powermanagement.conf`.
+ *   ⭐ `~/.config` e non `g_get_user_config_dir()`: l'ambiente della sessione
+ *   non porta `XDG_CONFIG_HOME`, quindi LXQt guarda lì.
+ * ⚠ Il prezzo, dichiarato come su XFCE: è il file DELL'UTENTE.  Se lo stesso
+ *   utente apre LXQt davanti alla macchina, il sorvegliante di inattività
+ *   resta spento.
+ * ⚠ Si tocca SOLO quel che si deve: il file si legge, si cambiano due chiavi,
+ *   le altre restano.  Se non si riesce a leggerlo (formato che GKeyFile non
+ *   capisce) NON lo si riscrive: si dice, e si va avanti con meno.
+ *
+ * E le tre cose che NON si scrivono:
+ *   · `compositor=` in `session.conf` — ⛔ `[R]` il wizard di `compositor`
+ *     vuoto lo lancia LO SCRIPT upstream (`labwc -S lxqt-config-session`),
+ *     non `lxqt-session`, che in 2.1.1 quella chiave non la legge
+ *     (`lxqtmodman.cpp`).  Col nostro lanciatore la chiave non ha lettori;
+ *   · il blocco — `lock_command_wayland` è letta **senza default** e nessun
+ *     file spedito la imposta: il blocco è già inerte (`STUDI.md` §lxqt §6.2).
+ *     ⛔ E `/bin/false` qui aprirebbe una finestra MODALE: non si scrive;
+ *   · l'inibizione D-Bus — non esiste (`sessione_inibisci()`).
+ */
+static void impostazioni_lxqt(void)
+{
+	g_autofree char *cartella = g_build_filename(g_get_home_dir(), ".config", "lxqt", NULL);
+	g_autofree char *file = g_build_filename(cartella, "lxqt-powermanagement.conf", NULL);
+	g_autoptr(GKeyFile) chiavi = g_key_file_new();
+	g_autoptr(GKeyFile) riletto = g_key_file_new();
+	g_autoptr(GError) sbaglio = NULL;
+	g_autofree char *attivo = NULL;
+	g_autofree char *livello = NULL;
+
+	if (g_file_test(file, G_FILE_TEST_EXISTS) &&
+	    !g_key_file_load_from_file(chiavi, file,
+	                               G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+	                               &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s c'è ma non lo so leggere (%s) — NON lo riscrivo, "
+		              "per non buttare le chiavi dell'utente.  ⚠ Il sorvegliante di "
+		              "inattività resta com'è",
+		              file, sbaglio->message);
+		return;
+	}
+	g_key_file_set_value(chiavi, "General", "enableIdlenessWatcher", "false");
+	g_key_file_set_value(chiavi, "General", "runCheckLevel", "1");
+	g_clear_error(&sbaglio);
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_key_file_save_to_file(chiavi, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s NON scritto (%s): il sorvegliante di inattività "
+		              "resta com'è",
+		              file, sbaglio ? sbaglio->message : g_strerror(errno));
+		return;
+	}
+
+	/* ⛔ E SI RILEGGE, come su XFCE: scritto non è in vigore finché non lo si
+	 *    rilegge dal file. */
+	if (g_key_file_load_from_file(riletto, file, G_KEY_FILE_NONE, NULL)) {
+		attivo = g_key_file_get_value(riletto, "General", "enableIdlenessWatcher", NULL);
+		livello = g_key_file_get_value(riletto, "General", "runCheckLevel", NULL);
+	}
+	if (g_strcmp0(attivo, "false") == 0 && g_strcmp0(livello, "1") == 0)
+		registro_dice(REG_SESSIONE,
+		              "⭐ LXQt: %s [General] enableIdlenessWatcher=false e "
+		              "runCheckLevel=1, RILETTE — il sorvegliante di inattività è "
+		              "spento, e il demone non lo riaccende al primo avvio",
+		              file);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s NON è in vigore (rileggo enableIdlenessWatcher=«%s», "
+		              "runCheckLevel=«%s»)",
+		              file, attivo ? attivo : "non lo so", livello ? livello : "non lo so");
+	registro_dice(REG_SESSIONE,
+	              "LXQt: non scrivo «compositor=» (col nostro lanciatore non ha "
+	              "lettori), né un comando di blocco (è già inerte, e /bin/false "
+	              "aprirebbe una finestra modale)");
+}
+
 void sessione_impostazioni(void)
 {
 	/* ⛔ FASE 12 — prima di aprire uno schema: su Plasma queste chiavi non
@@ -2346,6 +2744,14 @@ void sessione_impostazioni(void)
 		              "XFCE: le voci del pulsante d'azione del pannello le tolgo "
 		              "quando il pannello esiste (sessione_inibisci): prima, per un "
 		              "utente nuovo, il suo plugin non ha ancora un numero");
+		return;
+	}
+	/*
+	 * ⭐ FASE 14 — su LXQt: una sola leva, l'inattività.  E tre cose che NON si
+	 *    scrivono, ognuna con la sua ragione.
+	 */
+	if (e_lxqt()) {
+		impostazioni_lxqt();
 		return;
 	}
 	struct schema_aperto wayland = apri_schema("org.gnome.mutter.wayland");
@@ -2598,6 +3004,26 @@ guint32 sessione_inibisci(void)
 		              "blocco, sospensione, riavvio e spegnimento");
 		return 0;
 	}
+	/*
+	 * ⭐ FASE 14 — su LXQt NON si inibisce, e qui non c'è nemmeno a chi
+	 *    chiederlo: `PowerManagement.Inhibit` in LXQt **non esiste** — né
+	 *    esposto né consumato (`STUDI.md` §lxqt §6.2, `[✗]`, zero occorrenze).
+	 * ⚠ L'inattività la spegne `impostazioni_lxqt()` prima della nascita; e
+	 *   l'uscita su Wayland `lxqt-powermanagement` non la sa spegnere (DPMS solo
+	 *   su xcb).  Chi la spegnerebbe è `swayidle` dall'autostart di labwc, che
+	 *   la nostra cartella `-C` non ha.
+	 * [?] La leva più forte, `zwp_idle_inhibit_manager_v1` di labwc, non è di
+	 *     questo incremento: è la misura M5.
+	 * ⚠ Le voci pericolose del pannello (`fancymenu`, `lxqt-leave` nel
+	 *   quicklaunch di Debian) NON si toccano qui: incrementi dopo.
+	 */
+	if (e_lxqt()) {
+		registro_dice(REG_SESSIONE,
+		              "LXQt: non chiedo nessuna inibizione — LXQt non ha "
+		              "PowerManagement.Inhibit; l'inattività è spenta dalla "
+		              "configurazione, e swayidle non parte (autostart nostro, vuoto)");
+		return 0;
+	}
 
 	risposta = g_dbus_connection_call_sync(
 		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
@@ -2749,9 +3175,9 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "(«%s» non e' inattiva): non ne faccio nascere una seconda "
 		              "adesso — nascerebbe dentro quella che muore.  ⭐ Si riprova "
 		              "fra poco",
-		              e_kde()    ? SESSIONE_UNITA_KWIN
-		              : e_xfce() ? "il processo " SESSIONE_PROCESSO_XFCE
-		                         : SESSIONE_UNITA_GESTORE);
+		              e_kde()                   ? SESSIONE_UNITA_KWIN
+		              : (e_xfce() || e_lxqt()) ? "il processo " SESSIONE_PROCESSO_XFCE
+		                                        : SESSIONE_UNITA_GESTORE);
 		return false;
 	}
 

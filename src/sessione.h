@@ -157,6 +157,46 @@
 #define SESSIONE_BUS_XFCE "org.xfce.SessionManager"
 
 /*
+ * ⭐ FASE 14 — IL QUARTO DESKTOP: LXQt.  Incremento 1, «si riconosce, nasce e
+ *    si vede».  La fonte è `STUDI.md` §lxqt, e dove parla il sorgente upstream
+ *    lo si cita con l'indirizzo.
+ *
+ * ⛔⛔ SU TRIXIE LA SESSIONE WAYLAND DI LXQt NON È IMPACCHETTATA: manca il
+ *     lanciatore (`lxqt-wayland-session`, `startlxqtwayland`), non il codice
+ *     (`STUDI.md` §lxqt §1).  ⇒ Il lanciatore lo facciamo noi, e la forma è
+ *     quella del lanciatore upstream coetaneo di LXQt 2.1 — tag 0.1.1 —
+ *     `[R]` https://raw.githubusercontent.com/lxqt/lxqt-wayland-session/0.1.1/startlxqtwayland.in
+ *     (ramo `labwc`):
+ *
+ *         exec labwc -C $XDG_CONFIG_HOME/labwc -S lxqt-session
+ *
+ *   con UNA differenza voluta: la cartella di `-C` è NOSTRA (sotto
+ *   `XDG_RUNTIME_DIR`), non quella dell'utente — lo script upstream ci copia
+ *   una volta sola un `autostart` che lancia `swayidle … wlopm --off` a 5
+ *   minuti, e la copia è **permanente** (`STUDI.md` §lxqt §6.2).
+ *   ⭐ `-C` basta da solo: con `-C` labwc guarda **solo** quella cartella
+ *   (`[R]` labwc 0.8.3 `src/common/dir.c:151-157`).
+ *
+ * ⚠ La stessa forma di XFCE, e per la stessa ragione: `-S` (= `--session`)
+ *   rende `lxqt-session` il client primario di labwc ⇒ quando esce lui, labwc
+ *   termina.  ✅ E la trappola di XFCE qui non c'è: `lxqt-session` non chiama
+ *   `loginctl terminate-session` (`STUDI.md` §lxqt §3.3, `[✗]`).
+ *
+ * ⚠ La riga intera non è una costante, al contrario di XFCE: la cartella di
+ *   `-C` sta sotto `XDG_RUNTIME_DIR` e si compone in `avvia()`.  Qui ci sono
+ *   i due pezzi che non cambiano.
+ */
+#define SESSIONE_MARCATORE_LXQT "lxqt-session"
+#define SESSIONE_PRIMARIO_LXQT "lxqt-session"
+/* ⭐ Il nome sul bus D'UTENTE, e anche l'oggetto e l'interfaccia del logout:
+ *    `[R]` lxqt-session 2.1.1 `sessionapplication.cpp:48-49` (servizio e
+ *    `/LXQtSession`), `sessiondbusadaptor.h` (interfaccia `org.lxqt.session`)
+ *    — https://raw.githubusercontent.com/lxqt/lxqt-session/2.1.1/lxqt-session/src/sessiondbusadaptor.h
+ * ⚠ Il nome compare nel COSTRUTTORE: «c'è il nome» non vuol dire «desktop su»
+ *   (`STUDI.md` §lxqt §3.4).  Vedi `sessione_viva()`. */
+#define SESSIONE_BUS_LXQT "org.lxqt.session"
+
+/*
  * ⛔⛔ E IL QUARTO VALORE NON E' UN DESKTOP: E' L'ONESTA'.
  *
  * Fino alla fase 12 una macchina che non aveva ne' GNOME ne' KDE veniva
@@ -182,6 +222,8 @@ typedef enum {
 	SESSIONE_DESKTOP_KDE = 1,
 	SESSIONE_DESKTOP_XFCE = 2,
 	SESSIONE_DESKTOP_NESSUNO = 3,
+	/* ⭐ FASE 14 — IN CODA, per la regola qui sopra: 0..3 restano quelli. */
+	SESSIONE_DESKTOP_LXQT = 4,
 } SessioneDesktop;
 
 /*
@@ -197,23 +239,39 @@ typedef enum {
  *      ambiguo (fuori scopo: si sceglie e si dice, non si cura)
  *   3. `gnome-session`                                  → GNOME
  *   4. `xfce4-session`                                  → XFCE   ⭐ fase 13
- *   5. nessuno                                          → **NESSUNO**, e non
+ *      (e se c'è anche `lxqt-session`: XFCE, e si DICHIARA ambiguo — fase 14)
+ *   5. `lxqt-session`                                   → LXQT   ⭐ fase 14
+ *   6. nessuno                                          → **NESSUNO**, e non
  *      nasce niente — vedi il riquadro dell'enum
  *
  * ⚠ L'ordine NON è libero: i primi tre rami restano testualmente quelli della
  *   fase 12, quindi **nessuna macchina servita oggi cambia comportamento**.  Il
  *   ramo di XFCE si infila fra l'ultimo desktop conosciuto e il ripiego.
+ * ⭐ E quello di LXQt DOPO XFCE, per la stessa ragione: una macchina con XFCE
+ *   e LXQt insieme resta XFCE com'era ieri — cambia solo che adesso lo dice.
  *
  * ⛔ E il marcatore di XFCE è `xfce4-session`, **non `labwc`**: labwc è il
  *    compositore di FAMIGLIA, lo stesso che usa LXQt, e riconoscere su di lui
  *    confonderebbe due desktop diversi.  `labwc` resta una **precondizione**, e
  *    la sua assenza si dichiara alla nascita invece di scoprirla da un `exec`
- *    fallito.
+ *    fallito.  ⭐ Fase 14: per LXQt, identico, il marcatore è `lxqt-session`.
  */
 SessioneDesktop sessione_desktop(void);
 
 /* La scelta a parole, con il perche' — per la riga di avvio del server. */
 const char *sessione_desktop_spiega(void);
+
+/*
+ * ⭐ FASE 14 — LA FAMIGLIA, non il desktop: vero su XFCE **e** su LXQt.
+ *
+ * Cattura, input, appunti e rimontaggio non parlano col desktop: parlano col
+ * COMPOSITORE, e per tutt'e due è labwc (`STUDI.md` §lxqt §5: «riuso
+ * integrale»).  ⛔ Fino alla fase 13 `figlio.c` lo scriveva
+ * `== SESSIONE_DESKTOP_XFCE` in cinque punti: con un quinto valore dell'enum
+ * LXQt sarebbe caduto, tutto insieme e senza un avviso, nel ramo di GNOME/KDE.
+ * ⇒ Chi chiede «wlroots?» chiede questo, e non un desktop.
+ */
+bool sessione_su_wlroots(void);
 
 /*
  * ⛔ IL MONITOR SI SCEGLIE PER NOME, E IL NOME E' QUESTO.
