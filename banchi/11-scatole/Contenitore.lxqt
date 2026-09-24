@@ -423,5 +423,39 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wlr-randr \
     && rm -rf /var/lib/apt/lists/*
 
+# ---------------------------------------------------------------------------
+# ⭐ R5 — 24 set 2026, fase 14, incremento 2: LE ICONE DEL PANNELLO.
+# [M] Con R2..R4 il pannello LXQt nasceva SENZA icone e SENZA il pulsante
+#     del menu: una fila di spazi vuoti.
+# ⭐ Che cosa entra, e perche' `[R]`:
+#   `kf6-breeze-icon-theme`  il tema d'icone che LXQt si aspetta:
+#                            lxqt-session 2.1.1, `config/lxqt.conf:3`
+#                            `icon_theme=breeze`.  Lo porterebbe
+#                            `lxqt-system-theme`, ma SOLO come Recommends
+#                            (papirus | breeze | faenza | oxygen) ⇒
+#                            `--no-install-recommends` lo scarta.
+#   `qt6-svg-plugins`        il pulsante del menu prende l'icona dal qss del
+#                            tema: lxqt-themes 2.1.0,
+#                            `system/lxqt-panel.qss:72`
+#                            `qproperty-icon: url(mainmenu.svg)`; e Qt 6 un
+#                            `.svg` cosi' lo carica solo col plugin
+#                            d'immagini SVG.  Anche le icone breeze sono svg.
+# ⚠⚠ E' la SCATOLA, non il prodotto: una macchina vera con `apt` normale
+#    prende i Recommends e queste due cose le ha gia'.  Qui si rimettono a
+#    mano perche' la scatola somigli alla macchina vera: la scatola si
+#    prepara come la macchina vera.
+# [?] Versioni esatte di trixie da leggere nella scatola (`dpkg -l`): non
+#     guardate su qa.debian.org per questo strato.
+# ⚠ Strato NUOVO in coda, apposta, invece di allungare la riga di R2:
+#   toccare R2 butterebbe la cache di R2, R3 e R4 (tre strati, uno col
+#   desktop intero) per due pacchetti che non dipendono da nessuno di loro.
+#   Qui in fondo R1..R4 restano identici e si ricostruisce solo questo.
+# ⚠ C11 (`DEVE_COMBACIARE`) non li elenca: un pacchetto in piu' solo qui
+#   non la fa rossa.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        kf6-breeze-icon-theme qt6-svg-plugins \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
