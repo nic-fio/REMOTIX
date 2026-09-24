@@ -405,5 +405,23 @@ RUN useradd -m -s /bin/bash nictest \
     && usermod -aG sudo,video,render nictest \
     && printf 'nictest:nictest\n' | chpasswd
 
+# ---------------------------------------------------------------------------
+# ⭐ R4 — 24 set 2026, fase 14: STRATO DIAGNOSTICO.  ⛔ Del BANCO, non del
+#   prodotto: serve a una sonda che misura protocolli e uscite di `labwc`
+#   dentro questa scatola.
+#   `wlr-randr` 0.4.1-1   `[R]` trixie: elenca e cambia le uscite via
+#                         `zwlr_output_manager_v1` — cioe' dice quel che labwc
+#                         ANNUNCIA come schermi, non quel che pensiamo.
+#   ⚠ `wayland-utils` (`wayland-info`) NON si ripete qui: sta gia' nella §4,
+#     in tutte e quattro le scatole.  ⚠ `lswt` in Debian NON esiste
+#     (nessuna versione su qa.debian.org, 24 set 2026).
+# ⚠ C11 (`11-c11-allineamento.py`) confronta solo la sua lista DEVE_COMBACIARE,
+#   e `wlr-randr` non c'e': un pacchetto in piu' solo qui non la fa rossa.
+# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wlr-randr \
+    && rm -rf /var/lib/apt/lists/*
+
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
