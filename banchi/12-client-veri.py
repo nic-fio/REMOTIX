@@ -543,6 +543,10 @@ class GuidaChrome(GuidaCdp):
                "--remote-allow-origins=*"]
         if not visibile:
             cmd.append("--headless=new")
+        # ⚠ Opzioni in piu' dichiarate da chi lancia: `[M]` 24 set 2026, sul
+        #   server dentro un labwc senza schermo Chrome cercava X11 e non
+        #   partiva ⇒ `REMOTIX_CHROME_OPZIONI="--ozone-platform=wayland"`.
+        cmd += os.environ.get("REMOTIX_CHROME_OPZIONI", "").split()
         cmd.append("about:blank")
         self.log = open(os.path.join(self.profilo, "uscita.log"), "wb")
         self.p = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT)

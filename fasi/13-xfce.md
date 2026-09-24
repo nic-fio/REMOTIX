@@ -734,11 +734,26 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   e hanno dato due «blocchi» da 51 e 58 s che **non erano del prodotto** — rifatto da solo: 0 s.
   È la lezione di sempre sui banchi in parallelo.
 
-- 🔸 **CHROME HA BUCHI CHE FIREFOX NON HA** — 23 set 2026, notte, sessioni lunghe in 4K: Chrome
-  **34 buchi** in 20 min su gnome e **88** su xfce, ognuno recuperato con una richiesta di chiave;
-  Firefox 1 e 0. Lo schermo **non** si ferma mai (blocco più lungo 0 s), ma in 4K ogni chiave è
-  grossa. ⏳ I registri del server delle due sessioni Chrome sono salvati in
-  `~/REMOTIX-misure/lunghe/registri/` per capire da che cosa nasce ciascun buco.
+- ✅ **I FOTOGRAMMI PERSI IN 4K ERANO DEL TABLET, NON DI REMOTIX** — 24 set 2026, mattina.
+  Sul tablet, notte del 23: Chrome **34 buchi** in 20 min su gnome e **88** su xfce; Firefox riceveva
+  tutto ma ne dipingeva il **93 %**. ⭐ Dai registri del server: i buchi di Chrome li faceva il
+  **regolatore del ritmo** (3 597 fotogrammi scartati su ~26 000 perché due aspettavano già), con la
+  scena testimone a **~190 Mbit/s**, il ritardo della rete da **2 a 76-95 ms** (coda: linea satura) e
+  il tablet sul **Wi-Fi a 5 GHz con segnale -74 dBm** (540 Mbit/s nominali).
+  ⭐⭐ LA PROVA DI CONTROLLO `[M]`: stesse sessioni, 4K, mouse in moto, **browser sul server**
+  (`REMOTIX_SUL_SERVER=1`, labwc senza schermo a 3840x2160 — ⚠ e sulla **stessa Intel che codifica**,
+  la Radeon è esclusa apposta: la prova è più severa del caso vero), 3 min per giro:
+
+  | | sul tablet | sul server |
+  |---|---|---|
+  | gnome · Chrome | 21 fot/s, 34 buchi in 20 min | **40 fot/s, 0 buchi** |
+  | xfce · Chrome | 88 buchi in 20 min | **35 fot/s, 0 buchi** |
+  | gnome · Firefox | dipinti 93 % | **dipinti 100 %** (3 981 su 3 982) |
+
+  ⇒ **Il limite è il tablet** (Wi-Fi debole e decodifica del 4K), non il prodotto. ⚠ Resta del
+  prodotto una cosa da tenere per la prova sotto stress: su una linea più stretta del flusso il server
+  **scarta e poi manda una chiave intera**, che pesa di più — è la scelta di oggi (risalita della qualità
+  e tetto di banda spenti, I6), e un utente vero su un Wi-Fi debole la vedrebbe.
 
 - ✅ **KDE RIPARTE DOPO UN RIAVVIO DEL SERVER ANCHE SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
   binario `1c592928`. Trovato dall'utente: la sessione Plasma sopravvive al server (I4), ⛔ ma la tabella

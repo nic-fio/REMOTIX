@@ -398,6 +398,13 @@ def _ssh(comando, secondi=180, pty=False):
     """
     v = ["ssh"] + (["-tt"] if pty else []) + ["-o", "BatchMode=yes",
                                               "%s@%s" % (UTENTE_SSH, HOST), comando]
+    # ⭐ LA PROVA DI CONTROLLO SENZA IL TABLET — 24 set 2026.  Con
+    #   `REMOTIX_SUL_SERVER=1` il banco gira SULLA macchina di prova e i
+    #   comandi non passano da ssh: il browser sta accanto alle scatole, senza
+    #   il Wi-Fi del tablet in mezzo (`[M]` 23 set notte: 190 Mbit/s in 4K, il
+    #   ritardo da 2 a 90 ms, segnale -74 dBm).  Si dichiara, non si indovina.
+    if os.environ.get("REMOTIX_SUL_SERVER") == "1":
+        v = ["sh", "-c", comando]
     try:
         # ⛔⛔ `errors="replace"`, E NON E' PRUDENZA — 23 settembre 2026.
         #
