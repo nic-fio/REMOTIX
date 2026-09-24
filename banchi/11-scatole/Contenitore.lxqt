@@ -406,9 +406,12 @@ RUN useradd -m -s /bin/bash nictest \
     && printf 'nictest:nictest\n' | chpasswd
 
 # ---------------------------------------------------------------------------
-# ⭐ R4 — 24 set 2026, fase 14: STRATO DIAGNOSTICO.  ⛔ Del BANCO, non del
-#   prodotto: serve a una sonda che misura protocolli e uscite di `labwc`
-#   dentro questa scatola.
+# ⭐ R4 — 24 set 2026, fase 14: nato STRATO DIAGNOSTICO, e dall'incremento 3
+#   ⛔ DIPENDENZA DEL PRODOTTO su LXQt: `avvia()` (src/sessione.c,
+#   `primario_lxqt()`) fa nascere `lxqt-session` DOPO un `wlr-randr
+#   --custom-mode` alla misura del cliente — senza, lo sfondo di pcmanfm-qt
+#   puo' restare 1280x720 col resto nero (~1 nascita su 13).  ⚠ Se manca, la
+#   sessione nasce lo stesso (`;`, non `&&`) e torna la gara di prima.
 #   `wlr-randr` 0.4.1-1   `[R]` trixie: elenca e cambia le uscite via
 #                         `zwlr_output_manager_v1` — cioe' dice quel che labwc
 #                         ANNUNCIA come schermi, non quel che pensiamo.

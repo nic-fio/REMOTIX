@@ -1736,7 +1736,67 @@ static char *scrivi_config_labwc_lxqt(const char *runtime)
 	return g_steal_pointer(&cartella);
 }
 
-static gboolean avvia(void)
+/*
+ * ⭐⭐ FASE 14, incremento 3 — LO SFONDO DI LXQt NASCE DELLA MISURA DEL CLIENTE.
+ *
+ * `[M]` 24 set 2026: `labwc` headless nasce con `HEADLESS-1 1280x720`, e la
+ * misura del cliente gliela dà `wlr_misura_chiedi()` (cattura.c) ~200 ms dopo;
+ * ma `pcmanfm-qt --desktop` parte ~160 ms dopo labwc ⇒ GARA: ~1 nascita su 13
+ * lo sfondo resta 1280x720 e il resto dello schermo è NERO.
+ * `[R]` pcmanfm-qt 2.1.0: la finestra del desktop è ancorata ai quattro lati
+ * (`desktopwindow.cpp:202-212`), lo sfondo si fa da `screen->size()` (`:705`)
+ * e si rifà SOLO su `resizeEvent` (`:490`; `application.cpp:1050`) ⇒ se la
+ * misura arriva nel buco giusto, nessuno lo ridisegna.
+ *
+ * ⭐ La cura: `lxqt-session` (e quindi pcmanfm-qt) nasce DOPO che l'uscita ha
+ *    la misura.  Il client primario di labwc (`-S`) diventa un `sh` che prima
+ *    chiama `wlr-randr --custom-mode` e poi fa `exec lxqt-session` — stesso
+ *    pid, quindi «morto il primario, labwc esce» resta vero.
+ * ⛔ `;` e NON `&&`: se `wlr-randr` fallisce la sessione nasce lo stesso, e
+ *    resta la richiesta tardiva di sempre (`wlr_misura_chiedi()`, invariata).
+ * ⭐ Il nome dell'uscita NON si assume: `wlr-randr` 0.4.1 VUOLE `--output`
+ *    per cambiare un modo (`[R]` wlr-randr(1): «This option must be set when
+ *    making changes»), e senza argomenti elenca le uscite con il nome come
+ *    prima parola della prima riga (`HEADLESS-1 "Headless output 1"`).  ⇒ Si
+ *    prende quello; se è vuoto, niente `wlr-randr`.
+ * ⚠ Misura 0 (non nota) ⇒ la riga di oggi, senza `sh` davanti.
+ * ⚠ Due livelli di citazione: il nostro `sh -c` (quello di `avvia()`) e
+ *   `g_shell_parse_argv()` di labwc sul `-S`.  ⇒ `g_shell_quote()` due volte,
+ *   e nessuna citazione scritta a mano.
+ */
+static char *primario_lxqt(uint32_t larghezza, uint32_t altezza)
+{
+	g_autofree char *copione = NULL;
+	g_autofree char *interno = NULL;
+
+	if (larghezza == 0 || altezza == 0) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ LXQt: misura del cliente non nota (%ux%u) — lxqt-session "
+		              "nasce SENZA la misura data prima; resta la richiesta tardiva",
+		              larghezza, altezza);
+		return g_strdup(SESSIONE_PRIMARIO_LXQT);
+	}
+	copione = g_strdup_printf(
+		"u=$(wlr-randr 2>/dev/null | sed -n '1s/ .*//p'); "
+		"if [ -n \"$u\" ]; then "
+		"echo \"remotix: uscita $u portata a %ux%u PRIMA di lxqt-session\"; "
+		"wlr-randr --output \"$u\" --custom-mode %ux%u; "
+		"else echo \"remotix: nessuna uscita da wlr-randr, lxqt-session nasce "
+		"senza la misura\"; fi; "
+		"exec " SESSIONE_PRIMARIO_LXQT,
+		larghezza, altezza, larghezza, altezza);
+	interno = g_shell_quote(copione);
+	registro_dice(REG_SESSIONE,
+	              "⭐ LXQt: la misura del cliente %ux%u si dà all'uscita PRIMA della "
+	              "nascita di lxqt-session (wlr-randr nel client primario di labwc)",
+	              larghezza, altezza);
+	return g_strdup_printf("sh -c %s", interno);
+}
+
+/* ⭐ `larghezza`/`altezza`: la tela del cliente.  ⚠ Le usa SOLO il ramo LXQt
+ *   (`primario_lxqt()`): GNOME e KDE la misura la prendono dal drop-in, XFCE
+ *   dalla richiesta tardiva — identici a prima. */
+static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 {
 	g_auto(GStrv) ambiente = NULL;
 	g_autofree char *registro = NULL;
@@ -1764,9 +1824,11 @@ static gboolean avvia(void)
 			return FALSE;
 		/* ⚠ `SESSIONE_PROCESSO_XFCE` è `labwc`: il compositore di FAMIGLIA,
 		 *   lo stesso eseguibile — il nome della costante è della fase 13. */
-		comando_lxqt = g_strdup_printf("exec " SESSIONE_PROCESSO_XFCE " -C '%s' -S "
-		                               SESSIONE_PRIMARIO_LXQT,
-		                               cartella);
+		g_autofree char *primario = primario_lxqt(larghezza, altezza);
+		g_autofree char *primario_citato = g_shell_quote(primario);
+
+		comando_lxqt = g_strdup_printf("exec " SESSIONE_PROCESSO_XFCE " -C '%s' -S %s",
+		                               cartella, primario_citato);
 		comando = comando_lxqt;
 	}
 
@@ -3299,7 +3361,7 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 	 *    scritta dopo vale per la sessione SUCCESSIVA — cioe' ha ragione domani. */
 	sessione_impostazioni();
 
-	return avvia() ? true : false;
+	return avvia(larghezza, altezza) ? true : false;
 }
 
 SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata)
@@ -3432,7 +3494,7 @@ SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avvi
 		return sessione_stato(larghezza, altezza, NULL);
 	}
 
-	if (!avvia())
+	if (!avvia(larghezza, altezza))
 		return sessione_stato(larghezza, altezza, NULL);
 
 	/*
