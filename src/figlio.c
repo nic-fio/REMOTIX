@@ -5970,11 +5970,16 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 * ⇒ Qui non si fa niente, e si dice perché: un ramo vuoto senza una riga
 	 *   somiglia a un ramo dimenticato.
 	 */
-	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE) {
+	/* ⭐ FASE 14 — `sessione_su_wlroots()` e non `== XFCE`, qui e negli altri
+	 *    quattro punti di questo file (cattura, input, appunti, rimontaggio):
+	 *    la domanda è sul COMPOSITORE, e labwc serve XFCE e LXQt (`sessione.h`).
+	 *    ⛔ Con `== XFCE` LXQt cadeva nel ramo di GNOME/KDE, senza un avviso. */
+	if (sessione_su_wlroots()) {
 		registro_dettaglio(REG_FIGLIO,
-		                   "XFCE: nessun palco da aprire — su questa famiglia la "
+		                   "%s: nessun palco da aprire — su questa famiglia la "
 		                   "cattura parla col compositore senza passare da un "
-		                   "flusso montato");
+		                   "flusso montato",
+		                   sessione_desktop() == SESSIONE_DESKTOP_LXQT ? "LXQt" : "XFCE");
 		/*
 		 * ⛔⛔ E QUI NON SI SCRIVE `vista_viva = true` — 21 set 2026, e
 		 *     costava il congedo dell'utente.
@@ -6039,7 +6044,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	misura_del_palco(&tela_l, &tela_a);
 	/* ⭐ FASE 13 — l'altra porta: la sorgente a tiro.  ⛔ `nodo_del_palco()` non
 	 *    si chiama nemmeno, perché su questa famiglia un nodo non esiste. */
-	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+	if (sessione_su_wlroots())
 		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
 		                        CATTURA_COLORE_BGRX, &sbaglio);
 	else
@@ -6317,7 +6322,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *    tastiera e puntatore virtuali di Wayland, con lo stesso contratto
 		 *    (`input.h`).  ⛔ Il ramo sta PRIMA e non tocca la riga di GNOME e
 		 *    KDE qui sotto. */
-		if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+		if (sessione_su_wlroots())
 			palco_input = input_apri_wlr(tela_l, tela_a, &sbaglio_input);
 		else
 		palco_input = palco_kwin
@@ -6382,7 +6387,7 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		 *    protocollo di wlroots che KDE usa gia' (`appunti_kde.c`).  ⛔ Il
 		 *    ramo nuovo viene PRIMA, e i due di sotto sono quelli di prima.
 		 * ⭐ FASE 12 — su KDE gli appunti passano da KWin (`appunti_kde.c`). */
-		if (sessione_desktop() == SESSIONE_DESKTOP_XFCE)
+		if (sessione_su_wlroots())
 			palco_appunti = appunti_apri_wlroots(&sbaglio_app);
 		else
 			palco_appunti = palco_kwin
@@ -6630,7 +6635,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 	 *    `palco_kwin` sono NULL su XFCE, la guardia qui sotto tornava `false`
 	 *    e il chiamante smontava il palco INTERO (input e appunti compresi).
 	 */
-	if (sessione_desktop() == SESSIONE_DESKTOP_XFCE) {
+	if (sessione_su_wlroots()) {
 		if (!c)
 			return false;
 		if (*c) {
