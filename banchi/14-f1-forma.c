@@ -18,10 +18,10 @@
  *              <cartella MISTA: Adwaita + un breeze_cursors finto con `size_hor`>
  *
  * Le prove, ognuna con il suo verdetto (VERDE/ROSSO), ed e' ROSSO l'uscita:
- *   T1  il tema scritto: 68 file, ciascuno Xcursor 1x1 opaco, riletto dal
+ *   T1  il tema scritto: FORMA_QUANTE file, ciascuno Xcursor 1x1 opaco, riletto dal
  *       disco e decodificato da `forma_da_pixel` nel suo indice;
- *   T2  i 68 colori: distinti, lontani dal nero e dal bianco, e su tutti i
- *       16 777 216 colori opachi il dizionario ne riconosce ESATTAMENTE 68;
+ *   T2  i FORMA_QUANTE colori: distinti, lontani dal nero e dal bianco, e su tutti i
+ *       16 777 216 colori opachi il dizionario ne riconosce ESATTAMENTE tanti;
  *   T3  il tema reale: «ew-resize» e «sb_h_double_arrow» con la misura e il
  *       punto attivo che dice il parser Python;
  *   T3b il giro dei temi: con un `breeze_cursors` che HA `size_hor` (Adwaita
@@ -190,8 +190,8 @@ int main(int argc, char **argv)
 
 			snprintf(riga, sizeof riga,
 			         "colori distinti %s, distanza minima da nero/bianco 0x%02x, riconosciuti "
-			         "%ld su 16M opachi (attesi 68)",
-			         distinti ? "si'" : "NO", lontano, riconosciuti);
+			         "%ld su 16M opachi (attesi %d)",
+			         distinti ? "si'" : "NO", lontano, riconosciuti, FORMA_QUANTE);
 			verdetto("T2", distinti && !vicino && riconosciuti == FORMA_QUANTE, riga);
 		}
 	}

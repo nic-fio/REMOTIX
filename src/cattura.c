@@ -14,6 +14,7 @@
 #include <time.h>
 
 #include "cursore.h"
+#include "forma.h"
 #include "registro.h"
 
 
@@ -120,6 +121,13 @@ struct Cattura
 	gboolean wlr_detto_il_testimone, wlr_detto_y;
 	gboolean wlr_detto_ripiego;      /* «chiesta la scheda, arrivata la memoria» */
 	gboolean wlr_guardato_il_primo;  /* il primo fotogramma della scheda, mappato */
+	/* ⭐ La forma vera su labwc (la sonda, `wlroots.h`): l'ultima CONSEGNATA,
+	 *    per non rimandare la stessa immagine sotto due nomi (`default` e
+	 *    `left_ptr` sono lo stesso disegno), e la serie che `forma.h` lascia a
+	 *    chi consegna. */
+	CursoreForma wlr_forma;
+	gboolean wlr_forma_data;
+	guint64 wlr_forme_mandate, wlr_forme_uguali;
 
 	struct pw_thread_loop *ciclo;
 	struct pw_context *contesto;
@@ -2196,6 +2204,67 @@ static void guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo)
 	munmap(mappa, quanti);
 }
 
+/*
+ * ⭐⭐ LA FORMA VERA SU LABWC — la sonda (`wlroots.h`) ha visto sotto il
+ *      puntatore il colore di una forma: qui diventa l'immagine VERA del
+ *      tema reale (`forma_immagine`) e parte per la STESSA strada di GNOME e
+ *      KDE — `cursore_rimbalzo`, e da li' chi si e' registrato con
+ *      `cattura_cursore` (il figlio: `cursore_al_padre`).
+ *
+ * ⛔ Gira sul thread di chi chiama `cattura_prendi` (il ciclo del figlio), non
+ *    su quello di PipeWire: qui PipeWire non c'e'.  ⇒ Chi riceve puo' fare
+ *    quel che fa sempre, spedire sul socket, e niente di piu'.
+ * ⚠ Il nascosto qui non esiste: la sonda o riconosce un colore o tiene la
+ *   forma di prima.  ⇒ Un'applicazione che nasconde il puntatore non lo
+ *   nasconde a chi guarda — come su KDE (`cursore_mai_nascondere`).
+ */
+static void wlr_forma_consegna(Cattura *cattura)
+{
+	int indice = wlr_sonda_forma(cattura->wlr);
+	CursoreForma f;
+
+	if (indice < 0)
+		return;
+	memset(&f, 0, sizeof f);
+	if (!forma_immagine(indice, &f))
+		return; /* ⛔ tema reale assente: gia' detto da `forma.c`, il client
+		         *    tiene la sua freccia */
+	if (cattura->wlr_forma_data && f.larghezza == cattura->wlr_forma.larghezza &&
+	    f.altezza == cattura->wlr_forma.altezza &&
+	    f.attivo_x == cattura->wlr_forma.attivo_x &&
+	    f.attivo_y == cattura->wlr_forma.attivo_y &&
+	    memcmp(f.immagine, cattura->wlr_forma.immagine,
+	           (gsize)f.larghezza * f.altezza * 4u) == 0) {
+		cattura->wlr_forme_uguali++;
+		return;
+	}
+	f.serie = cattura->wlr_forma.serie + 1;
+	/* ⚠ Una riga a CAMBIO di forma, come su KDE (`cursore.c`): e' il ritmo
+	 *   della mano, e la prova che la sonda lavora si legge qui. */
+	registro_dice(AREA, "forma codificata %d «%s» ⇒ %ux%u, punto %d,%d (sonda wlroots)",
+	              indice, forma_nome(indice), (unsigned)f.larghezza, (unsigned)f.altezza,
+	              (int)f.attivo_x, (int)f.attivo_y);
+	cattura->wlr_forma = f;
+	cattura->wlr_forma_data = TRUE;
+	cattura->wlr_forme_mandate++;
+	cursore_rimbalzo(cattura, &f);
+}
+
+void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y)
+{
+	uint32_t l = 0, a = 0;
+
+	if (!cattura || !cattura->wlr)
+		return;
+	/* ⚠ La tela del puntatore e' quella del fotogramma (`input_ritela` la
+	 *   rimette a ogni cambio di misura, `figlio.c`), e su questa famiglia il
+	 *   fotogramma e' l'uscita intera: ⇒ la misura dell'uscita e' il metro.
+	 *   Per il fotogramma a cavallo di un cambio di misura il punto puo' essere
+	 *   scalato male UNA volta: la sonda dopo lo rimette a posto. */
+	wlr_misura(cattura->wlr, &l, &a);
+	wlr_sonda_puntatore(cattura->wlr, x, y, l, a);
+}
+
 CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
                             GError **sbaglio)
 {
@@ -2217,6 +2286,12 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		WlrFotogramma w;
 		gint64 prima = g_get_monotonic_time(), dopo;
 		WlrEsito e = wlr_fotogramma(cattura->wlr, attesa_s, &w, sbaglio);
+
+		/* ⭐ La sonda del puntatore: i suoi eventi li ha appena pompati
+		 *    `wlr_fotogramma`.  ⛔ PRIMA dello `switch`, che ha tre uscite:
+		 *    a desktop fermo il fotogramma scade quasi sempre, e la forma
+		 *    deve arrivare lo stesso. */
+		wlr_forma_consegna(cattura);
 
 		switch (e) {
 		case WLR_FOTOGRAMMA_SCADUTO:
@@ -2715,16 +2790,16 @@ void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
 {
 	/* ⛔ FASE 13 — su questa famiglia un canale per la FORMA del puntatore non
 	 *    esiste: c'è solo `overlay_cursor`, e il puntatore sta DENTRO
-	 *    l'immagine.  ⇒ La registrazione si accetta e non si richiamerà mai, e
-	 *    la riga lo dice — un silenzio qui sarebbe indistinguibile da un
-	 *    puntatore che non si muove. */
-	if (cattura && cattura->wlr) {
+	 *    l'immagine.  Fino al 24 settembre 2026 la registrazione si accettava
+	 *    e non si richiamava mai.
+	 * ⭐ Dal 24 settembre la forma la trova la SONDA (`wlroots.h`), e arriva
+	 *    per `cursore_rimbalzo` come su GNOME e KDE (`wlr_forma_consegna`).
+	 *    ⇒ La registrazione vale anche qui; la riga dice da dove verrà. */
+	if (cattura && cattura->wlr)
 		registro_dice(AREA,
-		              "wlroots: nessun canale per la forma del puntatore — su questa "
-		              "famiglia il puntatore è DENTRO i pixel (overlay_cursor).  Chi "
-		              "si è registrato non verrà richiamato, e non è un guasto");
-		return;
-	}
+		              "⭐ wlroots: la forma del puntatore la trova la SONDA (un 3x3 "
+		              "sotto il punto, dopo ogni gesto) e il dizionario del tema "
+		              "codificato: chi si è registrato sarà richiamato a ogni cambio");
 	if (!cattura)
 		return;
 	g_mutex_lock(&cattura->lucchetto);
@@ -2751,7 +2826,19 @@ void cattura_ferma(Cattura *cattura)
 
 	if (cattura->wlr) {
 		WlrConteggi w;
+		WlrSondaConteggi so;
 
+		wlr_sonda_conteggi(cattura->wlr, &so);
+		registro_dice(AREA,
+		              "wlroots: sonda del puntatore — gesti %" G_GUINT64_FORMAT
+		              ", sonde partite %" G_GUINT64_FORMAT " (di coda %" G_GUINT64_FORMAT
+		              "), tornate %" G_GUINT64_FORMAT ", fallite %" G_GUINT64_FORMAT
+		              "; forme nuove %" G_GUINT64_FORMAT " (dai vicini %" G_GUINT64_FORMAT
+		              "), senza colore nostro %" G_GUINT64_FORMAT "; consegnate %"
+		              G_GUINT64_FORMAT ", stesso disegno %" G_GUINT64_FORMAT,
+		              so.chieste, so.lanciate, so.di_coda, so.tornate, so.fallite, so.cambi,
+		              so.dai_vicini, so.ignote, cattura->wlr_forme_mandate,
+		              cattura->wlr_forme_uguali);
 		wlr_conteggi(cattura->wlr, &w);
 		registro_dice(AREA,
 		              "wlroots: cattura chiusa — chiesti %" G_GUINT64_FORMAT

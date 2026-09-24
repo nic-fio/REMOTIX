@@ -244,4 +244,39 @@ void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori);
  */
 void wlr_forza_intero(WlrPalco *palco);
 
+/*
+ * ⭐⭐ LA SONDA DEL PUNTATORE — 24 settembre 2026, la forma vera su labwc.
+ *
+ * Il perche' e le tre regole stanno in `wlroots.c`, sopra `wlr_sonda_puntatore`.
+ * In breve: col tema codificato (`forma.h`) il compositore disegna sotto il
+ * punto attivo un pixel del colore della forma; la sonda lo legge con una
+ * `capture_output_region` 3x3, e il dizionario ne fa il nome.
+ *
+ *   wlr_sonda_puntatore()  dopo OGNI gesto del puntatore iniettato: `x`,`y`
+ *                          nella tela `l`x`a` (le stesse di
+ *                          `wlr_input_assoluto`).  Coalescente, UNA in volo.
+ *   wlr_sonda_forma()      l'indice della forma (`forma.h`) se e' CAMBIATA
+ *                          dall'ultima volta, altrimenti -1.  ⛔ Da chiamare a
+ *                          ogni giro del ciclo (la chiama `cattura_prendi`):
+ *                          e' anche il posto da cui parte la sonda «di coda».
+ *
+ * ⛔ Stesso thread di `wlr_fotogramma`: e' la sua pompa che porta gli eventi.
+ * ⛔ Il flusso principale NON cambia: la sonda ha il suo fotogramma e il suo
+ *    buffer, e non tocca `forza_intero` ne' il danno.
+ */
+void wlr_sonda_puntatore(WlrPalco *palco, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
+int wlr_sonda_forma(WlrPalco *palco);
+
+typedef struct {
+	guint64 chieste;   /* gesti del puntatore arrivati                        */
+	guint64 lanciate;  /* sonde partite davvero (⚠ < chieste: coalescenza)    */
+	guint64 tornate, fallite;
+	guint64 di_coda;   /* le sonde «a mano ferma» (regola 3)                  */
+	guint64 cambi;     /* forme nuove riconosciute                            */
+	guint64 ignote;    /* tornate senza un colore nostro sotto il puntatore   */
+	guint64 dai_vicini; /* riconosciute su un vicino e non sul centro         */
+} WlrSondaConteggi;
+
+void wlr_sonda_conteggi(const WlrPalco *palco, WlrSondaConteggi *fuori);
+
 void wlr_chiudi(WlrPalco *palco);

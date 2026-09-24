@@ -161,6 +161,7 @@
  */
 #include "wlroots.h"
 
+#include "forma.h"
 #include "registro.h"
 
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
@@ -352,6 +353,34 @@ struct WlrPalco {
 	/* ⚠ le righe che si dicono una volta sola */
 	bool detto_senza_offerta, detto_formato_scheda, detta_sync_implicita;
 	bool detto_il_formato_scheda;
+
+	/* ------------------------------------------------------------------ *
+	 * ⭐⭐ LA SONDA DEL PUNTATORE — il riquadro sopra `wlr_sonda_puntatore`.
+	 *
+	 * ⛔ Tutto suo: un fotogramma, un buffer, un descrittore che NON sono
+	 *    quelli del flusso.  Il flusso principale non sa che la sonda esiste.
+	 * ------------------------------------------------------------------ */
+	struct zwlr_screencopy_frame_v1 *s_frame; /* UNA sola in volo        */
+	bool s_visto_buffer, s_copia_partita;
+	uint32_t s_f_shm, s_f_l, s_f_a, s_f_stride;
+	struct wl_buffer *s_buffer;
+	void *s_pixel;
+	int s_fd;
+	gsize s_byte;
+	uint32_t s_b_l, s_b_a, s_b_stride, s_b_shm;
+	/* la posizione della richiesta IN VOLO, e quella da rilanciare */
+	int32_t s_x, s_y;
+	bool s_in_attesa; /* ⭐ coalescente: si ricorda solo l'ULTIMA posizione */
+	int32_t s_attesa_x, s_attesa_y;
+	/* ⭐ la sonda «di coda»: una in piu', a mano ferma — vedi il riquadro */
+	gint64 s_coda_a;
+	bool s_coda_fatta;
+	gint64 s_ultima_partita; /* per il diradamento */
+	int s_forma;             /* l'ultima forma riconosciuta, -1 = nessuna  */
+	int s_nuova;             /* da consegnare a `wlr_sonda_forma`, o -1    */
+	bool s_spenta;           /* il formato non si legge: detto, e basta   */
+	bool s_detto_formato, s_detta_ignota, s_detto_fallito;
+	WlrSondaConteggi s_conto;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -1422,6 +1451,369 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
 	p->copia_col_danno = false;
 }
 
+/* ========================================================================= */
+/* ⭐⭐ LA SONDA DEL PUNTATORE — la forma vera su labwc (XFCE e LXQt).         */
+/* ========================================================================= */
+
+/*
+ * ⛔ IL FATTO `[M]`: labwc headless non ha un piano del cursore — il puntatore
+ *    lo disegna via software DENTRO il buffer dell'uscita, e screencopy non ha
+ *    un canale per la sua forma.  ⭐ Ma il tema codificato (`forma.h`) fa si'
+ *    che sotto il punto attivo ci sia UN pixel opaco di un colore che e' solo
+ *    di quella forma.  ⇒ Basta guardarlo.
+ *
+ * ⭐ COME SI GUARDA: `capture_output_region` di 3x3 attorno al punto, in un
+ *    `wl_shm` di 36 byte, dopo ogni gesto del puntatore.  Il 3x3 e non l'1x1
+ *    perche' il punto in coordinate dell'uscita e' frazionario (il puntatore
+ *    virtuale e' normalizzato) e `[?]` come wlroots lo porta al pixel non l'ho
+ *    letto: con tre pixel per lato non importa.  Si guarda il CENTRO, poi i
+ *    vicini.
+ *
+ * ⛔ LE TRE REGOLE:
+ *   1. UNA sola in volo.  Se il puntatore si muove mentre una e' in volo, si
+ *      ricorda solo l'ULTIMA posizione, e si rilancia quando la prima torna
+ *      (coalescente): a 60 Hz di mano non si accodano 60 sonde.
+ *   2. La copia e' `copy`, mai `copy_with_damage`: wlroots la serve al
+ *      prossimo commit dell'uscita, e il movimento del puntatore ne provoca
+ *      comunque uno (il cursore software e' danno).
+ *   3. ⭐ LA SONDA DI CODA.  `[R]` il client cambia forma DOPO aver ricevuto
+ *      l'`enter` — cioe' DOPO il movimento che l'ha provocata — e la sonda
+ *      di quel movimento puo' tornare prima che il client abbia risposto.
+ *      ⇒ A mano ferma, SONDA_CODA_US dopo l'ultima, se ne manda una in piu',
+ *      una volta sola.  Senza, chi si ferma su un bordo col primo gesto
+ *      terrebbe la freccia.
+ *
+ * ⛔ IL FILO: tutto gira sul thread del ciclo del figlio — la domanda parte da
+ *    `wlr_sonda_puntatore` (dopo l'iniezione del gesto), gli eventi li pompa
+ *    `wlr_fotogramma` (la stessa pompa del flusso), e la forma la raccoglie
+ *    `wlr_sonda_forma` (da `cattura_prendi`).  ⇒ Nessun lucchetto, e nessuna
+ *    consegna da dentro una richiamata di `libwayland`.
+ *
+ * ⚠ LO SPAZIO: la regione e' in coordinate dell'USCITA; il figlio passa le
+ *   coordinate della sua tela, e si scala come fa wlroots col puntatore
+ *   virtuale (`motion_absolute` e' normalizzato).  `[?]` scala 1: `wl_output`
+ *   dice la scala, qui non si legge, e sulle scatole e' 1.
+ * ⚠ I PIXEL: il formato lo dice l'evento `buffer` (numerazione wl_shm).
+ *   `[M]` labwc da' `XBGR8888`, cioe' R G B x in memoria; ARGB/XRGB sono
+ *   B G R A.  L'alfa del buffer dell'uscita non vuol dire niente (l'uscita e'
+ *   opaca): si passa 0xFF, e il controllo lo fanno verde e blu esatti.
+ * ⚠ IL COSTO: ogni sonda e' una lettura 3x3 dal renderer del compositore.
+ *   `[M]` 24 set 2026, rete14-lxqt (Intel UHD 730, tela 1344x870), puntatore
+ *   mosso a ~55 Hz per 30 s sopra qterminal, due giri per caso:
+ *       senza sonda      labwc 4,9-5,1%   figlio 11,2%   dipinti 55,1-55,3/s
+ *       sonda a 60 Hz    labwc 6,3-6,4%   figlio 11,6-11,8%   55,0-55,2/s
+ *       sonda a 30 Hz    labwc 5,7%       figlio 11,6-11,7%   55,1-55,3/s
+ *   ⇒ +1,4 punti di CPU di labwc (+0,5 del figlio), fotogrammi invariati:
+ *     sotto la soglia dei 2 punti, e il diradamento resta SPENTO.  Se un
+ *     giorno servisse: SONDA_MINIMO_US 33333 e' il 30 Hz misurato qui sopra.
+ */
+
+/* ⭐ Quanto dopo l'ultima sonda si manda quella di coda. */
+#define SONDA_CODA_US (120 * 1000)
+/* ⚠ Il diradamento: 0 = una per gesto (coalescente).  Vedi il costo, sopra. */
+#define SONDA_MINIMO_US 0
+
+static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y);
+
+static void sonda_chiudi_frame(WlrPalco *p)
+{
+	if (p->s_frame)
+		zwlr_screencopy_frame_v1_destroy(p->s_frame);
+	p->s_frame = NULL;
+	p->s_visto_buffer = p->s_copia_partita = false;
+}
+
+/* Il buffer della sonda: si rifa' solo se il compositore ne chiede un altro. */
+static bool sonda_buffer(WlrPalco *p)
+{
+	struct wl_shm_pool *pool;
+	gsize byte = (gsize)p->s_f_stride * p->s_f_a;
+
+	if (p->s_buffer && p->s_b_l == p->s_f_l && p->s_b_a == p->s_f_a &&
+	    p->s_b_stride == p->s_f_stride && p->s_b_shm == p->s_f_shm)
+		return true;
+	if (p->s_buffer)
+		wl_buffer_destroy(p->s_buffer);
+	p->s_buffer = NULL;
+	if (p->s_pixel)
+		munmap(p->s_pixel, p->s_byte);
+	p->s_pixel = NULL;
+	if (p->s_fd >= 0)
+		close(p->s_fd);
+	p->s_fd = -1;
+	/* ⛔ Un tetto: la regione e' 3x3, e un compositore che chiede di piu' non
+	 *    sta rispondendo a questa domanda. */
+	if (byte == 0 || byte > 4096 || p->s_f_stride < p->s_f_l * 4u)
+		return false;
+	p->s_fd = memfd_create("remotix-sonda", MFD_CLOEXEC);
+	if (p->s_fd < 0 || ftruncate(p->s_fd, (off_t)byte) != 0)
+		return false;
+	p->s_pixel = mmap(NULL, byte, PROT_READ | PROT_WRITE, MAP_SHARED, p->s_fd, 0);
+	if (p->s_pixel == MAP_FAILED) {
+		p->s_pixel = NULL;
+		return false;
+	}
+	p->s_byte = byte;
+	pool = wl_shm_create_pool(p->shm, p->s_fd, (int32_t)byte);
+	p->s_buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)p->s_f_l, (int32_t)p->s_f_a,
+	                                        (int32_t)p->s_f_stride, p->s_f_shm);
+	wl_shm_pool_destroy(pool);
+	p->s_b_l = p->s_f_l;
+	p->s_b_a = p->s_f_a;
+	p->s_b_stride = p->s_f_stride;
+	p->s_b_shm = p->s_f_shm;
+	return true;
+}
+
+/* La fine di una sonda (tornata o fallita): se ce n'e' una in attesa, parte. */
+static void sonda_prossima(WlrPalco *p)
+{
+	sonda_chiudi_frame(p);
+	if (p->s_in_attesa && g_get_monotonic_time() - p->s_ultima_partita >= SONDA_MINIMO_US) {
+		p->s_in_attesa = false;
+		sonda_lancia(p, p->s_attesa_x, p->s_attesa_y);
+	}
+}
+
+static void sonda_parti(WlrPalco *p)
+{
+	if (p->s_copia_partita)
+		return;
+	if (!sonda_buffer(p)) {
+		if (!p->s_detto_fallito) {
+			p->s_detto_fallito = true;
+			registro_dice(AREA, "⚠ wlroots: la sonda del puntatore non ha un buffer "
+			                    "(%ux%u stride %u): la forma non si guarda, e il client "
+			                    "tiene la sua freccia",
+			              p->s_f_l, p->s_f_a, p->s_f_stride);
+		}
+		p->s_conto.fallite++;
+		sonda_prossima(p);
+		return;
+	}
+	zwlr_screencopy_frame_v1_copy(p->s_frame, p->s_buffer);
+	p->s_copia_partita = true;
+}
+
+static void sonda_buffer_ev(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
+                            uint32_t l, uint32_t a, uint32_t stride)
+{
+	WlrPalco *p = dati;
+
+	p->s_visto_buffer = true;
+	p->s_f_shm = formato;
+	p->s_f_l = l;
+	p->s_f_a = a;
+	p->s_f_stride = stride;
+	/* ⚠ Sotto la v3 `buffer_done` non c'e': l'unica offerta e' questa. */
+	if (zwlr_screencopy_frame_v1_get_version(f) < 3)
+		sonda_parti(p);
+}
+
+static void sonda_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
+{
+	WlrPalco *p = dati;
+
+	if (p->s_visto_buffer)
+		sonda_parti(p);
+}
+
+/*
+ * Un pixel della sonda ⇒ B G R, secondo il formato dichiarato.  FALSE = un
+ * formato che qui non si legge (detto una volta, e la sonda si spegne).
+ */
+static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, uint8_t *r)
+{
+	switch (shm) {
+	case WL_SHM_FORMAT_ARGB8888:
+	case WL_SHM_FORMAT_XRGB8888:
+		*b = q[0], *g = q[1], *r = q[2];
+		return true;
+	case WL_SHM_FORMAT_ABGR8888:
+	case WL_SHM_FORMAT_XBGR8888:
+		*r = q[0], *g = q[1], *b = q[2];
+		return true;
+	default:
+		return false;
+	}
+}
+
+static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t sa,
+                         uint32_t sb, uint32_t ns)
+{
+	WlrPalco *p = dati;
+	const uint8_t *px = p->s_pixel;
+	/* ⭐ Il centro della regione, in pixel del buffer: al bordo dell'uscita la
+	 *    regione e' tagliata, e il centro si sposta con lei. */
+	int32_t cx = p->s_x - MAX(p->s_x - 1, 0), cy = p->s_y - MAX(p->s_y - 1, 0);
+	int trovata = -1;
+	uint8_t b = 0, g = 0, r = 0;
+
+	p->s_conto.tornate++;
+	if (!px) {
+		sonda_prossima(p);
+		return;
+	}
+	if (!sonda_bgr(p->s_f_shm, px, &b, &g, &r)) {
+		if (!p->s_detto_formato) {
+			p->s_detto_formato = true;
+			registro_dice(AREA,
+			              "⛔ wlroots: la sonda del puntatore riceve il formato wl_shm "
+			              "0x%08x, che qui non si legge: la sonda SI SPEGNE, e il "
+			              "client tiene la sua freccia",
+			              p->s_f_shm);
+		}
+		p->s_spenta = true;
+		sonda_chiudi_frame(p);
+		return;
+	}
+	/* ⭐ Prima il centro, poi i vicini — `forma_da_pixel` e' esatto al byte,
+	 *    e un vicino di un altro colore non e' mai una forma nostra. */
+	for (int giro = 0; giro < 2 && trovata < 0; giro++)
+		for (uint32_t y = 0; y < p->s_f_a && trovata < 0; y++)
+			for (uint32_t x = 0; x < p->s_f_l && trovata < 0; x++) {
+				bool centro = (int32_t)x == cx && (int32_t)y == cy;
+
+				if (centro != (giro == 0))
+					continue;
+				sonda_bgr(p->s_f_shm, px + (gsize)y * p->s_f_stride + x * 4u, &b, &g,
+				          &r);
+				trovata = forma_da_pixel(b, g, r, 0xFF);
+				if (trovata >= 0 && !centro)
+					p->s_conto.dai_vicini++;
+			}
+	if (trovata < 0) {
+		/* ⚠ Nessun colore nostro: un'applicazione che nasconde il puntatore, o
+		 *   che disegna una superficie sua.  Si tiene la forma di prima. */
+		p->s_conto.ignote++;
+		if (!p->s_detta_ignota) {
+			p->s_detta_ignota = true;
+			registro_dice(AREA,
+			              "⚠ wlroots: sotto il puntatore (%d,%d) nessun colore del tema "
+			              "codificato: si tiene la forma di prima.  La riga non si "
+			              "ripete; il conto e' nella chiusura",
+			              p->s_x, p->s_y);
+		}
+	} else if (trovata != p->s_forma) {
+		p->s_forma = trovata;
+		p->s_nuova = trovata;
+		p->s_conto.cambi++;
+	}
+	sonda_prossima(p);
+}
+
+static void sonda_fallita(void *dati, struct zwlr_screencopy_frame_v1 *f)
+{
+	WlrPalco *p = dati;
+
+	p->s_conto.fallite++;
+	sonda_prossima(p);
+}
+
+static void sonda_flags(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t flags) {}
+static void sonda_danno(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
+                        uint32_t l, uint32_t a) {}
+static void sonda_dmabuf(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
+                         uint32_t l, uint32_t a) {}
+
+/* ⛔ TUTTI gli eventi hanno una funzione: `libwayland` chiama senza guardare,
+ *    e un buco qui e' un salto a NULL alla prima versione che lo manda. */
+static const struct zwlr_screencopy_frame_v1_listener ASCOLTO_SONDA = {
+	.buffer = sonda_buffer_ev,
+	.flags = sonda_flags,
+	.ready = sonda_pronta,
+	.failed = sonda_fallita,
+	.damage = sonda_danno,
+	.linux_dmabuf = sonda_dmabuf,
+	.buffer_done = sonda_buffer_done,
+};
+
+static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y)
+{
+	int32_t rx = MAX(x - 1, 0), ry = MAX(y - 1, 0);
+	int32_t rl = MIN(x + 2, (int32_t)p->larghezza) - rx;
+	int32_t ra = MIN(y + 2, (int32_t)p->altezza) - ry;
+
+	if (rl <= 0 || ra <= 0)
+		return;
+	p->s_x = x;
+	p->s_y = y;
+	p->s_visto_buffer = p->s_copia_partita = false;
+	p->s_frame = zwlr_screencopy_manager_v1_capture_output_region(p->manager, 1, p->uscita,
+	                                                             rx, ry, rl, ra);
+	if (!p->s_frame) {
+		p->s_conto.fallite++;
+		return;
+	}
+	zwlr_screencopy_frame_v1_add_listener(p->s_frame, &ASCOLTO_SONDA, p);
+	p->s_conto.lanciate++;
+	p->s_ultima_partita = g_get_monotonic_time();
+	p->s_coda_a = p->s_ultima_partita + SONDA_CODA_US;
+	/* ⭐ Subito sul filo: la pompa del flusso gira fra 8 ms, e la forma arriva
+	 *    prima se la domanda parte adesso.  ⚠ EAGAIN non e' un guasto: parte
+	 *    col prossimo `flush` della pompa. */
+	wl_display_flush(p->display);
+}
+
+void wlr_sonda_puntatore(WlrPalco *p, uint32_t x, uint32_t y, uint32_t l, uint32_t a)
+{
+	int32_t ux, uy;
+
+	if (!p || p->s_spenta || !p->manager || !p->uscita || !p->shm || l == 0 || a == 0 ||
+	    p->larghezza == 0 || p->altezza == 0)
+		return;
+	/* ⭐ Dalla tela all'uscita, come wlroots fa col puntatore virtuale. */
+	if (x >= l)
+		x = l - 1;
+	if (y >= a)
+		y = a - 1;
+	ux = (int32_t)((uint64_t)x * p->larghezza / l);
+	uy = (int32_t)((uint64_t)y * p->altezza / a);
+	p->s_conto.chieste++;
+	p->s_coda_fatta = false;
+	if (p->s_frame || (SONDA_MINIMO_US > 0 &&
+	                   g_get_monotonic_time() - p->s_ultima_partita < SONDA_MINIMO_US)) {
+		/* ⭐ coalescente: si ricorda solo l'ULTIMA posizione */
+		p->s_in_attesa = true;
+		p->s_attesa_x = ux;
+		p->s_attesa_y = uy;
+		return;
+	}
+	sonda_lancia(p, ux, uy);
+}
+
+int wlr_sonda_forma(WlrPalco *p)
+{
+	int nuova;
+
+	if (!p || p->s_spenta)
+		return -1;
+	/* ⭐ la sonda di coda (regola 3), e quella rimasta indietro dal
+	 *    diradamento: partono da qui, che il ciclo del figlio chiama sempre */
+	if (!p->s_frame) {
+		gint64 ora = g_get_monotonic_time();
+
+		if (p->s_in_attesa && ora - p->s_ultima_partita >= SONDA_MINIMO_US) {
+			p->s_in_attesa = false;
+			sonda_lancia(p, p->s_attesa_x, p->s_attesa_y);
+		} else if (!p->s_in_attesa && !p->s_coda_fatta && p->s_conto.lanciate > 0 &&
+		           ora >= p->s_coda_a) {
+			p->s_coda_fatta = true;
+			p->s_conto.di_coda++;
+			sonda_lancia(p, p->s_x, p->s_y);
+		}
+	}
+	nuova = p->s_nuova;
+	p->s_nuova = -1;
+	return nuova;
+}
+
+void wlr_sonda_conteggi(const WlrPalco *p, WlrSondaConteggi *fuori)
+{
+	if (fuori)
+		*fuori = p ? p->s_conto : (WlrSondaConteggi){ 0 };
+}
+
 /* ------------------------------------------------------------------------- */
 
 WlrPalco *wlr_apri(GError **sbaglio)
@@ -1430,6 +1822,8 @@ WlrPalco *wlr_apri(GError **sbaglio)
 	const char *nome = g_getenv("WAYLAND_DISPLAY");
 
 	p->fd = -1;
+	p->s_fd = -1;
+	p->s_forma = p->s_nuova = -1;
 	p->forza_intero = true; /* il primo giro: chi si attacca deve vedere subito */
 	/* ⛔ I descrittori della scheda a -1 SUBITO: lo zero di `g_new0` è lo
 	 *    standard input, e una chiusura per sbaglio lo chiuderebbe. */
@@ -1938,6 +2332,14 @@ void wlr_chiudi(WlrPalco *palco)
 	/* ⛔ Difetto 7: tutto quel che si è creato si distrugge. */
 	if (palco->frame)
 		zwlr_screencopy_frame_v1_destroy(palco->frame);
+	/* ⭐ la sonda: il suo fotogramma prima del suo buffer, come il flusso */
+	sonda_chiudi_frame(palco);
+	if (palco->s_buffer)
+		wl_buffer_destroy(palco->s_buffer);
+	if (palco->s_pixel)
+		munmap(palco->s_pixel, palco->s_byte);
+	if (palco->s_fd >= 0)
+		close(palco->s_fd);
 	if (palco->buffer)
 		wl_buffer_destroy(palco->buffer);
 	if (palco->pixel)

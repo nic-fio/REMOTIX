@@ -43,8 +43,9 @@
  *    server e figlio sono lo stesso binario, un banco o una copia vecchia del
  *    tema in `XDG_RUNTIME_DIR` leggerebbero colori spostati.
  *
- * Sono i 68 nomi che il tema invisibile aveva gia' (fase 12): quelli che
- * i programmi chiedono davvero, nomi CSS e nomi X11 insieme.
+ * I primi 68 sono i nomi che il tema invisibile aveva gia' (fase 12): quelli
+ * che i programmi chiedono davvero, nomi CSS e nomi X11 insieme; gli altri
+ * sono venuti dopo, in coda, ciascuno col suo perche'.
  *
  * ⭐ Gli alias: il nome che il programma chiede non e' sempre un file del tema
  *    reale (`[M]` Adwaita di Trixie ne ha 62, e mancano `ibeam`, `size_hor`,
@@ -126,6 +127,35 @@ static const Voce VOCI[FORMA_QUANTE] = {
 	{ "up_arrow", { "default", "left_ptr" } },
 	{ "center_ptr", { "default", "left_ptr" } },
 	{ "X_cursor", { "not-allowed", "crossed_circle" } },
+	/*
+	 * ⭐ 24 set 2026, per labwc (XFCE e LXQt) — AGGIUNTE IN CODA, e il perche'.
+	 *
+	 * ⛔ `[M]` labwc 0.8.3 porta nel binario DUE serie di nomi per i suoi
+	 *    bordi: quella CSS (`n-resize`, `ne-resize`… `w-resize`, piu' `grab`)
+	 *    e quella X11 (`top_side`, `top_right_corner`… `left_side`, piu'
+	 *    `grabbing`).  Sceglie la CSS se il tema ha le sue forme — e il
+	 *    nostro ha `grab` e `default`: `[M]` 24 set 2026 su rete14-lxqt, il
+	 *    bordo destro di qterminal arriva come «e-resize» (indice 68), non
+	 *    come `right_side`.  ⇒ Senza queste otto il bordo chiedeva
+	 *    un nome che il tema non aveva: nessun pixel colorato sotto il
+	 *    puntatore, e la sonda (`wlroots.c`) non poteva riconoscere niente.
+	 * ⭐ Le stesse otto sono anche i nomi che wlroots da' alle forme di
+	 *   `cursor-shape-v1` (`wlr_cursor_shape_v1_name`), cioe' quel che chiede
+	 *   ogni client che usa quel protocollo invece del suo tema.
+	 * ⚠ `dnd-ask` e `all-resize` sono le due forme della v2 di
+	 *   `cursor-shape-v1`: wlroots 0.18 non le annuncia, ma un nome in piu' nel
+	 *   tema costa 68 byte, e un nome che manca costa la forma.
+	 */
+	{ "e-resize", { "right_side", "ew-resize", "size_hor" } },
+	{ "w-resize", { "left_side", "ew-resize", "size_hor" } },
+	{ "n-resize", { "top_side", "ns-resize", "size_ver" } },
+	{ "s-resize", { "bottom_side", "ns-resize", "size_ver" } },
+	{ "ne-resize", { "top_right_corner", "nesw-resize", "size_bdiag" } },
+	{ "nw-resize", { "top_left_corner", "nwse-resize", "size_fdiag" } },
+	{ "se-resize", { "bottom_right_corner", "nwse-resize", "size_fdiag" } },
+	{ "sw-resize", { "bottom_left_corner", "nesw-resize", "size_bdiag" } },
+	{ "dnd-ask", { "dnd-copy", "copy" } },
+	{ "all-resize", { "fleur", "all-scroll", "move" } },
 };
 
 /* Se nemmeno un alias c'e': la freccia, che e' meglio di niente — il cliente
@@ -142,11 +172,13 @@ static const char *TEMI_REALI[] = { "Adwaita", "breeze_cursors" };
 
 /*
  * ⭐ Indice ⇒ colore.  ⛔ Il rosso da solo basta a distinguerli (0x40 + i e'
- *    diverso per ogni i < 68), e sta fra 0x40 e 0x83: lontano dal nero e dal
+ *    diverso per ogni i < FORMA_QUANTE), e sta fra 0x40 e 0x8D: lontano dal nero e dal
  *    bianco, che sono i colori di cui sono fatti i cursori veri — nessun
  *    cursore vero di un solo colore puo' essere scambiato per uno dei nostri.
  *    Verde e blu sono il controllo: un pixel col rosso giusto e il resto a caso
- *    NON e' nostro.  Il banco (`banchi/14-f1-forma.sh`) verifica i 68.
+ *    NON e' nostro.  Il banco (`banchi/14-f1-forma.sh`) li verifica tutti.
+ *    ⚠ Il tetto: fino a 128 forme il rosso resta <= 0xBF, lontano dal
+ *      bianco; oltre, la regola va ripensata prima di aggiungere.
  */
 static void colore(int i, uint8_t *r, uint8_t *g, uint8_t *b)
 {
@@ -395,7 +427,7 @@ static gboolean prova_voce(char **cartelle, const Voce *v, Immagine *out)
 	return FALSE;
 }
 
-/* Carica le 68 immagini UNA volta.  Chiamata con la chiave presa. */
+/* Carica le FORMA_QUANTE immagini UNA volta.  Chiamata con la chiave presa. */
 static void carica(void)
 {
 	const char *radice = cartella_temi ? cartella_temi : "/usr/share/icons";

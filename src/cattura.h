@@ -727,6 +727,17 @@ void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
  */
 void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi);
 
+/*
+ * ⭐ LA SONDA DEL PUNTATORE — solo sulla famiglia wlroots (labwc), e altrove
+ *    non fa niente.  Il figlio la chiama DOPO ogni gesto del puntatore
+ *    iniettato, con le coordinate della sua tela (quelle date a
+ *    `input_puntatore`; per un pulsante, le ultime); la forma, se e' cambiata,
+ *    torna per `quando_cambia` di `cattura_cursore` dentro un
+ *    `cattura_prendi` successivo, sul thread di chi lo chiama.  Il perche' in
+ *    `wlroots.h`.
+ */
+void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y);
+
 /* Il flusso e' attivo ADESSO?  ⛔ «E' STATO attivo» non e' «lo e' ancora»: la
  * morte a meta' misura ha gia' prodotto una riga di tabella con dentro cinque
  * secondi sotto l'etichetta di venti. */

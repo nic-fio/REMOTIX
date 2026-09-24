@@ -3032,6 +3032,11 @@ static char disposizione_in_attesa[65];
 static uint32_t input_iniettato;
 static uint32_t input_rifiutati;
 static uint32_t input_non_producibili;
+/* ⭐ 24 set 2026 — dove sta il puntatore, per la SONDA della forma su labwc
+ *    (`cattura_sonda_puntatore`): un pulsante non porta coordinate, ma puo'
+ *    cambiare la forma (la presa della barra del titolo), e si sonda qui. */
+static uint32_t sonda_x, sonda_y;
+static bool sonda_nota;
 
 /* ⭐⭐ FASE 7 — GLI APPUNTI DELLA SESSIONE, e stanno di qua per la stessa
  *     ragione di `palco_input`: la clipboard e' del compositore, e col
@@ -7829,6 +7834,18 @@ void figlio_vive(int argc, char **argv)
 				 *     e l'anello del ritardo la crederebbe. */
 				if (e == 0) {
 					input_iniettato = ci.id;
+					/* ⭐ LA FORMA VERA SU LABWC: dopo ogni gesto del puntatore
+					 *    PRESO, la sonda guarda il pixel del tema codificato
+					 *    sotto il punto (`wlroots.h`).  Su GNOME e KDE non fa
+					 *    niente: la forma arriva gia' dal metadato. */
+					if (ci.azione == FIGLI_INPUT_PUNTATORE) {
+						sonda_x = (uint32_t)ci.a;
+						sonda_y = (uint32_t)ci.b;
+						sonda_nota = true;
+					}
+					if (sonda_nota && (ci.azione == FIGLI_INPUT_PUNTATORE ||
+					                   ci.azione == FIGLI_INPUT_PULSANTE))
+						cattura_sonda_puntatore(cat, sonda_x, sonda_y);
 				} else if (e == 1) {
 					/* ⛔ Solo `input_lettera`: «non producibile con questa
 					 *    disposizione».  La riga nel registro l'ha gia'

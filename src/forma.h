@@ -36,7 +36,7 @@
  *                          l'ambiente delle sessioni (`XCURSOR_THEME`) non
  *                          cambia di una lettera.
  *   FORMA_MISURA           la misura nominale che si chiede al tema reale.
- *   FORMA_QUANTE           quante forme ha il tema (68).
+ *   FORMA_QUANTE           quante forme ha il tema (78; puo' solo crescere).
  *
  *   forma_tema_scrivi()    scrive il tema codificato in
  *                          `<runtime>/remotix/icons/remotix-invisibile/`.
@@ -76,7 +76,9 @@
  */
 #define FORMA_MISURA 24
 
-#define FORMA_QUANTE 68
+/* ⚠ 68 fino al 24 set 2026; 78 da quando labwc ha chiesto i nomi CSS dei suoi
+ *   bordi (`n-resize`… `w-resize`, vedi `forma.c`).  Si cresce in CODA. */
+#define FORMA_QUANTE 78
 
 gboolean forma_tema_scrivi(const char *runtime);
 
