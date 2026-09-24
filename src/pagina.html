@@ -9630,7 +9630,21 @@ function cl_su_keydown(ev) {
     /* ⛔ La ripetizione automatica la fa il DESKTOP remoto, che il tasto ce
        l'ha giu': rimandarla qui sarebbe un secondo «premuto» senza rilascio. */
     if (ev.repeat || cl_tasti_premuti.has(ev.code)) return;
-    if (comando) cl_sincronizza_modificatori(ev, ev.timeStamp);
+    /* ⛔⭐ LA RISINCRONIZZAZIONE SI FA SEMPRE, NON SOLO COI COMANDI — 24 set 2026.
+     *
+     *   Prima c'era `if (comando)`: il Maiusc gia' giu' si recuperava solo se
+     *   c'era anche Ctrl/Alt/Super.  ⛔ Ma frecce, Home, Fine, PagSu, Tab,
+     *   Invio e Canc passano da QUI anche senza comando, e Maiusc+Sinistra
+     *   partiva come `105↓ 105↑`: **Maiusc+freccia non selezionava**, su tutti
+     *   e quattro i desktop.  `[M]` Iniettando `42↓ 105×3 42↑` dal server la
+     *   selezione riusciva su GNOME, KDE, XFCE e LXQt: il difetto era qui.
+     *
+     * ⛔ E si SALTA il tasto modificatore stesso.  Con Ctrl giu', premere
+     *   Maiusc arrivava qui con `getModifierState("Shift")` gia' vero:
+     *   `cl_sincronizza_modificatori` mandava il 42 e poi le due righe sotto lo
+     *   rimandavano — `29↓ 42↓ 42↓ 105↓ …`, il Maiusc premuto due volte.  Il
+     *   modificatore che si sta premendo lo manda il percorso normale, e basta. */
+    if (!CL_MODIFICATORI_LETTERA.has(ev.key)) cl_sincronizza_modificatori(ev, ev.timeStamp);
     cl_tasti_premuti.set(ev.code, codice);
     cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ev.timeStamp);
     return;
@@ -9647,6 +9661,27 @@ function cl_su_keydown(ev) {
      intero non li produce; il controllo resta perche' il costo e' zero e la
      conseguenza di sbagliare e' `ERRORE_PROTOCOLLO`. */
   if (p >= 0xD800 && p <= 0xDFFF) return;
+  /* ⛔⭐ PRIMA DELLA LETTERA SI RIDA' INDIETRO IL MAIUSC CHE LA PAGINA TIENE GIU'
+   *   — 24 set 2026, la seconda meta' della cura qui sopra.
+   *
+   *   Dopo Maiusc+Sinistra il 42 e' giu' SUL SERVER.  Se l'utente, tenendo il
+   *   Maiusc, batte «a», la `LETTERA 'A'` il suo Maiusc se lo preme e se lo
+   *   rilascia da se' (`input.c`, `input_lettera()`/`lettera_wlr()`: 42↓ 30↓
+   *   30↑ 42↑) — e quel 42↑ finale rilascia ANCHE il nostro.  `[R]` Su labwc
+   *   (`wlr_input.c`, il doppione 42↓ si scarta) il server resta col Maiusc SU
+   *   mentre la pagina lo crede giu' ⇒ la freccia dopo NON seleziona piu'
+   *   (`cl_sincronizza_modificatori` non lo rimanda: per lei c'e' gia').  Su
+   *   Mutter e KWin (libei, nessun filtro dei doppioni) il conto dipende dal
+   *   compositore.  ⇒ Invece di sperare, la pagina restituisce PRIMA quel che
+   *   ha premuto lei: la lettera parte su una tastiera pulita, e la freccia
+   *   dopo lo risincronizza da capo.  ⭐ E il rilascio del tasto vero, dopo,
+   *   non trova piu' niente nella mappa e non manda niente. */
+  for (const c of ["ShiftLeft", "ShiftRight", "AltRight"]) {
+    if (cl_tasti_premuti.has(c)) {
+      cl_spedisci(CL_TIPO.POSIZIONE_TASTO, cl_tasti_premuti.get(c), 0, ev.timeStamp);
+      cl_tasti_premuti.delete(c);
+    }
+  }
   cl_spedisci(CL_TIPO.LETTERA, p, 0, ev.timeStamp);
 }
 
