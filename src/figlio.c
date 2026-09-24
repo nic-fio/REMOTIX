@@ -5980,6 +5980,61 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    la domanda è sul COMPOSITORE, e labwc serve XFCE e LXQt (`sessione.h`).
 	 *    ⛔ Con `== XFCE` LXQt cadeva nel ramo di GNOME/KDE, senza un avviso. */
 	if (sessione_su_wlroots()) {
+		/*
+		 * ⛔⭐⭐ MA NON SI MONTA FINCHE' IL GESTORE DI SESSIONE NON E' SUL BUS
+		 *       — 24 set 2026, ed era il logout di LXQt che non chiudeva.
+		 *
+		 * `[M]` Su LXQt «Esci» faceva RINASCERE la sessione invece di
+		 * chiuderla: 16 volte su 20.  La catena, letta dal codice (`[R]`):
+		 *
+		 *   1. labwc c'e' gia', `lxqt-session` non ancora ⇒ lo stato dice
+		 *      MORTA, e questo ramo montava la cattura LO STESSO (labwc
+		 *      risponde);
+		 *   2. su questa famiglia «vista viva» la accende SOLO la lettura
+		 *      dello stato al montaggio (qui sopra) ⇒ e il montaggio l'aveva
+		 *      letto MORTA: `vista_viva` restava falsa per tutta la sessione;
+		 *   3. all'«Esci» il palco cade, il rimontaggio legge MORTA con
+		 *      `vista_viva` falsa ⇒ «non c'e' mai stata» ⇒ LA FA NASCERE.
+		 *
+		 * ⚠ `wlr-randr` prima di `exec lxqt-session` (e4ecfbb) allarga la
+		 *   finestra fra labwc e il gestore, e rende la gara quasi certa.
+		 *
+		 * ⭐ La cura e' la forma di `SESSIONE_NON_LETTA` qui sopra: «non
+		 *    adesso».  Si torna, il padre sente ATTENDI, e il ciclo riprova
+		 *    fitto (`PALCO_NASCITA_RIPROVA_MS`, finche' sta nascendo o
+		 *    qualcuno guarda).  Il montaggio che riesce ha letto SANA, e
+		 *    `vista_viva` e' vera per costruzione.
+		 * ⛔ E la nascita NON si richiede a ogni giro: la briglia e'
+		 *    `sta_nascendo()` (qui sopra), e dopo la briglia
+		 *    `sessione_fai_nascere()` rifiuta finche' labwc e' vivo
+		 *    (`unita_inattiva()`).  E' la stessa sorte di GNOME quando
+		 *    Mutter non compare: il montaggio fallisce e si riprova.
+		 * ⚠ E se il gestore non compare MAI (sessione rotta) non si resta
+		 *   muti: ogni cinque secondi una riga lo dice, con il tempo dalla
+		 *   nascita chiesta.
+		 */
+		if (p.stato_sessione == SESSIONE_MORTA) {
+			static uint64_t detto_ms;
+			uint64_t ora_ms = registro_ora_ms();
+
+			snprintf(p.guasto, sizeof p.guasto,
+			         "il gestore di sessione non è ancora sul bus");
+			if (ora_ms - detto_ms >= 5000) {
+				detto_ms = ora_ms;
+				registro_dice(REG_FIGLIO,
+				              "⏳ %s: labwc forse c'e', il gestore di sessione "
+				              "NO (nascita chiesta %llu ms fa) — ⛔ non monto "
+				              "la cattura: un montaggio che legge MORTA non "
+				              "accende «vista viva», e l'«Esci» dopo la farebbe "
+				              "RINASCERE.  Riprovo fra poco",
+				              sessione_desktop() == SESSIONE_DESKTOP_LXQT ? "LXQt" : "XFCE",
+				              nascita_chiesta_ms
+				                  ? (unsigned long long)(ora_ms - nascita_chiesta_ms)
+				                  : 0ULL);
+			}
+			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			return false;
+		}
 		registro_dettaglio(REG_FIGLIO,
 		                   "%s: nessun palco da aprire — su questa famiglia la "
 		                   "cattura parla col compositore senza passare da un "
