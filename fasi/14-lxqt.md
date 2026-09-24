@@ -153,6 +153,50 @@ regge» dal server, come sempre. ⇒ nessuna differenza inattesa rispetto al che
 1392x828) **e in 4K** (tela 3840x2014): a–g tutti verdi. La foto 4K di Firefox: sfondo pieno, 0 %
 nero, l'ultima colonna è sfondo (1,81,129) e non la striscia.
 
+### ✅ LA RETE INTERA SULLE QUATTRO SCATOLE — nessun rosso
+
+`[M]` 24 set 2026, 12:00 → 17:18, binario **`c0e8f010`** e pagina **`d77177f1`** in tutte e quattro,
+`rete11-lxqt` **rifatta** dalla ricetta nuova, `--famiglia tutto`: **«nessun rosso»**.
+**34 verdi su gnome, 34 su kde, 34 su xfce, 34 su lxqt** — LXQt fa esattamente le stesse maglie
+degli altri tre; **nessun guasto innestato sfuggito**; C14 (le quattro insieme) regge; C10 C12 C15
+C16 «il terreno non regge» dal server, come sempre. ⇒ GNOME, KDE e XFCE **non hanno perso niente**,
+né per LXQt né per la cura di Firefox che tocca tutti.
+
+### ✅ I browser veri sulle quattro scatole ufficiali
+
+`[M]` 24 set 2026, sera, binario `c0e8f010`, pagina `d77177f1`, labwc senza schermo sul server,
+finestra 1400x914 (tela 1392x828):
+
+| | `12-client-veri` Firefox 140 | `12-client-veri` Chrome 154 | `12-c20-veri` Firefox | `12-c20-veri` Chrome |
+|---|---|---|---|---|
+| **gnome** | PASS | PASS | VERDE | VERDE |
+| **kde** | PASS | PASS | VERDE | VERDE |
+| **xfce** | PASS | PASS | VERDE | VERDE |
+| **lxqt** | PASS | PASS | VERDE | VERDE |
+
+⚠ Su gnome il primo giro ha dato **BLOCKED** alla voce *e* (input): senza `--registro-cmd` il banco
+cerca l'id dell'input nei fotogrammi, e Mutter a scena «muovi» ne manda solo 7-8 in 8 s ⇒ **classe C**,
+del banco. Rifatto con `--registro-cmd`: **PASS** su tutti e due, 7-8 righe d'input nel registro.
+Android: resta all'utente, col suo telefono (l'emulatore non fa partire Chrome, 19 set).
+
+### ✅ Sessioni coi browser veri su LXQt (al massimo 10 minuti — l'utente, 24 set) e la guardia
+
+`[M]` `14-il-cliente-che-non-sta-fermo --desktop lxqt`, mouse in moto nel 100 % dei secondi:
+**Firefox 10 min: blocco più lungo 0 s, 0 buchi · Chrome 10 min: blocco più lungo 0 s, 0 buchi.**
+Guardia del battito col guasto `--schermo-congelato` (SIGSTOP a labwc trovato per socket): **esito 1,
+«lo schermo si è fermato per 23,9 s mentre il mouse si muoveva» — il guasto è stato VISTO.**
+
+## ⭐ CHECKPOINT — 24 settembre 2026, sera
+
+| | |
+|---|---|
+| **binario** | `c0e8f010` (md5), albero `a8bedb6` + banchi; pagina `d77177f1` |
+| **LXQt** | riconosciuto, nasce, si vede, input, appunti, «Esci», sfondo della misura del cliente, icone, voci pericolose nascoste; **34/34** nella rete, capacità `immagine input appunti` aperte |
+| **GNOME · KDE · XFCE** | **34/34 ciascuno**, invariati |
+| **client** | Firefox 140 e Chrome 154 PASS e C20 VERDE sulle quattro; sessioni LXQt 10 min verdi; Android: all'utente |
+| **rete** | «nessun rosso», nessun guasto sfuggito, C14 regge; guardia del battito vede il guasto su LXQt |
+| **fuori da LXQt, curato** | la striscia verde di Firefox (tutti i desktop), decisione dell'utente |
+
 ## ⛔ Un difetto trovato per strada, che NON è di LXQt — Firefox e il riempimento del codificatore
 
 `[M]` 24 set 2026, da 380 fotografie di tela (`c20veri` del 23 set, `topo`, `veri-lxqt`): **Firefox 140
@@ -171,3 +215,15 @@ a destra no.
 - ⚠ i contatori di `12-client-veri` erano verdi: lo si è visto solo **guardando** la fotografia.
 
 ## Che cosa resta [?]
+
+- **Android** (Chrome sul telefono dell'utente) su LXQt e sui tre con la pagina nuova: dell'utente.
+- **la prova a mano dell'utente** su `rete11-lxqt` (8514), utente `nictest`/`nictest` — come per le
+  altre tre scatole.
+- `[?]` il pulsante «Leave» di fancymenu: «Lock screen» cliccabile e inerte (dichiarato, come la
+  finestra «Log Out» di XFCE).
+- `[?]` ereditati da XFCE, da decidere a parte: la guardia e la forza di chiusura guardano ogni
+  `labwc` dell'utente; lo stesso utente con una sessione locale aperta confonde il prodotto.
+- `[?]` xfdesktop ha la stessa gara alla nascita di pcmanfm-qt? Su XFCE lo sfondo nella scatola è
+  nero, quindi non si vedrebbe: non misurato.
+- la scatola di sviluppo `rete14-lxqt` (8524, `/media/REMOTIX/rete14-lxqt`) resta accesa per le
+  prossime prove; non entra nella rete.
