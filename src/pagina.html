@@ -2043,8 +2043,10 @@ function misura_vista() {
    *   quella riga diceva il vero e questa la contraddiceva.
    *
    * ⚠ Il prezzo, dichiarato: la vista puo' uscire di 1 pixel piu' piccola del
-   *   vero, e la tela fino a 2 (1 di troncatura + 1 di parita').  A dpr 1 non
-   *   cambia niente — `clientWidth × 1` e' gia' esatto. */
+   *   vero, e la tela fino a 2 in altezza (1 di troncatura + 1 di parita') e
+   *   fino a 16 in larghezza (il multiplo di 16 di `tela_da_chiedere()`, cura
+   *   del 24 settembre 2026).  A dpr 1 non cambia niente — `clientWidth × 1`
+   *   e' gia' esatto. */
   return [Math.max(1, Math.floor(l * r)), Math.max(1, Math.floor(a * r))];
 }
 
@@ -2085,16 +2087,45 @@ function misura_vista() {
  *   oltre **16384** per lato `gnome-shell` MUORE, e su labwc `32768×32768`
  *   uccide il compositore con zero righe di registro.  7680 e' sotto tutt'e
  *   due. */
+/* ⛔⛔⭐ E LA LARGHEZZA SI TRONCA AL MULTIPLO DI 16, NON AL PARI — 24 settembre
+ *      2026, fase 14, decisione dell'utente: «curarlo subito».
+ *
+ * ⛔ `[M]` Firefox 140, su tutti i desktop: quando la larghezza della tela non
+ *    e' multipla di 16, il codificatore riempie il macroblocco a destra e
+ *    dichiara il RITAGLIO nell'SPS (`frame_cropping_flag`, `src/codificatore.c`).
+ *    Firefox quel ritaglio in ORIZZONTALE non lo onora: disegna la striscia di
+ *    riempimento — verde, (0,76,0) — larga quanto manca al multiplo (8 px a
+ *    tela 1400, 4 a 3788, 12 a 1348) **e schiaccia l'immagine** dentro la
+ *    larghezza dichiarata (1408 codificati → 1400 mostrati).  In ALTEZZA il
+ *    ritaglio lo onora.  Chrome 154: nessun difetto.
+ *
+ * ⇒ Una larghezza multipla di 16 non ha niente da ritagliare in orizzontale, e
+ *   il difetto non ha dove succedere — su nessun motore.  ⭐ E' codice comune:
+ *   nessun ramo per browser (l'utente non vuole eccezioni), e vale anche per
+ *   Chrome, che ci perde al piu' 15 pixel di sfondo nero che non viaggiano.
+ *
+ * ⚠ Il prezzo, dichiarato: la tela puo' uscire fino a 15 pixel PIU' STRETTA
+ *   della finestra.  La cornice resta a scala 1 (`cornice()`: `s = min(vista /
+ *   tela, …, 1)` con tela < vista vale 1) e la tela sta CENTRATA dal
+ *   `margin: 0 auto` ⇒ due bande nere di al piu' 7-8 pixel, FUORI dal buffer.
+ *   Il puntatore non se ne accorge: `cl_geometria()` parte da
+ *   `getBoundingClientRect()`, che contiene gia' lo scostamento.
+ * ⚠ I limiti restano compatibili: 320 e 7680 sono multipli di 16, e il 4K
+ *   (3840) pure — li' non cambia niente.  Il server (`rcp_misura_ammessa()`)
+ *   chiede solo il PARI, e un multiplo di 16 lo e'.
+ * ⚠ L'ALTEZZA resta al pari: la' il ritaglio funziona su tutti e due i motori,
+ *   e troncarla costerebbe righe di desktop senza curare niente. */
 const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 7680;
 const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 4320;
+const TELA_L_PASSO = 16, TELA_A_PASSO = 2;
 function tela_da_chiedere() {
   const v = misura_vista();
-  const p = (n, min, max) => {
+  const p = (n, min, max, passo) => {
     n = Math.min(max, Math.max(min, Math.round(n)));
-    return n - (n % 2);
+    return n - (n % passo);
   };
-  return [p(v[0], TELA_L_MINIMA, TELA_L_MASSIMA),
-          p(v[1], TELA_A_MINIMA, TELA_A_MASSIMA)];
+  return [p(v[0], TELA_L_MINIMA, TELA_L_MASSIMA, TELA_L_PASSO),
+          p(v[1], TELA_A_MINIMA, TELA_A_MASSIMA, TELA_A_PASSO)];
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -5137,8 +5168,8 @@ async function collega(utente, parola) {
    *    «la tela e' la finestra» — applicato anche al primo istante.
    *
    * ⚠ E i limiti restano normativi: `tela_da_chiedere()` li applica gia' (fra
-   *   320×240 e 7680×4320, entrambe PARI), ed e' la STESSA funzione che usa il
-   *   ridimensionamento — due regole sulla stessa misura diventerebbero due
+   *   320×240 e 7680×4320, larghezza multipla di 16, altezza PARI), ed e' la
+   *   STESSA funzione che usa il ridimensionamento — due regole sulla stessa misura diventerebbero due
    *   regole diverse il giorno in cui una cambia. */
   const [tela_l, tela_a] = tela_da_chiedere();
   /* ⛔ La vista si misura in UN posto solo — `misura_vista()`, la stessa che
