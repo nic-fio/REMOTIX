@@ -660,7 +660,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
 
 | # | punto | stato |
 |---|---|---|
-| 1 | **C20 non guarda** («non ho potuto guardare» dopo «Esci») | ✅ **CAPITO E CURATO** — non era «Esci» né il desktop: il **secondo fisso** di §4.4-bis durava **999 ms** (sotto) |
+| 1 | **C20 non guarda** («non ho potuto guardare» dopo «Esci») | ✅ **CHIUSO** — era il **secondo fisso** di 999 ms; curato, e nella rete finale C20 è verde e vede il guasto su tutti e tre |
 | 2 | **sessioni lunghe** coi browser veri solo su kde/Firefox | ✅ **VERDI**: gnome e xfce, Firefox e Chrome, 20 min in 4K col mouse in moto, blocco più lungo **0 s** in tutti e quattro |
 | 3 | **la guardia del battito** non è permanente | ✅ **FATTA E PROVATA SUL FERRO**: mouse in tutti gli scenari, soglia 10 s tarata, guasto innestato VISTO su gnome, kde e xfce |
 | 4 | Chrome Android su XFCE | ⏳ dell'utente |
@@ -697,8 +697,14 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   facendolo girare, sono nel messaggio di `b3b8f5b` (Chrome dentro labwc vuole «massimizzata»; xfce
   in 4K ha lo sfondo nero e il giudice di `12-client-veri` lo chiamava degenere; il gesto «Esci» di
   xfce lanciato senza raccogliere lo stderr).
-  ⚠ La **maglia** C20 della rete resta col cliente Python: coi 999 ms curati torna a poter guardare,
-  e lo dirà la rete di stanotte.
+  ✅ E la **maglia** C20 della rete, col secondo fisso curato, **guarda di nuovo**: rete finale del
+  24 set notte, **C20 VERDE su gnome, kde e xfce, e il guasto innestato VISTO su tutte e tre**.
+
+- ✅ **LA RETE FINALE DEL 24 SET NOTTE — nessun rosso** — binario `e681a262`, `--famiglia tutto`,
+  gnome + kde + xfce, **14 498 s**. Ogni scatola **18 su 18**, C20 verde e guasto visto ovunque,
+  «nessun rosso, né qui né là». C10 C12 C15 C16 «non possono guardare» dal server, com'è previsto
+  (girano sul portatile).
+  ⭐ **I QUATTRO PUNTI PRIMA DI LXQt SONO CHIUSI** tranne Chrome Android su XFCE, che è dell'utente.
 
 - 🔸 **LA GUARDIA DEL BATTITO È SCRITTA** — 23 set 2026 (`32511f9`). Il mouse che si muove è entrato
   in **tutti** gli scenari di `banchi/14-stress` che guardano lo schermo, come comportamento normale del
