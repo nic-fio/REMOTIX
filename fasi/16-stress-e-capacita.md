@@ -183,6 +183,28 @@ classificazione nasce dal comportamento, e le risorse servono a spiegarlo.*
 | sessione caduta, riavvio, errore RCP/QUIC che stacca | nessuno | — | uno qualunque |
 | memoria dei recinti `remotix` e `sessioni` nel livello, a lavoro stabile (il recinto `browser` si **registra** ma non classifica: la cache di un Firefox che naviga cresce da sola) | crescita ≤ 5 % | 5–15 % (si segnala) | > 15 % e continua (perdita) |
 
+**Quale ritardo classifica** — `[M]` diagnosi del 25 set sera (scatola xfce, 1 utente, terminale,
+460 lettere; evidenze in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). Il giro della pagina
+(tasto → fotogramma che lo porta) in 4K fa **45 / 54 ms** (p50/p95), ma dentro c'è lavoro che non
+è nostro:
+
+| tratto (4K, p50/p95 ms) | | di chi |
+|---|---|---|
+| la pagina manda il tasto → il terminale lo riceve | 4,9 / 8,7 | **nostro** (limitato dal `poll` di 8 ms del figlio, `figlio.c` `MOVIMENTO_ATTESA_S`) |
+| il terminale disegna l'eco | 10,2 / 16,6 | applicazione |
+| il compositore compone e ce lo copia | 14,5 / 19,0 | compositore |
+| conversione + codifica + spedizione → pagina | 14,0 / 14,9 | **nostro** |
+| decodifica e disegno nel browser (fuori dal giro) | Firefox 38, Chrome 3,4 | browser |
+
+⇒ Il **pezzo nostro** è ~19 / 24 ms, sotto il tetto di 50. Quindi, come dicono §7 («quello che il
+prodotto misura dal suo lato») e la riga qui sotto («prodotto»): **classifica il ritardo del
+prodotto** = p95 dei massimi al secondo della riga del figlio `TRATTO cattura → byte fuori` + 9 ms
+(il tetto costruttivo del tratto d'ingresso). ⚠ Sulla strada wlroots quella riga conta la copia
+due volte (~4 ms in più): è dal lato prudente e non si corregge durante la campagna. Il **giro della
+pagina** (`giro_eco`, solo battitura) si **registra** come ritardo dell'esperienza e non classifica.
+Candidata di cura per dopo la campagna: il socket del padre nello stesso `poll` del figlio
+(~4 ms p50, ~8 ms p95).
+
 **Il livello** è GREEN se **tutte** le sessioni sono GREEN; DEGRADED se almeno una è DEGRADED e
 nessuna FAIL; FAIL se almeno una è FAIL. **DEGRADED significativo** = più di un quarto delle
 sessioni DEGRADED, o una sola misura oltre metà della fascia DEGRADED.
