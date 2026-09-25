@@ -4762,6 +4762,11 @@ async function collega(utente, parola) {
      pagina non e' tornata al modulo.  La legge `fine_filo()`, qui sotto. */
   let attaccata = false;
   let congedo_letto = false;
+  /* ⛔ D-002, finestra trovata in revisione: il trasporto puo' chiudersi fra
+     l'arrivo di `SESSIONE` e il momento in cui `attaccata` diventa vera.
+     Allora `fine_filo()` non puo' agire, e mette qui la frase che avrebbe
+     scritto: la raccoglie chi accende `attaccata`. */
+  let fine_in_sospeso = null;
 
   const wt = new WebTransport(url, {
     allowPooling: false,
@@ -4851,7 +4856,10 @@ async function collega(utente, parola) {
    *    PERCHE' (linea morta, rete, server fermo: non lo distingue) e non
    *    promette che la sessione ci sia ancora. */
   const fine_filo = (frase, di_riserva) => {
-    if (!attaccata) return;
+    if (!attaccata) {
+      if (!congedo_letto) fine_in_sospeso = [frase, di_riserva];
+      return;
+    }
     attaccata = false;
     const e = $("esito");
     if (frase) esito(frase, false);
@@ -4880,7 +4888,11 @@ async function collega(utente, parola) {
        direbbe «errore» a un'uscita riuscita. */
     if (c && MOTIVO[c] && !congedo_letto) esito(MOTIVO[c], false);
     nota("sessione chiusa dal server: codice " + (c === undefined ? "?" : c));
-    fine_filo(c && MOTIVO[c] ? null : FILO_CADUTO);
+    /* ⚠ Il motivo va anche come frase DI RISERVA: se la chiusura cade prima
+       che `attaccata` sia vera, «Ammesso» lo sovrascrive, e la riserva lo
+       rimette (si scrive solo se davanti non c'e' gia' una frase rossa). */
+    fine_filo(c && MOTIVO[c] ? null : FILO_CADUTO,
+              c && MOTIVO[c] ? MOTIVO[c] : null);
   }).catch((e) => {
     fine_sessione();
     nota("sessione chiusa con errore: " + e);
@@ -5347,6 +5359,21 @@ async function collega(utente, parola) {
     esito("Ammesso, sessione " + (stato === 1 ? "nuova" : "ripresa") +
           ", tela " + tl + "×" + ta + ", desktop " + desktop, true);
 
+    /* ⛔ D-002: da `SESSIONE` la sessione c'e', e da qui la sua fine si dice
+     *    e riporta al modulo — SUBITO, senza nessun `await` in mezzo: fra
+     *    l'arrivo di `SESSIONE` e una riga piu' in basso il filo puo' cadere
+     *    (revisione del 25 settembre 2026), e prima `attaccata` si accendeva
+     *    dopo `createUnidirectionalStream()`, su una sessione gia' morta.
+     *    ⚠ Se il trasporto si e' chiuso PRIMA di questa riga, la frase
+     *    l'ha messa da parte `fine_filo()`: si dice adesso, e ci si ferma. */
+    attaccata = true;
+    if (fine_in_sospeso) {
+      const [frase, riserva] = fine_in_sospeso;
+      fine_in_sospeso = null;
+      fine_filo(frase, riserva);
+      return;
+    }
+
     /* ══ ⭐⭐ IL CANALE DI INPUT — la cucitura della fase 4, 14 agosto 2026 ══
      *
      * ⛔ Sta QUI e non dentro le due disposizioni, e non e' una preferenza:
@@ -5476,6 +5503,9 @@ async function collega(utente, parola) {
       nota("⛔ il canale di input NON si e' aperto (" + e + "): questa sessione "
          + "si GUARDA e non si comanda");
     }
+    /* ⛔ D-002: se la sessione e' finita durante l'`await` qui sopra, la pagina
+       e' gia' al modulo con la sua frase: niente video su un filo morto. */
+    if (!attaccata) return;
 
     /* ── DA QUI IN POI C'E' IL VIDEO (§2.5: non prima di SESSIONE) ──────── */
     if (!scelta_codec) {
@@ -5524,7 +5554,6 @@ async function collega(utente, parola) {
          che e' il messaggio da cui dipende tutta la regola del cambio di tela —
          non sarebbe mai stato letto.  Non si aspetta: la stretta di mano e'
          finita, e §4.4 vieta di bloccare il ciclo. */
-      attaccata = true;
       ascolta_controllo(canale, congeda,
                         () => { attaccata = false; congedo_letto = true; });
 
