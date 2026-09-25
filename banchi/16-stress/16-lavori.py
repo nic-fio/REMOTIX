@@ -166,6 +166,9 @@ http.server.ThreadingHTTPServer(("127.0.0.1", PORTA), H).serve_forever()
 PAGINE_A = ("testo", "immagini", "lunga", "tabella")
 COLORI_NAV = ("#c0392b", "#2471a3", "#1e8449", "#b7950b")
 NAV_Y = 0.16            # centro dei bottoni, frazione dell'altezza del desktop
+NOTA_Y = 0.94           # centro del campo di testo in fondo
+PAROLE_NOTA = ("alfa", "beta", "gamma", "delta", "sessione", "desktop", "tastiera", "server",
+               "misura", "rete", "fotogramma", "remoto")
 
 _TESTA = r"""<!doctype html><html lang=it><meta charset=utf-8><title>c16 %(nome)s</title>
 <style>
@@ -178,8 +181,10 @@ _TESTA = r"""<!doctype html><html lang=it><meta charset=utf-8><title>c16 %(nome)
  .card{display:inline-block;margin:18px;vertical-align:top}
  table{border-collapse:collapse;width:100%%} td,th{border:1px solid #888;padding:6px 14px}
  tr:nth-child(odd){background:#eef} section{padding:30px;margin:10px 0}
+ #nota{position:fixed;left:6vw;width:88vw;bottom:2vh;height:8vh;z-index:9;font:44px monospace;
+       background:#fffbe0;border:4px solid #555;box-sizing:border-box}
 </style>
-<nav>%(nav)s</nav><main>
+<nav>%(nav)s</nav><textarea id=nota spellcheck=false></textarea><main>
 """
 
 _CODA = r"""</main>
@@ -193,6 +198,13 @@ addEventListener('scroll', () => { if (tS) return; tS = setTimeout(() => { tS = 
   manda('scroll ' + NOME + ' ' + Math.round(scrollY) + ' ' + mx()); }, 150); });
 // ⭐ il bottone risponde SUBITO alla pressione (come ogni sito): l'immagine
 //   cambia al clic, e il carico della pagina dopo e' dell'applicazione
+// il campo di testo: dice il suo valore 300 ms dopo l'ultima battitura, e
+// lascia il fuoco dopo 1,5 s (PagGiu' e Home devono tornare alla pagina)
+const nota = document.getElementById('nota');
+let tN = null, tB = null;
+nota.addEventListener('input', () => { clearTimeout(tN); clearTimeout(tB);
+  tN = setTimeout(() => manda('testo ' + NOME + ' ' + nota.value), 300);
+  tB = setTimeout(() => nota.blur(), 1500); });
 document.querySelectorAll('nav a').forEach((a) => a.addEventListener('mousedown',
   () => { a.style.filter = 'brightness(1.6)'; }));
 addEventListener('click', (e) => { if (e.target.closest('a')) return;
@@ -557,7 +569,7 @@ class LavoroA(Lavoro):
     def passo(self):
         R, M = self.a.ritmo, self.a.mani
         tl, ta = self.a.desktop
-        az = R.scegli(("naviga", "rotella", "clic", "tasto"), (35, 35, 15, 15))
+        az = R.scegli(("naviga", "rotella", "clic", "tasto", "scrivi"), (30, 30, 12, 12, 16))
         if az == "naviga":
             altre = [p for p in PAGINE_A if p != self.pagina]
             dove = R.scegli(altre)
@@ -578,8 +590,19 @@ class LavoroA(Lavoro):
             self.a.verifica("rotella", e is not None, (e[0] - t0) * 1000 if e else None,
                             "%s %d tacche" % ("giu" if giu else "su", tacche))
             self.a.dorme(R.pausa_s("breve"))
+        elif az == "scrivi":
+            # ⭐ battitura a eco immediato in un campo della pagina: il clic
+            #   mette il fuoco, Ctrl+A fa sostituire il testo di prima
+            M.clic(tl * R.uniforme(0.3, 0.7), NOTA_Y * ta)
+            self.a.dorme(R.pausa_s("gesto"))
+            M.combo(["Control"], "a")
+            frase = " ".join(R.scegli(PAROLE_NOTA) for _ in range(R.intero(2, 5)))
+            t0 = M.batti(frase, eco=True)
+            e = self.aspetta(lambda e: e[1] == "testo" and " ".join(e[2][1:]) == frase, 8, t0 - 30)
+            self.a.verifica("scrivi", e is not None, (e[0] - t0) * 1000 if e else None, frase)
+            self.a.dorme(1.6 + R.pausa_s("breve"))
         elif az == "clic":
-            t0 = M.clic(tl * R.uniforme(0.2, 0.8), ta * R.uniforme(0.45, 0.9))
+            t0 = M.clic(tl * R.uniforme(0.2, 0.8), ta * R.uniforme(0.45, 0.85))
             e = self.aspetta(lambda e: e[1] == "clic", 8, t0)
             self.a.verifica("clic", e is not None, (e[0] - t0) * 1000 if e else None, self.pagina)
             self.a.dorme(R.pausa_s("breve"))
@@ -633,7 +656,7 @@ class LavoroB(Lavoro):
         M.combo(["Control"], "l")
         self.a.dorme(R.pausa_s("gesto"))
         M.combo(["Control"], "a")
-        M.batti(percorso)
+        M.batti(percorso, eco=True)
         M.premi("Enter")
         self.a.dorme(0.8 + R.pausa_s("gesto"))
 
@@ -671,7 +694,7 @@ class LavoroB(Lavoro):
             M.combo(["Control", "Shift"], "N")
             self.a.dorme(1.2 + R.pausa_s("gesto"))
             M.combo(["Control"], "a")
-            M.batti(nome)
+            M.batti(nome, eco=True)
             t0 = M.premi("Enter")
             fine, c, ct = time.time() + 10, False, None
             while time.time() < fine:
@@ -796,7 +819,7 @@ class LavoroC(Lavoro):
         R, M = self.a.ritmo, self.a.mani
         self.k += 1
         riga = "%s #k%d" % (cmd, self.k)
-        M.batti(riga)
+        M.batti(riga, eco=True)
         self.a.dorme(R.pausa_s("gesto"))
         t0 = M.premi("Enter", atteso=True)
         if durata_top:

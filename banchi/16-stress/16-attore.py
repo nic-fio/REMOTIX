@@ -265,6 +265,28 @@ def conti_classifica(c, diario):
     return out
 
 
+JS_GIRO = r"""
+const G = window.REMOTIX && window.REMOTIX.giro;
+return G && G.campioni ? { visti: G.visti, campioni: G.campioni.map(x => Math.round(x * 10) / 10) } : null;
+"""
+
+
+def campioni_nuovi(prima, dopo):
+    """⭐ I campioni del GIRO arrivati fra due letture di `REMOTIX.giro`
+    ({visti, campioni: gli ultimi 200}): gli ultimi `dopo.visti − prima.visti`.
+    Prese SOLO attorno a una battitura a eco immediato, sono il ritardo del
+    PRODOTTO (il carattere compare subito), senza il tempo di reazione
+    dell'applicazione (una pagina che carica, una finestra che si apre).
+    ⚠ Se ne sono arrivati piu' di quanti la lista ne tiene, si prendono quelli
+    che ci sono; una lettura mancata ⇒ nessun campione (mai inventati)."""
+    if not prima or not dopo or dopo.get("campioni") is None:
+        return []
+    n = (dopo.get("visti") or 0) - (prima.get("visti") or 0)
+    if n <= 0:
+        return []
+    return list(dopo["campioni"])[-n:]
+
+
 def attese_impulsi(impulsi, dipinti_t, ora, tetto_s=5.0):
     """⭐ Per ogni impulso (un input che DEVE cambiare l'immagine), l'attesa
     fino al primo dipinto DOPO di lui.  ⇒ (attese in s, impulsi ancora aperti).
@@ -377,6 +399,22 @@ def certifica():
     prova("senza conti diretti ⇒ dal diario (video X→Y)", cc.get("consegnati") == 5210
           and cc.get("dipinti") == 5000, str(cc))
 
+    print("── il giro a eco (solo le battiture)")
+    g0 = {"visti": 10, "campioni": [30.0] * 10}
+    g1 = {"visti": 11, "campioni": [30.0] * 10 + [1136.0]}            # un clic che carica una pagina
+    g2 = {"visti": 16, "campioni": [30.0] * 10 + [1136.0] + [41.0, 38.5, 44.0, 40.2, 39.9]}
+    eco = campioni_nuovi(g1, g2)                                      # attorno alla sola battitura
+    prova("i 5 campioni della battitura, e solo quelli", eco == [41.0, 38.5, 44.0, 40.2, 39.9],
+          str(eco))
+    # ⛔ GUASTO: la differenza presa dall'inizio (prima del clic) si porta dentro il 1136
+    tutto = campioni_nuovi(g0, g2)
+    prova("GUASTO visto: senza la lettura prima della battitura il clic di caricamento entra",
+          1136.0 in tutto and 1136.0 not in eco, str(tutto))
+    prova("lettura mancata ⇒ nessun campione", campioni_nuovi(None, g2) == []
+          and campioni_nuovi(g2, g2) == [])
+    g3 = {"visti": 500, "campioni": [float(i) for i in range(200)]}
+    prova("piu' campioni della lista ⇒ quelli che ci sono", len(campioni_nuovi(g0, g3)) == 200)
+
     print("── il blocco dell'immagine")
     at, ap = attese_impulsi([10.0, 12.0, 19.5], [10.2, 10.25, 13.5], 20.0)
     prova("attese: 0,2 s e 1,5 s, l'ultimo ancora aperto",
@@ -464,8 +502,11 @@ def ambiente(o):
         "REMOTIX_SUL_SERVER": "1",
         "MOZ_ENABLE_WAYLAND": "1",
         "REMOTIX_CHROME_OPZIONI": "--ozone-platform=wayland --disable-backgrounding-occluded-windows "
-                                  "--disable-renderer-backgrounding --disable-background-timer-throttling",
+                                  "--disable-renderer-backgrounding --disable-background-timer-throttling "
+                                  # ⭐ le opzioni in piu' della salita (es. --render-node-override)
+                                  + os.environ.get("REMOTIX_16_CHROME_IN_PIU", ""),
     })
+    os.environ["REMOTIX_CHROME_OPZIONI"] = os.environ["REMOTIX_CHROME_OPZIONI"].strip()
     os.environ.pop("DISPLAY", None)
 
 
@@ -519,6 +560,7 @@ class Attore:
         self.f_eventi = open(os.path.join(self.cartella, "eventi.jsonl"), "a", buffering=1)
         self.eventi_finestra = []
         self.errori_finestra = []
+        self.giro_eco_finestra = []
         self.impulsi = []
         self.dipinti_t = []
         self.entrato = False
@@ -654,7 +696,8 @@ class Attore:
             if attese:
                 blocco, lavoro = max(attese), True
         campi = {"conti": conti, "diario": riga_d, "diario_letto": diario,
-                 "giro": p.get("giro"), "input": self.ver_finestra,
+                 "giro": p.get("giro"), "giro_eco": self.giro_eco_finestra,
+                 "input": self.ver_finestra,
                  "blocco_max_ms": None if blocco is None else round(blocco * 1000),
                  "lavoro": lavoro, "caduta": caduta, "errori": errori + self.errori_finestra,
                  "sessione": p.get("sessione"), "schermo": p.get("schermo"),
@@ -687,6 +730,7 @@ class Attore:
         self.ver_finestra = []
         self.errori_finestra = []
         self.eventi_finestra = []
+        self.giro_eco_finestra = []
         self.riga("stato", **campi)
 
     def video_in_corso(self):
@@ -1004,9 +1048,27 @@ class Mani:
         self.G2.tasti(self.g, passi)
         return t
 
-    def batti(self, testo, atteso=True):
+    def giro(self):
+        try:
+            with self.G2.tetto(15, "il giro"):
+                return self.g.js(JS_GIRO)
+        except Exception:                        # noqa: BLE001
+            return None
+
+    def batti(self, testo, atteso=True, eco=False):
         """Ogni carattere un tasto vero, col ritmo della persona.  `atteso`: ogni
-        carattere deve comparire (eco) ⇒ e' un impulso per il blocco."""
+        carattere deve comparire (eco) ⇒ e' un impulso per il blocco.  `eco`:
+        il carattere compare SUBITO (terminale, campo di testo) ⇒ i campioni del
+        giro arrivati durante la battitura vanno in `giro_eco`."""
+        g_prima = self.giro() if eco else None
+        self._batti(testo, atteso)
+        fine = time.time()
+        if eco:
+            time.sleep(0.4)                      # l'eco degli ultimi caratteri
+            self.a.giro_eco_finestra += campioni_nuovi(g_prima, self.giro())
+        return fine
+
+    def _batti(self, testo, atteso):
         R = self.a.ritmo
         tempi = [(R.tenuta_ms(), R.battuta_ms()) for _ in testo]
         # ⚠ a pezzi di ~1,5 s, col cuore in mezzo: una riga lunga battuta in una
