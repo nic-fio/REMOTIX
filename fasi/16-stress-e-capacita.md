@@ -230,6 +230,12 @@ Oggi REMOTIX scrive su un file suo (`registro.log`, dallo standard output). Nell
 
 ## 13. Prima della campagna
 
+0. **server riavviato** (deciso dall'utente il 25 set, per partire puliti), `/media` intatto:
+   la radice in RAM va rifatta coi passi 0, 1, 5, 6 e 7 della ricetta
+   (`riavvio-perde-la-chiave-ssh`: rotta, chiave, pacchetti dell'ospite, `provisiona.sh`,
+   `storage.conf` e le quattro scatole) — contenitore di compilazione, librerie e immagini stanno
+   su `/media` e restano; poi si **guarda** che il server sia vuoto (niente processi, inquilini,
+   compositori rimasti) prima della prima misura;
 1. il journal (§12) e il tetto configurabile, con la **suite corta di regressione** della fase 15
    (accesso, input, immagine, appunti, «Esci», orologi — sui 4 desktop coi due browser) su quel
    commit;
