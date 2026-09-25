@@ -80,7 +80,11 @@ DICHIARATI_NON_SCRIVIBILI = {"È"}     # xkb `it` basic non ha Egrave su nessun 
 SCRIVIBILI = "".join(c for c, _k, _v, _m in TASTIERA_IT if c not in DICHIARATI_NON_SCRIVIBILI)
 TUTTI = "".join(c for c, _k, _v, _m in TASTIERA_IT)
 ATTESA_S = 8.0
-PRODUCIBILE = re.compile(r"U\+([0-9A-Fa-f]{4,6}) non e' producibile con la disposizione ([^:]*)")
+# ⛔ Fase 16 §12 (25 set 2026): il registro non scrive PIU' quale carattere — era
+#    la battuta dell'utente.  Dice «un carattere non e' producibile…»: nella scena
+#    il non producibile e' uno solo (È), e si conta.  La forma vecchia resta letta.
+PRODUCIBILE = re.compile(r"(?:U\+([0-9A-Fa-f]{4,6})|un carattere) non e' producibile con la "
+                         r"disposizione ([^:]*)")
 IN_VIGORE = re.compile(r"disposizione in vigore[^:]*: (.*)$")
 
 # ── D-015: le impostazioni dell'utente, lette DAL DISCO come le leggerebbe lui
@@ -147,10 +151,17 @@ def sequenza():
 def dichiarati(righe):
     """{carattere: disposizione} dalle righe «non e' producibile» del registro."""
     d = {}
+    anonimi = 0
     for r in righe:
         m = PRODUCIBILE.search(r)
-        if m:
+        if m and m.group(1):
             d[chr(int(m.group(1), 16))] = m.group(2).strip()
+        elif m:
+            # ⭐ senza nome: vale per il primo dei dichiarati non ancora visto
+            resto = sorted(c for c in DICHIARATI_NON_SCRIVIBILI if c not in d)
+            ch = resto[0] if resto else "?%d" % anonimi
+            anonimi += 1
+            d[ch] = m.group(2).strip()
     return d
 
 
@@ -187,6 +198,14 @@ def certifica():
     riga_u = riga_e.replace("U+00C8", "U+00E8").replace("it [Italian]", "us [English (US)]")
     prova("lettura del registro", dichiarati([riga_e]) == {"È": "it [Italian]"},
           repr(dichiarati([riga_e])))
+    riga_n = ("21:00:00.000 tastiera [c15009u1] un carattere non e' producibile con la "
+              "disposizione it [Italian]: NON mandato niente (RCP.md §7.3; quale, non si scrive)")
+    prova("lettura della forma senza carattere (fase 16 §12)",
+          dichiarati([riga_n]) == {"È": "it [Italian]"}, repr(dichiarati([riga_n])))
+    prova("forma senza carattere, È dichiarata ⇒ PASS",
+          giudica({"a": SCRIVIBILI}, [riga_n])[0] == S.PASS)
+    prova("forma senza carattere, È sparita in silenzio ⇒ FAIL",
+          giudica({"a": SCRIVIBILI}, [])[0] == S.FAIL)
     prova("tutti scritti, È dichiarata ⇒ PASS", giudica({"a": SCRIVIBILI}, [riga_e])[0] == S.PASS)
     prova("anche È scritta ⇒ PASS", giudica({"a": TUTTI}, [])[0] == S.PASS)
     prova("È sparita in silenzio ⇒ FAIL", giudica({"a": SCRIVIBILI}, [])[0] == S.FAIL)
