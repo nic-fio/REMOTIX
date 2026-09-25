@@ -387,13 +387,43 @@ accendi)
 	else
 		ok "scheda: solo la Radeon ($PCI, $DRV_C) — $INTEL_CARD → card0, $INTEL_RENDER → renderD128 (REMOTIX_SCHEDA=amd)"
 	fi
+	# ⭐⭐ I NODI ENTRANO ANCHE COL LORO NOME VERO — `[M]` 25 settembre 2026,
+	#   prova-amd-1 (fase 16 §11): dentro la scatola la Radeon era `card0` e
+	#   `renderD128`, ma coi NUMERI dell ospite (226:1 e 226:129).  libdrm
+	#   (`drmGetNodeTypeFromFd`, xf86drm.c) NON crede al nome con cui il nodo e'
+	#   stato aperto: dal minor ricostruisce `/dev/dri/renderD129` e guarda se
+	#   ESISTE — dentro non c'era ⇒ «non e' un nodo DRM» (-1) per tutti e due.
+	#   Conseguenze MISURATE, stessa scatola:
+	#     · wlroots: «'/dev/dri/renderD128' is not a DRM render node» ⇒ pixman
+	#       ⇒ nessun zwp_linux_dmabuf_v1 ⇒ i pixel passano per la memoria
+	#       (il nostro tratto p95 205 ms invece di ~20);
+	#     · libva: `vaGetDisplayDRM` restituisce NULL ⇒ «VA-API non si e'
+	#       aperta … Generic error» ⇒ libx264 in software.
+	#   Sulla Intel non si vedeva SOLO perche' oggi i suoi nodi sono davvero
+	#   card0/renderD128: ⛔ «renderD128 e renderD129 si scambiano fra due avvii»
+	#   (sopra), quindi vale per tutte e due le schede.
+	# ⇒ Il nodo entra DUE volte: col nome che il prodotto apre (card0/renderD128,
+	#   scritto in figlio.c) e col nome che libdrm ricostruisce dal minor.  Sono
+	#   lo stesso device (stesso maj:min), e libdrm li ripiega in uno solo
+	#   (`drmFoldDuplicatedDevices`).  Quando i due nomi coincidono (Intel oggi)
+	#   non si aggiunge niente: identico a prima.
+	NODI_VERI=""; NOMI_DENTRO="card0 renderD128"
+	for N in "$INTEL_CARD" "$INTEL_RENDER"; do
+		case "$N" in /dev/dri/card0|/dev/dri/renderD128) ;;
+		*) NODI_VERI="$NODI_VERI --device $N:$N"; NOMI_DENTRO="$NOMI_DENTRO $(basename "$N")" ;;
+		esac
+	done
+	[ -n "$NODI_VERI" ] && ok "e i nodi entrano ANCHE col nome vero (libdrm li cerca per minor):$NODI_VERI"
+	NOMI_DENTRO=$(printf '%s\n' $NOMI_DENTRO | sort -u | tr '\n' ' ')
 
+	# shellcheck disable=SC2086
 	podman run -d --replace --name "$NOME" \
 		--systemd=always \
 		--pids-limit 16384 \
 		--network=host \
 		--device "$INTEL_CARD:/dev/dri/card0" \
 		--device "$INTEL_RENDER:/dev/dri/renderD128" \
+		$NODI_VERI \
 		--cap-add=AUDIT_WRITE \
 		--cap-add=AUDIT_CONTROL \
 		$CAPS \
@@ -467,15 +497,15 @@ accendi)
 	fi
 
 	# ⛔ «Scritto non e' in vigore»: si GUARDA dentro che la Radeon non ci sia.
-	DENTRO=$(podman exec "$NOME" sh -c 'ls /dev/dri | tr "\n" " "' 2>/dev/null)
-	if [ "$DENTRO" = "card0 renderD128 " ]; then
+	DENTRO=$(podman exec "$NOME" sh -c 'ls /dev/dri | sort | tr "\n" " "' 2>/dev/null)
+	if [ "$DENTRO" = "$NOMI_DENTRO" ]; then
 		if [ "$SCHEDA" = intel ]; then
 			ok "dentro ci sono solo i nodi della Intel: $DENTRO"
 		else
 			ok "dentro ci sono solo i nodi della Radeon: $DENTRO"
 		fi
 	else
-		ko "⛔ dentro /dev/dri c'e' «$DENTRO», non solo card0 e renderD128: spengo"
+		ko "⛔ dentro /dev/dri c'e' «$DENTRO», non «$NOMI_DENTRO»: spengo"
 		podman rm -f -t 0 "$NOME" >/dev/null 2>&1
 		exit 1
 	fi
