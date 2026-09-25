@@ -73,6 +73,9 @@ LE MISURE, e da dove vengono (§7 → §9)
             non classifica: dentro c'e' la foto.  «Input perso» (un'azione con
             ok=false) ⇒ FAIL, come dice §9.  Profilo D (solo video, niente
             input): la voce non si applica, salvo campioni presenti.
+            ⚠ La verifica «video_avanza» falsa (profilo D: il tempo del video
+            nella scena non avanza) NON e' un input perso: va alla voce del
+            video (DEGRADED significativo: fermo nella scena, causa da guardare).
   saltati   (Δconsegnati − Δdipinti) / Δconsegnati — `video X→Y` della pagina:
             tutto quel che il filo ha portato e non e' arrivato al vetro
             (saltati_coda, tardivi, scartati, persi nel decodificatore).  E' il
@@ -86,8 +89,11 @@ LE MISURE, e da dove vengono (§7 → §9)
   audio     (profilo D) Δsuonati / (Δricevuti + Δmancati): quel che il server
             ha mandato e si e' sentito.  Nessun blocco mentre il video gira ⇒ 0 %.
   nascita   primo_fotogramma_ms − accesso_ms; «rifiuto» ⇒ FAIL.  Solo per gli
-            utenti nati nel livello (nascita.json presente, o `nuovo` in
-            livello.json: allora la sua assenza e' «non misurato»).
+            utenti nati nel livello: `nuovo` in livello.json (la sua assenza e'
+            «non misurato»); se l'elenco non c'e', solo se `accesso_ms` cade
+            dentro il livello.  Le altre nascita.json sono di un gradino
+            precedente (la cartella dell'attore si porta dietro): si REGISTRANO
+            (`nascita_precedente`) e non classificano.
   corto     controllo-corto.json: un FAIL ⇒ FAIL; un BLOCKED ⇒ non misurato.
   caduta    `caduta` nello stato, contatori della pagina ripartiti da zero
             (pagina ricaricata o riattaccata), e nel registro del server per
@@ -96,9 +102,21 @@ LE MISURE, e da dove vengono (§7 → §9)
             livello, non solo nella finestra: una caduta al minuto 3 e' una
             caduta.  Il riavvio del server (una riga «avvio REMOTIX», o il pid
             del padre che cambia in risorse.jsonl) ⇒ FAIL per tutte.
-  memoria   (livello) PSS dei recinti `remotix` e `sessioni` nella finestra:
-            (media degli ultimi 10 s − media dei primi 10 s) / primi.  «E
-            continua» = gli ultimi 30 s sopra i 30 s prima (piu' dell'1 %).
+  memoria   (livello) PSS dei recinti `remotix` e `sessioni` su TUTTO il lavoro
+            del livello, non sulla finestra (§6: l'ultimo gradino dura 30 min
+            apposta per vedere le perdite): da inizio del lavoro + 60 s di
+            assestamento (inizio del lavoro = fine − durata_lavoro_s di
+            livello.json; se no inizio_t; se no la prima riga; e comunque dopo
+            l'ultima nascita di un utente nuovo che si conosce) all'inizio del
+            controllo corto (fine − controllo_min: la sessione 99 nasce li' e
+            pesa sul recinto `sessioni`), se no alla fine.
+            crescita = (media degli ultimi 30 s − media dei primi 30 s) / primi.
+            «E continua» = la retta dei minimi quadrati sulla SECONDA META' del
+            tratto sale (a) piu' del 2 % all'ora della media e (b) di piu' di un
+            terzo della crescita totale lungo la meta' (pendenza × meta' durata).
+            Una crescita lineare da' 1/2 ⇒ continua; uno scalino nella prima
+            meta' e poi piatto ⇒ ferma.  Soglie §9 invariate: > 15 % e ferma ⇒
+            DEGRADED significativo.
             Il recinto `browser` si registra e NON classifica (§9).
 
 «NON MISURATO» — mai verde per assenza
@@ -109,8 +127,13 @@ e si guarda l'impianto, invece di salire su un numero che non c'e'.
 
 IL LIVELLO (§9): GREEN se tutte le sessioni (e le voci di livello) sono
 GREEN; DEGRADED se almeno una e' DEGRADED e nessuna FAIL; FAIL se almeno una e'
-FAIL.  DEGRADED SIGNIFICATIVO = piu' di un quarto delle sessioni DEGRADED, o una
-misura oltre META' della fascia DEGRADED (colonna `meta` di SOGLIE).
+FAIL.  DEGRADED SIGNIFICATIVO = piu' di un quarto delle sessioni DEGLI ATTORI
+DEGRADED (il controllo, utente 99, non conta; k·4 > n, esatto), o una misura
+oltre META' della fascia DEGRADED (colonna `meta` di SOGLIE).
+⛔ ENTRATI: se gli attori presenti (cartelle utente-NN, e quelli dell'elenco
+`utenti` di livello.json senza cartella contano come assenti) sono meno del
+livello dichiarato (--livello, se no livello.json) ⇒ voce di livello
+`entrati` FAIL «entrati K su N»: un gradino non raggiunto non e' superato.
 """
 import argparse
 import datetime as _dt
@@ -313,7 +336,9 @@ def delta(righe, chiave):
 
 # ─────────────────────────────── una sessione ──────────────────────────────
 def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, rete=None, tratti=None,
-             desktop=None):
+             desktop=None, t_liv=None):
+    """`nuovo`: True/False dall'elenco di livello.json; None se l'elenco non
+    c'e' (allora la nascita si giudica solo se `accesso_ms` cade in `t_liv`)."""
     righe = jsonl(os.path.join(dir_u, "stato.jsonl"))
     for r in righe:
         r["_c"] = conti_di(r)
@@ -356,8 +381,13 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         misure["esperienza"] = {
             "giro_eco_p95_ms": _tondo(p95(eco)) if eco else None, "giro_eco_campioni": len(eco),
             "giro_tutti_p95_ms": _tondo(p95(tutti)) if tutti else None, "giro_tutti_campioni": len(tutti)}
-        inp = [x for r in dentro for x in (r.get("input") or [])]
+        tutte_ver = [x for r in dentro for x in (r.get("input") or [])]
+        # ⚠ «video_avanza» (profilo D) non e' un input: il video nella scena
+        #   fermo va alla voce del video, non al ritardo
+        vid_fermo = [x for x in tutte_ver if x.get("azione") == "video_avanza" and x.get("ok") is False]
+        inp = [x for x in tutte_ver if x.get("azione") != "video_avanza"]
         persi = [x for x in inp if x.get("ok") is False]
+        misure["video_non_avanza"] = len(vid_fermo)
         lat = [x["latenza_ms"] for x in inp if x.get("ok") and x.get("latenza_ms") is not None]
         misure["input_azioni"] = len(inp)
         misure["input_persi"] = len(persi)
@@ -453,6 +483,18 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
                     "audio_udibile_pct", min(v, 100.0),
                     "%d suonati su %d mandati (%d ricevuti + %d mancati)" % (su, den, ri, ma or 0)
                     if den else "NESSUN blocco audio nella finestra mentre il video gira")
+            if vid_fermo:
+                vv = voci.get("video_frazione_f")
+                if not vv or vv["classe"] == "GREEN":
+                    voci["video_frazione_f"] = {
+                        "valore": (vv or {}).get("valore"), "classe": "DEGRADED", "significativo": True,
+                        "nota": "il VIDEO NELLA SCENA non avanza in %d verifiche su %d (%s): fermo o in pausa, "
+                                "causa da guardare%s" % (
+                                    len(vid_fermo), sum(1 for x in tutte_ver if x.get("azione") == "video_avanza"),
+                                    (vid_fermo[0].get("det") or "")[:80],
+                                    (" · " + vv["nota"]) if vv else "")}
+                else:
+                    vv["nota"] += " · il video nella scena non avanza in %d verifiche" % len(vid_fermo)
         # ── caduta: lo stato ──
         cad = [r for r in righe if r.get("caduta")]
         if cad:
@@ -483,6 +525,20 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         misure["tratto_server_ms"] = tratto[inq]
     # ── nascita ──
     na = jfile(os.path.join(dir_u, "nascita.json"))
+    if na is not None and nuovo is not True:
+        # ⛔ nata in questo livello?  Con l'elenco: solo se `nuovo`.  Senza:
+        #   solo se l'accesso cade dentro il livello.
+        acc = na.get("accesso_ms")
+        dentro_liv = (nuovo is None and acc is not None and t_liv is not None
+                      and t_liv[0] - 1 <= acc / 1000.0 <= t_liv[1])
+        if not dentro_liv:
+            misure["nascita_precedente"] = {
+                "nascita_s": round(na["nascita_ms"] / 1000.0, 2) if na.get("nascita_ms") is not None else
+                (round((na["primo_fotogramma_ms"] - acc) / 1000.0, 2)
+                 if acc is not None and na.get("primo_fotogramma_ms") is not None else None),
+                "esito": na.get("esito"),
+                "nota": "nascita di un gradino precedente: si registra, non classifica"}
+            na = None
     if na is not None:
         es = str(na.get("esito", "ok")).lower()
         ms = na.get("nascita_ms")
@@ -853,12 +909,28 @@ def risorse(p, w0, w1):
     return s, tutte
 
 
-def voci_livello(ris_tutte, w0, w1):
+ASSESTAMENTO_S = 60.0     # dopo l'inizio del lavoro, prima di misurare la memoria
+CONTINUA_PCT_ORA = 2.0    # «e continua»: pendenza della seconda meta' oltre il 2 %/ora della media...
+CONTINUA_FRAZ = 1.0 / 3   # ...e crescita lungo la seconda meta' oltre 1/3 della totale
+
+
+def pendenza(pts):
+    """La pendenza dei minimi quadrati di [(t, v)], per secondo."""
+    n = len(pts)
+    mt = sum(t for t, _ in pts) / n
+    mv = sum(v for _, v in pts) / n
+    den = sum((t - mt) ** 2 for t, _ in pts)
+    return sum((t - mt) * (v - mv) for t, v in pts) / den if den else 0.0
+
+
+def voci_livello(ris_tutte, w0, w1, m0=None, m1=None):
+    """`m0`–`m1`: il tratto della memoria (il lavoro del livello, vedi sopra);
+    None ⇒ dalla prima riga di risorse all'ultima."""
     voci = {}
-    fin = [r for r in ris_tutte if w0 < r.get("t", 0) <= w1]
+    fin = [r for r in ris_tutte if (m0 is None or r.get("t", 0) >= m0) and (m1 is None or r.get("t", 0) <= m1)]
     if not fin:
-        return {"memoria_remotix": non_misurato("nessuna riga di risorse.jsonl nella finestra"),
-                "memoria_sessioni": non_misurato("nessuna riga di risorse.jsonl nella finestra")}
+        return {"memoria_remotix": non_misurato("nessuna riga di risorse.jsonl nel lavoro del livello"),
+                "memoria_sessioni": non_misurato("nessuna riga di risorse.jsonl nel lavoro del livello")}
     for rc in ("remotix", "sessioni"):
         pts = [(r["t"], r["recinti"][rc]["pss_mb"]) for r in fin
                if r.get("recinti", {}).get(rc, {}).get("processi")]
@@ -867,15 +939,22 @@ def voci_livello(ris_tutte, w0, w1):
                                                  % (rc, len(pts)))
             continue
         t0, t1 = pts[0][0], pts[-1][0]
-        a = [v for t, v in pts if t <= t0 + 10]
-        b = [v for t, v in pts if t >= t1 - 10]
-        c1 = [v for t, v in pts if t >= t1 - 30]
-        c0 = [v for t, v in pts if t1 - 60 <= t < t1 - 30]
+        a = [v for t, v in pts if t <= t0 + 30]
+        b = [v for t, v in pts if t >= t1 - 30]
         ma, mb = sum(a) / len(a), sum(b) / len(b)
         cresc = 100.0 * (mb - ma) / ma if ma > 0 else 0.0
-        continua = bool(c0 and c1) and (sum(c1) / len(c1)) > (sum(c0) / len(c0)) * 1.01
-        nota = "PSS %.0f → %.0f MB in %.0f s%s" % (ma, mb, t1 - t0, " e CONTINUA a salire" if continua else "")
-        v = voce_misurata("memoria_crescita_pct", cresc, nota, {"continua": continua})
+        tm = (t0 + t1) / 2.0
+        seconda = [(t, v) for t, v in pts if t >= tm]
+        media = sum(v for _, v in pts) / len(pts)
+        k = pendenza(seconda) if len(seconda) >= 10 else 0.0
+        k_ora = 100.0 * k * 3600.0 / media if media > 0 else 0.0
+        su_meta = k * (t1 - tm)
+        continua = k_ora > CONTINUA_PCT_ORA and (mb - ma) > 0 and su_meta > CONTINUA_FRAZ * (mb - ma)
+        nota = ("PSS %.0f → %.0f MB in %.0f s di lavoro (%s–%s); seconda meta' %+.1f %%/ora, %+.0f MB su "
+                "%+.0f%s" % (ma, mb, t1 - t0, _ora(t0), _ora(t1), k_ora, su_meta, mb - ma,
+                             " e CONTINUA a salire" if continua else ""))
+        v = voce_misurata("memoria_crescita_pct", cresc, nota,
+                          {"continua": continua, "pendenza_pct_ora": _tondo(k_ora), "tratto_s": round(t1 - t0)})
         if v["classe"] == "FAIL" and not continua:
             # §9: FAIL e' «> 15 % E continua»; oltre il 15 % ma ferma: si segnala
             v.update(classe="DEGRADED", significativo=True,
@@ -926,16 +1005,52 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     t_inizio = meta.get("inizio_t") or min(ts + ts_r or [w0])
     journal = journal_err(cart, t_inizio, w1, journal_scatola)
     corto = jfile(os.path.join(cart, "controllo-corto.json"))
+    ha_elenco = bool(utenti_meta)
     sess = []
     for d in dirs:
         n = int(re.sub(r"\D", "", os.path.basename(d)) or 0)
         mu = utenti_meta.get(n)
-        info, misure, voci = sessione(d, w0, w1, fps_video, mu, bool(mu and mu.get("nuovo")),
-                                      corto, ev, tratto, rete, tratti, meta.get("desktop"))
+        nuovo = bool(mu.get("nuovo")) if mu else (False if ha_elenco else None)
+        info, misure, voci = sessione(d, w0, w1, fps_video, mu, nuovo,
+                                      corto, ev, tratto, rete, tratti, meta.get("desktop"), (t_inizio, w1))
         if journal and info.get("inquilino"):
             misure["journal_err"] = journal["per_inquilino"].get(info["inquilino"], 0)
         sess.append((d, info, misure, voci))
-    lv = voci_livello(ris_tutte, w0, w1)
+    # il tratto della memoria: il LAVORO del livello (+ assestamento), fino al controllo corto
+    if meta.get("durata_lavoro_s") is not None and meta.get("fine"):
+        m0, da = meta["fine"] - meta["durata_lavoro_s"], "inizio del lavoro"
+    elif meta.get("inizio_t"):
+        m0, da = meta["inizio_t"], "inizio del livello"
+    else:
+        m0, da = min(ts_r or [t_inizio]), "prima riga di risorse"
+    nate = []
+    for d in dirs:
+        n = int(re.sub(r"\D", "", os.path.basename(d)) or 0)
+        if (utenti_meta.get(n) or {}).get("nuovo"):
+            na = jfile(os.path.join(d, "nascita.json")) or {}
+            if na.get("primo_fotogramma_ms") is not None and na["primo_fotogramma_ms"] / 1000.0 <= w1:
+                nate.append(na["primo_fotogramma_ms"] / 1000.0)
+    if nate and max(nate) > m0:
+        m0, da = max(nate), "ultima nascita"
+    m0 += ASSESTAMENTO_S
+    m1 = w1
+    if corto is not None and meta.get("controllo_min") and meta.get("fine"):
+        m1 = min(w1, meta["fine"] - float(meta["controllo_min"]) * 60.0)
+    lv = voci_livello(ris_tutte, w0, w1, m0, m1)
+    for k in ("memoria_remotix", "memoria_sessioni"):
+        if not lv[k].get("non_misurato"):
+            lv[k]["nota"] += " · da: %s + %.0f s" % (da, ASSESTAMENTO_S)
+    # ⛔ un gradino non raggiunto non e' un gradino superato
+    n_dich = livello if livello is not None else meta.get("livello")
+    presenti = {int(re.sub(r"\D", "", os.path.basename(d)) or 0) for d in dirs}
+    senza_cart = sorted(set(utenti_meta) - presenti)
+    if n_dich is not None:
+        k_ent = len(presenti)
+        if k_ent < int(n_dich):
+            lv["entrati"] = fallita(k_ent, "entrati %d su %d%s" % (
+                k_ent, int(n_dich), (" (nell'elenco senza cartella: %s)" % senza_cart) if senza_cart else ""))
+        else:
+            lv["entrati"] = verde(k_ent, "entrati %d su %d" % (k_ent, int(n_dich)))
     if not c_log:
         lv["registro_server"] = non_misurato("manca server.log: cadute ed errori del server non guardati")
     if corto is None:
@@ -952,15 +1067,18 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     for c in classi:
         if ORDINE[c] > ORDINE[c_liv]:
             c_liv = c
-    n_deg = sum(1 for c in classi if c == "DEGRADED")
+    # ⚠ il quarto si conta sugli ATTORI: il controllo (utente 99) non c'entra
+    att = [classe_di(v) for _, i, _, v in sess if i.get("profilo") != "controllo"]
+    n_att = len(att)
+    n_deg = sum(1 for c in att if c == "DEGRADED")
     sig_voci = [(os.path.basename(d), k) for d, _, _, v in sess for k, x in v.items()
                 if x["classe"] == "DEGRADED" and x.get("significativo")]
     sig_voci += [("livello", k) for k, x in lv.items() if x["classe"] == "DEGRADED" and x.get("significativo")]
     significativo = c_liv == "FAIL" or (c_liv == "DEGRADED" and (
-        (sess and n_deg > len(sess) / 4.0) or bool(sig_voci)))
+        (n_att and n_deg * 4 > n_att) or bool(sig_voci)))
     return {"meta": meta, "w0": w0, "w1": w1, "fps_video": fps_video, "sessioni": sess, "journal": journal,
             "voci_livello": lv, "risorse": ris, "classe": c_liv, "significativo": significativo,
-            "n_degradate": n_deg, "sig_voci": sig_voci, "campagna": campagna or meta.get("campagna"),
+            "n_degradate": n_deg, "n_attori": n_att, "sig_voci": sig_voci, "campagna": campagna or meta.get("campagna"),
             "livello": livello if livello is not None else meta.get("livello", len(sess)),
             "cart": cart}
 
@@ -1002,8 +1120,9 @@ def _ragione_livello(g, conti):
     if g["classe"] == "DEGRADED":
         if g["significativo"]:
             perche = []
-            if g["sessioni"] and g["n_degradate"] > len(g["sessioni"]) / 4.0:
-                perche.append("piu' di un quarto delle sessioni DEGRADED")
+            if g["n_attori"] and g["n_degradate"] * 4 > g["n_attori"]:
+                perche.append("piu' di un quarto degli attori DEGRADED (%d su %d)"
+                              % (g["n_degradate"], g["n_attori"]))
             if g["sig_voci"]:
                 perche.append("oltre meta' fascia o non misurato: " + ", ".join(
                     "%s/%s" % x for x in g["sig_voci"][:6]))
@@ -1080,14 +1199,16 @@ def certifica():
     T0 = 1_790_000_000.0
     try:
         def livello(nome, utenti, log="", ris=True, mem=lambda t: 1000.0, corto=None, pid=lambda t: 111,
-                    fps=30, tratto=None):
+                    fps=30, tratto=None, elenco=True):
             c = os.path.join(tmp, nome)
             os.makedirs(c)
-            json.dump({"campagna": "cert", "livello": len(utenti), "desktop": "kde", "scheda": "intel",
-                       "fps_video": fps,
-                       "utenti": [{"utente": i + 1, "profilo": u["profilo"], "browser": "firefox",
-                                   "nuovo": u.get("nuovo", False)} for i, u in enumerate(utenti)]},
-                      open(os.path.join(c, "livello.json"), "w"))
+            lj = {"campagna": "cert", "livello": len(utenti), "desktop": "kde", "scheda": "intel",
+                  "fps_video": fps,
+                  "utenti": [{"utente": i + 1, "profilo": u["profilo"], "browser": "firefox",
+                              "nuovo": u.get("nuovo", False)} for i, u in enumerate(utenti)]}
+            if not elenco:
+                del lj["utenti"]
+            json.dump(lj, open(os.path.join(c, "livello.json"), "w"))
             for i, u in enumerate(utenti):
                 d = os.path.join(c, "utente-%02d" % (i + 1))
                 os.makedirs(d)
@@ -1135,7 +1256,7 @@ def certifica():
 
         def sano(prof, inq, fps_pag=30.0, fermo_da=None, salt_pct=0.0, buchi_min=0.0, giro=20.0,
                  blocco=300, audio_pct=100.0, persi=False, caduta_a=None, diario=False, eco=True,
-                 giro_lento=None, video_da=None):
+                 giro_lento=None, video_da=None, video_fermo=False):
             def riga(t, k):
                 n = k * fps_pag
                 if fermo_da is not None and k > fermo_da:
@@ -1161,6 +1282,9 @@ def certifica():
                     r["conti"] = conti
                 if prof != "D":
                     r["input"] = [{"ok": not persi or k < 550, "latenza_ms": 150, "azione": "clic"}]
+                elif video_fermo:
+                    r["input"] = [{"ok": k < 550, "latenza_ms": None, "azione": "video_avanza",
+                                   "det": "t 12.0→12.0"}]
                 if caduta_a is not None and k >= caduta_a:
                     r["caduta"] = True
                     r["errori"] = ["la tela e' nera"]
@@ -1213,14 +1337,33 @@ def certifica():
         guarda("⛔ misura MANCANTE ⇒ mai GREEN: «non misurato», significativo",
                s3["blocco_max_s"].get("non_misurato") and g["classe"] == "DEGRADED" and g["significativo"],
                s3["blocco_max_s"]["nota"])
-        u = [dict(sano("A", "c16u01"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 4800}),
-             dict(sano("B", "c16u02"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 16000}),
-             dict(sano("C", "c16u03"), nascita={"esito": "rifiuto"}), dict(sano("D", "c16u04"), nuovo=True)]
+        u = [dict(sano("A", "c16u01"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 4800}, nuovo=True),
+             dict(sano("B", "c16u02"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 16000}, nuovo=True),
+             dict(sano("C", "c16u03"), nascita={"esito": "rifiuto"}, nuovo=True),
+             dict(sano("D", "c16u04"), nuovo=True)]
         g = classifica(livello("nascite", u))
         cl = [g["sessioni"][i][3].get("nascita_s", {}).get("classe") for i in range(4)]
         guarda("nascite 4,8 s / 16 s / rifiuto / assente ⇒ GREEN, FAIL, FAIL, non misurato",
                cl == ["GREEN", "FAIL", "FAIL", "DEGRADED"] and g["sessioni"][3][3]["nascita_s"].get("non_misurato"),
                str(cl))
+        # ⛔ GUASTO (revisione 26 set): la nascita.json di un gradino precedente
+        #   (la cartella dell'attore resta) veniva rigiudicata a ogni livello
+        u = list(quattro)
+        u[1] = dict(sano("B", "c16u02"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 7000})
+        g = classifica(livello("nascita-vecchia", u))
+        s2 = g["sessioni"][1]
+        nsa = (T0 + 100) * 1000
+        u2 = [dict(sano("A", "c16u01"), nascita={"accesso_ms": 0, "primo_fotogramma_ms": 7000}),
+              dict(sano("B", "c16u02"), nascita={"accesso_ms": nsa, "primo_fotogramma_ms": nsa + 7000}),
+              sano("C", "c16u03"), sano("D", "c16u04")]
+        g2 = classifica(livello("nascita-senza-elenco", u2, elenco=False))
+        guarda("⛔ GUASTO: nascita di un gradino precedente (non `nuovo`, o accesso fuori dal livello) ⇒ "
+               "registrata, NON classifica; accesso dentro il livello ⇒ classifica",
+               "nascita_s" not in s2[3] and s2[2].get("nascita_precedente", {}).get("nascita_s") == 7.0
+               and g["classe"] == "GREEN"
+               and "nascita_s" not in g2["sessioni"][0][3]
+               and g2["sessioni"][1][3].get("nascita_s", {}).get("classe") == "DEGRADED",
+               json.dumps(s2[2].get("nascita_precedente"), ensure_ascii=False))
         hh = _dt.datetime.fromtimestamp(T0 + 300, _dt.timezone.utc).strftime("%H:%M:%S.000")
         dopo = _dt.datetime.fromtimestamp(T0 + 900, _dt.timezone.utc).strftime("%H:%M:%S.000")
         log = ("%s rcp     [c16u03] ⛔ FIN del CLIENT sul canale di controllo (stream 4): §4.2, "
@@ -1284,6 +1427,13 @@ def certifica():
         cc["nascita"] = {"ammissione_s": 1.0, "rifiuto": True, "esito": "FAIL", "ragione": "l'accesso: rifiutato"}
         g = classifica(livello("corto-rifiuto", quattro, corto=cc))
         guarda("controllo corto rifiutato ⇒ FAIL", g["classe"] == "FAIL")
+        # ⛔ GUASTO (revisione 26 set): il quarto contava anche il controllo
+        cc["nascita"] = {"nascita_s": 7.2, "esito": "PASS"}
+        g = classifica(livello("quarto-attori", quattro, corto=cc, tratto={"c16u01": 60.0}))
+        guarda("⛔ GUASTO: 1 attore su 4 DEGRADED + il controllo DEGRADED ⇒ NON significativo "
+               "(il quarto e' degli attori, 1·4 > 4 e' falso)",
+               g["classe"] == "DEGRADED" and not g["significativo"],
+               _ragione_livello(g, _conti(g)))
         u = list(quattro)
         u[0] = sano("A", "c16u01", giro=200, giro_lento=900)
         g = classifica(livello("tratto-30", u))
@@ -1312,10 +1462,30 @@ def certifica():
         v = g["voci_livello"]["memoria_sessioni"]
         guarda("memoria +48 % e continua ⇒ FAIL", v["classe"] == "FAIL", v["nota"])
         g = classifica(livello("mem-scalino", quattro,
-                               mem=lambda k: 1000.0 if k < 500 else 1200.0))
+                               mem=lambda k: 1000.0 if k < 200 else 1200.0))
         v = g["voci_livello"]["memoria_sessioni"]
         guarda("memoria +20 % ma FERMA ⇒ DEGRADED significativo (non FAIL)",
                v["classe"] == "DEGRADED" and v["significativo"], v["nota"])
+        # ⛔ GUASTO (revisione 26 set): una perdita lenta e costante (+20 % sul
+        #   livello) nella finestra di 120 s fa +3 %: era verde
+        g = classifica(livello("mem-lenta", quattro, mem=lambda k: 1000.0 * (1 + 0.20 * k / 600.0)))
+        v = g["voci_livello"]["memoria_sessioni"]
+        guarda("⛔ GUASTO: memoria +20 % lineare su tutto il livello ⇒ FAIL (crescita dall'inizio del lavoro, "
+               "pendenza della seconda meta')", v["classe"] == "FAIL" and v["continua"], v["nota"])
+        # ⛔ GUASTO (revisione 26 set): con meno attori del livello si giudicavano solo quelli presenti
+        g = classifica(livello("pochi", quattro), livello=6)
+        v = g["voci_livello"].get("entrati", {})
+        guarda("⛔ GUASTO: livello 6 dichiarato con 4 attori ⇒ FAIL «entrati 4 su 6»",
+               g["classe"] == "FAIL" and v.get("classe") == "FAIL" and v.get("valore") == 4, v.get("nota", ""))
+        # ⛔ GUASTO (revisione 26 set): «video_avanza» falso contava come input PERSO
+        u = list(quattro)
+        u[3] = sano("D", "c16u04", video_fermo=True)
+        g = classifica(livello("video-avanza", u))
+        s4 = g["sessioni"][3][3]
+        guarda("⛔ GUASTO: il video nella scena non avanza (profilo D) ⇒ voce del video DEGRADED "
+               "significativo, NON «input perso» sul ritardo",
+               s4["ritardo_p95_ms"]["classe"] == "GREEN" and s4["video_frazione_f"]["classe"] == "DEGRADED"
+               and s4["video_frazione_f"]["significativo"], s4["video_frazione_f"]["nota"])
         g = classifica(livello("mem-browser", quattro, mem=lambda k: 1000.0))
         guarda("il recinto browser che cresce NON classifica", g["classe"] == "GREEN")
         g = classifica(livello("senza-risorse", quattro, ris=False))
