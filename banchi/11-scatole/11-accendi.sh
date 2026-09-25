@@ -551,6 +551,15 @@ prodotto)
 
 server)
 	log "Accendo il server dentro $NOME sulla porta $PORTA"
+	# ⭐ fase 16 (§2): il tetto delle sessioni si alza per la campagna di stress,
+	#   da fuori: `sudo env REMOTIX_TETTO_SESSIONI=17 bash 11-accendi.sh server D`.
+	#   Senza la variabile, nessuna opzione: il predefinito del prodotto (10).
+	TETTO=""
+	case "${REMOTIX_TETTO_SESSIONI:-}" in
+	'') ;;
+	*[!0-9]*) ko "REMOTIX_TETTO_SESSIONI=«$REMOTIX_TETTO_SESSIONI» non e un numero"; exit 1 ;;
+	*) TETTO="--tetto-sessioni $REMOTIX_TETTO_SESSIONI"; ok "tetto delle sessioni: $REMOTIX_TETTO_SESSIONI" ;;
+	esac
 	podman exec "$NOME" sh -c "
 		systemctl stop rete11-server 2>/dev/null
 		systemctl reset-failed rete11-server 2>/dev/null
@@ -560,10 +569,10 @@ server)
 			--property=StandardOutput=append:/var/lib/rete11/registro.log \
 			--property=StandardError=append:/var/lib/rete11/registro.log \
 			--property=KillMode=mixed \
-			/opt/remotix/remotix --indirizzo 0.0.0.0 --nome 127.0.0.1 --porta $PORTA \
+			/opt/remotix/remotix --indirizzo 0.0.0.0 --nome 127.0.0.1 --porta $PORTA $TETTO \
 			--certificati /var/lib/rete11/certificati --pagina /opt/remotix/pagina.html \
 			--ban-file /var/lib/rete11/ban --comando-socket /var/lib/rete11/comando.sock \
-			--rilievo /var/lib/rete11/rilievo --parlantina
+			--rilievo /var/lib/rete11/rilievo --parlantina --journal
 	" >/dev/null 2>&1
 
 	# ⛔ Si aspetta che ASCOLTI, non che il processo esista: «acceso» vuol dire
