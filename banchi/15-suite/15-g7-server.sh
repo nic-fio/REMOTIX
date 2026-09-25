@@ -63,7 +63,12 @@ accendi)
 		systemctl reset-failed $UNITA 2>/dev/null
 		mkdir -p $DIR/rilievo
 		[ -d $DIR/certificati ] || cp -a /var/lib/rete11/certificati $DIR/certificati
-		rm -f $REG $DIR/ban $DIR/comando.sock
+		# ⛔ Il registro NON si cancella: si mette da parte (D-011, 25 set 2026 —
+		#    il riavvio fra le fasi di 15-f022 buttava via proprio le righe che
+		#    spiegavano il BLOCKED).  Se ne tengono gli ultimi 30.
+		[ -s $REG ] && mv $REG $DIR/registro-\$(date +%Y%m%d-%H%M%S)-\$\$.log
+		ls -1t $DIR/registro-*.log 2>/dev/null | tail -n +31 | xargs -r rm -f
+		rm -f $DIR/ban $DIR/comando.sock
 		systemd-run --unit=$UNITA \
 			--working-directory=/opt/remotix \
 			--property=StandardOutput=append:$REG \
