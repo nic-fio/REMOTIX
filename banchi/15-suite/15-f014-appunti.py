@@ -59,6 +59,22 @@ import suite as S                                                     # noqa: E4
 FUNZIONI = ("F-014", "F-015")
 
 
+def _parola_sudo():
+    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
+    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
+    nei banchi: sono nel deposito."""
+    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    if p is None:
+        try:
+            for r in open(os.path.expanduser("~/SERVER.ssh")):
+                if r.startswith("pass:"):
+                    p = r.split(":", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    return (p or "") + "\n"
+
+
 # ⛔ SUL SERVER I COMANDI NELLA SCATOLA NON PASSANO DA ssh — `[M]` 24 set 2026,
 #   dieci agenti sullo stesso server: `ssh` verso se' stesso chiude le
 #   connessioni («Connection closed by 192.168.0.2 port 22», MaxStartups) e
@@ -70,7 +86,7 @@ def _dentro_locale(self, riga, secondi=90):
     for _tentativo in range(3):
         try:
             r = subprocess.run(["sudo", "-S", "-p", "", "podman", "exec", self.contenitore,
-                                "sh", "-c", riga], input="nicfio\n", capture_output=True,
+                                "sh", "-c", riga], input=_parola_sudo(), capture_output=True,
                                text=True, errors="replace", timeout=secondi)
         except subprocess.TimeoutExpired:
             return None, "(nessuna risposta in %d s)" % secondi

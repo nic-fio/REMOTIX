@@ -46,7 +46,7 @@ DIR=/var/lib/rete15-d007
 REG=$DIR/registro.log
 
 dentro() {
-	printf 'nicfio\n' | sudo -S -p '' podman exec "$NOME" sh -c "$1"
+	printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman exec "$NOME" sh -c "$1"
 }
 
 case "$AZIONE" in
@@ -60,7 +60,7 @@ accendi)
 		[ -x "$BIN" ] || { echo "⛔ il binario «$BIN» non c'e'"; exit 2; }
 		ESEGUI=$DIR/remotix
 		dentro "systemctl stop $UNITA 2>/dev/null; true"
-		printf 'nicfio\n' | sudo -S -p '' podman cp "$BIN" "$NOME:$ESEGUI" || exit 1
+		printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman cp "$BIN" "$NOME:$ESEGUI" || exit 1
 		echo "⭐ binario $(sha256sum "$BIN" | cut -c1-16) → $NOME:$ESEGUI"
 	fi
 	# ⛔ Solo la NOSTRA unita': rete11-server non si tocca.

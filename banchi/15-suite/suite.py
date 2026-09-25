@@ -82,7 +82,7 @@ def _dentro_locale(self, riga, secondi=90):
     import subprocess
     try:
         r = subprocess.run(["sudo", "-S", "-p", "", "podman", "exec", self.contenitore,
-                            "sh", "-c", riga], input="nicfio\n", capture_output=True,
+                            "sh", "-c", riga], input=_parola_sudo(), capture_output=True,
                            text=True, errors="replace", timeout=secondi)
     except subprocess.TimeoutExpired:
         return None, "(nessuna risposta in %d s)" % secondi
@@ -95,6 +95,22 @@ DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 MODELLO_INQUILINO = re.compile(r"^c15[0-9]{3}u[0-9]+$")
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
 DA_CODICE = {VERDE: PASS, ROSSO: FAIL, CIECO: BLOCKED}
+
+
+def _parola_sudo():
+    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
+    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
+    nei banchi: sono nel deposito."""
+    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    if p is None:
+        try:
+            for r in open(os.path.expanduser("~/SERVER.ssh")):
+                if r.startswith("pass:"):
+                    p = r.split(":", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    return (p or "") + "\n"
 
 
 # ═══════════════════════════════════════════════════════════════════════════

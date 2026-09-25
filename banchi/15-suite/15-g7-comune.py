@@ -22,19 +22,34 @@ import signal
 import subprocess
 import time
 
+
+def _parola_sudo():
+    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
+    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
+    nei banchi: sono nel deposito."""
+    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    if p is None:
+        try:
+            for r in open(os.path.expanduser("~/SERVER.ssh")):
+                if r.startswith("pass:"):
+                    p = r.split(":", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    return (p or "") + "\n"
+
 QUI = os.path.dirname(os.path.abspath(__file__))
 SERVER_SH = os.path.join(QUI, "15-g7-server.sh")
 PORTE_G7 = {"gnome": 8611, "kde": 8612, "xfce": 8613, "lxqt": 8614}
 DIR_G7 = "/var/lib/rete15-g7"
 REGISTRO_G7 = DIR_G7 + "/registro.log"
-PAROLA_SUDO = "nicfio\n"
 
 
 def sudo(argv, secondi=60, entrata=""):
     """(codice, uscita) di `argv` con sudo, sul server (locale)."""
     try:
         r = subprocess.run(["sudo", "-S", "-p", ""] + list(argv),
-                           input=PAROLA_SUDO + entrata, capture_output=True,
+                           input=_parola_sudo() + entrata, capture_output=True,
                            text=True, errors="replace", timeout=secondi)
     except subprocess.TimeoutExpired:
         return None, "(nessuna risposta in %d s)" % secondi

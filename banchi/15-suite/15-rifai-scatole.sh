@@ -17,7 +17,7 @@ esito=0
 for d in $DESKTOP; do
 	echo "=== $d $(date +%T)"
 	for passo in accendi prodotto server; do
-		if ! printf 'nicfio\n' | sudo -S -p '' bash 11-accendi.sh "$passo" "$d" >"/tmp/rifai-$d-$passo.log" 2>&1; then
+		if ! printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' bash 11-accendi.sh "$passo" "$d" >"/tmp/rifai-$d-$passo.log" 2>&1; then
 			echo "⛔ $d $passo non riuscito: $(tail -2 "/tmp/rifai-$d-$passo.log" | tr '\n' ' ')"
 			esito=1
 		else

@@ -42,7 +42,7 @@ DIR=/var/lib/rete15-d006
 REG=$DIR/registro.log
 
 dentro() {
-	printf 'nicfio\n' | sudo -S -p '' podman exec "$NOME" sh -c "$1"
+	printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman exec "$NOME" sh -c "$1"
 }
 
 case "$AZIONE" in
@@ -51,7 +51,7 @@ accendi)
 	shift 1 2>/dev/null || true
 	[ -s "$PAGINA" ] || { echo "⛔ la pagina «$PAGINA» non c'e'"; exit 2; }
 	dentro "mkdir -p $DIR"
-	printf 'nicfio\n' | sudo -S -p '' podman cp "$PAGINA" "$NOME:$DIR/pagina.html" || exit 1
+	printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman cp "$PAGINA" "$NOME:$DIR/pagina.html" || exit 1
 	echo "⭐ pagina $(sha256sum "$PAGINA" | cut -c1-16) → $NOME:$DIR/pagina.html"
 	# ⛔ Solo la NOSTRA unita': rete11-server non si tocca.
 	dentro "

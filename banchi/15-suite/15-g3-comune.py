@@ -22,6 +22,22 @@ import sys
 import time
 
 QUI = os.path.dirname(os.path.abspath(__file__))
+
+
+def _parola_sudo():
+    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
+    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
+    nei banchi: sono nel deposito."""
+    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    if p is None:
+        try:
+            for r in open(os.path.expanduser("~/SERVER.ssh")):
+                if r.startswith("pass:"):
+                    p = r.split(":", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    return (p or "") + "\n"
 sys.path.insert(0, QUI)
 import suite as S                                                     # noqa: E402
 
@@ -159,7 +175,7 @@ def uccisi_dal_server():
     la prova): si confrontano prima e dopo.  [] se non si leggono."""
     import subprocess
     try:
-        r = subprocess.run(["sudo", "-S", "-p", "", "dmesg"], input="nicfio\n",
+        r = subprocess.run(["sudo", "-S", "-p", "", "dmesg"], input=_parola_sudo(),
                            capture_output=True, text=True, timeout=20)
         return [x for x in r.stdout.splitlines() if "Killed process" in x]
     except Exception:                            # noqa: BLE001

@@ -52,7 +52,7 @@ DIR=/var/lib/rete15-g7
 REG=$DIR/registro.log
 
 dentro() {
-	printf 'nicfio\n' | sudo -S -p '' podman exec "$NOME" sh -c "$1"
+	printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' podman exec "$NOME" sh -c "$1"
 }
 
 case "$AZIONE" in

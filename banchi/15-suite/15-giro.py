@@ -58,10 +58,25 @@ RETE11 = "/media/REMOTIX/rete11"
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 BROWSER = ("firefox", "chrome")
 TETTO_S = 600
-PAROLA_SUDO = "nicfio\n"
 SISTEMA = "Debian 13 · labwc senza schermo 3840x2160 · i5-13500T, Intel UHD 770"
 INQUILINO = re.compile(r"^c[0-9]+b?u[0-9]+$")
 _serratura = threading.Lock()
+
+
+def _parola_sudo():
+    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
+    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
+    nei banchi: sono nel deposito."""
+    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    if p is None:
+        try:
+            for r in open(os.path.expanduser("~/SERVER.ssh")):
+                if r.startswith("pass:"):
+                    p = r.split(":", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    return (p or "") + "\n"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -92,7 +107,7 @@ def leggi_prove(filtro=""):
 #  LA MACCHINA: scatole, binario, pagina, commit
 # ═══════════════════════════════════════════════════════════════════════════
 def sudo(comando, secondi=120):
-    r = subprocess.run(["sudo", "-S", "-p", "", "sh", "-c", comando], input=PAROLA_SUDO,
+    r = subprocess.run(["sudo", "-S", "-p", "", "sh", "-c", comando], input=_parola_sudo(),
                        capture_output=True, text=True, errors="replace", timeout=secondi)
     return r.returncode, (r.stdout + r.stderr).strip()
 
