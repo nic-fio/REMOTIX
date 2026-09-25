@@ -143,6 +143,11 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
         "devtools.console.stdout.content": True,
     }
     prefs.update(profilo_prefs or {})
+    # ⭐ `REMOTIX_FF_PREFS='{"pref": valore}'`: preferenze in piu' per il Firefox
+    #   del banco, senza toccare le guide (es. `media.hardware-video-decoding.
+    #   enabled` per confrontare decodifica hardware e software, fase 16).
+    #   Vuota o assente: nessun effetto.
+    prefs.update(json.loads(os.environ.get("REMOTIX_FF_PREFS") or "{}"))
     with open(os.path.join(profilo, "user.js"), "w") as f:
         for k, v in prefs.items():
             f.write('user_pref("%s", %s);\n' % (k, json.dumps(v)))
