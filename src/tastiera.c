@@ -850,8 +850,8 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 	 */
 	if (carattere > 0x10FFFF || (carattere >= 0xD800 && carattere <= 0xDFFF))
 	{
-		registro_dice(REG_TASTIERA, "carattere U+%X fuori dai valori scalari Unicode: rifiutato",
-		              carattere);
+		/* ⛔ Fase 16 §12: nemmeno qui il valore — e' quel che e' stato battuto. */
+		registro_dice(REG_TASTIERA, "carattere fuori dai valori scalari Unicode: rifiutato");
 		return -1;
 	}
 
@@ -937,15 +937,16 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 		 *     chi legge il registro sei ore dopo.
 		 */
 		registro_dice(REG_TASTIERA,
-		              "U+%04X non e' producibile con la disposizione %s: NON mandato niente "
-		              "(RCP.md §7.3)",
-		              carattere, t->nome);
+		              "un carattere non e' producibile con la disposizione %s: NON mandato "
+		              "niente (RCP.md §7.3; quale, non si scrive — fase 16 §12)",
+		              t->nome);
 		return 0;
 	}
 
 	memcpy(codici, migliori, migliori_n * sizeof *migliori);
 	*n = migliori_n;
-	registro_dettaglio(REG_TASTIERA, "U+%04X ⇒ %zu posizioni, l'ultima e' %u", carattere,
-	                   migliori_n, (unsigned)migliori[migliori_n - 1]);
+	/* ⛔ Fase 16 §12: ne' il carattere ne' il tasto che lo fa — i due insieme
+	 *    sono la battuta, una riga per lettera. */
+	registro_dettaglio(REG_TASTIERA, "un carattere ⇒ %zu posizioni", migliori_n);
 	return 1;
 }

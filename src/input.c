@@ -423,13 +423,18 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 			if (in->quanti_tasti)
 				in->quanti_tasti--;
 		}
+		/* ⛔ Fase 16 §12: il codice solo se e' un modificatore — gli altri
+		 *    tasti sono caratteri battuti, e nel registro si chiamano «tasto». */
+		char quale[24] = "";
+		if (registro_tasto_dicibile(codice))
+			g_snprintf(quale, sizeof quale, " 0x%X", codice);
 		registro_dice(AREA,
-		              "⛔⛔ il rilascio del tasto 0x%X NON PARTE: era premuto su una tastiera che "
+		              "⛔⛔ il rilascio del tasto%s NON PARTE: era premuto su una tastiera che "
 		              "il compositore ha gia' tolto (ricambio n. %u), e `handle_key` scarta in "
 		              "silenzio un rilascio sul dispositivo nuovo (`meta-eis-client.c:638-645`).  "
 		              "⛔ Un modificatore che resta giu' rende il desktop inservibile (`RCP.md` "
 		              "§11): la cura e' rilasciare PRIMA del ricambio",
-		              codice, in->ricambi_tastiera);
+		              quale, in->ricambi_tastiera);
 		return -1;
 	}
 
@@ -1945,9 +1950,9 @@ int input_lettera(Input *in, uint32_t carattere)
 		 *    disposizione c'e' e non fa quella lettera.  Qui la disposizione
 		 *    non c'e' affatto, ed e' un guasto — confonderli toglierebbe a chi
 		 *    legge il registro l'unica differenza che conta. */
-		registro_dice(AREA, "⚠ LETTERA U+%04X non mandata: nessuna disposizione (libei non ha "
-		                    "ancora consegnato una keymap)",
-		              carattere);
+		/* ⛔ Fase 16 §12: il carattere battuto NON si scrive. */
+		registro_dice(AREA, "⚠ LETTERA non mandata: nessuna disposizione (libei non ha "
+		                    "ancora consegnato una keymap)");
 		return -1;
 	}
 	if (!in->tastiera_dev || !in->tastiera_attiva)
@@ -2330,9 +2335,9 @@ static int lettera_wlr(Input *in, uint32_t carattere)
 
 	if (!in->disposizione)
 	{
-		registro_dice(AREA, "⚠ LETTERA U+%04X non mandata: nessuna disposizione (la keymap della "
-		                    "tastiera virtuale non si e' aperta)",
-		              carattere);
+		/* ⛔ Fase 16 §12: il carattere battuto NON si scrive. */
+		registro_dice(AREA, "⚠ LETTERA non mandata: nessuna disposizione (la keymap della "
+		                    "tastiera virtuale non si e' aperta)");
 		return -1;
 	}
 	if (wlr_input_caduto(in->wlr))

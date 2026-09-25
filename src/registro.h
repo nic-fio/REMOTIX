@@ -41,15 +41,67 @@
  *   sola invece di setacciare `wt` e `figlio`. */
 #define REG_BUDGET "budget"
 
-void registro_dice(const char *area, const char *fmt, ...)
-	__attribute__((format(printf, 2, 3)));
+/* ⭐ Le quattro funzioni che scrivono sono MACRO sopra quattro `_in`: la
+ *    macro ci mette `__FILE__` e `__LINE__`, che vanno nel journal come
+ *    `CODE_FILE`/`CODE_LINE` (fase 16 §12).  ⚠ Sulla riga di `stderr` non
+ *    compaiono: quella resta byte per byte com'era. */
+void registro_dice_in(const char *file, int linea, const char *area,
+                      const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+#define registro_dice(...) registro_dice_in(__FILE__, __LINE__, __VA_ARGS__)
 
 /* Le righe di dettaglio del trasporto: molte, e utili solo quando si sta
  * cercando qualcosa.  Spente di serie. */
 void registro_parlantina(bool acceso);
 bool registro_parla_molto(void);
-void registro_dettaglio(const char *area, const char *fmt, ...)
-	__attribute__((format(printf, 2, 3)));
+void registro_dettaglio_in(const char *file, int linea, const char *area,
+                           const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+#define registro_dettaglio(...) \
+	registro_dettaglio_in(__FILE__, __LINE__, __VA_ARGS__)
+
+/*
+ * ---------------------------------------------------------------------------
+ * ⭐⭐ IL JOURNAL DI SISTEMA — fase 16 §12, 25 settembre 2026.
+ *
+ * Con `--journal` ogni riga va ANCHE al journal di systemd, col protocollo
+ * nativo (un datagramma `CHIAVE=valore` su `/run/systemd/journal/socket`,
+ * senza libsystemd), con i campi che servono a filtrare:
+ *
+ *      MESSAGE            la riga senza l'ora (l'ora la mette il journal)
+ *      PRIORITY           3 se il corpo comincia con ⛔, 4 con ⚠, 7 per la
+ *                         parlantina, 6 tutto il resto
+ *      SYSLOG_IDENTIFIER  remotix        (⇒ `journalctl -t remotix`)
+ *      REMOTIX_AREA       l'area         (⇒ `REMOTIX_AREA=rcp`)
+ *      REMOTIX_INQUILINO  l'identita', solo se la riga ne ha una
+ *      CODE_FILE/LINE     chi l'ha scritta
+ *
+ * ⛔ La riga su `stderr` NON cambia e NON si spegne: il journal si AGGIUNGE.
+ *    I banchi leggono il file, e un journal che non risponde (pieno, fermo,
+ *    assente in un contenitore) non deve costare nemmeno una riga.  ⇒ Un
+ *    `sendmsg` non bloccante per riga, e se fallisce si tace.
+ * ⚠ Non attraversa l'`exec`: il figlio la riceve come `--journal` nella sua
+ *   riga di comando, come `--parlantina` (`figlio.c`, `diventa_ed_esegui()`).
+ * ⚠ E il figlio, dopo `pam_systemd`, sta nello scope della SESSIONE e non
+ *   nell'unita' del server: ⇒ `journalctl -t remotix`, non solo `-u`.
+ *
+ * Torna false se il socket non si apre (e allora il journal resta spento).
+ */
+bool registro_journal(bool acceso);
+bool registro_nel_journal(void);
+
+/*
+ * ⛔⛔ I TASTI NEL REGISTRO — fase 16 §12: «le battute si registrano come
+ *      "tasto", mai come carattere».  Un codice evdev E' un carattere, a meno
+ *      della disposizione: una fila di `codice evdev 30, 48, 46` e' una parola.
+ *
+ * ⭐ Tranne i modificatori (Ctrl, Maiusc, Alt, Meta, BlocMaiusc): non dicono
+ *    niente di quel che si scrive, e sono proprio quelli che restano giu' e
+ *    rendono il desktop inservibile (`RCP.md` §11) — chi indaga ha bisogno
+ *    di sapere QUALE.  ⇒ Questa e' la sola domanda che un chiamante deve fare
+ *    prima di scrivere un codice di tasto; la risposta sta in un posto solo.
+ */
+bool registro_tasto_dicibile(unsigned codice_evdev);
 
 /*
  * ---------------------------------------------------------------------------
@@ -101,11 +153,16 @@ void registro_identita(const char *chi);
 /* La riga di UNA sessione, scritta da un processo che ne serve molte.
  * ⚠ `chi` NULL o "" ⇒ vale l'identita' di processo; se non c'e' nemmeno quella,
  *   la riga esce muta, che e' la verita'. */
-void registro_dice_di(const char *area, const char *chi, const char *fmt, ...)
-	__attribute__((format(printf, 3, 4)));
-void registro_dettaglio_di(const char *area, const char *chi, const char *fmt,
-                           ...)
-	__attribute__((format(printf, 3, 4)));
+void registro_dice_di_in(const char *file, int linea, const char *area,
+                         const char *chi, const char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
+#define registro_dice_di(...) \
+	registro_dice_di_in(__FILE__, __LINE__, __VA_ARGS__)
+void registro_dettaglio_di_in(const char *file, int linea, const char *area,
+                              const char *chi, const char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
+#define registro_dettaglio_di(...) \
+	registro_dettaglio_di_in(__FILE__, __LINE__, __VA_ARGS__)
 
 /* Millisecondi da un orologio monotono — l'ora che RCP vuole. */
 uint64_t registro_ora_ms(void);

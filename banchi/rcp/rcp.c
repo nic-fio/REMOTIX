@@ -4546,6 +4546,22 @@ static void rilascia_al_distacco(rcp_sessione *s, const char *perche)
  * **se il canale di controllo e' ancora utilizzabile**» — e qui di solito lo e'. */
 static void viola_input(rcp_sessione *s, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
+
+/* ⭐ I MODIFICATORI, gli unici tasti il cui codice va nel registro (fase 16
+ *    §12): Ctrl 29/97, Maiusc 42/54, Alt 56/100, BlocMaiusc 58, Meta 125/126.
+ * ⚠ Gemello di `registro_tasto_dicibile()` (`src/registro.c`): questo modulo
+ *   si monta anche senza il registro del server (`banchi/rcp/`), e quindi la
+ *   lista la porta con se'. */
+static bool tasto_dicibile(unsigned c)
+{
+	switch (c) {
+	case 29: case 42: case 54: case 56: case 58:
+	case 97: case 100: case 125: case 126:
+		return true;
+	default:
+		return false;
+	}
+}
 static void viola_input(rcp_sessione *s, const char *fmt, ...)
 {
 	char d[224];
@@ -4802,8 +4818,19 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		}
 		s->inp_ultimo_id = id;
 		s->inp_ultimo_istante_us = istante;
-		snprintf(cosa, sizeof cosa, "codice evdev %u (%#x) %s", codice, codice,
-		         premuto ? "premuto" : "rilasciato");
+		/* ⛔⛔ FASE 16 §12: «le battute si registrano come "tasto", mai come
+		 *      carattere» — e un codice evdev E' un carattere, a meno della
+		 *      disposizione: questa riga, una per battuta, faceva del
+		 *      registro un registratore di tasti.  ⭐ Il codice resta per i
+		 *      PULSANTI e per i MODIFICATORI (`tasto_dicibile()`), che non
+		 *      dicono niente di quel che si scrive e sono quelli che restano
+		 *      giu' (§11). */
+		if (tipo == T_PULSANTE || tasto_dicibile(codice))
+			snprintf(cosa, sizeof cosa, "codice evdev %u (%#x) %s", codice,
+			         codice, premuto ? "premuto" : "rilasciato");
+		else
+			snprintf(cosa, sizeof cosa, "tasto %s",
+			         premuto ? "premuto" : "rilasciato");
 		if (!ha_canale_input(s))
 			esito = -1;
 		else if (tipo == T_PULSANTE)
@@ -4877,7 +4904,10 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		}
 		s->inp_ultimo_id = id;
 		s->inp_ultimo_istante_us = istante;
-		snprintf(cosa, sizeof cosa, "U+%04X", car);
+		/* ⛔ FASE 16 §12: il carattere NON si scrive (vedi POSIZIONE_TASTO
+		 *    qui sopra).  ⚠ I due `viola_input` di sopra lo citano ancora:
+		 *    sono valori che una lettera non puo' essere, non battute. */
+		snprintf(cosa, sizeof cosa, "«un carattere»");
 		esito = ha_canale_input(s) ? s->g.input_lettera(s->g.ctx, car) : -1;
 		break;
 	}

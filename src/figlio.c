@@ -1006,12 +1006,13 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char a_tetto[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Quindici: le nove fisse, il NULL, e le CINQUE parole facoltative in
-	 *   coda — `--parlantina`, `--qualita-risale`, `--tetto-banda-mbit` e il suo
-	 *   numero, e `--niente-audio-silenzio`.  Si aggiungono solo se il padre le
-	 *   ha (vedi sotto).  ⛔ Il conto si rifa' a ogni parola nuova: un `argv[]`
-	 *   troppo corto non da' un errore, scrive oltre la fine dello stack. */
-	char *argv[15];
+	/* ⚠ Sedici: le nove fisse, il NULL, e le SEI parole facoltative in coda —
+	 *   `--parlantina`, `--journal`, `--qualita-risale`, `--tetto-banda-mbit` e
+	 *   il suo numero, e `--niente-audio-silenzio`.  Si aggiungono solo se il
+	 *   padre le ha (vedi sotto).  ⛔ Il conto si rifa' a ogni parola nuova: un
+	 *   `argv[]` troppo corto non da' un errore, scrive oltre la fine dello
+	 *   stack. */
+	char *argv[16];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -1224,6 +1225,10 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 */
 	if (registro_parla_molto())
 		argv[na++] = (char *)"--parlantina";
+	/* ⭐ E il journal (fase 16 §12), per la stessa ragione esatta: il socket
+	 *    del padre e' CLOEXEC, e il figlio ne apre uno suo. */
+	if (registro_nel_journal())
+		argv[na++] = (char *)"--journal";
 	/*
 	 * ⛔⭐⭐ E LE **TRE** CURE DELLA FASE 9 PASSANO DI QUI, per la stessa ragione
 	 *      esatta della parlantina qui sopra — e non e' un'analogia, e' lo
@@ -6877,6 +6882,8 @@ void figlio_vive(int argc, char **argv)
 	for (int i = 9; i < argc; i++) {
 		if (strcmp(argv[i], "--parlantina") == 0)
 			registro_parlantina(true);
+		else if (strcmp(argv[i], "--journal") == 0)
+			registro_journal(true); /* ⚠ se non si apre, resta stderr */
 		else if (strcmp(argv[i], "--qualita-risale") == 0)
 			f9_risale = true;
 		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)

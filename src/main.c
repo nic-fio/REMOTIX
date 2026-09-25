@@ -178,6 +178,12 @@ static void aiuto(const char *nome)
 	        "                    Senza, non scrive niente.  Serve al confronto\n"
 	        "                    a pixel di F2.6\n"
 	        "  --parlantina      registro di dettaglio\n"
+	        "  --journal         ⭐ fase 16 §12: ogni riga del registro va ANCHE\n"
+	        "                    al journal di systemd, coi campi REMOTIX_AREA,\n"
+	        "                    REMOTIX_INQUILINO, PRIORITY (3 ⛔, 4 ⚠, 6, 7\n"
+	        "                    parlantina) e SYSLOG_IDENTIFIER=remotix.  La\n"
+	        "                    riga su stderr resta identica; vale anche nei\n"
+	        "                    figli (journalctl -t remotix)\n"
 	        "\n"
 	        "  ⭐⭐⭐ FASE 9 — LE CINQUE CURE, E DAL 24 AGOSTO 2026 SONO ACCESE\n"
 	        "     TUTT'E CINQUE (decisione dell'utente, dopo averle guardate\n"
@@ -1525,6 +1531,7 @@ int main(int argc, char **argv)
 	time_t ultimo_controllo_cert;
 	uint64_t ultimo_ripasso_locali = 0;
 	uint64_t ultimo_conto_guardiano = 0;
+	bool journal_chiesto = false;   /* --journal, fase 16 §12 */
 	int esito = 1;
 
 	/* ⛔⭐ E QUESTA E' LA PRIMA RIGA DEL PROGRAMMA, PRIMA DI QUALUNQUE ALTRA
@@ -1580,6 +1587,11 @@ int main(int argc, char **argv)
 			dir_rilievo = argv[++i];
 		else if (strcmp(a, "--parlantina") == 0)
 			registro_parlantina(true);
+		/* ⭐ Fase 16 §12 — il riquadro sta in `registro.h`.  ⚠ Se il socket
+		 *   non si apre si dice all'avvio (qui sotto) e si va avanti: il
+		 *   registro su `stderr` non dipende dal journal. */
+		else if (strcmp(a, "--journal") == 0)
+			journal_chiesto = true;
 		/* ⛔⭐ §5.3 — il secondo dei tre orologi, e il documento vuole che sia
 		 *     configurabile: *«il secondo e il terzo sono configurabili, con
 		 *     quei valori come predefiniti»*.
@@ -1869,7 +1881,21 @@ int main(int argc, char **argv)
 	signal(SIGTERM, al_segnale);
 	signal(SIGPIPE, SIG_IGN);
 
+	/* ⭐ Il journal si accende PRIMA della prima riga, cosi' ci va anche lei. */
+	int journal_errno = 0;
+	if (journal_chiesto && !registro_journal(true))
+		journal_errno = errno;
 	registro_dice(REG_AVVIO, "REMOTIX — fase 1, il filo nudo");
+	if (journal_chiesto && !journal_errno)
+		registro_dice(REG_AVVIO,
+		              "registro anche nel journal di systemd (--journal): "
+		              "SYSLOG_IDENTIFIER=remotix, campi REMOTIX_AREA e "
+		              "REMOTIX_INQUILINO — la riga qui resta identica");
+	else if (journal_chiesto)
+		registro_dice(REG_AVVIO,
+		              "⚠ --journal chiesto ma il socket non si apre (%s): il "
+		              "registro resta SOLO qui",
+		              strerror(journal_errno));
 	/* ⭐ FASE 12 — quale desktop accendera' questo server, detto all'avvio: con
 	 *    GNOME e KDE insieme la scelta e' ambigua, e si legge qui invece di
 	 *    scoprirla da un desktop che non e' quello atteso

@@ -6,10 +6,18 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
 
 static bool parlantina;
+
+/* ⭐ Il journal (riquadro in `registro.h`): -1 = spento.  ⚠ Si apre UNA volta,
+ *    all'accensione e non alla prima riga: `riga()` gira in piu' fili, e due
+ *    fili che aprono insieme lascerebbero un descrittore orfano. */
+static int journal_fd = -1;
 
 /* ⭐ L'identita' di questo processo — il riquadro sta in `registro.h`.  ⚠ Una
  *    COPIA e non un puntatore: chi la posa passa spesso un `argv`, e un
@@ -29,6 +37,89 @@ void registro_identita(const char *chi)
 	snprintf(identita, sizeof identita, "%s", chi);
 }
 
+bool registro_journal(bool acceso)
+{
+	if (!acceso) {
+		if (journal_fd >= 0)
+			close(journal_fd);
+		journal_fd = -1;
+		return true;
+	}
+	if (journal_fd >= 0)
+		return true;
+	/* ⛔ NON BLOCCANTE: un journal intasato non deve fermare il ciclo che
+	 *    serve lo schermo — la riga su `stderr` c'e' comunque.  ⚠ E CLOEXEC:
+	 *    il figlio nasce con `execve` e apre il suo (`--journal`). */
+	journal_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+	return journal_fd >= 0;
+}
+
+bool registro_nel_journal(void) { return journal_fd >= 0; }
+
+bool registro_tasto_dicibile(unsigned c)
+{
+	/* `linux/input-event-codes.h`: LEFTCTRL 29, LEFTSHIFT 42, RIGHTSHIFT 54,
+	 * LEFTALT 56, CAPSLOCK 58, RIGHTCTRL 97, RIGHTALT 100, LEFTMETA 125,
+	 * RIGHTMETA 126.  ⚠ A mano e non con l'intestazione: il numero e' del
+	 * protocollo (`RCP.md` §7.3, «codice evdev»), non della macchina. */
+	switch (c) {
+	case 29: case 42: case 54: case 56: case 58:
+	case 97: case 100: case 125: case 126:
+		return true;
+	default:
+		return false;
+	}
+}
+
+/*
+ * ⭐ Una riga al journal, col protocollo nativo — `systemd.journal-fields(7)`
+ *    e la pagina «Native Journal Protocol» di systemd.
+ *
+ * ⚠ Il MESSAGE va nella forma BINARIA (nome, a-capo, lunghezza in 64 bit
+ *   little-endian, byte): e' l'unica che regge un a-capo dentro il valore, e
+ *   un corpo scritto da `%s` altrui puo' averne.  Gli altri campi sono nostri
+ *   (area costante, identita' gia' ripulita, `__FILE__`) e vanno nella forma
+ *   semplice.
+ * ⛔ `sendmsg` con l'indirizzo a ogni riga e NON `connect` una volta: un
+ *    socket connesso resta morto per sempre se journald riparte, uno senza
+ *    connessione ritrova il nuovo al datagramma dopo.
+ */
+static void al_journal(const char *file, int linea, const char *area,
+                       const char *chi, int priorita, const char *msg,
+                       size_t msg_n)
+{
+	static const struct sockaddr_un dove = {
+		.sun_family = AF_UNIX,
+		.sun_path = "/run/systemd/journal/socket",
+	};
+	char campi[384];
+	uint8_t lung[8];
+	int n = snprintf(campi, sizeof campi,
+	                 "PRIORITY=%d\nSYSLOG_IDENTIFIER=remotix\n"
+	                 "REMOTIX_AREA=%s\n%s%s%sCODE_FILE=%s\nCODE_LINE=%d\n"
+	                 "MESSAGE\n",
+	                 priorita, area, chi ? "REMOTIX_INQUILINO=" : "",
+	                 chi ? chi : "", chi ? "\n" : "", file ? file : "?", linea);
+	if (n < 0 || (size_t)n >= sizeof campi)
+		return;
+	for (int i = 0; i < 8; i++)
+		lung[i] = (uint8_t)((uint64_t)msg_n >> (8 * i));
+	struct iovec iov[4] = {
+		{campi, (size_t)n},
+		{lung, sizeof lung},
+		{(void *)msg, msg_n},
+		{(void *)"\n", 1},
+	};
+	struct msghdr mh = {
+		.msg_name = (void *)&dove,
+		.msg_namelen = sizeof dove,
+		.msg_iov = iov,
+		.msg_iovlen = 4,
+	};
+	ssize_t r = sendmsg(journal_fd, &mh, MSG_NOSIGNAL | MSG_DONTWAIT);
+	(void)r; /* ⚠ si tace: il canale che resta e' `stderr`, e la riga c'e' */
+}
+
 uint64_t registro_ora_ms(void)
 {
 	struct timespec ts;
@@ -36,7 +127,8 @@ uint64_t registro_ora_ms(void)
 	return (uint64_t)ts.tv_sec * 1000u + (uint64_t)(ts.tv_nsec / 1000000);
 }
 
-static void riga(const char *area, const char *chi, const char *fmt, va_list ap)
+static void riga(const char *file, int linea, bool dettaglio, const char *area,
+                 const char *chi, const char *fmt, va_list ap)
 {
 	struct timespec ts;
 	struct tm tm;
@@ -92,7 +184,12 @@ static void riga(const char *area, const char *chi, const char *fmt, va_list ap)
 	const char *id = (chi && *chi) ? chi : identita;
 	char idsano[REG_IDENTITA_MAX + 1];
 	int n;
+	/* ⭐ Per il journal: dove comincia la riga senza l'ora (il MESSAGE) e dove
+	 *    comincia il corpo (da cui si legge la gravita'). */
+	int senza_ora, corpo;
+	bool con_id = false;
 	if (id && *id) {
+		con_id = true;
 		/* ⛔ SI RIPULISCE, e non e' diffidenza verso PAM: un `]` o un a-capo
 		 *    dentro l'identificatore spezzerebbe la riga in due, e una riga
 		 *    spezzata e' **plausibile e falsa** — il difetto che la cura del
@@ -116,6 +213,10 @@ static void riga(const char *area, const char *chi, const char *fmt, va_list ap)
 		return;
 	if ((size_t)n > sizeof buf - 2)
 		n = (int)(sizeof buf - 2);
+	senza_ora = (int)strlen(quando) + 5; /* «HH:MM:SS» + «.mmm » */
+	if (senza_ora > n)
+		senza_ora = n;
+	corpo = n;
 	int m = vsnprintf(buf + n, sizeof buf - (size_t)n - 1, fmt, ap);
 	if (m < 0)
 		m = 0;
@@ -136,41 +237,65 @@ static void riga(const char *area, const char *chi, const char *fmt, va_list ap)
 	ssize_t scritti = write(STDERR_FILENO, buf, (size_t)n);
 	(void)scritti; /* ⚠ non c'e' nessun posto dove riferire che il registro
 	                *    non si scrive: l'unico canale sarebbe quello rotto. */
+
+	/* ⭐ E il journal, DOPO `stderr` e solo se acceso: senza `--journal` qui
+	 *    non si arriva, e la riga di sopra e' tutto quel che succede.
+	 * ⭐ La gravita' la dice il segno in TESTA al corpo, che e' la convenzione
+	 *    di tutto il codice: ⛔ e' un guasto, ⚠ un ripiego o un avviso.  ⚠ In
+	 *    testa e non «dovunque»: tante righe normali citano un ⛔ a meta'
+	 *    («ban: … ⛔ …»), e sarebbero tutte errori.
+	 * ⛔ Le righe di PARLANTINA non ci vanno (fase 16, coordinatore): con 16
+	 *    sessioni sono decine di migliaia al minuto, il journal della scatola
+	 *    le strozzerebbe col suo limite di frequenza — perdendo proprio gli
+	 *    eventi — e il suo lavoro finirebbe dentro le misure di carico.  Il
+	 *    journal tiene gli EVENTI (§12); il dettaglio resta nel file. */
+	if (journal_fd >= 0 && !dettaglio) {
+		const char *c = buf + corpo;
+		while (*c == ' ')
+			c++;
+		int prio = strncmp(c, "⛔", strlen("⛔")) == 0 ? 3
+		         : strncmp(c, "⚠", strlen("⚠")) == 0 ? 4 : 6;
+		al_journal(file, linea, area, con_id ? idsano : NULL, prio,
+		           buf + senza_ora, (size_t)(n - 1 - senza_ora));
+	}
 }
 
-void registro_dice(const char *area, const char *fmt, ...)
+void registro_dice_in(const char *file, int linea, const char *area,
+                      const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	riga(area, NULL, fmt, ap);
+	riga(file, linea, false, area, NULL, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dettaglio(const char *area, const char *fmt, ...)
+void registro_dettaglio_in(const char *file, int linea, const char *area,
+                           const char *fmt, ...)
 {
 	va_list ap;
 	if (!parlantina)
 		return;
 	va_start(ap, fmt);
-	riga(area, NULL, fmt, ap);
+	riga(file, linea, true, area, NULL, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dice_di(const char *area, const char *chi, const char *fmt, ...)
+void registro_dice_di_in(const char *file, int linea, const char *area,
+                         const char *chi, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	riga(area, chi, fmt, ap);
+	riga(file, linea, false, area, chi, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dettaglio_di(const char *area, const char *chi, const char *fmt,
-                           ...)
+void registro_dettaglio_di_in(const char *file, int linea, const char *area,
+                              const char *chi, const char *fmt, ...)
 {
 	va_list ap;
 	if (!parlantina)
 		return;
 	va_start(ap, fmt);
-	riga(area, chi, fmt, ap);
+	riga(file, linea, true, area, chi, fmt, ap);
 	va_end(ap);
 }

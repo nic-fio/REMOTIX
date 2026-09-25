@@ -351,6 +351,12 @@ dipendenze:
 	done; \
 	exit $$stato
 
+# ⛔ Fase 16 (25 set 2026): `registro.h` e' diventato un file di MACRO
+#    (`registro_dice` & co. aggiungono __FILE__/__LINE__): un oggetto vecchio
+#    cerca il simbolo che non c'e' piu' e il collegamento cade a meta'.  Ogni
+#    oggetto passa dal registro, quindi dipende da lui — tutti, senza elenco.
+$(OGGETTI): registro.h
+
 # ⛔ `main.c` NON dipende piu' da `sessione.h`, `cattura.h`, `mutter.h` e
 #    `codificatore.h`, e la riga che le toglie e' la stessa decisione di
 #    `DECISIONI.md` §1.10-bis: quei quattro anelli li apre il FIGLIO, che gira
