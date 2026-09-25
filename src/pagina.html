@@ -5905,6 +5905,48 @@ const AUDIO_CUSCINO_MAX_MS = 600; /* oltre, si butta invece di accumulare */
    il cuscino e il confronto scattava per il rumore dell'aritmetica — vedi il
    difetto raccontato dentro `suona()`. */
 const AUDIO_ANCORA_MARGINE_MS = 5;
+/* ⛔⭐ D-006 — 25 settembre 2026, fase 15: su Firefox, con un video nella
+ *     sessione, buchi di 0,1-0,4 s a grappoli (F-013: udibile 89-96 %), su
+ *     Chrome nessuno.  `[M]` dagli orecchi del giro 1 sui quattro desktop:
+ *
+ *     · ogni buco e' un RIARMO — gnome 6 buchi e 6 riarmi, lxqt 16 e 15, xfce
+ *       3 e 3 (+1 pieno), kde 0 e 0; Chrome 0 riarmi dappertutto;
+ *     · e i riarmi arrivano SENZA uno stallo del thread principale lungo
+ *       quanto il cuscino: il timer a 100 ms del banco non ha mai tardato
+ *       oltre 173 ms su GNOME e 142 su XFCE.  ⛔ Quindi «il thread principale
+ *       e' occupato e l'audio lo programma lui» NON basta a spiegarli: con
+ *       250 ms di anticipo uno stallo di 170 non svuota niente;
+ *     · ⭐ quel che gli stessi campioni mostrano e' che su Firefox
+ *       `currentTime` letto dal thread principale e' STANTIO: fino a 77 ms
+ *       (gnome), 118 (lxqt), 204 (lxqt, giro d'integrazione) dietro
+ *       `performance.now()`, poi rientra.  Chrome: mai oltre il rumore.
+ *
+ *   ⇒ Due difetti nostri, e nessuno dei due e' il cuscino:
+ *     1. l'ancora si agganciava a un'ora VECCHIA — e la tirata, che sceglie il
+ *        blocco che sembra piu' in anticipo, sceglie proprio la lettura piu'
+ *        stantia: il cuscino vero restava 250 − S, e il ritardo normale del
+ *        thread lo bucava.  ⇒ `ora_fresca()`: l'ora del contesto si stima dal
+ *        massimo recente di `currentTime − performance.now()`, che una
+ *        lettura stantia non puo' alzare.  Su Chrome non cambia niente;
+ *     2. ogni blocco arrivato oltre il cuscino costava UN CUSCINO INTERO di
+ *        silenzio (il riarmo lo rimette 250 ms nel futuro) piu' le tirate che
+ *        buttavano quel che si era rimesso in scaletta.  ⇒ un ritardo
+ *        passeggero si paga quanto e' lungo: si butta il blocco il cui posto e'
+ *        passato — §6.3 alla lettera — e l'ancora resta.  Si riarma solo se il
+ *        ritardo DURA oltre `AUDIO_TARDI_TOLLERATI_MS` di flusso, cioe' se non
+ *        e' un sobbalzo ma la latenza che e' cambiata.
+ *
+ * ⚠ Il cuscino resta 250 (§5-quater.3, il giudizio e' dell'utente) e la
+ *   latenza fra quel che si vede e quel che si sente non cambia di un ms. */
+const AUDIO_TARDI_TOLLERATI_MS = 120;
+/* Quanto si fida la stima di un'ora che corre davanti a `currentTime`: oltre,
+   non e' una lettura stantia ma un orologio fermo (contesto sospeso, scheda
+   audio che si e' interrotta), e la stima si riparte da capo. */
+const AUDIO_OROLOGIO_STANTIO_MAX_S = 0.5;
+/* Di quanto la stima puo' scendere per secondo: copre la deriva fra
+   l'orologio della scheda e `performance.now()` (`[M]` F-013: 0,07-0,1 %,
+   cioe' ≤ 1 ms/s) con un largo margine, e resta piccolo contro uno stantio. */
+const AUDIO_OROLOGIO_RIENTRO = 0.02;
 
 let AUDIO = null;
 
@@ -5952,6 +5994,9 @@ function audio_conti() {
        non e' servita» per «la cura ha funzionato», che e' la stessa misura e
        la conclusione opposta. */
     scartati_tardivi: a.scartati_tardivi, fuori_ordine: a.fuori_ordine,
+    /* D-006: blocchi buttati per un ritardo passeggero senza riarmare, e il
+       massimo di cui `currentTime` e' stato trovato indietro (ms). */
+    tardi_tollerati: a.tardi_tollerati, orologio_stantio_ms: Math.round(a.oro_stantio_max * 1000),
     doppioni: a.doppioni, recuperati: a.recuperati,
     /* ⛔ `riarmi` e `tirate` ESCONO DI QUI e non solo dalla riga del registro —
      *    21 agosto 2026, ed e' un difetto di banco che ha quasi comprato un
@@ -6015,6 +6060,10 @@ function avvia_audio(wt) {
          numero atteso (QUIC scarta da se' i pacchetti ripetuti), e serve
          perche' il confronto di prima li fermava per caso e questo non piu'. */
     scartati_tardivi: 0, fuori_ordine: 0, doppioni: 0,
+    /* D-006: la tolleranza del ritardo passeggero e la stima dell'ora fresca
+       (vedi `AUDIO_TARDI_TOLLERATI_MS` e `ora_fresca()`). */
+    tardi_tollerati: 0, tardi_da_us: null,
+    oro_scarto: null, oro_p: 0, oro_stantio_max: 0,
     /* I `mancati` che sono rientrati fuori ordine: senza ripagarli, ogni
        sorpasso curato si presenterebbe come una perdita — la cura si
        accuserebbe da sola. */
@@ -6150,6 +6199,7 @@ function avvia_audio(wt) {
        perfetto, senza un errore da nessuna parte. */
     a.base = null;
     a.primo_suono = null;
+    a.oro_scarto = null;   /* D-006: la stima dell'ora fresca riparte col contesto */
     if (a.ctx.state === "suspended") {
       /* ⚠ RIPIEGO DICHIARATO: si tenta, e se il motore lo nega si SCRIVE.  Il
          suono partira' al primo clic, e l'utente deve sapere perche'. */
@@ -6243,6 +6293,30 @@ function avvia_audio(wt) {
     return a.base + ist_us / 1e6 < a.ctx.currentTime;
   }
 
+  /* ⭐ D-006 — L'ORA DEL CONTESTO, FRESCA.  Su Firefox `currentTime` letto dal
+   *   thread principale resta indietro fino a 200 ms (`[M]` F-013), perche' il
+   *   motore la aggiorna con un messaggio che si mette in coda come gli altri.
+   *   ⇒ Si tiene il MASSIMO recente di `currentTime − performance.now()`: una
+   *   lettura stantia lo abbassa, e il massimo non la vede.
+   * ⚠ Il massimo scende piano (`AUDIO_OROLOGIO_RIENTRO`) per seguire la deriva
+   *   fra i due orologi, e si butta se corre davanti a `currentTime` piu' di
+   *   `AUDIO_OROLOGIO_STANTIO_MAX_S`: quello non e' stantio, e' un orologio
+   *   che si e' fermato.  ⛔ E non torna MAI sotto `currentTime`.
+   * ⭐ Su Chrome `currentTime` e' gia' fresco: la stima coincide con lui.
+   * ⚠ `audio_posto_passato()` qui sopra resta su `currentTime`: con un'ora
+   *   stantia butta di MENO, e quel che lascia passare lo giudica `suona()`. */
+  function ora_fresca(ctx) {
+    const t = ctx.currentTime, p = performance.now() / 1000, s = t - p;
+    if (a.oro_scarto === null || p + a.oro_scarto - t > AUDIO_OROLOGIO_STANTIO_MAX_S)
+      a.oro_scarto = s;
+    else
+      a.oro_scarto = Math.max(s, a.oro_scarto - Math.max(0, p - a.oro_p) * AUDIO_OROLOGIO_RIENTRO);
+    a.oro_p = p;
+    const ora = Math.max(t, p + a.oro_scarto);
+    if (ora - t > a.oro_stantio_max) a.oro_stantio_max = ora - t;
+    return ora;
+  }
+
   /* ⛔ `ist_us` NON e' facoltativo: e' l'`istante` di §6.3 del primo campione
    *    del blocco, ed e' quel che ancora la riproduzione al tempo del server
    *    invece che alla successione degli arrivi.  ⚠ Se manca — non dovrebbe
@@ -6285,6 +6359,8 @@ function avvia_audio(wt) {
       if (a.sospesi % 250 === 1) { try { ctx.resume().catch(() => {}); } catch (e) {} }
       a.base = null;
       a.primo_suono = null;
+      a.oro_scarto = null;   /* D-006: a orologio fermo la stima non vale piu' */
+      a.tardi_da_us = null;
       if (a.sospesi === 1 || a.sospesi % 500 === 0)
         nota("⚠ il contesto audio e' «" + ctx.state + "»: il suo orologio e' "
            + "fermo e i blocchi si buttano invece di accumularli — in tutto "
@@ -6301,7 +6377,7 @@ function avvia_audio(wt) {
     s.buffer = buf;
     s.connect(ctx.destination);
 
-    const ora = ctx.currentTime;
+    const ora = ora_fresca(ctx);   /* D-006: non `currentTime`, che su Firefox e' stantio */
     a.passo_us = Math.round(fotogrammi * 1e6 / AUDIO_FREQUENZA);
 
     if (!(ist_us > 0)) {
@@ -6353,6 +6429,24 @@ function avvia_audio(wt) {
                         + "decodificavamo: si butta lui e l'ancora resta dov'e'");
           return;
         }
+        /* ⛔⭐ D-006 — (a) SI PAGA QUANTO DURA, NON UN CUSCINO INTERO.
+         *     Il riarmo rimette questo blocco 250 ms nel futuro: il buco e'
+         *     il suo ritardo PIU' 250 ms, anche quando il ritardo era un
+         *     sobbalzo di 30.  ⇒ Finche' il ritardo non dura oltre
+         *     `AUDIO_TARDI_TOLLERATI_MS` di flusso si butta il blocco — il suo
+         *     posto e' passato, §6.3 — e l'ancora resta: i blocchi dopo il
+         *     sobbalzo arrivano in tempo e suonano al posto loro.
+         * ⚠ `ist_max_us` si aggiorna lo stesso, o il prossimo blocco suonato
+         *   conterebbe questo come un salto sul filo (`salti_suono`). */
+        if (a.tardi_da_us === null) a.tardi_da_us = ist_us;
+        if ((ist_us - a.tardi_da_us) / 1000 < AUDIO_TARDI_TOLLERATI_MS) {
+          a.tardi_tollerati++;
+          if (ist_us > a.ist_max_us) a.ist_max_us = ist_us;
+          scarto_dillo(a, "il suo posto e' passato per un ritardo passeggero: "
+                        + "si butta lui e l'ancora resta dov'e' (D-006)");
+          return;
+        }
+        a.tardi_da_us = null;
         a.riarmi = (a.riarmi || 0) + 1;
         a.base = ora + AUDIO_CUSCINO_MS / 1000 - t;
         quando = a.base + t;
@@ -6446,6 +6540,8 @@ function avvia_audio(wt) {
       /* ⛔ UNA VOLTA SOLA.  Aggiornarlo riaprirebbe la finestra per sempre, ed
          e' precisamente il difetto qui sopra. */
       if (a.primo_suono === null) a.primo_suono = quando;
+      /* D-006: un blocco in tempo chiude il sobbalzo. */
+      a.tardi_da_us = null;
     } else {
       /* Il ripiego dichiarato: la vecchia scaletta per successione. */
       if (a.prossimo < ora + 0.001) {
@@ -6570,7 +6666,10 @@ function avvia_audio(wt) {
     const fine = quando + fotogrammi / AUDIO_FREQUENZA;
     s.onended = () => {
       const i = a.in_volo.indexOf(s); if (i >= 0) a.in_volo.splice(i, 1);
-      if (ctx.currentTime + 0.005 < fine) { a.tagliati++; return; }
+      /* ⛔ D-006: con `currentTime` stantio (Firefox) un blocco finito da
+         solo sembrava fermato prima: `tagliati` a centinaia che non erano
+         buchi.  L'ora fresca lo distingue. */
+      if (ora_fresca(ctx) + 0.005 < fine) { a.tagliati++; return; }
       a.usciti++;
       /* ⭐ E SOLO QUI il metro si aggiorna: questo blocco e' arrivato in fondo,
          cioe' si e' sentito davvero.
