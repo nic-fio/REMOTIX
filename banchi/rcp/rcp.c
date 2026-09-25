@@ -3049,10 +3049,20 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 
 	uint8_t corpo[128];
 	scrittore w = {corpo, sizeof corpo, 0, false};
-	sc_byte(&w, 1); /* 1 = NUOVA */
+	/* ⭐ D-001 (fase 15): lo stato e il desktop VERI, se chi ospita li sa —
+	 *    il perche' sta sui due ganci in `rcp.h`.  ⚠ Senza ganci resta quel
+	 *    che era: `NUOVA` e `sconosciuto`. */
+	bool ripresa = s->g.sessione_ripresa && s->g.sessione_ripresa(s->g.ctx);
+	const char *desktop = s->g.desktop ? s->g.desktop(s->g.ctx) : NULL;
+
+	if (!desktop || !desktop[0])
+		desktop = "sconosciuto";
+	sc_byte(&w, ripresa ? 2 : 1); /* §4.5: 1 = NUOVA, 2 = RIPRESA */
 	sc_u32(&w, tl);
 	sc_u32(&w, ta);
-	sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c'e' compositore */
+	sc_str(&w, desktop);
+	reg(s, "SESSIONE a %s: %s, tela %ux%u, desktop %s", s->utente,
+	    ripresa ? "RIPRESA (il palco c'era gia')" : "NUOVA", tl, ta, desktop);
 	if (!w.pieno) {
 		manda_messaggio(s, T_SESSIONE, corpo, w.len);
 		/* ⛔⭐ IL CANALE VIDEO SI APRE **QUI**, E NON UNA RIGA PIU' SU.

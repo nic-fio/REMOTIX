@@ -464,6 +464,10 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
  *    palco ci sta**, poi il figlio, poi il verdetto — e se il palco non ci sta
  *    esce un CONGEDO invece del silenzio.  E' la cura del difetto **P3**, e il
  *    riquadro lungo sta sulla riga che la fa. */
+/* ⭐ D-004: la tabella della presenza sta piu' giu', col suo riquadro; qui
+ *    serve solo a far partire l'orologio alla nascita del palco. */
+static void presenza_segna(const char *utente, uint64_t ora_ms);
+
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
                               const char *utente)
 {
@@ -490,6 +494,8 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 *   nessuno** (`[M]` §3.4: `grep RCP_BUDGET_PIENO src/*.c` ⇒ zero
 	 *   chiamanti).  Questa e' la riga che gli da' il suo primo mittente. */
 	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
+	/* ⭐ D-001: il palco c'era gia' ⇒ `SESSIONE` dira' `2 = RIPRESA`. */
+	bool ripresa = false;
 
 	if (ammesso && utente && utente[0]) {
 		/* ⛔ «C'era gia'» e «l'ho appena generato» sono due fatti diversi, e la
@@ -497,6 +503,11 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *    si chiede di rimandare il palco — lo sta prendendo adesso, e la
 		 *    domanda produrrebbe un fotogramma doppio. */
 		bool c_era = figli_pid_di(p->f, utente) > 0;
+
+		/* ⭐ D-001 — e «c'era gia'» e' esattamente la RIPRESA di §4.5: il
+		 *    figlio vive quanto la sessione grafica (figlio morto = sessione
+		 *    finita, vedi `congeda_figlio()`). */
+		ripresa = c_era;
 
 		/* ⛔⛔⭐ IL NO SI DICE PRIMA DI FAR NASCERE IL FIGLIO — 25 agosto 2026,
 		 *      difetto **P3** / rilievo **R10-A1**, e questa e' la riga che lo
@@ -599,7 +610,23 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			         "di capacita': la causa e' nella riga di registro "
 			         "precedente",
 			         utente);
-		} else if (c_era) {
+		} else if (!c_era) {
+			/* ⛔⭐ D-004 (fase 15) — L'OROLOGIO DELL'ABBANDONO PARTE ALLA
+			 *     NASCITA, non al primo gesto.
+			 *
+			 * ⛔ Prima la tabella della presenza si riempiva SOLO in
+			 *    `input_al_figlio()`: una sessione aperta e mai toccata non
+			 *    entrava in tabella, e ⛔ **non scadeva mai** — il palco restava
+			 *    vivo per sempre, contro §5.3 («60 minuti senza input»).
+			 * ⭐ Da qui l'orologio conta da quando la sessione e' nata.  ⚠ E SOLO
+			 *    alla nascita: un ri-attacco (`c_era`) NON lo rinnova — §5.3,
+			 *    decisione del 16 agosto 2026: «uno che si attacca e resta a
+			 *    guardare non rinnova piu' niente».
+			 * ⚠ E sovrascrive una casella vecchia dello stesso utente, se ce
+			 *   n'era una rimasta da una sessione finita: una sessione nuova non
+			 *   eredita la scadenza di quella morta. */
+			presenza_segna(utente, registro_ora_ms());
+		} else {
 			/* ⛔ Un figlio che c'era gia' puo' avere il ciclo SPENTO — l'ultima
 			 *    sessione di quell'utente se n'era andata e il palco aveva
 			 *    smesso di catturare.  ⚠ Gli si chiede il fotogramma tenuto
@@ -619,7 +646,9 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		budget_riga_verdetto(utente, senza_palco[0] == '\0', no_motivo,
 		                     rcp_tetto(), senza_palco);
 	}
-	trasporto_verdetto(p->t, pratica, ammesso);
+	/* ⛔ `ripresa` solo se entra davvero: con un congedo in arrivo non c'e'
+	 *    nessuna `SESSIONE` da riempire. */
+	trasporto_verdetto(p->t, pratica, ammesso, ripresa && !senza_palco[0]);
 
 	/* ⛔⭐ E IL CONGEDO ESCE QUI, DOPO IL VERDETTO — e l'ordine e' misurato, non
 	 *     estetico.  Tre ragioni, tutte necessarie:
@@ -1380,6 +1409,12 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	 *     palco morto e' peggio di nessun numero — fa concedere una tela che
 	 *     nessun fotogramma avra' mai. */
 	wt_palco_dimentica(utente);
+	/* ⭐ D-004 — e la sua casella nella tabella della presenza: senza palco
+	 *    non c'e' niente da far scadere, e una casella rimasta farebbe
+	 *    chiedere al figlio, un'ora dopo, di chiudere una sessione che non
+	 *    c'e' piu' (la riga «⛔ §5.3 … NON e' partita» per un guasto che non
+	 *    esiste).  Il prossimo palco la riaprira' alla nascita. */
+	presenza_dimentica(utente);
 
 	/*
 	 * ⭐⭐⭐ §7.6, IL GEMELLO — E STA QUI, NON NEL FIGLIO.  Difetto trovato dal
@@ -1840,6 +1875,26 @@ int main(int argc, char **argv)
 	 *    scoprirla da un desktop che non e' quello atteso
 	 *    (`DECISIONI.md` §4.6-duodetricies). */
 	registro_dice(REG_AVVIO, "il desktop di questa macchina: %s", sessione_desktop_spiega());
+	/* ⭐ D-001 — e lo stesso fatto, col nome di §4.5, va nel `SESSIONE` di
+	 *    ogni client: prima diceva «sconosciuto» a tutti, dalla fase 1. */
+	switch (sessione_desktop()) {
+	case SESSIONE_DESKTOP_GNOME:
+		wt_desktop("gnome");
+		break;
+	case SESSIONE_DESKTOP_KDE:
+		wt_desktop("kde");
+		break;
+	case SESSIONE_DESKTOP_XFCE:
+		wt_desktop("xfce");
+		break;
+	case SESSIONE_DESKTOP_LXQT:
+		wt_desktop("lxqt");
+		break;
+	case SESSIONE_DESKTOP_NESSUNO:
+	default:
+		wt_desktop("sconosciuto");
+		break;
+	}
 	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si scrive
 	 *    QUI, dal server, prima che nasca qualunque sessione: KWin mostra
 	 *    `zkde_screencast_unstable_v1` solo a un eseguibile dichiarato in un

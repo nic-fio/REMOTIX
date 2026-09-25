@@ -379,6 +379,9 @@ typedef struct {
 
 struct wt {
 	ngtcp2_conn *conn;
+	/* ⭐ D-001: il palco di quest'utente c'era gia' al verdetto di PAM ⇒
+	 *    `SESSIONE` dice `2 = RIPRESA`.  Lo scrive `wt_verdetto()`. */
+	bool ripresa;
 	ngtcp2_ccerr *ultimo_errore;
 	nghttp3_conn *h3;
 	char provenienza[80];
@@ -2646,6 +2649,27 @@ static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
 	if (!gancio_locale)
 		return false;
 	return gancio_locale(gancio_locale_ctx, utente, quale, quanto);
+}
+
+/* ⭐ D-001 — il nome del desktop di questa macchina per `SESSIONE` (§4.5).
+ *    Uno per PROCESSO, come la scelta del desktop (`sessione.h`): lo mette
+ *    `main.c` all'avvio, perche' qui `sessione.h` (glib) non entra. */
+static const char *desktop_nome = "sconosciuto";
+
+void wt_desktop(const char *nome)
+{
+	desktop_nome = (nome && nome[0]) ? nome : "sconosciuto";
+}
+
+static bool gancio_sessione_ripresa(void *ctx)
+{
+	return ((wt *)ctx)->ripresa;
+}
+
+static const char *gancio_desktop(void *ctx)
+{
+	(void)ctx;
+	return desktop_nome;
 }
 
 /* ⭐⭐ §7.6 — «l'utente ha chiesto di uscire». */
@@ -6949,6 +6973,10 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	if (gancio_termina)
 		g.termina_sessione = gancio_termina_sessione;
 
+	/* ⭐ D-001 — `SESSIONE` dice se il palco c'era e quale desktop e'. */
+	g.sessione_ripresa = gancio_sessione_ripresa;
+	g.desktop = gancio_desktop;
+
 	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
 	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un
 	 *    orologio disarmato e uno scaduto non devono avere la stessa faccia. */
@@ -8521,13 +8549,19 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
  *    la pratica e' un numero del PROCESSO, e chi la riconosce e' `rcp.c`.  ⚠ E
  *    se non la prende nessuno va bene cosi' — vuol dire che la connessione e'
  *    morta mentre PAM rispondeva, e non c'e' piu' nessuno da ammettere. */
-bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso)
+bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
 {
 	if (!w || !w->rcp)
 		return false;
-	return rcp_verdetto(w->rcp, pratica, ammesso,
-	                    ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
+	if (!rcp_verdetto(w->rcp, pratica, ammesso,
+	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS))
+		return false;
+	/* ⛔ Solo sulla connessione che ha preso la pratica: le altre non
+	 *    c'entrano, e il fatto e' di quest'ammissione. */
+	w->ripresa = ammesso && ripresa;
+	return true;
 }
+
 
 /* ⛔⭐ §5.3 — il segno di vita che viene dal filo.  Una riga di ponte, e la
  *     ragione per cui esiste sta su `rcp_segno_di_vita()`.

@@ -62,7 +62,10 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 /* ⭐ Consegna un verdetto di PAM alla connessione che lo aspettava (§1.10).
  * ⚠ Se non lo aspetta piu' nessuno lo scrive nel registro e lo butta: e'
  *   quel che succede quando la connessione muore mentre PAM risponde. */
-void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso);
+/* ⭐ D-001: `ripresa` = il palco di quell'utente c'era gia' prima di questo
+ * verdetto; arriva fino a `SESSIONE` (§4.5, `2 = RIPRESA`). */
+void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
+                        bool ripresa);
 void trasporto_chiudi(trasporto *t);
 
 int trasporto_fd(const trasporto *t);

@@ -1030,12 +1030,13 @@ int trasporto_attesa_ms(const trasporto *t)
  *    rispondeva» e «il verdetto e' andato a finire da nessuna parte per un
  *    difetto nostro» hanno lo stesso aspetto, e senza questa riga sarebbero
  *    indistinguibili. */
-void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso)
+void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
+                        bool ripresa)
 {
 	for (connessione *c = t->prime; c; c = c->prossima) {
 		if (c->morta || !c->w)
 			continue;
-		if (wt_verdetto(c->w, pratica, ammesso)) {
+		if (wt_verdetto(c->w, pratica, ammesso, ripresa)) {
 			/* ⛔ E si riscrive SUBITO: il verdetto puo' aver reso maturo
 			 *    l'`AMMESSO`/`RESPINTO`, e aspettare il prossimo battito
 			 *    aggiungerebbe fino a 100 ms a chi si autentica — cioe'

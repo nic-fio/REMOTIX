@@ -90,7 +90,12 @@ wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
 /* ⭐ Il verdetto di PAM che rientra dall'aiutante.  ⛔ `true` se questa
  * connessione era quella che aspettava quella pratica: chi chiama lo passa a
  * tutte, e una sola lo prende. */
-bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso);
+/* ⭐ D-001: `ripresa` = il palco di quell'utente c'era gia' (`SESSIONE` dira'
+ * `2 = RIPRESA`, §4.5). */
+bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa);
+/* ⭐ D-001: il nome del desktop per `SESSIONE` (`gnome · kde · xfce · lxqt ·
+ * sconosciuto`), uno per processo — lo mette `main.c` all'avvio. */
+void wt_desktop(const char *nome);
 void wt_libera(wt *w);
 
 /* Le chiamate che il trasporto gira qui.  Restituiscono 0 o un errore di

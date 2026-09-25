@@ -537,6 +537,25 @@ typedef struct {
 	                         size_t byte);
 
 	void (*termina_sessione)(void *ctx);
+
+	/* ⭐ `SESSIONE` DICE LA VERITA' — difetto D-001, fase 15 (25 set 2026).
+	 *
+	 * ⛔ Dalla fase 1 `SESSIONE` mandava FISSO `1 = NUOVA` e `«sconosciuto»`,
+	 *    anche a chi rientrava nel suo desktop e su qualunque desktop: la
+	 *    pagina scriveva «sessione nuova, desktop sconosciuto» a tutti.
+	 *
+	 * `sessione_ripresa` — `true` se il palco di quest'utente C'ERA GIA' quando
+	 *   PAM l'ha ammesso (§4.5: `2 = RIPRESA`).  ⚠ Il fatto si sa al verdetto,
+	 *   non a `SESSIONE`: a quel punto il figlio appena nato c'e' gia', e
+	 *   chiederlo li' direbbe «ripresa» a tutti.
+	 * `desktop` — uno dei nomi di §4.5 (`gnome · kde · xfce · lxqt ·
+	 *   sconosciuto`).
+	 *
+	 * ⛔ OPZIONALI, come gli altri: chi non li collega (i banchi del filo, dove
+	 *    non c'e' nessun palco) manda quel che mandava prima — `NUOVA` e
+	 *    `sconosciuto` — che per loro e' vero. */
+	bool (*sessione_ripresa)(void *ctx);
+	const char *(*desktop)(void *ctx);
 } rcp_ganci;
 
 /* Apre una sessione RCP su un canale di controllo appena nato.
