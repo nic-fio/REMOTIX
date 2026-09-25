@@ -4358,6 +4358,22 @@ async function impronta() {
     }
     return j.impronta || IMPRONTA_SERVITA;
   } catch (e) {
+    /* ⛔⭐ D-009, deciso dall'utente il 25 settembre 2026: «dillo subito».
+     *    `fetch` RIFIUTA con `TypeError` solo quando la richiesta non e'
+     *    arrivata a nessuno — TCP rifiutato, rete assente: il processo che
+     *    serve questa pagina (e che ascolta anche WebTransport) non c'e'.
+     *    ⚠ Prima si apriva lo stesso `WebTransport`, e Firefox aspettava i 30 s
+     *    della sua stretta di mano QUIC: `[M]` N-4, «Non si collega» dopo 31 s.
+     * ⛔ E NON vale per gli altri casi, che restano come prima (si usa
+     *    l'impronta servita): uno stato HTTP (`Error("stato …")`) e un corpo
+     *    illeggibile (`SyntaxError`) vogliono dire che il server C'E'; e un
+     *    server LENTO non finisce qui — sotto carico la stretta e' arrivata a
+     *    13 s, e questa pagina non mette orologi: aspetta la risposta. */
+    if (e && e.name === "TypeError") {
+      nota("impronta: /impronta rifiutata dalla rete (" + e.message + "): il "
+           + "server non c'e' — non apro WebTransport (D-009)");
+      return null;
+    }
     nota("impronta: /impronta non risponde (" + e.message + "): si usa quella servita con la pagina");
     return IMPRONTA_SERVITA;
   }
@@ -4728,6 +4744,10 @@ async function collega(utente, parola) {
   }
 
   const b64 = await impronta();
+  if (b64 === null) {
+    esito("il server non risponde: è spento o non raggiungibile", false);
+    return;
+  }
   const url = "https://" + location.host + "/rcp/1";
   nota("apro " + url);
 
