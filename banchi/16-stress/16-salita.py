@@ -387,6 +387,9 @@ def rifai_scatola(o, d, tetto, dove):
             amb = "env REMOTIX_SCHEDA=%s " % o.scheda
         t0 = time.time()
         c, t = sudo("cd %s && %sbash 11-accendi.sh %s %s" % (RETE11, amb, passo, d), 900)
+        # ⛔ [M] 26 set 00:35: la ricerca a meta' rifa' la scatola nella cartella di un
+        #    livello che non esiste ancora ⇒ FileNotFoundError e salita caduta
+        os.makedirs(dove, exist_ok=True)
         with open(os.path.join(dove, "scatola-%s.log" % passo), "a") as f:
             f.write("=== %s\n%s\n" % (ora(), t))
         ultima = [x for x in (t or "").splitlines() if x.strip()][-1:] or [""]
