@@ -111,6 +111,19 @@ def accendi(o, *opz):
 def sessione_con_scena(s, reg=None):
     segno = reg.righe() if reg else None
     ok, m = F019.entra_con_orecchio(s)
+    # ⚠ D-011, seconda lettura (25 set 2026): su XFCE la foto del primo
+    #   fotogramma a ~1 s dall'ingresso fallisce (Firefox: TakeScreenshot
+    #   «Failure»; Chrome: tela di area 0) — l'uscita di labwc nasce 1280x720 e
+    #   si ridimensiona DOPO la nascita.  Il CONGEDO 0x02 visto nella pagina era
+    #   una CONSEGUENZA (il banco, arreso, non toccava piu' niente per 25 s).
+    #   ⇒ Si riguarda la tela per 15 s prima di arrendersi.
+    riprove = 0
+    while not ok and "non li ho potuti guardare" in m and riprove < 5:
+        riprove += 1
+        time.sleep(3)
+        e, m2, st = s.pr.primo_fotogramma()
+        e, m2 = S.C20V.desktop_scuro_ma_vivo(e, m2, st)
+        ok, m = (e == S.VERDE), "il primo fotogramma (riprova %d): %s" % (riprove, m2)
     if not ok:
         # ⛔ D-011 (25 set 2026): qui il giro diceva solo «la tela non ha area
         #    visibile» e le prove del perche' sparivano col riavvio del server.
