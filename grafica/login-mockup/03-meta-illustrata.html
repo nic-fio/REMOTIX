@@ -1,0 +1,219 @@
+<!-- Stile: META ILLUSTRATA — pagina divisa: a sinistra un'illustrazione SVG del desktop remoto su fondo pastello, a destra il modulo.
+     Idea: far capire in un colpo d'occhio cosa fa il prodotto (portatile → browser → desktop Linux) prima ancora di leggere. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root {
+    --pastel: #e9f0ff;
+    --pastel-2: #fbeee6;
+    --ink: #1c2233;
+    --muted: #5b6275;
+    --line: #d4d8e2;
+    --accent: #4f46e5;       /* indaco: bianco su indaco 6,3:1 */
+    --accent-dark: #3f37c9;
+    --err-bg: #fff1f2;
+    --err-line: #fecdd3;
+    --err-ink: #9f1239;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: clamp(16px, 0.3vw + 14px, 24px); }
+  body {
+    margin: 0; min-height: 100vh;
+    color: var(--ink); background: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, sans-serif;
+  }
+  .split { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+
+  .art {
+    position: relative; overflow: hidden;
+    background: linear-gradient(160deg, var(--pastel) 0%, #f1ecff 55%, var(--pastel-2) 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 3rem clamp(16px, 4vw, 5rem);
+  }
+  .art::before, .art::after {
+    content: ""; position: absolute; border-radius: 50%; filter: blur(2px); opacity: .55;
+  }
+  .art::before { width: 26rem; height: 26rem; background: #dbe6ff; top: -8rem; left: -8rem; }
+  .art::after  { width: 20rem; height: 20rem; background: #ffe2d3; bottom: -7rem; right: -6rem; }
+  .art svg.scene { position: relative; z-index: 1; width: min(100%, 40rem); height: auto; }
+  .art .caption {
+    position: relative; z-index: 1; margin: 2rem 0 0; max-width: 30rem; text-align: center;
+    color: #3a4160; font-size: 1.05rem; line-height: 1.5;
+  }
+  .art .caption strong { color: var(--ink); }
+
+  .side {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 3rem clamp(16px, 6vw, 7rem);
+  }
+  .inner { width: 100%; max-width: 24rem; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: .7rem; margin-bottom: 2.5rem; }
+  .brand svg { width: 2.4rem; height: 2.4rem; }
+  .brand span { font-weight: 800; letter-spacing: .12em; font-size: 1.2rem; }
+  h1 { margin: 0 0 .4rem; font-size: clamp(1.6rem, 2.4vw, 2.2rem); letter-spacing: -.02em; line-height: 1.15; }
+  .motto { margin: 0 0 2rem; color: var(--muted); }
+
+  .field { margin-bottom: 1.15rem; }
+  label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: .4rem; }
+  input {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    padding: .8rem .95rem;
+    border: 1.5px solid var(--line); border-radius: 12px; background: #fff;
+    outline: none;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  input:hover { border-color: #aeb4c6; }
+  input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(79,70,229,.16); }
+
+  button {
+    width: 100%; margin-top: .6rem;
+    display: inline-flex; justify-content: center; align-items: center; gap: .5rem;
+    font: inherit; font-size: 1rem; font-weight: 650; color: #fff;
+    background: var(--accent); border: 0; border-radius: 12px; padding: .9rem 1rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px -10px rgba(79,70,229,.8);
+    transition: background .18s, transform .18s, box-shadow .18s;
+  }
+  button svg { width: 1.1em; height: 1.1em; transition: transform .2s; }
+  button:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 12px 24px -10px rgba(79,70,229,.85); }
+  button:hover svg { transform: translateX(3px); }
+  button:focus-visible { outline: 3px solid #1c2233; outline-offset: 3px; }
+
+  /* esempio: errore */
+  .error {
+    display: flex; gap: .6rem; align-items: center;
+    margin-top: 1.1rem; padding: .75rem .95rem;
+    background: var(--err-bg); border: 1px solid var(--err-line); border-radius: 12px;
+    color: var(--err-ink); font-size: .9rem;
+  }
+  .error svg { flex: none; width: 1.15rem; height: 1.15rem; }
+
+  .foot { margin-top: 2.5rem; color: var(--muted); font-size: .8rem; display: flex; gap: .45rem; align-items: center; }
+  .foot svg { width: .95rem; height: .95rem; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .inner { animation: slide .6s cubic-bezier(.2,.8,.2,1) both; }
+    .scene { animation: float 7s ease-in-out infinite; }
+    .scene .cursor { animation: cursor 4s ease-in-out infinite; }
+    .scene .wire { animation: flow 1.2s linear infinite; }
+    @keyframes slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+    @keyframes float { 50% { transform: translateY(-6px); } }
+    @keyframes cursor { 0%,100% { transform: translate(0,0); } 50% { transform: translate(38px,-22px); } }
+    @keyframes flow { to { stroke-dashoffset: -22; } }
+  }
+
+  @media (max-width: 860px) {
+    .split { grid-template-columns: 1fr; }
+    .art { padding: 2rem 16px 1.5rem; }
+    .art svg.scene { width: min(100%, 26rem); }
+    .art .caption { font-size: .92rem; margin-top: 1rem; }
+    .side { padding: 2rem 16px 2.5rem; }
+    .brand { margin-bottom: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="split">
+  <aside class="art" aria-hidden="true">
+    <!-- Illustrazione: un portatile col browser, il filo di punti, e lo schermo del server col desktop Linux -->
+    <svg class="scene" viewBox="0 0 560 360" fill="none">
+      <!-- server / monitor grande -->
+      <rect x="250" y="30" width="290" height="190" rx="14" fill="#fff" stroke="#c7cff0" stroke-width="2"/>
+      <rect x="262" y="42" width="266" height="152" rx="6" fill="#eef2ff"/>
+      <!-- barra del desktop -->
+      <rect x="262" y="180" width="266" height="14" rx="0" fill="#c7d2fe"/>
+      <circle cx="274" cy="187" r="4" fill="#4f46e5"/>
+      <rect x="286" y="184" width="26" height="6" rx="3" fill="#a5b4fc"/>
+      <rect x="318" y="184" width="26" height="6" rx="3" fill="#a5b4fc"/>
+      <!-- finestre -->
+      <rect x="278" y="56" width="140" height="90" rx="6" fill="#fff" stroke="#c7d2fe"/>
+      <rect x="278" y="56" width="140" height="14" rx="6" fill="#e0e7ff"/>
+      <circle cx="288" cy="63" r="2.5" fill="#fb7185"/><circle cx="297" cy="63" r="2.5" fill="#fbbf24"/><circle cx="306" cy="63" r="2.5" fill="#34d399"/>
+      <rect x="288" y="80" width="80" height="6" rx="3" fill="#c7d2fe"/>
+      <rect x="288" y="94" width="110" height="6" rx="3" fill="#e0e7ff"/>
+      <rect x="288" y="108" width="96" height="6" rx="3" fill="#e0e7ff"/>
+      <rect x="288" y="122" width="60" height="6" rx="3" fill="#e0e7ff"/>
+      <rect x="400" y="92" width="112" height="76" rx="6" fill="#fff" stroke="#fed7aa"/>
+      <rect x="400" y="92" width="112" height="14" rx="6" fill="#ffedd5"/>
+      <path d="M412 152l18-20 14 12 16-22 18 30z" fill="#fdba74" opacity=".8"/>
+      <circle cx="488" cy="122" r="7" fill="#fcd34d"/>
+      <!-- cursore remoto -->
+      <g class="cursor"><path d="M350 128l0 20 5-5 4 9 4-2-4-9 7 0z" fill="#1c2233" stroke="#fff" stroke-width="1.2"/></g>
+      <!-- piede del monitor -->
+      <path d="M375 220h40l8 26h-56z" fill="#dfe4f7"/>
+      <rect x="350" y="244" width="90" height="8" rx="4" fill="#c7cff0"/>
+
+      <!-- il filo: una traccia tratteggiata che scorre dal portatile al server -->
+      <path class="wire" d="M150 198 C 150 130, 190 110, 248 110" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9"/>
+      <circle cx="150" cy="198" r="4.5" fill="#4f46e5"/>
+      <circle cx="248" cy="110" r="4.5" fill="#4f46e5"/>
+      <!-- portatile col browser -->
+      <rect x="30" y="200" width="180" height="116" rx="10" fill="#fff" stroke="#c7cff0" stroke-width="2"/>
+      <rect x="40" y="210" width="160" height="96" rx="4" fill="#f8fafc"/>
+      <rect x="40" y="210" width="160" height="14" rx="4" fill="#e2e8f0"/>
+      <rect x="62" y="214" width="110" height="6" rx="3" fill="#fff"/>
+      <circle cx="48" cy="217" r="2.3" fill="#94a3b8"/>
+      <!-- miniatura del desktop dentro il browser -->
+      <rect x="50" y="232" width="140" height="66" rx="3" fill="#eef2ff"/>
+      <rect x="58" y="238" width="70" height="42" rx="3" fill="#fff" stroke="#c7d2fe"/>
+      <rect x="120" y="254" width="58" height="36" rx="3" fill="#fff" stroke="#fed7aa"/>
+      <rect x="50" y="292" width="140" height="6" fill="#c7d2fe"/>
+      <path d="M14 316h212l-10 14H24z" fill="#dfe4f7"/>
+
+      <!-- lucchetto sul filo -->
+      <g transform="translate(172 136)">
+        <circle r="17" fill="#fff" stroke="#c7d2fe" stroke-width="2"/>
+        <rect x="-7" y="-2" width="14" height="10" rx="2" fill="#4f46e5"/>
+        <path d="M-4.5 -2v-3a4.5 4.5 0 0 1 9 0v3" stroke="#4f46e5" stroke-width="2"/>
+      </g>
+    </svg>
+    <p class="caption"><strong>Apri il browser, e il tuo desktop è lì.</strong> Le finestre, i file e i programmi del server, come se fossi seduto davanti.</p>
+  </aside>
+
+  <main class="side">
+    <div class="inner">
+      <div class="brand">
+        <!-- Logo: schermo con la «X» di collegamento fatta di due frecce -->
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="3" y="6" width="34" height="22" rx="5" fill="#4f46e5"/>
+          <path d="M14 12l12 10M26 12L14 22" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+          <rect x="15" y="31" width="10" height="3" rx="1.5" fill="#4f46e5"/>
+        </svg>
+        <span>REMOTIX</span>
+      </div>
+      <h1>Bentornato</h1>
+      <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+      <form action="#" method="post" onsubmit="return false">
+        <div class="field">
+          <label for="u">Utente</label>
+          <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label for="p">Parola d'ordine</label>
+          <input id="p" name="parola" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit">Collegati
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <!-- esempio: stato d'errore, visibile solo nel mockup -->
+      <div class="error" role="alert">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>
+        Utente o parola d'ordine non corretti.
+      </div>
+
+      <p class="foot">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Connessione cifrata · niente da installare
+      </p>
+    </div>
+  </main>
+</div>
+</body>
+</html>

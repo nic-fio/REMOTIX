@@ -1,0 +1,156 @@
+<!doctype html>
+<!-- Stile: «Quattro desktop» — omaggio ordinato a GNOME, KDE, XFCE e LXQt.
+     Idea: quattro piccoli simboli astratti (cerchio, ingranaggio, onda, esagono) fanno da cornice a un modulo chiaro e pulito. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --sfondo:#f5f7fa; --carta:#ffffff; --inchiostro:#1b2430; --tenue:#5a6676;
+    --bordo:#dfe4eb; --accento:#2b5fd9; --accento-scuro:#1f4bb3;
+    --gnome:#3268c9; --kde:#1379b8; --xfce:#b45f06; --lxqt:#2e7d4f;
+    --errore-fondo:#fdeeee; --errore-bordo:#f2c4c4; --errore-testo:#a12222;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    padding:1.5rem 1rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--inchiostro); background:var(--sfondo);
+    background-image:
+      radial-gradient(circle at 12% 18%, #e7eefc 0, transparent 28rem),
+      radial-gradient(circle at 88% 85%, #eaf5ee 0, transparent 26rem);
+  }
+  main{width:100%; max-width:26rem}
+  .scheda{
+    background:var(--carta); border:1px solid var(--bordo); border-radius:1rem;
+    padding:2.25rem 2rem 1.75rem;
+    box-shadow:0 1px 2px rgba(20,30,50,.05), 0 12px 32px -12px rgba(20,30,50,.18);
+    animation:entra .5s ease-out both;
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+
+  .marchio{display:flex; align-items:center; gap:.7rem; justify-content:center}
+  .marchio svg{width:2.4rem; height:2.4rem}
+  .marchio h1{margin:0; font-size:1.6rem; letter-spacing:.14em; font-weight:750}
+  .motto{margin:.5rem 0 1.5rem; text-align:center; color:var(--tenue); font-size:.95rem}
+
+  /* i quattro desktop */
+  .desktop{list-style:none; margin:0 0 1.75rem; padding:0; display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem}
+  .desktop li{
+    display:flex; flex-direction:column; align-items:center; gap:.35rem;
+    padding:.6rem .2rem .5rem; border-radius:.6rem; border:1px solid var(--bordo);
+    font-size:.72rem; font-weight:600; color:var(--tenue); letter-spacing:.03em;
+    transition:transform .2s, border-color .2s, box-shadow .2s;
+    animation:entra .5s ease-out both;
+  }
+  .desktop li:nth-child(1){animation-delay:.10s}
+  .desktop li:nth-child(2){animation-delay:.16s}
+  .desktop li:nth-child(3){animation-delay:.22s}
+  .desktop li:nth-child(4){animation-delay:.28s}
+  .desktop li:hover{transform:translateY(-2px); box-shadow:0 6px 14px -8px rgba(20,30,50,.3)}
+  .desktop li:nth-child(1):hover{border-color:var(--gnome)}
+  .desktop li:nth-child(2):hover{border-color:var(--kde)}
+  .desktop li:nth-child(3):hover{border-color:var(--xfce)}
+  .desktop li:nth-child(4):hover{border-color:var(--lxqt)}
+  .desktop svg{width:1.6rem; height:1.6rem}
+
+  form{display:grid; gap:1rem}
+  label{display:block; font-size:.85rem; font-weight:600; margin-bottom:.35rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--inchiostro);
+    padding:.7rem .85rem; border:1px solid #c5cdd8; border-radius:.55rem; background:#fbfcfd;
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  input:hover{border-color:#9aa6b6}
+  input:focus{outline:none; border-color:var(--accento); background:#fff; box-shadow:0 0 0 3px rgba(43,95,217,.25)}
+  button{
+    margin-top:.4rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.8rem; border:0; border-radius:.55rem; background:var(--accento); cursor:pointer;
+    transition:background .15s, transform .1s, box-shadow .15s;
+    box-shadow:0 4px 12px -4px rgba(43,95,217,.5);
+  }
+  button:hover{background:var(--accento-scuro)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid #9bb7f0; outline-offset:2px}
+
+  /* esempio: lo stato d'errore, disegnato anche lui */
+  .errore{
+    margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start;
+    padding:.7rem .85rem; border-radius:.55rem; font-size:.88rem;
+    background:var(--errore-fondo); border:1px solid var(--errore-bordo); color:var(--errore-testo);
+  }
+  .errore svg{flex:none; width:1.1rem; height:1.1rem; margin-top:.1rem}
+
+  .piede{margin:1.4rem 0 0; text-align:center; font-size:.78rem; color:var(--tenue)}
+  .piede span{white-space:nowrap}
+
+  @media (max-width:400px){
+    .scheda{padding:1.75rem 1.25rem 1.4rem}
+    .desktop{gap:.35rem}
+    .desktop li{font-size:.66rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="scheda">
+    <div class="marchio">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="5" y="8" width="38" height="26" rx="4" fill="none" stroke="#2b5fd9" stroke-width="3"/>
+        <path d="M18 41h12M24 34v7" stroke="#2b5fd9" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="17" cy="21" r="3" fill="#3268c9"/><circle cx="31" cy="21" r="3" fill="#2e7d4f"/>
+        <path d="M20 21h8" stroke="#1b2430" stroke-width="2" stroke-dasharray="2 2"/>
+      </svg>
+      <h1>REMOTIX</h1>
+    </div>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser</p>
+
+    <ul class="desktop" aria-label="Desktop supportati">
+      <li>
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="#3268c9" stroke-width="2.5"/><circle cx="16" cy="16" r="4.5" fill="#3268c9"/></svg>
+        GNOME
+      </li>
+      <li>
+        <svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="#1379b8" stroke-width="2.5" stroke-linecap="round"><circle cx="16" cy="16" r="6"/><path d="M16 4v4M16 24v4M4 16h4M24 16h4M7.5 7.5l2.8 2.8M21.7 21.7l2.8 2.8M7.5 24.5l2.8-2.8M21.7 10.3l2.8-2.8"/></g></svg>
+        KDE
+      </li>
+      <li>
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 20c4-8 8-8 12 0s8 8 12 0" fill="none" stroke="#b45f06" stroke-width="2.5" stroke-linecap="round"/><path d="M4 12c4-6 8-6 12 0s8 6 12 0" fill="none" stroke="#b45f06" stroke-width="2.5" stroke-linecap="round" opacity=".45"/></svg>
+        XFCE
+      </li>
+      <li>
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l10.4 6v12L16 28 5.6 22V10z" fill="none" stroke="#2e7d4f" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 11l4.3 2.5v5L16 21l-4.3-2.5v-5z" fill="#2e7d4f"/></svg>
+        LXQt
+      </li>
+    </ul>
+
+    <form action="#" method="post" autocomplete="on">
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Collegati</button>
+    </form>
+
+    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <div class="errore" role="alert">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.2" fill="currentColor"/></svg>
+      <span>Utente o parola d'ordine non corretti.</span>
+    </div>
+
+    <p class="piede"><span>Connessione cifrata</span> · <span>niente da installare</span></p>
+  </div>
+</main>
+</body>
+</html>

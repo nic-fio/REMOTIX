@@ -1,0 +1,97 @@
+<!-- Stile: GIOCOSO MA SERIO — colori vivaci su bianco, un piccolo schermo sorridente con antenne.
+     Idea: la mascotte SVG saluta (e sbatte le palpebre), il modulo resta sobrio e chiaro; allegria nei dettagli, serietà nella sostanza. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --bianco:#ffffff; --fondo:#fbfbfe; --testo:#1c1b33; --testo-2:#55536e;
+    --viola:#5b3df5; --viola-scuro:#4327d6; --giallo:#ffc933; --corallo:#ff6b6b; --menta:#2ec4a6; --cielo:#4dabf7;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    min-height:100vh; font-family:var(--sans); color:var(--testo); background:var(--fondo);
+    font-size:clamp(16px, .5vw + 12px, 24px);
+    display:grid; place-items:center; padding:clamp(16px,4vw,5rem); overflow-x:hidden;
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(255,201,51,.28) 0 6em, transparent 6em),
+      radial-gradient(circle at 94% 88%, rgba(46,196,166,.22) 0 8em, transparent 8em),
+      radial-gradient(circle at 90% 8%, rgba(255,107,107,.18) 0 3em, transparent 3em);
+  }
+  .scheda{
+    width:min(100%, 26em); background:var(--bianco); border-radius:2em; padding:1.6em 2em 2em;
+    border:2px solid var(--testo); box-shadow:.5em .5em 0 var(--testo);
+    position:relative; animation:rimbalza .7s cubic-bezier(.3,1.5,.5,1) both;
+  }
+  .mascotte{display:block; width:9em; height:auto; margin:-4.8em auto .4em}
+  .mascotte .antenna{transform-origin:60px 34px; animation:dondola 2.6s ease-in-out infinite alternate}
+  .mascotte .antenna.b{animation-delay:-1.3s}
+  .mascotte .occhi{transform-origin:60px 70px; animation:batti 4.5s infinite}
+  .scheda:hover .mascotte .bocca{d:path("M46 84q14 14 28 0")}
+  .marchio{text-align:center; margin:0}
+  .marchio b{font-size:1.9em; font-weight:800; letter-spacing:.06em}
+  .marchio b span{color:var(--viola)}
+  .motto{text-align:center; color:var(--testo-2); margin:.3em 0 1.6em; line-height:1.45}
+  form{display:grid; gap:1em}
+  label{display:block; font-weight:700; font-size:.9em; margin-bottom:.35em}
+  input{
+    width:100%; font:inherit; padding:.8em 1em; border-radius:.9em; color:var(--testo);
+    background:#f6f5ff; border:2px solid #d8d4f5; transition:border-color .15s, background .15s, box-shadow .15s;
+  }
+  input:hover{border-color:var(--cielo)}
+  input:focus{outline:none; background:#fff; border-color:var(--viola); box-shadow:0 0 0 4px rgba(91,61,245,.22)}
+  button{
+    margin-top:.4em; font:inherit; font-weight:800; font-size:1.1em; color:#fff; cursor:pointer;
+    background:var(--viola); border:2px solid var(--testo); border-radius:1em; padding:.8em;
+    box-shadow:0 .3em 0 var(--testo); transition:transform .1s, box-shadow .1s, background .15s;
+  }
+  button:hover{background:var(--viola-scuro)}
+  button:active{transform:translateY(.3em); box-shadow:0 0 0 var(--testo)}
+  button:focus-visible{outline:3px solid var(--giallo); outline-offset:3px}
+  .errore{
+    margin:1.2em 0 0; padding:.75em 1em; border-radius:.9em; font-size:.92em; font-weight:600;
+    background:#ffecec; color:#a4161a; border:2px dashed #ff9b9b; display:flex; gap:.6em; align-items:center;
+  }
+  .piede{margin:1.4em 0 0; text-align:center; font-size:.8em; color:var(--testo-2)}
+  .piede i{display:inline-block; width:.5em; height:.5em; border-radius:50%; background:var(--menta); margin-right:.4em; vertical-align:.05em}
+  @keyframes rimbalza{from{opacity:0; transform:translateY(24px) scale(.96)} to{opacity:1; transform:none}}
+  @keyframes dondola{from{transform:rotate(-6deg)} to{transform:rotate(6deg)}}
+  @keyframes batti{0%,92%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)}}
+  @media (max-width:420px){.scheda{padding:1.4em 1.2em 1.6em; box-shadow:.3em .3em 0 var(--testo)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+<main class="scheda">
+  <svg class="mascotte" viewBox="0 0 120 120" aria-hidden="true">
+    <g class="antenna a"><path d="M52 34L40 10" stroke="#1c1b33" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="10" r="6" fill="#ff6b6b" stroke="#1c1b33" stroke-width="2.5"/></g>
+    <g class="antenna b"><path d="M68 34L82 12" stroke="#1c1b33" stroke-width="3" stroke-linecap="round"/><circle cx="82" cy="12" r="6" fill="#ffc933" stroke="#1c1b33" stroke-width="2.5"/></g>
+    <rect x="14" y="32" width="92" height="68" rx="16" fill="#4dabf7" stroke="#1c1b33" stroke-width="3"/>
+    <rect x="24" y="42" width="72" height="48" rx="10" fill="#fff" stroke="#1c1b33" stroke-width="2.5"/>
+    <g class="occhi" fill="#1c1b33"><circle cx="47" cy="64" r="4.5"/><circle cx="73" cy="64" r="4.5"/></g>
+    <circle cx="38" cy="76" r="4" fill="#ff6b6b" opacity=".5"/><circle cx="82" cy="76" r="4" fill="#ff6b6b" opacity=".5"/>
+    <path class="bocca" d="M50 78q10 8 20 0" fill="none" stroke="#1c1b33" stroke-width="3" stroke-linecap="round" style="transition:d .25s"/>
+    <path d="M46 100l-6 12h40l-6-12" fill="#2ec4a6" stroke="#1c1b33" stroke-width="3" stroke-linejoin="round"/>
+  </svg>
+
+  <p class="marchio"><b>REMOT<span>IX</span></b></p>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.<br>Ciao, ti stavamo aspettando!</p>
+
+  <form action="#" method="post">
+    <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
+    <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+    <button type="submit">Collegati</button>
+  </form>
+
+  <!-- esempio: stato d'errore, visibile solo per il mockup -->
+  <p class="errore" role="alert"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true" style="flex:none"><rect x="2" y="4" width="20" height="15" rx="4" fill="#ff6b6b" stroke="#a4161a" stroke-width="1.5"/><circle cx="9" cy="10.5" r="1.3" fill="#fff"/><circle cx="15" cy="10.5" r="1.3" fill="#fff"/><path d="M8.5 16q3.5-3 7 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg> Ops: utente o parola d'ordine non corretti.</p>
+
+  <p class="piede"><i aria-hidden="true"></i>Connessione cifrata · niente da installare</p>
+</main>
+</body>
+</html>

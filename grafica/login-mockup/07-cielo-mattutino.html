@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!-- Stile 07 «Cielo mattutino»: azzurro chiaro che schiarisce verso l'orizzonte, nuvole SVG morbide che scorrono piano.
+     Idea: il desktop «nella nuvola» detto con leggerezza; scheda bianca piena, sole tenue dietro il marchio. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX · Accesso</title>
+<style>
+  :root {
+    --ink: #13314d;
+    --ink-soft: #46607a;
+    --sky: #1f6fc2;
+    --sky-dark: #175a9f;
+    --line: #c9dcee;
+    --err-bg: #fff1f0;
+    --err-line: #f5c2bd;
+    --err-ink: #a0231a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    display: grid; place-items: center;
+    padding: clamp(16px, 4vw, 64px);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, #9fd2f7 0%, #c8e6fb 45%, #eef8ff 78%, #fff8ec 100%);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+  .cielo { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .sole {
+    position: absolute; right: 12vw; top: 9vh; width: 22vmin; height: 22vmin; border-radius: 50%;
+    background: radial-gradient(circle, #fff7d6 0%, rgba(255, 240, 190, .7) 40%, rgba(255, 240, 190, 0) 70%);
+  }
+  .nuvola { position: absolute; left: 0; fill: #fff; filter: drop-shadow(0 10px 18px rgba(60, 120, 180, .12)); animation: scorre linear infinite; }
+  .n1 { top: 8vh;  width: 30vmax; opacity: .95; animation-duration: 90s; animation-delay: -20s; }
+  .n2 { top: 34vh; width: 20vmax; opacity: .8;  animation-duration: 120s; animation-delay: -70s; }
+  .n3 { top: 70vh; width: 38vmax; opacity: .9;  animation-duration: 140s; animation-delay: -40s; }
+  .n4 { top: 55vh; width: 14vmax; opacity: .7;  animation-duration: 100s; animation-delay: -5s; }
+  @keyframes scorre { from { transform: translateX(-45vmax); } to { transform: translateX(110vw); } }
+
+  .scheda {
+    position: relative; z-index: 1;
+    width: min(100%, 26rem);
+    background: #fff;
+    border-radius: 28px;
+    padding: clamp(26px, 5vw, 46px);
+    box-shadow: 0 30px 70px -30px rgba(25, 80, 140, .45), 0 2px 8px rgba(25, 80, 140, .08);
+    animation: sale .8s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes sale { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+  header { text-align: center; }
+  .logo {
+    width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 22px;
+    display: grid; place-items: center;
+    background: linear-gradient(160deg, #e6f4ff, #cfe7fb);
+    box-shadow: inset 0 0 0 1px #d6e9fa;
+  }
+  .logo svg { width: 46px; height: 46px; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: .12em; font-weight: 760; }
+  .motto { margin: 8px 0 30px; color: var(--ink-soft); line-height: 1.45; }
+
+  form { display: grid; gap: 16px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+  .campo { position: relative; }
+  .campo svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #6f8aa5; pointer-events: none; transition: color .2s; }
+  input {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    padding: 13px 14px 13px 42px; border-radius: 999px;
+    border: 1.5px solid var(--line); background: #f7fbff;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  input:hover { border-color: #9cc3e6; }
+  input:focus-visible { outline: none; background: #fff; border-color: var(--sky); box-shadow: 0 0 0 4px rgba(31, 111, 194, .2); }
+  .campo:focus-within svg { color: var(--sky); }
+  button {
+    margin-top: 8px; font: inherit; font-weight: 650; font-size: 1rem; color: #fff;
+    padding: 14px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--sky);
+    box-shadow: 0 10px 24px -10px rgba(31, 111, 194, .8);
+    transition: background .2s, transform .15s, box-shadow .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  button svg { transition: transform .2s; }
+  button:hover { background: var(--sky-dark); transform: translateY(-1px); }
+  button:hover svg { transform: translateX(3px); }
+  button:focus-visible { outline: 3px solid #13314d; outline-offset: 3px; }
+
+  /* esempio: stato d'errore sempre visibile nel mockup */
+  .errore {
+    margin-top: 18px; padding: 12px 16px; border-radius: 16px;
+    background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-ink);
+    font-size: .9rem; display: flex; gap: 10px; align-items: center;
+  }
+  .piede { margin: 24px 0 0; text-align: center; font-size: .78rem; color: var(--ink-soft); }
+
+  @media (min-width: 2000px) { html { font-size: 22px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .nuvola, .scheda { animation: none; }
+    .n1 { transform: translateX(5vw); } .n2 { transform: translateX(70vw); } .n3 { transform: translateX(45vw); } .n4 { transform: translateX(10vw); }
+    input, button, button svg { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="cielo" aria-hidden="true">
+    <div class="sole"></div>
+    <svg class="nuvola n1" viewBox="0 0 200 80"><path d="M30 70a24 24 0 0 1 2-48 32 32 0 0 1 60-10 28 28 0 0 1 48 8 26 26 0 0 1 32 50z"/></svg>
+    <svg class="nuvola n2" viewBox="0 0 200 80"><path d="M24 70a20 20 0 0 1 6-40 30 30 0 0 1 56-8 24 24 0 0 1 44 12 22 22 0 0 1 40 36z"/></svg>
+    <svg class="nuvola n3" viewBox="0 0 200 80"><path d="M30 70a24 24 0 0 1 2-48 32 32 0 0 1 60-10 28 28 0 0 1 48 8 26 26 0 0 1 32 50z"/></svg>
+    <svg class="nuvola n4" viewBox="0 0 200 80"><path d="M24 70a20 20 0 0 1 6-40 30 30 0 0 1 56-8 24 24 0 0 1 44 12 22 22 0 0 1 40 36z"/></svg>
+  </div>
+
+  <main class="scheda">
+    <header>
+      <div class="logo">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="5" y="9" width="38" height="25" rx="4" fill="#1f6fc2"/>
+          <rect x="8.5" y="12.5" width="31" height="18" rx="2" fill="#eaf5ff"/>
+          <path d="M14 26c3-6 6-6 10-2s7 3 10-3" fill="none" stroke="#1f6fc2" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M19 41h10M24 34v7" stroke="#13314d" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>REMOTIX</h1>
+      <p class="motto">Il tuo desktop Linux, leggero come l'aria.<br>Da qualunque browser.</p>
+    </header>
+
+    <form action="#" method="post" onsubmit="return false">
+      <div>
+        <label for="utente">Utente</label>
+        <div class="campo">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="7" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 17a6.5 6.5 0 0 1 13 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        </div>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <div class="campo">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+        </div>
+      </div>
+      <button type="submit">Collegati
+        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+
+    <!-- esempio: messaggio d'errore dopo un tentativo sbagliato -->
+    <div class="errore" role="alert">
+      <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v5.5M10 14v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Utente o parola d'ordine non corretti.
+    </div>
+
+    <p class="piede">Connessione cifrata · niente da installare</p>
+  </main>
+</body>
+</html>

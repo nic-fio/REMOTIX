@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- Stile: «Rete» — nodi e linee sottili collegano un portatile, un telefono e il server.
+     Idea: il disegno racconta cosa fa REMOTIX (un desktop che viaggia sulla rete), il modulo resta sobrio accanto. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --sfondo:#f7f9fc; --carta:#fff; --inchiostro:#17212e; --tenue:#556274; --bordo:#e0e6ee;
+    --linea:#9fb3cc; --nodo:#2a6fb0; --accento:#1f6fb5; --accento-scuro:#185b95; --vivo:#16a37a;
+    --errore-fondo:#fdefef; --errore-bordo:#efc3c3; --errore-testo:#a12020;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center; padding:1.5rem 1rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--inchiostro); background:var(--sfondo);
+    background-image:radial-gradient(#dfe7f1 1px, transparent 1px); background-size:1.5rem 1.5rem;
+  }
+  .impianto{
+    width:100%; max-width:60rem; display:grid; grid-template-columns:1.1fr 1fr; align-items:center; gap:3rem;
+  }
+
+  /* il disegno della rete */
+  .rete{width:100%; height:auto; display:block}
+  .rete .filo{fill:none; stroke:var(--linea); stroke-width:1.4}
+  .rete .flusso{fill:none; stroke:var(--nodo); stroke-width:1.6; stroke-dasharray:4 14; stroke-linecap:round; animation:scorre 2.4s linear infinite}
+  .rete .flusso.b{animation-duration:3s; animation-direction:reverse}
+  .rete .flusso.c{stroke:var(--vivo); animation-duration:3.6s}
+  @keyframes scorre{to{stroke-dashoffset:-72}}
+  .rete .alone{fill:var(--nodo); opacity:.12; transform-box:fill-box; transform-origin:center; animation:pulsa 2.8s ease-out infinite}
+  @keyframes pulsa{0%{transform:scale(.6); opacity:.25} 100%{transform:scale(1.5); opacity:0}}
+  .rete .corpo{fill:#fff; stroke:#324357; stroke-width:1.6}
+  .rete .schermo{fill:#e8f0fa}
+  .rete text{font:600 11px system-ui,sans-serif; fill:#4b5869; letter-spacing:.06em}
+
+  .scheda{
+    background:var(--carta); border:1px solid var(--bordo); border-radius:.9rem; padding:2rem 1.9rem 1.6rem;
+    box-shadow:0 1px 2px rgba(20,30,50,.05), 0 18px 40px -18px rgba(20,40,70,.25);
+    animation:entra .5s ease-out both;
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  .marchio{display:flex; align-items:center; gap:.65rem}
+  .marchio svg{width:2.2rem; height:2.2rem}
+  .marchio h1{margin:0; font-size:1.45rem; letter-spacing:.12em; font-weight:750}
+  .motto{margin:.55rem 0 1.6rem; color:var(--tenue); font-size:.95rem; line-height:1.45}
+
+  form{display:grid; gap:1rem}
+  label{display:block; font-size:.85rem; font-weight:600; margin-bottom:.35rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--inchiostro);
+    padding:.7rem .85rem; border:1px solid #c3ccd8; border-radius:.5rem; background:#fff;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:#94a2b5}
+  input:focus{outline:none; border-color:var(--accento); box-shadow:0 0 0 3px rgba(31,111,181,.22)}
+  button{
+    margin-top:.35rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.8rem; border:0; border-radius:.5rem; background:var(--accento); cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:.55rem;
+    transition:background .15s, transform .1s;
+  }
+  button svg{width:1.1rem; height:1.1rem; transition:transform .2s}
+  button:hover{background:var(--accento-scuro)}
+  button:hover svg{transform:translateX(3px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid #93bde3; outline-offset:2px}
+
+  /* esempio: stato d'errore */
+  .errore{
+    margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start; padding:.7rem .85rem;
+    border-radius:.5rem; font-size:.88rem;
+    background:var(--errore-fondo); border:1px solid var(--errore-bordo); color:var(--errore-testo);
+  }
+  .errore svg{flex:none; width:1.1rem; height:1.1rem; margin-top:.1rem}
+
+  .piede{margin:1.3rem 0 0; font-size:.78rem; color:var(--tenue); display:flex; align-items:center; gap:.45rem}
+  .piede::before{content:""; flex:none; width:.5rem; height:.5rem; border-radius:50%; background:var(--vivo); box-shadow:0 0 0 3px rgba(22,163,122,.18)}
+
+  @media (max-width:820px){
+    .impianto{grid-template-columns:1fr; gap:1rem; max-width:26rem}
+    .rete{max-width:20rem; margin:0 auto}
+  }
+  @media (max-width:400px){ .scheda{padding:1.6rem 1.2rem 1.3rem} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="impianto">
+  <svg class="rete" viewBox="0 0 470 390" aria-hidden="true">
+      <!-- sei dispositivi, un server: tanti utenti insieme, ognuno col suo desktop -->
+      <path class="filo" d="M162 33 C267 33 267 196 372 196"/>
+      <path class="filo" d="M74 94 C223 94 223 196 372 196"/>
+      <path class="filo" d="M106 156 C239 156 239 196 372 196"/>
+      <path class="filo" d="M102 223 C237 223 237 196 372 196"/>
+      <path class="filo" d="M74 290 C223 290 223 196 372 196"/>
+      <path class="filo" d="M166 350 C269 350 269 196 372 196"/>
+      <path class="flusso" d="M162 33 C267 33 267 196 372 196"/>
+      <path class="flusso b" d="M74 94 C223 94 223 196 372 196"/>
+      <path class="flusso c" d="M106 156 C239 156 239 196 372 196"/>
+      <path class="flusso" d="M102 223 C237 223 237 196 372 196"/>
+      <path class="flusso b" d="M74 290 C223 290 223 196 372 196"/>
+      <path class="flusso c" d="M166 350 C269 350 269 196 372 196"/>
+
+      <!-- server -->
+      <circle class="alone" cx="405" cy="196" r="56"/>
+      <g transform="translate(372 144)">
+        <rect class="corpo" x="0" y="0" width="64" height="104" rx="6"/>
+        <g fill="#e8f0fa" stroke="#324357" stroke-width="1.2">
+          <rect x="8" y="10" width="48" height="20" rx="2.5"/><rect x="8" y="42" width="48" height="20" rx="2.5"/><rect x="8" y="74" width="48" height="20" rx="2.5"/>
+        </g>
+        <circle cx="47" cy="20" r="2.5" fill="#16a37a"/><circle cx="47" cy="52" r="2.5" fill="#16a37a"/><circle cx="47" cy="84" r="2.5" fill="#2a6fb0"/>
+        <path d="M14 20h20M14 52h20M14 84h20" stroke="#9fb3cc" stroke-width="1.6"/>
+      </g>
+      <text x="404" y="270" text-anchor="middle">SERVER LINUX</text>
+
+      <!-- i dispositivi -->
+      <g transform="translate(70 6)">
+        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
+        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
+        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(40 68)">
+        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
+        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
+        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
+        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(10 128)">
+        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
+        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
+        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
+        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
+        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
+        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(10 196)">
+        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
+        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
+        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(40 264)">
+        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
+        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
+        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
+        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(70 322)">
+        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
+        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
+        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
+        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
+        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
+        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+    </svg>
+
+  <main class="scheda">
+    <div class="marchio">
+      <svg viewBox="0 0 44 44" aria-hidden="true">
+        <rect x="4" y="7" width="36" height="24" rx="3.5" fill="none" stroke="#1f6fb5" stroke-width="2.8"/>
+        <path d="M16 38h12M22 31v7" stroke="#1f6fb5" stroke-width="2.8" stroke-linecap="round"/>
+        <circle cx="13" cy="19" r="2.6" fill="#1f6fb5"/><circle cx="31" cy="19" r="2.6" fill="#16a37a"/><circle cx="22" cy="14" r="2" fill="#9fb3cc"/>
+        <path d="M13 19L22 14L31 19" fill="none" stroke="#9fb3cc" stroke-width="1.4"/>
+      </svg>
+      <h1>REMOTIX</h1>
+    </div>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser: portatile, telefono o tablet.</p>
+
+    <form action="#" method="post">
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Collegati
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+
+    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <div class="errore" role="alert">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Utente o parola d'ordine non corretti.</span>
+    </div>
+
+    <p class="piede">Connessione cifrata · niente da installare</p>
+  </main>
+</div>
+</body>
+</html>

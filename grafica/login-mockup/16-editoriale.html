@@ -1,0 +1,120 @@
+<!-- Stile: EDITORIALE — impaginazione da rivista su fondo carta.
+     Idea: un grande titolo serif di sistema a sinistra come una copertina, il modulo a destra come una colonna di testo, filetti sottili e numeri di pagina. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --carta:#f6f1e7; --carta-2:#efe8da; --inchiostro:#1d1a16; --grigio:#5a5249;
+    --filetto:#cfc4b0; --accento:#a8321e;
+    --serif: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--carta);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,.55), transparent 55%),
+      repeating-linear-gradient(0deg, rgba(90,70,40,.018) 0 1px, transparent 1px 3px);
+    color:var(--inchiostro); font-family:var(--sans);
+    font-size:clamp(16px, .55vw + 12px, 26px);
+    display:grid; place-items:center; min-height:100vh; padding:clamp(16px,4vw,6rem);
+  }
+  .pagina{
+    width:min(100%, 72em); display:grid; grid-template-columns:1.25fr 1fr;
+    border-top:3px solid var(--inchiostro); border-bottom:1px solid var(--inchiostro);
+    animation:entra .9s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .testata{
+    grid-column:1/-1; display:flex; justify-content:space-between; align-items:center;
+    padding:.6em 0; border-bottom:1px solid var(--filetto);
+    font-size:.72em; letter-spacing:.18em; text-transform:uppercase; color:var(--grigio);
+  }
+  .marchio{display:flex; align-items:center; gap:.6em; color:var(--inchiostro); font-weight:700; letter-spacing:.3em}
+  .marchio svg{width:1.8em;height:1.8em}
+  .copertina{padding:2.4em 2.4em 2.4em 0; border-right:1px solid var(--filetto); position:relative}
+  .occhiello{font-size:.75em; letter-spacing:.2em; text-transform:uppercase; color:var(--accento); font-weight:600; margin:0 0 1em}
+  h1{
+    font-family:var(--serif); font-weight:400; font-size:clamp(2.6rem, 6.2vw, 9.5rem);
+    line-height:.92; letter-spacing:-.02em; margin:0 0 .35em;
+  }
+  h1 em{font-style:italic; color:var(--accento)}
+  .motto{font-family:var(--serif); font-size:1.35em; line-height:1.4; color:var(--grigio); max-width:22em; margin:0}
+  .motto::first-letter{font-size:2.6em; float:left; line-height:.85; padding:.06em .1em 0 0; color:var(--inchiostro)}
+  .colonna{padding:2.4em 0 2.4em 2.4em; display:flex; flex-direction:column; justify-content:center}
+  .colonna h2{font-family:var(--serif); font-weight:400; font-style:italic; font-size:1.6em; margin:0 0 1.2em; padding-bottom:.4em; border-bottom:1px solid var(--filetto)}
+  form{display:grid; gap:1.3em}
+  label{display:block; font-size:.72em; letter-spacing:.16em; text-transform:uppercase; font-weight:600; color:var(--grigio); margin-bottom:.45em}
+  input{
+    width:100%; font:inherit; font-size:1.05em; color:var(--inchiostro);
+    background:transparent; border:0; border-bottom:1.5px solid var(--inchiostro);
+    padding:.5em 0; border-radius:0; transition:border-color .2s, background .2s;
+  }
+  input:hover{background:rgba(255,255,255,.45)}
+  input:focus{outline:none; border-bottom-color:var(--accento); background:rgba(255,255,255,.6); box-shadow:0 2px 0 var(--accento)}
+  button{
+    margin-top:.6em; font:inherit; font-family:var(--serif); font-size:1.2em; cursor:pointer;
+    background:var(--inchiostro); color:var(--carta); border:0; padding:.75em 1.2em;
+    display:flex; justify-content:space-between; align-items:center; transition:background .2s, gap .2s;
+  }
+  button span{transition:transform .25s}
+  button:hover{background:var(--accento)}
+  button:hover span{transform:translateX(.35em)}
+  button:focus-visible, input:focus-visible{outline:3px solid var(--accento); outline-offset:3px}
+  .errore{
+    margin-top:1.4em; padding:.8em 1em; border-left:3px solid var(--accento);
+    background:#f7e3dc; color:#7a2012; font-size:.9em; font-family:var(--serif); font-style:italic;
+  }
+  .piede{
+    grid-column:1/-1; display:flex; justify-content:space-between; gap:1em; flex-wrap:wrap;
+    padding:.7em 0; font-size:.72em; letter-spacing:.12em; text-transform:uppercase; color:var(--grigio);
+    border-top:1px solid var(--filetto);
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  @media (max-width:760px){
+    .pagina{grid-template-columns:1fr}
+    .copertina{padding:1.6em 0; border-right:0; border-bottom:1px solid var(--filetto)}
+    .colonna{padding:1.6em 0}
+    .testata .num{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+<main class="pagina">
+  <header class="testata">
+    <span class="marchio">
+      <svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="5" width="26" height="17" rx="1.5"/><path d="M12 27h8M16 22v5"/>
+        <path d="M10 14h12M18 10l4 4-4 4" stroke="#a8321e"/>
+      </svg>
+      REMOTIX
+    </span>
+    <span class="num">N° 1 — Accesso</span>
+  </header>
+
+  <section class="copertina">
+    <p class="occhiello">Desktop remoto</p>
+    <h1>Il tuo<br>desktop,<br><em>ovunque.</em></h1>
+    <p class="motto">Apri la pagina e ritrovi il tuo desktop Linux, da qualunque browser, tutto dove l'avevi lasciato.</p>
+  </section>
+
+  <section class="colonna" aria-labelledby="titolo-accesso">
+    <h2 id="titolo-accesso">Entra nella tua sessione</h2>
+    <form action="#" method="post">
+      <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
+      <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Collegati <span aria-hidden="true">→</span></button>
+    </form>
+    <!-- esempio: stato d'errore, visibile solo per il mockup -->
+    <p class="errore" role="alert">Utente o parola d'ordine non corretti.</p>
+  </section>
+
+  <footer class="piede"><span>Connessione cifrata · niente da installare</span><span>REMOTIX</span></footer>
+</main>
+</body>
+</html>

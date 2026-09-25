@@ -420,27 +420,207 @@
   #puntatore { position: fixed; left: 0; top: 0; width: 0; height: 0;
                z-index: 9; pointer-events: none; display: none;
                will-change: transform; }
+
+  /* ═══ LA PAGINA D'ACCESSO «Rete» (grafica/login-mockup/13-rete.html) — 25 set
+     2026.  ⛔ Tutto dentro `.accesso` o sotto `body:not([data-schermo="acceso"])`:
+     col desktop acceso la pagina resta quella di prima.  Le misure sono in `em`
+     sulla grandezza dell'impianto, cosi' crescono col 4K senza toccare `html`. */
+  body:not([data-schermo="acceso"]) {
+    min-height: 100vh; box-sizing: border-box; align-items: center;
+    padding: 1.5rem 1rem; color: #17212e; background: #f7f9fc;
+    background-image: radial-gradient(#dfe7f1 1px, transparent 1px);
+    background-size: 1.5rem 1.5rem;
+  }
+  body:not([data-schermo="acceso"]) main { max-width: 64em; }
+  body[data-schermo="acceso"] .accesso { display: none; }
+  .accesso { --carta:#fff; --inchiostro:#17212e; --tenue:#556274; --bordo:#e0e6ee;
+    --linea:#9fb3cc; --nodo:#2a6fb0; --accento:#1f6fb5; --accento-scuro:#185b95; --vivo:#16a37a;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Cantarell, Ubuntu, sans-serif;
+    font-size: clamp(16px, 0.42vw + 10px, 26px); color: var(--inchiostro); color-scheme: light; }
+  .accesso .impianto { width: 100%; max-width: 60em; margin: 0 auto; display: grid;
+    grid-template-columns: 1.1fr 1fr; align-items: center; gap: 3em; }
+  .accesso .rete { width: 100%; height: auto; display: block; }
+  .accesso .rete .filo { fill: none; stroke: var(--linea); stroke-width: 1.4; }
+  .accesso .rete .flusso { fill: none; stroke: var(--nodo); stroke-width: 1.6; stroke-dasharray: 4 14;
+    stroke-linecap: round; animation: rx-scorre 2.4s linear infinite; }
+  .accesso .rete .flusso.b { animation-duration: 3s; animation-direction: reverse; }
+  .accesso .rete .flusso.c { stroke: var(--vivo); animation-duration: 3.6s; }
+  @keyframes rx-scorre { to { stroke-dashoffset: -72; } }
+  .accesso .rete .alone { fill: var(--nodo); opacity: .12; transform-box: fill-box;
+    transform-origin: center; animation: rx-pulsa 2.8s ease-out infinite; }
+  @keyframes rx-pulsa { 0% { transform: scale(.6); opacity: .25; } 100% { transform: scale(1.5); opacity: 0; } }
+  .accesso .rete .corpo { fill: #fff; stroke: #324357; stroke-width: 1.6; }
+  .accesso .rete .schermo { fill: #e8f0fa; }
+  .accesso .rete text { font: 600 11px system-ui, sans-serif; fill: #4b5869; letter-spacing: .06em; }
+  .accesso .scheda { background: var(--carta); border: 1px solid var(--bordo); border-radius: .9em;
+    padding: 2em 1.9em 1.6em;
+    box-shadow: 0 1px 2px rgba(20,30,50,.05), 0 18px 40px -18px rgba(20,40,70,.25);
+    animation: rx-entra .5s ease-out both; }
+  @keyframes rx-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .accesso .marchio { display: flex; align-items: center; gap: .65em; }
+  .accesso .marchio svg { width: 2.2em; height: 2.2em; }
+  .accesso h1 { margin: 0; font-size: 1.45em; letter-spacing: .12em; font-weight: 750; }
+  .accesso .motto { margin: .55em 0 1.6em; color: var(--tenue); font-size: .95em; line-height: 1.45; }
+  .accesso #modulo { display: grid; gap: 1em; }
+  .accesso label { display: block; font-size: .85em; font-weight: 600; margin: 0 0 .35em; }
+  .accesso input { width: 100%; box-sizing: border-box; font: inherit; font-size: 1em;
+    color: var(--inchiostro); padding: .7em .85em; border: 1px solid #c3ccd8; border-radius: .5em;
+    background: #fff; transition: border-color .15s, box-shadow .15s; }
+  .accesso input:hover { border-color: #94a2b5; }
+  .accesso input:focus { outline: none; border-color: var(--accento); box-shadow: 0 0 0 3px rgba(31,111,181,.22); }
+  .accesso #vai { margin-top: .35em; font: inherit; font-size: 1em; font-weight: 650; color: #fff;
+    padding: .8em; border: 0; border-radius: .5em; background: var(--accento); cursor: pointer;
+    display: flex; justify-content: center; align-items: center; gap: .55em;
+    transition: background .15s, transform .1s; }
+  .accesso #vai svg { width: 1.1em; height: 1.1em; transition: transform .2s; }
+  .accesso #vai:hover { background: var(--accento-scuro); }
+  .accesso #vai:hover svg { transform: translateX(3px); }
+  .accesso #vai:active { transform: translateY(1px); }
+  .accesso #vai:focus-visible { outline: 3px solid #93bde3; outline-offset: 2px; }
+  .accesso #esito { margin-top: 1em; min-height: 0; font-size: .88em; line-height: 1.45;
+    border-radius: .5em; }
+  .accesso #esito:empty { display: none; }
+  .accesso #esito.male { padding: .7em .85em .7em 2.3em; background: #fdefef no-repeat .8em .8em / 1.1em
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='none' stroke='%23a12020' stroke-width='1.8'/%3E%3Cpath d='M7 7l6 6M13 7l-6 6' stroke='%23a12020' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+    border: 1px solid #efc3c3; color: #a12020; }
+  .accesso #esito.bene { padding: .7em .85em; background: #ecf8f3; border: 1px solid #b7e4d2; color: #0f6b4f; }
+  .accesso #avviso { border-radius: .5em; margin: 0 0 1.2em; }
+  .accesso #dichiarazione { border-radius: .5em; }
+  .accesso .piede { margin: 1.3em 0 0; font-size: .78em; color: var(--tenue); display: flex;
+    align-items: center; gap: .45em; }
+  .accesso .piede::before { content: ""; flex: none; width: .5em; height: .5em; border-radius: 50%;
+    background: var(--vivo); box-shadow: 0 0 0 3px rgba(22,163,122,.18); }
+  @media (max-width: 820px) {
+    .accesso .impianto { grid-template-columns: 1fr; gap: 1em; max-width: 26em; }
+    .accesso .rete { max-width: 20em; margin: 0 auto; }
+  }
+  @media (max-width: 400px) { .accesso .scheda { padding: 1.6em 1.2em 1.3em; } }
+  @media (prefers-reduced-motion: reduce) {
+    .accesso *, .accesso *::before, .accesso *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body data-bannato="__BANNATO__" data-restano-ms="__RESTANO_MS__">
 <main>
-  <h1>REMOTIX</h1>
-  <div id="avviso">__AVVISO__</div>
+  <!-- ⭐ LA PAGINA D'ACCESSO — 25 settembre 2026, scelta dall'utente fra venti
+       proposte (grafica/login-mockup/13-rete.html, «Rete»).  ⛔ Gli ID restano
+       quelli di sempre (`modulo`, `utente`, `parola`, `vai`, `esito`, `avviso`,
+       `dichiarazione`): li usano la pagina e le prove della suite.  Tutto il
+       nuovo sta dentro `.accesso`, che col desktop acceso sparisce. -->
+  <div class="accesso">
+    <div class="impianto">
+      <svg class="rete" viewBox="0 0 470 390" aria-hidden="true">
+      <!-- sei dispositivi, un server: tanti utenti insieme, ognuno col suo desktop -->
+      <path class="filo" d="M162 33 C267 33 267 196 372 196"/>
+      <path class="filo" d="M74 94 C223 94 223 196 372 196"/>
+      <path class="filo" d="M106 156 C239 156 239 196 372 196"/>
+      <path class="filo" d="M102 223 C237 223 237 196 372 196"/>
+      <path class="filo" d="M74 290 C223 290 223 196 372 196"/>
+      <path class="filo" d="M166 350 C269 350 269 196 372 196"/>
+      <path class="flusso" d="M162 33 C267 33 267 196 372 196"/>
+      <path class="flusso b" d="M74 94 C223 94 223 196 372 196"/>
+      <path class="flusso c" d="M106 156 C239 156 239 196 372 196"/>
+      <path class="flusso" d="M102 223 C237 223 237 196 372 196"/>
+      <path class="flusso b" d="M74 290 C223 290 223 196 372 196"/>
+      <path class="flusso c" d="M166 350 C269 350 269 196 372 196"/>
+
+      <!-- server -->
+      <circle class="alone" cx="405" cy="196" r="56"/>
+      <g transform="translate(372 144)">
+        <rect class="corpo" x="0" y="0" width="64" height="104" rx="6"/>
+        <g fill="#e8f0fa" stroke="#324357" stroke-width="1.2">
+          <rect x="8" y="10" width="48" height="20" rx="2.5"/><rect x="8" y="42" width="48" height="20" rx="2.5"/><rect x="8" y="74" width="48" height="20" rx="2.5"/>
+        </g>
+        <circle cx="47" cy="20" r="2.5" fill="#16a37a"/><circle cx="47" cy="52" r="2.5" fill="#16a37a"/><circle cx="47" cy="84" r="2.5" fill="#2a6fb0"/>
+        <path d="M14 20h20M14 52h20M14 84h20" stroke="#9fb3cc" stroke-width="1.6"/>
+      </g>
+      <text x="404" y="270" text-anchor="middle">SERVER LINUX</text>
+
+      <!-- i dispositivi -->
+      <g transform="translate(70 6)">
+        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
+        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
+        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(40 68)">
+        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
+        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
+        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
+        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(10 128)">
+        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
+        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
+        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
+        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
+        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
+        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(10 196)">
+        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
+        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
+        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(40 264)">
+        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
+        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
+        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
+        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(70 322)">
+        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
+        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
+        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
+        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
+        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
+        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
+      </g>
+    </svg>
+
+      <section class="scheda" aria-labelledby="titolo">
+        <div class="marchio">
+          <svg viewBox="0 0 44 44" aria-hidden="true">
+                  <rect x="4" y="7" width="36" height="24" rx="3.5" fill="none" stroke="#1f6fb5" stroke-width="2.8"/>
+                  <path d="M16 38h12M22 31v7" stroke="#1f6fb5" stroke-width="2.8" stroke-linecap="round"/>
+                  <circle cx="13" cy="19" r="2.6" fill="#1f6fb5"/><circle cx="31" cy="19" r="2.6" fill="#16a37a"/><circle cx="22" cy="14" r="2" fill="#9fb3cc"/>
+                  <path d="M13 19L22 14L31 19" fill="none" stroke="#9fb3cc" stroke-width="1.4"/>
+                </svg>
+          <h1 id="titolo">REMOTIX</h1>
+        </div>
+        <p class="motto">Il tuo desktop Linux, da qualunque browser: portatile, telefono o tablet.</p>
+        <div id="avviso">__AVVISO__</div>
+
+        <form id="modulo">
+          <div>
+            <label for="utente">Utente</label>
+            <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+          </div>
+          <div>
+            <label for="parola">Parola d'ordine</label>
+            <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" id="vai">Collegati
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+
+        <div id="esito" role="status" aria-live="polite"></div>
+        <div id="dichiarazione"></div>
+        <p class="piede">Connessione cifrata · niente da installare</p>
+      </section>
+    </div>
+  </div>
   <!-- ⭐ Il suggerimento che compare SULLA TELA e sparisce da se': oggi serve a
        una cosa sola — dire che su Firefox si incolla col `Ctrl+V` — e si
        nasconde quando e' vuoto, come `#avviso` e `#dichiarazione`. -->
   <div id="suggerimento" aria-live="polite"></div>
 
-  <form id="modulo">
-    <label for="utente">Utente</label>
-    <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
-    <label for="parola">Parola d'ordine</label>
-    <input id="parola" name="parola" type="password" autocomplete="current-password" required>
-    <button type="submit" id="vai">Collegati</button>
-  </form>
-
-  <div id="esito"></div>
-  <div id="dichiarazione"></div>
   <!-- ⛔⭐ `tabindex="-1"` E NON E' UN DETTAGLIO DI ACCESSIBILITA': senza, una
        `<canvas>` NON e' focalizzabile, quindi le due `tela.focus()` che la
        pagina chiama dopo l'accesso sono **colpi a vuoto**.  ⇒ Il fuoco resta

@@ -1,0 +1,220 @@
+<!-- Stile: SVIZZERO — bianco puro, griglia a 12 colonne, tipografia grande e un solo accento rosso.
+     Idea: la pagina è un manifesto tipografico; il marchio enorme a sinistra, il modulo allineato alla griglia a destra. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root {
+    --ink: #111111;
+    --muted: #5a5a5a;
+    --line: #d9d9d9;
+    --paper: #ffffff;
+    --accent: #d0021b;       /* unico accento: rosso svizzero (bianco su rosso 5,3:1) */
+    --accent-dark: #a30015;
+    --err-bg: #fff3f4;
+    --err-line: #f2b8bf;
+    --err-ink: #8a0013;
+    --gutter: clamp(16px, 4vw, 96px);
+  }
+  * { box-sizing: border-box; }
+  html { font-size: clamp(16px, 0.35vw + 14px, 26px); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: auto 1fr auto;
+    column-gap: clamp(12px, 2vw, 40px);
+    padding: 0 var(--gutter);
+  }
+  /* Linee della griglia, leggere: il segno dello stile */
+  .rule { grid-column: 1 / -1; border-top: 2px solid var(--ink); }
+  header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 0 1rem;
+    border-bottom: 2px solid var(--ink);
+    font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+  }
+  header .brand { display: flex; align-items: center; gap: .6rem; font-weight: 700; letter-spacing: .14em; }
+  header .brand svg { width: 1.6rem; height: 1.6rem; }
+  header .idx { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .hero {
+    grid-column: 1 / span 7;
+    align-self: center;
+    padding: 3rem 0;
+  }
+  .hero .kicker {
+    display: flex; gap: 1rem; align-items: baseline;
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted);
+  }
+  .hero .kicker b { color: var(--accent); font-weight: 700; }
+  .hero h1 {
+    margin: .4em 0 .25em;
+    font-size: clamp(3.2rem, 11vw, 9.5rem);
+    line-height: .86;
+    letter-spacing: -.045em;
+    font-weight: 800;
+  }
+  .hero h1 .dot { color: var(--accent); }
+  .hero p {
+    max-width: 22ch;
+    margin: 0;
+    font-size: clamp(1.25rem, 2.2vw, 2.1rem);
+    line-height: 1.15;
+    font-weight: 500;
+    letter-spacing: -.01em;
+  }
+
+  .panel {
+    grid-column: 9 / span 4;
+    align-self: center;
+    padding: 3rem 0;
+  }
+  .panel h2 {
+    margin: 0 0 2rem;
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .12em;
+    display: flex; justify-content: space-between;
+    border-top: 2px solid var(--ink); padding-top: .6rem;
+  }
+  .panel h2 span { color: var(--muted); font-weight: 400; }
+
+  .field { margin-bottom: 1.6rem; }
+  label {
+    display: block;
+    font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: .4rem;
+  }
+  input {
+    width: 100%;
+    font: inherit; font-size: 1.1rem;
+    color: var(--ink);
+    padding: .55rem 0 .5rem;
+    border: 0; border-bottom: 2px solid var(--line);
+    background: transparent;
+    border-radius: 0;
+    outline: none;
+    transition: border-color .2s ease;
+  }
+  input:hover { border-bottom-color: #9a9a9a; }
+  input:focus-visible { border-bottom-color: var(--ink); box-shadow: 0 2px 0 0 var(--ink); }
+
+  button {
+    width: 100%;
+    margin-top: .6rem;
+    display: flex; justify-content: space-between; align-items: center;
+    font: inherit; font-size: 1.05rem; font-weight: 700; letter-spacing: .02em;
+    color: #fff; background: var(--accent);
+    border: 0; border-radius: 0;
+    padding: 1rem 1.1rem;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  button svg { width: 1.3em; height: 1.3em; transition: transform .25s ease; }
+  button:hover { background: var(--accent-dark); }
+  button:hover svg { transform: translateX(4px); }
+  button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  /* ESEMPIO: stato d'errore disegnato */
+  .error {
+    margin-top: 1.4rem;
+    display: grid; grid-template-columns: auto 1fr; gap: .7rem;
+    padding: .8rem 1rem;
+    background: var(--err-bg);
+    border-left: 4px solid var(--accent);
+    color: var(--err-ink);
+    font-size: .9rem; line-height: 1.35;
+  }
+  .error svg { width: 1.2em; height: 1.2em; margin-top: .1em; }
+
+  footer {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+    border-top: 2px solid var(--ink);
+    padding: 1rem 0 1.25rem;
+    font-size: .75rem; color: var(--muted); letter-spacing: .04em;
+  }
+  footer .lock { display: inline-flex; gap: .4rem; align-items: center; color: var(--ink); }
+  footer svg { width: 1em; height: 1em; }
+
+  /* Ingresso leggero */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero, .panel { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+    .panel { animation-delay: .12s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  }
+
+  @media (max-width: 900px) {
+    .hero { grid-column: 1 / -1; padding: 2.5rem 0 1rem; }
+    .panel { grid-column: 1 / -1; padding: 1rem 0 2.5rem; }
+    .hero h1 { font-size: clamp(3.2rem, 18vw, 7rem); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">
+      <!-- Logo: schermo a spigoli vivi con il segnale che parte -->
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="5" width="28" height="18" fill="none" stroke="#111" stroke-width="2.5"/>
+        <rect x="12" y="25" width="8" height="2.5" fill="#111"/>
+        <rect x="8" y="27.5" width="16" height="2" fill="#111"/>
+        <path d="M9 14h9" stroke="#d0021b" stroke-width="2.5"/>
+        <path d="M16 10.5l4 3.5-4 3.5" fill="none" stroke="#d0021b" stroke-width="2.5"/>
+      </svg>
+      REMOTIX
+    </div>
+    <span class="idx">Accesso · 01</span>
+  </header>
+
+  <section class="hero">
+    <div class="kicker"><b>●</b> Desktop remoto per Linux</div>
+    <h1 aria-label="REMOTIX">REMO<br>TIX<span class="dot">.</span></h1>
+    <p>Il tuo desktop Linux, da qualunque browser.</p>
+  </section>
+
+  <main class="panel">
+    <h2>Accedi <span>01 / 01</span></h2>
+    <form action="#" method="post" onsubmit="return false">
+      <div class="field">
+        <label for="u">Utente</label>
+        <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div class="field">
+        <label for="p">Parola d'ordine</label>
+        <input id="p" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Collegati
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
+      </button>
+    </form>
+
+    <!-- esempio: stato d'errore, visibile solo per il mockup -->
+    <div class="error" role="alert">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.4"/></svg>
+      <span>Utente o parola d'ordine non corretti.</span>
+    </div>
+  </main>
+
+  <footer>
+    <span class="lock">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      Connessione cifrata · niente da installare
+    </span>
+    <span>REMOTIX</span>
+  </footer>
+</div>
+</body>
+</html>

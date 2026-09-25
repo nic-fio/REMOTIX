@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!-- Stile 10 «Puntini e arancio»: carta crema con griglia di puntini leggera, un solo accento arancio caldo.
+     Idea: tono da strumento di lavoro ben fatto; scheda divisa in due su schermi larghi (presentazione a sinistra, modulo a destra). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX · Accesso</title>
+<style>
+  :root {
+    --ink: #2a2118;
+    --ink-soft: #5e5245;
+    --arancio: #e8742a;
+    --arancio-testo: #b8520f;   /* arancio scurito per testo e pulsante: contrasto AA sul chiaro */
+    --arancio-bottone: #c4581a;
+    --line: #e4d9cc;
+    --err-bg: #fdefeb;
+    --err-line: #f0c3b6;
+    --err-ink: #9b2615;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; display: grid; place-items: center;
+    padding: clamp(16px, 4vw, 64px);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, sans-serif;
+    color: var(--ink);
+    background-color: #fcf8f2;
+    background-image: radial-gradient(circle, #d9ccbb 1.2px, transparent 1.4px);
+    background-size: 22px 22px;
+    overflow-x: hidden;
+  }
+  /* alone caldo dietro la scheda */
+  body::before {
+    content: ""; position: fixed; width: 70vmin; height: 70vmin; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 170, 100, .28), rgba(255, 170, 100, 0) 65%);
+    left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none;
+  }
+
+  .scheda {
+    position: relative; width: min(100%, 52rem);
+    display: grid; grid-template-columns: 1fr 1.15fr;
+    background: #fff; border-radius: 22px; overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 60px -30px rgba(120, 70, 20, .35), 0 2px 8px rgba(120, 70, 20, .06);
+    animation: entra .7s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes entra { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  .lato {
+    padding: clamp(28px, 4vw, 48px);
+    background: linear-gradient(160deg, #fff4e8, #ffe6d1);
+    display: flex; flex-direction: column; justify-content: space-between; gap: 28px;
+    position: relative;
+  }
+  .lato::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(232, 116, 42, .35) 1.3px, transparent 1.5px);
+    background-size: 14px 14px;
+    -webkit-mask-image: linear-gradient(200deg, #000 0%, transparent 55%);
+    mask-image: linear-gradient(200deg, #000 0%, transparent 55%);
+  }
+  .marchio { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .marchio svg { width: 46px; height: 46px; flex: none; }
+  h1 { margin: 0; font-size: 1.5rem; letter-spacing: .12em; font-weight: 780; }
+  .motto { margin: 0; font-size: clamp(1.25rem, 2.6vw, 1.7rem); line-height: 1.25; font-weight: 700; position: relative; z-index: 1; }
+  .motto em { font-style: normal; color: var(--arancio-testo); }
+  .punti { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: .9rem; color: var(--ink-soft); position: relative; z-index: 1; }
+  .punti li { display: flex; gap: 8px; align-items: center; }
+  .punti li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--arancio); flex: none; }
+
+  .modulo { padding: clamp(28px, 4vw, 48px); }
+  .modulo h2 { margin: 0 0 22px; font-size: 1.2rem; }
+  form { display: grid; gap: 16px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+  input {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--line); background: #fffdfa;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:hover { border-color: #cdb9a2; }
+  input:focus-visible { outline: none; border-color: var(--arancio); box-shadow: 0 0 0 4px rgba(232, 116, 42, .22); background: #fff; }
+  button {
+    margin-top: 6px; font: inherit; font-weight: 700; font-size: 1rem; color: #fff;
+    padding: 13px; border: 0; border-radius: 10px; cursor: pointer;
+    background: var(--arancio-bottone);
+    box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 10px 20px -10px rgba(196, 88, 26, .9);
+    transition: background .2s, transform .15s, box-shadow .2s;
+  }
+  button:hover { background: #a94a12; transform: translateY(-1px); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  /* esempio: stato d'errore sempre visibile nel mockup */
+  .errore {
+    margin-top: 18px; padding: 11px 14px; border-radius: 10px;
+    background: var(--err-bg); border: 1px dashed var(--err-line); color: var(--err-ink);
+    font-size: .9rem; display: flex; gap: 10px; align-items: center;
+  }
+  .piede { margin: 22px 0 0; font-size: .78rem; color: var(--ink-soft); }
+
+  @media (max-width: 720px) {
+    .scheda { grid-template-columns: 1fr; width: min(100%, 26rem); }
+    .lato { gap: 16px; padding-bottom: 24px; }
+    .punti { display: none; }
+    .motto { font-size: 1.15rem; }
+  }
+  @media (min-width: 2000px) { html { font-size: 22px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .scheda { animation: none; }
+    input, button { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="scheda">
+    <section class="lato" aria-label="Presentazione">
+      <div class="marchio">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="4" y="8" width="40" height="26" rx="5" fill="#2a2118"/>
+          <rect x="8" y="12" width="32" height="18" rx="2" fill="#fff4e8"/>
+          <circle cx="16" cy="21" r="2.4" fill="#e8742a"/><circle cx="24" cy="21" r="2.4" fill="#e8742a" opacity=".7"/><circle cx="32" cy="21" r="2.4" fill="#e8742a" opacity=".4"/>
+          <path d="M18 41h12M24 34v7" stroke="#2a2118" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <h1>REMOTIX</h1>
+      </div>
+      <p class="motto">Il tuo desktop Linux, <em>da qualunque browser</em>.</p>
+      <ul class="punti">
+        <li>Tutto il desktop, a piena risoluzione</li>
+        <li>Da computer, tablet o telefono</li>
+        <li>Nessun programma da installare</li>
+      </ul>
+    </section>
+
+    <section class="modulo" aria-labelledby="titolo-accesso">
+      <h2 id="titolo-accesso">Accedi</h2>
+      <form action="#" method="post" onsubmit="return false">
+        <div>
+          <label for="utente">Utente</label>
+          <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        </div>
+        <div>
+          <label for="parola">Parola d'ordine</label>
+          <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit">Collegati</button>
+      </form>
+
+      <!-- esempio: messaggio d'errore dopo un tentativo sbagliato -->
+      <div class="errore" role="alert">
+        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.8 6.8l6.4 6.4M13.2 6.8l-6.4 6.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Utente o parola d'ordine non corretti.
+      </div>
+
+      <p class="piede">Connessione cifrata · niente da installare</p>
+    </section>
+  </main>
+</body>
+</html>

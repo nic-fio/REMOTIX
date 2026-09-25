@@ -1,0 +1,127 @@
+<!-- Stile: MEDITERRANEO — terracotta tenue, sabbia e blu mare, linee pulite.
+     Idea: una finestra ad arco affacciata sul mare (SVG) accanto a una scheda color sabbia; calma estiva, geometria semplice. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --sabbia:#f4ead9; --sabbia-2:#ead9bd; --calce:#fffaf2; --terracotta:#c0643f; --terracotta-scura:#9a4526;
+    --mare:#1f5f8b; --mare-chiaro:#8fc1dc; --testo:#2b2622; --testo-2:#5e5247;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    min-height:100vh; font-family:var(--sans); color:var(--testo);
+    font-size:clamp(16px, .5vw + 12px, 24px);
+    background:linear-gradient(180deg, var(--calce) 0%, var(--sabbia) 100%);
+    display:grid; place-items:center; padding:clamp(16px,4vw,5rem);
+  }
+  .scena{
+    width:min(100%, 62em); display:grid; grid-template-columns:1fr 1.05fr;
+    background:var(--calce); border-radius:1.6em; overflow:hidden;
+    box-shadow:0 1.5em 4em -1.2em rgba(120,70,30,.28), 0 0 0 1px rgba(160,110,60,.14);
+    animation:sale .8s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .finestra{
+    position:relative; background:var(--sabbia-2); display:flex; align-items:flex-end; justify-content:center;
+    padding:2.2em 2.2em 0; min-height:22em;
+  }
+  .finestra svg{width:100%; max-width:22em; height:auto; display:block}
+  .onda{animation:onda 7s ease-in-out infinite alternate}
+  .scheda{padding:2.8em 2.6em}
+  .marchio{display:flex; align-items:center; gap:.7em; margin-bottom:1.8em}
+  .marchio svg{width:2.4em; height:2.4em}
+  .marchio b{font-size:1.25em; letter-spacing:.22em; color:var(--terracotta-scura)}
+  h1{font-size:1.9em; line-height:1.15; font-weight:650; margin:0 0 .3em; color:var(--testo)}
+  .motto{margin:0 0 2em; color:var(--testo-2); line-height:1.5}
+  form{display:grid; gap:1.1em}
+  label{display:block; font-weight:600; font-size:.88em; color:var(--testo-2); margin-bottom:.4em}
+  input{
+    width:100%; font:inherit; padding:.8em 1em; border-radius:.75em; color:var(--testo);
+    background:#fff; border:1.5px solid #d9c6a6; transition:border-color .2s, box-shadow .2s;
+  }
+  input:hover{border-color:var(--terracotta)}
+  input:focus{outline:none; border-color:var(--mare); box-shadow:0 0 0 4px rgba(31,95,139,.2)}
+  button{
+    margin-top:.5em; font:inherit; font-weight:650; font-size:1.05em; color:#fff; cursor:pointer;
+    background:var(--terracotta-scura); border:0; border-radius:999px; padding:.85em 1.4em;
+    box-shadow:0 .5em 1.2em -.4em rgba(154,69,38,.55); transition:transform .15s, background .2s, box-shadow .2s;
+  }
+  button:hover{background:#86391d; transform:translateY(-2px); box-shadow:0 .8em 1.6em -.5em rgba(154,69,38,.6)}
+  button:active{transform:none}
+  button:focus-visible{outline:3px solid var(--mare); outline-offset:3px}
+  .errore{
+    margin:1.3em 0 0; display:flex; gap:.6em; align-items:flex-start;
+    padding:.8em 1em; border-radius:.75em; background:#fbe6dc; color:#8a2f14; border:1px solid #efc2ad; font-size:.92em;
+  }
+  .errore svg{flex:none; width:1.2em; height:1.2em; margin-top:.1em}
+  .piede{margin:2em 0 0; font-size:.78em; color:var(--testo-2); display:flex; align-items:center; gap:.5em}
+  .piede::before{content:""; width:1.6em; height:2px; background:var(--mare); border-radius:2px}
+  @keyframes sale{from{opacity:0; transform:translateY(18px) scale(.985)} to{opacity:1; transform:none}}
+  @keyframes onda{from{transform:translateX(-6px)} to{transform:translateX(6px)}}
+  @media (max-width:760px){
+    .scena{grid-template-columns:1fr}
+    .finestra{min-height:0; padding:1.6em 1.6em 0}
+    .finestra svg{max-width:13em}
+    .scheda{padding:1.8em 1.4em}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+<main class="scena">
+  <div class="finestra" aria-hidden="true">
+    <svg viewBox="0 0 240 300">
+      <defs>
+        <clipPath id="arco"><path d="M30 300V120a90 90 0 0 1 180 0v180z"/></clipPath>
+        <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf1dc"/><stop offset="1" stop-color="#f7d9b8"/></linearGradient>
+      </defs>
+      <path d="M18 300V120a102 102 0 0 1 204 0v180z" fill="#fffaf2"/>
+      <g clip-path="url(#arco)">
+        <rect width="240" height="300" fill="url(#cielo)"/>
+        <circle cx="160" cy="150" r="26" fill="#e9a07a"/>
+        <rect y="178" width="240" height="122" fill="#1f5f8b"/>
+        <g class="onda" fill="none" stroke="#8fc1dc" stroke-width="3" stroke-linecap="round">
+          <path d="M20 200q15-8 30 0t30 0 30 0 30 0 30 0 30 0 30 0"/>
+          <path d="M0 222q15-8 30 0t30 0 30 0 30 0 30 0 30 0 30 0 30 0" opacity=".7"/>
+          <path d="M20 246q15-8 30 0t30 0 30 0 30 0 30 0 30 0 30 0" opacity=".45"/>
+        </g>
+        <path d="M60 178l14-10 10 6 14-12 22 16z" fill="#c0643f" opacity=".85"/>
+      </g>
+      <rect x="10" y="286" width="220" height="14" rx="3" fill="#c0643f"/>
+    </svg>
+  </div>
+
+  <section class="scheda">
+    <div class="marchio">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="3" y="6" width="34" height="23" rx="5" fill="#1f5f8b"/>
+        <path d="M9 21q5.5-6 11 0t11 0" fill="none" stroke="#8fc1dc" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M14 35h12" stroke="#c0643f" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <b>REMOTIX</b>
+    </div>
+    <h1>Bentornato.</h1>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+    <form action="#" method="post">
+      <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
+      <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Collegati</button>
+    </form>
+
+    <!-- esempio: stato d'errore, visibile solo per il mockup -->
+    <p class="errore" role="alert">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#c0643f"/><path d="M10 5.5v5.5M10 14.2v.3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      Utente o parola d'ordine non corretti.
+    </p>
+
+    <p class="piede">Connessione cifrata · niente da installare</p>
+  </section>
+</main>
+</body>
+</html>

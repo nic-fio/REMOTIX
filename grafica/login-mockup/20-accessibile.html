@@ -1,0 +1,115 @@
+<!-- Stile: ACCESSIBILE AL MASSIMO — alto contrasto su fondo chiaro, grandi aree cliccabili, testi generosi.
+     Idea: ogni cosa si legge da lontano e si tocca col pollice (campi alti 64 px, contrasto AAA), il fuoco è un anello giallo+nero che non si perde mai; bello per chiarezza, non per decorazione. -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#f5f7fa; --bianco:#ffffff; --nero:#0b1220; --testo-2:#2f3a4c;
+    --blu:#0b4fd6; --blu-scuro:#083a9e; --giallo:#ffd400; --rosso:#b00020; --rosso-fondo:#fff0f2; --verde:#0a6b3d;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    min-height:100vh; font-family:var(--sans); color:var(--nero); background:var(--fondo);
+    font-size:clamp(18px, .55vw + 14px, 28px); line-height:1.5;
+    display:grid; place-items:center; padding:clamp(16px,4vw,5rem);
+  }
+  .salta{position:absolute; left:1em; top:-4em; background:var(--nero); color:#fff; padding:.6em 1em; border-radius:.4em; z-index:2}
+  .salta:focus{top:1em}
+  .scheda{
+    width:min(100%, 30em); background:var(--bianco); border-radius:1.2em; padding:2.2em 2.2em 2em;
+    border:2px solid var(--nero); box-shadow:0 1.2em 3em -1.2em rgba(11,18,32,.3);
+    animation:entra .5s ease-out both;
+  }
+  .testa{display:flex; align-items:center; gap:.8em; margin-bottom:1.2em}
+  .testa svg{width:3em; height:3em; flex:none}
+  .marchio{font-size:1.7em; font-weight:800; letter-spacing:.08em; margin:0; line-height:1}
+  .motto{font-size:1.1em; color:var(--testo-2); margin:0 0 1.6em; font-weight:500}
+  h1{font-size:1.4em; margin:0 0 .8em}
+  form{display:grid; gap:1.3em}
+  label{display:block; font-weight:700; font-size:1em; margin-bottom:.35em}
+  .aiuto{display:block; font-size:.82em; color:var(--testo-2); margin:-.2em 0 .45em; font-weight:400}
+  input{
+    width:100%; min-height:64px; font:inherit; font-size:1.05em; color:var(--nero);
+    padding:.55em .8em; background:var(--bianco); border:2px solid var(--nero); border-radius:.6em;
+    transition:box-shadow .15s, border-color .15s;
+  }
+  input:hover{border-color:var(--blu); box-shadow:0 0 0 2px var(--blu)}
+  input:focus{outline:none; border-color:var(--nero); box-shadow:0 0 0 3px var(--giallo), 0 0 0 6px var(--nero)}
+  .riga{display:flex; align-items:center; gap:.6em; min-height:48px; cursor:pointer; font-weight:600; font-size:.95em; margin-top:.5em; width:max-content; max-width:100%}
+  .riga input{width:28px; min-height:28px; height:28px; margin:0; accent-color:var(--blu); flex:none}
+  button{
+    width:100%; min-height:68px; font:inherit; font-size:1.15em; font-weight:800; cursor:pointer;
+    color:#fff; background:var(--blu); border:2px solid var(--blu-scuro); border-radius:.6em;
+    display:flex; align-items:center; justify-content:center; gap:.5em;
+    transition:background .15s, transform .1s;
+  }
+  button svg{width:1.1em; height:1.1em; transition:transform .2s}
+  button:hover{background:var(--blu-scuro)}
+  button:hover svg{transform:translateX(4px)}
+  button:active{transform:scale(.99)}
+  button:focus-visible{outline:none; box-shadow:0 0 0 3px var(--giallo), 0 0 0 6px var(--nero)}
+  .errore{
+    margin:1.4em 0 0; padding:.9em 1em; border-radius:.6em; display:flex; gap:.7em; align-items:flex-start;
+    background:var(--rosso-fondo); color:var(--rosso); border:2px solid var(--rosso); border-left-width:.5em; font-weight:600;
+  }
+  .errore svg{flex:none; width:1.4em; height:1.4em; margin-top:.05em}
+  .errore small{display:block; font-weight:400; color:var(--nero); font-size:.85em}
+  .piede{margin:1.6em 0 0; display:flex; align-items:center; gap:.5em; font-size:.85em; color:var(--testo-2)}
+  .piede svg{width:1.1em; height:1.1em; flex:none}
+  @keyframes entra{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  @media (max-width:420px){.scheda{padding:1.4em 1.1em 1.4em; border-radius:.9em}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+  @media (forced-colors:active){input:focus,button:focus-visible{outline:3px solid CanvasText}}
+</style>
+</head>
+<body>
+<a class="salta" href="#utente">Vai al modulo d'accesso</a>
+<main class="scheda">
+  <div class="testa">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="3" y="7" width="42" height="28" rx="5" fill="#0b4fd6"/>
+      <rect x="8" y="12" width="32" height="18" rx="2" fill="#fff"/>
+      <path d="M14 21h16M25 16l5 5-5 5" fill="none" stroke="#0b1220" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M16 42h16M24 35v7" stroke="#0b1220" stroke-width="3.5" stroke-linecap="round"/>
+    </svg>
+    <p class="marchio">REMOTIX</p>
+  </div>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+  <h1>Accedi</h1>
+  <form action="#" method="post" aria-describedby="err">
+    <div>
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" autocomplete="username" required aria-invalid="true" aria-describedby="err">
+    </div>
+    <div>
+      <label for="parola">Parola d'ordine</label>
+      <span class="aiuto" id="aiuto-parola">Attenzione a maiuscole e minuscole.</span>
+      <input id="parola" name="parola" type="password" autocomplete="current-password" required aria-invalid="true" aria-describedby="aiuto-parola err">
+      <label class="riga"><input type="checkbox" id="mostra"> Mostra la parola d'ordine</label>
+    </div>
+    <button type="submit">Collegati
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+
+  <!-- esempio: stato d'errore, visibile solo per il mockup -->
+  <div class="errore" id="err" role="alert">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L1 21h22z" fill="#b00020"/><path d="M12 9v5M12 17.5v.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+    <div>Utente o parola d'ordine non corretti.<small>Controlla e riprova.</small></div>
+  </div>
+
+  <p class="piede">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="9" rx="2" fill="#0a6b3d"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="#0a6b3d" stroke-width="2"/></svg>
+    Connessione cifrata · niente da installare
+  </p>
+</main>
+<script>document.getElementById("mostra").addEventListener("change",function(){document.getElementById("parola").type=this.checked?"text":"password"});</script>
+</body>
+</html>

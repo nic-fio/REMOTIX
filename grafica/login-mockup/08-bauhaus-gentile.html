@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<!-- Stile 08 «Bauhaus gentile»: cerchi, quadrati, triangoli e archi in colori pieni ma addolciti, sparsi sul bianco.
+     Idea: rigore geometrico e allegria; scheda netta con bordo scuro sottile e ombra piena spostata, niente sfumature. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX · Accesso</title>
+<style>
+  :root {
+    --ink: #1d1d27;
+    --ink-soft: #55556a;
+    --rosso: #e0564a;
+    --giallo: #f4c04e;
+    --blu: #2f5fd0;
+    --blu-scuro: #244bab;
+    --verde: #5fb08a;
+    --err-bg: #fdeeec;
+    --err-ink: #9e2419;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; display: grid; place-items: center;
+    padding: clamp(16px, 4vw, 64px);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, sans-serif;
+    color: var(--ink); background: #fbfaf7; overflow-x: hidden;
+  }
+  .forme { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .forme > * { transform-box: fill-box; transform-origin: center; animation: compare .9s cubic-bezier(.2,.9,.3,1.2) both; }
+  .forme > *:nth-child(2) { animation-delay: .08s; } .forme > *:nth-child(3) { animation-delay: .16s; }
+  .forme > *:nth-child(4) { animation-delay: .24s; } .forme > *:nth-child(5) { animation-delay: .32s; }
+  .forme > *:nth-child(6) { animation-delay: .40s; } .forme > *:nth-child(7) { animation-delay: .48s; }
+  .forme > *:nth-child(8) { animation-delay: .56s; } .forme > *:nth-child(9) { animation-delay: .64s; }
+  @keyframes compare { from { opacity: 0; transform: scale(.4) rotate(-20deg); } to { opacity: 1; transform: none; } }
+
+  .scheda {
+    position: relative; z-index: 1; width: min(100%, 25rem);
+    background: #fff; border: 2px solid var(--ink); border-radius: 6px;
+    padding: clamp(24px, 5vw, 42px);
+    box-shadow: 10px 10px 0 var(--giallo);
+    animation: entra .6s .2s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes entra { from { opacity: 0; transform: translate(-8px, 12px); } to { opacity: 1; transform: none; } }
+
+  .marchio { display: flex; align-items: center; gap: 14px; }
+  .marchio svg { width: 48px; height: 48px; flex: none; }
+  h1 { margin: 0; font-size: 1.7rem; font-weight: 800; letter-spacing: .06em; }
+  .motto { margin: 12px 0 26px; color: var(--ink-soft); line-height: 1.45; padding-left: 12px; border-left: 4px solid var(--rosso); }
+
+  form { display: grid; gap: 18px; }
+  label { display: block; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  input {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    padding: 12px 14px; border-radius: 4px; background: #fff;
+    border: 2px solid #c9c7c0;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:hover { border-color: #8d8b84; }
+  input:focus-visible { outline: none; border-color: var(--blu); box-shadow: 4px 4px 0 rgba(47, 95, 208, .25); }
+  button {
+    margin-top: 6px; font: inherit; font-weight: 750; font-size: 1rem; letter-spacing: .04em;
+    padding: 13px; border: 2px solid var(--ink); border-radius: 4px; cursor: pointer;
+    background: var(--blu); color: #fff;
+    box-shadow: 4px 4px 0 var(--ink);
+    transition: transform .12s, box-shadow .12s, background .15s;
+  }
+  button:hover { background: var(--blu-scuro); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+  button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+  button:focus-visible { outline: 3px solid var(--rosso); outline-offset: 4px; }
+
+  /* esempio: stato d'errore sempre visibile nel mockup */
+  .errore {
+    margin-top: 20px; padding: 12px 14px; border-radius: 4px;
+    background: var(--err-bg); color: var(--err-ink);
+    border: 2px solid #eab0a9; font-size: .9rem;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .errore i { flex: none; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid var(--rosso); }
+  .piede { margin: 24px 0 0; font-size: .78rem; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; justify-content: center; }
+  .piede b { width: 8px; height: 8px; border-radius: 50%; background: var(--verde); display: inline-block; }
+
+  @media (max-width: 480px) { .scheda { box-shadow: 6px 6px 0 var(--giallo); } }
+  @media (min-width: 2000px) { html { font-size: 22px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .forme > *, .scheda { animation: none; }
+    input, button { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <svg class="forme" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <circle cx="170" cy="190" r="120" fill="#f4c04e" opacity=".85"/>
+    <rect x="1280" y="90" width="170" height="170" fill="#2f5fd0" opacity=".8" transform="rotate(12 1365 175)"/>
+    <polygon points="1320,900 1520,900 1420,720" fill="#e0564a" opacity=".8"/>
+    <path d="M60 1000a200 200 0 0 1 400 0z" fill="#5fb08a" opacity=".7"/>
+    <circle cx="1450" cy="560" r="46" fill="none" stroke="#1d1d27" stroke-width="6" opacity=".6"/>
+    <rect x="360" y="620" width="70" height="70" fill="none" stroke="#e0564a" stroke-width="8" opacity=".7" transform="rotate(-18 395 655)"/>
+    <path d="M1100 40h140v140a140 140 0 0 1-140-140z" fill="#f4c04e" opacity=".6"/>
+    <g opacity=".45" fill="#1d1d27"><circle cx="300" cy="420" r="5"/><circle cx="330" cy="420" r="5"/><circle cx="360" cy="420" r="5"/><circle cx="300" cy="450" r="5"/><circle cx="330" cy="450" r="5"/><circle cx="360" cy="450" r="5"/></g>
+    <line x1="1160" y1="760" x2="1260" y2="660" stroke="#2f5fd0" stroke-width="10" stroke-linecap="round" opacity=".7"/>
+  </svg>
+
+  <main class="scheda">
+    <div class="marchio">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="3" y="7" width="42" height="28" rx="3" fill="#2f5fd0"/>
+        <rect x="7" y="11" width="34" height="20" fill="#fff"/>
+        <circle cx="17" cy="21" r="6" fill="#f4c04e"/>
+        <polygon points="26,27 36,27 31,16" fill="#e0564a"/>
+        <rect x="21" y="35" width="6" height="6" fill="#1d1d27"/>
+        <rect x="14" y="41" width="20" height="3" fill="#1d1d27"/>
+      </svg>
+      <h1>REMOTIX</h1>
+    </div>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+    <form action="#" method="post" onsubmit="return false">
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Collegati</button>
+    </form>
+
+    <!-- esempio: messaggio d'errore dopo un tentativo sbagliato -->
+    <div class="errore" role="alert"><i aria-hidden="true"></i>Utente o parola d'ordine non corretti.</div>
+
+    <p class="piede"><b aria-hidden="true"></b>Connessione cifrata · niente da installare</p>
+  </main>
+</body>
+</html>
