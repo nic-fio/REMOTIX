@@ -1210,6 +1210,11 @@ struct Codificatore {
 	AVPacket *pacchetto;
 	struct SwsContext *conversione;
 	CodificatoreConfessione conf;
+	/* ⭐ L'entrypoint SCELTO in `apri_dispositivo()` dopo averlo letto dal
+	 *    driver: e' quel che si chiede a libavcodec (`low_power`) e quel con cui
+	 *    si confronta la rilettura.  ⛔ Non `richiesta.potenza`: con
+	 *    `LA_DICHIARATA` la richiesta non dice da sola quale dei due. */
+	bool bassa_potenza_scelta;
 	/* ⚠ 320 e non 160: dentro ci sta il fornitore VA per esteso — «Intel iHD
 	 *   driver for Intel(R) Gen Graphics - 25.2.3 ()» sono gia' 53 byte.  Un nome
 	 *   troncato nel registro toglie proprio il pezzo che dice QUALE macchina ha
@@ -1551,16 +1556,60 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		   "encoding profile found», 3 giri su 3");
 		return -1;
 	}
-	VAEntrypoint voluto = (r->potenza == CODIFICATORE_POTENZA_BASSA)
-	                          ? VAEntrypointEncSliceLP
-	                          : VAEntrypointEncSlice;
+	VAEntrypoint voluto = (r->potenza == CODIFICATORE_POTENZA_PIENA)
+	                          ? VAEntrypointEncSlice
+	                          : VAEntrypointEncSliceLP;
 	char visti[128] = { 0 };
-	switch (entrypoint_c_e(va->display, profilo, voluto, visti, sizeof(visti))) {
+	EsitoEntrypoint trovato =
+	    entrypoint_c_e(va->display, profilo, voluto, visti, sizeof(visti));
+
+	/* ⭐ LA REGOLA DI `LA_DICHIARATA`, e si scrive in tutti e due i rami: la
+	 *    riga dice QUALE entrypoint e PERCHE', con l'elenco del driver accanto.
+	 *    ⛔ Si passa alla piena solo su «il driver NON lo dichiara» — su «non
+	 *    ho potuto guardare» si fallisce come per le altre due domande. */
+	if (r->potenza == CODIFICATORE_POTENZA_LA_DICHIARATA) {
+		if (trovato == EP_C_E)
+			registro_dice(REG_CODIFICA,
+			              "⭐ entrypoint EncSliceLP (bassa potenza) su «%s» (%s): il "
+			              "driver lo DICHIARA per il profilo %d [%s] ⇒ si prende "
+			              "quello — regola: LP se dichiarato, se no piena",
+			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+			              visti);
+		else if (trovato == EP_NON_C_E) {
+			char visti_lp[128];
+			snprintf(visti_lp, sizeof(visti_lp), "%s", visti[0] ? visti : "nessuno");
+			voluto = VAEntrypointEncSlice;
+			trovato = entrypoint_c_e(va->display, profilo, voluto, visti,
+			                         sizeof(visti));
+			if (trovato == EP_C_E)
+				registro_dice(REG_CODIFICA,
+				              "⭐⚠ entrypoint EncSlice (PIENA) su «%s» (%s): il "
+				              "driver NON dichiara EncSliceLP per il profilo %d e "
+				              "dichiara EncSlice [%s] ⇒ si prende la piena — regola: "
+				              "LP se dichiarato, se no piena.  ⚠ Sono due codifiche "
+				              "diverse: i numeri di qui non valgono per l'LP",
+				              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+				              visti_lp);
+		}
+	}
+
+	switch (trovato) {
 	case EP_C_E:
-		c->conf.bassa_potenza = (r->potenza == CODIFICATORE_POTENZA_BASSA);
+		c->bassa_potenza_scelta = (voluto == VAEntrypointEncSliceLP);
+		c->conf.bassa_potenza = c->bassa_potenza_scelta;
 		c->conf.bassa_potenza_verificata = true;
 		break;
 	case EP_NON_C_E:
+		if (r->potenza == CODIFICATORE_POTENZA_LA_DICHIARATA) {
+			di(errore, errore_byte,
+			   "su «%s» (%s) il profilo %d NON ha ne' EncSliceLP ne' EncSlice: il "
+			   "driver ne dichiara [%s].  ⛔ Nessuna codifica in hardware per "
+			   "questo profilo — chi chiama scenda sul ripiego in software e lo "
+			   "SCRIVA",
+			   r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
+			   visti[0] ? visti : "nessuno");
+			return -1;
+		}
 		di(errore, errore_byte,
 		   "su «%s» (%s) il profilo %d NON ha l'entrypoint %s: il driver ne "
 		   "dichiara [%s].  ⛔ Non si ripiega sull'altro — sono due codifiche "
@@ -1919,8 +1968,10 @@ static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte, "«%s» ha rifiutato async_depth=1", c->componente->name);
 		return -1;
 	}
+	/* ⭐ L'entrypoint SCELTO dopo averlo letto dal driver, non la richiesta:
+	 *    con `LA_DICHIARATA` e' `apri_dispositivo()` a dire quale dei due. */
 	if (av_opt_set_int(c->ctx->priv_data, "low_power",
-	                   c->richiesta.potenza == CODIFICATORE_POTENZA_BASSA ? 1 : 0, 0) < 0) {
+	                   c->bassa_potenza_scelta ? 1 : 0, 0) < 0) {
 		di(errore, errore_byte, "«%s» ha rifiutato low_power", c->componente->name);
 		return -1;
 	}
@@ -2442,11 +2493,10 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "async_depth = %d dopo averne chiesto 1: il componente terrebbe "
 		   "fotogrammi in canna", c->conf.profondita_asincrona);
-	else if (c->hardware &&
-	         c->conf.bassa_potenza != (r->potenza == CODIFICATORE_POTENZA_BASSA))
+	else if (c->hardware && c->conf.bassa_potenza != c->bassa_potenza_scelta)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "chiesta la codifica %s e il componente dice %s",
-		   r->potenza == CODIFICATORE_POTENZA_BASSA ? "a bassa potenza" : "piena",
+		   c->bassa_potenza_scelta ? "a bassa potenza" : "piena",
 		   c->conf.bassa_potenza ? "bassa potenza" : "piena");
 	/* ⛔ R31: un modo di bitrate diverso da quello CHIESTO PER NOME non si
 	 *    spedisce — e' l'esatta condizione in cui v1 emise CBR senza saperlo. */

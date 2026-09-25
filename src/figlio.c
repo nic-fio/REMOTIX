@@ -4682,7 +4682,14 @@ static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
  *    fra le due a parita' di bitrate `[?]` **non e' stato misurato**.
  */
 #define NODO_RENDERING "/dev/dri/renderD128"
-#define POTENZA_RENDERING CODIFICATORE_POTENZA_BASSA
+/* ⭐ Fase 16, campagna Radeon: non piu' `BASSA` rigida ma la regola scritta
+ *    `LA_DICHIARATA` — *EncSliceLP se il driver lo dichiara, se no EncSlice
+ *    piena* (vedi `PotenzaEntrypoint`).  Sull'Intel e' la stessa `EncSliceLP` di
+ *    prima; sulla RX 6800 (radeonsi) `[M]` c'e' solo `EncSlice`, e con `BASSA`
+ *    la sessione scendeva in SOFTWARE.  ⛔ La scelta la fa la capacita' letta
+ *    dal driver, non il nome della scheda: quale dei due e' in vigore lo dice
+ *    la riga «codificatore APERTO» qui sotto, non questa. */
+#define POTENZA_RENDERING CODIFICATORE_POTENZA_LA_DICHIARATA
 /* ⛔ Il QP costante, e NON e' «il CRF 20 di prima»: sono due grandezze diverse
  *    (vedi `ModoQualita` in `codificatore.h`).  ⚠ Il valore e' di comodo
  *    dichiarato — il punto di lavoro fra qualita' e banda e' la fase 9, come il
@@ -4714,6 +4721,9 @@ static const char *potenza_nome(PotenzaEntrypoint p)
 		return "EncSlice (piena)";
 	case CODIFICATORE_POTENZA_BASSA:
 		return "EncSliceLP (bassa potenza)";
+	case CODIFICATORE_POTENZA_LA_DICHIARATA:
+		return "EncSliceLP se il driver lo dichiara, se no EncSlice (piena) — "
+		       "quello IN VIGORE lo dice la riga «codificatore APERTO»";
 	default:
 		return "NON DICHIARATA (⛔ e cosi' non si apre niente)";
 	}
@@ -4999,12 +5009,16 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *    di quella di prima. */
 	codif_riprova_ms[indice] = 0;
 	codif_attesa_ms[indice] = 0;
+	/* ⭐ E il nome porta l'entrypoint EFFETTIVO (con nodo e fornitore), non
+	 *    quello chiesto: con `LA_DICHIARATA` sono due cose diverse finche' il
+	 *    driver non ha risposto, e questa e' la riga che lo dice. */
 	registro_dice(REG_FIGLIO,
 	              "⭐ FASE 3: codificatore %d APERTO e TENUTO VIVO fra un "
 	              "fotogramma e l'altro, %ux%u a %d/s — senza questo la "
 	              "predizione non esisterebbe e ogni fotogramma sarebbe una "
-	              "chiave",
-	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS);
+	              "chiave · in vigore: %s",
+	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS,
+	              codificatore_nome(codif[indice]));
 	return codif[indice];
 }
 

@@ -273,10 +273,27 @@ typedef enum {
  *   agosto 2026 — vedi `nodo_rendering` qui sotto), quindi «bassa potenza» e
  *   «piena» non sono una preferenza: sono due macchine diverse.
  */
+/*
+ * ⭐ `LA_DICHIARATA` (fase 16, campagna Radeon) e' la terza domanda, e non e'
+ *    «fai tu»: e' **una regola scritta** — *`EncSliceLP` se il driver lo
+ *    DICHIARA per quel profilo, se no `EncSlice` piena se il driver dichiara
+ *    quella, se no si fallisce* (e chi chiama scende sul ripiego in software,
+ *    dicendolo).  ⛔ La scelta si fa sulla CAPACITA' letta con
+ *    `vaQueryConfigEntrypoints`, non sul nome della scheda ne' su una
+ *    variabile d'ambiente (`niente eccezioni per scheda`): sull'Intel iHD c'e'
+ *    `EncSliceLP` e il risultato e' identico a `BASSA`; sulla RX 6800
+ *    (radeonsi) `[M]` 13 agosto 2026 c'e' solo `EncSlice`, e senza questa
+ *    regola la sessione codificava in SOFTWARE.
+ * ⚠ E il ripiego sull'altro entrypoint qui NON e' silenzioso: quale dei due e'
+ *   stato preso, e perche', lo scrive `codificatore.c` nel registro, e
+ *   `codificatore_nome()` porta l'entrypoint EFFETTIVO dentro il nome.
+ *   `BASSA` e `PIENA` restano rigide, per i banchi che confrontano le due.
+ */
 typedef enum {
 	CODIFICATORE_POTENZA_NON_DICHIARATA = 0,
 	CODIFICATORE_POTENZA_PIENA,  /* VAEntrypointEncSlice   */
 	CODIFICATORE_POTENZA_BASSA,  /* VAEntrypointEncSliceLP */
+	CODIFICATORE_POTENZA_LA_DICHIARATA, /* LP se il driver lo dichiara, se no piena */
 } PotenzaEntrypoint;
 
 typedef struct {
