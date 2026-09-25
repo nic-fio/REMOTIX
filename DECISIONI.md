@@ -5718,6 +5718,92 @@ guasto innestato `--senza-usermod`. `[M]` 22 set 2026: VERDE e guasto VISTO su g
 
 ---
 
+## 8. ✅ Le decisioni della fase 15 — la suite funzionale e la bonifica del giro 1
+
+*Dopo il giro 1 della suite (`fasi/15-suite-funzionale.md`, «Il giro 1»): 25 settembre 2026, mattina.
+Più l'eccezione di KDE, decisa la sera del 24 insieme alla fase.*
+
+### 8.1 ✅ La sessione KDE nasce vuota — salvo la scelta dell'utente
+
+Deciso dall'utente, 25 set 2026 (difetto **D-005**: dopo «Esci» Plasma riapriva da solo il programma
+che era aperto, mentre la pagina promette una sessione NUOVA; `[R]` il ripristino di riserva di Plasma
+6.3 su Wayland, `org.kde.plasma-fallback-session-restore.desktop`).
+
+La sessione remota KDE parte **vuota** di suo: `ksmserverrc` con `loginMode=emptySession` **nella
+cartella della sessione**, non nelle impostazioni dell'utente. ⭐ Ma se l'utente in Impostazioni ha
+scelto «ripristina la sessione salvata», **vince la sua scelta** (l'opzione A delle proposte).
+Cura: `aa4014d` sul ramo `bonifica-15`.
+
+### 8.2 ✅ ⭐ Le impostazioni dell'utente non si toccano — tranne blocco, riavvio, sospensione, stand-by
+
+Deciso dall'utente, 25 set 2026, in due tempi:
+- *«le impostazioni utente non si toccano»* — su nessun desktop;
+- precisata la stessa mattina: *«Le impostazioni dell'utente non si toccano TRANNE quelle che
+  riguardano blocco-schermo, riavvio sistema, sospensione e stand-by: queste sono impostazioni
+  pericolose per altri utenti presenti sulla macchina»*.
+
+| | dove si scrive |
+|---|---|
+| **blocco dello schermo, riavvio, sospensione, stand-by** | nelle impostazioni **dell'utente**, persistenti: pericolose per le altre persone sulla macchina |
+| **tutto il resto** (disposizione della tastiera, voci di menu, scorciatoie, «Esci» visibile, cambio utente, Ctrl+Alt+F…) | **solo nella sessione remota**, sui quattro desktop; alla fine della sessione l'utente ritrova le sue |
+
+⇒ Tre difetti di classe B aperti dalla decisione: **D-015** GNOME (la disposizione negoziata finiva in
+`org.gnome.desktop.input-sources` del dconf dell'utente), **D-017** XFCE (canali xfconf dell'utente e
+`~/.cache/sessions` cancellata), **D-018** LXQt (`~/.config/lxqt/*.conf` e voci `Hidden` in
+`~/.local/share/applications`). KDE era già a posto (`kxkbrc` della sessione). Cure: `ddcf28d`,
+`85697c9`, `7543c6a`, `e8115e5` su `bonifica-15`; la prova che sorveglia è **F-031B**
+(`banchi/15-suite/15-f031b-impostazioni-intatte.py`: le impostazioni lette dal disco prima dell'accesso
+e dopo «Esci»).
+
+🔸 Derivato (`7543c6a`): su XFCE Sospendi, Iberna e Sonno ibrido del dialogo di «Esci» contano come
+**sospensione** ⇒ sono permesse, e restano nel canale dell'utente.
+
+### 8.3 ✅ La frase della linea caduta
+
+Deciso dall'utente, 25 set 2026 (**D-002**: la linea cade e la pagina resta congelata col desktop, senza
+una parola). Quando il trasporto si chiude senza un CONGEDO, la pagina torna al modulo e dice:
+
+> *«il collegamento con il server si è interrotto: per rientrare scrivi di nuovo la parola d'ordine»*
+
+Cura: `c7a67ea` su `bonifica-15`.
+
+### 8.4 ✅ Il server spento si dice subito
+
+Deciso dall'utente, 25 set 2026 (**D-009**: a server spento la pagina impiegava 31 s a dire «Non si
+collega»). Si dice **subito**, ~1 s, dal rifiuto di rete di `/impronta`, senza aspettare i 30 s del
+browser su WebTransport. 🔸 Solo il rifiuto di rete: uno stato HTTP o un corpo illeggibile restano come
+prima, e un server lento non ha orologi (si aspetta la sua risposta). Cura: `e719d08` su `bonifica-15`.
+
+### 8.5 ✅ ⭐ D-006: un decodificatore Opus nostro, in WebAssembly, per tutti i browser
+
+Deciso dall'utente, 25 set 2026. Il difetto: Firefox con un video nella sessione ha buchi di suono
+corti e ripetuti; Chrome no. `[M]` 25 set, senza l'orecchio del banco, 60 s su lxqt e kde: Firefox+video
+**3-5 riarmi**, Firefox senza video 0, Chrome 0, Firefox+video in PCM 0 ⇒ il decodificatore Opus di
+Firefox (WebCodecs `AudioDecoder`). Una prima cura lato pagina è stata tolta (`b40856d`): coi browser
+veri peggiorava.
+
+L'utente: *«concordo sulla soluzione D [dichiararlo], ma il problema va risolto con la soluzione B
+[decodificatore Opus nostro in WebAssembly nella pagina, per TUTTI i browser], che è la scelta che ci
+consente di avere un prodotto bugs-free»*.
+
+⇒ Si dichiara, **e** si fa la B: il decodificatore Opus in WebAssembly nella pagina, **per tutti** i
+browser, non un ramo per Firefox.
+⛔ **Prima del giro 2.**
+
+### 8.6 ✅ L'eccezione di KDE al riattacco a misura diversa
+
+Deciso dall'utente il **24 settembre 2026, sera**, aprendo la fase 15 (`fasi/15-suite-funzionale.md`,
+«Le decisioni dell'utente»). Al riattacco a misura diversa (F-018, percorso C):
+- su **GNOME, XFCE, LXQt** la tela prende la misura nuova e il desktop la segue (sfondo, pannello);
+- su **KDE** la tela resta quella vecchia e **il browser riscala**: è l'**atteso**, non un FAIL.
+
+Conferma da parte dell'utente, per la suite, del ripiego di §5.0-bis (🔸 fino a oggi): KWin di Debian
+stabile (6.3.6; fino a 6.7.4 nessun ramo rilasciato ha il ridimensionamento a caldo) non cambia misura
+a sessione viva, e riavviarlo distruggerebbe la sessione. `[M]` giro 1: F-018 e P-C **PASS** su KDE
+coi due browser, con quest'atteso.
+
+---
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
