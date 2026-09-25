@@ -103,10 +103,26 @@ def accendi(o, *opz):
     return inatt, abb
 
 
-def sessione_con_scena(s):
+def sessione_con_scena(s, reg=None):
+    segno = reg.righe() if reg else None
     ok, m = F019.entra_con_orecchio(s)
     if not ok:
-        raise S.Bloccata("non si entra: " + m)
+        # ⛔ D-011 (25 set 2026): qui il giro diceva solo «la tela non ha area
+        #    visibile» e le prove del perche' sparivano col riavvio del server.
+        #    ⇒ Prima di arrendersi si fotografa lo STATO DELLA PAGINA (che cosa
+        #    dice, se e' ancora vestita da desktop, il suo registro) e le righe
+        #    del server per questo inquilino, e la frase della pagina entra nella
+        #    ragione del BLOCKED.
+        time.sleep(1)
+        pag = G7.pagina(s.g)
+        s.salva_testo("pagina-ingresso-fallito.txt",
+                      "\n".join("%s: %s" % kv for kv in pag.items()))
+        if reg is not None and segno is not None:
+            s.salva_testo("server-ingresso-fallito.txt", reg.da(segno, s.chi))
+        s.salva_console()
+        raise S.Bloccata("non si entra: %s · la pagina: esito «%s», vestita=%s, modulo=%s"
+                         % (m, (pag.get("esito") or "")[:120], pag.get("vestita"),
+                            pag.get("modulo_visibile")))
     F019.clic_tela(s)                 # ⭐ il PRIMO gesto: parte l'orologio dell'abbandono
     t_gesto = time.time()
     pid, t = G7.lancia_scena(s)
@@ -121,7 +137,7 @@ def sessione_con_scena(s):
 # ─────────────────────────────────────────────────────────────────────────────
 def fase_silenzio(o, E, reg):
     with S.Sessione(o, "022", E) as s:
-        pid, _t = sessione_con_scena(s)
+        pid, _t = sessione_con_scena(s, reg)
         segno = reg.righe()
         fermati = G7.ferma_browser(s.g)
         t0 = time.time()
@@ -170,7 +186,7 @@ def fase_orologi(o, E, reg, corti):
     passata = "sana" if corti else "guasto"
     with S.Sessione(o, "022", E) as s:
         segno = reg.righe()
-        pid, t_gesto = sessione_con_scena(s)
+        pid, t_gesto = sessione_con_scena(s, reg)
         # — F-023 —
         forma, riga, _d = reg.aspetta(segno, ["INATTIVITA'"], s.chi,
                                       tetto=max(1, INATTIVITA_S + MARGINE_S - (time.time() - t_gesto)),

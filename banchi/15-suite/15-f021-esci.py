@@ -55,6 +55,7 @@
       ⇒ ogni nascita che vi compare e' del prodotto.
 """
 import os
+import re
 import sys
 import time
 
@@ -245,6 +246,28 @@ def certifica():
       giudica_rientro({"entrato": True, "nuova": True, "programma": True})[0], S.FAIL)
     p("⛔ non rientra ⇒ FAIL", giudica_rientro({"entrato": False})[0], S.FAIL)
     p("⭐ le forme della fine vengono da C20", len(RIGHE_FINITA), 2)
+
+    # ⭐ la lettura del registro: VUOTO non e' NON LETTO (giro 1, gnome/firefox)
+    class Finta:
+        def __init__(self, uscita):
+            self.uscita = uscita
+
+        def dentro(self, _riga, _secondi=60):
+            return (None, self.uscita) if self.uscita.startswith("(nessuna") else (1, self.uscita)
+
+    class FintaSessione:
+        chi = "c15021u1"
+
+        def __init__(self, uscita):
+            self.sc = Finta(uscita)
+    p("⭐ registro letto e vuoto (GNOME dopo «Esci») ⇒ [] e non None",
+      registro(FintaSessione("@@fine"), 10), [])
+    p("⭐ una riga ⇒ la riga", registro(FintaSessione(
+        "x [c15021u1] LA FACCIO NASCERE\n@@fine"), 10), ["x [c15021u1] LA FACCIO NASCERE"])
+    p("⚠ registro non letto ⇒ None", registro(FintaSessione("(nessuna risposta in 60 s)"), 10),
+      None)
+    d = dict(buona, nascite=nascite_in([], "c15021u1"))
+    p("⭐ ⇒ e con la fetta vuota l'uscita e' giudicabile (PASS)", giudica_uscita(d)[0], S.PASS)
     print("⛔ %d casi sbagliati" % guai if guai else "⭐ i giudici dicono quel che devono")
     return 1 if guai else 0
 
@@ -260,6 +283,54 @@ def _ritenta(f, volte=3):
             return v
         time.sleep(2)
     return None
+
+
+def registro(s, segno):
+    """⭐ Le righe dell'inquilino dal `segno` in poi: una LISTA (anche vuota) se
+    il registro si e' letto, None se no.
+
+    ⛔ Non `s.registro_da(…) or None`: su GNOME, dopo «Esci», il figlio se ne
+       va e per l'inquilino non si scrive PIU' niente ⇒ la fetta e' VUOTA, ed
+       e' una risposta, non un silenzio.  Finche' `Scatola.dentro` passava da
+       ssh la fetta non era mai vuota (c'era la riga «password:» di sshpw) e
+       il difetto del banco non si vedeva; col `podman exec` locale (25 set)
+       si' ⇒ BLOCKED su gnome/firefox nel giro 1 e nella bonifica.
+       ⇒ Il marcatore @@fine dice che il comando e' arrivato in fondo."""
+    def una():
+        c, t = s.sc.dentro("tail -n +%d %s | grep -a -F -- '%s'; echo @@fine"
+                           % (int(segno) + 1, S.C20V.REGISTRO, s.chi), 60)
+        if "@@fine" not in (t or ""):
+            return None
+        return [r for r in t.split("@@fine")[0].splitlines()
+                if r.strip() and "password:" not in r]
+    return _ritenta(una)
+
+
+def aspetta_il_bus(s, tetto=30):
+    """⭐ Il bus di sessione dell'inquilino c'e' (il socket /run/user/<uid>/bus):
+    il gesto «Esci» ci parla.  ⛔ Subito dopo un rientro su GNOME il gestore
+    d'utente puo' non averlo ancora ⇒ «Failed to connect to user scope bus»."""
+    fine = time.time() + tetto
+    while time.time() < fine:
+        c, _t = s.sc.dentro("test -S /run/user/$(id -u %s)/bus" % s.chi, 20)
+        if c == 0:
+            return True
+        time.sleep(1)
+    return False
+
+
+def fai_il_gesto(s, gesto, tetto=30):
+    """(codice, uscita) del gesto; se il bus o il servizio non ci sono ANCORA
+    (sessione appena nata) lo si ritenta fino a `tetto`."""
+    aspetta_il_bus(s, tetto)
+    fine = time.time() + tetto
+    while True:
+        c, t = s.sc.come_utente(s.chi, gesto)
+        if c == 0 or time.time() >= fine or not re.search(
+                r"Failed to connect|No such file|ServiceUnknown|not provided|"
+                r"was not provided by any \.service", t or ""):
+            return c, t
+        time.sleep(2)
 
 
 def processi(s):
@@ -320,7 +391,7 @@ def leggi_pagina(s, tetto):
 def aspetta_finita(s, segno, tetto):
     fine = time.time() + tetto
     while time.time() < fine:
-        for r in s.registro_da(segno):
+        for r in registro(s, segno) or []:
             for f in RIGHE_FINITA:
                 if f in r and e_di(r, s.chi):
                     return f, r
@@ -334,7 +405,7 @@ def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nom
     segno = _ritenta(s.segno_registro)
     if segno is None:
         raise S.Bloccata("non leggo il registro del server")
-    c, t = s.sc.come_utente(s.chi, gesto)
+    c, t = fai_il_gesto(s, gesto)
     if c != 0:
         raise S.Bloccata("il gesto «Esci» non ha risposto (codice %s): %s" % (c, t[-200:]))
     t0 = time.time()
@@ -364,18 +435,16 @@ def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nom
         time.sleep(resto)
     d["guardia"] = time.time() - t0
     if not finita:
-        tutta = _ritenta(lambda: s.registro_da(segno) or None) or []
+        tutta = registro(s, segno) or []
         d["filo_caduto"] = next((r.strip() for r in tutta if e_di(r, s.chi) and any(
             k in r for k in FILO_CADUTO)), None)
-    fetta = _ritenta(lambda: s.registro_da(segno_fine) or None)
-    # ⚠ una fetta vuota e' possibile solo se il registro non risponde: dopo la
-    #   fine il figlio scrive a ogni tentativo («CHIUSA dall'utente»)
+    fetta = registro(s, segno_fine)       # [] = letto e vuoto (GNOME), None = non letto
     d["nascite"] = nascite_in(fetta, s.chi)
     print("      [%s] segno %s→%s · fetta %s righe · processi %s · nascite %s" % (
         nome, segno, segno_fine, None if fetta is None else len(fetta),
         None if d["rimasti"] is None else len(d["rimasti"]),
         None if d["nascite"] is None else len(d["nascite"])), flush=True)
-    ev = [s.salva_testo("server-%s.txt" % nome, s.registro_da(segno))]
+    ev = [s.salva_testo("server-%s.txt" % nome, registro(s, segno) or ["(non letto)"])]
     return d, ev
 
 
@@ -395,8 +464,8 @@ def rientra(s):
     ok, m = s.entra(apri=False)
     d["entrato"], d["perche"] = ok, m
     if not ok:
-        return d, [s.salva_testo("server-rientro.txt", s.registro_da(segno or 0))]
-    fetta = _ritenta(lambda: s.registro_da(segno) or None) or []
+        return d, [s.salva_testo("server-rientro.txt", registro(s, segno) or [])]
+    fetta = registro(s, segno) or []
     d["nuova"] = any("LA FACCIO NASCERE" in r and e_di(r, s.chi) for r in fetta)
     time.sleep(3)
     d["programma"] = programma_vivo(s)
@@ -466,8 +535,10 @@ def corpo(o, E):
                   len(d.get("nascite") or [])))
         print("   uscita: %s — %s" % (esito, oss), flush=True)
         ev.append(s.salva_testo("processi-dopo-esci.txt", d.get("tutti") or ["(nessuno)"]))
+        viva = False
         if esito == S.PASS:
             r, ev2 = rientra(s)
+            viva = bool(r.get("entrato"))
             esito, p2 = giudica_rientro(r)
             perche = perche + " · " + p2 + (" (⚠ il modulo non c'era: ricaricata)"
                                              if r.get("ricaricata") else "")
@@ -482,8 +553,12 @@ def corpo(o, E):
 
         if not o.guasto:
             return
-        # serve una sessione viva da cui partire
-        if not (s.stato().get("sessione")):
+        # serve una sessione viva da cui partire.  ⛔ Non dal campo della pagina
+        #   (`R.schermo.sessione` puo' restare dopo il congedo): se il rientro
+        #   della passata sana non c'e' stato, si rientra.  `[M]` 25 set, giro 1
+        #   e bonifica su gnome/firefox: senza rientro il G1 parlava a un bus
+        #   che non c'era piu' ⇒ BLOCKED.
+        if not viva:
             r, _ev = rientra(s)
             if not r.get("entrato"):
                 E.guasto("F-021", None, "nessuna sessione viva per il guasto: %s"
