@@ -719,6 +719,15 @@ GIRA_C23() {
 		python3 "$BANCHI_VERI/11-scatole/11-c23-maiusc-e-frecce-selezionano.py" \
 		--scatola "$1" --visibile "${@:2}"
 }
+# ⭐ LA SUITE FUNZIONALE (fase 15) — la nuova rete, decisa dall'utente il 24 set
+#   2026: i 4 desktop in parallelo coi browser VERI, ogni prova col suo guasto,
+#   piu' lo strato tecnico corto (C7 C9 C18 C19 per desktop, C14 insieme).
+#   Gira come l'utente dei browser, dall'albero intero dei banchi; ⛔ ~2 ore.
+GIRA_SUITE() {
+	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
+	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
+		python3 "$BANCHI_VERI/15-suite/15-giro.py" --giro "${GIRO_SUITE:-rete}" --strato-tecnico
+}
 # ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
 #   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
 #   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
@@ -1907,6 +1916,7 @@ decidi|gira)
 	rete)          log "la RETE — C10, C11, C12, C13, C15  ⭐ [M] ~11 s, e nessuna accende una sessione"; famiglia_rete ;;
 	rete-intera)   log "la RETE **PIU' C14** — ⛔ [M] ~800 s, e si prende le QUATTRO scatole"; famiglia_rete_intera ;;
 	tutto)         log "TUTTO — prima di chiudere una fase"; famiglia_tutto ;;
+	suite)         log "la SUITE FUNZIONALE — 4 desktop x 2 browser veri + strato tecnico, ⛔ ~2 ore"; esegui_maglia "SUITE" false GIRA_SUITE ;;
 	desktop-nuovo) famiglia_desktop_nuovo "${FAMIGLIA##*:}" ;;
 	*)             ko "famiglia sconosciuta: $FAMIGLIA"; exit 2 ;;
 	esac
