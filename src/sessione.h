@@ -362,6 +362,22 @@ GDBusConnection *sessione_bus(GError **sbaglio);
 char *sessione_cartella_kde(void);
 
 /*
+ * ⭐ FASE 15, D-015 — il dconf della SESSIONE (solo GNOME): scrive il profilo
+ * `$XDG_RUNTIME_DIR/remotix/dconf/profilo` (un database in memoria in cima,
+ * quello dell'utente sotto in sola lettura) e mette `DCONF_PROFILE` nel
+ * processo.  ⛔ Va chiamata PRIMA di qualunque `GSettings`: il motore di dconf
+ * legge la variabile una volta sola.  False su un altro desktop, o se la cura
+ * non puo' valere (detto nel registro).
+ */
+bool sessione_dconf_prepara(void);
+
+/*
+ * Il dconf della sessione e' in vigore in QUESTO processo?  ⛔ Se no, chi
+ * scrive impostazioni di GNOME le scriverebbe in quelle dell'utente.
+ */
+bool sessione_dconf_di_sessione(void);
+
+/*
  * C'e' un compositore che risponde?
  *
  * ⚠ E' la domanda DEBOLE, ed e' qui apposta perche' si veda che e' debole: una

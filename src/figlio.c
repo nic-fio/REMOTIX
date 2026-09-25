@@ -6957,6 +6957,12 @@ void figlio_vive(int argc, char **argv)
 	              "e' fra questi",
 	              utente, s.pid, s.euid, s.descrittori);
 
+	/* ⭐ FASE 15, D-015 — il dconf della SESSIONE, qui e non piu' tardi: prima
+	 *    di qualunque `GSettings` (`sessione_impostazioni()`,
+	 *    `input_disposizione()`) e prima dei fili — `g_setenv` non e' da fare
+	 *    con altri fili vivi.  Solo GNOME; il riquadro e' in `sessione.c`. */
+	sessione_dconf_prepara();
+
 	/* ⛔⭐⭐ I PARAMETRI DELLA FASE 9 SI SCRIVONO ALLA NASCITA — 23 agosto 2026.
 	 *
 	 *      La regola e' gia' scritta, e sta in `src/riavvia-7700.sh`: *«il

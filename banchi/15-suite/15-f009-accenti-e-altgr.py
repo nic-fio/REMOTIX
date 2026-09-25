@@ -36,9 +36,24 @@
    Il giudizio: il valore del campo LETTO NELLA SESSIONE, e per «È» la riga del
    registro del server; la foto si salva.
 
-GUASTO (--guasto, stessa sessione): il browser torna in INGLESE (en-US) e si
-   RIATTACCA: la pagina dichiara «us», la sessione prende la disposizione
-   americana, e gli accenti non ci sono ⇒ lo stesso giudice deve dare rosso.
+⭐ E LE IMPOSTAZIONI DELL'UTENTE NON SI TOCCANO (D-015, decisione dell'utente
+   del 25 set 2026, su tutti i desktop): la disposizione negoziata vale per la
+   SESSIONE, non si scrive dove l'utente la ritroverebbe entrando al monitor.
+   Si leggono DAL DISCO, come l'utente, prima dell'accesso e dopo la passata:
+   `org.gnome.desktop.input-sources` (sources, mru-sources, current,
+   xkb-options) del dconf dell'utente — letto con un profilo che ha SOLO
+   `user-db:user`, cioe' `~/.config/dconf/user` e nient'altro — e l'impronta
+   di `~/.config/kxkbrc`.  Devono essere quelli di PRIMA, o F-009 e' rosso
+   anche con tutte le lettere giuste.
+
+GUASTO (--guasto, stessa sessione), due innesti e un verdetto solo:
+   1. una SCRITTURA PERSISTENTE simulata — `sources` = de nel dconf
+      dell'utente (col suo profilo) e una riga di commento in fondo a
+      `~/.config/kxkbrc` — ⇒ il giudice delle impostazioni deve dare rosso;
+   2. il browser torna in INGLESE (en-US) e si RIATTACCA: la pagina dichiara
+      «us», la sessione prende la disposizione americana, e gli accenti non ci
+      sono ⇒ il giudice delle lettere deve dare rosso.
+   Visto = tutt'e due rossi.
 """
 import os
 import re
@@ -67,6 +82,51 @@ TUTTI = "".join(c for c, _k, _v, _m in TASTIERA_IT)
 ATTESA_S = 8.0
 PRODUCIBILE = re.compile(r"U\+([0-9A-Fa-f]{4,6}) non e' producibile con la disposizione ([^:]*)")
 IN_VIGORE = re.compile(r"disposizione in vigore[^:]*: (.*)$")
+
+# ── D-015: le impostazioni dell'utente, lette DAL DISCO come le leggerebbe lui
+CHIAVI_IS = ("sources", "mru-sources", "current", "xkb-options")
+LEGGI_IMPOSTAZIONI = (
+    "export HOME=/home/%(c)s; p=$(mktemp); echo user-db:user > \"$p\"; "
+    "for k in " + " ".join(CHIAVI_IS) + "; do "
+    "v=$(DCONF_PROFILE=\"$p\" gsettings get org.gnome.desktop.input-sources \"$k\" "
+    "2>/dev/null) || v='(non letta)'; echo \"is.$k=$v\"; done; rm -f \"$p\"; "
+    "if [ -f \"$HOME/.config/kxkbrc\" ]; then "
+    "echo \"kxkbrc=$(sha256sum < \"$HOME/.config/kxkbrc\" | cut -c1-16)\"; "
+    "else echo kxkbrc=assente; fi")
+SCRIVI_GUASTO = (
+    "export HOME=/home/%(c)s; p=$(mktemp); echo user-db:user > \"$p\"; "
+    "DCONF_PROFILE=\"$p\" gsettings set org.gnome.desktop.input-sources sources "
+    "\"[('xkb','de')]\" 2>&1 | head -2; rm -f \"$p\"; mkdir -p \"$HOME/.config\"; "
+    "echo '# 15-f009 guasto: scrittura persistente simulata' >> \"$HOME/.config/kxkbrc\"; "
+    "echo scritto")
+
+
+def leggi_impostazioni(testo):
+    """{chiave: valore} dalle righe «nome=valore»; None se non c'e' niente."""
+    d = {}
+    for r in (testo or "").splitlines():
+        if "=" in r and (r.startswith("is.") or r.startswith("kxkbrc=")):
+            k, v = r.split("=", 1)
+            d[k] = v.strip()
+    return d or None
+
+
+def giudica_impostazioni(prima, dopo):
+    """(esito, frase): le impostazioni dell'utente devono essere quelle di PRIMA."""
+    if prima is None or dopo is None:
+        return S.BLOCKED, "le impostazioni dell'utente non si sono potute leggere (%s)" % (
+            "prima" if prima is None else "dopo")
+    cambiate = ["%s: %s → %s" % (k, prima.get(k, "?"), dopo.get(k, "?"))
+                for k in sorted(set(prima) | set(dopo)) if prima.get(k) != dopo.get(k)]
+    if cambiate:
+        return S.FAIL, ("⛔ IMPOSTAZIONI DELL'UTENTE TOCCATE (D-015): %s" % "; ".join(cambiate))
+    return S.PASS, "impostazioni dell'utente intatte (%s)" % ", ".join(
+        "%s=%s" % (k, v) for k, v in sorted(prima.items()))
+
+
+def impostazioni(s):
+    c, t = s.come_utente("sh -c %s" % S._q(LEGGI_IMPOSTAZIONI % {"c": s.chi}), 60)
+    return leggi_impostazioni(t) if c == 0 else None
 
 
 def sequenza():
@@ -138,6 +198,20 @@ def certifica():
                                                   for c in TUTTI))
     prova("AltGr giu' prima di «@»", seq[seq.index(("giu", "@", "Semicolon", 186)) - 1][1]
           == "AltGraph")
+    # D-015
+    uscita = ("is.sources=@a(ss) []\nis.mru-sources=@a(ss) []\nis.current=uint32 0\n"
+              "is.xkb-options=@as []\nkxkbrc=assente\n")
+    pr = leggi_impostazioni(uscita)
+    prova("lettura delle impostazioni", pr and pr["is.sources"] == "@a(ss) []"
+          and pr["kxkbrc"] == "assente", repr(pr))
+    prova("impostazioni uguali ⇒ PASS", giudica_impostazioni(pr, dict(pr))[0] == S.PASS)
+    scritta = dict(pr, **{"is.sources": "[('xkb', 'it')]"})
+    prova("input-sources scritta nell'utente ⇒ FAIL",
+          giudica_impostazioni(pr, scritta)[0] == S.FAIL)
+    prova("kxkbrc dell'utente nato ⇒ FAIL",
+          giudica_impostazioni(pr, dict(pr, kxkbrc="0123456789abcdef"))[0] == S.FAIL)
+    prova("non lette ⇒ BLOCKED", giudica_impostazioni(None, pr)[0] == S.BLOCKED)
+    prova("niente da leggere ⇒ None", leggi_impostazioni("sh: errore") is None)
     print("⛔ CERTIFICAZIONE FALLITA" if guai else "⭐ CERTIFICATO")
     return 1 if guai else 0
 
@@ -170,6 +244,9 @@ def disposizione_in_vigore(s, segno):
 def corpo(o, E):
     with S.Sessione(o, "009", E) as s:
         segno0 = s.segno_registro()
+        # D-015: le impostazioni dell'utente PRIMA che la sessione lo veda
+        prima = impostazioni(s)
+        print("   impostazioni dell'utente, prima: %s" % prima, flush=True)
         sc, mp, geo, dove = G2.prepara(s, o.porte_base + 7, lingua="it-IT")
         disp, rip = disposizione_in_vigore(s, segno0)
         print("   disposizione in vigore: %s%s" % (disp, " · ⚠ " + rip[-1][:200] if rip else ""),
@@ -185,10 +262,33 @@ def corpo(o, E):
                 m = "rosso due volte: %s · %s" % (m, m2)
         m = "[disposizione in vigore: %s%s] %s" % (
             disp, "; RIPIEGO: " + rip[-1].split("] ", 1)[-1][:160] if rip else "", m)
-        E.metti("F-009", e, m, atteso="«%s» nel campo; «È» non scrivibile e dichiarata"
+        # D-015: e DOPO la passata, dal disco, le stesse di prima
+        dopo = impostazioni(s)
+        ei, mi = giudica_impostazioni(prima, dopo)
+        p = s.salva_testo("impostazioni-utente.txt",
+                          "prima: %r\ndopo:  %r\n%s" % (prima, dopo, mi))
+        if p:
+            ev.append(p)
+        m += " · " + mi
+        if ei == S.FAIL or (ei == S.BLOCKED and e == S.PASS):
+            e = ei
+        E.metti("F-009", e, m, atteso="«%s» nel campo; «È» non scrivibile e dichiarata; "
+                "impostazioni dell'utente (input-sources, kxkbrc) quelle di prima"
                 % SCRIVIBILI, osservato=m, evidenze=([dove] if dove else []) + ev
                 + ([s.salva_console()] if e != S.PASS else []))
         if o.guasto:
+            # innesto 1 (D-015): una scrittura persistente simulata nell'utente
+            _c, t = s.come_utente("sh -c %s" % S._q(SCRIVI_GUASTO % {"c": s.chi}), 60)
+            dopo_g = impostazioni(s)
+            eig, mig = giudica_impostazioni(prima, dopo_g)
+            print("   GUASTO 1, scrittura persistente simulata (%s): %s"
+                  % ((t or "").strip().replace("\n", " | ")[-120:], mig), flush=True)
+            if eig == S.BLOCKED:
+                E.guasto("F-009", None, "innesto 1 (scrittura persistente simulata) non "
+                         "guardabile: %s" % mig)
+                return
+            visto_1 = eig == S.FAIL
+            # innesto 2: il browser in inglese
             segno1 = s.segno_registro()
             print("   GUASTO: %s, e si riattacca" % G2.metti_lingua(s.g, "en-US"), flush=True)
             ok, mm = s.entra()
@@ -199,9 +299,13 @@ def corpo(o, E):
                 return
             disp_g, _rip = disposizione_in_vigore(s, segno1)
             eg, mg, evg, _r = prova_una(s, sc, mp, "accenti-guasto")
-            E.guasto("F-009", None if eg == S.BLOCKED else eg == S.FAIL,
-                     "browser in en-US, disposizione in vigore «%s»: %s" % (disp_g, mg),
-                     atteso="rosso: con «us» gli accenti non ci sono", osservato=mg,
+            visto_2 = None if eg == S.BLOCKED else eg == S.FAIL
+            E.guasto("F-009", None if visto_2 is None else (visto_1 and visto_2),
+                     "innesto 1, scrittura persistente simulata: %s — %s · innesto 2, "
+                     "browser in en-US, disposizione in vigore «%s»: %s"
+                     % ("ROSSO (visto)" if visto_1 else "⛔ NON visto", mig, disp_g, mg),
+                     atteso="rosso tutt'e due: le impostazioni dell'utente cambiate; con "
+                     "«us» gli accenti non ci sono", osservato=mig + " · " + mg,
                      evidenze=evg)
 
 

@@ -197,6 +197,7 @@
 #include "kwin.h"
 #include "mutter.h"
 #include "registro.h"
+#include "sessione.h"
 #include "tastiera.h"
 #include "wlr_input.h"
 
@@ -1719,6 +1720,32 @@ int input_disposizione(Input *in, const char *nome)
 	}
 
 	/*
+	 * ⛔⛔ FASE 15, D-015 — LE IMPOSTAZIONI DELL'UTENTE NON SI TOCCANO
+	 *     (decisione dell'utente del 25 set 2026).
+	 *
+	 * Fino a oggi questa scrittura finiva nel dconf DELL'UTENTE
+	 * (`~/.config/dconf/user`) e ci restava: chi entrava poi al monitor si
+	 * trovava la tastiera cambiata.  ⭐ Adesso il figlio legge e scrive
+	 * attraverso il dconf della SESSIONE (`sessione_dconf_prepara()`: un
+	 * database in memoria in cima, quello dell'utente sotto in sola lettura),
+	 * e la Shell pure.
+	 * ⛔ E se quel dconf non c'e', NON si scrive: meglio una disposizione non
+	 *    applicata, detta, che una scritta dove l'utente non vuole.
+	 */
+	if (!sessione_dconf_di_sessione())
+	{
+		registro_dice(AREA,
+		              "⚠ RIPIEGO DICHIARATO: il dconf della sessione non e' in vigore — "
+		              "la disposizione «%s» NON si scrive (finirebbe nelle impostazioni "
+		              "dell'UTENTE, D-015), e la sessione tiene «%s».  ⛔ Le lettere che "
+		              "quella non ha NON escono, e le SCORCIATOIE vanno sui suoi tasti "
+		              "(RCP.md §7.3)",
+		              nome, in->disposizione ? tastiera_disposizione(in->disposizione)
+		                                     : "nessuna");
+		return -1;
+	}
+
+	/*
 	 * ⛔⛔⭐ E PRIMA DI CHIEDERE IL CAMBIO, SI RILASCIA TUTTO.
 	 *
 	 * ⭐ Non e' prudenza: e' la cura che l'anello del PUNTATORE (sottofase 6.1)
@@ -1773,7 +1800,8 @@ int input_disposizione(Input *in, const char *nome)
 	 *      millisecondo piu' sotto.
 	 */
 	registro_dice(AREA,
-	              "disposizione «%s» CHIESTA alla sessione (input-sources = %s) — §5-bis.7. "
+	              "disposizione «%s» CHIESTA alla sessione (input-sources = %s, nel dconf della "
+	              "SESSIONE: quello dell'utente non si tocca, D-015) — §5-bis.7. "
 	              "⚠ chiesta, non ancora in vigore: lo dira' «KEYMAP CAMBIATA»",
 	              nome, valore);
 	return 0;

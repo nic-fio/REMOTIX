@@ -419,7 +419,7 @@ suono.o:          suono.h registro.h audio.h
 #    di tutte, perche' nessuno la collega alla modifica che l'ha prodotta.
 #    `[M]` 14 agosto 2026: il difetto e' stato segnalato dall'anello del
 #    cursore, che si era accorto che `cattura.o` non si rifaceva.
-input.o:          input.h tastiera.h registro.h mutter.h
+input.o:          input.h tastiera.h registro.h mutter.h sessione.h kwin.h
 tastiera.o:       tastiera.h registro.h
 cursore.o:        cursore.h registro.h
 

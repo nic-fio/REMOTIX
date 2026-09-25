@@ -1080,6 +1080,238 @@ static char *scrivi_regole_menu_kde(const char *runtime)
 	return g_steal_pointer(&cartella);
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 15, D-015 — IL DCONF DELLA SESSIONE: LE IMPOSTAZIONI DELL'UTENTE
+ *      NON SI TOCCANO (decisione dell'utente del 25 set 2026, su tutti i
+ *      desktop).
+ *
+ * ⛔ IL DIFETTO: su GNOME la disposizione negoziata col browser si scriveva
+ *    in `org.gnome.desktop.input-sources` del dconf DELL'UTENTE
+ *    (`~/.config/dconf/user`), e ci restava: chi poi entrava al monitor si
+ *    trovava la tastiera cambiata.  E con lei le chiavi di
+ *    `sessione_impostazioni()` (blocco, inattivita', «Esci», Ctrl+Alt+F*).
+ *
+ * ⭐ LA CURA: un PROFILO dconf della sessione, `$XDG_RUNTIME_DIR/remotix/
+ *    dconf/profilo`, con in cima un database SCRIVIBILE che vive in memoria:
+ *
+ *        service-db:shm/remotix     ← qui finisce OGNI scrittura
+ *        user-db:user               ← quello dell'utente, SOTTO: solo letto
+ *        (le altre righe del profilo di sistema, se c'e')
+ *
+ *   `[R]` dconf 0.40 (Debian 13): con piu' sorgenti **si scrive solo nella
+ *   prima** (`dconf-engine-profile.c`: «If the first source is a "user-db:"
+ *   or "service-db:" then the resulting profile will be writable»), si legge
+ *   dall'alto in basso, e i segnali di cambio si ascoltano su TUTTE
+ *   (`dconf_engine_watch_fast`).  ⇒ La sessione vede le impostazioni
+ *   dell'utente con sopra le nostre; l'utente non vede niente.
+ *   `[R]` `shm` e' uno scrittore di `dconf-service` (`dconf-shm-writer.c`)
+ *   che tiene il database in `$XDG_RUNTIME_DIR/dconf-service/shm/` — tmpfs,
+ *   mai in `~/.config`.  ⚠ Il nome `remotix` senza trattini: finisce in un
+ *   percorso D-Bus (`/ca/desrt/dconf/shm/remotix`), che li rifiuta.
+ *
+ * ⭐ COME ARRIVA A GNOME: `DCONF_PROFILE` nell'ambiente di `gnome-session`
+ *    (`componi_ambiente()`), che lo ESPORTA al gestore d'utente
+ *    (`[R]` gnome-session `gsm_util_export_user_environment`: tutto l'ambiente
+ *    tranne quattro variabili) — la stessa strada per cui `XDG_SESSION_TYPE`
+ *    arriva all'unita' della Shell.  ⇒ `gnome-shell` (che applica
+ *    `input-sources`: `keyboard.js`, `InputSourceManager`), i `gsd-*` e ogni
+ *    programma della sessione leggono attraverso il profilo.  Nel FIGLIO lo
+ *    mette `sessione_dconf_prepara()`, prima di qualunque `GSettings`.
+ *
+ * ⛔ PERCHE' NON «SCRIVO E POI RIMETTO COM'ERA»: e' la strada fragile.  Se il
+ *    figlio muore male, o la macchina si spegne a sessione aperta, il valore
+ *    nostro resta nel file dell'utente PER SEMPRE, e nessuno lo rimette.  Qui
+ *    non c'e' niente da rimettere: nel file dell'utente non si scrive mai.
+ *
+ * ⚠ I PREZZI, dichiarati:
+ *   · anche quel che l'UTENTE cambia dal desktop remoto (lo sfondo, una
+ *     scorciatoia) finisce nel database della sessione, e si perde quando la
+ *     sessione rinasce (`sessione_dconf_azzera()`) o la macchina si riavvia;
+ *   · il profilo OBBLIGATORIO (`/run/dconf/user/<uid>`) vince su
+ *     `DCONF_PROFILE`: se c'e', la cura non puo' valere, e lo si dice;
+ *   · la variabile resta nell'ambiente del gestore d'utente finche' lui vive
+ *     (e il file del profilo con lei: stanno tutt'e due in `XDG_RUNTIME_DIR`).
+ *     Un accesso al monitor che condividesse QUEL gestore la erediterebbe —
+ *     come eredita gia' il drop-in `--headless` di `scrivi_dropin()`.
+ */
+#define DCONF_SESSIONE_SORGENTE "service-db:shm/remotix"
+#define DCONF_SESSIONE_OGGETTO "/ca/desrt/dconf/shm/remotix"
+
+static char *dconf_profilo_percorso(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	if (!runtime || !*runtime)
+		return NULL;
+	return g_build_filename(runtime, "remotix", "dconf", "profilo", NULL);
+}
+
+static gboolean dconf_in_vigore;
+
+/* Il profilo che dconf userebbe SENZA di noi, nell'ordine di
+ * `dconf_engine_profile_open()`: `DCONF_PROFILE` (se non e' il nostro), quello
+ * di runtime, `user` in `/etc` e nelle `XDG_DATA_DIRS`.  NULL = nessuno, cioe'
+ * il predefinito di dconf, «user-db:user». */
+static char *dconf_profilo_di_base(const char *nostro)
+{
+	const char *amb = g_getenv("DCONF_PROFILE");
+	g_autoptr(GPtrArray) candidati = g_ptr_array_new_with_free_func(g_free);
+	const char *const *dati = g_get_system_data_dirs();
+
+	if (amb && *amb && g_strcmp0(amb, nostro) != 0) {
+		if (amb[0] == '/')
+			g_ptr_array_add(candidati, g_strdup(amb));
+		else {
+			g_ptr_array_add(candidati, g_build_filename("/etc/dconf/profile", amb, NULL));
+			for (int i = 0; dati[i]; i++)
+				g_ptr_array_add(candidati,
+				                g_build_filename(dati[i], "dconf", "profile", amb, NULL));
+		}
+	} else {
+		g_ptr_array_add(candidati, g_build_filename(g_get_user_runtime_dir(), "dconf",
+		                                            "profile", NULL));
+		g_ptr_array_add(candidati, g_strdup("/etc/dconf/profile/user"));
+		for (int i = 0; dati[i]; i++)
+			g_ptr_array_add(candidati,
+			                g_build_filename(dati[i], "dconf", "profile", "user", NULL));
+	}
+	for (guint i = 0; i < candidati->len; i++) {
+		char *testo = NULL;
+
+		if (g_file_get_contents(g_ptr_array_index(candidati, i), &testo, NULL, NULL))
+			return testo;
+	}
+	return NULL;
+}
+
+bool sessione_dconf_prepara(void)
+{
+	g_autofree char *percorso = dconf_profilo_percorso();
+	g_autofree char *cartella = NULL;
+	g_autofree char *obbligatorio = NULL;
+	g_autofree char *base = NULL;
+	g_autoptr(GString) profilo = g_string_new(NULL);
+	g_autoptr(GError) sbaglio = NULL;
+	g_auto(GStrv) righe = NULL;
+	int sorgenti = 0;
+
+	/* ⚠ Solo GNOME: gli altri desktop non leggono le loro impostazioni da
+	 *   dconf, e la disposizione la mettono per altre strade (kxkbrc della
+	 *   sessione su KDE, la keymap della tastiera virtuale su wlroots). */
+	if (sessione_desktop() != SESSIONE_DESKTOP_GNOME)
+		return false;
+	if (!percorso) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: XDG_RUNTIME_DIR non impostata — niente dconf della "
+		              "sessione, e allora la disposizione negoziata NON si scrive");
+		return false;
+	}
+	obbligatorio = g_strdup_printf("/run/dconf/user/%u", (unsigned) getuid());
+	if (g_file_test(obbligatorio, G_FILE_TEST_EXISTS)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: c'e' un profilo dconf OBBLIGATORIO (%s), e vince su "
+		              "DCONF_PROFILE: il dconf della sessione non puo' valere, e la "
+		              "disposizione negoziata NON si scrive",
+		              obbligatorio);
+		return false;
+	}
+
+	g_string_append(profilo,
+	                "# REMOTIX (D-015): il dconf della sessione remota.  In cima un\n"
+	                "# database in memoria che prende OGNI scrittura; sotto, in sola\n"
+	                "# lettura, quello dell'utente e i database di sistema.\n"
+	                DCONF_SESSIONE_SORGENTE "\n");
+	base = dconf_profilo_di_base(percorso);
+	righe = g_strsplit(base ? base : "", "\n", -1);
+	for (int i = 0; righe[i]; i++) {
+		const char *r = g_strstrip(righe[i]);
+
+		if (!*r || r[0] == '#' || g_strcmp0(r, DCONF_SESSIONE_SORGENTE) == 0)
+			continue;
+		if (g_str_has_prefix(r, "user-db:") || g_str_has_prefix(r, "system-db:") ||
+		    g_str_has_prefix(r, "service-db:") || g_str_has_prefix(r, "file-db:")) {
+			g_string_append_printf(profilo, "%s\n", r);
+			sorgenti++;
+		}
+	}
+	if (!sorgenti)
+		g_string_append(profilo, "user-db:user\n");
+
+	cartella = g_path_get_dirname(percorso);
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_file_set_contents(percorso, profilo->str, -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: il profilo dconf della sessione non si scrive (%s): %s — "
+		              "e allora la disposizione negoziata NON si scrive",
+		              percorso, sbaglio ? sbaglio->message : g_strerror(errno));
+		return false;
+	}
+	/* ⛔ Prima di qualunque `GSettings` del figlio: il motore di dconf legge
+	 *    `DCONF_PROFILE` una volta sola, quando nasce. */
+	g_setenv("DCONF_PROFILE", percorso, TRUE);
+	dconf_in_vigore = TRUE;
+	registro_dice(REG_SESSIONE,
+	              "⭐ D-015: dconf della SESSIONE in %s (" DCONF_SESSIONE_SORGENTE
+	              " in cima, %s sotto in sola lettura): quel che la sessione scrive "
+	              "NON tocca le impostazioni dell'utente",
+	              percorso, sorgenti ? "il profilo di sistema" : "user-db:user");
+	return true;
+}
+
+bool sessione_dconf_di_sessione(void)
+{
+	g_autofree char *percorso = dconf_profilo_percorso();
+
+	return dconf_in_vigore && percorso &&
+	       g_strcmp0(g_getenv("DCONF_PROFILE"), percorso) == 0 &&
+	       g_file_test(percorso, G_FILE_TEST_EXISTS);
+}
+
+/*
+ * ⭐ Alla nascita il database della sessione si SVUOTA: la sessione nuova
+ *    parte dalle impostazioni dell'utente di adesso, piu' le nostre — non da
+ *    quel che la sessione di prima (o il suo cliente) ci aveva lasciato.
+ * `[R]` E' `dconf reset -f /` detto a mano, per non dipendere da `dconf-cli`:
+ *    `ca.desrt.dconf.Writer.Change` vuole i byte di un `a{smv}`
+ *    (`dconf_changeset_serialise`), e `/` senza valore vuol dire «togli
+ *    tutto».
+ */
+static void sessione_dconf_azzera(void)
+{
+	g_autoptr(GDBusConnection) bus = NULL;
+	g_autoptr(GVariant) insieme = NULL;
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+	GVariantBuilder b;
+
+	if (!sessione_dconf_di_sessione())
+		return;
+	bus = sessione_bus(NULL);
+	if (!bus)
+		return;
+	g_variant_builder_init(&b, G_VARIANT_TYPE("a{smv}"));
+	g_variant_builder_add(&b, "{smv}", "/", NULL);
+	insieme = g_variant_ref_sink(g_variant_builder_end(&b));
+	risposta = g_dbus_connection_call_sync(
+		bus, "ca.desrt.dconf", DCONF_SESSIONE_OGGETTO, "ca.desrt.dconf.Writer", "Change",
+		g_variant_new("(@ay)",
+		              g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+		                                        g_variant_get_data(insieme),
+		                                        g_variant_get_size(insieme), 1)),
+		G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &sbaglio);
+	if (risposta)
+		registro_dice(REG_SESSIONE,
+		              "⭐ D-015: dconf della sessione SVUOTATO — la sessione nasce dalle "
+		              "impostazioni dell'utente di adesso, piu' le nostre");
+	else
+		registro_dice(REG_SESSIONE,
+		              "⚠ D-015: il dconf della sessione non si svuota (%s): la sessione "
+		              "nuova eredita quel che aveva la precedente — l'utente resta "
+		              "intatto comunque",
+		              sbaglio ? sbaglio->message : "senza motivo");
+}
+
 /*
  * L'ambiente della sessione, composto da zero: quel che non serve non passa.
  * Dieci variabili, una per volta (`CODER.md` §4.5).
@@ -1325,6 +1557,18 @@ static char **componi_ambiente(void)
 	 *   si confonde con «non ho letto l'ambiente».
 	 */
 	g_ptr_array_add(ambiente, g_strdup("SHELL="));
+	/* ⭐ FASE 15, D-015 — il dconf della sessione: `gnome-session` lo esporta
+	 *    al gestore d'utente, e la Shell e i `gsd-*` lo ereditano (il riquadro
+	 *    sopra `sessione_dconf_prepara()`). */
+	if (sessione_dconf_di_sessione()) {
+		g_autofree char *profilo = dconf_profilo_percorso();
+
+		g_ptr_array_add(ambiente, g_strdup_printf("DCONF_PROFILE=%s", profilo));
+	} else
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: la sessione GNOME nasce SENZA il dconf della sessione "
+		              "— quel che scrivera' la sessione finira' nelle impostazioni "
+		              "dell'utente");
 	/*
 	 * ⚠ E `XDG_SESSION_ID` NON si passa, di proposito.  `STUDI.md` §gnome §3.1 avverte
 	 *   che senza di essa Mutter puo' agganciare la sessione logind sbagliata —
@@ -3648,6 +3892,9 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 	/* ⛔ LE IMPOSTAZIONI PRIMA DEL COMANDO, per la stessa ragione del drop-in:
 	 *    `gnome-session` fa partire la Shell come prima cosa, e una chiave
 	 *    scritta dopo vale per la sessione SUCCESSIVA — cioe' ha ragione domani. */
+	/* ⭐ D-015: prima si svuota il dconf della sessione, poi ci si scrive. */
+	if (sessione_desktop() == SESSIONE_DESKTOP_GNOME)
+		sessione_dconf_azzera();
 	sessione_impostazioni();
 
 	return avvia(larghezza, altezza) ? true : false;
