@@ -108,9 +108,63 @@ def accendi(o, *opz):
     return inatt, abb
 
 
-def sessione_con_scena(s, reg=None):
+JS_GEO = r"""
+const t = document.getElementById('schermo');
+const r = t ? t.getBoundingClientRect() : null;
+const cs = t ? getComputedStyle(t) : null;
+const reg = document.getElementById('registro');
+return { rect: r ? [r.left, r.top, r.width, r.height] : null,
+         display: cs ? cs.display : null, visibility: cs ? cs.visibility : null,
+         buffer: t ? [t.width, t.height] : null,
+         schermo: document.body.dataset.schermo || null,
+         visibilita: document.visibilityState, fuoco: document.hasFocus(),
+         finestra: [innerWidth, innerHeight, outerWidth, outerHeight, screenX, screenY],
+         registro: reg ? reg.textContent.split('\n').filter(x => x.indexOf('audio:') !== 0).slice(-40) : [] };
+"""
+
+
+def _traccia(s):
+    """G7_TRACCIA=1: ogni chiamata al browser col suo orario (diagnosi D-011)."""
+    if os.environ.get("G7_TRACCIA") != "1" or getattr(s.g, "_tracciata", False):
+        return
+    s.g._tracciata = True
+    for nome in ("js", "fotografa_tela"):
+        vera = getattr(s.g, nome)
+
+        def avvolta(*a, _v=vera, _n=nome):
+            t0 = time.time()
+            try:
+                r = _v(*a)
+                esito = "ok"
+                return r
+            except Exception as e:               # noqa: BLE001
+                esito = "ECCEZIONE %s" % str(e)[:80]
+                raise
+            finally:
+                print("   ⏱ %s %s %.2f s %s · %s" % (time.strftime("%H:%M:%S"), _n,
+                      time.time() - t0, esito, (str(a[0])[:50] if a else "")), flush=True)
+        setattr(s.g, nome, avvolta)
+
+
+def sessione_con_scena(s, reg=None, tetto_foto=None):
     segno = reg.righe() if reg else None
-    ok, m = F019.entra_con_orecchio(s)
+    _traccia(s)
+    # ⛔⭐ D-011, la causa (25 set 2026, misurata con G7_TRACCIA=1): su XFCE lo
+    #    sfondo e' NERO e in 4K il giudice dei pixel lo dice «degenere» ⇒
+    #    `Prova.primo_fotogramma()` fotografa per TUTTO il tetto (45 s) e solo
+    #    alla fine `desktop_scuro_ma_vivo` lo salva.  Con l'orologio
+    #    d'inattivita' accorciato a 25 s, durante quei 45 s senza un gesto il
+    #    server congeda (0x02, giusto), la pagina torna al modulo (tela 16x16,
+    #    display:none) e la foto successiva fallisce: il BLOCKED era del BANCO.
+    #    ⇒ Nelle fasi a orologi corti il primo fotogramma si guarda con un
+    #    tetto piu' corto dell'orologio (`tetto_foto`), e il clic arriva subito.
+    vecchio = s.o.tetto_s
+    if tetto_foto:
+        s.o.tetto_s = min(vecchio, tetto_foto)
+    try:
+        ok, m = F019.entra_con_orecchio(s)
+    finally:
+        s.o.tetto_s = vecchio
     # ⚠ D-011, seconda lettura (25 set 2026): su XFCE la foto del primo
     #   fotogramma a ~1 s dall'ingresso fallisce (Firefox: TakeScreenshot
     #   «Failure»; Chrome: tela di area 0) — l'uscita di labwc nasce 1280x720 e
@@ -118,6 +172,14 @@ def sessione_con_scena(s, reg=None):
     #   una CONSEGUENZA (il banco, arreso, non toccava piu' niente per 25 s).
     #   ⇒ Si riguarda la tela per 15 s prima di arrendersi.
     riprove = 0
+    if not ok:
+        try:
+            g0 = s.g.js(JS_GEO)
+            g0.pop("registro", None)
+        except Exception as e:                   # noqa: BLE001
+            g0 = str(e)[:150]
+        print("   ⚠ primo fotogramma non guardabile, la pagina SUBITO: %s · %s"
+              % (g0, str(G7.pagina(s.g).get("esito"))[:100]), flush=True)
     while not ok and "non li ho potuti guardare" in m and riprove < 5:
         riprove += 1
         time.sleep(3)
@@ -133,8 +195,14 @@ def sessione_con_scena(s, reg=None):
         #    ragione del BLOCKED.
         time.sleep(1)
         pag = G7.pagina(s.g)
+        try:
+            geo = s.g.js(JS_GEO)
+        except Exception as e:                   # noqa: BLE001
+            geo = {"errore": str(e)[:200]}
+        pag["geometria"] = geo
         s.salva_testo("pagina-ingresso-fallito.txt",
                       "\n".join("%s: %s" % kv for kv in pag.items()))
+        print("   ⚠ ingresso fallito, la pagina: %s" % geo, flush=True)
         if reg is not None and segno is not None:
             s.salva_testo("server-ingresso-fallito.txt", reg.da(segno, s.chi))
         s.salva_console()
@@ -204,7 +272,8 @@ def fase_orologi(o, E, reg, corti):
     passata = "sana" if corti else "guasto"
     with S.Sessione(o, "022", E) as s:
         segno = reg.righe()
-        pid, t_gesto = sessione_con_scena(s, reg)
+        # il primo fotogramma si guarda per meno dell'orologio d'inattivita'
+        pid, t_gesto = sessione_con_scena(s, reg, tetto_foto=max(8, INATTIVITA_S - 10))
         # — F-023 —
         forma, riga, _d = reg.aspetta(segno, ["INATTIVITA'"], s.chi,
                                       tetto=max(1, INATTIVITA_S + MARGINE_S - (time.time() - t_gesto)),
