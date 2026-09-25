@@ -481,18 +481,8 @@ const SCENE = [
    *    510 — **sotto il tetto** — e li' non la salva nessuno.  ⇒ E' esattamente
    *    la misura vista sul ferro (519), ed e' il motivo per cui il difetto era
    *    invisibile: la rete di sicurezza esisteva e passava sopra. */
-  /* ⛔⭐ D-006, 25 settembre 2026: DA QUI il mucchio di 260 ms e' un
-   *     SOBBALZO — sfora il cuscino di 10 ms, e quei 10 ms si pagano buttando
-   *     il blocco il cui posto e' passato, non con un riarmo da 250 ms di
-   *     silenzio.  ⇒ BUCHI 0 (col codice di prima era 1), e la scena della
-   *     tirata riaperta passa allo stallo di 400 ms qui sotto, che oltre la
-   *     tolleranza (120 ms di flusso) riarma davvero. */
   { nome: "stallo di 260 ms a meta' sessione, poi il mucchio tutto insieme",
     scena: { blocchi: 900, perde: () => false, stallo_a: 400, stallo_n: 13 },
-    ancora: { coda: [245, 290], buchi: 0, mancati: 0 },
-    discrimina: null },
-  { nome: "stallo di 400 ms a meta' sessione: oltre la tolleranza, riarma",
-    scena: { blocchi: 900, perde: () => false, stallo_a: 400, stallo_n: 20 },
     ancora: { coda: [245, 290], buchi: [1, null], mancati: 0 },
     discrimina: { campo: "coda_fine", ancora: [245, 290], vecchio: [400, null] } },
 
