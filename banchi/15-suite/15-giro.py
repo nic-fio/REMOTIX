@@ -279,10 +279,36 @@ MAGLIE = [("C7", "c7", [], False), ("C7", "c7", ["--lascia-un-processo", "--atte
           ("C19", "c19", [], False), ("C19", "c19", ["--lascia-un-inquilino"], True)]
 
 
+SGOMBERO = r"""
+for u in $(awk -F: '$1 ~ /^c[0-9]+b?u[0-9]+$/ {print $1}' /etc/passwd); do
+  id=$(id -u "$u" 2>/dev/null)
+  m="runuser -u [$(printf %s "$u" | cut -c1)]$(printf %s "$u" | cut -c2-) "
+  loginctl terminate-user "$u" >/dev/null 2>&1
+  pkill -CONT -f "$m" >/dev/null 2>&1; pkill -CONT -u "$u" >/dev/null 2>&1
+  pkill -KILL -f "$m" >/dev/null 2>&1; pkill -KILL -u "$u" >/dev/null 2>&1
+  sleep 0.2
+  userdel -r "$u" >/dev/null 2>&1 || userdel "$u" >/dev/null 2>&1
+  [ -n "$id" ] && systemctl reset-failed "user@$id.service" >/dev/null 2>&1
+  [ -n "$id" ] && find /tmp -maxdepth 1 -uid "$id" -exec rm -rf {} + 2>/dev/null
+done; true
+"""
+
+
+def sgombera(d):
+    """Gli inquilini della rete (`c<n>[b]u<n>`) via dalla scatola: la stessa riga
+    di 11-gancio.sh, nello stesso spazio di nomi (nictest e provanic restano)."""
+    nella_scatola(d, SGOMBERO, 120)
+
+
 def strato_tecnico(o, desktop, meta):
     righe = []
 
     def una(d, nome, sotto, arg, guasto):
+        # ⛔ la SGOMBERATA della rete (11-gancio.sh sgombera_inquilini), prima di
+        #   ogni maglia: le maglie cancellano il loro inquilino PRIMA di crearlo,
+        #   non dopo ⇒ senza, C19 vede gli inquilini di C9 e dice rosso.
+        #   `[M]` giro 1, 25 set 2026 (D-013, classe C).
+        sgombera(d)
         t0 = time.time()
         c, t = sudo("bash %s/11-accendi.sh %s %s %s" % (RETE11, sotto, d, " ".join(arg)), 900)
         # ⛔ il guasto si legge al contrario (11-gancio.sh esegui_maglia): 0 = visto
