@@ -2139,6 +2139,127 @@ static void misura_i_pixel(CatturaFermo *fermo)
 }
 
 /*
+ * ⭐⭐ IL GIUDIZIO SULLA LASTRA SI FA A CAMPIONE, NON SU TUTTI I BYTE.
+ *
+ * ⛔ IL FATTO CHE L'HA RESO NECESSARIO — `[M]` fase 16, Radeon RX 6800,
+ *    scatola XFCE/labwc (strada wlroots-dmabuf, lastre gbm LINEARI): il giro
+ *    completo di `misura_i_pixel` sulla mappatura della lastra 4K ha preso
+ *    **63 673 ms** (attesa della GPU 0,59 ms), e per tutto quel tempo il ciclo
+ *    non ha consegnato niente e la nascita della sessione e' fallita.  Su una
+ *    scheda DISCRETA la lastra sta in VRAM e la CPU la legge attraverso il BAR
+ *    PCIe NON cachato: ogni lettura e' una transazione sul bus, e il giro
+ *    completo ne fa diverse per pixel su otto milioni di pixel.  ⚠ Sulla Intel
+ *    integrata (memoria di sistema) lo stesso giro e' istantaneo: e' per questo
+ *    che fino alla Radeon non si era visto.
+ *
+ * ⭐ IL GIUDIZIO «NERO / NON NERO» NON HA BISOGNO DI 30 MB: una griglia di
+ *    `CAMPIONE_LATO` x `CAMPIONE_LATO` punti, al CENTRO di ogni cella (su 4K
+ *    una cella e' 60x34 pixel), letti ciascuno con UNA lettura di 4 byte
+ *    (`memcpy` in una variabile locale: una transazione sola sul bus, non
+ *    tre-sei come il giro completo), toccando solo le pagine che servono.
+ *
+ * ⚠ E L'ERRORE POSSIBILE STA DA UNA PARTE SOLA, ed e' la parte innocua:
+ *    - «non nero» e' CERTO: basta un campione acceso per dimostrarlo;
+ *    - «nero» / «uniforme» possono essere FALSI solo se tutto quel che e'
+ *      acceso cade FRA i punti della griglia (una scena nera con dentro
+ *      qualcosa di piu' piccolo di una cella in ogni direzione);
+ *    - il range: «compatibile pieno» e' CERTO se i campioni lo vedono,
+ *      altrimenti esce «non conclusivo», che e' gia' il valore del «non so».
+ *    ⇒ Su una scena normale (sfondo, pannello) l'esito e' quello del giro
+ *      completo; cambiano i millisecondi.
+ *
+ * ⛔ IL TETTO DI TEMPO (`CAMPIONE_TETTO_US`), guardato a ogni riga della
+ *    griglia: se scade, quel che si e' visto vale solo se prova il «non nero»
+ *    (un campione acceso e due diversi).  Un «nero» o un «uniforme» su una
+ *    griglia a meta' NON si dichiara: `pixel_misurati` resta FALSE, «non ho
+ *    guardato» (`LEZIONI.md` §1.9), e la riga del chiamante lo dice.
+ *
+ * ⚠ Il modificatore: questa funzione legge la lastra come se fosse LINEARE,
+ *   come il giro completo prima di lei — sulla strada wlroots le lastre sono
+ *   LINEARI per costruzione (`wlroots.c`, `lastra_nuova`).  Su una lastra
+ *   piastrellata (tiled) i punti letti sono pixel VERI in posti diversi, e il
+ *   giudizio nero/uniforme vale lo stesso; su una lastra COMPRESSA
+ *   (DCC/CCS) i byte non sono pixel, esattamente come per il giro completo:
+ *   non si peggiora, e non si migliora.
+ */
+#define CAMPIONE_LATO 64u
+#define CAMPIONE_TETTO_US 250000u
+
+static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
+{
+	CatturaConsegna *c = &fermo->consegna;
+	int r = 0, g = 1, b = 2;
+	const uint8_t *base = fermo->pixel;
+	uint8_t primo[4] = { 0, 0, 0, 0 };
+	gboolean uniforme = TRUE;
+	guint guardati = 0, i, j;
+	uint64_t inizio = adesso_us();
+
+	*tetto = FALSE;
+	c->range_misurato = CATTURA_RANGE_NON_MISURATO;
+	if (!fermo->pixel || fermo->byte == 0 || fermo->larghezza == 0 || fermo->altezza == 0)
+		return 0;
+	/* ⛔ Come il giro completo: sui byte di una disposizione che non
+	 *    conosciamo non si misura. */
+	if (c->bit_per_canale != 8 || !posizioni_rgb(c->formato_grezzo, &r, &g, &b))
+		return 0;
+
+	c->minimo[0] = c->minimo[1] = c->minimo[2] = 255;
+	c->massimo[0] = c->massimo[1] = c->massimo[2] = 0;
+
+	for (i = 0; i < CAMPIONE_LATO; i++)
+	{
+		guint64 riga = ((2u * (guint64) i + 1u) * fermo->altezza) / (2u * CAMPIONE_LATO);
+		const uint8_t *p_riga = base + riga * (guint64) fermo->stride;
+
+		if ((riga + 1) * (guint64) fermo->stride > fermo->byte)
+			break;
+		if (i > 0 && adesso_us() - inizio > CAMPIONE_TETTO_US)
+		{
+			*tetto = TRUE;
+			break;
+		}
+		for (j = 0; j < CAMPIONE_LATO; j++)
+		{
+			guint64 colonna =
+			    ((2u * (guint64) j + 1u) * fermo->larghezza) / (2u * CAMPIONE_LATO);
+			uint8_t px[4];
+			uint8_t v[3];
+			int k;
+
+			/* ⭐ UNA lettura da 4 byte, poi si lavora sulla copia locale. */
+			memcpy(px, p_riga + colonna * 4u, 4);
+			if (guardati == 0)
+				memcpy(primo, px, 4);
+			v[0] = px[r];
+			v[1] = px[g];
+			v[2] = px[b];
+			for (k = 0; k < 3; k++)
+			{
+				if (v[k] < c->minimo[k])
+					c->minimo[k] = v[k];
+				if (v[k] > c->massimo[k])
+					c->massimo[k] = v[k];
+			}
+			if (uniforme && (px[0] != primo[0] || px[1] != primo[1] || px[2] != primo[2]))
+				uniforme = FALSE;
+			guardati++;
+		}
+	}
+	if (guardati == 0)
+		return 0;
+
+	c->uniforme = uniforme;
+	c->nero = (c->massimo[0] == 0 && c->massimo[1] == 0 && c->massimo[2] == 0);
+	if (c->minimo[0] == 0 && c->minimo[1] == 0 && c->minimo[2] == 0 && c->massimo[0] == 255 &&
+	    c->massimo[1] == 255 && c->massimo[2] == 255)
+		c->range_misurato = CATTURA_RANGE_COMPATIBILE_PIENO;
+	else
+		c->range_misurato = CATTURA_RANGE_NON_CONCLUSIVO;
+	return guardati;
+}
+
+/*
  * ⭐⭐ IL FOTOGRAMMA DELLA SCHEDA GUARDATO **UNA VOLTA SOLA**, e la ragione per
  *     cui e' una volta sola e' un costo, non una pigrizia.
  *
@@ -2163,14 +2284,21 @@ static void misura_i_pixel(CatturaFermo *fermo)
  *    memoria e' la sorveglianza continua: un desktop che diventasse nero a
  *    meta' sessione, su questa strada, non ha piu' chi lo dica.  Sta dichiarato
  *    qui invece che scoperto dopo.
+ *
+ * ⛔⛔ E NON SI LEGGE TUTTA: si legge a campione (`misura_i_pixel_a_campione`,
+ *     il riquadro sopra), perche' su una scheda discreta il giro completo ha
+ *     preso 63,7 s.  Torna quanti pixel ha guardato; `*tetto` dice se il
+ *     tempo e' scaduto prima della fine della griglia.
  */
-static void guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo)
+static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gboolean *tetto)
 {
 	void *mappa;
 	size_t quanti;
+	guint guardati;
 
+	*tetto = FALSE;
 	if (fermo->fd < 0 || fermo->byte == 0)
-		return;
+		return 0;
 	quanti = (size_t) fermo->offset + (size_t) fermo->byte;
 	mappa = mmap(NULL, quanti, PROT_READ, MAP_SHARED, fermo->fd, 0);
 	if (mappa == MAP_FAILED)
@@ -2190,7 +2318,7 @@ static void guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo)
 			              "GUARDATO, e `pixel_misurati` resta FALSE",
 			              fermo->fd, quanti, (guint64) fermo->modificatore);
 		}
-		return;
+		return 0;
 	}
 	/* ⚠ `misura_i_pixel` legge da `fermo->pixel`: glielo si presta per la durata
 	 *   della misura e glielo si toglie subito dopo.  ⛔ Lasciarlo li' vorrebbe
@@ -2198,10 +2326,21 @@ static void guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo)
 	 *   smontare — e a valle nessuno se lo aspetta, perche' `sulla_scheda` dice
 	 *   il contrario. */
 	fermo->pixel = (uint8_t *) mappa + fermo->offset;
-	misura_i_pixel(fermo);
-	fermo->consegna.pixel_misurati = TRUE;
+	guardati = misura_i_pixel_a_campione(fermo, tetto);
+	/* ⛔ Zero guardati = «non ho guardato» (formato sconosciuto, lastra
+	 *    piu' corta della prima riga).  E a tetto scaduto un «nero» o un
+	 *    «uniforme» su mezza griglia non si dichiara: vale solo il «non nero»,
+	 *    che un campione acceso dimostra da solo. */
+	fermo->consegna.pixel_misurati =
+	    guardati > 0 && !(*tetto && (fermo->consegna.nero || fermo->consegna.uniforme));
+	if (!fermo->consegna.pixel_misurati) {
+		fermo->consegna.nero = FALSE;
+		fermo->consegna.uniforme = FALSE;
+		fermo->consegna.range_misurato = CATTURA_RANGE_NON_MISURATO;
+	}
 	fermo->pixel = NULL;
 	munmap(mappa, quanti);
+	return guardati;
 }
 
 /*
@@ -2424,6 +2563,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *     n'è uno, NON si guarda, e lo si dice. */
 		if (!cattura->wlr_guardato_il_primo) {
 			uint64_t tm = adesso_us();
+			guint guardati = 0;
+			gboolean tetto = FALSE;
 			uint32_t grezzo = fuori->consegna.formato_grezzo;
 			uint32_t spa = (w.formato == DRM_FORMAT_XRGB8888) ? SPA_VIDEO_FORMAT_BGRx
 			               : (w.formato == DRM_FORMAT_ARGB8888) ? SPA_VIDEO_FORMAT_BGRA
@@ -2435,7 +2576,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			if (spa != SPA_VIDEO_FORMAT_UNKNOWN) {
 				fuori->consegna.formato_grezzo = spa;
 				wlr_lettura_cpu(fuori->fd, TRUE);
-				guarda_i_pixel_del_dmabuf(cattura, fuori);
+				guardati = guarda_i_pixel_del_dmabuf(cattura, fuori, &tetto);
 				wlr_lettura_cpu(fuori->fd, FALSE);
 				fuori->consegna.formato_grezzo = grezzo;
 			} else {
@@ -2450,15 +2591,25 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			if (fuori->consegna.pixel_misurati)
 				registro_dice(AREA,
 				              "⭐ wlroots: il PRIMO fotogramma della SCHEDA guardato "
-				              "mappando la lastra: %s (%.2f ms, attesa della GPU "
-				              "%.2f ms, %s)",
+				              "mappando la lastra: %s — %u pixel a campione su "
+				              "%ux%u%s (%.2f ms, attesa della GPU %.2f ms, %s)",
 				              fuori->consegna.nero       ? "⛔ NERO"
 				              : fuori->consegna.uniforme ? "⚠ UNIFORME"
 				                                         : "non nero",
+				              guardati, fuori->larghezza, fuori->altezza,
+				              tetto ? ", ⚠ TETTO di tempo scaduto a griglia incompleta" : "",
 				              fuori->us_misura / 1000.0, w.us_attesa_gpu / 1000.0,
 				              w.attesa_esplicita
 				                  ? "fence estratta dal DMA-BUF"
 				                  : "⚠ senza fence: sincronizzazione implicita");
+			else if (tetto)
+				registro_dice(AREA,
+				              "⚠ wlroots: il PRIMO fotogramma della SCHEDA NON è "
+				              "stato giudicato — TETTO di %u ms scaduto dopo %u "
+				              "pixel a campione tutti spenti o uguali (%.2f ms): «non ho guardato», "
+				              "non «non è nero», e `pixel_misurati` resta FALSE",
+				              CAMPIONE_TETTO_US / 1000u, guardati,
+				              fuori->us_misura / 1000.0);
 		}
 		return CATTURA_PRESA_PIXEL_ALTROVE;
 	}
@@ -2564,7 +2715,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		if (fuori->sulla_scheda && cattura->misura_ultima_us == 0)
 		{
 			uint64_t tm = adesso_us();
-			guarda_i_pixel_del_dmabuf(cattura, fuori);
+			gboolean tetto = FALSE;
+			guint guardati = guarda_i_pixel_del_dmabuf(cattura, fuori, &tetto);
 			cattura->misura_ultima_us = tm;
 			fuori->us_misura = adesso_us() - tm;
 			if (fuori->consegna.pixel_misurati)
@@ -2572,7 +2724,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				cattura->misura_fatte++;
 				registro_dice(AREA,
 				              "⭐ il PRIMO fotogramma della scheda e' stato guardato "
-				              "mappando il DMA-BUF: %s (%.2f ms).  ⛔ E' l'UNICO che si "
+				              "mappando il DMA-BUF: %s — %u pixel a campione su "
+				              "%ux%u%s (%.2f ms).  ⛔ E' l'UNICO che si "
 				              "guarda su questa strada — vedi il riquadro: i successivi "
 				              "portano `pixel_misurati` FALSE, che vuol dire «non ho "
 				              "guardato» e NON «non e' nero»",
@@ -2580,8 +2733,18 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 				                                   : (fuori->consegna.uniforme
 				                                          ? "⚠ UNIFORME"
 				                                          : "non nero"),
+				              guardati, fuori->larghezza, fuori->altezza,
+				              tetto ? ", ⚠ TETTO di tempo scaduto a griglia incompleta" : "",
 				              fuori->us_misura / 1000.0);
 			}
+			else if (tetto)
+				registro_dice(AREA,
+				              "⚠ il PRIMO fotogramma della scheda NON e' stato "
+				              "giudicato — TETTO di %u ms scaduto dopo %u pixel a "
+				              "campione tutti spenti o uguali (%.2f ms): «non ho "
+				              "guardato», non «non e' nero»",
+				              CAMPIONE_TETTO_US / 1000u, guardati,
+				              fuori->us_misura / 1000.0);
 		}
 		return CATTURA_PRESA_PIXEL_ALTROVE;
 	}
