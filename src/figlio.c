@@ -5139,6 +5139,22 @@ static uint64_t tratti_detto_us;
  *    numero la voce «produttore» sarebbe una media fra due grandezze diverse. */
 static uint64_t tratti_senza_pts;
 
+/* ⭐ FASE 16 (25 set 2026) — IL PEZZO NOSTRO, SECONDO PER SECONDO.
+ *
+ * ⛔ La riga TRATTO non basta a dire §3.2 di SPECIFICHE («si misura solo il
+ *    pezzo che e' nostro»), per due ragioni misurate (`fasi/16…` §9): il suo
+ *    `max` e' quello dell'anello di 512 fotogrammi, non del secondo — un picco
+ *    di nascita ci resta dentro 8-17 s —, e il suo totale parte dal `pts` del
+ *    compositore, cioe' contiene «produttore», che e' lavoro del compositore.
+ * ⭐ Qui: per ogni fotogramma `totale − produttore` (dalla nostra copia al byte
+ *    fuori, attesa nel posto compresa: quella e' nostra), raccolti SOLO nel
+ *    secondo che si chiude, e detti col p95 e il massimo di quel secondo.
+ * ⚠ Sulla strada wlroots la «copia» e' il blit del compositore sul nostro
+ *   DMA-BUF: resta dentro, dal lato prudente. */
+#define NOSTRO_SECONDO_MAX 512
+static uint32_t nostro_secondo[NOSTRO_SECONDO_MAX];
+static unsigned nostro_quanti;
+
 static int tratti_confronta(const void *a, const void *b)
 {
 	uint32_t x = *(const uint32_t *)a, y = *(const uint32_t *)b;
@@ -5218,6 +5234,11 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 		somma += v[i];
 	v[9] = somma < totale ? (uint32_t)(totale - somma) : 0u;
 	tratti_totale[tratti_prossimo] = totale > 0xffffffffu ? 0xffffffffu : (uint32_t)totale;
+	if (nostro_quanti < NOSTRO_SECONDO_MAX) {
+		uint64_t nostro = totale > v[0] ? totale - v[0] : 0u;
+		nostro_secondo[nostro_quanti++] = nostro > 0xffffffffu ? 0xffffffffu
+		                                                        : (uint32_t)nostro;
+	}
 
 	tratti_prossimo = (tratti_prossimo + 1) % TRATTI_CAMPIONI;
 	if (tratti_quanti < TRATTI_CAMPIONI)
@@ -5227,6 +5248,19 @@ static void tratti_conta(const CatturaFermo *fo, const CodificatoreFotogramma *f
 	if (us_fine - tratti_detto_us < 1000000u)
 		return;
 	tratti_detto_us = us_fine;
+	if (nostro_quanti) {
+		unsigned n = nostro_quanti;
+		qsort(nostro_secondo, n, sizeof nostro_secondo[0], tratti_confronta);
+		/* p95 «vicino al rango»: con 30 fotogrammi e' il 29°, cioe' il
+		 * secondo peggiore — non la media di due. */
+		unsigned k = (n * 95 + 99) / 100;
+		registro_dice(REG_FIGLIO,
+		              "⭐ NOSTRO nel secondo (copia → byte fuori, §3.2): p95 %.2f ms · "
+		              "max %.2f · mediana %.2f · %u fotogrammi",
+		              nostro_secondo[k ? k - 1 : 0] / 1000.0,
+		              nostro_secondo[n - 1] / 1000.0, nostro_secondo[n / 2] / 1000.0, n);
+		nostro_quanti = 0;
+	}
 	{
 		char riga[512];
 		size_t off = 0;
