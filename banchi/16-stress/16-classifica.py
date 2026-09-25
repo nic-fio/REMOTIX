@@ -48,7 +48,19 @@ CHE COSA LEGGE, nella cartella del livello
 
 LE MISURE, e da dove vengono (§7 → §9)
 ----------------------------------------------------------------------------
-  ritardo   p95 dei campioni del GIRO della pagina nella finestra: e' la misura
+  ritardo   (26 set, dal coordinatore) p95, sulla finestra, dei p95 AL SECONDO
+            delle righe «⭐ NOSTRO nel secondo (copia → byte fuori, §3.2)» del
+            figlio (commit ebc9dcd: solo i fotogrammi di quel secondo, senza il
+            «produttore» del compositore) + 9 ms (tetto costruttivo del tratto
+            d'ingresso, il poll di 8 ms del figlio): il pezzo del PRODOTTO.  Il
+            max al secondo si registra.  Le righe «TRATTO cattura → byte fuori»
+            si REGISTRANO soltanto (il loro `max` e' del campione mobile di 512
+            fotogrammi, e dentro c'e' il produttore).
+            ⚠ Sulla strada wlroots la riga conta la «copia» due volte (~4 ms in
+            piu'): NON corretto, dal lato prudente.  Senza righe ⇒ non misurato.
+            Il GIRO della pagina (sotto) si registra come ESPERIENZA: `giro_eco`
+            (solo battitura) e `giro` intero, che non classificano.
+            Il GIRO e' la misura
             che il PRODOTTO fa (`pagina.html`, `GIRO.parte` sull'input,
             `GIRO.torna` quando arriva il fotogramma che porta quell'input nei
             28 byte di RCP §6.2; il server timbra l'id nel figlio, all'istante
@@ -157,6 +169,9 @@ RIAVVIO = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+avvio\s+REMOTIX\b")
 #   ogni nascita, e non e' un rifiuto dell'accesso.  Sono le tre porte di rcp.c/webtransport.c.
 RIFIUTO = re.compile(r"(?:\[(c[0-9a-z]+)\]|«(c[0-9a-z]+)»).*(?:posto NEGATO|attacco NEGATO|"
                      r"sessione WebTransport RIFIUTATA)")
+NOSTRO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ NOSTRO nel secondo \([^)]*\): p95 ([\d.]+) ms · max ([\d.]+) · "
+                    r"mediana ([\d.]+) · (\d+) fotogrammi")
+PRODUTTORE = re.compile(r"produttore ([\d.]+) \(max ([\d.]+)\)")
 RETE = re.compile(r"\[(c[0-9a-z]+)\] rete-quic (\S+) (.*)$")
 TRATTO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ TRATTO cattura → byte fuori: mediana ([\d.]+) ms \(max ([\d.]+)\)")
 
@@ -297,7 +312,8 @@ def delta(righe, chiave):
 
 
 # ─────────────────────────────── una sessione ──────────────────────────────
-def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, rete=None):
+def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, rete=None, tratti=None,
+             desktop=None):
     righe = jsonl(os.path.join(dir_u, "stato.jsonl"))
     for r in righe:
         r["_c"] = conti_di(r)
@@ -326,37 +342,39 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         cons, r1 = delta(fin, "consegnati")
         dip, r2 = delta(fin, "dipinti")
         ripartenze = max(r1, r2)
-        # ── ritardo: il GIRO della pagina ──
-        # ⛔ CLASSIFICA solo `giro_eco` (26 set, dal coordinatore): i campioni delle
-        #   azioni a ECO IMMEDIATO (la battitura).  `giro` intero misura anche il
-        #   tempo di reazione delle applicazioni — una pagina che carica, un clic
-        #   che non cambia lo schermo — che non e' ritardo del prodotto: si registra.
+        # ── ritardo input → fotogramma: il pezzo del PRODOTTO ──
+        # ⛔ 26 set 2026, dal coordinatore, su una diagnosi misurata (fase16/
+        #   diagnosi-eco): giro_eco = nostro (ingresso ~5–9 ms + fotogramma in
+        #   mano → pagina ~14 ms) + NON nostro (l'app che disegna l'eco, il
+        #   compositore).  §9 classifica «(prodotto, p95)», §7 «quello che il
+        #   prodotto misura dal suo lato» ⇒ CLASSIFICA: p95 dei `max` delle righe
+        #   TRATTO del figlio nella finestra + 9 ms (il tetto costruttivo del
+        #   tratto d'ingresso).  giro_eco e giro intero si registrano come
+        #   ESPERIENZA e non classificano.
         tutti = campioni_giro(fin, "giro", "giro_ms")
-        camp = campioni_giro(fin, "giro_eco", "giro_eco_ms")
-        misure["giro_tutti_campioni"] = len(tutti)
-        misure["giro_tutti_p95_ms"] = _tondo(p95(tutti)) if tutti else None
+        eco = campioni_giro(fin, "giro_eco", "giro_eco_ms")
+        misure["esperienza"] = {
+            "giro_eco_p95_ms": _tondo(p95(eco)) if eco else None, "giro_eco_campioni": len(eco),
+            "giro_tutti_p95_ms": _tondo(p95(tutti)) if tutti else None, "giro_tutti_campioni": len(tutti)}
         inp = [x for r in dentro for x in (r.get("input") or [])]
         persi = [x for x in inp if x.get("ok") is False]
         lat = [x["latenza_ms"] for x in inp if x.get("ok") and x.get("latenza_ms") is not None]
-        misure["giro_eco_campioni"] = len(camp)
         misure["input_azioni"] = len(inp)
         misure["input_persi"] = len(persi)
         misure["input_latenza_p95_ms"] = _tondo(p95(lat)) if lat else None
+        vr = voce_ritardo(info["inquilino"], tratti, desktop, misure)
+        rit = vr["valore"] if vr else None
         if persi:
-            voci["ritardo_p95_ms"] = fallita(_tondo(p95(camp)) if camp else None,
-                                             "input PERSO: %d azioni su %d senza effetto (%s)"
+            voci["ritardo_p95_ms"] = fallita(_tondo(rit), "input PERSO: %d azioni su %d senza effetto (%s)"
                                              % (len(persi), len(inp),
                                                 ", ".join(str(x.get("azione")) for x in persi[:3])))
-        elif camp:
-            v = p95(camp)
-            misure["ritardo_p95_ms"] = _tondo(v)
-            voci["ritardo_p95_ms"] = voce_misurata("ritardo_p95_ms", v, "%d campioni del giro a eco "
-                                                   "immediato%s" % (len(camp), " (POCHI)" if len(camp) < 20 else ""))
-        elif d_video and not inp:
-            pass                                   # il profilo D non batte: non si applica
+        elif vr:
+            voci["ritardo_p95_ms"] = vr
         else:
-            voci["ritardo_p95_ms"] = non_misurato("nessun campione di `giro_eco` nella finestra (%d del "
-                                                  "giro intero, che si registra e non classifica)" % len(tutti))
+            voci["ritardo_p95_ms"] = non_misurato("nessuna riga «NOSTRO nel secondo» del figlio per %s nella "
+                                                  "finestra (binario prima di ebc9dcd? le righe TRATTO si "
+                                                  "registrano e non classificano)"
+                                                  % (info["inquilino"] or "l'inquilino ignoto"))
         # ── saltati ──
         if cons is None or dip is None:
             voci["saltati_pct"] = non_misurato("la pagina non ha dato `video X→Y`")
@@ -443,6 +461,12 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         elif ripartenze:
             voci["caduta"] = fallita(True, "i contatori della pagina sono ripartiti da zero %d volte: "
                                      "pagina ricaricata o sessione riattaccata" % ripartenze)
+    # il ritardo del prodotto non ha bisogno dell'attore: senza righe di stato
+    #   lo si prende lo stesso dalle righe TRATTO del figlio
+    if len(fin) < 2:
+        vr = voce_ritardo(info["inquilino"], tratti, desktop, misure)
+        if vr:
+            voci["ritardo_p95_ms"] = vr
     # ── caduta: il registro del server (tutto il livello) ──
     inq = info["inquilino"]
     ev = [e for e in log_eventi if e["inquilino"] == inq or e["inquilino"] == "*"] if inq else \
@@ -605,6 +629,67 @@ def eventi_log(p, t_rif, fuso=0.0):
         if m:
             tratto[m.group(1)] = {"mediana": float(m.group(2)), "max": float(m.group(3)), "ora": ora}
     return ev, tratto, True
+
+
+TETTO_INGRESSO_MS = 9.0   # il tratto d'ingresso: il poll di 8 ms del figlio (figlio.c:3794) + 1
+
+
+def tratti_log(p, w0, w1, fuso=0.0):
+    """Due serie del figlio nella finestra, per inquilino:
+    `nostro`  «⭐ NOSTRO nel secondo (copia → byte fuori, §3.2): p95 X ms · max Y ·
+              mediana Z · N fotogrammi» (commit ebc9dcd): SOLO i fotogrammi di
+              quel secondo, SENZA il «produttore» del compositore ⇒ CLASSIFICA;
+    `tratto`  «⭐ TRATTO cattura → byte fuori: mediana X (max Y) …»: ⚠ il `max`
+              e' del CAMPIONE MOBILE di 512 fotogrammi (non del secondo) e dentro
+              c'e' il produttore ⇒ si REGISTRA soltanto (serve a spiegare)."""
+    out = {"nostro": {}, "tratto": {}}
+    if not p or not os.path.exists(p):
+        return out
+    for riga in open(p, encoding="utf-8", errors="replace"):
+        if "NOSTRO nel secondo" not in riga and "TRATTO cattura" not in riga:
+            continue
+        te = epoca_log(riga[:12], w1, fuso)
+        if te is None or te <= w0 or te > w1 + 2:
+            continue
+        m = NOSTRO.search(riga)
+        if m:
+            out["nostro"].setdefault(m.group(1), []).append(
+                (te, float(m.group(2)), float(m.group(3)), float(m.group(4)), int(m.group(5))))
+            continue
+        m = TRATTO.search(riga)
+        if m:
+            pr = PRODUTTORE.search(riga)
+            out["tratto"].setdefault(m.group(1), []).append(
+                (te, float(m.group(2)), float(m.group(3)), float(pr.group(1)) if pr else None))
+    return out
+
+
+def voce_ritardo(inq, tratti, desktop, misure):
+    """La voce del ritardo del PRODOTTO e le misure registrate.  → voce o None."""
+    tratti = tratti or {"nostro": {}, "tratto": {}}
+    no = tratti["nostro"].get(inq) or [] if inq else []
+    tr = tratti["tratto"].get(inq) or [] if inq else []
+    if tr:
+        pm = [x[3] for x in tr if x[3] is not None]
+        misure["tratto"] = {"righe": len(tr), "mediana_p95_ms": _tondo(p95([x[1] for x in tr])),
+                            "max_campione_p95_ms": _tondo(p95([x[2] for x in tr])),
+                            "produttore_mediana_ms": _tondo(sorted(pm)[len(pm) // 2]) if pm else None}
+    if not no:
+        return None
+    p95s = [x[1] for x in no]
+    rit = p95(p95s) + TETTO_INGRESSO_MS
+    misure["ritardo_p95_ms"] = _tondo(rit)
+    misure["nostro"] = {"righe": len(no), "p95_dei_p95_ms": _tondo(p95(p95s)),
+                        "max_al_secondo_max_ms": _tondo(max(x[2] for x in no)),
+                        "max_al_secondo_p95_ms": _tondo(p95([x[2] for x in no])),
+                        "mediana_ms": _tondo(sorted(x[3] for x in no)[len(no) // 2]),
+                        "fotogrammi": sum(x[4] for x in no)}
+    nota = ("p95 dei p95 al secondo di «NOSTRO» (copia → byte fuori, %d righe del figlio) %.1f ms + %.0f ms "
+            "d'ingresso (tetto costruttivo: poll di 8 ms)" % (len(no), p95(p95s), TETTO_INGRESSO_MS))
+    if (desktop or "").lower() in ("xfce", "lxqt"):
+        nota += (" · ⚠ strada wlroots: la «copia» e' contata due volte (~4 ms in piu', cattura.c:2309 / "
+                 "figlio.c:5191) — NON corretto, e' dal lato prudente")
+    return voce_misurata("ritardo_p95_ms", rit, nota)
 
 
 RETE_CUM = ("persi", "byte_persi", "spediti", "byte_spediti", "ricevuti", "scartati",
@@ -836,6 +921,7 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     w0 = w1 - finestra_s
     ris, ris_tutte = risorse(ris_p, w0, w1)
     ev, tratto, c_log = eventi_log(os.path.join(cart, "server.log"), w1, fuso_log)
+    tratti = tratti_log(os.path.join(cart, "server.log"), w0, w1, fuso_log)
     rete = rete_log(os.path.join(cart, "server.log"), w0, w1, fuso_log)
     t_inizio = meta.get("inizio_t") or min(ts + ts_r or [w0])
     journal = journal_err(cart, t_inizio, w1, journal_scatola)
@@ -845,7 +931,7 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
         n = int(re.sub(r"\D", "", os.path.basename(d)) or 0)
         mu = utenti_meta.get(n)
         info, misure, voci = sessione(d, w0, w1, fps_video, mu, bool(mu and mu.get("nuovo")),
-                                      corto, ev, tratto, rete)
+                                      corto, ev, tratto, rete, tratti, meta.get("desktop"))
         if journal and info.get("inquilino"):
             misure["journal_err"] = journal["per_inquilino"].get(info["inquilino"], 0)
         sess.append((d, info, misure, voci))
@@ -994,7 +1080,7 @@ def certifica():
     T0 = 1_790_000_000.0
     try:
         def livello(nome, utenti, log="", ris=True, mem=lambda t: 1000.0, corto=None, pid=lambda t: 111,
-                    fps=30):
+                    fps=30, tratto=None):
             c = os.path.join(tmp, nome)
             os.makedirs(c)
             json.dump({"campagna": "cert", "livello": len(utenti), "desktop": "kde", "scheda": "intel",
@@ -1012,6 +1098,22 @@ def certifica():
                     json.dump(u["nascita"], open(os.path.join(d, "nascita.json"), "w"))
             with open(os.path.join(c, "server.log"), "w") as f:
                 f.write(log)
+                # le righe TRATTO del figlio, una al secondo per inquilino: max 30 ms
+                #   salvo `tratto` = {inquilino: max, o None per NESSUNA riga}
+                for i, u in enumerate(utenti):
+                    inq = "c16u%02d" % (i + 1)
+                    mx = (tratto or {}).get(inq, 30.0)
+                    if mx is None:
+                        continue
+                    for k in range(470, 601):
+                        o = _dt.datetime.fromtimestamp(T0 + k, _dt.timezone.utc).strftime("%H:%M:%S.000")
+                        f.write("%s figlio  [%s] ⭐ TRATTO cattura → byte fuori: mediana %.2f ms (max %.2f) su "
+                                "512 fotogrammi del campione, 9000 in tutto — produttore 24.00 (max 60.00)\n"
+                                % (o, inq, 43.0, 6339.0))
+                        if mx != "solo-tratto":
+                            f.write("%s figlio  [%s] ⭐ NOSTRO nel secondo (copia → byte fuori, §3.2): p95 %.2f "
+                                    "ms · max %.2f · mediana %.2f · 30 fotogrammi\n" % (o, inq, mx, mx * 1.5,
+                                                                                         mx * 0.6))
             json.dump(corto or {"utente": 1, "esiti": {"F-003": "PASS", "F-004": "PASS",
                                                        "F-007": "PASS", "F-014": "PASS"}},
                       open(os.path.join(c, "controllo-corto.json"), "w"))
@@ -1086,9 +1188,7 @@ def certifica():
         u[3] = sano("D", "c16u04", fps_pag=15.0)       # 0,5 f: oltre meta' fascia
         g = classifica(livello("video-sig", u))
         guarda("video a 0,5·f ⇒ DEGRADED SIGNIFICATIVO", g["classe"] == "DEGRADED" and g["significativo"])
-        u = [sano("A", "c16u01", giro=60), sano("B", "c16u02", giro=60), sano("C", "c16u03"),
-             sano("D", "c16u04")]
-        g = classifica(livello("due-deg", u))
+        g = classifica(livello("due-deg", quattro, tratto={"c16u01": 60.0, "c16u02": 60.0}))
         guarda("2 sessioni su 4 DEGRADED (ritardo 60 ms) ⇒ significativo (> un quarto)",
                g["classe"] == "DEGRADED" and g["significativo"], _ragione_livello(g, _conti(g)))
         u = [sano("A", "c16u01", salt_pct=5.0), sano("B", "c16u02"), sano("C", "c16u03"),
@@ -1185,15 +1285,22 @@ def certifica():
         g = classifica(livello("corto-rifiuto", quattro, corto=cc))
         guarda("controllo corto rifiutato ⇒ FAIL", g["classe"] == "FAIL")
         u = list(quattro)
-        u[0] = sano("A", "c16u01", giro=20, giro_lento=900)
-        g = classifica(livello("giro-eco", u))
-        v0 = g["sessioni"][0][3]["ritardo_p95_ms"]
-        u[0] = sano("A", "c16u01", eco=False)
-        g2 = classifica(livello("senza-eco", u))
-        guarda("ritardo: classifica `giro_eco` (20 ms ⇒ GREEN) e non il giro intero (900 ms, registrato); "
-               "senza giro_eco ⇒ non misurato",
-               v0["classe"] == "GREEN" and g["sessioni"][0][2]["giro_tutti_p95_ms"] == 900
-               and g2["sessioni"][0][3]["ritardo_p95_ms"].get("non_misurato"), v0["nota"])
+        u[0] = sano("A", "c16u01", giro=200, giro_lento=900)
+        g = classifica(livello("tratto-30", u))
+        v30 = g["sessioni"][0][3]["ritardo_p95_ms"]
+        es = g["sessioni"][0][2]["esperienza"]
+        g2 = classifica(livello("tratto-60", u, tratto={"c16u01": 60.0}))
+        v60 = g2["sessioni"][0][3]["ritardo_p95_ms"]
+        guarda("ritardo del PRODOTTO: NOSTRO p95 30 ⇒ 39 ms GREEN, 60 ⇒ 69 ms DEGRADED (le righe TRATTO col "
+               "max 6339 NON contano); giro_eco (200) e giro intero (900) solo ESPERIENZA",
+               v30["classe"] == "GREEN" and abs(v30["valore"] - 39.0) < 1e-6
+               and v60["classe"] == "DEGRADED" and abs(v60["valore"] - 69.0) < 1e-6
+               and es["giro_eco_p95_ms"] == 200 and es["giro_tutti_p95_ms"] == 900, v30["nota"])
+        g3 = classifica(livello("solo-tratto", u, tratto={"c16u01": "solo-tratto"}))
+        v = g3["sessioni"][0][3]["ritardo_p95_ms"]
+        guarda("⛔ GUASTO: solo righe TRATTO (niente NOSTRO) ⇒ non misurato, e il TRATTO registrato",
+               v.get("non_misurato") and g3["classe"] == "DEGRADED"
+               and g3["sessioni"][0][2]["tratto"]["produttore_mediana_ms"] == 24.0, v["nota"])
         u = list(quattro)
         u[3] = sano("D", "c16u04", video_da=540)       # il video parte a 540 s: 60 s di lavoro su 120
         g = classifica(livello("d-lavoro", u))
