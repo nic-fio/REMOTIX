@@ -980,6 +980,15 @@ static char *scrivi_tema_cursore(const char *runtime)
  *
  * Torna la cartella da mettere in `XDG_CONFIG_DIRS`, o NULL (detto nel registro).
  */
+char *sessione_cartella_kde(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	if (!runtime || !*runtime)
+		return NULL;
+	return g_build_filename(runtime, "remotix", "xdg", NULL);
+}
+
 static char *scrivi_regole_menu_kde(const char *runtime)
 {
 	g_autofree char *cartella = g_build_filename(runtime, "remotix", "xdg", NULL);
@@ -1033,6 +1042,41 @@ static char *scrivi_regole_menu_kde(const char *runtime)
 		              "⚠ Plasma: bordo delle finestre non scritto (%s): resta quello "
 		              "automatico, e ridimensionare col mouse sara' difficile",
 		              kwinrc);
+
+	/*
+	 * ⭐ FASE 15, D-005 — E LA SESSIONE NASCE VUOTA.  `[M]` giro 1, 15-f021 su
+	 *    KDE 4 volte su 4: dopo «Esci» il nuovo accesso riapriva il programma
+	 *    che era aperto.  ⛔ Non e' nostro: e' il ripristino di Plasma 6.3,
+	 *    `plasma-fallback-session-save` all'uscita e
+	 *    `plasma-fallback-session-restore` (autostart) all'entrata.
+	 * `[R]` plasma-workspace 6.3.6: tutt'e due leggono `ksmserverrc`
+	 *    `[General] loginMode` — `restore.cpp:30-33` esce subito con
+	 *    `emptySession`; `shutdown.cpp:87` salva solo con
+	 *    `restorePreviousLogout`; `ksmserver/main.cpp:187` (le finestre X11)
+	 *    idem.  ⇒ Una chiave sola ferma le tre strade, ⭐ e all'uscita non si
+	 *    salva nemmeno: la sessione remota non sovrascrive quella che
+	 *    l'utente ha salvato al monitor.
+	 * ⚠ SENZA `[$i]`, come il bordo: e' la partenza.  Un `loginMode` scritto
+	 *   dall'utente in `~/.config/ksmserverrc` (Impostazioni → Sessione
+	 *   desktop, «ripristina sessione salvata a mano») sta piu' in alto e vince.
+	 *   `[R]` il valore predefinito non si scrive (KConfigSkeleton), quindi
+	 *   chi non ha mai toccato quella voce prende il nostro.
+	 */
+	g_autofree char *ksmserverrc = g_build_filename(cartella, "ksmserverrc", NULL);
+
+	if (g_file_set_contents(ksmserverrc,
+	                        "[General]\n"
+	                        "loginMode=emptySession\n",
+	                        -1, NULL))
+		registro_dice(REG_SESSIONE,
+		              "⭐ Plasma: la sessione nasce VUOTA (%s, loginMode=emptySession): "
+		              "dopo «Esci» chi rientra non si ritrova i programmi di prima",
+		              ksmserverrc);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⚠ Plasma: loginMode non scritto (%s): Plasma riaprira' i "
+		              "programmi della sessione precedente",
+		              ksmserverrc);
 	return g_steal_pointer(&cartella);
 }
 

@@ -647,3 +647,114 @@ bool kwin_scrivi_permesso(char *perche, size_t quanto)
 	free(canonico);
 	return fatto;
 }
+
+/* ------------------------------------------------------------------ *
+ * La disposizione della tastiera — il gemello KWin di `input-sources`
+ * ------------------------------------------------------------------ */
+
+/*
+ * ⭐ FASE 15, D-008 — `[M]` giro 1, 15-f009 su KDE: con il browser in italiano
+ *    «è à ò ù é ç ° §» non uscivano, la sessione restava «English (US)».
+ *    `input_disposizione()` aveva la strada di GNOME e quella di wlroots, per
+ *    KWin nessuna (`STUDI.md` §kde §6.7 la elencava, nessuno l'aveva scritta).
+ *
+ * `[R]` KWin 6.3.6 — la strada 3 di §6.7, l'unica che cambia DAVVERO la
+ *    disposizione a sessione viva:
+ *   · la keymap viene da `kxkbrc [Layout] LayoutList/VariantList`
+ *     (`xkb.cpp:577-603`), aperto con `KConfig::NoGlobals`, cioe' CON la
+ *     cascata di `XDG_CONFIG_DIRS` (`main.cpp:138`);
+ *   · il segnale `org.kde.keyboard /Layouts reloadConfig` (lo stesso che manda
+ *     il modulo Tastiera delle Impostazioni) fa `reparseConfiguration()` +
+ *     `Xkb::reconfigure()` (`keyboard_layout.cpp:62-68,112-125`);
+ *   · e `layoutsReconfigured` rifa' il dispositivo tastiera EIS con la keymap
+ *     nuova (`plugins/eis/eisbackend.cpp:58-67`, `eiscontext.cpp:95-101`)
+ *     ⇒ `leggi_keymap()` di `input.c` la rilegge e scrive «KEYMAP CAMBIATA»,
+ *     come su GNOME.  «In vigore» lo dice quella riga, non questa.
+ *   ⛔ La strada 1 (`XKB_DEFAULT_*` all'avvio di KWin) vale solo per il primo
+ *     accesso; la 2 (`setLayout`) sceglie solo fra le disposizioni caricate.
+ *
+ * ⭐ DOVE: nella cartella della sessione (`sessione_cartella_kde()`, gia' in
+ *    testa a `XDG_CONFIG_DIRS`), non in `~/.config/kxkbrc`: vale per la
+ *    sessione remota e sparisce con lei, e ⛔ non cambia la tastiera a chi
+ *    siede al monitor con lo stesso utente.
+ * ⛔ Le due chiavi con `[$i]`: il `kxkbrc` dell'utente (ce l'ha chiunque abbia
+ *    aperto il modulo Tastiera) sta piu' in alto e altrimenti VINCEREBBE — la
+ *    negoziata non si applicherebbe proprio a chi ha configurato la sua.  Solo
+ *    quelle due: modello e opzioni restano suoi.
+ */
+static bool nome_xkb_pulito(const char *s, size_t n)
+{
+	if (n == 0)
+		return false;
+	for (size_t i = 0; i < n; i++)
+		if (!g_ascii_isalnum(s[i]) && s[i] != '_' && s[i] != '-')
+			return false;
+	return true;
+}
+
+int kwin_disposizione(const char *nome, GError **sbaglio)
+{
+	g_autofree char *cartella = sessione_cartella_kde();
+	g_autofree char *disposizione = NULL;
+	g_autofree char *variante = NULL;
+	g_autofree char *percorso = NULL;
+	g_autofree char *testo = NULL;
+	g_autoptr(GDBusConnection) bus = NULL;
+	const char *par = nome ? strchr(nome, '(') : NULL;
+
+	if (!nome || !*nome) {
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "nessun nome");
+		return -1;
+	}
+	/* `RCP.md` §4.5: `de(neo)` ⇒ LayoutList=de, VariantList=neo.
+	 * ⛔ Il nome finisce dentro un file INI: niente a capo, niente `[`. */
+	if (par) {
+		const char *chiusa = strchr(par + 1, ')');
+
+		if (!chiusa || chiusa[1] != '\0' ||
+		    !nome_xkb_pulito(nome, (size_t) (par - nome)) ||
+		    !nome_xkb_pulito(par + 1, (size_t) (chiusa - par - 1))) {
+			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			            "nome «%s» non valido", nome);
+			return -1;
+		}
+		disposizione = g_strndup(nome, (size_t) (par - nome));
+		variante = g_strndup(par + 1, (size_t) (chiusa - par - 1));
+	} else {
+		if (!nome_xkb_pulito(nome, strlen(nome))) {
+			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			            "nome «%s» non valido", nome);
+			return -1;
+		}
+		disposizione = g_strdup(nome);
+		variante = g_strdup("");
+	}
+
+	/* ⛔ Solo se la cartella c'e': e' `componi_ambiente()` a crearla e a
+	 *    metterla in `XDG_CONFIG_DIRS`.  Se non c'e', KWin non la legge — e
+	 *    scriverci sarebbe un «fatto» falso. */
+	if (!cartella || !g_file_test(cartella, G_FILE_TEST_IS_DIR)) {
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+		            "la cartella di configurazione della sessione (%s) non c'e': KWin "
+		            "non la guarda",
+		            cartella ? cartella : "XDG_RUNTIME_DIR assente");
+		return -1;
+	}
+	percorso = g_build_filename(cartella, "kxkbrc", NULL);
+	testo = g_strdup_printf("[Layout]\n"
+	                        "LayoutList[$i]=%s\n"
+	                        "VariantList[$i]=%s\n",
+	                        disposizione, variante);
+	if (!g_file_set_contents(percorso, testo, -1, sbaglio))
+		return -1;
+
+	bus = sessione_bus(sbaglio);
+	if (!bus)
+		return -1;
+	if (!g_dbus_connection_emit_signal(bus, NULL, "/Layouts", "org.kde.keyboard",
+	                                   "reloadConfig", NULL, sbaglio))
+		return -1;
+	/* ⚠ Il segnale non ha risposta: si svuota la coda perche' parta ADESSO. */
+	g_dbus_connection_flush_sync(bus, NULL, NULL);
+	return 0;
+}

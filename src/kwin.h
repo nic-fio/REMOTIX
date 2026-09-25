@@ -58,6 +58,12 @@ void kwin_chiudi(KwinSessione *sessione);
  * che sta girando.  false con `perche` scritto. */
 bool kwin_scrivi_permesso(char *perche, size_t quanto);
 
+/* La disposizione della tastiera negoziata col cliente (`it`, `de(neo)`):
+ * scritta in `kxkbrc` nella cartella della sessione e annunciata a KWin col
+ * segnale `org.kde.keyboard /Layouts reloadConfig`.  ⚠ «Chiesta», non «in
+ * vigore»: lo dice la keymap nuova che arriva da EIS.  -1 con `sbaglio`. */
+int kwin_disposizione(const char *nome, GError **sbaglio);
+
 /* Il socket Wayland dell'utente: `WAYLAND_DISPLAY` se risponde, altrimenti il
  * primo `wayland-N` di `XDG_RUNTIME_DIR` che risponde (il figlio nasce con
  * l'ambiente composto da zero).  Lo usano anche gli appunti (`appunti_kde.c`). */

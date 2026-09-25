@@ -1640,6 +1640,42 @@ int input_disposizione(Input *in, const char *nome)
 	}
 
 	/*
+	 * ⭐ FASE 15, D-008 — KWin ha la sua strada (`kwin_disposizione()`, e il
+	 *    riquadro li').  ⛔ E PRIMA dello schema di GNOME: una macchina KDE
+	 *    puo' avere gli schemi installati (li porta un programma GTK qualsiasi),
+	 *    e allora la negoziata finiva in una chiave che su Plasma non legge
+	 *    nessuno, senza nemmeno la riga del ripiego.
+	 */
+	if (in->kwin)
+	{
+		g_autoptr(GError) sbaglio_kwin = NULL;
+
+		/* ⛔ Prima si rilascia tutto: KWin rifa' il dispositivo tastiera (vedi
+		 *    il riquadro qui sotto, «E PRIMA DI CHIEDERE IL CAMBIO»). */
+		input_rilascia_tutto(in);
+		g_free(in->negoziata);
+		in->negoziata = g_strdup(nome);
+		if (kwin_disposizione(nome, &sbaglio_kwin) != 0)
+		{
+			registro_dice(AREA,
+			              "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata chiesta "
+			              "a KWin (%s) — la sessione tiene «%s».  ⛔ Le lettere che quella "
+			              "disposizione non ha NON escono, e le SCORCIATOIE vanno sui tasti "
+			              "di quella (RCP.md §7.3)",
+			              nome, sbaglio_kwin ? sbaglio_kwin->message : "senza motivo",
+			              in->disposizione ? tastiera_disposizione(in->disposizione)
+			                               : "nessuna");
+			return -1;
+		}
+		registro_dice(AREA,
+		              "disposizione «%s» CHIESTA a KWin (kxkbrc della sessione + "
+		              "org.kde.keyboard reloadConfig) — §5-bis.7. ⚠ chiesta, non ancora in "
+		              "vigore: lo dira' «KEYMAP CAMBIATA»",
+		              nome);
+		return 0;
+	}
+
+	/*
 	 * ⚠ Le due sintassi non sono la stessa, e confonderle e' un guasto muto:
 	 *   `RCP.md` §4.5 scrive la variante fra **parentesi** — `de(neo)` — e
 	 *   `org.gnome.desktop.input-sources` la scrive col **piu'** — `de+neo`.
@@ -1675,8 +1711,9 @@ int input_disposizione(Input *in, const char *nome)
 		registro_dice(AREA,
 		              "⚠ RIPIEGO DICHIARATO: lo schema «org.gnome.desktop.input-sources» non "
 		              "c'e' su questa macchina — la disposizione «%s» NON si applica, e la "
-		              "sessione tiene la sua. ⛔ Le LETTERE usciranno giuste lo stesso, le "
-		              "SCORCIATOIE no (RCP.md §7.3)",
+		              "sessione tiene la sua. ⛔ Le lettere che quella non ha NON escono "
+		              "(D-008: la frase di prima, «usciranno giuste lo stesso», era falsa), "
+		              "e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)",
 		              nome);
 		return -1;
 	}
@@ -2249,8 +2286,8 @@ static int disposizione_wlr(Input *in, const char *nome)
 	{
 		registro_dice(AREA,
 		              "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata mandata alla "
-		              "tastiera virtuale (%s) — resta «%s».  ⛔ Le LETTERE usciranno giuste lo "
-		              "stesso, le SCORCIATOIE no (RCP.md §7.3)",
+		              "tastiera virtuale (%s) — resta «%s».  ⛔ Le lettere che quella non ha "
+		              "NON escono, e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)",
 		              nome, sbaglio ? sbaglio->message : "senza motivo",
 		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna");
 		return -1;

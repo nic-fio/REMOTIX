@@ -353,6 +353,15 @@ typedef struct {
 GDBusConnection *sessione_bus(GError **sbaglio);
 
 /*
+ * La cartella di configurazione della sessione Plasma che serviamo:
+ * `$XDG_RUNTIME_DIR/remotix/xdg`, messa DAVANTI in `XDG_CONFIG_DIRS` quando la
+ * sessione nasce (le regole del menu, il bordo, `loginMode`).  ⭐ Ci scrive
+ * anche `kwin_disposizione()` (`kxkbrc`).  NULL senza `XDG_RUNTIME_DIR`;
+ * da liberare con `g_free`.
+ */
+char *sessione_cartella_kde(void);
+
+/*
  * C'e' un compositore che risponde?
  *
  * ⚠ E' la domanda DEBOLE, ed e' qui apposta perche' si veda che e' debole: una
