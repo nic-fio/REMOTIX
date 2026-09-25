@@ -164,7 +164,7 @@ Se un gradino arriva al **FAIL con N utenti**, il gradino successivo **riparte d
 risale sugli stessi gradini** (§6): ogni misura ha la sua curva completa e confrontabile. Si scende finché si arriva a 16
 nominali o si finisce la scala.
 
-## 9. Le soglie — ⛔ DA APPROVARE PRIMA DELLA CAMPAGNA, poi ferme
+## 9. Le soglie — ✅ APPROVATE dall'utente il 25 set 2026 (sera), ora ferme
 
 *Proposta del 25 settembre 2026. Un valore alto di una risorsa **da solo non è un FAIL**: la
 classificazione nasce dal comportamento, e le risorse servono a spiegarlo.*
@@ -175,12 +175,12 @@ classificazione nasce dal comportamento, e le risorse servono a spiegarlo.*
 | fotogrammi saltati dalla pagina | ≤ 2 % | 2–10 % | > 10 % |
 | blocco più lungo dell'immagine con lavoro in corso | ≤ 1 s | 1–3 s | > 3 s, o immagine ferma |
 | buchi nella catena del video (chiavi richieste) | 0 | ≤ 1 al minuto | > 1 al minuto |
-| video 4K (utenti D): fotogrammi dipinti al secondo | ≥ 24 | 12–24 | < 12 |
+| video 4K (utenti D): fotogrammi dipinti al secondo, **in proporzione alla frequenza del video scelto** (f) | ≥ 0,8·f | 0,4·f – 0,8·f | < 0,4·f |
 | audio (utenti D): suono udibile | ≥ 99 % | 95–99 % | < 95 % |
 | nascita di un utente nuovo (accesso → primo fotogramma) | ≤ 5 s | 5–15 s | > 15 s, o rifiuto |
 | controllo funzionale corto | tutto PASS | — | un FAIL |
 | sessione caduta, riavvio, errore RCP/QUIC che stacca | nessuno | — | uno qualunque |
-| memoria di un recinto nel livello, a lavoro stabile | crescita ≤ 5 % | 5–15 % (si segnala) | > 15 % e continua (perdita) |
+| memoria dei recinti `remotix` e `sessioni` nel livello, a lavoro stabile (il recinto `browser` si **registra** ma non classifica: la cache di un Firefox che naviga cresce da sola) | crescita ≤ 5 % | 5–15 % (si segnala) | > 15 % e continua (perdita) |
 
 **Il livello** è GREEN se **tutte** le sessioni sono GREEN; DEGRADED se almeno una è DEGRADED e
 nessuna FAIL; FAIL se almeno una è FAIL. **DEGRADED significativo** = più di un quarto delle
