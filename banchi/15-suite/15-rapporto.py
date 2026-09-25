@@ -37,6 +37,7 @@ NOMI = {
     "F-025": "stesso utente da due schede", "F-026": "più utenti insieme",
     "F-027": "parola sbagliata", "F-028": "ban", "F-029": "voci pericolose assenti",
     "F-030": "lo schermo non si spegne da solo", "F-031": "tocco (Android)",
+    "F-024b": "abbandono senza nessun gesto",
     "P-A": "percorso A: stacco e riattacco con input", "P-B": "percorso B: perdita di rete",
     "P-C": "percorso C: misura diversa e ritorno", "P-D": "percorso D: rete persa col video",
     "P-E": "percorso E: browser chiuso, nuova connessione",

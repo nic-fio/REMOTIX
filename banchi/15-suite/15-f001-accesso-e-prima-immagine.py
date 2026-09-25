@@ -70,7 +70,13 @@ def corpo(o, E):
         if e == S.VERDE and png:
             deg, desc = S.VERI.giudica_pixel(png)
             if deg:
-                e, m = S.ROSSO, "la foto a piena risoluzione e' degenere: " + desc
+                # ⚠ la stessa tolleranza del primo fotogramma (12-c20-veri
+                #   desktop_scuro_ma_vivo): lo sfondo di XFCE nella scatola e'
+                #   NERO, e in 4K pannello e icone sono il 2 % ⇒ «dominante 98 %
+                #   nero» ma 72 colori distinti.  `[M]` giro 1, 25 set: FAIL del
+                #   BANCO su xfce (D-010, classe C).
+                e, m = S.C20V.desktop_scuro_ma_vivo(
+                    S.ROSSO, "la foto a piena risoluzione e' degenere: " + desc, st)
         E.metti("F-002", e, m, atteso="desktop disegnato, non degenere, entro %d s" % o.tetto_s,
                 osservato=m, evidenze=ev + [s.salva_console()])
 

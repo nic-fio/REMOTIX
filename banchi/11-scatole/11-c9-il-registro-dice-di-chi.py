@@ -341,7 +341,12 @@ def garantisci_i_gruppi(chi, prefisso="   "):
 # `#define` del prodotto: `registro.h` (REG_*) piu' i quattro `#define AREA` di
 # `cattura.c`, `mutter.c` (= "cattura"), `cursore.c` e `input.c`.
 AREE_DI_SESSIONE = ("figlio", "sessione", "video", "cattura", "cursore",
-                    "input", "audio", "suono", "tastiera", "appunti")
+                    "input", "audio", "suono", "tastiera", "appunti",
+                    # ⭐ fase 14 (src/forma.c, 24 set 2026): il dizionario della
+                    #   forma del cursore, scritto dal figlio COL nome
+                    #   dell'inquilino.  `[M]` giro 1 della suite, 25 set: senza
+                    #   questa voce C9 dava 3 su kde, xfce e lxqt (D-012).
+                    "forma")
 
 # ⚠ La stessa area serve il saluto e il dialogo: non si giudicano, si contano.
 AREE_DEL_SALUTO = ("quic", "wt", "rcp", "pagina")
