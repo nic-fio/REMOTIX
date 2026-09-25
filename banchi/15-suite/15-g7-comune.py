@@ -446,9 +446,15 @@ def aspetta_scena(s, S, tetto=40):
     return None, "la scena in movimento non e' comparsa in %d s (%s)" % (tetto, desc)
 
 
-def la_scena_si_muove(s, nome, coppie=3, pausa=0.7):
-    """(True/False/None, descrizione, [percorsi]) — foto a distanza di
-    `pausa`: almeno una coppia diversa per > 2 % dei pixel."""
+def la_scena_si_muove(s, nome, coppie=3, pausa=None):
+    """(True/False/None, descrizione, [percorsi]) — foto a pause IRREGOLARI,
+    e si confrontano TUTTE le coppie: almeno una diversa per > 2 % dei pixel.
+
+    ⛔ `[M]` 25 set 2026 (D-019, classe C): con una pausa fissa di 0,7 s più il
+    tempo della foto 4K (~0,9 s in tutto) le foto cadevano quasi sempre nello
+    stesso punto del giro del triangolo di weston-simple-egl (mezzo giro
+    ~0,9 s) ⇒ 0,9-1,6 % di cambio con la scena VIVA, e un falso FAIL."""
+    pause = [0.43, 0.61, 0.77, 0.29, 0.53]
     foto, ev = [], []
     for i in range(coppie + 1):
         png, dove = s.foto("%s-%d" % (nome, i))
@@ -457,8 +463,9 @@ def la_scena_si_muove(s, nome, coppie=3, pausa=0.7):
         foto.append(png)
         if dove:
             ev.append(dove)
-        time.sleep(pausa)
-    diffs = [diversita(foto[i], foto[i + 1]) for i in range(coppie)]
+        time.sleep(pausa if pausa is not None else pause[i % len(pause)])
+    diffs = [diversita(foto[i], foto[j]) for i in range(len(foto))
+             for j in range(i + 1, len(foto))]
     if any(d is None for d in diffs):
         return None, "foto non confrontabili", ev
     desc = "cambi fra foto %s" % ["%.1f%%" % (100 * d) for d in diffs]
