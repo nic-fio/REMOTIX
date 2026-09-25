@@ -1235,6 +1235,14 @@ def main():
         return 3
     sal = Salita(o)
     guai = perche_non_vuoto(o.scatola)
+    # ⚠ [M] 26 set, 00:01: la salita di prima aveva appena sgomberato e la sessione
+    #   dell'inquilino era ancora in chiusura (logind) 6 s dopo ⇒ BLOCKED falso.  Chi
+    #   sta chiudendo si aspetta fino a 120 s; chi resta dopo e' un server non vuoto.
+    for _ in range(12):
+        if not guai:
+            break
+        time.sleep(10)
+        guai = perche_non_vuoto(o.scatola)
     if guai:
         sal.stato["server_non_vuoto"] = guai
         if not o.anche_se_non_vuoto:
