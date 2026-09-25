@@ -4,6 +4,8 @@
 #
 #   bash 11-accendi.sh costruisci [gnome]     rifa' l'immagine dalla ricetta
 #   bash 11-accendi.sh accendi    [gnome]     butta giu' e riaccende la scatola
+#        REMOTIX_SCHEDA=amd bash 11-accendi.sh accendi [gnome]   ... sulla RX 6800
+#                                         (predefinito intel: fase 16 §11)
 #   bash 11-accendi.sh passo0     [gnome]     esegue il passo 0 dentro
 #   bash 11-accendi.sh c1         [gnome] [n]  la sessione nasce e si vede
 #   bash 11-accendi.sh c2         [gnome] [--applicazione-che-muore|--finestra-che-non-si-apre]
@@ -279,6 +281,16 @@ costruisci)
 
 accendi)
 	log "Accendo la scatola $NOME"
+	# ⭐ QUALE SCHEDA ENTRA — REMOTIX_SCHEDA=intel|amd, predefinito `intel`.
+	#   Fase 16 §11: due campagne, la Intel UHD 770 e poi la RX 6800.  ⛔ Si
+	#   controlla PRIMA di buttare giu' la scatola: un nome sbagliato non deve
+	#   costare la scatola che c'e'.  Vedi il blocco «NIENTE RADEON» piu' giu'.
+	SCHEDA=${REMOTIX_SCHEDA:-intel}
+	case "$SCHEDA" in
+	intel) DRIVER_SCHEDA="i915|xe"; NOME_SCHEDA="la Intel integrata" ;;
+	amd)   DRIVER_SCHEDA="amdgpu";  NOME_SCHEDA="la Radeon (amdgpu)" ;;
+	*)     ko "REMOTIX_SCHEDA=«$SCHEDA»: vale intel o amd"; exit 1 ;;
+	esac
 	# ⛔ `-t 0`, cioe' si ammazza invece di chiedere per favore.  `[M]` 25 agosto
 	#    2026: un `podman rm -f` normale su questa scatola e' rimasto appeso
 	#    **oltre quattro minuti** aspettando uno spegnimento ordinato che non
@@ -338,22 +350,43 @@ accendi)
 	#   PCI e non per nome — `renderD128` e `renderD129` si scambiano fra due
 	#   avvii — e dentro prendono SEMPRE i nomi `card0` e `renderD128`, quelli
 	#   che il passo 0 e le maglie si aspettano.
+	#
+	# ⭐ FASE 16 §11, la campagna Radeon: con `REMOTIX_SCHEDA=amd` entra la
+	#   RX 6800 AL POSTO della Intel — trovata allo stesso modo (driver
+	#   `amdgpu`, indirizzo PCI) e con gli STESSI nomi dentro, `card0` e
+	#   `renderD128`: il prodotto apre `/dev/dri/renderD128` scritto nel codice
+	#   (`figlio.c`, NODO_RENDERING) e non va toccato.  ⛔ Sempre UNA scheda
+	#   sola dentro: nella campagna AMD la Intel NON c'e', o il compositore
+	#   della scatola potrebbe scegliersela e si misurerebbero due macchine.
+	# ⚠ Sull ospite i nodi della Radeon sono del gruppo `remotix-nogpu` (990,
+	#   `gpu-udev.sh`), e il prodotto SALTA quel nome (`provisiona.sh`).  Dentro
+	#   il gid 990 lo prende `render` (rete11-allinea-gruppi, all avvio); qui
+	#   sotto, se non l avesse preso nessuno, ⛔ NON si chiama `remotix-nogpu`.
+	# ⛔ Il predefinito resta `intel`, e con `intel` questo passo fa ESATTAMENTE
+	#   quel che faceva prima (stesse righe, stessi controlli).
 	# ═══════════════════════════════════════════════════════════════════
 	INTEL_CARD=""; INTEL_RENDER=""
 	for C in /sys/class/drm/card[0-9]*; do
 		case "$C" in *-*) continue ;; esac
 		[ -e "$C/device/driver" ] || continue
-		case "$(basename "$(readlink -f "$C/device/driver")")" in i915|xe) ;; *) continue ;; esac
+		DRV_C=$(basename "$(readlink -f "$C/device/driver")")
+		case "|$DRIVER_SCHEDA|" in *"|$DRV_C|"*) ;; *) continue ;; esac
 		PCI=$(basename "$(readlink -f "$C/device")")
 		INTEL_CARD=$(readlink -f "/dev/dri/by-path/pci-$PCI-card" 2>/dev/null)
 		INTEL_RENDER=$(readlink -f "/dev/dri/by-path/pci-$PCI-render" 2>/dev/null)
 		break
 	done
+	# ⚠ I nomi `INTEL_*` restano per non toccare le righe della Intel: con
+	#   REMOTIX_SCHEDA=amd dentro c'e' la Radeon.
 	if [ ! -e "$INTEL_CARD" ] || [ ! -e "$INTEL_RENDER" ]; then
-		ko "⛔ non trovo la Intel integrata (driver i915/xe): NON accendo — la scatola non nasce su un'altra scheda"
+		ko "⛔ non trovo $NOME_SCHEDA (driver ${DRIVER_SCHEDA//|//}): NON accendo — la scatola non nasce su un'altra scheda"
 		exit 1
 	fi
-	ok "scheda: solo la Intel integrata — $INTEL_CARD → card0, $INTEL_RENDER → renderD128"
+	if [ "$SCHEDA" = intel ]; then
+		ok "scheda: solo la Intel integrata — $INTEL_CARD → card0, $INTEL_RENDER → renderD128"
+	else
+		ok "scheda: solo la Radeon ($PCI, $DRV_C) — $INTEL_CARD → card0, $INTEL_RENDER → renderD128 (REMOTIX_SCHEDA=amd)"
+	fi
 
 	podman run -d --replace --name "$NOME" \
 		--systemd=always \
@@ -410,6 +443,9 @@ accendi)
 		podman exec "$NOME" getent group "$G" >/dev/null 2>&1 && continue
 		NOME_G=$(getent group "$G" 2>/dev/null | cut -d: -f1)
 		[ -n "$NOME_G" ] || NOME_G="scheda$G"
+		# ⛔ Il nome che il prodotto esclude non entra: nella campagna AMD
+		#   sarebbe la scheda chiusa all inquilino, cioe' la sessione cieca.
+		[ "$NOME_G" = remotix-nogpu ] && NOME_G="scheda$G"
 		if podman exec "$NOME" groupadd -g "$G" "$NOME_G" >/dev/null 2>&1; then
 			ok "gruppo $G ($NOME_G) creato dentro, per $N"
 		elif podman exec "$NOME" groupadd -g "$G" "scheda$G" >/dev/null 2>&1; then
@@ -433,7 +469,11 @@ accendi)
 	# ⛔ «Scritto non e' in vigore»: si GUARDA dentro che la Radeon non ci sia.
 	DENTRO=$(podman exec "$NOME" sh -c 'ls /dev/dri | tr "\n" " "' 2>/dev/null)
 	if [ "$DENTRO" = "card0 renderD128 " ]; then
-		ok "dentro ci sono solo i nodi della Intel: $DENTRO"
+		if [ "$SCHEDA" = intel ]; then
+			ok "dentro ci sono solo i nodi della Intel: $DENTRO"
+		else
+			ok "dentro ci sono solo i nodi della Radeon: $DENTRO"
+		fi
 	else
 		ko "⛔ dentro /dev/dri c'e' «$DENTRO», non solo card0 e renderD128: spengo"
 		podman rm -f -t 0 "$NOME" >/dev/null 2>&1

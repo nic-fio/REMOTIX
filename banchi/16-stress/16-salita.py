@@ -9,10 +9,26 @@
     python3 16-salita.py --scatola gnome --campagna intel-4k-gnome --misura 4k
     python3 16-salita.py --scatola lxqt --campagna taratura --misura 4k --prova
     python3 16-salita.py ... --secco              # il piano, senza fare niente
+    python3 16-salita.py --scatola kde --campagna amd-4k-kde --scheda amd   # §11, la Radeon
 
     opzioni:  --gradini 1,4,8,12,16  --minuti 10  --minuti-ultimo 30
               --controllo-min 2  --seme-base 1600  --fps-video F  --video URL
               --tetto 17  --porte-base 9900  --prova (§13.3: 1,2,4 da 3 min)
+              --scheda intel|amd  (la scheda della SCATOLA, predefinito intel)
+
+LA SCHEDA (§11, due campagne)
+  --scheda passa REMOTIX_SCHEDA a `11-accendi.sh accendi`: dentro la scatola
+  entra UNA scheda sola, la Intel UHD 770 o la RX 6800, sempre come
+  card0/renderD128.  ⭐ I browser-cliente (i labwc di 16-compositori.sh e
+  Chrome con --render-node-override) restano sulla INTEL in tutte e due le
+  campagne: il cliente pesa uguale, e il confronto Intel/Radeon misura solo
+  il server.  ⚠ Il prezzo, dichiarato: nella campagna Intel cliente e server
+  si contendono la stessa iGPU, nella AMD no — il vantaggio della Radeon
+  include anche «la iGPU non e' piu' divisa».  E' la domanda giusta (quanto
+  regge il SERVER su quella scheda), ma va scritto accanto al confronto;
+  per separarla, il livello registra `processi_gpu` per scheda (16-risorse).
+  Dopo il rifacimento si GUARDA che il renderD128 della scatola sia davvero
+  la scheda chiesta (stesso numero di periferica): se no, BLOCKED.
 
 CHE COSA FA
   0. guarda che il server sia VUOTO: nessun inquilino c16*, nessun browser dei
@@ -220,14 +236,43 @@ def meta_macchina(o):
     return m
 
 
-def render_intel():
-    """Il nodo di disegno della Intel integrata, per indirizzo PCI (come 11-accendi.sh)."""
+DRIVER_SCHEDA = {"intel": ("i915", "xe"), "amd": ("amdgpu",)}
+
+
+def scheda_di(quale):
+    """La scheda `intel` o `amd` (dict di schede()) e il suo nodo di disegno, per
+    indirizzo PCI (come 11-accendi.sh).  (scheda, nodo) o (None, None)."""
     for s in schede():
-        if s["driver"] in ("i915", "xe"):
+        if s["driver"] in DRIVER_SCHEDA[quale]:
             p = os.path.realpath("/dev/dri/by-path/pci-%s-render" % s["pci"])
             if os.path.exists(p):
-                return p, s["pci"]
+                return s, p
     return None, None
+
+
+def render_intel():
+    """Il nodo di disegno della Intel integrata, per indirizzo PCI (come 11-accendi.sh)."""
+    s, p = scheda_di("intel")
+    return (p, s["pci"]) if s else (None, None)
+
+
+def scheda_giusta(o, d):
+    """⛔ «Scritto non e' in vigore»: il renderD128 DENTRO la scatola deve essere
+    la stessa periferica (maggiore:minore) del nodo della scheda chiesta.  (ok, motivo)"""
+    s, nodo = scheda_di(o.scheda)
+    if not s:
+        return False, "sull'ospite non trovo la scheda «%s» (driver %s)" % (
+            o.scheda, "/".join(DRIVER_SCHEDA[o.scheda]))
+    st = os.stat(nodo)
+    fuori = "%x:%x" % (os.major(st.st_rdev), os.minor(st.st_rdev))
+    _c, t = nella_scatola(d, "stat -c %t:%T /dev/dri/renderD128", 60)
+    dentro = (t or "").strip().splitlines()[-1:] or ["?"]
+    if dentro[0] != fuori:
+        return False, "il renderD128 della scatola (%s) NON e' %s (%s, %s = %s)" % (
+            dentro[0], s["scheda"], s["pci"], nodo, fuori)
+    dice("   ⭐ scheda della scatola: %s [%s] %s = renderD128 dentro" % (
+        s["scheda"], s["driver"], s["pci"]))
+    return True, ""
 
 
 def ambiente_browser(s):
@@ -275,9 +320,10 @@ def meta_scatola(d):
                              "libgl1-mesa-dri 2>/dev/null; echo @@; "
                              "systemctl show -p ExecStart --value rete11-server 2>/dev/null "
                              "| tr ' ' '\\n' | grep -A1 -E '^--(tetto-sessioni|journal)' "
-                             "| tr '\\n' ' '", 60)
+                             "| tr '\\n' ' '; echo @@; vainfo --display drm --device "
+                             "/dev/dri/renderD128 2>&1 | grep -m1 'Driver version'", 60)
     parti = (t or "").split("@@")
-    while len(parti) < 4:
+    while len(parti) < 5:
         parti.append("")
     for riga in parti[0].splitlines():
         p = riga.split()
@@ -287,6 +333,8 @@ def meta_scatola(d):
     v["driver_video"] = [x for x in parti[2].split() if "=" in x and not x.endswith("=")]
     v["opzioni_server"] = parti[3].strip()
     v["journal"] = "--journal" in parti[3]
+    # ⭐ il fornitore VA che vede la scatola sul SUO renderD128 (iHD o radeonsi)
+    v["driver_va"] = parti[4].split(":", 1)[-1].strip() or "?"
     return v
 
 
@@ -328,6 +376,8 @@ def rifai_scatola(o, d, tetto, dove):
     """accendi · prodotto · server, come 15-rifai-scatole.sh.  (ok, motivo)"""
     for passo in ("accendi", "prodotto", "server"):
         amb = "env REMOTIX_TETTO_SESSIONI=%d " % tetto if (passo == "server" and tetto) else ""
+        if passo == "accendi":
+            amb = "env REMOTIX_SCHEDA=%s " % o.scheda
         t0 = time.time()
         c, t = sudo("cd %s && %sbash 11-accendi.sh %s %s" % (RETE11, amb, passo, d), 900)
         with open(os.path.join(dove, "scatola-%s.log" % passo), "a") as f:
@@ -338,6 +388,9 @@ def rifai_scatola(o, d, tetto, dove):
         if c != 0:
             return False, "11-accendi.sh %s %s non riuscito (codice %s): %s" % (
                 passo, d, c, re.sub(r"\x1b\[[0-9;]*m", "", " ".join((t or "").splitlines()[-3:]))[:300])
+    ok, perche = scheda_giusta(o, d)
+    if not ok:
+        return False, perche
     if tetto:
         v = tetto_in_vigore(d)
         if v != tetto:
@@ -517,10 +570,11 @@ class Salita:
             ok, perche = rifai_scatola(self.o, self.o.scatola, self.o.tetto, dove)
         if ok:
             self.meta_scatola = meta_scatola(self.o.scatola)
-            dice("   scatola: binario %s · pagina %s · %s · dri %s" % (
+            dice("   scatola: binario %s · pagina %s · %s · dri %s · VA %s" % (
                 self.meta_scatola.get("binario"), self.meta_scatola.get("pagina"),
                 self.meta_scatola.get("opzioni_server") or "(opzioni predefinite)",
-                ",".join(self.meta_scatola.get("dri_nella_scatola", []))))
+                ",".join(self.meta_scatola.get("dri_nella_scatola", [])),
+                self.meta_scatola.get("driver_va")))
         self.nuova_cartella_attori()
         return ok, perche
 
@@ -757,9 +811,15 @@ class Salita:
         ms = getattr(self, "meta_scatola", {})
         riga.update({"scatola_" + k: v for k, v in ms.items()})
         # ⭐ i campi di §10 coi nomi che legge 16-classifica.py (BASE)
-        intel = [s for s in self.meta.get("schede", []) if s["driver"] in ("i915", "xe")]
-        riga.update(scheda=(intel or [{}])[0].get("scheda", "?"),
-                    driver=" ".join([(intel or [{}])[0].get("driver", "?")]
+        # ⭐ la scheda del SERVER (quella nella scatola, --scheda), non la Intel
+        #   sempre: nella campagna AMD e' la RX 6800.  I browser-cliente restano
+        #   sulla Intel e lo dice `scheda_browser`.
+        srv = [s for s in self.meta.get("schede", []) if s["driver"] in DRIVER_SCHEDA[o.scheda]]
+        intel = [s for s in self.meta.get("schede", []) if s["driver"] in DRIVER_SCHEDA["intel"]]
+        riga.update(scheda=(srv or [{}])[0].get("scheda", "?"),
+                    scheda_quale=o.scheda, scheda_pci=(srv or [{}])[0].get("pci"),
+                    scheda_browser=(intel or [{}])[0].get("scheda", "?"),
+                    driver=" ".join([(srv or [{}])[0].get("driver", "?")]
                                     + ms.get("driver_video", [])),
                     commit=self.meta.get("commit_prodotto") or
                     "banchi %s" % self.meta.get("commit_banchi"), binario=ms.get("binario"),
@@ -792,6 +852,7 @@ class Salita:
         dice("⭐ SALITA %s · %s · %s (%dx%d) · gradini %s · %s min (ultimo %s) · tetto %d%s" % (
             o.campagna, o.scatola, o.misura, o.largo, o.alto, ",".join(map(str, o.gradini)),
             o.minuti, o.minuti_ultimo, o.tetto, " · PROVA (non conta)" if o.prova else ""))
+        dice("   scheda della scatola: %s · browser-cliente sulla Intel" % o.scheda)
         dice("   commit del prodotto: %s" % (self.meta["commit_prodotto"] or
                                             "? (16-prodotto assente o binario diverso)"))
         dice("   kernel %s · %s · binario %s · pagina %s · banchi %s" % (
@@ -963,6 +1024,9 @@ def main():
                    help="il tetto delle sessioni del server (predefinito: gradino piu' alto + 1, "
                         "per il controllo corto)")
     a.add_argument("--porte-base", type=int, default=9900)
+    a.add_argument("--scheda", default="intel", choices=sorted(DRIVER_SCHEDA),
+                   help="la scheda della SCATOLA (REMOTIX_SCHEDA di 11-accendi.sh); i "
+                        "browser-cliente restano sulla Intel")
     a.add_argument("--prova", action="store_true",
                    help="salita di prova §13.3: gradini 1,2,4 da 3 minuti; non conta")
     a.add_argument("--secco", action="store_true", help="stampa il piano e basta")
@@ -1002,9 +1066,9 @@ def main():
     o.prog_controllo = os.path.join(QUI, "16-controllo-corto.py")
     if o.secco:
         tot = sum(o.minuti for _ in o.gradini[:-1]) + o.minuti_ultimo
-        print("piano: %s · %s · gradini %s · %s min + ultimo %s ≈ %.0f min di lavoro (+ nascite, "
+        print("piano: %s · scheda %s · %s · gradini %s · %s min + ultimo %s ≈ %.0f min di lavoro (+ nascite, "
               "controlli, registro) · tetto %d · porte %d-%d · programmi %s" % (
-                  o.campagna, o.scatola, o.gradini, o.minuti, o.minuti_ultimo, tot, o.tetto,
+                  o.campagna, o.scheda, o.scatola, o.gradini, o.minuti, o.minuti_ultimo, tot, o.tetto,
                   o.porte_base, o.porte_base + 10 * max(o.gradini) + 9, prog))
         for p in (o.prog_attore, o.prog_risorse, o.prog_classifica, o.prog_controllo):
             print("  %s %s" % ("✓" if os.path.exists(p) else "✗ MANCA", p))
