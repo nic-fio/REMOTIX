@@ -35,7 +35,14 @@ Il prodotto porta DUE cinture (`src/sessione.c`):
                      (`SESSIONE_RIGA_XFCE`, `src/sessione.h:148`), nell'ambiente
                      di labwc e quindi di `xfce4-session`
     2. la chiave     xfconf `xfce4-session` `/general/WaylandLogoutCommand` =
-                     `/bin/true`, scritta e RILETTA — ha la precedenza (§9.2)
+                     `/bin/true`, scritta e RILETTA — ha la precedenza (§9.2).
+                     ⭐ Dalla fase 15 (D-017) e' nel xfconf della SESSIONE: una
+                     proprieta' BLOCCATA (`locked="*"`) nel file
+                     `$XDG_RUNTIME_DIR/remotix/xdg-xfce/xfce4/xfconf/
+                     xfce-perchannel-xml/xfce4-session.xml`, che `xfconfd`
+                     legge perche' un drop-in del prodotto gli mette quella
+                     cartella in testa a `XDG_CONFIG_DIRS`; il canale
+                     dell'utente non si tocca
 
 ---------------------------------------------------------------------------
 ⭐ I QUATTRO MODI, e che cosa ciascuno si aspetta
@@ -117,10 +124,22 @@ Il prodotto porta DUE cinture (`src/sessione.c`):
 ⭐ COME SI INNESTANO I GUASTI — e perche' non si tocca il prodotto
 ---------------------------------------------------------------------------
 
-  · la chiave xfconf: a desktop su, come l'inquilino,
-        xfconf-query -c xfce4-session -p /general/WaylandLogoutCommand -r
-    e si rilegge.  ⚠ Prima di toglierla si legge `/bin/true`: e' il controllo
-    positivo che il prodotto l'aveva scritta e che il lettore sa leggerla.
+  · la chiave xfconf — ⛔ FASE 15: NON piu' `xfconf-query -r` a desktop su.
+    La chiave e' BLOCCATA (D-017): `xfconfd` rifiuta di toglierla, e anche
+    riuscendoci `xfce4-session` non se ne accorgerebbe — `[R]` libxfconf
+    legge TUTTO il canale quando lo apre (`xfconf_cache_prefetch`,
+    `xfconf-channel.c:271`) e poi sente solo i cambi che il demone annuncia.
+    ⇒ Si innesta PRIMA della nascita: nella casa dell'inquilino nuovo, un
+    drop-in `~/.config/systemd/user/xfconfd.service.d/` con un nome che viene
+    DOPO quello del prodotto (`zzzz-…` > `zz-remotix-sessione.conf`: i drop-in
+    di tutte le cartelle si applicano in ordine di nome, e l'ultimo
+    `Environment=` vince) rimette `XDG_CONFIG_DIRS=/etc/xdg` ⇒ il file della
+    sessione non si legge, e la chiave e' ASSENTE (l'inquilino e' nuovo).
+    ⚠ Il controllo positivo non e' piu' «prima di toglierla si legge
+    `/bin/true`» ma: il PRODOTTO l'ha scritta — `/bin/true`, bloccata — nel
+    file della sessione (letto dal disco), e la rilettura con `xfconf-query`
+    dice ASSENTE (l'innesto ha morso).  Il drop-in porta una firma, e se ne
+    va con la casa dell'inquilino.
   · la variabile: il prodotto la mette nell'ambiente di labwc, e `labwc
     --session xfce4-session` cerca `xfce4-session` nel `PATH` che il figlio
     compone (`/usr/local/bin` prima di `/usr/bin`, `src/figlio.c`).  ⇒ Dentro
@@ -180,6 +199,12 @@ VERO = "/usr/bin/xfce4-session"
 INVOLUCRO = "/usr/local/bin/xfce4-session"
 FIRMA_INVOLUCRO = "# 13-w2: involucro innestato dal banco della trappola del logout"
 ASSENTE = "(assente)"
+# ⭐ FASE 15, D-017 — dove il prodotto scrive la chiave (xfconf della
+#    SESSIONE) e il drop-in con cui il banco la rende illeggibile a xfconfd
+FILE_SESSIONE = ("/run/user/%d/remotix/xdg-xfce/xfce4/xfconf/xfce-perchannel-xml/"
+                 "xfce4-session.xml")
+DROPIN_BANCO = "/home/%s/.config/systemd/user/xfconfd.service.d/zzzz-13w2-senza-xfconf.conf"
+FIRMA_DROPIN = "# 13-w2: senza-xfconf — il xfconf della sessione non si legge"
 
 # ⭐ Che cosa ogni modo toglie, e che cosa si aspetta.  Una tabella sola:
 #    il giudice e la messa in scena la leggono tutt'e due (§1.47).
@@ -269,12 +294,12 @@ def giudica(modo, m):
         #    Altrimenti la scena non e' quella che il modo dichiara (§1.52).
         if not atteso["xfconf"]:
             if m.get("xfconf_prima") != VALORE_CINTURA:
-                return 3, ["⛔ PRIMA dell'innesto la chiave xfconf non era "
-                           "«%s» ma «%s»: o il prodotto non l'ha scritta "
-                           "(e allora e' il giro SANO a doverlo dire), o il "
-                           "lettore non la sa leggere — ⇒ il controllo "
-                           "positivo manca" % (VALORE_CINTURA,
-                                               m.get("xfconf_prima"))]
+                return 3, ["⛔ il PRODOTTO non ha scritto la chiave xfconf "
+                           "«%s» (bloccata) nel file della sessione: leggo "
+                           "«%s» — o non l'ha scritta (e allora e' il giro "
+                           "SANO a doverlo dire), o il lettore non la sa "
+                           "leggere ⇒ il controllo positivo manca"
+                           % (VALORE_CINTURA, m.get("xfconf_prima"))]
             if m["xfconf"] != ASSENTE:
                 return 3, ["⛔ l'innesto NON ha morso: tolta la chiave, la "
                            "rilettura dice ancora «%s» (§xfce §10.6)"
@@ -477,6 +502,38 @@ def certifica():
         ok = letto == atteso
         sbagli += 0 if ok else 1
         print("  %s  %-62s letto=%s" % ("OK " if ok else "NO ", nome, letto))
+    # ⭐ FASE 15, D-017 — la lettura del file della sessione (il controllo
+    #    positivo dell'innesto (a)), su file scritti come li scrive il prodotto
+    global FILE_SESSIONE
+    vero_file = FILE_SESSIONE
+    cartella = tempfile.mkdtemp(prefix="13-w2-certifica-")
+    riga = ('<property name="WaylandLogoutCommand" type="string" value="/bin/true"%s/>')
+    prove_file = [
+        ("file della sessione: bloccata", riga % ' locked="*"', VALORE_CINTURA),
+        ("⛔ file della sessione: NON bloccata", riga % "",
+         VALORE_CINTURA + " (NON bloccata)"),
+        ("file della sessione senza la chiave", "", ASSENTE),
+        ("⛔ file illeggibile ≠ assente", None, None),
+        ("nessun file", False, ASSENTE),
+    ]
+    try:
+        for i, (nome, dentro, atteso) in enumerate(prove_file):
+            FILE_SESSIONE = os.path.join(cartella, "s%d-%%d.xml" % i)
+            if dentro is None:
+                with open(FILE_SESSIONE % 0, "w") as fo:
+                    fo.write("<channel><property")
+            elif dentro is not False:
+                with open(FILE_SESSIONE % 0, "w") as fo:
+                    fo.write('<?xml version="1.0"?><channel name="xfce4-session" '
+                             'version="1.0"><property name="general" type="empty">%s'
+                             '</property></channel>' % dentro)
+            letto = xfconf_scritta_dal_prodotto(0)
+            ok = letto == atteso
+            sbagli += 0 if ok else 1
+            print("  %s  %-62s letto=%r" % ("OK " if ok else "NO ", nome, letto))
+    finally:
+        FILE_SESSIONE = vero_file
+        shutil.rmtree(cartella, ignore_errors=True)
     print()
     if sbagli:
         print("⛔⛔ %d casi sbagliati: il giudice NON e' certificato" % sbagli)
@@ -693,6 +750,44 @@ def xfconf_leggi(chi, uid):
     return None
 
 
+def xfconf_scritta_dal_prodotto(uid):
+    """⭐ Il controllo positivo dell'innesto (a): il valore di `CHIAVE` nel
+       file della SESSIONE che il prodotto scrive (D-017), letto dal disco —
+       valore · `ASSENTE` (file o proprieta' mancanti) · `None` (illeggibile).
+       ⚠ Vale solo se BLOCCATA: una non bloccata la toglierebbe l'utente."""
+    t = leggi_file(FILE_SESSIONE % uid)
+    if t is None:
+        return ASSENTE
+    try:
+        import xml.etree.ElementTree as ET
+        radice = ET.fromstring(t)
+    except Exception:
+        return None
+    for g in radice.findall("property"):
+        if "/" + g.get("name", "") + "/" != CHIAVE[:CHIAVE.rindex("/") + 1]:
+            continue
+        for p in g.findall("property"):
+            if p.get("name") == CHIAVE.rsplit("/", 1)[1]:
+                return p.get("value") if p.get("locked") else "%s (NON bloccata)" % (
+                    p.get("value"))
+    return ASSENTE
+
+
+def innesta_senza_xfconf(chi):
+    """Il drop-in del banco, nella casa dell'inquilino NUOVO, prima della
+       nascita.  Torna None se fatto, o il perche' no."""
+    percorso = DROPIN_BANCO % chi
+    try:
+        os.makedirs(os.path.dirname(percorso), exist_ok=True)
+        with open(percorso, "w") as f:
+            f.write("%s\n[Service]\nEnvironment=XDG_CONFIG_DIRS=/etc/xdg\n" % FIRMA_DROPIN)
+    except OSError as e:
+        return str(e)
+    corri(["chown", "-R", "%s:" % chi, "/home/%s/.config" % chi])
+    t = leggi_file(percorso)
+    return None if t and FIRMA_DROPIN in t else "il drop-in scritto non si rilegge"
+
+
 def stato_xfsm(chi, uid):
     """Lo stato del gestore di sessione (0 Startup, 1 Idle, …), o None."""
     codice, uscita, _e = corri(
@@ -844,6 +939,17 @@ def giro(a, modo):
             print("   ⛔ innesto: %s riscrive la variabile in «%s» per «%s»"
                   % (INVOLUCRO, RIGA_TRAPPOLA, chi))
 
+        # --- l'innesto della chiave xfconf, anche lui PRIMA della nascita -----
+        #     (FASE 15, D-017: la chiave e' bloccata nel xfconf della sessione)
+        if not MODI[modo]["xfconf"]:
+            no = innesta_senza_xfconf(chi)
+            if no:
+                return esci(3, ["⛔ non riesco a scrivere il drop-in di xfconfd: %s"
+                                % no])
+            print("   ⛔ innesto: %s rimette XDG_CONFIG_DIRS=/etc/xdg a xfconfd per "
+                  "«%s» — il xfconf della sessione non si legge" % (DROPIN_BANCO % chi,
+                                                                     chi))
+
         # --- il cliente fa nascere la sessione, e resta attaccato -------------
         registro_cliente = tempfile.NamedTemporaryFile(
             prefix="13-w2-cliente-", suffix=".log", delete=False).name
@@ -949,15 +1055,16 @@ def giro(a, modo):
             leader = None
 
         # --- la seconda cintura, e l'innesto ------------------------------
-        m["xfconf_prima"] = xfconf_leggi(chi, uid)
-        print("   la chiave xfconf %s: %s" % (CHIAVE, m["xfconf_prima"]))
         if not MODI[modo]["xfconf"]:
-            corri(come(chi, uid, ["xfconf-query", "-c", CANALE, "-p", CHIAVE,
-                                  "-r"]))
-            time.sleep(1.0)
+            m["xfconf_prima"] = xfconf_scritta_dal_prodotto(uid)
+            print("   la chiave xfconf %s scritta dal PRODOTTO nel file della "
+                  "sessione: %s" % (CHIAVE, m["xfconf_prima"]))
             m["xfconf"] = xfconf_leggi(chi, uid)
-            print("   ⛔ innesto: tolta, e RILETTA: %s" % m["xfconf"])
+            print("   ⛔ innesto (drop-in prima della nascita): xfconf-query "
+                  "RILEGGE: %s" % m["xfconf"])
         else:
+            m["xfconf_prima"] = xfconf_leggi(chi, uid)
+            print("   la chiave xfconf %s: %s" % (CHIAVE, m["xfconf_prima"]))
             m["xfconf"] = m["xfconf_prima"]
 
         # ⭐ Il giudice guarda le guardie prima di tutto: se gia' qui non si
