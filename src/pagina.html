@@ -1145,6 +1145,25 @@ const DESINCRONIZZATA =
  *   e la riga del registro lo dice ogni volta. */
 const TELA_2D = new URLSearchParams(location.search).get("tela") === "2d";
 
+/* ⛔⭐⭐ `?tela=gl` — LA STRADA CANDIDATA, E SI MISURA PRIMA DI SCEGLIERE.
+ *
+ * `fasi/16-stress-e-capacita.md`, anomalia A1: su Firefox 140 ESR la strada
+ * di serie (`createImageBitmap` → `bitmaprenderer`) rilegge il fotogramma
+ * dalla GPU in modo SINCRONO — `[M]` ~34 ms a 4K — e la coda del
+ * decodificatore passa 2 ⇒ la pagina salta l'11-62 % dei fotogrammi
+ * (`saltati_coda`).  ⭐ WebGL2 `texImage2D(VideoFrame)` ha in Firefox una VIA
+ * VELOCE (DMA-BUF → blit sulla GPU, YUV→RGB senza rilettura) se: livello 0,
+ * scarto 0, RGBA/UNSIGNED_BYTE, niente UNPACK_SKIP, spazio colore
+ * predefinito, e rettangolo visibile = codificato.  `[?]` finche' non la
+ * misura il banco `banchi/16-stress/16-banco-tela.html` e poi questa pagina.
+ *
+ * ⛔ NON E' LA STRADA DI SERIE, e senza `?tela=gl` questa costante non tocca
+ *    niente: la scelta del predefinito la fa l'utente dopo la misura (§5.4 e'
+ *    una decisione sua).  ⚠ E un parametro solo: `?tela=` porta UN valore,
+ *    quindi `gl` esclude `2d` e `desincronizzata` — un confronto, una
+ *    variabile. */
+const TELA_GL = new URLSearchParams(location.search).get("tela") === "gl";
+
 /* ⛔⭐⭐ QUALE DELLE DUE STRADE VERSO I PIXEL — `DECISIONI.md` §7.18.
  *
  *   WebCodecs   la strada del prodotto: `VideoDecoder` e la tela.  Ritardo
@@ -2752,12 +2771,25 @@ class Schermo {
      *    scrive nel registro**, perche' su quella strada gli artefatti
      *    tornerebbero e nessun contatore lo direbbe.  ⚠ Non e' un'eccezione per
      *    compositore: e' una capacita' che manca al browser. */
+    /* ⭐ LA STRADA CANDIDATA `?tela=gl` (anomalia A1) si prova PRIMA, perche'
+     *   una tela prende un contesto solo: se WebGL2 non c'e' la tela resta
+     *   libera e sotto si prende la strada di serie, con la riga che lo dice.
+     * ⚠ Sulla tela staccata dello SPECCHIO (`?video=worker`, thread
+     *   principale) non si accende: a dipingere e' il worker, e un contesto
+     *   WebGL su una tela che nessuno vede sarebbe una GPU spesa per niente.
+     *   ⇒ `VIDEO_WORKER` di qua esiste, nel worker no — ed e' la distinzione. */
+    this.gl = null; this.gl_tex = null; this.gl_perche = null;
+    this.gl_persa = false; this.gl_rotta = false; this.gl_detto = false;
+    this.gl_via = null; this.gl_limite = null;
+    this.gl_ms = [];                           /* richiamo → `drawArrays` finito */
+    if (TELA_GL && !(typeof VIDEO_WORKER !== "undefined" && VIDEO_WORKER))
+      this.gl_accendi(tela);
     this.bm = null; this.pennello = null;
-    if (!TELA_2D && typeof createImageBitmap === "function") {
+    if (!this.gl && !TELA_2D && typeof createImageBitmap === "function") {
       try { this.bm = tela.getContext("bitmaprenderer"); }
       catch (e) { this.bm = null; }
     }
-    if (!this.bm)
+    if (!this.bm && !this.gl)
       this.pennello = tela.getContext("2d", {
         alpha: false,
         desynchronized: DESINCRONIZZATA });
@@ -3004,7 +3036,17 @@ class Schermo {
      *    costerebbe caro — le due strade danno la stessa immagine a ogni
      *    strumento che rilegge i pixel, e differiscono SOLO davanti agli occhi
      *    dell'utente (`LEZIONI.md` §1.16). */
-    this.riga(this.bm
+    /* ⛔ `?tela=gl` chiesta e NON ottenuta si dice PRIMA della strada in
+       vigore: `gl_accendi()` gira quando `su_riga` non c'e' ancora, quindi
+       tiene il perche' e lo scrive qui.  ⚠ Con `⛔`, cioe' arriva al server. */
+    if (this.gl_perche)
+      this.riga("⛔ RIPIEGO: `?tela=gl` chiesta ma " + this.gl_perche
+              + (this.gl ? "" : " — si dipinge sulla strada di serie"));
+    if (this.gl)
+      this.riga("MISURA tela gl · ⚠ `?tela=gl`: STRADA CANDIDATA a richiesta "
+              + "(WebGL2 `texImage2D(VideoFrame)`, anomalia A1) — NON e' la "
+              + "strada di serie, e serve a misurare");
+    else this.riga(this.bm
       ? "⭐ la tela si dipinge con `bitmaprenderer` (§5.4): niente magazzino 2D"
       : (TELA_2D
          ? "⚠ `?tela=2d`: STRADA VECCHIA a richiesta — e' quella su cui gli "
@@ -3043,6 +3085,11 @@ class Schermo {
     this.ult_ist_us = 0; this.ult_vetro_perf = 0;
     this.epoca++;
     if (this.bm) { try { this.bm.transferFromImageBitmap(null); } catch (e) { /* gia' vuota */ } }
+    /* ⭐ E sulla strada `?tela=gl` lo stesso, col suo modo di svuotarla. */
+    if (this.gl && !this.gl_persa && !this.gl_rotta) {
+      try { this.gl.clearColor(0, 0, 0, 1); this.gl.clear(this.gl.COLOR_BUFFER_BIT); }
+      catch (e) { /* gia' vuota */ }
+    }
     this.codec = null; this.stringa = null;
     this.tollerate = new Map(); this.storiche = new Set(); this.finestra = false;
     this.ultimo_consegnato = null; this.atteso = null;
@@ -3351,7 +3398,10 @@ class Schermo {
      * ⛔ Ed e' esattamente la ragione per cui il deposito esisteva (§5.1: il
      *    nero fino al fotogramma dopo, che durante un BUCO non arriva): quella
      *    ragione qui cade da sola, senza una copia in piu' per fotogramma. */
-    if (this.bm) { this.cornice(); return false; }
+    /* ⚠ E la strada `?tela=gl` e' nella stessa condizione: la tela WebGL
+       tiene l'ultimo fotogramma presentato, e `width` lo riscrive solo
+       `mostra_gl()` quando la misura del fotogramma cambia. */
+    if (this.bm || this.gl) { this.cornice(); return false; }
     if (!this.deposito) return false;
     const fl = this.deposito.width, fa = this.deposito.height;
     if (!fl || !fa) return false;
@@ -3557,6 +3607,273 @@ class Schermo {
       this.riga("⛔ il fotogramma non e' diventato un'immagine: " + e);
     });
   }
+
+  /* ⛔⭐⭐ LA STRADA CANDIDATA `?tela=gl` — anomalia A1, `fasi/16` — INIZIO.
+   *
+   * ⭐ Il fotogramma va al vetro con UNA chiamata sincrona
+   *   (`texImage2D(VideoFrame)`) e un triangolo che copre la tela: niente
+   *   `createImageBitmap`, niente promessa, niente magazzino 2D.  ⇒ Niente
+   *   `tardive` e niente `in_bmp` per costruzione — l'ordine e' quello del
+   *   richiamo — e il `VideoFrame` si chiude SUBITO dopo il caricamento,
+   *   cioe' torna al decodificatore prima che sulla strada di serie.
+   *
+   * ⚠ Gli stessi conti e gli stessi nomi della strada di serie, o le due non
+   *   si confrontano (forma E2 di `REVIEWER.md`):
+   *     `bmp_ms`    richiamo gia' fatto → `texImage2D` finita (il caricamento:
+   *                 e' QUI che la rilettura da 34 ms si vedrebbe, se la via
+   *                 veloce non scattasse) — `tratti()` lo chiama
+   *                 `9b_conversione` su tutt'e due le strade;
+   *     `vetro_ms`  `drawArrays` (il trasferimento al vetro);
+   *     `tot_ms`    richiamo → vetro, come sempre;
+   *     `gl_ms`     conversione + vetro, e la sua mediana va sulla riga dei
+   *                 5 s (`tela gl ...ms`) e sulla riga `MISURA tela gl`.
+   *   E il conto di §5.4 chiude lo stesso: un fotogramma che non si carica
+   *   (contesto perso, errore) va in `bmp_falliti`, e
+   *   `usciti = saltati_coda + dipinti + tardive + in_bmp + bmp_falliti`
+   *   con `tardive` e `in_bmp` a zero.
+   *
+   * ⛔ IL PREZZO DICHIARATO: `[?]` quanto costa davvero sulla GPU — il tempo
+   *    misurato qui e' della CPU (la chiamata), e il blit puo' pagarsi dopo, al
+   *    quadro del compositore.  ⇒ Il giudice non e' `gl_ms` da solo: e'
+   *    `saltati_coda` (salt) contro la strada di serie, a parita' di scena. */
+  gl_accendi(tela) {
+    let gl = null;
+    try {
+      /* ⚠ Le opzioni del banco `16-banco-tela.html` meno `desynchronized`:
+         quella e' un'altra variabile (`?tela=desincronizzata`), e qui se ne
+         cambia UNA.  `preserveDrawingBuffer: false` perche' a ogni fotogramma
+         si ridisegna tutta la tela: conservarla sarebbe una copia in piu'. */
+      gl = tela.getContext("webgl2", { alpha: false, antialias: false,
+                                       depth: false, stencil: false,
+                                       preserveDrawingBuffer: false });
+    } catch (e) { gl = null; this.gl_perche = "getContext(webgl2): " + e; }
+    if (!gl) {
+      if (!this.gl_perche) this.gl_perche = "questo browser non da' WebGL2";
+      return;
+    }
+    /* ⛔ Da qui la tela e' WebGL per sempre: un altro contesto non si puo' piu'
+       chiedere.  ⇒ Se il programma non si prepara si resta QUI, rotti e
+       dichiarati (`gl_rotta`), invece di ripiegare su una tela che direbbe
+       `null` a ogni fotogramma. */
+    this.gl = gl;
+    if (!this.gl_prepara()) {
+      this.gl_rotta = true;
+      this.gl_perche = "il programma WebGL non si prepara — la tela resta "
+                     + "NERA, ricaricare senza `?tela=gl`";
+    }
+    /* ⛔⭐ LA PERDITA DEL CONTESTO (driver che si riavvia, GPU sotto pressione).
+     *
+     * `preventDefault()` e' quel che dice al motore «voglio indietro il
+     * contesto»: senza, `webglcontextrestored` non arriverebbe mai.  Mentre e'
+     * perso i fotogrammi si chiudono e si CONTANO (`bmp_falliti`); quando torna
+     * si rifanno programma e tessitura, e il fotogramma dopo ridipinge tutto
+     * (ogni fotogramma copre la tela intera: nessuna chiave da chiedere).
+     * ⛔ IL RIPIEGO SULLA STRADA DI SERIE NON SI PUO' FARE A SESSIONE APERTA,
+     *    e si dice perche': la tela che ha avuto WebGL non da' piu'
+     *    `bitmaprenderer`, e cambiarla con un'altra `<canvas>` staccherebbe
+     *    l'input — i gestori del puntatore e del tocco stanno sull'ELEMENTO, e
+     *    piu' funzioni ne tengono il riferimento.  ⇒ Il ripiego e' alla
+     *    CARICA dopo, senza `?tela=gl`, e la riga lo dice se il contesto non
+     *    torna entro 3 s.
+     * ⚠ Nel worker la tela e' `tela_finta()`, che non ha `addEventListener`:
+     *   la' vale solo `isContextLost()`, controllato a ogni fotogramma. */
+    if (typeof tela.addEventListener === "function") {
+      tela.addEventListener("webglcontextlost", (ev) => {
+        ev.preventDefault();
+        this.gl_persa = true; this.gl_detto = false;
+        this.riga("⛔ tela gl: contesto WebGL PERSO — i fotogrammi si chiudono "
+                + "e si contano in `bmp_falliti` finche' non torna");
+        clearTimeout(this.gl_limite);
+        this.gl_limite = setTimeout(() => {
+          if (this.gl_persa)
+            this.riga("⛔ RIPIEGO: il contesto WebGL non e' tornato in 3 s — "
+                    + "a sessione aperta la strada di serie non si puo' "
+                    + "riprendere: ricaricare la pagina SENZA `?tela=gl`");
+        }, 3000);
+      });
+      tela.addEventListener("webglcontextrestored", () => {
+        clearTimeout(this.gl_limite);
+        this.gl_persa = false; this.gl_detto = false;
+        this.gl_rotta = !this.gl_prepara();
+        this.riga(this.gl_rotta
+          ? "⛔ tela gl: contesto tornato ma il programma non si rifa' — tela NERA"
+          : "MISURA tela gl: contesto WebGL TORNATO, si riprende a dipingere");
+      });
+    }
+  }
+
+  /* Programma, tessitura e stato di caricamento: alla nascita e dopo ogni
+     `webglcontextrestored` (un contesto tornato non ha piu' niente). */
+  gl_prepara() {
+    const gl = this.gl;
+    try {
+      /* ⭐ Un triangolo solo che copre la tela, senza attributi: i vertici
+         nascono da `gl_VertexID` (0,0) (2,0) (0,2).  ⚠ `uv.y` si rovescia
+         perche' la riga 0 della tessitura e' la riga IN ALTO del fotogramma
+         (`UNPACK_FLIP_Y_WEBGL` spento, sotto) e la y del GL sale. */
+      const vs = "#version 300 es\n"
+        + "out vec2 uv; void main() {"
+        + " vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));"
+        + " uv = vec2(p.x, 1.0 - p.y); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }";
+      const fs = "#version 300 es\n"
+        + "precision mediump float; in vec2 uv; uniform sampler2D s; out vec4 c;"
+        + " void main() { c = texture(s, uv); }";
+      const pr = gl.createProgram();
+      for (const [t, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+        const sh = gl.createShader(t);
+        gl.shaderSource(sh, src); gl.compileShader(sh); gl.attachShader(pr, sh);
+      }
+      gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) {
+        this.errori.push("webgl: " + gl.getProgramInfoLog(pr));
+        return false;
+      }
+      gl.useProgram(pr);
+      this.gl_tex = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.gl_tex);
+      /* ⚠ LINEAR e non NEAREST: alla scala 1 (la cura di §5.0-sexies) e'
+         identico, e fuori da li' a ridurre e' il CSS — come sulla strada di
+         serie, dove `cornice()` decide `image-rendering`. */
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      /* ⛔ Le condizioni della VIA VELOCE di Firefox (`TexUnpackBlob.cpp`,
+         `BlitPreventReason`): niente rovesciamento, niente premoltiplicazione,
+         niente UNPACK_SKIP, spazio colore predefinito.  Si scrivono anche se
+         sono i valori di partenza: chi un giorno ne cambiasse uno deve
+         trovarle qui, col perche'. */
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+      gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      return true;
+    } catch (e) {
+      this.errori.push("webgl: " + e);
+      return false;
+    }
+  }
+
+  /* ⚠ Mediana e p95 DENTRO la classe, e non `__tratto()`: la classe
+     attraversa il confine del worker da sola (`sorgente_worker()`), e un nome
+     globale in piu' la' sarebbe `is not defined` a ogni fotogramma. */
+  gl_mediana(a) {
+    if (!a || !a.length) return null;
+    const b = a.slice().sort(function (x, y) { return x - y; });
+    return { n: b.length, med: +b[b.length >> 1].toFixed(2),
+             p95: +b[Math.min(b.length - 1, Math.floor(b.length * 0.95))].toFixed(2) };
+  }
+
+  mostra_gl(f, fl, fa, t_out) {
+    const gl = this.gl;
+    const t_car = performance.now();
+    if (t_out !== undefined) {
+      this.pre_ms.push(t_car - t_out);
+      if (this.pre_ms.length > 200) this.pre_ms.shift();
+    }
+    /* ⛔ Contesto perso o programma rotto: il fotogramma si chiude SUBITO (o la
+       riserva del decodificatore si esaurisce) e si CONTA.  Una riga per
+       episodio, non per fotogramma. */
+    if (this.gl_persa || this.gl_rotta || gl.isContextLost()) {
+      this.conti.bmp_falliti++;
+      try { f.close(); } catch (e) { /* gia' chiuso */ }
+      if (!this.gl_detto) {
+        this.gl_detto = true;
+        this.riga("⛔ tela gl: fotogrammi NON dipinti — "
+                + (this.gl_rotta ? "programma rotto" : "contesto perso"));
+      }
+      return;
+    }
+    const ist_us = f.timestamp;
+    /* ⭐ LA VIA VELOCE E' POSSIBILE? Una delle sue condizioni si legge da
+     *   JavaScript — rettangolo visibile = codificato — e si dice alla prima
+     *   e a ogni cambio.  ⚠ Una misura che non e' multipla di 16 (una finestra
+     *   1588x914 codificata 1600x928) la esclude, e allora il numero di
+     *   `gl_ms` e' quello della via LENTA: va letto con questa riga accanto.
+     * ⚠ Che la via veloce SCATTI davvero da qui non si vede: lo dice Firefox
+     *   con `webgl.perf.max-warnings` alto («Missed GPU-copy fast-path»). */
+    const vr = f.visibleRect;
+    const via = (!vr || (vr.x === 0 && vr.y === 0 && vr.width === f.codedWidth
+                         && vr.height === f.codedHeight))
+      ? "possibile" : "ESCLUSA (visibile " + (vr.x + "," + vr.y + " "
+                      + vr.width + "x" + vr.height) + " ≠ codificato "
+                      + f.codedWidth + "x" + f.codedHeight + ")";
+    if (via !== this.gl_via) {
+      this.gl_via = via;
+      this.riga("MISURA tela gl · via veloce " + via + " · formato "
+              + (f.format === undefined ? "assente" : f.format));
+    }
+    const cambia = (this.f_l !== fl || this.f_a !== fa
+                    || this.tela.width !== fl || this.tela.height !== fa);
+    this.f_l = fl; this.f_a = fa;
+    /* ⛔ La misura della tela si SCRIVE, come sulla strada di serie (la riga
+       del 20 agosto in `mostra()`): `cl_geometria()` legge `tela.width` per
+       convertire il puntatore.  E solo quando cambia: `width` svuota. */
+    if (cambia) { this.tela.width = fl; this.tela.height = fa; }
+    try {
+      gl.viewport(0, 0, fl, fa);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, f);
+    } catch (e) {
+      this.conti.bmp_falliti++;
+      try { f.close(); } catch (e2) { /* gia' chiuso */ }
+      this.errori.push("texImage2D: " + e);
+      if ((this.conti.bmp_falliti & 511) === 1)
+        this.riga("⛔ tela gl: il fotogramma non si carica: " + e);
+      return;
+    }
+    /* ⭐ Chiuso SUBITO: il caricamento ha gia' copiato (via veloce o lenta
+       che sia) e il fotogramma torna al decodificatore. */
+    try { f.close(); } catch (e) { /* gia' chiuso */ }
+    const t_vetro = performance.now();
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const t_dopo = performance.now();
+    this.mostrata = ++this.serie;
+    this.bmp_ms.push(t_vetro - t_car);
+    if (this.bmp_ms.length > 200) this.bmp_ms.shift();
+    this.vetro_ms.push(t_dopo - t_vetro);
+    if (this.vetro_ms.length > 200) this.vetro_ms.shift();
+    this.gl_ms.push(t_dopo - t_car);
+    if (this.gl_ms.length > 200) this.gl_ms.shift();
+    if (t_out !== undefined) {
+      this.tot_ms.push(t_dopo - t_out);
+      if (this.tot_ms.length > 200) this.tot_ms.shift();
+      if ((this.conti.dipinti & 15) === 0 && typeof requestAnimationFrame === "function")
+        requestAnimationFrame(() => {
+          this.quadro_ms.push(performance.now() - t_dopo);
+          if (this.quadro_ms.length > 60) this.quadro_ms.shift();
+        });
+    }
+    if (ist_us) { this.ult_ist_us = ist_us; this.ult_vetro_perf = t_dopo; }
+    this.conti.dipinti++;
+    /* ⭐ LA RIGA DELLA MISURA, ogni 600 dipinti (~10 s a 60/s): caricamento,
+     *   vetro, totale, e i salti — quel che serve a confrontare con la strada
+     *   di serie senza aprire la console.  `MISURA` ⇒ arriva al server.
+     * ⚠ `getError()` si chiede SOLO qui: in Firefox e' un giro sincrono col
+     *   processo della GPU, e a ogni fotogramma sarebbe pagare la misura con
+     *   la cosa misurata.  Alla prima e ogni 600 basta a sapere che un errore
+     *   silenzioso (nero contato come dipinto) non c'e'. */
+    if (this.conti.dipinti === 1 || this.conti.dipinti % 600 === 0) {
+      const car = this.gl_mediana(this.bmp_ms), vet = this.gl_mediana(this.vetro_ms),
+            tot = this.gl_mediana(this.gl_ms), err = gl.getError();
+      this.riga("MISURA tela gl · caricamento med " + (car ? car.med : "?")
+              + " p95 " + (car ? car.p95 : "?") + " ms · vetro med "
+              + (vet ? vet.med : "?") + " ms · disegno med " + (tot ? tot.med : "?")
+              + " p95 " + (tot ? tot.p95 : "?") + " ms (n " + (tot ? tot.n : 0)
+              + ") · dipinti " + this.conti.dipinti + " salt "
+              + this.conti.saltati_coda + " fuori " + this.conti.usciti
+              + " · errore GL " + (err === 0 ? "nessuno" : "0x" + err.toString(16)));
+    }
+    SCENA.dipinto();
+    if (this.sessione && !this.vista_l) this.adatta_vista();
+    if (cambia) this.cornice();
+    this.dipinta = { l: fl, a: fa, x: 0, y: 0,
+                     vista: [this.tela.width, this.tela.height],
+                     fotogramma: [fl, fa], scala: 1 };
+    document.body.dataset.schermo = "acceso";
+  }
+  /* ⬆⬆ LA STRADA CANDIDATA `?tela=gl` — FINE. */
 
   /* ⭐⭐ `voff` — LA META' VIDEO DEL METRO DELLA DISTANZA, §9.7-bis.
    *
@@ -4446,6 +4763,11 @@ class Schermo {
     /* ⭐ IL BIVIO: sulla strada di §5.4 il fotogramma non entra in nessuna tela
      *    2D — va dritto a `createImageBitmap`.  Il resto di questa funzione e'
      *    il RIPIEGO, e resta identico a com'era. */
+    /* ⭐ E la strada candidata `?tela=gl` (anomalia A1) si stacca qui, allo
+       stesso punto e con gli stessi argomenti: tutto quel che sta sopra — il
+       salto della coda, il formato, la riga della misura — vale per lei
+       identico, o il confronto non sarebbe di UNA variabile. */
+    if (this.gl) { this.mostra_gl(f, fl, fa, t_out); return; }
     if (this.bm) { this.mostra(f, fl, fa, t_out); return; }
     try {
       if (!this.deposito) this.deposito = document.createElement("canvas");
@@ -4856,7 +5178,8 @@ function tratti() {
   if (!s) return null;
   return {
     /* ⭐ quale strada, o i numeri non si sanno di che cosa sono */
-    strada: s.bm ? "bitmaprenderer" : (TELA_2D ? "tela2d-a-richiesta"
+    strada: s.gl ? "webgl2-a-richiesta"
+          : s.bm ? "bitmaprenderer" : (TELA_2D ? "tela2d-a-richiesta"
                                                : "tela2d-ripiego"),
     tela: [s.tela_l, s.tela_a],
     dipinti: s.conti ? s.conti.dipinti : null,
@@ -7049,6 +7372,16 @@ function avvia_audio(wt) {
                  DOPO una piu' nuova.  ⛔ Zero e' il numero atteso. */
               + " tard " + schermo.conti.tardive
               + " err " + (schermo.errori ? schermo.errori.length : "?")
+              /* ⭐ `?tela=gl` (anomalia A1): la strada candidata si dice
+                 sulla riga che arriva al server, con la mediana del disegno
+                 (richiamo gia' fatto → `drawArrays`).  ⚠ Senza `?tela=gl` non
+                 compare niente: la riga di serie resta quella di prima. */
+              + (schermo.gl
+                   ? " tela gl " + (function () {
+                       const m = schermo.gl_mediana(schermo.gl_ms);
+                       return m ? m.med + "ms" : "?";
+                     })() + (schermo.gl_persa ? " PERSA" : "")
+                   : "")
             : " video ?")
        /* ⭐⭐⭐ IL METRO DELLA DISTANZA AUDIO↔VIDEO — §9.7-bis, 21 agosto 2026.
         *
@@ -8662,6 +8995,8 @@ function sorgente_worker() {
        la classe e' la STESSA del prodotto, e le costanti che legge devono
        attraversare il confine con lei. */
     "const TELA_2D = " + JSON.stringify(TELA_2D) + ";",
+    /* ⛔ E per la stessa ragione `TELA_GL` (`?tela=gl`, anomalia A1). */
+    "const TELA_GL = " + JSON.stringify(TELA_GL) + ";",
     /* ⛔⭐ 21 agosto 2026 — E MANCAVANO TRE NOMI, non uno: `VIA_MSE`, `GIRO` e
        `SCENA`.  `[M]` col percorso worker acceso contro il prodotto vero
        (banco `07-b63`), la pagina dipingeva **zero** fotogrammi e il worker
