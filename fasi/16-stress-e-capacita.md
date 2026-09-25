@@ -34,6 +34,7 @@ difetto che la fase 15 avrebbe dovuto vedere, si torna alla suite.
 | **la scala delle misure** | se il 4K va in FAIL: **3K → 2K → Full HD** | vedi §8 |
 | **YouTube 4K: 1 utente su 4** | rotazione fissa dei quattro profili | vedi §5 |
 | **due campagne** | Intel UHD 770 integrata, poi **AMD Radeon RX 6800 16 GB** | la RX 6800 va montata sul server; prima la si prova con un utente solo (§11) |
+| **la salita a gradini: 1 → 4 → 8 → 12 → 16** (25 set, sera) | *«forse avevo esagerato»*: un utente alla volta costava 24–96 ore di macchina | il punto di rottura si trova lo stesso, preciso a un utente, con la ricerca a metà (§6); si perde solo la curva utente per utente dove è tutto verde |
 | **logging nel journal di sistema** | `journalctl`, niente sistemi propri al suo posto | vedi §12 |
 
 ## 3. Le precondizioni — tutte soddisfatte il 25 settembre 2026
@@ -80,7 +81,7 @@ aiutare a diagnosticare (§4 del documento dell'utente).
 
 ## 5. I quattro lavori, e come si distribuiscono
 
-Gli utenti entrano **uno alla volta**; il lavoro di ciascuno è fissato dal suo numero e **non
+Gli utenti entrano **a gradini** (§6); il lavoro di ciascuno è fissato dal suo numero e **non
 cambia** in nessuna campagna:
 
 | utente | profilo | che cosa fa, in ciclo, per tutta la durata |
@@ -98,21 +99,31 @@ fra le campagne.
 
 ## 6. La salita e i controlli
 
-**PREPARARE → AVVIARE → AGGIUNGERE UN UTENTE → 10 MINUTI → CONTROLLARE → REGISTRARE → RIPETERE**
-fino a 16, oppure fino a un limite reale dimostrato.
+**PREPARARE → AVVIARE → SALIRE AL GRADINO → 10 MINUTI → CONTROLLARE → REGISTRARE → RIPETERE**
+sui gradini **1 → 4 → 8 → 12 → 16** utenti (decisione dell'utente, 25 set sera), oppure fino a un
+limite reale dimostrato. Gli utenti di un gradino entrano uno dopo l'altro, ciascuno quando il
+precedente ha il primo fotogramma (così si misura anche la nascita sotto carico).
 
 1. scatola rifatta da zero, server acceso col tetto a 16, nessun altro carico sul server;
 2. si accende il primo utente e il suo lavoro;
 3. **10 minuti** di lavoro continuo (il carico è **cumulativo**: chi c'era continua);
 4. **controllo** (§7) negli ultimi 2 minuti del livello;
-5. si registra (§10), poi si aggiunge il successivo.
+5. si registra (§10), poi si sale al gradino successivo;
+6. **all'ultimo gradino (16) il livello dura 30 minuti**, non 10: è la prova delle perdite di
+   memoria a pieno carico, che coi gradini radi non si vede più salendo.
+
+**La ricerca a metà**: se un gradino va in FAIL (dopo la ripetizione di §14), si prova a metà
+fra l'ultimo gradino buono e quello rotto, e si stringe finché si sa l'ultimo livello GREEN
+**preciso a un utente** (es. 8 buono, 12 FAIL ⇒ 10; 10 buono ⇒ 11; 10 FAIL ⇒ 9). Ogni livello
+della ricerca riparte da scatola pulita coi suoi N utenti.
 
 **Regola di non-prosecuzione**: se un controllo dice **DEGRADED significativo** o **FAIL**, non si
 sale in automatico: il livello si osserva, si documenta, si diagnostica, si classifica e si
 **ripete** nelle stesse condizioni (§14). Lo scopo non è arrivare a 16 a ogni costo.
 
-⚠ Durata: 16 livelli × ~11 minuti ≈ **3 ore per salita**. Quattro desktop × due schede ≈ **24 ore**
-di misure, più i gradini della scala (§8). Si fanno a blocchi, anche di notte.
+⚠ Durata: 5 gradini (l'ultimo da 30 minuti) più 0–2 livelli di ricerca ≈ **1 ora e 10 per salita**.
+Quattro desktop × due schede ≈ **9 ore** di misure nel caso migliore, ~35 con tutta la scala (§8),
+contro le 24–96 del piano a un utente alla volta. Si fanno a blocchi, anche di notte.
 
 ## 7. Il controllo di ogni livello
 
@@ -150,7 +161,7 @@ di misure, più i gradini della scala (§8). Si fanno a blocchi, anche di notte.
 | Full HD | 1920×1080 |
 
 Se un gradino arriva al **FAIL con N utenti**, il gradino successivo **riparte da 1 utente e
-risale**: ogni misura ha la sua curva completa e confrontabile. Si scende finché si arriva a 16
+risale sugli stessi gradini** (§6): ogni misura ha la sua curva completa e confrontabile. Si scende finché si arriva a 16
 nominali o si finisce la scala.
 
 ## 9. Le soglie — ⛔ DA APPROVARE PRIMA DELLA CAMPAGNA, poi ferme
@@ -180,7 +191,7 @@ sessioni DEGRADED, o una sola misura oltre metà della fascia DEGRADED.
 Come la fase 15, un **registro a sole aggiunte**, `banchi/16-stress/registro.jsonl`, una riga per
 **livello** e una per **sessione in quel livello**:
 
-`campagna` (es. `intel-4k-gnome`) · `livello` (1…16) · `utente` · `profilo` · `browser` e versione
+`campagna` (es. `intel-4k-gnome`) · `livello` (1, 4, 8, 12, 16 e quelli della ricerca) · `utente` · `profilo` · `browser` e versione
 · `desktop` · `scheda` e driver · `misura` · `commit` · binario · pagina · kernel · `inizio` ·
 `durata_s` · tutte le misure di §7 · `classe` (GREEN/DEGRADED/FAIL) · `ragione` · `evidenze`.
 
@@ -236,6 +247,11 @@ Oggi REMOTIX scrive su un file suo (`registro.log`, dallo standard output). Nell
    `storage.conf` e le quattro scatole) — contenitore di compilazione, librerie e immagini stanno
    su `/media` e restano; poi si **guarda** che il server sia vuoto (niente processi, inquilini,
    compositori rimasti) prima della prima misura;
+   `[M]` **fatto il 25 set sera**: radice verificata da `provisiona.sh verifica`, scatole su
+   `b1443a0b`/`c5279e66`, fumo F-001/F-002 **16 PASS su 16** (4 desktop × 2 browser). Alla
+   ricetta mancavano tre pezzi, ora aggiunti: `labwc` e `wlr-randr` (dalla cache apt),
+   Chrome (`/media/REMOTIX/cache/chrome.deb`) e `~/SERVER.ssh` sul server (0600: la suite ci
+   legge la parola di sudo — la copia la fa l'utente);
 1. il journal (§12) e il tetto configurabile, con la **suite corta di regressione** della fase 15
    (accesso, input, immagine, appunti, «Esci», orologi — sui 4 desktop coi due browser) su quel
    commit;
