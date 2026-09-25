@@ -292,6 +292,22 @@ Oggi REMOTIX scrive su un file suo (`registro.log`, dallo standard output). Nell
 corta di regressione, e **si rifà la salita interessata**. Un FAIL resta legato alla sua
 configurazione (desktop, scheda, commit, lavoro, utenti, sintomo) e non si generalizza.
 
+### Anomalia A1 — Firefox in 4K salta i fotogrammi già con un utente (25 set, notte)
+
+`[M]` salita di prova (GNOME 4K, 1 utente, Firefox cliente): 489 consegnati, 433 dipinti, **11,5 %
+saltati ⇒ FAIL** già al primo gradino; Chrome nelle stesse condizioni 3–6 %. Diagnosi (evidenze in
+`/media/REMOTIX/misure/fase16/diagnosi-ff-hw/`): il Firefox cliente decodifica **già in hardware**
+(VA-API, 2,3 ms di motore video a fotogramma, come Chrome); il collo è la strada di disegno della
+pagina: in Firefox 140 `createImageBitmap(VideoFrame)` fa una **rilettura sincrona dalla GPU**
+(~34 ms a 4K, sul thread principale, bug Mozilla 1788206), la coda del decodificatore supera 2 e la
+pagina salta (`saltati_coda`). Con la decodifica software si scende al 12 %, ancora sopra il 10.
+⇒ È un limite del **prodotto con Firefox in 4K** (la pagina), non del server né del carico: la
+campagna lo misura così com'è, e al 4K ogni gradino con un utente Firefox ne risente.
+Cura candidata, da misurare dopo la campagna: disegno con **WebGL2 `texImage2D(VideoFrame)`**
+(via DMA-BUF senza rilettura in ESR 140; stima < 2 ms), banco pronto in
+`banchi/16-stress/16-banco-tela.html` (vie `bmp` e `gl`, criteri: disegno < 3 ms, saltati < 5 %, e
+la foto del vetro col testimone per escludere i blocchi della 2D).
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
