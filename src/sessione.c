@@ -1269,38 +1269,51 @@ bool sessione_dconf_di_sessione(void)
 }
 
 /*
- * ⭐ Alla nascita il database della sessione si SVUOTA: la sessione nuova
- *    parte dalle impostazioni dell'utente di adesso, piu' le nostre — non da
- *    quel che la sessione di prima (o il suo cliente) ci aveva lasciato.
- * `[R]` E' `dconf reset -f /` detto a mano, per non dipendere da `dconf-cli`:
- *    `ca.desrt.dconf.Writer.Change` vuole i byte di un `a{smv}`
- *    (`dconf_changeset_serialise`), e `/` senza valore vuol dire «togli
- *    tutto».
+ * Una scrittura diretta a uno scrittore di `dconf-service` — `oggetto` e'
+ * `/ca/desrt/dconf/shm/remotix` (la sessione) o `/ca/desrt/dconf/Writer/user`
+ * (l'UTENTE) — senza passare dal motore del processo, che ha il profilo della
+ * sessione.  `valore` NULL = togli (`percorso` che finisce con `/`: tutta la
+ * cartella).
+ * `[R]` dconf 0.40: `ca.desrt.dconf.Writer.Change` vuole i byte di un
+ *    `a{smv}` (`dconf_changeset_serialise`); lo scrittore avvisa i lettori
+ *    (`Notify`), quindi la Shell e i `gsd-*` vedono il cambio subito.
  */
-static void sessione_dconf_azzera(void)
+static gboolean dconf_cambia(const char *oggetto, const char *percorso, GVariant *valore,
+                             GError **sbaglio)
 {
-	g_autoptr(GDBusConnection) bus = NULL;
+	g_autoptr(GDBusConnection) bus = sessione_bus(sbaglio);
 	g_autoptr(GVariant) insieme = NULL;
 	g_autoptr(GVariant) risposta = NULL;
-	g_autoptr(GError) sbaglio = NULL;
 	GVariantBuilder b;
 
-	if (!sessione_dconf_di_sessione())
-		return;
-	bus = sessione_bus(NULL);
 	if (!bus)
-		return;
+		return FALSE;
 	g_variant_builder_init(&b, G_VARIANT_TYPE("a{smv}"));
-	g_variant_builder_add(&b, "{smv}", "/", NULL);
+	g_variant_builder_add(&b, "{smv}", percorso, valore);
 	insieme = g_variant_ref_sink(g_variant_builder_end(&b));
 	risposta = g_dbus_connection_call_sync(
-		bus, "ca.desrt.dconf", DCONF_SESSIONE_OGGETTO, "ca.desrt.dconf.Writer", "Change",
+		bus, "ca.desrt.dconf", oggetto, "ca.desrt.dconf.Writer", "Change",
 		g_variant_new("(@ay)",
 		              g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
 		                                        g_variant_get_data(insieme),
 		                                        g_variant_get_size(insieme), 1)),
-		G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &sbaglio);
-	if (risposta)
+		G_VARIANT_TYPE("(s)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, sbaglio);
+	return risposta != NULL;
+}
+
+/*
+ * ⭐ Alla nascita il database della sessione si SVUOTA: la sessione nuova
+ *    parte dalle impostazioni dell'utente di adesso, piu' le nostre — non da
+ *    quel che la sessione di prima (o il suo cliente) ci aveva lasciato.
+ *    E' `dconf reset -f /` detto a mano, per non dipendere da `dconf-cli`.
+ */
+static void sessione_dconf_azzera(void)
+{
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!sessione_dconf_di_sessione())
+		return;
+	if (dconf_cambia(DCONF_SESSIONE_OGGETTO, "/", NULL, &sbaglio))
 		registro_dice(REG_SESSIONE,
 		              "⭐ D-015: dconf della sessione SVUOTATO — la sessione nasce dalle "
 		              "impostazioni dell'utente di adesso, piu' le nostre");
@@ -1310,6 +1323,28 @@ static void sessione_dconf_azzera(void)
 		              "nuova eredita quel che aveva la precedente — l'utente resta "
 		              "intatto comunque",
 		              sbaglio ? sbaglio->message : "senza motivo");
+}
+
+/*
+ * ⭐ FASE 15, D-018 — le due cartelle della SESSIONE LXQt, in testa a
+ *    `XDG_CONFIG_DIRS` e a `XDG_DATA_DIRS` (`componi_ambiente()`): quel che
+ *    la sessione deve avere e che non e' blocco, riavvio, sospensione o
+ *    stand-by sta qui, e non nei file dell'utente.  NULL senza
+ *    `XDG_RUNTIME_DIR`.
+ */
+static char *lxqt_cartella_config_sessione(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	return runtime && *runtime ? g_build_filename(runtime, "remotix", "xdg-lxqt", NULL) : NULL;
+}
+
+static char *lxqt_cartella_dati_sessione(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	return runtime && *runtime ? g_build_filename(runtime, "remotix", "dati-lxqt", NULL)
+	                           : NULL;
 }
 
 /*
@@ -1444,7 +1479,27 @@ static char **componi_ambiente(void)
 			 *    valore è quello dello script upstream, parola per parola, con
 			 *    `/etc/xdg` (il ritocco di Debian, `lxqt-branding-debian`) davanti a
 			 *    `/usr/share`.  [?] Quale dei due vinca davvero è la misura M6. */
-			g_ptr_array_add(ambiente, g_strdup("XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share"));
+			/* ⭐ FASE 15, D-018 — e DAVANTI a tutte, la cartella della
+			 *    SESSIONE (`pannello_lxqt()`): quel che la sessione deve avere
+			 *    sta li', non nei file dell'utente.  ⚠ Resta prima di lei
+			 *    solo `~/.config`, cioe' l'utente — che vince, e va bene. */
+			{
+				g_autofree char *cfg = lxqt_cartella_config_sessione();
+				g_autofree char *dati = lxqt_cartella_dati_sessione();
+				const char *dati_prima = g_getenv("XDG_DATA_DIRS");
+
+				g_ptr_array_add(ambiente,
+				                g_strdup_printf("XDG_CONFIG_DIRS=%s%s/etc:/etc/xdg:/usr/share",
+				                                cfg ? cfg : "", cfg ? ":" : ""));
+				/* e i DATI: le voci pericolose del menu nascoste
+				 * (`impostazioni_lxqt()`), in testa a quelle di sistema */
+				if (dati)
+					g_ptr_array_add(ambiente,
+					                g_strdup_printf("XDG_DATA_DIRS=%s:%s", dati,
+					                                dati_prima && *dati_prima
+					                                        ? dati_prima
+					                                        : "/usr/local/share:/usr/share"));
+			}
 			/* ⛔ SECCO (`STUDI.md` §lxqt §3.2, `LEZIONI.md` §1.8): con xcb
 			 *    `lxqt-session` diventa un'altra sessione — un secondo window
 			 *    manager, un dialogo modale, un secondo comandante della
@@ -2552,6 +2607,64 @@ static gboolean c_e_la_chiave(const struct schema_aperto *a, const char *chiave,
 	return FALSE;
 }
 
+/*
+ * ⭐ FASE 15, D-015 — UNA CHIAVE PERMESSA, nel dconf DELL'UTENTE (blocco,
+ *    riavvio, sospensione, stand-by: la decisione del 25 set 2026).
+ *
+ * ⛔ Non con `g_settings_set_*`: il motore di questo processo ha il profilo
+ *    della SESSIONE, e scriverebbe nel database in memoria.  Si scrive allo
+ *    scrittore dell'utente (`/ca/desrt/dconf/Writer/user`), al percorso che lo
+ *    schema dichiara; poi SI RILEGGE con GSettings — cioe' attraverso il
+ *    profilo della sessione, cioe' come la leggeranno la Shell e i `gsd-*`:
+ *    scritto non e' in vigore finche' non lo si rilegge.
+ * ⚠ `valore` puo' essere flottante: lo si prende sempre.
+ */
+static gboolean gnome_metti_utente(const struct schema_aperto *a, const char *schema,
+                                   const char *chiave, GVariant *valore)
+{
+	g_autoptr(GVariant) v = g_variant_ref_sink(valore);
+	g_autoptr(GVariant) riletto = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+	g_autofree char *percorso = NULL;
+	const char *base;
+
+	if (!c_e_la_chiave(a, chiave, schema))
+		return FALSE;
+	base = g_settings_schema_get_path(a->schema);
+	if (!base) {
+		registro_dice(REG_SESSIONE, "⛔ lo schema «%s» non ha un percorso: «%s» NON scritta",
+		              schema, chiave);
+		return FALSE;
+	}
+	percorso = g_strconcat(base, chiave, NULL);
+	if (!dconf_cambia("/ca/desrt/dconf/Writer/user", percorso, v, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: %s NON scritta nel dconf dell'utente (%s)", percorso,
+		              sbaglio ? sbaglio->message : "senza motivo");
+		return FALSE;
+	}
+	riletto = g_settings_get_value(a->impostazioni, chiave);
+	if (!riletto || !g_variant_equal(riletto, v)) {
+		g_autofree char *atteso = g_variant_print(v, FALSE);
+		g_autofree char *letto = riletto ? g_variant_print(riletto, FALSE) : NULL;
+
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: %s scritta nell'utente (%s) ma la sessione rilegge %s — "
+		              "NON e' in vigore",
+		              percorso, atteso, letto ? letto : "niente");
+		return FALSE;
+	}
+	{
+		g_autofree char *scritto = g_variant_print(v, FALSE);
+
+		registro_dice(REG_SESSIONE,
+		              "⭐ D-015: %s = %s nel dconf dell'UTENTE (permessa: blocco, "
+		              "riavvio, sospensione, stand-by), RILETTA dalla sessione",
+		              percorso, scritto);
+	}
+	return TRUE;
+}
+
 /* ------------------------------------------------------------------------- */
 /*
  * ⭐⭐ FASE 13 — LE LEVE DI XFCE: SCRIVI, RILEGGI, DI' SE È IN VIGORE.
@@ -2662,6 +2775,12 @@ static gboolean da_togliere(const char *voce)
 
 /* Un plugin «actions»: le voci da togliere passano da `+` a `-`, le altre
  * restano identiche e nel loro ordine.  Scritto e RILETTO. */
+/* ⭐ FASE 15, D-017 — PERMESSA: le voci tolte sono blocco, sospensione,
+ *    riavvio e spegnimento, cioe' le quattro specie che la decisione
+ *    dell'utente del 25 set 2026 lascia scrivere nel canale DELL'UTENTE
+ *    («pericolose per altri utenti presenti sulla macchina»).  ⚠ Resta nel
+ *    canale dell'utente: il numero del plugin e' suo, e un blocco di sessione
+ *    per `plugin-N` non si puo' scrivere prima che il pannello nasca. */
 static gboolean sistema_azioni_del_pannello(const char *base)
 {
 	g_autofree char *chiave = g_strdup_printf("%s/items", base);
@@ -2961,79 +3080,114 @@ static GPtrArray *plugin_di_tipo(GKeyFile *utente, GPtrArray *sistema, const cha
 /*
  * A) IL PANNELLO: `fancymenu` → `mainmenu`.
  *
- * ⭐ Il file dell'utente NON si copia dal sistema, anche se non esiste: basta
- *   scrivere `[fancymenu] type=mainmenu`, e il resto lxqt-panel lo prende dal
- *   file di sistema come fa già oggi.  Così si tocca SOLO quella chiave, come
- *   per l'inattività.
- * ⚠ Il prezzo, dichiarato come per le altre: è il file DELL'UTENTE.  Se lo
- *   stesso utente apre LXQt davanti alla macchina, trova il menu classico e
- *   non quello «fancy».
- * ⚠ Se il file c'è e non si sa leggere, NON si riscrive: si dice, e il
- *   pulsante «Leave» resta (con la rete di riserva B sotto).
+ * ⛔⛔ FASE 15, D-018 — NELLA CARTELLA DELLA SESSIONE, non nel file
+ *     dell'utente: le impostazioni dell'utente non si toccano (decisione del
+ *     25 set 2026), e un menu non e' blocco, riavvio, sospensione o stand-by.
+ * ⭐ COME: `$XDG_RUNTIME_DIR/remotix/xdg-lxqt` sta in TESTA a
+ *    `XDG_CONFIG_DIRS` (`componi_ambiente()`), e li' si scrive un
+ *    `lxqt/panel.conf` COMPLETO: i file di sistema fusi (vince il primo, come
+ *    li cerca QSettings) con `type=mainmenu` al posto del fancymenu.  Completo
+ *    e non solo la chiave, perche' valga anche se QSettings guardasse una
+ *    cartella sola.
+ * ⚠ Il prezzo: il file dell'utente (`~/.config/lxqt/panel.conf`) viene prima
+ *   di tutte le cartelle di sistema.  Se l'utente ha scritto lui `type` per
+ *   quel plugin, vince il suo: si dice, e resta il pulsante «Leave» (con la
+ *   rete di riserva B sotto).  ⭐ Di solito non c'e': i file dell'utente di
+ *   LXQt sono SPARSI (vedi `valore_effettivo()`).
  */
 static void pannello_lxqt(void)
 {
-	g_autofree char *cartella = g_build_filename(g_get_home_dir(), ".config", "lxqt", NULL);
-	g_autofree char *file = g_build_filename(cartella, "panel.conf", NULL);
+	g_autofree char *file = g_build_filename(g_get_home_dir(), ".config", "lxqt", "panel.conf",
+	                                         NULL);
+	g_autofree char *cfg = lxqt_cartella_config_sessione();
+	g_autofree char *cartella = cfg ? g_build_filename(cfg, "lxqt", NULL) : NULL;
+	g_autofree char *nostro = cartella ? g_build_filename(cartella, "panel.conf", NULL) : NULL;
 	g_autoptr(GKeyFile) utente = g_key_file_new();
+	g_autoptr(GKeyFile) fuso = g_key_file_new();
 	g_autoptr(GKeyFile) riletto = g_key_file_new();
 	g_autoptr(GPtrArray) sistema = file_di_sistema("panel");
+	g_autoptr(GPtrArray) con_nostro = NULL;
 	g_autoptr(GPtrArray) fancy = NULL;
 	g_autoptr(GPtrArray) restano = NULL;
 	g_autoptr(GError) sbaglio = NULL;
-	gboolean c_era = g_file_test(file, G_FILE_TEST_EXISTS);
 	guint cambiati = 0;
 
-	if (c_era && !leggi_ini_qt(utente, file, &sbaglio)) {
+	if (!nostro) {
 		registro_dice(REG_SESSIONE,
-		              "⛔ LXQt: %s c'è ma non lo so leggere (%s) — NON lo riscrivo.  "
-		              "⚠ Il pannello resta col fancymenu, e col suo pulsante «Leave»",
-		              file, sbaglio->message);
+		              "⛔ LXQt: senza XDG_RUNTIME_DIR non c'e' la cartella della sessione — "
+		              "il pannello resta col fancymenu, e col suo pulsante «Leave»");
 		return;
+	}
+	if (g_file_test(file, G_FILE_TEST_EXISTS) && !leggi_ini_qt(utente, file, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ LXQt: %s c'è ma non lo so leggere (%s) — lo tratto come vuoto "
+		              "(e non lo tocco)",
+		              file, sbaglio->message);
+		g_clear_error(&sbaglio);
 	}
 	fancy = plugin_di_tipo(utente, sistema, "fancymenu");
 	if (fancy->len == 0) {
 		registro_dice(REG_SESSIONE,
-		              "⭐ LXQt: nel pannello (%s%s) nessun fancymenu — non c'è "
-		              "niente da cambiare",
-		              file, c_era ? "" : ", che non c'è");
-		return;
-	}
-	for (guint i = 0; i < fancy->len; i++)
-		g_key_file_set_value(utente, g_ptr_array_index(fancy, i), "type", "mainmenu");
-	g_clear_error(&sbaglio);
-	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
-	    !g_key_file_save_to_file(utente, file, &sbaglio)) {
-		registro_dice(REG_SESSIONE,
-		              "⛔ LXQt: %s NON scritto (%s): il pannello resta col fancymenu, "
-		              "e col suo pulsante «Leave»",
-		              file, sbaglio ? sbaglio->message : g_strerror(errno));
+		              "⭐ LXQt: nel pannello nessun fancymenu — non c'è niente da cambiare");
 		return;
 	}
 
-	/* ⛔ E SI RILEGGE, e si guarda come lo guarda lxqt-panel: ognuno dei nomi
-	 *    cambiati è `mainmenu`, e di fancymenu non ne resta nessuno. */
-	if (!leggi_ini_qt(riletto, file, NULL)) {
-		registro_dice(REG_SESSIONE, "⛔ LXQt: %s scritto ma NON si rilegge", file);
+	/* il sistema fuso: dal meno forte al piu' forte, cosi' vince il primo */
+	for (guint i = sistema->len; i > 0; i--) {
+		GKeyFile *uno = g_ptr_array_index(sistema, i - 1);
+		g_auto(GStrv) gruppi = g_key_file_get_groups(uno, NULL);
+
+		for (int g = 0; gruppi[g]; g++) {
+			g_auto(GStrv) chiavi = g_key_file_get_keys(uno, gruppi[g], NULL, NULL);
+
+			for (int k = 0; chiavi && chiavi[k]; k++) {
+				g_autofree char *v = g_key_file_get_value(uno, gruppi[g], chiavi[k], NULL);
+
+				if (v)
+					g_key_file_set_value(fuso, gruppi[g], chiavi[k], v);
+			}
+		}
+	}
+	for (guint i = 0; i < fancy->len; i++)
+		g_key_file_set_value(fuso, g_ptr_array_index(fancy, i), "type", "mainmenu");
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_key_file_save_to_file(fuso, nostro, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s NON scritto (%s): il pannello resta col fancymenu, "
+		              "e col suo pulsante «Leave»",
+		              nostro, sbaglio ? sbaglio->message : g_strerror(errno));
 		return;
 	}
+
+	/* ⛔ E SI RILEGGE, e si guarda come lo guarda lxqt-panel: l'utente, poi il
+	 *    nostro, poi il sistema. */
+	if (!leggi_ini_qt(riletto, nostro, NULL)) {
+		registro_dice(REG_SESSIONE, "⛔ LXQt: %s scritto ma NON si rilegge", nostro);
+		return;
+	}
+	con_nostro = g_ptr_array_new();
+	g_ptr_array_add(con_nostro, riletto);
+	for (guint i = 0; i < sistema->len; i++)
+		g_ptr_array_add(con_nostro, g_ptr_array_index(sistema, i));
 	for (guint i = 0; i < fancy->len; i++) {
-		g_autofree char *e = valore_effettivo(riletto, sistema,
+		g_autofree char *e = valore_effettivo(utente, con_nostro,
 		                                      g_ptr_array_index(fancy, i), "type");
 
 		cambiati += g_strcmp0(e, "mainmenu") == 0;
 	}
-	restano = plugin_di_tipo(riletto, sistema, "fancymenu");
+	restano = plugin_di_tipo(utente, con_nostro, "fancymenu");
 	if (restano->len == 0 && cambiati == fancy->len)
 		registro_dice(REG_SESSIONE,
-		              "⭐ LXQt: fancymenu→mainmenu, RILETTO (%s, %u plugin%s) — il "
-		              "menu classico non ha il pulsante «Leave» fisso",
-		              file, cambiati, c_era ? "" : ", file nuovo");
+		              "⭐ LXQt: fancymenu→mainmenu NELLA SESSIONE, RILETTO (%s, %u "
+		              "plugin) — il menu classico non ha il pulsante «Leave» fisso, e "
+		              "il file dell'utente non si tocca",
+		              nostro, cambiati);
 	else
 		registro_dice(REG_SESSIONE,
-		              "⛔ LXQt: fancymenu→mainmenu NON in vigore (%s: rileggo %u "
-		              "mainmenu su %u, e %u fancymenu ancora lì)",
-		              file, cambiati, fancy->len, restano->len);
+		              "⛔ LXQt: fancymenu→mainmenu NON in vigore (rileggo %u mainmenu su "
+		              "%u, e %u fancymenu ancora lì — il file dell'utente %s vince sul "
+		              "nostro, e non lo tocco)",
+		              cambiati, fancy->len, restano->len, file);
 }
 
 /*
@@ -3142,7 +3296,9 @@ static void blocco_lxqt(void)
  *   non porta `XDG_CONFIG_HOME`, quindi LXQt guarda lì.
  * ⚠ Il prezzo, dichiarato come su XFCE: è il file DELL'UTENTE.  Se lo stesso
  *   utente apre LXQt davanti alla macchina, il sorvegliante di inattività
- *   resta spento.
+ *   resta spento.  ⭐ FASE 15, D-018 — PERMESSA (stand-by), come il comando
+ *   di blocco di `blocco_lxqt()` (blocco): la decisione del 25 set 2026.
+ *   Il pannello e le voci del menu, invece, vanno nella SESSIONE.
  * ⚠ Si tocca SOLO quel che si deve: il file si legge, si cambiano due chiavi,
  *   le altre restano.  Se non si riesce a leggerlo (formato che GKeyFile non
  *   capisce) NON lo si riscrive: si dice, e si va avanti con meno.
@@ -3196,25 +3352,28 @@ static void impostazioni_lxqt(void)
 	 *     riavvio, spegnimento.  ⛔ «Esci» RESTA (§4.1-ter): `lxqt-logout`
 	 *     NON è nella lista, apposta.
 	 *
-	 * ⭐ COME: un `.desktop` con lo STESSO NOME nella cartella dell'utente
-	 *   `~/.local/share/applications`, con `Hidden=true` e `NoDisplay=true`.
+	 * ⭐ COME: un `.desktop` con lo STESSO NOME, con `Hidden=true` e
+	 *   `NoDisplay=true`, in una cartella che viene PRIMA di quelle di sistema.
 	 *   `[R]` libqtxdg 4.1.0:
-	 *   · `xdgmenureader.cpp:320-325` — la cartella dell'utente viene PER
-	 *     PRIMA fra le `AppDir`, quindi il suo file copre quello di sistema
-	 *     con lo stesso id;
+	 *   · `xdgmenureader.cpp:320-325` — le `AppDir` sono la cartella
+	 *     dell'utente e poi `XDG_DATA_DIRS` nell'ordine;
 	 *   · `xdgmenuapplinkprocessor.cpp:156-167` — per ogni id vince il primo
 	 *     trovato, e le voci scartate non entrano nel menu;
 	 *   · `xdgdesktopfile.cpp:1346-1373` — `NoDisplay` e `Hidden` veri ⇒ la
 	 *     voce è scartata.
 	 *   `[R]` lxqt-menu-data 2.1.0 `lxqt-applications.menu:206-223`: è la
 	 *   cartella «Leave» del menu, dove stanno queste sei.
-	 * ⭐ `~/.local/share` e non `g_get_user_data_dir()`: stesso ragionamento
-	 *   di `~/.config` qui sopra — l'ambiente della sessione non porta
-	 *   `XDG_DATA_HOME`, quindi LXQt guarda lì.
-	 * ⚠ Il prezzo, dichiarato come per l'inattività: è la cartella
-	 *   DELL'UTENTE.  Se lo stesso utente apre LXQt davanti alla macchina,
-	 *   quelle sei voci non le vede più.  La chiave `X-REMOTIX` dice di chi è
-	 *   il file: un file SENZA quella chiave è dell'utente, e NON si tocca.
+	 * ⛔⛔ FASE 15, D-018 — NON PIU' in `~/.local/share/applications`: le
+	 *     impostazioni dell'utente non si toccano (decisione del 25 set 2026),
+	 *     e un menu non e' blocco, riavvio, sospensione o stand-by.  ⇒ Le voci
+	 *     stanno nella cartella dei DATI DELLA SESSIONE
+	 *     (`$XDG_RUNTIME_DIR/remotix/dati-lxqt`), in testa a `XDG_DATA_DIRS`
+	 *     (`componi_ambiente()`): valgono per la sessione che serviamo, e
+	 *     l'utente al monitor ha il suo menu intero.
+	 * ⚠ Il prezzo: un file dell'utente con lo stesso id in
+	 *   `~/.local/share/applications` viene PRIMA e vince.  Si guarda e si
+	 *   dice (la voce resta).  Uno con `X-REMOTIX` e' un avanzo delle versioni
+	 *   di prima: nasconde lo stesso, e non si tocca.
 	 *
 	 * ⛔ I DUE RESIDUI CHE QUESTE SEI NON CURANO — curati dall'incremento 4,
 	 *    `pannello_lxqt()` e `blocco_lxqt()` in fondo a questa funzione:
@@ -3237,16 +3396,20 @@ static void impostazioni_lxqt(void)
 			"lxqt-hibernate", "lxqt-shutdown", "lxqt-reboot", NULL
 		};
 		const int quante = G_N_ELEMENTS(PERICOLOSE) - 1;
-		g_autofree char *applicazioni = g_build_filename(g_get_home_dir(), ".local",
-		                                                 "share", "applications", NULL);
+		g_autofree char *dati = lxqt_cartella_dati_sessione();
+		g_autofree char *applicazioni = dati ? g_build_filename(dati, "applications", NULL)
+		                                     : NULL;
+		g_autofree char *dell_utente = g_build_filename(g_get_home_dir(), ".local", "share",
+		                                                "applications", NULL);
 		int nascoste = 0;
 
-		if (g_mkdir_with_parents(applicazioni, 0700) != 0) {
+		if (!applicazioni || g_mkdir_with_parents(applicazioni, 0700) != 0) {
 			registro_dice(REG_SESSIONE,
-			              "⛔ LXQt: %s non si crea (%s): 0/%d voci nascoste — "
-			              "sospensione, blocco, riavvio e spegnimento restano nel "
-			              "menu (grigi per polkit, ma visibili)",
-			              applicazioni, g_strerror(errno), quante);
+			              "⛔ LXQt: la cartella dei dati della sessione (%s) non si crea "
+			              "(%s): 0/%d voci nascoste — sospensione, blocco, riavvio e "
+			              "spegnimento restano nel menu (grigi per polkit, ma visibili)",
+			              applicazioni ? applicazioni : "senza XDG_RUNTIME_DIR",
+			              g_strerror(errno), quante);
 			/* ⚠ `goto` e non `return`: il pannello e il blocco si curano
 			 *   anche se le voci non si sono potute nascondere. */
 			goto pannello;
@@ -3254,49 +3417,42 @@ static void impostazioni_lxqt(void)
 		for (int i = 0; PERICOLOSE[i]; i++) {
 			g_autofree char *nome = g_strconcat(PERICOLOSE[i], ".desktop", NULL);
 			g_autofree char *voce = g_build_filename(applicazioni, nome, NULL);
+			g_autofree char *sua = g_build_filename(dell_utente, nome, NULL);
 			g_autofree char *contenuto = NULL;
-			g_autoptr(GKeyFile) com_era = g_key_file_new();
 			g_autoptr(GKeyFile) rilegge = g_key_file_new();
 			g_autoptr(GError) guasto = NULL;
-			gboolean dell_utente = FALSE;
+			const char *vince = voce;
 
-			/* ⚠ Se c'è già ed è SENZA `X-REMOTIX`, è dell'utente (o non si
-			 *   legge): non si sovrascrive, si dice. */
-			if (g_file_test(voce, G_FILE_TEST_EXISTS))
-				dell_utente = !g_key_file_load_from_file(com_era, voce, G_KEY_FILE_NONE,
-				                                         NULL) ||
-				              !g_key_file_has_key(com_era, "Desktop Entry", "X-REMOTIX",
-				                                  NULL);
-			if (dell_utente) {
+			contenuto = g_strdup_printf("[Desktop Entry]\n"
+			                            "Type=Application\n"
+			                            "Name=%s\n"
+			                            "Hidden=true\n"
+			                            "NoDisplay=true\n"
+			                            "X-REMOTIX=nascosta da REMOTIX nella sessione "
+			                            "(DECISIONI.md §4.7, D-018)\n",
+			                            PERICOLOSE[i]);
+			if (!g_file_set_contents(voce, contenuto, -1, &guasto))
+				registro_dice(REG_SESSIONE, "⛔ LXQt: %s NON scritto (%s)", voce,
+				              guasto->message);
+
+			/* ⛔ E SI RILEGGE QUEL CHE VINCE: il file dell'utente, se c'è,
+			 *    viene prima del nostro. */
+			if (g_file_test(sua, G_FILE_TEST_EXISTS)) {
+				vince = sua;
 				registro_dice(REG_SESSIONE,
-				              "⚠ LXQt: %s c'è già e NON è di REMOTIX (niente "
-				              "X-REMOTIX) — è dell'utente: non lo sovrascrivo",
-				              voce);
-			} else {
-				contenuto = g_strdup_printf("[Desktop Entry]\n"
-				                            "Type=Application\n"
-				                            "Name=%s\n"
-				                            "Hidden=true\n"
-				                            "NoDisplay=true\n"
-				                            "X-REMOTIX=nascosta da REMOTIX "
-				                            "(DECISIONI.md §4.7)\n",
-				                            PERICOLOSE[i]);
-				if (!g_file_set_contents(voce, contenuto, -1, &guasto))
-					registro_dice(REG_SESSIONE, "⛔ LXQt: %s NON scritto (%s)",
-					              voce, guasto->message);
+				              "⚠ LXQt: %s c'è nella cartella dell'utente e vince sulla "
+				              "nostra: conta il suo Hidden (non lo tocco)",
+				              sua);
 			}
-
-			/* ⛔ E SI RILEGGE: scritto non è in vigore finché non lo si
-			 *    rilegge dal file.  Conta chi dice Hidden=true, di chiunque
-			 *    sia il file. */
-			if (g_key_file_load_from_file(rilegge, voce, G_KEY_FILE_NONE, NULL) &&
+			if (g_key_file_load_from_file(rilegge, vince, G_KEY_FILE_NONE, NULL) &&
 			    g_key_file_get_boolean(rilegge, "Desktop Entry", "Hidden", NULL))
 				nascoste++;
 		}
 		if (nascoste == quante)
 			registro_dice(REG_SESSIONE,
-			              "⭐ LXQt: %d/%d voci nascoste, RILETTE; resta \"Esci\"",
-			              nascoste, quante);
+			              "⭐ LXQt: %d/%d voci nascoste NELLA SESSIONE (%s), RILETTE; "
+			              "resta \"Esci\"",
+			              nascoste, quante, applicazioni);
 		else
 			registro_dice(REG_SESSIONE,
 			              "⛔ LXQt: %d/%d voci nascoste, RILETTE — ne mancano %d, "
@@ -3307,6 +3463,181 @@ static void impostazioni_lxqt(void)
 pannello:
 	pannello_lxqt();
 	blocco_lxqt();
+}
+
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 15, D-017 — IL XFCONF DELLA SESSIONE: le impostazioni dell'utente
+ *      non si toccano, tranne blocco, riavvio, sospensione e stand-by
+ *      (decisione dell'utente del 25 set 2026).
+ *
+ * ⛔ Fino a qui `xfconf-query` scriveva nei canali DELL'UTENTE anche quel che
+ *    non e' di quelle quattro specie — la cintura del logout, le voci del
+ *    dialogo di uscita — e cancellava `~/.cache/sessions`.
+ *
+ * ⭐ LA STRADA: xfconf ha le proprieta' BLOCCATE.  `[R]` xfconf 4.20
+ *    `xfconfd/xfconf-backend-perchannel-xml.c`:
+ *    · `load_channel()` legge i file di sistema in ogni cartella di
+ *      `XDG_CONFIG_DIRS` (dal meno forte al piu' forte), POI quello
+ *      dell'utente;
+ *    · una `<property … locked="*">` in un file di SISTEMA vince, e quella
+ *      dell'utente con lo stesso nome viene saltata («not system file, prop
+ *      already locked, pass on this one»); `set_property` la rifiuta.
+ *    ⇒ Un file di canale in una cartella della SESSIONE, in testa a
+ *      `XDG_CONFIG_DIRS` di `xfconfd`, vale per la sessione e non scrive
+ *      niente nell'utente.
+ *
+ * ⚠ `xfconfd` NON e' un figlio della sessione: e' un'unita' d'utente
+ *   (`xfconfd.service`, attivata dal bus — `[R]` xfconf dal 2015,
+ *   `org.xfce.Xfconf.service`: `SystemdService=xfconfd.service`), e il suo
+ *   ambiente e' quello del gestore.  ⇒ La cartella gliela da' un drop-in in
+ *   `user.control` (la ricetta di `scrivi_dropin()`), e se `xfconfd` gira
+ *   gia' lo si fa ripartire: legge i file una volta, all'apertura di un canale.
+ *
+ * ⭐ E al posto del `rm -rf ~/.cache/sessions` (che portava via anche le
+ *   sessioni salvate DALL'UTENTE al monitor): `SessionName=REMOTIX` e
+ *   `SaveOnExit=false`, bloccate.  `[R]` xfce4-session 4.20.2
+ *   `xfsm-manager.c`: la sessione si cerca per NOME (`/general/SessionName`,
+ *   di serie «Default») e, se non c'e', nasce quella di serie; si salva solo
+ *   con `SaveOnExit` (`:1278`).  ⇒ La sessione remota non trova mai niente
+ *   di salvato, e non salva mai niente.
+ *
+ * ⚠ I PREZZI, dichiarati:
+ *   · il drop-in e la cartella vivono quanto il gestore d'utente (stanno in
+ *     `XDG_RUNTIME_DIR`): un XFCE aperto al monitor sullo STESSO gestore
+ *     vedrebbe gli stessi blocchi, finche' il gestore vive;
+ *   · se `xfconfd` non e' un'unita' di systemd su questa macchina, il
+ *     drop-in non conta: lo dice la rilettura, e le chiavi di sessione
+ *     restano di serie (la cintura del logout resta `XFCE4_SESSION_COMPOSITOR`).
+ */
+struct chiave_xfconf {
+	const char *gruppo; /* la cartella della proprieta' nel canale */
+	const char *nome;
+	const char *tipo;
+	const char *valore;
+};
+
+static const struct chiave_xfconf XFCE_SESSIONE[] = {
+	/* la seconda cintura del logout (la prima e' XFCE4_SESSION_COMPOSITOR) */
+	{ "general", "WaylandLogoutCommand", "string", "/bin/true" },
+	/* la sessione remota non ritrova e non salva sessioni */
+	{ "general", "SessionName", "string", "REMOTIX" },
+	{ "general", "SaveOnExit", "bool", "false" },
+	/* il dialogo di «Esci» (decisione del 21 set 2026) */
+	{ "shutdown", "ShowSwitchUser", "bool", "false" },
+	{ "shutdown", "ShowSuspend", "bool", "false" },
+	{ "shutdown", "ShowHibernate", "bool", "false" },
+	{ "shutdown", "ShowHybridSleep", "bool", "false" },
+	{ NULL, NULL, NULL, NULL },
+};
+
+static void xfce_xfconf_di_sessione(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+	g_autofree char *cfg = NULL;
+	g_autofree char *canali = NULL;
+	g_autofree char *file = NULL;
+	g_autofree char *cartella_dropin = NULL;
+	g_autofree char *dropin = NULL;
+	g_autofree char *riga = NULL;
+	g_autofree char *vigore = NULL;
+	g_autoptr(GString) xml = g_string_new(NULL);
+	g_autoptr(GError) sbaglio = NULL;
+	const char *gruppo = NULL;
+	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
+	char *riparti[] = { "systemctl", "--user", "try-restart", "xfconfd.service", NULL };
+	char *mostra[] = { "systemctl", "--user", "show", "-p", "Environment", "--value",
+		           "xfconfd.service", NULL };
+	int in_vigore = 0, quante = 0;
+
+	if (!runtime || !*runtime) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ XFCE, D-017: senza XDG_RUNTIME_DIR niente xfconf della sessione — "
+		              "le chiavi di sessione restano di serie");
+		return;
+	}
+	cfg = g_build_filename(runtime, "remotix", "xdg-xfce", NULL);
+	canali = g_build_filename(cfg, "xfce4", "xfconf", "xfce-perchannel-xml", NULL);
+	file = g_build_filename(canali, "xfce4-session.xml", NULL);
+
+	g_string_append(xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	                     "<!-- REMOTIX (D-017): valgono per la sessione remota, bloccate; "
+	                     "il canale dell'utente non si tocca -->\n"
+	                     "<channel name=\"xfce4-session\" version=\"1.0\">\n");
+	for (int i = 0; XFCE_SESSIONE[i].nome; i++) {
+		if (g_strcmp0(gruppo, XFCE_SESSIONE[i].gruppo) != 0) {
+			if (gruppo)
+				g_string_append(xml, "  </property>\n");
+			gruppo = XFCE_SESSIONE[i].gruppo;
+			g_string_append_printf(xml, "  <property name=\"%s\" type=\"empty\">\n", gruppo);
+		}
+		g_string_append_printf(xml,
+		                       "    <property name=\"%s\" type=\"%s\" value=\"%s\" "
+		                       "locked=\"*\"/>\n",
+		                       XFCE_SESSIONE[i].nome, XFCE_SESSIONE[i].tipo,
+		                       XFCE_SESSIONE[i].valore);
+	}
+	g_string_append(xml, "  </property>\n</channel>\n");
+	if (g_mkdir_with_parents(canali, 0700) != 0 ||
+	    !g_file_set_contents(file, xml->str, -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE, "⛔ XFCE, D-017: %s NON scritto (%s)", file,
+		              sbaglio ? sbaglio->message : g_strerror(errno));
+		return;
+	}
+
+	cartella_dropin = g_build_filename(runtime, "systemd", "user.control", "xfconfd.service.d",
+	                                   NULL);
+	dropin = g_build_filename(cartella_dropin, "zz-remotix-sessione.conf", NULL);
+	riga = g_strdup_printf("[Service]\nEnvironment=XDG_CONFIG_DIRS=%s:%s\n", cfg,
+	                       g_getenv("XDG_CONFIG_DIRS") && *g_getenv("XDG_CONFIG_DIRS")
+	                               ? g_getenv("XDG_CONFIG_DIRS")
+	                               : "/etc/xdg");
+	g_clear_error(&sbaglio);
+	if (g_mkdir_with_parents(cartella_dropin, 0700) != 0 ||
+	    !g_file_set_contents(dropin, riga, -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE, "⛔ XFCE, D-017: drop-in di xfconfd NON scritto (%s): %s",
+		              dropin, sbaglio ? sbaglio->message : g_strerror(errno));
+		return;
+	}
+	esegui(ricarica);
+	vigore = chiedi(mostra);
+	if (!vigore || !strstr(vigore, cfg))
+		registro_dice(REG_SESSIONE,
+		              "⚠ XFCE, D-017: il gestore non mostra la cartella della sessione "
+		              "nell'ambiente di xfconfd.service («%s») — la rilettura dira' se vale",
+		              vigore ? g_strstrip(vigore) : "non lo so");
+	/* ⛔ xfconfd legge i file all'apertura di un canale: se gira, riparte. */
+	esegui(riparti);
+
+	/* ⛔ E SI RILEGGE, come la leggera' xfce4-session: il valore EFFETTIVO. */
+	for (int i = 0; XFCE_SESSIONE[i].nome; i++) {
+		g_autofree char *chiave = g_strdup_printf("/%s/%s", XFCE_SESSIONE[i].gruppo,
+		                                          XFCE_SESSIONE[i].nome);
+		char *rileggi[] = { "xfconf-query", "-c", "xfce4-session", "-p", chiave, NULL };
+		g_autofree char *letto = chiedi(rileggi);
+
+		quante++;
+		if (letto && g_strcmp0(g_strstrip(letto), XFCE_SESSIONE[i].valore) == 0)
+			in_vigore++;
+		else
+			registro_dice(REG_SESSIONE,
+			              "⛔ XFCE, D-017: xfce4-session %s NON e' in vigore (rileggo «%s», "
+			              "voluto «%s»)",
+			              chiave, letto ? letto : "niente", XFCE_SESSIONE[i].valore);
+	}
+	if (in_vigore == quante)
+		registro_dice(REG_SESSIONE,
+		              "⭐ XFCE, D-017: xfconf della SESSIONE in vigore (%s, %d chiavi "
+		              "bloccate, RILETTE): cintura del logout, SessionName=REMOTIX, "
+		              "SaveOnExit=false, niente «Cambia utente»/«Sospendi»/«Iberna»/«Sonno "
+		              "ibrido» — il canale dell'utente non si tocca",
+		              file, quante);
+	else
+		registro_dice(REG_SESSIONE,
+		              "⛔ XFCE, D-017: xfconf della sessione in vigore per %d chiavi su %d.  "
+		              "⚠ La cintura del logout resta XFCE4_SESSION_COMPOSITOR; le voci del "
+		              "dialogo restano (grigie per polkit)",
+		              in_vigore, quante);
 }
 
 void sessione_impostazioni(void)
@@ -3339,40 +3670,12 @@ void sessione_impostazioni(void)
 	 *     `LEZIONI.md` §1.9 spostata dalla misura alla configurazione.
 	 */
 	if (e_xfce()) {
-		char *scrivi[] = { "xfconf-query", "-c", "xfce4-session", "-p",
-		                   "/general/WaylandLogoutCommand", "-n", "-t", "string",
-		                   "-s", "/bin/true", NULL };
-		char *rileggi[] = { "xfconf-query", "-c", "xfce4-session", "-p",
-		                    "/general/WaylandLogoutCommand", NULL };
-		g_autofree char *letto = NULL;
-
-		esegui(scrivi);
-		letto = chiedi(rileggi);
-		if (letto)
-			g_strstrip(letto);
-		if (g_strcmp0(letto, "/bin/true") == 0)
-			registro_dice(REG_SESSIONE,
-			              "⭐ XFCE: WaylandLogoutCommand = /bin/true, RILETTA — la "
-			              "seconda cintura contro il logout che ammazzerebbe la "
-			              "sessione di REMOTIX è in vigore");
-		else
-			registro_dice(REG_SESSIONE,
-			              "⛔ XFCE: WaylandLogoutCommand NON è in vigore (rileggo "
-			              "«%s»): resta la prima cintura, "
-			              "XFCE4_SESSION_COMPOSITOR.  ⚠ Se cadesse anche quella, al "
-			              "logout xfce4-session eseguirebbe «loginctl "
-			              "terminate-session» e porterebbe via la sessione di REMOTIX",
-			              letto ? letto : "non lo so");
-
-		/* ⚠ La sessione salvata è legata al NOME DEL SOCKET: una salvata su un
-		 *   altro schermo risorge con geometrie di quello.  Si cancella. */
-		{
-			g_autofree char *cache = g_build_filename(g_get_home_dir(), ".cache",
-			                                          "sessions", NULL);
-			char *via[] = { "rm", "-rf", cache, NULL };
-
-			esegui(via);
-		}
+		/* ⭐ FASE 15, D-017 — quel che la sessione deve avere e che NON e'
+		 *    blocco, riavvio, sospensione o stand-by: nel xfconf della SESSIONE
+		 *    (la cintura del logout, le voci del dialogo di uscita, e la sessione
+		 *    salvata al posto del vecchio `rm -rf ~/.cache/sessions`).  Il
+		 *    riquadro e' sopra `xfce_xfconf_di_sessione()`. */
+		xfce_xfconf_di_sessione();
 
 		/*
 		 * ⛔⛔ L'USCITA NON SI SPEGNE — `STUDI.md` §xfce §10.2.
@@ -3391,6 +3694,9 @@ void sessione_impostazioni(void)
 		 * ⚠ Il prezzo, dichiarato: è scritta nel canale DELL'UTENTE.  Se lo
 		 *   stesso utente apre XFCE davanti alla macchina, il suo schermo non
 		 *   si spegne più da solo.
+		 * ⭐ FASE 15, D-017 — PERMESSE, e restano nell'utente: DPMS e
+		 *    inattività (stand-by, sospensione) e, sotto, `LockCommand`
+		 *    (blocco) — la decisione dell'utente del 25 set 2026.
 		 */
 		xfconf_metti("xfce4-power-manager", "/xfce4-power-manager/dpms-enabled", "bool",
 		             "false",
@@ -3424,28 +3730,8 @@ void sessione_impostazioni(void)
 		xfconf_metti("xfce4-session", "/general/LockCommand", "string", "/bin/false",
 		             "il blocco schermo è spento: il blocco è di REMOTIX (§4.3)");
 
-		/*
-		 * ⛔ IL DIALOGO DI «ESCI» — decisione dell'utente del 21 set 2026.
-		 *
-		 * `[R]` xfce4-session 4.20.2, `xfsm-logout-dialog.c:263-374`: Sospendi,
-		 * Iberna e Sonno ibrido hanno una chiave che li TOGLIE; ⛔ **Riavvia e
-		 * Spegni no** — sono sempre disegnati, e l'unica cosa che decide è
-		 * `can_restart && auth_restart`, cioè logind, cioè polkit.  ⇒ Quei due
-		 * restano **grigi**, e grigi per la cintura 1 di §4.7 (polkit dice
-		 * `no`), che il figlio VERIFICA a ogni sessione.  ⚠ Anche il KIOSK di
-		 * XFCE (`Shutdown=`) li farebbe solo grigi, e sta in `/etc`.
-		 * ⛔ «Esci» resta (§4.1-ter): è l'UNICA voce che resta.  ⭐ «Cambia
-		 *    utente» esce anche da qui (`ShowSwitchUser`) — decisione
-		 *    dell'utente del 21 set 2026, sera: omogeneo con GNOME e KDE.
-		 */
-		xfconf_metti("xfce4-session", "/shutdown/ShowSwitchUser", "bool", "false",
-		             "niente «Cambia utente» nel dialogo di uscita");
-		xfconf_metti("xfce4-session", "/shutdown/ShowSuspend", "bool", "false",
-		             "niente «Sospendi» nel dialogo di uscita");
-		xfconf_metti("xfce4-session", "/shutdown/ShowHibernate", "bool", "false",
-		             "niente «Iberna» nel dialogo di uscita");
-		xfconf_metti("xfce4-session", "/shutdown/ShowHybridSleep", "bool", "false",
-		             "niente «Sonno ibrido» nel dialogo di uscita");
+		/* ⭐ Il DIALOGO DI «ESCI» (Show*) e' nel xfconf della SESSIONE
+		 *    (`xfce_xfconf_di_sessione()`, D-017), non piu' qui. */
 
 		registro_dice(REG_SESSIONE,
 		              "XFCE: le voci del pulsante d'azione del pannello le tolgo "
@@ -3470,16 +3756,41 @@ void sessione_impostazioni(void)
 	struct schema_aperto blocchi = apri_schema("org.gnome.desktop.lockdown");
 	const char *vuoto[] = { NULL };
 	int tolte = 0;
+	/*
+	 * ⛔⛔ FASE 15, D-015 — LE DUE SPECIE DI CHIAVI (decisione dell'utente del
+	 *     25 set 2026: «Le impostazioni dell'utente non si toccano TRANNE
+	 *     quelle che riguardano blocco-schermo, riavvio sistema, sospensione e
+	 *     stand-by: queste sono impostazioni pericolose per altri utenti
+	 *     presenti sulla macchina»).
+	 *
+	 *   · PERMESSE, scritte nel dconf DELL'UTENTE e persistenti
+	 *     (`gnome_metti_utente()`): `sleep-inactive-ac-type`,
+	 *     `sleep-inactive-battery-type` (sospensione), `idle-delay`
+	 *     (stand-by), `lock-enabled` (blocco);
+	 *   · DI SESSIONE, scritte SOLO nel dconf della sessione (GSettings del
+	 *     figlio, che ha il profilo di `sessione_dconf_prepara()`): le
+	 *     Ctrl+Alt+F1…F12, `always-show-log-out`, `disable-user-switching` (e
+	 *     la disposizione, in `input.c`).  ⛔ Senza il dconf della sessione
+	 *     NON si scrivono: finirebbero nell'utente.
+	 */
+	const gboolean di_sessione = sessione_dconf_di_sessione();
 
-	for (int i = 0; SCORCIATOIE_VT[i]; i++)
+	if (!di_sessione)
+		registro_dice(REG_SESSIONE,
+		              "⛔ D-015: il dconf della sessione NON e' in vigore — le chiavi di "
+		              "SESSIONE (Ctrl+Alt+F*, «Esci…» sempre, «Cambia utente») NON le "
+		              "scrivo: finirebbero nelle impostazioni dell'utente.  Le permesse "
+		              "(blocco, sospensione, stand-by) si scrivono lo stesso");
+
+	for (int i = 0; di_sessione && SCORCIATOIE_VT[i]; i++)
 		if (c_e_la_chiave(&wayland, SCORCIATOIE_VT[i], "org.gnome.mutter.wayland") &&
 		    g_settings_set_strv(wayland.impostazioni, SCORCIATOIE_VT[i], vuoto))
 			tolte++;
 	if (tolte)
 		registro_dice(REG_SESSIONE,
-		              "⭐ tolte %d scorciatoie Ctrl+Alt+F1…F12 su 12: in headless non "
-		              "c'e' nessuna console virtuale a cui passare, e Mutter le "
-		              "ingoiava senza poterle onorare (sono NON_MASKABLE: nemmeno la "
+		              "⭐ tolte %d scorciatoie Ctrl+Alt+F1…F12 su 12, nella SESSIONE: in "
+		              "headless non c'e' nessuna console virtuale a cui passare, e Mutter "
+		              "le ingoiava senza poterle onorare (sono NON_MASKABLE: nemmeno la "
 		              "pagina potrebbe riprendersele)",
 		              tolte);
 
@@ -3491,40 +3802,38 @@ void sessione_impostazioni(void)
 	 * `always-show-log-out` **oppure** ci sono piu' utenti **oppure** piu' di una
 	 * sessione in `/usr/share/…-sessions`.  ⇒ Su una macchina con un utente e una
 	 * sessione sola NON COMPARE, e senza di lei il logout non esiste.
+	 * ⭐ D-015: DI SESSIONE.
 	 */
-	if (c_e_la_chiave(&shell, "always-show-log-out", "org.gnome.shell") &&
+	if (di_sessione && c_e_la_chiave(&shell, "always-show-log-out", "org.gnome.shell") &&
 	    g_settings_set_boolean(shell.impostazioni, "always-show-log-out", TRUE))
 		registro_dice(REG_SESSIONE,
-		              "⭐ «Esci…» acceso (always-show-log-out): senza, su una macchina "
-		              "con un utente solo la voce NON compare, e il logout di §4.1-ter "
-		              "non esisterebbe");
+		              "⭐ «Esci…» acceso (always-show-log-out, nella SESSIONE): senza, su "
+		              "una macchina con un utente solo la voce NON compare, e il logout "
+		              "di §4.1-ter non esisterebbe");
 
 	/*
 	 * ⛔ LA SOSPENSIONE AUTOMATICA — `DECISIONI.md` §4.7, terza cintura, ed e' la
 	 *    meta' che toglie la BUGIA dallo schermo: polkit e `sleep.conf`
 	 *    impediscono il fatto, questa riga impedisce la notifica «Automatic
 	 *    Suspend» seguita da un fallimento silenzioso.
+	 * ⭐ D-015: PERMESSA — nell'utente, persistente.
 	 */
-	if (c_e_la_chiave(&energia, "sleep-inactive-ac-type",
-	                  "org.gnome.settings-daemon.plugins.power"))
-		g_settings_set_string(energia.impostazioni, "sleep-inactive-ac-type", "nothing");
-	if (c_e_la_chiave(&energia, "sleep-inactive-battery-type",
-	                  "org.gnome.settings-daemon.plugins.power")) {
-		g_settings_set_string(energia.impostazioni, "sleep-inactive-battery-type",
-		                      "nothing");
+	if (gnome_metti_utente(&energia, "org.gnome.settings-daemon.plugins.power",
+	                       "sleep-inactive-ac-type", g_variant_new_string("nothing")) &&
+	    gnome_metti_utente(&energia, "org.gnome.settings-daemon.plugins.power",
+	                       "sleep-inactive-battery-type", g_variant_new_string("nothing")))
 		registro_dice(REG_SESSIONE,
 		              "⭐ sospensione automatica spenta (era «suspend» a 900 s, "
 		              "upstream e su Debian): la macchina e' di piu' persone, e chi "
 		              "la sospende le porta via a tutti");
-	}
 
 	/* ⛔ E il blocca-schermo resta SPENTO — §4.3: su GNOME quello del desktop non
-	 *    mostra un blocco, ci REVOCA cattura e input. */
-	if (c_e_la_chiave(&sessione, "idle-delay", "org.gnome.desktop.session") &&
-	    g_settings_set_uint(sessione.impostazioni, "idle-delay", 0))
+	 *    mostra un blocco, ci REVOCA cattura e input.  ⭐ D-015: PERMESSE. */
+	if (gnome_metti_utente(&sessione, "org.gnome.desktop.session", "idle-delay",
+	                       g_variant_new_uint32(0)))
 		registro_dice(REG_SESSIONE, "⭐ inattivita' del desktop spenta (idle-delay 0)");
-	if (c_e_la_chiave(&salvaschermo, "lock-enabled", "org.gnome.desktop.screensaver") &&
-	    g_settings_set_boolean(salvaschermo.impostazioni, "lock-enabled", FALSE))
+	if (gnome_metti_utente(&salvaschermo, "org.gnome.desktop.screensaver", "lock-enabled",
+	                       g_variant_new_boolean(FALSE)))
 		registro_dice(REG_SESSIONE,
 		              "⭐ blocca-schermo del desktop spento (§4.3: il blocco e' di "
 		              "REMOTIX, e su GNOME quello del desktop ci REVOCA cattura e "
@@ -3537,12 +3846,14 @@ void sessione_impostazioni(void)
 	 *    dialogo).  Su GNOME la voce compare quando la macchina ha piu' utenti
 	 *    e GDM, cioe' proprio sulla macchina condivisa.
 	 * ⚠ Solo `disable-user-switching`: `disable-log-out` resta com'e'.
+	 * ⭐ D-015: DI SESSIONE.
 	 */
-	if (c_e_la_chiave(&blocchi, "disable-user-switching", "org.gnome.desktop.lockdown") &&
+	if (di_sessione &&
+	    c_e_la_chiave(&blocchi, "disable-user-switching", "org.gnome.desktop.lockdown") &&
 	    g_settings_set_boolean(blocchi.impostazioni, "disable-user-switching", TRUE))
 		registro_dice(REG_SESSIONE,
-		              "⭐ «Cambia utente» tolto (disable-user-switching): l'unica voce "
-		              "che resta e' «Esci…»");
+		              "⭐ «Cambia utente» tolto (disable-user-switching, nella SESSIONE): "
+		              "l'unica voce che resta e' «Esci…»");
 
 	g_settings_sync();
 	chiudi_schema(&wayland);
