@@ -19,6 +19,14 @@
    e `~/.cache/sessions` (dove il banco lascia una SENTINELLA: un file che
    REMOTIX non deve portare via).  Poi si entra dal browser, si aspetta che la
    sessione sia in piedi, si esce con «Esci» (il gesto di F-021), e si rilegge.
+   ⭐ E il GESTORE D'UTENTE (R1/R2, revisione della bonifica): col linger
+   acceso sopravvive alla sessione, e l'utente che entra al monitor ne
+   eredita l'ambiente e i drop-in.  Dopo «Esci» non deve restarci niente di
+   REMOTIX: nessuna variabile col nostro segno (`systemctl --user
+   show-environment`: `DCONF_PROFILE`, valori con «remotix»), nessun drop-in
+   col nostro nome (`$XDG_RUNTIME_DIR/systemd/user.control`,
+   `~/.config/systemd/user`), e `xfconf-query` sul bus vero dell'utente non
+   deve vedere le chiavi di sessione di XFCE (bloccate da noi).
 
 ⭐ IL GIUDIZIO, chiave per chiave, in tre classi:
    · PERMESSE (`PERMESSE`) — blocco, riavvio, sospensione, stand-by: possono
@@ -43,7 +51,8 @@ GUASTO (--guasto, dopo la passata sana, sessione chiusa): una SCRITTURA
    `~/.cache/sessions` portata via (il vecchio `rm -rf`), e una chiave del
    desktop: GNOME `always-show-log-out` nel dconf dell'utente, XFCE
    `ShowSwitchUser` nel canale dell'utente, LXQt una voce `lxqt-leave.desktop`
-   nascosta nella cartella dell'utente, KDE un gruppo in kxkbrc ⇒ lo stesso
+   nascosta nella cartella dell utente, KDE un gruppo in kxkbrc, e un drop-in
+   `zz-remotix-finto.conf` dimenticato nel gestore d utente ⇒ lo stesso
    giudice deve dare rosso.
 """
 import base64
@@ -81,6 +90,8 @@ FILE = (
     ".config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml",
     ".config/lxqt/panel.conf", ".config/lxqt/lxqt.conf", ".config/lxqt/session.conf",
     ".config/lxqt/lxqt-powermanagement.conf", ".config/kxkbrc")
+XFCONF_SESSIONE = ("/general/WaylandLogoutCommand", "/general/SessionName",
+                   "/general/SaveOnExit", "/shutdown/ShowSwitchUser")
 VOCI_LXQT = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
              "lxqt-shutdown", "lxqt-reboot")
 
@@ -108,6 +119,7 @@ SORVEGLIATE = [re.compile(x) for x in (
     r"^app:",
     r"^kxkbrc:",
     r"^cache:",
+    r"^gestore:",                                    # R1/R2: niente di nostro resta
 )]
 
 
@@ -136,6 +148,19 @@ def riga_lettura(chi):
         r.append("f=\"$HOME/.local/share/applications/%s.desktop\"; if [ -f \"$f\" ]; then "
                  "echo \"@@app %s $(base64 -w0 < \"$f\")\"; fi" % (v, v))
     r.append("ls -1 \"$HOME/.cache/sessions\" 2>/dev/null | sed 's/^/@@cache /'")
+    # ⭐ R1/R2 — il GESTORE D'UTENTE: le variabili col nostro segno, i drop-in
+    #   col nostro nome, e quel che xfconfd dice oggi delle chiavi di sessione
+    #   di XFCE, sul bus VERO dell'utente (quello che userebbe un accesso al
+    #   monitor)
+    r.append("u=$(id -u); if [ -S /run/user/$u/bus ]; then "
+             "systemctl --user show-environment 2>/dev/null | while IFS= read -r l; do "
+             "case \"$l\" in DCONF_PROFILE=*|*remotix*) echo \"@@env $l\";; esac; done; "
+             "if command -v xfconf-query >/dev/null 2>&1; then for k in %s; do "
+             "v=$(xfconf-query -c xfce4-session -p $k 2>/dev/null) && echo \"@@xfq $k=$v\"; "
+             "done; fi; fi" % " ".join(XFCONF_SESSIONE))
+    r.append("for f in /run/user/$u/systemd/user.control/*/*remotix* "
+             "\"$HOME\"/.config/systemd/user/*.d/*remotix*; do [ -e \"$f\" ] && "
+             "echo \"@@drop $f\"; done")
     r.append("echo @@fine")
     return "; ".join(r)
 
@@ -205,6 +230,14 @@ def interpreta(uscita):
                     d["lxqt:%s:%s" % (os.path.basename(nome), k)] = v
         elif riga.startswith("@@cache "):
             d["cache:" + riga[8:].strip()] = "c'e'"
+        elif riga.startswith("@@env "):
+            k, _, v = riga[6:].partition("=")
+            d["gestore:env:" + k.strip()] = v
+        elif riga.startswith("@@xfq "):
+            k, _, v = riga[6:].partition("=")
+            d["gestore:xfconf:" + k.strip()] = v.strip()
+        elif riga.startswith("@@drop "):
+            d["gestore:dropin:" + riga[7:].strip()] = "c'e'"
     return d
 
 
@@ -273,6 +306,9 @@ def riga_guasto(chi, desktop):
     elif desktop == "kde":
         r.append("mkdir -p \"$HOME/.config\"; printf '\\n[Remotix15Guasto]\\nscritta=1\\n' >> "
                  "\"$HOME/.config/kxkbrc\"")
+    # R1/R2: un drop-in di REMOTIX dimenticato nel gestore d'utente
+    r.append("d=\"$HOME/.config/systemd/user/xfconfd.service.d\"; mkdir -p \"$d\"; printf "
+             "'[Service]\\n# 15-f031b guasto\\n' > \"$d/zz-remotix-finto.conf\"")
     r.append("echo scritto")
     return "; ".join(r)
 
@@ -340,6 +376,18 @@ def certifica():
     prova("sentinella portata via ⇒ FAIL", giudica(p, senza)[0] == S.FAIL)
     prova("un file del desktop in piu' (altra) ⇒ PASS",
           giudica(p, dict(p, **{"lxqt:lxqt.conf:[General]__userfile__": "true"}))[0] == S.PASS)
+    g = interpreta("@@env DCONF_PROFILE=/run/user/5/remotix/dconf/profilo\n"
+                   "@@xfq /general/SessionName=REMOTIX\n"
+                   "@@drop /run/user/5/systemd/user.control/xfconfd.service.d/"
+                   "zz-remotix-sessione.conf\n@@fine")
+    prova("lettura del gestore", g == {
+        "gestore:env:DCONF_PROFILE": "/run/user/5/remotix/dconf/profilo",
+        "gestore:xfconf:/general/SessionName": "REMOTIX",
+        "gestore:dropin:/run/user/5/systemd/user.control/xfconfd.service.d/"
+        "zz-remotix-sessione.conf": "c'e'"}, repr(g))
+    for k, v in g.items():
+        prova("gestore: %s rimasto ⇒ FAIL" % k.split(":")[1],
+              giudica(p, dict(p, **{k: v}))[0] == S.FAIL)
     prova("non letto ⇒ BLOCKED", giudica(None, p)[0] == S.BLOCKED)
     prova("riga di lettura: shell valida",
           os.system("sh -n -c %s" % S._q(riga_lettura("x"))) == 0)

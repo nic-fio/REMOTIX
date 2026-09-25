@@ -5888,6 +5888,8 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "padre, che congeda chi guarda con 0x10");
 			manda(MSG_SESSIONE_FINITA, NULL, 0, NULL, 0);
 			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			/* ⭐ R1/R2: l'utente al monitor trova il gestore com'era */
+			sessione_sgombera_gestore("la sessione e' finita (§7.6)");
 			return false;
 		}
 	}
@@ -6962,6 +6964,9 @@ void figlio_vive(int argc, char **argv)
 	 *    `input_disposizione()`) e prima dei fili — `g_setenv` non e' da fare
 	 *    con altri fili vivi.  Solo GNOME; il riquadro e' in `sessione.c`. */
 	sessione_dconf_prepara();
+	/* ⭐ R1/R2 — e quel che una sessione finita male ha lasciato nel gestore
+	 *    d'utente se ne va adesso (solo a sessione morta: vedi il riquadro). */
+	sessione_sgombera_gestore("avvio del figlio: avanzi di prima");
 
 	/* ⛔⭐⭐ I PARAMETRI DELLA FASE 9 SI SCRIVONO ALLA NASCITA — 23 agosto 2026.
 	 *
@@ -8810,6 +8815,8 @@ void figlio_vive(int argc, char **argv)
 		suono_chiudi(son);
 		son = NULL;
 	}
+	/* ⭐ R1/R2: se la sessione non c'e' piu', il gestore torna com'era */
+	sessione_sgombera_gestore("il figlio esce");
 	registro_dice(REG_FIGLIO, "il figlio di «%s» ha smontato il palco ed esce",
 	              utente);
 	_exit(0);

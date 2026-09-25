@@ -2420,7 +2420,256 @@ static gboolean esci_lxqt(void)
 	return TRUE;
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * ⭐⭐ FASE 15, D-015/D-017 (R1, R2) — DOPO LA SESSIONE REMOTA, IL GESTORE
+ *      D'UTENTE TORNA COM'ERA.
+ *
+ * ⛔ IL BUCO, trovato dalla revisione della bonifica: quel che il prodotto
+ *    mette nel GESTORE D'UTENTE di systemd non se ne andava mai —
+ *    · i drop-in in `$XDG_RUNTIME_DIR/systemd/user.control/` (la Shell
+ *      `--headless`, KWin `--virtual`, `xfconfd` con la cartella della
+ *      sessione);
+ *    · le variabili che `gnome-session`/`startplasma`/labwc esportano nel
+ *      gestore dall'ambiente che componiamo noi (`DCONF_PROFILE`,
+ *      `XDG_CONFIG_DIRS`, `XCURSOR_THEME`=il tema invisibile, …).
+ *    E col linger acceso (`provisiona.sh`) il gestore sopravvive alla
+ *    sessione: l'utente che poi entra AL MONITOR ereditava tutto — su XFCE un
+ *    «Esci» che non esce (`WaylandLogoutCommand=/bin/true` bloccata), su GNOME
+ *    il dconf in memoria al posto del suo.
+ *
+ * ⭐ LA CURA, in due gesti:
+ *   · `sessione_fotografa_gestore()`, alla nascita e PRIMA di toccare
+ *     qualunque cosa: il valore di prima di ognuna delle NOSTRE variabili
+ *     (`VARIABILI_NOSTRE`) si scrive in `$XDG_RUNTIME_DIR/remotix/
+ *     gestore-prima` (c'e' finche' c'e' il gestore);
+ *   · `sessione_sgombera_gestore()`, quando la sessione remota e' finita (fine
+ *     vista dal figlio, `sessione_termina`, uscita del figlio) e anche
+ *     all'avvio del figlio e alla nascita (per quel che un crash ha lasciato):
+ *     via i nostri drop-in + `daemon-reload`; le nostre variabili rimesse come
+ *     erano (o tolte, se non c'erano) con `UnsetAndSetEnvironment`; e
+ *     `xfconfd` fatto ripartire se aveva la cartella della sessione.
+ *   ⛔ SOLO a sessione MORTA: con la sessione viva si porterebbe via il
+ *      terreno a un desktop che lavora.
+ *   ⚠ Senza la fotografia (un gestore nato con un prodotto di prima) si
+ *     tolgono solo le variabili che portano il nostro segno (`remotix` nel
+ *     valore): si dice, ed e' il ripiego.
+ *
+ * ⚠ Quel che resta, dichiarato: se il figlio non torna mai (la macchina resta
+ *   senza client e l'utente entra al monitor dopo un crash del figlio), lo
+ *   sgombero lo fara' il prossimo figlio: il server da root non parla al
+ *   gestore d'utente.
+ */
+static const char *const VARIABILI_NOSTRE[] = {
+	"DCONF_PROFILE", "XDG_CONFIG_DIRS", "XDG_DATA_DIRS", "XDG_MENU_PREFIX",
+	"XCURSOR_THEME", "XCURSOR_SIZE", "XCURSOR_PATH", "XDG_CURRENT_DESKTOP",
+	"XDG_SESSION_DESKTOP", "XDG_SESSION_TYPE", "SHELL", "LANG", "PATH",
+	"QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME", "GDK_BACKEND", "XFCE4_SESSION_COMPOSITOR",
+	"WLR_BACKENDS", "WLR_LIBINPUT_NO_DEVICES", "WLR_RENDER_DRM_DEVICE",
+	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY", NULL
+};
+
+/* { cartella del drop-in, nome } — tutti e soli i nostri */
+static const char *const DROPIN_NOSTRI[][2] = {
+	{ SESSIONE_UNITA_SHELL ".d", "zz-remotix-monitor.conf" },
+	{ SESSIONE_UNITA_KWIN ".d", "zz-remotix-monitor.conf" },
+	{ "xfconfd.service.d", "zz-remotix-sessione.conf" },
+};
+
+static char *gestore_prima_percorso(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	return runtime && *runtime ? g_build_filename(runtime, "remotix", "gestore-prima", NULL)
+	                           : NULL;
+}
+
+/* L'ambiente del gestore, {nome: valore}, chiesto a lui (proprieta'
+ * `Environment` di `org.freedesktop.systemd1.Manager`: stringhe crude, senza
+ * le virgolette di `show-environment`).  NULL se non risponde. */
+static GHashTable *ambiente_del_gestore(GDBusConnection *bus)
+{
+	g_autoptr(GVariant) risposta = NULL;
+	g_autoptr(GVariant) dentro = NULL;
+	g_autofree const char **voci = NULL;
+	GHashTable *amb;
+
+	risposta = g_dbus_connection_call_sync(
+		bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+		"org.freedesktop.DBus.Properties", "Get",
+		g_variant_new("(ss)", "org.freedesktop.systemd1.Manager", "Environment"),
+		G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL, NULL);
+	if (!risposta)
+		return NULL;
+	g_variant_get(risposta, "(v)", &dentro);
+	if (!g_variant_is_of_type(dentro, G_VARIANT_TYPE_STRING_ARRAY))
+		return NULL;
+	amb = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	voci = g_variant_get_strv(dentro, NULL);
+	for (int i = 0; voci[i]; i++) {
+		const char *uguale = strchr(voci[i], '=');
+
+		if (uguale)
+			g_hash_table_insert(amb, g_strndup(voci[i], uguale - voci[i]),
+			                    g_strdup(uguale + 1));
+	}
+	return amb;
+}
+
+void sessione_fotografa_gestore(void)
+{
+	g_autoptr(GDBusConnection) bus = sessione_bus(NULL);
+	g_autoptr(GHashTable) amb = NULL;
+	g_autoptr(GKeyFile) foto = g_key_file_new();
+	g_autofree char *percorso = gestore_prima_percorso();
+	g_autofree char *cartella = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!bus || !percorso || !(amb = ambiente_del_gestore(bus))) {
+		registro_dice(REG_SESSIONE,
+		              "⚠ R1/R2: non ho potuto fotografare l'ambiente del gestore d'utente — "
+		              "alla fine della sessione togliero' solo le variabili col nostro segno");
+		return;
+	}
+	for (int i = 0; VARIABILI_NOSTRE[i]; i++) {
+		const char *v = g_hash_table_lookup(amb, VARIABILI_NOSTRE[i]);
+
+		if (v)
+			g_key_file_set_string(foto, "prima", VARIABILI_NOSTRE[i], v);
+		else
+			g_key_file_set_boolean(foto, "assenti", VARIABILI_NOSTRE[i], TRUE);
+	}
+	cartella = g_path_get_dirname(percorso);
+	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	    !g_key_file_save_to_file(foto, percorso, &sbaglio))
+		registro_dice(REG_SESSIONE, "⚠ R1/R2: fotografia del gestore NON scritta (%s): %s",
+		              percorso, sbaglio ? sbaglio->message : g_strerror(errno));
+	else
+		registro_dice(REG_SESSIONE,
+		              "⭐ R1/R2: fotografato l'ambiente del gestore d'utente PRIMA della "
+		              "sessione (%s): alla fine lo rimetto com'era",
+		              percorso);
+}
+
+void sessione_sgombera_gestore(const char *perche)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+	g_autoptr(GDBusConnection) bus = NULL;
+	g_autoptr(GHashTable) amb = NULL;
+	g_autoptr(GKeyFile) foto = g_key_file_new();
+	g_autofree char *percorso = gestore_prima_percorso();
+	g_autoptr(GPtrArray) togli = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(GPtrArray) metti = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(GString) detto = g_string_new(NULL);
+	gboolean con_foto;
+	int drop = 0;
+	gboolean xfconfd = FALSE;
+	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
+	char *riparti[] = { "systemctl", "--user", "try-restart", "xfconfd.service", NULL };
+
+	if (!runtime || !*runtime)
+		return;
+	if (sessione_viva()) {
+		registro_dettaglio(REG_SESSIONE,
+		                   "R1/R2 (%s): la sessione e' VIVA — non sgombero il gestore "
+		                   "d'utente sotto un desktop che lavora",
+		                   perche);
+		return;
+	}
+
+	/* 1. i drop-in: tutti e soli i nostri */
+	for (guint i = 0; i < G_N_ELEMENTS(DROPIN_NOSTRI); i++) {
+		g_autofree char *cartella = g_build_filename(runtime, "systemd", "user.control",
+		                                             DROPIN_NOSTRI[i][0], NULL);
+		g_autofree char *file = g_build_filename(cartella, DROPIN_NOSTRI[i][1], NULL);
+
+		if (g_unlink(file) == 0) {
+			drop++;
+			xfconfd |= g_str_has_prefix(DROPIN_NOSTRI[i][0], "xfconfd");
+			g_string_append_printf(detto, " %s/%s", DROPIN_NOSTRI[i][0],
+			                       DROPIN_NOSTRI[i][1]);
+			g_rmdir(cartella); /* solo se vuota */
+		}
+	}
+	if (drop)
+		esegui(ricarica);
+	if (xfconfd)
+		esegui(riparti);
+
+	/* 2. le variabili: com'erano, o col solo nostro segno senza fotografia */
+	bus = sessione_bus(NULL);
+	amb = bus ? ambiente_del_gestore(bus) : NULL;
+	con_foto = percorso && g_key_file_load_from_file(foto, percorso, G_KEY_FILE_NONE, NULL);
+	for (int i = 0; amb && VARIABILI_NOSTRE[i]; i++) {
+		const char *nome = VARIABILI_NOSTRE[i];
+		const char *ora = g_hash_table_lookup(amb, nome);
+		g_autofree char *prima = con_foto ? g_key_file_get_string(foto, "prima", nome, NULL)
+		                                  : NULL;
+		gboolean era_assente = con_foto && g_key_file_get_boolean(foto, "assenti", nome, NULL);
+
+		if (con_foto) {
+			if (prima && g_strcmp0(prima, ora) != 0)
+				g_ptr_array_add(metti, g_strdup_printf("%s=%s", nome, prima));
+			else if (era_assente && ora)
+				g_ptr_array_add(togli, g_strdup(nome));
+		} else if (ora && strstr(ora, "remotix")) {
+			g_ptr_array_add(togli, g_strdup(nome));
+		}
+	}
+	if (togli->len || metti->len) {
+		g_autoptr(GVariant) r = NULL;
+		g_autoptr(GError) sbaglio = NULL;
+
+		g_ptr_array_add(togli, NULL);
+		g_ptr_array_add(metti, NULL);
+		r = g_dbus_connection_call_sync(
+			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+			"org.freedesktop.systemd1.Manager", "UnsetAndSetEnvironment",
+			g_variant_new("(^as^as)", (char **) togli->pdata, (char **) metti->pdata),
+			NULL, G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &sbaglio);
+		if (r) {
+			for (guint i = 0; i + 1 < togli->len; i++)
+				g_string_append_printf(detto, " -%s", (char *) g_ptr_array_index(togli, i));
+			for (guint i = 0; i + 1 < metti->len; i++) {
+				const char *m = g_ptr_array_index(metti, i);
+
+				g_string_append_printf(detto, " ~%.*s", (int) (strchr(m, '=') - m), m);
+			}
+		} else {
+			registro_dice(REG_SESSIONE,
+			              "⛔ R1/R2 (%s): le variabili del gestore d'utente NON si "
+			              "rimettono (%s) — l'utente al monitor erediterebbe le nostre",
+			              perche, sbaglio ? sbaglio->message : "senza motivo");
+		}
+	}
+	if (con_foto && amb)
+		g_unlink(percorso); /* consumata: la prossima nascita ne fa un'altra */
+
+	if (detto->len)
+		registro_dice(REG_SESSIONE,
+		              "⭐ R1/R2 (%s): il gestore d'utente torna com'era —%s%s%s",
+		              perche, detto->str, xfconfd ? " · xfconfd ripartito" : "",
+		              con_foto ? "" : " (⚠ senza fotografia: tolte solo le variabili col "
+		                              "nostro segno)");
+	else
+		registro_dettaglio(REG_SESSIONE,
+		                   "R1/R2 (%s): nel gestore d'utente non c'era niente di nostro",
+		                   perche);
+}
+
+static bool termina_davvero(void);
+
+/* ⭐ R1/R2: una sessione chiusa da noi lascia il gestore d'utente com'era. */
 bool sessione_termina(void)
+{
+	bool uscita = termina_davvero();
+
+	if (uscita)
+		sessione_sgombera_gestore("sessione terminata dal prodotto");
+	return uscita;
+}
+
+static bool termina_davvero(void)
 {
 	if (!sessione_viva()) {
 		registro_dice(REG_SESSIONE, "non c'era nessuna sessione da fermare");
@@ -4186,6 +4435,12 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              sessione_marca(stato));
 		return false;
 	}
+
+	/* ⭐ R1/R2 — prima di mettere qualunque cosa nel gestore d'utente: via gli
+	 *    avanzi di una sessione finita male, e la fotografia di com'e' adesso
+	 *    (il riquadro sopra `sessione_sgombera_gestore()`). */
+	sessione_sgombera_gestore("nascita: avanzi di prima");
+	sessione_fotografa_gestore();
 
 	/* ⛔ Il drop-in PRIMA del comando: la misura del desktop ci sta dentro, e
 	 *    `gnome-session` fa partire l'unita' della Shell come prima cosa.

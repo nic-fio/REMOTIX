@@ -378,6 +378,16 @@ bool sessione_dconf_prepara(void);
 bool sessione_dconf_di_sessione(void);
 
 /*
+ * ⭐ FASE 15 (R1/R2) — il GESTORE D'UTENTE di systemd torna com'era dopo la
+ * sessione remota: `sessione_fotografa_gestore()` alla nascita salva il
+ * valore di prima delle nostre variabili; `sessione_sgombera_gestore()` —
+ * a sessione MORTA, altrimenti non fa niente — toglie i nostri drop-in e
+ * rimette le variabili.  Il riquadro e' in `sessione.c`.
+ */
+void sessione_fotografa_gestore(void);
+void sessione_sgombera_gestore(const char *perche);
+
+/*
  * C'e' un compositore che risponde?
  *
  * ⚠ E' la domanda DEBOLE, ed e' qui apposta perche' si veda che e' debole: una
