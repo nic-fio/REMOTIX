@@ -3,7 +3,15 @@
 #
 #   (sul server, come nicfio)
 #   sudo systemd-run --unit=r16-coda --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 \
+#        -p TimeoutStopSec=1200 -p KillMode=mixed \
 #        bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh intel gnome kde xfce lxqt
+#
+# ⛔ TimeoutStopSec=1200 e KillMode=mixed NON sono facoltativi: lo sgombero di una salita
+#    (attori fino a 120 s, inquilini, compositori, il server rimesso) dura ben piu' dei 90 s
+#    predefiniti, e con KillMode=control-group il SIGTERM arriverebbe INSIEME a tutti
+#    (attori, browser, sudo dello sgombero).  Con «mixed» lo riceve solo questa coda, che
+#    lo passa alla salita in corso e aspetta che abbia sgomberato; il SIGKILL a tutto il
+#    gruppo solo dopo 1200 s.
 #
 # ⭐ Perche' una coda e non una sessione di Claude che lancia le salite: la campagna dura
 #    la notte (fasi/16 §6, decisione dell'utente del 25 set: «senza un mio intervento»), e
@@ -15,8 +23,13 @@
 # con un nome nuovo (§14: le evidenze della prima restano), poi si passa oltre, dichiarato.
 #
 # ⛔ Per fermarla fra una salita e l'altra: `touch /media/REMOTIX/misure/fase16/FERMA`.
-#    Per fermarla subito: `sudo systemctl stop r16-coda` (la salita in corso riceve
-#    SIGTERM, chiude il livello come INTERROTTO e sgombera).
+#    Per fermarla subito: `sudo systemctl stop r16-coda` (la coda passa il SIGTERM alla
+#    salita in corso, che chiude il livello come INTERROTTO — anche a meta' del controllo
+#    corto — e sgombera; poi la coda esce senza lanciarne altre).
+#
+# ⭐ Nel registro, accanto al codice, l'ultimo livello GREEN VERO della salita (da
+#    salita.jsonl): «buono» per la salita comprende i DEGRADED non significativi (la
+#    regola di non-prosecuzione), il GREEN vero e' un'altra cosa e si scrive a parte.
 #
 # Variabili: REMOTIX_16_VIDEO (il file del profilo D), REMOTIX_16_FPS (la sua f),
 #            REMOTIX_16_MISURE (la scala, predefinita «4k 3k 2k fhd»),
@@ -35,10 +48,36 @@ STATO=$MISURE_DIR/coda-$SCHEDA.jsonl
 mkdir -p "$MISURE_DIR"
 
 dice() { echo "$(date '+%F %T') $*" | tee -a "$LOG"; }
-segna() {  # desktop misura campagna codice
-	printf '{"t":"%s","scheda":"%s","desktop":"%s","misura":"%s","campagna":"%s","codice":%s}\n' \
-		"$(date -Is)" "$SCHEDA" "$1" "$2" "$3" "$4" >>"$STATO"
+segna() {  # desktop misura campagna codice ultimo_green
+	printf '{"t":"%s","scheda":"%s","desktop":"%s","misura":"%s","campagna":"%s","codice":%s,"ultimo_green":%s}\n' \
+		"$(date -Is)" "$SCHEDA" "$1" "$2" "$3" "$4" "${5:-null}" >>"$STATO"
 }
+# l'ultimo livello GREEN vero di una campagna (il piu' alto con classe GREEN in salita.jsonl)
+ultimo_green() {
+	python3 - "$MISURE_DIR/$1/salita.jsonl" <<'PY' 2>/dev/null || echo null
+import json, sys
+g = []
+for r in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    try:
+        d = json.loads(r)
+    except ValueError:
+        continue
+    if d.get("classe") == "GREEN" and not d.get("interrotto"):
+        g.append(int(d.get("livello") or 0))
+print(max(g) if g else "null")
+PY
+}
+
+# ⭐ il SIGTERM (systemctl stop, KillMode=mixed) arriva SOLO qui: lo si passa alla salita
+#   in corso e si aspetta che sgomberi; poi nessuna salita nuova
+FERMATA=0
+figlio=""
+ferma() {
+	FERMATA=1
+	dice "⚠ segnale: lo passo alla salita in corso (${figlio:-nessuna}) e aspetto che sgomberi"
+	[ -n "$figlio" ] && kill -TERM "$figlio" 2>/dev/null
+}
+trap ferma TERM INT
 
 dice "▶ coda $SCHEDA: desktop «$DESKTOP» · scala «$SCALA» · video $VIDEO (f=$FPS)"
 [ -f "$VIDEO" ] || { dice "⛔ il video non c'e': $VIDEO"; exit 2; }
@@ -55,21 +94,29 @@ for d in $DESKTOP; do
 			# shellcheck disable=SC2086
 			python3 "$QUI/16-salita.py" --scatola "$d" --campagna "$camp" --misura "$m" \
 				--video "$VIDEO" --fps-video "$FPS" ${REMOTIX_16_IN_PIU:-} \
-				>>"$MISURE_DIR/coda-$SCHEDA-salite.log" 2>&1
-			c=$?
-			segna "$d" "$m" "$camp" "$c"
-			dice "   $camp: codice $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('buono', s.get('ultimo_buono'), '· rottura', s.get('rottura'), '·', s.get('fase'))" "$MISURE_DIR/$camp/stato.json" 2>/dev/null || echo 'stato illeggibile'))"
+				>>"$MISURE_DIR/coda-$SCHEDA-salite.log" 2>&1 </dev/null &
+			figlio=$!
+			# ⚠ `wait` torna presto se arriva un segnale: si riaspetta finche' c'e'
+			wait "$figlio"; c=$?
+			while kill -0 "$figlio" 2>/dev/null; do wait "$figlio"; c=$?; done
+			figlio=""
+			verde=$(ultimo_green "$camp")
+			segna "$d" "$m" "$camp" "$c" "$verde"
+			dice "   $camp: codice $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('buono', s.get('ultimo_buono'), '· rottura', s.get('rottura'), '·', s.get('fase'))" "$MISURE_DIR/$camp/stato.json" 2>/dev/null || echo 'stato illeggibile')) · ultimo GREEN vero: $verde"
+			if [ "$FERMATA" = 1 ]; then dice "⏹ fermata da fuori: la salita ha sgomberato, esco"; exit 0; fi
 			if [ "$c" = 3 ] && [ "$tentativo" = 1 ]; then
 				dice "   ⚠ BLOCKED o interrotta: riprovo fra 2 minuti"
-				sleep 120
+				sleep 120 &
+				figlio=$!; wait "$figlio"; figlio=""
+				if [ "$FERMATA" = 1 ]; then dice "⏹ fermata da fuori: esco"; exit 0; fi
 				continue
 			fi
 			esito=$c
 			break
 		done
 		case "$esito" in
-		0) dice "✅ $d regge 16 utenti a $m"; break ;;
-		1) dice "↘ $d cede a $m: scendo di misura" ;;
+		0) dice "✅ $d regge 16 utenti a $m (ultimo GREEN vero: $verde)"; break ;;
+		1) dice "↘ $d cede a $m (ultimo GREEN vero: $verde): scendo di misura" ;;
 		*) dice "⛔ $d a $m: due volte BLOCKED — passo al desktop dopo"; break ;;
 		esac
 	done

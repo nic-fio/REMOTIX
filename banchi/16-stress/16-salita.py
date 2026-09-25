@@ -43,12 +43,19 @@ CHE COSA FA
      indipendente: seme = seme-base + N, porte-base + 10·N, il suo labwc) —
      uno dopo l'altro, ciascuno quando il precedente ha il primo fotogramma
      (§6: cosi' si misura la nascita sotto carico) —, 16-risorse.py per tutto
-     il livello, i minuti del livello a lavoro stabile; negli ultimi
-     `--controllo-min` minuti SIGUSR1 agli attori (la foto piena di ogni tela)
-     e il controllo corto (16-controllo-corto.py, una sessione sua, browser
-     alternato fra i livelli); poi il registro del server tagliato sul
+     il livello, i minuti del livello a lavoro stabile; `--anticipo-foto-s`
+     (30) PRIMA degli ultimi `--controllo-min` minuti SIGUSR1 agli attori (la
+     foto piena di ogni tela) e si aspetta che le foto siano scritte: la
+     finestra di giudizio comincia dopo (se tardano, slitta con la fine del
+     livello); nella finestra il controllo corto (16-controllo-corto.py, una
+     sessione sua, browser alternato fra i livelli; al SIGTERM si ferma
+     subito); poi il registro del server tagliato sul
      livello, le serie degli attori tagliate sul livello, livello.json, e
      16-classifica.py;
+     ⛔ Se l'ENTRATA fallisce (compositore o attore che non parte) il livello
+     e' «?» (non buono: ferma la salita come una classe illeggibile), con
+     l'evento e quanti sono entrati in livello.json.
+     ⭐ nascita.json va nel livello solo per gli utenti NUOVI del livello.
   3. la regola di non-prosecuzione (§6, §14): FAIL o DEGRADED significativo ⇒
      il livello si RIPETE una volta nelle stesse condizioni (scatola pulita,
      gli stessi N utenti coi loro semi); se si conferma ⇒ la RICERCA A META'
@@ -627,13 +634,23 @@ class Salita:
             try:
                 p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=amb, cwd=QUI,
                                      start_new_session=True)
-                try:
-                    c = p.wait(timeout=self.o.tetto_controllo_s)
-                except subprocess.TimeoutExpired:
-                    os.killpg(p.pid, signal.SIGKILL)
-                    p.wait()
-                    c = None
-                    dice("   ⛔ controllo corto oltre %d s: fermato" % self.o.tetto_controllo_s)
+                # ⭐ non un wait() cieco di 600 s: al SIGTERM (fermata da fuori) il
+                #   controllo si ferma subito e la salita va a sgomberare
+                limite = time.time() + self.o.tetto_controllo_s
+                c = None
+                while True:
+                    try:
+                        c = p.wait(timeout=1)
+                        break
+                    except subprocess.TimeoutExpired:
+                        pass
+                    if self.fermati or time.time() >= limite:
+                        dice("   ⛔ controllo corto %s: fermato" % (
+                            "interrotto (fermata da fuori)" if self.fermati
+                            else "oltre %d s" % self.o.tetto_controllo_s))
+                        ferma_gruppo(p)
+                        c = None
+                        break
             except Exception as e:               # noqa: BLE001
                 dice("   ⛔ controllo corto non lanciato: %s" % e)
                 return None
@@ -645,8 +662,41 @@ class Salita:
         dice("   controllo corto: %s (codice %s)" % (esito, c))
         return esito
 
+    def foto_prima_della_finestra(self, inizio_controllo, eventi):
+        """SIGUSR1 a tutti gli attori vivi, poi aspetta che ognuno abbia scritto
+        la sua foto (un file foto-* o l'evento «foto», anche fallito) — al piu'
+        `tetto_foto_s`.  Torna il riassunto per livello.json."""
+        vivi = [a for a in self.attori.values() if a.vivo()]
+        t = time.time()
+        self.aggiorna(fase="foto")
+        dice("   SIGUSR1 a %d attori (foto piena), %.0f s prima della finestra" % (
+            len(vivi), inizio_controllo - t))
+        for a in vivi:
+            a.segnale(signal.SIGUSR1)
+        fatte = set()
+        limite = t + self.o.tetto_foto_s
+        while not self.fermati:
+            for a in vivi:
+                if a.n not in fatte and foto_scritta(a.dir_utente, t):
+                    fatte.add(a.n)
+            if len(fatte) == len(vivi) or time.time() >= limite:
+                break
+            time.sleep(1)
+        mancano = sorted(a.n for a in vivi if a.n not in fatte)
+        dice("   foto scritte: %d/%d in %.0f s%s" % (
+            len(fatte), len(vivi), time.time() - t,
+            (" · ⚠ mancano %s" % mancano) if mancano else ""))
+        if mancano:
+            eventi.append({"t": ora(), "evento": "foto mancanti", "utenti": mancano})
+        self.aggiorna(fase="lavoro")
+        return {"t": iso(t), "t_s": round(t, 3), "attesi": sorted(a.n for a in vivi),
+                "fatte": sorted(fatte), "durata_s": round(time.time() - t, 1)}
+
     def taglia_attori(self, dirliv, t0, t1):
-        """Le serie degli attori dentro [t0, t1], nella cartella del livello."""
+        """Le serie degli attori dentro [t0, t1], nella cartella del livello.
+        ⛔ nascita.json SOLO se l'utente e' NUOVO in questo livello (partito nel
+        livello, o la nascita scritta nel livello): le nascite dei gradini prima
+        sono gia' state giudicate la', e qui non si rigiudicano."""
         for a in self.attori.values():
             src = a.dir_utente
             dst = os.path.join(dirliv, "utente-%02d" % a.n)
@@ -660,7 +710,13 @@ class Salita:
                 q = os.path.join(dst, nome)
                 if nome.endswith(".jsonl"):
                     taglia_jsonl(p, q, t0, t1)
-                elif nome == "nascita.json" or os.path.getmtime(p) >= t0 - 1:
+                elif nome == "nascita.json":
+                    if nascita_del_livello(a.partito, os.path.getmtime(p), t0):
+                        try:
+                            os.link(p, q)
+                        except OSError:
+                            shutil.copy2(p, q)
+                elif os.path.getmtime(p) >= t0 - 1:
                     try:
                         os.link(p, q)
                     except OSError:
@@ -737,20 +793,34 @@ class Salita:
         except OSError:
             pass
         eventi = []
-        ok, perche = self.entrano(n, n)
-        if not ok:
-            eventi.append({"t": ora(), "evento": "entrata fallita", "ragione": perche})
-            dice("⛔ %s" % perche)
+        entrata_ok, perche_entrata = self.entrano(n, n)
+        entrati = sorted(a.n for a in self.attori.values() if a.proc is not None)
+        nati = sorted(a.n for a in self.attori.values() if a.nato)
+        if not entrata_ok:
+            # ⛔ compositore o attore che non parte: il livello NON e' buono
+            #   (classe «?», che ferma la salita come una classe illeggibile)
+            eventi.append({"t": ora(), "evento": "entrata fallita", "ragione": perche_entrata,
+                           "attesi": n, "entrati": len(entrati), "nati": len(nati)})
+            dice("⛔ ENTRATA FALLITA (%d entrati su %d, %d nati): %s — il livello sara' «?»" % (
+                len(entrati), n, len(nati), perche_entrata))
         t_lavoro = time.time()
         fine = t_lavoro + minuti * 60
         inizio_controllo = fine - o.controllo_min * 60
-        dice("   tutti dentro (%.0f s dopo l'inizio del livello): lavoro fino alle %s" % (
-            t_lavoro - t_inizio, time.strftime("%H:%M:%S", time.localtime(fine))))
+        # ⭐ la foto piena (SIGUSR1) PRIMA della finestra di giudizio: Chrome
+        #   Page.captureScreenshot in 4K ferma il disegno, e dentro la finestra
+        #   la sporcherebbe.  Si manda `anticipo_foto_s` prima e la finestra
+        #   comincia solo quando le foto sono scritte (se tardano, finestra e
+        #   fine del livello slittano insieme: la finestra resta intera e pulita).
+        ora_foto = inizio_controllo - o.anticipo_foto_s
+        if entrata_ok:
+            dice("   tutti dentro (%.0f s dopo l'inizio del livello): lavoro fino alle %s" % (
+                t_lavoro - t_inizio, time.strftime("%H:%M:%S", time.localtime(fine))))
         self.aggiorna(fase="lavoro", fine_prevista=datetime.datetime.fromtimestamp(
             fine).astimezone().isoformat(timespec="seconds"))
         esito_controllo = None
         fatto_controllo = False
-        while not self.fermati:
+        foto = None                      # {"t": invio, "attesi": [...], "fatte": [...]}
+        while not self.fermati and entrata_ok:
             adesso = time.time()
             for a in self.attori.values():
                 if not a.vivo() and not a.morto_annotato:
@@ -758,20 +828,29 @@ class Salita:
                     eventi.append({"t": ora(), "evento": "attore morto", "utente": a.n,
                                    "codice": a.proc.returncode})
                     dice("   ⛔ utente %02d e' uscito (codice %s)" % (a.n, a.proc.returncode))
-            if not fatto_controllo and adesso >= inizio_controllo:
+            if foto is None and adesso >= ora_foto:
+                foto = self.foto_prima_della_finestra(inizio_controllo, eventi)
+                adesso = time.time()
+                if adesso > inizio_controllo:
+                    ritardo = adesso - inizio_controllo
+                    inizio_controllo, fine = adesso, fine + ritardo
+                    dice("   la finestra comincia %.0f s dopo (foto lente): fine alle %s" % (
+                        ritardo, time.strftime("%H:%M:%S", time.localtime(fine))))
+                    self.aggiorna(fine_prevista=datetime.datetime.fromtimestamp(
+                        fine).astimezone().isoformat(timespec="seconds"))
+                continue
+            if foto is not None and not fatto_controllo and adesso >= inizio_controllo:
                 fatto_controllo = True
                 self.aggiorna(fase="controllo")
-                dice("   SIGUSR1 agli attori (foto piena)")
-                for a in self.attori.values():
-                    a.segnale(signal.SIGUSR1)
                 if not o.senza_controllo:
                     esito_controllo = self.controllo_corto(n, dirliv)
                 self.aggiorna(fase="lavoro")
                 continue
             if adesso >= fine and fatto_controllo:
                 break
-            time.sleep(min(5, max(0.5, (inizio_controllo if not fatto_controllo else fine)
-                                  - adesso)))
+            prossimo = ora_foto if foto is None else (inizio_controllo if not fatto_controllo
+                                                       else fine)
+            time.sleep(min(5, max(0.5, prossimo - adesso)))
         t_fine = time.time()
         self.aggiorna(fase="registro")
         risorse.send_signal(signal.SIGTERM)
@@ -806,6 +885,10 @@ class Salita:
                           self.attori.values() if a.nato and a.nato >= t_inizio},
             "seme_base": o.seme_base, "video": o.video, "fps_video": o.fps_video,
             "controllo_corto": esito_controllo, "registro_server": files,
+            "entrata_ok": entrata_ok, "entrata_ragione": perche_entrata or None,
+            "attesi": n, "entrati": entrati, "nati_alla_partenza": nati,
+            "foto_piena": foto, "inizio_finestra": iso(inizio_controllo),
+            "inizio_finestra_t": round(inizio_controllo, 3),
             "schede_browser": schede_b,
             "eventi": eventi, "attori_da": self.cartella_attori, "prova": o.prova})
         ms = getattr(self, "meta_scatola", {})
@@ -833,6 +916,12 @@ class Salita:
         else:
             self.aggiorna(fase="classifico")
             classe, signif, perche_c = self.classifica(dirliv, n)
+            if not entrata_ok:
+                # ⛔ quel che dice la classifica resta nel suo registro, ma il
+                #   livello non e' quello chiesto: non e' buono
+                perche_c = "ENTRATA FALLITA (%d entrati su %d): %s · la classifica diceva %s" % (
+                    len(entrati), n, perche_entrata, classe)
+                classe, signif = "?", False
         self.livelli_fatti += 1
         riga.update(classe=classe, significativo=signif, ragione_classe=perche_c)
         with open(os.path.join(self.base, "salita.jsonl"), "a", encoding="utf-8") as f:
@@ -978,6 +1067,55 @@ def leggi_classe(uscita, codice):
         codice, " | ".join(uscita.strip().splitlines()[-3:])[:300])
 
 
+def nascita_del_livello(partito, mtime_nascita, t0):
+    """⭐ La nascita.json appartiene al livello che comincia a `t0` se l'attore
+    e' partito nel livello, o se la nascita e' stata scritta nel livello."""
+    return (partito is not None and partito >= t0) or mtime_nascita >= t0 - 1
+
+
+def foto_scritta(dir_utente, dopo):
+    """La foto chiesta a `dopo` c'e'?  Un file foto-* nuovo, o l'evento «foto»
+    (anche fallito: l'attore ha finito di provarci) in eventi.jsonl."""
+    try:
+        for nome in os.listdir(dir_utente):
+            if nome.startswith("foto-") and os.path.getmtime(os.path.join(dir_utente, nome)) >= dopo:
+                return True
+    except OSError:
+        return False
+    try:
+        with open(os.path.join(dir_utente, "eventi.jsonl"), encoding="utf-8",
+                  errors="replace") as f:
+            for riga in f:
+                if '"foto"' not in riga:
+                    continue
+                try:
+                    d = json.loads(riga)
+                except ValueError:
+                    continue
+                if d.get("evento") == "foto" and (d.get("t") or 0) >= dopo:
+                    return True
+    except OSError:
+        pass
+    return False
+
+
+def ferma_gruppo(p, grazia=20):
+    """SIGTERM al gruppo di `p` (il controllo sgombera la sua sessione), poi
+    SIGKILL se non esce in `grazia` s."""
+    try:
+        os.killpg(p.pid, signal.SIGTERM)
+    except OSError:
+        pass
+    try:
+        p.wait(timeout=grazia)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except OSError:
+            pass
+        p.wait()
+
+
 def taglia_jsonl(src, dst, t0, t1):
     """Le righe di `src` con l'istante dentro [t0, t1]; le righe senza istante
     leggibile passano tutte."""
@@ -1033,6 +1171,10 @@ def main():
     a.add_argument("--attesa-nascita-s", type=int, default=180)
     a.add_argument("--attesa-uscita-s", type=int, default=120)
     a.add_argument("--tetto-controllo-s", type=int, default=600)
+    a.add_argument("--anticipo-foto-s", type=int, default=30,
+                   help="la foto piena (SIGUSR1) quanti s PRIMA della finestra di giudizio")
+    a.add_argument("--tetto-foto-s", type=int, default=90,
+                   help="quanto si aspettano le foto prima della finestra")
     a.add_argument("--lascia-tetto", action="store_true")
     # ⚠ solo per provare l'impianto, mai in una campagna:
     a.add_argument("--anche-se-non-vuoto", action="store_true")

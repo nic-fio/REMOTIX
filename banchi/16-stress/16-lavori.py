@@ -198,13 +198,18 @@ addEventListener('scroll', () => { if (tS) return; tS = setTimeout(() => { tS = 
   manda('scroll ' + NOME + ' ' + Math.round(scrollY) + ' ' + mx()); }, 150); });
 // ⭐ il bottone risponde SUBITO alla pressione (come ogni sito): l'immagine
 //   cambia al clic, e il carico della pagina dopo e' dell'applicazione
-// il campo di testo: dice il suo valore 300 ms dopo l'ultima battitura, e
-// lascia il fuoco dopo 1,5 s (PagGiu' e Home devono tornare alla pagina)
+// il campo di testo: dice il suo valore 300 ms dopo l'ultima battitura.
+// ⛔ NON lascia il fuoco da solo (un tempo: 1,5 s dopo l'ultimo tasto — ma sotto
+//   carico Marionette/CDP puo' tardare di piu' fra due tasti, e le lettere dopo
+//   finivano fuori dal campo: «input perso» falso).  Lo lascia quando l'ATTORE
+//   ha finito la frase e preme Esc (PagGiu' e Home devono tornare alla pagina),
+//   e lo dice («lascia»).
 const nota = document.getElementById('nota');
-let tN = null, tB = null;
-nota.addEventListener('input', () => { clearTimeout(tN); clearTimeout(tB);
-  tN = setTimeout(() => manda('testo ' + NOME + ' ' + nota.value), 300);
-  tB = setTimeout(() => nota.blur(), 1500); });
+let tN = null;
+nota.addEventListener('input', () => { clearTimeout(tN);
+  tN = setTimeout(() => manda('testo ' + NOME + ' ' + nota.value), 300); });
+nota.addEventListener('keydown', (e) => { if (e.key === 'Escape') nota.blur(); });
+nota.addEventListener('blur', () => manda('lascia ' + NOME));
 document.querySelectorAll('nav a').forEach((a) => a.addEventListener('mousedown',
   () => { a.style.filter = 'brightness(1.6)'; }));
 addEventListener('click', (e) => { if (e.target.closest('a')) return;
@@ -365,6 +370,18 @@ def leggi_video(parole):
         except ValueError:
             d[k] = v
     return d
+
+
+def frase_nel_campo(e, frase):
+    """⭐ Una riga del quaderno «testo <pagina> <valore>» con il valore UGUALE
+    alla frase battuta (un carattere perso o fuori dal campo ⇒ no)."""
+    return e[1] == "testo" and " ".join(e[2][1:]) == frase
+
+
+def campo_lascia_da_solo(html):
+    """⛔ Il campo della pagina toglie il fuoco da SOLO a tempo (un setTimeout che
+    chiama blur)?  Deve essere no: sotto carico le lettere dopo andrebbero perse."""
+    return bool(re.search(r"setTimeout\([^;]*\.blur\(\)", html or ""))
 
 
 def storia_contiene(testo, riga):
@@ -566,6 +583,19 @@ class LavoroA(Lavoro):
                 return None
             self.a.dorme(0.4)
 
+    def lascia_il_campo(self):
+        """⭐ Finita la frase, l'attore toglie il fuoco al campo: Esc (la pagina
+        dice «lascia»); se non lo dice, un clic su un punto vuoto della pagina."""
+        t = self.a.mani.premi("Escape")
+        if self.aspetta(lambda e: e[1] == "lascia", 5, t - 1):
+            return True
+        tl, ta = self.a.desktop
+        t = self.a.mani.clic(tl * 0.5, ta * 0.6)
+        ok = self.aspetta(lambda e: e[1] == "lascia", 5, t - 1) is not None
+        if not ok:
+            self.a.evento("errore", testo="il campo di testo non lascia il fuoco (Esc e clic)")
+        return ok
+
     def passo(self):
         R, M = self.a.ritmo, self.a.mani
         tl, ta = self.a.desktop
@@ -598,9 +628,10 @@ class LavoroA(Lavoro):
             M.combo(["Control"], "a")
             frase = " ".join(R.scegli(PAROLE_NOTA) for _ in range(R.intero(2, 5)))
             t0 = M.batti(frase, eco=True)
-            e = self.aspetta(lambda e: e[1] == "testo" and " ".join(e[2][1:]) == frase, 8, t0 - 30)
+            e = self.aspetta(lambda e: frase_nel_campo(e, frase), 8, t0 - 30)
             self.a.verifica("scrivi", e is not None, (e[0] - t0) * 1000 if e else None, frase)
-            self.a.dorme(1.6 + R.pausa_s("breve"))
+            self.lascia_il_campo()
+            self.a.dorme(R.pausa_s("breve"))
         elif az == "clic":
             t0 = M.clic(tl * R.uniforme(0.2, 0.8), ta * R.uniforme(0.45, 0.85))
             e = self.aspetta(lambda e: e[1] == "clic", 8, t0)

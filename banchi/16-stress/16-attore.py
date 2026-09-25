@@ -314,6 +314,38 @@ def pausa_piu_lunga(dipinti_t, da, a):
     return max((y - x for x, y in zip(punti, punti[1:])), default=a - da)
 
 
+TETTO_DEGENERE_S = 15      # §9: il desktop non degenere entro 15 s dall'accesso (FAIL oltre)
+
+
+def esito_nascita(verde, rosso):
+    """(esito, nota) di nascita.json dal giudizio del desktop.  ⭐ Solo un ROSSO
+    (ancora degenere al tetto) e' «degenere»; un giudizio che non si e' potuto
+    dare (fotografia cieca) NON e' un difetto del prodotto: «ok», con la nota."""
+    if verde:
+        return "ok", None
+    if rosso:
+        return "degenere", None
+    return "ok", "desktop non misurato (la fotografia non si e' potuta giudicare)"
+
+
+def lavora_dopo_nascita(nascita):
+    """⭐ L'attore lavora se ha il primo fotogramma (la sessione c'e'), anche
+    con un desktop degenere o non guardato: il carico non si toglie."""
+    return bool(nascita.get("primo_fotogramma_ms")) and "rifiut" not in str(nascita.get("esito"))
+
+
+def ore_dei_tasti(t_ritorno, durate_ms):
+    """⭐ L'ora di ogni tasto di una catena Marionette, ricavata dal RITORNO di
+    `PerformActions` (che torna quando l'ultima pausa e' finita): il tasto i e'
+    stato premuto `somma(durate[i:])` prima.  ⛔ Con l'ora presa PRIMA della
+    chiamata, il ritardo di Marionette sotto carico finiva nel «blocco»."""
+    out, resto = [], sum(durate_ms) / 1000.0
+    for d in durate_ms:
+        out.append(t_ritorno - resto)
+        resto -= d / 1000.0
+    return out
+
+
 class Fine(Exception):
     """SIGTERM / SIGINT: si smette di lavorare e si sgombera."""
 
@@ -450,6 +482,52 @@ def certifica():
     prova("fonte video: YouTube e file", L.fonte_video("https://www.youtube.com/watch?v=LXb3EKWsInQ")
           == ("yt", "LXb3EKWsInQ") and L.fonte_video("file:///rete11/v.mp4") == ("file", "/rete11/v.mp4")
           and L.fonte_video("ftp://x")[0] is None)
+
+    print("── il campo di testo della pagina locale (A)")
+    pag = L.pagine_a()
+    prova("le pagine A non tolgono il fuoco al campo da sole",
+          not any(L.campo_lascia_da_solo(h) for h in pag.values()))
+    prova("il campo si lascia con Esc e lo dice («lascia»)",
+          all("'Escape'" in pag[n + ".html"] and "manda('lascia '" in pag[n + ".html"]
+              for n in L.PAGINE_A))
+    # ⛔ GUASTO: la pagina di prima (blur a 1,5 s dall'ultimo tasto) ⇒ vista
+    vecchia = pag["testo.html"].replace(
+        "tN = setTimeout(", "tB = setTimeout(() => nota.blur(), 1500); tN = setTimeout(")
+    prova("GUASTO visto: il blur a tempo nella pagina ⇒ riconosciuto",
+          L.campo_lascia_da_solo(vecchia))
+    e_ok = (1727.5, "testo", ["testo", "alfa", "rete", "server"])
+    prova("frase battuta = frase nel campo ⇒ ok", L.frase_nel_campo(e_ok, "alfa rete server"))
+    # ⛔ GUASTO: le lettere dopo una pausa lunga finite fuori dal campo ⇒ KO
+    e_ko = (1727.5, "testo", ["testo", "alfa", "re"])
+    prova("GUASTO visto: lettere perse ⇒ KO", not L.frase_nel_campo(e_ko, "alfa rete server"))
+
+    print("── l'ora dei gesti (dal ritorno della chiamata)")
+    ore = ore_dei_tasti(100.0, [200, 300, 500])
+    prova("tre tasti di 200/300/500 ms tornati a 100 s ⇒ 99,0 / 99,2 / 99,5",
+          [round(x, 3) for x in ore] == [99.0, 99.2, 99.5], str(ore))
+    # ⛔ GUASTO: Marionette in ritardo di 2 s: il dipinto del tasto arriva a
+    #   100,05 s; con l'ora PROGRAMMATA dalla partenza (97,0) il blocco e' ~3 s,
+    #   con l'ora dal ritorno e' ~0,55 s
+    programmate = [97.0, 97.2, 97.5]
+    at_vecchie, _ = attese_impulsi(programmate[:1], [100.05], 101.0)
+    at_nuove, _ = attese_impulsi(ore[:1], [100.05], 101.0)
+    prova("GUASTO visto: il ritardo di Marionette NON finisce nel blocco",
+          at_vecchie[0] > 2.5 and at_nuove[0] < 1.2,
+          "prima %.2f s, ora %.2f s" % (at_vecchie[0], at_nuove[0]))
+
+    print("── la nascita")
+    prova("desktop verde ⇒ ok", esito_nascita(True, False) == ("ok", None))
+    prova("degenere al tetto ⇒ «degenere»", esito_nascita(False, True)[0] == "degenere")
+    es, nota = esito_nascita(False, False)
+    prova("non guardato ⇒ ok con la nota «non misurato»", es == "ok" and "non misurato" in nota)
+    prova("il tetto del degenere e' la soglia FAIL di §9 (15 s)", TETTO_DEGENERE_S == 15)
+    prova("con il primo fotogramma l'attore LAVORA (anche degenere)",
+          lavora_dopo_nascita({"primo_fotogramma_ms": 1, "esito": "degenere"})
+          and lavora_dopo_nascita({"primo_fotogramma_ms": 1, "esito": "ok"}))
+    # ⛔ GUASTO: senza primo fotogramma, o rifiutato ⇒ non lavora (non e' in sessione)
+    prova("GUASTO visto: nessun fotogramma o rifiuto ⇒ non lavora",
+          not lavora_dopo_nascita({"primo_fotogramma_ms": None, "esito": "nessun_fotogramma"})
+          and not lavora_dopo_nascita({"esito": "rifiuto"}))
 
     print("── la finestra nella foto")
     try:
@@ -827,15 +905,22 @@ class Attore:
             return n
         # ⚠ il giudizio «non degenere» fotografa fino al tetto: `[M]` 25 set,
         #   xfce ha lo sfondo NERO e lo aspettava 60 s ⇒ tetto corto, e il
-        #   desktop scuro ma vivo lo riconosce `desktop_scuro_ma_vivo`
-        tetto, self.o.tetto_s = self.o.tetto_s, 8
+        #   desktop scuro ma vivo lo riconosce `desktop_scuro_ma_vivo`.
+        # ⛔ Il tetto e' la soglia FAIL di §9: «degenere» solo se lo e' ANCORA a
+        #   15 s dall'ACCESSO (non 8 s dal primo fotogramma: sotto carico lo
+        #   splash di Plasma dura di piu', e non e' un desktop rotto).  Se il
+        #   primo fotogramma arriva gia' oltre, un ultimo sguardo di 3 s.
+        tetto, self.o.tetto_s = self.o.tetto_s, max(3, int(math.ceil(
+            t0 + TETTO_DEGENERE_S - time.time())))
         try:
             e, m, st2 = s.pr.primo_fotogramma()
         finally:
             self.o.tetto_s = tetto
         e, m = self.S.C20V.desktop_scuro_ma_vivo(e, m, st2)
         n["desktop_vivo_ms"] = round((time.time() - t0) * 1000)
-        n["esito"] = {self.S.VERDE: "ok", self.S.ROSSO: "degenere"}.get(e, "non_guardato")
+        n["esito"], nota = esito_nascita(e == self.S.VERDE, e == self.S.ROSSO)
+        if nota:
+            n["nota"] = nota
         n["motivo"] = m
         return n
 
@@ -859,10 +944,13 @@ class Attore:
             with open(os.path.join(self.cartella, "nascita.json"), "w") as f:
                 json.dump(nascita, f, ensure_ascii=False, indent=1)
             self.evento("nascita", **nascita)
-            if nascita.get("esito") != "ok":
+            if not lavora_dopo_nascita(nascita):
                 codice = 1
                 self.aspetta_la_fine("accesso non riuscito")
                 return codice
+            # ⭐ un desktop «degenere» o non guardato ha pero' i fotogrammi: la
+            #   sessione c'e' e l'attore LAVORA — il carico non si toglie (la
+            #   nascita la giudica la classifica, da nascita.json)
             self.entrato = True
             self.arma_sonda()
             self.geo = self.s.geometria()
@@ -991,17 +1079,40 @@ class Mani:
         self.G2.mouse(self.g, self._cammino(X, Y))
         return time.time()
 
-    # ⭐ Ogni gesto torna l'ora di PRIMA dell'evento decisivo (la pressione,
-    #   la prima tacca, il tasto): `[M]` 25 set, con l'ora di DOPO la chiamata
-    #   la storia di bash risultava scritta 200 ms «prima» dell'Invio.
+    # ⭐ Ogni gesto torna l'ora dell'evento decisivo (la pressione, la prima
+    #   tacca, il tasto), ricavata dal RITORNO della chiamata al browser meno le
+    #   pause programmate DOPO di lui.  ⛔ `[M]` 25 set: l'ora di dopo la
+    #   chiamata, senza togliere le pause, metteva la storia di bash 200 ms
+    #   «prima» dell'Invio; ⛔ revisione 25 set: l'ora di PRIMA della chiamata
+    #   metteva il ritardo di Marionette/CDP sotto carico (e il bringToFront)
+    #   nel «blocco» del prodotto.
+    def _wd(self, azioni):
+        """Marionette: PerformActions ⇒ l'ora del suo RITORNO (prima del
+        ReleaseActions, che non c'entra col gesto)."""
+        self.g.m.chiama("WebDriver:PerformActions", {"actions": azioni})
+        t = time.time()
+        self.g.m.chiama("WebDriver:ReleaseActions")
+        return t
+
     def clic(self, X, Y, bottone=0, atteso=False):
         R = self.a.ritmo
         self.G2.mouse(self.g, self._cammino(X, Y))
-        t = time.time()
+        pausa = R.intero(50, 120)
+        if hasattr(self.g, "cdp"):
+            self.G2.mouse(self.g, [("muovi",) + tuple(self.pos), ("giu", bottone, 1),
+                                   ("pausa", pausa), ("su", bottone, 1)])
+            t = time.time() - pausa / 1000.0
+        else:
+            x, y = int(round(self.pos[0])), int(round(self.pos[1]))
+            t = self._wd([{"type": "pointer", "id": "topo", "parameters": {"pointerType": "mouse"},
+                           "actions": [{"type": "pointerMove", "x": x, "y": y, "origin": "viewport",
+                                        "duration": 0},
+                                       {"type": "pointerDown", "button": bottone},
+                                       {"type": "pause", "duration": pausa},
+                                       {"type": "pointerUp", "button": bottone}]}])
+            t -= pausa / 1000.0
         if atteso:
             self.a.impulso(t)
-        self.G2.mouse(self.g, [("muovi",) + tuple(self.pos), ("giu", bottone, 1),
-                               ("pausa", R.intero(50, 120)), ("su", bottone, 1)])
         self.a.conta("clic_mouse")
         return t
 
@@ -1011,33 +1122,43 @@ class Mani:
         vx, vy = self.pos
         R = self.a.ritmo
         dy = 120 if tacche > 0 else -120
-        t = time.time()
-        if atteso:
-            self.a.impulso(t)
+        t = None
         if hasattr(self.g, "cdp"):
             self.G2.davanti(self.g)
             with self.G2.tetto(60, "la rotella"):
                 for _ in range(abs(tacche)):
                     self.g.cdp.chiama("Input.dispatchMouseEvent", type="mouseWheel", x=vx, y=vy,
                                       deltaX=0, deltaY=dy)
+                    t = t or time.time()             # la prima tacca, al ritorno
                     time.sleep(R.intero(40, 160) / 1000.0)
         else:
-            az = []
+            az, pause = [], 0
             for _ in range(abs(tacche)):
+                p = R.intero(40, 160)
+                pause += p
                 az += [{"type": "scroll", "x": int(vx), "y": int(vy), "deltaX": 0, "deltaY": dy,
                         "origin": "viewport", "duration": 0},
-                       {"type": "pause", "duration": R.intero(40, 160)}]
-            self.g.m.chiama("WebDriver:PerformActions",
-                            {"actions": [{"type": "wheel", "id": "rotella", "actions": az}]})
-            self.g.m.chiama("WebDriver:ReleaseActions")
+                       {"type": "pause", "duration": p}]
+            t = self._wd([{"type": "wheel", "id": "rotella", "actions": az}]) - pause / 1000.0
+        t = t or time.time()
+        if atteso:
+            self.a.impulso(t)
         self.a.conta("tacche")
         return t
 
     def premi(self, nome, atteso=False):
-        t = time.time()
+        """Un tasto: giu', pausa, su', pausa (come `G2.tasti`)."""
+        P = self.G2.PAUSA_MS
+        v = self.G2.SPECIALI[nome][3] if nome in self.G2.SPECIALI else nome
+        if hasattr(self.g, "cdp") or v is None:
+            self.G2.tasti(self.g, self.G2.premi(nome))
+            t = time.time() - 2 * P / 1000.0
+        else:
+            t = self._wd([{"type": "key", "id": "tastiera", "actions": [
+                {"type": "keyDown", "value": v}, {"type": "pause", "duration": P},
+                {"type": "keyUp", "value": v}, {"type": "pause", "duration": P}]}]) - 2 * P / 1000.0
         if atteso:
             self.a.impulso(t)
-        self.G2.tasti(self.g, self.G2.premi(nome))
         return t
 
     def combo(self, mod, tasto):
@@ -1085,13 +1206,6 @@ class Mani:
         for i, pz in enumerate(pezzi):
             if i:
                 self.a.cuore()
-            if atteso:
-                # ⚠ l'ora di ogni tasto e' quella PROGRAMMATA dalla partenza del
-                #   pezzo (con Marionette il pezzo parte in una chiamata sola)
-                k = time.time()
-                for _c, (ten, bat) in pz:
-                    self.a.impulso(k)
-                    k += max(ten, bat) / 1000.0
             if hasattr(self.g, "cdp"):
                 self.G2.davanti(self.g)
                 with self.G2.tetto(30, "la battitura"):
@@ -1099,19 +1213,25 @@ class Mani:
                         cd, vk = self.G2.codice_di(c)
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyDown", key=c, code=cd,
                                           windowsVirtualKeyCode=vk, text=c, unmodifiedText=c)
+                        if atteso:
+                            self.a.impulso(time.time())     # al RITORNO del keyDown
                         time.sleep(ten / 1000.0)
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=c, code=cd,
                                           windowsVirtualKeyCode=vk)
                         time.sleep(max(0.0, bat - ten) / 1000.0)
             else:
-                az = []
+                az, durate = [], []
                 for c, (ten, bat) in pz:
                     az += [{"type": "keyDown", "value": c}, {"type": "pause", "duration": int(ten)},
                            {"type": "keyUp", "value": c},
                            {"type": "pause", "duration": int(max(0, bat - ten))}]
-                self.g.m.chiama("WebDriver:PerformActions",
-                                {"actions": [{"type": "key", "id": "tastiera", "actions": az}]})
-                self.g.m.chiama("WebDriver:ReleaseActions")
+                    durate.append(int(ten) + int(max(0, bat - ten)))
+                # ⭐ l'ora di ogni tasto dal RITORNO della catena (ore_dei_tasti), non
+                #   programmata dalla partenza: il ritardo di Marionette non e' un blocco
+                t_ret = self._wd([{"type": "key", "id": "tastiera", "actions": az}])
+                if atteso:
+                    for k in ore_dei_tasti(t_ret, durate):
+                        self.a.impulso(k)
         self.a.conta("tasti")
         return time.time()
 
