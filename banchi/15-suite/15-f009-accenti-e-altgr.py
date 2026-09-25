@@ -42,14 +42,14 @@
    Si leggono DAL DISCO, come l'utente, prima dell'accesso e dopo la passata:
    `org.gnome.desktop.input-sources` (sources, mru-sources, current,
    xkb-options) del dconf dell'utente — letto con un profilo che ha SOLO
-   `user-db:user`, cioe' `~/.config/dconf/user` e nient'altro — e l'impronta
-   di `~/.config/kxkbrc`.  Devono essere quelli di PRIMA, o F-009 e' rosso
+   `user-db:user`, cioe' `~/.config/dconf/user` e nient'altro — il gruppo
+   `[Layout]` di `~/.config/kxkbrc`.  Devono essere quelli di PRIMA, o F-009 e' rosso
    anche con tutte le lettere giuste.
 
 GUASTO (--guasto, stessa sessione), due innesti e un verdetto solo:
    1. una SCRITTURA PERSISTENTE simulata — `sources` = de nel dconf
-      dell'utente (col suo profilo) e una riga di commento in fondo a
-      `~/.config/kxkbrc` — ⇒ il giudice delle impostazioni deve dare rosso;
+      dell'utente (col suo profilo) e `[Layout] LayoutList=de` in fondo
+      a `~/.config/kxkbrc` — ⇒ il giudice delle impostazioni deve dare rosso;
    2. il browser torna in INGLESE (en-US) e si RIATTACCA: la pagina dichiara
       «us», la sessione prende la disposizione americana, e gli accenti non ci
       sono ⇒ il giudice delle lettere deve dare rosso.
@@ -90,14 +90,16 @@ LEGGI_IMPOSTAZIONI = (
     "for k in " + " ".join(CHIAVI_IS) + "; do "
     "v=$(DCONF_PROFILE=\"$p\" gsettings get org.gnome.desktop.input-sources \"$k\" "
     "2>/dev/null) || v='(non letta)'; echo \"is.$k=$v\"; done; rm -f \"$p\"; "
-    "if [ -f \"$HOME/.config/kxkbrc\" ]; then "
-    "echo \"kxkbrc=$(sha256sum < \"$HOME/.config/kxkbrc\" | cut -c1-16)\"; "
-    "else echo kxkbrc=assente; fi")
+    # ⚠ di kxkbrc solo il gruppo [Layout] (la disposizione): Plasma puo' creare
+    #   il file da se' al primo accesso, e il resto non e' nostro
+    "v=$(sed -n '/^\\[Layout\\]/,/^\\[/p' \"$HOME/.config/kxkbrc\" 2>/dev/null | "
+    "grep -v '^\\[' | grep -v '^[#;]' | grep . | sort | tr '\\n' ' '); "
+    "echo \"kxkbrc=${v:-assente}\"")
 SCRIVI_GUASTO = (
     "export HOME=/home/%(c)s; p=$(mktemp); echo user-db:user > \"$p\"; "
     "DCONF_PROFILE=\"$p\" gsettings set org.gnome.desktop.input-sources sources "
     "\"[('xkb','de')]\" 2>&1 | head -2; rm -f \"$p\"; mkdir -p \"$HOME/.config\"; "
-    "echo '# 15-f009 guasto: scrittura persistente simulata' >> \"$HOME/.config/kxkbrc\"; "
+    "printf '\\n[Layout]\\nLayoutList=de\\n' >> \"$HOME/.config/kxkbrc\"; "
     "echo scritto")
 
 
@@ -209,7 +211,7 @@ def certifica():
     prova("input-sources scritta nell'utente ⇒ FAIL",
           giudica_impostazioni(pr, scritta)[0] == S.FAIL)
     prova("kxkbrc dell'utente nato ⇒ FAIL",
-          giudica_impostazioni(pr, dict(pr, kxkbrc="0123456789abcdef"))[0] == S.FAIL)
+          giudica_impostazioni(pr, dict(pr, kxkbrc="LayoutList=it"))[0] == S.FAIL)
     prova("non lette ⇒ BLOCKED", giudica_impostazioni(None, pr)[0] == S.BLOCKED)
     prova("niente da leggere ⇒ None", leggi_impostazioni("sh: errore") is None)
     print("⛔ CERTIFICAZIONE FALLITA" if guai else "⭐ CERTIFICATO")
