@@ -457,6 +457,41 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
     return info, misure, voci
 
 
+def voce_nascita_controllo(na):
+    """`nascita` di controllo-corto.json: {pagina_s, ammissione_s, nascita_s
+    (accesso → primo fotogramma dipinto), primo_non_degenere_s, rifiuto, esito,
+    ragione}.  §9: <= 5 s GREEN, 5–15 DEGRADED, > 15 o rifiuto FAIL."""
+    if not na:
+        return non_misurato("controllo-corto.json senza `nascita`")
+    if na.get("rifiuto"):
+        return fallita(None, "RIFIUTO all'accesso: %s" % (na.get("ragione") or "")[:160])
+    if na.get("nascita_s") is None:
+        if str(na.get("esito", "")).upper() == "FAIL":
+            return fallita(None, "la sessione del controllo non e' nata: %s" % (na.get("ragione") or "")[:160])
+        return non_misurato("`nascita` senza nascita_s")
+    v = voce_misurata("nascita_s", float(na["nascita_s"]), "accesso → primo fotogramma dipinto, a carico pieno"
+                      + (" (non degenere a %s s)" % na["primo_non_degenere_s"]
+                         if na.get("primo_non_degenere_s") is not None else ""))
+    if str(na.get("esito", "PASS")).upper() == "FAIL":
+        v = fallita(v["valore"], "il primo fotogramma: %s" % (na.get("ragione") or "")[:160])
+    return v
+
+
+def sessione_controllo(cart, corto, log_eventi):
+    inq = corto.get("inquilino")
+    info = {"utente": int(corto.get("utente", 99)), "profilo": "controllo", "browser": corto.get("browser"),
+            "versione": corto.get("versione"), "inquilino": inq}
+    na = corto.get("nascita") or {}
+    misure = {"nascita_s": na.get("nascita_s"), "ammissione_s": na.get("ammissione_s"),
+              "primo_non_degenere_s": na.get("primo_non_degenere_s"),
+              "sessioni_durante": corto.get("sessioni_durante")}
+    voci = {"nascita_s": voce_nascita_controllo(na), "controllo_corto": voce_corto(corto)}
+    rif = [e for e in log_eventi if e.get("rifiuto") and inq and e["inquilino"] == inq]
+    if rif:
+        voci["nascita_s"] = fallita(None, "rifiuto nel registro del server: " + rif[0]["riga"][:160])
+    return (os.path.join(cart, "controllo-corto"), info, misure, voci)
+
+
 def voce_corto(corto):
     es = corto.get("esiti") or {}
     if isinstance(es, list):
@@ -791,7 +826,10 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     if corto is None:
         lv["controllo_corto"] = non_misurato("manca controllo-corto.json")
     elif not any("controllo_corto" in s[3] for s in sess):
-        lv["controllo_corto"] = voce_corto(corto)
+        # ⭐ il controllo corto e' una SESSIONE NUOVA sua (16-controllo-corto.py,
+        #   utente 99): si classifica come sessione a parte, profilo «controllo»,
+        #   con la sua nascita a carico pieno (§9 «nascita di un utente nuovo»)
+        sess.append(sessione_controllo(cart, corto, ev))
     if not sess:
         lv["sessioni"] = non_misurato("nessuna cartella utente-NN")
     classi = [classe_di(v) for _, _, _, v in sess]
@@ -1097,6 +1135,20 @@ def certifica():
                                                                                    "F-014": "FAIL"}}))
         guarda("controllo corto con un FAIL ⇒ la sua sessione FAIL",
                classe_di(g["sessioni"][1][3]) == "FAIL" and classe_di(g["sessioni"][0][3]) == "GREEN")
+        cc = {"utente": 99, "inquilino": "c1604u99", "browser": "chrome",
+              "esiti": {"F-003": "PASS", "F-004": "PASS", "F-007": "PASS", "F-014": "PASS"},
+              "nascita": {"pagina_s": 0.8, "ammissione_s": 0.4, "nascita_s": 7.2,
+                          "primo_non_degenere_s": 7.9, "esito": "PASS", "ragione": "ok"}}
+        g = classifica(livello("corto-99", quattro, corto=cc))
+        s99 = [x for x in g["sessioni"] if x[1]["utente"] == 99]
+        v = s99[0][3]["nascita_s"] if s99 else {}
+        guarda("controllo corto = sessione 99 «controllo»: nascita 7,2 s a carico pieno ⇒ DEGRADED",
+               len(g["sessioni"]) == 5 and s99 and s99[0][1]["profilo"] == "controllo"
+               and v.get("classe") == "DEGRADED" and g["classe"] == "DEGRADED"
+               and "controllo_corto" not in g["voci_livello"], v.get("nota", ""))
+        cc["nascita"] = {"ammissione_s": 1.0, "rifiuto": True, "esito": "FAIL", "ragione": "l'accesso: rifiutato"}
+        g = classifica(livello("corto-rifiuto", quattro, corto=cc))
+        guarda("controllo corto rifiutato ⇒ FAIL", g["classe"] == "FAIL")
         g = classifica(livello("mem-perdita", quattro, mem=lambda k: 1000.0 * (1 + 0.004 * max(0, k - 480))))
         v = g["voci_livello"]["memoria_sessioni"]
         guarda("memoria +48 % e continua ⇒ FAIL", v["classe"] == "FAIL", v["nota"])
