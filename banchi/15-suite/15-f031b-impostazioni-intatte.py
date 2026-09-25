@@ -229,7 +229,15 @@ def giudica(prima, dopo):
     for k in sorted(set(prima) | set(dopo)):
         a, b = prima.get(k, "(assente)"), dopo.get(k, "(assente)")
         if a != b:
-            per[classe(k)].append("%s: %s → %s" % (k, a[:80], b[:80]))
+            c = classe(k)
+            m = re.match(r"^lxqt:panel\.conf:\[([^\]]*)\]type$", k)
+            if c == "sorvegliata" and m and a == "(assente)" and b == m.group(1):
+                # ⚠ [M] 25 set 2026: lxqt-panel all'avvio RISCRIVE nel file
+                #   dell'utente tutta la configurazione che vede, coi tipi di
+                #   serie (il gruppo si chiama come il suo tipo): e' il
+                #   desktop, non noi.  Un tipo DIVERSO (mainmenu) resta rosso.
+                c = "altra"
+            per[c].append("%s: %s → %s" % (k, a[:80], b[:80]))
     coda = " · permesse cambiate: %s · altre cambiate (del desktop o nostre, non decidono): %d" % (
         "; ".join(per["permessa"]) or "nessuna", len(per["altra"]))
     if per["sorvegliata"]:
@@ -318,6 +326,11 @@ def certifica():
                                 "/bin/true"}))[0] == S.FAIL)
     prova("fancymenu→mainmenu nell'utente ⇒ FAIL",
           giudica(p, dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
+    prova("il pannello riscritto dal desktop coi tipi di serie ⇒ PASS",
+          giudica(p, dict(p, **{"lxqt:panel.conf:[taskbar]type": "taskbar"}))[0] == S.PASS)
+    prova("fancymenu→mainmenu scritto da zero nell'utente ⇒ FAIL",
+          giudica({k: v for k, v in p.items() if "fancymenu" not in k},
+                  dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
     prova("voce Hidden nell'utente ⇒ FAIL",
           giudica(p, dict(p, **{"app:lxqt-leave:Hidden": "true"}))[0] == S.FAIL)
     prova("kxkbrc toccato ⇒ FAIL",

@@ -3080,61 +3080,92 @@ static GPtrArray *plugin_di_tipo(GKeyFile *utente, GPtrArray *sistema, const cha
 /*
  * A) IL PANNELLO: `fancymenu` → `mainmenu`.
  *
- * ⛔⛔ FASE 15, D-018 — NELLA CARTELLA DELLA SESSIONE, non nel file
- *     dell'utente: le impostazioni dell'utente non si toccano (decisione del
- *     25 set 2026), e un menu non e' blocco, riavvio, sospensione o stand-by.
- * ⭐ COME: `$XDG_RUNTIME_DIR/remotix/xdg-lxqt` sta in TESTA a
- *    `XDG_CONFIG_DIRS` (`componi_ambiente()`), e li' si scrive un
- *    `lxqt/panel.conf` COMPLETO: i file di sistema fusi (vince il primo, come
- *    li cerca QSettings) con `type=mainmenu` al posto del fancymenu.  Completo
- *    e non solo la chiave, perche' valga anche se QSettings guardasse una
- *    cartella sola.
- * ⚠ Il prezzo: il file dell'utente (`~/.config/lxqt/panel.conf`) viene prima
- *   di tutte le cartelle di sistema.  Se l'utente ha scritto lui `type` per
- *   quel plugin, vince il suo: si dice, e resta il pulsante «Leave» (con la
- *   rete di riserva B sotto).  ⭐ Di solito non c'e': i file dell'utente di
- *   LXQt sono SPARSI (vedi `valore_effettivo()`).
+ * ⛔⛔ FASE 15, D-018 — NEL FILE DELLA SESSIONE, e il pannello non tocca
+ *     quello dell'utente: le impostazioni dell'utente non si toccano
+ *     (decisione del 25 set 2026), e un menu non e' blocco, riavvio,
+ *     sospensione o stand-by.
+ *
+ * ⛔ LA PRIMA STESURA NON BASTAVA — `[M]` 25 set 2026, 15-f031b su
+ *    rete11-lxqt: un `lxqt/panel.conf` della sessione in testa a
+ *    `XDG_CONFIG_DIRS` lo legge, si', ma `lxqt-panel` all'avvio RISCRIVE
+ *    tutta la configurazione che vede nel file DELL'UTENTE
+ *    (`~/.config/lxqt/panel.conf`: `type`, `alignment`, `[panel1]` intero) —
+ *    e il nostro `type=mainmenu` ci finiva dentro.  ⚠ La riscrittura e' del
+ *    desktop (`alignment`, `iconSize`… non li scriviamo noi): il guaio era
+ *    solo che la leggeva da noi.
+ *
+ * ⭐ LA CURA: il pannello della sessione usa un SUO file.
+ *    `[R]` lxqt-panel 2.1.4 `lxqtpanelapplication.cpp`: `-c/--configfile`
+ *    ⇒ `LXQt::Settings(configFile, QSettings::IniFormat)` — legge e SCRIVE
+ *    quel file, e nient'altro (niente cartelle di sistema: il file deve
+ *    essere COMPLETO).  E `lxqt-panel` lo lancia `lxqt-session` come modulo
+ *    dall'autostart (`[R]` lxqt-session 2.1.1 `lxqtmodman.cpp`:
+ *    `XdgAutoStart::desktopFileList()`, `X-LXQt-Module`, `expandExecString`),
+ *    che cerca per NOME di file in `~/.config/autostart` e poi in
+ *    `XDG_CONFIG_DIRS`, e vince il primo.  ⇒ Due file nella SESSIONE:
+ *    · `$XDG_RUNTIME_DIR/remotix/lxqt-pannello.conf` — il pannello
+ *      dell'utente COM'E' (i file di sistema fusi, con sopra il suo file
+ *      sparso) e `type=mainmenu` al posto del fancymenu;
+ *    · `$XDG_RUNTIME_DIR/remotix/xdg-lxqt/autostart/lxqt-panel.desktop` —
+ *      lo stesso modulo di sistema, con `--configfile` quel file.
+ *
+ * ⚠ I prezzi: quel che l'utente cambia nel pannello DAL REMOTO vale per la
+ *   sessione e si perde alla nascita successiva (come su GNOME); e un
+ *   `~/.config/autostart/lxqt-panel.desktop` dell'utente viene prima del
+ *   nostro — si dice, e allora resta il suo pannello (col fancymenu, e la
+ *   rete di riserva B sotto).
  */
 static void pannello_lxqt(void)
 {
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
 	g_autofree char *file = g_build_filename(g_get_home_dir(), ".config", "lxqt", "panel.conf",
 	                                         NULL);
+	g_autofree char *suo_avvio = g_build_filename(g_get_home_dir(), ".config", "autostart",
+	                                              "lxqt-panel.desktop", NULL);
 	g_autofree char *cfg = lxqt_cartella_config_sessione();
-	g_autofree char *cartella = cfg ? g_build_filename(cfg, "lxqt", NULL) : NULL;
-	g_autofree char *nostro = cartella ? g_build_filename(cartella, "panel.conf", NULL) : NULL;
+	g_autofree char *nostro = NULL;
+	g_autofree char *avvio = NULL;
+	g_autofree char *cartella_avvio = NULL;
+	g_autofree char *vecchio = NULL;
+	g_autofree char *riga_avvio = NULL;
 	g_autoptr(GKeyFile) utente = g_key_file_new();
 	g_autoptr(GKeyFile) fuso = g_key_file_new();
 	g_autoptr(GKeyFile) riletto = g_key_file_new();
 	g_autoptr(GPtrArray) sistema = file_di_sistema("panel");
-	g_autoptr(GPtrArray) con_nostro = NULL;
+	g_autoptr(GPtrArray) solo_nostro = NULL;
+	g_autoptr(GPtrArray) strati = g_ptr_array_new();
 	g_autoptr(GPtrArray) fancy = NULL;
 	g_autoptr(GPtrArray) restano = NULL;
 	g_autoptr(GError) sbaglio = NULL;
 	guint cambiati = 0;
 
-	if (!nostro) {
+	if (!runtime || !*runtime || !cfg) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: senza XDG_RUNTIME_DIR non c'e' la cartella della sessione — "
 		              "il pannello resta col fancymenu, e col suo pulsante «Leave»");
 		return;
 	}
+	nostro = g_build_filename(runtime, "remotix", "lxqt-pannello.conf", NULL);
+	cartella_avvio = g_build_filename(cfg, "autostart", NULL);
+	avvio = g_build_filename(cartella_avvio, "lxqt-panel.desktop", NULL);
+	/* ⛔ l'avanzo della prima stesura: letto da lxqt-panel, finiva nell'utente */
+	vecchio = g_build_filename(cfg, "lxqt", "panel.conf", NULL);
+	g_unlink(vecchio);
+
 	if (g_file_test(file, G_FILE_TEST_EXISTS) && !leggi_ini_qt(utente, file, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
-		              "⚠ LXQt: %s c'è ma non lo so leggere (%s) — lo tratto come vuoto "
-		              "(e non lo tocco)",
+		              "⚠ LXQt: %s c'è ma non lo so leggere (%s) — il pannello della "
+		              "sessione parte dal solo sistema (e il file non lo tocco)",
 		              file, sbaglio->message);
 		g_clear_error(&sbaglio);
 	}
-	fancy = plugin_di_tipo(utente, sistema, "fancymenu");
-	if (fancy->len == 0) {
-		registro_dice(REG_SESSIONE,
-		              "⭐ LXQt: nel pannello nessun fancymenu — non c'è niente da cambiare");
-		return;
-	}
 
-	/* il sistema fuso: dal meno forte al piu' forte, cosi' vince il primo */
-	for (guint i = sistema->len; i > 0; i--) {
-		GKeyFile *uno = g_ptr_array_index(sistema, i - 1);
+	/* il pannello com'e': sistema dal meno forte al piu' forte, poi l'utente */
+	for (guint i = sistema->len; i > 0; i--)
+		g_ptr_array_add(strati, g_ptr_array_index(sistema, i - 1));
+	g_ptr_array_add(strati, utente);
+	for (guint i = 0; i < strati->len; i++) {
+		GKeyFile *uno = g_ptr_array_index(strati, i);
 		g_auto(GStrv) gruppi = g_key_file_get_groups(uno, NULL);
 
 		for (int g = 0; gruppi[g]; g++) {
@@ -3148,9 +3179,10 @@ static void pannello_lxqt(void)
 			}
 		}
 	}
+	fancy = plugin_di_tipo(utente, sistema, "fancymenu");
 	for (guint i = 0; i < fancy->len; i++)
 		g_key_file_set_value(fuso, g_ptr_array_index(fancy, i), "type", "mainmenu");
-	if (g_mkdir_with_parents(cartella, 0700) != 0 ||
+	if (g_mkdir_with_parents(cartella_avvio, 0700) != 0 ||
 	    !g_key_file_save_to_file(fuso, nostro, &sbaglio)) {
 		registro_dice(REG_SESSIONE,
 		              "⛔ LXQt: %s NON scritto (%s): il pannello resta col fancymenu, "
@@ -3158,36 +3190,54 @@ static void pannello_lxqt(void)
 		              nostro, sbaglio ? sbaglio->message : g_strerror(errno));
 		return;
 	}
+	riga_avvio = g_strdup_printf("[Desktop Entry]\n"
+	                             "Type=Application\n"
+	                             "Name=Panel\n"
+	                             "TryExec=lxqt-panel\n"
+	                             "Exec=lxqt-panel --configfile %s\n"
+	                             "OnlyShowIn=LXQt;\n"
+	                             "X-LXQt-Module=true\n"
+	                             "X-REMOTIX=il pannello della sessione (D-018)\n",
+	                             nostro);
+	if (!g_file_set_contents(avvio, riga_avvio, -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ LXQt: %s NON scritto (%s): il pannello partira' col file "
+		              "dell'utente, e col fancymenu",
+		              avvio, sbaglio->message);
+		return;
+	}
 
-	/* ⛔ E SI RILEGGE, e si guarda come lo guarda lxqt-panel: l'utente, poi il
-	 *    nostro, poi il sistema. */
+	/* ⛔ E SI RILEGGE: il file della sessione, da solo (e' tutto quel che il
+	 *    pannello leggera'), e chi vince nell'autostart. */
 	if (!leggi_ini_qt(riletto, nostro, NULL)) {
 		registro_dice(REG_SESSIONE, "⛔ LXQt: %s scritto ma NON si rilegge", nostro);
 		return;
 	}
-	con_nostro = g_ptr_array_new();
-	g_ptr_array_add(con_nostro, riletto);
-	for (guint i = 0; i < sistema->len; i++)
-		g_ptr_array_add(con_nostro, g_ptr_array_index(sistema, i));
+	solo_nostro = g_ptr_array_new();
 	for (guint i = 0; i < fancy->len; i++) {
-		g_autofree char *e = valore_effettivo(utente, con_nostro,
-		                                      g_ptr_array_index(fancy, i), "type");
+		g_autofree char *e = g_key_file_get_value(riletto, g_ptr_array_index(fancy, i),
+		                                          "type", NULL);
 
 		cambiati += g_strcmp0(e, "mainmenu") == 0;
 	}
-	restano = plugin_di_tipo(utente, con_nostro, "fancymenu");
-	if (restano->len == 0 && cambiati == fancy->len)
+	restano = plugin_di_tipo(riletto, solo_nostro, "fancymenu");
+	if (g_file_test(suo_avvio, G_FILE_TEST_EXISTS))
 		registro_dice(REG_SESSIONE,
-		              "⭐ LXQt: fancymenu→mainmenu NELLA SESSIONE, RILETTO (%s, %u "
-		              "plugin) — il menu classico non ha il pulsante «Leave» fisso, e "
-		              "il file dell'utente non si tocca",
-		              nostro, cambiati);
+		              "⛔ LXQt: %s c'è ed è dell'utente: viene PRIMA del nostro, e il "
+		              "pannello partira' come dice lui (col suo file, e col fancymenu se "
+		              "ce l'ha) — non lo tocco",
+		              suo_avvio);
+	else if (restano->len == 0 && cambiati == fancy->len)
+		registro_dice(REG_SESSIONE,
+		              "⭐ LXQt: il pannello della SESSIONE è %s (%u fancymenu→mainmenu, "
+		              "RILETTO), lanciato con --configfile da %s — il pannello dell'utente "
+		              "(%s) non lo legge e non lo scrive",
+		              nostro, cambiati, avvio, file);
 	else
 		registro_dice(REG_SESSIONE,
-		              "⛔ LXQt: fancymenu→mainmenu NON in vigore (rileggo %u mainmenu su "
-		              "%u, e %u fancymenu ancora lì — il file dell'utente %s vince sul "
-		              "nostro, e non lo tocco)",
-		              cambiati, fancy->len, restano->len, file);
+		              "⛔ LXQt: fancymenu→mainmenu NON in vigore nel file della sessione "
+		              "(rileggo %u mainmenu su %u, e %u fancymenu ancora lì)",
+		              cambiati, fancy->len, restano->len);
 }
 
 /*
