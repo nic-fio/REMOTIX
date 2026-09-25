@@ -2677,6 +2677,9 @@ class Schermo {
      *    quello nuovo — che §riparti chiama «peggio del nero, perche' sembra
      *    vivo».  ⇒ L'epoca sale e non torna mai indietro. */
     this.epoca = 0;
+    /* ⛔ `chiusa`: la sessione e' FINITA e la pagina e' tornata al modulo —
+       la mette `chiudi()`, la toglie `riparti()` (D-003, 25 set 2026). */
+    this.chiusa = false;
     this.dipinta = null;                       /* l'ultimo rettangolo dipinto, per il registro */
     this.formato = null;                       /* `VideoFrame.format`, per il registro */
     /* ⛔⭐ IL COSTO DEL DISEGNO, MISURATO — §4.9 lo lasciava `[?]`: «il ritardo
@@ -2871,6 +2874,36 @@ class Schermo {
     this.attese_tela = 0;
     this.errori = [];
     for (const k of Object.keys(this.conti)) this.conti[k] = 0;
+    this.chiusa = false;
+  }
+
+  /* ⛔⭐ LA SESSIONE E' FINITA: DA QUI NON SI DIPINGE PIU' NIENTE — D-003,
+   *     fase 15, 25 settembre 2026.
+   *
+   * ⛔ Il difetto: `torna_al_modulo()` toglieva il vestito da desktop, ma i
+   *    fotogrammi GIA' IN VOLO — spediti dal server prima del `CONGEDO`, su
+   *    stream diversi dal canale di controllo e quindi senza ordine rispetto a
+   *    lui, piu' quelli dentro il decodificatore e dentro `createImageBitmap` —
+   *    arrivavano al vetro DOPO, e ciascuno riscriveva
+   *    `data-schermo="acceso"` (`mostra()`, `componi()`, il `rVFC` di MSE).
+   *    `[M]` giro di integrazione, lxqt/firefox, F-023: esito del congedo
+   *    scritto, modulo NASCOSTO, vestito «acceso», scena che si muoveva fino
+   *    al congedo.  ⚠ La guardia c'era gia' — l'EPOCA in `mostra()` — ma
+   *    l'epoca saliva solo in `riparti()`, cioe' all'accesso DOPO.
+   *
+   * ⇒ Si chiude qui quel che puo' ancora dipingere: il decodificatore (una
+   *   `close()` butta le uscite in sospeso e non chiama `error`), l'epoca sale
+   *   (le conversioni in corso si buttano da sole), il deposito della strada
+   *   2D se ne va (un ridimensionamento lo ricomporrebbe), e `chiusa` fa
+   *   tacere gli stream che arrivano ancora.
+   * ⚠ I CONTATORI NON SI AZZERANO: li leggono i banchi e la diagnosi DOPO la
+   *   fine della sessione.  Li azzera `riparti()`, all'accesso nuovo. */
+  chiudi() {
+    try { if (this.dec && this.dec.state !== "closed") this.dec.close(); }
+    catch (e) { /* gia' chiuso */ }
+    this.epoca++;
+    this.deposito = null; this.deposito_p = null;
+    this.chiusa = true;
   }
 
   /* ⛔ Un ERRORE_PROTOCOLLO si scrive nel registro E si porta sul filo (§3):
@@ -3442,6 +3475,10 @@ class Schermo {
   /* Uno stream del video, per intero.  `completo` e' falso quando lo stream e'
      stato AZZERATO (`RESET_STREAM`). */
   stream_video(byte, completo) {
+    /* ⛔ D-003: uno stream che arriva dopo la fine della sessione non e' una
+       violazione di §2.5 — il server lo ha spedito prima del `CONGEDO` — e
+       non va ne' dipinto ne' chiamato `ERRORE_PROTOCOLLO`. */
+    if (this.chiusa) return;
     this.conti.stream++;
     if (!this.sessione)
       return this.errore_protocollo("uno stream video prima di SESSIONE: §2.5 "
@@ -3833,7 +3870,7 @@ class Schermo {
            *    da `dipingi()`, e senza questa riga la pagina resterebbe per
            *    sempre «in attesa del primo fotogramma» mentre il desktop e' gia'
            *    sullo schermo. */
-          document.body.dataset.schermo = "acceso";
+          if (!this.chiusa) document.body.dataset.schermo = "acceso";
           this.mostrata = meta && meta.mediaTime;
           this.mse_insegui();
           v.requestVideoFrameCallback(conta);
@@ -4701,6 +4738,10 @@ async function collega(utente, parola) {
   /* Dichiarato qui e non piu' sotto: lo legge anche il gestore di `wt.closed`,
      che si registra due righe piu' avanti. */
   let congedato = false;
+  /* ⛔ D-002: vera da `SESSIONE` finche' la sessione non e' finita e la
+     pagina non e' tornata al modulo.  La legge `fine_filo()`, qui sotto. */
+  let attaccata = false;
+  let congedo_letto = false;
 
   const wt = new WebTransport(url, {
     allowPooling: false,
@@ -4756,6 +4797,52 @@ async function collega(utente, parola) {
     tela_chiesta_l = tela_chiesta_a = 0;
   };
 
+  /* ⛔⛔⭐ IL FILO CADUTO SENZA `CONGEDO` SI DICE, E SI TORNA AL MODULO — D-002,
+   *      fase 15, 25 settembre 2026.
+   *
+   * ⛔ Il difetto: la linea morta (§3.1-quater: il server manda UN
+   *    `CONNECTION_CLOSE`, e su una linea che non porta spesso non arriva), la
+   *    rete persa, il browser congelato e risvegliato — in tutti questi casi
+   *    il `CONGEDO` non arriva, e questa chiusura scriveva solo in `nota()`,
+   *    cioe' nel registro nascosto.  `[M]` giro di integrazione, F-019:
+   *    «sessione chiusa con errore: WebTransportError: Connection lost.» nel
+   *    registro, e davanti all'utente il desktop congelato, vestito «acceso»,
+   *    esito «Ammesso» NASCOSTO dal vestito.  ⇒ Un'attesa muta, che §8.2
+   *    chiama guasto.
+   *
+   * ⭐ La regola e' quella di `ascolta_controllo()` — «un `CONGEDO` finisce la
+   *   sessione, e per rientrare si passa dal modulo» — estesa al fatto, non al
+   *   messaggio: **la sessione finita** (per qualunque strada) riporta al
+   *   modulo.  E' anche quel che §3.1-quater ha deciso: *«il filo cade e si
+   *   rientra a mano»* — a mano vuol dire DAL MODULO, e la pagina lo deve dire.
+   *
+   * ⚠ Tre casi che NON si toccano:
+   *   · prima di `SESSIONE` (`attaccata` falsa): la stretta di mano ha gia' la
+   *     sua frase («Non si collega», il motivo del rifiuto) e la pagina non e'
+   *     mai stata vestita;
+   *   · il `CONGEDO` gia' letto: `ascolta_controllo()` ha scritto il motivo e
+   *     ha gia' riportato al modulo — qui si riscriverebbe una frase peggiore;
+   *   · la chiusura NOSTRA (`congedato`): la frase l'ha gia' scritta chi ha
+   *     deciso di chiudere (rilievo B-4) — si torna al modulo senza toccarla.
+   *     ⚠ Se invece nessuno ne ha scritta una (davanti c'e' ancora
+   *     «Ammesso…», in verde) si scrive quella DI RISERVA: tornare al modulo
+   *     con «Ammesso» sotto sarebbe dire il contrario del fatto.
+   * ⛔ E la frase dice quel che la pagina SA: il filo e' caduto.  Non dice
+   *    PERCHE' (linea morta, rete, server fermo: non lo distingue) e non
+   *    promette che la sessione ci sia ancora. */
+  const fine_filo = (frase, di_riserva) => {
+    if (!attaccata) return;
+    attaccata = false;
+    const e = $("esito");
+    if (frase) esito(frase, false);
+    else if (di_riserva && e && e.className !== "male") esito(di_riserva, false);
+    torna_al_modulo();
+  };
+  const FILO_CADUTO = "il collegamento con il server si e' interrotto: per "
+    + "rientrare scrivi di nuovo la parola d'ordine";
+  const CHIUSA_DA_NOI = "la sessione si e' chiusa per un errore: per rientrare "
+    + "scrivi di nuovo la parola d'ordine — il perche' preciso e' nel registro";
+
   wt.closed.then((info) => {
     fine_sessione();
     const c = info && info.closeCode;
@@ -4765,11 +4852,21 @@ async function collega(utente, parola) {
        sapeva (rilievo B-4, meta' visibile). */
     if (congedato) {
       nota("sessione chiusa da questa pagina: codice 0x" + (c === undefined ? "?" : c.toString(16)));
+      fine_filo(null, CHIUSA_DA_NOI);
       return;
     }
-    if (c && MOTIVO[c]) esito(MOTIVO[c], false);
+    /* ⚠ Il `CONGEDO` gia' letto ha scritto la sua frase (e `0x10` in verde):
+       il codice che lo segue e' lo stesso fatto, e riscriverlo in rosso
+       direbbe «errore» a un'uscita riuscita. */
+    if (c && MOTIVO[c] && !congedo_letto) esito(MOTIVO[c], false);
     nota("sessione chiusa dal server: codice " + (c === undefined ? "?" : c));
-  }).catch((e) => { fine_sessione(); nota("sessione chiusa con errore: " + e); });
+    fine_filo(c && MOTIVO[c] ? null : FILO_CADUTO);
+  }).catch((e) => {
+    fine_sessione();
+    nota("sessione chiusa con errore: " + e);
+    if (congedato) fine_filo(null, CHIUSA_DA_NOI);
+    else fine_filo(FILO_CADUTO);
+  });
 
   await wt.ready;
   nota("sessione WebTransport aperta");
@@ -5407,7 +5504,9 @@ async function collega(utente, parola) {
          che e' il messaggio da cui dipende tutta la regola del cambio di tela —
          non sarebbe mai stato letto.  Non si aspetta: la stretta di mano e'
          finita, e §4.4 vieta di bloccare il ciclo. */
-      ascolta_controllo(canale, congeda);
+      attaccata = true;
+      ascolta_controllo(canale, congeda,
+                        () => { attaccata = false; congedo_letto = true; });
 
       /* ══ ⭐⭐ `ADATTA_TELA` — E DA QUI IN POI LA SCALA VALE 1 ═══════════════
        *
@@ -5496,7 +5595,7 @@ async function collega(utente, parola) {
 /* ⛔ Il canale di controllo dopo la stretta di mano.  §3: quel che non si
    capisce si chiude con `ERRORE_PROTOCOLLO`, e si scrive che cosa non si e'
    capito. */
-async function ascolta_controllo(canale, congeda) {
+async function ascolta_controllo(canale, congeda, congedo_letto) {
   for (;;) {
     let m;
     try { m = await canale.ricevi(); }
@@ -5543,6 +5642,9 @@ async function ascolta_controllo(canale, congeda) {
        *
        * ⚠ `esito()` sopra ha gia' detto PERCHE', ciascuno con la sua frase: il
        *   ritorno al modulo non cancella la spiegazione, la rende usabile. */
+      /* ⛔ D-002: e da qui la chiusura del trasporto che segue non deve
+         riscrivere la frase ne' tornare al modulo una seconda volta. */
+      if (congedo_letto) congedo_letto();
       torna_al_modulo();
       return;
     }
@@ -8341,7 +8443,12 @@ function accendi_worker() {
       }
       return;
     }
-    if (m.t === "acceso") { document.body.dataset.schermo = m.valore; return; }
+    /* ⛔ D-003: un «acceso» spedito dal worker prima di `chiudi()` arriva
+       DOPO il ritorno al modulo, e rivestirebbe la pagina. */
+    if (m.t === "acceso") {
+      if (!schermo.chiusa) document.body.dataset.schermo = m.valore;
+      return;
+    }
     if (m.t === "stile") { $("schermo").style[m.chiave] = m.valore; return; }
     if (m.t === "conti") {
       /* Lo specchio: da qui i banchi leggono `REMOTIX.schermo.conti`. */
@@ -8455,10 +8562,17 @@ if (window.REMOTIX) { window.REMOTIX.video = VW; window.REMOTIX.giro = GIRO; }
 if (VW) {
   for (const metodo of ["riparti", "negozia", "vista", "tela_adattata",
                         "tela_rifiutata", "adatta_tela_chiesta",
-                        "stream_video"]) {
+                        "stream_video", "chiudi"]) {
     schermo[metodo] = (function (m) {
       return function () { VW.chiama(m, Array.prototype.slice.call(arguments)); };
     })(metodo);
+  }
+  /* ⛔ D-003: `chiusa` deve valere anche DI QUA, dove arrivano gli «acceso». */
+  for (const [metodo, valore] of [["chiudi", true], ["riparti", false]]) {
+    schermo[metodo] = (function (prima) {
+      return function () { schermo.chiusa = valore;
+                           return prima.apply(null, arguments); };
+    })(schermo[metodo]);
   }
   /* `adatta_vista()` e' l'unica che deve MISURARE di qua prima di partire. */
   schermo.adatta_vista = function () { VW.vista(); return misura_vista(); };
@@ -8572,6 +8686,11 @@ function torna_al_modulo() {
    *    se ne aggiunge un altro: al settimo il motore rifiuta e l'audio non
    *    torna piu' (rilievo 2 della revisione del 17 agosto 2026). */
   audio_ferma();
+
+  /* 0-bis. ⛔ E IL VIDEO SI FERMA PRIMA DI TOGLIERE IL VESTITO — D-003: un
+   *    fotogramma in volo lo rimetterebbe addosso un attimo dopo (vedi
+   *    `Schermo.chiudi()`). */
+  schermo.chiudi();
 
   /* 1. il vestito da desktop se ne va: e' quel che l'utente ha visto. */
   delete document.body.dataset.schermo;
