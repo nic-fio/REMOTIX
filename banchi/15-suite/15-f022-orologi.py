@@ -61,8 +61,13 @@ FUNZIONI = ("F-022", "F-023", "F-024")
 SERVER = "15-g7-server.sh"
 SILENZIO_S = 30
 MARGINE_S = 15
-INATTIVITA_S = 12
-ABBANDONO_S = 45
+# ⚠ 25 e non 12: `[M]` 25 set 2026 (D-011) l'orologio d'inattivita' conta dall'ultimo
+#   byte del client, cioe' dall'ATTACCA, anche mentre la sessione NASCE; su XFCE
+#   in 4K la nascita supera i 12 s ⇒ CONGEDO 0x02 un secondo dopo il primo
+#   fotogramma.  Coi valori veri (1800 s) non morde; qui l'orologio va tenuto
+#   piu' lungo della nascita piu' lenta.
+INATTIVITA_S = 25
+ABBANDONO_S = 60
 FORME_STACCO = ("linea-morta", "STACCATO per silenzio", "posto LASCIATO")
 
 
