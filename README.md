@@ -1,5 +1,16 @@
 # REMOTIX
 
+> # ✅ DOVE SIAMO — 25 settembre 2026: FASE 15 CHIUSA, ZERO DIFETTI
+>
+> La **suite funzionale** (fase 15) prova REMOTIX coi browser **veri** (Firefox 140, Chrome 154, in 4K)
+> sui quattro desktop — GNOME, KDE, XFCE, LXQt — con ~300 prove, ognuna col suo guasto innestato.
+> **Giro 1**: 21 difetti (14 del prodotto, 7 delle prove) ⇒ **bonifica** ⇒ **giro 2 a prodotto
+> congelato: 329 PASS su 329 e 328 guasti visti su 328** (binario `b1443a0b`, pagina `942f2873`).
+>
+> ⇒ Tutto in `fasi/15-suite-funzionale.md`; il rapporto in `banchi/15-suite/rapporto-giro2.html`;
+> la suite si rifà con `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`.
+> ⇒ La prossima è la **fase 16** (stress e capacità).
+
 > # ⏸ IL PROGETTO È IN PAUSA — dal 27 agosto 2026
 >
 > *L'utente ha un intervento chirurgico. Si riprende fra qualche settimana.*

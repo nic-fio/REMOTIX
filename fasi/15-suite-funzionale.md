@@ -408,3 +408,55 @@ prodotto.
   Opus di Firefox), l'orecchio non lo crea. Ma lo **gonfia**: le percentuali di F-013 (75-89 %) non sono
   la misura del difetto. E la prima cura, scritta su un banco che non somigliava a Firefox vero, coi
   browser veri peggiorava: tolta.
+
+---
+
+## ⭐⭐ IL GIRO 2 — 25 settembre 2026: ZERO DIFETTI
+
+`[M]` Prodotto e prove **congelati** al commit `d121715` (segno `fase15-giro2-congelato`), binario
+**`b1443a0b`**, pagina **`942f2873`**; scatole rifatte da zero; 11:25 → 13:38 (133 minuti), i quattro
+desktop in parallelo, Firefox 140 e Chrome 154 veri, 3840x2160, più lo strato tecnico e C14.
+
+| | esecuzioni | esito |
+|---|---|---|
+| passate sane | 329 | **329 PASS** — 0 FAIL, 0 BLOCKED |
+| passate col guasto innestato | 328 | **328 guasti visti** — nessuno sfuggito |
+| strato tecnico (C7 C9 C18 C19 × 4, C14) | compreso sopra | tutto verde |
+
+Funzioni coperte: F-001…F-030 (F-031, il tocco su Android, resta dell'utente col telefono), F-018b e
+F-018c (le finestre dentro lo schermo al riattacco a misura diversa, nate con D-007), F-024b (la
+sessione mai toccata scade), F-031B (le impostazioni dell'utente intatte dopo la sessione remota, e il
+gestore d'utente pulito), i percorsi A-F, le negative N-1, N-3, N-4.
+
+⇒ **Il cancello della fase 15 è passato**: giro 1 ⇒ 21 voci (14 del prodotto, 7 del banco) ⇒ bonifica
+⇒ giro 2 a zero. Tutte le voci sono «verificato (giro 2)»; D-014 non si è ripetuto.
+
+**Il rapporto**, generato dal registro e mai scritto a mano:
+`banchi/15-suite/rapporto-giro2.html` (e `.txt`), `banchi/15-suite/rapporto-giro1.html` (e `.txt`); il
+registro intero di tutti i giri — giro 1, caselle rifatte, verifiche della bonifica, prove generali,
+giro 2 — è `banchi/15-suite/registro.jsonl` (2455 righe, solo aggiunte), i difetti
+`banchi/15-suite/difetti.jsonl`; le evidenze sul server in `/media/REMOTIX/misure/fase15/giro2/`.
+
+**Come si rifà**: `bash banchi/15-suite/15-porta.sh`, poi sul server (con le scatole rifatte:
+`bash …/15-suite/15-rifai-scatole.sh`) `python3 …/15-suite/15-giro.py --giro <nome> --strato-tecnico`;
+oppure `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`. Il rapporto:
+`python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl --difetti
+banchi/15-suite/difetti.jsonl --giro <nome> --html <file>`.
+
+### Che cosa è entrato nel prodotto con la bonifica
+
+| difetto | che cosa si vedeva | la cura |
+|---|---|---|
+| D-001 | «sessione nuova» e «desktop sconosciuto» anche a sessione ripresa | SESSIONE dice RIPRESA (2) e il desktop vero |
+| D-002, D-021 | linea caduta o browser congelato: pagina muta sul desktop fermo | la pagina lo dice e torna al modulo, anche nella finestra fra SESSIONE e l'apertura dell'input |
+| D-003 | dopo lo stacco o «Esci» un fotogramma in volo rimetteva il desktop sopra il modulo | `Schermo.chiudi()` al congedo |
+| D-004 | una sessione mai toccata non scadeva mai | l'orologio dell'abbandono parte alla nascita |
+| D-005 | KDE riapriva i programmi dopo «Esci» | sessione Plasma vuota di suo (salvo scelta dell'utente) |
+| D-006 | buchi di suono con Firefox e un video (decodificatore Opus di Firefox) | **decodificatore Opus nostro in WebAssembly** (libopus 1.5.2), per tutti i browser |
+| D-007 | XFCE/LXQt: al riattacco più piccolo finestre in parte fuori dallo schermo | il prodotto fa riportare dentro le finestre a labwc |
+| D-008 | KDE: gli accenti non uscivano | la disposizione negoziata arriva a KWin (kxkbrc della sessione) |
+| D-009 | server spento: 31 s prima di «Non si collega» | detto subito |
+| D-015, D-017, D-018, D-020 | REMOTIX scriveva nelle impostazioni dell'utente e lasciava tracce nel gestore d'utente | le impostazioni dell'utente non si toccano, salvo blocco/riavvio/sospensione/stand-by; tutto il resto vale solo per la sessione remota e si toglie alla fine |
+
+⚠ **Resta dell'utente**: la colonna Android (F-031) col suo telefono, e il giudizio a orecchio
+dell'audio di Firefox col video sul tablet (D-006 è verde in suite; il giudice ultimo è lui).

@@ -162,7 +162,8 @@ def pagina(righe, difetti, giro):
             conto[r["esito"]] = conto.get(r["esito"], 0) + 1
     guasti = [r for k, r in m.items() if k[3] == "guasto"]
     visti = sum(1 for r in guasti if r["esito"] == "PASS")
-    impronte = sorted({(r.get("binario"), r.get("pagina"), r.get("commit")) for r in righe})
+    impronte = sorted({(str(r.get("binario")), str(r.get("pagina")), str(r.get("commit"))) for r in righe
+                       if r.get("binario")})
     h = ["<!doctype html><html lang='it'><head><meta charset='utf-8'>",
          "<meta name='viewport' content='width=device-width,initial-scale=1'>",
          "<title>Suite REMOTIX, giro %s</title><style>%s</style></head><body><main>" % (e(str(giro)), CSS),

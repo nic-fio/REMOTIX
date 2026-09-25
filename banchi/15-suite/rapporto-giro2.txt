@@ -1,0 +1,73 @@
+GIRO 2 · PASS=329
+         gno/fi  gno/ch  kde/fi  kde/ch  xfc/fi  xfc/ch  lxq/fi  lxq/ch  gno/-   kde/-   xfc/-   lxq/-  
+F-001    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-002    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-003    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-004    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-005    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-006    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-007    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-008    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-009    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-010    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-011    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-012    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-013    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-014    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-015    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-016    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-017    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-018    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-018b   ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-018c   ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-019    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-020    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-021    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-022    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-023    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-024    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-024b   ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+F-025    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-026    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-027    ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+F-028    ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+F-029    ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+F-030    ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+F-031B   ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+P-A      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+P-B      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+P-C      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+P-D      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+P-E      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+P-F      ok      ok      ok      ok      ok      ok      ok      ok      ·       ·       ·       ·      
+N-1      ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+N-3      ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+N-4      ok      ·       ok      ·       ok      ·       ok      ·       ·       ·       ·       ·      
+C7       ·       ·       ·       ·       ·       ·       ·       ·       ok      ok      ok      ok     
+C9       ·       ·       ·       ·       ·       ·       ·       ·       ok      ok      ok      ok     
+C14      ·       ·       ·       ·       ·       ·       ·       ·       ·       ·       ·       ·      
+C18      ·       ·       ·       ·       ·       ·       ·       ·       ok      ok      ok      ok     
+C19      ·       ·       ·       ·       ·       ·       ·       ·       ok      ok      ok      ok     
+
+DIFETTI:
+  D-001 [verificato (giro 2), classe A] dopo l'accesso la pagina dice sempre «sessione nuova» e «desktop sconosciuto», anche quando la sessione è ripresa e su qualunque desktop — gnome, kde, xfce, lxqt, firefox, chrome
+  D-002 [verificato (giro 2), classe A] quando la linea cade (linea morta) la pagina resta congelata col desktop e non dice niente, non torna al modulo — anche il browser congelato e risvegliato (portatile addormentato) non si accorge di essere stato staccato — tutti e 4 i desktop, firefox, chrome, giro 1: F-019 FAIL 8/8, F-025 FAIL 8/8
+  D-003 [verificato (giro 2), classe A] dopo il congedo per inattività la pagina torna al modulo ma un fotogramma in volo la ri-veste da desktop: modulo nascosto, desktop congelato — giro 1: F-023 FAIL su gnome/firefox, kde/firefox, kde/chrome, lxqt/firefox; F-021 gnome/firefox, gnome/firefox (misurato), gnome/firefox F-021 nel giro 1: «Esci» scrive «la sessione e' terminata» ma il modulo resta nascosto
+  D-004 [verificato (giro 2), classe A] [da misurare] una sessione aperta e mai toccata non scade mai per abbandono — codice
+  D-005 [verificato (giro 2), classe B] KDE: dopo «Esci» il nuovo accesso non è pulito — Plasma riapre da solo il programma che era aperto (la pagina promette una sessione NUOVA) — kde/firefox, kde/chrome, giro 1: F-021 FAIL kde/firefox e kde/chrome
+  D-006 [verificato (giro 2), classe A] Firefox con un video nella sessione: buchi di suono corti e ripetuti (0,1-0,4 s); Chrome no — kde/firefox 96,5% udibile, lxqt/firefox 88% sotto carico, 98% scarico, lxqt/firefox 94% a server scarico (giro di integrazione, 25 set 03:10), buco 1,0 s, giro 1: F-013 FAIL gnome/firefox 89%, lxqt/firefox 75%
+  D-007 [verificato (giro 2), classe prodotto] XFCE e LXQt (labwc): riattaccandosi con una finestra del browser più piccola, una finestra grande resta dov'era e finisce in parte fuori dal bordo destro/basso — xfce, lxqt
+  D-008 [verificato (giro 2), classe B] KDE: la disposizione della tastiera del browser non si applica — con il browser in italiano «è à ò ù é ç ° §» non escono (la sessione resta English US) — kde/firefox, kde/chrome, giro 1: F-009 FAIL kde/firefox e kde/chrome
+  D-009 [verificato (giro 2), classe A] [minore] a server spento la pagina impiega 31 s prima di dire «Non si collega» — gnome/kde/xfce/lxqt, firefox
+  D-010 [verificato (giro 2), classe C] [banco] F-002 dava FAIL su XFCE: la foto a piena risoluzione del desktop nero (sfondo della scatola) giudicata degenere, senza la tolleranza «scuro ma vivo» del primo fotogramma — xfce/firefox (giro 1)
+  D-011 [verificato (giro 2), classe C] [banco] XFCE, prova degli orologi: il banco aspettava 45 s il primo fotogramma «non degenere» (sfondo nero) senza gesti, e l'orologio d'inattività accorciato chiudeva la sessione — xfce/firefox, xfce/chrome
+  D-012 [verificato (giro 2), classe C] [banco] C9 «il registro dice di chi» dava BLOCKED su kde, xfce, lxqt: l'area «forma» del registro (src/forma.c, fase 14) non era fra le aree che conosce — kde, xfce, lxqt
+  D-013 [verificato (giro 2), classe C] [banco] C19 «la scatola resta pulita» dava FAIL sui 4 desktop: lo strato tecnico del giro non sgomberava gli inquilini fra una maglia e l'altra (lo fa 11-gancio.sh), e restavano quelli di C9 — gnome, kde, xfce, lxqt
+  D-014 [non riprodotto; giro 2 verde, classe ?] [da indagare] XFCE con Firefox, video: il contesto audio della pagina non diventa mai «running» dopo il clic — nessun suono per 40 s — xfce/firefox (giro 1)
+  D-015 [verificato (giro 2), classe B] GNOME: la disposizione della tastiera negoziata col browser si scrive nelle impostazioni dell'UTENTE (org.gnome.desktop.input-sources) e ci resta — viola la decisione dell'utente del 25 set 2026: «le impostazioni utente non si toccano» — gnome
+  D-016 [verificato (giro 2), classe C] [banco] F-021 su gnome/firefox BLOCKED: la fetta di registro vuota dopo «Esci» era letta come «non letto», e la passata col guasto non rientrava in una sessione viva — gnome/firefox
+  D-017 [verificato (giro 2), classe B] XFCE: REMOTIX scrive nei canali xfconf dell'utente impostazioni che non sono blocco/riavvio/sospensione/stand-by (voci del menu Show*, WaylandLogoutCommand, …) e cancella ~/.cache/sessions — viola la regola dell'utente del 25 set — xfce
+  D-018 [verificato (giro 2), classe B] LXQt: REMOTIX scrive in ~/.config/lxqt/*.conf e mette voci Hidden in ~/.local/share/applications dell'utente — viola la regola dell'utente del 25 set (salvo blocco/riavvio/sospensione/stand-by) — lxqt
+  D-019 [verificato (giro 2), classe C] [banco] XFCE con Chrome, rete che cade (P-B, P-D): dopo il rientro l'immagine resta quasi ferma (cambi fra foto 0,9-1,6 %) col processo della scena vivo e il suono presente — xfce/chrome (verifica della bonifica, binario a70cdf1e)
+  D-020 [verificato (giro 2), classe B] dopo la sessione remota restano nel gestore d'utente le impostazioni di SESSIONE di REMOTIX (drop-in di xfconfd, DCONF_PROFILE, drop-in --headless/--virtual): col linger acceso l'utente che entra al monitor le eredita (XFCE: «Esci» che non esce, sessione che non si salva; GNOME: dconf in memoria) — viola la regola del 25 set — xfce, gnome, kde (drop-in --virtual)
+  D-021 [verificato (giro 2), classe A] [minore] pagina: se il filo cade fra SESSIONE e l'apertura dello stream di input, la pagina resta su «Ammesso» senza dire che il collegamento è caduto — tutti
