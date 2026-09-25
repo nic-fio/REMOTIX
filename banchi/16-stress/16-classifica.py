@@ -112,6 +112,7 @@ import sys
 import tempfile
 
 QUI = os.path.dirname(os.path.abspath(__file__))
+FPS_VIDEO_SCELTO = 30          # il video del profilo D (dal coordinatore, 26 set 2026)
 REGISTRO = os.path.join(QUI, "registro.jsonl")
 ORDINE = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
 
@@ -256,6 +257,26 @@ def conti_di(riga):
     return c
 
 
+def campioni_giro(fin, chiave, chiave_lista):
+    """I campioni NUOVI nella finestra: `chiave` = {visti, campioni} (gli ultimi
+    200 della pagina: i nuovi sono gli ultimi `visti − visti_prima`), oppure
+    `chiave_lista` = [solo i campioni nuovi dall'ultima riga]."""
+    camp, pv = [], None
+    for r in fin:
+        g = r.get(chiave)
+        if isinstance(g, dict) and g.get("campioni") is not None:
+            vi = g.get("visti", 0)
+            if pv is not None and r is not fin[0]:
+                nuovi = max(0, vi - pv)
+                camp += list(g["campioni"])[-nuovi:] if nuovi else []
+            pv = vi
+        elif isinstance(g, list) and r is not fin[0]:
+            camp += list(g)
+        elif r.get(chiave_lista) is not None and r is not fin[0]:
+            camp += list(r[chiave_lista])
+    return camp
+
+
 def delta(righe, chiave):
     """Crescita di un contatore cumulativo lungo le righe; i ripartiti da zero
     si sommano per pezzi e si CONTANO (ripartenze)."""
@@ -306,22 +327,18 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         dip, r2 = delta(fin, "dipinti")
         ripartenze = max(r1, r2)
         # ── ritardo: il GIRO della pagina ──
-        camp = []
-        pv = None
-        for r in fin:
-            g = r.get("giro")
-            if isinstance(g, dict) and g.get("campioni") is not None:
-                vi = g.get("visti", 0)
-                if pv is not None and r is not fin[0]:
-                    nuovi = max(0, vi - pv)
-                    camp += list(g["campioni"])[-nuovi:] if nuovi else []
-                pv = vi
-            elif r.get("giro_ms") is not None and r is not fin[0]:
-                camp += list(r["giro_ms"])
+        # ⛔ CLASSIFICA solo `giro_eco` (26 set, dal coordinatore): i campioni delle
+        #   azioni a ECO IMMEDIATO (la battitura).  `giro` intero misura anche il
+        #   tempo di reazione delle applicazioni — una pagina che carica, un clic
+        #   che non cambia lo schermo — che non e' ritardo del prodotto: si registra.
+        tutti = campioni_giro(fin, "giro", "giro_ms")
+        camp = campioni_giro(fin, "giro_eco", "giro_eco_ms")
+        misure["giro_tutti_campioni"] = len(tutti)
+        misure["giro_tutti_p95_ms"] = _tondo(p95(tutti)) if tutti else None
         inp = [x for r in dentro for x in (r.get("input") or [])]
         persi = [x for x in inp if x.get("ok") is False]
         lat = [x["latenza_ms"] for x in inp if x.get("ok") and x.get("latenza_ms") is not None]
-        misure["giro_campioni"] = len(camp)
+        misure["giro_eco_campioni"] = len(camp)
         misure["input_azioni"] = len(inp)
         misure["input_persi"] = len(persi)
         misure["input_latenza_p95_ms"] = _tondo(p95(lat)) if lat else None
@@ -333,13 +350,13 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         elif camp:
             v = p95(camp)
             misure["ritardo_p95_ms"] = _tondo(v)
-            voci["ritardo_p95_ms"] = voce_misurata("ritardo_p95_ms", v, "%d campioni del giro della pagina%s"
-                                                   % (len(camp), " (POCHI)" if len(camp) < 20 else ""))
+            voci["ritardo_p95_ms"] = voce_misurata("ritardo_p95_ms", v, "%d campioni del giro a eco "
+                                                   "immediato%s" % (len(camp), " (POCHI)" if len(camp) < 20 else ""))
         elif d_video and not inp:
             pass                                   # il profilo D non batte: non si applica
         else:
-            voci["ritardo_p95_ms"] = non_misurato("nessun campione del giro nella finestra "
-                                                  "(`REMOTIX.giro` non letto dall'attore?)")
+            voci["ritardo_p95_ms"] = non_misurato("nessun campione di `giro_eco` nella finestra (%d del "
+                                                  "giro intero, che si registra e non classifica)" % len(tutti))
         # ── saltati ──
         if cons is None or dip is None:
             voci["saltati_pct"] = non_misurato("la pagina non ha dato `video X→Y`")
@@ -352,16 +369,23 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
             voci["saltati_pct"] = voce_misurata("saltati_pct", v, "%d consegnati, %d dipinti (salt %s)"
                                                 % (cons, dip, sa))
         # ── blocco ──
-        bm = [r["blocco_max_ms"] for r in dentro if r.get("blocco_max_ms") is not None]
-        fermi = 0
+        # ⚠ `lavoro: false` (per D: prima che il video parta) NON conta, ne' qui
+        #   ne' per i dipinti al secondo: si guardano solo gli intervalli di lavoro.
+        bm = [r["blocco_max_ms"] for r in dentro
+              if r.get("blocco_max_ms") is not None and r.get("lavoro", True) is not False]
+        fermi, dip_lav, dt_lav = 0, 0, 0.0
         for a, b in zip(fin, fin[1:]):
             da, db = a["_c"].get("dipinti"), b["_c"].get("dipinti")
-            lav = b.get("lavoro", True) or d_video
-            if da is not None and db is not None and db == da and lav:
-                fermi += 1
-        if dip == 0 and any(r.get("lavoro", True) for r in dentro):
-            voci["blocco_max_s"] = fallita(round(dt, 1), "IMMAGINE FERMA: nessun fotogramma dipinto "
-                                           "in %.0f s di lavoro" % dt)
+            lav = b.get("lavoro", True) is not False
+            if da is not None and db is not None and lav:
+                dip_lav += max(0, db - da) if db >= da else db
+                dt_lav += b["t"] - a["t"]
+                if db == da:
+                    fermi += 1
+        misure["lavoro_s"] = round(dt_lav, 1)
+        if dip_lav == 0 and dt_lav > 0 and dip is not None:
+            voci["blocco_max_s"] = fallita(round(dt_lav, 1), "IMMAGINE FERMA: nessun fotogramma dipinto "
+                                           "in %.0f s di lavoro" % dt_lav)
         elif bm:
             v = max(bm) / 1000.0
             misure["blocco_max_s"] = _tondo(v)
@@ -389,11 +413,15 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
                 voci["video_frazione_f"] = non_misurato("la pagina non ha dato `dipinti`")
             elif not f_video:
                 voci["video_frazione_f"] = non_misurato("manca f, la frequenza del video (--fps-video)")
+            elif dt_lav <= 0:
+                voci["video_frazione_f"] = non_misurato("nessun intervallo di lavoro nella finestra "
+                                                        "(il video non e' partito?)")
             else:
-                fps = dip / dt if dt > 0 else 0.0
+                fps = dip_lav / dt_lav
                 misure["video_fps"] = _tondo(fps)
                 voci["video_frazione_f"] = voce_misurata("video_frazione_f", fps / f_video,
-                                                         "%.1f dipinti/s con f = %s" % (fps, f_video))
+                                                         "%.1f dipinti/s in %.0f s di video, f = %s"
+                                                         % (fps, dt_lav, f_video))
             su, _ = delta(fin, "suonati")
             ri, _ = delta(fin, "ricevuti")
             ma, _ = delta(fin, "mancati")
@@ -794,7 +822,8 @@ def _senza_ripetuti(v):
 def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=None, fuso_log=0.0,
                journal_scatola=None):
     meta = jfile(os.path.join(cart, "livello.json")) or {}
-    fps_video = fps_video or meta.get("fps_video")
+    # f: --fps-video, poi livello.json, poi il video scelto nel piano (30 quadri/s)
+    fps_video = fps_video or meta.get("fps_video") or FPS_VIDEO_SCELTO
     utenti_meta = {int(u["utente"]): u for u in meta.get("utenti") or [] if "utente" in u}
     dirs = sorted(glob.glob(os.path.join(cart, "utente-*")))
     # la fine del livello: l'ultima riga di qualunque serie
@@ -1003,7 +1032,8 @@ def certifica():
             return c
 
         def sano(prof, inq, fps_pag=30.0, fermo_da=None, salt_pct=0.0, buchi_min=0.0, giro=20.0,
-                 blocco=300, audio_pct=100.0, persi=False, caduta_a=None, diario=False):
+                 blocco=300, audio_pct=100.0, persi=False, caduta_a=None, diario=False, eco=True,
+                 giro_lento=None, video_da=None):
             def riga(t, k):
                 n = k * fps_pag
                 if fermo_da is not None and k > fermo_da:
@@ -1011,7 +1041,12 @@ def certifica():
                 cons = int(k * fps_pag / (1 - salt_pct / 100.0)) if salt_pct else int(n)
                 r = {"t": t, "utente": int(inq[-2:]), "profilo": prof, "browser": "firefox",
                      "inquilino": inq, "lavoro": True, "blocco_max_ms": blocco,
-                     "giro": {"visti": k, "campioni": [giro] * min(200, k)}}
+                     "giro": {"visti": k, "campioni": [giro_lento or giro] * min(200, k)}}
+                if eco:
+                    r["giro_eco"] = {"visti": k, "campioni": [giro] * min(200, k)}
+                if video_da is not None:
+                    r["lavoro"] = k > video_da
+                    n = max(0, k - video_da) * fps_pag
                 conti = {"consegnati": cons, "dipinti": int(n), "salt": 0,
                          "buchi": int(k / 60.0 * buchi_min),
                          "ricevuti": k * 50, "suonati": int(k * 50 * audio_pct / 100.0), "mancati": 0}
@@ -1149,6 +1184,23 @@ def certifica():
         cc["nascita"] = {"ammissione_s": 1.0, "rifiuto": True, "esito": "FAIL", "ragione": "l'accesso: rifiutato"}
         g = classifica(livello("corto-rifiuto", quattro, corto=cc))
         guarda("controllo corto rifiutato ⇒ FAIL", g["classe"] == "FAIL")
+        u = list(quattro)
+        u[0] = sano("A", "c16u01", giro=20, giro_lento=900)
+        g = classifica(livello("giro-eco", u))
+        v0 = g["sessioni"][0][3]["ritardo_p95_ms"]
+        u[0] = sano("A", "c16u01", eco=False)
+        g2 = classifica(livello("senza-eco", u))
+        guarda("ritardo: classifica `giro_eco` (20 ms ⇒ GREEN) e non il giro intero (900 ms, registrato); "
+               "senza giro_eco ⇒ non misurato",
+               v0["classe"] == "GREEN" and g["sessioni"][0][2]["giro_tutti_p95_ms"] == 900
+               and g2["sessioni"][0][3]["ritardo_p95_ms"].get("non_misurato"), v0["nota"])
+        u = list(quattro)
+        u[3] = sano("D", "c16u04", video_da=540)       # il video parte a 540 s: 60 s di lavoro su 120
+        g = classifica(livello("d-lavoro", u))
+        s4 = g["sessioni"][3]
+        guarda("profilo D: `lavoro: false` prima del video non conta (fps 30 su 60 s, niente blocco)",
+               s4[3]["video_frazione_f"]["classe"] == "GREEN" and s4[3]["blocco_max_s"]["classe"] == "GREEN"
+               and abs(s4[2]["video_fps"] - 30.0) < 0.6, s4[3]["video_frazione_f"]["nota"])
         g = classifica(livello("mem-perdita", quattro, mem=lambda k: 1000.0 * (1 + 0.004 * max(0, k - 480))))
         v = g["voci_livello"]["memoria_sessioni"]
         guarda("memoria +48 % e continua ⇒ FAIL", v["classe"] == "FAIL", v["nota"])
