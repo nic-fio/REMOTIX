@@ -460,3 +460,14 @@ banchi/15-suite/difetti.jsonl --giro <nome> --html <file>`.
 
 ⚠ **Resta dell'utente**: la colonna Android (F-031) col suo telefono, e il giudizio a orecchio
 dell'audio di Firefox col video sul tablet (D-006 è verde in suite; il giudice ultimo è lui).
+
+### La prova a mano dell'utente — 25 settembre 2026, pomeriggio
+
+Binario `b1443a0b`, sulle quattro scatole vere (8511-8514). **Linux** (tablet, Firefox e Chrome):
+tutto bene. **Android** (Galaxy S23+, Chrome): sul Wi-Fi a **2,4 GHz** perdite di fotogrammi; `[M]` dal
+diario della pagina e dal server: 0,6 % di pacchetti persi (63 su 9877), 37 fotogrammi saltati su 2199
+(1,7 %, sempre col decodificatore in pari: arrivi a gruppi dopo le ritrasmissioni), 222 pezzetti d'audio
+mai arrivati — contro 0 pacchetti persi del tablet nelle stesse ore. Sul Wi-Fi a **5 GHz**: fluido
+(l'utente), `[M]` 0 pacchetti persi e 0 saltati su gnome, xfce e lxqt; su lxqt 7 saltati su 4067.
+⇒ Non è REMOTIX e non è la potenza del telefono: è la rete a 2,4 GHz. ⚠ Come REMOTIX si comporta su una
+rete che perde lo 0,6 % dei pacchetti resta una domanda vera: va nella **fase 16**.
