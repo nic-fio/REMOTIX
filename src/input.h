@@ -146,6 +146,22 @@ int input_puntatore(Input *, uint32_t x, uint32_t y);
 int input_ritela(Input *, uint32_t tela_l, uint32_t tela_a);
 
 /*
+ * ⭐ FASE 15, D-007 — DOPO UN CAMBIO DI MISURA DELL'USCITA, LE FINESTRE SI
+ *    RIPORTANO DENTRO LO SCHERMO (spostate il meno possibile, rimpicciolite
+ *    solo se piu' grandi dello schermo).
+ *
+ * Su GNOME e KDE lo fa il compositore da se' ⇒ qui non si fa niente, e si
+ * torna 0.  Su labwc (XFCE, LXQt) si BATTE la scorciatoia
+ * `SESSIONE_LABWC_TASTO` che la sessione ha scritto nella configurazione di
+ * labwc (`sessione.h`, il riquadro di `SESSIONE_LABWC_TASTIERA`), e poi si
+ * rimette il puntatore dove l'utente l'aveva lasciato.
+ * ⚠ Innocua se non c'e' niente da riportare: una finestra gia' dentro resta
+ *   dov'e', al pixel.
+ * Torna 1 se ha battuto la scorciatoia, 0 se non serve, -1 se l'invio fallisce.
+ */
+int input_riporta_dentro(Input *);
+
+/*
  * ⛔⭐⭐ LA DISPOSIZIONE NEGOZIATA ENTRA NELLA SESSIONE — `DECISIONI.md`
  *      §5-bis.7, decisa dall'utente l'8 agosto 2026 e CONFERMATA il 16.
  *

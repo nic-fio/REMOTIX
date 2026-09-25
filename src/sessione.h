@@ -145,7 +145,13 @@
  *   dentro `XFCE4_SESSION_COMPOSITOR` (senza).  ⛔ Scriverla due volte vorrebbe
  *   dire poterle far divergere, e divergendo scatterebbe la trappola del
  *   logout senza che nessuna riga lo dica. */
-#define SESSIONE_RIGA_XFCE "labwc --session xfce4-session"
+/* ⭐ FASE 15, D-007 — `-m` (`--merge-config`): labwc legge l'`rc.xml` di
+ *    TUTTE le cartelle XDG (la nostra, con la scorciatoia «riporta dentro»,
+ *    e quella dell'utente, che resta sua).  Senza, labwc prende SOLO il primo
+ *    `rc.xml` che trova, e quello dell'utente nasconderebbe il nostro.  Vedi
+ *    `SESSIONE_LABWC_TASTIERA` qui sotto.  ⚠ La riga contiene sempre `labwc`
+ *    e `--session`: la cintura del logout resta com'era. */
+#define SESSIONE_RIGA_XFCE "labwc -m --session xfce4-session"
 #define SESSIONE_COMANDO_XFCE "exec " SESSIONE_RIGA_XFCE
 /* ⛔ Il processo del compositore, per nome: su XFCE la guardia contro la
  *    seconda sessione non puo' chiedere a systemd — vedi `unita_inattiva()`. */
@@ -195,6 +201,114 @@
  * ⚠ Il nome compare nel COSTRUTTORE: «c'è il nome» non vuol dire «desktop su»
  *   (`STUDI.md` §lxqt §3.4).  Vedi `sessione_viva()`. */
 #define SESSIONE_BUS_LXQT "org.lxqt.session"
+
+/*
+ * ⭐⭐ FASE 15, D-007 — LE FINESTRE SI RIPORTANO DENTRO QUANDO L'USCITA SI
+ *      RIMPICCIOLISCE (labwc: XFCE e LXQt).
+ *
+ * IL DIFETTO `[M]` 25 set 2026: riattaccandosi con la finestra del browser
+ * piu' piccola, l'uscita di labwc si rimpicciolisce e una finestra grande
+ * resta dov'era, in parte FUORI dal bordo destro/basso.  GNOME e KWin le
+ * riportano dentro da se'; labwc NO, e per scelta:
+ *   `[R]` labwc 0.8.3 (quella delle scatole, ed e' uguale sul `master` del
+ *   22 set 2026) `src/view.c` `adjust_floating_geometry()`: al cambio di
+ *   disposizione una finestra fluttuante si sposta SOLO se il suo PUNTO
+ *   MEDIO esce dallo schermo (e allora si ricentra); a sinistra e in alto la
+ *   si tiene dentro, a destra e in basso no.  Nessuna opzione lo cambia.
+ *
+ * ⛔ Le strade che NON ci sono, lette sul sorgente:
+ *   · nessun protocollo Wayland lascia a un cliente spostare le finestre
+ *     degli altri (`wlr-foreign-toplevel` ha massimizza/riduci/chiudi, non la
+ *     posizione);
+ *   · cambiare l'uscita in due tempi non serve: labwc ricorda la posizione
+ *     «di prima dei cambi» (`last_layout_geometry`) e la rimette, quindi
+ *     l'esito dipende solo da quella e dall'uscita finale;
+ *   · l'unica azione di labwc che tiene una finestra dentro a DESTRA e in
+ *     BASSO e' `MoveToCursor` (`view_move_to_cursor()`: centra la finestra
+ *     sul puntatore e poi la chiude dentro l'area utile); con il puntatore
+ *     messo al CENTRO della finestra (`WarpCursor to="window"`) diventa
+ *     esattamente «spostala il meno possibile», e `FitToOutput` la
+ *     rimpicciolisce SOLO se e' piu' grande dello schermo.
+ *     ⚠ `[M]` 25 set 2026: labwc 0.8.3 scrive «Action MoveToCursor is
+ *     deprecated … use AutoPlace policy="cursor"» ⇒ si scrive
+ *     `AutoPlace policy="cursor"`, che chiama la STESSA funzione
+ *     (`view_place_by_policy()` → `view_move_to_cursor()`, `view.c:1080`).
+ *     Qui sotto «MoveToCursor» e' il nome della funzione, non dell'azione.
+ *
+ * ⭐ Quindi: una SCORCIATOIA di labwc che nessuno usa (`SESSIONE_LABWC_TASTO`),
+ *    scritta nella configurazione di labwc che il prodotto gia' governa, e che
+ *    il prodotto BATTE con la sua tastiera virtuale dopo aver cambiato la
+ *    misura (`input_riporta_dentro()`).  Quattro passate `ForEach`, piatte
+ *    perche' labwc 0.8.3 non annida If/ForEach (`rcxml.c` «cannot be a child
+ *    action»):
+ *
+ *   ⛔ Le finestre MASSIMIZZATE, AFFIANCATE e a TUTTO SCHERMO non si toccano:
+ *      labwc le rimette da se' alla misura nuova, e `MoveToCursor` le
+ *      farebbe uscire da quello stato.  Le prime due si escludono con le
+ *      `query`; il tutto schermo non ha una `query`, e si riconosce da un
+ *      effetto: labwc NON cambia la decorazione (`view_set_ssd_mode()`) e NON
+ *      arrotola (`view_set_shade()`, niente `ssd`) una finestra a tutto
+ *      schermo.  ⇒ Si cambia prima, e si sposta solo chi e' cambiato.
+ *   ⛔ E lo spostamento si fa col solo BORDO (`border`), mai con la barra del
+ *      titolo: `MoveToCursor` centra sulla finestra COMPRESI i bordi, e con la
+ *      barra sopra la finestra scenderebbe di mezza barra a ogni giro.
+ *
+ *   1. finestre senza decorazione del server (quasi tutte su XFCE: GTK,
+ *      Firefox) → bordo del server, provvisorio;
+ *   2. quelle ORA col bordo → `FitToOutput`, puntatore al centro,
+ *      `MoveToCursor`, di nuovo senza decorazione;
+ *   3. finestre con la barra (quasi tutte su LXQt: Qt) → arrotolate, come
+ *      segno;
+ *   4. quelle arrotolate → srotolate, `FitToOutput`, solo bordo, puntatore al
+ *      centro, `MoveToCursor`, di nuovo con la barra.
+ *
+ * ⚠ I PREZZI, dichiarati (rari: nascono solo da azioni dell'utente dentro
+ *   labwc): una finestra che l'utente aveva messo a «solo bordo» torna senza
+ *   bordo; una che aveva ARROTOLATO torna srotolata.  E il puntatore del
+ *   compositore resta sull'ultima finestra toccata: `input_riporta_dentro()`
+ *   lo rimette dove l'utente l'aveva.
+ * ⚠ Tutte le passate girano in UNA scorciatoia, dentro un solo giro di labwc:
+ *   nessun fotogramma cade in mezzo, quindi la decorazione provvisoria non si
+ *   vede.
+ */
+#define SESSIONE_LABWC_TASTO "W-C-A-S-F12"
+#define SESSIONE_LABWC_ESCLUSE                                                  \
+	"<query maximized=\"both\"/><query maximized=\"horizontal\"/>"         \
+	"<query maximized=\"vertical\"/><query tiled=\"left\"/>"               \
+	"<query tiled=\"right\"/><query tiled=\"up\"/><query tiled=\"down\"/>" \
+	"<query tiled=\"center\"/><query tiled_region=\"*\"/>"
+#define SESSIONE_LABWC_SPOSTA                                                  \
+	"<action name=\"FitToOutput\"/>"                                         \
+	"<action name=\"WarpCursor\" to=\"window\" x=\"center\" y=\"center\"/>" \
+	"<action name=\"AutoPlace\" policy=\"cursor\"/>"
+#define SESSIONE_LABWC_TASTIERA                                                 \
+	"  <keyboard>\n"                                                        \
+	"    <default/>\n"                                                      \
+	"    <keybind key=\"" SESSIONE_LABWC_TASTO "\">\n"                      \
+	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"<query shaded=\"yes\"/><query decoration=\"full\"/>"                   \
+	"<query decoration=\"border\"/><else>"                                  \
+	"<action name=\"SetDecorations\" decorations=\"border\" forceSSD=\"yes\"/>" \
+	"</else></action>\n"                                                    \
+	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"<query shaded=\"yes\"/><query decoration=\"full\"/>"                   \
+	"<query decoration=\"none\"/><else>" SESSIONE_LABWC_SPOSTA              \
+	"<action name=\"SetDecorations\" decorations=\"none\"/>"                \
+	"</else></action>\n"                                                    \
+	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"<query shaded=\"yes\"/><query decoration=\"none\"/>"                   \
+	"<query decoration=\"border\"/><else><action name=\"Shade\"/>"          \
+	"</else></action>\n"                                                    \
+	"      <action name=\"ForEach\">" SESSIONE_LABWC_ESCLUSE                \
+	"<query shaded=\"no\"/><else><action name=\"Unshade\"/>"                \
+	"<action name=\"FitToOutput\"/>"                                         \
+	"<action name=\"SetDecorations\" decorations=\"border\"/>"              \
+	"<action name=\"WarpCursor\" to=\"window\" x=\"center\" y=\"center\"/>" \
+	"<action name=\"AutoPlace\" policy=\"cursor\"/>"                                        \
+	"<action name=\"SetDecorations\" decorations=\"full\"/>"                \
+	"</else></action>\n"                                                    \
+	"    </keybind>\n"                                                      \
+	"  </keyboard>\n"
 
 /*
  * ⛔⛔ E IL QUARTO VALORE NON E' UN DESKTOP: E' L'ONESTA'.

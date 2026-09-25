@@ -321,6 +321,11 @@ struct input
 	gint64 wlr_ultimo_riattacco_us;
 	unsigned wlr_riattacchi;
 	gboolean wlr_riattacco_fallito_detto;
+	/* ⭐ FASE 15, D-007 — l'ultima posizione assoluta mandata (sulla tela di
+	 *    allora): `input_riporta_dentro()` la rimette dopo la scorciatoia, che
+	 *    sposta il puntatore di labwc sulle finestre. */
+	gboolean wlr_puntatore_noto;
+	uint32_t wlr_px, wlr_py, wlr_pl, wlr_pa;
 };
 
 /* ⭐ FASE 13 — i rami di wlroots, scritti in fondo al file (riquadro
@@ -1463,8 +1468,14 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 	 *    (la tela), e l'uscita e' quella a cui il puntatore e' legato — niente
 	 *    regione da cercare.  ⛔ E nessuna trasformazione: le coordinate vanno
 	 *    come arrivano, con la tela come metro. */
-	if (in && in->wlr)
+	if (in && in->wlr) {
+		in->wlr_puntatore_noto = TRUE;
+		in->wlr_px = x;
+		in->wlr_py = y;
+		in->wlr_pl = in->tela_l;
+		in->wlr_pa = in->tela_a;
 		return wlr_input_assoluto(in->wlr, x, y, in->tela_l, in->tela_a);
+	}
 	if (!in || !in->puntatore || !in->puntatore_attivo)
 		return -1;
 	if (!in->regione_nota)
@@ -1549,6 +1560,73 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 	if (in->puntatore)
 		leggi_regione(in, in->puntatore);
 	return 0;
+}
+
+/*
+ * ⭐ FASE 15, D-007 — `input.h`, e il perche' in `sessione.h` (il riquadro di
+ *    `SESSIONE_LABWC_TASTIERA`).
+ *
+ * ⛔ I codici sono evdev (`linux/input-event-codes.h`), e i tasti sono quelli
+ *    SINISTRI: in ogni disposizione pc105 sono Super_L, Control_L, Alt_L e
+ *    Shift_L, mentre l'Alt DESTRO e' AltGr (ISO_Level3_Shift) in mezza Europa.
+ *    F12 resta F12 anche col Maiusc.  ⚠ `SESSIONE_LABWC_TASTO` e questi
+ *    cinque numeri dicono la stessa cosa: se cambia l'una, cambiano gli altri.
+ */
+#define RIPORTA_SUPER 125 /* KEY_LEFTMETA */
+#define RIPORTA_CTRL 29   /* KEY_LEFTCTRL */
+#define RIPORTA_ALT 56    /* KEY_LEFTALT */
+#define RIPORTA_MAIUSC 42 /* KEY_LEFTSHIFT */
+#define RIPORTA_F12 88    /* KEY_F12 */
+
+int input_riporta_dentro(Input *in)
+{
+	static const uint16_t combinazione[] = { RIPORTA_SUPER, RIPORTA_CTRL, RIPORTA_ALT,
+		                                 RIPORTA_MAIUSC, RIPORTA_F12 };
+	const size_t quanti = G_N_ELEMENTS(combinazione);
+	size_t giu = 0;
+	int esito = 1;
+
+	/* GNOME e KDE: il compositore riporta dentro le finestre da se'. */
+	if (!in || !in->wlr)
+		return 0;
+
+	/* ⛔ Si parte da una tastiera VUOTA: un modificatore rimasto giu' farebbe
+	 *    una combinazione che labwc non riconosce (o, peggio, un'altra). */
+	input_rilascia_tutto(in);
+	for (giu = 0; giu < quanti; giu++)
+		if (manda_tasto(in, combinazione[giu], 1) < 0) {
+			esito = -1;
+			break;
+		}
+	/* ⛔ E si rilascia all'incontrario TUTTO quel che e' partito, anche se la
+	 *    combinazione e' rimasta a meta'. */
+	while (giu > 0)
+		manda_tasto(in, combinazione[--giu], 0);
+
+	/* Il puntatore torna dove l'utente l'aveva, sulla tela di ADESSO. */
+	if (in->wlr_puntatore_noto && in->wlr_pl && in->wlr_pa && in->tela_l && in->tela_a) {
+		uint32_t x = (uint32_t)((uint64_t)in->wlr_px * in->tela_l / in->wlr_pl);
+		uint32_t y = (uint32_t)((uint64_t)in->wlr_py * in->tela_a / in->wlr_pa);
+
+		if (x >= in->tela_l)
+			x = in->tela_l - 1;
+		if (y >= in->tela_a)
+			y = in->tela_a - 1;
+		input_puntatore(in, x, y);
+	}
+
+	if (esito < 0)
+		registro_dice(AREA,
+		              "⛔ D-007: la scorciatoia «riporta dentro» (%s) NON e' partita: "
+		              "le finestre grandi possono restare in parte fuori dallo schermo "
+		              "%ux%u",
+		              SESSIONE_LABWC_TASTO, in->tela_l, in->tela_a);
+	else
+		registro_dice(AREA,
+		              "⭐ D-007: battuta la scorciatoia «riporta dentro» (%s) — labwc "
+		              "riporta le finestre dentro lo schermo %ux%u",
+		              SESSIONE_LABWC_TASTO, in->tela_l, in->tela_a);
+	return esito;
 }
 
 /*

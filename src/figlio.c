@@ -6403,13 +6403,20 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			input_disposizione(palco_input, disposizione_in_attesa);
 			disposizione_in_attesa[0] = '\0';
 		}
-		if (palco_input)
+		if (palco_input) {
 			registro_dice(REG_FIGLIO,
 			              "⭐⭐ IL CANALE DI INPUT E' APERTO sulla tela %ux%u: "
 			              "da adesso quel che l'utente fa nel browser arriva "
 			              "al desktop (§7.3)",
 			              tela_l, tela_a);
-		else
+			/* ⭐ FASE 15, D-007 — su wlroots la misura dell'uscita si da'
+			 *    alla NASCITA della cattura (`cattura_avvia_wlr()`): al
+			 *    riattacco con una finestra piu' piccola le finestre della
+			 *    sessione sono rimaste dov'erano.  ⇒ Si riportano dentro
+			 *    adesso, che il canale c'e'.  (Innocua alla prima nascita,
+			 *    e su GNOME e KDE non fa niente.) */
+			input_riporta_dentro(palco_input);
+		} else
 			/* ⛔ E se non si apre NON si muore: `CODER.md` §4.2 — degradare,
 			 *    non fallire.  Un utente che vede il desktop e non lo comanda
 			 *    ha meno di quel che gli spetta; un utente a cui la sessione
@@ -8663,6 +8670,13 @@ void figlio_vive(int argc, char **argv)
 					              "su %ux%u: da qui in poi il puntatore andrebbe "
 					              "dove non deve",
 					              fo.larghezza, fo.altezza);
+				/* ⭐ FASE 15, D-007 — lo schermo ha cambiato misura: le
+				 *    finestre rimaste in parte fuori si riportano dentro (su
+				 *    GNOME e KDE lo fa il compositore, e la chiamata non fa
+				 *    niente).  ⚠ QUI, al primo fotogramma della misura
+				 *    nuova: labwc ha gia' rifatto la disposizione. */
+				if (palco_input)
+					input_riporta_dentro(palco_input);
 
 				/* 3. ⛔ E LE CHIAVI TENUTE SI BUTTANO — difetto trovato
 				 *    refutando: `tenuto[]` e' per CODEC, ma `tenuto_l`/`tenuto_a`

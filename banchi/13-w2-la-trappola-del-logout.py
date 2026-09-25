@@ -31,7 +31,7 @@ La trappola — `STUDI.md` §xfce §9.2:
 
 Il prodotto porta DUE cinture (`src/sessione.c`):
 
-    1. la variabile  `XFCE4_SESSION_COMPOSITOR=labwc --session xfce4-session`
+    1. la variabile  `XFCE4_SESSION_COMPOSITOR=labwc -m --session xfce4-session`
                      (`SESSIONE_RIGA_XFCE`, `src/sessione.h:148`), nell'ambiente
                      di labwc e quindi di `xfce4-session`
     2. la chiave     xfconf `xfce4-session` `/general/WaylandLogoutCommand` =
@@ -185,7 +185,7 @@ SCATOLA = "rete11-xfce"
 #    stampa accanto a quel che si legge, ma ⭐ il giudizio usa la REGOLA di
 #    `xfce4-session` (contiene `labwc` e `--session`), non l'uguaglianza: una
 #    riga diversa e innocua non e' un rosso.
-RIGA_PRODOTTO = "labwc --session xfce4-session"
+RIGA_PRODOTTO = "labwc -m --session xfce4-session"     # -m: D-007, fase 15
 RIGA_TRAPPOLA = "labwc"           # quella che l'involucro mette: senza --session
 CANALE = "xfce4-session"
 CHIAVE = "/general/WaylandLogoutCommand"
@@ -472,7 +472,7 @@ def certifica():
     prove_lettura = [
         ("ambiente con la variabile",
          b"HOME=/h\0XDG_RUNTIME_DIR=/run/user/5\0XFCE4_SESSION_COMPOSITOR="
-         b"labwc --session xfce4-session\0", RIGA_PRODOTTO),
+         b"labwc -m --session xfce4-session\0", RIGA_PRODOTTO),
         ("ambiente senza la variabile", b"HOME=/h\0XDG_RUNTIME_DIR=/r\0",
          ASSENTE),
         ("⛔ ambiente vuoto (illeggibile) ≠ assente", b"", None),

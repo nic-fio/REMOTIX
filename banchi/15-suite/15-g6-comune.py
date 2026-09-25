@@ -105,11 +105,11 @@ def porta_scena(o):
 # ═══════════════════════════════════════════════════════════════════════════
 #  LA SCENA NELLA SESSIONE
 # ═══════════════════════════════════════════════════════════════════════════
-def accendi_scena(s):
+def accendi_scena(s, finestra=FINESTRA_SCENA):
     """Servitore + firefox-esr normale nella sessione di `s.chi`.  (ok, testo)."""
     b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
     p = porta_scena(s.o)
-    xul = S.C21.xulstore(*FINESTRA_SCENA)
+    xul = S.C21.xulstore(*finestra)
     c, t = s.sc.dentro(
         # (la ~/.cache VERA la da' ora `suite.Sessione`, 25 set 2026)
         "set -e; h=/home/{c}; mkdir -p $h/{pr}; "

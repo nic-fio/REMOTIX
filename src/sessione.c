@@ -1348,6 +1348,61 @@ static char *lxqt_cartella_dati_sessione(void)
 }
 
 /*
+ * ⭐ FASE 15, D-007 — IL PEZZO DI CONFIGURAZIONE DI labwc PER XFCE: solo la
+ *    scorciatoia che riporta dentro le finestre (`SESSIONE_LABWC_TASTIERA`).
+ *
+ * ⛔ Su XFCE la configurazione di labwc e' dell'UTENTE (`~/.config/labwc`), e
+ *    resta sua: questo file sta in una cartella NOSTRA messa in testa a
+ *    `XDG_CONFIG_DIRS`, e labwc parte con `-m` (`SESSIONE_RIGA_XFCE`), che
+ *    legge e SOMMA gli `rc.xml` di tutte le cartelle — prima i nostri, poi
+ *    quelli dell'utente, che vincono dove dicono la stessa cosa (`[R]` labwc
+ *    0.8.3 `src/config/rcxml.c:1898-1937`).
+ * ⚠ Con `<default/>`: se l'utente non ha scorciatoie sue, le sue di serie
+ *   restano (con UNA `<keybind>` labwc non le caricherebbe piu').
+ *
+ * Torna la cartella da mettere in `XDG_CONFIG_DIRS`, o NULL (detto: la
+ * sessione nasce lo stesso, senza la cura).
+ */
+static char *scrivi_config_labwc_xfce(const char *runtime)
+{
+	g_autofree char *cartella = NULL;
+	g_autofree char *sotto = NULL;
+	g_autofree char *rc = NULL;
+	g_autoptr(GError) sbaglio = NULL;
+
+	if (!runtime || !*runtime)
+		return NULL;
+	cartella = g_build_filename(runtime, "remotix", "labwc-xfce", NULL);
+	sotto = g_build_filename(cartella, "labwc", NULL);
+	rc = g_build_filename(sotto, "rc.xml", NULL);
+	if (g_mkdir_with_parents(sotto, 0700) != 0 ||
+	    !g_file_set_contents(rc,
+	                         "<?xml version=\"1.0\"?>\n"
+	                         "<!-- REMOTIX (D-007): scritto a ogni nascita della sessione "
+	                         "XFCE, non modificare.\n"
+	                         "     labwc parte con -m: questo si SOMMA al rc.xml "
+	                         "dell'utente.  " SESSIONE_LABWC_TASTO " riporta dentro "
+	                         "le finestre\n     quando lo schermo remoto si "
+	                         "rimpicciolisce. -->\n"
+	                         "<labwc_config>\n" SESSIONE_LABWC_TASTIERA
+	                         "</labwc_config>\n",
+	                         -1, &sbaglio)) {
+		registro_dice(REG_SESSIONE,
+		              "⛔ XFCE, D-007: la configurazione di labwc NON e' scritta in %s "
+		              "(%s) — la sessione nasce lo stesso, ma riattaccandosi con una "
+		              "finestra piu' piccola le finestre grandi resteranno in parte "
+		              "FUORI dallo schermo",
+		              rc, sbaglio ? sbaglio->message : g_strerror(errno));
+		return NULL;
+	}
+	registro_dice(REG_SESSIONE,
+	              "⭐ XFCE, D-007: scorciatoia «riporta dentro» (%s) per labwc in %s, "
+	              "sommata alla configurazione dell'utente (-m)",
+	              SESSIONE_LABWC_TASTO, rc);
+	return g_steal_pointer(&cartella);
+}
+
+/*
  * L'ambiente della sessione, composto da zero: quel che non serve non passa.
  * Dieci variabili, una per volta (`CODER.md` §4.5).
  */
@@ -1449,6 +1504,19 @@ static char **componi_ambiente(void)
 			/* ⚠ Non perche' manchi — garcon ha un ripiego — ma per non EREDITARNE
 			 *   una sbagliata: il controllo là dentro è `prefix != NULL`. */
 			g_ptr_array_add(ambiente, g_strdup("XDG_MENU_PREFIX=xfce-"));
+			/* ⭐ FASE 15, D-007 — la cartella con la scorciatoia di labwc, DAVANTI
+			 *    alle cartelle di sistema (non al loro posto): dentro c'e' solo
+			 *    `labwc/rc.xml`, quindi per ogni altro programma non cambia
+			 *    niente. */
+			{
+				g_autofree char *labwc_cfg = scrivi_config_labwc_xfce(runtime);
+				const char *prima = g_getenv("XDG_CONFIG_DIRS");
+
+				if (labwc_cfg)
+					g_ptr_array_add(ambiente,
+					                g_strdup_printf("XDG_CONFIG_DIRS=%s:%s", labwc_cfg,
+					                                prima && *prima ? prima : "/etc/xdg"));
+			}
 		} else {
 			/*
 			 * ⭐ FASE 14 — LE RIGHE DI LXQt (`STUDI.md` §lxqt §3.2), e ogni valore
@@ -1955,10 +2023,13 @@ scrivi:
  * I due file, e perché sono così corti:
  *   · `rc.xml` — solo `<decoration>server</decoration>`, che è quel che LXQt
  *     spedisce e che `STUDI.md` §lxqt §7 dice di non toccare (una barra sola,
- *     nessun lampo).  ⭐ NIENTE `<keyboard>`: senza keybind labwc carica le
- *     sue di serie (`[R]` `src/config/rcxml.c:1685-1687`,
- *     `include/config/default-bindings.h`), e fra quelle **non c'è** nessun
- *     blocco schermo — `W-l` resta dell'utente;
+ *     nessun lampo).  ⭐ Le scorciatoie di serie di labwc (`<default/>`,
+ *     `[R]` `src/config/rcxml.c:1013`, `include/config/default-bindings.h`),
+ *     e fra quelle **non c'è** nessun blocco schermo — `W-l` resta
+ *     dell'utente; ⭐ FASE 15, D-007: PIU' la scorciatoia che riporta dentro
+ *     le finestre (`SESSIONE_LABWC_TASTIERA`).  ⛔ Il `<default/>` e'
+ *     obbligatorio: con UNA sola `<keybind>` labwc non carica piu' quelle
+ *     di serie (`rcxml.c:1685-1687`);
  *   · `autostart` — VUOTO di proposito, con la ragione scritta dentro:
  *     `lxqt-session` avvia da sé i suoi moduli da `/etc/xdg/autostart`, e
  *     quel che LXQt ci metterebbe (swayidle, swaybg) o spegne l'uscita o non
@@ -1988,12 +2059,17 @@ static char *scrivi_config_labwc_lxqt(const char *runtime)
 	                         "<?xml version=\"1.0\"?>\n"
 	                         "<!-- REMOTIX: scritto a ogni nascita della sessione "
 	                         "LXQt, non modificare.\n"
-	                         "     Nessuna <keyboard>: labwc usa le sue "
-	                         "scorciatoie di serie, senza blocco schermo. -->\n"
+	                         "     <keyboard>: le scorciatoie di serie di labwc "
+	                         "(<default/>, senza blocco schermo) piu' "
+	                         SESSIONE_LABWC_TASTO " (riporta dentro le finestre). -->\n"
 	                         "<labwc_config>\n"
 	                         "  <core>\n"
 	                         "    <decoration>server</decoration>\n"
 	                         "  </core>\n"
+	                         /* ⭐ FASE 15, D-007: le scorciatoie di serie
+	                          *    (`<default/>`) PIU' la nostra — vedi
+	                          *    `SESSIONE_LABWC_TASTIERA`. */
+	                         SESSIONE_LABWC_TASTIERA
 	                         "</labwc_config>\n",
 	                         -1, &sbaglio) ||
 	    !g_file_set_contents(autostart,
