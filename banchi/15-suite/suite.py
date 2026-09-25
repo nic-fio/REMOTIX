@@ -202,6 +202,9 @@ class Sessione:
     """
 
     def __init__(self, o, nnn, esiti, inquilino=True, chi=None, parola=None):
+        # ⚠ REMOTIX_NNN: le tre cifre dell'inquilino imposte da fuori, per gli
+        #   agenti che girano in parallelo sulla stessa scatola (c15<nnn>u<n>).
+        nnn = os.environ.get("REMOTIX_NNN") or nnn
         self.o, self.nnn, self.esiti = o, nnn, esiti
         self.sc = C20V.Scatola(o.scatola)
         self.chi = chi or "c15%su%d" % (nnn, random.randint(100, 999))
