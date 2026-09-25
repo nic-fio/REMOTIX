@@ -3472,8 +3472,8 @@ pannello:
  *      (decisione dell'utente del 25 set 2026).
  *
  * ⛔ Fino a qui `xfconf-query` scriveva nei canali DELL'UTENTE anche quel che
- *    non e' di quelle quattro specie — la cintura del logout, le voci del
- *    dialogo di uscita — e cancellava `~/.cache/sessions`.
+ *    non e' di quelle quattro specie — la cintura del logout, «Cambia
+ *    utente» nel dialogo di uscita — e cancellava `~/.cache/sessions`.
  *
  * ⭐ LA STRADA: xfconf ha le proprieta' BLOCCATE.  `[R]` xfconf 4.20
  *    `xfconfd/xfconf-backend-perchannel-xml.c`:
@@ -3523,11 +3523,10 @@ static const struct chiave_xfconf XFCE_SESSIONE[] = {
 	/* la sessione remota non ritrova e non salva sessioni */
 	{ "general", "SessionName", "string", "REMOTIX" },
 	{ "general", "SaveOnExit", "bool", "false" },
-	/* il dialogo di «Esci» (decisione del 21 set 2026) */
+	/* il dialogo di «Esci» (decisione del 21 set 2026): «Cambia utente».
+	 * ⚠ Sospendi, Iberna e Sonno ibrido NO: sono sospensione, cioe'
+	 *   PERMESSE, e stanno nel canale dell'utente (`sessione_impostazioni()`). */
 	{ "shutdown", "ShowSwitchUser", "bool", "false" },
-	{ "shutdown", "ShowSuspend", "bool", "false" },
-	{ "shutdown", "ShowHibernate", "bool", "false" },
-	{ "shutdown", "ShowHybridSleep", "bool", "false" },
 	{ NULL, NULL, NULL, NULL },
 };
 
@@ -3629,14 +3628,14 @@ static void xfce_xfconf_di_sessione(void)
 		registro_dice(REG_SESSIONE,
 		              "⭐ XFCE, D-017: xfconf della SESSIONE in vigore (%s, %d chiavi "
 		              "bloccate, RILETTE): cintura del logout, SessionName=REMOTIX, "
-		              "SaveOnExit=false, niente «Cambia utente»/«Sospendi»/«Iberna»/«Sonno "
-		              "ibrido» — il canale dell'utente non si tocca",
+		              "SaveOnExit=false, niente «Cambia utente» — il canale dell'utente "
+		              "non si tocca",
 		              file, quante);
 	else
 		registro_dice(REG_SESSIONE,
 		              "⛔ XFCE, D-017: xfconf della sessione in vigore per %d chiavi su %d.  "
-		              "⚠ La cintura del logout resta XFCE4_SESSION_COMPOSITOR; le voci del "
-		              "dialogo restano (grigie per polkit)",
+		              "⚠ La cintura del logout resta XFCE4_SESSION_COMPOSITOR; «Cambia "
+		              "utente» resta nel dialogo",
 		              in_vigore, quante);
 }
 
@@ -3672,7 +3671,7 @@ void sessione_impostazioni(void)
 	if (e_xfce()) {
 		/* ⭐ FASE 15, D-017 — quel che la sessione deve avere e che NON e'
 		 *    blocco, riavvio, sospensione o stand-by: nel xfconf della SESSIONE
-		 *    (la cintura del logout, le voci del dialogo di uscita, e la sessione
+		 *    (la cintura del logout, «Cambia utente» nel dialogo di uscita, e la sessione
 		 *    salvata al posto del vecchio `rm -rf ~/.cache/sessions`).  Il
 		 *    riquadro e' sopra `xfce_xfconf_di_sessione()`. */
 		xfce_xfconf_di_sessione();
@@ -3730,8 +3729,23 @@ void sessione_impostazioni(void)
 		xfconf_metti("xfce4-session", "/general/LockCommand", "string", "/bin/false",
 		             "il blocco schermo è spento: il blocco è di REMOTIX (§4.3)");
 
-		/* ⭐ Il DIALOGO DI «ESCI» (Show*) e' nel xfconf della SESSIONE
-		 *    (`xfce_xfconf_di_sessione()`, D-017), non piu' qui. */
+		/*
+		 * ⛔ IL DIALOGO DI «ESCI» — decisione dell'utente del 21 set 2026.
+		 *
+		 * `[R]` xfce4-session 4.20.2, `xfsm-logout-dialog.c:263-374`: Sospendi,
+		 * Iberna e Sonno ibrido hanno una chiave che li TOGLIE; ⛔ Riavvia e
+		 * Spegni no — restano GRIGI per polkit (cintura 1 di §4.7).
+		 * ⭐ FASE 15, D-017 — queste tre sono SOSPENSIONE, cioe' PERMESSE
+		 *    (decisione del 25 set 2026): restano nel canale dell'utente.
+		 *    «Cambia utente» (`ShowSwitchUser`) invece e' di SESSIONE, in
+		 *    `xfce_xfconf_di_sessione()`.
+		 */
+		xfconf_metti("xfce4-session", "/shutdown/ShowSuspend", "bool", "false",
+		             "niente «Sospendi» nel dialogo di uscita");
+		xfconf_metti("xfce4-session", "/shutdown/ShowHibernate", "bool", "false",
+		             "niente «Iberna» nel dialogo di uscita");
+		xfconf_metti("xfce4-session", "/shutdown/ShowHybridSleep", "bool", "false",
+		             "niente «Sonno ibrido» nel dialogo di uscita");
 
 		registro_dice(REG_SESSIONE,
 		              "XFCE: le voci del pulsante d'azione del pannello le tolgo "

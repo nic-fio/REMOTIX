@@ -25,8 +25,8 @@
      cambiare, e si dice come;
    · SORVEGLIATE (`SORVEGLIATE`) — tutto quel che REMOTIX ha mai scritto e
      che NON e' di quelle quattro specie (l'inventario del codice, 25 set
-     2026: la disposizione, Ctrl+Alt+F*, «Esci…», «Cambia utente», la cintura
-     del logout di XFCE, le voci del dialogo di uscita, la sessione salvata,
+     2026: la disposizione, Ctrl+Alt+F*, «Esci…», «Cambia utente» (GNOME e dialogo di XFCE), la cintura
+     del logout di XFCE, la sessione salvata,
      il pannello e le voci del menu di LXQt, kxkbrc): devono restare quelle
      di PRIMA, o FAIL;
    · ALTRE — il resto di quei file: le scrive anche il DESKTOP da se' al
@@ -92,6 +92,8 @@ PERMESSE = [re.compile(x) for x in (
     r"^xfconf:xfce4-power-manager:/xfce4-power-manager/"
     r"(dpms-enabled|inactivity-on-ac|inactivity-on-battery)$",
     r"^xfconf:xfce4-session:/general/LockCommand$",
+    # Sospendi, Iberna, Sonno ibrido nel dialogo di «Esci»: sospensione
+    r"^xfconf:xfce4-session:/shutdown/Show(Suspend|Hibernate|HybridSleep)$",
     # i pulsanti d'azione del pannello: blocco, sospensione, riavvio, spegnimento
     r"^xfconf:xfce4-panel:/plugins/plugin-\d+/items$",
     r"^lxqt:lxqt-powermanagement\.conf:\[General\](enableIdlenessWatcher|runCheckLevel)$",
@@ -101,7 +103,7 @@ PERMESSE = [re.compile(x) for x in (
 SORVEGLIATE = [re.compile(x) for x in (
     r"^dconf:",                                      # quelle lette e non permesse
     r"^xfconf:xfce4-session:/general/(WaylandLogoutCommand|SessionName|SaveOnExit)$",
-    r"^xfconf:xfce4-session:/shutdown/",
+    r"^xfconf:xfce4-session:/shutdown/ShowSwitchUser$",
     r"^lxqt:panel\.conf:\[[^\]]*\]type$",
     r"^app:",
     r"^kxkbrc:",
@@ -298,6 +300,9 @@ def certifica():
           == S.PASS)
     prova("LockCommand (permessa) ⇒ PASS",
           giudica(p, dict(p, **{"xfconf:xfce4-session:/general/LockCommand": "/bin/true"}))[0]
+          == S.PASS)
+    prova("ShowSuspend (permessa) ⇒ PASS",
+          giudica(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSuspend": "false"}))[0]
           == S.PASS)
     prova("pulsanti del pannello (permessa) ⇒ PASS",
           giudica(p, dict(p, **{"xfconf:xfce4-panel:/plugins/plugin-14/items": "-lock"}))[0]
