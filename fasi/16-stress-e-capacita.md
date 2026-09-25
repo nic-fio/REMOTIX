@@ -35,6 +35,7 @@ difetto che la fase 15 avrebbe dovuto vedere, si torna alla suite.
 | **YouTube 4K: 1 utente su 4** | rotazione fissa dei quattro profili | vedi §5 |
 | **due campagne** | Intel UHD 770 integrata, poi **AMD Radeon RX 6800 16 GB** | la RX 6800 va montata sul server; prima la si prova con un utente solo (§11) |
 | **la salita a gradini: 1 → 4 → 8 → 12 → 16** (25 set, sera) | *«forse avevo esagerato»*: un utente alla volta costava 24–96 ore di macchina | il punto di rottura si trova lo stesso, preciso a un utente, con la ricerca a metà (§6); si perde solo la curva utente per utente dove è tutto verde |
+| **tetto a 17 durante la campagna** (25 set, sera) | scelta 1 di due: al gradino 16 il controllo corto (§7) è la 17ª sessione, per ~70 s | i 16 utenti restano 16 e il carico è uguale a quello degli altri gradini; il 17° è solo il controllo, dichiarato in ogni livello; a fine campagna il tetto torna al predefinito |
 | **logging nel journal di sistema** | `journalctl`, niente sistemi propri al suo posto | vedi §12 |
 
 ## 3. Le precondizioni — tutte soddisfatte il 25 settembre 2026
