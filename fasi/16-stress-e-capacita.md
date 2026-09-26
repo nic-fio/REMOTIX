@@ -323,3 +323,40 @@ Per **una** configurazione, il requisito è verificato quando: 16 sessioni vere 
 insieme · ognuna col suo lavoro · chi c'era continua · il controllo dei 16 è completo e **GREEN**
 secondo §9 · le evidenze sono raccolte · il risultato è legato a un commit · la salita è
 riproducibile o documentata abbastanza da rifarla.
+
+## 17. Le modifiche della fase 16 — il registro per il manuale tecnico
+
+*Richiesta dell'utente, 26 set 2026: ogni modifica si annota qui, perché a fine lavori se ne scrive
+il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la misura, il commit, e se
+è **installata** (nel binario o nella pagina delle scatole) o no. Le decisioni dell'utente stanno in
+`DECISIONI.md` §9.*
+
+### 17.1 Il prodotto (`src/`)
+
+| commit | che cosa | perché | misura | installata |
+|---|---|---|---|---|
+| `62753e7` | **registro nel journal** (`--journal`): protocollo nativo del journal, una `sendmsg` per riga, non bloccante; campi `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; gravità 3/4/6 dal segno ⛔/⚠ in testa al corpo; la parlantina NON va al journal; il figlio lo riceve dal padre (`argv[16]`) | §12, DECISIONI §9.1 | 33 righe su 33 con i campi; stderr identico senza l'opzione | sì, da `bdde6bb1` |
+| `62753e7` | **l'input non si scrive**: `rcp.c` (e il gemello `banchi/rcp/rcp.c`), `tastiera.c`, `input.c` — niente `U+XXXX` né codici di tasto, salvo modificatori e pulsanti | §12, DECISIONI §9.2 | audit di tutte le chiamate `registro_*` | sì |
+| `62753e7` | `Makefile`: ogni oggetto dipende da `registro.h` | `registro.h` è diventato di macro (`__FILE__`/`__LINE__`) e una costruzione a metà non collegava | — | — |
+| `ebc9dcd` | **riga «NOSTRO nel secondo»** del figlio: p95, massimo e mediana di *copia → byte fuori* sui soli fotogrammi di quel secondo | la riga TRATTO usa un anello di 512 fotogrammi (un picco resta dentro 8–17 s) e comincia dal `pts` del compositore; §3.2 chiede il **pezzo nostro** | diagnosi del giro in 4K: nostro ~19/24 ms su 45/54 (§9, «Quale ritardo classifica») | sì, da `4cba76f6` |
+| `97e94fe` | **entrypoint del codificatore scelto sulla capacità dichiarata** dal driver: `EncSliceLP` se c'è (Intel, identico), se no `EncSlice` piena (radeonsi), dichiarato; il software solo se non c'è nessuno dei due | la Radeon non ha la bassa potenza ⇒ il prodotto codificava in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena», NOSTRO p95 17–29 ms | sì, `3fe94e8b` (binario della campagna Intel) |
+| `86598d6` | **primo fotogramma della scheda giudicato a campione** (griglia 64×64, tetto 250 ms) invece di leggere tutta la lastra DMA-BUF | su una scheda discreta la lastra è in VRAM: leggerla dalla CPU costava **63,7 s** e la sessione non nasceva | da misurare sulla Radeon | **no** (prossimo binario) |
+| `ea0f82a` | **strada di disegno WebGL2** nella pagina (`?tela=gl`): `texImage2D(VideoFrame)` sincrono, `close()` subito, quad a schermo intero, stessi contatori | anomalia A1: in Firefox `createImageBitmap(VideoFrame)` rilegge dalla GPU (~34 ms a 4K) ⇒ 11–50 % saltati con 1 utente | da misurare; poi sguardo dell'utente contro i quadrati (DECISIONI §9.4) | **no** (candidata) |
+
+### 17.2 L'impianto di prova (banchi e scatole)
+
+| commit | che cosa | perché |
+|---|---|---|
+| `8e7f9ec` | `11-accendi.sh server`: `--journal` e il tetto da `REMOTIX_TETTO_SESSIONI` | §12 e §2 (tetto a 17) |
+| `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, una scheda sola dentro la scatola | campagna Radeon (§11) |
+| `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva (Radeon: 205 ms → 17–29 ms) |
+| vari | `banchi/16-stress/`: attore, risorse, classifica, salita, controllo corto, compositori, coda, rapporto, banco della tela | l'impianto di §4–§10; corretto dopo una revisione avversaria (6 difetti) e dopo le prime salite vere (§14) |
+| `07-b46` | `REMOTIX_FF_PREFS`: preferenze in più nel profilo Firefox dei banchi | per ripetere una misura con la decodifica software |
+
+### 17.3 L'ambiente del server (volatile: rootfs in RAM)
+
+Alla ricetta di rifacimento dopo un riavvio si aggiungono: `labwc`, `wlr-randr`, Chrome da
+`/media/REMOTIX/cache/chrome.deb`, `~/SERVER.ssh` (0600) sul server, `loginctl enable-linger nicfio`
+(la coda notturna vive senza sessioni ssh), e l'unità della coda con `TimeoutStopSec=1200`,
+`KillMode=mixed`, `OOMPolicy=continue`.
+

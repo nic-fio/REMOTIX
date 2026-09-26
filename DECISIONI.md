@@ -5802,6 +5802,38 @@ stabile (6.3.6; fino a 6.7.4 nessun ramo rilasciato ha il ridimensionamento a ca
 a sessione viva, e riavviarlo distruggerebbe la sessione. `[M]` giro 1: F-018 e P-C **PASS** su KDE
 coi due browser, con quest'atteso.
 
+## 9. ✅ Le decisioni della fase 16 — stress e capacità
+
+*Prese dall'utente il 25 e 26 settembre 2026. Il racconto, le misure e le evidenze stanno in
+`fasi/16-stress-e-capacita.md` (§2, §9, §17); qui la decisione e basta.*
+
+### 9.1 ✅ Il registro va nel journal di sistema
+
+Con `--journal` il prodotto scrive i suoi **eventi** anche nel journal (`journalctl -t remotix`), con i
+campi `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE` e la gravità presa dal segno in
+testa alla riga (⛔ = errore, ⚠ = avviso). La **parlantina** resta solo nel file. Il file resta per chi
+amministra.
+
+### 9.2 ✅ Nel registro non entra mai quel che l'utente batte
+
+Né caratteri né codici di tasto: si scrive «un carattere», «tasto premuto/rilasciato». Il codice resta
+solo per i **modificatori** e i **pulsanti del mouse**. Vale anche per il carattere non producibile
+(RCP §7.3): si dichiara **che** c'è stato, non **quale**.
+
+### 9.3 ✅ La campagna: salita a gradini, tetto a 17, soglie §9
+
+Gradini 1 → 4 → 8 → 12 → 16 con la ricerca a metà (non un utente alla volta); tetto delle sessioni a
+**17** durante la campagna, perché il 17° è solo il controllo corto; soglie di §9 approvate, con il
+video in proporzione alla sua frequenza e la memoria dei browser che si registra ma non classifica.
+
+### 9.4 ✅ Firefox disegna con WebGL (anomalia A1) — decisione del 26 set 2026, mattina
+
+La campagna ha misurato che in Firefox la strada di disegno di serie (`bitmaprenderer`, scelta il 20
+ago 2026 contro i quadrati della tela 2D) rilegge ogni fotogramma dalla GPU (~34 ms a 4K) e fa saltare
+l'11–50 % dei fotogrammi già con un utente. L'utente ha scelto di **curare adesso** (strada WebGL2)
+invece di chiudere la campagna col difetto dichiarato: suite corta + prove della tela + **suo sguardo
+contro i quadrati**, poi si rifanno le salite interessate.
+
 ---
 
 ## Come si tiene questo documento
