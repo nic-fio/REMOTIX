@@ -2932,6 +2932,27 @@ class Schermo {
     this.quadro_ms = [];   /* ⭐ vetro → prossimo quadro (il limite inferiore
                                  del pezzo cieco di `STUDI.md` §web §6.2)     */
     this.t_dec = new Map();                    /* `istante` → ora di `decode()` */
+    /* ⭐⭐ LA GUARDIA DELLA CODA SI VEDE — 26 set 2026, fase 16 (anomalia A1).
+     *
+     * ⛔ `saltati_coda` diceva QUANTI, non PERCHE': si e' scoperto (fase 13,
+     *    22 set) che la guardia era cieca, e (fase 16, 26 set) che a disegno
+     *    veloce butta il 12 % dei fotogrammi senza guadagnare un millisecondo.
+     *    Nessuna delle due cose si leggeva dai conti.  ⇒ Quattro misure, tutte
+     *    nella riga del diario e in `REMOTIX.tratti()`:
+     *      `coda_cons`  istogramma di `decodeQueueSize` alla CONSEGNA (0,1,2,3,4,≥5);
+     *      `coda_usc`   lo stesso all'USCITA — e' il numero su cui decide la guardia;
+     *      `eta_ms`     quanto il fotogramma uscito e' piu' vecchio dell'ULTIMO
+     *                   consegnato (orologio del server, §6.2): il ritardo che il
+     *                   decodificatore ha accumulato, in ms e non in fotogrammi;
+     *      `ric_ms`     quanto il richiamo TIENE il thread principale — la parte
+     *                   sincrona di `dipingi()`, qualunque strada di disegno.
+     *   `salt_eta100` conta quel che una regola «eta' > 100 ms» AVREBBE
+     *   saltato: si misura prima di sceglierla.
+     * ⚠ Costo: due interi, una sottrazione e un `performance.now()` a
+     *   fotogramma; le mediane si calcolano solo sulla riga del diario. */
+    this.ric_ms = []; this.eta_ms = [];
+    this.coda_cons = [0, 0, 0, 0, 0, 0]; this.coda_usc = [0, 0, 0, 0, 0, 0];
+    this.ult_ist_dec_us = 0; this.salt_eta100 = 0;
     /* ⭐⭐ LA META' VIDEO DEL METRO DELLA DISTANZA AUDIO↔VIDEO (§9.7-bis).
      *
      * L'ultimo fotogramma arrivato al vetro: il suo `istante` (l'orologio del
@@ -4161,6 +4182,10 @@ class Schermo {
         if (!primo.done) this.t_dec.delete(primo.value);
       }
       this.t_dec.set(i.istante, performance.now());
+      /* ⭐ la coda che il decodificatore dichiara PRIMA di ricevere questo */
+      const cq = this.dec.decodeQueueSize;
+      this.coda_cons[cq > 5 ? 5 : cq]++;
+      this.ult_ist_dec_us = i.istante;
       this.dec.decode(new EncodedVideoChunk({
         type: chiave ? "key" : "delta", timestamp: i.istante, data: dati }));
     } catch (e) {
@@ -4715,7 +4740,36 @@ class Schermo {
      * ⛔ E il conto si tiene: un fotogramma buttato in silenzio e' un ritmo che
      *   cala senza che nessuno sappia perche' (`I1` vuole che ogni discesa sia
      *   dichiarata). */
-    if (!VIA_MSE && this.dec && this.dec.decodeQueueSize > 2) {
+    /* ⭐⭐⭐ E LA SOGLIA SI PESA COL COSTO DEL DISEGNO — 26 set 2026, fase 16.
+     *
+     * ⛔ La regola «coda > 2» era nata quando il disegno costava 34 ms: saltarlo
+     *    faceva arrivare prima i fotogrammi dietro.  ⚠ Ma la coda del
+     *    decodificatore non e' fatta di fotogrammi che aspettano NOI: sono
+     *    fotogrammi che aspettano LUI (`[M]` 26 set, Firefox 140 4K con
+     *    `?tela=gl`: disegno 0,26 ms, e la coda sale a 3-4 lo stesso quando la
+     *    GPU e' occupata da una seconda sessione).  Saltare il disegno di un
+     *    fotogramma che costa 0,26 ms non fa arrivare niente prima di 0,26 ms:
+     *    ⇒ il 12 % dei fotogrammi buttati per zero millisecondi guadagnati.
+     *
+     * ⭐ La grandezza giusta e' QUANTO COSTEREBBE DISEGNARE LA CODA: se i
+     *   fotogrammi dietro, al costo mediano di un richiamo, tengono il thread
+     *   principale piu' di un quadro (16 ms, il quadro a 60/s), il disegno E'
+     *   il collo e si salta — a 34 ms scatta a coda 1, cioe' come prima ai
+     *   fini pratici (la soglia «> 2» resta, ed e' quella misurata sana).  A
+     *   0,3 ms non scatta mai sotto i 50 in coda: il ritardo e' del
+     *   decodificatore, e buttare fotogrammi non lo cura — lo cura il
+     *   regolatore del ritmo del server, che guarda il giro.
+     * ⚠ Vale per ogni browser e ogni strada: il costo si MISURA (`ric_ms`,
+     *   piu' il vetro sulla strada asincrona), non si dichiara. */
+    const coda = (!VIA_MSE && this.dec) ? this.dec.decodeQueueSize : 0;
+    this.coda_usc[coda > 5 ? 5 : coda]++;
+    if (this.ult_ist_dec_us && f.timestamp !== undefined && f.timestamp !== null) {
+      const eta = (this.ult_ist_dec_us - f.timestamp) / 1000;
+      this.eta_ms.push(eta);
+      if (this.eta_ms.length > 200) this.eta_ms.shift();
+      if (eta > 100) this.salt_eta100++;
+    }
+    if (coda > 2 && coda * this.costo_disegno() > 16) {
       this.conti.saltati_coda++;
       try { f.close(); } catch (e) { /* gia' chiuso */ }
       return;
@@ -4767,8 +4821,8 @@ class Schermo {
        stesso punto e con gli stessi argomenti: tutto quel che sta sopra — il
        salto della coda, il formato, la riga della misura — vale per lei
        identico, o il confronto non sarebbe di UNA variabile. */
-    if (this.gl) { this.mostra_gl(f, fl, fa, t_out); return; }
-    if (this.bm) { this.mostra(f, fl, fa, t_out); return; }
+    if (this.gl) { this.mostra_gl(f, fl, fa, t_out); this.richiamo_finito(t_out); return; }
+    if (this.bm) { this.mostra(f, fl, fa, t_out); this.richiamo_finito(t_out); return; }
     try {
       if (!this.deposito) this.deposito = document.createElement("canvas");
       if (this.deposito.width !== fl || this.deposito.height !== fa) {
@@ -4802,6 +4856,28 @@ class Schermo {
      *   finiti`, cioe' esattamente i tratti 9+10 dell'agente A. */
     this.tot_ms.push(performance.now() - t_out);
     if (this.tot_ms.length > 200) this.tot_ms.shift();
+    this.richiamo_finito(t_out);
+  }
+
+  /* ⭐ Quanto il richiamo del decodificatore ha tenuto il thread principale:
+     la parte SINCRONA di `dipingi()`, su qualunque strada.  E' la sola cosa
+     che fa aspettare i fotogrammi dietro a questo. */
+  richiamo_finito(t_out) {
+    if (t_out === undefined) return;
+    this.ric_ms.push(performance.now() - t_out);
+    if (this.ric_ms.length > 200) this.ric_ms.shift();
+  }
+
+  /* ⭐ Il costo mediano di disegnare UN fotogramma, in ms di thread principale:
+     il richiamo, piu' — sulla strada asincrona (`bitmaprenderer`) — il
+     trasferimento al vetro che gira nel `.then`, perche' in Firefox la
+     rilettura dalla GPU puo' stare in uno dei due.  ⚠ Senza campioni vale 0:
+     alla nascita non si salta niente, e la misura arriva col primo fotogramma. */
+  costo_disegno() {
+    const r = this.gl_mediana(this.ric_ms);
+    if (!r) return 0;
+    const v = this.bm ? this.gl_mediana(this.vetro_ms) : null;
+    return r.med + (v ? v.med : 0);
   }
 }
 
@@ -5196,6 +5272,13 @@ function tratti() {
     bmp_falliti: s.conti ? s.conti.bmp_falliti : null,
     saltati_coda: s.conti ? s.conti.saltati_coda : null,
     tardive: s.conti ? s.conti.tardive : null,
+    /* ⭐ la guardia della coda, vista (26 set 2026): gli stessi nomi della riga */
+    coda_cons: s.coda_cons ? s.coda_cons.slice() : null,
+    coda_usc: s.coda_usc ? s.coda_usc.slice() : null,
+    eta_ms: __tratto(s.eta_ms),
+    ric_ms: __tratto(s.ric_ms),
+    costo_disegno_ms: (s.costo_disegno ? +s.costo_disegno().toFixed(3) : null),
+    salt_eta100: s.salt_eta100,
     "8_decode_richiamo": __tratto(s.dec_ms),
     "9a_richiamo_chiamata": __tratto(s.pre_ms),
     "9b_conversione": __tratto(s.bmp_ms),
@@ -7382,6 +7465,23 @@ function avvia_audio(wt) {
                        return m ? m.med + "ms" : "?";
                      })() + (schermo.gl_persa ? " PERSA" : "")
                    : "")
+              /* ⭐ LA GUARDIA DELLA CODA SI VEDE (26 set 2026): gli istogrammi
+                 della coda alla consegna e all'uscita (0/1/2/3/4/≥5), il
+                 tratto 8 (decode → richiamo), l'eta' del fotogramma uscito
+                 rispetto all'ultimo consegnato, il costo del richiamo, e quanti
+                 una regola sull'eta' (> 100 ms) avrebbe saltato.  Mediane e
+                 p95 sugli ultimi 200: si calcolano QUI, ogni 5 s, non a
+                 fotogramma. */
+              + ((VIA_MSE || !schermo.coda_cons) ? "" : (function () {
+                  const m = function (a) {
+                    const t = schermo.gl_mediana(a);
+                    return t ? t.med + "/" + t.p95 : "?";
+                  };
+                  return " cq " + schermo.coda_cons.join("/")
+                       + " cu " + schermo.coda_usc.join("/")
+                       + " dec8 " + m(schermo.dec_ms) + " eta " + m(schermo.eta_ms)
+                       + " ric " + m(schermo.ric_ms) + " eta100 " + schermo.salt_eta100;
+                })())
             : " video ?")
        /* ⭐⭐⭐ IL METRO DELLA DISTANZA AUDIO↔VIDEO — §9.7-bis, 21 agosto 2026.
         *

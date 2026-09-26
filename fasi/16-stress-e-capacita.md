@@ -343,6 +343,8 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 | `86598d6` | **primo fotogramma della scheda giudicato a campione** (griglia 64×64, tetto 250 ms) invece di leggere tutta la lastra DMA-BUF | su una scheda discreta la lastra è in VRAM: leggerla dalla CPU costava **63,7 s** e la sessione non nasceva | da misurare sulla Radeon | **no** (prossimo binario) |
 | `ea0f82a` | **strada di disegno WebGL2** nella pagina (`?tela=gl`): `texImage2D(VideoFrame)` sincrono, `close()` subito, quad a schermo intero, stessi contatori | anomalia A1: in Firefox `createImageBitmap(VideoFrame)` rilegge dalla GPU (~34 ms a 4K) ⇒ 11–50 % saltati con 1 utente | da misurare; poi sguardo dell'utente contro i quadrati (DECISIONI §9.4) | **no** (candidata) |
 
+| (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava i 34 ms del disegno 2D; con WebGL (0,26 ms) non salva niente e buttava il 12 % | Firefox di serie: salta come prima (15 = i fotogrammi a coda ≥ 3), ritardo invariato (36,8 ms); Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
+
 ### 17.2 L'impianto di prova (banchi e scatole)
 
 | commit | che cosa | perché |
