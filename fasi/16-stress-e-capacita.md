@@ -347,6 +347,10 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 
 | (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
 
+**Binario e pagina della campagna nuova** (da `e4e05dc`): binario **`45d048c8`**, pagina **`fb9a18f3`** —
+suite corta estesa (accesso, input, immagine, appunti, «Esci», orologi, più tela all'attacco, video,
+stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 PASS su 352**, 26 set.
+
 ### 17.2 L'impianto di prova (banchi e scatole)
 
 | commit | che cosa | perché |
