@@ -1257,6 +1257,10 @@ def main():
     o.porta = 0
     o.evidenze = os.path.join(o.dir, "utente-%02d" % o.utente)
     o.url = "https://%s:%d/" % (o.host, S.PORTE[o.scatola])
+    # ⭐ per misurare una strada della pagina (es. «?tela=gl», anomalia A1): si aggiunge
+    #   all'indirizzo, e si dichiara nello stato; vuota = la pagina di serie
+    if os.environ.get("REMOTIX_16_URL_EXTRA"):
+        o.url += os.environ["REMOTIX_16_URL_EXTRA"]
     o.scena, o.continuita_s, o.registro_cmd, o.lascia_acceso, o.salva = "viva", 8, "", False, ""
     att = Attore(o, S, G2)
 
