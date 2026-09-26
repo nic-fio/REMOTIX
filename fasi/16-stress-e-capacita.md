@@ -324,6 +324,9 @@ insieme · ognuna col suo lavoro · chi c'era continua · il controllo dei 16 è
 secondo §9 · le evidenze sono raccolte · il risultato è legato a un commit · la salita è
 riproducibile o documentata abbastanza da rifarla.
 
+⚠ **Gli orari**: i registri del server, le cartelle delle misure e le righe `[hh:mm:ss]` delle salite
+sono in **UTC** (il server non ha un fuso impostato); l'ora italiana (CEST, settembre) è **UTC + 2**.
+
 ## 17. Le modifiche della fase 16 — il registro per il manuale tecnico
 
 *Richiesta dell'utente, 26 set 2026: ogni modifica si annota qui, perché a fine lavori se ne scrive
