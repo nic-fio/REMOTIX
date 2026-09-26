@@ -1162,7 +1162,20 @@ const TELA_2D = new URLSearchParams(location.search).get("tela") === "2d";
  *    una decisione sua).  ⚠ E un parametro solo: `?tela=` porta UN valore,
  *    quindi `gl` esclude `2d` e `desincronizzata` — un confronto, una
  *    variabile. */
-const TELA_GL = new URLSearchParams(location.search).get("tela") === "gl";
+/* ⭐⭐ 26 set 2026, mattina — WebGL2 DIVENTA LA STRADA DI SERIE (`DECISIONI.md`
+ *    §9.4).  `[M]` Firefox 4K: disegno 34 ms → 0,26 ms, saltati 60 % → 12 %
+ *    (e il resto era la regola del salto, ora pesata col costo del disegno).
+ *    ⭐ Giudizio dell'utente allo schermo, video 4K e acquario WebGL a 30 000
+ *    pesci: «l'immagine e' perfetta: qualita' ottima, 45 fps costanti, nessuno
+ *    scatto» — i blocchi 64×192 della tela 2D NON ci sono.
+ * ⭐ `?tela=bmp` rimette la strada di prima (`bitmaprenderer`), per confrontare;
+ *   senza WebGL2 nel browser la pagina ci ripiega da sola, e lo scrive. */
+/* ⚠ Qualunque altro `?tela=` (2d, bmp, desincronizzata) e' un confronto con UNA
+ *   variabile cambiata: WebGL si spegne, e si prende quella strada. */
+const TELA_GL = (function () {
+  const t = new URLSearchParams(location.search).get("tela");
+  return t === null || t === "" || t === "gl";
+})();
 
 /* ⛔⭐⭐ QUALE DELLE DUE STRADE VERSO I PIXEL — `DECISIONI.md` §7.18.
  *

@@ -345,6 +345,8 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 
 | (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava i 34 ms del disegno 2D; con WebGL (0,26 ms) non salva niente e buttava il 12 % | Firefox di serie: salta come prima (15 = i fotogrammi a coda ≥ 3), ritardo invariato (36,8 ms); Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
 
+| (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
+
 ### 17.2 L'impianto di prova (banchi e scatole)
 
 | commit | che cosa | perché |
