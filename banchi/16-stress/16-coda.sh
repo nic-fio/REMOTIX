@@ -3,9 +3,13 @@
 #
 #   (sul server, come nicfio)
 #   sudo systemd-run --unit=r16-coda --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 \
-#        -p TimeoutStopSec=1200 -p KillMode=mixed \
+#        -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue \
 #        bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh intel gnome kde xfce lxqt
 #
+# ⛔ OOMPolicy=continue NON e' facoltativo: [M] 26 set 02:02, XFCE 4K a 12 utenti, la
+#    macchina (che fa girare anche i browser-cliente) ha finito la RAM e il kernel ha
+#    ucciso un Chrome; con la politica di serie (stop) systemd ha fermato TUTTA la coda.
+#    Un processo ucciso per memoria e' un gradino rosso da misurare, non la fine della notte.
 # ⛔ TimeoutStopSec=1200 e KillMode=mixed NON sono facoltativi: lo sgombero di una salita
 #    (attori fino a 120 s, inquilini, compositori, il server rimesso) dura ben piu' dei 90 s
 #    predefiniti, e con KillMode=control-group il SIGTERM arriverebbe INSIEME a tutti
