@@ -1036,6 +1036,24 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     m1 = w1
     if corto is not None and meta.get("controllo_min") and meta.get("fine"):
         m1 = min(w1, meta["fine"] - float(meta["controllo_min"]) * 60.0)
+    # ⛔ [M] 26 set 00:56 (intel-4k-xfce livello-01): il controllo corto duro' 156 s e non
+    #    120, la «fine − controllo_min» cadde 28 s DOPO la nascita della sessione u99 ⇒
+    #    +25 MB di un inquilino nuovo letti come perdita (FAIL falso).  Il tratto della
+    #    memoria finisce prima che il controllo compaia nelle risorse, qualunque sia la
+    #    durata del controllo; e mai dopo l'inizio della finestra dichiarato dalla salita.
+    if meta.get("inizio_finestra_t"):
+        m1 = min(m1, float(meta["inizio_finestra_t"]))
+    for r in ris_tutte:
+        t_r = r.get("t")
+        if t_r is None or t_r < m0:
+            continue
+        chi = set()
+        for rec in (r.get("recinti") or {}).values():
+            if isinstance(rec, dict):
+                chi.update((rec.get("per_inquilino") or {}).keys())
+        if any(str(c).endswith("u99") for c in chi):
+            m1 = min(m1, t_r - 5.0)
+            break
     lv = voci_livello(ris_tutte, w0, w1, m0, m1)
     for k in ("memoria_remotix", "memoria_sessioni"):
         if not lv[k].get("non_misurato"):
