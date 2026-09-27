@@ -363,6 +363,17 @@ l'utente aveva notato a mano restano una domanda separata: questo banco non le p
 mediana 8,8 ms in tutti e quattro. ⇒ Ipotesi smentita; la scheda è tornata su `auto`. `[?]`
 Resta da capire da dove vengono i picchi (la codifica ha mediana dei p95 ~20 ms).
 
+`[M]` **Dove stanno i picchi** (registro del server, `amd-freq-auto/livello-01`, 3322 fotogrammi):
+la codifica è bimodale — mediana **8,7 ms**, p99 **31 ms** — e i lenti arrivano **a gruppi di 5
+consecutivi da 31 ms**, ogni 12–40 s, su delta piccolissimi (300–1500 byte); la Intel sullo stesso
+lavoro: p99 8,7 ms, max 10,4. 11 gruppi su 13 cominciano entro 1,5 s da un'azione che fa
+ridisegnare la pagina (clic, rotella, tasto). `[?]` **Ipotesi**, da verificare: su radeonsi la
+conversione RGB → NV12 del VPP gira sugli **shader** (coda grafica), in fila dietro al
+ridisegno del desktop della sessione; sulla Intel la fa un blocco dedicato (VEBOX). Se è così,
+la cura candidata è una priorità alta per il contesto VPP, o la conversione dentro il
+codificatore dove la scheda lo permette. I tempi sono presi dalla chiamata di codifica, che
+comprende l'attesa del VPP.
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
