@@ -343,6 +343,26 @@ il banco non usa il prodotto come lo userebbe una persona.
   della campagna Radeon col binario 45d048c8 sono nere per D-023**: quei gradini misurano il
   difetto, non la capacità, e si rifanno col binario curato.
 
+### Anomalia A4 — il PageDown «perso» su KDE era dell'attore (27 set)
+
+`[M]` A 1 utente, su tutte le campagne fatte: **KDE 14 PageDown senza effetto su 49** (Intel e
+Radeon), gli altri desktop **0 su 172**; clic, battitura e rotella su KDE: 0 persi. Il tasto
+**arriva** al server (`POSIZIONE_TASTO` premuto e rilasciato nel registro). Tutti i persi
+vengono **dopo una rotella** (o dopo un altro PageDown perso); dopo un clic o una navigazione,
+mai. Causa: `aspetta()` dell'attore tornava alla prima riga buona e perdeva le posizioni dopo,
+quindi dopo una rotella credeva la pagina a metà mentre era in fondo, e sceglieva PageDown su una
+pagina che non poteva scendere. Su KDE la rotella sposta di più (`scroll_discrete`, 144 unità) e
+il fondo si tocca più spesso. ⇒ **Difetto del banco, non del prodotto**; cura in §17.2. Ha fatto
+FAIL `amd-freq-*` e ha pesato su `intel-b-4k-kde` e `amd-4k-kde`. ⚠ Le frecce su/giù che
+l'utente aveva notato a mano restano una domanda separata: questo banco non le prova.
+
+### Anomalia A3, seconda metà — il ritardo della Radeon NON è la frequenza (27 set)
+
+`[M]` KDE 4K, 1 utente, binario 28a947f5, due gradini per condizione: NOSTRO p95 dei p95
+**39,3 / 38,6 ms** con `power_dpm_force_performance_level=auto`, **37,5 / 42,0 ms** con `high`;
+mediana 8,8 ms in tutti e quattro. ⇒ Ipotesi smentita; la scheda è tornata su `auto`. `[?]`
+Resta da capire da dove vengono i picchi (la codifica ha mediana dei p95 ~20 ms).
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
@@ -402,6 +422,7 @@ stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 P
 | (questo commit) | lavoro C su LXQt: `qterminal -e bash`, e l'attore controlla la shell sotto il terminale | anomalia A2 (D-022, difetto del prodotto: `SHELL=` vuota ⇒ dash) — aggiramento dichiarato del banco, la cura del prodotto è dopo la campagna |
 | (questo commit) | lavoro B su LXQt: la cancellazione è Maiusc+Canc e «y» (pcmanfm-qt: il Canc del menu non scattava; «No» è il bottone predefinito del dialogo), foto al fallimento | `[M]` 27 set: «input perso: cancella» dava FAIL a LXQt già a 2 utenti — difetto del banco, non del prodotto; le salite LXQt 4K e 3K si rifanno |
 | `07-b46` | `REMOTIX_FF_PREFS`: preferenze in più nel profilo Firefox dei banchi | per ripetere una misura con la decodifica software |
+| (questo commit) | `16-lavori.py`, attore A: `aspetta()` legge TUTTO il gruppo di righe del quaderno prima di tornare, e prima di scegliere rotella o tasto l'attore rilegge la posizione | anomalia A4: il PageDown «perso» su KDE era dell'attore (posizione vecchia, pagina già in fondo). In vigore sul server dalle **13:58 UTC del 27 set**, cioè dal secondo utente di `amd-b-4k-gnome` in poi (l'utente 01 di quel gradino è partito alle 13:55 col codice di prima) |
 
 ### 17.3 L'ambiente del server (volatile: rootfs in RAM)
 

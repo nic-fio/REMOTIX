@@ -626,14 +626,24 @@ class LavoroA(Lavoro):
             pass
 
     def aspetta(self, cerca, attesa, dopo=0.0):
-        """La prima riga del quaderno (dopo l'ora `dopo`) per cui `cerca` e' vero."""
+        """La prima riga del quaderno (dopo l'ora `dopo`) per cui `cerca` e' vero.
+
+        ⛔ Il gruppo letto si legge TUTTO prima di tornare (anomalia A4, 27 set):
+           tornando alla prima riga buona, le posizioni dopo si perdevano, e dopo
+           una rotella l'attore credeva la pagina a meta' mentre era in fondo —
+           il PageDown seguente non poteva muoverla, e contava come input PERSO.
+           `[M]` a 1 utente: KDE 14 PageDown «persi» su 49, tutti dopo una
+           rotella o un altro PageDown; gli altri desktop 0 su 172."""
         fine = time.time() + attesa
         while True:
+            trovata = None
             for e in self.quaderno_nuovo():
                 if e[1] in ("carica", "scroll"):
                     self.leggi_pos(e)
-                if e[0] >= dopo and cerca(e):
-                    return e
+                if trovata is None and e[0] >= dopo and cerca(e):
+                    trovata = e
+            if trovata is not None:
+                return trovata
             if time.time() >= fine:
                 return None
             self.a.dorme(0.4)
@@ -665,6 +675,7 @@ class LavoroA(Lavoro):
                             dove)
             self.a.dorme(R.pausa_s("leggere"))
         elif az == "rotella":
+            self.aspetta(lambda e: False, 0)   # ⭐ A4: la posizione VERA prima di scegliere
             giu = self.y < self.max * 0.6
             tacche = R.intero(3, 12)
             y0 = self.y
@@ -693,6 +704,7 @@ class LavoroA(Lavoro):
             self.a.verifica("clic", e is not None, (e[0] - t0) * 1000 if e else None, self.pagina)
             self.a.dorme(R.pausa_s("breve"))
         else:
+            self.aspetta(lambda e: False, 0)   # ⭐ A4: la posizione VERA prima di scegliere
             tasto = "PageDown" if self.y < self.max * 0.7 else "Home"
             y0 = self.y
             M.muovi(tl * 0.5, ta * 0.6)
