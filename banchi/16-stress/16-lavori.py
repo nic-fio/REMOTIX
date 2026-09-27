@@ -44,7 +44,9 @@ Importato da `16-attore.py`; da solo non gira.  Ogni lavoro:
                    ~30 dipinti/s, audio suonati = ricevuti.
 
 ⛔ Nomi delle applicazioni per desktop: presenti tutti e quattro nelle scatole
-   (`command -v`, 25 set 2026); PROVATE dall'attore solo su xfce.
+   (`command -v`, 25 set 2026); PROVATE dall'attore su xfce (25 set), e su
+   lxqt il 27 set: pcmanfm-qt cancella solo con Maiusc+Canc e «y»
+   (`piano_cancella`), qterminal apre dash e va lanciato `-e bash` (`APP`).
 """
 import json
 import os
@@ -65,8 +67,18 @@ APP = {
     #   sessione ed esce subito ⇒ il processo da guardare e' «Thunar» (`[M]` 25 set)
     "xfce":  {"fm": ("thunar {dir}", "[Tt]hunar"),
               "term": ("xfce4-terminal --maximize", "xfce4-terminal")},
+    # ⛔ lxqt: `qterminal` da solo apre DASH, non bash (`[M]` 27 set 2026, intel-b
+    #   2K livello 4, utente 3, due volte su due): nelle sessioni SHELL e' assente
+    #   per scelta (02-sessione-stato), e qtermwidget 2.1 senza SHELL ripiega su
+    #   /bin/sh (nel binario ci sono solo «SHELL» e «/bin/sh», mai «/bin/bash»);
+    #   /bin/sh → dash.  Gli altri tre terminali prendono la shell da passwd
+    #   (bash).  Con dash il .bashrc non si legge, la storia non si scrive mai,
+    #   ogni comando risulta KO e la prima riga «non arriva» ⇒ tre tentativi,
+    #   tre finestre col prompt «$ » nudo nella foto, poi «in_attesa» per tutto
+    #   il livello: 6 righe di stato su 122 col blocco, e il classificatore
+    #   dice NON MISURATO.  ⇒ `-e bash`: «Execute command instead of shell».
     "lxqt":  {"fm": ("pcmanfm-qt {dir}", "pcmanfm-qt"),
-              "term": ("qterminal", "qterminal")},
+              "term": ("qterminal -e bash", "qterminal")},
 }
 
 # il passaggio dei file verso la scatola: la cartella dell'ospite montata dentro
@@ -388,6 +400,21 @@ def campo_lascia_da_solo(html):
 def storia_contiene(testo, riga):
     """⭐ La riga battuta c'e' ESATTA nella storia di bash (una riga intera)."""
     return any(r == riga for r in (testo or "").splitlines())
+
+
+def shell_sotto(ps_testo, proc):
+    """⭐ I processi che girano SOTTO il terminale (i figli diretti di ogni
+    processo il cui nome combacia con `proc`), da `ps -o pid=,ppid=,comm=`:
+    ['bash'], ['dash'], [] se il terminale non c'e' o non ha ancora figli.
+    ⚠ `comm` e' tagliato a 15 caratteri («gnome-terminal-server» ⇒
+    «gnome-terminal-»): `proc` si cerca dentro, non si confronta intero."""
+    righe = []
+    for r in (ps_testo or "").splitlines():
+        p = r.split(None, 2)
+        if len(p) == 3 and p[0].isdigit() and p[1].isdigit():
+            righe.append((p[0], p[1], p[2].strip()))
+    padri = {pid for pid, _pp, comm in righe if re.search(proc, comm)}
+    return sorted({comm for _pid, pp, comm in righe if pp in padri})
 
 
 def piano_cancella(scatola):
@@ -871,13 +898,24 @@ class LavoroC(Lavoro):
             return False, "%s non e' vivo dopo 30 s" % self.proc
         self.rett = self.trova_finestra(prima)
         self.a.dorme(2)
+        # ⛔ la shell sotto il terminale DEVE essere bash: la verifica e' la storia
+        #   di bash (`[M]` 27 set: qterminal apriva dash, vedi APP["lxqt"])
+        shell = self.shell()
+        if shell and "bash" not in shell:
+            return False, "%s con sotto %s e non bash: la storia (~/.c16-storia) non si scriverebbe mai" % (
+                self.proc, "/".join(shell))
         # il fuoco nella finestra, e una prima riga che dice che la storia si scrive
         x, y = self.punto(0.5, 0.5)
         self.a.mani.clic(x, y)
         ok = self.comando("echo pronto")
-        return ok, "%s, finestra %s, prima riga %s" % (
+        return ok, "%s, finestra %s, sotto %s, prima riga %s" % (
             self.proc, [int(v) for v in self.rett] if self.rett else "NON trovata (uso il centro)",
-            "arrivata" if ok else "NON arrivata")
+            "/".join(shell) if shell else "(nessun figlio)", "arrivata" if ok else "NON arrivata")
+
+    def shell(self):
+        """I figli diretti del terminale (la shell), dal `ps` della scatola."""
+        c, t = self.dentro("ps -u %s -o pid=,ppid=,comm=" % self.a.chi, 30)
+        return shell_sotto(t, self.proc) if c == 0 else []
 
     def storia(self):
         c, t = self.dentro("stat -c %%.3Y %s/.c16-storia; tail -n 30 %s/.c16-storia"

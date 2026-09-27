@@ -308,6 +308,19 @@ Cura candidata, da misurare dopo la campagna: disegno con **WebGL2 `texImage2D(V
 `banchi/16-stress/16-banco-tela.html` (vie `bmp` e `gl`, criteri: disegno < 3 ms, saltati < 5 %, e
 la foto del vetro col testimone per escludere i blocchi della 2D).
 
+### Anomalia A2 — in LXQt il terminale apre `dash`, non la shell dell'utente (27 set)
+
+`[M]` Il profilo C su LXQt non lavorava: qterminal apriva **`/bin/sh` (dash)**, senza `.bashrc`
+né storia. Causa: il prodotto fa nascere le sessioni con **`SHELL=` vuota** (`src/sessione.c`
+~1682, `src/figlio.c` ~1159 — voluta per la trappola della shell di login di `gnome-session`), e
+qtermwidget senza `SHELL` ripiega su `/bin/sh`; thunar/xfce4-terminal, konsole e gnome-terminal
+leggono la shell da passwd e non se ne accorgono. ⇒ **È un difetto funzionale del prodotto**
+(un utente LXQt che apre il terminale non trova la sua shell), che la fase 15 non ha visto: è
+**D-022**, da curare DOPO la campagna (la trappola è solo di GNOME: fuori da GNOME, `SHELL` dalla
+riga di passwd) con la sua prova nella suite. Per non fermare la campagna su un difetto che non
+tocca la capacità, l'attore apre `qterminal -e bash` — **dichiarato**, ed è l'unico punto in cui
+il banco non usa il prodotto come lo userebbe una persona.
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
@@ -362,6 +375,7 @@ stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 P
 | `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, una scheda sola dentro la scatola | campagna Radeon (§11) |
 | `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva (Radeon: 205 ms → 17–29 ms) |
 | vari | `banchi/16-stress/`: attore, risorse, classifica, salita, controllo corto, compositori, coda, rapporto, banco della tela | l'impianto di §4–§10; corretto dopo una revisione avversaria (6 difetti) e dopo le prime salite vere (§14) |
+| (questo commit) | lavoro C su LXQt: `qterminal -e bash`, e l'attore controlla la shell sotto il terminale | anomalia A2 (D-022, difetto del prodotto: `SHELL=` vuota ⇒ dash) — aggiramento dichiarato del banco, la cura del prodotto è dopo la campagna |
 | (questo commit) | lavoro B su LXQt: la cancellazione è Maiusc+Canc e «y» (pcmanfm-qt: il Canc del menu non scattava; «No» è il bottone predefinito del dialogo), foto al fallimento | `[M]` 27 set: «input perso: cancella» dava FAIL a LXQt già a 2 utenti — difetto del banco, non del prodotto; le salite LXQt 4K e 3K si rifanno |
 | `07-b46` | `REMOTIX_FF_PREFS`: preferenze in più nel profilo Firefox dei banchi | per ripetere una misura con la decodifica software |
 

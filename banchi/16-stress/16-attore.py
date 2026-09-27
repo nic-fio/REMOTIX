@@ -479,6 +479,19 @@ def certifica():
     prova("GUASTO visto: un carattere perso ⇒ KO",
           not L.storia_contiene(st, "ls -la ~/prova16 #k4")
           and not L.storia_contiene("ls -la ~/prova1 #k3\n", "ls -la ~/prova16 #k3"))
+    # ⛔ GUASTO visto il 27 set (LXQt): qterminal senza SHELL apriva dash ⇒ la
+    #   storia di bash non si scriveva mai, «prima riga NON arrivata» tre volte
+    ps = ("263 255 lxqt-session\n900 263 qterminal\n905 900 dash\n910 263 pcmanfm-qt\n"
+          "1000 263 gnome-terminal-\n1001 1000 bash\n")
+    prova("GUASTO visto: sotto qterminal c'e' dash, e si vede",
+          L.shell_sotto(ps, "qterminal") == ["dash"], str(L.shell_sotto(ps, "qterminal")))
+    prova("sotto gnome-terminal-server (nome tagliato a 15) c'e' bash",
+          L.shell_sotto(ps, "gnome-terminal") == ["bash"])
+    prova("terminale assente ⇒ nessuna shell, non un errore",
+          L.shell_sotto(ps, "konsole") == [] and L.shell_sotto("", "qterminal") == []
+          and L.shell_sotto("riga storta\n", "qterminal") == [])
+    prova("su LXQt qterminal si lancia con bash esplicito",
+          L.APP["lxqt"]["term"][0] == "qterminal -e bash")
     q = L.leggi_quaderno("1727.500 carica testo 0 9000\n1727.900 scroll testo 1200 9000\n"
                          "rotta\n1728.1 video yt t=12.40 stato=1 q=hd2160 livelli=hd2160,hd1440\n")
     prova("quaderno: tre righe buone, la rotta scartata", len(q) == 3 and q[1][1] == "scroll"
