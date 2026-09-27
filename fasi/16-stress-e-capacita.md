@@ -321,6 +321,22 @@ riga di passwd) con la sua prova nella suite. Per non fermare la campagna su un 
 tocca la capacità, l'attore apre `qterminal -e bash` — **dichiarato**, ed è l'unico punto in cui
 il banco non usa il prodotto come lo userebbe una persona.
 
+### Anomalia A3 — Radeon, 4K: ritardo a picchi e tela larga 3824 senza immagine (27 set)
+
+`[M]` `amd-4k-gnome` (binario 45d048c8, Radeon RX 6800, radeonsi 25.0.7), **1 utente**:
+- **ritardo**: NOSTRO mediana **9,1–9,3 ms** ma p95 dei p95 **45–50 ms** (max 60 ms), sulla Intel
+  allo stesso livello restava verde fino a 3 utenti ⇒ DEGRADED a 1 utente, due volte. Il lavoro
+  normale è veloce; sono picchi. `[?]` Chi li fa (codifica VCN, la copia dalla scheda, il
+  compositore): da misurare dopo la campagna, prima di giudicare la Radeon in 4K.
+- **tela 3824 × 2064**: il controllo con **Chrome** (finestra 3840×2073, tela 3824) non ha mai
+  avuto un fotogramma: 99 volte «il flusso MOSTRA 3840x2064 … la tela è 3824x2064» e 99 volte «il
+  codec 1 non ha consegnato il fotogramma dalla SCHEDA». Mutter ha dato un monitor largo 3840
+  invece dei 3824 chiesti, e il figlio rifiuta la misura diversa. Con Firefox (altra larghezza)
+  il controllo passava. Sulla Intel lo stesso Chrome nasceva. ⇒ **difetto funzionale del
+  prodotto** sulla Radeon (una tela larga non multipla di 64 resta nera): **D-023**, da curare
+  dopo la campagna con la sua prova nella suite. Evidenze:
+  `misure/fase16/amd-4k-gnome/livello-01-ripetizione/journal-err.jsonl`.
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
