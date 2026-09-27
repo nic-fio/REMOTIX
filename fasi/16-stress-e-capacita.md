@@ -336,6 +336,12 @@ il banco non usa il prodotto come lo userebbe una persona.
   prodotto** sulla Radeon (una tela larga non multipla di 64 resta nera): **D-023**, da curare
   dopo la campagna con la sua prova nella suite. Evidenze:
   `misure/fase16/amd-4k-gnome/livello-01-ripetizione/journal-err.jsonl`.
+  ⭐ **Causa e cura, 27 set**: non è Mutter, è il **driver** — `hevc_vaapi` su radeonsi dichiara
+  nel flusso il multiplo di 64 senza finestra di conformità (lo fa anche `ffmpeg` da riga di
+  comando: 2544 → 2560), mentre H.264 sulla stessa scheda è giusto; Chrome sceglie HEVC. La
+  cura scrive la cornice nell'SPS con `hevc_metadata` (§17.1). ⇒ **Tutte le sessioni Chrome
+  della campagna Radeon col binario 45d048c8 sono nere per D-023**: quei gradini misurano il
+  difetto, non la capacità, e si rifanno col binario curato.
 
 ## 15. Limiti dichiarati
 
@@ -378,6 +384,8 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 | (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava i 34 ms del disegno 2D; con WebGL (0,26 ms) non salva niente e buttava il 12 % | Firefox di serie: salta come prima (15 = i fotogrammi a coda ≥ 3), ritardo invariato (36,8 ms); Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
 
 | (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
+
+| (questo commit) | **D-023, la cornice che il driver non scrive**: se il primo SPS di un contesto dichiara una misura più grande della tela di meno di un blocco (64), `codificatore.c` fa passare i pacchetti con l'SPS (le chiavi) da `hevc_metadata`/`h264_metadata` con `crop_right`/`crop_bottom`, e lo dichiara (riga «⭐ D-023»); qualunque altra differenza resta rifiutata da `forma_va_bene()` | anomalia A3: sulla Radeon (radeonsi 25.0.7) `hevc_vaapi` dichiara il multiplo di 64 senza finestra di conformità (anche da `ffmpeg` a riga di comando) ⇒ ogni sessione HEVC — Chrome — a una tela non multipla di 64 restava **nera** | `banchi/16-stress/16-d023-cornice.sh`, 4 tele vere × 2 codec: Radeon **8 PASS** (PSNR 47 dB, l'immagine è 1:1), senza la cura **HEVC 4 FAIL su 4**; Intel 8 PASS, la cura non scatta mai | **no** — dopo la campagna Radeon in corso (la sua GNOME è da rifare) |
 
 **Binario e pagina della campagna nuova** (da `e4e05dc`): binario **`45d048c8`**, pagina **`fb9a18f3`** —
 suite corta estesa (accesso, input, immagine, appunti, «Esci», orologi, più tela all'attacco, video,

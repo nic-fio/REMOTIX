@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vaapi.h>
 #include <libavutil/imgutils.h>
@@ -1268,6 +1269,11 @@ struct Codificatore {
 	bool prossimo_chiave;         /* ⛔ la prossima e' una chiave VERA */
 	bool prima_codifica_fatta;
 	bool svuotato;                /* ⚠ e' stato messo in scarico: va riaperto */
+	/* ⭐ LA CORNICE (D-023, fase 16): il filtro che riscrive nell'SPS la misura
+	 *    vera quando il driver non ce la scrive.  NULL quando non serve — cioe'
+	 *    quasi sempre; si decide sul primo SPS di ogni contesto. */
+	AVBSFContext *cornice;
+	bool cornice_decisa;
 	int qualita_corrente;         /* CRF in vigore, dopo le eventuali ricodifiche */
 	ModoQualita modo_corrente;
 	/* ⭐ LA RISALITA (fase 9).  ⛔ Il pavimento NON sta qui: e' `richiesta.qualita`,
@@ -2236,6 +2242,8 @@ static void chiudi_contesto(Codificatore *c)
 	 *   e tenerne due vivi vorrebbe dire superfici della GPU che nessuno
 	 *   restituisce — una perdita che si vede solo dopo mezz'ora. */
 	av_buffer_unref(&c->magazzino);
+	av_bsf_free(&c->cornice);
+	c->cornice_decisa = false;
 }
 
 static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
@@ -3563,6 +3571,109 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 }
 
 /*
+ * ⭐⭐ D-023 — LA CORNICE CHE IL DRIVER NON SCRIVE (fase 16, 27 set 2026).
+ *
+ * `[M]` Radeon RX 6800, Mesa radeonsi 25.0.7, ffmpeg 7.1.5: `hevc_vaapi` a
+ * 2544x1344 fa un flusso che DICHIARA 2560x1344 — codifica il multiplo di 64
+ * (il blocco da 64 della scheda) e non scrive la finestra di conformita'.  Lo
+ * stesso con ffmpeg da riga di comando, senza una riga nostra: 3824 → 3840,
+ * 1904 → 1920.  H.264 sulla stessa scheda e' giusto, e la Intel pure.
+ * ⛔ Il sintomo era una sessione NERA per sempre: `forma_va_bene()` rifiuta
+ *    giustamente un flusso di misura diversa dalla tela (RCP.md §6.2), e
+ *    Chrome sceglie HEVC, e le tele di Chrome non sono mai multiple di 64.
+ *
+ * ⭐ LA CURA: la finestra la scriviamo noi, con `hevc_metadata`/`h264_metadata`
+ *    (`crop_right`/`crop_bottom`) — il filtro di libavcodec, non un parser a
+ *    mano.  `[M]` il flusso di 2560 tagliato a 2544 e decodificato contro
+ *    l'originale: PSNR 50 dB, cioe' l'immagine dentro e' quella, 1:1, e le 16
+ *    colonne in piu' sono solo riempimento.
+ * ⚠ Solo sui pacchetti con l'SPS (le chiavi): la misura vive li', e un delta
+ *   non ha niente da riscrivere.  E solo se il flusso e' PIU' GRANDE della
+ *   tela di meno di un blocco: qualunque altra differenza resta un errore, e
+ *   la rifiuta `forma_va_bene()` come prima.
+ */
+static bool cornice_al_suo_posto(Codificatore *c)
+{
+	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
+	if (!hevc && c->richiesta.codec != CODIFICATORE_H264)
+		return true;
+	if (!(c->pacchetto->flags & AV_PKT_FLAG_KEY))
+		return true;
+
+	if (!c->cornice_decisa) {
+		const uint8_t *d = c->pacchetto->data;
+		size_t byte = (size_t) c->pacchetto->size, off = 0, n = 0;
+		CodificatoreConfessione letta;
+		memset(&letta, 0, sizeof letta);
+		bool ok = false;
+		if (hevc) {
+			FormaAnnexB f;
+			annexb_leggi(d, byte, &f);
+			off = f.sps_offset, n = f.sps_byte;
+			ok = n && leggi_sps_hevc(d + off, n, &letta);
+		} else {
+			FormaAnnexB264 f;
+			annexb264_leggi(d, byte, &f);
+			off = f.sps_offset, n = f.sps_byte;
+			ok = n && leggi_sps_h264(d + off, n, &letta);
+		}
+		if (!ok)
+			return true; /* niente SPS leggibile: decide `forma_va_bene()` */
+		c->cornice_decisa = true;
+		uint32_t dx = letta.larghezza_flusso - c->richiesta.larghezza;
+		uint32_t dy = letta.altezza_flusso - c->richiesta.altezza;
+		if (letta.larghezza_flusso < c->richiesta.larghezza ||
+		    letta.altezza_flusso < c->richiesta.altezza || (dx == 0 && dy == 0) ||
+		    dx >= 64 || dy >= 64 || (dx | dy) & 1u)
+			return true;
+
+		const char *nome = hevc ? "hevc_metadata" : "h264_metadata";
+		const AVBitStreamFilter *filtro = av_bsf_get_by_name(nome);
+		int e = filtro ? av_bsf_alloc(filtro, &c->cornice) : AVERROR_BSF_NOT_FOUND;
+		if (e >= 0)
+			e = avcodec_parameters_from_context(c->cornice->par_in, c->ctx);
+		if (e >= 0) {
+			c->cornice->time_base_in = c->ctx->time_base;
+			av_opt_set_int(c->cornice->priv_data, "crop_left", 0, 0);
+			av_opt_set_int(c->cornice->priv_data, "crop_top", 0, 0);
+			av_opt_set_int(c->cornice->priv_data, "crop_right", dx, 0);
+			av_opt_set_int(c->cornice->priv_data, "crop_bottom", dy, 0);
+			e = av_bsf_init(c->cornice);
+		}
+		if (e < 0) {
+			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+			av_strerror(e, testo, sizeof(testo));
+			registro_dice(REG_CODIFICA,
+			              "⛔ D-023: il flusso dichiara %ux%u e la tela e' %ux%u, e «%s» "
+			              "non si apre (%s): la sessione restera' nera",
+			              letta.larghezza_flusso, letta.altezza_flusso,
+			              c->richiesta.larghezza, c->richiesta.altezza, nome, testo);
+			av_bsf_free(&c->cornice);
+			return true;
+		}
+		registro_dice(REG_CODIFICA,
+		              "⭐ D-023: «%s» dichiara %ux%u per una tela %ux%u (codifica il "
+		              "multiplo del blocco e non scrive la cornice): la scrivo io con "
+		              "«%s», %u colonne e %u righe tagliate a destra e in basso",
+		              c->componente->name, letta.larghezza_flusso, letta.altezza_flusso,
+		              c->richiesta.larghezza, c->richiesta.altezza, nome, dx, dy);
+	}
+	if (!c->cornice)
+		return true;
+
+	int e = av_bsf_send_packet(c->cornice, c->pacchetto);
+	if (e >= 0)
+		e = av_bsf_receive_packet(c->cornice, c->pacchetto);
+	if (e < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(e, testo, sizeof(testo));
+		registro_dice(REG_CODIFICA, "⛔ D-023: la cornice non e' stata scritta: %s", testo);
+		return false;
+	}
+	return true;
+}
+
+/*
  * ⛔ LA FORMA DEI BYTE SI CONTROLLA PRIMA DI SPEDIRLI.
  *
  * ⚠ E non e' prudenza in piu': `[M]` 12 agosto 2026 il decodificatore **non
@@ -4218,7 +4329,8 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	}
 
 	bool chiave = false;
-	if (!forma_va_bene(c, c->pacchetto->data, (size_t) c->pacchetto->size, &chiave)) {
+	if (!cornice_al_suo_posto(c) ||
+	    !forma_va_bene(c, c->pacchetto->data, (size_t) c->pacchetto->size, &chiave)) {
 		av_packet_unref(c->pacchetto);
 		c->pacchetto_in_mano = false;
 		return false;
