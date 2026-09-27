@@ -19,7 +19,8 @@ Importato da `16-attore.py`; da solo non gira.  Ogni lavoro:
                    l'ora della riga meno l'ora del gesto.
   B file manager   il file manager del desktop su ~/prova16: crea cartelle
                    (Ctrl+Maiusc+N, nome battuto, Invio) in ~/prova16/nuove e le
-                   cancella (Ctrl+A, Canc), naviga (Ctrl+L), cambia vista
+                   cancella (Ctrl+A, Canc; su LXQt Maiusc+Canc e «y» alla
+                   domanda: vedi `piano_cancella`), naviga (Ctrl+L), cambia vista
                    (Ctrl+1/2), apre e chiude finestre (Ctrl+N / Ctrl+W), rotella.
                    Verifica: la cartella c'e' / non c'e' piu' (dal disco, come
                    root); latenza = ctime della cartella meno l'ora dell'Invio.
@@ -389,6 +390,33 @@ def storia_contiene(testo, riga):
     return any(r == riga for r in (testo or "").splitlines())
 
 
+def piano_cancella(scatola):
+    """⭐ Il gesto con cui si cancella la selezione nel file manager, per desktop:
+    (modificatori, tasto, risposta al dialogo, secondi prima della risposta,
+    risposta SEMPRE o solo se le cartelle ci sono ancora).
+
+    ⛔ `[M]` 27 set 2026, campagne intel-b 4K e 3K su LXQt: Canc + Invio dopo
+       2,5 s NON ha mai avuto effetto (0 su 30 e piu' tentativi, gia' a 2
+       utenti).  Le foto (livello-02/utente-02 4K, livello-04/utente-02 3K)
+       mostrano la finestra di pcmanfm-qt su «nuove» con «8 item(s) selected»
+       (il Ctrl+A e' arrivato), NESSUN dialogo, tutte le cartelle al loro
+       posto, e nella casa dell'inquilino non esiste `~/.local/share/Trash`
+       ⇒ il «Move to Trash» del Canc non e' mai partito (GLib crea il cestino
+       PRIMA di spostare).  Su thunar (xfce) lo stesso Canc passa «con
+       conferma», su nautilus e dolphin in ~350 ms senza.
+       In pcmanfm-qt 2.1.0 il Canc e' la scorciatoia della QAction «Move to
+       Trash» del menu; Maiusc+Canc e' un QShortcut della finestra («Delete»,
+       elimina davvero) come il Ctrl+L che funziona, e apre il dialogo «Do you
+       want to delete the selected file(s)?» Yes/No con predefinito **No**:
+       l'Invio direbbe di no.  ⇒ Su LXQt si fa come un utente che vuole
+       eliminare: Maiusc+Canc, e alla domanda si risponde con la lettera «y»
+       (QMessageBox accetta la lettera del bottone anche senza Alt).
+    Sugli altri desktop resta Canc, e l'Invio a 2,5 s solo se serve (thunar)."""
+    if scatola == "lxqt":
+        return (["Shift"], "Delete", "y", 1.2, True)
+    return ([], "Delete", "Enter", 2.5, False)
+
+
 def rett_finestra(prima, dopo, soglia=40, fattore=8):
     """⭐ Il riquadro (x0,y0,x1,y1) — pixel della foto — della finestra COMPARSA
     fra due foto PIL della stessa misura, o None.  Colonne e righe «cambiate»
@@ -659,6 +687,7 @@ class LavoroB(Lavoro):
         self.fm, self.proc = APP[att.o.scatola]["fm"]
         self.k = 0
         self.nuove = []
+        self.foto_ko = 0                  # le foto scattate a un «cancella» fallito
 
     def prepara(self):
         p = self.h + "/prova16"
@@ -743,22 +772,37 @@ class LavoroB(Lavoro):
             self.fuoco_vista()
             M.combo(["Control"], "a")
             self.a.dorme(R.pausa_s("gesto"))
-            t0 = M.premi("Delete")
+            mod, tasto, risposta, dopo_s, sempre = piano_cancella(self.a.o.scatola)
+            t0 = M.combo(mod, tasto) if mod else M.premi(tasto)
             fine = time.time() + 10
             conferma = False
+            n = -1
             while time.time() < fine:
+                if sempre and not conferma and time.time() > t0 + dopo_s:
+                    # ⭐ LXQt: la domanda «delete?» c'e' sempre, e si risponde «y»
+                    M.batti(risposta, atteso=False)
+                    conferma = True
                 _c, t = self.dentro("ls -A %s/prova16/nuove | wc -l" % self.h, 30)
                 n = int(t.split()[-1]) if t and t.split()[-1].isdigit() else -1
                 if n == 0:
                     break
-                if not conferma and time.time() > t0 + 2.5:
-                    M.premi("Enter")         # il dialogo di conferma (pcmanfm-qt…)
+                if not sempre and not conferma and time.time() > t0 + dopo_s:
+                    M.premi(risposta)        # il dialogo di conferma (thunar)
                     conferma = True
                 self.a.dorme(0.4)
+            gesto = "+".join(mod + [tasto]) + (", " + risposta if conferma else "")
             self.a.verifica("cancella", n == 0, (time.time() - t0) * 1000 if n == 0 else None,
-                            "%d cartelle%s" % (len(self.nuove), " (con conferma)" if conferma else ""))
+                            "%d cartelle (%s)" % (len(self.nuove), gesto))
             if n == 0:
                 self.nuove = []
+            else:
+                # ⛔ Si GUARDA lo schermo: la foto dice che c'era (dialogo? filtro?
+                #   selezione?) — al massimo tre per attore, poi Esc per chiudere
+                #   quel che fosse rimasto aperto (dialogo, barra del filtro)
+                if self.foto_ko < 3:
+                    self.foto_ko += 1
+                    self.a.scatta()
+                M.premi("Escape")
         elif az == "naviga":
             dove = R.scegli(("alfa", "beta", "beta/dentro", "gamma", ""))
             self.vai(self.h + "/prova16/" + dove)

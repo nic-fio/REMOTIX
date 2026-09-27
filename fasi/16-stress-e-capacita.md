@@ -362,6 +362,7 @@ stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 P
 | `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, una scheda sola dentro la scatola | campagna Radeon (§11) |
 | `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva (Radeon: 205 ms → 17–29 ms) |
 | vari | `banchi/16-stress/`: attore, risorse, classifica, salita, controllo corto, compositori, coda, rapporto, banco della tela | l'impianto di §4–§10; corretto dopo una revisione avversaria (6 difetti) e dopo le prime salite vere (§14) |
+| (questo commit) | lavoro B su LXQt: la cancellazione è Maiusc+Canc e «y» (pcmanfm-qt: il Canc del menu non scattava; «No» è il bottone predefinito del dialogo), foto al fallimento | `[M]` 27 set: «input perso: cancella» dava FAIL a LXQt già a 2 utenti — difetto del banco, non del prodotto; le salite LXQt 4K e 3K si rifanno |
 | `07-b46` | `REMOTIX_FF_PREFS`: preferenze in più nel profilo Firefox dei banchi | per ripetere una misura con la decodifica software |
 
 ### 17.3 L'ambiente del server (volatile: rootfs in RAM)

@@ -468,6 +468,13 @@ def certifica():
     print("── le verifiche dell'input")
     st = "ls -la ~/prova16 #k3\nfind /usr/share -name '*.png' | head -n 60 #k4\n"
     prova("storia: la riga esatta c'e'", L.storia_contiene(st, "ls -la ~/prova16 #k3"))
+    # ⛔ GUASTO visto il 27 set (LXQt): Canc + Invio non cancellava mai — il
+    #   dialogo di pcmanfm-qt ha «No» come predefinito.  ⇒ Maiusc+Canc e «y».
+    pc = {s: L.piano_cancella(s) for s in ("gnome", "kde", "xfce", "lxqt")}
+    prova("GUASTO visto: su LXQt si cancella con Maiusc+Canc e si risponde «y», mai Invio",
+          pc["lxqt"][:3] == (["Shift"], "Delete", "y") and pc["lxqt"][4] is True, str(pc["lxqt"]))
+    prova("sugli altri desktop Canc, e l'Invio solo se serve",
+          all(pc[s] == ([], "Delete", "Enter", 2.5, False) for s in ("gnome", "kde", "xfce")))
     # ⛔ GUASTO: un carattere perso nel tragitto ⇒ KO
     prova("GUASTO visto: un carattere perso ⇒ KO",
           not L.storia_contiene(st, "ls -la ~/prova16 #k4")
