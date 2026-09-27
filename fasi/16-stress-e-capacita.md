@@ -355,6 +355,8 @@ pagina che non poteva scendere. Su KDE la rotella sposta di più (`scroll_discre
 il fondo si tocca più spesso. ⇒ **Difetto del banco, non del prodotto**; cura in §17.2. Ha fatto
 FAIL `amd-freq-*` e ha pesato su `intel-b-4k-kde` e `amd-4k-kde`. ⚠ Le frecce su/giù che
 l'utente aveva notato a mano restano una domanda separata: questo banco non le prova.
+`[M]` **Verifica, 27 set sera** (`amd-b-4k-kde`, attore curato): 10 PageDown, **0 persi**; il
+gradino da 1 utente cede ora solo per il ritardo (A3, NOSTRO p95 ~41 ms + 9), non più per input.
 
 ### Anomalia A3, seconda metà — il ritardo della Radeon NON è la frequenza (27 set)
 
