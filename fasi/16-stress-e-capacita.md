@@ -311,7 +311,7 @@ la foto del vetro col testimone per escludere i blocchi della 2D).
 ### Anomalia A2 — in LXQt il terminale apre `dash`, non la shell dell'utente (27 set)
 
 `[M]` Il profilo C su LXQt non lavorava: qterminal apriva **`/bin/sh` (dash)**, senza `.bashrc`
-né storia. Causa: il prodotto fa nascere le sessioni con **`SHELL=` vuota** (`src/sessione.c`
+né storia. Causa (corretta il 28 set, `[M]` su una sessione XFCE viva): fuori da GNOME le sessioni nascono **senza `SHELL`** — l'ambiente si compone da zero e non la mette; su GNOME è **`SHELL=` vuota** di proposito (`src/sessione.c`
 ~1682, `src/figlio.c` ~1159 — voluta per la trappola della shell di login di `gnome-session`), e
 qtermwidget senza `SHELL` ripiega su `/bin/sh`; thunar/xfce4-terminal, konsole e gnome-terminal
 leggono la shell da passwd e non se ne accorgono. ⇒ **È un difetto funzionale del prodotto**
@@ -429,6 +429,7 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 
 | (questo commit) | **D-023, la cornice che il driver non scrive**: se il primo SPS di un contesto dichiara una misura più grande della tela di meno di un blocco (64), `codificatore.c` fa passare i pacchetti con l'SPS (le chiavi) da `hevc_metadata`/`h264_metadata` con `crop_right`/`crop_bottom`, e lo dichiara (riga «⭐ D-023»); qualunque altra differenza resta rifiutata da `forma_va_bene()` | anomalia A3: sulla Radeon (radeonsi 25.0.7) `hevc_vaapi` dichiara il multiplo di 64 senza finestra di conformità (anche da `ffmpeg` a riga di comando) ⇒ ogni sessione HEVC — Chrome — a una tela non multipla di 64 restava **nera** | `banchi/16-stress/16-d023-cornice.sh`, 4 tele vere × 2 codec: Radeon **8 PASS** (PSNR 47 dB, l'immagine è 1:1), senza la cura **HEVC 4 FAIL su 4**; Intel 8 PASS, la cura non scatta mai | **sì**, binario **`28a947f5`** (da `678a2da`), 27 set: suite corta sulla Radeon, 4 desktop × 2 browser, **352 PASS su 352**; nei registri delle scatole la cura è scattata 62 volte, 0 flussi rifiutati |
 
+| (questo commit) | **D-022, la `SHELL` fuori da GNOME**: `sessione.c`, in coda all'ambiente della sessione, `SHELL` dalla riga di passwd dell'utente per KDE, XFCE e LXQt (GNOME resta vuota: trappola di `gnome-session`); senza shell in passwd lo dice | anomalia A2: `[M]` in una sessione XFCE viva `labwc` e `xfce4-panel` senza `SHELL`, `systemd --user` con `/bin/bash`; qterminal ripiegava su `/bin/sh` | compila pulito; prova sul terminale LXQt vero dopo la campagna | **no** — dopo la campagna (la campagna resta su `28a947f5`) |
 **Binario e pagina della campagna nuova** (da `e4e05dc`): binario **`45d048c8`**, pagina **`fb9a18f3`** —
 suite corta estesa (accesso, input, immagine, appunti, «Esci», orologi, più tela all'attacco, video,
 stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 PASS su 352**, 26 set.

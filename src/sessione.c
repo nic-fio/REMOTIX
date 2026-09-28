@@ -49,7 +49,9 @@
 #include <fcntl.h>
 #include <locale.h>
 #include <signal.h>
+#include <pwd.h>
 #include <string.h>
+#include <unistd.h>
 /* ⚠ `g_stat`, `g_open`, `g_close`: la famiglia di GLib, non quella di POSIX —
  *   è quella che `nodo_della_scheda()` e `processi_miei()` usano. */
 #include <glib/gstdio.h>
@@ -1702,6 +1704,29 @@ static char **componi_ambiente(void)
 	 *   gira come unita' di sistema.
 	 */
 la_coda:
+	/*
+	 * ⭐ D-022 (fase 16, 27-28 set 2026) — FUORI da GNOME la `SHELL` e' quella
+	 *    dell'utente, dalla sua riga di passwd.
+	 *
+	 * `[M]` sessione XFCE viva: `labwc` e `xfce4-panel` nascevano **senza**
+	 * `SHELL` (l'ambiente qui si compone da zero), mentre il `systemd --user`
+	 * dello stesso utente ha `/bin/bash`.  xfce4-terminal, konsole e
+	 * gnome-terminal leggono passwd e non se ne accorgono; **qterminal**
+	 * (qtermwidget) legge `$SHELL`, e senza ripiega su `/bin/sh` — un utente
+	 * LXQt apriva il terminale e non trovava la sua shell.
+	 * ⛔ GNOME resta com'e': la `SHELL` vuota qui sopra e' la cura della
+	 *    trappola di `gnome-session`, che gli altri tre non hanno.
+	 */
+	if (e_kde() || e_xfce() || e_lxqt()) {
+		const struct passwd *pw = getpwuid(getuid());
+
+		if (pw && pw->pw_shell && *pw->pw_shell)
+			g_ptr_array_add(ambiente, g_strdup_printf("SHELL=%s", pw->pw_shell));
+		else
+			registro_dice(REG_SESSIONE,
+			              "⚠ D-022: l'utente non ha una shell in passwd — la sessione "
+			              "nasce senza `SHELL`, e qterminal ripieghera' su /bin/sh");
+	}
 	g_ptr_array_add(ambiente, g_strdup_printf("LANG=%s", locale_utf8()));
 	g_ptr_array_add(ambiente, g_strdup_printf("HOME=%s", g_get_home_dir()));
 	g_ptr_array_add(ambiente, g_strdup_printf("USER=%s", g_get_user_name()));
