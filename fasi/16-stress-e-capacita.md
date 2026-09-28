@@ -453,3 +453,16 @@ Alla ricetta di rifacimento dopo un riavvio si aggiungono: `labwc`, `wlr-randr`,
 (la coda notturna vive senza sessioni ssh), e l'unità della coda con `TimeoutStopSec=1200`,
 `KillMode=mixed`, `OOMPolicy=continue`.
 
+⛔ **Il blocco del 28 set, 08:42 (06:42 UTC)**: `amd-b-3k-xfce`, gradino da 16 utenti (17 sessioni
+e 17 browser-cliente sulla stessa macchina): la RAM è finita, il killer del nucleo uccideva Chrome
+a ripetizione fra stalli RCU, e il sistema è rimasto **incastrato** — ping sì, ssh e REMOTIX no —
+finché l'utente lo ha riavviato. Evidenze: foto della console (utente), l'ultima riga della salita
+«controllo corto: BLOCKED» alle 06:41:49 UTC. ⇒ Due cambi d'ambiente, dal 28 set 09:05:
+- **swap da 16 a 32 GB** (l'utente, sul disco): non cambia i limiti misurati, che cadono dove la
+  RAM finisce; allunga il tempo prima del killer;
+- **`earlyoom`** (`/etc/default/earlyoom`: `-m 5 -s 100 -r 60`, preferisce i processi di Chrome e
+  Firefox, evita `remotix`, `systemd`, `sshd`, `podman`, `conmon`, i compositori, `python3`): con
+  la RAM disponibile sotto il 5 % chiude un browser **prima** che la macchina si incastri. Un
+  browser chiuso è un FAIL di quel livello, com'era prima; la differenza è che la notte continua.
+  ⚠ Va nella ricetta dopo ogni riavvio (il rootfs è in RAM).
+
