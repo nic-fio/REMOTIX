@@ -376,6 +376,15 @@ la cura candidata è una priorità alta per il contesto VPP, o la conversione de
 codificatore dove la scheda lo permette. I tempi sono presi dalla chiamata di codifica, che
 comprende l'attesa del VPP.
 
+### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
+
+`[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,
+Chrome), «blocco più lungo dell'immagine» 1,1–2,7 s, mentre i fotogrammi **arrivano e si
+dipingono tutti** (6622 consegnati = 6622 dipinti, 0 buchi). Lo stesso utente su GNOME Radeon
+(0,11 s) e su KDE Intel (0,08 s) è verde ⇒ **non è la cura D-023** (attiva anche su GNOME). `[?]`
+Ipotesi: il lettore video dentro la sessione KDE si ferma (l'immagine arriva ma non cambia). Da
+guardare dopo la campagna, prima di chiudere KDE Full HD Radeon a 15.
+
 ## 15. Limiti dichiarati
 
 - **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
