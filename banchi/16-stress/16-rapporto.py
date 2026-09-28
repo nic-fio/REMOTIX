@@ -124,7 +124,16 @@ def esiti_campagna(cc):
     verdi = [n for n in liv if cc["livelli"][n]["classe"] == "GREEN"]
     rotti = [n for n in liv if cc["livelli"][n]["classe"] == "FAIL"]
     degr = [n for n in liv if cc["livelli"][n]["classe"] == "DEGRADED"]
-    return {"ultimo_verde": max(verdi) if verdi else None,
+    # ⭐ «regge» e' la regola di non-prosecuzione della salita (§6, §9): il livello piu' alto
+    #   prima del primo FAIL o DEGRADED SIGNIFICATIVO — un DEGRADED non significativo regge.
+    regge = None
+    for n in liv:
+        r = cc["livelli"][n]
+        if r["classe"] == "FAIL" or (r["classe"] == "DEGRADED" and r.get("significativo")):
+            break
+        regge = n
+    return {"regge": regge,
+            "ultimo_verde": max(verdi) if verdi else None,
             "rottura": min(rotti) if rotti else None,
             "primo_degradato": min(degr) if degr else None,
             "massimo": max(liv) if liv else None}
@@ -171,9 +180,9 @@ def testo(righe):
     out = ["FASE 16 — %d campagne" % len(c)]
     for k, cc in sorted(c.items()):
         e = esiti_campagna(cc)
-        out.append("\n%s (%s · %s · %s) — ultimo GREEN %s · rottura %s" % (
+        out.append("\n%s (%s · %s · %s) — regge %s · ultimo GREEN %s · rottura %s" % (
             k, cc["meta"].get("desktop"), cc["meta"].get("scheda"), cc["meta"].get("misura"),
-            e["ultimo_verde"], e["rottura"]))
+            e["regge"], e["ultimo_verde"], e["rottura"]))
         for n in sorted(cc["livelli"]):
             L = cc["livelli"][n]
             s = sommario(L)
@@ -319,9 +328,9 @@ def pagina(righe):
                 es = esiti_campagna(cc)
                 cl = "GREEN" if es["rottura"] is None and es["primo_degradato"] is None else (
                     "FAIL" if es["rottura"] is not None else "DEGRADED")
-                celle.append("<a href='#%s' class='bollo %s'>%s</a> ultimo GREEN <b>%s</b> · rottura <b>%s</b>"
-                             % (e(k), cl, e(misura_di(cc["meta"].get("misura"))), fmt(es["ultimo_verde"]),
-                                fmt(es["rottura"])))
+                celle.append("<a href='#%s' class='bollo %s'>%s</a> regge <b>%s</b> · ultimo GREEN <b>%s</b> · rottura <b>%s</b>"
+                             % (e(k), cl, e(misura_di(cc["meta"].get("misura"))), fmt(es["regge"]),
+                                fmt(es["ultimo_verde"]), fmt(es["rottura"])))
             h.append("<td>%s</td>" % ("<br>".join(celle) if celle else "<span class='tenue'>·</span>"))
         h.append("</tr>")
     h.append("</tbody></table></div>")
@@ -476,6 +485,30 @@ def certifica():
     return 0 if ok == n else 1
 
 
+def scegli(righe, prefissi):
+    """⭐ Le campagne VALIDE (fasi/16 §11 e le anomalie): solo le etichette date (`intel-b`,
+    `amd-b`, `intel-c` …), e per ogni casella desktop × scheda × misura la campagna **piu'
+    recente** — una salita rifatta (attore curato, prodotto curato, ripresa dopo un blocco)
+    prende il posto di quella di prima.  Le scartate si elencano, non spariscono in silenzio."""
+    if not prefissi:
+        return righe, []
+    tieni = [r for r in righe if any((r.get("campagna") or "").startswith(x + "-") for x in prefissi)]
+    quando, casella = {}, {}
+    for r in tieni:
+        if r.get("tipo") != "livello":
+            continue
+        k = r.get("campagna")
+        quando[k] = max(quando.get(k, ""), r.get("inizio") or "")
+        casella[k] = (r.get("desktop"), colonna_scheda(r.get("scheda")), misura_di(r.get("misura")))
+    vince = {}
+    for k, cas in casella.items():
+        if cas not in vince or quando[k] > quando[vince[cas]]:
+            vince[cas] = k
+    buone = set(vince.values())
+    scartate = sorted(k for k in casella if k not in buone)
+    return [r for r in tieni if r.get("campagna") in buone], scartate
+
+
 def main():
     a = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -484,6 +517,8 @@ def main():
     a.add_argument("--testo", action="store_true")
     a.add_argument("--sintetico", help="scrive un registro sintetico di prova in questo percorso ed esce")
     a.add_argument("--certifica", action="store_true")
+    a.add_argument("--campagne", nargs="*", default=[],
+                   help="solo queste etichette (es. intel-b amd-b intel-c); per casella vince la piu' recente")
     o = a.parse_args()
     if o.certifica:
         return certifica()
@@ -491,6 +526,9 @@ def main():
         sintetico(o.sintetico)
         return 0
     righe = leggi(o.registro)
+    righe, scartate = scegli(righe, o.campagne)
+    if scartate:
+        print("⚠ sostituite da una salita piu' recente: %s" % ", ".join(scartate))
     with open(o.html, "w", encoding="utf-8") as f:
         f.write(pagina(righe))
     if o.testo:
