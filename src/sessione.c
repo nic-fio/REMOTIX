@@ -56,6 +56,9 @@
 /* ⚠ `g_stat`, `g_open`, `g_close`: la famiglia di GLib, non quella di POSIX —
  *   è quella che `nodo_della_scheda()` e `processi_miei()` usano. */
 #include <glib/gstdio.h>
+/* ⭐ FASE 17 — `gbm` per la prova del buffer (`scheda_sa_disegnare()`): è già
+ *   nel binario per `wlroots.c` (`src/Makefile`, il riquadro di `gbm`). */
+#include <gbm.h>
 
 /* Su questa macchina, senza accelerazione, la sessione ci mette una decina di
  * secondi: il margine e' per le macchine piu' lente. */
@@ -428,6 +431,65 @@ static char *nodo_della_scheda(void)
 		}
 	}
 	return primo ? g_build_filename("/dev/dri", primo, NULL) : NULL;
+}
+
+/*
+ * ⭐ FASE 17 — LA SCHEDA SA DISEGNARE?  Aprire il nodo non basta.
+ *
+ * `[M]` 29 set 2026, VM openSUSE Leap 16 con `virtio_gpu` SENZA 3D: il nodo
+ *   `renderD128` si APRE (quindi `nodo_della_scheda()` lo dà), ma labwc non
+ *   riesce a crearci il buffer dell'uscita — `gbm_bo_create failed`,
+ *   `Failed to allocate buffer` — e non disegna niente: tela nera.  Con
+ *   `WLR_RENDERER=pixman` il desktop arriva.
+ *
+ * ⇒ Si fa, prima di labwc, la STESSA mossa su cui labwc cade: `gbm` sul nodo e
+ *   un buffer XRGB8888 con gli usi che wlroots chiede quando crea senza
+ *   modificatori (`[R]` wlroots `render/allocator/gbm.c`, `create_buffer`:
+ *   `GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING`), poi col solo RENDERING.
+ *   ⛔ Si dice «no» solo se falliscono TUTTE E DUE: nel dubbio vince la scheda,
+ *      perché sulle macchine con una scheda vera non deve cambiare niente.
+ * ⛔ Nessuna eccezione per distribuzione, desktop o driver: si chiede alla
+ *    macchina se sa fare la cosa, e si scrive la risposta.
+ *
+ * Torna TRUE se il buffer nasce; altrimenti FALSE, e in `*perche` il motivo.
+ */
+static gboolean scheda_sa_disegnare(const char *nodo, char **perche)
+{
+	static const uint32_t usi[] = { GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING,
+		                        GBM_BO_USE_RENDERING };
+	struct gbm_device *gbm;
+	int fd, errore = 0;
+
+	fd = g_open(nodo, O_RDWR | O_CLOEXEC, 0);
+	if (fd < 0) {
+		*perche = g_strdup_printf("%s non si apre: %s", nodo, g_strerror(errno));
+		return FALSE;
+	}
+	gbm = gbm_create_device(fd);
+	if (!gbm) {
+		*perche = g_strdup_printf("gbm_create_device su %s non riesce", nodo);
+		g_close(fd, NULL);
+		return FALSE;
+	}
+	for (guint i = 0; i < G_N_ELEMENTS(usi); i++) {
+		struct gbm_bo *bo;
+
+		errno = 0;
+		bo = gbm_bo_create(gbm, 256, 256, GBM_FORMAT_XRGB8888, usi[i]);
+		if (bo) {
+			gbm_bo_destroy(bo);
+			gbm_device_destroy(gbm);
+			g_close(fd, NULL);
+			return TRUE;
+		}
+		errore = errno;
+	}
+	*perche = g_strdup_printf("gbm_bo_create su %s (gbm «%s») non crea il buffer: %s", nodo,
+	                          gbm_device_get_backend_name(gbm),
+	                          errore ? g_strerror(errore) : "senza errno");
+	gbm_device_destroy(gbm);
+	g_close(fd, NULL);
+	return FALSE;
 }
 
 static gboolean e_xfce(void)
@@ -1593,15 +1655,29 @@ static char **componi_ambiente(void)
 		 *     pixman — **software, in silenzio**.  È la stessa forma del
 		 *     codificatore che ripiega e lo dichiara, ma qui non lo dichiara
 		 *     nessuno: l'unico modo di accorgersene è che i numeri crollino. */
+		/* ⭐ FASE 17 — e aprirlo non basta: la scheda deve saper CREARE il
+		 *   buffer (`scheda_sa_disegnare()`).  Se non sa, labwc disegnerebbe
+		 *   una tela nera ⇒ si chiede pixman per nome (CODER §3.9) e lo si
+		 *   scrive: RIPIEGO DICHIARATO, non silenzioso.  ⚠ Senza
+		 *   `WLR_RENDER_DRM_DEVICE`: pixman non disegna sulla scheda. */
 		{
 			g_autofree char *nodo = nodo_della_scheda();
+			g_autofree char *perche = NULL;
 
-			if (nodo) {
+			if (nodo && !scheda_sa_disegnare(nodo, &perche)) {
+				g_ptr_array_add(ambiente, g_strdup("WLR_RENDERER=pixman"));
+				registro_dice(REG_SESSIONE,
+				              "⛔ %s: la scheda %s si apre ma NON sa creare il "
+				              "buffer dell'uscita (%s).  RIPIEGO DICHIARATO: "
+				              "WLR_RENDERER=pixman — labwc disegna in MEMORIA, "
+				              "col processore; senza, la tela sarebbe nera",
+				              nome_desktop(), nodo, perche);
+			} else if (nodo) {
 				g_ptr_array_add(ambiente,
 				                g_strdup_printf("WLR_RENDER_DRM_DEVICE=%s", nodo));
 				registro_dice(REG_SESSIONE,
-				              "⭐ %s: la scheda che do a wlroots è %s (aperta, non "
-				              "dedotta)", nome_desktop(), nodo);
+				              "⭐ %s: la scheda che do a wlroots è %s (aperta, e il "
+				              "buffer di prova nasce)", nome_desktop(), nodo);
 			} else {
 				registro_dice(REG_SESSIONE,
 				              "⛔ %s: nessun nodo /dev/dri/renderD* apribile — NON "
