@@ -947,6 +947,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
+| R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
 
 ---
 
@@ -962,7 +963,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
 | **T6** | PAM per famiglia, SELinux, firewall | R19, R20 | |
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
-| **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
+| **T8** | depositi firmati, canali, ritorno indietro, SBOM; l'aggiornamento automatico (timer, catalogo, D14) | R11, R17, R18, R24 | |
 | **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
 | **T10** | il giro intero sulle 26 macchine della matrice, e la chiusura | tutti verdi | |
 
@@ -994,6 +995,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |
+| **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta |
 
 **Le scelte di chi installa: quasi nessuna** (indicazione dell'utente, 29 set: *«non riesco ad immaginare
 grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamente la porta»*):

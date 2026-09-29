@@ -5941,6 +5941,24 @@ E il ciclo di vita, perché la scelta resti netta nel tempo:
 - una versione **esce** quando la distribuzione smette di aggiornarla: niente supporto oltre la vita che le
   dà chi la fa.
 
+### 10.10 ✅ Il ritmo: una versione all'anno per le novità, la manutenzione quando serve; e l'aggiornamento automatico
+
+Parole dell'utente (30 set 2026): *«la mia intenzione è quella di aggiornare REMOTIX almeno una volta
+l'anno»*; e, visti i ritmi delle distribuzioni: *«bisognerà pensare per REMOTIX ad una funzione di
+auto-aggiornamento in base alla distro su cui è installata»*.
+
+- **Due binari**: la **versione annuale** (le novità, suite completa e giro intero sulle VM) e gli
+  **aggiornamenti di manutenzione** senza novità, quando servono: correzioni di sicurezza delle librerie che
+  REMOTIX porta dentro (§10.6), ricostruzioni per le distribuzioni a rilascio continuo (Arch, Tumbleweed:
+  ogni cambio di ffmpeg), e il **catalogo** firmato — che si aggiorna da solo, senza un REMOTIX nuovo, e fa
+  entrare le versioni nuove delle distribuzioni a metà anno.
+- **L'aggiornamento automatico passa dal gestore di pacchetti della distribuzione**, alimentato dai nostri
+  archivi firmati (T8): ⛔ REMOTIX non scarica né sostituisce da sé il proprio binario (due verità su che cosa
+  è installato, e un bersaglio). Un timer di REMOTIX controlla ogni giorno l'archivio e il catalogo; ogni
+  aggiornamento passa dal percorso che non chiude i desktop (T7).
+- 🔸 **D14, aperta**: che cosa si applica da solo — proposta: sicurezza e ricostruzioni automatiche, la versione
+  annuale su scelta dell'amministratore; alternativa: solo avviso.
+
 ---
 
 ## Come si tiene questo documento
