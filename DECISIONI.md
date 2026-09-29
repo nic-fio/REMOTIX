@@ -5834,6 +5834,15 @@ l'11–50 % dei fotogrammi già con un utente. L'utente ha scelto di **curare ad
 invece di chiudere la campagna col difetto dichiarato: suite corta + prove della tela + **suo sguardo
 contro i quadrati**, poi si rifanno le salite interessate.
 
+### 9.5 ✅ Il rallentamento della Radeon in 4K (A3) è del driver: si documenta, non si aggira — 29 set 2026
+
+Esclusi con misure frequenza, VPP, barriera del compositore ed EFC, il ritardo sta dentro la codifica
+del VCN (gruppi di 5 fotogrammi da ~31 ms, una sessione alla volta). Parola dell'utente: *«è fuori dal
+nostro ambito. Se in futuro il problema dovesse essere risolto allora REMOTIX diverrà più capace di
+reggere un maggior carico»*. ⇒ Nessun aggiramento nel prodotto; il 4K della Radeon si dichiara limitato
+dal driver; il difetto è documentato nei minimi particolari in `fasi/16-a3-radeon-vcn.md`, perché
+l'utente possa decidere di aiutare gli sviluppatori del driver.
+
 ---
 
 ## Come si tiene questo documento
