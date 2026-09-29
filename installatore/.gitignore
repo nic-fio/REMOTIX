@@ -1,0 +1,3 @@
+# cache di Go e binari costruiti: si rifanno con costruisci.sh
+.cache/
+uscita/

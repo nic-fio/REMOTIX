@@ -1,0 +1,618 @@
+{
+  "formato": "remotix-catalogo/1",
+  "versione": "2026.09.30.1",
+  "sequenza": 1,
+  "emesso": "2026-09-30",
+  "scadenza": "2027-03-31",
+  "motore_minimo": "0.1.0",
+  "firma": {
+    "separata": "catalogo.json.firma",
+    "schema": "",
+    "nota": "il catalogo si pubblica e si aggiorna da solo, senza un REMOTIX nuovo (DECISIONI §10.10): la firma sta in un file separato accanto; lo schema e le chiavi sono della catena A (§6.6.10), da decidere con D11 in T8. Oggi non c'è firma, e il motore lo dice (RX-TRUST-001). «sequenza» cresce a ogni pubblicazione: servirà a rifiutare un catalogo più vecchio di quello già visto"
+  },
+  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop): quel che il documento sa il 30 set 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
+  "requisiti": {
+    "openssl_minima": "3.5.0",
+    "kde_minima": "6.1",
+    "systemd": true,
+    "xfce_minima": "4.20",
+    "lxqt_minima": "2.0",
+    "gnome_minima": "46"
+  },
+  "depositi": {
+    "rpmfusion": {
+      "nome": "RPM Fusion (free)",
+      "decisione": "D5",
+      "comandi": {
+        "fedora": "sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install libavcodec-freeworld",
+        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install libavcodec-freeworld   # DOPO EPEL, o libavcodec-free va in conflitto (§11.1)"
+      }
+    },
+    "packman": {
+      "nome": "Packman",
+      "decisione": "D5",
+      "comandi": {
+        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper dup --from packman --allow-vendor-change",
+        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper dup --from packman --allow-vendor-change   # [?] percorso da confermare"
+      }
+    },
+    "epel": {
+      "nome": "EPEL (con CRB)",
+      "decisione": "",
+      "comandi": {
+        "rhel": "sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb"
+      }
+    }
+  },
+  "installa": {
+    "debian": "sudo apt install",
+    "fedora": "sudo dnf install",
+    "arch": "sudo pacman -S",
+    "suse": "sudo zypper install"
+  },
+  "piattaforme": [
+    {
+      "id": "debian",
+      "distribuzione": "Debian",
+      "versioni": [
+        "13"
+      ],
+      "etichetta_versione": "13 (Trixie)",
+      "nome": "Debian 13",
+      "famiglia": "debian",
+      "matrice": true,
+      "giro_intero": "",
+      "h264": {
+        "scheda_di_serie": true,
+        "software_di_serie": true
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        }
+      },
+      "note": [
+        "la base di oggi"
+      ]
+    },
+    {
+      "id": "ubuntu",
+      "distribuzione": "Ubuntu",
+      "versioni": [
+        "26.04"
+      ],
+      "etichetta_versione": "26.04 LTS",
+      "nome": "Ubuntu 26.04 LTS",
+      "famiglia": "debian",
+      "matrice": true,
+      "giro_intero": "",
+      "derivate": [
+        {
+          "id": "linuxmint",
+          "versioni": [
+            "23"
+          ],
+          "nome": "Linux Mint"
+        }
+      ],
+      "h264": {
+        "scheda_di_serie": true,
+        "software_di_serie": true
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true,
+          "componenti": [
+            "gnome-session"
+          ],
+          "note": [
+            "GNOME 50 (§5.1); quale GNOME vede chi si collega è la decisione D8, aperta"
+          ]
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        }
+      }
+    },
+    {
+      "id": "fedora",
+      "distribuzione": "Fedora",
+      "versioni": [
+        "44"
+      ],
+      "etichetta_versione": "44",
+      "nome": "Fedora 44",
+      "famiglia": "fedora",
+      "matrice": true,
+      "giro_intero": "",
+      "h264": {
+        "scheda_di_serie": false,
+        "software_di_serie": false,
+        "deposito": "rpmfusion",
+        "comando": "fedora"
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        }
+      },
+      "note": [
+        "SELinux enforcing: pam_selinux open porta a un rifiuto all'esecuzione del figlio (§11.1 B), tappa T6"
+      ]
+    },
+    {
+      "id": "fedora",
+      "distribuzione": "Fedora",
+      "versioni": [
+        "43"
+      ],
+      "etichetta_versione": "43",
+      "nome": "Fedora 43",
+      "famiglia": "fedora",
+      "matrice": false,
+      "giro_intero": "",
+      "h264": {
+        "scheda_di_serie": false,
+        "software_di_serie": false,
+        "deposito": "rpmfusion",
+        "comando": "fedora"
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        }
+      },
+      "note": [
+        "analizzata, non certificata: fuori dalla matrice (§3); GNOME 49; esce di supporto a fine 2026"
+      ]
+    },
+    {
+      "id": "almalinux",
+      "distribuzione": "AlmaLinux",
+      "versioni": [
+        "10"
+      ],
+      "versione_minima": "10.1",
+      "etichetta_versione": "10.1 (OpenSSL 3.5)",
+      "nome": "AlmaLinux 10",
+      "famiglia": "fedora",
+      "matrice": true,
+      "giro_intero": "",
+      "derivate": [
+        {
+          "id": "rocky",
+          "versioni": [
+            "10"
+          ],
+          "nome": "Rocky Linux",
+          "versione_minima": "10.1"
+        },
+        {
+          "id": "rhel",
+          "versioni": [
+            "10"
+          ],
+          "nome": "RHEL",
+          "versione_minima": "10.1"
+        }
+      ],
+      "h264": {
+        "scheda_di_serie": false,
+        "software_di_serie": false,
+        "deposito": "rpmfusion",
+        "comando": "rhel",
+        "amd_senza_vaapi": true
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true,
+          "depositi": [
+            "epel"
+          ]
+        },
+        "xfce": {
+          "supportato": false,
+          "codice": "RX-COMPAT-005",
+          "motivo": "né labwc né XFCE in RHEL/EPEL 10"
+        },
+        "lxqt": {
+          "supportato": false,
+          "codice": "RX-COMPAT-005",
+          "motivo": "né labwc né LXQt in RHEL/EPEL 10"
+        }
+      },
+      "note": [
+        "dalla 10.1: OpenSSL 3.5",
+        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce",
+        "SELinux enforcing (§11.1 B), tappa T6"
+      ]
+    },
+    {
+      "id": "arch",
+      "distribuzione": "Arch Linux",
+      "versioni": [
+        "*"
+      ],
+      "etichetta_versione": "rolling (da set 2026)",
+      "nome": "Arch Linux",
+      "famiglia": "arch",
+      "matrice": true,
+      "giro_intero": "",
+      "derivate": [
+        {
+          "id": "manjaro",
+          "versioni": [
+            "*"
+          ],
+          "nome": "Manjaro",
+          "nota": "indietro di qualche settimana rispetto ad Arch"
+        },
+        {
+          "id": "endeavouros",
+          "versioni": [
+            "*"
+          ],
+          "nome": "EndeavourOS"
+        }
+      ],
+      "h264": {
+        "scheda_di_serie": true,
+        "software_di_serie": true
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        }
+      },
+      "note": [
+        "pam_faillock nella pila di serie (D3)",
+        "rolling release: il pacchetto si lega alla versione esatta di ffmpeg (§6.2)"
+      ]
+    },
+    {
+      "id": "opensuse-tumbleweed",
+      "distribuzione": "openSUSE Tumbleweed",
+      "versioni": [
+        "*"
+      ],
+      "etichetta_versione": "rolling (da set 2026)",
+      "nome": "openSUSE Tumbleweed",
+      "famiglia": "suse",
+      "matrice": true,
+      "giro_intero": "",
+      "h264": {
+        "scheda_di_serie": false,
+        "software_di_serie": false,
+        "deposito": "packman",
+        "comando": "tumbleweed"
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true,
+          "componenti": [
+            "breeze6-wallpapers"
+          ],
+          "note": [
+            "senza lo sfondo plasmashell non mostra né desktop né pannello (§11.1 D)"
+          ]
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc"
+          ],
+          "serve_carattere": true,
+          "note": [
+            "su openSUSE il pattern lxqt porta il carattere scalabile (google-droid-fonts) solo come raccomandato: senza, labwc muore (labwc #2525, §11.1)"
+          ]
+        }
+      },
+      "note": [
+        "la ffmpeg ufficiale non ha h264_vaapi: senza Packman niente codifica, su nessuna scheda (§4.2)"
+      ]
+    },
+    {
+      "id": "opensuse-leap",
+      "distribuzione": "openSUSE Leap",
+      "versioni": [
+        "16"
+      ],
+      "etichetta_versione": "16.0",
+      "nome": "openSUSE Leap 16",
+      "famiglia": "suse",
+      "matrice": true,
+      "giro_intero": "",
+      "h264": {
+        "scheda_di_serie": false,
+        "software_di_serie": false,
+        "deposito": "packman",
+        "comando": "leap16"
+      },
+      "desktop": {
+        "gnome": {
+          "supportato": true
+        },
+        "kde": {
+          "supportato": true
+        },
+        "xfce": {
+          "supportato": true,
+          "componenti": [
+            "labwc",
+            "wlr-randr"
+          ],
+          "limiti": [
+            "XFCE sotto Wayland è «sperimentale» per SUSE"
+          ],
+          "serve_carattere": true
+        },
+        "lxqt": {
+          "supportato": true,
+          "componenti": [
+            "labwc",
+            "wlr-randr"
+          ],
+          "limiti": [
+            "LXQt sotto Wayland è «sperimentale» per SUSE"
+          ],
+          "note": [
+            "su openSUSE il pattern lxqt porta il carattere scalabile (google-droid-fonts) solo come raccomandato: senza, labwc muore (labwc #2525, §11.1)"
+          ],
+          "serve_carattere": true
+        }
+      }
+    }
+  ],
+  "escluse": [
+    {
+      "id": "debian",
+      "versioni": [
+        "12"
+      ],
+      "motivo": "mutter 43 / GNOME 43, niente libei, niente labwc: la base è troppo vecchia"
+    },
+    {
+      "id": "ubuntu",
+      "versioni": [
+        "24.04"
+      ],
+      "motivo": "Ubuntu 24.04 fuori (D7, 29 set): si parte dalla 26.04; KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland"
+    },
+    {
+      "id": "linuxmint",
+      "versioni": [
+        "22"
+      ],
+      "motivo": "Mint 22 ha la base di Ubuntu 24.04 (D7)"
+    },
+    {
+      "id": "almalinux",
+      "versioni": [
+        "9"
+      ],
+      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+    },
+    {
+      "id": "rocky",
+      "versioni": [
+        "9"
+      ],
+      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+    },
+    {
+      "id": "rhel",
+      "versioni": [
+        "9"
+      ],
+      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+    },
+    {
+      "id": "centos",
+      "versioni": [
+        "9"
+      ],
+      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+    },
+    {
+      "id": "opensuse-leap",
+      "versioni": [
+        "15"
+      ],
+      "motivo": "Leap 15.6: fine vita il 30 aprile 2026"
+    },
+    {
+      "id": "sles",
+      "versioni": [
+        "16"
+      ],
+      "motivo": "SLES 16: solo GNOME, niente Packman — si rivede se un cliente la chiede"
+    }
+  ],
+  "carattere_scalabile": {
+    "debian": "fonts-dejavu-core",
+    "fedora": "dejavu-sans-fonts",
+    "arch": "ttf-dejavu",
+    "suse": "google-droid-fonts"
+  },
+  "desktop_di_riferimento": {
+    "debian": "gnome",
+    "ubuntu": "gnome",
+    "fedora": "gnome",
+    "almalinux": "gnome",
+    "arch": "kde",
+    "opensuse-tumbleweed": "kde",
+    "opensuse-leap": "kde"
+  },
+  "componenti_minimi": [
+    {
+      "componente": "nucleo Linux",
+      "minimo": "6.12",
+      "perche": "quello della distribuzione certificata più vecchia: driver i915/xe e amdgpu, DMA-BUF"
+    },
+    {
+      "componente": "systemd / logind",
+      "minimo": "con systemctl --user e sessioni Remote=yes",
+      "perche": "le sessioni per utente"
+    },
+    {
+      "componente": "OpenSSL",
+      "minimo": "3.5",
+      "perche": "l'API QUIC del ponte ngtcp2_crypto_ossl"
+    },
+    {
+      "componente": "ngtcp2 / nghttp3",
+      "minimo": "1.25.0 / 1.18.0",
+      "perche": "dentro il binario (DECISIONI §10.6)"
+    },
+    {
+      "componente": "libavcodec (ffmpeg)",
+      "minimo": "61.13.100 (ffmpeg 7.1)",
+      "perche": "avcodec_get_supported_config"
+    },
+    {
+      "componente": "libei",
+      "minimo": "1.3",
+      "perche": "ei_disconnect"
+    },
+    {
+      "componente": "PipeWire",
+      "minimo": "0.3.48",
+      "perche": "la cattura di GNOME e KDE"
+    },
+    {
+      "componente": "GNOME (mutter)",
+      "minimo": "46 (API ConnectToEIS, --headless); da 50 l'unità @user",
+      "perche": "sessione.c"
+    },
+    {
+      "componente": "KDE Plasma (KWin)",
+      "minimo": "6.1 (connectToEIS)",
+      "perche": "kwin.c"
+    },
+    {
+      "componente": "XFCE",
+      "minimo": "4.20 (Wayland)",
+      "perche": "la sessione sotto labwc"
+    },
+    {
+      "componente": "LXQt",
+      "minimo": "2.0 (Wayland)",
+      "perche": "la sessione sotto labwc"
+    },
+    {
+      "componente": "labwc / wlroots",
+      "minimo": "labwc 0.8 con -m/-C/-S; wlroots 0.18",
+      "perche": "wlroots.c, sessione.c"
+    },
+    {
+      "componente": "un carattere scalabile",
+      "minimo": "qualunque (DejaVu, Noto, Droid…)",
+      "perche": "senza, labwc muore (labwc #2525)"
+    },
+    {
+      "componente": "VA-API",
+      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD); NVIDIA proprietaria no",
+      "perche": "la codifica sulla scheda; altrimenti il ripiego software"
+    }
+  ],
+  "fuori_sempre": [
+    "distribuzioni senza systemd (Alpine, Devuan, Artix con OpenRC…): REMOTIX usa logind e il gestore d'utente",
+    "immutabili (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): rimandate a dopo la fase (D9)",
+    "Linux Mint Cinnamon: Cinnamon non è uno dei quattro desktop"
+  ]
+}
