@@ -35,6 +35,12 @@
 # ⛔ NON entra nel pacchetto (§4.4, §6.4, R14): utenti di prova, sudoers dei
 #    banchi, gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
 
+# Maintainer: nicfio <nicfio@gmail.com>
+#
+# ⚠ I PERCORSI DI ARCH: il binario sta in /usr/lib/remotix/, non in
+#   /usr/libexec/remotix/ come dice §6.4 — Arch non usa libexec (namcap:
+#   «ELF file outside of a valid path»).  Unita' e .desktop lo seguono.
+
 pkgname=remotix
 pkgver=0.17.0
 pkgrel=1
@@ -68,7 +74,7 @@ depends=(
 	labwc
 	wlr-randr
 )
-makedepends=(cmake ninja pkgconf wayland)
+makedepends=(cmake ninja pkgconf)            # wayland-scanner: da `wayland`, gia' in depends
 backup=(
 	etc/remotix/utenti-negati
 	etc/pam.d/remotix
@@ -91,6 +97,10 @@ sha256sums=('SKIP'
 _quic=quic
 
 build() {
+	# R23: i percorsi della costruzione non entrano nel binario (le assert di
+	# ngtcp2/nghttp3 si portano dietro __FILE__: makepkg «reference to $srcdir»)
+	export CFLAGS="$CFLAGS -ffile-prefix-map=$srcdir=/usr/src/remotix"
+
 	# ── nghttp3 e ngtcp2: SOLO statiche, in una cartella nostra
 	#    (la stessa ricetta di src/costruzione/quic-statiche.sh)
 	local comune=(-GNinja -DCMAKE_BUILD_TYPE=Release
@@ -136,7 +146,7 @@ check() {
 
 package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
-	install -Dm755 "$s/remotix"          "$pkgdir/usr/libexec/remotix/remotix"
+	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
 	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
@@ -146,7 +156,7 @@ package() {
 	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
 	# ⭐ il permesso della cattura di KWin: IDENTICO, byte per byte, a quello
 	#    che scrive `kwin_scrivi_permesso()` (kwin.c:48, main.c) col binario in
-	#    /usr/libexec/remotix/remotix — cosi' il programma lo trova uguale e
+	#    /usr/lib/remotix/remotix — cosi' il programma lo trova uguale e
 	#    non lo riscrive.  ⚠ Il codice va cambiato (§4.4): a esecuzione solo la
 	#    verifica (kwin.c:342), niente scrittura da root in /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \

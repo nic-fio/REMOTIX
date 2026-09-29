@@ -2,6 +2,6 @@
 Type=Application
 Name=REMOTIX
 Comment=Il desktop nel browser
-Exec=/usr/libexec/remotix/remotix
+Exec=/usr/lib/remotix/remotix
 NoDisplay=true
 X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1

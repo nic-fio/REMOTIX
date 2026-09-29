@@ -24,7 +24,7 @@ After=network.target systemd-logind.service
 Type=simple
 Environment=REMOTIX_PORTA=7447
 Environment=REMOTIX_NOME=%H
-ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome ${REMOTIX_NOME} --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban
+ExecStart=/usr/lib/remotix/remotix --indirizzo 0.0.0.0 --nome ${REMOTIX_NOME} --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban
 WorkingDirectory=/var/lib/remotix
 # ⭐ Le tre proprieta' con cui il prodotto e' sempre stato misurato
 #    (src/riavvia-7900.sh): KillMode=mixed (T2, §5.2: i desktop sopravvivono
