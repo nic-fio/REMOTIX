@@ -5014,6 +5014,11 @@ static CodecVideo codec_del_numero(uint8_t numero)
 	}
 }
 
+/* Perche' l'hardware non si e' aperto, l'ultima volta che lo si e' provato
+ * ("" se si e' aperto, o se non lo si e' provato). */
+static char rifiuto_hardware[256];
+static char rifiuto_software[256];
+
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
@@ -5179,6 +5184,10 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		hw.modo = CODIFICATORE_QUALITA_QP;
 		hw.qualita = QP_HARDWARE;
 		codif[indice] = codificatore_nuovo(&hw, errore, sizeof errore);
+		/* La ragione resta anche fuori dal registro: `--prova-codifica` la
+		 * riporta nel suo `motivo`. */
+		snprintf(rifiuto_hardware, sizeof rifiuto_hardware, "%s",
+		         codif[indice] ? "" : errore);
 		if (!codif[indice])
 			/* ⛔⭐ E I DUE NOMI SI STAMPANO, NON SI SCRIVONO A MANO — difetto
 			 *     trovato refutando, 22 agosto 2026 (fase 8).  Fino a qui la
@@ -5199,8 +5208,11 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 			              codificatore_ripiego_software(codec));
 	}
 
-	if (!codif[indice])
+	if (!codif[indice]) {
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+		snprintf(rifiuto_software, sizeof rifiuto_software, "%s",
+		         codif[indice] ? "" : errore);
+	}
 	if (codif[indice]) {
 		codif_prof[indice] = prof;
 		codif_liv[indice] = livello_chiesto_x10;
@@ -5249,6 +5261,130 @@ static void codificatori_libera(void)
 		codificatore_libera(codif[i]);
 		codif[i] = NULL;
 	}
+}
+
+/*
+ * ⭐ FASE 17 (§6.5-bis, §6.0 fase 7a) — `remotix --prova-codifica`.
+ *
+ * La certificazione dell'installatore deve sapere se questa macchina codifica
+ * davvero un fotogramma in H.264, e COME: la risposta la da' il prodotto, con
+ * la sua stessa scelta, non un ffmpeg a parte.  ⇒ Si passa per
+ * `codificatore_di()`, cioe' la strada di una sessione vera (H.264, 8 bit — la
+ * base di §4.3 —, nessun tetto di livello, BGRx): `h264_vaapi` su
+ * `NODO_RENDERING` con `POTENZA_RENDERING` e `QP_HARDWARE`, e se non si apre il
+ * ripiego dichiarato `libx264` con `CRF_SOFTWARE`.  Poi si codifica davvero un
+ * fotogramma sintetico 256x256, finche' non escono byte (al piu' 8 giri).
+ *
+ * Esce con UNA riga JSON su stdout (il registro va su stderr, come sempre):
+ *   {"esito":"hardware"|"software"|"nessuno","codificatore":"h264_vaapi"|"libx264"|"",
+ *    "nodo":"/dev/dri/renderD128"|"","motivo":"..."}
+ * e il codice: 0 se un fotogramma e' uscito (hardware O software: quale lo dice
+ * «esito») · 1 nessuno · 2 resta l'errore d'uso — lo stesso che il motore della linea A
+ * aspettava (fasi/17 §13.1, riga di 56c93d3).
+ *
+ * ⛔ «hardware» si dice SOLO se il componente accetta superfici VA-API
+ *    (`codificatore_in_hardware`) E un fotogramma e' uscito con dei byte E i
+ *    byte si sono riletti (`letto_dal_flusso`).  Tutto quel che non si sa
+ *    diventa «nessuno» col motivo — mai un hardware presunto.
+ * ⚠ Non serve root, ma i permessi contano: senza il gruppo del nodo (`render`)
+ *   un utente vedra' «software» dove root vedrebbe «hardware».  La prova va
+ *   fatta con l'identita' di cui si vuole sapere.
+ */
+#define PROVA_LATO 256u
+#define PROVA_GIRI 8
+
+static int prova_esce(const char *esito, const char *codificatore, const char *nodo,
+                      const char *motivo, int codice)
+{
+	char c[128], n[128], m[1024];
+
+	json_testo(c, sizeof c, codificatore);
+	json_testo(n, sizeof n, nodo);
+	json_testo(m, sizeof m, motivo);
+	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"nodo\":\"%s\",\"motivo\":\"%s\"}\n",
+	       esito, c, n, m);
+	/* ⛔ Una riga che non esce intera e' «non so», non l'esito che portava. */
+	if (fflush(stdout) != 0)
+		return 1;
+	return codice;
+}
+
+int figlio_prova_codifica(void)
+{
+	const uint8_t indice = 3; /* §6.2: 3 = H.264 */
+	static uint8_t pixel[PROVA_LATO * PROVA_LATO * 4];
+	CodificatoreFotogramma fg;
+	const CodificatoreConfessione *c;
+	Codificatore *cod;
+	char motivo[768];
+	bool in_hw, uscito = false;
+	size_t byte = 0;
+
+	profondita_chiesta = 8;
+	livello_chiesto_x10 = 0;
+	formato_ingresso = CODIFICATORE_PIXEL_BGRX;
+	cod = codificatore_di(CODIFICATORE_H264, indice, PROVA_LATO, PROVA_LATO);
+	if (!cod) {
+		snprintf(motivo, sizeof motivo,
+		         "H.264 non si apre: in hardware («h264_vaapi» su %s) %s; in software («%s») %s",
+		         NODO_RENDERING, rifiuto_hardware[0] ? rifiuto_hardware : "non provato",
+		         codificatore_ripiego_software(CODIFICATORE_H264),
+		         rifiuto_software[0] ? rifiuto_software : "nessuna ragione");
+		return prova_esce("nessuno", "", "", motivo, 1);
+	}
+	in_hw = codificatore_in_hardware(cod);
+	for (int giro = 0; giro < PROVA_GIRI && !uscito; giro++) {
+		/* Una sfumatura che scorre: ogni fotogramma e' diverso dal prima. */
+		for (uint32_t y = 0; y < PROVA_LATO; y++)
+			for (uint32_t x = 0; x < PROVA_LATO; x++) {
+				uint8_t *p = pixel + (y * PROVA_LATO + x) * 4;
+
+				p[0] = (uint8_t)(x + giro * 8);
+				p[1] = (uint8_t)y;
+				p[2] = (uint8_t)(x ^ y);
+				p[3] = 0xff;
+			}
+		memset(&fg, 0, sizeof fg);
+		if (!codificatore_comprimi(cod, pixel, PROVA_LATO * 4, &fg)) {
+			c = codificatore_confessione(cod);
+			snprintf(motivo, sizeof motivo,
+			         "«%s» si apre ma il fotogramma %d non si codifica%s%s",
+			         codificatore_nome(cod), giro + 1, c && c->perche_no[0] ? ": " : "",
+			         c && c->perche_no[0] ? c->perche_no : "");
+			codificatori_libera();
+			return prova_esce("nessuno", "", "", motivo, 1);
+		}
+		if (fg.byte > 0) {
+			uscito = true;
+			byte = fg.byte;
+		}
+	}
+	c = codificatore_confessione(cod);
+	if (!uscito || !c || !c->ha_obbedito || !c->letto_dal_flusso) {
+		snprintf(motivo, sizeof motivo,
+		         "«%s» si apre ma dopo %d fotogrammi non si sa se codifica: %s",
+		         codificatore_nome(cod), PROVA_GIRI,
+		         !uscito ? "nessun byte uscito"
+		         : !c || !c->ha_obbedito ? "il codificatore non ha obbedito"
+		                                 : "i byte non si rileggono");
+		codificatori_libera();
+		return prova_esce("nessuno", "", "", motivo, 1);
+	}
+	if (in_hw) {
+		snprintf(motivo, sizeof motivo,
+		         "un fotogramma %ux%u codificato: %zu byte, %s — %s", PROVA_LATO, PROVA_LATO,
+		         byte, c->stringa_codec, codificatore_nome(cod));
+		codificatori_libera();
+		return prova_esce("hardware", c->componente ? c->componente : "", NODO_RENDERING,
+		                  motivo, 0);
+	}
+	snprintf(motivo, sizeof motivo,
+	         "l'hardware non si apre («h264_vaapi» su %s: %s) — ripiego in software: un "
+	         "fotogramma %ux%u codificato, %zu byte, %s",
+	         NODO_RENDERING, rifiuto_hardware[0] ? rifiuto_hardware : "ragione non data",
+	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec);
+	codificatori_libera();
+	return prova_esce("software", c->componente ? c->componente : "", "", motivo, 0);
 }
 
 /* ⛔⭐ QUALE ISTANTE FINISCE NEI 28 BYTE, E DA DOVE VIENE — il punto 7, deciso

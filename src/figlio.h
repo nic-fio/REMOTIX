@@ -587,4 +587,13 @@ void figli_ricontrolla(figli *f, uint64_t ora_ms);
  *     l'utente stesso. */
 void figlio_vive(int argc, char **argv);
 
+/* ⭐ FASE 17 — `remotix --prova-codifica` (la certificazione, §6.0 fase 7a):
+ *    un fotogramma sintetico 256x256 in H.264 con la stessa scelta di una
+ *    sessione vera (VA-API sul nodo della sessione, altrimenti il ripiego in
+ *    software).  Scrive UNA riga JSON su stdout —
+ *    {"esito":"hardware"|"software"|"nessuno","codificatore":…,"nodo":…,"motivo":…}
+ *    — e torna il codice d'uscita: 0 se codifica (hardware o software) · 1 nessuno.
+ *    Niente rete, niente sessioni; root non serve (ma i gruppi del nodo sì). */
+int figlio_prova_codifica(void);
+
 #endif

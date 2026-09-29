@@ -156,6 +156,10 @@ static void aiuto(const char *nome)
 	        "REMOTIX — il server (fase 1: il filo nudo)\n"
 	        "\n"
 	        "  %s [opzioni]\n"
+	        "  %s --prova-codifica\n"
+	        "                    un fotogramma in H.264 con la scelta di una\n"
+	        "                    sessione vera; una riga JSON su stdout, esce\n"
+	        "                    0 se codifica (hardware o software), 1 no\n"
 	        "\n"
 	        "  --indirizzo IND   su che cosa ascoltare (predefinito: 0.0.0.0)\n"
 	        "  --nome NOME       il nome o l'indirizzo che va nel certificato\n"
@@ -326,7 +330,7 @@ static void aiuto(const char *nome)
 	        "     questo stesso binario riparte come figlio di un utente\n"
 	        "     ammesso (DECISIONI.md §1.10-bis).  Se la vedi in `ps`, quello\n"
 	        "     e' un figlio, non un secondo server.\n",
-	        nome, PORTA_PREDEFINITA);
+	        nome, nome, PORTA_PREDEFINITA);
 }
 
 /* ⛔⭐ IL FILE DEL SERVIZIO PAM, GUARDATO ALL'AVVIO — rilievo B-11.
@@ -1557,6 +1561,11 @@ int main(int argc, char **argv)
 		figlio_vive(argc, argv);
 		return 1; /* non ci si arriva */
 	}
+	/* ⭐ FASE 17 (§6.5-bis) — la prova di codifica della certificazione: da
+	 *    sola, prima di tutto il resto — niente certificati, niente rete,
+	 *    niente sessioni.  Il contratto e' in `figlio.h`. */
+	if (argc == 2 && strcmp(argv[1], "--prova-codifica") == 0)
+		return figlio_prova_codifica();
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];
