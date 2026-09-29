@@ -117,7 +117,9 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 
 // copia il file del piano nella cache dell'operazione, e controlla che sia quello del piano.
 func (a *pacchetti) inCache(c *Contesto) (string, string, error) {
-	cache := filepath.Join(c.Cartella, "cache")
+	// una cartella per passo: due passi di pacchetti nella stessa operazione non si mescolano
+	// ([M] 30 set, fedora44-gnome: il codec e remotix nella stessa cartella ⇒ due versioni)
+	cache := filepath.Join(c.Cartella, "cache", c.P.ID)
 	if err := os.MkdirAll(cache, 0o700); err != nil {
 		return "", "", err
 	}
