@@ -697,6 +697,7 @@ E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo c
 | `C-LIMITE` | una funzione manca | niente audio, una misura dello schermo non raggiungibile |
 | `C-HARDWARE` | un requisito della scheda | NVIDIA col driver proprietario |
 | `C-AMMINISTRATORE` | serve un passo a mano | aprire la porta sul router |
+| `C-DESKTOP` | il desktop non c'è (o non è supportato) e l'installatore lo aggiunge dagli archivi della distribuzione | Ubuntu Server, un'immagine cloud, una macchina con solo Cinnamon |
 
 ⭐ Le condizioni **non spariscono dopo il piano**: stanno nel certificato, in `remotix verifica` e in
 `remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
@@ -896,6 +897,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R35 | lo stato «a condizioni» non sparisce | installazione su Fedora senza RPM Fusion (ripiego software); poi `remotix verifica` e il certificato | la condizione non scritta, o scritta solo nel piano |
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
+| R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
 
 ---
 
@@ -952,6 +954,22 @@ grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamen
 - ⛔ tutto il resto ha un valore predefinito e **non si chiede**: chi entra (gli utenti della macchina,
   root escluso), il certificato (generato), le tre cinture (attive, dette nel benvenuto, D4), i gruppi
   della scheda. Chi vuole altro lo cambia dopo in `/etc/remotix/remotix.conf.d/`.
+
+**Se sulla macchina non c'è un desktop** (proposta dell'utente, 29 set 2026: *«se REMOTIX non trova nessun
+desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si installa»*):
+- PREFLIGHT lo rileva; nella schermata delle scelte compare **una domanda in più, solo in quel caso**:
+  «su questa macchina non c'è un desktop: vuoi installarne uno?», con i soli desktop che il catalogo dà per
+  buoni su quella distribuzione (Alma: GNOME e KDE). **Sì** ⇒ l'installazione del desktop entra nel piano
+  come azione dichiarata, col suo peso (pacchetti, GB); **no** ⇒ REMOTIX non si installa (BLOCCATA,
+  `RX-DESKTOP-001`, col perché e il rimedio);
+- lo stesso se c'è **solo un desktop non supportato** (Cinnamon, MATE, i3…): quello esistente non si tocca, il
+  nuovo si aggiunge accanto;
+- il desktop viene **dagli archivi della distribuzione** (il confine di `DECISIONI.md` §10.6 resta: REMOTIX
+  non se lo porta dietro), e si installa **senza cambiare come parte la macchina**: niente schermata di
+  accesso locale né avvio in grafica — i desktop di REMOTIX nascono senza schermo, e un server resta un
+  server davanti al monitor;
+- è un'azione **AL_MEGLIO** (§6.6.4): toglierla non rende la macchina identica, e il piano lo dice prima del
+  consenso.
 
 ⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
 il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.

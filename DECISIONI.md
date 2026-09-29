@@ -5915,6 +5915,13 @@ pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includer
 - ⛔ **Il confine: i desktop.** Un desktop che la distribuzione non ha (XFCE e LXQt su Alma/RHEL) non lo
   porta REMOTIX: quella combinazione resta fuori dalla matrice.
 
+### 10.7 ✅ Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
+
+Proposta dell'utente (29 set 2026), adottata: *«se REMOTIX non trova nessun desktop installato, o chiede di
+installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli archivi della
+distribuzione, si installa senza schermata d'accesso locale né avvio in grafica, ed è dichiarato come
+azione «al meglio». `fasi/17-l-installatore.md` §6.6 e R38.
+
 ---
 
 ## Come si tiene questo documento
