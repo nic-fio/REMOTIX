@@ -64,19 +64,23 @@ override_dh_auto_install:
 	# cambiato per non scriverlo piu' (solo verificarlo): annotato, fasi/17 §13.1.
 	install -D -m 0644 debian/org.kde.remotix.desktop \
 	  $(B)/usr/share/applications/org.kde.remotix.desktop
-	# ⚠ Le tre cinture di DECISIONI.md §4.7 nei percorsi del FORNITORE: se
-	#   debbano esserci di serie e' la decisione D4, IN ATTESA.
+	# ⛔ DECISIONI §10.12 — il pacchetto porta solo PEZZI INERTI: le tre cinture
+	#    di §4.7 stanno SPENTE in /usr/share/remotix/cinture/ (nessuno le legge
+	#    li'); le mette in vigore il MOTORE, col consenso (D4), e le annota nel
+	#    suo registro.
 	install -D -m 0644 src/remotix-niente-spegnimento.rules \
-	  $(B)/usr/share/polkit-1/rules.d/50-remotix-niente-spegnimento.rules
+	  $(B)/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules
 	install -D -m 0644 src/remotix-tasti.conf \
-	  $(B)/usr/lib/systemd/logind.conf.d/remotix-tasti.conf
+	  $(B)/usr/share/remotix/cinture/remotix-tasti.conf
 	install -D -m 0644 debian/remotix-niente-sospensione.conf \
-	  $(B)/usr/lib/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+	  $(B)/usr/share/remotix/cinture/remotix-niente-sospensione.conf
 
 override_dh_installsystemd:
-	# abilitato e avviato all'installazione; dopo un aggiornamento RIAVVIATO
-	# (non fermato prima): i desktop sopravvivono all'arresto (§5.2).
-	dh_installsystemd --restart-after-upgrade
+	# ⛔ DECISIONI §10.12: il pacchetto NON abilita e NON avvia il servizio: lo
+	#    accende il motore a installazione confermata.  In aggiornamento lo
+	#    riavvia (deb-systemd-invoke restart) SOLO se era gia' attivo o abilitato;
+	#    non lo ferma prima: i desktop sopravvivono all'arresto (§5.2).
+	dh_installsystemd --no-enable --no-start --restart-after-upgrade
 
 override_dh_gencontrol:
 	dh_gencontrol -- -Vremotix:Recommends="$(RACCOMANDA_VENDOR)"

@@ -1,0 +1,16 @@
+#!/bin/sh
+# remotix.prerm — prima che i file se ne vadano.
+#
+# Con --no-start debhelper non ferma il servizio al remove: se il motore lo
+# aveva acceso, il server resterebbe vivo su un binario cancellato.  ⇒ Al solo
+# `remove` si ferma (se gira).  I desktop sopravvivono all'arresto (§5.2).
+# In aggiornamento no: lo riavvia il postinst (try-restart), solo se girava.
+set -e
+
+if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+	deb-systemd-invoke stop remotix.service >/dev/null || true
+fi
+
+#DEBHELPER#
+
+exit 0

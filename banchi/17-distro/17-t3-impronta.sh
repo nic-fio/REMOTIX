@@ -11,7 +11,7 @@
 #   G  i gruppi e i loro membri · P  i conti · U  le unita' e il loro stato
 #   K  i pacchetti (versione, stato) · M  quelli installati a mano (apt-mark)
 #   C  la configurazione IN VIGORE di logind e sleep (non solo i file)
-#   W  firewall (nft)
+#   S  le porte in ascolto (ss) · W  firewall (nft)
 # ⚠ Fuori per scelta: /var/log, le cache di apt, /var/lib/dpkg (se ne guarda
 #   l'effetto nelle sezioni K e M), /etc/ld.so.cache (la rifa ldconfig).
 set -u
@@ -34,5 +34,6 @@ dpkg-query -W -f='K ${Package}:${Architecture} ${Version} ${db:Status-Abbrev}\n'
 apt-mark showmanual 2>/dev/null | sort | sed 's/^/M /'
 systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -vE '^(#|$)' | sed 's/^/C logind /'
 systemd-analyze cat-config systemd/sleep.conf  2>/dev/null | grep -vE '^(#|$)' | sed 's/^/C sleep /'
+ss -Htlnu 2>/dev/null | awk '{print "S", $1, $5}' | sort -u
 if command -v nft >/dev/null; then nft list ruleset 2>/dev/null | sed 's/^/W /'; fi
 true

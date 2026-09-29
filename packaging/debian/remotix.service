@@ -14,6 +14,14 @@
 #    e' del motore (T4).
 # ⛔ Nessuna opzione di banco (--rilievo, --comando-socket, --audio-prova,
 #    --parlantina, --sblocca): R13.
+# ⛔ DECISIONI §10.12, punto 3: senza installazione CONFERMATA dal motore il
+#    servizio non parte e lo dice (RX-INST-001).  Qui e' una guardia dell'unita'
+#    (uscita 78 = EX_CONFIG del processo PRINCIPALE, che RestartPreventExitStatus
+#    non fa ripartire: `[M]` 29 set, con un ExecStartPre l'unita' ripartiva ogni
+#    2 s, perche' quella regola guarda solo il processo principale); il controllo
+#    vero va nel programma.  ⚠ La marca /var/lib/remotix/installazione-confermata
+#    e' una PROPOSTA per T4-T5: il motore la scrive a operazione CONFERMATA.
+# ⛔ Il pacchetto NON abilita e NON avvia questa unita': lo fa il motore.
 [Unit]
 Description=REMOTIX, il desktop nel browser
 After=network.target systemd-logind.service
@@ -24,7 +32,9 @@ Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
-ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPZIONI
+# ⚠ `sh` controlla la marca e poi fa `exec`: il server resta il processo
+#   principale.  `$$` = un `$` per la shell (le variabili vengono da EnvironmentFile).
+ExecStart=/bin/sh -c 'test -f /var/lib/remotix/installazione-confermata || { echo "RX-INST-001: REMOTIX non e stato installato dall installatore (manca /var/lib/remotix/installazione-confermata). Rimedio: eseguire l installatore di REMOTIX." >&2; exit 78; }; exec /usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta "$${REMOTIX_PORTA}" --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $${REMOTIX_OPZIONI}'
 # ⭐ `mixed`: SIGTERM al solo padre, poi SIGKILL a quel che resta dell'unita'.
 #    I desktop stanno FUORI dall'unita' (setsid --fork) e sopravvivono
 #    all'arresto: misurato in T2 (fasi/17 §5.2), 10 prove su 10.
@@ -33,6 +43,7 @@ KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
+RestartPreventExitStatus=78
 RestartSec=2
 
 [Install]
