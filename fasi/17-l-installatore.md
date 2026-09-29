@@ -557,6 +557,26 @@ login non telefona a casa).
 11. **Costruzione riproducibile** (`SOURCE_DATE_EPOCH`) e **SBOM** che nomina ngtcp2 e nghttp3 con la
     versione esatta.
 
+### 6.5-bis Che cosa l'installatore chiede a REMOTIX — elenco chiuso (30 set 2026)
+
+*Preoccupazione dell'utente: «su T5 andrà fatto un ragionamento, perché rischiamo di dover introdurre
+funzionalità in REMOTIX non previste». ⇒ Quel che l'installatore chiede al prodotto sta **solo** in questo
+elenco; una richiesta nuova passa dall'utente prima di entrare.*
+
+| richiesta a REMOTIX | perché | stato |
+|---|---|---|
+| ritrovare i desktop vivi dopo un riavvio del servizio | aggiornare senza chiudere i desktop (§5.2, T7) | decisa (T2) |
+| una prova di codifica: un fotogramma in H.264, e dire se riesce | la certificazione, fase 7 (§6.0) | proposta del 30 set |
+| `remotix stato`: installazione certificata o no, condizioni attive | assistenza (§10.12) | decisa |
+| non scrivere più da sé il file di KDE (`kwin.c:48`) | il pacchetto possiede i suoi file | correzione |
+| annotare chi iscrive ai gruppi alla prima connessione (`figlio.c:~1525`) | la disinstallazione sa chi togliere | correzione |
+
+⛔ **Non** stanno in REMOTIX, e li fa il motore: gruppi, cinture, firewall, desktop, archivi, pacchetti, e alla
+**disinstallazione** la chiusura dei desktop aperti — il motore li trova da logind (sessioni col servizio PAM
+`remotix`) e li fa chiudere da logind, dopo averli elencati nel piano col consenso dell'amministratore
+(«2 desktop aperti: verranno chiusi, il lavoro non salvato va perso»). Un avviso nel browser alle persone
+collegate richiederebbe una funzione nuova: **non ora**, eventualmente in una versione futura.
+
 ### 6.6 La specifica del motore — stati, registro, azioni, fiducia (29 set 2026)
 
 *Scritta dopo una revisione della bozza portata dall'utente: l'architettura in otto fasi regge; quel che
