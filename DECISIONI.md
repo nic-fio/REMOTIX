@@ -5900,6 +5900,88 @@ Parola dell'utente: *«su TUI e GUI dico che è un requisito irrinunciabile»*. 
 GUI) su un solo motore, nessuna logica d'installazione nelle interfacce, la GUI come l'utente con
 polkit. Lo strumento è la decisione D12. `fasi/17-l-installatore.md` §6.6.1.
 
+### 10.6 ✅ Le dipendenze che mancano le porta REMOTIX — con un'eccezione e un confine
+
+Parola dell'utente (29 set 2026): *«usiamo questa regola generale per non impazzire: se ci sono
+pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*.
+
+- **La regola**: una libreria o un attrezzo di cui REMOTIX ha bisogno, **assente o troppo vecchio** nella
+  distribuzione, lo porta REMOTIX (dentro il binario o nel suo pacchetto). Se la distribuzione ce l'ha
+  giusto, si usa il suo (gli aggiornamenti di sicurezza sono suoi). ⇒ **D2 chiusa: sì**, ngtcp2 e nghttp3
+  dentro, con gli aggiornamenti di sicurezza a carico nostro.
+- ⛔ **L'eccezione: i codec brevettati** (H.264: x264, ffmpeg completa, Mesa coi codec). REMOTIX non li
+  include né li scarica da sé — sarebbe distribuirli; restano all'archivio esterno riconosciuto (RPM
+  Fusion, Packman) aggiunto dal motore **col consenso** (D5).
+- ⛔ **Il confine: i desktop.** Un desktop che la distribuzione non ha (XFCE e LXQt su Alma/RHEL) non lo
+  porta REMOTIX: quella combinazione resta fuori dalla matrice.
+
+### 10.7 ✅ Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
+
+Proposta dell'utente (29 set 2026), adottata: *«se REMOTIX non trova nessun desktop installato, o chiede di
+installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli archivi della
+distribuzione, si installa senza schermata d'accesso locale né avvio in grafica, ed è dichiarato come
+azione «al meglio». `fasi/17-l-installatore.md` §6.6 e R38.
+
+### 10.8 ✅ Ubuntu 24.04 fuori: si parte dalla 26.04
+
+Parola dell'utente (29 set 2026): *«partiamo dalla 26.04»*. Su 24.04 solo GNOME sarebbe stato possibile, al
+prezzo di portare dentro OpenSSL 3.5 (e i suoi aggiornamenti di sicurezza) e di due adattamenti per
+ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22. La matrice scende a 26 macchine.
+
+### 10.9 ✅ Il principio: un prodotto nuovo, su tecnologie di nuova generazione
+
+Parola dell'utente (30 set 2026): *«la scelta di lasciare fuori certe versioni delle distro è coerente con
+lo spirito del progetto: si tratta di un prodotto nuovo che adotta tecnologie di nuova generazione, è una
+scelta di design netta»*. ⇒ Wayland, QUIC/WebTransport, i desktop nelle versioni che li supportano; niente
+X11 né librerie di ripiego per inseguire versioni vecchie.
+
+E il ciclo di vita, perché la scelta resti netta nel tempo:
+- una versione nuova di una distribuzione **entra** nella matrice quando ha i componenti minimi
+  (`fasi/17-l-installatore.md` §3.1) e passa il giro sulle VM;
+- una versione **esce** quando la distribuzione smette di aggiornarla: niente supporto oltre la vita che le
+  dà chi la fa.
+
+### 10.10 ✅ Il ritmo: una versione all'anno per le novità, la manutenzione quando serve; e l'aggiornamento automatico
+
+Parole dell'utente (30 set 2026): *«la mia intenzione è quella di aggiornare REMOTIX almeno una volta
+l'anno»*; e, visti i ritmi delle distribuzioni: *«bisognerà pensare per REMOTIX ad una funzione di
+auto-aggiornamento in base alla distro su cui è installata»*.
+
+- **Due binari**: la **versione annuale** (le novità, suite completa e giro intero sulle VM) e gli
+  **aggiornamenti di manutenzione** senza novità, quando servono: correzioni di sicurezza delle librerie che
+  REMOTIX porta dentro (§10.6), ricostruzioni per le distribuzioni a rilascio continuo (Arch, Tumbleweed:
+  ogni cambio di ffmpeg), e il **catalogo** firmato — che si aggiorna da solo, senza un REMOTIX nuovo, e fa
+  entrare le versioni nuove delle distribuzioni a metà anno.
+- **L'aggiornamento automatico passa dal gestore di pacchetti della distribuzione**, alimentato dai nostri
+  archivi firmati (T8): ⛔ REMOTIX non scarica né sostituisce da sé il proprio binario (due verità su che cosa
+  è installato, e un bersaglio). Un timer di REMOTIX controlla ogni giorno l'archivio e il catalogo; ogni
+  aggiornamento passa dal percorso che non chiude i desktop (T7).
+- 🔸 **D14, aperta**: che cosa si applica da solo — proposta: sicurezza e ricostruzioni automatiche, la versione
+  annuale su scelta dell'amministratore; alternativa: solo avviso.
+
+### 10.11 ✅ Flatpak e AppImage accantonati: pacchetti nativi dal nostro archivio
+
+Parola dell'utente (30 set 2026): *«accantoniamo l'idea flatpak/appimage. Continuiamo sulla strada originale,
+alla fine mi sembra quella più semplice e coerente»*. ⇒ REMOTIX si distribuisce in **pacchetti nativi** negli
+**archivi firmati di REMOTIX** (tutto il materiale da noi, installato dal gestore di pacchetti della
+distribuzione); l'installatore dirige, non copia file. Uno studio su Flatpak/AppImage era partito ed è stato
+fermato. ⚠ Resta da guardare, alla decisione D9 (distribuzioni immutabili), la strada di systemd fatta per i
+servizi di sistema (`systemd-sysext`, portable services).
+
+### 10.12 ✅ L'installatore è l'unica via per installare REMOTIX
+
+Parola dell'utente (30 set 2026): *«l'unica via per installare REMOTIX è l'installer»*. Siccome un pacchetto
+in un archivio si può sempre installare a mano, la regola si fa valere **per costruzione**:
+1. **il pacchetto porta solo i pezzi, inerti**: programma, pagina, file di configurazione; non accende il
+   servizio, non tocca gruppi né firewall; le tre cinture ci stanno **spente** (in `/usr/share/remotix/`), le
+   attiva il motore col consenso (D4);
+2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
+   **suo** registro: una sola traccia, una disinstallazione più pulita;
+3. **REMOTIX non parte** se l'installazione non è stata completata e certificata dall'installatore
+   (operazione CONFERMATA), e lo dice con un codice (`RX-INST-001`) e il rimedio;
+4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
+   l'installatore, che verifica e riaccende senza chiudere i desktop.
+
 ---
 
 ## Come si tiene questo documento

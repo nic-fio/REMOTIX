@@ -1,0 +1,96 @@
+#!/bin/sh
+# remotix.postinst — dopo che i file sono al loro posto (fasi/17 §6.4).
+#
+# ⭐ LE PERSONE NEI GRUPPI DELLA SCHEDA (DECISIONI.md §7.21, decisione dell'utente
+#    del 20 set 2026): senza, la sessione di chi entra da remoto nasce CIECA
+#    (niente seat ⇒ niente ACL di logind sul nodo; fasi/10 §7.4).
+#    · i gruppi si LEGGONO dai nodi /dev/dri (gid del nodo), non si inchiodano;
+#    · le persone sono gli uid fra UID_MIN e UID_MAX di login.defs, con una shell
+#      vera (niente account di servizio);
+#    · ⛔ OGNI coppia (persona, gruppo) si annota in /var/lib/remotix/modifiche.log
+#      con la sua ORIGINE (§6.6.4): DIRETTA se l'ha messa il pacchetto,
+#      PREESISTENTE se c'era gia'.  Il purge toglie SOLO le DIRETTE (R6, R33).
+#    · ⛔ Una coppia gia' annotata non si tocca e non si riscrive: la seconda
+#      installazione non scrive niente (R5).
+# ⚠ Chi viene creato DOPO lo iscrive il prodotto alla prima connessione
+#   (figlio.c, iscrivi_ai_gruppi_della_scheda) — e oggi NON lo annota qui:
+#   il purge non lo sa togliere.  Annotato in fasi/17 §13.1 come cura del codice.
+# ⚠ Il pacchetto non rifiuta di installarsi se manca la scheda (§6.5 punto 1):
+#   lo dice e basta.
+set -e
+
+REGISTRO=/var/lib/remotix/modifiche.log
+
+gruppi_della_scheda() {
+	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
+		[ -e "$n" ] || continue
+		g=$(stat -c %g "$n" 2>/dev/null) || continue
+		[ "$g" = 0 ] && continue
+		getent group "$g" | cut -d: -f1
+	done | sort -u
+}
+
+login_defs() {  # login_defs <chiave> <predefinito>
+	v=""
+	for f in /etc/login.defs /usr/etc/login.defs; do
+		[ -r "$f" ] || continue
+		v=$(awk -v k="$1" '$1 == k { print $2; exit }' "$f")
+		[ -n "$v" ] && break
+	done
+	echo "${v:-$2}"
+}
+
+persone() {
+	getent passwd | awk -F: -v a="$(login_defs UID_MIN 1000)" -v b="$(login_defs UID_MAX 60000)" \
+		'$3 >= a && $3 <= b && $7 !~ /(nologin|false)$/ { print $1 }'
+}
+
+annotata() {  # annotata <persona> <gruppo>
+	[ -f "$REGISTRO" ] && awk -v u="$1" -v g="$2" \
+		'$3 == "gruppo" && $4 == u && $5 == g { t = 1 } END { exit !t }' "$REGISTRO"
+}
+
+iscrivi() {
+	GRUPPI=$(gruppi_della_scheda)
+	if [ -z "$GRUPPI" ]; then
+		echo "remotix: ⚠ nessun nodo /dev/dri su questa macchina: nessuno e' stato" \
+		     "iscritto ai gruppi della scheda (la codifica sara' solo software)."
+		return 0
+	fi
+	install -d -m 0700 /var/lib/remotix
+	for p in $(persone); do
+		for g in $GRUPPI; do
+			annotata "$p" "$g" && continue
+			if id -nG "$p" | tr ' ' '\n' | grep -qxF "$g"; then
+				origine=PREESISTENTE
+			else
+				gpasswd -a "$p" "$g" >/dev/null
+				origine=DIRETTA
+				echo "remotix: $p aggiunto al gruppo $g (la scheda grafica)"
+			fi
+			printf '%s %s gruppo %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+				"$origine" "$p" "$g" >>"$REGISTRO"
+		done
+	done
+	chmod 0600 "$REGISTRO" 2>/dev/null || true
+}
+
+case "$1" in
+configure)
+	iscrivi
+	# Le cinture di logind (tasti): logind le rilegge solo se glielo si dice.
+	if [ -d /run/systemd/system ]; then
+		systemctl reload systemd-logind >/dev/null 2>&1 || true
+	fi
+	;;
+abort-upgrade|abort-remove|abort-deconfigure)
+	;;
+*)
+	echo "postinst chiamato con un argomento sconosciuto: $1" >&2
+	exit 1
+	;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -48,6 +48,7 @@ ogni suo pezzo è noto e altri lo hanno già risolto.
 | **le prove in MACCHINE VIRTUALI, non nelle scatole** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | una VM ha kernel, SELinux, firewall e avvio **della distribuzione**; una scatola usa il kernel del server (Debian) e direbbe «tutto bene» dove la macchina vera rifiuterebbe |
 | **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, rafforzata su sua richiesta (TRUST, tre esiti per desktop, il piano come documento, l'accensione fra 7a e 7b, la RIPRESA), §6.0 |
 | **TUI e GUI irrinunciabili** | *«su TUI e GUI dico che è un requisito irrinunciabile»* | §6.6.1, D12 |
+| **le dipendenze che mancano le porta REMOTIX** | *«se ci sono pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*; eccezione i codec brevettati, confine i desktop | `DECISIONI.md` §10.6; D2 chiusa |
 | **una VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | il cliente ha di solito **un** desktop: con quattro insieme, un pezzo dimenticato per XFCE arriverebbe lo stesso trascinato da KDE, e la prova direbbe verde |
 
 ---
@@ -60,7 +61,7 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 |---|---|---|---|---|---|
 | **Debian 13** (riferimento) | ✅ | ✅ | ✅ | ✅ | la base di oggi |
 | **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); il GNOME «vanilla» va installato (§4.6) |
-| Ubuntu 24.04 LTS | 🔸 | ⛔ | ⛔ | ⛔ | KDE 5.27 (manca l'EIS di KWin ≥ 6.1), XFCE 4.18 e LXQt 1.4 senza Wayland. GNOME 46 sì, ma con OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 — **decisione D7** |
+| Ubuntu 24.04 LTS | ⛔ | ⛔ | ⛔ | ⛔ | **fuori** (D7, decisione dell'utente del 29 set): si parte dalla 26.04. KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland; GNOME 46 sì, ma chiederebbe di portare dentro OpenSSL 3.5 e due adattamenti per ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22 (Mint 23 sarà «compatibile, non certificata») |
 | **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 da RPM Fusion (§4.2) |
 | Fedora 43 | · | · | · | · | **analizzata, non certificata**: GNOME 49, esce di supporto a fine 2026; c'è la sua VM nuda per confronti |
 | **Alma 10** (certificata) · Rocky / RHEL 10 (compatibili, non certificate) | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
@@ -79,15 +80,64 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 - **Immutabili** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` in sola lettura, gruppi
   in `/usr/lib/group`, installazione con riavvio. Si rimandano a dopo la fase (§12, D9).
 
-⇒ **La matrice di certificazione: 27 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
-Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE), più Ubuntu 24.04 × GNOME (se D7
-dice sì). **Fedora 43 è analizzata ma fuori dalla matrice.**
+⇒ **La matrice di certificazione: 26 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
+Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE) = **26**. **Fedora 43 e Ubuntu 24.04 (D7) sono analizzate ma fuori
+dalla matrice.**
 
 ⚠ **Che cosa si certifica, e che cosa no.** Si certifica solo quel che gira nelle nostre VM: **Alma 10**,
 non «la famiglia RHEL 10». Rocky 10 e RHEL 10 si dichiarano **compatibili, non certificate**: stessa
 base di pacchetti, ma nessuno le ha provate. Lo stesso per Manjaro ed EndeavourOS rispetto ad Arch,
 e per Mint 23 rispetto a Ubuntu 26.04. Una derivata diventa certificata solo con la sua VM nella
 matrice.
+
+### 3.1 Le versioni supportate — per il manuale tecnico
+
+*Richiesta dell'utente (30 set 2026): «andrà documentato, anche nel manuale tecnico, da quali versioni gli
+SO sono supportati da REMOTIX». ⚠ La fonte unica è il **catalogo** del motore (§6.6.8): la tabella del
+manuale si **genera** dal catalogo a ogni rilascio, non si ricopia a mano. Questa è quella di oggi.*
+
+**Le distribuzioni**
+
+| distribuzione | versione minima | stato | desktop | condizioni |
+|---|---|---|---|---|
+| Debian | **13** (Trixie) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| Ubuntu | **26.04 LTS** | certificata | GNOME, KDE, XFCE, LXQt | `gnome-session` per GNOME (D8) |
+| Fedora | **44** | certificata | GNOME, KDE, XFCE, LXQt | H.264: RPM Fusion (D5); PAM senza `pam_selinux` fino a T6 |
+| AlmaLinux | **10.1** (OpenSSL 3.5) | certificata | GNOME, KDE | EPEL e CRB; H.264: RPM Fusion; niente XFCE/LXQt |
+| Arch Linux | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| openSUSE Tumbleweed | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; `breeze6-wallpapers` (KDE) |
+| openSUSE Leap | **16.0** | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; un carattere scalabile per LXQt (`google-droid-fonts`) |
+| Rocky Linux, RHEL | 10.1 | compatibile, non certificata | GNOME, KDE | come Alma |
+| Manjaro, EndeavourOS | rolling | compatibile, non certificata | come Arch | Manjaro è indietro di qualche settimana |
+| Linux Mint | **23** (base 26.04) | compatibile, non certificata | quelli di Ubuntu (non Cinnamon) | come Ubuntu |
+
+**Il principio** (`DECISIONI.md` §10.9): prodotto nuovo, tecnologie di nuova generazione; una versione
+**entra** quando ha i componenti minimi e passa il giro sulle VM, **esce** quando la distribuzione smette di
+aggiornarla.
+
+**Fuori, e perché**: Debian 12 e RHEL 9 (base troppo vecchia: mutter 43/GNOME 40, niente libei, niente
+labwc); Ubuntu 24.04 e Mint 22 (D7); Fedora 43 (fuori supporto a fine 2026); openSUSE Leap 15.6 (fine vita);
+SLES 16 (solo GNOME, niente Packman: si rivede su richiesta); distribuzioni senza systemd; immutabili (D9).
+
+**Le versioni minime dei componenti** (per chi usa una distribuzione non in elenco; `[L]` dal codice e dalle
+misure della fase):
+
+| componente | minimo | perché |
+|---|---|---|
+| nucleo Linux | quello della distribuzione certificata più vecchia (6.12) | driver i915/xe e amdgpu, DMA-BUF |
+| systemd / logind | con `systemctl --user` e sessioni `Remote=yes` | le sessioni per utente |
+| OpenSSL | **3.5** | l'API QUIC del ponte `ngtcp2_crypto_ossl` |
+| ngtcp2 / nghttp3 | 1.25.0 / 1.18.0 | dentro il binario (`DECISIONI.md` §10.6) |
+| libavcodec (ffmpeg) | **61.13.100** (ffmpeg 7.1) | `avcodec_get_supported_config` |
+| libei | 1.3 | `ei_disconnect` |
+| PipeWire | 0.3.48 | la cattura di GNOME e KDE |
+| GNOME (mutter) | **46** (API `ConnectToEIS`, `--headless`); da 50 l'unità `@user` | `sessione.c` |
+| KDE Plasma (KWin) | **6.1** (`connectToEIS`) | `kwin.c` |
+| XFCE | **4.20** (Wayland) | la sessione sotto labwc |
+| LXQt | **2.0** (Wayland) | la sessione sotto labwc |
+| labwc / wlroots | labwc 0.8 con `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
+| un carattere scalabile | qualunque (DejaVu, Noto, Droid…) | senza, labwc muore (labwc #2525) |
+| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD); NVIDIA proprietaria no | la codifica sulla scheda; altrimenti il ripiego software |
 
 ---
 
@@ -458,6 +508,12 @@ fuori dai percorsi di sistema.
 | SELinux | sottopacchetto `remotix-selinux`, **solo se** le prove dicono che serve (prima si prova senza) |
 | ⛔ **mai** | utenti di prova, `sudoers.d` dei banchi, `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d` |
 
+⭐ **L'installatore è l'unica via** (`DECISIONI.md` §10.12): il pacchetto porta i pezzi **inerti** — niente
+servizio acceso, niente gruppi, niente firewall, le cinture spente in `/usr/share/remotix/`; il motore li
+monta col consenso e li registra; il servizio non parte senza un'installazione CONFERMATA (`RX-INST-001`);
+un aggiornamento del pacchetto richiama il motore. Quel che segue va letto così: lo fa **il motore**, non
+gli script del pacchetto.
+
 Dopo l'installazione: le persone vengono iscritte ai gruppi della scheda (`DECISIONI.md` §7.21) **e
 lo si annota** (chi c'era già, chi l'ha messo REMOTIX), o la disinstallazione non sa che cosa togliere.
 
@@ -696,6 +752,7 @@ E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo c
 | `C-LIMITE` | una funzione manca | niente audio, una misura dello schermo non raggiungibile |
 | `C-HARDWARE` | un requisito della scheda | NVIDIA col driver proprietario |
 | `C-AMMINISTRATORE` | serve un passo a mano | aprire la porta sul router |
+| `C-DESKTOP` | il desktop non c'è (o non è supportato) e l'installatore lo aggiunge dagli archivi della distribuzione | Ubuntu Server, un'immagine cloud, una macchina con solo Cinnamon |
 
 ⭐ Le condizioni **non spariscono dopo il piano**: stanno nel certificato, in `remotix verifica` e in
 `remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
@@ -791,7 +848,7 @@ utente con inoltro delle porte, disco come sovrapposizione sull'immagine ufficia
 - `[M]` 29 set: **tutte e nove le distribuzioni partono** e rispondono a ssh in 3-39 s; SELinux
   Enforcing su Fedora e Alma.
 - ⚠ Sul server QEMU va reinstallato dopo ogni riavvio (il sistema è in memoria): è nella ricetta.
-- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0).
+- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0); ubuntu2404-gnome resta per confronto, fuori dalla matrice (D7).
 - **Quante VM insieme: 4** (decisione dell'utente: *«se il sistema regge passiamo da 4 a 8; se non regge
   torniamo a 4, così ci teniamo un po' di margine»*). `[M]` `17-carico.sh`, 8 VM × 10 min, ognuna con la
   schermata d'accesso, una codifica software Full HD 30 fps e 2,5 GB occupati: **8 × 6 GB e 8 × 4 GB non
@@ -838,7 +895,7 @@ Su ogni macchina, automatico:
 
 - **giro corto**, a ogni modifica dell'installatore: una macchina per famiglia (debian13, ubuntu2604,
   fedora44, arch, tumbleweed) — circa 20 minuti;
-- **giro intero**, prima di dichiarare pronta una versione: tutte le 27 — circa 2 ore, tre alla volta,
+- **giro intero**, prima di dichiarare pronta una versione: tutte le 26 — circa 2 ore, tre alla volta,
   anche di notte.
 
 ### 7.5 Le due cose che la VM non prova
@@ -895,6 +952,9 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R35 | lo stato «a condizioni» non sparisce | installazione su Fedora senza RPM Fusion (ripiego software); poi `remotix verifica` e il certificato | la condizione non scritta, o scritta solo nel piano |
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
+| R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
+| R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
+| R40 | ⭐ senza installatore REMOTIX non si installa | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo; poi `systemctl start remotix` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; REMOTIX che parte senza dire `RX-INST-001` |
 
 ---
 
@@ -903,16 +963,16 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | tappa | che cosa | produce | stato |
 |---|---|---|---|
 | **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` e `iso` | ✅ 29 set: 27 «cliente» + 6 «iso» (differenze in `banchi/17-distro/iso-differenze.md`); 4 VM insieme |
-| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | ✅ quasi: compila 7/7; gira 6 famiglie su 7 col binario del prodotto (§11.1) |
+| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | ✅ 30 set: compila 7/7; gira 7 famiglie su 7 col binario del prodotto, con le condizioni di §11.1 |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | ✅ 29 set: nessun desktop muore; cura leggera (§5.2) |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
 | **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
 | **T6** | PAM per famiglia, SELinux, firewall | R19, R20 | |
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
-| **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
+| **T8** | depositi firmati, canali, ritorno indietro, SBOM; l'aggiornamento automatico (timer, catalogo, D14) | R11, R17, R18, R24 | |
 | **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
-| **T10** | il giro intero sulle 27 macchine, e la chiusura | tutti verdi | |
+| **T10** | il giro intero sulle 26 macchine della matrice, e la chiusura | tutti verdi | |
 
 Ordine delle distribuzioni dentro ogni tappa: prima quelle che rendono di più con meno (**Debian 13,
 Ubuntu 26.04**), poi **Fedora e Arch**, poi **openSUSE** (la più scomoda per H.264) e **Alma**.
@@ -930,18 +990,19 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | | la domanda | quando | la proposta |
 |---|---|---|---|
 | **D1** | ~~Le sessioni aspettano il server nuovo invece di morire con lui?~~ ⭐ **Superata dalla misura di T2**: i desktop sopravvivono già. Resta una domanda più piccola: il figlio muore col padre (per scelta) — va bene così, visto che il desktop resta e il padre nuovo lo ritrova? | T7 | sì: il desktop è la cosa che conta, il figlio si rifà al riattacco |
-| **D2** | ngtcp2 e nghttp3 **dentro** il binario, con gli aggiornamenti di sicurezza a carico nostro? | T3 | sì: quasi nessuna distribuzione ha la 1.25 |
+| **D2** | ✅ **CHIUSA il 29 set**: sì, ngtcp2 e nghttp3 dentro — dalla regola generale dell'utente (`DECISIONI.md` §10.6): *quel che manca o è troppo vecchio lo porta REMOTIX*, salvo i codec brevettati (archivio esterno col consenso) e i desktop (fuori matrice) | — | — |
 | **D3** | La **politica contro i tentativi**: che cosa si vuole — quanti errori, per conto e per indirizzo, blocco o rallentamento, vale anche davanti alla macchina o solo da remoto, chi sblocca e come, che cosa si registra. Da lì si decide se la pila di REMOTIX tiene il `pam_faillock` della distribuzione | T6, con una proposta scritta di minacce e difese | da remoto un blocco per conto permette a chiunque di chiudere fuori il proprietario; proposta: rallentamento per conto + ban per indirizzo in REMOTIX, niente blocco del conto, tutto nel registro |
 | **D4** | Le tre cinture (la macchina non si spegne, non si sospende, i tasti non spengono) sulle macchine **degli altri**: sempre, o scelta dell'amministratore all'installazione? | T3 | predefinite, dichiarate nel benvenuto, disattivabili |
 | **D5** | RPM Fusion (Fedora) e Packman (openSUSE): l'installatore li **aggiunge chiedendo il consenso**, o si limita a **dire** il comando? | T4 | chiede il consenso, mai in silenzio; senza consenso REMOTIX si installa e il benvenuto dice che la codifica sulla scheda manca |
 | **D6** | Il firewall: l'installatore **apre** la porta 7447, o la definisce e dice il comando? | T4 | la apre chiedendo, come D5 |
-| **D7** | **Ubuntu 24.04** (LTS fino al 2029, e Mint 22) solo con GNOME: si supporta? Costa OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 | T1 | sì, solo GNOME, dichiarato |
+| **D7** | ✅ **CHIUSA il 29 set: Ubuntu 24.04 fuori**, si parte dalla 26.04 (parola dell'utente: *«partiamo dalla 26.04»*) | — | — |
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
-| **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo |
+| **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo; da guardare allora `systemd-sysext` e i portable services (`DECISIONI.md` §10.11) |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |
+| **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta |
 
 **Le scelte di chi installa: quasi nessuna** (indicazione dell'utente, 29 set: *«non riesco ad immaginare
 grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamente la porta»*):
@@ -951,6 +1012,22 @@ grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamen
 - ⛔ tutto il resto ha un valore predefinito e **non si chiede**: chi entra (gli utenti della macchina,
   root escluso), il certificato (generato), le tre cinture (attive, dette nel benvenuto, D4), i gruppi
   della scheda. Chi vuole altro lo cambia dopo in `/etc/remotix/remotix.conf.d/`.
+
+**Se sulla macchina non c'è un desktop** (proposta dell'utente, 29 set 2026: *«se REMOTIX non trova nessun
+desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si installa»*):
+- PREFLIGHT lo rileva; nella schermata delle scelte compare **una domanda in più, solo in quel caso**:
+  «su questa macchina non c'è un desktop: vuoi installarne uno?», con i soli desktop che il catalogo dà per
+  buoni su quella distribuzione (Alma: GNOME e KDE), fra cui **chi installa sceglie quale** (parola dell'utente); uno è **già selezionato**, quello di riferimento della distribuzione — GNOME su Debian, Ubuntu, Fedora, Alma; KDE su openSUSE e Arch — ed è anche quello che si installa senza domande se il file di risposte non dice altro. **Sì** ⇒ l'installazione del desktop entra nel piano
+  come azione dichiarata, col suo peso (pacchetti, GB); **no** ⇒ REMOTIX non si installa (BLOCCATA,
+  `RX-DESKTOP-001`, col perché e il rimedio);
+- lo stesso se c'è **solo un desktop non supportato** (Cinnamon, MATE, i3…): quello esistente non si tocca, il
+  nuovo si aggiunge accanto;
+- il desktop viene **dagli archivi della distribuzione** (il confine di `DECISIONI.md` §10.6 resta: REMOTIX
+  non se lo porta dietro), e si installa **senza cambiare come parte la macchina**: niente schermata di
+  accesso locale né avvio in grafica — i desktop di REMOTIX nascono senza schermo, e un server resta un
+  server davanti al monitor;
+- è un'azione **AL_MEGLIO** (§6.6.4): toglierla non rende la macchina identica, e il piano lo dice prima del
+  consenso.
 
 ⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
 il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.
@@ -1016,10 +1093,29 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
   ripieghi pixman); **VM: desktop nel browser su debian13-gnome, ubuntu2604-kde, fedora44-gnome, alma10-kde,
   arch-xfce, tumbleweed-kde** (con le condizioni: RPM Fusion e PAM senza `pam_selinux` su Fedora/Alma, 0
   rifiuti SELinux in enforcing; Packman e `breeze6-wallpapers` su Tumbleweed; su Arch il gruppo xfce4 non
-  porta ffmpeg: dipendenza per T3). **leap16-lxqt FAIL**: labwc 0.8.1 di Leap muore in pixman
-  (`buffer_adopt_cairo_surface: Assertion … CAIRO_FORMAT_ARGB32`) anche lanciato a mano senza REMOTIX
-  `[?]` (con XFCE sulla stessa Leap passava). Da guardare: alcuni primi fotogrammi wlroots «NERO» su XFCE/LXQt
-  nelle scatole, senza rossi. Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  porta ffmpeg: dipendenza per T3). Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  - **leap16-lxqt: mancano i caratteri.** `[M]` 29 set sera: la VM ha **solo caratteri bitmap** (PCF,
+    `xorg-x11-fonts-core`; `fc-match sans` = «Misc Fixed»). Pango 1.56 non li sa misurare: l'altezza del
+    titolo esce **1 398 724 px**, `create_corners()` chiede a cairo una superficie 9×1 398 724, cairo
+    rifiuta (`_cairo_surface_nil_invalid_size`) e l'`assert` di `buffer_adopt_cairo_surface` (buffer.c:90)
+    abbatte labwc (gdb con i simboli: `main` → `theme_init` → `create_corners` → `rounded_rect` →
+    `buffer_create_cairo`). Non è pixman né LXQt: labwc nudo, senza configurazione, muore uguale. Il
+    carattere lo porterebbe il pattern `lxqt` (`google-droid-fonts`, **raccomandato**), perso con
+    `solver.onlyRequires` dell'immagine Minimal-VM — la stessa trappola dello sfondo di Tumbleweed; il
+    pattern `xfce` porta i caratteri per altra via, e XFCE passava. È il difetto noto labwc#2525 (chiuso
+    dall'autore «mancava un carattere», **nessuna cura**: nel ramo principale del 26 set 2026 l'`assert`
+    c'è ancora). Con `google-droid-fonts` (+ Packman per libx265, (C)): **PASS** col binario del prodotto,
+    0 SIGABRT, labwc in pixman dichiarato, desktop a 0,6 s. ⇒ **T3**: l'installatore esige un carattere
+    scalabile (su openSUSE `google-droid-fonts`, `C-COMPONENTE`); REMOTIX da solo non lo può evitare —
+    senza un carattere vettoriale non c'è niente da indicare a labwc. `[?]` proposta, non fatta: una
+    riga «⛔ nessun carattere scalabile: labwc morirà» prima dell'avvio (fontconfig, `FC_OUTLINE`).
+  - **Il primo fotogramma wlroots «NERO» nelle scatole non è nuovo e non è un guasto.** `[M]` c'era già
+    in fase 16 (27 set, binario 45d048c8, `/media/REMOTIX/misure/fase16/intel-*/livello-*/server.log`):
+    XFCE 107 palchi su 367, LXQt 150 su 278, e uguale sulla Radeon; 0 su GNOME/KDE (passano da PipeWire).
+    Nella chiusura di T1: XFCE 12 su 14, LXQt 3 su 14 (le «24 righe» sono ognuna doppia, journal +
+    registro della sessione). È il primo fotogramma preso alla nascita di labwc, prima che sfondo e
+    pannello siano dipinti; le due cure non toccano la strada wlroots sull'Intel (0 ripieghi). Proposta
+    non fatta: guardare il primo fotogramma dopo ~1 s, perché la riga segnali solo un nero che dura.
 - **Stato ISO** (T0): 6 macchine su 6; le differenze che contano per l'installatore: `render` non c'è mai;
   Fedora Workstation apre 1025-65535, **Alma e Tumbleweed hanno la 7447 chiusa**; Tumbleweed con accesso
   automatico, btrfs e snapper (fotografie di sistema già pronte, §6.6.4), raccomandati installati; Ubuntu
@@ -1065,6 +1161,8 @@ installata sì/no.*
 | 192d482 | `sessione.c` `scheda_sa_disegnare()`: prima di dare il nodo a labwc (XFCE, LXQt) si crea un buffer di prova con `gbm` — XRGB8888 256×256, usi `SCANOUT\|RENDERING` e poi solo `RENDERING`, gli stessi con cui ripiega l'allocatore di wlroots. Se nessuno dei due nasce: `WLR_RENDERER=pixman`, niente `WLR_RENDER_DRM_DEVICE`, e una riga «RIPIEGO DICHIARATO» col motivo; se nasce, tutto come prima | macchina senza 3D (VM `virtio_gpu`, §11.1 D): il nodo si apre ma labwc non crea il buffer (`gbm_bo_create failed`) ⇒ tela nera. Criterio generico (si chiede alla macchina), nessuna eccezione per distribuzione o desktop | `[M]` 29 set: compila Leap 16 e Debian 13, zero avvisi. Sonda da sola (`gbm`): Intel del portatile e del server (i915) ⇒ «sì» con tutt'e due gli usi; VM Leap 16 ⇒ «no», `Permission denied`. Leap 16 XFCE installata a mano (T1c, + Packman per libx264/x265, solo diagnosi), Chrome vero: **PASS** col binario di diagnosi e **PASS col binario del prodotto**, senza impostazioni a mano; labwc con `WLR_RENDERER=pixman` nel suo ambiente. ⚠ Lo sfondo di xfdesktop resta 1280×720 (gara di nascita, §11.1 D) | no |
 | 6bede6a | `cattura.c`/`cattura.h`/`figlio.c`: il **ripiego sulla memoria dopo il rifiuto della scheda**. `cattura_formato_rifiutato()` = flusso in errore **e** nessun formato mai concordato (due fatti, non il testo di PipeWire); `cattura_avvia()` lo dice con `G_IO_ERROR_NOT_SUPPORTED` se arriva prima che torni. In `prendi_il_palco()` `ripiega_se_rifiutata()` passa la strada alla MEMORIA, scrive «la strada della SCHEDA e' stata RIFIUTATA … RIPIEGO DICHIARATO», segna `scheda_mai_piu` e riapre la sola cattura sullo stesso palco. `cattura_prendi()` esce subito da un flusso in errore invece di aspettare 5 s. Niente offerta doppia (la memoria accanto alla scheda lascerebbe scegliere il compositore) e niente ripiego sul silenzio (un compositore lento su scheda vera darebbe lo stesso silenzio); nessuna eccezione per compositore | T1c: senza 3D (VM `virtio-vga` senza virgl, server senza scheda) il compositore non ha DMA-BUF, la negoziazione muore con «no more input formats» e il ripiego di `scheda_da_abbandonare` vive dentro un fotogramma che non arriva ⇒ «Ammesso» e desktop mai; il figlio rimontava sulla scheda ogni 5 s per sempre | `[M]` 29 set, binari di `costruisci-tutti.sh`, Chrome vero: **VM** debian13-gnome PASS (desktop a 4,5 s; prima del ripiego rapido 10 s), arch-kde PASS, ubuntu2604-gnome PASS (col binario vecchio 0 su 3); il rifiuto e il ripiego stanno a **7 ms** dalla cattura avviata. **Scatole Intel** (binario debian13 `3e026237`, PAM nuovo + `utenti-negati`), giro `17-cura-copia-zero` f001 f003 f004 f011 f016 f018 f018b × 4 desktop × Chrome e Firefox: **208 PASS / 0 FAIL / 0 BLOCKED** (25 min); nel registro 14 palchi per desktop tutti «SCHEDA (DMA-BUF, copia zero)», 0 «MEMORIA», 0 «RIFIUTATA»; GNOME e KDE 14/14 «i fotogrammi arrivano come DMA-BUF», XFCE e LXQt 28 «PRIMO fotogramma della SCHEDA» e 0 ripieghi wlroots | no (scatole tornate a `4fb3287d` e al PAM di prima) |
 | — | ⚠ **non fatto, annotato**: `figlio.c:4684` apre sempre `renderD128` per il codificatore: con due schede può prendere quella sbagliata; va scelto dal driver (§4.4). Fuori dalla T1a per mandato | — | — | — |
+| c95146c | **T3, linea B — il pacchetto `.deb`** (`packaging/debian/`, debhelper 13, `dh_installsystemd`): `/usr/libexec/remotix/remotix`, `/usr/share/remotix/{pagina.html,remotix.conf}`, `/etc/remotix/remotix.conf.d/` vuota; **conffile** `/etc/pam.d/remotix` (il PAM di Debian, `src/remotix.pam`) e `/etc/remotix/utenti-negati` (root); `remotix.service` da root (`KillMode=mixed`, `Restart=on-failure`, `--nome %H`, `--journal`, nessuna opzione di banco; certificato generato dal programma al primo avvio, `certificati.c:302`); il permesso di KWin `/usr/share/applications/org.kde.remotix.desktop` **identico byte per byte** a quello che scrive `kwin.c:606`; le tre cinture nei percorsi del **fornitore** (`/usr/share/polkit-1/rules.d/50-…`, `/usr/lib/systemd/{logind,sleep}.conf.d/`) — ⚠ **dipendono da D4, aperta**; `tmpfiles.d` (`/var/lib/remotix` 0700, `/run/remotix`); postinst: le persone (UID_MIN..UID_MAX, shell vera) nei gruppi LETTI dai nodi `/dev/dri`, ogni coppia annotata in `/var/lib/remotix/modifiche.log` come DIRETTA o PREESISTENTE, una coppia già annotata non si riscrive (R5); postrm purge: via **solo** le DIRETTE, poi `/var/lib/remotix`. **Dipendenze**: `dpkg-shlibdeps` + `libpam-systemd libpam-modules passwd systemd dbus-user-session` (usate a tempo di esecuzione, dpkg non le vede); **Recommends** `va-driver-all \| va-driver, labwc, wlr-randr, xwayland` e, solo su Ubuntu, `gnome-session \| plasma-workspace \| xfce4-session \| lxqt-session` (D8 aperta: la sessione vanilla solo se non c'è già un altro desktop). `Static-Built-Using: ngtcp2 (= 1.25.0), nghttp3 (= 1.18.0)` (D2 chiusa). `src/costruzione/costruisci-deb.sh`: copia dell'albero, `debian/changelog` con versione e data del commit (⇒ `SOURCE_DATE_EPOCH`), `dpkg-buildpackage -b` nel contenitore, lintian, controlli R4/R13/R14/R23 sul pacchetto FINITO; `Contenitore.debian13`/`.ubuntu2604` con uno strato di attrezzi `.deb` in coda | T3 (§6.1-§6.4): la ricetta nativa, dipendenze calcolate e non scritte a mano (`LEZIONI.md` §2.5-bis) | `[M]` 29 set, 313ccfc: **compila** Debian 13 e Ubuntu 26.04; **lintian 0 E / 0 W**, 1 informazione (`systemd-service-file-missing-documentation-key`), 3 sostituzioni motivate (`pagina.html` non è documentazione; `systemctl reload systemd-logind`, che `deb-systemd-invoke` non sa fare); **R13** 0 frasi della funzione di banco nel binario estratto dal `.deb`, 1 nel controllo positivo (`rcp.o` con `BANCO_ACCESO 1`), nessuna opzione di banco nell'unità; **R14** nessun file del banco; **R4** `ldd` 108 (Debian) e 111 (Ubuntu) librerie, 0 mancanti, ngtcp2/nghttp3 non dinamiche; **R23** due costruzioni in due copie pulite ⇒ `.deb` **identici** byte per byte (Debian `a907d059…`, Ubuntu `966fcd73…`). Prove in VM: vedi §13.2 | sì, nelle VM di prova (poi tolto) |
+| — | ⚠ **non fatto, annotato dalla T3** (tocca il C, fuori mandato): (1) `kwin.c:606` `kwin_scrivi_permesso()` deve smettere di **scrivere** `/usr/share/applications/org.kde.remotix.desktop` (è del pacchetto) e solo verificarlo — oggi non lo riscrive perché lo trova uguale; (2) `figlio.c:1525` `iscrivi_ai_gruppi_della_scheda()` iscrive alla prima connessione chi è nato dopo l'installazione ma **non lo annota** in `/var/lib/remotix/modifiche.log`: il purge non lo toglie; (3) con `--journal` sotto systemd **ogni riga compare due volte** nel journal (una da stderr, una strutturata): il programma dovrebbe tacere su stderr quando `JOURNAL_STREAM` è il suo stderr; (4) il certificato di §6.6.13 (`0-generato.pem`, `/etc/remotix/certificati.d/`) non c'è: il pacchetto si appoggia a quello di oggi (`pagina.pem`/`sessione.pem`, marca `.nostro`); (5) `/usr/bin/remotix` (verifica, stato…) e la configurazione vera sono di T4: oggi `remotix.conf` è un `EnvironmentFile` provvisorio | — | — | — |
 
 ### 13.2 L'impianto di prova (banchi, VM)
 
@@ -1076,6 +1174,7 @@ installata sì/no.*
 | (questo commit) | `src/costruzione/`: un `Contenitore.<bersaglio>` per debian13, ubuntu2604, ubuntu2404, fedora44, alma10 (EPEL+CRB), arch, tumbleweed, leap16 — dipendenze dal gestore di pacchetti della distribuzione, ngtcp2 1.25.0 e nghttp3 1.18.0 **statiche** (`quic-statiche.sh`, solo `.a` in `/usr/local/lib`, `LIBRARY_PATH`: il Makefile non cambia); `costruisci-tutti.sh` costruisce uno o tutti in una copia dell'albero e scrive per bersaglio binario, registri, versioni, `ldd` fatto nel contenitore. `src/Contenitore` resta com'era | §6.2 e §6.3: si compila per ogni distribuzione, niente `ld.so.conf.d` | `[M]` 29 set, sul portatile: **7 su 7 compilano**, `ldd` senza «not found» e senza ngtcp2/nghttp3. Ubuntu 24.04 si ferma a ngtcp2 (OpenSSL 3.0.13 senza QUIC); una sonda senza il ramo OpenSSL mostra poi solo `codificatore.c:1419,1436` (ffmpeg 6.1) e `ei_disconnect` assente (`input.c:1218`, libei 1.2.1) — D7. Versioni: OpenSSL 3.5.0 (Leap) … 3.6.4 (Arch); libavcodec 61 (Debian, Alma, Leap), 62 (Ubuntu, Fedora), 63 (Arch, TW); libei 1.3.901…1.6.0; PipeWire 1.4.2…1.6.9; glib 2.80…2.88. Arch e TW hanno già ngtcp2 1.25 con crypto_ossl: usabile, non usata per uniformità | no (solo portatile) |
 | (questo commit) | **T1c**: `banchi/17-distro/17-t1c-installa.sh` (REMOTIX a mano in una VM, famiglia per famiglia: dipendenze, PAM, `utenti-negati`, polkit/logind/sleep, utente `prova`, unità transitoria sulla 7447), `17-t1c-browser.py` (Chrome vero con le guide di `12-client-veri.py`: apri → entra → primo fotogramma col giudice dei pixel), `17-t1c-guarda.sh` (labwc suo sull'Intel, `127.0.0.1` perché l'inoltro UDP di QEMU è solo IPv4) | far girare il prodotto portato e vederlo da un browser vero, prima dell'installatore | `[M]` 29 set, 7 VM «cliente», Full HD. **Col binario del prodotto: 0 su 7.** Tutte entrano («Ammesso»), nessuna dipinge: (1) nella VM `virtio_gpu` senza 3D la negoziazione PipeWire muore con «no more input formats» (strada della SCHEDA con modificatore obbligatorio, `cattura.c:1487`; il ripiego sulla memoria scatta solo dopo un fotogramma, `figlio.c:5362`) — Debian, Ubuntu, Arch, TW; (2) Fedora e Alma: figlio uscito con 37, AVC `{ transition } unconfined_service_t → unconfined_t` da `pam_selinux open`; (3) Fedora/Alma/openSUSE senza depositi di terzi: «libx265 non c'è in questa libavcodec: non se ne prende un altro» (Chrome chiede HEVC). **Col binario di diagnosi** (`-DCOPIA_ZERO=0`, non il prodotto): PASS Debian 13, Ubuntu 26.04 (GNOME 50, `@user` con `--headless`), Arch KDE; Fedora 44 e Alma 10 PASS solo con `pam_selinux` tolto dal PAM + `libavcodec-freeworld` (RPM Fusion); TW KDE (con Packman) e Leap XFCE BLOCKED dalla VM: KWin e labwc non allocano (`DRM_IOCTL_MODE_CREATE_DUMB: Permission denied` sul nodo virtio) ⇒ tela nera. `provisiona.sh` fuori da Debian installa `remotix.pam` (Debian) e la sua verifica dice lo stesso «⭐ a posto» | copiati sul server (`/media/REMOTIX/vm17/t1c/`) |
 | (questo commit) | **Stato ISO**: `17-vm.sh da-iso <macchina>-iso` (ISO ufficiale scaricata e verificata con la sha256 del sito, kernel e initrd presi dall'ISO, risposte servite in HTTP su 10.0.2.2, disco NUOVO, UEFI con NVRAM propria, foto «iso» con la NVRAM), `impronta [foto]` (firewall, SELinux, display manager, rete, pacchetti; da una foto in sola lettura, porte k=6), `schermo` (schermata dal monitor, senza socat); risposte in `banchi/17-distro/iso-risposte/` (preseed, autoinstall, kickstart ×2, archinstall 4.4, AutoYaST); porte k=5 | §7.2: una immagine cloud con un desktop sopra non è la macchina di un cliente | `[M]` 29 set: **6 su 6 fatte** con la foto «iso» (ssh, sudo, graphical.target): Debian 10 min, Ubuntu 11, Fedora 7, Alma 7, Arch ~10, Tumbleweed 14. Contro cloud+DESKTOP (`impronta … cliente`): 7447 chiusa da firewalld su Alma e **Tumbleweed ISO** (la cloud TW non ha firewall), aperta su Fedora Workstation (1025-65535); `video` già dato dall'installatore Debian, `render` mai; rete NetworkManager su tutte le ISO (cloud Debian/Ubuntu/Arch: networkd); TW ISO con accesso automatico, snapper su btrfs, raccomandati (+1701 pacchetti) e root con la parola dell'utente; Alma ISO su LVM; Fedora ISO con `noopenh264` — tutto in `banchi/17-distro/iso-differenze.md` | copiata sul server |
+| (questo commit) | **T3, linea B — la prova del `.deb` in VM**: `banchi/17-distro/17-t3-prova.sh <macchina> <deb>` (foto «cliente» → persona `prova` già in `video` → impronta → `apt-get install ./…deb` e nient'altro → Chrome vero su `127.0.0.1` con `17-t1c-guarda.sh` → impronta → `--reinstall` → impronta → `purge` → impronta → `autoremove --purge` → impronta → spenta e tornata a «cliente»; ⛔ non spegne una macchina già accesa, si ferma a 4 VM) e `17-t3-impronta.sh` (file di `/etc` con sha256, di `/usr` con dimensione e data, gruppi, conti, unità, pacchetti, manuali, logind/sleep in vigore, nft) | R4, R5, R6 in piccolo, a livello pacchetto (senza motore) | `[M]` 29 set, `.deb` 313ccfc, sul server in `/media/REMOTIX/vm17/t3/deb/esiti/`. **debian13-gnome**: installa con 10 dipendenze in più (labwc, wlr-randr e 8 librerie di wlroots; `va-driver` e `xwayland` c'erano già), 0 aggiornate; `nicfio` messo in `video`+`render`, `prova` in `render` (DIRETTE), `prova` in `video` PREESISTENTE; servizio attivo, certificato generato (`DNS:rx-debian13-gnome`); `ldd` da `prova` con ambiente vuoto: 0 mancanti; **Chrome PASS** («Ammesso, sessione nuova, desktop gnome», immagine a 4,8 s). **ubuntu2604-kde**: 8 dipendenze in più, `gnome-session` **non** portata (`plasma-workspace` soddisfa l'alternativa); stessi gruppi; **Chrome PASS** («desktop kde»); il file di KWin del pacchetto **non** riscritto dal programma. **R5**: fra «dopo il browser» e «reinstallato» nessun file cambiato di contenuto; restano le date delle cartelle rifatte da dpkg, `mimeinfo.cache` rigenerata da un innesco (stessa dimensione), CUPS e il numero di sessione (estranei). **R6**, prima → dopo `purge`+`autoremove`: **nessuna differenza DIRETTA**: gruppi identici a prima (`prova` resta in `video`: R33), `/etc/remotix`, `/etc/pam.d/remotix`, `/var/lib/remotix`, unità, cinture e i 10/8 pacchetti spariti; **INDIRETTE** (da dichiarare): `/etc/group-` e `/etc/gshadow-` (le copie di riserva di `gpasswd`, con lo stato di mezzo), date delle cartelle di `/usr`, cache di icone e mime rigenerate; **estranee**: CUPS, `fwupd.conf` 644→640 (fwupd, a macchina ferma di REMOTIX). ⚠ Dopo il purge `prova` ha ancora il **desktop vivo** (`session-cN.scope`): sopravvive al servizio (§5.2) ma non lo raggiunge più nessuno — domanda per T5 | copiati sul server (`/media/REMOTIX/vm17/t3/deb/`) |
 
 ### 13.3 L'ambiente del server
 

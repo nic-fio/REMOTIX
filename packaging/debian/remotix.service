@@ -1,0 +1,39 @@
+# remotix.service — il server REMOTIX (fasi/17-l-installatore.md §6.4).
+#
+# ⛔ Gira da ROOT, e non e' una comodita': da root PAM verifica la parola di
+#    chiunque e il server scende all'uid di ogni utente per il suo figlio
+#    (provisiona.sh, «i tre requisiti del multi-tenant», 27 ago 2026).
+# ⭐ Il certificato: se in /var/lib/remotix/certificati non c'e', il programma lo
+#    genera da se' all'avvio (certificati_prepara(), certificati.c:302); se
+#    l'amministratore ci mette il suo (senza la marca «.nostro») si usa quello.
+# ⭐ Il nome nel certificato e' il nome della macchina (%H).  Chi entra con un
+#    indirizzo IP lo dichiara in /etc/remotix/remotix.conf.d/<qualcosa>.conf:
+#        REMOTIX_OPZIONI=--nome 192.168.1.10
+#    (l'ultimo --nome vince).  ⚠ Formato PROVVISORIO, variabili d'ambiente: la
+#    configurazione vera («predefiniti in /usr, scelte in /etc», §6.5 punto 7)
+#    e' del motore (T4).
+# ⛔ Nessuna opzione di banco (--rilievo, --comando-socket, --audio-prova,
+#    --parlantina, --sblocca): R13.
+[Unit]
+Description=REMOTIX, il desktop nel browser
+After=network.target systemd-logind.service
+Wants=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/usr/share/remotix/remotix.conf
+EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+WorkingDirectory=/
+ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPZIONI
+# ⭐ `mixed`: SIGTERM al solo padre, poi SIGKILL a quel che resta dell'unita'.
+#    I desktop stanno FUORI dall'unita' (setsid --fork) e sopravvivono
+#    all'arresto: misurato in T2 (fasi/17 §5.2), 10 prove su 10.
+KillMode=mixed
+# La priorita' del suono e del video (come le unita' dei banchi dalla fase 9).
+LimitRTPRIO=20
+LimitNICE=-11
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

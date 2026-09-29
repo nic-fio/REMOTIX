@@ -42,9 +42,9 @@ id prova" ;;
 impronta)
 	nome=${3:?nome}
 	# shellcheck disable=SC2086
-	scp -q $O -P "$PORTA_SSH" "$QUI/17-t3-impronta.sh" nicfio@localhost:/var/tmp/
-	VM 'sudo bash /var/tmp/17-t3-impronta.sh' >"$T3/$m/impronta-$nome.txt"
-	VM 'rm -f /var/tmp/17-t3-impronta.sh'
+	scp -q $O -P "$PORTA_SSH" "$QUI/17-t3-impronta-arch.sh" nicfio@localhost:/var/tmp/
+	VM 'sudo bash /var/tmp/17-t3-impronta-arch.sh' >"$T3/$m/impronta-$nome.txt"
+	VM 'rm -f /var/tmp/17-t3-impronta-arch.sh'
 	wc -l "$T3/$m/impronta-$nome.txt" ;;
 installa)
 	pkg=${3:?pacchetto}

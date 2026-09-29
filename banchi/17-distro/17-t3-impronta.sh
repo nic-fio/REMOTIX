@@ -1,47 +1,38 @@
 #!/bin/bash
+# 17-t3-impronta.sh — l'impronta di una VM «cliente» per R5 e R6 (fasi/17 §7.3, §8).
 #
-# 17-t3-impronta.sh — fase 17, T3: l'impronta di una macchina, per confrontare
-# prima dell'installazione e dopo la disinstallazione (R5, R6, R33).
+#   (dentro la VM, da root)  bash 17-t3-impronta.sh > impronta.txt
+#   di solito:  bash 17-vm.sh ssh <m> 'sudo bash -s' < 17-t3-impronta.sh > <nome>.txt
 #
-#   (DENTRO la VM, da root)   bash 17-t3-impronta.sh > impronta.txt
-#
-# Una riga per fatto, ordinata, confrontabile con `diff`:
-#   F <percorso> <modo> <utente> <gruppo> <sha256|dimensione>   file di /etc, /usr, /var/lib, /opt
-#   L <percorso> -> <destinazione>                              collegamenti
-#   D <percorso> <modo> <utente> <gruppo>                       cartelle
-#   G <gruppo>:<gid>:<membri>                                   /etc/group
-#   U <utente>:<uid>:<shell>                                    /etc/passwd
-#   S <unita'> <stato>                                          unita' di sistema
-#   P <pacchetto> <versione> <esplicito|dipendenza>             pacchetti
-#   H <percorso>                                                sotto /home (solo i nomi)
-#
-# ⚠ /etc e le cartelle di configurazione di systemd, polkit, PAM col contenuto
-#   (sha256); il resto di /usr con la sola dimensione: e' la differenza di file,
-#   non di byte, che conta per R6.  Fuori: le cartelle che cambiano da sole
-#   (cache di pacman, journal, i database di pacman li dice gia' P).
+# Una riga per fatto, ordinate, con la SEZIONE in testa: cosi' `diff` fra due
+# impronte dice che cosa e' cambiato e dove.  Sezioni:
+#   F  i file di /etc (sha256), /usr (dimensione e data: il contenuto lo fissa il
+#      pacchetto), /var/lib/remotix, /run/remotix, /var/lib/systemd/deb-systemd-*
+#   G  i gruppi e i loro membri · P  i conti · U  le unita' e il loro stato
+#   K  i pacchetti (versione, stato) · M  quelli installati a mano (apt-mark)
+#   C  la configurazione IN VIGORE di logind e sleep (non solo i file)
+#   W  firewall (nft)
+# ⚠ Fuori per scelta: /var/log, le cache di apt, /var/lib/dpkg (se ne guarda
+#   l'effetto nelle sezioni K e M), /etc/ld.so.cache (la rifa ldconfig).
 set -u
 export LC_ALL=C
-{
-	find /etc /usr /var/lib /opt -xdev \
-		\( -path /var/lib/pacman -o -path /var/lib/systemd/coredump -o -path /var/lib/systemd/timers \
-		   -o -path /var/lib/systemd/random-seed -o -path /var/lib/systemd/catalog -o -path /var/lib/NetworkManager \
-		   -o -path /var/lib/dhcpcd -o -path /var/lib/logrotate.status -o -path /var/lib/sddm \
-		   -o -path /var/lib/lightdm -o -path /var/lib/upower -o -path /var/lib/systemd/backlight \
-		   -o -path /etc/ld.so.cache -o -path /var/lib/systemd/ephemeral-trees -o -path /var/lib/cloud \
-		   -o -path /var/lib/private -o -path /var/lib/colord -o -path /var/lib/geoclue -o -path /var/lib/AccountsService \
-		   -o -path /etc/pacman.d/gnupg -o -path /usr/share/mime -o -path /usr/share/icons -o -path /usr/lib/modules \
-		\) -prune -o \
-		\( -type d -printf 'D %p %m %u %g\n' \) -o \
-		\( -type l -printf 'L %p -> %l\n' \) -o \
-		\( -type f \( -path '/etc/*' -o -path '/usr/lib/systemd/*' -o -path '/usr/share/polkit-1/*' \
-		   -o -path '/usr/lib/tmpfiles.d/*' -o -path '/usr/share/applications/*' -o -path '/var/lib/remotix/*' \) \
-		   -exec sh -c 'for f; do printf "F %s %s\n" "$(stat -c "%n %a %U %G" "$f")" "$(sha256sum <"$f" | cut -c1-16)"; done' _ {} + \) -o \
-		\( -type f -printf 'F %p %m %u %g %s\n' \)
-	getent group | awk -F: '{ print "G " $1 ":" $3 ":" $4 }'
-	getent passwd | awk -F: '{ print "U " $1 ":" $3 ":" $7 }'
-	systemctl list-unit-files --type=service,socket,timer,path --no-legend --no-pager \
-		| awk '{ print "S " $1 " " $2 }'
-	pacman -Qe | awk '{ print "P " $1 " " $2 " esplicito" }'
-	pacman -Qd | awk '{ print "P " $1 " " $2 " dipendenza" }'
-	find /home -xdev -printf 'H %p\n' 2>/dev/null
-} | sort
+
+find /etc -xdev \( -path /etc/ld.so.cache \) -prune -o -printf '%p\t%y\t%m\t%u\t%g\t%l\n' 2>/dev/null |
+while IFS=$'\t' read -r p y m u g l; do
+	if [ "$y" = f ]; then h=$(sha256sum "$p" 2>/dev/null | cut -c1-16); else h=$l; fi
+	printf 'F %s %s %s %s:%s %s\n' "$p" "$y" "$m" "$u" "$g" "$h"
+done
+find /usr -xdev -printf 'F %p %y %m %u:%g %s %TY%Tm%Td%TH%TM%TS %l\n' 2>/dev/null | sed 's/\.[0-9]* / /'
+for d in /var/lib/remotix /run/remotix /var/lib/systemd/deb-systemd-helper-enabled \
+         /var/lib/systemd/deb-systemd-user-helper-enabled /var/lib/systemd/deb-systemd-helper-masked; do
+	[ -e "$d" ] && find "$d" -printf 'F %p %y %m %u:%g %l\n'
+done
+getent group  | sort | sed 's/^/G /'
+getent passwd | sort | sed 's/^/P /'
+systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '{print "U", $1, $2}' | sort
+dpkg-query -W -f='K ${Package}:${Architecture} ${Version} ${db:Status-Abbrev}\n' | sort
+apt-mark showmanual 2>/dev/null | sort | sed 's/^/M /'
+systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -vE '^(#|$)' | sed 's/^/C logind /'
+systemd-analyze cat-config systemd/sleep.conf  2>/dev/null | grep -vE '^(#|$)' | sed 's/^/C sleep /'
+if command -v nft >/dev/null; then nft list ruleset 2>/dev/null | sed 's/^/W /'; fi
+true
