@@ -990,8 +990,19 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
   - **(C) nessun ripiego senza libx264/libx265**: senza depositi di terzi (Fedora, Alma, openSUSE) REMOTIX
     rifiuta di codificare, per scelta scritta nel codice, anche dove c'è openh264 o svt-av1; con RPM
     Fusion (`libavcodec-freeworld`) o Packman (`libavcodec63`) riparte. ⇒ pesa su D5;
-  - **(D)** KWin su Tumbleweed e labwc su Leap: tela nera, `DRM_IOCTL_MODE_CREATE_DUMB: Permission denied`
-    — classificata «limite della VM», `[?]` **in verifica**: potrebbe essere di piattaforma.
+  - **(D)** tela nera su Tumbleweed (KWin) e Leap (labwc) — la verifica a smentire ha trovato **due cause
+    diverse**, nessuna delle due quella scritta: il `CREATE_DUMB: Permission denied` è di Mesa sul nodo
+    `renderD128` (il nucleo lo rifiuta a tutti, root compreso) ed esce identico su Arch, dove va.
+    - **Tumbleweed: manca lo sfondo.** L'immagine *Minimal-VM* ha `solver.onlyRequires = true` ⇒ il gruppo
+      KDE non porta `breeze6-wallpapers`, plasmashell non trova lo sfondo «Next» e non mostra né desktop né
+      pannello (nero anche nella foto di KWin stesso). Con il pacchetto, il desktop arriva. ⇒ è della
+      **piattaforma installata senza raccomandati** (un'altra ragione per lo stato ISO, §7.2);
+      l'installatore su openSUSE porta `breeze6-wallpapers` (`C-COMPONENTE`);
+    - **Leap 16: labwc non riesce a creare il buffer sulla scheda virtuale** (`gbm_bo_create failed`), anche
+      lanciato a mano senza REMOTIX. Con `WLR_RENDERER=pixman` il desktop XFCE arriva. ⇒ limite di una
+      macchina **senza 3D**, come (A); cura di prodotto in corso: provare il buffer prima di dare il nodo a
+      labwc e, se fallisce, `WLR_RENDERER=pixman` dichiarato. ⚠ Con pixman l'uscita resta 1280×720 e
+      rifiuta la misura del browser `[?]`.
 - **Dipendenze di esecuzione misurate** (per T3), oltre al binario: Ubuntu 26.04 `libavcodec62 libswscale9
   libavutil60 gnome-session`; Alma 10 `epel-release`, CRB, `libavcodec-free libavutil-free libswscale-free`;
   Tumbleweed `libavcodec63 libavutil61 libswscale10`; Leap 16 `libavcodec61 libavutil59 libswscale8
