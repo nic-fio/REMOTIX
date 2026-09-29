@@ -456,7 +456,11 @@ risparmia la battitura. Meccanismi in ordine: (1) in pagina un rilascio perso la
 scarta un input su `EAGAIN` quando il figlio è in ritardo; (4) le frecce del tastierino con
 BlocNum spento arrivano come KP_8/KP_2; (5) tasti scartati come composizione IME. `[M]` nei
 registri di tutta la campagna: **0** input non partiti verso il figlio, **1** ricambio di
-tastiera (u2). Prossimo passo: la prova mirata di 200 frecce con i conti di pagina e server.
+tastiera (u2).
+✅ **Chiuso il 29 set 2026, senza prova**: la sola segnalazione (26 set, 16:39) l'utente l'aveva
+ritirata un minuto dopo (*«ignora questo messaggio, è un errore»*) ed era entrata nei punti aperti per
+sbaglio; nessun difetto osservato, C23 (Maiusc+frecce) verde. Parola dell'utente: *«ok, levale»*. Se
+ricapita, si riapre con desktop e programma, e la prova mirata di 200 frecce è già descritta qui sopra.
 
 ## 15. Limiti dichiarati
 
