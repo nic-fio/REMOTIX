@@ -1,0 +1,29 @@
+#cloud-config
+# REMOTIX fase 17 — Ubuntu 26.04 dall'ISO DESKTOP, installazione automatica (autoinstall).
+# La sorgente e' quella di serie dell'ISO (ubuntu-desktop-minimal, «Selezione predefinita»);
+# le sole aggiunte del banco sono segnate con [banco].
+# Segnaposti riempiti da 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+autoinstall:
+  version: 1
+  locale: it_IT.UTF-8
+  keyboard:
+    layout: it
+  timezone: Europe/Rome
+  identity:
+    hostname: @NOME@
+    realname: @UTENTE@
+    username: @UTENTE@
+    password: '@HASH@'
+  # [banco] openssh-server: sul desktop non c'e' di serie
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - '@CHIAVE@'
+  storage:
+    layout:
+      name: direct
+  late-commands:
+    # [banco] sudo senza parola (l'utente e' gia' nel gruppo sudo, come il primo utente di serie)
+    - "echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/90-banco && chmod 440 /target/etc/sudoers.d/90-banco"
+  shutdown: reboot

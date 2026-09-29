@@ -1,0 +1,10 @@
+{
+  "users": [
+    {
+      "username": "@UTENTE@",
+      "enc_password": "@HASH@",
+      "sudo": true,
+      "groups": []
+    }
+  ]
+}

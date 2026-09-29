@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!DOCTYPE profile>
+<!--
+  REMOTIX fase 17 — openSUSE Tumbleweed dall'ISO NET, installazione automatica (AutoYaST).
+  I pattern sono quelli del ruolo di serie «Desktop con KDE Plasma» (control.xml di
+  openSUSE: kde x11 base enhanced_base x11_yast yast2_basis); SELinux enforcing e
+  firewalld acceso come di serie; l'accesso automatico dell'utente e la stessa parola
+  per root sono le caselle GIA' spuntate dell'installatore. Il partizionamento non si
+  scrive: si prende la proposta (btrfs con snapper). Le aggiunte del banco: [banco].
+  Segnaposti riempiti da 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+-->
+<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+  <general>
+    <mode>
+      <confirm config:type="boolean">false</confirm>
+      <final_reboot config:type="boolean">true</final_reboot>
+    </mode>
+  </general>
+  <language>
+    <language>it_IT</language>
+    <languages/>
+  </language>
+  <keyboard>
+    <keymap>italian</keymap>
+  </keyboard>
+  <timezone>
+    <hwclock>UTC</hwclock>
+    <timezone>Europe/Rome</timezone>
+  </timezone>
+  <networking>
+    <keep_install_network config:type="boolean">true</keep_install_network>
+  </networking>
+  <host>
+    <hosts config:type="list"/>
+  </host>
+  <software>
+    <install_recommended config:type="boolean">true</install_recommended>
+    <patterns config:type="list">
+      <pattern>kde</pattern>
+      <pattern>x11</pattern>
+      <pattern>base</pattern>
+      <pattern>enhanced_base</pattern>
+      <pattern>x11_yast</pattern>
+      <pattern>yast2_basis</pattern>
+    </patterns>
+  </software>
+  <security>
+    <lsm_select>selinux</lsm_select>
+    <selinux_mode>enforcing</selinux_mode>
+  </security>
+  <firewall>
+    <enable_firewall config:type="boolean">true</enable_firewall>
+    <start_firewall config:type="boolean">true</start_firewall>
+  </firewall>
+  <login_settings>
+    <autologin_user>@UTENTE@</autologin_user>
+  </login_settings>
+  <users config:type="list">
+    <user>
+      <username>@UTENTE@</username>
+      <fullname>@UTENTE@</fullname>
+      <encrypted config:type="boolean">true</encrypted>
+      <user_password>@HASH@</user_password>
+      <!-- [banco] la chiave del banco -->
+      <authorized_keys config:type="list">
+        <listentry>@CHIAVE@</listentry>
+      </authorized_keys>
+    </user>
+    <user>
+      <username>root</username>
+      <encrypted config:type="boolean">true</encrypted>
+      <user_password>@HASH@</user_password>
+    </user>
+  </users>
+  <services-manager>
+    <default_target>graphical</default_target>
+    <services>
+      <!-- [banco] sshd: sul ruolo desktop e' spento di serie -->
+      <enable config:type="list">
+        <service>sshd</service>
+      </enable>
+    </services>
+  </services-manager>
+  <scripts>
+    <chroot-scripts config:type="list">
+      <script>
+        <chrooted config:type="boolean">true</chrooted>
+        <filename>rx-banco.sh</filename>
+        <interpreter>shell</interpreter>
+        <source><![CDATA[
+# [banco] sudo senza parola, e ssh aperto nel firewall (di serie e' chiuso)
+echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
+chmod 440 /etc/sudoers.d/90-banco
+firewall-offline-cmd --zone=public --add-service=ssh
+echo @NOME@ > /etc/hostname
+]]></source>
+      </script>
+    </chroot-scripts>
+  </scripts>
+</profile>

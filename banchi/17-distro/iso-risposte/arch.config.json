@@ -1,0 +1,54 @@
+{
+  "archinstall-language": "English",
+  "audio_config": {"audio": "pipewire"},
+  "bootloader_config": {"bootloader": "Systemd-boot", "uki": false, "removable": false},
+  "disk_config": {
+    "config_type": "default_layout",
+    "device_modifications": [
+      {
+        "device": "/dev/vda",
+        "wipe": true,
+        "partitions": [
+          {
+            "btrfs": [], "dev_path": null,
+            "flags": ["boot", "esp"],
+            "fs_type": "fat32",
+            "mount_options": [], "mountpoint": "/boot",
+            "obj_id": "5c1e7d2a-0000-4000-8000-000000000001",
+            "start": {"sector_size": null, "unit": "MiB", "value": 1},
+            "size": {"sector_size": null, "unit": "GiB", "value": 1},
+            "status": "create", "type": "primary"
+          },
+          {
+            "btrfs": [], "dev_path": null,
+            "flags": [],
+            "fs_type": "ext4",
+            "mount_options": [], "mountpoint": "/",
+            "obj_id": "5c1e7d2a-0000-4000-8000-000000000002",
+            "start": {"sector_size": null, "unit": "MiB", "value": 1025},
+            "size": {"sector_size": null, "unit": "GiB", "value": 38},
+            "status": "create", "type": "primary"
+          }
+        ]
+      }
+    ]
+  },
+  "hostname": "@NOME@",
+  "kernels": ["linux"],
+  "locale_config": {"kb_layout": "it", "sys_enc": "UTF-8", "sys_lang": "it_IT"},
+  "network_config": {"type": "nm"},
+  "ntp": true,
+  "packages": ["openssh"],
+  "services": ["sshd"],
+  "profile_config": {
+    "gfx_driver": "All open-source",
+    "greeter": "sddm",
+    "profile": {"details": ["KDE Plasma"], "main": "Desktop"}
+  },
+  "swap": {"enabled": true, "algorithm": "zstd"},
+  "timezone": "Europe/Rome",
+  "custom_commands": [
+    "install -d -m 700 -o @UTENTE@ -g @UTENTE@ /home/@UTENTE@/.ssh && echo '@CHIAVE@' > /home/@UTENTE@/.ssh/authorized_keys && chown @UTENTE@:@UTENTE@ /home/@UTENTE@/.ssh/authorized_keys && chmod 600 /home/@UTENTE@/.ssh/authorized_keys",
+    "echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco && chmod 440 /etc/sudoers.d/90-banco"
+  ]
+}
