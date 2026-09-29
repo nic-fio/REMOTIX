@@ -97,6 +97,20 @@ sudo sh -c 'grep -h COMANDO /var/lib/remotix/operazioni/*/registro.jsonl' | sed 
 sed 's/^/   /' "$E/installato.txt" | head -60
 impronta installato
 
+echo "==> 2b. certifica (sola lettura) sulla macchina sana"
+vm "sudo /root/remotix-install certifica --lingua it; echo uscita \$?" >"$E/certifica.txt" 2>&1
+sed 's/^/   /' "$E/certifica.txt" | grep -E 'Certificazione|uscita|FAIL|UNKNOWN|C-'
+if [ -n "${R29:-}" ]; then
+	echo "==> R29: la certificazione su una macchina guasta apposta non dice mai VERDE"
+	vm "L=\$(ls /usr/lib/x86_64-linux-gnu/libx264.so.* /usr/lib64/libx264.so.* /usr/lib/libx264.so.* 2>/dev/null | head -1)
+P=\$(ls /etc/pam.d/common-account /etc/pam.d/password-auth /etc/pam.d/system-remote-login 2>/dev/null | head -1)
+echo \"-- guasto 1: la pila PAM rotta (\$P spostato)\"; sudo mv \$P /root/pam-via; sudo /root/remotix-install certifica --lingua it | grep -E 'Certificazione|pam-risolta'; sudo mv /root/pam-via \$P
+echo \"-- guasto 2: la scheda (e il ripiego) che non codifica (\$L spostata)\"; sudo mv \$L /root/x264-via; sudo /root/remotix-install certifica --lingua it | grep -E 'Certificazione|codifica'; sudo mv /root/x264-via \$L
+echo \"-- guasto 3: il servizio spento da altri\"; sudo systemctl stop remotix; sudo /root/remotix-install certifica --lingua it | grep -E 'Certificazione|servizio'; sudo systemctl start remotix; sleep 3
+echo \"-- di nuovo sana\"; sudo /root/remotix-install certifica --lingua it | grep -E 'Certificazione'" >"$E/r29.txt" 2>&1
+	sed 's/^/   /' "$E/r29.txt"
+fi
+
 echo "==> 3. il browser vero (Chrome) su 127.0.0.1:$PRX"
 T1C=$R/t1c bash "$R/t1c/17-t1c-guarda.sh" "$m" "$PRX" chrome >"$E/browser.log" 2>&1
 echo "   uscita $? — $(grep -E '^T1C ' "$E/browser.log" | cut -c1-300)"

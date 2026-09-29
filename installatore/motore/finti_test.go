@@ -203,6 +203,10 @@ func preparaMacchina(t testing.TB, radice string) {
 		"var/lib/finto-deposito.json":  `{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0"},"labwc":{"versione":"0.9","dipende":["libnuova"]}}`,
 		"var/lib/finto-pacchetti.json": `{"libcomune":"1.0","bash":"5.2"}`,
 		"var/lib/finto-attive.json":    "{}",
+		// la pila PAM di REMOTIX (certifica.go la segue fino ai moduli)
+		"etc/pam.d/remotix":            "auth required pam_unix.so\n@include common-account\n",
+		"etc/pam.d/common-account":     "account required pam_unix.so\n-session optional pam_manca.so\n",
+		"usr/lib/security/pam_unix.so": "",
 		// la cintura spenta che il pacchetto porterebbe
 		"usr/share/remotix/cinture/remotix-tasti.conf": "[Login]\nHandlePowerKey=ignore\n",
 	}

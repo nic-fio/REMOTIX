@@ -142,6 +142,9 @@ type Scelta struct {
 	Risposta    string   `json:"risposta"`
 	// Pacchetti: per ogni opzione, i pacchetti che la installano (dal catalogo)
 	Pacchetti map[string]string `json:"pacchetti,omitempty"`
+	// Componenti: per ogni opzione, i pezzi che quel desktop chiede a REMOTIX (labwc, wlr-randr,
+	// breeze6-wallpapers, il carattere scalabile…): entrano nel piano insieme al desktop
+	Componenti map[string]string `json:"componenti,omitempty"`
 }
 
 // Valore: la risposta data, o la predefinita.
@@ -164,7 +167,7 @@ func (p *Piano) Rispondi(id, risposta string) error {
 		}
 		s.Risposta = risposta
 		if id == "desktop" {
-			p.metteDesktop(risposta, s.Pacchetti[risposta])
+			p.metteDesktop(risposta, s.Pacchetti[risposta], s.Componenti[risposta])
 		}
 		return nil
 	}
@@ -172,11 +175,11 @@ func (p *Piano) Rispondi(id, risposta string) error {
 }
 
 // metteDesktop: il passo «installa-desktop» c'è se la risposta è un desktop, non c'è se è «no».
-func (p *Piano) metteDesktop(d, nomi string) {
+func (p *Piano) metteDesktop(d, nomi, componenti string) {
 	var az []AzionePiano
 	dopoDepositi := 0
 	for _, a := range p.Azioni {
-		if a.Tipo != "installa-desktop" {
+		if a.Tipo != "installa-desktop" && a.ID != "componenti-desktop" {
 			az = append(az, a)
 			if a.Tipo == "aggiungi-deposito" {
 				dopoDepositi = len(az)
@@ -184,7 +187,11 @@ func (p *Piano) metteDesktop(d, nomi string) {
 		}
 	}
 	if d != "no" {
-		az = append(az[:dopoDepositi], append([]AzionePiano{PianoDesktop("desktop", d, nomi)}, az[dopoDepositi:]...)...)
+		nuovi := []AzionePiano{PianoDesktop("desktop", d, nomi)}
+		if componenti != "" {
+			nuovi = append(nuovi, PianoPacchetti("componenti-desktop", "", "", componenti))
+		}
+		az = append(az[:dopoDepositi], append(nuovi, az[dopoDepositi:]...)...)
 	}
 	p.Azioni = az
 }
@@ -276,13 +283,21 @@ func SceltaDesktop(rap *Rapporto) *Scelta {
 	if !rap.SenzaDesktop {
 		return nil
 	}
-	s := &Scelta{ID: "desktop", Domanda: T("scelta.desktop"), Pacchetti: map[string]string{}}
+	s := &Scelta{ID: "desktop", Domanda: T("scelta.desktop"), Pacchetti: map[string]string{}, Componenti: map[string]string{}}
 	for _, e := range rap.Desktop {
 		if e.Livello == NON_SUPPORTATA {
 			continue
 		}
 		if rap.pl != nil {
 			s.Pacchetti[e.Desktop] = rap.pl.PacchettiDesktop[e.Desktop]
+			dc := rap.pl.Desktop[e.Desktop]
+			comp := append([]string{}, dc.Componenti...)
+			if dc.ServeCarattere && rap.cat != nil {
+				if car := rap.cat.CarattereScalabile[rap.pl.Famiglia]; car != "" {
+					comp = append(comp, car)
+				}
+			}
+			s.Componenti[e.Desktop] = strings.Join(comp, ",")
 		}
 		s.Opzioni = append(s.Opzioni, e.Desktop)
 		if e.Riferimento || s.Predefinita == "" {
