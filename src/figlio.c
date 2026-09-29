@@ -8027,7 +8027,7 @@ void figlio_vive(int argc, char **argv)
 					                    "chiudo la sessione grafica e con lei i "
 					                    "suoi programmi.  Al prossimo attacco ne "
 					                    "nascera' una NUOVA");
-					if (!sessione_termina())
+					if (!sessione_termina()) {
 						registro_dice(REG_FIGLIO,
 						              "⛔ la sessione grafica NON e' "
 						              "finita: l'utente ha chiesto di "
@@ -8037,7 +8037,25 @@ void figlio_vive(int argc, char **argv)
 						              "adesso le due verita' non "
 						              "combaciano — e questa riga e' "
 						              "l'unico posto in cui si vede");
-					continue;
+						continue;
+					}
+					/* ⛔⭐ FASE 17 T7 — E IL FIGLIO ESCE CON LEI.
+					 *     Finche' era lui ad aprire la sessione logind del
+					 *     desktop, il logout lo portava via (SIGTERM, vedi
+					 *     `congeda_figlio()` nel padre: «figlio morto =
+					 *     sessione finita»).  ⚠ Il figlio che RIPRENDE un
+					 *     desktop ritrovato sta in una sessione logind sua,
+					 *     e il logout non lo tocca: `[M]` 30 set 2026, restava
+					 *     vivo e al giro dopo RIFACEVA nascere un desktop che
+					 *     nessuno aveva chiesto.  ⇒ Chiusa la sessione, si esce:
+					 *     il palco non c'e' piu', e il prossimo attacco fara'
+					 *     nascere un figlio e un desktop NUOVI. */
+					registro_dice(REG_FIGLIO,
+					              "⭐ la sessione grafica e' chiusa: esco anch'io "
+					              "— il prossimo attacco avra' un figlio e un "
+					              "desktop NUOVI");
+					fine = true;
+					break;
 				}
 
 				if (ci.azione == FIGLI_INPUT_RITELA) {
