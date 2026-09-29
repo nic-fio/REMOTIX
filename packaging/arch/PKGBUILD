@@ -43,7 +43,7 @@
 
 pkgname=remotix
 pkgver=0.17.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Il desktop Linux nel browser (server: GNOME, KDE, XFCE, LXQt su Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
@@ -174,16 +174,19 @@ package() {
 	#    verifica (kwin.c:342), niente scrittura da root in /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
-	# ⚠ DECISIONE D4 APERTA — le tre cinture, nei percorsi del FORNITORE:
-	#   l'amministratore le spegne con un file omonimo in /etc.
-	#   `[M]` polkit 127-3: /usr/share/polkit-1/rules.d e' 0755 root:root (e'
-	#   /etc/polkit-1/rules.d ad essere 0750 root:polkitd): si sta nella prima.
+	# ⛔ DECISIONI.md §10.12 — le tre cinture ci sono ma SPENTE: in una
+	#    cartella che nessuno legge.  Le monta il motore col consenso (D4) nei
+	#    percorsi attivi (polkit rules.d, logind.conf.d, sleep.conf.d) e le
+	#    smonta dal suo registro.
+	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d e' 0755 root:root,
+	#    /etc/polkit-1/rules.d 0750 root:polkitd — da sapere per il motore.
 	install -Dm644 "$s/remotix-niente-spegnimento.rules" \
-		"$pkgdir/usr/share/polkit-1/rules.d/50-remotix-niente-spegnimento.rules"
+		"$pkgdir/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules"
 	install -Dm644 "$s/remotix-tasti.conf" \
-		"$pkgdir/usr/lib/systemd/logind.conf.d/remotix-tasti.conf"
+		"$pkgdir/usr/share/remotix/cinture/remotix-tasti.conf"
 	install -Dm644 "$a/remotix-niente-sospensione.conf" \
-		"$pkgdir/usr/lib/systemd/sleep.conf.d/remotix-niente-sospensione.conf"
-	# il firewall: definito, non aperto (D6)
+		"$pkgdir/usr/share/remotix/cinture/remotix-niente-sospensione.conf"
+	# il firewall: il servizio DEFINITO (una descrizione, non una regola: nessuna
+	# porta si apre finche' il motore non lo aggiunge a una zona, D6)
 	install -Dm644 "$a/remotix.firewalld.xml" "$pkgdir/usr/lib/firewalld/services/remotix.xml"
 }

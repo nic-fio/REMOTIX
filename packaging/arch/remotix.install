@@ -1,114 +1,49 @@
 # remotix.install — gli script del pacchetto Arch (fasi/17 §6.4, §6.6.4).
 #
-# ⭐ I GRUPPI DELLA SCHEDA (DECISIONI.md §7.21): una sessione remota non ha un
-#    seat, quindi l'ACL di logind sui nodi /dev/dri non arriva mai e restano
-#    solo i gruppi.  All'installazione si iscrivono le PERSONE della macchina
-#    (uid da UID_MIN a UID_MAX di /etc/login.defs, shell vera) ai gruppi LETTI
-#    DAI NODI (`stat -c %G`): i nomi non si inchiodano.
+# ⛔ DECISIONI.md §10.12 — L'INSTALLATORE E' L'UNICA VIA.  Il pacchetto porta
+#    i pezzi INERTI e non monta niente: non accende il servizio (su Arch il
+#    preset e' gia' «disable *»), NON iscrive nessuno ai gruppi della scheda,
+#    non tocca il firewall, e le tre cinture le lascia SPENTE in
+#    /usr/share/remotix/cinture/.  Tutto questo lo fa il motore, col consenso,
+#    e lo scrive nel SUO registro (R40).
 #
-# ⛔ E SI ANNOTA CHI C'ERA GIA' (§6.6.4, R6, R33): il registro dice riga per
-#    riga «MESSO» (l'ha fatto il pacchetto: origine DIRETTA) o «C'ERA»
-#    (PREESISTENTE).  La disinstallazione toglie SOLO i «MESSO»: chi era gia'
-#    in `video` prima di REMOTIX ci resta.
-#
-# ⚠ Il registro vale per il pacchetto.  Il PRODOTTO iscrive da se' chi arriva
-#   dopo, alla prima connessione (`figlio.c`, iscrivi_ai_gruppi_della_scheda),
-#   e lo scrive solo nel suo registro: quelle iscrizioni la disinstallazione
-#   non le conosce.  ⇒ Il codice va cambiato perche' annoti nello stesso file.
-
-REGISTRO=/var/lib/remotix/gruppi.registro
-
-_remotix_gruppi_della_scheda() {
-	local n
-	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
-		[ -e "$n" ] && stat -c %G "$n"
-	done | grep -vx 'root\|UNKNOWN' | sort -u
-}
-
-_remotix_persone() {
-	local min max
-	min=$(awk '$1 == "UID_MIN" { print $2 }' /etc/login.defs 2>/dev/null)
-	max=$(awk '$1 == "UID_MAX" { print $2 }' /etc/login.defs 2>/dev/null)
-	getent passwd | awk -F: -v a="${min:-1000}" -v b="${max:-60000}" \
-		'$3 >= a && $3 <= b && $7 !~ /(nologin|false)$/ { print $1 }'
-}
-
-_remotix_iscrivi() {
-	local g u gruppi persone
-	gruppi=$(_remotix_gruppi_della_scheda)
-	persone=$(_remotix_persone)
-	if [ -z "$gruppi" ]; then
-		echo ":: REMOTIX: nessun nodo /dev/dri con un gruppo: nessuna iscrizione"
-		return 0
-	fi
-	for u in $persone; do
-		for g in $gruppi; do
-			if id -nG "$u" | tr ' ' '\n' | grep -qx "$g"; then
-				printf "C'ERA %s %s\n" "$u" "$g" >>"$REGISTRO"
-			elif gpasswd -a "$u" "$g" >/dev/null; then
-				printf 'MESSO %s %s\n' "$u" "$g" >>"$REGISTRO"
-				echo ":: REMOTIX: $u iscritto al gruppo $g"
-			fi
-		done
-	done
-}
-
-_remotix_disiscrivi() {
-	local cosa u g
-	[ -f "$REGISTRO" ] || return 0
-	while read -r cosa u g; do
-		[ "$cosa" = MESSO ] || continue
-		id "$u" >/dev/null 2>&1 || continue
-		id -nG "$u" | tr ' ' '\n' | grep -qx "$g" || continue
-		gpasswd -d "$u" "$g" >/dev/null && echo ":: REMOTIX: $u tolto dal gruppo $g (l'aveva messo il pacchetto)"
-	done <"$REGISTRO"
-}
-
-# logind rilegge le sue impostazioni (la cintura dei tasti) solo se lo si chiede.
-# ⛔ MAI un restart di logind: chiuderebbe le sessioni di tutti.
-_remotix_logind() {
-	[ "$(systemctl show -p CanReload --value systemd-logind 2>/dev/null)" = yes ] \
-		&& systemctl reload systemd-logind 2>/dev/null
-	return 0
-}
+# ⚠ Il PRODOTTO iscrive ancora da se' chi arriva alla prima connessione
+#   (`figlio.c`, iscrivi_ai_gruppi_della_scheda, DECISIONI.md §7.21), e lo
+#   scrive solo nel registro della sessione: con §10.12 quell'iscrizione va
+#   portata nel registro del motore, o la disinstallazione non la conosce.
 
 post_install() {
-	# la cartella serve SUBITO (il registro): l'aggancio tmpfiles di pacman gira dopo
-	systemd-tmpfiles --create /usr/lib/tmpfiles.d/remotix.conf
-	printf '# %s — installazione del pacchetto %s\n' "$(date -Is)" "$1" >>"$REGISTRO"
-	_remotix_iscrivi
-	_remotix_logind
 	cat <<'FINE'
-:: REMOTIX e' installato ma SPENTO (su Arch i servizi nuovi non partono da soli).
-   Per accenderlo:   systemctl enable --now remotix.service
-   Porta 7447 (TCP e UDP).  Chi entra: le persone della macchina, root escluso
-   (/etc/remotix/utenti-negati).  Attive le tre cinture: nessuno spegne,
-   riavvia o sospende la macchina da una sessione, e i tasti non la spengono.
+:: REMOTIX: installati i pezzi, SPENTI.  Il pacchetto da solo non accende
+   niente: il servizio, i gruppi della scheda, le tre cinture e il firewall
+   li monta l'installatore di REMOTIX (DECISIONI.md §10.12).
 FINE
 }
 
 post_upgrade() {
 	# ⭐ T2 (§5.2): fermare il servizio NON chiude i desktop.  Un server vecchio
-	#    col binario nuovo sul disco rifarebbe i figli col binario nuovo: si riparte.
+	#    col binario nuovo sul disco rifarebbe i figli col binario nuovo: se era
+	#    ACCESO si riparte (try-restart: se era spento resta spento).
+	#    ⚠ Con §10.12 punto 4 sara' il motore, richiamato qui, a verificare e
+	#      riaccendere (T5/T7): questa riga e' il posto dove agganciarlo.
 	systemctl try-restart remotix.service 2>/dev/null
-	_remotix_logind
 	return 0
 }
 
 pre_remove() {
-	# Un server d'accesso remoto non resta in ascolto col suo binario cancellato.
+	# Un server d'accesso remoto non resta in ascolto col binario cancellato,
+	# ne' resta un collegamento d'accensione a un'unita' che sparisce.
 	systemctl --no-reload disable --now remotix.service 2>/dev/null
-	_remotix_disiscrivi
 	return 0
 }
 
 post_remove() {
-	# ⭐ R6: quel che REMOTIX ha creato da se' se ne va (certificati, ban,
-	#    registro).  /etc/remotix/utenti-negati lo tratta pacman (backup=).
+	# ⭐ R6: lo stato che il SERVIZIO ha creato da se' (certificati, ban) se ne
+	#    va col pacchetto.  /etc/remotix/utenti-negati e /etc/pam.d/remotix li
+	#    tratta pacman (backup=: con -n spariscono, senza restano .pacsave).
 	rm -rf /var/lib/remotix/certificati
-	rm -f /var/lib/remotix/ban "$REGISTRO"
+	rm -f /var/lib/remotix/ban
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null
-	_remotix_logind
 	return 0
 }
