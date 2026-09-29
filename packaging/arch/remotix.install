@@ -1,0 +1,49 @@
+# remotix.install — gli script del pacchetto Arch (fasi/17 §6.4, §6.6.4).
+#
+# ⛔ DECISIONI.md §10.12 — L'INSTALLATORE E' L'UNICA VIA.  Il pacchetto porta
+#    i pezzi INERTI e non monta niente: non accende il servizio (su Arch il
+#    preset e' gia' «disable *»), NON iscrive nessuno ai gruppi della scheda,
+#    non tocca il firewall, e le tre cinture le lascia SPENTE in
+#    /usr/share/remotix/cinture/.  Tutto questo lo fa il motore, col consenso,
+#    e lo scrive nel SUO registro (R40).
+#
+# ⚠ Il PRODOTTO iscrive ancora da se' chi arriva alla prima connessione
+#   (`figlio.c`, iscrivi_ai_gruppi_della_scheda, DECISIONI.md §7.21), e lo
+#   scrive solo nel registro della sessione: con §10.12 quell'iscrizione va
+#   portata nel registro del motore, o la disinstallazione non la conosce.
+
+post_install() {
+	cat <<'FINE'
+:: REMOTIX: installati i pezzi, SPENTI.  Il pacchetto da solo non accende
+   niente: il servizio, i gruppi della scheda, le tre cinture e il firewall
+   li monta l'installatore di REMOTIX (DECISIONI.md §10.12).
+FINE
+}
+
+post_upgrade() {
+	# ⭐ T2 (§5.2): fermare il servizio NON chiude i desktop.  Un server vecchio
+	#    col binario nuovo sul disco rifarebbe i figli col binario nuovo: se era
+	#    ACCESO si riparte (try-restart: se era spento resta spento).
+	#    ⚠ Con §10.12 punto 4 sara' il motore, richiamato qui, a verificare e
+	#      riaccendere (T5/T7): questa riga e' il posto dove agganciarlo.
+	systemctl try-restart remotix.service 2>/dev/null
+	return 0
+}
+
+pre_remove() {
+	# Un server d'accesso remoto non resta in ascolto col binario cancellato,
+	# ne' resta un collegamento d'accensione a un'unita' che sparisce.
+	systemctl --no-reload disable --now remotix.service 2>/dev/null
+	return 0
+}
+
+post_remove() {
+	# ⭐ R6: lo stato che il SERVIZIO ha creato da se' (certificati, ban) se ne
+	#    va col pacchetto.  /etc/remotix/utenti-negati e /etc/pam.d/remotix li
+	#    tratta pacman (backup=: con -n spariscono, senza restano .pacsave).
+	rm -rf /var/lib/remotix/certificati
+	rm -f /var/lib/remotix/ban
+	rmdir /var/lib/remotix 2>/dev/null
+	systemctl daemon-reload 2>/dev/null
+	return 0
+}
