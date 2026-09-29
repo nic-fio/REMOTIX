@@ -1,0 +1,182 @@
+package motore
+
+// testi: il catalogo dei testi del motore e della riga di comando, per lingua (DECISIONI §10.15).
+// Le chiavi sono stabili; i %s e %d seguono fmt.Sprintf e sono gli stessi nelle due lingue.
+var testi = map[string]Testo{
+	// stati (§6.6.2), come li dice l'avanzamento
+	"stato.NUOVA":                   {"nuova", "new"},
+	"stato.FIDATA":                  {"fiducia controllata", "trust checked"},
+	"stato.ESAMINATA":               {"macchina esaminata", "machine examined"},
+	"stato.VALUTATA":                {"compatibilità valutata", "compatibility assessed"},
+	"stato.PIANIFICATA":             {"piano controllato", "plan checked"},
+	"stato.APPROVATA":               {"piano approvato", "plan approved"},
+	"stato.ACQUISITA":               {"tutto il necessario è pronto", "everything needed is ready"},
+	"stato.IN_ESECUZIONE":           {"si applica il piano", "applying the plan"},
+	"stato.INTERROTTA":              {"trovata interrotta", "found interrupted"},
+	"stato.APPLICATA":               {"piano applicato", "plan applied"},
+	"stato.IN_VERIFICA":             {"si verifica", "verifying"},
+	"stato.VERIFICATA":              {"verificata", "verified"},
+	"stato.CONFERMATA":              {"CONFERMATA", "CONFIRMED"},
+	"stato.CONFERMATA_A_CONDIZIONI": {"CONFERMATA A CONDIZIONI", "CONFIRMED WITH CONDITIONS"},
+	"stato.IN_ANNULLAMENTO":         {"si annulla", "rolling back"},
+	"stato.ANNULLATA":               {"ANNULLATA: la macchina è com'era", "ROLLED BACK: the machine is as it was"},
+	"stato.ANNULLATA_IN_PARTE":      {"ANNULLATA IN PARTE", "PARTLY ROLLED BACK"},
+	"stato.BLOCCATA":                {"BLOCCATA", "BLOCKED"},
+	"stato.RIFIUTATA":               {"RIFIUTATA: niente è stato toccato", "REFUSED: nothing was touched"},
+	"ev.rimedio":                    {"rimedio", "remedy"},
+	"ev.si_riprende":                {"si riprende", "resuming"},
+	"ev.operazione":                 {"operazione %s", "operation %s"},
+
+	// compatibilità (§6.6.8)
+	"comp.nella_matrice":    {"nella matrice (%s)", "in the matrix (%s)"},
+	"comp.fuori_matrice":    {"analizzata, fuori dalla matrice (%s)", "analysed, outside the matrix (%s)"},
+	"comp.derivata":         {"derivata di %s (compatibile, non certificata)", "derivative of %s (compatible, not certified)"},
+	"comp.esclusa":          {"esclusa", "excluded"},
+	"comp.sconosciuta":      {"sconosciuta", "unknown"},
+	"cond.componente":       {"l'installatore aggiunge «%s», che il desktop di serie non porta", "the installer adds «%s», which the stock desktop does not bring"},
+	"cond.carattere":        {"manca un carattere scalabile: senza, labwc muore (labwc #2525)", "no scalable font: without one, labwc dies (labwc #2525)"},
+	"cond.deposito_desktop": {"%s viene da %s", "%s comes from %s"},
+	"cond.deposito_h264":    {"H.264 sulla scheda (e il ripiego software) solo con %s", "H.264 on the card (and the software fallback) only with %s"},
+	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API"},
+	"cond.ripiego":          {"la codifica passa al ripiego software", "encoding falls back to software"},
+	"cond.ripiego_amd":      {"su %s Mesa è senza VA-API: con una scheda AMD la codifica è in software", "on %s Mesa has no VA-API: with an AMD card encoding is in software"},
+	"cond.ripiego_senza":    {"nessuna scheda: la codifica è in software", "no graphics card: encoding is in software"},
+	"cond.ripiego_no":       {"la scheda non codifica H.264: la codifica è in software", "the card does not encode H.264: encoding is in software"},
+	"cond.desktop":          {"%s non c'è: l'installatore lo aggiunge dagli archivi della distribuzione, senza schermata d'accesso locale, solo col consenso", "%s is not there: the installer adds it from the distribution's archives, without a local login screen, only with consent"},
+	"cond.desktop_rimedio":  {"rispondere «sì» alla domanda sul desktop; «no» ⇒ REMOTIX non si installa (RX-DESKTOP-001)", "answer «yes» to the desktop question; «no» ⇒ REMOTIX is not installed (RX-DESKTOP-001)"},
+	"inc.openssl":           {"versione di OpenSSL", "OpenSSL version"},
+	"inc.desktop":           {"desktop %s", "desktop %s"},
+	"inc.h264":              {"H.264 sulla scheda (%s)", "H.264 on the card (%s)"},
+	"scelta.desktop":        {"Su questa macchina non c'è un desktop supportato da REMOTIX: installarne uno? (se no, REMOTIX non si installa)", "This machine has no desktop supported by REMOTIX: install one? (if not, REMOTIX is not installed)"},
+
+	// il piano di prova e i passi (§6.6.4)
+	"np.desktop":          {"nessun desktop supportato: un'installazione vera qui chiederebbe quale aggiungere (%s; proposto %s)", "no supported desktop: a real installation would ask here which one to add (%s; proposed %s)"},
+	"np.utente":           {"nessun utente indicato (--utente): il passo del gruppo «video» non c'è", "no user given (--utente): there is no «video» group step"},
+	"np.firewall_no":      {"la porta %s non si apre nel firewall: non è stato chiesto (--apri-firewall; decisione D6 aperta)", "port %s is not opened in the firewall: not requested (--apri-firewall; decision D6 open)"},
+	"np.firewall_nessuno": {"nessun firewall acceso: niente da aprire", "no firewall on: nothing to open"},
+	"np.firewall_mano":    {"%s: aprire a mano la porta %s TCP e UDP", "%s: open port %s TCP and UDP by hand"},
+
+	"az.file":              {"scrivere %s", "write %s"},
+	"az.file.fa":           {"si salva il file che c'è (se c'è), si scrive il nuovo in «%s» accanto, fsync, e lo si rinomina sopra", "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it"},
+	"az.file.verifica":     {"sha256 e permessi del file uguali a quelli del piano", "file sha256 and permissions equal to the plan's"},
+	"az.file.annulla":      {"si rimette il file salvato (o si toglie, se prima non c'era), e le cartelle create se sono rimaste vuote", "the saved file is put back (or removed, if it was not there), and created directories if left empty"},
+	"az.gruppo":            {"mettere %s nel gruppo %s", "add %s to the %s group"},
+	"az.gruppo.fa":         {"gpasswd -a %s %s (se non c'è già: altrimenti niente, e lo si annota come PREESISTENTE)", "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)"},
+	"az.gruppo.verifica":   {"%s fra i membri di %s", "%s among the members of %s"},
+	"az.gruppo.annulla":    {"gpasswd -d %s %s, solo se l'ha messo REMOTIX", "gpasswd -d %s %s, only if REMOTIX added them"},
+	"az.unita":             {"abilitare l'unità %s", "enable the unit %s"},
+	"az.unita.fa":          {"EnableUnitFiles %s sul D-Bus di systemd (senza avviarla)", "EnableUnitFiles %s on systemd's D-Bus (without starting it)"},
+	"az.unita.verifica":    {"stato del file dell'unità %s = enabled", "unit file state of %s = enabled"},
+	"az.unita.annulla":     {"DisableUnitFiles %s, se prima non era abilitata", "DisableUnitFiles %s, if it was not enabled before"},
+	"az.fw":                {"aprire la porta %s (TCP e UDP) nel firewall", "open port %s (TCP and UDP) in the firewall"},
+	"az.fw.fa":             {"addPort %s/tcp e /udp nella zona predefinita, vive e permanenti, sul D-Bus di firewalld", "addPort %s/tcp and /udp in the default zone, runtime and permanent, on firewalld's D-Bus"},
+	"az.fw.verifica":       {"queryPort, vive e permanenti", "queryPort, runtime and permanent"},
+	"az.fw.annulla":        {"removePort delle sole regole aggiunte da REMOTIX", "removePort of the rules added by REMOTIX only"},
+	"az.fw.consenso":       {"Aprire la porta %s (TCP e UDP) nel firewall? (decisione D6, aperta)", "Open port %s (TCP and UDP) in the firewall? (decision D6, open)"},
+	"az.desktop":           {"installare %s dagli archivi della distribuzione", "install %s from the distribution's archives"},
+	"az.desktop.fa":        {"il gruppo di pacchetti della distribuzione per %s, senza display manager e senza graphical.target: davanti al monitor la macchina resta com'era", "the distribution's package group for %s, without a display manager and without graphical.target: at the monitor the machine stays as it was"},
+	"az.desktop.verifica":  {"i pacchetti installati, e il palco che parte senza schermo", "the installed packages, and the stage starting headless"},
+	"az.desktop.annulla":   {"si tolgono i pacchetti installati per noi che nessun altro vuole; quelli aggiornati restano (INDIRETTA, dichiarata)", "packages installed for us that nobody else wants are removed; upgraded ones stay (INDIRECT, declared)"},
+	"az.cintura":           {"accendere la cintura %s", "switch on the safety belt %s"},
+	"az.cintura.fa":        {"copia di %s in %s (temporaneo + rinomina), annotando il file dell'amministratore se c'era", "copy of %s to %s (temporary + rename), recording the administrator's file if there was one"},
+	"az.cintura.verifica":  {"sha256 uguale alla sorgente", "sha256 equal to the source"},
+	"az.cintura.annulla":   {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
+	"az.cintura.consenso":  {"Accendere le tre cinture (la macchina non si spegne, non si sospende, i tasti non la spengono)? (decisione D4, aperta)", "Switch on the three safety belts (the machine does not power off, does not suspend, keys do not power it off)? (decision D4, open)"},
+	"az.servizio":          {"abilitare e accendere remotix.service", "enable and start remotix.service"},
+	"az.servizio.fa":       {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
+	"az.servizio.verifica": {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
+	"az.servizio.annulla":  {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
+
+	// operazione e certificato
+	"op.chiesto":          {"chiesto da chi amministra", "requested by the administrator"},
+	"op.no_desktop":       {"risposta «no» alla domanda sul desktop", "answer «no» to the desktop question"},
+	"cert.titolo":         {"REMOTIX — certificato dell'operazione %s", "REMOTIX — certificate of operation %s"},
+	"cert.stato":          {"stato finale", "final state"},
+	"cert.mestiere":       {"mestiere", "job"},
+	"cert.motore":         {"motore", "engine"},
+	"cert.catalogo":       {"catalogo", "catalogue"},
+	"cert.fiducia":        {"fiducia", "trust"},
+	"cert.piano":          {"piano", "plan"},
+	"cert.impronta":       {"impronta", "fingerprint"},
+	"cert.controlli":      {"controlli", "checks"},
+	"cert.condizioni":     {"condizioni", "conditions"},
+	"cert.nessuna":        {"nessuna", "none"},
+	"cert.non_annullato":  {"NON ANNULLATO", "NOT ROLLED BACK"},
+	"cert.prodotto_prova": {"nessuno: piano di prova del motore (T4)", "none: engine test plan (T4)"},
+	"cert.firma_si":       {"firma verificata", "signature verified"},
+	"cert.firma_no":       {"firma NON verificata (non ancora prevista: T8/D11); proceduto su richiesta esplicita", "signature NOT verified (not in place yet: T8/D11); proceeded on explicit request"},
+
+	// riga di comando
+	"cli.uso": {`remotix-install — il motore d'installazione di REMOTIX (versione %s, formato %s)
+
+  remotix-install verifica  [--json] [--porta N] [--catalogo FILE]
+        guarda la macchina, SENZA TOCCARE NIENTE, e dice che cosa REMOTIX ci può fare
+  remotix-install piano     [--uscita FILE] [--utente NOME] [--apri-firewall] [--json]
+        prepara un piano di PROVA del motore (niente pacchetti di REMOTIX: arrivano dopo)
+  remotix-install approva   FILE-PIANO [--desktop gnome|kde|xfce|lxqt|no]
+        scrive nel piano il consenso di chi lo lancia (per applicarlo senza domande)
+  remotix-install applica   FILE-PIANO [--approva] [--senza-firma] [--eventi]
+        applica il piano: si ferma se la macchina non è quella del piano
+  remotix-install riprendi  [--eventi]    completa un'operazione interrotta
+  remotix-install annulla   [--eventi]    annulla un'operazione non finita
+  remotix-install stato                   le operazioni e il loro stato
+  remotix-install aggiornato              per gli script del pacchetto dopo un aggiornamento:
+        dice se l'installazione è certificata, rifà la verifica e riaccende il servizio se era acceso
+  remotix-install catalogo [--tabella]    il catalogo in uso (--tabella: le tabelle di §3.1)
+
+  opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE,
+  --lingua it|en (predefinita: dall'ambiente, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
+  --eventi: gli eventi in JSON, una riga ciascuno (per le interfacce)
+`, `remotix-install — the REMOTIX installation engine (version %s, format %s)
+
+  remotix-install verifica  [--json] [--porta N] [--catalogo FILE]
+        examines the machine, WITHOUT TOUCHING ANYTHING, and says what REMOTIX can do on it
+  remotix-install piano     [--uscita FILE] [--utente NAME] [--apri-firewall] [--json]
+        prepares an engine TEST plan (no REMOTIX packages: they come later)
+  remotix-install approva   PLAN-FILE [--desktop gnome|kde|xfce|lxqt|no]
+        writes the consent of whoever runs it into the plan (to apply it without questions)
+  remotix-install applica   PLAN-FILE [--approva] [--senza-firma] [--eventi]
+        applies the plan: stops if the machine is not the plan's machine
+  remotix-install riprendi  [--eventi]    completes an interrupted operation
+  remotix-install annulla   [--eventi]    rolls back an unfinished operation
+  remotix-install stato                   the operations and their state
+  remotix-install aggiornato              for the package scripts after an update:
+        says whether the installation is certified, checks again and restarts the service if it was running
+  remotix-install catalogo [--tabella]    the catalogue in use (--tabella: the tables of §3.1)
+
+  common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE,
+  --lingua it|en (default: from the environment, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
+  --eventi: the events as JSON, one line each (for the interfaces)
+`},
+	"cli.titolo":         {"REMOTIX — controllo della macchina (sola lettura: niente è stato toccato)", "REMOTIX — machine check (read only: nothing was touched)"},
+	"cli.distribuzione":  {"Distribuzione", "Distribution"},
+	"cli.catalogo":       {"Catalogo: %s (scade il %s)", "Catalogue: %s (expires on %s)"},
+	"cli.desktop":        {"I desktop:", "The desktops:"},
+	"cli.non_installato": {"non installato", "not installed"},
+	"cli.non_si_sa":      {"non si sa se c'è", "unknown whether present"},
+	"cli.installato":     {"installato (%s)", "installed (%s)"},
+	"cli.proposto":       {"  ← quello proposto se se ne installa uno", "  ← the one proposed if one is installed"},
+	"cli.perche":         {"perché", "why"},
+	"cli.condizione":     {"condizione", "condition"},
+	"cli.comando":        {"comando", "command"},
+	"cli.decisione":      {"(decisione %s, aperta)", "(decision %s, open)"},
+	"cli.nota":           {"nota", "note"},
+	"cli.senza_desktop":  {"  ⚠ Nessun desktop supportato è installato: prima di installare REMOTIX si chiederà se\n    aggiungerne uno (se la risposta è no, REMOTIX non si installa: RX-DESKTOP-001).", "  ⚠ No supported desktop is installed: before installing REMOTIX you will be asked whether\n    to add one (if the answer is no, REMOTIX is not installed: RX-DESKTOP-001)."},
+	"cli.incognite":      {"Quel che NON si è potuto sapere (non vale come «a posto»):", "What could NOT be found out (it does not count as «fine»):"},
+	"cli.avvisi":         {"Avvisi e problemi:", "Warnings and problems:"},
+	"cli.fatti":          {"I fatti (RILEVATO = visto; VERIFICATO = provato davvero; SCONOSCIUTO = non si sa):", "The facts (RILEVATO = seen; VERIFICATO = actually tested; SCONOSCIUTO = unknown):"},
+	"cli.piano_scritto":  {"Piano di prova %s scritto in %s", "Test plan %s written to %s"},
+	"cli.piano_macchina": {"Macchina: %s — impronta %s (%d elementi vincolanti)", "Machine: %s — fingerprint %s (%d binding elements)"},
+	"cli.piano_passo":    {"%d. %s  [%s, %s]\n   si fa: %s\n   si verifica: %s\n   si annulla: %s\n", "%d. %s  [%s, %s]\n   done by: %s\n   verified by: %s\n   rolled back by: %s\n"},
+	"cli.consenso":       {"consenso richiesto: %s", "consent required: %s"},
+	"cli.non_fatto":      {"non fatto: %s %s %s", "not done: %s %s %s"},
+	"cli.per_applicarlo": {"Per applicarlo: remotix-install approva %s && remotix-install applica %s --senza-firma", "To apply it: remotix-install approva %s && remotix-install applica %s --senza-firma"},
+	"cli.approvato":      {"Piano %s approvato da %s (digest %s)", "Plan %s approved by %s (digest %s)"},
+	"cli.serve_piano":    {"%s: serve il file del piano", "%s: the plan file is needed"},
+	"cli.operazione":     {"operazione %s: %s", "operation %s: %s"},
+	"cli.nessuna_op":     {"nessuna operazione in %s", "no operation in %s"},
+	"cli.aperta":         {"  ← aperta: riprendi o annulla", "  ← open: resume or roll back"},
+	"cli.certificata":    {"installazione certificata dall'installatore: operazione %s %s", "installation certified by the installer: operation %s %s"},
+	"cli.riaccensione":   {"riaccensione di remotix.service", "restart of remotix.service"},
+	"cli.catalogo_info":  {"catalogo %s (sequenza %d), emesso il %s, scade il %s, motore minimo %s\ndigest %s\nfirma: %s\n", "catalogue %s (sequence %d), issued on %s, expires on %s, minimum engine %s\ndigest %s\nsignature: %s\n"},
+}
