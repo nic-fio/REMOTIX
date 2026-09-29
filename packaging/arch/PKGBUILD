@@ -163,10 +163,9 @@ package() {
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
 	# ⚠ DECISIONE D4 APERTA — le tre cinture, nei percorsi del FORNITORE:
 	#   l'amministratore le spegne con un file omonimo in /etc.
-	#   rules.d di polkit e' 0750 root:polkitd (gid 102, fisso su Arch) come
-	#   nel pacchetto polkit: altrimenti pacman avvisa «permissions differ».
-	install -dm750 -o root -g 102 "$pkgdir/usr/share/polkit-1/rules.d"
-	install -m644 "$s/remotix-niente-spegnimento.rules" \
+	#   `[M]` polkit 127-3: /usr/share/polkit-1/rules.d e' 0755 root:root (e'
+	#   /etc/polkit-1/rules.d ad essere 0750 root:polkitd): si sta nella prima.
+	install -Dm644 "$s/remotix-niente-spegnimento.rules" \
 		"$pkgdir/usr/share/polkit-1/rules.d/50-remotix-niente-spegnimento.rules"
 	install -Dm644 "$s/remotix-tasti.conf" \
 		"$pkgdir/usr/lib/systemd/logind.conf.d/remotix-tasti.conf"
