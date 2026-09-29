@@ -44,7 +44,9 @@ shift
 DESKTOP=${*:-gnome kde xfce lxqt}
 QUI=$(cd "$(dirname "$0")" && pwd)
 MISURE_DIR=/media/REMOTIX/misure/fase16
-VIDEO=${REMOTIX_16_VIDEO:-$MISURE_DIR/video/bbb_sunflower_2160p_30fps_normal.mp4}
+# ⭐ A5 (29 set): il file quadruplo (4 giri concatenati senza ricodifica, 42 min) — col file
+#   da 10,5 min il lettore ricominciava dentro le finestre di giudizio e fermava l'immagine 1-3 s.
+VIDEO=${REMOTIX_16_VIDEO:-$MISURE_DIR/video/bbb_sunflower_2160p_30fps_x4.mp4}
 FPS=${REMOTIX_16_FPS:-30}
 SCALA=${REMOTIX_16_MISURE:-4k 3k 2k fhd}
 LOG=$MISURE_DIR/coda-$SCHEDA.log

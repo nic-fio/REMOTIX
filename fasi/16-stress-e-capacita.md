@@ -426,6 +426,10 @@ nessuna chiave richiesta, rete pulita; i buchi al server coincidono al milliseco
 dell'attore (2,685 contro 2,68 s). ⇒ **Non è REMOTIX**, è il banco. Cura del banco (non fatta):
 un file più lungo del livello (`ffmpeg -stream_loop`, senza ricodifica), o le righe attorno al
 giro dichiarate ed escluse. Sul riepilogo pesa poco: tocca il numero severo di KDE Full HD Radeon.
+⭐ **Cura del banco fatta, 29 set**: `video/bbb_sunflower_2160p_30fps_x4.mp4`, lo stesso file
+concatenato 4 volte senza ricodifica (`ffmpeg -stream_loop 3 -c copy`, 2538 s = 42 min, sha256 in
+`video/SHA256SUMS`), più lungo di qualunque livello; `16-coda.sh` lo usa di serie. Non ancora
+provato in un livello.
 
 ### Le frecce su/giù (segnalate dall'utente a mano) — studio del 29 set
 
