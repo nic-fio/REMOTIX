@@ -5856,6 +5856,24 @@ Parola dell'utente: *«è il logo ufficiale del progetto»*. ⇒ `grafica/logo/r
 (icona, favicon, versione scura) si ricavano da questo, non lo sostituiscono.
 
 
+## 10. ✅ REMOTIX su Linux in generale, e l'installatore — 29 set 2026
+
+### 10.1 ✅ Non solo Debian: prima un'indagine sulle distribuzioni
+
+Parola dell'utente: *«al momento REMOTIX è stato sviluppato su Debian Trixie, ma l'obiettivo è farlo
+girare su Linux in generale. Per ottenere questo risultato, e quindi avere basi solide per costruire
+l'installer, è necessario fare un'indagine approfondita sulle principali distro»*. Famiglie:
+Debian/Ubuntu (e Mint), Fedora/RHEL (Rocky, Alma), Arch (Manjaro), openSUSE (aggiunta nell'indagine).
+⚠ Già visto nel codice: `src/remotix.pam` usa `@include common-auth`, che esiste solo su Debian e Ubuntu.
+
+### 10.2 ✅ L'installatore è professionale, di assoluta eccellenza
+
+Parola dell'utente: *«REMOTIX dovrà essere dotato di un sistema di installazione professionale, di
+assoluta eccellenza»*. ⇒ È un requisito del prodotto, non una rifinitura: l'installatore si progetta
+sull'indagine di §10.1 e su come installano i prodotti migliori, e si misura come il resto.
+
+---
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
