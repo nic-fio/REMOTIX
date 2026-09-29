@@ -116,7 +116,14 @@ var testi = map[string]Testo{
 	"az.iscrizione.fa":              {"gpasswd -d, se è ancora nel gruppo", "gpasswd -d, if still in the group"},
 	"az.iscrizione.verifica":        {"non è più nel gruppo", "no longer in the group"},
 	"az.iscrizione.annulla":         {"gpasswd -a (lo si rimette)", "gpasswd -a (added back)"},
-	"ver.codifica_assente":          {"il binario di REMOTIX non ha ancora --prova-codifica (da fare nel prodotto)", "the REMOTIX binary does not have --prova-codifica yet (to be done in the product)"},
+	"ver.pam":                       {"la pila d'accesso di REMOTIX si risolve (file, inclusioni, moduli)", "the REMOTIX login stack resolves (files, includes, modules)"},
+	"ver.porta":                     {"il firewall lascia passare la porta %s TCP e UDP", "the firewall lets port %s TCP and UDP through"},
+	"ver.porta_nessuno":             {"nessun firewall acceso", "no firewall on"},
+	"cond.pam_ignota":               {"la pila d'accesso non si è potuta controllare (%s)", "the login stack could not be checked (%s)"},
+	"cond.porta_ignota":             {"non si sa se il firewall lascia passare la porta %s: controllarlo a mano", "unknown whether the firewall lets port %s through: check by hand"},
+	"cond.porta_chiusa":             {"il firewall chiude %s: da fuori REMOTIX non si raggiunge finché non si apre (D6)", "the firewall closes %s: REMOTIX cannot be reached from outside until it is opened (D6)"},
+	"cli.certifica":                 {"Certificazione dell'installazione %s: %s", "Certification of installation %s: %s"},
+	"ver.codifica_assente":          {"la prova di codifica di REMOTIX non ha dato una risposta leggibile", "the REMOTIX encoding test gave no readable answer"},
 
 	// operazione e certificato
 	"op.chiesto":          {"chiesto da chi amministra", "requested by the administrator"},

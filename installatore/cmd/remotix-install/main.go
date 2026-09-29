@@ -53,6 +53,8 @@ func main() {
 		codice, err = aggiornato(arg)
 	case "disinstalla":
 		err = disinstalla(arg)
+	case "certifica":
+		codice, err = certifica(arg)
 	case "catalogo":
 		err = mostraCatalogo(arg)
 	case "versione", "--version":
@@ -509,4 +511,40 @@ func mostraCatalogo(arg []string) error {
 	}
 	fmt.Print(T("cli.catalogo_info", cat.Versione, cat.Sequenza, cat.Emesso, cat.Scadenza, cat.MotoreMinimo, cat.Digest, cat.Firma.Nota))
 	return nil
+}
+
+// certifica: rifà, in sola lettura, i controlli dell'installazione confermata (§6.6.11, R29):
+// VERDE solo se tutto è PASS e non c'è nessuna condizione; uscita 0 solo se VERDE.
+func certifica(arg []string) (int, error) {
+	fs := flag.NewFlagSet("certifica", flag.ContinueOnError)
+	var c comuni
+	c.aggiungi(fs)
+	comeJSON := fs.Bool("json", false, "in JSON")
+	if _, err := argomenti(fs, arg); err != nil {
+		return 2, err
+	}
+	cat, err := c.leggiCatalogo()
+	if err != nil {
+		return 1, err
+	}
+	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Catalogo: cat, Porta: c.porta}
+	r, err := m.Certifica()
+	if err != nil {
+		return 1, err
+	}
+	if *comeJSON {
+		stampaJSON(r)
+	} else {
+		fmt.Println(T("cli.certifica", r.Operazione, r.Esito))
+		for _, k := range r.Controlli {
+			fmt.Printf("  %-8s %s — %s\n", k.Esito, k.ID, k.Dettaglio)
+		}
+		for _, k := range r.Condizioni {
+			fmt.Printf("  %s %s\n", k.Codice, k.Testo)
+		}
+	}
+	if r.Esito != "VERDE" {
+		return 1, nil
+	}
+	return 0, nil
 }

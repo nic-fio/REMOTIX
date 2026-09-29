@@ -229,6 +229,7 @@ type Rapporto struct {
 	Catalogo     RifCatalogo `json:"catalogo"`
 	Piattaforma  string      `json:"piattaforma"` // "Debian 13"
 	pl           *Piattaforma
+	cat          *Catalogo
 	Riconosciuta string         `json:"riconosciuta"` // matrice · fuori matrice · derivata di … · esclusa · sconosciuta
 	Desktop      []EsitoDesktop `json:"desktop"`
 	SenzaDesktop bool           `json:"senza_desktop"`       // nessun desktop supportato installato (§10 e R38)
@@ -295,7 +296,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		r.Incognite = append(r.Incognite, T("inc.openssl"))
 	}
 	pl, derivata := c.trova(id, ver)
-	r.pl = pl
+	r.pl, r.cat = pl, c
 	if pl == nil && r.Riconosciuta == "" {
 		tutti = append(tutti, Msg("RX-COMPAT-002", id+" "+ver))
 		r.Riconosciuta = T("comp.sconosciuta")

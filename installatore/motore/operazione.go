@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -782,14 +783,24 @@ func (op *Operazione) verifica() (bool, error) {
 	}
 	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta, con un ripiego
 	// dichiarato (il software): UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS (§6.6.7).
+	// e la pila PAM che si risolve, e la porta che il firewall lascia passare (certifica.go, R29)
 	if op.Piano.Mestiere == "installazione" || op.Piano.Mestiere == "aggiornamento" {
-		k, cond := provaCodifica(op.m.Amb)
-		rv.Controlli = append(rv.Controlli, k)
-		if k.Esito == "FAIL" {
-			tutto = false
+		porta := op.m.Porta
+		for _, ap := range op.Piano.Azioni {
+			if ap.Tipo == "accendi-servizio" {
+				if n, err := strconv.Atoi(ap.Parametri["porta"]); err == nil && n > 0 {
+					porta = n
+				}
+			}
 		}
-		if cond != nil {
-			rv.Condizioni = append(rv.Condizioni, *cond)
+		if porta == 0 {
+			porta = 7447
+		}
+		k, cond, fallito := ControlliPiattaforma(op.m.Amb, porta)
+		rv.Controlli = append(rv.Controlli, k...)
+		rv.Condizioni = append(rv.Condizioni, cond...)
+		if fallito {
+			tutto = false
 		}
 	}
 	return tutto, op.scriviOggetto("verifica.json", rv)

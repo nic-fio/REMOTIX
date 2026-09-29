@@ -290,6 +290,9 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
+		if err := importaChiavi(c, "epel-release"); err != nil {
+			return err
+		}
 		if !adesso["crb"] {
 			return d.crb(c, true)
 		}
@@ -299,9 +302,11 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 			if d.rhel(c) {
 				u = "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-" + d.majorVersione(c) + ".noarch.rpm"
 			}
-			_, err := esegui(c.Amb, tempoGestore, "dnf", "install", "-y", u)
-			return err
+			if _, err := esegui(c.Amb, tempoGestore, "dnf", "install", "-y", u); err != nil {
+				return err
+			}
 		}
+		return importaChiavi(c, "rpmfusion-free-release")
 	case "packman":
 		if !adesso["packman"] {
 			m, _ := OsRelease(c.Amb)
@@ -515,6 +520,28 @@ func (d *deposito) togliArrivati(c *Contesto, p primaDeposito) error {
 	for _, k := range chiavi {
 		if _, err := esegui(c.Amb, time.Minute, "rpm", "-e", k); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// importaChiavi: le chiavi che il pacchetto del deposito porta (/etc/pki/rpm-gpg/…) si importano in
+// rpm SUBITO: i pacchetti del deposito il motore li installa dalla sua cartella, e dnf li verifica
+// solo se la chiave è già nell'archivio ([M] 30 set, fedora44-gnome: «The repository does not have
+// any OpenPGP keys configured»). Si tolgono all'annullamento (togliArrivati, rpm -e).
+func importaChiavi(c *Contesto, pacchetto string) error {
+	out, err := esegui(c.Amb, time.Minute, "rpm", "-ql", pacchetto)
+	if err != nil {
+		return err
+	}
+	for _, f := range strings.Fields(out) {
+		if strings.HasPrefix(f, "/etc/pki/rpm-gpg/") && strings.Contains(f, "RPM-GPG-KEY") && !strings.HasSuffix(f, "/") {
+			if st, e := os.Stat(c.Amb.P(f)); e != nil || st.IsDir() {
+				continue
+			}
+			if _, err := esegui(c.Amb, time.Minute, "rpm", "--import", f); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

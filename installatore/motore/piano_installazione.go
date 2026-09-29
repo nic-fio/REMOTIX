@@ -47,7 +47,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if s := SceltaDesktop(rap); s != nil {
 		pn.Scelte = append(pn.Scelte, *s)
 		pn.Consensi = append(pn.Consensi, s.Domanda)
-		pn.metteDesktop(s.Predefinita, s.Pacchetti[s.Predefinita])
+		pn.metteDesktop(s.Predefinita, s.Pacchetti[s.Predefinita], s.Componenti[s.Predefinita])
 	}
 	if o.Pacchetto == "" {
 		return nil, fmt.Errorf("serve il pacchetto di REMOTIX (--pacchetto): l'archivio firmato arriva con T8")

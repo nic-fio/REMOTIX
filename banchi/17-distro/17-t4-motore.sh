@@ -97,6 +97,25 @@ sudo sh -c 'grep -h COMANDO /var/lib/remotix/operazioni/*/registro.jsonl' | sed 
 sed 's/^/   /' "$E/installato.txt" | head -60
 impronta installato
 
+echo "==> 2b. certifica (sola lettura) sulla macchina sana"
+vm "sudo /root/remotix-install certifica --lingua it; echo uscita \$?" >"$E/certifica.txt" 2>&1
+sed 's/^/   /' "$E/certifica.txt" | grep -E 'Certificazione|uscita|FAIL|UNKNOWN|C-'
+if [ -n "${R29:-}" ]; then
+	echo "==> R29: la certificazione su una macchina guasta apposta non dice mai VERDE"
+	# tutto in UN sudo: una pila PAM rotta romperebbe anche i sudo successivi
+	vm "sudo bash -s" >"$E/r29.txt" 2>&1 <<'R29'
+L=$(ls /usr/lib/x86_64-linux-gnu/libx264.so.* /usr/lib64/libx264.so.* /usr/lib/libx264.so.* 2>/dev/null | head -1)
+P=$(ls /etc/pam.d/remotix /usr/lib/pam.d/remotix 2>/dev/null | head -1)
+c() { /root/remotix-install certifica --lingua it | grep -E "Certificazione|$1"; }
+echo "-- guasto 1: la pila PAM di REMOTIX nomina un modulo che non c'è"; cp -a $P /root/pam-via; echo "auth required pam_non_esiste.so" >> $P; c pam-risolta; cp -a /root/pam-via $P
+echo "-- guasto 2: niente libx264 ($L) e niente VA-API: la codifica non riesce"; mv $L /root/x264-via; c codifica; mv /root/x264-via $L
+echo "-- guasto 3: il servizio spento da altri"; systemctl stop remotix; c servizio; systemctl start remotix; sleep 3
+echo "-- di nuovo com'era"; c Certificazione
+R29
+
+	sed 's/^/   /' "$E/r29.txt"
+fi
+
 echo "==> 3. il browser vero (Chrome) su 127.0.0.1:$PRX"
 T1C=$R/t1c bash "$R/t1c/17-t1c-guarda.sh" "$m" "$PRX" chrome >"$E/browser.log" 2>&1
 echo "   uscita $? — $(grep -E '^T1C ' "$E/browser.log" | cut -c1-300)"

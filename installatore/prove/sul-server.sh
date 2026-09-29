@@ -14,7 +14,7 @@ scp -q "$qui/uscita/remotix-install" "$qui/../banchi/17-distro/17-t4-motore.sh" 
 case $1 in
 debian)
 	scp -q "$3" $S:$T4/
-	ssh -o BatchMode=yes $S "cd $T4 && DESKTOP=${DESKTOP:-} PIANO_OPZ='${PIANO_OPZ:-}' sg kvm -c 'bash 17-t4-motore.sh $2 $T4/remotix-install $T4/$(basename "$3")'" 2>&1 | grep -v tput ;;
+	ssh -o BatchMode=yes $S "cd $T4 && DESKTOP=${DESKTOP:-} R29=${R29:-} PIANO_OPZ='${PIANO_OPZ:-}' sg kvm -c 'bash 17-t4-motore.sh $2 $T4/remotix-install $T4/$(basename "$3")'" 2>&1 | grep -v tput ;;
 alma)
 	ssh -o BatchMode=yes $S "cd $T4 && sg kvm -c 'bash 17-t4-alma.sh $2 $T4/remotix-install'" 2>&1 | grep -v tput ;;
 esac

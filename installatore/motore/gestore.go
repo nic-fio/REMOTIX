@@ -274,9 +274,17 @@ func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 	if err := os.MkdirAll(g.a.P(dest), 0o700); err != nil {
 		return nil, err
 	}
-	arg := append([]string{"install", "-y", "--downloadonly", "--destdir", dest}, append(append([]string{}, file...), nomi...)...)
-	if _, err := esegui(g.a, tempoGestore, "dnf", arg...); err != nil {
-		return nil, err
+	if _, err := os.Stat(g.a.P("/usr/bin/dnf5")); err == nil {
+		// dnf5 (Fedora 41+): «install --downloadonly» non ha --destdir ([M] 30 set, fedora44-gnome):
+		// la transazione si legge da «install --assumeno», poi «download» dei pacchetti dei depositi
+		if err := g.scaricaDnf5(dest, file, nomi); err != nil {
+			return nil, err
+		}
+	} else {
+		arg := append([]string{"install", "-y", "--downloadonly", "--destdir", dest}, append(append([]string{}, file...), nomi...)...)
+		if _, err := esegui(g.a, tempoGestore, "dnf", arg...); err != nil {
+			return nil, err
+		}
 	}
 	voci, _ := filepath.Glob(g.a.P(dest) + "/*.rpm")
 	for _, f := range file { // il file locale: dnf non lo copia
@@ -285,11 +293,18 @@ func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 	var r []Artefatto
 	visti := map[string]bool{}
 	for _, v := range voci {
-		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `%{NAME} %{VERSION}-%{RELEASE} %{ARCH}`, v)
+		// ⚠ rpm scrive anche gli avvisi («NOKEY» se la chiave del deposito non è ancora importata)
+		// nella stessa uscita: si prende solo la riga con la marca
+		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `RX %{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n`, v)
 		if err != nil {
 			return nil, err
 		}
-		c := strings.Fields(out)
+		var c []string
+		for _, riga := range strings.Split(out, "\n") {
+			if f := strings.Fields(riga); len(f) == 4 && f[0] == "RX" {
+				c = f[1:]
+			}
+		}
 		if len(c) != 3 || visti[c[0]] {
 			continue
 		}
@@ -315,6 +330,61 @@ func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
 	return r, nil
+}
+
+var archi = map[string]bool{"x86_64": true, "noarch": true, "i686": true, "aarch64": true}
+
+func (g *gestoreDnf) scaricaDnf5(dest string, file, nomi []string) error {
+	out, c, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"install", "--assumeno"}, append(append([]string{}, file...), nomi...)...)...)
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(out, "Transaction Summary") {
+		if strings.Contains(out, "Nothing to do") {
+			return nil
+		}
+		return fmt.Errorf("dnf install --assumeno: uscita %d: %s", c, ultimeRighe(out, 6))
+	}
+	var nevra []string
+	in := false
+	for _, riga := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(riga)
+		// le sezioni della tabella di dnf5: si prende quel che si installa, aggiorna o RETROCEDE
+		// (una retrocessione è una modifica INDIRETTA come un aggiornamento), mai «Skipping
+		// packages with conflicts» ([M] 30 set: lì c'era la libavcodec-freeworld più nuova)
+		if strings.HasSuffix(t, ":") && !strings.HasPrefix(riga, " ") {
+			in = strings.HasPrefix(t, "Installing") || strings.HasPrefix(t, "Upgrading") || strings.HasPrefix(t, "Downgrading")
+			continue
+		}
+		f := strings.Fields(t)
+		if !in || len(f) < 4 || !archi[f[1]] || f[3] == "@commandline" {
+			continue
+		}
+		ver := f[2]
+		if strings.HasPrefix(ver, "0:") {
+			ver = ver[2:]
+		}
+		nevra = append(nevra, f[0]+"-"+ver+"."+f[1])
+	}
+	if len(nevra) == 0 {
+		return nil
+	}
+	if _, err = esegui(g.a, tempoGestore, "dnf", append([]string{"download", "--destdir", dest}, nevra...)...); err != nil {
+		return err
+	}
+	// [M] 30 set, fedora44-gnome: «download» ha lasciato anche un'altra versione dello stesso
+	// pacchetto: nella cartella resta SOLO l'insieme della transazione
+	voluti := map[string]bool{}
+	for _, n := range nevra {
+		voluti[n+".rpm"] = true
+	}
+	voci, _ := filepath.Glob(g.a.P(dest) + "/*.rpm")
+	for _, v := range voci {
+		if !voluti[filepath.Base(v)] {
+			os.Remove(v)
+		}
+	}
+	return nil
 }
 
 func nomiDi(r []Artefatto) []string {
