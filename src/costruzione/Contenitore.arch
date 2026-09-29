@@ -3,11 +3,16 @@
 # ⓘ Arch ha gia' ngtcp2 1.25 con crypto_ossl (pacchetto `ngtcp2`): si potrebbe
 #   usare quella.  Si costruisce comunque la nostra, statica, per uniformita'
 #   (una sola versione del trasporto da provare, §6.3).
+#
+# ⓘ labwc e wlr-randr non servono a compilare: sono dipendenze di ESECUZIONE
+#   del pacchetto (packaging/arch/PKGBUILD), e makepkg vuole vederle
+#   installate prima di costruire.
 FROM docker.io/library/archlinux:latest
 RUN pacman -Syu --noconfirm --needed \
         base-devel git cmake ninja \
         openssl pam glib2 pipewire libdrm ffmpeg libva \
         libei libxkbcommon mesa wayland \
+        labwc wlr-randr \
     && pacman -Scc --noconfirm
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

@@ -23,13 +23,14 @@
 #    ⇒ A carico nostro: ricostruire a ogni cambio di soname (ffmpeg circa una
 #      volta l'anno; OpenSSL, glib, libei, pipewire piu' di rado).
 #
-# ⭐ ngtcp2 e nghttp3 DENTRO, statiche, versione fissata (§6.3) — ⚠ DECISIONE
-#    D2 in attesa di conferma: la proposta e' «si'», ed e' gia' cosi' nei
-#    contenitori.  ⓘ Su Arch c'e' la strada corta: `libngtcp2` e' gia' 1.25
-#    col ponte crypto_ossl, e `libnghttp3` c'e'.  Legandosi a quelle
-#    (`libngtcp2.so`, `libnghttp3.so` nelle depends) gli aggiornamenti di
-#    sicurezza li farebbe Arch.  Non si usa per uniformita' (un solo trasporto
-#    da provare su tutte le famiglie); se D2 dicesse «no», su Arch basta questo.
+# ⭐ ngtcp2 e nghttp3 DENTRO, statiche, versione fissata (§6.3) — D2 chiusa
+#    («si'», DECISIONI.md §10.6), aggiornamenti di sicurezza a carico nostro.
+#    ⓘ Per la regola di §10.6 («se la distribuzione ce l'ha giusto, si usa il
+#    suo») su Arch si POTREBBE usare quella di sistema: `libngtcp2` e' gia'
+#    1.25 col ponte crypto_ossl, e `libnghttp3` c'e' — basterebbe mettere
+#    `libngtcp2.so libnghttp3.so` nelle depends e togliere build() di quic.
+#    Resta dentro per uniformita' (un solo trasporto da provare su tutte le
+#    famiglie) finche' non si decide diversamente.
 #
 # ⛔ NON entra nel pacchetto (§4.4, §6.4, R14): utenti di prova, sudoers dei
 #    banchi, gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
@@ -61,6 +62,9 @@ depends=(
 	#    wlr-randr serve alla cura della misura su LXQt.  ⛔ Come optdepends
 	#    pacman non li installerebbe mai, e R4 («niente a mano») cadrebbe su
 	#    XFCE e LXQt.  Il prezzo: labwc+wlroots anche su GNOME e KDE.
+	#    ⚠ labwc muore senza un carattere scalabile (labwc #2525, leap16-lxqt
+	#    in T1): su Arch labwc dipende da `ttf-font`, e pacman ne porta uno.
+	#    ⛔ Il DESKTOP no: senza desktop lo installa il motore (§10.7).
 	labwc
 	wlr-randr
 )
