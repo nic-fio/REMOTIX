@@ -1036,6 +1036,12 @@ desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si ins
 - è un'azione **AL_MEGLIO** (§6.6.4): toglierla non rende la macchina identica, e il piano lo dice prima del
   consenso.
 
+**Il linguaggio delle schermate** (indicazione dell'utente sul prototipo, 30 set: *«il riepilogo a volte usa
+termini quasi da programmatore»*): chi installa legge **che cosa succede e che cosa deve decidere**, in parole
+comuni («Accesso», «Protezione del sistema», «Serve il tuo consenso», «Lo sistemo io»); driver, percorsi,
+nomi di pacchetti, codici `RX-…` e impronte stanno in un «Mostra i dettagli tecnici» chiuso di serie — è lì
+che li cerca l'assistenza.
+
 ⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
 il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.
 
