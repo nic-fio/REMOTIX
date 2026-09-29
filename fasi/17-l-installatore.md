@@ -48,6 +48,7 @@ ogni suo pezzo è noto e altri lo hanno già risolto.
 | **le prove in MACCHINE VIRTUALI, non nelle scatole** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | una VM ha kernel, SELinux, firewall e avvio **della distribuzione**; una scatola usa il kernel del server (Debian) e direbbe «tutto bene» dove la macchina vera rifiuterebbe |
 | **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, rafforzata su sua richiesta (TRUST, tre esiti per desktop, il piano come documento, l'accensione fra 7a e 7b, la RIPRESA), §6.0 |
 | **TUI e GUI irrinunciabili** | *«su TUI e GUI dico che è un requisito irrinunciabile»* | §6.6.1, D12 |
+| **le dipendenze che mancano le porta REMOTIX** | *«se ci sono pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*; eccezione i codec brevettati, confine i desktop | `DECISIONI.md` §10.6; D2 chiusa |
 | **una VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | il cliente ha di solito **un** desktop: con quattro insieme, un pezzo dimenticato per XFCE arriverebbe lo stesso trascinato da KDE, e la prova direbbe verde |
 
 ---
@@ -60,7 +61,7 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 |---|---|---|---|---|---|
 | **Debian 13** (riferimento) | ✅ | ✅ | ✅ | ✅ | la base di oggi |
 | **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); il GNOME «vanilla» va installato (§4.6) |
-| Ubuntu 24.04 LTS | 🔸 | ⛔ | ⛔ | ⛔ | KDE 5.27 (manca l'EIS di KWin ≥ 6.1), XFCE 4.18 e LXQt 1.4 senza Wayland. GNOME 46 sì, ma con OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 — **decisione D7** |
+| Ubuntu 24.04 LTS | ⛔ | ⛔ | ⛔ | ⛔ | **fuori** (D7, decisione dell'utente del 29 set): si parte dalla 26.04. KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland; GNOME 46 sì, ma chiederebbe di portare dentro OpenSSL 3.5 e due adattamenti per ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22 (Mint 23 sarà «compatibile, non certificata») |
 | **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 da RPM Fusion (§4.2) |
 | Fedora 43 | · | · | · | · | **analizzata, non certificata**: GNOME 49, esce di supporto a fine 2026; c'è la sua VM nuda per confronti |
 | **Alma 10** (certificata) · Rocky / RHEL 10 (compatibili, non certificate) | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
@@ -79,9 +80,9 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 - **Immutabili** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` in sola lettura, gruppi
   in `/usr/lib/group`, installazione con riavvio. Si rimandano a dopo la fase (§12, D9).
 
-⇒ **La matrice di certificazione: 27 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
-Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE), più Ubuntu 24.04 × GNOME (se D7
-dice sì). **Fedora 43 è analizzata ma fuori dalla matrice.**
+⇒ **La matrice di certificazione: 26 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
+Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE) = **26**. **Fedora 43 e Ubuntu 24.04 (D7) sono analizzate ma fuori
+dalla matrice.**
 
 ⚠ **Che cosa si certifica, e che cosa no.** Si certifica solo quel che gira nelle nostre VM: **Alma 10**,
 non «la famiglia RHEL 10». Rocky 10 e RHEL 10 si dichiarano **compatibili, non certificate**: stessa
@@ -696,6 +697,7 @@ E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo c
 | `C-LIMITE` | una funzione manca | niente audio, una misura dello schermo non raggiungibile |
 | `C-HARDWARE` | un requisito della scheda | NVIDIA col driver proprietario |
 | `C-AMMINISTRATORE` | serve un passo a mano | aprire la porta sul router |
+| `C-DESKTOP` | il desktop non c'è (o non è supportato) e l'installatore lo aggiunge dagli archivi della distribuzione | Ubuntu Server, un'immagine cloud, una macchina con solo Cinnamon |
 
 ⭐ Le condizioni **non spariscono dopo il piano**: stanno nel certificato, in `remotix verifica` e in
 `remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
@@ -791,7 +793,7 @@ utente con inoltro delle porte, disco come sovrapposizione sull'immagine ufficia
 - `[M]` 29 set: **tutte e nove le distribuzioni partono** e rispondono a ssh in 3-39 s; SELinux
   Enforcing su Fedora e Alma.
 - ⚠ Sul server QEMU va reinstallato dopo ogni riavvio (il sistema è in memoria): è nella ricetta.
-- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0).
+- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0); ubuntu2404-gnome resta per confronto, fuori dalla matrice (D7).
 - **Quante VM insieme: 4** (decisione dell'utente: *«se il sistema regge passiamo da 4 a 8; se non regge
   torniamo a 4, così ci teniamo un po' di margine»*). `[M]` `17-carico.sh`, 8 VM × 10 min, ognuna con la
   schermata d'accesso, una codifica software Full HD 30 fps e 2,5 GB occupati: **8 × 6 GB e 8 × 4 GB non
@@ -838,7 +840,7 @@ Su ogni macchina, automatico:
 
 - **giro corto**, a ogni modifica dell'installatore: una macchina per famiglia (debian13, ubuntu2604,
   fedora44, arch, tumbleweed) — circa 20 minuti;
-- **giro intero**, prima di dichiarare pronta una versione: tutte le 27 — circa 2 ore, tre alla volta,
+- **giro intero**, prima di dichiarare pronta una versione: tutte le 26 — circa 2 ore, tre alla volta,
   anche di notte.
 
 ### 7.5 Le due cose che la VM non prova
@@ -895,6 +897,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R35 | lo stato «a condizioni» non sparisce | installazione su Fedora senza RPM Fusion (ripiego software); poi `remotix verifica` e il certificato | la condizione non scritta, o scritta solo nel piano |
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
+| R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
 
 ---
 
@@ -912,7 +915,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
 | **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
 | **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
-| **T10** | il giro intero sulle 27 macchine, e la chiusura | tutti verdi | |
+| **T10** | il giro intero sulle 26 macchine della matrice, e la chiusura | tutti verdi | |
 
 Ordine delle distribuzioni dentro ogni tappa: prima quelle che rendono di più con meno (**Debian 13,
 Ubuntu 26.04**), poi **Fedora e Arch**, poi **openSUSE** (la più scomoda per H.264) e **Alma**.
@@ -930,12 +933,12 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | | la domanda | quando | la proposta |
 |---|---|---|---|
 | **D1** | ~~Le sessioni aspettano il server nuovo invece di morire con lui?~~ ⭐ **Superata dalla misura di T2**: i desktop sopravvivono già. Resta una domanda più piccola: il figlio muore col padre (per scelta) — va bene così, visto che il desktop resta e il padre nuovo lo ritrova? | T7 | sì: il desktop è la cosa che conta, il figlio si rifà al riattacco |
-| **D2** | ngtcp2 e nghttp3 **dentro** il binario, con gli aggiornamenti di sicurezza a carico nostro? | T3 | sì: quasi nessuna distribuzione ha la 1.25 |
+| **D2** | ✅ **CHIUSA il 29 set**: sì, ngtcp2 e nghttp3 dentro — dalla regola generale dell'utente (`DECISIONI.md` §10.6): *quel che manca o è troppo vecchio lo porta REMOTIX*, salvo i codec brevettati (archivio esterno col consenso) e i desktop (fuori matrice) | — | — |
 | **D3** | La **politica contro i tentativi**: che cosa si vuole — quanti errori, per conto e per indirizzo, blocco o rallentamento, vale anche davanti alla macchina o solo da remoto, chi sblocca e come, che cosa si registra. Da lì si decide se la pila di REMOTIX tiene il `pam_faillock` della distribuzione | T6, con una proposta scritta di minacce e difese | da remoto un blocco per conto permette a chiunque di chiudere fuori il proprietario; proposta: rallentamento per conto + ban per indirizzo in REMOTIX, niente blocco del conto, tutto nel registro |
 | **D4** | Le tre cinture (la macchina non si spegne, non si sospende, i tasti non spengono) sulle macchine **degli altri**: sempre, o scelta dell'amministratore all'installazione? | T3 | predefinite, dichiarate nel benvenuto, disattivabili |
 | **D5** | RPM Fusion (Fedora) e Packman (openSUSE): l'installatore li **aggiunge chiedendo il consenso**, o si limita a **dire** il comando? | T4 | chiede il consenso, mai in silenzio; senza consenso REMOTIX si installa e il benvenuto dice che la codifica sulla scheda manca |
 | **D6** | Il firewall: l'installatore **apre** la porta 7447, o la definisce e dice il comando? | T4 | la apre chiedendo, come D5 |
-| **D7** | **Ubuntu 24.04** (LTS fino al 2029, e Mint 22) solo con GNOME: si supporta? Costa OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 | T1 | sì, solo GNOME, dichiarato |
+| **D7** | ✅ **CHIUSA il 29 set: Ubuntu 24.04 fuori**, si parte dalla 26.04 (parola dell'utente: *«partiamo dalla 26.04»*) | — | — |
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
@@ -951,6 +954,22 @@ grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamen
 - ⛔ tutto il resto ha un valore predefinito e **non si chiede**: chi entra (gli utenti della macchina,
   root escluso), il certificato (generato), le tre cinture (attive, dette nel benvenuto, D4), i gruppi
   della scheda. Chi vuole altro lo cambia dopo in `/etc/remotix/remotix.conf.d/`.
+
+**Se sulla macchina non c'è un desktop** (proposta dell'utente, 29 set 2026: *«se REMOTIX non trova nessun
+desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si installa»*):
+- PREFLIGHT lo rileva; nella schermata delle scelte compare **una domanda in più, solo in quel caso**:
+  «su questa macchina non c'è un desktop: vuoi installarne uno?», con i soli desktop che il catalogo dà per
+  buoni su quella distribuzione (Alma: GNOME e KDE), fra cui **chi installa sceglie quale** (parola dell'utente); uno è **già selezionato**, quello di riferimento della distribuzione — GNOME su Debian, Ubuntu, Fedora, Alma; KDE su openSUSE e Arch — ed è anche quello che si installa senza domande se il file di risposte non dice altro. **Sì** ⇒ l'installazione del desktop entra nel piano
+  come azione dichiarata, col suo peso (pacchetti, GB); **no** ⇒ REMOTIX non si installa (BLOCCATA,
+  `RX-DESKTOP-001`, col perché e il rimedio);
+- lo stesso se c'è **solo un desktop non supportato** (Cinnamon, MATE, i3…): quello esistente non si tocca, il
+  nuovo si aggiunge accanto;
+- il desktop viene **dagli archivi della distribuzione** (il confine di `DECISIONI.md` §10.6 resta: REMOTIX
+  non se lo porta dietro), e si installa **senza cambiare come parte la macchina**: niente schermata di
+  accesso locale né avvio in grafica — i desktop di REMOTIX nascono senza schermo, e un server resta un
+  server davanti al monitor;
+- è un'azione **AL_MEGLIO** (§6.6.4): toglierla non rende la macchina identica, e il piano lo dice prima del
+  consenso.
 
 ⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
 il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.

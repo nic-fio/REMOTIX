@@ -5900,6 +5900,34 @@ Parola dell'utente: *«su TUI e GUI dico che è un requisito irrinunciabile»*. 
 GUI) su un solo motore, nessuna logica d'installazione nelle interfacce, la GUI come l'utente con
 polkit. Lo strumento è la decisione D12. `fasi/17-l-installatore.md` §6.6.1.
 
+### 10.6 ✅ Le dipendenze che mancano le porta REMOTIX — con un'eccezione e un confine
+
+Parola dell'utente (29 set 2026): *«usiamo questa regola generale per non impazzire: se ci sono
+pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*.
+
+- **La regola**: una libreria o un attrezzo di cui REMOTIX ha bisogno, **assente o troppo vecchio** nella
+  distribuzione, lo porta REMOTIX (dentro il binario o nel suo pacchetto). Se la distribuzione ce l'ha
+  giusto, si usa il suo (gli aggiornamenti di sicurezza sono suoi). ⇒ **D2 chiusa: sì**, ngtcp2 e nghttp3
+  dentro, con gli aggiornamenti di sicurezza a carico nostro.
+- ⛔ **L'eccezione: i codec brevettati** (H.264: x264, ffmpeg completa, Mesa coi codec). REMOTIX non li
+  include né li scarica da sé — sarebbe distribuirli; restano all'archivio esterno riconosciuto (RPM
+  Fusion, Packman) aggiunto dal motore **col consenso** (D5).
+- ⛔ **Il confine: i desktop.** Un desktop che la distribuzione non ha (XFCE e LXQt su Alma/RHEL) non lo
+  porta REMOTIX: quella combinazione resta fuori dalla matrice.
+
+### 10.7 ✅ Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
+
+Proposta dell'utente (29 set 2026), adottata: *«se REMOTIX non trova nessun desktop installato, o chiede di
+installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli archivi della
+distribuzione, si installa senza schermata d'accesso locale né avvio in grafica, ed è dichiarato come
+azione «al meglio». `fasi/17-l-installatore.md` §6.6 e R38.
+
+### 10.8 ✅ Ubuntu 24.04 fuori: si parte dalla 26.04
+
+Parola dell'utente (29 set 2026): *«partiamo dalla 26.04»*. Su 24.04 solo GNOME sarebbe stato possibile, al
+prezzo di portare dentro OpenSSL 3.5 (e i suoi aggiornamenti di sicurezza) e di due adattamenti per
+ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22. La matrice scende a 26 macchine.
+
 ---
 
 ## Come si tiene questo documento
