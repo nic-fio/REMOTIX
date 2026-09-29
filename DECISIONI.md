@@ -5842,6 +5842,10 @@ nostro ambito. Se in futuro il problema dovesse essere risolto allora REMOTIX di
 reggere un maggior carico»*. ⇒ Nessun aggiramento nel prodotto; il 4K della Radeon si dichiara limitato
 dal driver; il difetto è documentato nei minimi particolari in `fasi/16-a3-radeon-vcn.md`, perché
 l'utente possa decidere di aiutare gli sviluppatori del driver.
+Aggiunta del 29 set 2026: Mesa 26.1.6 non cura (100 e 102 lenti contro 100 e 105). Parola dell'utente:
+*«stiamo andando fuori scope, questo è un problema dei driver AMD, non di REMOTIX. Aprirò a questo scopo
+un progetto apposito»*. ⇒ In REMOTIX il lavoro su A3 si chiude qui: niente riproduzione minima (§6.2 del
+dossier) né altri esperimenti; il dossier e il ramo `a3-esperimenti` sono il punto di partenza del progetto nuovo.
 
 ---
 
