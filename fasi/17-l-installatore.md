@@ -920,6 +920,18 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |
 
+**Le scelte di chi installa: quasi nessuna** (indicazione dell'utente, 29 set: *«non riesco ad immaginare
+grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamente la porta»*):
+- **la porta** (predefinita 7447): una sola domanda, che vale per **TCP** (la pagina) **e UDP** (QUIC);
+- due **consensi**, non preferenze, e **solo dove servono**: l'archivio esterno per H.264 (solo Fedora
+  e openSUSE, D5) e l'apertura del firewall (solo se è acceso, D6);
+- ⛔ tutto il resto ha un valore predefinito e **non si chiede**: chi entra (gli utenti della macchina,
+  root escluso), il certificato (generato), le tre cinture (attive, dette nel benvenuto, D4), i gruppi
+  della scheda. Chi vuole altro lo cambia dopo in `/etc/remotix/remotix.conf.d/`.
+
+⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
+il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.
+
 ---
 
 ## 11. Punti da confermare `[?]`
