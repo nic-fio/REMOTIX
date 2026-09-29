@@ -20,5 +20,9 @@ nero di D-023, `amd-freq-*`, `prova-*`) restano come storia: `16-rapporto.py --c
 Rigenerare: `python3 banchi/16-stress/16-rapporto.py --registro misure/fase16/registro.jsonl
 --campagne intel-b amd-b intel-c --html /tmp/rapporto.html`.
 
-⚠ I dati grezzi (server.log 15 GB, journal 18 GB, foto 2,9 GB, risorse) NON sono qui: stanno sul
-server e in un archivio compresso fuori dal deposito (vedi fasi/16 §17.3).
+⚠ I dati grezzi (server.log 15 GB, journal 18 GB, foto 2,9 GB, risorse) NON sono qui. Due copie:
+- sul server, `/media/REMOTIX/misure/fase16/` (42 GB, video di prova compreso);
+- sul portatile, `~/REMOTIX-misure/fase16-grezzi-2026-09-29.tar.zst` — 5,66 GB, 33 709 voci
+  (le stesse contate sul server, video escluso), `zstd -t` integro, sha256
+  `8fce1f837b03a33857223c8c1d0e2d45c1a174202f2af6fa89814021f29ce5fb`.
+  Si apre con `tar --use-compress-program=zstd -xf …`.
