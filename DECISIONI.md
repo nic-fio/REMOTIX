@@ -5977,10 +5977,46 @@ in un archivio si può sempre installare a mano, la regola si fa valere **per co
    attiva il motore col consenso (D4);
 2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
    **suo** registro: una sola traccia, una disinstallazione più pulita;
-3. **REMOTIX non parte** se l'installazione non è stata completata e certificata dall'installatore
-   (operazione CONFERMATA), e lo dice con un codice (`RX-INST-001`) e il rimedio;
+3. **due vie sole: l'installatore, oppure il codice sorgente a mano** (scaricare il codice, cercarsi le
+   dipendenze, installarle, tirare su i servizi, configurarli — a proprio rischio). Parola dell'utente, 30
+   set: *«o usa l'installer o deve scaricarsi il codice a mano, andarsi a cercare i pacchetti con le
+   dipendenze e installarseli, tirar su i servizi, configurarli»*. ⇒ REMOTIX non prevede una via intermedia:
+   **né blocchi né opzioni apposta** per chi parte senza installatore (corretto due volte il 30 set: prima
+   era un rifiuto secco, poi un'opzione esplicita). Resta solo un'informazione per l'assistenza: `remotix
+   stato` dice se l'installazione è **certificata dall'installatore** o no;
 4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
    l'installatore, che verifica e riaccende senza chiudere i desktop.
+
+### 10.13 ✅ REMOTIX sarà open source
+
+Parola dell'utente (30 set 2026): *«REMOTIX sarà opensource»*. Conseguenze da decidere a suo tempo:
+🔸 **la licenza** (GPL o permissiva; pesa anche sui codec: x264 è GPL, `DECISIONI.md` ~§5113 aveva già escluso
+x265 come ripiego); **D10** (dove si costruiscono i pacchetti): con un progetto pubblico diventa possibile
+OBS di openSUSE; **D11** (la chiave): la fiducia pubblica richiede una chiave madre custodita bene.
+
+### 10.14 ✅ L'installatore è un programma solo, monolitico
+
+Parola dell'utente (30 set 2026): *«l'installer è un programma che non chiama altri sottoprogrammi strani. È un
+sistema complesso e monolitico»*. ⇒
+- **un solo eseguibile** (`remotix-install`): motore, CLI, TUI e GUI; niente script né programmi di appoggio
+  nostri;
+- con i servizi del sistema (systemd, logind, firewalld, polkit) parla **dall'interno**, attraverso le loro
+  interfacce ufficiali (D-Bus), senza lanciare programmi;
+- **un elenco chiuso di programmi di sistema** si lancia solo dove non c'è un'interfaccia stabile: il gestore
+  di pacchetti della distribuzione (`apt`, `dnf`, `zypper`, `pacman` — regola 1 del motore) e i comandi dei
+  gruppi (`usermod`, `gpasswd`); col percorso completo, argomenti fissi, ogni chiamata nel registro;
+- **la GUI** gira come l'utente (non da root: Wayland), e per le operazioni da amministratore lo stesso
+  eseguibile **rilancia sé stesso** con i permessi chiesti a polkit — un file, due ruoli.
+
+### 10.15 ✅ L'installatore parla italiano e inglese, secondo la lingua del sistema
+
+Parola dell'utente (30 set 2026): *«l'installer lo rendiamo bilingue: italiano e inglese. La scelta della
+lingua la rendiamo coerente con le impostazioni linguistiche dell'OS sottostante (variabili di ambiente)»*.
+⇒ la lingua si legge nell'ordine standard `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`: italiano se la prima
+indicata è italiano, **inglese in tutti gli altri casi** (anche tedesco, francese…); ⚠ quando l'installatore
+si rilancia con i permessi (polkit ripulisce l'ambiente) la lingua scelta si **passa esplicitamente** alla
+parte da amministratore; nell'installazione senza domande il file di risposte può fissarla. I **codici**
+`RX-…` restano uguali nelle due lingue: sono quelli che si cercano nel manuale e nell'assistenza.
 
 ---
 

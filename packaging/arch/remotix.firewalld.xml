@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- remotix: il servizio di firewalld, DEFINITO e non aperto (fasi/17 §6.4, D6).
+     La pagina va in TCP, il QUIC in UDP, sulla stessa porta. -->
+<service>
+  <short>REMOTIX</short>
+  <description>REMOTIX, il desktop nel browser: la pagina (TCP) e il flusso QUIC (UDP).</description>
+  <port protocol="tcp" port="7447"/>
+  <port protocol="udp" port="7447"/>
+</service>
