@@ -94,10 +94,10 @@ segnati.
 
 | voce | Debian 13 | Ubuntu 26.04 | Fedora 44 | RHEL/Alma 10 | Arch | openSUSE TW / Leap 16 |
 |---|---|---|---|---|---|---|
-| **H.264 sulla scheda** | ✅ | ✅ Mesa coi codec | ⚠ Intel: `[?]` di serie; AMD: RPM Fusion | Intel: RPM Fusion; ⛔ AMD: Mesa senza VA-API | ✅ tutto ufficiale | ⛔ ffmpeg senza `h264_vaapi`: serve Packman |
+| **H.264 sulla scheda** | ✅ | ✅ Mesa coi codec | ⛔ Intel e AMD: RPM Fusion | Intel: RPM Fusion; ⛔ AMD: Mesa senza VA-API | ✅ tutto ufficiale | ⛔ ffmpeg senza `h264_vaapi`: serve Packman |
 | **ripiego software x264** | ✅ | ✅ | ⛔ solo RPM Fusion | ⛔ solo RPM Fusion | ✅ | ⛔ solo Packman |
 | **OpenSSL ≥ 3.5** (QUIC) | ✅ 3.5 | ✅ 3.5 (26.10: **4.0**) | ✅ 3.5 | ✅ da 10.1 | ✅ 3.6 | ✅ 3.5 |
-| **ngtcp2 ≥ 1.25** | da sorgente | ⛔ 1.16 | ⛔ 1.22 | ⛔ 1.22 (EPEL) | ✅ 1.25 | TW ✅ · Leap ⛔ 1.6 |
+| **ngtcp2 ≥ 1.25** | da sorgente | ⛔ 1.16 | ⛔ 1.21 | ⛔ 1.22 (EPEL) | ✅ 1.25 | TW ✅ · Leap ⛔ 1.6 |
 | **PAM** | `common-*` ✅ | `common-*` ✅ | ⛔ `password-auth` | ⛔ `password-auth` | ⛔ `system-auth`, niente `@include` | ⛔ un nome diverso, e in `/usr/lib/pam.d` |
 | **SELinux / AppArmor** | — | AppArmor, non ci tocca | SELinux **attivo** | SELinux **attivo** | — | SELinux **attivo** (TW dal 2025, Leap 16) |
 | **firewall di serie** | — | ufw (spento) | firewalld (Workstation: porta aperta; Server: chiusa) | firewalld, **chiuso** | — (EndeavourOS: firewalld) | firewalld, **chiuso** |
@@ -117,12 +117,17 @@ REMOTIX **non contiene** un codificatore H.264: usa quello della scheda (`h264_v
 e VA-API) e, come ripiego, `libx264` della distribuzione (`codificatore.c:1350`).
 
 Fedora e openSUSE tolgono H.264 dai loro pacchetti per i brevetti, in punti diversi:
-- **Fedora**: Mesa senza H.264 (AMD ⇒ `mesa-va-drivers-freeworld` da RPM Fusion); ffmpeg «free» ha
-  `h264_vaapi`; il driver Intel ridotto (`intel-media-driver-free`) — **se codifichi H.264 è la
-  contraddizione aperta** fra due ricerche `[?]`.
-- **openSUSE**: la ffmpeg ufficiale **non ha `h264_vaapi`** (`[L]` nella lista degli encoder del
-  pacchetto). Senza Packman REMOTIX non codifica, su nessuna scheda: **il caso peggiore**.
-- **RHEL 10**: Mesa costruita **senza VA-API**, e RPM Fusion non la sostituisce: su AMD niente.
+- **Fedora**: ffmpeg «free» ha `h264_vaapi`, ma **nessuna scheda codifica H.264 di serie**: Mesa è
+  costruita senza (AMD ⇒ `mesa-va-drivers-freeworld` da RPM Fusion), e il driver Intel ridotto
+  (`intel-media-driver-free`) è costruito con `AVC_Encode_VDEnc_Supported=no` e
+  `AVC_Encode_VME_Supported=no` dal 2023 (Intel ⇒ `intel-media-driver` da RPM Fusion) `[L]` spec F44.
+- **openSUSE**: la ffmpeg ufficiale **non ha `h264_vaapi`** (`[L]` nella lista degli encoder di
+  `libavcodec62-8.1.2` di Tumbleweed, aperta: ci sono `av1/vp9/mpeg2_vaapi` e `libopenh264`). Senza Packman REMOTIX non codifica, su nessuna scheda: **il caso peggiore**.
+- **RHEL 10**: Mesa costruita **senza VA-API**, e RPM Fusion non la sostituisce: su AMD niente; EPEL 10
+  non ha nemmeno il driver Intel. ⇒ Su RHEL/Alma 10 il video sulla scheda c'è solo con depositi di
+  terzi, e XFCE/LXQt non ci sono: **bersaglio debole**, si tiene per GNOME e KDE col ripiego dichiarato.
+- **NVIDIA col driver proprietario**: non codifica via VA-API su nessuna distribuzione `[D]`. Il
+  controllo preliminare la riconosce e lo dice prima.
 
 ⇒ Regole per l'installatore:
 1. ⛔ **Non distribuire mai un'implementazione di H.264** (né x264 né ffmpeg «completa» dentro il
@@ -136,8 +141,9 @@ Fedora e openSUSE tolgono H.264 dai loro pacchetti per i brevetti, in punti dive
 
 `/etc/pam.d/remotix` (sorgente `src/remotix.pam`) dice al sistema quali controlli fare quando
 qualcuno scrive nome e parola d'ordine nella pagina. Oggi rimanda ai controlli standard di Debian
-(`@include common-auth`, righe 43, 48, 50, 83), che **esistono solo su Debian e Ubuntu**: altrove il
-sistema rifiuta l'accesso, o accetta la parola d'ordine ma non riesce ad aprire il desktop.
+(`@include common-auth`, righe 43, 48, 50, 83). ⛔ E `@include` stesso è **una modifica di Debian** a
+Linux-PAM (patch `031_pam_include`): altrove la riga è «illegal module type» e **fallisce anche
+l'autenticazione** `[L]`. ⇒ Su Fedora, RHEL, Arch e openSUSE oggi **nessuno entra**.
 
 ⇒ **Un file per famiglia**, come fa Cockpit (che fa lo stesso mestiere su tutte e quattro):
 
@@ -149,11 +155,14 @@ sistema rifiuta l'accesso, o accetta la parola d'ordine ma non riesce ad aprire 
 | Arch | `system-remote-login` (o `system-auth`) | `/etc/pam.d/remotix` |
 
 In tutti: `pam_systemd` (senza, il desktop non nasce) e **root escluso** per impostazione predefinita.
+Su Arch anche `pam_systemd_home`, o gli utenti di `systemd-homed` non entrano `[?]` da misurare.
 
 ⚠ **Il blocco dei tentativi.** Arch (e Fedora/RHEL con authselect) mettono `pam_faillock` nella pila
 di serie: tre parole d'ordine sbagliate in 15 minuti chiudono il conto per 10 minuti — **anche per chi
-si siede davanti alla macchina**. Da remoto, chiunque conosca un nome utente può chiudere fuori il
-proprietario. REMOTIX ha già la sua difesa (il ban dell'indirizzo). ⇒ **Decisione D3.**
+si siede davanti alla macchina** (`[L]` pambase: `pam_faillock` senza parametri ⇒ deny=3,
+fail_interval=900 s, unlock_time=600 s). Da remoto, chiunque raggiunga la porta e conosca un nome
+utente può chiudere fuori il proprietario; il ban per indirizzo non basta se i tentativi arrivano da
+più indirizzi. ⇒ **Decisione D3.**
 
 ### 4.4 Il codice di REMOTIX: le cose legate a Debian
 
@@ -215,9 +224,20 @@ drop-in con `--headless` finisce sotto un nome che nessuno usa ⇒ la Shell nasc
 virtuale**. Anche gnome-session 49+ è stato riscritto (REMOTIX conosce a fondo i meccanismi interni
 della 48, `sessione.h:420-523`) ⇒ **da riprovare tutto** su GNOME 50.
 
-Cura: scegliere il nome dell'unità dal file che esiste, e riscrivere l'`ExecStart` **conservando
-`--mode=user`**. Piccola; si prova su `fedora44-gnome` e `ubuntu2604-gnome`. `[?]` la verifica sulle
-distribuzioni sta controllando se GNOME 50 offre un modo nuovo e più pulito per il `--headless`.
+`[L]` commit gnome-shell `0eb754a08` (13 nov 2025): l'unità diventa il modello
+`org.gnome.Shell@.service` con `ExecStart=gnome-shell --mode=%i`; `@user` lo chiede gnome-session 50.
+GNOME 50 c'è su Fedora 44, Ubuntu 26.04, Tumbleweed e Arch; Fedora 43 (49), Leap 16 (48) e Debian 13
+(48) hanno ancora `@wayland`. `--headless` e `--no-x11` in mutter 50 ci sono ancora;
+`org.gnome.Shell@headless.service` **non** va (diventerebbe `--mode=headless`, che non esiste).
+
+⛔ **E il nostro controllo darebbe un falso verde**: su GNOME 50 `systemctl --user show -p ExecStart
+org.gnome.Shell@wayland.service` crea l'istanza «wayland» dal modello, ci applica il nostro drop-in e
+restituisce la nostra riga — il controllo passa, mentre gnome-session avvia `@user` senza `--headless`.
+
+Cura (`sessione.c`, `sessione.h`): scegliere l'unità da quel che è installato (`@wayland` se c'è,
+altrimenti `@user`); il drop-in in `<unità>.d/`, **non** nella cartella del modello (toccherebbe anche
+GDM); la riga `--headless --no-x11` senza `--mode=%i`; rileggere la stessa unità scelta; la pulizia di
+`provisiona.sh:245,510` estesa a `@user` e `@`. Si prova su `fedora44-gnome` e `ubuntu2604-gnome`.
 
 ### 5.2 Aggiornare senza chiudere i desktop: la causa non è quella scritta
 
@@ -363,7 +383,7 @@ aggiornamento **rifiutato** dal gestore di pacchetti che uno che rompe in silenz
 
 | | scelta | perché |
 |---|---|---|
-| **ngtcp2, nghttp3** | dentro, **statiche**, versione fissata | servono ≥ 1.25 e quasi nessuna distribuzione le ha; sono piccole. ⚠ Gli **aggiornamenti di sicurezza diventano nostri** — **decisione D2** |
+| **ngtcp2, nghttp3** | dentro, **statiche**, versione fissata | serve ngtcp2 ≥ **1.25.0** (26 lug 2026: la impongono i flag `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c:296-299`; senza, 1.23) e quasi nessuna distribuzione la ha; sono piccole. ⚠ Gli **aggiornamenti di sicurezza diventano nostri** — **decisione D2** |
 | OpenSSL | della distribuzione | è la libreria di sicurezza più curata dalle distribuzioni |
 | libavcodec, driver, Mesa | ⛔ della distribuzione, **mai** dentro | è lì che stanno i codec brevettati (§4.2) |
 | PAM, PipeWire, libei, glib, Wayland | della distribuzione | devono combaciare con la macchina |
@@ -568,12 +588,15 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata).
 
 ## 11. Punti da confermare `[?]`
 
-In attesa della verifica sulle distribuzioni (29 set):
-- Fedora + Intel: il driver ridotto di Fedora codifica H.264, o serve quello di RPM Fusion?
-- GNOME 50: il nome `@user` e il modo giusto di passare `--headless`;
-- la versione minima **vera** di ngtcp2 che il codice usa;
-- `pam_faillock` di serie su Arch, con quali numeri;
-- openSUSE: SELinux enforcing di serie, e il nome del file PAM.
+La verifica sulle distribuzioni (29 set) ha chiuso i cinque punti aperti: GNOME 50 confermato con la
+cura di §5.1; Fedora con Intel **senza** H.264 di serie (smentita la ricerca sugli installatori);
+ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enforcing di serie e
+`common-session-nonlogin`. Restano **da misurare** sulle VM:
+- `gnome-remote-desktop` acceso di serie accanto a REMOTIX (porta 3389, niente conflitto; ma apre
+  sessioni di cattura sue sullo stesso mutter);
+- gli utenti `systemd-homed` (Arch);
+- eventuali modifiche di Ubuntu alle unità di gnome-shell 50;
+- il salto di labwc 0.8 → 0.9 / 0.20 (wlroots 0.20.2 ha ancora tutti i protocolli che usiamo `[L]`).
 
 ---
 
