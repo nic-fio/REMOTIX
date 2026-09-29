@@ -1035,10 +1035,29 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
   ripieghi pixman); **VM: desktop nel browser su debian13-gnome, ubuntu2604-kde, fedora44-gnome, alma10-kde,
   arch-xfce, tumbleweed-kde** (con le condizioni: RPM Fusion e PAM senza `pam_selinux` su Fedora/Alma, 0
   rifiuti SELinux in enforcing; Packman e `breeze6-wallpapers` su Tumbleweed; su Arch il gruppo xfce4 non
-  porta ffmpeg: dipendenza per T3). **leap16-lxqt FAIL**: labwc 0.8.1 di Leap muore in pixman
-  (`buffer_adopt_cairo_surface: Assertion … CAIRO_FORMAT_ARGB32`) anche lanciato a mano senza REMOTIX
-  `[?]` (con XFCE sulla stessa Leap passava). Da guardare: alcuni primi fotogrammi wlroots «NERO» su XFCE/LXQt
-  nelle scatole, senza rossi. Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  porta ffmpeg: dipendenza per T3). Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  - **leap16-lxqt: mancano i caratteri.** `[M]` 29 set sera: la VM ha **solo caratteri bitmap** (PCF,
+    `xorg-x11-fonts-core`; `fc-match sans` = «Misc Fixed»). Pango 1.56 non li sa misurare: l'altezza del
+    titolo esce **1 398 724 px**, `create_corners()` chiede a cairo una superficie 9×1 398 724, cairo
+    rifiuta (`_cairo_surface_nil_invalid_size`) e l'`assert` di `buffer_adopt_cairo_surface` (buffer.c:90)
+    abbatte labwc (gdb con i simboli: `main` → `theme_init` → `create_corners` → `rounded_rect` →
+    `buffer_create_cairo`). Non è pixman né LXQt: labwc nudo, senza configurazione, muore uguale. Il
+    carattere lo porterebbe il pattern `lxqt` (`google-droid-fonts`, **raccomandato**), perso con
+    `solver.onlyRequires` dell'immagine Minimal-VM — la stessa trappola dello sfondo di Tumbleweed; il
+    pattern `xfce` porta i caratteri per altra via, e XFCE passava. È il difetto noto labwc#2525 (chiuso
+    dall'autore «mancava un carattere», **nessuna cura**: nel ramo principale del 26 set 2026 l'`assert`
+    c'è ancora). Con `google-droid-fonts` (+ Packman per libx265, (C)): **PASS** col binario del prodotto,
+    0 SIGABRT, labwc in pixman dichiarato, desktop a 0,6 s. ⇒ **T3**: l'installatore esige un carattere
+    scalabile (su openSUSE `google-droid-fonts`, `C-COMPONENTE`); REMOTIX da solo non lo può evitare —
+    senza un carattere vettoriale non c'è niente da indicare a labwc. `[?]` proposta, non fatta: una
+    riga «⛔ nessun carattere scalabile: labwc morirà» prima dell'avvio (fontconfig, `FC_OUTLINE`).
+  - **Il primo fotogramma wlroots «NERO» nelle scatole non è nuovo e non è un guasto.** `[M]` c'era già
+    in fase 16 (27 set, binario 45d048c8, `/media/REMOTIX/misure/fase16/intel-*/livello-*/server.log`):
+    XFCE 107 palchi su 367, LXQt 150 su 278, e uguale sulla Radeon; 0 su GNOME/KDE (passano da PipeWire).
+    Nella chiusura di T1: XFCE 12 su 14, LXQt 3 su 14 (le «24 righe» sono ognuna doppia, journal +
+    registro della sessione). È il primo fotogramma preso alla nascita di labwc, prima che sfondo e
+    pannello siano dipinti; le due cure non toccano la strada wlroots sull'Intel (0 ripieghi). Proposta
+    non fatta: guardare il primo fotogramma dopo ~1 s, perché la riga segnali solo un nero che dura.
 - **Stato ISO** (T0): 6 macchine su 6; le differenze che contano per l'installatore: `render` non c'è mai;
   Fedora Workstation apre 1025-65535, **Alma e Tumbleweed hanno la 7447 chiusa**; Tumbleweed con accesso
   automatico, btrfs e snapper (fotografie di sistema già pronte, §6.6.4), raccomandati installati; Ubuntu
