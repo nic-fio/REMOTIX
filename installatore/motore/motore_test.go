@@ -87,7 +87,7 @@ func TestImprontaCambiata(t *testing.T) {
 		t.Fatalf("toccata: %v", d)
 	}
 	if ap, _ := b.motore(t).Aperta(); ap != nil {
-		t.Error("una BLOCCATA senza aver toccato niente deve essere finale")
+		t.Error("una BLOCCATA deve essere finale")
 	}
 	// anche un elemento del profilo: un gruppo della scheda con un membro in più
 	b2 := nuovoBanco(t)
@@ -210,7 +210,9 @@ func TestInstallazione(t *testing.T) {
 	ScriviJSON(b2.piano, &p)
 	m2 := b2.motore(t)
 	op, err := m2.Applica(b2.piano, true, "prova")
-	if err != nil || op.Stato != CONFERMATA {
+	// il binario di REMOTIX non c'è (e non ha ancora --prova-codifica): la codifica è UNKNOWN,
+	// richiesta con ripiego ⇒ a condizioni, mai CONFERMATA pulita (§6.6.7)
+	if err != nil || op.Stato != CONFERMATA_A_CONDIZIONI {
 		t.Fatal(op.Stato, err)
 	}
 	in, err := m2.ControllaInstallazione()
@@ -230,7 +232,7 @@ func TestSenzaDesktop(t *testing.T) {
 		t.Fatal("senza desktop non rilevato")
 	}
 	s := SceltaDesktop(rap)
-	if s == nil || s.Predefinita != "gnome" || strings.Join(s.Opzioni, ",") != "gnome,kde,xfce,lxqt,no" {
+	if s == nil || s.Predefinita != "gnome" || strings.Join(s.Opzioni, ",") != "gnome,kde,xfce,lxqt,no" || s.Pacchetti["kde"] != "task-kde-desktop" {
 		t.Fatalf("scelta: %+v", s)
 	}
 	for _, rispo := range []string{"no", "kde"} {
@@ -248,9 +250,15 @@ func TestSenzaDesktop(t *testing.T) {
 		p.Approvazione = nil
 		ScriviJSON(b.piano, &p)
 		op, err := m.Applica(b.piano, true, "prova")
-		atteso := map[string]string{"no": "RX-DESKTOP-001", "kde": "RX-AZIONE-004"}[rispo]
-		if op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), atteso) {
-			t.Errorf("risposta %s: %s %v (atteso BLOCCATA %s)", rispo, op.Stato, err, atteso)
+		switch rispo {
+		case "no": // niente desktop ⇒ REMOTIX non si installa, niente toccato
+			if op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-DESKTOP-001") {
+				t.Errorf("risposta no: %s %v (atteso BLOCCATA RX-DESKTOP-001)", op.Stato, err)
+			}
+		case "kde": // task-kde-desktop non è nel deposito finto: fallisce nell'acquisizione, prima di toccare
+			if op.Stato != ANNULLATA {
+				t.Errorf("risposta kde: %s %v (atteso ANNULLATA)", op.Stato, err)
+			}
 		}
 		if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
 			t.Errorf("risposta %s: toccata %v", rispo, d)
@@ -286,5 +294,59 @@ func TestFiducia(t *testing.T) {
 	cat.Scadenza, cat.MotoreMinimo = "2099-01-01", "9.0.0"
 	if _, err := VerificaFiducia(cat, m.adesso(), true); CodiceDi(err) != "RX-TRUST-003" {
 		t.Errorf("motore vecchio: %v", err)
+	}
+}
+
+// R38 in piccolo: il desktop installato SENZA schermata d'accesso né avvio in grafica — il display
+// manager che il «postinst» abilita e accende resta spento, il bersaglio d'avvio com'era; e
+// l'annullamento lo toglie.
+func TestDesktopSenzaGrafica(t *testing.T) {
+	b := nuovoBanco(t)
+	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-deposito.json"),
+		[]byte(`{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0"},"labwc":{"versione":"0.9","dipende":["libnuova"]},"task-lxqt-desktop":{"versione":"1","dipende":["sddm"]},"sddm":{"versione":"0.21"}}`), 0o644)
+	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-predefinito"), []byte("multi-user.target"), 0o644)
+	os.MkdirAll(filepath.Join(b.radice, "usr/sbin"), 0o755)
+	b.prima = foto(t, b.radice)
+	m := b.motore(t)
+	m.Amb.Famiglia = "debian" // policy-rc.d
+	var p Piano
+	LeggiJSON(pianoDiProva(t, b.radice, t.TempDir(), false), &p)
+	p.Azioni = append([]AzionePiano{PianoDesktop("desktop", "lxqt", "task-lxqt-desktop")}, p.Azioni...)
+	im, _ := CalcolaImpronta(profiloFinto(), m.Catalogo, p.Azioni, p.Dipende, &Contesto{Amb: m.Amb})
+	p.Impronta = *im
+	pp := filepath.Join(t.TempDir(), "p.json")
+	ScriviJSON(pp, &p)
+	op, err := m.Applica(pp, true, "prova")
+	if err != nil || op.Stato != CONFERMATA {
+		t.Fatalf("%v %v %s", op.Stato, err, op.ultimoDettaglio())
+	}
+	u := &unitaFinte{b.radice}
+	f, _ := u.Stato("sddm.service")
+	a, _ := u.Attiva("sddm.service")
+	d, _ := u.Predefinito()
+	if f == "enabled" || a == "active" || d != "multi-user.target" {
+		t.Fatalf("display manager %s %s, bersaglio %s: la macchina parte in grafica", f, a, d)
+	}
+	if _, err := os.Stat(filepath.Join(b.radice, "usr/sbin/policy-rc.d")); err == nil {
+		t.Fatal("è rimasto policy-rc.d")
+	}
+}
+
+// Il piano di prova: i depositi e i pacchetti in testa, il gruppo per ULTIMO (R28 dal vero su Alma).
+func TestPianoDiProva(t *testing.T) {
+	b := nuovoBanco(t)
+	amb := ambienteFinto(b.radice)
+	cat := catalogoProva(t)
+	prof := profiloFinto()
+	p, err := PianoDiProva(prof, Valuta(cat, prof), cat, amb, OpzioniPianoProva{Utente: "prova", ApriFirewall: true, Pacchetti: "labwc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tipi []string
+	for _, a := range p.Azioni {
+		tipi = append(tipi, a.Tipo)
+	}
+	if got := strings.Join(tipi, ","); got != "installa-pacchetti,scrivi-file,scrivi-file,abilita-unita,regola-firewall,aggiungi-utente-a-gruppo" {
+		t.Fatalf("ordine dei passi: %s", got)
 	}
 }

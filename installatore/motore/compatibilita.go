@@ -81,6 +81,7 @@ type Piattaforma struct {
 	Derivate          []Derivata                 `json:"derivate,omitempty"`
 	H264              H264Piattaforma            `json:"h264"`
 	Desktop           map[string]DesktopCatalogo `json:"desktop"`
+	PacchettiDesktop  map[string]string          `json:"pacchetti_desktop"` // desktop → pacchetti (virgole) per installarlo
 	Note              []string                   `json:"note,omitempty"`
 }
 
@@ -218,11 +219,12 @@ type EsitoDesktop struct {
 
 // Rapporto di compatibilità: il secondo oggetto (§6.6.1).
 type Rapporto struct {
-	Formato      string         `json:"formato"`
-	Oggetto      string         `json:"oggetto"` // "compatibilita"
-	Creato       string         `json:"creato"`
-	Catalogo     RifCatalogo    `json:"catalogo"`
-	Piattaforma  string         `json:"piattaforma"`  // "Debian 13"
+	Formato      string      `json:"formato"`
+	Oggetto      string      `json:"oggetto"` // "compatibilita"
+	Creato       string      `json:"creato"`
+	Catalogo     RifCatalogo `json:"catalogo"`
+	Piattaforma  string      `json:"piattaforma"` // "Debian 13"
+	pl           *Piattaforma
 	Riconosciuta string         `json:"riconosciuta"` // matrice · fuori matrice · derivata di … · esclusa · sconosciuta
 	Desktop      []EsitoDesktop `json:"desktop"`
 	SenzaDesktop bool           `json:"senza_desktop"`       // nessun desktop supportato installato (§10 e R38)
@@ -289,6 +291,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		r.Incognite = append(r.Incognite, T("inc.openssl"))
 	}
 	pl, derivata := c.trova(id, ver)
+	r.pl = pl
 	if pl == nil && r.Riconosciuta == "" {
 		tutti = append(tutti, Msg("RX-COMPAT-002", id+" "+ver))
 		r.Riconosciuta = T("comp.sconosciuta")

@@ -29,11 +29,10 @@ const (
 
 // transizioni: le SOLE valide, quelle del disegno di §6.6.2. ⛔ nessuno stato si salta.
 //
-// Due scelte del motore, dove il disegno non dice abbastanza (annotate in §13):
-//   - BLOCCATA dopo aver toccato la macchina (la ripresa trova un passo FATTO disfatto da altri,
-//     §6.6.3 ultima riga) NON è finale: da lì si riprende (IN_ESECUZIONE) o si annulla
-//     (IN_ANNULLAMENTO). BLOCCATA dalle fasi 0-5 resta finale («niente è stato toccato»).
-//   - APPLICATA e VERIFICATA possono andare a IN_ANNULLAMENTO («rosso» nella verifica).
+// BLOCCATA vuol dire SOLO «niente è stato toccato» (§6.6.2) ed è finale. Quando la macchina è già
+// stata toccata e la ripresa trova un passo FATTO disfatto da altri (§6.6.3, ultima riga), lo stato
+// è INTERROTTA col codice RX-RIPRESA-001: se ne esce con riprendi o annulla (decisione del
+// coordinatore, 30 set). APPLICATA e VERIFICATA possono andare a IN_ANNULLAMENTO («rosso»).
 var transizioni = map[Stato][]Stato{
 	NUOVA:           {FIDATA, BLOCCATA},
 	FIDATA:          {ESAMINATA, BLOCCATA},
@@ -42,13 +41,12 @@ var transizioni = map[Stato][]Stato{
 	PIANIFICATA:     {APPROVATA, RIFIUTATA, BLOCCATA},
 	APPROVATA:       {ACQUISITA, BLOCCATA},
 	ACQUISITA:       {IN_ESECUZIONE, BLOCCATA},
-	IN_ESECUZIONE:   {APPLICATA, INTERROTTA, IN_ANNULLAMENTO, BLOCCATA},
-	INTERROTTA:      {IN_ESECUZIONE, IN_ANNULLAMENTO, BLOCCATA},
+	IN_ESECUZIONE:   {APPLICATA, INTERROTTA, IN_ANNULLAMENTO},
+	INTERROTTA:      {IN_ESECUZIONE, IN_ANNULLAMENTO},
 	APPLICATA:       {IN_VERIFICA, IN_ANNULLAMENTO},
 	IN_VERIFICA:     {VERIFICATA, IN_ANNULLAMENTO},
 	VERIFICATA:      {CONFERMATA, CONFERMATA_A_CONDIZIONI, IN_ANNULLAMENTO},
 	IN_ANNULLAMENTO: {ANNULLATA, ANNULLATA_IN_PARTE},
-	BLOCCATA:        {IN_ESECUZIONE, IN_ANNULLAMENTO}, // solo se la macchina è stata toccata
 }
 
 // Valida dice se da → a è una transizione del disegno.
@@ -61,11 +59,10 @@ func Valida(da, a Stato) bool {
 	return false
 }
 
-// Finale: gli stati da cui non si esce. BLOCCATA è finale solo se niente è stato toccato: lo
-// decide chi conosce il registro (Operazione.Finita).
+// Finale: gli stati da cui non si esce.
 func Finale(s Stato) bool {
 	switch s {
-	case CONFERMATA, CONFERMATA_A_CONDIZIONI, ANNULLATA, ANNULLATA_IN_PARTE, RIFIUTATA:
+	case CONFERMATA, CONFERMATA_A_CONDIZIONI, ANNULLATA, ANNULLATA_IN_PARTE, RIFIUTATA, BLOCCATA:
 		return true
 	}
 	return false

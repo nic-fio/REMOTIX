@@ -55,6 +55,21 @@ type Contesto struct {
 	Amb      *Ambiente
 	Cartella string
 	P        AzionePiano
+	// Purge: nell'annullare i pacchetti si toglie anche la configurazione. Il ritorno indietro di
+	// un'installazione fallita è sempre purge (la macchina com'era); la disinstallazione lo è solo
+	// se lo si chiede (§6.5 punto 3: remove tiene la configurazione).
+	Purge bool
+}
+
+// Riparabile: un'azione che, trovata a metà, si ripara col rimedio del suo strumento invece di
+// annullare e rifare (la transazione del gestore di pacchetti, §6.6.3).
+type Riparabile interface {
+	Ripara(c *Contesto, prima json.RawMessage) error
+}
+
+// Dichiarante: un'azione che lascia modifiche INDIRETTE (§6.6.4) e le dichiara.
+type Dichiarante interface {
+	Indirette(prima json.RawMessage) []string
 }
 
 // Azione è l'interfaccia di §6.6.3-§6.6.4. Ogni metodo è idempotente: rifarlo non raddoppia

@@ -138,6 +138,8 @@ type Scelta struct {
 	Opzioni     []string `json:"opzioni"`
 	Predefinita string   `json:"predefinita"` // vale se nessuno risponde (senza domande: §6.6.12)
 	Risposta    string   `json:"risposta"`
+	// Pacchetti: per ogni opzione, i pacchetti che la installano (dal catalogo)
+	Pacchetti map[string]string `json:"pacchetti,omitempty"`
 }
 
 // Valore: la risposta data, o la predefinita.
@@ -160,7 +162,7 @@ func (p *Piano) Rispondi(id, risposta string) error {
 		}
 		s.Risposta = risposta
 		if id == "desktop" {
-			p.metteDesktop(risposta)
+			p.metteDesktop(risposta, s.Pacchetti[risposta])
 		}
 		return nil
 	}
@@ -168,15 +170,19 @@ func (p *Piano) Rispondi(id, risposta string) error {
 }
 
 // metteDesktop: il passo «installa-desktop» c'è se la risposta è un desktop, non c'è se è «no».
-func (p *Piano) metteDesktop(d string) {
+func (p *Piano) metteDesktop(d, nomi string) {
 	var az []AzionePiano
+	dopoDepositi := 0
 	for _, a := range p.Azioni {
 		if a.Tipo != "installa-desktop" {
 			az = append(az, a)
+			if a.Tipo == "aggiungi-deposito" {
+				dopoDepositi = len(az)
+			}
 		}
 	}
 	if d != "no" {
-		az = append([]AzionePiano{PianoDesktop("desktop", d)}, az...)
+		az = append(az[:dopoDepositi], append([]AzionePiano{PianoDesktop("desktop", d, nomi)}, az[dopoDepositi:]...)...)
 	}
 	p.Azioni = az
 }
@@ -190,8 +196,10 @@ func nuovoID() string {
 // OpzioniPianoProva: il piano di prova di T4 (nessun pacchetto di REMOTIX: quelli sono delle
 // linee B, C, D).
 type OpzioniPianoProva struct {
-	Utente       string // chi mettere in «video»; vuoto ⇒ il passo non c'è
-	ApriFirewall bool   // D6 aperta: il passo del firewall solo se chiesto
+	Utente       string   // chi mettere in «video»; vuoto ⇒ il passo non c'è
+	ApriFirewall bool     // D6 aperta: il passo del firewall solo se chiesto
+	Depositi     []string // archivi di terzi da aggiungere (prova dei depositi, D5)
+	Pacchetti    string   // pacchetti dai depositi da far installare (prova del gestore)
 	Porta        int
 }
 
@@ -205,6 +213,14 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
+	for _, d := range o.Depositi {
+		cons := T("consenso.deposito", nonVuoto(cat.Depositi[d].Nome, d))
+		pn.Azioni = append(pn.Azioni, PianoDeposito("deposito-"+d, d, nil, cons))
+		pn.Consensi = append(pn.Consensi, cons)
+	}
+	if o.Pacchetti != "" {
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", o.Pacchetti))
+	}
 	pn.Azioni = append(pn.Azioni,
 		PianoScriviFile("file-conf", "/etc/remotix/prova-motore.conf",
 			"# REMOTIX — file di prova del motore d'installazione (fase 17, T4). Si può togliere.\nporta="+ps+"\n", "0644"),
@@ -212,11 +228,6 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 			"# REMOTIX — unità di prova del motore d'installazione (fase 17, T4): non fa niente.\n[Unit]\nDescription=REMOTIX, prova del motore d'installazione\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
 		PianoUnita("unita", "remotix-prova-motore.service"),
 	)
-	if o.Utente != "" {
-		pn.Azioni = append(pn.Azioni, PianoGruppo("gruppo-video", o.Utente, "video"))
-	} else {
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.utente")})
-	}
 	switch g := amb.Firewall.Nome(); {
 	case !o.ApriFirewall:
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_no", ps)})
@@ -228,6 +239,13 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_nessuno")})
 	default:
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
+	}
+	// il gruppo per ultimo: con un utente che non esiste il passo fallisce DOPO tutti gli altri, e
+	// l'operazione si annulla per intero (R28 dal vero)
+	if o.Utente != "" {
+		pn.Azioni = append(pn.Azioni, PianoGruppo("gruppo-video", o.Utente, "video"))
+	} else {
+		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.utente")})
 	}
 	for _, e := range rap.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {
@@ -256,10 +274,13 @@ func SceltaDesktop(rap *Rapporto) *Scelta {
 	if !rap.SenzaDesktop {
 		return nil
 	}
-	s := &Scelta{ID: "desktop", Domanda: T("scelta.desktop")}
+	s := &Scelta{ID: "desktop", Domanda: T("scelta.desktop"), Pacchetti: map[string]string{}}
 	for _, e := range rap.Desktop {
 		if e.Livello == NON_SUPPORTATA {
 			continue
+		}
+		if rap.pl != nil {
+			s.Pacchetti[e.Desktop] = rap.pl.PacchettiDesktop[e.Desktop]
 		}
 		s.Opzioni = append(s.Opzioni, e.Desktop)
 		if e.Riferimento || s.Predefinita == "" {

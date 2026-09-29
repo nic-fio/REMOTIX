@@ -87,6 +87,32 @@ var testi = map[string]Testo{
 	"az.servizio.verifica": {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
 	"az.servizio.annulla":  {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
 
+	"az.pacchetti":                  {"far installare %s al gestore di pacchetti della distribuzione", "have the distribution's package manager install %s"},
+	"az.pacchetti.fa":               {"si risolve la transazione, si scarica tutto e si verifica (insieme risolto nel registro), poi il gestore installa dalla cache, senza rete", "the transaction is resolved, everything downloaded and verified (resolved set in the log), then the manager installs from the cache, offline"},
+	"az.pacchetti.verifica":         {"ogni pacchetto dell'insieme risolto installato alla sua versione, gestore non a metà", "every package of the resolved set installed at its version, manager not half-way"},
+	"az.pacchetti.annulla":          {"il gestore toglie i pacchetti NUOVI, e solo quelli (simulando prima); gli aggiornati restano e si dichiarano", "the manager removes the NEW packages, and only those (simulating first); upgraded ones stay and are declared"},
+	"az.deposito":                   {"aggiungere l'archivio %s", "add the %s archive"},
+	"az.deposito.fa.archivio":       {"la chiave dell'archivio in un file suo e la sorgente che la nomina (Signed-By / gpgkey): vale solo per quell'archivio", "the archive key in a file of its own and the source naming it (Signed-By / gpgkey): valid for that archive only"},
+	"az.deposito.fa.epel":           {"dnf install epel-release, e il deposito CRB acceso", "dnf install epel-release, and the CRB repository enabled"},
+	"az.deposito.fa.rpmfusion":      {"dnf install del pacchetto rpmfusion-free-release della versione della macchina", "dnf install of the rpmfusion-free-release package for the machine's version"},
+	"az.deposito.fa.packman":        {"zypper addrepo di Packman (priorità 90) e refresh con la sua chiave", "zypper addrepo of Packman (priority 90) and refresh with its key"},
+	"az.deposito.verifica":          {"l'archivio configurato", "the archive configured"},
+	"az.deposito.annulla.archivio":  {"si tolgono i due file (e la chiave da rpm)", "the two files are removed (and the key from rpm)"},
+	"az.deposito.annulla.epel":      {"si toglie epel-release e CRB torna com'era; i pacchetti presi da lì restano (dichiarati)", "epel-release is removed and CRB goes back; packages taken from it stay (declared)"},
+	"az.deposito.annulla.rpmfusion": {"si toglie rpmfusion-free-release; i pacchetti presi da lì restano (dichiarati)", "rpmfusion-free-release is removed; packages taken from it stay (declared)"},
+	"az.deposito.annulla.packman":   {"zypper removerepo packman; i pacchetti presi da lì e la chiave restano (dichiarati)", "zypper removerepo packman; packages taken from it and the key stay (declared)"},
+	"ind.deposito":                  {"deposito %s tolto: i pacchetti presi da lì e gli aggiornamenti restano", "repository %s removed: packages taken from it and upgrades stay"},
+	"consenso.deposito":             {"Aggiungere l'archivio di terzi %s (per H.264 o per il desktop)? (decisione D5)", "Add the third-party archive %s (for H.264 or for the desktop)? (decision D5)"},
+	"az.sessioni":                   {"chiudere le sessioni REMOTIX ancora aperte (%d: %s)", "close the REMOTIX sessions still open (%d: %s)"},
+	"az.sessioni.fa":                {"logind TerminateSession sulle sole sessioni col servizio PAM «remotix»: le sessioni locali o ssh delle stesse persone restano", "logind TerminateSession on the sessions with PAM service «remotix» only: the same people's local or ssh sessions stay"},
+	"az.sessioni.verifica":          {"nessuna di quelle sessioni è ancora aperta", "none of those sessions is still open"},
+	"az.sessioni.annulla":           {"IRREVERSIBILE: il lavoro non salvato è perso, le sessioni non si riaprono", "IRREVERSIBLE: unsaved work is lost, sessions do not reopen"},
+	"az.disfa":                      {"disfare: %s", "undo: %s"},
+	"az.disfa.verifica":             {"com'era prima dell'installazione", "as it was before the installation"},
+	"np.nessun_gruppo":              {"nessun nodo della scheda con un gruppo: nessuno da iscrivere", "no card node with a group: nobody to add"},
+	"cond.codifica_ignota":          {"la codifica H.264 non è stata provata da REMOTIX (%s): vale il ripiego dichiarato", "H.264 encoding was not tested by REMOTIX (%s): the declared fallback applies"},
+	"ver.codifica_assente":          {"il binario di REMOTIX non ha ancora --prova-codifica (da fare nel prodotto)", "the REMOTIX binary does not have --prova-codifica yet (to be done in the product)"},
+
 	// operazione e certificato
 	"op.chiesto":          {"chiesto da chi amministra", "requested by the administrator"},
 	"op.no_desktop":       {"risposta «no» alla domanda sul desktop", "answer «no» to the desktop question"},
@@ -112,7 +138,11 @@ var testi = map[string]Testo{
   remotix-install verifica  [--json] [--porta N] [--catalogo FILE]
         guarda la macchina, SENZA TOCCARE NIENTE, e dice che cosa REMOTIX ci può fare
   remotix-install piano     [--uscita FILE] [--utente NOME] [--apri-firewall] [--json]
-        prepara un piano di PROVA del motore (niente pacchetti di REMOTIX: arrivano dopo)
+        prepara un piano di PROVA del motore
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
+                            [--apri-firewall] [--senza-cinture]
+        prepara il piano dell'INSTALLAZIONE di REMOTIX
+  remotix-install disinstalla [--purge]   prepara il piano della disinstallazione (dal registro)
   remotix-install approva   FILE-PIANO [--desktop gnome|kde|xfce|lxqt|no]
         scrive nel piano il consenso di chi lo lancia (per applicarlo senza domande)
   remotix-install applica   FILE-PIANO [--approva] [--senza-firma] [--eventi]
@@ -132,7 +162,11 @@ var testi = map[string]Testo{
   remotix-install verifica  [--json] [--porta N] [--catalogo FILE]
         examines the machine, WITHOUT TOUCHING ANYTHING, and says what REMOTIX can do on it
   remotix-install piano     [--uscita FILE] [--utente NAME] [--apri-firewall] [--json]
-        prepares an engine TEST plan (no REMOTIX packages: they come later)
+        prepares an engine TEST plan
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
+                            [--apri-firewall] [--senza-cinture]
+        prepares the REMOTIX INSTALLATION plan
+  remotix-install disinstalla [--purge]   prepares the uninstallation plan (from the log)
   remotix-install approva   PLAN-FILE [--desktop gnome|kde|xfce|lxqt|no]
         writes the consent of whoever runs it into the plan (to apply it without questions)
   remotix-install applica   PLAN-FILE [--approva] [--senza-firma] [--eventi]
@@ -165,7 +199,7 @@ var testi = map[string]Testo{
 	"cli.incognite":      {"Quel che NON si è potuto sapere (non vale come «a posto»):", "What could NOT be found out (it does not count as «fine»):"},
 	"cli.avvisi":         {"Avvisi e problemi:", "Warnings and problems:"},
 	"cli.fatti":          {"I fatti (RILEVATO = visto; VERIFICATO = provato davvero; SCONOSCIUTO = non si sa):", "The facts (RILEVATO = seen; VERIFICATO = actually tested; SCONOSCIUTO = unknown):"},
-	"cli.piano_scritto":  {"Piano di prova %s scritto in %s", "Test plan %s written to %s"},
+	"cli.piano_scritto":  {"Piano (%s) %s scritto in %s", "Plan (%s) %s written to %s"},
 	"cli.piano_macchina": {"Macchina: %s — impronta %s (%d elementi vincolanti)", "Machine: %s — fingerprint %s (%d binding elements)"},
 	"cli.piano_passo":    {"%d. %s  [%s, %s]\n   si fa: %s\n   si verifica: %s\n   si annulla: %s\n", "%d. %s  [%s, %s]\n   done by: %s\n   verified by: %s\n   rolled back by: %s\n"},
 	"cli.consenso":       {"consenso richiesto: %s", "consent required: %s"},

@@ -143,19 +143,8 @@ func (m *Motore) apri(id string) (*Operazione, error) {
 	return op, nil
 }
 
-// Finita: in uno stato da cui non si esce. BLOCCATA è finita solo se niente è stato toccato.
-func (op *Operazione) Finita() (bool, error) {
-	if Finale(op.Stato) {
-		return true, nil
-	}
-	if op.Stato != BLOCCATA {
-		return false, nil
-	}
-	if err := op.apriRegistro(); err != nil {
-		return false, err
-	}
-	return !op.Reg.Toccata(), nil
-}
+// Finita: in uno stato da cui non si esce.
+func (op *Operazione) Finita() (bool, error) { return Finale(op.Stato), nil }
 
 func (op *Operazione) apriRegistro() error {
 	if op.Reg != nil {
@@ -418,7 +407,7 @@ func (m *Motore) Riprendi() (*Operazione, error) {
 			return op, err
 		}
 		fallthrough
-	case INTERROTTA, BLOCCATA:
+	case INTERROTTA:
 		if err := op.vai(IN_ESECUZIONE, "", "ripresa"); err != nil {
 			return op, err
 		}
@@ -451,7 +440,7 @@ func (m *Motore) Annulla() (*Operazione, error) {
 			return op, err
 		}
 		fallthrough
-	case INTERROTTA, BLOCCATA, APPLICATA, IN_VERIFICA, VERIFICATA:
+	case INTERROTTA, APPLICATA, IN_VERIFICA, VERIFICATA:
 		if err := op.vai(IN_ANNULLAMENTO, "", T("op.chiesto")); err != nil {
 			return op, err
 		}
@@ -459,7 +448,7 @@ func (m *Motore) Annulla() (*Operazione, error) {
 	return op, op.continua()
 }
 
-// continua porta l'operazione dallo stato in cui è fino a uno stato finale (o BLOCCATA).
+// continua porta l'operazione dallo stato in cui è fino a uno stato finale (o INTERROTTA).
 func (op *Operazione) continua() error {
 	for {
 		switch op.Stato {
@@ -467,7 +456,7 @@ func (op *Operazione) continua() error {
 			err := op.eseguiTutte()
 			switch {
 			case errors.Is(err, errConcorrente):
-				return op.vai(BLOCCATA, "RX-RIPRESA-001", op.ultimoDettaglio())
+				return op.vai(INTERROTTA, "RX-RIPRESA-001", op.ultimoDettaglio())
 			case errors.Is(err, errFallita):
 				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-001", op.ultimoDettaglio()))
 				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-001", op.ultimoDettaglio()); err != nil {
@@ -513,6 +502,11 @@ func (op *Operazione) continua() error {
 			if err := op.scriviInstallazione(fin); err != nil {
 				return err
 			}
+			if op.Piano.Mestiere == "disinstallazione" {
+				if err := os.Remove(op.m.PercorsoInstallazione()); err != nil && !os.IsNotExist(err) {
+					return err
+				}
+			}
 			return op.vai(fin, "", "")
 		case IN_ANNULLAMENTO:
 			resti, err := op.annullaTutte()
@@ -544,8 +538,10 @@ func (op *Operazione) ultimoDettaglio() string {
 	return ""
 }
 
+// contesto: il ritorno indietro di un'installazione (o di un aggiornamento) è sempre purge — la
+// macchina com'era; la disinstallazione porta il suo «purge» nei parametri dei passi disfa.
 func (op *Operazione) contesto(ap AzionePiano) *Contesto {
-	return &Contesto{Amb: op.m.Amb, Cartella: op.Cartella, P: ap}
+	return &Contesto{Amb: op.m.Amb, Cartella: op.Cartella, P: ap, Purge: true}
 }
 
 func (op *Operazione) fallita(ap AzionePiano, err error) error {
@@ -629,7 +625,13 @@ func (op *Operazione) eseguiTutte() error {
 				}
 				continue
 			case A_META:
-				if err := az.Annulla(c, prima); err != nil {
+				// la transazione del gestore di pacchetti: prima il SUO rimedio (§6.6.3), poi si rifà;
+				// le altre azioni: si annulla quel che c'è e si rifà
+				if r, ok := az.(Riparabile); ok {
+					if err := r.Ripara(c, prima); err != nil {
+						return op.fallita(ap, err)
+					}
+				} else if err := az.Annulla(c, prima); err != nil {
 					return op.fallita(ap, err)
 				}
 			case ESTRANEO:
@@ -738,10 +740,11 @@ type Controllo struct {
 
 // RapportoVerifica: il sesto oggetto.
 type RapportoVerifica struct {
-	Formato   string      `json:"formato"`
-	Oggetto   string      `json:"oggetto"`
-	Creato    string      `json:"creato"`
-	Controlli []Controllo `json:"controlli"`
+	Formato    string       `json:"formato"`
+	Oggetto    string       `json:"oggetto"`
+	Creato     string       `json:"creato"`
+	Controlli  []Controllo  `json:"controlli"`
+	Condizioni []Condizione `json:"condizioni,omitempty"` // quelle nate dalla verifica (un UNKNOWN con ripiego)
 }
 
 // verifica (fase 7, qui ridotta alle azioni di prova): ogni azione ricontrollata. ⛔ UNKNOWN non
@@ -771,15 +774,64 @@ func (op *Operazione) verifica() (bool, error) {
 		}
 		rv.Controlli = append(rv.Controlli, k)
 	}
+	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta, con un ripiego
+	// dichiarato (il software): UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS (§6.6.7).
+	if op.Piano.Mestiere == "installazione" || op.Piano.Mestiere == "aggiornamento" {
+		k := provaCodifica(op.m.Amb)
+		rv.Controlli = append(rv.Controlli, k)
+		switch k.Esito {
+		case "FAIL":
+			tutto = false
+		case "UNKNOWN":
+			rv.Condizioni = append(rv.Condizioni, Condizione{Codice: "C-LIMITE", Testo: T("cond.codifica_ignota", k.Dettaglio)})
+		}
+	}
 	return tutto, op.scriviOggetto("verifica.json", rv)
 }
 
+// provaCodifica: `remotix --prova-codifica` (da fare nel prodotto, §6.5-bis e §13.1). L'interfaccia
+// chiesta: uscita 0 e una riga «PROVA-CODIFICA scheda <nodo> h264_vaapi» o «PROVA-CODIFICA
+// software libx264»; uscita 1 se non codifica; il binario di oggi non conosce l'opzione (uscita
+// 2, l'aiuto): UNKNOWN dichiarato.
+func provaCodifica(a *Ambiente) Controllo {
+	k := Controllo{ID: "codifica-h264", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
+	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
+	switch {
+	case err != nil:
+		k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
+	case c == 0 && strings.Contains(out, "PROVA-CODIFICA"):
+		k.Esito, k.Dettaglio = "PASS", ultimaRigaCon(out, "PROVA-CODIFICA")
+	case c == 1:
+		k.Esito, k.Dettaglio = "FAIL", ultimeRighe(out, 2)
+	default:
+		k.Esito, k.Dettaglio = "UNKNOWN", T("ver.codifica_assente")
+	}
+	return k
+}
+
+func ultimaRigaCon(s, pezzo string) string {
+	r := ""
+	for _, x := range strings.Split(s, "\n") {
+		if strings.Contains(x, pezzo) {
+			r = strings.TrimSpace(x)
+		}
+	}
+	return r
+}
+
 func (op *Operazione) condizioni() []Condizione {
-	var r Rapporto
-	if err := LeggiJSON(filepath.Join(op.Cartella, "compatibilita.json"), &r); err != nil {
+	if op.Piano.Mestiere == "disinstallazione" {
 		return nil
 	}
 	var c []Condizione
+	var rv RapportoVerifica
+	if LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv) == nil {
+		c = append(c, rv.Condizioni...)
+	}
+	var r Rapporto
+	if err := LeggiJSON(filepath.Join(op.Cartella, "compatibilita.json"), &r); err != nil {
+		return c
+	}
 	for _, e := range r.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {
 			c = append(c, e.Condizioni...)
@@ -823,7 +875,7 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: fid.Catalogo, Fiducia: fiducia,
 		DigestPiano: op.Piano.Digest(), DigestInsieme: ins, Impronta: op.Piano.Impronta.Digest,
-		Controlli: rv.Controlli, Condizioni: op.condizioni(), Resti: resti, Indirette: []string{}}
+		Controlli: rv.Controlli, Condizioni: op.condizioni(), Resti: resti, Indirette: op.indirette()}
 	if c.Condizioni == nil {
 		c.Condizioni = []Condizione{}
 	}
@@ -900,4 +952,23 @@ func (m *Motore) ControllaInstallazione() (*Installazione, error) {
 		return nil, Errore("RX-INST-001", "l'operazione "+in.Operazione+" è "+string(op.Stato))
 	}
 	return &in, nil
+}
+
+// indirette: quel che è successo indirettamente e resta (§6.6.4): le dichiarano le azioni.
+func (op *Operazione) indirette() []string {
+	r := []string{}
+	for _, ap := range op.Piano.Azioni {
+		intz := op.Reg.Intenzione(ap.ID)
+		if intz == nil {
+			continue
+		}
+		a, err := NuovaAzione(ap)
+		if err != nil {
+			continue
+		}
+		if d, ok := a.(Dichiarante); ok {
+			r = append(r, d.Indirette(intz.Prima)...)
+		}
+	}
+	return r
 }

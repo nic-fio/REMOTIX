@@ -156,8 +156,9 @@ func nessunComando(time.Duration, string, ...string) (string, int, error) {
 }
 
 func ambienteFinto(radice string) *Ambiente {
-	return &Ambiente{Radice: radice, Esegui: nessunComando,
-		Gruppi: &gruppiFinti{radice}, Unita: &unitaFinte{radice}, Firewall: &firewallFinto{radice}}
+	return &Ambiente{Radice: radice, Esegui: nessunComando, Famiglia: "finta",
+		Gruppi: &gruppiFinti{radice}, Unita: &unitaFinte{radice}, Firewall: &firewallFinto{radice},
+		Pacchetti: &gestoreFinto{radice}, Sessioni: &sessioniFinte{radice}}
 }
 
 // profiloFinto: una Debian 13 con GNOME, scheda Intel che codifica.
@@ -196,6 +197,14 @@ func preparaMacchina(t testing.TB, radice string) {
 		"var/lib/finto-systemd.json": "{}",
 		// una delle quattro regole c'era già: dopo l'annullamento deve restare
 		"var/lib/finto-firewalld.json": `{"public 7447/tcp vive":true}`,
+		// il pacchetto di REMOTIX (finto) e il deposito: libcomune c'è già a una versione vecchia
+		// (sarà AGGIORNATA: INDIRETTA, resta), libnuova e labwc sono nuove
+		"var/pacchetti/remotix.pkg":    `{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`,
+		"var/lib/finto-deposito.json":  `{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0"},"labwc":{"versione":"0.9","dipende":["libnuova"]}}`,
+		"var/lib/finto-pacchetti.json": `{"libcomune":"1.0","bash":"5.2"}`,
+		"var/lib/finto-attive.json":    "{}",
+		// la cintura spenta che il pacchetto porterebbe
+		"usr/share/remotix/cinture/remotix-tasti.conf": "[Login]\nHandlePowerKey=ignore\n",
 	}
 	for p, c := range file {
 		d := filepath.Join(radice, p)
@@ -213,6 +222,7 @@ func preparaMacchina(t testing.TB, radice string) {
 // una regola già presente.
 func azioniDiProva() []AzionePiano {
 	return []AzionePiano{
+		PianoPacchetti("pacchetti", "/var/pacchetti/remotix.pkg", Sha256([]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`)), "labwc"),
 		PianoScriviFile("file-conf", "/etc/remotix/prova-motore.conf", "porta=7447\n", "0644"),
 		PianoScriviFile("file-sovrascritto", "/etc/remotix-esistente.conf", "contenuto di REMOTIX\n", "0644"),
 		PianoScriviFile("file-unita", "/etc/systemd/system/remotix-prova-motore.service", "[Unit]\nDescription=prova\n[Install]\nWantedBy=multi-user.target\n", "0644"),
@@ -220,6 +230,8 @@ func azioniDiProva() []AzionePiano {
 		PianoGruppo("gruppo-video", "prova", "video"),
 		PianoGruppo("gruppo-preesistente", "altro", "video"),
 		PianoFirewall("firewall", "7447"),
+		PianoCintura("cintura-tasti", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"),
+		PianoAccendiServizio("servizio", "remotix-prova-motore.service", 0),
 	}
 }
 

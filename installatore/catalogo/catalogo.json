@@ -1,7 +1,7 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.1",
-  "sequenza": 1,
+  "versione": "2026.09.30.2",
+  "sequenza": 2,
   "emesso": "2026-09-30",
   "scadenza": "2027-03-31",
   "motore_minimo": "0.1.0",
@@ -90,7 +90,13 @@
       },
       "note": [
         "la base di oggi"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "task-gnome-desktop",
+        "kde": "task-kde-desktop",
+        "xfce": "task-xfce-desktop",
+        "lxqt": "task-lxqt-desktop"
+      }
     },
     {
       "id": "ubuntu",
@@ -143,6 +149,12 @@
           ],
           "serve_carattere": true
         }
+      },
+      "pacchetti_desktop": {
+        "gnome": "ubuntu-desktop",
+        "kde": "kubuntu-desktop",
+        "xfce": "xubuntu-desktop",
+        "lxqt": "lubuntu-desktop"
       }
     },
     {
@@ -186,7 +198,13 @@
       },
       "note": [
         "SELinux enforcing: pam_selinux open porta a un rifiuto all'esecuzione del figlio (§11.1 B), tappa T6"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "@^workstation-product-environment",
+        "kde": "@^kde-desktop-environment",
+        "xfce": "@^xfce-desktop-environment",
+        "lxqt": "@^lxqt-desktop-environment"
+      }
     },
     {
       "id": "fedora",
@@ -229,7 +247,13 @@
       },
       "note": [
         "analizzata, non certificata: fuori dalla matrice (§3); GNOME 49; esce di supporto a fine 2026"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "@^workstation-product-environment",
+        "kde": "@^kde-desktop-environment",
+        "xfce": "@^xfce-desktop-environment",
+        "lxqt": "@^lxqt-desktop-environment"
+      }
     },
     {
       "id": "almalinux",
@@ -293,7 +317,11 @@
         "dalla 10.1: OpenSSL 3.5",
         "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce",
         "SELinux enforcing (§11.1 B), tappa T6"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "@^graphical-server-environment",
+        "kde": "@^kde-desktop-environment"
+      }
     },
     {
       "id": "arch",
@@ -352,7 +380,13 @@
       "note": [
         "pam_faillock nella pila di serie (D3)",
         "rolling release: il pacchetto si lega alla versione esatta di ffmpeg (§6.2)"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "gnome",
+        "kde": "plasma",
+        "xfce": "xfce4,xfce4-goodies",
+        "lxqt": "lxqt,breeze-icons"
+      }
     },
     {
       "id": "opensuse-tumbleweed",
@@ -404,7 +438,13 @@
       },
       "note": [
         "la ffmpeg ufficiale non ha h264_vaapi: senza Packman niente codifica, su nessuna scheda (§4.2)"
-      ]
+      ],
+      "pacchetti_desktop": {
+        "gnome": "pattern:gnome",
+        "kde": "pattern:kde",
+        "xfce": "pattern:xfce",
+        "lxqt": "pattern:lxqt"
+      }
     },
     {
       "id": "opensuse-leap",
@@ -455,6 +495,12 @@
           ],
           "serve_carattere": true
         }
+      },
+      "pacchetti_desktop": {
+        "gnome": "pattern:gnome",
+        "kde": "pattern:kde",
+        "xfce": "pattern:xfce",
+        "lxqt": "pattern:lxqt"
       }
     }
   ],
@@ -614,5 +660,6 @@
     "distribuzioni senza systemd (Alpine, Devuan, Artix con OpenRC…): REMOTIX usa logind e il gestore d'utente",
     "immutabili (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): rimandate a dopo la fase (D9)",
     "Linux Mint Cinnamon: Cinnamon non è uno dei quattro desktop"
-  ]
+  ],
+  "nota_pacchetti_desktop": "i gruppi ufficiali, gli stessi di `vesti` (§7.2); tutti portano un display manager: il motore lo lascia installato ma SPENTO e il bersaglio d'avvio com'era (R38). [?] i nomi dei gruppi dnf di Alma e dei pattern zypper non sono ancora provati dal motore"
 }
