@@ -1,0 +1,30 @@
+[07:50:26] ⭐ SALITA a5-video-lungo-kde · kde · fhd (1920x1080) · gradini 4 · 12.0 min (ultimo 12.0) · tetto 5
+[07:50:26]    scheda della scatola: amd · browser-cliente sulla Intel
+[07:50:26]    commit del prodotto: 16dc4e2
+[07:50:26]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 4fb3287d · pagina fb9a18f3 · banchi cc58e96+modifiche
+[07:50:28]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[07:50:29]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[07:50:30]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[07:50:30]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[07:50:30]    ⭐ tetto delle sessioni in vigore: 5
+[07:50:31]    scatola: binario 4fb3287d · pagina fb9a18f3 · --tetto-sessioni 5 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[07:50:31] ══ livello-04: 4 utenti, 12.0 min (gradino) ══
+[07:50:32]    + utente 01 (pid 264670, wayland-5, seme 1601, porte 9910)
+[07:50:45]      utente 01 nato in 12.5 s
+[07:50:45]    + utente 02 (pid 266117, wayland-6, seme 1602, porte 9920)
+[07:51:05]      utente 02 nato in 20.0 s
+[07:51:05]    + utente 03 (pid 268201, wayland-7, seme 1603, porte 9930)
+[07:51:16]      utente 03 nato in 11.0 s
+[07:51:16]    + utente 04 (pid 269687, wayland-8, seme 1604, porte 9940)
+[07:51:35]      utente 04 nato in 19.5 s
+[07:51:36]    tutti dentro (65 s dopo l'inizio del livello): lavoro fino alle 08:03:36
+[08:01:06]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[08:01:07]    foto scritte: 4/4 in 1 s
+[08:01:36]    controllo corto: firefox su wayland-4
+[08:02:44]    controllo corto: PASS (codice 0)
+[08:03:40]    ▶ livello-04: GREEN — 5 GREEN · 0 DEGRADED · 0 FAIL
+[08:03:40] ⏹ FINE: ultimo livello buono 4 · rottura None
+[08:03:40]    fermo 4 attori (SIGTERM: sgomberano da se')
+[08:03:45]    compositori spenti (5)
+[08:03:50]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[08:03:50] fine · [{"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/a5-video-lungo-kde/livello-04"}]

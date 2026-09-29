@@ -428,8 +428,10 @@ un file più lungo del livello (`ffmpeg -stream_loop`, senza ricodifica), o le r
 giro dichiarate ed escluse. Sul riepilogo pesa poco: tocca il numero severo di KDE Full HD Radeon.
 ⭐ **Cura del banco fatta, 29 set**: `video/bbb_sunflower_2160p_30fps_x4.mp4`, lo stesso file
 concatenato 4 volte senza ricodifica (`ffmpeg -stream_loop 3 -c copy`, 2538 s = 42 min, sha256 in
-`video/SHA256SUMS`), più lungo di qualunque livello; `16-coda.sh` lo usa di serie. Non ancora
-provato in un livello.
+`video/SHA256SUMS`), più lungo di qualunque livello; `16-coda.sh` lo usa di serie. `[M]` provato
+il 29 set (`a5-video-lungo-kde`, KDE Full HD Radeon, 4 utenti, 12 min: col file vecchio il giro
+sarebbe caduto a 10,5 min, dentro la finestra 10–12): utente 4 **GREEN, blocco 0,08 s**, livello
+tutto GREEN (5 su 5).
 
 ### Le frecce su/giù (segnalate dall'utente a mano) — studio del 29 set
 

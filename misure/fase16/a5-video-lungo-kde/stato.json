@@ -1,0 +1,32 @@
+{
+ "campagna": "a5-video-lungo-kde",
+ "scatola": "kde",
+ "misura": "fhd",
+ "gradini": [
+  4
+ ],
+ "pid": 262942,
+ "inizio": "2026-09-29T07:50:25+00:00",
+ "fase": "finita",
+ "gradino": 4,
+ "livello_dir": "/media/REMOTIX/misure/fase16/a5-video-lungo-kde/livello-04",
+ "utenti_vivi": 0,
+ "utenti_attesi": 4,
+ "classe_ultimo": "GREEN",
+ "storia": [
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/a5-video-lungo-kde/livello-04"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-29T08:03:50+00:00",
+ "tipo_livello": "gradino",
+ "fine_prevista": "2026-09-29T08:03:36+00:00",
+ "ultimo_buono": 4,
+ "rottura": null
+}
