@@ -99,6 +99,8 @@ type H264Piattaforma struct {
 	Deposito        string `json:"deposito,omitempty"`
 	Comando         string `json:"comando,omitempty"`
 	AmdSenzaVaapi   bool   `json:"amd_senza_vaapi,omitempty"`
+	// PacchettiCodec: la libavcodec coi codec, dal deposito di terzi (dopo il consenso, D5)
+	PacchettiCodec string `json:"pacchetti_codec,omitempty"`
 }
 
 type DesktopCatalogo struct {
@@ -196,6 +198,8 @@ type Condizione struct {
 	Testo     string `json:"testo"`
 	Rimedio   string `json:"rimedio,omitempty"`
 	Decisione string `json:"decisione,omitempty"` // la decisione dell'utente che la riguarda, se aperta
+	// Componente: per C-COMPONENTE, il pacchetto che l'installatore aggiunge (va nel piano)
+	Componente string `json:"componente,omitempty"`
 }
 
 // Livelli di compatibilità (§6.6.8).
@@ -342,7 +346,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 					if p.V("pacchetto."+comp) == "assente" || p.V("pacchetto."+comp) == "" {
 						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
 							Testo:   T("cond.componente", comp),
-							Rimedio: c.Installa[fam] + " " + comp})
+							Rimedio: c.Installa[fam] + " " + comp, Componente: comp})
 					}
 				}
 				car := c.CarattereScalabile[fam]
@@ -350,7 +354,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 					(p.V("caratteri.scalabili") == "" && p.V("pacchetto."+car) == "assente")) {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
 						Testo:   T("cond.carattere"),
-						Rimedio: c.Installa[fam] + " " + car})
+						Rimedio: c.Installa[fam] + " " + car, Componente: car})
 				}
 				for _, dep := range dc.Depositi {
 					if p.V("deposito."+dep) != "presente" {

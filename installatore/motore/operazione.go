@@ -507,7 +507,13 @@ func (op *Operazione) continua() error {
 					return err
 				}
 			}
-			return op.vai(fin, "", "")
+			if err := op.vai(fin, "", ""); err != nil {
+				return err
+			}
+			if op.Piano.Mestiere == "disinstallazione" {
+				return op.m.PulisciStoria(op.Piano.Purge)
+			}
+			return nil
 		case IN_ANNULLAMENTO:
 			resti, err := op.annullaTutte()
 			if err != nil {

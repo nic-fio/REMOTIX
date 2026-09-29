@@ -20,6 +20,26 @@ import (
 
 func init() { registraTipo("disfa", nuovaDisfa) }
 
+// PulisciStoria, a disinstallazione CONFERMATA (decisione del coordinatore, 30 set): senza purge la
+// storia del motore resta (per l'assistenza) ma senza i pacchetti in cache; con purge si toglie
+// tutta, e anche /var/lib/remotix se resta vuota.
+func (m *Motore) PulisciStoria(purge bool) error {
+	if purge {
+		if err := os.RemoveAll(m.Cartella); err != nil {
+			return err
+		}
+		os.Remove(filepath.Dir(m.Cartella)) // solo se vuota
+		return nil
+	}
+	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))
+	for _, v := range voci {
+		if err := os.RemoveAll(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // LeggiRegistro legge un registro senza aprirlo in scrittura.
 func LeggiRegistro(percorso string) ([]Evento, error) {
 	f, err := os.Open(percorso)
@@ -213,7 +233,7 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			}
 		}
 	}
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione",
+	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione", Purge: purge,
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest, m.Catalogo.Scadenza},
 		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 	sess, _ := SessioniRemotix(m.Amb)

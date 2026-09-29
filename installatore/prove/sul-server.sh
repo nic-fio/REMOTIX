@@ -9,11 +9,12 @@ T4=/media/REMOTIX/vm17/t4
 "$qui/costruisci.sh" >/dev/null
 ssh -o BatchMode=yes $S "mkdir -p $T4"
 scp -q "$qui/uscita/remotix-install" "$qui/../banchi/17-distro/17-t4-motore.sh" "$qui/../banchi/17-distro/17-t4-alma.sh" \
-	"$qui/../banchi/17-distro/17-t3-impronta.sh" $S:$T4/
+	"$qui/../banchi/17-distro/17-t3-impronta.sh" "$qui/../banchi/17-distro/17-t3-impronta-rpm.sh" \
+	"$qui/../banchi/17-distro/17-t3-impronta-arch.sh" $S:$T4/
 case $1 in
 debian)
 	scp -q "$3" $S:$T4/
-	ssh -o BatchMode=yes $S "cd $T4 && DESKTOP=${DESKTOP:-} sg kvm -c 'bash 17-t4-motore.sh $2 $T4/remotix-install $T4/$(basename "$3")'" 2>&1 | grep -v tput ;;
+	ssh -o BatchMode=yes $S "cd $T4 && DESKTOP=${DESKTOP:-} PIANO_OPZ='${PIANO_OPZ:-}' sg kvm -c 'bash 17-t4-motore.sh $2 $T4/remotix-install $T4/$(basename "$3")'" 2>&1 | grep -v tput ;;
 alma)
 	ssh -o BatchMode=yes $S "cd $T4 && sg kvm -c 'bash 17-t4-alma.sh $2 $T4/remotix-install'" 2>&1 | grep -v tput ;;
 esac

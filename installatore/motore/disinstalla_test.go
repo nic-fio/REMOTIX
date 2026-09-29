@@ -20,7 +20,8 @@ func installaFinta(t *testing.T) *banco {
 		t.Fatalf("installazione: %v %v", op.Stato, err)
 	}
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-sessioni.json"),
-		[]byte(`[{"ID":"c4","Utente":"prova","Servizio":"remotix","Stato":"active"},{"ID":"7","Utente":"prova","Servizio":"sshd","Stato":"active"}]`), 0o644)
+		[]byte(`[{"ID":"c4","Utente":"prova","Servizio":"remotix","Stato":"closing","Tipo":"unspecified"},{"ID":"7","Utente":"prova","Servizio":"sshd","Stato":"active","Tipo":"tty"}]`), 0o644)
+	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-grafica.json"), []byte(`{"prova":18}`), 0o644)
 	return b
 }
 
@@ -56,8 +57,12 @@ func TestDisinstallazione(t *testing.T) {
 			if err != nil || op.Stato != CONFERMATA {
 				t.Fatalf("disinstallazione: %v %v %s", op.Stato, err, op.ultimoDettaglio())
 			}
+			if n, _ := (&sessioniFinte{b.radice}).Grafici("prova"); n != 0 {
+				t.Fatalf("%d processi del desktop ancora vivi", n)
+			}
 			dopo := foto(t, b.radice)
 			delete(dopo, "var/lib/finto-sessioni.json")
+			delete(dopo, "var/lib/finto-grafica.json")
 			if d := differenzeDopoAnnullo(t, b.prima, dopo); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
 			}
@@ -67,6 +72,9 @@ func TestDisinstallazione(t *testing.T) {
 			}
 			if _, err := b.motore(t).ControllaInstallazione(); CodiceDi(err) != "RX-INST-001" {
 				t.Fatalf("installazione.json è rimasto: %v", err)
+			}
+			if _, err := os.Stat(b.operazioni); !os.IsNotExist(err) {
+				t.Fatalf("--purge: la storia del motore è rimasta (%v)", err)
 			}
 		})
 	}
@@ -86,10 +94,33 @@ func TestDisinstallazioneAnnullata(t *testing.T) {
 	dopo := foto(t, b.radice)
 	delete(dopo, "var/lib/finto-sessioni.json")
 	delete(installata, "var/lib/finto-sessioni.json")
+	delete(dopo, "var/lib/finto-grafica.json")
+	delete(installata, "var/lib/finto-grafica.json")
 	if d := differenze(installata, dopo); len(d) > 0 {
 		t.Fatalf("non è tornata l'installazione:\n%s", strings.Join(d, "\n"))
 	}
 	if _, err := b.motore(t).ControllaInstallazione(); err != nil {
 		t.Fatalf("l'installazione deve risultare ancora: %v", err)
+	}
+}
+
+// Senza --purge la storia resta (per l'assistenza), ma senza i pacchetti in cache.
+func TestDisinstallazioneSenzaPurge(t *testing.T) {
+	b := installaFinta(t)
+	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pn.Approvazione = &Approvazione{Da: "prova", Modo: "da file", DigestPiano: pn.Digest()}
+	p := filepath.Join(t.TempDir(), "d.json")
+	ScriviJSON(p, pn)
+	op, err := b.motore(t).Applica(p, false, "prova")
+	if err != nil || op.Stato != CONFERMATA {
+		t.Fatalf("%v %v", op.Stato, err)
+	}
+	ops, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "registro.jsonl"))
+	cache, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "cache"))
+	if len(ops) != 2 || len(cache) != 0 {
+		t.Fatalf("storia: %d registri (attesi 2), %d cache (attese 0)", len(ops), len(cache))
 	}
 }

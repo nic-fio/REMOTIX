@@ -62,7 +62,7 @@ func ScegliGestore(a *Ambiente, fam string) Gestore {
 	case "fedora":
 		return &gestoreDnf{a}
 	case "suse":
-		return &gestoreZypper{a}
+		return &gestoreZypper{a: a}
 	case "arch":
 		return &gestorePacman{a}
 	}
@@ -400,7 +400,19 @@ func (g *gestoreDnf) Ripara() error {
 
 // ---------------------------------------------------------------- zypper (openSUSE) — non provato
 
-type gestoreZypper struct{ a *Ambiente }
+type gestoreZypper struct {
+	a  *Ambiente
+	da string // --from <deposito> --allow-vendor-change
+}
+
+func (g *gestoreZypper) Da(d string) Gestore { return &gestoreZypper{g.a, d} }
+
+func (g *gestoreZypper) daArg() []string {
+	if g.da == "" {
+		return nil
+	}
+	return []string{"--from", g.da, "--allow-vendor-change"}
+}
 
 func (g *gestoreZypper) Nome() string { return "zypper" }
 
@@ -409,11 +421,11 @@ func (g *gestoreZypper) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
-	arg := append([]string{"--non-interactive", "install", "--download-only"}, append(append([]string{}, file...), nomi...)...)
+	arg := append(append([]string{"--non-interactive", "install", "--download-only"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)
 	if _, err := esegui(g.a, tempoGestore, "zypper", arg...); err != nil {
 		return nil, err
 	}
-	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, append(append([]string{}, file...), nomi...)...)...)
+	out, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +447,7 @@ func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 }
 
 func (g *gestoreZypper) Installa(cache string, file, nomi []string) error {
-	_, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--no-refresh", "install"}, append(append([]string{}, file...), nomi...)...)...)
+	_, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--no-refresh", "install"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)...)
 	return err
 }
 

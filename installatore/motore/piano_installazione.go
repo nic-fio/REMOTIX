@@ -39,6 +39,10 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		cons := T("consenso.deposito", nonVuoto(dc.Nome, d))
 		pn.Azioni = append(pn.Azioni, PianoDeposito("deposito-"+d, d, nil, cons))
 		pn.Consensi = append(pn.Consensi, cons)
+		// la libavcodec coi codec da quel deposito (§4.2, §11.1 C)
+		if rap.pl != nil && rap.pl.H264.Deposito == d && rap.pl.H264.PacchettiCodec != "" {
+			pn.Azioni = append(pn.Azioni, PianoPacchettiDa("codec", rap.pl.H264.PacchettiCodec, d))
+		}
 	}
 	if s := SceltaDesktop(rap); s != nil {
 		pn.Scelte = append(pn.Scelte, *s)
@@ -57,6 +61,24 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		return nil, fmt.Errorf("%s: %v", abs, err)
 	}
 	pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", abs, sha, ""))
+	// i pezzi che il desktop di serie non porta (C-COMPONENTE: labwc, breeze6-wallpapers, un
+	// carattere scalabile…): li aggiunge il motore, dopo il pacchetto
+	var comp []string
+	visti := map[string]bool{}
+	for _, e := range rap.Desktop {
+		if e.Livello == NON_SUPPORTATA || e.Installato == "" || e.Installato == "assente" || e.Installato == "sconosciuto" {
+			continue
+		}
+		for _, k := range e.Condizioni {
+			if k.Codice == "C-COMPONENTE" && k.Componente != "" && !visti[k.Componente] {
+				visti[k.Componente] = true
+				comp = append(comp, k.Componente)
+			}
+		}
+	}
+	if len(comp) > 0 {
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("componenti", "", "", strings.Join(comp, ",")))
+	}
 
 	utenti := o.Utenti
 	if len(utenti) == 0 {

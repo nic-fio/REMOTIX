@@ -27,9 +27,18 @@ QUI=$(cd "$(dirname "$0")" && pwd)
 E=$T4/esiti/$m
 V="bash $R/17-vm.sh"
 PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
+# la famiglia decide l'impronta; PIANO_OPZ aggiunge al piano (es. --deposito packman su openSUSE)
+IMPRONTA=17-t3-impronta.sh
 case $m in
-debian13|debian13-*) n=1;; ubuntu2604|ubuntu2604-*) n=2;; *) echo "per ora solo la famiglia .deb: $m"; exit 2;;
+debian13|debian13-*) n=1;; ubuntu2604|ubuntu2604-*) n=2;;
+fedora44|fedora44-*) n=3; IMPRONTA=17-t3-impronta-rpm.sh;;
+arch|arch-*) n=4; IMPRONTA=17-t3-impronta-arch.sh;;
+tumbleweed|tumbleweed-*) n=5; IMPRONTA=17-t3-impronta-rpm.sh;;
+leap16|leap16-*) n=6; IMPRONTA=17-t3-impronta-rpm.sh;;
+alma10|alma10-*) n=7; IMPRONTA=17-t3-impronta-rpm.sh;;
+*) echo "macchina sconosciuta: $m"; exit 2;;
 esac
+PIANO_OPZ=${PIANO_OPZ:-}
 k=0  # la macchina «nuda», senza desktop: R38, il motore lo installa (DESKTOP=lxqt … nell'ambiente)
 case $m in *-*) case ${m#*-} in gnome) k=1;; kde) k=2;; xfce) k=3;; lxqt) k=4;; esac ;; esac
 DESKTOP=${DESKTOP:-}
@@ -37,7 +46,7 @@ PSSH=$((2300 + 10 * n + k)); PRX=$((7500 + 10 * n + k))
 CH=$R/ssh/id_ed25519
 O="-i $CH -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 vm() { $V ssh "$m" "$@"; }
-impronta() { vm 'sudo bash -s' <"$QUI/17-t3-impronta.sh" >"$E/impronta-$1.txt" 2>"$E/impronta-$1.err"
+impronta() { vm 'sudo bash -s' <"$QUI/$IMPRONTA" >"$E/impronta-$1.txt" 2>"$E/impronta-$1.err"
              echo "   impronta «$1»: $(wc -l <"$E/impronta-$1.txt") righe"; }
 # la macchina «nuda» non ha la foto «cliente»: si rifà dall'immagine (azzera), prima e dopo
 torna() { if [ "$k" = 0 ]; then $V azzera "$m"; else $V torna "$m" cliente; fi; }
@@ -70,7 +79,7 @@ vm "sudo install -m 755 /tmp/remotix-install /root/remotix-install"
 
 echo "==> 2. verifica, piano, approva, applica (da root)"
 vm "sudo /root/remotix-install verifica --lingua it" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
-vm "cd /tmp && sudo /root/remotix-install piano --installa --pacchetto $D --utente prova --uscita /root/piano.json --lingua it" >"$E/piano.txt" 2>&1
+vm "cd /tmp && sudo /root/remotix-install piano --installa --pacchetto $D --utente prova $PIANO_OPZ --uscita /root/piano.json --lingua it" >"$E/piano.txt" 2>&1
 echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
 vm "sudo /root/remotix-install approva /root/piano.json ${DESKTOP:+--desktop $DESKTOP} --lingua it" >>"$E/piano.txt" 2>&1
 [ -n "$DESKTOP" ] && vm "echo bersaglio: \$(systemctl get-default); echo display manager: \$(systemctl is-enabled display-manager.service 2>&1) \$(systemctl is-active display-manager.service 2>&1)" | sed 's/^/   prima: /' 
@@ -112,9 +121,11 @@ echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazi
 sleep 3
 vm "for s in \$(loginctl list-sessions --no-legend | awk '{print \$1}'); do echo \"\$s \$(loginctl show-session \$s -p Service -p Name -p State --value | tr '\n' ' ')\"; done
 a=\$(sudo tail -1 ~prova/orologio.txt); sleep 3; b=\$(sudo tail -1 ~prova/orologio.txt); echo orologio ssh: \$a → \$b
-echo processi di prova: \$(pgrep -u prova | wc -l); echo gnome-shell di prova: \$(pgrep -u prova -c gnome-shell); ps -o pid,cgroup:70,comm -u prova | grep -v user@
+echo processi di prova: \$(pgrep -u prova | wc -l); echo gnome-shell/kwin/labwc/plasmashell di prova: \$(pgrep -u prova -c -x 'gnome-shell|kwin_wayland|labwc|plasmashell|lxqt-panel|xfce4-panel')
+echo processi grafici nel gestore d utente: \$(for p in \$(pgrep -u prova); do sudo grep -qa user@ /proc/\$p/cgroup 2>/dev/null && sudo tr '\\0' '\\n' < /proc/\$p/environ 2>/dev/null | grep -qE '^(WAYLAND_)?DISPLAY=' && echo \$p; done | wc -l)
+ps -o pid,cgroup:70,comm -u prova
 echo servizio: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remotix 2>&1)
-dpkg -l remotix 2>&1 | tail -1; id prova
+(dpkg -l remotix 2>/dev/null | tail -1 || true; rpm -q remotix 2>/dev/null; pacman -Q remotix 2>/dev/null); id prova
 sudo ls /var/lib/remotix /var/lib/remotix/operazioni; sudo sh -c 'cat /var/lib/remotix/operazioni/*/certificato.txt' | grep -A30 'stato finale: CONFERMATA\$' | tail -30" >"$E/dopo.txt" 2>&1
 sed 's/^/   /' "$E/dopo.txt" | head -60
 kill "$OROLOGIO" 2>/dev/null; OROLOGIO=

@@ -137,7 +137,7 @@ type GestoreUnita interface {
 
 // Sessione: una sessione di logind.
 type Sessione struct {
-	ID, Utente, Servizio, Stato string
+	ID, Utente, Servizio, Stato, Tipo string
 }
 
 // GestoreSessioni: logind, sul D-Bus.
@@ -146,6 +146,10 @@ type GestoreSessioni interface {
 	Termina(id string) error
 	// Segnale ai processi di UNA sessione (logind KillSession, who=all): resta dentro la sessione.
 	Segnale(id string, segnale int32) error
+	// Grafici: quanti processi del desktop ha la persona nel suo gestore d'utente.
+	Grafici(utente string) (int, error)
+	// ChiudiGrafica: ferma le unità del desktop nel gestore d'utente (grafica_utente.go).
+	ChiudiGrafica(utente string) ([]string, error)
 }
 
 // GestoreFirewall apre e chiude una porta. Oggi solo firewalld (§6.6.4, mandato di T4).
@@ -187,7 +191,7 @@ func AmbienteVero() *Ambiente {
 	a.Gruppi = &gruppiVeri{a}
 	a.Unita = &unitaDBus{a.Bus}
 	a.Firewall = scegliFirewall(a)
-	a.Sessioni = &sessioniDBus{a.Bus}
+	a.Sessioni = &sessioniDBus{a.Bus, a}
 	if m, _ := OsRelease(a); m != nil {
 		a.Famiglia = Famiglia(m["ID"], m["ID_LIKE"])
 	}
