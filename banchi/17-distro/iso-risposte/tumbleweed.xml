@@ -34,6 +34,10 @@
     <hosts config:type="list"/>
   </host>
   <software>
+    <!-- la NET offre quattro prodotti (Aeon, Kalpa, MicroOS, openSUSE): si sceglie Tumbleweed -->
+    <products config:type="list">
+      <product>openSUSE</product>
+    </products>
     <install_recommended config:type="boolean">true</install_recommended>
     <patterns config:type="list">
       <pattern>kde</pattern>
