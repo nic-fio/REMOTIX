@@ -959,7 +959,7 @@ grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamen
 desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si installa»*):
 - PREFLIGHT lo rileva; nella schermata delle scelte compare **una domanda in più, solo in quel caso**:
   «su questa macchina non c'è un desktop: vuoi installarne uno?», con i soli desktop che il catalogo dà per
-  buoni su quella distribuzione (Alma: GNOME e KDE). **Sì** ⇒ l'installazione del desktop entra nel piano
+  buoni su quella distribuzione (Alma: GNOME e KDE), fra cui **chi installa sceglie quale** (parola dell'utente); uno è **già selezionato**, quello di riferimento della distribuzione — GNOME su Debian, Ubuntu, Fedora, Alma; KDE su openSUSE e Arch — ed è anche quello che si installa senza domande se il file di risposte non dice altro. **Sì** ⇒ l'installazione del desktop entra nel piano
   come azione dichiarata, col suo peso (pacchetti, GB); **no** ⇒ REMOTIX non si installa (BLOCCATA,
   `RX-DESKTOP-001`, col perché e il rimedio);
 - lo stesso se c'è **solo un desktop non supportato** (Cinnamon, MATE, i3…): quello esistente non si tocca, il
