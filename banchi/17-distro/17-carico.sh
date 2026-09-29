@@ -76,6 +76,12 @@ while [ "$(date -u +%s)" -lt "$FINE" ]; do
 	sleep 5
 done
 
+# ⚠ spegnere e ripristinare UNA ALLA VOLTA, e PRIMA di leggere il journal: la verifica del 29 set ha
+#   trovato un'uccisione di earlyoom (xdg-desktop-portal-gtk, 15:28:19) durante lo spegnimento in
+#   parallelo di 8 VM — un secondo dopo il giudizio, che quindi non l'aveva vista.
+for m in "${M[@]}"; do vm ferma "$m" >/dev/null 2>&1; vm torna "$m" cliente >/dev/null; done
+echo "   VM spente e tornate alla foto «cliente» (una alla volta)"
+
 # il giudizio
 # ⛔ l'utente non legge il journal: senza sudo il conto sarebbe 0 SENZA aver guardato (UNKNOWN ≠ PASS)
 P=$(sed -n "s/^pass: *//p" ~/SERVER.ssh)
@@ -114,6 +120,3 @@ for n,ok,v in esiti: print(("  PASS " if ok else "  FAIL ")+n+" — "+v)
 print("⇒ REGGE" if all(ok for _,ok,_ in esiti) else "⇒ NON REGGE")
 PY
 
-for m in "${M[@]}"; do ( vm ferma "$m" >/dev/null 2>&1; vm torna "$m" cliente >/dev/null ) & done
-wait
-echo "   VM spente e tornate alla foto «cliente»"

@@ -779,6 +779,17 @@ utente con inoltro delle porte, disco come sovrapposizione sull'immagine ufficia
 - `[M]` 29 set: **tutte e nove le distribuzioni partono** e rispondono a ssh in 3-39 s; SELinux
   Enforcing su Fedora e Alma.
 - ⚠ Sul server QEMU va reinstallato dopo ogni riavvio (il sistema è in memoria): è nella ricetta.
+- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0).
+- **Quante VM insieme: 4** (decisione dell'utente: *«se il sistema regge passiamo da 4 a 8; se non regge
+  torniamo a 4, così ci teniamo un po' di margine»*). `[M]` `17-carico.sh`, 8 VM × 10 min, ognuna con la
+  schermata d'accesso, una codifica software Full HD 30 fps e 2,5 GB occupati: **8 × 6 GB e 8 × 4 GB non
+  reggono, per la sola memoria** (minimo disponibile 1954 e 2868 MB contro la soglia di 3072; scambio
+  medio 1536 e 2882 KiB/s contro 100); codifica 29,7-29,9 fps e ssh ≤ 0,9 s sempre dentro. Le VM
+  chiedono ~4,1-4,5 GB l'una, il server ne ha ~30 liberi a riposo (il sistema sta in RAM). Una verifica
+  mandata a smentire l'ha confermato, e ha trovato un'uccisione di earlyoom durante lo spegnimento
+  parallelo che il giudizio non vedeva (ora le VM si spengono una alla volta, prima di leggere il
+  journal). ⚠ Senza *balloon* una VM si tiene la memoria toccata: in ore di lavoro una VM da 6 GB va
+  verso i 6 GB, non i 4,5 misurati in 10 minuti. Stima non misurata: 6 × 4 GB probabile, 5 × 6 GB no.
 
 ### 7.2 La macchina «come il cliente»
 
@@ -973,6 +984,7 @@ installata sì/no.*
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
 | (questo commit) | `banchi/17-distro/17-vm.sh`: una VM per `<distro>-<desktop>` dalle immagini cloud ufficiali, cloud-init, porte per macchina, `vesti` col gruppo di pacchetti ufficiale, foto «cliente», riavvio vero controllato col `boot_id` | decisione dell'utente del 29 set: le prove dell'installatore in VM, una per desktop | `[M]` 9 distribuzioni su 9 accese, ssh in 3-39 s | copiata sul server |
+| 12f6782…(questo commit) | `banchi/17-distro/17-carico.sh`: la prova di carico delle VM; ritmo dai contatori dei fotogrammi su ~60 s; journal letto con sudo **dopo** lo spegnimento, VM spente una alla volta | decidere quante VM insieme (4 o 8) | `[M]` 8 VM non reggono (memoria); si resta a 4 | copiata sul server |
 
 ### 13.3 L'ambiente del server
 
