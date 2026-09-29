@@ -574,8 +574,19 @@ elenco; una richiesta nuova passa dall'utente prima di entrare.*
 ⛔ **Non** stanno in REMOTIX, e li fa il motore: gruppi, cinture, firewall, desktop, archivi, pacchetti, e alla
 **disinstallazione** la chiusura dei desktop aperti — il motore li trova da logind (sessioni col servizio PAM
 `remotix`) e li fa chiudere da logind, dopo averli elencati nel piano col consenso dell'amministratore
-(«2 desktop aperti: verranno chiusi, il lavoro non salvato va perso»). Un avviso nel browser alle persone
-collegate richiederebbe una funzione nuova: **non ora**, eventualmente in una versione futura.
+(«2 desktop aperti: verranno chiusi, il lavoro non salvato va perso»).
+
+**La disinstallazione** (parola dell'utente, 30 set: *«è un'operazione dell'admin del server: l'admin avverte
+gli utenti nelle modalità classiche (email, WhatsApp…); poi, quando avvia la disinstallazione, l'installer
+chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia del sistema»*):
+1. **prima**, l'amministratore avvisa le persone coi suoi mezzi — REMOTIX non ha né avrà un sistema di messaggi
+   per questo;
+2. il **piano** elenca chi è collegato in quel momento, come controllo per l'amministratore (non come avviso
+   agli utenti): conferma o rimanda;
+3. il motore chiude **le sessioni REMOTIX** e tutti i programmi nati dentro di esse (logind `TerminateSession`
+   sulla sessione, che porta via il suo gruppo di processi) — ⚠ **non** tutti i processi dell'utente: la stessa
+   persona può avere una sessione davanti al monitor o un lavoro via ssh, e quelli non si toccano;
+4. poi la **pulizia** del sistema, ripercorrendo il registro (§6.6.4).
 
 ### 6.6 La specifica del motore — stati, registro, azioni, fiducia (29 set 2026)
 
@@ -982,6 +993,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R40 | ⭐ il pacchetto da solo non accende niente | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo, porte in ascolto, gruppi; poi `remotix stato` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; `remotix stato` che non dica «installazione non certificata» |
 | R41 | un programma solo | durante un'installazione completa, l'albero dei processi figli del motore (`/proc`) | un processo che non sia il motore stesso o un programma dell'elenco chiuso; uno script eseguito; una chiamata a un programma non annotata nel registro |
 | R42 | la lingua segue il sistema | la stessa installazione con `LANG=it_IT.UTF-8`, `LANG=en_US.UTF-8`, `LANG=de_DE.UTF-8` e `LANGUAGE=it:en`, in GUI (che si rilancia con polkit) e in TUI | una schermata o un messaggio nella lingua sbagliata; un codice `RX-…` diverso fra le lingue |
+| R43 | la disinstallazione chiude solo le sessioni REMOTIX | un utente con un desktop REMOTIX aperto e, insieme, una sessione ssh con un processo che scrive l'ora ogni secondo; disinstallazione | il desktop REMOTIX ancora vivo; il processo della sessione ssh interrotto |
 
 ---
 
