@@ -407,6 +407,11 @@ ogni 12–40 s. Resta da provare: le superfici con il tiling della scheda (invec
 codifica in un contesto nuovo; e, se nessuna delle due, è un comportamento del driver/firmware da
 segnalare a Mesa con la scena riprodotta. Il 4K della Radeon nel riepilogo resta con questa riserva.
 
+✅ **Decisione dell'utente, 29 set 2026**: *«è fuori dal nostro ambito»* — A3 **non si aggira** in
+REMOTIX; si documenta nei minimi particolari per poterlo portare agli sviluppatori del driver:
+**`fasi/16-a3-radeon-vcn.md`** (macchina, catena, misure, ipotesi escluse, riproduzione, bozza del
+rapporto per Mesa). Il 4K della Radeon nel riepilogo è limitato dal driver, e lo si dichiara.
+
 ### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
 
 `[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,
