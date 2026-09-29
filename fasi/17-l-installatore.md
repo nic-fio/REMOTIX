@@ -1040,7 +1040,7 @@ desktop installato, o chiede di installarlo all'utente oppure REMOTIX non si ins
 termini quasi da programmatore»*): chi installa legge **che cosa succede e che cosa deve decidere**, in parole
 comuni («Accesso», «Protezione del sistema», «Serve il tuo consenso», «Lo sistemo io»); driver, percorsi,
 nomi di pacchetti, codici `RX-…` e impronte stanno in un «Mostra i dettagli tecnici» chiuso di serie — è lì
-che li cerca l'assistenza.
+che li cerca l'assistenza. Si scrive **«password»**, non «parola d'ordine»: è il termine che conoscono tutti (parola dell'utente, 30 set).
 
 ⇒ La GUI (e la TUI) sono **cinque schermate**: controllo della macchina · **una** schermata di scelte ·
 il piano, con un solo «conferma» · l'avanzamento · il certificato e il benvenuto con l'indirizzo.
