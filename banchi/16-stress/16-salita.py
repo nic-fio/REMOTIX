@@ -1147,6 +1147,44 @@ def taglia_jsonl(src, dst, t0, t1):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+
+# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026, «user unknown» della fase 16):
+#   il gancio (anche quello del pre-push, da solo) sgombera TUTTI gli inquilini
+#   `c<n>u<n>` prima di ogni maglia ⇒ un push durante un giro cancellava gli inquilini
+#   nati 7 s prima (`[M]` 04:28, 04:40, 04:42 del 29 set = i 4 FAIL e 36 BLOCKED).
+#   La stessa serratura in 15-giro.py, 16-salita.py e 11-gancio.sh; chi e' lanciato da
+#   uno di loro eredita REMOTIX_SCATOLE_TENUTE e non la riprende.
+#   ⚠ NON in /run/lock: la cartella e' «sticky» e con fs.protected_regular root non
+#   riapre il file creato da nicfio (e il gancio dice «tenute» a scatole libere, `[M]`).
+SERRATURA_SCATOLE = "/media/REMOTIX/rete11/.scatole.lock"
+
+
+def tieni_le_scatole(chi):
+    """None se le scatole sono nostre (la serratura resta presa fino all'uscita),
+    altrimenti la frase che dice chi le tiene."""
+    if os.environ.get("REMOTIX_SCATOLE_TENUTE"):
+        return None
+    fd = os.open(SERRATURA_SCATOLE, os.O_RDWR | os.O_CREAT, 0o666)
+    try:
+        os.fchmod(fd, 0o666)
+    except OSError:
+        pass
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        try:
+            tiene = os.pread(fd, 200, 0).decode(errors="replace").strip()
+        except OSError:
+            tiene = ""
+        os.close(fd)
+        return "le scatole le tiene gia' un altro banco (%s)" % (tiene or "?")
+    os.ftruncate(fd, 0)
+    os.pwrite(fd, ("%s pid %d" % (chi, os.getpid())).encode(), 0)
+    os.environ["REMOTIX_SCATOLE_TENUTE"] = chi
+    globals()["_fd_scatole"] = fd
+    return None
+
+
 def main():
     global _log_file
     a = argparse.ArgumentParser(description=__doc__,
@@ -1235,6 +1273,10 @@ def main():
         fcntl.flock(serratura, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         dice("⛔ BLOCKED: c'e' gia' un'altra salita in corso su questo server")
+        return 3
+    guaio = tieni_le_scatole("16-salita %s" % o.campagna)
+    if guaio:
+        dice("⛔ BLOCKED: %s" % guaio)
         return 3
     sal = Salita(o)
     guai = perche_non_vuoto(o.scatola)

@@ -482,6 +482,12 @@ eseguiti_json=""
 sgombera_inquilini() {
 	local d=$1 tolti
 	[ "$SECCO" = 1 ] && return 0
+	# ⛔ SI SGOMBERA SOLO CON LA SERRATURA DELLE SCATOLE IN MANO (29 set 2026): le
+	#   CARTE non la prendono (non accendono niente), ma lo sgombero dopo C16
+	#   girava lo stesso ⇒ `[M]` 10:32:18, un push di soli documenti durante un
+	#   giro della suite ha cancellato gli inquilini di f016 in GNOME e LXQt, e
+	#   i riattacchi falliti hanno bandito l'indirizzo: 12 FAIL e 102 BLOCKED.
+	[ -n "${REMOTIX_SCATOLE_TENUTE:-}" ] || return 0
 	scatola_accesa "$d" || return 0
 	tolti=$(podman exec "rete11-$d" sh -c '
 		tolti=""
@@ -1903,6 +1909,29 @@ decidi|gira)
 		inf "⭐ non parte niente — e non e' pigrizia: un gancio che gira quando"
 		inf "  non serve e' un gancio che qualcuno spegnera'"
 		exit 0
+	fi
+
+	# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026): ogni maglia sgombera
+	#   TUTTI gli inquilini `c<n>u<n>` ⇒ un push durante un giro della suite ne
+	#   cancellava gli inquilini appena nati (`[M]` «user unknown», 04:28, 04:40 e
+	#   04:42 del 29 set: 4 FAIL e 36 BLOCKED).  La stessa serratura di 15-giro.py e
+	#   16-salita.py; le CARTE non toccano le scatole e non la chiedono.  Se un
+	#   banco lungo e' in corso il gancio dice NO e il push aspetta la sua fine.
+	#   ⚠ Senza la serratura `sgombera_inquilini` non tocca niente: e' la stessa
+	#   variabile, REMOTIX_SCATOLE_TENUTE, a dire «le scatole sono nostre».
+	if [ "${FAMIGLIA%%:*}" != carte ] && [ -z "${REMOTIX_SCATOLE_TENUTE:-}" ]; then
+		# ⚠ non in /run/lock («sticky»: root non riapre il file di nicfio, `[M]`)
+		SERRATURA_SCATOLE=/media/REMOTIX/rete11/.scatole.lock
+		exec 9<>"$SERRATURA_SCATOLE" || { ko "non apro $SERRATURA_SCATOLE"; exit 2; }
+		chmod 666 "$SERRATURA_SCATOLE" 2>/dev/null
+		if ! flock -n -x 9; then
+			ko "le scatole le tiene gia' un altro banco ($(head -c 200 "$SERRATURA_SCATOLE" 2>/dev/null || echo ?)):"
+			ko "⇒ il gancio non parte, o sgombererebbe i suoi inquilini. Riprova a banco finito."
+			exit 1
+		fi
+		: > "$SERRATURA_SCATOLE"
+		printf "11-gancio %s pid %d" "${FAMIGLIA%%:*}" $$ >&9
+		export REMOTIX_SCATOLE_TENUTE="11-gancio"
 	fi
 
 	SECONDS=0

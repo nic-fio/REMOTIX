@@ -144,6 +144,43 @@ def commit():
         return "?"
 
 
+# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026, «user unknown» della fase 16):
+#   il gancio (anche quello del pre-push, da solo) sgombera TUTTI gli inquilini
+#   `c<n>u<n>` prima di ogni maglia ⇒ un push durante un giro cancellava gli inquilini
+#   nati 7 s prima (`[M]` 04:28, 04:40, 04:42 del 29 set = i 4 FAIL e 36 BLOCKED).
+#   La stessa serratura in 15-giro.py, 16-salita.py e 11-gancio.sh; chi e' lanciato da
+#   uno di loro eredita REMOTIX_SCATOLE_TENUTE e non la riprende.
+#   ⚠ NON in /run/lock: la cartella e' «sticky» e con fs.protected_regular root non
+#   riapre il file creato da nicfio (e il gancio dice «tenute» a scatole libere, `[M]`).
+SERRATURA_SCATOLE = "/media/REMOTIX/rete11/.scatole.lock"
+
+
+def tieni_le_scatole(chi):
+    """None se le scatole sono nostre (la serratura resta presa fino all'uscita),
+    altrimenti la frase che dice chi le tiene."""
+    if os.environ.get("REMOTIX_SCATOLE_TENUTE"):
+        return None
+    fd = os.open(SERRATURA_SCATOLE, os.O_RDWR | os.O_CREAT, 0o666)
+    try:
+        os.fchmod(fd, 0o666)
+    except OSError:
+        pass
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        try:
+            tiene = os.pread(fd, 200, 0).decode(errors="replace").strip()
+        except OSError:
+            tiene = ""
+        os.close(fd)
+        return "le scatole le tiene gia' un altro banco (%s)" % (tiene or "?")
+    os.ftruncate(fd, 0)
+    os.pwrite(fd, ("%s pid %d" % (chi, os.getpid())).encode(), 0)
+    os.environ["REMOTIX_SCATOLE_TENUTE"] = chi
+    globals()["_fd_scatole"] = fd
+    return None
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  IL REGISTRO
 # ═══════════════════════════════════════════════════════════════════════════
@@ -400,6 +437,11 @@ def main():
                                           " · LUNGA" if p["lunga"] else "",
                                           " · server " + p["server"] if p["server"] else ""))
         return 0
+    guaio = tieni_le_scatole("15-giro %s" % o.giro)
+    if guaio:
+        print("⛔ %s: il giro non parte (un gancio o una salita sgombererebbero i suoi "
+              "inquilini, o lui i loro)" % guaio)
+        return 3
     meta = {"commit": commit()}
     for d in o.desktop:
         meta[d] = impronte(d)
