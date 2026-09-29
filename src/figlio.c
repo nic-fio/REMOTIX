@@ -54,6 +54,9 @@
  *    dal protocollo. */
 #include "rcp.h"
 #include "registro.h"
+/* ⭐ FASE 17 T7: la meta' del PADRE chiede se un desktop e' vivo prima di
+ *    `loginctl terminate-user` (logind e /proc, niente del palco). */
+#include "ritrovo.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -1496,8 +1499,11 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
  *   macchina la tocca `provisiona.sh`»): il prodotto adesso tocca i gruppi.
  *   E' la decisione dell'utente, e si scrive nel registro ogni volta.
  * ⚠ Il gestore d'utente gia' vivo NON prende i gruppi nuovi: si fa rinascere
- *   con `loginctl terminate-user`, ed e' sicuro perche' qui un figlio per
- *   quest'utente non c'e' (I2) — nessuna sessione grafica da buttare giu'.
+ *   con `loginctl terminate-user` — ⛔ ma SOLO se l'utente non ha un desktop
+ *   REMOTIX vivo.  «Qui un figlio non c'e', quindi nessuna sessione grafica»
+ *   era vero finche' il desktop moriva col figlio; `[M]` T2 (fase 17 §5.2) ha
+ *   mostrato che dopo un riavvio del servizio sopravvive (vedi la guardia
+ *   in fondo alla funzione, FASE 17 T7).
  *
  * Torna `true` se ha cambiato qualcosa (e allora i gruppi vanno riletti).
  */
@@ -1738,8 +1744,36 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 	if (fd >= 0)
 		close(fd);
 	/* ⚠ E il gestore d'utente si fa RINASCERE, o i gruppi nuovi non arrivano al
-	 *   compositore (`[M]` 27 ago 2026).  Qui non c'e' nessuna sessione grafica
-	 *   da buttare giu': il figlio di quest'utente non esiste ancora. */
+	 *   compositore (`[M]` 27 ago 2026).
+	 * ⛔⭐ FASE 17, T7 — «qui un figlio non c'e', quindi nessun desktop» NON E'
+	 *     VERO: `[M]` T2, dopo un riavvio del servizio il desktop REMOTIX
+	 *     sopravvive senza figlio (`ritrovo.h`).  `terminate-user` lo
+	 *     butterebbe giu' con tutte le finestre.  ⇒ Si chiede a logind e /proc
+	 *     PRIMA; se il desktop c'e' — o non si sa — NON si da', e si dice che i
+	 *     gruppi nuovi arriveranno alla prossima nascita del desktop. */
+	{
+		RitrovoDesktop vivo;
+		int c = ritrovo_vivo(uid, &vivo);
+
+		if (c != 0) {
+			if (c > 0)
+				registro_dice_di(REG_FIGLIO, utente,
+				                 "⛔ «%s» iscritto a «%s», ma il gestore d'utente NON si fa "
+				                 "rinascere: ha un desktop REMOTIX VIVO (sessione %s, "
+				                 "palco pid %ld «%s») e `loginctl terminate-user` lo "
+				                 "chiuderebbe con le sue finestre.  ⚠ I gruppi nuovi "
+				                 "arriveranno al compositore alla prossima nascita del "
+				                 "desktop: fino ad allora puo' vedere in software",
+				                 utente, elenco, vivo.sessione, (long)vivo.palco, vivo.comm);
+			else
+				registro_dice_di(REG_FIGLIO, utente,
+				                 "⛔ «%s» iscritto a «%s», ma il gestore d'utente NON si fa "
+				                 "rinascere: logind non dice se ha un desktop REMOTIX vivo, "
+				                 "e nel dubbio non si butta giu' niente",
+				                 utente, elenco);
+			return true;
+		}
+	}
 	argv_term[0] = (char *)"loginctl";
 	argv_term[1] = (char *)"terminate-user";
 	argv_term[2] = (char *)utente;

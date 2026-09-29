@@ -76,6 +76,7 @@
 #include "comando.h"
 #include "figlio.h"
 #include "sentinella.h"
+#include "ritrovo.h"
 #include "pagina.h"
 #include "rcp.h"
 #include "registro.h"
@@ -385,6 +386,189 @@ struct ponte {
 	figli *f;
 };
 
+/* ⛔⭐⭐ FASE 17, T7 — I DESKTOP RITROVATI: palchi vivi che nessun figlio tiene.
+ *
+ *     `[M]` T2 (`fasi/17-l-installatore.md` §5.2): fermare il servizio NON
+ *     uccide i desktop — muoiono padre, aiutante e figlio, il palco nato con
+ *     `setsid --fork` resta coi suoi programmi.  ⛔ E questo padre ripartiva
+ *     con la tabella dei figli vuota: quei desktop non li contava nessuno, ne'
+ *     il tetto delle sessioni, ne' il budget, ne' l'orologio dell'abbandono.
+ *
+ * ⭐ All'avvio si cercano (`ritrovo.h`: sessione logind `remotix` con dentro il
+ *    capo del palco) e stanno QUI, «in attesa di riattacco»:
+ *      · il TETTO conta figli + ritrovati (`palchi_quanti()`);
+ *      · il BUDGET li mette dentro il conto come i palchi coi figli;
+ *      · l'OROLOGIO DELL'ABBANDONO parte dall'avvio di questo padre —
+ *        dichiarato: l'ultimo gesto visto dal padre di prima era nella sua
+ *        memoria, e non c'e' piu';
+ *      · al RIATTACCO il figlio nuovo nasce (D1: il figlio muore col padre per
+ *        scelta, e si rifa' qui), riprende lo stesso compositore, e l'utente
+ *        esce da questa tabella per entrare in quella dei figli;
+ *      · se l'orologio scade senza che nessuno sia rientrato, si fa nascere un
+ *        figlio che chiuda il desktop: chiudere ogni desktop lo sa solo lui,
+ *        che sta nel bus di sessione dell'utente (`sessione_termina()`).
+ * ⚠ E ogni RIPASSO_RITROVATI_MS si ricontrolla che ci siano ancora: un desktop
+ *   morto da solo non deve occupare un posto del tetto per un'ora.
+ * ⛔ Si cercano SOLO all'avvio.  Un figlio morto a padre vivo lascia il suo
+ *    desktop come prima (`congeda_figlio()`): non e' il caso di questa tappa. */
+#define RIPASSO_RITROVATI_MS 10000u
+#define QUANTI_RITROVATI_MAX 256
+
+static void presenza_segna(const char *utente, uint64_t ora_ms);
+static void presenza_dimentica(const char *utente);
+/* ⚠ Definizione provvisoria (C11 §6.9.2): il valore e il suo riquadro stanno
+ *   piu' giu', col terzo orologio di §5.3. */
+static uint64_t abbandono_ms;
+
+static RitrovoDesktop *ritrovati;
+static int ritrovati_n;
+
+static int ritrovato_indice(const char *utente)
+{
+	for (int i = 0; utente && i < ritrovati_n; i++)
+		if (strcmp(ritrovati[i].utente, utente) == 0)
+			return i;
+	return -1;
+}
+
+static bool ritrovato_di(const char *utente)
+{
+	return ritrovato_indice(utente) >= 0;
+}
+
+static void ritrovato_togli(const char *utente)
+{
+	int i = ritrovato_indice(utente);
+
+	if (i < 0)
+		return;
+	ritrovati[i] = ritrovati[ritrovati_n - 1];
+	ritrovati_n--;
+}
+
+/* ⭐ «Quanti palchi sono vivi»: i figli, piu' i desktop ritrovati che un figlio
+ *    non l'hanno ancora — chi rientra esce da `ritrovati` quando il suo nasce,
+ *    quindi nessuno si conta due volte. */
+static int palchi_quanti(const struct ponte *p)
+{
+	return figli_quanti(p->f) + ritrovati_n;
+}
+
+static void ritrovati_all_avvio(uint64_t ora_ms)
+{
+	char perche[256] = "";
+	char elenco[1024] = "";
+	size_t usati = 0;
+	int n;
+
+	ritrovati = calloc(QUANTI_RITROVATI_MAX, sizeof *ritrovati);
+	if (!ritrovati) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ FASE 17 T7: niente memoria per la tabella dei desktop "
+		              "ritrovati: quelli rimasti vivi da un padre precedente NON "
+		              "si contano (tetto, budget, abbandono)");
+		return;
+	}
+	n = ritrovo_cerca(ritrovati, QUANTI_RITROVATI_MAX, perche, sizeof perche);
+	if (n < 0) {
+		registro_dice(REG_FIGLIO,
+		              "⛔ FASE 17 T7: non ho potuto cercare i desktop REMOTIX vivi "
+		              "(%s).  ⚠ Se il servizio e' stato riavviato con dei desktop "
+		              "aperti, questi NON si contano: ne' tetto, ne' budget, ne' "
+		              "orologio dell'abbandono",
+		              perche);
+		return;
+	}
+	ritrovati_n = n;
+	for (int i = 0; i < n; i++) {
+		int k;
+
+		registro_dice(REG_FIGLIO,
+		              "⭐ FASE 17 T7 — RITROVATO il desktop di «%s» (uid %ld): "
+		              "sessione logind %s (servizio PAM «%s», %u in tutto), palco "
+		              "pid %ld «%s».  Resta IN ATTESA DI RIATTACCO: conta nel "
+		              "tetto e nel budget, e al riattacco il figlio nuovo riprende "
+		              "questo stesso desktop",
+		              ritrovati[i].utente, (long)ritrovati[i].uid,
+		              ritrovati[i].sessione, RITROVO_SERVIZIO_PAM,
+		              ritrovati[i].sessioni, (long)ritrovati[i].palco,
+		              ritrovati[i].comm);
+		/* ⚠ L'orologio dell'abbandono riparte da ADESSO, e si dice sotto. */
+		presenza_segna(ritrovati[i].utente, ora_ms);
+		k = snprintf(elenco + usati, sizeof elenco - usati, "%s«%s»",
+		             usati ? ", " : "", ritrovati[i].utente);
+		if (k > 0 && (size_t)k < sizeof elenco - usati)
+			usati += (size_t)k;
+	}
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 17 T7 — desktop REMOTIX vivi ritrovati all'avvio: %d%s%s.  "
+	              "I palchi contano %d su un tetto di %d; l'orologio "
+	              "dell'abbandono (%llu s) per loro riparte dall'avvio di questo "
+	              "padre — l'ultimo gesto visto dal padre di prima non e' stato "
+	              "conservato",
+	              n, n ? ": " : " (nessuna sessione logind «remotix» con un palco vivo)",
+	              elenco, n, rcp_tetto(),
+	              (unsigned long long)(abbandono_ms / 1000));
+	if (n > rcp_tetto())
+		registro_dice(REG_FIGLIO,
+		              "⚠ FASE 17 T7: i desktop ritrovati (%d) sono PIU' del tetto "
+		              "delle sessioni (%d): nessun utente NUOVO entra finche' non se "
+		              "ne vanno — chi ha il suo desktop rientra lo stesso",
+		              n, rcp_tetto());
+}
+
+/* ⭐ Il ripasso: un desktop ritrovato che nel frattempo e' morto esce dai conti.
+ * ⚠ Solo se ce n'e' almeno uno: a tabella vuota non si chiede niente a
+ *   nessuno, e il ciclo che consegna i fotogrammi non paga. */
+static void ritrovati_ripassa(uint64_t ora_ms)
+{
+	static uint64_t ultimo;
+	static bool muto_detto;
+	RitrovoDesktop *vivi;
+	char perche[256] = "";
+	int n;
+
+	if (!ritrovati_n || ora_ms - ultimo < RIPASSO_RITROVATI_MS)
+		return;
+	ultimo = ora_ms;
+	vivi = calloc(QUANTI_RITROVATI_MAX, sizeof *vivi);
+	if (!vivi)
+		return;
+	n = ritrovo_cerca(vivi, QUANTI_RITROVATI_MAX, perche, sizeof perche);
+	if (n < 0) {
+		if (!muto_detto) {
+			muto_detto = true;
+			registro_dice(REG_FIGLIO,
+			              "⚠ FASE 17 T7: il ripasso dei desktop ritrovati non ha "
+			              "risposta (%s): restano nei conti finche' non si sa",
+			              perche);
+		}
+		free(vivi);
+		return;
+	}
+	muto_detto = false;
+	for (int i = ritrovati_n - 1; i >= 0; i--) {
+		bool c_e = false;
+		char chi[sizeof ritrovati[0].utente];
+
+		for (int k = 0; k < n; k++)
+			if (vivi[k].uid == ritrovati[i].uid)
+				c_e = true;
+		if (c_e)
+			continue;
+		memcpy(chi, ritrovati[i].utente, sizeof chi);
+		registro_dice(REG_FIGLIO,
+		              "⚠ FASE 17 T7: il desktop ritrovato di «%s» non c'e' piu' "
+		              "(il palco pid %ld «%s» e' sparito senza che nessuno "
+		              "rientrasse): esce dal tetto, dal budget e dall'orologio "
+		              "dell'abbandono",
+		              chi, (long)ritrovati[i].palco, ritrovati[i].comm);
+		ritrovato_togli(chi);
+		presenza_dimentica(chi);
+	}
+	free(vivi);
+}
+
 /* ⛔⭐⭐⭐ «CI STA?» — LA DOMANDA DEL BUDGET, fase 10 (25 agosto 2026).
  *
  *     ⛔ Il difetto che cura, `[M]` §S.2: il prodotto **non aveva un budget —
@@ -443,6 +627,10 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 		if (chi && chi[0])
 			budget_conto_dentro(&conto, chi);
 	}
+	/* ⭐ FASE 17 T7: e i desktop ritrovati, che un figlio non l'hanno ancora
+	 *    ma tornano a comporre appena il loro utente rientra. */
+	for (int i = 0; i < ritrovati_n; i++)
+		budget_conto_dentro(&conto, ritrovati[i].utente);
 	e = budget_conto_verdetto(&conto, utente, tl, ta, perche, perche_cap);
 	if (e == BUDGET_NON_REGGE) {
 		*motivo = RCP_BUDGET_PIENO;
@@ -528,6 +716,15 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *    figlio vive quanto la sessione grafica (figlio morto = sessione
 		 *    finita, vedi `congeda_figlio()`). */
 		ripresa = c_era;
+		/* ⭐⭐ FASE 17 T7 — il figlio non c'e', ma il DESKTOP si': un padre
+		 *     precedente l'ha lasciato vivo e questo l'ha ritrovato all'avvio.
+		 *     ⇒ Per i conti e' come `c_era` (e' gia' dentro il tetto e il
+		 *     budget, e l'orologio non si rinnova); per il figlio no — nasce
+		 *     adesso (D1) e riprende lo stesso compositore. */
+		bool ritrovato = !c_era && ritrovato_di(utente);
+
+		if (ritrovato)
+			ripresa = true;
 
 		/* ⛔⛔⭐ IL NO SI DICE PRIMA DI FAR NASCERE IL FIGLIO — 25 agosto 2026,
 		 *      difetto **P3** / rilievo **R10-A1**, e questa e' la riga che lo
@@ -569,22 +766,24 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *
 		 * ⚠ `figli_quanti()` e `figli_pid_di()` esistevano gia': non serve
 		 *   nessuna funzione nuova, serve **chiedere prima**. */
-		if (!c_era && figli_quanti(p->f) >= rcp_tetto()) {
+		if (!ripresa && palchi_quanti(p) >= rcp_tetto()) {
 			registro_dice(REG_FIGLIO,
 			              "⛔ «%s» ha superato PAM ma NON avra' un palco: i "
-			              "palchi sono %d su %d, e ⛔ il posto nel registro "
-			              "delle sessioni puo' essere LIBERO lo stesso — il "
-			              "palco sopravvive al client (I4), il posto no.  ⭐ Il "
-			              "figlio NON viene generato: niente sessione grafica "
-			              "per chi verra' congedato (§8.1 D6), e il no esce sul "
-			              "filo con 0x0E",
-			              utente, figli_quanti(p->f), rcp_tetto());
+			              "palchi sono %d su %d (%d coi figli, %d ritrovati "
+			              "all'avvio e in attesa di riattacco), e ⛔ il posto "
+			              "nel registro delle sessioni puo' essere LIBERO lo "
+			              "stesso — il palco sopravvive al client (I4), il "
+			              "posto no.  ⭐ Il figlio NON viene generato: niente "
+			              "sessione grafica per chi verra' congedato (§8.1 D6), "
+			              "e il no esce sul filo con 0x0E",
+			              utente, palchi_quanti(p), rcp_tetto(),
+			              figli_quanti(p->f), ritrovati_n);
 			snprintf(senza_palco, sizeof senza_palco,
 			         "i palchi di questo server sono tutti impegnati (%d su "
 			         "%d): sono sessioni grafiche vive, che si liberano al "
 			         "logout o dopo l'abbandono",
-			         figli_quanti(p->f), rcp_tetto());
-		} else if (!c_era && !c_e_capacita(p, utente, senza_palco,
+			         palchi_quanti(p), rcp_tetto());
+		} else if (!ripresa && !c_e_capacita(p, utente, senza_palco,
 		                                   sizeof senza_palco, &no_motivo)) {
 			/* ⛔⭐⭐⭐ IL BUDGET — fase 10, ed e' la ragione della fase.
 			 *
@@ -624,12 +823,27 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "tetto (palchi %d su %d): il perche' e' nella riga qui "
 			              "sopra.  ⭐ Viene congedato con 0x0E invece di entrare "
 			              "su una pagina nera",
-			              utente, figli_quanti(p->f), rcp_tetto());
+			              utente, palchi_quanti(p), rcp_tetto());
 			snprintf(senza_palco, sizeof senza_palco,
 			         "il palco di «%s» non si e' montato e non e' un problema "
 			         "di capacita': la causa e' nella riga di registro "
 			         "precedente",
 			         utente);
+		} else if (ritrovato) {
+			/* ⭐ FASE 17 T7: il figlio e' nato, e da adesso il desktop e' suo
+			 *    — esce dai ritrovati per non contarlo due volte.  ⛔ La
+			 *    casella della presenza NON si tocca: e' un ri-attacco, e un
+			 *    ri-attacco non rinnova l'orologio (§5.3, 16 agosto 2026). */
+			int i = ritrovato_indice(utente);
+
+			registro_dice(REG_FIGLIO,
+			              "⭐ FASE 17 T7 — «%s» RIENTRA nel suo desktop "
+			              "ritrovato (sessione logind %s, palco pid %ld «%s»): "
+			              "il figlio nuovo lo riprende, e SESSIONE dira' "
+			              "RIPRESA",
+			              utente, ritrovati[i].sessione,
+			              (long)ritrovati[i].palco, ritrovati[i].comm);
+			ritrovato_togli(utente);
 		} else if (!c_era) {
 			/* ⛔⭐ D-004 (fase 15) — L'OROLOGIO DELL'ABBANDONO PARTE ALLA
 			 *     NASCITA, non al primo gesto.
@@ -1317,6 +1531,20 @@ static void abbandono_scaduto(struct ponte *p, const char *utente,
 		              quanti, utente, (unsigned long long)fermo_ms,
 		              (unsigned long long)abbandono_ms);
 
+	/* ⭐ FASE 17 T7 — un desktop RITROVATO non ha figlio: nessuno a cui
+	 *    chiedere di chiuderlo.  ⇒ Se ne fa nascere uno (D1: il figlio si
+	 *    rifa'), che sta nel bus di sessione dell'utente e sa chiudere ogni
+	 *    desktop (`sessione_termina()`); la domanda qui sotto lo aspetta nel
+	 *    suo socket.  ⚠ Il padre non chiude da se': da root e fuori dal bus
+	 *    saprebbe solo uccidere, e i desktop si chiudono, non si uccidono. */
+	if (figli_pid_di(p->f, utente) <= 0 && ritrovato_di(utente)) {
+		registro_dice(REG_AVVIO,
+		              "⭐ FASE 17 T7: «%s» ha un desktop RITROVATO e nessun "
+		              "figlio — ne faccio nascere uno che lo chiuda",
+		              utente);
+		if (figli_assicura(p->f, utente))
+			ritrovato_togli(utente);
+	}
 	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_ABBANDONO))
 		registro_dice(REG_AVVIO,
 		              "⛔ §5.3: la richiesta di chiudere la sessione abbandonata "
@@ -2308,6 +2536,11 @@ int main(int argc, char **argv)
 	figli_gancio_appunti(prole, appunti_dalla_sessione,
 	                     appunti_richiesta_dalla_sessione, &ponte);
 
+	/* ⭐⭐ FASE 17 T7 — PRIMA di dire «pronto»: i desktop che un padre
+	 *     precedente ha lasciato vivi entrano nei conti prima che il primo
+	 *     utente possa bussare. */
+	ritrovati_all_avvio(registro_ora_ms());
+
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
 	if (!p)
 		goto fine;
@@ -2410,6 +2643,9 @@ int main(int argc, char **argv)
 		 *    arriva qualcosa.  Il caso che conta e' proprio quello in cui non
 		 *    arriva piu' niente. */
 		abbandono_giro(&ponte, adesso);
+		/* ⭐ FASE 17 T7: i desktop ritrovati ci sono ancora?  (Ogni 10 s, e
+		 *    solo se ce n'e' qualcuno in attesa di riattacco.) */
+		ritrovati_ripassa(adesso);
 		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
 			aiutante_muovi(pam_aiuto, consegna_verdetto, &ponte);
 		aiutante_scaduti(pam_aiuto, adesso, consegna_verdetto, &ponte);
