@@ -20,9 +20,11 @@
  *    un `.desktop` che lo dichiara in `X-KDE-Wayland-Interfaces`.  `[M]` 18 set
  *    2026 nella scatola `kde`: senza quel file il global NON c'e' (58 altri
  *    si'), con il file c'e' — anche scritto a sessione gia' viva.
- *    ⇒ Il file lo scrive il server all'avvio (`kwin_scrivi_permesso()`), col
- *    percorso del binario che sta girando: il figlio e' un `execve` dello
- *    stesso binario, quindi e' lui che KWin riconosce.
+ *    ⇒ Il file lo porta il PACCHETTO (fase 17, §6.5-bis; fino alla fase 16 lo
+ *    scriveva il server).  Il server all'avvio lo VERIFICA soltanto
+ *    (`kwin_verifica_permesso()`) contro il percorso del binario che sta
+ *    girando: il figlio e' un `execve` dello stesso binario, quindi e' lui
+ *    che KWin riconosce.
  */
 #pragma once
 
@@ -53,10 +55,12 @@ int kwin_eis_fd(KwinSessione *sessione, GError **sbaglio);
 int kwin_eis_riattacca(KwinSessione *sessione, GError **sbaglio);
 void kwin_chiudi(KwinSessione *sessione);
 
-/* Il `.desktop` che apre il cancello, scritto dal SERVER (root) all'avvio in
- * `/usr/share/applications/org.kde.remotix.desktop`, con `Exec=` sul binario
- * che sta girando.  false con `perche` scritto. */
-bool kwin_scrivi_permesso(char *perche, size_t quanto);
+/* Il `.desktop` che apre il cancello, del PACCHETTO, in
+ * `/usr/share/applications/org.kde.remotix.desktop`: si verifica che ci sia,
+ * che `Exec=` porti al binario che sta girando e che dichiari
+ * `zkde_screencast_unstable_v1`.  ⛔ Non si scrive mai.  false con `perche`
+ * scritto, che comincia col codice (RX-KDE-001/002/003) e dice il rimedio. */
+bool kwin_verifica_permesso(char *perche, size_t quanto);
 
 /* La disposizione della tastiera negoziata col cliente (`it`, `de(neo)`):
  * scritta in `kxkbrc` nella cartella della sessione e annunciata a KWin col
