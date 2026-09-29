@@ -229,6 +229,7 @@ summary{cursor:pointer}
 .grafico svg{display:block;width:100%;height:auto}
 .legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--tenue);margin:4px 8px}
 .legenda i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.riepilogo{border-collapse:separate;border-spacing:4px;width:100%;font-size:14px}.riepilogo th{text-align:center;padding:4px;border:0}.riepilogo th.d{text-align:left;padding-left:8px}.riepilogo th.m{font-size:15px;border-bottom:2px solid var(--riga)}.riepilogo th.s{font-weight:500;color:var(--tenue);font-size:12px}.riepilogo td{text-align:center;border:0;border-radius:8px;padding:10px 4px;min-width:64px;background:color-mix(in oklab,var(--pass-f) calc(var(--q)*100%),var(--fail-f));color:color-mix(in oklab,var(--pass) calc(var(--q)*100%),var(--fail))}.riepilogo td b{display:block;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}.riepilogo td small{display:block;font-size:11px;opacity:.8}.riepilogo td.no{background:var(--vuoto);color:var(--tenue)}
 .collo{background:var(--carta);border:1px solid var(--riga);border-radius:8px;padding:8px 12px;margin:8px 0}
 """
 
@@ -310,6 +311,34 @@ def pagina(righe):
          "<p class='tenue'>Generato dal registro. Misurato su: %s. Soglie di §9 (approvate il 25 set 2026). "
          "⚠ I browser girano sullo stesso server: ogni numero è un limite <b>inferiore</b>.</p>"
          % e("; ".join("commit %s · binario %s · pagina %s" % x for x in impronte) or "—")]
+    # ── ⭐ il RIEPILOGO (proposta dell'utente, 29 set): desktop in riga, misure in colonna, Intel
+    #    e Radeon affiancate; il numero GRANDE e' il severo (tutti GREEN), la tolleranza sotto ──
+    trova = {}
+    for k, cc in c.items():
+        m = cc["meta"]
+        trova[(m.get("desktop"), colonna_scheda(m.get("scheda")), misura_di(m.get("misura")))] = (k, esiti_campagna(cc))
+    h.append("<h2>Riepilogo: quanti utenti insieme</h2><p class='tenue'>Il numero grande: utenti "
+             "insieme con <b>tutti</b> sotto i 50 ms e ogni altra misura GREEN (§9). Sotto, «regge»: "
+             "il livello in cui al massimo un utente su quattro è appena oltre (mai sopra 100 ms) e "
+             "nessuno fallisce. Livelli provati: 1, 4, 8, 12, 16, e la ricerca fra due gradini "
+             "solo dove la salita si è rotta.</p>")
+    h.append("<div class='scorre'><table class='riepilogo'><thead><tr><th></th>%s</tr><tr><th></th>%s</tr></thead><tbody>"
+             % ("".join("<th class='m' colspan='2'>%s</th>" % {"FHD": "Full HD"}.get(m, m) for m in MISURE),
+                "".join("<th class='s'>Intel</th><th class='s'>Radeon</th>" for _ in MISURE)))
+    for d in DESKTOP:
+        h.append("<tr><th class='d'>%s</th>" % e(d.upper() if d != "lxqt" else "LXQt"))
+        for m in MISURE:
+            for sc in ("intel", "radeon"):
+                t = trova.get((d, sc, m))
+                if not t:
+                    h.append("<td class='no'><b>·</b><small>non misurato</small></td>")
+                    continue
+                k, es = t
+                v, r = es["ultimo_verde"] or 0, es["regge"] or 0
+                h.append("<td style='--q:%.3f' title='%s'><a href='#%s' style='color:inherit;text-decoration:none'>"
+                         "<b>%d</b><small>regge %d</small></a></td>" % (min(v, 16) / 16.0, e(k), e(k), v, r))
+        h.append("</tr>")
+    h.append("</tbody></table></div>")
     # ── la matrice §11 ──
     schede = sorted({colonna_scheda(cc["meta"].get("scheda")) for cc in c.values()} | {"intel", "radeon"})
     h.append("<h2>La matrice finale</h2><p class='tenue'>Per ogni misura dello schermo: l'ultimo livello "
