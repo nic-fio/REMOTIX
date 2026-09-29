@@ -66,7 +66,7 @@ cerca_ngtcp2()
 	h="$NGTCP2/crypto/includes"
 	[ -f "$h/ngtcp2/ngtcp2_crypto_ossl.h" ] && INC="$INC -I$h"
 
-	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$PREFISSO/lib"; do
+	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$PREFISSO/lib" "$PREFISSO/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }
@@ -79,7 +79,7 @@ cerca_nghttp3()
 		[ -f "$i/nghttp3/nghttp3.h" ] || [ -f "$i/nghttp3/version.h" ] && \
 			INC="$INC -I$i"
 	done
-	for i in "$NGHTTP3/build/lib" "$PREFISSO/lib"; do
+	for i in "$NGHTTP3/build/lib" "$PREFISSO/lib" "$PREFISSO/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }

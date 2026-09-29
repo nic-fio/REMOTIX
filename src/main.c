@@ -507,7 +507,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 * ⚠ Due fatti diversi non possono avere lo stesso esito (rilievo R9.3): e'
 	 *   la stessa regola per cui `0x0F` era stato tolto da qui.  ⛔ E `0x06`
 	 *   era dichiarato in `rcp.h` dal primo giorno e **non l'aveva mai mandato
-	 *   nessuno** (`[M]` §3.4: `grep RCP_BUDGET_PIENO src/*.c` ⇒ zero
+	 *   nessuno** (`[M]` §3.4: `grep -r RCP_BUDGET_PIENO src/ --include=*.c` ⇒ zero
 	 *   chiamanti).  Questa e' la riga che gli da' il suo primo mittente. */
 	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
 	/* ⭐ D-001: il palco c'era gia' ⇒ `SESSIONE` dira' `2 = RIPRESA`. */
