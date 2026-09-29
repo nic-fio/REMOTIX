@@ -29,6 +29,14 @@ import (
 
 func init() { registraTipo("installa-pacchetti", nuovaPacchetti) }
 
+// PianoPacchettiDa: pacchetti presi da un deposito preciso (la libavcodec di Packman: su openSUSE
+// sostituisce quella della distribuzione, e zypper lo fa solo con --from e il cambio di fornitore).
+func PianoPacchettiDa(id, nomi, deposito string) AzionePiano {
+	a := PianoPacchetti(id, "", "", nomi)
+	a.Parametri["da"] = deposito
+	return a
+}
+
 // PianoPacchetti prepara il passo del piano.
 func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 	cosa := strings.TrimSpace(strings.Trim(filepath.Base(file)+" "+nomi, ". "))
@@ -44,6 +52,7 @@ func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 }
 
 type pacchetti struct {
+	da           string // un deposito da cui prenderli (zypper: --from, cambiando fornitore)
 	file, sha    string
 	nomi         []string
 	senzaGrafica bool
@@ -60,7 +69,7 @@ type primaPacchetti struct {
 }
 
 func nuovaPacchetti(p AzionePiano) (Azione, error) {
-	a := &pacchetti{file: p.Parametri["file"], sha: p.Parametri["sha256"], senzaGrafica: p.Parametri["senza_grafica"] == "si"}
+	a := &pacchetti{file: p.Parametri["file"], sha: p.Parametri["sha256"], senzaGrafica: p.Parametri["senza_grafica"] == "si", da: p.Parametri["da"]}
 	for _, n := range strings.Split(p.Parametri["nomi"], ",") {
 		if n = strings.TrimSpace(n); n != "" {
 			a.nomi = append(a.nomi, n)
@@ -75,6 +84,9 @@ func nuovaPacchetti(p AzionePiano) (Azione, error) {
 func (a *pacchetti) gestore(c *Contesto) (Gestore, error) {
 	if c.Amb.Pacchetti == nil {
 		return nil, Errore("RX-PACCHETTI-003", c.Amb.Famiglia)
+	}
+	if d, ok := c.Amb.Pacchetti.(interface{ Da(string) Gestore }); ok && a.da != "" {
+		return d.Da(a.da), nil
 	}
 	return c.Amb.Pacchetti, nil
 }

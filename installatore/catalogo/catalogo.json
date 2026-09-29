@@ -1,7 +1,7 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.2",
-  "sequenza": 2,
+  "versione": "2026.09.30.3",
+  "sequenza": 3,
   "emesso": "2026-09-30",
   "scadenza": "2027-03-31",
   "motore_minimo": "0.1.0",
@@ -172,7 +172,8 @@
         "scheda_di_serie": false,
         "software_di_serie": false,
         "deposito": "rpmfusion",
-        "comando": "fedora"
+        "comando": "fedora",
+        "pacchetti_codec": "libavcodec-freeworld"
       },
       "desktop": {
         "gnome": {
@@ -200,10 +201,10 @@
         "SELinux enforcing: pam_selinux open porta a un rifiuto all'esecuzione del figlio (§11.1 B), tappa T6"
       ],
       "pacchetti_desktop": {
-        "gnome": "@^workstation-product-environment",
-        "kde": "@^kde-desktop-environment",
-        "xfce": "@^xfce-desktop-environment",
-        "lxqt": "@^lxqt-desktop-environment"
+        "gnome": "@workstation-product-environment",
+        "kde": "@kde-desktop-environment",
+        "xfce": "@xfce-desktop-environment",
+        "lxqt": "@lxqt-desktop-environment"
       }
     },
     {
@@ -221,7 +222,8 @@
         "scheda_di_serie": false,
         "software_di_serie": false,
         "deposito": "rpmfusion",
-        "comando": "fedora"
+        "comando": "fedora",
+        "pacchetti_codec": "libavcodec-freeworld"
       },
       "desktop": {
         "gnome": {
@@ -249,10 +251,10 @@
         "analizzata, non certificata: fuori dalla matrice (§3); GNOME 49; esce di supporto a fine 2026"
       ],
       "pacchetti_desktop": {
-        "gnome": "@^workstation-product-environment",
-        "kde": "@^kde-desktop-environment",
-        "xfce": "@^xfce-desktop-environment",
-        "lxqt": "@^lxqt-desktop-environment"
+        "gnome": "@workstation-product-environment",
+        "kde": "@kde-desktop-environment",
+        "xfce": "@xfce-desktop-environment",
+        "lxqt": "@lxqt-desktop-environment"
       }
     },
     {
@@ -290,7 +292,8 @@
         "software_di_serie": false,
         "deposito": "rpmfusion",
         "comando": "rhel",
-        "amd_senza_vaapi": true
+        "amd_senza_vaapi": true,
+        "pacchetti_codec": "libavcodec-freeworld"
       },
       "desktop": {
         "gnome": {
@@ -319,8 +322,8 @@
         "SELinux enforcing (§11.1 B), tappa T6"
       ],
       "pacchetti_desktop": {
-        "gnome": "@^graphical-server-environment",
-        "kde": "@^kde-desktop-environment"
+        "gnome": "@graphical-server-environment",
+        "kde": "@kde-desktop-environment"
       }
     },
     {
@@ -403,7 +406,8 @@
         "scheda_di_serie": false,
         "software_di_serie": false,
         "deposito": "packman",
-        "comando": "tumbleweed"
+        "comando": "tumbleweed",
+        "pacchetti_codec": "libavcodec63"
       },
       "desktop": {
         "gnome": {
@@ -461,7 +465,8 @@
         "scheda_di_serie": false,
         "software_di_serie": false,
         "deposito": "packman",
-        "comando": "leap16"
+        "comando": "leap16",
+        "pacchetti_codec": "libavcodec61"
       },
       "desktop": {
         "gnome": {
@@ -661,5 +666,5 @@
     "immutabili (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): rimandate a dopo la fase (D9)",
     "Linux Mint Cinnamon: Cinnamon non è uno dei quattro desktop"
   ],
-  "nota_pacchetti_desktop": "i gruppi ufficiali, gli stessi di `vesti` (§7.2); tutti portano un display manager: il motore lo lascia installato ma SPENTO e il bersaglio d'avvio com'era (R38). [?] i nomi dei gruppi dnf di Alma e dei pattern zypper non sono ancora provati dal motore"
+  "nota_pacchetti_desktop": "i gruppi ufficiali, gli stessi di `vesti` (§7.2); tutti portano un display manager: il motore lo lascia installato ma SPENTO e il bersaglio d'avvio com'era (R38). [M] 30 set, prove/gruppi-desktop.sh: tutti i nomi risolti dal gestore di ogni famiglia (dnf 4 di Alma non capisce «@^»: si scrive «@<ambiente>» per tutti)"
 }

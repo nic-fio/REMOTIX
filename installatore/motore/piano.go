@@ -121,6 +121,8 @@ type Piano struct {
 	Condizioni   []Condizione  `json:"condizioni"` // quelle del rapporto che valgono per i desktop installati
 	NonFatto     []Messaggio   `json:"non_fatto"`  // quel che il piano dichiara di non fare, e perché
 	Approvazione *Approvazione `json:"approvazione,omitempty"`
+	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
+	Purge bool `json:"purge,omitempty"`
 }
 
 // Digest del piano senza l'approvazione: è quel che l'approvazione firma.

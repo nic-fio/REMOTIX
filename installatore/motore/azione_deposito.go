@@ -235,7 +235,7 @@ func (d *deposito) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 			p.Origine = DIRETTA
 		}
 	}
-	if d.tipo == "epel" || d.tipo == "rpmfusion" {
+	if d.tipo == "epel" || d.tipo == "rpmfusion" || d.tipo == "packman" {
 		tutti, err := rpmTutti(c)
 		if err != nil {
 			return nil, "", err
@@ -395,9 +395,11 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 		return d.togliArrivati(c, p)
 	case "packman":
 		if adesso["packman"] && !p.Stato["packman"] {
-			_, err := esegui(c.Amb, 5*time.Minute, "zypper", "--non-interactive", "removerepo", "packman")
-			return err
+			if _, err := esegui(c.Amb, 5*time.Minute, "zypper", "--non-interactive", "removerepo", "packman"); err != nil {
+				return err
+			}
 		}
+		return d.togliArrivati(c, p)
 	case "archivio":
 		sc, err := d.scrittori(c)
 		if err != nil {
@@ -496,7 +498,9 @@ func (d *deposito) togliArrivati(c *Contesto, p primaDeposito) error {
 		switch {
 		case prima[x]:
 		case strings.HasPrefix(x, "gpg-pubkey-"):
-			chiavi = append(chiavi, x)
+			chiavi = append(chiavi, x) // [M] 30 set: zypper --gpg-auto-import-keys importa quella di Packman
+		case d.tipo == "packman":
+			// Packman non porta pacchetti da sé: quel che c'è di nuovo l'ha portato altro
 		default:
 			nuovi = append(nuovi, x)
 		}

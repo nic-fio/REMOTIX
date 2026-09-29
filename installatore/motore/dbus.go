@@ -282,7 +282,22 @@ func (u *unitaDBus) ImpostaPredefinito(b string) error {
 }
 
 // sessioniDBus: logind. Elenco = ListSessions + la proprietà Service di ognuna.
-type sessioniDBus struct{ b *Bus }
+type sessioniDBus struct {
+	b *Bus
+	a *Ambiente
+}
+
+func (s *sessioniDBus) Grafici(utente string) (int, error) {
+	uid, err := uidDi(s.a, utente)
+	if err != nil {
+		return 0, err
+	}
+	return len(ProcessiGrafici(s.a, uid)), nil
+}
+
+func (s *sessioniDBus) ChiudiGrafica(utente string) ([]string, error) {
+	return ChiudiGraficaUtente(s.a, utente)
+}
 
 type sessioneLogind struct {
 	ID     string
@@ -301,9 +316,11 @@ func (s *sessioniDBus) Elenco() ([]Sessione, error) {
 	for _, x := range l {
 		serv, _ := s.b.Proprieta("org.freedesktop.login1", string(x.Via), "org.freedesktop.login1.Session.Service")
 		stato, _ := s.b.Proprieta("org.freedesktop.login1", string(x.Via), "org.freedesktop.login1.Session.State")
+		tipo, _ := s.b.Proprieta("org.freedesktop.login1", string(x.Via), "org.freedesktop.login1.Session.Type")
 		sv, _ := serv.(string)
 		st, _ := stato.(string)
-		r = append(r, Sessione{ID: x.ID, Utente: x.Utente, Servizio: sv, Stato: st})
+		tp, _ := tipo.(string)
+		r = append(r, Sessione{ID: x.ID, Utente: x.Utente, Servizio: sv, Stato: st, Tipo: tp})
 	}
 	return r, nil
 }

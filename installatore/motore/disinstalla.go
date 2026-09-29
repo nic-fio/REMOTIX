@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // La DISINSTALLAZIONE (§6.0, terzo mestiere; §6.5 punto 3; R6): un'operazione come le altre, col
@@ -18,7 +19,128 @@ import (
 // installazione.json si toglie; il registro delle operazioni resta (è la storia della macchina,
 // come quella di dnf).
 
-func init() { registraTipo("disfa", nuovaDisfa) }
+func init() {
+	registraTipo("disfa", nuovaDisfa)
+	registraTipo("togli-iscrizione", nuovaIscrizione)
+}
+
+// FileIscrizioni: dove REMOTIX annota chi ha iscritto ai gruppi alla prima connessione (figlio.c,
+// §6.5-bis): origine DIRETTA, la disinstallazione le toglie come quelle del motore.
+const FileIscrizioni = "gruppi-iscritti.jsonl"
+
+// Iscrizioni: le coppie (utente, gruppo) del file, senza doppioni.
+func (m *Motore) Iscrizioni() [][2]string {
+	b, err := os.ReadFile(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni))
+	if err != nil {
+		return nil
+	}
+	var r [][2]string
+	visti := map[[2]string]bool{}
+	for _, riga := range strings.Split(string(b), "\n") {
+		var x struct {
+			Formato, Utente, Gruppo, Origine string
+		}
+		if json.Unmarshal([]byte(riga), &x) != nil || x.Formato != "remotix-gruppi/1" || x.Utente == "" || x.Gruppo == "" {
+			continue
+		}
+		k := [2]string{x.Utente, x.Gruppo}
+		if !visti[k] {
+			visti[k] = true
+			r = append(r, k)
+		}
+	}
+	return r
+}
+
+// togli-iscrizione: l'inverso di aggiungi-utente-a-gruppo, per le iscrizioni fatte da REMOTIX.
+type iscrizione struct{ g *gruppo }
+
+func nuovaIscrizione(p AzionePiano) (Azione, error) {
+	return &iscrizione{&gruppo{p.Parametri["utente"], p.Parametri["gruppo"]}}, nil
+}
+
+type primaIscrizione struct {
+	Origine Origine `json:"origine"`
+}
+
+func (i *iscrizione) Vincoli(c *Contesto) ([]string, error) { return i.g.Vincoli(c) }
+func (i *iscrizione) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
+	esp, _, _, err := i.g.membro(c)
+	if err != nil {
+		if CodiceDi(err) == "RX-GRUPPI-003" || CodiceDi(err) == "RX-GRUPPI-002" {
+			return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil // l'utente o il gruppo non c'è più
+		}
+		return nil, "", err
+	}
+	if !esp {
+		return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil
+	}
+	return jsonDi(primaIscrizione{DIRETTA}), DIRETTA, nil
+}
+func (i *iscrizione) origine(prima json.RawMessage) Origine {
+	var p primaIscrizione
+	json.Unmarshal(prima, &p)
+	return p.Origine
+}
+func (i *iscrizione) Fai(c *Contesto, prima json.RawMessage) error {
+	if i.origine(prima) == PREESISTENTE {
+		return nil
+	}
+	if esp, _, _, err := i.g.membro(c); err != nil || !esp {
+		return err
+	}
+	return c.Amb.Gruppi.Togli(i.g.utente, i.g.gruppo)
+}
+func (i *iscrizione) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
+	if i.origine(prima) == PREESISTENTE {
+		return COMPLETO, "niente da togliere", nil
+	}
+	esp, _, _, err := i.g.membro(c)
+	if err != nil {
+		return "", "", err
+	}
+	if esp {
+		return ASSENTE, i.g.utente + " è ancora in " + i.g.gruppo, nil
+	}
+	return COMPLETO, i.g.utente + " non è più in " + i.g.gruppo, nil
+}
+func (i *iscrizione) Annulla(c *Contesto, prima json.RawMessage) error {
+	if i.origine(prima) == PREESISTENTE {
+		return nil
+	}
+	if esp, _, _, err := i.g.membro(c); err != nil || esp {
+		return err
+	}
+	return c.Amb.Gruppi.Aggiungi(i.g.utente, i.g.gruppo)
+}
+func (i *iscrizione) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
+	if i.origine(prima) == PREESISTENTE {
+		return true, "niente da rimettere", nil
+	}
+	esp, _, _, err := i.g.membro(c)
+	return esp, "", err
+}
+
+// PulisciStoria, a disinstallazione CONFERMATA (decisione del coordinatore, 30 set): senza purge la
+// storia del motore resta (per l'assistenza) ma senza i pacchetti in cache; con purge si toglie
+// tutta, e anche /var/lib/remotix se resta vuota.
+func (m *Motore) PulisciStoria(purge bool) error {
+	if purge {
+		if err := os.RemoveAll(m.Cartella); err != nil {
+			return err
+		}
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
+		os.Remove(filepath.Dir(m.Cartella))                                // solo se vuota
+		return nil
+	}
+	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))
+	for _, v := range voci {
+		if err := os.RemoveAll(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // LeggiRegistro legge un registro senza aprirlo in scrittura.
 func LeggiRegistro(percorso string) ([]Evento, error) {
@@ -213,7 +335,7 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			}
 		}
 	}
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione",
+	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione", Purge: purge,
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest, m.Catalogo.Scadenza},
 		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 	sess, _ := SessioniRemotix(m.Amb)
@@ -248,6 +370,23 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 	}
 	if !messa {
 		pn.Azioni = append([]AzionePiano{chiudi}, pn.Azioni...)
+	}
+	// le iscrizioni ai gruppi fatte da REMOTIX alla prima connessione (DIRETTE), tranne quelle
+	// che il motore stesso ha già in un suo passo
+	gia := map[[2]string]bool{}
+	for _, a := range orig.Azioni {
+		if a.Tipo == "aggiungi-utente-a-gruppo" {
+			gia[[2]string{a.Parametri["utente"], a.Parametri["gruppo"]}] = true
+		}
+	}
+	for _, k := range m.Iscrizioni() {
+		if gia[k] {
+			continue
+		}
+		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "iscrizione-" + k[0] + "-" + k[1], Tipo: "togli-iscrizione",
+			Parametri: map[string]string{"utente": k[0], "gruppo": k[1]}, Descrizione: T("az.iscrizione", k[0], k[1]),
+			ComeSiFa: T("az.iscrizione.fa"), ComeSiVerifica: T("az.iscrizione.verifica"), ComeSiAnnulla: T("az.iscrizione.annulla"),
+			Reversibilita: ESATTA})
 	}
 	im, err := CalcolaImpronta(prof, m.Catalogo, pn.Azioni, pn.Dipende, &Contesto{Amb: m.Amb, Cartella: filepath.Join(m.Cartella, "piano-in-costruzione")})
 	if err != nil {

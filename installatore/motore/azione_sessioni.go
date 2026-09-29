@@ -2,6 +2,7 @@ package motore
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -62,6 +63,9 @@ type primaSessioni struct {
 	Origine  Origine  `json:"origine"`
 	Sessioni []string `json:"sessioni"`
 	Utenti   []string `json:"utenti"`
+	// Grafica: le persone senza un'altra sessione grafica (un desktop locale): a loro si chiude
+	// anche il desktop nel gestore d'utente (grafica_utente.go)
+	Grafica []string `json:"grafica"`
 }
 
 func (chiudiSessioni) Vincoli(*Contesto) ([]string, error) { return nil, nil } // cambiano da sole: non vincolano
@@ -76,10 +80,41 @@ func (chiudiSessioni) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		p.Sessioni = append(p.Sessioni, s.ID)
 		p.Utenti = append(p.Utenti, s.Utente)
 	}
+	tutte, err := c.Amb.Sessioni.Elenco()
+	if err != nil {
+		return nil, "", err
+	}
+	visti := map[string]bool{}
+	for _, s := range l {
+		if visti[s.Utente] {
+			continue
+		}
+		visti[s.Utente] = true
+		altra := false
+		for _, x := range tutte {
+			if x.Utente == s.Utente && x.Servizio != ServizioPAM && (x.Tipo == "wayland" || x.Tipo == "x11") {
+				altra = true
+			}
+		}
+		if !altra {
+			p.Grafica = append(p.Grafica, s.Utente)
+		}
+	}
 	if len(l) == 0 {
 		p.Origine = PREESISTENTE // niente da chiudere
 	}
 	return jsonDi(p), p.Origine, nil
+}
+
+// graficiRimasti: i processi del desktop ancora vivi nel gestore d'utente delle persone di Grafica.
+func (chiudiSessioni) graficiRimasti(c *Contesto, p primaSessioni) int {
+	n := 0
+	for _, u := range p.Grafica {
+		if k, err := c.Amb.Sessioni.Grafici(u); err == nil {
+			n += k
+		}
+	}
+	return n
 }
 
 // rimaste: le sessioni di prima ancora aperte. Una sessione «closing» il cui scope non ha più
@@ -135,8 +170,11 @@ func (a chiudiSessioni) Fai(c *Contesto, prima json.RawMessage) error {
 	// mai l'utente intero), dopo 20 s SIGKILL; fino a 60 s.
 	for i := 0; i < 120; i++ {
 		n, err := a.rimaste(c, p)
-		if err != nil || n == 0 {
+		if err != nil {
 			return err
+		}
+		if n == 0 {
+			break
 		}
 		if i == 20 || i == 40 {
 			sg := int32(15)
@@ -148,6 +186,12 @@ func (a chiudiSessioni) Fai(c *Contesto, prima json.RawMessage) error {
 			}
 		}
 		time.Sleep(500 * time.Millisecond)
+	}
+	// il desktop nel gestore d'utente (§10.16: «le sessioni REMOTIX e i loro processi»)
+	for _, u := range p.Grafica {
+		if _, err := c.Amb.Sessioni.ChiudiGrafica(u); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -161,9 +205,12 @@ func (a chiudiSessioni) Controlla(c *Contesto, prima json.RawMessage) (Esito, st
 	if err != nil {
 		return "", "", err
 	}
+	g := a.graficiRimasti(c, p)
 	switch {
+	case n == 0 && g == 0:
+		return COMPLETO, "nessuna delle sessioni REMOTIX è ancora aperta, nessun processo del desktop", nil
 	case n == 0:
-		return COMPLETO, "nessuna delle sessioni REMOTIX è ancora aperta", nil
+		return A_META, fmt.Sprintf("%d processi del desktop ancora vivi nel gestore d'utente", g), nil
 	case n == len(p.Sessioni):
 		return ASSENTE, "tutte ancora aperte", nil
 	}
