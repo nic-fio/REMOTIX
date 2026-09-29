@@ -38,8 +38,8 @@ BASE=/media/REMOTIX
 RADICE="$BASE/vm17"
 CHIAVE="$RADICE/ssh/id_ed25519"
 UTENTE=nicfio
-CPU=4
-RAM=6144
+CPU=${RX_VM_CPU:-4}
+RAM=${RX_VM_RAM:-6144}   # MB; la prova di carico da 8 decide se scendere a 4096
 DISCO_GRANDE=40G
 
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
