@@ -6018,6 +6018,23 @@ si rilancia con i permessi (polkit ripulisce l'ambiente) la lingua scelta si **p
 parte da amministratore; nell'installazione senza domande il file di risposte può fissarla. I **codici**
 `RX-…` restano uguali nelle due lingue: sono quelli che si cercano nel manuale e nell'assistenza.
 
+### 10.16 ✅ La disinstallazione: l'amministratore avvisa, l'installatore chiude le sessioni REMOTIX e pulisce
+
+Parola dell'utente (30 set 2026): *«è un'operazione fatta dall'admin del server. La soluzione più pulita è che
+l'admin avverta gli utenti nelle modalità classiche (email, WhatsApp…). Poi, quando avvia la
+disinstallazione, l'installer chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia
+del sistema»*. ⇒ Nessun sistema di avvisi in REMOTIX e **nessuna domanda in più**: chi è ancora collegato viene
+chiuso e basta (*«erano già stati avvertiti prima»*); il piano porta solo la riga «chiudo le sessioni
+REMOTIX ancora aperte (N)»; si chiudono le sessioni REMOTIX e i programmi nati dentro di esse, **non** gli altri processi
+dell'utente (una sua sessione locale o ssh resta). `fasi/17-l-installatore.md` §6.5-bis, R43.
+
+### 10.17 ✅ Un sistema per avvisare gli utenti collegati: progetto a parte, fuori da REMOTIX
+
+Parola dell'utente (30 set 2026): *«la disinstallazione mi ha fatto venire in mente che serve un sistema per
+avvisare gli utenti collegati a un sistema. Ma questo è un progetto a parte che non riguarda REMOTIX»*. ⇒ In
+REMOTIX niente avvisi (§10.16). Nota per quel progetto: le sessioni REMOTIX sono desktop normali, quindi un
+avviso sul desktop dell'utente le raggiungerebbe senza che REMOTIX ne sappia niente.
+
 ---
 
 ## Come si tiene questo documento
