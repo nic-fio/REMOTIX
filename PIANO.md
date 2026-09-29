@@ -1707,6 +1707,12 @@ dell'utente.*
 
 > ### ⛔⛔ E UNA COSA DA FARE QUI È GIÀ MISURATA — *25 agosto 2026*
 >
+> ⭐⭐ **SMENTITO DALLA MISURA DEL 29 SETTEMBRE 2026** (`fasi/17-l-installatore.md` §5.2, T2): dieci
+> prove con Firefox vero sui quattro desktop — fermare l'unità (`KillMode=mixed`), uccidere il solo
+> padre, uccidere il solo figlio — **nessun desktop muore**: muoiono padre, aiutante PAM e figlio; il
+> palco (partito con `setsid --fork`, fuori dall'unità), la sessione e i programmi sopravvivono, e al
+> riattacco torna lo stesso compositore con le finestre. Il fatto del 25 agosto oggi non si riproduce.
+>
 > `[M]` **Fermare l'unità del server porta via TUTTE le sessioni degli utenti**, finestre
 > comprese: la sessione grafica vive nel suo albero di processi (`KillMode=mixed`). ⇒ ⛔ **Oggi
 > aggiornare il server significa buttare fuori tutti** — lo stesso danno che `DECISIONI.md` §4.7

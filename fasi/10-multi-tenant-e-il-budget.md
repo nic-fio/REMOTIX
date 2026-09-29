@@ -144,7 +144,7 @@ fenomeno**, e va cercato ogni volta (§1.34).
 > | | |
 > |---|---|
 > | ⛔⛔⛔ **LA SESSIONE CHE NASCE CIECA** (§7.4) | `[M]` Su una sessione **appena nata** Mutter non annuncia nessun `wl_output` ⇒ **nessuna applicazione può aprire una finestra**. Firefox resta vivo e non dipinge mai; il compositore sta a **0,0 %**; zero fotogrammi. ⚠ **Intermittente**: `provanic3` ha avuto il monitor **2 volte e poi 6 volte no**; `provanic4/5/6` **mai**, su 98 · 55 · 50 tentativi. ⭐ Quattro ipotesi refutate una per una |
-> | ⛔⛔ **FERMARE IL SERVER PORTA VIA TUTTE LE SESSIONI** (§7.5) | `[M]` Aggiornando la 7730 alle **18:14:29**, la sessione dell'utente è morta con l'unità — finestre comprese. ⇒ **Oggi aggiornare il server significa buttare fuori tutti**, ed è il danno che `DECISIONI.md` §4.7 vieta a chiunque di provocare |
+> | ⭐ *(smentito il 29 set 2026 dalla misura T2 della fase 17: fermare il server NON porta via i desktop — `fasi/17-l-installatore.md` §5.2)* ⛔⛔ **FERMARE IL SERVER PORTA VIA TUTTE LE SESSIONI** (§7.5) | `[M]` Aggiornando la 7730 alle **18:14:29**, la sessione dell'utente è morta con l'unità — finestre comprese. ⇒ **Oggi aggiornare il server significa buttare fuori tutti**, ed è il danno che `DECISIONI.md` §4.7 vieta a chiunque di provocare |
 >
 > ⭐⭐ **E li ha fatti emergere il REGISTA**, chiedendo una prova che obbligava a **partire da zero** —
 > ⛔ cosa che in tutta la fase **non era mai stata fatta**. La lezione è `LEZIONI.md` **§1.39**, ed è

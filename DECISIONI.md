@@ -3173,6 +3173,12 @@ costruzione** e si dichiara nel registro all'avvio, invece di scegliere in silen
 
 > ### ⛔⛔ E IL 25 AGOSTO 2026 QUESTA DECISIONE HA TROVATO UN BUCO — **chi aggiorna**
 >
+> ⭐⭐ **SMENTITO DALLA MISURA DEL 29 SETTEMBRE 2026** (`fasi/17-l-installatore.md` §5.2, T2): dieci
+> prove con Firefox vero sui quattro desktop — fermare l'unità (`KillMode=mixed`), uccidere il solo
+> padre, uccidere il solo figlio — **nessun desktop muore**: muoiono padre, aiutante PAM e figlio; il
+> palco (partito con `setsid --fork`, fuori dall'unità), la sessione e i programmi sopravvivono, e al
+> riattacco torna lo stesso compositore con le finestre. Il fatto del 25 agosto oggi non si riproduce.
+>
 > `[M]` Fermando l'unità del server per **aggiornarlo**, alle 18:14:29, **sono morte tutte le
 > sessioni degli utenti** — finestre comprese; quindici secondi dopo ne è nata una **nuova e vuota**.
 > La sessione grafica vive nell'**albero di processi del server** (`KillMode=mixed`).

@@ -247,35 +247,47 @@ altrimenti `@user`); il drop-in in `<unità>.d/`, **non** nella cartella del mod
 GDM); la riga `--headless --no-x11` senza `--mode=%i`; rileggere la stessa unità scelta; la pulizia di
 `provisiona.sh:245,510` estesa a `@user` e `@`. Si prova su `fedora44-gnome` e `ubuntu2604-gnome`.
 
-### 5.2 Aggiornare senza chiudere i desktop: la causa non è quella scritta
+### 5.2 Aggiornare senza chiudere i desktop: la misura (T2, 29 set 2026) `[M]`
 
-`PIANO.md` (Fase 15, «Il servizio»), `fasi/10` §7.5, `SPECIFICHE.md:374` e `DECISIONI.md:3178` dicono
-che fermare il servizio uccide le sessioni **per `KillMode=mixed`**. La verifica sul codice (`[L]`):
+`PIANO.md` (Fase 15), `fasi/10` §7.5, `SPECIFICHE.md` e `DECISIONI.md` dicevano che fermare il servizio
+uccide le sessioni per `KillMode=mixed` (misura del 25 agosto). La verifica sul codice aveva già
+smentito la causa; **la misura di T2 smentisce il fatto**:
 
-1. il padre gira da root nell'unità del servizio;
-2. il figlio di ogni utente apre la sessione con `pam_systemd` ⇒ logind lo sposta in
-   `session-cN.scope`, **fuori dall'unità**; il palco (gnome-session, startplasma, labwc) resta lì con
-   lui; `gnome-shell`, `kwin` e PipeWire stanno in `user@UID.service`;
-3. ⇒ `KillMode=mixed` colpisce solo quel che resta nell'unità: **né il figlio né il palco**;
-4. il figlio muore col padre **per scelta**, per tre strade volute: `figli_spegni()` (`figlio.c:2987`),
-   `PR_SET_PDEATHSIG` (`figlio.c:6966`) e la chiusura del socket (`figlio.c:7338`);
-5. il fatto misurato il 25 agosto resta vero: il desktop **muore**. La causa vera è **da misurare**:
-   il candidato è la morte del capo della sessione logind e la reazione a catena che ne segue.
+- **dieci prove con Firefox vero** sulle quattro scatole: 4 «ferma» (`systemctl stop`, `KillMode=mixed`),
+  4 «uccidi il padre» (`kill -KILL` al solo padre), 2 «uccidi il figlio» (SIGTERM al solo figlio). In
+  ogni sessione tre testimoni che scrivono l'ora ogni secondo (il terminale vero del desktop, un
+  processo in `session-cN.scope`, uno in `user@.service`) e una sentinella a 50 ms su nascite e morti;
+- **muoiono solo padre, aiutante PAM e figlio**, entro 0,06-1,2 s (GNOME: Stopping 53.596, «il figlio è
+  spento» 54.307, unità Deactivated 54.311, poi nient'altro). logind non fa nulla
+  (`KillUserProcesses=no`): nessuna sessione chiusa;
+- **sopravvivono il compositore, la sessione e i programmi**: i tre testimoni battono senza buchi, in
+  tutte e dieci le prove, fino allo sgombero 3 minuti e mezzo dopo;
+- **al riattacco** torna lo stesso compositore, con lo stesso pid, e il terminale dov'era. Su GNOME il
+  desktop ripreso è prima «ZERO MONITOR» (il monitor virtuale era del figlio morto): il figlio nuovo ne
+  monta un altro e le finestre ricompaiono;
+- **la causa**: il palco parte con `setsid --fork` e sta fuori dall'unità; la morte del figlio non si
+  propaga e nessuno chiude la sessione logind. Il fatto del 25 agosto oggi non si riproduce (non si sa se
+  allora il desktop fosse morto davvero o se si sia letta come morte la riga «New session … vuota»: anche
+  un riattacco riuscito apre una sessione logind nuova).
 
-⇒ Prima si **misura** (mezza giornata: `systemd-cgls` e `loginctl` prima di fermare il servizio, poi i
-registri, sui 4 desktop). Poi, secondo quel che si vede:
-- se il palco sopravvive già: il padre nuovo deve **ritrovare** i palchi vivi, e `loginctl
-  terminate-user` (`figlio.c:1577`) va disinnescato — **1-2 giorni** più la rete;
-- se il palco muore col capo della sessione: il figlio si divide in un **custode** che tiene la
-  sessione PAM e sopravvive al padre, e un figlio di cattura che rinasce dentro — **3-5 giorni** più
-  la rete e le prove di guasto.
+⇒ **La cura è quella leggera, 1-2 giorni; il «custode» non serve.** Resta da fare (T7):
+1. il **padre nuovo ritrova i desktop vivi** all'avvio: oggi riparte con «inquilini=0» e quei desktop
+   non li conta nessuno (né il tetto delle sessioni, né il budget, né l'orologio dell'abbandono);
+2. **`loginctl terminate-user`** (`figlio.c:1577`) non va dato quando l'utente ha già un desktop vivo.
+
+⚠ Due cose per l'installatore: (a) la sessione logind del figlio risulta «in chiusura» 24 ms dopo la
+nascita (`pam_end` senza `pam_close_session`): con **`KillUserProcesses=yes`** il desktop potrebbe morire —
+`[?]` da misurare, e il controllo preliminare deve leggere quell'impostazione; (b) ogni riattacco lascia
+una sessione logind in più (col capo morto), innocua per l'utente.
 
 Quel che i migliori insegnano (`[L]`): **NoMachine** butta fuori tutti a ogni aggiornamento e lo scrive
-nella guida; **xrdp** ha sessioni che sopravvivono ma che nessuno ritrova (schermo nero). ⇒ Far
-sopravvivere è metà del lavoro, **ritrovare** è l'altra metà. Lo strumento fatto apposta è il deposito
-dei descrittori di systemd (*fdstore*), che sopravvive a un `systemctl restart`. Le connessioni QUIC
-**non** sopravvivono comunque: la promessa onesta è *«aggiornare costa a chi è collegato un riattacco
-di pochi secondi; le finestre restano»*. ⇒ **Decisione D1.**
+nella guida; **xrdp** ha sessioni che sopravvivono ma che nessuno ritrova (schermo nero). ⇒ REMOTIX ha già
+la metà difficile (sopravvivere); gli manca la metà di xrdp (**ritrovare**). Le connessioni QUIC non
+sopravvivono comunque: la promessa onesta resta *«aggiornare costa a chi è collegato un riattacco di pochi
+secondi; le finestre restano»*.
+
+Il banco: `banchi/17-t2/` (`t2-misura.py`, `t2box.py`, `lancia.sh`, `catena.sh`, `riassunto.sh`,
+`tabella.sh`); le evidenze sul server in `/media/REMOTIX/tmp/t2/<desktop>-<azione>/`.
 
 ---
 
@@ -892,7 +904,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 |---|---|---|---|
 | **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` | 🔨 in corso (29 set: 9 distribuzioni accese, desktop in costruzione) |
 | **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | 🔨 compila 7/7; gira: in cura (§11.1) |
-| **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | |
+| **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | ✅ 29 set: nessun desktop muore; cura leggera (§5.2) |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
 | **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
@@ -917,7 +929,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 
 | | la domanda | quando | la proposta |
 |---|---|---|---|
-| **D1** | Le sessioni **aspettano** il server nuovo per qualche secondo invece di morire con lui? Cambia una scelta scritta (*«nessun orfano attaccato al monitor virtuale di un utente»*): la garanzia resta, con un termine invece che subito | T7, dopo la misura di T2 | sì, con un termine di 30-60 s |
+| **D1** | ~~Le sessioni aspettano il server nuovo invece di morire con lui?~~ ⭐ **Superata dalla misura di T2**: i desktop sopravvivono già. Resta una domanda più piccola: il figlio muore col padre (per scelta) — va bene così, visto che il desktop resta e il padre nuovo lo ritrova? | T7 | sì: il desktop è la cosa che conta, il figlio si rifà al riattacco |
 | **D2** | ngtcp2 e nghttp3 **dentro** il binario, con gli aggiornamenti di sicurezza a carico nostro? | T3 | sì: quasi nessuna distribuzione ha la 1.25 |
 | **D3** | La **politica contro i tentativi**: che cosa si vuole — quanti errori, per conto e per indirizzo, blocco o rallentamento, vale anche davanti alla macchina o solo da remoto, chi sblocca e come, che cosa si registra. Da lì si decide se la pila di REMOTIX tiene il `pam_faillock` della distribuzione | T6, con una proposta scritta di minacce e difese | da remoto un blocco per conto permette a chiunque di chiudere fuori il proprietario; proposta: rallentamento per conto + ban per indirizzo in REMOTIX, niente blocco del conto, tutto nel registro |
 | **D4** | Le tre cinture (la macchina non si spegne, non si sospende, i tasti non spengono) sulle macchine **degli altri**: sempre, o scelta dell'amministratore all'installazione? | T3 | predefinite, dichiarate nel benvenuto, disattivabili |
@@ -1026,6 +1038,7 @@ installata sì/no.*
 |---|---|---|---|---|
 | (questo commit) | `banchi/17-distro/17-vm.sh`: una VM per `<distro>-<desktop>` dalle immagini cloud ufficiali, cloud-init, porte per macchina, `vesti` col gruppo di pacchetti ufficiale, foto «cliente», riavvio vero controllato col `boot_id` | decisione dell'utente del 29 set: le prove dell'installatore in VM, una per desktop | `[M]` 9 distribuzioni su 9 accese, ssh in 3-39 s | copiata sul server |
 | 12f6782…(questo commit) | `banchi/17-distro/17-carico.sh`: la prova di carico delle VM; ritmo dai contatori dei fotogrammi su ~60 s; journal letto con sudo **dopo** lo spegnimento, VM spente una alla volta | decidere quante VM insieme (4 o 8) | `[M]` 8 VM non reggono (memoria); si resta a 4 | copiata sul server |
+| (questo commit) | `banchi/17-t2/`: la misura di T2 (sessione viva con tre testimoni e sentinella a 50 ms; ferma / uccidi-padre / uccidi-figlio; catena dal journal) | §5.2 | `[M]` 10 prove su 4 desktop: nessun desktop muore | sul server, in /media/REMOTIX/tmp/t2 |
 | (questo commit) | `src/costruzione/`: un `Contenitore.<bersaglio>` per debian13, ubuntu2604, ubuntu2404, fedora44, alma10 (EPEL+CRB), arch, tumbleweed, leap16 — dipendenze dal gestore di pacchetti della distribuzione, ngtcp2 1.25.0 e nghttp3 1.18.0 **statiche** (`quic-statiche.sh`, solo `.a` in `/usr/local/lib`, `LIBRARY_PATH`: il Makefile non cambia); `costruisci-tutti.sh` costruisce uno o tutti in una copia dell'albero e scrive per bersaglio binario, registri, versioni, `ldd` fatto nel contenitore. `src/Contenitore` resta com'era | §6.2 e §6.3: si compila per ogni distribuzione, niente `ld.so.conf.d` | `[M]` 29 set, sul portatile: **7 su 7 compilano**, `ldd` senza «not found» e senza ngtcp2/nghttp3. Ubuntu 24.04 si ferma a ngtcp2 (OpenSSL 3.0.13 senza QUIC); una sonda senza il ramo OpenSSL mostra poi solo `codificatore.c:1419,1436` (ffmpeg 6.1) e `ei_disconnect` assente (`input.c:1218`, libei 1.2.1) — D7. Versioni: OpenSSL 3.5.0 (Leap) … 3.6.4 (Arch); libavcodec 61 (Debian, Alma, Leap), 62 (Ubuntu, Fedora), 63 (Arch, TW); libei 1.3.901…1.6.0; PipeWire 1.4.2…1.6.9; glib 2.80…2.88. Arch e TW hanno già ngtcp2 1.25 con crypto_ossl: usabile, non usata per uniformità | no (solo portatile) |
 | (questo commit) | **T1c**: `banchi/17-distro/17-t1c-installa.sh` (REMOTIX a mano in una VM, famiglia per famiglia: dipendenze, PAM, `utenti-negati`, polkit/logind/sleep, utente `prova`, unità transitoria sulla 7447), `17-t1c-browser.py` (Chrome vero con le guide di `12-client-veri.py`: apri → entra → primo fotogramma col giudice dei pixel), `17-t1c-guarda.sh` (labwc suo sull'Intel, `127.0.0.1` perché l'inoltro UDP di QEMU è solo IPv4) | far girare il prodotto portato e vederlo da un browser vero, prima dell'installatore | `[M]` 29 set, 7 VM «cliente», Full HD. **Col binario del prodotto: 0 su 7.** Tutte entrano («Ammesso»), nessuna dipinge: (1) nella VM `virtio_gpu` senza 3D la negoziazione PipeWire muore con «no more input formats» (strada della SCHEDA con modificatore obbligatorio, `cattura.c:1487`; il ripiego sulla memoria scatta solo dopo un fotogramma, `figlio.c:5362`) — Debian, Ubuntu, Arch, TW; (2) Fedora e Alma: figlio uscito con 37, AVC `{ transition } unconfined_service_t → unconfined_t` da `pam_selinux open`; (3) Fedora/Alma/openSUSE senza depositi di terzi: «libx265 non c'è in questa libavcodec: non se ne prende un altro» (Chrome chiede HEVC). **Col binario di diagnosi** (`-DCOPIA_ZERO=0`, non il prodotto): PASS Debian 13, Ubuntu 26.04 (GNOME 50, `@user` con `--headless`), Arch KDE; Fedora 44 e Alma 10 PASS solo con `pam_selinux` tolto dal PAM + `libavcodec-freeworld` (RPM Fusion); TW KDE (con Packman) e Leap XFCE BLOCKED dalla VM: KWin e labwc non allocano (`DRM_IOCTL_MODE_CREATE_DUMB: Permission denied` sul nodo virtio) ⇒ tela nera. `provisiona.sh` fuori da Debian installa `remotix.pam` (Debian) e la sua verifica dice lo stesso «⭐ a posto» | copiati sul server (`/media/REMOTIX/vm17/t1c/`) |
 
