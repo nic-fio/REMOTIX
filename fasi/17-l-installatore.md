@@ -90,6 +90,51 @@ base di pacchetti, ma nessuno le ha provate. Lo stesso per Manjaro ed EndeavourO
 e per Mint 23 rispetto a Ubuntu 26.04. Una derivata diventa certificata solo con la sua VM nella
 matrice.
 
+### 3.1 Le versioni supportate — per il manuale tecnico
+
+*Richiesta dell'utente (30 set 2026): «andrà documentato, anche nel manuale tecnico, da quali versioni gli
+SO sono supportati da REMOTIX». ⚠ La fonte unica è il **catalogo** del motore (§6.6.8): la tabella del
+manuale si **genera** dal catalogo a ogni rilascio, non si ricopia a mano. Questa è quella di oggi.*
+
+**Le distribuzioni**
+
+| distribuzione | versione minima | stato | desktop | condizioni |
+|---|---|---|---|---|
+| Debian | **13** (Trixie) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| Ubuntu | **26.04 LTS** | certificata | GNOME, KDE, XFCE, LXQt | `gnome-session` per GNOME (D8) |
+| Fedora | **44** | certificata | GNOME, KDE, XFCE, LXQt | H.264: RPM Fusion (D5); PAM senza `pam_selinux` fino a T6 |
+| AlmaLinux | **10.1** (OpenSSL 3.5) | certificata | GNOME, KDE | EPEL e CRB; H.264: RPM Fusion; niente XFCE/LXQt |
+| Arch Linux | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| openSUSE Tumbleweed | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; `breeze6-wallpapers` (KDE) |
+| openSUSE Leap | **16.0** | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; un carattere scalabile per LXQt (`google-droid-fonts`) |
+| Rocky Linux, RHEL | 10.1 | compatibile, non certificata | GNOME, KDE | come Alma |
+| Manjaro, EndeavourOS | rolling | compatibile, non certificata | come Arch | Manjaro è indietro di qualche settimana |
+| Linux Mint | **23** (base 26.04) | compatibile, non certificata | quelli di Ubuntu (non Cinnamon) | come Ubuntu |
+
+**Fuori, e perché**: Debian 12 e RHEL 9 (base troppo vecchia: mutter 43/GNOME 40, niente libei, niente
+labwc); Ubuntu 24.04 e Mint 22 (D7); Fedora 43 (fuori supporto a fine 2026); openSUSE Leap 15.6 (fine vita);
+SLES 16 (solo GNOME, niente Packman: si rivede su richiesta); distribuzioni senza systemd; immutabili (D9).
+
+**Le versioni minime dei componenti** (per chi usa una distribuzione non in elenco; `[L]` dal codice e dalle
+misure della fase):
+
+| componente | minimo | perché |
+|---|---|---|
+| nucleo Linux | quello della distribuzione certificata più vecchia (6.12) | driver i915/xe e amdgpu, DMA-BUF |
+| systemd / logind | con `systemctl --user` e sessioni `Remote=yes` | le sessioni per utente |
+| OpenSSL | **3.5** | l'API QUIC del ponte `ngtcp2_crypto_ossl` |
+| ngtcp2 / nghttp3 | 1.25.0 / 1.18.0 | dentro il binario (`DECISIONI.md` §10.6) |
+| libavcodec (ffmpeg) | **61.13.100** (ffmpeg 7.1) | `avcodec_get_supported_config` |
+| libei | 1.3 | `ei_disconnect` |
+| PipeWire | 0.3.48 | la cattura di GNOME e KDE |
+| GNOME (mutter) | **46** (API `ConnectToEIS`, `--headless`); da 50 l'unità `@user` | `sessione.c` |
+| KDE Plasma (KWin) | **6.1** (`connectToEIS`) | `kwin.c` |
+| XFCE | **4.20** (Wayland) | la sessione sotto labwc |
+| LXQt | **2.0** (Wayland) | la sessione sotto labwc |
+| labwc / wlroots | labwc 0.8 con `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
+| un carattere scalabile | qualunque (DejaVu, Noto, Droid…) | senza, labwc muore (labwc #2525) |
+| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD); NVIDIA proprietaria no | la codifica sulla scheda; altrimenti il ripiego software |
+
 ---
 
 ## 4. Che cosa l'indagine ha trovato
