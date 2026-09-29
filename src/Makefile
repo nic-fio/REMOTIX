@@ -30,8 +30,14 @@
 #   libpipewire-0.3           il flusso dei fotogrammi  (`src/cattura.c`)
 #   libdrm                    i `DRM_FORMAT_MOD_*`: SOLO intestazioni, nessuna
 #                             libreria da collegare (`src/cattura.c`)
-#   libavcodec >= 61          la codifica HEVC/AV1      (`src/codificatore.c`)
-#   libavutil  >= 59          i fotogrammi
+#   libavcodec >= 61.13.100   la codifica HEVC/AV1      (`src/codificatore.c`)
+#                             ⛔ Diceva «>= 61», e non bastava: il 61.13.100
+#                             e' quello di `avcodec_get_supported_config()`
+#                             (`[R]` FFmpeg `doc/APIchanges`, 2024-09-08), cioe'
+#                             FFmpeg 7.1.  Ubuntu 24.04 (6.1, lavc 60) resta fuori
+#   libavutil  >= 59          i fotogrammi (a noi basterebbe la 58.7, quella di
+#                             `AV_FRAME_FLAG_KEY`: la 59 la impone la coppia
+#                             con libavcodec 61)
 #   libswscale >= 8           BGRx (dalla cattura) -> yuv420p10le, BT.709
 #                             ⛔ ERA NUOVA: `apt install libswscale-dev`.
 #                             `[M]` 12 ago 2026: sul contenitore della macchina
@@ -242,9 +248,24 @@ PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               linux-dmabuf-unstable-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
+# ⭐ FASE 17 — la cartella delle librerie del PREFISSO non e' sempre `lib`:
+#    cmake la chiama `lib64` su Fedora e openSUSE e `lib/<multiarch>` su Debian
+#    (`fasi/17-l-installatore.md` §4.4).  ⇒ Si chiede a `pkg-config` DENTRO il
+#    prefisso (`PKG_CONFIG_LIBDIR`, che SOSTITUISCE le cartelle di sistema, e
+#    senza `PKG_CONFIG_PATH`, che verrebbe cercato PRIMA: `[M]` nel contenitore
+#    rispondeva la ngtcp2 di `/usr/local` al posto di quella del prefisso); se
+#    non risponde, le cartelle che esistono.
+#    ⛔ Con ngtcp2/nghttp3 statiche (§6.3) il rpath non servira' piu': fino ad
+#    allora, che almeno punti dove stanno.
 ifneq ($(PREFISSO),)
+MULTIARCH   := $(shell $(CC) -print-multiarch 2>/dev/null)
+PC_PREFISSO := $(PREFISSO)/lib64/pkgconfig:$(PREFISSO)/lib/pkgconfig$(if $(MULTIARCH),:$(PREFISSO)/lib/$(MULTIARCH)/pkgconfig)
+LIB_PREFISSO := $(sort $(shell env -u PKG_CONFIG_PATH PKG_CONFIG_LIBDIR='$(PC_PREFISSO)' pkg-config --variable=libdir libngtcp2 libnghttp3 2>/dev/null))
+ifeq ($(LIB_PREFISSO),)
+LIB_PREFISSO := $(wildcard $(PREFISSO)/lib64 $(if $(MULTIARCH),$(PREFISSO)/lib/$(MULTIARCH)) $(PREFISSO)/lib)
+endif
 CFLAGS  += -I$(PREFISSO)/include
-LDFLAGS += -L$(PREFISSO)/lib -Wl,-rpath,$(PREFISSO)/lib
+LDFLAGS += $(foreach d,$(LIB_PREFISSO),-L$(d) -Wl,-rpath,$(d))
 endif
 
 # ⛔ `ngtcp2_crypto_ossl` va PRIMA di `ngtcp2`: il linker risolve i simboli da
@@ -343,8 +364,48 @@ pulisci:
 
 # ⛔ Il controllo delle dipendenze DICE che cosa manca, invece di far fallire il
 #    compilatore su un `#include` che nessuno collega alla libreria assente.
+#
+# ⭐ FASE 17 — e adesso guarda anche le VERSIONI MINIME, non solo che le
+#    intestazioni ci siano: un'intestazione di ffmpeg 6.1 c'e', e il
+#    compilatore cade venti righe dopo su `avcodec_get_supported_config`.
+#    I minimi, e da dove vengono (`fasi/17-l-installatore.md` §4.4):
+#      libavcodec 61.13.100   `avcodec_get_supported_config` (FFmpeg 7.1)
+#      libavutil 59, libswscale 8   la coppia di FFmpeg 7.x
+#      openssl 3.5.0          l'API QUIC nativa (`ngtcp2_crypto_ossl`)
+#      libngtcp2 1.25.0       i `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c`
+#      libnghttp3 1.18.0      quella con cui si costruisce (`src/Contenitore`);
+#                             `[?]` il minimo vero non e' stato cercato
+#      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` manca
+#                             nell'intestazione della 1.0.0, c'e' nella 1.1.0
+#      libpipewire-0.3 0.3.48 `PW_KEY_NODE_FORCE_QUANTUM`; `[M]` 29 set 2026:
+#                             cattura/cursore/suono compilano con la 0.3.48 di
+#                             Ubuntu 22.04; `[R]` la chiave manca nella 0.3.44
+#      gio-2.0 2.80           com'era dichiarato; a noi servirebbe la 2.72
+#                             (`g_get_user_state_dir`, `sessione.c`)
+#    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
+#       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
+#       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
+MINIMI := libavcodec:61.13.100 libavutil:59 libswscale:8 openssl:3.5.0 \
+          libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
+          libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
+          libva:0 libdrm:0 gbm:0 wayland-client:0
+
 dipendenze:
 	@stato=0; \
+	if [ -n "$(PREFISSO)" ]; then \
+	  PKG_CONFIG_PATH="$(PC_PREFISSO)$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}"; \
+	  export PKG_CONFIG_PATH; \
+	fi; \
+	for m in $(MINIMI); do \
+	  p=$${m%%:*}; v=$${m#*:}; d=">= $$v"; [ "$$v" = 0 ] && d="nessun minimo"; \
+	  if ! pkg-config --exists "$$p" 2>/dev/null; then \
+	    printf '  ??  %-24s pkg-config non la conosce (%s)\n' "$$p" "$$d"; stato=1; \
+	  elif pkg-config --atleast-version="$$v" "$$p"; then \
+	    printf '  OK  %-24s %s (%s)\n' "$$p" "$$(pkg-config --modversion $$p)" "$$d"; \
+	  else \
+	    printf '  NO  %-24s %s: TROPPO VECCHIA, serve >= %s\n' "$$p" "$$(pkg-config --modversion $$p)" "$$v"; stato=1; \
+	  fi; \
+	done; \
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \

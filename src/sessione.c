@@ -51,6 +51,7 @@
 #include <signal.h>
 #include <pwd.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 /* ⚠ `g_stat`, `g_open`, `g_close`: la famiglia di GLib, non quella di POSIX —
  *   è quella che `nodo_della_scheda()` e `processi_miei()` usano. */
@@ -1780,10 +1781,55 @@ static char *chiedi(char **argv)
 }
 
 /*
+ * ⭐ FASE 17 — QUALE UNITA' DELLA SHELL avvia gnome-session su QUESTA macchina
+ *    (`sessione.h`, `SESSIONE_UNITA_SHELL_*`; `fasi/17-l-installatore.md` §5.1).
+ *
+ * Si chiede al gestore d'utente da quale FILE caricherebbe
+ * `org.gnome.Shell@wayland.service` (`FragmentPath`):
+ *   · il file `…/org.gnome.Shell@wayland.service` ⇒ GNOME ≤ 49, e' quella;
+ *   · il modello `…/org.gnome.Shell@.service` ⇒ GNOME 50: la sessione chiede
+ *     `@user`, e `@wayland` e' un'istanza che NESSUNO avvia.
+ *
+ * ⛔⛔ E' il FALSO VERDE che questa funzione chiude: su GNOME 50
+ *     `systemctl --user show -p ExecStart org.gnome.Shell@wayland.service` crea
+ *     l'istanza «wayland» dal modello, ci applica il nostro drop-in e restituisce
+ *     la nostra riga — il controllo passava, e gnome-session avviava `@user`
+ *     senza `--headless`.
+ *
+ * ⚠ Il gestore e non una lista di cartelle scritta qui: le cartelle delle
+ *   unita' d'utente sono molte (anche da `XDG_DATA_DIRS`) e le conosce lui.
+ * ⛔ NULL se non riconosco niente: «non lo so» non diventa una scommessa su
+ *   uno dei due nomi, e chi chiama si ferma dicendolo.
+ */
+static const char *unita_shell(void)
+{
+	char *argv[] = { "systemctl", "--user", "show", "-p", "FragmentPath", "--value",
+		         SESSIONE_UNITA_SHELL_48, NULL };
+	g_autofree char *frammento = chiedi(argv);
+
+	if (!frammento) {
+		registro_dice(REG_SESSIONE, "⛔ non ho potuto chiedere al gestore d'utente "
+		                            "quale unita' della Shell c'e'");
+		return NULL;
+	}
+	g_strstrip(frammento);
+	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_48))
+		return SESSIONE_UNITA_SHELL_48;
+	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_MODELLO))
+		return SESSIONE_UNITA_SHELL_50;
+	registro_dice(REG_SESSIONE,
+	              "⛔ non riconosco l'unita' della Shell: il gestore carica «%s» da «%s», "
+	              "e io conosco solo " SESSIONE_UNITA_SHELL_48 " (GNOME ≤ 49) e il "
+	              "modello " SESSIONE_UNITA_SHELL_MODELLO " (GNOME 50)",
+	              SESSIONE_UNITA_SHELL_48, *frammento ? frammento : "(niente)");
+	return NULL;
+}
+
+/*
  * ⛔⭐ IL DROP-IN — LA RIGA CHE IN v1 SI SCRIVEVA SOLO PER KWIN.
  *
  * `gnome-session` non lancia `gnome-shell`: fa partire l'unita' d'utente
- * `org.gnome.Shell@wayland.service`, il cui `ExecStart` e' fisso.  Per chiedere
+ * della Shell (quale, lo dice `unita_shell()`), il cui `ExecStart` e' fisso.  Per chiedere
  * il monitor virtuale serve un drop-in, e la ricetta — copia in `user.control`
  * piu' `daemon-reload` — e' la stessa che v1 usa per `plasma-kwin_wayland`.
  *
@@ -1817,10 +1863,9 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ FASE 12: cambiano l'unita' e la riga, NON se scriverla — il riquadro qui
 	 *    sopra lo chiedeva, e il ramo Plasma e' qui sotto, dopo la cartella. */
 	const gboolean kde = e_kde();
-	const char *unita = kde ? SESSIONE_UNITA_KWIN : SESSIONE_UNITA_SHELL;
+	const char *unita = NULL;
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
-	char *mostra[] = { "systemctl",   "--user", "show", "-p", "ExecStart",
-		           "--value", (char *) unita, NULL };
+	char *mostra[] = { "systemctl", "--user", "show", "-p", "ExecStart", "--value", NULL, NULL };
 
 	/*
 	 * ⛔⛔ FASE 13 — SU XFCE QUESTA FUNZIONE NON HA OGGETTO, e non è un ramo in
@@ -1855,9 +1900,22 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 		return FALSE;
 	}
 
-	cartella = g_build_filename(runtime, "systemd", "user.control",
-	                            kde ? SESSIONE_UNITA_KWIN ".d" : SESSIONE_UNITA_SHELL ".d",
-	                            NULL);
+	/* ⭐ FASE 17: su GNOME l'unita' si sceglie da quel che e' installato, e
+	 *    si rilegge LA STESSA qui sotto (`mostra`) — mai un nome fisso da una
+	 *    parte e l'altro dall'altra. */
+	unita = kde ? SESSIONE_UNITA_KWIN : unita_shell();
+	if (!unita)
+		return FALSE;
+	mostra[6] = (char *) unita;
+
+	/* ⛔ `<istanza>.d/`, mai `org.gnome.Shell@.service.d/`: la cartella del
+	 *    modello varrebbe anche per la Shell di GDM. */
+	{
+		g_autofree char *nome_cartella = g_strconcat(unita, ".d", NULL);
+
+		cartella = g_build_filename(runtime, "systemd", "user.control", nome_cartella,
+		                            NULL);
+	}
 	percorso = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
 
 	/*
@@ -2177,6 +2235,81 @@ static char *primario_lxqt(uint32_t larghezza, uint32_t altezza)
 	return g_strdup_printf("sh -c %s", interno);
 }
 
+/*
+ * ⭐ FASE 17 — DOVE VA IL REGISTRO DELLA SESSIONE (`fasi/17-l-installatore.md` §4.4).
+ *
+ * ⛔ Stava in `/tmp/remotix-sessione-<uid>.log`: un nome PREVEDIBILE in una
+ *    cartella di tutti.  Un altro utente lo poteva creare prima — e con
+ *    `fs.protected_regular` (acceso su Debian, Fedora, Arch) l'`exec >>` della
+ *    shell su un file altrui in `/tmp` fallisce: il desktop non partiva.  O
+ *    peggio, se il file era un collegamento, scrivevamo dove diceva lui.
+ *
+ * ⇒ `$XDG_STATE_HOME/remotix/sessione.log` (di solito
+ *   `~/.local/state/remotix/`): e' dell'utente, e come `/tmp` sopravvive al
+ *   gestore d'utente — che e' la ragione per cui NON sta in `XDG_RUNTIME_DIR`
+ *   (riquadro del 16 agosto 2026 in `avvia()`).
+ *
+ * Creato in modo sicuro, e si VERIFICA invece di sperarlo:
+ *   · la cartella 0700, e dev'essere una cartella VERA (non un collegamento),
+ *     NOSTRA e non scrivibile da altri;
+ *   · il file aperto qui con `O_NOFOLLOW`, 0600, e dev'essere un file
+ *     regolare NOSTRO — poi la shell ci aggiunge in coda.
+ *
+ * ⚠ Se non si puo' (casa in sola lettura, cartella di un altro): ripiego
+ *   DICHIARATO su `XDG_RUNTIME_DIR`, che e' nostra ma muore con la sessione —
+ *   un registro che si perde vale piu' di un desktop che non parte
+ *   (`CODER.md` §4.2).  NULL solo se non c'e' nemmeno quella.
+ */
+static gboolean cartella_nostra(const char *cartella)
+{
+	struct stat st;
+
+	if (g_mkdir_with_parents(cartella, 0700) != 0 || lstat(cartella, &st) != 0)
+		return FALSE;
+	return S_ISDIR(st.st_mode) && st.st_uid == getuid() && (st.st_mode & 022) == 0;
+}
+
+static gboolean file_nostro(const char *percorso)
+{
+	struct stat st;
+	int fd = open(percorso, O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW | O_CLOEXEC, 0600);
+	gboolean bene;
+
+	if (fd < 0)
+		return FALSE;
+	bene = fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_uid == getuid();
+	close(fd);
+	return bene;
+}
+
+static char *registro_sessione_percorso(void)
+{
+	g_autofree char *cartella = g_build_filename(g_get_user_state_dir(), "remotix", NULL);
+	g_autofree char *percorso = g_build_filename(cartella, "sessione.log", NULL);
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	if (cartella_nostra(cartella) && file_nostro(percorso))
+		return g_steal_pointer(&percorso);
+
+	if (runtime && *runtime) {
+		g_autofree char *ripiego = g_build_filename(runtime, "remotix-sessione.log", NULL);
+
+		if (file_nostro(ripiego)) {
+			registro_dice(REG_SESSIONE,
+			              "⚠ non posso scrivere il registro della sessione in %s "
+			              "(cartella o file non miei, o non creabili): ripiego DICHIARATO "
+			              "su %s, che pero' sparisce con la sessione",
+			              percorso, ripiego);
+			return g_steal_pointer(&ripiego);
+		}
+	}
+	registro_dice(REG_SESSIONE,
+	              "⛔ nessun posto sicuro per il registro della sessione (né %s né "
+	              "XDG_RUNTIME_DIR): la sessione parte SENZA registro",
+	              percorso);
+	return NULL;
+}
+
 /* ⭐ `larghezza`/`altezza`: la tela del cliente.  ⚠ Le usa SOLO il ramo LXQt
  *   (`primario_lxqt()`): GNOME e KDE la misura la prendono dal drop-in, XFCE
  *   dalla richiesta tardiva — identici a prima. */
@@ -2230,15 +2363,20 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 	 *   piu'.  `[M]` Cercandolo dopo un avvio fallito si trovava un file vuoto o
 	 *   nessun file.
 	 *
-	 * ⚠ `/tmp` e' del sistema e non dell'utente: sopravvive al gestore, e il
-	 *   nome porta l'uid perche' due utenti non si sovrascrivano a vicenda.
+	 * ⭐ FASE 17: non piu' in `/tmp` — vedi `registro_sessione_percorso()`.
 	 */
-	registro = g_strdup_printf("/tmp/remotix-sessione-%ld.log", (long)getuid());
-	riga = g_strdup_printf("exec >>'%s' 2>&1; %s", registro, comando);
+	registro = registro_sessione_percorso();
+	if (registro) {
+		g_autofree char *citato = g_shell_quote(registro);
+
+		riga = g_strdup_printf("exec >>%s 2>&1; %s", citato, comando);
+	} else {
+		riga = g_strdup_printf("exec >/dev/null 2>&1; %s", comando);
+	}
 	argv[4] = riga;
 
 	registro_dice(REG_SESSIONE, "avvio la sessione grafica: %s (il suo registro va in %s)",
-	              comando, registro);
+	              comando, registro ? registro : "nessun posto");
 	if (!g_spawn_sync(g_get_home_dir(), argv, ambiente, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL,
 	                  NULL, &stato, &sbaglio) ||
 	    !g_spawn_check_wait_status(stato, &sbaglio)) {
@@ -2353,6 +2491,13 @@ static gboolean unita_inattiva(void)
 		return TRUE;
 	}
 
+	/* ⭐ FASE 17 — su GNOME 50 queste due unita' hanno ancora questi nomi
+	 *    (`[R]` gnome-session 50.0: `data/gnome-session-manager@.service.in`,
+	 *    `data/gnome-session-restart-dbus.service.in`); ha cambiato nome solo
+	 *    quella della Shell (`unita_shell()`), che qui non si guarda.
+	 * ⚠ Se un giorno cambiassero, `is-active` risponderebbe «inactive» a un
+	 *   nome che non esiste, e la guardia sparirebbe come su XFCE: da
+	 *   riguardare a ogni GNOME nuovo (`fasi/17-l-installatore.md` §5.1). */
 	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
@@ -2572,7 +2717,10 @@ static const char *const VARIABILI_NOSTRE[] = {
 
 /* { cartella del drop-in, nome } — tutti e soli i nostri */
 static const char *const DROPIN_NOSTRI[][2] = {
-	{ SESSIONE_UNITA_SHELL ".d", "zz-remotix-monitor.conf" },
+	/* ⭐ FASE 17: tutt'e due i nomi della Shell — una macchina aggiornata da
+	 *    GNOME 48 a 50 si porta dietro quello di prima (§5.1). */
+	{ SESSIONE_UNITA_SHELL_48 ".d", "zz-remotix-monitor.conf" },
+	{ SESSIONE_UNITA_SHELL_50 ".d", "zz-remotix-monitor.conf" },
 	{ SESSIONE_UNITA_KWIN ".d", "zz-remotix-monitor.conf" },
 	{ "xfconfd.service.d", "zz-remotix-sessione.conf" },
 };

@@ -66,7 +66,7 @@ cerca_ngtcp2()
 	h="$NGTCP2/crypto/includes"
 	[ -f "$h/ngtcp2/ngtcp2_crypto_ossl.h" ] && INC="$INC -I$h"
 
-	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$PREFISSO/lib"; do
+	for i in "$NGTCP2/build/lib" "$NGTCP2/build/crypto/ossl" "$PREFISSO/lib" "$PREFISSO/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }
@@ -79,7 +79,7 @@ cerca_nghttp3()
 		[ -f "$i/nghttp3/nghttp3.h" ] || [ -f "$i/nghttp3/version.h" ] && \
 			INC="$INC -I$i"
 	done
-	for i in "$NGHTTP3/build/lib" "$PREFISSO/lib"; do
+	for i in "$NGHTTP3/build/lib" "$PREFISSO/lib" "$PREFISSO/lib64"; do
 		[ -d "$i" ] && LIB="$LIB -L$i -Wl,-rpath,$i"
 	done
 }
@@ -231,6 +231,18 @@ fi
 #   averlo modificato, e riscriverglielo a ogni costruzione sarebbe una
 #   configurazione che si perde da sola.
 log "Il servizio PAM"
+# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, con
+#    onerr=fail ⇒ senza il file non entra nessuno.  Prima il file, e non si
+#    riscrive se c'e'.
+if [ -f /etc/remotix/utenti-negati ]; then
+	ok "/etc/remotix/utenti-negati c'e' gia' (non lo tocco)"
+elif install -D -m 644 /dev/null /etc/remotix/utenti-negati 2>/dev/null \
+     && echo root > /etc/remotix/utenti-negati; then
+	ok "scritto /etc/remotix/utenti-negati: root"
+else
+	ko "⛔ /etc/remotix/utenti-negati NON c'e' e non l'ho potuto scrivere (serve root):"
+	ko "   con il PAM nuovo non entrera' NESSUNO.  A mano:  echo root > /etc/remotix/utenti-negati"
+fi
 if [ -f /etc/pam.d/remotix ]; then
 	ok "/etc/pam.d/remotix c'e' gia' (non lo tocco)"
 elif cp "$QUI/remotix.pam" /etc/pam.d/remotix 2>/dev/null; then

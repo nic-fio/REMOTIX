@@ -111,7 +111,7 @@ static bool genera(const char *pem, const char *key, const char *marca,
 {
 	EVP_PKEY *k = NULL;
 	X509 *crt = NULL;
-	X509_NAME *nome;
+	X509_NAME *nome = NULL;
 	X509_EXTENSION *ext = NULL;
 	X509V3_CTX ctx;
 	char san[192];
@@ -146,9 +146,17 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	if (X509_set_pubkey(crt, k) != 1)
 		goto fine;
 
-	nome = X509_get_subject_name(crt);
-	X509_NAME_add_entry_by_txt(nome, "CN", MBSTRING_ASC,
-	                           (const unsigned char *)indirizzo, -1, -1, 0);
+	/* ⭐ FASE 17 — il nome si costruisce a parte e si CONSEGNA, non si
+	 *    modifica quello dentro il certificato: in OpenSSL 4.0
+	 *    `X509_get_subject_name` restituisce `const X509_NAME *` (Ubuntu
+	 *    26.10, Fedora rawhide), e scriverci dentro non compila piu'.  Cosi'
+	 *    va uguale con la 3.x (`fasi/17-l-installatore.md` §4.4). */
+	nome = X509_NAME_new();
+	if (!nome ||
+	    X509_NAME_add_entry_by_txt(nome, "CN", MBSTRING_ASC,
+	                               (const unsigned char *)indirizzo, -1, -1, 0) != 1 ||
+	    X509_set_subject_name(crt, nome) != 1)
+		goto fine;
 	/* autofirmato: emittente = soggetto */
 	if (X509_set_issuer_name(crt, nome) != 1)
 		goto fine;
@@ -194,6 +202,8 @@ static bool genera(const char *pem, const char *key, const char *marca,
 fine:
 	if (ext)
 		X509_EXTENSION_free(ext);
+	if (nome)
+		X509_NAME_free(nome);
 	if (bn)
 		BN_free(bn);
 	if (crt)

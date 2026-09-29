@@ -331,12 +331,17 @@ static void aiuto(const char *nome)
 
 /* ⛔⭐ IL FILE DEL SERVIZIO PAM, GUARDATO ALL'AVVIO — rilievo B-11.
  *
- *     `SPECIFICHE.md` §4.2 vuole il servizio `remotix`.  Se
- *     `/etc/pam.d/remotix` non c'e', Linux-PAM ripiega sul servizio `other`,
- *     che su Debian e' `pam_deny`: **ogni** parola d'ordine giusta viene
- *     rifiutata, e quel che l'utente legge e' «utente o parola d'ordine non
- *     corretti» — cioe' una diagnosi che punta sulla parola d'ordine mentre il
- *     difetto e' un file mancante.
+ *     `SPECIFICHE.md` §4.2 vuole il servizio `remotix`.  Se il file non c'e',
+ *     Linux-PAM ripiega sul servizio `other`, e nessuno dei due esiti va
+ *     bene: su Fedora e Arch `other` e' `pam_deny` (**ogni** parola d'ordine
+ *     giusta rifiutata, e l'utente legge «utente o parola d'ordine non
+ *     corretti» — una diagnosi che punta sulla parola mentre il difetto e' un
+ *     file mancante); su Debian include le pile comuni, cioe' una pila che non
+ *     e' la nostra e senza l'esclusione di root (`src/remotix.pam`).
+ *
+ * ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3-§4.4): il file si cerca dove
+ *    lo cerca Linux-PAM — prima `/etc/pam.d`, poi `/usr/lib/pam.d`, dove lo
+ *    mette il pacchetto di openSUSE.
  *
  * ⚠ NON si rifiuta di partire: senza PAM il server non serve a niente, ma il
  *   ban di §4.4-bis, la pagina e i certificati funzionano lo stesso, e
@@ -345,20 +350,25 @@ static void aiuto(const char *nome)
  *   programma, non in una nota di installazione che si perde. */
 static void guarda_il_servizio_pam(void)
 {
-	static const char *dove = "/etc/pam.d/remotix";
+	static const char *const dove[] = { "/etc/pam.d/remotix", "/usr/lib/pam.d/remotix" };
 	struct stat st;
-	if (stat(dove, &st) == 0) {
-		registro_dice(REG_AVVIO,
-		              "servizio PAM «remotix»: %s c'e' (SPECIFICHE.md §4.2)",
-		              dove);
-		return;
+	for (size_t i = 0; i < sizeof dove / sizeof dove[0]; i++) {
+		if (stat(dove[i], &st) == 0) {
+			registro_dice(REG_AVVIO,
+			              "servizio PAM «remotix»: %s c'e' (SPECIFICHE.md §4.2)",
+			              dove[i]);
+			return;
+		}
 	}
 	registro_dice(REG_AVVIO,
-	              "⛔ %s NON C'E' (%s): PAM ripieghera' sul servizio «other», "
-	              "che su Debian e' pam_deny — OGNI parola d'ordine giusta "
-	              "verra' rifiutata e l'utente leggera' «utente o parola "
-	              "d'ordine non corretti».  Si installa src/remotix.pam.",
-	              dove, strerror(errno));
+	              "⛔ il servizio PAM «remotix» NON C'E' (né %s né %s): PAM "
+	              "ripieghera' sul servizio «other», che NON e' la pila di "
+	              "REMOTIX — su Fedora e Arch e' pam_deny (OGNI parola d'ordine "
+	              "giusta rifiutata, e l'utente leggera' «utente o parola "
+	              "d'ordine non corretti»), su Debian le pile comuni senza "
+	              "l'esclusione di root.  Si installa il file della famiglia: "
+	              "src/remotix.pam (Debian/Ubuntu), .fedora, .suse, .arch.",
+	              dove[0], dove[1]);
 }
 
 /* ⛔ Le due cose che il ciclo `poll` deve poter raggiungere quando arriva un
@@ -497,7 +507,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 	 * ⚠ Due fatti diversi non possono avere lo stesso esito (rilievo R9.3): e'
 	 *   la stessa regola per cui `0x0F` era stato tolto da qui.  ⛔ E `0x06`
 	 *   era dichiarato in `rcp.h` dal primo giorno e **non l'aveva mai mandato
-	 *   nessuno** (`[M]` §3.4: `grep RCP_BUDGET_PIENO src/*.c` ⇒ zero
+	 *   nessuno** (`[M]` §3.4: `grep -r RCP_BUDGET_PIENO src/ --include=*.c` ⇒ zero
 	 *   chiamanti).  Questa e' la riga che gli da' il suo primo mittente. */
 	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
 	/* ⭐ D-001: il palco c'era gia' ⇒ `SESSIONE` dira' `2 = RIPRESA`. */

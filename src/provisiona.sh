@@ -242,12 +242,22 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	# 2. ⛔ VIA il drop-in di v1 col monitor di troppo
 	# -------------------------------------------------------------------
 	tit "Il drop-in di v1 col monitor di troppo"
-	if [ -e /etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf ]; then
-		rm -rf /etc/systemd/user/org.gnome.Shell@wayland.service.d
-		ok "tolto: v2 scrive il suo, senza --virtual-monitor"
-	else
-		ok "non c'era"
-	fi
+	# ⭐ FASE 17 (fasi/17-l-installatore.md §5.1): da GNOME 50 la Shell e'
+	#    org.gnome.Shell@user.service, istanza del modello org.gnome.Shell@.service
+	#    ⇒ si guardano tutte e tre le cartelle.  ⚠ Si toglie SOLO il nostro file,
+	#    e la cartella solo se resta vuota: quella del modello vale anche per GDM.
+	TOLTI=0
+	for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
+	         org.gnome.Shell@.service.d; do
+		f=/etc/systemd/user/$d/remotix-headless.conf
+		if [ -e "$f" ]; then
+			rm -f "$f"
+			rmdir "/etc/systemd/user/$d" 2>/dev/null || true
+			ok "tolto $f: v2 scrive il suo, senza --virtual-monitor"
+			TOLTI=$((TOLTI + 1))
+		fi
+	done
+	[ "$TOLTI" -eq 0 ] && ok "non c'era"
 
 	# -------------------------------------------------------------------
 	# 3. Le tre cinture di §4.7
@@ -276,6 +286,14 @@ CONF
 	# 4. Il servizio PAM
 	# -------------------------------------------------------------------
 	tit "Il servizio PAM"
+	# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, e
+	#    con onerr=fail se il file manca non entra NESSUNO ⇒ prima il file.
+	#    Non si riscrive se c'e': e' una scelta di chi amministra.
+	if [ ! -f /etc/remotix/utenti-negati ]; then
+		install -D -m 644 -o root -g root /dev/null /etc/remotix/utenti-negati
+		echo root > /etc/remotix/utenti-negati
+	fi
+	ok "/etc/remotix/utenti-negati ($(tr '\n' ' ' < /etc/remotix/utenti-negati))"
 	install -D -m 644 "$QUI/remotix.pam" /etc/pam.d/remotix
 	ok "/etc/pam.d/remotix"
 
@@ -492,6 +510,8 @@ done
 
 [ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix c'e'" \
 	|| ko "/etc/pam.d/remotix manca"
+grep -qx root /etc/remotix/utenti-negati 2>/dev/null && ok "root e' negato (/etc/remotix/utenti-negati)" \
+	|| ko "⛔ /etc/remotix/utenti-negati manca o non nega root"
 [ -f /etc/sudoers.d/remotix-banchi ] && ok "i banchi guidano il servizio senza password" \
 	|| ko "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo"
 grep -q pam_systemd /etc/pam.d/remotix 2>/dev/null && ok "e chiama pam_systemd" \
@@ -507,8 +527,13 @@ VIG=$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -c '^Han
 [ "$VIG" -ge 1 ] && ok "il tasto di accensione e' ignorato" \
 	|| ko "il tasto di accensione spegne ancora la macchina"
 
-[ -e /etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf ] \
-	&& ko "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor" \
+# ⭐ FASE 17: le tre cartelle della Shell (GNOME ≤ 49, GNOME 50, il modello)
+V1=""
+for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
+         org.gnome.Shell@.service.d; do
+	[ -e "/etc/systemd/user/$d/remotix-headless.conf" ] && V1="$V1 $d"
+done
+[ -n "$V1" ] && ko "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor:$V1" \
 	|| ok "nessun drop-in di v1"
 
 echo
