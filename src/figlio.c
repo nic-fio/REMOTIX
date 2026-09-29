@@ -1522,29 +1522,173 @@ static bool comando_da_root(const char *quale, char *const argv[], const char *u
 	return true;
 }
 
-static bool iscrivi_ai_gruppi_della_scheda(const char *utente, gid_t primario,
+/*
+ * ⭐ FASE 17 (§6.5-bis) — OGNI ISCRIZIONE FATTA DA REMOTIX SI ANNOTA IN UN FILE.
+ *    Il registro del servizio la diceva gia' (DECISIONI §7.21, garanzia 2), ma
+ *    il journal ruota e l'installatore non lo legge: alla disinstallazione il
+ *    motore deve sapere CHI ha messo REMOTIX in un gruppo (origine DIRETTA, si
+ *    toglie) e chi c'era gia' (PREESISTENTE, non si tocca mai — §6.6.4).
+ *    ⇒ Una riga JSON per gruppo, solo per i gruppi in cui l'utente NON era:
+ *
+ *    {"formato":"remotix-gruppi/1","data":"2026-09-30T10:11:12Z","utente":"mario",
+ *     "uid":1005,"gruppo":"render","gid":989,"origine":"DIRETTA",
+ *     "da":"REMOTIX alla prima connessione"}
+ *
+ * ⛔ Il file si apre in sola aggiunta (`O_APPEND`), mai riscritto ne' troncato;
+ *    la cartella si apre senza seguire collegamenti e dev'essere di root e non
+ *    scrivibile da altri, il file idem e regolare; ogni riga esce con UNA
+ *    `write` e poi `fsync` (e la cartella si sincronizza quando il file nasce).
+ * ⚠ Se non si puo' annotare, l'iscrizione si fa lo stesso — una sessione cieca
+ *   e' peggio (§4.2) — ma si DICE, con quel che la disinstallazione non sapra'.
+ */
+#define GRUPPI_CARTELLA "/var/lib/remotix"
+#define GRUPPI_FILE "gruppi-iscritti.jsonl"
+
+/* Il testo JSON di una stringa: virgolette, barra rovescia e controlli. */
+static void json_testo(char *d, size_t quanto, const char *s)
+{
+	size_t k = 0;
+
+	for (; *s && k + 7 < quanto; s++) {
+		unsigned char c = (unsigned char)*s;
+
+		if (c == '"' || c == '\\') {
+			d[k++] = '\\';
+			d[k++] = (char)c;
+		} else if (c < 0x20) {
+			k += (size_t)snprintf(d + k, quanto - k, "\\u%04x", c);
+		} else {
+			d[k++] = (char)c;
+		}
+	}
+	d[k] = '\0';
+}
+
+/* La cartella: aperta senza seguire collegamenti, di root, non scrivibile da
+ * altri.  Se manca (fuori dal pacchetto: un banco) si crea 0700.  -1 con
+ * `perche` scritto. */
+static int gruppi_apri_cartella(char *perche, size_t quanto)
+{
+	struct stat st;
+	int dfd;
+
+	if (mkdir(GRUPPI_CARTELLA, 0700) != 0 && errno != EEXIST) {
+		snprintf(perche, quanto, "mkdir %s: %s", GRUPPI_CARTELLA, strerror(errno));
+		return -1;
+	}
+	dfd = open(GRUPPI_CARTELLA, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (dfd < 0) {
+		snprintf(perche, quanto, "%s: %s", GRUPPI_CARTELLA, strerror(errno));
+		return -1;
+	}
+	if (fstat(dfd, &st) != 0 || st.st_uid != 0 || (st.st_mode & 022)) {
+		snprintf(perche, quanto, "%s non e' di root o e' scrivibile da altri", GRUPPI_CARTELLA);
+		close(dfd);
+		return -1;
+	}
+	return dfd;
+}
+
+/* Il file, in sola aggiunta.  -1 con `perche` scritto. */
+static int gruppi_apri_file(char *perche, size_t quanto)
+{
+	struct stat st;
+	int dfd = gruppi_apri_cartella(perche, quanto);
+	int fd;
+	bool nuovo = false;
+
+	if (dfd < 0)
+		return -1;
+	fd = openat(dfd, GRUPPI_FILE, O_WRONLY | O_APPEND | O_NOFOLLOW | O_CLOEXEC);
+	if (fd < 0 && errno == ENOENT) {
+		fd = openat(dfd, GRUPPI_FILE,
+		            O_WRONLY | O_APPEND | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+		nuovo = fd >= 0;
+	}
+	if (fd < 0) {
+		snprintf(perche, quanto, "%s/%s: %s", GRUPPI_CARTELLA, GRUPPI_FILE, strerror(errno));
+		close(dfd);
+		return -1;
+	}
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0 || (st.st_mode & 022)) {
+		snprintf(perche, quanto, "%s/%s non e' un file regolare di root, o e' scrivibile da altri",
+		         GRUPPI_CARTELLA, GRUPPI_FILE);
+		close(fd);
+		close(dfd);
+		return -1;
+	}
+	/* Il nome nuovo nella cartella deve sopravvivere a una caduta di corrente
+	 * quanto la riga dentro al file. */
+	if (nuovo)
+		(void)fsync(dfd);
+	close(dfd);
+	return fd;
+}
+
+/* Una riga per gruppo.  false con `perche` scritto. */
+static bool gruppi_annota(int fd, const char *utente, uid_t uid, const char *gruppo, gid_t gid,
+                          char *perche, size_t quanto)
+{
+	char u[256], g[192], quando[32], riga[768];
+	struct tm tm;
+	time_t ora = time(NULL);
+	int n;
+
+	json_testo(u, sizeof u, utente);
+	json_testo(g, sizeof g, gruppo);
+	gmtime_r(&ora, &tm);
+	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &tm);
+	n = snprintf(riga, sizeof riga,
+	             "{\"formato\":\"remotix-gruppi/1\",\"data\":\"%s\",\"utente\":\"%s\","
+	             "\"uid\":%lu,\"gruppo\":\"%s\",\"gid\":%lu,\"origine\":\"DIRETTA\","
+	             "\"da\":\"REMOTIX alla prima connessione\"}\n",
+	             quando, u, (unsigned long)uid, g, (unsigned long)gid);
+	if (n <= 0 || (size_t)n >= sizeof riga) {
+		snprintf(perche, quanto, "la riga non ci sta");
+		return false;
+	}
+	/* ⛔ Una sola `write`: con O_APPEND la riga arriva intera in fondo, o niente. */
+	if (write(fd, riga, (size_t)n) != n) {
+		snprintf(perche, quanto, "write: %s", strerror(errno));
+		return false;
+	}
+	if (fsync(fd) != 0) {
+		snprintf(perche, quanto, "fsync: %s", strerror(errno));
+		return false;
+	}
+	return true;
+}
+
+static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t primario,
                                            const gid_t *gruppi, int ngruppi)
 {
 	gid_t visti[QUANTI_GRUPPI_SCHEDA];
 	char nomi[QUANTI_GRUPPI_SCHEDA][64];
 	char nodi[QUANTI_GRUPPI_SCHEDA][96];
 	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	int messi[QUANTI_GRUPPI_SCHEDA];
+	int nmessi = 0;
 	char elenco[256] = "";
+	char perche[256] = "";
 	size_t usati = 0;
 	char *argv_mod[6];
 	char *argv_term[4];
+	int fd;
 
 	if (nvisti == 0 || geteuid() != 0)
 		return false;
 	for (int i = 0; i < nvisti; i++) {
 		int n;
 
+		/* Chi c'e' gia' e' PREESISTENTE: non si iscrive e non si annota. */
 		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i]))
 			continue;
 		n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s", usati ? "," : "",
 		             nomi[i]);
-		if (n > 0 && (size_t)n < sizeof elenco - usati)
+		if (n > 0 && (size_t)n < sizeof elenco - usati) {
 			usati += (size_t)n;
+			messi[nmessi++] = i;
+		}
 	}
 	if (!usati)
 		return false;
@@ -1559,14 +1703,40 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, gid_t primario,
 	argv_mod[2] = elenco;
 	argv_mod[3] = (char *)utente;
 	argv_mod[4] = NULL;
+	/* Il file si apre PRIMA di toccare i gruppi, cosi' un impedimento si sa
+	 * subito; la riga si scrive DOPO, solo se `usermod` e' riuscito: annotare
+	 * un'iscrizione mai fatta farebbe togliere alla disinstallazione un gruppo
+	 * messo da altri. */
+	fd = gruppi_apri_file(perche, sizeof perche);
 	if (!comando_da_root("/usr/sbin/usermod", argv_mod, utente) &&
 	    !comando_da_root("/sbin/usermod", argv_mod, utente)) {
 		registro_dice_di(REG_FIGLIO, utente,
 		                 "⛔ non ho potuto iscrivere «%s» a «%s»: la sessione nascera' "
 		                 "CIECA, e la cura a mano e' `usermod -aG %s %s`",
 		                 utente, elenco, elenco, utente);
+		if (fd >= 0)
+			close(fd);
 		return false;
 	}
+	for (int j = 0; j < nmessi; j++) {
+		int i = messi[j];
+
+		if (fd >= 0 && gruppi_annota(fd, utente, uid, nomi[i], visti[i], perche, sizeof perche))
+			registro_dice_di(REG_FIGLIO, utente,
+			                 "⭐ annotato in %s/%s: «%s» in «%s» (gid %ld), DIRETTA — la "
+			                 "disinstallazione lo togliera'",
+			                 GRUPPI_CARTELLA, GRUPPI_FILE, utente, nomi[i], (long)visti[i]);
+		else
+			registro_dice_di(REG_FIGLIO, utente,
+			                 "⛔ iscrizione NON ANNOTATA (%s): «%s» in «%s» (gid %ld) e' "
+			                 "opera di REMOTIX ma %s/%s non lo dice — la disinstallazione "
+			                 "NON lo togliera'.  Rimedio a mano: `gpasswd -d %s %s` dopo "
+			                 "aver disinstallato",
+			                 perche, utente, nomi[i], (long)visti[i], GRUPPI_CARTELLA,
+			                 GRUPPI_FILE, utente, nomi[i]);
+	}
+	if (fd >= 0)
+		close(fd);
 	/* ⚠ E il gestore d'utente si fa RINASCERE, o i gruppi nuovi non arrivano al
 	 *   compositore (`[M]` 27 ago 2026).  Qui non c'e' nessuna sessione grafica
 	 *   da buttare giu': il figlio di quest'utente non esiste ancora. */
@@ -1672,7 +1842,7 @@ bool figli_assicura(figli *f, const char *utente)
 	 *    dell'utente, 20 set 2026): iscritto, si rileggono i gruppi e si
 	 *    dichiara di nuovo — la riga che l'amministratore legge dev'essere
 	 *    quella VERA di questa sessione, non quella di prima della cura. */
-	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi)) {
+	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_uid, pw.pw_gid, gruppi, ngruppi)) {
 		ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
 		if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngruppi) < 0)
 			ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
