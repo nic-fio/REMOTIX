@@ -89,10 +89,29 @@
  * ⛔ Il comando e' la parte FACILE.  Quel che decide se il compositore nasce con
  *    qualcosa da catturare e' la sovrascrittura dell'`ExecStart` dell'unita'
  *    della Shell: `gnome-session` NON lancia `gnome-shell`, fa partire l'unita'
- *    d'utente `org.gnome.Shell@wayland.service`, il cui `ExecStart` e' fisso.
+ *    d'utente della Shell (`org.gnome.Shell@wayland.service` fino a GNOME 49,
+ *    `org.gnome.Shell@user.service` da GNOME 50), il cui `ExecStart` e' fisso.
  */
 #define SESSIONE_COMANDO_GNOME "exec gnome-session --session=gnome"
-#define SESSIONE_UNITA_SHELL "org.gnome.Shell@wayland.service"
+/*
+ * ⛔⭐ FASE 17 — L'UNITA' DELLA SHELL NON HA UN NOME SOLO (`fasi/17-l-installatore.md` §5.1).
+ *
+ *   · fino a GNOME 49 (Debian 13, Leap 16, Fedora 43): un file per modo,
+ *     `org.gnome.Shell@wayland.service`;
+ *   · da GNOME 50 (Fedora 44, Ubuntu 26.04, Tumbleweed, Arch): il MODELLO
+ *     `org.gnome.Shell@.service` con `ExecStart=gnome-shell --mode=%i`, e
+ *     gnome-session chiede l'istanza `org.gnome.Shell@user.service`
+ *     (`[R]` gnome-shell `0eb754a08`; gnome-session 50.0
+ *     `data/gnome.session.conf:3`).
+ *
+ * ⇒ Si sceglie da quel che e' INSTALLATO (`unita_shell()` in `sessione.c`),
+ *   non da un numero di versione.  ⛔ E il drop-in va nella cartella
+ *   dell'ISTANZA, mai in quella del modello (`org.gnome.Shell@.service.d/`):
+ *   quella vale anche per la Shell di GDM.
+ */
+#define SESSIONE_UNITA_SHELL_48 "org.gnome.Shell@wayland.service"
+#define SESSIONE_UNITA_SHELL_50 "org.gnome.Shell@user.service"
+#define SESSIONE_UNITA_SHELL_MODELLO "org.gnome.Shell@.service"
 #define SESSIONE_UNITA_GESTORE "gnome-session-manager@gnome.service"
 /* ⛔ E la SECONDA unita' da aspettare: quando una sessione GNOME finisce, GNOME
  * RIAVVIA il bus di sessione con questa.  Una sessione nuova avviata mentre gira

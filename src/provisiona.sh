@@ -242,12 +242,22 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 	# 2. ⛔ VIA il drop-in di v1 col monitor di troppo
 	# -------------------------------------------------------------------
 	tit "Il drop-in di v1 col monitor di troppo"
-	if [ -e /etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf ]; then
-		rm -rf /etc/systemd/user/org.gnome.Shell@wayland.service.d
-		ok "tolto: v2 scrive il suo, senza --virtual-monitor"
-	else
-		ok "non c'era"
-	fi
+	# ⭐ FASE 17 (fasi/17-l-installatore.md §5.1): da GNOME 50 la Shell e'
+	#    org.gnome.Shell@user.service, istanza del modello org.gnome.Shell@.service
+	#    ⇒ si guardano tutte e tre le cartelle.  ⚠ Si toglie SOLO il nostro file,
+	#    e la cartella solo se resta vuota: quella del modello vale anche per GDM.
+	TOLTI=0
+	for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
+	         org.gnome.Shell@.service.d; do
+		f=/etc/systemd/user/$d/remotix-headless.conf
+		if [ -e "$f" ]; then
+			rm -f "$f"
+			rmdir "/etc/systemd/user/$d" 2>/dev/null || true
+			ok "tolto $f: v2 scrive il suo, senza --virtual-monitor"
+			TOLTI=$((TOLTI + 1))
+		fi
+	done
+	[ "$TOLTI" -eq 0 ] && ok "non c'era"
 
 	# -------------------------------------------------------------------
 	# 3. Le tre cinture di §4.7
@@ -507,8 +517,13 @@ VIG=$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -c '^Han
 [ "$VIG" -ge 1 ] && ok "il tasto di accensione e' ignorato" \
 	|| ko "il tasto di accensione spegne ancora la macchina"
 
-[ -e /etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf ] \
-	&& ko "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor" \
+# ⭐ FASE 17: le tre cartelle della Shell (GNOME ≤ 49, GNOME 50, il modello)
+V1=""
+for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
+         org.gnome.Shell@.service.d; do
+	[ -e "/etc/systemd/user/$d/remotix-headless.conf" ] && V1="$V1 $d"
+done
+[ -n "$V1" ] && ko "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor:$V1" \
 	|| ok "nessun drop-in di v1"
 
 echo

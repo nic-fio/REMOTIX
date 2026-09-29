@@ -978,6 +978,7 @@ installata sì/no.*
 
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
+| (T1a-1) | `sessione.c` `unita_shell()`: la Shell si sceglie dal `FragmentPath` che il gestore d'utente dà per `@wayland` (il file `@wayland` ⇒ quella; il modello `@.service` ⇒ `@user`; altro ⇒ si ferma e lo dice); drop-in in `<istanza>.d/`, mai nel modello; la rilettura dell'`ExecStart` sulla stessa unità; lo sgombero conosce `@wayland.d` e `@user.d`; `provisiona.sh` pulisce e controlla anche `@user.d` e `@.d` (solo il nostro file) | GNOME 50 avvia `@user`: il drop-in su `@wayland` non si applicava e il controllo dava un falso verde (§5.1) | `[M]` compila pulito nel contenitore Debian 13; `[M]` sul portatile (GNOME 48.7) `FragmentPath` = `…/org.gnome.Shell@wayland.service`; `[M]` con un modello finto `x@.service` il `FragmentPath` di `x@wayland` è il modello e l'`ExecStart` di `x@user` porta `--mode=user`. ⛔ GNOME 50 vero non provato: tocca alla T1 sulle VM | no |
 
 ### 13.2 L'impianto di prova (banchi, VM)
 

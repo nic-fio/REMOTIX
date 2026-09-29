@@ -1780,10 +1780,55 @@ static char *chiedi(char **argv)
 }
 
 /*
+ * ⭐ FASE 17 — QUALE UNITA' DELLA SHELL avvia gnome-session su QUESTA macchina
+ *    (`sessione.h`, `SESSIONE_UNITA_SHELL_*`; `fasi/17-l-installatore.md` §5.1).
+ *
+ * Si chiede al gestore d'utente da quale FILE caricherebbe
+ * `org.gnome.Shell@wayland.service` (`FragmentPath`):
+ *   · il file `…/org.gnome.Shell@wayland.service` ⇒ GNOME ≤ 49, e' quella;
+ *   · il modello `…/org.gnome.Shell@.service` ⇒ GNOME 50: la sessione chiede
+ *     `@user`, e `@wayland` e' un'istanza che NESSUNO avvia.
+ *
+ * ⛔⛔ E' il FALSO VERDE che questa funzione chiude: su GNOME 50
+ *     `systemctl --user show -p ExecStart org.gnome.Shell@wayland.service` crea
+ *     l'istanza «wayland» dal modello, ci applica il nostro drop-in e restituisce
+ *     la nostra riga — il controllo passava, e gnome-session avviava `@user`
+ *     senza `--headless`.
+ *
+ * ⚠ Il gestore e non una lista di cartelle scritta qui: le cartelle delle
+ *   unita' d'utente sono molte (anche da `XDG_DATA_DIRS`) e le conosce lui.
+ * ⛔ NULL se non riconosco niente: «non lo so» non diventa una scommessa su
+ *   uno dei due nomi, e chi chiama si ferma dicendolo.
+ */
+static const char *unita_shell(void)
+{
+	char *argv[] = { "systemctl", "--user", "show", "-p", "FragmentPath", "--value",
+		         SESSIONE_UNITA_SHELL_48, NULL };
+	g_autofree char *frammento = chiedi(argv);
+
+	if (!frammento) {
+		registro_dice(REG_SESSIONE, "⛔ non ho potuto chiedere al gestore d'utente "
+		                            "quale unita' della Shell c'e'");
+		return NULL;
+	}
+	g_strstrip(frammento);
+	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_48))
+		return SESSIONE_UNITA_SHELL_48;
+	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_MODELLO))
+		return SESSIONE_UNITA_SHELL_50;
+	registro_dice(REG_SESSIONE,
+	              "⛔ non riconosco l'unita' della Shell: il gestore carica «%s» da «%s», "
+	              "e io conosco solo " SESSIONE_UNITA_SHELL_48 " (GNOME ≤ 49) e il "
+	              "modello " SESSIONE_UNITA_SHELL_MODELLO " (GNOME 50)",
+	              SESSIONE_UNITA_SHELL_48, *frammento ? frammento : "(niente)");
+	return NULL;
+}
+
+/*
  * ⛔⭐ IL DROP-IN — LA RIGA CHE IN v1 SI SCRIVEVA SOLO PER KWIN.
  *
  * `gnome-session` non lancia `gnome-shell`: fa partire l'unita' d'utente
- * `org.gnome.Shell@wayland.service`, il cui `ExecStart` e' fisso.  Per chiedere
+ * della Shell (quale, lo dice `unita_shell()`), il cui `ExecStart` e' fisso.  Per chiedere
  * il monitor virtuale serve un drop-in, e la ricetta — copia in `user.control`
  * piu' `daemon-reload` — e' la stessa che v1 usa per `plasma-kwin_wayland`.
  *
@@ -1817,10 +1862,9 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ FASE 12: cambiano l'unita' e la riga, NON se scriverla — il riquadro qui
 	 *    sopra lo chiedeva, e il ramo Plasma e' qui sotto, dopo la cartella. */
 	const gboolean kde = e_kde();
-	const char *unita = kde ? SESSIONE_UNITA_KWIN : SESSIONE_UNITA_SHELL;
+	const char *unita = NULL;
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
-	char *mostra[] = { "systemctl",   "--user", "show", "-p", "ExecStart",
-		           "--value", (char *) unita, NULL };
+	char *mostra[] = { "systemctl", "--user", "show", "-p", "ExecStart", "--value", NULL, NULL };
 
 	/*
 	 * ⛔⛔ FASE 13 — SU XFCE QUESTA FUNZIONE NON HA OGGETTO, e non è un ramo in
@@ -1855,9 +1899,22 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 		return FALSE;
 	}
 
-	cartella = g_build_filename(runtime, "systemd", "user.control",
-	                            kde ? SESSIONE_UNITA_KWIN ".d" : SESSIONE_UNITA_SHELL ".d",
-	                            NULL);
+	/* ⭐ FASE 17: su GNOME l'unita' si sceglie da quel che e' installato, e
+	 *    si rilegge LA STESSA qui sotto (`mostra`) — mai un nome fisso da una
+	 *    parte e l'altro dall'altra. */
+	unita = kde ? SESSIONE_UNITA_KWIN : unita_shell();
+	if (!unita)
+		return FALSE;
+	mostra[6] = (char *) unita;
+
+	/* ⛔ `<istanza>.d/`, mai `org.gnome.Shell@.service.d/`: la cartella del
+	 *    modello varrebbe anche per la Shell di GDM. */
+	{
+		g_autofree char *nome_cartella = g_strconcat(unita, ".d", NULL);
+
+		cartella = g_build_filename(runtime, "systemd", "user.control", nome_cartella,
+		                            NULL);
+	}
 	percorso = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
 
 	/*
@@ -2353,6 +2410,13 @@ static gboolean unita_inattiva(void)
 		return TRUE;
 	}
 
+	/* ⭐ FASE 17 — su GNOME 50 queste due unita' hanno ancora questi nomi
+	 *    (`[R]` gnome-session 50.0: `data/gnome-session-manager@.service.in`,
+	 *    `data/gnome-session-restart-dbus.service.in`); ha cambiato nome solo
+	 *    quella della Shell (`unita_shell()`), che qui non si guarda.
+	 * ⚠ Se un giorno cambiassero, `is-active` risponderebbe «inactive» a un
+	 *   nome che non esiste, e la guardia sparirebbe come su XFCE: da
+	 *   riguardare a ogni GNOME nuovo (`fasi/17-l-installatore.md` §5.1). */
 	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
@@ -2572,7 +2636,10 @@ static const char *const VARIABILI_NOSTRE[] = {
 
 /* { cartella del drop-in, nome } — tutti e soli i nostri */
 static const char *const DROPIN_NOSTRI[][2] = {
-	{ SESSIONE_UNITA_SHELL ".d", "zz-remotix-monitor.conf" },
+	/* ⭐ FASE 17: tutt'e due i nomi della Shell — una macchina aggiornata da
+	 *    GNOME 48 a 50 si porta dietro quello di prima (§5.1). */
+	{ SESSIONE_UNITA_SHELL_48 ".d", "zz-remotix-monitor.conf" },
+	{ SESSIONE_UNITA_SHELL_50 ".d", "zz-remotix-monitor.conf" },
 	{ SESSIONE_UNITA_KWIN ".d", "zz-remotix-monitor.conf" },
 	{ "xfconfd.service.d", "zz-remotix-sessione.conf" },
 };
