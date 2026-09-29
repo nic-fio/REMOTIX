@@ -1,0 +1,82 @@
+#!/usr/bin/make -f
+# debian/rules — il pacchetto .deb di REMOTIX (fasi/17-l-installatore.md §6.1-§6.4).
+#
+# ⚠ Si costruisce DENTRO il contenitore del bersaglio (src/costruzione/
+#   Contenitore.debian13 / .ubuntu2604) con `src/costruzione/costruisci-deb.sh`:
+#   ngtcp2 1.25.0 e nghttp3 1.18.0 statiche stanno li' (LIBRARY_PATH,
+#   PKG_CONFIG_PATH), non nelle Build-Depends (D2 chiusa: DECISIONI §10.6).
+# ⚠ packaging/debian/ diventa debian/ nella copia dell'albero: nel deposito
+#   la cartella e' packaging/debian perche' accanto verranno rpm/ e arch/.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+# ⛔ Il Makefile ha `CFLAGS ?= -O2 -g -std=gnu11 <avvertimenti>`: con i CFLAGS di
+#    dpkg-buildflags nell'ambiente quella riga non vale piu' e si perderebbe
+#    -std=gnu11 (gcc 15 va a gnu23).  ⇒ Si passano qui, INSIEME a quelli di
+#    dpkg (tempra, -ffile-prefix-map per la costruzione riproducibile, R23).
+#    CPPFLAGS (-D_FORTIFY_SOURCE) in coda: la regola %.o del Makefile non li usa.
+R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
+
+# ⭐ D8 (fasi/17 §10) NON e' decisa: su Ubuntu REMOTIX avvia la sessione `gnome`
+#    («vanilla»), che sta nel pacchetto gnome-session (universe), non in
+#    ubuntu-desktop.  ⇒ Raccomandata, ma in ALTERNATIVA agli altri tre desktop:
+#    su Kubuntu (plasma-workspace c'e') la raccomandazione e' gia' soddisfatta e
+#    non porta dentro GNOME; su Ubuntu GNOME porta solo gnome-session.
+#    Su Debian la sessione `gnome` e' quella di serie: niente.
+ifeq ($(shell dpkg-vendor --is Ubuntu && echo si),si)
+RACCOMANDA_VENDOR := gnome-session | plasma-workspace | xfce4-session | lxqt-session
+endif
+
+B := debian/remotix
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	$(MAKE) -C src pulisci
+
+override_dh_auto_configure:
+	# niente da configurare: `make dipendenze` controlla le versioni minime
+	$(MAKE) -C src dipendenze
+
+override_dh_auto_build:
+	# ⛔ R13: il binario del pacchetto NON ha la funzione di banco accesa.
+	grep -qx '#define BANCO_ACCESO 0' src/rcp.c || \
+	  { echo "⛔ src/rcp.c: BANCO_ACCESO non e' 0 — non si impacchetta (R13)"; exit 1; }
+	$(MAKE) -C src tutto CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
+	install -D -m 0644 src/pagina.html         $(B)/usr/share/remotix/pagina.html
+	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
+	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
+	# PAM di Debian/Ubuntu (common-*; fasi/17 §4.3) e chi non entra (root).
+	# Tutti e due conffile: dpkg li tiene al remove e li toglie al purge.
+	install -D -m 0644 src/remotix.pam         $(B)/etc/pam.d/remotix
+	install -D -m 0644 debian/utenti-negati    $(B)/etc/remotix/utenti-negati
+	# Il permesso di cattura di KWin.  ⛔ BYTE PER BYTE come lo scrive
+	# kwin_scrivi_permesso() (kwin.c:606) col binario in /usr/libexec/remotix:
+	# cosi' il programma lo trova uguale e non lo riscrive.  Il codice va
+	# cambiato per non scriverlo piu' (solo verificarlo): annotato, fasi/17 §13.1.
+	install -D -m 0644 debian/org.kde.remotix.desktop \
+	  $(B)/usr/share/applications/org.kde.remotix.desktop
+	# ⚠ Le tre cinture di DECISIONI.md §4.7 nei percorsi del FORNITORE: se
+	#   debbano esserci di serie e' la decisione D4, IN ATTESA.
+	install -D -m 0644 src/remotix-niente-spegnimento.rules \
+	  $(B)/usr/share/polkit-1/rules.d/50-remotix-niente-spegnimento.rules
+	install -D -m 0644 src/remotix-tasti.conf \
+	  $(B)/usr/lib/systemd/logind.conf.d/remotix-tasti.conf
+	install -D -m 0644 debian/remotix-niente-sospensione.conf \
+	  $(B)/usr/lib/systemd/sleep.conf.d/remotix-niente-sospensione.conf
+
+override_dh_installsystemd:
+	# abilitato e avviato all'installazione; dopo un aggiornamento RIAVVIATO
+	# (non fermato prima): i desktop sopravvivono all'arresto (§5.2).
+	dh_installsystemd --restart-after-upgrade
+
+override_dh_gencontrol:
+	dh_gencontrol -- -Vremotix:Recommends="$(RACCOMANDA_VENDOR)"

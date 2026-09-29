@@ -1,0 +1,7 @@
+# La pagina che il server manda al browser: e' il programma, non documentazione.
+remotix: package-contains-documentation-outside-usr-share-doc [usr/share/remotix/pagina.html]
+# `systemctl reload systemd-logind` dopo aver messo o tolto la cintura dei tasti
+# (logind.conf.d): deb-systemd-invoke conosce start/stop/restart, non reload,
+# e riavviare logind su una macchina con sessioni aperte non si fa.
+remotix: maintainer-script-calls-systemctl [postinst:*]
+remotix: maintainer-script-calls-systemctl [postrm:*]

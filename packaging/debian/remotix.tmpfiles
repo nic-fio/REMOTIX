@@ -1,0 +1,5 @@
+# remotix — le cartelle del servizio (fasi/17 §6.4).
+# /var/lib/remotix: certificati, ban, registro delle modifiche (modifiche.log).
+d /var/lib/remotix 0700 root root -
+# /run/remotix: oggi il prodotto non la usa; c'e' per il socket di comando.
+d /run/remotix 0700 root root -
