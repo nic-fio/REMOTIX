@@ -1,0 +1,19 @@
+# Contenitore.fedora44 — costruzione di REMOTIX per Fedora 44.
+#
+# ffmpeg: le intestazioni di ffmpeg-free (Fedora).  I codec H.264 al cliente
+# arrivano da RPM Fusion a esecuzione (§4.2): stessa libavcodec, stessa ABI.
+# ngtcp2 e nghttp3 dentro, statiche (quelle di Fedora sono 1.21).
+FROM registry.fedoraproject.org/fedora:44
+RUN dnf -y install --setopt=install_weak_deps=False \
+        gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
+        openssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
+        libavcodec-free-devel libavutil-free-devel libswscale-free-devel libva-devel \
+        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel \
+    && dnf clean all
+
+# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
+RUN sh /usr/local/bin/quic-statiche.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero/src

@@ -978,6 +978,7 @@ installata sì/no.*
 
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
+| (questo commit) | `src/Makefile`: le intestazioni di ffmpeg da `pkg-config --cflags libavcodec libavutil libswscale` | su Fedora e Alma (ffmpeg-free) stanno in `/usr/include/ffmpeg`: senza, `codificatore.c:24` non trova `<libavcodec/avcodec.h>`. Su Debian aggiunge solo `-I/usr/include/x86_64-linux-gnu`, che c'era già | `[M]` 29 set: Fedora 44 e Alma 10 compilano; Debian 13 identico (1 solo avviso, `main.c:500`) | no |
 
 ### 13.2 L'impianto di prova (banchi, VM)
 
@@ -985,6 +986,7 @@ installata sì/no.*
 |---|---|---|---|---|
 | (questo commit) | `banchi/17-distro/17-vm.sh`: una VM per `<distro>-<desktop>` dalle immagini cloud ufficiali, cloud-init, porte per macchina, `vesti` col gruppo di pacchetti ufficiale, foto «cliente», riavvio vero controllato col `boot_id` | decisione dell'utente del 29 set: le prove dell'installatore in VM, una per desktop | `[M]` 9 distribuzioni su 9 accese, ssh in 3-39 s | copiata sul server |
 | 12f6782…(questo commit) | `banchi/17-distro/17-carico.sh`: la prova di carico delle VM; ritmo dai contatori dei fotogrammi su ~60 s; journal letto con sudo **dopo** lo spegnimento, VM spente una alla volta | decidere quante VM insieme (4 o 8) | `[M]` 8 VM non reggono (memoria); si resta a 4 | copiata sul server |
+| (questo commit) | `src/costruzione/`: un `Contenitore.<bersaglio>` per debian13, ubuntu2604, ubuntu2404, fedora44, alma10 (EPEL+CRB), arch, tumbleweed, leap16 — dipendenze dal gestore di pacchetti della distribuzione, ngtcp2 1.25.0 e nghttp3 1.18.0 **statiche** (`quic-statiche.sh`, solo `.a` in `/usr/local/lib`, `LIBRARY_PATH`: il Makefile non cambia); `costruisci-tutti.sh` costruisce uno o tutti in una copia dell'albero e scrive per bersaglio binario, registri, versioni, `ldd` fatto nel contenitore. `src/Contenitore` resta com'era | §6.2 e §6.3: si compila per ogni distribuzione, niente `ld.so.conf.d` | `[M]` 29 set, sul portatile: **7 su 7 compilano**, `ldd` senza «not found» e senza ngtcp2/nghttp3. Ubuntu 24.04 si ferma a ngtcp2 (OpenSSL 3.0.13 senza QUIC); una sonda senza il ramo OpenSSL mostra poi solo `codificatore.c:1419,1436` (ffmpeg 6.1) e `ei_disconnect` assente (`input.c:1218`, libei 1.2.1) — D7. Versioni: OpenSSL 3.5.0 (Leap) … 3.6.4 (Arch); libavcodec 61 (Debian, Alma, Leap), 62 (Ubuntu, Fedora), 63 (Arch, TW); libei 1.3.901…1.6.0; PipeWire 1.4.2…1.6.9; glib 2.80…2.88. Arch e TW hanno già ngtcp2 1.25 con crypto_ossl: usabile, non usata per uniformità | no (solo portatile) |
 
 ### 13.3 L'ambiente del server
 
