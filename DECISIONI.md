@@ -5872,6 +5872,19 @@ Parola dell'utente: *«REMOTIX dovrà essere dotato di un sistema di installazio
 assoluta eccellenza»*. ⇒ È un requisito del prodotto, non una rifinitura: l'installatore si progetta
 sull'indagine di §10.1 e su come installano i prodotti migliori, e si misura come il resto.
 
+### 10.3 ✅ Le prove dell'installatore in macchine virtuali, una per desktop
+
+Parola dell'utente: *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento
+dell'installer, quindi la potenza bruta della GPU non serve. Passiamo dai container alle VM»*; e *«4 VM
+distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»*. ⇒ `fasi/17-l-installatore.md` §7.
+
+### 10.4 ✅ Il motore d'installazione in otto fasi
+
+Proposta dell'utente, adottata: PREFLIGHT · COMPATIBILITY · PLANNING · CONSENT & SAFETY · ACQUISITION ·
+INSTALLATION & CONFIGURATION · VERIFICATION & CERTIFICATION · COMMIT / ROLLBACK. Con tre regole: le fasi
+5-6 le esegue il gestore di pacchetti della distribuzione; il ritorno indietro è nostro (registro delle
+azioni); il consenso può arrivare da un file. ⇒ `fasi/17-l-installatore.md` §6.0.
+
 ---
 
 ## Come si tiene questo documento
