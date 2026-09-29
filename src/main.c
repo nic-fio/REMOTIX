@@ -1931,15 +1931,16 @@ int main(int argc, char **argv)
 		wt_desktop("sconosciuto");
 		break;
 	}
-	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si scrive
-	 *    QUI, dal server, prima che nasca qualunque sessione: KWin mostra
+	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si guarda
+	 *    QUI, prima che nasca qualunque sessione: KWin mostra
 	 *    `zkde_screencast_unstable_v1` solo a un eseguibile dichiarato in un
-	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  Su GNOME non si scrive
-	 *    niente. */
+	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  ⭐ FASE 17: il file e' del
+	 *    pacchetto, e il server non lo scrive piu' — lo verifica e, se non va,
+	 *    dice il codice e il rimedio.  Su GNOME non si guarda niente. */
 	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
-		char perche[640];
+		char perche[768];
 
-		if (kwin_scrivi_permesso(perche, sizeof perche))
+		if (kwin_verifica_permesso(perche, sizeof perche))
 			registro_dice(REG_AVVIO, "⭐ il permesso della cattura per KWin: %s", perche);
 		else
 			registro_dice(REG_AVVIO,

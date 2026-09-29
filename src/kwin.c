@@ -43,8 +43,9 @@
 
 #define USCITE_MAX 8
 
-/* Il percorso del permesso: di sistema, perche' lo scrive il server per tutti
- * gli utenti, e KWin cerca in `XDG_DATA_DIRS` (che contiene `/usr/share`). */
+/* Il percorso del permesso: di sistema, perche' vale per tutti gli utenti, e
+ * KWin cerca in `XDG_DATA_DIRS` (che contiene `/usr/share`).  Dalla fase 17 lo
+ * porta il pacchetto e REMOTIX lo verifica soltanto (`kwin_verifica_permesso`). */
 #define PERMESSO_DESKTOP "/usr/share/applications/org.kde.remotix.desktop"
 
 typedef struct
@@ -603,49 +604,100 @@ void kwin_chiudi(KwinSessione *sessione)
 /* ------------------------------------------------------------------ *
  * Il file che apre il cancello
  * ------------------------------------------------------------------ */
-bool kwin_scrivi_permesso(char *perche, size_t quanto)
+/*
+ * ⭐ FASE 17 (§6.5-bis) — il file lo porta il PACCHETTO, REMOTIX lo VERIFICA.
+ *    Fino alla fase 16 lo scriveva il server da root a ogni avvio; ora e' un
+ *    file del pacchetto (`packaging/{debian,rpm,arch}`, identico byte per
+ *    byte), e un programma che riscrive un file del pacchetto crea DUE verita'
+ *    su che cosa e' installato (`dpkg -V`, `rpm -V` lo segnalerebbero).
+ *    ⇒ Qui si guarda soltanto, e se non va si dicono il codice e il rimedio.
+ *
+ * Il modello del file resta `org.kde.krdpserver.desktop` (server RDP di KDE):
+ * `Exec=` sul binario CANONICO, perche' KWin confronta `/proc/<pid>/exe`
+ * (`executable_path_proc.cpp:11-14`).  Tre controlli, un codice ciascuno:
+ *   RX-KDE-001  il file non c'e' o non si legge;
+ *   RX-KDE-002  `Exec=` non porta al binario che sta girando (il percorso vero:
+ *               `/usr/libexec/remotix/remotix` su deb e rpm,
+ *               `/usr/lib/remotix/remotix` su Arch, altro in un banco);
+ *   RX-KDE-003  manca `zkde_screencast_unstable_v1` in X-KDE-Wayland-Interfaces.
+ */
+static bool exec_porta_a(const char *exec, const char *canonico, char **visto)
+{
+	char **argv = NULL;
+	char *vero;
+	bool uguale;
+
+	if (!g_shell_parse_argv(exec, NULL, &argv, NULL) || !argv || !argv[0]) {
+		g_strfreev(argv);
+		*visto = g_strdup(exec);
+		return false;
+	}
+	*visto = g_strdup(argv[0]);
+	/* Percorsi CANONICI da tutt'e due le parti, come fa KWin: un collegamento
+	 * che porta al binario vale quanto il binario. */
+	vero = realpath(argv[0], NULL);
+	uguale = vero && strcmp(vero, canonico) == 0;
+	free(vero);
+	g_strfreev(argv);
+	return uguale;
+}
+
+bool kwin_verifica_permesso(char *perche, size_t quanto)
 {
 	char *canonico = realpath("/proc/self/exe", NULL);
-	char *contenuto, *vecchio = NULL;
+	GKeyFile *chiavi = g_key_file_new();
 	GError *sbaglio = NULL;
-	bool fatto;
+	char *exec = NULL, *interfacce = NULL, *visto = NULL;
+	bool va = false;
 
 	if (!canonico) {
 		snprintf(perche, quanto, "non so quale binario sto eseguendo: %s", strerror(errno));
-		return false;
+		goto fine;
 	}
-	/* Il modello e' `org.kde.krdpserver.desktop`, il server RDP di KDE: `NoDisplay`,
-	 * `Exec=` sul binario CANONICO (`executable_path_proc.cpp:11-14`).  Solo la
-	 * cattura: lo stato dei lucchetti e' dell'incremento 3. */
-	contenuto = g_strdup_printf("[Desktop Entry]\n"
-	                            "Type=Application\n"
-	                            "Name=REMOTIX\n"
-	                            "Comment=Il desktop nel browser\n"
-	                            "Exec=%s\n"
-	                            "NoDisplay=true\n"
-	                            "X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1\n",
-	                            canonico);
-	/* Se c'e' gia' ed e' uguale non si riscrive: una data che cambia fa
-	 * ricostruire l'indice dei servizi a ogni sessione viva. */
-	if (g_file_get_contents(PERMESSO_DESKTOP, &vecchio, NULL, NULL)
-	    && strcmp(vecchio, contenuto) == 0) {
-		snprintf(perche, quanto, "%s c'e' gia', Exec=%s", PERMESSO_DESKTOP, canonico);
-		fatto = true;
-	} else {
-		fatto = g_file_set_contents(PERMESSO_DESKTOP, contenuto, -1, &sbaglio);
-		if (fatto) {
-			chmod(PERMESSO_DESKTOP, 0644);
-			snprintf(perche, quanto, "scritto %s, Exec=%s", PERMESSO_DESKTOP, canonico);
-		} else {
-			snprintf(perche, quanto, "%s non si scrive: %s", PERMESSO_DESKTOP,
-			         sbaglio->message);
-			g_clear_error(&sbaglio);
-		}
+	if (!g_key_file_load_from_file(chiavi, PERMESSO_DESKTOP, G_KEY_FILE_NONE, &sbaglio)) {
+		snprintf(perche, quanto,
+		         "RX-KDE-001: %s %s (%s). Rimedio: reinstallare REMOTIX con l'installatore",
+		         PERMESSO_DESKTOP,
+		         g_error_matches(sbaglio, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "non c'e'"
+		                                                                  : "non si legge",
+		         sbaglio->message);
+		goto fine;
 	}
-	g_free(vecchio);
-	g_free(contenuto);
+	exec = g_key_file_get_string(chiavi, "Desktop Entry", "Exec", NULL);
+	if (!exec || !exec_porta_a(exec, canonico, &visto)) {
+		snprintf(perche, quanto,
+		         "RX-KDE-002: in %s Exec=%s, ma il binario che gira e' %s. Rimedio: "
+		         "reinstallare REMOTIX con l'installatore",
+		         PERMESSO_DESKTOP, visto ? visto : "(manca)", canonico);
+		goto fine;
+	}
+	interfacce = g_key_file_get_string(chiavi, "Desktop Entry", "X-KDE-Wayland-Interfaces",
+	                                   NULL);
+	if (interfacce) {
+		char **voci = g_strsplit_set(interfacce, ",; \t", -1);
+
+		for (char **v = voci; *v; v++)
+			if (strcmp(*v, "zkde_screencast_unstable_v1") == 0)
+				va = true;
+		g_strfreev(voci);
+	}
+	if (!va) {
+		snprintf(perche, quanto,
+		         "RX-KDE-003: in %s X-KDE-Wayland-Interfaces=%s, senza "
+		         "zkde_screencast_unstable_v1. Rimedio: reinstallare REMOTIX con l'installatore",
+		         PERMESSO_DESKTOP, interfacce ? interfacce : "(manca)");
+		goto fine;
+	}
+	snprintf(perche, quanto, "%s verificato (e' del pacchetto: non lo scrivo), Exec=%s",
+	         PERMESSO_DESKTOP, canonico);
+fine:
+	g_clear_error(&sbaglio);
+	g_key_file_unref(chiavi);
+	g_free(exec);
+	g_free(interfacce);
+	g_free(visto);
 	free(canonico);
-	return fatto;
+	return va;
 }
 
 /* ------------------------------------------------------------------ *
