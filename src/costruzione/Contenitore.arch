@@ -1,0 +1,18 @@
+# Contenitore.arch — costruzione di REMOTIX per Arch Linux.
+#
+# ⓘ Arch ha gia' ngtcp2 1.25 con crypto_ossl (pacchetto `ngtcp2`): si potrebbe
+#   usare quella.  Si costruisce comunque la nostra, statica, per uniformita'
+#   (una sola versione del trasporto da provare, §6.3).
+FROM docker.io/library/archlinux:latest
+RUN pacman -Syu --noconfirm --needed \
+        base-devel git cmake ninja \
+        openssl pam glib2 pipewire libdrm ffmpeg libva \
+        libei libxkbcommon mesa wayland \
+    && pacman -Scc --noconfirm
+
+# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
+RUN sh /usr/local/bin/quic-statiche.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero/src

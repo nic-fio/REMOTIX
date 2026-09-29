@@ -1,0 +1,20 @@
+# Contenitore.alma10 — costruzione di REMOTIX per AlmaLinux 10 (con EPEL e CRB).
+#
+# Le -devel stanno in parte in CRB (libei, pipewire) e ffmpeg-free in EPEL.
+# ngtcp2 e nghttp3 dentro, statiche (quella di EPEL e' 1.22).
+FROM docker.io/library/almalinux:10
+RUN dnf -y install epel-release dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf -y install --setopt=install_weak_deps=False \
+        gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
+        openssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
+        libavcodec-free-devel libavutil-free-devel libswscale-free-devel libva-devel \
+        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel \
+    && dnf clean all
+
+# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
+RUN sh /usr/local/bin/quic-statiche.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero/src

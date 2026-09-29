@@ -170,6 +170,14 @@ F3_CFLAGS := $(shell pkg-config --cflags libva)
 F3_LIBS   := $(shell pkg-config --libs   libva)
 override CFLAGS += $(F3_CFLAGS)
 
+# ffmpeg: le intestazioni da pkg-config (fase 17, T1).  Su Debian e Ubuntu
+# stanno nel percorso di sistema e la riga aggiunge solo
+# `-I/usr/include/x86_64-linux-gnu`, che c'era gia': il risultato e' lo stesso.
+# Su Fedora e Alma (ffmpeg-free) stanno in /usr/include/ffmpeg, e senza questa
+# riga codificatore.c non trova <libavcodec/avcodec.h>.
+AV_CFLAGS := $(shell pkg-config --cflags libavcodec libavutil libswscale)
+override CFLAGS += $(AV_CFLAGS)
+
 # ⭐⭐ LE DUE DELLA FASE 4, innestate il 14 agosto 2026: **libei** e
 #     **xkbcommon**.  Le vuole il canale di input, e nessuna delle due si puo'
 #     sostituire con una nostra riga:

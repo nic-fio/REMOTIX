@@ -1,0 +1,20 @@
+# Contenitore.ubuntu2604 — costruzione di REMOTIX per Ubuntu 26.04 LTS.
+#
+# Le dipendenze di sviluppo dalla distribuzione (apt); ngtcp2 e nghttp3 dentro,
+# statiche (quic-statiche.sh, §6.3; quella di Ubuntu e' 1.16).
+FROM docker.io/library/ubuntu:26.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential pkg-config git ca-certificates cmake ninja-build \
+        libssl-dev libpam0g-dev \
+        libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
+        libavcodec-dev libavutil-dev libswscale-dev libva-dev \
+        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
+RUN sh /usr/local/bin/quic-statiche.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero/src
