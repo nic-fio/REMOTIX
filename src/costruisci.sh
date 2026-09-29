@@ -231,6 +231,18 @@ fi
 #   averlo modificato, e riscriverglielo a ogni costruzione sarebbe una
 #   configurazione che si perde da sola.
 log "Il servizio PAM"
+# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, con
+#    onerr=fail ⇒ senza il file non entra nessuno.  Prima il file, e non si
+#    riscrive se c'e'.
+if [ -f /etc/remotix/utenti-negati ]; then
+	ok "/etc/remotix/utenti-negati c'e' gia' (non lo tocco)"
+elif install -D -m 644 /dev/null /etc/remotix/utenti-negati 2>/dev/null \
+     && echo root > /etc/remotix/utenti-negati; then
+	ok "scritto /etc/remotix/utenti-negati: root"
+else
+	ko "⛔ /etc/remotix/utenti-negati NON c'e' e non l'ho potuto scrivere (serve root):"
+	ko "   con il PAM nuovo non entrera' NESSUNO.  A mano:  echo root > /etc/remotix/utenti-negati"
+fi
 if [ -f /etc/pam.d/remotix ]; then
 	ok "/etc/pam.d/remotix c'e' gia' (non lo tocco)"
 elif cp "$QUI/remotix.pam" /etc/pam.d/remotix 2>/dev/null; then

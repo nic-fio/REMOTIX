@@ -1,0 +1,45 @@
+#%PAM-1.0
+# remotix — il servizio PAM del server REMOTIX.  ⭐ openSUSE (Leap, Tumbleweed).
+#
+#   ⛔ si installa in /usr/lib/pam.d/remotix, NON in /etc/pam.d: openSUSE
+#      tiene i file dei pacchetti in /usr/lib/pam.d, e /etc/pam.d resta
+#      all'amministratore (un suo /etc/pam.d/remotix vince sul nostro).
+#
+# ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3): lo stesso mestiere di
+#    `remotix.pam` (Debian), scritto con le pile di questa famiglia.  ⛔ Niente
+#    `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga sarebbe
+#    «illegal module type».  Modello: `tools/cockpit.suse.pam` di Cockpit.
+#
+# ⚠ Le pile `common-*` le scrive `pam-config`: chi amministra la macchina le
+#   configura una volta e valgono anche qui (`CODER.md` §4.1).
+
+# ── auth
+# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
+#    auth e non in account, onerr=fail) sono scritte in `remotix.pam`.  Il
+#    file elenca un nome per riga e si installa con dentro `root`.
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
+auth       requisite    pam_nologin.so
+#
+# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
+#   `pam_faillock` non lo mettiamo noi: se l'amministratore l'ha messo in
+#   `common-auth` arriva con quella pila.  La scelta e' dell'utente.
+auth       include      common-auth
+
+# ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)
+account    required     pam_nologin.so
+account    include      common-account
+
+password   include      common-password
+
+# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
+#    fa nascere la sessione logind dell'utente.
+# ⚠ `optional`: le ragioni sono in `remotix.pam.fedora`.
+session    optional     pam_loginuid.so
+session    optional     pam_keyinit.so force revoke
+# ⚠ `common-session-nonlogin` e `pam_systemd` per NOME, come su Debian
+#   (`common-session-noninteractive` + `pam_systemd`, vedi `remotix.pam`):
+#   la pila «di login» porta anche quel che serve a chi si siede davanti alla
+#   macchina.  ⛔ E `pam_systemd` non e' facoltativo nei fatti: senza, il
+#   desktop non nasce.
+session    include      common-session-nonlogin
+session    optional     pam_systemd.so

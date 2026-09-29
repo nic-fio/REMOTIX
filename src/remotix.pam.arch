@@ -1,0 +1,42 @@
+#%PAM-1.0
+# remotix — il servizio PAM del server REMOTIX.  ⭐ ARCH, MANJARO.
+#
+#   si installa in /etc/pam.d/remotix
+#
+# ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3): lo stesso mestiere di
+#    `remotix.pam` (Debian), scritto con le pile di `pambase`.  ⛔ Niente
+#    `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga sarebbe
+#    «illegal module type».
+#
+# ⭐ `system-remote-login` e' la pila che Arch da' agli accessi da RETE (la usa
+#    sshd): include `system-login`, che porta `pam_loginuid`, `pam_keyinit` e
+#    ⛔ `pam_systemd` — senza, il desktop non nasce — e `system-auth`, che
+#    porta `pam_systemd_home` (gli utenti di systemd-homed; `[?]` da misurare).
+#    ⇒ `pam_systemd` NON si ripete qui: una seconda chiamata troverebbe la
+#    sessione gia' aperta.
+#    ⚠ Se un giorno servisse la pila piu' corta, l'alternativa e'
+#    `system-auth` + `session optional pam_systemd.so` per nome.
+#
+# ⛔ Se questo file manca, PAM ripiega su `other`, che qui e' `pam_deny`.
+
+# ── auth
+# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
+#    auth e non in account, onerr=fail) sono scritte in `remotix.pam`.  Il
+#    file elenca un nome per riga e si installa con dentro `root`.
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
+#
+# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
+#   `pambase` mette `pam_faillock` dentro `system-auth` (deny=3 in 15 minuti,
+#   blocco di 10): arriva con la pila, non lo mettiamo noi — e da remoto
+#   chiunque conosca un nome utente puo' chiudere fuori il proprietario.
+#   Se aggiungerlo, toglierlo o lasciarlo alla distribuzione lo decide l'utente.
+auth       include      system-remote-login
+
+# ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)
+account    include      system-remote-login
+
+password   include      system-remote-login
+
+# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
+#    fa nascere la sessione logind dell'utente.
+session    include      system-remote-login

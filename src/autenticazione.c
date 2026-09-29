@@ -57,10 +57,12 @@
  *    `pam_lastlog`, `pam_motd` e `pam_limits`, e un accesso di rete che passa
  *    di li' eredita politiche pensate per un'altra cosa.
  *
- * ⚠ E il file del servizio va INSTALLATO: `src/remotix.pam` in
- *   `/etc/pam.d/remotix`.  Senza, Linux-PAM ripiega sul servizio `other`, che
- *   su Debian e' `pam_deny` — cioe' **ogni** parola d'ordine giusta viene
- *   rifiutata, con il sintomo «utente o parola non corretti».  ⛔ E' per questo
+ * ⚠ E il file del servizio va INSTALLATO: `src/remotix.pam` (o quello della
+ *   famiglia: `.fedora`, `.suse`, `.arch`) in `/etc/pam.d/remotix` — su
+ *   openSUSE in `/usr/lib/pam.d/remotix`.  Senza, Linux-PAM ripiega sul
+ *   servizio `other`, che su Fedora e Arch e' `pam_deny` — cioe' **ogni**
+ *   parola d'ordine giusta viene rifiutata, con il sintomo «utente o parola
+ *   non corretti» — e su Debian e' una pila che non e' la nostra.  ⛔ E' per questo
  *   che il ripiego qui sotto NON e' silenzioso: `perche_no()` distingue «PAM
  *   dice che la parola e' sbagliata» da «PAM non ha potuto giudicare», e chi
  *   accende il server controlla il file all'avvio (`main.c`). */
@@ -154,11 +156,13 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
 	} else {
 		fprintf(stderr,
 		        "RCP: ⛔ PAM NON HA POTUTO GIUDICARE l'utente «%s» in %s: %s "
-		        "(servizio «%s») — NON e' «parola sbagliata».  Se manca "
-		        "/etc/pam.d/%s, Linux-PAM ripiega su «other» e su Debian "
-		        "«other» e' pam_deny: ogni parola giusta viene rifiutata.\n",
+		        "(servizio «%s») — NON e' «parola sbagliata».  Guarda che "
+		        "ci sia /etc/pam.d/%s (o /usr/lib/pam.d/%s su openSUSE) e "
+		        "/etc/remotix/utenti-negati: senza il primo Linux-PAM "
+		        "ripiega su «other» (pam_deny su Fedora e Arch), senza il "
+		        "secondo pam_listfile rifiuta tutti.\n",
 		        utente, passo, pam_strerror(pam, rv), SERVIZIO_PAM,
-		        SERVIZIO_PAM);
+		        SERVIZIO_PAM, SERVIZIO_PAM);
 	}
 	fflush(stderr);
 }

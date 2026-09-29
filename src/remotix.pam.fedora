@@ -1,0 +1,56 @@
+#%PAM-1.0
+# remotix — il servizio PAM del server REMOTIX.  ⭐ FEDORA, RHEL, ROCKY, ALMA.
+#
+#   si installa in /etc/pam.d/remotix
+#
+# ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3): lo stesso mestiere di
+#    `remotix.pam` (Debian), scritto con le pile di questa famiglia.  ⛔ Niente
+#    `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga sarebbe
+#    «illegal module type» — e l'autenticazione fallirebbe per tutti.
+#    Modello: `tools/cockpit.pam` di Cockpit, che fa lo stesso mestiere.
+#
+# ⚠ Le pile sono quelle che `authselect` scrive: `password-auth` (la pila per
+#   gli accessi da rete, la stessa di sshd) e `postlogin`.  Chi amministra la
+#   macchina le configura una volta e valgono anche qui (`CODER.md` §4.1).
+#
+# ⛔ Se questo file manca, PAM ripiega su `other`, che qui e' `pam_deny`:
+#    ogni parola d'ordine giusta rifiutata.  `main.c` lo guarda all'avvio.
+
+# ── auth
+# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
+#    auth e non in account, onerr=fail) sono scritte in `remotix.pam`.  Il
+#    file elenca un nome per riga e si installa con dentro `root`.
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
+auth       required     pam_sepermit.so
+#
+# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
+#   Con authselect `pam_faillock` sta gia' dentro `password-auth` (se il
+#   profilo ha `with-faillock`): arriva con la pila, non lo mettiamo noi.
+#   Se aggiungerlo, toglierlo o lasciarlo alla distribuzione lo decide l'utente.
+auth       substack     password-auth
+auth       include      postlogin
+
+# ── account: «questo conto e' utilizzabile?» (`autenticazione.c` chiama
+#    `pam_acct_mgmt` apposta)
+account    required     pam_nologin.so
+account    include      password-auth
+
+password   include      password-auth
+
+# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
+#    fa nascere la sessione logind dell'utente.
+# pam_selinux close deve essere la prima regola di session
+session    required     pam_selinux.so close
+# ⚠ `optional`, non `required` come Cockpit: se il server e' stato lanciato a
+#   mano da una sessione che ha gia' il suo loginuid (e il nucleo lo tiene
+#   immutabile), `pam_loginuid` fallisce — e per l'audit, non per il desktop,
+#   non si nega la sessione.
+session    optional     pam_loginuid.so
+# pam_selinux open va seguito solo da regole da eseguire nel contesto dell'utente
+session    required     pam_selinux.so open env_params
+session    optional     pam_keyinit.so force revoke
+# ⛔ `pam_systemd` (senza, il desktop non nasce) arriva da `password-auth`
+#    (`-session optional pam_systemd.so`, come per sshd).  ⚠ NON si ripete
+#    qui: una seconda chiamata trova la sessione gia' aperta e la rifiuta.
+session    include      password-auth
+session    include      postlogin

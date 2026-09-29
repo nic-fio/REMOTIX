@@ -1,6 +1,13 @@
-# remotix — il servizio PAM del server REMOTIX.
+# remotix — il servizio PAM del server REMOTIX.  ⭐ DEBIAN E UBUNTU (e Mint).
 #
 #   si installa in /etc/pam.d/remotix   (lo fa `costruisci.sh`)
+#
+# ⭐ FASE 17 — un file per famiglia, come Cockpit (`fasi/17-l-installatore.md`
+#    §4.3): `@include` qui sotto e' una modifica di Debian a Linux-PAM, e
+#    altrove la riga e' «illegal module type».  Gli altri tre:
+#      remotix.pam.fedora   Fedora, RHEL, Rocky, Alma   → /etc/pam.d/remotix
+#      remotix.pam.suse     openSUSE                    → /usr/lib/pam.d/remotix
+#      remotix.pam.arch     Arch, Manjaro               → /etc/pam.d/remotix
 #
 # -----------------------------------------------------------------------------
 # ⛔ PERCHE' ESISTE, E PERCHE' NON SI USA `login`
@@ -24,12 +31,16 @@
 # ⛔ SE QUESTO FILE NON C'E', OGNI PAROLA D'ORDINE GIUSTA VIENE RIFIUTATA
 #
 # Linux-PAM, quando il servizio chiesto non ha un file, ripiega sul servizio
-# `other` — e su Debian `/etc/pam.d/other` e' `pam_deny`.  ⛔ Il sintomo sarebbe
-# «utente o parola d'ordine non corretti» per chiunque, cioe' una diagnosi che
-# punta sulla parola d'ordine mentre il difetto e' un file mancante.  Da cui le
-# due protezioni, che stanno nel programma (invariante I7):
+# `other`.  ⛔ Che cosa faccia `other` dipende dalla distribuzione: su Fedora e
+# Arch e' `pam_deny` (il sintomo sarebbe «utente o parola d'ordine non
+# corretti» per chiunque, cioe' una diagnosi che punta sulla parola d'ordine
+# mentre il difetto e' un file mancante); su Debian include le pile comuni —
+# e non e' meglio: e' una pila che non e' la nostra (vedi §session qui sotto,
+# 15 agosto 2026, e l'esclusione di root che li' non c'e').  Da cui le due
+# protezioni, che stanno nel programma (invariante I7):
 #
-#   1. `main.c` guarda /etc/pam.d/remotix all'avvio e lo DICE se non c'e';
+#   1. `main.c` guarda /etc/pam.d/remotix (e /usr/lib/pam.d/remotix, dove lo
+#      mette openSUSE) all'avvio e lo DICE se non c'e';
 #   2. `autenticazione.c` distingue nel registro «PAM ha rifiutato» da «PAM non
 #      ha potuto giudicare», e nomina questo file nella seconda.
 #
@@ -39,7 +50,26 @@
 #   `common-auth` una volta e vale per tutti i servizi, compreso questo.
 
 # ── auth: «questa parola d'ordine e' giusta?»
+#
+# ⭐ FASE 17 — ROOT ESCLUSO, e PRIMA della parola d'ordine (`fasi/17` §4.3).
+#    Il file elenca un nome per riga; si installa con dentro `root`, di
+#    proprieta' di root e non scrivibile da altri (`pam_listfile` altrimenti
+#    lo rifiuta).  Cockpit fa lo stesso con /etc/cockpit/disallowed-users.
+#  · in `auth` e `requisite`, non in `account`: con la riga in `account` la
+#    parola di root verrebbe comunque PROVATA, e «parola giusta ma conto
+#    negato» risponde diverso da «parola sbagliata» — un oracolo per chi
+#    indovina la parola di root dalla rete;
+#  · ⛔ `onerr=fail` (Cockpit usa `succeed`): se il file manca o e' scritto
+#    male NESSUNO entra, e il registro di PAM lo dice.  Con `succeed` il
+#    file perso toglierebbe l'esclusione di root in silenzio — una
+#    protezione in una riga che si puo' perdere, cioe' quel che I7 vieta.
+auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 auth       required     pam_nologin.so
+#
+# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
+#   Qui `pam_faillock` non lo mettiamo NOI: se l'amministratore l'ha messo in
+#   `common-auth` arriva con quella pila, se no no.  Se aggiungerlo, toglierlo
+#   o lasciarlo alla distribuzione lo decide l'utente.
 @include common-auth
 
 # ── account: «questo conto e' utilizzabile?»  (conto scaduto, bloccato, ...)

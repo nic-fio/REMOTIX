@@ -286,6 +286,14 @@ CONF
 	# 4. Il servizio PAM
 	# -------------------------------------------------------------------
 	tit "Il servizio PAM"
+	# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, e
+	#    con onerr=fail se il file manca non entra NESSUNO ⇒ prima il file.
+	#    Non si riscrive se c'e': e' una scelta di chi amministra.
+	if [ ! -f /etc/remotix/utenti-negati ]; then
+		install -D -m 644 -o root -g root /dev/null /etc/remotix/utenti-negati
+		echo root > /etc/remotix/utenti-negati
+	fi
+	ok "/etc/remotix/utenti-negati ($(tr '\n' ' ' < /etc/remotix/utenti-negati))"
 	install -D -m 644 "$QUI/remotix.pam" /etc/pam.d/remotix
 	ok "/etc/pam.d/remotix"
 
@@ -502,6 +510,8 @@ done
 
 [ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix c'e'" \
 	|| ko "/etc/pam.d/remotix manca"
+grep -qx root /etc/remotix/utenti-negati 2>/dev/null && ok "root e' negato (/etc/remotix/utenti-negati)" \
+	|| ko "⛔ /etc/remotix/utenti-negati manca o non nega root"
 [ -f /etc/sudoers.d/remotix-banchi ] && ok "i banchi guidano il servizio senza password" \
 	|| ko "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo"
 grep -q pam_systemd /etc/pam.d/remotix 2>/dev/null && ok "e chiama pam_systemd" \
