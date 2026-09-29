@@ -1,0 +1,5 @@
+# remotix — le cartelle del servizio (`fasi/17-l-installatore.md` §6.4).
+# /var/lib/remotix: certificati generati al primo avvio e ban.  0700: dentro
+# c'e' la chiave privata TLS.  /run/remotix: come la linea .deb.
+d /var/lib/remotix 0700 root root -
+d /run/remotix 0700 root root -
