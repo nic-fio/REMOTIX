@@ -5928,6 +5928,37 @@ Parola dell'utente (29 set 2026): *«partiamo dalla 26.04»*. Su 24.04 solo GNOM
 prezzo di portare dentro OpenSSL 3.5 (e i suoi aggiornamenti di sicurezza) e di due adattamenti per
 ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22. La matrice scende a 26 macchine.
 
+### 10.9 ✅ Il principio: un prodotto nuovo, su tecnologie di nuova generazione
+
+Parola dell'utente (30 set 2026): *«la scelta di lasciare fuori certe versioni delle distro è coerente con
+lo spirito del progetto: si tratta di un prodotto nuovo che adotta tecnologie di nuova generazione, è una
+scelta di design netta»*. ⇒ Wayland, QUIC/WebTransport, i desktop nelle versioni che li supportano; niente
+X11 né librerie di ripiego per inseguire versioni vecchie.
+
+E il ciclo di vita, perché la scelta resti netta nel tempo:
+- una versione nuova di una distribuzione **entra** nella matrice quando ha i componenti minimi
+  (`fasi/17-l-installatore.md` §3.1) e passa il giro sulle VM;
+- una versione **esce** quando la distribuzione smette di aggiornarla: niente supporto oltre la vita che le
+  dà chi la fa.
+
+### 10.10 ✅ Il ritmo: una versione all'anno per le novità, la manutenzione quando serve; e l'aggiornamento automatico
+
+Parole dell'utente (30 set 2026): *«la mia intenzione è quella di aggiornare REMOTIX almeno una volta
+l'anno»*; e, visti i ritmi delle distribuzioni: *«bisognerà pensare per REMOTIX ad una funzione di
+auto-aggiornamento in base alla distro su cui è installata»*.
+
+- **Due binari**: la **versione annuale** (le novità, suite completa e giro intero sulle VM) e gli
+  **aggiornamenti di manutenzione** senza novità, quando servono: correzioni di sicurezza delle librerie che
+  REMOTIX porta dentro (§10.6), ricostruzioni per le distribuzioni a rilascio continuo (Arch, Tumbleweed:
+  ogni cambio di ffmpeg), e il **catalogo** firmato — che si aggiorna da solo, senza un REMOTIX nuovo, e fa
+  entrare le versioni nuove delle distribuzioni a metà anno.
+- **L'aggiornamento automatico passa dal gestore di pacchetti della distribuzione**, alimentato dai nostri
+  archivi firmati (T8): ⛔ REMOTIX non scarica né sostituisce da sé il proprio binario (due verità su che cosa
+  è installato, e un bersaglio). Un timer di REMOTIX controlla ogni giorno l'archivio e il catalogo; ogni
+  aggiornamento passa dal percorso che non chiude i desktop (T7).
+- 🔸 **D14, aperta**: che cosa si applica da solo — proposta: sicurezza e ricostruzioni automatiche, la versione
+  annuale su scelta dell'amministratore; alternativa: solo avviso.
+
 ---
 
 ## Come si tiene questo documento

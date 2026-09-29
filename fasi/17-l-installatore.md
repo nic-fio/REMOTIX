@@ -90,6 +90,55 @@ base di pacchetti, ma nessuno le ha provate. Lo stesso per Manjaro ed EndeavourO
 e per Mint 23 rispetto a Ubuntu 26.04. Una derivata diventa certificata solo con la sua VM nella
 matrice.
 
+### 3.1 Le versioni supportate — per il manuale tecnico
+
+*Richiesta dell'utente (30 set 2026): «andrà documentato, anche nel manuale tecnico, da quali versioni gli
+SO sono supportati da REMOTIX». ⚠ La fonte unica è il **catalogo** del motore (§6.6.8): la tabella del
+manuale si **genera** dal catalogo a ogni rilascio, non si ricopia a mano. Questa è quella di oggi.*
+
+**Le distribuzioni**
+
+| distribuzione | versione minima | stato | desktop | condizioni |
+|---|---|---|---|---|
+| Debian | **13** (Trixie) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| Ubuntu | **26.04 LTS** | certificata | GNOME, KDE, XFCE, LXQt | `gnome-session` per GNOME (D8) |
+| Fedora | **44** | certificata | GNOME, KDE, XFCE, LXQt | H.264: RPM Fusion (D5); PAM senza `pam_selinux` fino a T6 |
+| AlmaLinux | **10.1** (OpenSSL 3.5) | certificata | GNOME, KDE | EPEL e CRB; H.264: RPM Fusion; niente XFCE/LXQt |
+| Arch Linux | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | — |
+| openSUSE Tumbleweed | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; `breeze6-wallpapers` (KDE) |
+| openSUSE Leap | **16.0** | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; un carattere scalabile per LXQt (`google-droid-fonts`) |
+| Rocky Linux, RHEL | 10.1 | compatibile, non certificata | GNOME, KDE | come Alma |
+| Manjaro, EndeavourOS | rolling | compatibile, non certificata | come Arch | Manjaro è indietro di qualche settimana |
+| Linux Mint | **23** (base 26.04) | compatibile, non certificata | quelli di Ubuntu (non Cinnamon) | come Ubuntu |
+
+**Il principio** (`DECISIONI.md` §10.9): prodotto nuovo, tecnologie di nuova generazione; una versione
+**entra** quando ha i componenti minimi e passa il giro sulle VM, **esce** quando la distribuzione smette di
+aggiornarla.
+
+**Fuori, e perché**: Debian 12 e RHEL 9 (base troppo vecchia: mutter 43/GNOME 40, niente libei, niente
+labwc); Ubuntu 24.04 e Mint 22 (D7); Fedora 43 (fuori supporto a fine 2026); openSUSE Leap 15.6 (fine vita);
+SLES 16 (solo GNOME, niente Packman: si rivede su richiesta); distribuzioni senza systemd; immutabili (D9).
+
+**Le versioni minime dei componenti** (per chi usa una distribuzione non in elenco; `[L]` dal codice e dalle
+misure della fase):
+
+| componente | minimo | perché |
+|---|---|---|
+| nucleo Linux | quello della distribuzione certificata più vecchia (6.12) | driver i915/xe e amdgpu, DMA-BUF |
+| systemd / logind | con `systemctl --user` e sessioni `Remote=yes` | le sessioni per utente |
+| OpenSSL | **3.5** | l'API QUIC del ponte `ngtcp2_crypto_ossl` |
+| ngtcp2 / nghttp3 | 1.25.0 / 1.18.0 | dentro il binario (`DECISIONI.md` §10.6) |
+| libavcodec (ffmpeg) | **61.13.100** (ffmpeg 7.1) | `avcodec_get_supported_config` |
+| libei | 1.3 | `ei_disconnect` |
+| PipeWire | 0.3.48 | la cattura di GNOME e KDE |
+| GNOME (mutter) | **46** (API `ConnectToEIS`, `--headless`); da 50 l'unità `@user` | `sessione.c` |
+| KDE Plasma (KWin) | **6.1** (`connectToEIS`) | `kwin.c` |
+| XFCE | **4.20** (Wayland) | la sessione sotto labwc |
+| LXQt | **2.0** (Wayland) | la sessione sotto labwc |
+| labwc / wlroots | labwc 0.8 con `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
+| un carattere scalabile | qualunque (DejaVu, Noto, Droid…) | senza, labwc muore (labwc #2525) |
+| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD); NVIDIA proprietaria no | la codifica sulla scheda; altrimenti il ripiego software |
+
 ---
 
 ## 4. Che cosa l'indagine ha trovato
@@ -898,6 +947,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
+| R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
 
 ---
 
@@ -906,14 +956,14 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | tappa | che cosa | produce | stato |
 |---|---|---|---|
 | **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` e `iso` | ✅ 29 set: 27 «cliente» + 6 «iso» (differenze in `banchi/17-distro/iso-differenze.md`); 4 VM insieme |
-| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | ✅ quasi: compila 7/7; gira 6 famiglie su 7 col binario del prodotto (§11.1) |
+| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | ✅ 30 set: compila 7/7; gira 7 famiglie su 7 col binario del prodotto, con le condizioni di §11.1 |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | ✅ 29 set: nessun desktop muore; cura leggera (§5.2) |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
 | **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
 | **T6** | PAM per famiglia, SELinux, firewall | R19, R20 | |
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
-| **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
+| **T8** | depositi firmati, canali, ritorno indietro, SBOM; l'aggiornamento automatico (timer, catalogo, D14) | R11, R17, R18, R24 | |
 | **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
 | **T10** | il giro intero sulle 26 macchine della matrice, e la chiusura | tutti verdi | |
 
@@ -945,6 +995,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |
+| **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta |
 
 **Le scelte di chi installa: quasi nessuna** (indicazione dell'utente, 29 set: *«non riesco ad immaginare
 grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamente la porta»*):
@@ -1035,10 +1086,29 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
   ripieghi pixman); **VM: desktop nel browser su debian13-gnome, ubuntu2604-kde, fedora44-gnome, alma10-kde,
   arch-xfce, tumbleweed-kde** (con le condizioni: RPM Fusion e PAM senza `pam_selinux` su Fedora/Alma, 0
   rifiuti SELinux in enforcing; Packman e `breeze6-wallpapers` su Tumbleweed; su Arch il gruppo xfce4 non
-  porta ffmpeg: dipendenza per T3). **leap16-lxqt FAIL**: labwc 0.8.1 di Leap muore in pixman
-  (`buffer_adopt_cairo_surface: Assertion … CAIRO_FORMAT_ARGB32`) anche lanciato a mano senza REMOTIX
-  `[?]` (con XFCE sulla stessa Leap passava). Da guardare: alcuni primi fotogrammi wlroots «NERO» su XFCE/LXQt
-  nelle scatole, senza rossi. Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  porta ffmpeg: dipendenza per T3). Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+  - **leap16-lxqt: mancano i caratteri.** `[M]` 29 set sera: la VM ha **solo caratteri bitmap** (PCF,
+    `xorg-x11-fonts-core`; `fc-match sans` = «Misc Fixed»). Pango 1.56 non li sa misurare: l'altezza del
+    titolo esce **1 398 724 px**, `create_corners()` chiede a cairo una superficie 9×1 398 724, cairo
+    rifiuta (`_cairo_surface_nil_invalid_size`) e l'`assert` di `buffer_adopt_cairo_surface` (buffer.c:90)
+    abbatte labwc (gdb con i simboli: `main` → `theme_init` → `create_corners` → `rounded_rect` →
+    `buffer_create_cairo`). Non è pixman né LXQt: labwc nudo, senza configurazione, muore uguale. Il
+    carattere lo porterebbe il pattern `lxqt` (`google-droid-fonts`, **raccomandato**), perso con
+    `solver.onlyRequires` dell'immagine Minimal-VM — la stessa trappola dello sfondo di Tumbleweed; il
+    pattern `xfce` porta i caratteri per altra via, e XFCE passava. È il difetto noto labwc#2525 (chiuso
+    dall'autore «mancava un carattere», **nessuna cura**: nel ramo principale del 26 set 2026 l'`assert`
+    c'è ancora). Con `google-droid-fonts` (+ Packman per libx265, (C)): **PASS** col binario del prodotto,
+    0 SIGABRT, labwc in pixman dichiarato, desktop a 0,6 s. ⇒ **T3**: l'installatore esige un carattere
+    scalabile (su openSUSE `google-droid-fonts`, `C-COMPONENTE`); REMOTIX da solo non lo può evitare —
+    senza un carattere vettoriale non c'è niente da indicare a labwc. `[?]` proposta, non fatta: una
+    riga «⛔ nessun carattere scalabile: labwc morirà» prima dell'avvio (fontconfig, `FC_OUTLINE`).
+  - **Il primo fotogramma wlroots «NERO» nelle scatole non è nuovo e non è un guasto.** `[M]` c'era già
+    in fase 16 (27 set, binario 45d048c8, `/media/REMOTIX/misure/fase16/intel-*/livello-*/server.log`):
+    XFCE 107 palchi su 367, LXQt 150 su 278, e uguale sulla Radeon; 0 su GNOME/KDE (passano da PipeWire).
+    Nella chiusura di T1: XFCE 12 su 14, LXQt 3 su 14 (le «24 righe» sono ognuna doppia, journal +
+    registro della sessione). È il primo fotogramma preso alla nascita di labwc, prima che sfondo e
+    pannello siano dipinti; le due cure non toccano la strada wlroots sull'Intel (0 ripieghi). Proposta
+    non fatta: guardare il primo fotogramma dopo ~1 s, perché la riga segnali solo un nero che dura.
 - **Stato ISO** (T0): 6 macchine su 6; le differenze che contano per l'installatore: `render` non c'è mai;
   Fedora Workstation apre 1025-65535, **Alma e Tumbleweed hanno la 7447 chiusa**; Tumbleweed con accesso
   automatico, btrfs e snapper (fotografie di sistema già pronte, §6.6.4), raccomandati installati; Ubuntu
