@@ -23,6 +23,10 @@
 
 #include <libavcodec/avcodec.h>
 #include <libavcodec/bsf.h>
+#include <linux/dma-buf.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vaapi.h>
 #include <libavutil/imgutils.h>
@@ -1274,6 +1278,8 @@ struct Codificatore {
 	 *    quasi sempre; si decide sul primo SPS di ogni contesto. */
 	AVBSFContext *cornice;
 	bool cornice_decisa;
+	uint64_t us_barriera;         /* A3: l'ultima attesa della barriera del DMA-BUF */
+	bool efc_provato;             /* A3, esperimento 2 */
 	int qualita_corrente;         /* CRF in vigore, dopo le eventuali ricodifiche */
 	ModoQualita modo_corrente;
 	/* ⭐ LA RISALITA (fase 9).  ⛔ Il pavimento NON sta qui: e' `richiesta.qualita`,
@@ -3423,6 +3429,31 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 
 	if (!apri_vpp(c, c->richiesta.larghezza, c->richiesta.altezza))
 		return false;
+	/*
+	 * ⭐ A3 (fase 16, 29 set 2026) — LA BARRIERA DEL COMPOSITORE SI ASPETTA QUI,
+	 *    ESPLICITA, E SI MISURA A PARTE.
+	 *
+	 * Il compositore puo' consegnarci un DMA-BUF la cui scrittura sulla GPU non
+	 * e' ancora finita: la sincronizzazione implicita la fa comunque chi legge
+	 * (il VPP, o su radeonsi il VCN dentro la codifica), e il tempo finiva
+	 * dentro «codifica», attribuito a noi.  `[M]` Radeon: gruppi di 5 codifiche
+	 * da ~31 ms invece di 8,7.  ⇒ Si chiede al nucleo la barriera di lettura
+	 * (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`) e la si aspetta, al massimo 100 ms:
+	 * il tempo e' del compositore e va nel suo tratto.  Se il nucleo non lo
+	 * sa fare, 0 e si va avanti come prima (la sincronizzazione implicita resta).
+	 */
+	{
+		uint64_t tb = adesso_us();
+		struct dma_buf_export_sync_file x = { .flags = DMA_BUF_SYNC_READ, .fd = -1 };
+
+		if (ioctl(s->fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &x) == 0 && x.fd >= 0) {
+			struct pollfd pf = { .fd = x.fd, .events = POLLIN };
+
+			(void) poll(&pf, 1, 100);
+			close(x.fd);
+		}
+		c->us_barriera = adesso_us() - tb;
+	}
 	sorgente = importa_dmabuf(c, s);
 	if (sorgente == VA_INVALID_ID)
 		return false;
@@ -3437,6 +3468,17 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 		return false;
 	}
 	destinazione = (VASurfaceID) (uintptr_t) c->fotogramma->data[3];
+	/* ⚠ A3, ESPERIMENTO 2 (non prodotto): con il file `/tmp/remotix-a3-senza-efc` la prima
+	 *   conversione si fa DUE volte di fila — per la regola di Mesa
+	 *   (`postproc.c`: due postproc senza una codifica in mezzo) l'EFC si spegne
+	 *   per sempre, e ogni fotogramma passa da una vera copia NV12 invece di far
+	 *   leggere al VCN il buffer RGB lineare del compositore. */
+	if (!c->efc_provato && access("/tmp/remotix-a3-senza-efc", F_OK) == 0) {
+		c->efc_provato = true;
+		(void) converti_sulla_gpu(c, sorgente, destinazione);
+		registro_dice(REG_CODIFICA, "⚠ A3: EFC spento di proposito (conversione doppia sul "
+		              "primo fotogramma) — esperimento, non prodotto");
+	}
 	if (!converti_sulla_gpu(c, sorgente, destinazione))
 		return false;
 
@@ -4115,6 +4157,8 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 
 		uint64_t t0 = adesso_us();
 		int esito = avcodec_send_frame(c->ctx, c->fotogramma);
+		fuori->us_invio = adesso_us() - t0;
+		fuori->us_barriera = superficie ? c->us_barriera : 0;
 		if (esito < 0) {
 			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
 			av_strerror(esito, testo, sizeof(testo));

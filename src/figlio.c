@@ -5533,10 +5533,14 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	if (ciclo_fotogrammi != 0)
 		registro_dettaglio(REG_FIGLIO,
 		                   "codec %d: %zu byte, %s, caricamento %llu us, "
-		                   "codifica %llu us%s",
+		                   "codifica %llu us (invio %llu), barriera %llu us, "
+		                   "conversione %llu us%s",
 		                   (int)codec, fg.byte, fg.chiave ? "CHIAVE" : "delta",
 		                   (unsigned long long)fg.us_caricamento,
 		                   (unsigned long long)fg.us_codifica,
+		                   (unsigned long long)fg.us_invio,
+		                   (unsigned long long)fg.us_barriera,
+		                   (unsigned long long)fg.us_conversione,
 		                   fg.trattenuto ? " — TRATTENUTO" : "");
 
 	ciclo_fotogrammi++;

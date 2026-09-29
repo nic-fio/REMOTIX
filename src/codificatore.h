@@ -522,6 +522,13 @@ typedef struct {
 	 *    «e' gratis».
 	 */
 	uint64_t us_caricamento;
+	/* ⭐ A3 (fase 16, 29 set): la codifica divisa in due, e l'attesa della
+	 *    barriera del compositore FUORI da tutt'e due.  `us_barriera` e' quanto
+	 *    si aspetta che il compositore abbia finito di scrivere il DMA-BUF (0
+	 *    sulla strada della memoria); `us_invio` e' la parte di `us_codifica`
+	 *    spesa in `avcodec_send_frame`, il resto e' la ricezione del pacchetto. */
+	uint64_t us_barriera;
+	uint64_t us_invio;
 	uint32_t ricodifiche;         /* ⛔ >0 ⇒ il tetto dei 16 MiB ha morso */
 	bool trattenuto;              /* ⚠ il codificatore non l'ha consegnato subito */
 } CodificatoreFotogramma;
