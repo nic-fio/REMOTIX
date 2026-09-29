@@ -111,6 +111,10 @@ manuale si **genera** dal catalogo a ogni rilascio, non si ricopia a mano. Quest
 | Manjaro, EndeavourOS | rolling | compatibile, non certificata | come Arch | Manjaro è indietro di qualche settimana |
 | Linux Mint | **23** (base 26.04) | compatibile, non certificata | quelli di Ubuntu (non Cinnamon) | come Ubuntu |
 
+**Il principio** (`DECISIONI.md` §10.9): prodotto nuovo, tecnologie di nuova generazione; una versione
+**entra** quando ha i componenti minimi e passa il giro sulle VM, **esce** quando la distribuzione smette di
+aggiornarla.
+
 **Fuori, e perché**: Debian 12 e RHEL 9 (base troppo vecchia: mutter 43/GNOME 40, niente libei, niente
 labwc); Ubuntu 24.04 e Mint 22 (D7); Fedora 43 (fuori supporto a fine 2026); openSUSE Leap 15.6 (fine vita);
 SLES 16 (solo GNOME, niente Packman: si rivede su richiesta); distribuzioni senza systemd; immutabili (D9).
