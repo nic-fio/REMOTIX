@@ -5883,7 +5883,10 @@ distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»*. ⇒ `fa
 Proposta dell'utente, adottata: PREFLIGHT · COMPATIBILITY · PLANNING · CONSENT & SAFETY · ACQUISITION ·
 INSTALLATION & CONFIGURATION · VERIFICATION & CERTIFICATION · COMMIT / ROLLBACK. Con tre regole: le fasi
 5-6 le esegue il gestore di pacchetti della distribuzione; il ritorno indietro è nostro (registro delle
-azioni); il consenso può arrivare da un file. ⇒ `fasi/17-l-installatore.md` §6.0.
+azioni); il consenso può arrivare da un file. Rafforzata su richiesta dell'utente (*«migliorala nei punti
+che ritieni deboli»*): fase 0 TRUST, tre esiti di compatibilità per desktop, il piano come documento
+con «fai / verifica / annulla» per ogni azione, niente si installa prima che tutto sia scaricato,
+accensione fra verifica statica e dal vivo, ripresa di un'operazione interrotta. ⇒ `fasi/17-l-installatore.md` §6.0.
 
 ---
 

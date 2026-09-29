@@ -46,7 +46,7 @@ ogni suo pezzo è noto e altri lo hanno già risolto.
 | **installatore di eccellenza** | requisito del prodotto, con prove misurabili | `DECISIONI.md` §10.2 |
 | **prima l'indagine, poi l'installatore** | l'installatore si scrive una volta sola, sapendo già le differenze | fatta il 29 set, §4 |
 | **le prove in MACCHINE VIRTUALI, non nelle scatole** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | una VM ha kernel, SELinux, firewall e avvio **della distribuzione**; una scatola usa il kernel del server (Debian) e direbbe «tutto bene» dove la macchina vera rifiuterebbe |
-| **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, §6.0 |
+| **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, rafforzata su sua richiesta (TRUST, tre esiti per desktop, il piano come documento, l'accensione fra 7a e 7b, la RIPRESA), §6.0 |
 | **una VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | il cliente ha di solito **un** desktop: con quattro insieme, un pezzo dimenticato per XFCE arriverebbe lo stesso trascinato da KDE, e la prova direbbe verde |
 
 ---
@@ -273,43 +273,70 @@ di pochi secondi; le finestre restano»*. ⇒ **Decisione D1.**
 
 ## 6. La forma dell'installatore
 
-### 6.0 Il motore d'installazione: otto fasi — ✅ lo schema dell'utente, 29 set 2026
+### 6.0 Il motore d'installazione — lo schema dell'utente, rafforzato (29 set 2026)
 
-Proposta dell'utente, adottata:
+**La proposta dell'utente**, in otto fasi: PREFLIGHT (conoscere il sistema) · COMPATIBILITY (stabilire
+cosa è supportato) · PLANNING (costruire il piano) · CONSENT & SAFETY (presentare il piano e preparare
+la protezione) · ACQUISITION (pacchetti, risorse, dipendenze) · INSTALLATION & CONFIGURATION
+(applicare il piano) · VERIFICATION & CERTIFICATION (dimostrare che il prodotto funziona) · COMMIT /
+ROLLBACK (rendere definitiva o annullare l'operazione).
+
+Che cosa aggiunge a un installatore «buono»: un **piano esplicito presentato prima di agire**, e
+un'operazione che si **conferma o si annulla per intero** — anche la prima installazione che fallisce
+a metà, non solo l'aggiornamento. L'utente ha chiesto di rafforzarla nei punti deboli; le sei
+aggiunte, tutte nelle giunture fra una fase e l'altra:
+
+1. **una fase zero, TRUST**: il motore esegue comandi da root sulla macchina di un altro; prima di
+   tutto verifica che **sé stesso e il catalogo** (le combinazioni supportate) siano autentici
+   (firma) e aggiornati — un motore alterato o vecchio passerebbe tutte le fasi dopo;
+2. **COMPATIBILITY ha tre esiti, per desktop**: *certificata* (provata nelle nostre VM, §7) ·
+   *a condizioni* (RPM Fusion, labwc, ripiego software…) · *non supportata*; e una macchina può
+   essere a posto per GNOME e non per XFCE;
+3. **il piano è un documento**: si salva, si legge, si approva, si applica anche su cento macchine
+   uguali; ogni azione porta **come si fa, come si verifica, come si annulla** — l'annullamento nasce
+   col passo, non si aggiunge dopo; e il piano porta l'**impronta** della macchina su cui è stato
+   fatto: se fra il piano e l'esecuzione la macchina è cambiata, il piano non vale più;
+4. **ACQUISITION non è innocua**: aggiungere il deposito di RPM Fusion cambia già la macchina ⇒ è
+   un'azione del piano come le altre; e la regola: **niente si installa finché tutto non è scaricato
+   e verificato** — una rete che cade a metà ferma l'operazione *prima* di toccare la macchina;
+5. **fra installare e verificare c'è l'ACCENSIONE**: si installa a servizio spento, si fanno i
+   controlli che non chiedono il servizio (7a), si accende, si fanno quelli dal vivo (7b) — la gran
+   parte degli errori si scopre quando annullare costa poco e nessuno è collegato;
+6. **la RIPRESA**: ogni passo si scrive nel registro **prima** di farlo; se la corrente salta durante
+   la fase 6, il giro dopo il motore trova l'operazione aperta e propone di completarla o annullarla.
+   E nell'aggiornamento anche il ritorno indietro rispetta la regola di non chiudere i desktop.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    REMOTIX INSTALL ENGINE                   │
-├─────────────────────────────────────────────────────────────┤
-│  1. PREFLIGHT                    conoscere il sistema       │
-│  2. COMPATIBILITY                stabilire cosa è supportato│
-│  3. PLANNING                     costruire il piano         │
-│  4. CONSENT & SAFETY             presentare il piano e      │
-│                                  preparare la protezione    │
-│  5. ACQUISITION                  pacchetti, risorse, dipend.│
-│  6. INSTALLATION & CONFIGURATION applicare il piano         │
-│  7. VERIFICATION & CERTIFICATION dimostrare che funziona    │
-│  8. COMMIT / ROLLBACK            rendere definitiva o       │
-│                                  annullare l'operazione     │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          REMOTIX INSTALL ENGINE                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 0. TRUST                 il motore e il catalogo sono autentici e freschi│
+│ 1. PREFLIGHT             conoscere il sistema — sola lettura; l'impronta │
+│ 2. COMPATIBILITY         per desktop: certificata · a condizioni · no    │
+│ 3. PLANNING              il piano come documento: fai / verifica / annulla│
+│ 4. CONSENT & SAFETY      approvazione (a mano o da file), salvataggi,    │
+│                          registro aperto                                 │
+│ 5. ACQUISITION           tutto scaricato e verificato prima di toccare   │
+│ 6. INSTALLATION & CONF.  a servizio spento, ogni passo annotato prima    │
+│ 7. VERIFICATION & CERT.  7a senza servizio → ACCENSIONE → 7b dal vivo    │
+│ 8. COMMIT / ROLLBACK     conferma, o annulla ripercorrendo il registro   │
+│ ↺  RIPRESA               un'operazione interrotta si completa o si annulla│
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-Che cosa aggiunge a un installatore «buono»: un **piano esplicito presentato prima di agire**
-(l'amministratore vede per intero che cosa verrà toccato), e un'operazione che si **conferma o si
-annulla per intero** — anche la prima installazione che fallisce a metà, non solo l'aggiornamento.
-
-**Un motore, tre mestieri.** Le otto fasi valgono per installare, aggiornare e disinstallare:
+**Un motore, tre mestieri.** Le fasi valgono per installare, aggiornare e disinstallare:
 
 | fase | prima installazione | aggiornamento | disinstallazione |
 |---|---|---|---|
-| 1 PREFLIGHT | distribuzione, scheda, H.264, desktop, PAM, porta, firewall, SELinux | in più: la versione installata e **le sessioni aperte** | che cosa c'è, e il registro delle modifiche fatte da REMOTIX |
-| 2 COMPATIBILITY | la macchina contro la matrice di §3: supportata, supportata con riserve (es. H.264 da RPM Fusion), non supportata | la N+1 sulla stessa macchina; N+1 accetta la configurazione di N | — |
-| 3 PLANNING | l'elenco delle azioni: pacchetti, gruppi, firewall, depositi | in più: «chi è collegato si riattacca in pochi secondi» | che cosa si toglie, che cosa resta (configurazione, se non `purge`) |
-| 4 CONSENT & SAFETY | il piano si mostra; sì/no per ogni scelta (D5, D6); salvataggio di quel che si toccherà | salvataggio di `/etc/remotix` e `/var/lib/remotix` | salvataggio della configurazione |
-| 5 ACQUISITION | depositi e pacchetti scaricati e **verificati** (firme) prima di toccare niente | la N+1 | — |
-| 6 INSTALLATION | il gestore di pacchetti installa; il motore fa il resto e **annota ogni passo** | aggiornamento col riavvio del servizio senza chiudere i desktop (§5.2) | il gestore di pacchetti toglie; il motore disfa il suo registro |
-| 7 VERIFICATION | le prove della macchina (sotto) | le stesse, **più** le sessioni ritrovate | le impronte tornate com'erano |
-| 8 COMMIT / ROLLBACK | verde ⇒ si conferma; rosso ⇒ si annulla tutto | rosso ⇒ si torna a N | — |
+| 0 TRUST | firma del motore e del catalogo | idem | idem |
+| 1 PREFLIGHT | distribuzione, scheda (NVIDIA proprietaria compresa), H.264, desktop, PAM, porta, firewall, SELinux | in più: la versione installata e **le sessioni aperte** | che cosa c'è, e il registro delle modifiche fatte da REMOTIX |
+| 2 COMPATIBILITY | la macchina contro il catalogo (§3), desktop per desktop | la N+1 sulla stessa macchina; N+1 accetta la configurazione di N | — |
+| 3 PLANNING | azioni: depositi, pacchetti, gruppi, firewall | in più: «chi è collegato si riattacca in pochi secondi» | che cosa si toglie, che cosa resta (configurazione, se non `purge`) |
+| 4 CONSENT & SAFETY | sì/no per ogni scelta (D5, D6); salvataggio di quel che si toccherà | salvataggio di `/etc/remotix` e `/var/lib/remotix` | salvataggio della configurazione |
+| 5 ACQUISITION | depositi (annotati) e pacchetti scaricati e **verificati** | la N+1 | — |
+| 6 INSTALLATION | il gestore di pacchetti installa, servizio spento; il motore fa il resto e annota | l'installazione della N+1 **mentre la N serve ancora** | il gestore di pacchetti toglie; il motore disfa il suo registro |
+| 7 VERIFICATION | 7a · accensione · 7b | 7a · riavvio del servizio senza chiudere i desktop (§5.2) · 7b + sessioni ritrovate | le impronte tornate com'erano |
+| 8 COMMIT / ROLLBACK | verde ⇒ si conferma; rosso ⇒ si annulla tutto | rosso ⇒ si torna a N, **senza chiudere i desktop** | — |
 
 **Tre regole che tengono in piedi lo schema:**
 
@@ -318,22 +345,25 @@ annulla per intero** — anche la prima installazione che fallisce a metà, non 
    `pacman`. Se li copiasse il motore ci sarebbero **due verità** su che cosa è installato, e gli
    aggiornamenti di sistema non lo conoscerebbero (Tailscale e Netdata fanno così, §6.5).
 2. ⭐ **Il ritorno indietro è nostro.** Solo `dnf` ha un «annulla» vero (`dnf history undo`), e
-   openSUSE su btrfs le fotografie di sistema (snapper); `apt` e `pacman` no. ⇒ Il motore tiene un
-   **registro di ogni azione** (pacchetti, gruppi, firewall, depositi aggiunti come RPM Fusion) e per
-   annullare lo ripercorre all'indietro; dove la macchina offre le fotografie di sistema, le usa in
-   più. La promessa onesta: *«tutto quel che abbiamo fatto noi si annulla»*.
-3. **Il consenso anche senza nessuno davanti allo schermo**: le risposte possono arrivare da un file
-   (per cloud-init, Ansible, molte macchine). Il piano si stampa lo stesso, nel registro.
+   openSUSE su btrfs le fotografie di sistema (snapper); `apt` e `pacman` no. ⇒ Il motore ripercorre
+   all'indietro il **registro** (le azioni del piano, ognuna col suo «come si annulla»); dove la
+   macchina offre le fotografie di sistema, le usa in più. La promessa onesta: *«tutto quel che
+   abbiamo fatto noi si annulla»*.
+3. **Il consenso anche senza nessuno davanti allo schermo**: il piano approvato è un file, e si
+   applica da cloud-init o Ansible su molte macchine; il motore lo rifiuta se l'impronta non combacia.
 
 **La certificazione (fase 7), con quel che il motore può dimostrare da solo** — non ha un browser:
-- il servizio è attivo e la porta 7447 risponde (TCP e UDP);
-- la pila PAM si carica e rifiuta un utente inesistente;
-- la scheda **codifica davvero** un fotogramma di prova in H.264 (o si dichiara il ripiego software);
-- per ogni desktop installato, il palco **parte senza schermo** e produce un'immagine;
-- le librerie viste con l'uid di un inquilino: nessun `not found`.
-Il resto (un browser vero che entra e lavora) lo dimostrano le VM di §7, prima di ogni rilascio.
-L'esito si scrive in un **certificato dell'installazione** (`/var/lib/remotix/certificato-<data>.txt`):
-versione, macchina, ogni prova con l'esito — lo stesso che il benvenuto riassume.
+- *7a, a servizio spento*: le librerie viste con l'uid di un inquilino (nessun `not found`); la pila
+  PAM si carica e rifiuta un utente inesistente; la configurazione si legge; la scheda **codifica
+  davvero** un fotogramma di prova in H.264 (o si dichiara il ripiego software); per ogni desktop
+  installato, il palco **parte senza schermo** e produce un'immagine;
+- *7b, a servizio acceso*: attivo, la porta 7447 risponde (TCP e UDP), il certificato TLS è quello
+  atteso, il firewall la lascia passare.
+
+Il resto (un browser vero che entra e lavora) lo dimostrano le VM di §7, prima di ogni rilascio — ed
+è quel che rende una combinazione «certificata» nel catalogo. L'esito si scrive nel **certificato
+dell'installazione** (`/var/lib/remotix/certificato-<data>.txt`): versione, macchina, ogni prova con
+l'esito — lo stesso che il benvenuto riassume.
 
 ### 6.1 Pacchetti nativi, e uno script d'ingresso
 
@@ -538,6 +568,8 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R26 | il registro dice tutto | ogni modifica trovata da R6 è in `modifiche.log` | una modifica non registrata |
 | R27 | il desktop nasce su ogni combinazione della matrice | la suite funzionale corta (fase 15) su ogni VM, in Full HD col ripiego software | un rosso che su Debian non c'è |
 | R28 | ⭐ un'installazione che fallisce a metà si annulla per intero | guasto innestato in ogni passo della fase 6 (rete tagliata, disco pieno, pacchetto rotto) | impronte diverse da prima dell'inizio |
+| R30 | ⭐ un'installazione interrotta si riprende | corrente tolta alla VM (kill di QEMU) in ogni passo della fase 6, poi riavvio e motore rilanciato | la macchina resta a metà, o la ripresa non la porta a «completata» o «annullata» |
+| R31 | il piano non si applica a una macchina diversa | piano fatto, macchina cambiata (un pacchetto tolto), poi applicazione | il piano applicato lo stesso |
 | R29 | la certificazione non mente | la fase 7 su macchine guaste apposta (scheda che non codifica, PAM rotto, porta chiusa) | un «verde» su una macchina guasta |
 
 ---
@@ -550,7 +582,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
-| **T4** | il motore, fasi 1-4: PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
+| **T4** | il motore, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
 | **T6** | PAM per famiglia, SELinux, firewall | R19, R20 | |
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
