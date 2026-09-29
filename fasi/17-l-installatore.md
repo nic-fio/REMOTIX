@@ -891,7 +891,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | tappa | che cosa | produce | stato |
 |---|---|---|---|
 | **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` | 🔨 in corso (29 set: 9 distribuzioni accese, desktop in costruzione) |
-| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | |
+| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | 🔨 compila 7/7; gira: in cura (§11.1) |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
 | **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
@@ -956,6 +956,40 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
 - gli utenti `systemd-homed` (Arch);
 - eventuali modifiche di Ubuntu alle unità di gnome-shell 50;
 - il salto di labwc 0.8 → 0.9 / 0.20 (wlroots 0.20.2 ha ancora tutti i protocolli che usiamo `[L]`).
+
+---
+
+### 11.1 Gli esiti di T1 (29 set 2026, sera) `[M]`
+
+- **Compila** (T1b + T1a unite, 8ecc925): **7 distribuzioni su 7**, ngtcp2/nghttp3 statiche, `ldd` pulito
+  su ognuna; Ubuntu 24.04 si ferma a OpenSSL 3.0 (per D7: poi `codificatore.c:1419,1436` per ffmpeg 6.1 e
+  `input.c:1218` per libei 1.2).
+- **Gira** (T1c, a mano in 7 VM): si **entra** ovunque («Ammesso», sessione creata), ma col binario del
+  prodotto **il desktop non arriva su nessuna**. Le cause:
+  - **(A) difetto del prodotto**: senza accelerazione 3D il compositore non offre DMA-BUF, REMOTIX chiede
+    solo quelli (`cattura.c:~1487`) e il ripiego sulla memoria scatta solo dopo il primo fotogramma, che
+    non arriva mai. Vale per ogni macchina senza scheda (VM, server senza GPU). Cura in corso: ripiego
+    sulla memoria **dopo** il fallimento della negoziazione, la copia zero resta la strada di serie.
+    Con la memoria da subito (binario di diagnosi) il desktop arriva su Debian, Ubuntu 26.04 (**la cura di
+    GNOME 50 funziona**), Arch, Fedora, Alma;
+  - **(B) SELinux** su Fedora e Alma: `pam_selinux open` porta a un rifiuto `transition
+    unconfined_service_t → unconfined_t` all'esecuzione del figlio; senza `pam_selinux`, zero rifiuti in
+    enforcing. ⇒ T6: una regola nostra (come Cockpit) o via `pam_selinux`;
+  - **(C) nessun ripiego senza libx264/libx265**: senza depositi di terzi (Fedora, Alma, openSUSE) REMOTIX
+    rifiuta di codificare, per scelta scritta nel codice, anche dove c'è openh264 o svt-av1; con RPM
+    Fusion (`libavcodec-freeworld`) o Packman (`libavcodec63`) riparte. ⇒ pesa su D5;
+  - **(D)** KWin su Tumbleweed e labwc su Leap: tela nera, `DRM_IOCTL_MODE_CREATE_DUMB: Permission denied`
+    — classificata «limite della VM», `[?]` **in verifica**: potrebbe essere di piattaforma.
+- **Dipendenze di esecuzione misurate** (per T3), oltre al binario: Ubuntu 26.04 `libavcodec62 libswscale9
+  libavutil60 gnome-session`; Alma 10 `epel-release`, CRB, `libavcodec-free libavutil-free libswscale-free`;
+  Tumbleweed `libavcodec63 libavutil61 libswscale10`; Leap 16 `libavcodec61 libavutil59 libswscale8
+  libpipewire-0_3-0 libva2 libei1 labwc xwayland` (XFCE 4.20 senza Xwayland non parte); Debian e Arch
+  niente in più; Fedora la porta 7447 in firewalld (acceso dopo il gruppo Workstation).
+- `provisiona.sh` installa sempre il PAM di Debian e la sua verifica si accontenta di «pam_systemd»: su
+  Fedora e Arch direbbe verde con un PAM con cui non entra nessuno (**falso verde**: conferma che
+  l'installatore si scrive da capo).
+- Trappola del banco: il browser su `127.0.0.1`, non `localhost` (QEMU inoltra UDP solo in IPv4, Chrome
+  manda QUIC a `::1`).
 
 ---
 
