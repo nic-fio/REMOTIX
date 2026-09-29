@@ -1,0 +1,96 @@
+{
+ "campagna": "intel-c-3k-lxqt",
+ "scatola": "lxqt",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 2122156,
+ "inizio": "2026-09-28T23:40:06+00:00",
+ "fase": "finita",
+ "gradino": 13,
+ "livello_dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-13",
+ "utenti_vivi": 0,
+ "utenti_attesi": 13,
+ "classe_ultimo": "DEGRADED",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-04"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-08"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-12"
+  },
+  {
+   "livello": 16,
+   "nome": "livello-16",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-16"
+  },
+  {
+   "livello": 16,
+   "nome": "livello-16-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-16-ripetizione"
+  },
+  {
+   "livello": 14,
+   "nome": "livello-14",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-14"
+  },
+  {
+   "livello": 13,
+   "nome": "livello-13",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-c-3k-lxqt/livello-13"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-29T01:53:09+00:00",
+ "tipo_livello": "ricerca",
+ "fine_prevista": "2026-09-29T01:52:51+00:00",
+ "ricerca": [
+  12,
+  14
+ ],
+ "ultimo_buono": 13,
+ "rottura": 14
+}

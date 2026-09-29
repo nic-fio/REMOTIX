@@ -1,0 +1,74 @@
+{
+ "livello": 4,
+ "utente": 99,
+ "inquilino": "c16004u99",
+ "browser": "firefox",
+ "scatola": "lxqt",
+ "misura": "3840x2160",
+ "inizio": "2026-09-28T14:52:10+00:00",
+ "wayland": "wayland-0",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.80), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 565 px (atteso 566)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [1038, 525, 2736, 1547] (in 5.4 s) · cambia PASS: 24 foto in 5.9 s, 24 valori diversi, ritardo massimo 41 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» a0cfb48d",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» a0cfb48d",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 1.19,
+  "ammissione_s": 1.24,
+  "nascita_s": 1.45,
+  "primo_non_degenere_s": 2.81,
+  "esito": "PASS",
+  "ragione": "dipinti=8 dopo 0.0 s · 3776x2016 · colori distinti 233 · dominante 9.7% (0,24,48) · luminanza media 58 dev 33.0"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-4k-lxqt/livello-04-ripetizione/controllo-corto",
+ "versione": "Firefox 140.16.0 · finestra vera",
+ "sessioni_durante": 8,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 70,
+ "fine": "2026-09-28T14:53:20+00:00"
+}

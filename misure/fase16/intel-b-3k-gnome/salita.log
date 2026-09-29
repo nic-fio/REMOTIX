@@ -1,0 +1,136 @@
+[09:49:56] ⭐ SALITA intel-b-3k-gnome · gnome · 3k (3200x1800) · gradini 1,4,8,12,16 · 10 min (ultimo 30) · tetto 17
+[09:49:56]    scheda della scatola: intel · browser-cliente sulla Intel
+[09:49:56]    commit del prodotto: e4e05dc
+[09:49:56]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 45d048c8 · pagina fb9a18f3 · banchi 9e97f8d
+[09:49:58]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[09:49:59]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[09:50:00]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[09:50:00]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[09:50:00]    ⭐ tetto delle sessioni in vigore: 17
+[09:50:01]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[09:50:01] ══ livello-01: 1 utenti, 10 min (gradino) ══
+[09:50:02]    + utente 01 (pid 4064646, wayland-5, seme 1601, porte 9910)
+[09:50:12]      utente 01 nato in 10.5 s
+[09:50:12]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 10:00:12
+[09:57:42]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[09:57:43]    foto scritte: 1/1 in 1 s
+[09:58:12]    controllo corto: firefox su wayland-4
+[09:59:18]    controllo corto: PASS (codice 0)
+[10:00:14]    ▶ livello-01: GREEN — 2 GREEN · 0 DEGRADED · 0 FAIL
+[10:00:14] ══ livello-04: 4 utenti, 10 min (gradino) ══
+[10:00:15]    + utente 02 (pid 4074889, wayland-6, seme 1602, porte 9920)
+[10:00:27]      utente 02 nato in 11.5 s
+[10:00:27]    + utente 03 (pid 4076020, wayland-7, seme 1603, porte 9930)
+[10:00:36]      utente 03 nato in 9.0 s
+[10:00:36]    + utente 04 (pid 4077396, wayland-8, seme 1604, porte 9940)
+[10:00:49]      utente 04 nato in 13.0 s
+[10:00:49]    tutti dentro (35 s dopo l'inizio del livello): lavoro fino alle 10:10:49
+[10:08:19]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[10:08:20]    foto scritte: 4/4 in 1 s
+[10:08:49]    controllo corto: chrome su wayland-4
+[10:09:59]    controllo corto: PASS (codice 0)
+[10:10:53]    ▶ livello-04: DEGRADED — 4 GREEN · 1 DEGRADED · 0 FAIL · DEGRADED non significativo
+[10:10:53] ══ livello-08: 8 utenti, 10 min (gradino) ══
+[10:10:54]    + utente 05 (pid 4103049, wayland-9, seme 1605, porte 9950)
+[10:11:05]      utente 05 nato in 11.0 s
+[10:11:05]    + utente 06 (pid 4104532, wayland-10, seme 1606, porte 9960)
+[10:11:17]      utente 06 nato in 11.5 s
+[10:11:17]    + utente 07 (pid 4106620, wayland-11, seme 1607, porte 9970)
+[10:11:26]      utente 07 nato in 9.5 s
+[10:11:26]    + utente 08 (pid 4108413, wayland-12, seme 1608, porte 9980)
+[10:11:39]      utente 08 nato in 13.0 s
+[10:11:39]    tutti dentro (47 s dopo l'inizio del livello): lavoro fino alle 10:21:39
+[10:19:09]    SIGUSR1 a 8 attori (foto piena), 30 s prima della finestra
+[10:19:11]    foto scritte: 8/8 in 2 s
+[10:19:39]    controllo corto: firefox su wayland-4
+[10:20:50]    controllo corto: PASS (codice 0)
+[10:21:45]    ▶ livello-08: FAIL (significativo) — 1 GREEN · 7 DEGRADED · 1 FAIL
+[10:21:45] ⚠ 8 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[10:21:45]    fermo 8 attori (SIGTERM: sgomberano da se')
+[10:21:52]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[10:21:53]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[10:21:54]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[10:21:54]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[10:21:54]    ⭐ tetto delle sessioni in vigore: 17
+[10:21:54]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[10:21:54] ══ livello-08-ripetizione: 8 utenti, 10 min (ripetizione) ══
+[10:21:55]    + utente 01 (pid 4156168, wayland-5, seme 1601, porte 9910)
+[10:22:05]      utente 01 nato in 10.5 s
+[10:22:05]    + utente 02 (pid 4157501, wayland-6, seme 1602, porte 9920)
+[10:22:17]      utente 02 nato in 11.5 s
+[10:22:17]    + utente 03 (pid 4159219, wayland-7, seme 1603, porte 9930)
+[10:22:26]      utente 03 nato in 9.0 s
+[10:22:26]    + utente 04 (pid 4160729, wayland-8, seme 1604, porte 9940)
+[10:22:38]      utente 04 nato in 12.5 s
+[10:22:38]    + utente 05 (pid 4162317, wayland-9, seme 1605, porte 9950)
+[10:22:48]      utente 05 nato in 10.0 s
+[10:22:48]    + utente 06 (pid 4164746, wayland-10, seme 1606, porte 9960)
+[10:23:00]      utente 06 nato in 11.5 s
+[10:23:00]    + utente 07 (pid 4166859, wayland-11, seme 1607, porte 9970)
+[10:23:09]      utente 07 nato in 9.5 s
+[10:23:09]    + utente 08 (pid 4168753, wayland-12, seme 1608, porte 9980)
+[10:23:22]      utente 08 nato in 13.0 s
+[10:23:22]    tutti dentro (88 s dopo l'inizio del livello): lavoro fino alle 10:33:22
+[10:30:52]    SIGUSR1 a 8 attori (foto piena), 30 s prima della finestra
+[10:30:54]    foto scritte: 8/8 in 2 s
+[10:31:22]    controllo corto: chrome su wayland-4
+[10:32:35]    controllo corto: PASS (codice 0)
+[10:33:28]    ▶ livello-08-ripetizione: DEGRADED (significativo) — 1 GREEN · 8 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (8 su 8); oltre meta' fascia o non misurato: utente-01/ritardo_p95_ms, utente-04/ritardo_p95_ms, utent
+[10:33:28] ⛔ confermato: 8 utenti DEGRADED due volte
+[10:33:28] 🔎 ricerca a meta' fra 4 (buono) e 8 (rotto): 6 utenti
+[10:33:28]    fermo 8 attori (SIGTERM: sgomberano da se')
+[10:33:36]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[10:33:37]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[10:33:38]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[10:33:38]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[10:33:38]    ⭐ tetto delle sessioni in vigore: 17
+[10:33:38]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[10:33:38] ══ livello-06: 6 utenti, 10 min (ricerca) ══
+[10:33:39]    + utente 01 (pid 22502, wayland-5, seme 1601, porte 9910)
+[10:33:49]      utente 01 nato in 10.5 s
+[10:33:49]    + utente 02 (pid 23817, wayland-6, seme 1602, porte 9920)
+[10:34:01]      utente 02 nato in 11.5 s
+[10:34:01]    + utente 03 (pid 25523, wayland-7, seme 1603, porte 9930)
+[10:34:10]      utente 03 nato in 9.0 s
+[10:34:10]    + utente 04 (pid 27029, wayland-8, seme 1604, porte 9940)
+[10:34:23]      utente 04 nato in 13.0 s
+[10:34:23]    + utente 05 (pid 28609, wayland-9, seme 1605, porte 9950)
+[10:34:33]      utente 05 nato in 10.5 s
+[10:34:33]    + utente 06 (pid 31108, wayland-10, seme 1606, porte 9960)
+[10:34:45]      utente 06 nato in 11.5 s
+[10:34:45]    tutti dentro (66 s dopo l'inizio del livello): lavoro fino alle 10:44:45
+[10:42:15]    SIGUSR1 a 6 attori (foto piena), 30 s prima della finestra
+[10:42:17]    foto scritte: 6/6 in 2 s
+[10:42:45]    controllo corto: firefox su wayland-4
+[10:43:54]    controllo corto: PASS (codice 0)
+[10:44:49]    ▶ livello-06: DEGRADED (significativo) — 1 GREEN · 6 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (6 su 6); oltre meta' fascia o non misurato: utente-05/ritardo_p95_ms): non si sale
+[10:44:49] 🔎 ricerca a meta' fra 4 (buono) e 6 (rotto): 5 utenti
+[10:44:49]    fermo 6 attori (SIGTERM: sgomberano da se')
+[10:44:56]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[10:44:57]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[10:44:57]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[10:44:57]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[10:44:58]    ⭐ tetto delle sessioni in vigore: 17
+[10:44:58]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[10:44:58] ══ livello-05: 5 utenti, 10 min (ricerca) ══
+[10:44:58]    + utente 01 (pid 67221, wayland-5, seme 1601, porte 9910)
+[10:45:09]      utente 01 nato in 10.5 s
+[10:45:09]    + utente 02 (pid 68545, wayland-6, seme 1602, porte 9920)
+[10:45:20]      utente 02 nato in 11.5 s
+[10:45:20]    + utente 03 (pid 70255, wayland-7, seme 1603, porte 9930)
+[10:45:29]      utente 03 nato in 9.0 s
+[10:45:29]    + utente 04 (pid 71763, wayland-8, seme 1604, porte 9940)
+[10:45:42]      utente 04 nato in 13.0 s
+[10:45:42]    + utente 05 (pid 73346, wayland-9, seme 1605, porte 9950)
+[10:45:53]      utente 05 nato in 10.5 s
+[10:45:53]    tutti dentro (55 s dopo l'inizio del livello): lavoro fino alle 10:55:53
+[10:53:23]    SIGUSR1 a 5 attori (foto piena), 30 s prima della finestra
+[10:53:26]    foto scritte: 5/5 in 3 s
+[10:53:53]    controllo corto: chrome su wayland-4
+[10:55:05]    controllo corto: PASS (codice 0)
+[10:55:57]    ▶ livello-05: DEGRADED (significativo) — 4 GREEN · 2 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (2 su 5)): non si sale
+[10:55:57] ⏹ FINE: ultimo livello buono 4 · rottura 5
+[10:55:57]    fermo 5 attori (SIGTERM: sgomberano da se')
+[10:56:01]    compositori spenti (9)
+[10:56:06]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[10:56:06] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-01"}, {"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "DEGRADED", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-04"}, {"livello": 8, "nome": "livello-08", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-08"}, {"livello": 8, "nome": "livello-08-ripetizione", "tipo": "ripetizione", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-08-ripetizione"}, {"livello": 6, "nome": "livello-06", "tipo": "ricerca", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-06"}, {"livello": 5, "nome": "livello-05", "tipo": "ricerca", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-gnome/livello-05"}]

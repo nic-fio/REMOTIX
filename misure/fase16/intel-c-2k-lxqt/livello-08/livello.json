@@ -1,0 +1,207 @@
+{
+ "kernel": "7.0",
+ "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+ "schede": [
+  {
+   "scheda": "Intel UHD 770 (i5-13500T)",
+   "id": "8086:4680",
+   "driver": "i915",
+   "pci": "0000:00:02.0"
+  },
+  {
+   "scheda": "AMD Radeon RX 6800",
+   "id": "1002:73bf",
+   "driver": "amdgpu",
+   "pci": "0000:03:00.0"
+  }
+ ],
+ "prodotto_binario": "28a947f5",
+ "prodotto_pagina": "fb9a18f3",
+ "firefox": "Mozilla Firefox 140.16.0esr",
+ "chrome": "Google Chrome 154.0.8037.57",
+ "commit_banchi": "678a2da+modifiche",
+ "scheda_compositori": "/dev/dri/renderD128",
+ "commit_prodotto": "678a2da",
+ "campagna": "intel-c-2k-lxqt",
+ "livello": 8,
+ "nome": "livello-08",
+ "tipo": "gradino",
+ "desktop": "lxqt",
+ "misura": "2k",
+ "largo": 2560,
+ "alto": 1440,
+ "tetto_sessioni": 17,
+ "minuti": 10,
+ "controllo_min": 2,
+ "inizio": "2026-09-29T02:14:15+00:00",
+ "inizio_t": 1790648055.056,
+ "inizio_lavoro": "2026-09-29T02:14:58+00:00",
+ "fine": 1790648698.267,
+ "fine_iso": "2026-09-29T02:24:58+00:00",
+ "durata_s": 643,
+ "durata_lavoro_s": 600,
+ "utenti": [
+  {
+   "utente": 1,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": false
+  },
+  {
+   "utente": 2,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": false
+  },
+  {
+   "utente": 3,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": false
+  },
+  {
+   "utente": 4,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": false
+  },
+  {
+   "utente": 5,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 6,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 7,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 8,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  }
+ ],
+ "vivi_alla_fine": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8
+ ],
+ "nati_nel_livello": [
+  5,
+  6,
+  7,
+  8
+ ],
+ "nascite_s": {
+  "05": 10.5,
+  "06": 10.5,
+  "07": 8.5,
+  "08": 12.0
+ },
+ "seme_base": 1600,
+ "video": "/media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4",
+ "fps_video": 30.0,
+ "controllo_corto": "PASS",
+ "registro_server": [
+  "server.log",
+  "journal-err.jsonl",
+  "journal-server.log",
+  "journal-scatola.log"
+ ],
+ "entrata_ok": true,
+ "entrata_ragione": null,
+ "attesi": 8,
+ "entrati": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8
+ ],
+ "nati_alla_partenza": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8
+ ],
+ "foto_piena": {
+  "t": "2026-09-29T02:22:28+00:00",
+  "t_s": 1790648548.267,
+  "attesi": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "fatte": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "durata_s": 3.0
+ },
+ "inizio_finestra": "2026-09-29T02:22:58+00:00",
+ "inizio_finestra_t": 1790648578.267,
+ "schede_browser": {
+  "campioni_browser": 8077,
+  "fuori_intel": {},
+  "intel": "0000:00:02.0"
+ },
+ "eventi": [],
+ "attori_da": "/media/REMOTIX/misure/fase16/intel-c-2k-lxqt/attori-1",
+ "prova": false,
+ "scatola_binario": "28a947f5",
+ "scatola_pagina": "fb9a18f3",
+ "scatola_dri_nella_scatola": [
+  "card0",
+  "renderD128"
+ ],
+ "scatola_driver_video": [
+  "intel-media-va-driver=25.2.3+dfsg1-1",
+  "libgl1-mesa-dri=25.0.7-2+deb13u1",
+  "libva2=2.22.0-3",
+  "mesa-va-drivers=25.0.7-2+deb13u1"
+ ],
+ "scatola_opzioni_server": "--tetto-sessioni 17 -- --journal ;",
+ "scatola_journal": true,
+ "scatola_driver_va": "Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()",
+ "scheda": "Intel UHD 770 (i5-13500T)",
+ "scheda_quale": "intel",
+ "scheda_pci": "0000:00:02.0",
+ "scheda_browser": "Intel UHD 770 (i5-13500T)",
+ "driver": "i915 intel-media-va-driver=25.2.3+dfsg1-1 libgl1-mesa-dri=25.0.7-2+deb13u1 libva2=2.22.0-3 mesa-va-drivers=25.0.7-2+deb13u1",
+ "commit": "678a2da",
+ "binario": "28a947f5",
+ "pagina": "fb9a18f3",
+ "nucleo": "7.0"
+}

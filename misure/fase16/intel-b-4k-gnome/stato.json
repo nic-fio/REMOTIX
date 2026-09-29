@@ -1,0 +1,72 @@
+{
+ "campagna": "intel-b-4k-gnome",
+ "scatola": "gnome",
+ "misura": "4k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 3951980,
+ "inizio": "2026-09-26T08:56:26+00:00",
+ "fase": "finita",
+ "gradino": 3,
+ "livello_dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-03",
+ "utenti_vivi": 0,
+ "utenti_attesi": 3,
+ "classe_ultimo": "GREEN",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04-ripetizione"
+  },
+  {
+   "livello": 2,
+   "nome": "livello-02",
+   "tipo": "ricerca",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-02"
+  },
+  {
+   "livello": 3,
+   "nome": "livello-03",
+   "tipo": "ricerca",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-03"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-26T09:49:43+00:00",
+ "tipo_livello": "ricerca",
+ "fine_prevista": "2026-09-26T09:49:31+00:00",
+ "ricerca": [
+  2,
+  4
+ ],
+ "ultimo_buono": 3,
+ "rottura": 4
+}

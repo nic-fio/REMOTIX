@@ -1,0 +1,70 @@
+{
+ "livello": 10,
+ "utente": 99,
+ "inquilino": "c16010u99",
+ "browser": "chrome",
+ "scatola": "kde",
+ "misura": "2560x1440",
+ "inizio": "2026-09-26T18:44:31+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: (nessuna risposta in 90 s)",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: (nessuna risposta in 90 s)",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "FAIL",
+   "ragione": "apre PASS: la finestra si vede: ciano [700, 368, 1843, 1019] (in 48.6 s) · cambia FAIL: serie 1: FAIL foto vecchia di 5981 ms (n=168, tetto 1000); foto vecchia di 7797 ms (n=168, tetto 1000); foto vecchia di 3072 ms (n=221, tetto 1000); foto vecchia di 6527 ms (n=221, tetto 1000) (+8) · serie 2: foto vecchia di 28638 ms (n=221, tetto 1000); foto vecchia di 1329 ms (n=372, tetto 1000)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [700, 368, 1843, 1019] (in 48.6 s) · cambia FAIL: serie 1: FAIL foto vecchia di 5981 ms (n=168, tetto 1000); foto vecchia di 7797 ms (n=168, tetto 1000); foto vecchia di 3072 ms (n=221, tetto 1000); foto vecchia di 6527 ms (n=221, tetto 1000) (+8) · serie 2: foto vecchia di 28638 ms (n=221, tetto 1000); foto vecchia di 1329 ms (n=372, tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-2k-kde/livello-10/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» b73a91e3",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» b73a91e3",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-2k-kde/livello-10/controllo-corto/02-f014.png",
+    "/media/REMOTIX/misure/fase16/intel-b-2k-kde/livello-10/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.57,
+  "ammissione_s": 1.22,
+  "nascita_s": 2.83,
+  "primo_non_degenere_s": 7.98,
+  "esito": "PASS",
+  "ragione": "dipinti=193 · primo fotogramma a 0.0 s, desktop NON degenere a 5.1 s dopo 2 fotografie degeneri (la prima: 640x338 · colori distinti 42 · dominante 99.5% (0,0,0) · luminanza media 0 dev 8.3) · 640x338 · colori distinti 1022 · dominante 1.1% (216,144,136) · luminanza media 102 dev 43.1"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/intel-b-2k-kde/livello-10/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 20,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "FAIL",
+  "F-014": "PASS"
+ },
+ "esito": "FAIL",
+ "durata_s": 262,
+ "fine": "2026-09-26T18:48:53+00:00"
+}

@@ -1,0 +1,228 @@
+{
+ "kernel": "7.0",
+ "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+ "schede": [
+  {
+   "scheda": "Intel UHD 770 (i5-13500T)",
+   "id": "8086:4680",
+   "driver": "i915",
+   "pci": "0000:00:02.0"
+  },
+  {
+   "scheda": "AMD Radeon RX 6800",
+   "id": "1002:73bf",
+   "driver": "amdgpu",
+   "pci": "0000:03:00.0"
+  }
+ ],
+ "prodotto_binario": "3fe94e8b",
+ "prodotto_pagina": "c5279e66",
+ "firefox": "Mozilla Firefox 140.16.0esr",
+ "chrome": "Google Chrome 154.0.8037.57",
+ "commit_banchi": "4d62a81",
+ "scheda_compositori": "/dev/dri/renderD128",
+ "commit_prodotto": "97e94fe",
+ "campagna": "intel-4k-xfce-b",
+ "livello": 9,
+ "nome": "livello-09",
+ "tipo": "ricerca",
+ "desktop": "xfce",
+ "misura": "4k",
+ "largo": 3840,
+ "alto": 2160,
+ "tetto_sessioni": 17,
+ "minuti": 10,
+ "controllo_min": 2,
+ "inizio": "2026-09-26T03:22:53+00:00",
+ "inizio_t": 1790392973.931,
+ "inizio_lavoro": "2026-09-26T03:26:24+00:00",
+ "fine": 1790393825.6,
+ "fine_iso": "2026-09-26T03:37:05+00:00",
+ "durata_s": 852,
+ "durata_lavoro_s": 641,
+ "utenti": [
+  {
+   "utente": 1,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 2,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 3,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 4,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 5,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 6,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 7,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 8,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 9,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  }
+ ],
+ "vivi_alla_fine": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "nati_nel_livello": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "nascite_s": {
+  "01": 22.5,
+  "02": 24.0,
+  "03": 22.0,
+  "04": 25.5,
+  "05": 22.5,
+  "06": 24.0,
+  "07": 21.5,
+  "08": 25.5,
+  "09": 23.0
+ },
+ "seme_base": 1600,
+ "video": "/media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4",
+ "fps_video": 30.0,
+ "controllo_corto": "PASS",
+ "registro_server": [
+  "server.log",
+  "journal-err.jsonl",
+  "journal-server.log",
+  "journal-scatola.log"
+ ],
+ "entrata_ok": true,
+ "entrata_ragione": null,
+ "attesi": 9,
+ "entrati": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "nati_alla_partenza": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "foto_piena": {
+  "t": "2026-09-26T03:33:54+00:00",
+  "t_s": 1790393634.811,
+  "attesi": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "fatte": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "durata_s": 2.0
+ },
+ "inizio_finestra": "2026-09-26T03:34:24+00:00",
+ "inizio_finestra_t": 1790393664.811,
+ "schede_browser": {
+  "campioni_browser": 11588,
+  "fuori_intel": {},
+  "intel": "0000:00:02.0"
+ },
+ "eventi": [],
+ "attori_da": "/media/REMOTIX/misure/fase16/intel-4k-xfce-b/attori-5",
+ "prova": false,
+ "scatola_binario": "3fe94e8b",
+ "scatola_pagina": "c5279e66",
+ "scatola_dri_nella_scatola": [
+  "card0",
+  "renderD128"
+ ],
+ "scatola_driver_video": [
+  "intel-media-va-driver=25.2.3+dfsg1-1",
+  "libgl1-mesa-dri=25.0.7-2+deb13u1",
+  "libva2=2.22.0-3",
+  "mesa-va-drivers=25.0.7-2+deb13u1"
+ ],
+ "scatola_opzioni_server": "--tetto-sessioni 17 -- --journal ;",
+ "scatola_journal": true,
+ "scatola_driver_va": "Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()",
+ "scheda": "Intel UHD 770 (i5-13500T)",
+ "scheda_quale": "intel",
+ "scheda_pci": "0000:00:02.0",
+ "scheda_browser": "Intel UHD 770 (i5-13500T)",
+ "driver": "i915 intel-media-va-driver=25.2.3+dfsg1-1 libgl1-mesa-dri=25.0.7-2+deb13u1 libva2=2.22.0-3 mesa-va-drivers=25.0.7-2+deb13u1",
+ "commit": "97e94fe",
+ "binario": "3fe94e8b",
+ "pagina": "c5279e66",
+ "nucleo": "7.0"
+}

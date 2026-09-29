@@ -1,0 +1,10 @@
+2026-09-26 08:56:26 ▶ campagna intel-b ()
+2026-09-27 09:08:15 ⏹ campagna intel-b finita
+2026-09-27 09:08:15 ▶ campagna amd (--scheda amd)
+2026-09-27 12:19:44 ⏹ campagna amd finita
+2026-09-27 13:55:30 ▶ campagna amd-b (--scheda amd)
+2026-09-28 07:08:32 ▶ ripresa: env REMOTIX_16_IN_PIU=--scheda amd REMOTIX_16_MISURE=3k 2k fhd bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh amd-b xfce
+2026-09-28 14:22:25 ▶ ripresa: env REMOTIX_16_IN_PIU=--scheda amd bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh amd-b lxqt
+2026-09-28 22:20:29 ⏹ campagna amd-b finita
+2026-09-28 22:20:29 ▶ ripresa: env REMOTIX_16_MISURE=4k 3k 2k bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh intel-c lxqt
+2026-09-29 04:06:41 ⏹ campagna intel-c finita

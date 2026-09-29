@@ -1,0 +1,67 @@
+{
+ "livello": 16,
+ "utente": 99,
+ "inquilino": "c16016u99",
+ "browser": "chrome",
+ "scatola": "gnome",
+ "misura": "2560x1440",
+ "inizio": "2026-09-27T18:09:06+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: la scena non ha detto «caricata» | socket wayland-0 | amdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description. | If they do, bad things may happen! | [41672] Sandbox: SandboxBroker: thread creation failed (1 brokers): EAGAIN | IPDL protocol Error: Received an invalid file descriptor | mozilla::detail::MutexImpl::mutexLock: pthread_mutex_lock failed: Invalid argument | ExceptionHandler::GenerateDump attempting to generate:\u0000/home/c16016u99/.g2-profilo/minidumps/7447cb9e-8f14-37e2-5817-8711b57f883d.dmp",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: la scena non ha detto «caricata» | socket wayland-0 | amdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description. | If they do, bad things may happen! | [41672] Sandbox: SandboxBroker: thread creation failed (1 brokers): EAGAIN | IPDL protocol Error: Received an invalid file descriptor | mozilla::detail::MutexImpl::mutexLock: pthread_mutex_lock failed: Invalid argument | ExceptionHandler::GenerateDump attempting to generate:\u0000/home/c16016u99/.g2-profilo/minidumps/7447cb9e-8f14-37e2-5817-8711b57f883d.dmp",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "BLOCKED",
+   "ragione": "apre BLOCKED: firefox-esr non e' rimasto vivo: nessun pixel ciano: la finestra di prova non si vede",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre BLOCKED: firefox-esr non e' rimasto vivo: nessun pixel ciano: la finestra di prova non si vede",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-gnome/livello-16/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "BLOCKED",
+   "ragione": "la scena degli appunti non si accende: 9/f014.html /home/c16016u99/f014.log /home/c16016u99/.f014-cmd\n--run\nICEauthority\nbus\ndbus-1\ndconf\ndconf-service\ndoc\ngnome-session-leader-fifo\ngnome-shell\ngnupg\ngvfs\ngvfsd\npipewire-0\npipewire-0-manager\npipewire-0-manager.lock\npipewire-0.lock\npulse\nremotix\nsystemd\nwayland-0\nwayland-0.lock\n--curl\n1160",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.55,
+  "ammissione_s": 1.21,
+  "nascita_s": 2.62,
+  "primo_non_degenere_s": 3.85,
+  "esito": "PASS",
+  "ragione": "dipinti=9 dopo 0.0 s · 640x338 · colori distinti 147 · dominante 24.2% (32,32,32) · luminanza media 63 dev 21.2"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-2k-gnome/livello-16/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 32,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "BLOCKED",
+  "F-014": "BLOCKED"
+ },
+ "esito": "BLOCKED",
+ "durata_s": 292,
+ "fine": "2026-09-27T18:13:58+00:00"
+}

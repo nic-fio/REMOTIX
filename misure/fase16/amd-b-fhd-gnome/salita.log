@@ -1,0 +1,82 @@
+[19:17:43] ⭐ SALITA amd-b-fhd-gnome · gnome · fhd (1920x1080) · gradini 1,4,8,12,16 · 10 min (ultimo 30) · tetto 17
+[19:17:43]    scheda della scatola: amd · browser-cliente sulla Intel
+[19:17:43]    commit del prodotto: 678a2da
+[19:17:43]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 28a947f5 · pagina fb9a18f3 · banchi 678a2da+modifiche
+[19:17:45]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[19:17:46]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[19:17:47]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[19:17:47]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[19:17:47]    ⭐ tetto delle sessioni in vigore: 17
+[19:17:48]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[19:17:48] ══ livello-01: 1 utenti, 10 min (gradino) ══
+[19:17:48]    + utente 01 (pid 1254900, wayland-5, seme 1601, porte 9910)
+[19:17:59]      utente 01 nato in 10.5 s
+[19:17:59]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 19:27:59
+[19:25:29]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[19:25:30]    foto scritte: 1/1 in 1 s
+[19:25:59]    controllo corto: firefox su wayland-4
+[19:27:04]    controllo corto: PASS (codice 0)
+[19:28:01]    ▶ livello-01: GREEN — 2 GREEN · 0 DEGRADED · 0 FAIL
+[19:28:01] ══ livello-04: 4 utenti, 10 min (gradino) ══
+[19:28:02]    + utente 02 (pid 1266384, wayland-6, seme 1602, porte 9920)
+[19:28:14]      utente 02 nato in 11.5 s
+[19:28:14]    + utente 03 (pid 1267485, wayland-7, seme 1603, porte 9930)
+[19:28:23]      utente 03 nato in 9.0 s
+[19:28:23]    + utente 04 (pid 1268978, wayland-8, seme 1604, porte 9940)
+[19:28:36]      utente 04 nato in 13.0 s
+[19:28:36]    tutti dentro (35 s dopo l'inizio del livello): lavoro fino alle 19:38:36
+[19:36:06]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[19:36:07]    foto scritte: 4/4 in 1 s
+[19:36:36]    controllo corto: chrome su wayland-4
+[19:37:44]    controllo corto: PASS (codice 0)
+[19:38:39]    ▶ livello-04: DEGRADED — 4 GREEN · 1 DEGRADED · 0 FAIL · DEGRADED non significativo
+[19:38:39] ══ livello-08: 8 utenti, 10 min (gradino) ══
+[19:38:41]    + utente 05 (pid 1296447, wayland-9, seme 1605, porte 9950)
+[19:38:51]      utente 05 nato in 10.5 s
+[19:38:51]    + utente 06 (pid 1298046, wayland-10, seme 1606, porte 9960)
+[19:39:03]      utente 06 nato in 11.5 s
+[19:39:03]    + utente 07 (pid 1300150, wayland-11, seme 1607, porte 9970)
+[19:39:12]      utente 07 nato in 9.5 s
+[19:39:12]    + utente 08 (pid 1302042, wayland-12, seme 1608, porte 9980)
+[19:39:25]      utente 08 nato in 13.0 s
+[19:39:25]    tutti dentro (46 s dopo l'inizio del livello): lavoro fino alle 19:49:25
+[19:46:55]    SIGUSR1 a 8 attori (foto piena), 30 s prima della finestra
+[19:46:56]    foto scritte: 8/8 in 1 s
+[19:47:25]    controllo corto: firefox su wayland-4
+[19:48:32]    controllo corto: PASS (codice 0)
+[19:49:30]    ▶ livello-08: GREEN — 9 GREEN · 0 DEGRADED · 0 FAIL
+[19:49:30] ══ livello-12: 12 utenti, 10 min (gradino) ══
+[19:49:32]    + utente 09 (pid 1351349, wayland-13, seme 1609, porte 9990)
+[19:49:43]      utente 09 nato in 11.0 s
+[19:49:43]    + utente 10 (pid 1353305, wayland-14, seme 1610, porte 10000)
+[19:49:54]      utente 10 nato in 11.5 s
+[19:49:54]    + utente 11 (pid 1355820, wayland-15, seme 1611, porte 10010)
+[19:50:03]      utente 11 nato in 9.0 s
+[19:50:03]    + utente 12 (pid 1358171, wayland-16, seme 1612, porte 10020)
+[19:50:16]      utente 12 nato in 13.0 s
+[19:50:16]    tutti dentro (46 s dopo l'inizio del livello): lavoro fino alle 20:00:16
+[19:57:46]    SIGUSR1 a 12 attori (foto piena), 30 s prima della finestra
+[19:57:48]    foto scritte: 12/12 in 2 s
+[19:58:16]    controllo corto: chrome su wayland-4
+[19:59:26]    controllo corto: PASS (codice 0)
+[20:00:24]    ▶ livello-12: GREEN — 13 GREEN · 0 DEGRADED · 0 FAIL
+[20:00:24] ══ livello-16: 16 utenti, 30 min (gradino) ══
+[20:00:26]    + utente 13 (pid 1424603, wayland-17, seme 1613, porte 10030)
+[20:00:37]      utente 13 nato in 11.0 s
+[20:00:37]    + utente 14 (pid 1427006, wayland-18, seme 1614, porte 10040)
+[20:00:49]      utente 14 nato in 12.0 s
+[20:00:49]    + utente 15 (pid 1429791, wayland-19, seme 1615, porte 10050)
+[20:00:59]      utente 15 nato in 10.0 s
+[20:00:59]    + utente 16 (pid 1432314, wayland-20, seme 1616, porte 10060)
+[20:01:12]      utente 16 nato in 13.5 s
+[20:01:12]    tutti dentro (48 s dopo l'inizio del livello): lavoro fino alle 20:31:12
+[20:28:42]    SIGUSR1 a 16 attori (foto piena), 30 s prima della finestra
+[20:28:44]    foto scritte: 16/16 in 2 s
+[20:29:12]    controllo corto: firefox su wayland-4
+[20:30:20]    controllo corto: PASS (codice 0)
+[20:31:39]    ▶ livello-16: GREEN — 17 GREEN · 0 DEGRADED · 0 FAIL
+[20:31:39] ⏹ FINE: ultimo livello buono 16 · rottura None
+[20:31:39]    fermo 16 attori (SIGTERM: sgomberano da se')
+[20:31:46]    compositori spenti (17)
+[20:31:52]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[20:31:52] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-gnome/livello-01"}, {"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "DEGRADED", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-gnome/livello-04"}, {"livello": 8, "nome": "livello-08", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-gnome/livello-08"}, {"livello": 12, "nome": "livello-12", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-gnome/livello-12"}, {"livello": 16, "nome": "livello-16", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-gnome/livello-16"}]

@@ -1,0 +1,42 @@
+[20:10:17] ⭐ SALITA prova-gnome-1 · gnome · 4k (3840x2160) · gradini 1,2,4 · 3 min (ultimo 3) · tetto 5 · PROVA (non conta)
+[20:10:17]    scheda della scatola: intel · browser-cliente sulla Intel
+[20:10:17]    commit del prodotto: 97e94fe
+[20:10:17]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina c5279e66 · banchi 4d62a81
+[20:10:19]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[20:10:20]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[20:10:21]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[20:10:21]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[20:10:21]    ⭐ tetto delle sessioni in vigore: 5
+[20:10:21]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 5 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[20:10:21] ══ livello-01: 1 utenti, 3 min (gradino) ══
+[20:10:22]    + utente 01 (pid 1075934, wayland-5, seme 1601, porte 9910)
+[20:10:33]      utente 01 nato in 10.5 s
+[20:10:33]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 20:13:33
+[20:11:03]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[20:11:04]    foto scritte: 1/1 in 1 s
+[20:11:33]    controllo corto: firefox su wayland-4
+[20:12:41]    controllo corto: PASS (codice 0)
+[20:13:34]    ▶ livello-01: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[20:13:34] ⚠ 1 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[20:13:34]    fermo 1 attori (SIGTERM: sgomberano da se')
+[20:13:40]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[20:13:41]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[20:13:41]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[20:13:41]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[20:13:42]    ⭐ tetto delle sessioni in vigore: 5
+[20:13:42]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 5 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[20:13:42] ══ livello-01-ripetizione: 1 utenti, 3 min (ripetizione) ══
+[20:13:42]    + utente 01 (pid 1084766, wayland-5, seme 1601, porte 9910)
+[20:13:53]      utente 01 nato in 10.5 s
+[20:13:53]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 20:16:53
+[20:14:23]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[20:14:24]    foto scritte: 1/1 in 1 s
+[20:14:53]    controllo corto: chrome su wayland-4
+[20:16:03]    controllo corto: PASS (codice 0)
+[20:16:54]    ▶ livello-01-ripetizione: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[20:16:54] ⛔ confermato: 1 utenti FAIL due volte
+[20:16:54] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[20:16:54]    fermo 1 attori (SIGTERM: sgomberano da se')
+[20:16:57]    compositori spenti (2)
+[20:16:59]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[20:16:59] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-gnome-1/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-gnome-1/livello-01-ripetizione"}]

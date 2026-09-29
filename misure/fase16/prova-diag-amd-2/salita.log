@@ -1,0 +1,42 @@
+[20:34:25] ⭐ SALITA prova-diag-amd-2 · xfce · 4k (3840x2160) · gradini 1 · 3 min (ultimo 3) · tetto 2 · PROVA (non conta)
+[20:34:25]    scheda della scatola: amd · browser-cliente sulla Intel
+[20:34:25]    commit del prodotto: 97e94fe
+[20:34:25]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina c5279e66 · banchi 4d62a81
+[20:34:27]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[20:34:28]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[20:34:29]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[20:34:29]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[20:34:29]    ⭐ tetto delle sessioni in vigore: 2
+[20:34:30]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[20:34:30] ══ livello-01: 1 utenti, 3 min (gradino) ══
+[20:34:30]    + utente 01 (pid 1233711, wayland-5, seme 1601, porte 9310)
+[20:35:37]      utente 01 nato in 67.0 s
+[20:35:37]    tutti dentro (68 s dopo l'inizio del livello): lavoro fino alle 20:38:37
+[20:36:07]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[20:36:08]    foto scritte: 1/1 in 1 s
+[20:36:37]    controllo corto: firefox su wayland-4
+[20:40:27]    controllo corto: PASS (codice 0)
+[20:40:28]    ▶ livello-01: FAIL (significativo) — 0 GREEN · 0 DEGRADED · 2 FAIL · livello: FAIL memoria_remotix: 36.791 — PSS 128 → 175 MB in 109 s di lavoro (20:36:38–20:38:27); seconda meta' +3491.3 %/ora, +75 MB su +47 e CONTINUA a salire · da: in
+[20:40:28] ⚠ 1 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[20:40:28]    fermo 1 attori (SIGTERM: sgomberano da se')
+[20:40:33]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[20:40:34]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[20:40:34]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[20:40:35]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[20:40:35]    ⭐ tetto delle sessioni in vigore: 2
+[20:40:35]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[20:40:35] ══ livello-01-ripetizione: 1 utenti, 3 min (ripetizione) ══
+[20:40:35]    + utente 01 (pid 1240888, wayland-5, seme 1601, porte 9310)
+[20:41:42]      utente 01 nato in 66.5 s
+[20:41:42]    tutti dentro (67 s dopo l'inizio del livello): lavoro fino alle 20:44:42
+[20:42:12]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[20:42:13]    foto scritte: 1/1 in 1 s
+[20:42:42]    controllo corto: chrome su wayland-4
+[20:44:22]    controllo corto: BLOCKED (codice 3)
+[20:44:43]    ▶ livello-01-ripetizione: FAIL (significativo) — 0 GREEN · 0 DEGRADED · 2 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[20:44:43] ⛔ confermato: 1 utenti FAIL due volte
+[20:44:43] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[20:44:43]    fermo 1 attori (SIGTERM: sgomberano da se')
+[20:44:47]    compositori spenti (2)
+[20:44:51]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[20:44:51] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-diag-amd-2/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-diag-amd-2/livello-01-ripetizione"}]

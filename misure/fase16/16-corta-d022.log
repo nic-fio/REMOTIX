@@ -1,0 +1,12 @@
+⭐ GIRO 16-corta-d022 · gnome,kde,xfce,lxqt · firefox,chrome · 14 prove · commit cc58e96+modifiche · gnome=4fb3287d/fb9a18f3 kde=4fb3287d/fb9a18f3 xfce=4fb3287d/fb9a18f3 lxqt=4fb3287d/fb9a18f3
+   server 15-g7-server.sh accendi gnome: codice 0
+   server 15-g7-server.sh accendi kde: codice 0
+   server 15-g7-server.sh accendi xfce: codice 0
+   server 15-g7-server.sh accendi lxqt: codice 0
+[lxqt firefox] 15-f001-accesso-e-prima-immagine           12 s  PASS=4
+[gnome firefox] 15-f001-accesso-e-prima-immagine           12 s  PASS=4
+[kde firefox] 15-f001-accesso-e-prima-immagine           16 s  PASS=4
+[lxqt firefox] 15-f003-lo-schermo-si-aggiorna             36 s  PASS=2
+[gnome firefox] 15-f003-lo-schermo-si-aggiorna             37 s  PASS=2
+[xfce firefox] 15-f001-accesso-e-prima-immagine           55 s  PASS=4
+[kde firefox] 15-f003-lo-schermo-si-aggiorna             41 s  PASS=2

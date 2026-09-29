@@ -1,0 +1,62 @@
+{
+ "livello": 4,
+ "utente": "c16004u99",
+ "browser": "firefox",
+ "scatola": "lxqt",
+ "misura": "3840x2160",
+ "inizio": "2026-09-25T16:54:10+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.80), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 565 px (atteso 566)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto/01-scena.png"
+   ]
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto/02-tasti.png"
+   ]
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [1038, 525, 2736, 1547] (in 5.2 s) · cambia PASS: 28 foto in 5.9 s, 28 valori diversi, ritardo massimo 42 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto"
+   ]
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» 231d0bbe",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» 231d0bbe",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto/f014.json"
+   ]
+  }
+ },
+ "nascita": {
+  "pagina_s": 1.18,
+  "ammissione_s": 1.24,
+  "nascita_s": 1.65,
+  "primo_non_degenere_s": 2.93,
+  "esito": "PASS",
+  "ragione": "dipinti=7 dopo 0.0 s · 3776x2016 · colori distinti 235 · dominante 13.5% (0,32,48) · luminanza media 59 dev 33.1"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04/controllo-corto",
+ "versione": "Firefox 140.16.0 · finestra vera",
+ "sessioni_durante": 0,
+ "esito": "PASS",
+ "durata_s": 66,
+ "fine": "2026-09-25T16:55:16+00:00"
+}

@@ -1,0 +1,42 @@
+{
+ "campagna": "prova-gnome-1",
+ "scatola": "gnome",
+ "misura": "4k",
+ "gradini": [
+  1,
+  2,
+  4
+ ],
+ "pid": 1074359,
+ "inizio": "2026-09-25T20:10:15+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/prova-gnome-1/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "FAIL",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-gnome-1/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-gnome-1/livello-01-ripetizione"
+  }
+ ],
+ "prova": true,
+ "aggiornato": "2026-09-25T20:16:59+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-25T20:16:53+00:00",
+ "ultimo_buono": 0,
+ "rottura": 1
+}

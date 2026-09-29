@@ -1,0 +1,39 @@
+[16:46:52] ⚠ il server NON e' vuoto (--anche-se-non-vuoto, prova dell'impianto): 1 processi di browser/attori dei banchi vivi (es. 53172 firefox-esr --marionette --no-remote -remote-allow-system-access --profile /tmp/remotix-ff-wccc0_m_ --width 1400 -)
+[16:46:52] ⭐ SALITA prova-vera-1 · lxqt · 4k (3840x2160) · gradini 1,2,4 · 3 min (ultimo 3) · tetto 5 · PROVA (non conta)
+[16:46:52]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario b1443a0b · pagina c5279e66 · banchi e5a491a+modifiche
+[16:46:54]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[16:46:54]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[16:46:55]    scatola server: codice 0 in 0 s ·       righe rosse nel registro di avvio: 7
+[16:46:55]    ⭐ tetto delle sessioni in vigore: 5
+[16:46:55]    scatola: binario b1443a0b · pagina c5279e66 · --tetto-sessioni 5 · dri card0,renderD128
+[16:46:55] ══ livello-01: 1 utenti, 3 min (gradino) ══
+[16:46:56]    + utente 01 (pid 57585, wayland-5, seme 1601, porte 9910)
+[16:46:58]      utente 01 nato in 2.5 s
+[16:46:58]    tutti dentro (3 s dopo l'inizio del livello): lavoro fino alle 16:49:58
+[16:47:58]    SIGUSR1 agli attori (foto piena)
+[16:47:58]    controllo corto: firefox su wayland-4
+[16:49:06]    controllo corto: PASS (codice 0)
+[16:50:00]    ▶ livello-01: GREEN — finta
+[16:50:00] ══ livello-02: 2 utenti, 3 min (gradino) ══
+[16:50:00]    + utente 02 (pid 69436, wayland-6, seme 1602, porte 9920)
+[16:50:03]      utente 02 nato in 2.5 s
+[16:50:03]    tutti dentro (3 s dopo l'inizio del livello): lavoro fino alle 16:53:03
+[16:51:03]    SIGUSR1 agli attori (foto piena)
+[16:51:03]    controllo corto: chrome su wayland-4
+[16:52:11]    controllo corto: PASS (codice 0)
+[16:53:04]    ▶ livello-02: GREEN — finta
+[16:53:04] ══ livello-04: 4 utenti, 3 min (gradino) ══
+[16:53:05]    + utente 03 (pid 74000, wayland-7, seme 1603, porte 9930)
+[16:53:07]      utente 03 nato in 2.5 s
+[16:53:07]    + utente 04 (pid 74003, wayland-8, seme 1604, porte 9940)
+[16:53:10]      utente 04 nato in 2.5 s
+[16:53:10]    tutti dentro (6 s dopo l'inizio del livello): lavoro fino alle 16:56:10
+[16:54:10]    SIGUSR1 agli attori (foto piena)
+[16:54:10]    controllo corto: firefox su wayland-4
+[16:55:16]    controllo corto: PASS (codice 0)
+[16:56:11]    ▶ livello-04: GREEN — finta
+[16:56:11] ⏹ FINE: ultimo livello buono 4 · rottura None
+[16:56:11]    fermo 4 attori (SIGTERM: sgomberano da se')
+[16:56:12]    compositori spenti (5)
+[16:56:13]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[16:56:13] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-01"}, {"livello": 2, "nome": "livello-02", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-02"}, {"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04"}]

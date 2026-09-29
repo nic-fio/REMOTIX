@@ -1,0 +1,54 @@
+2026-09-27 13:55:30 ▶ coda amd-b: desktop «gnome kde xfce lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-27 13:55:30 ── salita amd-b-4k-gnome (tentativo 1)
+2026-09-27 14:16:14    amd-b-4k-gnome: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-27 14:16:14 ↘ gnome cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-27 14:16:14 ── salita amd-b-3k-gnome (tentativo 1)
+2026-09-27 16:47:03    amd-b-3k-gnome: codice 1 (buono 13 · rottura 14 · finita) · ultimo GREEN vero: 4
+2026-09-27 16:47:03 ↘ gnome cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-27 16:47:03 ── salita amd-b-2k-gnome (tentativo 1)
+2026-09-27 19:17:30    amd-b-2k-gnome: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 12
+2026-09-27 19:17:30 ↘ gnome cede a 2k (ultimo GREEN vero: 12): scendo di misura
+2026-09-27 19:17:30 ── salita amd-b-fhd-gnome (tentativo 1)
+2026-09-27 20:31:52    amd-b-fhd-gnome: codice 0 (buono 16 · rottura None · finita) · ultimo GREEN vero: 16
+2026-09-27 20:31:52 ✅ gnome regge 16 utenti a fhd (ultimo GREEN vero: 16)
+2026-09-27 20:31:52 ── salita amd-b-4k-kde (tentativo 1)
+2026-09-27 20:52:42    amd-b-4k-kde: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-27 20:52:42 ↘ kde cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-27 20:52:42 ── salita amd-b-3k-kde (tentativo 1)
+2026-09-27 22:28:38    amd-b-3k-kde: codice 1 (buono 9 · rottura 10 · finita) · ultimo GREEN vero: 4
+2026-09-27 22:28:38 ↘ kde cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-27 22:28:38 ── salita amd-b-2k-kde (tentativo 1)
+2026-09-28 00:48:01    amd-b-2k-kde: codice 1 (buono 13 · rottura 14 · finita) · ultimo GREEN vero: 8
+2026-09-28 00:48:01 ↘ kde cede a 2k (ultimo GREEN vero: 8): scendo di misura
+2026-09-28 00:48:01 ── salita amd-b-fhd-kde (tentativo 1)
+2026-09-28 03:22:11    amd-b-fhd-kde: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 8
+2026-09-28 03:22:11 ↘ kde cede a fhd (ultimo GREEN vero: 8): scendo di misura
+2026-09-28 03:22:11 ── salita amd-b-4k-xfce (tentativo 1)
+2026-09-28 04:09:34    amd-b-4k-xfce: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-28 04:09:34 ↘ xfce cede a 4k (ultimo GREEN vero: 1): scendo di misura
+2026-09-28 04:09:34 ── salita amd-b-3k-xfce (tentativo 1)
+2026-09-28 07:08:32 ▶ coda amd-b: desktop «xfce» · scala «3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-28 07:08:32 ── salita amd-b-3k-xfce-0708 (tentativo 1)
+2026-09-28 09:55:23    amd-b-3k-xfce-0708: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 4
+2026-09-28 09:55:23 ↘ xfce cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-28 09:55:23 ── salita amd-b-2k-xfce (tentativo 1)
+2026-09-28 12:09:04    amd-b-2k-xfce: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 12
+2026-09-28 12:09:04 ↘ xfce cede a 2k (ultimo GREEN vero: 12): scendo di misura
+2026-09-28 12:09:04 ── salita amd-b-fhd-xfce (tentativo 1)
+2026-09-28 14:22:25    amd-b-fhd-xfce: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 12
+2026-09-28 14:22:25 ↘ xfce cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-28 14:22:25 ⏹ coda amd-b finita
+2026-09-28 14:22:25 ▶ coda amd-b: desktop «lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-28 14:22:25 ── salita amd-b-4k-lxqt (tentativo 1)
+2026-09-28 15:15:32    amd-b-4k-lxqt: codice 1 (buono 3 · rottura 4 · finita) · ultimo GREEN vero: 3
+2026-09-28 15:15:32 ↘ lxqt cede a 4k (ultimo GREEN vero: 3): scendo di misura
+2026-09-28 15:15:32 ── salita amd-b-3k-lxqt (tentativo 1)
+2026-09-28 17:53:21    amd-b-3k-lxqt: codice 1 (buono 14 · rottura 15 · finita) · ultimo GREEN vero: 8
+2026-09-28 17:53:21 ↘ lxqt cede a 3k (ultimo GREEN vero: 8): scendo di misura
+2026-09-28 17:53:21 ── salita amd-b-2k-lxqt (tentativo 1)
+2026-09-28 20:06:55    amd-b-2k-lxqt: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 12
+2026-09-28 20:06:55 ↘ lxqt cede a 2k (ultimo GREEN vero: 12): scendo di misura
+2026-09-28 20:06:55 ── salita amd-b-fhd-lxqt (tentativo 1)
+2026-09-28 22:20:29    amd-b-fhd-lxqt: codice 1 (buono 14 · rottura 15 · finita) · ultimo GREEN vero: 12
+2026-09-28 22:20:29 ↘ lxqt cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-28 22:20:29 ⏹ coda amd-b finita

@@ -1,0 +1,42 @@
+[08:41:16] ⭐ SALITA prova-amd2-xfce · xfce · 4k (3840x2160) · gradini 1 · 3.0 min (ultimo 3.0) · tetto 2 · PROVA (non conta)
+[08:41:16]    scheda della scatola: amd · browser-cliente sulla Intel
+[08:41:16]    commit del prodotto: e4e05dc
+[08:41:16]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 45d048c8 · pagina fb9a18f3 · banchi e4e05dc+modifiche
+[08:41:18]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[08:41:19]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[08:41:20]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[08:41:20]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[08:41:20]    ⭐ tetto delle sessioni in vigore: 2
+[08:41:21]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[08:41:21] ══ livello-01: 1 utenti, 3.0 min (gradino) ══
+[08:41:21]    + utente 01 (pid 3920895, wayland-5, seme 1601, porte 9910)
+[08:41:44]      utente 01 nato in 22.5 s
+[08:41:44]    tutti dentro (23 s dopo l'inizio del livello): lavoro fino alle 08:44:44
+[08:42:14]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[08:42:15]    foto scritte: 1/1 in 1 s
+[08:42:44]    controllo corto: firefox su wayland-4
+[08:45:20]    controllo corto: PASS (codice 0)
+[08:45:22]    ▶ livello-01: DEGRADED (significativo) — 2 GREEN · 0 DEGRADED · 0 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[08:45:22] ⚠ 1 utenti: DEGRADED — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[08:45:22]    fermo 1 attori (SIGTERM: sgomberano da se')
+[08:45:27]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[08:45:28]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[08:45:29]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[08:45:29]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[08:45:29]    ⭐ tetto delle sessioni in vigore: 2
+[08:45:29]    scatola: binario 45d048c8 · pagina fb9a18f3 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[08:45:29] ══ livello-01-ripetizione: 1 utenti, 3.0 min (ripetizione) ══
+[08:45:30]    + utente 01 (pid 3929614, wayland-5, seme 1601, porte 9910)
+[08:45:52]      utente 01 nato in 22.5 s
+[08:45:52]    tutti dentro (23 s dopo l'inizio del livello): lavoro fino alle 08:48:52
+[08:46:22]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[08:46:23]    foto scritte: 1/1 in 1 s
+[08:46:52]    controllo corto: chrome su wayland-4
+[08:48:32]    controllo corto: BLOCKED (codice 3)
+[08:48:54]    ▶ livello-01-ripetizione: FAIL (significativo) — 0 GREEN · 1 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[08:48:54] ⛔ confermato: 1 utenti FAIL due volte
+[08:48:54] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[08:48:54]    fermo 1 attori (SIGTERM: sgomberano da se')
+[08:48:57]    compositori spenti (2)
+[08:49:02]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[08:49:02] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-amd2-xfce/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-amd2-xfce/livello-01-ripetizione"}]

@@ -1,0 +1,53 @@
+{
+ "campagna": "prova-vera-1",
+ "scatola": "lxqt",
+ "misura": "4k",
+ "gradini": [
+  1,
+  2,
+  4
+ ],
+ "pid": 56134,
+ "inizio": "2026-09-25T16:46:51+00:00",
+ "fase": "finita",
+ "gradino": 4,
+ "livello_dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04",
+ "utenti_vivi": 0,
+ "utenti_attesi": 4,
+ "classe_ultimo": "GREEN",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-01"
+  },
+  {
+   "livello": 2,
+   "nome": "livello-02",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-02"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/prova-vera-1/livello-04"
+  }
+ ],
+ "prova": true,
+ "server_non_vuoto": [
+  "1 processi di browser/attori dei banchi vivi (es. 53172 firefox-esr --marionette --no-remote -remote-allow-system-access --profile /tmp/remotix-ff-wccc0_m_ --width 1400 -)"
+ ],
+ "aggiornato": "2026-09-25T16:56:13+00:00",
+ "tipo_livello": "gradino",
+ "fine_prevista": "2026-09-25T16:56:10+00:00",
+ "ultimo_buono": 4,
+ "rottura": null
+}

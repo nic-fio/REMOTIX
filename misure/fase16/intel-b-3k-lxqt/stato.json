@@ -1,0 +1,64 @@
+{
+ "campagna": "intel-b-3k-lxqt",
+ "scatola": "lxqt",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 1678852,
+ "inizio": "2026-09-27T05:19:39+00:00",
+ "fase": "finita",
+ "gradino": 2,
+ "livello_dir": "/media/REMOTIX/misure/fase16/intel-b-3k-lxqt/livello-02",
+ "utenti_vivi": 0,
+ "utenti_attesi": 2,
+ "classe_ultimo": "FAIL",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-lxqt/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-lxqt/livello-04"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-lxqt/livello-04-ripetizione"
+  },
+  {
+   "livello": 2,
+   "nome": "livello-02",
+   "tipo": "ricerca",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-b-3k-lxqt/livello-02"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-27T06:02:11+00:00",
+ "tipo_livello": "ricerca",
+ "fine_prevista": "2026-09-27T06:02:02+00:00",
+ "ricerca": [
+  1,
+  4
+ ],
+ "ultimo_buono": 1,
+ "rottura": 2
+}

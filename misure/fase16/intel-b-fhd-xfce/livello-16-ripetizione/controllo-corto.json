@@ -1,0 +1,64 @@
+{
+ "livello": 16,
+ "utente": 99,
+ "inquilino": "c16016u99",
+ "browser": "chrome",
+ "scatola": "xfce",
+ "misura": "1920x1080",
+ "inizio": "2026-09-27T04:03:28+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: l'accesso: nessuna ammissione in 90 s (esito «None», sessione=None); ultime righe della pagina: ",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: l'accesso: nessuna ammissione in 90 s (esito «None», sessione=None); ultime righe della pagina: ",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: l'accesso: nessuna ammissione in 90 s (esito «None», sessione=None); ultime righe della pagina: ",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: l'accesso: nessuna ammissione in 90 s (esito «None», sessione=None); ultime righe della pagina: ",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 8.72,
+  "ammissione_s": 133.14,
+  "rifiuto": false,
+  "esito": "FAIL",
+  "ragione": "l'accesso: nessuna ammissione in 90 s (esito «None», sessione=None); ultime righe della pagina: "
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/intel-b-fhd-xfce/livello-16-ripetizione/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 32,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "BLOCKED",
+  "F-014": "BLOCKED"
+ },
+ "esito": "BLOCKED",
+ "durata_s": 153,
+ "fine": "2026-09-27T04:06:01+00:00"
+}

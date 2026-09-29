@@ -1,0 +1,115 @@
+⭐ GIRO 16-corta-d023-amd · gnome,kde,xfce,lxqt · firefox,chrome · 13 prove · commit 678a2da+modifiche · gnome=28a947f5/fb9a18f3 kde=28a947f5/fb9a18f3 xfce=28a947f5/fb9a18f3 lxqt=28a947f5/fb9a18f3
+   server 15-g7-server.sh accendi gnome: codice 0
+   server 15-g7-server.sh accendi kde: codice 0
+   server 15-g7-server.sh accendi xfce: codice 0
+   server 15-g7-server.sh accendi lxqt: codice 0
+[lxqt firefox] 15-f001-accesso-e-prima-immagine           11 s  PASS=4
+[gnome firefox] 15-f001-accesso-e-prima-immagine           13 s  PASS=4
+[kde firefox] 15-f001-accesso-e-prima-immagine           14 s  PASS=4
+[lxqt firefox] 15-f003-lo-schermo-si-aggiorna             35 s  PASS=2
+[gnome firefox] 15-f003-lo-schermo-si-aggiorna             35 s  PASS=2
+[kde firefox] 15-f003-lo-schermo-si-aggiorna             38 s  PASS=2
+[xfce firefox] 15-f001-accesso-e-prima-immagine           55 s  PASS=4
+[lxqt firefox] 15-f004-il-mouse                           73 s  PASS=2
+[gnome firefox] 15-f004-il-mouse                           74 s  PASS=2
+[kde firefox] 15-f004-il-mouse                           76 s  PASS=2
+[xfce firefox] 15-f003-lo-schermo-si-aggiorna             78 s  PASS=2
+[lxqt firefox] 15-f007-tasti-speciali                     36 s  PASS=2
+[gnome firefox] 15-f007-tasti-speciali                     36 s  PASS=2
+[kde firefox] 15-f007-tasti-speciali                     39 s  PASS=2
+[lxqt firefox] 15-f009-accenti-e-altgr                    46 s  PASS=2
+[gnome firefox] 15-f009-accenti-e-altgr                    47 s  PASS=2
+[lxqt firefox] 15-f011-la-tela-all-attacco                15 s  PASS=2
+[kde firefox] 15-f009-accenti-e-altgr                    49 s  PASS=2
+[gnome firefox] 15-f011-la-tela-all-attacco                16 s  PASS=2
+[kde firefox] 15-f011-la-tela-all-attacco                19 s  PASS=2
+[xfce firefox] 15-f004-il-mouse                          116 s  PASS=2
+[xfce firefox] 15-f007-tasti-speciali                     79 s  PASS=2
+[lxqt firefox] 15-f013-video                             152 s  PASS=2
+[gnome firefox] 15-f013-video                             151 s  PASS=2
+[kde firefox] 15-f013-video                             156 s  PASS=2
+[lxqt firefox] 15-f014-appunti                            51 s  PASS=4
+[xfce firefox] 15-f009-accenti-e-altgr                    90 s  PASS=2
+[gnome firefox] 15-f014-appunti                            51 s  PASS=4
+[kde firefox] 15-f014-appunti                            56 s  PASS=4
+[xfce firefox] 15-f011-la-tela-all-attacco                60 s  PASS=2
+[lxqt firefox] 15-f016-stacco-e-riattacco                128 s  PASS=8
+[gnome firefox] 15-f016-stacco-e-riattacco                128 s  PASS=8
+[kde firefox] 15-f016-stacco-e-riattacco                131 s  PASS=8
+[lxqt firefox] 15-f018-riattacco-a-misura-diversa         56 s  PASS=4
+[gnome firefox] 15-f018-riattacco-a-misura-diversa         56 s  PASS=4
+[kde firefox] 15-f018-riattacco-a-misura-diversa         59 s  PASS=4
+[lxqt firefox] 15-f018b-finestre-dentro-al-riattacco      56 s  PASS=4
+[gnome firefox] 15-f018b-finestre-dentro-al-riattacco      57 s  PASS=4
+[xfce firefox] 15-f013-video                             194 s  PASS=2
+[kde firefox] 15-f018b-finestre-dentro-al-riattacco      60 s  PASS=4
+[xfce firefox] 15-f014-appunti                            95 s  PASS=4
+[lxqt firefox] 15-f021-esci                              109 s  PASS=2
+[gnome firefox] 15-f021-esci                              108 s  PASS=2
+[kde firefox] 15-f021-esci                              114 s  PASS=2
+[xfce firefox] 15-f016-stacco-e-riattacco                217 s  PASS=8
+[gnome firefox] 15-f022-orologi                           259 s  PASS=6
+[lxqt firefox] 15-f022-orologi                           274 s  PASS=6
+[gnome chrome] 15-f001-accesso-e-prima-immagine           24 s  PASS=4
+[lxqt chrome] 15-f001-accesso-e-prima-immagine           23 s  PASS=4
+[xfce firefox] 15-f018-riattacco-a-misura-diversa         99 s  PASS=4
+[gnome chrome] 15-f003-lo-schermo-si-aggiorna             38 s  PASS=2
+[kde firefox] 15-f022-orologi                           284 s  PASS=6
+[lxqt chrome] 15-f003-lo-schermo-si-aggiorna             38 s  PASS=2
+[kde chrome] 15-f001-accesso-e-prima-immagine           32 s  PASS=4
+[gnome chrome] 15-f004-il-mouse                           75 s  PASS=2
+[kde chrome] 15-f003-lo-schermo-si-aggiorna             46 s  PASS=2
+[lxqt chrome] 15-f004-il-mouse                           75 s  PASS=2
+[xfce firefox] 15-f018b-finestre-dentro-al-riattacco      99 s  PASS=4
+[gnome chrome] 15-f007-tasti-speciali                     39 s  PASS=2
+[lxqt chrome] 15-f007-tasti-speciali                     38 s  PASS=2
+[kde chrome] 15-f004-il-mouse                           85 s  PASS=2
+[gnome chrome] 15-f009-accenti-e-altgr                    52 s  PASS=2
+[lxqt chrome] 15-f009-accenti-e-altgr                    52 s  PASS=2
+[gnome chrome] 15-f011-la-tela-all-attacco                19 s  PASS=2
+[lxqt chrome] 15-f011-la-tela-all-attacco                18 s  PASS=2
+[kde chrome] 15-f007-tasti-speciali                     47 s  PASS=2
+[kde chrome] 15-f009-accenti-e-altgr                    61 s  PASS=2
+[xfce firefox] 15-f021-esci                              188 s  PASS=2
+[kde chrome] 15-f011-la-tela-all-attacco                28 s  PASS=2
+[gnome chrome] 15-f013-video                             152 s  PASS=2
+[lxqt chrome] 15-f013-video                             153 s  PASS=2
+[gnome chrome] 15-f014-appunti                            54 s  PASS=4
+[lxqt chrome] 15-f014-appunti                            53 s  PASS=4
+[kde chrome] 15-f013-video                             161 s  PASS=2
+[kde chrome] 15-f014-appunti                            57 s  PASS=4
+[gnome chrome] 15-f016-stacco-e-riattacco                136 s  PASS=8
+[lxqt chrome] 15-f016-stacco-e-riattacco                134 s  PASS=8
+[gnome chrome] 15-f018-riattacco-a-misura-diversa         62 s  PASS=4
+[lxqt chrome] 15-f018-riattacco-a-misura-diversa         61 s  PASS=4
+[xfce firefox] 15-f022-orologi                           344 s  PASS=6
+[gnome chrome] 15-f018b-finestre-dentro-al-riattacco      62 s  PASS=4
+[lxqt chrome] 15-f018b-finestre-dentro-al-riattacco      62 s  PASS=4
+[kde chrome] 15-f016-stacco-e-riattacco                144 s  PASS=8
+[xfce chrome] 15-f001-accesso-e-prima-immagine           67 s  PASS=4
+[kde chrome] 15-f018-riattacco-a-misura-diversa         71 s  PASS=4
+[lxqt chrome] 15-f021-esci                              112 s  PASS=2
+[gnome chrome] 15-f021-esci                              115 s  PASS=2
+[xfce chrome] 15-f003-lo-schermo-si-aggiorna             81 s  PASS=2
+[kde chrome] 15-f018b-finestre-dentro-al-riattacco      71 s  PASS=4
+[xfce chrome] 15-f004-il-mouse                          121 s  PASS=2
+[kde chrome] 15-f021-esci                              121 s  PASS=2
+[xfce chrome] 15-f007-tasti-speciali                     83 s  PASS=2
+[gnome chrome] 15-f022-orologi                           268 s  PASS=6
+[lxqt chrome] 15-f022-orologi                           279 s  PASS=6
+[xfce chrome] 15-f009-accenti-e-altgr                    95 s  PASS=2
+[xfce chrome] 15-f011-la-tela-all-attacco                61 s  PASS=2
+[kde chrome] 15-f022-orologi                           306 s  PASS=6
+[xfce chrome] 15-f013-video                             196 s  PASS=2
+[xfce chrome] 15-f014-appunti                            96 s  PASS=4
+[xfce chrome] 15-f016-stacco-e-riattacco                222 s  PASS=8
+[xfce chrome] 15-f018-riattacco-a-misura-diversa        104 s  PASS=4
+[xfce chrome] 15-f018b-finestre-dentro-al-riattacco     105 s  PASS=4
+[xfce chrome] 15-f021-esci                              190 s  PASS=2
+[xfce chrome] 15-f022-orologi                           352 s  PASS=6
+   server 15-g7-server.sh spegni gnome: codice 0
+   server 15-g7-server.sh spegni kde: codice 0
+   server 15-g7-server.sh spegni xfce: codice 0
+   server 15-g7-server.sh spegni lxqt: codice 0
+
+⏱ giro 16-corta-d023-amd: 58 min · PASS=352

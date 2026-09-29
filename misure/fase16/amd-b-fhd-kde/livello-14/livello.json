@@ -1,0 +1,295 @@
+{
+ "kernel": "7.0",
+ "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+ "schede": [
+  {
+   "scheda": "Intel UHD 770 (i5-13500T)",
+   "id": "8086:4680",
+   "driver": "i915",
+   "pci": "0000:00:02.0"
+  },
+  {
+   "scheda": "AMD Radeon RX 6800",
+   "id": "1002:73bf",
+   "driver": "amdgpu",
+   "pci": "0000:03:00.0"
+  }
+ ],
+ "prodotto_binario": "28a947f5",
+ "prodotto_pagina": "fb9a18f3",
+ "firefox": "Mozilla Firefox 140.16.0esr",
+ "chrome": "Google Chrome 154.0.8037.57",
+ "commit_banchi": "678a2da+modifiche",
+ "scheda_compositori": "/dev/dri/renderD128",
+ "commit_prodotto": "678a2da",
+ "campagna": "amd-b-fhd-kde",
+ "livello": 14,
+ "nome": "livello-14",
+ "tipo": "ricerca",
+ "desktop": "kde",
+ "misura": "fhd",
+ "largo": 1920,
+ "alto": 1080,
+ "tetto_sessioni": 17,
+ "minuti": 10,
+ "controllo_min": 2,
+ "inizio": "2026-09-28T02:53:08+00:00",
+ "inizio_t": 1790563988.478,
+ "inizio_lavoro": "2026-09-28T02:57:10+00:00",
+ "fine": 1790564830.549,
+ "fine_iso": "2026-09-28T03:07:10+00:00",
+ "durata_s": 842,
+ "durata_lavoro_s": 600,
+ "utenti": [
+  {
+   "utente": 1,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 2,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 3,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 4,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 5,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 6,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 7,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 8,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 9,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 10,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 11,
+   "profilo": "C",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 12,
+   "profilo": "D",
+   "browser": "chrome",
+   "nuovo": true
+  },
+  {
+   "utente": 13,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  },
+  {
+   "utente": 14,
+   "profilo": "B",
+   "browser": "chrome",
+   "nuovo": true
+  }
+ ],
+ "vivi_alla_fine": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14
+ ],
+ "nati_nel_livello": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14
+ ],
+ "nascite_s": {
+  "01": 12.5,
+  "02": 20.0,
+  "03": 12.0,
+  "04": 23.0,
+  "05": 14.0,
+  "06": 21.0,
+  "07": 13.0,
+  "08": 22.0,
+  "09": 12.5,
+  "10": 19.0,
+  "11": 14.5,
+  "12": 22.0,
+  "13": 14.5,
+  "14": 21.5
+ },
+ "seme_base": 1600,
+ "video": "/media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4",
+ "fps_video": 30.0,
+ "controllo_corto": "PASS",
+ "registro_server": [
+  "server.log",
+  "journal-err.jsonl",
+  "journal-server.log",
+  "journal-scatola.log"
+ ],
+ "entrata_ok": true,
+ "entrata_ragione": null,
+ "attesi": 14,
+ "entrati": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14
+ ],
+ "nati_alla_partenza": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14
+ ],
+ "foto_piena": {
+  "t": "2026-09-28T03:04:40+00:00",
+  "t_s": 1790564680.421,
+  "attesi": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "fatte": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "durata_s": 2.0
+ },
+ "inizio_finestra": "2026-09-28T03:05:10+00:00",
+ "inizio_finestra_t": 1790564710.421,
+ "schede_browser": {
+  "campioni_browser": 17443,
+  "fuori_intel": {},
+  "intel": "0000:00:02.0"
+ },
+ "eventi": [],
+ "attori_da": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/attori-4",
+ "prova": false,
+ "scatola_binario": "28a947f5",
+ "scatola_pagina": "fb9a18f3",
+ "scatola_dri_nella_scatola": [
+  "card0",
+  "card1",
+  "renderD128",
+  "renderD129"
+ ],
+ "scatola_driver_video": [
+  "intel-media-va-driver=25.2.3+dfsg1-1",
+  "libgl1-mesa-dri=25.0.7-2+deb13u1",
+  "libva2=2.22.0-3",
+  "mesa-va-drivers=25.0.7-2+deb13u1"
+ ],
+ "scatola_opzioni_server": "--tetto-sessioni 17 -- --journal ;",
+ "scatola_journal": true,
+ "scatola_driver_va": "Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)",
+ "scheda": "AMD Radeon RX 6800",
+ "scheda_quale": "amd",
+ "scheda_pci": "0000:03:00.0",
+ "scheda_browser": "Intel UHD 770 (i5-13500T)",
+ "driver": "amdgpu intel-media-va-driver=25.2.3+dfsg1-1 libgl1-mesa-dri=25.0.7-2+deb13u1 libva2=2.22.0-3 mesa-va-drivers=25.0.7-2+deb13u1",
+ "commit": "678a2da",
+ "binario": "28a947f5",
+ "pagina": "fb9a18f3",
+ "nucleo": "7.0"
+}

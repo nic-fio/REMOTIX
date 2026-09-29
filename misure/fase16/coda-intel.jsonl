@@ -1,0 +1,11 @@
+{"t":"2026-09-25T22:01:43+00:00","scheda":"intel","desktop":"gnome","misura":"4k","campagna":"intel-4k-gnome","codice":1,"ultimo_green":null}
+{"t":"2026-09-25T22:01:44+00:00","scheda":"intel","desktop":"gnome","misura":"3k","campagna":"intel-3k-gnome","codice":3,"ultimo_green":null}
+{"t":"2026-09-25T22:36:11+00:00","scheda":"intel","desktop":"gnome","misura":"3k","campagna":"intel-3k-gnome-r2","codice":3,"ultimo_green":1}
+{"t":"2026-09-25T22:56:59+00:00","scheda":"intel","desktop":"kde","misura":"4k","campagna":"intel-4k-kde","codice":1,"ultimo_green":null}
+{"t":"2026-09-25T23:17:59+00:00","scheda":"intel","desktop":"kde","misura":"3k","campagna":"intel-3k-kde","codice":1,"ultimo_green":null}
+{"t":"2026-09-25T23:38:57+00:00","scheda":"intel","desktop":"kde","misura":"2k","campagna":"intel-2k-kde","codice":1,"ultimo_green":null}
+{"t":"2026-09-26T00:47:27+00:00","scheda":"intel","desktop":"kde","misura":"fhd","campagna":"intel-fhd-kde","codice":1,"ultimo_green":4}
+{"t":"2026-09-26T02:03:53+00:00","scheda":"intel","desktop":"xfce","misura":"4k","campagna":"intel-4k-xfce","codice":3,"ultimo_green":4}
+{"t":"2026-09-26T03:59:58+00:00","scheda":"intel","desktop":"xfce","misura":"3k","campagna":"intel-3k-xfce","codice":1,"ultimo_green":null}
+{"t":"2026-09-26T04:20:51+00:00","scheda":"intel","desktop":"xfce","misura":"2k","campagna":"intel-2k-xfce","codice":1,"ultimo_green":null}
+{"t":"2026-09-26T06:46:39+00:00","scheda":"intel","desktop":"xfce","misura":"fhd","campagna":"intel-fhd-xfce","codice":1,"ultimo_green":12}

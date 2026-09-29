@@ -1,0 +1,46 @@
+[07:22:56] ⭐ SALITA prova-coda-gl-4u-prima · xfce · 4k (3840x2160) · gradini 4 · 3.0 min (ultimo 3) · tetto 5 · PROVA (non conta)
+[07:22:56]    scheda della scatola: intel · browser-cliente sulla Intel
+[07:22:56]    commit del prodotto: 97e94fe
+[07:22:56]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina 2cea4147 · banchi 4d62a81
+[07:22:58]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[07:22:59]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[07:23:00]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[07:23:00]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[07:23:00]    ⭐ tetto delle sessioni in vigore: 5
+[07:23:01]    scatola: binario 3fe94e8b · pagina 2cea4147 · --tetto-sessioni 5 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[07:23:01] ══ livello-04: 4 utenti, 3 min (gradino) ══
+[07:23:02]    + utente 01 (pid 3504850, wayland-5, seme 1601, porte 9910)
+[07:23:26]      utente 01 nato in 23.5 s
+[07:23:26]    + utente 02 (pid 3506004, wayland-6, seme 1602, porte 9920)
+[07:23:50]      utente 02 nato in 24.0 s
+[07:23:50]    + utente 03 (pid 3507801, wayland-7, seme 1603, porte 9930)
+[07:24:12]      utente 03 nato in 22.5 s
+[07:24:12]    + utente 04 (pid 3508934, wayland-8, seme 1604, porte 9940)
+[07:24:38]      utente 04 nato in 25.5 s
+[07:24:38]    tutti dentro (97 s dopo l'inizio del livello): lavoro fino alle 07:27:38
+[07:25:08]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[07:25:09]    foto scritte: 4/4 in 1 s
+[07:25:38]    controllo corto: firefox su wayland-4
+[07:28:14]    controllo corto: PASS (codice 0)
+[07:28:16]    ▶ livello-04: FAIL (significativo) — 3 GREEN · 1 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: nessuna riga di risorse.jsonl nel lavoro del livello · DEGRADED memoria_sessioni: NON MISURATO: nessuna riga di risorse
+[07:28:16] ⚠ 4 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[07:28:16]    fermo 4 attori (SIGTERM: sgomberano da se')
+[07:28:22]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[07:28:22]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[07:28:23]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[07:28:23]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[07:28:23]    ⭐ tetto delle sessioni in vigore: 5
+[07:28:24]    scatola: binario 3fe94e8b · pagina 2cea4147 · --tetto-sessioni 5 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[07:28:24] ══ livello-04-ripetizione: 4 utenti, 3 min (ripetizione) ══
+[07:28:24]    + utente 01 (pid 3523507, wayland-5, seme 1601, porte 9910)
+[07:28:46]      utente 01 nato in 22.5 s
+[07:28:46]    + utente 02 (pid 3524704, wayland-6, seme 1602, porte 9920)
+[07:28:59] ⚠ segnale 2: mi fermo e sgombero
+[07:29:00]    ⚠ utente 02 non ha il primo fotogramma in 180 s: entra il prossimo lo stesso
+[07:29:00] ⛔ ENTRATA FALLITA (2 entrati su 4, 1 nati): fermata da fuori — il livello sara' «?»
+[07:29:01]    ▶ livello-04-ripetizione: INTERROTTO — fermata da fuori (segnale)
+[07:29:01] ⏹ FINE: ultimo livello buono 0 · rottura None · ⚠ FERMATA DA FUORI
+[07:29:01]    fermo 2 attori (SIGTERM: sgomberano da se')
+[07:29:15]    compositori spenti (5)
+[07:29:20]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[07:29:20] fine · [{"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-coda-gl-4u-prima/livello-04"}, {"livello": 4, "nome": "livello-04-ripetizione", "tipo": "ripetizione", "classe": "INTERROTTO", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/prova-coda-gl-4u-prima/livello-04-ripetizione"}]

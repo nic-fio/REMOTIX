@@ -1,0 +1,79 @@
+[22:03:45] ⭐ SALITA intel-3k-gnome-r2 · gnome · 3k (3200x1800) · gradini 1,4,8,12,16 · 10 min (ultimo 30) · tetto 17
+[22:03:45]    scheda della scatola: intel · browser-cliente sulla Intel
+[22:03:45]    commit del prodotto: 97e94fe
+[22:03:45]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina c5279e66 · banchi 4d62a81
+[22:03:48]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[22:03:48]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[22:03:49]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[22:03:49]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[22:03:49]    ⭐ tetto delle sessioni in vigore: 17
+[22:03:50]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[22:03:50] ══ livello-01: 1 utenti, 10 min (gradino) ══
+[22:03:51]    + utente 01 (pid 1272775, wayland-5, seme 1601, porte 9910)
+[22:04:01]      utente 01 nato in 10.5 s
+[22:04:01]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 22:14:01
+[22:11:31]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[22:11:32]    foto scritte: 1/1 in 1 s
+[22:12:01]    controllo corto: firefox su wayland-4
+[22:13:07]    controllo corto: PASS (codice 0)
+[22:14:03]    ▶ livello-01: GREEN — 2 GREEN · 0 DEGRADED · 0 FAIL
+[22:14:03] ══ livello-04: 4 utenti, 10 min (gradino) ══
+[22:14:05]    + utente 02 (pid 1282965, wayland-6, seme 1602, porte 9920)
+[22:14:16]      utente 02 nato in 11.5 s
+[22:14:16]    + utente 03 (pid 1284058, wayland-7, seme 1603, porte 9930)
+[22:14:25]      utente 03 nato in 9.0 s
+[22:14:25]    + utente 04 (pid 1285460, wayland-8, seme 1604, porte 9940)
+[22:14:38]      utente 04 nato in 13.0 s
+[22:14:38]    tutti dentro (35 s dopo l'inizio del livello): lavoro fino alle 22:24:38
+[22:22:08]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[22:22:10]    foto scritte: 4/4 in 2 s
+[22:22:38]    controllo corto: chrome su wayland-4
+[22:23:47]    controllo corto: PASS (codice 0)
+[22:24:42]    ▶ livello-04: DEGRADED (significativo) — 2 GREEN · 3 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (3 su 4)): non si sale
+[22:24:42] ⚠ 4 utenti: DEGRADED — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[22:24:42]    fermo 4 attori (SIGTERM: sgomberano da se')
+[22:24:48]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[22:24:49]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[22:24:49]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[22:24:50]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[22:24:50]    ⭐ tetto delle sessioni in vigore: 17
+[22:24:50]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[22:24:50] ══ livello-04-ripetizione: 4 utenti, 10 min (ripetizione) ══
+[22:24:50]    + utente 01 (pid 1312450, wayland-5, seme 1601, porte 9910)
+[22:25:00]      utente 01 nato in 10.0 s
+[22:25:00]    + utente 02 (pid 1313774, wayland-6, seme 1602, porte 9920)
+[22:25:12]      utente 02 nato in 11.5 s
+[22:25:12]    + utente 03 (pid 1315472, wayland-7, seme 1603, porte 9930)
+[22:25:21]      utente 03 nato in 9.0 s
+[22:25:21]    + utente 04 (pid 1316979, wayland-8, seme 1604, porte 9940)
+[22:25:33]      utente 04 nato in 12.5 s
+[22:25:33]    tutti dentro (43 s dopo l'inizio del livello): lavoro fino alle 22:35:33
+[22:33:03]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[22:33:05]    foto scritte: 4/4 in 2 s
+[22:33:33]    controllo corto: firefox su wayland-4
+[22:34:42]    controllo corto: PASS (codice 0)
+[22:35:36]    ▶ livello-04-ripetizione: FAIL (significativo) — 1 GREEN · 3 DEGRADED · 1 FAIL
+[22:35:36] ⛔ confermato: 4 utenti FAIL due volte
+[22:35:36] 🔎 ricerca a meta' fra 1 (buono) e 4 (rotto): 2 utenti
+[22:35:36]    fermo 4 attori (SIGTERM: sgomberano da se')
+[22:35:42] ⛔ la salita e' caduta: FileNotFoundError(2, 'No such file or directory')
+Traceback (most recent call last):
+  File "/media/REMOTIX/src/controllo/banchi/16-stress/16-salita.py", line 1260, in main
+    codice = sal.corri()
+  File "/media/REMOTIX/src/controllo/banchi/16-stress/16-salita.py", line 980, in corri
+    ultimo_buono, rotto = self.ricerca(ultimo_buono, rotto)
+                          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/media/REMOTIX/src/controllo/banchi/16-stress/16-salita.py", line 994, in ricerca
+    ok, perche = self.scatola_pulita(os.path.join(self.base, "livello-%02d" % n))
+                 ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/REMOTIX/src/controllo/banchi/16-stress/16-salita.py", line 577, in scatola_pulita
+    ok, perche = rifai_scatola(self.o, self.o.scatola, self.o.tetto, dove)
+                 ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/media/REMOTIX/src/controllo/banchi/16-stress/16-salita.py", line 390, in rifai_scatola
+    with open(os.path.join(dove, "scatola-%s.log" % passo), "a") as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/media/REMOTIX/misure/fase16/intel-3k-gnome-r2/livello-02/scatola-accendi.log'
+
+[22:35:42]    compositori spenti (5)
+[22:36:11]    server rimesso col tetto predefinito (codice 1, tetto None)
+[22:36:11] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/intel-3k-gnome-r2/livello-01"}, {"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-3k-gnome-r2/livello-04"}, {"livello": 4, "nome": "livello-04-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-3k-gnome-r2/livello-04-ripetizione"}]

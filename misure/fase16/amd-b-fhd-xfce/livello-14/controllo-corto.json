@@ -1,0 +1,74 @@
+{
+ "livello": 14,
+ "utente": 99,
+ "inquilino": "c16014u99",
+ "browser": "firefox",
+ "scatola": "xfce",
+ "misura": "1920x1080",
+ "inizio": "2026-09-28T14:07:07+00:00",
+ "wayland": "wayland-0",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.29), atteso (0.25,0.30) · visto a (0.70,0.59), atteso (0.70,0.60) · visto a (0.50,0.79), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 278 px (atteso 278)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [512, 308, 1343, 731] (in 4.8 s) · cambia PASS: 86 foto in 6.0 s, 31 valori diversi, ritardo massimo 25 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» 77c310be",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» 77c310be",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 1.25,
+  "ammissione_s": 1.24,
+  "nascita_s": 1.85,
+  "primo_non_degenere_s": 3.0,
+  "esito": "PASS",
+  "ragione": "dipinti=9 dopo 0.0 s · 1856x928 · colori distinti 149 · dominante 95.2% (0,0,0) · luminanza media 3 dev 15.3"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-fhd-xfce/livello-14/controllo-corto",
+ "versione": "Firefox 140.16.0 · finestra vera",
+ "sessioni_durante": 28,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 68,
+ "fine": "2026-09-28T14:08:15+00:00"
+}

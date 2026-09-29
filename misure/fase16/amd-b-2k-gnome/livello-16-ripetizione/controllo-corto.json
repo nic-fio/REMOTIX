@@ -1,0 +1,67 @@
+{
+ "livello": 16,
+ "utente": 99,
+ "inquilino": "c16016u99",
+ "browser": "firefox",
+ "scatola": "gnome",
+ "misura": "2560x1440",
+ "inizio": "2026-09-27T18:45:42+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: la scena non ha detto «caricata» | socket wayland-0 | amdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description. | If they do, bad things may happen! | ExceptionHandler::GenerateDump attempting to generate:\u0000/home/c16016u99/.g2-profilo/minidumps/3262058f-1297-d43b-9496-177273550a20.dmp | Exiting due to channel error. | Exiting due to channel error. |                            ^^^^^^^^^^^^^^^^^^^ | RuntimeError: can't start new thread | ----------------------------------------",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: la scena non ha detto «caricata» | socket wayland-0 | amdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description. | If they do, bad things may happen! | ExceptionHandler::GenerateDump attempting to generate:\u0000/home/c16016u99/.g2-profilo/minidumps/3262058f-1297-d43b-9496-177273550a20.dmp | Exiting due to channel error. | Exiting due to channel error. |                            ^^^^^^^^^^^^^^^^^^^ | RuntimeError: can't start new thread | ----------------------------------------",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "FAIL",
+   "ragione": "apre PASS: la finestra si vede: ciano [688, 394, 1809, 1019] (in 120.5 s) · cambia FAIL: serie 1: FAIL 49 foto su 49 col contatore illeggibile; solo 0 valori diversi in 49 foto · serie 2: 47 foto su 47 col contatore illeggibile; solo 0 valori diversi in 47 foto",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [688, 394, 1809, 1019] (in 120.5 s) · cambia FAIL: serie 1: FAIL 49 foto su 49 col contatore illeggibile; solo 0 valori diversi in 49 foto · serie 2: 47 foto su 47 col contatore illeggibile; solo 0 valori diversi in 47 foto",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-gnome/livello-16-ripetizione/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "BLOCKED",
+   "ragione": "la scena degli appunti non si accende: dboxingKind 0 -prefsHandle 0:39478 -prefMapHandle 1:269251 -sa\n--run\nICEauthority\nbus\ndbus-1\ndconf\ndconf-service\ndoc\ngnome-session-leader-fifo\ngnome-shell\ngnupg\ngvfs\ngvfsd\npipewire-0\npipewire-0-manager\npipewire-0-manager.lock\npipewire-0.lock\npulse\nremotix\nsystemd\nwayland-0\nwayland-0.lock\n--curl\n1160",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 1.18,
+  "ammissione_s": 1.23,
+  "nascita_s": 2.68,
+  "primo_non_degenere_s": 3.87,
+  "esito": "PASS",
+  "ragione": "dipinti=11 dopo 0.0 s · 2496x1296 · colori distinti 145 · dominante 23.6% (32,32,32) · luminanza media 61 dev 20.1"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-2k-gnome/livello-16-ripetizione/controllo-corto",
+ "versione": "Firefox 140.16.0 · finestra vera",
+ "sessioni_durante": 32,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "FAIL",
+  "F-014": "BLOCKED"
+ },
+ "esito": "FAIL",
+ "durata_s": 301,
+ "fine": "2026-09-27T18:50:43+00:00"
+}

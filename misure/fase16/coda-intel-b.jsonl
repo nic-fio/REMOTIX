@@ -1,0 +1,16 @@
+{"t":"2026-09-26T09:49:43+00:00","scheda":"intel-b","desktop":"gnome","misura":"4k","campagna":"intel-b-4k-gnome","codice":1,"ultimo_green":3}
+{"t":"2026-09-26T10:56:06+00:00","scheda":"intel-b","desktop":"gnome","misura":"3k","campagna":"intel-b-3k-gnome","codice":1,"ultimo_green":1}
+{"t":"2026-09-26T12:29:41+00:00","scheda":"intel-b","desktop":"gnome","misura":"2k","campagna":"intel-b-2k-gnome","codice":1,"ultimo_green":1}
+{"t":"2026-09-26T15:03:32+00:00","scheda":"intel-b","desktop":"gnome","misura":"fhd","campagna":"intel-b-fhd-gnome","codice":1,"ultimo_green":12}
+{"t":"2026-09-26T16:08:22+00:00","scheda":"intel-b","desktop":"kde","misura":"4k","campagna":"intel-b-4k-kde","codice":1,"ultimo_green":3}
+{"t":"2026-09-26T17:30:23+00:00","scheda":"intel-b","desktop":"kde","misura":"3k","campagna":"intel-b-3k-kde","codice":1,"ultimo_green":4}
+{"t":"2026-09-26T19:03:53+00:00","scheda":"intel-b","desktop":"kde","misura":"2k","campagna":"intel-b-2k-kde","codice":1,"ultimo_green":4}
+{"t":"2026-09-26T20:36:59+00:00","scheda":"intel-b","desktop":"kde","misura":"fhd","campagna":"intel-b-fhd-kde","codice":1,"ultimo_green":8}
+{"t":"2026-09-26T22:50:46+00:00","scheda":"intel-b","desktop":"xfce","misura":"4k","campagna":"intel-b-4k-xfce","codice":1,"ultimo_green":4}
+{"t":"2026-09-27T00:42:23+00:00","scheda":"intel-b","desktop":"xfce","misura":"3k","campagna":"intel-b-3k-xfce","codice":1,"ultimo_green":4}
+{"t":"2026-09-27T02:08:29+00:00","scheda":"intel-b","desktop":"xfce","misura":"2k","campagna":"intel-b-2k-xfce","codice":1,"ultimo_green":8}
+{"t":"2026-09-27T04:37:16+00:00","scheda":"intel-b","desktop":"xfce","misura":"fhd","campagna":"intel-b-fhd-xfce","codice":1,"ultimo_green":12}
+{"t":"2026-09-27T05:19:39+00:00","scheda":"intel-b","desktop":"lxqt","misura":"4k","campagna":"intel-b-4k-lxqt","codice":1,"ultimo_green":1}
+{"t":"2026-09-27T06:02:11+00:00","scheda":"intel-b","desktop":"lxqt","misura":"3k","campagna":"intel-b-3k-lxqt","codice":1,"ultimo_green":1}
+{"t":"2026-09-27T06:44:44+00:00","scheda":"intel-b","desktop":"lxqt","misura":"2k","campagna":"intel-b-2k-lxqt","codice":1,"ultimo_green":1}
+{"t":"2026-09-27T09:08:15+00:00","scheda":"intel-b","desktop":"lxqt","misura":"fhd","campagna":"intel-b-fhd-lxqt","codice":1,"ultimo_green":12}

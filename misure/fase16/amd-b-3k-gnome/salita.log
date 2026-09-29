@@ -1,0 +1,238 @@
+[14:16:26] ⭐ SALITA amd-b-3k-gnome · gnome · 3k (3200x1800) · gradini 1,4,8,12,16 · 10 min (ultimo 30) · tetto 17
+[14:16:26]    scheda della scatola: amd · browser-cliente sulla Intel
+[14:16:26]    commit del prodotto: 678a2da
+[14:16:26]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 28a947f5 · pagina fb9a18f3 · banchi 678a2da+modifiche
+[14:16:29]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[14:16:30]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[14:16:30]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[14:16:30]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[14:16:31]    ⭐ tetto delle sessioni in vigore: 17
+[14:16:31]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[14:16:31] ══ livello-01: 1 utenti, 10 min (gradino) ══
+[14:16:32]    + utente 01 (pid 3492842, wayland-5, seme 1601, porte 9910)
+[14:16:42]      utente 01 nato in 10.5 s
+[14:16:42]    tutti dentro (11 s dopo l'inizio del livello): lavoro fino alle 14:26:42
+[14:24:12]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[14:24:13]    foto scritte: 1/1 in 1 s
+[14:24:42]    controllo corto: firefox su wayland-4
+[14:25:49]    controllo corto: PASS (codice 0)
+[14:26:44]    ▶ livello-01: GREEN — 2 GREEN · 0 DEGRADED · 0 FAIL
+[14:26:44] ══ livello-04: 4 utenti, 10 min (gradino) ══
+[14:26:46]    + utente 02 (pid 3504278, wayland-6, seme 1602, porte 9920)
+[14:26:57]      utente 02 nato in 11.5 s
+[14:26:57]    + utente 03 (pid 3505379, wayland-7, seme 1603, porte 9930)
+[14:27:06]      utente 03 nato in 9.0 s
+[14:27:06]    + utente 04 (pid 3506866, wayland-8, seme 1604, porte 9940)
+[14:27:19]      utente 04 nato in 13.0 s
+[14:27:19]    tutti dentro (35 s dopo l'inizio del livello): lavoro fino alle 14:37:19
+[14:34:49]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[14:34:50]    foto scritte: 4/4 in 1 s
+[14:35:19]    controllo corto: chrome su wayland-4
+[14:36:29]    controllo corto: PASS (codice 0)
+[14:37:23]    ▶ livello-04: DEGRADED (significativo) — 3 GREEN · 2 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (2 su 4)): non si sale
+[14:37:23] ⚠ 4 utenti: DEGRADED — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[14:37:23]    fermo 4 attori (SIGTERM: sgomberano da se')
+[14:37:28]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[14:37:29]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[14:37:29]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[14:37:30]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[14:37:30]    ⭐ tetto delle sessioni in vigore: 17
+[14:37:30]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[14:37:30] ══ livello-04-ripetizione: 4 utenti, 10 min (ripetizione) ══
+[14:37:30]    + utente 01 (pid 3536199, wayland-5, seme 1601, porte 9910)
+[14:37:41]      utente 01 nato in 10.5 s
+[14:37:41]    + utente 02 (pid 3537547, wayland-6, seme 1602, porte 9920)
+[14:37:52]      utente 02 nato in 11.5 s
+[14:37:52]    + utente 03 (pid 3539323, wayland-7, seme 1603, porte 9930)
+[14:38:02]      utente 03 nato in 9.5 s
+[14:38:02]    + utente 04 (pid 3540935, wayland-8, seme 1604, porte 9940)
+[14:38:15]      utente 04 nato in 13.0 s
+[14:38:15]    tutti dentro (45 s dopo l'inizio del livello): lavoro fino alle 14:48:15
+[14:45:45]    SIGUSR1 a 4 attori (foto piena), 30 s prima della finestra
+[14:45:46]    foto scritte: 4/4 in 1 s
+[14:46:15]    controllo corto: firefox su wayland-4
+[14:47:22]    controllo corto: PASS (codice 0)
+[14:48:18]    ▶ livello-04-ripetizione: GREEN — 5 GREEN · 0 DEGRADED · 0 FAIL
+[14:48:18]    la ripetizione dice GREEN: non confermato, si sale
+[14:48:18] ══ livello-08: 8 utenti, 10 min (gradino) ══
+[14:48:20]    + utente 05 (pid 3568037, wayland-9, seme 1605, porte 9950)
+[14:48:31]      utente 05 nato in 11.0 s
+[14:48:31]    + utente 06 (pid 3569564, wayland-10, seme 1606, porte 9960)
+[14:48:43]      utente 06 nato in 12.0 s
+[14:48:43]    + utente 07 (pid 3571845, wayland-11, seme 1607, porte 9970)
+[14:48:52]      utente 07 nato in 9.5 s
+[14:48:52]    + utente 08 (pid 3573746, wayland-12, seme 1608, porte 9980)
+[14:49:05]      utente 08 nato in 13.0 s
+[14:49:05]    tutti dentro (47 s dopo l'inizio del livello): lavoro fino alle 14:59:05
+[14:56:35]    SIGUSR1 a 8 attori (foto piena), 30 s prima della finestra
+[14:56:37]    foto scritte: 8/8 in 2 s
+[14:57:05]    controllo corto: chrome su wayland-4
+[14:58:16]    controllo corto: PASS (codice 0)
+[14:59:11]    ▶ livello-08: DEGRADED — 7 GREEN · 2 DEGRADED · 0 FAIL · DEGRADED non significativo
+[14:59:11] ══ livello-12: 12 utenti, 10 min (gradino) ══
+[14:59:12]    + utente 09 (pid 3622330, wayland-13, seme 1609, porte 9990)
+[14:59:23]      utente 09 nato in 11.0 s
+[14:59:23]    + utente 10 (pid 3624106, wayland-14, seme 1610, porte 10000)
+[14:59:35]      utente 10 nato in 11.5 s
+[14:59:35]    + utente 11 (pid 3626791, wayland-15, seme 1611, porte 10010)
+[14:59:44]      utente 11 nato in 9.5 s
+[14:59:44]    + utente 12 (pid 3629198, wayland-16, seme 1612, porte 10020)
+[14:59:57]      utente 12 nato in 13.0 s
+[14:59:57]    tutti dentro (47 s dopo l'inizio del livello): lavoro fino alle 15:09:57
+[15:07:27]    SIGUSR1 a 12 attori (foto piena), 30 s prima della finestra
+[15:07:29]    foto scritte: 12/12 in 2 s
+[15:07:57]    controllo corto: firefox su wayland-4
+[15:09:07]    controllo corto: PASS (codice 0)
+[15:10:05]    ▶ livello-12: DEGRADED — 12 GREEN · 1 DEGRADED · 0 FAIL · DEGRADED non significativo
+[15:10:05] ══ livello-16: 16 utenti, 30 min (gradino) ══
+[15:10:07]    + utente 13 (pid 3696954, wayland-17, seme 1613, porte 10030)
+[15:10:18]      utente 13 nato in 11.0 s
+[15:10:18]    + utente 14 (pid 3699103, wayland-18, seme 1614, porte 10040)
+[15:10:30]      utente 14 nato in 11.5 s
+[15:10:30]    + utente 15 (pid 3701894, wayland-19, seme 1615, porte 10050)
+[15:10:40]      utente 15 nato in 10.5 s
+[15:10:40]    + utente 16 (pid 3704626, wayland-20, seme 1616, porte 10060)
+[15:10:54]      utente 16 nato in 13.5 s
+[15:10:54]    tutti dentro (48 s dopo l'inizio del livello): lavoro fino alle 15:40:54
+[15:38:24]    SIGUSR1 a 16 attori (foto piena), 30 s prima della finestra
+[15:38:26]    foto scritte: 16/16 in 2 s
+[15:38:54]    controllo corto: chrome su wayland-4
+[15:43:46]    controllo corto: BLOCKED (codice 3)
+[15:44:17]    ▶ livello-16: FAIL (significativo) — 4 GREEN · 10 DEGRADED · 3 FAIL
+[15:44:17] ⚠ 16 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[15:44:17]    fermo 16 attori (SIGTERM: sgomberano da se')
+[15:44:26]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[15:44:26]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[15:44:27]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[15:44:27]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[15:44:28]    ⭐ tetto delle sessioni in vigore: 17
+[15:44:28]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[15:44:28] ══ livello-16-ripetizione: 16 utenti, 30 min (ripetizione) ══
+[15:44:28]    + utente 01 (pid 3961929, wayland-5, seme 1601, porte 9910)
+[15:44:39]      utente 01 nato in 11.0 s
+[15:44:39]    + utente 02 (pid 3963276, wayland-6, seme 1602, porte 9920)
+[15:44:51]      utente 02 nato in 11.5 s
+[15:44:51]    + utente 03 (pid 3965068, wayland-7, seme 1603, porte 9930)
+[15:45:00]      utente 03 nato in 9.0 s
+[15:45:00]    + utente 04 (pid 3966676, wayland-8, seme 1604, porte 9940)
+[15:45:12]      utente 04 nato in 12.5 s
+[15:45:12]    + utente 05 (pid 3968352, wayland-9, seme 1605, porte 9950)
+[15:45:23]      utente 05 nato in 10.5 s
+[15:45:23]    + utente 06 (pid 3970926, wayland-10, seme 1606, porte 9960)
+[15:45:34]      utente 06 nato in 11.5 s
+[15:45:34]    + utente 07 (pid 3973116, wayland-11, seme 1607, porte 9970)
+[15:45:43]      utente 07 nato in 9.0 s
+[15:45:43]    + utente 08 (pid 3975139, wayland-12, seme 1608, porte 9980)
+[15:45:57]      utente 08 nato in 13.5 s
+[15:45:57]    + utente 09 (pid 3977299, wayland-13, seme 1609, porte 9990)
+[15:46:08]      utente 09 nato in 11.0 s
+[15:46:08]    + utente 10 (pid 3980297, wayland-14, seme 1610, porte 10000)
+[15:46:19]      utente 10 nato in 11.5 s
+[15:46:19]    + utente 11 (pid 3983087, wayland-15, seme 1611, porte 10010)
+[15:46:29]      utente 11 nato in 10.0 s
+[15:46:29]    + utente 12 (pid 3985581, wayland-16, seme 1612, porte 10020)
+[15:46:43]      utente 12 nato in 14.0 s
+[15:46:43]    + utente 13 (pid 3988249, wayland-17, seme 1613, porte 10030)
+[15:46:55]      utente 13 nato in 11.5 s
+[15:46:55]    + utente 14 (pid 3991885, wayland-18, seme 1614, porte 10040)
+[15:47:07]      utente 14 nato in 12.0 s
+[15:47:07]    + utente 15 (pid 3994969, wayland-19, seme 1615, porte 10050)
+[15:47:17]      utente 15 nato in 10.0 s
+[15:47:17]    + utente 16 (pid 3997467, wayland-20, seme 1616, porte 10060)
+[15:47:32]      utente 16 nato in 15.0 s
+[15:47:32]    tutti dentro (184 s dopo l'inizio del livello): lavoro fino alle 16:17:32
+[16:15:02]    SIGUSR1 a 16 attori (foto piena), 30 s prima della finestra
+[16:15:05]    foto scritte: 16/16 in 3 s
+[16:15:32]    controllo corto: firefox su wayland-4
+[16:20:34]    controllo corto: FAIL (codice 1)
+[16:21:06]    ▶ livello-16-ripetizione: FAIL (significativo) — 4 GREEN · 10 DEGRADED · 3 FAIL
+[16:21:06] ⛔ confermato: 16 utenti FAIL due volte
+[16:21:06] 🔎 ricerca a meta' fra 12 (buono) e 16 (rotto): 14 utenti
+[16:21:06]    fermo 16 attori (SIGTERM: sgomberano da se')
+[16:21:14]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[16:21:15]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[16:21:16]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[16:21:16]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[16:21:16]    ⭐ tetto delle sessioni in vigore: 17
+[16:21:16]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[16:21:16] ══ livello-14: 14 utenti, 10 min (ricerca) ══
+[16:21:17]    + utente 01 (pid 64812, wayland-5, seme 1601, porte 9910)
+[16:21:27]      utente 01 nato in 10.5 s
+[16:21:27]    + utente 02 (pid 66169, wayland-6, seme 1602, porte 9920)
+[16:21:39]      utente 02 nato in 11.5 s
+[16:21:39]    + utente 03 (pid 67984, wayland-7, seme 1603, porte 9930)
+[16:21:48]      utente 03 nato in 9.0 s
+[16:21:48]    + utente 04 (pid 69593, wayland-8, seme 1604, porte 9940)
+[16:22:01]      utente 04 nato in 13.0 s
+[16:22:01]    + utente 05 (pid 71263, wayland-9, seme 1605, porte 9950)
+[16:22:11]      utente 05 nato in 10.5 s
+[16:22:11]    + utente 06 (pid 73888, wayland-10, seme 1606, porte 9960)
+[16:22:23]      utente 06 nato in 11.5 s
+[16:22:23]    + utente 07 (pid 76028, wayland-11, seme 1607, porte 9970)
+[16:22:32]      utente 07 nato in 9.5 s
+[16:22:32]    + utente 08 (pid 77975, wayland-12, seme 1608, porte 9980)
+[16:22:45]      utente 08 nato in 13.0 s
+[16:22:45]    + utente 09 (pid 80158, wayland-13, seme 1609, porte 9990)
+[16:22:56]      utente 09 nato in 11.0 s
+[16:22:56]    + utente 10 (pid 83074, wayland-14, seme 1610, porte 10000)
+[16:23:08]      utente 10 nato in 12.0 s
+[16:23:08]    + utente 11 (pid 85946, wayland-15, seme 1611, porte 10010)
+[16:23:18]      utente 11 nato in 10.0 s
+[16:23:18]    + utente 12 (pid 88446, wayland-16, seme 1612, porte 10020)
+[16:23:32]      utente 12 nato in 13.5 s
+[16:23:32]    + utente 13 (pid 91038, wayland-17, seme 1613, porte 10030)
+[16:23:44]      utente 13 nato in 12.0 s
+[16:23:44]    + utente 14 (pid 94786, wayland-18, seme 1614, porte 10040)
+[16:23:56]      utente 14 nato in 12.0 s
+[16:23:56]    tutti dentro (159 s dopo l'inizio del livello): lavoro fino alle 16:33:56
+[16:31:26]    SIGUSR1 a 14 attori (foto piena), 30 s prima della finestra
+[16:31:28]    foto scritte: 14/14 in 2 s
+[16:31:56]    controllo corto: chrome su wayland-4
+[16:33:08]    controllo corto: PASS (codice 0)
+[16:34:05]    ▶ livello-14: DEGRADED (significativo) — 6 GREEN · 9 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (9 su 14)): non si sale
+[16:34:05] 🔎 ricerca a meta' fra 12 (buono) e 14 (rotto): 13 utenti
+[16:34:05]    fermo 14 attori (SIGTERM: sgomberano da se')
+[16:34:13]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[16:34:14]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[16:34:15]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[16:34:15]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[16:34:15]    ⭐ tetto delle sessioni in vigore: 17
+[16:34:16]    scatola: binario 28a947f5 · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[16:34:16] ══ livello-13: 13 utenti, 10 min (ricerca) ══
+[16:34:16]    + utente 01 (pid 175129, wayland-5, seme 1601, porte 9910)
+[16:34:26]      utente 01 nato in 10.5 s
+[16:34:26]    + utente 02 (pid 176484, wayland-6, seme 1602, porte 9920)
+[16:34:38]      utente 02 nato in 11.5 s
+[16:34:38]    + utente 03 (pid 178263, wayland-7, seme 1603, porte 9930)
+[16:34:47]      utente 03 nato in 9.0 s
+[16:34:47]    + utente 04 (pid 179875, wayland-8, seme 1604, porte 9940)
+[16:34:59]      utente 04 nato in 12.5 s
+[16:34:59]    + utente 05 (pid 181569, wayland-9, seme 1605, porte 9950)
+[16:35:10]      utente 05 nato in 10.5 s
+[16:35:10]    + utente 06 (pid 184175, wayland-10, seme 1606, porte 9960)
+[16:35:21]      utente 06 nato in 11.5 s
+[16:35:21]    + utente 07 (pid 186340, wayland-11, seme 1607, porte 9970)
+[16:35:31]      utente 07 nato in 9.5 s
+[16:35:31]    + utente 08 (pid 188383, wayland-12, seme 1608, porte 9980)
+[16:35:44]      utente 08 nato in 13.5 s
+[16:35:44]    + utente 09 (pid 190550, wayland-13, seme 1609, porte 9990)
+[16:35:55]      utente 09 nato in 11.0 s
+[16:35:55]    + utente 10 (pid 193436, wayland-14, seme 1610, porte 10000)
+[16:36:07]      utente 10 nato in 12.0 s
+[16:36:07]    + utente 11 (pid 196315, wayland-15, seme 1611, porte 10010)
+[16:36:17]      utente 11 nato in 10.0 s
+[16:36:17]    + utente 12 (pid 198799, wayland-16, seme 1612, porte 10020)
+[16:36:31]      utente 12 nato in 14.0 s
+[16:36:31]    + utente 13 (pid 201440, wayland-17, seme 1613, porte 10030)
+[16:36:43]      utente 13 nato in 11.5 s
+[16:36:43]    tutti dentro (147 s dopo l'inizio del livello): lavoro fino alle 16:46:43
+[16:44:13]    SIGUSR1 a 13 attori (foto piena), 30 s prima della finestra
+[16:44:15]    foto scritte: 13/13 in 2 s
+[16:44:43]    controllo corto: firefox su wayland-4
+[16:45:53]    controllo corto: PASS (codice 0)
+[16:46:53]    ▶ livello-13: DEGRADED — 11 GREEN · 3 DEGRADED · 0 FAIL · DEGRADED non significativo
+[16:46:53] ⏹ FINE: ultimo livello buono 13 · rottura 14
+[16:46:53]    fermo 13 attori (SIGTERM: sgomberano da se')
+[16:46:58]    compositori spenti (17)
+[16:47:03]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[16:47:03] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-01"}, {"livello": 4, "nome": "livello-04", "tipo": "gradino", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-04"}, {"livello": 4, "nome": "livello-04-ripetizione", "tipo": "ripetizione", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-04-ripetizione"}, {"livello": 8, "nome": "livello-08", "tipo": "gradino", "classe": "DEGRADED", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-08"}, {"livello": 12, "nome": "livello-12", "tipo": "gradino", "classe": "DEGRADED", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-12"}, {"livello": 16, "nome": "livello-16", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-16"}, {"livello": 16, "nome": "livello-16-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-16-ripetizione"}, {"livello": 14, "nome": "livello-14", "tipo": "ricerca", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-14"}, {"livello": 13, "nome": "livello-13", "tipo": "ricerca", "classe": "DEGRADED", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-gnome/livello-13"}]

@@ -1,0 +1,44 @@
+{
+ "campagna": "intel-3k-xfce",
+ "scatola": "xfce",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 2409371,
+ "inizio": "2026-09-26T03:37:21+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/intel-3k-xfce/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "FAIL",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-3k-xfce/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-3k-xfce/livello-01-ripetizione"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-26T03:59:57+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-26T03:59:10+00:00",
+ "ultimo_buono": 0,
+ "rottura": 1
+}

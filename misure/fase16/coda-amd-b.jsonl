@@ -1,0 +1,16 @@
+{"t":"2026-09-27T14:16:14+00:00","scheda":"amd-b","desktop":"gnome","misura":"4k","campagna":"amd-b-4k-gnome","codice":1,"ultimo_green":null}
+{"t":"2026-09-27T16:47:03+00:00","scheda":"amd-b","desktop":"gnome","misura":"3k","campagna":"amd-b-3k-gnome","codice":1,"ultimo_green":4}
+{"t":"2026-09-27T19:17:30+00:00","scheda":"amd-b","desktop":"gnome","misura":"2k","campagna":"amd-b-2k-gnome","codice":1,"ultimo_green":12}
+{"t":"2026-09-27T20:31:52+00:00","scheda":"amd-b","desktop":"gnome","misura":"fhd","campagna":"amd-b-fhd-gnome","codice":0,"ultimo_green":16}
+{"t":"2026-09-27T20:52:42+00:00","scheda":"amd-b","desktop":"kde","misura":"4k","campagna":"amd-b-4k-kde","codice":1,"ultimo_green":null}
+{"t":"2026-09-27T22:28:38+00:00","scheda":"amd-b","desktop":"kde","misura":"3k","campagna":"amd-b-3k-kde","codice":1,"ultimo_green":4}
+{"t":"2026-09-28T00:48:01+00:00","scheda":"amd-b","desktop":"kde","misura":"2k","campagna":"amd-b-2k-kde","codice":1,"ultimo_green":8}
+{"t":"2026-09-28T03:22:11+00:00","scheda":"amd-b","desktop":"kde","misura":"fhd","campagna":"amd-b-fhd-kde","codice":1,"ultimo_green":8}
+{"t":"2026-09-28T04:09:34+00:00","scheda":"amd-b","desktop":"xfce","misura":"4k","campagna":"amd-b-4k-xfce","codice":1,"ultimo_green":1}
+{"t":"2026-09-28T09:55:23+00:00","scheda":"amd-b","desktop":"xfce","misura":"3k","campagna":"amd-b-3k-xfce-0708","codice":1,"ultimo_green":4}
+{"t":"2026-09-28T12:09:04+00:00","scheda":"amd-b","desktop":"xfce","misura":"2k","campagna":"amd-b-2k-xfce","codice":1,"ultimo_green":12}
+{"t":"2026-09-28T14:22:25+00:00","scheda":"amd-b","desktop":"xfce","misura":"fhd","campagna":"amd-b-fhd-xfce","codice":1,"ultimo_green":12}
+{"t":"2026-09-28T15:15:32+00:00","scheda":"amd-b","desktop":"lxqt","misura":"4k","campagna":"amd-b-4k-lxqt","codice":1,"ultimo_green":3}
+{"t":"2026-09-28T17:53:21+00:00","scheda":"amd-b","desktop":"lxqt","misura":"3k","campagna":"amd-b-3k-lxqt","codice":1,"ultimo_green":8}
+{"t":"2026-09-28T20:06:55+00:00","scheda":"amd-b","desktop":"lxqt","misura":"2k","campagna":"amd-b-2k-lxqt","codice":1,"ultimo_green":12}
+{"t":"2026-09-28T22:20:29+00:00","scheda":"amd-b","desktop":"lxqt","misura":"fhd","campagna":"amd-b-fhd-lxqt","codice":1,"ultimo_green":12}

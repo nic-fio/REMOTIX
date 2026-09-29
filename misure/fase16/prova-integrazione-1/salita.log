@@ -1,0 +1,37 @@
+[17:02:59] ⚠ il server NON e' vuoto (--anche-se-non-vuoto, prova dell'impianto): in rete11-xfce ci sono inquilini della fase 16: c16001u1 · 2 processi di browser/attori dei banchi vivi (es. 100758 python3 16-attore.py --scatola xfce --utente 1 --wayland wayland-2 --dir /media/REMOTIX/misure/fase16/prove-attor)
+[17:02:59] ⭐ SALITA prova-integrazione-1 · lxqt · 4k (3840x2160) · gradini 1 · 3 min (ultimo 3) · tetto 2 · PROVA (non conta)
+[17:02:59]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario b1443a0b · pagina c5279e66 · banchi e5a491a+modifiche
+[17:03:01]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[17:03:01]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[17:03:02]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[17:03:02]    ⭐ tetto delle sessioni in vigore: 2
+[17:03:02]    scatola: binario b1443a0b · pagina c5279e66 · --tetto-sessioni 2 · dri card0,renderD128
+[17:03:02] ══ livello-01: 1 utenti, 3 min (gradino) ══
+[17:03:03]    + utente 01 (pid 104659, wayland-5, seme 1601, porte 9910)
+[17:03:13]      utente 01 nato in 9.5 s
+[17:03:13]    tutti dentro (10 s dopo l'inizio del livello): lavoro fino alle 17:06:13
+[17:04:13]    SIGUSR1 agli attori (foto piena)
+[17:04:13]    controllo corto: firefox su wayland-4
+[17:05:18]    controllo corto: PASS (codice 0)
+[17:06:14]    ▶ livello-01: FAIL (significativo) — 0 GREEN · 1 DEGRADED · 0 FAIL · livello: FAIL riavvio_server: 190 — recinto remotix VUOTO in 190 campioni · DEGRADED memoria_remotix: NON MISURATO: serie della memoria di remotix troppo corta (0 punti
+[17:06:14] ⚠ 1 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[17:06:14]    fermo 1 attori (SIGTERM: sgomberano da se')
+[17:06:20]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[17:06:20]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[17:06:21]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[17:06:21]    ⭐ tetto delle sessioni in vigore: 2
+[17:06:21]    scatola: binario b1443a0b · pagina c5279e66 · --tetto-sessioni 2 · dri card0,renderD128
+[17:06:21] ══ livello-01-ripetizione: 1 utenti, 3 min (ripetizione) ══
+[17:06:22]    + utente 01 (pid 115967, wayland-5, seme 1601, porte 9910)
+[17:06:32]      utente 01 nato in 10.0 s
+[17:06:32]    tutti dentro (10 s dopo l'inizio del livello): lavoro fino alle 17:09:32
+[17:07:32]    SIGUSR1 agli attori (foto piena)
+[17:07:32]    controllo corto: chrome su wayland-4
+[17:08:42]    controllo corto: PASS (codice 0)
+[17:09:33]    ▶ livello-01-ripetizione: FAIL (significativo) — 0 GREEN · 1 DEGRADED · 0 FAIL · livello: FAIL riavvio_server: 189 — recinto remotix VUOTO in 189 campioni · DEGRADED memoria_remotix: NON MISURATO: serie della memoria di remotix troppo corta (0 punti
+[17:09:33] ⛔ confermato: 1 utenti FAIL due volte
+[17:09:33] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[17:09:33]    fermo 1 attori (SIGTERM: sgomberano da se')
+[17:09:36]    compositori spenti (2)
+[17:09:37]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[17:09:37] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-integrazione-1/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-integrazione-1/livello-01-ripetizione"}]

@@ -1,0 +1,40 @@
+{
+ "campagna": "prova-tela-gl-kde-4k",
+ "scatola": "kde",
+ "misura": "4k",
+ "gradini": [
+  1
+ ],
+ "pid": 3467562,
+ "inizio": "2026-09-26T06:56:16+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/prova-tela-gl-kde-4k/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "FAIL",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-tela-gl-kde-4k/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-tela-gl-kde-4k/livello-01-ripetizione"
+  }
+ ],
+ "prova": true,
+ "aggiornato": "2026-09-26T07:05:17+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-26T07:05:10+00:00",
+ "ultimo_buono": 0,
+ "rottura": 1
+}

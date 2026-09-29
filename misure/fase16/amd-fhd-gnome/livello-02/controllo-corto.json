@@ -1,0 +1,63 @@
+{
+ "livello": 2,
+ "utente": 99,
+ "inquilino": "c16002u99",
+ "browser": "chrome",
+ "scatola": "gnome",
+ "misura": "1920x1080",
+ "inizio": "2026-09-27T11:22:35+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: nessun fotogramma dipinto 90 s dopo l'accesso",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: nessun fotogramma dipinto 90 s dopo l'accesso",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: nessun fotogramma dipinto 90 s dopo l'accesso",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "BLOCKED",
+   "ragione": "la sessione del controllo non e' nata: nessun fotogramma dipinto 90 s dopo l'accesso",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.55,
+  "ammissione_s": 1.22,
+  "esito": "FAIL",
+  "ragione": "nessun fotogramma dipinto 90 s dopo l'accesso"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-fhd-gnome/livello-02/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 4,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "BLOCKED",
+  "F-014": "BLOCKED"
+ },
+ "esito": "BLOCKED",
+ "durata_s": 100,
+ "fine": "2026-09-27T11:24:15+00:00"
+}

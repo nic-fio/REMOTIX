@@ -1,0 +1,74 @@
+{
+ "livello": 2,
+ "utente": 99,
+ "inquilino": "c16002u99",
+ "browser": "chrome",
+ "scatola": "xfce",
+ "misura": "3840x2160",
+ "inizio": "2026-09-28T04:06:42+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.80), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 572 px (atteso 574)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [1056, 564, 2771, 1613] (in 5.4 s) · cambia PASS: 31 foto in 6.0 s, 31 valori diversi, ritardo massimo -22 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» 5d98da2a",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» 5d98da2a",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.57,
+  "ammissione_s": 1.22,
+  "nascita_s": 1.84,
+  "primo_non_degenere_s": 91.98,
+  "esito": "PASS",
+  "ragione": "desktop scuro ma vivo (67 colori distinti): dipinti=1 ma la tela e' DEGENERE fino al tetto di 90 s (75 fotografie): 640x345 · colori distinti 67 · dominante 98.0% (0,0,0) · luminanza media 1 dev 8.0"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-4k-xfce/livello-02/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 4,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 161,
+ "fine": "2026-09-28T04:09:23+00:00"
+}

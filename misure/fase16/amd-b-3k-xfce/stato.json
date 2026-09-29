@@ -1,0 +1,82 @@
+{
+ "campagna": "amd-b-3k-xfce",
+ "scatola": "xfce",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 70994,
+ "inizio": "2026-09-28T04:09:34+00:00",
+ "fase": "classifico",
+ "gradino": 16,
+ "livello_dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-16-ripetizione",
+ "utenti_vivi": 16,
+ "utenti_attesi": 16,
+ "classe_ultimo": "FAIL",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-04"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-08"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-08-ripetizione"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-12"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-12-ripetizione"
+  },
+  {
+   "livello": 16,
+   "nome": "livello-16",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-xfce/livello-16"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-28T06:42:26+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-28T06:42:09+00:00"
+}

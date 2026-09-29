@@ -1,0 +1,11 @@
+2026-09-28 22:20:29 ▶ coda intel-c: desktop «lxqt» · scala «4k 3k 2k» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-28 22:20:29 ── salita intel-c-4k-lxqt (tentativo 1)
+2026-09-28 23:40:06    intel-c-4k-lxqt: codice 1 (buono 10 · rottura 11 · finita) · ultimo GREEN vero: 1
+2026-09-28 23:40:06 ↘ lxqt cede a 4k (ultimo GREEN vero: 1): scendo di misura
+2026-09-28 23:40:06 ── salita intel-c-3k-lxqt (tentativo 1)
+2026-09-29 01:53:09    intel-c-3k-lxqt: codice 1 (buono 13 · rottura 14 · finita) · ultimo GREEN vero: 4
+2026-09-29 01:53:09 ↘ lxqt cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-29 01:53:09 ── salita intel-c-2k-lxqt (tentativo 1)
+2026-09-29 04:06:41    intel-c-2k-lxqt: codice 1 (buono 15 · rottura 16 · finita) · ultimo GREEN vero: 12
+2026-09-29 04:06:41 ↘ lxqt cede a 2k (ultimo GREEN vero: 12): scendo di misura
+2026-09-29 04:06:41 ⏹ coda intel-c finita

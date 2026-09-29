@@ -1,0 +1,52 @@
+{
+ "campagna": "amd-3k-kde",
+ "scatola": "kde",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 2966043,
+ "inizio": "2026-09-27T11:45:37+00:00",
+ "fase": "fermata",
+ "gradino": 4,
+ "livello_dir": "/media/REMOTIX/misure/fase16/amd-3k-kde/livello-04-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 4,
+ "classe_ultimo": "INTERROTTO",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-3k-kde/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-3k-kde/livello-04"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "INTERROTTO",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-3k-kde/livello-04-ripetizione"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-27T12:19:44+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-27T12:21:27+00:00",
+ "ultimo_buono": 1,
+ "rottura": null
+}

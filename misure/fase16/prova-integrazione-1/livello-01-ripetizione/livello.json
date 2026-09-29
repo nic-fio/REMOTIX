@@ -1,0 +1,92 @@
+{
+ "kernel": "7.0",
+ "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+ "schede": [
+  {
+   "scheda": "Intel UHD 770 (i5-13500T)",
+   "id": "8086:4680",
+   "driver": "i915",
+   "pci": "0000:00:02.0"
+  },
+  {
+   "scheda": "AMD Radeon RX 6800",
+   "id": "1002:73bf",
+   "driver": "amdgpu",
+   "pci": "0000:03:00.0"
+  }
+ ],
+ "prodotto_binario": "b1443a0b",
+ "prodotto_pagina": "c5279e66",
+ "firefox": "Mozilla Firefox 140.16.0esr",
+ "chrome": "Google Chrome 154.0.8037.57",
+ "commit_banchi": "e5a491a+modifiche",
+ "scheda_compositori": "/dev/dri/renderD128",
+ "campagna": "prova-integrazione-1",
+ "livello": 1,
+ "nome": "livello-01-ripetizione",
+ "tipo": "ripetizione",
+ "desktop": "lxqt",
+ "misura": "4k",
+ "largo": 3840,
+ "alto": 2160,
+ "tetto_sessioni": 2,
+ "minuti": 3,
+ "controllo_min": 2,
+ "inizio": "2026-09-25T17:06:21+00:00",
+ "inizio_t": 1790355981.892,
+ "inizio_lavoro": "2026-09-25T17:06:32+00:00",
+ "fine": 1790356172.144,
+ "fine_iso": "2026-09-25T17:09:32+00:00",
+ "durata_s": 190,
+ "durata_lavoro_s": 180,
+ "utenti": [
+  {
+   "utente": 1,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  }
+ ],
+ "vivi_alla_fine": [
+  1
+ ],
+ "nati_nel_livello": [
+  1
+ ],
+ "nascite_s": {
+  "01": 10.0
+ },
+ "seme_base": 1600,
+ "video": "",
+ "fps_video": 0,
+ "controllo_corto": "PASS",
+ "registro_server": [
+  "server.log",
+  "journal-err.jsonl",
+  "journal-server.log",
+  "journal-scatola.log"
+ ],
+ "eventi": [],
+ "attori_da": "/media/REMOTIX/misure/fase16/prova-integrazione-1/attori-2",
+ "prova": true,
+ "scatola_binario": "b1443a0b",
+ "scatola_pagina": "c5279e66",
+ "scatola_dri_nella_scatola": [
+  "card0",
+  "renderD128"
+ ],
+ "scatola_driver_video": [
+  "intel-media-va-driver=25.2.3+dfsg1-1",
+  "libgl1-mesa-dri=25.0.7-2+deb13u1",
+  "libva2=2.22.0-3",
+  "mesa-va-drivers=25.0.7-2+deb13u1"
+ ],
+ "scatola_opzioni_server": "--tetto-sessioni 2",
+ "scatola_journal": false,
+ "scheda": "Intel UHD 770 (i5-13500T)",
+ "driver": "i915 intel-media-va-driver=25.2.3+dfsg1-1 libgl1-mesa-dri=25.0.7-2+deb13u1 libva2=2.22.0-3 mesa-va-drivers=25.0.7-2+deb13u1",
+ "commit": "e5a491a+modifiche",
+ "binario": "b1443a0b",
+ "pagina": "c5279e66",
+ "nucleo": "7.0"
+}

@@ -1,0 +1,74 @@
+{
+ "livello": 12,
+ "utente": 99,
+ "inquilino": "c16012u99",
+ "browser": "chrome",
+ "scatola": "xfce",
+ "misura": "2560x1440",
+ "inizio": "2026-09-28T10:36:01+00:00",
+ "wayland": "wayland-0",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.79), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 381 px (atteso 382)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [702, 402, 1843, 1053] (in 3.9 s) · cambia PASS: 31 foto in 6.0 s, 29 valori diversi, ritardo massimo -45 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» d19beecb",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» d19beecb",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.58,
+  "ammissione_s": 1.21,
+  "nascita_s": 1.81,
+  "primo_non_degenere_s": 3.04,
+  "esito": "PASS",
+  "ragione": "dipinti=8 dopo 0.0 s · 640x338 · colori distinti 110 · dominante 96.7% (0,0,0) · luminanza media 2 dev 11.5"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-2k-xfce/livello-12/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 24,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 71,
+ "fine": "2026-09-28T10:37:12+00:00"
+}

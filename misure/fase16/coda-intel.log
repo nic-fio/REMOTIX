@@ -1,0 +1,44 @@
+2026-09-25 21:40:57 ▶ coda intel: desktop «gnome kde xfce lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-25 21:40:57 ── salita intel-4k-gnome (tentativo 1)
+2026-09-25 22:01:43    intel-4k-gnome: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-25 22:01:43 ↘ gnome cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-25 22:01:43 ── salita intel-3k-gnome (tentativo 1)
+2026-09-25 22:01:44    intel-3k-gnome: codice 3 (buono None · rottura None · BLOCKED) · ultimo GREEN vero: null
+2026-09-25 22:01:44    ⚠ BLOCKED o interrotta: riprovo fra 2 minuti
+2026-09-25 22:03:44 ── salita intel-3k-gnome-r2 (tentativo 2)
+2026-09-25 22:36:11    intel-3k-gnome-r2: codice 3 (buono None · rottura None · finita) · ultimo GREEN vero: 1
+2026-09-25 22:36:11 ⛔ gnome a 3k: due volte BLOCKED — passo al desktop dopo
+2026-09-25 22:36:11 ── salita intel-4k-kde (tentativo 1)
+2026-09-25 22:56:59    intel-4k-kde: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-25 22:56:59 ↘ kde cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-25 22:56:59 ── salita intel-3k-kde (tentativo 1)
+2026-09-25 23:17:59    intel-3k-kde: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-25 23:17:59 ↘ kde cede a 3k (ultimo GREEN vero: null): scendo di misura
+2026-09-25 23:17:59 ── salita intel-2k-kde (tentativo 1)
+2026-09-25 23:38:57    intel-2k-kde: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-25 23:38:57 ↘ kde cede a 2k (ultimo GREEN vero: null): scendo di misura
+2026-09-25 23:38:57 ── salita intel-fhd-kde (tentativo 1)
+2026-09-26 00:47:27    intel-fhd-kde: codice 1 (buono 4 · rottura 5 · finita) · ultimo GREEN vero: 4
+2026-09-26 00:47:27 ↘ kde cede a fhd (ultimo GREEN vero: 4): scendo di misura
+2026-09-26 00:47:27 ── salita intel-4k-xfce (tentativo 1)
+2026-09-26 02:02:05 ⚠ segnale: lo passo alla salita in corso (1657514) e aspetto che sgomberi
+2026-09-26 02:03:53    intel-4k-xfce: codice 3 (buono 8 · rottura None · fermata) · ultimo GREEN vero: 4
+2026-09-26 02:03:53 ⏹ fermata da fuori: la salita ha sgomberato, esco
+2026-09-26 02:05:38 ▶ notte-2
+2026-09-26 03:37:21    intel-4k-xfce-b: codice 1
+2026-09-26 03:37:21 ▶ coda intel: desktop «xfce» · scala «3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-26 03:37:21 ── salita intel-3k-xfce (tentativo 1)
+2026-09-26 03:59:58    intel-3k-xfce: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-26 03:59:58 ↘ xfce cede a 3k (ultimo GREEN vero: null): scendo di misura
+2026-09-26 03:59:58 ── salita intel-2k-xfce (tentativo 1)
+2026-09-26 04:20:51    intel-2k-xfce: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-26 04:20:51 ↘ xfce cede a 2k (ultimo GREEN vero: null): scendo di misura
+2026-09-26 04:20:51 ── salita intel-fhd-xfce (tentativo 1)
+2026-09-26 06:46:39    intel-fhd-xfce: codice 1 (buono 12 · rottura 13 · finita) · ultimo GREEN vero: 12
+2026-09-26 06:46:39 ↘ xfce cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-26 06:46:39 ⏹ coda intel finita
+2026-09-26 06:46:39 ▶ coda intel: desktop «lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-26 06:46:39 ⏹ FERMA trovato: mi fermo
+2026-09-26 06:46:39 ▶ coda intel: desktop «gnome» · scala «3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-26 06:46:39 ⏹ FERMA trovato: mi fermo
+2026-09-26 06:46:39 ⏹ notte-2 finita

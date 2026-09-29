@@ -1,0 +1,104 @@
+{
+ "campagna": "amd-b-fhd-kde",
+ "scatola": "kde",
+ "misura": "fhd",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 3125053,
+ "inizio": "2026-09-28T00:48:01+00:00",
+ "fase": "finita",
+ "gradino": 15,
+ "livello_dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-15",
+ "utenti_vivi": 0,
+ "utenti_attesi": 15,
+ "classe_ultimo": "DEGRADED",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-04"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-08"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-12"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-12-ripetizione"
+  },
+  {
+   "livello": 16,
+   "nome": "livello-16",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-16"
+  },
+  {
+   "livello": 16,
+   "nome": "livello-16-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-16-ripetizione"
+  },
+  {
+   "livello": 14,
+   "nome": "livello-14",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-14"
+  },
+  {
+   "livello": 15,
+   "nome": "livello-15",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-fhd-kde/livello-15"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-28T03:22:11+00:00",
+ "tipo_livello": "ricerca",
+ "fine_prevista": "2026-09-28T03:21:44+00:00",
+ "ricerca": [
+  14,
+  16
+ ],
+ "ultimo_buono": 15,
+ "rottura": 16
+}

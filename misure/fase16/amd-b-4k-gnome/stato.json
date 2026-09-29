@@ -1,0 +1,44 @@
+{
+ "campagna": "amd-b-4k-gnome",
+ "scatola": "gnome",
+ "misura": "4k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 3465580,
+ "inizio": "2026-09-27T13:55:30+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/amd-b-4k-gnome/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "DEGRADED",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-4k-gnome/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-4k-gnome/livello-01-ripetizione"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-27T14:16:14+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-27T14:16:07+00:00",
+ "ultimo_buono": 0,
+ "rottura": 1
+}

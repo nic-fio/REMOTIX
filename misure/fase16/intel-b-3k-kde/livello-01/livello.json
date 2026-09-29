@@ -1,0 +1,124 @@
+{
+ "kernel": "7.0",
+ "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+ "schede": [
+  {
+   "scheda": "Intel UHD 770 (i5-13500T)",
+   "id": "8086:4680",
+   "driver": "i915",
+   "pci": "0000:00:02.0"
+  },
+  {
+   "scheda": "AMD Radeon RX 6800",
+   "id": "1002:73bf",
+   "driver": "amdgpu",
+   "pci": "0000:03:00.0"
+  }
+ ],
+ "prodotto_binario": "45d048c8",
+ "prodotto_pagina": "fb9a18f3",
+ "firefox": "Mozilla Firefox 140.16.0esr",
+ "chrome": "Google Chrome 154.0.8037.57",
+ "commit_banchi": "9e97f8d",
+ "scheda_compositori": "/dev/dri/renderD128",
+ "commit_prodotto": "e4e05dc",
+ "campagna": "intel-b-3k-kde",
+ "livello": 1,
+ "nome": "livello-01",
+ "tipo": "gradino",
+ "desktop": "kde",
+ "misura": "3k",
+ "largo": 3200,
+ "alto": 1800,
+ "tetto_sessioni": 17,
+ "minuti": 10,
+ "controllo_min": 2,
+ "inizio": "2026-09-26T16:08:39+00:00",
+ "inizio_t": 1790438919.705,
+ "inizio_lavoro": "2026-09-26T16:08:53+00:00",
+ "fine": 1790439533.107,
+ "fine_iso": "2026-09-26T16:18:53+00:00",
+ "durata_s": 613,
+ "durata_lavoro_s": 600,
+ "utenti": [
+  {
+   "utente": 1,
+   "profilo": "A",
+   "browser": "firefox",
+   "nuovo": true
+  }
+ ],
+ "vivi_alla_fine": [
+  1
+ ],
+ "nati_nel_livello": [
+  1
+ ],
+ "nascite_s": {
+  "01": 12.5
+ },
+ "seme_base": 1600,
+ "video": "/media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4",
+ "fps_video": 30.0,
+ "controllo_corto": "PASS",
+ "registro_server": [
+  "server.log",
+  "journal-err.jsonl",
+  "journal-server.log",
+  "journal-scatola.log"
+ ],
+ "entrata_ok": true,
+ "entrata_ragione": null,
+ "attesi": 1,
+ "entrati": [
+  1
+ ],
+ "nati_alla_partenza": [
+  1
+ ],
+ "foto_piena": {
+  "t": "2026-09-26T16:16:23+00:00",
+  "t_s": 1790439383.107,
+  "attesi": [
+   1
+  ],
+  "fatte": [
+   1
+  ],
+  "durata_s": 1.0
+ },
+ "inizio_finestra": "2026-09-26T16:16:53+00:00",
+ "inizio_finestra_t": 1790439413.107,
+ "schede_browser": {
+  "campioni_browser": 894,
+  "fuori_intel": {},
+  "intel": "0000:00:02.0"
+ },
+ "eventi": [],
+ "attori_da": "/media/REMOTIX/misure/fase16/intel-b-3k-kde/attori-1",
+ "prova": false,
+ "scatola_binario": "45d048c8",
+ "scatola_pagina": "fb9a18f3",
+ "scatola_dri_nella_scatola": [
+  "card0",
+  "renderD128"
+ ],
+ "scatola_driver_video": [
+  "intel-media-va-driver=25.2.3+dfsg1-1",
+  "libgl1-mesa-dri=25.0.7-2+deb13u1",
+  "libva2=2.22.0-3",
+  "mesa-va-drivers=25.0.7-2+deb13u1"
+ ],
+ "scatola_opzioni_server": "--tetto-sessioni 17 -- --journal ;",
+ "scatola_journal": true,
+ "scatola_driver_va": "Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()",
+ "scheda": "Intel UHD 770 (i5-13500T)",
+ "scheda_quale": "intel",
+ "scheda_pci": "0000:00:02.0",
+ "scheda_browser": "Intel UHD 770 (i5-13500T)",
+ "driver": "i915 intel-media-va-driver=25.2.3+dfsg1-1 libgl1-mesa-dri=25.0.7-2+deb13u1 libva2=2.22.0-3 mesa-va-drivers=25.0.7-2+deb13u1",
+ "commit": "e4e05dc",
+ "binario": "45d048c8",
+ "pagina": "fb9a18f3",
+ "nucleo": "7.0"
+}

@@ -1,0 +1,42 @@
+[03:37:33] ⭐ SALITA intel-3k-xfce · xfce · 3k (3200x1800) · gradini 1,4,8,12,16 · 10 min (ultimo 30) · tetto 17
+[03:37:33]    scheda della scatola: intel · browser-cliente sulla Intel
+[03:37:33]    commit del prodotto: 97e94fe
+[03:37:33]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina c5279e66 · banchi 4d62a81
+[03:37:36]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[03:37:37]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[03:37:37]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[03:37:37]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[03:37:38]    ⭐ tetto delle sessioni in vigore: 17
+[03:37:38]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[03:37:38] ══ livello-01: 1 utenti, 10 min (gradino) ══
+[03:37:39]    + utente 01 (pid 2411175, wayland-5, seme 1601, porte 9910)
+[03:38:02]      utente 01 nato in 23.5 s
+[03:38:02]    tutti dentro (24 s dopo l'inizio del livello): lavoro fino alle 03:48:02
+[03:45:32]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[03:45:33]    foto scritte: 1/1 in 1 s
+[03:46:02]    controllo corto: firefox su wayland-4
+[03:48:37]    controllo corto: PASS (codice 0)
+[03:48:38]    ▶ livello-01: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL
+[03:48:38] ⚠ 1 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[03:48:38]    fermo 1 attori (SIGTERM: sgomberano da se')
+[03:48:44]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[03:48:44]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[03:48:45]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[03:48:45]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[03:48:46]    ⭐ tetto delle sessioni in vigore: 17
+[03:48:46]    scatola: binario 3fe94e8b · pagina c5279e66 · --tetto-sessioni 17 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[03:48:46] ══ livello-01-ripetizione: 1 utenti, 10 min (ripetizione) ══
+[03:48:46]    + utente 01 (pid 2422126, wayland-5, seme 1601, porte 9910)
+[03:49:10]      utente 01 nato in 23.5 s
+[03:49:10]    tutti dentro (24 s dopo l'inizio del livello): lavoro fino alle 03:59:10
+[03:56:40]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[03:56:41]    foto scritte: 1/1 in 1 s
+[03:57:10]    controllo corto: chrome su wayland-4
+[03:59:48]    controllo corto: PASS (codice 0)
+[03:59:49]    ▶ livello-01-ripetizione: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL
+[03:59:49] ⛔ confermato: 1 utenti FAIL due volte
+[03:59:49] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[03:59:49]    fermo 1 attori (SIGTERM: sgomberano da se')
+[03:59:53]    compositori spenti (2)
+[03:59:57]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[03:59:57] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-3k-xfce/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/intel-3k-xfce/livello-01-ripetizione"}]

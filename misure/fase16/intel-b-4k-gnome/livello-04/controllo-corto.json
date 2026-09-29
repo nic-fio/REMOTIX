@@ -1,0 +1,74 @@
+{
+ "livello": 4,
+ "utente": 99,
+ "inquilino": "c16004u99",
+ "browser": "chrome",
+ "scatola": "gnome",
+ "misura": "3840x2160",
+ "inizio": "2026-09-26T09:15:20+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.80), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 572 px (atteso 574)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [1053, 567, 2771, 1616] (in 6.0 s) · cambia PASS: 19 foto in 5.9 s, 19 valori diversi, ritardo massimo -20 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» 71e22180",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» 71e22180",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.55,
+  "ammissione_s": 1.21,
+  "nascita_s": 2.66,
+  "primo_non_degenere_s": 3.9,
+  "esito": "PASS",
+  "ragione": "dipinti=9 dopo 0.0 s · 640x345 · colori distinti 115 · dominante 18.7% (32,32,32) · luminanza media 67 dev 19.8"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/intel-b-4k-gnome/livello-04/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 8,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 73,
+ "fine": "2026-09-26T09:16:34+00:00"
+}

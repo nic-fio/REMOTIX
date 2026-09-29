@@ -1,0 +1,50 @@
+2026-09-26 08:56:26 ▶ coda intel-b: desktop «gnome kde xfce lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-26 08:56:26 ── salita intel-b-4k-gnome (tentativo 1)
+2026-09-26 09:49:43    intel-b-4k-gnome: codice 1 (buono 3 · rottura 4 · finita) · ultimo GREEN vero: 3
+2026-09-26 09:49:43 ↘ gnome cede a 4k (ultimo GREEN vero: 3): scendo di misura
+2026-09-26 09:49:43 ── salita intel-b-3k-gnome (tentativo 1)
+2026-09-26 10:56:06    intel-b-3k-gnome: codice 1 (buono 4 · rottura 5 · finita) · ultimo GREEN vero: 1
+2026-09-26 10:56:06 ↘ gnome cede a 3k (ultimo GREEN vero: 1): scendo di misura
+2026-09-26 10:56:06 ── salita intel-b-2k-gnome (tentativo 1)
+2026-09-26 12:29:41    intel-b-2k-gnome: codice 1 (buono 8 · rottura 9 · finita) · ultimo GREEN vero: 1
+2026-09-26 12:29:41 ↘ gnome cede a 2k (ultimo GREEN vero: 1): scendo di misura
+2026-09-26 12:29:41 ── salita intel-b-fhd-gnome (tentativo 1)
+2026-09-26 15:03:32    intel-b-fhd-gnome: codice 1 (buono 12 · rottura 13 · finita) · ultimo GREEN vero: 12
+2026-09-26 15:03:32 ↘ gnome cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-26 15:03:32 ── salita intel-b-4k-kde (tentativo 1)
+2026-09-26 16:08:22    intel-b-4k-kde: codice 1 (buono 3 · rottura 4 · finita) · ultimo GREEN vero: 3
+2026-09-26 16:08:22 ↘ kde cede a 4k (ultimo GREEN vero: 3): scendo di misura
+2026-09-26 16:08:22 ── salita intel-b-3k-kde (tentativo 1)
+2026-09-26 17:30:23    intel-b-3k-kde: codice 1 (buono 4 · rottura 5 · finita) · ultimo GREEN vero: 4
+2026-09-26 17:30:23 ↘ kde cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-26 17:30:23 ── salita intel-b-2k-kde (tentativo 1)
+2026-09-26 19:03:53    intel-b-2k-kde: codice 1 (buono 8 · rottura 9 · finita) · ultimo GREEN vero: 4
+2026-09-26 19:03:53 ↘ kde cede a 2k (ultimo GREEN vero: 4): scendo di misura
+2026-09-26 19:03:53 ── salita intel-b-fhd-kde (tentativo 1)
+2026-09-26 20:36:59    intel-b-fhd-kde: codice 1 (buono 11 · rottura 12 · finita) · ultimo GREEN vero: 8
+2026-09-26 20:36:59 ↘ kde cede a fhd (ultimo GREEN vero: 8): scendo di misura
+2026-09-26 20:36:59 ── salita intel-b-4k-xfce (tentativo 1)
+2026-09-26 22:50:46    intel-b-4k-xfce: codice 1 (buono 8 · rottura 9 · finita) · ultimo GREEN vero: 4
+2026-09-26 22:50:46 ↘ xfce cede a 4k (ultimo GREEN vero: 4): scendo di misura
+2026-09-26 22:50:46 ── salita intel-b-3k-xfce (tentativo 1)
+2026-09-27 00:42:23    intel-b-3k-xfce: codice 1 (buono 8 · rottura 9 · finita) · ultimo GREEN vero: 4
+2026-09-27 00:42:23 ↘ xfce cede a 3k (ultimo GREEN vero: 4): scendo di misura
+2026-09-27 00:42:23 ── salita intel-b-2k-xfce (tentativo 1)
+2026-09-27 02:08:29    intel-b-2k-xfce: codice 1 (buono 11 · rottura 12 · finita) · ultimo GREEN vero: 8
+2026-09-27 02:08:29 ↘ xfce cede a 2k (ultimo GREEN vero: 8): scendo di misura
+2026-09-27 02:08:29 ── salita intel-b-fhd-xfce (tentativo 1)
+2026-09-27 04:37:16    intel-b-fhd-xfce: codice 1 (buono 12 · rottura 13 · finita) · ultimo GREEN vero: 12
+2026-09-27 04:37:16 ↘ xfce cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-27 04:37:16 ── salita intel-b-4k-lxqt (tentativo 1)
+2026-09-27 05:19:39    intel-b-4k-lxqt: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-27 05:19:39 ↘ lxqt cede a 4k (ultimo GREEN vero: 1): scendo di misura
+2026-09-27 05:19:39 ── salita intel-b-3k-lxqt (tentativo 1)
+2026-09-27 06:02:11    intel-b-3k-lxqt: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-27 06:02:11 ↘ lxqt cede a 3k (ultimo GREEN vero: 1): scendo di misura
+2026-09-27 06:02:11 ── salita intel-b-2k-lxqt (tentativo 1)
+2026-09-27 06:44:44    intel-b-2k-lxqt: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-27 06:44:44 ↘ lxqt cede a 2k (ultimo GREEN vero: 1): scendo di misura
+2026-09-27 06:44:44 ── salita intel-b-fhd-lxqt (tentativo 1)
+2026-09-27 09:08:15    intel-b-fhd-lxqt: codice 1 (buono 12 · rottura 13 · finita) · ultimo GREEN vero: 12
+2026-09-27 09:08:15 ↘ lxqt cede a fhd (ultimo GREEN vero: 12): scendo di misura
+2026-09-27 09:08:15 ⏹ coda intel-b finita

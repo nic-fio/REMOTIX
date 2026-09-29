@@ -1,0 +1,74 @@
+{
+ "livello": 8,
+ "utente": 99,
+ "inquilino": "c16008u99",
+ "browser": "firefox",
+ "scatola": "kde",
+ "misura": "3200x1800",
+ "inizio": "2026-09-27T21:23:19+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "PASS",
+   "ragione": "3 gesti su 3 (ridotto): l'effetto c'e' nell'applicazione",
+   "atteso": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato",
+   "osservato": "movimento: PASS tre punti: visto a (0.25,0.30), atteso (0.25,0.30) · visto a (0.70,0.60), atteso (0.70,0.60) · visto a (0.50,0.80), atteso (0.50,0.80) · clic-sinistro: PASS il bottone ha contato 1 clic col pulsante 0 · trascinamento: PASS il box si e' spostato di 470 px (atteso 470)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto/01-scena.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "PASS",
+   "ragione": "a='uYno\\nXdZue' b='fine'",
+   "atteso": "a='uYno\\nXdZue' b='fine'",
+   "osservato": "a='uYno\\nXdZue' b='fine'",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto/02-tasti.png"
+   ],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "PASS",
+   "ragione": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)",
+   "atteso": "la finestra si apre nella foto; contatore ≤ 1000 ms in ogni foto per 6 s",
+   "osservato": "apre PASS: la finestra si vede: ciano [864, 438, 2271, 1256] (in 4.7 s) · cambia PASS: 24 foto in 5.9 s, 24 valori diversi, ritardo massimo 81 ms (tetto 1000)",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto"
+   ],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "PASS",
+   "ragione": "identico (28 caratteri, 42 byte)",
+   "atteso": "F014 àèìòù €ß→ «ÀÉ» 9855197a",
+   "osservato": "F014 àèìòù €ß→ «ÀÉ» 9855197a",
+   "evidenze": [
+    "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto/04-f014.png",
+    "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto/f014.json"
+   ],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 1.2,
+  "ammissione_s": 1.23,
+  "nascita_s": 2.25,
+  "primo_non_degenere_s": 5.95,
+  "esito": "PASS",
+  "ragione": "dipinti=204 · primo fotogramma a 0.0 s, desktop NON degenere a 3.7 s dopo 2 fotografie degeneri (la prima: 3136x1648 · colori distinti 24 · dominante 99.7% (0,0,0) · luminanza media 0 dev 6.3) · 3136x1648 · colori distinti 112 · dominante 8.3% (40,24,24) · luminanza media 23 dev 10.6"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08/controllo-corto",
+ "versione": "Firefox 140.16.0 · finestra vera",
+ "sessioni_durante": 16,
+ "guasti": {},
+ "esiti": {
+  "F-004": "PASS",
+  "F-007": "PASS",
+  "F-003": "PASS",
+  "F-014": "PASS"
+ },
+ "esito": "PASS",
+ "durata_s": 71,
+ "fine": "2026-09-27T21:24:30+00:00"
+}

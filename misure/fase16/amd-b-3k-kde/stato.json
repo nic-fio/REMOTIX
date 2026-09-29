@@ -1,0 +1,96 @@
+{
+ "campagna": "amd-b-3k-kde",
+ "scatola": "kde",
+ "misura": "3k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 1694584,
+ "inizio": "2026-09-27T20:52:42+00:00",
+ "fase": "finita",
+ "gradino": 9,
+ "livello_dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-09",
+ "utenti_vivi": 0,
+ "utenti_attesi": 9,
+ "classe_ultimo": "DEGRADED",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-01"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-04"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-08-ripetizione"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-12"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-12-ripetizione"
+  },
+  {
+   "livello": 10,
+   "nome": "livello-10",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-10"
+  },
+  {
+   "livello": 9,
+   "nome": "livello-09",
+   "tipo": "ricerca",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/amd-b-3k-kde/livello-09"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-27T22:28:38+00:00",
+ "tipo_livello": "ricerca",
+ "fine_prevista": "2026-09-27T22:28:18+00:00",
+ "ricerca": [
+  8,
+  10
+ ],
+ "ultimo_buono": 9,
+ "rottura": 10
+}

@@ -1,0 +1,84 @@
+{
+ "campagna": "intel-4k-xfce",
+ "scatola": "xfce",
+ "misura": "4k",
+ "gradini": [
+  1,
+  4,
+  8,
+  12,
+  16
+ ],
+ "pid": 1657514,
+ "inizio": "2026-09-26T00:47:27+00:00",
+ "fase": "fermata",
+ "gradino": 12,
+ "livello_dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-12",
+ "utenti_vivi": 0,
+ "utenti_attesi": 12,
+ "classe_ultimo": "INTERROTTO",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "FAIL",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-01-ripetizione"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-04"
+  },
+  {
+   "livello": 4,
+   "nome": "livello-04-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-04-ripetizione"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-08"
+  },
+  {
+   "livello": 8,
+   "nome": "livello-08-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-08-ripetizione"
+  },
+  {
+   "livello": 12,
+   "nome": "livello-12",
+   "tipo": "gradino",
+   "classe": "INTERROTTO",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/intel-4k-xfce/livello-12"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-26T02:03:53+00:00",
+ "tipo_livello": "gradino",
+ "fine_prevista": "2026-09-26T02:12:06+00:00",
+ "ultimo_buono": 8,
+ "rottura": null
+}

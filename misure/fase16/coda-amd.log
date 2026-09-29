@@ -1,0 +1,20 @@
+2026-09-27 09:08:15 ▶ coda amd: desktop «gnome kde xfce lxqt» · scala «4k 3k 2k fhd» · video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_normal.mp4 (f=30)
+2026-09-27 09:08:15 ── salita amd-4k-gnome (tentativo 1)
+2026-09-27 09:29:02    amd-4k-gnome: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-27 09:29:02 ↘ gnome cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-27 09:29:02 ── salita amd-3k-gnome (tentativo 1)
+2026-09-27 10:16:23    amd-3k-gnome: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-27 10:16:23 ↘ gnome cede a 3k (ultimo GREEN vero: 1): scendo di misura
+2026-09-27 10:16:23 ── salita amd-2k-gnome (tentativo 1)
+2026-09-27 10:37:21    amd-2k-gnome: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-27 10:37:21 ↘ gnome cede a 2k (ultimo GREEN vero: null): scendo di misura
+2026-09-27 10:37:21 ── salita amd-fhd-gnome (tentativo 1)
+2026-09-27 11:24:45    amd-fhd-gnome: codice 1 (buono 1 · rottura 2 · finita) · ultimo GREEN vero: 1
+2026-09-27 11:24:45 ↘ gnome cede a fhd (ultimo GREEN vero: 1): scendo di misura
+2026-09-27 11:24:45 ── salita amd-4k-kde (tentativo 1)
+2026-09-27 11:45:37    amd-4k-kde: codice 1 (buono 0 · rottura 1 · finita) · ultimo GREEN vero: null
+2026-09-27 11:45:37 ↘ kde cede a 4k (ultimo GREEN vero: null): scendo di misura
+2026-09-27 11:45:37 ── salita amd-3k-kde (tentativo 1)
+2026-09-27 12:19:34 ⚠ segnale: lo passo alla salita in corso (2966043) e aspetto che sgomberi
+2026-09-27 12:19:44    amd-3k-kde: codice 3 (buono 1 · rottura None · fermata) · ultimo GREEN vero: 1
+2026-09-27 12:19:44 ⏹ fermata da fuori: la salita ha sgomberato, esco

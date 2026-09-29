@@ -1,0 +1,42 @@
+[06:47:26] ⭐ SALITA prova-tela-bmp-kde-4k · kde · 4k (3840x2160) · gradini 1 · 4.0 min (ultimo 4.0) · tetto 2 · PROVA (non conta)
+[06:47:26]    scheda della scatola: intel · browser-cliente sulla Intel
+[06:47:26]    commit del prodotto: 97e94fe
+[06:47:26]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3fe94e8b · pagina f42eee6e · banchi 4d62a81
+[06:47:30]    scatola accendi: codice 0 in 4 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[06:47:31]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[06:47:31]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[06:47:32]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[06:47:32]    ⭐ tetto delle sessioni in vigore: 2
+[06:47:32]    scatola: binario 3fe94e8b · pagina f42eee6e · --tetto-sessioni 2 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[06:47:32] ══ livello-01: 1 utenti, 4.0 min (gradino) ══
+[06:47:33]    + utente 01 (pid 3449604, wayland-5, seme 1601, porte 9910)
+[06:47:46]      utente 01 nato in 13.5 s
+[06:47:46]    tutti dentro (14 s dopo l'inizio del livello): lavoro fino alle 06:51:46
+[06:49:16]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[06:49:17]    foto scritte: 1/1 in 1 s
+[06:49:46]    controllo corto: firefox su wayland-4
+[06:51:00]    controllo corto: PASS (codice 0)
+[06:51:48]    ▶ livello-01: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: serie della memoria di remotix troppo corta (60 punti) · DEGRADED memoria_sessioni: NON MISURATO: serie della memoria d
+[06:51:48] ⚠ 1 utenti: FAIL — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[06:51:48]    fermo 1 attori (SIGTERM: sgomberano da se')
+[06:51:54]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Intel: card0 renderD128
+[06:51:55]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[06:51:55]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[06:51:55]    ⭐ scheda della scatola: Intel UHD 770 (i5-13500T) [i915] 0000:00:02.0 = renderD128 dentro
+[06:51:55]    ⭐ tetto delle sessioni in vigore: 2
+[06:51:56]    scatola: binario 3fe94e8b · pagina f42eee6e · --tetto-sessioni 2 -- --journal ; · dri card0,renderD128 · VA Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.3 ()
+[06:51:56] ══ livello-01-ripetizione: 1 utenti, 4.0 min (ripetizione) ══
+[06:51:56]    + utente 01 (pid 3458564, wayland-5, seme 1601, porte 9910)
+[06:52:09]      utente 01 nato in 13.0 s
+[06:52:09]    tutti dentro (13 s dopo l'inizio del livello): lavoro fino alle 06:56:09
+[06:53:39]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[06:53:40]    foto scritte: 1/1 in 1 s
+[06:54:09]    controllo corto: chrome su wayland-4
+[06:55:24]    controllo corto: PASS (codice 0)
+[06:56:11]    ▶ livello-01-ripetizione: FAIL (significativo) — 1 GREEN · 0 DEGRADED · 1 FAIL · livello: DEGRADED memoria_remotix: NON MISURATO: serie della memoria di remotix troppo corta (59 punti) · DEGRADED memoria_sessioni: NON MISURATO: serie della memoria d
+[06:56:11] ⛔ confermato: 1 utenti FAIL due volte
+[06:56:11] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[06:56:11]    fermo 1 attori (SIGTERM: sgomberano da se')
+[06:56:15]    compositori spenti (2)
+[06:56:16]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[06:56:16] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-tela-bmp-kde-4k/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "FAIL", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/prova-tela-bmp-kde-4k/livello-01-ripetizione"}]

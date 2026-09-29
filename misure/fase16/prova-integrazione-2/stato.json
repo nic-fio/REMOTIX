@@ -1,0 +1,44 @@
+{
+ "campagna": "prova-integrazione-2",
+ "scatola": "lxqt",
+ "misura": "4k",
+ "gradini": [
+  1
+ ],
+ "pid": 127338,
+ "inizio": "2026-09-25T17:10:18+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/prova-integrazione-2/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "DEGRADED",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-integrazione-2/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/prova-integrazione-2/livello-01-ripetizione"
+  }
+ ],
+ "prova": true,
+ "server_non_vuoto": [
+  "in rete11-xfce ci sono inquilini della fase 16: c16004u4",
+  "5 processi di browser/attori dei banchi vivi (es. 124311 python3 16-attore.py --scatola xfce --utente 4 --wayland wayland-2 --dir /media/REMOTIX/misure/fase16/prove-attor)"
+ ],
+ "aggiornato": "2026-09-25T17:17:01+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-25T17:16:55+00:00",
+ "ultimo_buono": 0,
+ "rottura": 1
+}

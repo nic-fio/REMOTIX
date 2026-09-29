@@ -1,0 +1,65 @@
+{
+ "livello": 12,
+ "utente": 99,
+ "inquilino": "c16012u99",
+ "browser": "chrome",
+ "scatola": "xfce",
+ "misura": "2560x1440",
+ "inizio": "2026-09-27T01:23:02+00:00",
+ "wayland": "wayland-4",
+ "funzioni": {
+  "F-004": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: (nessuna risposta in 90 s)",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-007": {
+   "esito": "BLOCKED",
+   "ragione": "la scena non si accende: (nessuna risposta in 90 s)",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-003": {
+   "esito": "BLOCKED",
+   "ragione": "il banco e' caduto: TimeoutError('timed out')",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  },
+  "F-014": {
+   "esito": "BLOCKED",
+   "ragione": "il banco e' caduto: TimeoutError('timed out')",
+   "atteso": "",
+   "osservato": "",
+   "evidenze": [],
+   "guasto_visto": null
+  }
+ },
+ "nascita": {
+  "pagina_s": 4.56,
+  "ammissione_s": 1.21,
+  "nascita_s": 2.04,
+  "primo_non_degenere_s": 3.26,
+  "esito": "PASS",
+  "ragione": "dipinti=4 dopo 0.0 s · 640x338 · colori distinti 93 · dominante 95.1% (0,0,0) · luminanza media 3 dev 13.0"
+ },
+ "evidenze": "/media/REMOTIX/misure/fase16/intel-b-2k-xfce/livello-12/controllo-corto",
+ "versione": "Chrome/154.0.8037.57 · finestra vera",
+ "sessioni_durante": 24,
+ "guasti": {},
+ "esiti": {
+  "F-004": "BLOCKED",
+  "F-007": "BLOCKED",
+  "F-003": "BLOCKED",
+  "F-014": "BLOCKED"
+ },
+ "esito": "BLOCKED",
+ "durata_s": 304,
+ "fine": "2026-09-27T01:28:06+00:00"
+}
