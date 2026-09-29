@@ -5922,6 +5922,12 @@ installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli
 distribuzione, si installa senza schermata d'accesso locale né avvio in grafica, ed è dichiarato come
 azione «al meglio». `fasi/17-l-installatore.md` §6.6 e R38.
 
+### 10.8 ✅ Ubuntu 24.04 fuori: si parte dalla 26.04
+
+Parola dell'utente (29 set 2026): *«partiamo dalla 26.04»*. Su 24.04 solo GNOME sarebbe stato possibile, al
+prezzo di portare dentro OpenSSL 3.5 (e i suoi aggiornamenti di sicurezza) e di due adattamenti per
+ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22. La matrice scende a 26 macchine.
+
 ---
 
 ## Come si tiene questo documento

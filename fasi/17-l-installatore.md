@@ -61,7 +61,7 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 |---|---|---|---|---|---|
 | **Debian 13** (riferimento) | ✅ | ✅ | ✅ | ✅ | la base di oggi |
 | **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); il GNOME «vanilla» va installato (§4.6) |
-| Ubuntu 24.04 LTS | 🔸 | ⛔ | ⛔ | ⛔ | KDE 5.27 (manca l'EIS di KWin ≥ 6.1), XFCE 4.18 e LXQt 1.4 senza Wayland. GNOME 46 sì, ma con OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 — **decisione D7** |
+| Ubuntu 24.04 LTS | ⛔ | ⛔ | ⛔ | ⛔ | **fuori** (D7, decisione dell'utente del 29 set): si parte dalla 26.04. KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland; GNOME 46 sì, ma chiederebbe di portare dentro OpenSSL 3.5 e due adattamenti per ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22 (Mint 23 sarà «compatibile, non certificata») |
 | **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 da RPM Fusion (§4.2) |
 | Fedora 43 | · | · | · | · | **analizzata, non certificata**: GNOME 49, esce di supporto a fine 2026; c'è la sua VM nuda per confronti |
 | **Alma 10** (certificata) · Rocky / RHEL 10 (compatibili, non certificate) | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
@@ -80,9 +80,9 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 - **Immutabili** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` in sola lettura, gruppi
   in `/usr/lib/group`, installazione con riavvio. Si rimandano a dopo la fase (§12, D9).
 
-⇒ **La matrice di certificazione: 27 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
-Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE), più Ubuntu 24.04 × GNOME (se D7
-dice sì). **Fedora 43 è analizzata ma fuori dalla matrice.**
+⇒ **La matrice di certificazione: 26 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
+Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE) = **26**. **Fedora 43 e Ubuntu 24.04 (D7) sono analizzate ma fuori
+dalla matrice.**
 
 ⚠ **Che cosa si certifica, e che cosa no.** Si certifica solo quel che gira nelle nostre VM: **Alma 10**,
 non «la famiglia RHEL 10». Rocky 10 e RHEL 10 si dichiarano **compatibili, non certificate**: stessa
@@ -840,7 +840,7 @@ Su ogni macchina, automatico:
 
 - **giro corto**, a ogni modifica dell'installatore: una macchina per famiglia (debian13, ubuntu2604,
   fedora44, arch, tumbleweed) — circa 20 minuti;
-- **giro intero**, prima di dichiarare pronta una versione: tutte le 27 — circa 2 ore, tre alla volta,
+- **giro intero**, prima di dichiarare pronta una versione: tutte le 26 — circa 2 ore, tre alla volta,
   anche di notte.
 
 ### 7.5 Le due cose che la VM non prova
@@ -938,7 +938,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D4** | Le tre cinture (la macchina non si spegne, non si sospende, i tasti non spengono) sulle macchine **degli altri**: sempre, o scelta dell'amministratore all'installazione? | T3 | predefinite, dichiarate nel benvenuto, disattivabili |
 | **D5** | RPM Fusion (Fedora) e Packman (openSUSE): l'installatore li **aggiunge chiedendo il consenso**, o si limita a **dire** il comando? | T4 | chiede il consenso, mai in silenzio; senza consenso REMOTIX si installa e il benvenuto dice che la codifica sulla scheda manca |
 | **D6** | Il firewall: l'installatore **apre** la porta 7447, o la definisce e dice il comando? | T4 | la apre chiedendo, come D5 |
-| **D7** | **Ubuntu 24.04** (LTS fino al 2029, e Mint 22) solo con GNOME: si supporta? Costa OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 | T1 | sì, solo GNOME, dichiarato |
+| **D7** | ✅ **CHIUSA il 29 set: Ubuntu 24.04 fuori**, si parte dalla 26.04 (parola dell'utente: *«partiamo dalla 26.04»*) | — | — |
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
