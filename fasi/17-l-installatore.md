@@ -568,9 +568,9 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R26 | il registro dice tutto | ogni modifica trovata da R6 è in `modifiche.log` | una modifica non registrata |
 | R27 | il desktop nasce su ogni combinazione della matrice | la suite funzionale corta (fase 15) su ogni VM, in Full HD col ripiego software | un rosso che su Debian non c'è |
 | R28 | ⭐ un'installazione che fallisce a metà si annulla per intero | guasto innestato in ogni passo della fase 6 (rete tagliata, disco pieno, pacchetto rotto) | impronte diverse da prima dell'inizio |
+| R29 | la certificazione non mente | la fase 7 su macchine guaste apposta (scheda che non codifica, PAM rotto, porta chiusa) | un «verde» su una macchina guasta |
 | R30 | ⭐ un'installazione interrotta si riprende | corrente tolta alla VM (kill di QEMU) in ogni passo della fase 6, poi riavvio e motore rilanciato | la macchina resta a metà, o la ripresa non la porta a «completata» o «annullata» |
 | R31 | il piano non si applica a una macchina diversa | piano fatto, macchina cambiata (un pacchetto tolto), poi applicazione | il piano applicato lo stesso |
-| R29 | la certificazione non mente | la fase 7 su macchine guaste apposta (scheda che non codifica, PAM rotto, porta chiusa) | un «verde» su una macchina guasta |
 
 ---
 
