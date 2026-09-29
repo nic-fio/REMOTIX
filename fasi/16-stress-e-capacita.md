@@ -376,6 +376,23 @@ la cura candidata è una priorità alta per il contesto VPP, o la conversione de
 codificatore dove la scheda lo permette. I tempi sono presi dalla chiamata di codifica, che
 comprende l'attesa del VPP.
 
+⛔ **Ipotesi SMENTITA, 29 set** (agente a refutare, sorgenti di Mesa 25.0.7 e registri):
+- su radeonsi il VPP **non converte**: dal 16° fotogramma `postproc.c` registra la sorgente RGB e
+  torna (EFC), e la conversione RGB→NV12 la fa il **VCN dentro la codifica** leggendo il buffer
+  lineare del compositore (conversione misurata 0,03 ms, contro 8,6 ms di VEBOX sulla Intel);
+- i gruppi sono **sempre 5 fotogrammi** (64 su 64), ~8,7 + 22 ms, **qualunque la dimensione**
+  (300 B come 480 KB) e **anche distanziati nel tempo** (un gruppo su GNOME dura 1,2 s): conta
+  fotogrammi, non tempo;
+- **per sessione**: in `amd-b-4k-kde` u99 fa 5×31 ms mentre u1, sulla stessa scheda e lo stesso
+  VCN, codifica a 8,5 ms negli stessi istanti; scheda grafica al 2–6 %.
+  ⇒ Niente coda comune, niente priorità da alzare. `[?]` Candidate: l'attesa implicita sul buffer
+  del compositore di quella sessione, il buffer lineare da 30 MB in memoria di sistema (GTT), o
+  lo stato del contesto VCN. **Esperimenti proposti**: (1) misurare prima — attesa esplicita della
+  barriera del DMA-BUF (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`) fuori da «codifica», e codifica divisa
+  in invio/ricezione; (2) spegnere l'EFC (un `vaProcess` in più all'apertura: Mesa lo disattiva
+  per sempre) così il VCN legge una NV12 in VRAM, al costo di ~1–2 ms di copia. Da fare prima di
+  giudicare il 4K della Radeon.
+
 ### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
 
 `[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,
@@ -384,6 +401,30 @@ dipingono tutti** (6622 consegnati = 6622 dipinti, 0 buchi). Lo stesso utente su
 (0,11 s) e su KDE Intel (0,08 s) è verde ⇒ **non è la cura D-023** (attiva anche su GNOME). `[?]`
 Ipotesi: il lettore video dentro la sessione KDE si ferma (l'immagine arriva ma non cambia). Da
 guardare dopo la campagna, prima di chiudere KDE Full HD Radeon a 15.
+
+⭐ **Chiusa, 29 set (agente a refutare, registri dei livelli)**: è il **riavvio del file del video**.
+Il lettore gira il file da ~634 s con `loop`; ogni blocco dell'utente 4 cade a t≈630–634 o t≈0–6 s
+del lettore, ogni ~10,5 min, e il lettore stesso conta 60–90 fotogrammi persi a ogni giro. Lo
+stesso succede su GNOME Radeon (2,8–4,4 s) e KDE Intel (1,5 s): KDE Radeon era DEGRADED solo
+perché le sue finestre di giudizio cadevano sul giro. Lato nostro, nel buco: la cattura gira
+(«attese a vuoto» +123/s), i fotogrammi consegnati restano fermi (il compositore non dà danno),
+nessuna chiave richiesta, rete pulita; i buchi al server coincidono al millisecondo con quelli
+dell'attore (2,685 contro 2,68 s). ⇒ **Non è REMOTIX**, è il banco. Cura del banco (non fatta):
+un file più lungo del livello (`ffmpeg -stream_loop`, senza ricodifica), o le righe attorno al
+giro dichiarate ed escluse. Sul riepilogo pesa poco: tocca il numero severo di KDE Full HD Radeon.
+
+### Le frecce su/giù (segnalate dall'utente a mano) — studio del 29 set
+
+Lettura del codice (agente), **nessuna prova ancora**. Le frecce passano da `POSIZIONE_TASTO`, che
+tiene uno stato in pagina e nel server (le lettere no): un difetto di stato colpisce le frecce e
+risparmia la battitura. Meccanismi in ordine: (1) in pagina un rilascio perso lascia il codice in
+`cl_tasti_premuti` e la pressione dopo si scarta in silenzio (`cl_su_keyup` torna subito quando
+`cl_nel_modulo`); (2) su Mutter/KWin la tastiera di libei in pausa o ricambiata
+(`tastiera_attiva` falso) scarta la pressione; (3) fra padre e figlio il socket non bloccante
+scarta un input su `EAGAIN` quando il figlio è in ritardo; (4) le frecce del tastierino con
+BlocNum spento arrivano come KP_8/KP_2; (5) tasti scartati come composizione IME. `[M]` nei
+registri di tutta la campagna: **0** input non partiti verso il figlio, **1** ricambio di
+tastiera (u2). Prossimo passo: la prova mirata di 200 frecce con i conti di pagina e server.
 
 ## 15. Limiti dichiarati
 
@@ -429,7 +470,7 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 
 | (questo commit) | **D-023, la cornice che il driver non scrive**: se il primo SPS di un contesto dichiara una misura più grande della tela di meno di un blocco (64), `codificatore.c` fa passare i pacchetti con l'SPS (le chiavi) da `hevc_metadata`/`h264_metadata` con `crop_right`/`crop_bottom`, e lo dichiara (riga «⭐ D-023»); qualunque altra differenza resta rifiutata da `forma_va_bene()` | anomalia A3: sulla Radeon (radeonsi 25.0.7) `hevc_vaapi` dichiara il multiplo di 64 senza finestra di conformità (anche da `ffmpeg` a riga di comando) ⇒ ogni sessione HEVC — Chrome — a una tela non multipla di 64 restava **nera** | `banchi/16-stress/16-d023-cornice.sh`, 4 tele vere × 2 codec: Radeon **8 PASS** (PSNR 47 dB, l'immagine è 1:1), senza la cura **HEVC 4 FAIL su 4**; Intel 8 PASS, la cura non scatta mai | **sì**, binario **`28a947f5`** (da `678a2da`), 27 set: suite corta sulla Radeon, 4 desktop × 2 browser, **352 PASS su 352**; nei registri delle scatole la cura è scattata 62 volte, 0 flussi rifiutati |
 
-| (questo commit) | **D-022, la `SHELL` fuori da GNOME**: `sessione.c`, in coda all'ambiente della sessione, `SHELL` dalla riga di passwd dell'utente per KDE, XFCE e LXQt (GNOME resta vuota: trappola di `gnome-session`); senza shell in passwd lo dice | anomalia A2: `[M]` in una sessione XFCE viva `labwc` e `xfce4-panel` senza `SHELL`, `systemd --user` con `/bin/bash`; qterminal ripiegava su `/bin/sh` | compila pulito; prova sul terminale LXQt vero dopo la campagna | **no** — dopo la campagna (la campagna resta su `28a947f5`) |
+| (questo commit) | **D-022, la `SHELL` fuori da GNOME**: `sessione.c`, in coda all'ambiente della sessione, `SHELL` dalla riga di passwd dell'utente per KDE, XFCE e LXQt (GNOME resta vuota: trappola di `gnome-session`); senza shell in passwd lo dice | anomalia A2: `[M]` in una sessione XFCE viva `labwc` e `xfce4-panel` senza `SHELL`, `systemd --user` con `/bin/bash`; qterminal ripiegava su `/bin/sh` | `banchi/15-suite/15-f032-la-shell-dell-utente.py` (F-032): sui 4 desktop la `SHELL` della sessione (vuota su GNOME), e su LXQt `qterminal` lanciato con l'ambiente del pannello apre `bash`: **4 PASS**, guasto rosso sui 4; col binario di prima (28a947f5) LXQt **FAIL** («SHELL della sessione None») | **sì**, binario **`4fb3287d`**, 29 set (dopo la campagna) |
 **Binario e pagina della campagna nuova** (da `e4e05dc`): binario **`45d048c8`**, pagina **`fb9a18f3`** —
 suite corta estesa (accesso, input, immagine, appunti, «Esci», orologi, più tela all'attacco, video,
 stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 PASS su 352**, 26 set.
