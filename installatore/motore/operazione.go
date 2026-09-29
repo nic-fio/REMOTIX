@@ -783,46 +783,53 @@ func (op *Operazione) verifica() (bool, error) {
 	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta, con un ripiego
 	// dichiarato (il software): UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS (§6.6.7).
 	if op.Piano.Mestiere == "installazione" || op.Piano.Mestiere == "aggiornamento" {
-		k := provaCodifica(op.m.Amb)
+		k, cond := provaCodifica(op.m.Amb)
 		rv.Controlli = append(rv.Controlli, k)
-		switch k.Esito {
-		case "FAIL":
+		if k.Esito == "FAIL" {
 			tutto = false
-		case "UNKNOWN":
-			rv.Condizioni = append(rv.Condizioni, Condizione{Codice: "C-LIMITE", Testo: T("cond.codifica_ignota", k.Dettaglio)})
+		}
+		if cond != nil {
+			rv.Condizioni = append(rv.Condizioni, *cond)
 		}
 	}
 	return tutto, op.scriviOggetto("verifica.json", rv)
 }
 
-// provaCodifica: `remotix --prova-codifica` (da fare nel prodotto, §6.5-bis e §13.1). L'interfaccia
-// chiesta: uscita 0 e una riga «PROVA-CODIFICA scheda <nodo> h264_vaapi» o «PROVA-CODIFICA
-// software libx264»; uscita 1 se non codifica; il binario di oggi non conosce l'opzione (uscita
-// 2, l'aiuto): UNKNOWN dichiarato.
-func provaCodifica(a *Ambiente) Controllo {
+// provaCodifica: `remotix --prova-codifica` (§6.5-bis, nel prodotto da 8c79168): una riga JSON
+// {"esito":"hardware"|"software"|"nessuno","codificatore":…,"nodo":…,"motivo":…}; uscita 0 se il
+// fotogramma è uscito, 1 se «nessuno», 2 errore d'uso. Il motore lo lancia da root (elenco chiuso).
+// hardware ⇒ PASS; software ⇒ PASS col ripiego dichiarato (C-RIPIEGO nella verifica); nessuno ⇒
+// FAIL; un binario che non la conosce o una risposta illeggibile ⇒ UNKNOWN (§6.6.7).
+func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 	k := Controllo{ID: "codifica-h264", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
 	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
+	var r struct {
+		Esito, Codificatore, Nodo, Motivo string
+	}
+	letto := false
+	for _, riga := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(riga), "{") && json.Unmarshal([]byte(riga), &r) == nil && r.Esito != "" {
+			letto = true
+		}
+	}
+	det := strings.TrimSpace(r.Esito + " " + r.Codificatore + " " + r.Nodo + " " + r.Motivo)
 	switch {
 	case err != nil:
 		k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-	case c == 0 && strings.Contains(out, "PROVA-CODIFICA"):
-		k.Esito, k.Dettaglio = "PASS", ultimaRigaCon(out, "PROVA-CODIFICA")
-	case c == 1:
-		k.Esito, k.Dettaglio = "FAIL", ultimeRighe(out, 2)
+	case !letto || c == 2:
+		k.Esito, k.Dettaglio = "UNKNOWN", T("ver.codifica_assente")+": "+ultimeRighe(out, 2)
+	case c == 0 && r.Esito == "hardware":
+		k.Esito, k.Dettaglio = "PASS", det
+	case c == 0 && r.Esito == "software":
+		k.Esito, k.Dettaglio = "PASS", det
+		return k, &Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego_verificato", r.Motivo)}
 	default:
-		k.Esito, k.Dettaglio = "UNKNOWN", T("ver.codifica_assente")
+		k.Esito, k.Dettaglio = "FAIL", det
 	}
-	return k
-}
-
-func ultimaRigaCon(s, pezzo string) string {
-	r := ""
-	for _, x := range strings.Split(s, "\n") {
-		if strings.Contains(x, pezzo) {
-			r = strings.TrimSpace(x)
-		}
+	if k.Esito == "UNKNOWN" {
+		return k, &Condizione{Codice: "C-LIMITE", Testo: T("cond.codifica_ignota", k.Dettaglio)}
 	}
-	return r
+	return k, nil
 }
 
 func (op *Operazione) condizioni() []Condizione {

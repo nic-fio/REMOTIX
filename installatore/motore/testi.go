@@ -111,6 +111,11 @@ var testi = map[string]Testo{
 	"az.disfa.verifica":             {"com'era prima dell'installazione", "as it was before the installation"},
 	"np.nessun_gruppo":              {"nessun nodo della scheda con un gruppo: nessuno da iscrivere", "no card node with a group: nobody to add"},
 	"cond.codifica_ignota":          {"la codifica H.264 non è stata provata da REMOTIX (%s): vale il ripiego dichiarato", "H.264 encoding was not tested by REMOTIX (%s): the declared fallback applies"},
+	"cond.ripiego_verificato": {"la scheda non codifica H.264: REMOTIX codifica in software (%s)", "the card does not encode H.264: REMOTIX encodes in software (%s)"},
+	"az.iscrizione":           {"togliere %s dal gruppo %s (iscritto da REMOTIX alla prima connessione)", "remove %s from the %s group (added by REMOTIX at first connection)"},
+	"az.iscrizione.fa":        {"gpasswd -d, se è ancora nel gruppo", "gpasswd -d, if still in the group"},
+	"az.iscrizione.verifica":  {"non è più nel gruppo", "no longer in the group"},
+	"az.iscrizione.annulla":   {"gpasswd -a (lo si rimette)", "gpasswd -a (added back)"},
 	"ver.codifica_assente":          {"il binario di REMOTIX non ha ancora --prova-codifica (da fare nel prodotto)", "the REMOTIX binary does not have --prova-codifica yet (to be done in the product)"},
 
 	// operazione e certificato

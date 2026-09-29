@@ -22,6 +22,10 @@ func installaFinta(t *testing.T) *banco {
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-sessioni.json"),
 		[]byte(`[{"ID":"c4","Utente":"prova","Servizio":"remotix","Stato":"closing","Tipo":"unspecified"},{"ID":"7","Utente":"prova","Servizio":"sshd","Stato":"active","Tipo":"tty"}]`), 0o644)
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-grafica.json"), []byte(`{"prova":18}`), 0o644)
+	// REMOTIX alla prima connessione ha iscritto «altro» a «render» (e l'ha scritto due volte)
+	(&gruppiFinti{b.radice}).Aggiungi("altro", "render")
+	riga := `{"formato":"remotix-gruppi/1","data":"2026-09-30","utente":"altro","uid":1001,"gruppo":"render","gid":991,"origine":"DIRETTA","da":"REMOTIX alla prima connessione"}` + "\n"
+	os.WriteFile(filepath.Join(filepath.Dir(b.operazioni), FileIscrizioni), []byte(riga+riga), 0o644)
 	return b
 }
 
