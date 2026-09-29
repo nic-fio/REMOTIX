@@ -38,7 +38,12 @@ git -C "$ALBERO" archive --format=tar.gz --prefix="remotix-$PKGVER/" \
 } >"$LAV/sorgente.txt"
 
 echo "== makepkg ($COMMIT)"
-podman run --rm --userns=keep-id -v "$LAV:/pkg" -w /pkg -e HOME=/pkg/tmp "$IMM" \
+# R23: SOURCE_DATE_EPOCH = la data del commit.  `[M]` 29 set: senza, due
+# costruzioni danno lo stesso binario (sha256 uguale) e pacchetti diversi
+# solo per `builddate` in .PKGINFO/.BUILDINFO e le date di .MTREE.
+SDE=$(git -C "$ALBERO" log -1 --format=%ct "$COMMIT")
+podman run --rm --userns=keep-id -v "$LAV:/pkg" -w /pkg -e HOME=/pkg/tmp \
+	-e SOURCE_DATE_EPOCH="$SDE" "$IMM" \
 	makepkg -f --noconfirm >"$LAV/makepkg.log" 2>&1 \
 	|| { tail -30 "$LAV/makepkg.log"; echo "⛔ makepkg fallito (vedi $LAV/makepkg.log)"; exit 1; }
 PKG=$(cd "$LAV" && ls remotix-"$PKGVER"-*-x86_64.pkg.tar.zst)
