@@ -477,6 +477,8 @@ cmd_da_iso() {
 	local web=$!
 	# shellcheck disable=SC2064
 	trap "kill $web 2>/dev/null" EXIT
+	sleep 1
+	kill -0 "$web" 2>/dev/null || die "il servitore delle risposte non parte (porta $PORTA_WEB occupata? un altro da-iso?): $DIR/web.log"
 
 	log "$D: installazione automatica dall'ISO (senza schermo; per guardare: 17-vm.sh schermo $D)"
 	: > "$CONSOLE"; rm -f "$MONITOR"
@@ -542,21 +544,22 @@ v() { printf "%-18s %s\n" "$1:" "$2"; }
 v sistema "$PRETTY_NAME, kernel $(uname -r)"
 v firmware "$([ -d /sys/firmware/efi ] && echo UEFI || echo BIOS)"
 v lsm "$(cat /sys/kernel/security/lsm 2>/dev/null)"
-v selinux "$(getenforce 2>/dev/null || echo assente)"
+v selinux "$(if [ -r /sys/fs/selinux/enforce ]; then [ "$(cat /sys/fs/selinux/enforce)" = 1 ] && echo Enforcing || echo Permissive; else echo assente; fi)"
 v apparmor "$(sudo aa-status --enabled 2>/dev/null && echo attivo || echo spento/assente)"
 v firewalld "$(systemctl is-enabled firewalld 2>/dev/null | head -1) / $(systemctl is-active firewalld 2>/dev/null)"
+v "altri firewall" "$(for u in ufw nftables iptables; do systemctl is-enabled $u >/dev/null 2>&1 && printf "%s " $u; done)"
 [ "$(systemctl is-active firewalld 2>/dev/null)" = active ] && v "  zona" "$(sudo firewall-cmd --get-default-zone): servizi [$(sudo firewall-cmd --list-services)] porte [$(sudo firewall-cmd --list-ports)]"
 v ufw "$(command -v ufw >/dev/null && sudo ufw status | head -1 || echo assente)"
 v nft "$(sudo nft list ruleset 2>/dev/null | grep -c . ) righe di regole"
 dm=$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null)
 v "display manager" "${dm##*/}"
-v "accesso autom." "$(grep -hsiE "^[[:space:]]*(AutomaticLoginEnable|AutomaticLogin|User|Session)[[:space:]]*=|^DISPLAYMANAGER_AUTOLOGIN" /etc/gdm/custom.conf /etc/gdm3/custom.conf /etc/gdm3/daemon.conf /etc/sddm.conf /etc/sddm.conf.d/* /etc/sysconfig/displaymanager 2>/dev/null | tr "\n" " ")"
+v "accesso autom." "$(grep -hsiE "^[[:space:]]*(AutomaticLoginEnable|AutomaticLogin|User|Session)[[:space:]]*=|^DISPLAYMANAGER(_AUTOLOGIN)?=" /etc/gdm/custom.conf /etc/gdm3/custom.conf /etc/gdm3/daemon.conf /etc/sddm.conf /etc/sddm.conf.d/* /etc/sysconfig/displaymanager 2>/dev/null | tr "\n" " ")"
 v "sessioni wayland" "$(ls /usr/share/wayland-sessions 2>/dev/null | tr "\n" " ")"
 v "sessioni x11" "$(ls /usr/share/xsessions 2>/dev/null | tr "\n" " ")"
 v "obiettivo" "$(systemctl get-default)"
 v rete "NetworkManager=$(systemctl is-active NetworkManager) networkd=$(systemctl is-active systemd-networkd) wicked=$(systemctl is-active wicked 2>/dev/null) netplan=[$(ls /etc/netplan 2>/dev/null | tr "\n" " ")]"
 v resolved "$(systemctl is-active systemd-resolved)"
-v sshd "$(systemctl is-enabled ssh 2>/dev/null || systemctl is-enabled sshd 2>/dev/null)"
+v sshd "$(for u in ssh sshd; do x=$(systemctl is-enabled $u 2>/dev/null) && { echo "$u $x"; break; }; done)"
 v cloud-init "$(command -v cloud-init >/dev/null && echo presente || echo assente)"
 v pacchetti "$( (dpkg-query -W 2>/dev/null || rpm -qa 2>/dev/null || pacman -Q 2>/dev/null) | wc -l)"
 v flatpak "$(command -v flatpak >/dev/null && flatpak remotes --columns=name 2>/dev/null | tr "\n" " " || echo assente)"
@@ -571,6 +574,10 @@ v "root" "$(sudo passwd -S root 2>/dev/null | cut -d" " -f2)"
 v faillock "$(grep -lsr pam_faillock /etc/pam.d /usr/lib/pam.d 2>/dev/null | wc -l) file PAM"
 v pipewire "$(systemctl --global is-enabled pipewire.socket 2>/dev/null)"
 v "unita abilitate" "$(systemctl list-unit-files --state=enabled --no-legend | wc -l)"
+v snapper "$(command -v snapper >/dev/null && sudo snapper list-configs 2>/dev/null | awk "NR>2{print \$1}" | tr "\n" " " || echo assente) $(command -v snapper >/dev/null && echo "($(sudo snapper list 2>/dev/null | grep -c "^ *[0-9]") foto)")"
+v raccomandati "apt=$(apt-config dump APT::Install-Recommends 2>/dev/null | sed -n "s/.*\"\(.*\)\";/\1/p") zypp.onlyRequires=$(grep -hsE "^[[:space:]]*solver.onlyRequires" /etc/zypp/zypp.conf /etc/zypp/zypp.conf.d/* /usr/etc/zypp/zypp.conf /usr/etc/zypp/zypp.conf.d/* 2>/dev/null | tr -d " " | tr "\n" " ") dnf=$(grep -hs install_weak_deps /etc/dnf/dnf.conf /etc/dnf/libdnf5.conf.d/* 2>/dev/null | tr -d " " | tr "\n" " ")"
+v "gruppi video/render" "$(getent group video render | cut -d: -f1,4 | tr "\n" " ")"
+v "in ascolto" "$(sudo ss -Hltnu 2>/dev/null | awk "{print \$1\"/\"\$5}" | sort -u | tr "\n" " ")"
 '
 
 cmd_impronta() {
