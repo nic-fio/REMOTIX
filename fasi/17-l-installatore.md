@@ -573,8 +573,7 @@ elenco; una richiesta nuova passa dall'utente prima di entrare.*
 
 ⛔ **Non** stanno in REMOTIX, e li fa il motore: gruppi, cinture, firewall, desktop, archivi, pacchetti, e alla
 **disinstallazione** la chiusura dei desktop aperti — il motore li trova da logind (sessioni col servizio PAM
-`remotix`) e li fa chiudere da logind, dopo averli elencati nel piano col consenso dell'amministratore
-(«2 desktop aperti: verranno chiusi, il lavoro non salvato va perso»).
+`remotix`) e li fa chiudere da logind (vedi sotto).
 
 **La disinstallazione** (parola dell'utente, 30 set: *«è un'operazione dell'admin del server: l'admin avverte
 gli utenti nelle modalità classiche (email, WhatsApp…); poi, quando avvia la disinstallazione, l'installer
