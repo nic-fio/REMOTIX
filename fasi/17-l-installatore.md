@@ -793,7 +793,7 @@ utente con inoltro delle porte, disco come sovrapposizione sull'immagine ufficia
 - `[M]` 29 set: **tutte e nove le distribuzioni partono** e rispondono a ssh in 3-39 s; SELinux
   Enforcing su Fedora e Alma.
 - ⚠ Sul server QEMU va reinstallato dopo ogni riavvio (il sistema è in memoria): è nella ricetta.
-- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0).
+- `[M]` 29 set: **le 27 macchine sono pronte** con la foto «cliente» (tutte rc=0); ubuntu2404-gnome resta per confronto, fuori dalla matrice (D7).
 - **Quante VM insieme: 4** (decisione dell'utente: *«se il sistema regge passiamo da 4 a 8; se non regge
   torniamo a 4, così ci teniamo un po' di margine»*). `[M]` `17-carico.sh`, 8 VM × 10 min, ognuna con la
   schermata d'accesso, una codifica software Full HD 30 fps e 2,5 GB occupati: **8 × 6 GB e 8 × 4 GB non
@@ -915,7 +915,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
 | **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
 | **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
-| **T10** | il giro intero sulle 27 macchine, e la chiusura | tutti verdi | |
+| **T10** | il giro intero sulle 26 macchine della matrice, e la chiusura | tutti verdi | |
 
 Ordine delle distribuzioni dentro ogni tappa: prima quelle che rendono di più con meno (**Debian 13,
 Ubuntu 26.04**), poi **Fedora e Arch**, poi **openSUSE** (la più scomoda per H.264) e **Alma**.
