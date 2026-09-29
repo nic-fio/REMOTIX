@@ -5959,6 +5959,15 @@ auto-aggiornamento in base alla distro su cui è installata»*.
 - 🔸 **D14, aperta**: che cosa si applica da solo — proposta: sicurezza e ricostruzioni automatiche, la versione
   annuale su scelta dell'amministratore; alternativa: solo avviso.
 
+### 10.11 ✅ Flatpak e AppImage accantonati: pacchetti nativi dal nostro archivio
+
+Parola dell'utente (30 set 2026): *«accantoniamo l'idea flatpak/appimage. Continuiamo sulla strada originale,
+alla fine mi sembra quella più semplice e coerente»*. ⇒ REMOTIX si distribuisce in **pacchetti nativi** negli
+**archivi firmati di REMOTIX** (tutto il materiale da noi, installato dal gestore di pacchetti della
+distribuzione); l'installatore dirige, non copia file. Uno studio su Flatpak/AppImage era partito ed è stato
+fermato. ⚠ Resta da guardare, alla decisione D9 (distribuzioni immutabili), la strada di systemd fatta per i
+servizi di sistema (`systemd-sysext`, portable services).
+
 ---
 
 ## Come si tiene questo documento

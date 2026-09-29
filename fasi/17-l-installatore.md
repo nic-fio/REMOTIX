@@ -990,7 +990,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D6** | Il firewall: l'installatore **apre** la porta 7447, o la definisce e dice il comando? | T4 | la apre chiedendo, come D5 |
 | **D7** | ✅ **CHIUSA il 29 set: Ubuntu 24.04 fuori**, si parte dalla 26.04 (parola dell'utente: *«partiamo dalla 26.04»*) | — | — |
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
-| **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo |
+| **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo; da guardare allora `systemd-sysext` e i portable services (`DECISIONI.md` §10.11) |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
