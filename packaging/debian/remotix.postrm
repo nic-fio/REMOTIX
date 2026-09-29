@@ -1,44 +1,22 @@
 #!/bin/sh
-# remotix.postrm — dopo che i file sono stati tolti (fasi/17 §6.4, §6.6.4).
+# remotix.postrm — dopo che i file sono stati tolti (fasi/17 §6.4).
 #
-#   remove   i file del pacchetto se ne vanno; restano la configurazione
-#            (/etc/remotix, /etc/pam.d/remotix), /var/lib/remotix e i gruppi;
-#   purge    si annulla quel che il pacchetto ha fatto DIRETTAMENTE: le persone
-#            messe nei gruppi della scheda DAL PACCHETTO escono (e solo loro:
-#            chi c'era gia' — PREESISTENTE nel registro — resta, R33), poi
-#            /var/lib/remotix (certificati, ban, registro) sparisce.
-# ⚠ Le librerie arrivate come dipendenze restano: le toglie `apt autoremove`
-#   (sono marcate «automatiche»), e quelle AGGIORNATE restano aggiornate
-#   (INDIRETTE, §6.6.4).
+# ⛔ DECISIONI §10.12: gruppi, cinture, firewall e accensione li monta il MOTORE
+#    e li annota nel SUO registro; li disfa lui.  Il pacchetto non li tocca,
+#    ne' all'installazione ne' qui.
+#   remove   restano la configurazione (/etc/remotix, /etc/pam.d/remotix) e
+#            /var/lib/remotix;
+#   purge    via cio' che il PROGRAMMA ha creato da se' (certificati, ban) e
+#            /run/remotix; /var/lib/remotix solo se resta vuota — quel che ci
+#            lascia il motore (il suo registro) non e' del pacchetto.
 set -e
 
-REGISTRO=/var/lib/remotix/modifiche.log
-
-togli_dai_gruppi() {
-	[ -f "$REGISTRO" ] || return 0
-	awk '$2 == "DIRETTA" && $3 == "gruppo" { print $4, $5 }' "$REGISTRO" |
-	while read -r p g; do
-		getent passwd "$p" >/dev/null || continue
-		getent group "$g" >/dev/null || continue
-		if id -nG "$p" | tr ' ' '\n' | grep -qxF "$g"; then
-			gpasswd -d "$p" "$g" >/dev/null && \
-				echo "remotix: $p tolto dal gruppo $g (ce l'aveva messo REMOTIX)"
-		fi
-	done
-}
-
 case "$1" in
-remove)
-	# le cinture di logind (tasti) se ne sono andate: glielo si dice
-	if [ -d /run/systemd/system ]; then
-		systemctl reload systemd-logind >/dev/null 2>&1 || true
-	fi
-	;;
 purge)
-	togli_dai_gruppi
-	rm -rf /var/lib/remotix /run/remotix
+	rm -rf /var/lib/remotix/certificati /var/lib/remotix/ban /run/remotix
+	rmdir /var/lib/remotix 2>/dev/null || true
 	;;
-upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 	;;
 *)
 	echo "postrm chiamato con un argomento sconosciuto: $1" >&2

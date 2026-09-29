@@ -29,8 +29,8 @@ Package: remotix
 Architecture: any
 # Depends: le librerie le calcola dpkg-shlibdeps dal binario (${shlibs:Depends}).
 #   Le altre sono quelle che il binario usa a tempo di esecuzione e che dpkg NON
-#   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod e
-#   gpasswd (postinst, postrm e la prima connessione), loginctl e systemctl
+#   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod (la prima
+#   connessione, figlio.c:1525), loginctl e systemctl
 #   --user (figlio.c), il bus d'utente di systemd (dbus-user-session).
 Depends: ${shlibs:Depends},
          ${misc:Depends},
@@ -62,5 +62,6 @@ Description: il desktop Linux nel browser, per piu' utenti
  escluso da /etc/remotix/utenti-negati) e trova la sua sessione.
  .
  Il servizio remotix.service ascolta sulla porta 7447 (TCP per la pagina, UDP
- per QUIC).  Il certificato si genera al primo avvio.  Il pacchetto contiene
+ per QUIC).  Il pacchetto porta solo i pezzi, spenti: il servizio lo accende
+ l'installatore di REMOTIX, l'unica via di installazione.  Il pacchetto contiene
  ngtcp2 e nghttp3 collegate staticamente.
