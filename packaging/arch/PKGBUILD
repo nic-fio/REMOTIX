@@ -1,0 +1,163 @@
+# PKGBUILD — REMOTIX per Arch Linux (Manjaro, EndeavourOS: compatibili, non
+# certificate).  fasi/17-l-installatore.md §6.1-§6.4, tappa T3.
+#
+# ⭐ Si costruisce DAL SORGENTE DEL DEPOSITO, dentro il contenitore di Arch
+#    (src/costruzione/Contenitore.arch):
+#       packaging/arch/costruisci.sh [commit]
+#    fa il tarball del commit (src/, banchi/rcp/, packaging/arch/), poi
+#    makepkg e namcap.  Tutti i file del pacchetto vengono da quel tarball.
+#
+# ⭐ LE DIPENDENZE E IL ROLLING RELEASE (§4.6, §6.2) — la scelta: il pacchetto
+#    si lega al NUMERO DELLA LIBRERIA (soname), non alla versione esatta.
+#    Ogni `libX.so` qui sotto makepkg lo trasforma nel soname che il binario
+#    usa DAVVERO (`libavcodec.so=63-64`), letto dal binario.  Quindi:
+#      · ffmpeg 9.0.2 → 9.0.3 (stesso soname, ABI uguale): si aggiorna libero;
+#      · ffmpeg 9 → 10 (libavcodec.so.64): `pacman -Syu` RIFIUTA, dicendo
+#        «breaks dependency 'libavcodec.so=63-64' required by remotix», finche'
+#        non si ricostruisce il pacchetto.  E' quel che fanno i pacchetti di
+#        Arch stessi, e §6.2 lo chiede: «meglio un aggiornamento rifiutato che
+#        uno che rompe in silenzio».
+#    ⛔ La versione ESATTA (`ffmpeg=2:9.0.2-1`) bloccherebbe ogni aggiornamento
+#       di ffmpeg, anche quelli di sicurezza, e con lui l'intero `-Syu`: su
+#       una rolling release vuol dire una macchina che non si aggiorna piu'.
+#    ⇒ A carico nostro: ricostruire a ogni cambio di soname (ffmpeg circa una
+#      volta l'anno; OpenSSL, glib, libei, pipewire piu' di rado).
+#
+# ⭐ ngtcp2 e nghttp3 DENTRO, statiche, versione fissata (§6.3) — ⚠ DECISIONE
+#    D2 in attesa di conferma: la proposta e' «si'», ed e' gia' cosi' nei
+#    contenitori.  ⓘ Su Arch c'e' la strada corta: `libngtcp2` e' gia' 1.25
+#    col ponte crypto_ossl, e `libnghttp3` c'e'.  Legandosi a quelle
+#    (`libngtcp2.so`, `libnghttp3.so` nelle depends) gli aggiornamenti di
+#    sicurezza li farebbe Arch.  Non si usa per uniformita' (un solo trasporto
+#    da provare su tutte le famiglie); se D2 dicesse «no», su Arch basta questo.
+#
+# ⛔ NON entra nel pacchetto (§4.4, §6.4, R14): utenti di prova, sudoers dei
+#    banchi, gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
+
+pkgname=remotix
+pkgver=0.17.0
+pkgrel=1
+pkgdesc='Il desktop Linux nel browser (server: GNOME, KDE, XFCE, LXQt su Wayland)'
+arch=('x86_64')
+url='https://github.com/nic-fio/REMOTIX'
+license=('LicenseRef-REMOTIX')
+_ngtcp2=1.25.0
+_nghttp3=1.18.0
+depends=(
+	glibc
+	systemd                                   # logind, gestore d'utente, tmpfiles
+	pam libpam.so
+	openssl libssl.so libcrypto.so            # >= 3.5: TLS 1.3 con QUIC nativo
+	ffmpeg libavcodec.so libavutil.so libswscale.so   # >= 7.1 (lavc 61.13.100)
+	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
+	libpipewire libpipewire-0.3.so
+	libva libva.so
+	libei libei.so                            # >= 1.1: l'input su GNOME e KDE
+	libxkbcommon libxkbcommon.so
+	wayland libwayland-client.so
+	mesa                                      # libgbm.so.1 (mesa non la dichiara)
+	# ⭐ Non collegati, ma senza il desktop non arriva (§4.6, §11.1):
+	#    XFCE e LXQt girano sotto labwc, che nessun gruppo di Arch porta;
+	#    wlr-randr serve alla cura della misura su LXQt.  ⛔ Come optdepends
+	#    pacman non li installerebbe mai, e R4 («niente a mano») cadrebbe su
+	#    XFCE e LXQt.  Il prezzo: labwc+wlroots anche su GNOME e KDE.
+	labwc
+	wlr-randr
+)
+makedepends=(cmake ninja pkgconf wayland)
+backup=(
+	etc/remotix/utenti-negati
+	etc/pam.d/remotix
+)
+install=remotix.install
+# ⚠ !lto: il prodotto e' misurato senza LTO (fasi 12-16); !debug: niente
+#   pacchetto remotix-debug finche' non c'e' un deposito che lo ospiti.
+options=('!lto' '!debug')
+source=(
+	"remotix-$pkgver.tar.gz"
+	"https://github.com/ngtcp2/ngtcp2/releases/download/v$_ngtcp2/ngtcp2-$_ngtcp2.tar.xz"
+	"https://github.com/ngtcp2/nghttp3/releases/download/v$_nghttp3/nghttp3-$_nghttp3.tar.xz"
+)
+# ⚠ Il tarball del deposito cambia a ogni commit: costruisci.sh scrive il
+#   commit e la sua sha256 accanto al pacchetto (sorgente.txt).
+sha256sums=('SKIP'
+            '2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb'
+            'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19')
+
+_quic=quic
+
+build() {
+	# ── nghttp3 e ngtcp2: SOLO statiche, in una cartella nostra
+	#    (la stessa ricetta di src/costruzione/quic-statiche.sh)
+	local comune=(-GNinja -DCMAKE_BUILD_TYPE=Release
+		-DCMAKE_INSTALL_PREFIX="$srcdir/$_quic" -DCMAKE_INSTALL_LIBDIR=lib
+		-DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_LIB_ONLY=ON
+		-DENABLE_SHARED_LIB=OFF -DENABLE_STATIC_LIB=ON)
+	cmake -B nghttp3-build -S "nghttp3-$_nghttp3" "${comune[@]}"
+	ninja -C nghttp3-build install
+	cmake -B ngtcp2-build -S "ngtcp2-$_ngtcp2" "${comune[@]}" -DENABLE_OPENSSL=ON
+	ninja -C ngtcp2-build install
+	if ls "$srcdir/$_quic"/lib/lib{ngtcp2,nghttp3}*.so* 2>/dev/null; then
+		echo "⛔ ci sono .so di ngtcp2/nghttp3: il binario le userebbe" >&2
+		return 1
+	fi
+
+	# ── REMOTIX.  Le intestazioni e le .a nostre PRIMA di quelle di sistema
+	#    (`libngtcp2` di Arch puo' esserci, la porta curl): CPATH e
+	#    LIBRARY_PATH vengono prima delle cartelle di sistema.
+	cd "remotix-$pkgver/src"
+	export CPATH="$srcdir/$_quic/include"
+	export LIBRARY_PATH="$srcdir/$_quic/lib"
+	export PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig"
+	# ⚠ CFLAGS dall'ambiente: il Makefile ha `CFLAGS ?=`, quindi quelli di
+	#   makepkg (FORTIFY, stack-clash, cf-protection) SOSTITUISCONO i suoi; gli
+	#   si rimettono lo standard e gli avvertimenti.  ⛔ Non `make CFLAGS=…`:
+	#   dalla riga di comando i `CFLAGS +=` del Makefile verrebbero ignorati.
+	export CFLAGS="$CFLAGS -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
+	make dipendenze
+	make pulisci
+	make tutto
+}
+
+check() {
+	cd "remotix-$pkgver/src"
+	# R13: le funzioni di banco spente nel binario del pacchetto (§4.5)
+	grep -q '^#define BANCO_ACCESO 0' rcp.c
+	# ngtcp2/nghttp3 davvero dentro, e nessuna libreria mancante
+	if ldd ./remotix | grep -E 'ngtcp2|nghttp3|not found'; then
+		echo "⛔ il binario chiede ngtcp2/nghttp3 dinamiche, o librerie che mancano" >&2
+		return 1
+	fi
+}
+
+package() {
+	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
+	install -Dm755 "$s/remotix"          "$pkgdir/usr/libexec/remotix/remotix"
+	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
+	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
+	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
+	# ⚠ D3 APERTA: la pila di Arch porta con se' il pam_faillock di pambase
+	#   (dentro system-auth): non lo aggiungiamo ne' lo togliamo (§4.3).
+	install -Dm644 "$s/remotix.pam.arch" "$pkgdir/etc/pam.d/remotix"
+	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
+	# ⭐ il permesso della cattura di KWin: IDENTICO, byte per byte, a quello
+	#    che scrive `kwin_scrivi_permesso()` (kwin.c:48, main.c) col binario in
+	#    /usr/libexec/remotix/remotix — cosi' il programma lo trova uguale e
+	#    non lo riscrive.  ⚠ Il codice va cambiato (§4.4): a esecuzione solo la
+	#    verifica (kwin.c:342), niente scrittura da root in /usr.
+	install -Dm644 "$a/org.kde.remotix.desktop" \
+		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
+	# ⚠ DECISIONE D4 APERTA — le tre cinture, nei percorsi del FORNITORE:
+	#   l'amministratore le spegne con un file omonimo in /etc.
+	#   rules.d di polkit e' 0750 root:polkitd (gid 102, fisso su Arch) come
+	#   nel pacchetto polkit: altrimenti pacman avvisa «permissions differ».
+	install -dm750 -o root -g 102 "$pkgdir/usr/share/polkit-1/rules.d"
+	install -m644 "$s/remotix-niente-spegnimento.rules" \
+		"$pkgdir/usr/share/polkit-1/rules.d/50-remotix-niente-spegnimento.rules"
+	install -Dm644 "$s/remotix-tasti.conf" \
+		"$pkgdir/usr/lib/systemd/logind.conf.d/remotix-tasti.conf"
+	install -Dm644 "$a/remotix-niente-sospensione.conf" \
+		"$pkgdir/usr/lib/systemd/sleep.conf.d/remotix-niente-sospensione.conf"
+	# il firewall: definito, non aperto (D6)
+	install -Dm644 "$a/remotix.firewalld.xml" "$pkgdir/usr/lib/firewalld/services/remotix.xml"
+}

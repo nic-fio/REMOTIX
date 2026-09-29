@@ -1,0 +1,39 @@
+# remotix.service — il server REMOTIX, unita' di sistema del PACCHETTO.
+#
+# ⭐ fasi/17-l-installatore.md §6.4.  Gira da ROOT: PAM deve poter verificare la
+#    parola di chiunque, e il figlio scende all'uid dell'utente da se'.
+# ⛔ Il pacchetto la INSTALLA e basta: su Arch il preset e' «disable *» e il
+#    servizio non si accende da solo.  L'accensione (`systemctl enable --now`)
+#    e' un gesto del motore d'installazione (T4-T5), col consenso.
+# ⛔ Nessun arnese di banco sulla riga di comando (§4.5, R13): niente
+#    --comando-socket, --rilievo, --parlantina, --audio-prova, --sblocca.
+#
+# ⚠ La porta e il nome del certificato si cambiano con un drop-in
+#   (`systemctl edit remotix`), senza toccare questo file:
+#       [Service]
+#       Environment=REMOTIX_PORTA=7447
+#       Environment=REMOTIX_NOME=192.168.1.10
+#   REMOTIX_NOME va nel subjectAltName del certificato (RCP.md §4.1): il
+#   predefinito e' il nome della macchina (%H).  Il certificato nasce all'avvio
+#   se manca (R16 e' della T4).
+[Unit]
+Description=REMOTIX, il desktop nel browser
+After=network.target systemd-logind.service
+
+[Service]
+Type=simple
+Environment=REMOTIX_PORTA=7447
+Environment=REMOTIX_NOME=%H
+ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome ${REMOTIX_NOME} --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban
+WorkingDirectory=/var/lib/remotix
+# ⭐ Le tre proprieta' con cui il prodotto e' sempre stato misurato
+#    (src/riavvia-7900.sh): KillMode=mixed (T2, §5.2: i desktop sopravvivono
+#    allo stop), la priorita' in tempo reale e il nice dei figli.
+KillMode=mixed
+LimitRTPRIO=20
+LimitNICE=-11
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
