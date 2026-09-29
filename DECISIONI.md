@@ -5968,6 +5968,20 @@ distribuzione); l'installatore dirige, non copia file. Uno studio su Flatpak/App
 fermato. ⚠ Resta da guardare, alla decisione D9 (distribuzioni immutabili), la strada di systemd fatta per i
 servizi di sistema (`systemd-sysext`, portable services).
 
+### 10.12 ✅ L'installatore è l'unica via per installare REMOTIX
+
+Parola dell'utente (30 set 2026): *«l'unica via per installare REMOTIX è l'installer»*. Siccome un pacchetto
+in un archivio si può sempre installare a mano, la regola si fa valere **per costruzione**:
+1. **il pacchetto porta solo i pezzi, inerti**: programma, pagina, file di configurazione; non accende il
+   servizio, non tocca gruppi né firewall; le tre cinture ci stanno **spente** (in `/usr/share/remotix/`), le
+   attiva il motore col consenso (D4);
+2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
+   **suo** registro: una sola traccia, una disinstallazione più pulita;
+3. **REMOTIX non parte** se l'installazione non è stata completata e certificata dall'installatore
+   (operazione CONFERMATA), e lo dice con un codice (`RX-INST-001`) e il rimedio;
+4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
+   l'installatore, che verifica e riaccende senza chiudere i desktop.
+
 ---
 
 ## Come si tiene questo documento
