@@ -1,0 +1,66 @@
+Source: remotix
+Section: net
+Priority: optional
+Maintainer: nicfio <nicfio@gmail.com>
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
+Build-Depends: debhelper-compat (= 13),
+               pkgconf | pkg-config,
+               libssl-dev (>= 3.5),
+               libpam0g-dev,
+               libglib2.0-dev (>= 2.80),
+               libpipewire-0.3-dev,
+               libdrm-dev,
+               libavcodec-dev (>= 7:7.1),
+               libavutil-dev,
+               libswscale-dev,
+               libva-dev,
+               libei-dev (>= 1.1),
+               libxkbcommon-dev,
+               libgbm-dev,
+               libwayland-dev
+
+# ⚠ ngtcp2 1.25.0 e nghttp3 1.18.0 NON sono nelle Build-Depends: le porta il
+#   contenitore di costruzione (src/costruzione/quic-statiche.sh), statiche e a
+#   versione fissata (fasi/17 §6.3; D2 chiusa, DECISIONI §10.6).  Il campo
+#   Static-Built-Using qui sotto le nomina nel pacchetto finito (per lo SBOM, R24).
+
+Package: remotix
+Architecture: any
+# Depends: le librerie le calcola dpkg-shlibdeps dal binario (${shlibs:Depends}).
+#   Le altre sono quelle che il binario usa a tempo di esecuzione e che dpkg NON
+#   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod e
+#   gpasswd (postinst, postrm e la prima connessione), loginctl e systemctl
+#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session).
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         libpam-systemd,
+         libpam-modules,
+         passwd,
+         systemd,
+         dbus-user-session
+# Recommends (apt li installa di serie; chi usa --no-install-recommends li perde
+#   e `remotix verifica`, T4, lo dira'):
+#   · il driver VA della scheda: senza, la codifica e' solo il ripiego software;
+#   · labwc, wlr-randr, xwayland: solo per XFCE e LXQt (il compositore che REMOTIX
+#     avvia; wlr-randr per la cura di LXQt; XFCE 4.20 sotto labwc vuole Xwayland);
+#     ⚠ su una macchina solo GNOME o KDE si installano lo stesso: nei metadati di
+#     un .deb non c'e' «solo se c'e' XFCE».  Un pacchetto per desktop e' da T4;
+#   · ${remotix:Recommends}: su Ubuntu la sessione GNOME «vanilla» (gnome-session),
+#     SOLO se la macchina non ha gia' un altro desktop — vedi debian/rules.
+#     Dipende da D8 (fasi/17 §10), non ancora decisa.
+Recommends: va-driver-all | va-driver,
+            labwc,
+            wlr-randr,
+            xwayland,
+            ${remotix:Recommends}
+Static-Built-Using: ngtcp2 (= 1.25.0), nghttp3 (= 1.18.0)
+Description: il desktop Linux nel browser, per piu' utenti
+ REMOTIX mostra il desktop di un utente (GNOME, KDE Plasma, Xfce, LXQt) in un
+ browser, con video e audio su HTTP/3 e WebTransport.  Chi si collega entra
+ con nome e parola d'ordine della macchina (PAM, servizio «remotix»; root
+ escluso da /etc/remotix/utenti-negati) e trova la sua sessione.
+ .
+ Il servizio remotix.service ascolta sulla porta 7447 (TCP per la pagina, UDP
+ per QUIC).  Il certificato si genera al primo avvio.  Il pacchetto contiene
+ ngtcp2 e nghttp3 collegate staticamente.

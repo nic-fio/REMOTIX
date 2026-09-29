@@ -18,3 +18,10 @@ RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
+
+# --- fase 17, T3: gli attrezzi del pacchetto .deb (packaging/debian/).
+#     Uno strato IN CODA, perche' gli strati di sopra (e le statiche) restino
+#     quelli in cache: `costruisci-deb.sh` lo usa, `costruisci-tutti.sh` no.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        debhelper dpkg-dev fakeroot lintian binutils \
+    && rm -rf /var/lib/apt/lists/*
