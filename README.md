@@ -1,3 +1,5 @@
+<p align="center"><img src="grafica/logo/remotix-logo.png" alt="REMOTIX" width="600"></p>
+
 # REMOTIX
 
 > # ✅ DOVE SIAMO — 25 settembre 2026: FASE 15 CHIUSA, ZERO DIFETTI

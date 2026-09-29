@@ -5849,6 +5849,13 @@ dossier) né altri esperimenti; il dossier e il ramo `a3-esperimenti` sono il pu
 
 ---
 
+### 9.6 ✅ Il logo ufficiale di REMOTIX — 29 set 2026
+
+Parola dell'utente: *«è il logo ufficiale del progetto»*. ⇒ `grafica/logo/remotix-logo.png`
+(PNG 2172×724, sha256 `192ce831…384104`), in testa al `README.md`. È l'originale: le varianti
+(icona, favicon, versione scura) si ricavano da questo, non lo sostituiscono.
+
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
