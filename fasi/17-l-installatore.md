@@ -902,8 +902,8 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 
 | tappa | che cosa | produce | stato |
 |---|---|---|---|
-| **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` | 🔨 in corso (29 set: 9 distribuzioni accese, desktop in costruzione) |
-| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | 🔨 compila 7/7; gira: in cura (§11.1) |
+| **T0** | il banco delle VM e le 27 macchine «cliente» | `banchi/17-distro/17-vm.sh`, foto `cliente` e `iso` | ✅ 29 set: 27 «cliente» + 6 «iso» (differenze in `banchi/17-distro/iso-differenze.md`); 4 VM insieme |
+| **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | ✅ quasi: compila 7/7; gira 6 famiglie su 7 col binario del prodotto (§11.1) |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | ✅ 29 set: nessun desktop muore; cura leggera (§5.2) |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
 | **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
@@ -1011,6 +1011,19 @@ ngtcp2 minima 1.25.0; `pam_faillock` di Arch 3/900 s/600 s; openSUSE SELinux enf
         `primario_lxqt()`), non pixman. La cura XFCE non è nello stesso punto: tocca la riga di avvio
         (`SESSIONE_RIGA_XFCE`), cioè la cintura del logout (`XFCE4_SESSION_COMPOSITOR`); e su Leap
         `wlr-randr`, che la cura di LXQt usa, **non è installato** (⇒ dipendenza per T3).
+- **Chiusura di T1** (binario del prodotto con le due cure, 9e035c5): **scatole 208 PASS / 0 FAIL / 0 BLOCKED**,
+  copia zero intatta su GNOME e KDE (14/14 palchi sulla scheda), la scheda Intel dice «sì» a labwc (zero
+  ripieghi pixman); **VM: desktop nel browser su debian13-gnome, ubuntu2604-kde, fedora44-gnome, alma10-kde,
+  arch-xfce, tumbleweed-kde** (con le condizioni: RPM Fusion e PAM senza `pam_selinux` su Fedora/Alma, 0
+  rifiuti SELinux in enforcing; Packman e `breeze6-wallpapers` su Tumbleweed; su Arch il gruppo xfce4 non
+  porta ffmpeg: dipendenza per T3). **leap16-lxqt FAIL**: labwc 0.8.1 di Leap muore in pixman
+  (`buffer_adopt_cairo_surface: Assertion … CAIRO_FORMAT_ARGB32`) anche lanciato a mano senza REMOTIX
+  `[?]` (con XFCE sulla stessa Leap passava). Da guardare: alcuni primi fotogrammi wlroots «NERO» su XFCE/LXQt
+  nelle scatole, senza rossi. Su Alma RPM Fusion va **dopo** EPEL, o `libavcodec-free` va in conflitto.
+- **Stato ISO** (T0): 6 macchine su 6; le differenze che contano per l'installatore: `render` non c'è mai;
+  Fedora Workstation apre 1025-65535, **Alma e Tumbleweed hanno la 7447 chiusa**; Tumbleweed con accesso
+  automatico, btrfs e snapper (fotografie di sistema già pronte, §6.6.4), raccomandati installati; Ubuntu
+  desktop minimo + snap, ufw spento; rete con NetworkManager ovunque.
 - **Dipendenze di esecuzione misurate** (per T3), oltre al binario: Ubuntu 26.04 `libavcodec62 libswscale9
   libavutil60 gnome-session`; Alma 10 `epel-release`, CRB, `libavcodec-free libavutil-free libswscale-free`;
   Tumbleweed `libavcodec63 libavutil61 libswscale10`; Leap 16 `libavcodec61 libavutil59 libswscale8
