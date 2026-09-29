@@ -510,7 +510,7 @@ fuori dai percorsi di sistema.
 
 ⭐ **L'installatore è l'unica via** (`DECISIONI.md` §10.12): il pacchetto porta i pezzi **inerti** — niente
 servizio acceso, niente gruppi, niente firewall, le cinture spente in `/usr/share/remotix/`; il motore li
-monta col consenso e li registra; senza un'installazione CONFERMATA il servizio parte solo con un'opzione esplicita e si dichiara «non supportato» (`RX-INST-001`: REMOTIX sarà open source, e chi replica a mano può farlo);
+monta col consenso e li registra; le vie sono due sole — l'installatore o il codice sorgente a mano, a proprio rischio — e REMOTIX non ha né blocchi né opzioni per una via intermedia: `remotix stato` dice solo se l'installazione è certificata dall'installatore;
 un aggiornamento del pacchetto richiama il motore. Quel che segue va letto così: lo fa **il motore**, non
 gli script del pacchetto.
 
@@ -954,7 +954,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
 | R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
-| R40 | ⭐ senza installatore REMOTIX non si installa da solo | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo; poi `systemctl start remotix`; poi con l'opzione esplicita | il servizio acceso o in ascolto dopo il solo pacchetto; un gruppo, una regola del firewall o una cintura attivati; REMOTIX che parte senza l'opzione, o che con l'opzione non dichiara `RX-INST-001` «non supportata» |
+| R40 | ⭐ il pacchetto da solo non accende niente | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo, porte in ascolto, gruppi; poi `remotix stato` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; `remotix stato` che non dica «installazione non certificata» |
 
 ---
 

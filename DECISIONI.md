@@ -5977,12 +5977,13 @@ in un archivio si può sempre installare a mano, la regola si fa valere **per co
    attiva il motore col consenso (D4);
 2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
    **suo** registro: una sola traccia, una disinstallazione più pulita;
-3. **REMOTIX sa se l'installazione è certificata**: senza un'operazione CONFERMATA dell'installatore parte
-   **solo se l'amministratore lo chiede esplicitamente** (un'opzione apposta), e lo dichiara nel registro e
-   in `remotix stato` (`RX-INST-001`: «installazione non certificata dall'installatore: non supportata»).
-   ⚠ Corretto il 30 set su parola dell'utente: *«REMOTIX sarà opensource, ma nessuno vieta di replicarsi a
-   mano quello che fa l'installer»* — un rifiuto secco sarebbe un ostacolo finto (il sorgente è aperto) e
-   contro lo spirito del codice aperto; l'installatore è l'unica via **supportata**;
+3. **due vie sole: l'installatore, oppure il codice sorgente a mano** (scaricare il codice, cercarsi le
+   dipendenze, installarle, tirare su i servizi, configurarli — a proprio rischio). Parola dell'utente, 30
+   set: *«o usa l'installer o deve scaricarsi il codice a mano, andarsi a cercare i pacchetti con le
+   dipendenze e installarseli, tirar su i servizi, configurarli»*. ⇒ REMOTIX non prevede una via intermedia:
+   **né blocchi né opzioni apposta** per chi parte senza installatore (corretto due volte il 30 set: prima
+   era un rifiuto secco, poi un'opzione esplicita). Resta solo un'informazione per l'assistenza: `remotix
+   stato` dice se l'installazione è **certificata dall'installatore** o no;
 4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
    l'installatore, che verifica e riaccende senza chiudere i desktop.
 
