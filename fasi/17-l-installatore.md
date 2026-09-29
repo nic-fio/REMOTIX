@@ -510,7 +510,7 @@ fuori dai percorsi di sistema.
 
 ⭐ **L'installatore è l'unica via** (`DECISIONI.md` §10.12): il pacchetto porta i pezzi **inerti** — niente
 servizio acceso, niente gruppi, niente firewall, le cinture spente in `/usr/share/remotix/`; il motore li
-monta col consenso e li registra; il servizio non parte senza un'installazione CONFERMATA (`RX-INST-001`);
+monta col consenso e li registra; senza un'installazione CONFERMATA il servizio parte solo con un'opzione esplicita e si dichiara «non supportato» (`RX-INST-001`: REMOTIX sarà open source, e chi replica a mano può farlo);
 un aggiornamento del pacchetto richiama il motore. Quel che segue va letto così: lo fa **il motore**, non
 gli script del pacchetto.
 
@@ -954,7 +954,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
 | R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
-| R40 | ⭐ senza installatore REMOTIX non si installa | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo; poi `systemctl start remotix` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; REMOTIX che parte senza dire `RX-INST-001` |
+| R40 | ⭐ senza installatore REMOTIX non si installa da solo | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo; poi `systemctl start remotix`; poi con l'opzione esplicita | il servizio acceso o in ascolto dopo il solo pacchetto; un gruppo, una regola del firewall o una cintura attivati; REMOTIX che parte senza l'opzione, o che con l'opzione non dichiara `RX-INST-001` «non supportata» |
 
 ---
 
@@ -998,7 +998,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D7** | ✅ **CHIUSA il 29 set: Ubuntu 24.04 fuori**, si parte dalla 26.04 (parola dell'utente: *«partiamo dalla 26.04»*) | — | — |
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo; da guardare allora `systemd-sysext` e i portable services (`DECISIONI.md` §10.11) |
-| **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
+| **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato — ⭐ REMOTIX sarà open source (`DECISIONI.md` §10.13): OBS diventa possibile |
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
 | **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |

@@ -5977,10 +5977,21 @@ in un archivio si può sempre installare a mano, la regola si fa valere **per co
    attiva il motore col consenso (D4);
 2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
    **suo** registro: una sola traccia, una disinstallazione più pulita;
-3. **REMOTIX non parte** se l'installazione non è stata completata e certificata dall'installatore
-   (operazione CONFERMATA), e lo dice con un codice (`RX-INST-001`) e il rimedio;
+3. **REMOTIX sa se l'installazione è certificata**: senza un'operazione CONFERMATA dell'installatore parte
+   **solo se l'amministratore lo chiede esplicitamente** (un'opzione apposta), e lo dichiara nel registro e
+   in `remotix stato` (`RX-INST-001`: «installazione non certificata dall'installatore: non supportata»).
+   ⚠ Corretto il 30 set su parola dell'utente: *«REMOTIX sarà opensource, ma nessuno vieta di replicarsi a
+   mano quello che fa l'installer»* — un rifiuto secco sarebbe un ostacolo finto (il sorgente è aperto) e
+   contro lo spirito del codice aperto; l'installatore è l'unica via **supportata**;
 4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
    l'installatore, che verifica e riaccende senza chiudere i desktop.
+
+### 10.13 ✅ REMOTIX sarà open source
+
+Parola dell'utente (30 set 2026): *«REMOTIX sarà opensource»*. Conseguenze da decidere a suo tempo:
+🔸 **la licenza** (GPL o permissiva; pesa anche sui codec: x264 è GPL, `DECISIONI.md` ~§5113 aveva già escluso
+x265 come ripiego); **D10** (dove si costruiscono i pacchetti): con un progetto pubblico diventa possibile
+OBS di openSUSE; **D11** (la chiave): la fiducia pubblica richiede una chiave madre custodita bene.
 
 ---
 
