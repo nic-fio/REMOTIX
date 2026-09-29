@@ -393,6 +393,20 @@ comprende l'attesa del VPP.
   per sempre) così il VCN legge una NV12 in VRAM, al costo di ~1–2 ms di copia. Da fare prima di
   giudicare il 4K della Radeon.
 
+`[M]` **I due esperimenti, 29 set mattina** (ramo `a3-esperimenti`, commit `18b6437`, binari
+`3e510160` e `39e3ed86`; KDE 4K Radeon, 1 utente, due gradini ciascuno; evidenze
+`misure/fase16/a3-misura-kde`, `a3-senza-efc-kde`):
+1. **la barriera del compositore NON c'entra**: aspettata esplicitamente e misurata a parte, vale
+   0,37 ms sui fotogrammi normali e **0,02 ms su quelli lenti**; e i 22 ms in più stanno **tutti
+   dentro `avcodec_send_frame`** (ricezione 0,0 ms): con `async_depth=1` è il VCN che codifica;
+   ancora 100 e 105 fotogrammi lenti per gradino;
+2. **l'EFC NON c'entra**: spento (conversione vera, 0,75 ms mediana), i gruppi da 5 × 31 ms restano
+   identici — 95 e 106 lenti per gradino, codifica p99 31,1–31,3 ms.
+⇒ Il ritardo è **dentro la codifica del VCN** della Radeon, una sessione per volta, 5 fotogrammi
+ogni 12–40 s. Resta da provare: le superfici con il tiling della scheda (invece del lineare), la
+codifica in un contesto nuovo; e, se nessuna delle due, è un comportamento del driver/firmware da
+segnalare a Mesa con la scena riprodotta. Il 4K della Radeon nel riepilogo resta con questa riserva.
+
 ### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
 
 `[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,

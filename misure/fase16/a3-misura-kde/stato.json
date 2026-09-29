@@ -1,0 +1,40 @@
+{
+ "campagna": "a3-misura-kde",
+ "scatola": "kde",
+ "misura": "4k",
+ "gradini": [
+  1
+ ],
+ "pid": 195847,
+ "inizio": "2026-09-29T05:55:16+00:00",
+ "fase": "finita",
+ "gradino": 1,
+ "livello_dir": "/media/REMOTIX/misure/fase16/a3-misura-kde/livello-01-ripetizione",
+ "utenti_vivi": 0,
+ "utenti_attesi": 1,
+ "classe_ultimo": "GREEN",
+ "storia": [
+  {
+   "livello": 1,
+   "nome": "livello-01",
+   "tipo": "gradino",
+   "classe": "DEGRADED",
+   "significativo": true,
+   "dir": "/media/REMOTIX/misure/fase16/a3-misura-kde/livello-01"
+  },
+  {
+   "livello": 1,
+   "nome": "livello-01-ripetizione",
+   "tipo": "ripetizione",
+   "classe": "GREEN",
+   "significativo": false,
+   "dir": "/media/REMOTIX/misure/fase16/a3-misura-kde/livello-01-ripetizione"
+  }
+ ],
+ "prova": false,
+ "aggiornato": "2026-09-29T06:08:05+00:00",
+ "tipo_livello": "ripetizione",
+ "fine_prevista": "2026-09-29T06:07:58+00:00",
+ "ultimo_buono": 1,
+ "rottura": null
+}

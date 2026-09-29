@@ -1,0 +1,42 @@
+[05:55:18] ⭐ SALITA a3-misura-kde · kde · 4k (3840x2160) · gradini 1 · 6.0 min (ultimo 6.0) · tetto 2
+[05:55:18]    scheda della scatola: amd · browser-cliente sulla Intel
+[05:55:18]    commit del prodotto: ? (16-prodotto assente o binario diverso)
+[05:55:18]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 3e510160 · pagina fb9a18f3 · banchi cc58e96+modifiche
+[05:55:20]    scatola accendi: codice 0 in 3 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[05:55:21]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[05:55:22]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[05:55:22]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[05:55:22]    ⭐ tetto delle sessioni in vigore: 2
+[05:55:23]    scatola: binario 3e510160 · pagina fb9a18f3 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[05:55:23] ══ livello-01: 1 utenti, 6.0 min (gradino) ══
+[05:55:24]    + utente 01 (pid 197441, wayland-5, seme 1601, porte 9910)
+[05:55:37]      utente 01 nato in 13.0 s
+[05:55:37]    tutti dentro (14 s dopo l'inizio del livello): lavoro fino alle 06:01:37
+[05:59:07]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[05:59:08]    foto scritte: 1/1 in 1 s
+[05:59:37]    controllo corto: firefox su wayland-4
+[06:00:49]    controllo corto: PASS (codice 0)
+[06:01:38]    ▶ livello-01: DEGRADED (significativo) — 1 GREEN · 1 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (1 su 1)): non si sale
+[06:01:38] ⚠ 1 utenti: DEGRADED — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[06:01:38]    fermo 1 attori (SIGTERM: sgomberano da se')
+[06:01:43]    scatola accendi: codice 0 in 2 s ·   OK  dentro ci sono solo i nodi della Radeon: card0 card1 renderD128 renderD129
+[06:01:44]    scatola prodotto: codice 0 in 1 s ·   OK  la catena PAM del prodotto e installata
+[06:01:45]    scatola server: codice 0 in 1 s ·       righe rosse nel registro di avvio: 7
+[06:01:45]    ⭐ scheda della scatola: AMD Radeon RX 6800 [amdgpu] 0000:03:00.0 = renderD128 dentro
+[06:01:45]    ⭐ tetto delle sessioni in vigore: 2
+[06:01:46]    scatola: binario 3e510160 · pagina fb9a18f3 · --tetto-sessioni 2 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)
+[06:01:46] ══ livello-01-ripetizione: 1 utenti, 6.0 min (ripetizione) ══
+[06:01:46]    + utente 01 (pid 208061, wayland-5, seme 1601, porte 9910)
+[06:01:58]      utente 01 nato in 12.5 s
+[06:01:58]    tutti dentro (13 s dopo l'inizio del livello): lavoro fino alle 06:07:58
+[06:05:28]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[06:05:29]    foto scritte: 1/1 in 1 s
+[06:05:58]    controllo corto: chrome su wayland-4
+[06:07:15]    controllo corto: PASS (codice 0)
+[06:08:00]    ▶ livello-01-ripetizione: GREEN — 2 GREEN · 0 DEGRADED · 0 FAIL
+[06:08:00]    la ripetizione dice GREEN: non confermato, si sale
+[06:08:00] ⏹ FINE: ultimo livello buono 1 · rottura None
+[06:08:00]    fermo 1 attori (SIGTERM: sgomberano da se')
+[06:08:04]    compositori spenti (2)
+[06:08:05]    server rimesso col tetto predefinito (codice 0, tetto 10)
+[06:08:05] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/a3-misura-kde/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "GREEN", "significativo": false, "dir": "/media/REMOTIX/misure/fase16/a3-misura-kde/livello-01-ripetizione"}]
