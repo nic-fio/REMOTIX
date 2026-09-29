@@ -408,6 +408,11 @@ aggiunte, tutte nelle giunture fra una fase e l'altra:
 | 7 VERIFICATION | 7a · accensione · 7b | 7a · riavvio del servizio senza chiudere i desktop (§5.2) · 7b + sessioni ritrovate | le impronte tornate com'erano |
 | 8 COMMIT / ROLLBACK | verde ⇒ si conferma; rosso ⇒ si annulla tutto | rosso ⇒ si torna a N, **senza chiudere i desktop** | — |
 
+⭐ **Un programma solo, monolitico** (`DECISIONI.md` §10.14): `remotix-install` è motore, CLI, TUI e GUI in un
+eseguibile; parla con systemd, logind, firewalld e polkit dall'interno (D-Bus); lancia solo un elenco chiuso
+di programmi di sistema (il gestore di pacchetti, `usermod`/`gpasswd`) col percorso completo e ogni chiamata
+nel registro; la GUI gira come l'utente e rilancia lo stesso eseguibile con i permessi di polkit.
+
 **Tre regole che tengono in piedi lo schema:**
 
 1. ⛔ **Le fasi 5 e 6 le esegue il gestore di pacchetti della distribuzione, non il motore.** Il motore
@@ -955,6 +960,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
 | R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
 | R40 | ⭐ il pacchetto da solo non accende niente | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo, porte in ascolto, gruppi; poi `remotix stato` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; `remotix stato` che non dica «installazione non certificata» |
+| R41 | un programma solo | durante un'installazione completa, l'albero dei processi figli del motore (`/proc`) | un processo che non sia il motore stesso o un programma dell'elenco chiuso; uno script eseguito; una chiamata a un programma non annotata nel registro |
 
 ---
 
@@ -1000,7 +1006,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo; da guardare allora `systemd-sysext` e i portable services (`DECISIONI.md` §10.11) |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato — ⭐ REMOTIX sarà open source (`DECISIONI.md` §10.13): OBS diventa possibile |
 | **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
-| **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
+| **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) ⚠ Con §10.14 (un eseguibile solo) la GUI va scritta in un toolkit che si possa usare dal Go dello stesso eseguibile, o la scelta cambia forma: da decidere guardando i legami Go di Qt 6 e GTK 4 |
 | **D13** | **La parte grafica**: le schermate e il percorso (una per fase del motore: controllo, compatibilità, piano da approvare, avanzamento, certificato), l'aspetto (colori, logo ufficiale, caratteri, tema chiaro e scuro, i quattro desktop), il tono e le lingue dei testi | **prima di T9**, su un **prototipo cliccabile** coi dati veri di una VM (per esempio Fedora senza RPM Fusion, per vedere un «a condizioni») — si decide guardando, poi si scrive la GUI vera | il prototipo si può fare presto, in parallelo: dipende solo dagli oggetti di §6.6.1, non dal codice del motore |
 | **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta |
 

@@ -5994,6 +5994,20 @@ Parola dell'utente (30 set 2026): *«REMOTIX sarà opensource»*. Conseguenze da
 x265 come ripiego); **D10** (dove si costruiscono i pacchetti): con un progetto pubblico diventa possibile
 OBS di openSUSE; **D11** (la chiave): la fiducia pubblica richiede una chiave madre custodita bene.
 
+### 10.14 ✅ L'installatore è un programma solo, monolitico
+
+Parola dell'utente (30 set 2026): *«l'installer è un programma che non chiama altri sottoprogrammi strani. È un
+sistema complesso e monolitico»*. ⇒
+- **un solo eseguibile** (`remotix-install`): motore, CLI, TUI e GUI; niente script né programmi di appoggio
+  nostri;
+- con i servizi del sistema (systemd, logind, firewalld, polkit) parla **dall'interno**, attraverso le loro
+  interfacce ufficiali (D-Bus), senza lanciare programmi;
+- **un elenco chiuso di programmi di sistema** si lancia solo dove non c'è un'interfaccia stabile: il gestore
+  di pacchetti della distribuzione (`apt`, `dnf`, `zypper`, `pacman` — regola 1 del motore) e i comandi dei
+  gruppi (`usermod`, `gpasswd`); col percorso completo, argomenti fissi, ogni chiamata nel registro;
+- **la GUI** gira come l'utente (non da root: Wayland), e per le operazioni da amministratore lo stesso
+  eseguibile **rilancia sé stesso** con i permessi chiesti a polkit — un file, due ruoli.
+
 ---
 
 ## Come si tiene questo documento
