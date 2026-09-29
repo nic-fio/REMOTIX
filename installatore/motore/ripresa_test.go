@@ -181,7 +181,7 @@ func TestAnnullaDopoInterruzione(t *testing.T) {
 			if op.Stato != ANNULLATA {
 				t.Fatalf("stato %s, atteso ANNULLATA", op.Stato)
 			}
-			if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
 			}
 		})
@@ -202,7 +202,7 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
 			// prima un'applicazione uccisa a metà, così c'è qualcosa da annullare
-			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@firewall")
+			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@servizio")
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "annulla", punto)
 			// la ripresa: un'operazione IN_ANNULLAMENTO si riprende annullando; una INTERROTTA la
 			// si annulla di nuovo
@@ -221,14 +221,14 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 			if op.Stato != ANNULLATA {
 				t.Fatalf("stato %s, atteso ANNULLATA", op.Stato)
 			}
-			if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
 			}
 		})
 	}
 	t.Run("il punto PREESISTENTE non si raggiunge", func(t *testing.T) {
 		b := nuovoBanco(t)
-		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@firewall")
+		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@servizio")
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		cmd.Env = append(os.Environ(), "REMOTIX_PROVA_FIGLIO=1", "RADICE="+b.radice, "OPERAZIONI="+b.operazioni,
 			"COMANDO=annulla", "PUNTO=annulla-dopo-intenzione@gruppo-preesistente")
@@ -237,7 +237,7 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 		if !errors.As(err, &ee) || ee.ExitCode() != 3 {
 			t.Fatalf("atteso: il figlio finisce senza passare dal punto (uscita 3), invece %v", err)
 		}
-		if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+		if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
 		}
 	})
@@ -253,7 +253,7 @@ func TestInterruzionePrimaDiToccare(t *testing.T) {
 			if err != nil || op.Stato != BLOCCATA {
 				t.Fatalf("stato %v, err %v; atteso BLOCCATA (RX-RIPRESA-002)", op.Stato, err)
 			}
-			if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("toccata: %s", strings.Join(d, "\n"))
 			}
 			// e non resta aperta: un'applicazione nuova parte
@@ -287,7 +287,7 @@ func TestRigaTroncata(t *testing.T) {
 	}
 }
 
-// FATTA ma l'effetto non c'è più (ultima riga della tabella): BLOCCATA; poi si annulla.
+// FATTA ma l'effetto non c'è più (ultima riga della tabella): INTERROTTA (RX-RIPRESA-001); poi si annulla.
 func TestModificaConcorrente(t *testing.T) {
 	t.Run("gruppo tolto da altri", func(t *testing.T) {
 		b := nuovoBanco(t)
@@ -295,17 +295,17 @@ func TestModificaConcorrente(t *testing.T) {
 		(&gruppiFinti{b.radice}).Togli("prova", "video")
 		m := b.motore(t)
 		op, err := m.Riprendi()
-		if err != nil || op.Stato != BLOCCATA {
-			t.Fatalf("stato %v err %v, atteso BLOCCATA", op.Stato, err)
+		if err != nil || op.Stato != INTERROTTA {
+			t.Fatalf("stato %v err %v, atteso INTERROTTA (RX-RIPRESA-001)", op.Stato, err)
 		}
 		if ap, _ := m.Aperta(); ap == nil {
-			t.Fatal("BLOCCATA dopo aver toccato la macchina deve restare aperta")
+			t.Fatal("INTERROTTA deve restare aperta")
 		}
 		op, err = m.Annulla()
 		if err != nil || op.Stato != ANNULLATA {
 			t.Fatalf("annulla: %v %v", op.Stato, err)
 		}
-		if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+		if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
 		}
 	})
@@ -315,8 +315,8 @@ func TestModificaConcorrente(t *testing.T) {
 		conf := filepath.Join(b.radice, "etc/remotix/prova-motore.conf")
 		os.WriteFile(conf, []byte("porta=9999 # messa a mano\n"), 0o644)
 		m := b.motore(t)
-		if op, _ := m.Riprendi(); op.Stato != BLOCCATA {
-			t.Fatalf("stato %v, atteso BLOCCATA", op.Stato)
+		if op, _ := m.Riprendi(); op.Stato != INTERROTTA {
+			t.Fatalf("stato %v, atteso INTERROTTA", op.Stato)
 		}
 		op, err := m.Annulla()
 		if err != nil || op.Stato != ANNULLATA_IN_PARTE {
@@ -342,7 +342,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 	if u := op.Reg.Ultimo("firewall", EvFallita); u == nil || u.Codice != "RX-FW-004" {
 		t.Fatalf("il fallimento non porta RX-FW-004: %+v", u)
 	}
-	if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+	if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 		t.Fatalf("%s", strings.Join(d, "\n"))
 	}
 	// e ucciso durante quell'annullamento, poi ripreso
@@ -357,7 +357,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 			if err != nil || op.Stato != ANNULLATA {
 				t.Fatalf("stato %v err %v", op.Stato, err)
 			}
-			if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("%s", strings.Join(d, "\n"))
 			}
 		})

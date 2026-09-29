@@ -48,6 +48,7 @@ func Preflight(a *Ambiente, o OpzioniPreflight) *Profilo {
 	depositi(a, p)
 	schede(a, p)
 	h264(a, p, fam)
+	famigliaDriver(p)
 	sicurezza(a, p)
 	firewall(a, p, o.Porta)
 	pam(a, p, fam)
@@ -162,7 +163,34 @@ func sistema(a *Ambiente, p *Profilo) {
 
 // pacchettiFissi: quelli che il PREFLIGHT guarda sempre, oltre ai desktop e al catalogo.
 var pacchettiFissi = []string{"labwc", "ffmpeg", "firewalld", "ufw", "nftables",
-	"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl"}
+	"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl",
+	// la famiglia del driver VA (§4.2): Intel completo o ridotto, Mesa coi codec o senza
+	"intel-media-driver", "intel-media-driver-free", "intel-media-va-driver", "intel-media-va-driver-non-free",
+	"mesa-va-drivers", "mesa-va-drivers-freeworld", "libavcodec-freeworld"}
+
+// famigliaDriver: dal pacchetto installato, se il driver VA codifica H.264 (§4.2). Fedora:
+// intel-media-driver-free e mesa-va-drivers sono costruiti SENZA la codifica H.264.
+func famigliaDriver(p *Profilo) {
+	c := func(n string) bool { v := p.V("pacchetto." + n); return v != "" && v != "assente" }
+	var f []string
+	switch {
+	case c("intel-media-driver-free") && !c("intel-media-driver"):
+		f = append(f, "intel-media-driver-free (senza H.264 in codifica)")
+	case c("intel-media-driver") || c("intel-media-va-driver-non-free") || c("intel-media-va-driver"):
+		f = append(f, "intel (iHD, con H.264)")
+	}
+	switch {
+	case c("mesa-va-drivers-freeworld"):
+		f = append(f, "mesa freeworld (radeonsi con H.264)")
+	case c("mesa-va-drivers") && p.V("distro.famiglia") == "fedora":
+		f = append(f, "mesa-va-drivers di Fedora/RHEL (senza H.264)")
+	}
+	if len(f) == 0 {
+		p.Sconosciuto("h264.famiglia_driver", "nessun pacchetto di driver VA riconosciuto")
+		return
+	}
+	p.Rilevato("h264.famiglia_driver", strings.Join(f, "; "), "pacchetti installati")
+}
 
 func nomiDesktop(fam string) []string {
 	var r []string

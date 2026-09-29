@@ -1,0 +1,569 @@
+package motore
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+)
+
+// Il gestore di pacchetti della distribuzione (§6.0, regola 1): è LUI che mette e toglie i file
+// dei pacchetti; il motore decide, chiede, controlla e annulla. Il motore lo lancia dall'elenco
+// chiuso (ambiente.go), mai una shell.
+//
+// L'insieme risolto (§6.6.6): Risolvi simula la transazione, scarica tutto e verifica, e dà
+// l'elenco esatto (nome, versione, architettura, origine, sha256, e che cosa succede: nuovo,
+// aggiornato da…, già presente). Installa installa ESATTAMENTE quello, dalla cache, senza
+// scaricare niente al momento. Togli simula prima e rifiuta se toglierebbe qualcosa che non è
+// nell'elenco (un pacchetto di altri che nel frattempo ne dipende).
+//
+// Provati sulle VM: apt (Debian 13) e dnf (Alma 10). zypper e pacman sono scritti con la stessa
+// forma ma NON ancora provati su una macchina vera.
+
+// Artefatto: una riga dell'insieme risolto.
+type Artefatto struct {
+	Nome     string `json:"nome"`
+	Versione string `json:"versione"`
+	Arch     string `json:"arch,omitempty"`
+	Origine  string `json:"origine"`          // "file" (dal piano) o il deposito
+	File     string `json:"file,omitempty"`   // il file nella cache
+	Sha256   string `json:"sha256,omitempty"` // del file nella cache
+	Esito    string `json:"esito"`            // "nuovo" · "aggiornato" · "presente"
+	Prima    string `json:"prima,omitempty"`  // la versione di prima, se aggiornato
+}
+
+// Gestore: il gestore di pacchetti della famiglia.
+type Gestore interface {
+	Nome() string
+	// Versioni: la versione installata per ogni nome ("" = non installato).
+	Versioni(nomi []string) (map[string]string, error)
+	// Risolvi: simula, scarica nella cache, verifica. file = pacchetti locali (percorsi nella cache
+	// dell'operazione), nomi = pacchetti dai depositi.
+	Risolvi(cache string, file, nomi []string) ([]Artefatto, error)
+	// Installa l'insieme risolto dalla cache, senza scaricare.
+	Installa(cache string, file, nomi []string) error
+	// Togli i nomi dati, e solo quelli (purge: anche la configurazione).
+	Togli(nomi []string, purge bool) error
+	// Integro: il gestore non è a metà di una transazione.
+	Integro() (bool, string, error)
+	// Ripara: il rimedio del gestore stesso dopo un'interruzione (§6.6.3).
+	Ripara() error
+}
+
+// ScegliGestore: quello della famiglia.
+func ScegliGestore(a *Ambiente, fam string) Gestore {
+	switch fam {
+	case "debian":
+		return &gestoreApt{a}
+	case "fedora":
+		return &gestoreDnf{a}
+	case "suse":
+		return &gestoreZypper{a}
+	case "arch":
+		return &gestorePacman{a}
+	}
+	return nil
+}
+
+func esegui(a *Ambiente, tempo time.Duration, nome string, arg ...string) (string, error) {
+	out, c, err := a.Esegui(tempo, nome, arg...)
+	if err != nil {
+		return out, err
+	}
+	if c != 0 {
+		return out, fmt.Errorf("%s %s: uscita %d: %s", nome, strings.Join(arg, " "), c, ultimeRighe(out, 6))
+	}
+	return out, nil
+}
+
+func ultimeRighe(s string, n int) string {
+	r := strings.Split(strings.TrimSpace(s), "\n")
+	if len(r) > n {
+		r = r[len(r)-n:]
+	}
+	return strings.Join(r, " | ")
+}
+
+const tempoGestore = 45 * time.Minute
+
+// ---------------------------------------------------------------- apt (Debian, Ubuntu)
+
+type gestoreApt struct{ a *Ambiente }
+
+func (g *gestoreApt) Nome() string { return "apt" }
+
+var aptOpzioni = []string{"-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "APT::Get::Assume-Yes=true"}
+
+func (g *gestoreApt) Versioni(nomi []string) (map[string]string, error) {
+	pk := ArchivioPacchetti(g.a, "debian", nomi)
+	if !pk.letto {
+		return nil, errors.New("l'archivio di dpkg non si legge")
+	}
+	r := map[string]string{}
+	for _, n := range nomi {
+		r[n] = pk.versioni[n]
+	}
+	return r, nil
+}
+
+// «Inst nome [vecchia] (nuova deposito [arch])»
+var aptInst = regexp.MustCompile(`^Inst (\S+)(?: \[(\S+)\])? \((\S+) (.*?) \[(\S+)\]\)`)
+
+func (g *gestoreApt) argomenti(file, nomi []string) []string {
+	return append(append([]string{}, file...), nomi...)
+}
+
+func (g *gestoreApt) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
+	sim := func() (string, error) {
+		return esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", "install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
+	}
+	out, err := sim()
+	if err != nil { // elenchi vecchi: si aggiornano (i metadati firmati dei depositi) e si riprova
+		if _, e2 := esegui(g.a, tempoGestore, "apt-get", "update"); e2 != nil {
+			return nil, err
+		}
+		if out, err = sim(); err != nil {
+			return nil, err
+		}
+	}
+	var r []Artefatto
+	for _, riga := range strings.Split(out, "\n") {
+		if strings.HasPrefix(riga, "Remv ") || strings.HasPrefix(riga, "Purg ") {
+			return nil, fmt.Errorf("la transazione toglierebbe un pacchetto: %s", riga)
+		}
+		m := aptInst.FindStringSubmatch(riga)
+		if m == nil {
+			continue
+		}
+		a := Artefatto{Nome: m[1], Versione: m[3], Arch: m[5], Origine: m[4], Esito: "nuovo"}
+		if m[2] != "" {
+			a.Esito, a.Prima = "aggiornato", m[2]
+		}
+		r = append(r, a)
+	}
+	// scaricare tutto PRIMA di toccare (§6.0 punto 4): apt verifica ogni file contro i metadati firmati
+	if _, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"install", "--download-only"}, aptOpzioni...), g.argomenti(file, nomi)...)...); err != nil {
+		return nil, err
+	}
+	locali := map[string]string{}
+	for _, f := range file {
+		n, v, e := g.intestazione(f)
+		if e == nil {
+			locali[n+" "+v] = f
+		}
+	}
+	for i := range r {
+		a := &r[i]
+		if f, ok := locali[a.Nome+" "+a.Versione]; ok {
+			a.Origine, a.File = "file", f
+		} else {
+			a.File = filepath.Join("/var/cache/apt/archives", a.Nome+"_"+strings.ReplaceAll(a.Versione, ":", "%3a")+"_"+a.Arch+".deb")
+		}
+		sha, err := Sha256File(g.a.P(a.File))
+		if err != nil || sha == "" {
+			return nil, fmt.Errorf("%s: il file scaricato non c'è (%v)", a.File, err)
+		}
+		a.Sha256 = sha
+	}
+	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
+	return r, nil
+}
+
+// intestazione di un .deb locale (nome, versione), letta con dpkg-deb.
+func (g *gestoreApt) intestazione(f string) (string, string, error) {
+	out, err := esegui(g.a, time.Minute, "dpkg-deb", "-W", "--showformat=${Package} ${Version}", f)
+	if err != nil {
+		return "", "", err
+	}
+	c := strings.Fields(out)
+	if len(c) != 2 {
+		return "", "", fmt.Errorf("dpkg-deb: %q", out)
+	}
+	return c[0], c[1], nil
+}
+
+// Installa: tutto è già nella cache di apt (Risolvi l'ha scaricato e verificato), e apt non
+// riscarica quel che c'è. ⚠ `--no-download` NON si può usare: con un .deb locale apt 3.0 si ferma
+// con «Internal Error, Pathname to install is not absolute» ([M] 30 set, Debian 13). Che sia
+// proprio l'insieme risolto lo garantisce «controlla», che confronta ogni versione.
+func (g *gestoreApt) Installa(cache string, file, nomi []string) error {
+	_, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
+	return err
+}
+
+var aptTogli = regexp.MustCompile(`^(?:Remv|Purg) (\S+)`)
+
+func (g *gestoreApt) Togli(nomi []string, purge bool) error {
+	verbo := "remove"
+	if purge {
+		verbo = "purge"
+	}
+	out, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", verbo}, aptOpzioni...), nomi...)...)
+	if err != nil {
+		return err
+	}
+	nostri := map[string]bool{}
+	for _, n := range nomi {
+		nostri[n] = true
+	}
+	for _, riga := range strings.Split(out, "\n") {
+		if m := aptTogli.FindStringSubmatch(riga); m != nil && !nostri[m[1]] {
+			return Errore("RX-PACCHETTI-002", m[1])
+		}
+	}
+	_, err = esegui(g.a, tempoGestore, "apt-get", append(append([]string{verbo}, aptOpzioni...), nomi...)...)
+	return err
+}
+
+func (g *gestoreApt) Integro() (bool, string, error) {
+	out, c, err := g.a.Esegui(time.Minute, "dpkg", "--audit")
+	if err != nil {
+		return false, "", err
+	}
+	if c != 0 || strings.TrimSpace(out) != "" {
+		return false, ultimeRighe(out, 3), nil
+	}
+	return true, "", nil
+}
+
+func (g *gestoreApt) Ripara() error {
+	_, err := esegui(g.a, tempoGestore, "dpkg", "--configure", "-a")
+	return err
+}
+
+// ---------------------------------------------------------------- dnf (Fedora, RHEL, Alma)
+
+type gestoreDnf struct{ a *Ambiente }
+
+func (g *gestoreDnf) Nome() string { return "dnf" }
+
+func rpmVersioni(a *Ambiente, nomi []string) (map[string]string, error) {
+	r := map[string]string{}
+	if len(nomi) == 0 {
+		return r, nil
+	}
+	out, _, err := a.Esegui(time.Minute, "rpm", append([]string{"-q", "--qf", `%{NAME} %{VERSION}-%{RELEASE}\n`}, nomi...)...)
+	if err != nil {
+		return nil, err
+	}
+	for _, n := range nomi {
+		r[n] = ""
+	}
+	for _, riga := range strings.Split(out, "\n") {
+		c := strings.Fields(riga)
+		if len(c) == 2 && !strings.HasPrefix(riga, "package ") {
+			r[c[0]] = c[1]
+		}
+	}
+	return r, nil
+}
+
+func (g *gestoreDnf) Versioni(nomi []string) (map[string]string, error) {
+	return rpmVersioni(g.a, nomi)
+}
+
+// Risolvi: dnf scarica l'intera chiusura in una cartella nostra (--destdir) verificando le somme dei
+// metadati; l'elenco si legge dai file con rpm -qp. I pacchetti già installati alla stessa
+// versione dnf non li scarica: sono «presente».
+func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
+	dest := filepath.Join(cache, "rpm")
+	if err := os.MkdirAll(g.a.P(dest), 0o700); err != nil {
+		return nil, err
+	}
+	arg := append([]string{"install", "-y", "--downloadonly", "--destdir", dest}, append(append([]string{}, file...), nomi...)...)
+	if _, err := esegui(g.a, tempoGestore, "dnf", arg...); err != nil {
+		return nil, err
+	}
+	voci, _ := filepath.Glob(g.a.P(dest) + "/*.rpm")
+	for _, f := range file { // il file locale: dnf non lo copia
+		voci = append(voci, g.a.P(f))
+	}
+	var r []Artefatto
+	visti := map[string]bool{}
+	for _, v := range voci {
+		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `%{NAME} %{VERSION}-%{RELEASE} %{ARCH}`, v)
+		if err != nil {
+			return nil, err
+		}
+		c := strings.Fields(out)
+		if len(c) != 3 || visti[c[0]] {
+			continue
+		}
+		visti[c[0]] = true
+		sha, _ := Sha256File(v)
+		rel := strings.TrimPrefix(v, strings.TrimSuffix(g.a.P("/"), "/"))
+		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: "deposito", File: rel, Sha256: sha, Esito: "nuovo"}
+		for _, f := range file {
+			if g.a.P(f) == v {
+				a.Origine = "file"
+			}
+		}
+		r = append(r, a)
+	}
+	prima, err := rpmVersioni(g.a, nomiDi(r))
+	if err != nil {
+		return nil, err
+	}
+	for i := range r {
+		if p := prima[r[i].Nome]; p != "" {
+			r[i].Esito, r[i].Prima = "aggiornato", p
+		}
+	}
+	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
+	return r, nil
+}
+
+func nomiDi(r []Artefatto) []string {
+	var n []string
+	for _, a := range r {
+		n = append(n, a.Nome)
+	}
+	return n
+}
+
+// Installa: i file scaricati, dalla cartella nostra, senza rete (-C); la firma dei pacchetti dei
+// depositi la verifica rpm (localpkg_gpgcheck: la chiave l'ha importata aggiungi-deposito o dnf
+// stesso al primo pacchetto del deposito).
+func (g *gestoreDnf) Installa(cache string, file, nomi []string) error {
+	voci, _ := filepath.Glob(g.a.P(filepath.Join(cache, "rpm")) + "/*.rpm")
+	var arg []string
+	for _, v := range voci {
+		arg = append(arg, strings.TrimPrefix(v, strings.TrimSuffix(g.a.P("/"), "/")))
+	}
+	arg = append(arg, file...)
+	if len(arg) == 0 { // tutto già presente
+		return nil
+	}
+	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "-C", "--setopt=localpkg_gpgcheck=1"}, arg...)...)
+	return err
+}
+
+func (g *gestoreDnf) Togli(nomi []string, purge bool) error {
+	// dnf remove toglie anche chi dipende da questi: prima si guarda con --assumeno
+	out, _, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
+	if err != nil {
+		return err
+	}
+	nostri := map[string]bool{}
+	for _, n := range nomi {
+		nostri[n] = true
+		if strings.HasPrefix(n, "gpg-pubkey-") { // una chiave si toglie per versione; dnf la mostra per nome
+			nostri["gpg-pubkey"] = true
+		}
+	}
+	in := false
+	for _, riga := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(riga)
+		if strings.HasPrefix(t, "Removing") || strings.HasPrefix(t, "Rimozione") {
+			in = true
+			continue
+		}
+		if in && (t == "" || strings.HasPrefix(t, "Transaction Summary") || strings.HasPrefix(t, "Riepilogo")) {
+			in = false
+		}
+		if c := strings.Fields(t); in && len(c) >= 3 && !strings.HasSuffix(c[0], ":") && !nostri[c[0]] {
+			return Errore("RX-PACCHETTI-002", c[0])
+		}
+	}
+	_, err = esegui(g.a, tempoGestore, "dnf", append([]string{"remove", "-y", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
+	return err
+}
+
+func (g *gestoreDnf) Integro() (bool, string, error) {
+	// una transazione rpm a metà lascia i pacchetti doppi (due versioni dello stesso)
+	out, c, err := g.a.Esegui(time.Minute, "rpm", "-qa", "--qf", `%{NAME}.%{ARCH}\n`)
+	if err != nil {
+		return false, "", err
+	}
+	if c != 0 {
+		return false, ultimeRighe(out, 3), nil
+	}
+	visti := map[string]bool{}
+	for _, n := range strings.Fields(out) {
+		if visti[n] && !strings.HasPrefix(n, "gpg-pubkey") && !strings.HasPrefix(n, "kernel") {
+			return false, "doppio: " + n, nil
+		}
+		visti[n] = true
+	}
+	return true, "", nil
+}
+
+// Ripara: dnf ripete la transazione; qui si torna a uno stato coerente togliendo i doppi.
+func (g *gestoreDnf) Ripara() error {
+	_, err := esegui(g.a, tempoGestore, "dnf", "remove", "-y", "--duplicates")
+	return err
+}
+
+// ---------------------------------------------------------------- zypper (openSUSE) — non provato
+
+type gestoreZypper struct{ a *Ambiente }
+
+func (g *gestoreZypper) Nome() string { return "zypper" }
+
+func (g *gestoreZypper) Versioni(nomi []string) (map[string]string, error) {
+	return rpmVersioni(g.a, nomi)
+}
+
+func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
+	arg := append([]string{"--non-interactive", "install", "--download-only"}, append(append([]string{}, file...), nomi...)...)
+	if _, err := esegui(g.a, tempoGestore, "zypper", arg...); err != nil {
+		return nil, err
+	}
+	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, append(append([]string{}, file...), nomi...)...)...)
+	if err != nil {
+		return nil, err
+	}
+	var r []Artefatto
+	re := regexp.MustCompile(`<solvable type="package" name="([^"]+)" edition="([^"]+)" arch="([^"]+)"`)
+	for _, m := range re.FindAllStringSubmatch(out, -1) {
+		r = append(r, Artefatto{Nome: m[1], Versione: m[2], Arch: m[3], Origine: "deposito", Esito: "nuovo"})
+	}
+	prima, err := rpmVersioni(g.a, nomiDi(r))
+	if err != nil {
+		return nil, err
+	}
+	for i := range r {
+		if p := prima[r[i].Nome]; p != "" {
+			r[i].Esito, r[i].Prima = "aggiornato", p
+		}
+	}
+	return r, nil
+}
+
+func (g *gestoreZypper) Installa(cache string, file, nomi []string) error {
+	_, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--no-refresh", "install"}, append(append([]string{}, file...), nomi...)...)...)
+	return err
+}
+
+func (g *gestoreZypper) Togli(nomi []string, purge bool) error {
+	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "remove", "--dry-run"}, nomi...)...)
+	if err != nil {
+		return err
+	}
+	nostri := map[string]bool{}
+	for _, n := range nomi {
+		nostri[n] = true
+	}
+	re := regexp.MustCompile(`<solvable type="package" name="([^"]+)"`)
+	for _, m := range re.FindAllStringSubmatch(out, -1) {
+		if !nostri[m[1]] {
+			return Errore("RX-PACCHETTI-002", m[1])
+		}
+	}
+	_, err = esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "remove"}, nomi...)...)
+	return err
+}
+
+func (g *gestoreZypper) Integro() (bool, string, error) {
+	out, c, err := g.a.Esegui(tempoGestore, "zypper", "--non-interactive", "verify", "--dry-run")
+	if err != nil {
+		return false, "", err
+	}
+	return c == 0, ultimeRighe(out, 2), nil
+}
+
+func (g *gestoreZypper) Ripara() error {
+	_, err := esegui(g.a, tempoGestore, "zypper", "--non-interactive", "verify")
+	return err
+}
+
+// ---------------------------------------------------------------- pacman (Arch) — non provato
+
+type gestorePacman struct{ a *Ambiente }
+
+func (g *gestorePacman) Nome() string { return "pacman" }
+
+func (g *gestorePacman) Versioni(nomi []string) (map[string]string, error) {
+	pk := ArchivioPacchetti(g.a, "arch", nomi)
+	if !pk.letto {
+		return nil, errors.New("l'archivio di pacman non si legge")
+	}
+	r := map[string]string{}
+	for _, n := range nomi {
+		r[n] = pk.versioni[n]
+	}
+	return r, nil
+}
+
+func (g *gestorePacman) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
+	var r []Artefatto
+	if len(nomi) > 0 {
+		out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-S", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, nomi...)...)
+		if err != nil {
+			return nil, err
+		}
+		for _, riga := range strings.Split(out, "\n") {
+			c := strings.Fields(riga)
+			if len(c) != 5 {
+				continue
+			}
+			f := filepath.Join("/var/cache/pacman/pkg", filepath.Base(c[4]))
+			r = append(r, Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: c[3], File: f, Esito: "nuovo"})
+		}
+		if _, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-Sw", "--needed", "--noconfirm"}, nomi...)...); err != nil {
+			return nil, err
+		}
+	}
+	for _, f := range file {
+		r = append(r, Artefatto{Nome: filepath.Base(f), Origine: "file", File: f, Esito: "nuovo"})
+	}
+	for i := range r {
+		r[i].Sha256, _ = Sha256File(g.a.P(r[i].File))
+	}
+	return r, nil
+}
+
+func (g *gestorePacman) Installa(cache string, file, nomi []string) error {
+	// i pacchetti dei depositi sono già nella cache di pacman (-Sw in Risolvi): -S li prende da lì
+	if len(nomi) > 0 {
+		if _, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-S", "--needed", "--noconfirm"}, nomi...)...); err != nil {
+			return err
+		}
+	}
+	if len(file) == 0 {
+		return nil
+	}
+	_, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-U", "--needed", "--noconfirm"}, file...)...)
+	return err
+}
+
+func (g *gestorePacman) Togli(nomi []string, purge bool) error {
+	out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
+	if err != nil {
+		return err
+	}
+	nostri := map[string]bool{}
+	for _, n := range nomi {
+		nostri[n] = true
+	}
+	for _, n := range strings.Fields(out) {
+		if !nostri[n] {
+			return Errore("RX-PACCHETTI-002", n)
+		}
+	}
+	arg := []string{"-R", "--noconfirm"}
+	if purge {
+		arg = []string{"-Rn", "--noconfirm"}
+	}
+	_, err = esegui(g.a, tempoGestore, "pacman", append(arg, nomi...)...)
+	return err
+}
+
+func (g *gestorePacman) Integro() (bool, string, error) {
+	if _, err := os.Stat(g.a.P("/var/lib/pacman/db.lck")); err == nil {
+		return false, "c'è /var/lib/pacman/db.lck", nil
+	}
+	return true, "", nil
+}
+
+// Ripara: il file di blocco lasciato da un pacman ucciso si toglie (nessun pacman gira: lo
+// garantisce la serratura del motore), poi pacman -Dk controlla l'archivio.
+func (g *gestorePacman) Ripara() error {
+	os.Remove(g.a.P("/var/lib/pacman/db.lck"))
+	_, err := esegui(g.a, tempoGestore, "pacman", "-Dk")
+	return err
+}

@@ -51,6 +51,8 @@ func main() {
 		err = stato(arg)
 	case "aggiornato":
 		codice, err = aggiornato(arg)
+	case "disinstalla":
+		err = disinstalla(arg)
 	case "catalogo":
 		err = mostraCatalogo(arg)
 	case "versione", "--version":
@@ -252,10 +254,15 @@ func piano(arg []string) error {
 	fs := flag.NewFlagSet("piano", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "piano-prova.json", "dove scrivere il piano")
-	utente := fs.String("utente", os.Getenv("SUDO_USER"), "chi mettere nel gruppo video (vuoto: nessuno)")
+	uscita := fs.String("uscita", "", "dove scrivere il piano (predefinito piano-<mestiere>.json)")
+	utente := fs.String("utente", "", "prova: chi mettere nel gruppo video; installazione: le persone da iscrivere ai gruppi della scheda, separate da virgola (vuoto: tutte le persone della macchina)")
 	apri := fs.Bool("apri-firewall", false, "mettere nel piano l'apertura della porta (D6)")
 	comeJSON := fs.Bool("json", false, "stampa anche il piano in JSON")
+	installa := fs.Bool("installa", false, "il piano dell'INSTALLAZIONE di REMOTIX (invece del piano di prova)")
+	pacchetto := fs.String("pacchetto", "", "installazione: il pacchetto di REMOTIX (file .deb/.rpm/.pkg.tar.zst)")
+	depositi := fs.String("deposito", "", "installazione: archivi di terzi col consenso (D5), separati da virgola: epel, rpmfusion, packman")
+	senzaCinture := fs.Bool("senza-cinture", false, "installazione: senza le tre cinture (D4)")
+	nomi := fs.String("pacchetti", "", "prova: pacchetti dai depositi da far installare (separati da virgola)")
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
@@ -266,18 +273,73 @@ func piano(arg []string) error {
 	amb := motore.AmbienteVero()
 	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
-	p, err := motore.PianoDiProva(prof, rap, cat, amb, motore.OpzioniPianoProva{Utente: *utente, ApriFirewall: *apri, Porta: c.porta})
+	var p *motore.Piano
+	if *installa {
+		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, SenzaCinture: *senzaCinture, Porta: c.porta}
+		if *utente != "" {
+			o.Utenti = strings.Split(*utente, ",")
+		}
+		if *depositi != "" {
+			o.Depositi = strings.Split(*depositi, ",")
+		}
+		p, err = motore.PianoInstallazione(prof, rap, cat, amb, o)
+	} else {
+		if *utente == "" {
+			*utente = os.Getenv("SUDO_USER")
+		}
+		o := motore.OpzioniPianoProva{Utente: *utente, ApriFirewall: *apri, Porta: c.porta, Pacchetti: *nomi}
+		if *depositi != "" {
+			o.Depositi = strings.Split(*depositi, ",")
+		}
+		p, err = motore.PianoDiProva(prof, rap, cat, amb, o)
+	}
 	if err != nil {
 		return err
 	}
-	if err := motore.ScriviJSON(*uscita, p); err != nil {
+	if *uscita == "" {
+		*uscita = "piano-" + p.Mestiere + ".json"
+	}
+	return stampaPiano(p, *uscita, *comeJSON)
+}
+
+// disinstalla: il piano della disinstallazione, dal registro dell'installazione confermata.
+func disinstalla(arg []string) error {
+	fs := flag.NewFlagSet("disinstalla", flag.ContinueOnError)
+	var c comuni
+	c.aggiungi(fs)
+	uscita := fs.String("uscita", "piano-disinstallazione.json", "dove scrivere il piano")
+	purge := fs.Bool("purge", false, "togliere anche la configurazione (come apt purge)")
+	comeJSON := fs.Bool("json", false, "stampa anche il piano in JSON")
+	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
-	if *comeJSON {
+	cat, err := c.leggiCatalogo()
+	if err != nil {
+		return err
+	}
+	amb := motore.AmbienteVero()
+	m := &motore.Motore{Amb: amb, Cartella: c.operazioni, Catalogo: cat, Porta: c.porta}
+	p, err := m.PianoDisinstallazione(m.Profilo(), *purge)
+	if err != nil {
+		return err
+	}
+	return stampaPiano(p, *uscita, *comeJSON)
+}
+
+func stampaPiano(p *motore.Piano, uscita string, comeJSON bool) error {
+	if err := motore.ScriviJSON(uscita, p); err != nil {
+		return err
+	}
+	if comeJSON {
 		stampaJSON(p)
 		return nil
 	}
-	fmt.Println(T("cli.piano_scritto", p.ID, *uscita))
+	return mostraPiano(p, uscita)
+}
+
+func mostraPiano(p *motore.Piano, uscitaFile string) error {
+	uscita := &uscitaFile
+	fmt.Println(T("cli.piano_scritto", p.Mestiere, p.ID, *uscita))
 	fmt.Printf("%s\n\n", T("cli.piano_macchina", p.Piattaforma, p.Impronta.Digest[:16], len(p.Impronta.Elementi)))
 	for i, a := range p.Azioni {
 		fmt.Print(T("cli.piano_passo", i+1, a.Descrizione, a.Tipo, a.Reversibilita, a.ComeSiFa, a.ComeSiVerifica, a.ComeSiAnnulla))
@@ -295,6 +357,7 @@ func piano(arg []string) error {
 func approva(arg []string) error {
 	fs := flag.NewFlagSet("approva", flag.ContinueOnError)
 	desktop := fs.String("desktop", "", "la risposta alla domanda sul desktop, se il piano la fa")
+	fs.String("lingua", "", "it o en (già letta in main)")
 	pos, err := argomenti(fs, arg)
 	if err != nil {
 		return err

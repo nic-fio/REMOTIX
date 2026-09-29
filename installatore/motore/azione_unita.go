@@ -122,7 +122,6 @@ func (u *unita) Annullata(c *Contesto, prima json.RawMessage) (bool, string, err
 	if err != nil {
 		return false, "", err
 	}
-	// «disabled» dopo il disable vale anche se prima era «not-found»: non succede, perché
-	// Fotografa rifiuta un'unità che non c'è.
-	return s == p.Stato, s, nil
+	// «annullata» = non più abilitata da noi (un passo dopo può averne tolto il file: not-found)
+	return s != "enabled", s, nil
 }

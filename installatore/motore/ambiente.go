@@ -18,18 +18,21 @@ import (
 // un'interfaccia stabile: il gestore di pacchetti e gpasswd/usermod —, col percorso assoluto,
 // e ogni chiamata si annota (nel registro dell'operazione, o nel profilo per «verifica»: R41).
 //
-// ⚠ rpm sta nell'elenco perché è la base di dnf e zypper e il suo archivio non si legge senza di
-// lui (dpkg e pacman invece si leggono dai loro file). ffmpeg NON c'è: la prova «la scheda
-// codifica un fotogramma» si fa in 7a con il binario di REMOTIX stesso; se si vuole anche nel
-// PREFLIGHT, è una riga qui — decisione dell'utente.
+// ⚠ rpm, dpkg e dpkg-deb stanno nell'elenco perché sono la base dei gestori (l'archivio di rpm non
+// si legge senza di lui; dpkg --audit e --configure -a sono il rimedio di §6.6.3). ffmpeg NON c'è
+// (decisione del coordinatore, 30 set): la prova «la scheda codifica un fotogramma» la fa in 7a il
+// binario di REMOTIX installato (`remotix --prova-codifica`, da fare nel prodotto: §6.5-bis).
 var programmiAmmessi = map[string][]string{
-	"apt-get": {"/usr/bin/apt-get"},
-	"dnf":     {"/usr/bin/dnf", "/usr/bin/dnf5"},
-	"zypper":  {"/usr/bin/zypper"},
-	"pacman":  {"/usr/bin/pacman"},
-	"rpm":     {"/usr/bin/rpm", "/bin/rpm"},
-	"gpasswd": {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
-	"usermod": {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
+	"apt-get":  {"/usr/bin/apt-get"},
+	"dnf":      {"/usr/bin/dnf", "/usr/bin/dnf5"},
+	"zypper":   {"/usr/bin/zypper"},
+	"pacman":   {"/usr/bin/pacman"},
+	"rpm":      {"/usr/bin/rpm", "/bin/rpm"},
+	"dpkg":     {"/usr/bin/dpkg"},
+	"dpkg-deb": {"/usr/bin/dpkg-deb"},
+	"remotix":  {"/usr/libexec/remotix/remotix"},
+	"gpasswd":  {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
+	"usermod":  {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
 }
 
 // ErrNonAmmesso: il motore non lancia programmi fuori dall'elenco.
@@ -75,7 +78,7 @@ func (a *Ambiente) eseguiDavvero(tempo time.Duration, nome string, argomenti ...
 	ctx, annulla := context.WithTimeout(context.Background(), tempo)
 	defer annulla()
 	cmd := exec.CommandContext(ctx, percorso, argomenti...)
-	cmd.Env = []string{"LC_ALL=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
+	cmd.Env = []string{"LC_ALL=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "DEBIAN_FRONTEND=noninteractive"}
 	var uscita strings.Builder
 	cmd.Stdout = &uscita
 	cmd.Stderr = &uscita
@@ -115,13 +118,34 @@ type GestoreGruppi interface {
 	Togli(utente, gruppo string) error
 }
 
-// GestoreUnita abilita e disabilita le unità di systemd.
+// GestoreUnita abilita, disabilita, accende e spegne le unità di systemd (sul D-Bus).
 type GestoreUnita interface {
 	// Stato: lo stato del file dell'unità (enabled, disabled, static, masked, not-found…), quel che
 	// systemctl is-enabled chiama con lo stesso nome.
 	Stato(unita string) (string, error)
 	Abilita(unita string) error
 	Disabilita(unita string) error
+	// Attiva: ActiveState (active, inactive, failed…).
+	Attiva(unita string) (string, error)
+	Avvia(unita string) error
+	Ferma(unita string) error
+	Ricarica(unita string) error
+	// il bersaglio d'avvio (graphical.target / multi-user.target)
+	Predefinito() (string, error)
+	ImpostaPredefinito(bersaglio string) error
+}
+
+// Sessione: una sessione di logind.
+type Sessione struct {
+	ID, Utente, Servizio, Stato string
+}
+
+// GestoreSessioni: logind, sul D-Bus.
+type GestoreSessioni interface {
+	Elenco() ([]Sessione, error)
+	Termina(id string) error
+	// Segnale ai processi di UNA sessione (logind KillSession, who=all): resta dentro la sessione.
+	Segnale(id string, segnale int32) error
 }
 
 // GestoreFirewall apre e chiude una porta. Oggi solo firewalld (§6.6.4, mandato di T4).
@@ -136,13 +160,16 @@ type GestoreFirewall interface {
 // Ambiente è tutto quel che il motore tocca o legge della macchina. Le prove ne costruiscono uno
 // finto sotto una cartella; il motore non sa la differenza.
 type Ambiente struct {
-	Radice   string // "/" sulla macchina vera; per leggere /etc, /sys, /proc, /usr, /var/lib
-	Esegui   Esecutore
-	Bus      *Bus // D-Bus di sistema (nil nelle prove)
-	Gruppi   GestoreGruppi
-	Unita    GestoreUnita
-	Firewall GestoreFirewall
-	Annota   func(riga string) // ogni programma lanciato (R41); nil = nessuno ascolta
+	Radice    string // "/" sulla macchina vera; per leggere /etc, /sys, /proc, /usr, /var/lib
+	Esegui    Esecutore
+	Bus       *Bus // D-Bus di sistema (nil nelle prove)
+	Famiglia  string
+	Gruppi    GestoreGruppi
+	Unita     GestoreUnita
+	Firewall  GestoreFirewall
+	Pacchetti Gestore
+	Sessioni  GestoreSessioni
+	Annota    func(riga string) // ogni programma lanciato (R41); nil = nessuno ascolta
 }
 
 // P è un percorso della macchina visto dalla radice dell'ambiente.
@@ -160,6 +187,11 @@ func AmbienteVero() *Ambiente {
 	a.Gruppi = &gruppiVeri{a}
 	a.Unita = &unitaDBus{a.Bus}
 	a.Firewall = scegliFirewall(a)
+	a.Sessioni = &sessioniDBus{a.Bus}
+	if m, _ := OsRelease(a); m != nil {
+		a.Famiglia = Famiglia(m["ID"], m["ID_LIKE"])
+	}
+	a.Pacchetti = ScegliGestore(a, a.Famiglia)
 	return a
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -226,4 +227,91 @@ func (f *firewalldDBus) PorteVive(zona string) ([][]string, error) {
 func (b *Bus) RiavviaSeAttiva(unita string) error {
 	var job dbus.ObjectPath
 	return b.Chiama(sdNome, sdPercorso, sdManager+".TryRestartUnit", []any{&job}, unita, "replace")
+}
+
+func (u *unitaDBus) Attiva(unita string) (string, error) { return u.b.StatoAttivo(unita) }
+
+func (u *unitaDBus) job(metodo, unita string) error {
+	var job dbus.ObjectPath
+	return u.b.Chiama(sdNome, sdPercorso, sdManager+"."+metodo, []any{&job}, unita, "replace")
+}
+
+// Avvia: StartUnit, e si aspetta che l'unità diventi attiva (o fallisca), fino a 60 s.
+func (u *unitaDBus) Avvia(unita string) error {
+	if err := u.job("StartUnit", unita); err != nil {
+		return err
+	}
+	return u.aspetta(unita, "active")
+}
+
+func (u *unitaDBus) Ferma(unita string) error {
+	if err := u.job("StopUnit", unita); err != nil {
+		return err
+	}
+	return u.aspetta(unita, "inactive")
+}
+
+func (u *unitaDBus) aspetta(unita, voluto string) error {
+	for i := 0; i < 120; i++ {
+		s, err := u.b.StatoAttivo(unita)
+		if err != nil {
+			return err
+		}
+		if s == voluto || (voluto == "inactive" && s == "failed") {
+			return nil
+		}
+		if voluto == "active" && s == "failed" {
+			return errors.New(unita + ": failed")
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return errors.New(unita + ": non è diventata " + voluto + " in 60 s")
+}
+
+func (u *unitaDBus) Ricarica(unita string) error { return u.job("ReloadUnit", unita) }
+
+func (u *unitaDBus) Predefinito() (string, error) {
+	var s string
+	err := u.b.Chiama(sdNome, sdPercorso, sdManager+".GetDefaultTarget", []any{&s})
+	return s, err
+}
+
+func (u *unitaDBus) ImpostaPredefinito(b string) error {
+	var cambi []cambioUnita
+	return u.b.Chiama(sdNome, sdPercorso, sdManager+".SetDefaultTarget", []any{&cambi}, b, true)
+}
+
+// sessioniDBus: logind. Elenco = ListSessions + la proprietà Service di ognuna.
+type sessioniDBus struct{ b *Bus }
+
+type sessioneLogind struct {
+	ID     string
+	UID    uint32
+	Utente string
+	Posto  string
+	Via    dbus.ObjectPath
+}
+
+func (s *sessioniDBus) Elenco() ([]Sessione, error) {
+	var l []sessioneLogind
+	if err := s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.ListSessions", []any{&l}); err != nil {
+		return nil, err
+	}
+	var r []Sessione
+	for _, x := range l {
+		serv, _ := s.b.Proprieta("org.freedesktop.login1", string(x.Via), "org.freedesktop.login1.Session.Service")
+		stato, _ := s.b.Proprieta("org.freedesktop.login1", string(x.Via), "org.freedesktop.login1.Session.State")
+		sv, _ := serv.(string)
+		st, _ := stato.(string)
+		r = append(r, Sessione{ID: x.ID, Utente: x.Utente, Servizio: sv, Stato: st})
+	}
+	return r, nil
+}
+
+func (s *sessioniDBus) Segnale(id string, segnale int32) error {
+	return s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillSession", nil, id, "all", segnale)
+}
+
+func (s *sessioniDBus) Termina(id string) error {
+	return s.b.Chiama("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.TerminateSession", nil, id)
 }
