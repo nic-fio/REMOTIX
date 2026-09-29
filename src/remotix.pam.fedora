@@ -39,15 +39,21 @@ password   include      password-auth
 
 # ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
 #    fa nascere la sessione logind dell'utente.
-# pam_selinux close deve essere la prima regola di session
-session    required     pam_selinux.so close
+# ⚠ PROVVISORIO, fase 17 T3 — `pam_selinux` TOLTO (close e open): la decisione
+#   e' di T6 (§11.1 B, R19).  `[M]` T1c, 29 set: con `pam_selinux open` il figlio
+#   esce con 37 e l'audit dice `{ transition } unconfined_service_t →
+#   unconfined_t` all'esecuzione del figlio; senza, zero rifiuti in enforcing e
+#   il desktop arriva.  Il prezzo: la sessione dell'utente resta nel contesto
+#   del servizio (`unconfined_service_t`), non in quello del suo login.  In T6:
+#   una regola SELinux nostra (come `cockpit-selinux`) o `pam_selinux` con la
+#   transizione permessa.  Le due righe restano qui, commentate:
+#session    required     pam_selinux.so close
 # ⚠ `optional`, non `required` come Cockpit: se il server e' stato lanciato a
 #   mano da una sessione che ha gia' il suo loginuid (e il nucleo lo tiene
 #   immutabile), `pam_loginuid` fallisce — e per l'audit, non per il desktop,
 #   non si nega la sessione.
 session    optional     pam_loginuid.so
-# pam_selinux open va seguito solo da regole da eseguire nel contesto dell'utente
-session    required     pam_selinux.so open env_params
+#session    required     pam_selinux.so open env_params
 session    optional     pam_keyinit.so force revoke
 # ⛔ `pam_systemd` (senza, il desktop non nasce) arriva da `password-auth`
 #    (`-session optional pam_systemd.so`, come per sshd).  ⚠ NON si ripete
