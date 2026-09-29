@@ -3750,6 +3750,55 @@ static bool scheda_mai_piu;
  */
 static uint32_t scheda_negata_l, scheda_negata_a;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ FASE 17 — IL RIPIEGO DOPO IL RIFIUTO: la macchina senza scheda 3D
+ *
+ * ⛔ IL DIFETTO, `[M]` 29 set 2026, T1c, 7 VM su 7: in una macchina senza
+ *    accelerazione 3D (VM con `virtio-vga` senza virgl, un server senza
+ *    scheda) il compositore rende in software e NON ha buffer DMA-BUF da
+ *    offrire.  La strada della scheda chiede SOLO quelli (modificatore
+ *    obbligatorio, `cattura.c` `proposta()`), la negoziazione muore con
+ *    «no more input formats», e nessun fotogramma arriva mai.  ⇒ Il ripiego
+ *    di `scheda_da_abbandonare` non scattava: vive DENTRO un fotogramma.  Il
+ *    browser entrava («Ammesso») e il desktop non arrivava; il figlio
+ *    rimontava il palco ogni cinque secondi, sempre sulla scheda, per sempre.
+ *
+ * ⭐ LA CURA: quando la negoziazione sulla scheda FALLISCE — il flusso in
+ *    errore senza che un formato sia mai stato concordato
+ *    (`cattura_formato_rifiutato()`, o `G_IO_ERROR_NOT_SUPPORTED` da
+ *    `cattura_avvia()`) — la strada passa alla MEMORIA, lo si dichiara, e la
+ *    cattura si riapre subito sullo stesso palco.
+ *
+ * ⛔⛔ E NON SI OFFRONO LE DUE STRADE INSIEME, apposta: una proposta con la
+ *      memoria accanto alla scheda lascerebbe scegliere al compositore, e
+ *      sulle macchine con la scheda vera la copia zero si perderebbe dove
+ *      oggi c'e'.  Qui la memoria arriva solo DOPO un «no» misurato.
+ * ⛔ E NON scatta sul silenzio (nessun fotogramma in 5 s): su una scheda vera
+ *    un compositore lento a nascere darebbe lo stesso silenzio, e la copia
+ *    zero se ne andrebbe per una gara.  Scatta sul rifiuto, che e' un fatto.
+ * ⚠ `scheda_mai_piu`: il rifiuto e' del COMPOSITORE, non della tela — una
+ *   tela nuova non gli da' i buffer che non ha, e riprovarci a ogni
+ *   ridimensionamento sarebbe una negoziazione fallita per niente.
+ * ⚠ Niente eccezioni per compositore: la domanda e' la stessa per Mutter e
+ *   per KWin (wlroots ha il suo ripiego in `cattura_avvia_wlr()`).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+static bool ripiega_se_rifiutata(bool rifiutata, const char *perche)
+{
+	if (!rifiutata || strada_del_palco != CATTURA_STRADA_SCHEDA)
+		return false;
+	strada_del_palco = CATTURA_STRADA_MEMORIA;
+	scheda_mai_piu = true;
+	registro_dice(REG_FIGLIO,
+	              "⛔⛔ la strada della SCHEDA e' stata RIFIUTATA dal compositore "
+	              "(nessun formato concordato: %s) — su questa macchina non ci "
+	              "sono buffer DMA-BUF da offrire, di solito perche' manca "
+	              "l'accelerazione 3D.  ⇒ RIPIEGO DICHIARATO: rimonto la cattura "
+	              "sulla MEMORIA e non ci riprovo — da qui in poi i numeri del "
+	              "tratto portano dentro la copia",
+	              perche ? perche : "senza spiegazione");
+	return true;
+}
+
 /* ⛔ Quanto si aspetta un fotogramma dalla cattura dentro un giro del ciclo.
  *
  * ⚠ Non e' un tetto di cadenza: e' quanto si resta fermi PRIMA di tornare a
@@ -6141,6 +6190,9 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	}
 	}
 
+	/* ⭐ FASE 17 — qui si torna UNA volta, se la scheda e' stata rifiutata:
+	 *    `ripiega_se_rifiutata()`.  Il palco (Mutter o KWin) resta quello. */
+rimonta_la_cattura:
 	/* ⛔ La cadenza si chiede UNA volta e con UN nome: `MOVIMENTO_FPS`.  Qui
 	 *    c'era il letterale 60 e la richiesta di codifica ne dichiarava 30 —
 	 *    due numeri diversi per la stessa grandezza. */
@@ -6166,6 +6218,13 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
 		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 		                    NULL, &sbaglio);
+	if (!cat && ripiega_se_rifiutata(
+	                sbaglio && g_error_matches(sbaglio, G_IO_ERROR,
+	                                           G_IO_ERROR_NOT_SUPPORTED),
+	                sbaglio ? sbaglio->message : NULL)) {
+		g_clear_error(&sbaglio);
+		goto rimonta_la_cattura;
+	}
 	if (!cat) {
 		snprintf(p.guasto, sizeof p.guasto, "cattura: %s",
 		         sbaglio ? sbaglio->message : "(nessun dettaglio)");
@@ -6194,6 +6253,19 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 	 *    sulla strada della scheda i pixel non sono in memoria, e il fotogramma
 	 *    c'e' lo stesso (`cattura.h`).  ⚠ Trattarlo come guasto qui vorrebbe
 	 *    dire smontare il palco a ogni montaggio riuscito. */
+	/* ⭐ FASE 17 — il rifiuto che arriva DOPO `cattura_avvia()`: e' il caso
+	 *    misurato (`[M]` 29 set, presa 2 «caduto durante la presa, guasto: no
+	 *    more input formats»).  Si ferma la sola cattura, e si riapre. */
+	if (presa != CATTURA_PRESA_FATTA && presa != CATTURA_PRESA_PIXEL_ALTROVE &&
+	    ripiega_se_rifiutata(cattura_formato_rifiutato(cat),
+	                         cattura_guasto(cat))) {
+		g_clear_error(&sbaglio);
+		cattura_fermo_libera(&fo);
+		cattura_ferma(cat);
+		cat = NULL;
+		*fuori_c = NULL;
+		goto rimonta_la_cattura;
+	}
 	if (presa != CATTURA_PRESA_FATTA && presa != CATTURA_PRESA_PIXEL_ALTROVE) {
 		snprintf(p.guasto, sizeof p.guasto, "presa %u: %s", (unsigned)presa,
 		         sbaglio ? sbaglio->message : "nessun fotogramma");

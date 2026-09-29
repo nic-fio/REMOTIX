@@ -1783,7 +1783,13 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 
 	if (cattura->stato == PW_STREAM_STATE_ERROR)
 	{
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
+		/* ⭐ FASE 17 — il codice dice CHE COSA e' andato storto, non solo che
+		 *    e' andato: `G_IO_ERROR_NOT_SUPPORTED` quando nessun formato e'
+		 *    mai stato concordato (`cattura_formato_rifiutato()`), cosi' chi
+		 *    chiama distingue «la strada chiesta non esiste qui» da un guasto
+		 *    qualunque senza leggere il testo di PipeWire. */
+		g_set_error(sbaglio, G_IO_ERROR,
+		            cattura->formato_noto ? G_IO_ERROR_FAILED : G_IO_ERROR_NOT_SUPPORTED,
 		            "il compositore ha rifiutato quel che si e' chiesto (%s, strada %s): %s",
 		            colore == CATTURA_COLORE_10BIT   ? "10 bit"
 		            : colore == CATTURA_COLORE_BGRA ? "BGRA"
@@ -2634,7 +2640,13 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 	 *     consegnato, fino al movimento successivo.
 	 * ⭐ Adesso: se c'e', si prende. */
 	scadenza = g_get_monotonic_time() + (gint64) (attesa_s * G_USEC_PER_SEC);
-	while (!cattura->posto_pieno)
+	/* ⭐ FASE 17 — e un flusso in ERRORE non consegnera' piu' niente: si esce
+	 *    subito invece di aspettare tutta l'attesa.  `[M]` 29 set 2026, VM senza
+	 *    3D: il rifiuto della negoziazione arrivava in millisecondi e la presa
+	 *    lo diceva cinque secondi dopo, a ogni accesso.  ⚠ `su_stato` scrive lo
+	 *    stato PRIMA di prendere il lucchetto e svegliare: qui, col lucchetto
+	 *    in mano, lo stato letto e' quello del risveglio. */
+	while (!cattura->posto_pieno && cattura->stato != PW_STREAM_STATE_ERROR)
 	{
 		if (!g_cond_wait_until(&cattura->novita, &cattura->lucchetto, scadenza))
 			break;
@@ -2947,6 +2959,17 @@ gboolean cattura_attiva(Cattura *cattura)
 const char *cattura_guasto(Cattura *cattura)
 {
 	return cattura ? cattura->guasto : NULL;
+}
+
+gboolean cattura_formato_rifiutato(Cattura *cattura)
+{
+	/* ⛔ Le due condizioni insieme, e nessuna delle due basta da sola:
+	 *    `ERROR` senza formato e' la negoziazione fallita; `ERROR` DOPO un
+	 *    formato e' un flusso che e' morto dopo essere nato, e li' la strada
+	 *    chiesta esisteva.  ⚠ Su wlroots non c'e' negoziazione PipeWire: il
+	 *    suo ripiego sta in `cattura_avvia_wlr()`. */
+	return cattura && !cattura->wlr && cattura->stato == PW_STREAM_STATE_ERROR &&
+	       !cattura->formato_noto;
 }
 
 void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)
