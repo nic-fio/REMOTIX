@@ -595,6 +595,16 @@ prodotto)
 		printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate=no\nAllowHybridSleep=no\n" > /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf
 		systemctl restart polkit >/dev/null 2>&1 || true
 		systemctl reload systemd-logind >/dev/null 2>&1 || true
+		# ⭐ IL PERMESSO DI KWIN LO METTE IL BANCO, COME IL PACCHETTO — fase 17.
+		# Fino alla fase 16 lo scriveva il server da root; dalla fase 17
+		# (§6.5-bis) il file e del pacchetto e il prodotto lo VERIFICA soltanto
+		# (RX-KDE-001/002/003).  ⇒ Senza questa riga KDE nelle scatole non si
+		# vede piu.  Stesso contenuto di packaging/debian/org.kde.remotix.desktop,
+		# con Exec sul binario della scatola.  In tutte le scatole, come il
+		# pacchetto, che non guarda il desktop.
+		mkdir -p /usr/share/applications
+		printf "[Desktop Entry]\nType=Application\nName=REMOTIX\nComment=Il desktop nel browser\nExec=/opt/remotix/remotix\nNoDisplay=true\nX-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1\n" > /usr/share/applications/org.kde.remotix.desktop
+		chmod 644 /usr/share/applications/org.kde.remotix.desktop
 		rm -f /opt/remotix/lib/*
 		cp -a /rete11/prodotto/lib/* /opt/remotix/lib/
 		echo /opt/remotix/lib > /etc/ld.so.conf.d/rete11.conf

@@ -1522,29 +1522,173 @@ static bool comando_da_root(const char *quale, char *const argv[], const char *u
 	return true;
 }
 
-static bool iscrivi_ai_gruppi_della_scheda(const char *utente, gid_t primario,
+/*
+ * ⭐ FASE 17 (§6.5-bis) — OGNI ISCRIZIONE FATTA DA REMOTIX SI ANNOTA IN UN FILE.
+ *    Il registro del servizio la diceva gia' (DECISIONI §7.21, garanzia 2), ma
+ *    il journal ruota e l'installatore non lo legge: alla disinstallazione il
+ *    motore deve sapere CHI ha messo REMOTIX in un gruppo (origine DIRETTA, si
+ *    toglie) e chi c'era gia' (PREESISTENTE, non si tocca mai — §6.6.4).
+ *    ⇒ Una riga JSON per gruppo, solo per i gruppi in cui l'utente NON era:
+ *
+ *    {"formato":"remotix-gruppi/1","data":"2026-09-30T10:11:12Z","utente":"mario",
+ *     "uid":1005,"gruppo":"render","gid":989,"origine":"DIRETTA",
+ *     "da":"REMOTIX alla prima connessione"}
+ *
+ * ⛔ Il file si apre in sola aggiunta (`O_APPEND`), mai riscritto ne' troncato;
+ *    la cartella si apre senza seguire collegamenti e dev'essere di root e non
+ *    scrivibile da altri, il file idem e regolare; ogni riga esce con UNA
+ *    `write` e poi `fsync` (e la cartella si sincronizza quando il file nasce).
+ * ⚠ Se non si puo' annotare, l'iscrizione si fa lo stesso — una sessione cieca
+ *   e' peggio (§4.2) — ma si DICE, con quel che la disinstallazione non sapra'.
+ */
+#define GRUPPI_CARTELLA "/var/lib/remotix"
+#define GRUPPI_FILE "gruppi-iscritti.jsonl"
+
+/* Il testo JSON di una stringa: virgolette, barra rovescia e controlli. */
+static void json_testo(char *d, size_t quanto, const char *s)
+{
+	size_t k = 0;
+
+	for (; *s && k + 7 < quanto; s++) {
+		unsigned char c = (unsigned char)*s;
+
+		if (c == '"' || c == '\\') {
+			d[k++] = '\\';
+			d[k++] = (char)c;
+		} else if (c < 0x20) {
+			k += (size_t)snprintf(d + k, quanto - k, "\\u%04x", c);
+		} else {
+			d[k++] = (char)c;
+		}
+	}
+	d[k] = '\0';
+}
+
+/* La cartella: aperta senza seguire collegamenti, di root, non scrivibile da
+ * altri.  Se manca (fuori dal pacchetto: un banco) si crea 0700.  -1 con
+ * `perche` scritto. */
+static int gruppi_apri_cartella(char *perche, size_t quanto)
+{
+	struct stat st;
+	int dfd;
+
+	if (mkdir(GRUPPI_CARTELLA, 0700) != 0 && errno != EEXIST) {
+		snprintf(perche, quanto, "mkdir %s: %s", GRUPPI_CARTELLA, strerror(errno));
+		return -1;
+	}
+	dfd = open(GRUPPI_CARTELLA, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (dfd < 0) {
+		snprintf(perche, quanto, "%s: %s", GRUPPI_CARTELLA, strerror(errno));
+		return -1;
+	}
+	if (fstat(dfd, &st) != 0 || st.st_uid != 0 || (st.st_mode & 022)) {
+		snprintf(perche, quanto, "%s non e' di root o e' scrivibile da altri", GRUPPI_CARTELLA);
+		close(dfd);
+		return -1;
+	}
+	return dfd;
+}
+
+/* Il file, in sola aggiunta.  -1 con `perche` scritto. */
+static int gruppi_apri_file(char *perche, size_t quanto)
+{
+	struct stat st;
+	int dfd = gruppi_apri_cartella(perche, quanto);
+	int fd;
+	bool nuovo = false;
+
+	if (dfd < 0)
+		return -1;
+	fd = openat(dfd, GRUPPI_FILE, O_WRONLY | O_APPEND | O_NOFOLLOW | O_CLOEXEC);
+	if (fd < 0 && errno == ENOENT) {
+		fd = openat(dfd, GRUPPI_FILE,
+		            O_WRONLY | O_APPEND | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+		nuovo = fd >= 0;
+	}
+	if (fd < 0) {
+		snprintf(perche, quanto, "%s/%s: %s", GRUPPI_CARTELLA, GRUPPI_FILE, strerror(errno));
+		close(dfd);
+		return -1;
+	}
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0 || (st.st_mode & 022)) {
+		snprintf(perche, quanto, "%s/%s non e' un file regolare di root, o e' scrivibile da altri",
+		         GRUPPI_CARTELLA, GRUPPI_FILE);
+		close(fd);
+		close(dfd);
+		return -1;
+	}
+	/* Il nome nuovo nella cartella deve sopravvivere a una caduta di corrente
+	 * quanto la riga dentro al file. */
+	if (nuovo)
+		(void)fsync(dfd);
+	close(dfd);
+	return fd;
+}
+
+/* Una riga per gruppo.  false con `perche` scritto. */
+static bool gruppi_annota(int fd, const char *utente, uid_t uid, const char *gruppo, gid_t gid,
+                          char *perche, size_t quanto)
+{
+	char u[256], g[192], quando[32], riga[768];
+	struct tm tm;
+	time_t ora = time(NULL);
+	int n;
+
+	json_testo(u, sizeof u, utente);
+	json_testo(g, sizeof g, gruppo);
+	gmtime_r(&ora, &tm);
+	strftime(quando, sizeof quando, "%Y-%m-%dT%H:%M:%SZ", &tm);
+	n = snprintf(riga, sizeof riga,
+	             "{\"formato\":\"remotix-gruppi/1\",\"data\":\"%s\",\"utente\":\"%s\","
+	             "\"uid\":%lu,\"gruppo\":\"%s\",\"gid\":%lu,\"origine\":\"DIRETTA\","
+	             "\"da\":\"REMOTIX alla prima connessione\"}\n",
+	             quando, u, (unsigned long)uid, g, (unsigned long)gid);
+	if (n <= 0 || (size_t)n >= sizeof riga) {
+		snprintf(perche, quanto, "la riga non ci sta");
+		return false;
+	}
+	/* ⛔ Una sola `write`: con O_APPEND la riga arriva intera in fondo, o niente. */
+	if (write(fd, riga, (size_t)n) != n) {
+		snprintf(perche, quanto, "write: %s", strerror(errno));
+		return false;
+	}
+	if (fsync(fd) != 0) {
+		snprintf(perche, quanto, "fsync: %s", strerror(errno));
+		return false;
+	}
+	return true;
+}
+
+static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t primario,
                                            const gid_t *gruppi, int ngruppi)
 {
 	gid_t visti[QUANTI_GRUPPI_SCHEDA];
 	char nomi[QUANTI_GRUPPI_SCHEDA][64];
 	char nodi[QUANTI_GRUPPI_SCHEDA][96];
 	int nvisti = raccogli_gruppi_scheda(visti, nomi, nodi, utente);
+	int messi[QUANTI_GRUPPI_SCHEDA];
+	int nmessi = 0;
 	char elenco[256] = "";
+	char perche[256] = "";
 	size_t usati = 0;
 	char *argv_mod[6];
 	char *argv_term[4];
+	int fd;
 
 	if (nvisti == 0 || geteuid() != 0)
 		return false;
 	for (int i = 0; i < nvisti; i++) {
 		int n;
 
+		/* Chi c'e' gia' e' PREESISTENTE: non si iscrive e non si annota. */
 		if (sta_nel_gruppo(primario, gruppi, ngruppi, visti[i]))
 			continue;
 		n = snprintf(elenco + usati, sizeof elenco - usati, "%s%s", usati ? "," : "",
 		             nomi[i]);
-		if (n > 0 && (size_t)n < sizeof elenco - usati)
+		if (n > 0 && (size_t)n < sizeof elenco - usati) {
 			usati += (size_t)n;
+			messi[nmessi++] = i;
+		}
 	}
 	if (!usati)
 		return false;
@@ -1559,14 +1703,40 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, gid_t primario,
 	argv_mod[2] = elenco;
 	argv_mod[3] = (char *)utente;
 	argv_mod[4] = NULL;
+	/* Il file si apre PRIMA di toccare i gruppi, cosi' un impedimento si sa
+	 * subito; la riga si scrive DOPO, solo se `usermod` e' riuscito: annotare
+	 * un'iscrizione mai fatta farebbe togliere alla disinstallazione un gruppo
+	 * messo da altri. */
+	fd = gruppi_apri_file(perche, sizeof perche);
 	if (!comando_da_root("/usr/sbin/usermod", argv_mod, utente) &&
 	    !comando_da_root("/sbin/usermod", argv_mod, utente)) {
 		registro_dice_di(REG_FIGLIO, utente,
 		                 "⛔ non ho potuto iscrivere «%s» a «%s»: la sessione nascera' "
 		                 "CIECA, e la cura a mano e' `usermod -aG %s %s`",
 		                 utente, elenco, elenco, utente);
+		if (fd >= 0)
+			close(fd);
 		return false;
 	}
+	for (int j = 0; j < nmessi; j++) {
+		int i = messi[j];
+
+		if (fd >= 0 && gruppi_annota(fd, utente, uid, nomi[i], visti[i], perche, sizeof perche))
+			registro_dice_di(REG_FIGLIO, utente,
+			                 "⭐ annotato in %s/%s: «%s» in «%s» (gid %ld), DIRETTA — la "
+			                 "disinstallazione lo togliera'",
+			                 GRUPPI_CARTELLA, GRUPPI_FILE, utente, nomi[i], (long)visti[i]);
+		else
+			registro_dice_di(REG_FIGLIO, utente,
+			                 "⛔ iscrizione NON ANNOTATA (%s): «%s» in «%s» (gid %ld) e' "
+			                 "opera di REMOTIX ma %s/%s non lo dice — la disinstallazione "
+			                 "NON lo togliera'.  Rimedio a mano: `gpasswd -d %s %s` dopo "
+			                 "aver disinstallato",
+			                 perche, utente, nomi[i], (long)visti[i], GRUPPI_CARTELLA,
+			                 GRUPPI_FILE, utente, nomi[i]);
+	}
+	if (fd >= 0)
+		close(fd);
 	/* ⚠ E il gestore d'utente si fa RINASCERE, o i gruppi nuovi non arrivano al
 	 *   compositore (`[M]` 27 ago 2026).  Qui non c'e' nessuna sessione grafica
 	 *   da buttare giu': il figlio di quest'utente non esiste ancora. */
@@ -1672,7 +1842,7 @@ bool figli_assicura(figli *f, const char *utente)
 	 *    dell'utente, 20 set 2026): iscritto, si rileggono i gruppi e si
 	 *    dichiara di nuovo — la riga che l'amministratore legge dev'essere
 	 *    quella VERA di questa sessione, non quella di prima della cura. */
-	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_gid, gruppi, ngruppi)) {
+	if (iscrivi_ai_gruppi_della_scheda(pw.pw_name, pw.pw_uid, pw.pw_gid, gruppi, ngruppi)) {
 		ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
 		if (getgrouplist(pw.pw_name, pw.pw_gid, gruppi, &ngruppi) < 0)
 			ngruppi = (int)(sizeof gruppi / sizeof gruppi[0]);
@@ -4844,6 +5014,11 @@ static CodecVideo codec_del_numero(uint8_t numero)
 	}
 }
 
+/* Perche' l'hardware non si e' aperto, l'ultima volta che lo si e' provato
+ * ("" se si e' aperto, o se non lo si e' provato). */
+static char rifiuto_hardware[256];
+static char rifiuto_software[256];
+
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
@@ -5009,6 +5184,10 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		hw.modo = CODIFICATORE_QUALITA_QP;
 		hw.qualita = QP_HARDWARE;
 		codif[indice] = codificatore_nuovo(&hw, errore, sizeof errore);
+		/* La ragione resta anche fuori dal registro: `--prova-codifica` la
+		 * riporta nel suo `motivo`. */
+		snprintf(rifiuto_hardware, sizeof rifiuto_hardware, "%s",
+		         codif[indice] ? "" : errore);
 		if (!codif[indice])
 			/* ⛔⭐ E I DUE NOMI SI STAMPANO, NON SI SCRIVONO A MANO — difetto
 			 *     trovato refutando, 22 agosto 2026 (fase 8).  Fino a qui la
@@ -5029,8 +5208,11 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 			              codificatore_ripiego_software(codec));
 	}
 
-	if (!codif[indice])
+	if (!codif[indice]) {
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
+		snprintf(rifiuto_software, sizeof rifiuto_software, "%s",
+		         codif[indice] ? "" : errore);
+	}
 	if (codif[indice]) {
 		codif_prof[indice] = prof;
 		codif_liv[indice] = livello_chiesto_x10;
@@ -5079,6 +5261,130 @@ static void codificatori_libera(void)
 		codificatore_libera(codif[i]);
 		codif[i] = NULL;
 	}
+}
+
+/*
+ * ⭐ FASE 17 (§6.5-bis, §6.0 fase 7a) — `remotix --prova-codifica`.
+ *
+ * La certificazione dell'installatore deve sapere se questa macchina codifica
+ * davvero un fotogramma in H.264, e COME: la risposta la da' il prodotto, con
+ * la sua stessa scelta, non un ffmpeg a parte.  ⇒ Si passa per
+ * `codificatore_di()`, cioe' la strada di una sessione vera (H.264, 8 bit — la
+ * base di §4.3 —, nessun tetto di livello, BGRx): `h264_vaapi` su
+ * `NODO_RENDERING` con `POTENZA_RENDERING` e `QP_HARDWARE`, e se non si apre il
+ * ripiego dichiarato `libx264` con `CRF_SOFTWARE`.  Poi si codifica davvero un
+ * fotogramma sintetico 256x256, finche' non escono byte (al piu' 8 giri).
+ *
+ * Esce con UNA riga JSON su stdout (il registro va su stderr, come sempre):
+ *   {"esito":"hardware"|"software"|"nessuno","codificatore":"h264_vaapi"|"libx264"|"",
+ *    "nodo":"/dev/dri/renderD128"|"","motivo":"..."}
+ * e il codice: 0 se un fotogramma e' uscito (hardware O software: quale lo dice
+ * «esito») · 1 nessuno · 2 resta l'errore d'uso — lo stesso che il motore della linea A
+ * aspettava (fasi/17 §13.1, riga di 56c93d3).
+ *
+ * ⛔ «hardware» si dice SOLO se il componente accetta superfici VA-API
+ *    (`codificatore_in_hardware`) E un fotogramma e' uscito con dei byte E i
+ *    byte si sono riletti (`letto_dal_flusso`).  Tutto quel che non si sa
+ *    diventa «nessuno» col motivo — mai un hardware presunto.
+ * ⚠ Non serve root, ma i permessi contano: senza il gruppo del nodo (`render`)
+ *   un utente vedra' «software» dove root vedrebbe «hardware».  La prova va
+ *   fatta con l'identita' di cui si vuole sapere.
+ */
+#define PROVA_LATO 256u
+#define PROVA_GIRI 8
+
+static int prova_esce(const char *esito, const char *codificatore, const char *nodo,
+                      const char *motivo, int codice)
+{
+	char c[128], n[128], m[1024];
+
+	json_testo(c, sizeof c, codificatore);
+	json_testo(n, sizeof n, nodo);
+	json_testo(m, sizeof m, motivo);
+	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"nodo\":\"%s\",\"motivo\":\"%s\"}\n",
+	       esito, c, n, m);
+	/* ⛔ Una riga che non esce intera e' «non so», non l'esito che portava. */
+	if (fflush(stdout) != 0)
+		return 1;
+	return codice;
+}
+
+int figlio_prova_codifica(void)
+{
+	const uint8_t indice = 3; /* §6.2: 3 = H.264 */
+	static uint8_t pixel[PROVA_LATO * PROVA_LATO * 4];
+	CodificatoreFotogramma fg;
+	const CodificatoreConfessione *c;
+	Codificatore *cod;
+	char motivo[768];
+	bool in_hw, uscito = false;
+	size_t byte = 0;
+
+	profondita_chiesta = 8;
+	livello_chiesto_x10 = 0;
+	formato_ingresso = CODIFICATORE_PIXEL_BGRX;
+	cod = codificatore_di(CODIFICATORE_H264, indice, PROVA_LATO, PROVA_LATO);
+	if (!cod) {
+		snprintf(motivo, sizeof motivo,
+		         "H.264 non si apre: in hardware («h264_vaapi» su %s) %s; in software («%s») %s",
+		         NODO_RENDERING, rifiuto_hardware[0] ? rifiuto_hardware : "non provato",
+		         codificatore_ripiego_software(CODIFICATORE_H264),
+		         rifiuto_software[0] ? rifiuto_software : "nessuna ragione");
+		return prova_esce("nessuno", "", "", motivo, 1);
+	}
+	in_hw = codificatore_in_hardware(cod);
+	for (int giro = 0; giro < PROVA_GIRI && !uscito; giro++) {
+		/* Una sfumatura che scorre: ogni fotogramma e' diverso dal prima. */
+		for (uint32_t y = 0; y < PROVA_LATO; y++)
+			for (uint32_t x = 0; x < PROVA_LATO; x++) {
+				uint8_t *p = pixel + (y * PROVA_LATO + x) * 4;
+
+				p[0] = (uint8_t)(x + giro * 8);
+				p[1] = (uint8_t)y;
+				p[2] = (uint8_t)(x ^ y);
+				p[3] = 0xff;
+			}
+		memset(&fg, 0, sizeof fg);
+		if (!codificatore_comprimi(cod, pixel, PROVA_LATO * 4, &fg)) {
+			c = codificatore_confessione(cod);
+			snprintf(motivo, sizeof motivo,
+			         "«%s» si apre ma il fotogramma %d non si codifica%s%s",
+			         codificatore_nome(cod), giro + 1, c && c->perche_no[0] ? ": " : "",
+			         c && c->perche_no[0] ? c->perche_no : "");
+			codificatori_libera();
+			return prova_esce("nessuno", "", "", motivo, 1);
+		}
+		if (fg.byte > 0) {
+			uscito = true;
+			byte = fg.byte;
+		}
+	}
+	c = codificatore_confessione(cod);
+	if (!uscito || !c || !c->ha_obbedito || !c->letto_dal_flusso) {
+		snprintf(motivo, sizeof motivo,
+		         "«%s» si apre ma dopo %d fotogrammi non si sa se codifica: %s",
+		         codificatore_nome(cod), PROVA_GIRI,
+		         !uscito ? "nessun byte uscito"
+		         : !c || !c->ha_obbedito ? "il codificatore non ha obbedito"
+		                                 : "i byte non si rileggono");
+		codificatori_libera();
+		return prova_esce("nessuno", "", "", motivo, 1);
+	}
+	if (in_hw) {
+		snprintf(motivo, sizeof motivo,
+		         "un fotogramma %ux%u codificato: %zu byte, %s — %s", PROVA_LATO, PROVA_LATO,
+		         byte, c->stringa_codec, codificatore_nome(cod));
+		codificatori_libera();
+		return prova_esce("hardware", c->componente ? c->componente : "", NODO_RENDERING,
+		                  motivo, 0);
+	}
+	snprintf(motivo, sizeof motivo,
+	         "l'hardware non si apre («h264_vaapi» su %s: %s) — ripiego in software: un "
+	         "fotogramma %ux%u codificato, %zu byte, %s",
+	         NODO_RENDERING, rifiuto_hardware[0] ? rifiuto_hardware : "ragione non data",
+	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec);
+	codificatori_libera();
+	return prova_esce("software", c->componente ? c->componente : "", "", motivo, 0);
 }
 
 /* ⛔⭐ QUALE ISTANTE FINISCE NEI 28 BYTE, E DA DOVE VIENE — il punto 7, deciso

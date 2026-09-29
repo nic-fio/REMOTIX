@@ -156,6 +156,10 @@ static void aiuto(const char *nome)
 	        "REMOTIX — il server (fase 1: il filo nudo)\n"
 	        "\n"
 	        "  %s [opzioni]\n"
+	        "  %s --prova-codifica\n"
+	        "                    un fotogramma in H.264 con la scelta di una\n"
+	        "                    sessione vera; una riga JSON su stdout, esce\n"
+	        "                    0 se codifica (hardware o software), 1 no\n"
 	        "\n"
 	        "  --indirizzo IND   su che cosa ascoltare (predefinito: 0.0.0.0)\n"
 	        "  --nome NOME       il nome o l'indirizzo che va nel certificato\n"
@@ -326,7 +330,7 @@ static void aiuto(const char *nome)
 	        "     questo stesso binario riparte come figlio di un utente\n"
 	        "     ammesso (DECISIONI.md §1.10-bis).  Se la vedi in `ps`, quello\n"
 	        "     e' un figlio, non un secondo server.\n",
-	        nome, PORTA_PREDEFINITA);
+	        nome, nome, PORTA_PREDEFINITA);
 }
 
 /* ⛔⭐ IL FILE DEL SERVIZIO PAM, GUARDATO ALL'AVVIO — rilievo B-11.
@@ -1557,6 +1561,11 @@ int main(int argc, char **argv)
 		figlio_vive(argc, argv);
 		return 1; /* non ci si arriva */
 	}
+	/* ⭐ FASE 17 (§6.5-bis) — la prova di codifica della certificazione: da
+	 *    sola, prima di tutto il resto — niente certificati, niente rete,
+	 *    niente sessioni.  Il contratto e' in `figlio.h`. */
+	if (argc == 2 && strcmp(argv[1], "--prova-codifica") == 0)
+		return figlio_prova_codifica();
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];
@@ -1931,15 +1940,16 @@ int main(int argc, char **argv)
 		wt_desktop("sconosciuto");
 		break;
 	}
-	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si scrive
-	 *    QUI, dal server, prima che nasca qualunque sessione: KWin mostra
+	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si guarda
+	 *    QUI, prima che nasca qualunque sessione: KWin mostra
 	 *    `zkde_screencast_unstable_v1` solo a un eseguibile dichiarato in un
-	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  Su GNOME non si scrive
-	 *    niente. */
+	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  ⭐ FASE 17: il file e' del
+	 *    pacchetto, e il server non lo scrive piu' — lo verifica e, se non va,
+	 *    dice il codice e il rimedio.  Su GNOME non si guarda niente. */
 	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
-		char perche[640];
+		char perche[768];
 
-		if (kwin_scrivi_permesso(perche, sizeof perche))
+		if (kwin_verifica_permesso(perche, sizeof perche))
 			registro_dice(REG_AVVIO, "⭐ il permesso della cattura per KWin: %s", perche);
 		else
 			registro_dice(REG_AVVIO,
