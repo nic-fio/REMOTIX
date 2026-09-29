@@ -746,6 +746,23 @@ gboolean cattura_attiva(Cattura *cattura);
 /* Il guasto dichiarato dal produttore, o NULL. */
 const char *cattura_guasto(Cattura *cattura);
 
+/*
+ * ⭐ FASE 17 — la negoziazione e' FALLITA: il flusso e' in errore e nessun
+ *    formato e' mai stato concordato.  E' il caso di «no more input formats»
+ *    (`[M]` 29 set 2026, 7 VM su 7): si e' chiesta la strada della SCHEDA a un
+ *    compositore che non ha buffer DMA-BUF da offrire (nessuna accelerazione
+ *    3D: `virtio-vga` senza virgl, un server senza scheda), e l'intersezione
+ *    delle proposte e' vuota.
+ *
+ * ⛔ Non guarda il TESTO del guasto: guarda i due fatti che lo producono.  E
+ *    `cattura_avvia()`, se il rifiuto arriva prima che lei torni, lo dice col
+ *    codice `G_IO_ERROR_NOT_SUPPORTED` invece di `G_IO_ERROR_FAILED`.
+ *
+ * ⚠ Che cosa farne lo decide chi chiama (`figlio.c`, `ripiega_se_rifiutata`):
+ *   qui si risponde solo alla domanda.
+ */
+gboolean cattura_formato_rifiutato(Cattura *cattura);
+
 /* ⭐ Gira l'interruttore di `cursore_mai_nascondere()` sul cursore di questa
  *    cattura: lo chiede il figlio su Plasma, dove il tema e' invisibile. */
 void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche);
