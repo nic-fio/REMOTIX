@@ -6008,6 +6008,16 @@ sistema complesso e monolitico»*. ⇒
 - **la GUI** gira come l'utente (non da root: Wayland), e per le operazioni da amministratore lo stesso
   eseguibile **rilancia sé stesso** con i permessi chiesti a polkit — un file, due ruoli.
 
+### 10.15 ✅ L'installatore parla italiano e inglese, secondo la lingua del sistema
+
+Parola dell'utente (30 set 2026): *«l'installer lo rendiamo bilingue: italiano e inglese. La scelta della
+lingua la rendiamo coerente con le impostazioni linguistiche dell'OS sottostante (variabili di ambiente)»*.
+⇒ la lingua si legge nell'ordine standard `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`: italiano se la prima
+indicata è italiano, **inglese in tutti gli altri casi** (anche tedesco, francese…); ⚠ quando l'installatore
+si rilancia con i permessi (polkit ripulisce l'ambiente) la lingua scelta si **passa esplicitamente** alla
+parte da amministratore; nell'installazione senza domande il file di risposte può fissarla. I **codici**
+`RX-…` restano uguali nelle due lingue: sono quelli che si cercano nel manuale e nell'assistenza.
+
 ---
 
 ## Come si tiene questo documento
