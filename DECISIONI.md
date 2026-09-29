@@ -6023,8 +6023,9 @@ parte da amministratore; nell'installazione senza domande il file di risposte pu
 Parola dell'utente (30 set 2026): *«è un'operazione fatta dall'admin del server. La soluzione più pulita è che
 l'admin avverta gli utenti nelle modalità classiche (email, WhatsApp…). Poi, quando avvia la
 disinstallazione, l'installer chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia
-del sistema»*. ⇒ Nessun sistema di avvisi in REMOTIX; il piano mostra chi è collegato come controllo per
-l'amministratore; si chiudono le sessioni REMOTIX e i programmi nati dentro di esse, **non** gli altri processi
+del sistema»*. ⇒ Nessun sistema di avvisi in REMOTIX e **nessuna domanda in più**: chi è ancora collegato viene
+chiuso e basta (*«erano già stati avvertiti prima»*); il piano porta solo la riga «chiudo le sessioni
+REMOTIX ancora aperte (N)»; si chiudono le sessioni REMOTIX e i programmi nati dentro di esse, **non** gli altri processi
 dell'utente (una sua sessione locale o ssh resta). `fasi/17-l-installatore.md` §6.5-bis, R43.
 
 ---

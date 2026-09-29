@@ -581,8 +581,9 @@ gli utenti nelle modalità classiche (email, WhatsApp…); poi, quando avvia la 
 chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia del sistema»*):
 1. **prima**, l'amministratore avvisa le persone coi suoi mezzi — REMOTIX non ha né avrà un sistema di messaggi
    per questo;
-2. il **piano** elenca chi è collegato in quel momento, come controllo per l'amministratore (non come avviso
-   agli utenti): conferma o rimanda;
+2. **nessuna domanda in più**: se ci sono ancora persone collegate, le loro sessioni REMOTIX si chiudono e basta
+   — erano state avvisate (parola dell'utente, 30 set). Il piano di disinstallazione, che si conferma una volta
+   sola come ogni piano, ne porta solo la riga «chiudo le sessioni REMOTIX ancora aperte (N)»;
 3. il motore chiude **le sessioni REMOTIX** e tutti i programmi nati dentro di esse (logind `TerminateSession`
    sulla sessione, che porta via il suo gruppo di processi) — ⚠ **non** tutti i processi dell'utente: la stessa
    persona può avere una sessione davanti al monitor o un lavoro via ssh, e quelli non si toccano;
