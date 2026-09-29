@@ -47,6 +47,7 @@ ogni suo pezzo è noto e altri lo hanno già risolto.
 | **prima l'indagine, poi l'installatore** | l'installatore si scrive una volta sola, sapendo già le differenze | fatta il 29 set, §4 |
 | **le prove in MACCHINE VIRTUALI, non nelle scatole** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | una VM ha kernel, SELinux, firewall e avvio **della distribuzione**; una scatola usa il kernel del server (Debian) e direbbe «tutto bene» dove la macchina vera rifiuterebbe |
 | **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, rafforzata su sua richiesta (TRUST, tre esiti per desktop, il piano come documento, l'accensione fra 7a e 7b, la RIPRESA), §6.0 |
+| **TUI e GUI irrinunciabili** | *«su TUI e GUI dico che è un requisito irrinunciabile»* | §6.6.1, D12 |
 | **una VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | il cliente ha di solito **un** desktop: con quattro insieme, un pezzo dimenticato per XFCE arriverebbe lo stesso trascinato da KDE, e la prova direbbe verde |
 
 ---
@@ -61,8 +62,8 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 | **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); il GNOME «vanilla» va installato (§4.6) |
 | Ubuntu 24.04 LTS | 🔸 | ⛔ | ⛔ | ⛔ | KDE 5.27 (manca l'EIS di KWin ≥ 6.1), XFCE 4.18 e LXQt 1.4 senza Wayland. GNOME 46 sì, ma con OpenSSL 3.5 statico e un `#if` per ffmpeg 6.1 — **decisione D7** |
 | **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 da RPM Fusion (§4.2) |
-| Fedora 43 | ✅ | ✅ | ✅ | ✅ | GNOME 49; esce di supporto a fine 2026 |
-| **Alma / Rocky / RHEL 10** | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
+| Fedora 43 | · | · | · | · | **analizzata, non certificata**: GNOME 49, esce di supporto a fine 2026; c'è la sua VM nuda per confronti |
+| **Alma 10** (certificata) · Rocky / RHEL 10 (compatibili, non certificate) | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
 | **Arch** (Manjaro, EndeavourOS) | ✅ | ✅ | ✅ | ✅ | tutto ufficiale, anche ngtcp2 1.25 e i codec |
 | **openSUSE Tumbleweed** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 solo con Packman (§4.2) |
 | **openSUSE Leap 16** | ✅ | ✅ | ✅ | ✅ | XFCE e LXQt sotto Wayland «sperimentali» per SUSE; ngtcp2 da portare dentro |
@@ -78,8 +79,15 @@ Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ 
 - **Immutabili** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` in sola lettura, gruppi
   in `/usr/lib/group`, installazione con riavvio. Si rimandano a dopo la fase (§12, D9).
 
-⇒ **27 macchine virtuali** nella matrice di oggi (6 distribuzioni × 4 desktop, più Alma × 2, più
-Ubuntu 24.04 × GNOME se D7 dice sì).
+⇒ **La matrice di certificazione: 27 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
+Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE), più Ubuntu 24.04 × GNOME (se D7
+dice sì). **Fedora 43 è analizzata ma fuori dalla matrice.**
+
+⚠ **Che cosa si certifica, e che cosa no.** Si certifica solo quel che gira nelle nostre VM: **Alma 10**,
+non «la famiglia RHEL 10». Rocky 10 e RHEL 10 si dichiarano **compatibili, non certificate**: stessa
+base di pacchetti, ma nessuno le ha provate. Lo stesso per Manjaro ed EndeavourOS rispetto ad Arch,
+e per Mint 23 rispetto a Ubuntu 26.04. Una derivata diventa certificata solo con la sua VM nella
+matrice.
 
 ---
 
@@ -476,6 +484,281 @@ login non telefona a casa).
 11. **Costruzione riproducibile** (`SOURCE_DATE_EPOCH`) e **SBOM** che nomina ngtcp2 e nghttp3 con la
     versione esatta.
 
+### 6.6 La specifica del motore — stati, registro, azioni, fiducia (29 set 2026)
+
+*Scritta dopo una revisione della bozza portata dall'utente: l'architettura in otto fasi regge; quel che
+mancava era renderne le promesse **precise abbastanza da poterle provare in automatico**. Qui si fissa
+quel che cambia i dati e il comportamento del motore — cambiarlo dopo vorrebbe dire riscriverlo. I
+dettagli che dipendono da cose che oggi non esistono (il deposito pubblico, la custodia della chiave)
+hanno il loro modello qui e la loro decisione alla tappa.*
+
+#### 6.6.1 Il contratto: gli oggetti del motore
+
+Il motore produce e consuma **sette oggetti**, file JSON con una versione di formato
+(`"formato": "remotix-install/1"`). Sono suoi: chiunque usi il motore li legge, nessuno li inventa.
+
+| oggetto | chi lo produce | che cosa contiene |
+|---|---|---|
+| **Profilo della macchina** | PREFLIGHT | ogni fatto rilevato, ciascuno con lo stato RILEVATO / VERIFICATO / SCONOSCIUTO (§6.6.7) |
+| **Rapporto di compatibilità** | COMPATIBILITY | per desktop: livello e condizioni (§6.6.8), con la versione del catalogo usata |
+| **Piano** | PLANNING | le azioni (§6.6.4) con le loro intenzioni e vincoli; l'impronta (§6.6.5); le scelte da approvare |
+| **Insieme risolto** | ACQUISITION | gli artefatti esatti che il piano diventa (§6.6.6) |
+| **Registro dell'esecuzione** | INSTALLATION, e il ritorno indietro | il giornale a scrittura anticipata (§6.6.3) |
+| **Rapporto di verifica** | VERIFICATION | ogni controllo con esito PASS / FAIL / UNKNOWN / N.A. |
+| **Certificato dell'installazione** | COMMIT | lo stato finale (§6.6.2), le condizioni, i riferimenti a motore, catalogo, piano, prodotto (§6.6.11) |
+
+**Le interfacce: tre, e TUI e GUI sono un requisito irrinunciabile** (parola dell'utente, 29 set
+2026):
+
+| interfaccia | per chi | come gira |
+|---|---|---|
+| **CLI** (`remotix-install`, e `install.sh` che la scarica) | chi amministra da terminale, e l'installazione senza domande (§6.6.12) | da root |
+| **TUI** (a schermo intero nel terminale) | chi amministra via ssh o dalla console, anche su una macchina senza nessuno davanti | da root, nel terminale |
+| **GUI** (finestra nel desktop) | chi amministra dal desktop della macchina | ⛔ **come l'utente, non da root** (sotto Wayland un client grafico da root è sbagliato e spesso rifiutato): chiede i permessi al motore con **polkit**, come gli installatori grafici delle distribuzioni |
+
+⛔ **Le interfacce non contengono logica d'installazione.** Mostrano gli oggetti del motore (profilo,
+rapporto, piano, avanzamento dal registro, certificato) e raccolgono il consenso; non scelgono mai
+pacchetti, depositi, PAM o ritorni indietro. Il motore è uno solo, e le tre interfacce parlano con lui
+nello stesso modo: il motore scrive gli oggetti e gli eventi (JSON, una riga per evento) e legge il
+consenso come un piano approvato. ⇒ La stessa operazione dà lo stesso piano, lo stesso registro e lo
+stesso certificato qualunque interfaccia la guidi (R36). Lo strumento per TUI e GUI è la **decisione D12**.
+
+#### 6.6.2 Gli stati dell'operazione
+
+Un'operazione (installazione, aggiornamento, disinstallazione) ha un identificativo e **uno stato**,
+scritto in `/var/lib/remotix/operazioni/<id>/stato`:
+
+```
+NUOVA → FIDATA → ESAMINATA → VALUTATA → PIANIFICATA → APPROVATA → ACQUISITA
+      → IN_ESECUZIONE → APPLICATA → IN_VERIFICA → VERIFICATA → CONFERMATA
+                ↓ interruzione          ↓ rosso               ↓ rosso
+            INTERROTTA ──ripresa──→ IN_ESECUZIONE        IN_ANNULLAMENTO → ANNULLATA
+                                                              ↓ un'azione non si annulla
+                                                          ANNULLATA_IN_PARTE
+dalle fasi 0-5, senza aver toccato niente:  BLOCCATA (serve un intervento) · RIFIUTATA (niente consenso)
+```
+
+| stato finale | vuol dire | il certificato dice |
+|---|---|---|
+| **CONFERMATA** | installata e verificata, tutti i controlli richiesti PASS | la piattaforma: CERTIFICATA o COMPATIBILE |
+| **CONFERMATA_A_CONDIZIONI** | installata e verificata, con condizioni attive (§6.6.8) | le condizioni, una per una |
+| **ANNULLATA** | tutto quel che REMOTIX ha fatto è stato disfatto | quel che resta di INDIRETTO (§6.6.4) |
+| **ANNULLATA_IN_PARTE** | il ritorno indietro non ha potuto disfare tutto | l'elenco esatto di quel che resta, e perché |
+| **BLOCCATA / RIFIUTATA** | niente è stato toccato | il codice del motivo (§6.6.9) |
+
+Regole: ⛔ **nessuno stato si salta**; le transizioni valide sono solo quelle disegnate; il motore
+rifiuta di partire se trova un'operazione in uno stato non finale e **non** la sua (va prima ripresa o
+annullata). ⭐ **installata ≠ certificata**: CONFERMATA_A_CONDIZIONI su una piattaforma COMPATIBILE è
+un'installazione riuscita, ma non una combinazione certificata.
+
+#### 6.6.3 Il registro: scrittura anticipata e ripresa
+
+Ogni azione del piano si esegue in quattro tempi, e il registro (`registro.jsonl`, una riga per
+evento, `fsync` del file e della cartella prima di proseguire) li annota:
+
+```
+INTENZIONE(azione, stato_prima)  → [effetto]  → FATTA(azione, stato_dopo)
+                                            ↘ FALLITA(azione, codice)
+```
+
+Ogni azione ha tre funzioni (§6.6.4): **fai**, **controlla** (dice se l'effetto c'è, senza cambiare
+niente), **annulla**. La ripresa dopo un'interruzione guarda l'ultima riga di ogni azione:
+
+| nel registro | che cosa è successo | che cosa fa la ripresa |
+|---|---|---|
+| niente | non cominciata | la fa |
+| INTENZIONE senza FATTA | cominciata; forse finita, forse no, forse a metà | chiama **controlla**: effetto completo ⇒ annota FATTA; assente ⇒ la rifà; **a metà** ⇒ annulla quel che c'è e la rifà |
+| FATTA | finita e annotata | passa oltre |
+| FATTA ma l'effetto non c'è più (controllo di coerenza) | qualcuno l'ha disfatta dopo | ⛔ si ferma: BLOCCATA, «la macchina è cambiata durante l'operazione» |
+
+⇒ Per questo ogni azione deve essere **idempotente** (rifarla non raddoppia l'effetto) e il suo
+**controlla** deve saper distinguere completo / assente / a metà. Un file di configurazione si scrive
+sempre su un nome temporaneo e poi si rinomina (mai a metà); un'unità si abilita e si controlla con
+`systemctl is-enabled`.
+
+⚠ **La transazione del gestore di pacchetti è un'azione speciale**: un'interruzione a metà lascia il
+gestore nel suo stato di mezzo. La ripresa usa **il rimedio del gestore stesso** prima di tutto il resto:
+`dpkg --configure -a` (apt), la ripetizione della transazione con `dnf` (e `rpm --verify`), la rimozione
+del file di blocco e `pacman -Dk` (pacman), `zypper verify` (zypper); poi il **controlla** dell'azione
+guarda i pacchetti uno per uno.
+
+#### 6.6.4 Le azioni: quanto si annullano, e di chi è la modifica
+
+Ogni azione del piano dichiara **quanto è reversibile**:
+
+| classe | vuol dire | esempi |
+|---|---|---|
+| **ESATTA** | si torna allo stato di prima, byte per byte | un file nostro in `/etc`; un'unità abilitata; un utente aggiunto a un gruppo in cui non c'era; una regola del firewall aggiunta |
+| **AL_MEGLIO** | si torna indietro, ma non per forza allo stesso stato | un pacchetto dipendenza tolto (se nessun altro lo vuole); un deposito tolto (ma i pacchetti presi da lì restano, e si dice) |
+| **CON_FOTOGRAFIA** | reversibile solo con una fotografia di sistema (snapper, btrfs, LVM) | una dipendenza **aggiornata** dal gestore di pacchetti |
+| **IRREVERSIBILE** | non si annulla | una conversione di formato che la versione vecchia non legge |
+
+⛔ Un'azione IRREVERSIBILE ha **una riga sua nel consenso**, e il piano non la contiene se esiste
+un'alternativa. Il certificato dice quali azioni CON_FOTOGRAFIA sono state fatte senza fotografia.
+
+E ogni **modifica** della macchina ha un'**origine**, che decide fin dove il ritorno indietro è
+autorizzato:
+
+| origine | esempio | il ritorno indietro |
+|---|---|---|
+| **DIRETTA** | il file PAM di REMOTIX; un utente messo in `render` da noi | la disfa |
+| **INDIRETTA** | libX aggiornata da 1.0 a 1.1 perché REMOTIX la chiede | ⛔ non la tocca (non si retrocede una libreria che altri possono già usare); la **dichiara** |
+| **PREESISTENTE** | l'utente era già in `video` prima | ⛔ non la tocca mai |
+| **CONCORRENTE** | l'amministratore cambia la stessa cosa durante l'operazione | ⛔ non la tocca; l'operazione si ferma (§6.6.3, ultima riga) |
+
+⇒ **La promessa normativa** (R6, R28): *«tutto quel che REMOTIX ha fatto direttamente si annulla; quel
+che è successo indirettamente si dichiara; quel che c'era prima non si tocca»*. Le dipendenze
+**installate** per noi si tolgono se nessun altro le vuole (la marca «automatica» dei gestori:
+`apt-mark auto`, `dnf` *userinstalled*, `pacman --asdeps`); quelle **aggiornate** restano aggiornate.
+
+Per ogni modifica che tocca uno stato che c'era già (le tre cinture, i gruppi, il firewall) il registro
+annota **lo stato di prima, la modifica, il consenso, lo stato dopo, come si annulla** (R33, R34).
+
+#### 6.6.5 L'impronta della macchina
+
+Il piano vale solo per la macchina su cui è stato fatto. L'impronta ha due parti:
+
+| **vincolante** — se cambia, il piano non vale più | **annotata** — si registra, non invalida |
+|---|---|
+| distribuzione, versione, architettura | nome della macchina, indirizzi |
+| i desktop installati e le loro versioni | pacchetti che il piano non tocca e da cui non dipende |
+| i pacchetti che il piano tocca o da cui dipende, con la versione | carico, memoria libera |
+| i depositi configurati (elenco e chiavi) | |
+| scheda, driver, capacità H.264 rilevata | |
+| i file che il piano scrive o legge (PAM, logind, polkit, firewall), con la loro impronta sha256 | |
+| i gruppi `video`/`render` e i loro membri | |
+| SELinux e il suo stato, il firewall e il suo stato | |
+| versione del motore e del catalogo | |
+
+L'impronta vincolante è un sha256 sul testo canonico di questi elementi (ordinati, un elemento per
+riga); il piano la contiene, APPLY la ricalcola e la confronta. R31 prova ciascun elemento.
+
+#### 6.6.6 Dal piano agli artefatti: PLAN → RESOLUTION → ARTIFACTS → VERIFY → APPLY
+
+Il piano contiene **intenzioni con vincoli** («`remotix` ≥ 1.4, dal deposito REMOTIX; `labwc` dal
+deposito della distribuzione»), non file. ACQUISITION le **risolve** nell'**insieme risolto**: per ogni
+pacchetto nome, versione esatta, architettura, deposito, **digest** (sha256), firma verificata. Poi:
+- APPLY installa **esattamente** quell'insieme, dalla cache locale già verificata (`apt install
+  nome=versione` sui `.deb` già scaricati, `dnf install` sui file, `pacman -U` sui file) — mai «l'ultima
+  versione» presa al momento;
+- se la risoluzione esce dai vincoli del piano (il deposito è cambiato fra il piano e l'esecuzione), si
+  torna a PLANNING con un **consenso nuovo**;
+- l'insieme risolto entra nel registro: dice, a posteriori, che cosa è stato installato bit per bit.
+
+#### 6.6.7 I fatti e i controlli: rilevato non è verificato, e UNKNOWN non è PASS
+
+Ogni fatto del profilo ha uno di tre stati:
+
+| stato | esempio |
+|---|---|
+| **RILEVATO** | «PipeWire è installato», «c'è una scheda AMD», «il file PAM esiste», «firewalld c'è» |
+| **VERIFICATO** | «PipeWire risponde», «la scheda ha codificato un fotogramma H.264», «la pila PAM rifiuta un utente inesistente», «la porta è raggiungibile» |
+| **SCONOSCIUTO** | lo strumento non c'è, il permesso manca, il tempo è scaduto |
+
+E ogni controllo della certificazione ha uno di quattro esiti: **PASS**, **FAIL**, **UNKNOWN**,
+**N.A.** (non si applica: il controllo di XFCE su una macchina senza XFCE).
+
+⛔ **La regola generale: UNKNOWN non è mai PASS.** Un controllo che non riesce a dimostrare la sua
+proprietà dà UNKNOWN; un controllo **richiesto** in UNKNOWN porta l'operazione a CONFERMATA_A_CONDIZIONI
+(se la proprietà ha un ripiego dichiarato) o a IN_ANNULLAMENTO (se no). ⛔ E un fatto soltanto
+RILEVATO non basta mai per un PASS. È la lezione del falso verde di GNOME 50 (§5.1) e dei contatori
+che non vedono l'immagine: un verde su informazione incompleta è peggio di un rosso (R32).
+
+#### 6.6.8 Compatibilità: livelli e condizioni
+
+Il livello, **per desktop**:
+
+| livello | vuol dire |
+|---|---|
+| **CERTIFICATA** | la combinazione distribuzione × versione × desktop è nella matrice (§3) e il catalogo registra un giro intero verde su di essa |
+| **COMPATIBILE** | nessuna ragione nota di rifiuto, ma nessuna nostra VM l'ha provata (Rocky 10, Manjaro, Mint 23…) |
+| **NON_SUPPORTATA** | un motivo noto, col suo codice (§6.6.9) |
+
+E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo codice:
+
+| codice | condizione | esempio |
+|---|---|---|
+| `C-DEPOSITO` | serve un deposito di terzi | RPM Fusion, Packman |
+| `C-COMPONENTE` | l'installatore aggiunge un pezzo che il desktop di serie non ha | labwc per XFCE e LXQt; `gnome-session` su Ubuntu |
+| `C-RIPIEGO` | una funzione passa al ripiego | H.264 in software (niente codifica sulla scheda) |
+| `C-LIMITE` | una funzione manca | niente audio, una misura dello schermo non raggiungibile |
+| `C-HARDWARE` | un requisito della scheda | NVIDIA col driver proprietario |
+| `C-AMMINISTRATORE` | serve un passo a mano | aprire la porta sul router |
+
+⭐ Le condizioni **non spariscono dopo il piano**: stanno nel certificato, in `remotix verifica` e in
+`remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
+`remotix verifica` lo vede e lo dice.
+
+Il **catalogo** (le combinazioni e le loro regole) ha una versione, una data di scadenza e la versione
+minima del motore che lo capisce; il certificato registra quale catalogo ha deciso lo stato di quella
+installazione.
+
+#### 6.6.9 Esiti e codici
+
+Ogni messaggio del motore ha:
+- una **gravità**: `INFO` · `AVVISO` · `BLOCCANTE`;
+- una **natura**: `SERVE_AZIONE` (dell'amministratore) · `RIPROVABILE` (es. rete) · `RECUPERABILE` (la
+  ripresa lo sistema) · `SERVE_ANNULLAMENTO` · `FATALE`;
+- un **codice stabile** `RX-<AREA>-<NNN>` (`RX-PAM-001` «la pila d'accesso della distribuzione non si
+  trova», `RX-H264-003` «la scheda non codifica H.264: su Fedora serve RPM Fusion»), con il testo in
+  italiano semplice, il comando che rimedia, e la pagina del manuale.
+
+Lo stesso codice compare nella riga di comando, nel registro, nel certificato, nel manuale e in ogni
+futura interfaccia. ⛔ Un codice non si riusa mai per un altro significato.
+
+#### 6.6.10 La fiducia: due catene separate
+
+| catena | che cosa firma | chi la usa |
+|---|---|---|
+| **A — il motore e il catalogo** | `remotix-install`, `install.sh`, il catalogo | il motore stesso, alla fase 0 TRUST |
+| **B — i pacchetti e i depositi** | i `.deb`/`.rpm`/`.pkg.tar.zst` e i metadati dei depositi | il gestore di pacchetti della distribuzione (R17, R18) |
+
+⛔ **Le due catene hanno chiavi diverse**: la chiave dei depositi non autorizza il motore e viceversa.
+
+Il modello (comune alle due):
+- **radice**: una chiave madre **fuori linea**, mai sulla macchina che costruisce; firma **sottochiavi**
+  con scadenza (un anno), che firmano gli artefatti;
+- **distribuzione della radice**: l'impronta della chiave madre è scritta nel motore rilasciato,
+  pubblicata sul sito e nel manuale; il pacchetto `remotix-archive-keyring` porta la catena B;
+- **rotazione**: una sottochiave nuova firmata dalla madre, pubblicata **prima** che la vecchia scada;
+- **revoca**: un elenco firmato di sottochiavi revocate, che il motore scarica con il catalogo;
+- **catalogo «fresco»**: firmato, non scaduto, con versione minima del motore ≤ la propria;
+- **se la fiducia non si verifica**: ⛔ BLOCCATA (`RX-TRUST-…`), niente viene toccato; si procede solo
+  con un catalogo **fuori linea firmato** dato esplicitamente (§6.6.12), mai saltando il controllo.
+
+La **custodia** della chiave madre e la **cadenza** della rotazione sono la **decisione D11** (T8): oggi
+non esiste ancora un deposito pubblico. La supply chain è comunque già definita qui, perché TRUST e
+ACQUISITION la presuppongono fin dalla T4.
+
+#### 6.6.11 Il certificato si verifica a posteriori
+
+Il certificato è un JSON (più la sua versione leggibile) con: identificativo dell'operazione, stato
+finale (§6.6.2), versione del prodotto, **versione e digest del motore**, **versione e digest del
+catalogo**, **digest del piano** e dell'insieme risolto, l'impronta, ogni controllo col suo esito, le
+condizioni. ⚠ Onestamente: sulla macchina stessa non lo si può firmare in modo che valga contro root.
+«Verificabile» vuol dire: `remotix verifica --certificato <file>` ricalcola i digest dagli oggetti
+conservati in `/var/lib/remotix/operazioni/<id>/` e **rifà i controlli**, dicendo che cosa è ancora
+come allora e che cosa è cambiato.
+
+#### 6.6.12 Senza domande non vuol dire senza consenso; e che cosa vuol dire «senza rete»
+
+- **Senza domande**: il consenso è **dato prima**, come un **piano approvato** (un file, fatto su una
+  macchina di riferimento con la stessa impronta vincolante) o un file di risposte che il motore
+  trasforma in piano e registra. ⛔ Mai un interruttore che salta CONSENT & SAFETY; ogni azione, anche
+  quelle di D5 e D6 (depositi, firewall), è nel piano, nel consenso e nel registro.
+- **Senza rete** (R22): un **pacchetto fuori linea**, preparato su una macchina collegata per una
+  impronta data, che contiene il catalogo firmato, l'insieme risolto (tutti gli artefatti, con i
+  digest e le firme), e i metadati firmati dei depositi. Il motore lo usa come un deposito locale; le
+  firme si verificano come in linea.
+
+#### 6.6.13 Il certificato del server (R16)
+
+`/var/lib/remotix/certificati/0-generato.pem` si genera al primo avvio se manca. L'amministratore
+mette il suo in `/etc/remotix/certificati.d/` (certificato + chiave, stesso nome base); **vince quello
+col nome che viene ultimo in ordine alfabetico**, e quelli dell'amministratore vincono sempre sul
+generato (la regola di Cockpit). `remotix certificato --mostra` dice quale è in uso e da dove viene.
+
+
 ---
 
 ## 7. Il banco: le macchine virtuali delle distribuzioni
@@ -499,17 +782,28 @@ utente con inoltro delle porte, disco come sovrapposizione sull'immagine ufficia
 
 ### 7.2 La macchina «come il cliente»
 
-`vesti` installa il desktop **col gruppo di pacchetti ufficiale** della distribuzione (`task-kde-desktop`,
-`kubuntu-desktop`, `dnf group install kde-desktop-environment`, `pacman -S plasma`, i *pattern* di
-zypper…), poi la macchina si spegne e si fotografa: la foto **«cliente»** è il punto da cui parte ogni
-prova. ⛔ `vesti` non installa niente di REMOTIX: labwc, i gruppi della scheda, i codec sono mestiere
+Gli stati di una macchina di prova, con nomi precisi:
+
+| stato | che cos'è | foto |
+|---|---|---|
+| **BASE** | l'immagine *cloud* ufficiale, dopo cloud-init | il disco nuovo |
+| **DESKTOP** | BASE + il desktop col **gruppo di pacchetti ufficiale** della distribuzione (`task-kde-desktop`, `kubuntu-desktop`, `dnf group install kde-desktop-environment`, `pacman -S plasma`, i *pattern* di zypper…), `graphical.target` | `cliente` (il nome di oggi nel banco) |
+| **ISO** | una macchina installata **dall'ISO ufficiale** con l'installatore automatico della distribuzione (preseed, autoinstall, kickstart, archinstall, agama) e il suo desktop di serie — la più vicina a una macchina vera | `iso` |
+
+⚠ **Una immagine cloud con un desktop sopra non è la macchina di un cliente**: manca il firewall
+acceso, il display manager configurato dall'installatore, a volte SELinux in un altro stato, i
+pacchetti che l'ISO mette di serie. ⇒ Il giro di ogni giorno parte da DESKTOP (veloce da rifare); lo
+stato **ISO** si costruisce per una macchina per famiglia (debian13-gnome, ubuntu2604-gnome,
+fedora44-gnome, arch-kde, tumbleweed-kde, alma10-gnome) e il **giro intero** passa anche da lì. Le
+differenze fra DESKTOP e ISO di una stessa combinazione si annotano: se una prova cambia esito fra le
+due, la verità è quella di ISO. ⛔ `vesti` non installa niente di REMOTIX: labwc, i gruppi della scheda, i codec sono mestiere
 dell'installatore, e la prova deve vederli mancare se lui li dimentica.
 
 ### 7.3 Il copione di una prova
 
 Su ogni macchina, automatico:
 
-1. `torna cliente` · impronte della macchina (`/etc`, `/usr`, gruppi, unità, firewall);
+1. `torna cliente` (DESKTOP) o `torna iso` · impronte della macchina (`/etc`, `/usr`, gruppi, unità, firewall);
 2. **installa** (lo script d'ingresso, e separatamente il gestore di pacchetti);
 3. un **browser vero** entra e vede il desktop (codifica col ripiego software, Full HD: nella VM non
    c'è la scheda vera);
@@ -541,13 +835,13 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | # | requisito | la prova | rosso se |
 |---|---|---|---|
 | R1 | il controllo preliminare non tocca niente | impronte prima/dopo `--verifica` | una differenza |
-| R2 | il controllo trova ogni difetto noto | macchine **guaste apposta**: senza scheda, senza `h264_vaapi`, porta occupata, PAM mancante, SELinux senza modulo, firewall chiuso | un guasto non detto, o detto senza il comando che rimedia |
+| R2 | il controllo trova ogni difetto noto, **col suo codice** | macchine **guaste apposta**: senza scheda, senza `h264_vaapi`, NVIDIA proprietaria, porta occupata, PAM mancante, SELinux senza modulo, firewall chiuso | un guasto non detto, detto senza il **codice stabile** (§6.6.9) o senza il comando che rimedia |
 | R3 | un comando installa | `install.sh`, e il gestore di pacchetti, su ogni famiglia | uscita ≠ 0, o `remotix verifica` rosso dopo |
 | R4 | le dipendenze sono tutte dichiarate | installazione sulla macchina «cliente» senza niente a mano; librerie viste con l'uid di un inquilino | un `not found`, o un pacchetto aggiunto a mano |
 | R5 | idempotenza | installare due volte | la seconda scrive qualcosa |
-| R6 | ⭐ la disinstallazione rimette la macchina com'era | impronte prima dell'installazione e dopo `purge` | una differenza non registrata; ⛔ un utente tolto da un gruppo in cui c'era prima |
+| R6 | ⭐ la disinstallazione **annulla tutto quel che REMOTIX ha fatto** (§6.6.4) — non «rimette la macchina com'era»: una dipendenza aggiornata dal gestore di pacchetti non torna indietro | impronte prima dell'installazione e dopo `purge`, confrontate col registro | una differenza **di origine DIRETTA** rimasta; una differenza INDIRETTA non dichiarata nel certificato; ⛔ un utente tolto da un gruppo in cui c'era **prima** |
 | R7 | ⭐ aggiornare non chiude le finestre | due utenti con un browser vero e un terminale aperto; aggiornamento a N+1 | una finestra sparita, un palco morto, uno schermo nero al riattacco |
-| R8 | aggiornare costa al massimo un riattacco breve | tempo fra l'ultimo fotogramma prima e il primo dopo | oltre la soglia che l'utente sceglierà |
+| R8 | aggiornare costa al massimo un riattacco breve — quattro tempi, misurati a parte: (a) il servizio fermo, (b) il desktop vivo (0 processi del palco persi), (c) la sessione ritrovata dal server nuovo, (d) il browser di nuovo con l'immagine | nella stessa prova di R7 | (b) diverso da zero; (a), (c), (d) oltre le soglie che l'utente sceglierà **dopo la misura di T2** — fino ad allora R8 non è un requisito chiuso |
 | R9 | il server nuovo ritrova **tutti** i palchi | `remotix stato` prima e dopo; ciascuno rientra nel **suo** | una sessione viva ma non ritrovata (il caso xrdp) |
 | R10 | la scheda del browser già aperta sopravvive al cambio di versione | una scheda aperta durante R7, poi ricaricata | un errore non spiegato |
 | R11 | si torna indietro | N → N+1 → N con sessione viva | una sessione persa, o la configurazione non letta |
@@ -557,20 +851,27 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R15 | regge il riavvio | installazione, riavvio vero, connessione | qualcosa che andava prima e non dopo |
 | R16 | il certificato nasce al primo avvio e si sostituisce | cancellato e riavviato ⇒ nuovo; uno dell'amministratore ⇒ usato quello | nessun certificato, o quello dell'amministratore ignorato |
 | R17 | depositi firmati e verificati | un byte alterato; una firma sbagliata | il gestore lo accetta |
-| R18 | la chiave vale solo per REMOTIX | `Signed-By`, niente `trusted.gpg.d` | chiave globale |
+| R18 | la chiave vale solo per REMOTIX, e non tocca i depositi che c'erano | `Signed-By`, niente `trusted.gpg.d`; su una macchina con **altri depositi di terzi già configurati**: le loro chiavi e i loro file invariati, e nessun pacchetto non-REMOTIX installabile dal nostro | chiave globale; un file di un altro deposito cambiato |
 | R19 | SELinux attivo, zero rifiuti | Fedora, Alma, Tumbleweed in *enforcing*: sessione completa, poi `ausearch -m avc` | un rifiuto legato a REMOTIX |
 | R20 | PAM giusto su ogni famiglia | accesso giusto ⇒ sessione logind `user`, `Remote=yes`; sbagliato ⇒ rifiuto; root ⇒ rifiuto | un caso diverso |
 | R21 | installazione senza domande | cloud-init con un file di configurazione depositato | una domanda, un'attesa |
 | R22 | installazione senza rete | sorgente preparata prima, VM senza rete | un accesso alla rete |
-| R23 | costruzione riproducibile | due costruzioni in due contenitori puliti | `diffoscope` trova differenze |
+| R23 | costruzione riproducibile — quattro livelli: binario, pacchetto, metadati del pacchetto, deposito | due costruzioni in due contenitori puliti con lo stesso `SOURCE_DATE_EPOCH` | `diffoscope` trova differenze nel binario o nel pacchetto (T3); nei metadati e nel deposito (T8) |
 | R24 | SBOM completo | lo SBOM nomina ngtcp2/nghttp3 con la versione che sta nel binario | versione assente o diversa |
 | R25 | benvenuto utile | l'uscita ha le cinque voci di §6.5 punto 8 | una voce mancante |
 | R26 | il registro dice tutto | ogni modifica trovata da R6 è in `modifiche.log` | una modifica non registrata |
-| R27 | il desktop nasce su ogni combinazione della matrice | la suite funzionale corta (fase 15) su ogni VM, in Full HD col ripiego software | un rosso che su Debian non c'è |
+| R27a | l'installatore **ha preparato la piattaforma** su ogni combinazione della matrice | la certificazione 7a/7b del motore (§6.0) | un controllo richiesto non PASS |
+| R27b | REMOTIX **funziona** su quella piattaforma | la suite funzionale corta (fase 15) su ogni VM, in Full HD col ripiego software | un rosso che su Debian non c'è — ⚠ è una prova del **prodotto**, non dell'installatore |
 | R28 | ⭐ un'installazione che fallisce a metà si annulla per intero | guasto innestato in ogni passo della fase 6 (rete tagliata, disco pieno, pacchetto rotto) | impronte diverse da prima dell'inizio |
 | R29 | la certificazione non mente | la fase 7 su macchine guaste apposta (scheda che non codifica, PAM rotto, porta chiusa) | un «verde» su una macchina guasta |
-| R30 | ⭐ un'installazione interrotta si riprende | corrente tolta alla VM (kill di QEMU) in ogni passo della fase 6, poi riavvio e motore rilanciato | la macchina resta a metà, o la ripresa non la porta a «completata» o «annullata» |
+| R30 | ⭐ un'installazione interrotta si riprende | QEMU ucciso in **ognuno di questi punti**: prima che il passo sia annotato; annotato ma non cominciato; a transazione del gestore di pacchetti cominciata; a metà di un file di configurazione scritto; a unità abilitata ma registro non aggiornato; durante il ritorno indietro. Poi riavvio e motore rilanciato | la macchina resta a metà; un passo rifatto due volte con effetto doppio; la ripresa non porta a COMMITTED o ROLLED_BACK |
 | R31 | il piano non si applica a una macchina diversa | piano fatto, macchina cambiata (un pacchetto tolto), poi applicazione | il piano applicato lo stesso |
+| R32 | ⭐ UNKNOWN non è mai PASS | ogni controllo della certificazione fatto fallire **nel modo di non sapere** (strumento assente, permesso negato, tempo scaduto) | un PASS, o un certificato COMMITTED senza CONDITIONAL/BLOCKED |
+| R33 | i gruppi che c'erano restano | un utente già in `video` prima dell'installazione; dopo `purge` | l'utente tolto da `video` |
+| R34 | le cinture si annullano al loro stato di prima | un `logind.conf.d` dell'amministratore già presente che tocca gli stessi tasti; installazione e `purge` | il suo file cambiato, o il comportamento di prima non tornato |
+| R35 | lo stato «a condizioni» non sparisce | installazione su Fedora senza RPM Fusion (ripiego software); poi `remotix verifica` e il certificato | la condizione non scritta, o scritta solo nel piano |
+| R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
+| R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 
 ---
 
@@ -582,12 +883,12 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | **T1** | REMOTIX **compila e gira** su ogni distribuzione, installato a mano: le cure di §4.4 e §5.1 | il prodotto portabile; R27 verde, a mano | |
 | **T2** | la **misura** di §5.2: che cosa uccide i desktop quando si ferma il servizio | la causa, e la stima vera | |
 | **T3** | le tre **ricette** dei pacchetti e i contenitori di costruzione per famiglia | `.deb`, `.rpm`, `.pkg.tar.zst`; R4, R13, R14, R23 | |
-| **T4** | il motore, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
+| **T4** | gli oggetti e gli stati di §6.6 (formato, registro, codici), poi il motore con la CLI, fasi 0-4: TRUST, PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY (`remotix verifica`, `install.sh`) | R1, R2, R3, R25 | |
 | **T5** | il motore, fasi 5-8: il registro delle azioni, la certificazione, COMMIT / ROLLBACK; la disinstallazione | R5, R6, R26, R28, R29 | |
 | **T6** | PAM per famiglia, SELinux, firewall | R19, R20 | |
 | **T7** | l'aggiornamento senza chiudere i desktop (secondo T2 e D1) | R7-R12 | |
 | **T8** | depositi firmati, canali, ritorno indietro, SBOM | R11, R17, R18, R24 | |
-| **T9** | senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
+| **T9** | la **TUI** e la **GUI** sul motore finito (R36, R37); senza domande e senza rete; la codifica sulla scheda vera per famiglia (scatole) | R21, R22 | |
 | **T10** | il giro intero sulle 27 macchine, e la chiusura | tutti verdi | |
 
 Ordine delle distribuzioni dentro ogni tappa: prima quelle che rendono di più con meno (**Debian 13,
@@ -601,13 +902,13 @@ banchi **non fermano** le tappe (*«ci stiamo avvitando in inezie tecniche blocc
 
 ## 10. Le decisioni che spettano all'utente
 
-Una per volta, ognuna nel momento in cui serve (la tappa è indicata).
+Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 aspetta una sua scelta: le soglie dei quattro tempi, **dopo** la misura di T2.
 
 | | la domanda | quando | la proposta |
 |---|---|---|---|
 | **D1** | Le sessioni **aspettano** il server nuovo per qualche secondo invece di morire con lui? Cambia una scelta scritta (*«nessun orfano attaccato al monitor virtuale di un utente»*): la garanzia resta, con un termine invece che subito | T7, dopo la misura di T2 | sì, con un termine di 30-60 s |
 | **D2** | ngtcp2 e nghttp3 **dentro** il binario, con gli aggiornamenti di sicurezza a carico nostro? | T3 | sì: quasi nessuna distribuzione ha la 1.25 |
-| **D3** | Il **blocco dei tentativi** della distribuzione (`pam_faillock`: 3 errori ⇒ conto chiuso 10 minuti, anche davanti alla macchina) si tiene, o REMOTIX usa una pila sua senza, e si affida al proprio ban dell'indirizzo? | T6 | pila nostra senza faillock: da remoto chiunque potrebbe chiudere fuori il proprietario |
+| **D3** | La **politica contro i tentativi**: che cosa si vuole — quanti errori, per conto e per indirizzo, blocco o rallentamento, vale anche davanti alla macchina o solo da remoto, chi sblocca e come, che cosa si registra. Da lì si decide se la pila di REMOTIX tiene il `pam_faillock` della distribuzione | T6, con una proposta scritta di minacce e difese | da remoto un blocco per conto permette a chiunque di chiudere fuori il proprietario; proposta: rallentamento per conto + ban per indirizzo in REMOTIX, niente blocco del conto, tutto nel registro |
 | **D4** | Le tre cinture (la macchina non si spegne, non si sospende, i tasti non spengono) sulle macchine **degli altri**: sempre, o scelta dell'amministratore all'installazione? | T3 | predefinite, dichiarate nel benvenuto, disattivabili |
 | **D5** | RPM Fusion (Fedora) e Packman (openSUSE): l'installatore li **aggiunge chiedendo il consenso**, o si limita a **dire** il comando? | T4 | chiede il consenso, mai in silenzio; senza consenso REMOTIX si installa e il benvenuto dice che la codifica sulla scheda manca |
 | **D6** | Il firewall: l'installatore **apre** la porta 7447, o la definisce e dice il comando? | T4 | la apre chiedendo, come D5 |
@@ -615,6 +916,8 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata).
 | **D8** | Su Ubuntu, chi si collega vede il GNOME **di Ubuntu** (dock, colori) o quello **vanilla** di Debian? | T1 | quello di Ubuntu: è quello che l'utente ha davanti al monitor |
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato |
+| **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali |
+| **D12** | Con che cosa si fanno **TUI e GUI** (requisito irrinunciabile): per la GUI GTK 4 o Qt 6 (una sola, che si vede bene su tutti e quattro i desktop), per la TUI una libreria a schermo intero | T4, prima di scrivere le interfacce | GUI in **Qt 6** (è di casa su KDE e LXQt, e si integra bene su GNOME e XFCE); TUI con **newt** (è la libreria degli installatori di Debian e Fedora, già presente quasi ovunque) |
 
 ---
 

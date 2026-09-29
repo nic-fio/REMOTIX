@@ -5888,6 +5888,12 @@ che ritieni deboli»*): fase 0 TRUST, tre esiti di compatibilità per desktop, i
 con «fai / verifica / annulla» per ogni azione, niente si installa prima che tutto sia scaricato,
 accensione fra verifica statica e dal vivo, ripresa di un'operazione interrotta. ⇒ `fasi/17-l-installatore.md` §6.0.
 
+### 10.5 ✅ TUI e GUI sono irrinunciabili
+
+Parola dell'utente: *«su TUI e GUI dico che è un requisito irrinunciabile»*. ⇒ Tre interfacce (CLI, TUI,
+GUI) su un solo motore, nessuna logica d'installazione nelle interfacce, la GUI come l'utente con
+polkit. Lo strumento è la decisione D12. `fasi/17-l-installatore.md` §6.6.1.
+
 ---
 
 ## Come si tiene questo documento
