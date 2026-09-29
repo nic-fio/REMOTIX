@@ -43,7 +43,7 @@
 
 pkgname=remotix
 pkgver=0.17.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Il desktop Linux nel browser (server: GNOME, KDE, XFCE, LXQt su Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
@@ -73,6 +73,19 @@ depends=(
 	#    ⛔ Il DESKTOP no: senza desktop lo installa il motore (§10.7).
 	labwc
 	wlr-randr
+	# ⭐ L'AUDIO: il sink e la cattura del suono stanno nel demone PipeWire
+	#    dell'utente, e il gruppo xfce4 di Arch NON lo porta.  `[M]` 29 set,
+	#    arch-xfce col pacchetto -1: «contesto PipeWire non creato … questa
+	#    sessione resta SENZA SUONO».  pipewire-pulse perche' i programmi
+	#    (Firefox, i lettori) suonano con l'API di PulseAudio: senza, il sink
+	#    c'e' e resta muto.  (Plasma li porta gia' tutti e tre.)
+	#    ⚠ pipewire-pulse e' in conflitto con `pulseaudio`: su una macchina che
+	#    usa ancora PulseAudio pacman chiede di toglierlo, e con --noconfirm si
+	#    ferma.  ⇒ Il controllo preliminare del motore (T4) lo deve dire e
+	#    chiedere il consenso: cambia il server audio della macchina.
+	pipewire
+	wireplumber
+	pipewire-pulse
 )
 makedepends=(cmake ninja pkgconf)            # wayland-scanner: da `wayland`, gia' in depends
 backup=(
