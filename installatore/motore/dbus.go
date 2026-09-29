@@ -295,7 +295,9 @@ func (s *sessioniDBus) Grafici(utente string) (int, error) {
 	return len(ProcessiGrafici(s.a, uid)), nil
 }
 
-func (s *sessioniDBus) ChiudiGrafica(utente string) ([]string, error) { return ChiudiGraficaUtente(s.a, utente) }
+func (s *sessioniDBus) ChiudiGrafica(utente string) ([]string, error) {
+	return ChiudiGraficaUtente(s.a, utente)
+}
 
 type sessioneLogind struct {
 	ID     string

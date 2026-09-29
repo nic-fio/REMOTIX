@@ -130,7 +130,7 @@ func (m *Motore) PulisciStoria(purge bool) error {
 			return err
 		}
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
-		os.Remove(filepath.Dir(m.Cartella))                                  // solo se vuota
+		os.Remove(filepath.Dir(m.Cartella))                                // solo se vuota
 		return nil
 	}
 	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))

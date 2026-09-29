@@ -334,11 +334,17 @@ func (g *gestoreDnf) Installa(cache string, file, nomi []string) error {
 	for _, v := range voci {
 		arg = append(arg, strings.TrimPrefix(v, strings.TrimSuffix(g.a.P("/"), "/")))
 	}
-	arg = append(arg, file...)
-	if len(arg) == 0 { // tutto già presente
+	// prima le dipendenze dei depositi, con la loro firma verificata; poi il file del piano, che
+	// il motore ha verificato col suo sha256 (senza firma rpm finché l'archivio firmato non c'è, T8)
+	if len(arg) > 0 {
+		if _, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "-C", "--setopt=localpkg_gpgcheck=1"}, arg...)...); err != nil {
+			return err
+		}
+	}
+	if len(file) == 0 {
 		return nil
 	}
-	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "-C", "--setopt=localpkg_gpgcheck=1"}, arg...)...)
+	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "-C", "--setopt=localpkg_gpgcheck=0"}, file...)...)
 	return err
 }
 
@@ -407,6 +413,17 @@ type gestoreZypper struct {
 
 func (g *gestoreZypper) Da(d string) Gestore { return &gestoreZypper{g.a, d} }
 
+// fileArg: il pacchetto del piano è verificato dal motore (sha256 del piano approvato, §6.6.6) e
+// finché l'archivio firmato non c'è (T8) non ha una firma rpm: zypper lo rifiuterebbe
+// ([M] 30 set, tumbleweed-kde: «Signature verification failed [6-File is unsigned]»).
+// ⚠ Vale SOLO per i file del piano; i pacchetti dei depositi restano verificati da zypper.
+func (g *gestoreZypper) fileArg(file []string) []string {
+	if len(file) == 0 {
+		return nil
+	}
+	return []string{"--allow-unsigned-rpm"}
+}
+
 func (g *gestoreZypper) daArg() []string {
 	if g.da == "" {
 		return nil
@@ -421,11 +438,11 @@ func (g *gestoreZypper) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
-	arg := append(append([]string{"--non-interactive", "install", "--download-only"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)
+	arg := append(append([]string{"--non-interactive", "install", "--download-only"}, g.daArg()...), append(append(g.fileArg(file), file...), nomi...)...)
 	if _, err := esegui(g.a, tempoGestore, "zypper", arg...); err != nil {
 		return nil, err
 	}
-	out, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)...)
+	out, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, g.daArg()...), append(append(g.fileArg(file), file...), nomi...)...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -447,7 +464,7 @@ func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 }
 
 func (g *gestoreZypper) Installa(cache string, file, nomi []string) error {
-	_, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--no-refresh", "install"}, g.daArg()...), append(append([]string{}, file...), nomi...)...)...)
+	_, err := esegui(g.a, tempoGestore, "zypper", append(append([]string{"--non-interactive", "--no-refresh", "install"}, g.daArg()...), append(append(g.fileArg(file), file...), nomi...)...)...)
 	return err
 }
 
@@ -502,30 +519,57 @@ func (g *gestorePacman) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestorePacman) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
-	var r []Artefatto
+	// la transazione intera (i file del piano e i pacchetti dei depositi, con le dipendenze):
+	// pacman -U/-S --print dice che cosa installerebbe, senza toccare niente
+	var righe []string
+	if len(file) > 0 {
+		out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-U", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, file...)...)
+		if err != nil {
+			return nil, err
+		}
+		righe = append(righe, strings.Split(out, "\n")...)
+	}
 	if len(nomi) > 0 {
 		out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-S", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, nomi...)...)
 		if err != nil {
 			return nil, err
 		}
-		for _, riga := range strings.Split(out, "\n") {
-			c := strings.Fields(riga)
-			if len(c) != 5 {
-				continue
-			}
-			f := filepath.Join("/var/cache/pacman/pkg", filepath.Base(c[4]))
-			r = append(r, Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: c[3], File: f, Esito: "nuovo"})
+		righe = append(righe, strings.Split(out, "\n")...)
+	}
+	var r []Artefatto
+	var daScaricare []string
+	visti := map[string]bool{}
+	for _, riga := range righe {
+		c := strings.Fields(riga)
+		if len(c) != 5 || visti[c[0]] {
+			continue
 		}
-		if _, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-Sw", "--needed", "--noconfirm"}, nomi...)...); err != nil {
+		visti[c[0]] = true
+		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: c[3], Esito: "nuovo"}
+		if strings.HasPrefix(c[4], "file://") || strings.HasPrefix(c[4], "/") {
+			a.Origine, a.File = "file", strings.TrimPrefix(c[4], "file://")
+		} else {
+			a.File = filepath.Join("/var/cache/pacman/pkg", filepath.Base(c[4]))
+			daScaricare = append(daScaricare, c[0])
+		}
+		r = append(r, a)
+	}
+	if len(daScaricare) > 0 {
+		if _, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-Sw", "--noconfirm"}, daScaricare...)...); err != nil {
 			return nil, err
 		}
 	}
-	for _, f := range file {
-		r = append(r, Artefatto{Nome: filepath.Base(f), Origine: "file", File: f, Esito: "nuovo"})
+	prima, err := g.Versioni(nomiDi(r))
+	if err != nil {
+		return nil, err
 	}
 	for i := range r {
 		r[i].Sha256, _ = Sha256File(g.a.P(r[i].File))
+		if p := prima[r[i].Nome]; p != "" {
+			r[i].Esito, r[i].Prima = "aggiornato", p
+		}
 	}
+	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
 	return r, nil
 }
 

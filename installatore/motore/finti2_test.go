@@ -225,7 +225,9 @@ func (s *sessioniFinte) Elenco() ([]Sessione, error) {
 func (s *sessioniFinte) Segnale(id string, sg int32) error { return s.Termina(id) }
 
 // il desktop nel gestore d'utente, finto: un numero di processi per persona
-func (s *sessioniFinte) grafica() string { return filepath.Join(s.radice, "var/lib/finto-grafica.json") }
+func (s *sessioniFinte) grafica() string {
+	return filepath.Join(s.radice, "var/lib/finto-grafica.json")
+}
 func (s *sessioniFinte) Grafici(u string) (int, error) {
 	m := map[string]int{}
 	leggiJSONFinto(s.grafica(), &m)

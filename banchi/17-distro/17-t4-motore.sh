@@ -122,7 +122,7 @@ sleep 3
 vm "for s in \$(loginctl list-sessions --no-legend | awk '{print \$1}'); do echo \"\$s \$(loginctl show-session \$s -p Service -p Name -p State --value | tr '\n' ' ')\"; done
 a=\$(sudo tail -1 ~prova/orologio.txt); sleep 3; b=\$(sudo tail -1 ~prova/orologio.txt); echo orologio ssh: \$a → \$b
 echo processi di prova: \$(pgrep -u prova | wc -l); echo gnome-shell/kwin/labwc/plasmashell di prova: \$(pgrep -u prova -c -x 'gnome-shell|kwin_wayland|labwc|plasmashell|lxqt-panel|xfce4-panel')
-echo processi grafici nel gestore d utente: \$(for p in \$(pgrep -u prova); do sudo grep -qa user@ /proc/\$p/cgroup 2>/dev/null && sudo tr '\\0' '\\n' < /proc/\$p/environ 2>/dev/null | grep -qE '^(WAYLAND_)?DISPLAY=' && echo \$p; done | wc -l)
+sudo bash -c 'n=0; for p in \$(pgrep -u prova); do grep -q user@ /proc/\$p/cgroup 2>/dev/null && tr \"\\\\0\" \"\\\\n\" < /proc/\$p/environ 2>/dev/null | grep -qE \"^(WAYLAND_)?DISPLAY=\" && n=\$((n+1)); done; echo processi grafici nel gestore d utente: \$n'
 ps -o pid,cgroup:70,comm -u prova
 echo servizio: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remotix 2>&1)
 (dpkg -l remotix 2>/dev/null | tail -1 || true; rpm -q remotix 2>/dev/null; pacman -Q remotix 2>/dev/null); id prova
