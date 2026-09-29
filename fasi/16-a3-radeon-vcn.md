@@ -90,10 +90,12 @@ nessun gruppo. (Sulla Intel il VPP è reale: VEBOX, conversione ~8,6 ms separata
 | il VCN che legge il buffer RGB lineare (EFC) | **esperimento 2** (binario `39e3ed86`): conversione doppia sul primo fotogramma ⇒ per la regola di `postproc.c` Mesa spegne l'EFC per sempre; ogni fotogramma passa da una NV12 vera | conversione vera 0,75 ms mediana; **gruppi identici**: 95 e 106 lenti per gradino, p99 31,1–31,3 ms (`a3-senza-efc-kde`) |
 | riciclo dei buffer del compositore, cadenza di cattura | conti dei buffer e del produttore | 4 buffer su KDE, 6 su GNOME, il gruppo è sempre 5; il produttore non è in ritardo (i fotogrammi si accodano durante il gruppo e si smaltiscono a 31 ms) |
 | chiavi, dimensione, contenuto | righe per fotogramma | nessuna chiave nei gruppi; 300 B e 480 KB costano uguale |
+| un difetto di Mesa 25.0.7 già corretto più avanti | **gradino 1, 29 set 2026**: nella scatola KDE Mesa **26.1.6** (`trixie-backports`, `26.1.6-1~bpo13+1`: `mesa-va-drivers`, `mesa-libgallium`, `libgl1-mesa-dri`, `libegl-mesa0`, `libglx-mesa0`, `libgbm1`), `vainfo` conferma «Mesa Gallium driver 26.1.6»; binario di prodotto `4fb3287d`, stessa scena di 6.1, due gradini da 6 min (`a3-mesa26-kde`) | **100 e 102 lenti** per gradino (su 5209 e 5168 codifiche), tutti fra 30,4 e 39,0 ms, mediana 31,0 ms; raffiche: 18 da 5, una da 4, 3, 2, 1 ⇒ **identico a 25.0.7**: Mesa più nuova non cura |
 
 ⇒ **Resta**: con `async_depth=1` `avcodec_send_frame` include la sottomissione al VCN e l'attesa del
 risultato; il tempo in più è lì dentro, per un contesto di codifica alla volta, per 5 fotogrammi.
-Candidati non ancora provati: **stato interno del contesto VCN / firmware** (5 = un numero di slot?
+Non è un difetto già chiuso in Mesa: con la 26.1.6 (settembre 2026) il fenomeno è identico, quindi
+va segnalato anche sulla versione corrente. Candidati non ancora provati: **stato interno del contesto VCN / firmware** (5 = un numero di slot?
 una finestra del controllo di frequenza per istanza?), **posizione della superficie** (buffer lineare
 da ~30 MB migrato fra GTT e VRAM), **superfici non tiled**.
 
@@ -120,7 +122,7 @@ un contesto contro due in parallelo; superficie lineare contro tiled; `async_dep
 Se si riproduce lì, il rapporto a Mesa diventa indipendente da REMOTIX.
 
 ## 7. Le evidenze
-- `misure/fase16/a3-misura-kde/`, `a3-senza-efc-kde/`, `amd-freq-auto/`, `amd-freq-alta/`,
+- `misure/fase16/a3-misura-kde/`, `a3-senza-efc-kde/`, `a3-mesa26-kde/`, `amd-freq-auto/`, `amd-freq-alta/`,
   `amd-b-4k-kde/`, `amd-b-4k-gnome/`, `intel-b-4k-kde/` — giudizi e diari (nel deposito);
 - le righe per fotogramma (`server.log` di ogni livello) nell'archivio dei grezzi;
 - il codice degli esperimenti: ramo `a3-esperimenti`, commit `18b6437`;

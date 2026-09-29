@@ -407,6 +407,13 @@ ogni 12–40 s. Resta da provare: le superfici con il tiling della scheda (invec
 codifica in un contesto nuovo; e, se nessuna delle due, è un comportamento del driver/firmware da
 segnalare a Mesa con la scena riprodotta. Il 4K della Radeon nel riepilogo resta con questa riserva.
 
+`[M]` **Gradino 1 (29 set 2026): Mesa 26.1.6 non cura.** Scatola KDE con Mesa 26.1.6 da
+`trixie-backports`, stesso binario `4fb3287d`, KDE 4K Radeon 1 utente, due gradini da 6 min
+(`a3-mesa26-kde`): **100 e 102** codifiche > 20 ms (con 25.0.7: 100 e 105), a raffiche di 5, mediana
+31,0 ms. ⇒ Il manuale NON può dire «Radeon: serve Mesa ≥ X»; il prossimo passo per chi vuole aiutare
+il driver è la riproduzione minima senza REMOTIX (dossier §6.2). La scatola è tornata a Mesa 25.0.7
+(ricostruita dall'immagine).
+
 ✅ **Decisione dell'utente, 29 set 2026**: *«è fuori dal nostro ambito»* — A3 **non si aggira** in
 REMOTIX; si documenta nei minimi particolari per poterlo portare agli sviluppatori del driver:
 **`fasi/16-a3-radeon-vcn.md`** (macchina, catena, misure, ipotesi escluse, riproduzione, bozza del

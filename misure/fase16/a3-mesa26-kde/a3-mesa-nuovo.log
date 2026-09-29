@@ -1,0 +1,40 @@
+4fb3287d81bd6bb96be6b09551f958fd  prodotto/remotix
+PACCHETTI: libegl-mesa0 libgbm1 libgl1-mesa-dri libglx-mesa0 mesa-libgallium mesa-va-drivers
+apt=0
+libgl1-mesa-dri 26.1.6-1~bpo13+1
+mesa-libgallium 26.1.6-1~bpo13+1
+mesa-va-drivers 26.1.6-1~bpo13+1
+vainfo: Driver version: Mesa Gallium driver 26.1.6-1~bpo13+1 for AMD Radeon RX 6800 (radeonsi, navi21, ACO, DRM 3.64, 7.0)
+[09:58:31] ⭐ SALITA a3-mesa26-kde · kde · 4k (3840x2160) · gradini 1 · 6.0 min (ultimo 6.0) · tetto 2
+[09:58:31]    scheda della scatola: amd · browser-cliente sulla Intel
+[09:58:31]    commit del prodotto: 16dc4e2
+[09:58:31]    kernel 7.0 · Intel UHD 770 (i5-13500T) [i915] + AMD Radeon RX 6800 [amdgpu] · binario 4fb3287d · pagina fb9a18f3 · banchi cc58e96+modifiche
+[09:58:31] ⚠ --non-rifare: la scatola NON si rifa' (solo prove dell'impianto)
+[09:58:31]    scatola: binario 4fb3287d · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 26.1.6-1~bpo13+1 for AMD Radeon RX 6800 (radeonsi, navi21, ACO, DRM 3.64, 7.0)
+[09:58:31] ══ livello-01: 1 utenti, 6.0 min (gradino) ══
+[09:58:32]    + utente 01 (pid 404837, wayland-5, seme 1601, porte 9910)
+[09:58:45]      utente 01 nato in 13.0 s
+[09:58:45]    tutti dentro (14 s dopo l'inizio del livello): lavoro fino alle 10:04:45
+[10:02:15]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[10:02:16]    foto scritte: 1/1 in 1 s
+[10:02:45]    controllo corto: firefox su wayland-4
+[10:03:56]    controllo corto: PASS (codice 0)
+[10:04:47]    ▶ livello-01: DEGRADED (significativo) — 1 GREEN · 1 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (1 su 1)): non si sale
+[10:04:47] ⚠ 1 utenti: DEGRADED — si RIPETE nelle stesse condizioni (§14), da scatola pulita
+[10:04:47]    fermo 1 attori (SIGTERM: sgomberano da se')
+[10:04:50] ⚠ --non-rifare: la scatola NON si rifa' (solo prove dell'impianto)
+[10:04:50]    scatola: binario 4fb3287d · pagina fb9a18f3 · --tetto-sessioni 17 -- --journal ; · dri card0,card1,renderD128,renderD129 · VA Driver version: Mesa Gallium driver 26.1.6-1~bpo13+1 for AMD Radeon RX 6800 (radeonsi, navi21, ACO, DRM 3.64, 7.0)
+[10:04:50] ══ livello-01-ripetizione: 1 utenti, 6.0 min (ripetizione) ══
+[10:04:50]    + utente 01 (pid 414430, wayland-5, seme 1601, porte 9910)
+[10:05:03]      utente 01 nato in 13.0 s
+[10:05:03]    tutti dentro (13 s dopo l'inizio del livello): lavoro fino alle 10:11:03
+[10:08:33]    SIGUSR1 a 1 attori (foto piena), 30 s prima della finestra
+[10:08:34]    foto scritte: 1/1 in 1 s
+[10:09:03]    controllo corto: chrome su wayland-4
+[10:10:19]    controllo corto: PASS (codice 0)
+[10:11:05]    ▶ livello-01-ripetizione: DEGRADED (significativo) — 1 GREEN · 1 DEGRADED · 0 FAIL · ⛔ DEGRADED SIGNIFICATIVO (piu' di un quarto degli attori DEGRADED (1 su 1)): non si sale
+[10:11:05] ⛔ confermato: 1 utenti DEGRADED due volte
+[10:11:05] ⏹ FINE: ultimo livello buono 0 · rottura 1
+[10:11:05]    fermo 1 attori (SIGTERM: sgomberano da se')
+[10:11:08]    compositori spenti (2)
+[10:11:08] fine · [{"livello": 1, "nome": "livello-01", "tipo": "gradino", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/a3-mesa26-kde/livello-01"}, {"livello": 1, "nome": "livello-01-ripetizione", "tipo": "ripetizione", "classe": "DEGRADED", "significativo": true, "dir": "/media/REMOTIX/misure/fase16/a3-mesa26-kde/livello-01-ripetizione"}]
