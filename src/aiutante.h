@@ -114,7 +114,8 @@ int aiutante_descrittore(const aiutante *a);
  * deve trattarlo come un «no» immediato.
  * `pratica` esce con il numero con cui la risposta si riconoscera'. */
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
-                     uint64_t ora_ms, uint64_t *pratica);
+                     const char *provenienza, uint64_t ora_ms,
+                     uint64_t *pratica);
 
 /* ⛔⭐ E LA CONSEGNA PORTA ANCHE IL NOME DELL'UTENTE — 12 agosto 2026,
  *     `DECISIONI.md` §1.10-bis.
@@ -128,8 +129,10 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
  * ⚠ Il nome vive nella tabella delle pratiche in volo accanto alla scadenza:
  *   ⛔ **la parola d'ordine no**, e non e' un dettaglio — §4.4 vuole che sia
  *   azzerata appena PAM ha risposto, e qui non ne resta nemmeno una copia. */
+/* ⭐ FASE 17 T6: e l'INDIRIZZO del client (nudo, come `PAM_RHOST` di sshd;
+ *    "" se non si sa), che al «si'» va alla sessione PAM del figlio. */
 typedef void (*AiutanteVerdetto)(void *ctx, uint64_t pratica, bool ammesso,
-                                 const char *utente);
+                                 const char *utente, const char *rhost);
 
 /* Legge le risposte pronte e le consegna una per una.  Da chiamare quando il
  * descrittore e' leggibile.

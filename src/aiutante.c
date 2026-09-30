@@ -24,7 +24,9 @@
  *    la stessa riga sta gia' in `webtransport.c`.  ⚠ E' l'UNICA funzione che
  *    tocca `libpam` in tutto il prodotto, e da oggi la chiama **solo il
  *    nipote**: nel processo che serve non viene piu' eseguita mai. */
-bool rcp_autentica(const char *utente, const char *parola);
+bool rcp_autentica_da(const char *utente, const char *parola,
+                      const char *rhost);
+bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
 
 /* ⛔⛔ QUESTO NUMERO NON E' IL TETTO DELLE SESSIONI, E NON DEVE SEGUIRLO — 25
  *      agosto 2026, e la riga qui sopra diceva il contrario.
@@ -72,6 +74,9 @@ struct richiesta {
 	uint64_t pratica;
 	char utente[257];
 	char parola[1025];
+	/* ⭐ FASE 17 T6: l'indirizzo del client, nudo, per `PAM_RHOST` (come
+	 *    sshd).  Vuoto se non si sa: allora PAM non lo riceve. */
+	char rhost[64];
 };
 
 struct risposta {
@@ -86,6 +91,8 @@ struct volo {
 	 *    generare il figlio quando la risposta e' «si'» (`figlio.h`), questa e'
 	 *    gia' azzerata da §4.4 prima che questa riga esista. */
 	char utente[257];
+	/* ⭐ E l'indirizzo, che al «si'» va alla sessione PAM del figlio. */
+	char rhost[64];
 };
 
 struct aiutante {
@@ -108,7 +115,7 @@ static void nipote(int fd, const struct richiesta *r)
 	 *    quando il caso per cui esiste e' gia' successo. */
 	alarm(NIPOTE_ALLARME_S);
 
-	ok = rcp_autentica(r->utente, r->parola);
+	ok = rcp_autentica_da(r->utente, r->parola, r->rhost);
 
 	out.pratica = r->pratica;
 	/* ⛔ Il solo posto del programma in cui nasce un «si'», ed e' scritto in
@@ -166,6 +173,7 @@ static void smistatore(int fd)
 		 *   a PAM byte che non erano nel messaggio. */
 		r.utente[sizeof r.utente - 1] = 0;
 		r.parola[sizeof r.parola - 1] = 0;
+		r.rhost[sizeof r.rhost - 1] = 0;
 
 		pid_t p = fork();
 		if (p == 0)
@@ -275,7 +283,8 @@ static void volo_togli(aiutante *a, int i)
 }
 
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
-                     uint64_t ora_ms, uint64_t *pratica)
+                     const char *provenienza, uint64_t ora_ms,
+                     uint64_t *pratica)
 {
 	struct richiesta r;
 	ssize_t scritti;
@@ -301,6 +310,7 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	 *    muro — quello che regge anche se il primo cambia. */
 	snprintf(r.utente, sizeof r.utente, "%s", utente);
 	snprintf(r.parola, sizeof r.parola, "%s", parola);
+	(void)rcp_rhost_da_provenienza(provenienza, r.rhost, sizeof r.rhost);
 
 	scritti = send(a->fd, &r, sizeof r, MSG_NOSIGNAL);
 	/* ⛔ §4.4: la parola si azzera appena servita.  Questa e' la copia del
@@ -323,6 +333,8 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	a->volo[a->nvolo].scade = ora_ms + SCADENZA_MS;
 	snprintf(a->volo[a->nvolo].utente, sizeof a->volo[a->nvolo].utente, "%s",
 	         utente);
+	(void)rcp_rhost_da_provenienza(provenienza, a->volo[a->nvolo].rhost,
+	                               sizeof a->volo[a->nvolo].rhost);
 	a->nvolo++;
 	*pratica = mia;
 	a->prossima_pratica++;
@@ -334,7 +346,7 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
  * stessa — si scarta e si scrive: e' l'unico modo per cui «ho ricevuto due
  * verdetti» non diventi «vince l'ultimo». */
 static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
-                         size_t cap)
+                         size_t cap, char *rhost, size_t rcap)
 {
 	for (int i = 0; i < a->nvolo; i++) {
 		if (a->volo[i].pratica == pratica) {
@@ -344,12 +356,16 @@ static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
 			 *    e' il difetto peggiore possibile. */
 			if (utente && cap)
 				snprintf(utente, cap, "%s", a->volo[i].utente);
+			if (rhost && rcap)
+				snprintf(rhost, rcap, "%s", a->volo[i].rhost);
 			volo_togli(a, i);
 			return true;
 		}
 	}
 	if (utente && cap)
 		utente[0] = 0;
+	if (rhost && rcap)
+		rhost[0] = 0;
 	return false;
 }
 
@@ -395,7 +411,7 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
 		snprintf(chi, sizeof chi, "%s", a->volo[0].utente);
 		volo_togli(a, 0);
 		if (consegna)
-			consegna(ctx, p, false, chi);
+			consegna(ctx, p, false, chi, "");
 	}
 }
 
@@ -406,6 +422,7 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 	for (;;) {
 		struct risposta ri;
 		char chi[257];
+		char da[64];
 		ssize_t letti = recv(a->fd, &ri, sizeof ri, 0);
 		if (letti == 0) {
 			muore(a, "il socket si e' chiuso dal suo lato", consegna, ctx);
@@ -429,7 +446,7 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 			              letti, sizeof ri);
 			continue;
 		}
-		if (!volo_consuma(a, ri.pratica, chi, sizeof chi)) {
+		if (!volo_consuma(a, ri.pratica, chi, sizeof chi, da, sizeof da)) {
 			registro_dice(REG_RCP,
 			              "⛔ risposta per la pratica %llu, che non e' in volo "
 			              "(gia' scaduta, o gia' risposta): SCARTATA",
@@ -440,7 +457,7 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 		 *     un confronto con `1`, non per un `!= 0`: un byte sporco, un
 		 *     residuo di memoria o un 255 sono un NO. */
 		if (consegna)
-			consegna(ctx, ri.pratica, ri.esito == 1u, chi);
+			consegna(ctx, ri.pratica, ri.esito == 1u, chi, da);
 	}
 }
 
@@ -463,7 +480,7 @@ void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
 			              "banna nessuno",
 			              (unsigned long long)p, SCADENZA_MS);
 			if (consegna)
-				consegna(ctx, p, false, chi);
+				consegna(ctx, p, false, chi, "");
 		} else {
 			i++;
 		}
