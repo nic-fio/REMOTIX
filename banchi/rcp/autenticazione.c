@@ -46,6 +46,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 /* ⛔ IL SERVIZIO PAM E' `remotix` — `SPECIFICHE.md` §4.2, prima riga:
  *    «PAM locale, servizio `remotix`, con il ban dell'indirizzo dopo tre
@@ -67,6 +68,9 @@
  *   dice che la parola e' sbagliata» da «PAM non ha potuto giudicare», e chi
  *   accende il server controlla il file all'avvio (`main.c`). */
 #define SERVIZIO_PAM "remotix"
+
+bool rcp_autentica_da(const char *utente, const char *parola,
+                      const char *rhost);
 
 struct risposta {
 	const char *parola;
@@ -167,7 +171,51 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
 	fflush(stderr);
 }
 
+/* ⭐ FASE 17 T6 — L'INDIRIZZO DEL CLIENT, COME LO DA' sshd (DECISIONI §10.18).
+ *
+ * `provenienza` e' la forma di `trasporto.c`, `[indirizzo]:porta` (le quadre
+ * anche per IPv4).  A PAM va l'indirizzo NUDO, come `PAM_RHOST` di sshd con
+ * `UseDNS no` (il suo predefinito): niente quadre, niente porta, e un IPv4
+ * mappato in IPv6 (`::ffff:1.2.3.4`, il socket a due pile) torna `1.2.3.4`,
+ * come fa `ipv64_normalise_mapped()` di sshd.
+ * ⇒ `pam_faillock` segna l'indirizzo invece di «SVC remotix», `pam_unix`
+ *   scrive `rhost=…` nel giornale, `pam_access` ha l'host, e logind segna la
+ *   sessione con `RemoteHost`.
+ * Restituisce false (e `fuori` vuoto) se la forma non e' quella attesa: si
+ * preferisce nessun `PAM_RHOST` a uno inventato. */
+bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap)
+{
+	const char *a, *c;
+	size_t n;
+
+	if (!fuori || cap == 0)
+		return false;
+	fuori[0] = 0;
+	if (!provenienza || provenienza[0] != '[')
+		return false;
+	a = provenienza + 1;
+	c = strchr(a, ']');
+	if (!c || c == a)
+		return false;
+	n = (size_t)(c - a);
+	if (n > 7 && strncasecmp(a, "::ffff:", 7) == 0 && memchr(a + 7, '.', n - 7)) {
+		a += 7;
+		n -= 7;
+	}
+	if (n >= cap)
+		return false;
+	memcpy(fuori, a, n);
+	fuori[n] = 0;
+	return true;
+}
+
 bool rcp_autentica(const char *utente, const char *parola)
+{
+	return rcp_autentica_da(utente, parola, NULL);
+}
+
+bool rcp_autentica_da(const char *utente, const char *parola,
+                      const char *rhost)
 {
 	if (!utente || !*utente || !parola)
 		return false;
@@ -186,6 +234,14 @@ bool rcp_autentica(const char *utente, const char *parola)
 		fflush(stderr);
 		return false;
 	}
+
+	/* ⭐ Come sshd (`auth-pam.c`, `sshpam_init`): `PAM_RHOST` = l'indirizzo
+	 *    del client e `PAM_TTY` = il nome del servizio («ssh» per lui) — i
+	 *    moduli come `pam_time` vogliono un tty, e prima della sessione non
+	 *    ce n'e' uno vero.  `PAM_RUSER` sshd non lo imposta, e nemmeno noi. */
+	if (rhost && rhost[0])
+		pam_set_item(pam, PAM_RHOST, rhost);
+	pam_set_item(pam, PAM_TTY, SERVIZIO_PAM);
 
 	bool ammesso = false;
 	rv = pam_authenticate(pam, 0);

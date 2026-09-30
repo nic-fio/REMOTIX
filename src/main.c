@@ -677,7 +677,7 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 static void presenza_segna(const char *utente, uint64_t ora_ms);
 
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
-                              const char *utente)
+                              const char *utente, const char *rhost)
 {
 	struct ponte *p = (struct ponte *)ctx;
 	/* ⛔ Il congedo si manda DOPO `trasporto_verdetto()`: la ragione lunga sta
@@ -809,7 +809,7 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 			              "filo con 0x06 BUDGET_PIENO — che e' un limite "
 			              "FISICO, non la tabella piena di 0x0E",
 			              utente, senza_palco);
-		} else if (!figli_assicura(p->f, utente)) {
+		} else if (!figli_assicura_da(p->f, utente, rhost)) {
 			/* ⚠ Le ALTRE cinque strade per cui un figlio non nasce: nome che
 			 *   PAM ammette e NSS non risolve, uid 0, `socketpair`,
 			 *   `SO_PASSCRED`, `fork`.  ⛔ Nessuna di queste e' capacita': sono
