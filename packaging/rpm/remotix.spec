@@ -129,9 +129,12 @@ Requires:       firewalld-filesystem
 # del monitor passa da wlr-randr (`primario_lxqt()`).  Dipendenze CONDIZIONATE:
 # solo se quel desktop c'e'.
 Requires:       (labwc if xfce4-session)
-Requires:       (xorg-x11-server-Xwayland if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
+# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
+# leap16-lxqt).  Legato a labwc, non a un desktop: vale per XFCE e LXQt.
+Requires:       (xorg-x11-server-Xwayland if labwc)
 # labwc MUORE senza un carattere scalabile (labwc #2525: con i soli caratteri
 # bitmap la barra del titolo esce alta 1,4 milioni di pixel e `buffer.c:90`
 # abortisce).  Su Fedora i gruppi dei desktop lo portano, ma una macchina con
@@ -165,9 +168,12 @@ Recommends:     openh264
 
 %if 0%{?suse_version}
 Requires:       (labwc if xfce4-session)
-Requires:       (xwayland if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
+# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
+# leap16-lxqt dell'immagine Minimal-VM).  Legato a labwc, non a un desktop.
+Requires:       (xwayland if labwc)
 # ⛔ labwc MUORE senza un carattere scalabile (labwc #2525, `buffer.c:90`): il
 # gruppo LXQt di openSUSE porta `google-droid-fonts` solo come RACCOMANDATO, e
 # sulle installazioni senza raccomandati non c'e'.  Uno qualunque dei sans scalabili.

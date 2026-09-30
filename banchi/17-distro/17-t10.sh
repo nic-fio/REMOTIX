@@ -118,7 +118,9 @@ vm "id prova" >"$E/gruppi-prima.txt"
 
 say "==> 2. installa come l'amministratore: install.sh + sha256, --risposte"
 vm "printf 'formato = remotix-risposte/1\nlingua = it\nutenti = prova\nconsenso.firewall = si\nconsenso.deposito.epel = si\nconsenso.deposito.openh264 = si\nconsenso.deposito.packman = si\nconsenso.deposito.rpmfusion = si\n' | sudo tee /root/risposte.conf >/dev/null
-cd /tmp && rm -f install.sh install.sh.sha256 && curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
+cd /tmp && rm -f install.sh install.sh.sha256
+if command -v curl >/dev/null 2>&1; then curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
+else wget -q -O install.sh $ARCH/install.sh && wget -q -O install.sh.sha256 $ARCH/install.sh.sha256; fi   # le iso desktop apt hanno wget, non curl (install.sh usa l'uno o l'altro)
 sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh | cut -c1-40" >"$E/installa.txt" 2>&1
 say "   $(grep -E 'install.sh: ' "$E/installa.txt" | head -1)"
 T0=$(date +%s)
