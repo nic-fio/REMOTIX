@@ -122,23 +122,13 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > 📖 **[`fasi/10-multi-tenant-e-il-budget.md`](fasi/10-multi-tenant-e-il-budget.md)** — la **sintesi**
 > in testa, **§5** le cure, **§6** le misure, **§8** le due decisioni che restano.
 >
-> ### ⭐⭐⭐ Il numero che la fase cercava — **e non era quello che si credeva**
+> ### ⭐⭐⭐ Che cosa la fase ha trovato — **e non era quello che si credeva**
 >
-> | dove si spende | motore | soffitto `[M]` |
-> |---|---|---|
-> | il **codificatore** | i due VDBOX | **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
-> | ⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`** | ⭐ **0,97 Gpixel/s — la METÀ** |
->
-> ⇒ ⛔⛔ **Il budget non è di codifica: è di composizione**, e a saturarlo è **`gnome-shell` al
-> 99,5 %** mentre **`remotix` sta a `0,00 %`** — cioè **una cosa che non è nostra**.
-> `DECISIONI.md` **§4.6-nonies** corregge §4.6.
->
-> ### ⭐⭐ E quante ne stanno
->
-> **Sei** sulla scena satura — *«tenendo conto che siamo su una scheda Intel integrata non
-> particolarmente performante, 6 RDP attivi contemporaneamente non mi sembra un cattivo risultato»*,
-> l'utente, `DECISIONI.md` §4.6-septies. ⭐ **E almeno UNDICI sul desktop vero**, dove `[M]` **il soffitto non è
-> stato trovato: sono finiti gli utenti, non la macchina**.
+> ⇒ ⛔⛔ **Il budget non è di codifica: è di composizione**, e a saturarlo è il **compositore del
+> desktop**, non `remotix` — cioè **una cosa che non è nostra**.
+> `DECISIONI.md` **§4.6-nonies** corregge §4.6. ⚠ Le misure di allora (e quante sessioni reggeva la
+> macchina di prova, `DECISIONI.md` §4.6-septies) stanno in `fasi/10-multi-tenant-e-il-budget.md` §6:
+> valgono per quel ferro e per il prodotto di prima della fase 18, e non sono garanzie.
 >
 > ### ⭐⭐⭐⭐ E LA COSA PIÙ UTILE DELLA GIORNATA NON È UN NUMERO
 >
@@ -163,18 +153,18 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ### ⭐⭐ E IL PRODOTTO HA DIMEZZATO LA BANDA DA SOLO
 >
-> `[M]` Stessa scena, filo strozzato: **38,5 → 37,4 fot/s** (uguali), **6,0 → 3,20 Mbit/s** (metà),
-> ⭐ **coda del filo VUOTA**, e il motore di composizione fermo sul **41-46 %** — cioè la scena si
-> muoveva come prima. ⇒ ⭐ **Non ha rallentato: ha compresso di più.**
+> Stessa scena, filo strozzato: i fotogrammi al secondo **restano quelli**, la banda **cala**,
+> ⭐ **coda del filo VUOTA** — cioè la scena si muoveva come prima. ⇒ ⭐ **Non ha rallentato: ha
+> compresso di più.**
 >
 > ### ⛔⛔⛔ E UN DIFETTO RESTA APERTO, DICHIARATO — **la sessione che nasce cieca**
 >
 > `[M]` Su una sessione **appena nata** Mutter non annuncia nessun `wl_output` ⇒ ⛔ **nessuna
-> applicazione può aprire una finestra**: Firefox resta vivo e non dipinge, il compositore sta a
-> **0,0 %**, il palco consegna **zero fotogrammi**. ⚠ È **intermittente**: `provanic3` ha avuto il
+> applicazione può aprire una finestra**: Firefox resta vivo e non dipinge, il compositore è
+> **fermo**, il palco consegna **zero fotogrammi**. ⚠ È **intermittente**: `provanic3` ha avuto il
 > monitor **2 volte e poi 6 volte no**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` **§7.4**.
 >
-> ⭐ **Non tocca i numeri di capacità** — quelli sono presi su sessioni che disegnavano davvero.
+> ⭐ **Non tocca le prove di capacità** — quelle sono state fatte su sessioni che disegnavano davvero.
 > ⛔ **Tocca la consegna**: oggi una sessione nuova su tre-quattro nasce cieca.
 >
 > ### ⚠ E DUE DECISIONI SONO RIMASTE NON PRESE — valgono i predefiniti
@@ -227,21 +217,21 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | linea morta | **accesa** (stallo 5 s · silenzio 10 s) | `--niente-linea-morta` |
 > | sfratto del fantasma | **15 000 ms** | `--sfratto-ms 0` |
 >
-> `[M]` **La prova che poteva far ritirare tutto è verde**: linea sana **39,69** fotogrammi/s coi
-> predefiniti contro **39,60** a cure spente, zero chiavi in tutt'e due. ⭐ È la ferita per cui v1
+> **La prova che poteva far ritirare tutto è verde**: a linea sana, coi predefiniti, gli stessi
+> fotogrammi che a cure spente, zero chiavi in tutt'e due. ⭐ È la ferita per cui v1
 > perse questa fase — *i numeri migliorano e l'esperienza peggiora* — ed è stata cercata apposta.
 >
 > ## ⭐⭐ I TRE FATTI CHE VALGONO OLTRE LA FASE
 >
 > 1. **Il difetto non comincia dove si vede.** La spirale di chiavi parte al **primo pacchetto
->    perso** (0,10 % di perdita); il calo che l'utente **vede** arriva **cinque volte più in là**
->    (0,53-0,75 %). ⇒ Un banco che guardi solo i fotogrammi/s dà **verde fino allo 0,5 %**.
-> 2. **L'innesco ha un rischio costante**: ~5 % al secondo, mediana **13 s**, e una volta acceso non
->    si spegne. ⛔ I banchi girano 25 s, **le sessioni durano ore** ⇒ ogni misura presa vicino al
+>    perso**; il calo che l'utente **vede** arriva **molto più in là**. ⇒ Un banco che guardi solo i
+>    fotogrammi/s dà **verde** ben oltre il punto in cui il difetto è già cominciato.
+> 2. **L'innesco ha un rischio costante**, e una volta acceso non si spegne. ⛔ I banchi girano
+>    qualche decina di secondi, **le sessioni durano ore** ⇒ ogni misura presa vicino al
 >    bordo **sottostima**, e non di poco.
 > 3. **Il disordine viene scambiato per perdita — e ci è tornato addosso.** La prima «linea morta»
->    era tarata su `pkt_lost`, e `[M]` una linea che **regge** ne dichiarava il **512‰** contro il
->    **123‰** di una che **non regge**. Rifatta sullo **stallo dell'uscita** (5 s).
+>    era tarata su `pkt_lost`, e una linea che **regge** ne dichiarava **più** di una che **non
+>    regge**. Rifatta sullo **stallo dell'uscita** (5 s).
 >
 > ## ⚠ E IL CONTO DEGLI ERRORI DI METODO — la parte più utile
 >
@@ -249,8 +239,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > leggere a un banco i numeri del banco **precedente**) · **tre prove che non mordevano**, scoperte
 > **contando i pacchetti** · **due conclusioni ritirate** (le applicazioni che «non arrivavano» — non
 > c'era nessuno che guardava; e la prova della claquette dichiarata «nulla» e smentita dal **terzo**
-> giudizio) · **due premesse false** ereditate e corrette (l'utente non è mai stato su **PCM**; i
-> **+331 ms** non raggiungono il suo orecchio).
+> giudizio) · **due premesse false** ereditate e corrette (l'utente non è mai stato su **PCM**; il
+> ritardo audio misurato allora non raggiunge il suo orecchio).
 >
 > ## ⏳ CHE COSA RESTA APERTO
 >
@@ -267,7 +257,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > `fasi/10-multi-tenant-e-il-budget.md` §5.10 ·
 > ⭐ ~~la metà **`AV`** del sincronismo non è rimisurata (vuole quel browser)~~ ⇒ **GIUDICATA il 25
 > agosto 2026**, su un video **4K** con la banda a **10 Mbit/s**: *«audio e video fluidi e in
-> sync»*. ⚠ Il `[M]` dei 331 ms resta `[?]` — quello è un numero, questo è un giudizio ·
+> sync»*. ⚠ Il ritardo audio misurato allora resta `[?]` — quello era un numero, questo è un giudizio ·
 > ⚠ `rcp.c` dice ancora *«rifiutati da ngtcp2»* dove adesso sono *«buttati perché il filo era muto»* ·
 > `[?]` l'algoritmo di congestione è **CUBIC** e **non è mai stato scelto**: la prova per contrasto
 > non è stata fatta perché nessuna opzione lo espone.
@@ -337,7 +327,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | | |
 > |---|---|
-> | ⭐ **il modello di fiducia regge** | una sessione WebTransport verso un certificato **autofirmato P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**: **Chrome 151** (30,2 ms) e **Firefox 140** (52,0 ms). `RCP.md` §4.1-bis passa da `[S]` a `[M]` su **due motori** |
+> | ⭐ **il modello di fiducia regge** | una sessione WebTransport verso un certificato **autofirmato P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**: **Chrome 151** e **Firefox 140**. `RCP.md` §4.1-bis passa da `[S]` a `[M]` su **due motori** |
 > | ⭐ **`ngtcp2` e `quiche` passano il criterio dell'SNI** | **10 agosto**: i loro server d'esempio servono il certificato a chi **non manda SNI**, e ⛔ **l'impronta ricevuta combacia con quella del file** — la stretta di mano che riesce non basta. ⇒ **il criterio non separa più le due candidate** |
 > | ⭐ **la diagnosi di `lsquic` si chiude** | senza SNI: *«fail certificate lookup»*; **con** SNI: *«looked up cert for remotix.prova»*. ⛔ Il difetto è l'SNI e nient'altro — **l'eliminazione regge, adesso su una prova intera**. E resta in coda a ogni esecuzione come **controllo negativo**: dimostra che la sonda sa vedere un rifiuto |
 > | ⛔ **e `quiche` porta un costo che non c'entra col QUIC** | la **0.29.3 pretende `rustc` 1.88** e Trixie ne ha **1.85**: si misura la **0.28.0**, scelta dal banco. Sceglierla significa restare lì finché Debian non aggiorna, **o** portarsi una catena Rust fuori dai pacchetti. `ngtcp2` non pone la domanda |
@@ -348,7 +338,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | ⛔⭐ **e `quiche` non arriva a WebTransport dal C** | dichiara **4** impostazioni sul filo e **nessuna delle due di WebTransport**. `h3::Config::set_additional_settings` **esiste in Rust e non nell'FFI**, e il trucco usato su `ngtcp2` lì non c'è: quei byte un'applicazione in C non li vede mai. ⇒ **§6.4 è chiusa** |
 > | ⭐ **l'arbitro non cade** | `aioquic` 1.2.0 porta WebTransport ⇒ il **cliente di prova** di B9 è possibile. ⚠ Ma parla la **bozza 02**, e i browser la **07**: il server manda tutt'e due le dichiarazioni, o metà degli strumenti direbbe di sì per il motivo sbagliato |
 >
-> | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato a **1074-1085 ms** |
+> | ⭐⭐ **RCP parla, e l'arbitro lo conferma** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, su **due connessioni** — e ⛔ **le tracce sono dichiarate conformi dal validatore di B4**, un terzo programma scritto leggendo solo `RCP.md`. Il **secondo fisso** di §4.4-bis misurato sul filo |
 > | ⭐ **B4: il validatore è certificato** | **13 su 13** `[M]` **10 agosto, sera** — sette registrazioni guaste accusate **ciascuna sul byte dichiarato in anticipo**, la conforme accettata, e ⛔ **i quattro esiti del validatore tutti coperti**: conforme · non conforme · registrazione rotta · *niente da giudicare*. ⚠ *Diceva «7 su 7» con due soli esiti: «non ho niente da giudicare» e «conforme» avevano lo stesso codice d'uscita, rilievo **R7.4***. ⭐ E alla prima esecuzione ha trovato **una contraddizione in `RCP.md`**: §4.3 vietava un carattere che §4.3 stessa usa |
 >
 > | ⭐⭐ **B3: cinque giri su cinque** | 1ª · 2ª dopo la chiusura · **2ª mentre la 1ª è viva ⇒ `GIA_ATTIVA_REMOTA`** per tutt'e due le strade di §3.1, e la prima non viene spodestata · ⭐ **la 2ª dopo il silenzio**, 35 s a `max_idle_timeout` 120 — rifiutata a +6 s, **entra a +35 s**, e la connessione della prima è **ancora viva**: a liberare il posto è stato il server, non QUIC · ⭐ **la 3ª con il certificato ruotato, adesso PIENA** `[M]` **10 agosto, ore 18:5x**: la pagina ritira l'impronta nuova e apre su tutt'e due i motori, ⭐ **e il server risponde davvero** — `CIAO` → `ECCOMI` letto sul filo — ⛔ e con la vecchia tutt'e due **rifiutano**. ⚠ *La prima stesura di questo giro mandava la parola `ciao` aspettando l'eco dello strato WebTransport: una prova nata quando il server non parlava ancora RCP. Con RCP innestato quella parola non è un messaggio, il server ne aspettava il resto e la pagina restava appesa — ed è **quello** il «lo stream non ha funzionato» del mattino, non il certificato* |
@@ -600,9 +590,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >   `rcp.c`. Ora tutti i sorgenti più il `Makefile`, e l'albero **si dichiara** — sotto
 >   `/media/REMOTIX/src` ce ne sono **cinque** con un `remotix` eseguibile dentro. Il terreno conta
 >   **15 su 15** sull'innesto e **4 su 4** sul prodotto, dov'era *«2 controlli, 1 ignoto»*.
-> - ⚠ **Le mediane di B8**: ~~1984~~ → `[M]` **2123 · 2198 · 1086 ms** (giro della sera). ⭐ Il numero
->   cambia perché cambia il giro; quel che è nuovo è che **l'imputato è misurato**: **+1034 ms** oltre
->   il secondo fisso sui respinti contro **+84 ms** sugli ammessi, cioè la firma di `pam_faildelay`.
+> - ⚠ **Le mediane di B8**: ⭐ quel che è nuovo è che **l'imputato è misurato**: sui respinti il
+>   ritardo oltre il secondo fisso è molto più lungo che sugli ammessi, cioè la firma di `pam_faildelay`.
 >   ⇒ **PAM, non il nostro codice** — e la `[?]` resta aperta lo stesso.
 >
 > #### ⚖️ E QUEL CHE ASPETTA L'UTENTE — adesso è **una** cosa, non due
@@ -649,16 +638,16 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > ⭐⭐ **Il desktop remoto prende la misura della finestra del browser**, e da questo discendono
 > quattro cose che l'utente vedeva come difetti separati: niente bande nere, testo nitido (scala di
-> disegno **1,000**), il ri-attacco che ritrova la sua misura, e il login che porta il desktop in
-> **311 ms** invece di 4,4 secondi. ⭐ La conferma che non viene da noi: GNOME *Impostazioni →
+> disegno **1,000**), il ri-attacco che ritrova la sua misura, e il login che porta il desktop
+> **subito** invece che dopo secondi. ⭐ La conferma che non viene da noi: GNOME *Impostazioni →
 > Displays*, **dentro** la sessione remota, dichiara «Resolution 1264 × 800».
 >
 > | | |
 > |---|---|
 > | ⭐ **il numero della fase** | la tela concordata all'attacco: `[M]` **1264×800** = la finestra, scala **1,000**, `pixelated` |
-> | ⭐ **login → desktop** | `[M]` **4,4 s → 311 ms** — e la cura non è il ridimensionamento: è che **riavviare il flusso consegna un buffer** quando una chiave è dovuta e la scena è ferma |
-> | ⭐⭐ **clic → fotogramma spedito** | `[M]` **136 ms → 41 ms** (peggiore 502 → 47), su scena FERMA. ⚠ Non è il numero di `CODER.md` §1-bis (quello è su scena in movimento, 139 ms, e resta della fase 8): è l'anello che nessuno aveva misurato |
-> | ⭐ **il ridimensionamento a caldo** | `[M]` **6 ms** dalla risposta del palco alla chiave spedita. ⚠ **E dal 17 agosto 2026 non è più una funzione dell'utente**: la tela si adatta all'attacco e al **riattacco** — che è dove questi 6 ms si pagano — e mai a sessione viva (`DECISIONI.md` §5.1-bis) |
+> | ⭐ **login → desktop** | la cura non è il ridimensionamento: è che **riavviare il flusso consegna un buffer** quando una chiave è dovuta e la scena è ferma |
+> | ⭐⭐ **clic → fotogramma spedito** | l'anello su scena FERMA, che nessuno aveva misurato, si accorcia. ⚠ Non è l'anello di `CODER.md` §1-bis, che è su scena in movimento |
+> | ⭐ **il ridimensionamento a caldo** | ⚠ **dal 17 agosto 2026 non è più una funzione dell'utente**: la tela si adatta all'attacco e al **riattacco**, e mai a sessione viva (`DECISIONI.md` §5.1-bis) |
 > | ⛔ **e il blocco della costruzione** | sciolto **senza chiedere all'utente**: `src/Contenitore` (podman da utente, sul portatile) e l'errore di percorso in `enter.sh` |
 >
 > ⛔⛔ **DIECI DIFETTI TROVATI REFUTANDO** la cura appena scritta (quattro agenti, mandato
@@ -705,8 +694,8 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | il lavoro, in ordine | perché prima |
 > |---|---|---|
 > | **1** | ⛔⛔ **FAR VEDERE IL DESKTOP VERO.** Il prodotto **aggiunge** un monitor virtuale alla sessione (`Meta-2`, *«2 prima e 3 dopo»*) e registra quello: GNOME ci mette **lo sfondo**, ma barra, dock e finestre restano sul **primario**. ⇒ **L'utente vede un secondo schermo vuoto, non il suo desktop** | ⭐ è **la domanda che l'utente ha fatto** — *«se il server non mostra il desktop, a che serve REMOTIX?»* — ed è `SPECIFICHE.md` §5.1. ⛔ **È rimasta nascosta per due fasi** dietro il giudizio della fase 2, *«è lo sfondo GNOME, è OK»*: **uno sfondo vuoto preso per un successo** |
-> | **2** | ⛔⛔ **HEVC NON DIPINGE nel browser dell'utente.** `[M]` 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ **I banchi dicevano il contrario** (1 047 dipinti, 30 fps): quel giro aveva una **scena sintetica** e un **Chrome del banco** | senza, **la codifica in hardware non è giudicabile** — e la fase l'ha già dentro |
-> | **3** | ⚠ ~~**IL DISEGNO: 28,0 ms su 78,1, il 36 %**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026**: il disegno costa **2,25 ms**; i 28 erano **l'attesa del fotogramma dalla GPU** più il disegno | il collo di bottiglia c'è, ⭐ ma **non è dove c'era scritto** |
+> | **2** | ⛔⛔ **HEVC NON DIPINGE nel browser dell'utente.** `[M]` 1 748 fotogrammi consegnati, **0 dipinti**, e il client chiede una chiave **1 659 volte**. ⚠ **I banchi dicevano il contrario** (fotogrammi dipinti): quel giro aveva una **scena sintetica** e un **Chrome del banco** | senza, **la codifica in hardware non è giudicabile** — e la fase l'ha già dentro |
+> | **3** | ⚠ ~~**IL DISEGNO come collo di bottiglia**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026**: il disegno costa poco; quel tratto era **l'attesa del fotogramma dalla GPU** più il disegno | il collo di bottiglia c'è, ⭐ ma **non è dove c'era scritto** |
 >
 > ⭐⭐ **E `D1` è CHIUSO, a costo zero, leggendo il registro della sessione del giudizio** — con una
 > risposta **peggiore della domanda**: la strozzatura del debito di chiave **regge a 1/s quando il
@@ -719,45 +708,25 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > ### ⭐⭐⭐⭐ Il numero della fase, e come è stato preso — **13 agosto 2026, notte**
 >
 > *La fase 3 ha il suo numero **con la codifica in hardware**, e la codifica in hardware è **nel
-> prodotto**, non su una copia. ⏳ **Manca solo il giudizio dell'utente**, preparato in
-> `fasi/rapporti/F3-giudizio-elenco.md`. Il conto per intero
-> sta in `fasi/rapporti/F3-sessione-13-sera.md`.*
+> prodotto**, non su una copia. Il conto per intero sta in [`FASI.md` §03-movimento](FASI.md#03-movimento).*
 >
-> | | totale | codifica | **disegno** | fps | P1 |
-> |---|---|---|---|---|---|
-> | AV1 in software *(la 7561)* | **71,86 ms** | 39,67 | ⭐ 9,07 | 22,0 | ✅ |
-> | ⭐ **HEVC in hardware** *(la 7571, il deposito)* | **78,12 ms** | ⭐ 31,78 | ⛔ **28,00** ⚠ *(l'etichetta «disegno» è falsa: vedi il riquadro sotto)* | ⭐ **30,0** | ✅ |
+> ⭐⭐ **L'ARCHITETTURA È ASSOLTA**: togliendo il costo della codifica con l'hardware **gli altri
+> tratti dell'anello non si muovono**, e la chiave smette di essere il fotogramma che pesa.
+> ⛔ **Ma il tetto del ritardo SFORA**, e il riquadro qui sotto dice perché la riga che lo spiegava
+> era sbagliata.
 >
-> ⭐⭐ **L'ARCHITETTURA È ASSOLTA**: togliendo l'hardware si perdono **31,7 ms** e **gli altri quattro
-> tratti non si muovono** (Mutter −0,02 · filo −0,12 · decodifica −0,76). La chiave passa da
-> **114,5 ms a 5,1**, e il ritmo **raddoppia**.
-> ⛔ **Ma il tetto SFORA** — 78,1 contro 50, e **94-118 ms** sul vetro col pezzo cieco dichiarato.
+> #### ⛔⛔⛔ 14 agosto 2026 — **UN'ETICHETTA FALSA SU UN NUMERO VERO**, e si corregge qui
 >
-> #### ⛔⛔⛔ 14 agosto 2026 — **QUESTA RIGA È UN'ETICHETTA FALSA SU UN NUMERO VERO**, e si corregge qui
->
-> *Corretto per decisione dell'utente il 14 agosto 2026, su due misure indipendenti della fase 4:
-> `fasi/rapporti/F4-A2-pagina-dipinge.md` e `fasi/rapporti/F4-A10-anello-input.md`.*
->
-> | | |
-> |---|---|
-> | ⭐ **che cosa resta vero** | il totale **78,1 ms** (n=379), e la scomposizione in cinque tratti |
-> | ⛔ **che cosa era falso** | **il nome del tratto**: non è «il disegno». `[M]` il disegno del flusso vero costa **2,25 ms** (5 giri, dispersione 0,30), e il controllo positivo su AV1 dà 6,25-8,45 contro i 9,07 della fase 3 ⇒ **il cronometro era tarato** |
-> | ⭐ **che cos'erano i 28 ms** | **l'ATTESA del fotogramma dalla GPU, più il disegno.** Un fotogramma HEVC decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca del banco (`03-b17:534`) ne provoca il trasferimento GPU→CPU; AV1 no |
-> | ⛔ **e la prova che il confine era messo male** | ⭐ cambiando codec **a palco identico**, «decodifica» e «disegno» si muovono in **versi opposti** — AV1 `6,315 + 9,105`, HEVC `0,730 + 27,995` — e **la somma si conserva**. ⚠ Ma `drawImage` **non sa quale codec ha prodotto il fotogramma**: ⇒ il costo non è entrato nel disegno, ha **attraversato il confine fra i due tratti** |
-> | ⭐ **il fatto nuovo che resta** | il costo del **client dopo il filo** raddoppia con HEVC: `[M]` **+10,5…+15,3 ms**. Quello è vero, ed è dove andare a cercare |
+> *Corretto per decisione dell'utente il 14 agosto 2026, su due misure indipendenti della fase 4.*
+> Il tratto chiamato «disegno» **non era il disegno**: era **l'attesa del fotogramma dalla GPU, più
+> il disegno** — un fotogramma HEVC decodificato in hardware esce **opaco** e la rilettura della marca
+> del banco ne provocava il trasferimento GPU→CPU. ⭐ La prova: cambiando codec a palco identico,
+> «decodifica» e «disegno» si muovevano **in versi opposti** e la somma si conservava. Il fatto che
+> resta vero: il costo del **client dopo il filo** cresce con HEVC, ed è lì che si cerca.
 >
 > ⛔ **E una cosa che fa una brutta figura, scritta perché non si perda**: la **cella di controllo di quel giro non è mai esistita** — il giro `con-gpu` ha provato HEVC, VP9 e H.264, e **non AV1**. Senza AV1 non c'era niente con cui confrontare.
 >
-> ⇒ ⭐ **Perché si corregge invece di annotarla**: chi legge «il collo di bottiglia è il disegno» si mette a ottimizzare un tratto che costa **2 ms** invece di uno che ne costa **28**. `LEZIONI.md` §7.2 — *ottimizzare nella direzione sbagliata è peggio che non ottimizzare*.
->
-> > ### ⛔⛔⛔ E IL COLLO DI BOTTIGLIA NON È PIÙ LA CODIFICA: È IL DISEGNO
-> > **28,0 ms su 78,1 — il 36 %** — contro i **5 ms** che ormai costa la codifica.
-> > ⭐ E si vede **solo** perché i giri sono **quattro**: con due soli si leggerebbe *«−31 ms,
-> > vittoria»* oppure *«l'hardware non serve»*. **Sono tutt'e due sbagliate.**
-> > ⇒ **È il primo lavoro della prossima fase, e non era in nessun piano.**
->
-> ⚠ **Il numero è 78,1 e non il 75,2 misurato su una copia**: quel giro aveva un controllo del banco
-> **rosso**, questo no. ⛔ **Si è preso il peggiore dei due.**
+> ⇒ ⭐ **Perché si corregge invece di annotarla**: chi legge «il collo di bottiglia è il disegno» si mette a ottimizzare il tratto sbagliato. `LEZIONI.md` §7.2 — *ottimizzare nella direzione sbagliata è peggio che non ottimizzare*.
 >
 > #### ⛔⛔ I tre lavori, in quest'ordine e non in un altro
 >
@@ -774,9 +743,9 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | | |
 > |---|---|
-> | il numero della fase **regge** | **72,397 ms** rimisurati con banco e pagina nuovi (n=508), e la codifica vale **39,82 = il 55 %** |
-> | la codifica in hardware **funziona** | `hevc_vaapi` porta il tratto da **28,03 a 2,64 ms** (scena facile) e da **113,10 a 3,93** (dura) |
-> | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa 5,65 ms**, più del doppio della codifica ⇒ ⭐ **`swscale` BGRx→P010 è il pezzo nuovo da aggredire: 7,1 ms su 9,7** |
+> | il numero della fase **regge** | rimisurato con banco e pagina nuovi, e la codifica in software ne era la parte più grossa |
+> | la codifica in hardware **funziona** | `hevc_vaapi` accorcia di molto il tratto di codifica, su scena facile e su scena dura |
+> | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa più della codifica** ⇒ ⭐ **`swscale` BGRx→P010 è il pezzo nuovo da aggredire** |
 > | il client **decodifica HEVC** | `VideoDecoder`: **120 fotogrammi su 120**, due strade di confezionamento, 5 giri su 5 |
 > | ⛔ **AV1 in hardware NON esiste** | `av1_vaapi` esce **218**: restare su AV1 = restare in software **per sempre** |
 > | ⛔ **Firefox non ha HEVC** in WebCodecs | ⇒ passare a HEVC **non toglie AV1: lo rende obbligatorio** |
@@ -983,7 +952,7 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 >
 > | | |
 > |---|---|
-> | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` mediana **2636 ms** su 42 tentativi respinti, dove `RCP.md` §4.4-bis vuole ~1000. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
+> | ⛔ **a governare i tempi non è il nostro ritardo fisso, è PAM** | `[M]` sui tentativi respinti il ritardo è **ben oltre** il secondo che `RCP.md` §4.4-bis vuole. La previsione (`pam_faildelay`) era stata scritta **prima** di misurare. ⚠ Conta perché quel ritardo **non è costante**: se varia, rimette in circolo l'informazione che il secondo fisso serve a nascondere — cioè **se un nome utente esiste** |
 > | ⚠ **il giro pieno di B8 si pianta al nono blocco su dieci** | resta fermo su qualcosa che nessuno gli dà. Il giro corto (`… 01-b8-lancia.sh 2`) arriva in fondo. ⛔ Va lanciato **staccato** dalla sessione di chi lo comanda, non attraverso di essa |
 > | ⭐ **B6 ha chiuso R3.27, e con DUE risposte** | **la prima**: il cronometro parte dall'**apertura del canale di controllo**, non dalla fine del TLS ⇒ **`RCP.md` §4.6 riga 1 è cambiata di una parola**, l'11 agosto 2026. ⛔ **La seconda, e dice che curare la parola non basta**: chi apre una sessione WebTransport e **non apre mai il canale** non ha addosso **nessun tetto** e resta lì — §4.6 non aveva una riga per quello stato, adesso ce l'ha ed è ❓ (`DECISIONI.md` §7.17) |
 | ⚠ **i tre tetti di B6 non hanno un registro** | scattano a **5,0 · 60,1 · 10,0 s** — ⛔ ma **non esiste nessun `.jsonl` di B6**, la scena di quel giro non è dichiarata da nessuna parte, e questi tre numeri **non sono riverificabili**. ⚠ *Stavano qui senza marca, senza data, senza scena e senza dispositivo, mentre `[M]` è definito più sotto come «misurato da noi, sul ferro, **con la data**» — rilievo **R12C.11**. Si rifanno col registro, oppure restano tre numeri di cui si sa solo l'ordine di grandezza.* |
