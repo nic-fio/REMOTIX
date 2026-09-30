@@ -467,6 +467,19 @@ func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ⚠ --assumeno esce 1 ANCHE quando la simulazione riesce («Operation aborted»): il codice non
+	// dice niente, il testo sì. Se il solver non risolve — togliere questi romperebbe un pacchetto
+	// PROTETTO, o uno installato che ne ha bisogno — non c'è la sezione «Removing»: i nomi stanno
+	// nei «Problem», e sono loro i dipendenti (i nomi dati si trattengono). `[M]` T10, 30 set,
+	// fedora44-gnome-iso: openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protetto);
+	// prima si leggeva «nessun dipendente» e `dnf remove -y` falliva.
+	if strings.Contains(out, "Failed to resolve the transaction") || strings.Contains(out, "Impossibile risolvere la transazione") {
+		altri := fuoriDa(problemiDnf(out), nomi)
+		if len(altri) == 0 {
+			return nil, fmt.Errorf("dnf remove --assumeno %s: %s", strings.Join(nomi, " "), ultimeRighe(out, 6))
+		}
+		return altri, nil
+	}
 	var tutti []string
 	in := false
 	for _, riga := range strings.Split(out, "\n") {
@@ -483,6 +496,46 @@ func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 		}
 	}
 	return fuoriDa(tutti, nomi), nil
+}
+
+// problemiDnf: i pacchetti nominati nei «Problem» di un solver dnf che non risolve — i protetti
+// («protected packages: a, b») e gli installati che hanno bisogno di quel che si toglie («installed
+// package NEVRA requires …»); il NEVRA torna nome.
+func problemiDnf(out string) []string {
+	var r []string
+	for _, riga := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(riga)
+		if _, dopo, ok := strings.Cut(t, "protected packages: "); ok {
+			for _, n := range strings.Split(dopo, ",") {
+				if n = strings.TrimSpace(n); n != "" {
+					r = append(r, n)
+				}
+			}
+			continue
+		}
+		for _, marca := range []string{"installed package ", "il pacchetto installato "} {
+			if _, dopo, ok := strings.Cut(t, marca); ok {
+				if f := strings.Fields(dopo); len(f) > 0 {
+					r = append(r, nomeDaNevra(f[0]))
+				}
+			}
+		}
+	}
+	return fuoriDa(r, nil)
+}
+
+// nomeDaNevra: «libheif-1.23.5-3.fc44.x86_64» → «libheif» (via l'architettura, poi versione e rilascio).
+func nomeDaNevra(nevra string) string {
+	s := nevra
+	if i := strings.LastIndex(s, "."); i > 0 {
+		s = s[:i]
+	}
+	for range 2 {
+		if i := strings.LastIndex(s, "-"); i > 0 {
+			s = s[:i]
+		}
+	}
+	return s
 }
 
 func (g *gestoreDnf) Togli(nomi []string, purge bool) error {

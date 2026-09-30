@@ -567,6 +567,28 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	var chiavi []string
+	if d.tipo != "archivio" {
+		// PRIMA i pacchetti arrivati col deposito. Quelli che chi resta chiede si TRATTENGONO, e con
+		// loro resta anche il DEPOSITO (chi li chiede continua a riceverne gli aggiornamenti): la
+		// regola della disinstallazione, la stessa di RX-PACCHETTI-006 in installa-pacchetti. `[M]`
+		// 30 set (T10): alma10-kde — ark, dolphin, plasma-desktop… chiedono openh264;
+		// fedora44-gnome-iso — libheif e mozilla-openh264. Prima ci si fermava con RX-PACCHETTI-002 e
+		// la disinstallazione si annullava.
+		var via, resta []string
+		via, resta, chiavi, err = d.trattenutiArrivati(c, p)
+		if err != nil {
+			return err
+		}
+		if len(via) > 0 {
+			if err := (&gestoreDnf{c.Amb}).Togli(via, true); err != nil {
+				return err
+			}
+		}
+		if len(resta) > 0 || (d.tipo == "epel" && d.ciscoNostro(c)) {
+			return nil // il deposito (e le chiavi) restano: Annullata lo dichiara
+		}
+	}
 	switch d.tipo {
 	case "epel":
 		if adesso["crb"] && !p.Stato["crb"] {
@@ -579,7 +601,6 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
-		return d.togliArrivati(c, p)
 	case "rpmfusion":
 		// prima nonfree (chiede free), poi free
 		for _, nome := range []string{"rpmfusion-nonfree-release", "rpmfusion-free-release"} {
@@ -589,7 +610,6 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 				}
 			}
 		}
-		return d.togliArrivati(c, p)
 	case "openh264":
 		switch {
 		case c.Amb.Famiglia == "suse":
@@ -611,14 +631,12 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 				}
 			}
 		}
-		return d.togliArrivati(c, p)
 	case "packman":
 		if adesso["packman"] && !p.Stato["packman"] {
 			if _, err := esegui(c.Amb, 5*time.Minute, "zypper", "--non-interactive", "removerepo", "packman"); err != nil {
 				return err
 			}
 		}
-		return d.togliArrivati(c, p)
 	case "archivio":
 		sc, err := d.scrittori(c)
 		if err != nil {
@@ -657,6 +675,13 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 			}
 		}
 	}
+	// le chiavi importate da dnf al primo uso: dnf non le toglie ([M] 30 set, Alma 10: «remove»
+	// esce 0 e le lascia), rpm -e sì
+	for _, k := range chiavi {
+		if _, err := esegui(c.Amb, time.Minute, "rpm", "-e", k); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -667,6 +692,21 @@ func (d *deposito) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 	}
 	if p.Origine == PREESISTENTE {
 		return true, "c'era già: non si tocca", nil
+	}
+	if d.tipo != "archivio" {
+		via, resta, _, err := d.trattenutiArrivati(c, p)
+		if err != nil {
+			return false, "", err
+		}
+		if len(via) > 0 {
+			return false, T("deposito.ancora", len(via), strings.Join(via, ", ")), nil
+		}
+		if len(resta) > 0 {
+			return true, "[RX-PACCHETTI-006] " + T("deposito.trattenuto", d.tipo, strings.Join(resta, ", ")), nil
+		}
+		if d.tipo == "epel" && d.ciscoNostro(c) {
+			return true, "[RX-PACCHETTI-006] " + T("deposito.resta_epel"), nil
+		}
 	}
 	adesso, err := d.pezzi(c)
 	if err != nil {
@@ -708,21 +748,20 @@ func rpmTutti(c *Contesto) ([]string, error) {
 	return r, nil
 }
 
-// togliArrivati: i pacchetti arrivati col deposito (e non c'erano prima) si tolgono, coi controlli
-// di Togli (se toglierli portasse via altro, ci si ferma).
-func (d *deposito) togliArrivati(c *Contesto, p primaDeposito) error {
+// arrivati: i pacchetti arrivati col deposito (non c'erano prima) e ancora installati, e le chiavi
+// gpg-pubkey importate da dnf al primo uso.
+func (d *deposito) arrivati(c *Contesto, p primaDeposito) (nuovi, chiavi []string, err error) {
 	if p.Rpm == nil {
-		return nil
+		return nil, nil, nil
 	}
 	adesso, err := rpmTutti(c)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	prima := map[string]bool{}
 	for _, x := range p.Rpm {
 		prima[x] = true
 	}
-	var nuovi, chiavi []string
 	for _, x := range adesso {
 		switch {
 		case prima[x]:
@@ -735,19 +774,26 @@ func (d *deposito) togliArrivati(c *Contesto, p primaDeposito) error {
 			nuovi = append(nuovi, x)
 		}
 	}
-	if len(nuovi) > 0 {
-		if err := (&gestoreDnf{c.Amb}).Togli(nuovi, true); err != nil {
-			return err
-		}
+	return nuovi, chiavi, nil
+}
+
+// trattenutiArrivati: degli arrivati, quelli che si tolgono («via») e quelli che RESTANO perché li
+// chiede qualcosa che resta (la simulazione del gestore, come `trattenuti` di installa-pacchetti).
+// Se ne resta uno, resta anche il deposito: lo decide Annulla, lo dichiara Annullata.
+func (d *deposito) trattenutiArrivati(c *Contesto, p primaDeposito) (via, resta, chiavi []string, err error) {
+	nuovi, chiavi, err := d.arrivati(c, p)
+	if err != nil || len(nuovi) == 0 {
+		return nil, nil, chiavi, err
 	}
-	// le chiavi importate da dnf al primo uso: dnf non le toglie ([M] 30 set, Alma 10: «remove»
-	// esce 0 e le lascia), rpm -e sì
-	for _, k := range chiavi {
-		if _, err := esegui(c.Amb, time.Minute, "rpm", "-e", k); err != nil {
-			return err
-		}
-	}
-	return nil
+	via, resta, err = trattenuti(&gestoreDnf{c.Amb}, nuovi, nuovi, true)
+	return via, resta, chiavi, err
+}
+
+// ciscoNostro: il file del deposito Cisco per EPEL c'è ed è il nostro (trattenuto con i suoi
+// pacchetti): la sua chiave è quella di epel-release, che allora resta anche lui.
+func (d *deposito) ciscoNostro(c *Contesto) bool {
+	b, err := os.ReadFile(c.Amb.P(fileCiscoEpel))
+	return err == nil && strings.HasPrefix(string(b), "# epel-cisco-openh264 — aggiunto da remotix-install")
 }
 
 // importaChiavi: le chiavi che il pacchetto del deposito porta (/etc/pki/rpm-gpg/…) si importano in
