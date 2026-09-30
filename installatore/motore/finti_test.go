@@ -262,7 +262,7 @@ func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 }
 
 func motoreFinto(t testing.TB, radice, operazioni string) *Motore {
-	return &Motore{Amb: ambienteFinto(radice), Cartella: operazioni, Catalogo: catalogoProva(t), SenzaFirma: true,
+	return &Motore{Amb: ambienteFinto(radice), Cartella: operazioni, Catalogo: catalogoProva(t), Fonti: fontiProva(t, ""),
 		Esamina: profiloFinto, Adesso: func() time.Time { return time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC) }}
 }
 

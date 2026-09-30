@@ -44,11 +44,24 @@ type Messaggio struct {
 // corregge il testo; se il significato cambia, si prende un numero nuovo.
 var Codici = map[string]Codice{
 	// fase 0 — TRUST (§6.6.10)
-	"RX-TRUST-001": {AVVISO, ServeAzione, "La firma del catalogo non si può ancora verificare: la catena di fiducia arriva con la tappa T8 (decisione D11).", "Per ora il motore procede solo se glielo si chiede esplicitamente con --senza-firma, e lo scrive nel registro."},
+	// ⛔ 001 e 005 sono RITIRATI con T8 (la firma c'è e si verifica sempre, --senza-firma non esiste
+	//    più): restano qui perché i registri vecchi li nominano, e non si riusano.
+	"RX-TRUST-001": {AVVISO, ServeAzione, "(ritirato in T8) La firma del catalogo non si poteva ancora verificare: si procedeva solo con --senza-firma.", ""},
 	"RX-TRUST-002": {BLOCCANTE, ServeAzione, "Il catalogo delle combinazioni supportate è scaduto.", "Scaricare il motore o il catalogo aggiornati."},
 	"RX-TRUST-003": {BLOCCANTE, ServeAzione, "Il catalogo chiede un motore più nuovo di questo.", "Scaricare il motore aggiornato."},
 	"RX-TRUST-004": {BLOCCANTE, Fatale, "Il catalogo non si legge o ha un formato sconosciuto.", "Scaricare di nuovo il motore o il catalogo."},
-	"RX-TRUST-005": {BLOCCANTE, ServeAzione, "La fiducia nel catalogo non è verificata e non è stato chiesto di procedere lo stesso.", "Rilanciare con --senza-firma solo sapendo che la firma non è ancora prevista (T8)."},
+	"RX-TRUST-005": {BLOCCANTE, ServeAzione, "(ritirato in T8) La fiducia nel catalogo non era verificata e non era stato chiesto di procedere lo stesso.", ""},
+	"RX-TRUST-006": {BLOCCANTE, ServeAzione, "Il catalogo (o il motore) non ha la sua firma, o la firma non si legge: senza firma non si procede.", "Scaricare di nuovo il catalogo con il suo file .firma accanto, o dare un catalogo fuori linea firmato (--catalogo FILE, con FILE.firma)."},
+	"RX-TRUST-007": {BLOCCANTE, ServeAzione, "La firma non corrisponde: il catalogo (o il motore) è stato alterato, o la firma è di un'altra cosa.", "Non usare questo file: scaricarlo di nuovo da REMOTIX e controllare da dove arriva."},
+	"RX-TRUST-008": {BLOCCANTE, ServeAzione, "La chiave che ha firmato non è certificata dalla chiave madre di REMOTIX scritta nel motore.", "Non usare questo file: non viene da REMOTIX, o il motore è troppo vecchio per la chiave nuova."},
+	"RX-TRUST-009": {BLOCCANTE, ServeAzione, "La chiave che ha firmato è scaduta (o non è ancora valida).", "Scaricare il catalogo aggiornato, firmato con la chiave in corso; controllare anche l'orologio della macchina."},
+	"RX-TRUST-010": {BLOCCANTE, ServeAzione, "La chiave che ha firmato è stata REVOCATA da REMOTIX.", "Scaricare il catalogo firmato con la chiave nuova; non usare niente firmato con quella revocata."},
+	"RX-TRUST-011": {AVVISO, ServeAzione, "Il catalogo ricevuto è più vecchio di uno già verificato su questa macchina: si tiene il più recente.", "Se è stato dato a mano, darne uno più recente; se viene dall'archivio, lo specchio può essere indietro."},
+	"RX-TRUST-012": {BLOCCANTE, ServeAzione, "L'elenco delle chiavi revocate non è firmato dalla chiave madre, o è alterato.", "Non si procede finché l'elenco non si verifica: scaricarlo di nuovo da REMOTIX."},
+	"RX-TRUST-013": {AVVISO, Riprovabile, "Il catalogo aggiornato non si è potuto scaricare dall'archivio: si usa il più recente già verificato.", "Controllare la rete; il controllo si ripete al prossimo giro."},
+	"RX-TRUST-014": {BLOCCANTE, ServeAzione, "Il motore che gira non corrisponde alla sua firma.", "Non usare questo motore: reinstallarlo dall'archivio di REMOTIX."},
+	"RX-TRUST-015": {INFO, ServeAzione, "Il motore non ha accanto la sua firma: la sua autenticità l'ha verificata chi l'ha scaricato (lo script d'ingresso) o il gestore di pacchetti (catena B).", ""},
+	"RX-TRUST-016": {BLOCCANTE, ServeAzione, "Il catalogo dato fuori linea è più vecchio di uno già verificato su questa macchina.", "Dare il catalogo più recente."},
 
 	// fase 1 — PREFLIGHT
 	"RX-DISTRO-001":  {BLOCCANTE, ServeAzione, "Non si riesce a capire quale distribuzione è installata (/etc/os-release manca o non si legge).", ""},
@@ -121,6 +134,18 @@ var Codici = map[string]Codice{
 	"RX-SYSTEMD-002":   {BLOCCANTE, ServeAzione, "L'unità è mascherata: l'amministratore l'ha spenta apposta.", ""},
 	"RX-SYSTEMD-003":   {BLOCCANTE, ServeAzione, "L'unità non esiste.", ""},
 	"RX-FILE-001":      {BLOCCANTE, ServeAzione, "Il file è stato cambiato da qualcun altro durante l'operazione: non si tocca.", ""},
+
+	// l'aggiornamento automatico (DECISIONI §10.10, T8)
+	"RX-AGG-001": {INFO, ServeAzione, "REMOTIX è all'ultima versione del suo canale.", ""},
+	"RX-AGG-002": {INFO, ServeAzione, "C'è un aggiornamento di manutenzione (sicurezza o ricostruzione): si applica da solo, come dice la configurazione.", ""},
+	"RX-AGG-003": {AVVISO, ServeAzione, "C'è la versione annuale nuova: non si applica da sola, la sceglie l'amministratore.", "remotix-install aggiorna --annuale"},
+	"RX-AGG-004": {AVVISO, ServeAzione, "C'è un aggiornamento, ma la configurazione dice di non applicarlo da solo (solo avviso).", "remotix-install aggiorna --applica"},
+	"RX-AGG-005": {INFO, ServeAzione, "Gli aggiornamenti automatici sono spenti dalla configurazione.", ""},
+	"RX-AGG-006": {BLOCCANTE, ServeAzione, "REMOTIX non è installato dall'installatore: non c'è niente da aggiornare da qui.", "Installare con remotix-install."},
+	"RX-AGG-007": {BLOCCANTE, Riprovabile, "L'archivio di REMOTIX non risponde, o la sua firma non si verifica (il gestore di pacchetti lo rifiuta).", "Controllare la rete; se il gestore parla di firme, NON forzare: l'archivio può essere stato alterato."},
+	"RX-AGG-008": {BLOCCANTE, ServeAzione, "Su Arch l'aggiornamento toccherebbe anche pacchetti non di REMOTIX (un aggiornamento parziale, che Arch non sostiene): non si applica da solo.", "pacman -Syu, poi remotix-install aggiorna"},
+	"RX-AGG-009": {BLOCCANTE, ServeAzione, "La versione chiesta non è nell'archivio di REMOTIX.", "remotix-install aggiorna --controlla dice le versioni che ci sono."},
+	"RX-AGG-010": {BLOCCANTE, ServeAzione, "La configurazione degli aggiornamenti non si legge.", "Correggere /etc/remotix/aggiornamenti.conf (remotix-install aggiorna --mostra)."},
 }
 
 // Msg costruisce un messaggio da un codice. Un codice sconosciuto è un difetto del motore, e la

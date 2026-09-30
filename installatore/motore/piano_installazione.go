@@ -14,7 +14,12 @@ import (
 // OpzioniInstallazione: le poche cose che chi installa sceglie (§10: la porta; i consensi D5 e
 // D6; e — finché D4 è aperta — le cinture).
 type OpzioniInstallazione struct {
-	Pacchetto    string   // il pacchetto di REMOTIX (file locale), finché l'archivio firmato non c'è (T8)
+	Pacchetto    string // il pacchetto di REMOTIX da un file locale (le prove di T3-T5); oppure:
+	Archivio     string // l'archivio firmato di REMOTIX (T8): URL di base
+	Canale       string // stabile (predefinito) o candidato
+	Chiave       string // la chiave pubblica della catena B (armatura ASCII), e la sua impronta
+	Impronta     string
+	SenzaTimer   bool     // niente aggiornamenti automatici (il timer resta spento)
 	Utenti       []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
 	Depositi     []string // archivi di terzi col consenso (D5): epel, rpmfusion, packman
 	ApriFirewall bool     // D6
@@ -34,6 +39,14 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 
+	if o.Archivio != "" {
+		par, err := ParametriArchivio(amb, o.Archivio, o.Canale, o.Chiave, o.Impronta)
+		if err != nil {
+			return nil, err
+		}
+		pn.Archivio = &RifArchivio{URL: par["archivio"], Canale: par["canale"]}
+		pn.Azioni = append(pn.Azioni, PianoDeposito("archivio-remotix", "archivio", par, ""))
+	}
 	for _, d := range o.Depositi {
 		dc := cat.Depositi[d]
 		cons := T("consenso.deposito", nonVuoto(dc.Nome, d))
@@ -49,18 +62,27 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		pn.Consensi = append(pn.Consensi, s.Domanda)
 		pn.metteDesktop(s.Predefinita, s.Pacchetti[s.Predefinita], s.Componenti[s.Predefinita])
 	}
-	if o.Pacchetto == "" {
-		return nil, fmt.Errorf("serve il pacchetto di REMOTIX (--pacchetto): l'archivio firmato arriva con T8")
+	switch {
+	case o.Archivio != "":
+		// dall'archivio: il prodotto, il motore (col timer degli aggiornamenti) e, su apt, la chiave
+		nomi := "remotix,remotix-install"
+		if amb.Famiglia == "debian" {
+			nomi += ",remotix-archive-keyring"
+		}
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", nomi))
+	case o.Pacchetto != "":
+		abs, err := filepath.Abs(o.Pacchetto)
+		if err != nil {
+			return nil, err
+		}
+		sha, err := Sha256File(amb.P(abs))
+		if err != nil || sha == "" {
+			return nil, fmt.Errorf("%s: %v", abs, err)
+		}
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", abs, sha, ""))
+	default:
+		return nil, fmt.Errorf("serve l'archivio di REMOTIX (--archivio URL) o un pacchetto (--pacchetto FILE)")
 	}
-	abs, err := filepath.Abs(o.Pacchetto)
-	if err != nil {
-		return nil, err
-	}
-	sha, err := Sha256File(amb.P(abs))
-	if err != nil || sha == "" {
-		return nil, fmt.Errorf("%s: %v", abs, err)
-	}
-	pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", abs, sha, ""))
 	// i pezzi che il desktop di serie non porta (C-COMPONENTE: labwc, breeze6-wallpapers, un
 	// carattere scalabile…): li aggiunge il motore, dopo il pacchetto
 	var comp []string
@@ -113,6 +135,13 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
 	}
 	pn.Azioni = append(pn.Azioni, PianoAccendiServizio("servizio", "remotix.service", o.Porta))
+	// gli aggiornamenti automatici (DECISIONI §10.10): il timer del pacchetto remotix-install, spento
+	// finché non lo accende il motore — col consenso, che dice che cosa si applicherà da solo (D14)
+	if o.Archivio != "" && !o.SenzaTimer {
+		cons := T("consenso.aggiornamenti")
+		pn.Azioni = append(pn.Azioni, PianoUnitaAccesa("aggiornamenti", "remotix-aggiorna.timer", cons))
+		pn.Consensi = append(pn.Consensi, cons)
+	}
 
 	for _, e := range rap.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {

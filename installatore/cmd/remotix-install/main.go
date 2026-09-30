@@ -2,8 +2,9 @@
 // (fasi/17-l-installatore.md §6.0, §6.6). Binario statico: gira da root su ogni distribuzione
 // prima che sia installato qualunque pacchetto (fase 0 TRUST), senza Python né librerie.
 //
-// T4, prima parte: verifica (fasi 1-2, sola lettura), piano (fase 3, un piano di PROVA),
-// approva, applica (fasi 4-8 sulle sole azioni di prova), riprendi, annulla, stato.
+// T4-T5: verifica (fasi 1-2, sola lettura), piano, approva, applica (fasi 4-8), riprendi, annulla,
+// stato, disinstalla, certifica. T8: la fiducia (catena A) sempre verificata; l'installazione
+// dall'archivio firmato (--archivio); aggiorna (il timer) e ritorna (R11); fiducia (verifica un file).
 package main
 
 import (
@@ -12,11 +13,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"remotix/installatore/catalogo"
+	"remotix/installatore/chiavi"
 	"remotix/installatore/motore"
 )
 
@@ -57,6 +60,10 @@ func main() {
 		codice, err = certifica(arg)
 	case "catalogo":
 		err = mostraCatalogo(arg)
+	case "aggiorna", "ritorna":
+		codice, err = aggiorna(cmd, arg)
+	case "fiducia":
+		codice, err = fiducia(arg)
 	case "versione", "--version":
 		fmt.Println(motore.VersioneMotore, motore.Formato)
 	case "aiuto", "help", "--help", "-h":
@@ -76,26 +83,49 @@ func main() {
 
 // comuni: le opzioni di tutti i comandi.
 type comuni struct {
-	operazioni, catalogo, lingua string
-	porta                        int
+	operazioni, catalogo, firmaCatalogo, archivio, canale, lingua string
+	porta                                                         int
+	senzaFirma                                                    bool
 }
 
 func (c *comuni) aggiungi(fs *flag.FlagSet) {
 	fs.StringVar(&c.operazioni, "operazioni", "/var/lib/remotix/operazioni", "dove stanno le operazioni")
-	fs.StringVar(&c.catalogo, "catalogo", "", "un catalogo al posto di quello incorporato")
+	fs.StringVar(&c.catalogo, "catalogo", "", "un catalogo FUORI LINEA, firmato (la firma in FILE.firma): è l'unico che si guarda")
+	fs.StringVar(&c.firmaCatalogo, "firma-catalogo", "", "la firma del catalogo fuori linea, se non sta in FILE.firma")
+	fs.StringVar(&c.archivio, "archivio", "", "l'archivio firmato di REMOTIX (URL di base)")
+	fs.StringVar(&c.canale, "canale", "stabile", "il canale dell'archivio: stabile o candidato")
 	fs.IntVar(&c.porta, "porta", 7447, "la porta di REMOTIX (TCP e UDP)")
 	fs.StringVar(&c.lingua, "lingua", "", "it o en (già letta in main)")
+	fs.BoolVar(&c.senzaFirma, "senza-firma", false, "(ritirata in T8: la firma si verifica sempre)")
 }
 
-func (c *comuni) leggiCatalogo() (*motore.Catalogo, error) {
-	b := catalogo.Incorporato
-	if c.catalogo != "" {
-		var err error
-		if b, err = os.ReadFile(c.catalogo); err != nil {
-			return nil, err
-		}
+// fonti: da dove viene il catalogo, e con che cosa si verifica (fase 0 TRUST, catena A).
+func (c *comuni) fonti(scrivi bool) (*motore.FontiFiducia, error) {
+	if c.senzaFirma {
+		return nil, errors.New(T("cli.senza_firma_ritirata"))
 	}
-	return motore.LeggiCatalogo(b)
+	radici, err := motore.LeggiRadici(chiavi.RadiceA)
+	if err != nil {
+		return nil, err
+	}
+	return &motore.FontiFiducia{Radici: radici, Incorporato: catalogo.Incorporato, FirmaIncorporata: catalogo.Firma,
+		RevocheIncorporate: chiavi.Revoche, FirmaRevoche: chiavi.FirmaRevoche,
+		Esplicito: c.catalogo, FirmaEsplicita: c.firmaCatalogo, Archivio: c.archivio, Canale: c.canale,
+		Memoria: filepath.Join(filepath.Dir(c.operazioni), "fiducia"), Scrivi: scrivi}, nil
+}
+
+// leggiCatalogo: la fase 0 TRUST, senza scrivere niente (verifica, piano, catalogo, certifica).
+func (c *comuni) leggiCatalogo() (*motore.Catalogo, error) {
+	cat, _, err := c.fidati()
+	return cat, err
+}
+
+func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
+	f, err := c.fonti(false)
+	if err != nil {
+		return nil, nil, err
+	}
+	return f.Fidati(time.Now())
 }
 
 // argomenti: le opzioni possono stare prima o dopo i nomi di file.
@@ -138,21 +168,22 @@ func verifica(arg []string) (int, error) {
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
-	cat, err := c.leggiCatalogo()
-	if err != nil {
-		return 1, err
+	cat, fid, errF := c.fidati() // verifica non scrive niente, neanche il catalogo memorizzato (R1)
+	if errF != nil {
+		if *comeJSON {
+			stampaJSON(map[string]any{"formato": motore.Formato, "fiducia": fid})
+		} else if fid != nil {
+			stampaFiducia(fid)
+		}
+		return 1, errF
 	}
 	amb := motore.AmbienteVero()
-	fid, errF := motore.VerificaFiducia(cat, time.Now(), true) // verifica non tocca niente: la firma si dice, non blocca
 	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
 	if *comeJSON {
 		stampaJSON(map[string]any{"formato": motore.Formato, "fiducia": fid, "profilo": prof, "compatibilita": rap})
 	} else {
 		stampaRapporto(fid, prof, rap)
-	}
-	if errF != nil {
-		return 1, errF
 	}
 	for _, e := range rap.Desktop {
 		if e.Livello != motore.NON_SUPPORTATA {
@@ -165,7 +196,8 @@ func verifica(arg []string) (int, error) {
 func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) {
 	fmt.Printf("%s\n\n", T("cli.titolo"))
 	fmt.Printf("%s: %s — %s\n", T("cli.distribuzione"), r.Piattaforma, r.Riconosciuta)
-	fmt.Printf("%s\n\n", T("cli.catalogo", r.Catalogo.Versione, r.Catalogo.Scadenza))
+	fmt.Printf("%s\n", T("cli.catalogo", r.Catalogo.Versione, r.Catalogo.Scadenza))
+	fmt.Printf("%s\n\n", T("cli.fiducia", fid.Fonte, fid.Sequenza, fid.Sottochiave, fid.Radice, fid.Revoche, fid.FirmaMotore))
 	fmt.Printf("%s\n", T("cli.desktop"))
 	for _, e := range r.Desktop {
 		inst := e.Installato
@@ -261,7 +293,8 @@ func piano(arg []string) error {
 	apri := fs.Bool("apri-firewall", false, "mettere nel piano l'apertura della porta (D6)")
 	comeJSON := fs.Bool("json", false, "stampa anche il piano in JSON")
 	installa := fs.Bool("installa", false, "il piano dell'INSTALLAZIONE di REMOTIX (invece del piano di prova)")
-	pacchetto := fs.String("pacchetto", "", "installazione: il pacchetto di REMOTIX (file .deb/.rpm/.pkg.tar.zst)")
+	pacchetto := fs.String("pacchetto", "", "installazione: il pacchetto di REMOTIX da un file (.deb/.rpm/.pkg.tar.zst), invece dell'archivio")
+	senzaTimer := fs.Bool("senza-timer", false, "installazione dall'archivio: senza gli aggiornamenti automatici")
 	depositi := fs.String("deposito", "", "installazione: archivi di terzi col consenso (D5), separati da virgola: epel, rpmfusion, packman")
 	senzaCinture := fs.Bool("senza-cinture", false, "installazione: senza le tre cinture (D4)")
 	nomi := fs.String("pacchetti", "", "prova: pacchetti dai depositi da far installare (separati da virgola)")
@@ -277,7 +310,11 @@ func piano(arg []string) error {
 	rap := motore.Valuta(cat, prof)
 	var p *motore.Piano
 	if *installa {
-		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, SenzaCinture: *senzaCinture, Porta: c.porta}
+		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, SenzaCinture: *senzaCinture, Porta: c.porta,
+			SenzaTimer: *senzaTimer}
+		if *pacchetto == "" && c.archivio != "" {
+			o.Archivio, o.Canale, o.Chiave, o.Impronta = c.archivio, c.canale, chiavi.Archivio, chiavi.ImprontaArchivio()
+		}
 		if *utente != "" {
 			o.Utenti = strings.Split(*utente, ",")
 		}
@@ -391,17 +428,29 @@ func opera(cmd string, arg []string) (int, error) {
 	c.aggiungi(fs)
 	eventi := fs.Bool("eventi", false, "eventi in JSON, una riga ciascuno")
 	approvaOra := fs.Bool("approva", false, "il consenso è dato adesso, da chi lancia il comando")
-	senzaFirma := fs.Bool("senza-firma", false, "procedere anche se la firma del catalogo non si verifica (oggi non esiste: T8)")
 	pos, err := argomenti(fs, arg)
 	if err != nil {
 		return 2, err
 	}
-	cat, err := c.leggiCatalogo()
-	if err != nil {
-		return 1, err
+	// l'archivio del piano: la fase 0 TRUST ci scarica il catalogo del canale
+	if cmd == "applica" && len(pos) == 1 && c.archivio == "" && c.catalogo == "" {
+		var p motore.Piano
+		if motore.LeggiJSON(pos[0], &p) == nil && p.Archivio != nil {
+			c.archivio, c.canale = p.Archivio.URL, p.Archivio.Canale
+		}
 	}
-	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Catalogo: cat, SenzaFirma: *senzaFirma,
+	fonti, err := c.fonti(true)
+	if err != nil {
+		return 2, err
+	}
+	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: fonti,
 		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
+	if cmd != "applica" {
+		// riprendi e annulla non ripassano dalla fase 0: il catalogo per il profilo è quello verificato
+		if m.Catalogo, err = c.leggiCatalogo(); err != nil {
+			return 1, err
+		}
+	}
 	var op *motore.Operazione
 	switch cmd {
 	case "applica":
@@ -546,5 +595,129 @@ func certifica(arg []string) (int, error) {
 	if r.Esito != "VERDE" {
 		return 1, nil
 	}
+	return 0, nil
+}
+
+func stampaFiducia(f *motore.Fiducia) {
+	fmt.Println(T("cli.fiducia", f.Fonte, f.Sequenza, f.Sottochiave, f.Radice, f.Revoche, f.FirmaMotore))
+	for _, g := range f.Guardati {
+		fmt.Printf("  %-8s %-60s %s\n", g.Cosa, tronca(g.Fonte, 60), g.Esito)
+	}
+	for _, m := range f.Messaggi {
+		fmt.Printf("  [%s] %s %s", m.Codice, m.Gravita, m.Testo)
+		if m.Dettaglio != "" {
+			fmt.Printf(" (%s)", m.Dettaglio)
+		}
+		fmt.Println()
+	}
+}
+
+// aggiorna: il controllo dell'archivio e del catalogo, e l'aggiornamento dal gestore di pacchetti
+// (DECISIONI §10.10). «ritorna --versione V»: una versione precedente (R11).
+func aggiorna(cmd string, arg []string) (int, error) {
+	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
+	var c comuni
+	c.aggiungi(fs)
+	o := motore.OpzioniAggiorna{Chi: chi()}
+	fs.BoolVar(&o.DalTimer, "dal-timer", false, "lanciato dal timer: vale /etc/remotix/aggiornamenti.conf (il consenso dato all'installazione)")
+	fs.BoolVar(&o.Controlla, "controlla", false, "solo guardare: che cosa c'è di nuovo, niente si applica")
+	fs.BoolVar(&o.Applica, "applica", false, "applicare la manutenzione adesso (anche con «avviso»)")
+	fs.BoolVar(&o.Annuale, "annuale", false, "applicare anche la versione annuale (la scelta dell'amministratore, D14)")
+	fs.StringVar(&o.Versione, "versione", "", "una versione precisa di remotix (ritorna: una precedente)")
+	mostra := fs.Bool("mostra", false, "la configurazione degli aggiornamenti e da dove viene ogni voce")
+	comeJSON := fs.Bool("json", false, "il rapporto in JSON")
+	eventi := fs.Bool("eventi", false, "eventi in JSON, una riga ciascuno")
+	if _, err := argomenti(fs, arg); err != nil {
+		return 2, err
+	}
+	amb := motore.AmbienteVero()
+	if *mostra {
+		conf, err := motore.LeggiConfAggiornamenti(amb)
+		if err != nil {
+			return 1, err
+		}
+		fmt.Println(T("agg.mostra", motore.FileConfAggiornamenti))
+		fmt.Printf("  automatico = %-13s ← %s\n", conf.Automatico, conf.Da["automatico"])
+		for _, k := range []string{"manutenzione", "tutto", "avviso", "spento"} {
+			fmt.Printf("    %-13s %s\n", k, motore.ModiAutomatico[k])
+		}
+		return 0, nil
+	}
+	if cmd == "ritorna" && o.Versione == "" {
+		return 2, errors.New(T("agg.serve_versione"))
+	}
+	fonti, err := c.fonti(true)
+	if err != nil {
+		return 2, err
+	}
+	m := &motore.Motore{Amb: amb, Cartella: c.operazioni, Fonti: fonti, Porta: c.porta,
+		Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
+	// il catalogo locale (memorizzato o incorporato) per il piano; se non si verifica, ci pensa
+	// Aggiorna col catalogo dell'archivio, o si ferma col suo codice
+	m.Catalogo, _ = c.leggiCatalogo()
+	r, op, err := m.Aggiorna(o)
+	if *comeJSON {
+		stampaJSON(r)
+	} else {
+		fmt.Println(T("agg.titolo", r.Archivio, r.Canale, r.Conf.Automatico))
+		if r.Catalogo != "" {
+			fmt.Println(T("agg.catalogo", r.Catalogo))
+		}
+		for _, n := range []string{"remotix", "remotix-install", "remotix-archive-keyring"} {
+			if v, ok := r.Installate[n]; ok {
+				fmt.Printf("  %-24s %-22s → %s\n", n, v, strings.Join(r.Disponibili[n], " "))
+			}
+		}
+		for _, x := range r.Messaggi {
+			fmt.Printf("  [%s] %s %s", x.Codice, x.Gravita, x.Testo)
+			if x.Dettaglio != "" {
+				fmt.Printf(" (%s)", x.Dettaglio)
+			}
+			fmt.Println()
+		}
+		if op != nil {
+			fmt.Printf("%s\n  %s\n", T("cli.operazione", op.ID, op.Stato), op.Cartella)
+		}
+	}
+	if err != nil {
+		return 1, err
+	}
+	if op != nil && op.Stato != motore.CONFERMATA && op.Stato != motore.CONFERMATA_A_CONDIZIONI {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+// fiducia: verifica un file con la catena A (il catalogo, il motore scaricato da install.sh).
+func fiducia(arg []string) (int, error) {
+	fs := flag.NewFlagSet("fiducia", flag.ContinueOnError)
+	oggetto := fs.String("oggetto", "catalogo", "catalogo · motore · revoche")
+	firma := fs.String("firma", "", "il file della firma (predefinito FILE.firma)")
+	fs.String("lingua", "", "it o en (già letta in main)")
+	pos, err := argomenti(fs, arg)
+	if err != nil || len(pos) != 1 {
+		return 2, errors.New("fiducia FILE [--oggetto catalogo|motore|revoche] [--firma FILE.firma]")
+	}
+	radici, err := motore.LeggiRadici(chiavi.RadiceA)
+	if err != nil {
+		return 1, err
+	}
+	dati, err := os.ReadFile(pos[0])
+	if err != nil {
+		return 1, err
+	}
+	if *firma == "" {
+		*firma = pos[0] + ".firma"
+	}
+	f, _ := os.ReadFile(*firma)
+	rev, err := motore.LeggiRevoche(radici, chiavi.Revoche, chiavi.FirmaRevoche, time.Now())
+	if err != nil {
+		return 1, err
+	}
+	e, err := motore.VerificaFirma(radici, dati, f, *oggetto, time.Now(), rev)
+	if err != nil {
+		return 1, err
+	}
+	fmt.Println(T("cli.fiducia_file", pos[0], *oggetto, e.Sottochiave, e.Dal, e.Al))
 	return 0, nil
 }

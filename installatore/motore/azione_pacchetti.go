@@ -245,9 +245,10 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	if err != nil {
 		return 0, 0, err
 	}
+	agg := versioniAggiornate(c.Cartella)
 	for _, x := range p.Insieme {
 		v := ver[x.Nome]
-		if versioneUguale(v, x.Versione) {
+		if versioneUguale(v, x.Versione) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) {
 			completi++
 		}
 		if x.Esito == "nuovo" && v != "" {

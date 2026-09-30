@@ -1,0 +1,16 @@
+{
+  "formato": "remotix-firma/1",
+  "catena": "A",
+  "oggetto": "catalogo",
+  "sha256": "5c9e1f633eefba0a13c7be8631f63c7cdaa633932114e2f73f961f5455b68434",
+  "firmato": "2026-09-30",
+  "sottochiave": {
+    "catena": "A",
+    "id": "A-2026",
+    "pubblica": "s+aeDZ5SzUuKffkcwGIpDYAzEN5MyTJVB6dOcMjKiSk=",
+    "dal": "2026-09-30",
+    "al": "2027-09-29",
+    "firma_radice": "yxkg6/9p5LsFzm9uxv62XZPtND7fqo4DZ/12AWIblOvjR+WIZ/lkcfo1zK9YOz+Q1VjahqivoGAxoGuMaueMBg=="
+  },
+  "firma": "iHQpxia/P0sYLklbYAxIkkGq/8BwlOph8kfEn5o1cMlizz1TCb+3xTpZFUVCA1MCBmLqgCa6epMqc0G+RozbCw=="
+}

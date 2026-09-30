@@ -3,11 +3,22 @@ package motore
 // codiciInglese: the English texts of the RX-… codes (same codes, same meaning: codici.go).
 // [0] = text, [1] = remedy.
 var codiciInglese = map[string][2]string{
-	"RX-TRUST-001": {"The catalogue signature cannot be verified yet: the chain of trust arrives with stage T8 (decision D11).", "For now the engine proceeds only if explicitly asked with --senza-firma, and records it in the log."},
+	"RX-TRUST-001": {"(retired in T8) The catalogue signature could not be verified yet: the engine proceeded only with --senza-firma.", ""},
 	"RX-TRUST-002": {"The catalogue of supported combinations has expired.", "Download the updated engine or catalogue."},
 	"RX-TRUST-003": {"The catalogue requires a newer engine than this one.", "Download the updated engine."},
 	"RX-TRUST-004": {"The catalogue cannot be read or has an unknown format.", "Download the engine or the catalogue again."},
-	"RX-TRUST-005": {"Trust in the catalogue is not verified and proceeding anyway was not requested.", "Run again with --senza-firma only knowing that signatures are not in place yet (T8)."},
+	"RX-TRUST-005": {"(retired in T8) Trust in the catalogue was not verified and proceeding anyway was not requested.", ""},
+	"RX-TRUST-006": {"The catalogue (or the engine) has no signature, or the signature cannot be read: nothing proceeds without a signature.", "Download the catalogue again with its .firma file next to it, or give a signed offline catalogue (--catalogo FILE, with FILE.firma)."},
+	"RX-TRUST-007": {"The signature does not match: the catalogue (or the engine) was altered, or the signature is for something else.", "Do not use this file: download it again from REMOTIX and check where it comes from."},
+	"RX-TRUST-008": {"The signing key is not certified by the REMOTIX root key written in the engine.", "Do not use this file: it does not come from REMOTIX, or the engine is too old for the new key."},
+	"RX-TRUST-009": {"The signing key has expired (or is not valid yet).", "Download the updated catalogue, signed with the current key; also check the machine's clock."},
+	"RX-TRUST-010": {"The signing key was REVOKED by REMOTIX.", "Download the catalogue signed with the new key; do not use anything signed with the revoked one."},
+	"RX-TRUST-011": {"The catalogue received is older than one already verified on this machine: the most recent is kept.", "If it was given by hand, give a more recent one; if it comes from the archive, the mirror may be behind."},
+	"RX-TRUST-012": {"The list of revoked keys is not signed by the root key, or it was altered.", "Nothing proceeds until the list verifies: download it again from REMOTIX."},
+	"RX-TRUST-013": {"The updated catalogue could not be downloaded from the archive: the most recent one already verified is used.", "Check the network; the check is repeated at the next run."},
+	"RX-TRUST-014": {"The running engine does not match its signature.", "Do not use this engine: reinstall it from the REMOTIX archive."},
+	"RX-TRUST-015": {"The engine has no signature next to it: its authenticity was verified by whoever downloaded it (the entry script) or by the package manager (chain B).", ""},
+	"RX-TRUST-016": {"The offline catalogue given is older than one already verified on this machine.", "Give the most recent catalogue."},
 
 	"RX-DISTRO-001":  {"Cannot tell which distribution is installed (/etc/os-release is missing or unreadable).", ""},
 	"RX-SYSTEMD-001": {"The machine was not booted with systemd: REMOTIX uses logind and the systemd user manager.", "REMOTIX does not run without systemd."},
@@ -76,4 +87,15 @@ var codiciInglese = map[string][2]string{
 	"RX-SYSTEMD-002":   {"The unit is masked: the administrator switched it off on purpose.", ""},
 	"RX-SYSTEMD-003":   {"The unit does not exist.", ""},
 	"RX-FILE-001":      {"The file was changed by someone else during the operation: it is not touched.", ""},
+
+	"RX-AGG-001": {"REMOTIX is at the latest version of its channel.", ""},
+	"RX-AGG-002": {"A maintenance update is available (security or rebuild): it is applied automatically, as the configuration says.", ""},
+	"RX-AGG-003": {"The new yearly version is available: it is not applied automatically, the administrator chooses it.", "remotix-install aggiorna --annuale"},
+	"RX-AGG-004": {"An update is available, but the configuration says not to apply it automatically (notice only).", "remotix-install aggiorna --applica"},
+	"RX-AGG-005": {"Automatic updates are switched off by the configuration.", ""},
+	"RX-AGG-006": {"REMOTIX was not installed by the installer: there is nothing to update from here.", "Install with remotix-install."},
+	"RX-AGG-007": {"The REMOTIX archive does not answer, or its signature does not verify (the package manager refuses it).", "Check the network; if the package manager talks about signatures, do NOT force it: the archive may have been altered."},
+	"RX-AGG-008": {"On Arch the update would also touch packages that are not REMOTIX (a partial upgrade, which Arch does not support): it is not applied automatically.", "pacman -Syu, then remotix-install aggiorna"},
+	"RX-AGG-009": {"The requested version is not in the REMOTIX archive.", "remotix-install aggiorna --controlla lists the versions available."},
+	"RX-AGG-010": {"The update configuration cannot be read.", "Fix /etc/remotix/aggiornamenti.conf (remotix-install aggiorna --mostra)."},
 }

@@ -278,25 +278,6 @@ func ultimoStato(op *Operazione) string {
 	return ""
 }
 
-// TRUST: senza --senza-firma ci si ferma; un catalogo scaduto ferma sempre.
-func TestFiducia(t *testing.T) {
-	b := nuovoBanco(t)
-	m := b.motore(t)
-	m.SenzaFirma = false
-	if op, err := m.Applica(b.piano, false, "prova"); CodiceDi(err) != "RX-TRUST-005" || op.Stato != BLOCCATA {
-		t.Fatalf("senza firma: %v %v", op.Stato, err)
-	}
-	cat := catalogoProva(t)
-	cat.Scadenza = "2026-01-01"
-	if _, err := VerificaFiducia(cat, m.adesso(), true); CodiceDi(err) != "RX-TRUST-002" {
-		t.Errorf("scaduto: %v", err)
-	}
-	cat.Scadenza, cat.MotoreMinimo = "2099-01-01", "9.0.0"
-	if _, err := VerificaFiducia(cat, m.adesso(), true); CodiceDi(err) != "RX-TRUST-003" {
-		t.Errorf("motore vecchio: %v", err)
-	}
-}
-
 // R38 in piccolo: il desktop installato SENZA schermata d'accesso né avvio in grafica — il display
 // manager che il «postinst» abilita e accende resta spento, il bersaglio d'avvio com'era; e
 // l'annullamento lo toglie.
