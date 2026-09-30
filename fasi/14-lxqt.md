@@ -1,7 +1,5 @@
 # Fase 14 — LXQt
 
-⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
-
 *Aperta il **24 settembre 2026**. Chiusa il —*
 
 ⚠ Numerazione: `PIANO.md` metteva LXQt nella fase 13 («XFCE e LXQt») e chiamava 14 «Il registro».
@@ -117,7 +115,7 @@ fisso nel codice di fancymenu e apre `lxqt-leave`, dove spegnimento/riavvio/sosp
 
 **Client veri** — binario **`1a10a66e`** (albero `a1f771e`), labwc senza schermo sul server:
 **Firefox 140 PASS · Chrome 154 PASS** (`12-client-veri`: pagina, ammissione, primo fotogramma,
-continuità dei fotogrammi, tastiera e mouse al server, 0 errori JS e di rete, rientro).
+continuità 63–66 fotogrammi in 8 s, tastiera e mouse al server, 0 errori JS e di rete, rientro).
 ⛔ **E la fotografia della tela mostra un difetto che i contatori non vedono**: con la tela del
 browser (1400x914) il pannello va giusto in fondo, ma **lo sfondo di pcmanfm-qt resta della misura
 di nascita** e il resto è nero. Col cliente Python (1920x1080) riempiva tutto. In diagnosi.
@@ -127,7 +125,7 @@ di nascita** e il resto è nero. Col cliente Python (1920x1080) riempiva tutto. 
 ### Incremento 3 — lo sfondo nasce della misura del cliente
 
 `[M]` La causa, con il cliente Python e senza browser: **una gara alla nascita**. labwc nasce con
-l'uscita 1280x720 e il prodotto la ridimensiona poco dopo; pcmanfm-qt parte a ridosso di labwc.
+l'uscita 1280x720 e il prodotto la ridimensiona ~200 ms dopo; pcmanfm-qt parte ~160 ms dopo labwc.
 `[R]` pcmanfm-qt 2.1.0 calcola lo sfondo da `screen->size()` e lo ricalcola solo su `resizeEvent`: se
 Qt aggiorna lo schermo dopo la finestra, lo sfondo resta 1280x720 per sempre.
 **Cura** (`e4ecfbb`, solo ramo LXQt): il client primario di labwc diventa `sh -c` che dà all'uscita la
@@ -207,11 +205,11 @@ Tutti curati, misurati coi browser veri, e ognuno con una maglia nuova che lo so
 | # | difetto `[M]` | desktop | cura | prova |
 |---|---|---|---|---|
 | 1 | l'icona «Lock screen» ancora attiva (finestra lxqt-leave dal pulsante fisso di fancymenu; cliccata restava APPESA) | LXQt | pannello col menu classico (`mainmenu`), `lock_command_wayland=true` calcolato come liblxqt (`efb1840`, `83ea7b4`) | foto, misure c94u* |
-| 2 | non si ridimensionano le finestre dal bordo: la zona è FUORI dal bordo e da REMOTIX non arrivava la freccia doppia | tutti | la **forma vera del puntatore** su tutti e quattro (decisione dell'utente): tema codificato + dizionario (`src/forma.c`), KDE dal metadato (`bd8a529`), labwc con la «sonda» 3x3 (`95d5f54`) | **C21** (forma sul bordo), **C22** (il bordo si trascina) |
+| 2 | non si ridimensionano le finestre dal bordo: la zona è FUORI dal bordo e da REMOTIX non arrivava la freccia doppia | tutti | la **forma vera del puntatore** su tutti e quattro (decisione dell'utente): tema codificato + dizionario (`src/forma.c`), KDE dal metadato (`bd8a529`), labwc con la «sonda» 3x3 (`95d5f54`, +1,4 % CPU a labwc) | **C21** (forma sul bordo), **C22** (il bordo si trascina) |
 | 3 | Maiusc+freccia non seleziona (il Maiusc da solo non partiva) | tutti | la pagina risincronizza sempre il Maiusc e lo restituisce prima della LETTERA (`694f77f`) | **C23** |
 | 4 | con Chrome il clic cade 1 px a sinistra a tela di mezzo pixel | tutti | il clic non ricalcola il punto del movimento (`72d12f2`) | misura 8/8 |
 | 5 | con Firefox (decodifica hardware) la zona sensibile spostata di «qualche mm» in basso | tutti | anche l'**altezza** della tela a multiplo di 16 (`fc0fbff`) | confermato dall'utente |
-| 6 | «Esci» fa RINASCERE la sessione (13-16 volte su 20; 1 su 20 col binario del mattino) | LXQt | su wlroots non si monta finché il gestore di sessione non è sul bus (`43345ea`): **20 uscite su 20**, XFCE 12/12 | C20, e C24 «Esci dieci volte» (in scrittura) |
+| 6 | «Esci» fa RINASCERE la sessione (13-16 volte su 20; 1 su 20 col binario del mattino) | LXQt | su wlroots non si monta finché il gestore di sessione non è sul bus (`43345ea`): **20 uscite su 20**, XFCE 12/12, +210 ms alla prima immagine | C20, e C24 «Esci dieci volte» (in scrittura) |
 
 ⚠ Il puntino di 1 px sotto la punta del puntatore (il prezzo della forma su KDE e labwc) **si vede**: da
 giudicare dall'utente. ⚠ Eccezione dichiarata dall'utente: su KDE (KWin < 6.8) al riattacco a misura

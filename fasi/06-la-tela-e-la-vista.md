@@ -1,7 +1,5 @@
 # Fase 6 — La tela e la vista
 
-⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
-
 ⭐ **Aperta il 16 agosto 2026, sera**, col suo documento e **prima di una riga di codice**
 (`PIANO.md` §0.1). Il piano è `PIANO.md` §«Fase 6 — La tela e la vista»; il modello di questo
 documento è `PIANO.md` §0.2.
@@ -23,7 +21,7 @@ rifanno**:
 | la **tela concordata all'attacco** | ✅ `[M]` 1264×800 in una finestra 1265×800, scala **1,000** |
 | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, **0** fotogrammi scartati |
 | la **vista che riscala** | ✅ c'era dalla fase 2; la scala vale 1 quando le due tele combaciano |
-| ~~il **ridimensionamento a caldo**~~ | ⛔ **USCITO dal prodotto il 17 agosto 2026** (`DECISIONI.md` §5.1-bis). Era `[M]` misurato su Mutter e **impossibile** su KWin ≤ 6.7.4: l'utente ha tolto l'eccezione invece di mantenerla |
+| ~~il **ridimensionamento a caldo**~~ | ⛔ **USCITO dal prodotto il 17 agosto 2026** (`DECISIONI.md` §5.1-bis). Era `[M]` 6 ms su Mutter e **impossibile** su KWin ≤ 6.7.4: l'utente ha tolto l'eccezione invece di mantenerla |
 
 ⛔ **E quel che resta APERTO, che è il lavoro vero di questa fase:**
 
@@ -138,7 +136,7 @@ essere dichiarati. Un numero preso sotto carico e non dichiarato tale è un nume
    `window.dispatchEvent(new KeyboardEvent("keydown", {code:"Enter"}))`, e solo i tasti
    **non-lettera** si tengono giù;
 5. ⛔ **ogni utente di prova va nel gruppo `render`** — senza, il codificatore ripiega in software
-   **dichiarandolo**, ed è molto più lento;
+   **dichiarandolo**: `[M]` 100 ms per fotogramma invece di 4,8;
 6. ⚠ **l'orologio della macchina di prova è indietro di DUE ORE** rispetto al portatile;
 7. ⛔ **la parola d'ordine non passa mai dalla riga di comando** (difetto **D12**): file `0600`
    scritto con `printf`, `--parola-file`, e una `trap` che lo cancella;
@@ -274,7 +272,7 @@ Gecko · WebKit) e non i sistemi: ⏳ la riga su Windows va aggiunta alla chiusu
 | il tetto del decodificatore dichiarato dal client | `video.misura_massima=3840x2160` |
 | la sessione | `tela=2540x868 vista=2541x869 disposizione=it`, da `[192.168.0.21]` |
 | l'invariante **I2** | *««prova» è già servito dal figlio pid 588775: NON ne nasce un secondo»* — il palco è lo stesso perché è della **sessione** (I4) |
-| il flusso | `0 guasti`, codec 1, 60/s chiesti |
+| il flusso | `3829 fotogrammi consegnati (10 chiavi), 0 guasti`, codec 1, 60/s chiesti; `1197 spediti, 7 abbandonati` |
 
 ⛔⛔ **E il fatto che vale per questa fase: la sua finestra era DISPARI su tutt'e due i lati —
 2541×869 — e la tela concessa è 2540×868**, troncata in giù di un pixel per lato. ⇒ Le due `[?]` di
@@ -316,10 +314,12 @@ banchi fermi** prima di diventare i numeri della fase.
 | tela concordata all'attacco | la misura chiesta, lati pari | **1264×800**, tre giri su tre | 6.1 |
 | riattacco a misura diversa | `SESSIONE` concede **quella del palco** (I4) | **1264×800** + riga `RIPIEGO DICHIARATO (§4.5)` | 6.1 |
 | fotogrammi scartati per misura | **0** | **0** in tutti i giri di tutte le sottofasi | 6.1 · 6.3 |
+| **la tela girata al palco** *(⛔ era etichettata «ridimensionamento a caldo»: vedi §5.14)* | ~6 ms (`[M]` 15 ago) | **5 ms** · **4 ms** di mediana su 9 cambi (3-13) | 6.1 · 6.3 |
+| `SESSIONE` → primo fotogramma, palco **da montare** | ~311 ms (`[M]` 15 ago) | **335 ms** | 6.3 |
+| ⭐ idem, palco **già in piedi** (I4) | — | **11 · 13 · 17 · 24 · 28 · 37 · 106 ms** | 6.3 |
+| giro intero `ADATTA_TELA`→`TELA` lato server | — | **40 ms** (31-60); Mutter ne prende **32** | 6.3 |
 | scala del **monitor** (lato server) | 1,000 | **1,000** su «Meta-0», e la riga si scrive **anche quando è buona** | 6.1 |
 | ⛔ scala di **disegno** (lato pagina) | 1,000 e `pixelated` | **1,000** sui pixel (986 su 986) — ⚠ e vedi §4.3 | 6.5 |
-
-⚠ *Le righe dei tempi — la tela girata al palco (⛔ era etichettata «ridimensionamento a caldo»: vedi §5.14), `SESSIONE` → primo fotogramma, il giro `ADATTA_TELA`→`TELA` — sono state tolte con la fase 18; restano in git.*
 
 ### 4.3 · ⭐⭐ La pagina, i pixel e i numeri del browser — le tre `[?]` di §6.1-bis, chiuse
 
@@ -379,7 +379,7 @@ codice**, e le altre quattro scene la leggono. Una regressione lì non l'avrebbe
 | il validatore certificato | **49 registrazioni su 49** accusate sul byte dichiarato prima · 4 esiti coperti (conforme 13 · non conforme 28 · rotta 7 · niente da giudicare 1) · **19 mutazioni su 19** |
 | i limiti di §4.5 sul palco vero | 320×240 **ADATTATA** · 318×240 **RIFIUTATA** · 1281×801 → **1280×800** · 7682×4320 **RIFIUTATA** · col tetto del client 3842×2160 → **3840×2158**, ripiego dichiarato |
 | le **coordinate in volo** (§7.1, mai provate prima) | dentro il secondo: **saturate e scritte** · **1000 ms dentro, 1001 ms `ERRORE_PROTOCOLLO`** · l'errore vero non è coperto dalla grazia |
-| il palco che cambia **da sé** | **zero `TELA` non sollecitati, mai** (filo: 3 cambi di fila; prodotto: richiamato, **torna**, 0 fotogrammi di misura sbagliata al client) |
+| il palco che cambia **da sé** | **zero `TELA` non sollecitati, mai** (filo: 3 cambi di fila; prodotto: richiamato, **torna in 37 ms**, 0 fotogrammi di misura sbagliata al client) |
 
 ### 4.5 · La tastiera al riattacco
 
@@ -402,7 +402,7 @@ codice**, e le altre quattro scene la leggono. Una regressione lì non l'avrebbe
 | la catena, tutta `[R]` **dentro Mutter** | `remove_viewport_devices()` (`meta-eis-client.c:197-206`) **non passa da `drop_device()`** · `handle_button()` (`:612-621`) **ingoia in silenzio** il rilascio per un pulsante non premuto *su quel* dispositivo · `update_button_count()` (`meta-seat-impl.c:899-908`) è **del posto**: il press del dispositivo morto lo tiene a 1, e **non scende mai a zero** |
 | ⇒ | ⭐ È *«su Android il mouse non prende più i click»* (l'utente, 15 agosto) **per una causa diversa da quella curata allora** |
 | la cura | **una riga**: `input_rilascia_tutto()` **prima** di `cattura_ridimensiona()` — applicata, `figlio.c` · `codificatore_di()` |
-| ⛔ **e non basta** | `[M]` i dispositivi si ricreano **anche senza cambiare misura**: ogni `cattura_risveglia()` (400 ms, scena ferma e chiave dovuta) è seguito subito dopo da un ricambio — **3 risvegli, 3 ricambi**, con **zero `ADATTA_TELA`**. ⇒ Cioè **proprio mentre l'utente tiene premuto il mouse su un desktop fermo**, e la cura ovvia (rilasciare a ogni risveglio) **distruggerebbe ogni trascinamento** |
+| ⛔ **e non basta** | `[M]` i dispositivi si ricreano **anche senza cambiare misura**: ogni `cattura_risveglia()` (400 ms, scena ferma e chiave dovuta) è seguito 8-24 ms dopo da un ricambio — **3 risvegli, 3 ricambi**, con **zero `ADATTA_TELA`**. ⇒ Cioè **proprio mentre l'utente tiene premuto il mouse su un desktop fermo**, e la cura ovvia (rilasciare a ogni risveglio) **distruggerebbe ogni trascinamento** |
 
 ### 4.7 · ⭐⭐ La decisione dell'utente ATTUATA — `Ctrl+Z` da una tastiera tedesca
 
@@ -453,10 +453,10 @@ e cinque codificatori** sullo stesso iGPU.*
 
 | scena | atteso *dichiarato prima* | `[M]` misurato |
 |---|---|---|
-| ⭐ **A · il trascinamento del bordo** | **0 rotti su 18** | ⭐ **0 su 18** — la 1ª richiesta `NON_ORA` **subito**, la 2ª `ADATTATA`, tela finale = quella della **seconda** · **0** fuori misura · **0** scartati · ⛔ **nessuna attesa dei 3 s**. E **0 su 10** anche a 5 ms di distanza, e **0 su 10** sotto carico CPU **10,9** |
+| ⭐ **A · il trascinamento del bordo** | **0 rotti su 18** | ⭐ **0 su 18** — la 1ª richiesta `NON_ORA` **subito**, la 2ª `ADATTATA`, tela finale = quella della **seconda** in **31,7 ms** di mediana (23,8-45,3) · **0** fuori misura · **0** scartati · ⛔ **nessuna attesa dei 3 s**. E **0 su 10** anche a 5 ms di distanza, e **0 su 10** sotto carico CPU **10,9** |
 | ⭐ **B · il clic tenuto giù** | il rilascio arriva, e i clic del **secondo giro** arrivano tutti | ⭐ registro: *«RILASCIATI 2 fra tasti e pulsanti PRIMA di ridimensionare»* · e nel secondo giro, **senza riaccendere il server**, il testimone vede **tutti e nove gli atti, clic compreso** |
 | ⭐ **C · la tastiera che comanda** | **`1a`** | ⭐ **`1a`**, con la catena intera nel registro: `§5-bis.7 «de» chiesta` → `tastiera TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
-| ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | ⚠ i tempi sono stati tolti con la fase 18 · **10/10 ADATTATA** · **0** scartati, **0** fuori misura |
+| ⛔ **D · i millisecondi, a macchina ferma** — ⚠ **NON RICALCOLABILI, vedi §5.6** | riprendere i cinque numeri | la tela girata al palco **4 ms** di mediana (3-7, n=10) · Mutter **39,5 ms** · giro intero lato server **44,5 ms**, **10/10 ADATTATA** · `SESSIONE`→1° fotogramma **25 ms** col palco in piedi e **203-220 ms** da montare (era 335) · **0** scartati, **0** fuori misura |
 
 ⭐ **E il controllo positivo ha reso dove contava**: spenta la riga di `figlio.c` · `codificatore_di()` e ricompilato,
 il caso del clic torna **DIFETTO_VIVO** — nel secondo giro **non arriva più nessun bottone**, solo i
@@ -548,8 +548,8 @@ ripreso quando H.264 entra nel prodotto (`DECISIONI.md` §1.13-ter).
 
 `src/pagina.html`: la tela visibile prende il contesto **`bitmaprenderer`** e il fotogramma ci
 arriva con **una sola** conversione (`createImageBitmap`) invece dei **due `drawImage`** di prima.
-⛔ **Spariscono tutt'e due le tele 2D**: quella del deposito — il costo che la fase 4 aveva misurato — e quella
-della vista.
+⛔ **Spariscono tutt'e due le tele 2D**: quella del deposito — `[M]` **34,03 ms** di mediana per
+fotogramma, il costo che la fase 4 aveva misurato — e quella della vista.
 
 | che cosa cambia | e perché non rompe niente |
 |---|---|
@@ -569,7 +569,7 @@ leggeva i pixel con `t.getContext("2d")` **sulla tela del prodotto** — adesso 
 sua. ⚠ Quel che rilegge resta il magazzino, non lo schermo (§1.16).
 
 ⛔⛔ **E il numero che ancora NON c'è**: `[?]` **quanto costa `createImageBitmap`**. Il conto da
-battere è quello del `drawImage` che ha sostituito, e finché non è misurato **non si
+battere è quello del `drawImage` che ha sostituito (34,03 ms), e finché non è misurato **non si
 dichiara un guadagno**. ⚠ Serve una scena in movimento, cioè l'apparecchio della fase 3.
 
 ⏳ **E manca il giudizio, che è l'unica cosa che chiude questa caccia**: nessun banco vede questo
@@ -713,7 +713,7 @@ un'ora prima era a pezzi.
 | `RCP.md` §4.3, §6.2 | `h264` nell'elenco negoziabile, `3` nel registro dei numeri. ⛔ Il `2` resta AV1 **per sempre** |
 | `rcp.h` | ⭐ `RCP_CODEC_VIDEO_MAX`, perché il numero più alto stia in **un posto solo** |
 | `rcp.c` | `NOSTRO_CODEC` diventa `hevc,h264` — AV1 esce dalla negoziazione |
-| `codificatore.c` | `h264_vaapi` in hardware e `libx264` come ripiego dichiarato; il lettore **Annex-B di H.264** (l'IDR sta nei *cinque* bit bassi, non nei sei di HEVC) e l'**SPS** letto fino al ritaglio, che è quel che permette di dire la profondità e la misura VERE |
+| `codificatore.c` | `h264_vaapi` in hardware (`[M]` **1,6 ms** per fotogramma) e `libx264` come ripiego dichiarato; il lettore **Annex-B di H.264** (l'IDR sta nei *cinque* bit bassi, non nei sei di HEVC) e l'**SPS** letto fino al ritaglio, che è quel che permette di dire la profondità e la misura VERE |
 | `figlio.c` | il terzo posto in **quattro** array per-codec, e la mappa numero → codec in una funzione sola |
 | `pagina.html` | la sonda `h264-8` e la scala delle misure, **generate** dai due programmi di `banchi/` e non scritte a mano; `avc1.6400<livello in esadecimale>`; e le frasi all'utente che nominavano AV1 |
 
@@ -727,7 +727,7 @@ cinque posti, e uno resta indietro»:**
 2. ⛔ **il figlio rifiutava il codec 3** con un tetto scritto a mano (*«che §6.2 non definisce»*) —
    e almeno questo *lo diceva*;
 3. ⛔⛔ **`wt_video_diffondi()` buttava ogni fotogramma H.264 IN SILENZIO**: il figlio codificava
-   (una CHIAVE), il padre riceveva, e lì il fotogramma spariva **senza una riga**.
+   (5 940 byte, CHIAVE, 1,6 ms), il padre riceveva, e lì il fotogramma spariva **senza una riga**.
    ⇒ Adesso il tetto viene da `RCP_CODEC_VIDEO_MAX` e il rifiuto **si dichiara** (una riga per
    numero, non per fotogramma).
 
@@ -925,20 +925,25 @@ finestra arbitraria**, che è peggio: un conto plausibile e falso. L'unico esito
 
 #### ⛔ I numeri **D** di §4.8 non sono ricalcolabili — la finestra è perduta
 
-⚠ Va scritto invece di essere aggirato: i numeri **D** vennero da una finestra di registro che **è
-stata cancellata**, e nessun file superstite la contiene. ⇒ Quel che se ne ricavava dai registri
-rimasti, **a macchina ferma**, con gli attrezzi riparati, è stato tolto con la fase 18 (i tempi);
-resta in git. ⛔ E una cosa che non è un tempo: `NON_ORA` prima stava sotto la stessa etichetta
-dell'`ADATTATA`, che è la forma E2.
+⚠ Va scritto invece di essere aggirato: **4 ms · 39,5 · 44,5 · n=10** vennero da una finestra di
+registro che **è stata cancellata**, e nessun file superstite la contiene. ⇒ Quel che si ricava oggi
+dai registri che restano, **a macchina ferma**, con gli attrezzi riparati:
 
-⭐ **E un numero del documento tornava esatto**: una riga di §4.2 usciva identica dagli attrezzi
-nuovi sullo stesso registro. ⇒ Non era tutto da rifare: era **quel** riquadro.
+| | `[M]` 21 agosto, dagli attrezzi riparati |
+|---|---|
+| **la tela girata al palco** | **4,0 ms** (0-18, n=30) |
+| Mutter | **35,0 ms** (29-45, n=20) |
+| giro intero lato server, `ADATTATA` | **43,5 ms** (38-57, n=20) — contro i 44,5 scritti: **finestra vicina, non la stessa** |
+| `NON_ORA` | **6,0 ms** (5-7, n=10) — ⛔ e prima stava sotto la stessa etichetta dell'`ADATTATA`, che è la forma E2 |
+
+⭐ **E un numero del documento torna esatto**: §4.2, *«4 ms di mediana su 9 cambi (3-13)»*, esce
+identico dagli attrezzi nuovi sullo stesso registro. ⇒ Non è tutto da rifare: è **quel** riquadro.
 
 #### ⭐⭐ E un indizio NUOVO, a favore della tesi della contesa
 
-`[M]` sul registro del **16 agosto**, con cinque banchi accesi: `NON_ORA` è molto più lento, e
-**due casi arrivano alla scadenza intera di §7.1**. Sul **17**, a macchina ferma, nessuno arriva al
-fondo. ⇒ ⭐ **La contesa muove davvero questa scena**, e il *«il verde vale sotto
+`[M]` sul registro del **16 agosto**, con cinque banchi accesi: `NON_ORA` ha mediana **22 ms** e
+**due casi a 3 000 ms** — la scadenza intera di §7.1. Sul **17**, a macchina ferma: **6 ms**, e
+nessuno arriva al fondo. ⇒ ⭐ **La contesa muove davvero questa scena**, e il *«il verde vale sotto
 carico CPU, non sotto contesa GPU»* di §7.1 ha adesso un secondo appoggio prima ancora che la scena
 di contesa venga lanciata.
 
@@ -998,7 +1003,7 @@ che ha già incrementato ⇒ **irrecuperabile**. L'unica strada resta `drop_devi
 | **A · prevenzione**: non ci si risveglia con qualcosa premuto | guardia in `figlio.c` + una finestra in `input.c/.h` | ⭐ **nessun trascinamento rotto**. ⚠ Su desktop fermo con un tasto giù la chiave non parte ⇒ **un client appena attaccato può restare bianco finché non si rilascia**. Si sana da sé, e la scena è rara: un trascinamento *muove* la scena |
 | **B · si rilascia prima del risveglio** | una riga in `figlio.c` | ⛔ **taglia OGNI trascinamento su desktop fermo** — è la «cura ovvia vietata» di §7.1. Citata solo per il confronto |
 | **C · recupero**: si riattacca il canale EIS quando il danno c'è | `input.c` (vede già `quanti_orfani > 0`) + `mutter_eis_riattacca()` in `mutter.c` | `[M]` funziona (S4). ⚠ Taglia il trascinamento in corso — **che però era già morto**. ⭐ Copre **le porte che non controlliamo**: `monitors-changed` (due giri), il cambio di keymap, e quel che Mutter aggiungerà |
-| **D · si toglie il risveglio**: la chiave si rifà dall'ultimo fotogramma | `figlio.c` + `codificatore.c` | toglie la porta alla radice, ⛔ ma **non sostituisce** il risveglio: al login non c'è nessun fotogramma da rifare, e l'attesa del login torna. E costa una copia intera del fotogramma |
+| **D · si toglie il risveglio**: la chiave si rifà dall'ultimo fotogramma | `figlio.c` + `codificatore.c` | toglie la porta alla radice, ⛔ ma **non sostituisce** il risveglio: al login non c'è nessun fotogramma da rifare, e i 4,4 secondi tornano. E costa ~9,8 MB di copia a 2560×962 |
 
 > ### 🔸 **Scelta del coordinatore: A + C** — derivata, non decisa dall'utente
 >
@@ -1044,8 +1049,8 @@ fermi. `[M]` Impronte dei sorgenti nel rapporto; ferro: **Intel UHD 730 integrat
 
 #### La scena è vera — certificata prima di misurare
 
-`[M]` Un codificatore da solo va sensibilmente più veloce di ciascuno di cinque che lavorano insieme
-⇒ la contesa sull'iGPU **c'è**.
+`[M]` Un codificatore da solo fa **382 fotogrammi/s** a 1920×1080; **cinque insieme, 184 ciascuno**
+⇒ la contesa sull'iGPU **c'è**, ed è **2,08×**.
 
 #### ⛔ Ma il prodotto non se n'è accorto, e il banco **si è rifiutato di dare il verdetto**
 
@@ -1054,18 +1059,20 @@ fermi. `[M]` Impronte dei sorgenti nel rapporto; ferro: **Intel UHD 730 integrat
 | | sotto contesa | a riposo |
 |---|---|---|
 | **rotti** | **0 su 18** | **0 su 18** |
-| ② **Mutter**, campioni oltre il tetto | ⛔ **13** | ⛔ **17** |
-
-⚠ *I tempi delle quattro latenze e del ritmo sono stati tolti con la fase 18; restano in git.*
+| ritmo fotogrammi | 51,2 ms | 55,3 ms |
+| ① girata→chiesta | 4,0 ms | 5,5 ms |
+| ② **Mutter** | 28,0 (22-48), ⛔ **13 oltre il tetto** | 32,0 (18-47), ⛔ **17 oltre il tetto** |
+| ③ palco→spedita | 4,0 | 4,0 |
+| ④ `ADATTATA` | 37,0 | 40,0 |
 
 ⇒ **Niente si è mosso**: ogni latenza è uguale o **più veloce** sotto contesa. Il testimone (che
 pretende una dilatazione ≥ 15 % del ritmo visto dal client) **non è scattato**, e
 `06-b41-verdetto.py` **ha rifiutato il verdetto**. ⭐ *«Non scrivo "0/18 sotto contesa GPU": sarebbe
 l'etichetta senza la cosa»* — ed è esattamente il motivo per cui quel testimone è stato scritto.
 
-⭐ **E si sa perché**: a riposo il ritmo lo detta **la scena** (un terminale che scrive l'ora ogni
-50 ms), non il codificatore. A quel ritmo, a 1280×800, il prodotto chiede all'iGPU **una piccola
-frazione** di quel che chiedono i cinque carichi. ⇒ **La contesa è vera
+⭐ **E si sa perché**: a riposo il ritmo è 55 ms ≈ **18 fotogrammi/s**, e lo detta **la scena** (un
+terminale che scrive l'ora ogni 50 ms), non il codificatore. A 18/s di 1280×800 il prodotto chiede
+all'iGPU circa **un cinquantesimo** di quel che chiedono i cinque carichi. ⇒ **La contesa è vera
 sull'iGPU, ma in questa scena il prodotto l'iGPU quasi non lo usa.**
 
 #### ⛔ Che cosa cambia per §7.1: **una causa è ESCLUSA con la misura**
@@ -1075,8 +1082,8 @@ sull'iGPU**. Non si promuove a «curato», e non si promuove a «spiegato».
 
 ⭐ **E dove il segnale c'è, indica un altro imputato**: la latenza ② ha **13 e 17 campioni oltre il
 tetto** su ~57 in **tutt'e due** le metà — cioè un quarto delle richieste al produttore **senza
-risposta da Mutter entro un secondo**. È la stessa firma del 16 agosto (`NON_ORA` lento, e due casi
-alla scadenza di §7.1). ⇒ ⏳ **La prossima ipotesi è la contesa sul COMPOSITORE e su PipeWire — cinque
+risposta da Mutter entro un secondo**. È la stessa firma del 16 agosto (`NON_ORA` mediana 22 ms e due
+casi a 3 000). ⇒ ⏳ **La prossima ipotesi è la contesa sul COMPOSITORE e su PipeWire — cinque
 sessioni — non sull'iGPU.** Quella scena non è stata costruita.
 
 #### ⛔ E col metro sano, il «5 guasti su 5» non regge
@@ -1085,7 +1092,7 @@ sessioni — non sull'iGPU.** Quella scena non è stata costruita.
 l'accensione:
 
 ```
-SANO   adattate=10 non_ora=0 ms_mediano=… fotogrammi=169 tela_nuova=10 non_spediti=0
+SANO   adattate=10 non_ora=0 ms_mediano=47,45 fotogrammi=169 tela_nuova=10 non_spediti=0
 G1 · G2 · G5   ATTESO-CONFERMATO      (regola sul sano = False)
 G3  ⛔ ATTESO-SMENTITO      tela_nuova_dal_palco = 1, e la regola ne pretende 0
 G4  ⛔ NON-DISCRIMINANTE    la regola è vera ANCHE sul sano
@@ -1131,8 +1138,8 @@ c'era **dal primo giorno del banco**: il difetto della marca scaduta (§5.6) non
 **realizzava**.
 
 `[M]` La riga «TELA NUOVA DAL PALCO» del giro di G3 è la **riconciliazione di nascita**, e **precede**
-il primo `ADATTA_TELA` — riprodotto due volte, a otto ore e a carichi diversi, il 21 agosto (carico
-2,78) e il 22 (carico ~0,7). Il figlio nasce al ripiego
+il primo `ADATTA_TELA` — riprodotto due volte, a otto ore e a carichi diversi: **476 ms prima** il
+21 agosto (carico 2,78), **461 ms prima** il 22 (carico ~0,7). Il figlio nasce al ripiego
 1920×1080 e il palco **nasce** — non si ridimensiona — a 1280×800.
 
 ⭐ **E «completare il guasto» è ESCLUSO con la prova, non scartato a gusto**: quella riga non passa da
@@ -1161,9 +1168,17 @@ buona parte del banco stesso — va letto come *«a macchina quasi ferma»*), so
 **tre giri nuovi** sul codice sano, con gli attrezzi riparati e il loro controllo positivo superato
 prima. Carico 0,30-0,48.
 
-⚠ *La tabella dei tempi è stata tolta con la fase 18; restano in git.* Quel che non è un tempo:
-**30/30 `ADATTATA`**, **0** scartati, **0** fuori misura, e **9/9** primi fotogrammi alla misura
-nuova sono una chiave. ⇒ Il buco di §4.8 si chiudeva: quel riquadro non era più un numero perduto.
+| | §4.8 (17 ago) | §5.6 (dai superstiti) | ⭐ **giro nuovo, 22 ago** |
+|---|---|---|---|
+| ① **la tela girata al palco** | 4 ms (n=10) | 4,0 (n=30) | **6,0 ms** (0-21, **n=27**) |
+| ② Mutter | 39,5 ms | 35,0 (n=20) | **32,0 ms** (15-49, n=27) |
+| ③ palco → spedita | — | — | **4,0 ms** (3-39, n=28) |
+| ④ giro intero, `ADATTATA` | 44,5 · 10/10 | 43,5 (n=20) | **42,0 ms** (25-59, n=27) · **27/27** |
+| `SESSIONE` → 1° fotogramma | 25 ms · 203-220 da montare | — | **14 e 26 ms** · **141 ms** da montare |
+| scartati · fuori misura | 0 · 0 | — | **0 · 0** (30/30 `ADATTATA`, 9/9 primo alla misura nuova = chiave) |
+
+⇒ ⭐ **Le tre latenze del riquadro D si riconfermano tutte entro pochi millisecondi, con n quasi
+triplo.** Il buco di §4.8 si chiude: quel riquadro non è più un numero perduto.
 
 ⭐ **E la cura di `registro.c` regge anche qui**: 3 righe senza marca su 3 242, **nessuna nostra**.
 
@@ -1293,10 +1308,10 @@ saturare esattamente su `(799,599)`.
 
 #### ⭐ L'asimmetria degli orologi non è più un ragionamento: è una tabella
 
-> **9 coppie su 9: il server misura di più** (LAN, carico 1,0-1,6).
+> **9 coppie su 9: il server misura di più, fra +11 e +25 ms** (LAN, carico 1,0-1,6).
 
-⇒ Un caso «dentro» appena sotto il secondo sarebbe stato **oltre il secondo per il server**: rosso
-su un prodotto che ha ragione. ⛔ La tabella sta nel banco **col divieto di usarla per avvicinarsi al confine**.
+⇒ Un caso «dentro» a 0,99 s sarebbe stato **1,01 s per il server**: rosso su un prodotto che ha
+ragione. ⛔ La tabella sta nel banco **col divieto di usarla per avvicinarsi al confine**.
 
 #### ⛔⛔ «L'arbitro dice conforme» non è una misura
 
@@ -1337,7 +1352,7 @@ Carico **1,57-2,91** contro lo **0,90** che §4.8 registra per il giorno del 4/1
 #### ⭐ E un contendente rende il compositore **più veloce**, non più lento
 
 `[M]` sonda indipendente sul ciclo principale di Mutter, con client attaccato in tutt'e due i casi:
-la latenza **scende**, nella mediana e nel p95. ⇒ La certificazione a cinque sessioni
+mediana **1,47 → 0,64 ms (0,44×)**, p95 **5,56 → 2,59**. ⇒ La certificazione a cinque sessioni
 **fallirebbe**, e il banco rifiuterebbe il verdetto — come ha già fatto quello della GPU.
 
 ⇒ 🔸 **Scelta del coordinatore: la finestra a cinque sessioni NON si spende.** Su raccomandazione
@@ -1397,8 +1412,8 @@ carico 0,23-1,40.*
 
 | il client se ne va… | posto lasciato | un altro client entra |
 |---|---|---|
-| **congedo pulito** | ⭐ **subito** | subito |
-| connessione chiusa senza congedo | **subito** | subito |
+| **congedo pulito** | ⭐ **5 ms** | subito |
+| connessione chiusa senza congedo | **7 ms** | subito |
 | **ammazzato** (presa chiusa) ×4 | 30,0 · 30,5 · 30,0 · **31,1 s** | idem |
 | **congelato** (buco nero) ×3 | 31,1 · 31,2 · 30,0 s | idem |
 | ⛔ **vivo sul filo, muto su RCP** | ⛔ **mai** | ⛔ **26 bussate su 26 respinte in 745 s** |
@@ -1420,7 +1435,7 @@ non i byte di RCP — ed è una scelta giusta e documentata, ⛔ ma **non è que
 > Si verifica con `pgrep`, non con `pkill`.
 > ⭐ **Ma quasi mai serve aspettare**: se il server è tuo, **riaccendilo** — i posti stanno nella
 > memoria del processo, la sessione grafica vive fuori: `[M]` il primo attacco dopo un riavvio arriva
-> a `SESSIONE` senza aspettare. ⭐ E se il client è tuo, **fallo congedare**: il posto si libera subito.
+> a `SESSIONE` in **1,03 s**. ⭐ E se il client è tuo, **fallo congedare**: **5-7 ms**.
 
 #### ⛔ E le strade sono DUE, con lo stesso numero — è il meccanismo dietro i falsi rossi
 
@@ -1444,7 +1459,7 @@ un browser in mano.
 | ⛔ `2 = RIPRESA` **non esce mai** | il byte è una **costante 1** nell'unico punto che costruisce il messaggio. `[M]` 12 riattacchi sullo stesso figlio: **stato 1, sempre**. È la forma **E1** ⇒ chi scrive banchi **non può** usarlo per sapere se ha un desktop nuovo |
 | ⛔ le **due strade** con lo stesso numero | sopra: due righe e due stati sotto lo stesso fatto, in gara |
 | ⛔ il **client vivo tiene il posto** | fino alla mezz'ora dell'inattività — misurato ≥ 745 s |
-| ⏳ `[?]` **il desktop immortale** | `presenza_segna()` è chiamata **da un posto solo**, quello che riceve l'input ⇒ chi si attacca e **non tocca niente** non entra fra i presenti e **l'orologio dell'abbandono non parte**. Se è vero, ogni banco che si attacca senza digitare lascia un desktop che non muore mai — ed è così che una macchina con otto banchi si riempie. ⛔ **È una lettura del codice, non una misura**: il giro che doveva provarla è saltato |
+| ⏳ `[?]` **il desktop immortale** | `presenza_segna()` è chiamata **da un posto solo**, quello che riceve l'input ⇒ chi si attacca e **non tocca niente** non entra fra i presenti e **l'orologio dell'abbandono non parte**. Se è vero, ogni banco che si attacca senza digitare lascia un desktop da **477 MB** che non muore mai — ed è così che una macchina con otto banchi si riempie. ⛔ **È una lettura del codice, non una misura**: il giro che doveva provarla è saltato |
 
 ### 5.14 · ⛔ 22 agosto — **un'etichetta sbagliata ha fatto credere all'utente che una funzione tolta fosse tornata**
 
@@ -1461,7 +1476,7 @@ e §5.9 era etichettata **«ridimensionamento a caldo»** e misura tutt'altro �
 richiesta **girata al palco** e la richiesta **arrivata al produttore**, sul cammino di `ADATTA_TELA`,
 cioè quello che ogni client percorre **attaccandosi**. Una cosa che c'è, e deve esserci.
 
-⇒ Chi leggeva *«ridimensionamento a caldo»* accanto a un numero di millisecondi concludeva che la funzione fosse tornata.
+⇒ Chi leggeva *«ridimensionamento a caldo: 6 ms»* concludeva che la funzione fosse tornata.
 
 ⚠ **Ed è la stessa forma di difetto che questa notte ha corretto sei volte nei banchi** — *un nome
 che promette una cosa e ne dice un'altra* — commessa dal coordinatore **nei documenti**. ⛔ Che sia
@@ -1588,7 +1603,7 @@ messe alla prova invece che attuate, e il risultato è più utile di tre cure.*
 
 | la proposta | l'esito |
 |---|---|
-| *«`cattura_ridimensiona()` dichiara successo su un flusso che muore, e `figlio.c` non ha modo di saperlo»* | ⛔ **RIFIUTATA**: la premessa è falsa. `[M]` col ciclo vero del figlio, il guasto arriva **subito** con **stato e causa dal produttore** — non è un timeout. ⭐ E un esito «morto» restituito dalla funzione sarebbe **verde per costruzione**: la morte arriva dopo il ritorno |
+| *«`cattura_ridimensiona()` dichiara successo su un flusso che muore, e `figlio.c` non ha modo di saperlo»* | ⛔ **RIFIUTATA**: la premessa è falsa. `[M]` col ciclo vero del figlio, il guasto arriva a **8,1 ms** con **stato e causa dal produttore** — non è un timeout. ⭐ E un esito «morto» restituito dalla funzione sarebbe **verde per costruzione**: la morte arriva 2 ms dopo il ritorno |
 | *«serve un accessore per la divergenza»* | ⛔ **RIFIUTATA**, e con tre misure: la sola scena che accende il campo dà un **falso allarme** (i «concessi» erano la richiesta di prima, non una concessione); i due accessori che esistono **bastano** e in più sanno dire «non ancora negoziato»; e la via del contatore **non regge** — due richieste incatenate producono **una sola** risposta, quindi i conti divergono per sempre |
 | *«il ramo "concesso diverso da chiesto" non si raggiunge»* | ⭐⭐ **SMENTITA AL CONTRARIO**: si raggiunge, **43 colpi su 480 catene** |
 
@@ -1606,7 +1621,7 @@ che non aveva letto»* — due zeri scritti a mano nella riga al posto della mis
 il difetto che avrei segnalato a un altro.»*
 
 ⏳ **E un guasto vero lasciato aperto, non suo da curare**: `[M]` il rimontaggio chiede al palco **la
-misura che l'ha appena ucciso**, e la chiamata **riesce 3 volte su 3** mentre il palco muore poco
+misura che l'ha appena ucciso**, e la chiamata **riesce 3 volte su 3** mentre il palco muore 300 ms
 dopo — con l'attesa corta si sceglie un **cappio**, e nessuno se ne accorge. ⚠ Sul prodotto vero è
 `[?]`, perché Mutter concede tutto sotto il tetto. È **dichiarato nel codice** accanto al ramo.
 
@@ -1750,13 +1765,13 @@ la decide l'utente.
   un altro banco, e la distinzione va tenuta;
 - ✅ ~~**il secondo di grazia curato e non misurato**~~ — **CHIUSO il 22 agosto**, e ⛔ **la ragione
   per cui sembrava impossibile era sbagliata**: la grazia parte dal `TELA`, **non dalla connessione**,
-  quindi il tempo della stretta di mano non c'entra. 📖 §5.10;
+  quindi i 1500 ms della stretta di mano non c'entrano. 📖 §5.10;
 - ✅ ~~**codice mai esercitato su Mutter**: il ramo «concesso diverso da chiesto» e
   `MISURA DIVERGENTE`~~ — **SMENTITO il 22 agosto**: ⭐ `MISURA DIVERGENTE` (oggi `cattura.c` · `su_parametri()`)
   **si raggiunge dall'esterno** — `[M]` **43 colpi su 480 catene**, tre spazzolate su tre. ⛔ La porta
   non è il produttore, **è il tempo**: due ridimensionamenti incatenati — *l'utente che trascina il
-  bordo* — e la risposta del primo torna quando la richiesta porta già la seconda. Finestra: **sotto il
-  millisecondo**. ⇒ È una corsa, ⭐ **ma una corsa che un banco programma**: si spazzola la distanza
+  bordo* — e la risposta del primo torna quando la richiesta porta già la seconda. Finestra: fra
+  **200 e 800 µs**. ⇒ È una corsa, ⭐ **ma una corsa che un banco programma**: si spazzola la distanza
   fra le due chiamate. ⚠ Resta non esercitato quello di `figlio.c` (oggi `:6764`): servirebbe un
   fotogramma vero, e il palco finto non ne accoda. 📖 §5.16;
 - ✅ ~~**il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3~~ — **MISURATO il 22 agosto:
@@ -1890,11 +1905,14 @@ interruttore. ⭐ Chrome per Android ha WebCodecs, e lì la strada c'è.
 disegno**: `MediaSource` con un `<video>`, a MP4 frammentato invece che ad Annex-B. ⇒ Il prezzo si
 misura prima, non dopo — banco `banchi/07-b57-quanto-costa-mse.py`.*
 
-### La misura — stesso ferro, stesso flusso
+### La misura — stesso ferro, stesso flusso (i nostri 150 fotogrammi, 2560×962, H.264 High 5.0)
 
-⚠ *La tabella dei tempi (WebCodecs contro MSE, a due ritmi, sui due motori) è stata tolta con la
-fase 18; resta in git. Il risultato, in parole: MSE aggiunge **centinaia di millisecondi** su tutt'e
-due i motori, e la coda di riproduzione del `<video>` resta lunga a ogni ritmo.*
+| | Firefox | Chrome |
+|---|---|---|
+| WebCodecs, 60/s | **60,5 ms** | **50,9 ms** |
+| MSE, 60/s | 285,4 ms — ⛔ **+225 ms** | 465,6 ms — ⛔ **+415 ms** |
+| MSE, 10/s | 246 ms — ⚠ **+17 ms** | 570 ms — **+348 ms** |
+| coda di riproduzione | 310–650 ms | 520–715 ms |
 
 ⛔ **Il tetto dichiarato è 50 ms** (`SPECIFICHE.md` §3.2). ⇒ A ritmo utile MSE lo sfonda di un
 ordine di grandezza, e non per lentezza del decodificatore: il `<video>` **tiene una coda apposta**,
@@ -1904,8 +1922,8 @@ perché il suo mestiere è la riproduzione fluida, non il ritardo basso.
 e due le strade decodificano in software. ⭐ Ma la coda di presentazione non è una proprietà della
 scheda video, e il confronto è fra due strade **nello stesso identico posto**.
 
-⚠ **E l'inseguimento non salva**: saltare al bordo vivo abbassa la coda di Firefox a prezzo di
-**molti salti** — cioè un'immagine che scatta. Si scambia ritardo con scatti.
+⚠ **E l'inseguimento non salva**: saltare al bordo vivo porta la mediana di Firefox a 265 ms con
+**40 salti** su 150 fotogrammi — cioè un'immagine che scatta. Si scambia ritardo con scatti.
 
 ### ⛔ Cinque difetti del banco, e ognuno avrebbe prodotto un numero falso
 
@@ -1915,21 +1933,21 @@ tutte della stessa famiglia — *lo strumento misurava se stesso*:
 1. `"null"` letto come un esito: Chrome dava tre righe rosse **e funzionava**;
 2. alimentare a 10/s un MP4 che si dichiara a 60 fps: il `<video>` corre a 60, resta a secco, e
    `requestVideoFrameCallback` vede **due** fotogrammi su cento;
-3. misurare **l'avvio** invece del regime;
-4. ⛔ **nessun gesto dell'utente**: senza un tocco il `<video>` non parte affatto — coda di secondi,
+3. misurare **l'avvio** invece del regime: mediana 2,7 s con una coda di 160 ms;
+4. ⛔ **nessun gesto dell'utente**: senza un tocco il `<video>` non parte affatto — coda 3,5 s,
    *zero* fotogrammi buttati, e sembrava «MSE bufferizza» mentre era «non è mai partito»;
 5. ⛔ **`ffmpeg -framerate` non vale per il demuxer H.264**: il file usciva a **25 fps** mentre lo
    alimentavo a 60, e la coda che chiamavo «di MSE» era la mia differenza di ritmo. Si vede da
    `currentTime = 5,98 s` con 150 fotogrammi: 150/25 = 6 s. ⇒ Si usa `-r`, e **si verifica con
    `ffprobe`** invece di credere alla riga di comando.
 
-⭐ Il difetto 4 è stato trovato **da un numero incoerente**, non da un errore: «coda di secondi **e zero
+⭐ Il difetto 4 è stato trovato **da un numero incoerente**, non da un errore: «coda 3,5 s **e zero
 fotogrammi buttati**» non può descrivere un decodificatore in affanno. Un banco che avesse
 riportato solo la mediana non l'avrebbe mai fatto vedere.
 
 ### ⏳ Che cosa resta da decidere — e non si decide qui
 
-⛔ Con questa misura, «Firefox per Android pienamente supportato» e «ritardo sotto i 50 ms» **non
+⛔ Con questi numeri, «Firefox per Android pienamente supportato» e «ritardo sotto i 50 ms» **non
 stanno insieme**. ⇒ La scelta è dell'utente, e le opzioni sono nominate: accettare su quel motore un
 ritardo di un'altra classe, oppure dichiararlo non supportato finché Mozilla non porta WebCodecs su
 Android. ⚠ La misura definitiva è sul telefono, che l'hardware ce l'ha; il banco si serve alla rete
@@ -1956,15 +1974,15 @@ telefono, e il verso video → schermo non ha un difetto da nominare.
 di `PREFERENZA` — non il ripiego. ⚠ L'H.264 di §1.13-ter resta necessario (Firefox desktop non fa
 HEVC), ma su questo telefono non è servito.
 
-### ⛔ E l'unico numero che non è buono: **la coda dell'audio, che cresce** — ⭐ e la sera stessa l'orecchio dell'utente lo ha CONFERMATO
+### ⛔ E l'unico numero che non è buono: **la coda dell'audio, 401 → 421 ms** — ⭐ e la sera stessa l'orecchio dell'utente lo ha CONFERMATO
 
-Il diario la riporta a ogni giro e **cresce**, e poi resta lì.
+Il diario la riporta a ogni giro e **cresce**: 401 ms a 10:37:39, 421 ms a 10:37:49, e lì resta.
 Il video, nella stessa sessione, non ha un fotogramma tardivo ⇒ non è la rete: è la coda del
 percorso audio.
 
 ⛔⭐ **E la sera del 21 agosto l'utente ha ascoltato, due volte.** La prima: *«Chrome su Android
 offre un'esperienza completa: audio e video perfetti»*. La seconda, un'ora dopo, su Windows:
-*«**il ritardo … tra audio e video in generale te lo confermo**»*. ⇒ Il numero **non è un
+*«**il ritardo di 400 ms tra audio e video in generale te lo confermo**»*. ⇒ Il numero **non è un
 caso e non è di Android**: è `AUDIO_CUSCINO_MS = 250` in `pagina.html`, più la catena, e si sente
 come **sincronia sbagliata** — non come audio sporco. 📖 La diagnosi e la cura nominata stanno in
 `fasi/07-audio-e-appunti.md` §8 e §9.7-bis.
@@ -2010,7 +2028,7 @@ motore non lo accetta».
 
 | | |
 |---|---|
-| la strada si accende e dipinge (Firefox, `?disegno=mse`) | ⭐ sì — `<video>` 1190×704, 4 dipinti, **0 buchi**, 1 salto |
+| la strada si accende e dipinge (Firefox, `?disegno=mse`) | ⭐ sì — `<video>` 1190×704, 4 dipinti, **0 buchi**, ritardo 50 ms, 1 salto |
 | la strada normale (WebCodecs) | ⭐ intatta: `07-b51` 4 controlli su 4 per motore |
 | Firefox per Android | ⏳ **da provare sul telefono** — è il motore per cui esiste |
 
@@ -2094,6 +2112,7 @@ fotogramma. ⚠ La tela nera resta **spiegata**, che è l'unica cosa che la rego
 |---|---|
 | fotogrammi consegnati → **dipinti** | 291 → ⭐ **250** |
 | buchi | ⭐ **0** |
+| coda del `<video>` | ⚠ 212 ms — coerente con il prezzo misurato in `07-b57` |
 | tela | ⭐ 1270×704, **non** i 320×240 di prima |
 
 ⚠ E il banco ha avuto anche il suo difetto, dichiarato: muovere il puntatore **non fa fotogrammi**
@@ -2126,6 +2145,7 @@ centro della tela lo **chiede alla pagina**.
 |---|---|
 | immagine | ⭐ 351 consegnati → **196 dipinti**, **0 buchi**, tela 1270×704 |
 | input | ⭐ **4 eventi al server**: la lettera, il movimento, e `PULSANTE evdev 272` premuto e rilasciato |
+| coda | 50 ms |
 
 ⚠ Un fotogramma su due non viene presentato: è il `<video>` che scarta sotto un terminale che
 scorre, **in software e senza GPU**. Sul telefono, che decodifica H.264 in hardware, il rapporto è
@@ -2209,8 +2229,8 @@ installarlo.
 |---|---|
 | **Firefox 154 per Android** (emulatore, `07-b59`) | ⭐ desktop **vivo** — orologio `16:52`, terminali che scorrono; `fermo=false cerca=false pronto=3`, il tempo del video **avanza di 4,43 s in 5** |
 | input da Android | ⭐ il tocco arriva: `PULSANTE codice evdev 272 rilasciato` nel registro del server |
-| ritardo su Android (emulatore) | ⚠ ⛔ il numero **non vale**: decodifica in software, scena pesante, tela 1080×2040 |
-| **senza WebCodecs, da tavolo** (`07-b58`) | ⭐ **vicino** al bordo vivo, 277 dipinti su 444, input e geometria verdi |
+| ritardo su Android (emulatore) | ⚠ **2,3 s** dal bordo vivo — ⛔ e il numero **non vale**: decodifica in software, scena pesante, tela 1080×2040 |
+| **senza WebCodecs, da tavolo** (`07-b58`) | ⭐ **0,21 s** dal bordo vivo, 277 dipinti su 444, input e geometria verdi |
 | **strada normale**, WebCodecs (`07-b51`) | ⭐ 4 controlli su 4 per motore, **intatta** |
 
 ⛔ **E il giudizio del banco è stato riscritto**, perché sbagliava: dava rosso sul contatore
@@ -2247,5 +2267,5 @@ l'unica prova che il problema non è nostro. Alla fase 13 si decide se buttarlo.
 ⛔ **E il costo si scrive**: sei giri di prove sul telefono dell'utente e una giornata, per una
 strada che non entra nel prodotto. ⚠ La lezione non è «non andava fatto»: è che **la domanda "quanto
 renderà?" andava misurata prima di costruire** — e il numero c'era già, dal banco `07-b57`:
-un ritardo di un'altra classe contro un tetto di 50 ms.
+centinaia di millisecondi contro un tetto di 50.
 

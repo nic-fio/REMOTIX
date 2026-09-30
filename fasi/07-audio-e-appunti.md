@@ -1,7 +1,5 @@
 # Fase 7 — Audio e appunti
 
-⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
-
 ⭐ **Aperta il 17 agosto 2026**, col suo documento e **prima di una riga di codice**
 (`PIANO.md` §0.1). Il piano è `PIANO.md` §«Fase 7 — Audio e appunti»; il modello di questo
 documento è `PIANO.md` §0.2.
@@ -26,7 +24,7 @@ fase 7»*); ⛔ quel che resta della 6 **resta aperto e non si chiude da sé**.
 >
 > | | |
 > |---|---|
-> | **la misura** | **perdita zero**, **2 buchi** (dell'avvio) e coda stabile |
+> | **la misura** | 49,95 blocchi/s ricevuti contro 50 prodotti — **perdita zero**, **2 buchi** (dell'avvio) e coda stabile a 311-341 ms |
 > | **la scena** | un video di **YouTube** riprodotto nella sessione remota, giudicato a orecchio |
 > | ⛔ **e prima ci sono stati sette «fa schifo»** | §6.8, ed è il capitolo che insegna: sei cure su otto erano difetti **veri** che non erano quello che l'utente sentiva |
 >
@@ -276,6 +274,7 @@ Opus, si danno al decodificatore i **pacchetti nudi** — nessun contenitore, co
 | pacchetti codificati (50 blocchi da 20 ms) | 51 | 51 |
 | ⭐ **frequenza dominante decodificata** | **440 Hz** | **440 Hz** |
 | ⭐ **ampiezza RMS** (attesa **0,3536**) | **0,3504** | **0,3510** |
+| byte per pacchetto, min-max (96 kbit/s, stereo) | **241 - 376** | **309 - 439** |
 | errori di codifica o decodifica | nessuno | nessuno |
 
 ⇒ ⭐ **Opus è una strada vera, non una dichiarazione**, e il decodificatore accetta i pacchetti
@@ -292,8 +291,8 @@ Opus, si danno al decodificatore i **pacchetti nudi** — nessun contenitore, co
 2. ⚠ **il giro misura il decodificatore con il NOSTRO codificatore del browser**, non con
    `libopus` del server: i due possono divergere. La prova che chiude questo punto è il banco
    della fase, non la sonda;
-3. ⚠ **i 96 kbit/s del giro sono scelti da noi**: non è il bitrate del prodotto, che non è
-   ancora deciso.
+3. ⚠ **`byte per pacchetto` è a 96 kbit/s scelti da noi**: non è il bitrate del prodotto, che
+   non è ancora deciso.
 
 ### 3.3 · ⛔⭐ A2 è CHIUSA, e il numero è **più basso della stima** — ma il PCM sopravvive
 
@@ -382,8 +381,8 @@ figlio**; i datagram li scrive **il padre**, che tiene QUIC.
 
 ⛔ **E il figlio codifica PRIMA di mandare**, invece di spedire i campioni crudi. Non è
 un'ottimizzazione qualunque: 20 ms di PCM stereo sono **3840 byte**, lo stesso blocco in Opus ne
-pesa **una piccola frazione**. Spedire crudo costerebbe **molte volte** il socket, cinquanta volte
-al secondo.
+misura `[M]` **241-439**. Spedire crudo costerebbe **dieci volte** il socket, cinquanta volte al
+secondo.
 
 ⛔⭐ **E la cosa che governa tutto il disegno è un vincolo, non un'architettura**: il richiamo dei
 campioni gira sul **thread di PipeWire, in tempo reale**. Chi ci scrive dentro una chiamata che
@@ -564,7 +563,7 @@ protocollo che si dichiara di aver capito e non si ha da nessuna parte.
 | ⛔ **quanti byte porta un datagram** (A2) | `[S]` ~1200 | **1024** su Chrome 151 (fisso) · **1024 → 1214** su Firefox 140esr. Scena: server **vero** sulla macchina di prova, porta 7700, rete locale via cavo, nessuna sessione aperta | `[M]` 17 ago 2026, `07-b40 --wt` |
 | ⭐ **il PCM di §5.3 ci sta** | ci deve stare | **sì su tutt'e due**, margine **52 byte** su Chrome e **242** su Firefox | `[M]` 17 ago 2026 |
 | ⭐⭐ **il filo dell'audio, PCM** | 200 blocchi/s, 440 Hz | **1000 blocchi su 1000** in 5,000 s — **resa 100,0 %**, passo fra gli `istante` **sempre 5000 µs**, zero fuori passo. Segnale: **440 Hz**, RMS **0,3535** (attesa 0,3536), **purezza 0,9963** | `[M]` 17 ago 2026, `07-b41` + `01-b3-cliente` + `07-b42` |
-| ⭐⭐ **il filo dell'audio, Opus** | 50 blocchi/s | **251 blocchi** in 5 s (i 20 ms di §5.3), a 96 kbit/s | `[M]` 17 ago 2026 |
+| ⭐⭐ **il filo dell'audio, Opus** | 50 blocchi/s | **251 blocchi** in 5 s (50,2/s = i 20 ms di §5.3), **279-439 byte** per pacchetto a 96 kbit/s | `[M]` 17 ago 2026 |
 | ⭐⭐⭐ **i pacchetti del NOSTRO server decodificati dal BROWSER** | — | **440 Hz**, RMS **0,3515**, purezza **0,997**, su **Chrome 151 e Firefox 140esr**, 251 pacchetti su 251, zero errori. ⛔ Non i pacchetti che il browser aveva codificato da sé: quelli usciti da `libopus` dentro il server, presi **dal filo** | `[M]` 17 ago 2026, `07-b40 --pacchetti` |
 | ⭐⭐ **la catena VERA è viva** (sink → monitor → Opus → socket → datagram) | 50 blocchi/s | **397 blocchi in 8 s = 49,6/s**, zero persi, zero scartati. Il sink compare in `wpctl status` come **predefinito**, `monitor.channel-volumes: true`. Scena: sessione GNOME di `prova2` sul server, tono di prova **spento** | `[M]` 17 ago 2026, porta 7710 |
 | ⭐⭐⭐ **e il suono della sessione ARRIVA** | 440 Hz | ⛔ *La prima misura diceva «silenzio», ed era la SCENA a essere rotta — vedi §6.5.* Con la scena certificata: `suono.c` consegna **PICCO 16383 su 32767** (= metà fondo scala, l'ampiezza esatta del tono) e i tratti contigui danno **440 Hz, rms 0,3535** — identici a quel che legge `pw-record` sullo stesso monitor | `[M]` 17 ago 2026, `07-b43` |
@@ -758,8 +757,8 @@ sono due fatti diversi, e al giro dopo serve il secondo.
 **Il difetto**: si spediva **un solo datagram per passata di scrittura**, e le passate sono ~25 al
 secondo. Il figlio ne produce **50**. ⇒ Uno passava, uno restava in coda, e la metà dell'audio
 moriva. ⛔ Non era la rete, non era il pacer, non era il video: **era il ciclo, che ne offriva uno
-per volta**. E lo spazio c'era da vendere — un pacchetto è **1452 byte**, un blocco di Opus **una
-frazione**: il pacchetto restava mezzo vuoto mentre l'audio veniva buttato.
+per volta**. E lo spazio c'era da vendere — un pacchetto è **1452 byte**, un blocco di Opus **230**:
+il pacchetto restava mezzo vuoto mentre l'audio veniva buttato.
 
 ⭐ **La precisione del numero era l'indizio**: *esattamente* la metà. Una perdita di rete non è
 mai esattamente la metà; un'aritmetica sì.
@@ -770,7 +769,7 @@ mai esattamente la metà; un'aritmetica sì.
 |---|---|---|---|
 | 1 | il rimando invece dello scarto | 38,5 % → 7,9 % | cura vera, ma a valle |
 | 2 | il rimando legato al **tempo** e non alle chiamate | 7,9 % → 0,3 % *in locale* | cura vera |
-| 3 | la coalescenza col pacchetto video (`MORE`) | nessun cambiamento per l'utente | ⛔ diagnosi sbagliata: *«il video si mangia la finestra»* — e i suoi fotogrammi erano **piccoli** |
+| 3 | la coalescenza col pacchetto video (`MORE`) | nessun cambiamento per l'utente | ⛔ diagnosi sbagliata: *«il video si mangia la finestra»* — e i suoi fotogrammi erano da **70-1300 byte** |
 | 4 | la priorità di tempo reale (**R26**) | nessun cambiamento | ⭐ difetto **vero e necessario**, ma non questo |
 | 5 | il riempimento GSO (`PADDING`) | nessun cambiamento | ⭐ difetto vero, non questo |
 | 6 | il pacchetto che buttavo con dentro i riscontri | nessun cambiamento | ⭐ difetto vero e grosso, non questo |
@@ -947,11 +946,11 @@ sull'audio — la strada del codificatore, la profondità della coda, come si su
 
 > ⛔ **Un'ora fa qui c'era scritto «difetti veri aperti: nessuno».** Era il giudizio *«audio e video
 > perfetti»* preso alla lettera, ⚠ e l'utente lo ha precisato subito dopo, sul PC Windows:
-> *«**il ritardo … fra audio e video in generale te lo confermo**»*. ⇒ Il difetto c'è, è
+> *«**il ritardo di 400 ms fra audio e video in generale te lo confermo**»*. ⇒ Il difetto c'è, è
 > **generale** (non di una piattaforma), ed è **udibile**: quel che si vede e quel che si sente non
 > stanno insieme.
 
-⛔ **IL RITARDO DELL'AUDIO SUL VIDEO — udibile, e la causa è nostra e scritta.**
+⛔ **IL RITARDO DELL'AUDIO SUL VIDEO — ~400 ms, e la causa è nostra e scritta.**
 
 `[M]` **`src/pagina.html`: `AUDIO_CUSCINO_MS = 250`** — non 60. Il 60 è stato alzato a 250 il
 **17 agosto**, e il commento del codice dice perché: *«il video si decodifica e si dipinge sullo
@@ -960,8 +959,8 @@ già svuotata e il cuscino si riarma — e ogni riarmo è un BUCO»*. ⚠ Fu la 
 pazzesco»*, e ha funzionato: i buchi sono spariti. ⛔ Il prezzo era **dichiarato nel commento** —
 *«250 ms fra quel che si vede e quel che si sente»* — e adesso l'utente lo ha sentito.
 
-**La somma**: 250 di cuscino + la cattura, la codifica Opus, il filo, la decodifica.
-⭐ Il video, sulla stessa sessione, sta sotto il suo tetto ⇒ **la distanza fra i due è tutta
+**La somma che fa i 400**: 250 di cuscino + la cattura, la codifica Opus, il filo, la decodifica.
+⭐ Il video, sulla stessa sessione, sta sotto i 50 ms del suo tetto ⇒ **la distanza fra i due è tutta
 qui dentro**, e non è la rete.
 
 #### ⛔⛔ La prima lettura di questa misura era MIA, ed era SBAGLIATA in quattro punti
@@ -972,7 +971,7 @@ qui dentro**, e non è la rete.
 
 | avevo scritto | `[M]` è invece |
 |---|---|
-| «coda **bassa** per i primi due minuti» | ⛔ era **più alta**: quella letta era la coda **dopo il primo riarmo** |
+| «coda **239-270 ms** per i primi due minuti» | ⛔ sono **389-539 ms**. I 239-270 sono la coda **dopo il primo riarmo** |
 | «**BUCHI 4**, tutti dell'avvio, il numero non sale più» | ⛔ **1 all'avvio e 3 in mezzo alla sessione** (18:00:14, :19, :29), ognuno con una perdita di datagram nella stessa finestra |
 | «il conto chiude e **assolve tutti gli altri anelli**: non si perde niente» | ⛔ **si perde**: 61 blocchi = **1 226 ms**, lo 0,58 %. In un'altra sessione dello stesso registro: **684 blocchi, 13,7 s, il 9,43 %** — e in 25 s dentro quella, **il 47 %** |
 | «nessun datagram **scartato dal server**» | ⛔ il server ne ha scartati **2 200**, ⭐ e **scrive anche perché**: prima «il quanto del pacer», poi `cwnd_left = 0` |
@@ -993,14 +992,16 @@ coda(n) = coda(n-1) + (ricevuti − attesi) × 20 ms,   riarmata a 250 quando to
 ```
 
 ⛔ **Ogni datagram perduto toglie 20 ms di cuscino per sempre**, e le uniche cose che lo rialzano
-sono un **BUCO udibile** o il traboccamento a 600. Il modello riproduce la curva vera ⇒ **spiega**.
+sono un **BUCO udibile** o il traboccamento a 600. Il modello riproduce la curva vera: **39 finestre
+pulite, scarto medio 15 ms, massimo 72** ⇒ **spiega**.
 
-⇒ ⛔ **La coda bassa di fine sessione non era «un regime»**: era il margine residuo dopo l'ultima
-raffica di perdite. La stessa discesa, 80 secondi prima, era arrivata quasi a zero **e aveva fatto
-un buco**.
+⇒ ⛔ **I 70-110 ms non erano «un regime»**: erano il margine residuo dopo l'ultima raffica di
+perdite, campionati 25 s prima della fine della sessione. La stessa discesa, 80 secondi prima, era
+arrivata a 79 ms **e aveva fatto un buco**.
 
 ⭐⭐ **E questo cambia la cura.** In questi dati **non c'è un solo indizio** che il thread principale
-abbia svuotato la riproduzione: il video ha dipinto **senza saltare un fotogramma**. ⇒ L'`AudioWorklet` **non è la prima cura**, e il *«jitter pazzesco»* del 17 agosto è spiegato
+abbia svuotato la riproduzione: il video ha dipinto 119-136 fotogrammi ogni 5 s **senza saltarne
+uno**. ⇒ L'`AudioWorklet` **non è la prima cura**, e il *«jitter pazzesco»* del 17 agosto è spiegato
 per intero da **perdite + serbatoio**: con un cuscino di 60 ms bastavano **tre blocchi persi**.
 
 #### ⭐ La cura scritta: l'orologio si àncora all'`istante` del server
@@ -1012,7 +1013,7 @@ abbassato**: con l'ancora deve coprire solo il jitter d'arrivo, che nessuno ha a
 
 ⚠ **E la cura NON è provata dove conta**: sulla rete di casa, in 100 s, `mancati 0` — la scena non ha
 avuto occasione di mostrare il difetto. Quel che è provato è che **non rompe niente** (60 s: coda
-piatta, BUCHI 0, pieni 0, `usciti 2806 su 2823`) e che l'algoritmo ha le proprietà dichiarate
+251-259 piatta, BUCHI 0, pieni 0, `usciti 2806 su 2823`) e che l'algoritmo ha le proprietà dichiarate
 (`07-b61-ancora.js`: **22 casi su 22**, che ritaglia `suona()` da `pagina.html` e la **esegue**).
 
 #### ⛔ E si aprono due cose nuove, che prima non si vedevano
@@ -1021,7 +1022,7 @@ piatta, BUCHI 0, pieni 0, `usciti 2806 su 2823`) e che l'algoritmo ha le proprie
    congestione, **mentre gli stream del video non perdono niente**. È del trasporto, non della
    pagina, e nessuno l'aveva mai guardato;
 2. ⏳ **un terzo termine c'è davvero, ma non è quello che sospettavo**: la **deriva fra gli
-   orologi**, `[M]` fra l'orologio del server e la scheda audio del client.
+   orologi**, `[M]` **0,7-1,4 ms/s** fra l'orologio del server e la scheda audio del client.
    L'ancora non la cura, e prima o poi porta al tetto dei 600 ms. Va deciso se correggerla.
 
 `[?]` **E una sentinella che non è mai scattata**: se il decodificatore Opus **ricostruisse**
@@ -1048,7 +1049,7 @@ PipeWire senza tempo reale — resta aperto ma **non è questo**.
 | era aperto | chiuso da |
 |---|---|
 | «gli appunti non hanno mai girato contro niente» | il giudizio dell'utente del 17 agosto sera, e poi i banchi `07-b53`, `07-b54`, `07-b56` |
-| ⛔ ~~«la coda dell'audio»~~ | **NON è chiusa, e la riga sbagliata è durata un'ora**: l'utente ha precisato *«il ritardo … fra audio e video te lo confermo»* ⇒ è tornata in §8, con la causa |
+| ⛔ ~~«la coda dell'audio a 400–420 ms»~~ | **NON è chiusa, e la riga sbagliata è durata un'ora**: l'utente ha precisato *«il ritardo di 400 ms fra audio e video te lo confermo»* ⇒ è tornata in §8, con la causa |
 | «nessuno ha ancora ascoltato l'audio da un telefono» | ⭐ adesso qualcuno l'ha ascoltato, ed è l'utente — §9.7 |
 | «il bitrate di Opus: 🔸 derivato, mai giudicato» | ⭐ giudicato **sul risultato**: 96 kbit/s hanno prodotto un ascolto che l'utente chiama pulito. ⛔ **Il cuscino no**: quello è 250, non 60, ed è il difetto di §8 |
 | «l'arbitro esterno del banco non esiste» | ⭐ vero, e **non si aggira**: §6.9. I banchi guidano browser veri con Marionette e CDP, e la sessione con `wl-copy`/`wl-paste` |
@@ -1073,23 +1074,27 @@ insieme**. Adesso c'è, e non è costato un banco nuovo — è costato **due num
   dopo `transferFromImageBitmap`, cioè **al vetro**, non alla decodifica;
 - ⇒ `aoff − voff` è la distanza, **e la costante fra i due orologi si elide**.
 
-`[M]` 90 s, 178 campioni, scena in movimento, 1588×914 H.264, carico 1,09→1,97. ⚠ *I valori di `AV`
-sono stati tolti con la fase 18; restano in git.*
+`[M]` 90 s, 178 campioni, scena in movimento, 1588×914 H.264, carico 1,09→1,97:
 
-⭐ **Offset costante, non deriva**, su 90 s. ⭐ E la premessa è stata **verificata, non creduta**: il
-marcatore che esce dal decodificatore **è** davvero l'`istante` del server.
+| | min | p05 | **mediana** | p95 | max |
+|---|---|---|---|---|---|
+| `AV` | 216 | 223 | **236 ms** | 245 | 247 |
 
-⚠ **E `AV` sovrastima, dichiarato**: `aoff` comprende `outputLatency`, `voff` non può comprendere
-l'equivalente perché fra il trasferimento e il pixel acceso c'è `[?]` **un tratto che nessuna API
-espone**. ⇒ La distanza vera è **un po' minore**. ⛔ Non è stata sottratta: *sottrarre
+⭐ **Offset costante, non deriva**: 233 → 237 → 236 su 90 s. ⭐ E la premessa è stata **verificata,
+non creduta**: il marcatore che esce dal decodificatore **è** davvero l'`istante` del server
+(escursione 32 ms, deriva −0,02 ms/s).
+
+⚠ **E `AV` sovrastima, dichiarato**: `aoff` comprende `outputLatency` (22-28 ms `[M]`), `voff` non
+può comprendere l'equivalente perché fra il trasferimento e il pixel acceso ci sono `[?]` **16-40 ms
+che nessuna API espone**. ⇒ La distanza vera è **~200-220 ms**. ⛔ Non è stata sottratta: *sottrarre
 una stima è fabbricare una misura*.
 
-⭐⭐ **E il numero dice da sé dove sta**: nello stesso istante la coda audio vale **quasi esattamente**
-`AUDIO_CUSCINO_MS` (**250**). ⇒ La distanza è **quasi tutta il cuscino più `outputLatency`**, non
+⭐⭐ **E il numero dice da sé dove sta**: nello stesso istante la coda audio vale **253 ms** e
+`AUDIO_CUSCINO_MS` vale **250**. ⇒ La distanza è **quasi tutta il cuscino più `outputLatency`**, non
 un ritardo che si accumula.
 
-⛔ **E non è il numero che l'utente ha provato**: questa è la pagina con l'orologio audio nuovo. Il
-ritardo sentito era di prima, e **il confronto lo può fare solo lui**.
+⛔ **E non è il numero che l'utente ha provato**: questa è la pagina con l'orologio audio nuovo. I
+400 ms erano di prima, e **il confronto lo può fare solo lui**.
 
 > ### ⛔⭐ 22 agosto — **il metro è stato accusato di essere una tautologia, e si è difeso con un numero**
 >
@@ -1107,7 +1112,7 @@ ritardo sentito era di prima, e **il confronto lo può fare solo lui**.
 > cuscino residuo** non muove `aoff` — ⭐ e non è un difetto del metro: è che **il suono esce davvero
 > alla stessa ora**.
 >
-> ⇒ E *«coda uguale al cuscino»*: ⛔ **non è una conferma** — è il cuscino letto due volte. Il termine
+> ⇒ E *«coda 253, cuscino 250»*: ⛔ **non è una conferma** — è il cuscino letto due volte. Il termine
 > che rende `AV` informativo è **`voff`**, che osserva al vetro.
 >
 > ⭐ **E il rilievo aveva centrato tre difetti veri, tutti curati**: `aoff` si aggiornava sui blocchi
@@ -1116,9 +1121,8 @@ ritardo sentito era di prima, e **il confronto lo può fare solo lui**.
 > dopo il tetto della coda e risponde `null`, **senza costanti nuove**); e *«è la gemella esatta di
 > `voff`»* era **falso**.
 >
-> ⏳ Il numero di `AV` resta da riprendere con l'`aoff` curato: non è invalidato, è **non
-> riconfermato**. ⭐ E si sa una cosa che mancava: `outputLatency` su quel Firefox **non è
-> trascurabile**, ed entra in `AV`.
+> ⏳ Il **236** resta da riprendere con l'`aoff` curato: non è invalidato, è **non riconfermato**.
+> ⭐ E si sa una cosa che mancava: `outputLatency` su quel Firefox vale **50 ms**, ed entra in `AV`.
 
 ### ⭐ Le regressioni, sul prodotto riunito — porta 7781, utente `provai6`
 
@@ -1161,26 +1165,28 @@ diceva di guardare **come trattiamo i datagram rispetto agli stream**. ⛔ Era l
 
 ### ⭐⭐ Ma la causa è a monte, e il codice l'aveva già nominata come ipotesi
 
-`[M]` Tre giri, stessa scena, `netem` sulla sola porta del banco, 30 s. ⚠ *La tabella è stata tolta
-con la fase 18; resta in git.* In parole: su linea **stretta** col desktop **fermo** l'audio passa
-intatto; sulla **stessa** linea col desktop **che si muove** l'audio crolla (purezza ⛔); su linea
-**larga** col desktop che si muove torna intatto.
+`[M]` Tre giri, stessa scena, `netem` sulla sola porta del banco, 30 s:
+
+| scena | audio spediti | rifiutati | purezza | banda sul filo |
+|---|---|---|---|---|
+| **3 Mbit, desktop FERMO** | **6 009** / 6 000 | 3 | ⭐ **1,000** | 1,82 su 3 |
+| 3 Mbit, desktop **che si muove** | **397** | 6 061 | ⛔ **0,18** | 3,39 |
+| **15 Mbit**, desktop che si muove | 5 997 | 15 | ⭐ **1,000** | 3,08 |
 
 ⇒ ⭐ **Stessa banda, stesso audio, esiti opposti: non è la banda, è il video.** E non è nemmeno quanto
-costa l'audio: `[M]` con **Opus** — una piccola frazione del PCM e del collegamento — allo stesso
-gradino si perde ancora **più di metà** dell'audio.
+costa l'audio: `[M]` con **Opus** — **1/32** del PCM, l'**1,6 %** del collegamento — allo stesso
+gradino si perde ancora il **58 %**.
 
 ⛔⛔ **La causa è la spirale di §5.2**, e sta scritta come *ipotesi* in `webtransport.c` da prima che
 qualcuno la misurasse:
 
 - nei giri stretti il video consegna **solo chiavi** (144/144, 148/148, 107/107, 138/138, 149/149),
   contro **2 su 1 019** a 15 Mbit;
-- il registro conta **806 richieste di chiave** e **173 righe** *«la CHIAVE N tiene ancora … byte
-  in coda e §5.2 vieta di abbandonarla: si ASPETTA»*;
-- su linea stretta una chiave occupa la finestra **più a lungo** dei 150 ms con cui
-  `WT_CHIAVE_RICHIESTA_MS` ne concede una nuova ⇒ ⛔ **se ne chiede una nuova prima che la precedente
-  sia uscita**;
-- e i blocchi PCM che nascono in quel tempo trovano tutti `cwnd_left = 0`.
+- il registro conta **806 richieste di chiave** e **173 righe** *«la CHIAVE N tiene ancora ~60 000
+  byte in coda e §5.2 vieta di abbandonarla: si ASPETTA»*;
+- una chiave da 60 KB su 3 Mbit occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede
+  una **ogni 150** ⇒ ⛔ **se ne chiede una nuova prima che la precedente sia uscita**;
+- in quei 160 ms nascono 32 blocchi PCM, e ognuno trova `cwnd_left = 0`.
 
 ### ⛔ Perché l'audio perde e il video no — e **nessuno l'ha deciso**
 
@@ -1188,17 +1194,16 @@ Il video sta su **stream**: se non passa adesso, ngtcp2 lo tiene, lo spezza e lo
 solo arrivare **tardi**. Il datagram non si spezza, non si ritrasmette, non può aspettare: **ogni
 scarsità la paga per intero l'audio**. ⇒ È quel che succede **se non si decide**.
 
-⚠ **E così com'è non è uno scambio, è un incidente**: l'audio chiede una frazione minima del
-collegamento e ne perde più di metà, mentre il video ne prende quasi tutto in chiavi **che si
-autoalimentano**. Uno scambio
+⚠ **E così com'è non è uno scambio, è un incidente**: l'audio chiede l'1,6 % del collegamento e ne
+perde il 58 %, mentre il video ne prende il 93 % in chiavi **che si autoalimentano**. Uno scambio
 deliberato sarebbe proporzionale; questo distrugge il flusso piccolo a favore di quello che è grande
 **perché sta andando male**.
 
 ### ⭐ E quattro varianti del trasporto che NON cambiano niente valgono quanto una cura
 
-`[M]` allo stesso gradino, nessuna delle quattro — senza il ritorno anticipato per passata · senza
-`PADDING` · senza `MORE`, in un pacchetto suo · con la **riserva reattiva** (il video cede la
-passata) — cambia l'audio consegnato.
+`[M]` allo stesso gradino: base **397** · senza il ritorno anticipato per passata **278** · senza
+`PADDING` **406** · senza `MORE`, in un pacchetto suo **514** · con la **riserva reattiva** (il video
+cede la passata) **371**.
 
 ⇒ ⭐⭐ **La finestra non è contesa: è già piena.** Rinunciare a scrivere altro video **non libera quel
 che è già in volo e non è ancora stato riscontrato**. È la ragione per cui la cura non può stare nel
@@ -1209,13 +1214,13 @@ pacer, e per cui le tre porte «nostre» erano l'imputato sbagliato.
 | | prezzo |
 |---|---|
 | 🔸 **A · la chiave non si richiede più in fretta di quanto ci metta a uscire** — `WT_CHIAVE_RICHIESTA_MS` da costante a funzione della banda misurata | ⭐ **l'unica che attacca la causa, e non toglie niente all'audio**. ⚠ Prezzo **visibile**: su linea stretta l'immagine resta rotta più a lungo dopo una perdita |
-| **B · riserva di finestra preventiva** (non reattiva, quella è misurata a zero) | cappa il video a `cwnd − pavimento`: quasi niente quando c'è spazio, morde quando è stretta — cioè quando serve. `[?]` **non misurata**: tocca l'ordine di scrittura degli stream |
-| **C · l'audio si adatta prima di morire** | ⛔ **da sola non basta, ed è misurato**: con una frazione minima della banda si perde ancora più di metà dell'audio. Complemento, non cura |
+| **B · riserva di finestra preventiva** (non reattiva, quella è misurata a zero) | cappa il video a `cwnd − pavimento`: < 3 % quando c'è spazio, morde quando è stretta — cioè quando serve. `[?]` **non misurata**: tocca l'ordine di scrittura degli stream |
+| **C · l'audio si adatta prima di morire** | ⛔ **da sola non basta, ed è misurato**: 1/32 della banda perde ancora il 58 %. Complemento, non cura |
 
 > 🔸 **Scelta del coordinatore: si scrive A.** Le altre due spostano il conto; A toglie la causa. ⏳ E
 > il suo prezzo è **visibile all'utente**, quindi la riga sta scritta perché lo giudichi lui.
 
-### ⭐⭐ La cura A è scritta e misurata — e su linea stretta l'audio consegnato **si moltiplica**
+### ⭐⭐ La cura A è scritta e misurata — e a 1 Mbit l'audio consegnato fa **×38**
 
 `chiave_intervallo_ms()` in `webtransport.c`, e ⭐ **la banda si misura invece di indovinarla**:
 `cwnd / smoothed_rtt`, cioè **i due numeri che ngtcp2 usa lui stesso** per decidere quanto spedire. La
@@ -1228,20 +1233,26 @@ nessuna chiave ancora spedita · ngtcp2 senza rtt né finestra). `[M]` A 15 Mbit
 su 101** *«la banda misurata basta: resta il fondo di 150 ms»* — ⭐ **la cura dice da sé quando non
 sta lavorando**.
 
-`[M]` Giri **alternati** (con la varianza vista fra due giri base identici, due giri di fila non
-dimostrano niente), due binari che differiscono per **una riga**, 30 s, PCM. ⚠ *La tabella è stata
-tolta con la fase 18; resta in git.* In parole:
+`[M]` Giri **alternati** (con la varianza vista — 397 contro 1 372 fra due giri base identici — due
+giri di fila non dimostrano niente), due binari che differiscono per **una riga**, 30 s, PCM:
 
-- ⭐ col desktop **fermo** (il controllo) e su linea **larga** la cura è **inerte**, com'era atteso;
-- ⭐ su linea **stretta** col desktop che si muove l'audio consegnato **si moltiplica**, i gruppi prima
-  e dopo **non si sovrappongono**, e le richieste di chiave **crollano**.
+| scena | attesa | audio **prima** | audio **dopo** | video prima → dopo |
+|---|---|---|---|---|
+| 3 Mbit, desktop **fermo** *(il controllo)* | 150, inerte | 6 009 | 6 002 | 1 → 1 |
+| 15 Mbit, mosso | 150, inerte | 4 076 · 3 944 | 3 984 · 3 830 | 743 → 683 |
+| **3 Mbit, mosso** | ~171 | 371 · 462 | ⭐ **1 552 · 1 595 · 1 725** | 115 → 89 |
+| **1 Mbit, mosso** | 600-1000 | **15** | ⭐⭐ **577** | 57 → **47** |
 
-⚠ **E il prezzo è misurato, non dedotto**: sulla linea più stretta il video consegna **meno
-fotogrammi**, tutti chiavi ⇒ l'immagine si aggiorna meno spesso. È esattamente *«su linea stretta
-l'immagine resta rotta più a lungo»*.
+⭐ A 3 Mbit l'audio fa **×3,3-×4,2**, e i due gruppi **non si sovrappongono**. A 1 Mbit fa **×38**, e
+le richieste di chiave crollano **178 → 68**.
 
-⛔ **E quel che la cura NON fa, dichiarato**: su linea stretta l'audio resta **lontano dal pieno** e i
-fotogrammi sono ancora **tutti chiavi**. **La spirale non è spenta: è più lenta.**
+⚠ **E il prezzo è misurato, non dedotto**: a 1 Mbit il video consegna **57 → 47 fotogrammi (−18 %)**,
+tutti chiavi ⇒ l'immagine si aggiorna meno spesso. È esattamente *«su linea stretta l'immagine resta
+rotta più a lungo»*, in numeri. ⚠ A 15 Mbit la cura è **inerte**: l'−8 % lì è varianza della scena,
+non un prezzo.
+
+⛔ **E quel che la cura NON fa, dichiarato**: a 3 Mbit l'audio resta al **27 %** e i fotogrammi sono
+ancora **tutti chiavi**. **La spirale non è spenta: è più lenta.**
 
 ### ⏳ E il motore vero sta un passo più a monte — `video_sgombra()`
 
@@ -1276,8 +1287,8 @@ un browser vero. Quella prova la fa il coordinatore sul prodotto riunito.
 
 ### ⛔⛔ Il difetto nuovo: la coda si gonfia a metà sessione, e resta gonfia
 
-`[M]` Giro di **cinque minuti sul ferro**, carico 2,25: la coda è saltata **in una finestra
-sola** (`BUCHI 1`, `mancati 4`) e **lì è rimasta** per il resto della sessione.
+`[M]` Giro di **cinque minuti sul ferro**, carico 2,25: la coda è saltata da **266 a 519 ms in una
+finestra sola** (`BUCHI 1`, `mancati 4`) e **lì è rimasta** per il resto della sessione.
 
 **Il meccanismo**, e non è la deriva: quando il thread principale si ferma un attimo, i datagram si
 accumulano nel lettore e **arrivano tutti insieme**. Il primo del mucchio è vecchio ⇒ riarmo, e
@@ -1292,7 +1303,7 @@ verdi). Nelle sessioni sane si riapre **zero volte**.
 
 | stessi 5 minuti, carico 2,25 | prima | dopo |
 |---|---|---|
-| coda | ⛔ **si gonfia, e resta gonfia** | ⭐ **ferma** |
+| coda | 266 → **519**, poi 585 | ⭐ **269-289, ferma** |
 | BUCHI | 1 | ⭐ **0** |
 | perdite | `mancati 4` → scatto e gonfiore | `mancati 7` → ⭐ **niente**, né scatto né gonfiore |
 
@@ -1317,7 +1328,7 @@ controllo positivo **è la pagina di ieri**, non un guasto sintetico:
 |---|---|---|
 | come nasce | `suspended` | `suspended` |
 | dopo 25 s senza toccare | `suspended`, **usciti 0** | `suspended`, **usciti 0** |
-| **dopo un clic vero** | ⛔ **`suspended`, usciti 0** | ⭐ **`running`, usciti 388** |
+| **dopo un clic vero** | ⛔ **`suspended`, usciti 0** | ⭐ **`running`, usciti 388**, coda 259 ms |
 
 ⛔ **La risposta era la peggiore delle due**: non solo mancava il gestore, ma **non si svegliava da sé
 nemmeno su un browser con schermo**. ⇒ Curato con quattro eventi in `passive` + cattura (non
@@ -1326,15 +1337,16 @@ un `resume()` riprovato ogni 5 s di blocchi buttati.
 
 ### ⭐ E la deriva fra gli orologi: **il numero era mio ed era sbagliato**
 
-⛔ La deriva dichiarata in §8 era **in gran parte il difetto qui sopra letto come deriva**. Tolto
-quello, su cinque minuti puliti, è **un ordine di grandezza più piccola** ⇒ dal cuscino al tetto dei
-600 ci vorrebbe **più di un'ora**, non pochi minuti.
+⛔ I **0,7-1,4 ms/s** dichiarati in §8 erano **in gran parte il difetto qui sopra letto come deriva**.
+Tolto quello, su cinque minuti puliti: **~0,07 ms/s** (±0,05). ⇒ Dal cuscino al tetto dei 600
+ci vorrebbero **~80 minuti**, non quattro.
 
 ⏳ **La forma della cura c'è, e la raccomandazione è di non scriverla adesso.** L'unica correzione
 *continua* è rendere l'ancora affine (`quando = base + istante/r`, ogni blocco a `playbackRate = r`):
-prezzo, uno scostamento d'intonazione **costante**, sotto la soglia percettiva. ⛔ Le alternative sono peggiori, **e sono state scartate con un numero**: far scorrere
-l'ancora a passetti dà un gradino a ogni blocco = **un ronzio a 50 Hz**; inserire o
-togliere un blocco = **un tic**. ⚠ Ma con una deriva così piccola **non vale il rischio dello stimatore**: resta
+prezzo, uno scostamento d'intonazione **costante** ≤ 0,15 % = **2,6 cent**, sotto la soglia
+percettiva. ⛔ Le alternative sono peggiori, **e sono state scartate con un numero**: far scorrere
+l'ancora a passetti dà ~1,4 campioni di gradino per blocco = **un ronzio a 50 Hz**; inserire o
+togliere un blocco = **un tic**. ⚠ Ma a 0,07 ms/s **non vale il rischio dello stimatore**: resta
 aperta, e si rimisura su una sessione vera dell'utente, dove le due schede audio sono altre.
 
 ### ⛔ E la finestra di riordino è USCITA — appartiene alla fase 9
@@ -1411,7 +1423,7 @@ ritardo audio/video è ok»*. ⇒ Il *«audio OK»* delle quattro prove comprend
 solo la pulizia del flusso.
 
 ⛔ **Era l'ultimo difetto vero della fase 7**, ed è quello che l'utente aveva confermato il 21 sera
-con *«il ritardo … tra audio e video in generale te lo confermo»*. ⇒ Fra le due frasi ci
+con *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Fra le due frasi ci
 sono: l'**ancora all'`istante` del server** (la coda non è più un serbatoio a senso unico), la
 **riapertura della tirata a ogni riancoraggio** (la coda non si gonfia più a metà sessione), la cura
 della **spirale delle chiavi** (l'audio non muore più quando la linea stringe) e il **primo clic**
@@ -1438,7 +1450,7 @@ Dato su un **video di YouTube** riprodotto nella sessione remota, e confermato d
 | blocchi ricevuti dalla pagina | 2184 → 3183 in 20 s = **49,95/s** contro 50 prodotti |
 | perdita | **zero** |
 | **buchi nella riproduzione** | **2**, e fermi — nessun nuovo buco in venti secondi |
-| coda | **stabile** |
+| coda | stabile a **311-341 ms** |
 
 ### 9.2-bis · ⭐⭐⭐ GLI APPUNTI: **«clipboard funziona in entrambi i versi»** — 17 agosto 2026
 
@@ -1667,8 +1679,8 @@ appunti letti non ne ha.
 ⇒ L'annuncio d'apertura è stato spostato dopo `SESSIONE` (`appunti_apri_la_domanda`).
 
 **3 · ⛔ L'offerta alla sessione cadeva nel vuoto, e nessuno la rifaceva.** `[M]` 06:00:15 —
-l'annuncio alle `.868`, l'apertura degli appunti della sessione alle `.982`: un intervallo in mezzo, e
-in quell'intervallo il figlio scriveva *«gli appunti della sessione non ci sono: l'offerta cade»*.
+l'annuncio alle `.868`, l'apertura degli appunti della sessione alle `.982`: **114 ms** in mezzo, e
+in quei 114 ms il figlio scriveva *«gli appunti della sessione non ci sono: l'offerta cade»*.
 ⇒ Il compositore non diventava mai proprietario della selezione, e dentro il desktop la voce
 «Incolla» **non aveva niente da dare**.
 ⭐ **Cura**: `figlio.c` tiene **un bit** (`appunti_offerta_arretrata`) e rifà l'offerta appena gli
@@ -1807,9 +1819,10 @@ mattina — **8 935 blocchi ricevuti, 8 933 suonati, 2 buchi in 3 min 30** — m
 ha mai chiuso niente qui dentro.
 
 ⛔ **E chiude il difetto che al mattino era l'unico vero aperto**: la coda dell'audio che si assestava
-**alta**. ⚠ La misura non era sbagliata, e non è stata «spiegata»: è stata **giudicata**. Una coda
-così si sente in una scena — un metronomo, un video con le labbra in campo — e in questa non si è
-sentita. ⇒ Smette di essere un difetto.
+a **401 → 421 ms**. ⚠ La misura non era sbagliata, e non è stata «spiegata»: è stata **giudicata**.
+Quattro decimi di secondo di coda si sentono in una scena — un metronomo, un video con le labbra in
+campo — e in questa non si sono sentiti. ⇒ Il numero resta scritto dov'è, come numero; smette di
+essere un difetto.
 
 ⭐ **Con questo, l'audio della fase 7 ha tre giudizi dell'utente, su tre mezzi diversi**: il video di
 YouTube da desktop (§9.1), gli appunti nei due versi (§9.2-bis), e adesso **un telefono**.
@@ -1823,18 +1836,18 @@ condizioni*** (`DECISIONI.md` §0.1-bis):
 | ⛔ **non** vale per | **Firefox per Android** — dichiarato incompatibile dall'utente lo stesso giorno (`DECISIONI.md` §7.18) |
 | resta non misurato | il **datagram su rete non locale**, e la **priorità in tempo reale** dentro il figlio |
 
-#### ⛔ 9.7-bis · E un'ora dopo, la precisazione che RIAPRE il difetto — **«… fra audio e video, te lo confermo»**
+#### ⛔ 9.7-bis · E un'ora dopo, la precisazione che RIAPRE il difetto — **«400 ms fra audio e video, te lo confermo»**
 
 > *«Su Windows ci siamo quasi, però a un certo punto l'audio è a scatti.»* → sessione sorvegliata
-> con `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo …
-> tra audio e video in generale te lo confermo.**»* — l'utente, 21 agosto 2026, sera.
+> con `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo di
+> 400 ms tra audio e video in generale te lo confermo.**»* — l'utente, 21 agosto 2026, sera.
 
 ⛔ **Due verdetti in una frase, e vanno separati**:
 
 | | |
 |---|---|
 | l'audio **a scatti** | ⭐ **non è nostro** — non si è ripresentato sotto sorveglianza, ed è del suo PC |
-| il ritardo **fra audio e video** | ⛔ **è nostro, è generale, ed è confermato dall'orecchio** |
+| il ritardo **fra audio e video** | ⛔ **è nostro, è generale, ed è confermato dall'orecchio**: ~400 ms |
 
 ⚠ **E il primo giudizio non era sbagliato: era meno preciso.** *«Audio e video perfetti»* voleva dire
 *ogni flusso è pulito* — ed è vero, `[M]`: zero perdite su ogni riga di ogni anello. ⛔ Quel che non

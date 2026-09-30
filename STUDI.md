@@ -1,7 +1,5 @@
 # STUDI — il codice degli altri, letto prima di scrivere il nostro
 
-⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
-
 *Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
 sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
 riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nessuna misura, nessuna
@@ -420,36 +418,53 @@ colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
 | la prescrizione diceva | esito `[M]` 13 agosto |
 |---|---|
 | ⭐ dipingere **dentro la callback del decodificatore**, non su `requestAnimationFrame` | ✅ **regge, ed è la metà che vale** |
-| ⭐ la **decodifica** fuori dal thread principale | ✅ **VALE, ed è misurato** `[M]`: il decodificatore consegna prima |
-| ⛔ la **tela** fuori dal thread principale | ⛔⛔ **AFFONDA IL CONTO** `[M]`: il disegno costa di più, e anche la consegna dello stream |
+| ⭐ la **decodifica** fuori dal thread principale | ✅ **VALE, ed è misurato**: `[M]` **−3,44 ms** (7,17 → 3,73) |
+| ⛔ la **tela** fuori dal thread principale | ⛔⛔ **AFFONDA IL CONTO**: `[M]` **+17,6 ms** sul disegno, più **+10,2** sulla consegna dello stream |
 | il canvas 2D **desincronizzato** | ⚠ **non è mai stato acceso nel prodotto**: `src/pagina.html` ha `desynchronized` **spento** `[R]`, e la strada per accenderlo (`?tela=desincronizzata`) **non esiste** — non è un interruttore spento, è un interruttore che non c'è. ⇒ Non è una prescrizione respinta: è una prescrizione **mai eseguita**, e il guadagno resta `[?]` |
 
 > #### ⛔⛔ Il worker: attuato, misurato — e **sbagliato A METÀ, non per intero**
 >
 > *`[M]` stessa macchina, stessa sessione, **stessa pagina** (cambia solo l'interruttore), stesso
-> strumento rigirato per il «prima» e per il «dopo», e due giri di «prima» per sapere quanto vale il
-> rumore: l'effetto lo supera di molto.*
+> strumento rigirato per il «prima» e per il «dopo». Due giri di «prima», per sapere quanto vale il
+> rumore: **5,9 ms**, e l'effetto lo supera di **cinque volte**. Errore d'orologio ±0,63-0,65 ms.*
 >
-> ⇒ **Col worker il ritardo disegno → vetro SALE.** ⛔ Ma il totale nasconde la cosa che serve, e la
-> scomposizione in tre tratti la mostra: la **consegna** dello stream a `decode()` peggiora, ⭐ **la
-> decodifica migliora**, e il **disegno** peggiora più di tutto.
+> | ritardo disegno → vetro | n | p05 | **mediana** | p95 | p99 |
+> |---|---|---|---|---|---|
+> | PRIMA-A (thread principale) | 432 | 58,85 | **73,66** | 99,53 | 218,46 |
+> | PRIMA-B (ripetuto) | 492 | 53,93 | **67,79** | 88,51 | 98,16 |
+> | ⛔ **DOPO (worker)** | 483 | 84,48 | ⛔ **101,30** | 126,13 | 157,82 |
+>
+> ⇒ **+27,6 / +33,5 ms di mediana.** ⛔ Ma il totale nasconde la cosa che serve, e la scomposizione
+> la mostra:
+>
+> | tratto (mediana, ms) | PRIMA-A | PRIMA-B | DOPO | Δ |
+> |---|---|---|---|---|
+> | stream completo → `decode()` | 0,07 | 0,06 | **10,23** | ⛔ **+10,2** |
+> | ⭐ **la decodifica** | **7,17** | 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
+> | richiamo → disegno finito (`drawImage` ×2) | 9,63 | 9,11 | **27,19** | ⛔ **+17,6** |
+> | **somma dei tre** | 16,87 | 15,30 | **41,15** | **+24,3 / +25,9** |
 >
 > ⭐⭐ **⇒ §6.1 non è sbagliata per intero: è sbagliata a metà. Vale la DECODIFICA, non la TELA.**
-> Il decodificatore **consegna prima quando non contende**, ed è un guadagno vero, non un
-> arrotondamento. È la **tela** che affonda il conto.
+> Il decodificatore **consegna prima quando non contende** — `[M]` **−3,44 ms**, ed è un guadagno
+> vero, non un arrotondamento. È la **tela** che affonda il conto, e da sola vale **+17,6**.
 > ⇒ ⛔ **La riga utilizzabile non è *«il worker è sbagliato»***, che sarebbe solo una porta chiusa:
 > è ***«la decodifica sì, la tela no»***, che dice a chi verrà dove mettere il confine.
 >
 > #### E i fotogrammi dipinti, obbligatori accanto (`LEZIONI.md` §6.2)
 >
+> | | catena vera (P7) | saturazione 1080p | saturazione 480p |
+> |---|---|---|---|
+> | thread principale | 22,8-24,2 /s | **127,6** /s | **230,6** /s |
+> | worker | **26,3** /s | **33,9** /s (−73,4 %) | **56,4** /s (−75,5 %) |
+>
 > ⚠⚠ **Le due grandezze dicono cose OPPOSTE**: sulla catena vera il worker dipinge **di più** (è la
-> coda), ma a saturazione il tetto **crolla**. Chi ne guardasse una sola leggerebbe
+> coda), ma a saturazione il tetto **crolla di tre quarti**. Chi ne guardasse una sola leggerebbe
 > metà del fatto — e **quale metà dipende da quale grandezza ha scelto per prima**.
 >
 > #### ⭐⭐ Il meccanismo, ed è la scoperta che cambia una REGOLA
 >
-> Il worker paga un costo in più per ogni fotogramma, e a saturazione si ferma **al quadro dei
-> 60 Hz**, mentre il thread principale va ben oltre.
+> Costo extra per fotogramma **13,4 ms a 480p** e **21,7 ms a 1080p**; e a 480p il worker si ferma a
+> **56,4 dipinti/s ≈ il quadro dei 60 Hz**, mentre il thread principale ne fa **230,6**.
 > ⇒ ⛔ **`transferControlToOffscreen` impegna la tela al ritmo del quadro: è un
 > `requestAnimationFrame` implicito.** Il worker prescritto da questo paragrafo reintroduce **in
 > silenzio** proprio il salto di quadro che il paragrafo vieta a voce alta.
@@ -465,8 +480,8 @@ colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
 > ⛔⛔ **Tutto è misurato su Xvfb, in software, SENZA GPU**, e la penale è in gran parte
 > **sincronizzazione al quadro**. ⇒ **Su hardware vero il conto va rifatto PRIMA di seppellire
 > §6.1**: questi numeri chiudono la strada per oggi, **non per sempre**.
-> ⏳ `[?]` E un `WebTransport` aperto **dentro** il worker toglierebbe il costo del tratto della
-> consegna, ⛔ **non** quello del disegno — che è quello che decide.
+> ⏳ `[?]` E un `WebTransport` aperto **dentro** il worker toglierebbe i **+10,2** del tratto della
+> consegna, ⛔ **non** i **+17,6** del disegno — che sono quelli che decidono.
 >
 > ⇒ ⭐ **Il codice resta in albero dietro `#video=worker`, SPENTO**, proprio perché il giorno della
 > GPU vera il numero si rifà senza riscrivere niente (`DECISIONI.md` §2.8).
@@ -515,7 +530,7 @@ GPU, e falserebbe la misura che sta prendendo.
 | ⭐ **P5 — e la causa del fuori ordine è misurata** | ⛔ **non nasce (solo) dalla rete: nasce dalla DIMENSIONE del fotogramma.** `stream_video` scatta al **completamento** dello stream ⇒ l'ordine d'arrivo è **l'ordine delle dimensioni**, non quello di partenza, e **una chiave grossa viene scavalcata dai delta** che le partono dietro. ⚠ E il conto lo paga il protocollo: uno scavalcamento **costa una chiave** (`RCP.md` §5.2, §6.2 — «la regola dell'ordine si applica prima di quella della misura»). ⇒ Un iniettore che ritarda i pacchetti non riproduce il fenomeno: **lo riproduce chi cambia le dimensioni** |
 | ⛔ **P6, la grana dell'orologio** | senza le due intestazioni di isolamento fra origini, su Firefox e Safari i cronometri cadono su una griglia da **1 ms** — su un tetto di **50**. ⚠ E `SPECIFICHE.md` §11.5 ne fa un **vincolo di prodotto**, non una taratura del banco (O11) |
 | ⛔ **P7, il ritmo come controllo del percorso** | il ritmo consegnato dice se si sta misurando la strada che si crede |
-| ⛔ **dove finisce la misura** | ⛔ **al disegno finito, non al richiamo del decodificatore.** *Corretto il 13 agosto 2026: la prima stesura chiudeva al richiamo, regalandosi un tratto nostro e misurabile. Il numero è salito, e lo si è lasciato salire.* ⇒ Il confine si sposta **nella direzione scomoda**, o il metro lavora per chi lo tiene |
+| ⛔ **dove finisce la misura** | ⛔ **al disegno finito, non al richiamo del decodificatore.** *Corretto il 13 agosto 2026: la prima stesura chiudeva al richiamo, regalandosi **~11 ms** nostri e misurabili su un tetto di 50. Il numero è salito da **63,8 a 74,6** e lo si è lasciato salire.* ⇒ Il confine si sposta **nella direzione scomoda**, o il metro lavora per chi lo tiene |
 | ⛔ **il pezzo cieco** | la misura finisce al disegno; il pixel si accende `[?]` 16-40 ms dopo, e **nessuna API JavaScript lo vede**. Si stima, e **la stima si dichiara accanto a ogni numero** invece di far finta che il numero sia il totale. ⛔⛔ **Ma su Xvfb quel pezzo NON esiste** (§6.2): la stima vale per lo schermo dell'utente, **non per il banco** |
 | ⚠ **e una misura singola non vale nulla** | si lavora **a distribuzioni**, non a campioni |
 
@@ -566,7 +581,7 @@ voci che toccano una decisione.*
 | `[?]` i 10 bit fino allo schermo | §1.2 A — e **non è verificabile da JavaScript** |
 | `[?]` la Keyboard Lock su DeX, e la PWA su Android | §5.5 |
 | ⛔ ~~`[?]` i 16-40 ms del compositore~~ — **resta aperta, ma NON dove si credeva** | §6.2 — nessuna API li espone, e questo non è cambiato. ⛔ **Quel che è cambiato è dove valgono**: `[M]` 13 agosto, **su Xvfb `requestAnimationFrame` non gira mai** — **0 quadri in 3 secondi**, con e senza GPU, `visibilityState` «visible». Senza schermo non c'è scanout ⇒ **su Xvfb il pezzo cieco non esiste**. La stima si dichiara accanto ai numeri dell'**utente**, non accanto a quelli del banco |
-| ⏳ ~~`[?]` quanti stream al secondo regge ciascun browser~~ — ⭐ **una misura c'è, per un browser solo** | `RCP.md` §2.3 — il video ne consuma uno per fotogramma. `[M]` 13 agosto, **Chrome 151 su Linux**: ha dipinto **tutti** i fotogrammi offerti a 60 al secondo (cioè 60 stream/s, senza perdite), con margine a saturazione. ⛔ **Resta `[?]` su Firefox e su Safari**, ed è la stessa `[?]` di `SPECIFICHE.md` §11.5: i mattoni stanno su due motori, i numeri su uno |
+| ⏳ ~~`[?]` quanti stream al secondo regge ciascun browser~~ — ⭐ **un numero c'è, per un browser solo** | `RCP.md` §2.3 — il video ne consuma uno per fotogramma. `[M]` 13 agosto, **Chrome 151 su Linux**: **60,0** fotogrammi dipinti al secondo offrendone 60 (cioè 60 stream/s, senza perdite), e **127,6/s** come **tetto a saturazione**. ⛔ **Resta `[?]` su Firefox e su Safari**, ed è la stessa `[?]` di `SPECIFICHE.md` §11.5: i mattoni stanno su due motori, i numeri su uno |
 
 ---
 
@@ -945,12 +960,12 @@ propone fino a 16; i nostri quattro li chiediamo noi).
 `maxFramerate` fa **due cose insieme**: è il freno della cattura **ed è la frequenza del monitor
 virtuale**.
 
-⛔ *Questo paragrafo diceva: «Stesso numero ⇒ **battimento**». **È sbagliato**, e la misura della
-fase 3 (step 1, M3) lo smentisce.*
+⛔ *Questo paragrafo diceva: «Stesso numero ⇒ **battimento** ⇒ 0,61». **È sbagliato**, e la misura
+della fase 3 (step 1, M3) lo smentisce in tutt'e due le metà: né il battimento né lo 0,61.*
 
 ⭐ **IL FATTO, che è `[M]` e non si tocca**: negoziando il monitor a **120 Hz** e rinegoziando la
-**sola** cadenza a **90**, GNOME consegna **la cadenza piena dei 60**, che a monitor e freno uguali
-non raggiunge. È la cella **D** di `banchi/03-b14-esiti.jsonl`.
+**sola** cadenza a **90**, GNOME consegna **61,4 fotogrammi al secondo** (60,04 dalla mediana), con
+intervallo mediano **16,66 ms** e p99 **20,43**. È la cella **D** di `banchi/03-b14-esiti.jsonl`.
 
 ⚠ **LA CAUSA, che è `[R]` e va detta per quello che è**: letta nel codice di Mutter, `maxFramerate`
 non sembra un tetto continuo ma una **griglia** — il freno calcola
@@ -972,21 +987,34 @@ legge misurata**, e non va scritta come se lo fosse.
 > stare sul monitor che si sta catturando*. Il banco **lo aveva scritto nel proprio file**, campo per
 > campo, e nessuno ha guardato quel campo: si è letto il numero e non la riga accanto.
 
-La tabella delle sette celle, con i tre controlli che chiudono, sta in `banchi/03-b14-esiti.jsonl`
-(tutte con `scena_sul_mio_monitor: true`) e nella storia di git di questo documento.
+**La tabella qui sotto viene TUTTA da `banchi/03-b14-esiti.jsonl`** — sette celle, **tutte** con
+`scena_sul_mio_monitor: true`, con i tre controlli (positivo: crollo a 9,57 chiedendo 10; negativo:
+60→60 resta su 46,07; ritorno: 83,03, cioè torna su B) che chiudono:
+
+| monitor | freno | consegnati | mediana | p99 | cella |
+|---|---|---|---|---|---|
+| 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
+| 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
+| 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
+| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
+
+⛔ **E i «sei decimi» non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**, che è
+quel che una griglia produce e un battimento no. ⭐ **Questa cella è pulita** — è la **A**, e regge.
 
 > ⛔ ⚠ *E cade anche il riscontro incrociato.* Qui stava scritto: «Riscontro incrociato con una
-> seconda scena indipendente: concordano, attese **0** ovunque». ⛔ **Non regge**, e
+> seconda scena indipendente: concordano **entro il 4 %**, attese **0** ovunque». ⛔ **Non regge**, e
 > lo dice il file stesso, `banchi/03-b14-esiti-scena2.jsonl`: la sua **cella D** — cioè proprio il
-> risultato da confermare — porta `scena_sul_mio_monitor: false` e `palco_stabile: false`, e non ha
-> nemmeno il conto delle attese; e il suo **controllo di RITORNO** non torna sulla sua stessa cella B,
-> quindi la catena dei controlli di quella scena **non chiude**. ⇒ ⛔ **La cella D oggi ha UNA scena
-> sola.** Corretto il
+> risultato da confermare — porta `scena_sul_mio_monitor: false`, `palco_stabile: false` e **1
+> fotogramma in 25 s (0,04/s)**, e non ha nemmeno il conto delle attese, perché il suo step 2 non
+> c'è. E il suo **controllo di RITORNO** dà **52,84** contro gli **80,28** della sua stessa cella B:
+> **non torna**, quindi la catena dei controlli di quella scena **non chiude**. Entro il 4 %
+> concordano solo la cella A (31,28 contro 31,5), la B (3,2 %) e il controllo positivo; la C sta al
+> **5,4 %** e il controllo negativo al **7 %**. ⇒ ⛔ **Il 61,4 oggi ha UNA scena sola.** Corretto il
 > 13 agosto 2026, stesso rilievo.
 
 ⭐ **`ensure_virtual_monitor` esce prima se la misura non cambia**, e il disaccoppiamento
-**funziona**: negoziare alto (monitor 120) e rinegoziare la sola cadenza (freno 90) porta GNOME
-alla cadenza piena, cioè quanto KWin. È costato tre celle e **zero righe di prodotto**, come previsto.
+**funziona**: negoziare alto (monitor 120) e rinegoziare la sola cadenza (freno 90) porta GNOME a
+**61,4**, cioè quanto KWin. È costato tre celle e **zero righe di prodotto**, come previsto.
 
 ⛔⛔ **Ma il prodotto oggi non sa chiederlo, e va scritto qui**: `MOVIMENTO_FPS 60` è una costante di
 compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual`
@@ -994,11 +1022,11 @@ non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i q
 **1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
 
 ⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Misurato
-il ritardo cattura → vetro (`SPECIFICHE.md` §3.2), il disegno → cattura di Mutter ne è la parte
-minore: il grosso è **nostro**, nel tratto cattura → primo byte in pagina,
-dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il figlio del prodotto consegna
-**con ZERO attese a vuoto**: **non aspetta mai Mutter**. Alzare la cadenza della cattura non
-sposterebbe il ritardo.
+il ritardo cattura → vetro (mediana **74,58 ms**, `SPECIFICHE.md` §3.2), il disegno → cattura di
+Mutter pesa **16,66 ms su 74,6, cioè il 22 %**: il **78 % è nostro**, e ~39 ms stanno nel tratto
+cattura → primo byte in pagina, dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il
+figlio del prodotto consegna **23,93 fotogrammi/s con ZERO attese a vuoto**: **non aspetta mai
+Mutter**. Alzare la cadenza della cattura non sposterebbe il ritardo.
 
 #### 8.3 Il resto
 
@@ -1155,7 +1183,7 @@ a ~10 cicli da Mutter: **non è gratis né dalla fase wlroots né dal lavoro su 
 |---|---|---|
 | **M1** | ⛔ il nostro regolatore regge `queueDepth == 0xFFFFFFFF` | §11: un desktop che si pianta per sempre. Si prova con un client strumentato, non aspettando |
 | **M2** | headless sì/no contro `inhibit_remote_access` | §4: è la precondizione che oggi abbiamo **per accidente** |
-| ⚠ **M3** | la cadenza disaccoppiata — ⭐ **il fatto è ottenuto**, ⛔ **ma la misura è MEZZA e non è chiusa** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **la cadenza piena** — cella **D**, pulita, con i tre controlli che chiudono. ⛔ **Ma la causa è `[R]`, non `[M]`**: la «legge della griglia» su 13 punti **non esiste** (vedi il riquadro di §8.2), e ⛔ **il riscontro su una seconda scena non c'è**: la cella D di `03-b14-esiti-scena2.jsonl` è rifiutata dal banco. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
+| ⚠ **M3** | la cadenza disaccoppiata — ⭐ **il fatto è ottenuto**, ⛔ **ma la misura è MEZZA e non è chiusa** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **61,4 consegnati** (60,04), mediana **16,66 ms** — cella **D**, pulita, con i tre controlli che chiudono. ⛔ **Ma la causa è `[R]`, non `[M]`**: la «legge della griglia» su 13 punti **non esiste** (vedi il riquadro di §8.2), e ⛔ **il riscontro su una seconda scena non c'è**: la cella D di `03-b14-esiti-scena2.jsonl` è rifiutata dal banco. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
 | **M4** | `SPA_META_SyncTimeline` con acquire/release, **oppure** trattenere il `pw_buffer` | §8.1: è la caccia della fase 9 nel posto giusto |
 | **M5** | `SPA_META_Cursor` + `cursor-mode=2` → cursore RDP nativo | §5.2: oggi il puntatore non arriva da nessuna parte |
 | **M6** | il profilo dconf in `$XDG_RUNTIME_DIR` con i lock, e **ogni chiave riletta** | §6: paga §1.1 punti 3, 4 e 5 insieme |
@@ -1172,9 +1200,9 @@ a ~10 cicli da Mutter: **non è gratis né dalla fase wlroots né dal lavoro su 
 >
 > | | |
 > |---|---|
-> | ✅ **quel che M3 HA ottenuto** | `[M]` **la cadenza piena** a monitor 120 e freno 90 — cella **D** di `banchi/03-b14-esiti.jsonl`, `scena_sul_mio_monitor: true`, con controllo positivo, negativo e di ritorno che chiudono. **Questo è un fatto, e resta** |
+> | ✅ **quel che M3 HA ottenuto** | `[M]` **61,4** a monitor 120 e freno 90 — cella **D** di `banchi/03-b14-esiti.jsonl`, `scena_sul_mio_monitor: true`, con controllo positivo (crollo a 9,57), negativo (fermo su 46,07) e di ritorno (83,03) che chiudono. **Questo è un fatto, e resta** |
 > | ⛔ **quel che M3 NON ha** | la **causa**. La quantizzazione è `[R]`: letta nel codice di Mutter, coerente con la cella D, **mai misurata su una griglia di punti** |
-> | ⛔ **e nemmeno** | il **riscontro su una seconda scena**: la cella D di `banchi/03-b14-esiti-scena2.jsonl` porta `scena_sul_mio_monitor: false` ⇒ la cella D ha **una scena sola** |
+> | ⛔ **e nemmeno** | il **riscontro su una seconda scena**: la cella D di `banchi/03-b14-esiti-scena2.jsonl` porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s** ⇒ il 61,4 ha **una scena sola** |
 > | ⇒ **che cosa la chiuderebbe** | rifare la **griglia** con la scena sul monitor che si cattura, e rifare la **cella D** sulla seconda scena. È lo stesso banco `banchi/03-b14-cadenza.py`, e ⭐ **il campo per accorgersene ce l'ha già**: è `scena_sul_mio_monitor`, e stamattina nessuno l'ha guardato |
 
 ---
@@ -1266,8 +1294,8 @@ da questo studio. Le celle marcate `[?]` sono quelle che il codice non decide.
 | 3 | Il protocollo è dietro un permesso? | no | **sì**, e il permesso è **un campo di un file `.desktop`** [R] — **+ `XDG_MENU_PREFIX`** [M, 7 ago] |
 | 4 | Senza monitor, disegna sulla GPU? | sì | **sì** [R] **e misurato** [M, 7 ago]: render node aperto, EGL/gbm, dmabuf v4 |
 | 5 | Si può chiedere uno schermo virtuale della misura voluta? | sì, `RecordVirtual` | **sì**, `stream_virtual_output` — ma **solo col backend `--drm`** [R] |
-| 6 | Quanto consegna, con una scena che cambia a ogni ridisegno? | meno di quanti chiesti | **tutti quelli chiesti** [M, 7 agosto] — misurato però con `--virtual` + `stream_output`, non nella configurazione del prodotto |
-| 7 | La cadenza dichiarata come si comporta? | meno di quanti chiesti, oltre 60 non sale, **fissa rifiutata** | `framerate` **deve** essere `0/1`; il tetto è `maxFramerate`, **onorato lato server** con aritmetica intera in ms [R] |
+| 6 | Quanto consegna, con una scena che cambia a ogni ridisegno? | ~37 su 60 | **59–60** [M, 7 agosto] — misurato però con `--virtual` + `stream_output`, non nella configurazione del prodotto |
+| 7 | La cadenza dichiarata come si comporta? | sei decimi, oltre 60 non sale, **fissa rifiutata** | `framerate` **deve** essere `0/1`; il tetto è `maxFramerate`, **onorato lato server** con aritmetica intera in ms [R] |
 | 8 | Consegna fotogrammi interi o «diff»? | **a copia zero è un diff** | **interi, sempre** [R] — il difetto di R29 non si ripresenta |
 | 9 | Il buffer arriva già disegnato? | **no**: il 100 % col disegno in corso | **sì**: KWin fa `glFlush()`, o `glFinish()` su NVidia e llvmpipe [R] |
 | 10 | Che cosa costa la risoluzione? | niente fino a 4K | niente [M] |
@@ -1792,10 +1820,10 @@ un'ottimizzazione successiva.
 > misuratore che interroga la fence implicita con `poll(POLLIN, 0)` sul descrittore del DMA-BUF —
 > **lo stesso metodo con cui misurammo Mutter**, quindi i due numeri sono confrontabili:
 >
-> | percorso | «disegno non finito» |
-> |---|---|
-> | **DMA-BUF** | **830 su 830** |
-> | in memoria (MemFd) | **0** |
+> | percorso | fotogrammi | «disegno non finito» |
+> |---|---|---|
+> | **DMA-BUF** | 594 in 10,03 s | **830 su 830** |
+> | in memoria (MemFd) | 435 in 10,03 s | **0** |
 >
 > ⛔ Cioè **su questa macchina il 100 % dei buffer DMA-BUF arriva con il disegno in corso.** Non
 > contraddice §4.8: KWin fa `glFlush()`, che **sottomette** il lavoro alla GPU e non aspetta che sia
@@ -1807,8 +1835,8 @@ un'ottimizzazione successiva.
 > **non si ripresenta**. Su KDE la copia zero richiede *una* cosa: aspettare la fence prima di
 > codificare, che è il comportamento corretto di qualunque consumatore.
 >
-> ⚠ E il conteggio dei buffer: più buffer che fotogrammi contati, con «danno parziale 829,
-> pieno 1». La differenza è verosimilmente i buffer di **solo cursore** di §4.7, che il
+> ⚠ E il conteggio dei buffer: 830 buffer contro 594 fotogrammi contati, con «danno parziale 829,
+> pieno 1». I ~236 di differenza sono verosimilmente i buffer di **solo cursore** di §4.7, che il
 > misuratore scarta: un'altra ragione per rendere onesto quel conteggio prima di citarlo.
 
 #### 4.9 Ciclo di vita — e i due modi di perdere il flusso
@@ -1885,7 +1913,7 @@ dispositivi DRM con `drmGetDevices2()` e apre un **nodo di rendering** (`DRM_NOD
 `EGL_PLATFORM_GBM_KHR`), con swapchain di buffer gbm.
 
 E la prova sta **nella nostra stessa tabella**: `banco/tabella-altri.txt` riporta per KWin
-`tipo=DMA-BUF`, `fence=1010`. Ma un flusso screencast **può essere DMA-BUF solo se il
+`tipo=DMA-BUF`, `fence=1010`, 59,50 fps. Ma un flusso screencast **può essere DMA-BUF solo se il
 compositore è un `AbstractEglBackend`** (`screencaststream.cpp:920-925`, e `:154-155` per la scelta
 del tipo di buffer). Cioè: **in quella misura KWin stava già componendo sulla GPU.**
 
@@ -1895,8 +1923,8 @@ Le sole cause di un `findRenderDevice() == nullptr`, dal codice: nessun `/dev/dr
 
 > ⛔ **Che cosa va fatto, e in quale ordine.** Non si corregge il documento su una lettura di codice:
 > si rifà la misura, con le due prove che non dipendono da quel che KWin dichiara (§5.3). Poi si
-> corregge R32 con data e fonte. Fino a quel momento, **la misura della cadenza di KWin resta valida
-> come misura e sospetta quanto alla sua etichetta**: quel che è in dubbio non è la cadenza, è il «in
+> corregge R32 con data e fonte. Fino a quel momento, **il numero «KWin: 60 fps a 4K» resta valido
+> come misura e sospetto quanto alla sua etichetta**: quel che è in dubbio non è il 60, è il «in
 > software».
 
 > #### ✅ MISURATO — e l'etichetta «in software» era sbagliata
@@ -1911,7 +1939,7 @@ Le sole cause di un `findRenderDevice() == nullptr`, dal codice: nessun `/dev/dr
 > | global `zwp_linux_dmabuf_v1` | **annunciato, versione 4** — e nasce solo da `AbstractEglBackend::initWayland()` |
 >
 > **Verdetto: KWin senza monitor compone sulla GPU.** La lettura del codice era giusta e la nostra
-> etichetta era sbagliata: **R32 va corretta**: la misura della cadenza resta, ma non è «in software».
+> etichetta era sbagliata: **R32 va corretta**, il «60 fps a 4K» resta ma non è «in software».
 >
 > ⚠ **Una trappola nella prova, per chi la rifà.** Su Mesa 25 tutti i driver gallium — llvmpipe
 > compreso — stanno in **un'unica** `libgallium-*.so`: quindi *«non vedo llvmpipe fra le librerie»*
@@ -2106,13 +2134,25 @@ non è possibile senza toccare KWin).
 
 #### 5.7 📊 Quanto eroga la cattura **sulla Intel integrata** — la tabella che conta per il prodotto
 
-**[M] 8 agosto 2026**, sola cattura, scena in movimento, da 720p a 4K, copia zero contro copia in
-memoria. *La tabella è tolta (fase 18: i numeri non valgono più) e resta nella storia di git.*
-Le due letture che contavano:
+**[M] 8 agosto 2026.** Le tabelle di `REFERENCE.md` R32 sono della Radeon; queste sono della GPU che
+il prodotto userà. Misura della **sola cattura**, scena dichiarata e in movimento
+(`weston-simple-egl` a schermo intero, sincronizzato al ridisegno), tetto dichiarato 60 fps, 10
+secondi per cella, `kwin_wayland --virtual` con la Radeon negata:
 
-1. ✅ **A copia zero la risoluzione non costava niente**: la cadenza restava piena da 720p a 4K.
-2. ⛔ **In memoria la risoluzione costava tutto**: salendo a 4K la cadenza crollava. **Il collo di
-   bottiglia era la copia**, non il compositore e non la GPU.
+| Risoluzione | copia zero (DMA-BUF) | in memoria (MemFd) |
+|---|---|---|
+| 1280×720 | **59,4** *(mediana 16,5 ms)* | 49,6 *(20,2 ms)* |
+| 1920×1080 | **59,2** *(17,2 ms)* | 43,3 *(23,2 ms)* |
+| 2560×1440 | **59,3** *(17,2 ms)* | 37,0 *(27,0 ms)* |
+| **3840×2160** | **59,0** *(17,2 ms)* | **27,0** *(37,4 ms)* |
+
+⭐ **Due letture, e sono le più importanti di tutta la fase:**
+
+1. ✅ **A copia zero la risoluzione non costa niente**: 59 fotogrammi al secondo **da 720p a 4K**, con
+   la mediana degli intervalli ferma a 17 ms. Il requisito dell'utente — *«30 a 1080p, 60 a 4K»*
+   (`REFERENCE.md` R32, e la memoria del progetto) — **è raggiungibile su una Intel integrata**.
+2. ⛔ **In memoria la risoluzione costa tutto**: da 49,6 a **27,0** salendo a 4K, cioè meno della metà
+   del bisogno. **Il collo di bottiglia è la copia**, non il compositore e non la GPU.
 
 > **Da cui la conseguenza per il piano**: su KDE la copia zero non è un'ottimizzazione, è **la
 > condizione** per i 60 a 4K. E su KDE è anche più facile che su GNOME, perché i fotogrammi sono
@@ -2267,7 +2307,7 @@ abbatte tutta la sessione.**
 
 > Cioè: KWin non ha bisogno di Xwayland, **Plasma sì**. E la nostra riga di banco
 > (`banco/banco-altri.sh:33`) avvia KWin **senza** `--xwayland`: con quella riga una **sessione
-> Plasma non parte**. Le misure di cadenza valgono per **KWin nudo**, non per una sessione Plasma
+> Plasma non parte**. I 59–60 fps misurati valgono per **KWin nudo**, non per una sessione Plasma
 > completa — e questa è la seconda etichetta da correggere sulle misure del 7 agosto.
 
 #### 6.5 Il logout: non c'è `RegisterClient`, e la strada buona è passiva
@@ -2523,7 +2563,7 @@ esiste ma i suoi **unici chiamanti sono gli autotest**.
 > `--drm`, che §5.2 ha escluso. Chi un giorno girasse su KWin ≥ 6.8 la rifaccia.
 >
 > **M7b — quanto costa mettere in piedi un flusso**: dal collegamento al socket al nodo PipeWire
-> annunciato, misurato su tre giri consecutivi. È la componente fissa del «buco» del
+> annunciato, **65, 65 e 67 ms** su tre giri consecutivi. È la componente fissa del «buco» del
 > ripiego «chiudi e rifai» (§8.3); a quella va aggiunto il tempo di ricreare l'output, che su
 > `--virtual` non si può misurare perché l'output non si crea affatto.
 
@@ -3059,7 +3099,7 @@ compositore, 68 730 righe. **krfb è ~5 000 righe di C++ e parla VNC**, e su que
 3. **otto difetti reali che possiamo non pagare**, e due sono della famiglia che ci ha già morso:
    il **danno mai negoziato** (`setDamageEnabled` non è chiamato in tutto l'albero, quindi krfb
    accoda **lo schermo intero a ogni fotogramma**), e un `QTimer` a 50 ms che impone **20 fps** —
-   cioè un tetto scritto in casa propria, esattamente il nostro difetto di R32. Gli altri:
+   cioè un tetto scritto in casa propria, esattamente il difetto dei nostri 18 (R32). Gli altri:
    `buttonMask` passato dove il portale vuole uno `state` 0/1 (`xdpevents.cpp:78` → pulsanti
    incastrati), doppio evento di rotella per scatto, uno scatto che arriva come `delta=±1 px`,
    `||` invece di `&&` nel cursore, pixel fisici dove servono unità logiche, e nessun ascolto della
@@ -3173,7 +3213,7 @@ permesso da chiedere.
 2. ⛔ **`REFERENCE.md` R32 e `LEZIONI.md` §3 riga 4**: *«KWin senza monitor disegna in software»* è
    contraddetto dal codice, e la nostra stessa tabella (DMA-BUF con fence) lo conferma. **Da
    rimisurare prima di correggere** (§5.1, §15).
-3. ⛔ **Le misure di cadenza hanno due etichette da rivedere**: sono state prese con
+3. ⛔ **Le misure dei 59–60 fps hanno due etichette da rivedere**: sono state prese con
    `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` (cioè scavalcando il cancello) e con `--virtual` +
    `stream_output` **senza `--xwayland`** — cioè su **KWin nudo**, non su una sessione Plasma, e non
    nella configurazione del prodotto (`stream_virtual_output`, che con `--virtual` **non funziona**).
@@ -3278,7 +3318,7 @@ giornata di banco della fase 11.
 | ~~**4**~~ | ⛔ **CHIUSA: parte in software.** Con i render node inaccessibili e `KWIN_COMPOSE=O2`: `forced to OpenGL` → `Falling back to defaults` → `QPainter … successfully initialized`, **e KWin parte**. L'interruttore è **inerte**: va cassato dalle ricette e da ogni banco, e l'unico modo di sapere come rende KWin è **chiederglielo** (§5.3-bis). ⚠ Nota: `LIBGL_ALWAYS_SOFTWARE` e le altre variabili di Mesa **non hanno effetto** su KWin. §5.4 | se parte, va cassato dalle nostre ricette, e tutte le misure fatte con quella variabile vanno rilette (§5.4) |
 | ~~**5**~~ | ✅ **CHIUSA: sì, senza nulla.** `gdbus … org.kde.KWin.EIS.RemoteDesktop.connectToEIS 7` da una shell SSH qualunque → **`(handle 0, 1)`**: un descrittore e un cookie, **senza sessione, senza portale, senza dialogo e senza `.desktop`**. L'input via libei su KDE è confermato sul campo | è la quarta domanda della fase, e il codice dice sì (§7.1) |
 | ~~**6**~~ | ✅ **CHIUSA: sì.** `libeis-dev` è nei `Build-Depends` di `kwin 4:6.3.6-1`, e — prova che non mente — **`eis.so` è dentro il pacchetto `kwin-common`** (`/usr/lib/<triplet>/qt6/plugins/kwin/plugins/eis.so`), libei 1.3.901. ⚠ `kwin-wayland` **non** dipende da `libeis1`: guardare lì avrebbe dato la risposta sbagliata | la premessa dell'input c'è (§7.1) |
-| ~~**7**~~ | ✅ **CHIUSA in parte.** Montare un flusso ha un costo fisso, misurato su tre giri, ed è la componente fissa del buco. Il tempo di *ricreare l'output* non è misurabile su `--virtual`, dove `stream_virtual_output` è rifiutato (`Could not find output`, verificato). §8.1 | decide la scelta n.2 di §13.4 (§8.3) |
+| ~~**7**~~ | ✅ **CHIUSA in parte.** Montare un flusso costa **65–67 ms** (tre giri), ed è la componente fissa del buco. Il tempo di *ricreare l'output* non è misurabile su `--virtual`, dove `stream_virtual_output` è rifiutato (`Could not find output`, verificato). §8.1 | decide la scelta n.2 di §13.4 (§8.3) |
 | ~~**8**~~ | ✅ **CHIUSA: la cattura è indipendente dal VT.** Il compositore `--virtual` **non apre nessuna tty/console** (verificato su `/proc/<pid>/fd`), la sua sessione ha `VTNr=0` e `Seat=` vuoto; cambiando VT (tty1 → tty2 → tty1 con `VT_ACTIVATE`, perché `chvt` non è installato) **compositore, flusso e protocollo restano tutti vivi**. §4.9 | è la condizione di un servizio non presidiato (§4.9) |
 | ~~**9**~~ | ✅ **CHIUSA: sì.** Dopo `org.kde.Shutdown.logout()` tutti i processi Plasma spariscono e il socket Wayland con loro, **ma il bus d'utente risponde ancora sulla stessa connessione** e `systemd --user` è vivo. Il difetto di GNOME non si ripresenta. §6.6 | se sì, un difetto di GNOME non si ripresenta (§6.6) |
 | ~~**10**~~ | ✅ **CHIUSA per lettura, e la lettura è conclusiva**: `eiscontext.cpp:272-285` **non inverte** e usa **la stessa formula per i due assi** (`delta = v120 × 15/120`, `v120` grezzo a valle). Nessuna asimmetria di KWin da compensare: l'adattamento è tutto nostro. Resta la verifica a occhio nella fase. §7.2 | §7.2 |
@@ -3296,7 +3336,7 @@ codice mostra due punti in cui il ripiego è silenzioso per costruzione.
 > state chiuse in questa giornata (M3d, M4, M7, M8, M9, M10, M11, M12), e i risultati che cambiano il
 > piano sono tre:
 >
-> 1. ⭐ **la copia zero è la condizione della cadenza piena a 4K** sulla GPU scelta dall'utente (§5.7);
+> 1. ⭐ **la copia zero è la condizione dei 60 fps a 4K** sulla GPU scelta dall'utente (§5.7);
 > 2. ⛔ **`KWIN_COMPOSE=O2` non protegge** (M4), quindi ogni misura va accompagnata dalla stringa del
 >    renderer (§5.3-bis);
 > 3. ⛔ **il modo ovvio di scegliere la GPU rompe il permesso della cattura** (§5.6, §3.3-bis).
@@ -3317,7 +3357,7 @@ codice mostra due punti in cui il ripiego è silenzioso per costruzione.
 > | ✅ **il cancello si apre anche per noi** (§3) | `.desktop` con `Exec=` sul binario canonico e `NoDisplay=true`, più `XDG_MENU_PREFIX=plasma-` nell'ambiente di KWin: il global compare, nessun dialogo. Con `--installa-desktop` il file lo scrive REMOTIX stesso, da `/proc/self/exe` |
 > | ✅ **la fence si aspetta, e basta** (§4.8) | **2 400 buffer su 2 400** col disegno in corso — la misura dell'8 agosto confermata su un campione otto volte più grande — e **zero attese scadute** con un tetto di 50 ms. Il difetto di R29 non si ripresenta: i fotogrammi sono interi |
 > | ✅ **il modificatore che si ottiene è `0x0`, lineare** (§11.2) | è quello che il codificatore vuole, e per averlo è bastato metterlo **primo** nell'enum della proposta. `INVALID` resta come seconda scelta |
-> | ✅ **il ritmo regge, sulla catena vera** (§5.7) | la cadenza resta quasi piena a 1080p e a 4K sulla Intel, appena sotto quella del solo `misura-cattura`. La differenza è la conversione sulla scheda, che il banco non faceva |
+> | ✅ **il ritmo regge, sulla catena vera** (§5.7) | **58,1 fps a 1080p e 58,4 a 4K** sulla Intel, contro i 59,2 e 59,0 misurati col solo `misura-cattura`. La differenza è la conversione sulla scheda, che il banco non faceva |
 >
 > ⛔ **E una trappola nuova, che non è di KDE ma dei banchi che rifanno la sessione**: uccidere
 > `kwin_wayland` mette in coda su systemd un lavoro di *stop* per la sua unità, e un
@@ -3571,8 +3611,8 @@ superficie di accumulo non serve.
 | **`copy_with_damage` a schermo fermo** | ⛔ **`ready` non arriva mai**, e non c'è alcun timeout: il listener resta agganciato (`:297-303`). Serve **un timer nostro** che, scaduto, distrugga il frame e riapra con `copy` semplice |
 | **`copy` semplice** | ⛔ chiama `wlr_output_update_needs_frame()` (`:448`), cioè **forza il rendering** anche a schermo immobile. Un ciclo ingenuo a 30 fps fa rendere al compositore 30 fotogrammi al secondo di nulla |
 
-⭐ **La forma giusta la mostra wayvnc**, ed è la correzione strutturale al problema della cadenza
-bassa del 7 agosto: `copy_with_damage` di regola, `copy` intero solo quando serve un fotogramma subito (primo
+⭐ **La forma giusta la mostra wayvnc**, ed è la correzione strutturale al problema dei 18 fps del
+7 agosto: `copy_with_damage` di regola, `copy` intero solo quando serve un fotogramma subito (primo
 client, cambio output, cambio misura, riaccensione) — e **la cadenza sottrae la latenza misurata del
 compositore**: `time_left = 1/rate − dt − delay`, con `delay` misurato a ogni `ready` e filtrato
 passa-basso a 0,5 s (`wayvnc/src/screencopy.c:308`, `:214-215`).
@@ -3683,7 +3723,7 @@ Su un output headless `frame_delay = 1 000 000 / refresh_mHz` ms (`backend/headl
 | 30 Hz | 33 ms | 30 fps |
 
 Nessun altro compositore ci ha mai dato questa leva: su Mutter la cadenza si dichiarava a PipeWire e
-se ne otteneva meno; su KWin il tetto era `maxFramerate` e lo onorava il server. ⚠ wayvnc lo
+se ne ottenevano sei decimi; su KWin il tetto era `maxFramerate` e lo onorava il server. ⚠ wayvnc lo
 lascia a 0 con un TODO, quindi qui **non abbiamo un precedente da copiare**.
 
 ⛔ **E i fotogrammi si tirano davvero**: niente danno ⇒ niente commit
@@ -4112,7 +4152,7 @@ diversi da quelli attesi.
 **Le cinque cose da copiare:**
 
 1. ⭐ **la cadenza che sottrae la latenza del compositore** (§4.2): è la correzione strutturale al
-   problema della cadenza bassa;
+   problema dei 18 fps;
 2. ⭐ **il libro doppio del danno** (§4.3): obbligatorio, non un'ottimizzazione;
 3. ⭐ **l'interfaccia astratta con due implementazioni di cattura** e le capacità in una maschera di
    bit, con **un solo punto** di diramazione;
@@ -4968,8 +5008,8 @@ portale, nessun campo in un file `.desktop`. Su questo Cinnamon sta con GNOME e 
 con KDE.
 
 `[?]` **Quel che non si può leggere**: quanti fotogrammi consegna, se il buffer arriva già
-disegnato, se il cursore finisce dentro l'immagine, quanto costa la risoluzione. Su Mutter è
-misurato `[M]`; su Muffin **non c'è ragione di supporre lo stesso comportamento**, perché il
+disegnato, se il cursore finisce dentro l'immagine, quanto costa la risoluzione. Su Mutter erano
+37 al secondo `[M]`; su Muffin **non c'è ragione di supporre lo stesso numero**, perché il
 percorso di rendering è quello che è cambiato di più fra i due — ed è esattamente la deduzione
 che §1.11 vieta.
 
@@ -5078,7 +5118,7 @@ Il minimo per decidere «dentro o fuori». Serve una macchina con Cinnamon 6.7 e
 |---|---|---|
 | **M1** | strada (A): `META_DUMMY_MONITORS=1 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland` da SSH, senza monitor | il compositore sta in piedi **e** `RecordMonitor` apre uno stream **e** `misura-cattura` conta fotogrammi > 0 su scena in movimento. Tre condizioni, non una |
 | **M2** | se M1 fallisce: strada (B), `--nested` dentro Xvfb | idem |
-| **M3** | i fotogrammi al secondo consegnati, con scena dichiarata | il numero, confrontabile con quelli di Mutter, KWin e wlroots |
+| **M3** | i fotogrammi al secondo consegnati, con scena dichiarata | il numero, confrontabile con Mutter 37 / KWin 60 / wlroots 61 |
 | **M4** | rende in GPU o in software? | ⚠ **non** «ha aperto un render node» (§1.11): si guarda il tipo di buffer che lo stream riesce a offrire, **dopo** aver chiesto DMA-BUF |
 | **M5** | il cursore è dentro l'immagine? | si guarda un fotogramma |
 | **M6** | il blocco schermo revoca la cattura, come su GNOME? | si blocca e si guarda se lo stream muore |
@@ -6192,13 +6232,13 @@ request_refresh(wid) {
 
 ⇒ E questo è **esattamente** il difetto che l'utente ha sentito oggi come *«il tempo fra il login e
 la comparsa del desktop è troppo lungo»*: `[M]` 14 agosto 2026, dal registro della sua sessione
-vera, la gran parte dell'attesa sta fra il canale video acceso e il primo pixel, e il registro
+vera, fra il canale video acceso e il primo pixel passano **4,10 secondi su 5,21**, e il registro
 dice il perché — *«scena ferma: Mutter consegna solo quando qualcosa cambia»*.
 
 | | |
 |---|---|
 | ⛔ **quel che ci manca** | in `RCP.md` **non esiste un messaggio che chieda l'immagine**. C'è `RICHIEDI_CHIAVE` (§7.1), ma chiede una **chiave** di quel che è già stato catturato: se non arriva niente dal compositore, non produce niente |
-| ⚠ **e non si copia alla lettera** | il `buffer_refresh` di Xpra costa poco perché il loro server possiede il modello di damage di X11. ⛔ Su Wayland **non si può ordinare a Mutter di ridipingere**: la leva equivalente è **riavviare il flusso**, che consegna un buffer — `[M]` è così che nasce il nostro primo fotogramma |
+| ⚠ **e non si copia alla lettera** | il `buffer_refresh` di Xpra costa poco perché il loro server possiede il modello di damage di X11. ⛔ Su Wayland **non si può ordinare a Mutter di ridipingere**: la leva equivalente è **riavviare il flusso**, che consegna un buffer — `[M]` è così che nasce il nostro fotogramma del `+325 ms` |
 | ⇒ ⭐ **quel che si eredita** | **la forma**: il client deve poter dire «dammi lo schermo adesso», e il server deve avere *una* strada per obbedire. Chi la attua è affare nostro |
 
 ---
