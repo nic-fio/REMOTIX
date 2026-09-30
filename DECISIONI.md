@@ -6089,7 +6089,11 @@ server»*; e *«i dati dell'installer restano su un nostro repository, così sia
   `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
 - resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
 
-### 10.22 🔸 La licenza: non commerciale, anche per l'uso interno delle aziende — la direzione (30 set 2026)
+### 10.22 ✅ La licenza: PolyForm Noncommercial — anche l'uso interno delle aziende è vietato (30 set 2026)
+
+✅ **Confermata dall'utente**: *«PolyForm Noncommercial mi sembra adatta ai miei obiettivi attuali»*. Il file
+`LICENSE` si mette al momento della pubblicazione, col **testo ufficiale copiato senza modifiche** dal sito del
+progetto PolyForm. La tappa per togliere ffmpeg resta: è la condizione perché la licenza non urti la GPL.
 
 Parole dell'utente: *«REMOTIX è un prodotto opensource. Si può usare liberamente e redistribuire liberamente.
 Il codice si può modificare e redistribuire ma citando progetto/codice originale. È vietato l'uso
