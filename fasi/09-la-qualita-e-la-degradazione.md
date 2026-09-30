@@ -1267,7 +1267,8 @@ degradazione permanente **no**.
 ⇒ Raggiungibile per **una via sola e stretta**: la tela grande **più** il ripiego software. E le due
 si tengono per mano: `[M]` `h264_vaapi` su questo chip si ferma a **4096 px per lato**, e la tela
 legale di `RCP.md` §4.5 arriva a 7680 ⇒ **oltre i 4096 il ripiego software non è un'eventualità, è
-la regola**.
+la regola**. ⚠ dopo la fase 18: OpenH264 si ferma a 4096×2304; oltre, H.264 serve la scheda
+(`DECISIONI.md` §10.26).
 
 ⛔ **Il morso vero non è il fotogramma perso: è quel che resta dopo.** Il fotogramma granuloso dura
 un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva a **CRF 47** o **QP 51**
@@ -2498,9 +2499,10 @@ famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione
 
 ⭐ **41,25 fot/s con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi).
 ⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica.
-`[M]` la riga del primo fotogramma a 4K: **conversione 11 466 µs** + **codifica 8 895 µs** = **20,4
-ms per fotogramma**, cioè **un tetto di ~49/s** prima ancora di uscire di casa. ⚠ A 2560×1080 erano
-6 652 + 3 827 = 10,5 ms (⇒ ~95/s), e infatti lì si vedono 41,8/s perché comanda il compositore.
+La riga del primo fotogramma a 4K dava conversione + codifica come tetto della catena prima ancora di
+uscire di casa. *(Quei tempi non valgono più dopo la fase 18: la conversione di quel fotogramma non si
+dimostra a copia zero — il codice di allora aveva anche la strada dalla memoria con `sws_scale` — e sono
+stati tolti.)*
 ⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto regge ~41/s, non 60.**
 
 ### 13.6.2 ⛔⛔ E IL ROSSO DI **P9** È CADUTO, con un innesco concreto
@@ -2700,9 +2702,11 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
 ```
 14:22:06.637 rcp     negoziato video.codec=h264 video.profondita=8 audio.codec=pcm
 14:22:07.782 video   primo fotogramma: (non letto) · 25450 byte · … livello 51, 2560x1080 ·
-                     conversione 6308 µs, … codifica 3815 µs · H.264 8 bit via h264_vaapi
+                     conversione … µs, … codifica … µs · H.264 8 bit via h264_vaapi
 ```
 
+*(I tempi di conversione e codifica della riga sono tolti dopo la fase 18: la conversione non si dimostra
+a copia zero.)*
 ⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
 `hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
 
@@ -2985,8 +2989,8 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
 
 ⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
 non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
-⚠ `[M]` conversione **11 941 µs** + codifica **8 924 µs** = **20,9 ms** per fotogramma ⇒ un tetto
-di **~48/s** prima di uscire di casa, e i 40,40 di `barra` ci stanno sotto.
+⚠ Il tetto «conversione + codifica» del primo fotogramma stava sopra i 40,40 di `barra`. *(I tempi sono
+tolti dopo la fase 18: la conversione non si dimostra a copia zero.)*
 
 ## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
 
