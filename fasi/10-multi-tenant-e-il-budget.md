@@ -1,4 +1,7 @@
 # Fase 10 — Multi-tenant e il budget
+
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 Aperta il **24 agosto 2026**, subito dopo la chiusura della fase 9.
 ## ✅⭐⭐⭐⭐⭐ **CHIUSA il 25 agosto 2026**, sul giudizio dell'utente
 
@@ -504,7 +507,7 @@ punto 5 della fase non ha oggi **nessuna riga di codice**.
 | 8 | `presenti[]` **trabocca in silenzio**: il 17° utente non ha l'orologio dell'abbandono e **nessuna riga lo dice** | `main.c` · `deposita_fotogramma()`, `presenza_segna()` `:713`, `return` muto a `:730` | 17 |
 | 9 | `MAX_IN_VOLO` è **un'altra grandezza** sotto lo stesso numero | `aiutante.c` · `rcp_autentica()` | 17 simultanee, 0 sessioni |
 | 10 | ⛔ **`MAX_POLL 64` e il troncamento MUTO dei figli**: `figli_descrittori()` si ferma a `max` **senza scrivere niente**. Conto peggiore oggi 36 su 64, i 16 figli ci stanno — ⛔ ma oltre ~28 figli, o con la pagina affollata, **un figlio resta fuori dal `poll` e il suo utente non vede più un pixel, senza una riga** | `main.c` · `TELA_A`, `figlio.c` | >28, e **in silenzio** |
-| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (`[M]` ~22 ms contro ~3, `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, dipende dal driver |
+| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (molto più lento della scheda — la misura non vale più dopo la fase 18; `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, dipende dal driver |
 | 12 | ⭐ il **file dei ban e il socket di comando NON si rompono** (un solo scrittore, un solo socket) ⚠ ma il ban è **per indirizzo**: dieci utenti dietro lo stesso NAT condividono i tre tentativi | `main.c` · `presenza_segna()`, `comando.c` · `comando_descrittori()` | 1 NAT |
 
 ### 3.7 Le `[?]` che la lettura non chiude
@@ -1376,9 +1379,9 @@ nessuna ricodifica, nessun fotogramma trattenuto, memoria mai vicina al limite.
    buffer GBM esce con passo **3416**, che **non è multiplo di 64**: la guardia di `codificatore.h`
    rifiuta l'importazione. ⇒ **Il minimo del prodotto passa per forza dalla strada della memoria.**
    (I 480p sono stati misurati a **864**×480, passo 3456, dichiarandolo.)
-2. **Anche la strada della memoria cede alla GPU, non alla CPU**: a 1080p30 tiene N=24 con **12,0
-   nuclei su 20** e cede a N=32 coi motori al 99,5 %. ⚠ Il costo di CPU però è reale e va nel budget:
-   **6,0 nuclei** per dieci sessioni 1080p contro **0,7** con la copia zero.
+2. **La strada della memoria** (`sws_scale` + `av_hwframe_transfer_data`): se ne era concluso che
+   cedesse alla GPU come la copia zero, con un costo di CPU reale da mettere nel budget. ⚠ La misura
+   non vale più dopo la fase 18 (la conversione ora è nostra).
 3. ⭐⭐ **Il giro lungo non cambia il ritmo, cambia il RITARDO.** 15 s e 60 s danno lo stesso
    Mpixel/s al decimo (1855,9 → 1856,0), ⛔ ma il ritardo mediano passa da **561 a 2317 ms**
    (peggiore 1061 → 4505): **oltre il soffitto l'arretrato cresce con l'esposizione.** È
