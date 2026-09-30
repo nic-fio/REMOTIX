@@ -732,7 +732,7 @@ esattamente la condizione in cui vista e tela coincidono e non si scala niente.
 |---|---|
 | il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
 | **ruotare il telefono** dopo l'attacco | ⛔ la tela **non gira**: si vedono le bande, e il client riscala impaginando (§6.2). ⚠ Ed è il comportamento **dichiarato**, non un difetto da curare: l'interruttore che la faceva girare è uscito il 17 agosto 2026 (`DECISIONI.md` §5.1-bis). ⭐ Per riavere la misura giusta ci si **riattacca** |
-| uno schermo 4K | la tela nasce 4K, e sono **cinque volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
+| uno schermo 4K | la tela nasce 4K, e sono **quattro volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
 
 `[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
 cambiano il numero che il client dichiara:
