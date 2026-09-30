@@ -1,6 +1,6 @@
 # DECISIONI — il registro di quel che è stato deciso, e da chi
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
 
 *Aperto l'8 agosto 2026, al primo giorno di REMOTIX.*
 
@@ -1103,7 +1103,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > | ⛔ **av1_vaapi** | **non esiste** |
 >
 > *(Qui c'era anche il tempo di `libsvtav1` in software, come confronto: tolto, la misura non vale più
-> dopo la fase 18.)*
+> dopo la fase 18.)* *→ il tempo di OpenH264 per fotogramma: `fasi/18-senza-ffmpeg.md` §5.4.*
 >
 > ⇒ ⛔⛔ **Restare su AV1 vuol dire restare in software per sempre**, su questa macchina. La riga
 > *«la scala di preferenza NON si rovescia: l'ordine resta `hevc,av1`»* era stata scritta per una
@@ -1718,7 +1718,7 @@ il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
 
 ⚠ **E i fotogrammi dipinti dicono il contrario del ritardo, quindi vanno accanto** (`LEZIONI.md`
 §6.2): sulla catena vera il worker dipinge **di più**, ma a saturazione il tetto **crolla fino a ≈ il
-quadro dei 60 Hz**. *(I numeri, presi con la codifica in software, sono tolti con la fase 18.)*
+quadro dei 60 Hz**. *(I numeri, presi con la codifica in software, sono tolti con la fase 18.)* *→ rifatta: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 ⇒ **Che cosa si decide oggi**: il codice resta in albero **dietro `#video=worker`, spento**. ⛔ **E
 non è una bocciatura definitiva.** ⏳ `[?]` **il limite più grosso, e va letto accanto ai numeri**:

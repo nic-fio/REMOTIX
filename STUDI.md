@@ -1,6 +1,6 @@
 # STUDI — il codice degli altri, letto prima di scrivere il nostro
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
 
 *Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
 sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
@@ -1028,7 +1028,7 @@ non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i q
 cattura → vetro era in gran parte nostro, nel tratto cattura → primo byte in pagina dominato dal
 codificatore in software, e il figlio del prodotto **non aspettava mai Mutter**: alzare la cadenza della
 cattura non sposterebbe il ritardo. *(I numeri di questa misura — fatta col codificatore software di
-allora, libsvtav1 / libx265 via libavcodec — non valgono più dopo la fase 18 e sono stati tolti.)*
+allora, libsvtav1 / libx265 via libavcodec — non valgono più dopo la fase 18 e sono stati tolti.)* *→ rifatta: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 #### 8.3 Il resto
 

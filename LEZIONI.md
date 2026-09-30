@@ -1,6 +1,6 @@
 # LEZIONI — quel che GNOME ci ha insegnato, e che serve al prossimo desktop
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
 
 *Scritto il 7 agosto 2026, chiudendo il supporto a GNOME (fasi 0–10), prima di aprire la fase 11.*
 
@@ -1910,7 +1910,7 @@ lo faccia per quello.
 > ### ⛔⛔ E la stessa sera è arrivato il caso che le fa dire cose OPPOSTE — la pagina nel worker
 >
 > *Si era deciso di tenere la tela sul thread principale (`DECISIONI.md` §2.8); le misure, prese con la
-> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.*
+> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.* *→ la catena rifatta: `fasi/18-senza-ffmpeg.md` §5.3-§5.4.*
 >
 > ⛔ **Sulla catena vera il worker dipingeva di più e sembrava migliore. A saturazione era di gran lunga
 > peggiore. E il ritardo diceva che era peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza
