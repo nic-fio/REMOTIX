@@ -6048,6 +6048,18 @@ ban per indirizzo di REMOTIX (§1.9: 3 fallimenti in 5 minuti ⇒ 12 ore) resta,
 voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password) — ✅ confermato dall'utente:
 *«che root non entri da REMOTIX è corretto, è lo stesso sistema di sicurezza di ssh»*.
 
+### 10.19 ✅ D12: la finestra dell'installatore si disegna con Gio, dentro lo stesso programma
+
+Scelta dell'utente (30 set 2026), fra tre strade: Chromium incorporato (indipendente, ma due programmi e un
+motore web da mantenere), WebKitGTK della distribuzione (dipendenza, programma non più unico), **Gio**, una
+libreria per interfacce in Go che disegna tutto da sé — *«ok per Gio»*. Nasce da una sua proposta: *«schermate
+con un motore di rendering integrato, così da rendere l'installer indipendente dai browser dell'utente»*. ⇒ La
+GUI vive nello stesso programma del motore, identica sui quattro desktop, senza browser; le schermate non sono
+HTML ma si riscrivono in Go **dal prototipo** (colori, caratteri, disposizione, parole comuni, «password»). La
+TUI, nel terminale, con una libreria Go dello stesso programma. ⚠ Da verificare nella costruzione: Gio sotto
+Linux usa le librerie grafiche del sistema (Wayland, X11, EGL) — il motore deve continuare a partire anche su
+una macchina senza desktop (dove si usa la TUI).
+
 ---
 
 ## Come si tiene questo documento
