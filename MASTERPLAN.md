@@ -153,5 +153,5 @@ nel masterplan»*. ⇒ Tolte, e i numeri **non** si riusano (regola 3):
 
 | | che cos'era | perché è uscita |
 |---|---|---|
-| **M1** | GNOME consegna ~31 fotogrammi invece di 60 (per averne 60 bisognerebbe chiedergliene 90, e `MOVIMENTO_FPS` è una costante) | deciso dall'utente: non è più un lavoro del «dopo». Il fatto resta scritto in `DECISIONI.md` §2.5-bis |
+| **M1** | GNOME consegna meno fotogrammi di quelli che gli si chiedono (per averne 60 bisognerebbe chiedergliene di più, e `MOVIMENTO_FPS` è una costante) | deciso dall'utente: non è più un lavoro del «dopo». Il fatto resta scritto in `DECISIONI.md` §2.5-bis |
 | **M4** | due client sullo stesso desktop nello stesso momento | deciso dall'utente: non è un lavoro del «dopo». L'invariante I2 (un posto per utente) resta com'è, `DECISIONI.md` §7.3 |
