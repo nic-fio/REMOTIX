@@ -28,16 +28,22 @@
  *    `banchi/07-b40` lo innesta apposta come controllo positivo.
  *
  * ---------------------------------------------------------------------------
- * ⭐ PERCHE' OPUS PASSA DA `libavcodec` E NON DA `libopus`
+ * ⭐ OPUS PASSA DA `libopus` DIRETTA — dal 30 settembre 2026 (fase 18,
+ *    `DECISIONI.md` §10.22 e §10.25: ffmpeg esce dal prodotto per la licenza).
  *
- * `[M]` 17 agosto 2026, sulla macchina di prova: `libavcodec` 61.19.101 e' gia'
- * collegato a `libopus.so.0`, e dichiara l'encoder `libopus`.  ⇒ Il `Makefile`
- * NON cambia e non si aggiunge un pacchetto a due ambienti di costruzione (il
- * contenitore del portatile e il `devroot` del server), dove `opus.pc` non c'e'.
+ * ⛔ Fino al 29 settembre passava da `libavcodec`, e la ragione era scritta
+ *    qui: `[M]` 17 agosto 2026, `libavcodec` 61.19.101 era gia' collegata a
+ *    `libopus.so.0`, e cosi' non si aggiungeva un pacchetto a due ambienti di
+ *    costruzione.  ⇒ Tolta libavcodec, quella ragione si rovescia: `libopus`
+ *    e' la dipendenza, e `opus.pc` c'e' in tutt'e due (`[M]` 30 set 2026:
+ *    `remotix-costruzione` e il `devroot` del server, libopus 1.5.2).
  *
- * ⚠ Il prezzo, dichiarato: si paga l'allocazione di un `AVPacket` per blocco,
- *   cioe' 50 al secondo.  E' meno del prezzo di una dipendenza che va
- *   installata due volte e ricordata per sempre (`LEZIONI.md` §2.5-bis).
+ * ⭐ Il codificatore e' LO STESSO (`libopus.so.0` c'era anche prima, sotto
+ *    l'involucro), e i parametri sono quelli che l'involucro dettava, tutti
+ *    scritti in `audio.c` — ⚠ due non coincidono col predefinito di libopus
+ *    (complessita' 10, VBR non vincolato).  `[M]` 30 set 2026,
+ *    `banchi/18-a1-opus-senza-ffmpeg.c`: pacchetti **identici byte per byte**
+ *    a quelli di libavcodec.  E l'`AVPacket` per blocco non c'e' piu'.
  */
 #pragma once
 
@@ -91,13 +97,16 @@ uint32_t audio_cod_blocco(const audio_cod *c);
  *
  *      `[M]` 1000 blocchi entrati, **1000 pacchetti usciti**, **zero EAGAIN**:
  *      `libopus` a 20 ms fissi e' UNO PER UNO.  ⇒ L'`istante` appartiene al
- *      blocco che parte, e il ramo `EAGAIN` qui sotto **non si percorre**.
- *      Resta perche' l'API di libavcodec lo ammette, non perche' succeda.
+ *      blocco che parte, e il ramo `EAGAIN` **non si percorreva**.
+ *      ⭐ Dal 30 settembre 2026 non c'e' piu' nemmeno il ramo: `opus_encode()`
+ *      e' sincrona, un blocco dentro e un pacchetto fuori per costruzione.
  *
  * ⚠⚠ E LA MISURA HA TROVATO UN'ALTRA COSA, che nessuno aveva dichiarato: il
  *     `pre-skip` di Opus.  `[M]` `initial_padding = 312 campioni`, e il `pts`
  *     dei pacchetti esce **sfasato di -312 campioni = -6,50 ms**, COSTANTE su
- *     tutti e mille.
+ *     tutti e mille.  ⚠ Senza libavcodec il `pts` non c'e' piu', ma la
+ *     grandezza resta: `OPUS_GET_LOOKAHEAD`, `[M]` 30 set 2026 ancora **312**,
+ *     e `audio.c` la scrive nel registro all'apertura.
  *     ⭐ Non e' un difetto e non deriva: e' l'anticipo che l'algoritmo si
  *     prende, e il **decodificatore lo toglie da se'** — end-to-end si
  *     cancella.  E non tocca l'ordinamento di §6.3, che confronta istanti fra

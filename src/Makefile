@@ -184,6 +184,17 @@ override CFLAGS += $(F3_CFLAGS)
 AV_CFLAGS := $(shell pkg-config --cflags libavcodec libavutil libswscale)
 override CFLAGS += $(AV_CFLAGS)
 
+# ⭐ FASE 18, linea A — `libopus` DIRETTA per l'audio (`src/audio.c`), dal 30
+#    settembre 2026: Opus non passa piu' da libavcodec (`DECISIONI.md` §10.25).
+#    `[M]` 30 set 2026: `opus.pc` 1.5.2 c'e' in `remotix-costruzione` e nel
+#    `devroot` del server.  ⚠ Su Debian Trixie: `apt install libopus-dev`.
+#    ⚠ Il minimo 1.3 e' per `OPUS_SET_PHASE_INVERSION_DISABLED`, che `audio.c`
+#      detta come faceva libavcodec: `[?]` comparsa fra la 1.2 e la 1.3, e la
+#      1.3.1 e' la piu' vecchia che abbiamo intorno (Debian 12, Ubuntu 22.04).
+F18A_CFLAGS := $(shell pkg-config --cflags opus)
+F18A_LIBS   := $(shell pkg-config --libs   opus)
+override CFLAGS += $(F18A_CFLAGS)
+
 # ⭐⭐ LE DUE DELLA FASE 4, innestate il 14 agosto 2026: **libei** e
 #     **xkbcommon**.  Le vuole il canale di input, e nessuna delle due si puo'
 #     sostituire con una nostra riga:
@@ -274,7 +285,7 @@ endif
 #   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS) $(F13_LIBS)
+        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -388,7 +399,7 @@ pulisci:
 MINIMI := libavcodec:61.13.100 libavutil:59 libswscale:8 openssl:3.5.0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
-          libva:0 libdrm:0 gbm:0 wayland-client:0
+          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3
 
 dipendenze:
 	@stato=0; \
@@ -410,7 +421,7 @@ dipendenze:
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
 	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h \
-	         libavutil/hwcontext_vaapi.h va/va.h gbm.h; do \
+	         libavutil/hwcontext_vaapi.h va/va.h gbm.h opus.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
@@ -473,8 +484,8 @@ codificatore.o:   codificatore.h registro.h
 
 # ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del
 #   prodotto, e l'innesto in ngtcp2 non ha niente da far suonare.
-#   ⛔ Non aggiunge una dipendenza: Opus passa da `libavcodec`, che c'e' gia'
-#      per il video ed e' collegata a `libopus` `[M]` 17 ago 2026.
+#   ⛔ Dal 30 set 2026 (fase 18) chiama `libopus` diretta: la dipendenza e'
+#      `F18A_LIBS` qui sopra.  Fino al 29 passava da `libavcodec`.
 audio.o:          audio.h registro.h
 
 # ⭐ IL SUONO DELLA SESSIONE — fase 7: il sink virtuale e la cattura del suo

@@ -4,7 +4,9 @@
 
 #include "registro.h"
 
-#include <opus.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,11 +59,9 @@
  * ⚠ IL PREZZO, DICHIARATO — due voci, e sono la ragione per cui l'interruttore
  *   esiste invece di essere un'ovvieta':
  *     1. su Opus il primo blocco dopo un tratto di silenzio riparte con lo
- *        stato del codificatore lasciato PRIMA del tratto (il codificatore
- *        quei blocchi semplicemente non li vede: dal 30 settembre 2026 non
- *        c'e' piu' nemmeno un `pts` da tenere fermo, vedi `opus_apri()`).
- *        E' quel che la DTX di Opus fa da sempre; `[?]` inudibile, e da qui
- *        NON e' misurato;
+ *        stato del codificatore lasciato PRIMA del tratto (qui il `pts` non
+ *        avanza, apposta, o libavcodec vedrebbe un salto).  E' quel che la DTX
+ *        di Opus fa da sempre; `[?]` inudibile, e da qui NON e' misurato;
  *     2. chi riceve vede un salto di `istante` e i suoi contatori lo contano
  *        come **`mancato`** — cioe' un numero che oggi vuol dire «perso»
  *        comincerebbe a voler dire anche «non c'era niente da mandare».
@@ -111,20 +111,6 @@ bool audio_silenzio_acceso(void)
 	return audio_taci_silenzio;
 }
 
-/*
- * ⛔ Lo spazio che si offre a `opus_encode()`, ed e' quello di libavcodec
- *    alla lettera: `(1275 * 6 + 7) * stream_count` (`[R]` FFmpeg 7.1,
- *    `libavcodec/libopusenc.c`, `libopus_encode()`), cioe' 7 657 byte per il
- *    nostro unico flusso.
- *
- * ⛔ E NON `AUDIO_FUORI_MAX`, apposta: con il tetto passato come spazio,
- *    libopus in VBR **restringerebbe** il pacchetto per farcelo stare, invece
- *    di lasciarlo uscire e farlo buttare dal controllo di sotto.  ⇒ Sarebbe un
- *    comportamento DIVERSO da quello misurato, anche se su 96 kbit/s non si
- *    vede (241-439 byte, riquadro del bitrate).  Costa 7,6 KB per sessione.
- */
-#define AUDIO_OPUS_SPAZIO (1275 * 6 + 7)
-
 struct audio_cod {
 	uint8_t codec; /* 1 = Opus, 2 = PCM */
 	uint32_t blocco;
@@ -132,127 +118,82 @@ struct audio_cod {
 	uint64_t taciuti; /* blocchi di silenzio digitale NON spediti */
 
 	/* solo per Opus */
-	OpusEncoder *enc;
-	/* ⚠ Il pacchetto nasce QUI e non in `fuori`: `opus_encode()` riceve lo
-	 *   stesso spazio che gli dava libavcodec (vedi `AUDIO_OPUS_SPAZIO`), e il
-	 *   tetto di `AUDIO_FUORI_MAX` resta un controllo DOPO, com'era. */
-	uint8_t pacchetto[AUDIO_OPUS_SPAZIO];
+	AVCodecContext *ctx;
+	AVFrame *frame;
+	AVPacket *pkt;
+	int64_t pts;
+	bool eagain_detto;
 };
-
-/*
- * ⛔⭐ OPUS PARLA CON `libopus` DIRETTA — fase 18, 30 settembre 2026
- *      (`DECISIONI.md` §10.22 e §10.25: ffmpeg esce dal prodotto).
- *
- * Fino al 29 settembre si passava da libavcodec, che chiamava lo STESSO
- * `libopus.so.0` con il suo involucro `libopusenc.c`.  ⇒ Togliere l'involucro
- * non cambia il codificatore: cambia solo chi gli detta i parametri.  E allora
- * i parametri si dettano **tutti**, anche quelli che coincidono col predefinito
- * di libopus, perche' il predefinito che contava era quello di libavcodec, e
- * due di loro NON coincidono con quello di libopus:
- *
- *   parametro              libavcodec 7.1 (`[R]` libopusenc.c)   libopus 1.5.2
- *   ---------------------  -----------------------------------  -------------
- *   application            `audio` (lo chiedevamo noi)          da scegliere
- *   durata della trama     20 ms (lo chiedevamo noi)            da scegliere
- *   bitrate                96 000 (lo chiedevamo noi)           automatico
- *   ⛔ complessita'         **10** (`compression_level` = 10)    9
- *   VBR                    acceso (`vbr` = on)                  acceso
- *   ⛔ VBR vincolato        **NO** (`vbr == 2` falso)            **SI'**
- *   perdita attesa         0 %                                  0 %
- *   FEC in banda           spenta                               spenta
- *   inversione di fase     permessa (`apply_phase_inv`)         permessa
- *   DTX di Opus            mai toccata (7.1 non ha l'opzione)   spenta
- *   banda massima          mai toccata (`cutoff` = 0)           piena
- *
- * ⚠ E la forma: libavcodec apriva un codificatore **multistream** a un flusso
- *   accoppiato (`opus_multistream_encoder_create(…, 1, 1, {0, 1}, …)`), qui ce
- *   n'e' uno semplice.  `[M]` 30 set 2026, dentro `remotix-costruzione`
- *   (libopus 1.5.2, libavcodec 61 di FFmpeg 7.1.5): i due, e quello di
- *   libavcodec, sugli stessi 1 500 blocchi (parlato, musica, onda quadra a
- *   fondo scala) danno **1 500 pacchetti su 1 500 identici byte per byte**,
- *   439 216 byte ciascuno.  ⇒ Il multistream non si porta dietro: e' un
- *   involucro che con un flusso solo non aggiunge niente.
- *
- * ⭐ E il banco che lo tiene vero e' `banchi/18-a1/`: il vecchio `audio.c`
- *    (545ec55) e questo, collegati insieme, sullo stesso segnale di 42 s
- *    (parlato, musica, silenzio digitale, salti a fondo scala, buchi di un
- *    blocco, ±1 LSB, rumore forte, tono puro).  `[M]` 30 set 2026 sul server
- *    (`devroot`, libopus 1.5.2): cura ACCESA 1 860 pacchetti + 240 taciuti,
- *    519 998 byte; SPENTA 2 100 pacchetti, 549 180 byte — in tutt'e due
- *    **ogni pacchetto identico byte per byte**, 0 campioni decodificati
- *    diversi su 4 032 000; tutti CELT a banda piena (config 31), stereo,
- *    codice 0; nessun pacchetto da 1-2 byte (la DTX di Opus resta spenta); il
- *    silenzio spedito a cura spenta pesa 3 byte, come in `09-b84`.
- *
- * ⭐ E cade da se' la domanda di `banchi/07-b44` (il codificatore trattiene un
- *    blocco?): `opus_encode()` e' SINCRONA, un blocco dentro e un pacchetto
- *    fuori per costruzione.  ⇒ Il ramo `EAGAIN` non esiste piu', invece di
- *    restare scritto e mai percorso.
- */
-static bool opus_ctl_o_di(int e, const char *che)
-{
-	if (e == OPUS_OK)
-		return true;
-	registro_dice(REG_AUDIO, "⛔ opus_encoder_ctl(%s): %s", che,
-	              opus_strerror(e));
-	return false;
-}
 
 static bool opus_apri(audio_cod *c)
 {
-	int e = OPUS_OK;
-	opus_int32 v = 0;
+	const AVCodec *cod;
+	int e;
 
-	c->enc = opus_encoder_create(AUDIO_FREQUENZA, AUDIO_CANALI,
-	                             OPUS_APPLICATION_AUDIO, &e);
-	if (!c->enc || e != OPUS_OK) {
+	/* ⛔ Si chiede l'encoder PER NOME, e non si accetta un sostituto.
+	 *    `CODER.md` §3.9: «un componente che sceglie in autonomia produce due
+	 *    misure diverse sotto la stessa etichetta».  ⚠ `avcodec_find_encoder`
+	 *    con `AV_CODEC_ID_OPUS` potrebbe restituire l'encoder NATIVO di
+	 *    FFmpeg, che e' dichiarato **sperimentale** e non e' quel che la sonda
+	 *    ha misurato. */
+	cod = avcodec_find_encoder_by_name("libopus");
+	if (!cod) {
 		registro_dice(REG_AUDIO,
-		              "⛔ opus_encoder_create: %s.  ⚠ Non si ripiega su PCM "
-		              "da qui: il codec e' negoziato (§4.3), e spedire PCM a "
-		              "chi aspetta Opus produce RUMORE invece di un errore",
-		              opus_strerror(e));
+		              "⛔ l'encoder «libopus» non c'e' in questa libavcodec.  "
+		              "⚠ Non si ripiega su PCM da qui: il codec e' negoziato "
+		              "(§4.3), e spedire PCM a chi aspetta Opus produce RUMORE "
+		              "invece di un errore");
 		return false;
 	}
 
-	/* ⛔ Nell'ordine di libavcodec (`libopus_configure_encoder()`), e ognuna
-	 *    controllata: una `ctl` rifiutata e taciuta sarebbe un parametro che
-	 *    crediamo di aver messo. */
-	if (!opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_BITRATE(AUDIO_OPUS_BITRATE)), "BITRATE") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_COMPLEXITY(10)), "COMPLEXITY") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_VBR(1)), "VBR") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_VBR_CONSTRAINT(0)), "VBR_CONSTRAINT") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_PACKET_LOSS_PERC(0)), "PACKET_LOSS_PERC") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_INBAND_FEC(0)), "INBAND_FEC") ||
-	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_PHASE_INVERSION_DISABLED(0)), "PHASE_INVERSION_DISABLED"))
+	c->ctx = avcodec_alloc_context3(cod);
+	if (!c->ctx)
 		return false;
 
-	/* ⛔ E si VERIFICA che abbia obbedito, invece di crederci — come prima
-	 *    si verificava il `frame_size` di libavcodec.  ⚠ La durata della
-	 *    trama qui non e' un'impostazione: sono i 960 fotogrammi che
-	 *    `opus_encode()` riceve a ogni chiamata (§5.3), e un numero che
-	 *    libopus non ammette e' un errore alla chiamata, non un suono storto.
-	 *    ⇒ Si rilegge il bitrate, che e' il numero che la sonda ha misurato. */
-	if (!opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_GET_BITRATE(&v)), "GET_BITRATE"))
-		return false;
-	if (v != AUDIO_OPUS_BITRATE) {
-		registro_dice(REG_AUDIO,
-		              "⛔ libopus tiene %d bit/s, e ne abbiamo chiesti %d.  "
-		              "Non si adatta in silenzio: si dichiara",
-		              (int)v, (int)AUDIO_OPUS_BITRATE);
+	c->ctx->sample_rate = AUDIO_FREQUENZA;
+	c->ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+	c->ctx->bit_rate = AUDIO_OPUS_BITRATE;
+	av_channel_layout_default(&c->ctx->ch_layout, AUDIO_CANALI);
+	/* 20 ms per pacchetto, che e' quel che §5.3 impone e non quel che
+	 * l'encoder sceglierebbe se nessuno glielo dicesse. */
+	av_opt_set(c->ctx->priv_data, "frame_duration", "20", 0);
+	av_opt_set(c->ctx->priv_data, "application", "audio", 0);
+
+	e = avcodec_open2(c->ctx, cod, NULL);
+	if (e < 0) {
+		char m[128];
+		av_strerror(e, m, sizeof m);
+		registro_dice(REG_AUDIO, "⛔ avcodec_open2(libopus): %s", m);
 		return false;
 	}
-	/* ⚠ Il `pre-skip` (`audio.h`, `[M]` 312 campioni = 6,50 ms) si DICHIARA
-	 *   anche adesso che nessun `pts` lo porta: e' la stessa grandezza, e chi
-	 *   un giorno sincronizzasse audio e video la cerchera' qui. */
-	if (opus_encoder_ctl(c->enc, OPUS_GET_LOOKAHEAD(&v)) != OPUS_OK)
-		v = -1;
+
+	/* ⛔ E si VERIFICA che abbia obbedito, invece di crederci.  Se l'encoder
+	 *    scegliesse un `frame_size` diverso dai 960 di §5.3, i blocchi che gli
+	 *    diamo sarebbero della misura sbagliata e il suono uscirebbe storto
+	 *    **senza un errore da nessuna parte**. */
+	if (c->ctx->frame_size != AUDIO_BLOCCO_OPUS) {
+		registro_dice(REG_AUDIO,
+		              "⛔ libopus ha scelto blocchi da %d fotogrammi, e §5.3 ne "
+		              "vuole %d (20 ms).  Non si adatta in silenzio: si dichiara",
+		              c->ctx->frame_size, AUDIO_BLOCCO_OPUS);
+		return false;
+	}
+
+	c->frame = av_frame_alloc();
+	c->pkt = av_packet_alloc();
+	if (!c->frame || !c->pkt)
+		return false;
+	c->frame->format = AV_SAMPLE_FMT_S16;
+	c->frame->sample_rate = AUDIO_FREQUENZA;
+	c->frame->nb_samples = AUDIO_BLOCCO_OPUS;
+	av_channel_layout_default(&c->frame->ch_layout, AUDIO_CANALI);
+	if (av_frame_get_buffer(c->frame, 0) < 0)
+		return false;
 
 	registro_dice(REG_AUDIO,
 	              "⭐ Opus aperto: 48 000 Hz, 2 canali, blocchi da %d fotogrammi "
-	              "(20 ms), %d bit/s VBR libero, complessita' 10, pre-skip %d "
-	              "campioni — «libopus» %s diretta, senza libavcodec",
-	              AUDIO_BLOCCO_OPUS, (int)AUDIO_OPUS_BITRATE, (int)v,
-	              opus_get_version_string());
+	              "(20 ms), %d bit/s — encoder «libopus» di libavcodec",
+	              c->ctx->frame_size, (int)AUDIO_OPUS_BITRATE);
 	return true;
 }
 
@@ -327,8 +268,12 @@ void audio_cod_chiudi(audio_cod *c)
 	              (unsigned long long)c->taciuti,
 	              (unsigned long long)c->entrati,
 	              (unsigned long long)c->usciti, c->codec);
-	if (c->enc)
-		opus_encoder_destroy(c->enc);
+	if (c->pkt)
+		av_packet_free(&c->pkt);
+	if (c->frame)
+		av_frame_free(&c->frame);
+	if (c->ctx)
+		avcodec_free_context(&c->ctx);
 	free(c);
 }
 
@@ -385,13 +330,9 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 	 *   in `figlio.c` — che e' quel che rende il buco un silenzio al posto
 	 *   giusto invece di uno spostamento di tutto quel che segue.
 	 *
-	 * ⛔ E il codificatore quei blocchi semplicemente NON LI VEDE: il suo
-	 *    stato resta quello dell'ultimo blocco suonato.  ⚠ Fino al 29 set
-	 *    2026 qui si teneva fermo anche il `pts` di libavcodec (che avrebbe
-	 *    visto un salto); con `opus_encode()` il tempo non entra nella
-	 *    chiamata, e il comportamento e' lo stesso per costruzione: `[M]` 30
-	 *    set 2026, `banchi/18-a1`, i pacchetti DOPO un tratto taciuto escono
-	 *    identici byte per byte a quelli di libavcodec. */
+	 * ⛔ E il `pts` di Opus NON si sposta: libavcodec vedrebbe un salto, e un
+	 *    salto e' una cosa che non abbiamo misurato.  Qui il codificatore
+	 *    semplicemente non vede quei blocchi. */
 	if (audio_taci_silenzio && tutto_zero(campioni, c->blocco)) {
 		c->taciuti++;
 		/* ⚠ Con un fondo, o un desktop muto riempirebbe il registro invece di
@@ -417,29 +358,60 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		return true;
 	}
 
-	/* ⛔ Una chiamata, un pacchetto: `opus_encode()` e' sincrona, e i
-	 *    campioni li legge dove stanno (s16 interlacciati nell'ordine della
-	 *    macchina, che e' quel che vuole) — niente copia in un fotogramma
-	 *    intermedio, e nessuna allocazione per blocco (prima erano un
-	 *    `AVPacket` e il suo carico, 50 volte al secondo). */
-	e = opus_encode(c->enc, campioni, AUDIO_BLOCCO_OPUS, c->pacchetto,
-	                AUDIO_OPUS_SPAZIO);
+	if (av_frame_make_writable(c->frame) < 0)
+		return false;
+	memcpy(c->frame->data[0], campioni,
+	       (size_t)AUDIO_BLOCCO_OPUS * AUDIO_CANALI * sizeof(int16_t));
+	c->frame->pts = c->pts;
+	c->pts += AUDIO_BLOCCO_OPUS;
+
+	e = avcodec_send_frame(c->ctx, c->frame);
 	if (e < 0) {
-		registro_dice(REG_AUDIO, "⛔ opus_encode: %s", opus_strerror(e));
+		char m[128];
+		av_strerror(e, m, sizeof m);
+		registro_dice(REG_AUDIO, "⛔ avcodec_send_frame: %s", m);
 		return false;
 	}
 
-	if ((size_t)e > AUDIO_FUORI_MAX) {
+	e = avcodec_receive_packet(c->ctx, c->pkt);
+	if (e == AVERROR(EAGAIN)) {
+		/* ⛔ RAMO MISURATO E MAI PERCORSO — `[M]` 17 agosto 2026,
+		 *    `banchi/07-b44`: 1000 blocchi dentro, 1000 pacchetti fuori, zero
+		 *    EAGAIN.  ⚠ Resta perche' l'API lo ammette, ⭐ ma adesso SI VEDE
+		 *    se si percorre: prima tornava `false` in silenzio, e allora
+		 *    «Opus accumula» sarebbe stato indistinguibile da «il blocco non
+		 *    e' arrivato».  E se un giorno si percorresse, l'`istante` di §6.3
+		 *    non apparterrebbe piu' al blocco che parte. */
+		if (!c->eagain_detto) {
+			c->eagain_detto = true;
+			registro_dice(REG_AUDIO,
+			              "⛔ libopus ha trattenuto un blocco (EAGAIN) — e "
+			              "`banchi/07-b44` dice che non succede mai.  ⚠ Da qui "
+			              "in poi l'`istante` di §6.3 puo' non essere quello "
+			              "del blocco spedito");
+		}
+		return false;
+	}
+	if (e < 0) {
+		char m[128];
+		av_strerror(e, m, sizeof m);
+		registro_dice(REG_AUDIO, "⛔ avcodec_receive_packet: %s", m);
+		return false;
+	}
+
+	if ((size_t)c->pkt->size > AUDIO_FUORI_MAX) {
 		/* ⛔ Non si tronca un pacchetto Opus: un pacchetto monco non e' un
 		 *    suono peggiore, e' un pacchetto che il decodificatore rifiuta. */
 		registro_dice(REG_AUDIO,
 		              "⛔ pacchetto Opus di %d byte, oltre il tetto di %d — "
 		              "buttato invece che troncato",
-		              e, AUDIO_FUORI_MAX);
+		              c->pkt->size, AUDIO_FUORI_MAX);
+		av_packet_unref(c->pkt);
 		return false;
 	}
-	memcpy(fuori, c->pacchetto, (size_t)e);
-	*quanti = (size_t)e;
+	memcpy(fuori, c->pkt->data, (size_t)c->pkt->size);
+	*quanti = (size_t)c->pkt->size;
+	av_packet_unref(c->pkt);
 	c->usciti++;
 	return true;
 }

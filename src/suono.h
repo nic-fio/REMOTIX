@@ -58,7 +58,9 @@
  *
  *   1. ⛔ Chi consuma **deve** avere una coda propria, comunque.  Il richiamo
  *      gira sul thread di tempo reale (vedi sotto): dentro non si puo'
- *      codificare — `avcodec_send_frame` alloca — ne' scrivere su un socket.
+ *      codificare — `opus_encode` e' calcolo che non ha un tetto di tempo
+ *      dichiarato, e fino al 29 set 2026 `avcodec_send_frame` allocava pure —
+ *      ne' scrivere su un socket.
  *      Quindi i campioni vanno copiati in una struttura che un ALTRO thread
  *      legge, e quella struttura e' per forza un anello con testa e coda: da un
  *      anello si tirano fuori 960 fotogrammi per costruzione, senza un secondo

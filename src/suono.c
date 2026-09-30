@@ -695,8 +695,11 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	 * ⛔ IL FORMATO SI CHIEDE FISSO, e non e' una preferenza: `RCP.md` §5.3.
 	 *    PipeWire ricampiona per conto suo fra il sink e questo flusso, cosi' fra
 	 *    il monitor e il filo non resta nessuna conversione da fare — il
-	 *    codificatore riceve gia' i campioni giusti, e non si dipende da quali
-	 *    ricampionatori sia stata compilata `libavcodec`.
+	 *    codificatore riceve gia' i campioni giusti, e non serve un
+	 *    ricampionatore nostro.  ⚠ Fino al 29 set 2026 la frase diceva «non si
+	 *    dipende da quali ricampionatori sia stata compilata `libavcodec`»:
+	 *    dalla fase 18 libavcodec non c'e' piu', e `libopus` (`audio.c`)
+	 *    ricampionatori non ne ha — ⇒ la ragione conta ancora di piu'.
 	 */
 	formato.format = SPA_AUDIO_FORMAT_S16;
 	formato.rate = AUDIO_FREQUENZA;
