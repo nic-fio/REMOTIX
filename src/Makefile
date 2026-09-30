@@ -82,7 +82,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
-            appunti_kde.c wlroots.c wlr_input.c forma.c
+            appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -431,7 +431,7 @@ $(OGGETTI): registro.h
 #    `DECISIONI.md` §1.10-bis: quei quattro anelli li apre il FIGLIO, che gira
 #    come l'utente.  Il padre e' root, e root non ha con chi parlare.
 main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
-                  registro.h tls.h trasporto.h
+                  registro.h tls.h trasporto.h ritrovo.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
 webtransport.o:   webtransport.h aiutante.h rcp.h registro.h figlio.h audio.h
 pagina.o:         pagina.h certificati.h rcp.h registro.h
@@ -454,7 +454,7 @@ aiutante.o:       aiutante.h registro.h
 #    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
 #    prodotto e basta, come `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
-                  input.h sentinella.h audio.h suono.h appunti.h
+                  input.h sentinella.h audio.h suono.h appunti.h ritrovo.h
 
 # ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
 #    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
@@ -465,6 +465,8 @@ sessione.o:       sessione.h registro.h
 # ⚠ Non e' fra i `GEMELLATI` e non ci puo' andare: `rcp.c` lo raggiunge per
 #   GANCIO, perche' la copia innestata in ngtcp2 non ha un bus di sistema.
 sentinella.o:     sentinella.h registro.h
+# ⭐ FASE 17, T7 — i desktop vivi lasciati da un padre precedente (logind e /proc).
+ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
 codificatore.o:   codificatore.h registro.h
