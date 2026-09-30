@@ -2,6 +2,7 @@ package motore
 
 import (
 	"encoding/json"
+	"os"
 	"sort"
 	"strings"
 )
@@ -83,6 +84,8 @@ type primaFirewall struct {
 	Forma    string `json:"forma,omitempty"`
 	DiSerie  bool   `json:"zona_di_serie,omitempty"`
 	Impronta string `json:"impronta_permanente,omitempty"`
+	// T6: <zona>.xml.old c'era già (se no, quello che loadDefaults lascia è nato da noi)
+	CeraOld bool `json:"cera_old,omitempty"`
 }
 
 func nuovaFirewall(p AzionePiano) (Azione, error) {
@@ -139,6 +142,9 @@ func (f *firewallAz) zonaAdesso(c *Contesto) (string, error) {
 	}
 	return c.Amb.Firewall.ZonaPredefinita()
 }
+
+// fileOld: la copia che firewalld fa del file di una zona prima di riscriverlo o toglierlo.
+func fileOld(zona string) string { return "/etc/firewalld/zones/" + zona + ".xml.old" }
 
 // ammesso: i firewall che il motore sa cambiare.
 func ammesso(g string) bool { return g == "firewalld" || g == "ufw" }
@@ -214,6 +220,9 @@ func (f *firewallAz) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	if fp, ok := c.Amb.Firewall.(firewallPermanente); ok && p.Origine == DIRETTA {
 		if p.Impronta, p.DiSerie, err = fp.StatoPermanente(zona, nil); err != nil {
 			return nil, "", err
+		}
+		if _, err := os.Stat(c.Amb.P(fileOld(zona))); err == nil {
+			p.CeraOld = true
 		}
 	}
 	return jsonDi(p), p.Origine, nil
@@ -335,7 +344,19 @@ func (f *firewallAz) Annulla(c *Contesto, prima json.RawMessage) error {
 		if imp == p.Impronta {
 			// tolte le nostre, la zona è quella di prima, che era quella di serie: il file in /etc
 			// l'abbiamo fatto nascere noi, e se ne va
-			return fp.RimettiDiSerie(p.Zona)
+			if err := fp.RimettiDiSerie(p.Zona); err != nil {
+				return err
+			}
+			// ⚠ `[M]` 30 set, alma10-gnome «cliente»: loadDefaults non cancella il file della zona, lo
+			//   RINOMINA in <zona>.xml.old. Se prima non c'era, quel file è la zona con le NOSTRE
+			//   regole: si toglie (solo se le contiene davvero).
+			if !p.CeraOld {
+				vecchio := c.Amb.P(fileOld(p.Zona))
+				if b, err := os.ReadFile(vecchio); err == nil && (strings.Contains(string(b), `"`+f.porta+`"`) || (f.servizio != "" && strings.Contains(string(b), `"`+f.servizio+`"`))) {
+					return os.Remove(vecchio)
+				}
+			}
+			return nil
 		}
 	}
 	return fp.AggiornaPermanente(p.Zona, nil, perm)
