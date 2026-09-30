@@ -107,7 +107,7 @@ sia la linea. Nasce dal caso della rete mobile (§8), non da una rinuncia sulla 
 | Leva | Cura | Prezzo |
 |---|---|---|
 | **10 bit per canale** ✅ | le strisce sulle sfumature | quasi nulla, e in hardware ovunque — decoder Android compreso |
-| 4:4:4 `[?]` | il testo colorato sfrangiato `[M]` v1 | ~50 % di banda, e **nessun decoder Android in hardware** |
+| 4:4:4 `[?]` | il testo colorato sfrangiato `[M]` v1 | molta più banda, e **nessun decoder Android in hardware** |
 
 Il 4:4:4 resta una `[?]` da misurare, non una promessa: sarebbe un'opzione per il solo client
 Linux su GPU capaci, e nessuno ha ancora misurato quanto si veda la differenza.
@@ -143,13 +143,12 @@ il giudizio a cui la prima serve.
 
 #### ⭐ La scena su cui è stata dettata, e il numero che l'utente ha prodotto con l'occhio
 
-`[M]` 22 agosto 2026, dal video dell'utente (404 fotogrammi, registratore di GNOME a 30/s): una
-finestra di terminale **720×433** trascinata a mano dentro la sessione. Velocità **mediana
-3 400 px/s**, p90 **6 300**, picchi **12 400**.
+22 agosto 2026, dal video dell'utente: una finestra di terminale trascinata a mano dentro la
+sessione.
 
 ⭐ **E l'utente ha misurato a occhio la cosa che conta**: la distanza fra la freccia del mouse e la
-finestra che la insegue è **«la metà della larghezza della barra del titolo»** ⇒ la barra è larga
-quanto la finestra, quindi **≈ 360 px**.
+finestra che la insegue è **«la metà della larghezza della barra del titolo»**. ⇒ Le velocità della
+mano e i conti su quella scena stanno in `fasi/08-l-anello.md`.
 
 #### ⛔ Perché è un ELASTICO, e perché l'utente lo chiama «fluidità» invece che «ritardo»
 
@@ -166,9 +165,9 @@ locale è **zero a qualunque velocità**. ⇒ La finestra *nuota* rispetto alla 
 percepisce come **mancanza di fluidità**, non come lentezza — che è esattamente la parola che
 l'utente ha usato per primo, prima che ne conoscessimo la causa.
 
-⭐⭐ **E il conto va nei due versi**: nota il distacco in pixel, si ricava il ritardo. 360 px danno
-**106 ms** se l'utente guarda alla velocità mediana, **57 ms** al suo p90, **29 ms** ai picchi. ⏳
-`[?]` **A quale delle tre stia guardando non è deducibile**: va misurato l'anello, non chiesto a lui.
+⭐⭐ **E il conto va nei due versi**: nota il distacco in pixel, si ricava il ritardo — ma il
+risultato cambia molto secondo la velocità della mano. ⏳ `[?]` **A quale velocità l'utente stia
+guardando non è deducibile**: va misurato l'anello, non chiesto a lui.
 
 #### ⛔ E il limite si dichiara, perché la specifica dice «non identica»
 
@@ -189,58 +188,17 @@ scelta che alza il ritmo peggiorando il ritardo non si fa»*. ⇒ ⛔ **Mettere 
 **peggiorerebbe l'elastico**, cioè proprio la cosa che l'utente vede. È **fuori**, e non per una
 misura nuova: per una riga che stava scritta da prima che il difetto avesse un nome.
 
-### ⛔⛔ Il numero c'è, ed è misurato — e la causa NON era quella
+### ⚠ Le misure del ritardo sono storiche
 
-*13 agosto 2026, fase 3 step 5. Qui stava scritto, con la marca `[?]`: «il traguardo dei 40 ms
-probabilmente non è raggiungibile su GNOME, per lo stesso muro dei 60 fotogrammi: Mutter ne
-consegna 37 al secondo. Stima, non misura», e accanto il candidato di cura letto in `STUDI.md` §gnome
-§8.2. ⛔ **La misura adesso c'è, e smentisce la causa.***
+*13 agosto 2026, fase 3 step 5*: il ritardo cattura → vetro è stato misurato sul ferro di allora,
+con la codifica del prodotto di allora. ⇒ I numeri, il loro spezzettamento tratto per tratto e la
+discussione sul compositore stanno in `STUDI.md` §gnome §8.2 e §13 e in `DECISIONI.md` §2.5: valgono
+per quella macchina e per quel prodotto, **non sono garanzie** *(decisione dell'utente del 30
+settembre 2026)*.
 
-`[M]` **ritardo cattura → vetro: mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99 138,1,
-su **6 giri** da ~800 campioni ciascuno, errore d'orologio **±0,63 ms**. Banco
-`banchi/03-b17-ritardo.py`, **31 controlli su 31**, ponte **11 su 11**.
-⛔ **Il pezzo cieco 16-40 ms NON è compreso** ⇒ sullo schermo dell'utente **90-115 ms**. ⇒ **si
-sfora il tetto dei 50, non solo il traguardo dei 40.**
-⚠ **E non è input → vetro**: il canale di input nasce alla fase 4 (`input` = 0 in **953 casi su
-953**), e al suo posto sta il controllo **P1**. Quel che è misurato è **cattura → vetro**.
-
-| tratto | mediana | di chi è |
-|---|---|---|
-| disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
-| ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro**, dominato dal codificatore in software |
-| il filo | 0,32 ms | — |
-| stream completo → `decode()` | 0,08 ms | nostro |
-| decodifica | 7,58 ms | nostro |
-| richiamo → disegno finito (due `drawImage`) | 10,51 ms | nostro |
-
-⛔⛔ **Il muro è NOSTRO, non di Mutter: 58 ms su 74,6 sono nostri, il 78 %**, e ~39 stanno nel
-tratto cattura→filo. A Mutter resta il **22 %**, che è un intervallo di quadro a 60 Hz. Le tre
-prove che lo dicono: la scena disegna **59,98/s con 0 attese**; il figlio del prodotto consegna
-**23,93/s con ZERO attese a vuoto**, cioè **non aspetta MAI Mutter**; e il codificatore è **in
-software**, dichiarato dal prodotto stesso (libsvtav1 / libx265). ⇒ La leva non è il compositore:
-è **la codifica** (`STUDI.md` §gnome §8.2 e §13).
-
-⛔ **E il muro dei 37 fotogrammi non si riproduce.** Con monitor a **120** e freno **90** si
-ottengono `[M]` **61,4 fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**.
-⚠ La causa scritta finora — un **battimento** fra due orologi allo stesso numero — è sbagliata; al
-suo posto c'è una **quantizzazione** sui tick (`min_interval_us = 10⁶/maxFramerate` troncato a
-intero contro un tick da 16666,67 µs), ⛔ **ma questa è `[R]`, letta nel codice di Mutter, non
-`[M]`**. ⚠ **E quella cura oggi non è raggiungibile dal prodotto**: è `[M]` sul banco e **zero in
-produzione** (`DECISIONI.md` §2.5).
-
-> ⛔ ⚠ *Questo capoverso dava la quantizzazione come misurata, «legge verificata su 13 punti, 8
-> confermano, 0 la smentiscono». **È falso**: il file `banchi/03-b14-esiti-griglia.jsonl` porta due
-> sole celle, tutt'e due con `scena_sul_mio_monitor: false`, e il banco stesso stampa «la legge NON
-> regge su 0 punti su 0». **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3.
-> ⇒ Il **61,4 resta `[M]`** (cella D di `03-b14-esiti.jsonl`, pulita); il **perché è `[R]`**.
-> Dettaglio in `STUDI.md` §gnome §8.2.*
-
-⛔ **Dove finisce la misura, ed è la parte scomoda**: la misura si chiude al **disegno finito**,
-non al richiamo del decodificatore. Sono **11 ms su un tetto di 50** che la prima stesura si
-regalava — il numero è salito da **63,8 a 74,6** e lo si è lasciato salire (`CODER.md` §1-bis).
-
-⚠ **E il pezzo cieco su Xvfb non esiste**: la stima 90-115 ms vale per lo schermo dell'utente, non
-per il banco (`STUDI.md` §web §8).
+⛔ **Resta la regola di metodo**: il ritardo si misura fino al **disegno finito**, non al richiamo del
+decodificatore — tagliare prima vuol dire regalarsi un pezzo del tetto (`CODER.md` §1-bis). ⚠ E il
+pezzo cieco dello schermo dell'utente non esiste su Xvfb (`STUDI.md` §web §8).
 
 ---
 
@@ -436,10 +394,10 @@ un'ora non lo verifica nessuno aspettando un'ora.
 > rinnova più niente: il tetto si nutre degli stessi cinque gesti di §7.3 che nutrono l'orologio dei
 > 30 minuti.
 >
-> ⭐ **E la decisione è venuta da una misura chiesta apposta**: `[M]` una sessione abbandonata costa
-> **477 MB** (PSS, l'1,5 % della macchina) e **~0,017 %** di un nucleo, e in quattro minuti **non
-> cresce di un megabyte**. Non è una perdita, è un costo fisso — e l'utente ha scelto di pagarlo per
-> un'ora invece che per sei. Il ragionamento intero è in `DECISIONI.md` §4.8.
+> ⭐ **E la decisione è venuta da una misura chiesta apposta**: una sessione abbandonata tiene
+> memoria e quasi niente processore, e **non cresce** nel tempo. Non è una perdita, è un costo
+> fisso — e l'utente ha scelto di pagarlo per un'ora invece che per sei. Il ragionamento intero, con
+> la misura, è in `DECISIONI.md` §4.8.
 
 ⭐ **Un client che tace è un client che si è staccato**, e nessuna connessione «tiene il posto».
 Chi arriva entra, senza timeout da aspettare: sparisce il caso «il telefono è morto in galleria e
@@ -482,49 +440,24 @@ Più utenti possono avere ciascuno la propria sessione grafica remota, indipende
 **budget** di pixel al secondo, e lo pone il codificatore. Con lo stesso ferro le stesse dieci
 sessioni sono facilissime o impossibili secondo la qualità che ciascuna chiede.
 
-Sul ferro di riferimento — i5-13500T, 31 GB, Intel UHD 730 `[M]` — ⭐ **il numero è stato misurato
-nella fase 10**, e sta qui sotto.
+⭐ **Quante sessioni reggano dipende dal ferro e dalla scena**, e non si promette: le misure della
+fase 10 sul ferro di allora stanno in `fasi/10-multi-tenant-e-il-budget.md` §6.
 
 **Quando il budget è pieno si rifiuta, dichiarando il motivo.** Non si fa degradare chi sta già
 lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,
 cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 
-> ### ⭐⭐⭐ IL BUDGET È MISURATO — 24 agosto 2026, fase 10
+> ### ⭐⭐⭐ LA MONETA DEL BUDGET — fase 10, 24 agosto 2026
 >
-> ⛔ **E la prima cosa che ha smentito è che il collo fosse il codificatore.**
->
-> | dove si spende | quale motore | soffitto misurato |
-> |---|---|---|
-> | il **codificatore** nudo | i due VDBOX | `[M]` **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
-> | ⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`**, il motore di disegno | `[M]` ⭐ **0,97 Gpixel/s — la METÀ** |
->
-> ⇒ ⛔⛔ **Il budget non è di codifica: è di composizione**, e a saturarlo è **`gnome-shell`**
-> (`[M]` 99,5 % di `rcs0`, mentre `remotix` sta a **0,00 %**) — cioè **una cosa che non è nostra**.
->
-> **E quante ne stanno, davvero:**
->
-> | scena | quante | che cosa succede a chi già lavora |
-> |---|---|---|
-> | **satura** — tutto lo schermo cambia a ogni fotogramma | `[M]` **6** | ⛔ dal settimo cede: **−28 %**, e all'ottavo **1,5 fot/s** |
-> | ⭐⭐ **desktop vero** — finestre, trascinamenti, strappi | `[M]` ⭐ **almeno 11** | ⭐ **−7,7 %**, e il ritardo **non si muove** (8,4 → 8,0 ms). ⛔ Il soffitto **non è stato trovato: sono finiti gli utenti, non la macchina** |
-> | **ferma** | `[M]` **11 costano GPU ZERO** | RC6 100 %, GT 0 MHz: lì il vincolo è la **memoria** |
->
-> ⭐ **La riga `[?]` che stava qui era sbagliata per DIFETTO in tutt'e tre i valori**: a 480p il
-> soffitto sta a **~180** sessioni e non a «una cinquantina»; a 1080p30 ne tengono **24** e non
-> «8-10»; e a 4K60 ne tengono **due**, non «una sola». ⚠ Ma sono numeri del **codificatore**, cioè
-> del motore che **non** è il collo: il numero che governa il prodotto è quello della composizione.
->
-> ### ⛔ E il dirupo non cade sul NUMERO di sessioni
->
-> `[M]` Stessa popolazione — otto sessioni, otto desktop — e si **spegne una sola scena**: il ritmo
-> torna **da 1,6 a 33,4 fot/s**. Rimettendola, il dirupo si riproduce. ⇒ ⭐ **cade su quanto si sta
-> COMPONENDO**, fra **873 e 953 Mpixel/s** — cioè esattamente sul soffitto di sopra, trovato per
-> un'altra strada.
+> ⛔ **La fase 10 ha smentito che il collo fosse il codificatore**: a saturarsi per primo, su quel
+> ferro, era il motore che **compone** — lavoro del compositore, non nostro — e il dirupo cadeva su
+> **quanto si sta componendo**, non sul numero di sessioni. ⇒ Le misure stanno in
+> `fasi/10-multi-tenant-e-il-budget.md` e `DECISIONI.md` §4.6-nonies; sono storiche.
 >
 > ⇒ ⭐⭐ **È per questo che il budget si può calcolare PRIMA di accettare**: la moneta è il pixel
 > composto, e il costo di una sessione si conosce dalla sua tela. ⛔ **Ma il pixel da solo non
-> basta**: si guarda anche **il ritardo di chi è già dentro** (`[M]` soglia **22,9 ms** — sano
-> ≤ 13,1, rotto ≥ 39,9, nessuna sovrapposizione).
+> basta**: si guarda anche **il ritardo di chi è già dentro**, con una soglia
+> (`BUDGET_RITARDO_AFFANNO_MS`, **22,9 ms**, in `src/budget.h`) tarata sulla macchina della fase 10.
 >
 > ### La regola, per intero
 >
@@ -545,9 +478,7 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > muto. Fino alla fase 10 era dichiarato in `src/rcp.h` e in `RCP.md` §8.2 **e nessuna riga lo
 > mandava mai**.
 >
-> ⚠ **Il giudizio dell'utente su questo numero è `DECISIONI.md` §4.6-septies**, e ne esce
-> rafforzato: *sei sessioni su una scheda integrata modesta non è un cattivo risultato* — ⭐ e sul
-> desktop vero, che è quel che gli utenti fanno davvero, sono **almeno undici**.
+> ⚠ **Il giudizio dell'utente sulla capacità misurata allora è `DECISIONI.md` §4.6-septies.**
 
 > ### ⛔ Alla fase 1 questa riga NON è onorata, ed è un ripiego dichiarato
 >
@@ -561,15 +492,9 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 > `fasi/rapporti/PAM-filo-unico.md`.* ⛔ **La verifica PAM non blocca più il filo**: la interroga un
 > **processo aiutante** (`src/aiutante.c`), e il ciclo `poll` torna al suo lavoro mentre PAM pensa.
 >
-> **I due numeri, sulla stessa scena** — una connessione già dentro e una seconda che fa la stretta
-> di mano, mentre una terza presenta credenziali **sbagliate** (il caso lento, quello con
-> `pam_faildelay`):
->
-> | | prima | dopo |
-> |---|---|---|
-> | quanto sta fermo chi **non** si autentica | `[M]` **2259 ms** | ⭐ `[M]` **3 ms** |
-> | la stretta di mano di chi arriva in quel momento | `[M]` **2262 ms** | ⭐ `[M]` **10 ms** |
-> | ⚠ quanto aspetta **chi si autentica** | `[M]` 2260 ms | **1844 ms** — ⭐ *e va bene così: quel numero lo governa PAM, e non doveva cambiare* |
+> ⭐ Chi **non** si sta autenticando non aspetta più PAM, e la stretta di mano di chi arriva non si
+> ferma; chi si autentica aspetta quanto decide PAM, e non doveva cambiare. Le misure prima/dopo
+> stanno in `fasi/rapporti/PAM-filo-unico.md`.
 >
 > ### ⭐⭐ E IL SECONDO RIPIEGO È FINITO — 24 agosto 2026, fase 10
 >
@@ -592,7 +517,7 @@ cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
 >
 > | | |
 > |---|---|
-> | **il filo** | ✅ **CURATO il 12 agosto 2026** — **`DECISIONI.md` §1.10**, con un **processo aiutante** come deciso. ⭐ Il numero che ha spostato la decisione l'ha misurato **B8**: il blocco era di **1,0-2,2 s** a tentativo, ⛔ e **a metterlo era PAM** (`+1034 ms` oltre il secondo fisso sui respinti contro `+84` sugli ammessi). ⭐ E quel che è crollato è il numero giusto: **2259 → 3 ms** per chi *non* si sta autenticando (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
+> | **il filo** | ✅ **CURATO il 12 agosto 2026** — **`DECISIONI.md` §1.10**, con un **processo aiutante** come deciso. ⭐ La misura che ha spostato la decisione l'ha presa **B8**: il filo restava fermo per secondi a ogni tentativo, ⛔ e **a metterlo era PAM**. ⭐ E dopo la cura chi *non* si sta autenticando non aspetta più (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
 > | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: qui sopra è scritto che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto e cambiarlo adesso vuol dire cambiarlo due volte. ⚠ **E il prezzo è questa riga**: per due fasi il codice dice **16** e questa sezione dice **dieci**, ed è la stessa forma che ha prodotto il difetto della finestra di cinque minuti (R12C.5) |
 
 ---
@@ -636,7 +561,7 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | # | che cosa | chi | se manca |
 |---|---|---|---|
 | A1 | l'**utente esiste** e ha una parola d'ordine | provisioning | PAM rifiuta: «utente o parola d'ordine non corretti» — e la diagnosi punta sulla parola |
-| A2 | ⛔ l'utente è nei gruppi **`video`** e **`render`** | provisioning | ⚠ **il sintomo è «lento», non «rotto»**: senza seat non arrivano le ACL di `uaccess`, Mesa ripiega su **llvmpipe** e il compositore disegna in software. `[M]` un comando nel terminale risponde dopo un secondo |
+| A2 | ⛔ l'utente è nei gruppi **`video`** e **`render`** | provisioning | ⚠ **il sintomo è «lento», non «rotto»**: senza seat non arrivano le ACL di `uaccess`, Mesa ripiega su **llvmpipe** e il compositore disegna in software: anche un comando nel terminale risponde con un ritardo che si vede |
 | A3 | `/etc/pam.d/remotix` esiste **e chiama `pam_systemd`** | provisioning | nessuna sessione logind ⇒ il compositore **non parte affatto** (vedi B3) |
 | A4 | la regola **polkit** (12 azioni) e `logind.conf` | provisioning | un utente remoto può spegnere la macchina e portarla via a tutti (`DECISIONI.md` §4.7) |
 | A5 | la regola **udev** della scheda | provisioning | il compositore sceglie la GPU **a caso**; le misure valgono per quel ferro e non per il prodotto (§4.6-quinquies) |
@@ -707,7 +632,7 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | il sintomo | il passo |
 |---|---|
 | «il desktop non compare» | B3 · B7 · A6 |
-| «compare dopo molti secondi» | B7 (l'avvio fallito si recupera in ~13 s) · B10 |
+| «compare dopo molti secondi» | B7 (l'avvio fallito si recupera, ma dopo qualche secondo) · B10 |
 | «bande nere ai lati» | B5 · B6 |
 | «il desktop è rotto» | B5 · B6 (la tela e il palco non combaciano) |
 | «nessun input» | B13 · **B6** (la regione del puntatore segue la tela: se la tela balla, i clic finiscono altrove) |
@@ -715,7 +640,7 @@ sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte m
 | «il terminale resta congelato finché non muovo il mouse» | la coda della raffica in `cattura.c` (`LEZIONI.md` §6.5) |
 | «si può spegnere la macchina» | A4 · B15 |
 | «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | ✅ **l'orologio del silenzio**, `FASI.md` §05-la-sessione §6-bis — riparato il 16 agosto. ⚠ Se ricompare, cerca nel registro *«il margine si sta assottigliando»* |
-| «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: §7.3 rilascia entro **28 ms**, misurato — `FASI.md` §05-la-sessione §6 |
+| «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: il server rilascia tutto al distacco (`RCP.md` §7.3) — `FASI.md` §05-la-sessione §6 |
 
 ---
 
@@ -749,7 +674,7 @@ perfetto»).*
 | momento | che cosa succede davvero | `[M]` |
 |---|---|---|
 | **attacco** | la pagina manda `ADATTA_TELA` con la misura della propria finestra, e la tela diventa quella | tela **1264×800** in una finestra 1265×800, scala di disegno **1,000** |
-| **durante la sessione** | ⛔ il client riscala, e il desktop **non si tocca mai** — dal 17 agosto 2026 non c'è più nemmeno l'interruttore che lo faceva (`DECISIONI.md` §5.1-bis) | ~~il ridimensionamento a caldo costa **6 ms**~~ — misurato, e uscito lo stesso: costava poco su Mutter e **non si poteva fare** su KWin ≤ 6.7.4 |
+| **durante la sessione** | ⛔ il client riscala, e il desktop **non si tocca mai** — dal 17 agosto 2026 non c'è più nemmeno l'interruttore che lo faceva (`DECISIONI.md` §5.1-bis) | ~~il ridimensionamento a caldo~~ — misurato, e uscito lo stesso: costava poco su Mutter e **non si poteva fare** su KWin ≤ 6.7.4 |
 | **riattacco da un altro dispositivo** | `SESSIONE` concede **la tela che il palco ha già** (§4.5), così i pixel arrivano subito, e poi la pagina chiede la sua | **0 fotogrammi scartati** |
 
 ⛔ **E la riga «È 1:1» è diventata vera in un senso più stretto di quel che sembrava**: non «un
@@ -1044,17 +969,17 @@ sotto il pavimento non c'è più è la **promessa**, non il comportamento.
 
 > ⛔ **IL NUMERO ERA 20, ED È DIVENTATO 30 la notte del 23 agosto 2026** (`DECISIONI.md` §3.1-sexies):
 > *«ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps»*. ⚠ Le misure della
-> fase 9 sono tarate su 20 e **non si riscrivono**: `[M]` il caso duro sul percorso vero chiedeva
-> 21,5-23,1 Mbit/s, che col pavimento vecchio era il 107-115 % e col nuovo è il **72-77 %**.
+> fase 9 sono tarate su 20 e **non si riscrivono**: stanno in `fasi/09-la-qualita-e-la-degradazione.md`,
+> e sono storiche.
 
 > ### ⛔⭐⭐ E LA BANDA NON È LA GRANDEZZA CHE DECIDE — `DECISIONI.md` §3.1-ter
 >
 > *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
 > perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* — 23 agosto 2026.
 >
-> ⛔ E il numero che lo dimostra: `[M]` il prodotto regge il caso peggiore **a banda libera**, ma
-> **la spirale di chiavi parte allo 0,10 % di perdita** — cioè al primo pacchetto perso — e il calo
-> che l'utente **vede** arriva allo 0,53-0,75 %. ⇒ **Il pavimento di banda è una premessa, non un
+> ⛔ E la fase 9 l'ha mostrato: a banda libera il caso peggiore reggeva, ma **la spirale di chiavi
+> partiva al primo pacchetto perso**, molto prima del calo che l'utente **vede**
+> (`fasi/09-la-qualita-e-la-degradazione.md`). ⇒ **Il pavimento di banda è una premessa, non un
 > requisito mordente**: il requisito mordente è il comportamento su una linea **sporca**.
 >
 > ⛔ E una linea che perde **a raffiche** si dichiara morta (§3.1-quater): 10 s senza pacchetti, o
@@ -1156,10 +1081,6 @@ scoprire: **una politica del prodotto che nessun documento dichiarava.**
 ⚠ **Il prezzo, dichiarato**: è banda tolta al video **proprio quando ce n'è poca**. ⭐ Ed è limitato
 **per costruzione**: la coda dei datagram è lunga **otto**, quindi al massimo otto pacchetti passano
 davanti.
-
-`[M]` 24 agosto 2026: a desktop fermo il filo è **tutto audio** (48,0 datagram su 48,4 pacchetti al
-secondo); sulla sessione vera dell'utente col desktop in movimento l'audio sta fra il **25 e il
-33 %** dei pacchetti.
 
 *(La decisione è scritta per esteso, alternativa scartata compresa, nel riquadro di `wt_scrivi()`.)*
 
@@ -1279,12 +1200,7 @@ il sintomo va detto in una frase — non «non funziona».
 > | | |
 > |---|---|
 > | ✅ **i mattoni** | il comportamento del decodificatore al cambio di tela è `[M]` **su Chrome e su Firefox**, in tutt'e due i versi — 8 celle su 8, HEVC e AV1 (`RCP.md` §5.2) |
-> | ⛔ **i numeri** | il ritardo cattura → vetro (§3.2), i fotogrammi dipinti e il tetto a saturazione sono misurati **su Chrome 151 e basta** |
->
-> ⇒ ⏳ **`[?]` il secondo motore sui numeri resta aperta**, ed è una `[?]` di questa sezione, non
-> del banco: finché una sola squadra che non ci conosce ha detto la sua, l'arbitro esterno di cui
-> parla il primo capoverso **non c'è ancora**. ⚠ E non si chiude ricopiando le celle dei mattoni:
-> quelle rispondono a un'altra domanda.
+> | ⚠ **i numeri** | le misure di prestazione di allora erano **su Chrome 151 e basta**. ⛔ Dal 30 settembre 2026 non sono più una verifica del prodotto: *«eliminiamo i test di performance, sono troppo dipendenti dall'hardware»* — l'utente |
 
 ---
 
