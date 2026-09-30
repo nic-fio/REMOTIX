@@ -29,6 +29,8 @@ export TMPDIR="$LAV/tmp"
 
 git -C "$ALBERO" archive "$COMMIT" packaging/arch/PKGBUILD packaging/arch/remotix.install \
 	| tar -x -C "$LAV" --strip-components=2
+# T8: RX_REVISIONE = il pkgrel di un rilascio di manutenzione (una ricostruzione)
+[ -n "${RX_REVISIONE:-}" ] && sed -i "s/^pkgrel=.*/pkgrel=$RX_REVISIONE/" "$LAV/PKGBUILD"
 git -C "$ALBERO" archive --format=tar.gz --prefix="remotix-$PKGVER/" \
 	-o "$LAV/remotix-$PKGVER.tar.gz" "$COMMIT" src banchi/rcp packaging/arch
 {

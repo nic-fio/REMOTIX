@@ -42,6 +42,11 @@ override_dh_auto_configure:
 	$(MAKE) -C src dipendenze
 
 override_dh_auto_build:
+	# ⛔ R24: le statiche collegate sono della versione dichiarata in
+	#    Static-Built-Using (control), come fa lo spec rpm: uno SBOM che nomina
+	#    una versione diversa da quella nel binario mentirebbe.
+	test "$$(pkg-config --modversion libngtcp2)" = 1.25.0
+	test "$$(pkg-config --modversion libnghttp3)" = 1.18.0
 	# ⛔ R13: il binario del pacchetto NON ha la funzione di banco accesa.
 	grep -qx '#define BANCO_ACCESO 0' src/rcp.c || \
 	  { echo "⛔ src/rcp.c: BANCO_ACCESO non e' 0 — non si impacchetta (R13)"; exit 1; }
@@ -53,6 +58,11 @@ override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
 	install -D -m 0644 src/pagina.html         $(B)/usr/share/remotix/pagina.html
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
+	# R24 (T8): le versioni delle statiche COLLEGATE, lette da pkg-config nel
+	#    contenitore che ha costruito il binario: le legge lo SBOM dell'archivio.
+	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+	  "$$(pkg-config --modversion libngtcp2)" "$$(pkg-config --modversion libnghttp3)" \
+	  >$(B)/usr/share/remotix/incorporate.json
 	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
 	# PAM di Debian/Ubuntu (common-*; fasi/17 §4.3) e chi non entra (root).
 	# Tutti e due conffile: dpkg li tiene al remove e li toglie al purge.

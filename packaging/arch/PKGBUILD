@@ -161,6 +161,12 @@ package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
 	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
+	# R24 (T8): le versioni delle statiche COLLEGATE, dal pkg-config della
+	#    cartella dove build() le ha installate — per lo SBOM dell'archivio.
+	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libngtcp2)" \
+		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libnghttp3)" \
+		>"$pkgdir/usr/share/remotix/incorporate.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
 	# ⚠ D3 APERTA: la pila di Arch porta con se' il pam_faillock di pambase
