@@ -40,14 +40,20 @@ Architecture: any
 #   Le altre sono quelle che il binario usa a tempo di esecuzione e che dpkg NON
 #   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod (la prima
 #   connessione, figlio.c:1525), loginctl e systemctl
-#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session).
+#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session), e il DEMONE
+#   PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire (mutter/kwin
+#   screencast) e l'audio di OGNI desktop pure (suono.c); dpkg vede la LIBRERIA
+#   (libpipewire-0.3-0) ma non il demone. I desktop di serie lo portano, ma non le
+#   installazioni minime (T10, 30 set: su openSUSE GNOME senza pipewire il desktop non arriva).
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libpam-systemd,
          libpam-modules,
          passwd,
          systemd,
-         dbus-user-session
+         dbus-user-session,
+         pipewire,
+         wireplumber
 # Recommends (apt li installa di serie; chi usa --no-install-recommends li perde
 #   e `remotix verifica`, T4, lo dira'):
 #   · il driver VA della scheda: senza, la codifica e' solo il ripiego software.

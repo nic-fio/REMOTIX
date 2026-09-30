@@ -109,6 +109,14 @@ BuildRequires:  selinux-policy-devel
 BuildRequires:  bzip2
 Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
 
+# Il DEMONE PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire
+# (mutter/kwin screencast) e l'audio di OGNI desktop pure (suono.c); rpm vede la LIBRERIA
+# (libpipewire) ma non il demone.  I gruppi dei desktop lo portano, ma non le installazioni
+# minime (T10, 30 set: openSUSE GNOME dell'immagine Minimal-VM SENZA pipewire ⇒ mutter non
+# raggiunge lo screencast, «Error connecting to the screencast service», e il desktop non arriva).
+Requires:       pipewire
+Requires:       wireplumber
+
 %if 0%{?fedora} || 0%{?rhel}
 # Il servizio firewalld e' DEFINITO nella cartella di firewalld-filesystem (niente
 # demone, niente regole): aprirlo e' del motore, col consenso (D6).

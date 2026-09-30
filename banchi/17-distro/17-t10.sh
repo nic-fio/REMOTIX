@@ -72,6 +72,10 @@ fine() {
 	[ -n "${BROWSER:-}" ] && kill "$BROWSER" 2>/dev/null
 	# il labwc di questa macchina
 	[ -f "$T1C/labwc.pid" ] && kill "$(cat "$T1C/labwc.pid")" 2>/dev/null
+	if [ -n "${LASCIA:-}" ]; then
+		say "==> LASCIA=1: la VM $m resta ACCESA per la diagnosi (poi: 17-vm.sh ferma $m; torna $m $foto)"
+		riga="T10 $m $stato $FINALE$PASSI"; echo "$riga" | tee -a "$E/esito.txt" >>"$T10/giro.log"; echo "$riga"; return
+	fi
 	say "==> spengo e rimetto la foto «$foto»"
 	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$foto" >/dev/null 2>&1
 	# la macchina torna a vedere l'archivio N (per un giro successivo)
@@ -100,9 +104,13 @@ sudo install -d -m 700 -o prova -g prova ~prova/.ssh
 sudo install -m 600 -o prova -g prova ~/.ssh/authorized_keys ~prova/.ssh/authorized_keys
 . /etc/os-release; echo \"\$PRETTY_NAME · \$(uname -r) · selinux: \$(getenforce 2>/dev/null || echo -)\"
 ls -l /dev/dri/ | grep -c card; id prova
-curl -s -m 8 -o /dev/null -w 'archivio: HTTP %{http_code}\n' $ARCH/install.sh.sha256 || echo 'archivio: NON raggiungibile'" >"$E/macchina.txt" 2>&1
+if command -v curl >/dev/null 2>&1; then curl -s -m 8 -o /dev/null -w 'archivio: HTTP %{http_code}\n' $ARCH/install.sh.sha256 || echo 'archivio: NON raggiungibile'
+elif wget -q -T 8 -O /dev/null $ARCH/install.sh.sha256; then echo 'archivio: HTTP 200 (wget)'
+else echo 'archivio: NON raggiungibile'; fi" >"$E/macchina.txt" 2>&1
 sed 's/^/   /' "$E/macchina.txt" | tee -a "$E/giro.log"
 grep -q 'HTTP 200' "$E/macchina.txt" || { say "⛔ l'archivio non si raggiunge dalla VM"; exit 1; }
+# ⚠ le iso desktop apt hanno wget ma NON curl: install.sh usa l'uno o l'altro (§6.6.12), il
+#   pre-controllo qui sopra pure
 
 say "==> 1. impronta «prima»"
 impronta prima
