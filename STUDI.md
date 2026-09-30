@@ -1,6 +1,6 @@
 # STUDI — il codice degli altri, letto prima di scrivere il nostro
 
-⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione rimaste in questo documento sono storiche: valgono per la macchina e per il prodotto di allora; quelle della codifica con ffmpeg sono state tolte con la fase 18. Decisione dell'utente del 30 set 2026.
 
 *Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
 sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
@@ -1024,11 +1024,11 @@ non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i q
 **1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
 
 ⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Misurato
-il ritardo cattura → vetro (mediana **74,58 ms**, `SPECIFICHE.md` §3.2), il disegno → cattura di
-Mutter pesa **16,66 ms su 74,6, cioè il 22 %**: il **78 % è nostro**, e ~39 ms stanno nel tratto
-cattura → primo byte in pagina, dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il
-figlio del prodotto consegna **23,93 fotogrammi/s con ZERO attese a vuoto**: **non aspetta mai
-Mutter**. Alzare la cadenza della cattura non sposterebbe il ritardo.
+il ritardo cattura → vetro (`SPECIFICHE.md` §3.2), il disegno → cattura di Mutter ne pesa
+**16,66 ms**, la parte minore: il grosso è **nostro**, nel tratto cattura → primo byte in pagina,
+dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il figlio del prodotto consegna
+**con ZERO attese a vuoto**: **non aspetta mai Mutter**. Alzare la cadenza della cattura non
+sposterebbe il ritardo.
 
 #### 8.3 Il resto
 
