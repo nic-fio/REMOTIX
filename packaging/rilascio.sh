@@ -49,7 +49,8 @@ export CHIAVI=${CHIAVI:-$HOME/.local/share/remotix-chiavi-di-prova}
 # D10 aperta: dove si carica l'archivio (il VPS). Quando c'è, qui l'indirizzo.
 DESTINAZIONE=${DESTINAZIONE:-'<D10: indirizzo del VPS, per esempio remotix@archivio.example:/srv/remotix/>'}
 LAV=$ALBERO/costruzione-uscita/rilascio-$VERSIONE
-rm -rf "$LAV"; mkdir -p "$LAV/tmp"
+# i contenitori (rpm) lasciano file di un altro uid dello spazio utente: si tolgono da lì dentro
+podman unshare rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR=$LAV/tmp
 REG=$LAV/rilascio.log
 passo() { printf '\n== %s\n' "$*" | tee -a "$REG"; }
