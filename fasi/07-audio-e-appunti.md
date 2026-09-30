@@ -1,5 +1,7 @@
 # Fase 7 — Audio e appunti
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 ⭐ **Aperta il 17 agosto 2026**, col suo documento e **prima di una riga di codice**
 (`PIANO.md` §0.1). Il piano è `PIANO.md` §«Fase 7 — Audio e appunti»; il modello di questo
 documento è `PIANO.md` §0.2.
