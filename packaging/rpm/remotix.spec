@@ -74,20 +74,16 @@ BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
 # ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  OpenH264 (il ripiego H.264),
 #   SVT-AV1 (il ripiego AV1), libopus (l'audio).  `[M]` 30 set, i depositi: Fedora 44
-#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus/libyuv da fedora;
+#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus da fedora;
 #   Alma 10 openh264 SOLO dal deposito Cisco per EPEL (epel-cisco-openh264, da
-#   aggiungere), svt-av1 da EPEL, opus da AppStream, libyuv NON C'E'; openSUSE
+#   aggiungere), svt-av1 da EPEL, opus da AppStream; openSUSE
 #   libopenh264 da repo-openh264 (codecs.opensuse.org: quello di repo-oss e' la copia
 #   vuota), il resto da repo-oss.
 BuildRequires:  pkgconfig(openh264)
 BuildRequires:  pkgconfig(SvtAv1Enc)
 BuildRequires:  pkgconfig(opus)
-# ⚠ libyuv: la conversione dei colori, decisione ancora APERTA (il codice potrebbe
-#   farla da se', `colori709.c`).  Se esce, si toglie SOLO questo blocco.  Su Alma 10
-#   libyuv non c'e' in nessun deposito (`[M]` 30 set): lì si costruisce senza.
-%if ! 0%{?rhel}
-BuildRequires:  pkgconfig(libyuv)
-%endif
+# ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1);
+#   tolta il 30 set (T10).
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)
@@ -113,6 +109,14 @@ BuildRequires:  selinux-policy-devel
 BuildRequires:  bzip2
 Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
 
+# Il DEMONE PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire
+# (mutter/kwin screencast) e l'audio di OGNI desktop pure (suono.c); rpm vede la LIBRERIA
+# (libpipewire) ma non il demone.  I gruppi dei desktop lo portano, ma non le installazioni
+# minime (T10, 30 set: openSUSE GNOME dell'immagine Minimal-VM SENZA pipewire ⇒ mutter non
+# raggiunge lo screencast, «Error connecting to the screencast service», e il desktop non arriva).
+Requires:       pipewire
+Requires:       wireplumber
+
 %if 0%{?fedora} || 0%{?rhel}
 # Il servizio firewalld e' DEFINITO nella cartella di firewalld-filesystem (niente
 # demone, niente regole): aprirlo e' del motore, col consenso (D6).
@@ -125,9 +129,12 @@ Requires:       firewalld-filesystem
 # del monitor passa da wlr-randr (`primario_lxqt()`).  Dipendenze CONDIZIONATE:
 # solo se quel desktop c'e'.
 Requires:       (labwc if xfce4-session)
-Requires:       (xorg-x11-server-Xwayland if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
+# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
+# leap16-lxqt).  Legato a labwc, non a un desktop: vale per XFCE e LXQt.
+Requires:       (xorg-x11-server-Xwayland if labwc)
 # labwc MUORE senza un carattere scalabile (labwc #2525: con i soli caratteri
 # bitmap la barra del titolo esce alta 1,4 milioni di pixel e `buffer.c:90`
 # abortisce).  Su Fedora i gruppi dei desktop lo portano, ma una macchina con
@@ -161,9 +168,12 @@ Recommends:     openh264
 
 %if 0%{?suse_version}
 Requires:       (labwc if xfce4-session)
-Requires:       (xwayland if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
+# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
+# leap16-lxqt dell'immagine Minimal-VM).  Legato a labwc, non a un desktop.
+Requires:       (xwayland if labwc)
 # ⛔ labwc MUORE senza un carattere scalabile (labwc #2525, `buffer.c:90`): il
 # gruppo LXQt di openSUSE porta `google-droid-fonts` solo come RACCOMANDATO, e
 # sulle installazioni senza raccomandati non c'e'.  Uno qualunque dei sans scalabili.

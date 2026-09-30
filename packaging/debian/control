@@ -15,7 +15,6 @@ Build-Depends: debhelper-compat (= 13),
                libopenh264-dev,
                libsvtav1enc-dev,
                libopus-dev,
-               libyuv-dev,
                libei-dev (>= 1.1),
                libxkbcommon-dev,
                libgbm-dev,
@@ -27,8 +26,9 @@ Build-Depends: debhelper-compat (= 13),
 #   podman: Debian 13 tutto in main (libopenh264-8 2.6.0, libsvtav1enc2 2.3.0,
 #   libopus0 1.5.2, libva2 2.22); Ubuntu 26.04 libopenh264-8 e libsvtav1enc2 in
 #   universe, il resto in main.
-#   ⚠ libyuv-dev: la conversione dei colori, decisione ancora APERTA (il codice
-#   potrebbe farla da se', `colori709.c`): se esce, si toglie SOLO quella riga.
+#   ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`,
+#   fasi/18 §1) — tolta il 30 set (T10: dpkg-checkbuilddeps la chiedeva e il
+#   contenitore della fase 18 non la porta).
 # ⚠ ngtcp2 1.25.0 e nghttp3 1.18.0 NON sono nelle Build-Depends: le porta il
 #   contenitore di costruzione (src/costruzione/quic-statiche.sh), statiche e a
 #   versione fissata (fasi/17 §6.3; D2 chiusa, DECISIONI §10.6).  Il campo
@@ -40,14 +40,20 @@ Architecture: any
 #   Le altre sono quelle che il binario usa a tempo di esecuzione e che dpkg NON
 #   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod (la prima
 #   connessione, figlio.c:1525), loginctl e systemctl
-#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session).
+#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session), e il DEMONE
+#   PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire (mutter/kwin
+#   screencast) e l'audio di OGNI desktop pure (suono.c); dpkg vede la LIBRERIA
+#   (libpipewire-0.3-0) ma non il demone. I desktop di serie lo portano, ma non le
+#   installazioni minime (T10, 30 set: su openSUSE GNOME senza pipewire il desktop non arriva).
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libpam-systemd,
          libpam-modules,
          passwd,
          systemd,
-         dbus-user-session
+         dbus-user-session,
+         pipewire,
+         wireplumber
 # Recommends (apt li installa di serie; chi usa --no-install-recommends li perde
 #   e `remotix verifica`, T4, lo dira'):
 #   · il driver VA della scheda: senza, la codifica e' solo il ripiego software.
