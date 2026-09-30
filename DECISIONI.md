@@ -1356,7 +1356,7 @@ Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme*
 > | ⭐ **che cosa resta** | 4K · 60 fps · 10 bit è il **tetto di quel che il prodotto sa fare** — la misura più grande che si codifica e si consegna |
 > | ⛔ **che cosa NON è più** | una promessa **al pavimento**. A 20 Mbit/s il 4K **non è promesso in movimento**, e non è un difetto: è la scelta |
 > | ⚠ **e nemmeno a 30** | il conto dice che «fisso buono, 30+» **non compra** il 4K mosso. La riga di §3.1 che lo lasciava credere era già superata dal §3.1-bis, e questa voce lo dice per esteso |
-> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero, `[M]` 20,9 fotogrammi/s) — cioè **leggere e scrivere**, non guardare un video |
+> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero; il ritmo misurato allora, con la codifica in software, è tolto con la fase 18) — cioè **leggere e scrivere**, non guardare un video |
 >
 > ⇒ ⭐ **La banda a cui il 4K in movimento diventa servibile è una cosa da MISURARE e DICHIARARE,
 > non da promettere** — è `SPECIFICHE.md` §2.6 alla lettera. La misura è di questa fase.
@@ -1504,16 +1504,15 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 >
 > ⚠ *Il ritardo totale cattura → vetro (banco `banchi/03-b17-ritardo.py`) e il tratto cattura → primo
 > byte in pagina erano misurati col **codificatore in software** di libavcodec (libsvtav1 / libx265):
-> tolti, non valgono più dopo la fase 18. Restano i tratti che non passano dal codificatore.* Non era
-> input → vetro: il canale di input nasce alla fase 4, e al suo posto stava il controllo **P1**.
+> tolti, non valgono più dopo la fase 18. Tolti anche i tratti del browser (stream → `decode()`,
+> decodifica, disegno), misurati sulla stessa catena col codificatore in software. Restano i tratti che
+> stanno prima del codificatore o fuori.* Non era input → vetro: il canale di input nasce alla fase 4,
+> e al suo posto stava il controllo **P1**.
 >
 > | dove se ne va | mediana | di chi è |
 > |---|---|---|
 > | disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter |
 > | il filo | 0,32 ms | — |
-> | stream completo → `decode()` | 0,08 ms | nostro |
-> | decodifica | 7,58 ms | nostro |
-> | richiamo → disegno finito | 10,51 ms | nostro |
 >
 > ⛔⛔ **Il muro NON è di Mutter, e le prove erano queste**: la scena disegna **59,98/s con 0
 > attese**; il figlio del prodotto non aspettava mai Mutter (zero attese a vuoto); il codificatore
@@ -1682,12 +1681,9 @@ alcune **molto più economiche da rispettare**.
 migliore. È stata scritta, misurata — e ⭐ **la misura l'ha spaccata in due**, non bocciata in
 blocco.*
 
-| tratto (mediana, ms) | prima | dopo | Δ |
-|---|---|---|---|
-| stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
-| ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-| richiamo → disegno finito ⚠ *(vedi la nota sotto: il nome del tratto è stato corretto)* | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
-| **mediana disegno → vetro** | 73,66 / 67,79 | ⛔ **101,30** | ⛔ **+27,6 / +33,5** |
+*⚠ La tabella dei tratti prima/dopo il worker (consegna a `decode()`, decodifica, richiamo → disegno,
+disegno → vetro) è tolta: misurata sulla catena col codificatore in software, non vale più dopo la
+fase 18. Restano il verso degli effetti e la decisione.*
 
 > ### ⛔⛔ 14 agosto 2026 — **IL TRATTO «richiamo → disegno finito» PORTAVA UN NOME SBAGLIATO**
 >
@@ -1695,7 +1691,8 @@ blocco.*
 > (`fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md`), arrivate alla stessa
 > conclusione da due lati senza mettersi d'accordo.*
 >
-> ⭐ **I numeri restano**; ⛔ **il nome no.** `[M]` il disegno vero costa **2,25 ms**: quel tratto
+> ⛔ **Il nome del tratto era sbagliato.** Il disegno vero costava poco *(il numero, misurato su una
+> catena che passava da `sws_scale`, è tolto con la fase 18)*: quel tratto
 > misurava **l'attesa del fotogramma dalla GPU più il disegno**, perché un fotogramma HEVC
 > decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca ne provoca il
 > trasferimento GPU→CPU. ⭐ La prova che il confine era messo male: a **palco identico**, cambiando
@@ -1710,8 +1707,8 @@ blocco.*
 
 | | |
 |---|---|
-| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** `[M]` **−3,44 ms** — il decodificatore consegna prima quando non contende |
-| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: da sola **+17,6 ms**, più i +10,2 della consegna |
+| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** — il decodificatore consegna prima quando non contende |
+| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: il disegno e la consegna al worker costano più di quanto la decodifica guadagni |
 
 ⛔ **Il meccanismo, ed è la parte che vale oltre questo caso**: una `OffscreenCanvas` in un worker
 **si consegna al ritmo del quadro** — un `requestAnimationFrame` implicito che nessuno ha scritto.
@@ -1720,9 +1717,8 @@ parola: **è sul meccanismo**. ⛔⛔ E la prescrizione **conteneva la propria s
 il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
 
 ⚠ **E i fotogrammi dipinti dicono il contrario del ritardo, quindi vanno accanto** (`LEZIONI.md`
-§6.2): sulla catena vera il worker dipinge **di più** (26,3/s contro 22,8-24,2), ma a saturazione il
-tetto **crolla di tre quarti** — 127,6 → **33,9**/s a 1080p, 230,6 → **56,4**/s a 480p, cioè **≈ il
-quadro dei 60 Hz**.
+§6.2): sulla catena vera il worker dipinge **di più**, ma a saturazione il tetto **crolla fino a ≈ il
+quadro dei 60 Hz**. *(I numeri, presi con la codifica in software, sono tolti con la fase 18.)*
 
 ⇒ **Che cosa si decide oggi**: il codice resta in albero **dietro `#video=worker`, spento**. ⛔ **E
 non è una bocciatura definitiva.** ⏳ `[?]` **il limite più grosso, e va letto accanto ai numeri**:
