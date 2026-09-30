@@ -30,7 +30,7 @@ import (
 
 func init() { registraTipo("installa-pacchetti", nuovaPacchetti) }
 
-// PianoPacchettiDa: pacchetti presi da un deposito preciso (la libavcodec di Packman: su openSUSE
+// PianoPacchettiDa: pacchetti presi da un deposito preciso (la Mesa di Packman, fase 18: su openSUSE
 // sostituisce quella della distribuzione, e zypper lo fa solo con --from e il cambio di fornitore).
 func PianoPacchettiDa(id, nomi, deposito string) AzionePiano {
 	a := PianoPacchetti(id, "", "", nomi)
@@ -423,7 +423,8 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 }
 
 // trattenuti: dei pacchetti NUOVI da togliere, quelli che si possono togliere e quelli che restano
-// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo (la libavcodec di
+// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo (la Mesa di Packman
+// che sostituisce quella di openSUSE, fase 18; prima la libavcodec di
 // Packman o di RPM Fusion, che vuole la libx264 portata da lì), o un programma installato dopo.
 // Toglierli si porterebbe via anche lui (`[M]` 30 set, leap16-kde: `zypper rm` di libx264 & c.
 // trascinava 53 pacchetti, Plasma compreso). ⇒ Non si tolgono, e si dichiarano (§6.6.4: quel che

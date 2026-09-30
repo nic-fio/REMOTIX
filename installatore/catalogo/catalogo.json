@@ -1,10 +1,10 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.7",
-  "sequenza": 7,
+  "versione": "2026.09.30.8",
+  "sequenza": 8,
   "emesso": "2026-09-30",
   "motore_minimo": "0.1.0",
-  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop): quel che il documento sa il 30 set 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
+  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, OpenH264, SVT-AV1, libopus; pacchetti e depositi [M] 30 set nelle immagini podman): quel che i documenti sanno il 30 set 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
   "requisiti": {
     "openssl_minima": "3.5.0",
     "kde_minima": "6.1",
@@ -15,19 +15,19 @@
   },
   "depositi": {
     "rpmfusion": {
-      "nome": "RPM Fusion (free)",
+      "nome": "RPM Fusion",
       "decisione": "D5",
       "comandi": {
-        "fedora": "sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install libavcodec-freeworld",
-        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install libavcodec-freeworld   # DOPO EPEL, o libavcodec-free va in conflitto (§11.1)"
+        "fedora": "sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install intel-media-driver mesa-va-drivers-freeworld   # Intel: intel-media-driver (nonfree); AMD: mesa-va-drivers-freeworld (free)",
+        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install intel-media-driver   # DOPO EPEL; solo Intel: su AMD la Mesa di RHEL è senza VA-API"
       }
     },
     "packman": {
       "nome": "Packman",
       "decisione": "D5",
       "comandi": {
-        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper dup --from packman --allow-vendor-change",
-        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper dup --from packman --allow-vendor-change   # [?] percorso da confermare"
+        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva   # solo AMD: il driver Intel ufficiale codifica già",
+        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva   # solo AMD: il driver Intel ufficiale codifica già"
       }
     },
     "epel": {
@@ -35,6 +35,16 @@
       "decisione": "",
       "comandi": {
         "rhel": "sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb"
+      }
+    },
+    "openh264": {
+      "nome": "OpenH264 di Cisco",
+      "decisione": "D5",
+      "comandi": {
+        "fedora": "sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1 && sudo dnf install openh264",
+        "rhel": "printf '[epel-cisco-openh264]\\nname=Cisco OpenH264 per EPEL $releasever_major\\nmetalink=https://mirrors.fedoraproject.org/metalink?repo=epel-cisco-openh264-$releasever_major&arch=$basearch\\nenabled=1\\ngpgcheck=1\\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-10\\n' | sudo tee /etc/yum.repos.d/epel-cisco-openh264.repo && sudo dnf install openh264   # DOPO EPEL (la chiave è la sua)",
+        "tumbleweed": "sudo zypper ar -f http://codecs.opensuse.org/openh264/openSUSE_Tumbleweed repo-openh264 && sudo zypper --gpg-auto-import-keys refresh repo-openh264 && sudo zypper install libopenh264-8",
+        "leap16": "sudo zypper ar -f https://codecs.opensuse.org/openh264/openSUSE_Leap_16 repo-openh264 && sudo zypper --gpg-auto-import-keys refresh repo-openh264 && sudo zypper install libopenh264-8"
       }
     }
   },
@@ -58,7 +68,8 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true
+        "software_di_serie": true,
+        "pacchetti_software": "libopenh264-8"
       },
       "desktop": {
         "gnome": {
@@ -114,7 +125,8 @@
       ],
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true
+        "software_di_serie": true,
+        "pacchetti_software": "libopenh264-8"
       },
       "desktop": {
         "gnome": {
@@ -161,11 +173,21 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": false,
+        "software_di_serie": true,
         "deposito": "rpmfusion",
         "comando": "fedora",
-        "pacchetti_codec": "libavcodec-freeworld"
+        "pacchetti_scheda": {
+          "Intel": "intel-media-driver",
+          "AMD": "mesa-va-drivers-freeworld"
+        },
+        "nonfree": [
+          "Intel"
+        ],
+        "pacchetti_software": "openh264"
       },
+      "depositi": [
+        "openh264"
+      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -211,11 +233,21 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": false,
+        "software_di_serie": true,
         "deposito": "rpmfusion",
         "comando": "fedora",
-        "pacchetti_codec": "libavcodec-freeworld"
+        "pacchetti_scheda": {
+          "Intel": "intel-media-driver",
+          "AMD": "mesa-va-drivers-freeworld"
+        },
+        "nonfree": [
+          "Intel"
+        ],
+        "pacchetti_software": "openh264"
       },
+      "depositi": [
+        "openh264"
+      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -284,8 +316,18 @@
         "deposito": "rpmfusion",
         "comando": "rhel",
         "amd_senza_vaapi": true,
-        "pacchetti_codec": "libavcodec-freeworld"
+        "pacchetti_scheda": {
+          "Intel": "intel-media-driver"
+        },
+        "nonfree": [
+          "Intel"
+        ],
+        "pacchetti_software": "openh264"
       },
+      "depositi": [
+        "epel",
+        "openh264"
+      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -309,7 +351,8 @@
       },
       "note": [
         "dalla 10.1: OpenSSL 3.5",
-        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce",
+        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce: il video in software (OpenH264)",
+        "EPEL serve a REMOTIX stesso (SVT-AV1: svt-av1-libs), OpenH264 viene dal deposito Cisco per EPEL 10 (epel-cisco-openh264, non configurato da epel-release); libyuv non c'è [M] 30 set",
         "SELinux enforcing (§11.1 B), tappa T6"
       ],
       "pacchetti_desktop": {
@@ -347,7 +390,8 @@
       ],
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true
+        "software_di_serie": true,
+        "pacchetti_software": "openh264"
       },
       "desktop": {
         "gnome": {
@@ -373,7 +417,7 @@
       },
       "note": [
         "pam_faillock nella pila di serie (D3)",
-        "rolling release: il pacchetto si lega alla versione esatta di ffmpeg (§6.2)"
+        "rolling release: il pacchetto si lega al numero (soname) delle librerie — openh264, svt-av1, libva, opus — non alla versione esatta (§6.2)"
       ],
       "pacchetti_desktop": {
         "gnome": "gnome",
@@ -395,11 +439,17 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": false,
+        "software_di_serie": true,
         "deposito": "packman",
         "comando": "tumbleweed",
-        "pacchetti_codec": "libavcodec63"
+        "pacchetti_scheda": {
+          "AMD": "Mesa-dri,Mesa-libva"
+        },
+        "pacchetti_software": "libopenh264-8"
       },
+      "depositi": [
+        "openh264"
+      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -432,7 +482,8 @@
         }
       },
       "note": [
-        "la ffmpeg ufficiale non ha h264_vaapi: senza Packman niente codifica, su nessuna scheda (§4.2)"
+        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set",
+        "OpenH264 vero dal deposito repo-openh264 (codecs.opensuse.org, acceso di serie): quello di repo-oss è la copia vuota (noopenh264) [M] 30 set"
       ],
       "pacchetti_desktop": {
         "gnome": "pattern:gnome",
@@ -454,11 +505,17 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": false,
+        "software_di_serie": true,
         "deposito": "packman",
         "comando": "leap16",
-        "pacchetti_codec": "libavcodec61"
+        "pacchetti_scheda": {
+          "AMD": "Mesa-dri,Mesa-libva"
+        },
+        "pacchetti_software": "libopenh264-8"
       },
+      "depositi": [
+        "openh264"
+      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -498,7 +555,11 @@
         "kde": "pattern:kde",
         "xfce": "pattern:xfce",
         "lxqt": "pattern:lxqt"
-      }
+      },
+      "note": [
+        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set",
+        "OpenH264 vero dal deposito repo-openh264 (codecs.opensuse.org, acceso di serie): quello di repo-oss è la copia vuota (noopenh264) [M] 30 set"
+      ]
     }
   ],
   "escluse": [
@@ -603,9 +664,24 @@
       "perche": "dentro il binario (DECISIONI §10.6)"
     },
     {
-      "componente": "libavcodec (ffmpeg)",
-      "minimo": "61.13.100 (ffmpeg 7.1)",
-      "perche": "avcodec_get_supported_config"
+      "componente": "libva (VA-API)",
+      "minimo": "2.22",
+      "perche": "la codifica sulla scheda, senza ffmpeg (fase 18); la più vecchia della matrice: Debian 13, Alma 10, Leap 16 [M] 30 set"
+    },
+    {
+      "componente": "OpenH264",
+      "minimo": "2.5 (libopenh264.so.7, Alma 10); 2.6 (so.8) altrove",
+      "perche": "il ripiego H.264 in software; ⛔ la copia vuota «noopenh264» non conta"
+    },
+    {
+      "componente": "SVT-AV1",
+      "minimo": "2.3 (libSvtAv1Enc.so.2)",
+      "perche": "il ripiego AV1 in software; Fedora 44 ha la 3.1 (so.3), Arch e Tumbleweed la 4.2 (so.4)"
+    },
+    {
+      "componente": "libopus",
+      "minimo": "1.4",
+      "perche": "l'audio, senza ffmpeg; Alma 10 ha la 1.4"
     },
     {
       "componente": "libei",
@@ -649,7 +725,7 @@
     },
     {
       "componente": "VA-API",
-      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD); NVIDIA proprietaria no",
+      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD con i codec); NVIDIA proprietaria no",
       "perche": "la codifica sulla scheda; altrimenti il ripiego software"
     }
   ],

@@ -17,12 +17,15 @@ import (
 //     punto 6, R18: Signed-By su apt, gpgkey + import in rpm su dnf e zypper; mai trusted.gpg.d).
 //     ESATTA: i file (e la chiave in rpm o in pacman), tolti come non c'erano; su Arch un blocco in
 //     /etc/pacman.conf fra due righe di marca. Il perché di ogni pezzo: archivio.go (T8).
-//   - «epel» (Alma/RHEL, KDE), «rpmfusion» (Fedora, Alma: H.264), «packman» (openSUSE: H.264):
-//     archivi di TERZI, col consenso (D5, riga sua). AL_MEGLIO: il deposito si toglie, ma i
-//     pacchetti presi da lì e gli aggiornamenti restano (si dichiara).
+//   - «epel» (Alma/RHEL: SVT-AV1, KDE), «rpmfusion» (Fedora, Alma: i driver con H.264; col ramo
+//     nonfree se la scheda è Intel), «packman» (openSUSE con scheda AMD: la Mesa coi codec),
+//     «openh264» (OpenH264 di Cisco, il ripiego software: Fedora lo accende, Alma lo scrive — il
+//     deposito Cisco per EPEL, firmato con la chiave di EPEL —, openSUSE lo aggiunge): archivi di
+//     TERZI, col consenso (D5, riga sua). AL_MEGLIO: il deposito si toglie, ma i pacchetti presi da
+//     lì e gli aggiornamenti restano (si dichiara). Fase 18 (senza ffmpeg).
 //
 // parametri: tipo; per «archivio»: nome, url, chiave (il testo della chiave pubblica, armatura
-// ASCII), suite, componenti.
+// ASCII), suite, componenti; per «rpmfusion»: nonfree ("si": anche rpmfusion-nonfree-release).
 
 func init() { registraTipo("aggiungi-deposito", nuovaDeposito) }
 
@@ -67,7 +70,7 @@ type primaDeposito struct {
 func nuovaDeposito(p AzionePiano) (Azione, error) {
 	d := &deposito{tipo: p.Parametri["tipo"], par: p.Parametri}
 	switch d.tipo {
-	case "archivio", "epel", "rpmfusion", "packman":
+	case "archivio", "epel", "rpmfusion", "packman", "openh264":
 		return d, nil
 	}
 	return nil, fmt.Errorf("aggiungi-deposito: tipo %q sconosciuto", d.tipo)
@@ -98,11 +101,24 @@ func (d *deposito) pezzi(c *Contesto) (map[string]bool, error) {
 		r["epel-release"] = v["epel-release"] != ""
 		r["crb"] = repoAcceso(c, "crb")
 	case "rpmfusion":
-		v, err := rpmVersioni(c.Amb, []string{"rpmfusion-free-release"})
+		v, err := rpmVersioni(c.Amb, []string{"rpmfusion-free-release", "rpmfusion-nonfree-release"})
 		if err != nil {
 			return nil, err
 		}
 		r["rpmfusion-free-release"] = v["rpmfusion-free-release"] != ""
+		if d.par["nonfree"] == "si" {
+			r["rpmfusion-nonfree-release"] = v["rpmfusion-nonfree-release"] != ""
+		}
+	case "openh264":
+		switch {
+		case c.Amb.Famiglia == "suse":
+			r["repo-openh264"] = zypperOpenH264(c) != ""
+		case d.rhel(c):
+			_, err := os.Stat(c.Amb.P(fileCiscoEpel))
+			r[fileCiscoEpel] = err == nil
+		default:
+			r["fedora-cisco-openh264"] = repoAcceso(c, "fedora-cisco-openh264")
+		}
 	case "packman":
 		_, err := os.Stat(c.Amb.P("/etc/zypp/repos.d/packman.repo"))
 		r["packman"] = err == nil
@@ -149,6 +165,52 @@ func repoAcceso(c *Contesto, nome string) bool {
 		return regexp.MustCompile(`(?m)^enabled\s*=\s*(1|true|yes)\s*$`).MatchString(sez)
 	}
 	return false
+}
+
+// fileCiscoEpel: il deposito Cisco di OpenH264 per EPEL (Alma/RHEL 10): lo scrive il motore.
+const fileCiscoEpel = "/etc/yum.repos.d/epel-cisco-openh264.repo"
+
+// ContenutoCiscoEpel: il file del deposito, come quello che EPEL 9 portava in epel-release. `[M]` 30
+// set, alma10: metalink epel-cisco-openh264-10 ⇒ codecs.fedoraproject.org/openh264/epel/10,
+// openh264-2.5.1 (libopenh264.so.7) installato con la firma verificata dalla chiave di EPEL 10.
+func ContenutoCiscoEpel(major string) string {
+	return "# epel-cisco-openh264 — aggiunto da remotix-install (OpenH264 di Cisco, il ripiego video)\n" +
+		"[epel-cisco-openh264]\nname=Extra Packages for Enterprise Linux " + major + " - Cisco OpenH264 - $basearch\n" +
+		"metalink=https://mirrors.fedoraproject.org/metalink?repo=epel-cisco-openh264-$releasever_major&arch=$basearch\n" +
+		"enabled=1\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-" + major + "\n"
+}
+
+// zypperOpenH264: il file del deposito OpenH264 di openSUSE, acceso ("" se non c'è): repo-openh264
+// (Tumbleweed) o openSUSE:repo-openh264 (Leap 16, dal servizio «openSUSE»), `[M]` 30 set.
+func zypperOpenH264(c *Contesto) string {
+	voci, _ := filepath.Glob(c.Amb.P("/etc/zypp/repos.d") + "/*.repo")
+	for _, v := range voci {
+		b, _ := os.ReadFile(v)
+		t := string(b)
+		if strings.Contains(t, "codecs.opensuse.org/openh264") && !repoSpento.MatchString(t) {
+			return v
+		}
+	}
+	return ""
+}
+
+// accendiRepo: enabled=1/0 di un deposito dnf che c'è già (Fedora: fedora-cisco-openh264, del
+// pacchetto fedora-repos).
+func (d *deposito) accendiRepo(c *Contesto, id string, acceso bool) error {
+	v := "0"
+	if acceso {
+		v = "1"
+	}
+	if _, err := os.Stat(c.Amb.P("/usr/bin/dnf5")); err == nil {
+		_, err := esegui(c.Amb, 5*time.Minute, "dnf", "config-manager", "setopt", id+".enabled="+v)
+		return err
+	}
+	verbo := "--set-disabled"
+	if acceso {
+		verbo = "--set-enabled"
+	}
+	_, err := esegui(c.Amb, 5*time.Minute, "dnf", "config-manager", verbo, id)
+	return err
 }
 
 func (d *deposito) crb(c *Contesto, acceso bool) error {
@@ -282,7 +344,7 @@ func (d *deposito) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 			p.Origine = DIRETTA
 		}
 	}
-	if d.tipo == "epel" || d.tipo == "rpmfusion" || d.tipo == "packman" {
+	if d.tipo == "epel" || d.tipo == "rpmfusion" || d.tipo == "packman" || d.tipo == "openh264" {
 		tutti, err := rpmTutti(c)
 		if err != nil {
 			return nil, "", err
@@ -344,13 +406,18 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 			return d.crb(c, true)
 		}
 	case "rpmfusion":
-		if !adesso["rpmfusion-free-release"] {
-			u := "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-" + d.majorVersione(c) + ".noarch.rpm"
-			if d.rhel(c) {
-				u = "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-" + d.majorVersione(c) + ".noarch.rpm"
+		for _, ramo := range []string{"free", "nonfree"} {
+			nome := "rpmfusion-" + ramo + "-release"
+			if v, chiesto := adesso[nome]; !chiesto || v {
+				continue
 			}
+			u := URLRpmFusionRamo(c.Amb, ramo)
 			arg := []string{"install", "-y", u}
-			if f := FileTerzi(c.Amb, "rpmfusion"); f != "" {
+			chiave := "rpmfusion" // il nome nel pacchetto fuori linea: «rpmfusion» (free), «rpmfusion-nonfree»
+			if ramo == "nonfree" {
+				chiave = "rpmfusion-nonfree"
+			}
+			if f := FileTerzi(c.Amb, chiave); f != "" {
 				// senza rete: lo stesso pacchetto, dal pacchetto fuori linea (verificato col suo sha256
 				// quando il pacchetto si è letto); nessun deposito si consulta
 				arg = []string{"install", "-y", "--disablerepo=*", f}
@@ -359,7 +426,49 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
-		return importaChiavi(c, "rpmfusion-free-release")
+		if err := importaChiavi(c, "rpmfusion-free-release"); err != nil {
+			return err
+		}
+		if _, chiesto := adesso["rpmfusion-nonfree-release"]; chiesto {
+			return importaChiavi(c, "rpmfusion-nonfree-release")
+		}
+	case "openh264":
+		switch {
+		case c.Amb.Famiglia == "suse":
+			if !adesso["repo-openh264"] {
+				m, _ := OsRelease(c.Amb)
+				u := "http://codecs.opensuse.org/openh264/openSUSE_Tumbleweed"
+				if strings.Contains(m["ID"], "leap") {
+					v, _, _ := strings.Cut(m["VERSION_ID"], ".")
+					u = "https://codecs.opensuse.org/openh264/openSUSE_Leap_" + v
+				}
+				if _, err := esegui(c.Amb, 5*time.Minute, "zypper", "--non-interactive", "addrepo", "-f", u, "repo-openh264"); err != nil {
+					return err
+				}
+				_, err := esegui(c.Amb, tempoGestore, "zypper", "--non-interactive", "--gpg-auto-import-keys", "refresh", "repo-openh264")
+				return err
+			}
+		case d.rhel(c):
+			if !adesso[fileCiscoEpel] {
+				// il deposito Cisco per EPEL: nessun pacchetto lo configura (epel-release 10 porta solo
+				// epel ed epel-testing, `[M]` 30 set). Firmato con la chiave di EPEL, che c'è già
+				// (EPEL viene prima: è un deposito di REMOTIX anche lui, su Alma)
+				f := c.Amb.P(fileCiscoEpel)
+				if err := os.WriteFile(f+".remotix", []byte(ContenutoCiscoEpel(d.majorVersione(c))), 0o644); err != nil {
+					return err
+				}
+				if err := os.Rename(f+".remotix", f); err != nil {
+					return err
+				}
+				if err := importaChiavi(c, "epel-release"); err != nil {
+					return err
+				}
+			}
+		default:
+			if !adesso["fedora-cisco-openh264"] {
+				return d.accendiRepo(c, "fedora-cisco-openh264", true)
+			}
+		}
 	case "packman":
 		if !adesso["packman"] {
 			m, _ := OsRelease(c.Amb)
@@ -472,9 +581,34 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 		}
 		return d.togliArrivati(c, p)
 	case "rpmfusion":
-		if adesso["rpmfusion-free-release"] && !p.Stato["rpmfusion-free-release"] {
-			if err := (&gestoreDnf{c.Amb}).Togli([]string{"rpmfusion-free-release"}, true); err != nil {
-				return err
+		// prima nonfree (chiede free), poi free
+		for _, nome := range []string{"rpmfusion-nonfree-release", "rpmfusion-free-release"} {
+			if adesso[nome] && !p.Stato[nome] {
+				if err := (&gestoreDnf{c.Amb}).Togli([]string{nome}, true); err != nil {
+					return err
+				}
+			}
+		}
+		return d.togliArrivati(c, p)
+	case "openh264":
+		switch {
+		case c.Amb.Famiglia == "suse":
+			if adesso["repo-openh264"] && !p.Stato["repo-openh264"] {
+				if _, err := esegui(c.Amb, 5*time.Minute, "zypper", "--non-interactive", "removerepo", "repo-openh264"); err != nil {
+					return err
+				}
+			}
+		case d.rhel(c):
+			if adesso[fileCiscoEpel] && !p.Stato[fileCiscoEpel] {
+				if err := os.Remove(c.Amb.P(fileCiscoEpel)); err != nil && !os.IsNotExist(err) {
+					return err
+				}
+			}
+		default:
+			if adesso["fedora-cisco-openh264"] && !p.Stato["fedora-cisco-openh264"] {
+				if err := d.accendiRepo(c, "fedora-cisco-openh264", false); err != nil {
+					return err
+				}
 			}
 		}
 		return d.togliArrivati(c, p)
@@ -594,8 +728,9 @@ func (d *deposito) togliArrivati(c *Contesto, p primaDeposito) error {
 		case prima[x]:
 		case strings.HasPrefix(x, "gpg-pubkey-"):
 			chiavi = append(chiavi, x) // [M] 30 set: zypper --gpg-auto-import-keys importa quella di Packman
-		case d.tipo == "packman":
-			// Packman non porta pacchetti da sé: quel che c'è di nuovo l'ha portato altro
+		case d.tipo == "packman" || (d.tipo == "openh264" && c.Amb.Famiglia == "suse"):
+			// Packman (e il deposito OpenH264 di openSUSE) non porta pacchetti da sé: quel che c'è di
+			// nuovo l'ha portato altro, e zypper non è gestoreDnf
 		default:
 			nuovi = append(nuovi, x)
 		}

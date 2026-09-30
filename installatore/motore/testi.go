@@ -36,7 +36,8 @@ var testi = map[string]Testo{
 	"cond.componente":       {"l'installatore aggiunge «%s», che il desktop di serie non porta", "the installer adds «%s», which the stock desktop does not bring"},
 	"cond.carattere":        {"manca un carattere scalabile: senza, labwc muore (labwc #2525)", "no scalable font: without one, labwc dies (labwc #2525)"},
 	"cond.deposito_desktop": {"%s viene da %s", "%s comes from %s"},
-	"cond.deposito_h264":    {"H.264 sulla scheda (e il ripiego software) solo con %s", "H.264 on the card (and the software fallback) only with %s"},
+	"cond.deposito_h264":    {"H.264 sulla scheda solo col driver di %s", "H.264 on the card only with the driver from %s"},
+	"cond.deposito_base":    {"le librerie del video di REMOTIX (OpenH264, SVT-AV1) solo con %s", "REMOTIX's video libraries (OpenH264, SVT-AV1) only with %s"},
 	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API"},
 	"pacchetti.trattenuti":  {"i pacchetti nuovi non ci sono più, tranne quelli che restano perché li chiede chi resta: %s", "the new packages are gone, except those kept because something that stays needs them: %s"},
 	"pacchetti.chiesto_da":  {"lo chiede %s", "needed by %s"},
@@ -100,15 +101,17 @@ var testi = map[string]Testo{
 	"az.deposito":                   {"aggiungere l'archivio %s", "add the %s archive"},
 	"az.deposito.fa.archivio":       {"la chiave dell'archivio e la sorgente che la nomina: apt Signed-By + un pin che dall'archivio prende solo i pacchetti di REMOTIX; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman un blocco [remotix] con SigLevel Required e la chiave in pacman-key", "the archive key (chain B) and the source naming it: apt Signed-By + a pin taking only REMOTIX packages from the archive; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman a [remotix] block with SigLevel Required and the key in pacman-key"},
 	"az.deposito.fa.epel":           {"dnf install epel-release, e il deposito CRB acceso", "dnf install epel-release, and the CRB repository enabled"},
-	"az.deposito.fa.rpmfusion":      {"dnf install del pacchetto rpmfusion-free-release della versione della macchina", "dnf install of the rpmfusion-free-release package for the machine's version"},
+	"az.deposito.fa.rpmfusion":      {"dnf install del pacchetto rpmfusion-free-release della versione della macchina (e rpmfusion-nonfree-release se la scheda Intel lo chiede)", "dnf install of the rpmfusion-free-release package for the machine's version (and rpmfusion-nonfree-release if the Intel card needs it)"},
+	"az.deposito.fa.openh264":       {"il deposito di OpenH264 di Cisco: acceso (Fedora), scritto in /etc/yum.repos.d con la chiave di EPEL (Alma), zypper addrepo (openSUSE)", "Cisco's OpenH264 repository: enabled (Fedora), written in /etc/yum.repos.d with the EPEL key (Alma), zypper addrepo (openSUSE)"},
 	"az.deposito.fa.packman":        {"zypper addrepo di Packman (priorità 90) e refresh con la sua chiave", "zypper addrepo of Packman (priority 90) and refresh with its key"},
 	"az.deposito.verifica":          {"l'archivio configurato", "the archive configured"},
 	"az.deposito.annulla.archivio":  {"si tolgono i file (e la chiave da rpm o da pacman-key; il blocco da pacman.conf)", "the files are removed (and the key from rpm or pacman-key; the block from pacman.conf)"},
 	"az.deposito.annulla.epel":      {"si toglie epel-release e CRB torna com'era; i pacchetti presi da lì restano (dichiarati)", "epel-release is removed and CRB goes back; packages taken from it stay (declared)"},
-	"az.deposito.annulla.rpmfusion": {"si toglie rpmfusion-free-release; i pacchetti presi da lì restano (dichiarati)", "rpmfusion-free-release is removed; packages taken from it stay (declared)"},
+	"az.deposito.annulla.rpmfusion": {"si tolgono rpmfusion-free-release e rpmfusion-nonfree-release messi da noi; i pacchetti presi da lì restano (dichiarati)", "the rpmfusion-free-release and rpmfusion-nonfree-release we added are removed; packages taken from it stay (declared)"},
+	"az.deposito.annulla.openh264":  {"il deposito torna com'era (spento, o il file tolto); i pacchetti presi da lì restano (dichiarati)", "the repository goes back as it was (disabled, or the file removed); packages taken from it stay (declared)"},
 	"az.deposito.annulla.packman":   {"zypper removerepo packman; i pacchetti presi da lì e la chiave restano (dichiarati)", "zypper removerepo packman; packages taken from it and the key stay (declared)"},
 	"ind.deposito":                  {"deposito %s tolto: i pacchetti presi da lì e gli aggiornamenti restano", "repository %s removed: packages taken from it and upgrades stay"},
-	"consenso.deposito":             {"Aggiungere l'archivio di terzi %s (per H.264 o per il desktop)? (decisione D5)", "Add the third-party archive %s (for H.264 or for the desktop)? (decision D5)"},
+	"consenso.deposito":             {"Aggiungere l'archivio di terzi %s (per il video o per il desktop)? (decisione D5)", "Add the third-party archive %s (for video or for the desktop)? (decision D5)"},
 	"az.sessioni":                   {"chiudere le sessioni REMOTIX ancora aperte (%d: %s)", "close the REMOTIX sessions still open (%d: %s)"},
 	"az.sessioni.fa":                {"logind TerminateSession sulle sole sessioni col servizio PAM «remotix»: le sessioni locali o ssh delle stesse persone restano", "logind TerminateSession on the sessions with PAM service «remotix» only: the same people's local or ssh sessions stay"},
 	"az.sessioni.verifica":          {"nessuna di quelle sessioni è ancora aperta", "none of those sessions is still open"},
@@ -156,7 +159,7 @@ var testi = map[string]Testo{
         guarda la macchina, SENZA TOCCARE NIENTE, e dice che cosa REMOTIX ci può fare
   remotix-install piano     [--uscita FILE] [--utente NOME] [--apri-firewall] [--json]
         prepara un piano di PROVA del motore
-  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,openh264,rpmfusion,packman]
                             [--apri-firewall]
         prepara il piano dell'INSTALLAZIONE di REMOTIX
   remotix-install disinstalla [--purge]   prepara il piano della disinstallazione (dal registro)
@@ -187,7 +190,7 @@ var testi = map[string]Testo{
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (solo se manca un desktop)
         consenso.firewall = si|no
-        consenso.deposito.rpmfusion|packman|epel = si|no
+        consenso.deposito.rpmfusion|packman|epel|openh264 = si|no
         (ogni consenso che su quella macchina serve va dato, «si» o «no»)
 
   opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE (dato a mano),
@@ -199,7 +202,7 @@ var testi = map[string]Testo{
         examines the machine, WITHOUT TOUCHING ANYTHING, and says what REMOTIX can do on it
   remotix-install piano     [--uscita FILE] [--utente NAME] [--apri-firewall] [--json]
         prepares an engine TEST plan
-  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,openh264,rpmfusion,packman]
                             [--apri-firewall]
         prepares the REMOTIX INSTALLATION plan
   remotix-install disinstalla [--purge]   prepares the uninstallation plan (from the log)
@@ -230,7 +233,7 @@ var testi = map[string]Testo{
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (only if a desktop is missing)
         consenso.firewall = si|no
-        consenso.deposito.rpmfusion|packman|epel = si|no
+        consenso.deposito.rpmfusion|packman|epel|openh264 = si|no
         (every consent that machine needs must be given, «si» or «no»)
 
   common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE (given by hand),
