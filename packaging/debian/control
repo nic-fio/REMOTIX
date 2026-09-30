@@ -46,14 +46,13 @@ Depends: ${shlibs:Depends},
 #     avvia; wlr-randr per la cura di LXQt; XFCE 4.20 sotto labwc vuole Xwayland);
 #     ⚠ su una macchina solo GNOME o KDE si installano lo stesso: nei metadati di
 #     un .deb non c'e' «solo se c'e' XFCE».  Un pacchetto per desktop e' da T4;
-#   · ${remotix:Recommends}: su Ubuntu la sessione GNOME «vanilla» (gnome-session),
-#     SOLO se la macchina non ha gia' un altro desktop — vedi debian/rules.
-#     Dipende da D8 (fasi/17 §10), non ancora decisa.
+#   ⛔ NON gnome-session (la sessione «vanilla» di universe): D8 (DECISIONI
+#     §10.20) — su Ubuntu REMOTIX avvia la sessione DI SERIE, `ubuntu`, che
+#     c'e' gia' (ubuntu-session); il criterio sta in sessione.c, sessione_gnome().
 Recommends: va-driver-all | va-driver,
             labwc,
             wlr-randr,
-            xwayland,
-            ${remotix:Recommends}
+            xwayland
 Static-Built-Using: ngtcp2 (= 1.25.0), nghttp3 (= 1.18.0)
 Description: il desktop Linux nel browser, per piu' utenti
  REMOTIX mostra il desktop di un utente (GNOME, KDE Plasma, Xfce, LXQt) in un

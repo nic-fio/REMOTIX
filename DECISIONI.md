@@ -6060,6 +6060,35 @@ TUI, nel terminale, con una libreria Go dello stesso programma. ⚠ Da verificar
 Linux usa le librerie grafiche del sistema (Wayland, X11, EGL) — il motore deve continuare a partire anche su
 una macchina senza desktop (dove si usa la TUI).
 
+### 10.20 ✅ D5, D6, D8, D13 — parole dell'utente (30 set 2026)
+
+- **D5**: *«si chiede il consenso e si installa. Se l'utente nega il consenso allora REMOTIX non si installa»* ⇒
+  dove serve un archivio esterno per la codifica (RPM Fusion, Packman, EPEL), il consenso è richiesto; un «no» ⇒
+  BLOCCATA, niente toccato.
+- **D6**: *«l'installer apre la porta che l'utente ha scelto sul firewall (per il router ovviamente non può essere
+  REMOTIX a pensarci, a meno che non vogliamo supportare UPnP)»* ⇒ la porta si apre sul firewall della macchina;
+  il router resta all'amministratore (UPnP: vedi la nota sotto).
+- **D8**: *«l'utente vede il desktop originale di Ubuntu (o altrimenti saremo costretti a implementare un nostro
+  session manager)»* ⇒ su Ubuntu la sessione **`ubuntu`** (quella che si vede davanti al monitor), non il GNOME
+  «vanilla»: REMOTIX avvia la sessione GNOME **di serie della distribuzione**; niente `gnome-session` in più.
+- **D13**: *«di base sì, ma potremo farci dei piccoli miglioramenti»* ⇒ il prototipo è la base della GUI.
+
+⚠ Nota su UPnP (D6): aprire da sé una porta sul router renderebbe il server raggiungibile da internet senza che
+l'amministratore l'abbia deciso, e molti router lo tengono spento per sicurezza ⇒ proposta: **niente UPnP**; il
+benvenuto dice quale porta inoltrare sul router, TCP e UDP.
+
+### 10.21 ✅ D11 semplificata: una chiave sola, quella dell'archivio
+
+Parole dell'utente (30 set 2026): *«stiamo complicando le cose. L'installer originale che l'utente scarica avrà
+un codice sha256 che l'utente potrà controllare … per i pacchetti l'installer usa il package manager del
+server»*; e *«i dati dell'installer restano su un nostro repository, così siamo al sicuro»*. ⇒
+- **una sola chiave**: quella che firma i pacchetti e l'archivio di REMOTIX — indispensabile, perché apt, dnf,
+  zypper e pacman rifiutano un archivio di terzi non firmato;
+- **via la seconda catena** (motore e catalogo firmati a parte, sottochiavi, revoche): l'installatore scaricato
+  a mano si verifica con lo **sha256** pubblicato (HTTPS); il **catalogo** viaggia dentro il pacchetto
+  `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
+- resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
+
 ---
 
 ## Come si tiene questo documento

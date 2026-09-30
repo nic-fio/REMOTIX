@@ -77,15 +77,21 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		}
 		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", nomi))
 	case o.Pacchetto != "":
-		abs, err := filepath.Abs(o.Pacchetto)
-		if err != nil {
-			return nil, err
+		// uno o più file, separati da virgola, in UNA transazione (T6: remotix e remotix-selinux,
+		// che remotix chiede dove c'è la politica «targeted»)
+		var file, shas []string
+		for _, f := range dividiVirgole(o.Pacchetto) {
+			abs, err := filepath.Abs(f)
+			if err != nil {
+				return nil, err
+			}
+			sha, err := Sha256File(amb.P(abs))
+			if err != nil || sha == "" {
+				return nil, fmt.Errorf("%s: %v", abs, err)
+			}
+			file, shas = append(file, abs), append(shas, sha)
 		}
-		sha, err := Sha256File(amb.P(abs))
-		if err != nil || sha == "" {
-			return nil, fmt.Errorf("%s: %v", abs, err)
-		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", abs, sha, ""))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", strings.Join(file, ","), strings.Join(shas, ","), ""))
 	default:
 		return nil, fmt.Errorf("serve l'archivio di REMOTIX (--archivio URL) o un pacchetto (--pacchetto FILE)")
 	}
@@ -127,10 +133,10 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	}
 	pn.Dichiarate = append(pn.Dichiarate, T("az.cintura.dichiarata"))
 	switch g := amb.Firewall.Nome(); {
-	case !o.ApriFirewall && g == "firewalld":
+	case !o.ApriFirewall && (g == "firewalld" || g == "ufw"):
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: AVVISO, Testo: T("np.firewall_no", ps)})
 	case !o.ApriFirewall:
-	case g == "firewalld":
+	case g == "firewalld" || g == "ufw":
 		a := PianoFirewall("firewall", ps)
 		pn.Azioni = append(pn.Azioni, a)
 		pn.Consensi = append(pn.Consensi, a.Consenso)

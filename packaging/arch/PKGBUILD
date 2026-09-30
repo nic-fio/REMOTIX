@@ -169,8 +169,8 @@ package() {
 		>"$pkgdir/usr/share/remotix/incorporate.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
-	# ⚠ D3 APERTA: la pila di Arch porta con se' il pam_faillock di pambase
-	#   (dentro system-auth): non lo aggiungiamo ne' lo togliamo (§4.3).
+	# ⭐ D3 chiusa (DECISIONI §10.18): il file e' /etc/pam.d/sshd di Arch (system-remote-login)
+	#   piu' root escluso; il pam_faillock di pambase vale come per ssh (§4.3).
 	install -Dm644 "$s/remotix.pam.arch" "$pkgdir/etc/pam.d/remotix"
 	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
 	# ⭐ il permesso della cattura di KWin: IDENTICO, byte per byte, a quello

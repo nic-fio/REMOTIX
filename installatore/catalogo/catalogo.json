@@ -1,7 +1,7 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.4",
-  "sequenza": 4,
+  "versione": "2026.09.30.6",
+  "sequenza": 6,
   "emesso": "2026-09-30",
   "scadenza": "2027-03-31",
   "motore_minimo": "0.1.0",
@@ -125,11 +125,8 @@
       "desktop": {
         "gnome": {
           "supportato": true,
-          "componenti": [
-            "gnome-session"
-          ],
           "note": [
-            "GNOME 50 (§5.1); quale GNOME vede chi si collega è la decisione D8, aperta"
+            "GNOME 50 (§5.1); chi si collega vede la sessione GNOME di serie della distribuzione, su Ubuntu la sessione «ubuntu» (D8)"
           ]
         },
         "kde": {

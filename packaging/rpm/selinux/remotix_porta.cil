@@ -1,0 +1,7 @@
+; remotix_porta.cil — la porta di REMOTIX, 7447 TCP e UDP, col tipo remotix_port_t
+; (dichiarato in remotix.te).  Un modulo a parte perche' `portcon` non si puo' scrivere in un
+; modulo .te; in CIL si', e si toglie col modulo (niente `semanage port` negli scriptlet).
+; ⚠ Con una porta diversa (REMOTIX_PORTA in /etc/remotix/remotix.conf.d/) l'amministratore la
+;   dichiara lui:  semanage port -a -t remotix_port_t -p tcp N  (e -p udp N).
+(portcon tcp 7447 (system_u object_r remotix_port_t ((s0) (s0))))
+(portcon udp 7447 (system_u object_r remotix_port_t ((s0) (s0))))

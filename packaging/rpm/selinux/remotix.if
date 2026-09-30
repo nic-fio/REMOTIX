@@ -1,0 +1,19 @@
+## <summary>REMOTIX: il desktop di questa macchina nel browser.</summary>
+
+########################################
+## <summary>
+##	Passare al dominio del servizio REMOTIX.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Il dominio a cui si permette.
+##	</summary>
+## </param>
+#
+interface(`remotix_domtrans',`
+	gen_require(`
+		type remotix_t, remotix_exec_t;
+	')
+
+	domtrans_pattern($1, remotix_exec_t, remotix_t)
+')
