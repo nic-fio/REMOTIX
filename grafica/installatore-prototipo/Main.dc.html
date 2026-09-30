@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Controllo della macchina</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDF4;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#0B1433}
+a{color:#0A5FE0}a:hover{color:#0847A8}
+</style>
+</helmet>
+<div style="width: 1120px; height: 760px; box-sizing: border-box; background: #F5F7FB; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; border: 1px solid #D5DCE8">
+<header style="height: 64px; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 16px; background: #FFFFFF; border-bottom: 1px solid #DCE3EE">
+<img src="/_blob/c470eee235982d82c8186b0934d711a5" alt="REMOTIX" style="height: 34px; width: auto">
+<div style="font-family: Sora, sans-serif; font-size: 17px; font-weight: 600; color: #0B1433">Installazione</div>
+<div style="flex-grow: 1"></div>
+<div style="font-size: 13px; color: #4A5570">Fedora Linux 44 · Workstation · GNOME 50</div>
+</header>
+<div style="flex-grow: 1; display: flex; min-height: 0">
+<nav aria-label="Passi" style="width: 232px; box-sizing: border-box; padding: 28px 20px; display: flex; flex-direction: column; gap: 6px; background: #EEF2F8; border-right: 1px solid #DCE3EE">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: #FFFFFF">
+<div style="width: 26px; height: 26px; border-radius: 13px; background: #0A5FE0; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center">1</div>
+<div style="font-size: 15px; font-weight: 600">Controllo</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+<div style="width: 26px; height: 26px; border-radius: 13px; border: 1.5px solid #8C97AD; color: #4A5570; font-size: 13px; display: flex; align-items: center; justify-content: center; box-sizing: border-box">2</div>
+<div style="font-size: 15px; color: #4A5570">Scelte</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+<div style="width: 26px; height: 26px; border-radius: 13px; border: 1.5px solid #8C97AD; color: #4A5570; font-size: 13px; display: flex; align-items: center; justify-content: center; box-sizing: border-box">3</div>
+<div style="font-size: 15px; color: #4A5570">Piano</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+<div style="width: 26px; height: 26px; border-radius: 13px; border: 1.5px solid #8C97AD; color: #4A5570; font-size: 13px; display: flex; align-items: center; justify-content: center; box-sizing: border-box">4</div>
+<div style="font-size: 15px; color: #4A5570">Installazione</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+<div style="width: 26px; height: 26px; border-radius: 13px; border: 1.5px solid #8C97AD; color: #4A5570; font-size: 13px; display: flex; align-items: center; justify-content: center; box-sizing: border-box">5</div>
+<div style="font-size: 15px; color: #4A5570">Pronto</div>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="font-size: 12px; line-height: 1.5; color: #4A5570">Fino al passo 3 non si tocca niente: solo lettura.</div>
+</nav>
+<main style="flex-grow: 1; box-sizing: border-box; padding: 28px 36px; display: flex; flex-direction: column; gap: 18px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 26px; font-weight: 600">Ho controllato questa macchina</h1>
+<p style="margin: 0; font-size: 15px; color: #4A5570">Niente è stato modificato. Ecco che cosa ho trovato.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 12px; background: #FFF4DF; border: 1px solid #F1D39A">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A4A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 15px; font-weight: 600; color: #5C3800">REMOTIX si può installare, a una condizione</div>
+<div style="font-size: 14px; color: #5C3800">Per il video serve un componente che Fedora non include. Te lo chiedo al passo successivo.</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #DCE3EE; border-radius: 12px; overflow: hidden">
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Sistema</div>
+<div style="font-size: 14px">Fedora 44: REMOTIX è provato su questa versione</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Desktop</div>
+<div style="font-size: 14px">GNOME: supportato</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Scheda grafica</div>
+<div style="font-size: 14px">Intel UHD Graphics 770: la userò per il video</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6; background: #FFFBF3">
+<div style="font-size: 14px; color: #4A5570">Video</div>
+<div style="font-size: 14px">Per trasmettere il video serve un componente che Fedora non include</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #FFF1D6; color: #6B4100">Serve il tuo consenso</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Accesso</div>
+<div style="font-size: 14px">Si entrerà con nome e password di questa macchina</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Protezione del sistema</div>
+<div style="font-size: 14px">Attiva, e compatibile con REMOTIX</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Firewall</div>
+<div style="font-size: 14px">Lascia già passare i collegamenti di REMOTIX</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Porta di collegamento</div>
+<div style="font-size: 14px">La 7447 è libera</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #E7F6EE; color: #0F6B40">A posto</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #EEF1F6">
+<div style="font-size: 14px; color: #4A5570">Permessi</div>
+<div style="font-size: 14px">A una persona manca il permesso di usare la scheda grafica</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #EAF1FE; color: #0A4FC0">Lo sistemo io</div>
+</div>
+<div style="display: grid; grid-template-columns: 190px minmax(0, 1fr) 180px; gap: 16px; align-items: center; padding: 11px 18px">
+<div style="font-size: 14px; color: #4A5570">Audio</div>
+<div style="font-size: 14px">C'è; si potrà provare solo al primo collegamento</div>
+<div style="justify-self: end; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #EEF0F4; color: #3E4658">Si prova dopo</div>
+</div>
+</div>
+<details style="font-size: 14px"><summary style="cursor: pointer; color: #0A5FE0">Mostra i dettagli tecnici</summary><div style="margin-top: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: #4A5570">Fedora Linux 44 Workstation · GNOME 50.5 · i915 /dev/dri/renderD128 · RX-H264-003 (VA-API: EncSlice H.264 assente) · PAM password-auth · SELinux enforcing · firewalld FedoraWorkstation · render: 1 mancante · PipeWire 1.6</div></details>
+</main>
+</div>
+<footer style="height: 76px; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border-top: 1px solid #DCE3EE">
+<a href="#" style="height: 44px; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; border-radius: 10px; border: 1px solid #C7D0DF; color: #0B1433; font-size: 15px; font-weight: 500; text-decoration: none">Annulla</a>
+<div style="flex-grow: 1"></div>
+<a href="Scelte.dc.html" style="height: 44px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; border-radius: 10px; background: #0A5FE0; color: #FFFFFF; font-size: 15px; font-weight: 600; text-decoration: none">Avanti</a>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1120,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
