@@ -18,8 +18,10 @@ tutte le dipendenze di REMOTIX diventano permissive (MIT, BSD, Apache).*
 Il cambio entra **solo** se:
 - la **suite funzionale della fase 15** completa è verde sulle **4 scatole** (GNOME, KDE, XFCE, LXQt) **in
   parallelo**, coi browser veri, in 4K;
-- la **campagna della fase 16** (Intel, poi Radeon; una configurazione alla volta — le prestazioni non si
-  misurano in parallelo) dà ritardo, fotogrammi e qualità **uguali** a quelli misurati con ffmpeg (`fasi/16`);
+- ~~la campagna della fase 16~~ — ⛔ **tolta** dall'utente il 30 set: *«eliminiamo i test di performance, sono
+  troppo dipendenti dall'hardware»*; resta (🔸 proposta, da confermare) il **confronto relativo** del codificatore
+  sulla stessa macchina e sulle stesse immagini, vecchio contro nuovo: tempo per fotogramma, dimensione, qualità
+  (PSNR/SSIM) — il nuovo non dev'essere peggio del vecchio;
 - il flusso che arriva al browser è dello stesso tipo di oggi (profili, livelli, intestazioni): la pagina non
   cambia.
 Se non ci arriva: resta ffmpeg, e la licenza si riapre.
