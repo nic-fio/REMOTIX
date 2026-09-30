@@ -6035,6 +6035,18 @@ avvisare gli utenti collegati a un sistema. Ma questo è un progetto a parte che
 REMOTIX niente avvisi (§10.16). Nota per quel progetto: le sessioni REMOTIX sono desktop normali, quindi un
 avviso sul desktop dell'utente le raggiungerebbe senza che REMOTIX ne sappia niente.
 
+### 10.18 ✅ D3: REMOTIX rispecchia l'autenticazione del sistema (PAM), blocco dei conti compreso
+
+Parola dell'utente (30 set 2026): *«non voglio che REMOTIX si disallinei rispetto all'autenticazione di default
+del sistema, deve rispecchiare PAM»*. ⇒ Il file PAM di REMOTIX usa **la stessa pila dell'accesso remoto
+standard** della distribuzione (quella di ssh: `system-remote-login` su Arch, `password-auth` + `postlogin` su
+Fedora/Alma, `common-*` su Debian/Ubuntu/openSUSE), con quel che contiene: `pam_faillock` dove la
+distribuzione lo ha (resta il rischio del blocco del conto a distanza, lo stesso di ssh, governato
+dall'amministratore in `/etc/security/faillock.conf`), e **`pam_selinux` su Fedora/Alma come ssh** ⇒ il rifiuto
+SELinux del figlio si cura con una **regola SELinux di REMOTIX** (come Cockpit), non togliendo la riga (T6). Il
+ban per indirizzo di REMOTIX (§1.9: 3 fallimenti in 5 minuti ⇒ 12 ore) resta, in aggiunta. Unica differenza
+voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password).
+
 ---
 
 ## Come si tiene questo documento
