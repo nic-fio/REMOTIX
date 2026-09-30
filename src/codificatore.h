@@ -36,6 +36,17 @@
  *    GPU, e il costo del caricamento si misura a parte — vedi
  *    `us_caricamento` in `CodificatoreFotogramma`.
  *
+ * ⭐⭐ **FASE 18 (30 set 2026, `DECISIONI.md` §10.25): la scheda NON passa piu'
+ *      da libavcodec.**  `h264_vaapi` e `hevc_vaapi` restano i NOMI della
+ *      strada della scheda, ma sotto c'e' `src/vadiretta.c` — libva usata
+ *      direttamente, con le intestazioni del flusso scritte da REMOTIX
+ *      (`src/scrittore_bit.c`).  Il flusso e' dello stesso tipo di prima:
+ *      `[M]` sulla copia zero vecchio e nuovo danno gli stessi byte e lo stesso
+ *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria» carica i
+ *      pixel cosi' come sono e li converte con la VPP della scheda: niente
+ *      libswscale.  ⚠ Il ripiego in SOFTWARE e' ancora libavcodec, dietro un
+ *      confine dichiarato in `codificatore.c`, in attesa della linea del ripiego.
+ *
  * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
  *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
  *    **47** nominano RDP/FreeRDP, e *HEVC*, *265*, *10 bit* compaiono **zero**

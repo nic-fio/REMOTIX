@@ -80,7 +80,8 @@ NOME    := remotix
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
-            sessione.c cattura.c mutter.c codificatore.c audio.c suono.c \
+            sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
+            scrittore_bit.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
             appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
 OGGETTI  := $(SORGENTI:.c=.o)
@@ -172,8 +173,14 @@ override CFLAGS += $(F2_CFLAGS)
 #   `libavutil-dev`.  ⛔ La riga sta qui lo stesso: una dipendenza che c'e'
 #   perche' un'altra se l'e' portata dietro sparisce il giorno in cui quell'altra
 #   cambia idea, ed e' il difetto che questo elenco esiste per non avere.
-F3_CFLAGS := $(shell pkg-config --cflags libva)
-F3_LIBS   := $(shell pkg-config --libs   libva)
+# ⭐⭐ FASE 18 (30 set 2026): libva e' diventata LA strada della scheda —
+#    `src/vadiretta.c` la usa per tutto (configurazione, parametri, packed
+#    header, buffer codificati), e `libva-drm` apre il nodo (`vaGetDisplayDRM`)
+#    al posto di `av_hwdevice_ctx_create`.  libavcodec resta SOLO per il
+#    ripiego in software (`codificatore.c`, dietro il confine), finche' la
+#    linea del ripiego non lo sostituisce.
+F3_CFLAGS := $(shell pkg-config --cflags libva libva-drm)
+F3_LIBS   := $(shell pkg-config --libs   libva libva-drm)
 override CFLAGS += $(F3_CFLAGS)
 
 # ffmpeg: le intestazioni da pkg-config (fase 17, T1).  Su Debian e Ubuntu
@@ -396,7 +403,7 @@ pulisci:
 #    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
 #       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
 #       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
-MINIMI := libavcodec:61.13.100 libavutil:59 libswscale:8 openssl:3.5.0 \
+MINIMI := libavcodec:61.13.100 libavutil:59 libswscale:8 openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
           libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3
@@ -480,7 +487,10 @@ sentinella.o:     sentinella.h registro.h
 ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
-codificatore.o:   codificatore.h registro.h
+codificatore.o:   codificatore.h registro.h vadiretta.h scrittore_bit.h
+# ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni.
+vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
+scrittore_bit.o:  scrittore_bit.h
 
 # ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del
 #   prodotto, e l'innesto in ngtcp2 non ha niente da far suonare.

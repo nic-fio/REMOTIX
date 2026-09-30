@@ -9,9 +9,32 @@
  *    fotogramma che dalla cattura va alla GPU senza passare per la memoria di
  *    sistema — resta alla fase 8, e qui il caricamento si paga e **si misura a
  *    parte** (`us_caricamento`), perche' si veda quanto varra' toglierlo.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ FASE 18 (30 set 2026, `DECISIONI.md` §10.25) — LE DUE META' DEL FILE
+ *
+ * Da oggi il file ha DUE strade che non condividono una riga di codec:
+ *
+ *   LA SCHEDA     `vadiretta.c`: libva usata direttamente — parametri,
+ *                 intestazioni scritte da noi, buffer codificati.  ⛔ Niente
+ *                 libavcodec, niente libswscale: la conversione di colore la
+ *                 fa la VPP della scheda anche sulla strada «dalla memoria».
+ *   IL RIPIEGO    in SOFTWARE: `libx264`/`libx265`/`libsvtav1` via libavcodec,
+ *                 come ieri, chiuso dietro il CONFINE marcato «RIPIEGO
+ *                 SOFTWARE» qui sotto — le funzioni `sw_*` e la struttura
+ *                 `RipiegoSoftware`.  ⚠ E' la parte che la linea del ripiego
+ *                 sostituira' con OpenH264 e SVT-AV1 diretti: chi la rifa'
+ *                 tocca SOLO quelle, e `comprimi_comune()` non se ne accorge.
+ *
+ * Quel che sta FUORI dalle due meta' — il tetto dei 16 MiB, la scala della
+ * degradazione e la risalita, la forma dei byte, la cornice di D-023, il terzo
+ * testimone del bitrate — lavora sui BYTE e vale per tutt'e due.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 #include "codificatore.h"
 #include "registro.h"
+#include "scrittore_bit.h"
+#include "vadiretta.h"
 
 #include <inttypes.h>
 #include <limits.h>
@@ -21,10 +44,8 @@
 #include <string.h>
 #include <time.h>
 
+/* ⛔ CONFINE — questi tre include servono SOLO al ripiego in software. */
 #include <libavcodec/avcodec.h>
-#include <libavcodec/bsf.h>
-#include <libavutil/hwcontext.h>
-#include <libavutil/hwcontext_vaapi.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
@@ -462,6 +483,18 @@ typedef struct {
 	bool finito;  /* ⛔ tre esiti, non due: «0» e «non ho potuto leggere» */
 } LettoreBit;
 
+/* ⭐ DOVE STA LA CORNICE nell'SPS (D-023, fase 18): la posizione in bit — nel
+ *    RBSP senza emulazione — del flag di ritaglio (`frame_cropping_flag` in
+ *    H.264, `conformance_window_flag` in HEVC), i quattro scarti se c'erano,
+ *    e il bit dopo.  Serve a `cornice_al_suo_posto()` per riscrivere la testa
+ *    dell'SPS e ricopiare la coda tale e quale. */
+typedef struct {
+	size_t bit_flag;      /* dove sta il flag */
+	size_t bit_dopo;      /* il primo bit dopo il flag e i suoi scarti */
+	bool presente;        /* il flag era 1 */
+	uint32_t sx, dx, su, giu; /* gli scarti letti (0 se il flag era 0) */
+} PosizioneCornice;
+
 static void lb_apri(LettoreBit *l, const uint8_t *dati, size_t byte)
 {
 	l->dati = dati;
@@ -721,7 +754,8 @@ static void salta_liste_scala(LettoreBit *l, int quante)
  *    §1.2.  ⚠ E le unita' del ritaglio dipendono dal sottocampionamento: 4:2:0
  *    conta due pixel per unita' in orizzontale e due in verticale.
  */
-static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessione *c)
+static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
+                           PosizioneCornice *dove)
 {
 	uint8_t *rbsp;
 	size_t n;
@@ -730,6 +764,7 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	uint32_t sotto_l = 2, sotto_a = 2;
 	uint32_t taglio_sx = 0, taglio_dx = 0, taglio_su = 0, taglio_giu = 0;
 	int solo_fotogrammi;
+	size_t bit_flag;
 
 	if (byte < 5)
 		return false;
@@ -798,11 +833,24 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	if (!solo_fotogrammi)
 		(void) lb_bit(&l, 1);              /* mb_adaptive_frame_field_flag */
 	(void) lb_bit(&l, 1);                  /* direct_8x8_inference_flag */
+	bit_flag = l.bit;
 	if (lb_bit(&l, 1)) {                   /* frame_cropping_flag */
 		taglio_sx = lb_ue(&l);
 		taglio_dx = lb_ue(&l);
 		taglio_su = lb_ue(&l);
 		taglio_giu = lb_ue(&l);
+		if (dove)
+			dove->presente = true;
+	} else if (dove) {
+		dove->presente = false;
+	}
+	if (dove) {
+		dove->bit_flag = bit_flag;
+		dove->bit_dopo = l.bit;
+		dove->sx = taglio_sx;
+		dove->dx = taglio_dx;
+		dove->su = taglio_su;
+		dove->giu = taglio_giu;
 	}
 	free(rbsp);
 	if (l.finito)
@@ -864,7 +912,8 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
  *    superiore a quello dichiarato dal client, e **non lo indovina**) e per la
  *    stringa `hev1.2.4.L93.B0` di `VideoDecoder.configure()`.
  */
-static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessione *c)
+static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
+                           PosizioneCornice *dove)
 {
 	if (byte < 4)
 		return false;
@@ -933,6 +982,11 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	 * `[S]` H.265 §7.4.3.2: gli scarti sono in unita' di croma, cioe' vanno
 	 * moltiplicati per SubWidthC/SubHeightC.
 	 */
+	size_t bit_flag = l.bit;
+	if (dove) {
+		memset(dove, 0, sizeof *dove);
+		dove->bit_flag = bit_flag;
+	}
 	if (lb_bit(&l, 1)) {                        /* conformance_window_flag */
 		uint32_t sinistra = lb_ue(&l), destra = lb_ue(&l);
 		uint32_t sopra = lb_ue(&l), sotto = lb_ue(&l);
@@ -940,6 +994,13 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 		uint32_t sub_a = (croma == 1) ? 2 : 1;
 		uint32_t taglio_l = sub_l * (sinistra + destra);
 		uint32_t taglio_a = sub_a * (sopra + sotto);
+		if (dove) {
+			dove->presente = true;
+			dove->sx = sinistra;
+			dove->dx = destra;
+			dove->su = sopra;
+			dove->giu = sotto;
+		}
 		/* ⚠ Un taglio piu' grande dell'immagine non si sottrae: si lascia stare e
 		 *   il chiamante vedra' una misura che non combacia, che e' meglio di un
 		 *   numero che va sotto zero e diventa enorme. */
@@ -948,6 +1009,8 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 		if (taglio_a < altezza)
 			altezza -= taglio_a;
 	}
+	if (dove)
+		dove->bit_dopo = l.bit;
 	uint32_t bit_luma = lb_ue(&l) + 8;
 	uint32_t bit_croma = lb_ue(&l) + 8;
 	free(rbsp);
@@ -1197,19 +1260,43 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
  *    politica sbagliata su otto voci costerebbe piu' righe di quel che rende. */
 #define IMPORTATE_MAX 8
 
+/* ⛔ Quante superfici d'INGRESSO tiene il magazzino della scheda.  Con l'attesa
+ *    a ogni fotogramma ne basterebbe una; se ne tengono quattro per non
+ *    riscrivere quella che la VPP ha appena riempito mentre il driver la sta
+ *    ancora leggendo, su un driver che tenesse un giro in canna. */
+#define SUPERFICI_PRONTE 4
+
+
 /* ⛔ Il numero sta in UN posto solo, con la misura accanto in `codificatore.h`.
  *    ⚠ Non e' un multiplo scelto per prudenza: e' il confine misurato al pixel
  *    fra 1552 (che legge) e 1544 (che non legge). */
 #define ALLINEAMENTO_SCHEDA 64u
 
 
-struct Codificatore {
-	CodificatoreRichiesta richiesta;
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔ CONFINE — IL RIPIEGO SOFTWARE (libavcodec, oggi).  Tutto quel che serve
+ *    per codificare in CPU sta qui dentro e nelle funzioni `sw_*`; il resto
+ *    del file lo vede solo attraverso `sw_apri()`, `sw_chiudi()`,
+ *    `sw_prepara()`, `sw_codifica()`.  La linea del ripiego (OpenH264 +
+ *    SVT-AV1 diretti) sostituisce questa struttura e quelle funzioni.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+typedef struct {
 	const AVCodec *componente;
 	AVCodecContext *ctx;
-	AVFrame *fotogramma;
+	AVFrame *fotogramma;          /* dove swscale scrive, e quel che entra nel codec */
 	AVPacket *pacchetto;
 	struct SwsContext *conversione;
+} RipiegoSoftware;
+
+struct Codificatore {
+	CodificatoreRichiesta richiesta;
+	/* ⛔ Il nome del componente e' un'ETICHETTA di REMOTIX: `h264_vaapi` e
+	 *    `hevc_vaapi` sono la strada della scheda (vadiretta), `libx264`,
+	 *    `libx265` e `libsvtav1` il ripiego.  I due nomi «_vaapi» restano
+	 *    quelli di ieri perche' `figlio.c` e `--prova-codifica` (fase 17) li
+	 *    scrivono e li leggono, e l'installatore li confronta. */
+	char nome_componente[64];
+	RipiegoSoftware sw;
 	CodificatoreConfessione conf;
 	/* ⭐ L'entrypoint SCELTO in `apri_dispositivo()` dopo averlo letto dal
 	 *    driver: e' quel che si chiede a libavcodec (`low_power`) e quel con cui
@@ -1229,10 +1316,11 @@ struct Codificatore {
 	 *    posto dove un giorno non lo sara' piu'.
 	 */
 	bool hardware;
-	AVBufferRef *dispositivo;     /* AVHWDeviceContext (VAAPI) */
-	AVBufferRef *magazzino;       /* AVHWFramesContext: le superfici della GPU */
-	enum AVPixelFormat formato_gpu; /* P010LE a 10 bit, NV12 a 8 */
-	AVFrame *appoggio;            /* il fotogramma in memoria di sistema */
+	VaDispositivo dispositivo;    /* il nodo aperto: display e fornitore */
+	VAProfile profilo_va;         /* la coppia scelta e VERIFICATA in apri_dispositivo() */
+	VAEntrypoint entrypoint_va;
+	VaDiretta *va;                /* il codificatore sulla scheda: NULL in software */
+	VASurfaceID superficie_pronta; /* l'ingresso riempito da prepara_*, da codificare */
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⭐⭐⭐ LA COPIA ZERO — le tre cose che servono, e nient'altro
@@ -1269,11 +1357,20 @@ struct Codificatore {
 	bool prossimo_chiave;         /* ⛔ la prossima e' una chiave VERA */
 	bool prima_codifica_fatta;
 	bool svuotato;                /* ⚠ e' stato messo in scarico: va riaperto */
-	/* ⭐ LA CORNICE (D-023, fase 16): il filtro che riscrive nell'SPS la misura
-	 *    vera quando il driver non ce la scrive.  NULL quando non serve — cioe'
-	 *    quasi sempre; si decide sul primo SPS di ogni contesto. */
-	AVBSFContext *cornice;
+	/* ⭐ LA CORNICE (D-023, fase 16): la finestra di conformita' riscritta
+	 *    nell'SPS quando il driver non ce la scrive.  ⭐ Dalla fase 18 la
+	 *    riscrive `cornice_al_suo_posto()` coi bit, non piu' `hevc_metadata`
+	 *    di libavcodec.  Si decide sul primo SPS di ogni contesto. */
 	bool cornice_decisa;
+	bool cornice_attiva;
+	uint32_t cornice_dx, cornice_dy; /* colonne e righe da tagliare a destra e in basso */
+	/* ⭐ I BYTE CHE SI CONSEGNANO — nostri, per tutt'e due le strade.  Il
+	 *    codificatore (scheda o software) li produce nel suo buffer; qui si
+	 *    copiano (`[M]` una chiave 4K sono ~1 MB: decine di µs) perche' la
+	 *    cornice possa riscriverli e perche' `fuori->dati` non dipenda dalla
+	 *    vita di un pacchetto di libavcodec — il difetto del 23 agosto 2026. */
+	uint8_t *uscita;
+	size_t uscita_capacita, uscita_byte;
 	int qualita_corrente;         /* CRF in vigore, dopo le eventuali ricodifiche */
 	ModoQualita modo_corrente;
 	/* ⭐ LA RISALITA (fase 9).  ⛔ Il pavimento NON sta qui: e' `richiesta.qualita`,
@@ -1294,7 +1391,7 @@ struct Codificatore {
 	uint32_t banda_fotogrammi;
 	uint32_t banda_massimo;       /* il piu' grosso: e' il picco, non la media */
 	int64_t numero;               /* il pts, che qui e' il contatore dei fotogrammi */
-	bool pacchetto_in_mano;
+	bool pacchetto_in_mano;       /* `uscita` e' in mano al chiamante fino a rilascia() */
 };
 
 /* ⚠ Dichiarate qui e definite col resto della copia zero, molto piu' sotto:
@@ -1413,19 +1510,25 @@ static const char *nome_modo(ModoQualita modo)
  *   nomina ne' la GPU ne' il nome.  ⇒ Si guarda quel che DICHIARA: un
  *   codificatore in hardware accetta un formato di superficie, non di pixel.
  */
-static bool componente_e_hardware(const AVCodec *c, enum AVPixelFormat *quale)
+/*
+ * ⭐ FASE 18: la risposta non la da' piu' libavcodec (che non c'e' piu' sulla
+ *    strada della scheda): la danno i DUE NOMI che REMOTIX riserva alla
+ *    scheda, `h264_vaapi` e `hevc_vaapi`.  ⚠ Non e' il `strstr(nome, "_vaapi")`
+ *    che la nota qui sopra vietava: quello indovinava fra i componenti di
+ *    un'altra libreria; questi sono etichette NOSTRE, e una terza (`hevc_qsv`)
+ *    qui non esiste e non si apre — fallisce dicendolo.
+ */
+static bool componente_e_hardware(const char *nome, CodecVideo *codec)
 {
-	const enum AVPixelFormat *elenco = NULL;
-	if (avcodec_get_supported_config(NULL, c, AV_CODEC_CONFIG_PIX_FORMAT, 0,
-	                                 (const void **) &elenco, NULL) < 0 || !elenco)
-		return false;
-	for (int i = 0; elenco[i] != AV_PIX_FMT_NONE; i++) {
-		const AVPixFmtDescriptor *d = av_pix_fmt_desc_get(elenco[i]);
-		if (d && (d->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
-			if (quale)
-				*quale = elenco[i];
-			return true;
-		}
+	if (strcmp(nome, "h264_vaapi") == 0) {
+		if (codec)
+			*codec = CODIFICATORE_H264;
+		return true;
+	}
+	if (strcmp(nome, "hevc_vaapi") == 0) {
+		if (codec)
+			*codec = CODIFICATORE_HEVC;
+		return true;
 	}
 	return false;
 }
@@ -1525,7 +1628,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		di(errore, errore_byte,
 		   "«%s» e' un codificatore in HARDWARE e non e' stato dichiarato nessun "
 		   "nodo di rendering: ⛔ non se ne indovina uno — su questa macchina i due "
-		   "nodi sono di due fornitori diversi [M]", c->componente->name);
+		   "nodi sono di due fornitori diversi [M]", c->nome_componente);
 		return -1;
 	}
 	if (r->potenza == CODIFICATORE_POTENZA_NON_DICHIARATA) {
@@ -1533,26 +1636,19 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		   "«%s»: l'entrypoint non e' stato dichiarato.  ⛔ `EncSliceLP` (bassa "
 		   "potenza) e `EncSlice` (piena) NON sono equivalenti, e il difetto di "
 		   "libavcodec (piena) non si eredita: si chiede PIENA o BASSA",
-		   c->componente->name);
+		   c->nome_componente);
 		return -1;
 	}
 
-	int esito = av_hwdevice_ctx_create(&c->dispositivo, AV_HWDEVICE_TYPE_VAAPI,
-	                                   r->nodo_rendering, NULL, 0);
-	if (esito < 0) {
-		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-		av_strerror(esito, testo, sizeof(testo));
-		di(errore, errore_byte, "VA-API non si e' aperta su «%s»: %s",
-		   r->nodo_rendering, testo);
+	/* ⭐ FASE 18: il nodo lo apre `vadiretta.c` (vaGetDisplayDRM + vaInitialize),
+	 *    non piu' `av_hwdevice_ctx_create`.  Il fornitore lo chiede lui. */
+	if (!vadiretta_apri_dispositivo(r->nodo_rendering, &c->dispositivo, errore, errore_byte))
 		return -1;
-	}
 
-	AVHWDeviceContext *dc = (AVHWDeviceContext *) c->dispositivo->data;
-	AVVAAPIDeviceContext *va = dc->hwctx;
-	const char *fornitore = vaQueryVendorString(va->display);
+	VADisplay display = c->dispositivo.display;
 	snprintf(c->conf.nodo, sizeof(c->conf.nodo), "%s", r->nodo_rendering);
 	snprintf(c->conf.fornitore_va, sizeof(c->conf.fornitore_va), "%s",
-	         fornitore ? fornitore : "(il driver non dice il suo nome)");
+	         c->dispositivo.fornitore);
 
 	VAProfile profilo = profilo_va(r->codec, r->profondita);
 	if (profilo == VAProfileNone) {
@@ -1567,7 +1663,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	                          : VAEntrypointEncSliceLP;
 	char visti[128] = { 0 };
 	EsitoEntrypoint trovato =
-	    entrypoint_c_e(va->display, profilo, voluto, visti, sizeof(visti));
+	    entrypoint_c_e(display, profilo, voluto, visti, sizeof(visti));
 
 	/* ⭐ LA REGOLA DI `LA_DICHIARATA`, e si scrive in tutti e due i rami: la
 	 *    riga dice QUALE entrypoint e PERCHE', con l'elenco del driver accanto.
@@ -1585,7 +1681,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			char visti_lp[128];
 			snprintf(visti_lp, sizeof(visti_lp), "%s", visti[0] ? visti : "nessuno");
 			voluto = VAEntrypointEncSlice;
-			trovato = entrypoint_c_e(va->display, profilo, voluto, visti,
+			trovato = entrypoint_c_e(display, profilo, voluto, visti,
 			                         sizeof(visti));
 			if (trovato == EP_C_E)
 				registro_dice(REG_CODIFICA,
@@ -1604,6 +1700,10 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		c->bassa_potenza_scelta = (voluto == VAEntrypointEncSliceLP);
 		c->conf.bassa_potenza = c->bassa_potenza_scelta;
 		c->conf.bassa_potenza_verificata = true;
+		/* ⭐ La coppia VERIFICATA e' quella che `vadiretta_apri()` usera': non
+		 *    la riscopre, la riceve. */
+		c->profilo_va = profilo;
+		c->entrypoint_va = voluto;
 		break;
 	case EP_NON_C_E:
 		if (r->potenza == CODIFICATORE_POTENZA_LA_DICHIARATA) {
@@ -1668,7 +1768,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			                   { .type = VAConfigAttribMaxPictureHeight },
 			                   /* ⭐ il terzo e' di fase 9: vedi il blocco in fondo */
 			                   { .type = VAConfigAttribRateControl } };
-		VAStatus st = vaGetConfigAttributes(va->display, profilo, voluto, attr, 3);
+		VAStatus st = vaGetConfigAttributes(display, profilo, voluto, attr, 3);
 
 		if (st != VA_STATUS_SUCCESS) {
 			registro_dice(REG_CODIFICA,
@@ -1693,14 +1793,14 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 				   "driver lo dice PRIMA, e si dichiara invece di scoprirlo al primo "
 				   "fotogramma: chi chiama scenda sul ripiego in software e SCRIVA che "
 				   "ci e' sceso",
-				   c->componente->name, r->nodo_rendering, c->conf.fornitore_va,
+				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
 				   attr[0].value, attr[1].value, r->larghezza, r->altezza);
 				return -1;
 			}
 			registro_dice(REG_CODIFICA,
 			              "⭐ il driver dichiara al massimo %ux%u per «%s» su %s, e "
 			              "%ux%u ci sta — CHIESTO al driver, non dedotto dal nome",
-			              attr[0].value, attr[1].value, c->componente->name,
+			              attr[0].value, attr[1].value, c->nome_componente,
 			              c->conf.nodo, r->larghezza, r->altezza);
 		}
 
@@ -1758,9 +1858,9 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			registro_dice(REG_CODIFICA,
 			              "⚠ «%s» (%s), profilo %d, %s: il driver NON DICHIARA nessun "
 			              "modo di controllo del bitrate.  ⛔ E non si conclude che ce ne "
-			              "sia uno solo: da qui in poi libavcodec ASSUME il CQP "
-			              "(«assuming CQP only»), e quell'assunzione e' SUA, non del "
-			              "driver.  Si chiede %s per nome",
+			              "sia uno solo (era la deduzione di libavcodec, «assuming CQP "
+			              "only», e vadiretta NON la fa): si chiede %s per nome, e se "
+			              "il driver lo rifiuta l'apertura fallira' dicendolo",
 			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
 			              voluto == VAEntrypointEncSliceLP ? "EncSliceLP (bassa potenza)"
 			                                               : "EncSlice (piena)",
@@ -1778,7 +1878,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 				   "controllo del bitrate %s (0x%x) e il driver DICHIARA [%s] (0x%x) — "
 				   "⛔ NON c'e'.  Non si ripiega su un altro modo: sarebbe R31 dall'altro "
 				   "capo, cioe' un modo di bitrate scelto da nessuno",
-				   c->componente->name, r->nodo_rendering, c->conf.fornitore_va,
+				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
 				   (int) profilo,
 				   voluto == VAEntrypointEncSliceLP ? "EncSliceLP" : "EncSlice",
 				   modo.nome, modo.va_bit, modi, attr[2].value);
@@ -1794,41 +1894,6 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			                                               : "EncSlice (piena)",
 			              modi, attr[2].value, modo.nome, modo.va_bit);
 		}
-	}
-	return 0;
-}
-
-/*
- * Il magazzino delle superfici: quel che il codificatore in hardware consuma.
- * ⚠ `initial_pool_size` non e' un numero di comodo — e' quante superfici la GPU
- *   tiene pronte.  Con `async_depth=1` ne serve poco piu' di una, e si tiene un
- *   margine dichiarato per il caso in cui il componente ne trattenga qualcuna.
- */
-#define SUPERFICI_PRONTE 8
-
-static int apri_magazzino(Codificatore *c, char *errore, size_t errore_byte)
-{
-	av_buffer_unref(&c->magazzino);
-	c->magazzino = av_hwframe_ctx_alloc(c->dispositivo);
-	if (!c->magazzino) {
-		di(errore, errore_byte, "niente memoria per il magazzino delle superfici");
-		return -1;
-	}
-	AVHWFramesContext *fc = (AVHWFramesContext *) c->magazzino->data;
-	fc->format = AV_PIX_FMT_VAAPI;
-	fc->sw_format = c->formato_gpu;
-	fc->width = (int) c->richiesta.larghezza;
-	fc->height = (int) c->richiesta.altezza;
-	fc->initial_pool_size = SUPERFICI_PRONTE;
-	int esito = av_hwframe_ctx_init(c->magazzino);
-	if (esito < 0) {
-		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-		av_strerror(esito, testo, sizeof(testo));
-		di(errore, errore_byte, "il magazzino %s %ux%u non si e' aperto: %s",
-		   av_get_pix_fmt_name(c->formato_gpu), c->richiesta.larghezza,
-		   c->richiesta.altezza, testo);
-		av_buffer_unref(&c->magazzino);
-		return -1;
 	}
 	return 0;
 }
@@ -1886,35 +1951,54 @@ static int livello_imposto(const Codificatore *c)
 }
 
 /*
- * ⛔ LE OPZIONI DEL CODIFICATORE IN HARDWARE, DECISE INVECE CHE EREDITATE — e
- *    sono la stessa regola di `opzioni_hevc()`, su un altro componente.
+ * ⭐⭐ LA SCHEDA SI APRE QUI — fase 18: era `opzioni_vaapi()`, che passava a
+ *     libavcodec `rc_mode`, `qp`, `async_depth`, `low_power`, `idr_interval`,
+ *     `profile`, `level`.  Ognuna di quelle opzioni aveva una ragione misurata
+ *     e la ragione resta: cambia solo a CHI si dice.
  *
- * ⚠ `[M]` 13 agosto 2026, lette in `ffmpeg -h encoder=hevc_vaapi`: il difetto
- *   di `async_depth` e' **2**.  Nessuno l'aveva chiesto, ed e' esattamente la
- *   stessa forma dei `bframes=4` di x265 — un fotogramma tenuto in canna e' un
- *   fotogramma di ritardo, contro un tetto di 50 ms.  ⛔ Qui vale DOPPIO: il
- *   ciclo di `figlio.c` manda un fotogramma e ne aspetta subito il pacchetto, e
- *   con `async_depth=2` il primo giro tornerebbe `EAGAIN` — cioe' il ramo che
- *   mette il codificatore in scarico e lo fa riaprire, con una chiave in piu' a
- *   ogni fotogramma.
+ *   `rc_mode`       → `VaDirettaRichiesta.banda_*`: zeri = CQP, altrimenti QVBR
+ *                     — chiesto PER NOME anche qui, e `apri_dispositivo()` ha
+ *                     gia' letto dal driver che il modo esiste (R31);
+ *   `qp`            → `.qp`: fisso sotto CQP, fattore di qualita' sotto QVBR
+ *                     (`[M]` 23 agosto 2026: sotto QVBR il QP conta, sotto
+ *                     VBR no — ed e' la ragione per cui il tetto usa QVBR);
+ *   `async_depth=1` → non esiste piu' come opzione: vadiretta ASPETTA la fine
+ *                     di ogni fotogramma per costruzione.  ⚠ `[M]` 13 agosto
+ *                     2026 il difetto di libavcodec era 2, e non lo aveva
+ *                     chiesto nessuno: e' il difetto che non si puo' piu'
+ *                     ereditare, perche' non c'e' piu' nessuno da cui;
+ *   `low_power`     → `.entrypoint`: quello SCELTO e VERIFICATO in
+ *                     `apri_dispositivo()`, con la regola di `LA_DICHIARATA`;
+ *   `idr_interval=0`→ per costruzione: ogni I e' un IDR (`vadiretta.c`);
+ *   `profile`       → `.profilo` (VAProfileH264High / HEVCMain / HEVCMain10);
+ *   `level`         → `.livello_idc` = `livello_imposto()`, 0 = calcolato
+ *                     come lo calcolava ffmpeg.
+ *
+ * ⛔ I DUE RIFIUTI RESTANO IDENTICI: senza perdita e CRF non esistono sulla
+ *    scheda, e non si fingono (`ModoQualita`).
  */
-static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
+static int apri_scheda(Codificatore *c, char *errore, size_t errore_byte)
 {
+	const CodificatoreRichiesta *r = &c->richiesta;
+	VaDirettaRichiesta v;
+	const VaDirettaDichiarazione *d;
+	char errore_va[256] = { 0 };
+
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
-		/* ⛔ Non si finge, come non si finge su SVT-AV1: `hevc_vaapi` non ha un
+		/* ⛔ Non si finge, come non si finge su SVT-AV1: la scheda non ha un
 		 *    modo senza perdita, e `qp=0` NON lo e' — su VA-API lo zero e' il
 		 *    valore che vuol dire «non chiesto» (difetto dell'opzione), che e'
 		 *    la stessa sentinella implicita gia' pagata su `crf=0`. */
 		di(errore, errore_byte,
 		   "in hardware non c'e' un modo senza perdita, e non lo si finge: "
-		   "`hevc_vaapi` ha QP costante, e `qp=0` vuol dire «non chiesto», non "
+		   "la scheda ha QP costante, e `qp=0` vuol dire «non chiesto», non "
 		   "«senza perdita».  ⇒ Il regime senza perdita si chiede a libx265");
 		return -1;
 	}
 	if (c->modo_corrente == CODIFICATORE_QUALITA_CRF) {
 		/* ⛔ CRF e QP non sono la stessa grandezza: vedi `ModoQualita`. */
 		di(errore, errore_byte,
-		   "in hardware non c'e' il CRF: `hevc_vaapi` ha il QP costante.  ⛔ "
+		   "in hardware non c'e' il CRF: la scheda ha il QP costante.  ⛔ "
 		   "Tradurre CRF %d in QP %d e continuare a chiamarlo CRF darebbe due "
 		   "misure sotto la stessa etichetta ⇒ si chieda CODIFICATORE_QUALITA_QP",
 		   c->qualita_corrente, c->qualita_corrente);
@@ -1927,108 +2011,102 @@ static int opzioni_vaapi(Codificatore *c, char *errore, size_t errore_byte)
 		   c->qualita_corrente);
 		return -1;
 	}
-	/* Il modo si chiede PER NOME (`CQP` a tetto spento, `QVBR` a tetto acceso) e
-	 * non si lascia `auto`: `auto` sceglie in base alle altre opzioni, cioe' un
-	 * componente che decide da se' — `CODER.md` §3.9, e in v1 quel che scelse fu
-	 * il CBR (R31).  ⭐ E il driver ha gia' detto, in `apri_dispositivo()`, se
-	 * questo modo ce l'ha: qui non si scopre niente, si conferma. */
-	ModoBitrate modo = modo_bitrate_voluto();
-	if (av_opt_set_int(c->ctx->priv_data, "rc_mode", modo.ffmpeg, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato rc_mode=%s (%d)",
-		   c->componente->name, modo.nome, modo.ffmpeg);
-		return -1;
-	}
-	/* ⭐ Il QP si chiede in tutt'e due i modi, e sotto QVBR **conta**: `[M]` e'
-	 *    il fattore di qualita', e la scala della degradazione regge (26 → 0,218
-	 *    · 35 → 0,125 · 44 → 0,076 Mbit/s a scena ferma).  ⛔ Sotto VBR invece
-	 *    sarebbe ignorato — byte per byte identico con e senza — ed e' la
-	 *    ragione per cui il tetto usa QVBR e non VBR. */
-	if (av_opt_set_int(c->ctx->priv_data, "qp", c->qualita_corrente, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato qp=%d", c->componente->name,
-		   c->qualita_corrente);
-		return -1;
-	}
+
+	memset(&v, 0, sizeof v);
+	v.codec = (r->codec == CODIFICATORE_H264) ? VADIRETTA_H264 : VADIRETTA_HEVC;
+	v.profondita = r->profondita;
+	v.larghezza = r->larghezza;
+	v.altezza = r->altezza;
+	v.fotogrammi_al_secondo = r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30;
+	v.profilo = c->profilo_va;
+	v.entrypoint = c->entrypoint_va;
+	v.qp = c->qualita_corrente;
+	v.chiavi_ogni = r->chiavi_ogni;
+	v.superfici_ingresso = SUPERFICI_PRONTE;
 	if (tetto_pavimento_mbit) {
-		/* ⛔ I tre numeri stanno sul contesto GENERICO, non sul `priv_data`: sono
-		 *    di `AVCodecContext`, e metterli fra le opzioni del componente non
-		 *    darebbe un errore — darebbe silenzio. */
-		c->ctx->bit_rate = tetto_punto();
-		c->ctx->rc_max_rate = tetto_filo();
-		c->ctx->rc_buffer_size = tetto_serbatoio_bit();
+		v.banda_punto = tetto_punto();
+		v.banda_filo = tetto_filo();
+		v.serbatoio_bit = tetto_serbatoio_bit();
 		/* ⛔⛔ IL CONTROLLO CHE VALE R31, e sta PRIMA dell'apertura: se questi
 		 *      due numeri fossero uguali il driver dedurrebbe **CBR** — e `[M]`
 		 *      il CBR su questo ferro spende **83 volte** il necessario a scena
 		 *      ferma.  Non e' una possibilita' teorica: e' quel che v1 fece. */
-		if (c->ctx->bit_rate >= c->ctx->rc_max_rate || c->ctx->rc_buffer_size <= 0) {
+		if (v.banda_punto >= v.banda_filo || v.serbatoio_bit <= 0) {
 			di(errore, errore_byte,
 			   "⛔ i numeri del tetto sono guasti: punto di lavoro %" PRId64 ", filo "
 			   "%" PRId64 ", serbatoio %d bit.  Il punto DEVE stare sotto il filo "
-			   "(con `rc_max_rate == bit_rate` il driver deduce CBR: e' R31) e il "
+			   "(con filo == punto il driver deduce CBR: e' R31) e il "
 			   "serbatoio DEVE essere positivo",
-			   (int64_t) c->ctx->bit_rate, (int64_t) c->ctx->rc_max_rate,
-			   c->ctx->rc_buffer_size);
+			   v.banda_punto, v.banda_filo, v.serbatoio_bit);
 			return -1;
 		}
 	}
-	if (av_opt_set_int(c->ctx->priv_data, "async_depth", 1, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato async_depth=1", c->componente->name);
+	/* ⛔⭐⭐ E IL LIVELLO DI §4.3, CHIESTO PER NOME — 23 agosto 2026.  Un
+	 *      fallimento QUI e' un errore vero e ferma l'apertura: se la scheda
+	 *      rifiuta il tetto, aprirla lo stesso vorrebbe dire produrre di nuovo
+	 *      un flusso che sfora — cioe' il difetto di quella sera. */
+	v.livello_idc = livello_imposto(c);
+	if (v.livello_idc > 0)
+		registro_dice(REG_CODIFICA,
+		              "⭐ §4.3: livello IMPOSTO a «%s» — %d.%d, cioe' %d in "
+		              "%s.  ⚠ Chiesto non vuol dire ubbidito: il verdetto "
+		              "arriva dall'SPS",
+		              c->nome_componente, r->livello_x10 / 10, r->livello_x10 % 10,
+		              v.livello_idc,
+		              r->codec == CODIFICATORE_H264 ? "level_idc"
+		                                            : "general_level_idc (il triplo)");
+
+	c->va = vadiretta_apri(&c->dispositivo, &v, errore_va, sizeof errore_va);
+	if (!c->va) {
+		di(errore, errore_byte, "«%s» non si e' aperto: %s", c->nome_componente, errore_va);
 		return -1;
 	}
-	/* ⭐ L'entrypoint SCELTO dopo averlo letto dal driver, non la richiesta:
-	 *    con `LA_DICHIARATA` e' `apri_dispositivo()` a dire quale dei due. */
-	if (av_opt_set_int(c->ctx->priv_data, "low_power",
-	                   c->bassa_potenza_scelta ? 1 : 0, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato low_power", c->componente->name);
+	d = vadiretta_dichiarazione(c->va);
+
+	/* ───────────────────────────────────────────────────────────────────────
+	 * ⛔ PRIMO TESTIMONE: la confessione dal contesto — che ora e' NOSTRO, e
+	 *    quindi dice quel che abbiamo scritto noi.  ⚠ Vale meno di ieri, ed e'
+	 *    giusto dirlo: ieri rileggere `async_depth` da libavcodec era un
+	 *    controllo su un altro; oggi i campi sono per costruzione.  Il
+	 *    testimone che conta e' rimasto il SECONDO — i byte (`forma_va_bene`)
+	 *    — e il TERZO, la banda misurata.
+	 */
+	c->conf.codec = r->codec;
+	c->conf.componente = c->nome_componente;
+	c->conf.profondita_chiesta = r->profondita;
+	c->conf.fotogrammi_b = 0;
+	c->conf.global_header = false;
+	c->conf.in_hardware = true;
+	c->conf.ha_obbedito = true;
+	c->conf.perche_no[0] = 0;
+	c->conf.profondita_asincrona = 1;
+	c->conf.bassa_potenza = c->bassa_potenza_scelta;
+	/* i numeri di ieri per il modo (1 = CQP, 5 = QVBR) restano, cosi' le righe
+	 * del registro e i banchi che le leggono non cambiano */
+	c->conf.modo_bitrate = (d->modo_va == VA_RC_QVBR) ? 5 : 1;
+	c->conf.banda_punto = v.banda_punto;
+	c->conf.banda_filo = v.banda_filo;
+	c->conf.banda_serbatoio = v.serbatoio_bit;
+	c->conf.banda_serbatoio_ms =
+	    (v.banda_filo > 0 && v.serbatoio_bit > 0)
+	        ? (uint32_t) ((int64_t) v.serbatoio_bit * 1000 / v.banda_filo)
+	        : 0;
+	/* ⛔⛔ IL SERBATOIO, E IL NUMERO SI GIUDICA IN MILLISECONDI — il difetto di
+	 *      v1 che nessuno aveva mai nominato: `rc_buffer_size = bit_rate/2`
+	 *      sono **500 ms**, dieci volte il tetto di 50 di `CODER.md` §1-bis. */
+	if (tetto_pavimento_mbit && c->conf.banda_serbatoio_ms > 50) {
+		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+		   "il serbatoio del regolatore e' %u ms (%d bit su %" PRId64 " bit/s): "
+		   "CODER.md §1-bis da' 50 ms a TUTTO il pezzo nostro, e un regolatore non "
+		   "puo' prenderseli tutti.  ⚠ In v1 erano 500, e non lo disse nessuno",
+		   c->conf.banda_serbatoio_ms, c->conf.banda_serbatoio, c->conf.banda_filo);
+		c->conf.ha_obbedito = false;
+		di(errore, errore_byte, "⛔ E2: %s", c->conf.perche_no);
+		vadiretta_chiudi(c->va);
+		c->va = NULL;
 		return -1;
 	}
-	/* ⛔ `idr_interval = 0`: fra due chiavi non ci vanno I non-IDR.  Una I che
-	 *    non azzera la predizione non e' una chiave di `RCP.md` §5.2, e un
-	 *    client che si collegasse li' resterebbe con lo schermo sfasciato. */
-	if (av_opt_set_int(c->ctx->priv_data, "idr_interval", 0, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato idr_interval=0", c->componente->name);
-		return -1;
-	}
-	/* ⚠ Il profilo si chiede anche qui, per nome e non per numero implicito:
-	 *   `ctx->profile` lo dice gia', ma il componente ha un'opzione sua e due
-	 *   posti che dicono la stessa cosa vanno detti tutti e due o nessuno. */
-	if (av_opt_set_int(c->ctx->priv_data, "profile",
-	                   c->richiesta.profondita == 10 ? 2 : 1, 0) < 0) {
-		di(errore, errore_byte, "«%s» ha rifiutato il profilo", c->componente->name);
-		return -1;
-	}
-	/* ⛔⭐⭐ E IL LIVELLO DI §4.3, CHIESTO PER NOME — 23 agosto 2026.
-	 *
-	 * ⚠ Si chiede in DUE posti, come il profilo qui sopra e per la stessa
-	 *   ragione: `ctx->level` e' il campo generico di `AVCodecContext`, `level`
-	 *   e' l'opzione del componente, e due posti che dicono la stessa cosa
-	 *   vanno detti tutti e due o nessuno.
-	 * ⛔ Un fallimento QUI e' un errore vero e ferma l'apertura: se il
-	 *    componente rifiuta il tetto, aprirlo lo stesso vorrebbe dire produrre
-	 *    di nuovo un flusso che sfora — cioe' il difetto di stasera, con una
-	 *    riga in piu' che dice che ci avevamo provato. */
-	{
-		int liv = livello_imposto(c);
-		if (liv > 0) {
-			c->ctx->level = liv;
-			if (av_opt_set_int(c->ctx->priv_data, "level", liv, 0) < 0) {
-				di(errore, errore_byte,
-				   "«%s» ha rifiutato level=%d (§4.3: il client dichiara "
-				   "video.livello=%d.%d, e il server DEVE non superarlo)",
-				   c->componente->name, liv, c->richiesta.livello_x10 / 10,
-				   c->richiesta.livello_x10 % 10);
-				return -1;
-			}
-			registro_dice(REG_CODIFICA,
-			              "⭐ §4.3: livello IMPOSTO a «%s» — %d.%d, cioe' %d in "
-			              "%s.  ⚠ Chiesto non vuol dire ubbidito: il verdetto "
-			              "arriva dall'SPS",
-			              c->componente->name, c->richiesta.livello_x10 / 10,
-			              c->richiesta.livello_x10 % 10, liv,
-			              c->richiesta.codec == CODIFICATORE_H264
-			                  ? "level_idc"
-			                  : "general_level_idc (il triplo)");
-		}
-	}
+	c->prossimo_chiave = true; /* ⛔ dopo ogni apertura il primo e' una chiave */
 	return 0;
 }
 
@@ -2066,12 +2144,12 @@ static int opzioni_hevc(Codificatore *c, char *errore, size_t errore_byte)
 	if (c->richiesta.livello_x10 > 0) {
 		snprintf(livello, sizeof(livello), "level-idc=%d.%d:",
 		         c->richiesta.livello_x10 / 10, c->richiesta.livello_x10 % 10);
-		c->ctx->level = livello_imposto(c);
+		c->sw.ctx->level = livello_imposto(c);
 		registro_dice(REG_CODIFICA,
 		              "⭐ §4.3: livello IMPOSTO a libx265 — %d.%d (general_level_"
 		              "idc %d).  ⚠ Il verdetto arriva dall'SPS, non da qui",
 		              c->richiesta.livello_x10 / 10,
-		              c->richiesta.livello_x10 % 10, c->ctx->level);
+		              c->richiesta.livello_x10 % 10, c->sw.ctx->level);
 	}
 
 	snprintf(parametri, sizeof(parametri),
@@ -2104,7 +2182,7 @@ static int opzioni_hevc(Codificatore *c, char *errore, size_t errore_byte)
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1,
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1);
 
-	if (av_opt_set(c->ctx->priv_data, "x265-params", parametri, 0) < 0) {
+	if (av_opt_set(c->sw.ctx->priv_data, "x265-params", parametri, 0) < 0) {
 		di(errore, errore_byte, "libx265 ha rifiutato i parametri «%s»", parametri);
 		return -1;
 	}
@@ -2148,7 +2226,7 @@ static int opzioni_h264(Codificatore *c, char *errore, size_t errore_byte)
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1,
 	         c->richiesta.chiavi_ogni ? (int) c->richiesta.chiavi_ogni : -1);
 
-	if (av_opt_set(c->ctx->priv_data, "x264-params", parametri, 0) < 0) {
+	if (av_opt_set(c->sw.ctx->priv_data, "x264-params", parametri, 0) < 0) {
 		di(errore, errore_byte, "libx264 ha rifiutato i parametri «%s»", parametri);
 		return -1;
 	}
@@ -2165,15 +2243,15 @@ static int opzioni_h264(Codificatore *c, char *errore, size_t errore_byte)
 		char liv[32];
 		snprintf(liv, sizeof(liv), "%d.%d", c->richiesta.livello_x10 / 10,
 		         c->richiesta.livello_x10 % 10);
-		c->ctx->level = livello_imposto(c);
-		if (av_opt_set(c->ctx->priv_data, "level", liv, 0) < 0) {
+		c->sw.ctx->level = livello_imposto(c);
+		if (av_opt_set(c->sw.ctx->priv_data, "level", liv, 0) < 0) {
 			di(errore, errore_byte, "libx264 ha rifiutato level=«%s» (§4.3)", liv);
 			return -1;
 		}
 		registro_dice(REG_CODIFICA,
 		              "⭐ §4.3: livello IMPOSTO a libx264 — «%s» (level_idc %d)."
 		              "  ⚠ Il verdetto arriva dall'SPS, non da qui",
-		              liv, c->ctx->level);
+		              liv, c->sw.ctx->level);
 	}
 	return 0;
 }
@@ -2211,79 +2289,60 @@ static int opzioni_av1(Codificatore *c, char *errore, size_t errore_byte)
 		   "il flusso esce a CRF 35 in silenzio [M]", c->qualita_corrente);
 		return -1;
 	}
-	if (av_opt_set_int(c->ctx->priv_data, "crf", c->qualita_corrente, 0) < 0) {
+	if (av_opt_set_int(c->sw.ctx->priv_data, "crf", c->qualita_corrente, 0) < 0) {
 		di(errore, errore_byte, "libsvtav1 ha rifiutato crf=%d", c->qualita_corrente);
 		return -1;
 	}
 	/* preset 10 e' quello di difetto dell'involucro `[M]` 162 ms per chiave
 	 * 1080p10; si scrive lo stesso, perche' un difetto non chiesto che si tiene
 	 * si dichiara. */
-	if (av_opt_set_int(c->ctx->priv_data, "preset", 10, 0) < 0) {
+	if (av_opt_set_int(c->sw.ctx->priv_data, "preset", 10, 0) < 0) {
 		di(errore, errore_byte, "libsvtav1 ha rifiutato il preset");
 		return -1;
 	}
 	/* ⛔ `pred-struct=1` = bassa latenza.  Senza, SVT-AV1 dice di suo
 	 *    «pred struct: random access» `[M]`, che e' l'equivalente AV1 dei
 	 *    fotogrammi B: fotogrammi trattenuti in attesa dei successivi. */
-	if (av_opt_set(c->ctx->priv_data, "svtav1-params", "pred-struct=1", 0) < 0) {
+	if (av_opt_set(c->sw.ctx->priv_data, "svtav1-params", "pred-struct=1", 0) < 0) {
 		di(errore, errore_byte, "libsvtav1 ha rifiutato svtav1-params");
 		return -1;
 	}
 	return 0;
 }
 
-static void chiudi_contesto(Codificatore *c)
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔ CONFINE — IL RIPIEGO SOFTWARE: chiudere e aprire il contesto di libavcodec
+ * ═══════════════════════════════════════════════════════════════════════════ */
+static void sw_chiudi(Codificatore *c)
 {
-	if (c->pacchetto)
-		av_packet_free(&c->pacchetto);
-	if (c->ctx)
-		avcodec_free_context(&c->ctx); /* ⚠ libera anche `hw_frames_ctx` */
-	/* ⚠ Il magazzino si chiude col contesto: `apri_contesto` ne apre uno nuovo,
-	 *   e tenerne due vivi vorrebbe dire superfici della GPU che nessuno
-	 *   restituisce — una perdita che si vede solo dopo mezz'ora. */
-	av_buffer_unref(&c->magazzino);
-	av_bsf_free(&c->cornice);
-	c->cornice_decisa = false;
+	if (c->sw.pacchetto)
+		av_packet_free(&c->sw.pacchetto);
+	if (c->sw.ctx)
+		avcodec_free_context(&c->sw.ctx);
 }
 
-static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
+static int sw_apri(Codificatore *c, char *errore, size_t errore_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
-	/*
-	 * ⚠ In hardware il formato del CONTESTO e' quello della superficie
-	 *   (`AV_PIX_FMT_VAAPI`); il formato dei pixel veri e' quello del magazzino
-	 *   (`formato_gpu`), ed e' **P010LE** a 10 bit — non `yuv420p10le`.  ⛔ Sono
-	 *   due formati diversi con lo stesso numero di bit: P010 e' semi-planare e
-	 *   tiene i 10 bit nei bit ALTI di sedici.  Convertirci dentro come se fosse
-	 *   planare darebbe un'immagine buia e nessun errore.
-	 */
-	enum AVPixelFormat formato;
-	if (c->hardware) {
-		c->formato_gpu = (r->profondita == 10) ? AV_PIX_FMT_P010LE : AV_PIX_FMT_NV12;
-		formato = AV_PIX_FMT_VAAPI;
-	} else {
-		formato = (r->profondita == 10) ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P;
-	}
+	enum AVPixelFormat formato =
+	    (r->profondita == 10) ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P;
 
-	if (!accetta_formato(c->componente, formato)) {
+	if (!accetta_formato(c->sw.componente, formato)) {
 		di(errore, errore_byte,
 		   "«%s» non accetta %s: ⛔ non si ripiega su un altro formato, si dichiara",
-		   c->componente->name, av_get_pix_fmt_name(formato));
+		   c->sw.componente->name, av_get_pix_fmt_name(formato));
 		return -1;
 	}
-	if (c->hardware && apri_magazzino(c, errore, errore_byte) < 0)
-		return -1;
-
-	c->ctx = avcodec_alloc_context3(c->componente);
-	if (!c->ctx) {
+	c->sw.ctx = avcodec_alloc_context3(c->sw.componente);
+	if (!c->sw.ctx) {
 		di(errore, errore_byte, "niente memoria per il contesto");
 		return -1;
 	}
-	c->ctx->width = (int) r->larghezza;
-	c->ctx->height = (int) r->altezza;
-	c->ctx->pix_fmt = formato;
-	c->ctx->time_base = (AVRational){ 1, (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30) };
-	c->ctx->framerate = (AVRational){ (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30), 1 };
+	c->sw.ctx->width = (int) r->larghezza;
+	c->sw.ctx->height = (int) r->altezza;
+	c->sw.ctx->pix_fmt = formato;
+	c->sw.ctx->time_base = (AVRational){ 1, (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30) };
+	c->sw.ctx->framerate = (AVRational){ (int) (r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30), 1 };
 	/* ⛔⛔ ZERO, DECISO E NON EREDITATO — e dal 22 agosto 2026 col numero sotto,
 	 *      perche' senza il numero la riga era un'opinione e la tentazione
 	 *      resta viva.
@@ -2300,11 +2359,11 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 *   in una riga — *«una scelta che alza il ritmo peggiorando il ritardo non
 	 *   si fa»* — ed e' la stessa ragione per cui la fase 8 ha chiuso l'anello
 	 *   in parallelo prima di aprirlo.  ⚠ Vedi anche `opzioni_hevc()`. */
-	c->ctx->max_b_frames = 0;
-	c->ctx->gop_size = r->chiavi_ogni ? (int) r->chiavi_ogni : INT_MAX;
+	c->sw.ctx->max_b_frames = 0;
+	c->sw.ctx->gop_size = r->chiavi_ogni ? (int) r->chiavi_ogni : INT_MAX;
 	switch (r->codec) {
 	case CODIFICATORE_HEVC:
-		c->ctx->profile = (r->profondita == 10) ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
+		c->sw.ctx->profile = (r->profondita == 10) ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
 		break;
 	/* ⭐ High (100), che e' quel che dichiara la stringa passata al browser:
 	 *    `avc1.PPCCLL` — `64` = profile_idc 100, `00` = nessun vincolo, `LL` =
@@ -2323,10 +2382,10 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 *    la stringa dai byte dell'SPS, e la riga «§4.3 — LIVELLO» del figlio la
 	 *    scrive accanto al livello CHIESTO dal client. */
 	case CODIFICATORE_H264:
-		c->ctx->profile = AV_PROFILE_H264_HIGH;
+		c->sw.ctx->profile = AV_PROFILE_H264_HIGH;
 		break;
 	default:
-		c->ctx->profile = AV_PROFILE_AV1_MAIN;
+		c->sw.ctx->profile = AV_PROFILE_AV1_MAIN;
 		break;
 	}
 
@@ -2372,10 +2431,10 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 *   converte YUV→RGB per la tela e F2.6 confronta: due matrici diverse ai
 	 *   due capi misurerebbero **la matrice**.
 	 */
-	c->ctx->colorspace = AVCOL_SPC_BT709;
-	c->ctx->color_primaries = AVCOL_PRI_BT709;
-	c->ctx->color_trc = AVCOL_TRC_BT709;
-	c->ctx->color_range = AVCOL_RANGE_MPEG;
+	c->sw.ctx->colorspace = AVCOL_SPC_BT709;
+	c->sw.ctx->color_primaries = AVCOL_PRI_BT709;
+	c->sw.ctx->color_trc = AVCOL_TRC_BT709;
+	c->sw.ctx->color_range = AVCOL_RANGE_MPEG;
 
 	/*
 	 * ⛔⛔ QUI NON SI ACCENDE `AV_CODEC_FLAG_GLOBAL_HEADER`, E LA RIGA E'
@@ -2388,40 +2447,26 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 * Li' la ragione era RDP; qui e' che in Annex-B il chunk `key` deve portarli
 	 * con se' (`S2-decodifica.md` §3.5).  Stessa regola, stesso sintomo.
 	 */
-	c->ctx->flags &= ~(unsigned) AV_CODEC_FLAG_GLOBAL_HEADER;
-
-	/* ⛔ Il magazzino si attacca PRIMA di `avcodec_open2`: senza, il componente
-	 *    in hardware si apre lo stesso e fallisce al primo fotogramma con «No
-	 *    device available», che e' un errore che non nomina questa riga. */
-	if (c->hardware) {
-		c->ctx->hw_frames_ctx = av_buffer_ref(c->magazzino);
-		if (!c->ctx->hw_frames_ctx) {
-			di(errore, errore_byte, "niente memoria per legare il magazzino");
-			chiudi_contesto(c);
-			return -1;
-		}
-	}
+	c->sw.ctx->flags &= ~(unsigned) AV_CODEC_FLAG_GLOBAL_HEADER;
 
 	int esito;
-	if (c->hardware)
-		esito = opzioni_vaapi(c, errore, errore_byte);
-	else if (r->codec == CODIFICATORE_HEVC)
+	if (r->codec == CODIFICATORE_HEVC)
 		esito = opzioni_hevc(c, errore, errore_byte);
 	else if (r->codec == CODIFICATORE_H264)
 		esito = opzioni_h264(c, errore, errore_byte);
 	else
 		esito = opzioni_av1(c, errore, errore_byte);
 	if (esito < 0) {
-		chiudi_contesto(c);
+		sw_chiudi(c);
 		return -1;
 	}
 
-	int aperto = avcodec_open2(c->ctx, c->componente, NULL);
+	int aperto = avcodec_open2(c->sw.ctx, c->sw.componente, NULL);
 	if (aperto < 0) {
 		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
 		av_strerror(aperto, testo, sizeof(testo));
-		di(errore, errore_byte, "«%s» non si e' aperto: %s", c->componente->name, testo);
-		chiudi_contesto(c);
+		di(errore, errore_byte, "«%s» non si e' aperto: %s", c->sw.componente->name, testo);
+		sw_chiudi(c);
 		return -1;
 	}
 
@@ -2429,125 +2474,77 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 	 * ⛔ PRIMO TESTIMONE: HA OBBEDITO, SECONDO LIBAVCODEC?
 	 * Non si presume: si rilegge quel che il contesto dice DOPO l'apertura. */
 	c->conf.codec = r->codec;
-	c->conf.componente = c->ctx->codec->name;
+	c->conf.componente = c->sw.ctx->codec->name;
 	c->conf.profondita_chiesta = r->profondita;
-	c->conf.fotogrammi_b = c->ctx->max_b_frames;
-	c->conf.global_header = (c->ctx->flags & AV_CODEC_FLAG_GLOBAL_HEADER) != 0;
-	c->conf.in_hardware = c->hardware;
+	c->conf.fotogrammi_b = c->sw.ctx->max_b_frames;
+	c->conf.global_header = (c->sw.ctx->flags & AV_CODEC_FLAG_GLOBAL_HEADER) != 0;
+	c->conf.in_hardware = false;
 	c->conf.ha_obbedito = true;
 	c->conf.perche_no[0] = 0;
 
-	/* ⭐ E in hardware si RILEGGONO le due opzioni che comprano ritardo: quel che
-	 *    si e' chiesto e quel che il componente ha tenuto sono due cose diverse
-	 *    finche' non si guarda.  ⚠ `av_opt_get_int` sul `priv_data` legge il
-	 *    valore in vigore, non quello passato. */
-	if (c->hardware) {
-		int64_t v = 0;
-		c->conf.profondita_asincrona =
-		    (av_opt_get_int(c->ctx->priv_data, "async_depth", 0, &v) == 0) ? (int) v : -1;
-		if (av_opt_get_int(c->ctx->priv_data, "low_power", 0, &v) == 0)
-			c->conf.bassa_potenza = v != 0;
-		/* ⭐⭐ SECONDO TESTIMONE DEL BITRATE: che cosa il CONTESTO ha tenuto.
-		 *
-		 * ⛔ E si dichiara subito che cosa NON prova, o vale meno di zero: dice
-		 *    che **libavcodec** ha tenuto quel che gli si e' chiesto, ⛔ **non
-		 *    che il driver l'abbia applicato**.  In v1 questo testimone sarebbe
-		 *    stato **verde**: `bit_rate` e `rc_max_rate` erano esattamente i
-		 *    numeri chiesti, e il CBR era il nome che il driver dava a quella
-		 *    coppia.  ⇒ A prenderlo furono i **byte**, e solo quelli. */
-		c->conf.modo_bitrate =
-		    (av_opt_get_int(c->ctx->priv_data, "rc_mode", 0, &v) == 0) ? (int) v : -1;
-		/* ⚠ TRE ESITI E NON DUE anche qui: `-1` e' **«non ho potuto rileggere»**,
-		 *   e non si spedisce nel mucchio di «ha disobbedito».  ⛔ Si dichiara e
-		 *   si va avanti: rifiutare su un silenzio sarebbe decidere su un
-		 *   silenzio, che e' la forma di R31 dall'altro capo. */
-		if (c->conf.modo_bitrate < 0)
-			registro_dice(REG_CODIFICA,
-			              "⚠ NON ho potuto rileggere `rc_mode` dal contesto dopo "
-			              "l'apertura: ⛔ NON e' «ha obbedito», e' «non ho guardato».  "
-			              "Restano il driver (prima) e i BYTE (dopo)");
-		c->conf.banda_punto = c->ctx->bit_rate;
-		c->conf.banda_filo = c->ctx->rc_max_rate;
-		c->conf.banda_serbatoio = c->ctx->rc_buffer_size;
-		/* ⭐ Il serbatoio si tiene anche in MILLISECONDI, ed e' quello il numero
-		 *    che `CODER.md` §1-bis giudica: in bit non si vede che v1 ne aveva
-		 *    **cinquecento**. */
-		c->conf.banda_serbatoio_ms =
-		    (c->ctx->rc_max_rate > 0 && c->ctx->rc_buffer_size > 0)
-		        ? (uint32_t) ((int64_t) c->ctx->rc_buffer_size * 1000 / c->ctx->rc_max_rate)
-		        : 0;
-	}
-
-	if (c->ctx->codec->id != id_di(r->codec))
+	if (c->sw.ctx->codec->id != id_di(r->codec))
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "«%s» non e' un codificatore %s", c->ctx->codec->name,
+		   "«%s» non e' un codificatore %s", c->sw.ctx->codec->name,
 		   nome_codec(r->codec));
-	else if (strcmp(c->ctx->codec->name, c->componente->name) != 0)
+	else if (strcmp(c->sw.ctx->codec->name, c->sw.componente->name) != 0)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "chiesto «%s», aperto «%s»", c->componente->name, c->ctx->codec->name);
-	else if (c->ctx->pix_fmt != formato)
+		   "chiesto «%s», aperto «%s»", c->sw.componente->name, c->sw.ctx->codec->name);
+	else if (c->sw.ctx->pix_fmt != formato)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "chiesto %s, aperto %s", av_get_pix_fmt_name(formato),
-		   av_get_pix_fmt_name(c->ctx->pix_fmt));
+		   av_get_pix_fmt_name(c->sw.ctx->pix_fmt));
 	else if (c->conf.global_header)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
 		   "GLOBAL_HEADER acceso: i parameter set uscirebbero dal flusso");
-	else if (c->ctx->max_b_frames != 0)
+	else if (c->sw.ctx->max_b_frames != 0)
 		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "fotogrammi B: %d, e ne erano stati chiesti 0", c->ctx->max_b_frames);
-	/* ⛔ Un `async_depth` diverso da 1 e' un fotogramma trattenuto, cioe' il
-	 *    difetto che questa fase esiste per togliere: non si spedisce. */
-	else if (c->hardware && c->conf.profondita_asincrona != 1)
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "async_depth = %d dopo averne chiesto 1: il componente terrebbe "
-		   "fotogrammi in canna", c->conf.profondita_asincrona);
-	else if (c->hardware && c->conf.bassa_potenza != c->bassa_potenza_scelta)
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "chiesta la codifica %s e il componente dice %s",
-		   c->bassa_potenza_scelta ? "a bassa potenza" : "piena",
-		   c->conf.bassa_potenza ? "bassa potenza" : "piena");
-	/* ⛔ R31: un modo di bitrate diverso da quello CHIESTO PER NOME non si
-	 *    spedisce — e' l'esatta condizione in cui v1 emise CBR senza saperlo. */
-	else if (c->hardware && c->conf.modo_bitrate >= 0 &&
-	         c->conf.modo_bitrate != modo_bitrate_voluto().ffmpeg)
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "il modo di controllo del bitrate riletto e' %d dopo aver chiesto %s "
-		   "(%d): e' R31, e non si spedisce su un modo che nessuno ha scelto",
-		   c->conf.modo_bitrate, modo_bitrate_voluto().nome,
-		   modo_bitrate_voluto().ffmpeg);
-	else if (c->hardware && tetto_pavimento_mbit &&
-	         (c->conf.banda_punto != tetto_punto() || c->conf.banda_filo != tetto_filo()))
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "il tetto riletto e' %" PRId64 "/%" PRId64 " bit/s e ne erano stati "
-		   "chiesti %" PRId64 "/%" PRId64,
-		   c->conf.banda_punto, c->conf.banda_filo, tetto_punto(), tetto_filo());
-	/* ⛔⛔ IL SERBATOIO, E IL NUMERO SI GIUDICA IN MILLISECONDI — e' il difetto
-	 *      di v1 che nessuno aveva mai nominato: `rc_buffer_size = bit_rate/2`
-	 *      sono **500 ms**, dieci volte il tetto di 50 di `CODER.md` §1-bis.  Un
-	 *      serbatoio e' un fotogramma trattenuto come lo e' `async_depth`, e qui
-	 *      si rifiuta con la stessa fermezza. */
-	else if (c->hardware && tetto_pavimento_mbit && c->conf.banda_serbatoio_ms > 50)
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
-		   "il serbatoio del regolatore e' %u ms (%d bit su %" PRId64 " bit/s): "
-		   "CODER.md §1-bis da' 50 ms a TUTTO il pezzo nostro, e un regolatore non "
-		   "puo' prenderseli tutti.  ⚠ In v1 erano 500, e non lo disse nessuno",
-		   c->conf.banda_serbatoio_ms, c->conf.banda_serbatoio, c->conf.banda_filo);
+		   "fotogrammi B: %d, e ne erano stati chiesti 0", c->sw.ctx->max_b_frames);
 
 	if (c->conf.perche_no[0]) {
 		c->conf.ha_obbedito = false;
 		di(errore, errore_byte, "⛔ E2: %s", c->conf.perche_no);
-		chiudi_contesto(c);
+		sw_chiudi(c);
 		return -1;
 	}
 
-	c->pacchetto = av_packet_alloc();
-	if (!c->pacchetto) {
+	c->sw.pacchetto = av_packet_alloc();
+	if (!c->sw.pacchetto) {
 		di(errore, errore_byte, "niente memoria per il pacchetto");
-		chiudi_contesto(c);
+		sw_chiudi(c);
 		return -1;
 	}
 	c->prossimo_chiave = true; /* ⛔ dopo ogni apertura il primo e' una chiave */
 	return 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * ⭐ FASE 18: le due strade si chiudono e si aprono qui, e `abbassa_qualita()`,
+ *    `risali_qualita()`, `codificatore_ridimensiona()` chiamano queste due e
+ *    non sanno quale delle due sta sotto.  ⚠ In hardware il contesto di
+ *    vadiretta porta dentro anche il magazzino d'ingresso e le superfici
+ *    ricostruite: chiuderlo e riaprirlo e' quel che ieri facevano
+ *    `avcodec_free_context` + `av_buffer_unref(&magazzino)`.
+ */
+static void chiudi_contesto(Codificatore *c)
+{
+	if (c->hardware) {
+		vadiretta_chiudi(c->va);
+		c->va = NULL;
+		c->superficie_pronta = VA_INVALID_ID;
+	} else {
+		sw_chiudi(c);
+	}
+	c->cornice_decisa = false;
+	c->cornice_attiva = false;
+}
+
+static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
+{
+	if (c->hardware)
+		return apri_scheda(c, errore, errore_byte);
+	return sw_apri(c, errore, errore_byte);
 }
 
 /*
@@ -2556,72 +2553,39 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
  *    stesure, e ⛔ la seconda si era gia' dimenticata la promozione dichiarata.
  *    Due stesure della stessa cosa sono un posto dove divergere in silenzio.
  *
- * ⚠ In hardware i fotogrammi sono DUE: quello in memoria di sistema
- *   (`appoggio`, dove swscale scrive) e la superficie della GPU (`fotogramma`,
- *   che si prende dal magazzino a ogni giro).  In software resta uno solo.
+ * ⛔ CONFINE — la parte di libavcodec/libswscale e' `sw_apri_fotogrammi()`.
+ *    In hardware non c'e' niente da allocare: le superfici d'ingresso le tiene
+ *    vadiretta, e la conversione la fa la VPP a ogni fotogramma.
  */
-static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
+static int sw_apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 {
 	const CodificatoreRichiesta *r = &c->richiesta;
-	enum AVPixelFormat destinazione = c->hardware ? c->formato_gpu : c->ctx->pix_fmt;
+	enum AVPixelFormat destinazione = c->sw.ctx->pix_fmt;
 
-	if (c->fotogramma)
-		av_frame_free(&c->fotogramma);
-	if (c->appoggio)
-		av_frame_free(&c->appoggio);
-	if (c->conversione) {
-		sws_freeContext(c->conversione);
-		c->conversione = NULL;
+	if (c->sw.fotogramma)
+		av_frame_free(&c->sw.fotogramma);
+	if (c->sw.conversione) {
+		sws_freeContext(c->sw.conversione);
+		c->sw.conversione = NULL;
 	}
 
-	/* Il fotogramma che entra nel codificatore. */
-	c->fotogramma = av_frame_alloc();
-	if (!c->fotogramma) {
+	c->sw.fotogramma = av_frame_alloc();
+	if (!c->sw.fotogramma) {
 		di(errore, errore_byte, "niente memoria per il fotogramma");
 		return -1;
 	}
-	if (!c->hardware) {
-		c->fotogramma->format = c->ctx->pix_fmt;
-		c->fotogramma->width = c->ctx->width;
-		c->fotogramma->height = c->ctx->height;
-		c->fotogramma->colorspace = c->ctx->colorspace;
-		c->fotogramma->color_range = c->ctx->color_range;
-		if (av_frame_get_buffer(c->fotogramma, 0) < 0) {
-			di(errore, errore_byte, "niente memoria per i piani del fotogramma");
-			return -1;
-		}
-	} else {
-		/* ⛔ La superficie NON si alloca qui e non si riusa: si prende dal
-		 *    magazzino a ogni giro (vedi `prepara_fotogramma`).  Riusarne una
-		 *    sola mentre il codificatore ne tiene ancora un riferimento e' una
-		 *    scrittura sotto i piedi di chi legge, e il sintomo sarebbe
-		 *    un'immagine che ogni tanto si strappa — senza nessun errore. */
-		c->appoggio = av_frame_alloc();
-		if (!c->appoggio) {
-			di(errore, errore_byte, "niente memoria per il fotogramma d'appoggio");
-			return -1;
-		}
-		c->appoggio->format = c->formato_gpu;
-		c->appoggio->width = (int) r->larghezza;
-		c->appoggio->height = (int) r->altezza;
-		c->appoggio->colorspace = c->ctx->colorspace;
-		c->appoggio->color_range = c->ctx->color_range;
-		if (av_frame_get_buffer(c->appoggio, 0) < 0) {
-			di(errore, errore_byte, "niente memoria per i piani d'appoggio");
-			return -1;
-		}
+	c->sw.fotogramma->format = c->sw.ctx->pix_fmt;
+	c->sw.fotogramma->width = c->sw.ctx->width;
+	c->sw.fotogramma->height = c->sw.ctx->height;
+	c->sw.fotogramma->colorspace = c->sw.ctx->colorspace;
+	c->sw.fotogramma->color_range = c->sw.ctx->color_range;
+	if (av_frame_get_buffer(c->sw.fotogramma, 0) < 0) {
+		di(errore, errore_byte, "niente memoria per i piani del fotogramma");
+		return -1;
 	}
 
-	/*
-	 * La conversione.  ⛔ Serve in DUE casi, e il secondo e' nato con
-	 * l'hardware:
-	 *   - BGRx → il formato del codificatore: la cattura di GNOME (`[M]` F2.2);
-	 *   - yuv420p10le → **P010LE**: l'ingresso del banco su un codificatore in
-	 *     hardware.  ⚠ Sono tutti e due «10 bit 4:2:0» e **non sono lo stesso
-	 *     formato**: P010 e' semi-planare e tiene i dieci bit in ALTO dentro
-	 *     sedici.  Copiarli come se fossero uguali darebbe un'immagine buia e
-	 *     nessun errore — la forma di difetto che non nomina la causa.
-	 */
+	/* La conversione: BGRx/RGBx → il formato del codificatore (la cattura),
+	 * oppure niente per yuv420p10le → yuv420p10le (il banco). */
 	enum AVPixelFormat sorgente;
 	if (r->formato == CODIFICATORE_PIXEL_BGRX)
 		sorgente = AV_PIX_FMT_BGR0;
@@ -2631,10 +2595,10 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 		sorgente = AV_PIX_FMT_YUV420P10LE;
 
 	if (sorgente != destinazione) {
-		c->conversione = sws_getContext((int) r->larghezza, (int) r->altezza, sorgente,
-		                                (int) r->larghezza, (int) r->altezza, destinazione,
-		                                SWS_BILINEAR, NULL, NULL, NULL);
-		if (!c->conversione) {
+		c->sw.conversione = sws_getContext((int) r->larghezza, (int) r->altezza, sorgente,
+		                                   (int) r->larghezza, (int) r->altezza, destinazione,
+		                                   SWS_BILINEAR, NULL, NULL, NULL);
+		if (!c->sw.conversione) {
 			di(errore, errore_byte, "swscale non ha aperto %s → %s",
 			   av_get_pix_fmt_name(sorgente), av_get_pix_fmt_name(destinazione));
 			return -1;
@@ -2647,12 +2611,22 @@ static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
 		 *   `yuv420p10le` che arriva dal banco e' gia' a intervallo limitato, e
 		 *   dichiararlo pieno lo schiarirebbe di un passo a ogni giro. */
 		const int *tavola = sws_getCoefficients(SWS_CS_ITU709);
-		sws_setColorspaceDetails(c->conversione, tavola,
+		sws_setColorspaceDetails(c->sw.conversione, tavola,
 		                         FORMATO_PIXEL_IMPACCHETTATO(r->formato) ? 1 : 0,
 		                         tavola, 0 /* uscita: limitato */, 0, 1 << 16, 1 << 16);
 	}
+	return 0;
+}
+
+static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
+{
+	const CodificatoreRichiesta *r = &c->richiesta;
+
+	if (!c->hardware && sw_apri_fotogrammi(c, errore, errore_byte) < 0)
+		return -1;
 	/* ⚠ La sorgente ha 8 bit veri (`[M]` F2.2): il Main10 che ne esce e' 8 bit
-	 *   PROMOSSI, e la promozione si dichiara invece di subirla. */
+	 *   PROMOSSI, e la promozione si dichiara invece di subirla.  Vale per le
+	 *   due strade: in hardware la promozione la fa la VPP (RGB → P010). */
 	c->conf.promozione_8_a_10 =
 	    (FORMATO_PIXEL_IMPACCHETTATO(r->formato) && r->profondita == 10);
 	return 0;
@@ -2714,27 +2688,44 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *   secondo lascia scegliere a libavcodec fra cinque codificatori HEVC, e
 	 *   quattro sono in hardware.
 	 */
-	c->componente = avcodec_find_encoder_by_name(nome);
-	if (!c->componente) {
-		di(errore, errore_byte,
-		   "il codificatore «%s» non c'e' in questa libavcodec: ⛔ non se ne prende "
-		   "un altro, si fallisce dicendolo", nome);
-		free(c);
-		return NULL;
-	}
-	if (c->componente->id != id_di(richiesta->codec)) {
-		di(errore, errore_byte, "«%s» non e' un codificatore %s", nome,
-		   nome_codec(richiesta->codec));
-		free(c);
-		return NULL;
-	}
+	snprintf(c->nome_componente, sizeof c->nome_componente, "%s", nome);
+	c->superficie_pronta = VA_INVALID_ID;
+	c->dispositivo.fd = -1;
 
 	/*
-	 * ⛔ «E' in hardware?» si chiede al componente PRIMA di aprire: da quella
-	 *    risposta dipendono il formato del contesto, il magazzino e la
-	 *    conversione — cioe' tre cose che dopo non si possono cambiare.
+	 * ⛔ «E' in hardware?» si decide PRIMA di aprire: da quella risposta
+	 *    dipendono il dispositivo, il magazzino e la conversione — cioe' tre
+	 *    cose che dopo non si possono cambiare.  ⭐ Fase 18: lo dice il NOME
+	 *    (`h264_vaapi`/`hevc_vaapi` sono le due etichette della scheda), e il
+	 *    codec dell'etichetta deve essere quello chiesto.
 	 */
-	c->hardware = componente_e_hardware(c->componente, NULL);
+	{
+		CodecVideo codec_scheda;
+		c->hardware = componente_e_hardware(nome, &codec_scheda);
+		if (c->hardware && codec_scheda != richiesta->codec) {
+			di(errore, errore_byte, "«%s» non e' un codificatore %s", nome,
+			   nome_codec(richiesta->codec));
+			free(c);
+			return NULL;
+		}
+	}
+	if (!c->hardware) {
+		/* ⛔ CONFINE — il ripiego si cerca in libavcodec, per nome */
+		c->sw.componente = avcodec_find_encoder_by_name(nome);
+		if (!c->sw.componente) {
+			di(errore, errore_byte,
+			   "il codificatore «%s» non c'e' in questa libavcodec: ⛔ non se ne prende "
+			   "un altro, si fallisce dicendolo", nome);
+			free(c);
+			return NULL;
+		}
+		if (c->sw.componente->id != id_di(richiesta->codec)) {
+			di(errore, errore_byte, "«%s» non e' un codificatore %s", nome,
+			   nome_codec(richiesta->codec));
+			free(c);
+			return NULL;
+		}
+	}
 	if (c->hardware && apri_dispositivo(c, errore, errore_byte) < 0) {
 		codificatore_libera(c);
 		return NULL;
@@ -2760,7 +2751,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		         "%s %s via %s (in HARDWARE · %s · %s · %s)",
 		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->componente->name, c->conf.nodo, c->conf.fornitore_va,
+		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va,
 		         c->conf.bassa_potenza ? "⚠ EncSliceLP, bassa potenza — NON e' la "
 		                                 "codifica piena"
 		                               : "EncSlice, piena");
@@ -2768,7 +2759,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		snprintf(c->nome, sizeof(c->nome), "%s %s via %s (in software)",
 		         nome_codec(richiesta->codec),
 		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->componente->name);
+		         c->nome_componente);
 
 	/* ⭐ IL PUNTO DI LAVORO COL SUO NUMERO, non col suo nome.  ⛔ Fino al 23
 	 *    agosto 2026 questa riga diceva *«QP costante»* e taceva il **26**: chi
@@ -2907,7 +2898,7 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		registro_dice(REG_CODIFICA,
 		              "il tetto di banda non tocca il ripiego in software: «%s» va a "
 		              "%s, e il controllo del bitrate di fase 9 e' del solo hardware",
-		              c->componente->name, punto);
+		              c->nome_componente, punto);
 	else if (tetto_pavimento_mbit)
 		registro_dice(REG_CODIFICA,
 		              "⭐ FASE 9: il TETTO DI BANDA e' ACCESO su un pavimento di %u "
@@ -2941,24 +2932,23 @@ void codificatore_libera(Codificatore *c)
 {
 	if (!c)
 		return;
-	if (c->pacchetto_in_mano)
-		av_packet_unref(c->pacchetto);
-	if (c->conversione)
-		sws_freeContext(c->conversione);
-	if (c->fotogramma)
-		av_frame_free(&c->fotogramma);
-	if (c->appoggio)
-		av_frame_free(&c->appoggio);
-	/* ⛔ Prima del dispositivo, e in quest'ordine: le superfici importate e il
-	 *    contesto della conversione vivono SUL dispositivo, e liberarli dopo
-	 *    vorrebbe dire chiederlo a un display che non c'e' piu'. */
+	c->pacchetto_in_mano = false;
+	/* ⛔ CONFINE — la parte del ripiego */
+	if (c->sw.conversione)
+		sws_freeContext(c->sw.conversione);
+	if (c->sw.fotogramma)
+		av_frame_free(&c->sw.fotogramma);
+	/* ⛔ Prima del dispositivo, e in quest'ordine: le superfici importate, il
+	 *    contesto della conversione e il codificatore vivono SUL dispositivo,
+	 *    e liberarli dopo vorrebbe dire chiederlo a un display che non c'e'
+	 *    piu'. */
 	butta_le_importate(c, "il codificatore si chiude");
 	chiudi_vpp(c);
 	chiudi_contesto(c);
-	/* ⚠ Il dispositivo si chiude per ULTIMO: il magazzino e le superfici ne
-	 *   tengono un riferimento, e chiuderlo prima lascerebbe il driver a
-	 *   liberare superfici su un display che non c'e' piu'. */
-	av_buffer_unref(&c->dispositivo);
+	/* ⚠ Il dispositivo si chiude per ULTIMO. */
+	if (c->hardware)
+		vadiretta_chiudi_dispositivo(&c->dispositivo);
+	free(c->uscita);
 	free(c);
 }
 
@@ -3106,14 +3096,7 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 
 static VADisplay display_di(Codificatore *c)
 {
-	AVHWDeviceContext *dc;
-	AVVAAPIDeviceContext *va;
-
-	if (!c->dispositivo)
-		return NULL;
-	dc = (AVHWDeviceContext *) c->dispositivo->data;
-	va = dc->hwctx;
-	return va ? va->display : NULL;
+	return c->hardware ? c->dispositivo.display : NULL;
 }
 
 /* Butta tutte le superfici importate.  ⛔ Si chiama quando la generazione dei
@@ -3414,7 +3397,6 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 {
 	uint64_t t0 = adesso_us();
 	VASurfaceID sorgente, destinazione;
-	int esito;
 
 	/* ⛔ Il caricamento sulla GPU NON C'E' su questa strada, e lo zero lo dice.
 	 *    ⚠ Chi legge la tabella dei tratti deve poter distinguere «gratis» da
@@ -3427,41 +3409,31 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
 	if (sorgente == VA_INVALID_ID)
 		return false;
 
-	av_frame_unref(c->fotogramma);
-	esito = av_hwframe_get_buffer(c->magazzino, c->fotogramma, 0);
-	if (esito < 0) {
-		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-		av_strerror(esito, testo, sizeof(testo));
-		registro_dice(REG_CODIFICA, "⛔ nessuna superficie libera nel magazzino (%d pronte): %s",
-		              SUPERFICI_PRONTE, testo);
+	/* ⭐ Fase 18: la superficie d'ingresso la da' vadiretta, dal suo magazzino
+	 *    (una nuova a ogni giro, come ieri col magazzino di libavutil). */
+	destinazione = vadiretta_superficie_ingresso(c->va);
+	if (destinazione == VA_INVALID_ID) {
+		registro_dice(REG_CODIFICA, "⛔ nessuna superficie d'ingresso (%d pronte)",
+		              SUPERFICI_PRONTE);
 		return false;
 	}
-	destinazione = (VASurfaceID) (uintptr_t) c->fotogramma->data[3];
 	if (!converti_sulla_gpu(c, sorgente, destinazione))
 		return false;
-
-	c->fotogramma->colorspace = c->ctx->colorspace;
-	c->fotogramma->color_range = c->ctx->color_range;
+	c->superficie_pronta = destinazione;
 	*us = adesso_us() - t0;
-
-	c->fotogramma->pts = c->numero;
-	c->fotogramma->pict_type = c->prossimo_chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
-	if (c->prossimo_chiave)
-		c->fotogramma->flags |= AV_FRAME_FLAG_KEY;
-	else
-		c->fotogramma->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
 
 	if (!c->detto_copia_zero) {
 		c->detto_copia_zero = true;
 		registro_dice(REG_CODIFICA,
 		              "⭐⭐ COPIA ZERO in vigore: il DMA-BUF del compositore (fd %d, %ux%u, "
 		              "passo %u, modificatore 0x%llx) e' importato come superficie VA-API e "
-		              "convertito in %s DALLA GPU — nessuna `memcpy`, nessun `sws_scale`, "
-		              "nessun `av_hwframe_transfer_data`.  ⚠ La conversione resta e costa "
+		              "convertito in %s DALLA GPU — nessuna `memcpy`, nessuna conversione "
+		              "in CPU, nessun caricamento.  ⚠ La conversione resta e costa "
 		              "%llu us: e' cambiato CHI la fa, non che vada fatta",
 		              s->fd, s->larghezza, s->altezza, s->stride,
 		              (unsigned long long) s->modificatore,
-		              av_get_pix_fmt_name(c->formato_gpu), (unsigned long long) *us);
+		              c->richiesta.profondita == 10 ? "P010" : "NV12",
+		              (unsigned long long) *us);
 	}
 	return true;
 }
@@ -3481,13 +3453,71 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
                                uint64_t *us, uint64_t *us_carico)
 {
 	uint64_t t0 = adesso_us();
-	AVFrame *dove = c->hardware ? c->appoggio : c->fotogramma;
 
 	*us_carico = 0;
+	*us = 0;
+
+	if (c->hardware) {
+		/* ═══════════════════════════════════════════════════════════════════
+		 * ⭐ FASE 18 — I PIXEL SALGONO SULLA SCHEDA E LA' SI CONVERTONO.
+		 *
+		 * Ieri: `sws_scale` in CPU (BGRx → NV12/P010) e poi
+		 * `av_hwframe_transfer_data` (memoria → GPU).  Oggi: i BGRx salgono
+		 * COSI' COME SONO in una superficie RGB32 (`us_caricamento`), e la
+		 * VPP li converte in NV12/P010 sulla scheda (`us_conversione`) — la
+		 * stessa VPP, la stessa matrice imposta (BT.709, pieno → limitato)
+		 * della copia zero.  ⛔ Niente libswscale: la conversione di colore e'
+		 * della scheda su tutt'e due le strade.
+		 *
+		 * ⚠ I due tempi restano SEPARATI e con le etichette di ieri: chi
+		 *   confronta i numeri di ieri con quelli di oggi vede che il
+		 *   caricamento e' quello di 8 MB di RGB invece di 3 MB di NV12, e
+		 *   che la conversione e' passata dalla CPU alla GPU.
+		 * ═══════════════════════════════════════════════════════════════════ */
+		char errore[256] = { 0 };
+		VASurfaceID destinazione = vadiretta_superficie_ingresso(c->va);
+		if (destinazione == VA_INVALID_ID) {
+			registro_dice(REG_CODIFICA, "⛔ nessuna superficie d'ingresso (%d pronte)",
+			              SUPERFICI_PRONTE);
+			return false;
+		}
+		if (FORMATO_PIXEL_IMPACCHETTATO(c->richiesta.formato)) {
+			VASurfaceID rgb;
+			unsigned fourcc = (c->richiesta.formato == CODIFICATORE_PIXEL_RGBX)
+			                      ? VA_FOURCC_RGBX
+			                      : VA_FOURCC_BGRX;
+			if (!vadiretta_superficie_rgb(c->va, fourcc, &rgb, errore, sizeof errore)
+			    || !vadiretta_carica_rgb(c->va, rgb, pixel, passo, errore, sizeof errore)) {
+				registro_dice(REG_CODIFICA, "⛔ i pixel non sono saliti sulla scheda: %s", errore);
+				return false;
+			}
+			*us_carico = adesso_us() - t0;
+			uint64_t t1 = adesso_us();
+			if (!apri_vpp(c, c->richiesta.larghezza, c->richiesta.altezza))
+				return false;
+			if (!converti_sulla_gpu(c, rgb, destinazione))
+				return false;
+			*us = adesso_us() - t1;
+		} else {
+			/* yuv420p10le (il banco) → P010, direttamente nell'ingresso */
+			if (!vadiretta_carica_yuv420p10(c->va, destinazione, pixel, passo, errore,
+			                                sizeof errore)) {
+				registro_dice(REG_CODIFICA, "⛔ i campioni non sono saliti sulla scheda: %s",
+				              errore);
+				return false;
+			}
+			*us_carico = adesso_us() - t0;
+		}
+		c->superficie_pronta = destinazione;
+		return true;
+	}
+
+	/* ⛔ CONFINE — il ripiego: swscale in memoria di sistema, come ieri */
+	AVFrame *dove = c->sw.fotogramma;
 	if (av_frame_make_writable(dove) < 0)
 		return false;
 
-	if (c->conversione) {
+	if (c->sw.conversione) {
 		const uint8_t *piani[4] = { NULL, NULL, NULL, NULL };
 		int passi[4] = { 0, 0, 0, 0 };
 		if (FORMATO_PIXEL_IMPACCHETTATO(c->richiesta.formato)) {
@@ -3505,7 +3535,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 			passi[1] = (int) (passo_y / 2);
 			passi[2] = (int) (passo_y / 2);
 		}
-		int righe = sws_scale(c->conversione, piani, passi, 0, (int) c->richiesta.altezza,
+		int righe = sws_scale(c->sw.conversione, piani, passi, 0, (int) c->richiesta.altezza,
 		                      dove->data, dove->linesize);
 		if (righe != (int) c->richiesta.altezza) {
 			registro_dice(REG_CODIFICA,
@@ -3532,41 +3562,12 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 	}
 	*us = adesso_us() - t0;
 
-	if (c->hardware) {
-		uint64_t t1 = adesso_us();
-		/* ⛔ Una superficie NUOVA a ogni giro: vedi `apri_fotogrammi()`.  Il
-		 *    magazzino ne tiene `SUPERFICI_PRONTE` e le riusa da se' quando
-		 *    nessuno le guarda piu'. */
-		av_frame_unref(c->fotogramma);
-		int esito = av_hwframe_get_buffer(c->magazzino, c->fotogramma, 0);
-		if (esito < 0) {
-			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-			av_strerror(esito, testo, sizeof(testo));
-			registro_dice(REG_CODIFICA,
-			              "⛔ nessuna superficie libera nel magazzino (%d pronte): %s",
-			              SUPERFICI_PRONTE, testo);
-			return false;
-		}
-		esito = av_hwframe_transfer_data(c->fotogramma, c->appoggio, 0);
-		if (esito < 0) {
-			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-			av_strerror(esito, testo, sizeof(testo));
-			registro_dice(REG_CODIFICA,
-			              "⛔ il fotogramma non e' salito sulla GPU (%s → %s): %s",
-			              av_get_pix_fmt_name(c->formato_gpu), c->conf.nodo, testo);
-			return false;
-		}
-		c->fotogramma->colorspace = c->ctx->colorspace;
-		c->fotogramma->color_range = c->ctx->color_range;
-		*us_carico = adesso_us() - t1;
-	}
-
-	c->fotogramma->pts = c->numero;
-	c->fotogramma->pict_type = c->prossimo_chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+	dove->pts = c->numero;
+	dove->pict_type = c->prossimo_chiave ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
 	if (c->prossimo_chiave)
-		c->fotogramma->flags |= AV_FRAME_FLAG_KEY;
+		dove->flags |= AV_FRAME_FLAG_KEY;
 	else
-		c->fotogramma->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
+		dove->flags &= ~(unsigned) AV_FRAME_FLAG_KEY;
 	return true;
 }
 
@@ -3592,82 +3593,166 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
  *   tela di meno di un blocco: qualunque altra differenza resta un errore, e
  *   la rifiuta `forma_va_bene()` come prima.
  */
-static bool cornice_al_suo_posto(Codificatore *c)
+/*
+ * ⭐ FASE 18: la cornice la scriviamo NOI, bit per bit, e non piu' col filtro
+ *    `hevc_metadata`/`h264_metadata` di libavcodec.  Il metodo: si rilegge
+ *    l'SPS fino al flag di ritaglio (il lettore di cui sopra dice DOVE sta,
+ *    `PosizioneCornice`), si riscrive la testa uguale, poi il flag a 1 coi
+ *    quattro scarti (sommati a quelli che c'erano), e si ricopia la CODA
+ *    dell'SPS tale e quale, bit per bit, fino al bit di stop.  ⛔ E' lecito
+ *    perche' la sintassi dell'SPS e' sequenziale e niente, dopo la finestra,
+ *    dipende dalla posizione in cui sta.  Poi l'RBSP torna NAL con i byte di
+ *    emulazione rimessi (`nal_annexb`) e prende il posto del vecchio nel
+ *    fotogramma.
+ *
+ * ⚠ Gli scarti sono in unita' di croma: 4:2:0 ⇒ meta' dei pixel, per tutt'e
+ *   due i codec (H.264 7.4.2.1.1 CropUnitX/Y = 2 con frame_mbs_only;
+ *   H.265 7.4.3.2 SubWidthC/SubHeightC = 2).  `dx` e `dy` sono pari: lo
+ *   controlla chi decide.
+ */
+static bool riscrivi_sps_con_cornice(Codificatore *c, size_t sps_offset, size_t sps_byte)
 {
 	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
+	const size_t testa_byte = hevc ? 2 : 1;
+	const uint8_t *nal = c->uscita + sps_offset;
+	uint8_t *rbsp, *nuovo_rbsp, *nuovo_nal, *fotogramma;
+	size_t n, ultimo_uno, nuovo_byte, inizio_codice, dopo, totale;
+	CodificatoreConfessione letta;
+	PosizioneCornice dove;
+	ScrittoreBit w;
+	bool ok;
+
+	memset(&letta, 0, sizeof letta);
+	memset(&dove, 0, sizeof dove);
+	ok = hevc ? leggi_sps_hevc(nal, sps_byte, &letta, &dove)
+	          : leggi_sps_h264(nal, sps_byte, &letta, &dove);
+	if (!ok || sps_byte <= testa_byte)
+		return false;
+
+	rbsp = malloc(sps_byte);
+	nuovo_rbsp = malloc(sps_byte + 32);
+	nuovo_nal = malloc(sps_byte + 64);
+	if (!rbsp || !nuovo_rbsp || !nuovo_nal) {
+		free(rbsp);
+		free(nuovo_rbsp);
+		free(nuovo_nal);
+		return false;
+	}
+	n = togli_emulazione(nal + testa_byte, sps_byte - testa_byte, rbsp, sps_byte);
+	/* il bit di stop: l'ULTIMO 1 dell'RBSP */
+	ultimo_uno = 0;
+	for (size_t b = n * 8; b > 0; b--) {
+		if ((rbsp[(b - 1) >> 3] >> (7 - ((b - 1) & 7))) & 1u) {
+			ultimo_uno = b - 1;
+			break;
+		}
+	}
+	if (dove.bit_dopo > ultimo_uno || dove.bit_flag >= dove.bit_dopo) {
+		free(rbsp);
+		free(nuovo_rbsp);
+		free(nuovo_nal);
+		return false;
+	}
+	sb_apri(&w, nuovo_rbsp, sps_byte + 32);
+	sb_copia_bit(&w, rbsp, 0, dove.bit_flag);
+	sb_flag(&w, true);
+	sb_ue(&w, dove.sx);
+	sb_ue(&w, dove.dx + c->cornice_dx / 2);
+	sb_ue(&w, dove.su);
+	sb_ue(&w, dove.giu + c->cornice_dy / 2);
+	sb_copia_bit(&w, rbsp, dove.bit_dopo, ultimo_uno - dove.bit_dopo);
+	sb_chiudi_rbsp(&w);
+	if (w.traboccato) {
+		free(rbsp);
+		free(nuovo_rbsp);
+		free(nuovo_nal);
+		return false;
+	}
+	nuovo_byte = nal_annexb(nuovo_nal, sps_byte + 64, nal, testa_byte, nuovo_rbsp, sb_byte(&w));
+	free(rbsp);
+	free(nuovo_rbsp);
+	if (!nuovo_byte) {
+		free(nuovo_nal);
+		return false;
+	}
+	/* il codice di inizio davanti al vecchio SPS: 3 o 4 byte */
+	inizio_codice = sps_offset - 3;
+	if (inizio_codice > 0 && c->uscita[inizio_codice - 1] == 0)
+		inizio_codice--;
+	dopo = sps_offset + sps_byte;
+	totale = inizio_codice + nuovo_byte + (c->uscita_byte - dopo);
+	fotogramma = malloc(totale);
+	if (!fotogramma) {
+		free(nuovo_nal);
+		return false;
+	}
+	memcpy(fotogramma, c->uscita, inizio_codice);
+	memcpy(fotogramma + inizio_codice, nuovo_nal, nuovo_byte);
+	memcpy(fotogramma + inizio_codice + nuovo_byte, c->uscita + dopo, c->uscita_byte - dopo);
+	free(nuovo_nal);
+	free(c->uscita);
+	c->uscita = fotogramma;
+	c->uscita_capacita = totale;
+	c->uscita_byte = totale;
+	return true;
+}
+
+static bool cornice_al_suo_posto(Codificatore *c, bool chiave)
+{
+	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
+	size_t off = 0, n = 0;
+
 	if (!hevc && c->richiesta.codec != CODIFICATORE_H264)
 		return true;
-	if (!(c->pacchetto->flags & AV_PKT_FLAG_KEY))
+	if (!chiave)
 		return true;
 
+	/* dov'e' l'SPS in questo fotogramma */
+	if (hevc) {
+		FormaAnnexB f;
+		annexb_leggi(c->uscita, c->uscita_byte, &f);
+		off = f.sps_offset;
+		n = f.sps_byte;
+	} else {
+		FormaAnnexB264 f;
+		annexb264_leggi(c->uscita, c->uscita_byte, &f);
+		off = f.sps_offset;
+		n = f.sps_byte;
+	}
+	if (!n)
+		return true; /* niente SPS: decide `forma_va_bene()` */
+
 	if (!c->cornice_decisa) {
-		const uint8_t *d = c->pacchetto->data;
-		size_t byte = (size_t) c->pacchetto->size, off = 0, n = 0;
 		CodificatoreConfessione letta;
 		memset(&letta, 0, sizeof letta);
-		bool ok = false;
-		if (hevc) {
-			FormaAnnexB f;
-			annexb_leggi(d, byte, &f);
-			off = f.sps_offset, n = f.sps_byte;
-			ok = n && leggi_sps_hevc(d + off, n, &letta);
-		} else {
-			FormaAnnexB264 f;
-			annexb264_leggi(d, byte, &f);
-			off = f.sps_offset, n = f.sps_byte;
-			ok = n && leggi_sps_h264(d + off, n, &letta);
-		}
+		bool ok = hevc ? leggi_sps_hevc(c->uscita + off, n, &letta, NULL)
+		               : leggi_sps_h264(c->uscita + off, n, &letta, NULL);
 		if (!ok)
 			return true; /* niente SPS leggibile: decide `forma_va_bene()` */
 		c->cornice_decisa = true;
+		c->cornice_attiva = false;
 		uint32_t dx = letta.larghezza_flusso - c->richiesta.larghezza;
 		uint32_t dy = letta.altezza_flusso - c->richiesta.altezza;
 		if (letta.larghezza_flusso < c->richiesta.larghezza ||
 		    letta.altezza_flusso < c->richiesta.altezza || (dx == 0 && dy == 0) ||
 		    dx >= 64 || dy >= 64 || (dx | dy) & 1u)
 			return true;
-
-		const char *nome = hevc ? "hevc_metadata" : "h264_metadata";
-		const AVBitStreamFilter *filtro = av_bsf_get_by_name(nome);
-		int e = filtro ? av_bsf_alloc(filtro, &c->cornice) : AVERROR_BSF_NOT_FOUND;
-		if (e >= 0)
-			e = avcodec_parameters_from_context(c->cornice->par_in, c->ctx);
-		if (e >= 0) {
-			c->cornice->time_base_in = c->ctx->time_base;
-			av_opt_set_int(c->cornice->priv_data, "crop_left", 0, 0);
-			av_opt_set_int(c->cornice->priv_data, "crop_top", 0, 0);
-			av_opt_set_int(c->cornice->priv_data, "crop_right", dx, 0);
-			av_opt_set_int(c->cornice->priv_data, "crop_bottom", dy, 0);
-			e = av_bsf_init(c->cornice);
-		}
-		if (e < 0) {
-			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-			av_strerror(e, testo, sizeof(testo));
-			registro_dice(REG_CODIFICA,
-			              "⛔ D-023: il flusso dichiara %ux%u e la tela e' %ux%u, e «%s» "
-			              "non si apre (%s): la sessione restera' nera",
-			              letta.larghezza_flusso, letta.altezza_flusso,
-			              c->richiesta.larghezza, c->richiesta.altezza, nome, testo);
-			av_bsf_free(&c->cornice);
-			return true;
-		}
+		c->cornice_attiva = true;
+		c->cornice_dx = dx;
+		c->cornice_dy = dy;
 		registro_dice(REG_CODIFICA,
 		              "⭐ D-023: «%s» dichiara %ux%u per una tela %ux%u (codifica il "
-		              "multiplo del blocco e non scrive la cornice): la scrivo io con "
-		              "«%s», %u colonne e %u righe tagliate a destra e in basso",
-		              c->componente->name, letta.larghezza_flusso, letta.altezza_flusso,
-		              c->richiesta.larghezza, c->richiesta.altezza, nome, dx, dy);
+		              "multiplo del blocco e non scrive la cornice): la scrivo io nell'SPS, "
+		              "bit per bit, %u colonne e %u righe tagliate a destra e in basso",
+		              c->nome_componente, letta.larghezza_flusso, letta.altezza_flusso,
+		              c->richiesta.larghezza, c->richiesta.altezza, dx, dy);
 	}
-	if (!c->cornice)
+	if (!c->cornice_attiva)
 		return true;
-
-	int e = av_bsf_send_packet(c->cornice, c->pacchetto);
-	if (e >= 0)
-		e = av_bsf_receive_packet(c->cornice, c->pacchetto);
-	if (e < 0) {
-		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-		av_strerror(e, testo, sizeof(testo));
-		registro_dice(REG_CODIFICA, "⛔ D-023: la cornice non e' stata scritta: %s", testo);
+	if (!riscrivi_sps_con_cornice(c, off, n)) {
+		registro_dice(REG_CODIFICA,
+		              "⛔ D-023: la cornice non e' stata scritta (SPS di %zu byte non "
+		              "riscrivibile): questo fotogramma non parte", n);
 		return false;
 	}
 	return true;
@@ -3702,7 +3787,7 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 		}
 		if (!c->conf.letto_dal_flusso && f.sps_byte)
 			c->conf.letto_dal_flusso =
-			    leggi_sps_hevc(dati + f.sps_offset, f.sps_byte, &c->conf);
+			    leggi_sps_hevc(dati + f.sps_offset, f.sps_byte, &c->conf, NULL);
 	} else if (c->richiesta.codec == CODIFICATORE_H264) {
 		FormaAnnexB264 f;
 
@@ -3725,7 +3810,7 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 		}
 		if (!c->conf.letto_dal_flusso && f.sps_byte)
 			c->conf.letto_dal_flusso =
-			    leggi_sps_h264(dati + f.sps_offset, f.sps_byte, &c->conf);
+			    leggi_sps_h264(dati + f.sps_offset, f.sps_byte, &c->conf, NULL);
 	} else {
 		FormaObu f;
 		obu_leggi(dati, byte, &f);
@@ -3960,6 +4045,96 @@ static bool risali_qualita(Codificatore *c)
 	return true;
 }
 
+/* I byte codificati si copiano in `c->uscita`, che e' nostro: vedi la
+ * struttura.  Cresce quando serve e non si restringe mai. */
+static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte)
+{
+	if (byte > c->uscita_capacita) {
+		size_t nuova = byte + byte / 4 + 4096;
+		uint8_t *p = realloc(c->uscita, nuova);
+		if (!p) {
+			registro_dice(REG_CODIFICA, "⛔ niente memoria per %zu byte d'uscita", byte);
+			return false;
+		}
+		c->uscita = p;
+		c->uscita_capacita = nuova;
+	}
+	memcpy(c->uscita, dati, byte);
+	c->uscita_byte = byte;
+	return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⛔ CONFINE — IL RIPIEGO SOFTWARE: un fotogramma dentro, un pacchetto fuori.
+ *    Tutto quel che libavcodec fa in questo file passa da qui: `send_frame`,
+ *    `receive_packet`, il caso EAGAIN (il fotogramma trattenuto, che mette il
+ *    contesto in scarico), il testimone del riordino (dts ≠ pts).  I byte del
+ *    pacchetto si copiano in `c->uscita` e il pacchetto si libera subito.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+static bool sw_codifica(Codificatore *c, CodificatoreFotogramma *fuori, uint64_t t0,
+                        uint32_t *in_volo)
+{
+	int esito = avcodec_send_frame(c->sw.ctx, c->sw.fotogramma);
+
+	*in_volo = 0;
+	if (esito < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(esito, testo, sizeof(testo));
+		registro_dice(REG_CODIFICA, "⛔ il fotogramma non e' entrato: %s", testo);
+		return false;
+	}
+	esito = avcodec_receive_packet(c->sw.ctx, c->sw.pacchetto);
+	if (esito == AVERROR(EAGAIN)) {
+		/*
+		 * ⚠ IL CODIFICATORE HA TRATTENUTO IL FOTOGRAMMA — ed e' esattamente
+		 *   il ritardo che `bframes=0` e `pred-struct=1` esistono per
+		 *   togliere.  ⛔ Non si finge che non sia successo e non lo si
+		 *   aggira svuotando: `avcodec_send_frame(ctx, NULL)` mette il
+		 *   codificatore in scarico e **non si torna indietro** — la fase 3
+		 *   si troverebbe un codificatore chiuso al secondo fotogramma, e il
+		 *   sintomo sarebbe «il video si ferma dopo il primo».
+		 *   ⇒ Si conta, si dichiara, e si riapre: dopo la riapertura il
+		 *     fotogramma successivo e' una chiave, che RCP.md §5.2 ammette
+		 *     sempre.
+		 */
+		*in_volo = 1;
+		c->conf.fotogrammi_in_volo = 1;
+		registro_dice(REG_CODIFICA,
+		              "⚠ «%s» ha trattenuto il fotogramma invece di consegnarlo: e' "
+		              "un fotogramma di RITARDO contro i 50 ms di SPECIFICHE.md §3.2, "
+		              "e le opzioni di bassa latenza non sono bastate",
+		              c->nome_componente);
+		avcodec_send_frame(c->sw.ctx, NULL);
+		esito = avcodec_receive_packet(c->sw.ctx, c->sw.pacchetto);
+		c->svuotato = true;
+	}
+	if (esito < 0) {
+		char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+		av_strerror(esito, testo, sizeof(testo));
+		registro_dice(REG_CODIFICA, "⛔ nessun pacchetto: %s", testo);
+		return false;
+	}
+	fuori->us_codifica = adesso_us() - t0;
+	fuori->trattenuto = *in_volo != 0;
+	/* ⭐ Il testimone del riordino, e vale identico sui codec in software: un
+	 *    codificatore che riordina lo dichiara qui, qualunque cosa abbia
+	 *    fatto delle opzioni che gli abbiamo passato. */
+	if (c->sw.pacchetto->dts != AV_NOPTS_VALUE && c->sw.pacchetto->pts != AV_NOPTS_VALUE &&
+	    c->sw.pacchetto->dts != c->sw.pacchetto->pts) {
+		c->conf.riordina = true;
+		registro_dice(REG_CODIFICA,
+		              "⚠ dts %" PRId64 " ≠ pts %" PRId64 ": il codificatore riordina, "
+		              "e ogni riordino e' un fotogramma di ritardo",
+		              c->sw.pacchetto->dts, c->sw.pacchetto->pts);
+	}
+	esito = metti_in_uscita(c, c->sw.pacchetto->data, (size_t) c->sw.pacchetto->size) ? 0 : -1;
+	av_packet_unref(c->sw.pacchetto);
+	if (esito < 0)
+		return false;
+	c->pacchetto_in_mano = true;
+	return true;
+}
+
 /*
  * ⭐ IL CORPO COMUNE ALLE DUE STRADE — e ce n'e' UNO perche' quel che viene dopo
  *    il fotogramma preparato e' identico: la codifica, il tetto dei 16 MiB, le
@@ -4114,74 +4289,42 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		fuori->us_caricamento = us_carico;
 
 		uint64_t t0 = adesso_us();
-		int esito = avcodec_send_frame(c->ctx, c->fotogramma);
-		if (esito < 0) {
-			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-			av_strerror(esito, testo, sizeof(testo));
-			registro_dice(REG_CODIFICA, "⛔ il fotogramma non e' entrato: %s", testo);
-			return false;
-		}
-		esito = avcodec_receive_packet(c->ctx, c->pacchetto);
 		uint32_t in_volo = 0;
-		if (esito == AVERROR(EAGAIN)) {
-			/*
-			 * ⚠ IL CODIFICATORE HA TRATTENUTO IL FOTOGRAMMA — ed e' esattamente
-			 *   il ritardo che `bframes=0` e `pred-struct=1` esistono per
-			 *   togliere.  ⛔ Non si finge che non sia successo e non lo si
-			 *   aggira svuotando: `avcodec_send_frame(ctx, NULL)` mette il
-			 *   codificatore in scarico e **non si torna indietro** — la fase 3
-			 *   si troverebbe un codificatore chiuso al secondo fotogramma, e il
-			 *   sintomo sarebbe «il video si ferma dopo il primo».
-			 *   ⇒ Si conta, si dichiara, e si riapre: dopo la riapertura il
-			 *     fotogramma successivo e' una chiave, che RCP.md §5.2 ammette
-			 *     sempre.
-			 */
-			in_volo = 1;
-			c->conf.fotogrammi_in_volo = 1;
-			registro_dice(REG_CODIFICA,
-			              "⚠ «%s» ha trattenuto il fotogramma invece di consegnarlo: e' "
-			              "un fotogramma di RITARDO contro i 50 ms di SPECIFICHE.md §3.2, "
-			              "e le opzioni di bassa latenza non sono bastate",
-			              c->componente->name);
-			avcodec_send_frame(c->ctx, NULL);
-			esito = avcodec_receive_packet(c->ctx, c->pacchetto);
-			c->svuotato = true;
-		}
-		if (esito < 0) {
-			char testo[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-			av_strerror(esito, testo, sizeof(testo));
-			registro_dice(REG_CODIFICA, "⛔ nessun pacchetto: %s", testo);
+		if (c->hardware) {
+			/* ⭐ FASE 18 — la scheda: un giro, un'attesa, i byte.  Niente
+			 *    EAGAIN per costruzione, niente riordino per costruzione. */
+			const uint8_t *dati = NULL;
+			size_t byte = 0;
+			char errore[256] = { 0 };
+			if (!vadiretta_codifica(c->va, c->superficie_pronta, c->prossimo_chiave, &dati,
+			                        &byte, errore, sizeof errore)) {
+				registro_dice(REG_CODIFICA, "⛔ la scheda non ha codificato: %s", errore);
+				return false;
+			}
+			if (!metti_in_uscita(c, dati, byte))
+				return false;
+			fuori->us_codifica = adesso_us() - t0;
+			fuori->trattenuto = false;
+			c->pacchetto_in_mano = true;
+		} else if (!sw_codifica(c, fuori, t0, &in_volo)) {
 			return false;
 		}
-		fuori->us_codifica = adesso_us() - t0;
-		fuori->trattenuto = in_volo != 0;
-		c->pacchetto_in_mano = true;
-		/* ⭐ Il testimone del riordino, e vale identico sui due codec: un
-		 *    codificatore che riordina lo dichiara qui, qualunque cosa abbia
-		 *    fatto delle opzioni che gli abbiamo passato. */
-		if (c->pacchetto->dts != AV_NOPTS_VALUE && c->pacchetto->pts != AV_NOPTS_VALUE &&
-		    c->pacchetto->dts != c->pacchetto->pts) {
-			c->conf.riordina = true;
-			registro_dice(REG_CODIFICA,
-			              "⚠ dts %" PRId64 " ≠ pts %" PRId64 ": il codificatore riordina, "
-			              "e ogni riordino e' un fotogramma di ritardo",
-			              c->pacchetto->dts, c->pacchetto->pts);
-		}
+		/* ⛔ CONFINE — da qui in giu' si lavora sui BYTE in `c->uscita`, e le
+		 *    due strade non si distinguono piu'. */
 
 		/* ───────────────────────────────────────────────────────────────────
 		 * ⛔ IL TETTO DEI 16 MiB — `RCP.md` §6.2, e vincola CHI SPEDISCE. */
-		if ((uint32_t) c->pacchetto->size > TETTO_FOTOGRAMMA) {
-			/* ⭐ La misura si legge PRIMA dell'`unref`, o la riga della discesa
-			 *    direbbe zero: e' la prova che la discesa e' misurata (I1). */
-			uint32_t prodotti = (uint32_t) c->pacchetto->size;
+		if ((uint32_t) c->uscita_byte > TETTO_FOTOGRAMMA) {
+			/* ⭐ La misura si legge PRIMA di buttare i byte, o la riga della
+			 *    discesa direbbe zero: e' la prova che la discesa e' misurata (I1). */
+			uint32_t prodotti = (uint32_t) c->uscita_byte;
 			/* ⚠ Il tetto nel messaggio si STAMPA, non si scrive a mano: una
 			 *   riga di registro che dicesse «16 MiB» mentre la costante ne
 			 *   dice altri manderebbe la caccia dalla parte sbagliata. */
 			registro_dice(REG_CODIFICA,
-			              "⛔ fotogramma di %d byte, oltre i %u del tetto di RCP.md §6.2: "
+			              "⛔ fotogramma di %zu byte, oltre i %u del tetto di RCP.md §6.2: "
 			              "si RICODIFICA a qualita' inferiore (tentativo %u), non si spedisce",
-			              c->pacchetto->size, TETTO_FOTOGRAMMA, tentativo + 1);
-			av_packet_unref(c->pacchetto);
+			              c->uscita_byte, TETTO_FOTOGRAMMA, tentativo + 1);
 			c->pacchetto_in_mano = false;
 
 			/* ⛔ LO SCALINO SU CUI IL TETTO HA MORSO e' quello del PRIMO
@@ -4316,7 +4459,7 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *   grandezza che decide e' «a questa qualita' il fotogramma ci sta», e non
 	 *   dipende da cosa ne faccia poi chi spedisce.
 	 */
-	if ((uint32_t) c->pacchetto->size <= RISALITA_MARGINE) {
+	if ((uint32_t) c->uscita_byte <= RISALITA_MARGINE) {
 		if (c->sotto_margine < UINT32_MAX)
 			c->sotto_margine++;
 		/* La risalita ha retto fino al punto di lavoro chiesto: la prossima
@@ -4329,9 +4472,8 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	}
 
 	bool chiave = false;
-	if (!cornice_al_suo_posto(c) ||
-	    !forma_va_bene(c, c->pacchetto->data, (size_t) c->pacchetto->size, &chiave)) {
-		av_packet_unref(c->pacchetto);
+	if (!cornice_al_suo_posto(c, chiave_chiesta || c->prossimo_chiave) ||
+	    !forma_va_bene(c, c->uscita, c->uscita_byte, &chiave)) {
 		c->pacchetto_in_mano = false;
 		return false;
 	}
@@ -4344,7 +4486,6 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		registro_dice(REG_CODIFICA,
 		              "⛔ era stata chiesta una CHIAVE e il codificatore ha prodotto un "
 		              "delta: non si spedisce (RCP.md §5.2)");
-		av_packet_unref(c->pacchetto);
 		c->pacchetto_in_mano = false;
 		return false;
 	}
@@ -4375,10 +4516,10 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		uint64_t adesso = adesso_us();
 		if (!c->banda_t0_us)
 			c->banda_t0_us = adesso;
-		c->banda_byte += (uint64_t) c->pacchetto->size;
+		c->banda_byte += (uint64_t) c->uscita_byte;
 		c->banda_fotogrammi++;
-		if ((uint32_t) c->pacchetto->size > c->banda_massimo)
-			c->banda_massimo = (uint32_t) c->pacchetto->size;
+		if ((uint32_t) c->uscita_byte > c->banda_massimo)
+			c->banda_massimo = (uint32_t) c->uscita_byte;
 		uint64_t durata = adesso - c->banda_t0_us;
 		if (durata >= BANDA_FINESTRA_US) {
 			uint64_t kbit = c->banda_byte * 8u * 1000u / durata; /* µs ⇒ kbit/s */
@@ -4409,11 +4550,11 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	if (!c->prima_codifica_fatta) {
 		c->prima_codifica_fatta = true;
 		registro_dice(REG_CODIFICA,
-		              "primo fotogramma: %s · %d byte · chiave %s · flusso: %s, %d bit, "
+		              "primo fotogramma: %s · %zu byte · chiave %s · flusso: %s, %d bit, "
 		              "livello %d, %ux%u · conversione %" PRIu64 " µs, caricamento "
 		              "%" PRIu64 " µs, codifica %" PRIu64 " µs · %s",
 		              c->conf.stringa_codec[0] ? c->conf.stringa_codec : "(non letto)",
-		              c->pacchetto->size, chiave ? "si" : "no",
+		              c->uscita_byte, chiave ? "si" : "no",
 		              c->conf.letto_dal_flusso ? "letto" : "⛔ NON letto",
 		              c->conf.profondita_flusso, c->conf.livello_flusso,
 		              c->conf.larghezza_flusso, c->conf.altezza_flusso,
@@ -4461,8 +4602,8 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *   per fortuna.  ⚠ Chi aggiunge un `chiudi_contesto()` ottavo aggiunga anche
 	 *   la riga qui sopra, o toglie la prova a tutti.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	fuori->dati = c->pacchetto->data;
-	fuori->byte = (size_t) c->pacchetto->size;
+	fuori->dati = c->uscita;
+	fuori->byte = c->uscita_byte;
 	fuori->chiave = chiave;
 	c->prossimo_chiave = false;
 	c->numero++;
@@ -4496,7 +4637,7 @@ bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie 
 		              "c'e' nessun pixel da leggere.  ⚠ Chi cattura deve chiedere la "
 		              "MEMORIA quando il codificatore non e' in hardware — la strada si "
 		              "sceglie prima, non qui",
-		              c->componente ? c->componente->name : "(nessuno)");
+		              c->nome_componente);
 		return false;
 	}
 	if (superficie->fd < 0 || !superficie->larghezza || !superficie->altezza
@@ -4559,6 +4700,7 @@ void codificatore_rilascia(Codificatore *c)
 {
 	if (!c || !c->pacchetto_in_mano)
 		return;
-	av_packet_unref(c->pacchetto);
+	/* ⭐ Fase 18: i byte sono nostri (`c->uscita`) e restano validi; il
+	 *    rilascio dice solo che il chiamante ha finito di leggerli. */
 	c->pacchetto_in_mano = false;
 }
