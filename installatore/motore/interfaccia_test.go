@@ -168,3 +168,42 @@ func TestFermataDaChiInstalla(t *testing.T) {
 		t.Errorf("fermata: IN_ANNULLAMENTO con RX-AZIONE-006 non è nel registro")
 	}
 }
+
+// La porta scelta finisce nel piano: un file in /etc/remotix/remotix.conf.d (remotix.service lo
+// legge), PRIMA dell'accensione; con quella di serie nessun file (`[M]` 30 set, leap16-kde in
+// scatola: il servizio partiva su 7447 e il motore lo verificava su 8532).
+func TestPianoPortaScelta(t *testing.T) {
+	radice := t.TempDir()
+	preparaMacchina(t, radice)
+	os.WriteFile(filepath.Join(radice, "remotix.deb"), []byte("pacchetto finto"), 0o644)
+	amb := ambienteFinto(radice)
+	prof := profiloFinto()
+	cat := catalogoProva(t)
+	rap := Valuta(cat, prof)
+	for _, porta := range []int{7447, 8531} {
+		p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: porta})
+		if err != nil {
+			t.Fatal(err)
+		}
+		file, servizio := -1, -1
+		for i, a := range p.Azioni {
+			switch {
+			case a.ID == "porta" && a.Tipo == "scrivi-file":
+				file = i
+				if a.Parametri["percorso"] != "/etc/remotix/remotix.conf.d/porta.conf" || a.Parametri["contenuto"] != "REMOTIX_PORTA=8531\n" {
+					t.Errorf("porta %d: il file è %v", porta, a.Parametri)
+				}
+			case a.Tipo == "accendi-servizio":
+				servizio = i
+			}
+		}
+		switch {
+		case porta == 7447 && file != -1:
+			t.Errorf("porta di serie: nessun file in /etc, invece c'è")
+		case porta != 7447 && file == -1:
+			t.Errorf("porta %d: manca il file in /etc/remotix/remotix.conf.d", porta)
+		case file != -1 && file > servizio:
+			t.Errorf("porta %d: il file va scritto PRIMA dell'accensione (%d > %d)", porta, file, servizio)
+		}
+	}
+}

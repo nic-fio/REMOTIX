@@ -151,6 +151,12 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if len(gruppi) == 0 {
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.nessun_gruppo")})
 	}
+	// la porta scelta (§6.4: i predefiniti in /usr, le scelte in /etc): remotix.service la legge da
+	// /etc/remotix/remotix.conf.d/*.conf. Solo se non è quella di serie — `[M]` 30 set, leap16-kde in
+	// scatola: senza questo passo il servizio partiva su 7447 e il motore lo verificava su 8532
+	if o.Porta != 7447 {
+		pn.Azioni = append(pn.Azioni, PianoScriviFile("porta", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
+	}
 	// D4 (DECISIONI §4.7, 15 ago 2026): le tre cinture SEMPRE, senza consenso; il piano lo dichiara
 	for _, c := range Cinture {
 		pn.Azioni = append(pn.Azioni, PianoCintura(c.ID, c.Sorgente, c.Percorso, c.Ricarica))
