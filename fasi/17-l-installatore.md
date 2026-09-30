@@ -367,8 +367,9 @@ a metà, non solo l'aggiornamento. L'utente ha chiesto di rafforzarla nei punti 
 aggiunte, tutte nelle giunture fra una fase e l'altra:
 
 1. **una fase zero, TRUST**: il motore esegue comandi da root sulla macchina di un altro; prima di
-   tutto verifica che **sé stesso e il catalogo** (le combinazioni supportate) siano autentici
-   (firma) e aggiornati — un motore alterato o vecchio passerebbe tutte le fasi dopo;
+   tutto si accerta che **il catalogo** (le combinazioni supportate) sia quello giusto e che lui lo
+   capisca — dopo D11 (§6.6.10) è quello che il motore porta dentro, consegnato dal gestore di
+   pacchetti (il pacchetto `remotix-install`) o da `install.sh` (lo sha256);
 2. **COMPATIBILITY ha tre esiti, per desktop**: *certificata* (provata nelle nostre VM, §7) ·
    *a condizioni* (RPM Fusion, labwc, ripiego software…) · *non supportata*; e una macchina può
    essere a posto per GNOME e non per XFCE;
@@ -390,7 +391,7 @@ aggiunte, tutte nelle giunture fra una fase e l'altra:
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                          REMOTIX INSTALL ENGINE                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 0. TRUST                 il motore e il catalogo sono autentici e freschi│
+│ 0. TRUST                 il catalogo del pacchetto, e il motore lo capisce│
 │ 1. PREFLIGHT             conoscere il sistema — sola lettura; l'impronta │
 │ 2. COMPATIBILITY         per desktop: certificata · a condizioni · no    │
 │ 3. PLANNING              il piano come documento: fai / verifica / annulla│
@@ -408,7 +409,7 @@ aggiunte, tutte nelle giunture fra una fase e l'altra:
 
 | fase | prima installazione | aggiornamento | disinstallazione |
 |---|---|---|---|
-| 0 TRUST | firma del motore e del catalogo | idem | idem |
+| 0 TRUST | il catalogo del motore (§6.6.10) | idem | idem |
 | 1 PREFLIGHT | distribuzione, scheda (NVIDIA proprietaria compresa), H.264, desktop, PAM, porta, firewall, SELinux | in più: la versione installata e **le sessioni aperte** | che cosa c'è, e il registro delle modifiche fatte da REMOTIX |
 | 2 COMPATIBILITY | la macchina contro il catalogo (§3), desktop per desktop | la N+1 sulla stessa macchina; N+1 accetta la configurazione di N | — |
 | 3 PLANNING | azioni: depositi, pacchetti, gruppi, firewall | in più: «chi è collegato si riattacca in pochi secondi» | che cosa si toglie, che cosa resta (configurazione, se non `purge`) |
@@ -555,8 +556,8 @@ login non telefona a casa).
    chiedere il riavvio del servizio.
 5. **Ritorno alla versione precedente**: il deposito conserva le vecchie; prima di aggiornare si salva
    `/etc/remotix` e `/var/lib/remotix`; la versione N−1 legge la configurazione della N.
-6. **Firme**: chiave per il solo deposito REMOTIX (`Signed-By`, mai `trusted.gpg.d`), pacchetto
-   `remotix-archive-keyring`, sottochiave di firma con scadenza e un piano per ruotarla.
+6. **Firme**: UNA chiave (§6.6.10), per il solo deposito REMOTIX (`Signed-By`, mai `trusted.gpg.d`),
+   nel pacchetto `remotix-archive-keyring`; dove si custodisce e come si cambia: con D10.
 7. **Configurazione**: predefiniti in `/usr`, scelte dell'amministratore in `/etc` che vincono;
    `remotix configurazione --mostra` dice da quale file viene ogni voce.
 8. **Benvenuto** alla fine: gli indirizzi da aprire, l'impronta del certificato, chi può entrare
@@ -804,9 +805,9 @@ E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo c
 `remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
 `remotix verifica` lo vede e lo dice.
 
-Il **catalogo** (le combinazioni e le loro regole) ha una versione, una data di scadenza e la versione
-minima del motore che lo capisce; il certificato registra quale catalogo ha deciso lo stato di quella
-installazione.
+Il **catalogo** (le combinazioni e le loro regole) ha una versione, una sequenza e la versione minima
+del motore che lo capisce; viaggia DENTRO il motore, e il motore nel pacchetto `remotix-install`
+(§6.6.10). Il certificato registra quale catalogo ha deciso lo stato di quella installazione.
 
 #### 6.6.9 Esiti e codici
 
@@ -821,31 +822,23 @@ Ogni messaggio del motore ha:
 Lo stesso codice compare nella riga di comando, nel registro, nel certificato, nel manuale e in ogni
 futura interfaccia. ⛔ Un codice non si riusa mai per un altro significato.
 
-#### 6.6.10 La fiducia: due catene separate
+#### 6.6.10 La fiducia: una chiave sola (`DECISIONI.md` §10.21, 30 set 2026)
 
-⚠ **Superata dalla decisione dell'utente del 30 set (`DECISIONI.md` §10.21)**: una chiave sola, quella dell'archivio (catena B); la catena A si toglie — l'installatore si verifica con lo sha256, il catalogo sta nel pacchetto `remotix-install`. Il testo sotto resta per la storia.
-
-| catena | che cosa firma | chi la usa |
+| che cosa | chi lo garantisce | come |
 |---|---|---|
-| **A — il motore e il catalogo** | `remotix-install`, `install.sh`, il catalogo | il motore stesso, alla fase 0 TRUST |
-| **B — i pacchetti e i depositi** | i `.deb`/`.rpm`/`.pkg.tar.zst` e i metadati dei depositi | il gestore di pacchetti della distribuzione (R17, R18) |
+| `install.sh`, scaricato a mano | l'amministratore | lo **sha256** pubblicato sul sito di REMOTIX, in HTTPS |
+| il motore scaricato da `install.sh` (`remotix-install`, `-gui`) | `install.sh` | lo **sha256** scritto dentro `install.sh` dal comando di rilascio (una copia di sviluppo: quello pubblicato accanto al motore, **solo in HTTPS**; http solo con `--insicuro`, per le prove) — `RX-TRUST-017` se non torna |
+| i pacchetti (`remotix`, `remotix-install`, `remotix-selinux`, `remotix-archive-keyring`) e i metadati dell'archivio | il **gestore di pacchetti** | l'**unica chiave** di REMOTIX (GPG), che firma pacchetti e archivio: apt (`Signed-By`, `Valid-Until`), dnf (`gpgcheck`, `repo_gpgcheck`), zypper, pacman — R17 |
+| il **catalogo** | chi ha consegnato il motore | sta DENTRO il motore (`installatore/catalogo/catalogo.json`, incorporato), e il motore dentro il pacchetto `remotix-install`: si aggiorna **come ogni pacchetto** (`apt upgrade`…, §10.23) |
 
-⛔ **Le due catene hanno chiavi diverse**: la chiave dei depositi non autorizza il motore e viceversa.
-
-Il modello (comune alle due):
-- **radice**: una chiave madre **fuori linea**, mai sulla macchina che costruisce; firma **sottochiavi**
-  con scadenza (un anno), che firmano gli artefatti;
-- **distribuzione della radice**: l'impronta della chiave madre è scritta nel motore rilasciato,
-  pubblicata sul sito e nel manuale; il pacchetto `remotix-archive-keyring` porta la catena B;
-- **rotazione**: una sottochiave nuova firmata dalla madre, pubblicata **prima** che la vecchia scada;
-- **revoca**: un elenco firmato di sottochiavi revocate, che il motore scarica con il catalogo;
-- **catalogo «fresco»**: firmato, non scaduto, con versione minima del motore ≤ la propria;
-- **se la fiducia non si verifica**: ⛔ BLOCCATA (`RX-TRUST-…`), niente viene toccato; si procede solo
-  con un catalogo **fuori linea firmato** dato esplicitamente (§6.6.12), mai saltando il controllo.
-
-La **custodia** della chiave madre e la **cadenza** della rotazione sono la **decisione D11** (T8): oggi
-non esiste ancora un deposito pubblico. La supply chain è comunque già definita qui, perché TRUST e
-ACQUISITION la presuppongono fin dalla T4.
+La fase 0 TRUST, quindi: il catalogo è quello del motore che gira — del pacchetto (`/usr/bin/remotix-install`:
+«lo garantisce il gestore di pacchetti») o scaricato da `install.sh` («verificato con lo sha256») — oppure uno
+dato a mano con `--catalogo FILE` (è dell'amministratore, e il certificato lo dice). Resta un solo controllo:
+che si legga (`RX-TRUST-004`) e che questo motore lo capisca (`RX-TRUST-003`); niente scadenza, niente
+catalogo memorizzato sulla macchina. ⚠ Onestamente: lo sha256 di `install.sh` vale quanto il sito che lo
+pubblica (HTTPS); da lì in giù la catena è chiusa. **Ritirati** (non si riusano): `RX-TRUST-002`, `006`…`016`
+(la vecchia «catena A»: radice ed25519, sottochiavi, revoche, firme del motore e del catalogo, `fiducia`).
+Resta da decidere, con **D10**, dove si custodisce la chiave e la sua copia di riserva.
 
 #### 6.6.11 Il certificato si verifica a posteriori
 
@@ -864,8 +857,8 @@ come allora e che cosa è cambiato.
   trasforma in piano e registra. ⛔ Mai un interruttore che salta CONSENT & SAFETY; ogni azione, anche
   quelle di D5 e D6 (depositi, firewall), è nel piano, nel consenso e nel registro.
 - **Senza rete** (R22): un **pacchetto fuori linea**, preparato su una macchina collegata per una
-  impronta data, che contiene il catalogo firmato, l'insieme risolto (tutti gli artefatti, con i
-  digest e le firme), e i metadati firmati dei depositi. Il motore lo usa come un deposito locale; le
+  impronta data, che contiene il motore (col catalogo dentro) e il suo sha256, l'insieme risolto (tutti
+  gli artefatti, con i digest e le firme), e i metadati firmati dei depositi. Il motore lo usa come un deposito locale; le
   firme si verificano come in linea.
 
 ⭐ **Come è fatto (T9, 30 set 2026)** — il codice in `installatore/motore/risposte.go` e `fuorilinea.go`:
@@ -874,8 +867,8 @@ come allora e che cosa è cambiato.
   `desktop` (solo se manca: se il file tace vale quello di riferimento, §10), e i consensi
   `consenso.firewall` (D6, solo con firewalld acceso) — ⭐ le cinture **non si chiedono** (D4 era già decisa:
   `DECISIONI.md` §4.7; una `consenso.cinture` di un file vecchio si annota fra le «superflue» e non conta, T9),
-  `consenso.deposito.rpmfusion|packman|epel` (D5, solo dove serve), `consenso.aggiornamenti` (il timer),
-  ognuno «si» o «no». Il motore sa quali consensi servono **su quella macchina**: se ne manca uno il piano
+  `consenso.deposito.rpmfusion|packman|epel` (D5, solo dove serve), ognuno «si» o «no» (`consenso.aggiornamenti`
+  è ritirata con D14, §10.23: in un file vecchio è «superflua»). Il motore sa quali consensi servono **su quella macchina**: se ne manca uno il piano
   si fa (per mostrarlo) con `mancanti` scritti dentro, e l'operazione è **BLOCCATA** con `RX-RISPOSTE-001`
   prima di toccare niente; una voce sconosciuta (un errore di battitura in un consenso) è `RX-RISPOSTE-002`,
   un valore sbagliato `RX-RISPOSTE-003`. Il piano porta il file (percorso, sha256, voci, predefinite,
@@ -887,8 +880,8 @@ come allora e che cosa è cambiato.
   --uscita DIR` su una macchina **collegata uguale** a quella senza rete (stessa impronta vincolante e
   **stessi pacchetti installati**: l'insieme risolto dipende da quel che c'è già). Dentro: il manifesto
   `fuori-linea.json` (l'impronta, l'elenco dei pacchetti, l'insieme risolto, ogni file col suo sha256),
-  `archivio/` (catalogo e revoche firmati, motore con la sua firma, chiavi, il deposito di REMOTIX coi
-  suoi metadati firmati e i soli pacchetti che servono), `distro/apt/<n>/` (apt: una copia **parziale**
+  `archivio/` (il motore col suo sha256 — il catalogo è dentro —, la chiave pubblica, il deposito di REMOTIX
+  coi suoi metadati firmati e i soli pacchetti che servono), `distro/apt/<n>/` (apt: una copia **parziale**
   di ogni deposito della distribuzione, col suo InRelease firmato dalla distribuzione, gli indici che
   certifica e nel pool i soli `.deb` che mancano), `distro/rpm/<passo>/` (dnf: i `.rpm` che mancano,
   firmati uno per uno), `terzi/rpmfusion/` (su Fedora, col consenso D5: senza RPM Fusion REMOTIX non
@@ -901,13 +894,13 @@ come allora e che cosa è cambiato.
   `_apt` legge (non `/root`): il deposito locale di REMOTIX resta configurato dopo, per gli aggiornamenti
   portati con un pacchetto nuovo, e da `/root` `apt-get update` non lo legge;
 - **lo script d'ingresso** `installatore/install.sh`: tutto in funzioni, `main "$@"` all'ultima riga;
-  riconosce la famiglia (`/etc/os-release`), scarica il motore statico dall'archivio, ne verifica la
-  firma (catena A: sottochiave certificata dalla radice **scritta nello script**, periodo, revoche firmate
-  dalla radice) con `openssl pkeyutl` e gli passa la mano (`installa`, `verifica`, `piano`); `--verifica`
+  riconosce la famiglia (`/etc/os-release`), scarica il motore statico dall'archivio, ne verifica lo
+  **sha256** (§6.6.10: scritto nello script dal comando di rilascio) e gli passa la mano (`installa`,
+  `verifica`, `piano`); `--verifica`
   (anche da utente), `--dry-run` (da root: il piano legge i file che toccherebbe), `--risposte`,
   `--lingua`; bilingue; il motore sta in una cartella temporanea; ⛔ nessun file del prodotto copiato
-  (lo controlla anche `TestScriptRadice`). `pubblica.sh script` lo mette nell'archivio, firmato come
-  oggetto «script» (`remotix-install fiducia install.sh --oggetto script` lo verifica);
+  (lo controlla anche `TestScript`). `pubblica.sh script` lo mette nell'archivio con gli sha256 dei due
+  motori dentro, e `install.sh.sha256` accanto (quello da pubblicare sul sito);
 - **cloud-init** (R21): `banchi/17-t9/cloud-init-r21.yaml`, un user-data che scrive il file di risposte e
   lancia `curl …/install.sh | sh -s -- --archivio … --risposte …`.
 
@@ -925,11 +918,11 @@ Linux si lega alle librerie grafiche **al collegamento** (pkg-config: wayland-cl
 wayland-egl, egl, x11, xkbcommon, xkbcommon-x11, x11-xcb, xcursor, xfixes; solo Vulkan a richiesta): un
 binario con la finestra su una macchina senza quelle librerie non arriva nemmeno a `main`. Caricarle «solo
 quando servono» vorrebbe dire riscrivere le chiamate di Gio. ⇒ `remotix-install` (statico, senza cgo: motore,
-CLI, TUI — quello del pacchetto e del timer, va ovunque) e `remotix-install-gui` (etichetta `gui`, cgo,
+CLI, TUI — quello del pacchetto, va ovunque) e `remotix-install-gui` (etichetta `gui`, cgo,
 costruito su **glibc di Debian 12** in `installatore/Contenitore.gui`, perché giri anche su Alma 10): **gli
 stessi comandi più `gui`**. La statica a `gui` risponde **RX-UI-001**. `install.sh --finestra` scarica la
-seconda (stessa firma, catena A), `--tui` la prima. Su ogni macchina resta **un file**, un programma che fa
-partire sé stesso da root; nell'archivio i binari firmati sono due.
+seconda (col suo sha256), `--tui` la prima. Su ogni macchina resta **un file**, un programma che fa
+partire sé stesso da root; nell'archivio i binari sono due, ognuno col suo sha256.
 
 **Il disegno** (`installatore/interfaccia/`, nessuna logica d'installazione, §6.6.1):
 - `motore/interfaccia.go` — quel che il motore aggiunge per le interfacce: `DomandeDaFare` (la porta; il
@@ -1095,7 +1088,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R36 | ⭐ tre interfacce, un solo motore | la stessa installazione guidata da CLI, TUI e GUI su tre copie della stessa macchina | piano, insieme risolto, registro (a parte gli orari) o certificato diversi fra le tre |
 | R37 | la GUI non gira da root | processo della finestra durante l'installazione | uid 0 |
 | R38 | una macchina senza desktop | VM «nuda» (senza desktop): risposta «sì» ⇒ desktop installato, `graphical.target` e schermata d'accesso NON attivati, desktop nel browser; risposta «no» ⇒ BLOCCATA con `RX-DESKTOP-001` e impronte invariate | un desktop che parte davanti al monitor; una macchina toccata dopo un «no» |
-| R39 | l'aggiornamento automatico passa dal gestore di pacchetti e non chiude i desktop | versione N+1 di manutenzione pubblicata nell'archivio di prova; il timer di REMOTIX la trova e (secondo D14) la applica con due utenti collegati; poi un catalogo nuovo che aggiunge una versione di distribuzione | un file di REMOTIX cambiato fuori dal gestore di pacchetti; una finestra persa; il catalogo nuovo non letto |
+| R39 | l'aggiornamento passa dal gestore di pacchetti e non chiude i desktop | (D14, §10.23) un rilascio N+1 fatto col comando di rilascio, con un catalogo nuovo; l'aggiornamento DEL SISTEMA (`apt upgrade`, `dnf upgrade`, `pacman -Syu`) con un browser collegato | un file di REMOTIX cambiato fuori dal gestore di pacchetti; un desktop chiuso o rinato (processo diverso); il catalogo nuovo non in uso; `certifica` non verde dopo |
 | R40 | ⭐ il pacchetto da solo non accende niente | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo, porte in ascolto, gruppi; poi `remotix stato` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; `remotix stato` che non dica «installazione non certificata» |
 | R41 | un programma solo | durante un'installazione completa, l'albero dei processi figli del motore (`/proc`) | un processo che non sia il motore stesso o un programma dell'elenco chiuso; uno script eseguito; una chiamata a un programma non annotata nel registro |
 | R42 | la lingua segue il sistema | la stessa installazione con `LANG=it_IT.UTF-8`, `LANG=en_US.UTF-8`, `LANG=de_DE.UTF-8` e `LANGUAGE=it:en`, in GUI (che si rilancia con polkit) e in TUI | una schermata o un messaggio nella lingua sbagliata; un codice `RX-…` diverso fra le lingue |
