@@ -143,6 +143,7 @@ var Codici = map[string]Codice{
 	"RX-PACCHETTI-002": {BLOCCANTE, ServeAzione, "Togliere i pacchetti di REMOTIX toglierebbe anche un pacchetto d'altri: non si tocca.", "Guardare chi dipende da quel pacchetto."},
 	"RX-PACCHETTI-003": {BLOCCANTE, ServeAzione, "Il gestore di pacchetti di questa famiglia non è conosciuto dal motore.", ""},
 	"RX-PACCHETTI-004": {BLOCCANTE, ServeAzione, "Il gestore di pacchetti è a metà di una transazione di prima.", "Sistemarlo col suo rimedio (dpkg --configure -a, dnf, zypper verify) e riprovare."},
+	"RX-PACCHETTI-006": {INFO, ServeAzione, "Dei pacchetti portati da REMOTIX alcuni restano: li chiede qualcosa che resta (un pacchetto aggiornato dallo stesso archivio, o un programma installato dopo). Toglierli si porterebbe via anche lui.", "Se non servono più, toglierli a mano insieme a chi li chiede, col gestore di pacchetti."},
 	"RX-PACCHETTI-005": {BLOCCANTE, Riprovabile, "La transazione non si è potuta risolvere o scaricare: niente è stato installato.", "Controllare la rete e i depositi, poi riprendere."},
 	"RX-CINTURA-001":   {BLOCCANTE, ServeAzione, "Il file spento della cintura non c'è (il pacchetto non l'ha portato).", ""},
 	"RX-SYSTEMD-002":   {BLOCCANTE, ServeAzione, "L'unità è mascherata: l'amministratore l'ha spenta apposta.", ""},

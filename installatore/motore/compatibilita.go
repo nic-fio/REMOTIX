@@ -101,6 +101,9 @@ type DesktopCatalogo struct {
 	Componenti []string `json:"componenti,omitempty"`
 	Depositi   []string `json:"depositi,omitempty"`
 	Limiti     []string `json:"limiti,omitempty"`
+	// Richiede3D: il desktop non va senza l'accelerazione 3D della scheda (il perché): condizione
+	// C-HARDWARE; senza nessuna scheda (nessun nodo di rendering) NON_SUPPORTATA, RX-COMPAT-007
+	Richiede3D string `json:"richiede_3d,omitempty"`
 	// ServeCarattere: il desktop gira sotto labwc, che muore senza un carattere scalabile
 	// (labwc #2525, §11.1)
 	ServeCarattere bool     `json:"serve_carattere,omitempty"`
@@ -343,6 +346,13 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 				}
 				for _, l := range dc.Limiti {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-LIMITE", Testo: l})
+				}
+				if dc.Richiede3D != "" {
+					if p.V("scheda.nodi") == "nessuno" {
+						e.Motivi = append(e.Motivi, Msg("RX-COMPAT-007", T("mot.3d", NomeDesktop(d), dc.Richiede3D)))
+					} else {
+						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-HARDWARE", Testo: T("cond.3d", NomeDesktop(d), dc.Richiede3D)})
+					}
 				}
 				e.Note = append(e.Note, dc.Note...)
 				if min := c.Requisiti.minimaDesktop(d); min != "" && inst != "" && inst[0] >= '0' && inst[0] <= '9' &&

@@ -1012,9 +1012,17 @@ func (m *Motore) ControllaInstallazione() (*Installazione, error) {
 	return &in, nil
 }
 
-// indirette: quel che è successo indirettamente e resta (§6.6.4): le dichiarano le azioni.
+// indirette: quel che è successo indirettamente e resta (§6.6.4): le dichiarano le azioni; e i
+// pacchetti trattenuti da un passo che disfa (RX-PACCHETTI-006), che lo dice nel suo FATTA.
 func (op *Operazione) indirette() []string {
 	r := []string{}
+	for _, e := range op.Reg.Eventi {
+		var d map[string]string
+		if e.Tipo == EvFatta && json.Unmarshal(e.Dopo, &d) == nil && strings.Contains(d["dettaglio"], "[RX-PACCHETTI-006]") {
+			_, x, _ := strings.Cut(d["dettaglio"], "[RX-PACCHETTI-006] ")
+			r = append(r, "RX-PACCHETTI-006 "+e.Azione+": "+x)
+		}
+	}
 	for _, ap := range op.Piano.Azioni {
 		intz := op.Reg.Intenzione(ap.ID)
 		if intz == nil {

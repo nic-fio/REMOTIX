@@ -93,6 +93,7 @@ var codiciInglese = map[string][2]string{
 	"RX-PACCHETTI-002": {"Removing the REMOTIX packages would also remove someone else's package: nothing is touched.", "Check who depends on that package."},
 	"RX-PACCHETTI-003": {"This family's package manager is not known to the engine.", ""},
 	"RX-PACCHETTI-004": {"The package manager is half-way through an earlier transaction.", "Fix it with its own remedy (dpkg --configure -a, dnf, zypper verify) and retry."},
+	"RX-PACCHETTI-006": {"Some packages brought by REMOTIX stay: something that stays needs them (a package updated from the same archive, or a program installed later). Removing them would take it away too.", "If they are no longer needed, remove them by hand together with what needs them, with the package manager."},
 	"RX-PACCHETTI-005": {"The transaction could not be resolved or downloaded: nothing was installed.", "Check the network and the repositories, then resume."},
 	"RX-CINTURA-001":   {"The switched-off safety-belt file is missing (the package did not bring it).", ""},
 	"RX-SYSTEMD-002":   {"The unit is masked: the administrator switched it off on purpose.", ""},

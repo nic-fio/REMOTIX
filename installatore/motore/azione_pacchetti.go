@@ -358,11 +358,15 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	var togli []string
+	var nuovi []string
 	for _, x := range p.Insieme {
 		if x.Esito == "nuovo" && ver[x.Nome] != "" {
-			togli = append(togli, x.Nome)
+			nuovi = append(nuovi, x.Nome)
 		}
+	}
+	togli, _, err := trattenuti(g, nuovi, nuovi, c.Purge)
+	if err != nil {
+		return err
 	}
 	if len(togli) > 0 {
 		if err := g.Togli(togli, c.Purge); err != nil {
@@ -383,19 +387,72 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	if p.Origine == PREESISTENTE {
 		return true, "c'erano già: non si toccano", nil
 	}
-	_, nuovi, err := a.conta(c, p)
+	g, err := a.gestore(c)
 	if err != nil {
 		return false, "", err
 	}
-	if nuovi > 0 {
-		return false, fmt.Sprintf("%d pacchetti nuovi ancora installati", nuovi), nil
+	ver, err := g.Versioni(nomiDi(p.Insieme))
+	if err != nil {
+		return false, "", err
+	}
+	var tutti, ancora []string
+	for _, x := range p.Insieme {
+		if x.Esito == "nuovo" {
+			tutti = append(tutti, x.Nome)
+			if ver[x.Nome] != "" {
+				ancora = append(ancora, x.Nome)
+			}
+		}
+	}
+	via, resta, err := trattenuti(g, ancora, tutti, c.Purge)
+	if err != nil {
+		return false, "", err
+	}
+	if len(via) > 0 {
+		return false, fmt.Sprintf("%d pacchetti nuovi ancora installati", len(via)), nil
 	}
 	if a.senzaGrafica && p.Grafica != nil {
 		if ok, det := p.Grafica.comePrima(c); !ok {
 			return false, det, nil
 		}
 	}
+	if len(resta) > 0 {
+		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(resta, ", ")), nil
+	}
 	return true, "i pacchetti nuovi non ci sono più", nil
+}
+
+// trattenuti: dei pacchetti NUOVI da togliere, quelli che si possono togliere e quelli che restano
+// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo (la libavcodec di
+// Packman o di RPM Fusion, che vuole la libx264 portata da lì), o un programma installato dopo.
+// Toglierli si porterebbe via anche lui (`[M]` 30 set, leap16-kde: `zypper rm` di libx264 & c.
+// trascinava 53 pacchetti, Plasma compreso). ⇒ Non si tolgono, e si dichiarano (§6.6.4: quel che
+// resta di indiretto si dice). Un pacchetto è trattenuto se toglierlo DA SOLO toglierebbe qualcosa
+// fuori da «nostri» (i nuovi dello stesso passo): chi dipende da lui di rimbalzo lo trattiene anche
+// lui, perché la simulazione del gestore segue tutta la catena.
+func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta []string, err error) {
+	if len(candidati) == 0 {
+		return nil, nil, nil
+	}
+	altri, err := g.SimulaTogli(candidati, purge)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(fuoriDa(altri, nostri)) == 0 {
+		return candidati, nil, nil
+	}
+	for _, n := range candidati {
+		a, err := g.SimulaTogli([]string{n}, purge)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(fuoriDa(a, nostri)) > 0 {
+			resta = append(resta, n+" ("+T("pacchetti.chiesto_da", strings.Join(fuoriDa(a, nostri), ", "))+")")
+		} else {
+			via = append(via, n)
+		}
+	}
+	return via, resta, nil
 }
 
 // Indirette: i pacchetti AGGIORNATI per noi restano aggiornati (§6.6.4): si dichiarano.

@@ -464,7 +464,8 @@
           "supportato": true
         },
         "kde": {
-          "supportato": true
+          "supportato": true,
+          "richiede_3d": "Plasma di Leap 16 (KWin 6.4) si pianta appena REMOTIX cattura lo schermo se la scheda non ha l'accelerazione 3D (cfr. KDE bug 487217): serve una scheda vera, o virgl in una macchina virtuale; XFCE e LXQt vanno anche senza"
         },
         "xfce": {
           "supportato": true,

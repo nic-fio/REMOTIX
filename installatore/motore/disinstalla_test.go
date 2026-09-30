@@ -128,3 +128,33 @@ func TestDisinstallazioneSenzaPurge(t *testing.T) {
 		t.Fatalf("storia: %d registri (attesi 2), %d cache (attese 0)", len(ops), len(cache))
 	}
 }
+
+// Un pacchetto NUOVO che un pacchetto AGGIORNATO (che resta) chiede non si toglie: si trattiene e si
+// dichiara (`[M]` 30 set, leap16-kde: la libavcodec di Packman aggiornata vuole la libx264 nuova, e
+// `zypper rm` si sarebbe portato via Plasma). La disinstallazione si conferma lo stesso.
+func TestDisinstallazioneTrattiene(t *testing.T) {
+	b := installaFinta(t)
+	// libcomune è stata AGGIORNATA dall'installazione (1.0 → 2.0) e la 2.0 chiede libnuova, NUOVA
+	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-deposito.json"),
+		[]byte(`{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0","dipende":["libnuova"]},"labwc":{"versione":"0.9","dipende":["libnuova"]}}`), 0o644)
+	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), false) // senza purge: il certificato resta
+	if err != nil {
+		t.Fatal(err)
+	}
+	pn.Approvazione = &Approvazione{Da: "prova", Modo: "da file", DigestPiano: pn.Digest()}
+	pd := filepath.Join(t.TempDir(), "d.json")
+	ScriviJSON(pd, pn)
+	op, err := b.motore(t).Applica(pd, false, "prova")
+	if err != nil || op.Stato != CONFERMATA {
+		t.Fatalf("disinstallazione: %v %v %s", op.Stato, err, op.ultimoDettaglio())
+	}
+	in := (&gestoreFinto{b.radice}).installati()
+	if in["libnuova"] == "" || in["labwc"] != "" || in["remotix"] != "" || in["libcomune"] != "2.0" {
+		t.Fatalf("pacchetti dopo: %v (atteso: libnuova trattenuta, labwc e remotix tolti)", in)
+	}
+	var c Certificato
+	LeggiJSON(filepath.Join(op.Cartella, "certificato.json"), &c)
+	if s := strings.Join(c.Indirette, "\n"); !strings.Contains(s, "RX-PACCHETTI-006") || !strings.Contains(s, "libnuova") || !strings.Contains(s, "libcomune") {
+		t.Fatalf("la libnuova trattenuta non è dichiarata nel certificato: %q", s)
+	}
+}
