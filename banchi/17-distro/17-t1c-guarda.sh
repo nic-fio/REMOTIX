@@ -5,6 +5,8 @@
 #
 #   (sul server, come nicfio)  bash 17-t1c-guarda.sh <macchina> <porta-inoltrata> [chrome|firefox]
 #   es.  bash 17-t1c-guarda.sh debian13-gnome 7511
+#   T1C_PROGRAMMA / T1C_EVIDENZE: un altro programma con le stesse opzioni (T8: t8-browser.py, che
+#   resta collegato durante l'aggiornamento) e un'altra cartella delle evidenze.
 #
 # ⚠ 127.0.0.1 e non «localhost»: l'inoltro UDP di QEMU ascolta solo in IPv4, e
 #   Chrome manda il QUIC a ::1 ⇒ `QUIC_PACKET_WRITE_ERROR -102` e «Opening
@@ -43,6 +45,6 @@ fi
 
 exec env XDG_RUNTIME_DIR="$R" WAYLAND_DISPLAY="$(cat "$T1C/labwc.sock")" MOZ_ENABLE_WAYLAND=1 \
 	REMOTIX_CHROME_OPZIONI="--ozone-platform=wayland --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling" \
-	python3 "$QUI/17-t1c-browser.py" --banchi "${REMOTIX_BANCHI:-/media/REMOTIX/src/controllo/banchi}" \
+	python3 "${T1C_PROGRAMMA:-$QUI/17-t1c-browser.py}" --banchi "${REMOTIX_BANCHI:-/media/REMOTIX/src/controllo/banchi}" \
 	--host 127.0.0.1 --porta "$p" --utente prova --parola "${REMOTIX_PAROLA_PROVA:-prova2026}" \
-	--browser "$b" --evidenze "$T1C/esiti/$m-$b" --porte-base $((3200 + p % 100 * 2))
+	--browser "$b" --evidenze "${T1C_EVIDENZE:-$T1C/esiti/$m-$b}" --porte-base $((3200 + p % 100 * 2))
