@@ -41,4 +41,4 @@ if nm -u "$FUORI/audio-nuovo.o" | grep -E ' (av_|avcodec_)'; then
 	exit 1
 fi
 echo "⭐ audio-nuovo.o: nessun simbolo av_/avcodec_ indefinito"
-"$FUORI/18-a1"
+"$FUORI/18-a1" --scrivi "$FUORI"

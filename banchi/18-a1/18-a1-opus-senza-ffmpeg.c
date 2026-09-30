@@ -117,6 +117,10 @@ static double riso_passa(riso *r, double x)
 
 /* Genera tutto il segnale una volta: si ridà identico a ogni braccio. */
 static int16_t *segnale;
+/* `--scrivi DIR`: il braccio Opus a cura accesa lascia i suoi pacchetti per
+ * `chrome.py` — due byte di lunghezza little-endian e il pacchetto, 0 = blocco
+ * taciuto — e la decodifica NATIVA in float del nuovo, per il paragone. */
+static const char *scrivi_in;
 static int *tratto_di; /* per blocco */
 static int blocchi_tot;
 
@@ -314,6 +318,23 @@ static int braccio(uint8_t codec, bool cura)
 		cn.decodificato = calloc((size_t)blocchi_tot * BL * 2, sizeof(int16_t));
 	}
 
+	FILE *fv = NULL, *fn = NULL, *ff = NULL;
+	OpusDecoder *dfl = NULL;
+	if (scrivi_in && codec == 1 && cura) {
+		char nome[512];
+		snprintf(nome, sizeof nome, "%s/vecchio.pkt", scrivi_in);
+		fv = fopen(nome, "wb");
+		snprintf(nome, sizeof nome, "%s/nuovo.pkt", scrivi_in);
+		fn = fopen(nome, "wb");
+		snprintf(nome, sizeof nome, "%s/nuovo.f32", scrivi_in);
+		ff = fopen(nome, "wb");
+		dfl = opus_decoder_create(FQ, 2, &e);
+		if (!fv || !fn || !ff || !dfl) {
+			printf("⛔ non scrivo in %s\n", scrivi_in);
+			return 2;
+		}
+	}
+
 	uint32_t passi = (uint32_t)blocchi_tot * BL / bl;
 	for (uint32_t b = 0; b < passi; b++) {
 		const int16_t *s = segnale + (size_t)b * bl * 2;
@@ -329,6 +350,24 @@ static int braccio(uint8_t codec, bool cura)
 			if (primo_diverso < 0)
 				primo_diverso = (int)b;
 		}
+		if (fv) {
+			uint8_t l2[2] = { (uint8_t)(qv & 0xFF), (uint8_t)(qv >> 8) };
+			uint8_t n2[2] = { (uint8_t)(qn & 0xFF), (uint8_t)(qn >> 8) };
+			if (!ov)
+				l2[0] = l2[1] = 0;
+			if (!on)
+				n2[0] = n2[1] = 0;
+			fwrite(l2, 1, 2, fv);
+			if (ov)
+				fwrite(pv, 1, qv, fv);
+			fwrite(n2, 1, 2, fn);
+			if (on) {
+				static float fl[BL * 2];
+				fwrite(pn, 1, qn, fn);
+				if (opus_decode_float(dfl, pn, (opus_int32)qn, fl, BL, 0) == BL)
+					fwrite(fl, sizeof(float), BL * 2, ff);
+			}
+		}
 		/* ⭐ Chi riceve mette il blocco al suo istante; un blocco taciuto
 		 *   e' un buco, cioe' zero (il decodificatore non lo vede). */
 		if (codec == 1) {
@@ -341,6 +380,13 @@ static int braccio(uint8_t codec, bool cura)
 			                      BL, 0) != BL)
 				rifiutati++;
 		}
+	}
+	if (fv) {
+		fclose(fv);
+		fclose(fn);
+		fclose(ff);
+		opus_decoder_destroy(dfl);
+		printf("   ⭐ pacchetti e decodifica nativa scritti in %s\n", scrivi_in);
 	}
 	cv.taciuti = vecchio_cod_taciuti(v);
 	cn.taciuti = audio_cod_taciuti(nu);
@@ -399,9 +445,11 @@ static int braccio(uint8_t codec, bool cura)
 	return (diversi || rifiutati) ? 1 : 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	int esito = 0;
+	if (argc == 3 && strcmp(argv[1], "--scrivi") == 0)
+		scrivi_in = argv[2];
 	genera();
 	printf("== 18-a1 · Opus senza ffmpeg · %d blocchi da 20 ms (%.0f s) · %s\n",
 	       blocchi_tot, blocchi_tot * 0.02, opus_get_version_string());

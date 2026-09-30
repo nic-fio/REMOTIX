@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>18-a1 · Opus nel browser</title>
+<script>
+/*
+ * 18-a1 — il BROWSER VERO decodifica i pacchetti del nuovo `audio.c` con il
+ * decodificatore DELLA PAGINA (D-006: libopus 1.5.2 in WebAssembly, preso da
+ * `src/pagina.html` fra i due segni, non da un'altra copia), e li paragona:
+ *   · al vecchio (libavcodec) decodificato nello stesso modo, campione per
+ *     campione;
+ *   · alla decodifica NATIVA del server (`opus_decode_float`, `nuovo.f32`).
+ * Il gesto e la programmazione dei blocchi di `suona()` NON si provano qui:
+ * non dipendono da chi codifica.
+ */
+async function prendi(u) {
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(u + " " + r.status);
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function modulo() {
+  const s = atob(await (await fetch("wasm.b64")).text());
+  const b = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+  const { instance } = await WebAssembly.instantiate(b, {});
+  const x = instance.exports;
+  if (typeof x._initialize === "function") x._initialize();
+  if (x.rx_apri() !== 0) throw new Error("rx_apri");
+  return x;
+}
+async function decodifica(pkt) {
+  const x = await modulo();
+  const fuori = [];
+  let pacchetti = 0, taciuti = 0, rifiutati = 0, t = 0;
+  for (let i = 0; i < pkt.length;) {
+    const n = pkt[i] | (pkt[i + 1] << 8);
+    i += 2;
+    if (n === 0) { taciuti++; continue; }
+    if (n > x.rx_pacchetto_max()) { rifiutati++; i += n; continue; }
+    new Uint8Array(x.memory.buffer, x.rx_pacchetto(), n).set(pkt.subarray(i, i + n));
+    i += n;
+    const t0 = performance.now();
+    const f = x.rx_decodifica(n);
+    t += performance.now() - t0;
+    if (f <= 0) { rifiutati++; continue; }
+    pacchetti++;
+    fuori.push(new Float32Array(x.memory.buffer, x.rx_uscita(), f * 2).slice());
+  }
+  return { pacchetti, taciuti, rifiutati, fuori, ms: t };
+}
+(async function () {
+  const esito = { ua: navigator.userAgent };
+  try {
+    const v = await decodifica(await prendi("vecchio.pkt"));
+    const n = await decodifica(await prendi("nuovo.pkt"));
+    const nat = new Float32Array((await prendi("nuovo.f32")).buffer);
+    esito.vecchio = { pacchetti: v.pacchetti, taciuti: v.taciuti, rifiutati: v.rifiutati };
+    esito.nuovo = { pacchetti: n.pacchetti, taciuti: n.taciuti, rifiutati: n.rifiutati,
+                    ms_per_pacchetto: n.ms / Math.max(1, n.pacchetti) };
+    let diversi_vn = 0, diversi_nat = 0, max_nat = 0, k = 0, campioni = 0, e = 0;
+    for (let b = 0; b < n.fuori.length; b++) {
+      const a = n.fuori[b], c = v.fuori[b];
+      for (let i = 0; i < a.length; i++, k++) {
+        campioni++;
+        if (!c || a[i] !== c[i]) diversi_vn++;
+        const d = Math.abs(a[i] - nat[k]);
+        if (d !== 0) diversi_nat++;
+        if (d > max_nat) max_nat = d;
+        e += a[i] * a[i];
+      }
+    }
+    esito.campioni = campioni;
+    esito.diversi_vecchio_nuovo = diversi_vn;
+    esito.diversi_dal_nativo = diversi_nat;
+    esito.massimo_scarto_dal_nativo = max_nat;
+    esito.rms_dbfs = 10 * Math.log10(e / Math.max(1, campioni) + 1e-20);
+  } catch (err) {
+    esito.errore = String(err);
+  }
+  await fetch("esito", { method: "POST", body: JSON.stringify(esito) });
+  document.title = "fatto";
+})();
+</script>
