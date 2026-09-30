@@ -3,11 +3,11 @@
   18-decodifica-chrome.html — un browser VERO decodifica il flusso, con la stessa
   strada della pagina del prodotto: Annex-B → EncodedVideoChunk → VideoDecoder.
 
-  Si apre con Chrome headless e un budget di tempo virtuale, e si legge il DOM:
-    google-chrome --headless=new --disable-gpu --allow-file-access-from-files \
-      --virtual-time-budget=60000 --dump-dom \
+  Si apre con Chrome headless (`18-decodifica-chrome.sh`) e l'esito si legge
+  dalla console (`console.log`, con `--enable-logging=stderr`):
+    google-chrome --headless=new --allow-file-access-from-files --enable-logging=stderr \
       "file:///…/18-decodifica-chrome.html?flusso=file:///…/F.bin&codec=avc1.64002a"
-  In fondo al body compare una riga JSON: fotogrammi decodificati, errori, la
+  E' una riga JSON: fotogrammi decodificati, errori, la
   misura del primo fotogramma, e un'impronta (somma dei pixel) di ogni decimo
   fotogramma — cosi' due flussi «uguali» si confrontano anche sull'immagine.
 
@@ -23,7 +23,12 @@
   const p = new URLSearchParams(location.search);
   const flusso = p.get("flusso"), codec = p.get("codec");
   const esito = { flusso, codec, decodificati: 0, errori: [], chunk: 0, misura: "", impronte: [] };
-  const fine = (m) => { document.getElementById("esito").textContent = "ESITO " + JSON.stringify(Object.assign(esito, m || {})); };
+  const fine = (m) => {
+    const testo = "ESITO " + JSON.stringify(Object.assign(esito, m || {}));
+    document.getElementById("esito").textContent = testo;
+    console.log(testo); /* e' quel che 18-decodifica-chrome.sh legge dal registro di Chrome */
+    setTimeout(() => window.close(), 300); /* in headless l'ultima finestra chiusa chiude Chrome */
+  };
   try {
     const byte = new Uint8Array(await (await fetch(flusso)).arrayBuffer());
     // la fila dei NAL: si taglia sui codici di inizio, si raggruppano in fotogrammi
