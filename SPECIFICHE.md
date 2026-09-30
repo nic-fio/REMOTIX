@@ -216,7 +216,7 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 | | |
 |---|---|
 | **trasporto** | **WebTransport su HTTP/3**, cioè QUIC con TLS 1.3 obbligatorio — **porta 7447** di serie, configurabile |
-| **codec video** | HEVC, con AV1 dove l'hardware lo codifica |
+| **codec video** | **H.264** e **HEVC** sulla scheda; in software **H.264** o **AV1** — si negozia col browser (`DECISIONI.md` §1.13) |
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
 
@@ -1133,22 +1133,23 @@ via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, 
 
 ### 11.4 L'accelerazione hardware
 
-**L'astrazione è `libavcodec`**, non le API dei costruttori: si sceglie il codificatore **per
-nome, a runtime**, in base a cosa si trova. Un solo percorso di codice, nessuna riga specifica per
-costruttore. La scala di preferenza:
+**La codifica passa dalla scheda, attraverso VA-API** — `libva` usata direttamente, senza strati
+in mezzo: REMOTIX imposta i parametri, gestisce i buffer e scrive da sé le intestazioni del flusso.
+La scala:
 
-1. `hevc_vaapi` · `hevc_qsv` · `hevc_nvenc` — la strada normale
-2. `av1_*` dove c'è — Intel Arc/Xe2, AMD RDNA3+, NVIDIA Ada+
-3. ripiego software: **SVT-AV1** (BSD-3) — ⛔ **mai x265**, che è GPL-only e incatenerebbe tutto
-   il server
+1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — la strada normale. Anche la **conversione
+   dei colori** si fa sulla scheda (VPP di VA-API)
+2. **ripiego software**: **H.264** con **OpenH264**, **AV1** con **SVT-AV1** usata direttamente.
+   ⛔ **Niente HEVC in software**. La conversione dei colori, nel ripiego, si fa sul processore
+3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
+   condizione della licenza (`DECISIONI.md` §10.22)
 
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
 
-⛔ **E con il client web l'AV1 è chiuso anche dall'altro lato** *(`STUDI.md` §web §8-bis, O2)*: in
-decodifica non porta niente che HEVC non dia già. Resta al secondo posto della scala **come porta
-aperta per l'hardware di domani**, non come strada da provare — e chi la riaprisse deve rimisurare
-entrambi i lati.
+⚠ **AV1 in hardware non è nella scala** *(`STUDI.md` §web §8-bis, O2)*: in decodifica non porta
+niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. AV1 resta
+come **ripiego software**.
 
 ⛔ **Si codifica in BT.709, e l'HDR non si promette** `[S]` *(O3)*: BT.2020/PQ fa cadere il percorso
 a zero copie nel browser, e quello a una copia converte con un risultato slavato. È una scelta del
@@ -1163,10 +1164,6 @@ il sintomo è «il browser non apre il flusso».
 lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`AV1Profile0`,
 `VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
 delle capacità delle due schede sta in `DECISIONI.md` §4.6.
-
-`[?]` Vulkan Video resta una delle opzioni fra cui `libavcodec` può scegliere. Non è la prima
-perché non porta il controllo del bitrate — che è precisamente la parte che decide se i Mbps
-risultino guardabili.
 
 ### 11.5 I browser serviti, e perché vanno dichiarati
 
@@ -1232,7 +1229,7 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 
 | | |
 |---|---|
-| ⏳ **la licenza** | rinviata a fine progetto. Fino ad allora vale il solo vincolo di §11.4: niente x265 |
+| ✅ **la licenza** | **PolyForm Noncommercial** (`DECISIONI.md` §10.22) — e da qui il vincolo di §11.4: nessuna dipendenza GPL |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
 | ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |
