@@ -6045,7 +6045,8 @@ distribuzione lo ha (resta il rischio del blocco del conto a distanza, lo stesso
 dall'amministratore in `/etc/security/faillock.conf`), e **`pam_selinux` su Fedora/Alma come ssh** ⇒ il rifiuto
 SELinux del figlio si cura con una **regola SELinux di REMOTIX** (come Cockpit), non togliendo la riga (T6). Il
 ban per indirizzo di REMOTIX (§1.9: 3 fallimenti in 5 minuti ⇒ 12 ore) resta, in aggiunta. Unica differenza
-voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password).
+voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password) — ✅ confermato dall'utente:
+*«che root non entri da REMOTIX è corretto, è lo stesso sistema di sicurezza di ssh»*.
 
 ---
 
