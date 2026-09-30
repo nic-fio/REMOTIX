@@ -82,6 +82,13 @@ RUN git clone --depth 1 -b v1.25.0 --recursive \
 RUN apt-get update && apt-get install -y --no-install-recommends libgbm-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): le librerie che prendono il posto di
+#    ffmpeg — OpenH264 e SVT-AV1 per il ripiego, libopus diretta, libyuv per i
+#    colori.  In uno strato suo, come `libgbm-dev`, per la stessa ragione.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libopenh264-dev libsvtav1enc-dev libopus-dev libyuv-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN ldconfig
 ENV PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 
