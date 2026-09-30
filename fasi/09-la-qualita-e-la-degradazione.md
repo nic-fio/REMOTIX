@@ -1,6 +1,6 @@
 # Fase 9 — La qualità e la degradazione
 
-⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
 
 Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
@@ -48,31 +48,28 @@ Il **controllo del ritmo**, la **scala di degradazione**, il comportamento su **
 > **§3.1-ter**.
 >
 > ⛔ **La banda esce dal corpo della fase**, e la ragione è una misura di questa stessa fase: §16,
-> sul **percorso vero**, il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge **senza
-> degradare e con tutte le cure spente**. Un banco che non riesce a far cedere quel che misura non
-> sta misurando la grandezza giusta.
+> sul **percorso vero**, il caso peggiore il prodotto lo regge **senza degradare e con tutte le cure
+> spente**. Un banco che non riesce a far cedere quel che misura non sta misurando la grandezza giusta.
 >
 > ⭐⭐⭐ **E sulla grandezza giusta il prodotto cede, e cede prestissimo** (§17.1, §17.11):
-> ⛔⛔ **il gradino è DOPPIO** — la spirale di chiavi parte **al primo pacchetto perso**
-> (0,00-0,10 % di perdita vera), il calo che l'utente **vede** casca cinque volte più in là
-> (0,53-0,75 %): ⇒ fra i due c'è mezzo punto percentuale in cui il prodotto **sta già degenerando e
-> i fotogrammi al secondo dicono ancora che va tutto bene**. ⚠ E vicino al bordo è **bistabile**:
-> stesso ingresso, `0 chiavi · 40,16/s` **oppure** `24 chiavi · 33,84/s`; con **zero perdita** e ±15 ms di sfarfallio **16,6/s e il DOPPIO dei byte sul
-> filo**, che è la prova diretta che il disordine viene scambiato per perdita; al **13 %** a
-> raffiche ⛔⛔ **la sessione si stacca dopo 0,3 s**, e *«mai staccare»* è l'unico obbligo che vale
-> ovunque.
+> ⛔⛔ **il gradino è DOPPIO** — la spirale di chiavi parte **al primo pacchetto perso**, il calo
+> che l'utente **vede** casca molto più in là: ⇒ fra i due c'è una fascia di perdita in cui il
+> prodotto **sta già degenerando e i fotogrammi al secondo dicono ancora che va tutto bene**. ⚠ E
+> vicino al bordo è **bistabile**: stesso ingresso, zero chiavi **oppure** una raffica di chiavi; con
+> **zero perdita** e un po' di sfarfallio il ritmo crolla e i byte sul filo raddoppiano, che è la
+> prova diretta che il disordine viene scambiato per perdita; a raffiche forti ⛔⛔ **la sessione si
+> stacca**, e *«mai staccare»* è l'unico obbligo che vale ovunque.
 >
-> ⭐⭐⭐ **E LA CURA FUNZIONA** (§17.6, appaiata a tre bracci): la quota di chiavi passa da
-> **51,7-88,1 %** a **0,0-5,6 %**, il ritmo torna **da 1,7 a 2,8 volte**, e i byte sul filo
-> **salgono** — ⇒ la linea non era satura, **era sprecata**. ⛔ Ma servono **tutt'e due** le cure: la
-> sola soglia lascia il 12,8-33,6 % di chiavi. ⚠ **La linea sana non paga niente** (39,85 / 40,19 /
-> 39,63 fotogrammi/s, zero chiavi), e il prezzo è **da −38 a +161 ms** di ritardo sui profili
-> ordinari — **4,5 s** su `raffica-forte`, dove *«immagine che si muove con cinque secondi di
-> ritardo»* contro *«immagine ferma»* **non è una scelta che spetti a una misura**.
+> ⭐⭐⭐ **E LA CURA FUNZIONA** (§17.6, appaiata a tre bracci): le chiavi quasi spariscono, il ritmo
+> torna, e i byte sul filo **salgono** — ⇒ la linea non era satura, **era sprecata**. ⛔ Ma servono
+> **tutt'e due** le cure: la sola soglia lascia una quota di chiavi ancora alta. ⚠ **La linea sana
+> non paga niente**, e il prezzo è un po' di ritardo sui profili ordinari — e **secondi** su
+> `raffica-forte`, dove *«immagine che si muove con secondi di ritardo»* contro *«immagine
+> ferma»* **non è una scelta che spetti a una misura**.
 > ⇒ ❓ **Le cure restano SPENTE**: I6, e la decisione è dell'utente.
 >
-> ⭐⭐ **E la cura del riordino dell'audio MORDE** (§17.2): purezza da 0,40-0,80 a **1,0000** su
-> tutti e cinque i profili che riordinano, sei su sei verdi.
+> ⭐⭐ **E la cura del riordino dell'audio MORDE** (§17.2): la purezza arriva a **1,0000** su tutti e
+> cinque i profili che riordinano, sei su sei verdi.
 
 **Che cosa l'utente vede e giudica alla fine**: ⛔ **l'immagine, e basta.** In v1 la fase omologa
 fu validata con PSNR e SSIM, il giudizio dell'utente sul desktop vero fu *«siamo tornati
@@ -91,21 +88,19 @@ indietro»*, e la fase fu **azzerata**.
 > questa sintesi.** In due parole, e i dettagli là:
 > ⭐⭐⭐ **la cura della memoria REGGE** e il crollo si riproduce **due volte su due**, con la pila
 > letta dal core (§13.1) · ⭐⭐⭐ **il regolatore del ritmo spegne la spirale**: zero chiavi e zero
-> abbandoni dove prima ce n'erano 18 e 24 (§13.3) · ⛔ **la soglia da sola NON mantiene quel che
+> abbandoni dove prima ce n'erano (§13.3) · ⛔ **la soglia da sola NON mantiene quel che
 > P3 prometteva**, e va tarata **al contrario** di come P3 diceva (§13.2) · ⭐⭐ **il tetto di
-> banda sopravvive ai suoi due rossi** (§13.4) · ⛔⛔ **tutti i numeri di banda di §3.8 sono
-> HEVC, e il prodotto manda H.264**: stessa scena, **21,18 contro 7,92 Mbit/s** (§13.5) ·
-> ⛔⛔ **il 4K regge 41 fot/s, non 60**, e il livello prodotto **sfora** quello del client
-> (§13.6) · ⭐⭐⭐ **§10.2 è decisa: la spirale sul desktop vero non morde fino a 10 Mbit/s**
-> (§13.8).
+> banda sopravvive ai suoi due rossi** (§13.4) · ⛔⛔ **tutti i numeri di banda di §3.8 erano
+> HEVC, e il prodotto manda H.264** (§13.5) · ⛔⛔ **il 4K non arriva a 60 fotogrammi**, e il
+> livello prodotto **sfora** quello del client (§13.6) · ⭐⭐⭐ **§10.2 è decisa: sulla linea del
+> pavimento la spirale sul desktop vero non morde** (§13.8).
 >
-> ⛔⛔⛔ **E LA NOTTE DEL 23 AGOSTO IL METRO È CAMBIATO: §14, e da lì in giù i numeri sono
-> H.264.** ⛔ Il cliente di prova negoziava HEVC per una riga rimasta indietro di tre giorni;
-> adesso negozia **quel che negozia Firefox**, verificato sulle righe di `pagina.html` (§14.1).
-> In due parole: ⛔⛔ **il caso duro in H.264 chiede ancora 44,6 Mbit/s = 223 % del pavimento** —
-> il tetto serve (§14.2, §14.3) · ⛔ **il rapporto HEVC/H.264 NON è una costante**: 0,36× sul
-> retinato, 0,76× sulla grana, ⛔ **1,7× in su** sul desktop vero (§14.2) · ⛔ **la soglia da sola
-> non mantiene la promessa a NESSUN valore**, e a 800 ms paga **1 321 ms** di coda; ⭐ la leva è la
+> ⛔⛔⛔ **E LA NOTTE DEL 23 AGOSTO IL METRO È CAMBIATO: §14, e da lì in giù il codec è H.264.**
+> ⛔ Il cliente di prova negoziava HEVC per una riga rimasta indietro di tre giorni; adesso negozia
+> **quel che negozia Firefox**, verificato sulle righe di `pagina.html` (§14.1).
+> In due parole: ⛔⛔ **il caso duro in H.264 chiede ancora più del pavimento** — il tetto serve
+> (§14.2, §14.3) · ⛔ **il rapporto HEVC/H.264 NON è una costante**: cambia verso secondo la scena
+> (§14.2) · ⛔ **la soglia da sola non mantiene la promessa a NESSUN valore**; ⭐ la leva è la
 > **coppia** con `--ritmo-adattivo` (§14.4) · ⭐⭐⭐ **P8 è VERDE**, a coppie ferma/mossa nello
 > stesso giro (§14.5) · ⭐ **il 4K in H.264** e ⛔ **l'audio** in §14.6 e §14.7.
 
@@ -124,19 +119,19 @@ primo abbastanza **grosso** perché `free()` restituisse davvero le pagine al ke
 più — si marca `consegnato`, e a liberare è l'ack (`coda_conferma()`) o la chiusura dello stream.
 ⛔ **Non è dietro un interruttore**: non cambia quel che si vede, corregge un modo di morire.
 
-## S.2 · Che cosa è stato misurato, e quanto vale
+## S.2 · Che cosa è stato misurato, e che cosa se ne è concluso
 
-| | `[M]` 23 agosto | dove |
-|---|---|---|
-| ⛔ **a scena ferma il ritmo non cala: SI FERMA** — 1 fotogramma in 30 s, poi zero. E **non è nostro**: Mutter consegna solo sul cambiamento (123 attese a vuoto/s) | 0,03 fot/s, ripetuto 2 volte, riconfermato a 2560x1080 | §3.1 |
-| ⭐⭐⭐ **e il risveglio da fermo NON costa niente** — 180 colpi, quiete da 0,2 a 15 s | **13 ms** di mediana, **tutte** le 180 misure fra **12,3 e 14,3** | §3.6 |
-| ⇒ e **l'80 % di quei 13 ms è attesa del compositore**; la codifica, che è nostra, ne vale 2,7 | 10,2-10,9 · **2,6-2,7** · 0,0 | §3.6 |
-| ⭐ **il desktop VERO dell'utente, a schermo intero e in movimento, costa l'1 % del pavimento** | **0,204 Mbit/s**, ritrovato due volte (0,193 · 0,195) | §3.8 · §3.15 |
-| ⛔ **ma il caso duro chiede TRE VOLTE il pavimento** — film con la grana a schermo intero | **58,668 Mbit/s = 293 %** di 20 | §3.8 |
-| ⛔ **e «quanti pixel cambiano» non predice niente**: la banda dipende dal CONTENUTO | `pieno` 1,2 · `barra` retinato **21** · grana **59** Mbit/s, a parità di pixel mossi | §3.8 |
-| ⛔⭐ **basta un buco di 3 secondi** per portare il ritmo da 40 a 13/s e fare metà chiavi | e `abbandoni §5.1` = `chiavi`, **uno a uno**, a ogni livello | §3.10 |
-| ⭐ **ma il ritorno è immediato e non c'è isteresi**: regime pieno al secondo dopo | 42 fot/s, **0 chiavi**, nessuno strascico in 17 s | §3.10 |
-| ⭐ **le tre cure del mattino non hanno cambiato niente dove non dovevano** — confronto appaiato 7900/7910 | risveglio ±0,5 ms · `pieno` **164 byte su 3,62 MB = 0,005 %** | §3-bis |
+| | dove |
+|---|---|
+| ⛔ **a scena ferma il ritmo non cala: SI FERMA** — un fotogramma, poi zero. E **non è nostro**: Mutter consegna solo sul cambiamento | §3.1 |
+| ⭐⭐⭐ **e il risveglio da fermo NON costa niente**, qualunque sia la durata della quiete | §3.6 |
+| ⇒ e **il grosso del risveglio è attesa del compositore**; la codifica, che è nostra, ne è la parte piccola | §3.6 |
+| ⭐ **il desktop VERO dell'utente, a schermo intero e in movimento, costa una frazione minima del pavimento** | §3.8 · §3.15 |
+| ⛔ **ma il caso duro chiede più volte il pavimento** — film con la grana a schermo intero | §3.8 |
+| ⛔ **e «quanti pixel cambiano» non predice niente**: la banda dipende dal CONTENUTO | §3.8 |
+| ⛔⭐ **basta un buco di 3 secondi** per far crollare il ritmo e riempirlo di chiavi — e `abbandoni §5.1` = `chiavi`, **uno a uno** | §3.10 |
+| ⭐ **ma il ritorno è immediato e non c'è isteresi**: regime pieno al secondo dopo, zero chiavi | §3.10 |
+| ⭐ **le tre cure del mattino non hanno cambiato niente dove non dovevano** — confronto appaiato 7900/7910 | §3-bis |
 
 ## S.3 · Che cosa è cambiato nel codice, e dietro quale interruttore
 
@@ -218,26 +213,25 @@ era scritto da nessuna parte. Il controllo è in §3.12, e la 7900 non ha nessun
 
 | | il prezzo, quantificato |
 |---|---|
-| **la soglia sulla coda** (`--sgombra-soglia-ms 100`) | trascinando una finestra mentre la linea cala, la finestra segue il puntatore con fino a **~150 ms** di ritardo per un attimo (**~205 ms** dal gesto al pixel, sommando l'anello di fase 8) — ⛔ **invece di scattare da un'immagine all'altra a ritmo di chiave**, che è quel che fa oggi. ⚠ Quale delle due sia peggio **non lo decide una misura** |
-| **il tetto di banda** (`--tetto-banda-mbit 20`) | sul **caso duro** l'immagine diventa più brutta: è il suo mestiere. ⭐ Sul **contenuto vero** la previsione è che **non succeda niente** (0,204 Mbit/s, l'1 % del pavimento) — e se il desktop vero costasse **meno** di prima, il tetto sta risparmiando dove non deve e **la cura si butta** |
+| **la soglia sulla coda** (`--sgombra-soglia-ms 100`) | trascinando una finestra mentre la linea cala, la finestra segue il puntatore con un ritardo visibile per un attimo — ⛔ **invece di scattare da un'immagine all'altra a ritmo di chiave**, che è quel che fa oggi. ⚠ Quale delle due sia peggio **non lo decide una misura** |
+| **il tetto di banda** (`--tetto-banda-mbit 20`) | sul **caso duro** l'immagine diventa più brutta: è il suo mestiere. ⭐ Sul **contenuto vero** la previsione è che **non succeda niente** (costa una frazione minima del pavimento) — e se il desktop vero costasse **meno** di prima, il tetto sta risparmiando dove non deve e **la cura si butta** |
 | **il regolatore del ritmo** (`--ritmo-adattivo`, con la soglia accesa) | durante un calo di linea **si vedono meno fotogrammi**: il movimento diventa a scatti invece che vecchio. ⭐ La previsione è che **a 20 Mbit/s non faccia niente** — è un **parapetto**, e il suo comportamento corretto è non fare nulla. ⛔ Se un giorno la scena consegnata scende **sotto 25/s su una linea da 20 Mbit/s**, il registro lo dichiara **difetto** e non lo combatte: forzare un fotogramma dentro una coda che non si svuota peggiora la coda |
 
 ## S.6 · ⛔⛔ LE DUE CONTRADDIZIONI, dichiarate e non lisciate
 
 ⚠ **Stanno per esteso in §10, con quel che le deciderebbe.** In breve:
 
-1. ⛔ **«Non serve nessun tetto di banda» (mattina) contro «ne chiede il 293 %» (pomeriggio).**
-   Lo studio delle 09:07 concluse *«sul contenuto misurato, a 20 Mbit/s, il CQP 26 va benissimo»*
-   sulla base di `[M]` fase 8 (24 956 byte per chiave, 4,17 Mbit/s nel regime peggiore). Alle 08:35
-   UTC il film con la grana a schermo intero ha dato **58,668 Mbit/s**. ⇒ ⭐ **Non si contraddicono
-   sul numero: misurano due contenuti diversi**, e lo studio lo aveva scritto (*«il desktop
-   dell'utente NON contiene quella scena»*). ⛔ **Quel che è stato smentito è la sua stima**: ~19,9
-   Mbit/s estrapolati da v1, **ottimista di tre volte**;
+1. ⛔ **«Non serve nessun tetto di banda» (mattina) contro «ne chiede più volte il pavimento»
+   (pomeriggio).** Lo studio delle 09:07 concluse *«sul contenuto misurato, a 20 Mbit/s, il CQP 26
+   va benissimo»* sulla base delle misure di fase 8. Il film con la grana a schermo intero ha
+   chiesto molto di più. ⇒ ⭐ **Non si contraddicono sul numero: misurano due contenuti diversi**, e
+   lo studio lo aveva scritto (*«il desktop dell'utente NON contiene quella scena»*). ⛔ **Quel che è
+   stato smentito è la sua stima**, estrapolata da v1 e **troppo ottimista**;
 2. ⛔ **Quanto morde la spirale sopra il pavimento — due posizioni.** La proposta della soglia
    (§5.2) sostiene che il difetto **vive sotto il pavimento** e che sopra la cura è **inerte**
-   (`[M]` a 15 Mbit/s: 2 chiavi su 1 019). Il gradino di §3.10 mostra abbandoni e chiavi **anche
-   sulla linea larga** (3↔3, 1↔1 a 22-26 Mbit/s). ⇒ Le due posizioni non sono ancora decise, e
-   §10.2 dice con quale misura si decidono.
+   (a 15 Mbit/s le chiavi erano quasi assenti). Il gradino di §3.10 mostra abbandoni e chiavi
+   **anche sulla linea larga**. ⇒ Le due posizioni non sono ancora decise, e §10.2 dice con quale
+   misura si decidono.
 
 ---
 
@@ -254,7 +248,7 @@ in parallelo, mandato di estrazione. Quel che segue è il **risultato**, non il 
 | | v1 fase **9** | v1 fase **10** |
 |---|---|---|
 | che cosa era | la copia zero, i millisecondi di CPU per fotogramma | **la qualità e la banda** |
-| l'errore | ottimizzata la CPU (41→6 ms) mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
+| l'errore | ottimizzata la CPU per fotogramma mentre i fotogrammi consegnati **calavano** | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
 | l'esito | una lezione | ⛔ **AZZERATA**, codice riportato indietro, banchi rimossi |
 
 ⇒ ⭐ **La fase 9 di V2 è l'erede della fase 10 di v1.** `PIANO.md:1180` scrive *«in v1 questa fase
@@ -279,7 +273,7 @@ era stata validata con PSNR»*: è vero come *fase omologa*, ⚠ ma chi cercasse
    faccia un difetto noto a metà giornata.
 
 ⭐ **Il fatto tecnico che innescò tutto** (`fondamenta/documenti/SPECIFICA.md:93-96`): il controllo di
-bitrate spedito *«su un desktop poco mosso scendeva a 2–6 Mbit/s, contento di risparmiare»*. ⚠ E
+bitrate spedito, su un desktop poco mosso, scendeva molto in basso, *«contento di risparmiare»*. ⚠ E
 il testo della specifica **si prestava alla lettura opposta** — cioè una fase è stata azzerata
 anche per **l'ambiguità di una riga di specifica**.
 
@@ -322,21 +316,20 @@ riga — la **risoluzione** (`DECISIONI.md` §5.0-ter, volutamente fuori), **la 
 a sessione viva, §5.1-bis), il **4:4:4** (rinviato a RCP/2), la **profondità** (si negozia, non si
 degrada). Resta il **qp**, di cui non esiste nessuna scala definita.
 
-### 0.5 ⭐ I numeri già in mano — non si riparte da zero
+### 0.5 ⭐ I fatti già in mano — non si riparte da zero
 
-| | `[M]` |
+| | da dove |
 |---|---|
-| a **3 Mbit/s con desktop MOSSO** l'audio passa 397 blocchi su 6 458 — purezza **0,18** | 21 ago |
-| a **3 Mbit/s con desktop FERMO** — purezza **1,000** ⇒ ⛔ **non è la banda: è il video** | 21 ago |
-| con **Opus** (1/32 della banda dell'audio) si perde comunque il **58 %** ⇒ ridurre quel che l'audio chiede **non lo salva** | 21 ago |
-| sui giri stretti i fotogrammi consegnati sono **tutti chiavi** (144/144, 149/149) contro **2 su 1 019** a 15 Mbit/s | 21 ago |
-| una chiave da 60 KB a 3 Mbit/s occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede una ogni **150** | 21 ago |
-| ⛔ **quattro varianti del trasporto non cambiano niente** (397 · 278 · 406 · 514 · 371) ⇒ *«la finestra non è contesa: è già piena»* | 21 ago |
-| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)**; `libx264` tiene 1 992 ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
+| su **linea stretta con desktop MOSSO** l'audio si perde quasi tutto; con **desktop FERMO** arriva intatto ⇒ ⛔ **non è la banda: è il video** | 21 ago |
+| anche con **Opus**, che chiede una frazione della banda, l'audio si perde lo stesso ⇒ ridurre quel che l'audio chiede **non lo salva** | 21 ago |
+| sui giri stretti i fotogrammi consegnati sono **tutti chiavi**, mentre sulla linea larga le chiavi sono rarissime | 21 ago |
+| su linea stretta una chiave occupa la finestra più a lungo dell'intervallo con cui `WT_CHIAVE_RICHIESTA_MS` ne concede una | 21 ago |
+| ⛔ **quattro varianti del trasporto non cambiano niente** ⇒ *«la finestra non è contesa: è già piena»* | 21 ago |
+| il **pavimento del codificatore hardware** (v1, R31): chiedendo poca banda a scena mossa, il codificatore hardware ne spende di più, qualunque modo gli si dia ⇒ **c'è un fondo, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
 | ⛔ **il modo di controllo del bitrate non si sceglie: lo DEDUCE il driver** (`rc_max_rate == bit_rate` ⇒ CBR, e nessuno l'aveva scelto) | v1, R31 |
-| su desktop fermo il CBR spendeva **9 875 kbit/s contro 277 del QVBR, per 1,8 dB** ⇒ *«la scelta non si gioca sulla scena dura: si gioca su quanto si spende quando non serve»* | v1, R31 |
-| il ritmo del **contenuto vero dell'utente**: **20,9 fotogrammi/s**, 31 % identici | fase 8 |
-| il peso vero delle chiavi sulla tela dell'utente: max **21 433 byte = 0,13 %** del tetto di 16 MiB | fase 8 |
+| su desktop fermo il CBR spendeva enormemente più del QVBR, per una differenza di qualità trascurabile ⇒ *«la scelta non si gioca sulla scena dura: si gioca su quanto si spende quando non serve»* | v1, R31 |
+| il **contenuto vero dell'utente** non chiede il ritmo pieno, e una parte dei suoi fotogrammi è identica alla precedente | fase 8 |
+| il peso vero delle chiavi sulla tela dell'utente è una frazione minima del tetto di 16 MiB | fase 8 |
 
 ---
 
@@ -420,17 +413,17 @@ Si inietta un ritardo **noto** di 200 ms congelando dei processi, e il banco dev
 
 | tentativo | dove cade il ritardo | esito |
 |---|---|---|
-| congelo il **figlio** (cattura+codifica) al colpo | ⛔ `colpo → pixel` **0,5 → 191,8 ms** | il ritardo finisce **prima** del pixel: non prova niente sul tratto misurato |
-| congelo il **padre** (trasporto) al colpo | ⛔ `colpo → pixel` **1,1 → 192,0 ms** | **uguale**: lo stimolo si sposta insieme allo strumento |
-| ⭐ congelo il padre **dopo che il pixel è cambiato** | ✅ risveglio **12,8 → 204,0 ms**, e `colpo → pixel` resta **1,2 ms** | il ritardo cade **dentro** il tratto misurato, e il banco lo vede tutto |
+| congelo il **figlio** (cattura+codifica) al colpo | ⛔ fra il colpo e il pixel | il ritardo finisce **prima** del pixel: non prova niente sul tratto misurato |
+| congelo il **padre** (trasporto) al colpo | ⛔ fra il colpo e il pixel | **uguale**: lo stimolo si sposta insieme allo strumento |
+| ⭐ congelo il padre **dopo che il pixel è cambiato** | ✅ il risveglio misurato cresce di **tutto** il ritardo iniettato, e `colpo → pixel` resta fermo | il ritardo cade **dentro** il tratto misurato, e il banco lo vede tutto |
 
 ⭐⭐ **E i due tentativi falliti hanno misurato una cosa che non cercavo, e non è piccola**:
 congelare **qualunque** anello della nostra catena — figlio *o* padre — ferma il **disegno
-dell'applicazione**. `[M]` 191,8 e 192,0 ms su 200 iniettati, con dispersione di **0,6 ms**.
+dell'applicazione** per quasi tutto il ritardo iniettato.
 ⇒ ⛔ **Mutter concede il `wl_surface.frame` al ritmo di chi consuma il monitor virtuale**: se il
 prodotto non consuma, l'applicazione dentro la sessione **non disegna**. È la stessa riga
 letta dall'altro capo in §3.2 (*«il collo non è il codificatore: è la consegna»*), e spiega
-perché i 40/s su 60 chiesti non si spostano.
+perché il ritmo consegnato resta sotto quello chiesto.
 
 ---
 
@@ -481,41 +474,21 @@ perché i 40/s su 60 chiesti non si spostano.
 > ⚠⚠ **DA LEGGERE CON §3.7 ACCANTO** (scritto il pomeriggio dello stesso giorno): queste misure
 > sono state prese con la sessione nella **vista d'insieme** di GNOME, dove una finestra «a schermo
 > intero» è in realtà **un'anteprima rimpicciolita**. ⇒ la forma del risultato regge (a scena ferma
-> escono zero fotogrammi, rimisurato a 2560x1080), ⛔ **ma i byte di `barra` e `pieno` qui sotto
-> sono quelli di una frazione dello schermo, non dello schermo.** I byte veri sono in §3.8.
-
-| scena | ora | fotogrammi/s | CHIAVE | delta | carico video | byte sul filo (`lo`) |
-|---|---|---|---|---|---|---|
-| **ferma** | 07:02:27 | ⛔ **0,03** | 1 | **0** | 10 147 B · **2,7 kbit/s** | 9 119 569 B · **2,432 Mbit/s** |
-| **barra** | 07:03:32 | **39,67** | 1 | 1 189 | 2 171 824 B · **579 kbit/s** | 11 771 322 B · **3,139 Mbit/s** |
-| **pieno** | 07:04:09 | **39,00** | 1 | 1 169 | 10 196 190 B · **2 719 kbit/s** | 20 121 206 B · **5,366 Mbit/s** |
-| **ferma** *(ripetuta)* | 07:04:44 | ⛔ **0,03** | 1 | **0** | 10 143 B · **2,7 kbit/s** | 9 118 304 B · **2,432 Mbit/s** |
+> escono zero fotogrammi, rimisurato a 2560x1080), ⛔ **ma i byte di `barra` e `pieno` di queste
+> misure sono quelli di una frazione dello schermo, non dello schermo.** I byte veri sono in §3.8.
 
 ⛔⛔ **A scena ferma, in 30 secondi, esce UN fotogramma solo — la chiave d'apertura — e poi più
-niente.** Ripetuto due volte, **identico**: 1 e 1. Non è un calo: è un **arresto**.
-
-⭐ **E il ritmo al secondo lo dice senza mediarlo** (`fotogrammi al secondo`, dalla riga del figlio):
-
-```
-ferma   1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-barra  40 40 40 40 39 41 40 40 40 40 41 40 40 38 39 38 38 40 40 40 41 39 40 40 40 40 40 40 41
-pieno  40 39 40 40 38 38 37 38 38 39 37 40 37 40 40 39 40 40 39 39 40 40 39 40 40 41 39 41 40
-```
+niente.** Ripetuto due volte, **identico**. Non è un calo: è un **arresto**. ⭐ E il ritmo al secondo,
+letto dalla riga del figlio senza mediarlo, lo dice uguale: un fotogramma il primo secondo, poi zeri.
 
 ⭐⭐ **E LA CAUSA È SCRITTA NEL REGISTRO DAL PRODOTTO STESSO**, `figlio.c`, ogni secondo:
 
 > *«N fotogrammi consegnati (K chiavi), **M attese a vuoto (scena ferma: Mutter consegna solo
 > quando qualcosa cambia)**»*
 
-| scena | attese a vuoto al secondo | fotogrammi al secondo | somma |
-|---|---|---|---|
-| **ferma** | **123** | 0 | ~123 |
-| **barra** | 80 | 40 | ~120 |
-| **pieno** | 81 | 39 | ~120 |
-
-⇒ ⭐ **Il ciclo del figlio gira sempre a ~120 Hz**: non rallenta, non si risparmia, non decide
-niente. A cambiare è **quante volte Mutter gli mette qualcosa in mano** — 40 su 120 quando la
-scena si muove, **0 su 123** quando è ferma.
+⇒ ⭐ **Il ciclo del figlio gira sempre allo stesso passo**: non rallenta, non si risparmia, non
+decide niente. A cambiare è **quante volte Mutter gli mette qualcosa in mano** — spesso quando la
+scena si muove, **mai** quando è ferma.
 
 ⛔ **Quindi la discesa NON è nostra, e non è nemmeno una decisione**: nessuno la prende. Il
 prodotto **non ha un regolatore del ritmo** (§0.3: il controllo di bitrate *non esiste*), e la
@@ -530,28 +503,20 @@ sorgente — `RecordVirtual` di Mutter — consegna **solo sul cambiamento**. �
 - ⛔ **il prezzo vero è al RISVEGLIO**, e questo banco **non l'ha ancora misurato**: quanto passa
   fra il primo pixel che cambia e il primo fotogramma che esce. È la misura che segue.
 
-### 3.2 Il ritmo a scena mossa: **40/s su 60 chiesti**
+### 3.2 Il ritmo a scena mossa: **meno di quanto chiesto**
 
-`[M]` Il figlio chiede **60/s** alla cattura (`60/s chiesti`) e ne riceve **39–41**. Il tetto non è
-la nostra codifica: il tratto **cattura → byte fuori** ha mediana **8,12 ms** (barra) e **8,87 ms**
-(pieno) su 1920x1080 — cioè ~115/s di capienza. ⇒ ⭐ **Il collo non è il codificatore: è la
-consegna.** `[?]` Da capire in questa fase se i 40 sono un tetto di Mutter o della scena.
+`[M]` Il figlio chiede **60/s** alla cattura (`60/s chiesti`) e ne riceve meno. Il tetto non è la
+nostra codifica, che ha capienza ben più larga. ⇒ ⭐ **Il collo non è il codificatore: è la
+consegna.** `[?]` Da capire in questa fase se il tetto sia di Mutter o della scena.
 
 ### 3.3 I byte, e ⛔ quanto costa il silenzio
 
 > ⚠ **Vale l'avvertenza di §3.1**: `barra` e `pieno` erano anteprime, non schermo intero — §3.7.
 > La riga **ferma** invece regge, ed è confermata a 2560x1080 in §3.8.
 
-| scena | carico video | filo totale | ⇒ overhead + audio |
-|---|---|---|---|
-| ferma | 2,7 kbit/s | 2,432 Mbit/s | ⛔ **il 99,9 % del filo non è video** |
-| barra | 579 kbit/s | 3,139 Mbit/s | |
-| pieno | 2 719 kbit/s | 5,366 Mbit/s | |
-
-⛔⛔ **A desktop fermo il prodotto spende 2,4 Mbit/s per non mostrare niente**: sono l'audio PCM
-(5 995 blocchi × 960 B = 1,53 Mbit/s di carico) più QUIC. ⭐ È l'osservazione di v1 R31 rovesciata
-(*«la scelta si gioca su quanto si spende quando non serve»*), e stavolta chi spende **non è il
-video**.
+⛔⛔ **A desktop fermo il prodotto spende banda per non mostrare niente**: quasi tutto il filo non è
+video, è l'audio PCM più QUIC. ⭐ È l'osservazione di v1 R31 rovesciata (*«la scelta si gioca su
+quanto si spende quando non serve»*), e stavolta chi spende **non è il video**.
 
 ### 3.4 Gli abbandoni e le richieste di chiave — **tutti a zero, e il perché è buono**
 
@@ -572,18 +537,18 @@ muoversi**.
 
 | | |
 |---|---|
-| fotogrammi spediti | 690 in 30 s = **23,0/s** (contro 39,0 su linea larga) |
-| di cui **CHIAVE** | ⛔ **152 su 690** — contro **1 su 1 170** |
-| abbandoni §5.1 | **151** ⇒ ⭐ **un abbandono, una chiave**: la corrispondenza è quasi esatta |
-| delta buttati perché serve una chiave | **538** ⇒ cioè **tutti** i delta consegnati |
-| quel che arriva a chi guarda | **367 fotogrammi, 128 chiavi** — su 690 spediti |
-| l'audio | **3 018 datagram rifiutati da ngtcp2** (su linea larga: 0) |
+| fotogrammi spediti | molti meno che su linea larga |
+| di cui **CHIAVE** | ⛔ una parte grossa — contro una sola su linea larga |
+| abbandoni §5.1 | ⭐ **un abbandono, una chiave**: la corrispondenza è quasi esatta |
+| delta buttati perché serve una chiave | **tutti** i delta consegnati |
+| quel che arriva a chi guarda | circa metà dei fotogrammi spediti, e fra questi molte chiavi |
+| l'audio | datagram **rifiutati da ngtcp2** (su linea larga: nessuno) |
 
 ⇒ ⛔ **È esattamente la spirale che §0.3 aveva letto nel codice, qui misurata sul prodotto della
 fase 9**: `video_sgombra()` abbandona il delta ⇒ §5.2 apre il debito ⇒ esce una chiave ⇒ la chiave
 riempie la finestra ⇒ il delta dopo non esce ⇒ si ricomincia. ⭐ E il flusso **degrada nello
-spazio E nel tempo insieme** (23/s **e** sole chiavi) invece di calare il ritmo tenendo i delta,
-che è quel che §8.3 chiede.
+spazio E nel tempo insieme** (meno fotogrammi **e** sole chiavi) invece di calare il ritmo tenendo
+i delta, che è quel che §8.3 chiede.
 
 ⚠ **Questo è un CONTROLLO, non una misura della fase**: 2 Mbit/s è un decimo del pavimento
 dichiarato (§3.1-bis, 20 Mbit/s). Serve a sapere che i contatori vedono; il punto di lavoro va
@@ -600,43 +565,26 @@ misurato a 20 Mbit/s e sopra.
 ⛔ **La domanda**: §3.1 ha misurato che a scena ferma il ritmo **si ferma**. Il prezzo per chi
 guarda è zero finché nessuno tocca niente — ⛔ **ma quanto costa ricominciare?**
 
-| quiete prima del colpo | n | **mediana** | min | max | **p95** |
-|---|---|---|---|---|---|
-| **0,2 s** | 30 | **13,3 ms** | 12,7 | 13,8 | 13,8 |
-| **0,5 s** | 30 | **13,0 ms** | 12,6 | 13,5 | 13,5 |
-| **1,0 s** | 30 | **13,6 ms** | 13,0 | 14,3 | 14,2 |
-| **2,0 s** | 30 | **13,2 ms** | 12,6 | 13,8 | 13,7 |
-| **5,0 s** | 30 | **13,0 ms** | 12,3 | 13,6 | 13,5 |
-| **15,0 s** | 30 | **13,2 ms** | 12,6 | 13,8 | 13,8 |
-
-⭐⭐ **La risposta è secca: il risveglio da fermo NON costa niente.** Fra 0,2 s di quiete e 15 s
-di quiete la differenza è **0,3 ms su 13** — dentro il rumore. ⛔ E non è una mediana che nasconde
-una coda: **tutte e 180 le misure stanno fra 12,3 e 14,3 ms**, cioè la coda è larga **2 ms**.
-`LEZIONI.md` §6.5 chiede la coda perché *«il regime è cieco alla coda»*: qui la coda è stata
-guardata e **non c'è**.
+⭐⭐ **La risposta è secca: il risveglio da fermo NON costa niente.** Dopo una quiete breve o lunga
+il risveglio costa uguale, dentro il rumore. ⛔ E non è una mediana che nasconde una coda: la coda è
+stata guardata e **non c'è**. `LEZIONI.md` §6.5 chiede la coda perché *«il regime è cieco alla
+coda»*.
 
 ⇒ ⭐ **L'arresto a scena ferma non è un difetto della fase.** Il ritmo si ferma perché Mutter non
 consegna, e riparte al primo pixel come se non si fosse mai fermato.
 
 **Che cosa è misurato** (`SPECIFICHE.md` §2.4): **primo pixel → byte fuori dal server**.
 ⚠ **Non** l'anello intero: mancano il volo sul filo, la decodifica e la pittura, che sono di
-fase 8 e **si sommano**. ⭐ Il tratto della *scena* è dichiarato a parte e vale **0,3–0,4 ms**
-(il `SIGCONT` e il disegno): non è nostro e non è dentro i 13.
+fase 8 e **si sommano**. ⭐ Il tratto della *scena* (il `SIGCONT` e il disegno) è dichiarato a
+parte: non è nostro e non è dentro il risveglio.
 
-⭐ **E dove vanno quei 13 millisecondi** — dalle righe per fotogramma del registro:
+⭐ **E dove va il tempo del risveglio** — dalle righe per fotogramma del registro: ⛔ **il grosso è
+attesa del compositore** (Mutter compone e ci consegna, più la nostra cattura), coerente con un
+monitor virtuale a 60 Hz; la codifica è la parte piccola, e la consegna al trasporto sta sotto il
+millisecondo del registro. ⭐ **Non c'è niente da ottimizzare qui dentro.**
 
-| | mediana |
-|---|---|
-| pixel → inizio della codifica (**Mutter compone e ci consegna, più la nostra cattura**) | **10,2–10,9 ms** |
-| **la codifica**, che è nostra | **2,6–2,7 ms** |
-| fine codifica → `SPEDITO` (consegna al trasporto) | **0,0 ms** (sotto il millisecondo del registro) |
-
-⇒ ⛔ **L'80 % del risveglio è attesa del compositore, non lavoro nostro**, ed è coerente con un
-monitor virtuale a 60 Hz (mezzo periodo medio = 8,3 ms). ⭐ **Non c'è niente da ottimizzare qui
-dentro**: la parte che possiamo toccare sono 2,7 ms su 13.
-
-**Il primo fotogramma che esce è sempre un `delta`** (180 su 180), mediana **2,9–3,1 KB**: il
-risveglio **non costa una chiave**.
+**Il primo fotogramma che esce è sempre un `delta`** (180 su 180): il risveglio **non costa una
+chiave**.
 
 ### 3.7 ⛔⭐⭐ E IL BANCO DI STAMATTINA MISURAVA UNA VISTA D'INSIEME — *08:08*
 
@@ -654,38 +602,30 @@ barra in alto e il cassetto in basso.
 l'utente preme un tasto**. Le due strade più comode sono chiuse e le ho provate:
 `org.gnome.Shell.Eval` → `(false, '')`; `org.gnome.Shell.FocusApp` → `AccessDenied`.
 
-### 3.8 ⭐⭐⭐ LA BANDA A 2560x1080 — **il video a schermo intero chiede il 293 % del pavimento**
+### 3.8 ⭐⭐⭐ LA BANDA A 2560x1080 — **il video a schermo intero chiede più volte il pavimento**
 
-> Utente **`prova2`** (palco nuovo), tela **2560x1080**, 30 s per punto (25 s per la grana),
-> linea **larga**, `08:22–08:35`. Banco `banchi/09-b72-banda.py`. ⭐ Ogni scena è stata
-> **guardata nei pixel** prima di essere creduta.
-
-| scena | fot/s | chiavi | **carico video** | **% di 20 Mbit/s** | filo `lo` |
-|---|---|---|---|---|---|
-| **ferma** (niente) | **0,00** | 0 | **0** | **0 %** | 2,426 Mbit/s |
-| **video: il desktop vero dell'utente, a schermo intero** | 23,10 | 0 | **0,204 Mbit/s** | **1,0 %** | 2,678 |
-| **pieno**: bande a tinta piatta, tutto lo schermo | 40,57 | 0 | **1,179 Mbit/s** | 5,9 % | 3,730 |
-| **barra**: gradiente **retinato** su tutto lo schermo + barra | 34,93 | 1 | **21,356 Mbit/s** | ⛔ **106,8 %** | 24,219 |
-| ⛔ **video con la grana, a schermo intero** | 23,44 | 0 | ⛔ **58,668 Mbit/s** | ⛔ **293,3 %** | **61,671** |
+> Utente **`prova2`** (palco nuovo), tela **2560x1080**, linea **larga**, `08:22–08:35`. Banco
+> `banchi/09-b72-banda.py`. ⭐ Ogni scena è stata **guardata nei pixel** prima di essere creduta.
+> Cinque scene: ferma · il desktop vero dell'utente a schermo intero · `pieno` (bande a tinta
+> piatta) · `barra` (gradiente **retinato** + barra) · un video con la grana a schermo intero.
 
 ⛔⛔ **La risposta alla domanda di §0.3 è sì: serve un controllo del bitrate.** Con **QP 26 fisso**
-e **nessun tetto**, un contenuto duro a schermo intero chiede **tre volte il pavimento dichiarato**
-— 312 861 byte per fotogramma di media, 23 al secondo. ⚠ E il `[?]` di stamattina (**~19,9
-Mbit/s**, riscalato da v1) era **ottimista di tre volte**.
+e **nessun tetto**, un contenuto duro a schermo intero chiede **più volte il pavimento dichiarato**.
+⚠ E il `[?]` di stamattina, riscalato da v1, era **molto ottimista**.
 
-⭐⭐ **E i tre punti insieme dicono la cosa che un numero solo non direbbe**: la banda non dipende
+⭐⭐ **E le scene insieme dicono la cosa che un numero solo non direbbe**: la banda non dipende
 dalla *superficie* che si muove, dipende dal **contenuto**. `pieno` muove **tutti** i pixel e costa
-**1,2 Mbit/s**; `barra` muove gli stessi pixel con un **retino** e costa **21**; il film con la
-grana costa **59**. ⇒ ⛔ **«quanti pixel cambiano» non predice niente**, e un regolatore costruito
-su quella grandezza sbaglierebbe di due ordini di grandezza.
+poco; `barra` muove gli stessi pixel con un **retino** e costa il pavimento; il film con la grana
+costa di più ancora. ⇒ ⛔ **«quanti pixel cambiano» non predice niente**, e un regolatore costruito
+su quella grandezza sbaglierebbe di ordini di grandezza.
 
-⭐ **Il desktop vero dell'utente, a schermo intero e in movimento, costa l'1 % del pavimento**
-(0,204 Mbit/s). ⇒ Sul contenuto per cui il prodotto esiste, oggi **non c'è nessun problema di
+⭐ **Il desktop vero dell'utente, a schermo intero e in movimento, costa una frazione minima del
+pavimento.** ⇒ Sul contenuto per cui il prodotto esiste, oggi **non c'è nessun problema di
 banda**: il problema è il caso duro, ed è per il caso duro che il tetto va scritto.
 
 ⚠ **Il filmato e il lettore si dichiarano**, perché un altro lettore darebbe un altro ritmo:
-`scena-utente.webm` (2560x1080, VP8, 17,5 s, 404 fotogrammi a ~23/s — **lo stesso file** su cui la
-fase 8 ha misurato 24 956 byte per chiave), riprodotto da **firefox-esr** a schermo intero.
+`scena-utente.webm` (2560x1080, VP8, 17,5 s, 404 fotogrammi — **lo stesso file** della fase 8),
+riprodotto da **firefox-esr** a schermo intero.
 ⛔ Sulla macchina non esistono mpv, ffplay, gst-launch, totem, vlc né ffmpeg: Firefox è **l'unico
 lettore**, ed è anche quello vero dell'utente.
 
@@ -695,13 +635,12 @@ lettore**, ed è anche quello vero dell'utente.
 > `Main process exited, code=killed, status=11/SEGV`
 
 ⭐ **L'ultima riga del suo registro, allo stesso secondo**:
-> `08:28:09.894 figlio  codec 1: 525298 byte, delta, caricamento 0 us, codifica 2597 us`
+> `08:28:09.894 figlio  codec 1: 525298 byte, delta, …`
 > `08:28:09.895 rcp     fotogramma 185 SPEDITO: delta 0x0302, codec 1, 2560x1080, 525298 byte…`
 
 Era il primo fotogramma del **film con la grana**. ⚠ **Non riprodotto**: il giro dopo, con lo
-stesso filmato, ha retto 25 secondi e 586 fotogrammi (mediana 313 KB, punte oltre 500 KB).
-⛔ Nessun `core` (coredump disabilitato) e nessun OOM in `dmesg`: la memoria di picco dell'unità
-era **41,2 MiB**.
+stesso filmato, ha retto 25 secondi, con punte oltre 500 KB.
+⛔ Nessun `core` (coredump disabilitato) e nessun OOM in `dmesg`.
 
 > ⭐⭐⭐ **E nel pomeriggio la causa è stata trovata, riga per riga: §4.** Questo riquadro resta
 > com'era scritto la mattina — *«`[?]` la causa non è nominata»* — perché è il verbale di quel che
@@ -711,47 +650,28 @@ era **41,2 MiB**.
 
 ### 3.10 ⭐⭐⭐ IL GRADINO — **basta un buco di 3 secondi, e il ritorno è immediato**
 
-> Scena **`barra`** (quella che chiede 21 Mbit/s: sotto i 10 del buco c'è un **deficit vero**),
-> tela 2560x1080. `netem` su `lo`, solo la porta 7900, `delay 15ms` **in tutte e tre le fasi** —
-> cambia solo il `rate`, così il transitorio è della banda e non dell'RTT. `08:32`.
-> ⭐ Il cambio di disciplina costa **4,0–4,7 ms**, misurato: su un buco di 3 s è l'0,15 %.
+> Scena **`barra`** (quella che chiede il pavimento: sotto i 10 Mbit/s del buco c'è un **deficit
+> vero**), tela 2560x1080. `netem` su `lo`, solo la porta 7900, `delay 15ms` **in tutte e tre le
+> fasi** — cambia solo il `rate`, così il transitorio è della banda e non dell'RTT. `08:32`.
 
-| s | fot/s | **chiavi** | delta | abbandoni §5.1 | filo Mbit/s | fase |
-|---|---|---|---|---|---|---|
-| 5 | 32 | 3 | 29 | 3 | 22,1 | larga |
-| 6 | 38 | 1 | 37 | 1 | 26,3 | larga |
-| 7 | **40** | **0** | 40 | **0** | 28,2 | larga |
-| **8** | ⛔ **14** | ⛔ **6** | 8 | **7** | **8,5** | **stretta** |
-| **9** | ⛔ **14** | ⛔ **7** | 7 | **6** | **8,3** | **stretta** |
-| **10** | ⛔ **13** | ⛔ **7** | 6 | **7** | **8,0** | **stretta** |
-| 11 | 32 | 2 | 30 | 2 | 24,1 | *la linea si riapre a +11,1 s* |
-| **12** | ⭐ **42** | ⭐ **0** | 42 | **0** | **29,2** | larga |
-| 13…28 | 39–41 | **0** | | **0** | 27,6–29,0 | larga |
+⛔⛔ **Sì: basta un buco.** Non serve una linea povera sostenuta — **tre secondi** fanno crollare il
+ritmo e fanno diventare **metà dei fotogrammi delle chiavi**. È la spirale di §0.3, identica a
+quella vista a 2 Mbit/s costanti, innescata da un transitorio.
 
-⛔⛔ **Sì: basta un buco.** Non serve una linea povera sostenuta — **tre secondi** portano il ritmo
-da 40 a 13/s e fanno diventare **metà dei fotogrammi delle chiavi** (7 su 13). È la spirale di
-§0.3, identica a quella vista a 2 Mbit/s costanti, innescata da un transitorio.
+⭐⭐ **E la corrispondenza è esatta, a ogni livello**: `abbandoni §5.1` = `chiavi`, uno a uno — nel
+buco e anche **sulla linea larga**. ⇒ ⛔ Non è «la linea povera fa uscire chiavi»: è
+**`video_sgombra()` che abbandona un delta, e ogni abbandono compra una chiave**. La linea povera
+non fa che aumentare gli abbandoni.
 
-⭐⭐ **E la corrispondenza è esatta, a ogni livello**: `abbandoni §5.1` = `chiavi`, uno a uno —
-7↔6, 6↔7, 7↔7 nel buco, e anche **sulla linea larga** (3↔3, 1↔1). ⇒ ⛔ Non è «la linea povera fa
-uscire chiavi»: è **`video_sgombra()` che abbandona un delta, e ogni abbandono compra una chiave**.
-La linea povera non fa che aumentare gli abbandoni.
-
-⭐⭐⭐ **Ma il ritorno è immediato, e questa è la notizia buona**: la linea si riapre a +11,1 s, il
-secondo 11 è di transizione (32 fot, 2 chiavi) e **il secondo 12 è già regime pieno** — 42
-fotogrammi, **zero chiavi**, 29,2 Mbit/s. ⇒ **meno di un secondo**, e nessuno strascico nei 17
+⭐⭐⭐ **Ma il ritorno è immediato, e questa è la notizia buona**: la linea si riapre, un secondo di
+transizione e **il secondo dopo è già regime pieno**, **zero chiavi**, e nessuno strascico nei
 secondi successivi. ⛔ **Non c'è isteresi**: il prodotto non ha un regolatore che «si ricorda» di
 essere sceso, quindi non ha nemmeno niente da far risalire.
 
 #### ⛔ IL CONTROLLO, e senza di lui il gradino non dimostra niente
 
-Stesso gradino, scena **`pieno`** (3,7 Mbit/s sul filo, cioè **sotto** il buco):
-
-| s | 8 | 9 | 10 | 11 |
-|---|---|---|---|---|
-| fot/s | 40 | 39 | 39 | 40 |
-| chiavi | **0** | **0** | **0** | **0** |
-| abbandoni | **0** | **0** | **0** | **0** |
+Stesso gradino, scena **`pieno`**, che chiede **meno** di quel che il buco lascia passare: nel buco
+**zero chiavi e zero abbandoni**, e il ritmo non si muove.
 
 ⇒ ⭐ Quando la banda chiesta sta sotto il buco **non succede assolutamente niente**. Il banco non
 spara a vuoto: spara quando c'è un deficit, e solo allora. ⛔ E questo dice anche l'altra metà:
@@ -869,48 +789,32 @@ il controllo che quel riavvio è servito.
 > **30 colpi per punto**, linea larga. ⛔ **Uno per volta**: fra i due giri la macchina è stata
 > rimessa a zero (nessun palco vivo, nessuna disciplina).
 
-| quiete | **7900 · mediana** | p95 | primo fotogramma | **7910 · mediana** | p95 | primo fotogramma |
-|---|---|---|---|---|---|---|
-| **0,2 s** | **12,4 ms** | 12,9 | 2 988 B | **12,0 ms** | 12,5 | 2 981 B |
-| **2,0 s** | **11,9 ms** | 12,4 | 2 880 B | **12,4 ms** | 13,2 | 2 889 B |
-| **15,0 s** | **12,1 ms** | 12,7 | 2 928 B | **12,7 ms** | 13,2 | 2 878 B |
+⭐⭐ **Identico**: la differenza fra i due server è più piccola della differenza fra due quieti
+dello stesso server. ⛔ E non è una mediana che nasconde una coda: anche le code combaciano. ⭐ Il
+**primo fotogramma** è `delta` 180 volte su 180, e pesa uguale sui due server.
 
-⭐⭐ **Identico**: la differenza fra i due server è **0,4–0,6 ms su 12**, cioè meno della
-differenza fra due quieti dello stesso server. ⛔ E non è una mediana che nasconde una coda: i
-p95 stanno fra 12,4 e 13,2 su tutt'e sei i punti. ⭐ Il **primo fotogramma** è `delta` 180 volte
-su 180 e pesa **2 878 – 2 988 byte**: i due server si discostano di **meno dello 0,5 %**.
+⚠ E il risveglio di stamattina (§3.6) non è uguale a quello di adesso: la macchina è la stessa, la
+sessione è nuova. ⛔ **Per questo il «prima» è stato rimisurato adesso invece di credere al numero
+delle 07:46** — un confronto appaiato si fa con due misure vicine, non con una di tre ore fa.
 
-⚠ E i 13 ms di stamattina (§3.6) sono diventati 12: la macchina è la stessa, la sessione è nuova.
-⛔ **Per questo il «prima» è stato rimisurato adesso invece di credere al numero delle 07:46** —
-un confronto appaiato si fa con due misure vicine, non con una di tre ore fa.
-
-**Dove vanno**: pixel→codifica **9,2–9,9 ms** · la codifica **2,5–2,6 ms** · codifica→`SPEDITO`
-**0,0 ms**, sui due server allo stesso modo.
+**Dove va il tempo**: attesa del compositore, codifica e consegna si dividono il risveglio **sui
+due server allo stesso modo**.
 
 ### 3.14 ⭐⭐ I1 — A SCENA FERMA, **identico** — *7910 alle 09:31–09:33, 7900 alle 09:35–09:38*
 
 > Banco `09-b68-ritmo.py tutto --secondi 30`, utente `prova`, tela 1920x1080, linea larga.
 
-| scena | **7900** fot/s | K + Δ | carico video | filo `lo` | **7910** fot/s | K + Δ | carico video | filo `lo` |
-|---|---|---|---|---|---|---|---|---|
-| **ferma** | **0,07** | 1 + 1 | 5 559 B · 1,5 kbit/s | **2,429** Mbit/s | **0,07** | 1 + 1 | 5 565 B · 1,5 kbit/s | **2,431** Mbit/s |
-| **barra** | 37,03 | 1 + 1 110 | 62 036 040 B · 16 543 kbit/s | 19,925 | 34,60 | 1 + 1 037 | 58 005 654 B · 15 468 kbit/s | 18,790 |
-| **pieno** | 39,97 | 1 + 1 198 | 4 936 055 B · 1 316 kbit/s | 3,920 | 40,17 | 1 + 1 204 | 5 038 472 B · 1 344 kbit/s | 3,947 |
-| **ferma** *(ripetuta)* | **0,07** | 1 + 1 | 5 556 B | 2,431 | **0,07** | 1 + 1 | 5 551 B | 2,431 |
-| abbandoni §5.1 · chiave trattenuta §5.2 | **0 · 0** | | | | **0 · 0** | | | |
-| audio `vecchi` del cliente | **0** | | | | **0** | | | |
-
-⭐⭐ **La misura che conta è il costo PER FOTOGRAMMA, non il conto dei fotogrammi**: su `barra`
-sono **55 838** byte (7900) contro **55 882** (7910), cioè **lo 0,08 % di differenza**. ⇒ Il
-codificatore fa la stessa cosa; a ballare del 6 % è **quante volte Mutter consegna**, che è la
-stessa grandezza di §3.1 e non è nostra.
+⭐⭐ **La misura che conta è il costo PER FOTOGRAMMA, non il conto dei fotogrammi**: su `barra` i
+due server spendono per fotogramma **gli stessi byte**, a meno di un'inezia. ⇒ Il codificatore fa
+la stessa cosa; a ballare è **quante volte Mutter consegna**, che è la stessa grandezza di §3.1 e
+non è nostra. A scena ferma, sui due server, esce una chiave e un delta e poi niente; abbandoni e
+chiavi trattenute a zero.
 
 ⛔ **E l'audio sul percorso locale conferma la premessa della cura 1**: `vecchi` **0** su
 tutt'e due, in tutt'e quattro i giri. Non c'era niente da curare, e infatti non è cambiato niente.
 
-⚠ `barra` qui costa **16–20 Mbit/s** contro i 579 kbit/s di §3.1: quelle erano anteprime della
-vista d'insieme (§3.7), queste no. ⛔ Il confronto che vale è **colonna contro colonna**, non
-contro stamattina.
+⚠ `barra` qui costa molto più che in §3.1: quelle erano anteprime della vista d'insieme (§3.7),
+queste no. ⛔ Il confronto che vale è **colonna contro colonna**, non contro stamattina.
 
 ### 3.15 ⭐⭐⭐ LA BANDA A 2560x1080: **identica al byte** — *7910 alle 09:44 e 09:51, 7900 alle 09:47*
 
@@ -918,18 +822,11 @@ contro stamattina.
 > linea larga. Il punto «video» è il **desktop vero dell'utente**: `scena-utente.webm` a schermo
 > intero in `firefox-esr`, cioè il contenuto per cui il prodotto esiste.
 
-| punto | **7900** fot/s | **carico video** | % di 20 Mbit/s | B/fotogramma | filo `lo` | **7910** fot/s | **carico video** | % | B/fot | filo |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **ferma** | 0,00 | **0** | 0 % | — | 2,427 | 0,04 | **632 B** | 0 % | 632 | 2,427 |
-| **pieno** | 41,00 | **1,159 Mbit/s** | 5,8 % | 3 532 | 3,683 | 41,28 | **1,159 Mbit/s** | 5,8 % | 3 508 | 3,687 |
-| **video** *(desktop vero)* | 21,96 | **0,193 Mbit/s** | **1,0 %** | 1 099 | 2,666 | 21,92 | **0,195 Mbit/s** | **1,0 %** | 1 112 | 2,667 |
+⭐⭐⭐ **`pieno`: sui due server lo stesso numero di byte a meno di un'inezia, su 25 secondi.** ⛔ Non
+«simile»: lo stesso codificatore che fa la stessa cosa.
 
-⭐⭐⭐ **`pieno`: 3 620 466 byte contro 3 620 630, su 25 secondi e ~1 030 fotogrammi.** Sono
-**164 byte di differenza su 3,62 MB — lo 0,005 %.** ⛔ Non «simile»: lo stesso codificatore che
-fa la stessa cosa.
-
-⭐ **E il desktop vero costa l'1,0 % del pavimento su tutt'e due** — 0,193 contro 0,195 Mbit/s,
-cioè il numero di §3.8 (0,204) ritrovato due volte a distanza di quattro minuti.
+⭐ **E il desktop vero costa una frazione minima del pavimento su tutt'e due**, cioè il risultato
+di §3.8 ritrovato due volte a distanza di quattro minuti.
 
 ⚠ Il punto `pieno` sulla 7910 è stato **rifatto alle 09:51**: al primo giro la scena non era
 partita — `⛔ shm_open(//09-b68): Permission denied`, il segmento di memoria condivisa era rimasto
@@ -1000,15 +897,13 @@ prima di scriverlo — non dopo.
 ### 3.17 ⛔⛔ DUE FALSI ALLARMI DEL BANCO, E VALGONO PIÙ DI UN NUMERO
 
 **1. «Il dopo è più lento e i suoi fotogrammi pesano il doppio» — *08:52, e non era vero*.**
-Il primo giro del risveglio sulla 7910 ha dato mediana **13,4 / 14,0 / 13,8 ms** contro i
-**12,4 / 11,9 / 12,1** della 7900, e primo fotogramma **6 141 / 5 872 / 5 812 byte** contro
-**2 988 / 2 880 / 2 928**: il **doppio**, sistematico su 90 colpi, con la stessa scena.
+Il primo giro del risveglio sulla 7910 è uscito più lento della 7900, e col primo fotogramma
+**del doppio**, sistematico su 90 colpi, con la stessa scena.
 
 ⛔ La causa non era il prodotto: era **un palco orfano di stamattina** — il figlio di `prova2`
 rimasto vivo sulla 7900 dopo il banco della banda delle 08:30 (invariante I4: il palco sopravvive
 al distacco) — che continuava a catturare e codificare sulla **stessa GPU integrata**. Chiuso
-quello e rifatta la misura sulla macchina pulita, il dopo ha dato **12,0 / 12,4 / 12,7** e primo
-fotogramma **2 981 / 2 889 / 2 878**: identico al prima.
+quello e rifatta la misura sulla macchina pulita, il dopo è uscito identico al prima.
 
 ⇒ ⭐⭐ È `LEZIONI.md` §1.26 preso in flagrante: **non ha dato un rosso, ha dato un numero
 plausibile** — e quel numero, creduto, avrebbe accusato tre cure innocenti. ⚠ E la riga che lo
@@ -1016,7 +911,7 @@ denunciava era stampata dal banco stesso e non l'avevo pesata: *«fotogrammi usc
 quieti: **1 · 1 · 7**»* contro *«0 · 0 · 0 (il desktop era davvero fermo)»* del giro pulito.
 
 **2. «Il dopo non spedisce quasi niente» — *09:29, e non era vero*.**
-Il primo giro di I1 sulla 7910 ha dato `barra` a **0,17 fot/s** e **13 kB** sul filo in 30 s. Nel
+Il primo giro di I1 sulla 7910 ha dato `barra` quasi ferma e quasi niente sul filo. Nel
 registro la causa, testuale:
 
 > `09:29:05.841 rcp     posto NEGATO a prova da [192.168.0.2]:55729: lo occupa un altro client di questo stesso utente (occupati: 1)`
@@ -1192,14 +1087,12 @@ si svuota entro la soglia**. Sotto la soglia si **tiene**: gli stream sono indip
 ⛔ **La soglia è 100 ms, e i quattro vincoli che la derivano** *(⚠ derivata, non dimostrata: il
 banco la spazza a 50 · 100 · 200 e chi sceglie è l'utente, perché è un prezzo che si VEDE)*:
 
-1. **più di un periodo di fotogramma**, o è la regola di oggi con un nome nuovo: `[M]` fase 8, il
-   contenuto vero va a **20,9 fot/s = 47,8 ms**;
+1. **più di un periodo di fotogramma** del contenuto vero (fase 8), o è la regola di oggi con un
+   nome nuovo;
 2. **meno del fondo con cui già si richiede una chiave** — `WT_CHIAVE_RICHIESTA_MS` = 150;
-3. deve **lasciar passare una CHIAVE più qualche delta** dove il difetto morde: `[M]` una chiave
-   sulla tela dell'utente misura **20 817 byte**; a 3 Mbit/s esce in **56 ms**, e nei 44 che
-   restano ci stanno **tre delta**;
-4. il prezzo si somma all'anello: `[M]` fase 8, l'anello intero è **55,20 ms**, e 100 + 55 sta
-   sotto il quinto di secondo.
+3. deve **lasciar passare una CHIAVE più qualche delta** dove il difetto morde, cioè una chiave
+   della tela dell'utente anche su linea stretta;
+4. il prezzo si somma all'anello di fase 8, e la somma deve restare sotto il quinto di secondo.
 
 ⚠ **Il ripiego dichiarato**: finché ngtcp2 non ha né `smoothed_rtt` né `cwnd` si assume **il
 pavimento**, 20 Mbit/s = 2 500 byte/ms — e **la riga di registro dice quale dei due casi è**, invece
@@ -1258,11 +1151,11 @@ degradazione permanente **no**.
 
 | | il cricchetto scatta? |
 |---|---|
-| `[M]` tela dell'utente 2560×1080, QP 26, 404 chiavi vere: max **21 433 byte = 0,13 %** del tetto, margine **782×** | ⛔ **no** — nemmeno il rumore uniforme ci arriva (15,1 %) |
-| `[M]` 7680×4320 in hardware, desktop vero | ⛔ no (1,5 %) |
-| `[M]` 7680×4320, grana `alls=60` in hardware | ⚠ **94,9 %** — **al confine** |
+| `[M]` tela dell'utente 2560×1080, QP 26, chiavi vere: lontanissime dal tetto | ⛔ **no** — nemmeno il rumore uniforme ci arriva |
+| `[M]` 7680×4320 in hardware, desktop vero | ⛔ no |
+| `[M]` 7680×4320, grana `alls=60` in hardware | ⚠ **al confine** |
 | `[M]` 7680×4320, rumore uniforme in hardware | ⛔ **sì**, 8 su 8 |
-| ⛔ `[M]` **ripiego software `libx264` CRF 20, 7680×4320, filmato granuloso: 18,733 MiB, 1 su 8** | ⛔ **sì, con contenuto plausibile** |
+| ⛔ `[M]` **ripiego software, 7680×4320, filmato granuloso** | ⛔ **sì, con contenuto plausibile** |
 
 ⇒ Raggiungibile per **una via sola e stretta**: la tela grande **più** il ripiego software. E le due
 si tengono per mano: `[M]` `h264_vaapi` su questo chip si ferma a **4096 px per lato**, e la tela
@@ -1277,8 +1170,8 @@ un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva
 **Il vincolo che decide DOVE va il codice**: `chiudi_contesto()` fa `av_packet_free()` ⇒ la risalita
 **non può** stare dopo `break`, dove `fuori->dati` punta dentro il pacchetto: sarebbe lo stesso
 difetto di §4. ⇒ **si conta alla consegna, si risale all'ingresso del fotogramma dopo**, e come
-effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware, **1,8-3,3 s** in
-software) cade **fra** due fotogrammi.
+effetto secondario il costo della riapertura, che non è piccolo e in software è grande, cade
+**fra** due fotogrammi.
 
 ⛔ **E non è simmetrica alla discesa, di proposito**: si scende di tre scalini in un fotogramma, si
 risale di **UNO** ogni `RISALITA_ATTESA`, con l'attesa che **raddoppia** a ogni ricaduta
@@ -1292,9 +1185,9 @@ leva di I1: **restituisce** quella di §3.3. ⛔ L'unico punto in cui potrebbe t
 riapertura ogni 2 secondi, **e quello sì sarebbe I1**.
 
 ⛔ **Il guasto che ucciderebbe questa cura si chiama SBATTIMENTO, e non è ipotetico**: la grana
-`alls=60` a 7680×4320 sta al **94,9 %** del tetto, cioè è una scena che vive **esattamente sul
-confine**. In software basterebbero pochi giri (1,8-3,3 s ciascuno) perché **la cura costi più del
-difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
+`alls=60` a 7680×4320 sta a un soffio dal tetto, cioè è una scena che vive **esattamente sul
+confine**. In software basterebbero pochi giri, con una riapertura lenta ciascuno, perché **la cura
+costi più del difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
 
 ### 5.4 Cura 4 — il riordino dell'audio · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
 
@@ -1393,22 +1286,21 @@ sessione **muta con tutti i contatori verdi**.
 ### 5.5 Cura 5 — il tetto di banda · `codificatore.c:200-340`, `:1786-1800`
 
 **La misura che la obbliga**: §3.8 — con **QP 26 fisso e nessun tetto**, un contenuto duro a schermo
-intero chiede **58,668 Mbit/s = il 293 % del pavimento**, e nessuno gli dice di no.
+intero chiede **più volte il pavimento**, e nessuno gli dice di no.
 
 ⭐⭐ **E il modo si è scelto con i byte, non con una preferenza** — misurato sul portatile il 23
 agosto pomeriggio, il dettaglio in `codificatore.c:200-260`:
 
 | modo | esito |
 |---|---|
-| ⛔ **VBR** | **fuori**, e la prova non è un ragionamento: con e senza `qp=26` escono **gli stessi identici byte** (8 350 170 e 514 142, due volte su due) ⇒ **sotto VBR il `qp` è ignorato**, e tutta la scala della degradazione **più la risalita scritta stamattina** diventerebbero **no-op silenziosi** |
-| ⛔ **CBR** | **smascherato sul ferro nostro**: a scena ferma spende **15,98 Mbit/s contro 0,193** del CQP — **83 volte** per niente (R31 di v1 diceva 42× a 1440p: **qui è peggio**) |
+| ⛔ **VBR** | **fuori**, e la prova non è un ragionamento: con e senza `qp=26` escono **gli stessi identici byte**, due volte su due ⇒ **sotto VBR il `qp` è ignorato**, e tutta la scala della degradazione **più la risalita scritta stamattina** diventerebbero **no-op silenziosi** |
+| ⛔ **CBR** | **smascherato sul ferro nostro**: a scena ferma spende enormemente più del CQP, per niente (R31 di v1 lo diceva già: **qui è peggio**) |
 | ⛔ **ICQ / AVBR** | fuori: mai misurati, mai visti in v1, e `AVBR` converge *«in N frames»* — un modo che si assesta su una finestra sbaglia **proprio nell'istante in cui la scena cambia** |
-| ⭐ **QVBR** — **scelto** | la scala **REGGE**: `[M]` scena ferma QP 26 → **0,218** · QP 35 → **0,125** · QP 44 → **0,076** Mbit/s. ⚠ E a scena **dura** la scala non morde più (11,14 · 11,31 · 11,19): **quando il tetto è in presa la qualità la decide il tetto, non il QP** — va detto, o un banco che cercasse lì l'effetto del QP non lo troverebbe e concluderebbe male |
+| ⭐ **QVBR** — **scelto** | la scala **REGGE**: `[M]` a scena ferma ogni scalino di QP abbassa la banda. ⚠ E a scena **dura** la scala non morde più: **quando il tetto è in presa la qualità la decide il tetto, non il QP** — va detto, o un banco che cercasse lì l'effetto del QP non lo troverebbe e concluderebbe male |
 
 ⛔ **I tre numeri si derivano dal pavimento, nessuno è scritto a mano**: `rc_max_rate` = **80 %** del
-pavimento (16 Mbit/s ⇒ 16 + i **2,426** `[M]` misurati di audio/input/QUIC = **il 92 %** del
-pavimento: il margine ha un numero sotto invece di essere prudenza) · `bit_rate` = **75 % del filo**,
-⛔ **mai uguale al filo, è R31 alla lettera** · `rc_buffer_size` = filo × **40 ms**.
+pavimento (16 Mbit/s: il resto del pavimento è il posto di audio, input e QUIC) · `bit_rate` =
+**75 % del filo**, ⛔ **mai uguale al filo, è R31 alla lettera** · `rc_buffer_size` = filo × **40 ms**.
 
 ⛔⛔ **E quella terza riga è quella che v1 sbagliò senza che nessuno se ne accorgesse**:
 `fondamenta/remotix-c/src/codificatore.c:256` metteva `rc_buffer_size = bit_rate / 2`, che **non è «metà»:
@@ -1448,16 +1340,15 @@ bolletta.** Con `rc_mode = auto` si sceglie qualcos'altro **in silenzio**; col n
 **fallisce**, e la parentesi dell'errore *«(supported modes: …)»* **elenca quel che c'è**.
 
 ⚠ **E la regola del banco che ne esce, in una riga**: ⛔ **il controllo del modo si fa a schermo
-FERMO** — `[M]` a scena ferma i modi differiscono di **83×** (CQP 0,193 contro CBR 15,98 Mbit/s), a
-scena dura stanno tutti dentro l'1 % l'uno dall'altro ⇒ **un banco che misurasse solo la scena dura
-non misurerebbe niente**. ⛔ **Ma sul prodotto «fermo» vuol dire ZERO fotogrammi** (§3.8: 0,00
-fot/s), quindi la scena che fa da controllo è **la seconda: il desktop vero**, che si muove e costa
-l'1 %.
+FERMO** — `[M]` a scena ferma i modi differiscono enormemente, a scena dura stanno tutti vicini ⇒
+**un banco che misurasse solo la scena dura non misurerebbe niente**. ⛔ **Ma sul prodotto «fermo»
+vuol dire ZERO fotogrammi** (§3.8), quindi la scena che fa da controllo è **la seconda: il desktop
+vero**, che si muove e costa poco.
 
 ⚠ **Quel che NON si tocca, e va detto**: `max_frame_size`. `[M]` ffmpeg lo rifiuta sotto CQP e lo
-accetta sotto QVBR — darebbe **in un passaggio** quel che oggi costa fino a 3 riaperture da
-91-108 ms. ⛔ Non si accende oggi: è una **seconda leva sulla stessa grandezza**, e due leve accese
-insieme al primo giro darebbero **due misure sotto la stessa etichetta**.
+accetta sotto QVBR — darebbe **in un passaggio** quel che oggi costa fino a 3 riaperture. ⛔ Non si
+accende oggi: è una **seconda leva sulla stessa grandezza**, e due leve accese insieme al primo giro
+darebbero **due misure sotto la stessa etichetta**.
 
 #### ⛔ E il difetto trovato strada facendo, che non era il bersaglio dello studio
 
@@ -1677,8 +1568,8 @@ di pendolamento**: se cambia più di *N* volte al secondo, la riga diventa *«�
 
 ### 7.2 ⛔ I buchi che l'inventario ha trovato — e uno era già chiuso
 
-`[M]` **Quanto costa una riga**, misurato il 23 agosto su Intel N100 (il ferro **più lento** dei due,
-quindi è un tetto): **0,63 µs** e **98 byte**.
+`[M]` **Quanto costa una riga**, misurato il 23 agosto sul ferro **più lento** dei due: pochissimo,
+in tempo e in byte.
 
 | | |
 |---|---|
@@ -1690,21 +1581,15 @@ quindi è un tetto): **0,63 µs** e **98 byte**.
 
 ### 7.2-bis ⚠ IL PREZZO — e ⛔ **non serve un livello intermedio: serve un FONDO**
 
-`[M]` 0,63 µs e 98 byte per riga. `[R]` A regime, **una** sessione a 60 fps, le righe **per
-fotogramma** sono due (`stream uni aperto` e `codec N: … byte`):
+`[R]` A regime, **una** sessione a 60 fps, le righe **per fotogramma** sono due (`stream uni aperto`
+e `codec N: … byte`).
 
-| | righe/s | byte/s | in un'ora | CPU |
-|---|---|---|---|---|
-| **una sessione, con `--parlantina`** | **120** | **11,8 kB/s** | **42 MB** | **0,0076 % di un nucleo** |
-| quattro sessioni | 480 | 47 kB/s | 170 MB | 0,03 % |
+⇒ ⭐ **La CPU non è il prezzo: è trascurabile.** Il prezzo è il **disco** e la **leggibilità** — un
+registro in cui le due righe per fotogramma seppelliscono tutto il resto.
 
-⇒ ⭐ **La CPU non è il prezzo: è tre centesimi di millesimo di nucleo.** Il prezzo è il **disco** e
-la **leggibilità** — un registro in cui le due righe per fotogramma seppelliscono tutto il resto in
-rapporto **120 : 1**.
-
-⛔⛔ **E sotto congestione il prezzo lo paga anche il registro SPENTO.** `[M]` 21 agosto: a 3 Mbit/s
-la riga *«FOTOGRAMMA NON SPEDITO»* esce **28 volte al secondo**, e ogni abbandono ne genera un'altra
-⇒ ~**60 righe/s = 21 MB/ora senza `--parlantina`**, e **nessuna delle due ha un fondo**.
+⛔⛔ **E sotto congestione il prezzo lo paga anche il registro SPENTO.** `[M]` 21 agosto: su linea
+stretta la riga *«FOTOGRAMMA NON SPEDITO»* esce decine di volte al secondo, e ogni abbandono ne
+genera un'altra, **senza `--parlantina`**, e **nessuna delle due ha un fondo**.
 ⇒ ⛔ **Il registro è più rumoroso quando la linea è peggiore, cioè quando serve leggerlo.**
 
 ⛔ **Un terzo livello (`--parlantina-ritmo`) è la strada sbagliata**: metterebbe le righe di I1
@@ -1720,11 +1605,11 @@ tutte con la motivazione scritta accanto: *una volta sola* (`bool detto`) · *og
 1. le righe `🔻`/`🔺` a `registro_dice()`, **solo quando il valore cambia** ⇒ su una sessione sana:
    **zero righe**;
 2. una riga `ritmo:` **una volta al secondo, sempre, con dentro gli zero** — fotogrammi consegnati ·
-   saltati per credito · abbandonati · byte in coda · valore in vigore. **98 byte/s per sessione =
-   0,35 MB/ora**: **120 volte meno** della parlantina;
-3. ⛔ **un fondo sulle tre righe che sotto congestione escono a 28-60/s.** ⚠ E non si può mettere
-   **prima** della riga periodica del punto 2, perché oggi il conto esce solo a fine sessione: sono
-   **una cura sola in due pezzi**;
+   saltati per credito · abbandonati · byte in coda · valore in vigore. Costa un'inezia rispetto alla
+   parlantina;
+3. ⛔ **un fondo sulle tre righe che sotto congestione escono a decine al secondo.** ⚠ E non si può
+   mettere **prima** della riga periodica del punto 2, perché oggi il conto esce solo a fine
+   sessione: sono **una cura sola in due pezzi**;
 4. ⚠ e, **fuori dal mandato di questa fase**, il **filtro per area** (`--parlantina wt,rcp`): oggi
    la parlantina è un interruttore unico su **undici** aree, e chi indaga il ritmo si porta dietro
    gli appunti, la tastiera e il cursore.
@@ -1761,12 +1646,12 @@ legge non può dire se sia giusta. ⇒ ⭐ **Non va scritta.** Quel che va scrit
 | # | la previsione | ⛔ che cosa la smentirebbe | dove per esteso |
 |---|---|---|---|
 | **P1** | ⛔ **il crollo si riproduce** con `MALLOC_MMAP_THRESHOLD_=32768` + client congelato: `SEGV`, `error 4`, sempre in `__memmove_avx_unaligned_erms` | **se non muore, la diagnosi di §4 è sbagliata** | §4.5 |
-| **P2** | **la soglia sulla coda è INERTE a 20 Mbit/s**: `abbandonati per soglia` = 0, ritardo dell'anello = 55,20 ms | ⛔ **molti abbandoni al secondo con l'interruttore spento a 20 Mbit/s** ⇒ il difetto morde **sopra** il pavimento, la cura non è una robustezza, e **cambia la priorità della fase** — §10.2 | `webtransport.c:2738-2790` |
-| **P3** | **sul gradino** (3 s a 10 Mbit/s, `barra`): fot/s nei secondi 8-10 da 13-14 a **≥ 25**, chiavi/s da 6-7 a **≤ 2**, abbandoni/s **≤ 2**, secondi 7 e 12 **identici** | ⛔ **4 rossi**: (1) chiavi ferme mentre gli abbandoni scendono ⇒ il debito lo accende **un'altra** delle sette cause, quasi certamente il **credito mancato** (forma C, invisibile al ricevente); (2) i fot/s non salgono ⇒ soglia troppo alta, si scende a 50; (3) ⭐ **l'anello supera 55 + soglia** ⇒ la stima **sottostima**, ed è il rosso più importante perché sarebbe **un numero che sembra misurato**; (4) il ritorno smette di essere sotto il secondo ⇒ la cura paga il transitorio col ritorno, e va **spenta** invece che tarata | `webtransport.c:2738-2790` |
-| **P4** | **il tetto di banda**: `ferma` 0 · **desktop vero 0,20-0,45** · tinta piatta 1,1-1,6 · retinato **11-16** · grana **11-16**, e **MAI sopra 16** | ⛔ **2 cambiano la conclusione**: (1) ⭐⭐ **il desktop vero costa MENO di 0,204** ⇒ il tetto **risparmia dove non deve**, è v1 che si ripete, **e questa cura si butta** (la previsione è *«non scende»*, ed è secca: `[M]` sul portatile QVBR spende il **13 % in più** del CQP a scena ferma); (2) ⭐⭐ **il retinato resta sopra 20** ⇒ il driver **non ha obbedito**, R31 vale **anche contro la richiesta esplicita**, e lo coglie **solo il terzo testimone, i byte** | `codificatore.c:252-300` |
-| **P5** | **la risalita della qualità**: dopo una raffica granulosa e 600 fotogrammi fermi, la confessione torna **esattamente** a 26 (o 20) e c'è la riga `RISALITA` | ⛔ **lo sbattimento**: > 3 riaperture/minuto sulla scena al **94,9 %** del tetto ⇒ i tre numeri sono sbagliati; e ⛔ **i fot/s con la cura più bassi di quelli senza** (appaiato, stessa scena) ⇒ il prezzo lo paga I1 | §7.3 · `codificatore.c:100-145` |
+| **P2** | **la soglia sulla coda è INERTE a 20 Mbit/s**: `abbandonati per soglia` = 0, ritardo dell'anello invariato | ⛔ **molti abbandoni al secondo con l'interruttore spento a 20 Mbit/s** ⇒ il difetto morde **sopra** il pavimento, la cura non è una robustezza, e **cambia la priorità della fase** — §10.2 | `webtransport.c:2738-2790` |
+| **P3** | **sul gradino** (3 s a 10 Mbit/s, `barra`): nei secondi del buco fot/s **≥ 25**, chiavi/s **≤ 2**, abbandoni/s **≤ 2**, il secondo prima e il secondo dopo **identici** | ⛔ **4 rossi**: (1) chiavi ferme mentre gli abbandoni scendono ⇒ il debito lo accende **un'altra** delle sette cause, quasi certamente il **credito mancato** (forma C, invisibile al ricevente); (2) i fot/s non salgono ⇒ soglia troppo alta, si scende a 50; (3) ⭐ **l'anello supera quello di fase 8 più la soglia** ⇒ la stima **sottostima**, ed è il rosso più importante perché sarebbe **un numero che sembra misurato**; (4) il ritorno smette di essere sotto il secondo ⇒ la cura paga il transitorio col ritorno, e va **spenta** invece che tarata | `webtransport.c:2738-2790` |
+| **P4** | **il tetto di banda**: nessuna scena **MAI sopra 16 Mbit/s**, e il desktop vero **non** deve costare meno che senza tetto | ⛔ **2 cambiano la conclusione**: (1) ⭐⭐ **il desktop vero costa MENO che senza tetto** ⇒ il tetto **risparmia dove non deve**, è v1 che si ripete, **e questa cura si butta** (la previsione è *«non scende»*, ed è secca: `[M]` sul portatile QVBR spende un po' più del CQP a scena ferma); (2) ⭐⭐ **il retinato resta sopra il tetto** ⇒ il driver **non ha obbedito**, R31 vale **anche contro la richiesta esplicita**, e lo coglie **solo il terzo testimone, i byte** | `codificatore.c:252-300` |
+| **P5** | **la risalita della qualità**: dopo una raffica granulosa e 600 fotogrammi fermi, la confessione torna **esattamente** a 26 (o 20) e c'è la riga `RISALITA` | ⛔ **lo sbattimento**: > 3 riaperture/minuto sulla scena che sta a un soffio dal tetto ⇒ i tre numeri sono sbagliati; e ⛔ **i fot/s con la cura più bassi di quelli senza** (appaiato, stessa scena) ⇒ il prezzo lo paga I1 | §7.3 · `codificatore.c:100-145` |
 | **P6** | **il riordino dell'audio**, sui profili `netem`: ±2 ms **0,175 → ≥ 0,95** · ±5 ms ≥ 0,95 · ±10 ms ≥ 0,90; `vecchi` da **1 004 a ~0**, e `fuori` deve **prendersi quel numero** ⭐ *(la previsione più forte: se la somma non si conserva, è sbagliata)* | ⛔ **blocchi sovrapposti** ⇒ la purezza **peggiora** e il giudice sente **distorsione, non buchi** (⚠ è il modo peggiore di fallire, ed **è già successo** in questo file: il rilievo 3 del 17 agosto) · **confine troppo permissivo** ⇒ `tardivi ≈ vecchi di prima`, la cura non ha curato niente · **confine troppo severo** ⇒ `vecchi` alto **con `fuori` a zero**, l'ancora è alla deriva (sintomo distintivo: `pieni` sale insieme) · `[?]` **Opus non tollera i timestamp non monotòni** ⇒ `errori` sale sul percorso Opus e resta **zero sul PCM**: **non verificato**, e il banco va fatto su tutt'e due i codec | §5.4 |
-| **P7** | **il regolatore, scena MOSSA a 20 Mbit/s**: 20-37 fot/s (quelli che la scena produce), `arretrato` **0, ogni tanto 1, mai 2**, `video_ritmo_scesi` ⭐ **0** | ⛔ **discese con un desktop normale** ⇒ `POSTI = 2` è troppo stretto o un fotogramma costa più del misurato (**la riga di registro dice da sé quale dei due**) · **discese con `cwnd_left` ALTO** ⇒ non è la linea, è **la finestra del browser** · `video_saltati` che cresce con `arretrato` a 0 ⇒ il collo è **il credito di stream** · ⛔ **zero discese E zero letture di `arretrato`** ⇒ non è una previsione confermata, **è un anello mai percorso** — §6.5 | §6 |
+| **P7** | **il regolatore, scena MOSSA a 20 Mbit/s**: i fotogrammi che la scena produce, `arretrato` **0, ogni tanto 1, mai 2**, `video_ritmo_scesi` ⭐ **0** | ⛔ **discese con un desktop normale** ⇒ `POSTI = 2` è troppo stretto o un fotogramma costa più del misurato (**la riga di registro dice da sé quale dei due**) · **discese con `cwnd_left` ALTO** ⇒ non è la linea, è **la finestra del browser** · `video_saltati` che cresce con `arretrato` a 0 ⇒ il collo è **il credito di stream** · ⛔ **zero discese E zero letture di `arretrato`** ⇒ non è una previsione confermata, **è un anello mai percorso** — §6.5 | §6 |
 | **P8** | **il regolatore, scena FERMA**: `video_ritmo_scesi` **invariato**. ⭐ La dimostrazione è **strutturale prima che sperimentale**: a desktop fermo Mutter non consegna, `video_a_una()` non viene chiamata, **il ramo non è raggiungibile** | ⛔ **e il controllo non può essere «il contatore è zero»**: vuoto e proibito hanno la stessa faccia. ⇒ **si fa a coppie nello stesso giro** — metà ferma e metà mossa alternate, `arretrato` **letto** in tutt'e due le metà. Un giro che non lo soddisfa **non ha misurato niente, e va buttato invece che interpretato** | §6 |
 | **P9** | ⭐ **il confronto di `RCP.md` §4.3 lo farà il programma**, non chi legge: oggi le due righe ci sono ma il confronto è manuale | ⛔ un livello troppo basso **non dà un errore di rete**: **fa rifiutare la configurazione**, cioè schermo che non parte senza un rosso | §5.5 |
 
@@ -1821,12 +1706,12 @@ minuto invece di zero — la forma del risultato non cambia, l'ordine di grandez
 7. ⛔⛔ **L'`ESC` che apre la porta è lo stesso che la chiude.** `ESC` fa uscire dalla vista
    d'insieme di GNOME — ed è anche il tasto che fa uscire dallo **schermo intero del browser**.
    Mandato *dopo* aver acceso il video, spegneva il video che doveva accendere: `[M]` 08:13, il
-   punto «video» ha dato **0,202 Mbit/s**, cioè lo stesso di «ferma». ⇒ Cura: l'ESC **prima**, e la
+   punto «video» ha dato la stessa banda di «ferma». ⇒ Cura: l'ESC **prima**, e la
    pagina richiede lo schermo intero **ogni secondo** invece di una volta sola.
 8. ⛔⛔ **`UID_B` va passato anche per spegnere.** `09-b72-video.sh -- spegni` senza `UID_B` prende
    il riposo **1001** e ammazza il Firefox di «prova», non quello di «prova2». ⇒ nei quattro punti
-   del giro delle 08:11 **il video è rimasto acceso sotto tutti gli altri**, e «ferma» ha dato
-   **25,9 fotogrammi/s e 0,235 Mbit/s**: un desktop fermo che non era fermo. ⇒ Cura: si spegne
+   del giro delle 08:11 **il video è rimasto acceso sotto tutti gli altri**, e «ferma» ha dato i
+   fotogrammi e la banda di un video: un desktop fermo che non era fermo. ⇒ Cura: si spegne
    **e si verifica**, e chi non muore lo si dice.
 
 ⭐⭐ **La lezione del pomeriggio, e non è nuova**: cinque guasti su sei non hanno dato un rosso —
@@ -1862,15 +1747,15 @@ non l'ha guardato.
 > tranne le due che non cambiano quel che si vede. ⛔ **Il giudizio dell'utente resta il passo che
 > manca**, e la tabella resta perché è il verbale dei numeri che l'hanno obbligato.
 
-| | il numero che la obbliga |
+| | la misura che la obbliga |
 |---|---|
-| ⛔ **il tetto di banda va scritto** — §0.3 lo chiamava «non esiste» | §3.8: un video con la grana a schermo intero chiede **58,7 Mbit/s = 293 %** del pavimento, e nessuno gli dice di no |
-| ⭐ **ma NON per il contenuto vero** | §3.8: il desktop dell'utente a schermo intero costa **0,204 Mbit/s = 1 %**. ⇒ il tetto è per il **caso duro**, e un regolatore che si accendesse sul contenuto normale ripeterebbe **l'errore di v1** (*«contento di risparmiare»*, §0.2) |
-| ⛔ **il regolatore NON può guardare quanti pixel cambiano** | §3.8: `pieno` muove **tutti** i pixel e costa 1,2 Mbit/s; `barra` muove gli stessi pixel con un retino e costa **21**. Due ordini di grandezza a parità di superficie |
+| ⛔ **il tetto di banda va scritto** — §0.3 lo chiamava «non esiste» | §3.8: un video con la grana a schermo intero chiede più volte il pavimento, e nessuno gli dice di no |
+| ⭐ **ma NON per il contenuto vero** | §3.8: il desktop dell'utente a schermo intero costa una frazione minima del pavimento. ⇒ il tetto è per il **caso duro**, e un regolatore che si accendesse sul contenuto normale ripeterebbe **l'errore di v1** (*«contento di risparmiare»*, §0.2) |
+| ⛔ **il regolatore NON può guardare quanti pixel cambiano** | §3.8: `pieno` muove **tutti** i pixel e costa poco; `barra` muove gli stessi pixel con un retino e costa il pavimento. Ordini di grandezza a parità di superficie |
 | ⛔ **la cura di `video_sgombra()` è la leva giusta** | §3.10: `abbandoni §5.1` = `chiavi`, **uno a uno**, a ogni livello di banda. Togliere un abbandono toglie una chiave |
 | ⭐ **e NON serve isteresi né memoria della discesa** | §3.10: dopo la riapertura il regime torna pieno in **meno di un secondo**, senza strascichi |
-| ✅ **l'arresto a scena ferma NON è un difetto** | §3.6: 180 risvegli, **13 ms** da 0,2 s a 15 s di quiete, coda larga 2 ms. ⇒ §3.1 resta una violazione **letterale** di I1 che **non costa niente a chi guarda** |
-| ⛔ **e non c'è niente da ottimizzare nel nostro tratto** | §3.6: dei 13 ms, **10 sono attesa del compositore** e **2,7** sono la codifica |
+| ✅ **l'arresto a scena ferma NON è un difetto** | §3.6: il risveglio costa uguale dopo una quiete breve o lunga, e senza coda. ⇒ §3.1 resta una violazione **letterale** di I1 che **non costa niente a chi guarda** |
+| ⛔ **e non c'è niente da ottimizzare nel nostro tratto** | §3.6: il grosso del risveglio è attesa del compositore; la codifica ne è la parte piccola |
 
 ---
 
@@ -1880,43 +1765,42 @@ non l'ha guardato.
 > **che cosa deciderebbe la questione**. ⚠ Chi legge non deve scegliere sulla fiducia: deve sapere
 > quale misura manca.
 
-### 10.1 ⛔ «Non serve nessun tetto di banda» **contro** «ne chiede il 293 %»
+### 10.1 ⛔ «Non serve nessun tetto di banda» **contro** «ne chiede più volte il pavimento»
 
 | | la posizione | su che cosa poggia |
 |---|---|---|
-| **la mattina** | *«Sul contenuto misurato, a 20 Mbit/s, il CQP 26 va benissimo, e non serve nessun controllo di bitrate.»* | `[M]` fase 8: sul contenuto **vero** dell'utente, **ogni fotogramma una chiave** — il regime peggiore che esista — la mediana è **24 956 byte** ⇒ a 20,9 fps sono **4,17 Mbit/s = il 21 %** del pavimento. **Quattro volte sotto**, perfino nello stato in cui il difetto di `video_sgombra()` lo fa cadere |
-| **il pomeriggio** | ⛔ *«Serve un controllo del bitrate»* | `[M]` §3.8: un film con la grana a schermo intero, 2560×1080, QP 26, **58,668 Mbit/s = il 293 %** del pavimento |
+| **la mattina** | *«Sul contenuto misurato, a 20 Mbit/s, il CQP 26 va benissimo, e non serve nessun controllo di bitrate.»* | `[M]` fase 8: sul contenuto **vero** dell'utente, anche nel regime peggiore che esista — **ogni fotogramma una chiave** — la banda resta ben sotto il pavimento, perfino nello stato in cui il difetto di `video_sgombra()` lo fa cadere |
+| **il pomeriggio** | ⛔ *«Serve un controllo del bitrate»* | `[M]` §3.8: un film con la grana a schermo intero, 2560×1080, QP 26, chiede più volte il pavimento |
 
 ⭐⭐ **E le due misure non si contraddicono sul numero: misurano due contenuti diversi** — e lo
 studio della mattina lo aveva **scritto lui stesso**: *«il desktop dell'utente misurato in fase 8 NON
 contiene quella scena»*. ⇒ La contraddizione vera è più stretta e va nominata:
 
-⛔ **Quel che è stato SMENTITO è la stima del pomeriggio dello studio**: `[?]` **~19,9 Mbit/s**,
-estrapolati da R31 di v1 riscalando pixel e scalini di QP, contro **58,7** misurati.
-**Ottimista di tre volte.** ⇒ ⭐ L'estrapolazione da un ferro all'altro **non regge**, e questa è la
-lezione che sopravvive alla giornata più della conclusione.
+⛔ **Quel che è stato SMENTITO è la stima del pomeriggio dello studio**, estrapolata da R31 di v1
+riscalando pixel e scalini di QP: **molto ottimista**. ⇒ ⭐ L'estrapolazione da un ferro all'altro
+**non regge**, e questa è la lezione che sopravvive alla giornata più della conclusione.
 
 ⚠ **E lo studio aveva scritto il suo stesso falsificatore, con la soglia**: *«sotto 10 Mbit/s ⇒ si
 chiude tutto · fra 15 e 25 ⇒ serve un tetto, dietro l'interruttore spento · **sopra 30 ⇒ R31 è
-confermata sul ferro nostro, e il tetto non è più un'opzione**»*. ⇒ **58,7 sta nel terzo ramo**, ed è
-per questo che la cura 5 è stata scritta.
+confermata sul ferro nostro, e il tetto non è più un'opzione**»*. ⇒ **La misura sta nel terzo
+ramo**, ed è per questo che la cura 5 è stata scritta.
 
 ⇒ ⭐ **La sintesi che regge tutt'e due**: *il tetto è per il **caso duro**, e per il contenuto vero
 deve essere inerte* — ⛔ **e un regolatore che si accendesse sul contenuto normale ripeterebbe
 esattamente l'errore di v1** (*«contento di risparmiare»*). **È il rosso n° 1 della previsione P4**,
-e la misura che lo decide c'è già: il desktop vero a tetto acceso deve costare **almeno** 0,204
-Mbit/s.
+e la misura che lo decide c'è già: il desktop vero a tetto acceso deve costare **almeno** quanto
+senza tetto.
 
 ### 10.2 ⛔ Quanto morde la spirale **sopra** il pavimento — due posizioni, e nessuna è decisa
 
 | | la posizione | su che cosa poggia |
 |---|---|---|
-| **A** — *«il difetto vive SOTTO il pavimento; sopra, la cura è inerte»* | la soglia è **una robustezza sui transitori**, non la cura della fase | `[M]` **a 15 Mbit/s: 2 fotogrammi chiave su 1 019** ⇒ la catena dei delta era **intatta**, e 15 sta **sotto** il pavimento di 20. E `DECISIONI.md` §3.1-bis dice testualmente che sotto i 20 il prodotto *«non promette niente e non misura niente come requisito»* |
-| **B** — *«morde anche sopra il pavimento»* | la spirale scatta anche su una linea larga | `[M]` §3.10, il gradino a 2560×1080 con `barra`: **abbandoni e chiavi anche nei secondi «larga»** — 3↔3 al secondo 5 (22,1 Mbit/s sul filo) e 1↔1 al secondo 6 (26,3). ⇒ `video_sgombra()` abbandona **anche quando la linea porta** |
+| **A** — *«il difetto vive SOTTO il pavimento; sopra, la cura è inerte»* | la soglia è **una robustezza sui transitori**, non la cura della fase | `[M]` **a 15 Mbit/s le chiavi erano rarissime** ⇒ la catena dei delta era **intatta**, e 15 sta **sotto** il pavimento di 20. E `DECISIONI.md` §3.1-bis dice testualmente che sotto i 20 il prodotto *«non promette niente e non misura niente come requisito»* |
+| **B** — *«morde anche sopra il pavimento»* | la spirale scatta anche su una linea larga | `[M]` §3.10, il gradino a 2560×1080 con `barra`: **abbandoni e chiavi anche nei secondi «larga»**. ⇒ `video_sgombra()` abbandona **anche quando la linea porta** |
 
 ⛔ **Non si sceglie qui, e la ragione è che le due misure non sono confrontabili**: `barra` è un
-gradiente **retinato** sintetico che chiede **21 Mbit/s** da solo, cioè **cento volte** il desktop
-vero (0,204). Un contenuto che consuma tutto il pavimento produce una coda anche su linea larga;
+gradiente **retinato** sintetico che da solo chiede quanto il pavimento, cioè ordini di grandezza più
+del desktop vero. Un contenuto che consuma tutto il pavimento produce una coda anche su linea larga;
 il contenuto per cui il prodotto esiste no.
 
 ⭐⭐ **CHE COSA DECIDEREBBE LA QUESTIONE — una misura sola, e si può fare domani:**
@@ -1943,7 +1827,7 @@ per rispondere ad A/B, e **col gradino** per misurare la cura: sono **due giri, 
 | ⏳ ⛔ **la trappola non è armata**: niente core dump, il registro è condiviso e viene sepolto, `dmesg` non si raccoglie allo spegnimento | §4.7 |
 | ✅ **il tetto di banda: quale, e su che grandezza — DECISO il 23 agosto**: `QVBR`, con filo · punto di lavoro · serbatoio derivati dal pavimento, `--tetto-banda-mbit`, **spento**. ⛔ Resta `[?]` la misura sulla macchina di prova (P4) | §5.5 · `codificatore.c:200-340` |
 | ⏳ `[?]` **il film con la grana non si misura oltre i 25 s su questa macchina**: la decodifica VP8 software a 2560x1080 affama il **cliente**, che sta sulla stessa macchina, e QUIC cade per *idle timeout*. ⇒ il numero di §3.8 è buono, ma un giro lungo vuole un cliente su un'altra macchina | §3.8 |
-| ✅ la cura di **`video_sgombra()`** — ⭐ **scritta il 23 agosto**, dietro `--sgombra-soglia-ms`, **spenta**. ⛔ Resta `[?]` la misura (P3) e ⛔⛔ **il prezzo, che lo giudica l'utente**: ~150 ms di immagine leggermente vecchia sotto congestione | §5.2 · `webtransport.c:2705-2800` |
+| ✅ la cura di **`video_sgombra()`** — ⭐ **scritta il 23 agosto**, dietro `--sgombra-soglia-ms`, **spenta**. ⛔ Resta `[?]` la misura (P3) e ⛔⛔ **il prezzo, che lo giudica l'utente**: un po' di immagine leggermente vecchia sotto congestione | §5.2 · `webtransport.c:2705-2800` |
 | ✅ la **finestra di riordino dell'audio** — ⭐ **scritta il 23 agosto**, senza interruttore (allentamento puro). ⛔ Resta `[?]` **la verifica, e il banco prescritto NON PUÒ farla**: misura se stesso — serve un banco che faccia girare **la pagina** | §5.4 · §3.16 · `pagina.html` · `avvia_audio()` |
 | ⏳ `[?]` **il riordino su Opus**: la misura è in **PCM da 5 ms**, con Opus la soglia di sorpasso è **4 volte più alta** e il difetto morde 4 volte meno ⇒ il percorso vero è Opus, e su Opus il numero non c'è. ⚠ E `[?]` se il decodificatore Opus tolleri i timestamp non monotòni: **non verificato** | §5.4 · P6 |
 | ⏳ `[?]` la qualità di **`EncSliceLP`** contro l'entrypoint pieno a parità di banda — **mai misurata**, e ⚠ **sul ferro di casa non si può fare**: serve l'AMD | `PIANO.md:1197` |
@@ -2091,7 +1975,6 @@ tutto** al braccio malato: stessa porta 7920, stessa cartella `tmp/09c`, stessa 
 | | MALATO `09c-mal-src` | ⭐ CURATO `09c-src` |
 |---|---|---|
 | fotogrammi spediti | ⛔ **27**, poi morto | ⭐ **1 463** |
-| taglia mediana | — | **302 984** byte |
 | **taglia massima** | 516 782 (l'ultimo) | ⭐⭐ **537 063** byte — ⛔ **più grosso dei 525 298 che l'avevano ucciso stamattina** |
 | fotogrammi sopra i 32 KiB nei primi 6 s | 0 letti (morto prima) | ⭐ **173 su 173** — cioè **ogni** fotogramma passava dalla trappola |
 | `netem loss 5%` | ⛔ **non è nemmeno servito** | ⭐ **120 s interi** con la perdita addosso |
@@ -2182,84 +2065,58 @@ avrebbe misurato **lei** invece della soglia.
 
 `⭐ FASE 9, la soglia della coda video: **spenta (I6) (0 ms)**` — letto dal registro del server.
 
-| s | fot | chiavi | abbandoni §5.1 | filo Mbit/s | fase |
-|---|---|---|---|---|---|
-| 5-7 | 40-41 | **0** | **0** | 21,1-21,5 | larga |
-| **8** | 21 | ⛔ **6** | ⛔ **6** | 9,87 | **stretta** |
-| **9** | 25 | ⛔ **6** | ⛔ **6** | 9,14 | **stretta** |
-| **10** | 22 | ⛔ **6** | ⛔ **7** | 9,87 | **stretta** |
-| 11 | 28 | 4 | 3 | 16,87 | (ritorno) |
-| 12-27 | 39-42 | **0** | **0** | 20,4-23,0 | larga |
-
-⭐ **`abbandoni` = `chiavi`, uno a uno, a ogni secondo** (6↔6, 6↔6, 7↔6): §3.10 si riproduce
+⭐ **`abbandoni` = `chiavi`, uno a uno, a ogni secondo della stretta**: §3.10 si riproduce
 **identico**, ed è il meccanismo della spirale visto in diretta.
-⭐ **E il ritorno è immediato**: dal secondo 12 si è già a 40/s con **zero** chiavi — nessuna
-isteresi, nessuno strascico in 16 s.
-⚠ **Un numero che NON coincide col «prima» citato**: `[M]` di stamattina dava **13-14 fot/s** nei
-secondi 8-10; qui sono **21-25**. ⛔ Lo dichiaro invece di lisciarlo — il metro del *prima* e quello
-di adesso non sono lo stesso giro, e **il paragone che vale è quello appaiato di qui sotto**, preso
-a mezz'ora di distanza sulla stessa porta, stessa scena, stessa tela, stesso binario.
+⭐ **E il ritorno è immediato**: il secondo dopo la riapertura si è già a regime con **zero**
+chiavi — nessuna isteresi, nessuno strascico.
+⚠ **Il ritmo nella stretta NON coincide col «prima» di stamattina.** ⛔ Lo dichiaro invece di
+lisciarlo — il metro del *prima* e quello di adesso non sono lo stesso giro, e **il paragone che
+vale è quello appaiato di qui sotto**, preso a mezz'ora di distanza sulla stessa porta, stessa
+scena, stessa tela, stesso binario.
 
 ### 13.2.2 ⛔⭐ IL BRACCIO CON `--sgombra-soglia-ms 100` — *13:28:26 → 13:29:1x*: **il meccanismo gira, l'effetto promesso NON arriva**
 
 `⭐ FASE 9, soglia della coda video (§5.1): **100 ms** … Impostata da: main.c, dalla riga di comando`
 — letto dal registro del server, non dedotto dal comando.
 
-| s | fot **spenta → 100 ms** | chiavi **spenta → 100** | abbandoni **spenta → 100** |
-|---|---|---|---|
-| 5-7 (larga) | 39-41 → **39-40** | 0 → **0** | 0 → **0** |
-| **8** | 21 → **29** | 6 → **4** | 6 → **6** |
-| **9** | 25 → **26** | 6 → **5** | 6 → ⛔ **9** |
-| **10** | 22 → **21** | 6 → **5** | 7 → **5** |
-| 11 (ritorno) | 28 → **34** | 4 → **3** | 3 → **3** |
-| 12-27 (larga) | 39-42 → **39-42** | 0 → **0** | 0 → **0** |
+| la previsione (**P3** e S.5) | esito |
+|---|---|
+| fot/s nei secondi della stretta **≥ 25** | ⚠ **due su tre** |
+| chiavi/s **≤ 2** | ⛔ **NO** — calano appena |
+| abbandoni/s **≤ 2** | ⛔ **NO** — e in un secondo sono **saliti** |
+| i secondi prima e dopo **identici** a interruttore spento, **0 chiavi** | ⭐ **SÌ — la cura è INERTE sulla linea larga** |
+| ritorno pieno entro un secondo | ⭐ **SÌ**, e meglio del braccio spento |
+| ⭐ **`arretrato` deve salire a 2-3** (oggi zero per costruzione) | ⭐⭐ **SÌ, e arriva a 4** |
 
-| la previsione (**P3** e S.5) | `[M]` | esito |
-|---|---|---|
-| fot/s nei sec 8-10 **≥ 25** | **29 · 26 · 21** | ⚠ **due su tre** |
-| chiavi/s **≤ 2** | **4 · 5 · 5** | ⛔ **NO** |
-| abbandoni/s **≤ 2** | **6 · 9 · 5** | ⛔ **NO** — e al secondo 9 sono **saliti** |
-| secondi 7 e 12 **identici** a interruttore spento | 40/39 e 40/39, **0 chiavi** in tutt'e quattro | ⭐ **SÌ — la cura è INERTE sulla linea larga** |
-| ritorno **≥ 32/s** entro un secondo | sec 11 **34/s**, sec 12 **39/s** | ⭐ **SÌ**, e meglio del braccio spento (28) |
-| ⭐ **`arretrato` deve salire a 2-3** (oggi zero per costruzione) | **2 (14 volte) · 3 (19) · 4 (6)** | ⭐⭐ **SÌ, e arriva a 4** |
-
-⭐⭐ **E il meccanismo si vede lavorare, riga per riga**: **17 attraversamenti SOPRA** la soglia e
-**17 ritorni SOTTO** nei 3 secondi di stretta, con le righe che dicono da sé che cosa hanno fatto:
+⭐⭐ **E il meccanismo si vede lavorare, riga per riga**: tanti attraversamenti **SOPRA** la soglia
+quanti ritorni **SOTTO** nei 3 secondi di stretta, con le righe che dicono da sé che cosa hanno
+fatto:
 
 ```
-⛔ la coda del video passa SOPRA la soglia (135475 byte = 114 ms, soglia 100 ms,
+⛔ la coda del video passa SOPRA la soglia (… byte = … ms, soglia 100 ms,
    dalla banda misurata (cwnd/rtt)), arretrato 2 delta: da qui i piu' vecchi si abbandonano
-⭐ la coda del video torna SOTTO la soglia (100369 byte = 84 ms, soglia 100 ms):
+⭐ la coda del video torna SOTTO la soglia (… byte = … ms, soglia 100 ms):
    i 2 delta arretrati si TENGONO — §5.1 dice PUO', non DEVE
 ```
 
 ### 13.2.3 ⛔⛔ LA DIAGNOSI, E LA CURA VA TARATA NEL VERSO **OPPOSTO** A QUELLO PREVISTO
 
 ⛔ **P3 aveva già scritto il rimedio per questo caso, e lo scriveva al contrario**: *«i fot/s non
-salgono ⇒ soglia troppo alta, **si scende a 50**»*. ⭐ **I byte dicono di salire.** Ecco perché — i
-**17** valori a cui la coda ha attraversato la soglia, in ms:
+salgono ⇒ soglia troppo alta, **si scende a 50**»*. ⭐ **I byte dicono di salire.** Ecco perché: i
+valori a cui la coda ha attraversato la soglia stanno **tutti appena sopra la soglia**.
 
-```
-101 · 103 · 106 · 109 · 113 · 114 · 116 · 117 · 117 · 120 · 125 · 126 · 126 · 128 · 134 · 135 · 138
-```
-
-⛔ **Sono TUTTI fra 101 e 138.** Durante la stretta la coda del video **oscilla proprio attorno ai
-100 ms**: la soglia è piantata **in mezzo all'oscillazione**, e ogni mezzo respiro la fa
-attraversare. ⇒ La cura passa metà del tempo a **tenere** e metà ad **abbandonare**, e il totale
-degli abbandoni resta **23 contro 24** — cioè **nessuna differenza**.
+⛔ Durante la stretta la coda del video **oscilla proprio attorno alla soglia**: la soglia è
+piantata **in mezzo all'oscillazione**, e ogni mezzo respiro la fa attraversare. ⇒ La cura passa
+metà del tempo a **tenere** e metà ad **abbandonare**, e il totale degli abbandoni resta
+praticamente quello di prima — cioè **nessuna differenza**.
 ⛔ **Con la soglia a 50 ms l'attraversamento sarebbe sempre in corso e la cura tornerebbe a
 `sgombra` puro**, cioè peggio. ⇒ **il verso giusto è ALZARLA**, e la previsione da falsificare
 adesso è: *a 200 ms gli attraversamenti crollano, chiavi e abbandoni con loro*.
 
 ### 13.2.4 ⭐⭐⭐ LA PROVA CHE DECIDE — *a 200 ms gli attraversamenti NON crollano: si spostano*
 
-`[M]` 13:30. Stesso giro, `--sgombra-soglia-ms 200`. I **14** valori a cui la coda ha attraversato:
-
-```
-204 · 206 · 209 · 211 · 211 · 212 · 219 · 221 · 222 · 222 · 224 · 225 · 227 · 236 ms
-```
-
-⛔⛔ **Di nuovo tutti appena SOPRA la soglia, come a 100 erano tutti fra 101 e 138.**
+`[M]` 13:30. Stesso giro, `--sgombra-soglia-ms 200`. ⛔⛔ **Di nuovo gli attraversamenti stanno
+tutti appena SOPRA la soglia, come a 100.**
 
 ⭐⭐⭐ **E questa è la scoperta della sera, e cambia il modo di leggere la cura 2**: la soglia
 **non è un filtro, è il PUNTO DI LAVORO della coda.** `video_sgombra()` abbandona non appena la
@@ -2268,26 +2125,15 @@ assesta appena oltre. ⇒ Il numero degli abbandoni **non lo decide la soglia**:
 fra quanto entra e quanto esce. La soglia decide **quanto in profondità si accumula prima di
 abbandonare**, cioè **quanto ritardo si paga**.
 
-| | spenta | **100 ms** | **200 ms** |
-|---|---|---|---|
-| fotogrammi nei 3 s | 68 | 76 | **79** |
-| ⛔ **chiavi** nei 3 s | **18** | 14 | **11** |
-| abbandoni §5.1, tutto il giro | 24 | 23 | **18** |
-| kbyte consegnati nei 3 s | 3 896 | 4 300 | **4 476** (+15 %) |
-| ⚠ **`arretrato`** (il prezzo) | 0-1 per costruzione | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
-| ⚠ **il ritardo pagato** | — | 101-138 ms | ⛔ **204-236 ms** |
+⭐ **C'è un miglioramento, ed è monotòno**: più alta la soglia, più fotogrammi e meno chiavi, e più
+byte consegnati. ⛔ **Ma è LONTANO da quel che P3 prometteva**: chiavi e abbandoni al secondo restano
+sopra le soglie della previsione. ⇒ **P3 è SMENTITA sui due numeri che contavano**, e confermata su
+quelli di contorno (inerzia sulla linea larga, ritorno sotto il secondo).
 
-⭐ **C'è un miglioramento, ed è monotòno**: più alta la soglia, più fotogrammi e meno chiavi.
-⛔ **Ma è LONTANO da quel che P3 prometteva** — *chiavi ≤ 2/s* è uscito **3-5/s**, e *abbandoni
-≤ 2/s* è uscito **5-6/s**. ⇒ **P3 è SMENTITA sui due numeri che contavano**, e confermata su quelli
-di contorno (inerzia sulla linea larga, ritorno sotto il secondo).
-
-⛔⛔ **E il prezzo per l'utente va corretto verso l'alto.** S.5 dichiarava *«fino a ~150 ms di
-ritardo per un attimo (~205 ms dal gesto al pixel)»*. `[M]` a soglia 100 la coda arriva a **138 ms**
-(⇒ ~193 ms d'anello) e **a soglia 200 arriva a 236 ms** (⇒ **~291 ms d'anello**). ⚠ La stima di
-S.5 era **giusta per 100 ms e sbagliata per qualunque taratura più generosa**, e la taratura più
-generosa è proprio quella che dà l'immagine migliore. ⛔ **È il compromesso che decide lui, e adesso
-ha i due numeri.**
+⛔⛔ **E il prezzo per l'utente va corretto verso l'alto.** La coda si assesta appena sopra la
+soglia, quindi il ritardo pagato cresce con la soglia: la stima di S.5 era **giusta per 100 ms e
+sbagliata per qualunque taratura più generosa**, e la taratura più generosa è proprio quella che dà
+l'immagine migliore. ⛔ **È il compromesso che decide lui.**
 
 ⭐ **E una cosa la soglia l'ha fatta bene, ed è il suo prerequisito**: ha portato `arretrato` da
 **0-1 per costruzione** a **2-6**. ⇒ `WT_RITMO_POSTI = 2` è **superato di continuo**, e il
@@ -2308,12 +2154,9 @@ regolatore del ritmo — che senza la soglia non scatterebbe mai — adesso **pu
 
 | nei 3 s di stretta | spenta | soglia 100 | soglia 200 | ⭐⭐ **100 + ritmo** |
 |---|---|---|---|---|
-| fotogrammi/s | 21 · 25 · 22 | 29 · 26 · 21 | 31 · 23 · 25 | 26 · 23 · **20** |
-| ⛔ **CHIAVI/s** | **6 · 6 · 6** | 4 · 5 · 5 | 3 · 5 · 3 | ⭐⭐⭐ **0 · 0 · 0** |
-| ⛔ **abbandoni §5.1/s** | **6 · 6 · 7** | 6 · 9 · 5 | 5 · 6 · 5 | ⭐⭐⭐ **0 · 0 · 0** |
-| chiavi in tutto il giro | 18 | 14 | 11 | ⭐ **0** |
-| abbandoni in tutto il giro | 24 | 23 | 18 | ⭐ **0** |
-| sulla linea larga (sec 0-7, 12-28) | 39-42 fot/s, 0 chiavi | idem | idem | ⭐ **idem: 37-41 fot/s, 0 chiavi** |
+| ⛔ **CHIAVI** | in ogni secondo | in ogni secondo, appena meno | in ogni secondo, meno ancora | ⭐⭐⭐ **nessuna** |
+| ⛔ **abbandoni §5.1** | in ogni secondo | in ogni secondo | in ogni secondo | ⭐⭐⭐ **nessuno** |
+| sulla linea larga | zero chiavi | idem | idem | ⭐ **idem** |
 
 ⛔⛔ **La spirale non è stata attenuata: è stata SPENTA.** Zero chiavi e zero abbandoni in tutto il
 giro — e non perché la soglia abbia lavorato meglio, ⭐ **ma perché non ha dovuto lavorare affatto**:
@@ -2324,90 +2167,67 @@ inchiodato a **2**, e la coda non arriva mai ai 100 ms che sveglierebbero `video
 ### 13.3.2 ⭐⭐ IL CONTROLLO DI §6.5, quello *«che invalida tutto il banco»* — **superato**
 
 `LEZIONI.md` §1.9: un contatore a zero su un ramo mai percorso non dimostra niente. La riga di
-`ritmo_ciclo()` risponde, **una al secondo**:
+`ritmo_ciclo()` risponde, **una al secondo**.
 
-| ora | `arretrato` LETTO | massimo | discese nel secondo | in tutto |
-|---|---|---|---|---|
-| 13:32:19-27 (larga) | ⭐ **36-42 volte/s** | **0** | **0** | 0 |
-| **13:32:28** | 40 | **2** | ⛔ **13** | 13 |
-| **13:32:29** | 40 | **2** | ⛔ **17** | 30 |
-| **13:32:30** | 38 | **2** | ⛔ **17** | 47 |
-| **13:32:31** (ritorno) | 38 | **2** | 10 | **57** |
-| 13:32:32-48 (larga) | ⭐ **38-42 volte/s** | **0** | **0** | ⭐ **57, e resta 57** |
-
-⭐⭐ **Le letture ci sono — 36-42 al secondo — e valgono ZERO.** ⇒ Non è *«un anello mai
-percorso»* (il rosso **d** di `ritmo_frena()`): è **percorso 40 volte al secondo, e la risposta è
+⭐⭐ **Le letture ci sono — una per fotogramma — e sulla linea larga valgono ZERO**: massimo 0,
+nessuna discesa. Nei tre secondi di stretta il massimo sale a **2** e le discese si concentrano
+tutte lì; tornata la linea, il conto delle discese **non si muove più**. ⇒ Non è *«un anello mai
+percorso»* (il rosso **d** di `ritmo_frena()`): è **percorso a ogni fotogramma, e la risposta è
 «non c'è niente da fare»**. È esattamente il comportamento che S.5 chiamava *parapetto*.
 
 ### 13.3.3 ⭐ DUE RIGHE PER EPISODIO, non una per fotogramma — e il RISALE arriva
 
-`[M]` **5 discese e 5 risalite**, 10 righe in tutto per **57** fotogrammi trattenuti (il difetto dei
-30,8 GB di registro non si ripete):
+`[M]` **5 discese e 5 risalite**, 10 righe in tutto per tutti i fotogrammi trattenuti (il difetto dei
+30,8 GB di registro non si ripete).
 
-| episodio | durata | fotogrammi restati indietro | `cwnd_left` alla discesa |
-|---|---|---|---|
-| 1 | 158 ms | 4 | **0** |
-| 2 | 841 ms | 16 | 51 466 |
-| 3 | 607 ms | 10 | 12 117 |
-| 4 | ⚠ **1 385 ms** | 25 | **0** |
-| 5 | 68 ms | 2 | 264 318 |
-
-⭐ **Il RISALE dopo il ritorno della linea è dentro il secondo**: l'episodio 4 è cominciato alle
-`13:32:30.071`, **dentro** la stretta, e si è chiuso alle `13:32:31.455` — la linea si era riaperta
-a `13:32:31.1`, quindi **355 ms dopo**. ⚠ *«durato 1 385 ms»* **non** smentisce *«RISALE entro 1 s»*:
-il cronometro giusto parte dal ritorno della linea, non dall'inizio dell'episodio.
+⭐ **Il RISALE dopo il ritorno della linea è dentro il secondo**: l'episodio più lungo è cominciato
+**dentro** la stretta e si è chiuso poco dopo la riapertura della linea. ⚠ La sua durata **non**
+smentisce *«RISALE entro 1 s»*: il cronometro giusto parte dal ritorno della linea, non dall'inizio
+dell'episodio.
 
 ⭐ **E il rosso (b) di `ritmo_frena()` — il più importante — NON è caduto**: `cwnd_left` è **0** in
 due discese su cinque e piccolo in una terza ⇒ **è la linea a frenare, non la finestra del
-browser**. ⚠ L'unica discesa con `cwnd_left` largo (264 318) è la **quinta**, quella da 68 ms,
-scattata quando la linea si era già riaperta e `cwnd` stava ricrescendo: coerente.
+browser**. ⚠ L'unica discesa con `cwnd_left` largo è la **quinta**, la più breve, scattata quando
+la linea si era già riaperta e `cwnd` stava ricrescendo: coerente.
 
-### 13.3.4 ⚠ IL PREZZO, misurato — **e il numero da portare a lui**
+### 13.3.4 ⚠ IL PREZZO, misurato — **e la cosa da portare a lui**
 
-⛔ Il prezzo è quello dichiarato in S.5, e adesso ha una cifra: nei 3 secondi di stretta si vedono
-**20-26 fotogrammi/s invece di 21-25** — cioè **praticamente gli stessi**, ma **fatti tutti di
-delta**, senza le 18 chiavi. ⭐ In byte, la 100+ritmo consegna nei 3 s **4 349 kbyte** contro i
-**3 896** del braccio spento: **più immagine, non meno**.
+⛔ Il prezzo è quello dichiarato in S.5: nei 3 secondi di stretta si vedono **praticamente gli stessi
+fotogrammi** del braccio spento, ma **fatti tutti di delta**, senza chiavi. ⭐ In byte, la
+100+ritmo consegna nei 3 s **più** del braccio spento: **più immagine, non meno**.
 
-⚠ **E l'unico numero che si avvicina a un limite**: al secondo 10 si scende a **20 fot/s**, sotto i
-25 che `DECISIONI.md` §2.1 chiama pavimento. ⛔ **Non è il difetto che S.5 dichiarava**: quella riga
-parla di *«sotto 25/s su una linea da 20 Mbit/s»*, e qui la linea è **10 Mbit/s**, cioè **metà del
-pavimento**. ⇒ Va riguardato il giorno in cui si misura a 20.
+⚠ **E l'unico punto che si avvicina a un limite**: in un secondo della stretta il ritmo scende sotto
+i 25/s che `DECISIONI.md` §2.1 chiama pavimento. ⛔ **Non è il difetto che S.5 dichiarava**: quella
+riga parla di *«sotto 25/s su una linea da 20 Mbit/s»*, e qui la linea è **10 Mbit/s**, cioè **metà
+del pavimento**. ⇒ Va riguardato il giorno in cui si misura a 20.
 
 ## 13.4 ⭐⭐⭐ P4 — IL TETTO DI BANDA: **i due rossi che chiudevano la cura NON sono caduti**
 
 **Il giro**: cinque scene a **2560×1080**, 30 s l'una, sessione di `prova2`, `tc` mai toccato.
 ⛔ **E l'ordine delle scene è parte della misura, ed è stato corretto strada facendo** — vedi 13.4.3.
 
-### 13.4.1 `[M]` I DIECI NUMERI, appaiati — *tetto spento 13:38, tetto 20 alle 13:41*
+### 13.4.1 `[M]` LE CINQUE SCENE, appaiate — *tetto spento 13:38, tetto 20 alle 13:41*
 
-| scena | ⛔ **tetto SPENTO** | ⭐ **`--tetto-banda-mbit 20`** | |
-|---|---|---|---|
-| **ferma** (nessuna scena) | 0 fot/s · **0,000** Mbit/s · filo **2,427** | 0 fot/s · **0,000** · filo **2,427** | ⭐ identico al terzo decimale |
-| **tinta piatta** (`pieno`) | 41,10 fot/s · **1,151** Mbit/s | 41,23 fot/s · **1,219** | ⚠ **+5,9 %** |
-| ⛔⛔ **desktop VERO** (`video`) | 23,13 fot/s · **0,208** = **1,0 %** | 23,13 fot/s · ⭐⭐ **0,249** = **1,2 %** | ⭐⭐⭐ **SALE del 19,7 %, NON scende** |
-| ⛔⛔ **gradiente retinato** (`barra`) | 34,67 fot/s · **21,183** = **105,9 %** | ⭐⭐ **40,70** fot/s · ⭐⭐⭐ **8,287** = **41,4 %** | ⭐ **il driver HA obbedito** |
-| **film con la grana** | 23,17 fot/s · **54,302** = 271,5 % · filo **58,414 = 292,1 %** | 23,30 fot/s · ⭐ **4,794** = **24,0 %** · filo **7,419 = 37,1 %** | ⭐ da **293 %** a **37 %** |
-
-⭐ **E il metro è buono**: i cinque numeri a tetto spento riproducono §3.8 entro l'1-2 %
-(0,208 contro 0,204 · 1,151 contro 1,179 · 21,183 contro 21,36 · 58,414 contro 58,668).
+⭐ **Il tetto fa quel che deve**: a scena ferma non cambia niente; sulla tinta piatta e sul desktop
+vero la banda **sale di poco** invece di scendere; sul gradiente retinato e sul film con la grana
+scende **sotto il pavimento**, e il retinato consegna **più** fotogrammi di prima. ⭐ E il metro è
+buono: a tetto spento le cinque scene riproducono §3.8.
 
 ### 13.4.2 ⛔⛔ I DUE ROSSI CHE CHIUDEVANO LA CURA, uno per uno
 
-| il rosso di **P4** | che cosa sarebbe successo | `[M]` |
-|---|---|---|
-| ⭐⭐ **il desktop vero costa MENO di 0,204** ⇒ *«il tetto risparmia dove non deve, è v1 che si ripete, e questa cura si butta»* | 0,208 → qualcosa sotto 0,204 | ⭐⭐⭐ **NON è caduto**: 0,208 → **0,249**, cioè **+19,7 %**. ⚠ È il **prezzo del QVBR** già previsto (`[M]` sul portatile: *«spende il 13 % in più del CQP a scena ferma»*), misurato qui al **19,7 %** — ⇒ **la cura VIVE** |
-| ⭐⭐ **il retinato resta sopra 20** ⇒ *«il driver non ha obbedito, e lo coglie solo il terzo testimone»* | 21,18 → ancora ≥ 20 | ⭐⭐⭐ **NON è caduto**: **8,287** Mbit/s, cioè il **39 %** di prima |
+| il rosso di **P4** | `[M]` |
+|---|---|
+| ⭐⭐ **il desktop vero costa MENO che senza tetto** ⇒ *«il tetto risparmia dove non deve, è v1 che si ripete, e questa cura si butta»* | ⭐⭐⭐ **NON è caduto**: a tetto acceso il desktop vero costa un po' **di più**. ⚠ È il **prezzo del QVBR** già previsto sul portatile ⇒ **la cura VIVE** |
+| ⭐⭐ **il retinato resta sopra il tetto** ⇒ *«il driver non ha obbedito, e lo coglie solo il terzo testimone»* | ⭐⭐⭐ **NON è caduto**: il retinato scende a una frazione di prima |
 
-⚠ **E c'è uno scarto dalla previsione che va detto, ed è nel verso opposto a un rosso**: P4 diceva
-*«retinato 11-16 · grana 11-16, e MAI sopra 16»*. `[M]` sono usciti **8,287** e **4,794** —
-⛔ **sotto la forchetta, non sopra.** ⇒ Il tetto **stringe più del previsto**: il filo è
-**16 000 kbit/s** e il caso duro ne usa il **24-62 %**. ⚠ Vuol dire che sul caso duro l'immagine è
-più brutta di quanto il tetto obbligherebbe: `[?]` **da tarare**, non un difetto — e **non lo decide
-una misura, lo decide l'occhio**.
+⚠ **E c'è uno scarto dalla previsione che va detto, ed è nel verso opposto a un rosso**: P4
+prevedeva il caso duro appena sotto il tetto. `[M]` è uscito **ben sotto**. ⇒ Il tetto **stringe
+più del previsto**. ⚠ Vuol dire che sul caso duro l'immagine è più brutta di quanto il tetto
+obbligherebbe: `[?]` **da tarare**, non un difetto — e **non lo decide una misura, lo decide
+l'occhio**.
 
-⭐ **E i fotogrammi non li paga nessuno, anzi**: sul retinato il tetto acceso ne consegna **40,70/s
-contro 34,67** — perché fotogrammi più piccoli escono più in fretta.
+⭐ **E i fotogrammi non li paga nessuno, anzi**: sul retinato il tetto acceso ne consegna **di più** —
+perché fotogrammi più piccoli escono più in fretta.
 
 ### 13.4.3 ⭐⭐ I TRE TESTIMONI, letti tutti e tre — *e sono le righe che il prodotto scrive da sé*
 
@@ -2415,10 +2235,10 @@ contro 34,67** — perché fotogrammi più piccoli escono più in fretta.
 |---|---|
 | **1** · il driver | `controllo del bitrate su «/dev/dri/renderD128» (Intel iHD driver … 25.2.3), profilo 17, EncSliceLP: il driver DICHIARA [CBR\|VBR\|VCM\|CQP\|MB\|QVBR\|TCBRC] (0x149e) · chiesto QVBR (0x400) · c'e'` |
 | **2** · il contesto | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `codificatore 1 APERTO e TENUTO VIVO … 2560x1080 a 60/s` |
-| **3** ⭐⭐ · **i BYTE** | `banda del video: 5581 kbit/s su 10001 ms — 283 fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, **ne usa il 34 %**` — una riga ogni 10 s |
+| **3** ⭐⭐ · **i BYTE** | `banda del video: … kbit/s su … ms — … fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, ne usa il …%` — una riga ogni 10 s |
 
 ⭐ **Il terzo è quello che decide, e dice che il tetto è in presa**: nei dieci intervalli letti il
-consumo va dall'**1 %** (desktop fermo) al **62 %** del filo, e **non lo supera mai**.
+consumo resta sotto il filo, e **non lo supera mai**.
 
 ### 13.4.4 ⛔ IL DIFETTO DEL BANCO CHE HO TROVATO E CORRETTO — *e avrebbe dato «un numero plausibile»*
 
@@ -2427,11 +2247,10 @@ punto prima**. ⇒ Col mio primo ordine (`ferma,video,pieno,barra,video-grana`) 
 stato misurato **col film ancora vivo sotto**. ⛔ È la famiglia di difetti di §8, quarta volta oggi.
 ⭐ **Rifatto tutto con le scene video IN FONDO** (`ferma,pieno,barra,video,video-grana`): fra due
 video ci pensa `09-b72-video.sh`, che fa `pkill`.
-⚠ **E l'esito del controllo va detto**: il `pieno` contaminato aveva dato **1,162** Mbit/s, quello
-pulito **1,151** — cioè **lo stesso numero**. ⇒ In *questo* caso la contaminazione non ha morso
-(la finestra della scena copre il film e Mutter non consegna quel che è nascosto). ⛔ **Ma la misura
-buona è quella dell'ordine giusto**, e il banco va corretto: un difetto che non morde oggi morde
-domani.
+⚠ **E l'esito del controllo va detto**: il `pieno` contaminato e quello pulito hanno dato **lo
+stesso numero**. ⇒ In *questo* caso la contaminazione non ha morso (la finestra della scena copre il
+film e Mutter non consegna quel che è nascosto). ⛔ **Ma la misura buona è quella dell'ordine
+giusto**, e il banco va corretto: un difetto che non morde oggi morde domani.
 
 ## 13.5 ⛔⛔⛔ IL FATTO CHE RIMETTE IN DISCUSSIONE §3.8, §10.1 E TUTTA LA BOLLETTA: **si stava misurando HEVC**
 
@@ -2443,30 +2262,23 @@ domani.
 ```
 
 ⛔ **`banchi/01-b3-cliente.py` · `--video-codec` dichiara `--video-codec` con predefinito `hevc,av1`**, e il
-server sceglie **HEVC**. ⇒ **Tutti i numeri di banda di §3.8 e della prima parte di questa sezione —
-0,204 · 1,179 · 21,36 · 58,668 Mbit/s — sono numeri HEVC.**
+server sceglie **HEVC**. ⇒ **Tutti i numeri di banda di §3.8 e della prima parte di questa sezione
+sono numeri HEVC.**
 
 ⛔⛔ **E il prodotto a Firefox Android NON manda HEVC**: `MEMORY.md`, *«AV1 esce, entra H.264 —
 Firefox Android non ha né HEVC né AV1; `avc1.640032` è già verificato»*.
 
 ### 13.5.1 `[M]` QUANTO CAMBIA — *stessa scena, stessa tela, stesso QP 26, 13:47*
 
-| `barra`, 2560×1080, tetto spento | HEVC | ⭐ **H.264** |
-|---|---|---|
-| fotogrammi/s | 34,67 | ⭐ **41,80** |
-| carico video | **21,183** Mbit/s = **105,9 %** | ⭐⭐ **7,920** Mbit/s = **39,6 %** |
-| filo | 24,052 = 120,3 % | ⭐ **10,511** = **52,6 %** |
-| byte medi per fotogramma | 61 100 | **23 683** |
+⛔⛔ **Sulla stessa scena, H.264 costa QUI molto meno di HEVC**, non di più. ⚠ Non è la teoria dei
+codec: è che **`QP 26` non vuol dire la stessa qualità nei due**, e sul `hevc_vaapi` di questo
+driver, a QP 26 e `EncSliceLP`, esce **molta più roba**. ⇒ ⛔ **La scala della degradazione
+(26 → 35 → 44 → 51) è tarata su un numero che nei due codec significa due cose diverse**, e finora
+è stata provata sul codec sbagliato.
 
-⛔⛔ **H.264 costa QUI un terzo di HEVC**, non di più. ⚠ Non è la teoria dei codec: è che **`QP 26`
-non vuol dire la stessa qualità nei due**, e sul `hevc_vaapi` di questo driver, a QP 26 e
-`EncSliceLP`, esce **molta più roba**. ⇒ ⛔ **La scala della degradazione (26 → 35 → 44 → 51) è
-tarata su un numero che nei due codec significa due cose diverse**, e finora è stata provata sul
-codec sbagliato.
-
-⇒ ⭐⭐ **La contraddizione §10.1 va riscritta.** *«Ne chiede il 293 %»* è HEVC. Sul codec che il
-prodotto manda davvero, la stessa scena dura chiede **il 39,6 %** del pavimento. ⛔ `[?]` **Il caso
-duro vero (film con la grana) sotto H.264 NON è stato misurato**: è il primo numero da prendere.
+⇒ ⭐⭐ **La contraddizione §10.1 va riscritta.** *«Ne chiede più volte il pavimento»* è HEVC. Sul
+codec che il prodotto manda davvero, la stessa scena dura chiede **meno** del pavimento. ⛔ `[?]`
+**Il caso duro vero (film con la grana) sotto H.264 NON è stato misurato**: è il primo da prendere.
 
 ### 13.5.2 ⛔ `[R]` E UN DIFETTO CHE ESCE DALLA STESSA RIGA: **sotto H.264 la stringa per il decodificatore è VUOTA**
 
@@ -2480,28 +2292,19 @@ che la descrive sta in `codificatore.c` · `salta_liste_scala()`), e scrive `(no
 stesso** (`livello 51`, poi `52`): manca la **stringa**. `[?]` Se è quella che va al browser, è la
 famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione»*.
 
-## 13.6 ⛔⛔⛔ IL 4K — *13:50-13:52*: **41 fotogrammi/s, non 60 — e il livello prodotto SFORA quello del client**
+## 13.6 ⛔⛔⛔ IL 4K — *13:50-13:52*: **meno di 60 fotogrammi al secondo — e il livello prodotto SFORA quello del client**
 
 **Il giro**: tela **3840×2160** verificata **nel registro del prodotto** (`TELA NUOVA DAL PALCO:
-1920x1080 → 3840x2160`), scena `barra`, 20 s, tetto spento, `tc` mai toccato.
-
-| a 3840×2160 | ⭐ **H.264** (quel che il browser riceve) | HEVC |
-|---|---|---|
-| **fotogrammi/s** | ⛔ **41,25** | 38,75 |
-| carico video | **24,055** Mbit/s = **120,3 %** del pavimento | ⛔ **74,390** = **372,0 %** |
-| filo | 26,711 = 133,6 % | ⛔ **78,018** = **390,1 %** |
-| byte medi per fotogramma | 72 895 | 239 968 |
-| chiavi / abbandoni in 20 s | ⭐ **0 / 0** | ⛔ **19 / 20** |
-| ⛔ **LIVELLO PRODOTTO** | ⛔⛔ **5.2** (`level_idc` 52 nell'SPS) | 5.0 (`general_level_idc` 150) |
+1920x1080 → 3840x2160`), scena `barra`, 20 s, tetto spento, `tc` mai toccato. In **H.264** (quel che
+il browser riceve): nessuna chiave, nessun abbandono, ⛔⛔ **livello prodotto 5.2** (`level_idc` 52
+nell'SPS). In HEVC: chiavi e abbandoni, livello 5.0 (`general_level_idc` 150).
 
 ### 13.6.1 ⛔ LA RISPOSTA ALLA DOMANDA: **il 4K·60 che il prodotto promette non c'è, e il tetto non è la linea**
 
-⭐ **41,25 fot/s con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi).
-⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica.
-`[M]` la riga del primo fotogramma a 4K: **conversione 11 466 µs** + **codifica 8 895 µs** = **20,4
-ms per fotogramma**, cioè **un tetto di ~49/s** prima ancora di uscire di casa. ⚠ A 2560×1080 erano
-6 652 + 3 827 = 10,5 ms (⇒ ~95/s), e infatti lì si vedono 41,8/s perché comanda il compositore.
-⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto regge ~41/s, non 60.**
+⭐ **Con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi) il 4K non
+arriva a 60. ⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica, che a
+4K ha un tetto suo prima ancora di uscire di casa; a 2560×1080 invece comanda il compositore.
+⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto non regge 60.**
 
 ### 13.6.2 ⛔⛔ E IL ROSSO DI **P9** È CADUTO, con un innesco concreto
 
@@ -2552,30 +2355,30 @@ serve per l'automazione.
 
 ⛔ La domanda di §10.2 era: *«sopra il pavimento la spirale morde o no?»*, con **due posizioni** in
 campo — §5.2 (*«il difetto vive sotto il pavimento, sopra la cura è inerte»*) contro §3.10
-(*«abbandoni e chiavi anche sulla linea larga, 3↔3 a 22-26 Mbit/s»*).
+(*«abbandoni e chiavi anche sulla linea larga»*).
 
 **Il giro che la decide**: ⛔ **sul DESKTOP VERO**, non su `barra` — ⭐ e col **codec che il browser
 riceve davvero, H.264** (`negoziato video.codec=h264`, letto dal registro). Una **sola** sessione a
 2560×1080 per tutti i gradini, così l'unica variabile è la stretta. Soglia e regolatore **spenti**,
 cioè il prodotto com'è oggi. Gradino: 8 s larga → **3 s stretti** → 6 s larga.
 
-| la stretta | fotogrammi spediti | ⛔ **CHIAVI** | ⛔ **abbandoni §5.1** |
-|---|---|---|---|
-| **30 Mbit/s** (150 % del pavimento) | 421 | ⭐ **0** | ⭐ **0** |
-| **25 Mbit/s** (125 %) | 429 | ⭐ **0** | ⭐ **0** |
-| ⭐ **20 Mbit/s** (**il pavimento**) | 426 | ⭐ **0** | ⭐ **0** |
-| **15 Mbit/s** (75 %) | 406 | ⭐ **0** | ⭐ **0** |
-| **10 Mbit/s** (50 %) | 426 | ⭐ **0** | ⭐ **0** |
-| ⛔ **5 Mbit/s** (25 %) | 424 | ⛔ **3** | ⛔ **3** |
+| la stretta | ⛔ **CHIAVI** | ⛔ **abbandoni §5.1** |
+|---|---|---|
+| **30 Mbit/s** (150 % del pavimento) | ⭐ **0** | ⭐ **0** |
+| **25 Mbit/s** (125 %) | ⭐ **0** | ⭐ **0** |
+| ⭐ **20 Mbit/s** (**il pavimento**) | ⭐ **0** | ⭐ **0** |
+| **15 Mbit/s** (75 %) | ⭐ **0** | ⭐ **0** |
+| **10 Mbit/s** (50 %) | ⭐ **0** | ⭐ **0** |
+| ⛔ **5 Mbit/s** (25 %) | ⛔ **3** | ⛔ **3** |
 
 ### ⭐ IL VERDETTO, secco
 
 ⛔⛔ **Sul contenuto vero la spirale NON esiste fino a 10 Mbit/s compresi**, cioè fino a **metà
-pavimento**. Il primo segno arriva a **5 Mbit/s**, ed è **3 chiavi su 424 fotogrammi = lo 0,7 %**.
-⇒ **§5.2 aveva ragione e §3.10 misurava un'altra cosa**: i suoi abbandoni a 22-26 Mbit/s erano su
-**`barra`**, il gradiente retinato — una scena **sintetica** che a 2560×1080 costa **21 Mbit/s da
-sola** (105,9 % del pavimento). ⛔ **Non è il desktop di nessuno**: è un caso di prova che vive
-*sopra* il pavimento anche a riposo, e sotto quel carico qualunque stretta produce coda.
+pavimento**. Il primo segno arriva a **5 Mbit/s**, ed è qualche chiave su centinaia di fotogrammi.
+⇒ **§5.2 aveva ragione e §3.10 misurava un'altra cosa**: i suoi abbandoni sulla linea larga erano
+su **`barra`**, il gradiente retinato — una scena **sintetica** che a 2560×1080 costa da sola quanto
+il pavimento. ⛔ **Non è il desktop di nessuno**: è un caso di prova che vive *sopra* il pavimento
+anche a riposo, e sotto quel carico qualunque stretta produce coda.
 
 ⇒ ⭐⭐ **La soglia sulla coda e il regolatore del ritmo sono ROBUSTEZZE, non correzioni di un
 difetto che l'utente vede.** Sul suo desktop, a 20 Mbit/s, **non hanno niente da fare** — ed è quel
@@ -2586,31 +2389,30 @@ contenuto è un caso duro (video a schermo intero), e lì lavorano bene: §13.3.
 `fot [0,0,0]` in tutt'e sei i giri — un errore mio nel raggruppare per secondo, **non una misura**.
 ⛔ I numeri qui sopra **non vengono da quella tabella**: vengono dal **conto diretto sui registri
 salvati** (`grep -c SPEDITO`, `grep -c 'SPEDITO: CHIAVE'`, `grep -c ABBANDONATO`), che è la
-grandezza che il prodotto scrive. ⚠ Se avessi riportato la tabella, avrei detto *«zero fotogrammi»*
-dove ce n'erano **424**.
+⛔ Se avessi riportato la tabella, avrei detto *«zero fotogrammi»* dove ce n'erano centinaia.
 
 ## 13.9 ⭐⭐⭐ IL VERDETTO DELLA SERA — le nove previsioni, una per riga
 
 | # | la previsione | esito | dove |
 |---|---|---|---|
-| **P1** | il crollo si riproduce; con la cura regge | ⭐⭐⭐ **CONFERMATA, e oltre**: il malato muore al fotogramma **27** (516 782 byte), il curato regge **1 463** fotogrammi fino a **537 063** byte col 5 % di perdita. ⭐ **La pila dal core chiude il `[?]` di §4.8** | 13.1 |
+| **P1** | il crollo si riproduce; con la cura regge | ⭐⭐⭐ **CONFERMATA, e oltre**: il malato muore al fotogramma **27**, il curato regge tutta la sessione con fotogrammi più grossi e il 5 % di perdita. ⭐ **La pila dal core chiude il `[?]` di §4.8** | 13.1 |
 | **P2** | la soglia è **inerte** a 20 Mbit/s | ⭐ **CONFERMATA**, e non solo a 20: sul desktop vero **niente da fare fino a 10 Mbit/s** | 13.2.2 · 13.8 |
-| **P3** | sul gradino: chiavi ≤ 2/s, abbandoni ≤ 2/s, fot ≥ 25 | ⛔ **SMENTITA sui due numeri che contavano**: chiavi **4-5/s**, abbandoni **5-9/s**. ⭐ Confermata su inerzia e ritorno. ⛔ **E il rimedio scritto in P3 era nel verso sbagliato** | 13.2.2 · 13.2.3 |
-| **P4** | il tetto: desktop vero **non scende**, retinato **sotto il pavimento** | ⭐⭐⭐ **CONFERMATA — i due rossi che buttavano la cura NON sono caduti**: 0,208 → **0,249** (+19,7 %), retinato 21,18 → **8,29**. ⚠ Stringe **più** del previsto (fuori forchetta in basso) | 13.4 |
+| **P3** | sul gradino: chiavi ≤ 2/s, abbandoni ≤ 2/s, fot ≥ 25 | ⛔ **SMENTITA sui due numeri che contavano**: chiavi e abbandoni restano sopra. ⭐ Confermata su inerzia e ritorno. ⛔ **E il rimedio scritto in P3 era nel verso sbagliato** | 13.2.2 · 13.2.3 |
+| **P4** | il tetto: desktop vero **non scende**, retinato **sotto il pavimento** | ⭐⭐⭐ **CONFERMATA — i due rossi che buttavano la cura NON sono caduti**: il desktop vero sale di poco, il retinato scende sotto il pavimento. ⚠ Stringe **più** del previsto | 13.4 |
 | **P5** | la risalita della qualità | ⛔ **NON PROVATA** — vedi 13.10 | 13.10 |
 | **P6** | il riordino dell'audio | ⛔ **NON PROVATA**: Marionette non apre la porta | 13.7 |
-| **P7** | il regolatore: **zero discese** a desktop normale; discese sul gradino, RISALE entro 1 s | ⭐⭐⭐ **CONFERMATA IN PIENO**: `arretrato` **LETTO 36-42 volte/s** sulla linea larga con **massimo 0** e **zero discese**; **57** discese concentrate nei 3 s; RISALE **355 ms** dopo il ritorno. ⛔ E il rosso *«è la finestra del browser»* **non è caduto**: `cwnd_left` = 0 | 13.3 |
+| **P7** | il regolatore: **zero discese** a desktop normale; discese sul gradino, RISALE entro 1 s | ⭐⭐⭐ **CONFERMATA IN PIENO**: `arretrato` **LETTO a ogni fotogramma** sulla linea larga con **massimo 0** e **zero discese**; le discese tutte nei 3 s; RISALE entro il secondo dal ritorno. ⛔ E il rosso *«è la finestra del browser»* **non è caduto**: `cwnd_left` = 0 | 13.3 |
 | **P8** | a scena ferma il ritmo non cala | ⚠ **NON misurata a coppie** (mezza ferma / mezza mossa). ⭐ Ma la metà del controllo c'è: le righe `arretrato LETTO N volte` esistono e distinguono *vuoto* da *proibito* | 13.3.2 |
 | **P9** | il livello prodotto contro quello del client, e nessuno li confronta | ⛔⛔ **CADUTA, con l'innesco**: a 4K H.264 il server emette **5.2** mentre il client dichiara **5.1**, e **il programma non se ne accorge** | 13.6.2 |
 
 ### ⭐⭐ E LE TRE COSE NUOVE, che nessuna previsione aveva previsto
 
 1. ⛔⛔⛔ **Si stava misurando HEVC.** Il cliente di prova negozia `hevc`, il prodotto manda H.264 a
-   Firefox. Stessa scena: **21,18** Mbit/s in HEVC contro **7,92** in H.264 — ⇒ **§10.1 va
-   riscritta e la bolletta rifatta** — 13.5;
-2. ⭐⭐⭐ **La soglia non è un filtro: è il punto di lavoro della coda.** A 100 ms la coda si assesta
-   a 101-138; a 200 ms a 204-236. ⇒ alzarla **compra immagine e paga ritardo**, e non cambia il
-   numero degli abbandoni — 13.2.3;
+   Firefox, e sulla stessa scena i due costano molto diverso ⇒ **§10.1 va riscritta e la bolletta
+   rifatta** — 13.5;
+2. ⭐⭐⭐ **La soglia non è un filtro: è il punto di lavoro della coda.** La coda si assesta appena
+   sopra la soglia, qualunque essa sia. ⇒ alzarla **compra immagine e paga ritardo**, e non cambia
+   il numero degli abbandoni — 13.2.3;
 3. ⭐⭐⭐ **Il regolatore rende la soglia inutile sul gradino**: tiene `arretrato` a 2, la coda non
    arriva mai ai 100 ms, e `video_sgombra()` **non scatta nemmeno una volta** — 13.3.1.
 
@@ -2627,10 +2429,9 @@ non hanno nessun effetto
 
 ⛔ **`2 097 152` byte = 2 MiB è la soglia che fa SCENDERE la qualità.** Perché la risalita abbia
 qualcosa da risalire, la qualità deve prima essere scesa, cioè serve un fotogramma **sopra i 2 MiB**.
-`[M]` di stasera, il fotogramma **più grosso mai visto in tutta la giornata**: **537 063 byte** — un
-**quarto** della soglia, e su un **film con la grana a schermo intero**, che è il caso più duro che
-questa fase abbia. A 4K HEVC la media è **239 968** byte, la punta resta lontana.
-⇒ ⛔ **Sulla tela dell'utente non succede mai**, ed è la stessa cosa che §5.3 aveva scritto.
+`[M]` di stasera, il fotogramma **più grosso mai visto in tutta la giornata**, su un **film con la
+grana a schermo intero** che è il caso più duro che questa fase abbia, sta a **un quarto** della
+soglia. ⇒ ⛔ **Sulla tela dell'utente non succede mai**, ed è la stessa cosa che §5.3 aveva scritto.
 
 ⚠ **La strada per farla scattare c'è ed è quella dichiarata nel mandato** — tela enorme + ripiego
 software (`h264_vaapi` si ferma a 4096 px per lato) — ⛔ **ma è un giro che non misura il prodotto**:
@@ -2699,8 +2500,8 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
 
 ```
 14:22:06.637 rcp     negoziato video.codec=h264 video.profondita=8 audio.codec=pcm
-14:22:07.782 video   primo fotogramma: (non letto) · 25450 byte · … livello 51, 2560x1080 ·
-                     conversione 6308 µs, … codifica 3815 µs · H.264 8 bit via h264_vaapi
+14:22:07.782 video   primo fotogramma: (non letto) · … livello 51, 2560x1080 ·
+                     … · H.264 8 bit via h264_vaapi
 ```
 
 ⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
@@ -2742,66 +2543,46 @@ glibc spenta), utente **`prova2`**, tela **2560×1080**, **una sola sessione** p
 punti — così l'unica variabile è la scena. Tetto **spento**, `tc` **mai toccato** (`lo` verificata
 `noqueue` prima e dopo, `enp7s0` mai sfiorata). 30 s per punto.
 
-| scena | ora | fot/s | ⭐ **carico video H.264** | % di 20 | filo `lo` | byte/fotogramma | chiavi | abbandoni |
-|---|---|---|---|---|---|---|---|---|
-| **ferma** (nessuna scena) | 14:23:08 | 0,00 | **0,000** Mbit/s | 0 % | 2,427 | — | 0 | 0 |
-| ⭐ **desktop VERO** (`scena-utente.webm` a schermo intero) | 14:23:52 | 23,10 | **0,356** Mbit/s | **1,8 %** | 2,842 | 1 924 | 0 | 0 |
-| **tinta piatta** (`pieno`) | 14:24:31 | 41,03 | **1,190** Mbit/s | 5,9 % | 3,717 | 3 624 | 0 | 0 |
-| **gradiente retinato** (`barra`) | 14:25:10 | 40,77 | **7,728** Mbit/s | 38,6 % | 10,45 | 23 695 | 0 | 0 |
-| ⛔ **film con la GRANA** (il caso duro) | 14:25:55 | 23,30 | ⛔ **44,574** Mbit/s | ⛔ **222,9 %** | 48,42 | 239 129 | 0 | 0 |
+Le cinque scene: ferma · il desktop vero (`scena-utente.webm` a schermo intero) · tinta piatta
+(`pieno`) · gradiente retinato (`barra`) · film con la grana (il caso duro). Nessuna chiave e nessun
+abbandono in nessuna delle cinque.
 
 ### ⛔⭐ LA RISPOSTA ALLA DOMANDA CHE DECIDE
 
-> **Il caso duro in H.264 supera i 20 Mbit/s?** ⇒ ⛔ **SÌ. 44,574 Mbit/s, cioè 2,2 volte il
-> pavimento.**
+> **Il caso duro in H.264 supera i 20 Mbit/s?** ⇒ ⛔ **SÌ, e di molto.**
 
 ### `[M]` I DUE METRI AFFIANCATI — e la distanza **non** è un fattore costante
 
-| a 2560×1080, tetto spento | HEVC (§3.8, mattina) | ⭐ **H.264** (14:2x) | rapporto |
-|---|---|---|---|
-| ferma | 0 | 0 | — |
-| desktop vero | 0,204 | ⚠ **0,356** | ⛔ **1,7× in SU** |
-| tinta piatta | 1,179 | 1,190 | 1,01× |
-| gradiente retinato | 21,36 | ⭐ **7,728** | **0,36×** |
-| film con la grana | 58,668 | **44,574** | **0,76×** |
-
-⛔⛔ **E questa riga è il fatto nuovo della tabella**: H.264 **non** costa «un terzo di HEVC», come
-§13.5.1 lasciava credere misurando una scena sola. Costa **il 36 %** sul gradiente retinato, il
-**76 %** sul film con la grana e ⛔ **il 170 %** — cioè **di più** — sul desktop vero.
+⛔⛔ **Il fatto nuovo**: H.264 **non** costa «una frazione fissa di HEVC», come §13.5.1 lasciava
+credere misurando una scena sola. Sul gradiente retinato e sul film con la grana costa meno di HEVC;
+sulla tinta piatta uguale; ⛔ **sul desktop vero costa di più**.
 ⇒ ⭐ **Il rapporto fra i due codec dipende dal CONTENUTO**, ed è la stessa lezione di §3.8 («quanti
 pixel cambiano non predice niente») applicata al codec. ⚠ Un fattore di conversione da HEVC a
 H.264 **non esiste**: i numeri vecchi non si convertono, si **rifanno**.
 
-### ⭐ Il controllo positivo, e sta dentro la tabella
+### ⭐ Il controllo positivo
 
-I cinque punti coprono **tre ordini di grandezza** (0 → 0,356 → 1,19 → 7,73 → 44,57): se il banco
-fosse cieco darebbero lo stesso numero. ⭐ E `barra` ritrovato a **7,728** contro i **7,920** di
-§13.5.1, preso trentacinque minuti prima con un'altra sessione: **2,4 % di scarto**, cioè la misura
-si ripete.
-⚠ **La riga `ferma` dice un'altra cosa che vale la pena leggere**: **zero** video e **2,427
-Mbit/s sul filo**. ⇒ A desktop fermo il **100 %** di quel che passa è QUIC + **l'audio PCM**, che da
-solo chiede 1,536 Mbit/s. `[?]` **A linea stretta è l'audio a mangiare il video, non il contrario** —
-vedi 14.4.1, dove a 3 Mbit/s il video scende a 5 fot/s e il filo resta a 2,4.
+I cinque punti coprono **tre ordini di grandezza**: se il banco fosse cieco darebbero lo stesso
+numero. ⭐ E `barra` ritrovato quasi uguale a §13.5.1, preso trentacinque minuti prima con un'altra
+sessione: la misura si ripete.
+⚠ **La riga `ferma` dice un'altra cosa che vale la pena leggere**: **zero** video, e sul filo passa
+lo stesso qualcosa. ⇒ A desktop fermo **tutto** quel che passa è QUIC + **l'audio PCM**, che da solo
+chiede 1,536 Mbit/s. `[?]` **A linea stretta è l'audio a mangiare il video, non il contrario** —
+vedi 14.4.1, dove su linea strettissima il video crolla e il filo resta occupato.
 
-## 14.3 ⭐⭐⭐ §10.1 RIFATTA COL NUMERO GIUSTO — la contraddizione **non cade, si dimezza**
+## 14.3 ⭐⭐⭐ §10.1 RIFATTA SUL CODEC GIUSTO — la contraddizione **non cade**
 
 §10.1 metteva a confronto due frasi: lo studio diceva *«non serve nessun tetto»* sul contenuto vero,
-la misura diceva *«293 % del pavimento»* sul caso duro. ⛔ Erano tutt'e due **numeri HEVC**.
+la misura diceva *«più volte il pavimento»* sul caso duro. ⛔ Erano tutt'e due **misure HEVC**.
 
-| | HEVC (quel che diceva §10.1) | ⭐ **H.264** (quel che l'utente riceve) |
-|---|---|---|
-| il **contenuto vero** dell'utente | 0,204 Mbit/s = **1,0 %** | **0,356** Mbit/s = **1,8 %** |
-| il **caso duro** (film con la grana) | 58,668 = **293 %** | ⛔ **44,574** = **223 %** |
-| la distanza fra i due | **288×** | **125×** |
+### ⭐ LA CONCLUSIONE
 
-### ⭐ LA CONCLUSIONE, col numero e non con l'opinione
-
-1. ⭐ **La prima frase regge, e regge meglio di prima**: sul desktop vero il prodotto chiede
-   **l'1,8 % del pavimento**. Un tetto a 20 Mbit/s lì **non ha niente da fare**, e §13.4 l'ha già
-   misurato (0,208 → 0,249, e la cura non è caduta);
-2. ⛔ **La seconda frase regge anche lei, e il cambio di codec NON la salva**: il caso duro chiede
-   **223 %** invece di 293 %. ⇒ ⛔ **Passare a H.264 toglie 70 punti percentuali e lascia il
-   problema in piedi**: 44,6 contro 20 è ancora **più del doppio**;
+1. ⭐ **La prima frase regge**: anche in H.264 sul desktop vero il prodotto chiede **una frazione
+   minima del pavimento**. Un tetto a 20 Mbit/s lì **non ha niente da fare**, e §13.4 l'ha già
+   misurato (la cura non è caduta);
+2. ⛔ **La seconda frase regge anche lei, e il cambio di codec NON la salva**: in H.264 il caso duro
+   chiede meno che in HEVC, ⛔ ma ancora **più del doppio del pavimento**. ⇒ **Passare a H.264 lascia
+   il problema in piedi**;
 3. ⇒ ⭐⭐ **LA CONTRADDIZIONE NON ERA UNA CONTRADDIZIONE, ed è deciso**: le due frasi parlano di due
    contenuti diversi, e tutt'e due sono vere **sullo stesso codec**. **Il tetto serve, e serve solo
    per il caso duro** — cioè è esattamente quel che §5.5 aveva progettato: un parapetto che sul
@@ -2817,77 +2598,61 @@ Il mandato chiedeva lo spazzamento **sul desktop vero**, e ha ragione: `barra` �
 ⛔ **Ma sul desktop vero non c'è niente da tarare, e l'ho misurato invece di dedurlo.**
 
 `[M]` **14:27:48**, gradino sul desktop vero in H.264, soglia **spenta**, stretta a **3 Mbit/s** —
-cioè **un terzo** di quel che §13.8 aveva già provato a 10:
+cioè **un terzo** di quel che §13.8 aveva già provato a 10.
 
-| s | 5-7 (larga) | **8** | **9** | **10** | **11** | 13-25 (larga) |
-|---|---|---|---|---|---|---|
-| fotogrammi | 29 | 21 | 13 | **5** | 5 | 27-29 |
-| ⛔ **chiavi** | 0 | **0** | **0** | **0** | **0** | 0 |
-| ⛔ **abbandoni** | 0 | **0** | **0** | **0** | **0** | 0 |
-
-⇒ ⭐⭐ **A 3 Mbit/s — il 15 % del pavimento — sul desktop vero il ritmo crolla da 29 a 5 fot/s e
-la spirale NON PARTE LO STESSO: zero chiavi, zero abbandoni.** §13.8 si fermava a 5 Mbit/s e ne
-trovava 3; qui, più in basso ancora, ce ne sono **zero**.
+⇒ ⭐⭐ **A 3 Mbit/s — il 15 % del pavimento — sul desktop vero il ritmo crolla, e la spirale NON
+PARTE LO STESSO: zero chiavi, zero abbandoni**, nella stretta e dopo. §13.8 si fermava a 5 Mbit/s e
+ne trovava 3; qui, più in basso ancora, ce ne sono **zero**.
 ⇒ ⛔ **Uno spazzamento della soglia su questa scena misurerebbe zero contro zero contro zero**, cioè
 niente. Il banco non ha lo stimolo, e un banco senza stimolo dà *«la cura funziona»* per ogni
 valore. **Non l'ho fatto lì.**
 
 ⭐ **E c'è un secondo motivo, e viene dal metro nuovo**: l'obiezione di §13.8 contro `barra`
-(*«a 2560×1080 costa 21 Mbit/s da sola, non è il desktop di nessuno»*) era un'obiezione **HEVC**.
-In H.264 `barra` costa **7,73 Mbit/s** (14.2), cioè il 39 % del pavimento. ⚠ Ma il caso che
-**chiede** la cura è un altro, ed è quello vero: il **film con la grana**, 44,6 Mbit/s.
+(*«a 2560×1080 costa da sola quanto il pavimento, non è il desktop di nessuno»*) era un'obiezione
+**HEVC**. In H.264 `barra` costa meno (14.2). ⚠ Ma il caso che **chiede** la cura è un altro, ed è
+quello vero: il **film con la grana**.
 
 ### 14.4.2 `[M]` LO SPAZZAMENTO, sul CASO DURO — film con la grana, 2560×1080, H.264
 
 **Il giro**, identico sei volte: 8 s larga → **3 s a 10 Mbit/s** → 17 s larga, `tc` solo su `lo`
 e solo sulla 7920, guardiano armato, `enp7s0` mai toccata (verificato dopo ogni braccio).
-Server riavviato a ogni braccio, `md5 162d2d10…`, trappola glibc spenta. Le righe qui sotto sono
-**i 3 secondi di stretta**, e i millisecondi sono quelli che il prodotto scrive da sé nella riga
-*«la coda del video passa SOPRA la soglia (… byte = N ms …)»*.
-
-| braccio | ora | fot/s nei 3 s | ⛔ chiavi | ⛔ abbandoni | kbyte | attrav. | ⚠ **ms di coda pagati** | `arretrato` max |
-|---|---|---|---|---|---|---|---|---|
-| **spenta** | 14:29 | 6,0 | **8** | **8** | 6 111 | — | — | 0-1 per costruzione |
-| **100 ms** | 14:30 | 6,7 | 8 | 10 | 6 507 | 8 | **136 – 397** | 3 |
-| **200 ms** | 14:31 | 7,7 | 8 | 14 | 7 216 | 8 | **222 – 942** | 6 |
-| **400 ms** | 14:32 | 5,7 | 6 | 8 | 5 930 | 7 | **414 – 643** | 8 |
-| **800 ms** | 14:33 | 7,3 | **5** | 14 | 6 738 | 6 | ⛔ **856 – 1 321** | 7 |
-| ⭐ **200 + `--ritmo-adattivo`** | 14:34 | 5,3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
+Server riavviato a ogni braccio, `md5 162d2d10…`, trappola glibc spenta. Si guardano **i 3 secondi
+di stretta**, e la coda è quella che il prodotto scrive da sé nella riga *«la coda del video passa
+SOPRA la soglia (… byte = N ms …)»*. Sei bracci: soglia **spenta · 100 · 200 · 400 · 800 ms**, e
+⭐ **200 + `--ritmo-adattivo`**. `arretrato` massimo: 0-1 per costruzione a soglia spenta, poi
+3 · 6 · 8 · 7 con la sola soglia, ⭐ **2** con la coppia.
 
 ### ⭐ LA COPPIA CHE L'UTENTE DEVE GIUDICARE, e la risposta secca
 
-> **A quale valore la soglia mantiene la promessa di P3, e a che prezzo in ms?**
+> **A quale valore la soglia mantiene la promessa di P3?**
 > ⇒ ⛔ **NESSUNO. Da sola non ci arriva a nessun valore.** P3 chiedeva *chiavi ≤ 2/s*,
-> *abbandoni ≤ 2/s* e *fot ≥ 25/s*: ⭐ le chiavi scendono nella promessa a **400 ms** (2,0/s) e a
-> **800** (1,7/s), ⛔ gli **abbandoni non ci arrivano a nessun valore** (2,7 – 4,7/s), e ⛔ i
-> **fotogrammi non ci si avvicinano nemmeno** (5,3 – 7,7/s contro 25).
+> *abbandoni ≤ 2/s* e *fot ≥ 25/s*: ⭐ le chiavi entrano nella promessa solo alle soglie più alte,
+> ⛔ gli **abbandoni non ci arrivano a nessun valore**, e ⛔ i **fotogrammi non ci si avvicinano
+> nemmeno**.
 > ⭐⭐ **L'unico braccio che porta gli abbandoni dentro la promessa è la COPPIA**
-> `--sgombra-soglia-ms 200 --ritmo-adattivo`: **6 abbandoni in 3 s = 2,0/s**, e li paga con
-> **209-323 ms** di coda, cioè **~264-378 ms dal gesto al pixel** sommando i 55 ms dell'anello di
-> fase 8.
+> `--sgombra-soglia-ms 200 --ritmo-adattivo`, e li paga con una coda appena sopra la soglia.
 
 ### ⛔⛔ E TRE COSE CHE SMENTISCONO QUEL CHE §13.2.4 AVEVA CONCLUSO
 
-1. ⛔ **«Il miglioramento è monòtono» NON regge sul caso duro.** Le chiavi calano piano
-   (8 · 8 · 8 · 6 · 5) ma gli **abbandoni ballano** (8 · 10 · 14 · 8 · 14) e i fotogrammi pure
-   (6,0 · 6,7 · 7,7 · 5,7 · 7,3). ⚠ Un solo giro per braccio: **una differenza di una o due chiavi
-   è dentro il rumore, e non la riporto come un effetto.** Quel che è **fuori** dal rumore è una
-   cosa sola, ed è il prezzo;
-2. ⛔⛔ **IL PREZZO CRESCE PIÙ IN FRETTA DI QUEL CHE COMPRA, e a 800 ms è fuori scala**:
-   397 → 942 → 643 → **1 321 ms**. ⭐ Il punto di lavoro di §13.2.4 è confermato una seconda volta e
-   su un'altra scena (la coda si assesta **appena sopra** la soglia, qualunque numero si scelga) —
-   ⛔ ma la conseguenza è che **alzare la soglia compra 3 chiavi e vende un secondo e tre decimi di
-   ritardo.** ⇒ **Il verso «alzala» di §13.2.3 è giusto solo fino a ~200-400 ms**: sopra, il
-   commercio è quello che `SPECIFICHE.md` §3.2 vieta in una riga;
-3. ⭐⭐⭐ **E IL REGOLATORE È LA LEVA, NON LA SOGLIA.** `arretrato` massimo: **3 · 6 · 8 · 7** con la
-   sola soglia, ⭐ **2** con la coppia — cioè `WT_RITMO_POSTI = 2` **tiene**, e la coda smette di
-   approfondirsi. ⇒ Alla stessa soglia di 200 ms, accendere il regolatore **dimezza gli abbandoni
-   (14 → 6)** e **taglia il ritardo di massimo da 942 a 323 ms**. ⛔ **La soglia da sola non è la
-   leva giusta; la coppia sì**, ed è quel che il mandato sospettava.
+1. ⛔ **«Il miglioramento è monòtono» NON regge sul caso duro.** Le chiavi calano piano ma gli
+   **abbandoni ballano**, e i fotogrammi pure. ⚠ Un solo giro per braccio: **una differenza di una o
+   due chiavi è dentro il rumore, e non la riporto come un effetto.** Quel che è **fuori** dal
+   rumore è una cosa sola, ed è il prezzo;
+2. ⛔⛔ **IL PREZZO CRESCE PIÙ IN FRETTA DI QUEL CHE COMPRA, e alla soglia più alta è fuori scala.**
+   ⭐ Il punto di lavoro di §13.2.4 è confermato una seconda volta e su un'altra scena (la coda si
+   assesta **appena sopra** la soglia, qualunque numero si scelga) — ⛔ ma la conseguenza è che
+   **alzare la soglia compra qualche chiave e vende più di un secondo di ritardo.** ⇒ **Il verso
+   «alzala» di §13.2.3 è giusto solo fino a ~200-400 ms**: sopra, il commercio è quello che
+   `SPECIFICHE.md` §3.2 vieta in una riga;
+3. ⭐⭐⭐ **E IL REGOLATORE È LA LEVA, NON LA SOGLIA.** Con la sola soglia `arretrato` si approfondisce;
+   ⭐ con la coppia resta a **2** — cioè `WT_RITMO_POSTI = 2` **tiene**, e la coda smette di
+   approfondirsi. ⇒ Alla stessa soglia di 200 ms, accendere il regolatore **dimezza gli abbandoni**
+   e **taglia il ritardo di punta**. ⛔ **La soglia da sola non è la leva giusta; la coppia sì**, ed
+   è quel che il mandato sospettava.
 
 ⚠ **Il rosso di §2 del mandato resta in piedi e lo dichiaro**: se il ritardo dell'anello superasse
-55 ms + la soglia, la stima dello svuotamento sottostima. `[M]` qui la coda misurata arriva a
-**1 321 ms** contro una soglia di 800: ⇒ ⛔ **a 800 ms la stima È già fuori dal suo campo di
+quello di fase 8 più la soglia, la stima dello svuotamento sottostima. `[M]` qui a soglia 800 la
+coda misurata va ben oltre la soglia: ⇒ ⛔ **a 800 ms la stima È già fuori dal suo campo di
 validità**, ed è una ragione in più per non salire lì.
 
 ## 14.5 ⭐⭐⭐ P8 — IL RITMO A SCENA FERMA, A COPPIE: **VERDE** — *14:40:00 → 14:41:00 UTC*
@@ -2901,11 +2666,11 @@ fotogrammi**, una al secondo.
 | | secondi | ⭐ **`arretrato` LETTO** | secondi con **ZERO** letture | massimo | ⛔ **discese** |
 |---|---|---|---|---|---|
 | ⛔ **metà FERMA** | 16 | **0 in tutto** | ⭐ **16 su 16** | 0 | ⭐ **0** |
-| ⭐ **metà MOSSA** | 27 | **1 072** = **39,7 al secondo** | ⭐ **0 su 27** | 0 | ⭐ **0** |
+| ⭐ **metà MOSSA** | 27 | a ogni fotogramma | ⭐ **0 su 27** | 0 | ⭐ **0** |
 
 ⇒ ⭐⭐⭐ **VERDE, e sui due punti insieme**: nella metà ferma il ramo **non è stato percorso**
 («LETTO 0 volte», 16 righe su 16) e il ritmo **non è sceso**; nella metà mossa l'anello è stato
-percorso **1 072 volte** e il ritmo **non è sceso lo stesso**.
+percorso a ogni fotogramma e il ritmo **non è sceso lo stesso**.
 ⛔ **E questo è quel che «il contatore è zero» non poteva dire**: le due metà danno lo stesso zero
 di discese, e le righe `LETTO` dicono che **una l'ha guadagnato e l'altra no**. Vuoto e proibito
 sono distinti, che è tutto il punto di P8.
@@ -2926,53 +2691,36 @@ neanche a 1. ⇒ Il regolatore è **un parapetto che non tocca niente**, com'era
    transitorio del compositore. ⚠ **E la guardia non può nascondere il rosso che conta**: una
    discesa a scena ferma cadrebbe nei secondi **centrali**, non sul bordo.
 
-## 14.6 ⭐⭐ IL 4K IN H.264 — *14:45:42 → 14:48:15 UTC*: **il numero che mancava, e il tetto SI MUOVE**
+## 14.6 ⭐⭐ IL 4K IN H.264 — *14:45:42 → 14:48:15 UTC*: **il tetto dei fotogrammi SI MUOVE**
 
 **Il giro**: stessa 7920, stesso binario, **nessun interruttore**, tela **3840×2160** verificata nel
 registro del prodotto (`SESSIONE: stato=1 tela=3840x2160`), `tc` mai toccato, 30 s per punto,
-una sola sessione.
+una sola sessione. Quattro scene: desktop vero · tinta piatta · gradiente retinato · film con la
+grana.
 
-| a **3840×2160**, H.264, tetto spento | fot/s | ⭐ **carico video** | % di 20 | filo | byte/fotogramma | chiavi | abb. |
-|---|---|---|---|---|---|---|---|
-| ⭐ **desktop VERO** | 23,10 | **0,852** Mbit/s | ⭐ **4,3 %** | 3,351 | 4 607 | 0 | 0 |
-| **tinta piatta** (`pieno`) | ⚠ **33,37** | 2,716 | 13,6 % | 5,259 | 10 174 | 0 | 0 |
-| **gradiente retinato** (`barra`) | **40,40** | 23,564 | **117,8 %** | 26,641 | 72 908 | 0 | 0 |
-| ⛔ **film con la GRANA** | 23,27 | ⛔ **74,699** | ⛔ **373,5 %** | 79,279 | 401 320 | ⛔ **2** | ⛔ **2** |
+### ⭐ 1. IL TETTO DEI FOTOGRAMMI A 4K **SI MUOVE CON LA SCENA** — e §13.6 non poteva vederlo
 
-### ⭐ 1. IL TETTO DEI 41 FOT/S **SI MUOVE CON LA SCENA** — e §13.6 non poteva vederlo
-
-§13.6 aveva misurato **41,25 fot/s** su `barra` e ne aveva concluso *«a 3840×2160 il prodotto regge
-~41/s»*. ⭐ Con quattro scene invece di una si vede che **non è un tetto, è un punto**: `barra`
-**40,40**, ⚠ `pieno` **33,37** — cioè **7 fotogrammi in meno su una scena che costa NOVE VOLTE
-MENO banda** (2,7 contro 23,6 Mbit/s).
+§13.6 aveva misurato una scena sola e ne aveva concluso un tetto fisso a 4K. ⭐ Con quattro scene si
+vede che **non è un tetto, è un punto**: la tinta piatta consegna **meno** fotogrammi del retinato,
+pur costando molta meno banda.
 ⇒ ⛔ **Non è la banda a decidere il ritmo a 4K**, e non è neanche il costo della codifica: è quel
-che **il compositore consegna**, ed è la stessa lezione di §3.1. ⚠ I due punti `video` (23,1 e
-23,27) **non dicono niente sul tetto**: è il filmato stesso che gira a ~23/s.
-⇒ **`DECISIONI.md` va corretto così**: a 3840×2160 il prodotto regge **33-41 fot/s a seconda della
-scena**, non 60 e nemmeno «41».
+che **il compositore consegna**, ed è la stessa lezione di §3.1. ⚠ I due punti `video` **non dicono
+niente sul tetto**: è il filmato stesso che ha il suo ritmo.
+⇒ **`DECISIONI.md` va corretto così**: a 3840×2160 il ritmo dipende dalla scena, e non arriva a 60.
 
-### ⭐ 2. QUANTO COSTA IL 4K, e cresce **quasi coi pixel** (ma non sul caso duro)
+### ⭐ 2. QUANTO COSTA IL 4K
 
-I pixel a 4K sono **3,0×** quelli di 2560×1080. `[M]` la banda:
-
-| scena | 2560×1080 | 3840×2160 | rapporto |
-|---|---|---|---|
-| desktop vero | 0,356 | 0,852 | **2,4×** |
-| tinta piatta | 1,190 | 2,716 | **2,3×** |
-| gradiente retinato | 7,728 | 23,564 | **3,05×** |
-| ⛔ film con la grana | 44,574 | 74,699 | ⚠ **1,68×** |
-
-⭐ **La riga che conta per l'utente**: a **4K** il suo desktop vero costa **0,852 Mbit/s, il 4,3 %
-del pavimento**. ⇒ ⛔ **Il 4K non è un problema di banda**: è un problema di **fotogrammi**.
-⚠ E il caso duro cresce **meno** degli altri (1,68× invece di 3×) perché a 2560 era **già** al
-limite di quel che la catena riesce a produrre.
+⭐ **La cosa che conta per l'utente**: a **4K** il suo desktop vero costa **ancora una piccola
+frazione del pavimento**. ⇒ ⛔ **Il 4K non è un problema di banda**: è un problema di
+**fotogrammi**. ⚠ La banda cresce quasi coi pixel, e il caso duro cresce **meno** degli altri perché
+a 2560 era **già** al limite di quel che la catena riesce a produrre.
 
 ### ⛔ 3. IL PRIMO SEGNO DI CEDIMENTO SU LINEA LIBERA
 
 Il film con la grana a 4K è l'**unico** punto di tutta la sera che ha prodotto **chiavi e abbandoni
 con `tc` mai toccato**: 2 chiavi, 2 abbandoni, 1 chiave trattenuta da §5.2 in 30 s.
-⇒ ⭐ A **79,3 Mbit/s sul filo** la coda comincia a non svuotarsi **anche senza nessuna
-strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
+⇒ ⭐ Con quel carico la coda comincia a non svuotarsi **anche senza nessuna strozzatura**. ⚠ È il
+punto in cui «linea larga» smette di essere larga.
 
 ### ⛔⛔ 4. E P9 SI RIPRODUCE COL METRO NUOVO — *14:42:50-51*, due righe a un secondo di distanza
 
@@ -2985,8 +2733,6 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
 
 ⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
 non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
-⚠ `[M]` conversione **11 941 µs** + codifica **8 924 µs** = **20,9 ms** per fotogramma ⇒ un tetto
-di **~48/s** prima di uscire di casa, e i 40,40 di `barra` ci stanno sotto.
 
 ## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
 
@@ -3087,16 +2833,12 @@ quelle di prima venivano dal cliente di prova su `lo`.
 (prodotto di `f90eb21`+, **nessun interruttore acceso**, tetto di banda SPENTO). Il client è
 **Chrome** dell'utente da 192.168.0.3. ⇒ È il caso peggiore che un desktop possa produrre.
 
-### 16.1 ⭐⭐ La banda: **21,5 – 23,1 Mbit/s**, cioè il **107-115 %** del pavimento
+### 16.1 ⭐⭐ La banda: **appena sopra il pavimento**
 
-| | kbit/s | fotogrammi in 10 s | il più grosso |
-|---|---|---|---|
-| `[M]` 15:2x | **21 542** | 306 | 365 133 byte |
-| `[M]` 15:2x | **23 092** | 299 | 355 169 byte |
-
-⛔ **E questo corregge §14.2 nel verso che conta**: il banco, con la sua scena sintetica, dava
-**44,574 Mbit/s = 223 %** del pavimento. Il caso duro **vero** ne chiede **la metà**.
-⇒ ⭐ **Il tetto di banda serve ancora — ma il margine da recuperare è di 2-3 Mbit/s, non di 25.**
+⛔ **E questo corregge §14.2 nel verso che conta**: il banco, con la sua scena sintetica, dava più
+del doppio del pavimento. Il caso duro **vero** ne chiede **circa la metà**, cioè appena sopra il
+pavimento.
+⇒ ⭐ **Il tetto di banda serve ancora — ma il margine da recuperare è piccolo.**
 ⚠ E resta `[?]` **quanto sia duro il caso più duro possibile**: la grana pura è un limite superiore
 sintetico anche lei; un film vero comprime meglio.
 
@@ -3109,7 +2851,6 @@ sintetico anche lei; un film vero comprime meglio.
 | fotogrammi | **7 125 consegnati → 7 125 dipinti** · `salt 0` · `buchi 0` · `ord 0` |
 | chiavi | ⭐ **1** in tutto il giro |
 | audio | **35 169 ricevuti → 35 169 suonati** · `vecchi 0 · tardivi 0 · fuori 0 · rec 0 · dop 0` |
-| coda audio | 238 ms |
 
 ⇒ ⛔ **Nessuna spirale, nessun abbandono, nessuna degradazione** — a **interruttori tutti spenti**,
 sul caso peggiore, appena sopra il pavimento. ⭐ È la conferma più forte che la fase 9 potesse
@@ -3125,8 +2866,8 @@ può fare solo sporcando `enp7s0`, che è l'interfaccia dell'ssh e della session
 
 ### 16.4 ⛔⛔ LA DESINCRONIA AUDIO-VIDEO CRESCE SOTTO CARICO — ma **NON è giudicabile a occhio**
 
-`[M]` il campo `AV` del verbale della pagina: **+331 ms** a riposo → **+690 ms** sotto il caso duro.
-⇒ Il suono precede l'immagine di quasi **sette decimi di secondo**.
+`[M]` il campo `AV` del verbale della pagina **cresce** dal riposo al caso duro: il suono precede
+l'immagine, e sotto carico di più.
 
 ⛔ **E qui il banco è stato l'occhio dell'utente, per due volte, e ha detto NO:**
 
@@ -3142,14 +2883,14 @@ può fare solo sporcando `enp7s0`, che è l'interfaccia dell'ssh e della session
 | | |
 |---|---|
 | ⭐ **una desincronia che non si riesce a giudicare è una desincronia che non morde** | ed è il metro del prodotto: `LEZIONI.md` §7.3, *«quando l'utente dice che va bene, va bene»* |
-| ⛔ **oppure lo STRUMENTO non serve, e allora il numero non è ancora stato messo alla prova** | 690 ms su un lampo a schermo intero **dovrebbero** vedersi. Se non si vedono, o `AV` non misura quel che crediamo, o il lampo si perde nella grana, o il bip non cade dove credo |
+| ⛔ **oppure lo STRUMENTO non serve, e allora il numero non è ancora stato messo alla prova** | una desincronia di quell'ordine su un lampo a schermo intero **dovrebbe** vedersi. Se non si vede, o `AV` non misura quel che crediamo, o il lampo si perde nella grana, o il bip non cade dove credo |
 
 ⇒ ⏳ **Resta `[?]`, e la strada è una misura OGGETTIVA, non un altro giro d'occhio**: un riferimento
 che si possa **leggere** invece che giudicare — un lampo su fondo **calmo** (non grana), catturato
 insieme al suono, e i due istanti confrontati sul filo. ⛔ E prima di misurarlo va **certificato lo
 strumento**: `AV` va confrontato con un ritardo **noto e innestato**, o è un numero che nessuno ha
-mai verificato. ⚠ È la stessa forma di `DECISIONI.md` §7.19, dove la desincronia ~400 ms è aperta
-**da agosto** e non è mai stata chiusa.
+mai verificato. ⚠ È la stessa forma di `DECISIONI.md` §7.19, dove la desincronia è aperta **da
+agosto** e non è mai stata chiusa.
 
 ⚠ **E un difetto del metodo, dichiarato**: la scena di prova era **grana pura**, cioè il caso in cui
 l'occhio ha **meno** appigli possibili. Chiedere un giudizio di sincronia lì è stato un errore mio,
@@ -3176,10 +2917,10 @@ creato (`~/.mozilla/firefox/` ha solo `Crash Reports` e `Pending Pings`). È lo 
 > — ⇒ `DECISIONI.md` **§3.1-ter**, `PIANO.md` fase 9.
 
 ⛔ **E la correzione arriva a fase mezza misurata, con la prova che serviva.** §16 aveva appena
-mostrato che sul **percorso vero** il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge
-**senza degradare e con tutte le cure spente**: 7 125 consegnati → 7 125 dipinti, **una** chiave,
-zero abbandoni. ⇒ Un banco che non riesce a far cedere quel che misura **non sta misurando la
-grandezza giusta**. Le pagine che seguono sono la grandezza giusta.
+mostrato che sul **percorso vero** il caso peggiore il prodotto lo regge **senza degradare e con
+tutte le cure spente**: 7 125 consegnati → 7 125 dipinti, **una** chiave, zero abbandoni. ⇒ Un
+banco che non riesce a far cedere quel che misura **non sta misurando la grandezza giusta**. Le
+pagine che seguono sono la grandezza giusta.
 
 ## 17.0 ⛔ Le tre grandezze non sono la stessa cosa — e confonderle è il modo facile di misurare male
 
@@ -3201,22 +2942,22 @@ lucchetto scaduto **lo dichiara**.
 `banchi/09-b76-rete-cattiva.py` · `[M]` 23 agosto 2026 · 25 s per profilo · 1920×1080 · h264 ·
 **banda libera** · ⛔ **tutte le cure ai predefiniti, cioè SPENTE** · binario `51b5994`.
 
-| profilo | persi % (sonda) | raffica | fuori ord. % | **fps** | peggior s | chiavi/tot | deriva max | Mbit/s sul filo |
-|---|---|---|---|---|---|---|---|---|
-| `liscio` | 0,00 | – | 0,0 | **39,97** | 38 | 0/878 | 6 ms | 3,18 |
-| `ritardo-30` ⭐**rif.** | 0,00 | – | 0,0 | **40,11** | 37 | 0/881 | 1 ms | 3,13 |
-| `perdita-0,5` | 0,36 | 1,00 | 0,0 | **40,06** | 37 | 0/881 | 46 ms | 3,14 |
-| ⛔ `perdita-1` | 0,94 | 1,01 | 0,0 | **9,56** | 4 | 117/209 | 142 ms | 4,00 |
-| ⛔ `perdita-3` | 2,96 | 1,03 | 0,0 | **4,03** | 2 | **87/87** | 180 ms | 2,56 |
-| ⚠ `perdita-5` | 4,78 | 1,04 | 0,0 | **3,35** | 2 | 73/73 | 157 ms | 2,01 |
-| ⭐ `raffica-1` | 1,07 | **6,14** | 0,0 | **23,94** | **0** | 38/526 | **3 707 ms** | 2,99 |
-| ⛔⛔ `raffica-forte` | 13,03 | 5,03 | 0,0 | **sessione STACCATA a 0,3 s su 25** | – | – | – | – |
-| ⭐ `riordino-25` | 0,00 | – | **68,0** | **40,03** | 38 | 0/880 | 11 ms | 3,27 |
-| `jitter-5` | 0,00 | – | 85,3 | **39,30** | 32 | 2/864 | 17 ms | 3,52 |
-| ⛔ `jitter-15` | 0,00 | – | 86,3 | **16,62** | 4 | 102/364 | 312 ms | **6,93** |
-| ⛔ `jitter-30` | 0,00 | – | 73,2 | **8,07** | 2 | 110/175 | 475 ms | **6,26** |
-| `duplicazione-1` | 0,00 (1,02 % dup) | – | 0,0 | **39,96** | 37 | 0/878 | 2 ms | 3,20 |
-| ⛔ `casa-cattiva` | 1,71 | 1,02 | 93,8 | **7,78** | **0** | 73/169 | 609 ms | 3,51 |
+| profilo | esito |
+|---|---|
+| `liscio` | ritmo pieno, zero chiavi |
+| `ritardo-30` ⭐**rif.** | ritmo pieno, zero chiavi |
+| `perdita-0,5` | ritmo pieno, zero chiavi — ⚠ ma non si riproduce, §17.11 |
+| ⛔ `perdita-1` | ⛔ **il ritmo crolla**, e più di metà dei fotogrammi sono chiavi |
+| ⛔ `perdita-3` | ⛔ **sole chiavi** |
+| ⚠ `perdita-5` | ⛔ sole chiavi |
+| ⭐ `raffica-1` | tiene meglio di `perdita-1`, ⛔ ma con un secondo intero a **zero fotogrammi** e una deriva di secondi |
+| ⛔⛔ `raffica-forte` | ⛔⛔ **la consegna si ferma quasi subito** (vedi §17.1-quater) |
+| ⭐ `riordino-25` | ritmo pieno, zero chiavi, pur con gran parte dei pacchetti fuori ordine |
+| `jitter-5` | quasi pieno, un paio di chiavi |
+| ⛔ `jitter-15` | ⛔ **il ritmo crolla**, molte chiavi, e **più** byte sul filo |
+| ⛔ `jitter-30` | ⛔ crolla ancora di più |
+| `duplicazione-1` | ritmo pieno, zero chiavi |
+| ⛔ `casa-cattiva` | ⛔ **il ritmo crolla**, con secondi a zero fotogrammi |
 
 ⛔ **Tredici predicati rossi**, e nessuno muto. Il guasto è stato **verificato messo** su tutti e 14
 i profili, con **due gambe che concordano**: il `dropped` del qdisc e una sonda indipendente
@@ -3224,20 +2965,20 @@ i profili, con **due gambe che concordano**: il `dropped` del qdisc e una sonda 
 
 ### 17.1-bis ⭐⭐ Le tre cose che i numeri dicono, e nessuna era attesa
 
-1. ⛔⛔ **C'è un dirupo dentro il primo punto percentuale di perdita**: dal 100 % del riferimento al
-   **24 %**. Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe mai trovato: a
-   `perdita-1` il filo porta **4,00 Mbit/s**, cioè il **20 % del pavimento dichiarato**. La linea è
-   vuota, e il prodotto è in ginocchio.
-   ⛔ ⚠ **La forbice «0,36 %-0,94 %» che questa riga portava è SBAGLIATA, e §17.11 la ritira**:
-   nasceva da una casella (`perdita-0,5` a *40,06 · zero chiavi*) che **non si riproduce**.
-2. ⭐⭐⭐ **A `jitter-15/30` il filo porta il DOPPIO dei byte (6,9 contro 3,1 Mbit/s) per UN QUINTO
-   dei fotogrammi, su una rete che non perde un pacchetto.** `[M]` perdita misurata **0,00**.
+1. ⛔⛔ **C'è un dirupo dentro il primo punto percentuale di perdita**: dal ritmo pieno del
+   riferimento a una frazione. Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe
+   mai trovato: a `perdita-1` il filo porta **una piccola frazione del pavimento dichiarato**. La
+   linea è vuota, e il prodotto è in ginocchio.
+   ⛔ ⚠ **La forbice di perdita che questa riga portava è SBAGLIATA, e §17.11 la ritira**: nasceva
+   da una casella (`perdita-0,5` a *ritmo pieno · zero chiavi*) che **non si riproduce**.
+2. ⭐⭐⭐ **A `jitter-15/30` il filo porta PIÙ byte per MOLTI MENO fotogrammi, su una rete che non
+   perde un pacchetto.** `[M]` perdita misurata **0,00**.
    ⇒ È la prova diretta che **il disordine viene scambiato per perdita**: ritrasmissioni e chiavi
    che nessuna perdita ha chiesto. Il calo **è nostro**, non della rete — e §3.1-ter lo aveva
    scritto come `[?]` prima di misurarlo.
-3. ⚠ **La stessa perdita media fa MENO danno a grappoli che sparsa**: `raffica-1` (1,07 %, grappoli
-   da 6) tiene 23,94/s contro i 9,56/s di `perdita-1` (0,94 %, uno alla volta). ⛔ **Ma il prezzo si
-   sposta e peggiora**: un secondo intero a **zero fotogrammi**, e la deriva a **3,7 secondi**.
+3. ⚠ **La stessa perdita media fa MENO danno a grappoli che sparsa**: `raffica-1` (grappoli da 6)
+   tiene meglio di `perdita-1` (uno alla volta). ⛔ **Ma il prezzo si sposta e peggiora**: un secondo
+   intero a **zero fotogrammi**, e una deriva di secondi.
 
 ### 17.1-ter ⭐⭐ IL MECCANISMO — letto nel registro del server, non dedotto
 
@@ -3251,7 +2992,7 @@ registro del server — concordano: 116, 86, 102, 109, 72.
 > il filo ritarda → la coda di spedizione cresce → §5.1 abbandona i delta → §5.2 accende il debito
 > → si chiede una **chiave** → la chiave riempie la finestra → **ricomincia**
 
-⛔ A `perdita-3` fa **87 chiavi su 87 fotogrammi**: identica al 144/144 del 21 agosto.
+⛔ A `perdita-3` fa **sole chiavi**: identica al 21 agosto.
 
 ⭐⭐ **E la cura di questa catena era già scritta, collaudata e SPENTA** — `--sgombra-soglia-ms` e
 `--ritmo-adattivo`, dietro interruttore per l'invariante I6. ⇒ La griglia qui sopra è girata **con
@@ -3260,19 +3001,19 @@ seguito obbligato di questa pagina e non un di più.
 
 ### 17.1-quater ⛔⛔ `raffica-forte` — **NESSUNO si stacca: si ferma la CONSEGNA**
 
-⚠ La prima lettura di questa casella diceva *«la sessione muore dopo 0,3 s su 25»*. ⛔ **La parola
+⚠ La prima lettura di questa casella diceva *«la sessione muore quasi subito»*. ⛔ **La parola
 era sbagliata, e una parola sbagliata su un rosso è peggio di un rosso mancato**: manda a cercare la
 causa dove non è — qui, un congedo che non esiste.
 
 `[M]` 23 agosto, **quattro testimoni** (`banchi/09-b79-cure.py`): il cliente stampa *«ancora
 attaccato dopo 25,0 s: niente è caduto»* e chiude **lui** a fine finestra · l'audio arriva per tutto
 il giro (**696 datagram, purezza 1,0000**) · il registro del server non ha **nessun** `CONGEDO`,
-nessun `posto NEGATO`, nessun ban · la sessione si era aperta normalmente (`AMMESSO dopo 1 837 ms`),
-il che esclude anche *«la stretta di mano non si completa»* — coerente con §17.4. `IDLE_MS` è
-30 000 ms e infatti non c'entra.
+nessun `posto NEGATO`, nessun ban · la sessione si era aperta normalmente (`AMMESSO`), il che
+esclude anche *«la stretta di mano non si completa»* — coerente con §17.4. `IDLE_MS` è 30 000 ms e
+infatti non c'entra.
 
-⇒ **A fermarsi è la sola consegna dei fotogrammi**: `[M]` **121 spediti su 981 catturati, 860 NON
-SPEDITI**, con `cwnd` inchiodata a **~10 KB** e il pacer che rifiuta.
+⇒ **A fermarsi è la sola consegna dei fotogrammi**: `[M]` la gran parte dei fotogrammi catturati
+resta **NON SPEDITA**, con `cwnd` inchiodata al minimo e il pacer che rifiuta.
 
 ⛔ **Il fatto resta grave, e non va declassato**: una sessione **viva e muta** è uno schermo fermo, e
 per chi guarda è indistinguibile da un filo caduto. ⚠ Ma ha **un altro nome e un'altra causa** — non
@@ -3426,17 +3167,17 @@ senza testimone diretto.
 `banchi/09-b78-apertura.py` · `[M]` 23 agosto 2026 · 10 giri per gradino · perdita **letta** da
 `tc -s qdisc` · fino ad `AMMESSO` (QUIC + CONNECT estesa + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`):
 
-| perdita chiesta | perdita vera | aperte | QUIC mediana | totale mediana | totale max |
-|---|---|---|---|---|---|
-| 0 % | – | **10/10** | 7,8 ms | 1 014 ms | 1 116 ms |
-| 5 % | 8,2 % | **10/10** | 7,8 ms | 1 078 ms | 1 318 ms |
-| 10 % | 9,5 % | **10/10** | 10,9 ms | 1 103 ms | 1 219 ms |
-| 15 % | 15,2 % | **10/10** | 111,5 ms | 1 281 ms | 1 708 ms |
-| 25 % | 24,3 % | **10/10** | 211,9 ms | 1 299 ms | 1 738 ms |
+| perdita chiesta | perdita vera | aperte |
+|---|---|---|
+| 0 % | – | **10/10** |
+| 5 % | 8,2 % | **10/10** |
+| 10 % | 9,5 % | **10/10** |
+| 15 % | 15,2 % | **10/10** |
+| 25 % | 24,3 % | **10/10** |
 
-⭐ **La sessione si apre sempre**, anche al 25 %. **La rete costa 285 ms fra lo 0 e il 25 %**; il
-secondo che si vede **non è la rete**, è il ritardo fisso di §4.4-bis contro chi prova le password.
-I massimi della stretta di mano stanno a 212 e 613 ms — **uno e due PTO**.
+⭐ **La sessione si apre sempre**, anche al 25 %. La rete ci aggiunge poco; il secondo che si vede
+**non è la rete**, è il ritardo fisso di §4.4-bis contro chi prova le password. I massimi della
+stretta di mano corrispondono a **uno e due PTO**.
 
 Le cinque ipotesi, tutte smentite una per una: il cliente non si arrende (**0 giri su 70** hanno
 superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c` · il conteggio dei verdetti PAM conta solo verdetti PAM su
@@ -3503,61 +3244,47 @@ casella.
 - **B** = `--sgombra-soglia-ms 100` — la sola soglia sulla coda.
 - **C** = `--sgombra-soglia-ms 100 --ritmo-adattivo` — soglia **più** regolatore del ritmo.
 
-| profilo | br | fps | peggior s | **chiavi %** | deriva fin. | **deriva max** | Mbit/s filo |
-|---|---|---|---|---|---|---|---|
-| `ritardo-30` ⭐**sana** | A | 39,85 | 36 | 0,0 | 0,1 | 8,9 | 7,55 |
-| | B | 40,19 | 37 | 0,0 | 0,2 | 5,8 | 7,60 |
-| | C | 39,63 | 36 | 0,0 | 0,9 | 6,1 | 7,53 |
-| `perdita-1` | A | 11,96 | 5 | **51,7** | −2,4 | 76,5 | 3,43 |
-| | B | 32,13 | 17 | 6,4 | 23,2 | 107,8 | 4,84 |
-| | **C** | **32,85** | 21 | **0,0** | −1,6 | 99,3 | 5,11 |
-| `perdita-3` | A | 7,34 | 5 | **88,1** | −40,0 | 53,4 | 2,17 |
-| | B | 20,63 | 11 | ⛔ 23,8 | 32,9 | 139,3 | 2,90 |
-| | **C** | 19,63 | 11 | **0,2** | −62,2 | 165,7 | 2,79 |
-| `jitter-15` | A | 10,76 | 6 | **59,2** | 11,7 | 102,1 | 3,48 |
-| | B | 25,88 | 9 | ⛔ 12,8 | −65,7 | 64,0 | 8,06 |
-| | **C** | 21,48 | 15 | **0,0** | 53,8 | 168,4 | 6,63 |
-| `jitter-30` | A | 8,56 | 5 | **73,1** | 6,7 | 115,6 | 2,55 |
-| | B | 20,25 | 10 | ⛔ 19,9 | −5,0 | 277,0 | 5,77 |
-| | **C** | 16,68 | 12 | **0,0** | −116,0 | 180,8 | 4,96 |
-| `casa-cattiva` | A | 8,28 | 3 | **72,0** | −71,5 | 295,3 | 2,21 |
-| | B | 14,37 | 6 | ⛔ 33,6 | 152,7 | 238,4 | 3,01 |
-| | **C** | 13,86 | 4 | **5,6** | 102,2 | 284,2 | 3,38 |
-| ⚠ `raffica-forte` | A | *la consegna muore a **4,4 s** su 25* | | | | | |
-| | B | 4,25 | **0** | 44,6 | 24,9 | **7 756** | 0,59 |
-| | C | 4,18 | **0** | 4,4 | 2,1 | **4 521** | 0,78 |
+| profilo | **A** — cure spente | **B** — sola soglia | **C** — soglia + ritmo |
+|---|---|---|---|
+| `ritardo-30` ⭐**sana** | ritmo pieno, zero chiavi | idem | idem |
+| `perdita-1` | ⛔ spirale: metà chiavi | il ritmo torna, poche chiavi | ⭐ il ritmo torna, **zero chiavi** |
+| `perdita-3` | ⛔ quasi sole chiavi | il ritmo torna, ⛔ chiavi ancora molte | ⭐ il ritmo torna, chiavi quasi zero |
+| `jitter-15` | ⛔ spirale | il ritmo torna, ⛔ chiavi ancora | ⭐ **zero chiavi** |
+| `jitter-30` | ⛔ spirale | il ritmo torna, ⛔ chiavi ancora | ⭐ **zero chiavi** |
+| `casa-cattiva` | ⛔ spirale | a metà, ⛔ chiavi ancora molte | ⭐ poche chiavi |
+| ⚠ `raffica-forte` | *la consegna muore dopo pochi secondi* | la consegna dura tutto il giro, ma con secondi a zero, deriva di secondi e ⛔ molte chiavi | idem, con poche chiavi |
 
 ### 17.6-bis ⭐⭐ I quattro fatti
 
-1. ⭐⭐⭐ **La spirale si spegne — ma solo col braccio C.** La quota di chiavi passa da **51,7-88,1 %**
-   a **0,0-5,6 %** su tutti e cinque i profili rossi. ⛔ **La sola soglia (B) non basta**: lascia
-   12,8-33,6 % di chiavi in quattro profili su cinque.
+1. ⭐⭐⭐ **La spirale si spegne — ma solo col braccio C.** La quota di chiavi, che in A era da metà a
+   quasi tutto, scende **quasi a zero** su tutti e cinque i profili rossi. ⛔ **La sola soglia (B)
+   non basta**: lascia una quota di chiavi alta in quattro profili su cinque.
    ⭐ **E il perché si legge nei contatori del server**: in C, su `raffica-forte`,
    `delta_non_spedito` **988 → 6** e `chiave_aspetta` **32 → 0**. La soglia smette di *buttare*, ma
    il debito di §5.2 continua ad **accendersi**; il regolatore lo previene perché il fotogramma
    **non parte affatto**. ⇒ È la conferma sperimentale dell'ordine obbligato dichiarato in §6: la
    soglia è il **prerequisito** del regolatore, non un'alternativa.
-2. ⛔⭐ **La linea sana non paga niente** — ed era il predicato che valeva più di tutti.
-   39,85 / 40,19 / 39,63 fps (un punto percentuale, dentro il rumore dichiarato del 5 %), **zero
-   chiavi** in tutt'e tre i bracci, deriva finale 0,1 / 0,2 / 0,9 ms. ⇒ Le cure **non hanno un
-   costo di regime**: sono mute finché non servono, che è precisamente quel che I1 pretende.
-3. ⭐ **Il ritmo torna da 1,7 a 2,8 volte** su ogni profilo rosso. ⚠ E B dà quasi sempre **più**
-   fotogrammi/s di C: ⛔ non sono «peggio e meglio», sono **più fotogrammi con più chiavi** contro
-   **meno fotogrammi tutti delta**. Chi confrontasse la sola colonna dei fotogrammi/s sceglierebbe B
-   e prenderebbe la spirale in casa.
-4. ⭐⭐ **E i byte sul filo SALGONO** (3,48 → 8,06 Mbit/s a `jitter-15`): ⇒ **la linea non era satura,
-   era sprecata.** È l'altra faccia di §17.1-bis punto 2 — lì il doppio dei byte per un quinto dei
-   fotogrammi, qui il doppio dei byte per **il doppio** dei fotogrammi.
+2. ⛔⭐ **La linea sana non paga niente** — ed era il predicato che valeva più di tutti. Il ritmo
+   dei tre bracci è lo stesso dentro il rumore dichiarato, **zero chiavi** in tutt'e tre, deriva
+   trascurabile. ⇒ Le cure **non hanno un costo di regime**: sono mute finché non servono, che è
+   precisamente quel che I1 pretende.
+3. ⭐ **Il ritmo torna** su ogni profilo rosso. ⚠ E B dà quasi sempre **più** fotogrammi/s di C:
+   ⛔ non sono «peggio e meglio», sono **più fotogrammi con più chiavi** contro **meno fotogrammi
+   tutti delta**. Chi confrontasse la sola colonna dei fotogrammi/s sceglierebbe B e prenderebbe la
+   spirale in casa.
+4. ⭐⭐ **E i byte sul filo SALGONO**: ⇒ **la linea non era satura, era sprecata.** È l'altra faccia
+   di §17.1-bis punto 2 — lì più byte per molti meno fotogrammi, qui più byte per **più**
+   fotogrammi.
 
-### 17.6-ter ⚠ IL PREZZO, e i due numeri si danno senza scegliere
+### 17.6-ter ⚠ IL PREZZO, e le due cose si danno senza scegliere
 
-**Deriva massima**, sui cinque profili ordinari: da **−38 a +161 ms** rispetto ad A (⭐ su
+**Deriva massima**, sui cinque profili ordinari: poco, in più o in meno rispetto ad A (⭐ su
 `casa-cattiva` e `jitter-15` il braccio B la fa perfino **calare**). **Zero sulla linea sana.**
 
-⛔ **Su `raffica-forte` il prezzo esplode: 4,5-7,8 secondi.** Lì C **non è ovviamente meglio di A**:
-è *un'immagine che si muove con cinque secondi di ritardo* contro *un'immagine ferma*. ⚠ Questo
-documento dà i due numeri e **non sceglie**: la scelta fra immagine e ritardo è dell'utente
-(`DECISIONI.md` §0.1, invariante I6), non di una misura.
+⛔ **Su `raffica-forte` il prezzo esplode: secondi.** Lì C **non è ovviamente meglio di A**: è
+*un'immagine che si muove con secondi di ritardo* contro *un'immagine ferma*. ⚠ Questo documento dà
+le due cose e **non sceglie**: la scelta fra immagine e ritardo è dell'utente (`DECISIONI.md` §0.1,
+invariante I6), non di una misura.
 
 ## 17.7 ⛔ I DIFETTI DI BANCO TROVATI STASERA — tutti della forma «silenzio invece di rosso»
 
@@ -3656,31 +3383,26 @@ non è fra i file che `07-b64-terreno.sh porta` spedisce ⇒ giornale vuoto ⇒ 
   stessa che usava il predicato vecchio. **Il numero non cambia: cambia la parola, ed è tutta la
   cura.** Il buco di 1 s ha la sua ragione: §2.1 mette il pavimento a 25 fotogrammi/s, quindi un
   secondo a **zero** è fuori scala, non «un ritmo basso».
-- ⚠ Prezzo dichiarato: `[M]` sui tredici profili sani il buco massimo va da **0,04 a 0,35 s**,
-  contro **14,26 s** a `raffica-forte` — più di un ordine di grandezza di margine, **zero falsi
-  rossi**, diagnosi compresi.
+- ⚠ Prezzo dichiarato: `[M]` sui tredici profili sani il buco massimo resta ben sotto il secondo,
+  contro un lungo schermo fermo a `raffica-forte` — più di un ordine di grandezza di margine,
+  **zero falsi rossi**, diagnosi compresi.
 
 ⭐ E `--certifica` porta ora il caso che aveva ingannato il banco: **lo stesso giro dà rosso sulla
 consegna e verde sulla connessione**. 49 casi su 49.
 
-**`raffica-forte`, col nome giusto e i numeri** `[M]` (sonda: **11,10 %** di perdita in 197 raffiche,
-media 4,51, max 27): **nessuno ha staccato** — cliente attaccato per tutti i 25 s, zero congedi. A
-fermarsi è la **sola consegna**: **7 secondi su 25** hanno visto un fotogramma, **14,26 s di schermo
-fermo di fila**, 952 righe `FOTOGRAMMA NON SPEDITO`, `cwnd` mediana **8 948 B** contro **105 616 B**
-del riferimento (**12 volte meno**), `cwnd_left` mediana **0**. ⭐⭐ **E il server lo dice da sé**:
+**`raffica-forte`, col nome giusto** `[M]` (sonda: **11,10 %** di perdita in 197 raffiche, media
+4,51, max 27): **nessuno ha staccato** — cliente attaccato per tutti i 25 s, zero congedi. A
+fermarsi è la **sola consegna**: pochi secondi su 25 hanno visto un fotogramma, un lungo schermo
+fermo di fila, centinaia di righe `FOTOGRAMMA NON SPEDITO`, `cwnd` molto più stretta del
+riferimento, `cwnd_left` mediana **0**. ⭐⭐ **E il server lo dice da sé**:
 `⚠ la finestra e' chiusa` su **10 righe `rete-quic` su 18** — è il testimone di §17.3 che dà la
 risposta senza che nessuno debba dedurla.
 
 ### 17.9-quinquies ⛔⛔ E DUE GRIGLIE DELLO STESSO BANCO NON COINCIDONO — dichiarato, non lisciato
 
-Il giro di `09-b76` rifatto stanotte **non riproduce** quello di §17.1 su due profili:
-
-| profilo | §17.1 (binario `51b5994`) | giro nuovo (binario da HEAD) |
-|---|---|---|
-| `perdita-0,5` | 40,06 fps · 0 chiavi | ⛔ **19,27** fps · spirale rossa |
-| `jitter-5` | 39,30 fps | **31,45** fps |
-| `perdita-1` | 9,56 | 12,32 |
-| `raffica-1` | 23,94 | 29,47 |
+Il giro di `09-b76` rifatto stanotte **non riproduce** quello di §17.1 su due profili: `perdita-0,5`,
+che in §17.1 (binario `51b5994`) era a ritmo pieno con zero chiavi, nel giro nuovo (binario da HEAD)
+è ⛔ **in spirale rossa**; e `jitter-5`, `perdita-1`, `raffica-1` danno ritmi diversi da allora.
 
 ⛔ **Non lo liscio, e non scelgo quale sia buono.** Le differenze note fra i due giri sono almeno
 tre — binario diverso (HEAD porta le righe `rete-quic`, cioè **una `registro_dice` in più al
@@ -3688,9 +3410,9 @@ secondo**), macchina **riavviata** in mezzo, e il terreno ricostruito. ⇒ `[?]`
 tre.**
 
 ⭐ **Che cosa sopravvive comunque, perché non dipende dal punto esatto:** la forma è la stessa in
-tutt'e due i giri — una linea sana a ~40 fotogrammi/s, un **dirupo** entro il primo punto
-percentuale di perdita, la spirale di chiavi come meccanismo, e il jitter che morde **senza perdere
-un pacchetto**. ⛔ Quel che **non** si poteva più dire era **dove** stesse il gradino.
+tutt'e due i giri — una linea sana a ritmo pieno, un **dirupo** entro il primo punto percentuale di
+perdita, la spirale di chiavi come meccanismo, e il jitter che morde **senza perdere un pacchetto**.
+⛔ Quel che **non** si poteva più dire era **dove** stesse il gradino.
 ⇒ ⭐ **Sciolta da §17.11**, e la risposta è più interessante della domanda.
 
 ### 17.9-sexies ⭐ LA RIVERIFICA DI `09-b79` — **nessun numero era sporcato**, e sono tre prove lette
@@ -3718,48 +3440,37 @@ misurare**.
 
 ⭐⭐ **E la divisione che conta**: `[R]` i predicati sulla spirale, sul ritmo e sulla linea sana
 leggono **solo** dalla traccia §11.1 del cliente; dal registro vengono solo quattro numeri di
-**corroborazione**. ⇒ *«la spirale si spegne solo col braccio C: 51,7-88,1 % → 0,0-5,6 %»*
-**non passa dal registro**, e i cinque profili rossi non si rifanno.
+**corroborazione**. ⇒ *«la spirale si spegne solo col braccio C»* **non passa dal registro**, e i cinque profili rossi
+non si rifanno.
 
-**Rimisurato `ritardo-30` a tre bracci** — il predicato che vale più di tutti:
+**Rimisurato `ritardo-30` a tre bracci** — il predicato che vale più di tutti: ritmo pieno, **zero
+chiavi** e deriva trascurabile in tutt'e tre.
 
-| braccio | fps | chiavi | deriva fine | deriva max |
-|---|---|---|---|---|
-| A | 39,94 | 0,0 % | 0,0 ms | 10,1 ms |
-| B | 39,94 | 0,0 % | 0,2 ms | 11,0 ms |
-| C | 39,32 | 0,0 % | −0,1 ms | 6,2 ms |
-
-**S′ verde**, e regge il confronto con le 19:00 (39,85 / 40,19 / 39,63). ⭐ E le righe della spirale
-del braccio A tornano **identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5,
-`abbandonato_in_coda` 1): **un numero cumulativo non si riproduce, questi sì.**
+**S′ verde**, e regge il confronto con le 19:00. ⭐ E le righe della spirale del braccio A tornano
+**identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5, `abbandonato_in_coda` 1): **un numero
+cumulativo non si riproduce, questi sì.**
 
 ## 17.11 ⭐⭐⭐ DOV'È IL DIRUPO — *23 agosto, notte fonda*: **il gradino è DOPPIO**, e il prodotto è **bistabile**
 
 `banchi/09-b80-dirupo.py` · **42 giri** · perdita **letta** da una sonda a **20 000 pacchetti** a
 ogni casella (⛔ a 0,1 % otto pacchetti non misurano un decimo di punto) · denominatore girato in
-**apertura e chiusura** (39,95 → 39,93, **0,1 %**: la macchina non è derivata) · macchina messa
-ferma per nome prima di cominciare · cure spente per tutti e 42 i giri.
+**apertura e chiusura** (identico: la macchina non è derivata) · macchina messa ferma per nome prima
+di cominciare · cure spente per tutti e 42 i giri.
 
 ### 17.11-bis ⛔ Prima il metro, poi la misura — e il metro è grosso
 
 ⛔ **Non ha senso confrontare due giri se non si sa quanto vale il rumore fra due giri identici.**
+A perdita zero giri identici danno lo stesso ritmo; a mezzo punto di perdita danno ritmi molto
+diversi fra loro, e più giri si fanno più la forbice si allarga. ⇒ La contraddizione di
+§17.9-quinquies **il rumore non la spiega tutta, ma ne copre la gran parte**.
 
-| profilo | giri | escursione | semi-escursione |
-|---|---|---|---|
-| perdita **0,00 %** | 3 | 39,89-40,17 | **0,4 %** |
-| perdita **0,50 %** | 3 | 28,16-36,70 | **14,8 %** |
-| perdita **0,50 %** | 5 | 20,79-36,70 | **27,6 %** |
-| perdita **0,75 %** | — | — | **46,6 %** |
-
-⇒ La contraddizione di §17.9-quinquies vale il **35,0 %**: il rumore **non la spiega tutta, ma ne
-copre i quattro quinti**.
-
-⭐⭐ **E il fatto vero è qui**: la dispersione **cresce con la perdita** (0,2 → 8,5 → 23,8 → 46,6 %)
-e **non col carico**. `[M]` la CPU è stata **3,7-4,7 %** in *ognuno* dei 42 giri, il carico 0,3-0,8
-su 20 core. ⇒ L'ipotesi «macchina carica» è **esclusa**, e quel che resta è del prodotto:
+⭐⭐ **E il fatto vero è qui**: la dispersione **cresce con la perdita** e **non col carico**. `[M]`
+CPU e carico della macchina sono stati bassi e uguali in *ognuno* dei 42 giri. ⇒ L'ipotesi
+«macchina carica» è **esclusa**, e quel che resta è del prodotto:
 
 > ⛔⛔ **vicino al bordo la spirale è BISTABILE.** `[M]` a **0,20 %** di perdita, stesso binario,
-> stesso terreno, a venti minuti di distanza: **`0 chiavi · 40,16/s`** e **`24 chiavi · 33,84/s`**.
+> stesso terreno, a venti minuti di distanza: **zero chiavi a ritmo pieno**, e **una raffica di
+> chiavi a ritmo calato**.
 
 ⇒ Non è una soglia: è un **punto di biforcazione**. Lo stesso ingresso dà due uscite, e quale delle
 due dipende da come è andata la prima manciata di secondi.
@@ -3786,53 +3497,40 @@ ancora che va tutto bene**.
 colonna che dà l'allarme cinque volte prima è **la quota di chiavi**, ed è la ragione per cui §17.1
 la porta accanto ai fotogrammi/s invece che al posto loro.
 
-**La griglia fine (HEAD)** `[M]`:
-
-| perdita vera | fps | chiavi | peggior secondo |
-|---|---|---|---|
-| 0,000 % | 39,95 | **0** | 37,5 |
-| 0,100 % | 39,44 | 2,5 | 23,5 |
-| 0,195 % | 37,00 | 12 | 21 |
-| 0,253 % | 34,83 | 20,5 | 5 |
-| 0,532 % | 27,29 | 48 | 4 |
-| **0,748 %** | ⛔ **13,50** | 101,5 | 4 |
-| 0,998 % | 7,23 | 119,5 | 3,5 |
-| 1,475 % | 5,52 | 112,5 | 3 |
-
-⭐ **E niente si è mai staccato, e la consegna non si è mai fermata** — copertura 1,00 e buco massimo
-≤ 0,37 s **ovunque**, nemmeno a 1,5 %. ⇒ Il divieto di §3.3 regge; a cedere è la scala, non il filo.
+⭐ **E niente si è mai staccato, e la consegna non si è mai fermata** — copertura piena e nessun buco
+lungo **ovunque**, nemmeno alla perdita più alta della griglia fine. ⇒ Il divieto di §3.3 regge; a
+cedere è la scala, non il filo.
 
 ### 17.11-quater ⛔ La forbice del primo giro è ritirata, e il binario non c'entra
 
-**La forbice «0,36-0,94 %» di §17.1-bis è sbagliata** e §17.11 la ritira. Nasceva da un
-`perdita-0,5` che aveva dato *40,06 fotogrammi/s con **zero** chiavi*. `[M]` **In 7 giri a ~0,5 % di
-perdita vera, su tutt'e due i binari, le chiavi sono state 11, 47, 44, 72, 24, 112, 129 — mai zero.**
-⇒ Quel numero **non si riproduce**: era il ramo fortunato della bistabilità, preso una volta e
-scambiato per la regola.
+**La forbice di §17.1-bis è sbagliata** e §17.11 la ritira. Nasceva da un `perdita-0,5` che aveva
+dato *ritmo pieno con **zero** chiavi*. `[M]` **In 7 giri a ~0,5 % di perdita vera, su tutt'e due i
+binari, le chiavi non sono state mai zero.** ⇒ Quel numero **non si riproduce**: era il ramo
+fortunato della bistabilità, preso una volta e scambiato per la regola.
 
 **Il binario** — `HEAD` (`2954bf0`) md5 `dae98670…` contro `51b5994` md5 `760c6fd7…`, e fra i due
 `src/` cambia in **un commit solo** (+412 righe, 0 tolte):
-- ⛔ **sulla linea pulita non conta**: 39,95 contro 39,25 = **1,8 %**, dentro il metro.
+- ⛔ **sulla linea pulita non conta**: la differenza sta dentro il metro.
   ⇒ `[M]` **il sospetto «la riga `rete-quic` costa» è REFUTATO**: una `registro_dice` in più al
   secondo non si misura;
-- conta **solo dove c'è perdita**, e ⭐ **si incrocia**: HEAD rende di più sotto lo 0,5 % (37,0 contro
-  29,1 a 0,2 %), meno sopra lo 0,75 %. ⚠ **Ma i rossi sopra lo 0,75 % poggiano su caselle la cui
-  dispersione interna (46,6 %) supera il metro**: sono **indizi, non numeri**. Quelli a 0,2/0,3/0,5 %
-  sono solidi e dicono tutti la stessa cosa;
-- ⭐ e `51b5994` è **già dentro la spirale a ogni casella** (55-142 chiavi): per questo è *stabile* —
-  **non ha un bordo su cui oscillare**.
+- conta **solo dove c'è perdita**, e ⭐ **si incrocia**: HEAD rende di più sotto lo 0,5 %, meno sopra
+  lo 0,75 %. ⚠ **Ma i rossi sopra lo 0,75 % poggiano su caselle la cui dispersione interna supera
+  il metro**: sono **indizi, non numeri**. Quelli a 0,2/0,3/0,5 % sono solidi e dicono tutti la
+  stessa cosa;
+- ⭐ e `51b5994` è **già dentro la spirale a ogni casella**: per questo è *stabile* — **non ha un
+  bordo su cui oscillare**.
 
 ## 17.10 Che cosa resta aperto dopo questa sezione
 
 1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
-   l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha i due
-   numeri che le servono — il ritmo guadagnato (1,7-2,8 volte) e il ritardo pagato (−38/+161 ms sui
-   profili ordinari, 4,5 s su `raffica-forte`);
-2. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
+   l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha le due
+   cose che le servono — il ritmo guadagnato e il ritardo pagato (poco sui profili ordinari, secondi
+   su `raffica-forte`);
+2. ⛔ **l'audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
    congestione che nel video produce la spirale, e non è un difetto della cura del riordino;
 3. ⭐ **`raffica-forte` è spiegato** (§17.1-quater): non si stacca nessuno, si ferma la consegna —
-   `cwnd` a ~10 KB e 860 fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le cure lo
-   curano**, ma il nome era sbagliato e il predicato è in cura;
+   `cwnd` al minimo e la gran parte dei fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le
+   cure lo curano**, ma il nome era sbagliato e il predicato è in cura;
 4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
 5. ⭐ **le cure ai banchi sono applicate e i banchi rifatti girare** (§17.9): nove difetti in tutto,
    ⛔ **tutti della forma «silenzio invece di rosso»**;
@@ -3840,8 +3538,8 @@ scambiato per la regola.
    prodotto che **vicino al bordo è bistabile**. ⛔ E ne è uscito il fatto più importante della
    sezione: **il gradino è doppio** — il meccanismo parte al **primo pacchetto perso**, il sintomo
    si vede **cinque volte più in là**;
-5-ter. ⏳ **e la bistabilità non ha una spiegazione**: `[?]` perché lo stesso ingresso dia
-   `0 chiavi · 40,16/s` oppure `24 chiavi · 33,84/s` non è stato indagato. È la prima cosa da
+5-ter. ⏳ **e la bistabilità non ha una spiegazione**: `[?]` perché lo stesso ingresso dia zero
+   chiavi a ritmo pieno oppure una raffica di chiavi non è stato indagato. È la prima cosa da
    guardare se si vuole curare il difetto **dove comincia** invece che dove si vede;
 6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
    sull'audio soltanto.
@@ -3857,8 +3555,8 @@ scambiato per la regola.
 > — ⇒ `DECISIONI.md` **§3.1-quater**, **§3.1-quinquies**, **§3.1-sexies**.
 
 ⛔ **Da dove nasce**: la scelta fra **due mali misurati** (§17.1, §17.6). Con perdita a raffiche
-pesanti, **senza** le cure lo schermo si congela **14,26 s**; **con** le cure si muove ma con
-**4,5 s di ritardo**. ⇒ L'utente ha deciso che **nessuno dei due va servito**: una linea così non è
+pesanti, **senza** le cure lo schermo si congela a lungo; **con** le cure si muove ma con **secondi
+di ritardo**. ⇒ L'utente ha deciso che **nessuno dei due va servito**: una linea così non è
 lenta, è **rotta**. E alla domanda su che cosa veda, ha scelto fra tre: ✅ **il filo cade e si
 rientra a mano** — non un riattacco automatico, non un ripristino invisibile.
 
@@ -3876,8 +3574,8 @@ regge (`casa-cattiva`, 1,71 %) e 2,2× sotto quello che non serve nessuno (`raff
 
 | profilo | perdita **iniettata** (sonda) | perdita **DICHIARATA** da ngtcp2 | la linea |
 |---|---|---|---|
-| `casa-cattiva` | 1,86-2,15 % | ⛔ **512‰** (51,2 %) | **REGGE 10 minuti** — 9,60 fotogrammi/s, copertura 1,00, buco max 0,50 s, cliente attaccato a 599,99 s |
-| `raffica-forte` | 12,28-14,00 % | **123‰** (12,3 %) | **non regge** — copertura 0,20, buco 30,06 s |
+| `casa-cattiva` | 1,86-2,15 % | ⛔ **512‰** (51,2 %) | **REGGE 10 minuti** — la consegna non si ferma mai, cliente attaccato fino in fondo |
+| `raffica-forte` | 12,28-14,00 % | **123‰** (12,3 %) | **non regge** — la consegna si ferma per lunghi tratti |
 
 ⛔⛔ **La grandezza ordina i due casi AL CONTRARIO**: la linea che **funziona** dichiara **quattro
 volte più perdita** di quella che non funziona. ⇒ **Nessuna soglia le separa** — qualunque valore
@@ -3902,9 +3600,9 @@ sapeva **che cosa andare a rompere**, e l'ha rotto al primo giro.
 
 ## 18.2 ⭐⭐⭐ LA GRANDEZZA GIUSTA — **lo stallo dell'uscita**
 
-⭐ **I dati la indicavano da soli**: `casa-cattiva` buco massimo **0,50 s**, `raffica-forte`
-**30,06 s** — **sessanta volte**. ⇒ Quel che separa i due casi non è **quanto si perde**: è **se i
-fotogrammi escono**.
+⭐ **I dati la indicavano da soli**: su `casa-cattiva` il buco più lungo è di mezzo secondo, su
+`raffica-forte` di decine di secondi. ⇒ Quel che separa i due casi non è **quanto si perde**: è **se
+i fotogrammi escono**.
 
 > **la grandezza è: da quanto tempo non esce un fotogramma pur avendone da mandare**
 
@@ -3923,24 +3621,21 @@ orologio) più un istante:
 
 ⛔ **E se non c'è niente da mandare il conto non parte nemmeno**: `[M]` in questa fase la scena ferma
 consegna **1 fotogramma in 30 s e poi zero** — e non è un difetto, è `RecordVirtual` di Mutter che
-consegna solo sul cambiamento (§13, il risveglio costa 13 ms). ⇒ Una cura che partisse lì
+consegna solo sul cambiamento (§13, il risveglio non costa). ⇒ Una cura che partisse lì
 **butterebbe fuori chi guarda un desktop fermo**, che è il modo peggiore in cui potrebbe fallire.
 
-⚠ **Si contano i byte, non i fotogrammi interi**, e la ragione è dichiarata: una chiave da ~60 000
-byte su linea stretta può metterci secondi a uscire tutta, e a fotogrammi quei secondi sarebbero uno
-«stallo» **mentre il filo lavora**. Un byte che parte è un filo che porta.
+⚠ **Si contano i byte, non i fotogrammi interi**, e la ragione è dichiarata: una chiave su linea
+stretta può metterci secondi a uscire tutta, e a fotogrammi quei secondi sarebbero uno «stallo»
+**mentre il filo lavora**. Un byte che parte è un filo che porta.
 
 ### 18.2-bis La soglia — **5 000 ms**, e i due margini col caso intermedio
 
-| | stallo/buco più lungo | |
-|---|---|---|
-| tredici profili sani | 0,04-0,35 s | reggono |
-| `casa-cattiva` | **0,50 s** | ⛔ **REGGE — non va dichiarata morta** |
-| ⚠ `raffica-1` | **un secondo intero a zero** | ma consegna **23,94 fotogrammi/s**: regge benissimo |
-| `raffica-forte` | **14,26 s** (30,06 nell'altro giro) | non regge |
+I profili sani e `casa-cattiva` hanno buchi **sotto il secondo** e reggono (⛔ `casa-cattiva` **non va
+dichiarata morta**); ⚠ `raffica-1` ha **un secondo intero a zero** ma regge benissimo; `raffica-forte`
+ha buchi di **molti secondi** e non regge.
 
-⇒ intervallo **1,00-14,26 s**, centro geometrico **3,78 s**, scelta **5,0 s** — ⭐ **sopra** il
-centro, apposta. Margine **5,0×** sopra il peggiore che regge, **2,9×** sotto quello che non serve.
+⇒ Fra il peggiore che regge e il migliore che non regge la scelta è **5,0 s** — ⭐ **sopra** il
+centro geometrico dell'intervallo, apposta.
 
 ⛔ **Il lato stretto usa il PIÙ CORTO dei due stalli di `raffica-forte`**, non il più lungo: un
 margine scritto sul numero fortunato non è un margine.
@@ -3957,18 +3652,18 @@ non si rimedia.
 banco ribatte lo stesso profilo **con soglie sempre più basse** finché una scatta, e allora il
 prodotto stampa il suo `stallo_ms`.
 
-| profilo | stallo massimo | margine sulla soglia di 5 000 ms | buco al client |
-|---|---|---|---|
-| `ritardo-30` (sano) | < 500 ms | **> 10×** | 0,157-0,175 s |
-| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0,359-0,479 s |
-| ⚠ `raffica-1` | **1 001 ms** | **5,0×** | 0,52-3,73 s |
-| ⛔ scena **ferma** | *il conto non parte* | — | 1 e 3 fotogrammi in 90 s |
+| profilo | stallo massimo | margine sulla soglia di 5 000 ms |
+|---|---|---|
+| `ritardo-30` (sano) | sotto il mezzo secondo | **largo** |
+| ⭐ `casa-cattiva` | sotto il mezzo secondo | **largo** |
+| ⚠ `raffica-1` | circa **un secondo** | quello dichiarato sul lato stretto |
+| ⛔ scena **ferma** | *il conto non parte* | — (1 e 3 fotogrammi in 90 s) |
 
-⭐ **`raffica-1` conferma la derivazione con un numero indipendente**: il lato stretto vale
-**1,00 s**, esattamente quello del riquadro, e il margine sono i **5,0×** dichiarati.
+⭐ **`raffica-1` conferma la derivazione con un numero indipendente**: il lato stretto vale un
+secondo, esattamente quello del riquadro.
 
-**`casa-cattiva`, dieci minuti, cura accesa: ZERO SCATTI** — 9,71 fotogrammi/s, copertura **1,00**
-(600 s su 600), buco massimo **0,479 s**, cliente attaccato a 599,88 s, nessun congedo.
+**`casa-cattiva`, dieci minuti, cura accesa: ZERO SCATTI** — la consegna non si ferma mai, cliente
+attaccato per tutti i dieci minuti, nessun congedo.
 
 ⭐⭐ **E il confronto che chiude la refuta**, nello **stesso** giro: il **testimone** dice `permille`
 mediana **529‰**, con **392 finestre su 392** sopra i vecchi 50‰. ⇒ **La cura vecchia avrebbe ucciso
@@ -3993,9 +3688,9 @@ stanno nella griglia di §17.
 
 ⚠ **Una cosa da dire, e va nel verso prudente**: lo **stallo** (server: byte usciti) e il **buco**
 (client: fotogrammi arrivati) **non sono la stessa grandezza**, e la soglia è derivata dal secondo
-mentre la cura misura il primo. `[M]` su `raffica-1` un giro ha dato buco **3,73 s** con lo stallo
-che non scattava nemmeno a 1 000 ms: **i byte partono, a mancare è la ritrasmissione**. ⇒ L'errore
-va dalla parte buona, ma il numero della derivazione è **prudente, non esatto**.
+mentre la cura misura il primo. `[M]` su `raffica-1` un giro ha dato un buco di qualche secondo con
+lo stallo che non scattava nemmeno a 1 000 ms: **i byte partono, a mancare è la ritrasmissione**. ⇒
+L'errore va dalla parte buona, ma il numero della derivazione è **prudente, non esatto**.
 
 ### 18.2-quater ⛔ Che fine ha fatto il `permille` — da **giudice** a **testimone**
 
@@ -4030,8 +3725,8 @@ l'occupante qui è attaccato ma **non vivo**, e finora l'unico orologio che li d
 da 30 s. ⭐ `torna_a_parlare()` riparte **solo da `S_STACCATA`**: per questo lo sfratto cambia lo
 **stato** e non si limita a togliere il posto, o il fantasma resterebbe `S_ATTIVA` senza posto.
 
-`[M]` **Il fantasma scende del 48 %**: da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**. ⭐ E con
-la linea morta accesa scende a **~10 s con zero rifiuti** — il posto torna libero al primo tentativo.
+`[M]` **Il fantasma dura circa la metà**, con la metà dei rifiuti. ⭐ E con la linea morta accesa
+scende ancora, **con zero rifiuti** — il posto torna libero al primo tentativo.
 
 **Due utenti diversi** `[M]`: zero sfratti, il secondo utente entra sul **proprio** posto con zero
 rifiuti. ⚠ La riga `⛔ SFRATTO NEGATO` **non esce**, ed era previsto `[R]` prima di girare: il
@@ -4054,15 +3749,15 @@ l'utente incontra rientrando**.
 
 ## 18.5 ⚠ E un prezzo dichiarato per un caso che non esiste — corretto
 
-I PING passano a metà della soglia quando la cura è accesa, e il costo era stato dichiarato in
-**0,21 kbit/s** per sessione. ⛔ Il banco **non ha potuto isolarlo, e si è rifiutato di dare un verde
-vuoto**: `[M]` una sessione «ferma» costa comunque **2 463 kbit/s** di audio PCM (§4.3, che non si
-spegne — un `CIAO` senza codec audio comune si becca `0x09 NIENTE_IN_COMUNE`), cioè **11 727 volte**
-quel numero; la differenza acceso−spento è **+0,539 kbit/s**, dentro il rumore.
+I PING passano a metà della soglia quando la cura è accesa, e il costo era stato dichiarato
+minuscolo per sessione. ⛔ Il banco **non ha potuto isolarlo, e si è rifiutato di dare un verde
+vuoto**: `[M]` una sessione «ferma» costa comunque molto di più di audio PCM (§4.3, che non si
+spegne — un `CIAO` senza codec audio comune si becca `0x09 NIENTE_IN_COMUNE`), e la differenza
+acceso−spento sta **dentro il rumore**.
 
 ⭐ **E il fatto vero**: `[M]` su una sessione viva il contatore **non si ferma mai per 0,6 s** ⇒ il
-keep-alive **non ha mai occasione di scattare**, e quei 0,21 kbit/s descrivevano **un caso in cui il
-prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggio di nessun prezzo**.
+keep-alive **non ha mai occasione di scattare**, e quel costo descriveva **un caso in cui il prodotto
+non entra**. Un prezzo dichiarato per un caso che non esiste **è peggio di nessun prezzo**.
 
 ## 18.6 Che cosa resta, dopo §18
 
@@ -4071,7 +3766,7 @@ prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggi
 2. ⏳ **le cure contro la spirale** (§17.6) restano spente e aspettano **i suoi occhi**, che è l'unica
    cosa che non si può delegare a una misura;
 3. ⏳ **la bistabilità** di §17.11 non ha ancora una spiegazione;
-4. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
+4. ⛔ **l'audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
 5. ⚠ **lo stallo e il buco non sono la stessa grandezza** (§18.2-ter): la derivazione è prudente, non
    esatta, e un giro che le misuri **insieme** la renderebbe esatta.
 
@@ -4119,26 +3814,26 @@ non sollecita non è un giudizio.
 `[M]` **Primo giro, e non valeva**: perdita all'1 % accesa e verificata (il server la vedeva:
 *«la linea perde»*, 27 pacchetti dichiarati persi, 22 datagram audio perduti), **zero fotogrammi
 abbandonati su 920**, **due chiavi in tutto**. ⇒ Nessuna spirale — ma la ragione era nel numero che
-non stavo guardando: ⛔ **i suoi fotogrammi pesavano 242-283 byte.** Duecento byte. Il banco crollava
-su una scena che riempiva il filo con 3 Mbit/s; qui la perdita **non aveva niente da rompere**.
+non stavo guardando: ⛔ **i suoi fotogrammi erano minuscoli.** Il banco crollava su una scena che
+riempiva il filo; qui la perdita **non aveva niente da rompere**.
 
-`[M]` **Secondo tentativo, il trascinamento di una finestra**: fotogrammi fino a **3 801 byte**,
-**zero chiavi** su 400, **2 abbandoni su 2 181**. ⇒ Ancora insufficiente: il banco lavorava su
-fotogrammi **sette volte più grossi**.
+`[M]` **Secondo tentativo, il trascinamento di una finestra**: fotogrammi più grossi, ma ancora
+**molto più piccoli** di quelli del banco; **zero chiavi**, abbandoni quasi nessuno. ⇒ Ancora
+insufficiente.
 
 `[M]` **E al 5 % il primo giudizio è stato RITIRATO prima di scriverlo**, contando i pacchetti
 passati davvero dentro il guasto: **221, con 18 buttati**. ⛔ Diciotto pacchetti non sono una prova.
 ⇒ Rifatto con **trenta secondi senza mai fermarsi**, e allora sì: **7 596 pacchetti nel guasto, 423
 buttati = 5,6 % reale**.
 
-⭐ **Il numero che rende valido il giro buono** — e che mancava ai due precedenti: fotogrammi fino a
-**77 304 byte**, cioè ⭐ **tre volte più grossi di quelli su cui il banco crollava**. Con quelli:
-**chiavi 3,8 %** (23 su 600), **abbandoni 11 su 3 017** (0,36 %), e il giudizio *«è tutto fluido»*.
+⭐ **Il fatto che rende valido il giro buono** — e che mancava ai due precedenti: fotogrammi ⭐ **più
+grossi di quelli su cui il banco crollava**. Con quelli: poche chiavi, pochissimi abbandoni, e il
+giudizio *«è tutto fluido»*.
 
 ⛔ **La lezione, e vale oltre questa fase**: il gradino non lo decide la perdita, lo decide **quanto
-la scena chiede**. Il banco produce una sollecitazione che pretende **quaranta fotogrammi al secondo
-di cambiamento continuo**; un desktop vero — anche mentre si trascina una finestra — cambia **a
-strappi**. ⇒ **Non è la stessa sollecitazione**, e le previsioni del banco **non si applicano al
+la scena chiede**. Il banco produce una sollecitazione che pretende **cambiamento continuo a ritmo
+pieno**; un desktop vero — anche mentre si trascina una finestra — cambia **a strappi**. ⇒ **Non è la
+stessa sollecitazione**, e le previsioni del banco **non si applicano al prodotto così com'è usato**.
 prodotto così com'è usato**.
 
 ## 19.3 ⭐⭐ IL BLOCCO AL 10 %, COLTO NELL'ISTANTE — e il meccanismo è quello di §17.1-ter
@@ -4159,15 +3854,15 @@ giusto**; sbagliato era **dove** lo collocava.
 
 ⭐⭐ **E `cwnd_left = cwnd` con «in volo = 0» è la firma che assolve il filo e accusa noi**: non è
 congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-forte` (§17.9-quater,
-`cwnd` mediana 8 948 B, `cwnd_left` mediana 0) su una linea vera.
+`cwnd` al minimo, `cwnd_left` mediana 0) su una linea vera.
 
 ## 19.4 ⚠ E DUE COSE CHE QUESTA SESSIONE NON HA POTUTO PROVARE
 
 1. ⛔⛔ ~~**Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**~~
-   → **ERRATA, e la correzione è in §20.1.** `[M]` `mpv` **arriva eccome** — 241 fotogrammi in 8 s
-   su un banco controllato. Quando l'ho giudicato *«non arriva»* ⛔ **non c'era nessun cliente
-   attaccato**: il server non spediva, e il contatore era fermo **per costruzione**. I «167 byte»
-   erano gli ultimi valori di prima.
+   → **ERRATA, e la correzione è in §20.1.** `[M]` `mpv` **arriva eccome** su un banco controllato.
+   Quando l'ho giudicato *«non arriva»* ⛔ **non c'era nessun cliente attaccato**: il server non
+   spediva, e il contatore era fermo **per costruzione**. I «167 byte» erano gli ultimi valori di
+   prima.
    ⚠ **Ho giudicato con un metro che in quella scena non poteva dire niente**, ed è la stessa ferita
    di §19.2 — la terza volta in due giorni. **Firefox** invece è rotto davvero, ma `[M]` **anche
    fuori da REMOTIX**: non è nostro (§20.1).
@@ -4192,10 +3887,10 @@ Perdita **misurata sul filo**: 8 597 pacchetti passati, **905 buttati = 10,5 %**
 | **il giudizio dell'utente** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
 
 ⭐ **Le cure fanno esattamente quel che il banco prometteva**: senza, la consegna si **ferma**; con,
-va avanti a **cinque-venti fotogrammi al secondo**, e i fotogrammi mai spediti passano da 27 a **1**.
-Il meccanismo è curato.
+va avanti a pochi fotogrammi al secondo, e i fotogrammi mai spediti passano da 27 a **1**. Il
+meccanismo è curato.
 
-⛔⛔ **E non basta.** Per chi guarda, cinque fotogrammi al secondo con quel ritardo **sono un blocco
+⛔⛔ **E non basta.** Per chi guarda, pochi fotogrammi al secondo con quel ritardo **sono un blocco
 lo stesso**. ⇒ Il numero migliora e **l'esperienza no**, ed è precisamente la distinzione che questa
 fase esisteva per proteggere (v1: *«siamo tornati indietro»* su numeri che erano migliorati).
 
@@ -4241,12 +3936,12 @@ dei due va servito»* non era una preferenza: era la lettura giusta, e adesso ha
    ⇒ Sopra una certa perdita **la scala di degradazione non ha più niente da offrire**, e l'unica
    risposta onesta è §3.1-quater: dichiarare la linea morta;
 2. ⛔ **Il pavimento di banda (§3.1-sexies, 30 Mbit/s) non c'entra niente con tutto questo.** `[M]`
-   Nel giro buono i fotogrammi grossi arrivavano a 77 KB e la linea non era mai satura: quel che si
-   chiudeva era la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma
-   più forte**: la banda è una premessa, la grandezza che decide è la **qualità** del filo;
+   Nel giro buono i fotogrammi erano grossi e la linea non era mai satura: quel che si chiudeva era
+   la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma più forte**:
+   la banda è una premessa, la grandezza che decide è la **qualità** del filo;
 3. ⚠ **e le soglie del banco vanno lette per quel che sono**: `[M]` misure su una sollecitazione
-   **dieci volte più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va
-   scritto accanto a ogni numero di §17 che qualcuno potrebbe prendere per una promessa.
+   **molto più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va scritto
+   accanto a ogni misura di §17 che qualcuno potrebbe prendere per una promessa.
 
 ---
 
@@ -4259,20 +3954,13 @@ la correzione, non si liscia.
 
 `banchi/09-b82-mostra.sh` · binario `b86cf6df…` dall'albero di lavoro.
 
-⭐ **`mpv` arriva eccome.** `[M]` Con **solo** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
-fotogrammi in 8 s, 38 513 byte medi**. Con `systemd-run --user` (la strada del menu): **317**. E
-`WAYLAND_DISPLAY` **c'era già** nell'ambiente del gestore d'utente — ce lo scrive GNOME.
+⭐ **`mpv` arriva eccome.** `[M]` Con **solo** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY` i fotogrammi
+arrivano, e arrivano anche con `systemd-run --user` (la strada del menu). E `WAYLAND_DISPLAY` **c'era
+già** nell'ambiente del gestore d'utente — ce lo scrive GNOME.
 
 ⇒ ⛔ **La causa vera del caso di stamattina: non c'era nessuno che guardava.** `[M]` Il registro
-della 7920, minuto per minuto:
-
-```
-08:33   765 fotogrammi ·  49 battiti rete-quic
-08:34   708 fotogrammi ·  59 battiti
-08:35   228 fotogrammi ·  60 battiti
-08:36    13 fotogrammi ·  31 battiti   ← il cliente se ne va
-poi     NIENTE, solo «il legame regge» ogni minuto
-```
+della 7920, minuto per minuto: fotogrammi e battiti `rete-quic` regolari finché il cliente c'è,
+poi calano quando **il cliente se ne va**, e dopo **niente**, solo «il legame regge» ogni minuto.
 
 Senza un cliente attaccato il server **non spedisce**, il contatore è fermo **per costruzione**, e i
 «167 byte» erano gli ultimi valori di prima. ⚠ **Ho giudicato in una scena in cui il metro non
@@ -4285,16 +3973,11 @@ incompleto.
 
 ### 20.1-bis ⛔ E ANCHE IL METRO ERA SBAGLIATO — i byte non dicono quel che credevo
 
-`[M]` Calibrazione su finestre di 8 s:
+`[M]` Calibrazione su finestre di 8 s, quattro scene — desktop fermo · una **bandiera a schermo
+intero** · `film-grana.webm` · `duro.mp4`: ⛔ la bandiera produce **molti** fotogrammi, ma
+**piccoli quanto quelli di un desktop fermo**.
 
-| scena | fotogrammi | byte medi |
-|---|---|---|
-| desktop fermo | 0-1 | 238-283 |
-| ⛔ una **bandiera a schermo intero** | **321** | **268** |
-| `film-grana.webm` | 226 | 18 600 |
-| `duro.mp4` | 240 | 37 081 |
-
-⇒ **Una finestra viva a schermo intero può produrre fotogrammi da 268 byte, cioè quanto un desktop
+⇒ **Una finestra viva a schermo intero può produrre fotogrammi minuscoli, cioè quanto un desktop
 fermo.** ⭐ **Il verdetto è il CONTO, non i byte**: i byte dicono *quanto* cambia, il conto dice *se*
 cambia. ⚠ E in §19.2 avevo usato i byte come metro: quel ragionamento regge sul merito (i suoi
 fotogrammi *erano* piccoli) ma il metro giusto era un altro.
@@ -4342,7 +4025,7 @@ fotogrammi *erano* piccoli) ma il metro giusto era un altro.
 
 ### ~~20.1-ter~~ *(il testo originale, conservato)* ✅ Firefox è rotto — **e non è nostro**
 
-`[M]` Firefox `140.14.0esr`: vivo (80 thread, 126 MB), **zero fotogrammi dopo 90 s**, mai attaccato
+`[M]` Firefox `140.14.0esr`: vivo (80 thread), **zero fotogrammi dopo 90 s**, mai attaccato
 al socket Wayland. Fallisce identico da `systemd-run --user`, con `--profile` esplicito, con
 `MOZ_CRASHREPORTER_DISABLE`, `MOZ_DISABLE_GPU_PROCESS`, `LIBGL_ALWAYS_SOFTWARE`,
 `MOZ_ENABLE_WAYLAND=0`, sandbox spente.
@@ -4383,17 +4066,17 @@ monitor, scala 1,0, ambiente completo. La cura era **nel modo di giudicare**.
 
 ⇒ ⛔ **L'utente non è mai stato su PCM.** `[R]` Il PCM lo impongono **i banchi**: `09-b68:191`,
 `09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` passano tutti `--audio-codec pcm`.
-⇒ **§17.2-quater e §18.5 vanno lette così**: il 36 % di rifiutati e i 2 463 kbit/s sono proprietà di
+⇒ **§17.2-quater e §18.5 vanno lette così**: l'audio rifiutato e il costo del PCM sono proprietà di
 una **configurazione di banco**, non del prodotto in uso.
 
-### 20.2-ter ⭐⭐⭐ E QUEL CHE C'ERA SOTTO: **si spendono 589 kbit/s per portare 1,2 kbit/s di silenzio**
+### 20.2-ter ⭐⭐⭐ E QUEL CHE C'ERA SOTTO: **si spendeva la banda di un audio vero per portare silenzio**
 
 `[M]` Che cosa viene rifiutato, sulla sessione **vera**: `datagram di 16 byte` = 1 (prefisso) + 12
 (§6.3) + **3 di carico**. Riprodotto sul banco: `codec 1 (Opus), 3 byte di carico`, 1 248 su 1 248, e
 `suono.c` dice **`PICCO 0 su 32767`**. ⇒ **Si rifiuta il silenzio digitale.**
 
-`[M]` A desktop fermo, Opus: **48,0 datagram al secondo su 48,4 pacchetti** — il filo è *tutto*
-audio — e ogni pacchetto è **pieno**, 1 441 byte su 1 452, per il `PADDING`.
+`[M]` A desktop fermo, Opus: il filo è *tutto* audio, e ogni pacchetto è **pieno**, per il
+`PADDING`.
 
 **La cura** (`src/audio.c`, ⛔ nasce **spenta**, I6): un blocco in cui **tutti** i campioni sono
 esattamente zero **non diventa un datagram**. ⭐ La ragione per cui è lecito: §6.3 mette l'`istante`
@@ -4401,13 +4084,9 @@ in ogni blocco e chi riceve lo rimette al posto assoluto ⇒ **un blocco non spe
 buco è silenzio** — che è esattamente quel che quel blocco conteneva. ⛔ Nessuna soglia: **solo lo
 zero digitale**, l'unico caso in cui «spedito» e «non spedito» suonano identici.
 
-| desktop fermo, Opus | sul filo | pacchetti/s | datagram/s | byte/pacchetto | carico utile |
-|---|---|---|---|---|---|
-| **spenta** | 557,6 kbit/s | 48,4 | 48,0 | 1 441 | 1,18 kbit/s |
-| ⭐ **accesa** | **5,5 kbit/s** | 0,5 | 0,0 | — | 0,00 |
-
-⇒ ⭐⭐ **102,1 volte**, e 1 248 blocchi taciuti su 1 248. **Oggi una sessione ferma spende 589 kbit/s
-per portare 1,2 kbit/s di silenzio: il 99,8 % è riempimento.**
+⇒ ⭐⭐ Con la cura accesa la banda di una sessione ferma **crolla di due ordini di grandezza**, e
+1 248 blocchi su 1 248 vengono taciuti. **Una sessione ferma spendeva la banda di un audio vero per
+portare silenzio: quasi tutto era riempimento.**
 
 **Il controllo che protegge l'utente** (tono a 440 Hz nel sink, giudice di `07-b42`): copertura
 **1,0000 → 0,9996**, purezza del tono **1,000 → 1,000**, blocchi taciuti **1 su 5 001** — e quell'uno
@@ -4442,19 +4121,19 @@ comando è **descritta e non scritta**.~~
    DEGLI STREAM»*. ⇒ ⚠ **Una decisione presa nel codice e mai messa a verbale**, ed è precisamente
    il genere di cosa che questa fase esiste per scoprire.
    `[M]` E oggi vince **l'audio**: a desktop fermo il filo è tutto suo; sulla sessione vera col
-   desktop in movimento tocca il **25-33 %** dei pacchetti.
+   desktop in movimento ne tocca una parte.
 
 ### 20.2-quinquies ⛔ E UNA PREVISIONE DELL'AGENTE CHE NON HA RETTO — scritta com'è
 
 `casa-cattiva`, scena col tono, stesso `netem`, cura spenta:
 
-| codec | sul filo | spediti | rifiutati | ‰ | **copertura** |
-|---|---|---|---|---|---|
-| PCM | 1 024,5 kbit/s | 3 135 | **1 880** | **375‰** | 0,6088 |
-| Opus | 366,3 kbit/s | 1 127 | **126** | **101‰** | **0,8803** |
+| codec | spediti | rifiutati | ‰ | **copertura** |
+|---|---|---|---|---|
+| PCM | 3 135 | **1 880** | **375‰** | 0,6088 |
+| Opus | 1 127 | **126** | **101‰** | **0,8803** |
 
-⭐ La copertura sale **0,61 → 0,88** (+27 punti di audio che arriva davvero). ⛔ Ma il predicato
-chiedeva *«Opus sotto 20‰»* e ha dato **rosso**: Opus divide il rifiuto per 3,7, **non lo toglie**.
+⭐ La copertura sale (più audio che arriva davvero). ⛔ Ma il predicato chiedeva *«Opus sotto 20‰»*
+e ha dato **rosso**: Opus riduce il rifiuto, **non lo toglie**.
 ⇒ **Il codec è la cura del costo, non del rifiuto.** Il confine è stato lasciato dov'era e il rosso
 scritto nel banco, invece di ritarare la soglia dopo aver visto il numero.
 
@@ -4472,49 +4151,35 @@ lotto GSO).
 `banchi/09-b85-*` · binario `64258ca4…`. ⛔ **E il metro è stato certificato prima di misurare
 qualunque cosa**, in tre gradini, nessuno saltato.
 
-**(a) sul file**, 7 sfalsi noti iniettati con `-itsoffset`: ritrovati **−700,0 · −300,0 · −100,0 ·
-−0,0 · +100,0 · +300,0 · +700,0**. **(b) ricampionato a 40/s**, 4 fasi: bias **−2,3 ms**, ampiezza
-**4,0 ms**. **(c) ⭐⭐ attraverso il prodotto vero**, lo stesso film con l'audio spostato di ±300 ms
-noti, suonato nella sessione e ripreso dal filo:
+**(a) sul file**, 7 sfalsi noti iniettati con `-itsoffset`: ritrovati tutti, col segno giusto.
+**(b) ricampionato a 40/s**, 4 fasi: errore piccolo e costante. **(c) ⭐⭐ attraverso il prodotto
+vero**, lo stesso film con l'audio spostato di ±300 ms noti, suonato nella sessione e ripreso dal
+filo: ritrovati tutti e tre gli sfalsi con lo stesso piccolo errore costante.
 
-| messo | ritrovato (n=23) | errore |
-|---|---|---|
-| **+300** | **+288,5** | −11,5 |
-| **0** | **−12,6** | −12,6 |
-| **−300** | **−310,8** | −10,8 |
-
-⇒ **pendenza 0,9988, costante −11,6 ms.** Il metro ritrova quel che si sa di aver messo, col segno
-giusto, su tutta la catena.
-
-### 20.3-bis ⭐⭐ IL PRODOTTO È PULITO — **niente +331, niente +690, in nessun caso**
+⇒ Il metro ritrova quel che si sa di aver messo, col segno giusto, su tutta la catena.
+### 20.3-bis ⭐⭐ IL PRODOTTO È PULITO — **lo sfalso non nasce prima del browser, in nessun caso**
 
 `[M]` 24 agosto (segno: **positivo = il suono esce DOPO l'immagine**, la convenzione di
-`pagina.html` · `avvia_audio()`):
+`pagina.html` · `avvia_audio()`), quattro casi: fermo · sotto carico · perdita 1 % · perdita 5 %.
 
-| caso | fps | Mbit/s video | **sfalso alla sorgente** | **sfalso in rete** | rete p90 |
-|---|---|---|---|---|---|
-| fermo | 40,1 | 0,30 | **−12,6** (n=23) | −5,8 | −3,9 |
-| sotto carico | 35,1 | **106,5** | **−7,8** (n=22) | −14,7 | −16,6 |
-| perdita 1 % | 36,5 | 0,30 | **−12,7** (n=22) | −6,1 | −9,8 |
-| perdita 5 % | 16,2 | 0,60 | **−17,2** (n=10) | −19,1 | **−94,9** |
-
-⇒ **Tutti e quattro entro ±6 ms dalla costante certificata.** Il prodotto marca i due flussi con lo
-stesso orologio e li marca bene: **lo sfalso non nasce prima del browser.**
+⇒ **Tutti e quattro stanno attaccati alla costante certificata.** Il prodotto marca i due flussi con
+lo stesso orologio e li marca bene: **lo sfalso non nasce prima del browser.**
 
 ⭐ **E l'ipotesi «con la perdita peggiora» è smentita sulla mediana**, confermata solo sulla coda: a
-5 % la latenza video p90 va a **118,5 ms** contro 23,6 dell'audio (gli stream ritrasmettono, i
-datagram no) ⇒ **−94,9 ms**, cioè **l'audio che corre avanti**, non l'audio che resta indietro.
+5 % la coda della latenza video sale molto più di quella dell'audio (gli stream ritrasmettono, i
+datagram no) ⇒ **l'audio che corre avanti**, non l'audio che resta indietro.
 ⚠ E metà delle claquette sparisce: **11 lampi su 20 click**.
 
-### 20.3-ter ⭐⭐⭐ IL +331 NON È UN ARTEFATTO: **è il cuscino dell'audio, ed è scritto nel prodotto**
+### 20.3-ter ⭐⭐⭐ IL VALORE DI §16.4 NON È UN ARTEFATTO: **è il cuscino dell'audio, ed è scritto nel prodotto**
 
 `[R]` `src/pagina.html` · `AUDIO_CUSCINO_MS()` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
 `:5761` `aoff = (perf − ist/1000) + CUSCINO + u`.
 
 > ⇒ `AV ≈ cuscino + latenza d'uscita − ritardo di pittura`
 
-A riposo 250 → **~331**; sotto carico la coda supera i 600 e `a.base` **si riàncora** (`:6152`) →
-**~690**. ⭐ **I due numeri di §16.4 sono le due tacche del cuscino**, non due misure di un difetto.
+A riposo il cuscino è 250 e `AV` ne porta la tacca bassa; sotto carico la coda supera i 600 e
+`a.base` **si riàncora** (`:6152`) → la tacca alta. ⭐ **I due valori di §16.4 sono le due tacche del
+cuscino**, non due misure di un difetto.
 
 ⛔⛔ **E §16.4 legge il segno alla rovescia.** Scrive *«il suono precede l'immagine»*; il prodotto
 dice *«positivo = il suono esce DOPO»*. ⇒ **L'audio è in RITARDO, non in anticipo** — e le due cose
@@ -4532,21 +4197,22 @@ e Nota 1: *«detectability thresholds are about +45 ms to −125 ms and acceptab
 about +90 ms to −185 ms on the average, a positive value indicates that sound is advanced with
 respect to vision»*.
 
-⚠ **Il segno dell'ITU è l'opposto del nostro**: per loro positivo = suono in **anticipo**. Il nostro
-+331 (audio **in ritardo**) è l'ITU **−331 ms**.
+⚠ **Il segno dell'ITU è l'opposto del nostro**: per loro positivo = suono in **anticipo**. Il valore
+di §16.4 (audio **in ritardo**) sta dalla parte negativa della scala ITU.
 
-| | soglia ITU (audio in ritardo) | §16.4 a riposo (−331) | §16.4 sotto carico (−690) |
+| | soglia ITU (audio in ritardo) | §16.4 a riposo | §16.4 sotto carico |
 |---|---|---|---|
-| **si nota** | −125 ms | ⛔ **2,6× oltre** | ⛔ **5,5× oltre** |
-| **è accettabile** | −185 ms | ⛔ **1,8× oltre** | ⛔ **3,7× oltre** |
+| **si nota** | −125 ms | ⛔ **oltre** | ⛔ **oltre** |
+| **è accettabile** | −185 ms | ⛔ **oltre** | ⛔ **oltre** |
 
-⇒ ⛔⛔ **Se il +331 è quel che l'utente riceve, si nota e non è accettabile.** ⚠ Che l'utente non
-l'abbia giudicato sulla grana **non dice che non morde**: dice che quella scena non permetteva di
-giudicarlo — ed è la **seconda** delle due letture tenute aperte in §16.4, non la prima.
+⇒ ⛔⛔ **Se il valore di §16.4 è quel che l'utente riceve, si nota e non è accettabile.** ⚠ Che
+l'utente non l'abbia giudicato sulla grana **non dice che non morde**: dice che quella scena non
+permetteva di giudicarlo — ed è la **seconda** delle due letture tenute aperte in §16.4, non la
+prima.
 
 ⏳ **Che cosa resta**: la metà `AV` non è stata rimisurata (vuole il browser, e su quella macchina
 Firefox non parte — §20.1-ter). Tutto quel che sta **prima** del browser è pulito; la conferma
-diretta del 331 aspetta quello strumento.
+diretta aspetta quello strumento.
 
 > ### ⭐⭐⭐ E IL GIUDIZIO È ARRIVATO — **25 agosto 2026, fase 10**
 >
@@ -4562,13 +4228,13 @@ diretta del 331 aspetta quello strumento.
 > > fluidi e in sync**.»*
 >
 > ⇒ ⭐ **La metà `AV` del sincronismo ha il suo giudizio.** ⚠ **Non un numero**: un giudizio — il
-> `[M]` dei **331 ms** e il termine di Opus restano `[?]`, e per quelli serve ancora lo strumento.
+> `[M]` di §16.4 e il termine di Opus restano `[?]`, e per quelli serve ancora lo strumento.
 > ⭐ Ma la domanda che contava — *«all'orecchio e all'occhio, stanno insieme?»* — ha una risposta, ed
 > è **sì**, presa dove il metro è l'utente (**I8**).
 >
-> `[M]` E accanto al giudizio ci sono i numeri della stessa scena, letti dal registro senza toccarla:
-> **37,4 fot/s**, **3,20 Mbit/s**, ⭐ **coda vuota** — la banda **dimezzata senza perdere un
-> fotogramma**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` §10. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
+> `[M]` E accanto al giudizio c'è il registro della stessa scena, letto senza toccarla: ⭐ **coda
+> vuota** — la banda **ridotta senza perdere fotogrammi**. ⇒ `fasi/10-multi-tenant-e-il-budget.md`
+> §10. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
 (nel repo non esiste un decodificatore Opus, `07-b42-giudice.py` · `main()`).
 
 ⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
@@ -4589,17 +4255,17 @@ gemelli**, senza dire all'utente quale fosse quale.
 | ordine | che cosa c'era **nel file** | il suo giudizio |
 |---|---|---|
 | 1° | audio **321 ms in anticipo** | *«perfetto»* |
-| 2° | **allineato** (21 ms) | *«perfetto»* · *«il bip è in sincrono con il flash»* |
+| 2° | **allineato** | *«perfetto»* · *«il bip è in sincrono con il flash»* |
 | 3° | audio **279 ms in ritardo** | ⭐ *«il flash è in anticipo rispetto al bip»* |
 
 ⭐⭐ **Ha riconosciuto il ritardo vero, con la direzione giusta, senza saperlo.** ⇒ Il suo orecchio è
 **tarato** su questa scala, e i suoi giudizi valgono — che è precisamente quel che mancava a §16.4.
 
 ⛔ **E il verdetto è che il difetto non arriva.** Il filmato **allineato** gli è arrivato **in
-sincrono**. Se il prodotto aggiungesse davvero i **+331 ms** di §16.4, quel filmato gli sarebbe
-suonato **come il terzo** — riconoscibile, perché ha appena dimostrato di riconoscere 279 ms.
-⇒ **Il ritardo che raggiunge l'orecchio è sotto la soglia che lui sa riconoscere**, cioè **< ~280 ms**,
-e probabilmente molto meno.
+sincrono**. Se il prodotto aggiungesse davvero il ritardo di §16.4, quel filmato gli sarebbe
+suonato **come il terzo** — riconoscibile, perché ha appena dimostrato di riconoscere il ritardo del
+terzo. ⇒ **Il ritardo che raggiunge l'orecchio è sotto la soglia che lui sa riconoscere**, e
+probabilmente molto meno.
 
 ⚠ **Che cosa questo NON dice**, e va scritto: fra il 1° e il 2° non ha visto differenza, e sono
 distanti **321 ms**. ⇒ Dalla parte dell'**anticipo** la sua risoluzione è più grossa di 300 ms. Ma il
@@ -4607,7 +4273,7 @@ cuscino spinge dalla parte del **ritardo**, ed è lì che discrimina. ⚠ E il g
 di Opus non c'è dentro.
 
 ⇒ ⭐ **§20.3-quater va letta con questo accanto**: il conto con la soglia ITU dice *«si sentirebbe»*
-**se** i 331 ms arrivassero. `[M]` L'orecchio dice che **non arrivano**. Le due cose non si
+**se** il valore di §16.4 arrivasse. `[M]` L'orecchio dice che **non arriva**. Le due cose non si
 contraddicono: §20.3 misura il cuscino **dentro la pagina**, e la latenza di pittura del video lo
 compensa in gran parte — la parte che **nessuna delle due misure di ieri poteva vedere da sola**.
 
@@ -4663,8 +4329,9 @@ sessione lunga su quella linea andrebbe guardata prima di concludere**.
 
 **Le ipotesi, una per una** `[M]`: la perdita non era la stessa ⇒ **esclusa** (0,165-0,255 % in
 entrambe le famiglie) · l'avvio lento di CUBIC ⇒ **non verificata** (`ssthresh` lascia l'infinito a
-~2 s in tutt'e due) · la scena ⇒ **esclusa** (prima chiave 58,44-58,88 kB in entrambe) · la soglia
-dei tre pacchetti ⇒ **non verificata** · macchina carica ⇒ **esclusa** (CPU 5,1-6,5 % in tutti e 20).
+~2 s in tutt'e due) · la scena ⇒ **esclusa** (prima chiave della stessa misura in entrambe) · la
+soglia dei tre pacchetti ⇒ **non verificata** · macchina carica ⇒ **esclusa** (carico basso e uguale
+in tutti e 20).
 `[R]` L'algoritmo è **CUBIC** (ngtcp2 1.25, `trasporto.c` · `accetta()` non tocca `cc_algo`) — ⚠ e la prova per
 contrasto **non è stata fatta**: non è esposto da nessuna opzione.
 
@@ -4707,13 +4374,14 @@ numero in vigore · che è il predefinito dal 24 agosto per decisione dell'utent
 - **(b) ognuna si spegne ancora** ✅ — cinque riavvii, una per volta; e i due nomi vecchi **rifiutati**;
 - **(c) ⭐ il prodotto funziona acceso**, giro appaiato di 25 s a 1920×1080:
 
-| braccio | fotogrammi/s | chiavi | quota delta | deriva finale |
-|---|---|---|---|---|
-| tutte **spente** | 39,60 | **0** | 1,0000 | 0,0 ms |
-| ⭐ **predefiniti** | **39,69** | **0** | 1,0000 | 0,4 ms |
-| `[M]` l'ancora di §17.6 | 39,85 | 0 | — | 0,1 ms |
+| braccio | chiavi | quota delta |
+|---|---|---|
+| tutte **spente** | **0** | 1,0000 |
+| ⭐ **predefiniti** | **0** | 1,0000 |
 
-⇒ **Nessun peggioramento**: −0,2 % contro le cure spente, −0,4 % contro l'ancora, **dentro il rumore
+⇒ **Nessun peggioramento**: il ritmo coi predefiniti sta con quello a cure spente e con l'ancora di
+§17.6, **dentro il rumore dichiarato del 5 %**, deriva trascurabile. Zero chiavi, zero buchi, **zero
+scatti della linea morta, zero sfratti**.
 dichiarato del 5 %**. Zero chiavi, zero buchi, **zero scatti della linea morta, zero sfratti**.
 ⭐⭐ **Era la prova che poteva far ritirare tutto** — la ferita di v1 è esattamente «i numeri
 migliorano e l'esperienza peggiora» — ed è verde.
@@ -4730,7 +4398,7 @@ il braccio spento si fa **dalla riga di comando sullo stesso identico binario**:
 `09-b79-cure.py`: bracci **rovesciati** — **A** = cure spente **a mano**, **C** = *nessuna opzione*.
 ⭐ Il guadagno è scritto nel commento: **il braccio che rappresenta il prodotto adesso è quello a cui
 non si chiede niente**, e quindi non può promettere niente. `[M]` `--certifica` 21/21; giro vero su
-`ritardo-30`: fps **38,15 / 39,61 / 39,78**, chiavi 0,2 / 0,0 / 0,0 %, **S′ verde**.
+`ritardo-30`: ritmo pieno e chiavi quasi zero nei tre bracci, **S′ verde**.
 
 `09-b84-audio-silenzio.py`: da **due binari** a **uno**. ⭐ Due binari erano **due imputati** — se i
 bracci davano numeri uguali le spiegazioni erano due (*«la cura non serve»* oppure *«i binari non
@@ -4739,37 +4407,31 @@ erano quelli che credevo»*); uno solo ne lascia una.
 contiene *«dal 24 agosto nasce ACCESA»*, e il banco cercava `"ACCESA" in dett` ⇒ **avrebbe letto
 «accesa» su un braccio spento**, dando verde a due bracci sbagliati **proprio ora che quel predicato
 è l'unica cintura**. Curato ancorandolo alle due frasi di stato.
-`[M]` `--certifica` 31/31; giro `muto` (Opus, fermo): **557,5 → 5,7 kbit/s = 97,3×**, 1 248 blocchi
-taciuti; giro `tono` (PCM): copertura **1,0000 → 1,0000**, purezza **1,000 → 1,000**, taciuti **1 su
-5 002**.
+`[M]` `--certifica` 31/31; giro `muto` (Opus, fermo): la banda crolla di due ordini di grandezza,
+1 248 blocchi taciuti; giro `tono` (PCM): copertura **1,0000 → 1,0000**, purezza **1,000 → 1,000**,
+taciuti **1 su 5 002**.
 
 ### 21.4-ter ⛔⭐ `WT_DGRAM_RIMANDI_MAX` — **si tiene la grandezza, si cambia l'unità**
 
-`[M]` Il numero che spiega tutto: `casa-cattiva`, 25 s ⇒ **2,2 milioni di rimandi**, cioè **~85 000
-passate di scrittura al secondo** sotto carico contro **~200** a riposo. ⇒ Il tetto `4096` valeva
-**~48 ms** in un caso e **decine di secondi** nell'altro. ⛔ E non era un fusibile, **era la
-politica**: 2 258 blocchi buttati da quel tetto contro **9** dalla coda piena — il **99,6 %**.
+`[M]` Il fatto che spiega tutto: su `casa-cattiva` le passate di scrittura al secondo sono moltissime
+sotto carico e poche a riposo. ⇒ Il tetto `4096`, contato in passate, valeva **pochi millisecondi**
+in un caso e **decine di secondi** nell'altro. ⛔ E non era un fusibile, **era la politica**: quasi
+tutti i blocchi buttati li buttava quel tetto, non la coda piena.
 
 ⭐⭐ **La strada ovvia è stata provata e la misura l'ha rifiutata.** Timbrare ogni blocco e buttarlo
 sull'**età vera**: `[M]` a 50 ms non scatta più di quanto scatti a 250, perché la coda tiene 8
 blocchi = 40 ms di PCM e **la testa non è quasi mai più vecchia di 40 ms**. Prezzo di quel «non tocca
-niente»: **+30 % di byte sul filo** (1 415 → 1 840 kbit/s, **rubati alla finestra del video**) per
-**+11 % di blocchi utili** — il resto arriva già vecchio e **lo butta il cliente**.
+niente»: **più byte sul filo, rubati alla finestra del video**, per pochi blocchi utili in più — il
+resto arriva già vecchio e **lo butta il cliente**.
 
 ⇒ Il campo diventa **`dgram_zitto_da`** («da quanto la connessione non mette un datagram in un
 pacchetto») e il tetto **`WT_DGRAM_ZITTO_MAX_MS`**, in millisecondi. ⛔ E `4096` **non si converte con
-una divisione**: è auto-referenziale — quante passate si fanno dipende da quanto si butta. `[M]` Col
-prodotto 2,1 M rimandi, col tetto a 50 ms **20 M**. ⇒ Il valore si è **tarato sulla misura**, e il
-verde è *«indistinguibile dal prodotto»*:
+una divisione**: è auto-referenziale — quante passate si fanno dipende da quanto si butta. ⇒ Il
+valore si è **tarato sulla misura**, e il verde è *«indistinguibile dal prodotto»*: a **10 ms** tutte
+le colonne (spediti, buttati, rifiutati, utili) stanno dentro la dispersione del prodotto; a 50 ms
+la coda butta molto di più.
 
-| tetto | spediti | butt. (coda) | rifiutati | kbit/s | utili | utili/filo |
-|---|---|---|---|---|---|---|
-| **il prodotto** (5 giri) | 2 912-3 242 | 14-16 | 1 753-2 084 | 1 312-1 447 | 1 223-1 315 | 0,40-0,44 |
-| ⭐ **10 ms** | 2 947 | 16 | 2 039 | 1 286 | 1 246 | 0,435 |
-| 5 ms | 2 999 | 15 | 1 995 | 1 327 | 1 246 | 0,424 |
-| 50 ms | 3 955 | **797** | 263 | 1 743 | 1 390 | 0,360 |
-
-**10 ms** (= due blocchi di PCM) sta **dentro la dispersione del prodotto su ogni colonna**.
+**10 ms** = due blocchi di PCM.
 ⇒ ⭐ **La cura cambia quel che il numero vuol dire, non quel che il prodotto fa.** L'età vera del
 blocco resta registrata (`dgram[].nato`) ma ⛔ **non decide**: finisce nella riga di registro accanto
 al silenzio, **apposta per farsi smentire**.
@@ -4781,13 +4443,13 @@ al silenzio, **apposta per farsi smentire**.
 Scritta, costruita e misurata appaiata (desktop fermo col tono, `lo` liscio, stesso binario a meno di
 quella riga):
 
-| codec | riempimento | kbit/s | byte per pacchetto |
-|---|---|---|---|
-| Opus | sempre | 557,7 / 556,5 | 1 441 |
-| Opus | condizionato | 556,9 / 555,8 | 1 441 |
-| Opus | ⛔ **mai** | 556,4 | ⛔ **1 441** |
-| PCM | sempre | 2 221,7 | 1 443 |
-| PCM | condizionato | 1 988,0 | 1 292 |
+| codec | riempimento | byte per pacchetto |
+|---|---|---|
+| Opus | sempre | 1 441 |
+| Opus | condizionato | 1 441 |
+| Opus | ⛔ **mai** | ⛔ **1 441** |
+| PCM | sempre | 1 443 |
+| PCM | condizionato | 1 292 |
 
 ⛔⛔ **Su Opus il guadagno è ZERO, non «piccolo»**: col riempimento **mai chiesto** il pacchetto resta
 di **1 441 byte**. `[R]` **A riempirlo è `wt_scrivi()`**, che chiede il riempimento a *ogni* scrittura
@@ -4795,7 +4457,7 @@ di stream e chiude il pacchetto che il datagram aveva lasciato aperto con `WRITE
 riempimento di una sessione ferma è dello STREAM, non del datagram**, e chi lo volesse togliere deve
 andare lì.
 
-⚠ Su PCM la condizione morde (**−10,5 %**) solo perché a 200 blocchi/s il datagram chiude il pacchetto
+⚠ Su PCM la condizione morde solo perché a 200 blocchi/s il datagram chiude il pacchetto
 da solo — ma il PCM **non è quel che il prodotto negozia**, e col silenzio acceso a desktop fermo i
 datagram sono **0,0/s**. ⇒ **Codice revertito**, e il verbale coi numeri resta nel riquadro
 `MORE`/`PADDING` di `webtransport.c`: ⭐ una cura che non compra niente è **codice in più da
