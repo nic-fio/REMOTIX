@@ -1,5 +1,7 @@
 # Fase 15 — La suite funzionale
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Decisa il **24 settembre 2026**, sera. Da aprire in una sessione nuova.*
 
 ## Perché esiste
