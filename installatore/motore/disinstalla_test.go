@@ -26,13 +26,41 @@ func installaFinta(t *testing.T) *banco {
 	(&gruppiFinti{b.radice}).Aggiungi("altro", "render")
 	riga := `{"formato":"remotix-gruppi/1","data":"2026-09-30","utente":"altro","uid":1001,"gruppo":"render","gid":991,"origine":"DIRETTA","da":"REMOTIX alla prima connessione"}` + "\n"
 	os.WriteFile(filepath.Join(filepath.Dir(b.operazioni), FileIscrizioni), []byte(riga+riga), 0o644)
+	// i registri di sessione che REMOTIX ha scritto nelle case (sessione.c): «prova» ha solo quello,
+	// «altro» ha anche un file suo nella stessa cartella (che deve restare), root niente
+	for _, u := range []string{"prova", "altro"} {
+		d := filepath.Join(b.radice, "home", u, cartellaStatoUtente)
+		os.MkdirAll(d, 0o700)
+		os.WriteFile(filepath.Join(d, fileSessione), []byte("2026-09-30 sessione di "+u+"\n"), 0o600)
+	}
+	os.WriteFile(filepath.Join(b.radice, "home/altro", cartellaStatoUtente, "appunti.txt"), []byte("miei\n"), 0o600)
 	return b
+}
+
+// registriDopo: la casa di «prova» senza cartella, quella di «altro» col solo file suo.
+func registriDopo(t *testing.T, radice string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(radice, "home/prova", cartellaStatoUtente)); !os.IsNotExist(err) {
+		t.Fatalf("la cartella di stato di prova è rimasta (%v)", err)
+	}
+	if _, err := os.Stat(filepath.Join(radice, "home/altro", cartellaStatoUtente, fileSessione)); !os.IsNotExist(err) {
+		t.Fatalf("il sessione.log di altro è rimasto (%v)", err)
+	}
+	if _, err := os.Stat(filepath.Join(radice, "home/altro", cartellaStatoUtente, "appunti.txt")); err != nil {
+		t.Fatalf("il file di altro NON doveva sparire: %v", err)
+	}
 }
 
 func pianoDisinstallazione(t *testing.T, b *banco) string {
 	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), true)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if n := len(pn.Dichiarate); n != 1 || !strings.Contains(pn.Dichiarate[0], "/home/prova/.local/state/remotix/sessione.log, /home/altro/.local/state/remotix/sessione.log") {
+		t.Fatalf("il piano deve dichiarare i registri di sessione coi percorsi: %q", pn.Dichiarate)
+	}
+	if u := pn.Azioni[len(pn.Azioni)-1]; u.Tipo != "togli-registri-utente" || !strings.Contains(u.Descrizione, "/home/altro/") {
+		t.Fatalf("l'ultimo passo deve togliere i registri, coi percorsi: %+v", u)
 	}
 	pn.Approvazione = &Approvazione{Da: "prova", Modo: "da file", DigestPiano: pn.Digest()}
 	p := filepath.Join(t.TempDir(), "disinstalla.json")
@@ -64,9 +92,13 @@ func TestDisinstallazione(t *testing.T) {
 			if n, _ := (&sessioniFinte{b.radice}).Grafici("prova"); n != 0 {
 				t.Fatalf("%d processi del desktop ancora vivi", n)
 			}
+			registriDopo(t, b.radice)
 			dopo := foto(t, b.radice)
 			delete(dopo, "var/lib/finto-sessioni.json")
 			delete(dopo, "var/lib/finto-grafica.json")
+			for _, k := range []string{"home/", "home/altro/", "home/altro/.local/", "home/altro/.local/state/", "home/altro/.local/state/remotix/", "home/altro/.local/state/remotix/appunti.txt", "home/prova/", "home/prova/.local/", "home/prova/.local/state/"} {
+				delete(dopo, k) // le case: quel che non è di REMOTIX resta
+			}
 			if d := differenzeDopoAnnullo(t, b.prima, dopo); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
 			}

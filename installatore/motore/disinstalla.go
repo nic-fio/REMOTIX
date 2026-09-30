@@ -394,6 +394,15 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			ComeSiFa: T("az.iscrizione.fa"), ComeSiVerifica: T("az.iscrizione.verifica"), ComeSiAnnulla: T("az.iscrizione.annulla"),
 			Reversibilita: ESATTA})
 	}
+	// i registri di sessione nelle case (decisione dell'utente, 1 ott 2026): sempre, per ultimo,
+	// a sessioni chiuse; i percorsi di adesso si dichiarano
+	registri := RegistriUtente(m.Amb)
+	pn.Azioni = append(pn.Azioni, PianoTogliRegistri("registri-utente", registri))
+	elenco := T("az.registri.nessuno")
+	if len(registri) > 0 {
+		elenco = strings.Join(registri, ", ")
+	}
+	pn.Dichiarate = append(pn.Dichiarate, T("az.registri.dichiarata", elenco))
 	im, err := CalcolaImpronta(prof, m.Catalogo, pn.Azioni, pn.Dipende, &Contesto{Amb: m.Amb, Cartella: filepath.Join(m.Cartella, "piano-in-costruzione")})
 	if err != nil {
 		return nil, err
