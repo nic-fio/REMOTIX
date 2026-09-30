@@ -59,6 +59,7 @@
 #include "ritrovo.h"
 
 #include <dirent.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sched.h>
@@ -475,6 +476,9 @@ _Static_assert(sizeof(struct corpo_appunti) <= sizeof(struct corpo_fotogramma),
 struct figlio {
 	bool usato;
 	char utente[64];
+	/* ⭐ FASE 17 T6: l'indirizzo del client che l'ha fatto nascere, per
+	 *    `PAM_RHOST` della sessione (come sshd); "" ⇒ «remotix». */
+	char rhost[64];
 	uid_t uid;
 	gid_t gid;
 	pid_t pid;
@@ -991,6 +995,93 @@ static int conversazione_muta_figlio(int n, const struct pam_message **m,
 	return PAM_CONV_ERR;
 }
 
+/*
+ * ⭐ FASE 17 T6 — IL LIVELLO SELinux DEL DESKTOP, COME PER sshd.
+ *
+ * `[M]` 30 set 2026, leap16-kde in enforcing: il figlio e cio' che esegue
+ * direttamente (startplasma-wayland, labwc) nascevano
+ * `unconfined_u:unconfined_r:unconfined_t:s0`, mentre chi entra con ssh (e
+ * tutto quel che parte dal gestore d'utente, kwin compreso) ha
+ * `s0-s0:c0.c1023`.  La causa: `pam_selinux open` cerca il dominio di chi lo
+ * chiama — `remotix_t`, il nostro — in `contexts/users/<utente>` e in
+ * `contexts/default_contexts`.  Quei file li scrive la politica della
+ * distribuzione ed elencano `sshd_t`, `cockpit_session_t`, `xdm_t`… ma non
+ * `remotix_t`, e nessun modulo li puo' estendere (`semodule` non li tocca).
+ * ⇒ libselinux ripiega su `failsafe_context` (`unconfined_r:unconfined_t:s0`),
+ *   livello scritto per esteso: `s0`.
+ *
+ * ⇒ La cura qui: il ruolo e il tipo restano quelli che `pam_selinux` ha scelto
+ *   (per un utente `unconfined_u` sono gli stessi di ssh), il LIVELLO si
+ *   rimette quello della mappa di login (`getseuserbyname`, `semanage login`)
+ *   — lo stesso che sshd ottiene dalla sua riga.  Solo se `pam_selinux` ha
+ *   impostato un contesto, e solo se il contesto nuovo e' valido per la
+ *   politica; altrimenti si lascia com'e' e lo si scrive.
+ * ⚠ libselinux si apre con `dlopen`: c'e' dove c'e' SELinux (Fedora, Alma,
+ *   openSUSE), e su Debian o Arch questo passo tace.  Nessuna dipendenza nuova.
+ */
+static void livello_selinux_come_sshd(const char *utente)
+{
+	void *l = dlopen("libselinux.so.1", RTLD_NOW | RTLD_LOCAL);
+	if (!l)
+		return;
+	int (*abilitato)(void) = (int (*)(void))dlsym(l, "is_selinux_enabled");
+	int (*leggi)(char **) = (int (*)(char **))dlsym(l, "getexeccon");
+	int (*scrivi)(const char *) = (int (*)(const char *))dlsym(l, "setexeccon");
+	int (*mappa)(const char *, char **, char **) =
+		(int (*)(const char *, char **, char **))dlsym(l, "getseuserbyname");
+	int (*valido)(const char *) =
+		(int (*)(const char *))dlsym(l, "security_check_context");
+	void (*libera)(char *) = (void (*)(char *))dlsym(l, "freecon");
+	char *esec = NULL, *seuser = NULL, *livello = NULL;
+
+	if (!abilitato || !leggi || !scrivi || !mappa || !valido || !libera ||
+	    abilitato() != 1)
+		goto fine;
+	if (leggi(&esec) != 0 || !esec)
+		goto fine; /* pam_selinux non ha scelto niente: non si inventa */
+	if (mappa(utente, &seuser, &livello) != 0 || !livello || !livello[0])
+		goto fine;
+	{
+		/* utente:ruolo:tipo:livello — il livello puo' contenere «:» */
+		const char *p = esec;
+		for (int i = 0; i < 3 && p; i++) {
+			p = strchr(p, ':');
+			if (p)
+				p++;
+		}
+		if (!p || strcmp(p, livello) == 0)
+			goto fine; /* niente livello, o gia' quello giusto */
+		char nuovo[512];
+		int n = snprintf(nuovo, sizeof nuovo, "%.*s%s",
+		                 (int)(p - esec), esec, livello);
+		if (n <= 0 || (size_t)n >= sizeof nuovo || valido(nuovo) != 0) {
+			fprintf(stderr,
+			        "figlio: ⚠ SELinux: il desktop di «%s» nasce «%s»; "
+			        "il livello della mappa di login («%s») non fa un "
+			        "contesto valido — lasciato com'e'\n",
+			        utente, esec, livello);
+			goto fine;
+		}
+		if (scrivi(nuovo) == 0)
+			fprintf(stderr,
+			        "figlio: ⭐ SELinux: il desktop di «%s» nasce «%s» "
+			        "come con ssh (pam_selinux aveva dato «%s»: remotix_t "
+			        "non e' nei contesti di serie della politica)\n",
+			        utente, nuovo, esec);
+		else
+			fprintf(stderr,
+			        "figlio: ⚠ SELinux: setexeccon(«%s») rifiutato (%s): "
+			        "il desktop nasce «%s»\n",
+			        nuovo, strerror(errno), esec);
+	}
+fine:
+	if (esec && libera)
+		libera(esec);
+	free(seuser);
+	free(livello);
+	dlclose(l);
+}
+
 /* ⛔ Quel che si fa DOPO il `fork` e PRIMA dell'`exec`, e in quest'ordine.
  *    Ogni permuta e' punita con un difetto diverso, e nessuno dei tre dice
  *    «hai sbagliato l'ordine» (forma d'errore E4):
@@ -1103,7 +1194,13 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 		} else {
 			pam_putenv(pam, "XDG_SESSION_TYPE=wayland");
 			pam_putenv(pam, "XDG_SESSION_CLASS=user");
-			pam_set_item(pam, PAM_RHOST, "remotix");
+			/* ⭐ FASE 17 T6: l'indirizzo vero del client, come sshd
+			 *    (logind `RemoteHost`, `pam_lastlog` e i registri lo
+			 *    scrivono); «remotix» solo se non si sa.  ⚠ Da 127.0.0.1
+			 *    logind segna `Remote=no`, come per ssh da 127.0.0.1: il
+			 *    guardiano di §5.1 discrimina sul seat, non su Remote. */
+			pam_set_item(pam, PAM_RHOST,
+			             g->rhost[0] ? g->rhost : "remotix");
 			pam_set_item(pam, PAM_TTY, "remotix");
 
 			rv = pam_open_session(pam, PAM_SILENT);
@@ -1114,6 +1211,8 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 				        pam_strerror(pam, rv));
 			} else {
 				ambiente_pam = pam_getenvlist(pam);
+				/* ⭐ FASE 17 T6: il livello SELinux come per ssh. */
+				livello_selinux_come_sshd(pw->pw_name);
 			}
 			/* ⛔ `pam_end` e non `pam_close_session`: vedi sopra. */
 			pam_end(pam, PAM_SUCCESS);
@@ -1788,6 +1887,11 @@ static bool iscrivi_ai_gruppi_della_scheda(const char *utente, uid_t uid, gid_t 
 
 bool figli_assicura(figli *f, const char *utente)
 {
+	return figli_assicura_da(f, utente, NULL);
+}
+
+bool figli_assicura_da(figli *f, const char *utente, const char *rhost)
+{
 	struct figlio *g;
 	struct passwd pw, *ris = NULL;
 	char scorta[1024];
@@ -1916,6 +2020,7 @@ bool figli_assicura(figli *f, const char *utente)
 	memset(g, 0, sizeof *g);
 	g->matricola = f->prossima_matricola;
 	snprintf(g->utente, sizeof g->utente, "%s", pw.pw_name);
+	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
 	g->uid = pw.pw_uid;
 	g->gid = pw.pw_gid;
 

@@ -391,6 +391,10 @@ void figli_spegni(figli *f);
  *    non deve trattarlo come «forse»: nessun palco, nessun pixel.  Le strade
  *    che portano qui sono elencate in `figlio.c`, funzione `figli_assicura`. */
 bool figli_assicura(figli *f, const char *utente);
+/* ⭐ FASE 17 T6: la stessa, con l'indirizzo del client (nudo) che la
+ *    sessione PAM del figlio riceve come `PAM_RHOST`, come quella di sshd
+ *    (logind: `RemoteHost`).  NULL o "" ⇒ «remotix», com'era. */
+bool figli_assicura_da(figli *f, const char *utente, const char *rhost);
 
 /* I descrittori da mettere nel `poll`.  Restituisce quanti ne ha scritti. */
 size_t figli_descrittori(figli *f, struct pollfd *fds, size_t max);

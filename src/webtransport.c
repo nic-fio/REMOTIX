@@ -25,7 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool rcp_autentica(const char *utente, const char *parola);
+bool rcp_autentica_da(const char *utente, const char *parola,
+                      const char *rhost);
+bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
 
 /* ------------------------------------------------------------------------ */
 /* Le due cose che il C non porta in dote: un vettore di byte e un elenco.    */
@@ -2363,8 +2365,11 @@ static void gancio_registra(void *ctx, const char *riga)
  *   da `rcp.c`, «per via SINCRONA — il filo e' rimasto fermo». */
 static bool gancio_verifica(void *ctx, const char *utente, const char *parola)
 {
-	(void)ctx;
-	return rcp_autentica(utente, parola);
+	wt *w = (wt *)ctx;
+	char rhost[64];
+	(void)rcp_rhost_da_provenienza(w ? w->provenienza : NULL, rhost,
+	                               sizeof rhost);
+	return rcp_autentica_da(utente, parola, rhost);
 }
 
 /* ⭐⭐ LA STRADA BUONA: si chiede, non si aspetta — `DECISIONI.md` §1.10.
@@ -2378,7 +2383,7 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
 	wt *w = (wt *)ctx;
 	if (!w->aiuto)
 		return false;
-	return aiutante_chiedi(w->aiuto, utente, parola,
+	return aiutante_chiedi(w->aiuto, utente, parola, w->provenienza,
 	                       ngtcp2_conn_get_timestamp(w->conn)
 	                           / NGTCP2_MILLISECONDS,
 	                       pratica);
