@@ -201,6 +201,28 @@ type Rapporto struct {
 	Incognite    []string       `json:"incognite,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
 	Messaggi     []Messaggio    `json:"messaggi"`
 	Note         []string       `json:"note,omitempty"`
+	// Minima: per una versione esclusa, la prima versione della stessa distribuzione che il
+	// catalogo sostiene («serve almeno Debian 13»: la schermata «bloccata», T9)
+	Minima string `json:"minima,omitempty"`
+}
+
+// primaVersione: la versione più vecchia di una distribuzione che il catalogo sostiene.
+func (c *Catalogo) primaVersione(id string) string {
+	min := ""
+	for _, p := range c.Piattaforme {
+		if p.ID != id {
+			continue
+		}
+		for _, v := range p.Versioni {
+			if v != "*" && (min == "" || ConfrontaVersioni(v, min) < 0) {
+				min = v
+			}
+		}
+		if min != "" {
+			return strings.TrimSpace(p.Distribuzione + " " + min)
+		}
+	}
+	return min
 }
 
 func versioneCombacia(versioni []string, v string) bool {
@@ -247,6 +269,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		if e.ID == id && versioneCombacia(e.Versioni, ver) {
 			tutti = append(tutti, Msg("RX-COMPAT-001", e.Motivo))
 			r.Riconosciuta = T("comp.esclusa")
+			r.Minima = c.primaVersione(id)
 		}
 	}
 	if p.V("distro.immutabile") == "si" {

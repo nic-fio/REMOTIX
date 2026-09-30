@@ -15,6 +15,10 @@
 #   --dry-run           il controllo e il PIANO che si applicherebbe: niente viene toccato (da root)
 #   --risposte FILE     installazione SENZA DOMANDE dal file di risposte (§6.6.12)
 #   --lingua it|en      altrimenti dalla lingua del sistema (DECISIONI §10.15)
+#   --finestra          la FINESTRA (GUI), da utente nel desktop: scarica la costruzione con la
+#                       finestra (motore/remotix-install-gui, stessa firma, DECISIONI §10.19); i
+#                       permessi da amministratore li chiede lei a polkit quando servono
+#   --tui               le schermate nel terminale (da root), per ssh e console
 #   -- …                il resto va al motore così com'è
 #
 # Tutto il corpo sta in funzioni, e l'ultima riga chiama main: uno scaricamento interrotto a metà
@@ -157,8 +161,8 @@ verifica_revoche() {
 # ---------------------------------------------------------------- main
 
 uso() {
-	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run] [--risposte FILE] [--lingua it|en] [-- opzioni del motore]" \
-		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run] [--risposte FILE] [--lingua it|en] [-- engine options]"
+	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [-- opzioni del motore]" \
+		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [-- engine options]"
 }
 
 main() {
@@ -172,6 +176,8 @@ main() {
 		--canale=*) CANALE=${1#*=} ;;
 		--verifica) MODO=verifica ;;
 		--dry-run) MODO=prova ;;
+		--finestra | --window) MODO=finestra ;;
+		--tui) MODO=tui ;;
 		--risposte) RISPOSTE=${2:-}; shift ;;
 		--risposte=*) RISPOSTE=${1#*=} ;;
 		--lingua) L=${2:-}; LINGUA_DATA=1; shift ;;
@@ -197,7 +203,11 @@ main() {
 	fi
 	# --dry-run vuole root anche lui: il piano legge i file che toccherebbe (polkit, logind), e da
 	# utente non si leggono (`[M]` 30 set, debian13-gnome: «lstat /etc/polkit-1/rules.d/…: permission denied»)
-	if [ "$MODO" != verifica ] && [ "$(id -u)" -ne 0 ]; then
+	# la finestra, al contrario, NON gira da root (R37): polkit dà i permessi alla sua parte da root
+	if [ "$MODO" = finestra ]; then
+		[ "$(id -u)" -ne 0 ] || errore "la finestra non si lancia da root: senza sudo (i permessi li chiede lei). RX-UI-003" "the window is not launched as root: without sudo (it asks for permissions itself). RX-UI-003"
+		[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] || errore "non c'è una sessione grafica: usa --tui (da root). RX-UI-002" "there is no graphical session: use --tui (as root). RX-UI-002"
+	elif [ "$MODO" != verifica ] && [ "$(id -u)" -ne 0 ]; then
 		errore "l'installazione e --dry-run vanno lanciati da root (sudo sh install.sh …); --verifica no." "installation and --dry-run must be run as root (sudo sh install.sh …); --verifica need not."
 	fi
 	riconosci
@@ -205,9 +215,13 @@ main() {
 	T=$(mktemp -d "${TMPDIR:-/tmp}/remotix-install.XXXXXX") || errore "mktemp" "mktemp"
 	trap 'rm -rf "$T"' EXIT
 	trap 'exit 130' INT TERM
+	# due costruzioni dello stesso sorgente (DECISIONI §10.19): la statica va ovunque; quella con la
+	# finestra è legata alle librerie grafiche del sistema e si scarica solo per --finestra
 	M=$T/remotix-install
+	NOME=remotix-install
+	[ "$MODO" = finestra ] && NOME=remotix-install-gui
 	dice "Scarico il motore da $ARCHIVIO/motore/ …" "Downloading the engine from $ARCHIVIO/motore/ …"
-	scarica "$ARCHIVIO/motore/remotix-install" "$M" && scarica "$ARCHIVIO/motore/remotix-install.firma" "$M.firma" ||
+	scarica "$ARCHIVIO/motore/$NOME" "$M" && scarica "$ARCHIVIO/motore/$NOME.firma" "$M.firma" ||
 		errore "il motore non si scarica da $ARCHIVIO." "the engine cannot be downloaded from $ARCHIVIO."
 	verifica_firma "$M" "$M.firma" motore
 	verifica_revoche
@@ -220,6 +234,16 @@ main() {
 	comuni="--archivio $ARCHIVIO --canale $CANALE"
 	[ -n "$LINGUA_DATA" ] && comuni="$comuni --lingua $L"
 	case $MODO in
+	finestra)
+		# la lingua va passata sempre: polkit ripulisce l'ambiente della parte da root (§10.15)
+		"$M" gui --archivio "$ARCHIVIO" --canale "$CANALE" --lingua "$L" "$@"
+		exit $?
+		;;
+	tui)
+		# curl | sh: lo standard input è lo script; le schermate vogliono il terminale
+		"$M" tui --archivio "$ARCHIVIO" --canale "$CANALE" --lingua "$L" "$@" </dev/tty
+		exit $?
+		;;
 	verifica)
 		# shellcheck disable=SC2086
 		"$M" verifica $comuni "$@"

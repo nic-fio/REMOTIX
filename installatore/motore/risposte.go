@@ -17,7 +17,7 @@ import (
 // registro dell'operazione come ogni altro piano.
 //
 // ⛔ Senza domande NON vuol dire senza consenso: ogni consenso che su QUESTA macchina servirebbe
-// (le cinture D4; l'archivio di terzi D5, solo dove serve; il firewall D6, solo se firewalld è
+// (l'archivio di terzi D5, solo dove serve; il firewall D6, solo se firewalld è
 // acceso; gli aggiornamenti automatici, solo dall'archivio) deve avere nel file una risposta
 // esplicita, «si» o «no». Se ne manca uno il piano si fa lo stesso (per mostrarlo), ma
 // l'operazione è BLOCCATA con RX-RISPOSTE-001, prima di toccare niente: mai un «sì» per scelta
@@ -33,7 +33,8 @@ import (
 //	desktop = gnome                       # SOLO se sulla macchina manca un desktop supportato: gnome · kde ·
 //	                                      #   xfce · lxqt · no. Se manca la voce: quello di riferimento della
 //	                                      #   distribuzione (fasi/17 §10, parola dell'utente)
-//	consenso.cinture = si                 # D4: le tre cinture (niente spegnimento, sospensione, tasti)
+//	                                      # (consenso.cinture: RITIRATA — D4, le cinture sempre; in un file
+//	                                      #  vecchio si annota fra le «superflue» e non conta)
 //	consenso.firewall = si                # D6: aprire la porta nel firewall (serve solo se firewalld è acceso)
 //	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel), solo dove serve
 //	consenso.aggiornamenti = si           # il timer degli aggiornamenti automatici (DECISIONI §10.10, D14)
@@ -258,7 +259,9 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 		rif.Superflue = append(rif.Superflue, "desktop")
 	}
 
-	o.SenzaCinture = !consenso("consenso.cinture", true)
+	if _, dato := r.Voci["consenso.cinture"]; dato { // D4: sempre; la voce vecchia si dice e non conta
+		rif.Superflue = append(rif.Superflue, "consenso.cinture ("+T("risposte.cinture_ignorata")+")")
+	}
 	o.ApriFirewall = consenso("consenso.firewall", amb.Firewall != nil && amb.Firewall.Nome() == "firewalld")
 	o.SenzaTimer = !consenso("consenso.aggiornamenti", o.Archivio != "")
 	servono := map[string]bool{}

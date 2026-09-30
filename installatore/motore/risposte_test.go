@@ -58,10 +58,12 @@ func TestConsensiNecessari(t *testing.T) {
 		mancanti string
 		superflu string
 	}{
-		{"debian, niente", deb, "", "", "consenso.cinture,consenso.firewall", ""},
-		{"debian, archivio", deb, "http://a", "", "consenso.cinture,consenso.firewall,consenso.aggiornamenti", ""},
-		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.deposito.rpmfusion"},
-		{"fedora senza RPM Fusion", fed, "", "consenso.cinture = si\nconsenso.firewall = si\n", "consenso.deposito.rpmfusion", ""},
+		// D4 (DECISIONI §4.7): le cinture non si chiedono; «consenso.cinture» di un file vecchio si
+		// annota fra le superflue e non conta, nemmeno «no»
+		{"debian, niente", deb, "", "", "consenso.firewall", ""},
+		{"debian, archivio", deb, "http://a", "", "consenso.firewall,consenso.aggiornamenti", ""},
+		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.cinture,consenso.deposito.rpmfusion"},
+		{"fedora senza RPM Fusion", fed, "", "consenso.cinture = si\nconsenso.firewall = si\n", "consenso.deposito.rpmfusion", "consenso.cinture"},
 	}
 	for _, c := range casi {
 		r, err := LeggiRisposte(fileRisposte(t, "formato = remotix-risposte/1\n"+c.testo))
@@ -76,12 +78,17 @@ func TestConsensiNecessari(t *testing.T) {
 		if got := strings.Join(rif.Mancanti, ","); got != c.mancanti {
 			t.Errorf("%s: mancanti %q, attesi %q", c.nome, got, c.mancanti)
 		}
-		if got := strings.Join(rif.Superflue, ","); got != c.superflu {
+		var sup []string
+		for _, x := range rif.Superflue {
+			x, _, _ = strings.Cut(x, " (")
+			sup = append(sup, x)
+		}
+		if got := strings.Join(sup, ","); got != c.superflu {
 			t.Errorf("%s: superflue %q, attese %q", c.nome, got, c.superflu)
 		}
 		// un consenso che manca vale «no», mai «sì»
 		for _, k := range rif.Mancanti {
-			si := map[string]bool{"consenso.firewall": o.ApriFirewall, "consenso.cinture": !o.SenzaCinture,
+			si := map[string]bool{"consenso.firewall": o.ApriFirewall,
 				"consenso.aggiornamenti": !o.SenzaTimer, "consenso.deposito.rpmfusion": strings.Contains(strings.Join(o.Depositi, ","), "rpmfusion")}
 			if si[k] {
 				t.Errorf("%s: il consenso mancante %s è diventato sì: %+v", c.nome, k, o)

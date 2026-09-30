@@ -113,7 +113,9 @@ func TestCatalogo(t *testing.T) {
 		{"ubuntu", "24.04", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"}, // D7 chiusa: fuori
 		{"linuxmint", "22", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"},
 		{"linuxmint", "23", "gnome", map[string]string{"pacchetto.gnome-session": "50.0"}, "COMPATIBILE "},
-		{"ubuntu", "26.04", "gnome", map[string]string{"pacchetto.gnome-session": "assente"}, "COMPATIBILE C-COMPONENTE"},
+		// D8 (30 set): REMOTIX avvia la sessione GNOME di serie (su Ubuntu «ubuntu»): gnome-session non
+		// è più un componente da aggiungere, e non compare nel piano
+		{"ubuntu", "26.04", "gnome", map[string]string{"pacchetto.gnome-session": "assente"}, "COMPATIBILE "},
 		{"debian", "12", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"},
 		{"almalinux", "10.1", "xfce", nil, "NON_SUPPORTATA RX-COMPAT-005"},
 		{"almalinux", "10.0", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"}, // serve la 10.1 (OpenSSL 3.5)

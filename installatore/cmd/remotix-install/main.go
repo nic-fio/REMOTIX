@@ -68,6 +68,12 @@ func main() {
 		codice, err = installa(arg)
 	case "prepara-fuori-linea":
 		codice, err = preparaFuoriLinea(arg)
+	case "gui":
+		codice, err = guiCmd(arg)
+	case "tui":
+		codice, err = tuiCmd(arg)
+	case "motore-interfaccia":
+		codice, err = motoreInterfaccia(arg)
 	case "versione", "--version":
 		fmt.Println(motore.VersioneMotore, motore.Formato)
 	case "aiuto", "help", "--help", "-h":
@@ -363,7 +369,6 @@ func piano(arg []string) error {
 	pacchetto := fs.String("pacchetto", "", "installazione: il pacchetto di REMOTIX da un file (.deb/.rpm/.pkg.tar.zst), invece dell'archivio")
 	senzaTimer := fs.Bool("senza-timer", false, "installazione dall'archivio: senza gli aggiornamenti automatici")
 	depositi := fs.String("deposito", "", "installazione: archivi di terzi col consenso (D5), separati da virgola: epel, rpmfusion, packman")
-	senzaCinture := fs.Bool("senza-cinture", false, "installazione: senza le tre cinture (D4)")
 	nomi := fs.String("pacchetti", "", "prova: pacchetti dai depositi da far installare (separati da virgola)")
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
@@ -397,7 +402,7 @@ func piano(arg []string) error {
 		return stampaPiano(p, *uscita, *comeJSON)
 	}
 	if *installa {
-		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, SenzaCinture: *senzaCinture, Porta: c.porta,
+		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, Porta: c.porta,
 			SenzaTimer: *senzaTimer}
 		if *pacchetto == "" && c.archivio != "" {
 			o.Archivio, o.Canale, o.Chiave, o.Impronta = c.archivio, c.canale, chiavi.Archivio, chiavi.ImprontaArchivio()
@@ -480,6 +485,9 @@ func mostraPiano(p *motore.Piano, uscitaFile string) error {
 	}
 	for _, x := range p.Consensi {
 		fmt.Printf("\n%s\n", T("cli.consenso", x))
+	}
+	for _, x := range p.Dichiarate {
+		fmt.Printf("\n%s\n", T("cli.dichiarato", x))
 	}
 	for _, m := range p.NonFatto {
 		fmt.Printf("\n%s\n", T("cli.non_fatto", m.Codice, m.Testo, m.Dettaglio))
@@ -578,6 +586,9 @@ func opera(cmd string, arg []string) (int, error) {
 	}
 	switch op.Stato {
 	case motore.CONFERMATA, motore.CONFERMATA_A_CONDIZIONI:
+		if !*eventi && op.Piano != nil && op.Piano.Mestiere == "installazione" {
+			fmt.Println(T("cli.router", m.Porta)) // D6
+		}
 		return 0, nil
 	case motore.ANNULLATA:
 		if cmd == "annulla" {

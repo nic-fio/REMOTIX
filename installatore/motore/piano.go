@@ -105,21 +105,23 @@ type Approvazione struct {
 
 // Piano: il terzo oggetto (§6.6.1). Un documento: si salva, si legge, si approva, si applica.
 type Piano struct {
-	Formato      string        `json:"formato"`
-	Oggetto      string        `json:"oggetto"` // "piano"
-	ID           string        `json:"id"`
-	Creato       string        `json:"creato"`
-	Mestiere     string        `json:"mestiere"` // "prova-motore" in T4; poi installazione, aggiornamento, disinstallazione
-	Motore       RifMotore     `json:"motore"`
-	Catalogo     RifCatalogo   `json:"catalogo"`
-	Piattaforma  string        `json:"piattaforma"`
-	Impronta     Impronta      `json:"impronta"`
-	Dipende      []string      `json:"dipende"` // pacchetti da cui il piano dipende (nell'impronta)
-	Azioni       []AzionePiano `json:"azioni"`
-	Consensi     []string      `json:"consensi"`   // le domande con una riga loro (D5, D6, IRREVERSIBILE)
-	Scelte       []Scelta      `json:"scelte"`     // le domande con una risposta (il desktop, se manca)
-	Condizioni   []Condizione  `json:"condizioni"` // quelle del rapporto che valgono per i desktop installati
-	NonFatto     []Messaggio   `json:"non_fatto"`  // quel che il piano dichiara di non fare, e perché
+	Formato     string        `json:"formato"`
+	Oggetto     string        `json:"oggetto"` // "piano"
+	ID          string        `json:"id"`
+	Creato      string        `json:"creato"`
+	Mestiere    string        `json:"mestiere"` // "prova-motore" in T4; poi installazione, aggiornamento, disinstallazione
+	Motore      RifMotore     `json:"motore"`
+	Catalogo    RifCatalogo   `json:"catalogo"`
+	Piattaforma string        `json:"piattaforma"`
+	Impronta    Impronta      `json:"impronta"`
+	Dipende     []string      `json:"dipende"` // pacchetti da cui il piano dipende (nell'impronta)
+	Azioni      []AzionePiano `json:"azioni"`
+	Consensi    []string      `json:"consensi"`   // le domande con una riga loro (D5, D6, IRREVERSIBILE)
+	Scelte      []Scelta      `json:"scelte"`     // le domande con una risposta (il desktop, se manca)
+	Condizioni  []Condizione  `json:"condizioni"` // quelle del rapporto che valgono per i desktop installati
+	NonFatto    []Messaggio   `json:"non_fatto"`  // quel che il piano dichiara di non fare, e perché
+	// Dichiarate: quel che il piano fa SENZA chiedere, detto prima (D4: le cinture, sempre)
+	Dichiarate   []string      `json:"dichiarate,omitempty"`
 	Approvazione *Approvazione `json:"approvazione,omitempty"`
 	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
 	Purge bool `json:"purge,omitempty"`
