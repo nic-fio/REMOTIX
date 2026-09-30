@@ -1,31 +1,9 @@
 package motore
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
-
-// La configurazione degli aggiornamenti: il predefinito è la PROPOSTA di D14, il file vince, un
-// valore sbagliato è un errore col suo codice (mai un ripiego in silenzio).
-func TestConfAggiornamenti(t *testing.T) {
-	r := t.TempDir()
-	a := &Ambiente{Radice: r}
-	c, err := LeggiConfAggiornamenti(a)
-	if err != nil || c.Automatico != "manutenzione" || !strings.Contains(c.Da["automatico"], "D14") {
-		t.Fatalf("predefinito: %v %+v", err, c)
-	}
-	os.MkdirAll(filepath.Join(r, "etc/remotix"), 0o755)
-	os.WriteFile(filepath.Join(r, FileConfAggiornamenti), []byte("# prova\nautomatico = avviso\n"), 0o644)
-	if c, err = LeggiConfAggiornamenti(a); err != nil || c.Automatico != "avviso" || c.Da["automatico"] != FileConfAggiornamenti {
-		t.Fatalf("dal file: %v %+v", err, c)
-	}
-	os.WriteFile(filepath.Join(r, FileConfAggiornamenti), []byte("automatico = sempre\n"), 0o644)
-	if _, err = LeggiConfAggiornamenti(a); CodiceDi(err) != "RX-AGG-010" {
-		t.Fatalf("valore sbagliato: %v", err)
-	}
-}
 
 // Il blocco di pacman.conf: si toglie SOLO lui, il resto del file resta byte per byte.
 func TestBloccoPacman(t *testing.T) {

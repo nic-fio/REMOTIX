@@ -137,7 +137,7 @@ func Anteprima(uscita, dati string, scala float32) error {
 		e.Installato, e.Condizioni = "assente", nil
 		rnd.Desktop = append(rnd.Desktop, e)
 	}
-	dnd := &motore.Domande{Porta: 7447, Firewall: "nessuno", Depositi: []motore.DomandaDeposito{}, Aggiornamenti: true,
+	dnd := &motore.Domande{Porta: 7447, Firewall: "nessuno", Depositi: []motore.DomandaDeposito{},
 		Desktop: &motore.Scelta{ID: "desktop", Opzioni: []string{"gnome", "kde", "xfce", "lxqt", "no"}, Predefinita: "gnome"},
 		Persone: dom.Persone, SenzaScheda: dom.SenzaScheda}
 	nd.metteControllo(&interfaccia.Controllo{Fiducia: ver.Fiducia, Profilo: pnd, Rapporto: &rnd, Domande: dnd})
@@ -183,7 +183,7 @@ func copiaProfilo(p *motore.Profilo, cambi map[string]string) *motore.Profilo {
 // domandeDaProfilo: per l'anteprima (niente ambiente vero): il firewall dal profilo, le persone e i
 // depositi dal piano fatto su quella macchina.
 func domandeDaProfilo(p *motore.Profilo, r *motore.Rapporto, pn *motore.Piano) *motore.Domande {
-	d := &motore.Domande{Porta: 7447, Aggiornamenti: pn.Archivio != nil, Depositi: []motore.DomandaDeposito{}, SenzaScheda: []string{}}
+	d := &motore.Domande{Porta: 7447, Depositi: []motore.DomandaDeposito{}, SenzaScheda: []string{}}
 	switch {
 	case p.V("firewall.tipo") != "firewalld":
 		d.Firewall = "nessuno"

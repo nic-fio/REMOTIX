@@ -17,9 +17,8 @@ type OpzioniInstallazione struct {
 	Pacchetto    string // il pacchetto di REMOTIX da un file locale (le prove di T3-T5); oppure:
 	Archivio     string // l'archivio firmato di REMOTIX (T8): URL di base
 	Canale       string // stabile (predefinito) o candidato
-	Chiave       string // la chiave pubblica della catena B (armatura ASCII), e la sua impronta
+	Chiave       string // la chiave pubblica dell'archivio (armatura ASCII), e la sua impronta
 	Impronta     string
-	SenzaTimer   bool     // niente aggiornamenti automatici (il timer resta spento)
 	Utenti       []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
 	Depositi     []string // archivi di terzi col consenso (D5): epel, rpmfusion, packman
 	ApriFirewall bool     // D6
@@ -35,7 +34,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	ps := strconv.Itoa(o.Porta)
 	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "installazione",
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
-		Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza}, Piattaforma: rap.Piattaforma,
+		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 
 	if o.Archivio != "" {
@@ -70,7 +69,8 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	}
 	switch {
 	case o.Archivio != "":
-		// dall'archivio: il prodotto, il motore (col timer degli aggiornamenti) e, su apt, la chiave
+		// dall'archivio: il prodotto, il motore (col catalogo dentro) e, su apt, la chiave. Poi si
+		// aggiornano col sistema (DECISIONI §10.23): niente timer nostro
 		nomi := "remotix,remotix-install"
 		if amb.Famiglia == "debian" {
 			nomi += ",remotix-archive-keyring"
@@ -146,13 +146,6 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
 	}
 	pn.Azioni = append(pn.Azioni, PianoAccendiServizio("servizio", "remotix.service", o.Porta))
-	// gli aggiornamenti automatici (DECISIONI §10.10): il timer del pacchetto remotix-install, spento
-	// finché non lo accende il motore — col consenso, che dice che cosa si applicherà da solo (D14)
-	if o.Archivio != "" && !o.SenzaTimer {
-		cons := T("consenso.aggiornamenti")
-		pn.Azioni = append(pn.Azioni, PianoUnitaAccesa("aggiornamenti", "remotix-aggiorna.timer", cons))
-		pn.Consensi = append(pn.Consensi, cons)
-	}
 
 	for _, e := range rap.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {

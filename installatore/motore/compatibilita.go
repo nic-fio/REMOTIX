@@ -6,7 +6,7 @@ import (
 )
 
 // FormatoCatalogo è la versione di formato del catalogo (diversa da quella degli oggetti: il
-// catalogo si pubblica a parte, con la sua scadenza, §6.6.8).
+// catalogo viaggia nel pacchetto remotix-install, §6.6.8).
 const FormatoCatalogo = "remotix-catalogo/1"
 
 // Catalogo: le combinazioni e le loro regole (§3, §6.6.8).
@@ -15,9 +15,7 @@ type Catalogo struct {
 	Versione           string                      `json:"versione"`
 	Sequenza           int                         `json:"sequenza"`
 	Emesso             string                      `json:"emesso"`
-	Scadenza           string                      `json:"scadenza"`
 	MotoreMinimo       string                      `json:"motore_minimo"`
-	Firma              FirmaCatalogo               `json:"firma"`
 	Fonte              string                      `json:"fonte"`
 	Requisiti          RequisitiCatalogo           `json:"requisiti"`
 	Depositi           map[string]DepositoCatalogo `json:"depositi"`
@@ -30,15 +28,7 @@ type Catalogo struct {
 	ComponentiMinimi   []ComponenteMinimo          `json:"componenti_minimi"`
 
 	Digest      string `json:"-"` // sha256 dei byte letti
-	Provenienza string `json:"-"` // da dove viene (fase 0 TRUST): incorporato, memorizzato, archivio …, fuori linea …
-}
-
-// FirmaCatalogo: il catalogo si aggiorna da solo, senza un REMOTIX nuovo (DECISIONI §10.10), con
-// la firma in un file separato. Schema e chiavi: catena A (§6.6.10), D11.
-type FirmaCatalogo struct {
-	Separata string `json:"separata"`
-	Schema   string `json:"schema"`
-	Nota     string `json:"nota"`
+	Provenienza string `json:"-"` // da dove viene (fase 0 TRUST): il pacchetto, il motore scaricato, dato a mano
 }
 
 // ComponenteMinimo: una riga della tabella «versioni minime dei componenti» (§3.1).
@@ -139,7 +129,6 @@ func LeggiCatalogo(b []byte) (*Catalogo, error) {
 type RifCatalogo struct {
 	Versione string `json:"versione"`
 	Digest   string `json:"digest"`
-	Scadenza string `json:"scadenza"`
 }
 
 type RifMotore struct {
@@ -258,7 +247,7 @@ func (c *Catalogo) trova(id, versione string) (pl *Piattaforma, derivata *Deriva
 // Valuta: fase 2 COMPATIBILITY, desktop per desktop.
 func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 	r := &Rapporto{Formato: Formato, Oggetto: "compatibilita", Creato: ora(),
-		Catalogo: RifCatalogo{c.Versione, c.Digest, c.Scadenza}}
+		Catalogo: RifCatalogo{c.Versione, c.Digest}}
 	id, ver := p.V("distro.id"), p.V("distro.versione")
 	fam := p.V("distro.famiglia")
 	r.Piattaforma = strings.TrimSpace(p.V("distro.nome"))

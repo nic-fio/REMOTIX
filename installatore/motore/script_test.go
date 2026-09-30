@@ -3,36 +3,21 @@ package motore
 import (
 	"os"
 	"regexp"
-	"strings"
 	"testing"
-
-	"remotix/installatore/chiavi"
 )
 
-// Lo script d'ingresso verifica il motore con la chiave madre della catena A scritta DENTRO di sé:
-// deve essere la stessa del motore (installatore/chiavi/radice-A.pub), o install.sh rifiuterebbe
-// ogni motore vero — o, peggio, ne accetterebbe uno firmato da un'altra radice.
-func TestScriptRadice(t *testing.T) {
+// Lo script d'ingresso verifica il motore con lo sha256 (DECISIONI §10.21): le righe SHA256_ le
+// scrive il comando di rilascio (packaging/rilascio.sh) nella copia pubblicata; nel deposito ci
+// sono, e sono VUOTE (una copia di sviluppo prende lo sha256 pubblicato accanto al motore).
+func TestScript(t *testing.T) {
 	b, err := os.ReadFile("../install.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile(`(?m)^RADICE_A='([^']+)'$`).FindStringSubmatch(string(b))
-	if m == nil {
-		t.Fatal("install.sh: RADICE_A non trovata")
-	}
-	radici, err := LeggiRadici(chiavi.RadiceA)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var righe []string
-	for _, r := range strings.Split(chiavi.RadiceA, "\n") {
-		if r = strings.TrimSpace(r); r != "" && !strings.HasPrefix(r, "#") {
-			righe = append(righe, r)
+	for _, v := range []string{"SHA256_MOTORE", "SHA256_MOTORE_GUI"} {
+		if !regexp.MustCompile(`(?m)^` + v + `=''$`).Match(b) {
+			t.Errorf("install.sh: manca la riga %s='' (la riempie il comando di rilascio)", v)
 		}
-	}
-	if len(radici) != 1 || righe[0] != m[1] {
-		t.Errorf("install.sh ha la radice %s, il motore %v", m[1], righe)
 	}
 	// ⛔ lo script non copia file del prodotto: niente install/cp verso le cartelle di REMOTIX
 	if regexp.MustCompile(`(?m)^[^#]*\b(install|cp|mv)\b[^\n]*(/usr/(lib|libexec|bin|share)|/etc/remotix|/var/lib/remotix)`).Match(b) {

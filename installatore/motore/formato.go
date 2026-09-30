@@ -20,7 +20,9 @@ import (
 const Formato = "remotix-install/1"
 
 // VersioneMotore è la versione di questo motore; il catalogo dichiara la minima che lo capisce.
-const VersioneMotore = "0.1.0"
+// Il comando di rilascio (packaging/rilascio.sh) la fissa uguale a quella del rilascio
+// (-ldflags -X), la stessa dei pacchetti remotix e remotix-install.
+var VersioneMotore = "0.1.0"
 
 // ora restituisce l'istante in UTC, con i secondi: è quel che va nei registri.
 func ora() string { return time.Now().UTC().Format(time.RFC3339Nano) }

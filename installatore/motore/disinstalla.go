@@ -130,7 +130,8 @@ func (m *Motore) PulisciStoria(purge bool) error {
 			return err
 		}
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
-		// T8: il catalogo memorizzato, le versioni aggiornate, i piani degli aggiornamenti
+		// T8: il catalogo memorizzato, le versioni annotate, i piani degli aggiornamenti (i primi e gli
+		// ultimi li scrivevano motori di prima di D11/D14: si tolgono lo stesso, se ci sono)
 		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "fiducia"))
 		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti"))
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti.json"))
@@ -341,7 +342,7 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 		}
 	}
 	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione", Purge: purge,
-		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest, m.Catalogo.Scadenza},
+		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest},
 		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 	sess, _ := SessioniRemotix(m.Amb)
 	var utenti []string

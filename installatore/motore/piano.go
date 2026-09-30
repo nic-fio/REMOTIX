@@ -234,7 +234,7 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 	ps := fmt.Sprint(o.Porta)
 	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "prova-motore",
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
-		Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza}, Piattaforma: rap.Piattaforma,
+		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 	for _, d := range o.Depositi {
 		cons := T("consenso.deposito", nonVuoto(cat.Depositi[d].Nome, d))

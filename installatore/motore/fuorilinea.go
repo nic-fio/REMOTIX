@@ -2,7 +2,6 @@ package motore
 
 import (
 	"bufio"
-	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -31,24 +30,24 @@ import (
 //	fuori-linea.json          il manifesto: l'impronta della macchina di riferimento (quella vincolante
 //	                          del piano e l'elenco esatto dei pacchetti installati), l'INSIEME RISOLTO
 //	                          (ogni artefatto con nome, versione, sha256) e ogni file con il suo sha256
-//	archivio/                 la parte dell'archivio di REMOTIX che serve: il catalogo FIRMATO e le
-//	                          revoche (catena A), il motore con la sua firma, le chiavi pubbliche, e il
-//	                          deposito della famiglia coi suoi METADATI FIRMATI (catena B: InRelease;
-//	                          repomd.xml.asc) e i soli pacchetti che servono
+//	archivio/                 la parte dell'archivio di REMOTIX che serve: il motore col suo sha256 (il
+//	                          catalogo sta dentro di lui), la chiave pubblica, e il deposito della
+//	                          famiglia coi suoi METADATI FIRMATI (InRelease; repomd.xml.asc) e i soli
+//	                          pacchetti che servono
 //	distro/apt/<n>/           (apt) una copia PARZIALE di ogni deposito della distribuzione: il suo
 //	                          InRelease firmato dalla distribuzione, gli indici Packages che quell'InRelease
 //	                          certifica, e nel pool i soli .deb che alla macchina mancano
 //	distro/rpm/<azione>/      (dnf) i .rpm che alla macchina mancano, firmati uno per uno dalla distribuzione
 //
 // Sulla macchina senza rete il motore lo usa come ARCHIVIO LOCALE (file://…/archivio: il deposito di
-// REMOTIX punta lì, e anche il catalogo si prende da lì) e le firme si verificano COME IN LINEA:
+// REMOTIX punta lì) e le firme si verificano COME IN LINEA:
 //   - apt: il gestore legge i depositi del pacchetto (e solo quelli, con una configurazione
 //     temporanea: niente cambia nelle sorgenti della macchina) e verifica InRelease con la chiave della
 //     distribuzione (Signed-By, lo stesso file di prima), gli indici con InRelease, ogni .deb con
 //     l'indice — la stessa catena di una installazione in linea;
 //   - dnf: ogni .rpm si installa con la verifica della sua firma (localpkg_gpgcheck=1), come in linea
 //     (gpgcheck=1: i metadati di Fedora non sono firmati nemmeno in linea); quelli di REMOTIX con la
-//     chiave della catena B, i metadati del deposito di REMOTIX con repo_gpgcheck (repomd.xml.asc).
+//     chiave dell'archivio, i metadati del deposito di REMOTIX con repo_gpgcheck (repomd.xml.asc).
 //
 // ⛔ Un pacchetto preparato per un'altra impronta si RIFIUTA (RX-FUORI-002), come un piano (R31); un
 // file del pacchetto alterato o mancante si rifiuta prima di toccare la macchina (RX-FUORI-001).
@@ -172,7 +171,7 @@ func LeggiFuoriLinea(dir string) (*PacchettoFuoriLinea, error) {
 		case sha == "":
 			male = append(male, f.File+": manca")
 		case sha != f.Sha256:
-			male = append(male, f.File+": sha256 "+sha[:16]+"…, atteso "+abbrevia(f.Sha256))
+			male = append(male, f.File+": sha256 "+sha[:16]+"…, atteso "+f.Sha256[:min(16, len(f.Sha256))]+"…")
 		}
 	}
 	if len(male) > 0 {
@@ -467,8 +466,7 @@ func copiaFile(da, a string) error {
 type OpzioniPrepara struct {
 	Archivio, Canale string
 	Uscita           string
-	Radici           []ed25519.PublicKey
-	ChiaveArchivio   string // la chiave pubblica della catena B (armatura ASCII)
+	ChiaveArchivio   string // la chiave pubblica dell'archivio (armatura ASCII)
 	Scarica          func(url string) ([]byte, error)
 }
 
@@ -558,7 +556,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	}
 	defer os.RemoveAll(p.lav)
 	p.fl = &PacchettoFuoriLinea{Formato: Formato, Oggetto: "pacchetto-fuori-linea", Creato: ora(),
-		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza},
+		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{cat.Versione, cat.Digest},
 		Origine: strings.TrimRight(o.Archivio, "/"), Canale: o.Canale, Bersaglio: BersaglioArchivio(amb), Famiglia: amb.Famiglia,
 		Azioni: []AzioneFuoriLinea{}, Artefatti: []Artefatto{}, File: []FileFuoriLinea{}}
 
@@ -569,36 +567,23 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	}
 	p.fl.Impronta, p.fl.Pacchetti, p.fl.DigestPacchetti = *im, pk, Sha256([]byte(strings.Join(pk, "\n")))
 
-	// catena A: catalogo, revoche, motore; e le chiavi pubbliche — verificati QUI (un archivio
-	// alterato si scopre prima di portarlo via), e di nuovo sulla macchina senza rete
-	ev("catalogo, revoche e motore (catena A)")
-	adesso := time.Now()
-	rd, err := p.daArchivio("catalogo/revoche.json")
+	// il motore (col suo sha256 pubblicato accanto: il catalogo viaggia dentro di lui) e la chiave
+	// pubblica dell'archivio — il motore si verifica QUI (un archivio alterato si scopre prima di
+	// portarlo via); la catena dei pacchetti la verifica il gestore, sulla macchina senza rete come in
+	// linea (D11 semplificata, DECISIONI §10.21)
+	ev("il motore e la chiave dell'archivio")
+	mot, err := p.daArchivio("motore/remotix-install")
 	if err != nil {
 		return nil, err
 	}
-	rf, err := p.daArchivio("catalogo/revoche.json.firma")
+	sha, err := p.daArchivio("motore/remotix-install.sha256")
 	if err != nil {
 		return nil, err
 	}
-	rev, err := LeggiRevoche(o.Radici, rd, rf, adesso)
-	if err != nil {
-		return nil, err
+	if f := strings.Fields(string(sha)); len(f) == 0 || f[0] != Sha256(mot) {
+		return nil, Errore("RX-TRUST-017", "motore/remotix-install: sha256 "+Sha256(mot)[:16]+"…, pubblicato "+strings.TrimSpace(string(sha)))
 	}
-	for _, x := range [][2]string{{"catalogo/" + o.Canale + "/catalogo.json", "catalogo"}, {"motore/remotix-install", "motore"}} {
-		d, err := p.daArchivio(x[0])
-		if err != nil {
-			return nil, err
-		}
-		f, err := p.daArchivio(x[0] + ".firma")
-		if err != nil {
-			return nil, err
-		}
-		if _, err := VerificaFirma(o.Radici, d, f, x[1], adesso, rev); err != nil {
-			return nil, err
-		}
-	}
-	for _, k := range []string{"chiavi/radice-A.pub", "chiavi/remotix-archivio.asc", "chiavi/LEGGIMI"} {
+	for _, k := range []string{"chiavi/remotix-archivio.asc", "chiavi/LEGGIMI"} {
 		if _, err := p.daArchivio(k); err != nil && !strings.HasSuffix(k, "LEGGIMI") {
 			return nil, err
 		}

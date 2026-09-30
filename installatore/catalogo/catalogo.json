@@ -1,15 +1,9 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.6",
-  "sequenza": 6,
+  "versione": "2026.09.30.7",
+  "sequenza": 7,
   "emesso": "2026-09-30",
-  "scadenza": "2027-03-31",
   "motore_minimo": "0.1.0",
-  "firma": {
-    "separata": "catalogo.json.firma",
-    "schema": "remotix-firma/1: catena A (§6.6.10), ed25519; la sottochiave firma, la radice (fuori linea) certifica la sottochiave",
-    "nota": "il catalogo si pubblica e si aggiorna da solo, senza un REMOTIX nuovo (DECISIONI §10.10), con la firma in un file separato accanto; il motore verifica firma, sottochiave, revoche, scadenza e versione minima alla fase 0 TRUST e si ferma (BLOCCATA, RX-TRUST-…) se qualcosa non torna. «sequenza» cresce a ogni pubblicazione: un catalogo più vecchio di uno già verificato non lo sostituisce. ⚠ T8: firmato con chiavi DI PROVA (D11)"
-  },
   "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop): quel che il documento sa il 30 set 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
   "requisiti": {
     "openssl_minima": "3.5.0",

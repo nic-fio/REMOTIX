@@ -43,7 +43,7 @@ func TestLeggiRisposte(t *testing.T) {
 }
 
 // I consensi che servono dipendono dalla macchina: il firewall solo con firewalld acceso, l'archivio
-// di terzi solo dove H.264 lo chiede, gli aggiornamenti solo dall'archivio; le cinture sempre.
+// di terzi solo dove H.264 lo chiede; le cinture sempre; gli aggiornamenti mai (D14: col sistema).
 func TestConsensiNecessari(t *testing.T) {
 	cat := catalogoProva(t)
 	amb := ambienteFinto(t.TempDir()) // firewalld
@@ -59,10 +59,10 @@ func TestConsensiNecessari(t *testing.T) {
 		superflu string
 	}{
 		// D4 (DECISIONI §4.7): le cinture non si chiedono; «consenso.cinture» di un file vecchio si
-		// annota fra le superflue e non conta, nemmeno «no»
+		// annota fra le superflue e non conta, nemmeno «no»; lo stesso «consenso.aggiornamenti» (D14)
 		{"debian, niente", deb, "", "", "consenso.firewall", ""},
-		{"debian, archivio", deb, "http://a", "", "consenso.firewall,consenso.aggiornamenti", ""},
-		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.cinture,consenso.deposito.rpmfusion"},
+		{"debian, archivio", deb, "http://a", "", "consenso.firewall", ""},
+		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.cinture,consenso.aggiornamenti,consenso.deposito.rpmfusion"},
 		{"fedora senza RPM Fusion", fed, "", "consenso.cinture = si\nconsenso.firewall = si\n", "consenso.deposito.rpmfusion", "consenso.cinture"},
 	}
 	for _, c := range casi {
@@ -89,7 +89,7 @@ func TestConsensiNecessari(t *testing.T) {
 		// un consenso che manca vale «no», mai «sì»
 		for _, k := range rif.Mancanti {
 			si := map[string]bool{"consenso.firewall": o.ApriFirewall,
-				"consenso.aggiornamenti": !o.SenzaTimer, "consenso.deposito.rpmfusion": strings.Contains(strings.Join(o.Depositi, ","), "rpmfusion")}
+				"consenso.deposito.rpmfusion": strings.Contains(strings.Join(o.Depositi, ","), "rpmfusion")}
 			if si[k] {
 				t.Errorf("%s: il consenso mancante %s è diventato sì: %+v", c.nome, k, o)
 			}

@@ -28,7 +28,6 @@ func installa(arg []string) (int, error) {
 	utente := fs.String("utente", "", "a mano: le persone da iscrivere ai gruppi della scheda (vuoto: tutte)")
 	apri := fs.Bool("apri-firewall", false, "a mano: aprire la porta nel firewall (D6)")
 	depositi := fs.String("deposito", "", "a mano: archivi di terzi col consenso (D5)")
-	senzaTimer := fs.Bool("senza-timer", false, "a mano: senza gli aggiornamenti automatici")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
@@ -54,7 +53,7 @@ func installa(arg []string) (int, error) {
 			return 1, err
 		}
 	} else {
-		o.ApriFirewall, o.SenzaTimer = *apri, *senzaTimer
+		o.ApriFirewall = *apri
 		if *utente != "" {
 			o.Utenti = strings.Split(*utente, ",")
 		}
@@ -98,15 +97,11 @@ func installa(arg []string) (int, error) {
 	if err := motore.ScriviJSON(*uscita, p); err != nil {
 		return 1, err
 	}
-	fonti, err := c.fonti(true)
-	if err != nil {
-		return 2, err
-	}
 	porta := c.porta
 	if r != nil && r.Porta() != 0 {
 		porta = r.Porta()
 	}
-	m := &motore.Motore{Amb: amb, Cartella: c.operazioni, Fonti: fonti, Porta: porta, Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
+	m := &motore.Motore{Amb: amb, Cartella: c.operazioni, Fonti: c.fonti(), Porta: porta, Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
 	if fl != nil {
 		if err := m.UsaFuoriLinea(fl); err != nil {
 			return 1, err
@@ -150,10 +145,6 @@ func preparaFuoriLinea(arg []string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	radici, err := motore.LeggiRadici(chiavi.RadiceA)
-	if err != nil {
-		return 1, err
-	}
 	amb := motore.AmbienteVero()
 	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
@@ -174,7 +165,7 @@ func preparaFuoriLinea(arg []string) (int, error) {
 		}
 	}
 	fl, err := motore.PreparaFuoriLinea(amb, prof, cat, p, motore.OpzioniPrepara{Archivio: c.archivio, Canale: c.canale,
-		Uscita: *uscita, Radici: radici, ChiaveArchivio: chiavi.Archivio}, func(s string) { fmt.Fprintln(os.Stderr, "  · "+s) })
+		Uscita: *uscita, ChiaveArchivio: chiavi.Archivio}, func(s string) { fmt.Fprintln(os.Stderr, "  · "+s) })
 	if err != nil {
 		return 1, err
 	}

@@ -1,16 +1,11 @@
-// Package chiavi porta dentro il motore le parti PUBBLICHE delle due catene di fiducia
-// (fasi/17-l-installatore.md §6.6.10):
+// Package chiavi porta dentro il motore la parte PUBBLICA dell'unica chiave di REMOTIX
+// (DECISIONI §10.21, D11 semplificata): quella che firma i pacchetti e l'archivio. Il motore la
+// scrive per il gestore di pacchetti quando aggiunge l'archivio di REMOTIX (apt Signed-By, dnf
+// gpgkey, pacman-key). ⛔ Il motore NON la usa per fidarsi di niente: la verifica la fa il gestore
+// di pacchetti.
 //
-//   - radice-A.pub: la chiave madre della catena A (il motore e il catalogo), ed25519. Il motore
-//     verifica con lei i certificati delle sottochiavi e l'elenco delle revoche;
-//   - revoche.json(+.firma): l'elenco delle sottochiavi revocate noto quando il motore è uscito
-//     (quello scaricato con il catalogo, se più recente, lo sostituisce);
-//   - archivio.asc: la chiave pubblica della catena B (i pacchetti e gli archivi, GPG), che il
-//     motore scrive per il gestore di pacchetti quando aggiunge l'archivio di REMOTIX. ⛔ Il motore
-//     NON la usa per fidarsi di niente: la verifica della catena B la fa il gestore di pacchetti.
-//
-// ⚠ T8: sono chiavi DI PROVA, generate apposta per le prove (le private stanno fuori dal deposito).
-// Le chiavi vere, e dove si custodisce la madre, sono la decisione D11.
+// ⚠ È la chiave DI PROVA della fase 17 (la privata sta fuori dal deposito, in
+// ~/.local/share/remotix-chiavi-di-prova/b); la vera, e dove si custodisce, si decidono con D10.
 package chiavi
 
 import (
@@ -18,20 +13,11 @@ import (
 	"strings"
 )
 
-//go:embed radice-A.pub
-var RadiceA string
-
-//go:embed revoche.json
-var Revoche []byte
-
-//go:embed revoche.json.firma
-var FirmaRevoche []byte
-
 //go:embed archivio.asc
 var Archivio string
 
 //go:embed archivio.impronta
 var improntaArchivio string
 
-// ImprontaArchivio: l'impronta (fingerprint) della chiave madre della catena B.
+// ImprontaArchivio: l'impronta (fingerprint) della chiave dell'archivio.
 func ImprontaArchivio() string { return strings.TrimSpace(improntaArchivio) }

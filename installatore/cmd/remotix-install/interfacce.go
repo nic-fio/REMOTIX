@@ -38,9 +38,6 @@ func (c *comuni) argomentiRoot() []string {
 	if c.catalogo != "" {
 		a = append(a, "--catalogo", c.catalogo)
 	}
-	if c.firmaCatalogo != "" {
-		a = append(a, "--firma-catalogo", c.firmaCatalogo)
-	}
 	if c.operazioni != "/var/lib/remotix/operazioni" {
 		a = append(a, "--operazioni", c.operazioni)
 	}

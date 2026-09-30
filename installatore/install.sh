@@ -4,10 +4,16 @@
 #   curl -fsSL <archivio>/install.sh | sudo sh -s -- --archivio <archivio> [opzioni]
 #
 # Che cosa fa, e basta: riconosce la distribuzione, scarica il MOTORE d'installazione
-# (remotix-install, binario statico) dall'archivio di REMOTIX, ne VERIFICA la firma con la chiave
-# madre della catena A scritta qui sotto (§6.6.10), e gli passa la mano. ⛔ Non copia mai file del
-# prodotto: li mette il gestore di pacchetti della distribuzione, guidato dal motore (§6.0 regola 1).
-# Il motore sta in una cartella temporanea, e la cartella se ne va con lo script.
+# (remotix-install, binario statico) dall'archivio di REMOTIX, ne VERIFICA lo sha256 (§6.6.10,
+# DECISIONI §10.21) e gli passa la mano. ⛔ Non copia mai file del prodotto: li mette il gestore di
+# pacchetti della distribuzione, guidato dal motore (§6.0 regola 1), dall'archivio firmato con
+# l'unica chiave di REMOTIX. Il motore sta in una cartella temporanea, e se ne va con lo script.
+#
+# La catena, dall'amministratore in giù: lui verifica QUESTO script con lo sha256 pubblicato sul sito
+# (HTTPS); lo script verifica il motore con lo sha256 scritto qui sotto dal comando di rilascio
+# (packaging/rilascio.sh) — o, in una copia di sviluppo dove la riga è vuota, con quello pubblicato
+# accanto al motore (<archivio>/motore/<nome>.sha256), scaricato in HTTPS; il motore porta dentro di
+# sé il catalogo.
 #
 #   --archivio URL      l'archivio di REMOTIX (D10: un indirizzo pubblico non c'è ancora)
 #   --canale C          stabile (predefinito) · candidato
@@ -16,18 +22,20 @@
 #   --risposte FILE     installazione SENZA DOMANDE dal file di risposte (§6.6.12)
 #   --lingua it|en      altrimenti dalla lingua del sistema (DECISIONI §10.15)
 #   --finestra          la FINESTRA (GUI), da utente nel desktop: scarica la costruzione con la
-#                       finestra (motore/remotix-install-gui, stessa firma, DECISIONI §10.19); i
+#                       finestra (motore/remotix-install-gui, DECISIONI §10.19); i
 #                       permessi da amministratore li chiede lei a polkit quando servono
 #   --tui               le schermate nel terminale (da root), per ssh e console
+#   --insicuro          (solo prove) accetta un archivio in http:// anche senza lo sha256 scritto qui
 #   -- …                il resto va al motore così com'è
 #
 # Tutto il corpo sta in funzioni, e l'ultima riga chiama main: uno scaricamento interrotto a metà
 # (curl | sh) non esegue un pezzo di script.
 #
-# ⚠ T9: la chiave madre qui sotto è quella DI PROVA della fase 17 (D11); quando ci sarà la vera si
-# cambia questa riga insieme a installatore/chiavi/radice-A.pub (TestScriptRadice lo controlla).
+# Le due righe SHA256_ le scrive il comando di rilascio (TestScript controlla che qui siano vuote).
+# ARCHIVIO_PREDEFINITO: l'indirizzo pubblico dell'archivio (D10 aperta: per ora non c'è).
 
-RADICE_A='2dmXgOiOluzJJzQxbCZ4OfQiC+NZUDVKIQzuL3Z802M='
+SHA256_MOTORE=''
+SHA256_MOTORE_GUI=''
 ARCHIVIO_PREDEFINITO=''
 
 # ---------------------------------------------------------------- lingua e messaggi
@@ -73,8 +81,8 @@ riconosci() {
 	done
 	[ -n "$FAMIGLIA" ] || errore "$PRETTY_NAME: famiglia di distribuzione sconosciuta (REMOTIX conosce Debian/Ubuntu, Fedora/Alma, openSUSE, Arch)." \
 		"$PRETTY_NAME: unknown distribution family (REMOTIX knows Debian/Ubuntu, Fedora/Alma, openSUSE, Arch)."
-	dice "Distribuzione: $PRETTY_NAME (famiglia $FAMIGLIA). Se è supportata lo dice il motore, col suo catalogo firmato." \
-		"Distribution: $PRETTY_NAME ($FAMIGLIA family). Whether it is supported is decided by the engine, with its signed catalogue."
+	dice "Distribuzione: $PRETTY_NAME (famiglia $FAMIGLIA). Se è supportata lo dice il motore, col suo catalogo." \
+		"Distribution: $PRETTY_NAME ($FAMIGLIA family). Whether it is supported is decided by the engine, with its catalogue."
 }
 
 # il comando che installa un programma mancante, per famiglia
@@ -99,75 +107,39 @@ scarica() { # scarica URL FILE
 	fi
 }
 
-# ---------------------------------------------------------------- la firma (catena A, §6.6.10)
-# Il formato è quello di installatore/motore/firma.go: un file .firma JSON (scritto dallo strumento
-# chiavi-a, una voce per riga), la sottochiave certificata dalla radice, ed25519. Si verifica con
-# openssl (pkeyutl -rawin): nessun programma nostro.
-
-campo() { sed -n "s/^ *\"$1\": *\"\([^\"]*\)\".*/\1/p" "$2" | head -n 1; }
+# ---------------------------------------------------------------- lo sha256 (§6.6.10, DECISIONI §10.21)
 
 sha256_di() {
 	if command -v sha256sum >/dev/null 2>&1; then
 		sha256sum "$1" | cut -d' ' -f1
-	else
+	elif command -v openssl >/dev/null 2>&1; then
 		openssl dgst -sha256 -r "$1" | cut -d' ' -f1
+	else
+		errore "servono sha256sum (coreutils) o openssl per verificare il motore." "sha256sum (coreutils) or openssl is needed to verify the engine."
 	fi
 }
 
-# verifica_ed25519 CHIAVE_BASE64 FILE_MESSAGGIO FIRMA_BASE64
-verifica_ed25519() {
-	[ "$(printf '%s' "$1" | base64 -d 2>/dev/null | wc -c)" -eq 32 ] || return 1
-	{ printf 'MCowBQYDK2VwAyEA' | base64 -d && printf '%s' "$1" | base64 -d; } >"$T/chiave.der" 2>/dev/null || return 1
-	printf '%s' "$3" | base64 -d >"$T/firma.bin" 2>/dev/null || return 1
-	openssl pkeyutl -verify -pubin -keyform DER -inkey "$T/chiave.der" -rawin -in "$2" -sigfile "$T/firma.bin" >/dev/null 2>&1
-}
-
-# verifica_firma FILE FILE.firma OGGETTO — la firma di una sottochiave certificata dalla radice
-verifica_firma() {
-	f=$1 s=$2 ogg=$3
-	command -v openssl >/dev/null 2>&1 || errore "serve openssl per verificare la firma del motore: $(comando_installa openssl). Senza verifica non si procede." \
-		"openssl is needed to verify the engine signature: $(comando_installa openssl). Nothing proceeds without verification."
-	[ "$(campo formato "$s")" = remotix-firma/1 ] && [ "$(campo catena "$s")" = A ] && [ "$(campo oggetto "$s")" = "$ogg" ] ||
-		errore "$ogg: la firma non si legge o non è della catena A per «$ogg» (RX-TRUST-006/007)." "$ogg: the signature cannot be read or is not chain A for «$ogg» (RX-TRUST-006/007)."
-	sha=$(campo sha256 "$s")
-	[ "$(sha256_di "$f")" = "$sha" ] || errore "$ogg: il contenuto non è quello firmato: alterato (RX-TRUST-007)." "$ogg: the content is not what was signed: altered (RX-TRUST-007)."
-	id=$(campo id "$s") pub=$(campo pubblica "$s") dal=$(campo dal "$s") al=$(campo al "$s") fr=$(campo firma_radice "$s")
-	printf 'remotix-sottochiave/1\nA\n%s\n%s\n%s\n%s\n' "$id" "$pub" "$dal" "$al" >"$T/msg-sottochiave"
-	verifica_ed25519 "$RADICE_A" "$T/msg-sottochiave" "$fr" ||
-		errore "$ogg: la chiave che ha firmato non è certificata dalla chiave madre di REMOTIX (RX-TRUST-008)." "$ogg: the signing key is not certified by the REMOTIX root key (RX-TRUST-008)."
-	oggi=$(date -u +%Y%m%d) n_dal=$(printf '%s' "$dal" | tr -cd 0-9) n_al=$(printf '%s' "$al" | tr -cd 0-9)
-	{ [ -z "$n_dal" ] || [ -z "$n_al" ] || [ "$oggi" -lt "$n_dal" ] || [ "$oggi" -gt "$n_al" ]; } &&
-		errore "$ogg: la sottochiave $id vale dal $dal al $al (RX-TRUST-009; controllare anche l'orologio)." "$ogg: subkey $id is valid from $dal to $al (RX-TRUST-009; also check the clock)."
-	printf 'remotix-firma/1\nA\n%s\n%s\n' "$ogg" "$sha" >"$T/msg-oggetto"
-	verifica_ed25519 "$pub" "$T/msg-oggetto" "$(campo firma "$s")" ||
-		errore "$ogg: la firma non è della sottochiave $id (RX-TRUST-007)." "$ogg: the signature is not by subkey $id (RX-TRUST-007)."
-	SOTTOCHIAVE=$id
-}
-
-# le revoche: firmate dalla RADICE; la sottochiave del motore non deve esserci
-verifica_revoche() {
-	r=$T/revoche.json
-	scarica "$ARCHIVIO/catalogo/revoche.json" "$r" && scarica "$ARCHIVIO/catalogo/revoche.json.firma" "$r.firma" ||
-		errore "l'elenco delle revoche non si scarica: senza non si procede (RX-TRUST-012)." "the revocation list cannot be downloaded: nothing proceeds without it (RX-TRUST-012)."
-	[ "$(campo oggetto "$r.firma")" = revoche ] && [ "$(sha256_di "$r")" = "$(campo sha256 "$r.firma")" ] || errore "revoche alterate (RX-TRUST-012)." "revocations altered (RX-TRUST-012)."
-	printf 'remotix-firma/1\nA\nrevoche\n%s\n' "$(campo sha256 "$r.firma")" >"$T/msg-revoche"
-	verifica_ed25519 "$RADICE_A" "$T/msg-revoche" "$(campo firma "$r.firma")" ||
-		errore "l'elenco delle revoche non è firmato dalla chiave madre (RX-TRUST-012)." "the revocation list is not signed by the root key (RX-TRUST-012)."
-	if grep -q "\"id\": *\"$SOTTOCHIAVE\"" "$r"; then
-		errore "la sottochiave $SOTTOCHIAVE che ha firmato il motore è REVOCATA (RX-TRUST-010)." "subkey $SOTTOCHIAVE that signed the engine is REVOKED (RX-TRUST-010)."
+# verifica_sha256 FILE ATTESO — il motore scaricato è quello pubblicato
+verifica_sha256() {
+	a=$(printf '%s' "$2" | tr 'A-F' 'a-f')
+	if [ ${#a} -ne 64 ] || [ -n "$(printf '%s' "$a" | tr -d '0-9a-f')" ]; then
+		errore "lo sha256 pubblicato del motore non si legge (RX-TRUST-017)." "the published engine sha256 cannot be read (RX-TRUST-017)."
 	fi
+	h=$(sha256_di "$1")
+	[ "$h" = "$a" ] || errore "il motore scaricato NON è quello pubblicato: sha256 $h, atteso $a. Non si procede (RX-TRUST-017)." \
+		"the downloaded engine is NOT the published one: sha256 $h, expected $a. Nothing proceeds (RX-TRUST-017)."
 }
 
 # ---------------------------------------------------------------- main
 
 uso() {
-	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [-- opzioni del motore]" \
-		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [-- engine options]"
+	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- opzioni del motore]" \
+		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- engine options]"
 }
 
 main() {
 	scegli_lingua
-	ARCHIVIO=${REMOTIX_ARCHIVIO:-$ARCHIVIO_PREDEFINITO} CANALE=stabile MODO=installa RISPOSTE='' LINGUA_DATA=''
+	ARCHIVIO=${REMOTIX_ARCHIVIO:-$ARCHIVIO_PREDEFINITO} CANALE=stabile MODO=installa RISPOSTE='' LINGUA_DATA='' INSICURO=''
 	while [ $# -gt 0 ]; do
 		case $1 in
 		--archivio) ARCHIVIO=${2:-}; shift ;;
@@ -178,6 +150,7 @@ main() {
 		--dry-run) MODO=prova ;;
 		--finestra | --window) MODO=finestra ;;
 		--tui) MODO=tui ;;
+		--insicuro) INSICURO=1 ;;
 		--risposte) RISPOSTE=${2:-}; shift ;;
 		--risposte=*) RISPOSTE=${1#*=} ;;
 		--lingua) L=${2:-}; LINGUA_DATA=1; shift ;;
@@ -218,16 +191,27 @@ main() {
 	# due costruzioni dello stesso sorgente (DECISIONI §10.19): la statica va ovunque; quella con la
 	# finestra è legata alle librerie grafiche del sistema e si scarica solo per --finestra
 	M=$T/remotix-install
-	NOME=remotix-install
-	[ "$MODO" = finestra ] && NOME=remotix-install-gui
+	NOME=remotix-install ATTESO=$SHA256_MOTORE
+	[ "$MODO" = finestra ] && NOME=remotix-install-gui ATTESO=$SHA256_MOTORE_GUI
+	DA="questo script" DA_EN="this script"
+	if [ -z "$ATTESO" ]; then
+		# una copia di sviluppo: lo sha256 pubblicato accanto al motore, e SOLO in HTTPS (in http chi
+		# sta in mezzo cambierebbe motore e sha256 insieme)
+		case $ARCHIVIO in
+		https://* | file://*) ;;
+		*) [ -n "$INSICURO" ] || errore "l'archivio $ARCHIVIO non è in HTTPS: lo sha256 del motore non proteggerebbe niente (RX-TRUST-017). Solo per prova: --insicuro." \
+			"the archive $ARCHIVIO is not HTTPS: the engine sha256 would protect nothing (RX-TRUST-017). For testing only: --insicuro." ;;
+		esac
+		scarica "$ARCHIVIO/motore/$NOME.sha256" "$T/atteso" || errore "lo sha256 del motore non si scarica da $ARCHIVIO (RX-TRUST-017)." "the engine sha256 cannot be downloaded from $ARCHIVIO (RX-TRUST-017)."
+		ATTESO=$(cut -d' ' -f1 <"$T/atteso")
+		DA="$ARCHIVIO/motore/$NOME.sha256" DA_EN=$DA
+	fi
 	dice "Scarico il motore da $ARCHIVIO/motore/ …" "Downloading the engine from $ARCHIVIO/motore/ …"
-	scarica "$ARCHIVIO/motore/$NOME" "$M" && scarica "$ARCHIVIO/motore/$NOME.firma" "$M.firma" ||
-		errore "il motore non si scarica da $ARCHIVIO." "the engine cannot be downloaded from $ARCHIVIO."
-	verifica_firma "$M" "$M.firma" motore
-	verifica_revoche
+	scarica "$ARCHIVIO/motore/$NOME" "$M" || errore "il motore non si scarica da $ARCHIVIO." "the engine cannot be downloaded from $ARCHIVIO."
+	verifica_sha256 "$M" "$ATTESO"
 	chmod 0755 "$M"
-	dice "Firma del motore VERIFICATA (catena A, sottochiave $SOTTOCHIAVE, chiave madre scritta in questo script). Passo la mano al motore." \
-		"Engine signature VERIFIED (chain A, subkey $SOTTOCHIAVE, root key written in this script). Handing over to the engine."
+	dice "Motore VERIFICATO: sha256 uguale a quello pubblicato ($DA). Passo la mano al motore." \
+		"Engine VERIFIED: sha256 equal to the published one ($DA_EN). Handing over to the engine."
 
 	# la lingua passa al motore solo se data qui: altrimenti il motore la legge da sé, dall'ambiente
 	# o dal file di risposte (DECISIONI §10.15: il file di risposte può fissarla)

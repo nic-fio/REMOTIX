@@ -407,7 +407,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 		}
 	}
 	if fid != nil {
-		d = append(d, fmt.Sprintf("catalogo %s", rap.Catalogo.Versione), "motore "+motore.VersioneMotore, fid.FirmaMotore)
+		d = append(d, fmt.Sprintf("catalogo %s", rap.Catalogo.Versione), "motore "+motore.VersioneMotore)
 	}
 	var r []string
 	for _, x := range d {
@@ -650,10 +650,6 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 			porta = a.Parametri["porta"]
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.f", porta)}
-			}, a)
-		case a.Tipo == "abilita-unita" && a.ID == "aggiornamenti":
-			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.aggiornamenti"), Sotto: T("a.aggiornamenti.t"), Fatto: T("a.aggiornamenti.f"), Breve: T("a.aggiornamenti.f")}
 			}, a)
 		default:
 			metti(a.ID, func() Passo {

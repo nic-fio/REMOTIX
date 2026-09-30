@@ -272,10 +272,15 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	if err != nil {
 		return 0, 0, err
 	}
+	// D14 (DECISIONI §10.23): REMOTIX e le sue dipendenze si aggiornano col sistema. Un pacchetto
+	// dell'insieme è «completo» alla versione risolta, a una PIÙ NUOVA (l'ha portata un aggiornamento
+	// del sistema), o a quella annotata dall'ultimo `remotix-install aggiornato` (un ritorno indietro
+	// fatto coi comandi del gestore)
 	agg := versioniAggiornate(c.Cartella)
 	for _, x := range p.Insieme {
 		v := ver[x.Nome]
-		if versioneUguale(v, x.Versione) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) {
+		if versioneUguale(v, x.Versione) || (agg[x.Nome] != "" && versioneUguale(v, agg[x.Nome])) ||
+			(v != "" && x.Versione != "" && ConfrontaPacchetti(c.Amb.Famiglia, v, x.Versione) > 0) {
 			completi++
 		}
 		if x.Esito == "nuovo" && v != "" {

@@ -288,7 +288,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 
 	// 0 TRUST
 	if m.Fonti == nil {
-		return op, op.blocca(Errore("RX-TRUST-006", "nessuna fonte del catalogo"))
+		return op, op.blocca(Errore("RX-TRUST-004", "nessuna fonte del catalogo"))
 	}
 	cat, fid, err := m.Fonti.Fidati(m.adesso())
 	if e := op.scriviOggetto("fiducia.json", fid); e != nil {
@@ -301,7 +301,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return op, op.blocca(err)
 	}
 	m.Catalogo = cat
-	if err := op.vai(FIDATA, "", fmt.Sprintf("catalogo %s (sequenza %d, %s, sottochiave %s); motore: %s", cat.Versione, cat.Sequenza, fid.Fonte, fid.Sottochiave, fid.FirmaMotore)); err != nil {
+	if err := op.vai(FIDATA, "", fmt.Sprintf("catalogo %s (sequenza %d): %s", cat.Versione, cat.Sequenza, fid.Fonte)); err != nil {
 		return op, err
 	}
 
@@ -578,7 +578,7 @@ func (op *Operazione) ultimoDettaglio() string {
 	return ""
 }
 
-// contesto: il ritorno indietro di un'installazione (o di un aggiornamento) è sempre purge — la
+// contesto: il ritorno indietro di un'installazione è sempre purge — la
 // macchina com'era; la disinstallazione porta il suo «purge» nei parametri dei passi disfa.
 func (op *Operazione) contesto(ap AzionePiano) *Contesto {
 	return &Contesto{Amb: op.m.Amb, Cartella: op.Cartella, P: ap, Purge: true}
@@ -820,7 +820,7 @@ func (op *Operazione) verifica() (bool, error) {
 	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta, con un ripiego
 	// dichiarato (il software): UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS (§6.6.7).
 	// e la pila PAM che si risolve, e la porta che il firewall lascia passare (certifica.go, R29)
-	if op.Piano.Mestiere == "installazione" || op.Piano.Mestiere == "aggiornamento" {
+	if op.Piano.Mestiere == "installazione" {
 		porta := op.m.Porta
 		for _, ap := range op.Piano.Azioni {
 			if ap.Tipo == "accendi-servizio" {
@@ -927,9 +927,9 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 	var rv RapportoVerifica
 	LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv)
 	ins, _ := Sha256File(filepath.Join(op.Cartella, "insieme-risolto.json"))
-	fiducia := T("cert.firma_no")
-	if fid.FirmaVerificata {
-		fiducia = T("cert.firma_si") + fmt.Sprintf(" — %s, sequenza %d, sottochiave %s, revoche %d; motore: %s", fid.Fonte, fid.Sequenza, fid.Sottochiave, fid.Revoche, fid.FirmaMotore)
+	fiducia := T("cert.fiducia_no")
+	if fid.Catalogo.Digest != "" && len(fid.Messaggi) == 0 {
+		fiducia = fmt.Sprintf("%s (sequenza %d)", fid.Fonte, fid.Sequenza)
 	}
 	c := Certificato{Formato: Formato, Oggetto: "certificato", Creato: ora(), Operazione: op.ID, Stato: fin,
 		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
@@ -987,13 +987,7 @@ func (m *Motore) PercorsoInstallazione() string {
 // scriviInstallazione: solo per i mestieri che installano davvero il prodotto. Il piano di prova
 // di T4 non lo scrive: non ha installato REMOTIX.
 func (op *Operazione) scriviInstallazione(fin Stato) error {
-	switch op.Piano.Mestiere {
-	case "installazione":
-	case "aggiornamento":
-		// l'installazione resta quella (la disinstallazione ripercorre il SUO registro); si annotano
-		// le versioni nuove, che il «controlla» dei pacchetti dell'installazione deve accettare
-		return op.scriviAggiornate()
-	default:
+	if op.Piano.Mestiere != "installazione" {
 		return nil
 	}
 	return ScriviJSON(op.m.PercorsoInstallazione(), Installazione{Formato: Formato, Oggetto: "installazione",
