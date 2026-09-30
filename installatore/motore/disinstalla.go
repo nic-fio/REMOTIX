@@ -130,7 +130,12 @@ func (m *Motore) PulisciStoria(purge bool) error {
 			return err
 		}
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
-		os.Remove(filepath.Dir(m.Cartella))                                // solo se vuota
+		// T8: il catalogo memorizzato, le versioni aggiornate, i piani degli aggiornamenti
+		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "fiducia"))
+		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti"))
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti.json"))
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti-sospesi.json"))
+		os.Remove(filepath.Dir(m.Cartella)) // solo se vuota
 		return nil
 	}
 	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))

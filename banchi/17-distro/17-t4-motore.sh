@@ -84,7 +84,7 @@ echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
 vm "sudo /root/remotix-install approva /root/piano.json ${DESKTOP:+--desktop $DESKTOP} --lingua it" >>"$E/piano.txt" 2>&1
 [ -n "$DESKTOP" ] && vm "echo bersaglio: \$(systemctl get-default); echo display manager: \$(systemctl is-enabled display-manager.service 2>&1) \$(systemctl is-active display-manager.service 2>&1)" | sed 's/^/   prima: /' 
 T0=$(date +%s)
-vm "sudo /root/remotix-install applica /root/piano.json --senza-firma --lingua it" >"$E/applica.txt" 2>&1
+vm "sudo /root/remotix-install applica /root/piano.json --lingua it" >"$E/applica.txt" 2>&1
 echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/applica.txt")"
 vm "echo servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix)
 echo bersaglio: \$(systemctl get-default); for u in gdm3 sddm lightdm display-manager; do echo \"\$u: \$(systemctl is-enabled \$u.service 2>&1) \$(systemctl is-active \$u.service 2>&1)\"; done; ls /usr/sbin/policy-rc.d 2>&1
@@ -135,7 +135,7 @@ vm "sudo /root/remotix-install disinstalla --purge --uscita /root/disinstalla.js
 echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/disinstalla-piano.txt") passi"
 vm "sudo /root/remotix-install approva /root/disinstalla.json --lingua it" >>"$E/disinstalla-piano.txt" 2>&1
 T0=$(date +%s)
-vm "sudo /root/remotix-install applica /root/disinstalla.json --senza-firma --lingua it" >"$E/disinstalla.txt" 2>&1
+vm "sudo /root/remotix-install applica /root/disinstalla.json --lingua it" >"$E/disinstalla.txt" 2>&1
 echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/disinstalla.txt")"
 sleep 3
 vm "for s in \$(loginctl list-sessions --no-legend | awk '{print \$1}'); do echo \"\$s \$(loginctl show-session \$s -p Service -p Name -p State --value | tr '\n' ' ')\"; done

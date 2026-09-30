@@ -15,15 +15,15 @@ import (
 
 // Motore: un'istanza del motore sulla macchina (o su una macchina finta, nelle prove).
 type Motore struct {
-	Amb        *Ambiente
-	Cartella   string // /var/lib/remotix/operazioni (in prova, una radice qualunque)
-	Catalogo   *Catalogo
-	SenzaFirma bool
-	Porta      int
-	Esamina    func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
-	Ev         *Eventi
-	Adesso     func() time.Time
-	serratura  *os.File
+	Amb       *Ambiente
+	Cartella  string        // /var/lib/remotix/operazioni (in prova, una radice qualunque)
+	Catalogo  *Catalogo     // quello scelto e verificato dalla fase 0 TRUST (Fonti)
+	Fonti     *FontiFiducia // da dove viene il catalogo, e con che cosa si verifica (fiducia.go)
+	Porta     int
+	Esamina   func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
+	Ev        *Eventi
+	Adesso    func() time.Time
+	serratura *os.File
 }
 
 // Operazione: una cartella in Cartella/<id>/ con lo stato, il registro e gli oggetti.
@@ -280,7 +280,10 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	}
 
 	// 0 TRUST
-	fid, err := VerificaFiducia(m.Catalogo, m.adesso(), m.SenzaFirma)
+	if m.Fonti == nil {
+		return op, op.blocca(Errore("RX-TRUST-006", "nessuna fonte del catalogo"))
+	}
+	cat, fid, err := m.Fonti.Fidati(m.adesso())
 	if e := op.scriviOggetto("fiducia.json", fid); e != nil {
 		return op, e
 	}
@@ -290,10 +293,8 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	if err != nil {
 		return op, op.blocca(err)
 	}
-	if err := op.Reg.Scrivi(Evento{Tipo: EvNota, Codice: "RX-TRUST-001", Dettaglio: "proceduto senza firma, come chiesto (--senza-firma)"}); err != nil {
-		return op, err
-	}
-	if err := op.vai(FIDATA, "", ""); err != nil {
+	m.Catalogo = cat
+	if err := op.vai(FIDATA, "", fmt.Sprintf("catalogo %s (sequenza %d, %s, sottochiave %s); motore: %s", cat.Versione, cat.Sequenza, fid.Fonte, fid.Sottochiave, fid.FirmaMotore)); err != nil {
 		return op, err
 	}
 
@@ -891,9 +892,9 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 	var rv RapportoVerifica
 	LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv)
 	ins, _ := Sha256File(filepath.Join(op.Cartella, "insieme-risolto.json"))
-	fiducia := T("cert.firma_si")
-	if !fid.FirmaVerificata {
-		fiducia = T("cert.firma_no")
+	fiducia := T("cert.firma_no")
+	if fid.FirmaVerificata {
+		fiducia = T("cert.firma_si") + fmt.Sprintf(" — %s, sequenza %d, sottochiave %s, revoche %d; motore: %s", fid.Fonte, fid.Sequenza, fid.Sottochiave, fid.Revoche, fid.FirmaMotore)
 	}
 	c := Certificato{Formato: Formato, Oggetto: "certificato", Creato: ora(), Operazione: op.ID, Stato: fin,
 		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
@@ -952,7 +953,11 @@ func (m *Motore) PercorsoInstallazione() string {
 // di T4 non lo scrive: non ha installato REMOTIX.
 func (op *Operazione) scriviInstallazione(fin Stato) error {
 	switch op.Piano.Mestiere {
-	case "installazione", "aggiornamento":
+	case "installazione":
+	case "aggiornamento":
+		// l'installazione resta quella (la disinstallazione ripercorre il SUO registro); si annotano
+		// le versioni nuove, che il «controlla» dei pacchetti dell'installazione deve accettare
+		return op.scriviAggiornate()
 	default:
 		return nil
 	}

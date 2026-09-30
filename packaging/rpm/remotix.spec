@@ -46,7 +46,9 @@
 
 Name:           remotix
 Version:        0.17.0
-Release:        1%{?dist}
+# T8: il rilascio di manutenzione (una ricostruzione) lo dà costruisci-rpm.sh con
+#     RX_REVISIONE (--define "rx_rilascio N"); predefinito 1.
+Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
 Summary:        Il desktop di questa macchina nel browser
 # ⚠ La licenza del prodotto non e' ancora scelta (deposito privato).
 License:        LicenseRef-Proprietary
@@ -182,6 +184,11 @@ install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
 # I PREDEFINITI (porta, opzioni): del pacchetto, un aggiornamento li riscrive.
 # Le scelte dell'amministratore in /etc/remotix/remotix.conf.d/*.conf (vincono).
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
+# R24 (T8): le versioni delle statiche COLLEGATE (pkg-config nel contenitore di
+# costruzione), per lo SBOM dell'archivio.
+printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+    "$(pkg-config --modversion libngtcp2)" "$(pkg-config --modversion libnghttp3)" \
+    > %{buildroot}%{_datadir}/remotix/incorporate.json
 install -D -m 0644 packaging/rpm/remotix.service %{buildroot}%{_unitdir}/remotix.service
 install -D -m 0644 packaging/rpm/remotix.tmpfiles %{buildroot}%{_tmpfilesdir}/remotix.conf
 install -D -m 0644 src/%{pamsorgente} %{buildroot}%{pamdir}/remotix
@@ -264,6 +271,7 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %dir %{_datadir}/remotix
 %{_datadir}/remotix/pagina.html
 %{_datadir}/remotix/remotix.conf
+%{_datadir}/remotix/incorporate.json
 %dir %{_datadir}/remotix/cinture
 %{_datadir}/remotix/cinture/50-remotix-niente-spegnimento.rules
 %{_datadir}/remotix/cinture/remotix-tasti.conf

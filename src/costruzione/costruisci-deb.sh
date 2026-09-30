@@ -61,7 +61,14 @@ prepara_copia() {  # prepara_copia <cartella> <bersaglio>
 	cp -a "$ALBERO/packaging/debian" "$c/remotix/debian"
 	rm -f "$c/remotix/src/remotix" "$c/remotix/src"/*.o \
 	      "$c/remotix/src"/*-protocol.c "$c/remotix/src"/*-client-protocol.h
-	VERSIONE="0.17.0~git$GIORNO.$HASH$SPORCO-1$suff"
+	# T8: RX_VERSIONE e RX_REVISIONE danno la versione di un RILASCIO dell'archivio
+	#     (0.17.0-2+deb13: la revisione cresce a ogni ricostruzione di manutenzione);
+	#     senza, quella di prova col commit, come in T3.
+	if [ -n "${RX_VERSIONE:-}" ]; then
+		VERSIONE="$RX_VERSIONE$SPORCO-${RX_REVISIONE:-1}$suff"
+	else
+		VERSIONE="0.17.0~git$GIORNO.$HASH$SPORCO-1$suff"
+	fi
 	cat >"$c/remotix/debian/changelog" <<EOF
 remotix ($VERSIONE) $dist; urgency=medium
 

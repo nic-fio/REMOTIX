@@ -3,7 +3,6 @@ package motore
 import (
 	"encoding/json"
 	"strings"
-	"time"
 )
 
 // FormatoCatalogo è la versione di formato del catalogo (diversa da quella degli oggetti: il
@@ -30,7 +29,8 @@ type Catalogo struct {
 	FuoriSempre        []string                    `json:"fuori_sempre"`
 	ComponentiMinimi   []ComponenteMinimo          `json:"componenti_minimi"`
 
-	Digest string `json:"-"` // sha256 dei byte letti
+	Digest      string `json:"-"` // sha256 dei byte letti
+	Provenienza string `json:"-"` // da dove viene (fase 0 TRUST): incorporato, memorizzato, archivio …, fuori linea …
 }
 
 // FirmaCatalogo: il catalogo si aggiorna da solo, senza un REMOTIX nuovo (DECISIONI §10.10), con
@@ -136,15 +136,6 @@ func LeggiCatalogo(b []byte) (*Catalogo, error) {
 	return &c, nil
 }
 
-// Fiducia è l'esito della fase 0 TRUST.
-type Fiducia struct {
-	Catalogo            RifCatalogo `json:"catalogo"`
-	Motore              RifMotore   `json:"motore"`
-	FirmaVerificata     bool        `json:"firma_verificata"`
-	ProcedutoSenzaFirma bool        `json:"proceduto_senza_firma"`
-	Messaggi            []Messaggio `json:"messaggi"`
-}
-
 type RifCatalogo struct {
 	Versione string `json:"versione"`
 	Digest   string `json:"digest"`
@@ -164,32 +155,6 @@ func DigestMotore() string {
 		return "sconosciuto"
 	}
 	return d
-}
-
-// VerificaFiducia: fase 0 TRUST. Freschezza e versione minima si controllano davvero; la firma
-// non esiste ancora (catena A, §6.6.10: modello scritto, custodia e chiavi con D11 e T8), e il
-// motore lo DICE: senza --senza-firma si blocca, con --senza-firma procede e lo annota.
-func VerificaFiducia(c *Catalogo, adesso time.Time, senzaFirma bool) (*Fiducia, error) {
-	f := &Fiducia{
-		Catalogo: RifCatalogo{c.Versione, c.Digest, c.Scadenza},
-		Motore:   RifMotore{VersioneMotore, DigestMotore()},
-	}
-	scad, err := time.Parse("2006-01-02", c.Scadenza)
-	if err != nil {
-		return f, Errore("RX-TRUST-004", "scadenza "+c.Scadenza)
-	}
-	if adesso.After(scad.Add(24 * time.Hour)) {
-		return f, Errore("RX-TRUST-002", "scaduto il "+c.Scadenza)
-	}
-	if ConfrontaVersioni(VersioneMotore, c.MotoreMinimo) < 0 {
-		return f, Errore("RX-TRUST-003", "serve "+c.MotoreMinimo+", questo è "+VersioneMotore)
-	}
-	f.Messaggi = append(f.Messaggi, Msg("RX-TRUST-001", ""))
-	if !senzaFirma {
-		return f, Errore("RX-TRUST-005", "")
-	}
-	f.ProcedutoSenzaFirma = true
-	return f, nil
 }
 
 // Condizione: una delle condizioni C-… di §6.6.8, col suo rimedio.

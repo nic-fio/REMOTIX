@@ -6,7 +6,8 @@ import "encoding/json"
 // GetUnitFileState: quel che fanno systemctl enable e is-enabled, senza lanciarli, §10.14). Reversibilità ESATTA; un'unità già abilitata è PREESISTENTE e resta
 // abilitata; un'unità mascherata non si tocca (l'amministratore l'ha spenta apposta).
 //
-// parametri: unita.
+// parametri: unita; avvia ("si": anche accesa subito — il timer degli aggiornamenti, T8: abilitato
+// soltanto partirebbe al riavvio dopo; annullare la spegne e la disabilita).
 
 func init() { registraTipo("abilita-unita", nuovaUnita) }
 
@@ -23,14 +24,33 @@ func PianoUnita(id, unita string) AzionePiano {
 	}
 }
 
-type unita struct{ nome string }
+type unita struct {
+	nome  string
+	avvia bool
+}
 
 type primaUnita struct {
 	Origine Origine `json:"origine"`
 	Stato   string  `json:"stato"` // quel che diceva is-enabled
 }
 
-func nuovaUnita(p AzionePiano) (Azione, error) { return &unita{p.Parametri["unita"]}, nil }
+func nuovaUnita(p AzionePiano) (Azione, error) {
+	return &unita{p.Parametri["unita"], p.Parametri["avvia"] == "si"}, nil
+}
+
+// PianoUnitaAccesa: abilitata e accesa (il timer degli aggiornamenti automatici, T8).
+func PianoUnitaAccesa(id, u, consenso string) AzionePiano {
+	a := PianoUnita(id, u)
+	a.Parametri["avvia"] = "si"
+	a.Descrizione = T("az.unita.accesa", u)
+	a.Consenso = consenso
+	return a
+}
+
+func (u *unita) attiva(c *Contesto) bool {
+	a, err := c.Amb.Unita.Attiva(u.nome)
+	return err == nil && a == "active"
+}
 
 func (u *unita) Vincoli(c *Contesto) ([]string, error) {
 	s, err := c.Amb.Unita.Stato(u.nome)
@@ -66,7 +86,13 @@ func (u *unita) Fai(c *Contesto, prima json.RawMessage) error {
 	if p.Origine == PREESISTENTE {
 		return nil
 	}
-	return c.Amb.Unita.Abilita(u.nome)
+	if err := c.Amb.Unita.Abilita(u.nome); err != nil {
+		return err
+	}
+	if u.avvia && !u.attiva(c) {
+		return c.Amb.Unita.Avvia(u.nome)
+	}
+	return nil
 }
 
 func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
@@ -79,6 +105,8 @@ func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 		return "", "", err
 	}
 	switch {
+	case s == "enabled" && u.avvia && !u.attiva(c):
+		return A_META, "enabled ma non accesa", nil
 	case s == "enabled":
 		return COMPLETO, "enabled", nil
 	case p.Origine == PREESISTENTE:
@@ -100,6 +128,11 @@ func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
 	s, err := c.Amb.Unita.Stato(u.nome)
 	if err != nil {
 		return err
+	}
+	if u.avvia && u.attiva(c) {
+		if err := c.Amb.Unita.Ferma(u.nome); err != nil {
+			return err
+		}
 	}
 	if s == p.Stato {
 		return nil

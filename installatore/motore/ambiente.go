@@ -23,16 +23,21 @@ import (
 // (decisione del coordinatore, 30 set): la prova «la scheda codifica un fotogramma» la fa in 7a il
 // binario di REMOTIX installato (`remotix --prova-codifica`, da fare nel prodotto: §6.5-bis).
 var programmiAmmessi = map[string][]string{
-	"apt-get":  {"/usr/bin/apt-get"},
-	"dnf":      {"/usr/bin/dnf", "/usr/bin/dnf5"},
-	"zypper":   {"/usr/bin/zypper"},
-	"pacman":   {"/usr/bin/pacman"},
-	"rpm":      {"/usr/bin/rpm", "/bin/rpm"},
-	"dpkg":     {"/usr/bin/dpkg"},
-	"dpkg-deb": {"/usr/bin/dpkg-deb"},
-	"remotix":  {"/usr/libexec/remotix/remotix"},
-	"gpasswd":  {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
-	"usermod":  {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
+	"apt-get": {"/usr/bin/apt-get"},
+	// apt-cache: le versioni che l'archivio di REMOTIX offre (madison), per l'aggiornamento (T8)
+	"apt-cache": {"/usr/bin/apt-cache"},
+	"dnf":       {"/usr/bin/dnf", "/usr/bin/dnf5"},
+	"zypper":    {"/usr/bin/zypper"},
+	"pacman":    {"/usr/bin/pacman"},
+	// pacman-key: il portachiavi di pacman (la chiave dell'archivio di REMOTIX, T8). È lo strumento
+	// ufficiale del gestore: pacman non ha un'interfaccia per le chiavi senza di lui.
+	"pacman-key": {"/usr/bin/pacman-key"},
+	"rpm":        {"/usr/bin/rpm", "/bin/rpm"},
+	"dpkg":       {"/usr/bin/dpkg"},
+	"dpkg-deb":   {"/usr/bin/dpkg-deb"},
+	"remotix":    {"/usr/libexec/remotix/remotix", "/usr/lib/remotix/remotix"}, // Arch: /usr/lib (PKGBUILD)
+	"gpasswd":    {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
+	"usermod":    {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
 }
 
 // ErrNonAmmesso: il motore non lancia programmi fuori dall'elenco.

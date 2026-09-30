@@ -68,7 +68,7 @@ costruisci_uno()
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/strumenti: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
-		rpmbuild -ba --define "_topdir /lavoro" /lavoro/SPECS/remotix.spec 2>&1
+		rpmbuild -ba --define "_topdir /lavoro" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" /lavoro/SPECS/remotix.spec 2>&1
 		echo "rpmbuild-esito=$?"
 		ls /lavoro/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /lavoro/SPECS/remotix.spec /lavoro/RPMS/*/*.rpm /lavoro/SRPMS/*.rpm >/lavoro/rpmlint.txt 2>&1

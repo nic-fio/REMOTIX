@@ -31,10 +31,10 @@ for img in $immagini; do
 		cd /tmp
 		/opt/rx/remotix-install piano --utente provamotore --operazioni /tmp/op >/dev/null && echo "piano: fatto"
 		/opt/rx/remotix-install approva piano-prova.json
-		/opt/rx/remotix-install applica piano-prova.json --senza-firma --operazioni /tmp/op; echo "applica: uscita $?"
+		/opt/rx/remotix-install applica piano-prova.json --operazioni /tmp/op; echo "applica: uscita $?"
 		/opt/rx/remotix-install stato --operazioni /tmp/op
 		cat /tmp/op/*/certificato.txt 2>/dev/null | sed -n "1,40p"
-		/opt/rx/remotix-install applica piano-prova.json --senza-firma --operazioni /tmp/op >/dev/null 2>&1; echo "applica di nuovo (piano vecchio): uscita $? — atteso 1, impronta cambiata"
+		/opt/rx/remotix-install applica piano-prova.json --operazioni /tmp/op >/dev/null 2>&1; echo "applica di nuovo (piano vecchio): uscita $? — atteso 1, impronta cambiata"
 	' > "$esiti/$nome.txt" 2>&1 || true
 	grep -E '^(R1|verifica|applica|piano)' "$esiti/$nome.txt" | sed 's/^/   /'
 	grep -q '^R1 PASS' "$esiti/$nome.txt" || rosso=1

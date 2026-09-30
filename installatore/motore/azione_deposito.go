@@ -15,7 +15,8 @@ import (
 //
 //   - «archivio»: l'archivio FIRMATO di REMOTIX con la SUA chiave, valida solo per lui (§6.5
 //     punto 6, R18: Signed-By su apt, gpgkey + import in rpm su dnf e zypper; mai trusted.gpg.d).
-//     ESATTA: due file (e la chiave in rpm), tolti come non c'erano. pacman: non ancora fatto.
+//     ESATTA: i file (e la chiave in rpm o in pacman), tolti come non c'erano; su Arch un blocco in
+//     /etc/pacman.conf fra due righe di marca. Il perché di ogni pezzo: archivio.go (T8).
 //   - «epel» (Alma/RHEL, KDE), «rpmfusion» (Fedora, Alma: H.264), «packman» (openSUSE: H.264):
 //     archivi di TERZI, col consenso (D5, riga sua). AL_MEGLIO: il deposito si toglie, ma i
 //     pacchetti presi da lì e gli aggiornamenti restano (si dichiara).
@@ -108,7 +109,23 @@ func (d *deposito) pezzi(c *Contesto) (map[string]bool, error) {
 	case "archivio":
 		for _, f := range d.fileArchivio(c) {
 			sha, _ := Sha256File(c.Amb.P(f.percorso))
-			r[f.percorso] = sha == Sha256([]byte(f.contenuto))
+			if f.presenza {
+				r[f.percorso] = sha != ""
+			} else {
+				r[f.percorso] = sha == Sha256([]byte(f.contenuto))
+			}
+		}
+		if c.Amb.Famiglia == "arch" {
+			_, c2, err := d.pacmanConf(c)
+			if err != nil {
+				return nil, err
+			}
+			r["pacman.conf [remotix]"] = c2
+			k, err := d.chiavePacman(c)
+			if err != nil {
+				return nil, err
+			}
+			r["pacman-key "+d.par["impronta"]] = k
 		}
 	}
 	return r, nil
@@ -151,27 +168,49 @@ func (d *deposito) crb(c *Contesto, acceso bool) error {
 	return err
 }
 
-type fileArchivio struct{ percorso, contenuto string }
+// fileArchivio: un file dell'archivio di REMOTIX. presenza: basta che ci sia (la chiave di apt: dopo
+// l'installazione la possiede il pacchetto remotix-archive-keyring, che la aggiorna quando la
+// sottochiave ruota — il motore non deve vederla come «cambiata da altri»).
+type fileArchivio struct {
+	percorso, contenuto string
+	presenza            bool
+}
 
-// fileArchivio: i due file dell'archivio di REMOTIX per la famiglia, col loro contenuto.
+// fileArchivio: i file dell'archivio di REMOTIX per la famiglia, col loro contenuto (archivio.go).
 func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 	nome := nonVuoto(d.par["nome"], "remotix")
 	chiave := d.par["chiave"]
+	pacchetti := strings.ReplaceAll(nonVuoto(d.par["pacchetti"], strings.Join(PacchettiArchivio, ",")), ",", " ")
 	switch c.Amb.Famiglia {
 	case "debian":
-		k := "/usr/share/keyrings/" + nome + "-archive-keyring.asc"
-		return []fileArchivio{{k, chiave}, {"/etc/apt/sources.list.d/" + nome + ".sources",
+		k := ChiaveApt
+		r := []fileArchivio{{k, chiave, true}, {"/etc/apt/sources.list.d/" + nome + ".sources",
 			"# " + nome + " — aggiunto da remotix-install\nTypes: deb\nURIs: " + d.par["url"] + "\nSuites: " + nonVuoto(d.par["suite"], "stabile") +
-				"\nComponents: " + nonVuoto(d.par["componenti"], "main") + "\nSigned-By: " + k + "\n"}}
+				"\nComponents: " + nonVuoto(d.par["componenti"], "main") + "\nSigned-By: " + k + "\n", false}}
+		if d.par["host"] != "" {
+			// R18: dall'host dell'archivio SOLO i pacchetti di REMOTIX. Il record col nome dei
+			// pacchetti viene prima di quello generale (apt usa il primo che corrisponde).
+			r = append(r, fileArchivio{"/etc/apt/preferences.d/" + nome + ".pref",
+				"# " + nome + " — aggiunto da remotix-install: l'archivio di REMOTIX vale solo per i pacchetti di REMOTIX (R18)\n" +
+					"Package: " + pacchetti + "\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: 500\n\n" +
+					"Package: *\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: -1\n", false})
+		}
+		return r
 	case "fedora", "suse":
 		k := "/etc/pki/rpm-gpg/RPM-GPG-KEY-" + nome
 		dir := "/etc/yum.repos.d/"
 		if c.Amb.Famiglia == "suse" {
 			dir = "/etc/zypp/repos.d/"
 		}
-		return []fileArchivio{{k, chiave}, {dir + nome + ".repo",
+		inc := ""
+		if d.par["host"] != "" && c.Amb.Famiglia == "fedora" {
+			inc = "includepkgs=" + pacchetti + "\n" // R18: dal nostro archivio solo i nostri pacchetti
+		}
+		return []fileArchivio{{k, chiave, false}, {dir + nome + ".repo",
 			"# " + nome + " — aggiunto da remotix-install\n[" + nome + "]\nname=" + nome + "\nbaseurl=" + d.par["url"] +
-				"\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=file://" + k + "\n"}}
+				"\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=file://" + k + "\n" + inc, false}}
+	case "arch":
+		return []fileArchivio{} // il blocco in pacman.conf e pacman-key: archivio.go
 	}
 	return nil
 }
@@ -185,7 +224,7 @@ func (d *deposito) scrittori(c *Contesto) ([]*scriviFile, error) {
 		}
 		r = append(r, s.(*scriviFile))
 	}
-	if len(r) == 0 {
+	if len(r) == 0 && c.Amb.Famiglia != "arch" {
 		return nil, Errore("RX-AZIONE-004", "aggiungi-deposito archivio su "+c.Amb.Famiglia)
 	}
 	return r, nil
@@ -255,7 +294,7 @@ func (d *deposito) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 			}
 			p.File[s.percorso] = string(pf)
 		}
-		if c.Amb.Famiglia != "debian" {
+		if c.Amb.Famiglia == "fedora" || c.Amb.Famiglia == "suse" {
 			k, err := chiaviRpm(c)
 			if err != nil {
 				return nil, "", err
@@ -331,8 +370,35 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
-		if c.Amb.Famiglia != "debian" {
+		switch c.Amb.Famiglia {
+		case "fedora", "suse":
 			if _, err := esegui(c.Amb, time.Minute, "rpm", "--import", sc[0].percorso); err != nil {
+				return err
+			}
+			if c.Amb.Famiglia == "fedora" {
+				// repo_gpgcheck: dnf5 verifica i metadati con un portachiavi SUO, e la chiave la importa
+				// chiedendo. `[M]` 30 set, fedora44-gnome: con --assumeno (la risoluzione) la domanda ha
+				// risposta «no», il deposito si salta e remotix «No match». Qui si risponde sì alla SOLA
+				// chiave del file che il motore ha appena scritto (gpgkey=file://…).
+				if _, err := esegui(c.Amb, tempoGestore, "dnf", "makecache", "-y", "--repo=remotix"); err != nil {
+					return err
+				}
+			}
+		case "arch":
+			if !adesso["pacman-key "+d.par["impronta"]] {
+				if err := d.mettiChiavePacman(c); err != nil {
+					return err
+				}
+			}
+			if err := d.mettiBloccoPacman(c); err != nil {
+				return err
+			}
+			// il SOLO database di REMOTIX (gli altri non si rinfrescano: niente aggiornamento parziale)
+			conf, err := ConfSoloRemotix(c.Amb, c.Cartella)
+			if err != nil {
+				return err
+			}
+			if _, err := esegui(c.Amb, tempoGestore, "pacman", "--config", conf, "-Sy"); err != nil {
 				return err
 			}
 		}
@@ -415,7 +481,17 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
-		if c.Amb.Famiglia != "debian" {
+		if c.Amb.Famiglia == "arch" {
+			if err := d.togliBloccoPacman(c); err != nil {
+				return err
+			}
+			if adesso["pacman-key "+d.par["impronta"]] && !p.Stato["pacman-key "+d.par["impronta"]] {
+				if _, err := esegui(c.Amb, time.Minute, "pacman-key", "--delete", d.par["impronta"]); err != nil {
+					return err
+				}
+			}
+		}
+		if c.Amb.Famiglia == "fedora" || c.Amb.Famiglia == "suse" {
 			k, err := chiaviRpm(c)
 			if err != nil {
 				return err

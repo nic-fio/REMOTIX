@@ -123,6 +123,15 @@ type Piano struct {
 	Approvazione *Approvazione `json:"approvazione,omitempty"`
 	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
 	Purge bool `json:"purge,omitempty"`
+	// Archivio: l'archivio firmato di REMOTIX da cui si installa e si aggiorna (T8); la fase 0
+	// TRUST ci scarica il catalogo del canale.
+	Archivio *RifArchivio `json:"archivio,omitempty"`
+}
+
+// RifArchivio: l'archivio di REMOTIX (URL di base) e il canale (stabile, candidato).
+type RifArchivio struct {
+	URL    string `json:"url"`
+	Canale string `json:"canale"`
 }
 
 // Digest del piano senza l'approvazione: è quel che l'approvazione firma.
