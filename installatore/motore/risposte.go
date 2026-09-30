@@ -18,7 +18,7 @@ import (
 //
 // ⛔ Senza domande NON vuol dire senza consenso: ogni consenso che su QUESTA macchina servirebbe
 // (l'archivio di terzi D5, solo dove serve; il firewall D6, solo se firewalld è
-// acceso; gli aggiornamenti automatici, solo dall'archivio) deve avere nel file una risposta
+// acceso) deve avere nel file una risposta
 // esplicita, «si» o «no». Se ne manca uno il piano si fa lo stesso (per mostrarlo), ma
 // l'operazione è BLOCCATA con RX-RISPOSTE-001, prima di toccare niente: mai un «sì» per scelta
 // tacita. Una voce sconosciuta (un errore di battitura in un consenso) ferma tutto: RX-RISPOSTE-002.
@@ -37,7 +37,8 @@ import (
 //	                                      #  vecchio si annota fra le «superflue» e non conta)
 //	consenso.firewall = si                # D6: aprire la porta nel firewall (serve solo se firewalld è acceso)
 //	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel), solo dove serve
-//	consenso.aggiornamenti = si           # il timer degli aggiornamenti automatici (DECISIONI §10.10, D14)
+//	                                      # (consenso.aggiornamenti: RITIRATA — D14, REMOTIX si aggiorna col
+//	                                      #  sistema, DECISIONI §10.23; in un file vecchio è «superflua»)
 //
 // Valori dei consensi: «si» (anche «sì», «yes») o «no». Una voce data dove non serve (il firewall su
 // una macchina senza firewalld) si annota e non fa niente.
@@ -263,7 +264,9 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 		rif.Superflue = append(rif.Superflue, "consenso.cinture ("+T("risposte.cinture_ignorata")+")")
 	}
 	o.ApriFirewall = consenso("consenso.firewall", amb.Firewall != nil && amb.Firewall.Nome() == "firewalld")
-	o.SenzaTimer = !consenso("consenso.aggiornamenti", o.Archivio != "")
+	if _, dato := r.Voci["consenso.aggiornamenti"]; dato { // D14: col sistema; la voce vecchia si dice e non conta
+		rif.Superflue = append(rif.Superflue, "consenso.aggiornamenti ("+T("risposte.aggiornamenti_ignorata")+")")
+	}
 	servono := map[string]bool{}
 	for _, d := range DepositiDaChiedere(rap, prof, desktop) {
 		servono[d] = true

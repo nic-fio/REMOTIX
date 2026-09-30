@@ -244,7 +244,7 @@ func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 	amb := ambienteFinto(radice)
 	cat := catalogoProva(t)
 	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: "piano-prova", Creato: "2026-09-30T00:00:00Z", Mestiere: "prova-motore",
-		Catalogo: RifCatalogo{cat.Versione, cat.Digest, cat.Scadenza}, Azioni: azioniDiProva(),
+		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Azioni: azioniDiProva(),
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 	im, err := CalcolaImpronta(profiloFinto(), cat, pn.Azioni, pn.Dipende, &Contesto{Amb: amb})
 	if err != nil {
@@ -262,7 +262,7 @@ func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 }
 
 func motoreFinto(t testing.TB, radice, operazioni string) *Motore {
-	return &Motore{Amb: ambienteFinto(radice), Cartella: operazioni, Catalogo: catalogoProva(t), Fonti: fontiProva(t, ""),
+	return &Motore{Amb: ambienteFinto(radice), Cartella: operazioni, Catalogo: catalogoProva(t), Fonti: fontiProva(t),
 		Esamina: profiloFinto, Adesso: func() time.Time { return time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC) }}
 }
 

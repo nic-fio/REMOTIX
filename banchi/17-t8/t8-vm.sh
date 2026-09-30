@@ -7,17 +7,22 @@
 #   accendi                 foto «cliente», accensione; la persona «prova» già nel gruppo del nodo
 #   terzi                   R18: un archivio DI TERZI già configurato (chiave sua, pacchetto suo)
 #   impronta <nome>         l'impronta della macchina (17-t3-impronta*.sh) e dei depositi (R18)
-#   motore                  il motore scaricato DALL'ARCHIVIO (come farà install.sh) e la sua firma
+#   motore                  il motore scaricato DALL'ARCHIVIO (come fa install.sh) e il suo sha256
 #   installa [canale]       verifica → piano --installa --archivio → approva → applica
-#   stato                   versioni, timer, servizio, operazioni, certificato, fiducia
+#   script                  come l'amministratore: install.sh e il suo sha256 dall'archivio, il
+#                           controllo (sha256sum -c), poi `sh install.sh --archivio … --risposte …`
+#   aggiorna                l'aggiornamento DEL SISTEMA (apt-get upgrade · dnf upgrade): REMOTIX
+#                           viene con lui (DECISIONI §10.23); il giornale di remotix.service
+#   disinstalla             disinstalla --purge → applica, e che cosa resta di REMOTIX
+#   stato                   versioni, servizio, operazioni, certificato, catalogo
 #   collega                 un Chrome vero entra e RESTA collegato (t8-browser.py) — in secondo piano
 #   via                     il browser collegato ricarica e rientra: deve rivedere il desktop
 #   palco                   i processi del desktop di «prova» (pid): prima e dopo devono combaciare
-#   timer                   il servizio del timer, lanciato come lo lancia il timer; il suo giornale
 #   motore-cmd "<arg>"      remotix-install <arg> nella VM (da root)
 #   spegni                  spegne e torna a «cliente»
 #
-# L'archivio sta in /media/REMOTIX/vm17/archivio/, servito su 127.0.0.1:8717 (dalla VM: 10.0.2.2).
+# L'archivio sta in /media/REMOTIX/vm17/archivio/, servito su 127.0.0.1:8717 (dalla VM: 10.0.2.2);
+# un altro con ARCH=http://10.0.2.2:<porta> (t8-porta.sh con DOVE e PORTA).
 # ⛔ Al massimo 2 VM di questo banco e 4 in tutto; non spegne una macchina già accesa da altri.
 # Evidenze in /media/REMOTIX/vm17/t8/esiti/<macchina>/.
 set -uo pipefail
@@ -27,7 +32,7 @@ T8=${T8:-$R/t8}
 QUI=$(cd "$(dirname "$0")" && pwd)
 E=$T8/esiti/$m
 V="bash $R/17-vm.sh"
-ARCH=http://10.0.2.2:8717
+ARCH=${ARCH:-http://10.0.2.2:8717}
 PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
 IMPRONTA=17-t3-impronta.sh
 case $m in
@@ -77,10 +82,39 @@ impronta)
 	echo "   impronta «$nome»: $(wc -l <"$E/impronta-$nome.txt") righe; depositi: $(wc -l <"$E/depositi-$nome.txt") righe"
 	;;
 motore)
-	vm "curl -sf $ARCH/motore/remotix-install -o /tmp/remotix-install && curl -sf $ARCH/motore/remotix-install.firma -o /tmp/remotix-install.firma
+	vm "cd /tmp && curl -sf $ARCH/motore/remotix-install -o remotix-install && curl -sf $ARCH/motore/remotix-install.sha256 -o remotix-install.sha256
+sha256sum -c remotix-install.sha256; echo \"sha256: uscita \$?\"
 sudo install -m 755 /tmp/remotix-install /root/remotix-install
-sudo /root/remotix-install fiducia /root/remotix-install --oggetto motore --firma /tmp/remotix-install.firma; echo \"fiducia: uscita \$?\"
 sudo /root/remotix-install versione" | tee "$E/motore.txt"
+	;;
+script)
+	# le risposte: la persona «prova» nei gruppi della scheda; firewall e RPM Fusion col consenso (D5,
+	# D6: il motore annota quelli che su questa macchina non servono)
+	vm "printf 'formato = remotix-risposte/1\nlingua = it\nutenti = prova\nconsenso.firewall = si\n' | sudo tee /root/risposte.conf >/dev/null
+[ -e /etc/fedora-release ] && echo 'consenso.deposito.rpmfusion = si' | sudo tee -a /root/risposte.conf >/dev/null
+cd /tmp && curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
+sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh" >"$E/script.txt" 2>&1
+	echo "   install.sh: $(grep -E 'install.sh: ' "$E/script.txt")"
+	T0=$(date +%s)
+	vm "cd /tmp && sudo sh install.sh --archivio $ARCH --risposte /root/risposte.conf --lingua it" >>"$E/script.txt" 2>&1
+	echo "   install.sh --risposte: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione |Motore VERIFICATO' "$E/script.txt" | tr '\n' ' ')"
+	grep -E 'FALLITA|BLOCCATA|RX-' "$E/script.txt" | head -8 | sed 's/^/   /'
+	;;
+aggiorna)
+	T0=$(date +%s)
+	vm "if command -v apt-get >/dev/null; then sudo apt-get update -q && sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -q; else sudo dnf upgrade -y --refresh; fi
+echo \"uscita: \$?\"
+echo --- remotix.service:
+sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix | grep -aE 'RITROVAT|pronto|avvio|Stopp|Start' | tail -12" >"$E/aggiorna-$(t).txt" 2>&1
+	echo "   aggiornamento del sistema in $(( $(date +%s) - T0 )) s: $(grep -cE '^(Setting up|Configurazione di|  Upgrading|  Aggiornamento|  Upgraded)' "$E"/aggiorna-*.txt | tail -1) righe di pacchetti"
+	grep -aE 'remotix|installazione certificata|versioni di REMOTIX|RX-|uscita:|RITROVAT' "$E"/aggiorna-*.txt | tail -16 | cut -c1-220 | sed 's/^/   /'
+	;;
+disinstalla)
+	vm "sudo /usr/bin/remotix-install disinstalla --purge --uscita /root/d.json --lingua it >/dev/null && sudo /usr/bin/remotix-install applica /root/d.json --approva --lingua it" >"$E/disinstalla.txt" 2>&1
+	echo "   disinstalla: uscita $? — $(grep -E '^operazione ' "$E/disinstalla.txt")"
+	grep -E 'FALLITA|BLOCCATA|RX-' "$E/disinstalla.txt" | head -6 | sed 's/^/   /'
+	vm "echo \"pacchetti rimasti: \$( (dpkg-query -W -f='\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null) | tr '\n' ' ')\"
+echo \"archivi: \$(ls /etc/apt/sources.list.d /etc/yum.repos.d 2>/dev/null | grep -ci remotix) · servizio: \$(systemctl is-active remotix 2>&1) · /var/lib/remotix: \$(sudo ls /var/lib/remotix 2>&1 | tr '\n' ' ')\"" | tee -a "$E/disinstalla.txt"
 	;;
 installa)
 	canale=${1:-stabile}
@@ -95,11 +129,11 @@ installa)
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/applica.txt" | head -8 | sed 's/^/   /'
 	;;
 stato)
-	vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install remotix-archive-keyring 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
-echo \"servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix) · timer: \$(systemctl is-enabled remotix-aggiorna.timer 2>&1) \$(systemctl is-active remotix-aggiorna.timer 2>&1)\"
-systemctl list-timers remotix-aggiorna.timer --no-pager 2>/dev/null | sed -n 2p
-sudo /root/remotix-install stato --lingua it
-sudo /usr/bin/remotix-install catalogo --lingua it 2>&1 | head -2
+	vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install remotix-archive-keyring 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
+echo \"servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix) · pid \$(systemctl show -p MainPID --value remotix)\"
+sudo /usr/bin/remotix-install stato --lingua it
+sudo /usr/bin/remotix-install catalogo --lingua it 2>&1 | head -1
+sudo /usr/bin/remotix-install certifica --lingua it 2>&1 | head -1
 sudo sh -c 'cat /var/lib/remotix/aggiornamenti.json 2>/dev/null'; echo" 2>&1 | tee "$E/stato-$(t).txt"
 	;;
 collega)
@@ -119,19 +153,11 @@ palco)
 echo processi di prova: \$(pgrep -u prova | wc -l)
 loginctl list-sessions --no-legend | grep prova" | tee "$E/palco-$(t).txt"
 	;;
-timer)
-	T0=$(date +%s)
-	vm "sudo systemctl start remotix-aggiorna.service; echo \"uscita del servizio: \$(systemctl show -p ExecMainStatus --value remotix-aggiorna.service)\"
-sudo journalctl -u remotix-aggiorna.service --since @$T0 --no-pager -o cat | tail -40
-echo --- remotix.service:
-sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix | grep -aE 'RITROVAT|pronto|avvio|Stopp|Start' | tail -12" 2>&1 | tee "$E/timer-$(t).txt"
-	echo "   in $(( $(date +%s) - T0 )) s"
-	;;
 motore-cmd)
 	vm "sudo /usr/bin/remotix-install $* --lingua it" 2>&1 | tee -a "$E/comandi.txt"
 	;;
 spegni)
 	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" cliente >/dev/null 2>&1; echo "   $m spenta, tornata a «cliente»"
 	;;
-*) sed -n 3,22p "$0"; exit 2 ;;
+*) sed -n 3,27p "$0"; exit 2 ;;
 esac

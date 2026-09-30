@@ -10,7 +10,7 @@ import (
 // ogni rilascio, non si ricopia a mano.
 func TabellaVersioni(c *Catalogo) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "*Generata da remotix-install catalogo --tabella, catalogo %s (scade il %s).*\n\n", c.Versione, c.Scadenza)
+	fmt.Fprintf(&b, "*Generata da remotix-install catalogo --tabella, catalogo %s (sequenza %d).*\n\n", c.Versione, c.Sequenza)
 	fmt.Fprintf(&b, "**Le distribuzioni**\n\n| distribuzione | versione minima | stato | desktop | condizioni |\n|---|---|---|---|---|\n")
 	for _, p := range c.Piattaforme {
 		var desk, cond []string

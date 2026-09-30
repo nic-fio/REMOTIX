@@ -124,6 +124,10 @@ func TestCatalogo(t *testing.T) {
 		{"gentoo", "2.17", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-002"},
 		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.packman": "presente", "pacchetto.breeze6-wallpapers": "assente"}, "COMPATIBILE C-COMPONENTE"},
 		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "deposito.packman": "presente", "pacchetto.labwc": "0.8.1", "pacchetto.wlr-randr": "0.4", "caratteri.scalabili": "0"}, "COMPATIBILE C-COMPONENTE,C-LIMITE"},
+		// Leap 16 + Plasma (KWin 6.4) chiede il 3D (T6 seguiti, KDE 487217): condizione; senza scheda, no
+		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.packman": "presente"}, "COMPATIBILE C-HARDWARE"},
+		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.packman": "presente", "scheda.nodi": "nessuno"}, "NON_SUPPORTATA RX-COMPAT-007"},
+		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.packman": "presente", "scheda.nodi": "nessuno"}, "COMPATIBILE C-COMPONENTE"},
 		{"debian", "13", "kde", map[string]string{"desktop.kde": "5.27"}, "NON_SUPPORTATA RX-COMPAT-006"},
 		{"debian", "13", "gnome", map[string]string{"sistema.systemd": "no"}, "NON_SUPPORTATA RX-COMPAT-007"},
 		{"debian", "13", "gnome", map[string]string{"distro.immutabile": "si"}, "NON_SUPPORTATA RX-COMPAT-003"},

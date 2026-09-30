@@ -23,8 +23,6 @@ type Domande struct {
 	Depositi []DomandaDeposito `json:"depositi"`
 	// Desktop: la scelta del desktop, solo se sulla macchina non ce n'è uno supportato
 	Desktop *Scelta `json:"desktop,omitempty"`
-	// Aggiornamenti: il consenso al timer si chiede solo se si installa da un archivio
-	Aggiornamenti bool `json:"aggiornamenti"`
 	// SenzaScheda: le persone a cui manca il permesso di usare la scheda (il motore le iscrive)
 	SenzaScheda []string `json:"senza_scheda"`
 	// Persone: chi potrà entrare (le persone della macchina; root è escluso)
@@ -45,7 +43,7 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 	if porta == 0 {
 		porta = 7447
 	}
-	d := &Domande{Porta: porta, Aggiornamenti: archivio, Depositi: []DomandaDeposito{}, SenzaScheda: []string{}}
+	d := &Domande{Porta: porta, Depositi: []DomandaDeposito{}, SenzaScheda: []string{}}
 	d.Desktop = SceltaDesktop(rap)
 	if d.Desktop != nil && desktopScelto == "" {
 		desktopScelto = d.Desktop.Predefinita
@@ -110,9 +108,6 @@ func (d *Domande) VociDiserie() map[string]string {
 	}
 	for _, x := range d.Depositi {
 		v["consenso.deposito."+x.ID] = "si"
-	}
-	if d.Aggiornamenti {
-		v["consenso.aggiornamenti"] = "si"
 	}
 	if d.Desktop != nil {
 		v["desktop"] = d.Desktop.Predefinita

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// L'ARCHIVIO di REMOTIX (T8, §6.5 punti 5-6, §6.6.10 catena B): gli archivi firmati delle tre
+// L'ARCHIVIO di REMOTIX (T8, §6.5 punti 5-6, §6.6.10): gli archivi firmati (l'unica chiave) delle tre
 // famiglie, generati da packaging/archivio/pubblica.sh. Qui: dove sta ciascuno, e che cosa il motore
 // scrive sulla macchina perché il gestore di pacchetti lo usi — e SOLO per i pacchetti di REMOTIX:
 //
@@ -29,9 +29,11 @@ import (
 // I canali: «stabile» e «candidato» (§6.1); le versioni vecchie restano nell'archivio (R11).
 
 // PacchettiArchivio: i soli pacchetti che l'archivio di REMOTIX può dare (il pin, includepkgs).
-var PacchettiArchivio = []string{"remotix", "remotix-install", "remotix-archive-keyring"}
+// remotix-selinux (T6, solo .rpm): lo tira remotix dove c'è la politica targeted — senza, dnf non
+// lo trova nel nostro archivio (includepkgs) e la transazione non si risolve.
+var PacchettiArchivio = []string{"remotix", "remotix-install", "remotix-archive-keyring", "remotix-selinux"}
 
-// ChiaveApt: dove sta la chiave della catena B per apt (la stessa del pacchetto remotix-archive-keyring).
+// ChiaveApt: dove sta la chiave dell'archivio per apt (la stessa del pacchetto remotix-archive-keyring).
 const ChiaveApt = "/usr/share/keyrings/remotix-archive-keyring.asc"
 
 // Marche del blocco di pacman.conf.

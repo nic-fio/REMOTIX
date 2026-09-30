@@ -6,8 +6,9 @@ import "encoding/json"
 // GetUnitFileState: quel che fanno systemctl enable e is-enabled, senza lanciarli, §10.14). Reversibilità ESATTA; un'unità già abilitata è PREESISTENTE e resta
 // abilitata; un'unità mascherata non si tocca (l'amministratore l'ha spenta apposta).
 //
-// parametri: unita; avvia ("si": anche accesa subito — il timer degli aggiornamenti, T8: abilitato
-// soltanto partirebbe al riavvio dopo; annullare la spegne e la disabilita).
+// parametri: unita; avvia ("si": anche accesa subito; annullare la spegne e la disabilita). ⚠ Nessun
+// piano nuovo lo usa più (era il timer degli aggiornamenti, tolto con D14, DECISIONI §10.23): resta
+// perché la disinstallazione di un'installazione fatta prima sappia spegnere quel che aveva acceso.
 
 func init() { registraTipo("abilita-unita", nuovaUnita) }
 
@@ -36,15 +37,6 @@ type primaUnita struct {
 
 func nuovaUnita(p AzionePiano) (Azione, error) {
 	return &unita{p.Parametri["unita"], p.Parametri["avvia"] == "si"}, nil
-}
-
-// PianoUnitaAccesa: abilitata e accesa (il timer degli aggiornamenti automatici, T8).
-func PianoUnitaAccesa(id, u, consenso string) AzionePiano {
-	a := PianoUnita(id, u)
-	a.Parametri["avvia"] = "si"
-	a.Descrizione = T("az.unita.accesa", u)
-	a.Consenso = consenso
-	return a
 }
 
 func (u *unita) attiva(c *Contesto) bool {

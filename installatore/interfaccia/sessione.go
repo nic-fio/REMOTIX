@@ -70,8 +70,8 @@ type Config struct {
 	Operazioni string
 	Archivio   string
 	Canale     string
-	// Fonti: la fase 0 TRUST (la riga di comando sa costruirla: chiavi, catalogo incorporato)
-	Fonti func(scrivi bool) (*motore.FontiFiducia, error)
+	// Fonti: la fase 0 TRUST (la riga di comando sa costruirla: il catalogo del motore)
+	Fonti func() *motore.FontiFiducia
 	// Base: le opzioni d'installazione che non si chiedono (archivio, chiave dell'archivio)
 	Base motore.OpzioniInstallazione
 	// Chi: la persona che approva (per il registro); Modo: da quale interfaccia
@@ -113,11 +113,7 @@ func (s *Sessione) Controlla(porta int) (*Controllo, error) {
 	if porta == 0 {
 		porta = 7447
 	}
-	f, err := s.C.Fonti(false)
-	if err != nil {
-		return &Controllo{Errore: messaggioDi(err)}, nil
-	}
-	cat, fid, err := f.Fidati(time.Now())
+	cat, fid, err := s.C.Fonti().Fidati(time.Now())
 	if err != nil {
 		return &Controllo{Fiducia: fid, Errore: messaggioDi(err)}, nil
 	}
@@ -180,11 +176,7 @@ func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*
 	if err := motore.ScriviJSON(s.file, s.piano); err != nil {
 		return nil, err
 	}
-	fonti, err := s.C.Fonti(true)
-	if err != nil {
-		return &Esito{Errore: messaggioDi(err)}, nil
-	}
-	m := &motore.Motore{Amb: s.amb, Cartella: s.C.Operazioni, Fonti: fonti, Porta: s.porta,
+	m := &motore.Motore{Amb: s.amb, Cartella: s.C.Operazioni, Fonti: s.C.Fonti(), Porta: s.porta,
 		Ev: &motore.Eventi{W: &righeEventi{f: eventi}, JSON: true}, Fermata: s.fermo.Load}
 	op, err := m.Applica(s.file, false, s.C.Chi)
 	es := &Esito{Messaggi: []motore.Messaggio{}}

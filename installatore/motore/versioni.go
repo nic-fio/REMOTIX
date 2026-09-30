@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// Il confronto delle versioni dei PACCHETTI (T8: che cosa è più nuovo nell'archivio, e che cosa è un
-// ritorno indietro). Due algoritmi, quelli dei gestori stessi: dpkg (Debian, Ubuntu) e rpmvercmp
+// Il confronto delle versioni dei PACCHETTI (dopo D14: un pacchetto dell'installazione portato più
+// avanti da un aggiornamento del sistema è ancora «completo», azione_pacchetti.go). Due algoritmi, quelli dei gestori stessi: dpkg (Debian, Ubuntu) e rpmvercmp
 // (rpm, e pacman che usa lo stesso). ⚠ ConfrontaVersioni (profilo.go) resta quello semplice per le
 // versioni «umane» (GNOME 48, OpenSSL 3.5.1): qui ci sono epoche, revisioni, tilde.
 
@@ -220,21 +220,3 @@ func rpmvercmp(a, b string) int {
 	}
 	return -1
 }
-
-// VersioneAnnuale: la parte che fa una versione ANNUALE (le novità, D14): «X.Y» della versione a
-// monte X.Y.Z, senza epoca né revisione del pacchetto. ⭐ La regola, dichiarata (DECISIONI §10.10,
-// D14): cambia X.Y ⇒ versione annuale (su scelta dell'amministratore); cambia solo Z, o solo la
-// revisione del pacchetto (una ricostruzione: 0.17.0-1 → 0.17.0-2) ⇒ manutenzione (sicurezza o
-// ricostruzione, automatica con la proposta di D14).
-func VersioneAnnuale(v string) string {
-	_, v = epoca(v)
-	u, _ := ultimoTrattino(v)
-	p := strings.SplitN(u, ".", 3)
-	if len(p) >= 2 {
-		return p[0] + "." + p[1]
-	}
-	return u
-}
-
-// Annuale: passare da a a b è un cambio di versione annuale?
-func Annuale(a, b string) bool { return VersioneAnnuale(a) != VersioneAnnuale(b) }

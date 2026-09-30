@@ -38,6 +38,10 @@ var testi = map[string]Testo{
 	"cond.deposito_desktop": {"%s viene da %s", "%s comes from %s"},
 	"cond.deposito_h264":    {"H.264 sulla scheda (e il ripiego software) solo con %s", "H.264 on the card (and the software fallback) only with %s"},
 	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API"},
+	"pacchetti.trattenuti":  {"i pacchetti nuovi non ci sono più, tranne quelli che restano perché li chiede chi resta: %s", "the new packages are gone, except those kept because something that stays needs them: %s"},
+	"pacchetti.chiesto_da":  {"lo chiede %s", "needed by %s"},
+	"cond.3d":               {"%s richiede l'accelerazione 3D della scheda: %s", "%s requires the card's 3D acceleration: %s"},
+	"mot.3d":                {"%s richiede l'accelerazione 3D, e la macchina non ha una scheda (nessun nodo di rendering): %s", "%s requires 3D acceleration, and the machine has no card (no render node): %s"},
 	"cond.ripiego":          {"la codifica passa al ripiego software", "encoding falls back to software"},
 	"cond.ripiego_amd":      {"su %s Mesa è senza VA-API: con una scheda AMD la codifica è in software", "on %s Mesa has no VA-API: with an AMD card encoding is in software"},
 	"cond.ripiego_senza":    {"nessuna scheda: la codifica è in software", "no graphics card: encoding is in software"},
@@ -56,57 +60,50 @@ var testi = map[string]Testo{
 	"np.firewall_nessuno": {"nessun firewall acceso: niente da aprire", "no firewall on: nothing to open"},
 	"np.firewall_mano":    {"%s: aprire a mano la porta %s TCP e UDP", "%s: open port %s TCP and UDP by hand"},
 
-	"az.file":                   {"scrivere %s", "write %s"},
-	"az.file.fa":                {"si salva il file che c'è (se c'è), si scrive il nuovo in «%s» accanto, fsync, e lo si rinomina sopra", "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it"},
-	"az.file.verifica":          {"sha256 e permessi del file uguali a quelli del piano", "file sha256 and permissions equal to the plan's"},
-	"az.file.annulla":           {"si rimette il file salvato (o si toglie, se prima non c'era), e le cartelle create se sono rimaste vuote", "the saved file is put back (or removed, if it was not there), and created directories if left empty"},
-	"az.gruppo":                 {"mettere %s nel gruppo %s", "add %s to the %s group"},
-	"az.gruppo.fa":              {"gpasswd -a %s %s (se non c'è già: altrimenti niente, e lo si annota come PREESISTENTE)", "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)"},
-	"az.gruppo.verifica":        {"%s fra i membri di %s", "%s among the members of %s"},
-	"az.gruppo.annulla":         {"gpasswd -d %s %s, solo se l'ha messo REMOTIX", "gpasswd -d %s %s, only if REMOTIX added them"},
-	"az.unita":                  {"abilitare l'unità %s", "enable the unit %s"},
-	"az.unita.accesa":           {"abilitare e accendere l'unità %s", "enable and start the unit %s"},
-	"az.unita.fa":               {"EnableUnitFiles %s sul D-Bus di systemd (senza avviarla)", "EnableUnitFiles %s on systemd's D-Bus (without starting it)"},
-	"az.unita.verifica":         {"stato del file dell'unità %s = enabled", "unit file state of %s = enabled"},
-	"az.unita.annulla":          {"DisableUnitFiles %s, se prima non era abilitata", "DisableUnitFiles %s, if it was not enabled before"},
-	"az.fw":                     {"aprire la porta %s (TCP e UDP) nel firewall", "open port %s (TCP and UDP) in the firewall"},
-	"az.fw.fa":                  {"il servizio remotix se il firewall lo conosce già, altrimenti le porte %s/tcp e /udp, vive e permanenti: firewalld sul suo D-Bus (zona predefinita), ufw col suo comando", "the remotix service if the firewall already knows it, otherwise ports %s/tcp and /udp, runtime and permanent: firewalld on its D-Bus (default zone), ufw with its command"},
-	"az.fw.verifica":            {"le regole vive e permanenti ci sono", "the runtime and permanent rules are there"},
-	"az.fw.annulla":             {"si tolgono le sole regole aggiunte da REMOTIX; una zona di firewalld che era quella di serie torna di serie", "only the rules added by REMOTIX are removed; a firewalld zone that was the stock one goes back to stock"},
-	"az.fw.consenso":            {"Aprire la porta %s (TCP e UDP) nel firewall? (decisione D6, aperta)", "Open port %s (TCP and UDP) in the firewall? (decision D6, open)"},
-	"az.desktop":                {"installare %s dagli archivi della distribuzione", "install %s from the distribution's archives"},
-	"az.desktop.fa":             {"il gruppo di pacchetti della distribuzione per %s, senza display manager e senza graphical.target: davanti al monitor la macchina resta com'era", "the distribution's package group for %s, without a display manager and without graphical.target: at the monitor the machine stays as it was"},
-	"az.desktop.verifica":       {"i pacchetti installati, e il palco che parte senza schermo", "the installed packages, and the stage starting headless"},
-	"az.desktop.annulla":        {"si tolgono i pacchetti installati per noi che nessun altro vuole; quelli aggiornati restano (INDIRETTA, dichiarata)", "packages installed for us that nobody else wants are removed; upgraded ones stay (INDIRECT, declared)"},
-	"az.cintura":                {"accendere la cintura %s", "switch on the safety belt %s"},
-	"az.cintura.fa":             {"copia di %s in %s (temporaneo + rinomina), annotando il file dell'amministratore se c'era", "copy of %s to %s (temporary + rename), recording the administrator's file if there was one"},
-	"az.cintura.verifica":       {"sha256 uguale alla sorgente", "sha256 equal to the source"},
-	"az.cintura.annulla":        {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
-	"az.cintura.dichiarata":     {"Le tre cinture si accendono sempre (D4, DECISIONI §4.7): da remoto e davanti al monitor la macchina non si potrà spegnere né sospendere, e i tasti non la spengono; solo root può.", "The three safety belts are always switched on (D4, DECISIONS §4.7): remotely and at the monitor the machine cannot be shut down or suspended, and the keys do not power it off; only root can."},
-	"risposte.cinture_ignorata": {"consenso.cinture è ignorata: le cinture si accendono sempre (D4)", "consenso.cinture is ignored: the safety belts are always switched on (D4)"},
-	"az.servizio":               {"abilitare e accendere remotix.service", "enable and start remotix.service"},
-	"az.servizio.fa":            {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
-	"az.servizio.verifica":      {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
-	"az.servizio.annulla":       {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
+	"az.file":                         {"scrivere %s", "write %s"},
+	"az.file.fa":                      {"si salva il file che c'è (se c'è), si scrive il nuovo in «%s» accanto, fsync, e lo si rinomina sopra", "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it"},
+	"az.file.verifica":                {"sha256 e permessi del file uguali a quelli del piano", "file sha256 and permissions equal to the plan's"},
+	"az.file.annulla":                 {"si rimette il file salvato (o si toglie, se prima non c'era), e le cartelle create se sono rimaste vuote", "the saved file is put back (or removed, if it was not there), and created directories if left empty"},
+	"az.gruppo":                       {"mettere %s nel gruppo %s", "add %s to the %s group"},
+	"az.gruppo.fa":                    {"gpasswd -a %s %s (se non c'è già: altrimenti niente, e lo si annota come PREESISTENTE)", "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)"},
+	"az.gruppo.verifica":              {"%s fra i membri di %s", "%s among the members of %s"},
+	"az.gruppo.annulla":               {"gpasswd -d %s %s, solo se l'ha messo REMOTIX", "gpasswd -d %s %s, only if REMOTIX added them"},
+	"az.unita":                        {"abilitare l'unità %s", "enable the unit %s"},
+	"az.unita.fa":                     {"EnableUnitFiles %s sul D-Bus di systemd (senza avviarla)", "EnableUnitFiles %s on systemd's D-Bus (without starting it)"},
+	"az.unita.verifica":               {"stato del file dell'unità %s = enabled", "unit file state of %s = enabled"},
+	"az.unita.annulla":                {"DisableUnitFiles %s, se prima non era abilitata", "DisableUnitFiles %s, if it was not enabled before"},
+	"az.fw":                           {"aprire la porta %s (TCP e UDP) nel firewall", "open port %s (TCP and UDP) in the firewall"},
+	"az.fw.fa":                        {"il servizio remotix se il firewall lo conosce già, altrimenti le porte %s/tcp e /udp, vive e permanenti: firewalld sul suo D-Bus (zona predefinita), ufw col suo comando", "the remotix service if the firewall already knows it, otherwise ports %s/tcp and /udp, runtime and permanent: firewalld on its D-Bus (default zone), ufw with its command"},
+	"az.fw.verifica":                  {"le regole vive e permanenti ci sono", "the runtime and permanent rules are there"},
+	"az.fw.annulla":                   {"si tolgono le sole regole aggiunte da REMOTIX; una zona di firewalld che era quella di serie torna di serie", "only the rules added by REMOTIX are removed; a firewalld zone that was the stock one goes back to stock"},
+	"az.fw.consenso":                  {"Aprire la porta %s (TCP e UDP) nel firewall? (decisione D6, aperta)", "Open port %s (TCP and UDP) in the firewall? (decision D6, open)"},
+	"az.desktop":                      {"installare %s dagli archivi della distribuzione", "install %s from the distribution's archives"},
+	"az.desktop.fa":                   {"il gruppo di pacchetti della distribuzione per %s, senza display manager e senza graphical.target: davanti al monitor la macchina resta com'era", "the distribution's package group for %s, without a display manager and without graphical.target: at the monitor the machine stays as it was"},
+	"az.desktop.verifica":             {"i pacchetti installati, e il palco che parte senza schermo", "the installed packages, and the stage starting headless"},
+	"az.desktop.annulla":              {"si tolgono i pacchetti installati per noi che nessun altro vuole; quelli aggiornati restano (INDIRETTA, dichiarata)", "packages installed for us that nobody else wants are removed; upgraded ones stay (INDIRECT, declared)"},
+	"az.cintura":                      {"accendere la cintura %s", "switch on the safety belt %s"},
+	"az.cintura.fa":                   {"copia di %s in %s (temporaneo + rinomina), annotando il file dell'amministratore se c'era", "copy of %s to %s (temporary + rename), recording the administrator's file if there was one"},
+	"az.cintura.verifica":             {"sha256 uguale alla sorgente", "sha256 equal to the source"},
+	"az.cintura.annulla":              {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
+	"az.cintura.dichiarata":           {"Le tre cinture si accendono sempre (D4, DECISIONI §4.7): da remoto e davanti al monitor la macchina non si potrà spegnere né sospendere, e i tasti non la spengono; solo root può.", "The three safety belts are always switched on (D4, DECISIONS §4.7): remotely and at the monitor the machine cannot be shut down or suspended, and the keys do not power it off; only root can."},
+	"risposte.aggiornamenti_ignorata": {"consenso.aggiornamenti è ignorata: REMOTIX si aggiorna col sistema (D14)", "consenso.aggiornamenti is ignored: REMOTIX is updated with the system (D14)"},
+	"risposte.cinture_ignorata":       {"consenso.cinture è ignorata: le cinture si accendono sempre (D4)", "consenso.cinture is ignored: the safety belts are always switched on (D4)"},
+	"az.servizio":                     {"abilitare e accendere remotix.service", "enable and start remotix.service"},
+	"az.servizio.fa":                  {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
+	"az.servizio.verifica":            {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
+	"az.servizio.annulla":             {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
 
 	"az.pacchetti":                  {"far installare %s al gestore di pacchetti della distribuzione", "have the distribution's package manager install %s"},
 	"az.pacchetti.fa":               {"si risolve la transazione, si scarica tutto e si verifica (insieme risolto nel registro), poi il gestore installa dalla cache, senza rete", "the transaction is resolved, everything downloaded and verified (resolved set in the log), then the manager installs from the cache, offline"},
 	"az.pacchetti.verifica":         {"ogni pacchetto dell'insieme risolto installato alla sua versione, gestore non a metà", "every package of the resolved set installed at its version, manager not half-way"},
 	"az.pacchetti.annulla":          {"il gestore toglie i pacchetti NUOVI, e solo quelli (simulando prima); gli aggiornati restano e si dichiarano", "the manager removes the NEW packages, and only those (simulating first); upgraded ones stay and are declared"},
 	"az.deposito":                   {"aggiungere l'archivio %s", "add the %s archive"},
-	"az.deposito.fa.archivio":       {"la chiave dell'archivio (catena B) e la sorgente che la nomina: apt Signed-By + un pin che dall'archivio prende solo i pacchetti di REMOTIX; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman un blocco [remotix] con SigLevel Required e la chiave in pacman-key", "the archive key (chain B) and the source naming it: apt Signed-By + a pin taking only REMOTIX packages from the archive; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman a [remotix] block with SigLevel Required and the key in pacman-key"},
+	"az.deposito.fa.archivio":       {"la chiave dell'archivio e la sorgente che la nomina: apt Signed-By + un pin che dall'archivio prende solo i pacchetti di REMOTIX; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman un blocco [remotix] con SigLevel Required e la chiave in pacman-key", "the archive key (chain B) and the source naming it: apt Signed-By + a pin taking only REMOTIX packages from the archive; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman a [remotix] block with SigLevel Required and the key in pacman-key"},
 	"az.deposito.fa.epel":           {"dnf install epel-release, e il deposito CRB acceso", "dnf install epel-release, and the CRB repository enabled"},
 	"az.deposito.fa.rpmfusion":      {"dnf install del pacchetto rpmfusion-free-release della versione della macchina", "dnf install of the rpmfusion-free-release package for the machine's version"},
 	"az.deposito.fa.packman":        {"zypper addrepo di Packman (priorità 90) e refresh con la sua chiave", "zypper addrepo of Packman (priority 90) and refresh with its key"},
 	"az.deposito.verifica":          {"l'archivio configurato", "the archive configured"},
 	"az.deposito.annulla.archivio":  {"si tolgono i file (e la chiave da rpm o da pacman-key; il blocco da pacman.conf)", "the files are removed (and the key from rpm or pacman-key; the block from pacman.conf)"},
-	"consenso.aggiornamenti":        {"Accendere gli aggiornamenti automatici di REMOTIX? Ogni giorno un timer fa controllare l'archivio firmato; secondo /etc/remotix/aggiornamenti.conf si applicano da soli, dal gestore di pacchetti e senza chiudere i desktop, gli aggiornamenti di sicurezza e le ricostruzioni; la versione annuale la sceglie l'amministratore (predefinito: la proposta di D14, non ancora decisa)", "Switch on automatic REMOTIX updates? Every day a timer has the signed archive checked; as /etc/remotix/aggiornamenti.conf says, security updates and rebuilds are applied automatically, by the package manager and without closing the desktops; the yearly version is chosen by the administrator (default: the D14 proposal, not decided yet)"},
-	"az.aggiorna":                   {"portare i pacchetti di REMOTIX a %s: %s", "bring the REMOTIX packages to %s: %s"},
-	"az.aggiorna.fa":                {"il gestore di pacchetti risolve e scarica dall'archivio firmato, poi installa quelle versioni esatte (apt install nome=versione, dnf install/downgrade dei file verificati, pacman -S/-U); il servizio riparte da sé (try-restart) e ritrova i desktop", "the package manager resolves and downloads from the signed archive, then installs those exact versions (apt install name=version, dnf install/downgrade of the verified files, pacman -S/-U); the service restarts by itself (try-restart) and finds the desktops again"},
-	"az.aggiorna.verifica":          {"le versioni installate sono quelle del piano, e il servizio, se era acceso, è acceso", "the installed versions are those of the plan, and the service, if it was running, is running"},
-	"az.aggiorna.annulla":           {"si torna alle versioni di prima, che l'archivio conserva", "back to the previous versions, which the archive keeps"},
-	"agg.consenso_prima":            {"consenso dato all'installazione: aggiornamenti automatici = %s (%s)", "consent given at installation: automatic updates = %s (%s)"},
-	"agg.consenso_ora":              {"a mano, da %s (remotix-install aggiorna/ritorna)", "by hand, by %s (remotix-install aggiorna/ritorna)"},
 	"az.deposito.annulla.epel":      {"si toglie epel-release e CRB torna com'era; i pacchetti presi da lì restano (dichiarati)", "epel-release is removed and CRB goes back; packages taken from it stay (declared)"},
 	"az.deposito.annulla.rpmfusion": {"si toglie rpmfusion-free-release; i pacchetti presi da lì restano (dichiarati)", "rpmfusion-free-release is removed; packages taken from it stay (declared)"},
 	"az.deposito.annulla.packman":   {"zypper removerepo packman; i pacchetti presi da lì e la chiave restano (dichiarati)", "zypper removerepo packman; packages taken from it and the key stay (declared)"},
@@ -150,8 +147,7 @@ var testi = map[string]Testo{
 	"cert.nessuna":        {"nessuna", "none"},
 	"cert.non_annullato":  {"NON ANNULLATO", "NOT ROLLED BACK"},
 	"cert.prodotto_prova": {"nessuno: piano di prova del motore (T4)", "none: engine test plan (T4)"},
-	"cert.firma_si":       {"firma verificata", "signature verified"},
-	"cert.firma_no":       {"firma NON verificata: l'operazione si è fermata alla fase 0", "signature NOT verified: the operation stopped at phase 0"},
+	"cert.fiducia_no":     {"il catalogo NON si è potuto usare: l'operazione si è fermata alla fase 0", "the catalogue could NOT be used: the operation stopped at phase 0"},
 
 	// riga di comando
 	"cli.uso": {`remotix-install — il motore d'installazione di REMOTIX (versione %s, formato %s)
@@ -166,13 +162,16 @@ var testi = map[string]Testo{
   remotix-install disinstalla [--purge]   prepara il piano della disinstallazione (dal registro)
   remotix-install approva   FILE-PIANO [--desktop gnome|kde|xfce|lxqt|no]
         scrive nel piano il consenso di chi lo lancia (per applicarlo senza domande)
-  remotix-install applica   FILE-PIANO [--approva] [--senza-firma] [--eventi]
+  remotix-install applica   FILE-PIANO [--approva] [--eventi]
         applica il piano: si ferma se la macchina non è quella del piano
   remotix-install riprendi  [--eventi]    completa un'operazione interrotta
   remotix-install annulla   [--eventi]    annulla un'operazione non finita
   remotix-install stato                   le operazioni e il loro stato
-  remotix-install aggiornato              per gli script del pacchetto dopo un aggiornamento:
-        dice se l'installazione è certificata, rifà la verifica e riaccende il servizio se era acceso
+  remotix-install aggiornato              per gli script dei pacchetti dopo un cambio di versione:
+        annota le versioni, dice se l'installazione è certificata e se c'è un problema BLOCCANTE
+  remotix-install certifica [--json]      rifà i controlli dell'installazione (VERDE, A_CONDIZIONI, ROSSO)
+  REMOTIX si aggiorna col sistema (apt upgrade, dnf upgrade, zypper up, pacman -Syu): il motore non
+        ha un comando per aggiornare; per tornare indietro, i comandi del gestore (remotix-install ritorna)
   remotix-install catalogo [--tabella]    il catalogo in uso (--tabella: le tabelle di §3.1)
 
   SENZA DOMANDE e SENZA RETE (§6.6.12):
@@ -182,16 +181,16 @@ var testi = map[string]Testo{
   remotix-install piano --installa --risposte FILE [...]   solo il piano (da leggere, o da portare
         approvato su macchine con la stessa impronta: remotix-install applica FILE-PIANO)
   remotix-install prepara-fuori-linea --archivio URL (--risposte FILE | --piano FILE) --uscita DIR
-        su una macchina COLLEGATA uguale a quella senza rete: il pacchetto fuori linea (catalogo
-        firmato, insieme risolto, metadati firmati dei depositi); là: installa --fuori-linea DIR
+        su una macchina COLLEGATA uguale a quella senza rete: il pacchetto fuori linea (motore,
+        insieme risolto, metadati firmati dei depositi); là: installa --fuori-linea DIR
   il file di risposte (formato remotix-risposte/1), una voce per riga, «#» commento:
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (solo se manca un desktop)
-        consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.firewall = si|no
         consenso.deposito.rpmfusion|packman|epel = si|no
         (ogni consenso che su quella macchina serve va dato, «si» o «no»)
 
-  opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE,
+  opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE (dato a mano),
   --lingua it|en (predefinita: dall'ambiente, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
   --eventi: gli eventi in JSON, una riga ciascuno (per le interfacce)
 `, `remotix-install — the REMOTIX installation engine (version %s, format %s)
@@ -206,13 +205,16 @@ var testi = map[string]Testo{
   remotix-install disinstalla [--purge]   prepares the uninstallation plan (from the log)
   remotix-install approva   PLAN-FILE [--desktop gnome|kde|xfce|lxqt|no]
         writes the consent of whoever runs it into the plan (to apply it without questions)
-  remotix-install applica   PLAN-FILE [--approva] [--senza-firma] [--eventi]
+  remotix-install applica   PLAN-FILE [--approva] [--eventi]
         applies the plan: stops if the machine is not the plan's machine
   remotix-install riprendi  [--eventi]    completes an interrupted operation
   remotix-install annulla   [--eventi]    rolls back an unfinished operation
   remotix-install stato                   the operations and their state
-  remotix-install aggiornato              for the package scripts after an update:
-        says whether the installation is certified, checks again and restarts the service if it was running
+  remotix-install aggiornato              for the package scripts after a version change:
+        records the versions, says whether the installation is certified and whether there is a BLOCKING problem
+  remotix-install certifica [--json]      runs the installation checks again (VERDE, A_CONDIZIONI, ROSSO)
+  REMOTIX is updated with the system (apt upgrade, dnf upgrade, zypper up, pacman -Syu): the engine
+        has no update command; to go back, the package manager commands (remotix-install ritorna)
   remotix-install catalogo [--tabella]    the catalogue in use (--tabella: the tables of §3.1)
 
   UNATTENDED and OFFLINE (§6.6.12):
@@ -222,67 +224,65 @@ var testi = map[string]Testo{
   remotix-install piano --installa --risposte FILE [...]   only the plan (to read, or to carry
         approved to machines with the same fingerprint: remotix-install applica PLAN-FILE)
   remotix-install prepara-fuori-linea --archivio URL (--risposte FILE | --piano FILE) --uscita DIR
-        on a CONNECTED machine identical to the offline one: the offline bundle (signed catalogue,
+        on a CONNECTED machine identical to the offline one: the offline bundle (engine,
         resolved set, signed repository metadata); there: installa --fuori-linea DIR
   the answer file (format remotix-risposte/1), one entry per line, «#» comment:
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (only if a desktop is missing)
-        consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.firewall = si|no
         consenso.deposito.rpmfusion|packman|epel = si|no
         (every consent that machine needs must be given, «si» or «no»)
 
-  common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE,
+  common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE (given by hand),
   --lingua it|en (default: from the environment, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
   --eventi: the events as JSON, one line each (for the interfaces)
 `},
-	"cli.titolo":               {"REMOTIX — controllo della macchina (sola lettura: niente è stato toccato)", "REMOTIX — machine check (read only: nothing was touched)"},
-	"cli.distribuzione":        {"Distribuzione", "Distribution"},
-	"cli.catalogo":             {"Catalogo: %s (scade il %s)", "Catalogue: %s (expires on %s)"},
-	"cli.desktop":              {"I desktop:", "The desktops:"},
-	"cli.non_installato":       {"non installato", "not installed"},
-	"cli.non_si_sa":            {"non si sa se c'è", "unknown whether present"},
-	"cli.installato":           {"installato (%s)", "installed (%s)"},
-	"cli.proposto":             {"  ← quello proposto se se ne installa uno", "  ← the one proposed if one is installed"},
-	"cli.perche":               {"perché", "why"},
-	"cli.condizione":           {"condizione", "condition"},
-	"cli.comando":              {"comando", "command"},
-	"cli.decisione":            {"(decisione %s, aperta)", "(decision %s, open)"},
-	"cli.nota":                 {"nota", "note"},
-	"cli.senza_desktop":        {"  ⚠ Nessun desktop supportato è installato: prima di installare REMOTIX si chiederà se\n    aggiungerne uno (se la risposta è no, REMOTIX non si installa: RX-DESKTOP-001).", "  ⚠ No supported desktop is installed: before installing REMOTIX you will be asked whether\n    to add one (if the answer is no, REMOTIX is not installed: RX-DESKTOP-001)."},
-	"cli.incognite":            {"Quel che NON si è potuto sapere (non vale come «a posto»):", "What could NOT be found out (it does not count as «fine»):"},
-	"cli.avvisi":               {"Avvisi e problemi:", "Warnings and problems:"},
-	"cli.fatti":                {"I fatti (RILEVATO = visto; VERIFICATO = provato davvero; SCONOSCIUTO = non si sa):", "The facts (RILEVATO = seen; VERIFICATO = actually tested; SCONOSCIUTO = unknown):"},
-	"cli.piano_scritto":        {"Piano (%s) %s scritto in %s", "Plan (%s) %s written to %s"},
-	"cli.piano_macchina":       {"Macchina: %s — impronta %s (%d elementi vincolanti)", "Machine: %s — fingerprint %s (%d binding elements)"},
-	"cli.piano_passo":          {"%d. %s  [%s, %s]\n   si fa: %s\n   si verifica: %s\n   si annulla: %s\n", "%d. %s  [%s, %s]\n   done by: %s\n   verified by: %s\n   rolled back by: %s\n"},
-	"cli.consenso":             {"consenso richiesto: %s", "consent required: %s"},
-	"cli.non_fatto":            {"non fatto: %s %s %s", "not done: %s %s %s"},
-	"cli.per_applicarlo":       {"Per applicarlo: remotix-install approva %s && remotix-install applica %s", "To apply it: remotix-install approva %s && remotix-install applica %s"},
-	"cli.gia_approvato":        {"Già approvato (%s): si applica così com'è, anche su altre macchine con la stessa impronta: remotix-install applica %s", "Already approved (%s): it is applied as it is, also on other machines with the same fingerprint: remotix-install applica %s"},
-	"cli.risposte":             {"Dal file di risposte %s (sha256 %s): %d voci", "From the answer file %s (sha256 %s): %d entries"},
-	"cli.risposte_predef":      {"  scelte non dette dal file, al valore predefinito: %s", "  choices the file does not state, at their default: %s"},
-	"cli.risposte_superflue":   {"  voci senza effetto su questa macchina: %s", "  entries with no effect on this machine: %s"},
-	"cli.risposte_mancanti":    {"  ⛔ consensi che servono e che il file NON dà: %s — l'operazione sarà BLOCCATA (RX-RISPOSTE-001)", "  ⛔ consents that are needed and that the file does NOT give: %s — the operation will be BLOCKED (RX-RISPOSTE-001)"},
-	"cli.conferma":             {"Applicare questo piano? Scrivere «si» per confermare: ", "Apply this plan? Type «yes» to confirm: "},
-	"cli.non_confermato":       {"non confermato: niente è stato toccato", "not confirmed: nothing was touched"},
-	"cli.dichiarato":           {"si fa sempre: %s", "always done: %s"},
-	"cli.router":               {"Da fuori della rete locale: inoltra sul router la porta %d, TCP e UDP, verso questa macchina (REMOTIX non lo fa da sé: niente UPnP).", "From outside the local network: forward port %d, TCP and UDP, on the router to this machine (REMOTIX does not do it by itself: no UPnP)."},
-	"cli.senza_terminale":      {"nessun terminale per chiedere la conferma: per installare senza domande serve --risposte FILE (§6.6.12)", "no terminal to ask for confirmation: an unattended installation needs --risposte FILE (§6.6.12)"},
-	"cli.fuori_linea":          {"Pacchetto fuori linea %s: %s, canale %s, %d artefatti, %d file verificati, preparato il %s", "Offline bundle %s: %s, channel %s, %d artefacts, %d files verified, prepared on %s"},
-	"cli.preparato":            {"Pacchetto fuori linea pronto in %s: %d artefatti, %d file (%d MB). Impronta della macchina di riferimento %s, %d pacchetti.", "Offline bundle ready in %s: %d artefacts, %d files (%d MB). Reference machine fingerprint %s, %d packages."},
-	"cli.approvato":            {"Piano %s approvato da %s (digest %s)", "Plan %s approved by %s (digest %s)"},
-	"cli.serve_piano":          {"%s: serve il file del piano", "%s: the plan file is needed"},
-	"cli.operazione":           {"operazione %s: %s", "operation %s: %s"},
-	"cli.nessuna_op":           {"nessuna operazione in %s", "no operation in %s"},
-	"cli.aperta":               {"  ← aperta: riprendi o annulla", "  ← open: resume or roll back"},
-	"cli.certificata":          {"installazione certificata dall'installatore: operazione %s %s", "installation certified by the installer: operation %s %s"},
-	"cli.riaccensione":         {"riaccensione di remotix.service", "restart of remotix.service"},
-	"cli.fiducia":              {"Fiducia (catena A): catalogo %s, sequenza %d, sottochiave %s, radice %s, revoche %d; motore: %s", "Trust (chain A): catalogue %s, sequence %d, subkey %s, root %s, revocations %d; engine: %s"},
-	"cli.fiducia_file":         {"%s: firma della catena A VALIDA per «%s» (sottochiave %s, valida dal %s al %s)", "%s: chain A signature VALID for «%s» (subkey %s, valid from %s to %s)"},
-	"cli.senza_firma_ritirata": {"--senza-firma non esiste più (T8): la firma del catalogo si verifica sempre; senza rete si dà un catalogo fuori linea firmato con --catalogo FILE", "--senza-firma no longer exists (T8): the catalogue signature is always verified; without a network give a signed offline catalogue with --catalogo FILE"},
-	"agg.mostra":               {"Aggiornamenti automatici (%s; il predefinito è la proposta di D14, non ancora decisa):", "Automatic updates (%s; the default is the D14 proposal, not decided yet):"},
-	"agg.serve_versione":       {"ritorna: serve --versione (una versione di remotix che l'archivio conserva)", "ritorna: --versione is needed (a remotix version the archive keeps)"},
-	"agg.titolo":               {"Aggiornamenti di REMOTIX — archivio %s, canale %s, automatico = %s", "REMOTIX updates — archive %s, channel %s, automatic = %s"},
-	"agg.catalogo":             {"  catalogo: %s", "  catalogue: %s"},
-	"cli.catalogo_info":        {"catalogo %s (sequenza %d), emesso il %s, scade il %s, motore minimo %s\ndigest %s\nfirma: %s\n", "catalogue %s (sequence %d), issued on %s, expires on %s, minimum engine %s\ndigest %s\nsignature: %s\n"},
+	"cli.titolo":             {"REMOTIX — controllo della macchina (sola lettura: niente è stato toccato)", "REMOTIX — machine check (read only: nothing was touched)"},
+	"cli.distribuzione":      {"Distribuzione", "Distribution"},
+	"cli.catalogo":           {"Catalogo: %s", "Catalogue: %s"},
+	"cli.desktop":            {"I desktop:", "The desktops:"},
+	"cli.non_installato":     {"non installato", "not installed"},
+	"cli.non_si_sa":          {"non si sa se c'è", "unknown whether present"},
+	"cli.installato":         {"installato (%s)", "installed (%s)"},
+	"cli.proposto":           {"  ← quello proposto se se ne installa uno", "  ← the one proposed if one is installed"},
+	"cli.perche":             {"perché", "why"},
+	"cli.condizione":         {"condizione", "condition"},
+	"cli.comando":            {"comando", "command"},
+	"cli.decisione":          {"(decisione %s, aperta)", "(decision %s, open)"},
+	"cli.nota":               {"nota", "note"},
+	"cli.senza_desktop":      {"  ⚠ Nessun desktop supportato è installato: prima di installare REMOTIX si chiederà se\n    aggiungerne uno (se la risposta è no, REMOTIX non si installa: RX-DESKTOP-001).", "  ⚠ No supported desktop is installed: before installing REMOTIX you will be asked whether\n    to add one (if the answer is no, REMOTIX is not installed: RX-DESKTOP-001)."},
+	"cli.incognite":          {"Quel che NON si è potuto sapere (non vale come «a posto»):", "What could NOT be found out (it does not count as «fine»):"},
+	"cli.avvisi":             {"Avvisi e problemi:", "Warnings and problems:"},
+	"cli.fatti":              {"I fatti (RILEVATO = visto; VERIFICATO = provato davvero; SCONOSCIUTO = non si sa):", "The facts (RILEVATO = seen; VERIFICATO = actually tested; SCONOSCIUTO = unknown):"},
+	"cli.piano_scritto":      {"Piano (%s) %s scritto in %s", "Plan (%s) %s written to %s"},
+	"cli.piano_macchina":     {"Macchina: %s — impronta %s (%d elementi vincolanti)", "Machine: %s — fingerprint %s (%d binding elements)"},
+	"cli.piano_passo":        {"%d. %s  [%s, %s]\n   si fa: %s\n   si verifica: %s\n   si annulla: %s\n", "%d. %s  [%s, %s]\n   done by: %s\n   verified by: %s\n   rolled back by: %s\n"},
+	"cli.consenso":           {"consenso richiesto: %s", "consent required: %s"},
+	"cli.non_fatto":          {"non fatto: %s %s %s", "not done: %s %s %s"},
+	"cli.per_applicarlo":     {"Per applicarlo: remotix-install approva %s && remotix-install applica %s", "To apply it: remotix-install approva %s && remotix-install applica %s"},
+	"cli.gia_approvato":      {"Già approvato (%s): si applica così com'è, anche su altre macchine con la stessa impronta: remotix-install applica %s", "Already approved (%s): it is applied as it is, also on other machines with the same fingerprint: remotix-install applica %s"},
+	"cli.risposte":           {"Dal file di risposte %s (sha256 %s): %d voci", "From the answer file %s (sha256 %s): %d entries"},
+	"cli.risposte_predef":    {"  scelte non dette dal file, al valore predefinito: %s", "  choices the file does not state, at their default: %s"},
+	"cli.risposte_superflue": {"  voci senza effetto su questa macchina: %s", "  entries with no effect on this machine: %s"},
+	"cli.risposte_mancanti":  {"  ⛔ consensi che servono e che il file NON dà: %s — l'operazione sarà BLOCCATA (RX-RISPOSTE-001)", "  ⛔ consents that are needed and that the file does NOT give: %s — the operation will be BLOCKED (RX-RISPOSTE-001)"},
+	"cli.conferma":           {"Applicare questo piano? Scrivere «si» per confermare: ", "Apply this plan? Type «yes» to confirm: "},
+	"cli.non_confermato":     {"non confermato: niente è stato toccato", "not confirmed: nothing was touched"},
+	"cli.dichiarato":         {"si fa sempre: %s", "always done: %s"},
+	"cli.router":             {"Da fuori della rete locale: inoltra sul router la porta %d, TCP e UDP, verso questa macchina (REMOTIX non lo fa da sé: niente UPnP).", "From outside the local network: forward port %d, TCP and UDP, on the router to this machine (REMOTIX does not do it by itself: no UPnP)."},
+	"cli.senza_terminale":    {"nessun terminale per chiedere la conferma: per installare senza domande serve --risposte FILE (§6.6.12)", "no terminal to ask for confirmation: an unattended installation needs --risposte FILE (§6.6.12)"},
+	"cli.fuori_linea":        {"Pacchetto fuori linea %s: %s, canale %s, %d artefatti, %d file verificati, preparato il %s", "Offline bundle %s: %s, channel %s, %d artefacts, %d files verified, prepared on %s"},
+	"cli.preparato":          {"Pacchetto fuori linea pronto in %s: %d artefatti, %d file (%d MB). Impronta della macchina di riferimento %s, %d pacchetti.", "Offline bundle ready in %s: %d artefacts, %d files (%d MB). Reference machine fingerprint %s, %d packages."},
+	"cli.approvato":          {"Piano %s approvato da %s (digest %s)", "Plan %s approved by %s (digest %s)"},
+	"cli.serve_piano":        {"%s: serve il file del piano", "%s: the plan file is needed"},
+	"cli.operazione":         {"operazione %s: %s", "operation %s: %s"},
+	"cli.nessuna_op":         {"nessuna operazione in %s", "no operation in %s"},
+	"cli.aperta":             {"  ← aperta: riprendi o annulla", "  ← open: resume or roll back"},
+	"cli.certificata":        {"installazione certificata dall'installatore: operazione %s %s", "installation certified by the installer: operation %s %s"},
+	"cli.fiducia":            {"Fiducia: catalogo %s, sequenza %d — %s", "Trust: catalogue %s, sequence %d — %s"},
+	"cli.col_sistema":        {"REMOTIX si aggiorna col sistema (DECISIONI §10.23): apt upgrade · dnf upgrade · zypper up · pacman -Syu.\nPer tornare a una versione precedente, i comandi del gestore di pacchetti:\n  apt install remotix=VERSIONE remotix-install=VERSIONE   (le versioni: apt list -a remotix)\n  dnf downgrade remotix remotix-install\n  zypper install --oldpackage remotix-VERSIONE remotix-install-VERSIONE\n  pacman -U /var/cache/pacman/pkg/remotix-VERSIONE-x86_64.pkg.tar.zst (o dall'archivio)\nIl servizio riparte senza chiudere i desktop; dopo, remotix-install certifica.\n", "REMOTIX is updated with the system (DECISIONS §10.23): apt upgrade · dnf upgrade · zypper up · pacman -Syu.\nTo go back to a previous version, use the package manager commands:\n  apt install remotix=VERSION remotix-install=VERSION   (the versions: apt list -a remotix)\n  dnf downgrade remotix remotix-install\n  zypper install --oldpackage remotix-VERSION remotix-install-VERSION\n  pacman -U /var/cache/pacman/pkg/remotix-VERSION-x86_64.pkg.tar.zst (or from the archive)\nThe service restarts without closing the desktops; afterwards, remotix-install certifica.\n"},
+	"cli.versioni_annotate":  {"versioni di REMOTIX annotate: %s", "REMOTIX versions recorded: %s"},
+	"fid.pacchetto":          {"il catalogo del pacchetto remotix-install (lo garantisce il gestore di pacchetti, dall'archivio firmato di REMOTIX)", "the catalogue of the remotix-install package (guaranteed by the package manager, from the signed REMOTIX archive)"},
+	"fid.scaricato":          {"il catalogo del motore %s (scaricato da install.sh, che lo verifica con lo sha256 pubblicato)", "the catalogue of the engine %s (downloaded by install.sh, which checks it against the published sha256)"},
+	"fid.a_mano":             {"il catalogo dato a mano: %s (dell'amministratore)", "the catalogue given by hand: %s (the administrator's)"},
+	"cli.catalogo_info":      {"catalogo %s (sequenza %d), emesso il %s, motore minimo %s\ndigest %s\n%s\n", "catalogue %s (sequence %d), issued on %s, minimum engine %s\ndigest %s\n%s\n"},
 }

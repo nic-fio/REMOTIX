@@ -61,10 +61,11 @@ echo \"prova: \$(id prova)\"
 curl -s -m 5 -o /dev/null -w 'archivio di T9: HTTP %{http_code}\n' $ARCH/install.sh || echo 'archivio di T9: NON raggiungibile'" | tee "$E/accendi-$modo.txt"
 	;;
 motore)
-	for f in $T9/archivio/motore/remotix-install $T9/archivio/motore/remotix-install.firma $T9/risposte-*.conf; do
+	for f in $T9/archivio/motore/remotix-install $T9/archivio/motore/remotix-install.sha256 $T9/risposte-*.conf; do
 		vm "sudo tee /root/$(basename "$f") >/dev/null" <"$f"
 	done
-	vm "sudo chmod 755 /root/remotix-install; sudo /root/remotix-install fiducia /root/remotix-install --oggetto motore; sudo /root/remotix-install versione" | tee "$E/motore.txt"
+	# D11 semplificata (DECISIONI §10.21): il motore si verifica con lo sha256 pubblicato
+	vm "sudo chmod 755 /root/remotix-install; cd /root && sudo sha256sum -c remotix-install.sha256; sudo /root/remotix-install versione" | tee "$E/motore.txt"
 	;;
 cmd)
 	vm "sudo sh -c '$*'" 2>&1 | tee -a "$E/comandi.txt"

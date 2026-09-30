@@ -139,22 +139,37 @@ func (g *gestoreFinto) Installa(cache string, file, nomi []string) error {
 	return os.Remove(g.p("finto-pacchetti.transazione"))
 }
 
-func (g *gestoreFinto) Togli(nomi []string, purge bool) error {
+// SimulaTogli: chi dipende (anche di rimbalzo) dai nomi dati, fra gli installati.
+func (g *gestoreFinto) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	in := g.installati()
 	dep := g.deposito()
 	via := map[string]bool{}
 	for _, n := range nomi {
 		via[n] = true
 	}
-	for n := range in {
-		if via[n] {
-			continue
-		}
-		for _, d := range dep[n].Dipende {
-			if via[d] {
-				return Errore("RX-PACCHETTI-002", n)
+	var altri []string
+	for cambiato := true; cambiato; {
+		cambiato = false
+		for _, n := range chiaviOrdinate(in) {
+			if via[n] {
+				continue
+			}
+			for _, d := range dep[n].Dipende {
+				if via[d] {
+					via[n], cambiato = true, true
+					altri = append(altri, n)
+					break
+				}
 			}
 		}
+	}
+	return altri, nil
+}
+
+func (g *gestoreFinto) Togli(nomi []string, purge bool) error {
+	in := g.installati()
+	if err := soloLoro(g, nomi, purge); err != nil {
+		return err
 	}
 	for _, n := range nomi {
 		delete(in, n)

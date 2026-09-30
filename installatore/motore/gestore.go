@@ -46,7 +46,11 @@ type Gestore interface {
 	Risolvi(cache string, file, nomi []string) ([]Artefatto, error)
 	// Installa l'insieme risolto dalla cache, senza scaricare.
 	Installa(cache string, file, nomi []string) error
-	// Togli i nomi dati, e solo quelli (purge: anche la configurazione).
+	// SimulaTogli: che cosa toglierebbe il gestore OLTRE ai nomi dati (chi ne dipende), senza
+	// toccare niente.
+	SimulaTogli(nomi []string, purge bool) ([]string, error)
+	// Togli i nomi dati, e solo quelli (purge: anche la configurazione): se ne toglierebbe altri,
+	// RX-PACCHETTI-002 e niente tolto.
 	Togli(nomi []string, purge bool) error
 	// Integro: il gestore non è a metà di una transazione.
 	Integro() (bool, string, error)
@@ -197,26 +201,65 @@ func (g *gestoreApt) Installa(cache string, file, nomi []string) error {
 
 var aptTogli = regexp.MustCompile(`^(?:Remv|Purg) (\S+)`)
 
-func (g *gestoreApt) Togli(nomi []string, purge bool) error {
-	verbo := "remove"
+func aptVerbo(purge bool) string {
 	if purge {
-		verbo = "purge"
+		return "purge"
 	}
-	out, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", verbo}, aptOpzioni...), nomi...)...)
+	return "remove"
+}
+
+func (g *gestoreApt) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	out, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", aptVerbo(purge)}, aptOpzioni...), nomi...)...)
 	if err != nil {
+		return nil, err
+	}
+	var altri []string
+	for _, riga := range strings.Split(out, "\n") {
+		if m := aptTogli.FindStringSubmatch(riga); m != nil {
+			altri = append(altri, m[1])
+		}
+	}
+	return fuoriDa(altri, nomi), nil
+}
+
+func (g *gestoreApt) Togli(nomi []string, purge bool) error {
+	if err := soloLoro(g, nomi, purge); err != nil {
 		return err
 	}
+	_, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{aptVerbo(purge)}, aptOpzioni...), nomi...)...)
+	return err
+}
+
+// fuoriDa: i nomi di «tutti» che non sono in «nomi» (senza ripetizioni). Una chiave rpm si toglie
+// per versione (gpg-pubkey-…), e dnf la mostra per nome.
+func fuoriDa(tutti, nomi []string) []string {
 	nostri := map[string]bool{}
 	for _, n := range nomi {
 		nostri[n] = true
-	}
-	for _, riga := range strings.Split(out, "\n") {
-		if m := aptTogli.FindStringSubmatch(riga); m != nil && !nostri[m[1]] {
-			return Errore("RX-PACCHETTI-002", m[1])
+		if strings.HasPrefix(n, "gpg-pubkey-") {
+			nostri["gpg-pubkey"] = true
 		}
 	}
-	_, err = esegui(g.a, tempoGestore, "apt-get", append(append([]string{verbo}, aptOpzioni...), nomi...)...)
-	return err
+	var r []string
+	for _, n := range tutti {
+		if !nostri[n] {
+			nostri[n] = true
+			r = append(r, n)
+		}
+	}
+	return r
+}
+
+// soloLoro: la guardia di Togli — il gestore toglierebbe soltanto i nomi dati.
+func soloLoro(g Gestore, nomi []string, purge bool) error {
+	altri, err := g.SimulaTogli(nomi, purge)
+	if err != nil {
+		return err
+	}
+	if len(altri) > 0 {
+		return Errore("RX-PACCHETTI-002", strings.Join(altri, ", "))
+	}
+	return nil
 }
 
 func (g *gestoreApt) Integro() (bool, string, error) {
@@ -418,19 +461,13 @@ func (g *gestoreDnf) Installa(cache string, file, nomi []string) error {
 	return err
 }
 
-func (g *gestoreDnf) Togli(nomi []string, purge bool) error {
-	// dnf remove toglie anche chi dipende da questi: prima si guarda con --assumeno
+func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	// dnf remove toglie anche chi dipende da questi: si guarda con --assumeno
 	out, _, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	nostri := map[string]bool{}
-	for _, n := range nomi {
-		nostri[n] = true
-		if strings.HasPrefix(n, "gpg-pubkey-") { // una chiave si toglie per versione; dnf la mostra per nome
-			nostri["gpg-pubkey"] = true
-		}
-	}
+	var tutti []string
 	in := false
 	for _, riga := range strings.Split(out, "\n") {
 		t := strings.TrimSpace(riga)
@@ -441,11 +478,18 @@ func (g *gestoreDnf) Togli(nomi []string, purge bool) error {
 		if in && (t == "" || strings.HasPrefix(t, "Transaction Summary") || strings.HasPrefix(t, "Riepilogo")) {
 			in = false
 		}
-		if c := strings.Fields(t); in && len(c) >= 3 && !strings.HasSuffix(c[0], ":") && !nostri[c[0]] {
-			return Errore("RX-PACCHETTI-002", c[0])
+		if c := strings.Fields(t); in && len(c) >= 3 && !strings.HasSuffix(c[0], ":") {
+			tutti = append(tutti, c[0])
 		}
 	}
-	_, err = esegui(g.a, tempoGestore, "dnf", append([]string{"remove", "-y", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
+	return fuoriDa(tutti, nomi), nil
+}
+
+func (g *gestoreDnf) Togli(nomi []string, purge bool) error {
+	if err := soloLoro(g, nomi, purge); err != nil {
+		return err
+	}
+	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"remove", "-y", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
 	return err
 }
 
@@ -538,22 +582,25 @@ func (g *gestoreZypper) Installa(cache string, file, nomi []string) error {
 	return err
 }
 
-func (g *gestoreZypper) Togli(nomi []string, purge bool) error {
+var zypperSolvibile = regexp.MustCompile(`<solvable type="package" name="([^"]+)"`)
+
+func (g *gestoreZypper) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "remove", "--dry-run"}, nomi...)...)
 	if err != nil {
+		return nil, err
+	}
+	var tutti []string
+	for _, m := range zypperSolvibile.FindAllStringSubmatch(out, -1) {
+		tutti = append(tutti, m[1])
+	}
+	return fuoriDa(tutti, nomi), nil
+}
+
+func (g *gestoreZypper) Togli(nomi []string, purge bool) error {
+	if err := soloLoro(g, nomi, purge); err != nil {
 		return err
 	}
-	nostri := map[string]bool{}
-	for _, n := range nomi {
-		nostri[n] = true
-	}
-	re := regexp.MustCompile(`<solvable type="package" name="([^"]+)"`)
-	for _, m := range re.FindAllStringSubmatch(out, -1) {
-		if !nostri[m[1]] {
-			return Errore("RX-PACCHETTI-002", m[1])
-		}
-	}
-	_, err = esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "remove"}, nomi...)...)
+	_, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "remove"}, nomi...)...)
 	return err
 }
 
@@ -657,25 +704,37 @@ func (g *gestorePacman) Installa(cache string, file, nomi []string) error {
 	return err
 }
 
-func (g *gestorePacman) Togli(nomi []string, purge bool) error {
-	out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
+func (g *gestorePacman) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	// ⚠ pacman -R non toglie chi dipende: se qualcuno dipende, la simulazione FALLISCE e lo dice
+	// («removing X breaks dependency 'X' required by Y»): chi dipende è Y
+	out, c, err := g.a.Esegui(tempoGestore, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	nostri := map[string]bool{}
-	for _, n := range nomi {
-		nostri[n] = true
-	}
-	for _, n := range strings.Fields(out) {
-		if !nostri[n] {
-			return Errore("RX-PACCHETTI-002", n)
+	if c != 0 {
+		var r []string
+		for _, m := range pacmanRompe.FindAllStringSubmatch(out, -1) {
+			r = append(r, m[1])
 		}
+		if len(r) == 0 {
+			return nil, fmt.Errorf("pacman -R --print: uscita %d: %s", c, ultimeRighe(out, 6))
+		}
+		return fuoriDa(r, nomi), nil
+	}
+	return fuoriDa(strings.Fields(out), nomi), nil
+}
+
+var pacmanRompe = regexp.MustCompile(`required by (\S+)`)
+
+func (g *gestorePacman) Togli(nomi []string, purge bool) error {
+	if err := soloLoro(g, nomi, purge); err != nil {
+		return err
 	}
 	arg := []string{"-R", "--noconfirm"}
 	if purge {
 		arg = []string{"-Rn", "--noconfirm"}
 	}
-	_, err = esegui(g.a, tempoGestore, "pacman", append(arg, nomi...)...)
+	_, err := esegui(g.a, tempoGestore, "pacman", append(arg, nomi...)...)
 	return err
 }
 

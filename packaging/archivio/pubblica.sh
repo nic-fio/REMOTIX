@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # pubblica.sh — l'ARCHIVIO firmato di REMOTIX, per le tre famiglie (fasi/17 §6.1, §6.5 punti 5-6,
-# §6.6.10; tappa T8), dai pacchetti già costruiti.
+# §6.6.10), dai pacchetti già costruiti. Lo chiama il comando di rilascio (packaging/rilascio.sh).
 #
 #   pubblica.sh aggiungi <canale> <bersaglio> FILE…   un pacchetto nel suo posto (deb, rpm, pacman)
-#   pubblica.sh catalogo <canale> [FILE [SOTTOCHIAVE]] il catalogo del canale, firmato (catena A)
-#   pubblica.sh revoche  <sequenza> [ID=motivo …]      l'elenco delle sottochiavi revocate (radice)
-#   pubblica.sh motore   FILE FILE.firma               il motore per lo script d'ingresso
-#   pubblica.sh script                                 install.sh (installatore/install.sh), firmato (catena A, «script»)
-#   pubblica.sh rigenera                               indici, firme (catena B), SBOM (R24)
+#   pubblica.sh motore   FILE [FILE-GUI]               il motore (e la costruzione con la finestra) per
+#                                                      install.sh, ognuno col suo .sha256 accanto
+#   pubblica.sh script                                 install.sh alla radice, con lo sha256 dei due
+#                                                      motori SCRITTO DENTRO, e install.sh.sha256
+#   pubblica.sh rigenera                               indici e firme, SBOM (R24), licenze, SHA256SUMS
 #
 #   canale: stabile · candidato.  bersaglio: debian13, ubuntu2604, fedora44, alma10, arch, …
 #
@@ -17,16 +17,16 @@
 #   rpm/<canale>/<bersaglio>/*.rpm (firmati) + repodata/ (repomd.xml.asc: repo_gpgcheck=1)
 #   pacman/<canale>/x86_64/*.pkg.tar.zst(.sig) + remotix.db(.sig): il database ha la versione più
 #        nuova di ogni pacchetto; le VECCHIE restano come file (pacman -U, il ritorno indietro R11)
-#   catalogo/<canale>/catalogo.json(.firma), catalogo/revoche.json(.firma)       — catena A
-#   motore/remotix-install(.firma), chiavi/ (le due chiavi pubbliche), sbom/<pacchetto>.spdx.json
+#   install.sh, install.sh.sha256, motore/remotix-install(-gui)(.sha256), chiavi/ (la chiave
+#   pubblica), sbom/<pacchetto>.spdx.json, LICENZE-COMPONENTI.txt, SHA256SUMS
 # ⭐ Le versioni vecchie non si cancellano mai da qui: tornare indietro (R11) vuol dire che ci sono.
-# ⛔ Le due catene hanno chiavi DIVERSE: catena A (ed25519, installatore/strumenti/chiavi-a) per il
-#    catalogo e il motore; catena B (GPG) per pacchetti e metadati. Le private stanno in $CHIAVI,
-#    FUORI dal deposito e fuori dalla cartella servita. ⚠ T8: sono chiavi DI PROVA (D11).
+# ⭐ UNA chiave sola (DECISIONI §10.21): quella che firma pacchetti e metadati, verificata dal gestore
+#    di pacchetti. La privata sta in $CHIAVI, FUORI dal deposito e fuori dalla cartella servita.
+#    ⚠ Fase 17: chiave DI PROVA (la vera, e dove si custodisce, con D10).
 #
 # Ambiente: ARCHIVIO (predefinito costruzione-uscita/archivio), CHIAVI
-# (~/.local/share/remotix-chiavi-di-prova: a/ per la catena A, b/firma per la catena B, che ha
-# SOLO la sottochiave di firma: la madre GPG sta in b/radice, «fuori linea»), SOTTOCHIAVE_A (A-2026).
+# (~/.local/share/remotix-chiavi-di-prova: b/firma è la cartella GPG con la sola sottochiave di
+# firma; la madre GPG sta in b/radice, «fuori linea»).
 set -euo pipefail
 export LC_ALL=C   # le date di Release (Valid-Until) in inglese, come apt le legge
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -34,7 +34,6 @@ ALBERO=$(cd "$QUI/../.." && pwd)
 INST=$ALBERO/installatore
 ARCHIVIO=${ARCHIVIO:-$ALBERO/costruzione-uscita/archivio}
 CHIAVI=${CHIAVI:-$HOME/.local/share/remotix-chiavi-di-prova}
-SUB=${SOTTOCHIAVE_A:-A-2026}
 GB=$CHIAVI/b/firma
 FPR=$(cat "$CHIAVI/b/archivio.impronta")
 LAV=$ARCHIVIO/../.lavoro-archivio
@@ -42,16 +41,6 @@ mkdir -p "$ARCHIVIO" "$LAV"
 export TMPDIR=$LAV
 
 gpgb() { gpg --homedir "$GB" --batch --yes --pinentry-mode loopback --passphrase '' -u "$FPR" "$@"; }
-
-# la catena A: lo strumento chiavi-a nel contenitore di Go (le chiavi passano da .cache, poi via)
-firmaA() {  # firmaA <sottochiave> <oggetto> <file>
-	rm -rf "$INST/.cache/chiavi-firma" "$INST/.cache/da-firmare"; mkdir -p "$INST/.cache/da-firmare"
-	cp -a "$CHIAVI/a" "$INST/.cache/chiavi-firma"
-	cp "$3" "$INST/.cache/da-firmare/oggetto"
-	"$INST/costruisci.sh" go run ./strumenti/chiavi-a firma /src/.cache/chiavi-firma "$1" "$2" /src/.cache/da-firmare/oggetto "$(date -u +%F)" >/dev/null
-	cp "$INST/.cache/da-firmare/oggetto.firma" "$3.firma"
-	rm -rf "$INST/.cache/chiavi-firma" "$INST/.cache/da-firmare"
-}
 
 aggiungi() {
 	local canale=$1 bers=$2; shift 2
@@ -72,33 +61,28 @@ aggiungi() {
 	done
 }
 
-catalogo() {
-	local canale=$1 f=${2:-$INST/catalogo/catalogo.json} sub=${3:-$SUB}
-	mkdir -p "$ARCHIVIO/catalogo/$canale"
-	cp "$f" "$ARCHIVIO/catalogo/$canale/catalogo.json"
-	firmaA "$sub" catalogo "$ARCHIVIO/catalogo/$canale/catalogo.json"
-	echo "   catalogo $canale: $(grep -m1 '"versione"' "$f" | tr -d ' ,') firmato con $sub"
-}
-
-revoche() {
-	local seq=$1; shift
-	rm -rf "$INST/.cache/chiavi-firma"; cp -a "$CHIAVI/a" "$INST/.cache/chiavi-firma"
-	"$INST/costruisci.sh" go run ./strumenti/chiavi-a revoche /src/.cache/chiavi-firma "$seq" "$(date -u +%F)" /src/.cache/revoche.json "$@"
-	mkdir -p "$ARCHIVIO/catalogo"
-	mv "$INST/.cache/revoche.json" "$INST/.cache/revoche.json.firma" "$ARCHIVIO/catalogo/"
-	rm -rf "$INST/.cache/chiavi-firma"
-}
-
 motore() {
 	mkdir -p "$ARCHIVIO/motore"
-	cp "$1" "$ARCHIVIO/motore/remotix-install"; cp "$2" "$ARCHIVIO/motore/remotix-install.firma"
+	for f in "$@"; do
+		n=$(basename "$f")
+		case $n in remotix-install | remotix-install-gui) ;; *) echo "⛔ $n: il motore si chiama remotix-install(-gui)"; exit 2 ;; esac
+		cp "$f" "$ARCHIVIO/motore/$n"
+		(cd "$ARCHIVIO/motore" && sha256sum "$n" >"$n.sha256")
+		echo "   motore/$n $(cut -c1-16 "$ARCHIVIO/motore/$n.sha256")…"
+	done
 }
 
-# lo script d'ingresso (T9), firmato con la catena A come oggetto «script», alla radice dell'archivio
+# lo script d'ingresso: gli sha256 dei due motori SCRITTI DENTRO (l'amministratore verifica lo script
+# con lo sha256 pubblicato sul sito, e lo script verifica il motore con quello che porta)
 script() {
-	cp "$INST/install.sh" "$ARCHIVIO/install.sh"
-	firmaA "$SUB" script "$ARCHIVIO/install.sh"
-	echo "   install.sh firmato con $SUB"
+	local s g
+	s=$(cut -d' ' -f1 "$ARCHIVIO/motore/remotix-install.sha256")
+	g=$(cut -d' ' -f1 "$ARCHIVIO/motore/remotix-install-gui.sha256" 2>/dev/null || true)
+	sed -e "s/^SHA256_MOTORE=''\$/SHA256_MOTORE='$s'/" -e "s/^SHA256_MOTORE_GUI=''\$/SHA256_MOTORE_GUI='$g'/" \
+		"$INST/install.sh" >"$ARCHIVIO/install.sh"
+	grep -q "^SHA256_MOTORE='$s'\$" "$ARCHIVIO/install.sh" || { echo "⛔ install.sh: la riga SHA256_MOTORE non c'è"; exit 1; }
+	(cd "$ARCHIVIO" && sha256sum install.sh >install.sh.sha256)
+	echo "   install.sh $(cut -d' ' -f1 "$ARCHIVIO/install.sh.sha256") (da pubblicare sul sito)"
 }
 
 rigenera_deb() {
@@ -112,7 +96,7 @@ rigenera_deb() {
 		apt-ftparchive -o APT::FTPArchive::Release::Origin=REMOTIX -o APT::FTPArchive::Release::Label=REMOTIX \
 			-o APT::FTPArchive::Release::Suite="$s" -o APT::FTPArchive::Release::Codename="$s" \
 			-o APT::FTPArchive::Release::Architectures=amd64 -o APT::FTPArchive::Release::Components=main \
-			-o APT::FTPArchive::Release::Description="REMOTIX, archivio $s (fase 17 T8: chiavi DI PROVA)" \
+			-o APT::FTPArchive::Release::Description="REMOTIX, archivio $s (fase 17: chiave DI PROVA)" \
 			release "$d" >"$LAV/Release"
 		# Valid-Until: un archivio non rifirmato da 60 giorni apt lo rifiuta (difesa dal «congelamento»)
 		awk -v v="Valid-Until: $(date -u -d '+60 days' '+%a, %d %b %Y %H:%M:%S UTC')" '{print} /^Date:/{print v}' "$LAV/Release" >"$d/Release"
@@ -175,15 +159,29 @@ rigenera_pacman() {
 rigenera_chiavi() {
 	mkdir -p "$ARCHIVIO/chiavi"
 	cp "$CHIAVI/b/archivio.asc" "$ARCHIVIO/chiavi/remotix-archivio.asc"
-	cp "$INST/chiavi/radice-A.pub" "$ARCHIVIO/chiavi/radice-A.pub"
+	rm -f "$ARCHIVIO/chiavi/radice-A.pub"
 	cat >"$ARCHIVIO/chiavi/LEGGIMI" <<EOF
-Le chiavi PUBBLICHE di REMOTIX — ⚠ fase 17 T8: chiavi DI PROVA, generate apposta, non proteggono
-niente di vero (la custodia delle chiavi vere è la decisione D11).
-  remotix-archivio.asc  catena B (GPG): i pacchetti e i metadati dell'archivio. Madre $FPR
-                        (solo certificazione, fuori linea); firma una sottochiave con scadenza.
-  radice-A.pub          catena A (ed25519): il catalogo e il motore; scritta dentro il motore.
-Le due catene non si autorizzano a vicenda.
+La chiave PUBBLICA di REMOTIX — l'unica (DECISIONI §10.21): firma i pacchetti e i metadati
+dell'archivio, e la verifica il gestore di pacchetti. ⚠ Fase 17: chiave DI PROVA, generata apposta,
+non protegge niente di vero (la vera, e dove si custodisce, con D10).
+  remotix-archivio.asc  GPG, impronta $FPR
+Lo script d'ingresso (install.sh) non è firmato: si verifica col suo sha256, pubblicato sul sito di
+REMOTIX in HTTPS; lui verifica il motore con lo sha256 che porta scritto dentro.
 EOF
+}
+
+# il file delle licenze dei componenti (DECISIONI §10.22): da SBOM e dal vendor/ del motore
+rigenera_licenze() {
+	# LICENZA_GO: la licenza di Go presa dal contenitore di costruzione (la passa rilascio.sh)
+	python3 "$QUI/licenze.py" "$ARCHIVIO" "$INST" "${LICENZA_GO:-}" >"$ARCHIVIO/LICENZE-COMPONENTI.txt"
+	echo "   LICENZE-COMPONENTI.txt: $(grep -c '^== ' "$ARCHIVIO/LICENZE-COMPONENTI.txt") componenti"
+}
+
+# SHA256SUMS: ogni file pubblicato (fuori dagli indici, che hanno le loro firme)
+rigenera_somme() {
+	(cd "$ARCHIVIO" && find . -type f ! -name SHA256SUMS ! -path './deb/dists/*' ! -path './*/repodata/*' \
+		! -name 'remotix.db*' ! -name 'remotix.files*' -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' sha256sum >SHA256SUMS)
+	echo "   SHA256SUMS: $(wc -l <"$ARCHIVIO/SHA256SUMS") file"
 }
 
 # SBOM (R24): uno per ogni pacchetto del PRODOTTO, SPDX 2.3; ngtcp2 e nghttp3 con la versione
@@ -223,16 +221,16 @@ rigenera_sbom() {
 cmd=${1:-}; shift || true
 case $cmd in
 aggiungi) aggiungi "$@" ;;
-catalogo) catalogo "$@" ;;
-revoche)  revoche "$@" ;;
 motore)   motore "$@" ;;
 script)   script ;;
 rigenera)
-	echo "== deb";    rigenera_deb
-	echo "== rpm";    rigenera_rpm
-	echo "== pacman"; rigenera_pacman
-	echo "== chiavi"; rigenera_chiavi
-	echo "== SBOM";   rigenera_sbom
+	echo "== deb";     rigenera_deb
+	echo "== rpm";     rigenera_rpm
+	echo "== pacman";  rigenera_pacman
+	echo "== chiavi";  rigenera_chiavi
+	echo "== SBOM";    rigenera_sbom
+	echo "== licenze"; rigenera_licenze
+	echo "== somme";   rigenera_somme
 	;;
 *) sed -n '2,12p' "$0"; exit 2 ;;
 esac
