@@ -1,6 +1,9 @@
 # Contenitore.alma10 — costruzione di REMOTIX per AlmaLinux 10 (con EPEL e CRB).
 #
-# Le -devel stanno in parte in CRB (libei, pipewire) e ffmpeg-free in EPEL.
+# Le -devel stanno in parte in CRB (libei, pipewire); fase 18, senza ffmpeg:
+# `noopenh264-devel` (EPEL: le SOLE intestazioni, che bastano a compilare —
+# a esecuzione serve `openh264` vero dal deposito `epel-cisco-openh264`, e
+# `ripiego.c` riconosce la copia vuota), `svt-av1-devel` e `opus-devel` (EPEL).
 # ngtcp2 e nghttp3 dentro, statiche (quella di EPEL e' 1.22).
 FROM docker.io/library/almalinux:10
 RUN dnf -y install epel-release dnf-plugins-core \
@@ -8,7 +11,7 @@ RUN dnf -y install epel-release dnf-plugins-core \
     && dnf -y install --setopt=install_weak_deps=False \
         gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
         openssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
-        libavcodec-free-devel libavutil-free-devel libswscale-free-devel libva-devel \
+        libva-devel noopenh264-devel svt-av1-devel opus-devel \
         libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel \
     && dnf clean all
 

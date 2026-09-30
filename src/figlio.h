@@ -595,9 +595,22 @@ void figlio_vive(int argc, char **argv);
  *    un fotogramma sintetico 256x256 in H.264 con la stessa scelta di una
  *    sessione vera (VA-API sul nodo della sessione, altrimenti il ripiego in
  *    software).  Scrive UNA riga JSON su stdout —
- *    {"esito":"hardware"|"software"|"nessuno","codificatore":…,"nodo":…,"motivo":…}
- *    — e torna il codice d'uscita: 0 se codifica (hardware o software) · 1 nessuno.
- *    Niente rete, niente sessioni; root non serve (ma i gruppi del nodo sì). */
-int figlio_prova_codifica(void);
+ *    {"esito":"hardware"|"software"|"nessuno","codificatore":…,"nodo":…,"motivo":…,
+ *     "codec":…,"offerti":…,"hevc":…,"h264":…,"rimedio":…}
+ *    — e torna il codice d'uscita: 0 se codifica (hardware o software) · 1 nessuno
+ *    · 2 errore d'uso.  Niente rete, niente sessioni; root non serve (ma i
+ *    gruppi del nodo sì).
+ * ⭐ FASE 18: gli argomenti che seguono `--prova-codifica` (tutti facoltativi):
+ *    `h264`|`hevc`, `--nodo /dev/dri/renderDN`, `--software` (salta la scheda:
+ *    l'unico modo di provare il ripiego dove la scheda c'e'). */
+int figlio_prova_codifica(int argc, char **argv);
+
+/* ⭐ FASE 18 — la prova ALL'AVVIO del padre: che cosa questa macchina sa
+ *    codificare, in un processo a parte (un driver che cade non porta giu' il
+ *    server).  `offerti` e' l'elenco per `video.codec` dell'ECCOMI («hevc,h264»
+ *    · «h264» · «» = niente), `spiegazione` la riga per il registro col
+ *    rimedio quando manca OpenH264.  Torna false se non si offre niente. */
+bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
+                           size_t spiegazione_byte);
 
 #endif

@@ -95,6 +95,16 @@ const char *ripiego_nome(const Ripiego *rp);
  * "openh264", "svt-av1", o NULL per HEVC (che non c'e'). */
 const char *ripiego_componente(CodecVideo codec);
 
+/*
+ * ⭐ IL RIMEDIO, quando OpenH264 manca o e' la copia vuota: la riga che dice
+ *    QUALE pacchetto installare su QUESTA distribuzione (letta da
+ *    `/etc/os-release`), per il registro all'avvio e per `--prova-codifica`.
+ * ⛔ Decisione dell'utente (30 set 2026): senza scheda e senza OpenH264 vero
+ *    NON si rimette AV1 nella negoziazione — si dichiara, col rimedio, e il
+ *    browser non riceve offerte che il server non sa mantenere.
+ */
+void ripiego_rimedio_openh264(char *dove, size_t quanto);
+
 void ripiego_chiudi(Ripiego *rp);
 
 #endif

@@ -1890,8 +1890,31 @@ static const char *prima_comune(const char *elenco_client, const char *nostro,
  * ⚠ Il numero 2 di §6.2 resta AV1 per sempre: non si riusa (un client vecchio
  *   che sentisse «2» dipingerebbe spazzatura senza un errore).  Qui esce dalla
  *   NEGOZIAZIONE, non dal registro dei numeri. */
-#define NOSTRO_CODEC "hevc,h264"
+#define NOSTRO_CODEC_PREDEFINITO "hevc,h264"
 #define NOSTRA_PROFONDITA "8,10"
+
+/* ⭐⭐ FASE 18 (30 set 2026) — L'ELENCO DEI CODEC E' MISURATO, NON SCRITTO.
+ *
+ * Il padre lo IMPOSTA all'avvio dopo la prova di `figlio_capacita_video()`:
+ * «hevc» solo se la scheda codifica HEVC (in software non esiste piu': x265 e'
+ * GPL), «h264» se la scheda o OpenH264 vero, «» se niente.  ⛔ Il browser non
+ * deve ricevere un'offerta che il server non sa mantenere: negoziare «hevc» e
+ * poi non aprirlo era uno schermo nero senza una riga che lo nominasse.
+ * ⚠ Il predefinito resta quello di ieri per l'innesto dei banchi
+ *   (`banchi/rcp/`), che non ha una scheda da provare; il prodotto lo scrive
+ *   SEMPRE (`main.c`), e con l'elenco vuoto ogni CIAO finisce in
+ *   NIENTE_IN_COMUNE — dichiarato all'avvio e nel congedo. */
+static char nostro_codec[64] = NOSTRO_CODEC_PREDEFINITO;
+
+void rcp_video_codec_imposta(const char *elenco)
+{
+	snprintf(nostro_codec, sizeof nostro_codec, "%s", elenco ? elenco : "");
+}
+
+const char *rcp_video_codec(void)
+{
+	return nostro_codec;
+}
 #define NOSTRO_AUDIO "opus,pcm"
 
 static void manda_eccomi(rcp_sessione *s)
@@ -1901,7 +1924,7 @@ static void manda_eccomi(rcp_sessione *s)
 	sc_u16(&w, RCP_VERSIONE);
 	sc_u16(&w, 5); /* quante capacita' */
 	sc_str(&w, "video.codec");
-	sc_str(&w, NOSTRO_CODEC);
+	sc_str(&w, nostro_codec);
 	sc_str(&w, "video.profondita");
 	sc_str(&w, NOSTRA_PROFONDITA);
 	sc_str(&w, "audio.codec");
@@ -2317,7 +2340,15 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 * ERRORE_PROTOCOLLO: non ha sbagliato a scrivere, non ha di che parlare. */
 	char sc_codec[257], sc_prof[257], sc_audio[257];
 	int n_codec = 0, n_prof = 0, n_audio = 0;
-	if (!prima_comune(c_codec, NOSTRO_CODEC, s->codec, sizeof s->codec,
+	if (!nostro_codec[0]) {
+		/* ⛔ Fase 18: il server non sa codificare niente, e lo dice col nome
+		 *    della causa — il registro dell'avvio porta il rimedio. */
+		congeda(s, RCP_NIENTE_IN_COMUNE,
+		        "questo server non sa codificare video: nessun codec nell'ECCOMI "
+		        "(ne' scheda ne' OpenH264 vero — vedi il registro dell'avvio)");
+		return false;
+	}
+	if (!prima_comune(c_codec, nostro_codec, s->codec, sizeof s->codec,
 	                  sc_codec, sizeof sc_codec, &n_codec) ||
 	    !prima_comune(c_prof, NOSTRA_PROFONDITA, s->profondita,
 	                  sizeof s->profondita, sc_prof, sizeof sc_prof, &n_prof) ||
@@ -3364,7 +3395,7 @@ uint8_t rcp_codec_negoziato(const rcp_sessione *s)
 	 * §0 di `RCP.md` esiste per togliere. */
 	if (strcmp(s->codec, "hevc") == 0)
 		return 1;
-	/* ⚠ `av1` resta QUI e non in `NOSTRO_CODEC`: il numero e' assegnato per
+	/* ⚠ `av1` resta QUI e non in `nostro_codec`: il numero e' assegnato per
 	 *   sempre (§6.2), e questa riga e' la sua tomba dichiarata — non si
 	 *   negozia piu', ma se comparisse si tradurrebbe giusto. */
 	if (strcmp(s->codec, "av1") == 0)

@@ -1792,8 +1792,8 @@ int main(int argc, char **argv)
 	/* ⭐ FASE 17 (§6.5-bis) — la prova di codifica della certificazione: da
 	 *    sola, prima di tutto il resto — niente certificati, niente rete,
 	 *    niente sessioni.  Il contratto e' in `figlio.h`. */
-	if (argc == 2 && strcmp(argv[1], "--prova-codifica") == 0)
-		return figlio_prova_codifica();
+	if (argc >= 2 && strcmp(argv[1], "--prova-codifica") == 0)
+		return figlio_prova_codifica(argc - 2, argv + 2);
 
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];
@@ -2143,6 +2143,33 @@ int main(int argc, char **argv)
 		              "⚠ --journal chiesto ma il socket non si apre (%s): il "
 		              "registro resta SOLO qui",
 		              strerror(journal_errno));
+	/* ⭐⭐ FASE 18 — CHE COSA SI OFFRE AL BROWSER, MISURATO ALL'AVVIO.
+	 *     `video.codec` dell'`ECCOMI` (§4.3) dice solo i codec che questa
+	 *     macchina sa fare: HEVC se la scheda lo codifica (in software non
+	 *     esiste), H.264 se la scheda o OpenH264 vero.  ⛔ Decisione dell'utente
+	 *     (30 set 2026): senza scheda e senza OpenH264 NON si rimette AV1 —
+	 *     si dichiara qui, col rimedio, e ogni CIAO finisce in NIENTE_IN_COMUNE. */
+	{
+		char offerti[32], spiega[1024];
+		registro_dice(REG_AVVIO,
+		              "⭐ fase 18 — prova di codifica all'avvio, in un processo a parte: le "
+		              "righe «aperto: …» a 256x256 qui sotto sono sue, non di una sessione");
+		bool qualcosa = figlio_capacita_video(offerti, sizeof offerti, spiega, sizeof spiega);
+		rcp_video_codec_imposta(offerti);
+		if (qualcosa)
+			registro_dice(REG_AVVIO,
+			              "⭐ fase 18 — video.codec offerti nell'ECCOMI: «%s» — %s",
+			              offerti, spiega);
+		else
+			registro_dice(REG_AVVIO,
+			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessun codec "
+			              "nell'ECCOMI, ogni CIAO finira' in NIENTE_IN_COMUNE — %s.  "
+			              "⛔ AV1 non si rimette al suo posto (decisione dell'utente, "
+			              "30 set 2026): il rimedio e' OpenH264 VERO, o una scheda con "
+			              "i driver di codifica",
+			              spiega);
+	}
+
 	/* ⭐ FASE 12 — quale desktop accendera' questo server, detto all'avvio: con
 	 *    GNOME e KDE insieme la scelta e' ambigua, e si legge qui invece di
 	 *    scoprirla da un desktop che non e' quello atteso

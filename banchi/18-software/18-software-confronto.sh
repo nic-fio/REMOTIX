@@ -178,6 +178,6 @@ codifica) codifica ;;
 eventi) eventi ;;
 rifiuti) carico; mkdir -p "$LAVORO/rifiuti"; SCRIVI=$LAVORO/rifiuti "$BANCO" rifiuti
 	for f in "$LAVORO"/rifiuti/*; do echo "$f: $(ffprobe -v error -show_entries stream=profile,level,width,height -of compact=p=0 "$f")"; done ;;
-tutto) prepara && costruisci && "$0" colori && "$0" codifica && "$0" eventi && "$0" rifiuti ;;
+tutto) prepara && costruisci && bash "$0" colori && bash "$0" codifica && bash "$0" eventi && bash "$0" rifiuti ;;
 *) echo "passo ignoto: $PASSO"; exit 2 ;;
 esac

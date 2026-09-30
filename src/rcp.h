@@ -102,6 +102,13 @@ int rcp_tetto(void);
  *    strada» che `CODER.md` §2-bis vieta. */
 bool rcp_tetto_imposta(int quante);
 
+/* ⭐ FASE 18 — i codec video che l'ECCOMI OFFRE («hevc,h264» · «h264» · «»),
+ *    misurati all'avvio dal padre (`figlio_capacita_video()`), non scritti.
+ *    ⛔ Con «» ogni CIAO finisce in NIENTE_IN_COMUNE, dichiarato.  Il
+ *    predefinito («hevc,h264») serve solo all'innesto dei banchi. */
+void rcp_video_codec_imposta(const char *elenco);
+const char *rcp_video_codec(void);
+
 /* I motivi di §8.2.  Il codice 0 NON DEVE essere usato (§3.1). */
 enum {
 	RCP_CHIUSO_DALL_UTENTE = 0x01,

@@ -6103,6 +6103,14 @@ scatole in parallelo, campagna della fase 16 (una configurazione alla volta: le 
 parallelo) con ritardo e qualità uguali a oggi; altrimenti resta ffmpeg e si riapre la licenza. Poi
 l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prodotto definitivo.
 
+**Che cosa si offre al browser** (decisione dell'utente, 30 set 2026, all'integrazione): l'`ECCOMI` dichiara
+solo i codec che il server **sa fare**, misurati all'avvio — «hevc» se la scheda lo codifica (HEVC in
+software non esiste: x265 è GPL), «h264» se la scheda o OpenH264 **vero**. Se non c'è una scheda che codifica e
+OpenH264 manca o è la copia vuota (`noopenh264`), **AV1 NON si rimette nella negoziazione**: REMOTIX lo
+DICHIARA all'avvio (registro) e in `--prova-codifica`, col rimedio — installare openh264 vero, col pacchetto
+giusto per la distribuzione — e ogni `CIAO` finisce in `NIENTE_IN_COMUNE`. Il browser non riceve mai un'offerta
+che il server non può mantenere.
+
 ---
 
 ## Come si tiene questo documento

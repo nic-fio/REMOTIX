@@ -30,19 +30,15 @@
 #   libpipewire-0.3           il flusso dei fotogrammi  (`src/cattura.c`)
 #   libdrm                    i `DRM_FORMAT_MOD_*`: SOLO intestazioni, nessuna
 #                             libreria da collegare (`src/cattura.c`)
-#   libavcodec >= 61.13.100   la codifica HEVC/AV1      (`src/codificatore.c`)
-#                             ⛔ Diceva «>= 61», e non bastava: il 61.13.100
-#                             e' quello di `avcodec_get_supported_config()`
-#                             (`[R]` FFmpeg `doc/APIchanges`, 2024-09-08), cioe'
-#                             FFmpeg 7.1.  Ubuntu 24.04 (6.1, lavc 60) resta fuori
-#   libavutil  >= 59          i fotogrammi (a noi basterebbe la 58.7, quella di
-#                             `AV_FRAME_FLAG_KEY`: la 59 la impone la coppia
-#                             con libavcodec 61)
-#   libswscale >= 8           BGRx (dalla cattura) -> yuv420p10le, BT.709
-#                             ⛔ ERA NUOVA: `apt install libswscale-dev`.
-#                             `[M]` 12 ago 2026: sul contenitore della macchina
-#                             di prova c'era gia' (7:7.1.5-0+deb13u1, stesso
-#                             pacchetto sorgente di `libavcodec-dev`)
+#   ⭐ FASE 18 (30 set 2026, `DECISIONI.md` §10.25): ffmpeg e' USCITO dal
+#      prodotto — nessun `-lavcodec`, `-lavutil`, `-lswscale`.  Al suo posto:
+#   libva, libva-drm            la codifica sulla scheda (`src/vadiretta.c`)
+#   openh264 >= 2.5             SOLO le intestazioni (`src/ripiego.c` apre la
+#                               libreria con `dlopen`, per riconoscere la copia
+#                               vuota «noopenh264» e poter usare il binario di
+#                               Cisco): niente `--libs`, e `-ldl` accanto
+#   SvtAv1Enc >= 2.3            AV1 in software, collegata (`src/ripiego.c`)
+#   (i colori BT.709 sono nostri: `src/colori709.c`, nessuna dipendenza)
 #
 # ⭐ E LA SETTIMA, della FASE 13 (21 settembre 2026):
 #
@@ -58,8 +54,8 @@
 #                             ovunque giri labwc (wlroots la vuole per se').
 #
 # Su Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
-# `libpipewire-0.3-dev`, `libdrm-dev`, `libavcodec-dev`, `libavutil-dev`,
-# `libswscale-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
+# `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopenh264-dev`,
+# `libsvtav1enc-dev`, `libopus-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
 # bastano nella versione dei pacchetti (1.11 / 1.8): vanno costruiti dai
 # sorgenti, ed e' quel che fa `banchi/01-b2-costruisci-ngtcp2.sh`.
 #
@@ -81,7 +77,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
-            scrittore_bit.c audio.c suono.c \
+            scrittore_bit.c ripiego.c colori709.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
             appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
 OGGETTI  := $(SORGENTI:.c=.o)
@@ -176,20 +172,21 @@ override CFLAGS += $(F2_CFLAGS)
 # ⭐⭐ FASE 18 (30 set 2026): libva e' diventata LA strada della scheda —
 #    `src/vadiretta.c` la usa per tutto (configurazione, parametri, packed
 #    header, buffer codificati), e `libva-drm` apre il nodo (`vaGetDisplayDRM`)
-#    al posto di `av_hwdevice_ctx_create`.  libavcodec resta SOLO per il
-#    ripiego in software (`codificatore.c`, dietro il confine), finche' la
-#    linea del ripiego non lo sostituisce.
+#    al posto di `av_hwdevice_ctx_create`.
 F3_CFLAGS := $(shell pkg-config --cflags libva libva-drm)
 F3_LIBS   := $(shell pkg-config --libs   libva libva-drm)
 override CFLAGS += $(F3_CFLAGS)
 
-# ffmpeg: le intestazioni da pkg-config (fase 17, T1).  Su Debian e Ubuntu
-# stanno nel percorso di sistema e la riga aggiunge solo
-# `-I/usr/include/x86_64-linux-gnu`, che c'era gia': il risultato e' lo stesso.
-# Su Fedora e Alma (ffmpeg-free) stanno in /usr/include/ffmpeg, e senza questa
-# riga codificatore.c non trova <libavcodec/avcodec.h>.
-AV_CFLAGS := $(shell pkg-config --cflags libavcodec libavutil libswscale)
-override CFLAGS += $(AV_CFLAGS)
+# ⭐ FASE 18, il RIPIEGO in software (`src/ripiego.c`): OpenH264 e SVT-AV1.
+#    ⛔ OpenH264 SOLO `--cflags`: la libreria si apre con `dlopen` (vedi il
+#       riquadro in `ripiego.c` — la copia vuota «noopenh264» di Fedora/Alma/
+#       openSUSE ha lo stesso nome e non codifica; aperta, la si riconosce).
+#       ⇒ `-ldl` accanto, e nessun `-lopenh264`.
+#    SVT-AV1 collegata come una libreria qualunque (`SvtAv1Enc.pc`).
+#    ⚠ Su Debian Trixie: `apt install libopenh264-dev libsvtav1enc-dev`.
+F18S_CFLAGS := $(shell pkg-config --cflags openh264 SvtAv1Enc)
+F18S_LIBS   := $(shell pkg-config --libs   SvtAv1Enc) -ldl
+override CFLAGS += $(F18S_CFLAGS)
 
 # ⭐ FASE 18, linea A — `libopus` DIRETTA per l'audio (`src/audio.c`), dal 30
 #    settembre 2026: Opus non passa piu' da libavcodec (`DECISIONI.md` §10.25).
@@ -288,11 +285,9 @@ endif
 
 # ⛔ `ngtcp2_crypto_ossl` va PRIMA di `ngtcp2`: il linker risolve i simboli da
 #    sinistra a destra, e all'incontrario mancherebbero i simboli del ponte.
-# ⚠ `-lswscale` va PRIMA di `-lavutil` per la stessa ragione del ponte di
-#   ngtcp2: il linker risolve da sinistra a destra.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
-        -lavcodec -lswscale -lavutil -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS)
+        -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
+        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F18S_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -384,11 +379,13 @@ pulisci:
 #    compilatore su un `#include` che nessuno collega alla libreria assente.
 #
 # ⭐ FASE 17 — e adesso guarda anche le VERSIONI MINIME, non solo che le
-#    intestazioni ci siano: un'intestazione di ffmpeg 6.1 c'e', e il
-#    compilatore cade venti righe dopo su `avcodec_get_supported_config`.
+#    intestazioni ci siano: un'intestazione vecchia c'e', e il compilatore
+#    cade venti righe dopo su una funzione che non esiste.
 #    I minimi, e da dove vengono (`fasi/17-l-installatore.md` §4.4):
-#      libavcodec 61.13.100   `avcodec_get_supported_config` (FFmpeg 7.1)
-#      libavutil 59, libswscale 8   la coppia di FFmpeg 7.x
+#      openh264 2.5           le due forme dell'ABI che `ripiego.c` conosce
+#                             (2.5 = .so.7 di Alma, 2.6 = .so.8 delle altre)
+#      SvtAv1Enc 2.3          quella misurata (Debian 13); la 3.x di Fedora e
+#                             Arch ha la guardia sulla versione in `ripiego.c`
 #      openssl 3.5.0          l'API QUIC nativa (`ngtcp2_crypto_ossl`)
 #      libngtcp2 1.25.0       i `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c`
 #      libnghttp3 1.18.0      quella con cui si costruisce (`src/Contenitore`);
@@ -403,7 +400,7 @@ pulisci:
 #    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
 #       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
 #       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
-MINIMI := libavcodec:61.13.100 libavutil:59 libswscale:8 openssl:3.5.0 libva-drm:0 \
+MINIMI := openh264:2.5 SvtAv1Enc:2.3 openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
           libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3
@@ -427,8 +424,8 @@ dipendenze:
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
-	         libavcodec/avcodec.h libavutil/frame.h libswscale/swscale.h \
-	         libavutil/hwcontext_vaapi.h va/va.h gbm.h opus.h; do \
+	         wels/codec_api.h svt-av1/EbSvtAv1Enc.h \
+	         va/va.h va/va_drm.h gbm.h opus.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
@@ -487,10 +484,13 @@ sentinella.o:     sentinella.h registro.h
 ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
-codificatore.o:   codificatore.h registro.h vadiretta.h scrittore_bit.h
-# ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni.
+codificatore.o:   codificatore.h registro.h vadiretta.h scrittore_bit.h ripiego.h colori709.h
+# ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni;
+#    il ripiego in software (OpenH264, SVT-AV1) e i colori BT.709 nostri.
 vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
 scrittore_bit.o:  scrittore_bit.h
+ripiego.o:        ripiego.h colori709.h codificatore.h registro.h
+colori709.o:      colori709.h
 
 # ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del
 #   prodotto, e l'innesto in ngtcp2 non ha niente da far suonare.

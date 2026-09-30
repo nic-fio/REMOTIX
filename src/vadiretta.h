@@ -139,17 +139,20 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 /* ───────────────────────────────────────────────────────────────────────────
  * La strada DALLA MEMORIA: i pixel salgono sulla scheda.
  *
- * - RGB (BGRx o RGBx della cattura): in una superficie RGB32 d'appoggio, che
- *   poi `codificatore.c` converte in NV12/P010 con la VPP — lo stesso VPP
- *   della copia zero.  ⛔ Niente libswscale: la conversione di colore la fa la
- *   scheda anche su questa strada (fase 18, linea A).
+ * - BGRx/RGBx della cattura: `codificatore.c` li converte in CPU con
+ *   `colori709.c` (BT.709 limitato, la stessa matrice di ieri) in NV12 o P010
+ *   e li carica QUI nella superficie d'ingresso.  ⛔ Non si carica RGB per
+ *   farlo convertire alla VPP: misurato peggio della conversione in CPU
+ *   (`vadiretta.c`, la nota su `vadiretta_carica_nv12`).  La VPP resta alla
+ *   copia zero, dove il fotogramma e' gia' sulla scheda.
  * - yuv420p10le (il banco): direttamente nella superficie P010 d'ingresso,
  *   con lo spostamento dei 10 bit in alto dentro 16 fatto qui.
+ * I passi sono in BYTE.
  */
-bool vadiretta_superficie_rgb(VaDiretta *v, unsigned fourcc_va, VASurfaceID *fuori,
-                              char *errore, size_t errore_byte);
-bool vadiretta_carica_rgb(VaDiretta *v, VASurfaceID rgb, const uint8_t *pixel, uint32_t passo,
-                          char *errore, size_t errore_byte);
+bool vadiretta_carica_nv12(VaDiretta *v, VASurfaceID dest, const uint8_t *y, uint32_t passo_y,
+                           const uint8_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte);
+bool vadiretta_carica_p010(VaDiretta *v, VASurfaceID dest, const uint16_t *y, uint32_t passo_y,
+                           const uint16_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte);
 bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *pixel,
                                 uint32_t passo_y, char *errore, size_t errore_byte);
 

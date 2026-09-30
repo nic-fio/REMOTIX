@@ -155,6 +155,73 @@ static int regola(const char *nome, int difetto)
 #define regola(nome, difetto) (difetto)
 #endif
 
+/* `ID=` e `ID_LIKE=` di /etc/os-release, senza virgolette, in minuscolo. */
+static void distribuzione(char *id, size_t id_n, char *simile, size_t simile_n)
+{
+	FILE *f = fopen("/etc/os-release", "r");
+	char riga[256];
+
+	id[0] = 0;
+	simile[0] = 0;
+	if (!f)
+		return;
+	while (fgets(riga, sizeof riga, f)) {
+		char *dove = NULL;
+		size_t n = 0;
+		if (strncmp(riga, "ID=", 3) == 0) {
+			dove = id;
+			n = id_n;
+			memmove(riga, riga + 3, strlen(riga + 3) + 1);
+		} else if (strncmp(riga, "ID_LIKE=", 8) == 0) {
+			dove = simile;
+			n = simile_n;
+			memmove(riga, riga + 8, strlen(riga + 8) + 1);
+		} else {
+			continue;
+		}
+		size_t k = 0;
+		for (const char *p = riga; *p && *p != '\n' && k + 1 < n; p++)
+			if (*p != '"')
+				dove[k++] = (char) ((*p >= 'A' && *p <= 'Z') ? *p + 32 : *p);
+		dove[k] = 0;
+	}
+	fclose(f);
+}
+
+void ripiego_rimedio_openh264(char *dove, size_t quanto)
+{
+	char id[64], simile[128], tutto[200];
+
+	if (!dove || !quanto)
+		return;
+	distribuzione(id, sizeof id, simile, sizeof simile);
+	snprintf(tutto, sizeof tutto, "%s %s", id, simile);
+	/* ⚠ I nomi sono quelli dell'installatore (`installatore/catalogo`, fase 17)
+	 *   e della riga `fc19168` di `fasi/18-senza-ffmpeg.md` §4: chi cambia un
+	 *   nome la' lo cambia anche qui. */
+	if (strstr(tutto, "fedora"))
+		snprintf(dove, quanto,
+		         "dnf install openh264 (dal deposito «fedora-cisco-openh264», acceso di "
+		         "serie): sostituisce la copia vuota «noopenh264»");
+	else if (strstr(tutto, "almalinux") || strstr(tutto, "rhel") || strstr(tutto, "centos")
+	         || strstr(tutto, "rocky"))
+		snprintf(dove, quanto,
+		         "dnf install openh264 dal deposito «epel-cisco-openh264» (EPEL): "
+		         "sostituisce la copia vuota «noopenh264»");
+	else if (strstr(tutto, "suse"))
+		snprintf(dove, quanto,
+		         "zypper install libopenh264-8 dal deposito «repo-openh264» "
+		         "(https://codecs.opensuse.org/openh264/): quello di repo-oss e' la copia vuota");
+	else if (strstr(tutto, "arch"))
+		snprintf(dove, quanto, "pacman -S openh264");
+	else if (strstr(tutto, "debian") || strstr(tutto, "ubuntu"))
+		snprintf(dove, quanto, "apt install libopenh264-8 (Debian: main; Ubuntu: universe)");
+	else
+		snprintf(dove, quanto,
+		         "installare la libreria OpenH264 VERA di Cisco (libopenh264.so.8 o .so.7), "
+		         "non la copia vuota «noopenh264»");
+}
+
 const char *ripiego_componente(CodecVideo codec)
 {
 	switch (codec) {
@@ -761,7 +828,14 @@ static bool apri_av1(Ripiego *rp, char *errore, size_t n)
 {
 	EbSvtAv1EncConfiguration cfg;
 	memset(&cfg, 0, sizeof cfg);
+	/* ⚠ SVT-AV1 3.0 ha tolto il secondo argomento (`p_app_data`) di
+	 *   `svt_av1_enc_init_handle`: Debian 13 e Ubuntu 26.04 hanno la 2.3,
+	 *   Fedora 44 e Arch la 3.x.  Si sceglie dalla versione dell'intestazione. */
+#if SVT_AV1_CHECK_VERSION(3, 0, 0)
+	EbErrorType esito = svt_av1_enc_init_handle(&rp->av1, &cfg);
+#else
 	EbErrorType esito = svt_av1_enc_init_handle(&rp->av1, NULL, &cfg);
+#endif
 	if (esito != EB_ErrorNone || !rp->av1) {
 		di(errore, n, "SVT-AV1: init_handle = 0x%x", (unsigned) esito);
 		rp->av1 = NULL;
@@ -785,10 +859,20 @@ static bool apri_av1(Ripiego *rp, char *errore, size_t n)
 	 *    libsvtav1).  ⚠ `opzioni_av1()` mandava sempre `crf`, anche a QP. */
 	cfg.rate_control_mode = SVT_AV1_RC_MODE_CQP_OR_CRF;
 	cfg.qp = (uint32_t) rp->qualita;
+	/* ⚠ SVT-AV1 4.0 ha rinominato i due campi: `enable_adaptive_quantization`
+	 *   → `aq_mode`, e `SVT_AV1_PRED_LOW_DELAY_B` → `LOW_DELAY` (Arch ha la
+	 *   4.2, Fedora 44 la 3.1, Debian 13 la 2.3).  Stesso significato. */
+#if SVT_AV1_CHECK_VERSION(4, 0, 0)
+	if (rp->modo == CODIFICATORE_QUALITA_QP)
+		cfg.aq_mode = 0;
+	/* ⛔ bassa latenza, niente fotogrammi dal futuro. */
+	cfg.pred_structure = LOW_DELAY;
+#else
 	if (rp->modo == CODIFICATORE_QUALITA_QP)
 		cfg.enable_adaptive_quantization = 0;
 	/* ⛔ `pred-struct=1`: bassa latenza, niente fotogrammi dal futuro. */
 	cfg.pred_structure = SVT_AV1_PRED_LOW_DELAY_B;
+#endif
 	/* ⛔ Chiavi solo su richiesta (−1 = «nessun rinfresco»), e CHIUSE (2 = KEY
 	 *    con GOP chiuso): §5.2 vuole una chiave che si decodifichi da sola. */
 	cfg.intra_period_length = rp->r.chiavi_ogni ? (int32_t) rp->r.chiavi_ogni - 1 : -1;
@@ -799,7 +883,13 @@ static bool apri_av1(Ripiego *rp, char *errore, size_t n)
 	 *   rimette a 0 da se', e la chiave esce lo stesso (banco, «chiave chiesta
 	 *   al 45 uscita», vecchia e nuova). */
 	cfg.force_key_frames = 0;
+	/* ⚠ SVT-AV1 3.0 ha tolto `color_description_present_flag`: i quattro campi
+	 *   qui sotto, se diversi da «non specificato», finiscono nel sequence
+	 *   header da soli.  ⛔ Il banco `rifiuti`/`ffprobe` del 18-software
+	 *   (colore 709 tv nel flusso) e' la verifica, versione per versione. */
+#if !SVT_AV1_CHECK_VERSION(3, 0, 0)
 	cfg.color_description_present_flag = 1;
+#endif
 	cfg.color_primaries = EB_CICP_CP_BT_709;
 	cfg.transfer_characteristics = EB_CICP_TC_BT_709;
 	cfg.matrix_coefficients = EB_CICP_MC_BT_709;
@@ -854,10 +944,14 @@ static bool codifica_av1(Ripiego *rp, const uint8_t *pixel, uint32_t passo, bool
 		io.y_stride = py / 2u;
 		io.cb_stride = io.cr_stride = py / 4u;
 	}
+	/* ⚠ Dalla 3.0 `EbSvtIOFormat` porta solo i piani e i passi: misura,
+	 *   formato e profondita' le sa gia' dalla configurazione. */
+#if !SVT_AV1_CHECK_VERSION(3, 0, 0)
 	io.width = l;
 	io.height = a;
 	io.color_fmt = EB_YUV420;
 	io.bit_depth = rp->r.profondita == 10 ? EB_TEN_BIT : EB_EIGHT_BIT;
+#endif
 
 	in.size = sizeof in;
 	in.p_buffer = (uint8_t *) &io;

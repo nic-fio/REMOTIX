@@ -16,7 +16,7 @@
 #        remotix          il binario (se compila)
 #        immagine.log     il registro della costruzione dell'immagine
 #        compilazione.log il registro di make
-#        versioni.txt     OpenSSL, libavcodec, libei, pipewire, glib trovate
+#        versioni.txt     OpenSSL, OpenH264, SVT-AV1, opus, libei, pipewire, glib trovate
 #        ldd.txt          `ldd remotix` DENTRO il contenitore del bersaglio
 #        esito.txt        una riga: compila sì/no, ldd pulito sì/no
 #
@@ -51,7 +51,7 @@ costruisci_uno()
 	fi
 
 	podman run --rm "$imm" sh -c '
-		for m in openssl libavcodec libei-1.0 libpipewire-0.3 glib-2.0; do
+		for m in openssl openh264 SvtAv1Enc opus libva libei-1.0 libpipewire-0.3 glib-2.0; do
 			printf "%-18s %s\n" "$m" "$(pkg-config --modversion $m 2>&1)"
 		done
 		printf "%-18s %s\n" gcc "$(cc -dumpfullversion 2>&1)"
@@ -73,6 +73,8 @@ costruisci_uno()
 		ldd_ok=si
 		grep -q 'not found' "$u/ldd.txt" && { ldd_ok=no; nota="$nota librerie-mancanti"; }
 		grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ngtcp2/nghttp3-dinamiche"; }
+		# ⛔ fase 18: ffmpeg NON deve comparire — ne' collegato ne' in un simbolo
+		grep -qE 'libav|libswscale|libx26[45]' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ffmpeg-collegato"; }
 	else
 		nota=" errori: $(grep -cE 'error:|Error [0-9]' "$u/compilazione.log") righe (vedi compilazione.log)"
 	fi

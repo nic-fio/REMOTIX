@@ -17,9 +17,9 @@
  *
  *      il costo   `[M]` 13 agosto 2026, 1920×1080 a 10 bit, 120 fotogrammi,
  *                 tutti a 20 Mbit/s e coi fotogrammi in uscita CONTATI:
- *                 `hevc_vaapi` **3,16-3,24 ms** contro **22,23 ms** di
- *                 `libsvtav1` preset 10 sulla scena vera.  Il codificatore in
- *                 software e' il pezzo grosso dei 39 ms del tratto di codifica.
+ *                 `hevc_vaapi` **3,16-3,24 ms** contro decine di millisecondi
+ *                 del ripiego in software sulla scena vera: il codificatore
+ *                 in software e' il pezzo grosso del tratto di codifica.
  *      il bersaglio ⛔ e **non e' AV1**: `av1_vaapi` **compare** nell'elenco di
  *                 ffmpeg e all'uso esce **218** — *«No usable encoding profile
  *                 found»*, 3 giri su 3.  `vainfo` da' AV1 in sola decodifica su
@@ -42,10 +42,13 @@
  *      direttamente, con le intestazioni del flusso scritte da REMOTIX
  *      (`src/scrittore_bit.c`).  Il flusso e' dello stesso tipo di prima:
  *      `[M]` sulla copia zero vecchio e nuovo danno gli stessi byte e lo stesso
- *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria» carica i
- *      pixel cosi' come sono e li converte con la VPP della scheda: niente
- *      libswscale.  ⚠ Il ripiego in SOFTWARE e' ancora libavcodec, dietro un
- *      confine dichiarato in `codificatore.c`, in attesa della linea del ripiego.
+ *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria»
+ *      converte in CPU con `src/colori709.c` (BT.709 limitato, come ieri) e
+ *      carica i piani NV12/P010: niente libswscale, e ⛔ niente VPP dalla
+ *      memoria, che e' misurata peggio.  ⭐ E il ripiego in SOFTWARE e' `src/ripiego.c`: OpenH264
+ *      per H.264, SVT-AV1 per AV1, i colori di `src/colori709.c`; ⛔ HEVC in
+ *      software NON c'e' (x265 e' GPL) e si rifiuta dicendolo.  Nessuna riga
+ *      del prodotto passa piu' da ffmpeg.
  *
  * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
  *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
@@ -150,7 +153,7 @@
  * ⇒ Da cui i **due testimoni** di `codificatore_confessione()`, e il secondo non
  *   dipende dal primo:
  *
- *     il contesto  quel che `libavcodec` dice di aver aperto (nome del
+ *     il contesto  quel che il codificatore dice di aver aperto (nome del
  *                  componente, formato dei pixel, profilo, fotogrammi B)
  *     ⭐ I BYTE     quel che c'e' scritto **nel flusso**: l'SPS di HEVC e la
  *                  sequence header OBU di AV1 si leggono e si confrontano con
@@ -311,15 +314,16 @@ typedef struct {
 	CodecVideo codec;
 	/*
 	 * ⛔ Il componente si chiede PER NOME e non si ripiega.
-	 * NULL = il nome predefinito per quel codec in fase 2 (`libx265` /
-	 * `libsvtav1`), che e' comunque un nome e non una scelta di libavcodec.
+	 * NULL = il ripiego in software di quel codec (`openh264` / `svt-av1`,
+	 * `codificatore_ripiego_software()`); ⛔ per HEVC non ce n'e' uno, e
+	 * `codificatore_nuovo()` rifiuta dicendolo.
 	 */
 	const char *componente;
 	/*
 	 * ⛔⭐ IL NODO DI RENDERING — si stabilisce e si DICHIARA, non si indovina.
 	 *
-	 * Serve solo quando `componente` e' un codificatore in hardware (uno che
-	 * accetta `AV_PIX_FMT_VAAPI`).  ⛔ `NULL` non vuol dire «quello buono»:
+	 * Serve solo quando `componente` e' un codificatore in hardware
+	 * (`h264_vaapi` / `hevc_vaapi`).  ⛔ `NULL` non vuol dire «quello buono»:
 	 * vuol dire **fallisci dicendolo**.
 	 *
 	 * ⚠ E la ragione per cui non si puo' indovinare e' `[M]` 13 agosto 2026
@@ -381,7 +385,7 @@ typedef struct {
  */
 typedef struct {
 	CodecVideo codec;
-	const char *componente;       /* il nome vero, chiesto a libavcodec */
+	const char *componente;       /* il nome del componente aperto davvero */
 	bool ha_obbedito;             /* ⛔ falso ⇒ non si spedisce niente */
 	char perche_no[256];          /* la ragione, quando non ha obbedito */
 
@@ -431,7 +435,7 @@ typedef struct {
 	 *    rapporto».  Un ritmo di 3 ms senza queste cinque righe accanto e' un
 	 *    numero che vale per una macchina che non si sa quale sia.
 	 */
-	bool in_hardware;             /* il componente accetta AV_PIX_FMT_VAAPI */
+	bool in_hardware;             /* la scheda (vadiretta), non il ripiego */
 	char nodo[64];                /* il nodo CHIESTO, es. /dev/dri/renderD128 */
 	/*
 	 * ⭐ Il fornitore che ha RISPOSTO, chiesto a `vaQueryVendorString()` sul
@@ -525,8 +529,7 @@ typedef struct {
 	uint64_t us_codifica;         /*    calato» non si attribuisce a niente */
 	/*
 	 * ⭐ IL QUARTO TEMPO, e nasce con l'hardware: quanto costa PORTARE il
-	 *    fotogramma dalla memoria di sistema alla GPU (`av_hwframe_transfer_
-	 *    data`).  ⛔ Sta separato di proposito: e' esattamente il tratto che la
+	 *    fotogramma dalla memoria di sistema alla GPU (`vadiretta_carica_*`).  ⛔ Sta separato di proposito: e' esattamente il tratto che la
 	 *    **copia zero** della fase 8 esiste per togliere, e sommarlo alla
 	 *    codifica renderebbe invisibile quanto vale quel lavoro.  ⚠ In software
 	 *    e' sempre 0, e lo zero li' vuol dire «non c'e' questo tratto», non
@@ -550,7 +553,8 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
                                  char *errore, size_t errore_byte);
 void codificatore_libera(Codificatore *cod);
 
-/* Per il registro: «HEVC 10 bit via libx265 (in software)» oppure
+/* Per il registro: «H.264 8 bit via openh264 (in software: OpenH264 2.6.0 ·
+ * QP 25 · CABAC · 4 fili)» oppure
  * «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
  * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
  * la riga che finisce nel registro accanto a ogni numero. */
@@ -568,6 +572,18 @@ const char *codificatore_nome(const Codificatore *cod);
  *    quello vecchio e la caccia parte da li'.
  */
 const char *codificatore_ripiego_software(CodecVideo codec);
+
+/*
+ * ⭐ FASE 18 — dice PRIMA di aprire se il ripiego in software sa fare quel
+ *    codec a quella profondita' (per H.264: se c'e' OpenH264 VERO, non la copia
+ *    vuota), e se no perche'.  Serve alla prova all'avvio di `figlio.c`, che
+ *    decide che cosa il server OFFRE al browser, e a `--prova-codifica`.
+ * ⛔ Per HEVC rende sempre false: HEVC in software non esiste (x265 e' GPL).
+ */
+bool codificatore_software_pronto(CodecVideo codec, int profondita, char *perche,
+                                  size_t perche_byte);
+/* La riga del rimedio quando OpenH264 manca: QUALE pacchetto su QUESTA distro. */
+void codificatore_software_rimedio(char *dove, size_t quanto);
 
 /* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);
@@ -728,7 +744,8 @@ bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t a
  * ⛔ IL DIFETTO CHE CURA: `qualita_corrente` scende quando il fotogramma sfonda
  *    il tetto dei 16 MiB di `RCP.md` §6.2, e fino al 23 agosto 2026 **non
  *    risaliva mai**.  Un solo fotogramma d'eccezione — `[M]` il ripiego
- *    `libx264` a 7680x4320 su filmato granuloso fa 18,733 MiB, 1 volta su 8 —
+ *    in software di allora a 7680x4320 su filmato granuloso sfondava il tetto
+ *    1 volta su 8 —
  *    lasciava il codificatore in fondo alla scala **per tutta la sessione**, e
  *    il desktop fermo dell'utente usciva sgranato per ore.  ⚠ E' il *«mai
  *    sgranare»* di `DECISIONI.md` §3.3 perso per inerzia.

@@ -269,9 +269,6 @@ struct VaDiretta {
 		unsigned min_cb, ctu;
 	} hevc;
 
-	/* la strada dalla memoria */
-	VASurfaceID rgb;               /* la superficie RGB32 d'appoggio, VA_INVALID_ID finche' non serve */
-	unsigned rgb_fourcc;
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -989,7 +986,6 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 	v->config = VA_INVALID_ID;
 	v->contesto = VA_INVALID_ID;
 	v->coded = VA_INVALID_ID;
-	v->rgb = VA_INVALID_ID;
 	for (unsigned i = 0; i < RICOSTRUITE; i++)
 		v->ricostruite[i] = VA_INVALID_ID;
 	if (!v->r.fotogrammi_al_secondo)
@@ -1206,8 +1202,6 @@ void vadiretta_chiudi(VaDiretta *v)
 	}
 	if (v->ricostruite[0] != VA_INVALID_ID)
 		vaDestroySurfaces(v->display, v->ricostruite, RICOSTRUITE);
-	if (v->rgb != VA_INVALID_ID)
-		vaDestroySurfaces(v->display, &v->rgb, 1);
 	if (v->config != VA_INVALID_ID)
 		vaDestroyConfig(v->display, v->config);
 	free(v->uscita);
@@ -1698,51 +1692,44 @@ static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uin
 	return true;
 }
 
-bool vadiretta_superficie_rgb(VaDiretta *v, unsigned fourcc_va, VASurfaceID *fuori,
-                              char *errore, size_t errore_byte)
+/*
+ * ⭐ NV12 / P010 gia' convertiti in CPU (`colori709.c`), dritti nella superficie
+ *    d'ingresso: e' la strada che c'era prima della fase 18 (conversione in
+ *    memoria di sistema, poi il caricamento), rifatta senza libswscale.
+ * ⛔ NON si carica RGB per farlo convertire alla VPP: `[M]` 30 set 2026,
+ *    `banchi/18-scheda/18-confronto.sh`, la VPP dalla memoria perde qualita'
+ *    e byte rispetto alla conversione in CPU (Intel 1080p H.264 −1 dB e +82 %
+ *    di byte, HEVC −4 dB e +255 %; Radeon −1…−6 dB).  La VPP resta SOLO sulla
+ *    copia zero, dove il fotogramma e' gia' sulla scheda.
+ */
+bool vadiretta_carica_nv12(VaDiretta *v, VASurfaceID dest, const uint8_t *y, uint32_t passo_y,
+                           const uint8_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte)
 {
-	VAStatus st;
-	VASurfaceAttrib formato = {
-		.type = VASurfaceAttribPixelFormat,
-		.flags = VA_SURFACE_ATTRIB_SETTABLE,
-		.value.type = VAGenericValueTypeInteger,
-		.value.value.i = (int) fourcc_va,
+	uint32_t l = v->r.larghezza, a = v->r.altezza;
+	Piani p = {
+		.piano = { y, uv },
+		.passo = { passo_y, passo_uv },
+		.righe = { a, a / 2 },
+		.byte_per_riga = { l, l },
+		.piani = 2,
 	};
 
-	if (v->rgb != VA_INVALID_ID && v->rgb_fourcc == fourcc_va) {
-		*fuori = v->rgb;
-		return true;
-	}
-	if (v->rgb != VA_INVALID_ID) {
-		vaDestroySurfaces(v->display, &v->rgb, 1);
-		v->rgb = VA_INVALID_ID;
-	}
-	st = vaCreateSurfaces(v->display, VA_RT_FORMAT_RGB32, v->r.larghezza, v->r.altezza, &v->rgb, 1,
-	                      &formato, 1);
-	if (st != VA_STATUS_SUCCESS) {
-		v->rgb = VA_INVALID_ID;
-		di(errore, errore_byte, "la superficie RGB32 d'appoggio %ux%u non si e' creata: %s",
-		   v->r.larghezza, v->r.altezza, vaErrorStr(st));
-		return false;
-	}
-	v->rgb_fourcc = fourcc_va;
-	*fuori = v->rgb;
-	return true;
+	return scrivi_immagine(v, dest, VA_FOURCC_NV12, l, a, &p, errore, errore_byte);
 }
 
-bool vadiretta_carica_rgb(VaDiretta *v, VASurfaceID rgb, const uint8_t *pixel, uint32_t passo,
-                          char *errore, size_t errore_byte)
+bool vadiretta_carica_p010(VaDiretta *v, VASurfaceID dest, const uint16_t *y, uint32_t passo_y,
+                           const uint16_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte)
 {
+	uint32_t l = v->r.larghezza, a = v->r.altezza;
 	Piani p = {
-		.piano = { pixel },
-		.passo = { passo ? passo : v->r.larghezza * 4 },
-		.righe = { v->r.altezza },
-		.byte_per_riga = { v->r.larghezza * 4 },
-		.piani = 1,
+		.piano = { (const uint8_t *) y, (const uint8_t *) uv },
+		.passo = { passo_y, passo_uv },
+		.righe = { a, a / 2 },
+		.byte_per_riga = { l * 2, l * 2 },
+		.piani = 2,
 	};
 
-	return scrivi_immagine(v, rgb, v->rgb_fourcc, v->r.larghezza, v->r.altezza, &p, errore,
-	                       errore_byte);
+	return scrivi_immagine(v, dest, VA_FOURCC_P010, l, a, &p, errore, errore_byte);
 }
 
 bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *pixel,
