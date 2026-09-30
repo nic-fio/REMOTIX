@@ -1,5 +1,7 @@
 # Fase 8 — L'anello più corto
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 > ⚠ **Nel piano questa fase si chiama ancora «La copia zero».** Il titolo è di quando la fase era
 > quel solo tratto. ⛔ **Il mandato del 22 agosto 2026 è più largo**, e il documento porta il nome
 > del mandato: la copia zero è **un tratto su sei**. Se il piano vada rinominato lo decide l'utente.

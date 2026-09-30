@@ -1,5 +1,7 @@
 # RCP — Remotix Control Protocol, versione 1
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *Scritto il 9 agosto 2026, prima di qualunque riga di codice.*
 *Completato il 9 agosto 2026, dopo il censimento di §0-bis — sempre prima di qualunque riga di codice.*
 

@@ -1,5 +1,7 @@
 # FASI — che cosa è stato fatto, fase per fase
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *I documenti delle fasi **chiuse**, cuciti in un documento solo il **16 agosto 2026** per decisione
 dell'utente. ⛔ **Non è un riassunto**: il testo è quello che era, riga per riga, con i titoli
 abbassati di un livello per farli stare sotto ai capitoli. Nessuna misura, nessuna marca e nessuna

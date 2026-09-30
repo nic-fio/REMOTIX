@@ -1,5 +1,7 @@
 # DECISIONI — il registro di quel che è stato deciso, e da chi
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *Aperto l'8 agosto 2026, al primo giorno di REMOTIX.*
 
 Questo documento non spiega e non convince: **registra**. A che serve, in una riga: una

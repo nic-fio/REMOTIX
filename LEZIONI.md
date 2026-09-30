@@ -1,5 +1,7 @@
 # LEZIONI — quel che GNOME ci ha insegnato, e che serve al prossimo desktop
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *Scritto il 7 agosto 2026, chiudendo il supporto a GNOME (fasi 0–10), prima di aprire la fase 11.*
 
 > ## ⛔ Portato in REMOTIX l'8 agosto 2026 — si legge prima di tutto il resto

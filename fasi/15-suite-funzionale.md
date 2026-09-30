@@ -1,5 +1,7 @@
 # Fase 15 — La suite funzionale
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *Decisa il **24 settembre 2026**, sera. Da aprire in una sessione nuova.*
 
 ## Perché esiste

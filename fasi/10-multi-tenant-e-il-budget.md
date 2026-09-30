@@ -1,4 +1,7 @@
 # Fase 10 — Multi-tenant e il budget
+
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 Aperta il **24 agosto 2026**, subito dopo la chiusura della fase 9.
 ## ✅⭐⭐⭐⭐⭐ **CHIUSA il 25 agosto 2026**, sul giudizio dell'utente
 

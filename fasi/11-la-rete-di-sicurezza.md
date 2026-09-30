@@ -1,5 +1,7 @@
 # Fase 11 — La rete di sicurezza
 
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 *Aperta il **25 agosto 2026**. Chiusa il —*
 
 > ### 📋 QUESTO DOCUMENTO È SCRITTO ANCHE PER CHI NON CONOSCE IL PROGETTO

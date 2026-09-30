@@ -1,4 +1,7 @@
 # Fase 9 — La qualità e la degradazione
+
+⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+
 Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
 reti degradate, senza pretendere di fare miracoli»*
