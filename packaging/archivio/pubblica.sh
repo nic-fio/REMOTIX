@@ -6,6 +6,7 @@
 #   pubblica.sh catalogo <canale> [FILE [SOTTOCHIAVE]] il catalogo del canale, firmato (catena A)
 #   pubblica.sh revoche  <sequenza> [ID=motivo …]      l'elenco delle sottochiavi revocate (radice)
 #   pubblica.sh motore   FILE FILE.firma               il motore per lo script d'ingresso
+#   pubblica.sh script                                 install.sh (installatore/install.sh), firmato (catena A, «script»)
 #   pubblica.sh rigenera                               indici, firme (catena B), SBOM (R24)
 #
 #   canale: stabile · candidato.  bersaglio: debian13, ubuntu2604, fedora44, alma10, arch, …
@@ -91,6 +92,13 @@ revoche() {
 motore() {
 	mkdir -p "$ARCHIVIO/motore"
 	cp "$1" "$ARCHIVIO/motore/remotix-install"; cp "$2" "$ARCHIVIO/motore/remotix-install.firma"
+}
+
+# lo script d'ingresso (T9), firmato con la catena A come oggetto «script», alla radice dell'archivio
+script() {
+	cp "$INST/install.sh" "$ARCHIVIO/install.sh"
+	firmaA "$SUB" script "$ARCHIVIO/install.sh"
+	echo "   install.sh firmato con $SUB"
 }
 
 rigenera_deb() {
@@ -218,6 +226,7 @@ aggiungi) aggiungi "$@" ;;
 catalogo) catalogo "$@" ;;
 revoche)  revoche "$@" ;;
 motore)   motore "$@" ;;
+script)   script ;;
 rigenera)
 	echo "== deb";    rigenera_deb
 	echo "== rpm";    rigenera_rpm

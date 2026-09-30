@@ -102,13 +102,20 @@ riga() {  # riga <distro>[-<desktop>][-iso] -> NUM, URL, ESPR, DE, D, porte
 	fi
 	# l'immagine ufficiale e' UNA per distribuzione; il disco e' uno per macchina
 	BASE_IMG="$RADICE/$dis/base.qcow2"
-	DIR="$RADICE/$D"; DISCO="$DIR/disco.qcow2"; SEME="$DIR/seme.iso"
+	DIR="$RADICE/$D"; DISCO="$DIR/disco.qcow2"; SEME="${RX_VM_SEME:-$DIR/seme.iso}"
 	PID="$DIR/qemu.pid"; MONITOR="$DIR/monitor.sock"; CONSOLE="$DIR/console.log"
 	VARS="$DIR/ovmf-vars.fd"   # la NVRAM UEFI: c'e' solo per le macchine che la usano
 	PORTA_SSH=$((2300 + 10 * NUM + k)); PORTA_RX=$((7500 + 10 * NUM + k))
 }
 
 AVVIA_EXTRA=()   # argomenti in piu' per QEMU in cmd_avvia (impronta: -snapshot)
+# Per le prove dell'installazione senza domande e senza rete (fase 17, T9), solo all'avvio:
+#   RX_VM_SEME=file.iso     un seme di cloud-init diverso (user-data della prova, instance-id nuovo)
+#   RX_VM_RETE=,restrict=on la rete TOLTA: la VM non raggiunge niente fuori (gli inoltri verso di lei
+#                           restano: ssh e la porta di REMOTIX)
+#   RX_VM_CATTURA=file.pcap ogni pacchetto della scheda di rete della VM, nei due versi (filter-dump)
+RETE_EXTRA=${RX_VM_RETE:-}
+[ -n "${RX_VM_CATTURA:-}" ] && AVVIA_EXTRA+=(-object "filter-dump,id=cattura0,netdev=n0,file=$RX_VM_CATTURA")
 
 accesa() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
 
@@ -216,7 +223,7 @@ cmd_avvia() {
 		-device virtio-vga -display none \
 		-drive "file=$DISCO,if=virtio,format=qcow2,discard=unmap" \
 		"${extra[@]}" "${AVVIA_EXTRA[@]}" \
-		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22,hostfwd=tcp::$PORTA_RX-:7447,hostfwd=udp::$PORTA_RX-:7447" \
+		-netdev "user,id=n0,hostfwd=tcp::$PORTA_SSH-:22,hostfwd=tcp::$PORTA_RX-:7447,hostfwd=udp::$PORTA_RX-:7447$RETE_EXTRA" \
 		-device virtio-net-pci,netdev=n0 \
 		-device virtio-rng-pci \
 		-serial "file:$CONSOLE" \

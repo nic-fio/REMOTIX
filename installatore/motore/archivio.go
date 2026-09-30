@@ -62,7 +62,8 @@ func BersaglioArchivio(a *Ambiente) string {
 func ParametriArchivio(a *Ambiente, base, canale, chiave, impronta string) (map[string]string, error) {
 	base = strings.TrimRight(base, "/")
 	u, err := url.Parse(base)
-	if err != nil || u.Host == "" {
+	// file:///…: l'archivio locale di un pacchetto fuori linea (§6.6.12, fuorilinea.go)
+	if err != nil || (u.Host == "" && !(u.Scheme == "file" && strings.HasPrefix(u.Path, "/"))) {
 		return nil, fmt.Errorf("l'indirizzo dell'archivio non è un URL: %q", base)
 	}
 	canale = nonVuoto(canale, "stabile")

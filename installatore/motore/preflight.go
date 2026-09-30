@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -350,24 +351,58 @@ func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string)
 }
 
 // depositi di terzi che contano per H.264 e per KDE su Alma (§4.2, §11.1).
+//
+// Un deposito c'è se una SEZIONE di un .repo col suo nome è ACCESA («enabled» che manca = acceso,
+// come per dnf e zypper). `[M]` 30 set, fedora44-gnome: prima bastava la parola in un file qualunque,
+// e fedora-workstation-repositories porta rpmfusion-nonfree-steam SPENTO ⇒ RPM Fusion «presente»,
+// nessuna condizione C-DEPOSITO, nessun consenso chiesto, e REMOTIX senza codifica (T9, R22).
+var (
+	intestazioneRepo = regexp.MustCompile(`(?m)^\[([^\]]+)\]\s*$`)
+	repoSpento       = regexp.MustCompile(`(?mi)^enabled\s*=\s*(0|false|no)\s*$`)
+)
+
 func depositi(a *Ambiente, p *Profilo) {
 	cerca := func(chiave string, cartelle []string, parola string) {
-		trovato := ""
+		acceso, spenti := "", ""
 		for _, c := range cartelle {
 			voci, _ := filepath.Glob(a.P(c) + "/*.repo")
 			for _, v := range voci {
-				if b, err := os.ReadFile(v); err == nil && strings.Contains(strings.ToLower(string(b)), parola) {
-					trovato = strings.TrimPrefix(v, strings.TrimSuffix(a.P("/"), "/"))
+				b, err := os.ReadFile(v)
+				if err != nil {
+					continue
+				}
+				t := string(b)
+				rel := strings.TrimPrefix(v, strings.TrimSuffix(a.P("/"), "/"))
+				idx := intestazioneRepo.FindAllStringSubmatchIndex(t, -1)
+				for i, m := range idx {
+					id := strings.ToLower(t[m[2]:m[3]])
+					if !strings.Contains(id, parola) {
+						continue
+					}
+					fine := len(t)
+					if i+1 < len(idx) {
+						fine = idx[i+1][0]
+					}
+					if repoSpento.MatchString(t[m[1]:fine]) {
+						spenti = rel + " [" + id + "] spento"
+					} else {
+						acceso = rel + " [" + id + "]"
+					}
 				}
 			}
 		}
-		if trovato != "" {
-			p.Rilevato(chiave, "presente", trovato)
-		} else {
+		switch {
+		case acceso != "":
+			p.Rilevato(chiave, "presente", acceso)
+		case spenti != "":
+			p.Rilevato(chiave, "assente", spenti)
+		default:
 			p.Rilevato(chiave, "assente", strings.Join(cartelle, " "))
 		}
 	}
-	cerca("deposito.rpmfusion", []string{"/etc/yum.repos.d"}, "rpmfusion")
+	// RPM Fusion: conta «free», dove stanno i codec (§4.2); i «nonfree» che Fedora Workstation porta
+	// spenti (steam, nvidia-driver) non c'entrano
+	cerca("deposito.rpmfusion", []string{"/etc/yum.repos.d"}, "rpmfusion-free")
 	cerca("deposito.epel", []string{"/etc/yum.repos.d"}, "epel")
 	cerca("deposito.packman", []string{"/etc/zypp/repos.d"}, "packman")
 }

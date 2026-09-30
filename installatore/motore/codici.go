@@ -109,6 +109,16 @@ var Codici = map[string]Codice{
 	"RX-PIANO-004": {BLOCCANTE, Fatale, "Il piano contiene un'azione che questo motore non conosce.", ""},
 	"RX-PIANO-005": {BLOCCANTE, ServeAzione, "L'approvazione non corrisponde a questo piano (il piano è stato cambiato dopo).", "Approvare di nuovo il piano."},
 
+	// senza domande e senza rete (§6.6.12, T9)
+	"RX-RISPOSTE-001": {BLOCCANTE, ServeAzione, "Il file di risposte non dà un consenso che su questa macchina serve: senza domande non vuol dire senza consenso, e un consenso che manca non vale «sì». Niente è stato toccato.", "Aggiungere al file di risposte la voce indicata, con «si» o «no» (le voci: remotix-install aiuto)."},
+	"RX-RISPOSTE-002": {BLOCCANTE, Fatale, "Il file di risposte non si legge, ha un formato sconosciuto o contiene una voce sconosciuta.", "Correggere il file: la prima voce è «formato = remotix-risposte/1»; le voci ammesse sono in remotix-install aiuto."},
+	"RX-RISPOSTE-003": {BLOCCANTE, ServeAzione, "Una risposta del file ha un valore non ammesso su questa macchina.", "Correggere il valore indicato."},
+	"RX-FUORI-001":    {BLOCCANTE, ServeAzione, "Il pacchetto fuori linea non è integro: un file manca o non è quello preparato.", "Prepararlo di nuovo (remotix-install prepara-fuori-linea) e ricopiarlo per intero."},
+	"RX-FUORI-002":    {BLOCCANTE, ServeAzione, "Il pacchetto fuori linea è stato preparato per un'altra macchina (impronta o pacchetti installati diversi).", "Prepararlo su una macchina collegata uguale a questa (stessa distribuzione e stessi pacchetti)."},
+	"RX-FUORI-003":    {BLOCCANTE, ServeAzione, "Nel pacchetto fuori linea manca qualcosa che l'installazione chiede.", "Prepararlo di nuovo sulla macchina di riferimento, con le stesse risposte."},
+	"RX-FUORI-004":    {BLOCCANTE, ServeAzione, "L'installazione senza rete non è ancora fatta per questa famiglia di distribuzioni (zypper, pacman).", "Installare dalla rete."},
+	"RX-FUORI-005":    {BLOCCANTE, ServeAzione, "Un archivio di terzi (RPM Fusion, Packman, EPEL) non entra nel pacchetto fuori linea: il suo passo scarica dalla rete.", "Preparare senza quel consenso (la codifica passa al ripiego dichiarato), o installare dalla rete."},
+
 	// operazione, registro e ripresa (§6.6.2, §6.6.3)
 	"RX-STATO-001":     {BLOCCANTE, Recuperabile, "C'è un'operazione non finita: va prima ripresa o annullata.", "remotix-install riprendi, oppure remotix-install annulla."},
 	"RX-STATO-002":     {BLOCCANTE, Fatale, "Transizione di stato non valida: è un difetto del motore.", ""},

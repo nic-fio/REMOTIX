@@ -64,6 +64,10 @@ func main() {
 		codice, err = aggiorna(cmd, arg)
 	case "fiducia":
 		codice, err = fiducia(arg)
+	case "installa":
+		codice, err = installa(arg)
+	case "prepara-fuori-linea":
+		codice, err = preparaFuoriLinea(arg)
 	case "versione", "--version":
 		fmt.Println(motore.VersioneMotore, motore.Formato)
 	case "aiuto", "help", "--help", "-h":
@@ -86,6 +90,7 @@ type comuni struct {
 	operazioni, catalogo, firmaCatalogo, archivio, canale, lingua string
 	porta                                                         int
 	senzaFirma                                                    bool
+	risposte, fuoriLinea                                          string
 }
 
 func (c *comuni) aggiungi(fs *flag.FlagSet) {
@@ -97,6 +102,68 @@ func (c *comuni) aggiungi(fs *flag.FlagSet) {
 	fs.IntVar(&c.porta, "porta", 7447, "la porta di REMOTIX (TCP e UDP)")
 	fs.StringVar(&c.lingua, "lingua", "", "it o en (già letta in main)")
 	fs.BoolVar(&c.senzaFirma, "senza-firma", false, "(ritirata in T8: la firma si verifica sempre)")
+	fs.StringVar(&c.risposte, "risposte", "", "il file di risposte: l'installazione senza domande (§6.6.12)")
+	fs.StringVar(&c.fuoriLinea, "fuori-linea", "", "il pacchetto fuori linea (prepara-fuori-linea): l'archivio è quello, senza rete")
+}
+
+// leggiRisposte: il file di risposte, se c'è. Fissa la lingua (se non data con --lingua), e dà
+// l'archivio e il canale alla fase 0 TRUST se la riga di comando non li dice.
+func (c *comuni) leggiRisposte() (*motore.FileRisposte, error) {
+	if c.risposte == "" {
+		return nil, nil
+	}
+	r, err := motore.LeggiRisposte(c.risposte)
+	if err != nil {
+		return nil, err
+	}
+	if l := r.Voci["lingua"]; l != "" && c.lingua == "" {
+		motore.ImpostaLingua(l)
+	}
+	if c.archivio == "" && c.fuoriLinea == "" {
+		c.archivio = r.Voci["archivio"]
+	}
+	if v := r.Voci["canale"]; v != "" {
+		c.canale = v
+	}
+	return r, nil
+}
+
+// leggiFuoriLinea: il pacchetto fuori linea, se c'è (ogni file verificato col suo sha256); il suo
+// archivio locale diventa l'archivio.
+func (c *comuni) leggiFuoriLinea() (*motore.PacchettoFuoriLinea, error) {
+	if c.fuoriLinea == "" {
+		return nil, nil
+	}
+	fl, err := motore.LeggiFuoriLinea(c.fuoriLinea)
+	if err != nil {
+		return nil, err
+	}
+	c.archivio, c.canale = fl.URLArchivio(), fl.Canale
+	fmt.Fprintln(os.Stderr, T("cli.fuori_linea", fl.Dir, fl.Bersaglio, fl.Canale, len(fl.Artefatti), len(fl.File), fl.Creato))
+	return fl, nil
+}
+
+// opzioniInstallazione: quelle che vengono dalla riga di comando (archivio, porta).
+func (c *comuni) opzioniInstallazione() motore.OpzioniInstallazione {
+	return motore.OpzioniInstallazione{Archivio: c.archivio, Canale: c.canale, Chiave: chiavi.Archivio,
+		Impronta: chiavi.ImprontaArchivio(), Porta: c.porta}
+}
+
+func stampaRisposte(p *motore.Piano) {
+	r := p.Risposte
+	if r == nil {
+		return
+	}
+	fmt.Println(T("cli.risposte", r.File, r.Sha256[:16]+"…", len(r.Voci)))
+	if len(r.Predefinite) > 0 {
+		fmt.Println(T("cli.risposte_predef", strings.Join(r.Predefinite, ", ")))
+	}
+	if len(r.Superflue) > 0 {
+		fmt.Println(T("cli.risposte_superflue", strings.Join(r.Superflue, ", ")))
+	}
+	if len(r.Mancanti) > 0 {
+		fmt.Println(T("cli.risposte_mancanti", strings.Join(r.Mancanti, ", ")))
+	}
 }
 
 // fonti: da dove viene il catalogo, e con che cosa si verifica (fase 0 TRUST, catena A).
@@ -301,6 +368,13 @@ func piano(arg []string) error {
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
+	r, err := c.leggiRisposte()
+	if err != nil {
+		return err
+	}
+	if _, err := c.leggiFuoriLinea(); err != nil {
+		return err
+	}
 	cat, err := c.leggiCatalogo()
 	if err != nil {
 		return err
@@ -309,6 +383,19 @@ func piano(arg []string) error {
 	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
 	var p *motore.Piano
+	if r != nil {
+		// senza domande: le scelte e i consensi SOLO dal file (le opzioni di consenso della riga di
+		// comando non valgono: il consenso è quello scritto)
+		p, err = motore.PianoDaRisposte(r, prof, rap, cat, amb, c.opzioniInstallazione())
+		if err != nil {
+			return err
+		}
+		if *uscita == "" {
+			*uscita = "piano-" + p.Mestiere + ".json"
+		}
+		stampaRisposte(p)
+		return stampaPiano(p, *uscita, *comeJSON)
+	}
 	if *installa {
 		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, SenzaCinture: *senzaCinture, Porta: c.porta,
 			SenzaTimer: *senzaTimer}
@@ -373,7 +460,15 @@ func stampaPiano(p *motore.Piano, uscita string, comeJSON bool) error {
 		stampaJSON(p)
 		return nil
 	}
-	return mostraPiano(p, uscita)
+	if err := mostraPiano(p, uscita); err != nil {
+		return err
+	}
+	if p.Approvazione != nil { // già approvato (dal file di risposte): si applica così com'è
+		fmt.Printf("\n%s\n", T("cli.gia_approvato", p.Approvazione.Modo, uscita))
+	} else {
+		fmt.Printf("\n%s\n", T("cli.per_applicarlo", uscita, uscita))
+	}
+	return nil
 }
 
 func mostraPiano(p *motore.Piano, uscitaFile string) error {
@@ -389,7 +484,6 @@ func mostraPiano(p *motore.Piano, uscitaFile string) error {
 	for _, m := range p.NonFatto {
 		fmt.Printf("\n%s\n", T("cli.non_fatto", m.Codice, m.Testo, m.Dettaglio))
 	}
-	fmt.Printf("\n%s\n", T("cli.per_applicarlo", *uscita, *uscita))
 	return nil
 }
 
@@ -437,7 +531,15 @@ func opera(cmd string, arg []string) (int, error) {
 		var p motore.Piano
 		if motore.LeggiJSON(pos[0], &p) == nil && p.Archivio != nil {
 			c.archivio, c.canale = p.Archivio.URL, p.Archivio.Canale
+			// un archivio locale di un pacchetto fuori linea: si installa da quello (R22)
+			if c.fuoriLinea == "" {
+				c.fuoriLinea = motore.DaURLArchivio(p.Archivio.URL)
+			}
 		}
+	}
+	fl, err := c.leggiFuoriLinea()
+	if err != nil {
+		return 1, err
 	}
 	fonti, err := c.fonti(true)
 	if err != nil {
@@ -445,6 +547,11 @@ func opera(cmd string, arg []string) (int, error) {
 	}
 	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: fonti,
 		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
+	if fl != nil {
+		if err := m.UsaFuoriLinea(fl); err != nil {
+			return 1, err
+		}
+	}
 	if cmd != "applica" {
 		// riprendi e annulla non ripassano dalla fase 0: il catalogo per il profilo è quello verificato
 		if m.Catalogo, err = c.leggiCatalogo(); err != nil {

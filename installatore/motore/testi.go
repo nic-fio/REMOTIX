@@ -174,6 +174,22 @@ var testi = map[string]Testo{
         dice se l'installazione è certificata, rifà la verifica e riaccende il servizio se era acceso
   remotix-install catalogo [--tabella]    il catalogo in uso (--tabella: le tabelle di §3.1)
 
+  SENZA DOMANDE e SENZA RETE (§6.6.12):
+  remotix-install installa --risposte FILE [--archivio URL | --fuori-linea DIR] [--eventi]
+        piano dal file di risposte, registrato, e applicato: un consenso che manca ⇒ BLOCCATA
+        (RX-RISPOSTE-001). Senza --risposte: mostra il piano e chiede una conferma al terminale
+  remotix-install piano --installa --risposte FILE [...]   solo il piano (da leggere, o da portare
+        approvato su macchine con la stessa impronta: remotix-install applica FILE-PIANO)
+  remotix-install prepara-fuori-linea --archivio URL (--risposte FILE | --piano FILE) --uscita DIR
+        su una macchina COLLEGATA uguale a quella senza rete: il pacchetto fuori linea (catalogo
+        firmato, insieme risolto, metadati firmati dei depositi); là: installa --fuori-linea DIR
+  il file di risposte (formato remotix-risposte/1), una voce per riga, «#» commento:
+        formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
+        utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (solo se manca un desktop)
+        consenso.cinture = si|no   consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.deposito.rpmfusion|packman|epel = si|no
+        (ogni consenso che su quella macchina serve va dato, «si» o «no»)
+
   opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE,
   --lingua it|en (predefinita: dall'ambiente, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
   --eventi: gli eventi in JSON, una riga ciascuno (per le interfacce)
@@ -197,6 +213,22 @@ var testi = map[string]Testo{
   remotix-install aggiornato              for the package scripts after an update:
         says whether the installation is certified, checks again and restarts the service if it was running
   remotix-install catalogo [--tabella]    the catalogue in use (--tabella: the tables of §3.1)
+
+  UNATTENDED and OFFLINE (§6.6.12):
+  remotix-install installa --risposte FILE [--archivio URL | --fuori-linea DIR] [--eventi]
+        plan from the answer file, logged, and applied: a missing consent ⇒ BLOCKED
+        (RX-RISPOSTE-001). Without --risposte: shows the plan and asks for one confirmation at the terminal
+  remotix-install piano --installa --risposte FILE [...]   only the plan (to read, or to carry
+        approved to machines with the same fingerprint: remotix-install applica PLAN-FILE)
+  remotix-install prepara-fuori-linea --archivio URL (--risposte FILE | --piano FILE) --uscita DIR
+        on a CONNECTED machine identical to the offline one: the offline bundle (signed catalogue,
+        resolved set, signed repository metadata); there: installa --fuori-linea DIR
+  the answer file (format remotix-risposte/1), one entry per line, «#» comment:
+        formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
+        utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (only if a desktop is missing)
+        consenso.cinture = si|no   consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.deposito.rpmfusion|packman|epel = si|no
+        (every consent that machine needs must be given, «si» or «no»)
 
   common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE,
   --lingua it|en (default: from the environment, LANGUAGE, LC_ALL, LC_MESSAGES, LANG)
@@ -225,6 +257,16 @@ var testi = map[string]Testo{
 	"cli.consenso":             {"consenso richiesto: %s", "consent required: %s"},
 	"cli.non_fatto":            {"non fatto: %s %s %s", "not done: %s %s %s"},
 	"cli.per_applicarlo":       {"Per applicarlo: remotix-install approva %s && remotix-install applica %s", "To apply it: remotix-install approva %s && remotix-install applica %s"},
+	"cli.gia_approvato":        {"Già approvato (%s): si applica così com'è, anche su altre macchine con la stessa impronta: remotix-install applica %s", "Already approved (%s): it is applied as it is, also on other machines with the same fingerprint: remotix-install applica %s"},
+	"cli.risposte":             {"Dal file di risposte %s (sha256 %s): %d voci", "From the answer file %s (sha256 %s): %d entries"},
+	"cli.risposte_predef":      {"  scelte non dette dal file, al valore predefinito: %s", "  choices the file does not state, at their default: %s"},
+	"cli.risposte_superflue":   {"  voci senza effetto su questa macchina: %s", "  entries with no effect on this machine: %s"},
+	"cli.risposte_mancanti":    {"  ⛔ consensi che servono e che il file NON dà: %s — l'operazione sarà BLOCCATA (RX-RISPOSTE-001)", "  ⛔ consents that are needed and that the file does NOT give: %s — the operation will be BLOCKED (RX-RISPOSTE-001)"},
+	"cli.conferma":             {"Applicare questo piano? Scrivere «si» per confermare: ", "Apply this plan? Type «yes» to confirm: "},
+	"cli.non_confermato":       {"non confermato: niente è stato toccato", "not confirmed: nothing was touched"},
+	"cli.senza_terminale":      {"nessun terminale per chiedere la conferma: per installare senza domande serve --risposte FILE (§6.6.12)", "no terminal to ask for confirmation: an unattended installation needs --risposte FILE (§6.6.12)"},
+	"cli.fuori_linea":          {"Pacchetto fuori linea %s: %s, canale %s, %d artefatti, %d file verificati, preparato il %s", "Offline bundle %s: %s, channel %s, %d artefacts, %d files verified, prepared on %s"},
+	"cli.preparato":            {"Pacchetto fuori linea pronto in %s: %d artefatti, %d file (%d MB). Impronta della macchina di riferimento %s, %d pacchetti.", "Offline bundle ready in %s: %d artefacts, %d files (%d MB). Reference machine fingerprint %s, %d packages."},
 	"cli.approvato":            {"Piano %s approvato da %s (digest %s)", "Plan %s approved by %s (digest %s)"},
 	"cli.serve_piano":          {"%s: serve il file del piano", "%s: the plan file is needed"},
 	"cli.operazione":           {"operazione %s: %s", "operation %s: %s"},

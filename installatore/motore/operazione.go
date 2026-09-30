@@ -15,15 +15,17 @@ import (
 
 // Motore: un'istanza del motore sulla macchina (o su una macchina finta, nelle prove).
 type Motore struct {
-	Amb       *Ambiente
-	Cartella  string        // /var/lib/remotix/operazioni (in prova, una radice qualunque)
-	Catalogo  *Catalogo     // quello scelto e verificato dalla fase 0 TRUST (Fonti)
-	Fonti     *FontiFiducia // da dove viene il catalogo, e con che cosa si verifica (fiducia.go)
-	Porta     int
-	Esamina   func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
-	Ev        *Eventi
-	Adesso    func() time.Time
-	serratura *os.File
+	Amb      *Ambiente
+	Cartella string        // /var/lib/remotix/operazioni (in prova, una radice qualunque)
+	Catalogo *Catalogo     // quello scelto e verificato dalla fase 0 TRUST (Fonti)
+	Fonti    *FontiFiducia // da dove viene il catalogo, e con che cosa si verifica (fiducia.go)
+	Porta    int
+	Esamina  func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
+	Ev       *Eventi
+	Adesso   func() time.Time
+	// FuoriLinea: il pacchetto fuori linea da cui si installa (R22); la macchina deve combaciare
+	FuoriLinea *PacchettoFuoriLinea
+	serratura  *os.File
 }
 
 // Operazione: una cartella in Cartella/<id>/ con lo stato, il registro e gli oggetti.
@@ -334,11 +336,25 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		}
 		return op, op.blocca(Errore("RX-PIANO-001", det))
 	}
+	// il pacchetto fuori linea: preparato per QUESTA macchina? (e i suoi file sono integri)
+	if m.FuoriLinea != nil {
+		if _, err := LeggiFuoriLinea(m.FuoriLinea.Dir); err != nil {
+			return op, op.blocca(err)
+		}
+		if err := m.FuoriLinea.Combacia(prof, m.Catalogo, m.Amb); err != nil {
+			return op, op.blocca(err)
+		}
+	}
 	if err := op.vai(PIANIFICATA, "", "impronta "+im.Digest[:16]); err != nil {
 		return op, err
 	}
 
 	// 4 CONSENT & SAFETY
+	// senza domande (§6.6.12): un consenso che il file di risposte non dà non è un «sì»
+	if r := piano.Risposte; r != nil && len(r.Mancanti) > 0 {
+		m.Ev.Messaggio(op.ID, Msg("RX-RISPOSTE-001", strings.Join(r.Mancanti, ", ")))
+		return op, op.vai(BLOCCATA, "RX-RISPOSTE-001", strings.Join(r.Mancanti, ", "))
+	}
 	for _, sc := range piano.Scelte {
 		if sc.ID == "desktop" && sc.Valore() == "no" {
 			m.Ev.Messaggio(op.ID, Msg("RX-DESKTOP-001", ""))

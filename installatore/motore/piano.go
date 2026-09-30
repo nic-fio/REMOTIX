@@ -126,6 +126,9 @@ type Piano struct {
 	// Archivio: l'archivio firmato di REMOTIX da cui si installa e si aggiorna (T8); la fase 0
 	// TRUST ci scarica il catalogo del canale.
 	Archivio *RifArchivio `json:"archivio,omitempty"`
+	// Risposte: il piano viene da un file di risposte (senza domande, §6.6.12): il file, le voci, e i
+	// consensi che mancano (se ce n'è uno, l'operazione è BLOCCATA: RX-RISPOSTE-001)
+	Risposte *RifRisposte `json:"risposte,omitempty"`
 }
 
 // RifArchivio: l'archivio di REMOTIX (URL di base) e il canale (stabile, candidato).
