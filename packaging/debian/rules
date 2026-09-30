@@ -19,15 +19,10 @@ include /usr/share/dpkg/buildflags.mk
 #    CPPFLAGS (-D_FORTIFY_SOURCE) in coda: la regola %.o del Makefile non li usa.
 R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 
-# ⭐ D8 (fasi/17 §10) NON e' decisa: su Ubuntu REMOTIX avvia la sessione `gnome`
-#    («vanilla»), che sta nel pacchetto gnome-session (universe), non in
-#    ubuntu-desktop.  ⇒ Raccomandata, ma in ALTERNATIVA agli altri tre desktop:
-#    su Kubuntu (plasma-workspace c'e') la raccomandazione e' gia' soddisfatta e
-#    non porta dentro GNOME; su Ubuntu GNOME porta solo gnome-session.
-#    Su Debian la sessione `gnome` e' quella di serie: niente.
-ifeq ($(shell dpkg-vendor --is Ubuntu && echo si),si)
-RACCOMANDA_VENDOR := gnome-session | plasma-workspace | xfce4-session | lxqt-session
-endif
+# ⭐ D8 (DECISIONI §10.20): su Ubuntu REMOTIX avvia la sessione di serie
+#    (`ubuntu`), non la `gnome` di universe ⇒ la raccomandazione solo-Ubuntu di
+#    gnome-session (${remotix:Recommends}) e' TOLTA: il pacchetto e' lo stesso
+#    per le due distribuzioni.
 
 B := debian/remotix
 
@@ -91,6 +86,3 @@ override_dh_installsystemd:
 	#    riavvia (deb-systemd-invoke restart) SOLO se era gia' attivo o abilitato;
 	#    non lo ferma prima: i desktop sopravvivono all'arresto (§5.2).
 	dh_installsystemd --no-enable --no-start --restart-after-upgrade
-
-override_dh_gencontrol:
-	dh_gencontrol -- -Vremotix:Recommends="$(RACCOMANDA_VENDOR)"

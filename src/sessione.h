@@ -92,7 +92,12 @@
  *    d'utente della Shell (`org.gnome.Shell@wayland.service` fino a GNOME 49,
  *    `org.gnome.Shell@user.service` da GNOME 50), il cui `ExecStart` e' fisso.
  */
-#define SESSIONE_COMANDO_GNOME "exec gnome-session --session=gnome"
+/* ⭐ FASE 17, D8 (`DECISIONI.md` §10.20): la sessione GNOME NON e' piu' sempre
+ *    `gnome`.  E' quella di serie della distribuzione (`ubuntu` su Ubuntu), letta
+ *    dalle sessioni che il display manager propone: il criterio sta su
+ *    `sessione_gnome()` in `sessione.c`.  `gnome` resta solo come RIPIEGO
+ *    DICHIARATO, quando nessuna sessione proposta lancia gnome-session. */
+#define SESSIONE_GNOME_RIPIEGO "gnome"
 /*
  * ⛔⭐ FASE 17 — L'UNITA' DELLA SHELL NON HA UN NOME SOLO (`fasi/17-l-installatore.md` §5.1).
  *
@@ -103,6 +108,13 @@
  *     gnome-session chiede l'istanza `org.gnome.Shell@user.service`
  *     (`[R]` gnome-shell `0eb754a08`; gnome-session 50.0
  *     `data/gnome.session.conf:3`).
+ *   · ⛔ D8: l'istanza e' DELLA SESSIONE, non fissa: `gnome` chiede `@user`,
+ *     `ubuntu` chiede `@ubuntu` (`[M]` 30 set 2026, Ubuntu 26.04:
+ *     `gnome-session@ubuntu.target.d/ubuntu.session.conf`,
+ *     `Requires=org.gnome.Shell@ubuntu.service`) — e l'istanza e' il MODO
+ *     della Shell (`--mode=%i`): la dock e i colori di Ubuntu stanno li'.
+ *     ⇒ La si chiede al gestore (`Requires` di `gnome-session@<sessione>.target`),
+ *     e il drop-in tiene `--mode=%i`.
  *
  * ⇒ Si sceglie da quel che e' INSTALLATO (`unita_shell()` in `sessione.c`),
  *   non da un numero di versione.  ⛔ E il drop-in va nella cartella
@@ -110,9 +122,9 @@
  *   quella vale anche per la Shell di GDM.
  */
 #define SESSIONE_UNITA_SHELL_48 "org.gnome.Shell@wayland.service"
-#define SESSIONE_UNITA_SHELL_50 "org.gnome.Shell@user.service"
 #define SESSIONE_UNITA_SHELL_MODELLO "org.gnome.Shell@.service"
-#define SESSIONE_UNITA_GESTORE "gnome-session-manager@gnome.service"
+/* ⚠ L'unita' del gestore di sessione e' `gnome-session-manager@<sessione>.service`:
+ *   il nome lo compone `sessione_gnome()` (D8). */
 /* ⛔ E la SECONDA unita' da aspettare: quando una sessione GNOME finisce, GNOME
  * RIAVVIA il bus di sessione con questa.  Una sessione nuova avviata mentre gira
  * nasce su un bus che sta per essere sostituito — e muore senza scrivere niente

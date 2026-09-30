@@ -545,6 +545,218 @@ static const char *nome_desktop(void)
 }
 
 /*
+ * ⭐⭐ FASE 17, D8 (`DECISIONI.md` §10.20) — QUALE SESSIONE GNOME: quella DI
+ *      SERIE della distribuzione, non sempre `gnome`.
+ *
+ * Su Ubuntu il GNOME che si vede davanti al monitor e' la sessione `ubuntu`
+ * (dock, colori, estensioni: il MODO `ubuntu` della Shell); la sessione `gnome`
+ * c'e' solo col pacchetto `gnome-session` di universe.  ⛔ Niente eccezioni per
+ * distribuzione: si legge quel che la macchina PROPONE, con un criterio solo.
+ *
+ * ⭐ IL CRITERIO (`[M]` 30 set 2026: Ubuntu 26.04, Debian 13, Fedora 44):
+ *   1. i candidati sono le sessioni che il display manager propone:
+ *      `<dati di sistema>/wayland-sessions/<nome>.desktop` il cui `Exec` lancia
+ *      `gnome-session`; il nome e' quello di `--session` (senza: `gnome`, il
+ *      predefinito di gnome-session), e deve esserci
+ *      `<dati>/gnome-session/sessions/<nome>.session`;
+ *   2. se ce n'e' uno solo, e' quello (Ubuntu di serie: `ubuntu`; Debian e
+ *      Fedora di serie: `gnome`);
+ *   3. se ce ne sono piu' d'uno: quello che porta il nome della distribuzione
+ *      (`ID` di os-release — la sessione della distribuzione, come `ubuntu`);
+ *      altrimenti `gnome`; altrimenti il primo in ordine alfabetico — e' la
+ *      regola di GDM a monte (`get_fallback_session_name`), mentre Ubuntu la
+ *      corregge a mano («Prefer ubuntu session as fallback», changelog di gdm3):
+ *      il punto 3 da' lo stesso esito senza nominare Ubuntu;
+ *   4. nessun candidato ⇒ RIPIEGO DICHIARATO su `gnome`, e si dice.
+ * ⚠ La riga di avvio e' l'`Exec` della sessione, argomento per argomento
+ *   (quotati): un `env GNOME_SHELL_SESSION_MODE=…` davanti arriva cosi' com'e'.
+ *   `XDG_CURRENT_DESKTOP` viene da `DesktopNames` (Ubuntu: `ubuntu:GNOME`, e le
+ *   impostazioni di serie di Ubuntu sono scritte per `ubuntu`), come fa GDM.
+ */
+typedef struct {
+	char *nome;     /* --session: `ubuntu`, `gnome` */
+	char *id;       /* il file .desktop senza estensione: XDG_SESSION_DESKTOP */
+	char *riga;     /* "exec …", la riga di avvio */
+	char *desktop;  /* XDG_CURRENT_DESKTOP, gia' coi due punti */
+	char *gestore;  /* gnome-session-manager@<nome>.service */
+} SessioneGnome;
+
+/* Il nome della sessione dall'argv di un `Exec`, o NULL se non lancia
+ * gnome-session. */
+static char *nome_da_exec(char **argv)
+{
+	for (int i = 0; argv[i]; i++) {
+		g_autofree char *base = g_path_get_basename(argv[i]);
+
+		if (strcmp(base, "gnome-session") != 0)
+			continue;
+		for (int j = i + 1; argv[j]; j++) {
+			if (g_str_has_prefix(argv[j], "--session="))
+				return g_strdup(argv[j] + strlen("--session="));
+			if (strcmp(argv[j], "--session") == 0 && argv[j + 1])
+				return g_strdup(argv[j + 1]);
+		}
+		return g_strdup("gnome");
+	}
+	return NULL;
+}
+
+static gboolean c_e_il_file_session(const char *nome)
+{
+	const char *const *dati = g_get_system_data_dirs();
+	g_autofree char *file = g_strconcat(nome, ".session", NULL);
+
+	for (int i = 0; dati[i]; i++) {
+		g_autofree char *p = g_build_filename(dati[i], "gnome-session", "sessions", file, NULL);
+
+		if (g_file_test(p, G_FILE_TEST_IS_REGULAR))
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* Un candidato dal file .desktop, o NULL se non lo e'. */
+static SessioneGnome *candidato(const char *percorso, const char *id)
+{
+	g_autoptr(GKeyFile) kf = g_key_file_new();
+	g_autofree char *exec = NULL;
+	g_autofree char *prova = NULL;
+	g_autofree char *trovato = NULL;
+	g_auto(GStrv) argv = NULL;
+	g_auto(GStrv) nomi = NULL;
+	g_autoptr(GString) riga = g_string_new("exec");
+	SessioneGnome *s;
+	char *nome;
+
+	if (!g_key_file_load_from_file(kf, percorso, G_KEY_FILE_NONE, NULL) ||
+	    g_key_file_get_boolean(kf, G_KEY_FILE_DESKTOP_GROUP, "Hidden", NULL) ||
+	    !(exec = g_key_file_get_string(kf, G_KEY_FILE_DESKTOP_GROUP, "Exec", NULL)) ||
+	    !g_shell_parse_argv(exec, NULL, &argv, NULL) || !(nome = nome_da_exec(argv)))
+		return NULL;
+	prova = g_key_file_get_string(kf, G_KEY_FILE_DESKTOP_GROUP, "TryExec", NULL);
+	trovato = prova ? g_find_program_in_path(prova) : NULL;
+	if ((prova && !trovato) || !c_e_il_file_session(nome)) {
+		g_free(nome);
+		return NULL;
+	}
+	for (int i = 0; argv[i]; i++) {
+		g_autofree char *q = NULL;
+
+		/* i codici di campo delle voci .desktop (%U…) non sono argomenti */
+		if (argv[i][0] == '%' && strlen(argv[i]) == 2)
+			continue;
+		q = g_shell_quote(argv[i]);
+		g_string_append_printf(riga, " %s", q);
+	}
+	nomi = g_key_file_get_string_list(kf, G_KEY_FILE_DESKTOP_GROUP, "DesktopNames", NULL,
+	                                  NULL);
+	s = g_new0(SessioneGnome, 1);
+	s->nome = nome;
+	s->id = g_strdup(id);
+	s->riga = g_string_free(g_steal_pointer(&riga), FALSE);
+	s->desktop = nomi && nomi[0] ? g_strjoinv(":", nomi) : g_strdup("GNOME");
+	s->gestore = g_strdup_printf("gnome-session-manager@%s.service", nome);
+	return s;
+}
+
+static const SessioneGnome *sessione_gnome(void)
+{
+	static gsize fatto;
+	static SessioneGnome *scelta;
+
+	if (g_once_init_enter(&fatto)) {
+		const char *const *dati = g_get_system_data_dirs();
+		g_autoptr(GHashTable) visti = g_hash_table_new_full(g_str_hash, g_str_equal,
+		                                                    g_free, NULL);
+		g_autoptr(GPtrArray) tutti = g_ptr_array_new();
+		g_autoptr(GString) elenco = g_string_new(NULL);
+		g_autofree char *os = g_get_os_info(G_OS_INFO_KEY_ID);
+		const char *perche = NULL;
+
+		/* ⚠ La prima cartella dei dati vince a parita' di nome di file, come
+		 *   per ogni voce XDG. */
+		for (int i = 0; dati[i]; i++) {
+			g_autofree char *cartella = g_build_filename(dati[i], "wayland-sessions", NULL);
+			g_autoptr(GDir) d = g_dir_open(cartella, 0, NULL);
+			const char *f;
+
+			while (d && (f = g_dir_read_name(d))) {
+				g_autofree char *id = NULL;
+				g_autofree char *p = NULL;
+				SessioneGnome *s;
+
+				if (!g_str_has_suffix(f, ".desktop"))
+					continue;
+				id = g_strndup(f, strlen(f) - strlen(".desktop"));
+				if (g_hash_table_contains(visti, id))
+					continue;
+				g_hash_table_add(visti, g_strdup(id));
+				p = g_build_filename(cartella, f, NULL);
+				if ((s = candidato(p, id)))
+					g_ptr_array_add(tutti, s);
+			}
+		}
+		for (guint i = 0; i < tutti->len; i++) {
+			SessioneGnome *s = tutti->pdata[i];
+
+			g_string_append_printf(elenco, "%s%s (%s)", i ? ", " : "", s->id, s->nome);
+		}
+		/* alfabetico sul nome del file, come l'elenco di GDM */
+		for (guint i = 0; i + 1 < tutti->len; i++)
+			for (guint j = i + 1; j < tutti->len; j++)
+				if (strcmp(((SessioneGnome *) tutti->pdata[j])->id,
+				           ((SessioneGnome *) tutti->pdata[i])->id) < 0) {
+					gpointer t = tutti->pdata[i];
+
+					tutti->pdata[i] = tutti->pdata[j];
+					tutti->pdata[j] = t;
+				}
+		if (tutti->len == 1) {
+			scelta = tutti->pdata[0];
+			perche = "l'unica che la macchina propone";
+		}
+		for (guint i = 0; !scelta && os && i < tutti->len; i++)
+			if (strcmp(((SessioneGnome *) tutti->pdata[i])->nome, os) == 0) {
+				scelta = tutti->pdata[i];
+				perche = "porta il nome della distribuzione (ID di os-release)";
+			}
+		for (guint i = 0; !scelta && i < tutti->len; i++)
+			if (strcmp(((SessioneGnome *) tutti->pdata[i])->nome,
+			           SESSIONE_GNOME_RIPIEGO) == 0) {
+				scelta = tutti->pdata[i];
+				perche = "e' «" SESSIONE_GNOME_RIPIEGO "», la predefinita di GDM a monte";
+			}
+		if (!scelta && tutti->len) {
+			scelta = tutti->pdata[0];
+			perche = "la prima in ordine alfabetico, come GDM a monte";
+		}
+		if (!scelta) {
+			scelta = g_new0(SessioneGnome, 1);
+			scelta->nome = g_strdup(SESSIONE_GNOME_RIPIEGO);
+			scelta->id = g_strdup(SESSIONE_GNOME_RIPIEGO);
+			scelta->riga = g_strdup("exec gnome-session --session=" SESSIONE_GNOME_RIPIEGO);
+			scelta->desktop = g_strdup("GNOME");
+			scelta->gestore =
+				g_strdup("gnome-session-manager@" SESSIONE_GNOME_RIPIEGO ".service");
+			registro_dice(REG_SESSIONE,
+			              "⚠ D8: nessuna sessione wayland-sessions/*.desktop lancia "
+			              "gnome-session con un .session installato: RIPIEGO "
+			              "DICHIARATO su «%s»",
+			              SESSIONE_GNOME_RIPIEGO);
+		} else
+			registro_dice(REG_SESSIONE,
+			              "⭐ D8: la sessione GNOME e' «%s» (%s.desktop): %s.  "
+			              "Candidate: %s.  Riga: %s · XDG_CURRENT_DESKTOP=%s",
+			              scelta->nome, scelta->id, perche, elenco->str, scelta->riga,
+			              scelta->desktop);
+		/* ⚠ Le scartate restano: una manciata di stringhe, una volta per
+		 *   processo. */
+		g_once_init_leave(&fatto, 1);
+	}
+	return scelta;
+}
+
+/*
  * Quanti processi di QUESTO utente si chiamano cosi'.
  *
  * ⛔ Serve perche' su XFCE il compositore non è un'unita' systemd: la domanda
@@ -1735,8 +1947,13 @@ static char **componi_ambiente(void)
 
 	/* La sessione deve DICHIARARSI, o le applicazioni di GNOME non si
 	 * riconoscono a casa propria e si fermano da sole. */
-	g_ptr_array_add(ambiente, g_strdup("XDG_CURRENT_DESKTOP=GNOME"));
-	g_ptr_array_add(ambiente, g_strdup("XDG_SESSION_DESKTOP=gnome"));
+	/* ⭐ D8: dalla sessione di serie (`DesktopNames` e il nome del file), come
+	 *    fa GDM — su Ubuntu `ubuntu:GNOME` e `ubuntu`: le impostazioni di serie
+	 *    di Ubuntu sono scritte per `ubuntu` (`[org.gnome…:ubuntu]` negli
+	 *    override di glib), e con `GNOME` la Shell avrebbe i colori di Adwaita. */
+	g_ptr_array_add(ambiente, g_strconcat("XDG_CURRENT_DESKTOP=", sessione_gnome()->desktop,
+	                                      NULL));
+	g_ptr_array_add(ambiente, g_strconcat("XDG_SESSION_DESKTOP=", sessione_gnome()->id, NULL));
 	/*
 	 * ⛔ `XDG_SESSION_TYPE=wayland` SERVE, e non e' una bugia: l'unita' della
 	 *    Shell porta `ConditionEnvironment=XDG_SESSION_TYPE=wayland` (verificato
@@ -1864,7 +2081,9 @@ static char *chiedi(char **argv)
  * `org.gnome.Shell@wayland.service` (`FragmentPath`):
  *   · il file `…/org.gnome.Shell@wayland.service` ⇒ GNOME ≤ 49, e' quella;
  *   · il modello `…/org.gnome.Shell@.service` ⇒ GNOME 50: la sessione chiede
- *     `@user`, e `@wayland` e' un'istanza che NESSUNO avvia.
+ *     la SUA istanza (D8: `Requires` di `gnome-session@<sessione>.target` —
+ *     `@user` per `gnome`, `@ubuntu` per `ubuntu`), e `@wayland` e' un'istanza
+ *     che NESSUNO avvia.  Il chiamante libera la stringa.
  *
  * ⛔⛔ E' il FALSO VERDE che questa funzione chiude: su GNOME 50
  *     `systemctl --user show -p ExecStart org.gnome.Shell@wayland.service` crea
@@ -1877,11 +2096,16 @@ static char *chiedi(char **argv)
  * ⛔ NULL se non riconosco niente: «non lo so» non diventa una scommessa su
  *   uno dei due nomi, e chi chiama si ferma dicendolo.
  */
-static const char *unita_shell(void)
+static char *unita_shell(void)
 {
 	char *argv[] = { "systemctl", "--user", "show", "-p", "FragmentPath", "--value",
 		         SESSIONE_UNITA_SHELL_48, NULL };
 	g_autofree char *frammento = chiedi(argv);
+	g_autofree char *bersaglio = NULL;
+	g_autofree char *richieste = NULL;
+	g_auto(GStrv) voci = NULL;
+	char *chiedi_bersaglio[] = { "systemctl", "--user", "show", "-p", "Requires", "--value",
+		                     NULL, NULL };
 
 	if (!frammento) {
 		registro_dice(REG_SESSIONE, "⛔ non ho potuto chiedere al gestore d'utente "
@@ -1890,9 +2114,26 @@ static const char *unita_shell(void)
 	}
 	g_strstrip(frammento);
 	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_48))
-		return SESSIONE_UNITA_SHELL_48;
-	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_MODELLO))
-		return SESSIONE_UNITA_SHELL_50;
+		return g_strdup(SESSIONE_UNITA_SHELL_48);
+	if (g_str_has_suffix(frammento, "/" SESSIONE_UNITA_SHELL_MODELLO)) {
+		/* ⭐ D8: l'istanza la chiede la SESSIONE (`gnome` ⇒ `@user`, `ubuntu`
+		 *    ⇒ `@ubuntu`), e la si legge dal suo bersaglio, drop-in compresi. */
+		bersaglio = g_strdup_printf("gnome-session@%s.target", sessione_gnome()->nome);
+		chiedi_bersaglio[6] = bersaglio;
+		richieste = chiedi(chiedi_bersaglio);
+		voci = richieste ? g_strsplit_set(g_strstrip(richieste), " \t\n", -1) : NULL;
+		for (int i = 0; voci && voci[i]; i++)
+			if (g_str_has_prefix(voci[i], "org.gnome.Shell@") &&
+			    g_str_has_suffix(voci[i], ".service") &&
+			    strcmp(voci[i], SESSIONE_UNITA_SHELL_MODELLO) != 0)
+				return g_strdup(voci[i]);
+		registro_dice(REG_SESSIONE,
+		              "⛔ GNOME 50: la Shell e' il modello " SESSIONE_UNITA_SHELL_MODELLO
+		              ", ma %s non chiede nessuna sua istanza (Requires: «%s»): non so "
+		              "quale Shell avviera' la sessione, e non scommetto",
+		              bersaglio, richieste ? richieste : "(nessuna risposta)");
+		return NULL;
+	}
 	registro_dice(REG_SESSIONE,
 	              "⛔ non riconosco l'unita' della Shell: il gestore carica «%s» da «%s», "
 	              "e io conosco solo " SESSIONE_UNITA_SHELL_48 " (GNOME ≤ 49) e il "
@@ -1939,7 +2180,7 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ FASE 12: cambiano l'unita' e la riga, NON se scriverla — il riquadro qui
 	 *    sopra lo chiedeva, e il ramo Plasma e' qui sotto, dopo la cartella. */
 	const gboolean kde = e_kde();
-	const char *unita = NULL;
+	g_autofree char *unita = NULL;
 	char *ricarica[] = { "systemctl", "--user", "daemon-reload", NULL };
 	char *mostra[] = { "systemctl", "--user", "show", "-p", "ExecStart", "--value", NULL, NULL };
 
@@ -1979,10 +2220,10 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ FASE 17: su GNOME l'unita' si sceglie da quel che e' installato, e
 	 *    si rilegge LA STESSA qui sotto (`mostra`) — mai un nome fisso da una
 	 *    parte e l'altro dall'altra. */
-	unita = kde ? SESSIONE_UNITA_KWIN : unita_shell();
+	unita = kde ? g_strdup(SESSIONE_UNITA_KWIN) : unita_shell();
 	if (!unita)
 		return FALSE;
-	mostra[6] = (char *) unita;
+	mostra[6] = unita;
 
 	/* ⛔ `<istanza>.d/`, mai `org.gnome.Shell@.service.d/`: la cartella del
 	 *    modello varrebbe anche per la Shell di GDM. */
@@ -2077,10 +2318,15 @@ static gboolean scrivi_dropin(uint32_t larghezza, uint32_t altezza)
 	 *   monitor con `video_format->size`).  Restano nella firma perche' con
 	 *   loro si CONTROLLA quel che si e' ottenuto — vedi `sessione_assicura`.
 	 */
+	/* ⭐ D8: sul modello di GNOME 50 il MODO e' l'istanza (`--mode=%i` nel file
+	 *    di serie): la nostra riga lo deve tenere, o la sessione `ubuntu`
+	 *    nascerebbe col modo `user` — senza dock e senza i colori di Ubuntu. */
 	contenuto = g_strdup_printf("[Service]\n"
 	                            "ExecStart=\n"
-	                            "ExecStart=%s --headless --no-x11\n",
-	                            shell);
+	                            "ExecStart=%s --headless --no-x11%s\n",
+	                            shell,
+	                            strcmp(unita, SESSIONE_UNITA_SHELL_48) != 0 ? " --mode=%i"
+	                                                                        : "");
 	(void) larghezza;
 	(void) altezza;
 	atteso = g_strdup_printf("--headless --no-x11");
@@ -2401,7 +2647,7 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 	int stato = 0;
 	/* ⚠ A TRE VIE, e non un ternario annidato: chi aggiunge il quarto desktop
 	 *   deve vedere l'elenco, non doverlo districare. */
-	const char *comando = SESSIONE_COMANDO_GNOME;
+	const char *comando = sessione_gnome()->riga; /* D8 */
 	/* ⭐ FASE 14 — la riga di LXQt si compone (la cartella di `-C` sta sotto
 	 *    `XDG_RUNTIME_DIR`): vive qui, e `comando` la punta. */
 	g_autofree char *comando_lxqt = NULL;
@@ -2515,7 +2761,7 @@ static gboolean unita_inattiva(void)
 	 *   e' rimasto **vuoto, zero byte**, ed e' il motivo per cui la causa e'
 	 *   costata tanto — il difetto cancellava le proprie tracce.
 	 *
-	 * ⚠ E' la stessa forma di `SESSIONE_UNITA_GESTORE` qui sotto — «inattiva» e
+	 * ⚠ E' la stessa forma di `sessione_gnome()->gestore` qui sotto — «inattiva» e
 	 *   non «non piu' attiva» — applicata a un secondo pezzo che nessuno aveva
 	 *   guardato perche' nessuno sapeva che esistesse.
 	 */
@@ -2574,7 +2820,7 @@ static gboolean unita_inattiva(void)
 	 * ⚠ Se un giorno cambiassero, `is-active` risponderebbe «inactive» a un
 	 *   nome che non esiste, e la guardia sparirebbe come su XFCE: da
 	 *   riguardare a ogni GNOME nuovo (`fasi/17-l-installatore.md` §5.1). */
-	return unita_ferma(SESSIONE_UNITA_GESTORE) && unita_ferma(SESSIONE_UNITA_DBUS);
+	return unita_ferma(sessione_gnome()->gestore) && unita_ferma(SESSIONE_UNITA_DBUS);
 }
 
 static gboolean aspetta_che_finisca(void)
@@ -2788,15 +3034,17 @@ static const char *const VARIABILI_NOSTRE[] = {
 	"XDG_SESSION_DESKTOP", "XDG_SESSION_TYPE", "SHELL", "LANG", "PATH",
 	"QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME", "GDK_BACKEND", "XFCE4_SESSION_COMPOSITOR",
 	"WLR_BACKENDS", "WLR_LIBINPUT_NO_DEVICES", "WLR_RENDER_DRM_DEVICE",
-	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY", NULL
+	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY",
+	/* ⭐ D8: la mette l'`Exec` di una sessione (`env GNOME_SHELL_SESSION_MODE=…`),
+	 *    e gnome-session la esporta al gestore come tutto il suo ambiente. */
+	"GNOME_SHELL_SESSION_MODE", NULL
 };
 
 /* { cartella del drop-in, nome } — tutti e soli i nostri */
 static const char *const DROPIN_NOSTRI[][2] = {
-	/* ⭐ FASE 17: tutt'e due i nomi della Shell — una macchina aggiornata da
-	 *    GNOME 48 a 50 si porta dietro quello di prima (§5.1). */
-	{ SESSIONE_UNITA_SHELL_48 ".d", "zz-remotix-monitor.conf" },
-	{ SESSIONE_UNITA_SHELL_50 ".d", "zz-remotix-monitor.conf" },
+	/* ⭐ FASE 17: le istanze della Shell (`@wayland`, `@user`, `@ubuntu`…)
+	 *    non stanno qui: le cerca `sessione_sgombera_gestore()` nella cartella,
+	 *    perche' con D8 il nome dipende dalla sessione (§5.1). */
 	{ SESSIONE_UNITA_KWIN ".d", "zz-remotix-monitor.conf" },
 	{ "xfconfd.service.d", "zz-remotix-sessione.conf" },
 };
@@ -2914,6 +3162,32 @@ void sessione_sgombera_gestore(const char *perche)
 			g_string_append_printf(detto, " %s/%s", DROPIN_NOSTRI[i][0],
 			                       DROPIN_NOSTRI[i][1]);
 			g_rmdir(cartella); /* solo se vuota */
+		}
+	}
+	/* ⭐ D8: le istanze della Shell, qualunque nome abbiano (`@wayland`, `@user`,
+	 *    `@ubuntu`…) — ⛔ mai la cartella del modello, `org.gnome.Shell@.service.d`,
+	 *    dove non scriviamo e che vale anche per GDM. */
+	{
+		g_autofree char *controllo = g_build_filename(runtime, "systemd", "user.control",
+		                                              NULL);
+		g_autoptr(GDir) d = g_dir_open(controllo, 0, NULL);
+		const char *f;
+
+		while (d && (f = g_dir_read_name(d))) {
+			g_autofree char *cartella = NULL;
+			g_autofree char *file = NULL;
+
+			if (!g_str_has_prefix(f, "org.gnome.Shell@") ||
+			    !g_str_has_suffix(f, ".service.d") ||
+			    strcmp(f, SESSIONE_UNITA_SHELL_MODELLO ".d") == 0)
+				continue;
+			cartella = g_build_filename(controllo, f, NULL);
+			file = g_build_filename(cartella, "zz-remotix-monitor.conf", NULL);
+			if (g_unlink(file) == 0) {
+				drop++;
+				g_string_append_printf(detto, " %s/zz-remotix-monitor.conf", f);
+				g_rmdir(cartella); /* solo se vuota */
+			}
 		}
 	}
 	if (drop)
@@ -4840,7 +5114,7 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		              "fra poco",
 		              e_kde()                   ? SESSIONE_UNITA_KWIN
 		              : (e_xfce() || e_lxqt()) ? "il processo " SESSIONE_PROCESSO_XFCE
-		                                        : SESSIONE_UNITA_GESTORE);
+		                                        : sessione_gnome()->gestore);
 		return false;
 	}
 
