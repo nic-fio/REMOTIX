@@ -87,9 +87,11 @@ func (g *aggApt) Rinfresca(archivio string) error {
 	if err != nil {
 		return err
 	}
-	// apt esce 0 anche se un deposito non si verifica («W: … is not signed», «E: The repository …
-	// is not signed» su versioni vecchie): si guarda il testo
-	if c != 0 || regexp.MustCompile(`(?m)^(E:|W: GPG error|W: .*(not signed|NO_PUBKEY|BADSIG|Hash Sum mismatch|File has unexpected size))`).MatchString(out) {
+	// apt esce 0 anche se l'archivio non si verifica: rifiuta il file, tiene gli elenchi di prima e lo
+	// dice solo nel testo. `[M]` 30 set, Debian 13 (apt 3.0, sqv), InRelease firmato da una chiave
+	// estranea: «Err:1 … InRelease», «W: An error occurred during the signature verification. The
+	// repository is not updated and the previous index files will be used», uscita 0.
+	if c != 0 || regexp.MustCompile(`(?m)^(Err:|E:|W: (GPG error|An error occurred during the signature verification|Some index files failed)|W: .*(not signed|NO_PUBKEY|BADSIG|Hash Sum mismatch|File has unexpected size))`).MatchString(out) {
 		return Errore("RX-AGG-007", ultimeRighe(out, 4))
 	}
 	return nil
@@ -169,11 +171,13 @@ func (g *aggApt) Porta(cache string, voluti map[string]string, archivio string) 
 type aggDnf struct{ a *Ambiente }
 
 func (g *aggDnf) Rinfresca(archivio string) error {
-	out, c, err := g.a.Esegui(tempoGestore, "dnf", "makecache", "--repo=remotix", "--refresh")
+	out, c, err := g.a.Esegui(tempoGestore, "dnf", "makecache", "-y", "--repo=remotix", "--refresh")
 	if err != nil {
 		return err
 	}
-	if c != 0 {
+	// dnf5 esce 0 anche se i metadati non si verificano (`[M]` 30 set, fedora44: «repomd.xml GPG
+	// signature verification error: Bad PGP signature»): si guarda il testo
+	if c != 0 || regexp.MustCompile(`(?i)signature verification error|bad pgp signature|signing key not found|checksum mismatch|failed to download metadata`).MatchString(out) {
 		return Errore("RX-AGG-007", ultimeRighe(out, 4))
 	}
 	return nil
@@ -321,10 +325,18 @@ func (g *aggPacman) Disponibili(nomi []string, archivio string) (map[string][]st
 			r[f[1]] = append(r[f[1]], f[2])
 		}
 	}
+	// le versioni vecchie che l'archivio conserva: l'elenco remotix.versioni accanto al database
+	// (pubblica.sh). Solo NOMI di file: il pacchetto lo scarica e lo verifica pacman (.sig).
+	var elenco []string
+	if archivio != "" {
+		if b, err := (&FontiFiducia{}).scarica(strings.TrimRight(archivio, "/") + "/remotix.versioni"); err == nil {
+			elenco = strings.Fields(string(b))
+		}
+	}
 	for n := range voluti {
 		voci, _ := filepath.Glob(g.a.P("/var/cache/pacman/pkg") + "/" + n + "-*.pkg.tar.zst")
 		re := regexp.MustCompile("^" + regexp.QuoteMeta(n) + `-([^-]+-[^-]+)-[^-]+\.pkg\.tar\.zst$`)
-		for _, v := range voci {
+		for _, v := range append(voci, elenco...) {
 			if m := re.FindStringSubmatch(filepath.Base(v)); m != nil && !contiene(r[n], m[1]) {
 				r[n] = append(r[n], m[1])
 			}

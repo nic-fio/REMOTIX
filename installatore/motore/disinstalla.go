@@ -134,6 +134,7 @@ func (m *Motore) PulisciStoria(purge bool) error {
 		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "fiducia"))
 		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti"))
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti.json"))
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti-sospesi.json"))
 		os.Remove(filepath.Dir(m.Cartella)) // solo se vuota
 		return nil
 	}

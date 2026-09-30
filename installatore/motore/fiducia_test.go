@@ -251,15 +251,6 @@ func TestRotazione(t *testing.T) {
 	}
 }
 
-func haCodice(m []Messaggio, c string) bool {
-	for _, x := range m {
-		if x.Codice == c {
-			return true
-		}
-	}
-	return false
-}
-
 // L'operazione: una fiducia che non si verifica è BLOCCATA prima di toccare niente.
 func TestFiduciaBloccata(t *testing.T) {
 	b := nuovoBanco(t)

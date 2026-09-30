@@ -1,0 +1,15 @@
+# remotix-aggiorna.timer — una volta al giorno (DECISIONI.md §10.10).
+# ⛔ Il pacchetto lo porta SPENTO: lo abilita e lo accende il motore all'installazione, col
+#    consenso, e lo spegne alla disinstallazione (è un passo del suo piano e del suo registro).
+# RandomizedDelaySec: le macchine non chiedono l'archivio tutte nello stesso minuto.
+# Persistent: una macchina spenta a mezzanotte controlla appena si riaccende.
+[Unit]
+Description=REMOTIX: aggiornamenti automatici, una volta al giorno
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=4h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

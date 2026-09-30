@@ -1,0 +1,25 @@
+# PKGBUILD — il motore d'installazione di REMOTIX per Arch (T8).
+# Binario Go STATICO (installatore/costruisci.sh): qui si impacchetta soltanto.
+# Lo costruisce packaging/archivio/pacchetti-motore.sh (pkgver/pkgrel dall'ambiente).
+# ⛔ DECISIONI §10.12: il timer degli aggiornamenti arriva SPENTO; lo accende il motore col consenso.
+
+# Maintainer: nicfio <nicfio@gmail.com>
+pkgname=remotix-install
+pkgver=${RX_VERSIONE:-0.1.0}
+pkgrel=${RX_RILASCIO:-1}
+pkgdesc='Il motore d installazione di REMOTIX (installa, aggiorna, disinstalla, certifica)'
+arch=('x86_64')
+url='https://github.com/nic-fio/REMOTIX'
+license=('LicenseRef-REMOTIX')
+depends=(systemd pacman)
+options=('!strip' '!debug')
+source=(remotix-install remotix-install.firma remotix-aggiorna.service remotix-aggiorna.timer LEGGIMI)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package() {
+	install -Dm755 remotix-install          "$pkgdir/usr/bin/remotix-install"
+	install -Dm644 remotix-install.firma    "$pkgdir/usr/share/remotix-install/remotix-install.firma"
+	install -Dm644 LEGGIMI                  "$pkgdir/usr/share/remotix-install/LEGGIMI"
+	install -Dm644 remotix-aggiorna.service "$pkgdir/usr/lib/systemd/system/remotix-aggiorna.service"
+	install -Dm644 remotix-aggiorna.timer   "$pkgdir/usr/lib/systemd/system/remotix-aggiorna.timer"
+}

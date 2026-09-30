@@ -1,0 +1,29 @@
+remotix-install — il motore d'installazione di REMOTIX (fasi/17-l-installatore.md)
+
+Un solo programma (DECISIONI §10.14): installa, aggiorna, disinstalla, verifica.
+Il pacchetto porta il motore e il timer degli aggiornamenti, SPENTO: lo accende il
+motore stesso all'installazione, col consenso.
+
+Aggiornamenti automatici (DECISIONI §10.10)
+  remotix-aggiorna.timer, una volta al giorno, lancia `remotix-install aggiorna --dal-timer`:
+    1. il catalogo firmato del canale (catena A), verificato e memorizzato;
+    2. il SOLO archivio di REMOTIX rinfrescato dal gestore di pacchetti (che ne verifica la firma);
+    3. secondo /etc/remotix/aggiornamenti.conf, l'aggiornamento fatto dal gestore di pacchetti,
+       senza chiudere i desktop, come operazione del motore (registro e certificato).
+
+  /etc/remotix/aggiornamenti.conf (facoltativo):
+      automatico = manutenzione   # predefinito: sicurezza e ricostruzioni da sole,
+                                  # la versione annuale la sceglie l'amministratore
+      automatico = tutto          # anche la versione annuale da sola
+      automatico = avviso         # niente da solo: solo l'avviso
+      automatico = spento         # il timer non controlla niente
+  ⚠ Il predefinito è la PROPOSTA della decisione D14, non ancora presa.
+  Annuale o manutenzione: cambia X.Y di X.Y.Z ⇒ annuale; cambia Z o la revisione del
+  pacchetto (una ricostruzione) ⇒ manutenzione.
+
+Comandi
+  remotix-install aggiorna --mostra            la configurazione e da dove viene
+  remotix-install aggiorna --controlla         che cosa c'è di nuovo (non applica niente)
+  remotix-install aggiorna --annuale           applica anche la versione annuale
+  remotix-install ritorna --versione V         torna a una versione precedente (l'archivio le conserva)
+  remotix-install fiducia FILE --oggetto catalogo|motore   verifica una firma della catena A

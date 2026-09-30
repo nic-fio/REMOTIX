@@ -146,6 +146,7 @@ var Codici = map[string]Codice{
 	"RX-AGG-008": {BLOCCANTE, ServeAzione, "Su Arch l'aggiornamento toccherebbe anche pacchetti non di REMOTIX (un aggiornamento parziale, che Arch non sostiene): non si applica da solo.", "pacman -Syu, poi remotix-install aggiorna"},
 	"RX-AGG-009": {BLOCCANTE, ServeAzione, "La versione chiesta non è nell'archivio di REMOTIX.", "remotix-install aggiorna --controlla dice le versioni che ci sono."},
 	"RX-AGG-010": {BLOCCANTE, ServeAzione, "La configurazione degli aggiornamenti non si legge.", "Correggere /etc/remotix/aggiornamenti.conf (remotix-install aggiorna --mostra)."},
+	"RX-AGG-011": {AVVISO, ServeAzione, "L'aggiornamento automatico è sospeso fino a questa versione: l'amministratore ci è tornato indietro (remotix-install ritorna). Una versione più nuova riparte da sola.", "remotix-install aggiorna --applica (toglie la sospensione)"},
 }
 
 // Msg costruisce un messaggio da un codice. Un codice sconosciuto è un difetto del motore, e la

@@ -514,6 +514,15 @@ func (m *Motore) Aggiorna(o OpzioniAggiorna) (*RapportoAggiorna, *Operazione, er
 		return r, nil, errV
 	}
 	fam := m.Amb.Famiglia
+	// R11: dopo un «ritorna» dell'amministratore, il timer non rimette da sé la versione da cui si è
+	// tornati indietro (né una più vecchia): la riprende solo una versione più nuova, o l'amministratore
+	sospesi := map[string]string{}
+	fs := filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti-sospesi.json")
+	if o.DalTimer {
+		LeggiJSON(fs, &sospesi)
+	} else if o.Versione == "" && !o.Controlla {
+		os.Remove(fs)
+	}
 	r.Installate, r.Disponibili = map[string]string{}, disp
 	r.Manutenzione, r.Annuale, r.Scelte = map[string]string{}, map[string]string{}, map[string]string{}
 	for _, n := range PacchettiArchivio {
@@ -524,6 +533,12 @@ func (m *Motore) Aggiorna(o OpzioniAggiorna) (*RapportoAggiorna, *Operazione, er
 		r.Installate[n] = iv
 		for _, v := range disp[n] {
 			if ConfrontaPacchetti(fam, v, iv) <= 0 {
+				continue
+			}
+			if s := sospesi[n]; s != "" && ConfrontaPacchetti(fam, v, s) <= 0 {
+				if !haCodice(r.Messaggi, "RX-AGG-011") {
+					r.Messaggi = append(r.Messaggi, Msg("RX-AGG-011", n+" "+s))
+				}
 				continue
 			}
 			if n != "remotix" || !Annuale(iv, v) {
@@ -591,7 +606,11 @@ func (m *Motore) Aggiorna(o OpzioniAggiorna) (*RapportoAggiorna, *Operazione, er
 	if o.DalTimer {
 		modo = T("agg.consenso_prima", conf.Automatico, conf.Da["automatico"])
 	}
-	pn.Approvazione = &Approvazione{Da: nonVuoto(o.Chi, "remotix-aggiorna.timer"), Ora: ora(), Modo: modo, DigestPiano: pn.Digest()}
+	da := nonVuoto(o.Chi, "amministratore")
+	if o.DalTimer {
+		da = "remotix-aggiorna.timer"
+	}
+	pn.Approvazione = &Approvazione{Da: da, Ora: ora(), Modo: modo, DigestPiano: pn.Digest()}
 	dir := filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return r, nil, err
@@ -600,18 +619,45 @@ func (m *Motore) Aggiorna(o OpzioniAggiorna) (*RapportoAggiorna, *Operazione, er
 	if err := ScriviJSON(pp, pn); err != nil {
 		return r, nil, err
 	}
+	// la fase 0 dell'operazione guarda lo STESSO archivio (e ricorda il catalogo): `[M]` 30 set, senza,
+	// un catalogo alterato nell'archivio fermava il controllo ma non l'operazione
+	if m.Fonti != nil {
+		f := *m.Fonti
+		f.Archivio, f.Canale, f.Scrivi = arc.URL, arc.Canale, true
+		m.Fonti = &f
+	}
 	op, err := m.Applica(pp, false, pn.Approvazione.Da)
 	if op != nil {
 		r.Operazione, r.Stato = op.ID, op.Stato
+		if r.Tipo == "ritorno" && (op.Stato == CONFERMATA || op.Stato == CONFERMATA_A_CONDIZIONI) {
+			ScriviJSON(fs, map[string]string{"remotix": r.Installate["remotix"]})
+		}
 	}
 	return r, op, err
+}
+
+func haCodice(m []Messaggio, c string) bool {
+	for _, x := range m {
+		if x.Codice == c {
+			return true
+		}
+	}
+	return false
 }
 
 // scriviAggiornate: a un aggiornamento CONFERMATO, le versioni nuove dei pacchetti di REMOTIX. Le
 // legge il «controlla» dei pacchetti dell'installazione (azione_pacchetti.go), che altrimenti
 // vedrebbe una versione diversa da quella installata allora e la direbbe «a metà».
 func (op *Operazione) scriviAggiornate() error {
+	// si fondono con quelle degli aggiornamenti di prima (un aggiornamento può toccare un pacchetto solo)
+	var prima struct {
+		Versioni map[string]string `json:"versioni"`
+	}
+	LeggiJSON(filepath.Join(filepath.Dir(op.m.Cartella), "aggiornamenti.json"), &prima)
 	v := map[string]string{}
+	for n, x := range prima.Versioni {
+		v[n] = x
+	}
 	for _, ap := range op.Piano.Azioni {
 		if ap.Tipo != "aggiorna-pacchetti" {
 			continue

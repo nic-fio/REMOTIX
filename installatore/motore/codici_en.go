@@ -98,4 +98,5 @@ var codiciInglese = map[string][2]string{
 	"RX-AGG-008": {"On Arch the update would also touch packages that are not REMOTIX (a partial upgrade, which Arch does not support): it is not applied automatically.", "pacman -Syu, then remotix-install aggiorna"},
 	"RX-AGG-009": {"The requested version is not in the REMOTIX archive.", "remotix-install aggiorna --controlla lists the versions available."},
 	"RX-AGG-010": {"The update configuration cannot be read.", "Fix /etc/remotix/aggiornamenti.conf (remotix-install aggiorna --mostra)."},
+	"RX-AGG-011": {"Automatic updates are suspended up to this version: the administrator rolled back from it (remotix-install ritorna). A newer version resumes automatically.", "remotix-install aggiorna --applica (lifts the suspension)"},
 }

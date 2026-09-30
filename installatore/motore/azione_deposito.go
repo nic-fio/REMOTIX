@@ -375,6 +375,15 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 			if _, err := esegui(c.Amb, time.Minute, "rpm", "--import", sc[0].percorso); err != nil {
 				return err
 			}
+			if c.Amb.Famiglia == "fedora" {
+				// repo_gpgcheck: dnf5 verifica i metadati con un portachiavi SUO, e la chiave la importa
+				// chiedendo. `[M]` 30 set, fedora44-gnome: con --assumeno (la risoluzione) la domanda ha
+				// risposta «no», il deposito si salta e remotix «No match». Qui si risponde sì alla SOLA
+				// chiave del file che il motore ha appena scritto (gpgkey=file://…).
+				if _, err := esegui(c.Amb, tempoGestore, "dnf", "makecache", "-y", "--repo=remotix"); err != nil {
+					return err
+				}
+			}
 		case "arch":
 			if !adesso["pacman-key "+d.par["impronta"]] {
 				if err := d.mettiChiavePacman(c); err != nil {

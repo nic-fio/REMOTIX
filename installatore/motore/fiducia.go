@@ -305,7 +305,14 @@ func (f *FontiFiducia) firmaMotore(fid *Fiducia, adesso time.Time, rev *Revoche)
 	}
 	var firma []byte
 	var dove string
-	for _, p := range []string{exe + ".firma", "/usr/share/remotix-install/remotix-install.firma"} {
+	cand := []string{exe + ".firma"}
+	if exe == "/usr/bin/remotix-install" {
+		// il motore del pacchetto: la sua firma sta fra i dati del pacchetto (un file .firma in
+		// /usr/bin non ci sta). `[M]` 30 set: prima valeva per ogni motore, e un motore copiato altrove
+		// veniva confrontato con la firma di un altro binario
+		cand = append(cand, "/usr/share/remotix-install/remotix-install.firma")
+	}
+	for _, p := range cand {
 		if b, err := os.ReadFile(p); err == nil {
 			firma, dove = b, p
 			break

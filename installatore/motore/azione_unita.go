@@ -42,6 +42,7 @@ func nuovaUnita(p AzionePiano) (Azione, error) {
 func PianoUnitaAccesa(id, u, consenso string) AzionePiano {
 	a := PianoUnita(id, u)
 	a.Parametri["avvia"] = "si"
+	a.Descrizione = T("az.unita.accesa", u)
 	a.Consenso = consenso
 	return a
 }
