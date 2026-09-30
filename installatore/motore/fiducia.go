@@ -78,6 +78,10 @@ func (f *FontiFiducia) scarica(url string) ([]byte, error) {
 	if f.Scarica != nil {
 		return f.Scarica(url)
 	}
+	if p, ok := strings.CutPrefix(url, "file://"); ok {
+		// l'archivio locale di un pacchetto fuori linea (§6.6.12): le firme si verificano come in linea
+		return os.ReadFile(p)
+	}
 	cl := &http.Client{Timeout: 20 * time.Second}
 	r, err := cl.Get(url)
 	if err != nil {

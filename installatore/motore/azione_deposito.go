@@ -194,6 +194,14 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 				"# " + nome + " — aggiunto da remotix-install: l'archivio di REMOTIX vale solo per i pacchetti di REMOTIX (R18)\n" +
 					"Package: " + pacchetti + "\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: 500\n\n" +
 					"Package: *\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: -1\n", false})
+		} else if strings.HasPrefix(d.par["url"], "file:") {
+			// l'archivio LOCALE di un pacchetto fuori linea: un deposito locale non ha un host (per apt
+			// «origin» è vuota, come per ogni altro deposito locale). Si lega all'Origin del suo Release,
+			// che è firmato con la nostra chiave: vale solo per l'archivio di REMOTIX (R18)
+			r = append(r, fileArchivio{"/etc/apt/preferences.d/" + nome + ".pref",
+				"# " + nome + " — aggiunto da remotix-install: l'archivio di REMOTIX vale solo per i pacchetti di REMOTIX (R18)\n" +
+					"Package: " + pacchetti + "\nPin: release o=REMOTIX\nPin-Priority: 500\n\n" +
+					"Package: *\nPin: release o=REMOTIX\nPin-Priority: -1\n", false})
 		}
 		return r
 	case "fedora", "suse":
@@ -203,7 +211,7 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 			dir = "/etc/zypp/repos.d/"
 		}
 		inc := ""
-		if d.par["host"] != "" && c.Amb.Famiglia == "fedora" {
+		if (d.par["host"] != "" || strings.HasPrefix(d.par["url"], "file:")) && c.Amb.Famiglia == "fedora" {
 			inc = "includepkgs=" + pacchetti + "\n" // R18: dal nostro archivio solo i nostri pacchetti
 		}
 		return []fileArchivio{{k, chiave, false}, {dir + nome + ".repo",
@@ -341,7 +349,13 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 			if d.rhel(c) {
 				u = "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-" + d.majorVersione(c) + ".noarch.rpm"
 			}
-			if _, err := esegui(c.Amb, tempoGestore, "dnf", "install", "-y", u); err != nil {
+			arg := []string{"install", "-y", u}
+			if f := FileTerzi(c.Amb, "rpmfusion"); f != "" {
+				// senza rete: lo stesso pacchetto, dal pacchetto fuori linea (verificato col suo sha256
+				// quando il pacchetto si è letto); nessun deposito si consulta
+				arg = []string{"install", "-y", "--disablerepo=*", f}
+			}
+			if _, err := esegui(c.Amb, tempoGestore, "dnf", arg...); err != nil {
 				return err
 			}
 		}

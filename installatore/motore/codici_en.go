@@ -63,6 +63,15 @@ var codiciInglese = map[string][2]string{
 	"RX-PIANO-004": {"The plan contains a step this engine does not know.", ""},
 	"RX-PIANO-005": {"The approval does not match this plan (the plan was changed afterwards).", "Approve the plan again."},
 
+	"RX-RISPOSTE-001": {"The answer file does not give a consent that this machine needs: unattended does not mean without consent, and a missing consent does not count as «yes». Nothing was touched.", "Add the indicated entry to the answer file, with «si» or «no» (the entries: remotix-install aiuto)."},
+	"RX-RISPOSTE-002": {"The answer file cannot be read, has an unknown format or contains an unknown entry.", "Fix the file: the first entry is «formato = remotix-risposte/1»; the allowed entries are in remotix-install aiuto."},
+	"RX-RISPOSTE-003": {"An answer in the file has a value that is not allowed on this machine.", "Fix the indicated value."},
+	"RX-FUORI-001":    {"The offline bundle is not intact: a file is missing or is not the one prepared.", "Prepare it again (remotix-install prepara-fuori-linea) and copy it whole."},
+	"RX-FUORI-002":    {"The offline bundle was prepared for another machine (different fingerprint or installed packages).", "Prepare it on a connected machine identical to this one (same distribution and same packages)."},
+	"RX-FUORI-003":    {"Something the installation needs is missing from the offline bundle.", "Prepare it again on the reference machine, with the same answers."},
+	"RX-FUORI-004":    {"Installation without a network is not done yet for this distribution family (zypper, pacman).", "Install from the network."},
+	"RX-FUORI-005":    {"A third-party archive (RPM Fusion, Packman, EPEL) does not go into the offline bundle: its step downloads from the network.", "Prepare without that consent (encoding falls back, declared), or install from the network."},
+
 	"RX-STATO-001":     {"There is an unfinished operation: it must be resumed or rolled back first.", "remotix-install riprendi, or remotix-install annulla."},
 	"RX-STATO-002":     {"Invalid state transition: this is an engine defect.", ""},
 	"RX-STATO-003":     {"Another engine is working right now.", "Wait for it to finish."},

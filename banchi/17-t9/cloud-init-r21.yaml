@@ -1,0 +1,30 @@
+#cloud-config
+# REMOTIX — R21: l'installazione SENZA NESSUNO DAVANTI, da cloud-init (fase 17, T9).
+# Un esempio funzionante: la macchina nasce, cloud-init scrive il file di risposte e lancia lo
+# script d'ingresso, che verifica la firma del motore e gli passa la mano; il motore fa il piano
+# dal file, lo registra, lo applica. Nessuna domanda, nessuna attesa.
+#
+# Per usarlo altrove: cambiare l'indirizzo dell'archivio (qui quello di prova del banco, 10.0.2.2
+# è il server visto dalla VM) e le risposte; il resto (utenti, chiavi) è del banco.
+# Segnaposti riempiti da t9-vm.sh: MACCHINA, CHIAVE, PAROLA, ARCHIVIO, RISPOSTE (fra due chiocciole).
+hostname: rx-@MACCHINA@
+users:
+  - name: nicfio
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: false
+    ssh_authorized_keys:
+      - @CHIAVE@
+  - name: prova
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: @PAROLA@
+write_files:
+  - path: /root/remotix-risposte.conf
+    owner: root:root
+    permissions: '0600'
+    content: |
+@RISPOSTE@
+runcmd:
+  - [sh, -c, "curl -fsSL @ARCHIVIO@/install.sh | sh -s -- --archivio @ARCHIVIO@ --risposte /root/remotix-risposte.conf >/var/log/remotix-installa.log 2>&1; echo \"install.sh: uscita $?\" >>/var/log/remotix-installa.log"]
+final_message: "rx-@MACCHINA@: cloud-init finito dopo $UPTIME s"
