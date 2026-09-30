@@ -1,5 +1,7 @@
 # Fase 8 — L'anello più corto
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 > ⚠ **Nel piano questa fase si chiama ancora «La copia zero».** Il titolo è di quando la fase era
 > quel solo tratto. ⛔ **Il mandato del 22 agosto 2026 è più largo**, e il documento porta il nome
 > del mandato: la copia zero è **un tratto su sei**. Se il piano vada rinominato lo decide l'utente.
@@ -238,7 +240,7 @@ codice: due agenti sullo stesso file si accoltellano.*
 | | |
 |---|---|
 | **`EncSliceLP` sa fare i sotto-livelli temporali?** | ⛔ **NO** — 7 profili su 7, con **due controlli positivi** (VP9 sullo stesso entrypoint li ha; AMD `EncSlice` pure) e 6 celle su 6 nei byte. ⇒ *«ogni abbandono costa una chiave»* resta, con la misura sotto |
-| **Quanto pesa una chiave?** | alla tela dell'utente **0,13 % del tetto**, margine **782×** (n=404 chiavi vere). A 8K si sfonda, e il ripiego software sfonda **prima e con contenuto plausibile** |
+| **Quanto pesa una chiave?** | alla tela dell'utente **0,13 % del tetto**, margine **782×** (n=404 chiavi vere). A 8K si sfonda *(la misura del ripiego software, che sfondava prima, non vale più dopo la fase 18)* |
 | **Il codificatore va sulla scheda giusta?** | sì, e adesso **lo dichiara** invece di ripiegare in silenzio |
 | **I ~16 ms non spiegati** | ⭐ **trovati**: 5,34 di **diagnostica** (ogni pixel di ogni fotogramma, per una riga scritta una volta) e il resto nel produttore — ⛔ che **non era di Mutter**: era il nostro lavoro dentro il suo thread di tempo reale |
 | **I 17,48 ms del tratto 9** | ⛔ **non esistevano** — 0,39-2,80 ms con quattro banchi. ⚠ E la causa **non è ancora chiusa**: la contesa lo *abbassava* |
@@ -736,22 +738,26 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 >
 > ### Il tratto, e i sotto-tratti affiancati
 >
-> `[M]` `cattura → byte fuori`: **22,82 → 6,41 ms**, il **−72 %**. Tre giri **alternati** (A-B-A-B
+> `[M]` `cattura → byte fuori`: **6,41 ms** con la copia zero (⛔ il «prima», sulla strada dalla memoria con
+> `sws_scale`, è tolto: non vale più dopo la fase 18). Tre giri **alternati** (A-B-A-B
 > sullo stesso albero), md5 verificati diversi, tela 1920×1080, **copia zero verificata accesa a
 > ogni giro**. Macchina: 20 nuclei, carico 1,31-1,65, 0 Chrome, 0 Xvfb — **il carico è dichiarato**,
 > come §4-F1 pretende.
 >
-> | | prima | dopo |
-> |---|---|---|
-> | la copia | 2,11 | **0,00** |
-> | la conversione (`sws_scale`) | 11,23 | **2,98** |
-> | il caricamento sulla GPU | 1,24 | **0,00** |
-> | ⭐ **il produttore** | 5,44 | **0,64** |
+> | | dopo *(scheda)* |
+> |---|---|
+> | la copia | **0,00** |
+> | la conversione (VPP) | **2,98** |
+> | il caricamento sulla GPU | **0,00** — il tratto non c'è più |
+> | ⭐ **il produttore** | **0,64** |
+>
+> *(La colonna «prima», sulla memoria con `sws_scale` e `av_hwframe_transfer_data`, è tolta: la fase 18
+> ha sostituito quella strada, e la misura non vale più.)*
 >
 > ### ⭐⭐ E i «5,79 ms di Mutter» erano quasi tutti NOSTRI — smentito C
 >
 > §4-C aveva scritto: *«5,79 ms sono di Mutter: più di un terzo del margine non è nostro»*. ⛔ `[M]`
-> **Il produttore cala di 4,80 ms** togliendo **il nostro lavoro** dal thread di tempo reale di
+> **Il produttore cala a 0,64 ms** togliendo **il nostro lavoro** dal thread di tempo reale di
 > PipeWire. ⇒ Non era il compositore: **eravamo noi, dentro casa sua.**
 >
 > ### ⛔⛔ E il difetto vero trovato **coi millisecondi già perfetti**
@@ -770,8 +776,8 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 >
 > ### ⭐⭐⭐ E la cosa da mettere in `LEZIONI.md`: **il controllo sul colore è CIECO a questo difetto**
 >
-> `[M]` Le medie per canale dei due flussi combaciano entro **0,17 livelli su 255** mentre la marca
-> **non si legge su 0 fotogrammi di 903**. Controllo negativo (R↔B scambiati): scarto **33**, cioè
+> `[M]` Le medie per canale dei due flussi (memoria e scheda) combaciano mentre la marca
+> **non si legge su 0 fotogrammi di 903** (lo scarto in livelli è tolto: un lato passava da `sws_scale`, fase 18). Controllo negativo (R↔B scambiati): scarto **33**, cioè
 > lo strumento funziona.
 >
 > ⇒ ⛔⛔ **Un banco che guarda le medie dice VERDE su un'immagine sbagliata.** È la forma di
@@ -794,8 +800,8 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 
 > ### ⭐⭐ IL RISULTATO IN DUE RIGHE, e la seconda vale più della prima
 >
-> `[M]` Il tratto `cattura → primo byte` passa da **22,82 a 6,41 ms (−72 %)**, tre giri
-> **alternati**, e ⭐ **stavolta i fotogrammi SALGONO anche al metro dell'utente**: il distacco
+> `[M]` Il tratto `cattura → primo byte` scende a **6,41 ms** (il «prima» su `sws_scale` è tolto,
+> fase 18), tre giri **alternati**, e ⭐ **stavolta i fotogrammi SALGONO anche al metro dell'utente**: il distacco
 > misurato col banco di B va da **0,27 a 0,16 barre del titolo**, con **834→942** fotogrammi
 > dipinti in 25 s.  Il pavimento locale misurato da B è **0,13**: eravamo a **2,1 volte** il locale,
 > siamo a **1,23**.
@@ -806,9 +812,8 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 > passo che non sia multiplo di 64 byte**.
 >
 > ⭐⭐⭐ **E la parte che è metodo, non aneddoto**: `[M]` il controllo sul COLORE **non lo vede**.
-> Le medie per canale dei due flussi combaciavano entro **0,17 livelli su 255** — R 96,90 contro
-> 96,97, B 130,11 contro 130,17 — mentre il lettore certificato della marca leggeva **0 marche su
-> 903**. ⇒ *Un banco che guarda le medie dice verde su un'immagine sbagliata.* Il numero che
+> Le medie per canale dei due flussi combaciavano — mentre il lettore certificato della marca leggeva
+> **0 marche su 903**. ⇒ *Un banco che guarda le medie dice verde su un'immagine sbagliata.* Il numero che
 > discrimina è la **struttura**, non l'intensità.
 
 *22 agosto 2026. Macchina di prova NIC-OS (Intel i5-13500T, **iGPU Intel UHD 730 integrata** su
@@ -879,14 +884,15 @@ ciascuno, 2 241 760 campioni:
 
 | | media R | media G | media B | min/max | a zero | a 255 |
 |---|---|---|---|---|---|---|
-| memoria (`sws_scale`) | 96,902 | 114,055 | 130,110 | 0 / 255 | 6,39 % | 1,98 % |
 | scheda (GPU, VPP) | 96,969 | 113,891 | 130,170 | 0 / 255 | 6,41 % | 1,79 % |
-| **scarto** | **0,067** | **0,165** | **0,061** | — | — | — |
+
+*(La riga della memoria, convertita con `sws_scale`, e lo scarto fra le due sono tolti: la fase 18 ha
+sostituito quella conversione.)*
 
 ⭐ E il **controllo negativo** dello stesso banco — lo stesso flusso con R e B **scambiati a mano** —
 dà scarti di **33,27 e 33,14**: il banco *sa* dire di no, e quel verde non è per costruzione.
 
-⇒ ⛔⛔ **Le medie combaciavano entro 0,17 livelli su 255 mentre la marca non si leggeva su 0
+⇒ ⛔⛔ **Le medie combaciavano mentre la marca non si leggeva su 0
 fotogrammi di 903.** Uno strumento che guarda le intensità è cieco a un difetto **geometrico**.
 ⭐ Chi certifica una catena di immagini deve avere almeno un controllo che guardi la **struttura**.
 
@@ -975,36 +981,40 @@ l'entrypoint **letto dal driver**, non da ffmpeg.*
 sorgente**, cambia **una costante** (`COPIA_ZERO`), e il banco **verifica che gli md5 differiscano**
 prima di misurare.
 
-| tratto | **prima** *(memoria)* | **dopo** *(scheda)* | Δ |
-|---|---|---|---|
-| ⛔ **produttore** *(pts di Mutter → la nostra richiamata)* | **5,44** | **0,64** | ⭐ **−4,80** |
-| allocazione | 0,00 | 0,00 | — |
-| ⭐ **copia** | **2,11** | **0,00** | **−2,11** |
-| nel posto | 0,09 | 0,08 | −0,01 |
-| misura | 0,00 | 0,00 | — |
-| ⭐ **conversione** | **11,23** | **2,98** | **−8,25** |
-| ⭐ **caricamento** | **1,24** | **0,00** | **−1,24** |
-| codifica | 2,21 | 2,47 | +0,26 |
-| spedizione | 0,02 | 0,05 | +0,03 |
-| resto | 0,05 | 0,17 | +0,12 |
-| **TOTALE** | **22,82** | **6,41** | ⭐⭐ **−16,41 ms (−72 %)** |
-| **fotogrammi in 45 s** | 1 487 · 1 468 · 1 521 | 1 519 · 1 506 · 1 454 | ⚠ **fermi** |
+| tratto | **dopo** *(scheda)* |
+|---|---|
+| ⛔ **produttore** *(pts di Mutter → la nostra richiamata)* | **0,64** |
+| allocazione | 0,00 |
+| ⭐ **copia** | **0,00** |
+| nel posto | 0,08 |
+| misura | 0,00 |
+| ⭐ **conversione** (VPP) | **2,98** |
+| ⭐ **caricamento** | **0,00** |
+| codifica | 2,47 |
+| spedizione | 0,05 |
+| resto | 0,17 |
+| **TOTALE** | **6,41** |
+| **fotogrammi in 45 s** | 1 519 · 1 506 · 1 454 |
 
-*(mediana dei tre giri per riga; i tre concordano — `conversione` 11,23/12,06/10,72 prima,
-2,91/2,99/2,98 dopo; `totale` 22,82/23,46/22,52 prima, 6,34/6,48/6,41 dopo.)*
+*(mediana dei tre giri per riga; i tre concordano — `conversione` 2,91/2,99/2,98; `totale`
+6,34/6,48/6,41.)*
+
+⚠ **La colonna «prima» — la strada dalla memoria, con `sws_scale` e `av_hwframe_transfer_data` — è
+tolta, con le differenze**: la fase 18 ha sostituito quella strada e la misura non vale più. Resta la
+decisione: la copia zero, perché toglie la copia, la conversione sulla CPU e il caricamento sulla GPU.
 
 ### ⛔ Che cosa questa tabella dice, e che cosa NON dice
 
 1. ⭐⭐ **I 5,79 ms «di Mutter» non erano tutti di Mutter.** C aveva scritto *«più di un terzo del
    margine non è nostro: non c'è niente da limare, è il compositore»*. `[M]` La voce `produttore`
-   passa da **5,44 a 0,64 ms** togliendo **il nostro** lavoro dal thread di tempo reale e dalla
-   banda di memoria. ⇒ **Erano nostri quasi tutti**, ed è la smentita più grossa di oggi;
-2. ⛔ **I fotogrammi consegnati dal figlio NON sono saliti** (1 487 → 1 506, dentro la dispersione):
+   scende a **0,64 ms** togliendo **il nostro** lavoro dal thread di tempo reale e dalla
+   banda di memoria (il «prima» è tolto, fase 18). ⇒ **Erano nostri quasi tutti**, ed è la smentita più grossa di oggi;
+2. ⛔ **I fotogrammi consegnati dal figlio NON sono saliti** (dentro la dispersione):
    a **33/s** su una scena che ne disegna 61 il collo di bottiglia non è la nostra CPU. È la forma
    mite di `LEZIONI.md` §6.2, e va detta;
-3. ⛔ **Il budget di C — 10,96 ms — è stato superato, e non perché la stima fosse timida**: le tre
-   voci previste ne valgono 11,60, ma il totale scende di **16,41** perché ne è caduta una quarta
-   che nessuno contava (`produttore`). ⇒ **In questo tratto le voci non sono indipendenti in
+3. ⛔ **Il budget di C è stato superato, e non perché la stima fosse timida**: oltre alle tre
+   voci previste ne è caduta una quarta che nessuno contava (`produttore`) — i millisecondi del
+   «prima» sono tolti (fase 18). ⇒ **In questo tratto le voci non sono indipendenti in
    tutt'e due i versi**: si passano la cache (C), e si passano il thread di tempo reale (io).
 
 ---
@@ -1644,7 +1654,7 @@ banco — e la distinzione la scrivo invece di nasconderla.
 
 1. ⭐⭐ **Il tratto 5 è la firma della copia zero, e il conto torna con quello di F4.**
    `[M]` **26,27 → 9,89 ms, −62 %**. F4, sul suo tratto `cattura → byte fuori` e senza browser,
-   aveva `[M]` **22,82 → 6,41, −72 %**. ⇒ **Due banchi diversi, due palchi diversi, la stessa cura,
+   aveva visto la stessa discesa *(il suo «prima», su `sws_scale`, è tolto: fase 18)*. ⇒ **Due banchi diversi, due palchi diversi, la stessa cura,
    la stessa forma.** È la conferma incrociata che al numero di F4 mancava.
 2. ⭐⭐⭐ **E rende ANCHE nel tratto 3, che non è suo** — `[M]` **27,67 → 11,78, −15,89 ms**. Il
    tratto 3 è *«la scena riceve l'input → la scena disegna»*, cioè **l'attesa del quadro sul
@@ -2333,7 +2343,7 @@ il verbale del 14 agosto, che cita `web.md §6.2`, con quello di oggi, che cita 
 | | 14 agosto | 22 agosto | che effetto ha |
 |---|---|---|---|
 | ⛔⛔ **la tela** | **1920 × 1080** = 2 073 600 px | **1460 × 888** = 1 296 480 px | **il 62,5 % dei pixel**: meno da convertire, codificare, spedire, decodificare e disegnare ⇒ tira giù **E** e **F**, e forse **D** |
-| ⛔ **la profondità** | `hev1.**2.4**` — HEVC **10 bit**, promozione 8→10 **dichiarata** (conversione 6214 µs + caricamento 2916 + codifica 5187 = **14,3 ms**) | `hev1.**1.6**` — HEVC **8 bit**, nessuna promozione (2735 + 1606 + 7199 = **11,5 ms**) | tira giù **E** |
+| ⛔ **la profondità** | `hev1.**2.4**` — HEVC **10 bit**, promozione 8→10 **dichiarata** | `hev1.**1.6**` — HEVC **8 bit**, nessuna promozione *(i tempi di conversione con `sws_scale`, caricamento e codifica dalla memoria sono tolti: fase 18)* | tira giù **E** |
 
 ⚠ **Ho provato a rimettere la tela di allora e NON ci sono riuscito**: `?adatta=no` è la leva
 dichiarata («la pagina di prima del 15 agosto»), il giro con quella coda ha girato, ⛔ **e la tela è
@@ -2452,7 +2462,7 @@ successivi. ⚠ Va scritto nel banco: oggi il rimedio è nella testa di chi lo l
 | ⏳ **quanto dei 41 ms è prodotto** | la tela è passata da 1920×1080 a 1460×888 (**62,5 % dei pixel**) e il flusso da 10 a 8 bit, e non ho trovato il modo di rimettere la tela di allora (`?adatta=no` non basta: il monitor virtuale nasce già a quella misura). **Almeno 18 ms sono prodotto** (tratto B, dimostrato da Q6); il resto è aperto |
 | ⏳ **la strada `bitmaprenderer`** | il numero che l'utente vive **non è mai stato misurato da questo banco**. Serve il prologo rifatto (§A.4 punto 1) |
 | ⏳ **il tratto C, 23,25 ms e la dispersione più larga di tutte** ([13,86 – 28,28]) | è «la scena riceve l'input → la scena disegna». ⚠ È in parte **la scena del banco**, non il prodotto: prima di curarlo bisogna sapere quanto sia suo |
-| ⏳ **i ~16 ms non spiegati dentro il tratto 5** | oggi il tratto 5 vale 24,19 e il primo fotogramma dichiara conversione 2,7 + caricamento 1,6 + codifica 7,2 = **11,5 ms** ⇒ ne restano **~12,7** che nessuno dei tre spiega. Il margine c'è ancora, ed è più piccolo di prima |
+| ⏳ **i ~16 ms non spiegati dentro il tratto 5** | oggi il tratto 5 vale 24,19 e conversione, caricamento e codifica non lo spiegano tutto *(i loro tempi, sulla strada di `sws_scale`, sono tolti: fase 18)*. Il margine c'è ancora, ed è più piccolo di prima |
 | ⏳ **i sei buchi del video dell'utente** | ⛔ **non li ho separati**: il mio giro non ha una traccia di rete abbastanza fine per attribuirli. Resta il punto §2.4 della fase |
 | `[?]` **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza, non la codifica piena** — riga letta oggi, e la fase 9 la deve sapere |
 | ⚠ **il palco era condiviso** | i due server dell'utente (7730, 7731) giravano durante tutti i giri. È la spiegazione più economica della dispersione 88 – 111 ms, e non l'ho isolata |
@@ -2479,8 +2489,9 @@ toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del te
 > misurata con uno strumento che non c'era prima non ha un prima»*. L'ordine era giusto e lo
 > rifarei; ⛔ **la stima del tempo era mia ed era sbagliata.**
 >
-> ⇒ Resta il budget `[M]`, **da misurare col banco e non da sottrarre a tavolino**: copia 1,65 +
-> conversione 8,15 + caricamento 1,16 = **10,96 ms su 18,86, il 58 % del tratto**.
+> ⇒ Resta il budget, **da misurare col banco e non da sottrarre a tavolino**: la copia, la
+> conversione con `sws_scale` e il caricamento sulla GPU (⛔ i millisecondi sono tolti: la strada
+> dalla memoria con `sws_scale` non vale più dopo la fase 18).
 >
 > ### ⭐⭐ E i ~16 ms hanno un nome — due, e nessuno dei due era quello che cercavamo
 >
@@ -2491,12 +2502,11 @@ toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del te
 > |---|---|
 > | ⛔ **il produttore (Mutter)** — dal suo `pts` alla nostra richiamata | **5,79** |
 > | ⛔ **`misura_i_pixel()`** — la diagnostica | **5,34** |
-> | la conversione (`sws_scale`) | 5,39 |
 > | la copia | 1,30 |
-> | la codifica, in hardware | 2,18 |
-> | il caricamento sulla GPU | 0,98 |
 > | il fotogramma che aspetta nel posto | **0,08** |
-> | **totale** | **21,61** |
+>
+> *(La conversione con `sws_scale`, il caricamento, la codifica dalla memoria e il totale sono tolti:
+> quella strada non vale più dopo la fase 18.)*
 >
 > 1. ⛔ **5,79 ms sono di Mutter**: più di un terzo del margine **non è nostro**;
 > 2. ⛔⛔ **5,34 ms sono DIAGNOSTICA**: `misura_i_pixel()` legge **ogni pixel di ogni fotogramma**
@@ -2507,10 +2517,11 @@ toccate**, e il conteggio dei vicini lo dichiara in ogni riga di registro del te
 > ### ⛔⛔ E la cura non ha reso quel che aveva tolto — **i tratti non si sommano**
 >
 > Il giro sui pixel è passato a cadenza (500 ms). Prima/dopo **alternato**, tre giri, stesso albero,
-> md5 verificati diversi: `[M]` **21,19 → 18,86 ms (−11 %)**.
+> md5 verificati diversi.
 >
-> ⛔ **Ma ha tolto 7,28 e guadagnato 2,33**: `sws_scale` si è ripreso **+3,84 ms** (3 giri su 3, in
-> tutt'e due i versi) perché la scansione dei pixel **gli scaldava la cache**.
+> ⛔ **Ma ha tolto 7,28 ms e il totale è sceso molto meno**: `sws_scale` se ne è ripresa una parte
+> (3 giri su 3, in tutt'e due i versi) perché la scansione dei pixel **gli scaldava la cache**. ⚠ I
+> millisecondi del totale e della conversione sono tolti: passavano da `sws_scale` (fase 18).
 > ⛔⛔ **E i fotogrammi consegnati NON sono saliti**: 1 271 → 1 242.
 >
 > ⇒ ⭐ **Per la regola di §2.2 punto 1, questa non è ancora una vittoria** — «si contano i
@@ -2540,10 +2551,13 @@ utente `provac8`, porta **7752**, albero `/media/REMOTIX/src/08-c-src`, lavoro
 scompone **dentro il prodotto**, e la riga esce nel registro **una volta al secondo**:
 
 ```
-⭐ TRATTO cattura → byte fuori: mediana 21.61 ms (max 32.87) su 512 fotogrammi del campione,
+⭐ TRATTO cattura → byte fuori: mediana … ms (max …) su 512 fotogrammi del campione,
    2450 in tutto — produttore 5.79 · allocazione 0.00 · copia 1.30 · nel posto 0.08 ·
-   misura 5.34 · conversione 5.39 · caricamento 0.98 · codifica 2.18 · spedizione 0.01 · resto 0.02
+   misura 5.34 · conversione … · caricamento … · codifica … · spedizione 0.01 · resto 0.02
 ```
+
+*(La forma della riga è quella di allora; i valori della strada dalla memoria — conversione con
+`sws_scale`, caricamento, codifica, totale — sono tolti: non valgono più dopo la fase 18.)*
 
 Dieci voci **disgiunte e in fila**, **mediane** (non medie) su un anello di 512 fotogrammi, col
 **massimo** accanto. ⭐ L'ultima voce e' il **`resto`**: quel che il totale ha in piu' della somma
@@ -2573,12 +2587,12 @@ del cliente sono lo **stesso `CLOCK_MONOTONIC`**: niente ancora d'orologio, nien
 | **copia** *(la `memcpy` nella richiamata di tempo reale)* | **1,30** | 2,26 | nostro |
 | **nel posto** *(il fotogramma che invecchia aspettando)* | **0,08** | 6,52 | nostro |
 | **misura** *(`misura_i_pixel()`)* | **5,34** | 13,91 | ⛔ **nostro, e DIAGNOSTICA** |
-| conversione *(`sws_scale`)* | 5,39 | 7,89 | nostro |
-| caricamento *(→ GPU)* | 0,98 | 1,75 | nostro |
-| codifica | 2,18 | 2,65 | nostro |
+| conversione *(`sws_scale`)* | ⛔ tolta *(fase 18)* | | nostro |
+| caricamento *(→ GPU)* | ⛔ tolto *(fase 18)* | | nostro |
+| codifica *(dalla memoria)* | ⛔ tolta *(fase 18)* | | nostro |
 | spedizione | 0,01 | 0,03 | nostro |
 | **resto** | **0,02** | 1,41 | ⭐ **niente buchi** |
-| **TOTALE** | **21,61** | 32,87 | |
+| **TOTALE** | ⛔ tolto *(fase 18)* | | |
 
 ### ⇒ Le due risposte, e la seconda e' una **smentita mia**
 
@@ -2649,21 +2663,19 @@ misurare.*
 | copia | 1,30 | 1,65 | +0,35 |
 | nel posto | 0,08 | 0,08 | — |
 | ⭐ **misura** | **7,28** | **0,00** | **−7,28** |
-| ⛔ **conversione** | **4,31** | **8,15** | **+3,84** |
-| caricamento | 0,90 | 1,16 | +0,26 |
-| codifica | 2,18 | 2,08 | −0,10 |
 | spedizione | 0,01 | 0,02 | — |
 | resto | 0,03 | 0,04 | — |
-| **TOTALE** | **21,19** | **18,86** | ⭐ **−2,33 ms (−11 %)** |
 | **fotogrammi in 40 s** | 1 268 · 1 271 · 1 276 | 1 240 · 1 242 · 1 340 | ⚠ **fermi** |
 
 *(mediana dei tre giri per riga; i tre giri concordano — `misura` 6,48/7,79/7,28 prima, 0,00 sempre
-dopo; `conversione` 4,17/4,18/4,31 prima, 8,40/7,95/8,15 dopo.)*
+dopo. ⛔ Le righe della conversione con `sws_scale`, del caricamento, della codifica dalla memoria e
+del totale sono tolte: quella strada non vale più dopo la fase 18.)*
 
 ### ⛔⛔ E QUI STA LA COSA CHE VA DETTA PRIMA DEL GUADAGNO
 
-**Ho tolto 7,28 ms e ne ho guadagnati 2,33.** Gli altri **~4 ms li ha ripresi `sws_scale`**, che nei
-tre giri passa da 4,3 a 8,2 — **in tutti e tre, in tutt'e due i versi**. Non e' rumore.
+**Ho tolto 7,28 ms e il totale ne ha guadagnati molti meno.** Il resto **l'ha ripreso `sws_scale`**,
+**in tutti e tre i giri, in tutt'e due i versi**. Non e' rumore. *(I millisecondi di `sws_scale` e del
+totale sono tolti, fase 18.)*
 
 ⭐ **E il meccanismo si spiega, ed e' istruttivo**: la scansione leggeva gli **8 MB del fotogramma
 subito prima** che `sws_scale` leggesse gli stessi 8 MB. **Scaldava la cache per lui.** Tolta la
@@ -2671,14 +2683,13 @@ scansione, il traffico verso la memoria lo paga swscale. ⇒ *Una parte di quei 
 era prefetch fatto per sbaglio.*
 
 ⛔ **E i fotogrammi consegnati NON sono saliti** (1 271 → 1 242 di mediana, dentro la dispersione dei
-giri). ⇒ La cura **non compra fluidita'**: compra **2,33 ms di ritardo** e basta. Alla velocita'
-mediana dell'utente (3 400 px/s) valgono **−8 px** di distacco; ai suoi picchi (12 400 px/s),
-**−29 px** su ~360. ⚠ **E' una limatura vera e piccola, e va chiamata cosi'.**
+giri). ⇒ La cura **non compra fluidita'**: compra un poco di ritardo e basta. ⚠ **E' una limatura vera
+e piccola, e va chiamata cosi'.**
 
 ⭐ **Ma la lezione vale piu' del guadagno**: ⛔ **non si sommeranno mai i tratti tolti sperando che
 si sottraggano dal totale.** In questo tratto le voci **non sono indipendenti**: si passano la cache.
 Chi togliera' `conversione` e `caricamento` con la copia zero deve **rimisurare il totale**, non
-sottrarre 9,3.
+sottrarre le voci.
 
 ---
 
@@ -2698,12 +2709,11 @@ copia zero resta intera per chi viene dopo.
 | che cosa la copia zero cancella | `[M]` oggi |
 |---|---|
 | `copia` (la `memcpy` nel posto) | **1,65 ms** |
-| `conversione` (`sws_scale`) | **8,15 ms** |
-| `caricamento` (memoria → GPU) | **1,16 ms** |
-| **in tutto** | **10,96 ms su 18,86 — il 58 % del tratto** |
+| `conversione` (`sws_scale`) | ⛔ tolta *(fase 18)* |
+| `caricamento` (memoria → GPU) | ⛔ tolto *(fase 18)* |
 
-⚠ **E il numero da NON credere e' proprio quello**: vedi C.1-bis. Le voci si passano la cache, e
-9,3 tolti hanno reso 2,3. ⇒ **La copia zero va misurata col banco, non stimata dalla tabella.**
+⚠ **E il conto da NON credere e' proprio la somma**: vedi C.1-bis. Le voci si passano la cache, e
+quel che si toglie non rende quanto vale sulla tabella. ⇒ **La copia zero va misurata col banco, non stimata dalla tabella.**
 ⭐ Il banco per farlo c'e' ed e' quello di qui: `08-c-giro.sh` + `08-c-ab.sh` (due binari dallo
 stesso albero, alternati, md5 verificati diversi).
 
@@ -2826,8 +2836,9 @@ sotto i 6 000 byte da soli. `[?]` Resta non percorso.
 
 1. ⛔⛔ **La mia ipotesi sui ~16 ms era sbagliata.** Credevo fosse il fotogramma che invecchia nel
    posto: `[M]` **0,08 ms**. Refutata dal primo giro dello strumento.
-2. ⛔ **La cura ha reso un terzo di quel che toglieva** — 7,28 ms tolti, **2,33** guadagnati, perche'
-   `sws_scale` si e' ripreso ~4 ms che la scansione gli scaldava in cache. ⇒ ⛔ **In questo tratto le
+2. ⛔ **La cura ha reso meno di quel che toglieva** — 7,28 ms tolti, molti meno guadagnati, perche'
+   `sws_scale` si e' ripreso il tempo che la scansione gli scaldava in cache *(i millisecondi di
+   `sws_scale` sono tolti, fase 18)*. ⇒ ⛔ **In questo tratto le
    voci non sono indipendenti**, e i tratti tolti **non si sommano**.
 3. ⛔ **I fotogrammi consegnati non sono saliti** (1 271 → 1 242 di mediana, dentro la dispersione).
    La cura compra ritardo, non fluidita'. E' la forma mite di `LEZIONI.md` §6.2, e va detta.
@@ -2841,8 +2852,9 @@ sotto i 6 000 byte da soli. `[?]` Resta non percorso.
 7. ⚠ **Non ero solo sulla macchina** (`banchi/03-solo.py`): due sessioni GNOME, nove `remotix`,
    carico 1,25-2,09. ⇒ ⛔ **I valori assoluti di questo rapporto vanno letti come un tetto.** Il
    prima/dopo regge perche' e' **alternato**; i totali singoli no. Nell'ultimo giro della giornata,
-   con la macchina piu' carica, la stessa `conversione` e' salita da 8,15 a **11,9** senza che nulla
-   cambiasse nel codice — ed e' la misura di quanto la compagnia sposti i numeri.
+   con la macchina piu' carica, la stessa `conversione` e' salita di parecchio senza che nulla
+   cambiasse nel codice — ed e' la misura di quanto la compagnia sposti i numeri *(i valori, di
+   `sws_scale`, sono tolti: fase 18)*.
 
 ---
 
@@ -2850,9 +2862,9 @@ sotto i 6 000 byte da soli. `[?]` Resta non percorso.
 
 | | |
 |---|---|
-| ⏳ **la copia zero** | non fatta. Budget `[M]` **10,96 ms su 18,86 (58 %)** — ⛔ da **misurare**, non da sottrarre |
+| ⏳ **la copia zero** | non fatta. Budget — ⛔ da **misurare**, non da sottrarre *(i millisecondi, sulla strada di `sws_scale`, sono tolti: fase 18)* |
 | ⏳ **i 5,79 ms del produttore** | `[M]` sono di Mutter. `[?]` Non so **di che cosa siano fatti** (composizione? il ciclo di PipeWire? la cadenza del compositore?) e non e' detto che si possa sapere da qui |
-| ⏳ **`conversione` che si prende la cache** | `[M]` +3,84 ms quando la scansione sparisce. `[?]` Se `sws_scale` acceda alla memoria in modo migliorabile (piu' thread, flag diversi) non e' stato guardato — ⚠ e la copia zero lo cancella comunque |
+| ⏳ **`conversione` che si prende la cache** | `[M]` sale quando la scansione sparisce *(i millisecondi sono tolti: fase 18)*. `[?]` Se `sws_scale` acceda alla memoria in modo migliorabile (piu' thread, flag diversi) non e' stato guardato — ⚠ e la copia zero lo cancella comunque |
 | `[?]` **il ramo «delta abbandonato»** | non percorso nemmeno col guasto innestato |
 | `[?]` **`banchi/02-cattura-prodotto.c` legge `nero`/`uniforme` senza `pixel_misurati`** | ⛔ **non e' mio e non l'ho toccato.** Prende pochi fotogrammi e il primo si misura sempre, quindi oggi non sbaglia; ma la riga giusta e' stamparlo. **Una riga, per chi lo possiede** |
 | `[?]` **il valore di `CRF_PASSO`** | 9 e' *sufficiente*, non *giusto*: il punto di lavoro e' della **fase 9** |
@@ -3323,7 +3335,7 @@ togliendo **sei** figure su 120. Il banco distingue.
 **Il tetto è 16 777 216 byte** (`RCP.md` §6.2). Metodo: **ogni** fotogramma è una chiave (`-g 1`,
 `idr_interval 0`), e si misura l'**accesso intero** — VPS+SPS+PPS+SEI+IDR — cioè quel che il
 protocollo mette in un chunk `key`, non il solo slice. Regime del prodotto: `EncSliceLP`,
-`rc_mode=CQP`, **QP 26** (`figlio.c` · `QP_HARDWARE`); ripiego in software **CRF 20** (`figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)*).
+`rc_mode=CQP`, **QP 26** (`figlio.c` · `QP_HARDWARE`). ⛔ Le misure del ripiego in software (`libx264`/`libx265`) sono tolte: non valgono più dopo la fase 18.
 
 ⛔ **I 10 bit qui sono OTTO PROMOSSI, e si dichiara**: `DECISIONI.md` §2.3-ter ha misurato che dalla
 cattura di Mutter i 10 bit veri non escono per nessuna strada. Le righe `main10` qui sotto misurano
@@ -3348,8 +3360,6 @@ fotogrammi), **ogni fotogramma una chiave**:
 | il desktop vero | 20 259 byte | 0,1 % |
 | il desktop + **grana forte** (`noise=alls=30`) | 758 513 byte | 4,5 % |
 | ⛔ **rumore uniforme** — il caso peggiore che esista | **2 529 464 byte (2,412 MiB)** | **15,1 %** |
-| ripiego `libx265` CRF 20 sul rumore | 3 065 178 byte | 18,3 % |
-| ripiego `libx264` CRF 20 sul rumore | 2 812 378 byte | 16,8 % |
 
 ⇒ ⛔⭐ **Alla tela di 2560×1080 il difetto di forma di §6.2 è irraggiungibile**: perfino il rumore
 puro sta **6,6 volte** sotto.
@@ -3377,40 +3387,35 @@ densità di dettaglio per pixel resta quella vera. `[M]` `banchi/08-D2-misure.py
 dichiara legale, con contenuto quasi incomprimibile. **Ma con un desktop vero, no** — nemmeno a 8K,
 dove sta al **1,5 %**.
 
-### D.2.3 ⛔⛔ E il ripiego in software sfonda **prima**, con contenuto **plausibile**
+### D.2.3 ⛔ Oltre i 4096 px l'H.264 in hardware non c'è — e si scende in software
 
 ⛔ **`h264_vaapi` su questo chip si ferma a 4096 px per lato** — `[M]` *«Hardware does not support
 encoding at size 4112x2160 (constraints: width 32-4096 height 32-4096)»*, mentre 4096×2160 passa
 (41 566 byte, n=10). ⇒ **Oltre i 4096 px l'H.264 in hardware NON C'È**, e la tela legale arriva a
-7680: là si scende su `libx264`. `[M]` `hevc_vaapi` invece regge 7680×4320, 8192×4320 e perfino
-16384×4320 (6 chiavi su 6 ciascuno).
+7680: là si scende sul ripiego in software. `[M]` `hevc_vaapi` invece regge 7680×4320, 8192×4320 e
+perfino 16384×4320 (6 chiavi su 6 ciascuno).
 
-`[M]` `banchi/08-D2-ripiego.py`, `libx264` **CRF 20**, 7680×4320, n=8:
-
-| scena | mediana | massimo | sopra il tetto |
-|---|---|---|---|
-| il desktop affiancato | 331 979 | 398 054 byte (0,380 MiB) | 0/8 |
-| + grana `alls=30` | 9 182 880 | **19 642 719 byte (18,733 MiB)** | ⛔ **1/8** |
-| + grana `alls=60` | 11 653 811 | **23 820 270 byte (22,717 MiB)** | ⛔ **1/8** |
-| rumore uniforme | 18 729 154 | 33 710 537 byte (32,149 MiB) | ⛔ 8/8 |
-
-⇒ ⛔ **Un filmato molto granuloso a schermo intero su una tela 8K è già oltre il tetto**, e non è
-rumore di laboratorio.
+⛔ Si era misurato che il ripiego in software (`libx264`) **sfondava il tetto prima** dell'hardware, con
+un filmato granuloso a schermo intero su tela 8K; ⚠ **la misura non vale più dopo la fase 18** (il
+ripiego è cambiato) ed è tolta.
 
 ### D.2.4 ⛔⛔ E qui c'è il difetto vero: **la scala delle ricodifiche è corta di UNO scalino**
 
 `[R]` `codificatore.c` · `RICODIFICHE_MASSIME` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
-La scala è dunque **QP 26 → 32 → 38** (hardware) e **CRF 20 → 26 → 32** (software), e dopo il terzo
+La scala è dunque **QP 26 → 32 → 38** (hardware; in software lo stesso con CRF), e dopo il terzo
 tentativo `:2203` **restituisce `false`: il fotogramma NON parte.**
 
 `[M]` sul caso che sfonda, 7680×4320, n=8 per riga:
 
-| tentativo | hardware `hevc_vaapi` LP | esito | software `libx264` | esito |
-|---|---|---|---|---|
-| 0 | QP 26 → 28,915 MiB | ⛔ sopra 8/8 | CRF 20 → 32,149 MiB | ⛔ sopra 8/8 |
-| 1 | QP 32 → 22,442 MiB | ⛔ sopra 8/8 | CRF 26 → 25,602 MiB | ⛔ sopra 1/8 |
-| 2 | QP 38 → **16,654 MiB** | ⛔ **sopra 8/8** | CRF 32 → **19,895 MiB** | ⛔ **sopra 1/8** |
-| **3 — che non c'è** | *QP 44 → 11,056 MiB* | *0/8, ce l'avrebbe fatta* | *CRF 38 → 14,280 MiB* | *0/8, ce l'avrebbe fatta* |
+| tentativo | hardware `hevc_vaapi` LP | esito |
+|---|---|---|
+| 0 | QP 26 → 28,915 MiB | ⛔ sopra 8/8 |
+| 1 | QP 32 → 22,442 MiB | ⛔ sopra 8/8 |
+| 2 | QP 38 → **16,654 MiB** | ⛔ **sopra 8/8** |
+| **3 — che non c'è** | *QP 44 → 11,056 MiB* | *0/8, ce l'avrebbe fatta* |
+
+*(Le colonne del software, `libx264`, sono tolte: non valgono più dopo la fase 18. Allora davano lo
+stesso verdetto.)*
 
 ⇒ ⛔⛔ **Manca uno scalino solo**, su tutt'e due i percorsi, e il tentativo che manca è quello che
 sarebbe bastato. **QP 38 sta al 104,1 % del tetto**: si perde per il **4 %**.
@@ -3418,8 +3423,8 @@ sarebbe bastato. **QP 38 sta al 104,1 % del tetto**: si perde per il **4 %**.
 ⛔ **E la conseguenza è quella che `RCP.md` §5.2 esiste per non avere.** Se il fotogramma che «non
 parte» è una **chiave**, §5.2 dice *«il server NON DEVE abbandonare un fotogramma chiave»*: il
 client resta rotto, manda `RICHIEDI_CHIAVE`, e ogni richiesta fa rifare **tre** ricodifiche che non
-producono niente. `[M]` **Ogni tentativo a 8K costa 91-108 ms in hardware e 1,8-3,3 s in
-software** ⇒ **~300 ms** ovvero **~7,8 s** buttati per fotogramma, a ripetizione. **È la spirale.**
+producono niente. `[M]` **Ogni tentativo a 8K costa 91-108 ms in hardware** ⇒ **~300 ms** buttati per
+fotogramma, a ripetizione (in software molto di più; la misura è tolta, fase 18). **È la spirale.**
 
 ⚠ **Quanto è raggiungibile**: serve una tela vicina agli 8K **e** contenuto quasi incomprimibile.
 Alla tela dell'utente, mai (§D.2.1). ⇒ È un difetto **vero e dimostrato**, non **urgente**.
@@ -3485,7 +3490,7 @@ Alla tela dell'utente, mai (§D.2.1). ⇒ È un difetto **vero e dimostrato**, n
 
 | # | dove | che cosa, e perché |
 |---|---|---|
-| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware e **19,895 MiB** in software, e il quarto ce l'avrebbe fatta. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware e **1,8-3,3 s** in software, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
+| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware, e il quarto ce l'avrebbe fatta *(i numeri del software sono tolti: fase 18)*. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
 | **2** | `codificatore.c:2203-2207` — la resa | ⛔⛔ Quando si arrende restituisce `false` **anche per una CHIAVE**, e `RCP.md` §5.2 vieta di abbandonare le chiavi. ⇒ Per una chiave non ci si può arrendere: si continua a scendere finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si scrive nel registro che l'immagine è uscita brutta. Abbandonarla lascia il client rotto **per sempre**, e ogni `RICHIEDI_CHIAVE` che segue costa tre ricodifiche **che non producono niente**: è la spirale di §5.2 |
 | **3** | `codificatore.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* `c->ctx->max_b_frames = 0` | ⛔ **Non si tocca, e adesso c'è il numero accanto**: metterlo a 1 darebbe `[M]` 59 figure buttabili su 120 e −16 % di banda a qualità invariata, **ma 67 ms di riordino** — da solo oltre i 50 ms di `DECISIONI.md` §2.4. ⭐ Il commento «deciso, non ereditato» merita la misura sotto |
 | **4** | *nessuna riga: è una cosa che non esiste* | ⚠ `-max_frame_size` **non** è utilizzabile come tetto: `[M]` `hevc_vaapi` lo rifiuta in CQP, 3/3. Se qualcuno ci pensasse, è già misurato che non c'è |
@@ -3554,8 +3559,9 @@ del documento che vale di più, e si legge prima delle misure.*
 
 ### 5.4 ⛔ E una cura che non ha reso quel che aveva tolto
 
-Tolta la diagnostica dai pixel: `[M]` 21,19 → 18,86 ms. ⛔ **Ma tolti 7,28 e guadagnati 2,33**,
-perché `sws_scale` si è ripreso **+3,84 ms**: la scansione **gli scaldava la cache**. ⛔⛔ **E i
+Tolta la diagnostica dai pixel (7,28 ms), ⛔ **il totale è sceso molto meno**, perché `sws_scale`
+se n'è ripreso una parte: la scansione **gli scaldava la cache** *(i millisecondi del totale e di
+`sws_scale` sono tolti: fase 18)*. ⛔⛔ **E i
 fotogrammi consegnati non erano saliti** (1 271 → 1 242). ⇒ Per la regola di §2.2 punto 1 **non era
 ancora una vittoria**, e sta scritto così. ⭐ *(La vittoria è arrivata dopo, con la copia zero: +9 %.)*
 
@@ -3626,7 +3632,7 @@ gli input»* — non se ne perdeva nessuno, non si **vedeva** che arrivavano (`p
 | | |
 |---|---|
 | ⏳ **a quale velocità guarda l'utente** | 360 px danno 106 ms alla mediana, 57 al p90, 29 ai picchi. ⛔ **Non è deducibile**: si misura l'anello, non si chiede a lui |
-| ⏳ **i ~16 ms non spiegati** | dentro `cattura → primo byte` (30,37 ms) stanno 5,6 di conversione, 2,9 di caricamento, 5,3 di codifica — e **~16 che nessuno dei tre spiega**. ⚠ Un margine, non un difetto |
+| ⏳ **i ~16 ms non spiegati** | dentro `cattura → primo byte` (30,37 ms) stanno conversione, caricamento e codifica *(i loro tempi, sulla strada di `sws_scale`, sono tolti: fase 18)* — e **~16 che nessuno dei tre spiega**. ⚠ Un margine, non un difetto |
 | ⏳ **gli altri cinque tratti** | la fase 4 dice «sei da ~25 ms». ⛔ **Questo documento ne ha nominato uno solo.** Gli altri cinque vanno aperti |
 | ⏳ **i sei buchi** | del WiFi (§2.4) o nostri? Il banco li separa |
 | `[?]` **il codificatore e la sua scheda** | VA-API sceglie da sé; se cercasse la discreta — chiusa da udev — ripiegherebbe in CPU **in silenzio** (`DECISIONI.md` §4.6-ter) |
