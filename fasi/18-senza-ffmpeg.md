@@ -1,5 +1,9 @@
 # Fase 18 — REMOTIX senza ffmpeg
 
+✅ **CHIUSA il 30 settembre 2026**: suite della fase 15 verde sulle 4 scatole (673/673 in hardware, 80/80 di fumo
+in software); il prodotto non collega più libavcodec, libavutil né libswscale. Unita in `fase-10-cure` (`13ccabd`).
+Prossimo passo: T10 della fase 17 sul prodotto senza ffmpeg.
+
 *Aperta dall'utente il **30 settembre 2026** (`DECISIONI.md` §10.22, §10.25). Nasce dalla licenza: REMOTIX sarà
 sotto **PolyForm Noncommercial**, incompatibile con la libavcodec **GPL** delle distribuzioni. Togliendo ffmpeg
 tutte le dipendenze di REMOTIX diventano permissive (MIT, BSD, Apache).*
