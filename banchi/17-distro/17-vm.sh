@@ -277,7 +277,9 @@ cmd_riavvia() {
 	local b0; b0=$(ssh_vm 'cat /proc/sys/kernel/random/boot_id')
 	ssh_vm 'sudo systemctl reboot' 2>/dev/null || true
 	sleep 5
-	aspetta_ssh 300
+	# RX_VM_RIAVVIA_S: la pazienza del riavvio (predefinito 300 s); con più VM insieme lo
+	# spegnimento+riavvio si allunga per la contesa (T10, 30 set: Fedora sotto carico > 300 s)
+	aspetta_ssh "${RX_VM_RIAVVIA_S:-300}"
 	local b1; b1=$(ssh_vm 'cat /proc/sys/kernel/random/boot_id')
 	[ "$b0" != "$b1" ] || die "boot_id invariato: la macchina non si e' riavviata"
 	ok "riavviata (boot_id cambiato)"

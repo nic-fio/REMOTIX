@@ -127,7 +127,10 @@ echo --- certifica:; sudo /usr/bin/remotix-install certifica --lingua it 2>&1; e
 echo --- registro d avvio:; sudo journalctl -u remotix.service --no-pager -b 2>/dev/null | grep -aE 'codec offerti|OpenH264|pronto|RX-|⛔' | tail -6 | cut -c1-200" >"$E/installato.txt" 2>&1
 sed 's/^/   /' "$E/installato.txt" | tee -a "$E/giro.log" >/dev/null
 grep -E 'pacchetti:|servizio:|R4 |Certificazione|certifica: uscita|codec offerti' "$E/installato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
-if [ $u = 0 ] && echo "$OP" | grep -qE 'CONFERMATA' && grep -q 'certifica: uscita 0' "$E/installato.txt" && grep -q 'servizio: enabled active' "$E/installato.txt" && grep -q 'in ascolto 7447: [1-9]' "$E/installato.txt" && grep -q 'non trovate (uid prova): 0' "$E/installato.txt"; then
+# nella VM non c'è la scheda: la certificazione attesa è A_CONDIZIONI con la sola C-RIPIEGO (R35),
+# oppure VERDE; ogni controllo PASS
+certifica_va() { grep -q 'Certificazione dell' "$1" && ! grep -qE '^  (FAIL|UNKNOWN) ' "$1" && ! { grep -E '^  C-' "$1" | grep -vq 'C-RIPIEGO'; }; }
+if [ $u = 0 ] && echo "$OP" | grep -qE 'CONFERMATA' && certifica_va "$E/installato.txt" && grep -q 'servizio: enabled active' "$E/installato.txt" && grep -q 'in ascolto 7447: [1-9]' "$E/installato.txt" && grep -q 'non trovate (uid prova): 0' "$E/installato.txt"; then
 	esito_passo installa PASS
 else
 	esito_passo installa FAIL; exit 1
@@ -139,7 +142,7 @@ say "   uscita $? — $(grep -E '^T1C ' "$E/browser-1.log" | cut -c1-300)"
 if grep -E '^T1C ' "$E/browser-1.log" | grep -q '"esito": *"PASS"'; then esito_passo browser PASS; else esito_passo browser FAIL; vm "sudo journalctl -u remotix --no-pager -b | tail -40" >"$E/journal-browser-1.txt" 2>&1; exit 1; fi
 
 say "==> 4. riavvio vero della macchina (R15), e si rientra"
-$V riavvia "$m" >"$E/riavvia.log" 2>&1 || { tail -3 "$E/riavvia.log" | tee -a "$E/giro.log"; esito_passo riavvio FAIL; exit 1; }
+RX_VM_RIAVVIA_S=${RX_VM_RIAVVIA_S:-600} $V riavvia "$m" >"$E/riavvia.log" 2>&1 || { tail -3 "$E/riavvia.log" | tee -a "$E/giro.log"; esito_passo riavvio FAIL; exit 1; }
 vm "echo \"servizio: \$(systemctl is-active remotix 2>&1) · in ascolto 7447: \$(sudo ss -Htulpn | grep -c ':7447 ')\"" | tee -a "$E/giro.log"
 T1C=$T1C T1C_EVIDENZE=$E/browser-2 bash "$R/t1c/17-t1c-guarda.sh" "$m" "$PRX" chrome >"$E/browser-2.log" 2>&1
 say "   uscita $? — $(grep -E '^T1C ' "$E/browser-2.log" | cut -c1-300)"
@@ -177,9 +180,9 @@ say "   $(grep '^T8 ' "$E/browser-agg.log" | cut -c1-400)"
 vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-active remotix 2>&1) · pid \$(systemctl show -p MainPID --value remotix)\"
 sudo /usr/bin/remotix-install versione; sudo /usr/bin/remotix-install stato --lingua it 2>&1 | head -12
-sudo /usr/bin/remotix-install certifica --lingua it >/root/c.txt 2>&1; echo \"certifica: uscita \$?\"; head -3 /root/c.txt" >"$E/aggiornato.txt" 2>&1
+sudo sh -c '/usr/bin/remotix-install certifica --lingua it >/tmp/c.txt 2>&1'; echo \"certifica: uscita \$?\"; sudo cat /tmp/c.txt" >"$E/aggiornato.txt" 2>&1
 grep -E 'pacchetti:|servizio:|Certificazione|certifica: uscita' "$E/aggiornato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
-if grep -q 'aggiornamento: uscita 0' "$E/aggiorna.txt" && grep -E '^T8 ' "$E/browser-agg.log" | grep -q '"esito": *"PASS"' && cmp -s "$E/palco-prima.txt" "$E/palco-dopo.txt" && [ -s "$E/palco-prima.txt" ] && grep -q "pacchetti:.*${VERSIONE_N1:-NON_DATA}" "$E/aggiornato.txt" && grep -q 'certifica: uscita 0' "$E/aggiornato.txt"; then
+if grep -q 'aggiornamento: uscita 0' "$E/aggiorna.txt" && grep -E '^T8 ' "$E/browser-agg.log" | grep -q '"esito": *"PASS"' && cmp -s "$E/palco-prima.txt" "$E/palco-dopo.txt" && [ -s "$E/palco-prima.txt" ] && grep -q "pacchetti:.*${VERSIONE_N1:-NON_DATA}" "$E/aggiornato.txt" && certifica_va "$E/aggiornato.txt"; then
 	esito_passo aggiorna PASS
 else
 	esito_passo aggiorna FAIL
@@ -193,7 +196,7 @@ OROLOGIO=$!
 sleep 4
 vm "loginctl list-sessions --no-legend" >"$E/sessioni-prima.txt" 2>&1
 T0=$(date +%s)
-vm "sudo /usr/bin/remotix-install disinstalla --purge --uscita /root/d.json --lingua it >/root/d.txt 2>&1 && sudo /usr/bin/remotix-install applica /root/d.json --approva --lingua it" >"$E/disinstalla.txt" 2>&1
+vm "sudo sh -c '/usr/bin/remotix-install disinstalla --purge --uscita /root/d.json --lingua it >/tmp/d.txt 2>&1' && sudo /usr/bin/remotix-install applica /root/d.json --approva --lingua it" >"$E/disinstalla.txt" 2>&1
 u=$?
 OPD=$(grep -E '^operazione ' "$E/disinstalla.txt" | tail -1)
 say "   disinstalla: uscita $u in $(( $(date +%s) - T0 )) s — $OPD"
@@ -211,10 +214,17 @@ vm "sudo rm -f ~prova/orologio.txt"
 impronta dopo
 diff "$E/impronta-prima.txt" "$E/impronta-dopo.txt" >"$E/diff-R6.txt"
 # R6: le righe DIRETTE di REMOTIX rimaste; i gruppi di «prova» come prima (R33); il resto (cache,
-# ore delle cartelle, copie di gpasswd) si legge nel diff e si dichiara
-grep -E '^[<>]' "$E/diff-R6.txt" | grep -i 'remotix' | grep -vE 'journal|/var/cache|/var/log' >"$E/diff-R6-remotix.txt"
+# ore delle cartelle, copie di gpasswd) si legge nel diff e si dichiara.
+# ⛔ Escluso `/var/lib/remotix` (la STORIA del motore: la cartella `piani`/`operazioni` dell'operazione
+#    di disinstallazione IN CORSO non si può togliere mentre gira — residuo DIRETTO atteso, come in T5,
+#    §13.1 riga 56c93d3; `--purge` toglie il resto). Un residuo remotix FUORI di lì è un vero rosso.
+#    Escluso anche `~/.local/state/remotix/sessione.log` (il registro della sessione dell'utente:
+#    DIRETTA, ma la sua rimozione è una DECISIONE APERTA dell'utente, §13.1 ⚠ punto 2 di 165906c).
+grep -E '^[<>]' "$E/diff-R6.txt" | grep -i 'remotix' | grep -vE 'journal|/var/cache|/var/log|/var/lib/remotix|state/remotix' >"$E/diff-R6-remotix.txt"
+# i residui DOCUMENTATI (storia del motore, registro di sessione): si dichiarano, non fanno rosso
+grep -E '^[<>]' "$E/diff-R6.txt" | grep -iE '/var/lib/remotix|state/remotix' >"$E/diff-R6-attesi.txt" || true
 G1=$(sed 's/.*groups=//' "$E/gruppi-prima.txt"); G2=$(grep '^uid=' "$E/dopo.txt" | sed 's/.*groups=//')
-say "   R6: $(grep -c '^[<>]' "$E/diff-R6.txt") righe diverse, di cui $(wc -l <"$E/diff-R6-remotix.txt") nominano remotix; gruppi di prova prima «$G1» dopo «$G2»"
+say "   R6: $(grep -c '^[<>]' "$E/diff-R6.txt") righe diverse, di cui $(wc -l <"$E/diff-R6-remotix.txt") residui remotix NON attesi, $(wc -l <"$E/diff-R6-attesi.txt") attesi (storia/sessione); gruppi di prova prima «$G1» dopo «$G2»"
 a=$(grep 'R43 orologio' "$E/dopo.txt" | sed 's/.*: //'); a1=${a%% →*}; a2=${a##*→ }
 if [ $u = 0 ] && echo "$OPD" | grep -q 'CONFERMATA' && [ -z "$(grep 'pacchetti rimasti:' "$E/dopo.txt" | cut -d: -f2 | tr -d ' ')" ] && [ "$a1" != "$a2" ] && grep -q 'desktop di prova: 0' "$E/dopo.txt" && [ "$G1" = "$G2" ] && [ ! -s "$E/diff-R6-remotix.txt" ]; then
 	esito_passo disinstalla PASS
