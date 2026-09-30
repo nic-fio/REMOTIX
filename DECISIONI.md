@@ -6165,6 +6165,10 @@ l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prod
   ffmpeg, quando il video potrebbe andare in software.
 - **Niente AV1 come ultimo ripiego**: senza scheda e senza un OpenH264 vero (l'installatore lo mette
   sempre) REMOTIX **lo dichiara** all'avvio col rimedio; il browser non riceve codec che il server non sa fare.
+- ✅ **Si ripetono solo le due misure che il cambio ha toccato** (parola dell'utente, 30 set): il confronto
+  relativo vecchio/nuovo, stessa macchina e stesse immagini, per la codifica **senza scheda** e per la scheda
+  con i pixel **dalla memoria**. La copia zero è risultata identica (byte, qualità, tempi del codificatore) e
+  non si rimisura; il resto delle prove di prestazione resta tolto.
 - 🔸 (detti all'utente, non ancora confermati esplicitamente) i limiti di OpenH264 senza scheda: niente senza perdita (si chiede la qualità più alta), H.264
   fino a 4096×2304 (oltre, serve la scheda).
 
