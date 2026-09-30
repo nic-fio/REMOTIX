@@ -1,5 +1,7 @@
 # Fase 15 — La suite funzionale
 
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
+
 *Decisa il **24 settembre 2026**, sera. Da aprire in una sessione nuova.*
 
 ## Perché esiste
@@ -404,7 +406,7 @@ prodotto.
 - **L'orecchio innocente ma gonfiante** (D-006). L'orecchio del G4 sostituisce il collegamento audio
   della pagina: il sospetto era che i buchi di Firefox fossero suoi. `[M]` misurato **senza orecchio**
   (60 s, lxqt e kde): Firefox+video 3-5 riarmi anche col video nel worker, Firefox senza video 0,
-  Chrome 0, Firefox+video in PCM 0, CPU del server 11-14 % ⇒ il difetto è **vero** (il decodificatore
+  Chrome 0, Firefox+video in PCM 0, CPU del server lontana dal limite ⇒ il difetto è **vero** (il decodificatore
   Opus di Firefox), l'orecchio non lo crea. Ma lo **gonfia**: le percentuali di F-013 (75-89 %) non sono
   la misura del difetto. E la prima cura, scritta su un banco che non somigliava a Firefox vero, coi
   browser veri peggiorava: tolta.

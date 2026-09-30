@@ -1,5 +1,7 @@
 # Fase 16 — Stress e capacità
 
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
+
 *Decisa dall'utente il **25 settembre 2026**, pomeriggio, a fase 15 chiusa a zero difetti. Questo
 documento fissa **prima** dei test tutto quel che la campagna farà: le decisioni, l'impianto, i
 lavori, le misure, le soglie. ⛔ Le soglie di §9 si approvano prima della campagna e **non si
@@ -183,27 +185,26 @@ classificazione nasce dal comportamento, e le risorse servono a spiegarlo.*
 | sessione caduta, riavvio, errore RCP/QUIC che stacca | nessuno | — | uno qualunque |
 | memoria dei recinti `remotix` e `sessioni` nel livello, a lavoro stabile (il recinto `browser` si **registra** ma non classifica: la cache di un Firefox che naviga cresce da sola) | crescita ≤ 5 % | 5–15 % (si segnala) | > 15 % e continua (perdita) |
 
-**Quale ritardo classifica** — `[M]` diagnosi del 25 set sera (scatola xfce, 1 utente, terminale,
-460 lettere; evidenze in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). Il giro della pagina
-(tasto → fotogramma che lo porta) in 4K fa **45 / 54 ms** (p50/p95), ma dentro c'è lavoro che non
-è nostro:
+**Quale ritardo classifica** — `[M]` diagnosi del 25 set sera (scatola xfce, 1 utente, terminale;
+evidenze in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). Il giro della pagina (tasto → fotogramma
+che lo porta) contiene lavoro che non è nostro *(i tempi dei tratti sono stati tolti con la fase
+18)*:
 
-| tratto (4K, p50/p95 ms) | | di chi |
-|---|---|---|
-| la pagina manda il tasto → il terminale lo riceve | 4,9 / 8,7 | **nostro** (limitato dal `poll` di 8 ms del figlio, `figlio.c` `MOVIMENTO_ATTESA_S`) |
-| il terminale disegna l'eco | 10,2 / 16,6 | applicazione |
-| il compositore compone e ce lo copia | 14,5 / 19,0 | compositore |
-| conversione + codifica + spedizione → pagina | 14,0 / 14,9 | **nostro** |
-| decodifica e disegno nel browser (fuori dal giro) | Firefox 38, Chrome 3,4 | browser |
+| tratto | di chi |
+|---|---|
+| la pagina manda il tasto → il terminale lo riceve | **nostro** (limitato dal `poll` di 8 ms del figlio, `figlio.c` `MOVIMENTO_ATTESA_S`) |
+| il terminale disegna l'eco | applicazione |
+| il compositore compone e ce lo copia | compositore |
+| conversione + codifica + spedizione → pagina | **nostro** |
+| decodifica e disegno nel browser (fuori dal giro) | browser |
 
-⇒ Il **pezzo nostro** è ~19 / 24 ms, sotto il tetto di 50. Quindi, come dicono §7 («quello che il
+⇒ Il tetto di 50 ms si giudica sul **pezzo nostro**. Quindi, come dicono §7 («quello che il
 prodotto misura dal suo lato») e la riga qui sotto («prodotto»): **classifica il ritardo del
 prodotto** = p95 dei massimi al secondo della riga del figlio `TRATTO cattura → byte fuori` + 9 ms
 (il tetto costruttivo del tratto d'ingresso). ⚠ Sulla strada wlroots quella riga conta la copia
-due volte (~4 ms in più): è dal lato prudente e non si corregge durante la campagna. Il **giro della
+due volte: è dal lato prudente e non si corregge durante la campagna. Il **giro della
 pagina** (`giro_eco`, solo battitura) si **registra** come ritardo dell'esperienza e non classifica.
-Candidata di cura per dopo la campagna: il socket del padre nello stesso `poll` del figlio
-(~4 ms p50, ~8 ms p95).
+Candidata di cura per dopo la campagna: il socket del padre nello stesso `poll` del figlio.
 
 **Il livello** è GREEN se **tutte** le sessioni sono GREEN; DEGRADED se almeno una è DEGRADED e
 nessuna FAIL; FAIL se almeno una è FAIL. **DEGRADED significativo** = più di un quarto delle
@@ -294,17 +295,17 @@ configurazione (desktop, scheda, commit, lavoro, utenti, sintomo) e non si gener
 
 ### Anomalia A1 — Firefox in 4K salta i fotogrammi già con un utente (25 set, notte)
 
-`[M]` salita di prova (GNOME 4K, 1 utente, Firefox cliente): 489 consegnati, 433 dipinti, **11,5 %
-saltati ⇒ FAIL** già al primo gradino; Chrome nelle stesse condizioni 3–6 %. Diagnosi (evidenze in
+`[M]` salita di prova (GNOME 4K, 1 utente, Firefox cliente): i fotogrammi **saltati oltre la soglia
+di §9 ⇒ FAIL** già al primo gradino; Chrome nelle stesse condizioni no. Diagnosi (evidenze in
 `/media/REMOTIX/misure/fase16/diagnosi-ff-hw/`): il Firefox cliente decodifica **già in hardware**
-(VA-API, 2,3 ms di motore video a fotogramma, come Chrome); il collo è la strada di disegno della
-pagina: in Firefox 140 `createImageBitmap(VideoFrame)` fa una **rilettura sincrona dalla GPU**
-(~34 ms a 4K, sul thread principale, bug Mozilla 1788206), la coda del decodificatore supera 2 e la
-pagina salta (`saltati_coda`). Con la decodifica software si scende al 12 %, ancora sopra il 10.
+(VA-API, come Chrome); il collo è la strada di disegno della pagina: in Firefox 140
+`createImageBitmap(VideoFrame)` fa una **rilettura sincrona dalla GPU** (cara in 4K, sul thread
+principale, bug Mozilla 1788206), la coda del decodificatore supera 2 e la pagina salta
+(`saltati_coda`). Con la decodifica software si resta sopra la soglia.
 ⇒ È un limite del **prodotto con Firefox in 4K** (la pagina), non del server né del carico: la
 campagna lo misura così com'è, e al 4K ogni gradino con un utente Firefox ne risente.
 Cura candidata, da misurare dopo la campagna: disegno con **WebGL2 `texImage2D(VideoFrame)`**
-(via DMA-BUF senza rilettura in ESR 140; stima < 2 ms), banco pronto in
+(via DMA-BUF senza rilettura in ESR 140), banco pronto in
 `banchi/16-stress/16-banco-tela.html` (vie `bmp` e `gl`, criteri: disegno < 3 ms, saltati < 5 %, e
 la foto del vetro col testimone per escludere i blocchi della 2D).
 
@@ -324,9 +325,8 @@ il banco non usa il prodotto come lo userebbe una persona.
 ### Anomalia A3 — Radeon, 4K: ritardo a picchi e tela larga 3824 senza immagine (27 set)
 
 `[M]` `amd-4k-gnome` (binario 45d048c8, Radeon RX 6800, radeonsi 25.0.7), **1 utente**:
-- **ritardo**: NOSTRO mediana **9,1–9,3 ms** ma p95 dei p95 **45–50 ms** (max 60 ms), sulla Intel
-  allo stesso livello restava verde fino a 3 utenti ⇒ DEGRADED a 1 utente, due volte. Il lavoro
-  normale è veloce; sono picchi. `[?]` Chi li fa (codifica VCN, la copia dalla scheda, il
+- **ritardo**: NOSTRO con la mediana bassa ma il p95 a ridosso del tetto, dove la Intel restava
+  verde ⇒ DEGRADED a 1 utente, due volte. Il lavoro normale è veloce; sono picchi. `[?]` Chi li fa (codifica VCN, la copia dalla scheda, il
   compositore): da misurare dopo la campagna, prima di giudicare la Radeon in 4K.
 - **tela 3824 × 2064**: il controllo con **Chrome** (finestra 3840×2073, tela 3824) non ha mai
   avuto un fotogramma: 99 volte «il flusso MOSTRA 3840x2064 … la tela è 3824x2064» e 99 volte «il
@@ -356,19 +356,17 @@ il fondo si tocca più spesso. ⇒ **Difetto del banco, non del prodotto**; cura
 FAIL `amd-freq-*` e ha pesato su `intel-b-4k-kde` e `amd-4k-kde`. ⚠ Le frecce su/giù che
 l'utente aveva notato a mano restano una domanda separata: questo banco non le prova.
 `[M]` **Verifica, 27 set sera** (`amd-b-4k-kde`, attore curato): 10 PageDown, **0 persi**; il
-gradino da 1 utente cede ora solo per il ritardo (A3, NOSTRO p95 ~41 ms + 9), non più per input.
+gradino da 1 utente cede ora solo per il ritardo (A3), non più per input.
 
 ### Anomalia A3, seconda metà — il ritardo della Radeon NON è la frequenza (27 set)
 
-`[M]` KDE 4K, 1 utente, binario 28a947f5, due gradini per condizione: NOSTRO p95 dei p95
-**39,3 / 38,6 ms** con `power_dpm_force_performance_level=auto`, **37,5 / 42,0 ms** con `high`;
-mediana 8,8 ms in tutti e quattro. ⇒ Ipotesi smentita; la scheda è tornata su `auto`. `[?]`
-Resta da capire da dove vengono i picchi (la codifica ha mediana dei p95 ~20 ms).
+`[M]` KDE 4K, 1 utente, binario 28a947f5, due gradini per condizione:
+`power_dpm_force_performance_level=auto` e `high` danno **lo stesso ritardo**. ⇒ Ipotesi smentita;
+la scheda è tornata su `auto`. `[?]` Resta da capire da dove vengono i picchi.
 
-`[M]` **Dove stanno i picchi** (registro del server, `amd-freq-auto/livello-01`, 3322 fotogrammi):
-la codifica è bimodale — mediana **8,7 ms**, p99 **31 ms** — e i lenti arrivano **a gruppi di 5
-consecutivi da 31 ms**, ogni 12–40 s, su delta piccolissimi (300–1500 byte); la Intel sullo stesso
-lavoro: p99 8,7 ms, max 10,4. 11 gruppi su 13 cominciano entro 1,5 s da un'azione che fa
+`[M]` **Dove stanno i picchi** (registro del server, `amd-freq-auto/livello-01`): la codifica è
+**bimodale**, e i lenti arrivano **a gruppi di 5 consecutivi**, a intervalli irregolari, su delta
+piccolissimi; la Intel sullo stesso lavoro non ne ha. 11 gruppi su 13 cominciano entro 1,5 s da un'azione che fa
 ridisegnare la pagina (clic, rotella, tasto). `[?]` **Ipotesi**, da verificare: su radeonsi la
 conversione RGB → NV12 del VPP gira sugli **shader** (coda grafica), in fila dietro al
 ridisegno del desktop della sessione; sulla Intel la fa un blocco dedicato (VEBOX). Se è così,
@@ -379,61 +377,57 @@ comprende l'attesa del VPP.
 ⛔ **Ipotesi SMENTITA, 29 set** (agente a refutare, sorgenti di Mesa 25.0.7 e registri):
 - su radeonsi il VPP **non converte**: dal 16° fotogramma `postproc.c` registra la sorgente RGB e
   torna (EFC), e la conversione RGB→NV12 la fa il **VCN dentro la codifica** leggendo il buffer
-  lineare del compositore (conversione misurata 0,03 ms, contro 8,6 ms di VEBOX sulla Intel);
-- i gruppi sono **sempre 5 fotogrammi** (64 su 64), ~8,7 + 22 ms, **qualunque la dimensione**
-  (300 B come 480 KB) e **anche distanziati nel tempo** (un gruppo su GNOME dura 1,2 s): conta
-  fotogrammi, non tempo;
-- **per sessione**: in `amd-b-4k-kde` u99 fa 5×31 ms mentre u1, sulla stessa scheda e lo stesso
-  VCN, codifica a 8,5 ms negli stessi istanti; scheda grafica al 2–6 %.
+  lineare del compositore;
+- i gruppi sono **sempre 5 fotogrammi** (64 su 64), **qualunque la dimensione** del fotogramma e
+  **anche distanziati nel tempo**: conta fotogrammi, non tempo;
+- **per sessione**: in `amd-b-4k-kde` u99 fa un gruppo lento mentre u1, sulla stessa scheda e lo
+  stesso VCN, codifica normale negli stessi istanti; scheda grafica quasi ferma.
   ⇒ Niente coda comune, niente priorità da alzare. `[?]` Candidate: l'attesa implicita sul buffer
   del compositore di quella sessione, il buffer lineare da 30 MB in memoria di sistema (GTT), o
   lo stato del contesto VCN. **Esperimenti proposti**: (1) misurare prima — attesa esplicita della
   barriera del DMA-BUF (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`) fuori da «codifica», e codifica divisa
   in invio/ricezione; (2) spegnere l'EFC (un `vaProcess` in più all'apertura: Mesa lo disattiva
-  per sempre) così il VCN legge una NV12 in VRAM, al costo di ~1–2 ms di copia. Da fare prima di
+  per sempre) così il VCN legge una NV12 in VRAM, al costo di una copia. Da fare prima di
   giudicare il 4K della Radeon.
 
 `[M]` **I due esperimenti, 29 set mattina** (ramo `a3-esperimenti`, commit `18b6437`, binari
 `3e510160` e `39e3ed86`; KDE 4K Radeon, 1 utente, due gradini ciascuno; evidenze
 `misure/fase16/a3-misura-kde`, `a3-senza-efc-kde`):
-1. **la barriera del compositore NON c'entra**: aspettata esplicitamente e misurata a parte, vale
-   0,37 ms sui fotogrammi normali e **0,02 ms su quelli lenti**; e i 22 ms in più stanno **tutti
-   dentro `avcodec_send_frame`** (ricezione 0,0 ms): con `async_depth=1` è il VCN che codifica;
-   ancora 100 e 105 fotogrammi lenti per gradino;
-2. **l'EFC NON c'entra**: spento (conversione vera, 0,75 ms mediana), i gruppi da 5 × 31 ms restano
-   identici — 95 e 106 lenti per gradino, codifica p99 31,1–31,3 ms.
+1. **la barriera del compositore NON c'entra**: aspettata esplicitamente e misurata a parte, è
+   trascurabile proprio sui fotogrammi lenti; e il tempo in più sta **tutto dentro
+   `avcodec_send_frame`**: con `async_depth=1` è il VCN che codifica; i gruppi lenti restano;
+2. **l'EFC NON c'entra**: spento (conversione vera), i gruppi da 5 restano identici.
 ⇒ Il ritardo è **dentro la codifica del VCN** della Radeon, una sessione per volta, 5 fotogrammi
-ogni 12–40 s. Resta da provare: le superfici con il tiling della scheda (invece del lineare), la
+alla volta. Resta da provare: le superfici con il tiling della scheda (invece del lineare), la
 codifica in un contesto nuovo; e, se nessuna delle due, è un comportamento del driver/firmware da
 segnalare a Mesa con la scena riprodotta. Il 4K della Radeon nel riepilogo resta con questa riserva.
 
 `[M]` **Gradino 1 (29 set 2026): Mesa 26.1.6 non cura.** Scatola KDE con Mesa 26.1.6 da
 `trixie-backports`, stesso binario `4fb3287d`, KDE 4K Radeon 1 utente, due gradini da 6 min
-(`a3-mesa26-kde`): **100 e 102** codifiche > 20 ms (con 25.0.7: 100 e 105), a raffiche di 5, mediana
-31,0 ms. ⇒ Il manuale NON può dire «Radeon: serve Mesa ≥ X»; il prossimo passo per chi vuole aiutare
+(`a3-mesa26-kde`): le codifiche lente arrivano **come con la 25.0.7**, a raffiche di 5. ⇒ Il manuale NON può dire «Radeon: serve Mesa ≥ X»; il prossimo passo per chi vuole aiutare
 il driver è la riproduzione minima senza REMOTIX (dossier §6.2). La scatola è tornata a Mesa 25.0.7
 (ricostruita dall'immagine).
 
 ✅ **Decisione dell'utente, 29 set 2026**: *«è fuori dal nostro ambito»* — A3 **non si aggira** in
 REMOTIX; si documenta nei minimi particolari per poterlo portare agli sviluppatori del driver:
-**`fasi/16-a3-radeon-vcn.md`** (macchina, catena, misure, ipotesi escluse, riproduzione, bozza del
-rapporto per Mesa). Il 4K della Radeon nel riepilogo è limitato dal driver, e lo si dichiara.
+**`fasi/16-a3-radeon-vcn.md`** (dalla fase 18 ridotto a che cosa resta; il dossier con le misure
+sta nella sua storia). Il 4K della Radeon nel riepilogo è limitato dal driver, e lo si dichiara.
 
 ### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
 
 `[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,
-Chrome), «blocco più lungo dell'immagine» 1,1–2,7 s, mentre i fotogrammi **arrivano e si
-dipingono tutti** (6622 consegnati = 6622 dipinti, 0 buchi). Lo stesso utente su GNOME Radeon
-(0,11 s) e su KDE Intel (0,08 s) è verde ⇒ **non è la cura D-023** (attiva anche su GNOME). `[?]`
-Ipotesi: il lettore video dentro la sessione KDE si ferma (l'immagine arriva ma non cambia). Da
-guardare dopo la campagna, prima di chiudere KDE Full HD Radeon a 15.
+Chrome), «blocco più lungo dell'immagine» sopra la soglia, mentre i fotogrammi **arrivano e si
+dipingono tutti** (consegnati = dipinti, 0 buchi). Lo stesso utente su GNOME Radeon e su KDE Intel
+è verde ⇒ **non è la cura D-023** (attiva anche su GNOME). `[?]` Ipotesi: il lettore video dentro
+la sessione KDE si ferma (l'immagine arriva ma non cambia). Da guardare dopo la campagna, prima di
+chiudere KDE Full HD Radeon.
 
 ⭐ **Chiusa, 29 set (agente a refutare, registri dei livelli)**: è il **riavvio del file del video**.
 Il lettore gira il file da ~634 s con `loop`; ogni blocco dell'utente 4 cade a t≈630–634 o t≈0–6 s
-del lettore, ogni ~10,5 min, e il lettore stesso conta 60–90 fotogrammi persi a ogni giro. Lo
-stesso succede su GNOME Radeon (2,8–4,4 s) e KDE Intel (1,5 s): KDE Radeon era DEGRADED solo
-perché le sue finestre di giudizio cadevano sul giro. Lato nostro, nel buco: la cattura gira
-(«attese a vuoto» +123/s), i fotogrammi consegnati restano fermi (il compositore non dà danno),
+del lettore, ogni ~10,5 min, e il lettore stesso conta fotogrammi persi a ogni giro. Lo stesso
+succede su GNOME Radeon e KDE Intel: KDE Radeon era DEGRADED solo perché le sue finestre di giudizio
+cadevano sul giro. Lato nostro, nel buco: la cattura gira («attese a vuoto» che crescono), i
+fotogrammi consegnati restano fermi (il compositore non dà danno),
 nessuna chiave richiesta, rete pulita; i buchi al server coincidono al millisecondo con quelli
 dell'attore (2,685 contro 2,68 s). ⇒ **Non è REMOTIX**, è il banco. Cura del banco (non fatta):
 un file più lungo del livello (`ffmpeg -stream_loop`, senza ricodifica), o le righe attorno al
@@ -442,7 +436,7 @@ giro dichiarate ed escluse. Sul riepilogo pesa poco: tocca il numero severo di K
 concatenato 4 volte senza ricodifica (`ffmpeg -stream_loop 3 -c copy`, 2538 s = 42 min, sha256 in
 `video/SHA256SUMS`), più lungo di qualunque livello; `16-coda.sh` lo usa di serie. `[M]` provato
 il 29 set (`a5-video-lungo-kde`, KDE Full HD Radeon, 4 utenti, 12 min: col file vecchio il giro
-sarebbe caduto a 10,5 min, dentro la finestra 10–12): utente 4 **GREEN, blocco 0,08 s**, livello
+sarebbe caduto a 10,5 min, dentro la finestra 10–12): utente 4 **GREEN**, livello
 tutto GREEN (5 su 5).
 
 ### Le frecce su/giù (segnalate dall'utente a mano) — studio del 29 set
@@ -495,14 +489,14 @@ il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la 
 | `62753e7` | **registro nel journal** (`--journal`): protocollo nativo del journal, una `sendmsg` per riga, non bloccante; campi `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; gravità 3/4/6 dal segno ⛔/⚠ in testa al corpo; la parlantina NON va al journal; il figlio lo riceve dal padre (`argv[16]`) | §12, DECISIONI §9.1 | 33 righe su 33 con i campi; stderr identico senza l'opzione | sì, da `bdde6bb1` |
 | `62753e7` | **l'input non si scrive**: `rcp.c` (e il gemello `banchi/rcp/rcp.c`), `tastiera.c`, `input.c` — niente `U+XXXX` né codici di tasto, salvo modificatori e pulsanti | §12, DECISIONI §9.2 | audit di tutte le chiamate `registro_*` | sì |
 | `62753e7` | `Makefile`: ogni oggetto dipende da `registro.h` | `registro.h` è diventato di macro (`__FILE__`/`__LINE__`) e una costruzione a metà non collegava | — | — |
-| `ebc9dcd` | **riga «NOSTRO nel secondo»** del figlio: p95, massimo e mediana di *copia → byte fuori* sui soli fotogrammi di quel secondo | la riga TRATTO usa un anello di 512 fotogrammi (un picco resta dentro 8–17 s) e comincia dal `pts` del compositore; §3.2 chiede il **pezzo nostro** | diagnosi del giro in 4K: nostro ~19/24 ms su 45/54 (§9, «Quale ritardo classifica») | sì, da `4cba76f6` |
-| `97e94fe` | **entrypoint del codificatore scelto sulla capacità dichiarata** dal driver: `EncSliceLP` se c'è (Intel, identico), se no `EncSlice` piena (radeonsi), dichiarato; il software solo se non c'è nessuno dei due | la Radeon non ha la bassa potenza ⇒ il prodotto codificava in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena», NOSTRO p95 17–29 ms | sì, `3fe94e8b` (binario della campagna Intel) |
-| `86598d6` | **primo fotogramma della scheda giudicato a campione** (griglia 64×64, tetto 250 ms) invece di leggere tutta la lastra DMA-BUF | su una scheda discreta la lastra è in VRAM: leggerla dalla CPU costava **63,7 s** e la sessione non nasceva | `[M]` 26 set, Radeon, XFCE e GNOME 4K: **5,7–6,2 ms** (prima 63,7 s), codifica `h264_vaapi` in HARDWARE su radeonsi, sessioni GREEN | sì, `45d048c8` |
-| `ea0f82a` | **strada di disegno WebGL2** nella pagina (`?tela=gl`): `texImage2D(VideoFrame)` sincrono, `close()` subito, quad a schermo intero, stessi contatori | anomalia A1: in Firefox `createImageBitmap(VideoFrame)` rilegge dalla GPU (~34 ms a 4K) ⇒ 11–50 % saltati con 1 utente | da misurare; poi sguardo dell'utente contro i quadrati (DECISIONI §9.4) | **no** (candidata) |
+| `ebc9dcd` | **riga «NOSTRO nel secondo»** del figlio: p95, massimo e mediana di *copia → byte fuori* sui soli fotogrammi di quel secondo | la riga TRATTO usa un anello di 512 fotogrammi (un picco resta dentro 8–17 s) e comincia dal `pts` del compositore; §3.2 chiede il **pezzo nostro** | diagnosi del giro in 4K (§9, «Quale ritardo classifica») | sì, da `4cba76f6` |
+| `97e94fe` | **entrypoint del codificatore scelto sulla capacità dichiarata** dal driver: `EncSliceLP` se c'è (Intel, identico), se no `EncSlice` piena (radeonsi), dichiarato; il software solo se non c'è nessuno dei due | la Radeon non ha la bassa potenza ⇒ il prodotto codificava in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena» | sì, `3fe94e8b` (binario della campagna Intel) |
+| `86598d6` | **primo fotogramma della scheda giudicato a campione** (griglia 64×64, tetto 250 ms) invece di leggere tutta la lastra DMA-BUF | su una scheda discreta la lastra è in VRAM: leggerla dalla CPU era lentissimo e la sessione non nasceva | `[M]` 26 set, Radeon, XFCE e GNOME 4K: la sessione nasce, codifica `h264_vaapi` in HARDWARE su radeonsi, sessioni GREEN | sì, `45d048c8` |
+| `ea0f82a` | **strada di disegno WebGL2** nella pagina (`?tela=gl`): `texImage2D(VideoFrame)` sincrono, `close()` subito, quad a schermo intero, stessi contatori | anomalia A1: in Firefox `createImageBitmap(VideoFrame)` rilegge dalla GPU ⇒ saltati oltre la soglia con 1 utente | da misurare; poi sguardo dell'utente contro i quadrati (DECISIONI §9.4) | **no** (candidata) |
 
-| (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava i 34 ms del disegno 2D; con WebGL (0,26 ms) non salva niente e buttava il 12 % | Firefox di serie: salta come prima (15 = i fotogrammi a coda ≥ 3), ritardo invariato (36,8 ms); Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
+| (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava il costo del disegno 2D; con WebGL, che costa pochissimo, non salva niente e buttava fotogrammi | Firefox di serie: salta come prima, ritardo invariato; Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
 
-| (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
+| (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, […] nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
 
 | (questo commit) | **D-023, la cornice che il driver non scrive**: se il primo SPS di un contesto dichiara una misura più grande della tela di meno di un blocco (64), `codificatore.c` fa passare i pacchetti con l'SPS (le chiavi) da `hevc_metadata`/`h264_metadata` con `crop_right`/`crop_bottom`, e lo dichiara (riga «⭐ D-023»); qualunque altra differenza resta rifiutata da `forma_va_bene()` | anomalia A3: sulla Radeon (radeonsi 25.0.7) `hevc_vaapi` dichiara il multiplo di 64 senza finestra di conformità (anche da `ffmpeg` a riga di comando) ⇒ ogni sessione HEVC — Chrome — a una tela non multipla di 64 restava **nera** | `banchi/16-stress/16-d023-cornice.sh`, 4 tele vere × 2 codec: Radeon **8 PASS** (PSNR 47 dB, l'immagine è 1:1), senza la cura **HEVC 4 FAIL su 4**; Intel 8 PASS, la cura non scatta mai | **sì**, binario **`28a947f5`** (da `678a2da`), 27 set: suite corta sulla Radeon, 4 desktop × 2 browser, **352 PASS su 352**; nei registri delle scatole la cura è scattata 62 volte, 0 flussi rifiutati |
 
@@ -517,7 +511,7 @@ stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 P
 |---|---|---|
 | `8e7f9ec` | `11-accendi.sh server`: `--journal` e il tetto da `REMOTIX_TETTO_SESSIONI` | §12 e §2 (tetto a 17) |
 | `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, una scheda sola dentro la scatola | campagna Radeon (§11) |
-| `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva (Radeon: 205 ms → 17–29 ms) |
+| `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva |
 | vari | `banchi/16-stress/`: attore, risorse, classifica, salita, controllo corto, compositori, coda, rapporto, banco della tela | l'impianto di §4–§10; corretto dopo una revisione avversaria (6 difetti) e dopo le prime salite vere (§14) |
 | (questo commit) | lavoro C su LXQt: `qterminal -e bash`, e l'attore controlla la shell sotto il terminale | anomalia A2 (D-022, difetto del prodotto: `SHELL=` vuota ⇒ dash) — aggiramento dichiarato del banco, la cura del prodotto è dopo la campagna |
 | (questo commit) | lavoro B su LXQt: la cancellazione è Maiusc+Canc e «y» (pcmanfm-qt: il Canc del menu non scattava; «No» è il bottone predefinito del dialogo), foto al fallimento | `[M]` 27 set: «input perso: cancella» dava FAIL a LXQt già a 2 utenti — difetto del banco, non del prodotto; le salite LXQt 4K e 3K si rifanno |

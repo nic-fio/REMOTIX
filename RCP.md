@@ -1,5 +1,7 @@
 # RCP — Remotix Control Protocol, versione 1
 
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
+
 *Scritto il 9 agosto 2026, prima di qualunque riga di codice.*
 *Completato il 9 agosto 2026, dopo il censimento di §0-bis — sempre prima di qualunque riga di codice.*
 
@@ -618,7 +620,7 @@ dominio.*
 | | |
 |---|---|
 | **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta. ⛔ **Dei byte DER del certificato** — non della chiave pubblica e non dei byte PEM. ⚠ *Il DER mancava qui e c'era in `DECISIONI.md` §1.5 riga 7 dal 9 agosto (rilievo R1.14): allineato la notte del 10 agosto 2026, ed è lo stesso danno di allora — chi calcola l'impronta sull'involucro sbagliato ottiene un confronto che **non combacia mai**, col sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta* |
-| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** (30,2 ms) e su **Firefox 140** (52,0 ms), e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `FASI.md` §01-filo-nudo |
+| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** e su **Firefox 140**, e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `FASI.md` §01-filo-nudo |
 | ⚠ **e quel che i due motori NON provano** | sono due squadre che non ci conoscono, quindi il loro accordo vale — ⛔ **ma chi serviva era `aioquic`, non una nostra implementazione**: questo misura **il modello di fiducia**, non il server. E **Safari resta fuori per decisione** (`DECISIONI.md` §1.8) |
 | **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
 | ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
@@ -1287,9 +1289,9 @@ chiede uno. Le due cose, e la prima costa **zero byte**:
   entrypoint** e per H.264/HEVC su **AMD `EncSlice`** — ⭐ due controlli positivi; e nei byte che
   escono **6 celle su 6** danno `sps_max_sub_layers = 1` con tutti i `temporal_id = 0`.
   ⇒ ⭐ **«Ogni abbandono costa una chiave» resta in vigore, e adesso ha una misura sotto invece di
-  una `[?]`.** ⚠ E la strada vicina è chiusa dal **ritardo**, non dalla banda: `[M]` con `-bf 1`
-  escono **59 figure buttabili su 120** a qualità invariata (−0,065 dB) e **−16 % di banda**, ⛔ ma
-  **67 ms di riordino** — da solo oltre i 50 ms dati a *tutto* il pezzo nostro. `[?]` Resta aperto
+  una `[?]`.** ⚠ E la strada vicina è chiusa dal **ritardo**, non dalla banda: `[M]` con le figure B
+  escono figure buttabili a qualità invariata e con meno banda, ⛔ ma il **riordino** da solo supera
+  i 50 ms dati a *tutto* il pezzo nostro. `[?]` Resta aperto
   se un codificatore VA-API scritto da noi potrebbe costruirli lo stesso: `EncPackedHeaders = 0x1f`
   dice che le intestazioni le impacchetta **l'applicazione**. 📖 `fasi/08-l-anello.md` §4-D;
 - ⛔ il client **DEVE** mandare `RICHIEDI_CHIAVE` quando si accorge di un **buco** nella successione
@@ -1502,20 +1504,21 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
 > 16 MiB. Il client avrebbe staccato la sessione perché il server ha fatto una cosa che §4.5 gli
 > permette — e §5.2 gli vieta pure di abbandonare le chiavi, quindi non aveva vie d'uscita.
 >
-> ✅ **MISURATO il 22 agosto 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D:
-> - ⭐ **alla tela dell'utente il tetto è irraggiungibile**: 2560×1080, **404 chiavi vere**, massimo
->   **21 433 byte = 0,13 %**, margine **782×**. Nemmeno il rumore uniforme ci arriva (15,1 %);
-> - ⛔ **a 7680×4320 si sfonda davvero**: rumore uniforme **28,9 MiB, 8 su 8** sopra il tetto, e la
->   grana forte arriva al **94,9 %**. ⛔⛔ E il **ripiego in software sfonda prima e con contenuto
->   plausibile**: un filmato molto granuloso a schermo intero fa **18,7 MiB**;
-> - ⚠ e i **10 bit qui sono otto promossi** — `DECISIONI.md` §2.3-ter. Infatti `[M]` l'etichetta
->   `main10` a 8K costa **933 byte in MENO** di `main`: non porta informazione che non ci sia;
+> ✅ **MISURATO il 22 agosto 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D *(le dimensioni misurate
+> dei fotogrammi sono state tolte con la fase 18: valevano per il codificatore di allora)*:
+> - ⭐ **alla tela dell'utente il tetto è irraggiungibile**, con un margine larghissimo, e nemmeno il
+>   rumore uniforme ci arriva;
+> - ⛔ **a 7680×4320 si sfonda davvero** col rumore uniforme, e la grana forte ci va vicino. ⛔⛔ E il
+>   **ripiego in software sfonda prima e con contenuto plausibile**: un filmato molto granuloso a
+>   schermo intero;
+> - ⚠ e i **10 bit qui sono otto promossi** — `DECISIONI.md` §2.3-ter: l'etichetta `main10` a 8K
+>   non porta informazione che non ci sia;
 > - ⛔⛔ **il difetto di forma però non è quello che si credeva.** La **scala delle ricodifiche è
->   corta di uno scalino** — l'ultimo tentativo lascia **16,654 MiB**, il quarto ce l'avrebbe fatta,
->   e si perde per il **4 %** — e quando si arrende il codificatore **butta il fotogramma anche se è
->   una chiave**, che **§5.2 vieta**. ⇒ È la spirale: il client resta rotto, e ogni
->   `RICHIEDI_CHIAVE` costa tre ricodifiche che non producono niente. ⭐ La cura ha già il suo
->   numero: `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi una chiave **entra sempre**.
+>   corta di uno scalino** — l'ultimo tentativo resta appena sopra il tetto e il successivo ce
+>   l'avrebbe fatta — e quando si arrende il codificatore **butta il fotogramma anche se è una
+>   chiave**, che **§5.2 vieta**. ⇒ È la spirale: il client resta rotto, e ogni `RICHIEDI_CHIAVE`
+>   costa tre ricodifiche che non producono niente. ⭐ La cura: all'ultimo scalino **QP 51**, a cui
+>   una chiave **entra sempre**.
 
 ⛔ **L'ordine, e chi lo rimette a posto.** Gli stream sono indipendenti, quindi i fotogrammi
 **possono arrivare fuori ordine**. Il client:
@@ -2270,7 +2273,7 @@ collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di
 | `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minuti senza input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *Diceva «6 ore senza attacchi»: cambiato il 16 agosto 2026 — cambia il tetto **e** il criterio, perché chi guarda senza toccare non rinnova niente. Il codice e il nome restano* |
 | `0x04` | `SESSIONE_LOCALE_PREVALSA` | l'utente ha aperto una sessione grafica locale |
 | `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
-| `0x06` | `BUDGET_PIENO` | ⭐ **la macchina non ha più capacità di COMPOSIZIONE** — ⚠ *diceva «di codifica»: corretto il 24 agosto 2026, `DECISIONI.md` §4.6-nonies, perché `[M]` il collo è `rcs0` a **0,97 Gpixel/s**, la **metà** del codificatore. ⛔ E fino alla fase 10 questo codice **non è mai stato mandato da nessuna riga del server**: dalla fase 10 parte davvero* |
+| `0x06` | `BUDGET_PIENO` | ⭐ **la macchina non ha più capacità di COMPOSIZIONE** — ⚠ *diceva «di codifica»: corretto il 24 agosto 2026, `DECISIONI.md` §4.6-nonies, perché `[M]` il collo è il motore di composizione `rcs0`, che si satura prima del codificatore. ⛔ E fino alla fase 10 questo codice **non è mai stato mandato da nessuna riga del server**: dalla fase 10 parte davvero* |
 | `0x07` | `CREDENZIALI_ERRATE` | |
 | `0x08` | `TROPPI_TENTATIVI` | ⭐ **l'indirizzo è bannato**: tre autenticazioni fallite, dodici ore (§4.4-bis). ⚠ *Diceva «limitazione della frequenza», ed era la forma precedente: dal 10 agosto 2026 non è più una frequenza, è un ban* |
 | `0x09` | `NIENTE_IN_COMUNE` | nessun codec condiviso |

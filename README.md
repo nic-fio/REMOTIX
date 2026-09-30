@@ -65,6 +65,11 @@ Desktop remoto per Linux: un **server**, **nessun client da installare** — bas
 moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*, che viaggia su
 **WebTransport**.
 
+Il video si codifica **sulla scheda** con libva diretta (H.264, HEVC), colori convertiti anch'essi
+sulla scheda (VPP di VA-API); dove la scheda non basta c'è il **ripiego in software** — OpenH264 per
+H.264, SVT-AV1 per AV1, ⛔ niente HEVC in software. L'audio è Opus, con libopus diretta
+(fase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
+
 > # 📅 COM'ERA IL **25 agosto 2026** — *ripresa di allora, superata*
 >
 > ⚠ ⛔ **Non si riparte da qui.** Il punto d'ingresso e' il riquadro **⏸ IL PROGETTO E' IN PAUSA**, in testa a questo file. Questa intestazione resta perche' racconta da dove si ripartiva **quel giorno**.
@@ -744,10 +749,10 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 > | | |
 > |---|---|
 > | il numero della fase **regge** | rimisurato con banco e pagina nuovi, e la codifica in software ne era la parte più grossa |
-> | la codifica in hardware **funziona** | `hevc_vaapi` accorcia di molto il tratto di codifica, su scena facile e su scena dura |
-> | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa più della codifica** ⇒ ⭐ **`swscale` BGRx→P010 è il pezzo nuovo da aggredire** |
+> | la codifica in hardware **funziona** | sulla scheda il tratto di codifica si accorcia di molto, su scena facile e su scena dura |
+> | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa più della codifica** ⇒ ⭐ va portata **sulla scheda** — e dalla fase 18 la fa la VPP di VA-API |
 > | il client **decodifica HEVC** | `VideoDecoder`: **120 fotogrammi su 120**, due strade di confezionamento, 5 giri su 5 |
-> | ⛔ **AV1 in hardware NON esiste** | `av1_vaapi` esce **218**: restare su AV1 = restare in software **per sempre** |
+> | ⛔ **AV1 in hardware NON esiste** sulla UHD 730 | restare su AV1 = restare in software **per sempre** — e dalla fase 18 AV1 resta solo nel ripiego software, con SVT-AV1 |
 > | ⛔ **Firefox non ha HEVC** in WebCodecs | ⇒ passare a HEVC **non toglie AV1: lo rende obbligatorio** |
 >
 > ---

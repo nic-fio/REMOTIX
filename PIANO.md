@@ -267,7 +267,7 @@ Se il banco non sa riprodurre un numero che sappiamo vero, ogni misura futura è
 > numero. Le misure stanno in `FASI.md` §03-movimento.*
 
 **Il banco**: `fondamenta/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
-scene con `ffmpeg -f lavfi -i testsrc2`.
+scene di prova.
 
 **Si riusa**: tutto `fondamenta/banchi/` (262 file), `fondamenta/banco/` per il provisioning.
 
@@ -500,7 +500,7 @@ qualcun altro.
 > ⛔ **Chi giudica è l'utente, sulla sua scena** — nessun banco può vedere questo difetto (I8).
 >
 > **2. H.264 nel prodotto** — `RCP.md` §4.3/§6.2 (il terzo numero di codec **si aggiunge**),
-> `codificatore.c` (`h264_vaapi` e il lettore dei NAL che riconosce l'**IDR**), `figlio.c`, e in
+> `codificatore.c` (H.264 sulla scheda e il lettore dei NAL che riconosce l'**IDR**), `figlio.c`, e in
 > `pagina.html` la scala di preferenza e il flusso di prova della sonda. ⚠ Con dentro la `[?]`
 > della **scala di colore** del decodificatore hardware: +8 livelli sulle zone chiare.
 >
@@ -601,16 +601,16 @@ qualcun altro.
 > *Il piano della sessione nuova è stato riletto **prima che partisse un agente**, e controllato
 > misurando invece che ricordando. Ne sono uscite tre righe che cambiano il lavoro.*
 >
-> **1. ⛔⛔ La codifica AV1 in hardware NON ESISTE su questa macchina** — `[M]`, 3 giri su 3:
-> `av1_vaapi` esce **218**, *«No usable encoding profile found»*, e `vainfo` dà AV1 in **sola
-> decodifica** su tutt'e due i nodi. ⚠ Il codificatore **compare** nell'elenco di `ffmpeg`: *un
-> elenco dice che il codice c'è, non che la macchina lo sa fare*.
-> ⇒ ⭐ **Restare su AV1 vuol dire restare in software per sempre.** HEVC non è una preferenza: sul
-> lato server è **l'unica strada verso l'hardware**.
+> **1. ⛔⛔ La codifica AV1 in hardware NON ESISTE su questa macchina** — `[M]`, 3 giri su 3: la
+> prova di codifica esce con *«No usable encoding profile found»*, e `vainfo` dà AV1 in **sola
+> decodifica** su tutt'e due i nodi. ⚠ Il codificatore **compariva** nell'elenco della libreria:
+> *un elenco dice che il codice c'è, non che la macchina lo sa fare*.
+> ⇒ ⭐ **Restare su AV1 vuol dire restare in software per sempre.** HEVC (e poi H.264) non è una
+> preferenza: sul lato server è **la strada verso l'hardware**.
 >
 > **2. ⛔⛔ Lo scoglio «nessun client accetta HEVC» era una BANDIERA del banco**, non un palco.
 > `[M]` A/B con una sola variabile: senza `--disable-gpu` il Chrome del banco vede la GPU e dice sì
-> a HEVC; con la bandiera dice no. ⭐ E **dipinge davvero** un flusso di `hevc_vaapi`: 5 giri su 5,
+> a HEVC; con la bandiera dice no. ⭐ E **dipinge davvero** un flusso HEVC codificato sulla scheda: 5 giri su 5,
 > 1920×1080, 119 fotogrammi su 120, `powerEfficient: true`.
 > ⇒ **La corsia che doveva aprire la sessione è cancellata**, e la strada critica diventa
 > *codifica → anello rimisurato*, senza rami che possano bloccarla.
@@ -1072,7 +1072,7 @@ degli appunti tiene **un solo tipo MIME**.
 >
 > | la promessa di questa fase | dov'è finita |
 > |---|---|
-> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** `src/figlio.c` · `hevc_vaapi` chiede `hevc_vaapi` su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e il ripiego su `libx265` **scrive di essere un ripiego**. `[M]` il tratto della codifica si dimezza e i fotogrammi raddoppiano (`F3-E`, stesso palco, notte del 14 agosto); la chiamata al codificatore è ormai una piccola parte di quel tratto (fase 4, `hev1.2.4.L120.B0`) |
+> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** La codifica sulla scheda passa da **VA-API** su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e dalla fase 18 con **libva diretta**, per H.264 e HEVC. Il ripiego software è **OpenH264** (H.264) o **SVT-AV1** (AV1), ⛔ **HEVC in software non c'è**, e il ripiego **scrive di essere un ripiego**. `[M]` il tratto della codifica si dimezza e i fotogrammi raddoppiano (`F3-E`, stesso palco, notte del 14 agosto); la chiamata al codificatore è ormai una piccola parte di quel tratto (fase 4, `hev1.2.4.L120.B0`) |
 > | ⚠ **10 bit** | ⛔ **nominali, e il muro è a monte, non qui.** `DECISIONI.md` §2.3-ter `[M]`: dalla cattura di Mutter dieci bit veri **non escono per nessuna strada** — MemFd dà BGRx, il DMA-BUF pure, e chiedendo i formati a 10 bit da soli si prende `no more input formats` su tutt'e due. `Main10` da qui vuol dire **otto bit promossi a dieci**. ⇒ La domanda non è più *«il nostro codice sa fare 10 bit?»* ma *«esiste una sorgente che ce li dia?»*, ed è **una domanda per la cattura**, non per la codifica |
 > | ⛔ **la copia zero** | **intatta — e non anticipata di proposito** (`README.md`: *«la copia zero NON si anticipa: resta alla fase 8»*). È tutto quel che segue |
 >
@@ -1081,7 +1081,7 @@ degli appunti tiene **un solo tipo MIME**.
 >
 > | | lo toglie la copia zero? |
 > |---|---|
-> | la conversione (swscale) | ⭐ **sì** |
+> | la conversione dei colori, allora in CPU | ⭐ **sì** |
 > | il caricamento sulla GPU | ⭐ **sì** |
 > | la codifica, **in hardware** | no — è già curata |
 > | ⛔ **e una parte che nessuno dei tre spiega** | ⏳ `[?]` **da scoprire, e sta in questo tratto** |
@@ -1128,11 +1128,10 @@ metro di quando questa fase era solo la copia zero.)*
   due volte**, perché la fase 4 ha trovato la coda che cresce: il server consegnava più
   fotogrammi di quanti la pagina ne dipingesse. Un guadagno di millisecondi che si trasformasse
   in fotogrammi che nessuno dipinge **peggiorerebbe il ritardo** invece di curarlo;
-- ⛔ **chiedere il codificatore per nome e verificare che abbia obbedito**: un codificatore che
+- ⛔ **chiedere il codificatore e verificare che abbia obbedito**: un codificatore che
   ripiega in CPU credendosi in GPU produce due misure sotto la stessa etichetta. Se non obbedisce,
-  si dichiara il fallimento (`LEZIONI.md` §1.8). ⭐ Il modo giusto è già nel prodotto e si riusa:
-  `componente_e_hardware()` **chiede al componente** quali formati accetta — una superficie, non
-  dei pixel — invece di leggere `_vaapi` dentro il nome;
+  si dichiara il fallimento (`LEZIONI.md` §1.8). ⭐ La domanda giusta è **che cosa riceve** il
+  codificatore — una superficie della scheda, o dei pixel — non come si chiama;
 - ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11);
 - ⛔ **e il numero si rifà con lo STESSO banco e la STESSA scena della fase 4** (`03-b17-ritardo.py`),
   o il prima e il dopo non si sottraggono. ⚠ Non basta il totale: si affiancano **i tratti**, perché

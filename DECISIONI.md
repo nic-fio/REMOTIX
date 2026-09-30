@@ -1,5 +1,7 @@
 # DECISIONI — il registro di quel che è stato deciso, e da chi
 
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
+
 *Aperto l'8 agosto 2026, al primo giorno di REMOTIX.*
 
 Questo documento non spiega e non convince: **registra**. A che serve, in una riga: una
@@ -51,7 +53,7 @@ altrui era lo stesso ragionamento applicato al filo.
 > ### ⛔⭐ E IL 17 AGOSTO 2026 HA PRODOTTO IL SUO CASO PIÙ NETTO — §5.1-bis
 >
 > *«Non voglio mettere delle eccezioni nel progetto.»* Il ridimensionamento a caldo funzionava su
-> Mutter (`[M]` 6 ms) e **non si poteva fare** su KWin ≤ 6.7.4. ⇒ È uscito dal prodotto invece di
+> Mutter e **non si poteva fare** su KWin ≤ 6.7.4. ⇒ È uscito dal prodotto invece di
 > restare dietro un interruttore. ⚠ **La regola che se ne ricava, e vale in avanti**: se una
 > funzione si può fare su un compositore e non su un altro, la domanda da portare all'utente non è
 > *«come la nascondiamo»* ma *«la teniamo?»* — e la risposta finora è stata no. Si dipende dal
@@ -86,8 +88,8 @@ su ogni motore è **dire la verità su se stesso** (§0, e la riga della pagina 
 quando manca), non rendere allo stesso modo.
 
 ⚠ **Il fatto che l'ha prodotta**: `[M]` Firefox per Android non ha WebCodecs — né `VideoDecoder` né
-`AudioDecoder` — e l'unica alternativa, MSE, costa **+225 ms su Firefox e +415 ms su Chrome** sulla
-mediana (`fasi/06`, banco `07-b57`), contro un tetto dichiarato di 50 ms.
+`AudioDecoder` — e l'unica alternativa, MSE, aggiunge un ritardo che **sfora da sola** il tetto dichiarato di 50 ms
+(`fasi/06`, banco `07-b57`).
 
 ⏳ **E una cosa questa decisione NON la stabilisce**, quindi resta aperta invece di essere dedotta:
 se il percorso MSE vada **scritto** oppure no. La frase presuppone *«ma comunque REMOTIX funziona»*,
@@ -204,23 +206,22 @@ compositore** — è §5.1-bis applicata ai numeri: *niente eccezioni per compos
 
 | | |
 |---|---|
-| **i desktop nuovi** (KDE, XFCE, LXQt) | ⭐ **niente da fare**: il prodotto già chiede 60 a chiunque. Se lo consegnano, il buco su di loro **non esiste**. `[M]` KWin ne dà **58,9** senza che gli si chieda niente di speciale |
-| ⛔ **GNOME** | a 60 se ne dimezza (**31,5**), e per averne 60 bisognerebbe **chiedergliene 90** — che il prodotto non sa fare (§2.5-bis) ⇒ ⚠ era `MASTERPLAN.md` **M1**, ⛔ **tolta dall'utente il 21 set 2026** (*«M2, M3 e M5 sono gli unici punti da conservare nel masterplan»*): il fatto resta, il lavoro del «dopo» no |
+| **i desktop nuovi** (KDE, XFCE, LXQt) | ⭐ **niente da fare**: il prodotto già chiede 60 a chiunque. Se lo consegnano, il buco su di loro **non esiste**. KWin ci arriva senza che gli si chieda niente di speciale |
+| ⛔ **GNOME** | a 60 ne consegna molti meno, e per averne 60 bisognerebbe **chiedergliene di più** — che il prodotto non sa fare (§2.5-bis) ⇒ ⚠ era `MASTERPLAN.md` **M1**, ⛔ **tolta dall'utente il 21 set 2026** (*«M2, M3 e M5 sono gli unici punti da conservare nel masterplan»*): il fatto resta, il lavoro del «dopo» no |
 
 ⚠ **Quel che questa decisione NON fa**: non promette 4K/60 su GNOME e non lo toglie dai traguardi.
 §2.5-bis resta in vigore così com'è — *«su GNOME il desiderato non si promette»* — ⛔ **con la ragione
 corretta**, che dal 13 agosto 2026 non è più *«Mutter non ce la fa»* ma *«noi non gliela chiediamo»*.
 
 ⭐⭐ **E la parte che non aspetta la fine**: all'ingresso di ogni desktop nuovo — fasi 12, 13, 14 —
-si fa **una domanda sola e si scrive il numero**: *«ti chiedo 4K a 60: quanti me ne dai?»*
+si fa **una domanda sola**: *«ti chiedo 4K a 60: me li dai?»*
 ⛔ Se ne dà la metà, **è un GNOME anche lui**, e lo si sa il primo giorno invece di scoprirlo per
 caso undici giorni dopo — che è **esattamente** com'è andata su GNOME. ⇒ Sta in `PIANO.md`, nelle tre
 fasi, e **non costa una riga di prodotto**.
 
 ⛔ **SOSPESA il 21 settembre 2026, dall'utente**, insieme a M1: *«sì, saltala. Poi una volta che
 avremo completato il progetto, penseremo alla sua evoluzione, ma l'obiettivo primario è arrivare ad
-avere un prodotto funzionante sui 4 DE principali»*. ⇒ Su XFCE e LXQt la domanda **non si fa**; il
-numero di KDE (58,9) resta scritto.
+avere un prodotto funzionante sui 4 DE principali»*. ⇒ Su XFCE e LXQt la domanda **non si fa**.
 
 ### 0.6 ✅ ⭐⭐ Una macchina, UN desktop — le macchine con più desktop insieme sono fuori scopo
 
@@ -1093,13 +1094,8 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > invece di un giro butterebbe una consegna. *Un elenco dice che il codice c'è, non che la macchina
 > lo sa fare.*
 >
-> | codificatore, 1920×1080 10 bit, **20 Mbit/s per tutti**, 120 fotogrammi contati in uscita | ms/fotogramma |
-> |---|---|
-> | ⭐ **hevc_vaapi** | **3,16 – 3,24** |
-> | h264_vaapi | 3,11 – 3,16 |
-> | vp9_vaapi profilo 2 | 6,95 – 7,28 |
-> | ⛔ **av1_vaapi** | **non esiste** |
-> | *(software)* libsvtav1 preset 10, sul numero della fase 3 | **22,23** |
+> ⇒ Sulla scheda esistono i codificatori **HEVC**, **H.264** e **VP9**; ⛔ **AV1 no**. *(I tempi per
+> fotogramma misurati allora con ffmpeg sono stati tolti con la fase 18.)*
 >
 > ⇒ ⛔⛔ **Restare su AV1 vuol dire restare in software per sempre**, su questa macchina. La riga
 > *«la scala di preferenza NON si rovescia: l'ordine resta `hevc,av1`»* era stata scritta per una
@@ -1120,7 +1116,7 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > stato dipinto per la strada `<video>`, e il prodotto usa WebCodecs `VideoDecoder`»*.
 > `[M]` **120 `VideoFrame` su 120 unità d'accesso, 5 giri su 5, su tutt'e due le strade di
 > confezionamento** (Annex-B senza `description`, e `hvcC` demuxato dall'mp4) — fotogrammi contati
-> all'uscita del *callback*, non dichiarati. HEVC è anche **il più veloce dei sei flussi provati**, e
+> all'uscita del *callback*, non dichiarati. HEVC
 > restituisce `VideoFrame.format: null`, cioè **fotogrammi opachi che stanno sulla GPU**.
 > ⭐ Il controllo negativo separa netto: con `--disable-gpu` HEVC dà **zero** 5 volte su 5 e gli
 > altri quattro flussi 120. ⚠ **Firefox headless** dà una risposta vera e diversa: positivi verdi,
@@ -1186,10 +1182,10 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 >
 > | codec | decodifica sul tablet | Firefox Android | codifica sul server |
 > |---|---|---|---|
-> | HEVC | ⭐ hardware | ⛔ **no** | ⭐ hardware, **3,16 ms** |
+> | HEVC | ⭐ hardware | ⛔ **no** | ⭐ hardware |
 > | AV1 | ⛔ **nessun profilo** | sì | ⛔ **non esiste**, solo software |
-> | **H.264** | ⭐ hardware | ⭐ sì | ⭐ hardware, **3,11 ms** — il più veloce |
-> | VP9 | ⭐ hardware | sì | ⭐ hardware, 6,95-7,28 ms |
+> | **H.264** | ⭐ hardware | ⭐ sì | ⭐ hardware |
+> | VP9 | ⭐ hardware | sì | ⭐ hardware |
 >
 > ⇒ ⛔ **AV1 era l'unico codec senza hardware da nessuna parte** in questo impianto: sul server per
 > §1.13-bis, sul tablet dell'utente per `vainfo`. Il ripiego costava CPU **ai due capi**.
@@ -1284,15 +1280,12 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 
 *8 agosto 2026.*
 
-Diceva «30 fps a 1080p», ed era il numero di v1 — che lo superava già `[M]`: la cattura di
-Mutter consegnava 37 fotogrammi, KWin 60.
+Diceva «30 fps a 1080p», ed era il numero di v1 — che la cattura di Mutter e di KWin superava già.
 
-> ⛔ *13 agosto 2026: **il 37 non si riproduce**, e questa riga lo cita come se fosse un fatto
-> stabile. Alla cadenza che chiedevamo Mutter consegna **31,5** con mediana 33,31 ms; rinegoziando
-> la sola cadenza (monitor 120, freno 90) ne consegna `[M]` **61,4** (60,04). Il numero **non è una
-> proprietà stabile di Mutter**, e la spiegazione più probabile — il resto di una divisione troncata
-> — è `[R]`, non `[M]` (§2.5-bis). ⚠ Il **minimo** deciso qui non si tocca — resta lontanissimo in
-> tutt'e due i casi.*
+> ⛔ *13 agosto 2026: quel che Mutter consegna **non è una proprietà stabile**: dipende dalla cadenza
+> che gli si chiede, e rinegoziando la sola cadenza (monitor 120, freno 90) arriva al ritmo chiesto.
+> La spiegazione più probabile — il resto di una divisione troncata — è `[R]`, non `[M]` (§2.5-bis).
+> ⚠ Il **minimo** deciso qui non si tocca.*
 
 Il cambiamento è di **natura** più che di valore: il minimo smette di essere un'asticella da
 inseguire e diventa il **livello sotto cui non si scende e non si stacca**, per quanto brutta
@@ -1330,7 +1323,7 @@ qualità»*, e sotto quella parola stavano due leve distinte:
 | Leva | Cura | Prezzo |
 |---|---|---|
 | **10 bit per canale** | le strisce sulle sfumature | quasi nulla, e in hardware ovunque — decoder Android compreso |
-| **4:4:4** | il testo colorato sfrangiato `[M]` v1 §5.2 | ~50 % di banda, **nessun decoder Android in hardware** |
+| **4:4:4** | il testo colorato sfrangiato `[M]` v1 §5.2 | molta più banda, **nessun decoder Android in hardware** |
 
 Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme**, in hardware.
 
@@ -1340,7 +1333,7 @@ Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme*
 >
 > ⛔ **La domanda era vera e stava per diventare un debito.** Aperto il pavimento di §3.1-bis, un
 > agente mandato a refutare ha fatto il conto: una tela **3840×2160 in movimento** chiede
-> `[?]` **36 Mbit/s** nel regime a sole chiavi e `[?]` **~158 Mbit/s** su un video a schermo intero
+> `[?]` **più dei 30 Mbit/s** già nel regime a sole chiavi, e molto di più su un video a schermo intero
 > — mentre §3.1 prometteva *«fisso buono, 30+ Mbps ⇒ punta al desiderato»*. ⇒ Quella riga
 > **prometteva il desiderato su una banda che non lo porta**, e nessuno se n'era accorto perché il
 > 4K in movimento non è mai stato misurato.
@@ -1352,7 +1345,7 @@ Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme*
 > | ⭐ **che cosa resta** | 4K · 60 fps · 10 bit è il **tetto di quel che il prodotto sa fare** — la misura più grande che si codifica e si consegna |
 > | ⛔ **che cosa NON è più** | una promessa **al pavimento**. A 20 Mbit/s il 4K **non è promesso in movimento**, e non è un difetto: è la scelta |
 > | ⚠ **e nemmeno a 30** | il conto dice che «fisso buono, 30+» **non compra** il 4K mosso. La riga di §3.1 che lo lasciava credere era già superata dal §3.1-bis, e questa voce lo dice per esteso |
-> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero, `[M]` 20,9 fotogrammi/s) — cioè **leggere e scrivere**, non guardare un video |
+> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** — cioè **leggere e scrivere**, non guardare un video |
 >
 > ⇒ ⭐ **La banda a cui il 4K in movimento diventa servibile è una cosa da MISURARE e DICHIARARE,
 > non da promettere** — è `SPECIFICHE.md` §2.6 alla lettera. La misura è di questa fase.
@@ -1446,34 +1439,27 @@ che l'utente sente è questo più la rete: si dichiara, non si promette.
 
 *Scritto in `CODER.md` §1-bis, accanto agli altri due numeri.*
 
-⛔ **13 agosto 2026 — il numero è stato misurato, e sfora**: `[M]` mediana **74,58 ms** cattura →
-vetro, pezzo cieco 16-40 ms escluso (§2.5 e `SPECIFICHE.md` §3.2). ⛔ **E il muro dei 37 fotogrammi
-di Mutter non ne è la causa**: Mutter vale il **22 %**, il **78 % è nostro** e quasi tutto sta nel
-codificatore in software. La decisione dell'utente resta questa; cambia da chi si va a prendere i
-millisecondi.
+⛔ **13 agosto 2026 — il numero è stato misurato, e sforava** cattura → vetro, pezzo cieco escluso
+(§2.5 e `SPECIFICHE.md` §3.2). ⛔ **E il ritmo di Mutter non ne era la causa**: Mutter ne valeva una
+parte piccola, il grosso era **nostro** e quasi tutto nel codificatore in software di allora. La
+decisione dell'utente resta questa; cambia da chi si va a prendere i millisecondi.
 ⛔ **E «il pezzo che è nostro» adesso ha un confine dichiarato**: la misura finisce al **disegno
-finito**, non al richiamo del decodificatore. Sono **11 ms su 50** che la prima stesura si
-regalava, ed è la parte che si dà volentieri via senza accorgersene.
+finito**, non al richiamo del decodificatore. È la parte che la prima stesura si regalava, e che si
+dà volentieri via senza accorgersene.
 
 ### 2.5 🔸 ⛔⛔ Il traguardo dei 40 ms su GNOME — **MISURATO il 13 agosto, e la causa NON era Mutter**
 
 *⛔ Questa voce si intitolava «Il traguardo dei 40 ms non è raggiungibile su GNOME — stesso muro dei
-60 fps», e attribuiva il ritardo al muro dei 37 fotogrammi della cattura. **Il ritardo è stato
-misurato alla fase 3, e sfora — ma per il 78 % è nostro.** Il conto qui sotto è tenuto perché era
-la stima su cui la decisione è stata presa; la correzione è nel riquadro in fondo, e vale più della
-stima.*
+60 fps», e attribuiva il ritardo al ritmo basso della cattura. **Il ritardo è stato misurato alla
+fase 3, e sforava — ma il grosso era nostro.** La stima qui sotto è tenuta perché è quella su cui
+la decisione è stata presa; la correzione è nel riquadro in fondo, e vale più della stima.*
 
-Il conto, sommando i pezzi che v1 ha misurato:
+La stima, sommando i pezzi che v1 aveva misurato (ridisegno del desktop, consegna della cattura,
+codifica), diceva: **GNOME dentro il tetto e fuori dal traguardo, KDE dentro tutti e due** — e la
+differenza stava tutta nella consegna della cattura. *(Le cifre della stima sono in git.)*
 
-| | GNOME (Mutter) | KDE (KWin) |
-|---|---|---|
-| il desktop reagisce e ridisegna | ~16 ms | ~16 ms |
-| **la cattura ci consegna il fotogramma** | **~27 ms** (37 al secondo `[M]`) | **~16 ms** (60 al secondo `[M]`) |
-| la codifica | 3-6 ms `[M]` fase 9 | 3-6 ms |
-| **totale** | **~48 ms** — dentro il tetto, fuori dal traguardo | **~37 ms** — dentro tutti e due |
-
-⭐ **È lo stesso muro dei 60 fotogrammi a 4K, e per la stessa ragione**: Mutter consegna sei
-decimi di quel che gli si chiede (`LEZIONI.md` §3, domanda 6). Il tetto del ritardo, come quello
+⭐ **È lo stesso muro dei 60 fotogrammi a 4K, e per la stessa ragione**: Mutter consegna meno
+di quel che gli si chiede (`LEZIONI.md` §3, domanda 6). Il tetto del ritardo, come quello
 del ritmo, **in buona parte lo pone il compositore**.
 
 > ⭐ **E il «nessuna leva nostra lo sposta» che questa voce diceva è stato tolto il 9 agosto
@@ -1484,47 +1470,36 @@ del ritmo, **in buona parte lo pone il compositore**.
 >
 > ⚠ **Non cambia la decisione**, che è dell'utente e sta sui numeri: 50 di tetto, 40 di
 > traguardo. Cambia che il traguardo **non si dà più per perso su GNOME prima di aver provato**,
-> e la prova va fatta presto — se riesce, tutta la riga della cattura in questa tabella scende da
-> ~27 ms a ~16, e GNOME entra nel traguardo come KDE.
+> e la prova va fatta presto — se riesce, la consegna della cattura su GNOME scende a quella di
+> KDE, e GNOME entra nel traguardo come KDE.
 
-⚠⚠ **E questa tabella è una stima, non una misura — marcata `[?]`.** È la somma di componenti
+⚠⚠ **E questa stima non è una misura — marcata `[?]`.** È la somma di componenti
 misurati separatamente, che è *precisamente* ciò contro cui mette in guardia `LEZIONI.md` §1.7:
 sommare i registri di chi manda non dice che il byte è arrivato. Serve per orientarsi, **non per
 concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 
 > ## ⛔⛔ 13 agosto 2026 — il banco di §2.6 ha parlato, e ha smentito la tabella qui sopra
 >
-> *Fase 3, step 5. La stima diceva **~48 ms** e dava la colpa alla cattura di Mutter. La misura dice
-> **74,58** e dà la colpa a noi. La previsione era sbagliata in tutt'e due i modi: nel numero e
-> nell'imputato.*
+> *Fase 3, step 5. La stima dava la colpa alla cattura di Mutter; la misura (banco
+> `banchi/03-b17-ritardo.py`, con i controlli verdi) ha dato la colpa a noi. La previsione era
+> sbagliata in tutt'e due i modi: nel numero e nell'imputato.*
 >
-> `[M]` **ritardo cattura → vetro, mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99
-> 138,1, 6 giri da ~800 campioni, errore d'orologio **±0,63 ms**, banco `banchi/03-b17-ritardo.py`
-> (31 controlli su 31, ponte 11 su 11). ⛔ **Pezzo cieco 16-40 ms non compreso** ⇒ sullo schermo
-> dell'utente **90-115 ms**. ⇒ **Si sfora il tetto dei 50, non solo il traguardo dei 40.**
-> ⚠ Non è input → vetro: il canale di input nasce alla fase 4 (`input` = 0 in 953 su 953), e al suo
-> posto sta il controllo **P1**.
+> `[M]` **ritardo cattura → vetro**: ⇒ **si sforava il tetto dei 50, non solo il traguardo dei 40**,
+> e sullo schermo dell'utente, col pezzo cieco, ancora di più. ⚠ Non è input → vetro: il canale di
+> input nasce alla fase 4, e al suo posto sta il controllo **P1**. *(La scomposizione tratto per
+> tratto, con le cifre, è in git.)*
 >
-> | dove se ne va | mediana | di chi è |
-> |---|---|---|
-> | disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
-> | ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
-> | il filo | 0,32 ms | — |
-> | stream completo → `decode()` | 0,08 ms | nostro |
-> | decodifica | 7,58 ms | nostro |
-> | richiamo → disegno finito | 10,51 ms | nostro |
+> ⛔⛔ **Il muro NON era di Mutter, e le tre prove sono queste**: la scena disegnava al ritmo pieno
+> senza attese; il figlio del prodotto consegnava **senza attese a vuoto** — *non aspettava mai
+> Mutter*; il codificatore era **in software** e lo dichiarava il prodotto stesso. ⇒ **Il grosso
+> del ritardo era nostro**, quasi tutto nel tratto cattura→filo, cioè nella codifica.
 >
-> ⛔⛔ **Il muro NON è di Mutter, e le tre prove sono queste**: la scena disegna **59,98/s con 0
-> attese**; il figlio del prodotto consegna **23,93/s con ZERO attese a vuoto** — *non aspetta mai
-> Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (libsvtav1 /
-> libx265). ⇒ **58 ms su 74,6 sono nostri, il 78 %**, ~39 nel solo tratto cattura→filo.
->
-> ⛔ **E il muro dei 37 non si riproduce.** Con monitor a **120** e freno **90**: `[M]` **61,4
-> fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**. E i «sei decimi» non
-> si riproducono nemmeno: la cella bassa dà **0,50 pulito**. ⚠ Il riquadro qui sopra dava la causa
-> dei sei decimi come **battimento** fra due orologi allo stesso numero: è sbagliata anche quella, e
-> al suo posto c'è una **quantizzazione** sui tick — `min_interval_us = 10⁶/maxFramerate` **troncato
-> a intero** (16666 per 60) contro un tick da 16666,67 µs ⇒ chi cade sotto perde un tick intero.
+> ⛔ **E il ritmo basso della cattura non si riproduce.** Con monitor a **120** e freno **90** `[M]`
+> GNOME consegna il ritmo chiesto. E i «sei decimi» non si riproducono nemmeno: la cella bassa è
+> pulita. ⚠ Il riquadro qui sopra dava la causa dei sei decimi come **battimento** fra due orologi
+> allo stesso numero: è sbagliata anche quella, e al suo posto c'è una **quantizzazione** sui tick —
+> `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
+> 16666,67 µs ⇒ chi cade sotto perde un tick intero.
 > ⛔ **Ma la quantizzazione è `[R]`, letta nel codice di Mutter, non `[M]`.**
 >
 > > ⛔ ⚠ *Questo capoverso diceva «Legge verificata su **13 punti**, 8 confermano, **0 la
@@ -1532,9 +1507,8 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 > > `banchi/03-b14-esiti-griglia.jsonl`, porta **tre righe** — il terreno e **due celle**, tutt'e
 > > due con `scena_sul_mio_monitor: false` ⇒ rifiutate dal banco stesso, che stampa «⛔ la legge NON
 > > regge su **0 punti su 0**». **Corretto il 13 agosto 2026**, rilievo del coordinatore della
-> > fase 3, verificato sui due file di esiti. ⇒ Restano `[M]` il **61,4** e lo **0,50**, che vengono
-> > dalle celle pulite di `03-b14-esiti.jsonl`; **cade la legge**, e con lei la chiusura di M3
-> > (`STUDI.md` §gnome §13).*
+> > fase 3, verificato sui due file di esiti. ⇒ Restano `[M]` le celle pulite di
+> > `03-b14-esiti.jsonl`; **cade la legge**, e con lei la chiusura di M3 (`STUDI.md` §gnome §13).*
 >
 > ⛔⛔ **Ma quella cura il prodotto oggi non la sa chiedere**, e va scritto qui o si scambia una
 > misura di banco per una prestazione: `MOVIMENTO_FPS 60` è una **costante di compilazione**
@@ -1558,23 +1532,22 @@ compositor dei 4 DE Mutter è quello che performa peggio […] GNOME non è in g
 fps, ma va bene. Non sarà adatto per il gaming ma consente comunque una soddisfacente esperienza
 desktop e multimedia.»
 
-`[M]` 9 agosto: **36 ± 2 fotogrammi al secondo** su sei giri (33,7-37,8), scena dichiarata,
-1080p, copia zero — mentre il client ne disegna **60**. Il tetto è del compositore.
+`[M]` 9 agosto: su sei giri, scena dichiarata, 1080p, copia zero, la cattura di Mutter consegnava
+**molti meno fotogrammi** di quelli che il client disegna. Il tetto sembrava del compositore.
 
 | | |
 |---|---|
 | **il minimo** (`§2.1`) | lontanissimo, mai in discussione |
-| **il desiderato** (`§2.2`) | ⛔ **su GNOME non si promette**. Resta il traguardo dove il compositore lo consente — KWin consegna 58,9 `[M]` sulla stessa macchina, nello stesso pomeriggio |
+| **il desiderato** (`§2.2`) | ⛔ **su GNOME non si promette**. Resta il traguardo dove il compositore lo consente — KWin ci arrivava `[M]` sulla stessa macchina, nello stesso pomeriggio |
 | il gaming | **fuori**, e non era mai stato dentro |
 
 ⚠ **Due cose che questa decisione NON dice**, e vanno tenute accanto o si attribuisce il tetto alla
 cosa sbagliata:
 
-1. ⛔ **non è un limite del 4K.** Il costo della risoluzione sulla cattura di Mutter è **zero** fino
-   a 4K (`LEZIONI.md` §3, domanda 10): i 36 sono a 1080p, e a 4K sono gli stessi. «GNOME consegna
-   ~36 a qualunque misura» è la frase giusta;
-2. ⏳ **non chiude M3.** La firma degli intervalli misurata oggi — mediana 33,3 ms, minimo 16,2, mai
-   valori intermedi — è quella di due orologi a 60 che battono fra loro, cioè la lettura di
+1. ⛔ **non è un limite del 4K.** La risoluzione non cambia il ritmo della cattura di Mutter fino
+   a 4K (`LEZIONI.md` §3, domanda 10). «GNOME consegna lo stesso ritmo a qualunque misura» è la
+   frase giusta;
+2. ⏳ **non chiude M3.** La firma degli intervalli misurata oggi — mai valori intermedi — è quella di due orologi a 60 che battono fra loro, cioè la lettura di
    `STUDI.md` §gnome §8.2. La cura candidata costa **zero righe di prodotto** ed è nella fase 3. Se
    riuscisse, questa voce si riscrive.
 
@@ -1584,12 +1557,12 @@ cosa sbagliata:
 > è chiusa**: la causa non è misurata (`STUDI.md` §gnome §13).*
 >
 > ⭐ **Il tetto non è del compositore, e la prova è `[M]`**: alla cadenza disaccoppiata GNOME
-> consegna **61,4** invece di 31,5, sulla stessa macchina e con la stessa scena.
+> consegna il ritmo chiesto invece di dimezzarlo, sulla stessa macchina e con la stessa scena.
 >
 > ⚠ **Il perché è `[R]`**: nel codice di Mutter il freno calcola
 > `min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) contro un tick da
 > 16666,67 µs ⇒ chi cade sotto perderebbe un tick intero. Non un battimento fra due orologi, una
-> **quantizzazione**. ⚠ E la firma «mediana 33,3, minimo 16,2, mai valori intermedi» è quel che una
+> **quantizzazione**. ⚠ E la firma «mai valori intermedi» è quel che una
 > griglia produce e due orologi in battimento no — ⛔ **ma è un indizio coerente, non una legge
 > misurata**.
 >
@@ -1598,30 +1571,24 @@ cosa sbagliata:
 > > celle**, tutt'e due con `scena_sul_mio_monitor: false`, e il banco stampa «⛔ la legge NON regge
 > > su **0 punti su 0**». **Corretto il 13 agosto 2026**, rilievo del coordinatore della fase 3.*
 >
-> | monitor | freno | consegnati | mediana | p99 | cella |
-> |---|---|---|---|---|---|
-> | 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
-> | 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
-> | 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
-> | ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
+> *Quattro celle della griglia (monitor × freno: 60×60, 120×120, 120×60, 120×90), da
+> `banchi/03-b14-esiti.jsonl`, tutte con `scena_sul_mio_monitor: true` e coi tre controlli —
+> positivo, negativo, ritorno — che chiudono. La cella buona è **120 × 90**. Le cifre sono in git.*
 >
-> *Le quattro celle vengono da `banchi/03-b14-esiti.jsonl`, tutte con `scena_sul_mio_monitor: true`
-> e coi tre controlli — positivo, negativo, ritorno — che chiudono.*
->
-> ⇒ ⛔ **Il «36 ± 2» resta vero alla cadenza che chiedevamo, e smette di essere un muro del
-> compositore.** Alla cadenza disaccoppiata GNOME consegna **61,4**, cioè quanto KWin. ⚠ E i «sei
-> decimi» **non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**.
+> ⇒ ⛔ **Il ritmo basso resta vero alla cadenza che chiedevamo, e smette di essere un muro del
+> compositore.** Alla cadenza disaccoppiata GNOME consegna quanto KWin. ⚠ E i «sei decimi» **non si
+> riproducono**: la cella bassa è **pulita e deterministica**.
 >
 > ⛔⛔ **Ma la decisione dell'utente NON cambia oggi, e la ragione è che il prodotto non sa
 > chiedere quella cadenza**: `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c` · `MOVIMENTO_FPS`),
 > `main.c` non ha opzioni di cadenza, `RecordVirtual` non prende la frequenza (`src/mutter.h` · la nota su `RecordVirtual`) e
-> i quattro monitor virtuali sono tutti **@60**. ⇒ Il 61,4 è `[M]` **sul banco** e **zero in
+> i quattro monitor virtuali sono tutti **@60**. ⇒ Il ritmo pieno è `[M]` **sul banco** e **zero in
 > produzione**. Finché resta così, *«su GNOME il desiderato non si promette»* regge — ⛔ **ma la
 > ragione è cambiata: non è più «Mutter non ce la fa», è «noi non gliela chiediamo».** Sono due
 > frasi con cure opposte, e la seconda è nostra.
 >
 > ⚠ **E il ritmo non è il ritardo**: questa voce parla di fotogrammi al secondo. Il ritardo è §2.5,
-> sfora, e per il 78 % è nostro (`LEZIONI.md` §6.2).
+> sfora, e il grosso è nostro (`LEZIONI.md` §6.2).
 
 ### 2.7 ✅ ⭐ Il massimo lo offre il server; l'altezza la mette il client
 
@@ -1681,12 +1648,14 @@ alcune **molto più economiche da rispettare**.
 migliore. È stata scritta, misurata — e ⭐ **la misura l'ha spaccata in due**, non bocciata in
 blocco.*
 
-| tratto (mediana, ms) | prima | dopo | Δ |
-|---|---|---|---|
-| stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
-| ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-| richiamo → disegno finito ⚠ *(vedi la nota sotto: il nome del tratto è stato corretto)* | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
-| **mediana disegno → vetro** | 73,66 / 67,79 | ⛔ **101,30** | ⛔ **+27,6 / +33,5** |
+| tratto | col worker |
+|---|---|
+| stream completo → `decode()` | ⛔ **più lungo** |
+| ⭐ **la decodifica** | ⭐ **più corta** |
+| richiamo → disegno finito ⚠ *(vedi la nota sotto: il nome del tratto è stato corretto)* | ⛔ **molto più lungo** |
+| **disegno → vetro, in tutto** | ⛔ **più lungo** |
+
+*(Le cifre sono in git.)*
 
 > ### ⛔⛔ 14 agosto 2026 — **IL TRATTO «richiamo → disegno finito» PORTAVA UN NOME SBAGLIATO**
 >
@@ -1694,7 +1663,7 @@ blocco.*
 > (`fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md`), arrivate alla stessa
 > conclusione da due lati senza mettersi d'accordo.*
 >
-> ⭐ **I numeri restano**; ⛔ **il nome no.** `[M]` il disegno vero costa **2,25 ms**: quel tratto
+> ⭐ **Il numero era giusto**; ⛔ **il nome no.** `[M]` il disegno vero costa poco: quel tratto
 > misurava **l'attesa del fotogramma dalla GPU più il disegno**, perché un fotogramma HEVC
 > decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca ne provoca il
 > trasferimento GPU→CPU. ⭐ La prova che il confine era messo male: a **palco identico**, cambiando
@@ -1709,8 +1678,8 @@ blocco.*
 
 | | |
 |---|---|
-| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** `[M]` **−3,44 ms** — il decodificatore consegna prima quando non contende |
-| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: da sola **+17,6 ms**, più i +10,2 della consegna |
+| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** `[M]` — il decodificatore consegna prima quando non contende |
+| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: da sola costa più di quel che la decodifica guadagna, e in più si allunga la consegna |
 
 ⛔ **Il meccanismo, ed è la parte che vale oltre questo caso**: una `OffscreenCanvas` in un worker
 **si consegna al ritmo del quadro** — un `requestAnimationFrame` implicito che nessuno ha scritto.
@@ -1719,9 +1688,8 @@ parola: **è sul meccanismo**. ⛔⛔ E la prescrizione **conteneva la propria s
 il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
 
 ⚠ **E i fotogrammi dipinti dicono il contrario del ritardo, quindi vanno accanto** (`LEZIONI.md`
-§6.2): sulla catena vera il worker dipinge **di più** (26,3/s contro 22,8-24,2), ma a saturazione il
-tetto **crolla di tre quarti** — 127,6 → **33,9**/s a 1080p, 230,6 → **56,4**/s a 480p, cioè **≈ il
-quadro dei 60 Hz**.
+§6.2): sulla catena vera il worker dipinge **di più**, ma a saturazione il tetto **crolla** fino
+a **≈ il quadro dei 60 Hz**, a 1080p come a 480p.
 
 ⇒ **Che cosa si decide oggi**: il codice resta in albero **dietro `#video=worker`, spento**. ⛔ **E
 non è una bocciatura definitiva.** ⏳ `[?]` **il limite più grosso, e va letto accanto ai numeri**:
@@ -1806,7 +1774,7 @@ funzionare — è il web a non funzionare. Un prodotto non si tara su una linea 
    ⇒ Un ritmo sotto i 25 al secondo lassù **è un difetto**, non una degradazione riuscita.
 2. ❓ **un secondo budget, di rete, accanto a quello di GPU** (§4.6): dieci sessioni × 20 Mbit/s
    sono **200 Mbit/s sul filo del server**. Da nominare in fase 9, da misurare in **fase 10**.
-3. ⚠ **§2.2/§2.3, il 4:4:4**: l'obiezione *«~50 % di banda»* si indebolisce. ⛔ Il rifiuto però
+3. ⚠ **§2.2/§2.3, il 4:4:4**: l'obiezione *«molta più banda»* si indebolisce. ⛔ Il rifiuto però
    **regge lo stesso**, e per l'altra ragione: nessun decoder Android in hardware.
 4. ⚠ **`SPECIFICHE.md` §6.4**: il livello H.264 dichiarato è `avc1.640032` (High **5.0**), mentre
    oltre i **40 Mbit/s** servirebbe il tier High con livello **5.1**. Un livello troppo basso non
@@ -1828,8 +1796,8 @@ perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter».
 
 ⛔⭐ **È una correzione di bersaglio, e arriva al momento giusto**: la fase 9 aveva passato la
 giornata a stringere la banda, e il prodotto **aveva retto il caso peggiore senza degradare e
-senza nessuna cura accesa** (§16 della fase: `[M]` 21,5-23,1 Mbit/s sul percorso vero, 7 125
-fotogrammi consegnati → 7 125 dipinti, **una** chiave, zero abbandoni). ⇒ Un banco che non riesce
+senza nessuna cura accesa** (§16 della fase: `[M]` sul percorso vero, ogni fotogramma consegnato
+dipinto, **una** chiave, zero abbandoni). ⇒ Un banco che non riesce
 a far cedere quel che misura **non sta misurando la grandezza giusta**.
 
 | | |
@@ -1891,9 +1859,8 @@ stata tarata sopra per una giornata intera. ⇒ Il numero è **30** da questa vo
   bersaglio della fase resta **perdita, fuori sequenza e jitter**, e questa voce **rafforza** quella
   correzione invece di riaprirla;
 - ⛔ **le misure della giornata NON si riscrivono**: sono tarate su 20 e vanno lette per quello che
-  sono. `[M]` Il caso duro sul percorso vero (§16) chiedeva **21,5-23,1 Mbit/s**, che col pavimento
-  vecchio era il **107-115 %** e col nuovo è il **72-77 %**. ⇒ ⭐ **Col pavimento a 30 il caso duro
-  entra, e ci sta comodo**: la decisione sul tetto di banda si semplifica invece di complicarsi;
+  sono. `[M]` Il caso duro sul percorso vero (§16) chiedeva **un po' più** del pavimento vecchio, e
+  sta **comodamente sotto** il nuovo. ⇒ ⭐ **Col pavimento a 30 il caso duro entra, e ci sta comodo**: la decisione sul tetto di banda si semplifica invece di complicarsi;
 - ⚠ **§2.1 (480p · 25 fps) non si muove**: è il fondo della **scala di degradazione**, non un
   livello che la banda impone. Con più banda a disposizione, un ritmo sotto i 25/s è **ancora più**
   chiaramente un difetto.
@@ -1914,8 +1881,8 @@ comportamenti possibili, e sono brutti tutti e due:
 
 | | che cosa fa | che cosa vede l'utente |
 |---|---|---|
-| **senza** le cure della fase 9 | la consegna si ferma: 7 secondi su 25 hanno visto un fotogramma | ⛔ lo schermo **congelato per 14,26 s** |
-| **con** le cure | consegna tutti i 25 s, ma tenendo la coda | ⛔ l'immagine si muove **con 4,5 s di ritardo** |
+| **senza** le cure della fase 9 | la consegna si ferma per la maggior parte del giro | ⛔ lo schermo **congelato per secondi** |
+| **con** le cure | consegna per tutto il giro, ma tenendo la coda | ⛔ l'immagine si muove **con secondi di ritardo** |
 
 ⇒ ⭐ **L'utente ha deciso che nessuno dei due va servito**: una linea così **non è una linea lenta,
 è una linea rotta**, e va chiamata col suo nome.
@@ -1951,7 +1918,7 @@ comportamenti possibili, e sono brutti tutti e due:
 morta.»*
 
 ⛔ **Il fatto**, `[M]` misurato lo stesso giorno (§17.5): cade il filo, l'utente riprova a entrare, e
-per **30,5 secondi** gli viene detto **«hai già una sessione attiva altrove»**. ⚠ **Per chi la legge
+per **tutto il tempo di `SILENZIO`** gli viene detto **«hai già una sessione attiva altrove»**. ⚠ **Per chi la legge
 è falsa**: quella sessione è **la sua**, ed è morta un attimo prima. Il conto si chiude senza
 sporcare la rete — un addio **perso** e un addio **mai detto** sono lo stesso fatto — ed è
 `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
@@ -1985,10 +1952,10 @@ avrebbe centrato mai, e nessuna quantità di lavoro l'avrebbe fatto.
 
 | cura | predefinito nuovo | che cosa compra | ⚠ che cosa costa |
 |---|---|---|---|
-| **silenzio dell'audio** | acceso | `[M]` **102× meno traffico** a schermo fermo (557,6 → 5,5 kbit/s); tono di prova puro **1,000** | i `mancati` del cliente +2 su 5 000 |
-| **sfratto del fantasma** | 15 000 ms | `[M]` il fantasma da **32,13 s / 14 rifiuti** a **16,83 s / 7** | nessuno che si veda; ⛔ non tocca `SILENZIO`, e vale solo fra client dello **stesso** utente |
+| **silenzio dell'audio** | acceso | `[M]` **molto meno traffico** a schermo fermo; tono di prova puro | i `mancati` del cliente +2 su 5 000 |
+| **sfratto del fantasma** | 15 000 ms | `[M]` il fantasma dura **la metà**, con la metà dei rifiuti | nessuno che si veda; ⛔ non tocca `SILENZIO`, e vale solo fra client dello **stesso** utente |
 | **linea morta** | accesa (stallo 5 s · silenzio 10 s) | dice che il filo è rotto invece di lasciare uno schermo fermo che sembra un programma morto | ⛔ **chiude una sessione**: margine **10×** sopra la linea peggiore che regge, **2,9×** sotto quella che non serve |
-| **soglia sulla coda** + **regolatore del ritmo** | 100 ms · acceso | `[M]` chiavi da **51,7-88,1 %** a **0,0-5,6 %**; ritmo da **1,7 a 2,8 volte** | ⚠ **fino a +160 ms** di deriva su rete cattiva; **zero** sulla linea sana |
+| **soglia sulla coda** + **regolatore del ritmo** | 100 ms · acceso | `[M]` chiavi **quasi azzerate**; ritmo **più alto** | ⚠ **un po' di deriva** su rete cattiva; **nessuna** sulla linea sana |
 
 ⛔ **Perché erano spente, e perché adesso non lo sono più.** L'invariante **I6** — *ciò che cambia
 quel che l'utente vede resta dietro un interruttore spento finché non l'ha guardato* — è servita
@@ -2353,18 +2320,14 @@ capiterà mai che ci sono 10 utenti contemporaneamente che si collegano con clie
 sono facilissime o impossibili a seconda della qualità che ciascuna chiede.
 
 > ⛔⛔ **QUESTA RIGA È STATA CORRETTA IL 24 AGOSTO 2026, E DALLA MISURA: il limite NON lo pone il
-> codificatore.** Lo pone **la composizione**, che cede alla **metà** — e il resto della sezione,
+> codificatore.** Lo pone **la composizione**, che cede **prima** — e il resto della sezione,
 > tabella compresa, va letto con davanti **§4.6-nonies**. ⭐ La parte che regge è *«il limite è un
 > budget, non un conteggio»*: quella la misura l'ha **confermata**. ⛔ Quel che cade è **di quale
 > motore** sia il budget.
 
-Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agosto:
-
-| 10 sessioni a… | Da codificare | Sulla sola Intel |
-|---|---|---|
-| 480p · 25 fps *(il minimo)* | ~100 Mpixel/s | ⭐ larghissimo, una cinquantina |
-| 1080p · 30 fps | ~620 Mpixel/s | ✅ giusto al limite |
-| 4K · 60 fps *(il desiderato)* | ~5 Gpixel/s | ⛔ **una sola sessione** |
+Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) — la stima di allora diceva
+che dieci sessioni al **minimo** ci stavano larghe, a **1080p · 30** al limite, e al **desiderato**
+(4K · 60) ne stava una sola. *(Era `[?]`, e §4.6-nonies l'ha corretta; le cifre sono in git.)*
 
 > ### ✅ Confermate `[M]` il 9 agosto 2026 — `vainfo` installato ed eseguito sul ferro
 >
@@ -2388,14 +2351,13 @@ Sul ferro di prova — i5-13500T, 31 GB, Intel UHD 730 (Alder Lake) `[M]` 9 agos
 > erano riempiti due campi, banda costante senza che nessuno l'avesse scelta). **Si chiede per
 > nome e si verifica che abbia obbedito.**
 >
-> ⭐ E la tabella del budget qui sopra resta `[?]` per un'altra ragione: `vainfo` dice **quali
+> ⭐ E la stima del budget qui sopra resta `[?]` per un'altra ragione: `vainfo` dice **quali
 > profili** ci sono, non **quanti pixel al secondo**. Il numero di sessioni va misurato saturando,
 > ed è la fase 10.
 
 **Da cui il disegno**: nessun numero cablato nel programma. Il server tiene un **budget** — sa
 quanto sta già codificando e quanto può — e il dieci è il valore predefinito di un massimo
-configurabile, come le sei ore di §4.2. La RAM non è il collo: dieci sessioni GNOME ferme sono
-~12 GB dei 31, dieci LXQt ~5.
+configurabile, come le sei ore di §4.2. La RAM non è il collo.
 
 ### 4.6-bis 🔸 Quando il budget è pieno si rifiuta, dichiarando il motivo
 
@@ -2455,7 +2417,7 @@ senza un errore»* — su una macchina a **due** GPU smette di essere teorica.
 
 ### 4.6-quinquies ✅ ⛔ **Si misura sulla GPU INTEGRATA**, non sulla discreta
 
-*Vincolo posto dall'utente il **15 agosto 2026**, guardando la registrazione dell'Aquarium a 60 fps:
+*Vincolo posto dall'utente il **15 agosto 2026**, guardando la registrazione dell'Aquarium:
 «i test vanno fatti sulla GPU integrata, altrimenti "trucchiamo" il gioco. La solidità del sistema la
 si vede su GPU poco potenti, non mostri come la RX 6800».*
 
@@ -2472,8 +2434,8 @@ misure che sembravano un risultato e erano una proprietà del banco.
 
 ⛔ **E non era una scelta: era un accidente.** Senza la regola udev di §4.6-ter — `[M]` non era
 installata, `/etc/udev/rules.d` era vuota — i gruppi `video`/`render` danno accesso a **tutte e
-due**, e `[M]` il compositore aveva preso la **Radeon**. ⇒ La misura dell'Aquarium delle 22:09 —
-60 fps inchiodati — è stata fatta **sulla scheda sbagliata**, e va rifatta.
+due**, e `[M]` il compositore aveva preso la **Radeon**. ⇒ La misura dell'Aquarium delle 22:09
+è stata fatta **sulla scheda sbagliata**, e va rifatta.
 
 **La cura è quella già decisa in §4.6-ter, finalmente applicata**: `fondamenta/banco/gpu-udev.sh` con
 l'indirizzo da **escludere**, che sposta il nodo in un gruppo senza membri. ⭐ `[M]` dopo il
@@ -2581,7 +2543,7 @@ prima della copia zero è un budget da rifare.
 > è il modo più veloce per non sapere più che cosa è stato detto davvero.
 > ⇒ **La decisione era ed è la stessa; è il posto in fila ad essere cambiato.**
 
-### 4.6-septies ✅ ⭐⭐⭐ **Sei sessioni su una scheda integrata sono un buon risultato — la fase 10 si chiude**
+### 4.6-septies ✅ ⭐⭐⭐ **La capacità su una scheda integrata è un buon risultato — la fase 10 si chiude**
 
 *Giudizio dell'utente, **24 agosto 2026**, davanti al primo giro di misure del multi-tenant:*
 
@@ -2596,20 +2558,17 @@ fase 10 si chiude sul giudizio invece che su un bersaglio numerico. È la stessa
 decisione della fase 10 di v1 sulla qualità — *«va bene così»* — e vale per la stessa ragione:
 ⛔ **il metro è l'utente, non il numero.**
 
-⚠ **E il giudizio è dato sul caso PEGGIORE.** Le misure stanno in
-`fasi/10-multi-tenant-e-il-budget.md` §S.2 e §6.12, e non si ricopiano qui:
-
-| scena | quante ci stanno |
-|---|---|
-| **satura** — tutto lo schermo cambia a ogni fotogramma | `[M]` **6** ← *il numero giudicato* |
-| ⭐ **desktop vero** — finestre, trascinamenti, lavoro normale | `[M]` **almeno 11**, e il soffitto **non è stato trovato**: sono finiti gli utenti, non la macchina |
+⚠ **E il giudizio è dato sul caso PEGGIORE** — la scena **satura**, in cui tutto lo schermo cambia a
+ogni fotogramma. Sul **desktop vero** — finestre, trascinamenti, lavoro normale — `[M]` ne stavano
+di più, e il soffitto **non è stato trovato**: sono finiti gli utenti, non la macchina. *(Le misure,
+storiche, stavano in `fasi/10-multi-tenant-e-il-budget.md` §S.2 e §6.12; le cifre sono in git.)*
 
 ⇒ ⭐⭐ **Il giudizio ne esce rafforzato, non smentito**: quel che gli utenti fanno davvero costa meno
-della scena peggiore, e undici è un limite dello strumento di misura, non della macchina.
+della scena peggiore.
 
-⛔ **E il ferro va detto ogni volta** che si cita questo numero: Intel UHD 730 **integrata**, non una
-scheda dedicata. Un «sei» senza il ferro accanto è un numero che qualcuno confronterà con l'hardware
-sbagliato.
+⛔ **E il ferro va detto ogni volta** che si cita una capacità: Intel UHD 730 **integrata**, non una
+scheda dedicata. Un numero senza il ferro accanto è un numero che qualcuno confronterà con
+l'hardware sbagliato.
 
 > ### ⚠ E questa sezione ha una storia che vale la pena tenere
 >
@@ -2661,24 +2620,25 @@ simuli 10 utenti veri».*
 
 | dove si spende | quale motore della GPU | soffitto `[M]` |
 |---|---|---|
-| il **codificatore** nudo, scena sintetica | i due VDBOX (`vcs0`, `vcs1`) | **1,86 Gpixel/s** in H.264 · **2,33** in HEVC |
-| ⭐⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`**, il motore di disegno | ⭐ **0,97 Gpixel/s — la METÀ** |
+| il **codificatore** nudo, scena sintetica | i due VDBOX (`vcs0`, `vcs1`) | più alto |
+| ⭐⭐⭐ **la COMPOSIZIONE** | ⛔ **`rcs0`**, il motore di disegno | ⭐ **molto più basso: è lui il collo** |
 
-⇒ ⛔ **Il collo è a monte di noi.** `[M]` A saturare `rcs0` è **`gnome-shell` al 99,5 %**, mentre
-**`remotix` sta a `0,00 %`**. ⭐ *Cioè: il prodotto non è lento — il prodotto sta aspettando il
+⇒ ⛔ **Il collo è a monte di noi.** `[M]` A saturare `rcs0` è **`gnome-shell`**, mentre
+**`remotix` quel motore non lo usa**. ⭐ *Cioè: il prodotto non è lento — il prodotto sta aspettando il
 compositore*, e nessuna ottimizzazione del codificatore sposta quel numero.
 
 > ### ⭐⭐ La prova che lo inchioda sta in una riga sola
 >
 > `[M]` Stessa popolazione — **otto sessioni, otto desktop, otto figli** — e si **spegne una sola
-> scena**. **Il ritmo torna da 1,6 a 33,4 fot/s.** La si rimette, e il dirupo si riproduce.
+> scena**. **Il ritmo torna su.** La si rimette, e il dirupo si riproduce.
 > ⭐ **Reversibile e ripetibile.**
 >
 > ⇒ ⛔⛔ **Il dirupo non cade sul NUMERO delle sessioni: cade su quanto si sta COMPONENDO** — `[M]`
-> fra **873 e 953 Mpixel/s**, che è **lo stesso soffitto trovato per un'altra strada**.
+> sempre allo stesso livello di pixel composti al secondo, che è **lo stesso soffitto trovato per
+> un'altra strada**.
 >
 > ⚠ **E la colonna che lo tradiva non la guardava nessuno**: quando i compositori prendono il 100 %
-> del motore di disegno, `video-enhance` **crolla da 48,7 % a 0,4 %** ⇒ ⛔ **il codificatore non ha
+> del motore di disegno, `video-enhance` **crolla quasi a zero** ⇒ ⛔ **il codificatore non ha
 > più niente da fare. Non rallenta: si ferma.**
 
 #### ⭐ Che cosa cambia nel prodotto, in concreto
@@ -2688,28 +2648,24 @@ regge anche se la sua fisica era sbagliata: ⭐ **la moneta è il pixel COMPOSTO
 sessione si conosce dalla sua tela prima che la sessione esista.
 
 ⛔ **Ma il pixel da solo non basta**, e questo la fase l'ha imparato misurando: si guarda **anche il
-ritardo di chi è già dentro** — `[M]` soglia **22,9 ms**, ricavata da sano **≤ 13,1** e rotto
-**≥ 39,9**, ⭐ **senza nessuna sovrapposizione fra le due popolazioni**.
+ritardo di chi è già dentro** — soglia **22,9 ms**, ricavata dalle misure di allora, ⭐ **senza
+nessuna sovrapposizione fra la popolazione sana e quella rotta**.
 
 ```
 regge(dentro, nuovo)  ⟺  domanda(dentro) + costo(nuovo)  ≤  C × tolleranza
                           E  il ritardo di chi è dentro sta sotto la soglia
 ```
 
-#### ⚠ E i numeri di §4.6 che erano sbagliati — tutt'e tre **per difetto**
+#### ⚠ E le stime di §4.6 erano sbagliate — tutt'e tre **per difetto**
 
-| 10 sessioni a… | §4.6 diceva | ⭐ `[M]` |
-|---|---|---|
-| 480p · 25 | «una cinquantina» | il soffitto sta a **~180** — e la scala si è fermata al **tetto del banco**, non a quello del ferro |
-| 1080p · 30 | «giusto al limite» | il numero (620 Mpixel/s) era **giusto**, ⛔ ma è il **33,2 %**: ne tengono **24** |
-| 4K · 60 | «**una sola** sessione» | ⛔ i 5 Gpixel/s **non esistono**: il soffitto è 1,86. Ne tengono **DUE** |
+`[M]` Il codificatore da solo reggeva **più** sessioni di quel che §4.6 stimava, a tutte e tre le
+misure. ⛔ **Ma è il motore che NON è il collo**, e va letto solo per quello che è: la capacità del
+codificatore. ⭐ **Il numero che governa il prodotto è quello della composizione.** *(Le cifre sono
+in git.)*
 
-⛔ **Ma sono numeri del motore che NON è il collo**, e vanno letti solo per quello che sono: la
-capacità del codificatore. ⭐ **Il numero che governa il prodotto è quello della composizione.**
-
-⇒ ⭐ **E per l'utente il numero vero è un altro ancora**: sulla scena satura ne stanno **sei**; sul
-**desktop vero** — finestre, trascinamenti, strappi — `[M]` **almeno undici, e il soffitto non è
-stato trovato: sono finiti gli utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
+⇒ ⭐ **E per l'utente il numero vero è un altro ancora**: la scena satura e il **desktop vero** —
+finestre, trascinamenti, strappi — dove `[M]` **il soffitto non è stato trovato: sono finiti gli
+utenti, non la macchina**. Il giudizio è in **§4.6-septies**.
 
 ### 4.6-decies ✅ ⭐⭐⭐⭐ **Il metro sotto le specifiche: «artefatti sì, fluidità e sincronismo no»**
 
@@ -2734,15 +2690,14 @@ fallire»*), e sotto le specifiche quella promessa si onora **così**.
 
 > ### ⭐⭐ E la prova se l'è disegnata lui — con la correzione giusta, due volte
 >
-> 1. Alla proposta di scendere a **30 Mbit/s** gli è stato messo davanti il numero — `[M]` quel
->    video viaggiava a **6,0 Mbit/s**, cioè trenta sono **cinque volte** quel che serve — e ⭐ **ha
->    sceso a 10**;
+> 1. Alla proposta di scendere a **30 Mbit/s** gli è stato messo davanti quanta banda quel video
+>    usava davvero — `[M]` molto meno di trenta — e ⭐ **ha sceso a 10**;
 > 2. ⭐⭐ e ha strozzato **il tablet**, non il server: cioè **il percorso vero**, dal lato del client
 >    — che è la scena che un utente vero produce, e non quella comoda da fabbricare.
 >
-> `[M]` **E il prodotto ha risposto dimezzando la banda senza perdere un fotogramma**: 38,5 → **37,4
-> fot/s**, 6,0 → **3,20 Mbit/s**, ⭐ con la **coda del filo vuota** e il motore di composizione
-> **fermo sullo stesso 41-46 %** — cioè la scena si muoveva come prima.
+> `[M]` **E il prodotto ha risposto comprimendo di più senza perdere fotogrammi**, ⭐ con la **coda
+> del filo vuota** e il motore di composizione **fermo allo stesso carico** — cioè la scena si
+> muoveva come prima.
 > ⇒ **Non ha rallentato: ha compresso di più.**
 
 ⚠ **E questo giudizio chiude un `[?]` della fase 9**: la metà **AV** del sincronismo, rimasta aperta
@@ -2860,7 +2815,7 @@ domanda diversa.**
 
 | tipo di prova | la domanda | si rifà? |
 |---|---|---|
-| **capienza** | *quanti inquilini ci stanno insieme prima che la macchina ceda?* | ⛔ **no**: `[M]` sei sulla scena satura, almeno undici sul desktop vero |
+| **capienza** | *quanti inquilini ci stanno insieme prima che la macchina ceda?* | ⛔ **no**: `[M]` misurata alla fase 10, sul caso peggiore e sul desktop vero |
 | ⭐ **correttezza a più inquilini** | *il secondo riesce a fare quel che deve?* | ✅ **sì, ed è la rete** |
 
 ⭐⭐ **E il rilievo era dei due revisori esterni**, che ci sono arrivati per due strade diverse: *«C8
@@ -2949,8 +2904,8 @@ col guasto innestato `1 sì · 1 no`).
 quattro scatole le porte della macchina, e la separazione **per porta** è una separazione **vera** —
 ciascuna riconosce come propria solo la sua.
 
-⚠ **Il tempo è informazione, non verdetto**: `[M]` 6,6 s da sola → 7,0 s in parallelo (×1,06), e il
-totale scende da 26,2 s a 7,0 s. ⛔ E un tempo è stato **buttato dal banco stesso**: col guasto
+⚠ **Il tempo è informazione, non verdetto**: `[M]` in parallelo ogni scatola ci mette quasi quanto da
+sola, e il totale scende di molto. ⛔ E un tempo è stato **buttato dal banco stesso**: col guasto
 innestato i quattro tempi erano uguali a un decimo di secondo, perché quasi tutto era **attesa fissa
 nostra** e non lavoro. ⇒ Chiamarla «contesa» sarebbe stato misurare il proprio tetto.
 
@@ -3071,7 +3026,7 @@ decisione, non un difetto.
 | | |
 |---|---|
 | `--headless` da solo | ⛔ **zero `wl_output`**, ed è voluto: in headless Mutter non apre le schede |
-| il monitor virtuale | ⭐ nasce **solo quando un consumatore PipeWire si aggancia** al flusso — `[M]` 65–93 ms dopo l'aggancio, **mai prima** |
+| il monitor virtuale | ⭐ nasce **solo quando un consumatore PipeWire si aggancia** al flusso — `[M]` subito dopo l'aggancio, **mai prima** |
 | lo stacco del **consumatore** | ⭐ il monitor **sopravvive** (`[M]` 15 s, c'è ancora) |
 | la chiusura della **connessione D-Bus** di chi ha chiamato `RecordVirtual` | ⛔ **il monitor MUORE** |
 
@@ -3094,15 +3049,15 @@ che viva quanto la sessione. ⇒ ❓ **È una decisione del regista**, e la magl
 filo non esce nessun fotogramma — il difetto del 14 agosto riprodotto) e la geometria (1920×1080 e
 1268×713 danno lo stesso esito).
 
-### 4.6-quaterque-vicies ✅ ⛔ **I ~97 secondi erano della SCATOLA, non del prodotto**
+### 4.6-quaterque-vicies ✅ ⛔ **L'avvio lentissimo era della SCATOLA, non del prodotto**
 
 ⇒ `LEZIONI.md` §1.54. In una riga: la ricetta spostava il gruppo `polkitd` da 991 a 1991 per dare
 991 alla scheda grafica, ⛔ `groupmod -g` non si porta dietro i file, `polkitd` non poteva più
 leggere le sue regole e moriva, e `gnome-shell` incassava **quattro scadenze da 25 000 ms in fila**.
 
 ⭐ Curato nella ricetta, **senza nessun permesso nuovo** oltre a `SYS_ADMIN`: chi sposta il numero fa
-seguire i file, e l'unità dei gruppi prende `Before=polkit.service`. `[M]` Da **~97 secondi** a
-**1,105 · 0,998 · 0,957 s**.
+seguire i file, e l'unità dei gruppi prende `Before=polkit.service`. `[M]` L'avvio torna
+**normale**, tre giri su tre.
 
 ### 4.6-quinquies-vicies ⛔⛔ **Il prodotto guida UN desktop, non quattro**
 
@@ -3296,15 +3251,9 @@ input di §7.3 — e non del fatto che una connessione esista.
 *L'utente aveva chiesto: «misura la memoria. Potrei anche decidere di diminuire drasticamente questo
 intervallo».*
 
-`[M]` 16 agosto 2026, sessione abbandonata, PSS (le librerie condivise contate una volta sola):
-
-| | |
-|---|---|
-| la sessione intera di `prova` | **477 MB** su 31 851 totali ⇒ **1,5 %** |
-| di cui `gnome-shell` | 182 MB |
-| di cui **il nostro figlio** (palco, cattura, codificatore) | **116 MB** |
-| CPU | ~0,017 % di un nucleo |
-| ⭐ **crescita in 4 minuti** | **nessuna**: 477 · 476 · 476 · 477 · 477 · 477 · 477 · 477 · 477 MB |
+`[M]` 16 agosto 2026, sessione abbandonata, PSS (le librerie condivise contate una volta sola): la
+memoria di una sessione ferma è una **piccola frazione** di quella della macchina, e ⭐ **non cresce**
+col passare dei minuti. *(Le cifre sono in git.)*
 
 ⇒ **Non è una perdita, è un costo fisso.** ⚠ E la scelta, con quel numero davanti, è dell'utente: si
 paga per un'ora invece che per sei.
@@ -3397,7 +3346,7 @@ ottimizzare nella direzione sbagliata.
 > ⚠ **E le due ragioni di questa voce non erano sbagliate: erano legate a un vincolo che non c'è
 > più.** La prima diceva che una finestra piccola darebbe *«un desktop piccolo per tutta la
 > sessione»* — vero **finché la tela non si poteva cambiare**. Da quando `figli_ritela()` →
-> `cattura_ridimensiona()` esiste (`[M]` 6 ms a caldo, 15 agosto), la tela si rifà **a ogni
+> `cattura_ridimensiona()` esiste (15 agosto), la tela si rifà **a ogni
 > attacco e a ogni riattacco**. ⛔ *Durante* la sessione no, e dal 17 agosto 2026 nemmeno dietro un
 > interruttore: §5.1-bis l'ha tolto. ⚠ Ma la voce resta curata lo stesso — «piccolo per sempre»
 > voleva dire *per tutta la sessione*, e una sessione si riattacca.
@@ -3537,8 +3486,8 @@ aperta, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.m
 
 | | misura esatta | cambio a caldo |
 |---|---|---|
-| **Mutter** (GNOME) | `[M]` **30 richieste su 30**, da 1×1 a 7680×4320, scala **1,000000**, passo senza riempimento | `[M]` primo fotogramma nuovo a **41,6 ms**, nessun nero, sessione ed EIS intatti; **20 ridimensionamenti in 2 s, 20 esatti** |
-| **labwc** (XFCE, LXQt) | `[M]` esatta **anche a larghezza dispari**; `1×1`, `1919×1079`, `32768×1080` tutte al pixel | `[M]` **5,1 ms**, **0 fotogrammi persi su 25** |
+| **Mutter** (GNOME) | `[M]` **30 richieste su 30**, da 1×1 a 7680×4320, scala **1,000000**, passo senza riempimento | `[M]` nessun nero, sessione ed EIS intatti; **20 ridimensionamenti di fila, 20 esatti** |
+| **labwc** (XFCE, LXQt) | `[M]` esatta **anche a larghezza dispari**; `1×1`, `1919×1079`, `32768×1080` tutte al pixel | `[M]` **0 fotogrammi persi su 25** |
 | **KWin** (KDE) | `[R]` nessuna validazione: né minimo, né massimo, né parità, né multipli | ⛔ solo su `master` — vedi §5.0-bis |
 | **il codificatore** | `[M]` il vincolo è **pari, e basta** — non multiplo di 8 né di 16 | — |
 
@@ -3586,10 +3535,10 @@ conversione.
 ⭐ **E la risposta non va cercata quel giorno: è stata misurata il 14 agosto 2026**, ed è il
 ridimensionamento **a caldo**, sulla sessione viva, senza rifarla:
 
-| | costo misurato | che cosa NON succede |
+| | che cosa si è misurato | che cosa NON succede |
 |---|---|---|
-| **Mutter** (GNOME) | `[M]` primo fotogramma nuovo a **41,6 ms** · **20 ridimensionamenti in 2 s, 20 esatti** | nessun fotogramma nero, **sessione ed EIS intatti**, nessuna riconnessione |
-| **labwc** (XFCE, LXQt) | `[M]` **5,1 ms** · **0 fotogrammi persi su 25** | nessun fotogramma nero; il fotogramma successivo è già alla misura nuova |
+| **Mutter** (GNOME) | `[M]` **20 ridimensionamenti di fila, 20 esatti** | nessun fotogramma nero, **sessione ed EIS intatti**, nessuna riconnessione |
+| **labwc** (XFCE, LXQt) | `[M]` **0 fotogrammi persi su 25** | nessun fotogramma nero; il fotogramma successivo è già alla misura nuova |
 | **KWin** (KDE ≤ 6.7.4) | ⛔ non esiste | ⇒ vale il ripiego dichiarato di §5.0-bis, e **solo lì** |
 
 ⇒ ⭐ **Il ri-attacco a misura diversa non è un problema aperto: è un caso già coperto**, su tre
@@ -3623,10 +3572,10 @@ studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` e rilegg
 >
 > | | prima (14 ago) | adesso (15 ago) |
 > |---|---|---|
-> | ⭐⭐ dal canale video al primo fotogramma | **4,4 s** (659 «attese a vuoto») | **311 ms** |
+> | ⭐⭐ dal canale video al primo fotogramma | lento: il flusso restava fermo in «attese a vuoto» | ⭐ **subito** |
 > | la tela in vigore all'attacco | 1920×1080 fissa | **1264×800** = la finestra del browser |
 > | la scala di disegno del client | 0,658 (`imageRendering: auto`) | **1,000** (`pixelated`) |
-> | il ridimensionamento a caldo (1264×800 → 1000×640) | non esisteva | ⭐ **6 ms** dalla risposta del palco alla chiave spedita |
+> | il ridimensionamento a caldo (1264×800 → 1000×640) | non esisteva | ⭐ **funziona**, dalla risposta del palco alla chiave spedita |
 > | fotogrammi scartati per misura · trattenuti · errori | — | **0 · 0 · 0** |
 >
 > ⭐ **E il desktop lo dice da sé**: GNOME *Impostazioni → Displays* dentro la sessione remota
@@ -3648,7 +3597,7 @@ studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` e rilegg
 > | `RCP_TELA_ATTESA_MS` | **3000 ms** | il fondo oltre cui si risponde `NON_ORA` comunque: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`, e §6.2 fa **trattenere fotogrammi** al client finché aspetta |
 > | `RCP_TELA_RICHIAMO_MS` | 500 ms, che raddoppia fino a 8 s | ogni quanto si **richiede** al palco di tornare alla tela in vigore, quando ne ha una sua |
 > | ~~`TELA_FONDO_MS` (client)~~ ⛔ **USCITO il 17 agosto 2026** *(riallineato il 28)* | ~~250 ms~~ | chi trascina un bordo produce decine di `resize` al secondo — ⭐ ma il fondo è uscito **con la funzione che serviva** (`tela_forse_chiedi()`): `src/pagina.html` ne tiene la lapide, perché la cura andrebbe rimessa solo se qualcuno rimettesse l'inseguimento |
-> | `RISVEGLIO_MS` (figlio) | 400 ms | ogni quanto si riavvia il flusso quando **una chiave è dovuta e la scena è ferma** — è la cura dei 4,4 secondi |
+> | `RISVEGLIO_MS` (figlio) | 400 ms | ogni quanto si riavvia il flusso quando **una chiave è dovuta e la scena è ferma** — è la cura dell'attesa al primo fotogramma |
 >
 > ⛔ **E una cosa che il server NON fa, per una riga che manca a `RCP.md`**: quando il palco cambia
 > misura **senza che nessuno gliel'abbia chiesto**, il server **non adotta** la misura nuova e non
@@ -3777,8 +3726,8 @@ com'era scritta l'8 agosto).
 
 #### Perché — e la ragione non è il codice, è il prodotto
 
-⛔ **L'eccezione era misurata, non temuta.** Su Mutter cambiare la tela a caldo costa `[M]` **6 ms**
-e funziona. Su KWin ≤ 6.7.4 — cioè **Debian Trixie, e fino a Forky** — `stream_virtual_output`
+⛔ **L'eccezione era misurata, non temuta.** Su Mutter cambiare la tela a caldo `[M]`
+funziona. Su KWin ≤ 6.7.4 — cioè **Debian Trixie, e fino a Forky** — `stream_virtual_output`
 risponde **`Could not find output` a ogni misura** (`[M]` 8 agosto 2026, cinque misure provate,
 `VirtualBackend` non ridefinisce `createVirtualOutput()`). ⇒ Tenerla avrebbe voluto dire **un
 prodotto che fa una cosa diversa a seconda di chi ci ospita**, con un ramo condizionato al
@@ -4475,8 +4424,7 @@ prezzo di una dipendenza da installare due volte e ricordare per sempre (`LEZION
 ### 5-quater.2 🔸 Il bitrate di Opus: **96 kbit/s**
 
 Derivato, non deciso dall'utente. È la banda a cui Opus è trasparente per la musica secondo la sua
-documentazione `[S]`; `[M]` un blocco da 20 ms misura **241-439 byte**, che sta nel datagram con
-margine largo. ⏳ **Da rivedere il giorno in cui qualcuno giudichi la qualità**, non prima.
+documentazione `[S]`; `[M]` un blocco da 20 ms sta nel datagram con margine largo. ⏳ **Da rivedere il giorno in cui qualcuno giudichi la qualità**, non prima.
 
 ### 5-quater.3 🔸 Il cuscino di riproduzione: **250 ms**, e non è un numero libero
 
@@ -4503,7 +4451,7 @@ rifiuto»**: quella era una lettura mia, e valeva il **50 %** dell'audio.
 |---|---|
 | ⛔ **quel che NON si fa** | buttare un blocco perché il pacer ha detto «non adesso»: quel blocco parte qualche centinaio di microsecondi dopo, e buttarlo è **un buco garantito** |
 | ⭐ **quel che decide** | **la coda**: otto blocchi = 160 ms di Opus. Oltre quelli il più vecchio non serve più a nessuno, ed **è lì** che §6.3 morde |
-| ⭐ **e si spediscono più blocchi per pacchetto** | un pacchetto è **1452 byte**, un blocco di Opus **230**: ce ne stanno sei. ⛔ Spedirne uno per passata di scrittura, con ~25 passate al secondo contro 50 blocchi prodotti, perdeva **esattamente la metà** |
+| ⭐ **e si spediscono più blocchi per pacchetto** | un blocco di Opus è una piccola frazione di un pacchetto: ce ne stanno parecchi. ⛔ Spedirne uno per passata di scrittura, con metà delle passate rispetto ai blocchi prodotti, perdeva **esattamente la metà** |
 
 ⚠ **E la forma del numero era l'indizio**: *esattamente* la metà. Una perdita di rete non è mai
 esattamente la metà; un'aritmetica sì (`LEZIONI.md` §2.7).
@@ -4946,7 +4894,7 @@ fa con un banco davanti, non su carta.
 > |---|---|
 > | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, il nostro è un numero **senza il suo paragone** |
 > | ⚠ **due proprietà su sei**, *alle 08:00* | delle sei che B2 doveva verificare qui, questa misura ne portava due — **datagram abilitati** e **`max_idle_timeout` 30 s**. ⭐ **Le altre quattro sono state chiuse mezz'ora dopo**, riquadro qui sotto: non restano `[?]` |
-> | ⚠ **i millisecondi non si confrontano** | 118,6 ms (Chrome) e 140,0 ms (Firefox) sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato 22,2 ms in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà questi numeri accanto ai 30,2 ms del 9 agosto confronterà due cose diverse |
+> | ⚠ **i millisecondi non si confrontano** | i tempi d'apertura di quel giro sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato tempi molto diversi in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà quei tempi accanto a quelli del 9 agosto confronterà due cose diverse |
 
 > ### ⭐ Le sei proprietà del trasporto: **6 su 6**, lette dal pari — `[M]` 10 agosto 2026, mattina
 >
@@ -5121,9 +5069,8 @@ secondo, e su una macchina sola lo pone il codificatore.
 ### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
 50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. ⛔ *L'avvertenza che stava qui —
 «il traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi» — è
-**caduta il 13 agosto 2026**: il ritardo è `[M]` **74,58 ms** e sfora anche il tetto, ma il motivo
-non è quello. Mutter pesa il **22 %**, il **78 % è nostro**, e il muro dei 37 non si riproduce
-(§2.5).*
+**caduta il 13 agosto 2026**: il ritardo `[M]` sforava anche il tetto, ma il motivo non era quello.
+Il grosso era **nostro**, e il ritmo basso della cattura di Mutter non si riproduce (§2.5).*
 
 ### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
 Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio
@@ -5181,7 +5128,7 @@ foglio bianco — **parte da `STUDI.md` §gnome e cerca le differenze**. È una 
 1. **si può creare uno schermo virtuale senza monitor?** Su GNOME è `RecordVirtual`; su KDE la
    risposta negativa è stata il risultato più costoso di tutto lo studio (`STUDI.md` §kde §8.1);
 2. **quanti fotogrammi consegna la cattura, con una scena dichiarata e sempre in movimento?**
-   Mutter 37, KWin 60, wlroots 61 `[M]`.
+   La stessa domanda già misurata su Mutter, KWin e wlroots `[M]`.
 
 Poi le altre dodici di `LEZIONI.md` §3, e la ricetta di §9 — a partire dal punto 0, *cercare chi
 l'ha già fatto*, che su KDE aveva fatto trovare `KRdp` in un nono repository dopo che lo studio
@@ -5496,9 +5443,9 @@ la domanda è *se l'hai detta*.
 (la strada verso i pixel è una sola in `pagina.html`). ⭐ Ha però WebTransport e decodifica H.264
 **in hardware** via MSE: la capacità c'è, manca il modo di darle i byte.
 
-⛔ **Il prezzo, misurato** (`fasi/06`, banco `07-b57`): MSE costa **+225 ms** su Firefox e
-**+415 ms** su Chrome sulla mediana, con una coda di riproduzione di 310–715 ms, contro il tetto
-dichiarato di **50 ms**. ⚠ E l'inseguimento non salva: 40 salti su 150 fotogrammi.
+⛔ **Il prezzo, misurato** (`fasi/06`, banco `07-b57`): MSE aggiunge un ritardo **di un'altra
+classe**, molto oltre il tetto dichiarato di **50 ms**, su Firefox come su Chrome. ⚠ E
+l'inseguimento non salva: salta fotogrammi.
 
 | la lettura | che lavoro produce |
 |---|---|
@@ -5545,8 +5492,8 @@ chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il s
 > ⚠ **E resta scritto quanto è costata**: sei giri di prove sul telefono dell'utente e una giornata
 > di lavoro, per una strada che non entra nel prodotto. ⭐ Non è tempo buttato del tutto — ne sono
 > usciti `07-b58`, `07-b59` e §1.19 di `LEZIONI.md` — ma la lezione vera è che **la domanda «quanto
-> renderà?» andava misurata prima di costruire**, e il numero c'era già: `07-b57`, centinaia di
-> millisecondi contro un tetto di 50.
+> renderà?» andava misurata prima di costruire**, e la misura c'era già: `07-b57`, un ritardo molto
+> oltre il tetto di 50 ms.
 
 ### 7.20 ✅ **I motori supportati, dichiarati dall'utente** — 22 agosto 2026
 
@@ -5583,8 +5530,8 @@ c'è, ed è giudicato — non dedotto dai contatori.
 
 | | |
 |---|---|
-| che cosa chiude | ⛔ **l'ultimo difetto vero della fase 7**: la coda dell'audio a 400–420 ms. ⇒ `fasi/07-audio-e-appunti.md` §9.7 e §8 |
-| ⚠ il numero resta scritto | 401 → 421 ms, `[M]` sulla prima sessione Android. Smette di essere un **difetto**, non di essere una **misura**: il metro è I8, e per l'audio I8 è l'orecchio |
+| che cosa chiude | ⛔ **l'ultimo difetto vero della fase 7**: la coda dell'audio. ⇒ `fasi/07-audio-e-appunti.md` §9.7 e §8 |
+| ⚠ la misura resta | `[M]` sulla prima sessione Android (le cifre sono in git). Smette di essere un **difetto**, non di essere una **misura**: il metro è I8, e per l'audio I8 è l'orecchio |
 | in che condizioni | Samsung DeX, Android 16, **rete di casa**, codec negoziato **HEVC in hardware**. ⏳ Il datagram su rete non locale resta non misurato |
 
 ⚠ **E questo è §0.1-bis applicato per intero**: *«pienamente supportato»* qui vuol dire **funziona, e
@@ -5713,8 +5660,8 @@ kde. `[M]` 22 set 2026, inquilini senza gruppi, **browser veri** con finestra ve
 
 | scatola | Firefox 140 | Chrome 153 | che cosa ha fatto il prodotto |
 |---|---|---|---|
-| **gnome** | ⭐ PASS (1° fotogramma 1,6 s) | ⭐ PASS (1,2 s) | `id -nG`: `sgruppig`/`sgruppic` → `… video render` |
-| **xfce** | ⭐ PASS (0,6 s) | ⭐ PASS (0,9 s) | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
+| **gnome** | ⭐ PASS | ⭐ PASS | `id -nG`: `sgruppig`/`sgruppic` → `… video render` |
+| **xfce** | ⭐ PASS | ⭐ PASS | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
 
 ⛔ **E la rete non lo guardava**, perché **ogni maglia mette i gruppi al suo inquilino da sé**
 (`garantisci_i_gruppi`): quando il cliente arriva, il prodotto non ha più niente da iscrivere ⇒ la
@@ -5835,20 +5782,20 @@ video in proporzione alla sua frequenza e la memoria dei browser che si registra
 ### 9.4 ✅ Firefox disegna con WebGL (anomalia A1) — decisione del 26 set 2026, mattina
 
 La campagna ha misurato che in Firefox la strada di disegno di serie (`bitmaprenderer`, scelta il 20
-ago 2026 contro i quadrati della tela 2D) rilegge ogni fotogramma dalla GPU (~34 ms a 4K) e fa saltare
-l'11–50 % dei fotogrammi già con un utente. L'utente ha scelto di **curare adesso** (strada WebGL2)
+ago 2026 contro i quadrati della tela 2D) rilegge ogni fotogramma dalla GPU e a 4K fa saltare
+fotogrammi già con un utente. L'utente ha scelto di **curare adesso** (strada WebGL2)
 invece di chiudere la campagna col difetto dichiarato: suite corta + prove della tela + **suo sguardo
 contro i quadrati**, poi si rifanno le salite interessate.
 
 ### 9.5 ✅ Il rallentamento della Radeon in 4K (A3) è del driver: si documenta, non si aggira — 29 set 2026
 
 Esclusi con misure frequenza, VPP, barriera del compositore ed EFC, il ritardo sta dentro la codifica
-del VCN (gruppi di 5 fotogrammi da ~31 ms, una sessione alla volta). Parola dell'utente: *«è fuori dal
+del VCN (a gruppi di fotogrammi, una sessione alla volta). Parola dell'utente: *«è fuori dal
 nostro ambito. Se in futuro il problema dovesse essere risolto allora REMOTIX diverrà più capace di
 reggere un maggior carico»*. ⇒ Nessun aggiramento nel prodotto; il 4K della Radeon si dichiara limitato
 dal driver; il difetto è documentato nei minimi particolari in `fasi/16-a3-radeon-vcn.md`, perché
 l'utente possa decidere di aiutare gli sviluppatori del driver.
-Aggiunta del 29 set 2026: Mesa 26.1.6 non cura (100 e 102 lenti contro 100 e 105). Parola dell'utente:
+Aggiunta del 29 set 2026: Mesa 26.1.6 non cura. Parola dell'utente:
 *«stiamo andando fuori scope, questo è un problema dei driver AMD, non di REMOTIX. Aprirò a questo scopo
 un progetto apposito»*. ⇒ In REMOTIX il lavoro su A3 si chiude qui: niente riproduzione minima (§6.2 del
 dossier) né altri esperimenti; il dossier e il ramo `a3-esperimenti` sono il punto di partenza del progetto nuovo.

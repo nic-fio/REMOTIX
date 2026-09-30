@@ -1,5 +1,7 @@
 # Fase 11 — La rete di sicurezza
 
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
+
 *Aperta il **25 agosto 2026**. Chiusa il —*
 
 > ### 📋 QUESTO DOCUMENTO È SCRITTO ANCHE PER CHI NON CONOSCE IL PROGETTO
@@ -758,7 +760,7 @@ nella ricetta**, riga per riga, invece di essere ereditate per caso.
 ## 7-bis.5 ⭐ IL PRODOTTO GIRA DENTRO LA SCATOLA — e la prova è un cliente vero
 
 `[M]` 26 agosto 2026: il cliente di prova si è attaccato al server **dentro la scatola**, ed è stato
-**AMMESSO in 1004 ms**, con `SESSIONE: stato=1 tela=1920x1080`, restando attaccato 30 s senza che
+**AMMESSO**, con `SESSIONE: stato=1 tela=1920x1080`, restando attaccato 30 s senza che
 cadesse niente. ⇒ ⭐ Il guardiano di `logind` si è collegato al bus di sistema **dentro il
 contenitore**, che era la `[?]` di Q2.
 
@@ -771,7 +773,7 @@ ferro dava a `provanic3` **2 riusciti e 6 falliti**.
 | | |
 |---|---|
 | ⛔ **la scatola non si spegne da sola** | `[M]` un `podman rm -f` normale è rimasto appeso **oltre quattro minuti** aspettando uno spegnimento ordinato che non arrivava, bloccando anche i comandi successivi. Per ora si ammazza (`-t 0`). ⚠ **Non tocca il passo 0** (la scatola è usa-e-getta) ⛔ **ma tocca C7** — *«si chiude tutto e non resta niente»* — e lì quella domanda diventa il bersaglio |
-| ⚠ **tre giri su sei non hanno giudicato** | il palco impiega ~13 s a nascere e a volte non nasce affatto; l'attesa dichiarata è 45 s. ⇒ Restano **«non lo so»**, ⛔ **e non diventano verdi** |
+| ⚠ **tre giri su sei non hanno giudicato** | il palco a volte non nasce affatto dentro l'attesa dichiarata (45 s). ⇒ Restano **«non lo so»**, ⛔ **e non diventano verdi** |
 
 ## 7-bis.7 ⭐⭐⭐⭐ LA SECONDA SCATOLA — **e le stesse prove girano su PLASMA senza una riga cambiata**
 
@@ -825,8 +827,7 @@ adattatore da quaranta righe**.
 **Le scatole sono quattro; i compositori sono TRE.** XFCE e LXQt non portano un compositore proprio
 su Wayland: portano una **sessione** e si appoggiano a uno di famiglia `wlroots` — e la scelta, per
 tutt'e due, è **labwc**. ⛔ Non è una comodità di questa fase: `DECISIONI.md` ha già misurato il
-ridimensionamento sotto l'etichetta **«labwc (XFCE, LXQt)»** (`[M]` 5,1 ms, 0 fotogrammi persi su
-25), e `PIANO.md` fase 13 lo dice in una riga — *«il terzo e il quarto desktop, che condividono
+ridimensionamento sotto l'etichetta **«labwc (XFCE, LXQt)»**, e `PIANO.md` fase 13 lo dice in una riga — *«il terzo e il quarto desktop, che condividono
 wlroots e quindi quasi tutto»*.
 
 ⇒ ⚠ **Che cosa mette alla prova davvero la quarta scatola**: una quarta **sessione**, una quarta
@@ -1320,8 +1321,8 @@ difetto solo.** Sono state tre cose, e ciascuna nascondeva la successiva:
 | | che cos'era | come si è visto |
 |---|---|---|
 | ⛔⛔ **la prova** | **C1 non poteva dire verde** — leggeva `ZERO MONITOR`, che il prodotto scrive nel percorso di una nascita **riuscita**, e il suo ramo verde era irraggiungibile | un agente mandato a **smentirla** ⇒ `LEZIONI.md` §1.53 |
-| ⛔ **la scatola** | il §6 della ricetta spostava il gruppo `polkitd` da 991 per darlo alla scheda; `groupmod` non porta i file ⇒ `polkit` moriva, `gnome-shell` incassava **4 scadenze da 25 s** | `[M]` da **~97 s** a **1,0 s** dopo la cura ⇒ §1.54 |
-| ⭐⭐⭐ **la causa vera** | **l'inquilino non era nei gruppi `video` e `render`** | `[M]` **17 sessioni su 17** vedono coi gruppi · **0 su 4** senza · ⭐ dati i gruppi allo stesso inquilino ⇒ **2,04 s**. Una variabile sola, esito ribaltato |
+| ⛔ **la scatola** | il §6 della ricetta spostava il gruppo `polkitd` da 991 per darlo alla scheda; `groupmod` non porta i file ⇒ `polkit` moriva, `gnome-shell` incassava **4 scadenze da 25 s** | `[M]` dopo la cura l'avvio torna normale ⇒ §1.54 |
+| ⭐⭐⭐ **la causa vera** | **l'inquilino non era nei gruppi `video` e `render`** | `[M]` **17 sessioni su 17** vedono coi gruppi · **0 su 4** senza · ⭐ dati i gruppi allo stesso inquilino ⇒ **vede**. Una variabile sola, esito ribaltato |
 
 ⭐⭐ **E la tabella di §7.4 si spiega da sola**: `provanic4/5/6` — quelli che non videro **mai**, su
 **98 · 55 · 50** tentativi — non hanno quei gruppi; `prova` e `provanic1`, che videro sempre, li
@@ -1337,7 +1338,7 @@ hanno. ⇒ ⛔ **Non era intermittente: erano due popolazioni di inquilini.**
 `[R]` `--headless` da solo **non crea nessun monitor**, ed è voluto. In tutto Mutter **due** posti ne
 creano uno: la bandiera `--virtual-monitor` all'avvio, e `RecordVirtual`. ⭐ E quello di
 `RecordVirtual` nasce **quando PipeWire fissa il formato**, cioè **dopo che un consumatore si è
-agganciato** — `[M]` 65–93 ms dopo, mai prima.
+agganciato** — `[M]` sempre dopo, mai prima.
 
 ⇒ ⭐⭐ **Ecco perché le cinque prove «bloccate» non erano bloccate**: mentre un cliente è attaccato,
 lo schermo **c'è** — che è esattamente la condizione in cui quelle cinque lavorano.
