@@ -4,8 +4,9 @@
 
 *Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
 sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
-riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nessuna misura, nessuna
-marca e nessuna data sono state toccate.*
+riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nella cucitura nessuna
+misura, nessuna marca e nessuna data sono state toccate; dopo, con la fase 18, sono state tolte solo le misure
+che il cambio ha invalidato (vedi la riga ⚠ qui sopra).*
 
 > ⚠ **COME SI LEGGONO I PERCORSI QUI DENTRO** *(convenzione aggiunta il 28 agosto 2026)*
 >
