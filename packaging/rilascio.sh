@@ -112,21 +112,21 @@ RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
 	"$ALBERO/packaging/archivio/pacchetti-motore.sh" "$LAV/motore" >>"$REG" 2>&1 || { tail -20 "$REG"; exit 1; }
 
 passo "5. l'archivio ($ARCHIVIO)"
-PUB=$ALBERO/packaging/archivio/pubblica.sh
+PUB="bash $ALBERO/packaging/archivio/pubblica.sh"
 M=$LAV/motore
 for b in "${deb[@]}"; do
-	"$PUB" aggiungi "$CANALE" "$b" "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$M/remotix-archive-keyring_${V}-${R}_all.deb"
+	$PUB aggiungi "$CANALE" "$b" "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$M/remotix-archive-keyring_${V}-${R}_all.deb"
 done
 for b in "${rpm[@]}"; do
-	"$PUB" aggiungi "$CANALE" "$b" $(ls "$P/rpm/$b"/*.rpm | grep -vE '\.src\.rpm$|-debug(info|source)-') "$M"/remotix-install-"$V"-"$R".x86_64.rpm
+	$PUB aggiungi "$CANALE" "$b" $(ls "$P/rpm/$b"/*.rpm | grep -vE '\.src\.rpm$|-debug(info|source)-') "$M"/remotix-install-"$V"-"$R".x86_64.rpm
 done
 if [ $arch = 1 ]; then
-	"$PUB" aggiungi "$CANALE" arch "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst
+	$PUB aggiungi "$CANALE" arch "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst
 fi
-"$PUB" motore "$LAV/motore-bin/remotix-install" "$LAV/motore-bin/remotix-install-gui"
-"$PUB" script
+$PUB motore "$LAV/motore-bin/remotix-install" "$LAV/motore-bin/remotix-install-gui"
+$PUB script
 podman run --rm docker.io/library/golang:1.25 cat /usr/local/go/LICENSE >"$LAV/LICENSE-go"
-LICENZA_GO=$LAV/LICENSE-go "$PUB" rigenera 2>&1 | tee -a "$REG"
+LICENZA_GO=$LAV/LICENSE-go $PUB rigenera 2>&1 | tee -a "$REG"
 
 passo "6. il riassunto"
 SHA_IS=$(cut -d' ' -f1 "$ARCHIVIO/install.sh.sha256")
