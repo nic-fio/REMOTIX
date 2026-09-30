@@ -1909,15 +1909,11 @@ lo faccia per quello.
 >
 > ### ⛔⛔ E la stessa sera è arrivato il caso che le fa dire cose OPPOSTE — la pagina nel worker
 >
-> | | thread principale | worker |
-> |---|---|---|
-> | ⭐ **fotogrammi dipinti sulla catena vera** | 22,8-24,2 /s | ⭐ **26,3 /s** — *il worker dipinge di PIÙ* |
-> | ⛔ **tetto a saturazione, 1080p** | **127,6 /s** | ⛔ **33,9 /s** (**−73,4 %**) |
-> | ⛔ **tetto a saturazione, 480p** | **230,6 /s** | ⛔ **56,4 /s** (**−75,5 %**) |
-> | ⛔ **mediana del ritardo** | 73,66 / 67,79 ms | ⛔ **101,30 ms** |
+> *Si era deciso di tenere la tela sul thread principale (`DECISIONI.md` §2.8); le misure, prese con la
+> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.*
 >
-> ⛔ **Sulla catena vera il worker sembra migliore. A saturazione è tre quarti peggiore. E il ritardo
-> dice che è peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza
+> ⛔ **Sulla catena vera il worker dipingeva di più e sembrava migliore. A saturazione era di gran lunga
+> peggiore. E il ritardo diceva che era peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza
 > si è scelta per prima** — che è il modo più educato in cui una misura può mentire.
 >
 > ⭐ **La regola pratica**: quando una leva tocca il percorso del video, le tre grandezze si
