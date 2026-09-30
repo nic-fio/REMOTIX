@@ -25,7 +25,8 @@ ALBERO=$(cd "$QUI/../.." && pwd)
 USCITA=${USCITA:-$ALBERO/costruzione-uscita}
 CACHE=${CACHE:-$USCITA/.lavoro}
 TUTTI=(fedora44 alma10 tumbleweed leap16)
-VER=$(awk '/^Version:/ { print $2 }' "$QUI/remotix.spec")
+# la versione: quella del rilascio (RX_VERSIONE, packaging/rilascio.sh) o la predefinita dello spec
+VER=${RX_VERSIONE:-$(sed -n 's/^Version:.*!?rx_versione:\([^}]*\)}.*/\1/p' "$QUI/remotix.spec")}
 
 command -v podman >/dev/null 2>&1 || { echo "⛔ podman non c'e'"; exit 2; }
 mkdir -p "$CACHE/tmp" "$USCITA/rpm"
@@ -68,7 +69,7 @@ costruisci_uno()
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/strumenti: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
-		rpmbuild -ba --define "_topdir /lavoro" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" '"${RX_SELINUX_PERMISSIVO:+--define \"rx_selinux_permissivo 1\"}"' /lavoro/SPECS/remotix.spec 2>&1
+		rpmbuild -ba --define "_topdir /lavoro" --define "rx_versione '"$VER"'" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" '"${RX_SELINUX_PERMISSIVO:+--define \"rx_selinux_permissivo 1\"}"' /lavoro/SPECS/remotix.spec 2>&1
 		echo "rpmbuild-esito=$?"
 		ls /lavoro/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /lavoro/SPECS/remotix.spec /lavoro/RPMS/*/*.rpm /lavoro/SRPMS/*.rpm >/lavoro/rpmlint.txt 2>&1

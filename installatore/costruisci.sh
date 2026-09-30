@@ -11,10 +11,15 @@
 #   ./costruisci.sh anteprime DATI USCITA [it|en]   le schermate in PNG fuori schermo (dati: una
 #                              cartella con verifica.json e piano.json di una macchina)
 #
+# RX_VERSIONE (dal comando di rilascio, packaging/rilascio.sh): la versione del motore, la stessa dei
+# pacchetti del rilascio (-ldflags -X motore.VersioneMotore); senza, quella scritta in formato.go.
+#
 # ⚠ /tmp del portatile è quasi pieno: la cache di Go sta in .cache/ qui accanto (ignorata da git).
 set -eu
 qui=$(cd "$(dirname "$0")" && pwd)
 immagine=docker.io/library/golang:1.25
+ldf="-s -w"
+[ -n "${RX_VERSIONE:-}" ] && ldf="$ldf -X remotix/installatore/motore.VersioneMotore=$RX_VERSIONE"
 mkdir -p "$qui/.cache/go-build" "$qui/.cache/tmp" "$qui/uscita"
 go_() {
 	podman run --rm -v "$qui:/src:Z" -w /src \
@@ -31,7 +36,7 @@ gui_() {
 }
 case "${1:-}" in
 gui)
-	gui_ go build -tags gui -trimpath -ldflags "-s -w" -o uscita/remotix-install-gui ./cmd/remotix-install
+	gui_ go build -tags gui -trimpath -ldflags "$ldf" -o uscita/remotix-install-gui ./cmd/remotix-install
 	ls -l "$qui/uscita/remotix-install-gui"
 	;;
 anteprime)
@@ -47,7 +52,7 @@ go)
 	go_ go "$@"
 	;;
 *)
-	go_ go build -trimpath -ldflags "-s -w" -o uscita/remotix-install ./cmd/remotix-install
+	go_ go build -trimpath -ldflags "$ldf" -o uscita/remotix-install ./cmd/remotix-install
 	ls -l "$qui/uscita/remotix-install"
 	;;
 esac

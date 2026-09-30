@@ -45,9 +45,10 @@
 %endif
 
 Name:           remotix
-Version:        0.17.0
-# T8: il rilascio di manutenzione (una ricostruzione) lo dà costruisci-rpm.sh con
-#     RX_REVISIONE (--define "rx_rilascio N"); predefinito 1.
+# La versione e il rilascio li dà il comando di rilascio (packaging/rilascio.sh) attraverso
+# costruisci-rpm.sh: RX_VERSIONE (--define "rx_versione X.Y.Z") e RX_REVISIONE
+# (--define "rx_rilascio N"); predefiniti 0.17.0 e 1.
+Version:        %{?rx_versione}%{!?rx_versione:0.17.0}
 Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
 Summary:        Il desktop di questa macchina nel browser
 # ⚠ La licenza del prodotto non e' ancora scelta (deposito privato).
@@ -294,14 +295,23 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %endif
 
 %postun
-# All'aggiornamento: `try-restart`, cioe' SOLO se era gia' acceso (T2, §5.2: i
-# desktop sopravvivono, chi e' collegato riattacca).  ⚠ §10.12 punto 4: poi
-# l'aggiornamento richiamera' il motore, che verifica — non ancora (T4-T7).
+# All'aggiornamento: `try-restart`, cioe' SOLO se era gia' acceso (T2, §5.2, T7:
+# i desktop sopravvivono, il servizio nuovo li ritrova, chi e' collegato
+# riattacca).  REMOTIX si aggiorna col sistema (DECISIONI §10.23): dnf upgrade,
+# zypper up.
 %if 0%{?suse_version}
 %service_del_postun remotix.service
 %else
 %systemd_postun_with_restart remotix.service
 %endif
+
+%posttrans
+# Dopo la transazione (anche remotix-install e' gia' al suo posto): il motore
+# annota le versioni e dice se l'installazione e' ancora certificata
+# (DECISIONI §10.12 punto 4, §10.23).  ⛔ Non fa mai fallire la transazione.
+if [ -x /usr/bin/remotix-install ]; then
+	/usr/bin/remotix-install aggiornato || :
+fi
 
 %files
 %dir %{_libexecdir}/remotix

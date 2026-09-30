@@ -29,7 +29,9 @@ import (
 // I canali: «stabile» e «candidato» (§6.1); le versioni vecchie restano nell'archivio (R11).
 
 // PacchettiArchivio: i soli pacchetti che l'archivio di REMOTIX può dare (il pin, includepkgs).
-var PacchettiArchivio = []string{"remotix", "remotix-install", "remotix-archive-keyring"}
+// remotix-selinux (T6, solo .rpm): lo tira remotix dove c'è la politica targeted — senza, dnf non
+// lo trova nel nostro archivio (includepkgs) e la transazione non si risolve.
+var PacchettiArchivio = []string{"remotix", "remotix-install", "remotix-archive-keyring", "remotix-selinux"}
 
 // ChiaveApt: dove sta la chiave dell'archivio per apt (la stessa del pacchetto remotix-archive-keyring).
 const ChiaveApt = "/usr/share/keyrings/remotix-archive-keyring.asc"

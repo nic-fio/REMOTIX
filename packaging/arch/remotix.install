@@ -21,12 +21,15 @@ FINE
 }
 
 post_upgrade() {
-	# ⭐ T2 (§5.2): fermare il servizio NON chiude i desktop.  Un server vecchio
-	#    col binario nuovo sul disco rifarebbe i figli col binario nuovo: se era
-	#    ACCESO si riparte (try-restart: se era spento resta spento).
-	#    ⚠ Con §10.12 punto 4 sara' il motore, richiamato qui, a verificare e
-	#      riaccendere (T5/T7): questa riga e' il posto dove agganciarlo.
+	# ⭐ T2 (§5.2), T7: fermare il servizio NON chiude i desktop, e il servizio
+	#    nuovo li ritrova.  Un server vecchio col binario nuovo sul disco
+	#    rifarebbe i figli col binario nuovo: se era ACCESO si riparte
+	#    (try-restart: se era spento resta spento).  REMOTIX si aggiorna col
+	#    sistema, pacman -Syu (DECISIONI §10.23).
 	systemctl try-restart remotix.service 2>/dev/null
+	# il motore annota le versioni e dice se l'installazione e' ancora
+	# certificata (§10.12 punto 4); non fa mai fallire pacman
+	[ -x /usr/bin/remotix-install ] && /usr/bin/remotix-install aggiornato
 	return 0
 }
 

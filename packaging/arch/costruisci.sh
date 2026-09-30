@@ -23,6 +23,8 @@ USCITA=${USCITA:-$ALBERO/costruzione-uscita/pacchetto-arch}
 IMM=${IMM:-localhost/remotix-costruzione-arch}
 LAV="$USCITA/.lavoro"
 PKGVER=$(git -C "$ALBERO" show "$COMMIT:packaging/arch/PKGBUILD" | sed -n 's/^pkgver=//p')
+# il rilascio (packaging/rilascio.sh): RX_VERSIONE = pkgver, RX_REVISIONE = pkgrel
+PKGVER=${RX_VERSIONE:-$PKGVER}
 
 rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR="$LAV/tmp"
@@ -31,6 +33,7 @@ git -C "$ALBERO" archive "$COMMIT" packaging/arch/PKGBUILD packaging/arch/remoti
 	| tar -x -C "$LAV" --strip-components=2
 # T8: RX_REVISIONE = il pkgrel di un rilascio di manutenzione (una ricostruzione)
 [ -n "${RX_REVISIONE:-}" ] && sed -i "s/^pkgrel=.*/pkgrel=$RX_REVISIONE/" "$LAV/PKGBUILD"
+sed -i "s/^pkgver=.*/pkgver=$PKGVER/" "$LAV/PKGBUILD"
 git -C "$ALBERO" archive --format=tar.gz --prefix="remotix-$PKGVER/" \
 	-o "$LAV/remotix-$PKGVER.tar.gz" "$COMMIT" src banchi/rcp packaging/arch
 {

@@ -29,7 +29,7 @@ mkdir -p "$D"
 vm() { $V ssh "$m" "$@"; }
 
 prendi_motore() {
-	vm "curl -s -o /tmp/remotix-install $ARCH/motore/remotix-install-gui && curl -s -o /tmp/remotix-install.firma $ARCH/motore/remotix-install-gui.firma && chmod 755 /tmp/remotix-install && /tmp/remotix-install fiducia /tmp/remotix-install --oggetto motore --lingua it"
+	vm "curl -s -o /tmp/remotix-install-gui $ARCH/motore/remotix-install-gui && curl -s -o /tmp/remotix-install-gui.sha256 $ARCH/motore/remotix-install-gui.sha256 && (cd /tmp && sha256sum -c remotix-install-gui.sha256) && mv /tmp/remotix-install-gui /tmp/remotix-install && chmod 755 /tmp/remotix-install"
 }
 
 # pty: un terminale vero per il comando nella VM (ssh -tt), e i tasti mandati quando lo schermo
