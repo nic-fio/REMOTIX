@@ -1,6 +1,6 @@
 # Fase 13 — XFCE
 
-⚠ Le misure di prestazione rimaste in questo documento sono storiche: valgono per la macchina e per il prodotto di allora; quelle della codifica con ffmpeg sono state tolte con la fase 18. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
 
 *Aperta il **20 settembre 2026**. Chiusa il —*
 
@@ -140,7 +140,7 @@ XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventa
 | **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | 🔧 scritto e costruito, **non provato** (21 set) |
 | **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | 🔧 `zwlr_output_manager` v4 scritto dentro l'incremento 2 — ⏳ sulla macchina |
 | — | energia, blocco, voci pericolose (decisione dell'utente del 21 set) | la prova degli 11 minuti | 🔧 scritto (agente) — ⏳ sulla macchina |
-| — | la strada della SCHEDA per la cattura (copia zero, `gbm`) | tratto e CPU di labwc | 🔧 scritto (agente), `[M]` sul portatile: CPU di labwc **dimezzata** — ⚠ **da portare a mano** sopra il `wlroots.c` riscritto |
+| — | la strada della SCHEDA per la cattura (copia zero, `gbm`) | tratto e CPU di labwc | 🔧 scritto (agente), sul portatile: meno lavoro per labwc — ⚠ **da portare a mano** sopra il `wlroots.c` riscritto |
 
 ⚠ **L'ordine 2-3 può invertirsi**, e la ragione va scritta il giorno che si decide: su KDE la
 cattura è venuta prima dell'input perché era la più piccola; qui sono **tutte e due grosse**, e la
@@ -299,11 +299,11 @@ di GNOME e torna con `goto la_coda` o `return`, così i rami vecchi restano test
 | il desktop riconosciuto, nelle quattro scatole | quattro risposte diverse e giuste | ⭐ gnome → *GNOME* · kde → *KDE Plasma* · xfce → ⭐ *XFCE (c'è xfce4-session, e labwc per farlo girare)* · lxqt → ⛔ *NESSUN DESKTOP RICONOSCIUTO* |
 | **la sessione XFCE nasce** per un inquilino nuovo | labwc + xfce4-session vivi | ⭐ **e nasce intera**: `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar` · `wrapper-2.0` |
 | il prodotto la **riconosce viva** | il nome sul bus d'utente | ⭐ *«il gestore di sessione XFCE c'è sul bus: la sessione è viva»* |
-| quanto ci mette | ≥ 8 s (gruppi di priorità) | `[M]` **17,0 s** dal «la faccio nascere» al nome sul bus (giro pulito delle 21:40). ⚠ Un secondo giro ha dato 0,4 s e **non lo conto**: il registro non era stato ritroncato, e due misure che non si possono separare non si mediano — `[?]` da rifare pulita prima di tarare il tetto del banco |
+| quanto ci mette | ≥ 8 s (gruppi di priorità) | `[?]` da rifare pulita prima di tarare il tetto del banco (il secondo giro non si separava dal primo: il registro non era stato ritroncato) |
 | la cintura del logout | scritta **e riletta** | ⭐ *«WaylandLogoutCommand = /bin/true, RILETTA»* |
 | la scheda data a wlroots | aperta, non dedotta | ⭐ *«la scheda che do a wlroots è /dev/dri/renderD128 (aperta, non dedotta)»* |
 | il drop-in | dichiarato assente, non finto | ⭐ *«nessun drop-in da scrivere … E la tela chiesta (1920x1080) NON entra nella nascita»* |
-| **C7(xfce)** — si chiude e non resta niente | verde | ⭐ **VERDE**, 1,15 s. ⚠ E il banco dichiara da sé che una voce (`/dev/dri`) passa ancora **a vuoto**: la sessione non apre la scheda finché non c'è la cattura |
+| **C7(xfce)** — si chiude e non resta niente | verde | ⭐ **VERDE**. ⚠ E il banco dichiara da sé che una voce (`/dev/dri`) passa ancora **a vuoto**: la sessione non apre la scheda finché non c'è la cattura |
 | **C1(xfce)** | ⛔ **rosso, e per un motivo NUOVO** | ⛔ rosso: *«nate CIECHE»*. ⭐ E adesso è vero alla lettera — la sessione c'è, l'immagine no: è l'incremento 2 |
 | **C1(gnome)** · **C1(kde)** | verdi, invariati | ⭐ **verdi tutt'e due**, 2 sessioni su 2 ciascuna |
 
@@ -377,7 +377,6 @@ esempio, su wlroots **non è la stessa cosa**: lì la misura si cambia sull'outp
 | l'uscita | `HEADLESS-1`, **1280×720**, stride 5120 |
 | il formato | **XB24** (`XBGR8888`) — ⚠ **non** quello che si sarebbe dato per scontato |
 | il contenuto | **199-201 colori distinti**, 6,1 % dei campioni non nero ⇒ è un desktop vero, non uno schermo spento |
-| il tempo per fotogramma | `[M]` **8,8-14,9 ms** in media, 16,5 ms il peggiore — ⚠ ed è il giro INTERO col copiamento in memoria, su Intel UHD 730 |
 | il puntatore | **dentro l'immagine** (`overlay_cursor = 1`), come previsto: su questa famiglia non c'è un canale per la sua forma |
 
 #### ⛔⛔ E una trappola pagata subito, che vale piu' del fotogramma
@@ -592,7 +591,7 @@ server alle 13:26 UTC e chiuso alle 17:31 UTC.
    distingue un codificatore fermo da uno sano. ⇒ **`copy_with_damage`** (screencopy v2+): il
    compositore risponde solo quando lo schermo cambia. ⚠ Che ha rotto subito C4(xfce): una copia
    «col danno» pendente bloccava il fotogramma intero forzato ⇒ se il palco deve dare un fotogramma
-   intero e c'è una copia col danno in sospeso, **la si abbandona**. `[M]` Poi: 62 fps sulla strada
+   intero e c'è una copia col danno in sospeso, **la si abbandona**. `[M]` Poi: sulla strada
    della scheda, C3 e C4 verdi coi loro guasti.
 2. ⛔ **C17 rossa su tutti e tre i desktop** — classificata **C (difetto del banco)**: il file
    dell'arbitro in `/tmp` aveva un nome fisso, apparteneva a un altro utente, e le mie prove a mano
@@ -606,8 +605,8 @@ due i browser):
 
 | browser | verdetto | che cosa |
 |---|---|---|
-| **Firefox 140** Linux | ⭐ **PASS** | modulo · ammesso · primo fotogramma in 1,0 s · 84 fotogrammi in 8 s · tasto e mouse nel registro del server · 0 errori · riconnessione |
-| **Chrome 153** Linux | ⭐ **PASS** | idem: 85 fotogrammi in 8 s, primo fotogramma subito, riconnessione |
+| **Firefox 140** Linux | ⭐ **PASS** | modulo · ammesso · primo fotogramma · i fotogrammi arrivano · tasto e mouse nel registro del server · 0 errori · riconnessione |
+| **Chrome 153** Linux | ⭐ **PASS** | idem: primo fotogramma, i fotogrammi arrivano, riconnessione |
 | **Chrome Android** | ⏳ **all'utente** | l'emulatore non lo lancia già dalla fase 12: la validazione resta sua, come per KDE |
 
 `[M]` La fotografia del desktop: pannello in alto, icone Home e File System, il dock in basso, le
@@ -634,7 +633,7 @@ toccarlo toccherebbe GNOME e KDE: resta com'è.
 | modo | esito |
 |---|---|
 | `--certifica` (il giudice a secco) | ⭐ 0 |
-| sano | ⭐ **VERDE**: il desktop sparisce in 0,3 s, la sessione logind resta viva per tutti i 20 s |
+| sano | ⭐ **VERDE**: il desktop sparisce, la sessione logind resta viva per tutti i 20 s |
 | `--senza-xfconf` | ⭐ guasto **visto** |
 | `--senza-variabile` | ⭐ guasto **visto** |
 | `--senza-cinture` | ⚠ **3**, dichiarato: la sessione non cade |
@@ -695,7 +694,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   | **xfce** | ⭐ VERDE ×3, 0 salti | ⭐ VERDE, 0 salti |
 
   In tutti: dopo «Esci» la pagina torna al modulo con *«la sessione e' terminata: i programmi sono
-  stati chiusi»*, e il nuovo accesso ha l'immagine in 0,3–1,6 s. ⚠ Tre difetti **del banco**, trovati
+  stati chiusi»*, e il nuovo accesso ha l'immagine. ⚠ Tre difetti **del banco**, trovati
   facendolo girare, sono nel messaggio di `b3b8f5b` (Chrome dentro labwc vuole «massimizzata»; xfce
   in 4K ha lo sfondo nero e il giudice di `12-client-veri` lo chiamava degenere; il gesto «Esci» di
   xfce lanciato senza raccogliere lo stderr).
@@ -737,20 +736,14 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   È la lezione di sempre sui banchi in parallelo.
 
 - ✅ **I FOTOGRAMMI PERSI IN 4K ERANO DEL TABLET, NON DI REMOTIX** — 24 set 2026, mattina.
-  Sul tablet, notte del 23: Chrome **34 buchi** in 20 min su gnome e **88** su xfce; Firefox riceveva
-  tutto ma ne dipingeva il **93 %**. ⭐ Dai registri del server: i buchi di Chrome li faceva il
-  **regolatore del ritmo** (3 597 fotogrammi scartati su ~26 000 perché due aspettavano già), con la
-  scena testimone a **~190 Mbit/s**, il ritardo della rete da **2 a 76-95 ms** (coda: linea satura) e
-  il tablet sul **Wi-Fi a 5 GHz con segnale -74 dBm** (540 Mbit/s nominali).
+  Sul tablet, notte del 23: Chrome perdeva fotogrammi su gnome e su xfce; Firefox riceveva tutto ma
+  non dipingeva tutto. ⭐ Dai registri del server: i buchi di Chrome li faceva il **regolatore del
+  ritmo** (fotogrammi scartati perché due aspettavano già), con la linea satura e il tablet su un
+  **Wi-Fi a segnale debole**.
   ⭐⭐ LA PROVA DI CONTROLLO `[M]`: stesse sessioni, 4K, mouse in moto, **browser sul server**
   (`REMOTIX_SUL_SERVER=1`, labwc senza schermo a 3840x2160 — ⚠ e sulla **stessa Intel che codifica**,
-  la Radeon è esclusa apposta: la prova è più severa del caso vero), 3 min per giro:
-
-  | | sul tablet | sul server |
-  |---|---|---|
-  | gnome · Chrome | 21 fot/s, 34 buchi in 20 min | **40 fot/s, 0 buchi** |
-  | xfce · Chrome | 88 buchi in 20 min | **35 fot/s, 0 buchi** |
-  | gnome · Firefox | dipinti 93 % | **dipinti 100 %** (3 981 su 3 982) |
+  la Radeon è esclusa apposta: la prova è più severa del caso vero): **zero buchi** con Chrome su
+  gnome e su xfce, e Firefox su gnome dipinge tutto.
 
   ⇒ **Il limite è il tablet** (Wi-Fi debole e decodifica del 4K), non il prodotto. ⚠ Resta del
   prodotto una cosa da tenere per la prova sotto stress: su una linea più stretta del flusso il server
@@ -771,7 +764,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
 
   | browser | prima (`f1807378`) | dopo (`1c592928`) |
   |---|---|---|
-  | **Firefox 140** | ⛔ schermo mai acceso, **0** fotogrammi in 60 s | ⭐ acceso in **2,0 s**, **+3324** fotogrammi, 0 buchi |
+  | **Firefox 140** | ⛔ schermo mai acceso, **0** fotogrammi in 60 s | ⭐ acceso, **+3324** fotogrammi, 0 buchi |
   | **Chrome 153** | ⛔ schermo mai acceso, **0** fotogrammi in 40 s | ⭐ acceso, **+2273** fotogrammi, 0 buchi |
 
   ⚠ In tutti e quattro i giri la tela adottata è quella del palco (1548x862), non quella chiesta dalla
@@ -781,11 +774,10 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   a 41 consegnati su 8810 stream. (2) `e2b8c43` **l'ordine di consegna**: gli stream si leggono incatenati,
   nell'ordine in cui il server li apre. Non era Firefox: 173 buchi su 173 erano fotogrammi arrivati dopo il
   loro successore, con 0 abbandoni lato server.
-  `[M]` KDE, scena ~236 Mbit/s, 190 s, browser veri e visibili: Firefox buchi **173 → 3**, fuori ordine
-  207 → 3, consegnati/s 37,9 → 48,1, tela **pulita** (dispersione dei blocchi 8×8 sul rumore 37,8 → 23,3,
-  Chrome 16,7); Chrome buchi 14 → 2. Nessuna linea morta. La catena non costa ritardo: tratto
-  cattura→byte fuori 16,4–16,9 ms, come prima.
-  ⏳ **Aperti, e nessuno dei due è di oggi**: (a) Firefox riceve 48/s e ne dipinge 37/s — 1858 fotogrammi
+  `[M]` KDE, scena pesante, 190 s, browser veri e visibili: Firefox buchi **173 → 3**, fuori ordine
+  207 → 3, tela **pulita** (dispersione dei blocchi 8×8 sul rumore 37,8 → 23,3,
+  Chrome 16,7); Chrome buchi 14 → 2. Nessuna linea morta. La catena non aggiunge ritardo.
+  ⏳ **Aperti, e nessuno dei due è di oggi**: (a) Firefox ne dipinge meno di quanti ne riceve — 1858 fotogrammi
   spariscono dentro il suo decodificatore, senza errori e senza che **nessuno li conti** (serve un contatore
   `decode()` contro fotogrammi in uscita) → ⭐ **il (a) è stato riletto il 23 set, e non è quel che
   sembrava: vedi la voce qui sotto**; (b) restano 3 buchi in 190 s: la catena rispetta l'ordine in cui
@@ -834,7 +826,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   ⭐ **E la forma è una raffica, non un tasso.** `[M]` Su 39 intervalli da 5 s di `n-ff-kde`, **17 perdono
   esattamente 0** e altri 6 perdono 1-2 fotogrammi (il volo); i **16** che restano perdono dal 16 %
   all'**88 %**: `t18` = 261 entrati, **31 dipinti**. ⇒ La media
-  «48 riceve / 37 dipinge» **nasconde il difetto invece di dirlo**: quel che l'utente vede non è un ritmo
+  «tanti ricevuti, meno dipinti» **nasconde il difetto invece di dirlo**: quel che l'utente vede non è un ritmo
   più basso, sono **congelamenti di 1-4 secondi** più volte al minuto, con il desktop che poi riparte
   dall'immagine giusta. ⚠ È lo stesso difetto che la fase 9 chiamava `F4-CODA-DEL-DECODIFICATORE`, e
   **la guardia è cieca**: `saltati_coda` scatta su `dec.decodeQueueSize > 2`, e Firefox teneva
@@ -876,9 +868,9 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
 
   | | ultima parola del client (registro, UTC) | il processo del browser esce (giornale del tablet, locale) | linea morta |
   |---|---|---|---|
-  | **12:30** Chrome 153 | 10:30:11.698 «il client si congeda, motivo=0x01 **la scheda è stata chiusa**» | `app-…Chrome-4339.scope` **12:30:11** (1,8 G di picco) | 10:30:22.330 |
-  | **12:41** Firefox 140 | 10:41:26.73 ultimo pacchetto · 10:41:27.834 ultimo diario | `app-…firefox-esr-5792.scope` **12:41:28** (7min 9s CPU, 1,7 G) | 10:41:36.874 |
-  | **12:42** Firefox 140 | 10:42:33.47 ultimo pacchetto | `app-…firefox-esr-6666.scope` **12:42:33** (830 M) | 10:42:44.297 |
+  | **12:30** Chrome 153 | 10:30:11.698 «il client si congeda, motivo=0x01 **la scheda è stata chiusa**» | `app-…Chrome-4339.scope` **12:30:11** | 10:30:22.330 |
+  | **12:41** Firefox 140 | 10:41:26.73 ultimo pacchetto · 10:41:27.834 ultimo diario | `app-…firefox-esr-5792.scope` **12:41:28** | 10:41:36.874 |
+  | **12:42** Firefox 140 | 10:42:33.47 ultimo pacchetto | `app-…firefox-esr-6666.scope` **12:42:33** | 10:42:44.297 |
 
   ⇒ In tutti e tre il client parlava fino **all'istante in cui il processo è uscito**: nessun
   congelamento di 10 s del browser, nessun OOM, nessun messaggio del kernel, nessun evento WiFi nella
@@ -888,19 +880,17 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
 
   ⭐ **E il difetto vero stava PRIMA, ed è quello che l'utente ha poi curato lo stesso pomeriggio.**
   Il diario della pagina (ogni 5 s, sempre puntuale al millisecondo ⇒ il filo principale della pagina
-  NON era bloccato) tiene i contatori **fermi**, mentre il server continua a spedire ~58 fotogrammi/s
-  e 1,5 MB/s:
+  NON era bloccato) tiene i contatori **fermi**, mentre il server continua a spedire:
   - sessione Firefox delle 12:39-12:41: `dipinti 1097 video 3882→1097 salt 2785` **identico per 50 s**
     (10:40:37.788 → 10:41:27.834). Si ferma esattamente sul **video pesante**: il fotogramma 3882 è
-    l'ultimo contato, e subito dopo arrivano il 3886 da **131 238 byte** e la CHIAVE 3888 da **152 074
-    byte**, chiesta dalla pagina a 10:40:34.583 (§5.2) perché i `buchi` erano appena passati da 1 a 3.
+    l'ultimo contato, e subito dopo arrivano il 3886, grosso, e la CHIAVE 3888, chiesta dalla pagina a 10:40:34.583 (§5.2) perché i `buchi` erano appena passati da 1 a 3.
   - sessione Firefox delle 12:41-12:42: `dipinti 146 video 190→146` **fermo per 40 s**, e il
-    fotogramma 190 pesa **144 305 byte**, il 193 è la CHIAVE da **152 901 byte** chiesta a 10:41:49.283.
+    fotogramma 190 è grosso, il 193 è la CHIAVE chiesta a 10:41:49.283.
   ⇒ È **la spirale della chiave**, parola per parola come la racconta `a50b389` («la pagina restava
   ferma sull'ultima immagine buona, con Firefox e con Chrome, **finché la linea moriva**»): curata il
   22 set alle **17:08** (`a50b389`) e alle **18:55** (`e2b8c43`), cioè **4 ore e mezza dopo** questi
   tre episodi. La riga di «che cosa resta» era rimasta indietro. Il `[M]` post-cura (190 s, browser
-  veri, ~236 Mbit/s, «nessuna linea morta») è già qui sopra.
+  veri, scena pesante, «nessuna linea morta») è già qui sopra.
   ⛔ **Due correzioni alla vecchia riga**: i 1097 su 3882 erano di **Firefox 140**, non di Chrome —
   Chrome, nella stessa mezz'ora, dipingeva `817 video 817→817 salt 0 buchi 0`; e la linea morta non è
   un sintomo del blocco, è la **coda** del browser che l'utente chiudeva perché lo schermo era fermo.
@@ -912,7 +902,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   tenere vivo**» → 10:30:12.199 spediamo la capsula di chiusura → e poi teniamo aperta la connessione
   QUIC, spedendo 2 pacchetti ogni secondo o due a un browser che non c'è più, finché a 10:30:22.330
   esce un ⛔ **LINEA MORTA** che si legge come un guasto del prodotto.
-  ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va in **9 ms**
+  ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va **subito**
   (10:39:11.675 congedo → 10:39:11.684 «connessione chiusa»): il comportamento dipende dal client, e
   Chrome che esce non saluta a livello QUIC.
   ⇒ Il guardiano è `linea_morta_giudica()` (`src/webtransport.c`): si fermava su `!w->rcp ||
@@ -956,8 +946,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   10:30:22.330 (**+10,6 s**); 23 set col binario curato, congedo 05:07:41.775 → «il palco smette di
   catturare» 05:08:12.276 (**+30,5 s**, cioè al `max_idle_timeout`). ⇒ La finestra in cui **si
   cattura e si codifica per nessuno** passa da ~10 s a ~30 s.
-  ⭐ Sul desktop fermo della prova costa niente (11 fotogrammi in tutto), ma su una scena viva a 58
-  fotogrammi/s sono **venti secondi di codifica in più per ogni client che se ne va**, su una
+  ⭐ Sul desktop fermo della prova costa niente (11 fotogrammi in tutto), ma su una scena viva sono **venti secondi di codifica in più per ogni client che se ne va**, su una
   macchina che ha altri inquilini. La misura sotto carico è nella sessione lunga.
 
 - ✅ **IL PALCO SMETTE DI CATTURARE AL CONGEDO — CURATO E MISURATO** — 23 set 2026, `103280f`,
@@ -966,7 +955,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   ⛔ E curava anche un caso peggiore trovato scrivendo: il client che chiudeva **per bene** lo
   stream della CONNECT non fermava il palco **mai**, nemmeno alla morte della connessione.
   `[M]` Tutte e cinque le previsioni scritte prima reggono: **zero** righe `⛔ NIENTE VIDEO`, il
-  palco si ferma **+100 ms** dopo il congedo (prima: +30 s), figli 2→2→2 e RSS fermo (I4 regge),
+  palco si ferma **subito** dopo il congedo (prima: al `max_idle_timeout`), figli 2→2→2 e RSS fermo (I4 regge),
   al rientro `canale video ACCESO` e 404 fotogrammi subito dopo, zero coppie acceso/spento.
   ⚠ P5 (l'audio) regge per metà: lo spegnimento è esatto, ma in quella sessione non suonava
   niente, quindi «audio muto al rientro» non è stato né confermato né smentito.
@@ -1026,8 +1015,8 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   `org.gnome.SessionManager` · `xfce4-session-logout`); (3) l'inquilino si chiama **`c20u<n>`**,
   dentro lo spazio di nomi della rete, così il gancio lo sgombera e C19 lo vede.
   ⛔⛔ **E ha dovuto mettere lei una scena, come C3** — è la misura che ha riscritto la maglia. A
-  desktop fermo, nel secondo accesso: **kde 1 800 fotogrammi in 45 s** (KWin consegna sempre),
-  **xfce 7 in 60 s** (labwc, come ogni wlroots, consegna solo sul danno) ⇒ su xfce e lxqt la maglia
+  desktop fermo, nel secondo accesso: **kde consegna di continuo** (KWin consegna sempre),
+  **xfce quasi niente** (labwc, come ogni wlroots, consegna solo sul danno) ⇒ su xfce e lxqt la maglia
   sarebbe stata **3 per sempre**. La cura è `banchi/11-scatole/11-c20-scena.html`: una banda scura che
   scorre su fondo chiaro, **due** bande a 100 punti di distanza così che in vista ci sia sempre
   esattamente il 20 % di scuro ⇒ ⭐ ogni fotogramma è diverso (c'è danno, quindi consegna) **e la
@@ -1068,8 +1057,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   `[M]` 22 set 2026, inquilini creati SENZA gruppi, browser **veri** e finestra vera: gnome Firefox 140
   **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In tutti e quattro il
   registro dice «PRIMA CONNESSIONE … ce lo METTO io» e poi «è nei gruppi della scheda … può vedere in
-  hardware», `id -nG` passa da «solo se stesso» a «video render», e il primo fotogramma arriva in
-  0,6–1,6 s. (kde era già `[M]` il 20 set, `DECISIONI.md` §7.21.)
+  hardware», `id -nG` passa da «solo se stesso» a «video render», e il primo fotogramma arriva. (kde era già `[M]` il 20 set, `DECISIONI.md` §7.21.)
   ⭐ **E adesso la rete lo guarda**: maglia **C18** «i gruppi della scheda li mette il prodotto»,
   l'unica che NON chiama `garantisci_i_gruppi` — tutte le altre glieli mettono da sé e così
   **nascondevano** quel pezzo di prodotto. Guasto innestato `--senza-usermod` (si nasconde `usermod`
@@ -1104,7 +1092,7 @@ L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e co
   poteva scattare**.
   `[M]` Firefox vero e visibile, `rete11-kde`, 20 minuti, scena in movimento: **698 s su 1199 (58 %)**
   senza un solo fotogramma nuovo, sette blocchi (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
-  fotogrammi codificati e buttati (~13 GB per nessuno su una UHD 730). ⭐ E **l'immagine non si rompe
+  fotogrammi codificati e buttati per nessuno. ⭐ E **l'immagine non si rompe
   mai** (1146 fotografie, 0 celle guaste): non era corruzione, era un **blocco**. Il blocco finiva
   quando si smetteva di muovere il mouse per un secondo — è nel registro.
   ⭐ Cura a due cinture: `batti_fra()` fissa un **tetto** e non un appuntamento (una scadenza più
