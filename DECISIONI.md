@@ -1,5 +1,7 @@
 # DECISIONI — il registro di quel che è stato deciso, e da chi
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Aperto l'8 agosto 2026, al primo giorno di REMOTIX.*
 
 Questo documento non spiega e non convince: **registra**. A che serve, in una riga: una
@@ -1099,7 +1101,9 @@ Non serve una riga nuova di protocollo — cioè **§9 non viene toccata**.
 > | h264_vaapi | 3,11 – 3,16 |
 > | vp9_vaapi profilo 2 | 6,95 – 7,28 |
 > | ⛔ **av1_vaapi** | **non esiste** |
-> | *(software)* libsvtav1 preset 10, sul numero della fase 3 | **22,23** |
+>
+> *(Qui c'era anche il tempo di `libsvtav1` in software, come confronto: tolto, la misura non vale più
+> dopo la fase 18.)*
 >
 > ⇒ ⛔⛔ **Restare su AV1 vuol dire restare in software per sempre**, su questa macchina. La riga
 > *«la scala di preferenza NON si rovescia: l'ordine resta `hevc,av1`»* era stata scritta per una
@@ -1352,7 +1356,7 @@ Scelto il 10 bit: la massima qualità ottenibile **su entrambi i client insieme*
 > | ⭐ **che cosa resta** | 4K · 60 fps · 10 bit è il **tetto di quel che il prodotto sa fare** — la misura più grande che si codifica e si consegna |
 > | ⛔ **che cosa NON è più** | una promessa **al pavimento**. A 20 Mbit/s il 4K **non è promesso in movimento**, e non è un difetto: è la scelta |
 > | ⚠ **e nemmeno a 30** | il conto dice che «fisso buono, 30+» **non compra** il 4K mosso. La riga di §3.1 che lo lasciava credere era già superata dal §3.1-bis, e questa voce lo dice per esteso |
-> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero, `[M]` 20,9 fotogrammi/s) — cioè **leggere e scrivere**, non guardare un video |
+> | ⭐ **che cosa vale a 20 Mbit/s** | `[?]` il 4K **da fermo o poco mosso** (~12 Mbit/s col ritmo del contenuto vero; il ritmo misurato allora, con la codifica in software, è tolto con la fase 18) — cioè **leggere e scrivere**, non guardare un video |
 >
 > ⇒ ⭐ **La banda a cui il 4K in movimento diventa servibile è una cosa da MISURARE e DICHIARARE,
 > non da promettere** — è `SPECIFICHE.md` §2.6 alla lettera. La misura è di questa fase.
@@ -1446,10 +1450,10 @@ che l'utente sente è questo più la rete: si dichiara, non si promette.
 
 *Scritto in `CODER.md` §1-bis, accanto agli altri due numeri.*
 
-⛔ **13 agosto 2026 — il numero è stato misurato, e sfora**: `[M]` mediana **74,58 ms** cattura →
-vetro, pezzo cieco 16-40 ms escluso (§2.5 e `SPECIFICHE.md` §3.2). ⛔ **E il muro dei 37 fotogrammi
-di Mutter non ne è la causa**: Mutter vale il **22 %**, il **78 % è nostro** e quasi tutto sta nel
-codificatore in software. La decisione dell'utente resta questa; cambia da chi si va a prendere i
+⛔ **13 agosto 2026 — il numero è stato misurato, e sforava** (§2.5 e `SPECIFICHE.md` §3.2). ⛔ **E il
+muro dei 37 fotogrammi di Mutter non ne era la causa**: la parte grossa era nostra, e quasi tutta nel
+codificatore in software. *(Il valore misurato, fatto col codificatore software di libavcodec, è tolto:
+non vale più dopo la fase 18.)* La decisione dell'utente resta questa; cambia da chi si va a prendere i
 millisecondi.
 ⛔ **E «il pezzo che è nostro» adesso ha un confine dichiarato**: la misura finisce al **disegno
 finito**, non al richiamo del decodificatore. Sono **11 ms su 50** che la prima stesura si
@@ -1494,30 +1498,26 @@ concludere**. Il numero vero lo dà il banco di 2.6, e può smentirla.
 
 > ## ⛔⛔ 13 agosto 2026 — il banco di §2.6 ha parlato, e ha smentito la tabella qui sopra
 >
-> *Fase 3, step 5. La stima diceva **~48 ms** e dava la colpa alla cattura di Mutter. La misura dice
-> **74,58** e dà la colpa a noi. La previsione era sbagliata in tutt'e due i modi: nel numero e
-> nell'imputato.*
+> *Fase 3, step 5. La stima diceva **~48 ms** e dava la colpa alla cattura di Mutter. La misura
+> sforava il tetto e dava la colpa a noi. La previsione era sbagliata in tutt'e due i modi: nel numero
+> e nell'imputato.*
 >
-> `[M]` **ritardo cattura → vetro, mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99
-> 138,1, 6 giri da ~800 campioni, errore d'orologio **±0,63 ms**, banco `banchi/03-b17-ritardo.py`
-> (31 controlli su 31, ponte 11 su 11). ⛔ **Pezzo cieco 16-40 ms non compreso** ⇒ sullo schermo
-> dell'utente **90-115 ms**. ⇒ **Si sfora il tetto dei 50, non solo il traguardo dei 40.**
-> ⚠ Non è input → vetro: il canale di input nasce alla fase 4 (`input` = 0 in 953 su 953), e al suo
-> posto sta il controllo **P1**.
+> ⚠ *Il ritardo totale cattura → vetro (banco `banchi/03-b17-ritardo.py`) e il tratto cattura → primo
+> byte in pagina erano misurati col **codificatore in software** di libavcodec (libsvtav1 / libx265):
+> tolti, non valgono più dopo la fase 18. Tolti anche i tratti del browser (stream → `decode()`,
+> decodifica, disegno), misurati sulla stessa catena col codificatore in software. Restano i tratti che
+> stanno prima del codificatore o fuori.* Non era input → vetro: il canale di input nasce alla fase 4,
+> e al suo posto stava il controllo **P1**.
 >
 > | dove se ne va | mediana | di chi è |
 > |---|---|---|
-> | disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
-> | ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
+> | disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter |
 > | il filo | 0,32 ms | — |
-> | stream completo → `decode()` | 0,08 ms | nostro |
-> | decodifica | 7,58 ms | nostro |
-> | richiamo → disegno finito | 10,51 ms | nostro |
 >
-> ⛔⛔ **Il muro NON è di Mutter, e le tre prove sono queste**: la scena disegna **59,98/s con 0
-> attese**; il figlio del prodotto consegna **23,93/s con ZERO attese a vuoto** — *non aspetta mai
-> Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (libsvtav1 /
-> libx265). ⇒ **58 ms su 74,6 sono nostri, il 78 %**, ~39 nel solo tratto cattura→filo.
+> ⛔⛔ **Il muro NON è di Mutter, e le prove erano queste**: la scena disegna **59,98/s con 0
+> attese**; il figlio del prodotto non aspettava mai Mutter (zero attese a vuoto); il codificatore
+> era **in software** e lo dichiarava il prodotto stesso (libsvtav1 / libx265) — la parte grossa del
+> ritardo stava lì, nel tratto cattura → filo.
 >
 > ⛔ **E il muro dei 37 non si riproduce.** Con monitor a **120** e freno **90**: `[M]` **61,4
 > fotogrammi consegnati al secondo** (60,04), intervallo mediano **16,66 ms**. E i «sei decimi» non
@@ -1681,12 +1681,9 @@ alcune **molto più economiche da rispettare**.
 migliore. È stata scritta, misurata — e ⭐ **la misura l'ha spaccata in due**, non bocciata in
 blocco.*
 
-| tratto (mediana, ms) | prima | dopo | Δ |
-|---|---|---|---|
-| stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
-| ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-| richiamo → disegno finito ⚠ *(vedi la nota sotto: il nome del tratto è stato corretto)* | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
-| **mediana disegno → vetro** | 73,66 / 67,79 | ⛔ **101,30** | ⛔ **+27,6 / +33,5** |
+*⚠ La tabella dei tratti prima/dopo il worker (consegna a `decode()`, decodifica, richiamo → disegno,
+disegno → vetro) è tolta: misurata sulla catena col codificatore in software, non vale più dopo la
+fase 18. Restano il verso degli effetti e la decisione.*
 
 > ### ⛔⛔ 14 agosto 2026 — **IL TRATTO «richiamo → disegno finito» PORTAVA UN NOME SBAGLIATO**
 >
@@ -1694,7 +1691,8 @@ blocco.*
 > (`fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md`), arrivate alla stessa
 > conclusione da due lati senza mettersi d'accordo.*
 >
-> ⭐ **I numeri restano**; ⛔ **il nome no.** `[M]` il disegno vero costa **2,25 ms**: quel tratto
+> ⛔ **Il nome del tratto era sbagliato.** Il disegno vero costava poco *(il numero, misurato su una
+> catena che passava da `sws_scale`, è tolto con la fase 18)*: quel tratto
 > misurava **l'attesa del fotogramma dalla GPU più il disegno**, perché un fotogramma HEVC
 > decodificato in hardware esce **opaco** (`format = null`) e la rilettura della marca ne provoca il
 > trasferimento GPU→CPU. ⭐ La prova che il confine era messo male: a **palco identico**, cambiando
@@ -1709,8 +1707,8 @@ blocco.*
 
 | | |
 |---|---|
-| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** `[M]` **−3,44 ms** — il decodificatore consegna prima quando non contende |
-| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: da sola **+17,6 ms**, più i +10,2 della consegna |
+| ⭐ **la decodifica fuori dal thread principale** | ✅ **vale** — il decodificatore consegna prima quando non contende |
+| ⛔ **la tela fuori dal thread principale** | ⛔ **affonda il conto**: il disegno e la consegna al worker costano più di quanto la decodifica guadagni |
 
 ⛔ **Il meccanismo, ed è la parte che vale oltre questo caso**: una `OffscreenCanvas` in un worker
 **si consegna al ritmo del quadro** — un `requestAnimationFrame` implicito che nessuno ha scritto.
@@ -1719,9 +1717,8 @@ parola: **è sul meccanismo**. ⛔⛔ E la prescrizione **conteneva la propria s
 il worker e vietava il salto di quadro, che il worker reintroduce in silenzio.
 
 ⚠ **E i fotogrammi dipinti dicono il contrario del ritardo, quindi vanno accanto** (`LEZIONI.md`
-§6.2): sulla catena vera il worker dipinge **di più** (26,3/s contro 22,8-24,2), ma a saturazione il
-tetto **crolla di tre quarti** — 127,6 → **33,9**/s a 1080p, 230,6 → **56,4**/s a 480p, cioè **≈ il
-quadro dei 60 Hz**.
+§6.2): sulla catena vera il worker dipinge **di più**, ma a saturazione il tetto **crolla fino a ≈ il
+quadro dei 60 Hz**. *(I numeri, presi con la codifica in software, sono tolti con la fase 18.)*
 
 ⇒ **Che cosa si decide oggi**: il codice resta in albero **dietro `#video=worker`, spento**. ⛔ **E
 non è una bocciatura definitiva.** ⏳ `[?]` **il limite più grosso, e va letto accanto ai numeri**:
@@ -5121,9 +5118,9 @@ secondo, e su una macchina sola lo pone il codificatore.
 ### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
 50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. ⛔ *L'avvertenza che stava qui —
 «il traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi» — è
-**caduta il 13 agosto 2026**: il ritardo è `[M]` **74,58 ms** e sfora anche il tetto, ma il motivo
-non è quello. Mutter pesa il **22 %**, il **78 % è nostro**, e il muro dei 37 non si riproduce
-(§2.5).*
+**caduta il 13 agosto 2026**: il ritardo misurato allora sforava anche il tetto, ma il motivo non
+era quello — la parte grossa era nostra (il codificatore in software; la misura non vale più dopo la
+fase 18), e il muro dei 37 non si riproduce (§2.5).*
 
 ### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
 Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio

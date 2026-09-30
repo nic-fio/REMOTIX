@@ -1,5 +1,7 @@
 # A3 — La Radeon rallenta la codifica a gruppi di 5 fotogrammi (dossier per gli sviluppatori del driver)
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 > Stato: **aperto, fuori dall'ambito di REMOTIX** — decisione dell'utente del 29 set 2026
 > («è fuori dal nostro ambito»; strada 2: documentare e segnalare, non aggirare). Se il driver
 > lo risolve, la Radeon in 4K reggerà più utenti senza toccare REMOTIX.

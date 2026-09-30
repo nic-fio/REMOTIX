@@ -1,5 +1,7 @@
 # LEZIONI — quel che GNOME ci ha insegnato, e che serve al prossimo desktop
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Scritto il 7 agosto 2026, chiudendo il supporto a GNOME (fasi 0–10), prima di aprire la fase 11.*
 
 > ## ⛔ Portato in REMOTIX l'8 agosto 2026 — si legge prima di tutto il resto
@@ -1610,7 +1612,7 @@ parlano.
 | l'ipotesi | come è morta |
 |---|---|
 | ⛔ «il flusso AV1 che spediamo è rotto» | **falsa.** Sei fotogrammi presi **dal filo** e dati a **libdav1d** — lo stesso decodificatore che usa Firefox — danno un'immagine **perfetta**: sfondo liscio, testo del terminale nitido, nessun blocco |
-| ⛔ «SVT-AV1 allinea 962 a 968 e il conto non torna» | **falsa, e misurata a parte**: 2560×**962** codificato e ridecodificato torna **2560×962 esatti**, PSNR **43,3 dB** — meglio del 960 allineato (42,6). L'encoder riempie dentro e scrive la misura di resa; dav1d ritaglia giusto |
+| ⛔ «SVT-AV1 allinea 962 a 968 e il conto non torna» | **falsa, e misurata a parte**: 2560×**962** codificato e ridecodificato torna **2560×962 esatti**. L'encoder riempie dentro e scrive la misura di resa; dav1d ritaglia giusto. *(La qualità misurata allora, SVT-AV1 passando da libavcodec, non vale più dopo la fase 18.)* |
 | ⛔ «la pagina riceve una misura diversa da quella dichiarata» | **falsa.** La pagina lo dice da sé: *codificato 2560×962 · mostrato 2560×962 · tela in vigore 2560×962* |
 | ⛔ «il decodificatore del browser sbaglia e lo dice» | **falso**: zero errori riportati, e il filtro che li avrebbe portati al server funzionava |
 
@@ -1893,10 +1895,12 @@ lo faccia per quello.
 >
 > | la leva | il ritmo | il ritardo |
 > |---|---|---|
-> | la cadenza disaccoppiata (monitor 120, freno 90) | ⭐ **da 31,5 a 61,4/s** | ⛔ **fermo**: `[M]` mediana **74,58 ms**, e Mutter ne vale il **22 %** |
+> | la cadenza disaccoppiata (monitor 120, freno 90) | ⭐ **da 31,5 a 61,4/s** | ⛔ **fermo** |
 >
 > ⛔ **Raddoppiare i fotogrammi al secondo non ha tolto un millisecondo al ritardo**, e la ragione è
-> che il collo era altrove: **58 ms su 74,6 sono nostri**, quasi tutti nel codificatore in software.
+> che il collo era altrove: la gran parte del ritardo era nostra, quasi tutta nel codificatore in
+> software. *(I millisecondi misurati allora dipendevano dalla codifica senza scheda di libavcodec e non
+> valgono più dopo la fase 18.)*
 > I 60 fotogrammi **tolgono un ostacolo**; il numero che l'utente sente lo fa il ritardo.
 >
 > ⇒ ⭐ **La lezione, nella forma che le mancava: sono TRE grandezze, non due.** Millisecondi di CPU
@@ -1905,15 +1909,11 @@ lo faccia per quello.
 >
 > ### ⛔⛔ E la stessa sera è arrivato il caso che le fa dire cose OPPOSTE — la pagina nel worker
 >
-> | | thread principale | worker |
-> |---|---|---|
-> | ⭐ **fotogrammi dipinti sulla catena vera** | 22,8-24,2 /s | ⭐ **26,3 /s** — *il worker dipinge di PIÙ* |
-> | ⛔ **tetto a saturazione, 1080p** | **127,6 /s** | ⛔ **33,9 /s** (**−73,4 %**) |
-> | ⛔ **tetto a saturazione, 480p** | **230,6 /s** | ⛔ **56,4 /s** (**−75,5 %**) |
-> | ⛔ **mediana del ritardo** | 73,66 / 67,79 ms | ⛔ **101,30 ms** |
+> *Si era deciso di tenere la tela sul thread principale (`DECISIONI.md` §2.8); le misure, prese con la
+> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.*
 >
-> ⛔ **Sulla catena vera il worker sembra migliore. A saturazione è tre quarti peggiore. E il ritardo
-> dice che è peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza
+> ⛔ **Sulla catena vera il worker dipingeva di più e sembrava migliore. A saturazione era di gran lunga
+> peggiore. E il ritardo diceva che era peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza
 > si è scelta per prima** — che è il modo più educato in cui una misura può mentire.
 >
 > ⭐ **La regola pratica**: quando una leva tocca il percorso del video, le tre grandezze si

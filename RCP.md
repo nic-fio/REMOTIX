@@ -1,5 +1,7 @@
 # RCP — Remotix Control Protocol, versione 1
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Scritto il 9 agosto 2026, prima di qualunque riga di codice.*
 *Completato il 9 agosto 2026, dopo il censimento di §0-bis — sempre prima di qualunque riga di codice.*
 
@@ -1506,8 +1508,8 @@ con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
 > - ⭐ **alla tela dell'utente il tetto è irraggiungibile**: 2560×1080, **404 chiavi vere**, massimo
 >   **21 433 byte = 0,13 %**, margine **782×**. Nemmeno il rumore uniforme ci arriva (15,1 %);
 > - ⛔ **a 7680×4320 si sfonda davvero**: rumore uniforme **28,9 MiB, 8 su 8** sopra il tetto, e la
->   grana forte arriva al **94,9 %**. ⛔⛔ E il **ripiego in software sfonda prima e con contenuto
->   plausibile**: un filmato molto granuloso a schermo intero fa **18,7 MiB**;
+>   grana forte arriva al **94,9 %**. *(La misura del ripiego in software, `libx264` passando da
+>   libavcodec, non vale più dopo la fase 18.)*;
 > - ⚠ e i **10 bit qui sono otto promossi** — `DECISIONI.md` §2.3-ter. Infatti `[M]` l'etichetta
 >   `main10` a 8K costa **933 byte in MENO** di `main`: non porta informazione che non ci sia;
 > - ⛔⛔ **il difetto di forma però non è quello che si credeva.** La **scala delle ricodifiche è

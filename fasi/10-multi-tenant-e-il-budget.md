@@ -1,4 +1,7 @@
 # Fase 10 — Multi-tenant e il budget
+
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 Aperta il **24 agosto 2026**, subito dopo la chiusura della fase 9.
 ## ✅⭐⭐⭐⭐⭐ **CHIUSA il 25 agosto 2026**, sul giudizio dell'utente
 
@@ -504,7 +507,7 @@ punto 5 della fase non ha oggi **nessuna riga di codice**.
 | 8 | `presenti[]` **trabocca in silenzio**: il 17° utente non ha l'orologio dell'abbandono e **nessuna riga lo dice** | `main.c` · `deposita_fotogramma()`, `presenza_segna()` `:713`, `return` muto a `:730` | 17 |
 | 9 | `MAX_IN_VOLO` è **un'altra grandezza** sotto lo stesso numero | `aiutante.c` · `rcp_autentica()` | 17 simultanee, 0 sessioni |
 | 10 | ⛔ **`MAX_POLL 64` e il troncamento MUTO dei figli**: `figli_descrittori()` si ferma a `max` **senza scrivere niente**. Conto peggiore oggi 36 su 64, i 16 figli ci stanno — ⛔ ma oltre ~28 figli, o con la pagina affollata, **un figlio resta fuori dal `poll` e il suo utente non vede più un pixel, senza una riga** | `main.c` · `TELA_A`, `figlio.c` | >28, e **in silenzio** |
-| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (`[M]` ~22 ms contro ~3, `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, dipende dal driver |
+| 11 | ⛔ **il ripiego in software non lo vede nessuno**: se l'apertura VA-API fallisce, il figlio ripiega su `libx265` (molto più lento della scheda — la misura non vale più dopo la fase 18; `figlio.c:4185-4188`) ⇒ l'undicesima sessione può degradare **senza che il budget se ne accorga**, e **I1 è rotta per chi arriva** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, dipende dal driver |
 | 12 | ⭐ il **file dei ban e il socket di comando NON si rompono** (un solo scrittore, un solo socket) ⚠ ma il ban è **per indirizzo**: dieci utenti dietro lo stesso NAT condividono i tre tentativi | `main.c` · `presenza_segna()`, `comando.c` · `comando_descrittori()` | 1 NAT |
 
 ### 3.7 Le `[?]` che la lettura non chiude
@@ -1376,9 +1379,9 @@ nessuna ricodifica, nessun fotogramma trattenuto, memoria mai vicina al limite.
    buffer GBM esce con passo **3416**, che **non è multiplo di 64**: la guardia di `codificatore.h`
    rifiuta l'importazione. ⇒ **Il minimo del prodotto passa per forza dalla strada della memoria.**
    (I 480p sono stati misurati a **864**×480, passo 3456, dichiarandolo.)
-2. **Anche la strada della memoria cede alla GPU, non alla CPU**: a 1080p30 tiene N=24 con **12,0
-   nuclei su 20** e cede a N=32 coi motori al 99,5 %. ⚠ Il costo di CPU però è reale e va nel budget:
-   **6,0 nuclei** per dieci sessioni 1080p contro **0,7** con la copia zero.
+2. **La strada della memoria** (`sws_scale` + `av_hwframe_transfer_data`): se ne era concluso che
+   cedesse alla GPU come la copia zero, con un costo di CPU reale da mettere nel budget. ⚠ La misura
+   non vale più dopo la fase 18 (la conversione ora è nostra).
 3. ⭐⭐ **Il giro lungo non cambia il ritmo, cambia il RITARDO.** 15 s e 60 s danno lo stesso
    Mpixel/s al decimo (1855,9 → 1856,0), ⛔ ma il ritardo mediano passa da **561 a 2317 ms**
    (peggiore 1061 → 4505): **oltre il soffitto l'arretrato cresce con l'esposizione.** È
@@ -1850,37 +1853,34 @@ codifiche cala di frequenza»* **non regge su questo ferro** — e non per merit
 
 #### ⭐⭐⭐ E la conversione di colore gira sulle **EU**, non sul motore che si credeva
 
-`[M]` con la conversione **BGRA → NV12** nel percorso, 1080p CQP26:
+`[M]` codificatore nudo, 1080p CQP26, senza conversione: **1 flusso 449 fot/s · 8 flussi 852** (1766
+Mpixel/s) · **24,6 W** · 10 flussi 854 · 24,6 W.
+Con la conversione **BGRA → NV12** nel percorso (`ffmpeg` con `hwupload` dalla memoria) il lavoro era
+finito su **`rcs0`, il motore di rendering (le EU)**, non sul `vecs0` che si credeva dedicato, con un
+calo di ritmo e più potenza. *(I numeri della conversione dalla memoria — ritmo, watt, secondi di
+`rcs0` — non valgono più dopo la fase 18: quella strada ora converte in CPU, non con la VPP; sono
+stati tolti.)*
 
-| | 1 flusso | 8 flussi | 10 flussi |
-|---|---|---|---|
-| senza conversione | 449 fot/s | **852** (1766 Mpixel/s) · **24,6 W** | 854 · 24,6 W |
-| **con conversione** | 439 | **709** (1470 Mpixel/s) · ⛔ **50,2 W** | 708 · 50,2 W |
-
-⛔⛔ **`vecs0` — il motore di *video enhance* — è rimasto a `0,00 s` in OGNI singolo giro di tutta la
-campagna.** A lavorare è **`rcs0`, il motore di rendering (le EU)**: 1,00 s con un flusso, **11,25 s
-con dieci**.
-⇒ ⭐⭐ **La conversione compra il −17 % di ritmo raddoppiando la potenza di pacchetto** — e il motore
-che si credeva dedicato **non è coinvolto**.
-
-⭐⭐⭐ **Ed è il pezzo che spiega §6.5**: là il collo era `rcs0` al 99,5 %. ⚠ **E spiega anche la
+⭐⭐⭐ **Ed era il pezzo che spiegava §6.5**: là il collo era `rcs0` al 99,5 %. ⚠ **E spiegava anche la
 discordanza con §6.4-bis**, che vedeva il VEBOX al 10,55 %: là dietro c'era **un compositore vero**,
 qui solo `ffmpeg`. ⇒ **Due scene diverse, tutt'e due vere** (`LEZIONI.md` §1.28), e la conclusione
 che sopravvive a tutt'e tre è la stessa: ⛔ **il collo sta PRIMA del codificatore.**
 
-⭐ Altre due: `[M]` **HEVC costa quanto H.264** (883 fot/s a ×8 contro 852, cioè il 4 % **meno**) ·
-`async_depth` 1 / 2 / 4 **nessuna differenza** ⇒ il valore 1 del prodotto **non costa niente**.
+⭐ Altre due: il confronto HEVC contro H.264 di questo banco passava da `hwupload` dalla memoria
+*(misura tolta dopo la fase 18; quella valida è §6.10)* · `async_depth` 1 / 2 / 4 **nessuna
+differenza** ⇒ il valore 1 del prodotto **non costa niente**.
 
 #### Il budget del codificatore nudo, e la tabella di §5.5 rifatta
 
 `[M]` **≈ 1,8 Gpixel/s** in H.264 (900 per VDBOX, ⭐ **notevolmente costante al variare della
-risoluzione**: 900 a 480p, 940 a 1080p, 917 a 4K) · **≈ 1,47 Gpixel/s** con la conversione.
+risoluzione**: 900 a 480p, 940 a 1080p, 917 a 4K). *(Il valore «con la conversione» dalla memoria è tolto dopo la
+fase 18.)*
 
 | §5.5 dice | chiede, per dieci | è | ⇒ |
 |---|---|---|---|
 | 480p·25 «una cinquantina» | 102 Mpixel/s | **6 %** | ⭐ si alza |
-| 1080p·30 «8-10, giusto al limite» | 622 Mpixel/s | **35 %** nudo · **42 %** con conversione | ⭐⭐ **~29 / ~23** |
-| 4K·60 «una sola» | 4 977 Mpixel/s | 274 % | ⭐ **3,6 / 3,0** |
+| 1080p·30 «8-10, giusto al limite» | 622 Mpixel/s | **35 %** nudo | ⭐⭐ **~29** |
+| 4K·60 «una sola» | 4 977 Mpixel/s | 274 % | ⭐ **3,6** |
 
 ⛔ **E la forma del limite non è quella che §5.5 immaginava**: non è *«dieci sessioni sono il bordo»*
 — è **due VDBOX da 900 Mpixel/s l'uno, spartiti equamente, e il numero di sessioni non conta**
@@ -1908,8 +1908,8 @@ il predicato è verificabile senza ambiguità · **2560×1080**, la tela del pro
 righe di §5.5 per poterle confrontare · cattura, rete, muxing, dmabuf importato: ⭐ **il numero è del
 codificatore NUDO** · il **contenuto**: solo scena sintetica — `[?]` se lo scarto di **costo di
 codifica** fra scena vera e grana sia grande quanto quello di **banda** · ⚠ il costo della
-conversione **senza `hwupload`**: il −17 % comprende il caricamento BGRA da 8 MB/fotogramma, mentre
-**il prodotto importa un dmabuf a copia zero** ⇒ il suo costo è **più basso** · 4K60 **sostenuto**.
+conversione **senza `hwupload`**: la misura con il caricamento BGRA da 8 MB/fotogramma è tolta dopo la
+fase 18, e **il prodotto importa un dmabuf a copia zero** · 4K60 **sostenuto**.
 
 ### 6.7 ⭐⭐⭐ IL REGISTRO A PIÙ SESSIONI — **il 4,2 %**, e la prova cieca che vale più della percentuale
 
@@ -2338,10 +2338,10 @@ quattro contro due.
 ⛔ **E le due colonne restano SEPARATE**: stessa scena, stesso QP, 1080p30 N=1 → H.264 **8,976**
 contro HEVC **9,804 Mbit/s** (**1,09×**). ⭐ **HEVC costa meno GPU e più bit**, e il rapporto **non è
 una costante** — è la ferita che la fase 9 aveva già pagato.
-⚠ **Discordanza dichiarata e non forzata** (`LEZIONI.md` §1.28): §6.6 diceva *«HEVC costa il 4 %
-meno»* su `ffmpeg` con `hwupload` **dalla memoria** e in fot/s; qui è **21 %**, sul codificatore del
-prodotto **con copia zero** e in tempo di motore **a saturazione**. **Due grandezze diverse, stessa
-direzione.**
+⚠ **Discordanza dichiarata e non forzata** (`LEZIONI.md` §1.28): §6.6 aveva un confronto più piccolo
+su `ffmpeg` con `hwupload` **dalla memoria** e in fot/s *(misura tolta dopo la fase 18)*; qui è **21 %**,
+sul codificatore del prodotto **con copia zero** e in tempo di motore **a saturazione**. **Due grandezze
+diverse, stessa direzione.**
 
 #### ⛔⛔ QVBR: c'è, funziona — **e nessuno lo accende**
 
@@ -2444,8 +2444,8 @@ ferro ne fa **992** ⇒ 992/835,6 = **1,187** contro 1542/1342 = **1,149**, che 
 
 > ##### ✅⛔ E QUESTO CORREGGE §6.6 — *due scene diverse, e quella del prodotto è l'altra*
 >
-> §6.6 aveva trovato la conversione **su `rcs0`**, con `vecs0` a `0,00 s` in tutta la campagna, a
-> **−17 % di ritmo e il doppio dei watt**. ⚠ **Ma quello era `ffmpeg` con `hwupload`, 8 MB per
+> §6.6 aveva trovato la conversione **su `rcs0`**, non su `vecs0`, con un calo di ritmo e più watt
+> *(numeri tolti dopo la fase 18)*. ⚠ **Ma quello era `ffmpeg` con `hwupload`, 8 MB per
 > fotogramma.** ⭐ **Il prodotto importa un dmabuf a copia zero**: `[M]` **zero sul motore di
 > rendering, tutto sul VEBOX** — che **non è mai il collo**.
 > ⇒ ⭐ Il `[?]` che l'incarico segnava con la stella è **chiuso**, e nel verso buono: **la nostra

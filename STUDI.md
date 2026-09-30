@@ -1,9 +1,12 @@
 # STUDI — il codice degli altri, letto prima di scrivere il nostro
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
 sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
-riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nessuna misura, nessuna
-marca e nessuna data sono state toccate.*
+riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nella cucitura nessuna
+misura, nessuna marca e nessuna data sono state toccate; dopo, con la fase 18, sono state tolte solo le misure
+che il cambio ha invalidato (vedi la riga ⚠ qui sopra).*
 
 > ⚠ **COME SI LEGGONO I PERCORSI QUI DENTRO** *(convenzione aggiunta il 28 agosto 2026)*
 >
@@ -1021,12 +1024,11 @@ compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha nessuna opzion
 non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i quattro monitor virtuali sono tutti
 **1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
 
-⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Misurato
-il ritardo cattura → vetro (mediana **74,58 ms**, `SPECIFICHE.md` §3.2), il disegno → cattura di
-Mutter pesa **16,66 ms su 74,6, cioè il 22 %**: il **78 % è nostro**, e ~39 ms stanno nel tratto
-cattura → primo byte in pagina, dominato dal codificatore in software (libsvtav1 / libx265). ⇒ Il
-figlio del prodotto consegna **23,93 fotogrammi/s con ZERO attese a vuoto**: **non aspetta mai
-Mutter**. Alzare la cadenza della cattura non sposterebbe il ritardo.
+⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Il ritardo
+cattura → vetro era in gran parte nostro, nel tratto cattura → primo byte in pagina dominato dal
+codificatore in software, e il figlio del prodotto **non aspettava mai Mutter**: alzare la cadenza della
+cattura non sposterebbe il ritardo. *(I numeri di questa misura — fatta col codificatore software di
+allora, libsvtav1 / libx265 via libavcodec — non valgono più dopo la fase 18 e sono stati tolti.)*
 
 #### 8.3 Il resto
 

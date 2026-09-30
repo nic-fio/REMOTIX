@@ -1,4 +1,7 @@
 # Fase 9 — La qualità e la degradazione
+
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
 reti degradate, senza pretendere di fare miracoli»*
@@ -251,7 +254,7 @@ in parallelo, mandato di estrazione. Quel che segue è il **risultato**, non il 
 | | v1 fase **9** | v1 fase **10** |
 |---|---|---|
 | che cosa era | la copia zero, i millisecondi di CPU per fotogramma | **la qualità e la banda** |
-| l'errore | ottimizzata la CPU (41→6 ms) mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
+| l'errore | ottimizzata la CPU mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
 | l'esito | una lezione | ⛔ **AZZERATA**, codice riportato indietro, banchi rimossi |
 
 ⇒ ⭐ **La fase 9 di V2 è l'erede della fase 10 di v1.** `PIANO.md:1180` scrive *«in v1 questa fase
@@ -329,7 +332,7 @@ degrada). Resta il **qp**, di cui non esiste nessuna scala definita.
 | sui giri stretti i fotogrammi consegnati sono **tutti chiavi** (144/144, 149/149) contro **2 su 1 019** a 15 Mbit/s | 21 ago |
 | una chiave da 60 KB a 3 Mbit/s occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede una ogni **150** | 21 ago |
 | ⛔ **quattro varianti del trasporto non cambiano niente** (397 · 278 · 406 · 514 · 371) ⇒ *«la finestra non è contesa: è già piena»* | 21 ago |
-| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)**; `libx264` tiene 1 992 ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
+| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)** (il confronto con `libx264` non vale più dopo la fase 18) ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
 | ⛔ **il modo di controllo del bitrate non si sceglie: lo DEDUCE il driver** (`rc_max_rate == bit_rate` ⇒ CBR, e nessuno l'aveva scelto) | v1, R31 |
 | su desktop fermo il CBR spendeva **9 875 kbit/s contro 277 del QVBR, per 1,8 dB** ⇒ *«la scelta non si gioca sulla scena dura: si gioca su quanto si spende quando non serve»* | v1, R31 |
 | il ritmo del **contenuto vero dell'utente**: **20,9 fotogrammi/s**, 31 % identici | fase 8 |
@@ -1259,12 +1262,13 @@ degradazione permanente **no**.
 | `[M]` 7680×4320 in hardware, desktop vero | ⛔ no (1,5 %) |
 | `[M]` 7680×4320, grana `alls=60` in hardware | ⚠ **94,9 %** — **al confine** |
 | `[M]` 7680×4320, rumore uniforme in hardware | ⛔ **sì**, 8 su 8 |
-| ⛔ `[M]` **ripiego software `libx264` CRF 20, 7680×4320, filmato granuloso: 18,733 MiB, 1 su 8** | ⛔ **sì, con contenuto plausibile** |
+| ⛔ **ripiego software**, 7680×4320, filmato granuloso | ⛔ **sì** — ⚠ la misura (`libx264`) non vale più dopo la fase 18 |
 
 ⇒ Raggiungibile per **una via sola e stretta**: la tela grande **più** il ripiego software. E le due
 si tengono per mano: `[M]` `h264_vaapi` su questo chip si ferma a **4096 px per lato**, e la tela
 legale di `RCP.md` §4.5 arriva a 7680 ⇒ **oltre i 4096 il ripiego software non è un'eventualità, è
-la regola**.
+la regola**. ⚠ dopo la fase 18: OpenH264 si ferma a 4096×2304; oltre, H.264 serve la scheda
+(`DECISIONI.md` §10.26).
 
 ⛔ **Il morso vero non è il fotogramma perso: è quel che resta dopo.** Il fotogramma granuloso dura
 un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva a **CRF 47** o **QP 51**
@@ -1274,8 +1278,8 @@ un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva
 **Il vincolo che decide DOVE va il codice**: `chiudi_contesto()` fa `av_packet_free()` ⇒ la risalita
 **non può** stare dopo `break`, dove `fuori->dati` punta dentro il pacchetto: sarebbe lo stesso
 difetto di §4. ⇒ **si conta alla consegna, si risale all'ingresso del fotogramma dopo**, e come
-effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware, **1,8-3,3 s** in
-software) cade **fra** due fotogrammi.
+effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware; quella in software, misurata con `libx264`, non vale più dopo la
+fase 18) cade **fra** due fotogrammi.
 
 ⛔ **E non è simmetrica alla discesa, di proposito**: si scende di tre scalini in un fotogramma, si
 risale di **UNO** ogni `RISALITA_ATTESA`, con l'attesa che **raddoppia** a ogni ricaduta
@@ -1290,7 +1294,7 @@ riapertura ogni 2 secondi, **e quello sì sarebbe I1**.
 
 ⛔ **Il guasto che ucciderebbe questa cura si chiama SBATTIMENTO, e non è ipotetico**: la grana
 `alls=60` a 7680×4320 sta al **94,9 %** del tetto, cioè è una scena che vive **esattamente sul
-confine**. In software basterebbero pochi giri (1,8-3,3 s ciascuno) perché **la cura costi più del
+confine**. In software basterebbero pochi giri (la riapertura costa molto di più che in hardware) perché **la cura costi più del
 difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
 
 ### 5.4 Cura 4 — il riordino dell'audio · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
@@ -2495,9 +2499,10 @@ famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione
 
 ⭐ **41,25 fot/s con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi).
 ⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica.
-`[M]` la riga del primo fotogramma a 4K: **conversione 11 466 µs** + **codifica 8 895 µs** = **20,4
-ms per fotogramma**, cioè **un tetto di ~49/s** prima ancora di uscire di casa. ⚠ A 2560×1080 erano
-6 652 + 3 827 = 10,5 ms (⇒ ~95/s), e infatti lì si vedono 41,8/s perché comanda il compositore.
+La riga del primo fotogramma a 4K dava conversione + codifica come tetto della catena prima ancora di
+uscire di casa. *(Quei tempi non valgono più dopo la fase 18: la conversione di quel fotogramma non si
+dimostra a copia zero — il codice di allora aveva anche la strada dalla memoria con `sws_scale` — e sono
+stati tolti.)*
 ⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto regge ~41/s, non 60.**
 
 ### 13.6.2 ⛔⛔ E IL ROSSO DI **P9** È CADUTO, con un innesco concreto
@@ -2697,9 +2702,11 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
 ```
 14:22:06.637 rcp     negoziato video.codec=h264 video.profondita=8 audio.codec=pcm
 14:22:07.782 video   primo fotogramma: (non letto) · 25450 byte · … livello 51, 2560x1080 ·
-                     conversione 6308 µs, … codifica 3815 µs · H.264 8 bit via h264_vaapi
+                     conversione … µs, … codifica … µs · H.264 8 bit via h264_vaapi
 ```
 
+*(I tempi di conversione e codifica della riga sono tolti dopo la fase 18: la conversione non si dimostra
+a copia zero.)*
 ⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
 `hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
 
@@ -2982,8 +2989,8 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
 
 ⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
 non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
-⚠ `[M]` conversione **11 941 µs** + codifica **8 924 µs** = **20,9 ms** per fotogramma ⇒ un tetto
-di **~48/s** prima di uscire di casa, e i 40,40 di `barra` ci stanno sotto.
+⚠ Il tetto «conversione + codifica» del primo fotogramma stava sopra i 40,40 di `barra`. *(I tempi sono
+tolti dopo la fase 18: la conversione non si dimostra a copia zero.)*
 
 ## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
 

@@ -1,5 +1,7 @@
 # Fase 11 — La rete di sicurezza
 
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 *Aperta il **25 agosto 2026**. Chiusa il —*
 
 > ### 📋 QUESTO DOCUMENTO È SCRITTO ANCHE PER CHI NON CONOSCE IL PROGETTO
