@@ -6089,6 +6089,32 @@ server»*; e *«i dati dell'installer restano su un nostro repository, così sia
   `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
 - resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
 
+### 10.22 🔸 La licenza: non commerciale, anche per l'uso interno delle aziende — la direzione (30 set 2026)
+
+Parole dell'utente: *«REMOTIX è un prodotto opensource. Si può usare liberamente e redistribuire liberamente.
+Il codice si può modificare e redistribuire ma citando progetto/codice originale. È vietato l'uso
+commerciale. Il codice non può essere modificato e redistribuito a pagamento»*; *«le aziende non possono
+usarlo come strumento di lavoro, ne trarrebbero un vantaggio economico»*; *«non voglio accollarmi le spese per
+un legale»*.
+
+- ⚠ Una licenza con divieto commerciale **non è «open source»** secondo la definizione ufficiale (OSI): è «a
+  codice disponibile». Il nome da usare va scelto di conseguenza.
+- **La licenza**: **PolyForm Noncommercial 1.0.0**, il testo originale **senza modifiche** (scritto da
+  avvocati, gratuito, fatto per il software): uso, modifica e ridistribuzione per scopi non commerciali, con la
+  citazione dell'originale; vietato alle aziende come strumento di lavoro e vietata la vendita.
+- ⛔ **Il conflitto con ffmpeg**: REMOTIX usa la libavcodec della distribuzione, costruita sotto **GPL** su
+  Debian, Ubuntu, Arch e con RPM Fusion/Packman; una licenza non commerciale non è compatibile con la GPL. ⇒
+  **Tappa nuova (dopo la chiusura dell'installatore): togliere ffmpeg da REMOTIX** — la codifica sulla scheda
+  direttamente con **libva** (MIT), il ripiego software con **OpenH264** (BSD) al posto di x264. Dopo, tutte le
+  dipendenze sono permissive (MIT, BSD, Apache) e la licenza — come un'eventuale vendita del prodotto —
+  non ha più conflitti.
+- **Senza legale** (scelta dell'utente): solo licenze standard non modificate, nessuna dipendenza GPL, il file
+  delle licenze dei componenti generato dallo SBOM, e un accordo standard per chi contribuirà (per restare
+  proprietario di tutto il codice, condizione di una vendita). Rischio residuo basso, dichiarato.
+- Una **vendita** del prodotto cede i diritti sul **nostro** codice; ffmpeg non è nostro e, tolta la
+  dipendenza, non la tocca. I **brevetti** dei codec (H.264, HEVC) restano una questione a parte per chi
+  vende.
+
 ---
 
 ## Come si tiene questo documento
