@@ -58,7 +58,7 @@ debian13-*)
 ubuntu2604-*)
 	# ubuntu-desktop non porta libavcodec; e il GNOME «vanilla» (sessione `gnome`,
 	# che REMOTIX avvia) sta nel pacchetto gnome-session (§4.6, D8)
-	$VM 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q libavcodec62 libswscale9 libavutil60 gnome-session' ;;
+	$VM 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q libavcodec62 libswscale9 libavutil60' ;;
 fedora44-*)
 	: ;;   # il gruppo Workstation porta gia' libavcodec-free (SENZA libx264/libx265)
 alma10-*)
