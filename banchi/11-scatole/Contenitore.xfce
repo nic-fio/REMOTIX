@@ -159,11 +159,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   varrebbe meno — che e' il guasto che l'utente ha nominato per primo (D5) e
 #   che C11 va a cercare.
 # ---------------------------------------------------------------------------
+# ⭐ fase 18 (1 ott 2026): `firefox-esr` NON dal deposito ma dal .deb dell'OSPITE
+#   (`pacchetti/`, che `11-accendi.sh costruisci` prende da
+#   /media/REMOTIX/cache/apt-host).  `[M]` 30 set: il deposito di sicurezza di
+#   trixie e' passato alla 153.4.0esr mentre l'ospite, e le scatole di TUTTE le
+#   misure delle fasi 15-18, hanno la 140.16.0esr — e' la regola R2 (§3): la
+#   scatola ha i pacchetti della macchina vera, non quelli «giusti».
+#   `apt-mark hold` perche' un aggiornamento dentro la scatola non lo cambi in
+#   silenzio.  ⚠ La versione sta scritta qui apposta: quando l'ospite cambia
+#   Firefox, cambia questa riga, e lo si sa.
+COPY pacchetti/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb /tmp/pacchetti/firefox-esr.deb
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        firefox-esr ffmpeg \
+        /tmp/pacchetti/firefox-esr.deb ffmpeg \
         python3-numpy python3-pil \
         fonts-dejavu-core libpci3 \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-mark hold firefox-esr \
+    && rm -rf /tmp/pacchetti /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
 # 5. L'INQUILINO — il PRIMO, e con il gruppo `render` senza cui il compositore

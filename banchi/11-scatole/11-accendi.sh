@@ -273,6 +273,17 @@ case "${1:-}" in
 
 costruisci)
 	log "Costruisco l'immagine di $DESKTOP dalla ricetta"
+	# ⭐ fase 18 (1 ott 2026): il Firefox della scatola e' quello dell'OSPITE
+	#   (ricetta, blocco 4-ter): il .deb si prende dalla cache dei pacchetti
+	#   dell'ospite e si mette nel contesto della costruzione (`pacchetti/`).
+	#   ⛔ Se manca, ci si ferma: una scatola con un Firefox diverso da quello
+	#   delle misure di prima non e' la stessa scatola, e lo si saprebbe dopo.
+	FF_DEB=/media/REMOTIX/cache/apt-host/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb
+	mkdir -p "$BASE/pacchetti"
+	if [ ! -f "$BASE/pacchetti/$(basename "$FF_DEB")" ]; then
+		cp "$FF_DEB" "$BASE/pacchetti/" \
+			|| { ko "manca $FF_DEB: la scatola avrebbe un Firefox diverso dall'ospite"; exit 1; }
+	fi
 	# ⚠ `--network=host` anche qui: senza, la costruzione non arriva ai
 	#   pacchetti (stessa ragione di sopra, misurata il 25 agosto 2026).
 	podman build --network=host -f "$RICETTA" -t "$IMMAGINE" "$BASE" || exit 1
