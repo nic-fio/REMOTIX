@@ -1,6 +1,6 @@
 # Fase 12 — KDE
 
-⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione rimaste in questo documento sono storiche: valgono per la macchina e per il prodotto di allora; quelle della codifica con ffmpeg sono state tolte con la fase 18. Decisione dell'utente del 30 set 2026.
 
 *Aperta il **18 settembre 2026**. Chiusa il —*
 
