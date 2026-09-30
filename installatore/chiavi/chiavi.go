@@ -5,7 +5,7 @@
 // di pacchetti.
 //
 // ⚠ È la chiave DI PROVA della fase 17 (la privata sta fuori dal deposito, in
-// ~/.local/share/remotix-chiavi-di-prova/b); la vera, e dove si custodisce, si decidono con D10.
+// .chiavi/b del progetto, ignorata da git); la vera, e dove si custodisce, si decidono con D10.
 package chiavi
 
 import (

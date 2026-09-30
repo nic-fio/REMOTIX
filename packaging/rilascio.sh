@@ -16,7 +16,7 @@
 #      packaging/rpm/costruisci-rpm.sh), Arch (packaging/arch/costruisci.sh);
 #   4. i pacchetti del MOTORE e della CHIAVE (packaging/archivio/pacchetti-motore.sh);
 #   5. l'ARCHIVIO (packaging/archivio/pubblica.sh): i pacchetti al loro posto, firmati con l'UNICA
-#      chiave (quella DI PROVA in ~/.local/share/remotix-chiavi-di-prova finché D10 non dà la vera);
+#      chiave (quella DI PROVA in .chiavi/ del progetto, ignorata da git finché D10 non dà la vera);
 #      i due motori col loro sha256; install.sh con gli sha256 dei motori scritti dentro, e il suo
 #      sha256; indici e firme, SBOM, il file delle licenze dei componenti, SHA256SUMS;
 #   6. il riassunto: la riga per RILASCI.txt dell'archivio, lo sha256 di install.sh da pubblicare
@@ -45,7 +45,7 @@ V=${BASH_REMATCH[1]} R=${BASH_REMATCH[2]}
 BERSAGLI=${BERSAGLI:-debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch}
 CANALE=${CANALE:-stabile}
 export ARCHIVIO=${ARCHIVIO:-$ALBERO/costruzione-uscita/archivio}
-export CHIAVI=${CHIAVI:-$HOME/.local/share/remotix-chiavi-di-prova}
+export CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
 # D10 aperta: dove si carica l'archivio (il VPS). Quando c'è, qui l'indirizzo.
 DESTINAZIONE=${DESTINAZIONE:-'<D10: indirizzo del VPS, per esempio remotix@archivio.example:/srv/remotix/>'}
 LAV=$ALBERO/costruzione-uscita/rilascio-$VERSIONE

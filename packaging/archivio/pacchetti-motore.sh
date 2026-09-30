@@ -15,14 +15,14 @@
 # versione gli script chiamano `remotix-install aggiornato`.
 #
 # Ambiente: RX_VERSIONE (obbligatoria: quella del motore deve essere lei), RX_REVISIONE (1), MOTORE
-# (installatore/uscita/remotix-install), CHIAVI (~/.local/share/remotix-chiavi-di-prova: la chiave
+# (installatore/uscita/remotix-install), CHIAVI (.chiavi/ del progetto, ignorata da git: la chiave
 # DI PROVA, fuori dal deposito, finché D10 non dà quella vera).
 # ⚠ Niente /tmp: sul portatile è quasi pieno.
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)
 U=${1:-$ALBERO/costruzione-uscita/motore}
-CHIAVI=${CHIAVI:-$HOME/.local/share/remotix-chiavi-di-prova}
+CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
 V=${RX_VERSIONE:?RX_VERSIONE: la versione del rilascio}
 R=${RX_REVISIONE:-1}
 MOTORE=${MOTORE:-$ALBERO/installatore/uscita/remotix-install}

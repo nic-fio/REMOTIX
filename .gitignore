@@ -67,3 +67,7 @@ banchi/13-w3-input-wlr
 
 # Le uscite di src/costruzione/costruisci-tutti.sh: binari per bersaglio e registri
 costruzione-uscita/
+
+# ⛔ Le chiavi dei rilasci (la privata compresa): stanno nel progetto ma NON nel deposito
+#    (parola dell'utente, 1 ott 2026: «per il momento la lasciamo nella cartella locale del progetto»).
+/.chiavi/

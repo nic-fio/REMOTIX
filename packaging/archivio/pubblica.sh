@@ -25,7 +25,7 @@
 #    ⚠ Fase 17: chiave DI PROVA (la vera, e dove si custodisce, con D10).
 #
 # Ambiente: ARCHIVIO (predefinito costruzione-uscita/archivio), CHIAVI
-# (~/.local/share/remotix-chiavi-di-prova: b/firma è la cartella GPG con la sola sottochiave di
+# (.chiavi/ del progetto, ignorata da git: b/firma è la cartella GPG con la sola sottochiave di
 # firma; la madre GPG sta in b/radice, «fuori linea»).
 set -euo pipefail
 export LC_ALL=C   # le date di Release (Valid-Until) in inglese, come apt le legge
@@ -33,7 +33,7 @@ QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)
 INST=$ALBERO/installatore
 ARCHIVIO=${ARCHIVIO:-$ALBERO/costruzione-uscita/archivio}
-CHIAVI=${CHIAVI:-$HOME/.local/share/remotix-chiavi-di-prova}
+CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
 GB=$CHIAVI/b/firma
 FPR=$(cat "$CHIAVI/b/archivio.impronta")
 LAV=$ARCHIVIO/../.lavoro-archivio
