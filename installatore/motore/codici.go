@@ -73,6 +73,7 @@ var Codici = map[string]Codice{
 	"RX-H264-003":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su Fedora e sulla famiglia RHEL serve RPM Fusion.", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
 	"RX-H264-004":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su openSUSE serve Packman.", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
 	"RX-H264-005":    {AVVISO, ServeAzione, "Non c'è nemmeno il ripiego software (libx264) nella ffmpeg di questa macchina.", ""},
+	"RX-H264-006":    {BLOCCANTE, ServeAzione, "Senza l'archivio esterno per la codifica video REMOTIX non si installa (decisione D5, DECISIONI §10.20): niente è stato toccato.", "Rifare l'installazione dando il consenso all'archivio (consenso.deposito.<nome> = si)."},
 	"RX-PAM-001":     {BLOCCANTE, ServeAzione, "La pila d'accesso della distribuzione non si trova.", "Controllare i file in /etc/pam.d (o /usr/lib/pam.d su openSUSE)."},
 	"RX-PAM-002":     {AVVISO, ServeAzione, "La pila d'accesso della distribuzione contiene pam_faillock: tre parole sbagliate chiudono il conto, anche davanti alla macchina.", "Decisione D3, aperta."},
 	"RX-PAM-003":     {INFO, ServeAzione, "Esiste già un file d'accesso «remotix».", ""},
@@ -144,6 +145,15 @@ var Codici = map[string]Codice{
 	"RX-SYSTEMD-002":   {BLOCCANTE, ServeAzione, "L'unità è mascherata: l'amministratore l'ha spenta apposta.", ""},
 	"RX-SYSTEMD-003":   {BLOCCANTE, ServeAzione, "L'unità non esiste.", ""},
 	"RX-FILE-001":      {BLOCCANTE, ServeAzione, "Il file è stato cambiato da qualcun altro durante l'operazione: non si tocca.", ""},
+	"RX-AZIONE-006":    {BLOCCANTE, ServeAnnullamento, "L'installazione è stata fermata da chi installa: quel che era già fatto si annulla.", ""},
+
+	// le interfacce (T9, DECISIONI §10.14, §10.19): TUI e GUI
+	"RX-UI-001": {BLOCCANTE, ServeAzione, "Questa costruzione di remotix-install non ha la finestra (è quella statica, per le macchine senza desktop).", "remotix-install tui (nel terminale), oppure install.sh --finestra, che scarica la costruzione con la finestra."},
+	"RX-UI-002": {BLOCCANTE, ServeAzione, "La finestra non si apre: non c'è una sessione grafica (né WAYLAND_DISPLAY né DISPLAY), o le sue librerie non rispondono.", "remotix-install tui, nel terminale."},
+	"RX-UI-003": {BLOCCANTE, ServeAzione, "La finestra non gira da amministratore (root): chiede lei i permessi, a polkit, quando servono.", "Lanciarla come utente normale, senza sudo."},
+	"RX-UI-004": {BLOCCANTE, ServeAzione, "I permessi da amministratore non sono stati dati (polkit ha rifiutato o la richiesta è stata chiusa): niente è stato toccato.", "Rilanciare e inserire la password di un amministratore."},
+	"RX-UI-005": {BLOCCANTE, ServeAzione, "La parte da amministratore del motore si è interrotta.", "remotix-install stato dice a che punto è l'operazione; remotix-install riprendi o annulla."},
+	"RX-UI-006": {BLOCCANTE, ServeAzione, "La TUI chiede un terminale e i permessi da amministratore.", "sudo remotix-install tui"},
 
 	// l'aggiornamento automatico (DECISIONI §10.10, T8)
 	"RX-AGG-001": {INFO, ServeAzione, "REMOTIX è all'ultima versione del suo canale.", ""},

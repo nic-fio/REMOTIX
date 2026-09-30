@@ -35,7 +35,6 @@ func PianoCintura(id, sorgente, destinazione, ricarica string) AzionePiano {
 		ComeSiVerifica: T("az.cintura.verifica"),
 		ComeSiAnnulla:  T("az.cintura.annulla"),
 		Reversibilita:  ESATTA,
-		Consenso:       T("az.cintura.consenso"),
 	}
 }
 

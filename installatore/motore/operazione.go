@@ -25,7 +25,11 @@ type Motore struct {
 	Adesso   func() time.Time
 	// FuoriLinea: il pacchetto fuori linea da cui si installa (R22); la macchina deve combaciare
 	FuoriLinea *PacchettoFuoriLinea
-	serratura  *os.File
+	// Fermata: chi installa ha chiesto di fermarsi (il pulsante «Annulla e rimetti com'era» di TUI e
+	// GUI). Si guarda fra un passo e l'altro, mai in mezzo a un passo: il passo cominciato finisce,
+	// poi l'operazione va a IN_ANNULLAMENTO (RX-AZIONE-006) e si annulla tutto dal registro.
+	Fermata   func() bool
+	serratura *os.File
 }
 
 // Operazione: una cartella in Cartella/<id>/ con lo stato, il registro e gli oggetti.
@@ -42,6 +46,7 @@ type Operazione struct {
 var (
 	errFallita     = errors.New("un'azione è fallita")
 	errConcorrente = errors.New("la macchina è cambiata durante l'operazione")
+	errFermata     = errors.New("fermata da chi installa")
 )
 
 func (m *Motore) adesso() time.Time {
@@ -355,6 +360,12 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		m.Ev.Messaggio(op.ID, Msg("RX-RISPOSTE-001", strings.Join(r.Mancanti, ", ")))
 		return op, op.vai(BLOCCATA, "RX-RISPOSTE-001", strings.Join(r.Mancanti, ", "))
 	}
+	for _, x := range piano.NonFatto {
+		if x.Codice == "RX-H264-006" { // D5: il «no» all'archivio della codifica
+			m.Ev.Messaggio(op.ID, x)
+			return op, op.vai(BLOCCATA, "RX-H264-006", x.Dettaglio)
+		}
+	}
 	for _, sc := range piano.Scelte {
 		if sc.ID == "desktop" && sc.Valore() == "no" {
 			m.Ev.Messaggio(op.ID, Msg("RX-DESKTOP-001", ""))
@@ -475,6 +486,11 @@ func (op *Operazione) continua() error {
 			switch {
 			case errors.Is(err, errConcorrente):
 				return op.vai(INTERROTTA, "RX-RIPRESA-001", op.ultimoDettaglio())
+			case errors.Is(err, errFermata):
+				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-006", ""))
+				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-006", ""); err != nil {
+					return err
+				}
 			case errors.Is(err, errFallita):
 				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-001", op.ultimoDettaglio()))
 				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-001", op.ultimoDettaglio()); err != nil {
@@ -615,6 +631,9 @@ func (op *Operazione) eseguiTutte() error {
 		}
 		c := op.contesto(ap)
 		ult := op.Reg.Ultimo(ap.ID, EvIntenzione, EvFatta, EvFallita)
+		if ult == nil && op.m.Fermata != nil && op.m.Fermata() {
+			return errFermata
+		}
 		switch {
 		case ult == nil: // niente nel registro: non cominciata ⇒ la si fa
 			punto("prima-intenzione", ap.ID)

@@ -56,37 +56,38 @@ var testi = map[string]Testo{
 	"np.firewall_nessuno": {"nessun firewall acceso: niente da aprire", "no firewall on: nothing to open"},
 	"np.firewall_mano":    {"%s: aprire a mano la porta %s TCP e UDP", "%s: open port %s TCP and UDP by hand"},
 
-	"az.file":              {"scrivere %s", "write %s"},
-	"az.file.fa":           {"si salva il file che c'è (se c'è), si scrive il nuovo in «%s» accanto, fsync, e lo si rinomina sopra", "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it"},
-	"az.file.verifica":     {"sha256 e permessi del file uguali a quelli del piano", "file sha256 and permissions equal to the plan's"},
-	"az.file.annulla":      {"si rimette il file salvato (o si toglie, se prima non c'era), e le cartelle create se sono rimaste vuote", "the saved file is put back (or removed, if it was not there), and created directories if left empty"},
-	"az.gruppo":            {"mettere %s nel gruppo %s", "add %s to the %s group"},
-	"az.gruppo.fa":         {"gpasswd -a %s %s (se non c'è già: altrimenti niente, e lo si annota come PREESISTENTE)", "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)"},
-	"az.gruppo.verifica":   {"%s fra i membri di %s", "%s among the members of %s"},
-	"az.gruppo.annulla":    {"gpasswd -d %s %s, solo se l'ha messo REMOTIX", "gpasswd -d %s %s, only if REMOTIX added them"},
-	"az.unita":             {"abilitare l'unità %s", "enable the unit %s"},
-	"az.unita.accesa":      {"abilitare e accendere l'unità %s", "enable and start the unit %s"},
-	"az.unita.fa":          {"EnableUnitFiles %s sul D-Bus di systemd (senza avviarla)", "EnableUnitFiles %s on systemd's D-Bus (without starting it)"},
-	"az.unita.verifica":    {"stato del file dell'unità %s = enabled", "unit file state of %s = enabled"},
-	"az.unita.annulla":     {"DisableUnitFiles %s, se prima non era abilitata", "DisableUnitFiles %s, if it was not enabled before"},
-	"az.fw":                {"aprire la porta %s (TCP e UDP) nel firewall", "open port %s (TCP and UDP) in the firewall"},
-	"az.fw.fa":             {"addPort %s/tcp e /udp nella zona predefinita, vive e permanenti, sul D-Bus di firewalld", "addPort %s/tcp and /udp in the default zone, runtime and permanent, on firewalld's D-Bus"},
-	"az.fw.verifica":       {"queryPort, vive e permanenti", "queryPort, runtime and permanent"},
-	"az.fw.annulla":        {"removePort delle sole regole aggiunte da REMOTIX", "removePort of the rules added by REMOTIX only"},
-	"az.fw.consenso":       {"Aprire la porta %s (TCP e UDP) nel firewall? (decisione D6, aperta)", "Open port %s (TCP and UDP) in the firewall? (decision D6, open)"},
-	"az.desktop":           {"installare %s dagli archivi della distribuzione", "install %s from the distribution's archives"},
-	"az.desktop.fa":        {"il gruppo di pacchetti della distribuzione per %s, senza display manager e senza graphical.target: davanti al monitor la macchina resta com'era", "the distribution's package group for %s, without a display manager and without graphical.target: at the monitor the machine stays as it was"},
-	"az.desktop.verifica":  {"i pacchetti installati, e il palco che parte senza schermo", "the installed packages, and the stage starting headless"},
-	"az.desktop.annulla":   {"si tolgono i pacchetti installati per noi che nessun altro vuole; quelli aggiornati restano (INDIRETTA, dichiarata)", "packages installed for us that nobody else wants are removed; upgraded ones stay (INDIRECT, declared)"},
-	"az.cintura":           {"accendere la cintura %s", "switch on the safety belt %s"},
-	"az.cintura.fa":        {"copia di %s in %s (temporaneo + rinomina), annotando il file dell'amministratore se c'era", "copy of %s to %s (temporary + rename), recording the administrator's file if there was one"},
-	"az.cintura.verifica":  {"sha256 uguale alla sorgente", "sha256 equal to the source"},
-	"az.cintura.annulla":   {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
-	"az.cintura.consenso":  {"Accendere le tre cinture (la macchina non si spegne, non si sospende, i tasti non la spengono)? (decisione D4, aperta)", "Switch on the three safety belts (the machine does not power off, does not suspend, keys do not power it off)? (decision D4, open)"},
-	"az.servizio":          {"abilitare e accendere remotix.service", "enable and start remotix.service"},
-	"az.servizio.fa":       {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
-	"az.servizio.verifica": {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
-	"az.servizio.annulla":  {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
+	"az.file":                   {"scrivere %s", "write %s"},
+	"az.file.fa":                {"si salva il file che c'è (se c'è), si scrive il nuovo in «%s» accanto, fsync, e lo si rinomina sopra", "the existing file (if any) is saved, the new one is written to «%s» next to it, fsync, and renamed over it"},
+	"az.file.verifica":          {"sha256 e permessi del file uguali a quelli del piano", "file sha256 and permissions equal to the plan's"},
+	"az.file.annulla":           {"si rimette il file salvato (o si toglie, se prima non c'era), e le cartelle create se sono rimaste vuote", "the saved file is put back (or removed, if it was not there), and created directories if left empty"},
+	"az.gruppo":                 {"mettere %s nel gruppo %s", "add %s to the %s group"},
+	"az.gruppo.fa":              {"gpasswd -a %s %s (se non c'è già: altrimenti niente, e lo si annota come PREESISTENTE)", "gpasswd -a %s %s (unless already there: then nothing, recorded as PRE-EXISTING)"},
+	"az.gruppo.verifica":        {"%s fra i membri di %s", "%s among the members of %s"},
+	"az.gruppo.annulla":         {"gpasswd -d %s %s, solo se l'ha messo REMOTIX", "gpasswd -d %s %s, only if REMOTIX added them"},
+	"az.unita":                  {"abilitare l'unità %s", "enable the unit %s"},
+	"az.unita.accesa":           {"abilitare e accendere l'unità %s", "enable and start the unit %s"},
+	"az.unita.fa":               {"EnableUnitFiles %s sul D-Bus di systemd (senza avviarla)", "EnableUnitFiles %s on systemd's D-Bus (without starting it)"},
+	"az.unita.verifica":         {"stato del file dell'unità %s = enabled", "unit file state of %s = enabled"},
+	"az.unita.annulla":          {"DisableUnitFiles %s, se prima non era abilitata", "DisableUnitFiles %s, if it was not enabled before"},
+	"az.fw":                     {"aprire la porta %s (TCP e UDP) nel firewall", "open port %s (TCP and UDP) in the firewall"},
+	"az.fw.fa":                  {"addPort %s/tcp e /udp nella zona predefinita, vive e permanenti, sul D-Bus di firewalld", "addPort %s/tcp and /udp in the default zone, runtime and permanent, on firewalld's D-Bus"},
+	"az.fw.verifica":            {"queryPort, vive e permanenti", "queryPort, runtime and permanent"},
+	"az.fw.annulla":             {"removePort delle sole regole aggiunte da REMOTIX", "removePort of the rules added by REMOTIX only"},
+	"az.fw.consenso":            {"Aprire la porta %s (TCP e UDP) nel firewall? (decisione D6, aperta)", "Open port %s (TCP and UDP) in the firewall? (decision D6, open)"},
+	"az.desktop":                {"installare %s dagli archivi della distribuzione", "install %s from the distribution's archives"},
+	"az.desktop.fa":             {"il gruppo di pacchetti della distribuzione per %s, senza display manager e senza graphical.target: davanti al monitor la macchina resta com'era", "the distribution's package group for %s, without a display manager and without graphical.target: at the monitor the machine stays as it was"},
+	"az.desktop.verifica":       {"i pacchetti installati, e il palco che parte senza schermo", "the installed packages, and the stage starting headless"},
+	"az.desktop.annulla":        {"si tolgono i pacchetti installati per noi che nessun altro vuole; quelli aggiornati restano (INDIRETTA, dichiarata)", "packages installed for us that nobody else wants are removed; upgraded ones stay (INDIRECT, declared)"},
+	"az.cintura":                {"accendere la cintura %s", "switch on the safety belt %s"},
+	"az.cintura.fa":             {"copia di %s in %s (temporaneo + rinomina), annotando il file dell'amministratore se c'era", "copy of %s to %s (temporary + rename), recording the administrator's file if there was one"},
+	"az.cintura.verifica":       {"sha256 uguale alla sorgente", "sha256 equal to the source"},
+	"az.cintura.annulla":        {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
+	"az.cintura.dichiarata":     {"Le tre cinture si accendono sempre (D4, DECISIONI §4.7): da remoto e davanti al monitor la macchina non si potrà spegnere né sospendere, e i tasti non la spengono; solo root può.", "The three safety belts are always switched on (D4, DECISIONS §4.7): remotely and at the monitor the machine cannot be shut down or suspended, and the keys do not power it off; only root can."},
+	"risposte.cinture_ignorata": {"consenso.cinture è ignorata: le cinture si accendono sempre (D4)", "consenso.cinture is ignored: the safety belts are always switched on (D4)"},
+	"az.servizio":               {"abilitare e accendere remotix.service", "enable and start remotix.service"},
+	"az.servizio.fa":            {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
+	"az.servizio.verifica":      {"attivo, la porta risponde in TCP e UDP (7b)", "active, the port answers on TCP and UDP (7b)"},
+	"az.servizio.annulla":       {"StopUnit e DisableUnitFiles di remotix.service", "StopUnit and DisableUnitFiles of remotix.service"},
 
 	"az.pacchetti":                  {"far installare %s al gestore di pacchetti della distribuzione", "have the distribution's package manager install %s"},
 	"az.pacchetti.fa":               {"si risolve la transazione, si scarica tutto e si verifica (insieme risolto nel registro), poi il gestore installa dalla cache, senza rete", "the transaction is resolved, everything downloaded and verified (resolved set in the log), then the manager installs from the cache, offline"},
@@ -160,7 +161,7 @@ var testi = map[string]Testo{
   remotix-install piano     [--uscita FILE] [--utente NOME] [--apri-firewall] [--json]
         prepara un piano di PROVA del motore
   remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
-                            [--apri-firewall] [--senza-cinture]
+                            [--apri-firewall]
         prepara il piano dell'INSTALLAZIONE di REMOTIX
   remotix-install disinstalla [--purge]   prepara il piano della disinstallazione (dal registro)
   remotix-install approva   FILE-PIANO [--desktop gnome|kde|xfce|lxqt|no]
@@ -186,7 +187,7 @@ var testi = map[string]Testo{
   il file di risposte (formato remotix-risposte/1), una voce per riga, «#» commento:
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (solo se manca un desktop)
-        consenso.cinture = si|no   consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.firewall = si|no   consenso.aggiornamenti = si|no
         consenso.deposito.rpmfusion|packman|epel = si|no
         (ogni consenso che su quella macchina serve va dato, «si» o «no»)
 
@@ -200,7 +201,7 @@ var testi = map[string]Testo{
   remotix-install piano     [--uscita FILE] [--utente NAME] [--apri-firewall] [--json]
         prepares an engine TEST plan
   remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
-                            [--apri-firewall] [--senza-cinture]
+                            [--apri-firewall]
         prepares the REMOTIX INSTALLATION plan
   remotix-install disinstalla [--purge]   prepares the uninstallation plan (from the log)
   remotix-install approva   PLAN-FILE [--desktop gnome|kde|xfce|lxqt|no]
@@ -226,7 +227,7 @@ var testi = map[string]Testo{
   the answer file (format remotix-risposte/1), one entry per line, «#» comment:
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (only if a desktop is missing)
-        consenso.cinture = si|no   consenso.firewall = si|no   consenso.aggiornamenti = si|no
+        consenso.firewall = si|no   consenso.aggiornamenti = si|no
         consenso.deposito.rpmfusion|packman|epel = si|no
         (every consent that machine needs must be given, «si» or «no»)
 
@@ -264,6 +265,8 @@ var testi = map[string]Testo{
 	"cli.risposte_mancanti":    {"  ⛔ consensi che servono e che il file NON dà: %s — l'operazione sarà BLOCCATA (RX-RISPOSTE-001)", "  ⛔ consents that are needed and that the file does NOT give: %s — the operation will be BLOCKED (RX-RISPOSTE-001)"},
 	"cli.conferma":             {"Applicare questo piano? Scrivere «si» per confermare: ", "Apply this plan? Type «yes» to confirm: "},
 	"cli.non_confermato":       {"non confermato: niente è stato toccato", "not confirmed: nothing was touched"},
+	"cli.dichiarato":           {"si fa sempre: %s", "always done: %s"},
+	"cli.router":               {"Da fuori della rete locale: inoltra sul router la porta %d, TCP e UDP, verso questa macchina (REMOTIX non lo fa da sé: niente UPnP).", "From outside the local network: forward port %d, TCP and UDP, on the router to this machine (REMOTIX does not do it by itself: no UPnP)."},
 	"cli.senza_terminale":      {"nessun terminale per chiedere la conferma: per installare senza domande serve --risposte FILE (§6.6.12)", "no terminal to ask for confirmation: an unattended installation needs --risposte FILE (§6.6.12)"},
 	"cli.fuori_linea":          {"Pacchetto fuori linea %s: %s, canale %s, %d artefatti, %d file verificati, preparato il %s", "Offline bundle %s: %s, channel %s, %d artefacts, %d files verified, prepared on %s"},
 	"cli.preparato":            {"Pacchetto fuori linea pronto in %s: %d artefatti, %d file (%d MB). Impronta della macchina di riferimento %s, %d pacchetti.", "Offline bundle ready in %s: %d artefacts, %d files (%d MB). Reference machine fingerprint %s, %d packages."},

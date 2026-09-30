@@ -23,7 +23,6 @@ type OpzioniInstallazione struct {
 	Utenti       []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
 	Depositi     []string // archivi di terzi col consenso (D5): epel, rpmfusion, packman
 	ApriFirewall bool     // D6
-	SenzaCinture bool     // D4 aperta: le cinture ci sono, con la loro riga di consenso, se non si dice di no
 	Porta        int
 }
 
@@ -56,6 +55,13 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		if rap.pl != nil && rap.pl.H264.Deposito == d && rap.pl.H264.PacchettiCodec != "" {
 			pn.Azioni = append(pn.Azioni, PianoPacchettiDa("codec", rap.pl.H264.PacchettiCodec, d))
 		}
+	}
+	// D5 (DECISIONI §10.20): senza l'archivio che porta la codifica H.264, REMOTIX non si installa. Il
+	// piano lo dice (BLOCCANTE, col nome dell'archivio) e Applica si ferma prima di toccare niente
+	if rap.pl != nil && !rap.pl.H264.SchedaDiSerie && rap.pl.H264.Deposito != "" &&
+		prof.V("deposito."+rap.pl.H264.Deposito) != "presente" && !contiene(o.Depositi, rap.pl.H264.Deposito) {
+		d := rap.pl.H264.Deposito
+		pn.NonFatto = append(pn.NonFatto, Msg("RX-H264-006", nonVuoto(cat.Depositi[d].Nome, d)))
 	}
 	if s := SceltaDesktop(rap); s != nil {
 		pn.Scelte = append(pn.Scelte, *s)
@@ -115,12 +121,11 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if len(gruppi) == 0 {
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.nessun_gruppo")})
 	}
-	if !o.SenzaCinture {
-		for _, c := range Cinture {
-			pn.Azioni = append(pn.Azioni, PianoCintura(c.ID, c.Sorgente, c.Percorso, c.Ricarica))
-		}
-		pn.Consensi = append(pn.Consensi, T("az.cintura.consenso"))
+	// D4 (DECISIONI §4.7, 15 ago 2026): le tre cinture SEMPRE, senza consenso; il piano lo dichiara
+	for _, c := range Cinture {
+		pn.Azioni = append(pn.Azioni, PianoCintura(c.ID, c.Sorgente, c.Percorso, c.Ricarica))
 	}
+	pn.Dichiarate = append(pn.Dichiarate, T("az.cintura.dichiarata"))
 	switch g := amb.Firewall.Nome(); {
 	case !o.ApriFirewall && g == "firewalld":
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: AVVISO, Testo: T("np.firewall_no", ps)})

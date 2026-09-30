@@ -28,7 +28,6 @@ func installa(arg []string) (int, error) {
 	utente := fs.String("utente", "", "a mano: le persone da iscrivere ai gruppi della scheda (vuoto: tutte)")
 	apri := fs.Bool("apri-firewall", false, "a mano: aprire la porta nel firewall (D6)")
 	depositi := fs.String("deposito", "", "a mano: archivi di terzi col consenso (D5)")
-	senzaCinture := fs.Bool("senza-cinture", false, "a mano: senza le tre cinture (D4)")
 	senzaTimer := fs.Bool("senza-timer", false, "a mano: senza gli aggiornamenti automatici")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
@@ -55,7 +54,7 @@ func installa(arg []string) (int, error) {
 			return 1, err
 		}
 	} else {
-		o.ApriFirewall, o.SenzaCinture, o.SenzaTimer = *apri, *senzaCinture, *senzaTimer
+		o.ApriFirewall, o.SenzaTimer = *apri, *senzaTimer
 		if *utente != "" {
 			o.Utenti = strings.Split(*utente, ",")
 		}
@@ -121,6 +120,9 @@ func installa(arg []string) (int, error) {
 		return 1, err
 	}
 	if op.Stato == motore.CONFERMATA || op.Stato == motore.CONFERMATA_A_CONDIZIONI {
+		if !*eventi {
+			fmt.Println(T("cli.router", porta)) // D6: il router non lo tocca nessuno, lo si dice
+		}
 		return 0, nil
 	}
 	return 1, nil
