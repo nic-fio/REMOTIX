@@ -6156,6 +6156,18 @@ scatole in parallelo, campagna della fase 16 (una configurazione alla volta: le 
 parallelo) con ritardo e qualità uguali a oggi; altrimenti resta ffmpeg e si riapre la licenza. Poi
 l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prodotto definitivo.
 
+### 10.26 ✅ Fase 18: le scelte dell'utente del 30 set
+
+- **Le misure di prestazione escono dai documenti** (*«con questo cambio architetturale i numeri sono
+  completamente invalidati»*): subito dai documenti del prodotto; dal diario a fase 18 riuscita. Le soglie
+  restano come **obiettivi di progetto**, non promesse misurate (SPECIFICHE §3).
+- **D5 resta**: un «no» al deposito dei driver (RPM Fusion, Packman) blocca l'installazione anche senza
+  ffmpeg, quando il video potrebbe andare in software.
+- **Niente AV1 come ultimo ripiego**: senza scheda e senza un OpenH264 vero (l'installatore lo mette
+  sempre) REMOTIX **lo dichiara** all'avvio col rimedio; il browser non riceve codec che il server non sa fare.
+- 🔸 (detti all'utente, non ancora confermati esplicitamente) i limiti di OpenH264 senza scheda: niente senza perdita (si chiede la qualità più alta), H.264
+  fino a 4096×2304 (oltre, serve la scheda).
+
 ---
 
 ## Come si tiene questo documento
