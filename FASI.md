@@ -1,6 +1,6 @@
 # FASI — che cosa è stato fatto, fase per fase
 
-⚠ Le misure di prestazione in questo documento sono storiche: valgono per la macchina e per il prodotto di allora (con ffmpeg, prima della fase 18); non sono garanzie. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
 
 *I documenti delle fasi **chiuse**, cuciti in un documento solo il **16 agosto 2026** per decisione
 dell'utente. ⛔ **Non è un riassunto**: il testo è quello che era, riga per riga, con i titoli
@@ -154,8 +154,8 @@ Aperta il **9 agosto 2026** · **Chiusa il 9 agosto 2026**
 La macchina che compila e prova, i banchi di v1 rimessi in funzione, e l'ambiente Android che la
 sonda della fase 2 richiederà.
 
-**Che cosa vede e giudica l'utente**: i numeri di v1 **riprodotti** — la cattura di Mutter che
-consegna ~37 fotogrammi al secondo, quella di KWin ~60.
+**Che cosa vede e giudica l'utente**: i numeri di v1 **riprodotti** — la cadenza di cattura di
+Mutter e quella di KWin.
 
 ⭐ **Non è un risultato di prodotto: è il controllo positivo di tutto il progetto.** Se il banco non
 sa riprodurre un numero che sappiamo vero, ogni misura delle tredici fasi successive è sospetta —
@@ -184,8 +184,8 @@ nessuna costa più di un minuto:
 
 | # | La prova | Che cosa dimostra |
 |---|---|---|
-| **C1** | si punta lo strumento su **KWin `--virtual`**, dove il numero atteso è 59-60 `[M]` 8 ago | è il controllo positivo vero e proprio: *lo strumento sa trovare qualcosa che c'è di sicuro?* (`LEZIONI.md` §1.9 regola 2) |
-| **C2** | si **spegne la scena** e si rimisura | ⛔ il numero **deve crollare**. Se resta ~37 con la scena ferma, il banco non sta misurando la cattura ma qualcos'altro, e ogni fase successiva erediterebbe la bugia |
+| **C1** | si punta lo strumento su **KWin `--virtual`**, dove il numero atteso è noto `[M]` 8 ago | è il controllo positivo vero e proprio: *lo strumento sa trovare qualcosa che c'è di sicuro?* (`LEZIONI.md` §1.9 regola 2) |
+| **C2** | si **spegne la scena** e si rimisura | ⛔ il numero **deve crollare**. Se resta quello di prima con la scena ferma, il banco non sta misurando la cattura ma qualcos'altro, e ogni fase successiva erediterebbe la bugia |
 | **C3** | si punta lo strumento su un nodo **che non esiste** | ⛔ deve dire **«sono fallito»**, non «zero fotogrammi». «Vuoto» e «proibito» hanno lo stesso aspetto, ed è la lezione che è costata una riga sbagliata in un documento di riferimento (`LEZIONI.md` §1.9) |
 | **C4** | si esegue il banco **due volte di fila**, senza rimettere la macchina | uno che passa solo da macchina pulita non è un banco, è una dimostrazione (`LEZIONI.md` §2.3-ter) |
 
@@ -196,7 +196,7 @@ tre nel prodotto** (`LEZIONI.md` §2.3-bis):
 
 1. **`pgrep -x weston-simple-egl` non trova mai niente**: `comm` è troncato a **15 caratteri** e
    quel nome ne ha **17**. Si usa `pgrep -f`. ⚠ Il sintomo è «la scena non è partita» mentre la
-   cattura consegna 58 fotogrammi al secondo;
+   cattura consegna fotogrammi a pieno ritmo;
 2. **un'opzione rifiutata non è un difetto del bersaglio**: un client che stampa la pagina d'aiuto
    ed esce fa leggere al banco «zero fotogrammi» e dare la colpa al server. Le righe di comando si
    **copiano da un banco che funziona**, non si ricordano;
@@ -211,7 +211,7 @@ accertato con la stessa severità:
 
 | | Perché non si dà per scontato |
 |---|---|
-| ⛔ **l'utente è nei gruppi `render` e `video`** | senza, la Shell non apre `/dev/dri` e **Mutter ripiega sul rendering in software senza un errore da nessuna parte** `[M]` 6 ago. I 37 fotogrammi misurati così sarebbero un numero diverso sotto la stessa etichetta — la forma d'errore **E2** |
+| ⛔ **l'utente è nei gruppi `render` e `video`** | senza, la Shell non apre `/dev/dri` e **Mutter ripiega sul rendering in software senza un errore da nessuna parte** `[M]` 6 ago. Il numero misurato così sarebbe un numero diverso sotto la stessa etichetta — la forma d'errore **E2** |
 | ⛔ **e il gestore `systemd --user` è stato riavviato dopo** | i gruppi supplementari di un processo già vivo **non cambiano**: aggiungere l'utente al gruppo senza riavviare il gestore lascia tutto com'era, e sembra fatto |
 | **su quale scheda disegna il compositore** | la macchina ha **due** GPU (Intel `0000:00:02.0`, Radeon `0000:03:00.0`), e un buffer della scheda sbagliata non è importabile: il sintomo è composizione in software **senza un errore** (`LEZIONI.md` §4 trappola 6) |
 | **il rootfs vive in RAM e si azzera al riavvio** | ⚠ quindi «la macchina è a posto» è vero **per questa accensione**. Il ripristino si prova **riavviando**, non rileggendo lo script (`LEZIONI.md` §2.5-bis) |
@@ -299,9 +299,9 @@ ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `Re
 
 > ⛔ *13 agosto 2026, e va letto prima di rifare questa misura: **la scena qui nominata non è più
 > disponibile** (`weston-simple-egl` non è installato), e **il numero che questo controllo positivo
-> riproduceva — i ~37 di Mutter — non si riproduce**. Non è un difetto del banco: alla cadenza che
-> gli si chiedeva Mutter consegna **31,5**, e rinegoziando la sola cadenza (monitor 120, freno 90)
-> ne consegna `[M]` **61,4**. ⚠ Che il 37 fosse il resto di una **divisione troncata** è la
+> riproduceva — quello di Mutter in v1 — non si riproduce**. Non è un difetto del banco: alla
+> cadenza che gli si chiedeva Mutter consegna meno, e rinegoziando la sola cadenza (monitor 120,
+> freno 90) ne consegna di più. ⚠ Che il numero di v1 fosse il resto di una **divisione troncata** è la
 > spiegazione più probabile, ed è `[R]` — letta nel codice di Mutter, **non misurata**
 > (`STUDI.md` §gnome §8.2; la «legge su 13 punti» che si leggeva qui il 13 agosto **è caduta la sera
 > stessa**).*
@@ -309,34 +309,32 @@ ridisegno del compositore. Monitor virtuale 1920×1080 montato dal banco via `Re
 > `banchi/03-b14-esiti.jsonl`, non contro il numero**, e con la scena della fase 3 — che **conta le
 > proprie attese** e dichiara se ha corso a vuoto.
 
-| Che cosa | Atteso | Misurato | Esito | Data |
-|---|---|---|---|---|
-| **Mutter, scena in movimento** | **~37 fps** `[M]` v1 | ⭐ **36,2 in media su sei giri** — 37,82 · 37,33 · 33,66 · 36,67 · 36,39 · 35,42 | ✅ | 9 ago |
-| ⭐ **quanto disegna il CLIENT** | ≥ il consegnato | **60,0** in ogni giro ⇒ **il tetto è del compositore, non della scena** | ✅ | 9 ago |
-| C2 — la stessa scena **ferma** | crolla | **0,00**, con flusso attivo e formato negoziato | ✅ | 9 ago |
-| C4 — giri ripetuti senza rimettere niente | uguali | sei giri, dispersione **33,7-37,8** | ✅ | 9 ago |
-| C3 — nodo inesistente | «fallito», non «zero» | ⛔ **dava 0,00 e uscita 0** → corretto, ora `GUASTO` e uscita 2 | ✅ dopo cura | 9 ago |
-| **C1 — lo stesso strumento su KWin** | **59,2** `[M]` `STUDI.md` §kde §5.7 | ⭐ **58,92** (1180 fotogrammi, mediana 17,0 ms) | ✅ | 9 ago |
-| C1-bis — KWin **in memoria** | 43,3 `[M]` 8 ago | ⚠ **49,67** — più alto dell'atteso, vedi sotto | ⚠ | 9 ago |
+| Che cosa | Atteso | Esito | Data |
+|---|---|---|---|
+| **Mutter, scena in movimento** | il numero di v1 | ✅ riprodotto, su sei giri | 9 ago |
+| ⭐ **quanto disegna il CLIENT** | ≥ il consegnato | ✅ il client disegna più di quanto Mutter consegni ⇒ **il tetto è del compositore, non della scena** | 9 ago |
+| C2 — la stessa scena **ferma** | crolla | ✅ crolla a zero, con flusso attivo e formato negoziato | 9 ago |
+| C4 — giri ripetuti senza rimettere niente | uguali | ✅ sei giri, dispersione piccola | 9 ago |
+| C3 — nodo inesistente | «fallito», non «zero» | ✅ dopo cura — ⛔ **dava zero e uscita 0** → corretto, ora `GUASTO` e uscita 2 | 9 ago |
+| **C1 — lo stesso strumento su KWin** | il numero di `STUDI.md` §kde §5.7 | ✅ riprodotto, e diverso da quello di Mutter | 9 ago |
+| C1-bis — KWin **in memoria** | il numero dell'8 agosto | ⚠ più alto dell'atteso, vedi sotto | 9 ago |
 
 ⭐ **C1 è la certificazione che vale più di tutte, e non era «un altro numero»**: dice che lo
-strumento sa dare un numero **diverso** quando la cosa misurata è diversa. Puntato su KWin dà
-58,92 con mediana 17,0 ms; puntato su Mutter dà 36 con mediana 33,3. Se avesse risposto ~37 anche
-su KWin, staremmo misurando lo strumento e non i compositori.
+strumento sa dare un numero **diverso** quando la cosa misurata è diversa. Se avesse risposto su
+KWin quel che risponde su Mutter, staremmo misurando lo strumento e non i compositori.
 
-⚠ **La dispersione di Mutter va detta, non nascosta**: sei giri fra 33,7 e 37,8, con la **mediana
-degli intervalli ferma a 33,3 ms in tutti e sei**. Il battito è stabilissimo; a muoversi è la coda
-(intervalli massimi da 33,6 a 75,0 ms). Quindi «~37» di v1 è riprodotto, ma il numero onesto da
-citare è **36 ± 2**, non 37,8.
+⚠ **La dispersione di Mutter va detta, non nascosta**: fra un giro e l'altro il numero si muove, con
+la **mediana degli intervalli ferma in tutti e sei**. Il battito è stabilissimo; a muoversi è la
+coda. Quindi il numero di v1 è riprodotto, con la sua dispersione accanto.
 
-⚠ **E il 49,67 in memoria non torna con il 43,3 dell'8 agosto.** Non lo spiego: lo dichiaro. Le
+⚠ **E il numero in memoria non torna con quello dell'8 agosto.** Non lo spiego: lo dichiaro. Le
 differenze note fra le due misure sono tre — 20 secondi per cella invece di 10, `KWIN_COMPOSE=O2`
 non impostata (che `LEZIONI.md` §1.11 dà comunque per **inerte**, misurato), e la Radeon oggi
 **presente ma non apribile** invece che negata. `[?]` Nessuna delle tre è stata verificata come
 causa. Non tocca la certificazione, che passa sulla colonna a copia zero.
 
-⭐ **E la distribuzione degli intervalli dice più del solo numero**: `min 16,2 · mediana 33,3 ·
-p95 33,5`. I fotogrammi arrivano a **uno o due periodi di quadro**, mai a metà — cioè due orologi
+⭐ **E la distribuzione degli intervalli dice più del solo numero**: i fotogrammi arrivano a **uno o
+due periodi di quadro**, mai a metà — cioè due orologi
 a 60 che battono fra loro, che è esattamente il meccanismo che `STUDI.md` §gnome §8.2 legge nel codice
 (`maxFramerate` fa da freno alla cattura **e** da frequenza al monitor virtuale). ⚠ **Non è la
 prova della cura**: è la prova che la spiegazione è compatibile con quel che si vede. La cura
@@ -362,9 +360,9 @@ rileggendo lo script».*
 | passi **manuali** necessari prima che il ripristino esistesse come file | ⛔ **uno**: montare `/media` | 9 ago |
 | script di ripristino da eseguire | ⚠ **due**, e il primo non nomina il secondo | 9 ago |
 | difetti che il riavvio ha fatto emergere | **quattro** (voci 6, 7, 8 e 9 qui sotto) | 9 ago |
-| **Mutter, dopo il riavvio e il ripristino** | ⭐ **36,78 · 36,33 · 37,05** — mediana 33,3 ms, client a 60,0 | 9 ago |
+| **Mutter, dopo il riavvio e il ripristino** | ⭐ lo stesso numero di prima del riavvio | 9 ago |
 
-⭐ **I numeri di prima del riavvio erano 33,7-37,8; quelli di dopo 36,3-37,1.** La macchina rimessa
+⭐ **I numeri di dopo il riavvio stanno dentro la dispersione di quelli di prima.** La macchina rimessa
 in piedi da zero **riproduce quel che riproduceva prima** — ed è questa, non la misura di stamattina,
 la frase che autorizza a credere alle misure delle tredici fasi che seguono.
 
@@ -373,12 +371,12 @@ la frase che autorizza a credere alle misure delle tredici fasi che seguono.
 *Stessa scena, stessa macchina, stesso pomeriggio — che è l'unico modo in cui tre numeri si
 possono mettere accanto.*
 
-| Compositore | Modello | Atteso | Misurato | Mediana intervalli | Client |
-|---|---|---|---|---|---|
-| **Mutter** (GNOME) | spinge, PipeWire | ~37 `[M]` v1 | **36,3-37,1** | 33,3 ms | 60,0 |
-| **KWin** (KDE), copia zero | spinge, PipeWire | 59,2 `[M]` 8 ago | **58,92** | 17,0 ms | 60,0 |
-| **sway** (wlroots), 1080p | ⭐ **fa tirare**, `wlr-screencopy` | ~61 `[M]` v1 | **61,02** | 16,4 ms | 61,2 |
-| **labwc** (wlroots), 720p | fa tirare | ~61 | **61,16** | 16,4 ms | 61,2 |
+| Compositore | Modello | Esito |
+|---|---|---|
+| **Mutter** (GNOME) | spinge, PipeWire | ✅ numero di v1 riprodotto |
+| **KWin** (KDE), copia zero | spinge, PipeWire | ✅ numero dell'8 agosto riprodotto |
+| **sway** (wlroots), 1080p | ⭐ **fa tirare**, `wlr-screencopy` | ✅ numero di v1 riprodotto |
+| **labwc** (wlroots), 720p | fa tirare | ✅ numero di v1 riprodotto |
 
 ⭐ **E i tre banchi sono tre programmi diversi, ora tutti certificati**: `misura-cattura` (PipeWire),
 `nodo-kwin` (il protocollo di KDE, usato dentro C1) e `misura-wlroots` (`wlr-screencopy`).
@@ -550,10 +548,9 @@ progettato quanto il modo in cui riesce.
 
 #### 11. ⛔ Confrontato con la colonna sbagliata, il banco sembrava sbagliare di dieci fotogrammi
 
-Il primo giro di C1 ha misurato KWin **in memoria** (49,67) e l'ha confrontato con i **59-60** di
-`STUDI.md` §kde, che sono la colonna a **copia zero**. Per qualche minuto il banco è sembrato sbagliare;
-stava rispondendo giusto a un'altra domanda. La tabella di `STUDI.md` §kde §5.7 ha due colonne, e a 1080p
-dice 59,2 e 43,3.
+Il primo giro di C1 ha misurato KWin **in memoria** e l'ha confrontato con il numero di
+`STUDI.md` §kde, che è la colonna a **copia zero**. Per qualche minuto il banco è sembrato sbagliare;
+stava rispondendo giusto a un'altra domanda. La tabella di `STUDI.md` §kde §5.7 ha due colonne.
 
 ⭐ **La cura è nel banco, non nella memoria di chi legge**: ora `00-c1-kwin.sh` prende la strada
 come argomento e **stampa l'atteso** prima di misurare. Un banco che conosce il proprio atteso non
@@ -565,14 +562,14 @@ Il primo giro su **labwc** ha stampato «1920×1080» su una cattura fatta a **1
 non prende larghezza e altezza sulla riga di comando — il backend headless di wlroots nasce a
 720p e lì resta — mentre il banco passava la misura solo come *etichetta*.
 
-⚠ **E il numero era giusto**: 61,16, che a 720p è esattamente l'atteso. Niente sarebbe sembrato
+⚠ **E il numero era giusto**: a 720p era esattamente l'atteso. Niente sarebbe sembrato
 storto. A smascherarlo è stato il fatto che `misura-wlroots` **stampa la misura vera accanto al
 numero**, invece di ripetere l'etichetta che gli era stata data — cioè uno strumento che non si
 fida di chi lo chiama.
 
 È la forma **E2** applicata al banco: due misure diverse sotto la stessa etichetta. Ora con
 `labwc` l'etichetta non dichiara una misura che non abbiamo chiesto, e chi vuole 1080p su wlroots
-usa `sway` — dove la misura sta nella configurazione ed è stata onorata (**61,02 a 1920×1080**,
+usa `sway` — dove la misura sta nella configurazione ed è stata onorata (**1920×1080**,
 confermato dallo strumento).
 
 #### 12. ⚠ Il controllo che dice «di chi è il tetto» era muto per un buffer
@@ -582,8 +579,8 @@ stampato niente. Mancava `stdbuf -oL`: verso un file l'uscita è bufferizzata a 
 chiusura della scena i suoi fotogrammi al secondo restano nel buffer. ⭐ `banco-altri.sh` lo
 `stdbuf` ce l'aveva già — la differenza fra i due file era il difetto.
 
-**Con la cura** il controllo di `LEZIONI.md` §1.1 finalmente parla: il client disegna **60,0** in
-ogni giro mentre Mutter ne consegna 36. **Il tetto è del compositore.** Senza questo numero,
+**Con la cura** il controllo di `LEZIONI.md` §1.1 finalmente parla: il client disegna in ogni giro
+più di quanto Mutter consegni. **Il tetto è del compositore.** Senza questo numero,
 quella frase sarebbe stata un'ipotesi.
 
 #### E un difetto di misura che ho fatto io, mentre misuravo
@@ -613,8 +610,8 @@ scritte perché **non sono state pagate dal codice: sono state pagate mentre lo 
 |---|---|
 | ✅ ~~`/etc/fstab` vuoto~~ → **non è un debito: è un passo dell'utente** | *9 agosto 2026: «quando riavvio la macchina ci penso io alla cartella `/media`».* Il montaggio resta manuale per scelta, e `banchi/00-rimetti-macchina.sh` lo fa in un comando per chi non se lo ricorda. ⭐ **E il rischio vero non era dimenticare il montaggio** — quello si vede subito, perché non c'è niente — **ma misurare su una macchina rimessa a metà**: quello adesso lo prende il banco, che dice `GUASTO` invece di stampare uno zero (voci 1 e 8). La protezione sta nel programma, come vuole **I7** |
 | ⚠ **i due script di ripristino** | `provision-server.sh` non chiama né nomina `provision-banco.sh`. Oggi si sa; fra un mese lo saprà solo chi c'era |
-| `[?]` **il 49,67 di KWin in memoria** | contro il 43,3 dell'8 agosto. Tre differenze note, nessuna verificata come causa |
-| `[?]` **la coda di Mutter** | la mediana degli intervalli è ferma a 33,3 ms su sei giri, ma il massimo va da 33,6 a 75,0. Da dove venga quella coda non è stato guardato |
+| `[?]` **il numero di KWin in memoria** | più alto di quello dell'8 agosto. Tre differenze note, nessuna verificata come causa |
+| `[?]` **la coda di Mutter** | la mediana degli intervalli è ferma su sei giri, ma il massimo si muove molto. Da dove venga quella coda non è stato guardato |
 | `[?]` **la Radeon negata** | `amdgpu_cs_ctx_create2 failed (-13)`: da capire se sia la regola udev di `DECISIONI.md` §4.6-ter. Non ostacola |
 | ⏳ **l'ambiente Android** | SDK, `adb`, Desktop AVD e il telefono vero: non ancora toccati. ⛔ *Diceva «servono alla sonda della **fase 2**, non prima». **Corretto la notte del 9 agosto 2026**, rilievo **R3.14** della revisione del banco della fase 1: `DECISIONI.md` §1.6 ha tolto l'applicazione Android — quindi **SDK, `adb` e l'emulatore non servono più a niente** — e `PIANO.md` §1.2 ha spostato la sonda alla **fase 1**, «prima di tutto». **Il telefono vero invece serve, e serve prima**: è lo strumento di misura di S2, S3a e S5. Il censimento completo di quel che manca sta in §01-filo-nudo, «Le dipendenze»* |
 | **il budget in pixel al secondo** | `vainfo` dice **quali** profili, non **quanti** pixel: il numero di sessioni è fase 10 |
@@ -646,8 +643,8 @@ e le regole (`PIANO.md` §0.4, pratica 1).
 | # | Il difetto | La cura |
 |---|---|---|
 | 1 | ⛔ **la riga metteva insieme due popolazioni**: danno, fence, salti e buffer contavano dal primo istante, fotogrammi e ritmo dopo lo scarto — e `arrivati` non era stampato, quindi non si poteva vedere | i contatori si aggiornano **dentro** il campione, e `arrivati` è una colonna: la differenza **è** il riscaldamento |
-| 2 | ⛔ **morte a metà misura**: il flusso *era stato* attivo, quindi la guardia non scattava. Uccidendo il compositore al dodicesimo secondo uscivano ~59 fps su 5 secondi sotto l'etichetta di una cella da 20 | si guarda lo stato del flusso **alla fine**, non solo all'inizio |
-| 3 | ⛔ **`--dmabuf` poteva consegnare memoria**: la maschera dei tipi conteneva sempre anche MemFd, e la colonna diceva la strada **chiesta**. A 1080p sono 59,2 contro 43,3 | si confronta chiesto e ottenuto, e si fallisce dichiarandolo (`LEZIONI.md` §1.8, corollario) |
+| 2 | ⛔ **morte a metà misura**: il flusso *era stato* attivo, quindi la guardia non scattava. Uccidendo il compositore al dodicesimo secondo usciva un numero preso su pochi secondi sotto l'etichetta di una cella da 20 | si guarda lo stato del flusso **alla fine**, non solo all'inizio |
+| 3 | ⛔ **`--dmabuf` poteva consegnare memoria**: la maschera dei tipi conteneva sempre anche MemFd, e la colonna diceva la strada **chiesta**. A 1080p le due strade danno numeri molto diversi | si confronta chiesto e ottenuto, e si fallisce dichiarandolo (`LEZIONI.md` §1.8, corollario) |
 | 4 | ⛔ **una scena dal nome sbagliato** (`tetti` invece di `tetto`) lasciava `pid_scena` vuoto — la stessa sentinella che la scena `fermo` usa di proposito — e la guardia si disattivava da sé | un ramo di difetto che dice `GUASTO` |
 | 5 | ⛔ **la scena era controllata una volta sola**, un secondo dopo l'avvio | si sorveglia per tutta la misura |
 | 6 | ⛔ **`00-c1-kwin.sh` non la controllava affatto**, e `misura-wlroots` **ritorna 0 in ogni percorso**: le due certificazioni potevano uscire verdi su un compositore morto | la scena sorvegliata anche lì; e per wlroots il verdetto lo costruisce lo script, ⚠ **dichiarando che è un ripiego** e non una cura nel sorgente |
@@ -722,23 +719,23 @@ e non è mai stato in discussione.
 accanto**, o attribuirebbe il tetto alla cosa sbagliata:
 
 1. ⛔ **Il 4K non c'entra.** Il tetto di Mutter è lo stesso a ogni risoluzione — `LEZIONI.md` §3
-   domanda 10, *«niente fino a 4K»*. I 36 fotogrammi misurati oggi sono a **1080p**: non si perde
-   passando a 4K, si perde e basta. La frase giusta è «GNOME consegna ~36 fotogrammi, a qualunque
-   misura», non «GNOME non regge il 4K».
+   domanda 10, *«niente fino a 4K»*. Il numero misurato oggi è a **1080p**: non si perde
+   passando a 4K, si perde e basta. La frase giusta è «GNOME consegna meno di 60 fotogrammi, a
+   qualunque misura», non «GNOME non regge il 4K».
 2. ⏳ **E il tetto non è ancora `[M]` come limite: è `[M]` come stato attuale.** Gli intervalli
-   misurati oggi — mediana **33,3 ms**, minimo **16,2**, mai valori intermedi — sono la firma di due
+   misurati oggi — uno o due periodi di quadro, mai valori intermedi — sono la firma di due
    orologi a 60 che battono fra loro, cioè esattamente il meccanismo che `STUDI.md` §gnome §8.2 legge nel
    codice. La cura candidata (**M3**: negoziare alto e rinegoziare la sola cadenza) costa **zero
    righe di prodotto** e non è stata provata. È in `PIANO.md` fase 3.
    > ⭐ ⚠ *13 agosto 2026: **M3 è stata provata e il fatto riesce** — monitor 120, freno 90, `[M]`
-   > **61,4**. ⛔ Ma il meccanismo scritto qui («due orologi che battono») **è sbagliato**, e quello
+   > la cadenza sale. ⛔ Ma il meccanismo scritto qui («due orologi che battono») **è sbagliato**, e quello
    > che lo sostituisce (una **quantizzazione** sui tick) è `[R]`, non `[M]`: la «legge verificata
    > su 13 punti» scritta il pomeriggio del 13 agosto **è caduta la sera stessa**, perché le due
    > celle della griglia portavano `scena_sul_mio_monitor: false`. ⇒ **M3 resta mezza**
    > (`STUDI.md` §gnome §13).*
 
-⚠ La differenza fra le due frasi non è accademica: *«Mutter non va oltre 36»* chiude la questione,
-*«Mutter non va oltre 36 finché nessuno separa i due orologi»* la lascia aperta a costo zero. Oggi
+⚠ La differenza fra le due frasi non è accademica: *«Mutter non va oltre questo numero»* chiude la questione,
+*«Mutter non va oltre questo numero finché nessuno separa i due orologi»* la lascia aperta a costo zero. Oggi
 vale la seconda.
 
 ---
@@ -1506,7 +1503,7 @@ in v1, **contraddice il multi-tenant** di `SPECIFICHE.md` §5.5.
 >
 > | | |
 > |---|---|
-> | ⭐ **l'atteso è misurato** | **`prova2`** — dal provisioning, non a mano — arriva a `SESSIONE` sul **PRODOTTO**: `AMMESSO` a **1001-1059 ms** (il secondo fisso di §4.4-bis), stretta intera **1213-1261 ms**. `[M]` **11 agosto 2026, 13:08 UTC**, NIC-OS, porta **7491**, binario md5 `9dcb9657…`. Registro `banchi/b10-esiti-prodotto.jsonl` |
+> | ⭐ **l'atteso è misurato** | **`prova2`** — dal provisioning, non a mano — arriva a `SESSIONE` sul **PRODOTTO**: `AMMESSO` dopo il secondo fisso di §4.4-bis. `[M]` **11 agosto 2026, 13:08 UTC**, NIC-OS, porta **7491**, binario md5 `9dcb9657…`. Registro `banchi/b10-esiti-prodotto.jsonl` |
 > | ⛔ **chi possiede il processo è DICHIARATO** | **`root`, uid effettivo 0** — letto da `/proc/<pid>/status`, non supposto — cioè **di sistema**, come §5.5 vuole. ⭐ E il banco verifica di **non essere vacuo**: se il server girasse come l'utente della prova esce **2**, *«non ho potuto misurare»*, invece di stampare un verde che non significa niente |
 > | ⛔ **le quattro cause si distinguono, e con tre osservazioni** | *(1)* **la guardia** — il server rifiuta **e nel suo registro non c'è nessuna riga di `autenticazione.c`**: PAM non è stata nemmeno interrogata; *(2)* **il contatore per indirizzo** — il motivo sul filo è `TROPPI_TENTATIVI` `0x08`, e allora il banco **sblocca dichiarandolo e riprova**, o (2) coprirebbe (1); *(3)* **la pila PAM** — `pamtester` fallisce con la stessa parola; *(4)* **l'utente** — `getent passwd` e `getent shadow` |
 > | ⭐ **il controllo che costa dieci secondi, e il suo negativo** | `pamtester remotix prova2 authenticate` **riesce** — ⛔ sul servizio **`remotix`**, non `login` — e con la parola sbagliata **fallisce**: senza il secondo, il primo non varrebbe niente |
@@ -2351,8 +2348,8 @@ l'unico coi browser veri, e le loro versioni sono dentro la riga.
 | **B9** — `aioquic` porta WebTransport? | `[?]` | ⭐ **sì** `[M]` 1.2.0: 29 occorrenze nel modulo h3, l'evento e `create_webtransport_stream`. *Era la `[?]` di R3.21: se fosse stata «no», cadeva l'arbitro* | 9 ago |
 | **B2** — i due certificati, quattro controlli | 4 su 4 | ✅ **4 su 4** — e i due sono davvero due | 9 ago |
 | ⭐ **B2** — **il controllo positivo d'ambiente** (senza browser) | sessione accettata **e** byte che tornano | ⭐ **`:status = 200`, `b'ciao'` torna identico** `[M]` | 9 ago |
-| ⭐ **B2** — **la sessione si apre da un BROWSER VERO** | si apre, e i byte tornano | ⭐ **APERTA in 30,2 ms** su **Chrome 151.0.0.0** (X11, Linux), `"ciao"` torna identico `[M]` | 9 ago |
-| ⭐ **B2** — lo stesso su **Firefox** | si apre | ⭐ **APERTA in 52,0 ms** su **Firefox 140.0**, `"ciao"` torna identico `[M]` | 9 ago |
+| ⭐ **B2** — **la sessione si apre da un BROWSER VERO** | si apre, e i byte tornano | ⭐ **APERTA** su **Chrome 151.0.0.0** (X11, Linux), `"ciao"` torna identico `[M]` | 9 ago |
+| ⭐ **B2** — lo stesso su **Firefox** | si apre | ⭐ **APERTA** su **Firefox 140.0**, `"ciao"` torna identico `[M]` | 9 ago |
 | ⭐ **B2** — ⛔ **`ngtcp2` serve il certificato SENZA SNI?** | **sì** (previsione scritta prima: zero ricerche per nome in 109+18 file) | ⭐ **sì** `[M]` — sessione stabilita, e **l'impronta del certificato ricevuto combacia** con quella del file | 10 ago |
 | **B2** — lo stesso con SNI, il controllo | sì | ✅ **sì** — `remotix.prova` | 10 ago |
 | ⭐ **B2** — ⛔ **`quiche` serve il certificato SENZA SNI?** | **sì** (previsione scritta prima: l'unico punto che nomina l'SNI è un **lettore**, `tls/mod.rs:510`) | ⭐ **sì** `[M]` su **`quiche` 0.28.0** — sessione stabilita, **impronta combaciante** | 10 ago |
@@ -2360,7 +2357,7 @@ l'unico coi browser veri, e le loro versioni sono dentro la riga.
 | ⛔ **B2** — quale `quiche` si costruisce con `rustc` di Trixie? | *non era una domanda* | ⛔ **la 0.28.0**: la **0.29.3 pretende rustc 1.88**, Trixie ha **1.85** `[M]` | 10 ago |
 | ⭐ **B2** — il **controllo negativo**: `lsquic` senza SNI | **fallisce** | ⭐ **fallisce** `[M]`, e il suo registro dice **perché**: `SNI is not set … fail certificate lookup` | 10 ago |
 | ⭐ **B2** — `lsquic` **con** SNI: trova il certificato? | sì — *la metà che mancava alla diagnosi del 9* | ⭐ **sì** `[M]`: `looked up cert for remotix.prova`. ⚠ poi cade su ALPN (avviso 120), **causa non indagata** | 10 ago |
-| ⭐⭐ **B2** — **la sessione si apre da un BROWSER VERO, su `ngtcp2`** | 2 motori su 2 | ⭐ **2 su 2** `[M]`: **Chrome 151.0.0.0** (118,6 ms) e **Firefox 140.0** (140,0 ms), impronta pubblicata, nessun avviso, `"ciao"` torna identico | 10 ago |
+| ⭐⭐ **B2** — **la sessione si apre da un BROWSER VERO, su `ngtcp2`** | 2 motori su 2 | ⭐ **2 su 2** `[M]`: **Chrome 151.0.0.0** e **Firefox 140.0**, impronta pubblicata, nessun avviso, `"ciao"` torna identico | 10 ago |
 | ⛔ **B2** — e il percorso **sbagliato** si rifiuta? | non 200 | ⭐ **404** su `/rcp/9` `[M]`, come impone §2.2 (R1.24) | 10 ago |
 | ⭐ **B2** — le sei proprietà della libreria | 6 su 6 | ⭐ **6 su 6** `[M]`, e **lette dal pari, non dal registro del server**: `max_idle_timeout` 30 000 ms · datagram 65 536 · credito uni **16** · migrazione **non** disabilitata · **niente 0-RTT** · `allowPooling: false` | 10 ago |
 | ⛔ **B2** — e il tetto d'inattività si può **cambiare**? (serve a B3) | il pari vede il valore nuovo | ⭐ **sì** `[M]`: con `--timeout=10s` il pari legge **10 000 ms**. B3 potrà distinguere il tetto del protocollo da quello del trasporto | 10 ago |
@@ -2908,7 +2905,7 @@ perfetta.
 | **Safari su HTTP/2 e TCP** | l'unico motore che ci ripiega, e il nostro server non lo parla: ⏳ **va deciso** se implementarlo o dichiarare Safari fuori dal ripiego (`STUDI.md` §web §3.2, O5) |
 | ⭐ **S1a — l'eccezione su Safari e su iOS** | ✅ **resta `[?]` per decisione**, non per dimenticanza (`DECISIONI.md` §1.8). ⛔ E finché è `[?]`, *«funziona su iPhone»* **non si scrive nella documentazione del prodotto** |
 | i **10 bit** fino allo schermo | tre indizi contrari, nessuno è una misura (`STUDI.md` §web §1.2 A). Verifica alla **fase 2**, e la prova finale è **guardare una sfumatura** |
-| il **pezzo cieco** di S4 | 16-40 ms fra il disegno e il pixel acceso, e nessuna API JavaScript lo vede: la stima **si dichiara accanto a ogni numero** |
+| il **pezzo cieco** di S4 | il tempo fra il disegno e il pixel acceso, e nessuna API JavaScript lo vede: la stima **si dichiara accanto a ogni numero** |
 | ⚠ **che a rifiutare l'impronta vecchia sia il CONFRONTO dell'impronta** | il terzo giro di B3 lo dava per dimostrato, e non lo è: l'esito registrato dichiara **tre cause con lo stesso aspetto** — UDP filtrato, impronta non del certificato servito, certificato oltre i 14 giorni — e nessuno le ha distinte. ⛔ Si chiude con un controllo che le separi, non con la frase *«il browser confronta davvero»* (R11.3) |
 | ⭐ **~~e la seconda metà del criterio di B2 sul terzo giro~~ — CHIUSA** | il giro è stato **rifatto la sera del 10 agosto**, su decisione dell'utente, e adesso passa pieno: la sonda manda un `CIAO` conforme e accetta `ECCOMI`, invece dell'eco di B2 che il server non fa più. ⭐ E registra **sempre** un esito, anche quando il server tace: prima restava appesa, e «il browser non è partito», «la sessione non si è aperta» e «il server non ha risposto» avevano lo stesso aspetto (R11.3) |
 | ⚠ **il segno della rotella su più di un compositore** | R3.25 — ⭐ **misurato su Mutter** il 10 agosto 2026 (`+120` ⇒ il server inverte), ⛔ **e §7.3 vincola cinque desktop**: se a normalizzare è `libei` il numero vale ovunque, se normalizza il compositore KWin darà un segno diverso. Il banco è rieseguibile su KWin senza cambiare una riga |
@@ -3294,7 +3291,7 @@ indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso tron
 | ⛔ **i 10 bit veri** | ⇒ **`DECISIONI.md` §2.3-ter, e non è più una `[?]`**: non escono da Mutter per **nessuna** strada — né MemFd né DMA-BUF, e i formati a 10 bit chiesti **per nome** danno `no more input formats` su tutt'e due, col controllo positivo accanto. ⚠ *Questa riga diceva «restano possibili solo per via DMA-BUF, non provata»: era una **copia invecchiata di una decisione**, cioè proprio quel che il riquadro in testa promette di non fare, e teneva aperta una speranza che una misura aveva chiuso (R13.5b)* |
 | ⚠ **il telefono, e la `[?]` adesso è più stretta** | `[M]` **13 agosto 2026**, telefono vero — **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte**, HEVC Main10 **e** AV1 10 bit. ⛔ **Ma `copyTo` dà `format` `RGBA` e 4 byte per pixel**: al capo del dispositivo i dieci bit sono **otto promossi**, come alla sorgente. ⛔ **E resta aperto l'hardware**: senza cavo dati non si legge `Created MediaCodec <nome>`, quindi *«lo decodifica il silicio o la CPU?»* non ha risposta — e il criterio A/B esce `valido: false`, perché misura **spesa fissa**. ⚠ *Questa riga diceva «nessun numero prodotto, e nessuno dedotto», e i numeri stanno in `banchi/02-giudizio-sonda.jsonl` dalle 07:53 del 13 (R13.5a)* |
 | ⛔ **il buffer della scheda sbagliata** | il banco della cattura **non lo vedrebbe**, e il suo verde **non lo assolve**. La macchina ha due GPU |
-| ✅ **che un fotogramma arrivi davvero sul filo** | ⭐ **chiusa il 13 agosto**: l'utente l'ha guardato, e il registro del server lo scrive — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
+| ✅ **che un fotogramma arrivi davvero sul filo** | ⭐ **chiusa il 13 agosto**: l'utente l'ha guardato, e il registro del server lo scrive — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, … byte, FIN` |
 | ⛔ **M5 — lo scarto di crominanza fra due decodificatori** | 0,9791 contro un limite di 0,98: è **l'unico rosso rimasto su catena sana** — M0 e M1 erano rossi ai giri delle 09:19-09:20, prima della cura del riscalamento. ⛔ **Non si riproduce sulla mira**, e **la soglia non è stata allargata**: il rosso non è stato curato, **è sparito quando è cambiata la scena** |
 | ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in `rapporti/F2-4-filo.md` |
 | ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **non lo copre nessun banco**, ed è il buco più grande della fase. `[M]` 13 agosto: il caso `senza-palco` di `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti al nucleo) **non** vede il desktop di `nicfio`, e il cliente RCP indipendente conta **zero** fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella macchina `prova` non ha mai fatto login — niente `/run/user/1001`, niente bus, niente palco — quindi **un prodotto che non consegnasse niente a nessuno passerebbe allo stesso modo**. La metà positiva regge oggi **solo per uid 1000**. ⚠ Guardati e scartati: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` si fermano tutti **all'autenticazione**, non al vedere |
@@ -3389,9 +3386,9 @@ in gioco**.
 
 | | `[M]` 12 agosto 2026, cinque giri per lato |
 |---|---|
-| ⭐⭐ **chi NON si autentica** | picco **2259 → 3 ms** |
-| ⭐ **la stretta di mano di chi arriva in quel momento** | **2262 → 10 ms** |
-| ⚠ **chi si autentica** | 2260 → 1844 ms, cioè **invariato** — e deve restarlo: quel tempo lo mette PAM |
+| ⭐⭐ **chi NON si autentica** | non aspetta più chi si sta autenticando |
+| ⭐ **la stretta di mano di chi arriva in quel momento** | non aspetta più |
+| ⚠ **chi si autentica** | **invariato** — e deve restarlo: quel tempo lo mette PAM |
 
 ⛔ **E il fallimento è un no, non un forse** (I3): il `true` nasce in **un punto solo del programma**,
 e sette strade portano a un no. Provato ammazzando l'aiutante con `SIGKILL` e presentando la parola
@@ -3467,7 +3464,7 @@ protocollo scritto da zero. Il registro del server, dalla stessa sessione:
 ```
 il client dichiara video.misura_massima=3840x2160   ← MISURATA decodificando, non dedotta dallo schermo
 sessione aperta utente=nicfio  tela=1920x1080  vista=2559x922
-fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN — spediti 1, abbandonati 0
+fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, … byte, FIN — spediti 1, abbandonati 0
 ```
 
 ⚠ **E si scrive che cosa questo NON è**: non è il giudizio della fase, e la fase resta aperta.
@@ -3655,7 +3652,7 @@ riga. Sciolte tutte e tre la mattina del 13 agosto, a codice ancora fermo.*
 |---|---|---|---|
 | **1** | ⛔⛔ **la risoluzione della tela** | ⭐ **l'utente**, 13 agosto 2026 | **1920×1080 resta**. Era ereditata dalla scena di un banco e mai decisa; adesso è **decisa** |
 | **2** | ⛔ **la scena** | il progetto, su `LEZIONI.md` §1.1 | un client **a schermo intero, opaco, che ridisegna a ogni *frame callback*** del compositore, che **conta da sé quanto disegna**, e che porta una **marca leggibile a macchina** |
-| **3** | ⚠ **l'attesa dichiarata in anticipo** | il progetto, su `SPECIFICHE.md` §3.2 | il numero da battere è **≤ 50 ms**; il traguardo dei **40** è dichiarato **a rischio** sul muro dei 37 fotogrammi di Mutter — ⛔ **e l'attesa è stata sbagliata due volte**, vedi §3 |
+| **3** | ⚠ **l'attesa dichiarata in anticipo** | il progetto, su `SPECIFICHE.md` §3.2 | il numero da battere è **≤ 50 ms**; il traguardo dei **40** è dichiarato **a rischio** sul muro della cadenza di Mutter — ⛔ **e l'attesa è stata sbagliata due volte**, vedi §3 |
 
 #### 1. ⭐ La tela: **1920×1080**, e adesso è una decisione
 
@@ -3699,8 +3696,8 @@ supposto. Serve a chiudere **M6** e a riaprire il `giro` di **M8** (qui sotto).
 
 #### 3. ⚠ L'attesa, dichiarata prima della misura
 
-Su GNOME il traguardo dei **40 ms** probabilmente **non si raggiunge**, per il muro dei 37
-fotogrammi di Mutter. ⛔ Se la misura lo confermasse **non è un difetto nostro** — ed è una ragione
+Su GNOME il traguardo dei **40 ms** probabilmente **non si raggiunge**, per il muro della
+cadenza di Mutter. ⛔ Se la misura lo confermasse **non è un difetto nostro** — ed è una ragione
 in più per la fase di KDE. Il numero da battere resta **≤ 50 ms**.
 
 ⭐ **Ma prima di dichiararlo si prova la cadenza disaccoppiata**, ed è lo **step 1** proprio perché
@@ -3713,12 +3710,12 @@ costa **tre celle e zero righe di prodotto**.
 >
 > | quel che l'attesa diceva | quel che la misura dice |
 > |---|---|
-> | il traguardo dei **40** è a rischio | ⛔ **peggio**: si sfora anche il **tetto dei 50**. `[M]` mediana **74,58 ms**, e con il pezzo cieco **90-115 ms** sullo schermo dell'utente |
-> | ⛔ per il **muro dei 37 fotogrammi di Mutter** | ⛔⛔ **falso in tutt'e due i pezzi**: il 37 **non si riproduce**, e Mutter pesa il **22 %** del ritardo. Il **78 % è nostro**, quasi tutto nel codificatore in software |
+> | il traguardo dei **40** è a rischio | ⛔ **peggio**: si sfora anche il **tetto dei 50** `[M]`, e ancora di più col pezzo cieco sullo schermo dell'utente |
+> | ⛔ per il **muro della cadenza di Mutter** | ⛔⛔ **falso in tutt'e due i pezzi**: il numero di v1 **non si riproduce**, e Mutter pesa una parte piccola del ritardo. Il grosso **è nostro**, quasi tutto nel codificatore in software |
 > | ⛔ *«non è un difetto nostro»* | ⛔ **è un difetto nostro.** Ed è la riga che questa fase ha smentito nel modo più utile |
 >
-> ⚠ **E la cura dello step 1 riesce, ma non salva il numero**: monitor 120 + freno 90 danno `[M]`
-> **61,4** fotogrammi al secondo — e il ritardo **non si muove**, perché il collo è altrove. La
+> ⚠ **E la cura dello step 1 riesce, ma non salva il numero**: monitor 120 + freno 90 alzano `[M]`
+> la cadenza — e il ritardo **non si muove**, perché il collo è altrove. La
 > cadenza non è il ritardo (`LEZIONI.md` §6.2).
 >
 > ⭐ **Che cosa ha funzionato del metodo**: dichiarare l'attesa prima ha reso **visibile** lo
@@ -3773,7 +3770,7 @@ deve poterla rifiutare con un caso.
 | ⭐ **M6** | ✅ **chiusa**: da `[?]` a `[M]`, ⛔ **col limite della catena scritto accanto** — mancano la cattura PipeWire e la tela del browser riletta, quindi non è la catena intera |
 | ⭐ **il `giro` di M8** | ✅ **riaperto**: la dichiarazione *«NON APPLICABILE per costruzione»* **cade**, con il `numero` che cresce a ogni fotogramma il controllo è **eseguibile** |
 | ⛔ **P15**, il secondo di grazia | ⏳ non è quel che ha morso. L'orologio che ha fatto danni in questa fase è stato un altro: quello **del banco**, non del protocollo (§P1 a blocchi, `LEZIONI.md` §1.13) |
-| ⛔ **il punto cieco a monte della cattura** | ⛔ **si è allargato come previsto, e adesso ha un numero**: 16-40 ms non compresi nel 74,58. ⚠ E **su Xvfb non esiste**: la stima vale per l'utente, non per il banco |
+| ⛔ **il punto cieco a monte della cattura** | ⛔ **si è allargato come previsto, e adesso ha una stima**, non compresa nel numero della fase. ⚠ E **su Xvfb non esiste**: la stima vale per l'utente, non per il banco |
 | ⛔ **«due utenti, ciascuno vede la propria sessione»** | ⭐ **il prezzo è stato pagato, non rinviato**: il deposito del video è sparito **del tutto** — non «uno per sessione», **nessuno**. ⏳ Il banco che copre la metà positiva **resta da scrivere** |
 | ⚠ **`02-figlio-accendi.sh`** | ✅ **curato** `[R]` — ⛔ **e non eseguito**: la cura è letta nel codice, non girata. Non porta la marca `[M]` |
 
@@ -3813,35 +3810,30 @@ all'apertura soltanto.
 
 #### ⭐ Il numero della fase, che è quel che la fase esisteva per produrre
 
-`[M]` **ritardo cattura → vetro: mediana 74,58 ms** — min 50,4 · p05 58,1 · p95 101,2 · p99 138,1,
-**6 giri** da ~800 campioni ciascuno, errore d'orologio **±0,63 ms**.
-⛔ **Pezzo cieco 16-40 ms NON compreso** ⇒ sullo schermo dell'utente **90-115 ms**, contro un tetto
-di **50**. ⇒ ⛔⛔ **SFORA il tetto e il traguardo.**
+`[M]` **ritardo cattura → vetro**, **6 giri** da ~800 campioni ciascuno: ⛔⛔ **SFORA il tetto dei
+50 ms e il traguardo** — e il pezzo cieco, **non compreso**, lo allontana ancora sullo schermo
+dell'utente.
 ⚠ **Non è input → vetro**: il canale di input nasce alla fase 4 (`input` = 0 in **953 su 953**), e
 al suo posto sta il controllo **P1**.
 
-| dove se ne va | mediana | di chi è |
-|---|---|---|
-| disegno → cattura (il `pts` di Mutter) | 16,66 ms | Mutter — **22 %** |
-| ⛔ **cattura → primo byte in pagina** | **39,17 ms** | ⛔ **nostro** — codificatore in software |
-| il filo | 0,32 ms | — |
-| stream completo → `decode()` | 0,08 ms | nostro |
-| decodifica | 7,58 ms | nostro |
-| richiamo → disegno finito (due `drawImage`) | 10,51 ms | nostro |
+La scomposizione in sei tratti — disegno → cattura (Mutter), cattura → primo byte in pagina, il
+filo, stream completo → `decode()`, decodifica, richiamo → disegno finito — dice che **Mutter pesa
+una parte piccola** e che ⛔ **il tratto più grosso è cattura → primo byte**, cioè il codificatore in
+software.
 
-⛔⛔ **Il muro non è di Mutter, e le tre prove sono queste**: la scena disegna **59,98/s con 0
-attese**; il figlio del prodotto consegna **23,93/s con ZERO attese a vuoto** — *non aspetta mai
+⛔⛔ **Il muro non è di Mutter, e le tre prove sono queste**: la scena disegna a ritmo di quadro
+**con 0 attese**; il figlio del prodotto consegna **con ZERO attese a vuoto** — *non aspetta mai
 Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (libsvtav1 / libx265).
-⇒ **58 ms su 74,6 sono nostri**, ~39 nel solo tratto cattura→filo. **La cura è la fase 8.**
+⇒ **Il grosso del ritardo è nostro**, quasi tutto nel tratto cattura→filo. **La cura è la fase 8.**
 
 #### La tavola dei cinque step, con gli esiti
 
 | # | Step | Che cosa ha prodotto | Esito |
 |---|---|---|---|
-| **1** | ⭐ **La cadenza disaccoppiata** (M3) | `[M]` monitor **120** + freno **90** ⇒ **61,4** consegnati (60,04), mediana **16,66 ms** — cella **D**, pulita. ⚠ E la spiegazione, che è `[R]`: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro un tick da 16666,67 µs — una **quantizzazione**, non un battimento, **letta nel codice di Mutter** | ⭐ **il fatto riesce** — ⛔ **ma M3 è MEZZA, non chiusa**: la causa non è misurata, il prodotto non sa chiedere quella cadenza, e la causa scritta in tre documenti era sbagliata |
+| **1** | ⭐ **La cadenza disaccoppiata** (M3) | `[M]` monitor **120** + freno **90** ⇒ la cadenza consegnata sale al ritmo del quadro — cella **D**, pulita. ⚠ E la spiegazione, che è `[R]`: `min_interval_us = 10⁶/maxFramerate` **troncato a intero** contro il tick del quadro — una **quantizzazione**, non un battimento, **letta nel codice di Mutter** | ⭐ **il fatto riesce** — ⛔ **ma M3 è MEZZA, non chiusa**: la causa non è misurata, il prodotto non sa chiedere quella cadenza, e la causa scritta in tre documenti era sbagliata |
 | **2** | ⛔ **La scena che si dichiara** | `banchi/03-scena.c` — `wl_shm` + `xdg-shell`, marca a **144 bit**, quattro conti fra cui le **attese**, verifica `wl_surface.enter` — e il suo lettore | ✅ **34 verdi / 0 rossi**. M6 chiusa `[M]`, il `giro` di M8 riaperto |
-| **3** | **Il prodotto: uno stream per fotogramma** | **135 fotogrammi**, `numero` 1→135 · **132 delta e 3 chiavi** · il primo dopo `SESSIONE` è una **chiave con FIN** · `RICHIEDI_CHIAVE` → chiave in **≤ 200 ms** · **10 stream azzerati contro 18 con FIN**, nessuna chiave abbandonata, **E8 provata sul filo** · ⭐ nei 28 byte il **`pts` di Mutter** (scarto dal nostro `CLOCK_MONOTONIC`: **11 347 µs**) · ⭐ **il deposito del video sparito del tutto** | ✅ **6 punti su 7 chiusi** · 13 controlli di certificazione, **13 verdi** · giro dal vivo **8 verdi, 1 rosso** |
-| **4** | **La pagina: i fotogrammi consegnati** | **60,0 fotogrammi dipinti al secondo** offrendone 60; tetto a saturazione **127,6/s** a 1080p | ✅ **19 casi verdi**, **8 guasti innestati su 8 accusati** |
+| **3** | **Il prodotto: uno stream per fotogramma** | **135 fotogrammi**, `numero` 1→135 · **132 delta e 3 chiavi** · il primo dopo `SESSIONE` è una **chiave con FIN** · `RICHIEDI_CHIAVE` → chiave · **10 stream azzerati contro 18 con FIN**, nessuna chiave abbandonata, **E8 provata sul filo** · ⭐ nei 28 byte il **`pts` di Mutter** (scarto dal nostro `CLOCK_MONOTONIC`: **11 347 µs**) · ⭐ **il deposito del video sparito del tutto** | ✅ **6 punti su 7 chiusi** · 13 controlli di certificazione, **13 verdi** · giro dal vivo **8 verdi, 1 rosso** |
+| **4** | **La pagina: i fotogrammi consegnati** | **tutti i fotogrammi offerti vengono dipinti**, e a saturazione la pagina ha margine oltre i 60 a 1080p | ✅ **19 casi verdi**, **8 guasti innestati su 8 accusati** |
 | **5** | ⭐ **L'anello del ritardo (S4)** | il numero qui sopra. **P1** verde (N=25 → **+25,08**; N=60 → **+58,58**), con l'iniezione **fuori dal prodotto** e l'ancora d'orologio che **non ci passa**. **P3** verde **sui pixel veri**: 234 fotogrammi in movimento, **0 falsi positivi** | ✅ **banco 31 su 31, ponte 11 su 11** — ⛔ **ma P5 NON ESEGUITO, e adesso lo dice** |
 
 > ⛔⛔ ⚠ **La riga dello step 1 diceva un'altra cosa, e va detto che cosa diceva.** *Fino alla sera
@@ -3855,9 +3847,9 @@ Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (li
 >
 > | | |
 > |---|---|
-> | ✅ **che cosa sopravvive** | tutto quel che sta in `banchi/03-b14-esiti.jsonl`: sette celle, **tutte** con `scena_sul_mio_monitor: true` — A (60/60 → 31,5), B (120/120 → 82,9), C (120/60 → 46,13), ⭐ **D (120/90 → 61,4, mediana 16,66, p99 20,43)** e i tre controlli. E con loro il **«sei decimi non si riproducono»** (la A dà 0,50 pulito) e il **«37 non si riproduce»** |
+> | ✅ **che cosa sopravvive** | tutto quel che sta in `banchi/03-b14-esiti.jsonl`: sette celle, **tutte** con `scena_sul_mio_monitor: true` — A (60/60), B (120/120), C (120/60), ⭐ **D (120/90)** e i tre controlli. E con loro il **«i decimali di v1 non si riproducono»** e il **«il numero di v1 non si riproduce»** |
 > | ⛔ **che cosa cade** | la **legge della griglia verificata**. La quantizzazione torna `[R]`: resta la spiegazione migliore che abbiamo, coerente con la cella D, **ma è letta nel codice di Mutter, non misurata** |
-> | ⛔ **e cade anche** | il **riscontro incrociato**: in `banchi/03-b14-esiti-scena2.jsonl` la cella D porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s**, e il controllo di ritorno di quella scena non torna. ⇒ **il 61,4 ha una scena sola** |
+> | ⛔ **e cade anche** | il **riscontro incrociato**: in `banchi/03-b14-esiti-scena2.jsonl` la cella D porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s**, e il controllo di ritorno di quella scena non torna. ⇒ **la cella D ha una scena sola** |
 > | ⚠ **e M3** | **non è chiusa: è mezza** — il fatto è `[M]`, la causa `[R]`, il riscontro non c'è (`STUDI.md` §gnome §13) |
 >
 > ⭐⭐ **E la cosa che vale più della correzione**: la ragione del rifiuto è **la trappola numero uno
@@ -3879,8 +3871,8 @@ Mutter*; il codificatore è **in software** e lo dichiara il prodotto stesso (li
    una da sola;
 3. ⛔ **la pagina nel worker**, scritta per intero, **misurata e tenuta spenta** — vedi qui sotto.
    ⭐ È uno sviluppo finito nella colonna delle cose che non hanno funzionato, **e ha prodotto lo
-   stesso una riga utilizzabile**: `[M]` la **decodifica** fuori dal thread principale vale
-   **−3,44 ms**; è la **tela** che affonda il conto (+17,6).
+   stesso una riga utilizzabile**: `[M]` la **decodifica** fuori dal thread principale guadagna;
+   è la **tela** che affonda il conto.
 
 ---
 
@@ -3919,7 +3911,7 @@ detto HEVC = true con GPU, e non si è più riprodotto (0 su 5 successivi)»*, c
 su sei non è rumore: è una **variabile non dichiarata**.*
 
 ⭐ **Quel che NON è successo, e va detto perché era il rischio grosso**: `03-b17-ritardo.py` · `leggi_celle()` ha
-**`gpu=True` di default** — `--senza-gpu` è opt-in ⇒ ⛔ **il numero della fase, i 74,58 ms, NON era
+**`gpu=True` di default** — `--senza-gpu` è opt-in ⇒ ⛔ **il numero della fase NON era
 misurato al buio.** Era **la sonda dei codec** a esserlo, non la misura.
 
 ⇒ **Costo**: una corsia intera di un piano, e la sessione seguente sarebbe cominciata da lì.
@@ -3945,7 +3937,7 @@ su un palco con monitor virtuali **non è quello dell'utente**.
 |---|---|
 | la `ResizeObserver` | ⛔ **la premessa era falsa** |
 | la seconda cura della vista | ⛔ **caduta alla misura**: `overflow-y: scroll` tiene `clientWidth` **fermo** |
-| il **seqlock in contesa** | ⛔ **200 letture su 200 riuscite** con la scena a 1034 disegni/s. La causa era un **relitto a `seq` dispari**, non la contesa |
+| il **seqlock in contesa** | ⛔ **200 letture su 200 riuscite** con la scena al massimo ritmo. La causa era un **relitto a `seq` dispari**, non la contesa |
 | *«quel che manca ai 60 è di Mutter»* | ⛔ **zero attese a vuoto** |
 | *«accendi su `Meta-3`»* | ⛔ i monitor sono **quattro**, il suo era `Meta-2` |
 
@@ -3999,7 +3991,7 @@ compositore più carico — **quel che succede quando accanto gira una cattura**
 |---|---|---|---|
 | `fidato` | true | **false** | true |
 | `frame` in volo, max | **1** | **18** (fino a 26) | 1 |
-| disegni/s a 60 Hz | 60 | **461,7** (fino a 1034) | 60 |
+| disegni al secondo a 60 Hz | pari al quadro | **molti di più** | pari al quadro |
 
 ⭐ **E i due sintomi erano lo stesso difetto**: una scena in corsa a vuoto non torna al ciclo
 principale ⇒ ignora `--secondi` (**6 chiesti, 146 vissuti**) ⇒ il banco la **uccide** ⇒ la morte cade
@@ -4013,23 +4005,22 @@ legge i disegni senza guardare `fidato`. **Chiusa: 43 righe verdi, 0 rosse.**
 ⛔⛔ **RIGA CHE VALE PER TUTTO IL PROGETTO**: *ogni cella di ritmo misurata con `03-scena` **prima**
 del 13 agosto va rifatta o marcata `[?]`* — la scena poteva correre a vuoto senza dirlo.
 ⭐ **Le celle che contano dello step 1 reggono**: `banchi/03-b14-esiti.jsonl` usa `03-b14-scena`
-(EGL, sua), e la matrice dei tetti rifatta con la cura è **invariata** (60,0-60,2 disegni/s,
+(EGL, sua), e la matrice dei tetti rifatta con la cura è **invariata** (ritmo di quadro,
 0 attese).
 
 > ⛔ ⚠ *Questa riga diceva: «**Il riscontro incrociato dello step 1 regge** […] ⇒ l'accordo **entro
-> il 4 %** fra due scene indipendenti tiene». **Non regge.** La seconda scena del riscontro è
+> il margine dichiarato** fra due scene indipendenti tiene». **Non regge.** La seconda scena del riscontro è
 > proprio `03-scena`, cioè quella che questa stessa riga dichiara da rifare — e in
 > `banchi/03-b14-esiti-scena2.jsonl` la sua **cella D** porta `scena_sul_mio_monitor: false`,
-> `palco_stabile: false` e **1 fotogramma in 25 s**, mentre il suo controllo di **ritorno** dà 52,84
-> contro gli 80,28 della sua cella B: **non torna**. Il 4 % vale su A (0,7 %), B (3,2 %) e il
-> controllo positivo; C sta al **5,4 %** e il negativo al **7 %**. ⇒ ⛔ **La cella D — il 61,4 — ha
-> UNA scena sola.** Corretta il 13 agosto 2026, rilievo del coordinatore della fase 3.*
+> `palco_stabile: false` e **1 fotogramma in 25 s**, mentre il suo controllo di **ritorno** non
+> torna con la sua cella B. L'accordo vale su A, B e il controllo positivo; C e il negativo stanno
+> fuori dal margine. ⇒ ⛔ **La cella D ha UNA scena sola.** Corretta il 13 agosto 2026, rilievo del coordinatore della fase 3.*
 
-#### ⛔ 6. Il metro si stava regalando 11 ms, e P5 si dichiarava verde senza esserlo
+#### ⛔ 6. Il metro si stava regalando dei millisecondi, e P5 si dichiarava verde senza esserlo
 
-1. ⛔ **la prima stesura del metro chiudeva al richiamo del decodificatore**, regalandosi **~11 ms**
-   nostri e misurabili su un tetto di 50. ⭐ **Il confine è stato spostato nella direzione scomoda**:
-   il numero è salito da **63,8 a 74,6** e lo si è lasciato salire;
+1. ⛔ **la prima stesura del metro chiudeva al richiamo del decodificatore**, regalandosi dei
+   millisecondi nostri e misurabili su un tetto di 50. ⭐ **Il confine è stato spostato nella
+   direzione scomoda**: il numero è salito e lo si è lasciato salire;
 2. ⛔ **P5 si dichiarava verde**, e dopo tre iniettori `scavalcati = 0` non è *«l'anello regge»*: è
    *«il fenomeno non si è presentato»*. Adesso è dichiarato **NON ESEGUITO**. ⚠ E la causa vera del
    fuori ordine è la **dimensione** del fotogramma, non la rete: l'evento scatta al completamento
@@ -4038,15 +4029,10 @@ del 13 agosto va rifatta o marcata `[?]`* — la scena poteva correre a vuoto se
 
 #### ⛔ 7. La pagina nel worker: scritta, misurata, e **sbagliata a metà**
 
-`STUDI.md` §web §6.1 la prescriveva. Attuata, ha dato `[M]` **+27,6 / +33,5 ms** di mediana (73,66 / 67,79
-→ **101,30**) e **tetto −73,4 %** a 1080p (127,6 → **33,9** dipinti/s). ⛔ **Ma il totale nasconde
-la cosa che serve**, e la scomposizione la mostra:
-
-| tratto (mediana, ms) | prima | dopo | Δ |
-|---|---|---|---|
-| stream completo → `decode()` | 0,07 / 0,06 | **10,23** | ⛔ **+10,2** |
-| ⭐ **la decodifica** | **7,17** / 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-| richiamo → disegno finito | 9,63 / 9,11 | **27,19** | ⛔ **+17,6** |
+`STUDI.md` §web §6.1 la prescriveva. Attuata, `[M]` ha **peggiorato il ritardo** e fatto
+**crollare il tetto** a 1080p. ⛔ **Ma il totale nasconde la cosa che serve**, e la scomposizione la
+mostra: ⭐ **la decodifica migliora**, mentre ⛔ l'attesa prima di `decode()` e ⛔ il tratto
+richiamo → disegno finito **peggiorano molto**.
 
 ⭐⭐ **⇒ §6.1 non è sbagliata per intero: vale la DECODIFICA, non la TELA.** Il decodificatore
 consegna prima quando non contende; è la tela che affonda il conto. ⇒ La riga utilizzabile non è
@@ -4059,8 +4045,8 @@ prescrizione conteneva la propria smentita**: §6.1 prescriveva il worker e viet
 quadro, che il worker reintroduce in silenzio. Nessuna rilettura del documento poteva accorgersene
 senza misurarla.
 
-⚠ **E le due grandezze dicono cose opposte**: sulla catena vera il worker dipinge **di più**
-(26,3/s contro 22,8-24,2), a saturazione crolla di tre quarti (`LEZIONI.md` §6.2).
+⚠ **E le due grandezze dicono cose opposte**: sulla catena vera il worker dipinge **di più**, a
+saturazione crolla (`LEZIONI.md` §6.2).
 
 ⏳ ⛔ **`[?]` E questo va letto accanto ai numeri, non in fondo**: tutto è su **Xvfb, in software,
 senza GPU**, e la penale è in gran parte sincronizzazione al quadro. ⇒ **Su hardware vero il conto
@@ -4095,43 +4081,41 @@ dall'utente, non su un documento completo* (`PIANO.md` §0.3).
 #### ⭐⭐ E il giudizio è stato MISURATO — dalla registrazione fatta dall'utente
 
 *L'utente ha registrato il proprio schermo mentre guardava (`Screencast From 2026-08-14 07-47-30.webm`,
-10,5 s, 2560×1080, VP8 a 30,3/s). ⇒ **La sua impressione si può contare invece di crederla**: si
+10,5 s, 2560×1080, VP8). ⇒ **La sua impressione si può contare invece di crederla**: si
 segue il baricentro della barra bianca fotogramma per fotogramma.*
 
 | | |
 |---|---|
 | fotogrammi della registrazione | **318**, la barra visibile in **tutti** |
-| ⛔ **fotogrammi in cui il contenuto NON è cambiato** | **97 su 312 = 31,1 %** |
-| ⇒ ⭐ **ritmo del contenuto** | **20,9 fotogrammi/s** |
-| le pause | **83 volte 33 ms · 7 volte 66 ms** — ⭐ **mai più lunghe** |
+| ⛔ **fotogrammi in cui il contenuto NON è cambiato** | una parte non piccola |
+| le pause | di uno o due fotogrammi della registrazione — ⭐ **mai più lunghe** |
 
-⭐⭐ **E tre misure indipendenti danno lo stesso numero**: il banco dell'anello **21,98/s**, il
-registro del prodotto **~21/s**, e ora **l'occhio dell'utente, da fuori, 20,9/s**. *Nessuna delle tre
-sa delle altre.*
+⭐⭐ **E tre misure indipendenti danno lo stesso ritmo**: il banco dell'anello, il registro del
+prodotto, e ora **l'occhio dell'utente, da fuori**. *Nessuna delle tre sa delle altre.*
 
 ⛔ **E la causa del «non il massimo» è stata cercata, non supposta.** L'ipotesi naturale era
 *l'irregolarità* — che la barra avanzasse a scatti. **Falsa**: la distribuzione dei passi è
-**bimodale sui due valori attesi** (~7-8 colonne = un fotogramma di attesa, ~14-15 = due), e **solo
-il 7 % dei passi** sta fuori da quei due gruppi, con **due soli** valori anomali su 215.
+**bimodale sui due valori attesi** (un fotogramma di attesa, o due), e **pochi passi** stanno fuori
+da quei due gruppi, con **due soli** valori anomali su 215.
 
-> ⇒ ⭐ **Il «non il massimo» non è instabilità: è il RITMO.** A 21 fotogrammi al secondo su uno
-> schermo che ne mostra 30, **una volta su tre l'occhio vede lo stesso fotogramma due volte** — e
-> quello si sente, anche quando non c'è nessuno scatto.
+> ⇒ ⭐ **Il «non il massimo» non è instabilità: è il RITMO.** Con un ritmo sotto quello dello
+> schermo, **l'occhio vede spesso lo stesso fotogramma due volte** — e quello si sente, anche quando
+> non c'è nessuno scatto.
 > ⛔ **Quindi la strada per «il massimo» non è togliere jitter: è alzare il ritmo** — e il ritmo lo
-> tiene giù un tratto da **28,0 ms su 78,1** che allora chiamavamo «il disegno».
+> tiene giù un tratto che allora chiamavamo «il disegno».
 > ⚠ ⛔ **E quel nome era falso, corretto il 14 agosto 2026** (deciso dall'utente): il disegno costa
-> **2,25 ms** `[M]`, e i 28,0 erano **l'attesa del fotogramma dalla GPU** più il disegno. Il totale
+> poco `[M]`, e quel tratto era **l'attesa del fotogramma dalla GPU** più il disegno. Il totale
 > resta vero. `fasi/rapporti/F4-A2-pagina-dipinge.md` e `F4-A10-anello-input.md`.
 
-⚠ **I limiti di questa misura, dichiarati**: la registrazione stessa gira a 30,3/s, quindi **non può
-vedere niente di più veloce**; e un fotogramma perso dal registratore si conterebbe come una pausa
-del prodotto. ⇒ I 20,9/s sono un **limite inferiore**, e concordano con gli altri due numeri.
+⚠ **I limiti di questa misura, dichiarati**: la registrazione stessa ha un suo ritmo, quindi **non
+può vedere niente di più veloce**; e un fotogramma perso dal registratore si conterebbe come una
+pausa del prodotto. ⇒ Il ritmo contato è un **limite inferiore**, e concorda con gli altri due.
 
 #### ⛔ E i tre limiti del giudizio, scritti PRIMA che lo desse e non dopo
 
 | | |
 |---|---|
-| **1** | vale per la catena con **AV1 in software** — ⭐ ed è **esattamente** la configurazione su cui è stato misurato il numero (71,86 ms, ~22 fotogrammi/s) |
+| **1** | vale per la catena con **AV1 in software** — ⭐ ed è **esattamente** la configurazione su cui è stato misurato il numero |
 | **2** | ⛔ **non** vale per la codifica in hardware: **il browser dell'utente non dipinge HEVC** (§0-ter) |
 | **3** | ⛔ **non ha visto un desktop**: ha visto **un monitor aggiunto** con dentro la scena dei banchi (§0-quater) |
 
@@ -4148,7 +4132,7 @@ scena da quella misurata» — e si è realizzato in trenta secondi, due volte.*
 > [192.168.0.3]: §5.2 vuole una CHIAVE — richiesta girata al palco   ← 1 659 volte
 > ```
 > **Il server manda, il client rifiuta e richiede una chiave, per sempre.** Schermo nero.
-> ⛔ **E i banchi dicevano il contrario** — 1 047 fotogrammi dipinti, 30 fps esatti, `consegnati ==
+> ⛔ **E i banchi dicevano il contrario** — 1 047 fotogrammi dipinti, `consegnati ==
 > dipinti`. La differenza: quel giro aveva **una scena sintetica e un Chrome lanciato dal banco**;
 > questo ha **il browser dell'utente e il suo desktop**.
 > ⇒ ⭐ *Un banco che dice sì e un utente che vede nero: il banco stava misurando un'altra cosa.*
@@ -4264,23 +4248,23 @@ scoperto che la differenza non è accademica:
 
 | dove si smette di contare | con la codifica di **oggi** (software) | con un codificatore **gratis** `[R]` |
 |---|---|---|
-| al **disegno finito** | **74,58 ms** ⇒ fuori | **~35,4 ms** ⇒ ⭐ **dentro il tetto, vicino al traguardo** |
-| al **pixel acceso** (col pezzo cieco) | 90-115 ms ⇒ fuori | **51-75 ms** ⇒ ⛔ **fuori anche a fase 8 fatta** |
+| al **disegno finito** | fuori | ⭐ **dentro il tetto, vicino al traguardo** |
+| al **pixel acceso** (col pezzo cieco) | fuori | ⛔ **fuori anche a fase 8 fatta** |
 
 ⇒ **La stessa architettura è promossa o bocciata a seconda di dove si mette il traguardo.**
 
 ⚠ *E il confine della **misura** è stato spostato oggi, nella direzione scomoda: la prima stesura
-dell'anello chiudeva al richiamo del decodificatore, regalandosi ~11 ms nostri e misurabili. Il
-numero è salito da 63,8 a 74,58 ed è stato lasciato salire. `CODER.md` §1-bis dichiara adesso dove
+dell'anello chiudeva al richiamo del decodificatore, regalandosi dei millisecondi nostri e
+misurabili. Il numero è salito ed è stato lasciato salire. `CODER.md` §1-bis dichiara adesso dove
 finisce la **misura** — non fino a dove vale il **tetto**, che è questa domanda.*
 
 #### ⛔ Perché NON si decide adesso, e sono due ragioni indipendenti
 
 1. **il pavimento con l'accelerazione vera non è misurato**, e non lo sarà finché la fase 8 non
    esiste;
-2. ⛔ **il pezzo cieco è a sua volta una `[?]`**: **16-40 ms** è una forbice larga **due volte e
-   mezzo**, e nessuna API JavaScript la espone (`STUDI.md` §web §6.2). Decidere dove finisce di contare un
-   tetto di **50** appoggiandosi a un numero che oscilla di **24** è decidere su niente — ed è la
+2. ⛔ **il pezzo cieco è a sua volta una `[?]`**: è una forbice **larga**, e nessuna API
+   JavaScript la espone (`STUDI.md` §web §6.2). Decidere dove finisce di contare un tetto di **50**
+   appoggiandosi a un numero che oscilla quasi quanto metà del tetto è decidere su niente — ed è la
    grandezza sostitutiva che `LEZIONI.md` §1.13 vieta.
 
 ⇒ È la stessa disciplina del primo punto aperto: **non si cura, e non si decide, su un sintomo
@@ -4321,11 +4305,11 @@ questo però dopo servirà una nuova sessione**».*
 non si riscrive una misura perché è arrivata una decisione — e questa sezione dice **che cosa manca
 ancora prima del giudizio**.
 
-#### Perché, in un numero
+#### Perché, in una riga
 
-Il ritardo misurato è **74,58 ms**, e ⛔ **39,17 di quelli — il 53 % — sono la codifica in
-software**. Gli altri quattro tratti sommano **~35,4 ms**, che sarebbe il **pavimento della catena a
-codificatore gratis**: `[R]` **dentro il tetto dei 50, e vicino al traguardo dei 40**.
+⛔ **Più della metà del ritardo misurato è la codifica in software**. Gli altri quattro tratti,
+sommati, sarebbero il **pavimento della catena a codificatore gratis**: `[R]` **dentro il tetto dei
+50, e vicino al traguardo dei 40**.
 
 ⇒ L'obiezione dell'utente, che è quella giusta: *«senza accelerazione hw stiamo ragionando e
 sviluppando su numeri non molto affidabili»*. Un totale dominato da un pezzo che sta per essere
@@ -4333,8 +4317,8 @@ sostituito **non è un numero su cui prendere decisioni** — e le fasi 4-7 ne p
 uguali, da rifare dopo.
 
 ⚠ **Ma il danno era stretto, e va detto perché non si legga la giornata come persa**: dei risultati
-della fase 3, **solo il verdetto sul ritardo** dipendeva dal codificatore. La cella **D** (61,4 a
-monitor 120 e freno 90), il verde prodotto dallo strumento, **B-18**, **B-20**, il worker respinto,
+della fase 3, **solo il verdetto sul ritardo** dipendeva dal codificatore. La cella **D** (monitor
+120 e freno 90), il verde prodotto dallo strumento, **B-18**, **B-20**, il worker respinto,
 la scena che correva a vuoto e i tre falsi rossi **non ci si appoggiano affatto**.
 
 > ⛔ ⚠ *Questa riga cominciava l'elenco con «**La legge della griglia**». **Va tolta di lì**: la
@@ -4352,8 +4336,8 @@ VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
 
 ⛔ **E questa riga corregge un errore di oggi**: un agente aveva riferito *«su questo server non c'è
 un codificatore hardware per nessuno dei due codec»*, e **nessuno l'aveva verificata**. È vera per
-**AV1** — e stava già nei documenti — ed è **falsa per HEVC**. ⚠ È la stessa forma dei «37
-fotogrammi di Mutter»: una riga **ripetuta** invece che **misurata**, che poi decide un piano.
+**AV1** — e stava già nei documenti — ed è **falsa per HEVC**. ⚠ È la stessa forma del «muro
+di Mutter»: una riga **ripetuta** invece che **misurata**, che poi decide un piano.
 
 #### Che cosa manca, e in che ordine
 
@@ -4363,7 +4347,7 @@ fotogrammi di Mutter»: una riga **ripetuta** invece che **misurata**, che poi d
 | 2 | la codifica HEVC in hardware nel prodotto, **su una copia** finché non è misurata |
 | 3 | ⭐ **l'anello rimisurato con lo STESSO banco e la STESSA scena** — o i due numeri non si sottraggono |
 | 4 | ⛔ **i CINQUE tratti affiancati**, non il totale: *tolta la codifica in software, gli altri quattro restano dove sono?* Se restano, l'architettura è **assolta**; se si muovono, c'è una contesa che nessuno ha visto |
-| 5 | ⚠ **i fotogrammi consegnati accanto ai millisecondi** (`LEZIONI.md` §6.2): in v1 il costo per fotogramma scese da 41 a 6 **mentre i consegnati calavano da 29 a 22,7** |
+| 5 | ⚠ **i fotogrammi consegnati accanto ai millisecondi** (`LEZIONI.md` §6.2): in v1 il costo per fotogramma scese molto **mentre i consegnati calavano** |
 | 6 | e **solo allora** il giudizio dell'utente, su un numero che non ha il freno a mano tirato |
 
 ⚠ **`EncSliceLP` è la codifica «a bassa potenza»**: veloce, ma con limiti suoi di qualità e di
@@ -4405,7 +4389,7 @@ alla chiusura: le misure qui si **registrano** strada facendo, non si ricordano 
 | | | dove |
 |---|---|---|
 | ⛔ | **HEVC non dipinge nel browser dell'utente** — 1 748 consegnati, **0 dipinti** | §03-movimento §0-ter |
-| ⛔ | **il disegno: 28,0 ms su 78,1 — il 36 %**, il collo di bottiglia nuovo | `fasi/rapporti/F3-E-anello-rimisurato.md` |
+| ⛔ | **il disegno**, creduto il collo di bottiglia nuovo | `fasi/rapporti/F3-E-anello-rimisurato.md` |
 
 **L'utente vede**: ⭐ **usa il desktop**. È il momento in cui REMOTIX smette di essere una
 dimostrazione.
@@ -4431,7 +4415,7 @@ crederlo** (`CODER.md` §3.3). L'elenco vive qui e si riempie strada facendo.
 | **A8** | la pagina, modo tocco | `04-b28-gesti` | i sette gesti, e il passaggio automatico sul contesto | 7671-75 | ⭐ **24 su 25**, tre giri |
 | **A9** | le scorciatoie (sonda S3) | `04-b29-scorciatoie` | «arriva **e basta**?» — i tre stati, su due motori | 7681-85 | ⭐ **594 misure**, 74 buttate |
 | **A10** | i banchi di fase | `04-b30-anello-input` | ⭐ l'anello **input → vetro**, che alla fase 3 non era misurabile | 7691-95 | ⭐ **16 su 16**, e ⏳ `n=0` |
-| ⭐ **O2** | **il numero dell'anello** | `04-b30-*` (esteso) · `04-b32-terreno` · `04-b32-coda` · `04-b32-ritmo` | ⭐ **il ritardo input → vetro, con `n` e la scomposizione**, e la coda che cresce | **7721-25** | ⭐⭐ **~140 ms, n = 326 e 322**, 10 controlli su 11 |
+| ⭐ **O2** | **il numero dell'anello** | `04-b30-*` (esteso) · `04-b32-terreno` · `04-b32-coda` · `04-b32-ritmo` | ⭐ **il ritardo input → vetro, con `n` e la scomposizione**, e la coda che cresce | **7721-25** | ⭐⭐ **il numero c'è, n = 326 e 322**, 10 controlli su 11 |
 
 ⭐ **E le cuciture le tiene il coordinatore, non gli anelli** — `src/input.h`, `src/tastiera.h`,
 `src/cursore.h`, più `figlio.c`, `main.c` e il `Makefile`. ⛔ È la lezione di
@@ -4555,7 +4539,7 @@ tre entrava nel verdetto — e proprio per questo nessuno li avrebbe controllati
 | ⛔ «HEVC non dipinge» | **falso**: `[M]` **8 caselle su 8** dipingono (profilo della stringa × profondità del flusso, HEVC e AV1, 64×48 **e** 1920×1080), compresa la combinazione esatta del prodotto — flusso Main10 letto con la stringa Main8. Palco = il **desktop vero**, GPU vera, dichiarato e verificato dall'altro capo. E in continuo: **60 su 60**, sei giri |
 | ⛔ i «1 748 consegnati, 0 dipinti» | ⛔ **il conto era letto male**: nella finestra della sessione nera il contatore **entra a 1748 ed esce a 1748** per 2 min 38 s — il 1748 è **il residuo della sera prima** (`ciclo_fotogrammi` è statico di file). E il «1 659» era un `grep -c` su tutto il file da 6,7 MB: nella finestra vera sono **653** |
 | ⇒ la causa vera | **il monitor aggiunto e vuoto**: nulla si muove, Mutter non consegna. **Lavoro di A1, non del codec** |
-| ⛔ «il disegno costa 28,0 ms» | **falso**: `[M]` **2,25 ms** (5 giri, dispersione 0,30), stesso confine della fase 3. E il controllo positivo su AV1 dà **6,25-8,45** contro i **9,07** della fase 3 ⇒ **il cronometro era tarato** |
+| ⛔ «il disegno è il collo di bottiglia» | **falso**: `[M]` il disegno costa poco (5 giri), stesso confine della fase 3. E il controllo positivo su AV1 ridà l'ordine di grandezza della fase 3 ⇒ **il cronometro era tarato** |
 
 ⭐ **E la prima ipotesi dell'anello — profondità 8 negoziata contro flusso a 10 — è stata scritta
 prima di misurare e smentita alla prima casella.** *Scritta prima, quindi smentibile: è il verso
@@ -4758,64 +4742,52 @@ rompersi. Il ripiego sparisce da sé adesso che la riga c'è.
 | ⭐ **tre guasti NUOVI**, che alla fase 3 non erano nemmeno esprimibili | e il più importante è *«la mediana sale di N ma **nel tratto sbagliato**»*: ⛔ **un metro così non diventa mai rosso — dice bugie sulla diagnosi**, che è esattamente quel che è successo all'etichetta del disegno |
 | ⭐ **la catena in UNDICI tratti** (quattro nuovi) | provata sul finto che li somma al totale con scarto **0,00 ms** |
 | ⛔ **e il numero NON c'è: `n = 0`, uscita 3** | *«non ho niente da giudicare»* — ⭐ **e dirlo è la cosa giusta**: il client non manda ancora §7.3. È il difetto che il validatore della fase 1 aveva (conforme e «niente da giudicare» con lo stesso codice d'uscita), qui evitato per costruzione |
-| ⭐ **i pezzi ciechi sono DUE, non uno** | quello in uscita (16-40 ms, noto) e ⭐ **quello in INGRESSO** — `[?]` **4-12 ms** fra la mano e `event.timeStamp` — **che nessuno aveva mai nominato** |
+| ⭐ **i pezzi ciechi sono DUE, non uno** | quello in uscita (noto) e ⭐ **quello in INGRESSO** — `[?]` fra la mano e `event.timeStamp` — **che nessuno aveva mai nominato** |
 
 ⛔ **E il suo controllo di precondizione ha dato un FALSO VERDE**: cercava `0x0101` in `pagina.html`,
 ne trovava cinque, ed erano **tutti commenti**. ⚠ *Pagata dentro il banco che esiste per non pagarla.*
 
 ---
 
-#### ⭐⭐⭐ O2 — IL NUMERO C'È: **~140 ms fra la mano e il pixel**, e sono **due giri che concordano**
+#### ⭐⭐⭐ O2 — IL NUMERO C'È fra la mano e il pixel, e sono **due giri che concordano**
 
 *14 agosto 2026, pomeriggio. Rapporto in `rapporti/F4-O2-anello-input.md`.*
 
-`[M]` **139,40 ms** (n = **326 su 326**) e **141,60 ms** (n = **322 su 322**), due giri indipendenti
-che concordano entro **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **Il tetto è 50 ms: si sfora
-di quasi tre volte.** Coi due pezzi ciechi dichiarati: **160-193 ms sullo schermo di un utente, più
-la rete.** ⚠ E sul prodotto di un'ora prima — senza la cura di O1 in `src/figlio.c` — erano
-**151,17 ms** (n = 573).
+`[M]` due giri indipendenti (n = **326 su 326** e **322 su 322**) che concordano. ⛔ **Il tetto è
+50 ms, e si sfora di molto** — ancora di più coi due pezzi ciechi dichiarati, **più la rete**.
 
-⭐ **E la scomposizione dice che NESSUN TRATTO DOMINA** — la tesi 1 del mandato è **refutata**:
+⭐ **E la scomposizione dice che NESSUN TRATTO DOMINA** — la tesi 1 del mandato è **refutata**: sei
+tratti di peso simile — cattura → primo byte *(codifica compresa)*, la scena riceve → disegna, byte
+usciti → la scena riceve, richiamo → 1° `drawImage` *(l'ATTESA)*, la scena disegna → cattura,
+evento → il prodotto lo vede — fanno quasi tutto il ritardo; la decodifica **vera** e il disegno
+**vero** (1° → 2° `drawImage`) pesano poco. Curarne uno solo non basta, e il tetto resterebbe
+sforato. ⚠ La codifica sta **dentro** il tratto 5 e ne è una parte piccola: «il collo di bottiglia
+è la codifica» resta falsa. ⭐ **E la scomposizione è ripetibile quanto il totale** fra i due giri.
 
-| tratto | ms | | tratto | ms |
-|---|---|---|---|---|
-| **5** cattura → primo byte *(codifica compresa)* | **30,4** | | **4** la scena disegna → cattura | **16,2** |
-| **3** la scena riceve → disegna | **26,6** | | **1a** evento → il prodotto lo vede | **13,1** |
-| **2** byte usciti → la scena riceve | **26,0** | | **8** la decodifica **vera** | **0,75** |
-| **9** richiamo → 1° `drawImage` *(l'ATTESA)* | **25,6** | | **10** 1° → 2° `drawImage` *(il disegno VERO)* | **0,08** |
-
-⇒ I **sei** tratti maggiori valgono fra **13,1 e 30,4 ms** e fanno il **99 %**: curarne uno solo
-toglie al massimo il **22 %** del ritardo, e il tetto resterebbe sforato di due volte e mezzo.
-⚠ La codifica sta **dentro** il tratto 5 e vale **5,3 su 30,4**; la **decodifica** vale **0,75 ms**:
-«il collo di bottiglia è la codifica» resta falsa, e adesso con un numero sotto.
-⭐ **E la scomposizione è ripetibile quanto il totale**: nessun tratto si sposta di più di **1,6 ms**
-fra i due giri.
-
-⭐⭐ **E i tratti che il metro della fase 3 NON attraversava** (1a + 1b + 2 + 3) valgono **65,8 ms**,
-cioè **il 47 %**: ⛔ *il numero della fase 3 non vedeva quasi metà del ritardo che l'utente sente.*
+⭐⭐ **E i tratti che il metro della fase 3 NON attraversava** (1a + 1b + 2 + 3) valgono **quasi metà
+del ritardo**: ⛔ *il numero della fase 3 non vedeva quasi metà del ritardo che l'utente sente.*
 
 > ##### ⛔⛔ E IL DIFETTO PIÙ GRAVE NON È UN TRATTO: È UNA CODA CHE CRESCE
-> `[M]` il server consegna **39,6** fotogrammi/s, la pagina ne dipinge **34,7**, e ⛔ **nessuno
-> butta l'avanzo** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ Il ritardo cresce di
-> **+108 ms al secondo**: 31,6 ms dopo 1 s → **4 650 ms dopo 43 s**. **Dopo un minuto l'utente
-> comanda un desktop che ha visto sei secondi fa, e tutti i contatori sono verdi.**
+> `[M]` il server consegna più fotogrammi di quanti la pagina ne dipinga, e ⛔ **nessuno butta
+> l'avanzo** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ Il ritardo **cresce senza
+> limite**: **dopo un minuto l'utente comanda un desktop che ha visto secondi prima, e tutti i
+> contatori sono verdi.**
 > ⭐ **Curato** in `src/pagina.html` (ancora `F4-CODA-DEL-DECODIFICATORE`): si salta **il disegno**,
-> non la decodifica — nessun buco, nessuna chiave. `[M]` dopo: pendenza **−2 ms/s**, ritardo **1,3
-> ms** dopo 41 s.
+> non la decodifica — nessun buco, nessuna chiave. `[M]` dopo: il ritardo **non cresce più**.
 
 > ##### ⛔ E LA TESI 2 — *«il ritmo è quanto ci consegna Mutter»* — **REFUTATA in questo regime**
-> `[M]` quattro conti nella stessa finestra di 30 s: la scena disegna **59,99/s**, Mutter ce ne
-> consegna **30,84** (il 51 %), il server ne spedisce **30,54**, la pagina ne dipinge **30,6** —
-> ⭐ e le **attese a vuoto sono 0,00/s**: ogni volta che abbiamo chiesto un fotogramma ce n'era già
-> uno pronto. ⇒ **Non stiamo aspettando Mutter: il limite è nel nostro ciclo.**
-> ⚠ `[?]` I 10,8/s che l'utente ha misurato dal suo video sono su un desktop **vero**, cioè in
+> `[M]` quattro conti nella stessa finestra di 30 s: la scena disegna a ritmo di quadro, Mutter ce
+> ne consegna circa la metà, e il server e la pagina seguono Mutter — ⭐ e le **attese a vuoto sono
+> zero**: ogni volta che abbiamo chiesto un fotogramma ce n'era già uno pronto. ⇒ **Non stiamo
+> aspettando Mutter: il limite è nel nostro ciclo.**
+> ⚠ `[?]` Il ritmo che l'utente ha misurato dal suo video è su un desktop **vero**, cioè in
 > regime di scarsità: le due misure rispondono a due domande diverse.
 
 > ##### ⛔⛔ E LA TESI 3 (tastiera contro mouse) NON È CHIUSA — ⭐ e a dirlo è **la scomposizione**
-> `[M]` ultimo giro: **35 sonde chiuse su 296**, mediana **151,7 ms** contro i **141,6** del mouse
-> nello stesso giro. ⚠ Verosimile: *«la tastiera è 10 ms più lenta»*. ⛔ **È falso**, e la prova è
-> che la sua scomposizione **non è fisica**: `2 byte usciti → la scena riceve` = **−562,8 ms**,
-> negativo. ⇒ L'accoppiamento prende il fotogramma sbagliato, e **il totale da solo non lo direbbe
+> `[M]` ultimo giro: **35 sonde chiuse su 296**, e la mediana della tastiera sta sopra quella del
+> mouse nello stesso giro. ⚠ Verosimile: *«la tastiera è più lenta»*. ⛔ **È falso**, e la prova è
+> che la sua scomposizione **non è fisica**: il tratto `2 byte usciti → la scena riceve` esce
+> **negativo**. ⇒ L'accoppiamento prende il fotogramma sbagliato, e **il totale da solo non lo direbbe
 > mai**: è il **guasto n. 12 della certificazione di A10** visto dal vivo.
 > ⇒ ⛔ **Il numero non è stato pubblicato.** Serve un eco della tastiera che non si sovrascriva
 > (lavoro mio su `04-b30-scena.c`).
@@ -4947,8 +4919,8 @@ non su un documento completo»*.
 
 | la sua frase | il numero che le corrisponde |
 |---|---|
-| *«la comparsa del desktop è più immediata»* | `[M]` **5,11 s → 1,04-1,13 s** (7 giri) — e di quel secondo, **1,00 s è il secondo fisso di §4.4-bis**: ⭐ quel che è nostro sono **34-124 ms** |
-| *«mi sembra ok»* (dopo qualche minuto d'uso) | `[M]` il ritardo **non cresce più**: pendenza da **+108 ms/s a −2 ms/s**, e **1,3 ms** dopo 41 s |
+| *«la comparsa del desktop è più immediata»* | `[M]` da secondi a poco più del **secondo fisso di §4.4-bis** (7 giri): ⭐ quel che resta nostro è poco |
+| *«mi sembra ok»* (dopo qualche minuto d'uso) | `[M]` il ritardo **non cresce più** |
 
 #### ⛔ E i limiti del giudizio, scritti PRIMA che lo desse e non dopo
 
@@ -4957,8 +4929,8 @@ manca è un'approvazione al buio», la stessa regola con cui ha chiuso la fase 2
 
 | | |
 |---|---|
-| ⛔ **il ritardo SFORA** | `[M]` **139,40 ms** (n=326) contro un tetto di **50**. ⚠ Ha giudicato **con gli occhi**, non su quel numero — e i due non si sostituiscono |
-| ⛔ **nessun tratto domina** | sei tratti da ~25 ms: **nessuna cura singola** porta 140 a 50. È lavoro della **fase 8**, e va detto perché il giudizio non venga letto come «il ritardo è a posto» |
+| ⛔ **il ritardo SFORA** | `[M]` (n=326) il tetto di **50**. ⚠ Ha giudicato **con gli occhi**, non su quel numero — e i due non si sostituiscono |
+| ⛔ **nessun tratto domina** | sei tratti di peso simile: **nessuna cura singola** porta il ritardo sotto 50. È lavoro della **fase 8**, e va detto perché il giudizio non venga letto come «il ritardo è a posto» |
 | ⛔ **la tela non è la sua** | il suo schermo è **21:9**, il desktop remoto **16:9** ⇒ `[M]` dal suo video, **il 36 % dei pixel è banda nera**. Ha giudicato una finestra, non uno schermo pieno |
 | ⚠ **un browser solo** | **Chrome 151**. Safari, iPhone e DeX restano `[?]` **dichiarate, non dedotte** |
 | ⚠ **qualche minuto, non qualche ora** | i tre orologi della sessione sono della **fase 5**: l'abbandono lungo non è stato giudicato |
@@ -4990,43 +4962,35 @@ fotogrammi su 953, perché il canale non esisteva.*
 
 | | |
 |---|---|
-| ⭐ **il numero** | **139,40 ms** (n = 326 su 326) e **141,60 ms** (n = 322 su 322), ⭐ **due giri indipendenti che concordano entro 2,2 ms** |
-| ⚠ **coi pezzi ciechi** | **160-193 ms** sullo schermo dell'utente, **più la rete** |
-| ⛔ **contro il tetto** | **50 ms**. Si sfora di quasi **tre volte**, e si scrive com'è |
+| ⭐ **il numero** | n = 326 su 326 e n = 322 su 322, ⭐ **due giri indipendenti che concordano** |
+| ⚠ **coi pezzi ciechi** | di più sullo schermo dell'utente, **più la rete** |
+| ⛔ **contro il tetto** | **50 ms**. Si sfora di molto, e si scrive com'è |
 
 #### ⭐ La scomposizione, e la risposta a «che cosa ottimizzo?»
 
-| tratto | mediana |
-|---|---|
-| cattura → primo byte | **30,4 ms** |
-| la scena riceve → disegna *(è il desktop remoto, non noi)* | 26,6 |
-| byte → scena | 26,0 |
-| richiamo → primo `drawImage` | 25,6 |
-| disegno → cattura | 16,2 |
-| decodifica | 0,75 |
-| ⭐ **il `drawImage` vero** | **0,08** |
-
-⇒ ⛔ **Nessun tratto domina**: sono sei tratti da ~25 ms. **Nessuna cura singola porta 140 a 50.**
-⭐ La somma dei tratti fa **139,08** contro un totale di **139,40** — scarto **0,32 ms**: la
-scomposizione è completa, non ha buchi.
-⭐⭐ **E i tratti che il metro della fase 3 NON attraversava valgono 65,8 ms, il 47 %**: metà del
-ritardo vero stava fuori dal vecchio metro.
+⇒ ⛔ **Nessun tratto domina**: sono sei tratti di peso simile — cattura → primo byte, la scena
+riceve → disegna *(è il desktop remoto, non noi)*, byte → scena, richiamo → primo `drawImage`,
+disegno → cattura — più la decodifica e il `drawImage` vero, che pesano poco. **Nessuna cura
+singola porta il ritardo sotto 50.** ⭐ La somma dei tratti torna col totale: la scomposizione è
+completa, non ha buchi.
+⭐⭐ **E i tratti che il metro della fase 3 NON attraversava valgono quasi metà del ritardo**: metà
+del ritardo vero stava fuori dal vecchio metro.
 
 > #### ⭐⭐ E la prova sul ferro che l'etichetta corretta stamattina era giusta
-> Il **primo** `drawImage` costa **25,6-27,1 ms**, il **secondo 0,080** ⇒ **320-339 volte**.
+> Il **primo** `drawImage` costa centinaia di volte il **secondo**.
 > ⛔ *Il disegno non è mai stato caro: era l'attesa del fotogramma dalla GPU.*
 
 ---
 
 ### ⭐⭐ Le due ottimizzazioni chieste dall'utente — e tutt'e due erano NOSTRE
 
-#### 1. Il login → desktop: **5,11 s → 1,04-1,13 s**
+#### 1. Il login → desktop: da secondi a poco più del secondo fisso
 
 ⛔⛔ **E la causa era una riga del coordinatore, scritta la mattina stessa.** Per far arrivare
 l'input più in fretta era stato messo il descrittore di `libei` nello stesso `poll()` del figlio —
 ⛔ ma il codice dopo **non guardava `pf.revents`**: svegliandosi per `libei`, il figlio andava lo
 stesso a leggere il socket del padre, **bloccante**.
-⇒ *Una modifica fatta per risparmiare millisecondi sull'input costava **quattro secondi** al login.*
+⇒ *Una modifica fatta per risparmiare millisecondi sull'input costava **secondi** al login.*
 ⭐ **La cura è una riga**: `if (!pf.revents) break;`
 
 ⚠ **E il registro lo diceva già**: *«0 fotogrammi consegnati, **0 attese a vuoto**»* — zero attese a
@@ -5036,14 +5000,13 @@ risposte opposte: l'ha chiuso solo un debugger attaccato al processo.*
 
 #### 2. ⭐⭐ E il ritardo CRESCEVA senza limite, con tutti i contatori verdi
 
-`[M]` il server consegnava **39,6 fotogrammi/s**, la pagina ne dipingeva **34,7**, e **nessuno
+`[M]` il server consegnava più fotogrammi di quanti la pagina ne dipingesse, e **nessuno
 buttava l'avanzo**: `scartati_ordine 0 · trattenuti 0 · corti 0`.
 
 | | |
 |---|---|
-| la crescita | ⛔ **+108 ms al secondo** |
-| dopo 43 s | ⛔ **4 650 ms** — si comandava un desktop visto **sei secondi prima** |
-| ⭐ curato | pendenza **−2 ms/s**, ritardo **1,3 ms** dopo 41 s |
+| la crescita | ⛔ **senza limite** — dopo meno di un minuto si comandava un desktop visto **secondi prima** |
+| ⭐ curato | il ritardo **non cresce più** |
 
 ⇒ ⛔ **È il difetto che l'utente sentiva e che nessun contatore contava**: tutti verdi, e la coda del
 decodificatore che si allungava e basta.
@@ -5052,9 +5015,9 @@ decodificatore che si allungava e basta.
 
 | | prima | dopo |
 |---|---|---|
-| il registro a raffica | **151,9 MB/s** (⛔ `[M]` **30,8 GB** scritti in una mattina) | **284 B/s** |
-| un nucleo bruciato a vuoto | **1,00** | **0,00** |
-| il desktop dopo che la sessione grafica torna | ⛔ **non tornava mai** | ⭐ **1,11 s, stesso figlio** |
+| il registro a raffica | ⛔ `[M]` decine di GB scritti in una mattina | poche righe |
+| un nucleo bruciato a vuoto | ⛔ un nucleo intero | nessuno |
+| il desktop dopo che la sessione grafica torna | ⛔ **non tornava mai** | ⭐ **torna, stesso figlio** |
 
 ⚠ ⭐ **E il ciclo a vuoto ha DUE facce, e una è MUTA**: per questo il banco misura il registro **e**
 la CPU. E con un client muto **un difetto ne nasconde un altro** — serve un client che *chieda le
@@ -5150,14 +5113,14 @@ le ore qui sono le sue.
 | che cosa | scena | atteso | misurato | data |
 |---|---|---|---|---|
 | tela concordata all'attacco | finestra 1265×800 | la misura della finestra | **1264×800** (pari, troncata in giù) | 15 ago |
-| ⭐ dal canale video al primo fotogramma | login, desktop fermo | «meno dei 4,4 s del 14 ago» | **311 ms** | 15 ago |
+| ⭐ dal canale video al primo fotogramma | login, desktop fermo | «meno del 14 ago» | ⭐ **molto meno** | 15 ago |
 | scala di disegno del client | idem | 1,000 | **1,000**, `imageRendering: pixelated` | 15 ago |
-| ridimensionamento a caldo | 1264×800 → 1000×640 | ~41 ms (`[M]` F4-IN-8) | **6 ms** dalla risposta del palco alla chiave spedita | 15 ago |
+| ridimensionamento a caldo | 1264×800 → 1000×640 | quello di `[M]` F4-IN-8 | ⭐ meno, dalla risposta del palco alla chiave spedita | 15 ago |
 | ri-attacco a misura diversa | palco a 1264×800, pagina che chiede 1920×1080 | i pixel arrivano subito | `SESSIONE` concede **1264×800** (§4.5), **0 fotogrammi scartati** | 15 ago |
 | fotogrammi scartati per misura · trattenuti · errori | sessione intera | 0 · 0 · 0 | **0 · 0 · 0** | 15 ago |
 | guardia 2 (la scala del monitor) | montaggio del palco | 1,000 | **1,000** su «Meta-0», e la riga si scrive **anche quando è buona** | 15 ago |
-| ⭐⭐ clic → primo fotogramma spedito | 25 clic veri dell'utente, desktop fermo | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **136 ms** (peggiore 502) → dopo la cura **41 ms** (peggiore 47) | 15 ago |
-| il giro completo, misurato dalla pagina (`GIRO`) | 10 clic, portatile su rete locale | — | **55 ms**, peggiore 71 (era 135 dal DeX il 14 ago) | 15 ago |
+| ⭐⭐ clic → primo fotogramma spedito | 25 clic veri dell'utente, desktop fermo | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **fuori** → dopo la cura ⭐ **dentro**, anche il peggiore | 15 ago |
+| il giro completo, misurato dalla pagina (`GIRO`) | 10 clic, portatile su rete locale | — | più breve di quello dal DeX del 14 ago | 15 ago |
 | il banco | `04-b31` | 18 verdi | **18 verdi**, e **11 guasti su 11** visti | 15 ago |
 | ⛔ **e il 16 agosto era 11/18** | `04-b31` | — | l'atteso di sette casi non contava la richiesta della nascita di `477d708`. ✅ **19/19 e 12 guasti su 12**, col caso 19 a guardia della cura | 16 ago |
 
@@ -5203,7 +5166,7 @@ ping-pong. **Un fondo temporale cura un padrone insistente, non due padroni.**
 #### ⛔ Il quarto di secondo su ogni clic, e il numero che stava nel registro da un giorno
 
 Il ciclo del figlio aspettava un fotogramma fino a **250 ms**, e in quell'attesa non leggeva il
-socket del padre. `[M]` 136 ms di mediana sui clic veri. ⭐ E la causa era stampata **una volta al
+socket del padre, e sui clic veri il ritardo sforava il tetto. ⭐ E la causa era stampata **una volta al
 secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = quattro giri al secondo =
 250 ms per giro. È la seconda volta in due giorni che il registro aveva già il fatto
 (`LEZIONI.md` §6.2-ter).
@@ -5241,7 +5204,7 @@ secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = qua
 | ⛔ **il banco del riattacco che BATTE UN TASTO dopo** | `PIANO.md` lo chiede per questa fase. `[M]` si è visto nel registro che `libei` ricrea i dispositivi al cambio di geometria e che `input.c` li riaggancia, ⛔ **e l'utente ha scritto in un terminale dopo un riattacco** — ma un banco che lo provi non c'è |
 | ⛔ **il ripiego su KWin dichiarato nel registro** | `PIANO.md` lo chiede per questa fase e **non è verificabile**: KDE è la fase 11, e su questa macchina non c'è. Il percorso di codice esiste (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 del banco, **su un ospite finto** |
 | `[?]` **il mezzo pixel del `margin: 0 auto`** | quando `clientWidth × devicePixelRatio` è dispari. ⭐ Giudizio dell'utente sul DeX: *«tutto perfetto»* ⇒ **non si presenta**, ma nessuno l'ha misurato |
-| ⚠ **i 4 ms di ritardo medio aggiunto** | l'attesa di 8 ms è un **ripiego dichiarato**: la cura vera è un descrittore che la cattura scrive quando il fotogramma è pronto, nello stesso `poll()` del padre e di `libei` |
+| ⚠ **il ritardo medio aggiunto** | l'attesa di 8 ms è un **ripiego dichiarato**: la cura vera è un descrittore che la cattura scrive quando il fotogramma è pronto, nello stesso `poll()` del padre e di `libei` |
 | ⚠ **il multi-monitor** | `SPECIFICHE.md` §6.5, fuori scopo come funzione |
 | ⚠ **i banchi RCP/1 non esercitano la strada nuova** | `01-b3-cliente.py` e `01-b4-validatore.py` restano verdi perché il filo non è cambiato, ⛔ ma nessuno dei due manda un `ADATTA_TELA` |
 
@@ -5404,7 +5367,7 @@ lega `can-*` a `visible`.
 
 ⭐ **Tre quarti sono già fatti e misurati**, ma nella **coda della fase 4** (§04-si-comanda,
 `rapporti/F4-IN-13-la-tela-che-cambia.md`): la tela è la finestra, `SESSIONE` concede la tela che il
-palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a caldo costa **6 ms**.
+palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a caldo costa poco.
 
 > #### ✅ ⭐⭐ E IL RIATTACCO A MISURA DIVERSA È STATO MISURATO — 16 agosto 2026, **e l'ha fatto l'utente**
 >
@@ -5412,13 +5375,13 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
 > `ADATTA_TELA` (zero occorrenze; la pagina ne ha 45) ⇒ si misura col browser».*
 >
 > `[M]` Sessione aperta col browser **massimizzato** (`2544x926`), scheda chiusa, riattacco con la
-> finestra **ridotta**. La catena intera in **61 millisecondi**:
+> finestra **ridotta**. La catena intera:
 >
 > ```
 > 17:11:00.875  ⚠ RIPIEGO DICHIARATO (§4.5): chiesta 1240x622, il palco ha 2544x926
 >                 → CONCESSA quella del palco, così i fotogrammi arrivano da subito
-> 17:11:00.887  ⭐ ADATTA_TELA 1240x622 GIRATA al palco            (+12 ms)
-> 17:11:00.935  ⭐ tela IN VIGORE cambiata da 2544x926 a 1240x622  (+60 ms)
+> 17:11:00.887  ⭐ ADATTA_TELA 1240x622 GIRATA al palco
+> 17:11:00.935  ⭐ tela IN VIGORE cambiata da 2544x926 a 1240x622
 > ```
 >
 > | | |
@@ -5608,7 +5571,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 | | |
 |---|---|
 | ⏳ la riga che manca a `RCP.md` §7.1 | che cosa fa il server quando il palco cambia misura **da sé** |
-| ⚠ i 4 ms di ritardo medio aggiunto | `MOVIMENTO_ATTESA_S` a 8 ms è un ripiego dichiarato |
+| ⚠ il ritardo medio aggiunto | `MOVIMENTO_ATTESA_S` a 8 ms è un ripiego dichiarato |
 | ⚠ i banchi RCP/1 non esercitano `ADATTA_TELA` | `01-b3` e `01-b4` restano verdi perché il filo non è cambiato |
 
 ---
@@ -5628,7 +5591,7 @@ che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` 
 | ✅ **il logout si raggiunge in due modi**: la voce del menu e `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` e ❌ `Win+F12` scartate **con una misura ciascuna**, ❌ **nessun bottone a schermo** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 agosto |
 | ✅ **il multi-tenant è della fase 10** — qui **un utente remoto per volta**, ⛔ ma il guardiano di logind discrimina **per utente** | `DECISIONI.md` §4.6-quater, 15 agosto |
 
-| ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
+| ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno di quasi un secondo (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
 
 **Aperte:** ⭐ nessuna. ⚠ Il 16 agosto ne è passata una che **non era una decisione**: l'orologio del
 silenzio contava i secondi sbagliati (§6-bis). `SPECIFICHE.md` §5.3 e `RCP.md` §8.2 avevano già
@@ -5637,12 +5600,12 @@ scegliere.
 
 #### ⏳ Il secondo che si potrebbe recuperare, con la misura già fatta
 
-`[M]` L'accesso costa **2087 ms** di mediana, e **968** sono il figlio che aspetta: il browser
+`[M]` Dell'accesso, una buona parte è il figlio che aspetta: il browser
 dichiara la misura della sua finestra **solo dopo essere stato ammesso**, e prima di allora la
 sessione non può nascere perché non si sa a che misura.
 
 ⇒ Se la misura arrivasse **col saluto** — come già fa il tetto del decodificatore — la sessione
-nascerebbe **durante** il secondo fisso invece che dopo: accesso a **~1,2 s**. ⛔ E il secondo fisso
+nascerebbe **durante** il secondo fisso invece che dopo. ⛔ E il secondo fisso
 resterebbe intatto: cambia *quando si dichiara la misura*, non *quando si risponde*, quindi il
 canale del cronometro resta chiuso.
 
@@ -5739,7 +5702,7 @@ aggiunto io, quindi andava esclusa per prima:
 
 | sospetto | misura |
 |---|---|
-| il **ripasso di logind** ogni 2 s, sincrono nel ciclo dei fotogrammi | ⭐ `[M]` 200 chiamate: **mediana 0,125 ms**, p95 0,226, **max 0,351 ms**. ⇒ Non è quello, e il ripiego «sincrono» di `sentinella.c` regge |
+| il **ripasso di logind** ogni 2 s, sincrono nel ciclo dei fotogrammi | ⭐ `[M]` 200 chiamate, tutte di costo trascurabile. ⇒ Non è quello, e il ripiego «sincrono» di `sentinella.c` regge |
 | il **danno degenerato** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 avvisi in tutto, non continui. ⚠ E la lettura del sorgente di Mutter (`meta-screen-cast-stream-src.c:891`) dice che **non** sono i buffer PipeWire: sono i **posti-regione** nel metadato `VideoDamage`, che chiediamo `×4` con tetto `×16` (`cattura.c` · `parametri_di_consumo()`). Quando le regioni sono di più, Mutter dichiara **tutto il fotogramma danneggiato**. ⏳ Difetto vero, piccolo, da curare — ma non è questo il lag |
 
 ⛔ **La causa era il compositore che disegnava IN SOFTWARE**, e l'ho introdotta io: `[M]`
@@ -5788,14 +5751,14 @@ girato **dentro** il desktop remoto in Firefox, e guardato attraverso REMOTIX.
 
 | che cosa | misura |
 |---|---|
-| il contatore dell'Aquarium, **letto a piena risoluzione su 16 secondi consecutivi** | ⭐ **58 · 59 · 60 · 61** — inchiodato a sessanta, mai un tuffo |
-| fotogrammi **distinti** arrivati sullo schermo del client (`mpdecimate`) | ⭐ **453 su 17,26 s = 26,2 al secondo** ⚠ e il tetto è del registratore, che campiona a 30: non si distingue «26 consegnati» da «più di 26, campionati 30» |
+| il contatore dell'Aquarium, **letto a piena risoluzione su 16 secondi consecutivi** | ⭐ inchiodato al ritmo pieno, mai un tuffo |
+| fotogrammi **distinti** arrivati sullo schermo del client (`mpdecimate`) | ⭐ flusso fluido ⚠ e il tetto è del registratore: non si distingue «consegnati» da «di più, campionati» |
 
-⭐ **È la controprova della cura di §5 di stanotte**: llvmpipe non fa 60 fps su un WebGL con 100
-pesci, neanche per sbaglio. ⇒ La GPU c'è, e il difetto dei gruppi mancanti era davvero tutto il lag.
+⭐ **È la controprova della cura di §5 di stanotte**: llvmpipe non tiene il ritmo pieno su un WebGL
+con 100 pesci, neanche per sbaglio. ⇒ La GPU c'è, e il difetto dei gruppi mancanti era davvero tutto il lag.
 
 ⚠ **E quel che questa misura NON dice, dichiarato**: non è una misura di **latenza** — dice che il
-flusso è fluido, non quanto tempo passa fra il tasto e il pixel. Quella resta `[M]` 41 ms della coda
+flusso è fluido, non quanto tempo passa fra il tasto e il pixel. Quella resta la `[M]` della coda
 della fase 4, e va rifatta su questa configurazione.
 
 > #### ⛔⛔ E QUESTA MISURA È STATA FATTA SULLA SCHEDA SBAGLIATA — vincolo posto dall'utente, 15 agosto
@@ -5803,7 +5766,7 @@ della fase 4, e va rifatta su questa configurazione.
 > > *«I test vanno fatti sulla GPU integrata, altrimenti "trucchiamo" il gioco. La solidità del
 > > sistema la si vede su GPU poco potenti, non mostri come la RX 6800.»*
 >
-> `[M]` I 60 fps dell'Aquarium sono stati presi sulla **Radeon RX 6800**, perché senza la regola
+> `[M]` Il ritmo dell'Aquarium è stato preso sulla **Radeon RX 6800**, perché senza la regola
 > udev di `DECISIONI.md` §4.6-ter — non installata — la scheda **la sceglieva il compositore**, e
 > aveva preso la discreta. ⇒ ⛔ **Il numero non vale come misura del prodotto**: dice quanto è veloce
 > quel ferro.
@@ -5823,7 +5786,7 @@ della fase 4, e va rifatta su questa configurazione.
 > registro dice che alle `20:15:12` si è collegato **`192.168.0.24`**, un dispositivo diverso dal
 > portatile (`.3`), con tela 2544×926 e vista 2560×926: il **DeX**.
 >
-> ⇒ ⭐ **WebGL Aquarium, 100 pesci, 60 fps fissi — sulla GPU integrata, guardato da Android.** ⚠ E
+> ⇒ ⭐ **WebGL Aquarium, 100 pesci, a ritmo pieno — sulla GPU integrata, guardato da Android.** ⚠ E
 > vale doppio perché DeX è l'uso **primario** (`DECISIONI.md` §5-bis.0), cioè il caso in cui il filo
 > è più lungo e il dispositivo più debole. ⛔ Resta quel che questa misura non è: **non è latenza**.
 
@@ -5865,13 +5828,13 @@ spento**, nessuna impalcatura:
 `RemoteHost=remotix`, **`Seat=` vuoto**; e il compositore apre **`renderD128`**, l'integrata — la
 regola udev regge anche su una sessione che nasce da sola.
 
-⚠ **Il prezzo, dichiarato**: dal primo attacco al primo fotogramma passano **~32 secondi**, ed è
-l'avvio a freddo di `gnome-session`. Succede una volta per sessione, ⛔ ma in quei 32 s il client è
-attaccato e non vede niente — e oggi non gli diciamo perché.
+⚠ **Il prezzo, dichiarato**: dal primo attacco al primo fotogramma passa l'avvio a freddo di
+`gnome-session`. Succede una volta per sessione, ⛔ ma in quell'attesa il client è attaccato e non
+vede niente — e oggi non gli diciamo perché.
 
-> ⭐ **E questo numero è VECCHIO: il 16 agosto l'avvio a freddo misura `[M]` 2353 ms**, non 32 s (vedi
-> §«venti giri dal browser»). ⇒ Il difetto di fondo resta — *mentre aspetti non ti diciamo perché* —
-> ma l'attesa è passata da mezzo minuto a due secondi e mezzo, e con essa l'urgenza. ⏳ Da coprire,
+> ⭐ **E questa attesa il 16 agosto è molto più corta** (vedi §«venti giri dal browser»). ⇒ Il
+> difetto di fondo resta — *mentre aspetti non ti diciamo perché* — ma l'attesa si è accorciata
+> molto, e con essa l'urgenza. ⏳ Da coprire,
 > non da correre.
 
 #### 15 agosto 2026, 20:50 UTC — ⛔⛔ «il terminale è congelato finché non muovo il mouse»
@@ -5888,10 +5851,10 @@ allora il fotogramma giusto **era stato prodotto e non è stato consegnato**.
 
 | | |
 |---|---|
-| dal palco al filo | `[M]` **0 ms** di mediana e p95, **1 ms** il massimo su 200 fotogrammi |
-| il codificatore | `hevc_vaapi` **in hardware** su `renderD128`, chiave in **8,8 ms** |
-| il ripasso di logind | `[M]` 0,125 ms di mediana |
-| la banda | ⚠ c'erano abbandoni a 45 Mbit/s **con l'Aquarium in moto** — ⛔ ma l'utente ha detto *«niente Aquarium»*, e la pista è caduta |
+| dal palco al filo | `[M]` trascurabile, su 200 fotogrammi |
+| il codificatore | `hevc_vaapi` **in hardware** su `renderD128`, e la chiave esce subito |
+| il ripasso di logind | `[M]` trascurabile |
+| la banda | ⚠ c'erano abbandoni **con l'Aquarium in moto** — ⛔ ma l'utente ha detto *«niente Aquarium»*, e la pista è caduta |
 
 ⛔⛔ **LA CAUSA, e stava scritta in un commento del nostro codice**: `cattura.c` consegnava il
 fotogramma **solo se qualcuno lo stava aspettando in quell'istante** —
@@ -5899,8 +5862,8 @@ fotogramma **solo se qualcuno lo stava aspettando in quell'istante** —
 sarebbe lavoro dentro la richiamata di tempo reale, fatto per niente»*.
 
 ⭐ **Il ragionamento è giusto per il caso a regime e sbaglia il caso che l'utente vede.** La finestra
-che si chiude produce una **raffica**: prendiamo il primo fotogramma e passiamo ~20 ms a convertirlo
-e comprimerlo; ⛔ tutti quelli che arrivano in quei 20 ms trovano `qualcuno_aspetta == FALSE` e
+che si chiude produce una **raffica**: prendiamo il primo fotogramma e passiamo del tempo a
+convertirlo e comprimerlo; ⛔ tutti quelli che arrivano in quel tempo trovano `qualcuno_aspetta == FALSE` e
 **vengono buttati — compreso l'ultimo**, quello con la finestra già sparita. Poi la scena è ferma e
 Mutter non manda più niente (cadenza `0/1`: *«un fotogramma quando cambia qualcosa»*). ⇒ L'utente
 resta a guardare il **primo** fotogramma della raffica, finché un movimento non ne produce un altro.
@@ -5933,7 +5896,7 @@ erano PERSI)»* — perché il numero che conta non è che la cura c'è: è **qu
 > ⇒ ⚠ *Un difetto che si manifesta in un caso limite può costare in tutti gli altri, in silenzio.*
 > La lezione per intero è in `LEZIONI.md` §6.5.
 >
-> ⏳ **E ora la misura di latenza va rifatta**: i `[M]` 41 ms della coda della fase 4 sono di prima
+> ⏳ **E ora la misura di latenza va rifatta**: la `[M]` della coda della fase 4 è di prima
 > di questa cura, e su una configurazione diversa. Il numero vero non lo sappiamo ancora.
 
 *⚠ L'orologio della macchina di prova è **UTC**, cioè due ore indietro rispetto al nostro: le ore
@@ -5990,7 +5953,7 @@ file cresce. Un tasto rilasciato ferma il file **all'istante**.
 | | |
 |---|---|
 | `[M]` **la ripetizione esiste, e si misura** | 1016 righe in ~30 s ⇒ **~33 battute al secondo** sul desktop vero |
-| `[M]` **il rilascio la ferma di netto** | fra l'ultima battuta e la riga del registro che dichiara il rilascio: **1 ms · 15 ms · 28 ms** nelle tre prove |
+| `[M]` **il rilascio la ferma di netto** | fra l'ultima battuta e la riga del registro che dichiara il rilascio non passa quasi niente, nelle tre prove |
 
 ⚠ **Che cosa è finto in questa prova, dichiarato**: il *keydown* nasce da `dispatchEvent` dentro la
 pagina, perché il pilota del browser non sa **tenere premuto** un tasto (manda sempre giù-e-su
@@ -6356,14 +6319,14 @@ riattacco si ritrova tutto.
 
 | | |
 |---|---|
-| **figlio** | **2 tick in 120 s** ⇒ ~0,017 % di un nucleo |
-| **gnome-shell** | 33 tick ⇒ 0,27 % |
+| **figlio** | CPU vicina a zero |
+| **gnome-shell** | CPU vicina a zero |
 | **fotogrammi spediti** | **0** |
 | **righe nuove in `mutter.log`** | **0** — ⭐ il difetto di v1 non c'è |
 | figlio · gnome-shell · terminale | tutti e tre **vivi** |
 
 ⭐ **Il confronto che dà il senso al numero**: con un client attaccato e la scena ferma il figlio
-consuma **0,63 tick al secondo**; senza nessuno, **0,017**. ⇒ **37 volte meno**: il ciclo di cattura
+consuma poco; senza nessuno, **decine di volte meno**: il ciclo di cattura
 si ferma davvero quando non guarda nessuno, non gira a vuoto.
 
 ⭐ E il figlio non tace: ogni 60 secondi scrive *«"prova" ricontrollato: uid 1001, pid 476758, padre
@@ -6461,14 +6424,13 @@ accumularsi* — è quello il modo in cui questa roba si rompe alla seconda volt
 
 | | giro 1 | giro 2 | giro 3 |
 |---|---|---|---|
-| ms fino al desktop | 1430 | 1318 | **1164** |
 | primo fotogramma | CHIAVE | CHIAVE | CHIAVE |
 | **descrittori del figlio** | **41** | **41** | **41** |
 | `gnome-shell` | 390241 | 390241 | 390241 |
 | battute arrivate al testimone | +18 | +18 | +18 |
 | tasti rimasti giù | 0 | 0 | 0 |
 
-⭐ E i tempi **calano** invece di crescere: 1430 → 1318 → 1164 ms.
+⭐ E i tempi fino al desktop **calano** invece di crescere, da un giro all'altro.
 
 #### `[M]` I due giri sporchi — il filo tagliato
 
@@ -6476,7 +6438,7 @@ accumularsi* — è quello il modo in cui questa roba si rompe alla seconda volt
 |---|---|---|
 | stacco | `30492 ms senza un PACCHETTO` | `30939 ms` |
 | descrittori, prima e dopo | 41 → 41 | 41 → 41 |
-| riaggancio successivo | ✅ 1245 ms, 894 colori | ✅ 2007 ms, 894 colori |
+| riaggancio successivo | ✅ 894 colori | ✅ 894 colori |
 
 #### ⭐ Il bilancio, su tutti e sei gli attacchi
 
@@ -6585,7 +6547,7 @@ vera** — ma sono **due** cose diverse che si chiamano tutt'e due «sessione»:
 
 | | che cos'è | destino |
 |---|---|---|
-| **il gestore d'utente** — `user@1001.service`, logind `8799`, `Class=manager` | il *linger*: il bus, `/run/user/1001`, i servizi d'utente | ⭐ **non muore mai**. `[M]` attivo dalle 13:13, ore prima. **È deliberato**: è la cura che ha portato il bus di sessione da **2,6 s a 18 ms** |
+| **il gestore d'utente** — `user@1001.service`, logind `8799`, `Class=manager` | il *linger*: il bus, `/run/user/1001`, i servizi d'utente | ⭐ **non muore mai**. `[M]` attivo dalle 13:13, ore prima. **È deliberato**: è la cura che ha reso il bus di sessione pronto quasi subito |
 | **la sessione grafica** — `gnome-session`, `gnome-shell`, logind `Class=user` `remotix` | il desktop, e i programmi dentro | ⛔ **questa** muore: al logout, e allo scadere dell'abbandono |
 
 ⇒ Chi guarda `loginctl` o `/run/user/1001` dopo una chiusura **vede qualcosa di vivo e conclude che
@@ -6667,16 +6629,9 @@ il motivo, è il fatto — *una sessione finita si rientra dal modulo*.
 
 ### ⏱ I tempi, misurati (16 agosto 2026, 20 giri, GPU integrata)
 
-| fase | mediana | p90 | max |
-|---|---|---|---|
-| login → richiesta della sessione | 244 ms | 300 ms | 301 ms |
-| ⛔ richiesta → palco montato | **2907 ms** | 16969 ms | 17885 ms |
-| palco → primo fotogramma | 84 ms | 89 ms | 91 ms |
-| ⭐ **TOTALE login → desktop** | **3211 ms** | 17255 ms | 18158 ms |
-
-⭐ **Il giro tipico è 3,2 s**, e di questi ~2,9 sono `gnome-session` che si alza: quel che facciamo noi
-sta in ~330 ms. ⛔ **La coda no**: circa un giro su sette costa 13-18 secondi, e sotto c'è il
-**punto aperto** qui sotto.
+*(Le cifre sono state tolte con la fase 18; restano in git.)* ⭐ Nel giro tipico il grosso del tempo
+login → desktop è `gnome-session` che si alza, e quel che facciamo noi è una parte piccola. ⛔ **La
+coda no**: circa un giro su sette costava molto di più, e sotto c'è il **punto aperto** qui sotto.
 
 ### ⭐⭐⭐ VENTI GIRI DAL BROWSER VERO — la misura che l'utente aveva chiesto
 
@@ -6686,16 +6641,10 @@ non il banco: è l'unico modo di misurare effettivamente quello che accade».*
 `[M]` 16 agosto 2026, Chrome su questo portatile → il server, venti cicli **accesso → desktop →
 `Ctrl+Alt+Fine` → conferma → modulo di accesso**, senza mai toccare il banco.
 
-| fase | mediana |
-|---|---|
-| nascita del figlio → tela dichiarata dal browser | 968 ms |
-| tela → avvio di `gnome-session` | 214 ms |
-| avvio → palco montato | 850 ms |
-| palco → **primo fotogramma spedito** | 45 ms |
-| ⭐ **TOTALE, «Collegati» → desktop** | **2087 ms** |
-
-⭐ **p90 2142 ms · minimo 1968 · massimo 2155.** ⇒ **187 ms di dispersione su venti giri**: nessuna
-punta, nessun giro lento.
+⭐ I tratti misurati — nascita del figlio → tela dichiarata dal browser, tela → avvio di
+`gnome-session`, avvio → palco montato, palco → **primo fotogramma spedito** — danno un totale
+**«Collegati» → desktop** dentro il criterio dell'utente, con una dispersione piccola su venti giri:
+nessuna punta, nessun giro lento.
 
 ⭐ E le tre cose che facevano paura sono a zero:
 
@@ -6706,7 +6655,7 @@ punta, nessun giro lento.
 | figlio fermo ad aspettare senza provare | **0** |
 | congedi `0x10` puliti | **21 su 21** |
 
-⚠ E il **secondo fisso** dell'ammissione è quasi metà del totale (968 ms su 2087): è la difesa dalla
+⚠ E il **secondo fisso** dell'ammissione è quasi metà del totale: è la difesa dalla
 forza bruta — senza, si leggerebbe **col cronometro** la differenza fra «l'utente non esiste» e «la
 parola è sbagliata», che §4.4 vieta di dire a parole.
 
@@ -6715,15 +6664,7 @@ parola è sbagliata», che §4.4 vieta di dire a parole.
 `[M]` Stessa prova col browser, ma con **la sessione grafica mai avviata** — nessun desktop in
 memoria, tutto da freddo:
 
-| | |
-|---|---|
-| nascita del figlio → tela dal browser | 1074 ms |
-| tela → avvio di `gnome-session` | 229 ms |
-| avvio → palco | 952 ms |
-| palco → primo fotogramma | 98 ms |
-| ⭐ **TOTALE a freddo** | **2353 ms** |
-
-⇒ ⭐ **Il caso peggiore riproducibile è 2,4 secondi**, non diciotto. ⚠ E il criterio è dell'utente:
+⇒ ⭐ **Anche il caso peggiore riproducibile sta nel criterio**, lontano dai diciotto. ⚠ E il criterio è dell'utente:
 *«se il tempo medio fra la parola d'ordine e la comparsa del desktop è circa 2 secondi va bene. Ma
 non va bene se i secondi diventano 18»*.
 
@@ -6771,36 +6712,31 @@ non va bene se i secondi diventano 18»*.
 >
 > | fase | ⛔ prima | ⭐ dopo |
 > |---|---|---|
-> | login → richiesta | 244 ms | 1192 ms |
-> | **richiesta → palco** | 2907 ms · p90 **16969** | **900 ms** · p90 950 |
-> | palco → 1° fotogramma | 84 ms | 85 ms |
-> | ⭐ **TOTALE al desktop** | 3211 ms · p90 **17255** · max **18158** | **2164 ms** · p90 **2242** · max **2294** |
 > | fotogrammi alla misura sbagliata | 1 su 1 a `1920x1080` | ⭐ **nessuno**: tutti a `2544x926` |
 >
-> ⇒ ⭐ **Mediana −33%, p90 −87%, massimo −87%.** E i venti giri stanno fra **2067 e 2294 ms**: la
-> dispersione totale è **227 ms**, cioè il tempo del desktop adesso è un *numero*, non un intervallo.
+> ⇒ ⭐ **La coda è sparita**: il tempo del desktop adesso è un *numero*, non un intervallo.
 >
-> ⚠ `login → richiesta` cresce da 244 ms a 1192 perché adesso il **secondo fisso** dell'ammissione
+> ⚠ `login → richiesta` cresce perché adesso il **secondo fisso** dell'ammissione
 > sta sul percorso critico: la sessione non può nascere prima che il cliente sia ammesso e abbia
 > dichiarato la finestra. ⭐ Ed è pagato con gli interessi dal pezzo dopo.
 
-- ⛔⛔ **LA CODA: un giro su sette costa 13-18 secondi** — ⭐ **causa trovata**, vedi il riquadro qui
+- ⛔⛔ **LA CODA: un giro su sette costava molte volte il giro tipico** — ⭐ **causa trovata**, vedi il riquadro qui
   sopra. Qui resta il diario di come ci si è arrivati, che vale più della causa. `[M]`
   Quel che si è ESCLUSO con la misura, e ognuno era una diagnosi che sembrava giusta:
 
   | ipotesi | come è stata esclusa |
   |---|---|
   | l'attesa che raddoppia (1→2→4→…→30 s) | ⭐ era **vera** e curata (vedi sotto), ma la coda resta |
-  | il gestore d'utente che rinasce | curato col **linger**: bus 2,6 s → **18 ms** `[M]`, coda invariata |
+  | il gestore d'utente che rinasce | curato col **linger**: bus pronto quasi subito `[M]`, coda invariata |
   | il sondaggio a Mutter da 5 s | tetto sceso a 400 ms, coda invariata; e `[M]` quel tetto non scatta mai |
   | un passo lento dentro `prendi_il_palco` | ⏱ i tre cronometri **tacciono**: nessun passo sopra 250 ms |
   | il figlio che aspetta invece di provare | ⏳ **nessuna riga**: non sta aspettando |
 
-  ⇒ ⚠ Nei 17 secondi il figlio **non scrive niente, non aspetta e non ha passi lenti**: le tre cose
+  ⇒ ⚠ Nella coda il figlio **non scrive niente, non aspetta e non ha passi lenti**: le tre cose
   insieme non tornano, quindi manca ancora un pezzo di strumentazione. ⭐ **Il sospettato che
   resta**, ed è l'unica regione non ancora cronometrata: il **montaggio della cattura dopo
   `mutter_apri`** — `ATTESA_AVVIO_S 10` in `cattura.c` e `ATTESA_NODO_MS 10000` in `mutter.c`.
-  Dieci secondi più l'avvio del compositore fanno proprio i diciassette.
+  Dieci secondi più l'avvio del compositore spiegherebbero la coda.
 
   ⛔⛔ **E LA RAGIONE PER CUI CI SONO VOLUTE SEI DIAGNOSI È UNA SOLA, ed è la peggiore possibile:
   il figlio non aveva la parlantina.**
@@ -6822,7 +6758,7 @@ non va bene se i secondi diventano 18»*.
   nascita chiesta 0 ms fa»* — e i due numeri insieme dicono tutto: raddoppiava, e la guardia non
   poteva scattare perché si arma solo quando la sessione risulta **morta**, mentre i giri lenti sono
   proprio quelli in cui la precedente **sta ancora chiudendo** (`State=closing`). ⇒ Adesso: se
-  qualcuno guarda, si riprova ogni **200 ms**. p90 da 21,2 s a 17,3 s, e le punte a 30 s sparite.
+  qualcuno guarda, si riprova ogni **200 ms**, e le punte a 30 s sono sparite.
 
 ### 7 · Il giudizio dell'utente
 
@@ -6835,7 +6771,7 @@ data, e niente altro.
 
 | quando | che cosa ha detto | su che cosa |
 |---|---|---|
-| 16 ago | *«Se il tempo medio tra l'inserimento della password e la comparsa del desktop è circa 2 secondi va bene. Ma non va bene se i secondi diventano 18»* | il criterio dei tempi — `[M]` mediana **2087 ms**, peggiore caso a freddo **2353 ms** |
+| 16 ago | *«Se il tempo medio tra l'inserimento della password e la comparsa del desktop è circa 2 secondi va bene. Ma non va bene se i secondi diventano 18»* | il criterio dei tempi — `[M]` mediana e caso peggiore a freddo **dentro il criterio** |
 | 16 ago | *«Mi ritengo più che soddisfatto così»* | i tempi, dopo la misura |
 | 16 ago | *«Il menù di sistema è corretto. L'utente non può spegnere, riavviare o mandare in standby la macchina»* | §1.1 e `DECISIONI.md` §4.7 |
 | 16 ago | *«Niente timeout delle 6 ore: se dopo 60 minuti non c'è traccia di input la sessione viene killata»* | il terzo orologio — `DECISIONI.md` §4.8 |
