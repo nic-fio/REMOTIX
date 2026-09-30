@@ -74,20 +74,16 @@ BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
 # ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  OpenH264 (il ripiego H.264),
 #   SVT-AV1 (il ripiego AV1), libopus (l'audio).  `[M]` 30 set, i depositi: Fedora 44
-#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus/libyuv da fedora;
+#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus da fedora;
 #   Alma 10 openh264 SOLO dal deposito Cisco per EPEL (epel-cisco-openh264, da
-#   aggiungere), svt-av1 da EPEL, opus da AppStream, libyuv NON C'E'; openSUSE
+#   aggiungere), svt-av1 da EPEL, opus da AppStream; openSUSE
 #   libopenh264 da repo-openh264 (codecs.opensuse.org: quello di repo-oss e' la copia
 #   vuota), il resto da repo-oss.
 BuildRequires:  pkgconfig(openh264)
 BuildRequires:  pkgconfig(SvtAv1Enc)
 BuildRequires:  pkgconfig(opus)
-# ⚠ libyuv: la conversione dei colori, decisione ancora APERTA (il codice potrebbe
-#   farla da se', `colori709.c`).  Se esce, si toglie SOLO questo blocco.  Su Alma 10
-#   libyuv non c'e' in nessun deposito (`[M]` 30 set): lì si costruisce senza.
-%if ! 0%{?rhel}
-BuildRequires:  pkgconfig(libyuv)
-%endif
+# ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1);
+#   tolta il 30 set (T10).
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)

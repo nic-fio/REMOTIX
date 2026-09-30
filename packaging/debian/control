@@ -15,7 +15,6 @@ Build-Depends: debhelper-compat (= 13),
                libopenh264-dev,
                libsvtav1enc-dev,
                libopus-dev,
-               libyuv-dev,
                libei-dev (>= 1.1),
                libxkbcommon-dev,
                libgbm-dev,
@@ -27,8 +26,9 @@ Build-Depends: debhelper-compat (= 13),
 #   podman: Debian 13 tutto in main (libopenh264-8 2.6.0, libsvtav1enc2 2.3.0,
 #   libopus0 1.5.2, libva2 2.22); Ubuntu 26.04 libopenh264-8 e libsvtav1enc2 in
 #   universe, il resto in main.
-#   ⚠ libyuv-dev: la conversione dei colori, decisione ancora APERTA (il codice
-#   potrebbe farla da se', `colori709.c`): se esce, si toglie SOLO quella riga.
+#   ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`,
+#   fasi/18 §1) — tolta il 30 set (T10: dpkg-checkbuilddeps la chiedeva e il
+#   contenitore della fase 18 non la porta).
 # ⚠ ngtcp2 1.25.0 e nghttp3 1.18.0 NON sono nelle Build-Depends: le porta il
 #   contenitore di costruzione (src/costruzione/quic-statiche.sh), statiche e a
 #   versione fissata (fasi/17 §6.3; D2 chiusa, DECISIONI §10.6).  Il campo
