@@ -6144,6 +6144,18 @@ aggiornamento del sistema, non di REMOTIX»*. ⇒ Quando e come aggiornare, e l'
 sono dell'amministratore. A REMOTIX resta solo di **non chiudere da sé i desktop** quando il suo pacchetto
 viene aggiornato insieme al resto (R7, già garantito dalla T7). **R8 (la soglia di tempo) è tolta.**
 
+### 10.25 ✅ Priorità: togliere ffmpeg, prima di T10 — e le prove col massimo parallelismo
+
+Parole dell'utente (30 set 2026): *«se togliere ffmpeg non comporta impatti su REMOTIX leviamolo pure»*; *«con
+la sostituzione di ffmpeg dovremo rifare tutti i test: di funzionalità e di performance»*; *«diamo priorità a
+ffmpeg, a condizione che i test vengano svolti, dove possibile, con il massimo parallelismo. Per i test
+funzionali vanno bene 4 scatole con i 4 DE»*. ⇒ **Fase 18** (`fasi/18-senza-ffmpeg.md`): libva diretta per la
+codifica sulla scheda, OpenH264 e SVT-AV1 per il ripiego software, libopus diretta, conversione dei colori
+senza libswscale. **Condizione**: entra solo se indistinguibile — suite completa della fase 15 verde sulle 4
+scatole in parallelo, campagna della fase 16 (una configurazione alla volta: le prestazioni non si misurano in
+parallelo) con ritardo e qualità uguali a oggi; altrimenti resta ffmpeg e si riapre la licenza. Poi
+l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prodotto definitivo.
+
 ---
 
 ## Come si tiene questo documento
