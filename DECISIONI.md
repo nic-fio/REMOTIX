@@ -6119,6 +6119,21 @@ un legale»*.
   dipendenza, non la tocca. I **brevetti** dei codec (H.264, HEVC) restano una questione a parte per chi
   vende.
 
+### 10.23 ✅ D14: REMOTIX si aggiorna col sistema — niente sistema di aggiornamento nostro
+
+Parole dell'utente (30 set 2026): *«una volta installato sul server un apt upgrade si occupa del resto dei
+pacchetti»*; *«resta solo la questione di rigenerare l'installer»*. ⇒
+- REMOTIX (e il pacchetto `remotix-install`) si aggiornano **quando l'amministratore aggiorna il sistema**
+  (`apt upgrade`, `dnf upgrade`, `zypper up`, `pacman -Syu`), o con gli aggiornamenti automatici della
+  distribuzione se lui li ha accesi — come ogni altro programma del server. **Via il timer** `remotix-aggiorna`
+  e la domanda «che cosa si aggiorna da solo» (sostituisce §10.10, punto «aggiornamento automatico»).
+- Restano nel **pacchetto**: il riavvio che non chiude i desktop (T7); su Arch/Tumbleweed il legame al soname di
+  ffmpeg che blocca un aggiornamento incompatibile finché non ricostruiamo; il ritorno indietro coi comandi del
+  gestore.
+- **A ogni versione**, un solo comando di rilascio: ricostruire i pacchetti delle tre famiglie, ricostruire
+  l'installatore (le due costruzioni) e pubblicarne lo sha256, aggiornare il catalogo (dentro `remotix-install`),
+  firmare e pubblicare l'archivio (sul VPS, D10).
+
 ---
 
 ## Come si tiene questo documento

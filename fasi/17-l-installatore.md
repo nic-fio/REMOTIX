@@ -1147,7 +1147,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D11** | ✅ **SEMPLIFICATA il 30 set**: una chiave sola, quella dell'archivio; installatore verificato con lo sha256; catalogo dentro il pacchetto (`DECISIONI.md` §10.21). Resta: dove si custodisce la chiave (con D10) | con D10 | — |
 | **D12** | ✅ **CHIUSA il 30 set: Gio** (`DECISIONI.md` §10.19) — la GUI disegnata dal programma stesso, identica sui quattro desktop, senza browser; la TUI con una libreria Go nello stesso programma | — | — |
 | **D13** | ✅ **CHIUSA il 30 set**: il prototipo è la base, con piccoli miglioramenti (§10.20) | — | — |
-| **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta ⭐ **T8 l'ha resa configurabile senza deciderla**: `/etc/remotix/aggiornamenti.conf`, `automatico = manutenzione` (predefinito = questa proposta) · `tutto` · `avviso` (l'alternativa) · `spento`; la regola che separa le due cose è il numero di versione (cambia X.Y di X.Y.Z ⇒ annuale; Z o la revisione del pacchetto ⇒ manutenzione). Decidere D14 = scegliere il predefinito |
+| **D14** | ✅ **CHIUSA il 30 set**: REMOTIX si aggiorna col sistema (`apt upgrade`…), niente timer nostro; a ogni versione un comando di rilascio rigenera pacchetti, installatore (sha256), catalogo e archivio (`DECISIONI.md` §10.23) | — | — |
 
 **Le scelte di chi installa: quasi nessuna** (indicazione dell'utente, 29 set: *«non riesco ad immaginare
 grandi scelte da parte dell'utente sull'installazione di REMOTIX, se non solamente la porta»*):
