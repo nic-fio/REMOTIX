@@ -38,3 +38,4 @@ Se non ci arriva: resta ffmpeg, e la licenza si riapre.
 
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
+| `1db22a3` `acf4698` | linea A: l'audio con **libopus diretta** (`src/audio.c`), senza libavcodec; complessità 10 e VBR non vincolato scritti esplicitamente (erano i valori dell'involucro di ffmpeg, diversi dal predefinito di libopus) | licenza (§10.22) | `[M]` banco `banchi/18-a1`, 42 s di segnale misto: pacchetti **identici byte per byte** al vecchio, 0 campioni diversi su 4 032 000 in decodifica; Chrome 154 col decodificatore WebAssembly della pagina: 1 860 pacchetti, 0 rifiutati. ⚠ Prodotto intero col browser non ancora provato (lo fa la suite) | no |
