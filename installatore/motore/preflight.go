@@ -742,7 +742,7 @@ func PamBase(fam string) []string {
 	case "fedora":
 		return []string{"password-auth", "postlogin", "system-auth"}
 	case "suse":
-		return []string{"common-auth", "common-account", "common-session-nonlogin", "common-password"}
+		return []string{"common-auth", "common-account", "common-session", "common-password", "postlogin-auth", "postlogin-session"}
 	case "arch":
 		return []string{"system-remote-login", "system-auth"}
 	}

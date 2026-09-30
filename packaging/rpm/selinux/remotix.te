@@ -1,0 +1,161 @@
+policy_module(remotix, 1.0.0)
+
+# remotix.te — il modulo SELinux di REMOTIX (fase 17, T6; `fasi/17-l-installatore.md` §11.1 B, R19).
+#
+# ⭐ Perche' esiste.  `DECISIONI.md` §10.18 (D3): il file PAM di REMOTIX e' la pila di sshd, con
+#    `pam_selinux close/open`.  `pam_selinux open` chiede che il prossimo `execve` passi al contesto
+#    dell'utente (`unconfined_t` per un utente normale) — ed e' il figlio di REMOTIX a farlo, quando si
+#    rilancia come l'utente (`figlio.c`, `execve` di se stesso).  Nel contesto di un servizio
+#    qualunque (`unconfined_service_t`) quel passaggio e' vietato: `[M]` T1c, 29 set, Fedora e Alma:
+#    `{ transition } unconfined_service_t → unconfined_t`, il figlio esce con 37 e il desktop non nasce.
+#    ⇒ Come Cockpit (`selinux/cockpit.te`: `cockpit_session_t`), REMOTIX ha un dominio SUO, che e'
+#    un «programma d'accesso» come sshd e login (`auth_login_pgm_domain`) e che puo' passare al
+#    contesto dell'utente (`userdom_spec_domtrans_all_users`, `unconfined_domtrans`).
+#
+# ⭐ I tipi:
+#    remotix_t            il servizio (il padre, l'aiutante PAM, il figlio fino al suo `execve`)
+#    remotix_exec_t       /usr/libexec/remotix/remotix
+#    remotix_port_t       la porta 7447, TCP (la pagina) e UDP (QUIC): `remotix_porta.cil`
+#    remotix_var_lib_t    /var/lib/remotix (certificati, ban, registro del motore)
+#    remotix_var_run_t    /run/remotix
+#
+# ⚠ Le regole sono quelle MISURATE (`[M]` sulle VM, il dominio prima in «permissive» e ogni rifiuto
+#   letto con `ausearch -m avc`): una regola che non ha una misura dietro non c'e'.  Dove una misura
+#   non c'e' ancora (un ramo raro del codice), il rifiuto si vede nel giornale di audit e la
+#   cura e' `semanage permissive -a remotix_t` finche' la regola non entra qui.
+#
+# Si costruisce con `make -f /usr/share/selinux/devel/Makefile remotix.pp` (lo fa lo spec, nel
+# contenitore di ogni bersaglio: le interfacce sono quelle della politica di QUELLA distribuzione).
+
+########################################
+#
+# Le dichiarazioni
+#
+
+type remotix_t;
+type remotix_exec_t;
+# ⭐ come sshd (`init_ranged_daemon_domain(sshd_t, sshd_exec_t, s0 - mcs_systemhigh)`): il servizio
+#    ha tutte le categorie, e `pam_selinux` da' all'utente il suo livello intero
+#    (unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023, come a chi entra con ssh).  `[M]` con
+#    `init_daemon_domain` il palco nasceva «s0» soltanto.
+# ⚠ Tutte e due le righe: in Fedora `init_ranged_daemon_domain` NON chiama piu' init_daemon_domain
+#   (e' commentata nell'interfaccia), e da sola lascia systemd senza il permesso di eseguire il
+#   programma (`[M]` `{ getattr } init_t → remotix_exec_t`, 203/EXEC).
+init_daemon_domain(remotix_t, remotix_exec_t)
+init_ranged_daemon_domain(remotix_t, remotix_exec_t, s0 - mcs_systemhigh)
+
+type remotix_port_t;
+corenet_port(remotix_port_t)
+
+type remotix_var_lib_t;
+files_type(remotix_var_lib_t)
+
+type remotix_var_run_t;
+files_pid_file(remotix_var_run_t)
+
+########################################
+#
+# Il servizio
+#
+
+# ── i privilegi di root che il servizio usa: scendere all'uid dell'utente (setuid, setgid, i
+#    gruppi), leggere e cambiare i file degli utenti che il figlio prepara, i limiti del palco
+allow remotix_t self:capability { chown dac_override dac_read_search fowner fsetid kill setgid setuid sys_nice sys_resource };
+allow remotix_t self:process { setexec setrlimit setsched signal_perms getsched };
+allow remotix_t self:fifo_file rw_fifo_file_perms;
+allow remotix_t self:unix_stream_socket { create_stream_socket_perms connectto };
+allow remotix_t self:unix_dgram_socket create_socket_perms;
+allow remotix_t self:netlink_kobject_uevent_socket create_socket_perms;
+
+# ── la rete: la pagina (TCP) e QUIC/WebTransport (UDP) sulla porta di REMOTIX
+allow remotix_t self:tcp_socket create_stream_socket_perms;
+allow remotix_t self:udp_socket create_socket_perms;
+allow remotix_t remotix_port_t:tcp_socket name_bind;
+allow remotix_t remotix_port_t:udp_socket name_bind;
+corenet_tcp_bind_generic_node(remotix_t)
+corenet_udp_bind_generic_node(remotix_t)
+corenet_tcp_sendrecv_generic_if(remotix_t)
+corenet_udp_sendrecv_generic_if(remotix_t)
+
+# ── i suoi file
+manage_dirs_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
+manage_files_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
+files_var_lib_filetrans(remotix_t, remotix_var_lib_t, dir)
+
+manage_dirs_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+manage_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+manage_sock_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
+files_pid_filetrans(remotix_t, remotix_var_run_t, dir)
+
+# il figlio si rilancia: `execve` dello stesso programma (poi il passaggio all'utente, qui sotto)
+can_exec(remotix_t, remotix_exec_t)
+
+# ── la scheda: /dev/dri (i gruppi dei nodi, la prova del buffer prima di labwc)
+dev_rw_dri(remotix_t)
+dev_read_sysfs(remotix_t)
+dev_read_urand(remotix_t)
+dev_read_rand(remotix_t)
+
+# ── il sistema: /proc, /etc, le librerie, i certificati, il giornale
+kernel_read_system_state(remotix_t)
+kernel_read_network_state(remotix_t)
+kernel_read_kernel_sysctls(remotix_t)
+files_read_etc_files(remotix_t)
+files_read_usr_files(remotix_t)
+files_search_var_lib(remotix_t)
+fs_getattr_all_fs(remotix_t)
+miscfiles_read_localization(remotix_t)
+miscfiles_read_generic_certs(remotix_t)
+logging_send_syslog_msg(remotix_t)
+corecmd_exec_bin(remotix_t)
+corecmd_exec_shell(remotix_t)
+init_read_state(remotix_t)
+
+########################################
+#
+# L'accesso: PAM, logind, il passaggio all'utente — come sshd
+#
+
+# la pila PAM intera, pam_selinux compreso (la stessa interfaccia di sshd, login e cockpit-session)
+auth_login_pgm_domain(remotix_t)
+auth_use_nsswitch(remotix_t)
+auth_read_shadow(remotix_t)
+auth_domtrans_chk_passwd(remotix_t)
+auth_write_login_records(remotix_t)
+
+# `pam_systemd` apre la sessione logind (D-Bus di sistema)
+dbus_system_bus_client(remotix_t)
+optional_policy(`
+	systemd_dbus_chat_logind(remotix_t)
+')
+
+# ⭐ il passaggio al contesto dell'utente all'`execve` del figlio, senza AT_SECURE (l'ambiente il
+#    figlio lo compone da se', `figlio.c` punto 5): come `cockpit_session_t`
+userdom_spec_domtrans_all_users(remotix_t)
+userdom_noatsecure_login_userdomain(remotix_t)
+# ⭐ il figlio si rilancia COME L'UTENTE eseguendo se stesso: il programma e' il punto d'ingresso del
+#    dominio dell'utente.  `[M]` 30 set, fedora44-gnome-iso: `{ entrypoint } unconfined_t →
+#    remotix_exec_t`, il figlio esce con 37.  (sshd e cockpit non ne hanno bisogno: eseguono una
+#    shell o `cockpit-bridge`, file che i domini degli utenti possono gia' eseguire.)
+gen_require(`
+	attribute userdomain;
+')
+allow userdomain remotix_exec_t:file { entrypoint execute getattr map open read };
+
+# ⭐ il padre chiude il palco che ha fatto nascere (l'abbandono, il riavvio a desktop vivo): segnali
+#    al dominio dell'utente.  `[M]` fedora44-gnome-iso, dominio in permissive e dontaudit spento:
+#    `{ signal } remotix_t → unconfined_t`.  Come cockpit (`userdom_signal_all_users`).
+userdom_signal_all_users(remotix_t)
+userdom_kill_all_users(remotix_t)
+
+# ⚠ Due rifiuti che non tolgono niente, e che si TACCIONO (`[M]` alma10-gnome-iso e fedora44-gnome-iso,
+#   permissive e dontaudit spento, una sessione intera con riavvio del servizio a desktop vivo):
+#   · `net_admin`: sd-journal e sd-bus provano SO_SNDBUFFORCE sui loro socket e, senza, tengono il
+#     buffer di serie — lo stesso rifiuto che la politica tace per i servizi di systemd;
+#   · `cap_userns sys_ptrace`: il ritrovo dei palchi (`ritrovo.c`) scorre /proc di TUTTI i processi, e
+#     quelli dentro uno spazio utente (bwrap, flatpak, glycin) non sono nostri: saltarli e' giusto.
+dontaudit remotix_t self:capability net_admin;
+dontaudit remotix_t self:cap_userns sys_ptrace;
+optional_policy(`
+	unconfined_domtrans(remotix_t)
+')

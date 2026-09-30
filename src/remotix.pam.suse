@@ -5,13 +5,22 @@
 #      tiene i file dei pacchetti in /usr/lib/pam.d, e /etc/pam.d resta
 #      all'amministratore (un suo /etc/pam.d/remotix vince sul nostro).
 #
-# ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3): lo stesso mestiere di
-#    `remotix.pam` (Debian), scritto con le pile di questa famiglia.  ⛔ Niente
-#    `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga sarebbe
-#    «illegal module type».  Modello: `tools/cockpit.suse.pam` di Cockpit.
+# ⭐ `DECISIONI.md` §10.18 (D3 chiusa, 30 set 2026): REMOTIX RISPECCHIA
+#    l'autenticazione del sistema.  Questo file e' /usr/lib/pam.d/sshd della
+#    distribuzione, riga per riga, con UNA riga in piu' in testa: root escluso.
+#    `[M]` 30 set, confronto con tumbleweed-kde-iso e leap16-kde (identici fra
+#    loro): 13 righe su 13 uguali (`banchi/17-t6/t6-leggi-pam.sh`).
+#    ⇒ Quel che l'amministratore mette in `common-*` con `pam-config` (per
+#      esempio `pam_faillock`) vale anche qui.
 #
-# ⚠ Le pile `common-*` le scrive `pam-config`: chi amministra la macchina le
-#   configura una volta e valgono anche qui (`CODER.md` §4.1).
+# ⚠ `common-session` (non piu' `common-session-nonlogin`): e' quella di sshd.
+#   Con SELinux acceso `pam-config` ci mette `pam_selinux close/open` (`[M]`
+#   Tumbleweed e Leap 16 in enforcing): la sessione dell'utente nasce nel SUO
+#   contesto, e il passaggio lo permette il modulo `remotix-selinux`.
+#   `pam_systemd` arriva da li' (senza, il desktop non nasce): non si ripete.
+#
+# ⛔ Niente `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga
+#    sarebbe «illegal module type».
 
 # ── auth
 # ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
@@ -19,27 +28,22 @@
 #    file elenca un nome per riga e si installa con dentro `root`.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 auth       requisite    pam_nologin.so
-#
-# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
-#   `pam_faillock` non lo mettiamo noi: se l'amministratore l'ha messo in
-#   `common-auth` arriva con quella pila.  La scelta e' dell'utente.
-auth       include      common-auth
+auth       substack     common-auth
+auth       include      postlogin-auth
 
 # ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)
-account    required     pam_nologin.so
-account    include      common-account
+account    requisite    pam_nologin.so
+account    substack     common-account
+account    include      postlogin-account
 
-password   include      common-password
+password   substack     common-password
+password   include      postlogin-password
 
 # ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
 #    fa nascere la sessione logind dell'utente.
-# ⚠ `optional`: le ragioni sono in `remotix.pam.fedora`.
-session    optional     pam_loginuid.so
+# ⚠ `pam_loginuid` `required` come sshd: le ragioni in `remotix.pam.fedora`.
+session    required     pam_loginuid.so
 session    optional     pam_keyinit.so force revoke
-# ⚠ `common-session-nonlogin` e `pam_systemd` per NOME, come su Debian
-#   (`common-session-noninteractive` + `pam_systemd`, vedi `remotix.pam`):
-#   la pila «di login» porta anche quel che serve a chi si siede davanti alla
-#   macchina.  ⛔ E `pam_systemd` non e' facoltativo nei fatti: senza, il
-#   desktop non nasce.
-session    include      common-session-nonlogin
-session    optional     pam_systemd.so
+session    substack     common-session
+session    include      postlogin-session
+session    optional     pam_motd.so

@@ -1,0 +1,3 @@
+/usr/libexec/remotix/remotix	--	gen_context(system_u:object_r:remotix_exec_t,s0)
+/var/lib/remotix(/.*)?			gen_context(system_u:object_r:remotix_var_lib_t,s0)
+/run/remotix(/.*)?			gen_context(system_u:object_r:remotix_var_run_t,s0)

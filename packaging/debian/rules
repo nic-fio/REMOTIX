@@ -68,6 +68,10 @@ override_dh_auto_install:
 	# Tutti e due conffile: dpkg li tiene al remove e li toglie al purge.
 	install -D -m 0644 src/remotix.pam         $(B)/etc/pam.d/remotix
 	install -D -m 0644 debian/utenti-negati    $(B)/etc/remotix/utenti-negati
+	# ufw: il profilo dell'applicazione «REMOTIX» (7447 TCP e UDP), DEFINITO e non
+	#    aperto (§10.12, come il servizio di firewalld nel .rpm): `ufw allow REMOTIX`
+	#    lo fa il motore, col consenso (D6), se ufw e' acceso (fasi/17 T6).
+	install -D -m 0644 debian/remotix.ufw      $(B)/etc/ufw/applications.d/remotix
 	# Il permesso di cattura di KWin.  ⛔ BYTE PER BYTE come lo scrive
 	# kwin_scrivi_permesso() (kwin.c:606) col binario in /usr/libexec/remotix:
 	# cosi' il programma lo trova uguale e non lo riscrive.  Il codice va

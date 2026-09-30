@@ -87,6 +87,16 @@ BuildRequires:  pkgconfig(gbm)
 Provides:       bundled(ngtcp2) = %{ngtcp2_ver}
 Provides:       bundled(nghttp3) = %{nghttp3_ver}
 
+# ⭐ SELinux (T6, `DECISIONI.md` §10.18): il PAM di REMOTIX e' quello di sshd, con
+#    `pam_selinux`; il passaggio al contesto dell'utente lo permette il modulo di
+#    REMOTIX, nel sottopacchetto remotix-selinux (come cockpit-ws-selinux).  Lo tira
+#    dentro il gestore di pacchetti SOLO dove c'e' la politica «targeted»: Fedora,
+#    Alma, openSUSE (Tumbleweed e Leap 16 sono in enforcing di serie).
+%global selinuxtype targeted
+BuildRequires:  selinux-policy-devel
+BuildRequires:  bzip2
+Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
+
 %if 0%{?fedora} || 0%{?rhel}
 # Il servizio firewalld e' DEFINITO nella cartella di firewalld-filesystem (niente
 # demone, niente regole): aprirlo e' del motore, col consenso (D6).
@@ -153,6 +163,19 @@ Ogni utente della macchina entra con la sua parola d'ordine; root no.
 ⚠ La codifica H.264 usa i codec e i driver della distribuzione: su Fedora e
 openSUSE servono RPM Fusion o Packman, che questo pacchetto non aggiunge.
 
+%package selinux
+Summary:        Il modulo SELinux di REMOTIX
+BuildArch:      noarch
+Requires(post): selinux-policy-%{selinuxtype}
+Requires(post): selinux-policy-base
+Requires(post): libselinux-utils
+Requires(post): policycoreutils
+
+%description selinux
+Il modulo SELinux del servizio REMOTIX: il dominio remotix_t, la porta 7447
+(remotix_port_t) e il passaggio al contesto dell'utente all'apertura della
+sessione, come per sshd.
+
 %prep
 %autosetup -n %{name}-%{version}
 
@@ -177,6 +200,17 @@ CFLAGS="$CFLAGS -fPIE"; LDFLAGS="$LDFLAGS -pie"
 %endif
 make pulisci >/dev/null
 make %{?_smp_mflags} tutto
+cd ..
+
+# Il modulo SELinux, con le interfacce della politica di QUESTA distribuzione.
+# ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
+#   costruisce il modulo col dominio in «permissive»: per MISURARE i rifiuti di una
+#   sessione intera in un giro solo.  ⛔ Mai in un pacchetto pubblicato.
+cd packaging/rpm/selinux
+%{?rx_selinux_permissivo:echo 'permissive remotix_t;' >> remotix.te}
+make -f %{_datadir}/selinux/devel/Makefile remotix.pp
+bzip2 -9 remotix.pp
+cd ../../..
 
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
@@ -222,6 +256,10 @@ install -D -m 0644 packaging/rpm/remotix-niente-sospensione.conf %{buildroot}%{_
 # rende noto un nome a firewalld e non cambia nessuna zona.  L'apertura
 # (`firewall-cmd --permanent --add-service=remotix`) e' del motore, col consenso.
 install -D -m 0644 packaging/rpm/remotix-firewalld.xml %{buildroot}%{_prefix}/lib/firewalld/services/remotix.xml
+
+# remotix-selinux: il modulo (il dominio) e la porta (portcon, in CIL)
+install -D -m 0644 packaging/rpm/selinux/remotix.pp.bz2 %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix.pp.bz2
+install -D -m 0644 packaging/rpm/selinux/remotix_porta.cil %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
 
 # I file che il servizio genera da se': dichiarati %%ghost, cosi' li conosce rpm
 # e la disinstallazione li toglie (origine DIRETTA, §6.6.4).  `[M]` T3 su
@@ -306,6 +344,30 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.nuovo
 
+# ⭐ remotix-selinux: gli scriptlet sono quelli della politica (come cockpit-ws-selinux).
+#   Il modulo si carica e basta: non accende niente (R40).  Il ricalcolo delle etichette
+#   si fa in %%posttrans, quando anche i file di remotix sono al loro posto (nella stessa
+#   transazione rpm li scrive con le etichette di PRIMA del modulo).
+%pre selinux
+%selinux_relabel_pre -s %{selinuxtype}
+
+%post selinux
+%selinux_modules_install -s %{selinuxtype} %{_datadir}/selinux/packages/%{selinuxtype}/remotix.pp.bz2 %{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
+
+%postun selinux
+%selinux_modules_uninstall -s %{selinuxtype} remotix_porta remotix
+
+%posttrans selinux
+%selinux_relabel_post -s %{selinuxtype}
+
+%files selinux
+%{_datadir}/selinux/packages/%{selinuxtype}/remotix.pp.bz2
+%{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
+%ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/remotix
+%ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/remotix_porta
+
 %changelog
+* Wed Sep 30 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
+- Fase 17, T6: il PAM di sshd (D3), il sottopacchetto remotix-selinux.
 * Tue Sep 29 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
 - Fase 17, T3: il primo pacchetto nativo per Fedora, Alma, Tumbleweed e Leap.

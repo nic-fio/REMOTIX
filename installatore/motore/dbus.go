@@ -1,7 +1,11 @@
 package motore
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -173,10 +177,25 @@ func dividiPorta(porta string) (string, string) {
 	return p, proto
 }
 
+// servizioDi: «servizio:remotix» ⇒ «remotix»; una porta ⇒ "".
+func servizioDi(regola string) string {
+	s, _ := strings.CutPrefix(regola, "servizio:")
+	if s == regola {
+		return ""
+	}
+	return s
+}
+
+// HaPorta: la regola (una porta «7447/tcp», o un servizio «servizio:remotix») c'è, viva o permanente?
 func (f *firewalldDBus) HaPorta(zona, porta string, permanente bool) (bool, error) {
-	p, proto := dividiPorta(porta)
 	var ok bool
+	s := servizioDi(porta)
+	p, proto := dividiPorta(porta)
 	if !permanente {
+		if s != "" {
+			err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.queryService", []any{&ok}, zona, s)
+			return ok, err
+		}
 		err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.queryPort", []any{&ok}, zona, p, proto)
 		return ok, err
 	}
@@ -184,34 +203,187 @@ func (f *firewalldDBus) HaPorta(zona, porta string, permanente bool) (bool, erro
 	if err != nil {
 		return false, err
 	}
+	if s != "" {
+		err = f.b.Chiama(fwNome, zp, fwNome+".config.zone.queryService", []any{&ok}, s)
+		return ok, err
+	}
 	err = f.b.Chiama(fwNome, zp, fwNome+".config.zone.queryPort", []any{&ok}, p, proto)
 	return ok, err
 }
 
 func (f *firewalldDBus) Aggiungi(zona, porta string, permanente bool) error {
+	s := servizioDi(porta)
 	p, proto := dividiPorta(porta)
 	if !permanente {
 		var z string
+		if s != "" {
+			return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.addService", []any{&z}, zona, s, int32(0))
+		}
 		return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.addPort", []any{&z}, zona, p, proto, int32(0))
 	}
-	zp, err := f.zonaConfig(zona)
-	if err != nil {
-		return err
-	}
-	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.addPort", nil, p, proto)
+	return f.AggiornaPermanente(zona, []string{porta}, nil)
 }
 
 func (f *firewalldDBus) Togli(zona, porta string, permanente bool) error {
+	s := servizioDi(porta)
 	p, proto := dividiPorta(porta)
 	if !permanente {
 		var z string
+		if s != "" {
+			return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.removeService", []any{&z}, zona, s)
+		}
 		return f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.removePort", []any{&z}, zona, p, proto)
 	}
+	return f.AggiornaPermanente(zona, nil, []string{porta})
+}
+
+// Conosce: firewalld conosce il servizio sia nelle regole vive sia in quelle permanenti. `[M]` T6:
+// un file nuovo in /usr/lib/firewalld/services non lo vede nessuna delle due fino al reload.
+func (f *firewalldDBus) Conosce(servizio string) (bool, error) {
+	var vive, perm []string
+	if err := f.b.Chiama(fwNome, fwPercorso, fwNome+".listServices", []any{&vive}); err != nil {
+		return false, err
+	}
+	if err := f.b.Chiama(fwNome, fwPercorso+"/config", fwNome+".config.getServiceNames", []any{&perm}); err != nil {
+		return false, err
+	}
+	return slices.Contains(vive, servizio) && slices.Contains(perm, servizio), nil
+}
+
+type portaFw struct{ Porta, Proto string }
+
+// impostazioni: le porte e i servizi permanenti della zona (getSettings2), e il resto come testo
+// in ordine, per l'impronta.
+func (f *firewalldDBus) impostazioni(zp string) (map[string]dbus.Variant, error) {
+	var m map[string]dbus.Variant
+	err := f.b.Chiama(fwNome, zp, fwNome+".config.zone.getSettings2", []any{&m})
+	return m, err
+}
+
+func portePermanenti(m map[string]dbus.Variant) []portaFw {
+	var r []portaFw
+	if v, ok := m["ports"]; ok {
+		if l, ok := v.Value().([][]any); ok {
+			for _, x := range l {
+				if len(x) == 2 {
+					a, _ := x[0].(string)
+					b, _ := x[1].(string)
+					r = append(r, portaFw{a, b})
+				}
+			}
+		}
+	}
+	return r
+}
+
+func serviziPermanenti(m map[string]dbus.Variant) []string {
+	if v, ok := m["services"]; ok {
+		if l, ok := v.Value().([]string); ok {
+			return l
+		}
+	}
+	return nil
+}
+
+// togliRegole: le porte e i servizi senza le regole date.
+func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []string) {
+	fuori := map[string]bool{}
+	for _, r := range via {
+		fuori[r] = true
+	}
+	var p2 []portaFw
+	for _, p := range porte {
+		if !fuori[p.Porta+"/"+p.Proto] {
+			p2 = append(p2, p)
+		}
+	}
+	var s2 []string
+	for _, s := range servizi {
+		if !fuori["servizio:"+s] {
+			s2 = append(s2, s)
+		}
+	}
+	return p2, s2
+}
+
+// StatoPermanente: l'impronta delle impostazioni permanenti della zona (tolte «senza»), in un
+// ordine che non dipende da firewalld; e se la zona è quella di serie (la proprietà «default»:
+// `[M]` falsa per public.xml in /etc/firewalld/zones, vera per work.xml in /usr/lib).
+func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bool, error) {
+	zp, err := f.zonaConfig(zona)
+	if err != nil {
+		return "", false, err
+	}
+	m, err := f.impostazioni(zp)
+	if err != nil {
+		return "", false, err
+	}
+	porte, servizi := togliRegole(portePermanenti(m), serviziPermanenti(m), senza)
+	var righe []string
+	for k, v := range m {
+		if k != "ports" && k != "services" {
+			righe = append(righe, k+"="+v.String())
+		}
+	}
+	for _, p := range porte {
+		righe = append(righe, "port="+p.Porta+"/"+p.Proto)
+	}
+	for _, s := range servizi {
+		righe = append(righe, "service="+s)
+	}
+	sort.Strings(righe)
+	h := sha256.Sum256([]byte(strings.Join(righe, "\n")))
+	v, err := f.b.Proprieta(fwNome, zp, fwNome+".config.zone.default")
+	if err != nil {
+		return "", false, err
+	}
+	diSerie, _ := v.(bool)
+	return hex.EncodeToString(h[:]), diSerie, nil
+}
+
+// AggiornaPermanente: le regole permanenti aggiunte e tolte in UNA scrittura (update2 con le sole
+// chiavi «ports» e «services»: firewalld tiene le altre com'erano). ⚠ Una scrittura per regola fa
+// nascere <zona>.xml.old (firewalld copia il file che c'era prima di riscriverlo).
+func (f *firewalldDBus) AggiornaPermanente(zona string, aggiungi, togli []string) error {
 	zp, err := f.zonaConfig(zona)
 	if err != nil {
 		return err
 	}
-	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.removePort", nil, p, proto)
+	m, err := f.impostazioni(zp)
+	if err != nil {
+		return err
+	}
+	porte, servizi := togliRegole(portePermanenti(m), serviziPermanenti(m), togli)
+	for _, r := range aggiungi {
+		if s := servizioDi(r); s != "" {
+			if !slices.Contains(servizi, s) {
+				servizi = append(servizi, s)
+			}
+			continue
+		}
+		p, proto := dividiPorta(r)
+		if !slices.Contains(porte, portaFw{p, proto}) {
+			porte = append(porte, portaFw{p, proto})
+		}
+	}
+	if porte == nil {
+		porte = []portaFw{}
+	}
+	if servizi == nil {
+		servizi = []string{}
+	}
+	nuove := map[string]dbus.Variant{"ports": dbus.MakeVariant(porte), "services": dbus.MakeVariant(servizi)}
+	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.update2", nil, nuove)
+}
+
+// RimettiDiSerie: la zona torna quella di /usr/lib/firewalld/zones (loadDefaults: il file in /etc se
+// ne va).
+func (f *firewalldDBus) RimettiDiSerie(zona string) error {
+	zp, err := f.zonaConfig(zona)
+	if err != nil {
+		return err
+	}
+	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.loadDefaults", nil)
 }
 
 // PorteVive: le porte (anche intervalli) aperte nella zona, per vedere l'intervallo 1025-65535 di
