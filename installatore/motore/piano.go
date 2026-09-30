@@ -252,7 +252,7 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 	switch g := amb.Firewall.Nome(); {
 	case !o.ApriFirewall:
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_no", ps)})
-	case g == "firewalld":
+	case g == "firewalld" || g == "ufw":
 		a := PianoFirewall("firewall", ps)
 		pn.Azioni = append(pn.Azioni, a)
 		pn.Consensi = append(pn.Consensi, a.Consenso)

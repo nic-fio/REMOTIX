@@ -328,11 +328,12 @@ func TestModificaConcorrente(t *testing.T) {
 	})
 }
 
-// R28 in piccolo: un passo che fallisce (qui: ufw, che il motore non sa ancora cambiare) ⇒
+// R28 in piccolo: un passo che fallisce (qui: nftables, che il motore non sa ancora cambiare; ufw
+// lo sa da T6) ⇒
 // l'operazione si annulla per intero, e la macchina è com'era.
 func TestFallimentoAnnullaTutto(t *testing.T) {
 	b := nuovoBanco(t)
-	os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("ufw"), 0o644)
+	os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("nftables"), 0o644)
 	b.piano = pianoDiProva(t, b.radice, filepath.Dir(b.radice), true)
 	b.prima = foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
@@ -349,7 +350,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 	for _, punto := range []string{"annulla-dopo-intenzione@unita", "annulla-dopo-effetto@file-sovrascritto", "stato:IN_ANNULLAMENTO@"} {
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
-			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("ufw"), 0o644)
+			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("nftables"), 0o644)
 			b.piano = pianoDiProva(t, b.radice, filepath.Dir(b.radice), true)
 			b.prima = foto(t, b.radice)
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", punto)

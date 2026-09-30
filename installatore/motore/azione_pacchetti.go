@@ -24,7 +24,8 @@ import (
 //     toglierebbe altri, si ferma); quelli AGGIORNATI restano aggiornati e si dichiarano
 //     (INDIRETTA, §6.6.4). Reversibilità AL_MEGLIO.
 //
-// parametri: file (percorso di un pacchetto locale, facoltativo), sha256 (del file), nomi
+// parametri: file (percorsi di pacchetti locali, facoltativi, separati da virgola: una transazione
+// sola — T6: remotix e remotix-selinux insieme), sha256 (uno per file, nello stesso ordine), nomi
 // (separati da virgola, dai depositi), senza_grafica ("si" per il desktop: vedi azione_desktop.go).
 
 func init() { registraTipo("installa-pacchetti", nuovaPacchetti) }
@@ -39,7 +40,11 @@ func PianoPacchettiDa(id, nomi, deposito string) AzionePiano {
 
 // PianoPacchetti prepara il passo del piano.
 func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
-	cosa := strings.TrimSpace(strings.Trim(filepath.Base(file)+" "+nomi, ". "))
+	var basi []string
+	for _, f := range dividiVirgole(file) {
+		basi = append(basi, filepath.Base(f))
+	}
+	cosa := strings.TrimSpace(strings.Join(basi, " ") + " " + nomi)
 	return AzionePiano{
 		ID: id, Tipo: "installa-pacchetti",
 		Parametri:      map[string]string{"file": file, "sha256": sha, "nomi": nomi},
@@ -52,8 +57,8 @@ func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 }
 
 type pacchetti struct {
-	da           string // un deposito da cui prenderli (zypper: --from, cambiando fornitore)
-	file, sha    string
+	da           string   // un deposito da cui prenderli (zypper: --from, cambiando fornitore)
+	file, sha    []string // i pacchetti locali e i loro sha256, nello stesso ordine
 	nomi         []string
 	senzaGrafica bool
 }
@@ -62,21 +67,23 @@ type primaPacchetti struct {
 	Origine Origine       `json:"origine"`
 	Gestore string        `json:"gestore"`
 	Cache   string        `json:"cache"`
-	File    string        `json:"file,omitempty"` // il file nella cache
+	File    string        `json:"file,omitempty"`       // il file nella cache (il primo)
+	Altri   []string      `json:"altri_file,omitempty"` // gli altri file nella cache (T6)
 	Nomi    []string      `json:"nomi"`
 	Insieme []Artefatto   `json:"insieme_risolto"`
 	Grafica *primaGrafica `json:"grafica,omitempty"`
 }
 
 func nuovaPacchetti(p AzionePiano) (Azione, error) {
-	a := &pacchetti{file: p.Parametri["file"], sha: p.Parametri["sha256"], senzaGrafica: p.Parametri["senza_grafica"] == "si", da: p.Parametri["da"]}
+	a := &pacchetti{file: dividiVirgole(p.Parametri["file"]), sha: dividiVirgole(p.Parametri["sha256"]),
+		senzaGrafica: p.Parametri["senza_grafica"] == "si", da: p.Parametri["da"]}
 	for _, n := range strings.Split(p.Parametri["nomi"], ",") {
 		if n = strings.TrimSpace(n); n != "" {
 			a.nomi = append(a.nomi, n)
 		}
 	}
-	if a.file != "" && a.sha == "" {
-		return nil, fmt.Errorf("installa-pacchetti: il file %s senza sha256", a.file)
+	if len(a.file) != len(a.sha) {
+		return nil, fmt.Errorf("installa-pacchetti: %d file e %d sha256", len(a.file), len(a.sha))
 	}
 	return a, nil
 }
@@ -102,8 +109,8 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 		return nil, err
 	}
 	var v []string
-	if a.file != "" {
-		v = append(v, "pacchetto-file:"+filepath.Base(a.file)+"="+a.sha)
+	for i, f := range a.file {
+		v = append(v, "pacchetto-file:"+filepath.Base(f)+"="+a.sha[i])
 	}
 	ver, err := g.Versioni(a.nomi)
 	if err != nil {
@@ -115,46 +122,67 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	return v, nil
 }
 
-// copia il file del piano nella cache dell'operazione, e controlla che sia quello del piano.
-func (a *pacchetti) inCache(c *Contesto) (string, string, error) {
+// copia i file del piano nella cache dell'operazione, e controlla che siano quelli del piano.
+func (a *pacchetti) inCache(c *Contesto) (string, []string, error) {
 	// una cartella per passo: due passi di pacchetti nella stessa operazione non si mescolano
 	// ([M] 30 set, fedora44-gnome: il codec e remotix nella stessa cartella ⇒ due versioni)
 	cache := filepath.Join(c.Cartella, "cache", c.P.ID)
 	if err := os.MkdirAll(cache, 0o700); err != nil {
-		return "", "", err
+		return "", nil, err
 	}
-	if a.file == "" {
-		return cache, "", nil
+	var r []string
+	for i, f := range a.file {
+		dest, err := unoInCache(c, cache, f, a.sha[i])
+		if err != nil {
+			return "", nil, err
+		}
+		r = append(r, dest)
 	}
-	dest := filepath.Join(cache, filepath.Base(a.file))
-	if sha, _ := Sha256File(dest); sha == a.sha {
-		return cache, dest, nil
+	if len(r) > 0 {
+		if err := SincronizzaCartella(cache); err != nil {
+			return "", nil, err
+		}
 	}
-	in, err := os.Open(c.Amb.P(a.file))
+	return cache, r, nil
+}
+
+func unoInCache(c *Contesto, cache, file, sha string) (string, error) {
+	dest := filepath.Join(cache, filepath.Base(file))
+	if s, _ := Sha256File(dest); s == sha {
+		return dest, nil
+	}
+	in, err := os.Open(c.Amb.P(file))
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	defer in.Close()
 	tmp := dest + ".parziale"
 	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	if _, err := io.Copy(out, in); err != nil {
 		out.Close()
-		return "", "", err
+		return "", err
 	}
 	out.Sync()
 	out.Close()
-	sha, _ := Sha256File(tmp)
-	if sha != a.sha {
+	if s, _ := Sha256File(tmp); s != sha {
 		os.Remove(tmp)
-		return "", "", Errore("RX-PACCHETTI-001", a.file+": sha256 "+sha)
+		return "", Errore("RX-PACCHETTI-001", file+": sha256 "+s)
 	}
-	if err := os.Rename(tmp, dest); err != nil {
-		return "", "", err
+	return dest, os.Rename(tmp, dest)
+}
+
+// dividiVirgole: «a,b» ⇒ [a b]; vuoto ⇒ nessuno.
+func dividiVirgole(s string) []string {
+	var r []string
+	for _, x := range strings.Split(s, ",") {
+		if x = strings.TrimSpace(x); x != "" {
+			r = append(r, x)
+		}
 	}
-	return cache, dest, SincronizzaCartella(cache)
+	return r
 }
 
 func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
@@ -167,19 +195,18 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	} else if !ok {
 		return nil, "", Errore("RX-PACCHETTI-004", det)
 	}
-	cache, f, err := a.inCache(c)
+	cache, file, err := a.inCache(c)
 	if err != nil {
 		return nil, "", err
-	}
-	var file []string
-	if f != "" {
-		file = []string{f}
 	}
 	ins, err := g.Risolvi(cache, file, a.nomi)
 	if err != nil {
 		return nil, "", Errore("RX-PACCHETTI-005", err.Error())
 	}
-	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), Cache: cache, File: f, Nomi: a.nomi, Insieme: ins}
+	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), Cache: cache, Nomi: a.nomi, Insieme: ins}
+	if len(file) > 0 {
+		p.File, p.Altri = file[0], file[1:]
+	}
 	for _, x := range ins {
 		if x.Esito != "presente" {
 			p.Origine = DIRETTA
@@ -209,7 +236,7 @@ func (p primaPacchetti) file() []string {
 	if p.File == "" {
 		return nil
 	}
-	return []string{p.File}
+	return append([]string{p.File}, p.Altri...)
 }
 
 func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {

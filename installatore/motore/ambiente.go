@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,9 @@ var programmiAmmessi = map[string][]string{
 	"remotix":    {"/usr/libexec/remotix/remotix", "/usr/lib/remotix/remotix"}, // Arch: /usr/lib (PKGBUILD)
 	"gpasswd":    {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
 	"usermod":    {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
+	// ufw: la porta di REMOTIX nel firewall di Ubuntu (T6). ufw non ha un D-Bus: il suo programma è
+	// l'unica interfaccia (lo stesso argomento di pacman-key).
+	"ufw": {"/usr/sbin/ufw", "/sbin/ufw"},
 }
 
 // ErrNonAmmesso: il motore non lancia programmi fuori dall'elenco.
@@ -278,8 +282,8 @@ func (g *gruppiVeri) Togli(utente, gruppo string) error {
 	return eseguiOErrore(g.a, "gpasswd", "-d", utente, gruppo)
 }
 
-// firewallNonFatto: ufw e nftables sono riconosciuti, ma il motore non li sa ancora cambiare
-// (mandato di T4): ogni cambio restituisce RX-FW-004, e il piano lo dichiara prima.
+// firewallNonFatto: nftables è riconosciuto, ma il motore non lo sa ancora cambiare (mandato di
+// T4): ogni cambio restituisce RX-FW-004, e il piano lo dichiara prima. (ufw lo sa, da T6.)
 type firewallNonFatto struct{ nome string }
 
 func (f *firewallNonFatto) Nome() string                     { return f.nome }
@@ -290,6 +294,61 @@ func (f *firewallNonFatto) HaPorta(string, string, bool) (bool, error) {
 func (f *firewallNonFatto) Aggiungi(string, string, bool) error { return Errore("RX-FW-004", f.nome) }
 func (f *firewallNonFatto) Togli(string, string, bool) error    { return Errore("RX-FW-004", f.nome) }
 
+// firewallUfw: ufw acceso (T6). Col suo programma (elenco chiuso); un livello solo — le regole di
+// ufw sono vive e permanenti insieme: «vive» si legge come «permanente» e non si cambia da sola.
+// La regola: il profilo dell'applicazione «REMOTIX» (il pacchetto .deb lo mette in
+// /etc/ufw/applications.d/remotix) se c'è e la porta è la sua, altrimenti la porta.
+type firewallUfw struct{ a *Ambiente }
+
+func (f *firewallUfw) Nome() string                     { return "ufw" }
+func (f *firewallUfw) ZonaPredefinita() (string, error) { return "", nil }
+
+// Conosce: il profilo del servizio c'è (il nome del file è quello del servizio).
+func (f *firewallUfw) Conosce(servizio string) (bool, error) {
+	_, err := os.Stat(f.a.P("/etc/ufw/applications.d/" + servizio))
+	return err == nil, nil
+}
+
+// ufwRegola: «servizio:remotix» ⇒ «REMOTIX» (il nome del profilo); «7447/tcp» resta com'è.
+func ufwRegola(porta string) string {
+	if s := servizioDi(porta); s != "" {
+		return strings.ToUpper(s)
+	}
+	return porta
+}
+
+// HaPorta: la regola è fra quelle aggiunte (`ufw show added`, che risponde anche a ufw spento).
+func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
+	out, c, err := f.a.Esegui(time.Minute, "ufw", "show", "added")
+	if err != nil {
+		return false, err
+	}
+	if c != 0 {
+		return false, fmt.Errorf("ufw show added: uscita %d: %s", c, strings.TrimSpace(out))
+	}
+	voglio := "ufw allow " + ufwRegola(porta)
+	for _, r := range strings.Split(out, "\n") {
+		if strings.TrimSpace(r) == voglio {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (f *firewallUfw) Aggiungi(_, porta string, permanente bool) error {
+	if !permanente {
+		return nil // un livello solo: la regola la mette il passo «permanente»
+	}
+	return eseguiOErrore(f.a, "ufw", "allow", ufwRegola(porta))
+}
+
+func (f *firewallUfw) Togli(_, porta string, permanente bool) error {
+	if !permanente {
+		return nil
+	}
+	return eseguiOErrore(f.a, "ufw", "delete", "allow", ufwRegola(porta))
+}
+
 // scegliFirewall: quello acceso. firewalld risponde sul bus; ufw si dice acceso nel suo file;
 // nftables come unità attiva.
 func scegliFirewall(a *Ambiente) GestoreFirewall {
@@ -297,7 +356,7 @@ func scegliFirewall(a *Ambiente) GestoreFirewall {
 		return fw
 	}
 	if b, err := os.ReadFile(a.P("/etc/ufw/ufw.conf")); err == nil && strings.Contains(string(b), "ENABLED=yes") {
-		return &firewallNonFatto{"ufw"}
+		return &firewallUfw{a}
 	}
 	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
 		return &firewallNonFatto{"nftables"}
