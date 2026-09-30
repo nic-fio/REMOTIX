@@ -6077,6 +6077,18 @@ una macchina senza desktop (dove si usa la TUI).
 l'amministratore l'abbia deciso, e molti router lo tengono spento per sicurezza ⇒ proposta: **niente UPnP**; il
 benvenuto dice quale porta inoltrare sul router, TCP e UDP.
 
+### 10.21 ✅ D11 semplificata: una chiave sola, quella dell'archivio
+
+Parole dell'utente (30 set 2026): *«stiamo complicando le cose. L'installer originale che l'utente scarica avrà
+un codice sha256 che l'utente potrà controllare … per i pacchetti l'installer usa il package manager del
+server»*; e *«i dati dell'installer restano su un nostro repository, così siamo al sicuro»*. ⇒
+- **una sola chiave**: quella che firma i pacchetti e l'archivio di REMOTIX — indispensabile, perché apt, dnf,
+  zypper e pacman rifiutano un archivio di terzi non firmato;
+- **via la seconda catena** (motore e catalogo firmati a parte, sottochiavi, revoche): l'installatore scaricato
+  a mano si verifica con lo **sha256** pubblicato (HTTPS); il **catalogo** viaggia dentro il pacchetto
+  `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
+- resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
+
 ---
 
 ## Come si tiene questo documento

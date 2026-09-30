@@ -819,6 +819,8 @@ futura interfaccia. ⛔ Un codice non si riusa mai per un altro significato.
 
 #### 6.6.10 La fiducia: due catene separate
 
+⚠ **Superata dalla decisione dell'utente del 30 set (`DECISIONI.md` §10.21)**: una chiave sola, quella dell'archivio (catena B); la catena A si toglie — l'installatore si verifica con lo sha256, il catalogo sta nel pacchetto `remotix-install`. Il testo sotto resta per la storia.
+
 | catena | che cosa firma | chi la usa |
 |---|---|---|
 | **A — il motore e il catalogo** | `remotix-install`, `install.sh`, il catalogo | il motore stesso, alla fase 0 TRUST |
@@ -1086,7 +1088,7 @@ Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 
 | **D8** | ✅ **CHIUSA il 30 set**: su Ubuntu la sessione `ubuntu` di serie, non il GNOME vanilla (§10.20) | — | — |
 | **D9** | Le distribuzioni **immutabili** (Silverblue, Aeon, Kinoite, Kalpa): dentro questa fase o dopo? | fine fase | dopo; da guardare allora `systemd-sysext` e i portable services (`DECISIONI.md` §10.11) |
 | **D10** | Dove si costruiscono e si ospitano i pacchetti: contenitori nostri e un deposito nostro, o **OBS** di openSUSE (che costruisce per tutte le famiglie, ma vuole progetti pubblici)? | T3 | contenitori nostri finché il codice è privato — ⭐ REMOTIX sarà open source (`DECISIONI.md` §10.13): OBS diventa possibile ⭐ T8: l'archivio è una cartella di file statici (un server HTTP qualunque); oggi il motore non ha un indirizzo predefinito (`--archivio` obbligatorio) finché D10 non dice dove sta |
-| **D11** | La **custodia della chiave madre** (dove sta, chi la tiene, copia di riserva) e la cadenza della rotazione | T8 | fuori linea, due copie in due posti, sottochiavi annuali ⭐ **T8 ha fatto tutto con chiavi DI PROVA** (catena A ed25519, catena B GPG, madre solo-certificazione e sottochiave di firma a un anno; le private in `~/.local/share/remotix-chiavi-di-prova/` del portatile, fuori dal deposito): per le vere si rigenerano con la stessa procedura, si cambia `installatore/chiavi/` (radice A, chiave B) e si rifirma il catalogo |
+| **D11** | ✅ **SEMPLIFICATA il 30 set**: una chiave sola, quella dell'archivio; installatore verificato con lo sha256; catalogo dentro il pacchetto (`DECISIONI.md` §10.21). Resta: dove si custodisce la chiave (con D10) | con D10 | — |
 | **D12** | ✅ **CHIUSA il 30 set: Gio** (`DECISIONI.md` §10.19) — la GUI disegnata dal programma stesso, identica sui quattro desktop, senza browser; la TUI con una libreria Go nello stesso programma | — | — |
 | **D13** | ✅ **CHIUSA il 30 set**: il prototipo è la base, con piccoli miglioramenti (§10.20) | — | — |
 | **D14** | L'**aggiornamento automatico** (`DECISIONI.md` §10.10): che cosa si applica da solo — sicurezza e ricostruzioni automatiche e la versione annuale su scelta dell'amministratore, oppure solo avviso | T8 | sicurezza e ricostruzioni automatiche; la versione annuale su scelta ⭐ **T8 l'ha resa configurabile senza deciderla**: `/etc/remotix/aggiornamenti.conf`, `automatico = manutenzione` (predefinito = questa proposta) · `tutto` · `avviso` (l'alternativa) · `spento`; la regola che separa le due cose è il numero di versione (cambia X.Y di X.Y.Z ⇒ annuale; Z o la revisione del pacchetto ⇒ manutenzione). Decidere D14 = scegliere il predefinito |
