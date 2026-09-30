@@ -1,4 +1,7 @@
 # Fase 9 — La qualità e la degradazione
+
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+
 Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
 reti degradate, senza pretendere di fare miracoli»*
@@ -251,7 +254,7 @@ in parallelo, mandato di estrazione. Quel che segue è il **risultato**, non il 
 | | v1 fase **9** | v1 fase **10** |
 |---|---|---|
 | che cosa era | la copia zero, i millisecondi di CPU per fotogramma | **la qualità e la banda** |
-| l'errore | ottimizzata la CPU (41→6 ms) mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
+| l'errore | ottimizzata la CPU mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
 | l'esito | una lezione | ⛔ **AZZERATA**, codice riportato indietro, banchi rimossi |
 
 ⇒ ⭐ **La fase 9 di V2 è l'erede della fase 10 di v1.** `PIANO.md:1180` scrive *«in v1 questa fase
@@ -329,7 +332,7 @@ degrada). Resta il **qp**, di cui non esiste nessuna scala definita.
 | sui giri stretti i fotogrammi consegnati sono **tutti chiavi** (144/144, 149/149) contro **2 su 1 019** a 15 Mbit/s | 21 ago |
 | una chiave da 60 KB a 3 Mbit/s occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede una ogni **150** | 21 ago |
 | ⛔ **quattro varianti del trasporto non cambiano niente** (397 · 278 · 406 · 514 · 371) ⇒ *«la finestra non è contesa: è già piena»* | 21 ago |
-| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)**; `libx264` tiene 1 992 ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
+| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)** (il confronto con `libx264` non vale più dopo la fase 18) ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
 | ⛔ **il modo di controllo del bitrate non si sceglie: lo DEDUCE il driver** (`rc_max_rate == bit_rate` ⇒ CBR, e nessuno l'aveva scelto) | v1, R31 |
 | su desktop fermo il CBR spendeva **9 875 kbit/s contro 277 del QVBR, per 1,8 dB** ⇒ *«la scelta non si gioca sulla scena dura: si gioca su quanto si spende quando non serve»* | v1, R31 |
 | il ritmo del **contenuto vero dell'utente**: **20,9 fotogrammi/s**, 31 % identici | fase 8 |
@@ -1259,7 +1262,7 @@ degradazione permanente **no**.
 | `[M]` 7680×4320 in hardware, desktop vero | ⛔ no (1,5 %) |
 | `[M]` 7680×4320, grana `alls=60` in hardware | ⚠ **94,9 %** — **al confine** |
 | `[M]` 7680×4320, rumore uniforme in hardware | ⛔ **sì**, 8 su 8 |
-| ⛔ `[M]` **ripiego software `libx264` CRF 20, 7680×4320, filmato granuloso: 18,733 MiB, 1 su 8** | ⛔ **sì, con contenuto plausibile** |
+| ⛔ **ripiego software**, 7680×4320, filmato granuloso | ⛔ **sì** — ⚠ la misura (`libx264`) non vale più dopo la fase 18 |
 
 ⇒ Raggiungibile per **una via sola e stretta**: la tela grande **più** il ripiego software. E le due
 si tengono per mano: `[M]` `h264_vaapi` su questo chip si ferma a **4096 px per lato**, e la tela
@@ -1274,8 +1277,8 @@ un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva
 **Il vincolo che decide DOVE va il codice**: `chiudi_contesto()` fa `av_packet_free()` ⇒ la risalita
 **non può** stare dopo `break`, dove `fuori->dati` punta dentro il pacchetto: sarebbe lo stesso
 difetto di §4. ⇒ **si conta alla consegna, si risale all'ingresso del fotogramma dopo**, e come
-effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware, **1,8-3,3 s** in
-software) cade **fra** due fotogrammi.
+effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware; quella in software, misurata con `libx264`, non vale più dopo la
+fase 18) cade **fra** due fotogrammi.
 
 ⛔ **E non è simmetrica alla discesa, di proposito**: si scende di tre scalini in un fotogramma, si
 risale di **UNO** ogni `RISALITA_ATTESA`, con l'attesa che **raddoppia** a ogni ricaduta
@@ -1290,7 +1293,7 @@ riapertura ogni 2 secondi, **e quello sì sarebbe I1**.
 
 ⛔ **Il guasto che ucciderebbe questa cura si chiama SBATTIMENTO, e non è ipotetico**: la grana
 `alls=60` a 7680×4320 sta al **94,9 %** del tetto, cioè è una scena che vive **esattamente sul
-confine**. In software basterebbero pochi giri (1,8-3,3 s ciascuno) perché **la cura costi più del
+confine**. In software basterebbero pochi giri (la riapertura costa molto di più che in hardware) perché **la cura costi più del
 difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
 
 ### 5.4 Cura 4 — il riordino dell'audio · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
