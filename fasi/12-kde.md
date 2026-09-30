@@ -1,6 +1,6 @@
 # Fase 12 — KDE
 
-⚠ Le misure di prestazione rimaste in questo documento sono storiche: valgono per la macchina e per il prodotto di allora; quelle della codifica con ffmpeg sono state tolte con la fase 18. Decisione dell'utente del 30 set 2026.
+⚠ Le misure di prestazione sono state tolte con la fase 18 (cambio di architettura: i numeri non valgono più); restano in git. Decisione dell'utente del 30 set 2026.
 
 *Aperta il **18 settembre 2026**. Chiusa il —*
 
@@ -32,7 +32,7 @@ sbagliato (⛔ mai come scorciatoia).
 
 - **19 settembre 2026, dell'utente**: *emulatore Android sul server*. ⚠ Cambia la regola d'agosto
   «SDK ed emulatore restano sul tablet» (`DECISIONI.md` §5-bis.0-ter): `[M]` il tablet (7,5 GB) non
-  regge Android 17 — memoria libera a 170 MB, Chrome mai partito. Il server ha KVM, 20 processori,
+  regge Android 17 — memoria esaurita, Chrome mai partito. Il server ha KVM, 20 processori,
   22 GB liberi. ⇒ L'SDK sta in `/media/REMOTIX/android` (disco: il sistema del server vive in RAM).
   ⛔ Firefox per Android resta NON supportato (§7.18); si prova il **Chrome** dell'immagine
   Android 17 (145), e Chromium no (niente H.264).
@@ -100,9 +100,8 @@ del 18 settembre, `[R]`):
 |---|---|---|
 | chi nasce | `gnome-session` → `org.gnome.Shell@wayland` col drop-in `--headless --no-x11` | `startplasma-wayland` → `plasma-kwin_wayland.service` col drop-in `--xwayland --virtual --width W --height H --no-lockscreen` |
 | monitor alla nascita | ⛔ **zero**: il monitor lo monta la cattura (`RecordVirtual`) | ⭐ **uno**, `Virtual-0`, della misura della riga — `[M]` 1600x900 chiesto ⇒ 1600x900, una sola `wl_output` |
-| quanto ci mette | ~1 s (C1) | KWin sul bus **0,79 s**, `plasmashell` **1,31 s** |
 | la scheda | Intel | `OpenGL renderer string: Mesa Intel(R) UHD Graphics 770` — ⭐ GPU, non llvmpipe |
-| la chiusura | `loginctl terminate-user` pulisce | ⭐ **0 processi in 529 ms**, `/run/user` sparita |
+| la chiusura | `loginctl terminate-user` pulisce | ⭐ **0 processi**, `/run/user` sparita |
 
 ⇒ **DIFFERENZA**: su KDE l'uscita nasce con la sessione e la misura è quella del **primo** cliente;
 non si cambia più finché la sessione vive. ⇒ **DECISIONE**: il prodotto scrive la misura nel drop-in
@@ -133,11 +132,11 @@ Prova a mano con `banchi/12-i1-nasce-plasma.sh` (dentro la scatola: un cliente `
 
 | | atteso | misurato |
 |---|---|---|
-| `plasmashell` dell'utente | entro 26 s | ⭐ **2,59 s** dall'avvio del cliente |
+| `plasmashell` dell'utente | entro 26 s | ⭐ entro il tetto |
 | KWin | `--virtual`, misura del cliente | ⭐ `Virtual-0` **1920x1080** = la tela dichiarata dal cliente |
 | sessioni nate | una | ⭐ **una** (`startplasma-wayland` ×1) — la guardia delle unità regge |
-| il prodotto la vede viva | sì | ⭐ ultima «nessun KWin sul bus» a +0,8 s, poi più nessuna |
-| la chiusura | niente resti | ⭐ 0 processi in 527 ms |
+| il prodotto la vede viva | sì | ⭐ ultima «nessun KWin sul bus» subito dopo l'avvio, poi più nessuna |
+| la chiusura | niente resti | ⭐ 0 processi |
 | ⛔ **controllo negativo**: binario di baseline `bfc5936a`, stessa scatola, stessa scena | niente | ⭐ `plasmashell` **MAI**, 0 processi Plasma |
 
 ⇒ Dopo la nascita il figlio prova a montare la cattura e dice *«Mutter non espone RemoteDesktop»*:
@@ -201,7 +200,7 @@ rossa per un motivo che c'era già (controllo fatto) ed è dichiarata aperta.
 | chi dà il nodo PipeWire | Mutter, D-Bus `ScreenCast.RecordVirtual` (`mutter.c`) — un monitor **nuovo** della misura chiesta | KWin 6.3.6, protocollo **Wayland** `zkde_screencast_unstable_v1` **v5**, `stream_output` sull'uscita che c'è già (`Virtual-0`) |
 | il cancello | nessuno | ⛔ il global **non c'è** per un client qualunque (58 altri sì); ⭐ c'è con un `.desktop` in `/usr/share/applications` che dichiara `X-KDE-Wayland-Interfaces` e ha `Exec=` sull'eseguibile canonico — **anche scritto a sessione già viva** (+3 s). `XDG_MENU_PREFIX=plasma-` nell'ambiente di KWin: sì (dall'incremento 1) |
 | la misura | segue la tela chiesta | ⛔ **fissa**: l'uscita è della misura del primo cliente e KWin 6.3.6 non la ridimensiona (v1: `kwin!7932`, atteso per 6.8). `[M]` chiedere 1384x912 a un'uscita 1388x914 ⇒ PipeWire `no more input formats` ⇒ palco **mai più** montato |
-| il primo fotogramma | la Shell | ⭐ la **schermata d'avvio di Plasma** («Plasma made by KDE», 99 % nero + logo) per ~2,4 s, poi il desktop. `[M]` aspettare `org.kde.plasmashell` sul bus **non** la evita (il nome arriva prima) ⇒ provato e **tolto** |
+| il primo fotogramma | la Shell | ⭐ la **schermata d'avvio di Plasma** («Plasma made by KDE», 99 % nero + logo) per qualche secondo, poi il desktop. `[M]` aspettare `org.kde.plasmashell` sul bus **non** la evita (il nome arriva prima) ⇒ provato e **tolto** |
 | il resto della strada | `cattura.c` → `codificatore.c` | ⭐ **la stessa**: dal nodo in poi niente cambia. `cattura.c` scarta già i buffer `SPA_CHUNK_FLAG_CORRUPTED` (i buffer di solo cursore di KWin, v1 §4.7) |
 
 ⚠ **Non misurato e dichiarato**: la *fence* di KWin (v1: 830 buffer su 830 arrivano col disegno
@@ -222,7 +221,7 @@ misura: resta aperto per quando si guarderanno i numeri.
 | | misurato |
 |---|---|
 | C1(kde)×3 (`11-accendi.sh c1 kde 3`) | ⭐ **VERDE** 3 su 3, monitor «Virtual-0» (1 dopo), ~150 fotogrammi — la prima volta |
-| Firefox Linux, utente nuovo, scatola `kde` | ⭐ **PASS** 7 su 7: schermata d'avvio a 0,9 s, desktop Plasma a 3,3 s; riconnessione in 0,3 s |
+| Firefox Linux, utente nuovo, scatola `kde` | ⭐ **PASS** 7 su 7: schermata d'avvio, poi il desktop Plasma; la riconnessione riesce |
 | Chrome Linux, stessa sessione | a·b·c·e·f·g verdi · ⛔ (d) 0 fotogrammi muovendo il mouse — ⭐ **atteso**: l'input arriva al server (e) ma non ancora a KWin (incremento 3), e il cursore lo disegna la pagina ⇒ il desktop non cambia |
 | ⚠ (e) su KDE | il banco prova che l'input arriva **al server**, non al desktop: su KDE il figlio dice *«il canale di input NON si apre»*. Il verde di (e) qui **non** vuol dire «si comanda» |
 | prima della cura della misura (`b835dc63`) | ⛔ la riconnessione di Chrome chiedeva 1384x912: `no more input formats`, palco mai più montato, 0 fotogrammi in 30 s ⇒ curato con `misura_del_palco()` |
@@ -271,10 +270,10 @@ chiudono **prima** di lanciare la rete — la rete guarda il registro intero, an
 
 | | misurato |
 |---|---|
-| Chrome e Firefox Linux su `kde` | ⭐ **PASS 7 su 7** tutt'e due; (d) muovendo il mouse **76** fotogrammi nuovi in 8 s (prima dell'input: 0) |
+| Chrome e Firefox Linux su `kde` | ⭐ **PASS 7 su 7** tutt'e due; (d) muovendo il mouse arrivano fotogrammi nuovi (prima dell'input: 0) |
 | ⭐ **C4(kde)** | **VERDE**: la zona attesa passa dal colore di partenza a quello d'arrivo al 100 %, la cornice cambia dello 0 % |
 | C4(kde) guasti | `--senza-tasto` ⭐ visto · `--scena-sorda` ⭐ visto |
-| ⭐ **C3(kde)** | **VERDE** (10 994 fotogrammi in 187 s, 60 coppie su 60 diverse); `--fotogramma-ripetuto` ⭐ visto; `--scena-ferma` regge |
+| ⭐ **C3(kde)** | **VERDE** (60 coppie su 60 diverse); `--fotogramma-ripetuto` ⭐ visto; `--scena-ferma` regge |
 | ⚠ C3(kde) `--codificatore-fermo` | **3**, non giudica: l'innesto (SIGSTOP 2 s dopo che il codificatore lavora) cade sulla schermata d'avvio di Plasma e l'ultimo fotogramma è quasi nero ⇒ **saltato su KDE, dichiarato** nel gancio. Il guasto di C3 su KDE resta `--fotogramma-ripetuto` |
 | ⭐ **C6(kde)** | **VERDE** (si ritrova); `--uccidi-la-sessione` ⭐ visto (*«specie: un'altra sessione»*) |
 | C2(kde) | **3**: i primi 12 fotogrammi sono la schermata d'avvio, e C2 li prende per il suo «prima» ⇒ **saltata su KDE, dichiarato**: si adatta il banco in un incremento suo |
@@ -305,7 +304,7 @@ registro; xfce e lxqt restano chiuse.
 | | |
 |---|---|
 | **OBIETTIVO** | C2 e C8b giudicano anche su KDE |
-| **LA CAUSA, `[M]`** | tutt'e due prendevano il «prima» dai primissimi fotogrammi del flusso, e su KDE quelli sono la schermata d'avvio di Plasma (~2,4 s, 100-200 fotogrammi neri). C2 ne guardava 12, C8b 1 ⇒ «non lo so» per sempre |
+| **LA CAUSA, `[M]`** | tutt'e due prendevano il «prima» dai primissimi fotogrammi del flusso, e su KDE quelli sono la schermata d'avvio di Plasma (qualche secondo di fotogrammi neri). C2 ne guardava 12, C8b 1 ⇒ «non lo so» per sempre |
 | **LA CURA** | la stessa regola in tutt'e due, e vale per ogni desktop: il «prima» è il **primo fotogramma non nero** fra i primi 240. C2 la aveva già (`scegli_il_prima`) — si alza solo il numero, da 12 a 240; C8b la riceve (`estrai(…, giudice)`). ⛔ Se sono tutti neri resta «a monte» / «non lo so», come prima; se il primo non nero è già la pagina, «già magenta» e non si giudica |
 | **GNOME** | ⭐ invariato: il primo disegnato è il fotogramma **1** (C2 lo scrive: *«fotogrammi guardati per il prima: 1»*) |
 | **certificazioni** | `--certifica` di C2 e di C8b: uscita 0 |
@@ -360,7 +359,7 @@ con la controprova, e il giorno che entrano nella rete sarà una maglia sua.
 | | |
 |---|---|
 | **OBIETTIVO** | l'ultimo guasto chiuso a `kde` (decisione dell'utente, 19 set: «anche questo punto va fatto») |
-| **LA CAUSA** | la schermata d'avvio di Plasma si anima per ~2,4 s: `aspetta_che_i_fotogrammi_arrivino` passava sull'animazione, e il SIGSTOP cadeva sul nero |
+| **LA CAUSA** | la schermata d'avvio di Plasma si anima per qualche secondo: `aspetta_che_i_fotogrammi_arrivino` passava sull'animazione, e il SIGSTOP cadeva sul nero |
 | **LA CURA** | nel banco, non nel prodotto: `11-c3` aspetta che il codificatore **si fermi** (`aspetta_che_il_desktop_si_fermi`) prima di accendere la scena, più un respiro di 2 s prima dell'innesto (`--respiro-innesco`), contato in `secondi_prima`. Su GNOME il desktop è già fermo ⇒ un passo solo. Nessuna domanda sul desktop |
 | **IL CANCELLO** | `11-gancio.sh` apre a `kde` il guasto «codificatore fermo» |
 
