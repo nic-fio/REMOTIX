@@ -68,15 +68,19 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 			t.Errorf("%s = %q, atteso %q", k, p.V(k), v)
 		}
 	}
-	// senza libavcodec: H.264 SCONOSCIUTO dichiarato, mai «sì»
-	if f, _ := p.F("h264.scheda"); f.Stato != SCONOSCIUTO {
-		t.Errorf("h264.scheda senza ffmpeg: %+v", f)
+	// fase 18: nessun driver VA (NVIDIA proprietaria) ⇒ la scheda non codifica, RILEVATO; OpenH264
+	// manca ⇒ nemmeno il ripiego. Mai «sì»
+	if f, _ := p.F("h264.scheda"); f.Stato != RILEVATO || f.Valore != "no" {
+		t.Errorf("h264.scheda senza driver VA: %+v", f)
+	}
+	if p.V("h264.software") != "no" {
+		t.Errorf("h264.software senza OpenH264: %q", p.V("h264.software"))
 	}
 	codici := map[string]bool{}
 	for _, m := range p.Messaggi {
 		codici[m.Codice] = true
 	}
-	for _, c := range []string{"RX-GPU-002", "RX-H264-001", "RX-PAM-002", "RX-SELINUX-001", "RX-GRUPPI-001", "RX-LOGIND-001"} {
+	for _, c := range []string{"RX-GPU-002", "RX-H264-003", "RX-H264-005", "RX-PAM-002", "RX-SELINUX-001", "RX-GRUPPI-001", "RX-LOGIND-001"} {
 		if !codici[c] {
 			t.Errorf("manca %s fra %v", c, codici)
 		}
@@ -119,15 +123,19 @@ func TestCatalogo(t *testing.T) {
 		{"debian", "12", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"},
 		{"almalinux", "10.1", "xfce", nil, "NON_SUPPORTATA RX-COMPAT-005"},
 		{"almalinux", "10.0", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-001"}, // serve la 10.1 (OpenSSL 3.5)
-		{"almalinux", "10.1", "kde", map[string]string{"desktop.kde": "6.4", "deposito.epel": "assente", "deposito.rpmfusion": "presente"}, "COMPATIBILE C-DEPOSITO"},
-		{"rocky", "10.1", "gnome", map[string]string{"deposito.rpmfusion": "presente"}, "COMPATIBILE "},
+		// fase 18: EPEL serve a REMOTIX stesso su Alma (SVT-AV1), e anche a KDE: una condizione sola
+		{"almalinux", "10.1", "kde", map[string]string{"desktop.kde": "6.4", "deposito.epel": "assente", "deposito.openh264": "presente", "deposito.rpmfusion": "presente"}, "COMPATIBILE C-DEPOSITO"},
+		{"almalinux", "10.1", "gnome", map[string]string{"deposito.epel": "presente", "deposito.rpmfusion": "presente"}, "COMPATIBILE C-DEPOSITO"}, // OpenH264 di Cisco
+		{"rocky", "10.1", "gnome", map[string]string{"deposito.epel": "presente", "deposito.openh264": "presente", "deposito.rpmfusion": "presente"}, "COMPATIBILE "},
 		{"gentoo", "2.17", "gnome", nil, "NON_SUPPORTATA RX-COMPAT-002"},
-		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.packman": "presente", "pacchetto.breeze6-wallpapers": "assente"}, "COMPATIBILE C-COMPONENTE"},
-		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "deposito.packman": "presente", "pacchetto.labwc": "0.8.1", "pacchetto.wlr-randr": "0.4", "caratteri.scalabili": "0"}, "COMPATIBILE C-COMPONENTE,C-LIMITE"},
+		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.openh264": "presente", "pacchetto.breeze6-wallpapers": "assente"}, "COMPATIBILE C-COMPONENTE"},
+		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "deposito.openh264": "presente", "pacchetto.labwc": "0.8.1", "pacchetto.wlr-randr": "0.4", "caratteri.scalabili": "0"}, "COMPATIBILE C-COMPONENTE,C-LIMITE"},
+		// OpenH264 di Cisco spento: si chiede (è di serie, D5 se qualcuno l'ha tolto)
+		{"opensuse-tumbleweed", "20260930", "gnome", nil, "COMPATIBILE C-DEPOSITO"},
 		// Leap 16 + Plasma (KWin 6.4) chiede il 3D (T6 seguiti, KDE 487217): condizione; senza scheda, no
-		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.packman": "presente"}, "COMPATIBILE C-HARDWARE"},
-		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.packman": "presente", "scheda.nodi": "nessuno"}, "NON_SUPPORTATA RX-COMPAT-007"},
-		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.packman": "presente", "scheda.nodi": "nessuno"}, "COMPATIBILE C-COMPONENTE"},
+		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.openh264": "presente"}, "COMPATIBILE C-HARDWARE"},
+		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "deposito.openh264": "presente", "scheda.nodi": "nessuno"}, "NON_SUPPORTATA RX-COMPAT-007"},
+		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "deposito.openh264": "presente", "scheda.nodi": "nessuno"}, "COMPATIBILE C-COMPONENTE"},
 		{"debian", "13", "kde", map[string]string{"desktop.kde": "5.27"}, "NON_SUPPORTATA RX-COMPAT-006"},
 		{"debian", "13", "gnome", map[string]string{"sistema.systemd": "no"}, "NON_SUPPORTATA RX-COMPAT-007"},
 		{"debian", "13", "gnome", map[string]string{"distro.immutabile": "si"}, "NON_SUPPORTATA RX-COMPAT-003"},

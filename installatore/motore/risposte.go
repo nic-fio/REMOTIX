@@ -36,7 +36,7 @@ import (
 //	                                      # (consenso.cinture: RITIRATA — D4, le cinture sempre; in un file
 //	                                      #  vecchio si annota fra le «superflue» e non conta)
 //	consenso.firewall = si                # D6: aprire la porta nel firewall (serve solo se firewalld è acceso)
-//	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel), solo dove serve
+//	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel, openh264), solo dove serve
 //	                                      # (consenso.aggiornamenti: RITIRATA — D14, REMOTIX si aggiorna col
 //	                                      #  sistema, DECISIONI §10.23; in un file vecchio è «superflua»)
 //
@@ -72,6 +72,7 @@ var vociNote = map[string]bool{
 	"formato": true, "lingua": true, "porta": true, "archivio": true, "canale": true, "utenti": true,
 	"desktop": true, "consenso.cinture": true, "consenso.firewall": true, "consenso.aggiornamenti": true,
 	"consenso.deposito.epel": true, "consenso.deposito.rpmfusion": true, "consenso.deposito.packman": true,
+	"consenso.deposito.openh264": true,
 }
 
 // LeggiRisposte legge e controlla il file: formato, voci conosciute, valori ammessi. Non guarda la
@@ -157,8 +158,9 @@ func (r *FileRisposte) Porta() int {
 	return p
 }
 
-// DepositiDaChiedere: gli archivi di terzi che su questa macchina servono (D5): quello di H.264 se la
-// scheda di serie non basta, e quelli dei desktop installati (o di quello che si installerà).
+// DepositiDaChiedere: gli archivi di terzi che su questa macchina servono (D5): quelli di REMOTIX
+// stesso (le librerie del video, fase 18), quello dei driver se la scheda DI QUESTA MACCHINA lo
+// chiede, e quelli dei desktop installati (o di quello che si installerà).
 func DepositiDaChiedere(rap *Rapporto, prof *Profilo, desktopScelto string) []string {
 	visti := map[string]bool{}
 	var r []string
@@ -171,8 +173,12 @@ func DepositiDaChiedere(rap *Rapporto, prof *Profilo, desktopScelto string) []st
 	if rap.pl == nil {
 		return nil
 	}
-	if !rap.pl.H264.SchedaDiSerie {
-		metti(rap.pl.H264.Deposito)
+	for _, d := range rap.pl.Depositi {
+		metti(d)
+	}
+	if d, _, nf := rap.pl.H264.PerLaScheda(prof); d != "" && !visti[d] && !depositoPresente(prof, d, nf) {
+		visti[d] = true // il ramo nonfree che manca: il deposito si chiede anche se «free» c'è
+		r = append(r, d)
 	}
 	for _, e := range rap.Desktop {
 		installato := e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto"
@@ -272,7 +278,9 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 		servono[d] = true
 	}
 	o.Depositi = nil
-	for _, d := range []string{"epel", "packman", "rpmfusion"} {
+	// l'ordine è quello dei passi: EPEL prima (RPM Fusion per EL e il deposito Cisco per EPEL ne
+	// usano la chiave), poi OpenH264, poi i driver
+	for _, d := range []string{"epel", "openh264", "packman", "rpmfusion"} {
 		if consenso("consenso.deposito."+d, servono[d]) {
 			o.Depositi = append(o.Depositi, d)
 		}

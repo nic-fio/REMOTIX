@@ -48,7 +48,7 @@ func TestConsensiNecessari(t *testing.T) {
 	cat := catalogoProva(t)
 	amb := ambienteFinto(t.TempDir()) // firewalld
 	deb := profiloFinto()
-	fed := profiloDi("fedora", "44", nil)
+	fed := profiloDi("fedora", "44", map[string]string{"deposito.openh264": "presente"})
 	fed.Verificato("h264.scheda", "no", "finto")
 	casi := []struct {
 		nome     string

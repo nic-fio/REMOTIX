@@ -51,11 +51,11 @@ import (
 //
 // ⛔ Un pacchetto preparato per un'altra impronta si RIFIUTA (RX-FUORI-002), come un piano (R31); un
 // file del pacchetto alterato o mancante si rifiuta prima di toccare la macchina (RX-FUORI-001).
-// ⭐ RPM Fusion (Fedora, D5) ENTRA nel pacchetto, se il piano lo ha col consenso: su Fedora senza di lui
-// REMOTIX non codifica affatto (nemmeno il ripiego software: §11.1 C), e la certificazione annulla
-// l'installazione (`[M]` 30 set, fedora44-gnome senza rete: codifica-h264 FAIL ⇒ ANNULLATA). Il
-// pacchetto porta rpmfusion-free-release (scaricato in https, come lo scarica il passo in linea) e i
-// codec risolti; i codec si installano con la firma verificata (la chiave la porta il release).
+// ⭐ RPM Fusion (Fedora, D5) ENTRA nel pacchetto, se il piano lo ha col consenso: porta i driver con
+// H.264 della scheda (fase 18: niente più ffmpeg; il ripiego software è OpenH264, dal deposito Cisco
+// che Fedora accende di serie). Il pacchetto porta rpmfusion-free-release (e rpmfusion-nonfree-release
+// se la scheda è Intel), scaricati in https come li scarica il passo in linea, e i driver risolti;
+// si installano con la firma verificata (la chiave la porta il release).
 // ⚠ Limiti dichiarati: zypper e pacman non ancora (RX-FUORI-004); Packman ed EPEL non entrano nel
 // pacchetto: il loro passo scarica dalla rete (RX-FUORI-005).
 
@@ -537,7 +537,10 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 			if a.Parametri["tipo"] != "rpmfusion" || amb.Famiglia != "fedora" {
 				return nil, Errore("RX-FUORI-005", a.Parametri["tipo"])
 			}
-			terzi = append(terzi, a.Parametri["tipo"])
+			terzi = append(terzi, "rpmfusion")
+			if a.Parametri["nonfree"] == "si" {
+				terzi = append(terzi, "rpmfusion-nonfree")
+			}
 		}
 		if a.Tipo == "installa-pacchetti" && a.Parametri["file"] != "" {
 			return nil, Errore("RX-FUORI-003", "un pacchetto da file ("+a.Parametri["file"]+")")
@@ -877,13 +880,16 @@ func fileDiRelease(t string) [][2]string {
 // ---- dnf: la transazione di ogni passo (cumulativa), scaricata in una cartella per passo
 
 // URLRpmFusion: il pacchetto che configura RPM Fusion (free) — lo stesso del passo in linea.
-func URLRpmFusion(a *Ambiente) string {
+func URLRpmFusion(a *Ambiente) string { return URLRpmFusionRamo(a, "free") }
+
+// URLRpmFusionRamo: il pacchetto che configura un ramo di RPM Fusion («free» o «nonfree»).
+func URLRpmFusionRamo(a *Ambiente, ramo string) string {
 	m, _ := OsRelease(a)
 	v, _, _ := strings.Cut(m["VERSION_ID"], ".")
 	if m["ID"] != "fedora" {
-		return "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-" + v + ".noarch.rpm"
+		return "https://mirrors.rpmfusion.org/" + ramo + "/el/rpmfusion-" + ramo + "-release-" + v + ".noarch.rpm"
 	}
-	return "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-" + v + ".noarch.rpm"
+	return "https://mirrors.rpmfusion.org/" + ramo + "/fedora/rpmfusion-" + ramo + "-release-" + v + ".noarch.rpm"
 }
 
 // FileTerzi: il file di un archivio di terzi nel pacchetto fuori linea in uso ("" se non si lavora
@@ -902,8 +908,12 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 	if err := os.MkdirAll(repos, 0o755); err != nil {
 		return err
 	}
-	for _, t := range terzi { // rpmfusion: il release nel pacchetto, e i suoi depositi per risolvere
-		u := URLRpmFusion(a)
+	for _, t := range terzi { // rpmfusion(-nonfree): il release nel pacchetto, e i suoi depositi per risolvere
+		ramo := "free"
+		if t == "rpmfusion-nonfree" {
+			ramo = "nonfree"
+		}
+		u := URLRpmFusionRamo(a, ramo)
 		p.ev("RPM Fusion: " + u)
 		b, err := p.scarica(u)
 		if err != nil {
@@ -919,9 +929,9 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 		p.fl.Terzi[t] = rel
 		// solo per risolvere e scaricare (le firme dei codec le verifica rpm sulla macchina senza
 		// rete, con la chiave che il release porta)
-		if err := os.WriteFile(filepath.Join(repos, "rpmfusion-fuori-linea.repo"), []byte(
-			"[rpmfusion-free-fl]\nname=RPM Fusion free (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo=free-fedora-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n\n"+
-				"[rpmfusion-free-updates-fl]\nname=RPM Fusion free updates (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(repos, t+"-fuori-linea.repo"), []byte(
+			"["+t+"-fl]\nname=RPM Fusion "+ramo+" (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n\n"+
+				"["+t+"-updates-fl]\nname=RPM Fusion "+ramo+" updates (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-updates-released-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n"), 0o644); err != nil {
 			return err
 		}
 	}

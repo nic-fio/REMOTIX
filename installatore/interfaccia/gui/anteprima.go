@@ -198,7 +198,7 @@ func domandeDaProfilo(p *motore.Profilo, r *motore.Rapporto, pn *motore.Piano) *
 		case "aggiungi-deposito":
 			if a.ID != "archivio-remotix" {
 				id := a.Parametri["tipo"]
-				nome := map[string]string{"rpmfusion": "RPM Fusion", "packman": "Packman", "epel": "EPEL"}[id]
+				nome := map[string]string{"rpmfusion": "RPM Fusion", "packman": "Packman", "epel": "EPEL", "openh264": "OpenH264 di Cisco"}[id]
 				d.Depositi = append(d.Depositi, motore.DomandaDeposito{ID: id, Nome: nome, Per: "h264", Serve: true})
 			}
 		case "aggiungi-utente-a-gruppo":

@@ -310,7 +310,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	case video:
 		righe = append(righe, Riga{T("r.video"), T("t.video.deposito", distro), CONSENSO})
 		condizioni = append(condizioni, T("c.cond.video", distro))
-	case prof.V("h264.software") == "si" && prof.V("h264.libavcodec_h264_vaapi") != "si":
+	case prof.V("h264.software") == "si" && prof.V("h264.scheda") == "no":
 		righe = append(righe, Riga{T("r.video"), T("t.video.soft"), DOPO})
 	default:
 		righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
@@ -384,7 +384,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 	for _, n := range strings.Fields(prof.V("scheda.nodi")) {
 		d = append(d, n+" "+prof.V("scheda."+n+".fornitore")+" "+prof.V("scheda."+n+".driver"))
 	}
-	for _, k := range []string{"h264.libavcodec_h264_vaapi", "h264.software", "pam.base", "selinux", "apparmor", "firewall.tipo", "firewall.zona"} {
+	for _, k := range []string{"h264.scheda", "h264.famiglia_driver", "h264.software", "pam.base", "selinux", "apparmor", "firewall.tipo", "firewall.zona"} {
 		if x := prof.V(k); x != "" {
 			d = append(d, k+"="+x)
 		}

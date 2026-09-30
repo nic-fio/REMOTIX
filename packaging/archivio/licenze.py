@@ -128,8 +128,9 @@ Le librerie della DISTRIBUZIONE che remotix usa (collegate dinamiche o chiamate 
 esecuzione) non stanno nei pacchetti di REMOTIX: le installa il gestore di pacchetti, ognuna con la
 licenza e il testo che la distribuzione porta in /usr/share/doc (o /usr/share/licenses). Dallo SBOM:
 {elenco}
-⚠ libavcodec (ffmpeg) su Debian, Ubuntu, Arch e con RPM Fusion/Packman è costruita sotto GPL: la
-tappa che la toglie (libva diretto, OpenH264) è in DECISIONI §10.22.
+⭐ Fase 18 (DECISIONI §10.22, §10.25): REMOTIX non collega più ffmpeg (libavcodec GPL). Al suo posto
+libva (MIT), OpenH264 (BSD-2-Clause), SVT-AV1 (BSD-3-Clause-Clear), libopus (BSD-3-Clause) e — se
+resta — libyuv (BSD-3-Clause). I driver VA (Mesa MIT, intel-media-driver MIT/BSD) si caricano a parte.
 """
 print(testa)
 for p in parti:

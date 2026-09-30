@@ -31,7 +31,7 @@ type Domande struct {
 
 // DomandaDeposito: un archivio di terzi da chiedere, e per che cosa serve.
 type DomandaDeposito struct {
-	ID    string `json:"id"`   // rpmfusion · packman · epel
+	ID    string `json:"id"`   // rpmfusion · packman · epel · openh264
 	Nome  string `json:"nome"` // «RPM Fusion (free)»
 	Per   string `json:"per"`  // "h264" · "desktop"
 	Serve bool   `json:"serve"`
@@ -48,9 +48,16 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 	if d.Desktop != nil && desktopScelto == "" {
 		desktopScelto = d.Desktop.Predefinita
 	}
-	per264 := ""
-	if rap.pl != nil && !rap.pl.H264.SchedaDiSerie {
-		per264 = rap.pl.H264.Deposito
+	// «per il video»: il deposito dei driver che la scheda chiede e quelli delle librerie del video
+	// di REMOTIX (fase 18: OpenH264 di Cisco, EPEL per SVT-AV1 su Alma)
+	per264 := map[string]bool{}
+	if rap.pl != nil {
+		if x, _, _ := rap.pl.H264.PerLaScheda(prof); x != "" {
+			per264[x] = true
+		}
+		for _, x := range rap.pl.Depositi {
+			per264[x] = true
+		}
 	}
 	for _, x := range DepositiDaChiedere(rap, prof, desktopScelto) {
 		nome := x
@@ -60,7 +67,7 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 			}
 		}
 		per := "desktop"
-		if x == per264 {
+		if per264[x] {
 			per = "h264"
 		}
 		d.Depositi = append(d.Depositi, DomandaDeposito{ID: x, Nome: nome, Per: per, Serve: true})

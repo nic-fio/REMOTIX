@@ -2,6 +2,7 @@ package motore
 
 import (
 	"encoding/json"
+	"sort"
 	"strings"
 )
 
@@ -59,20 +60,24 @@ type DepositoCatalogo struct {
 }
 
 type Piattaforma struct {
-	ID                string                     `json:"id"`
-	Distribuzione     string                     `json:"distribuzione"`
-	Versioni          []string                   `json:"versioni"`
-	VersioneMinima    string                     `json:"versione_minima,omitempty"`
-	EtichettaVersione string                     `json:"etichetta_versione"`
-	Nome              string                     `json:"nome"`
-	Famiglia          string                     `json:"famiglia"`
-	Matrice           bool                       `json:"matrice"`
-	GiroIntero        string                     `json:"giro_intero"` // data del giro intero verde (T10); "" = mai
-	Derivate          []Derivata                 `json:"derivate,omitempty"`
-	H264              H264Piattaforma            `json:"h264"`
-	Desktop           map[string]DesktopCatalogo `json:"desktop"`
-	PacchettiDesktop  map[string]string          `json:"pacchetti_desktop"` // desktop → pacchetti (virgole) per installarlo
-	Note              []string                   `json:"note,omitempty"`
+	ID                string          `json:"id"`
+	Distribuzione     string          `json:"distribuzione"`
+	Versioni          []string        `json:"versioni"`
+	VersioneMinima    string          `json:"versione_minima,omitempty"`
+	EtichettaVersione string          `json:"etichetta_versione"`
+	Nome              string          `json:"nome"`
+	Famiglia          string          `json:"famiglia"`
+	Matrice           bool            `json:"matrice"`
+	GiroIntero        string          `json:"giro_intero"` // data del giro intero verde (T10); "" = mai
+	Derivate          []Derivata      `json:"derivate,omitempty"`
+	H264              H264Piattaforma `json:"h264"`
+	// Depositi: gli archivi che servono a REMOTIX stesso, su qualunque desktop (le librerie del
+	// video senza ffmpeg, fase 18): Alma → EPEL (SVT-AV1) e OpenH264 di Cisco; Fedora e openSUSE →
+	// OpenH264 di Cisco, che lì è acceso di serie (si chiede solo se qualcuno l'ha spento). D5.
+	Depositi         []string                   `json:"depositi,omitempty"`
+	Desktop          map[string]DesktopCatalogo `json:"desktop"`
+	PacchettiDesktop map[string]string          `json:"pacchetti_desktop"` // desktop → pacchetti (virgole) per installarlo
+	Note             []string                   `json:"note,omitempty"`
 }
 
 type Derivata struct {
@@ -83,14 +88,110 @@ type Derivata struct {
 	Nota           string   `json:"nota,omitempty"`
 }
 
+// H264Piattaforma: la codifica video della piattaforma, SENZA ffmpeg (fase 18): sulla scheda con
+// libva e il driver VA della distribuzione; in software con OpenH264. ⭐ Il deposito di terzi serve
+// ai DRIVER, e dipende dal fornitore della scheda (`[M]` 30 set, dai binari dei driver nelle
+// immagini podman): Fedora toglie H.264 sia dal driver Intel (libva-intel-media-driver) sia da Mesa
+// ⇒ RPM Fusion per entrambi (Intel: intel-media-driver, nel ramo NONFREE; AMD:
+// mesa-va-drivers-freeworld); openSUSE toglie H.264 solo da Mesa ⇒ Packman solo per AMD; Alma su
+// AMD non ha VA-API affatto.
 type H264Piattaforma struct {
-	SchedaDiSerie   bool   `json:"scheda_di_serie"`
-	SoftwareDiSerie bool   `json:"software_di_serie"`
+	SchedaDiSerie   bool   `json:"scheda_di_serie"`   // ogni scheda Intel/AMD codifica coi pacchetti ufficiali
+	SoftwareDiSerie bool   `json:"software_di_serie"` // OpenH264 vero nei depositi accesi di serie
 	Deposito        string `json:"deposito,omitempty"`
 	Comando         string `json:"comando,omitempty"`
 	AmdSenzaVaapi   bool   `json:"amd_senza_vaapi,omitempty"`
-	// PacchettiCodec: la libavcodec coi codec, dal deposito di terzi (dopo il consenso, D5)
-	PacchettiCodec string `json:"pacchetti_codec,omitempty"`
+	// PacchettiScheda: fornitore (come in scheda.*.fornitore: Intel, AMD) → i driver da Deposito,
+	// separati da virgola (dopo il consenso, D5). Un fornitore che non c'è codifica di serie, o non
+	// codifica affatto (AmdSenzaVaapi).
+	PacchettiScheda map[string]string `json:"pacchetti_scheda,omitempty"`
+	// Nonfree: i fornitori il cui driver sta nel ramo «nonfree» del deposito (RPM Fusion: il driver
+	// Intel completo)
+	Nonfree []string `json:"nonfree,omitempty"`
+	// PacchettiSoftware: OpenH264 VERO, per nome, nella transazione di REMOTIX quando la macchina non
+	// l'ha: dove c'è anche la copia vuota (noopenh264 su Fedora e Alma, libopenh264-8
+	// «~noopenh264» in repo-oss di openSUSE) la risoluzione per libreria potrebbe prendere quella
+	PacchettiSoftware string `json:"pacchetti_software,omitempty"`
+}
+
+// fornitoriScheda: i fornitori delle schede della macchina (scheda.<nodo>.fornitore); noti=false se
+// il profilo non ne dice nessuno (allora si resta prudenti: come se servissero tutti).
+func fornitoriScheda(p *Profilo) (map[string]bool, bool) {
+	r := map[string]bool{}
+	for _, f := range p.Fatti {
+		if strings.HasPrefix(f.Chiave, "scheda.") && strings.HasSuffix(f.Chiave, ".fornitore") && f.Valore != "" {
+			r[f.Valore] = true
+		}
+	}
+	return r, len(r) > 0
+}
+
+// PerLaScheda: che cosa chiede la codifica sulla scheda SU QUESTA MACCHINA: il deposito di terzi (""
+// se non serve), i driver da prendere lì e se serve il suo ramo nonfree. Senza schede non serve
+// niente; con schede di fornitori che il catalogo non nomina (NVIDIA, virtio…) nemmeno.
+func (h H264Piattaforma) PerLaScheda(p *Profilo) (deposito string, pacchetti []string, nonfree bool) {
+	if h.Deposito == "" || h.SchedaDiSerie || p.V("scheda.nodi") == "nessuno" {
+		return "", nil, false
+	}
+	forn, noti := fornitoriScheda(p)
+	var nomi []string
+	for f := range h.PacchettiScheda {
+		if !noti || forn[f] {
+			nomi = append(nomi, f)
+		}
+	}
+	if !noti && len(h.PacchettiScheda) == 0 {
+		return h.Deposito, nil, len(h.Nonfree) > 0
+	}
+	sort.Strings(nomi)
+	visti := map[string]bool{}
+	for _, f := range nomi {
+		for _, x := range dividiVirgole(h.PacchettiScheda[f]) {
+			if !visti[x] {
+				visti[x] = true
+				pacchetti = append(pacchetti, x)
+			}
+		}
+		if contiene(h.Nonfree, f) {
+			nonfree = true
+		}
+	}
+	if len(pacchetti) == 0 {
+		return "", nil, false
+	}
+	return h.Deposito, pacchetti, nonfree
+}
+
+// depositoPresente: il deposito c'è, acceso (e, se serve, col suo ramo nonfree).
+func depositoPresente(p *Profilo, d string, nonfree bool) bool {
+	return p.V("deposito."+d) == "presente" && (!nonfree || p.V("deposito."+d+"-nonfree") == "presente")
+}
+
+// DepositoScheda: il deposito di terzi che la scheda di QUESTA macchina chiede e che manca ("" se
+// non ne chiede, o se c'è già).
+func DepositoScheda(pl *Piattaforma, p *Profilo) string {
+	if pl == nil {
+		return ""
+	}
+	d, _, nf := pl.H264.PerLaScheda(p)
+	if d == "" || depositoPresente(p, d, nf) {
+		return ""
+	}
+	return d
+}
+
+// DepositiBaseMancanti: i depositi che servono a REMOTIX stesso (Piattaforma.Depositi) e mancano.
+func DepositiBaseMancanti(pl *Piattaforma, p *Profilo) []string {
+	if pl == nil {
+		return nil
+	}
+	var r []string
+	for _, d := range pl.Depositi {
+		if p.V("deposito."+d) != "presente" {
+			r = append(r, d)
+		}
+	}
+	return r
 }
 
 type DesktopCatalogo struct {
@@ -303,6 +404,13 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 	}
 
 	condH264 := condizioniH264(c, pl, p, fam, r)
+	// i depositi che servono a REMOTIX stesso (fase 18: le librerie del video), su ogni desktop
+	var condBase []Condizione
+	for _, dep := range DepositiBaseMancanti(pl, p) {
+		dd := c.Depositi[dep]
+		condBase = append(condBase, Condizione{Codice: "C-DEPOSITO",
+			Testo: T("cond.deposito_base", nonVuoto(dd.Nome, dep)), Rimedio: dd.Comandi[pl.H264.Comando], Decisione: dd.Decisione})
+	}
 	nessuno := true
 	for _, d := range DESKTOP {
 		inst := p.V("desktop." + d)
@@ -322,6 +430,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			case !dc.Supportato:
 				e.Motivi = append(e.Motivi, Msg(nonVuoto(dc.Codice, "RX-COMPAT-005"), dc.Motivo))
 			default:
+				e.Condizioni = append(e.Condizioni, condBase...)
 				e.Condizioni = append(e.Condizioni, condH264...)
 				for _, comp := range dc.Componenti {
 					if p.V("pacchetto."+comp) == "assente" || p.V("pacchetto."+comp) == "" {
@@ -338,7 +447,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 						Rimedio: c.Installa[fam] + " " + car, Componente: car})
 				}
 				for _, dep := range dc.Depositi {
-					if p.V("deposito."+dep) != "presente" {
+					if p.V("deposito."+dep) != "presente" && !contiene(pl.Depositi, dep) {
 						dd := c.Depositi[dep]
 						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-DEPOSITO",
 							Testo: T("cond.deposito_desktop", NomeDesktop(d), dd.Nome), Rimedio: dd.Comandi["rhel"], Decisione: dd.Decisione})
@@ -420,8 +529,10 @@ func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rap
 	if h.Stato == VERIFICATO && h.Valore == "si" {
 		return cc
 	}
-	if pl != nil && !pl.H264.SchedaDiSerie && pl.H264.Deposito != "" && p.V("deposito."+pl.H264.Deposito) != "presente" {
-		d := c.Depositi[pl.H264.Deposito]
+	// il deposito dei driver, solo se la scheda di QUESTA macchina lo chiede (fase 18: Packman solo
+	// per AMD; RPM Fusion per Intel e AMD, niente per NVIDIA o senza scheda)
+	if dep := DepositoScheda(pl, p); dep != "" {
+		d := c.Depositi[dep]
 		cc = append(cc, Condizione{Codice: "C-DEPOSITO",
 			Testo:     T("cond.deposito_h264", d.Nome),
 			Rimedio:   d.Comandi[pl.H264.Comando],

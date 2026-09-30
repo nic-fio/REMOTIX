@@ -8,7 +8,8 @@
 #    (`src/costruzione/Contenitore.<bersaglio>`) con `packaging/rpm/costruisci-rpm.sh`.
 #
 # ⭐ Le librerie le calcola rpmbuild leggendo il binario (le «Requires» automatiche
-#    per soname: libavcodec, libssl, libpam, libpipewire, libei, libva, …): e' la
+#    per soname: libva, libopenh264, libSvtAv1Enc, libopus, libssl, libpam, libpipewire,
+#    libei, …): e' la
 #    cura di `LEZIONI.md` §2.5-bis.  Qui sotto si scrive A MANO solo quel che rpm
 #    NON puo' vedere, perche' si carica o si esegue a tempo di esecuzione: il
 #    compositore per XFCE/LXQt, wlr-randr, Xwayland, lo sfondo di Plasma, i
@@ -70,9 +71,23 @@ BuildRequires:  pkgconfig(gio-2.0) >= 2.80
 BuildRequires:  pkgconfig(libpipewire-0.3) >= 0.3.48
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libva)
-BuildRequires:  pkgconfig(libavcodec) >= 61.13.100
-BuildRequires:  pkgconfig(libavutil) >= 59
-BuildRequires:  pkgconfig(libswscale) >= 8
+BuildRequires:  pkgconfig(libva-drm)
+# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  OpenH264 (il ripiego H.264),
+#   SVT-AV1 (il ripiego AV1), libopus (l'audio).  `[M]` 30 set, i depositi: Fedora 44
+#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus/libyuv da fedora;
+#   Alma 10 openh264 SOLO dal deposito Cisco per EPEL (epel-cisco-openh264, da
+#   aggiungere), svt-av1 da EPEL, opus da AppStream, libyuv NON C'E'; openSUSE
+#   libopenh264 da repo-openh264 (codecs.opensuse.org: quello di repo-oss e' la copia
+#   vuota), il resto da repo-oss.
+BuildRequires:  pkgconfig(openh264)
+BuildRequires:  pkgconfig(SvtAv1Enc)
+BuildRequires:  pkgconfig(opus)
+# ⚠ libyuv: la conversione dei colori, decisione ancora APERTA (il codice potrebbe
+#   farla da se', `colori709.c`).  Se esce, si toglie SOLO questo blocco.  Su Alma 10
+#   libyuv non c'e' in nessun deposito (`[M]` 30 set): lì si costruisce senza.
+%if ! 0%{?rhel}
+BuildRequires:  pkgconfig(libyuv)
+%endif
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)
@@ -120,18 +135,25 @@ Requires:       (wlr-randr if lxqt-session)
 Requires:       (default-fonts-core-sans if labwc)
 # I driver VA-API: si caricano con dlopen, rpm non li vede.  Su Fedora il driver
 # Mesa (AMD, virtio) sta in mesa-dri-drivers, quello Intel libero in
-# libva-intel-media-driver.  ⚠ NESSUNO dei due codifica H.264 di serie (§4.2):
-# serve RPM Fusion (mesa-va-drivers-freeworld / intel-media-driver), che il
-# pacchetto NON aggiunge (D5).  Recommends: sulla macchina senza scheda Intel il
-# driver Intel non serve, e chi li toglie non deve rompere il pacchetto.
+# libva-intel-media-driver.  ⚠ NESSUNO dei due codifica H.264 di serie (§4.2;
+# `[M]` 30 set dai binari, fase 18): serve RPM Fusion (mesa-va-drivers-freeworld,
+# free / intel-media-driver, NONFREE), che il pacchetto NON aggiunge (D5).
+# Recommends: sulla macchina senza scheda Intel il driver Intel non serve, e chi
+# li toglie non deve rompere il pacchetto.
 Recommends:     mesa-dri-drivers
 Recommends:     (libva-intel-media-driver or intel-media-driver)
+# OpenH264 VERO (fase 18): noopenh264, nel deposito fedora, fornisce la stessa
+# libopenh264.so.8 e non codifica; quello di Cisco lo nomina per nome.
+Recommends:     openh264
 %endif
 
 %if 0%{?rhel}
-# ⚠ Alma/RHEL 10: libavcodec-free sta in EPEL 10 (con CRB): senza EPEL la
-#   dipendenza automatica su libavcodec.so.61 non si risolve e l'installazione
-#   si ferma.  Il pacchetto NON aggiunge EPEL: e' un passo del motore (§6.0).
+# ⚠ Alma/RHEL 10 (fase 18): svt-av1-libs sta in EPEL 10 e openh264 nel deposito
+#   Cisco per EPEL 10 (epel-cisco-openh264, che epel-release NON configura): senza
+#   di loro le dipendenze automatiche (libSvtAv1Enc.so.2, libopenh264.so.7) non si
+#   risolvono e l'installazione si ferma.  Il pacchetto NON aggiunge depositi: e'
+#   un passo del motore (§6.0, D5).  (EPEL ha solo noopenh264, la copia vuota.)
+Recommends:     openh264
 # ⛔ Niente labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): nessuna dipendenza da scrivere.
 # ⛔ Mesa di RHEL 10 e' senza VA-API e EPEL non ha il driver Intel (§4.2): la
 #   codifica sulla scheda c'e' solo con depositi di terzi.
@@ -150,8 +172,10 @@ Requires:       ((google-droid-fonts or dejavu-fonts or google-noto-sans-fonts o
 # non mostra ne' desktop ne' pannello (tela nera).  Sulle installazioni senza
 # «raccomandati» (l'immagine Minimal, `solver.onlyRequires`) il gruppo KDE non lo porta.
 Requires:       (breeze6-wallpapers if plasma6-workspace)
-# driver VA-API (dlopen).  ⚠ La ffmpeg di openSUSE non ha h264_vaapi (§4.2): senza
-# Packman REMOTIX non codifica su nessuna scheda.  Il pacchetto NON aggiunge Packman (D5).
+# driver VA-API (dlopen).  Fase 18 (`[M]` 30 set, dai binari): il driver Intel
+# ufficiale codifica H.264; la Mesa ufficiale e' senza h264/h265 ⇒ con una scheda
+# AMD serve quella di Packman (Mesa-dri, Mesa-libva).  Il pacchetto NON aggiunge
+# Packman (D5).
 Recommends:     Mesa-libva
 Recommends:     intel-media-driver
 %endif
@@ -161,8 +185,9 @@ REMOTIX porta il desktop di questa macchina (GNOME, KDE Plasma, XFCE, LXQt) in
 un browser, con WebTransport e video H.264 codificato sulla scheda grafica.
 Ogni utente della macchina entra con la sua parola d'ordine; root no.
 
-⚠ La codifica H.264 usa i codec e i driver della distribuzione: su Fedora e
-openSUSE servono RPM Fusion o Packman, che questo pacchetto non aggiunge.
+⚠ La codifica H.264 sulla scheda usa i driver della distribuzione: su Fedora e
+Alma serve RPM Fusion, su openSUSE con una scheda AMD Packman, che questo
+pacchetto non aggiunge; il ripiego in software usa OpenH264 di Cisco.
 
 %package selinux
 Summary:        Il modulo SELinux di REMOTIX
@@ -191,7 +216,7 @@ test "$(pkg-config --modversion libngtcp2)"  = %{ngtcp2_ver}  || { echo "⛔ ngt
 test "$(pkg-config --modversion libnghttp3)" = %{nghttp3_ver} || { echo "⛔ nghttp3 $(pkg-config --modversion libnghttp3), dichiarata %{nghttp3_ver}"; exit 1; }
 # I flag della distribuzione (FORTIFY, PIE, protezione dello stack, …) NELL'AMBIENTE:
 # il Makefile ha `CFLAGS ?=` e poi `CFLAGS +=`.  Passati sulla riga di comando di
-# make scavalcherebbero anche i `+=` (e sparirebbero le intestazioni di ffmpeg).
+# make scavalcherebbero anche i `+=` (e sparirebbero le intestazioni delle librerie).
 cd src
 export CFLAGS="%{optflags} -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
 export LDFLAGS="%{?build_ldflags}"

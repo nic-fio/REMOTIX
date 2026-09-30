@@ -73,9 +73,9 @@ var Codici = map[string]Codice{
 	"RX-GPU-002":     {AVVISO, ServeAzione, "La scheda NVIDIA usa il driver proprietario: non codifica H.264 attraverso VA-API.", "La codifica passerà al ripiego software (condizione C-HARDWARE)."},
 	"RX-H264-001":    {AVVISO, ServeAzione, "Non si sa ancora se la scheda codifica H.264: il controllo non lancia programmi, e la prova col fotogramma si fa dopo l'installazione (7a), col binario di REMOTIX.", "Il controllo resta SCONOSCIUTO fino ad allora: non vale come «a posto»."},
 	"RX-H264-002":    {AVVISO, ServeAzione, "La scheda non ha codificato il fotogramma H.264 di prova.", "Controllare il driver VA-API della scheda."},
-	"RX-H264-003":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su Fedora e sulla famiglia RHEL serve RPM Fusion.", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
-	"RX-H264-004":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su openSUSE serve Packman.", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
-	"RX-H264-005":    {AVVISO, ServeAzione, "Non c'è nemmeno il ripiego software (libx264) nella ffmpeg di questa macchina.", ""},
+	"RX-H264-003":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su Fedora e sulla famiglia RHEL il driver con H.264 viene da RPM Fusion (Intel: intel-media-driver; AMD, solo Fedora: mesa-va-drivers-freeworld).", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
+	"RX-H264-004":    {AVVISO, ServeAzione, "La scheda non codifica H.264: su openSUSE con una scheda AMD serve la Mesa di Packman (il driver Intel ufficiale codifica già).", "Il comando è nel rapporto di compatibilità (condizione C-DEPOSITO, decisione D5)."},
+	"RX-H264-005":    {AVVISO, ServeAzione, "Non c'è nemmeno il ripiego software: OpenH264 manca, o c'è solo la sua copia vuota (noopenh264).", "L'installazione aggiunge OpenH264 vero (il pacchetto è nel rapporto di compatibilità)."},
 	"RX-H264-006":    {BLOCCANTE, ServeAzione, "Senza l'archivio esterno per la codifica video REMOTIX non si installa (decisione D5, DECISIONI §10.20): niente è stato toccato.", "Rifare l'installazione dando il consenso all'archivio (consenso.deposito.<nome> = si)."},
 	"RX-PAM-001":     {BLOCCANTE, ServeAzione, "La pila d'accesso della distribuzione non si trova.", "Controllare i file in /etc/pam.d (o /usr/lib/pam.d su openSUSE)."},
 	"RX-PAM-002":     {AVVISO, ServeAzione, "La pila d'accesso della distribuzione contiene pam_faillock: tre parole sbagliate chiudono il conto, anche davanti alla macchina — per REMOTIX come per ssh.", "Decisione D3: REMOTIX segue il sistema. Si governa in /etc/security/faillock.conf; faillock --user NOME --reset sblocca."},
@@ -121,7 +121,7 @@ var Codici = map[string]Codice{
 	"RX-FUORI-002":    {BLOCCANTE, ServeAzione, "Il pacchetto fuori linea è stato preparato per un'altra macchina (impronta o pacchetti installati diversi).", "Prepararlo su una macchina collegata uguale a questa (stessa distribuzione e stessi pacchetti)."},
 	"RX-FUORI-003":    {BLOCCANTE, ServeAzione, "Nel pacchetto fuori linea manca qualcosa che l'installazione chiede.", "Prepararlo di nuovo sulla macchina di riferimento, con le stesse risposte."},
 	"RX-FUORI-004":    {BLOCCANTE, ServeAzione, "L'installazione senza rete non è ancora fatta per questa famiglia di distribuzioni (zypper, pacman).", "Installare dalla rete."},
-	"RX-FUORI-005":    {BLOCCANTE, ServeAzione, "Un archivio di terzi (RPM Fusion, Packman, EPEL) non entra nel pacchetto fuori linea: il suo passo scarica dalla rete.", "Preparare senza quel consenso (la codifica passa al ripiego dichiarato), o installare dalla rete."},
+	"RX-FUORI-005":    {BLOCCANTE, ServeAzione, "Un archivio di terzi (Packman, EPEL, OpenH264 di Cisco da aggiungere) non entra nel pacchetto fuori linea: il suo passo scarica dalla rete.", "Preparare senza quel consenso (la codifica passa al ripiego dichiarato), o installare dalla rete."},
 
 	// operazione, registro e ripresa (§6.6.2, §6.6.3)
 	"RX-STATO-001":     {BLOCCANTE, Recuperabile, "C'è un'operazione non finita: va prima ripresa o annullata.", "remotix-install riprendi, oppure remotix-install annulla."},
