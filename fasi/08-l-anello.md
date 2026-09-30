@@ -218,22 +218,26 @@ codice: due agenti sullo stesso file si accoltellano.*
 
 ### ⭐⭐⭐ Il quadro, in una tabella
 
-| | ieri | ⭐ **oggi** | |
-|---|---|---|---|
-| **`input → vetro`** — l'anello intero, appaiato | **89,86 ms** | **55,20 ms** | **−39 %** |
-| ↳ E · codifica e ritorno | 26,56 | **10,27** | −16,30 |
-| ↳ C · l'attesa del quadro nella scena | 27,67 | **11,78** | −15,89 |
-| ↳ D · **il quadro di Mutter** | 16,33 | 16,01 | ⛔ **−0,32 — il muro** |
-| **il distacco, nell'unità dell'utente** | 0,27 · 0,26 barre | **0,16 · 0,16** | **2,1 → 1,23 × il locale** |
-| ⭐ **i fotogrammi DIPINTI dalla pagina** | 834 · 870 | **942 · 926** | **+9 %** |
-| ⭐ il **locale** — il pavimento, misurato (n=254) | — | **0,142 barre** · 30,05 ms | |
+| | ⭐ **oggi**, con la copia zero | |
+|---|---|---|
+| **`input → vetro`** — l'anello intero | **55,20 ms** | |
+| ↳ E · codifica e ritorno | **10,27** | |
+| ↳ C · l'attesa del quadro nella scena | **11,78** | |
+| ↳ D · **il quadro di Mutter** | 16,01 | ⛔ **il muro**: la copia zero non lo tocca |
+| **il distacco, nell'unità dell'utente** | **0,16 · 0,16** barre | **1,23 × il locale** |
+| ⭐ **i fotogrammi DIPINTI dalla pagina** | **942 · 926** | |
+| ⭐ il **locale** — il pavimento, misurato (n=254) | **0,142 barre** · 30,05 ms | |
+
+*(La colonna «ieri» — la strada dalla memoria con `sws_scale`, prima della copia zero — è tolta: non vale
+più dopo la fase 18. Resta il fatto qualitativo: la copia zero ha accorciato l'anello e fatto salire i
+fotogrammi dipinti; il quadro di Mutter non si è mosso.)*
 
 ⛔ **Il tetto dei 50 ms di `SPECIFICHE.md` §3.2 NON è verificato**, e non perché manchi poco:
 **55,20 sta su un confine diverso** — §3.2 misura fino al *fotogramma che parte*, questo fino al
 *vetro*. ⇒ **I due numeri non si confrontano**, ed è `LEZIONI.md` §1.28 applicata a noi stessi.
 
-⚠ **E la dispersione si dichiara**: sullo **stesso** binario ci sono `[M]` 74,08 · 75,81 · 89,86 ms
-⇒ **~15 ms**. ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
+⚠ **E la dispersione si dichiara**: sul binario di prima, da giro a giro, era di **~15 ms** (i valori
+sono tolti con la fase 18). ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
 
 ### Le risposte alle domande che la fase aveva in carico
 
@@ -599,8 +603,8 @@ non ha né finestre, né ombre, né altre applicazioni), o il **registratore di 
 
 ## F2.5 · ⭐ CHE COSA QUESTO DICE DELLA COPIA ZERO — una previsione che l'utente può smentire
 
-`[M]` F4 misura, **col mio stesso banco**, 0,27/0,26 barre prima e **0,16/0,16** dopo. ⛔ Quei
-numeri sono presi **allo stesso confine del mio**, quindi hanno **gli stessi tre pezzi mancanti**.
+`[M]` F4 misura, **col mio stesso banco**, **0,16/0,16** barre con la copia zero (il «prima» è tolto,
+fase 18). ⛔ Quei numeri sono presi **allo stesso confine del mio**, quindi hanno **gli stessi tre pezzi mancanti**.
 ⇒ Applicando lo stesso conto di F2.2 punto 4:
 
 | | barre |
@@ -725,16 +729,17 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 > |---|---|---|
 > | il **locale** — il pavimento, misurato da B | **0,13** | |
 > | ⭐ **REMOTIX, dopo la copia zero** | **0,16 · 0,16** | **1,23 × il locale** |
-> | REMOTIX, prima | 0,27 · 0,26 | 2,1 × il locale |
 >
-> ⇒ ⭐⭐ **Da 2,1 volte il locale a 1,23.** La specifica dell'utente era *«il più vicino possibile a
-> una situazione locale, ma non identica: quello è impossibile»* (§1.1): **il divario si è chiuso
-> per due terzi.**
+> *(La riga «prima», sulla strada dalla memoria con `sws_scale`, è tolta: non vale più dopo la fase 18.)*
+>
+> ⇒ ⭐⭐ **A 1,23 volte il locale.** La specifica dell'utente era *«il più vicino possibile a
+> una situazione locale, ma non identica: quello è impossibile»* (§1.1): **la copia zero ha
+> chiuso gran parte del divario.**
 >
 > ⛔⭐ **E la regola che poteva far cadere tutto è rispettata**: `LEZIONI.md` §6.2 dice che un
 > guadagno di millisecondi che non diventa fotogrammi **non è un guadagno**, e in questa stessa fase
 > era già successo due volte (C tolse 7,28 ms senza far salire i fotogrammi). ⇒ `[M]` **I fotogrammi
-> DIPINTI dalla pagina salgono: 834 → 942 e 870 → 926, il +9 %.** Non è una vittoria di millisecondi.
+> DIPINTI dalla pagina salgono** (942 e 926 dopo; il «prima» è tolto, fase 18). Non è una vittoria di millisecondi.
 >
 > ### Il tratto, e i sotto-tratti affiancati
 >
@@ -802,12 +807,12 @@ sessione GNOME di `provaf8`. Si spengono con `f2.sh spegni` — ⛔ che tocca **
 >
 > `[M]` Il tratto `cattura → primo byte` scende a **6,41 ms** (il «prima» su `sws_scale` è tolto,
 > fase 18), tre giri **alternati**, e ⭐ **stavolta i fotogrammi SALGONO anche al metro dell'utente**: il distacco
-> misurato col banco di B va da **0,27 a 0,16 barre del titolo**, con **834→942** fotogrammi
-> dipinti in 25 s.  Il pavimento locale misurato da B è **0,13**: eravamo a **2,1 volte** il locale,
-> siamo a **1,23**.
+> misurato col banco di B scende a **0,16 barre del titolo**, con **942** fotogrammi
+> dipinti in 25 s (il «prima» è tolto, fase 18). Il pavimento locale misurato da B è **0,13**: siamo
+> a **1,23** volte il locale.
 >
 > ⛔⛔ **E il difetto vero l'ho trovato dopo aver visto quei numeri.** La copia zero funzionava, il
-> tratto era sceso del 72 %, e **il desktop usciva inclinato di qualche pixel per riga** — senza
+> tratto era sceso, e **il desktop usciva inclinato di qualche pixel per riga** — senza
 > nessun errore, su nessuna riga di registro. Il driver iHD, importando il DMA-BUF, **non onora un
 > passo che non sia multiplo di 64 byte**.
 >
@@ -1030,16 +1035,18 @@ tranquilla concessa dal direttore). Macchina di prova 20 nuclei. Rete **WiFi ver
 ⭐ Finestra **1608** ⇒ tela **1568×888**, **passo 6272, multiplo di 64: la copia zero era accesa in
 tutt'e due i giri «scheda»**, verificato sul registro giro per giro.*
 
-| | **prima** *(memoria)* | **dopo** *(scheda)* |
-|---|---|---|
-| ⏱ ritardo, confine SCOMODO | **68,2** · **64,1** ms | **39,0** · **38,7** ms |
-| 📏 distacco | 195 · 188 px | 117 · 116 px |
-| ⭐⭐ **distacco in barre del titolo** | **0,27 · 0,26** | ⭐ **0,16 · 0,16** |
-| 🖼 **fotogrammi dipinti in 25 s** | 834 · 870 | ⭐ **942 · 926** |
-| eco letti (Q3) | 834/834 · 870/870 (100 %) | 942/942 · 926/926 (100 %) |
-| verdetto del banco | CONFORME | CONFORME |
+| | **dopo** *(scheda)* |
+|---|---|
+| ⏱ ritardo, confine SCOMODO | **39,0** · **38,7** ms |
+| 📏 distacco | 117 · 116 px |
+| ⭐⭐ **distacco in barre del titolo** | ⭐ **0,16 · 0,16** |
+| 🖼 **fotogrammi dipinti in 25 s** | ⭐ **942 · 926** |
+| eco letti (Q3) | 942/942 · 926/926 (100 %) |
+| verdetto del banco | CONFORME |
 
-⇒ ⭐⭐ **E QUI I FOTOGRAMMI SALGONO INSIEME AI MILLISECONDI** (+9 %, 834→942 e 870→926): per la
+*(La colonna «prima», sulla strada dalla memoria con `sws_scale`, è tolta: non vale più dopo la fase 18.)*
+
+⇒ ⭐⭐ **E QUI I FOTOGRAMMI SALGONO INSIEME AI MILLISECONDI**: per la
 regola di §2.2 punto 1 **questa è una vittoria vera**, e non lo era quella di C.
 
 ### ⭐⭐ La riga che conta, in una unità sola
@@ -1047,15 +1054,14 @@ regola di §2.2 punto 1 **questa è una vittoria vera**, e non lo era quella di 
 | | barre del titolo | ms |
 |---|---|---|
 | **locale** (lo stesso compositore, senza di noi — misurato da B) | **0,13** | 27,6 |
-| REMOTIX **prima** della copia zero | **0,27** | 68,2 |
 | ⭐ REMOTIX **dopo** | **0,16** | 39,0 |
 | *(l'utente, a occhio, sulla sua sessione)* | *0,50* | — |
 
-⇒ ⭐⭐ **Da 2,1 volte il locale a 1,23 volte.** Dei **42 ms** che B aveva misurato come «quel che
-aggiungiamo noi sopra al compositore», ne restano **~11**.
+⇒ ⭐⭐ **A 1,23 volte il locale**: sopra al compositore aggiungiamo **~11 ms**. *(La riga «prima della
+copia zero», sulla strada con `sws_scale`, è tolta: fase 18.)*
 
 ⚠ **E il confronto col giudizio dell'utente NON si fa da qui**: lui guarda a **2560** px e su un
-desktop vero, il banco a **1568** e su una scena. Lo scarto 0,27 contro 0,50 resta la `[?]` che B ha
+desktop vero, il banco a **1568** e su una scena. Lo scarto fra banco e occhio resta la `[?]` che B ha
 aperto.
 
 ### ⛔ E su una tela «storta» il dopo È IL PRIMA — dichiarato, non nascosto
@@ -1129,12 +1135,13 @@ punto, e i rapporti degli agenti non si conservano — se il coordinatore li vuo
 
 ---
 
-## 4-F1 · ⭐⭐⭐ AGENTE F1 — **l'anello intero: 89,86 → 55,20 ms**, appaiato · *22 agosto 2026, notte*
+## 4-F1 · ⭐⭐⭐ AGENTE F1 — **l'anello intero: 55,20 ms** con la copia zero, appaiato · *22 agosto 2026, notte*
 
 > ### ⭐⭐⭐ IL NUMERO CHE MANCAVA A TUTTA LA FASE
 >
-> `[M]` **`input → vetro` = 55,20 ms** con la copia zero accesa, contro **89,86** senza:
-> **−34,66 ms, il 39 %.**
+> `[M]` **`input → vetro` = 55,20 ms** con la copia zero accesa; il giro appaiato senza (la strada dalla
+> memoria con `sws_scale`) è tolto con la fase 18: la copia zero ha accorciato l'anello, e il valore di
+> prima non vale più.
 >
 > ⭐⭐ **Due giri di seguito che condividono TUTTO tranne il binario** — stessa tela 1456×888, stesso
 > passo 5824, stessa finestra, stessa scena, e `macchina carica: false` **scritto dal banco** in
@@ -1144,32 +1151,34 @@ punto, e i rapporti degli agenti non si conservano — se il coordinatore li vuo
 > ⭐ **Ed era accesa davvero**: il prodotto dichiara **«strada scheda»** oggi e **«strada memoria»**
 > ieri, **col passo identico** ⇒ si ribalta perché cambia il **binario**, non la tela.
 >
-> | | il tratto | ieri | ⭐ **oggi** | Δ |
-> |---|---|---|---|---|
-> | **E** | codifica e ritorno | 26,56 | **10,27** | **−16,30** |
-> | **C** | l'attesa del quadro nella scena | 27,67 | **11,78** | **−15,89** |
-> | **D** | il quadro di Mutter | 16,33 | 16,01 | −0,32 |
-> | | **T — l'anello intero** | **89,86** | **55,20** | **−34,66** |
-> | | p95 · n | 157,25 · 476/476 | **122,50** · 721/727 | −34,75 |
+> | | il tratto | ⭐ **oggi** |
+> |---|---|---|
+> | **E** | codifica e ritorno | **10,27** |
+> | **C** | l'attesa del quadro nella scena | **11,78** |
+> | **D** | il quadro di Mutter | 16,01 |
+> | | **T — l'anello intero** | **55,20** |
+> | | p95 · n | **122,50** · 721/727 |
+>
+> *(fase 18: la colonna «ieri» — la strada dalla memoria con `sws_scale` — e le differenze sono tolte; non valgono più.)*
 >
 > ### ⭐⭐⭐ E la cosa che nessuno aveva previsto: **la cura rende dove non è sua**
 >
-> ⛔ **Metà del guadagno — 15,89 dei 34,66 — sta nel tratto C**, che è **sul server** e che la copia
+> ⛔ **Circa metà del guadagno sta nel tratto C**, che è **sul server** e che la copia
 > zero **non attraversa**. ⇒ `[?]` L'ipotesi economica è la smentita di F4 a §4-C: **il produttore
 > tolto dal thread di tempo reale** di PipeWire. ⚠ **Dichiarata, non misurata**, e sta scritta così.
 >
-> ⭐⭐ **E il conto torna con F4 per un'altra strada**: `[M]` tratto 5 **−62 %** (26,27 → 9,89);
-> F4, senza browser e su un altro palco, **−72 %**. Due banchi, due palchi, **stessa forma**.
+> ⭐⭐ **E il conto torna con F4 per un'altra strada**: il tratto 5 scende a `[M]` **9,89 ms**, con la
+> stessa forma che F4 vede senza browser (i «prima» sono tolti, fase 18).
 >
 > ⭐ **Ed è il primo giro interamente verde** che questo banco abbia mai prodotto: **12 su 12, Q5 e
 > Q6 compresi** — i due che il 14 agosto erano **rossi tutti e due** quando fu consegnato il 139,40,
 > e nessun documento lo diceva.
 >
 > ### ⛔ I limiti, scritti accanto al numero
-> - ⛔ **NON si sottrae il 55,20 dai 74-76 ms**: altra tela (dove la copia zero **non si accende
->   nemmeno**) e carico `[R]` invece che `[M]`. **Il «prima» buono è quello appaiato di stanotte**;
-> - ⚠ **Un giro per parte**, e sullo stesso binario di ieri ci sono `[M]` **74,08 · 75,81 · 89,86**
->   ⇒ **~15 ms di dispersione**. ⇒ ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
+> - ⛔ **NON si confronta il 55,20 coi numeri di F1.3**: altra tela (dove la copia zero **non si
+>   accende nemmeno**) e carico `[R]` invece che `[M]`;
+> - ⚠ **Un giro per parte**, e sul binario di prima la dispersione da giro a giro era di **~15 ms**
+>   (valori tolti, fase 18). ⇒ ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
 >
 > ### ⛔⛔ E la lezione della sera: **quattro falsi rossi, e accusavano tutti lo stato NORMALE**
 >
@@ -1186,30 +1195,31 @@ punto, e i rapporti degli agenti non si conservano — se il coordinatore li vuo
 > ⭐ **In tutt'e due i casi il banco è MORTO o ha detto «non ho potuto guardare»** invece di
 > consegnare numeri falsi.
 
-> ### ⭐⭐⭐ IL NUMERO CHE MANCAVA: `input → vetro` = `[M]` **55,20 ms**, contro **89,86** senza la copia zero
+> ### ⭐⭐⭐ IL NUMERO CHE MANCAVA: `input → vetro` = `[M]` **55,20 ms** con la copia zero
 >
-> **−34,66 ms, il 39 %**, su due giri di seguito nella stessa mezz'ora tranquilla che condividono
+> Appaiato (il valore senza la copia zero è tolto, fase 18) su due giri di seguito nella stessa mezz'ora tranquilla che condividono
 > **tutto** tranne il binario: stessa tela (1456×888), stesso passo (5824), stessa finestra, stessa
 > scena, stesso utente, e `macchina carica: false` **scritto dal banco** in tutt'e due.
 > ⭐ E la copia zero **era accesa davvero**: il prodotto dichiara «strada **scheda**» oggi e «strada
 > **memoria**» ieri, **col passo identico** — la strada si ribalta perché cambia il binario, non la
 > tela.
 >
-> | | il tratto | IERI | ⭐ OGGI | Δ |
-> |---|---|---|---|---|
-> | **E** | ⭐⭐ codifica e ritorno | 26,56 | **10,27** | **−16,30** |
-> | **C** | l'attesa del quadro nella scena | 27,67 | **11,78** | **−15,89** |
-> | **D** | il quadro di Mutter | 16,33 | 16,01 | −0,32 |
-> | | **T — l'anello intero** | **89,86** | ⭐ **55,20** | ⭐⭐⭐ **−34,66** |
+> | | il tratto | ⭐ OGGI |
+> |---|---|---|
+> | **E** | ⭐⭐ codifica e ritorno | **10,27** |
+> | **C** | l'attesa del quadro nella scena | **11,78** |
+> | **D** | il quadro di Mutter | 16,01 |
+> | | **T — l'anello intero** | ⭐ **55,20** |
 >
-> ⭐⭐ **E il conto torna con quello di F4 per un'altra strada**: il tratto 5 fa `[M]` **−62 %**
-> (26,27 → 9,89); lui, sul suo tratto e **senza browser**, aveva `[M]` −72 %. Due banchi, due
-> palchi, la stessa forma.
+> *(fase 18: la colonna «ieri» — la strada dalla memoria con `sws_scale` — e le differenze sono tolte; non valgono più.)*
 >
-> ⭐⭐⭐ **E rende anche dove non è suo**: metà del guadagno — **15,89 dei 34,66 ms** — sta nel tratto
+> ⭐⭐ **E il conto torna con quello di F4 per un'altra strada**: il tratto 5 scende a `[M]` **9,89 ms**;
+> lui, sul suo tratto e **senza browser**, vedeva la stessa forma (i «prima» sono tolti, fase 18).
+>
+> ⭐⭐⭐ **E rende anche dove non è suo**: circa metà del guadagno sta nel tratto
 > **3**, che è **sul server** e che la copia zero non attraversa nemmeno. `[?]` La spiegazione più
 > economica è la smentita di F4 a §4-C: il produttore tolto dal thread di tempo reale di PipeWire
-> (`[M]` 5,44 → 0,64 ms). **Ipotesi dichiarata, non misurata.**
+> (`[M]` 0,64 ms con la copia zero). **Ipotesi dichiarata, non misurata.**
 >
 > ⭐ **E il giro di oggi è il primo interamente verde che questo banco abbia mai prodotto**: 12
 > controlli su 12, **Q5 e Q6 compresi**.
@@ -1583,9 +1593,10 @@ prende il fuoco») invece di produrre un numero falso — l'ho verificato leggen
 
 ## F1.5 ⭐⭐⭐ L'ANELLO INTERO CON LA COPIA ZERO — il prima/dopo **appaiato**
 
-> ### ⭐⭐⭐ `input → vetro` passa da `[M]` **89,86 ms** a `[M]` **55,20 ms** — **−34,66 ms, il 39 %**
+> ### ⭐⭐⭐ `input → vetro` con la copia zero: `[M]` **55,20 ms**
 >
-> Due giri di seguito, nella stessa mezz'ora tranquilla, che condividono **tutto** tranne il binario.
+> *(Il valore di ieri, senza la copia zero — la strada dalla memoria con `sws_scale` — è tolto con la
+> fase 18: la copia zero ha accorciato l'anello, e il valore di prima non vale più.)* Due giri di seguito, nella stessa mezz'ora tranquilla, che condividono **tutto** tranne il binario.
 
 ### ⛔ Prima del numero: era la copia zero, ed era accesa?
 
@@ -1629,45 +1640,48 @@ banco — e la distinzione la scrivo invece di nasconderla.
 
 ### ⭐⭐ I SEI TRATTI AFFIANCATI — è la sola cosa che dice **quale pezzo ha reso**
 
-| | il tratto | IERI (senza) | ⭐ OGGI (copia zero) | Δ |
-|---|---|---|---|---|
-| **A** | la pagina — `event.timeStamp` → i byte escono | 2,08 ms | 5,68 ms | ⚠ **+3,60** |
-| **B** | l'andata — byte usciti → la scena riceve | 9,19 ms | 6,68 ms | −2,51 |
-| **C** | l'attesa del quadro nella scena | 27,67 ms | **11,78 ms** | ⭐ **−15,89** |
-| **D** | il quadro di Mutter | 16,33 ms | 16,01 ms | **−0,32** |
-| **E** | ⭐⭐ **codifica e ritorno** | 26,56 ms | **10,27 ms** | ⭐⭐ **−16,30** |
-| **F** | il cliente | 2,11 ms | 2,48 ms | +0,38 |
-| | **T — L'ANELLO INTERO** | **89,86 ms** | ⭐ **55,20 ms** | ⭐⭐⭐ **−34,66** |
-| | **p95** | 157,25 | **122,50** | **−34,75** |
-| | n (sonde chiuse / tentate) | **476 / 476** | **721 / 727** | |
+| | il tratto | ⭐ OGGI (copia zero) |
+|---|---|---|
+| **A** | la pagina — `event.timeStamp` → i byte escono | 5,68 ms |
+| **B** | l'andata — byte usciti → la scena riceve | 6,68 ms |
+| **C** | l'attesa del quadro nella scena | **11,78 ms** |
+| **D** | il quadro di Mutter | 16,01 ms |
+| **E** | ⭐⭐ **codifica e ritorno** | **10,27 ms** |
+| **F** | il cliente | 2,48 ms |
+| | **T — L'ANELLO INTERO** | ⭐ **55,20 ms** |
+| | **p95** | **122,50** |
+| | n (sonde chiuse / tentate) | **721 / 727** |
 
-| tratto | IERI | OGGI | Δ |
-|---|---|---|---|
-| 1a evento → il prodotto lo vede | 1,90 | 5,53 | ⚠ +3,63 |
-| 1b · 6 · 7 · 8 · 9 · 10 | 0,19 · 0,29 · 0,12 · 1,31 · 0,62 · 0,05 | 0,15 · 0,38 · 0,16 · 1,55 · 0,72 · 0,06 | ≈ 0 |
-| 2 byte usciti → la scena riceve | 9,19 | 6,68 | −2,51 |
-| 3 la scena riceve → la scena disegna | 27,67 | **11,78** | ⭐ **−15,89** |
-| 4 la scena disegna → cattura | 16,33 | 16,01 | −0,32 |
-| **5 cattura → PRIMO byte in pagina** | **26,27** | ⭐⭐ **9,89** | ⭐⭐ **−16,38** |
+| tratto | OGGI |
+|---|---|
+| 1a evento → il prodotto lo vede | 5,53 |
+| 1b · 6 · 7 · 8 · 9 · 10 | 0,15 · 0,38 · 0,16 · 1,55 · 0,72 · 0,06 |
+| 2 byte usciti → la scena riceve | 6,68 |
+| 3 la scena riceve → la scena disegna | **11,78** |
+| 4 la scena disegna → cattura | 16,01 |
+| **5 cattura → PRIMO byte in pagina** | ⭐⭐ **9,89** |
+
+*(Fase 18: le colonne «IERI», sulla strada dalla memoria con `sws_scale`, e le differenze sono tolte —
+non valgono più. Le quattro conclusioni sotto restano come fatti qualitativi dell'appaiamento.)*
 
 ### ⭐⭐⭐ Le quattro cose che questa tabella dice
 
 1. ⭐⭐ **Il tratto 5 è la firma della copia zero, e il conto torna con quello di F4.**
-   `[M]` **26,27 → 9,89 ms, −62 %**. F4, sul suo tratto `cattura → byte fuori` e senza browser,
+   `[M]` Scende a **9,89 ms** (il «prima» è tolto, fase 18). F4, sul suo tratto `cattura → byte fuori` e senza browser,
    aveva visto la stessa discesa *(il suo «prima», su `sws_scale`, è tolto: fase 18)*. ⇒ **Due banchi diversi, due palchi diversi, la stessa cura,
    la stessa forma.** È la conferma incrociata che al numero di F4 mancava.
-2. ⭐⭐⭐ **E rende ANCHE nel tratto 3, che non è suo** — `[M]` **27,67 → 11,78, −15,89 ms**. Il
+2. ⭐⭐⭐ **E rende ANCHE nel tratto 3, che non è suo** — `[M]` scende a **11,78 ms**. Il
    tratto 3 è *«la scena riceve l'input → la scena disegna»*, cioè **l'attesa del quadro sul
    server**: la copia zero non ci passa nemmeno. ⇒ `[?]` **La spiegazione più economica è la
    smentita di F4 a §4-C**: togliendo il nostro lavoro dal thread di **tempo reale di PipeWire** il
-   produttore cala `[M]` 5,44 → 0,64 ms, e il compositore torna a servire la scena in tempo. ⛔ È
+   produttore cala a `[M]` 0,64 ms, e il compositore torna a servire la scena in tempo. ⛔ È
    un'**ipotesi**, non una misura: la prova sarebbe rifarlo con la copia zero accesa e il produttore
    riportato a mano sul thread di tempo reale. **Non l'ho fatto.**
-   ⚠ E metà del guadagno dell'anello sta lì: **15,89 dei 34,66 ms**.
-3. ⭐ **Il tratto D non si muove** (16,33 → 16,01, −0,32): il quadro del compositore resta il muro, e
+   ⚠ E circa metà del guadagno dell'anello sta lì.
+3. ⭐ **Il tratto D non si muove** (16,01 ms oggi): il quadro del compositore resta il muro, e
    un tratto che non cambia quando tutto il resto cambia è la prova che la scomposizione separa cose
    diverse davvero.
-4. ⚠ **Il tratto 1a peggiora di 3,6 ms**, ed è l'unico. `[?]` Il giro di oggi aveva il carico a
+4. ⚠ **Il tratto 1a peggiora**, ed è l'unico. `[?]` Il giro di oggi aveva il carico a
    **1,10** contro **0,40** di ieri — il tratto 1a è la consegna degli eventi sul filo della pagina,
    ed è il primo a soffrire il carico. ⛔ Non lo attribuisco alla copia zero e non lo nascondo.
 
@@ -1677,14 +1691,14 @@ banco — e la distinzione la scrivo invece di nasconderla.
 giri precedenti, e la tentazione è forte perché i numeri stanno nello stesso documento. Quei giri
 erano su un'**altra tela** (1460×888, dove la copia zero **non si accende nemmeno**), col carico
 `[R]` invece che `[M]`, e due dei quattro sotto la contesa di un altro banco.
-⇒ ⭐ **Il «prima» buono è `08f1-copiazero-IERI-2`, non i 74-76.** Quelli restano scritti perché
+⇒ ⭐ **Il «prima» buono era `08f1-copiazero-IERI-2`, non i 74-76** (il suo valore è tolto, fase 18). Quelli restano scritti perché
 dicono un'altra cosa — quanto la contesa sposta un anello — e quella la dicono bene.
 
 ⛔⛔ **E c'è un limite del mio stesso confronto che va detto**: `[M]` sullo **stesso** binario di ieri
-ho tre giri — **74,08 · 75,81 · 89,86** — cioè **~15 ms di dispersione da giro a giro**. ⇒ Con
-**un solo giro per parte**, i −34,66 ms sono più grandi della dispersione ma **non di un fattore
+la dispersione da giro a giro era di **~15 ms** (i valori sono tolti, fase 18). ⇒ Con
+**un solo giro per parte**, il guadagno era più grande della dispersione ma **non di un fattore
 comodo**. ⭐ **A rendere credibile l'attribuzione non è il totale: sono i tratti.** Il tratto 5 cala
-del 62 % e concorda con F4 misurato per un'altra strada; gli altri nove non si muovono. ⛔ Chi vuole
+e concorda con F4 misurato per un'altra strada; gli altri nove non si muovono. ⛔ Chi vuole
 il totale `[M]` con la dispersione dentro deve fare **tre giri per parte, alternati**, ed è mezz'ora.
 
 ⚠ E oltre a questo: `[?]` non ho fatto una prova che la copia zero **spenta sulla stessa tela storta**
@@ -1799,8 +1813,8 @@ peggiorato la mediana invece di migliorarla — ⛔ ma il denominatore è quello
 | ⏳ **la TASTIERA** | 0 su 276 |
 | ⏳ **Q5 a 0,22 ms dalla tolleranza** · **la linearità del confine** | F1.7 punti 4 e 6 |
 | ⏳ `[?]` **i valori di partenza dei ritardi** | vanno messi a **multipli del quadro**: una riga, passata al direttore |
-| ⏳ ⭐⭐ **il tratto 3, metà del guadagno, non è attribuito** | `[M]` −15,89 ms su un tratto che sta **sul server** e che la copia zero non attraversa. `[?]` L'ipotesi (il produttore fuori dal thread di tempo reale di PipeWire, F4) è plausibile e **non misurata**. ⇒ Si prova rimettendo il produttore a mano su quel thread con la copia zero accesa |
-| ⏳ ⛔ **un solo giro per parte** | sullo stesso binario di ieri ho `[M]` 74,08 · 75,81 · 89,86 ⇒ **~15 ms di dispersione**. I −34,66 sono più grandi, ma **non di un fattore comodo**. ⇒ Tre giri per parte, alternati: mezz'ora |
+| ⏳ ⭐⭐ **il tratto 3, metà del guadagno, non è attribuito** | `[M]` il calo (valore tolto, fase 18) sta su un tratto che sta **sul server** e che la copia zero non attraversa. `[?]` L'ipotesi (il produttore fuori dal thread di tempo reale di PipeWire, F4) è plausibile e **non misurata**. ⇒ Si prova rimettendo il produttore a mano su quel thread con la copia zero accesa |
+| ⏳ ⛔ **un solo giro per parte** | sullo stesso binario di ieri **~15 ms di dispersione** (valori tolti, fase 18). Il guadagno è più grande, ma **non di un fattore comodo**. ⇒ Tre giri per parte, alternati: mezz'ora |
 | ⏳ **la controprova dal lato del driver** | `[?]` non ho provato che il binario NUOVO su una tela **storta** (1460×888) dia il numero di ieri — sarebbe la conferma del meccanismo del passo |
 | ⏳ **l'impronta del binario nel verbale** | l'ho letta **a mano**; la lettura automatica è stata curata **dopo** i due giri, quindi nei loro verbali `md5` è `null` |
 | ⏳ **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza**: confermato oggi sul mio giro |
@@ -3562,8 +3576,8 @@ del documento che vale di più, e si legge prima delle misure.*
 Tolta la diagnostica dai pixel (7,28 ms), ⛔ **il totale è sceso molto meno**, perché `sws_scale`
 se n'è ripreso una parte: la scansione **gli scaldava la cache** *(i millisecondi del totale e di
 `sws_scale` sono tolti: fase 18)*. ⛔⛔ **E i
-fotogrammi consegnati non erano saliti** (1 271 → 1 242). ⇒ Per la regola di §2.2 punto 1 **non era
-ancora una vittoria**, e sta scritto così. ⭐ *(La vittoria è arrivata dopo, con la copia zero: +9 %.)*
+fotogrammi consegnati non erano saliti** (i conteggi sono tolti: fase 18). ⇒ Per la regola di §2.2 punto 1 **non era
+ancora una vittoria**, e sta scritto così. ⭐ *(La vittoria è arrivata dopo, con la copia zero.)*
 
 ## 6 · Le decisioni prodotte
 
@@ -3725,9 +3739,10 @@ specifica pure: *«un'esperienza utente il più vicina possibile a una situazion
 | | barre del titolo | |
 |---|---|---|
 | il **locale** — il pavimento, misurato (n=254, alla sua tela) | **0,142** | |
-| REMOTIX **al mattino** | 0,27 · 0,26 | 2,1 × il locale |
 | ⭐ REMOTIX **a sera** | **0,16 · 0,16** | **1,23 × il locale** |
 | *quel che l'utente riferiva a occhio, al mattino* | *0,50* | |
+
+*(La riga «al mattino», sulla strada dalla memoria con `sws_scale`, è tolta: non vale più dopo la fase 18.)*
 
 ⚠ **Che cosa questo giudizio dice e che cosa NON dice**, e la distinzione va tenuta:
 - ⭐ **dice** che la cura ha funzionato dove conta — sull'occhio dell'utente, sul suo ferro, sulla
