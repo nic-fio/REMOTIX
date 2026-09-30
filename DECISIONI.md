@@ -6162,6 +6162,10 @@ l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prod
   ffmpeg, quando il video potrebbe andare in software.
 - **Niente AV1 come ultimo ripiego**: senza scheda e senza un OpenH264 vero (l'installatore lo mette
   sempre) REMOTIX **lo dichiara** all'avvio col rimedio; il browser non riceve codec che il server non sa fare.
+- ✅ **H.264 resta** (parola dell'utente, 30 set): la ragione d'origine (Firefox per Android) è caduta con §7.18,
+  ma **Firefox su Linux** non decodifica HEVC e lavora in H.264; senza, gli resterebbe solo AV1, che le schede
+  Intel del server non codificano. I brevetti di H.264 restano una questione di chi vende (§10.22); OpenH264 è
+  BSD e lavora solo senza scheda.
 - ✅ **Si ripetono solo le due misure che il cambio ha toccato** (parola dell'utente, 30 set): il confronto
   relativo vecchio/nuovo, stessa macchina e stesse immagini, per la codifica **senza scheda** e per la scheda
   con i pixel **dalla memoria**. La copia zero è risultata identica (byte, qualità, tempi del codificatore) e
