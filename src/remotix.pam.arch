@@ -25,11 +25,13 @@
 #    file elenca un nome per riga e si installa con dentro `root`.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 #
-# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
-#   `pambase` mette `pam_faillock` dentro `system-auth` (deny=3 in 15 minuti,
-#   blocco di 10): arriva con la pila, non lo mettiamo noi — e da remoto
-#   chiunque conosca un nome utente puo' chiudere fuori il proprietario.
-#   Se aggiungerlo, toglierlo o lasciarlo alla distribuzione lo decide l'utente.
+# ⭐ `DECISIONI.md` §10.18 (D3 chiusa, 30 set 2026): REMOTIX RISPECCHIA
+#    l'autenticazione del sistema.  /etc/pam.d/sshd di Arch sono quattro righe
+#    `include system-remote-login`: questo file e' quello, con la sola riga
+#    di root in piu' (`[M]` 30 set, arch-kde-iso: 4 righe su 4 uguali).
+#    `pambase` mette `pam_faillock` in `system-auth` (deny=3 in 15 minuti,
+#    blocco di 10): vale per REMOTIX come per ssh, e si governa in
+#    /etc/security/faillock.conf.  `faillock --user <nome> --reset` sblocca.
 auth       include      system-remote-login
 
 # ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)

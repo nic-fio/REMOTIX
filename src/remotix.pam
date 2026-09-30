@@ -48,13 +48,33 @@
 # ⚠ Le pile comuni si INCLUDONO invece di riscriverle: `CODER.md` §4.1,
 #   «dipendere, non riscrivere».  Chi amministra la macchina configura
 #   `common-auth` una volta e vale per tutti i servizi, compreso questo.
+#
+# -----------------------------------------------------------------------------
+# ⭐⭐ D3 CHIUSA (`DECISIONI.md` §10.18, 30 set 2026) — REMOTIX RISPECCHIA
+#    l'autenticazione del sistema: *«non voglio che REMOTIX si disallinei
+#    rispetto all'autenticazione di default del sistema, deve rispecchiare
+#    PAM»*.  ⇒ Da qui in giu' e' /etc/pam.d/sshd di Debian e di Ubuntu, riga per
+#    riga, con UNA riga in piu' in testa: root escluso (come ssh di serie).
+#    `[M]` 30 set, confronto con /etc/pam.d/sshd su debian13-gnome-iso e
+#    ubuntu2604-gnome-iso (identici fra loro): 15 righe su 15 uguali
+#    (`banchi/17-t6/t6-leggi-pam.sh`).  Le righe che c'erano prima (la pila
+#    `common-session-noninteractive` + `pam_systemd` per nome, `pam_nologin`
+#    in auth) erano una politica NOSTRA: il §«session» qui sotto racconta
+#    perche' erano nate, e perche' la regola di D3 le supera — `common-session`
+#    di serie porta `pam_systemd` (`[M]` Debian 13 e Ubuntu 26.04), e quel che
+#    c'e' in piu' (`pam_motd`, `pam_mail`, `pam_limits`, `pam_env`) e' lo
+#    stesso che riceve chi entra con ssh.
+#    ⛔ La vecchia obiezione a `login` resta vera: `login` e' la pila della
+#       CONSOLE (pam_securetty & co.); sshd e' la pila dell'accesso da RETE, e
+#       REMOTIX e' un accesso da rete.
 
 # ── auth: «questa parola d'ordine e' giusta?»
 #
-# ⭐ FASE 17 — ROOT ESCLUSO, e PRIMA della parola d'ordine (`fasi/17` §4.3).
-#    Il file elenca un nome per riga; si installa con dentro `root`, di
-#    proprieta' di root e non scrivibile da altri (`pam_listfile` altrimenti
-#    lo rifiuta).  Cockpit fa lo stesso con /etc/cockpit/disallowed-users.
+# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine (`fasi/17` §4.3).  E' l'unica
+#    differenza voluta da sshd (D3).  Il file elenca un nome per riga; si
+#    installa con dentro `root`, di proprieta' di root e non scrivibile da altri
+#    (`pam_listfile` altrimenti lo rifiuta).  Cockpit fa lo stesso con
+#    /etc/cockpit/disallowed-users.
 #  · in `auth` e `requisite`, non in `account`: con la riga in `account` la
 #    parola di root verrebbe comunque PROVATA, e «parola giusta ma conto
 #    negato» risponde diverso da «parola sbagliata» — un oracolo per chi
@@ -64,51 +84,44 @@
 #    file perso toglierebbe l'esclusione di root in silenzio — una
 #    protezione in una riga che si puo' perdere, cioe' quel che I7 vieta.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
-auth       required     pam_nologin.so
 #
-# ⚠ DECISIONE D3 APERTA — il blocco dei tentativi (`fasi/17` §4.3, §10).
-#   Qui `pam_faillock` non lo mettiamo NOI: se l'amministratore l'ha messo in
-#   `common-auth` arriva con quella pila, se no no.  Se aggiungerlo, toglierlo
-#   o lasciarlo alla distribuzione lo decide l'utente.
+# ⭐ `pam_faillock`, se l'amministratore l'ha messo in `common-auth`, arriva
+#   con la pila: vale per REMOTIX come per ssh (D3).
 @include common-auth
 
 # ── account: «questo conto e' utilizzabile?»  (conto scaduto, bloccato, ...)
 #    ⚠ Non e' un di piu': `pam_authenticate` non risponde a questa domanda, e
 #      `autenticazione.c` chiama `pam_acct_mgmt` apposta.
+account    required     pam_nologin.so
 @include common-account
 
+# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che fa
+#    nascere la sessione logind dell'utente — con `pam_systemd`, che sta in
+#    `common-session` (`[M]` 30 set: Debian 13 e Ubuntu 26.04).
+#
+# ⛔ STORIA, 15 agosto 2026 (fase 5): allora il file includeva
+#    `common-session-noninteractive`, che `pam_systemd` NON lo ha — e senza,
+#    l'utente non ha una sessione logind, `is_headless()` di Mutter non ha
+#    niente da guardare (`DECISIONI.md` §4.3-bis) e la regola di §5.1 perde il
+#    suo soggetto.  Il difetto era invisibile per un accidente: il file non era
+#    installato e PAM ripiegava su `other`, che su Debian include le pile
+#    comuni.  La cura di allora fu `pam_systemd` per nome; con D3 la cura e'
+#    la pila di sshd, che lo porta.  ⛔ La prova che resta: `provisiona.sh`
+#    controlla che il file installato arrivi a `pam_systemd`.
+#
+# ⚠ `pam_loginuid` `required` come sshd: il servizio (e `riavvia-7700.sh`,
+#   con `systemd-run`) parte da systemd, senza loginuid, e lo puo' scrivere.
+# ⚠ `pam_selinux` c'e' come in sshd, con le azioni che lo fanno tacere dove il
+#   modulo non c'e' (Debian e Ubuntu di serie sono senza SELinux).
+session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so close
+session    required     pam_loginuid.so
+session    optional     pam_keyinit.so force revoke
+@include common-session
+session    optional     pam_motd.so  motd=/run/motd.dynamic
+session    optional     pam_motd.so noupdate
+session    optional     pam_mail.so standard noenv
+session    required     pam_limits.so
+session    required     pam_env.so
+session    required     pam_env.so envfile=/etc/default/locale
+session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so open
 @include common-password
-
-# ── session: ⛔⛔ E QUI ALLA FASE 5 IL FILE ERA SBAGLIATO — 15 agosto 2026
-#
-# Diceva: «session non lo usa nessuno alla fase 1 — il server non apre sessioni
-# PAM», e includeva `common-session-noninteractive`.  ⛔ Alla fase 5 il server le
-# sessioni PAM LE APRE — `figlio.c` chiama `pam_open_session`, ed e' quella
-# chiamata che fa nascere la sessione logind dell'utente.
-#
-# `[M]` 15 agosto 2026, macchina di prova, Debian 13:
-#
-#     /etc/pam.d/common-session-noninteractive   →  pam_unix, pam_umask
-#     /etc/pam.d/common-session                  →  pam_unix, pam_umask, **pam_systemd**
-#
-# ⇒ Con la pila «noninteractive» **`pam_systemd` non gira**, e allora:
-#   · l'utente non ha nessuna sessione logind;
-#   · ⛔ `is_headless()` di Mutter — che guarda se la sessione logind ha un seat
-#     (`DECISIONI.md` §4.3-bis) — non ha piu' NIENTE da guardare;
-#   · ⛔ la regola di §5.1 (motivi `0x04` e `0x05`) perde il suo soggetto.
-#
-# ⭐ E il difetto era invisibile per un accidente: `[M]` su questa macchina
-#    `/etc/pam.d/remotix` NON ERA INSTALLATO, quindi PAM ripiegava su `other` —
-#    che su Debian **non e' `pam_deny`**, come dice il riquadro qui sopra, ma
-#    include le pile comuni, `common-session` compresa.  ⇒ Installare questo
-#    file «come si deve» avrebbe ROTTO quel che l'assenza del file faceva
-#    funzionare.  E' `DECISIONI.md` §4.3-bis alla rovescia: non una condizione
-#    che ci salva per accidente, ma una nostra riga che l'avrebbe tolta.
-#
-# ⚠ `pam_systemd` si chiede ESPLICITAMENTE invece di includere `common-session`:
-#   quella pila porta anche quel che serve a chi si siede davanti alla macchina,
-#   ed e' la ragione per cui §«non si usa `login`» qui sopra esiste.  Chiedere
-#   una cosa sola per nome e' `CODER.md` §4.1 letta bene: si dipende da
-#   `pam_systemd`, non dalla politica interattiva di questa distribuzione.
-@include common-session-noninteractive
-session    optional     pam_systemd.so

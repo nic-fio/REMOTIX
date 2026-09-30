@@ -514,8 +514,15 @@ grep -qx root /etc/remotix/utenti-negati 2>/dev/null && ok "root e' negato (/etc
 	|| ko "⛔ /etc/remotix/utenti-negati manca o non nega root"
 [ -f /etc/sudoers.d/remotix-banchi ] && ok "i banchi guidano il servizio senza password" \
 	|| ko "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo"
-grep -q pam_systemd /etc/pam.d/remotix 2>/dev/null && ok "e chiama pam_systemd" \
-	|| ko "⛔ NON chiama pam_systemd: senza, la sessione logind non nasce e il compositore non parte"
+# ⭐ D3 (DECISIONI §10.18): il file e' la pila di sshd, e `pam_systemd` arriva da
+#    `common-session` — si guarda la riga VERA (non un commento), nel file o nella pila inclusa.
+if grep -qE '^[[:space:]]*session.*pam_systemd' /etc/pam.d/remotix 2>/dev/null \
+	|| { grep -qE '^@include[[:space:]]+common-session[[:space:]]*$' /etc/pam.d/remotix 2>/dev/null \
+	     && grep -qE '^[[:space:]]*session.*pam_systemd' /etc/pam.d/common-session 2>/dev/null; }; then
+	ok "e arriva a pam_systemd"
+else
+	ko "⛔ NON arriva a pam_systemd: senza, la sessione logind non nasce e il compositore non parte"
+fi
 
 [ -f /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules ] && ok "la regola polkit c'e'" \
 	|| ko "la regola polkit manca"

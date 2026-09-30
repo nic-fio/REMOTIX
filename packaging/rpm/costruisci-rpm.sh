@@ -62,13 +62,13 @@ costruisci_uno()
 	echo "== $b: rpmbuild (log in $u/rpmbuild.log)"
 	podman run --rm -v "$lav:/lavoro" "$imm" sh -c '
 		if command -v dnf >/dev/null; then
-			dnf -y -q install --setopt=install_weak_deps=False rpm-build rpmlint systemd-rpm-macros cpio >/dev/null 2>&1
+			dnf -y -q install --setopt=install_weak_deps=False rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		else
-			zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio >/dev/null 2>&1
+			zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		fi
 		rpm -q rpm-build rpmlint | sed "s/^/strumenti: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
-		rpmbuild -ba --define "_topdir /lavoro" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" /lavoro/SPECS/remotix.spec 2>&1
+		rpmbuild -ba --define "_topdir /lavoro" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" '"${RX_SELINUX_PERMISSIVO:+--define \"rx_selinux_permissivo 1\"}"' /lavoro/SPECS/remotix.spec 2>&1
 		echo "rpmbuild-esito=$?"
 		ls /lavoro/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /lavoro/SPECS/remotix.spec /lavoro/RPMS/*/*.rpm /lavoro/SRPMS/*.rpm >/lavoro/rpmlint.txt 2>&1
