@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>18 · WebCodecs sul flusso del ripiego</title>
+</head>
+<body>
+<pre id="esito">in corso…</pre>
+<script>
+/*
+ * Fase 18, linea V-software: il flusso di OpenH264 (o SVT-AV1) dato a
+ * `VideoDecoder` ESATTAMENTE come fa la pagina: Annex B senza `description`,
+ * stringa `avc1.640033` (High 5.1, `stringhe_codec()` di src/pagina.html) o
+ * `av01.0.13M.08`, un chunk per fotogramma («key»/«delta» dal .csv del banco).
+ *
+ *   ?flusso=h264-nuova-1920x1080.h264&codec=avc1.640033&hw=prefer-software
+ *
+ * Scrive in #esito una riga JSON: configurato, uscite, errori, e l'impronta
+ * (somma dei byte Y) di OGNI fotogramma decodificato, da confrontare con
+ * quella di ffmpeg sullo stesso flusso.
+ */
+const q = new URLSearchParams(location.search);
+const flusso = q.get("flusso"), codec = q.get("codec") || "avc1.640033";
+const hw = q.get("hw") || "no-preference";
+const esito = { flusso, codec, hw, supportato: null, uscite: 0, errori: [], impronte: [], l: 0, a: 0 };
+const fine = () => {
+  const t = JSON.stringify(esito);
+  document.getElementById("esito").textContent = t;
+  /* il banco legge l'esito dalla console di Chrome (`--enable-logging`) */
+  console.log("F18ESITO " + t);
+};
+
+(async () => {
+  try {
+    const dati = new Uint8Array(await (await fetch(flusso)).arrayBuffer());
+    const righe = (await (await fetch(flusso + ".csv")).text()).trim().split("\n").slice(1);
+    const s = await VideoDecoder.isConfigSupported({ codec, hardwareAcceleration: hw });
+    esito.supportato = s.supported;
+    console.log("F18 supportato", s.supported, dati.length, righe.length);
+    let attese = [];
+    const dec = new VideoDecoder({
+      output: (f) => { if (!esito.uscite) console.log("F18 primo fotogramma"); attese.push(impronta(f)); },
+      error: (e) => { esito.errori.push(String(e)); },
+    });
+    async function impronta(f) {
+        const idx = Math.round(f.timestamp / 16667);
+        esito.uscite++;
+        esito.l = f.displayWidth; esito.a = f.displayHeight;
+        const buf = new Uint8Array(f.allocationSize());
+        let lay;
+        try { lay = await f.copyTo(buf); } finally { if (!lay) f.close(); }
+        /* impronta: la somma della luma, riga per riga (il passo e' nel layout) */
+        let somma = 0;
+        const p = lay[0];
+        for (let y = 0; y < f.codedHeight && y < f.displayHeight; y++)
+          for (let x = 0; x < f.displayWidth; x++) somma += buf[p.offset + y * p.stride + x];
+        esito.impronte[idx] = somma;
+        esito.formato = f.format;
+        f.close();
+    }
+    dec.configure({ codec, hardwareAcceleration: hw, optimizeForLatency: true });
+    let at = 0;
+    for (let i = 0; i < righe.length; i++) {
+      const c = righe[i].split(",");
+      const byte = +c[1], chiave = c[2] === "1";
+      dec.decode(new EncodedVideoChunk({ type: chiave ? "key" : "delta", timestamp: i * 16667,
+                                         data: dati.subarray(at, at + byte) }));
+      at += byte;
+    }
+    console.log("F18 mandati", righe.length, "coda", dec.decodeQueueSize);
+    await dec.flush();
+    console.log("F18 svuotato, uscite", esito.uscite);
+    const r = await Promise.allSettled(attese);
+    const no = r.filter((x) => x.status !== "fulfilled");
+    if (no.length) esito.errori.push("copyTo fallite: " + no.length + " — " + no[0].reason);
+    console.log("F18 impronte fatte", r.length - no.length);
+    esito.chunk = righe.length;
+  } catch (e) {
+    esito.errori.push("eccezione: " + e);
+  }
+  fine();
+})();
+</script>
+</body>
+</html>
