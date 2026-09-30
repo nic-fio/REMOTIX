@@ -82,6 +82,12 @@ il motivo per cui `RCP.md` esiste prima del codice.
 Sono i numeri che l'utente pone e a cui la tecnica si adegua, non il contrario. Ogni scelta
 tecnica si giustifica mostrando che avvicina uno di questi. (`CODER.md` §1 e §1-bis)
 
+⚠ **Obiettivi di progetto, non promesse misurate** *(decisione dell'utente, 30 set 2026)*: le prove di
+prestazione sono state tolte (troppo dipendenti dall'hardware) e le misure con loro; le soglie di questo
+capitolo — e le altre del documento — restano come **direzione** delle scelte tecniche, non come garanzia.
+I parametri che il prodotto usa davvero (banda minima, tetto delle sessioni, orologi, ban) sono
+configurazione e valgono come scritti.
+
 ⭐ **E tutti e tre misurano il pezzo che è nostro** *(`DECISIONI.md` §2.7, 9 agosto 2026)*: REMOTIX
 promette quel che **produce e consegna sulla linea**. Che cosa il dispositivo dall'altra parte
 riesca a decodificare e dipingere **si misura e si dichiara, non si promette** — non è codice
