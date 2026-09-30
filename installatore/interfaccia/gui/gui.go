@@ -75,6 +75,8 @@ type Finestra struct {
 	salva    widget.Clickable
 	dett     widget.Clickable
 	dettAp   bool
+	impr     widget.Clickable // «Come riconoscere questa macchina» (l'impronta), a parte dai dettagli
+	imprAp   bool
 	reg      widget.Clickable
 	regAp    bool
 	lista    widget.List
@@ -717,8 +719,8 @@ func (f *Finestra) prontoSchermo() []W {
 		scritta(f.th, fTesto, 14, cGrigio, v.Router)}
 	if v.Impronta != "" {
 		apri = append(apri, func(gtx C) D {
-			ws := []W{collegamento(f.th, &f.dett, T("pr.riconosci"), 13)}
-			if f.dettAp {
+			ws := []W{collegamento(f.th, &f.impr, T("pr.riconosci"), 13)}
+			if f.imprAp {
 				ws = append(ws, scritta(f.th, fTesto, 13, cGrigio, T("pr.impronta")), scritta(f.th, fMono, 11, cNotte, "SHA-256 "+v.Impronta))
 			}
 			return colonna(6, ws...)(gtx)
@@ -804,6 +806,9 @@ func (f *Finestra) eventiInput(gtx C) {
 	f.nota = strings.TrimSpace(f.nota)
 	if f.dett.Clicked(gtx) {
 		f.dettAp = !f.dettAp
+	}
+	if f.impr.Clicked(gtx) {
+		f.imprAp = !f.imprAp
 	}
 	if f.reg.Clicked(gtx) {
 		f.regAp = !f.regAp

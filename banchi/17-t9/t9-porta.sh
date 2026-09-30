@@ -22,6 +22,8 @@ V=/media/REMOTIX/vm17
 U=$INST/uscita
 
 "$INST/costruisci.sh" >/dev/null
+# la costruzione con la finestra (DECISIONI §10.19): stesso sorgente, etichetta «gui»
+"$INST/costruisci.sh" gui >/dev/null
 firma() { # firma <oggetto> <file>
 	rm -rf "$INST/.cache/chiavi-firma" "$INST/.cache/da-firmare"; mkdir -p "$INST/.cache/da-firmare"
 	cp -a "$CHIAVI/a" "$INST/.cache/chiavi-firma"
@@ -32,14 +34,17 @@ firma() { # firma <oggetto> <file>
 }
 cp "$INST/install.sh" "$U/install.sh"
 firma motore "$U/remotix-install"
+firma motore "$U/remotix-install-gui"
 firma script "$U/install.sh"
 echo "motore $(sha256sum "$U/remotix-install" | cut -c1-16)… e install.sh firmati con $SUB"
 
 ssh -o BatchMode=yes $S "mkdir -p $V/t9 && rm -rf $V/t9/archivio && cp -a $V/archivio $V/t9/archivio" 2>&1 | grep -v tput || true
-scp -q "$U/remotix-install" "$U/remotix-install.firma" $S:$V/t9/archivio/motore/
+scp -q "$U/remotix-install" "$U/remotix-install.firma" "$U/remotix-install-gui" "$U/remotix-install-gui.firma" $S:$V/t9/archivio/motore/
 scp -q "$U/install.sh" "$U/install.sh.firma" $S:$V/t9/archivio/
-scp -q "$QUI/t9-vm.sh" "$QUI/t9-rete.py" "$QUI"/risposte-*.conf "$QUI/cloud-init-r21.yaml" $S:$V/t9/
-scp -q "$ALBERO/banchi/17-distro/17-vm.sh" $S:$V/17-vm.sh
+scp -q "$QUI/t9-vm.sh" "$QUI/t9-rete.py" "$QUI"/risposte-*.conf "$QUI/cloud-init-r21.yaml" "$QUI/t9-gui.sh" $S:$V/t9/
+# in modo atomico: altri banchi possono star leggendo 17-vm.sh proprio adesso (bash lo legge a pezzi)
+scp -q "$ALBERO/banchi/17-distro/17-vm.sh" $S:$V/.17-vm.sh.nuovo
+ssh -o BatchMode=yes $S "chmod 755 $V/.17-vm.sh.nuovo && mv $V/.17-vm.sh.nuovo $V/17-vm.sh" 2>&1 | grep -v tput || true
 # ⚠ due ssh separati: con l'accensione nella stessa riga, pkill -f trova la shell di ssh (che contiene
 # «http.server 8727») e la uccide; [h] evita che trovi sé stesso
 ssh -o BatchMode=yes $S "pkill -f '[h]ttp.server 8727'" || true

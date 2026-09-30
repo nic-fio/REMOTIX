@@ -30,6 +30,7 @@
 #                                         manager, rete, pacchetti); con [foto] la avvia da quella
 #                                         foto in sola lettura, su porte sue (k=6)
 #   bash 17-vm.sh schermo   <macchina> [file.png]  fotografia dello schermo (dal monitor di QEMU)
+#   bash 17-vm.sh hmp       <macchina> "<comando>"  un comando del monitor (sendkey, mouse_move…)
 #
 # Le macchine si chiamano <distro>-<desktop> (fedora44-kde; <distro> da sola =
 # «nudo», senza desktop).  Tutto sta sotto /media/REMOTIX/vm17/<macchina>/;
@@ -116,6 +117,13 @@ AVVIA_EXTRA=()   # argomenti in piu' per QEMU in cmd_avvia (impronta: -snapshot)
 #   RX_VM_CATTURA=file.pcap ogni pacchetto della scheda di rete della VM, nei due versi (filter-dump)
 RETE_EXTRA=${RX_VM_RETE:-}
 [ -n "${RX_VM_CATTURA:-}" ] && AVVIA_EXTRA+=(-object "filter-dump,id=cattura0,netdev=n0,file=$RX_VM_CATTURA")
+#   RX_VM_CHI=nome          chi accende (scritto in <dir>/chi; di serie «pid <n>»): «avvia» su una VM
+#                           accesa da un ALTRO si ferma con errore; RX_VM_CONDIVIDI=1 per farlo apposta
+#   RX_VM_TAVOLETTA=1       una tavoletta USB (puntatore ASSOLUTO) e un monitor QMP in <dir>/qmp.sock:
+#                           «input-send-event» porta il puntatore al pixel voluto (T9, la finestra
+#                           dell'installatore). ⚠ «mouse_move» del monitor HMP manda solo movimenti
+#                           RELATIVI, che la tavoletta scarta (`[M]` 30 set: nessun evento ABS nell'ospite)
+[ -n "${RX_VM_TAVOLETTA:-}" ] && AVVIA_EXTRA+=(-device qemu-xhci -device usb-tablet)
 
 accesa() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
 
@@ -207,8 +215,21 @@ UD
 	fi
 }
 
+# chi ha acceso la macchina: RX_VM_CHI, altrimenti «pid <chi ha lanciato questo script>». ⛔ Una VM
+# accesa da un ALTRO non si usa in due: `[M]` 30 set, un agente ha trovato accesa la VM di un altro e
+# ci ha installato sopra per pochi istanti (prima «avvia» diceva «già accesa» e andava avanti)
+CHI_IO=${RX_VM_CHI:-pid $PPID}
+
 cmd_avvia() {
-	accesa && { ok "$D gia' accesa (pid $(cat "$PID"))"; return; }
+	if accesa; then
+		local tiene
+		tiene=$(cat "$DIR/chi" 2>/dev/null || echo "sconosciuto (acceso prima della guardia)")
+		if [ "$tiene" = "$CHI_IO" ] || [ -n "${RX_VM_CONDIVIDI:-}" ]; then
+			ok "$D gia' accesa (pid $(cat "$PID"), da «$tiene»)"
+			return
+		fi
+		die "$D e' gia' accesa e la tiene «$tiene»: non la si usa in due (RX_VM_CONDIVIDI=1 solo se e' voluto)"
+	fi
 	[ -f "$DISCO" ] || die "disco assente: 17-vm.sh crea $D"
 	[ -w /dev/kvm ] || die "/dev/kvm non scrivibile: usermod -aG kvm $USER e rientra"
 	log "$D: avvio (ssh :$PORTA_SSH, REMOTIX :$PORTA_RX)"
@@ -218,6 +239,7 @@ cmd_avvia() {
 	[ -f "$VARS" ] && extra+=(-drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
 		-drive "if=pflash,format=raw,file=$VARS")
 	[ -f "$SEME" ] && extra+=(-drive "file=$SEME,if=virtio,format=raw,readonly=on")
+	[ -n "${RX_VM_TAVOLETTA:-}" ] && extra+=(-qmp "unix:$DIR/qmp.sock,server=on,wait=off")
 	qemu-system-x86_64 \
 		-name "rx-$D" -machine q35,accel=kvm -cpu host -smp "$CPU" -m "$RAM" \
 		-device virtio-vga -display none \
@@ -229,7 +251,8 @@ cmd_avvia() {
 		-serial "file:$CONSOLE" \
 		-monitor "unix:$MONITOR,server,nowait" \
 		-pidfile "$PID" -daemonize
-	ok "qemu pid $(cat "$PID")"
+	printf '%s\n' "$CHI_IO" >"$DIR/chi"
+	ok "qemu pid $(cat "$PID"), di «$CHI_IO»"
 	aspetta_ssh 600
 	# cloud-init fino in fondo, o le prove partono su una macchina a meta'
 	ssh_vm 'command -v cloud-init >/dev/null && sudo cloud-init status --wait >/dev/null 2>&1; true'
@@ -244,7 +267,7 @@ cmd_ferma() {
 	local t=0
 	while accesa && [ "$t" -lt 90 ]; do sleep 2; t=$((t + 2)); done
 	if accesa; then kill "$(cat "$PID")"; sleep 2; inf "forzata dopo 90 s"; fi
-	rm -f "$PID"
+	rm -f "$PID" "$DIR/chi"
 	ok "spenta"
 }
 
@@ -435,6 +458,11 @@ s.sendall((sys.argv[2] + "\n").encode()); time.sleep(1.5)
 try: sys.stdout.write(s.recv(65536).decode(errors="replace"))
 except Exception: pass
 PY
+}
+
+cmd_hmp() {  # un comando del monitor di QEMU (sendkey, mouse_move, mouse_button…)
+	accesa || die "$D e' spenta"
+	monitor "$*"
 }
 
 cmd_schermo() {
@@ -629,7 +657,7 @@ ssh)
 	riga "${1:?manca la distribuzione}"; shift; ssh_vm "$@" ;;
 da-iso)
 	riga "${1:?manca la macchina (<distro>-<desktop>-iso)}"; shift; cmd_da_iso "$@" ;;
-impronta|schermo)
+impronta|schermo|hmp)
 	riga "${1:?manca la macchina}"; shift; "cmd_$c" "$@" ;;
 *) sed -n '2,42p' "$0"; exit 2 ;;
 esac

@@ -201,7 +201,7 @@ var testi = map[string]due{
 	"pr.sotto":              {"Tutto funziona.", "Everything works."},
 	"pr.sotto.dep":          {"Tutto funziona. Per il video usa un componente di %s, come hai scelto.", "Everything works. For video it uses a component from %s, as you chose."},
 	"pr.sotto.cond":         {"Funziona, con una condizione: %s", "It works, with one condition: %s"},
-	"cond.C-RIPIEGO":        {"il video lo fa il processore: funziona, ma è più lento", "the processor does the video: it works, but it is slower"},
+	"cond.C-RIPIEGO":        {"il video lo fa il processore, più lento della scheda", "the processor does the video, slower than the card"},
 	"cond.C-HARDWARE":       {"la scheda grafica non si può usare per il video", "the graphics card cannot be used for video"},
 	"cond.C-DEPOSITO":       {"per il video serve un componente da un archivio esterno", "video needs a component from an external archive"},
 	"cond.C-COMPONENTE":     {"ho aggiunto piccoli pezzi che servono al desktop", "I added small parts the desktop needs"},
