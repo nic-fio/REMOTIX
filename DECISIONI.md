@@ -6170,8 +6170,9 @@ l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prod
   relativo vecchio/nuovo, stessa macchina e stesse immagini, per la codifica **senza scheda** e per la scheda
   con i pixel **dalla memoria**. La copia zero è risultata identica (byte, qualità, tempi del codificatore) e
   non si rimisura; il resto delle prove di prestazione resta tolto.
-- 🔸 (detti all'utente, non ancora confermati esplicitamente) i limiti di OpenH264 senza scheda: niente senza perdita (si chiede la qualità più alta), H.264
-  fino a 4096×2304 (oltre, serve la scheda).
+- ✅ **I limiti di OpenH264 non sono limiti del prodotto** (30 set, verificato sulle SPECIFICHE): niente senza
+  perdita e H.264 senza scheda fino a 4096×2304 — le SPECIFICHE chiedono il 4K e non nominano il senza perdita.
+  Sono differenze rispetto a x264, non rispetto ai requisiti.
 
 ---
 
