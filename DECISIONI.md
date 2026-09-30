@@ -6134,6 +6134,16 @@ pacchetti»*; *«resta solo la questione di rigenerare l'installer»*. ⇒
   l'installatore (le due costruzioni) e pubblicarne lo sha256, aggiornare il catalogo (dentro `remotix-install`),
   firmare e pubblicare l'archivio (sul VPS, D10).
 
+### 10.24 ✅ L'aggiornamento è del sistema, e dell'amministratore — non un problema di REMOTIX
+
+Parole dell'utente (30 set 2026): *«un admin avvisa gli utenti che il giorno X verrà effettuato un
+aggiornamento del sistema, quindi gli utenti collegati potrebbero aspettarsi delle interruzioni del servizio.
+L'aggiornamento del sistema dev'essere un problema di REMOTIX? Secondo me no»*; *«io parlerei di
+aggiornamento del sistema, non di REMOTIX»*. ⇒ Quando e come aggiornare, e l'avviso agli utenti (anche con
+**AMS**, il progetto a parte dell'utente: messaggi dagli amministratori agli utenti con conferma di lettura),
+sono dell'amministratore. A REMOTIX resta solo di **non chiudere da sé i desktop** quando il suo pacchetto
+viene aggiornato insieme al resto (R7, già garantito dalla T7). **R8 (la soglia di tempo) è tolta.**
+
 ---
 
 ## Come si tiene questo documento

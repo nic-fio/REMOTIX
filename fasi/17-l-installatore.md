@@ -1062,8 +1062,8 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R4 | le dipendenze sono tutte dichiarate | installazione sulla macchina «cliente» senza niente a mano; librerie viste con l'uid di un inquilino | un `not found`, o un pacchetto aggiunto a mano |
 | R5 | idempotenza | installare due volte | la seconda scrive qualcosa |
 | R6 | ⭐ la disinstallazione **annulla tutto quel che REMOTIX ha fatto** (§6.6.4) — non «rimette la macchina com'era»: una dipendenza aggiornata dal gestore di pacchetti non torna indietro | impronte prima dell'installazione e dopo `purge`, confrontate col registro | una differenza **di origine DIRETTA** rimasta; una differenza INDIRETTA non dichiarata nel certificato; ⛔ un utente tolto da un gruppo in cui c'era **prima** |
-| R7 | ⭐ aggiornare non chiude le finestre | due utenti con un browser vero e un terminale aperto; aggiornamento a N+1 | una finestra sparita, un palco morto, uno schermo nero al riattacco |
-| R8 | aggiornare costa al massimo un riattacco breve — quattro tempi, misurati a parte: (a) il servizio fermo, (b) il desktop vivo (0 processi del palco persi), (c) la sessione ritrovata dal server nuovo, (d) il browser di nuovo con l'immagine | nella stessa prova di R7 | (b) diverso da zero; (a), (c), (d) oltre le soglie che l'utente sceglierà **dopo la misura di T2** — fino ad allora R8 non è un requisito chiuso |
+| R7 | ⭐ durante un **aggiornamento del sistema** che comprende REMOTIX, REMOTIX non chiude da sé i desktop degli utenti | due utenti con un browser vero e un terminale aperto; `apt upgrade`/`dnf upgrade`/`pacman -Syu` che porta REMOTIX a N+1 | una finestra sparita, un processo del palco morto, uno schermo nero al riattacco |
+| ~~R8~~ | ⛔ **tolta il 30 set** (parola dell'utente: *«io parlerei di aggiornamento del sistema, non di REMOTIX»*): l'aggiornamento del sistema lo decide e lo annuncia l'amministratore (anche con AMS, progetto a parte), e le interruzioni in quella finestra sono attese. Resta a REMOTIX solo R7. I tempi misurati (fermo ~4 s, browser di nuovo con l'immagine ~9 s) restano come informazione in §5.2 | — | — |
 | R9 | il server nuovo ritrova **tutti** i palchi | `remotix stato` prima e dopo; ciascuno rientra nel **suo** | una sessione viva ma non ritrovata (il caso xrdp) |
 | R10 | la scheda del browser già aperta sopravvive al cambio di versione | una scheda aperta durante R7, poi ricaricata | un errore non spiegato |
 | R11 | si torna indietro | N → N+1 → N con sessione viva | una sessione persa, o la configurazione non letta |
@@ -1130,7 +1130,7 @@ banchi **non fermano** le tappe (*«ci stiamo avvitando in inezie tecniche blocc
 
 ## 10. Le decisioni che spettano all'utente
 
-Una per volta, ognuna nel momento in cui serve (la tappa è indicata). Anche R8 aspetta una sua scelta: le soglie dei quattro tempi, **dopo** la misura di T2.
+Una per volta, ognuna nel momento in cui serve (la tappa è indicata). R8 è stata tolta il 30 set (l'aggiornamento del sistema è dell'amministratore).
 
 | | la domanda | quando | la proposta |
 |---|---|---|---|
