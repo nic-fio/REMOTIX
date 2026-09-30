@@ -1,0 +1,32 @@
+# Contenitore.debian13-kde — fase 17, T10: la scatola «cliente» di Debian 13 con KDE Plasma, per
+# il copione di §7.3 SULLA SCHEDA VERA del server (fasi/17 §7.5 punto 1; decisione dell'utente,
+# 1 ott 2026: debian13-kde e leap16-kde in VM non hanno lo screencast di KWin senza 3D).
+#
+# Come la VM «cliente» (17-vm.sh vesti): il desktop col gruppo di pacchetti ufficiale della
+# distribuzione, task-kde-desktop, e NIENTE di REMOTIX: quello e' mestiere dell'installatore.
+# In piu', perche' e' una scatola e non una macchina (dichiarato in fasi/17 §7.5):
+#   · systemd come primo processo, sshd su una porta SUA (--network=host: le porte sono dell'ospite);
+#   · il gestore d'accesso (sddm) resta spento: la scatola non ha un monitor e non deve prendere
+#     la scheda dell'ospite; REMOTIX apre i desktop da se';
+#   · il gruppo `render` allineato al gruppo del nodo dell'ospite (sulla macchina vera lo fa udev).
+FROM docker.io/library/debian:13
+ARG PORTA_SSH=8541
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus dbus-user-session libpam-systemd \
+        sudo procps iproute2 ca-certificates curl openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+# il desktop come lo installa un utente normale (con i «raccomandati», come task-kde-desktop vuole)
+RUN apt-get update && apt-get install -y -q task-kde-desktop \
+    && rm -rf /var/lib/apt/lists/*
+RUN systemctl set-default multi-user.target \
+    && mkdir -p /etc/ssh/sshd_config.d /root/.ssh \
+    && printf 'Port %s\nListenAddress 127.0.0.1\nPermitRootLogin prohibit-password\n' "$PORTA_SSH" > /etc/ssh/sshd_config.d/t10.conf \
+    && ssh-keygen -A
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
+COPY t10-gruppi.sh /usr/local/sbin/t10-gruppi
+COPY t10-gruppi.service /etc/systemd/system/t10-gruppi.service
+RUN chmod 755 /usr/local/sbin/t10-gruppi && systemctl enable t10-gruppi.service ssh.service
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

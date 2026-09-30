@@ -1,0 +1,22 @@
+# Contenitore.leap16-kde — fase 17, T10: la scatola «cliente» di openSUSE Leap 16 con KDE Plasma,
+# per il copione di §7.3 SULLA SCHEDA VERA del server (vedi Contenitore.debian13-kde per il perche',
+# e per le tre cose che una scatola ha in piu' di una macchina).
+# Come la VM «cliente» (17-vm.sh vesti): il pattern ufficiale `kde`, e NIENTE di REMOTIX.
+FROM registry.opensuse.org/opensuse/leap:16.0
+ARG PORTA_SSH=8542
+RUN zypper -n --gpg-auto-import-keys refresh \
+    && zypper -n install systemd dbus-1 sudo procps iproute2 ca-certificates curl openssh-server shadow \
+    && zypper -n clean -a
+RUN zypper -n --gpg-auto-import-keys install -t pattern kde \
+    && zypper -n clean -a
+RUN systemctl set-default multi-user.target \
+    && mkdir -p /etc/ssh/sshd_config.d /root/.ssh \
+    && printf 'Port %s\nListenAddress 127.0.0.1\nPermitRootLogin prohibit-password\n' "$PORTA_SSH" > /etc/ssh/sshd_config.d/t10.conf \
+    && ssh-keygen -A
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
+COPY t10-gruppi.sh /usr/local/sbin/t10-gruppi
+COPY t10-gruppi.service /etc/systemd/system/t10-gruppi.service
+RUN chmod 755 /usr/local/sbin/t10-gruppi && systemctl enable t10-gruppi.service sshd.service
+STOPSIGNAL SIGRTMIN+3
+CMD ["/usr/lib/systemd/systemd"]
