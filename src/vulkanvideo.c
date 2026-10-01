@@ -1778,6 +1778,19 @@ VulkanVideo *vulkanvideo_apri(VulkanVideoDispositivo *d, const VulkanVideoRichie
 	}
 	gran_l = v->cap.codifica.encodeInputPictureGranularity.width;
 	gran_a = v->cap.codifica.encodeInputPictureGranularity.height;
+	/* ⛔⭐ LA MISURA CODIFICATA SI ALLINEA ANCHE ALLA GRANULARITA' DELLA SCHEDA
+	 *      (1 ott 2026, il verde di Chrome).  Prima si allineava a 16 e basta:
+	 *      a 2544x1344 l'SPS diceva 2544 di larghezza, ma la RX 6800 (RADV,
+	 *      granularita' 64x16) codifica a blocchi di 64 ⇒ il flusso da 2544 e'
+	 *      ROTTO: `[M]` ffmpeg lo decodifica giusto per poche righe e poi
+	 *      verde, Chrome (VA-API Intel) da' la tela tutta (0,136,0).  A 3840 e
+	 *      3776 (multipli di 64) non si vedeva.  ⇒ La misura nell'SPS e' quella
+	 *      allineata (2560), e il resto lo taglia la finestra di conformita',
+	 *      come fa radeonsi in VA-API (1920x1088). */
+	if (gran_l > 1 && gran_l % 16 == 0)
+		v->larg_cod = allinea(v->larg_cod, gran_l);
+	if (gran_a > 1 && gran_a % 16 == 0)
+		v->alt_cod = allinea(v->alt_cod, gran_a);
 	v->larg_img = allinea(v->larg_cod, gran_l ? gran_l : 1);
 	v->alt_img = allinea(v->alt_cod, gran_a ? gran_a : 1);
 	v->larg_img = allinea(v->larg_img, v->cap.video.pictureAccessGranularity.width ? v->cap.video.pictureAccessGranularity.width : 1);
