@@ -504,7 +504,7 @@ togliere»*.
 | 1 | §4.3 | una **capacità** sconosciuta — nome o valore — si ignora: è il meccanismo con cui le versioni future si capiscono. ⚠ È ignorare *un'offerta*, non *un comando* |
 | 2 | §6.3 | un **datagram** corrotto o troppo corto si scarta invece di chiudere: è per definizione inaffidabile, e punirlo punirebbe la rete |
 | 3 | §7.1 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie: è l'unico momento in cui i due lati hanno legittimamente due verità |
-| 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere. ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
+| 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere — ⭐ dal 1 ott 2026 solo **sotto il minimo**: sopra il massimo si concede ridotta (§4.5). ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
 | 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
 | 6 | §6.2 | dopo un cambio di tela si tollerano i fotogrammi che portano **una misura che è stata in vigore da quando la coda ha cominciato a svuotarsi**, e la tolleranza finisce quando arriva **la prima chiave alla misura nuova** (§5.2), non a orologio. Sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
 | 7 | §2.5 | uno **stream video arrivato prima di `SESSIONE`** quando l'`ATTACCA` è già partito **non chiude**: si **trattiene** e si giudica quando `SESSIONE` arriva. ⚠ *L'ordine fra due stream QUIC non è quello del filo, e bastava un pacchetto perso perché un client conforme uccidesse una sessione sana — rilievo **P20*** |
@@ -1007,8 +1007,29 @@ ATTACCA
 | `disposizione` | stringa | la disposizione di tastiera, es. `it` |
 | `vista_larghezza`, `vista_altezza` | pixel | la misura in cui il client disegnerà |
 
-⛔ **I limiti, e sono normativi**: larghezza e altezza della tela **DEVONO** stare fra **320×240** e
-**7680×4320**, ed **entrambe DEVONO essere pari**. Fuori da lì è `ERRORE_PROTOCOLLO`.
+⛔ **I limiti, e sono normativi**: larghezza e altezza della tela **concessa** **DEVONO** stare fra
+**320×240** e **4096×2304**, ed **entrambe DEVONO essere pari**.
+
+- **Sotto il minimo**, o con un lato **dispari**, la tela chiesta in `ATTACCA` è `ERRORE_PROTOCOLLO`
+  (in `ADATTA_TELA`, sotto il minimo, `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` — §7.1).
+- ⛔ **Sopra il massimo NON è un errore**: il server **DEVE** concedere la tela col lato che sfora
+  portato **al massimo** e l'altro invariato (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), e
+  **DEVE** scriverlo nel registro. Vale identico in `ATTACCA` e in `ADATTA_TELA` (che risponde
+  `TELA(ADATTATA)` con la misura ridotta). È un caso della regola qui sotto — *la tela concessa può
+  essere diversa da quella chiesta* — e il client **DEVE** adattarsi impaginando con le bande
+  (`SPECIFICHE.md` §6.2), senza deformare. ⭐ Un client **DOVREBBE** comunque non chiedere oltre il
+  massimo: la nostra pagina porta già lei il lato al massimo (`tela_da_chiedere()`), con la stessa
+  regola, così server e client arrivano allo stesso numero.
+
+> ⛔ *Fino al 1 ottobre 2026 il massimo era **7680×4320**, e oltre era `ERRORE_PROTOCOLLO`.* Abbassato
+> per decisione dell'utente (fase 19: *«4096 max di larghezza va benissimo, non ho mai preteso di
+> più»*). ⚠ **La ragione è il video, non la cattura**: `[M]` 22 agosto 2026 H.264 sulla scheda Intel
+> (VA-API, `EncSliceLP`) accetta **32–4096 px per lato** (4096×2160 sì, 4112×2160 no), e Firefox su
+> Linux riceve solo H.264 — una tela più larga aveva video solo in HEVC, cioè solo su Chrome.
+> **2304** è il 16:9 a 4096 (il DCI 4096×2160 ci sta), e 4096×2304 sono **36 864 macroblocchi**, il
+> `MaxFS` esatto dei livelli H.264 5.1 e 5.2 — oltre servirebbe il livello 6. ⭐ Il cambio è
+> **compatibile**: nessun numero nuovo né riusato, e un client che chiedeva fino a 7680×4320 riceve
+> una tela più piccola — cosa che §4.5 gli imponeva già di saper ricevere.
 
 ⭐ **Il vincolo dei numeri pari non è pignoleria**: i codificatori video lavorano su blocchi, e una
 misura dispari viene arrotondata **da chi codifica, in silenzio** — due misure diverse sotto la
