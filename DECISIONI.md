@@ -6202,6 +6202,14 @@ proprietario non codifica via VA-API: si ripiegava sul processore, già prima de
   ferma lì e Firefox riceve solo H.264. Una finestra più grande riceve la tela ridotta al massimo, non un rifiuto.
   ⛔ Il 3K come massimo è stato proposto e scartato (non toglie problemi di licenza né di compatibilità; peggiora
   i monitor 4K).
+- ✅ **La famiglia Red Hat resta** (Red Hat, Alma, Rocky; parole dell'utente: *«il problema delle licenze è di chi
+  installa remotix, non del progetto»*; *«va bene, ma sarà meglio annotare bene queste limitazioni»*): solo **Intel**
+  (con RPM Fusion EL ed EPEL, col consenso D5), solo **GNOME e KDE**; ⛔ **AMD non supportata** (RPM Fusion non ha
+  il driver AMD con la codifica per EL; su Fedora sì). Si prova su Alma. Tabella completa: `SPECIFICHE.md` §11.4-bis.
+- ⚠ **NVIDIA**: l'utente non può comprare la scheda; la strada Vulkan resta «non provata» finché non si prova
+  (macchina a noleggio, a sua scelta, o un utente che ce l'ha).
+- ⭐ **Android**: Chrome su Android entra nella suite della fase 19 (emulatore sul server); Firefox Android resta
+  fuori (§7.18).
 - ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
   dell'utente: *«basta misure»*).
 
