@@ -6197,6 +6197,11 @@ proprietario non codifica via VA-API: si ripiegava sul processore, già prima de
   controllo preliminare lo dice prima, con la ragione. Le VM con scheda passata o virtuale (passthrough, vGPU)
   vanno; le VM senza scheda no. ⇒ Le VM di T10 provano solo il rifiuto pulito; le prove complete nei contenitori
   con la scheda vera (come §7.5 della fase 17).
+- ✅ **La tela al massimo 4096 pixel di larghezza** (parola dell'utente: *«4096 max di larghezza va benissimo, non ho
+  mai preteso di più (è anche superiore al 4K, che ha larghezza massima di 3840)»*): H.264 sulla scheda Intel si
+  ferma lì e Firefox riceve solo H.264. Una finestra più grande riceve la tela ridotta al massimo, non un rifiuto.
+  ⛔ Il 3K come massimo è stato proposto e scartato (non toglie problemi di licenza né di compatibilità; peggiora
+  i monitor 4K).
 - ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
   dell'utente: *«basta misure»*).
 
