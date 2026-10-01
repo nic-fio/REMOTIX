@@ -6174,6 +6174,21 @@ l'installatore adeguato alle nuove dipendenze, e **T10 una volta sola** sul prod
   perdita e H.264 senza scheda fino a 4096×2304 — le SPECIFICHE chiedono il 4K e non nominano il senza perdita.
   Sono differenze rispetto a x264, non rispetto ai requisiti.
 
+### 10.27 ✅ La scheda si usa SEMPRE, NVIDIA compresa — requisito dell'utente (1 ott 2026)
+
+Parole dell'utente: *«io avevo chiesto una cosa sola: che remotix sfruttasse l'accelerazione hardware della
+macchina su cui viene installato»*; *«non è accettabile che un utente abbia una 5070 e si ritrova con remotix
+che gira su CPU»*. ⇒ **Requisito**: su una macchina con una scheda capace di codificare H.264/HEVC, REMOTIX
+codifica **sulla scheda**, qualunque sia il produttore. Oggi Intel e AMD sì (VA-API); **NVIDIA no** (il driver
+proprietario non codifica via VA-API: si ripiegava sul processore, già prima della fase 18).
+- 🔸 Proposta (da confermare): **NVENC** per NVIDIA, aperta a richiesta come OpenH264 (intestazioni MIT,
+  libreria del driver NVIDIA); VA-API resta per Intel e AMD; il processore solo senza scheda capace.
+  Vulkan Video scartato per ora: `[M]` 1 ott, la codifica Vulkan c'è sulla Radeon (RADV, Mesa 25.0) ma sulla
+  Intel UHD 770 solo dietro `ANV_DEBUG=video-encode` anche con Mesa 26.2.3 (sperimentale).
+- ⚠ Serve una NVIDIA vera per provarla: nel laboratorio non c'è.
+- ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
+  dell'utente: *«basta misure»*).
+
 ---
 
 ## Come si tiene questo documento
