@@ -4,12 +4,14 @@
 # in software, sono usciti con la fase 19).  I driver VA con H.264 al cliente
 # arrivano da RPM Fusion (§4.2).
 # ngtcp2 e nghttp3 dentro, statiche (quelle di Fedora sono 1.21).
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-loader-devel` (porta
+#    `vulkan-headers`), `[M]` 1 ott 2026 nell'immagine: 1.4.341.
 FROM registry.fedoraproject.org/fedora:44
 RUN dnf -y install --setopt=install_weak_deps=False \
         gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
         openssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
         libva-devel opus-devel \
-        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel \
+        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel vulkan-loader-devel \
     && dnf clean all
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

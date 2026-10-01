@@ -3,12 +3,14 @@
 # Fase 18, senza ffmpeg: `libopus-devel`.  (OpenH264 e SVT-AV1, il ripiego in
 # software, sono usciti con la fase 19.)
 # ngtcp2 e nghttp3 dentro, statiche (quella di Leap e' 1.6, inutilizzabile).
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-devel` (loader e
+#    intestazioni), `[M]` 1 ott 2026 nell'immagine: 1.4.309.
 FROM registry.opensuse.org/opensuse/leap:16.0
 RUN zypper -n refresh && zypper -n install --no-recommends \
         gcc make pkg-config git cmake ninja diffutils \
         libopenssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
         libva-devel libopus-devel \
-        libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel \
+        libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel vulkan-devel \
     && zypper -n clean -a
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

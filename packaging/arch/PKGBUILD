@@ -66,6 +66,13 @@ depends=(
 	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
 	libpipewire libpipewire-0.3.so
 	libva libva.so libva-drm.so
+	# ⭐ Fase 19 (`fasi/19-nvidia.md`): Vulkan Video, provata PRIMA di VA-API.
+	#    Il loader si collega; il driver (ICD) e' della scheda: `vulkan-radeon`
+	#    per AMD (RADV), `nvidia-utils` per NVIDIA — `[M]` 1 ott 2026 su Arch
+	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` e'
+	#    un virtuale con piu' fornitori e pacman lo chiederebbe: resta fra gli
+	#    optdepends, e il motore (T4) mette quello della scheda che trova.
+	vulkan-icd-loader libvulkan.so
 	libei libei.so                            # >= 1.1: l'input su GNOME e KDE
 	libxkbcommon libxkbcommon.so
 	wayland libwayland-client.so
@@ -94,7 +101,11 @@ depends=(
 	wireplumber
 	pipewire-pulse
 )
-makedepends=(cmake ninja pkgconf)            # wayland-scanner: da `wayland`, gia' in depends
+makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: da `wayland`, gia' in depends; vulkan-headers: fase 19
+optdepends=(
+	'vulkan-radeon: la codifica Vulkan Video sulle schede AMD (RADV), fase 19'
+	'nvidia-utils: la codifica Vulkan Video sulle schede NVIDIA col driver proprietario'
+)
 backup=(
 	etc/remotix/utenti-negati
 	etc/pam.d/remotix

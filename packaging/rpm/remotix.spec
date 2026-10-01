@@ -83,6 +83,10 @@ BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-scanner)
 BuildRequires:  pkgconfig(gbm)
+# ⭐ Fase 19: Vulkan Video (src/vulkanvideo.c) — solo il loader e le intestazioni
+#   (vulkan-loader-devel; `[M]` 1 ott 2026: 1.4.328 su Alma 10 AppStream, 1.4.341
+#   su Fedora 44).  Il minimo 1.3.274 e' quello del Makefile.
+BuildRequires:  pkgconfig(vulkan) >= 1.3.274
 # ⚠ ngtcp2 >= 1.25.0 e nghttp3: NON sono un BuildRequires, perche' quasi nessuna
 #   distribuzione le ha (§6.3).  Le costruisce il contenitore, SOLO statiche, in
 #   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build controlla che ci
@@ -143,6 +147,10 @@ Requires:       (default-fonts-core-sans if labwc)
 # li toglie non deve rompere il pacchetto.
 Recommends:     mesa-dri-drivers
 Recommends:     (libva-intel-media-driver or intel-media-driver)
+# ⭐ Fase 19: i driver VULKAN di Mesa (RADV per AMD: la strada Vulkan Video, che
+#   il prodotto prova PRIMA di VA-API).  Il loader (vulkan-loader, libvulkan.so.1)
+#   lo calcola rpm dal binario.  NVIDIA: l'ICD arriva col driver proprietario.
+Recommends:     mesa-vulkan-drivers
 %endif
 
 %if 0%{?rhel}

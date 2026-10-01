@@ -5,6 +5,8 @@
 # ⓘ src/Contenitore resta quello di sempre (le .so in /usr/local, per il lavoro
 #   di tutti i giorni e per costruisci-in-contenitore.sh): questo e' il bersaglio
 #   «da pacchetto», uguale agli altri sette.
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — il loader e le
+#    intestazioni, `[M]` 1 ott 2026 nell'immagine: 1.4.309 (Debian 13).
 FROM docker.io/library/debian:13
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libssl-dev libpam0g-dev \
         libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
         libva-dev libopus-dev \
-        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev \
+        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

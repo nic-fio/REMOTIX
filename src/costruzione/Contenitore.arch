@@ -7,11 +7,13 @@
 # ⓘ labwc, wlr-randr, wireplumber e pipewire-pulse non servono a compilare: sono dipendenze di ESECUZIONE
 #   del pacchetto (packaging/arch/PKGBUILD), e makepkg vuole vederle
 #   installate prima di costruire.
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-headers` + `vulkan-icd-loader`
+#    (`[M]` 1 ott 2026 nell'immagine: 1.4.357).
 FROM docker.io/library/archlinux:latest
 RUN pacman -Syu --noconfirm --needed \
         base-devel git cmake ninja \
         openssl pam glib2 pipewire libdrm libva opus \
-        libei libxkbcommon mesa wayland \
+        libei libxkbcommon mesa wayland vulkan-headers vulkan-icd-loader \
         labwc wlr-randr wireplumber pipewire-pulse \
     && pacman -Scc --noconfirm
 

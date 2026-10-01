@@ -115,10 +115,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ⇒ Sono quelle del `Makefile`, riga per riga.  ⛔ `libngtcp2` e `libnghttp3`
 #   NON stanno qui: quelle si costruiscono e si copiano dentro con il prodotto
 #   (`11-accendi.sh prodotto`), perche' non sono in Debian.
+# ⭐ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): `libvulkan1` (il loader che il
+#   binario collega) e `mesa-vulkan-drivers` (gli ICD di Mesa: RADV per la
+#   Radeon — la strada Vulkan Video, provata PRIMA di VA-API; ANV per la Intel,
+#   che in Vulkan non codifica e resta a VA-API).  ⛔ Senza l'ICD il prodotto
+#   non vede Vulkan e scende a VA-API dicendolo: la rete anti-regressione
+#   «Radeon = Vulkan» misurerebbe VA-API con l'etichetta sbagliata.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 libpipewire-0.3-0 libdrm2 \
         libopus0 libva-drm2 \
+        libvulkan1 mesa-vulkan-drivers \
         libei1 libxkbcommon0 libpam0g libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
