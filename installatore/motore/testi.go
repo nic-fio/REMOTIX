@@ -37,19 +37,15 @@ var testi = map[string]Testo{
 	"cond.carattere":        {"manca un carattere scalabile: senza, labwc muore (labwc #2525)", "no scalable font: without one, labwc dies (labwc #2525)"},
 	"cond.deposito_desktop": {"%s viene da %s", "%s comes from %s"},
 	"cond.deposito_h264":    {"H.264 sulla scheda solo col driver di %s", "H.264 on the card only with the driver from %s"},
-	"cond.deposito_base":    {"le librerie del video di REMOTIX (OpenH264, SVT-AV1) solo con %s", "REMOTIX's video libraries (OpenH264, SVT-AV1) only with %s"},
-	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API"},
+	"cond.deposito_base":    {"REMOTIX su questa distribuzione solo con %s (lo chiede il deposito dei driver della scheda)", "REMOTIX on this distribution only with %s (the card driver repository needs it)"},
+	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API, il video lo codifica l'altra scheda (Vulkan Video: fase 19)", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API, video is encoded by the other card (Vulkan Video: phase 19)"},
+	"cond.amd_senza_vaapi":  {"su %s Mesa è senza VA-API: la scheda AMD non codifica, il video lo codifica l'altra scheda", "on %s Mesa has no VA-API: the AMD card does not encode, video is encoded by the other card"},
 	"pacchetti.trattenuti":  {"i pacchetti nuovi non ci sono più, tranne quelli che restano perché li chiede chi resta: %s", "the new packages are gone, except those kept because something that stays needs them: %s"},
 	"pacchetti.chiesto_da":  {"lo chiede %s", "needed by %s"},
 	"deposito.trattenuto":   {"il deposito %s resta acceso: i pacchetti presi da lì li chiede chi resta — %s", "the %s repository stays enabled: packages taken from it are needed by what stays — %s"},
-	"deposito.resta_epel":   {"epel-release resta: la sua chiave serve al deposito epel-cisco-openh264, trattenuto", "epel-release stays: its key is needed by the retained epel-cisco-openh264 repository"},
 	"deposito.ancora":       {"%d pacchetti arrivati col deposito ancora installati: %s", "%d packages that came with the repository are still installed: %s"},
 	"cond.3d":               {"%s richiede l'accelerazione 3D della scheda: %s", "%s requires the card's 3D acceleration: %s"},
 	"mot.3d":                {"%s richiede l'accelerazione 3D, e la macchina non ha una scheda (nessun nodo di rendering): %s", "%s requires 3D acceleration, and the machine has no card (no render node): %s"},
-	"cond.ripiego":          {"la codifica passa al ripiego software", "encoding falls back to software"},
-	"cond.ripiego_amd":      {"su %s Mesa è senza VA-API: con una scheda AMD la codifica è in software", "on %s Mesa has no VA-API: with an AMD card encoding is in software"},
-	"cond.ripiego_senza":    {"nessuna scheda: la codifica è in software", "no graphics card: encoding is in software"},
-	"cond.ripiego_no":       {"la scheda non codifica H.264: la codifica è in software", "the card does not encode H.264: encoding is in software"},
 	"cond.desktop":          {"%s non c'è: l'installatore lo aggiunge dagli archivi della distribuzione, senza schermata d'accesso locale, solo col consenso", "%s is not there: the installer adds it from the distribution's archives, without a local login screen, only with consent"},
 	"cond.desktop_rimedio":  {"rispondere «sì» alla domanda sul desktop; «no» ⇒ REMOTIX non si installa (RX-DESKTOP-001)", "answer «yes» to the desktop question; «no» ⇒ REMOTIX is not installed (RX-DESKTOP-001)"},
 	"inc.openssl":           {"versione di OpenSSL", "OpenSSL version"},
@@ -91,6 +87,7 @@ var testi = map[string]Testo{
 	"az.cintura.annulla":              {"si toglie il file (o si rimette quello dell'amministratore)", "the file is removed (or the administrator's one is put back)"},
 	"az.cintura.dichiarata":           {"Le tre cinture si accendono sempre (D4, DECISIONI §4.7): da remoto e davanti al monitor la macchina non si potrà spegnere né sospendere, e i tasti non la spengono; solo root può.", "The three safety belts are always switched on (D4, DECISIONS §4.7): remotely and at the monitor the machine cannot be shut down or suspended, and the keys do not power it off; only root can."},
 	"risposte.aggiornamenti_ignorata": {"consenso.aggiornamenti è ignorata: REMOTIX si aggiorna col sistema (D14)", "consenso.aggiornamenti is ignored: REMOTIX is updated with the system (D14)"},
+	"risposte.openh264_ignorata":      {"consenso.deposito.openh264 è ignorata: niente più codifica sul processore, né il deposito di OpenH264 (fase 19)", "consenso.deposito.openh264 is ignored: no more encoding on the processor, nor the OpenH264 repository (phase 19)"},
 	"risposte.cinture_ignorata":       {"consenso.cinture è ignorata: le cinture si accendono sempre (D4)", "consenso.cinture is ignored: the safety belts are always switched on (D4)"},
 	"az.servizio":                     {"abilitare e accendere remotix.service", "enable and start remotix.service"},
 	"az.servizio.fa":                  {"EnableUnitFiles e StartUnit di remotix.service, dopo i controlli a servizio spento (7a)", "EnableUnitFiles and StartUnit of remotix.service, after the checks with the service stopped (7a)"},
@@ -105,13 +102,11 @@ var testi = map[string]Testo{
 	"az.deposito.fa.archivio":       {"la chiave dell'archivio e la sorgente che la nomina: apt Signed-By + un pin che dall'archivio prende solo i pacchetti di REMOTIX; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman un blocco [remotix] con SigLevel Required e la chiave in pacman-key", "the archive key (chain B) and the source naming it: apt Signed-By + a pin taking only REMOTIX packages from the archive; dnf gpgcheck, repo_gpgcheck, includepkgs; pacman a [remotix] block with SigLevel Required and the key in pacman-key"},
 	"az.deposito.fa.epel":           {"dnf install epel-release, e il deposito CRB acceso", "dnf install epel-release, and the CRB repository enabled"},
 	"az.deposito.fa.rpmfusion":      {"dnf install del pacchetto rpmfusion-free-release della versione della macchina (e rpmfusion-nonfree-release se la scheda Intel lo chiede)", "dnf install of the rpmfusion-free-release package for the machine's version (and rpmfusion-nonfree-release if the Intel card needs it)"},
-	"az.deposito.fa.openh264":       {"il deposito di OpenH264 di Cisco: acceso (Fedora), scritto in /etc/yum.repos.d con la chiave di EPEL (Alma), zypper addrepo (openSUSE)", "Cisco's OpenH264 repository: enabled (Fedora), written in /etc/yum.repos.d with the EPEL key (Alma), zypper addrepo (openSUSE)"},
 	"az.deposito.fa.packman":        {"zypper addrepo di Packman (priorità 90) e refresh con la sua chiave", "zypper addrepo of Packman (priority 90) and refresh with its key"},
 	"az.deposito.verifica":          {"l'archivio configurato", "the archive configured"},
 	"az.deposito.annulla.archivio":  {"si tolgono i file (e la chiave da rpm o da pacman-key; il blocco da pacman.conf)", "the files are removed (and the key from rpm or pacman-key; the block from pacman.conf)"},
 	"az.deposito.annulla.epel":      {"si toglie epel-release e CRB torna com'era; i pacchetti presi da lì restano (dichiarati); se chi resta ne chiede uno, restano lui, il deposito e epel-release", "epel-release is removed and CRB goes back; packages taken from it stay (declared)"},
 	"az.deposito.annulla.rpmfusion": {"si tolgono rpmfusion-free-release e rpmfusion-nonfree-release messi da noi; i pacchetti presi da lì restano (dichiarati)", "the rpmfusion-free-release and rpmfusion-nonfree-release we added are removed; packages taken from it stay (declared)"},
-	"az.deposito.annulla.openh264":  {"il deposito torna com'era (spento, o il file tolto); i pacchetti presi da lì restano (dichiarati); se chi resta ne chiede uno (es. mozilla-openh264, ark), restano lui e il deposito", "the repository goes back as it was (disabled, or the file removed); packages taken from it stay (declared)"},
 	"az.deposito.annulla.packman":   {"zypper removerepo packman; i pacchetti presi da lì e la chiave restano (dichiarati)", "zypper removerepo packman; packages taken from it and the key stay (declared)"},
 	"ind.deposito":                  {"deposito %s tolto: i pacchetti presi da lì e gli aggiornamenti restano", "repository %s removed: packages taken from it and upgrades stay"},
 	"consenso.deposito":             {"Aggiungere l'archivio di terzi %s (per il video o per il desktop)? (decisione D5)", "Add the third-party archive %s (for video or for the desktop)? (decision D5)"},
@@ -122,8 +117,8 @@ var testi = map[string]Testo{
 	"az.disfa":                      {"disfare: %s", "undo: %s"},
 	"az.disfa.verifica":             {"com'era prima dell'installazione", "as it was before the installation"},
 	"np.nessun_gruppo":              {"nessun nodo della scheda con un gruppo: nessuno da iscrivere", "no card node with a group: nobody to add"},
-	"cond.codifica_ignota":          {"la codifica H.264 non è stata provata da REMOTIX (%s): vale il ripiego dichiarato", "H.264 encoding was not tested by REMOTIX (%s): the declared fallback applies"},
-	"cond.ripiego_verificato":       {"la scheda non codifica H.264: REMOTIX codifica in software (%s)", "the card does not encode H.264: REMOTIX encodes in software (%s)"},
+	"cond.codifica_ignota":          {"la codifica H.264 sulla scheda non è stata provata da REMOTIX (%s): non è confermata", "H.264 encoding on the card was not tested by REMOTIX (%s): it is not confirmed"},
+	"ver.nessuna_scheda":            {"nessuna scheda sa codificare: il codificatore della scheda non si apre (%s)", "no card can encode: the card's encoder does not open (%s)"},
 	"az.iscrizione":                 {"togliere %s dal gruppo %s (iscritto da REMOTIX alla prima connessione)", "remove %s from the %s group (added by REMOTIX at first connection)"},
 	"az.iscrizione.fa":              {"gpasswd -d, se è ancora nel gruppo", "gpasswd -d, if still in the group"},
 	"az.iscrizione.verifica":        {"non è più nel gruppo", "no longer in the group"},
@@ -172,7 +167,7 @@ var testi = map[string]Testo{
         guarda la macchina, SENZA TOCCARE NIENTE, e dice che cosa REMOTIX ci può fare
   remotix-install piano     [--uscita FILE] [--utente NOME] [--apri-firewall] [--json]
         prepara un piano di PROVA del motore
-  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,openh264,rpmfusion,packman]
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
                             [--apri-firewall]
         prepara il piano dell'INSTALLAZIONE di REMOTIX
   remotix-install disinstalla [--purge]   prepara il piano della disinstallazione (dal registro)
@@ -203,7 +198,7 @@ var testi = map[string]Testo{
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (solo se manca un desktop)
         consenso.firewall = si|no
-        consenso.deposito.rpmfusion|packman|epel|openh264 = si|no
+        consenso.deposito.rpmfusion|packman|epel = si|no
         (ogni consenso che su quella macchina serve va dato, «si» o «no»)
 
   opzioni comuni: --operazioni DIR (predefinita /var/lib/remotix/operazioni), --catalogo FILE (dato a mano),
@@ -215,7 +210,7 @@ var testi = map[string]Testo{
         examines the machine, WITHOUT TOUCHING ANYTHING, and says what REMOTIX can do on it
   remotix-install piano     [--uscita FILE] [--utente NAME] [--apri-firewall] [--json]
         prepares an engine TEST plan
-  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,openh264,rpmfusion,packman]
+  remotix-install piano --installa --pacchetto FILE [--utente A,B] [--deposito epel,rpmfusion,packman]
                             [--apri-firewall]
         prepares the REMOTIX INSTALLATION plan
   remotix-install disinstalla [--purge]   prepares the uninstallation plan (from the log)
@@ -246,7 +241,7 @@ var testi = map[string]Testo{
         formato = remotix-risposte/1   lingua = it|en   porta = 7447   archivio = URL   canale = stabile
         utenti = tutti|a,b   desktop = gnome|kde|xfce|lxqt|no (only if a desktop is missing)
         consenso.firewall = si|no
-        consenso.deposito.rpmfusion|packman|epel|openh264 = si|no
+        consenso.deposito.rpmfusion|packman|epel = si|no
         (every consent that machine needs must be given, «si» or «no»)
 
   common options: --operazioni DIR (default /var/lib/remotix/operazioni), --catalogo FILE (given by hand),

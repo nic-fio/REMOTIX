@@ -471,7 +471,7 @@ func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	// dice niente, il testo sì. Se il solver non risolve — togliere questi romperebbe un pacchetto
 	// PROTETTO, o uno installato che ne ha bisogno — non c'è la sezione «Removing»: i nomi stanno
 	// nei «Problem», e sono loro i dipendenti (i nomi dati si trattengono). `[M]` T10, 30 set,
-	// fedora44-gnome-iso: openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protetto);
+	// fedora44-gnome-iso (fase 18, col deposito Cisco): openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protetto);
 	// prima si leggeva «nessun dipendente» e `dnf remove -y` falliva.
 	if strings.Contains(out, "Failed to resolve the transaction") || strings.Contains(out, "Impossibile risolvere la transazione") {
 		altri := fuoriDa(problemiDnf(out), nomi)

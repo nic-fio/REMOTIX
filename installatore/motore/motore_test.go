@@ -211,7 +211,7 @@ func TestInstallazione(t *testing.T) {
 	m2 := b2.motore(t)
 	op, err := m2.Applica(b2.piano, true, "prova")
 	// il binario di REMOTIX non c'è (e non ha ancora --prova-codifica): la codifica è UNKNOWN,
-	// richiesta con ripiego ⇒ a condizioni, mai CONFERMATA pulita (§6.6.7)
+	// richiesta ⇒ a condizioni, mai CONFERMATA pulita (§6.6.7)
 	if err != nil || op.Stato != CONFERMATA_A_CONDIZIONI {
 		t.Fatal(op.Stato, err)
 	}
