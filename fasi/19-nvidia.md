@@ -143,3 +143,30 @@ KDE, XFCE, LXQt.
 | 8 | F-016, F-017, F-020 stacco e rientro | chiudere Chrome di colpo, riaprirlo, rientrare | la sessione c'è ancora, con l'editor e il testo scritto |
 | 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
 | 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
+
+## 6. Da qui si riparte (2 ott 2026, sera — sessione chiusa dall'utente)
+
+**Stato.** Suite automatica VERDE sulle due schede (Radeon = Vulkan, giro `19-radeon-3` 669 PASS, i 4 BLOCKED del banco
+rifatti 16/16; Intel = VA-API, giro corto `19-intel-3` 128/128). Android sul telefono vero verde (righe 1-10 su GNOME,
+corte sugli altri tre; in verticale F-003 e F-013 dipendono dalla tela stretta, in orizzontale verdi). Scatole sulla
+**Radeon**, binario `ad3ba33a`, pagina `210ff091`. Ultimo lavoro: **la tastiera del telefono solo a richiesta**
+(DECISIONI §10.28, commit `25f878a`/`5168275`): pagina `prodotto/pagina.html.3fc5777d` sul server, NON ancora nelle scatole.
+
+**Prima cosa della sessione nuova, in ordine:**
+1. dal ramo `fase-19`: `bash banchi/15-suite/15-porta.sh`; sul server la pagina nuova nelle scatole
+   (`cp -n prodotto/pagina.html prodotto/pagina.html.210ff091 && cp prodotto/pagina.html.3fc5777d prodotto/pagina.html`,
+   poi `11-accendi.sh prodotto|server` per i 4 desktop) e il giro mirato
+   `15-giro.py --giro 19-tastiera --desktop gnome,kde,xfce,lxqt --browser firefox,chrome --prove f007,f009,f014,f031-tocco`;
+   ⚠ dopo un riavvio del server, prima `15-compositori.sh accendi`;
+2. Android col telefono (Phonestra aperto): `bash banchi/19-android/19-android.sh prova 2` e `prova 3`
+   (il ⌨, e `[?]` il cancella a campo vuoto con la tastiera Samsung) — ~20 minuti;
+3. **la prova a mano dell'utente** (§4-bis): prima i 4 desktop sulla Intel, poi i 4 sulla Radeon (nictest, 8511-8514);
+   sul telefono: un dito che parte dalla meta' bassa muove il puntatore (con la tastiera chiusa);
+4. chiusura della fase 19 e `fase-19` dentro `fase-10-cure`.
+
+**Lavori da fare dopo la fase 19** (elenco dell'utente, 2 ott 2026):
+- scatole: il file di login `remotix.pam` aggiornato (D3), in un giro a parte;
+- **versione trial e full** (da definire con l'utente);
+- NVIDIA: la prova sulla macchina noleggiata, col banco gia' pronto (`banchi/19-nvidia/LEGGIMI.md`);
+- prestazioni: le misure da rifare da zero, con un piano che approva l'utente;
+- installatore: le prove nei contenitori con la scheda vera, e una VM senza scheda che deve rifiutare con un messaggio chiaro.
