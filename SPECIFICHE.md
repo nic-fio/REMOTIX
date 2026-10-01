@@ -222,7 +222,7 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 | | |
 |---|---|
 | **trasporto** | **WebTransport su HTTP/3**, cioè QUIC con TLS 1.3 obbligatorio — **porta 7447** di serie, configurabile |
-| **codec video** | **H.264** e **HEVC** sulla scheda; in software **H.264** o **AV1** — si negozia col browser (`DECISIONI.md` §1.13) |
+| **codec video** | **H.264** e **HEVC**, **solo sulla scheda** — si negozia col browser (`DECISIONI.md` §1.13); ⛔ niente codifica sul processore (§11.4, `DECISIONI.md` §10.27) |
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
 
@@ -1143,19 +1143,31 @@ via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, 
 in mezzo: REMOTIX imposta i parametri, gestisce i buffer e scrive da sé le intestazioni del flusso.
 La scala:
 
-1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — la strada normale. Anche la **conversione
-   dei colori** si fa sulla scheda (VPP di VA-API)
-2. **ripiego software**: **H.264** con **OpenH264**, **AV1** con **SVT-AV1** usata direttamente.
-   ⛔ **Niente HEVC in software**. La conversione dei colori, nel ripiego, si fa sul processore
+1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — l'unica strada. Sulla copia zero anche la
+   **conversione dei colori** si fa sulla scheda (VPP di VA-API); sulla strada «dalla memoria» i
+   colori si convertono sul processore e i piani salgono sulla scheda, dove si codificano
+2. ⛔ **Niente codifica sul processore** — *decisione dell'utente, 1 ottobre 2026* (`DECISIONI.md`
+   §10.27): *«niente cpu senza scheda»*. Il ripiego in software (OpenH264, SVT-AV1) è **uscito** dal
+   prodotto, dai pacchetti e dall'installatore. Senza una scheda capace di codificare:
+   - il **server** lo dichiara all'avvio nel registro (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*,
+     con la ragione di ogni codec) e l'`ECCOMI` non offre codec: ogni `CIAO` finisce in
+     `NIENTE_IN_COMUNE`, col motivo;
+   - `remotix --prova-codifica` esce con **3** (*nessuna scheda sa codificare*), distinto da 0
+     (la scheda codifica), 1 (si apre ma il fotogramma non esce) e 2 (errore d'uso);
+   - l'**installatore** rifiuta già nel controllo preliminare, con la ragione (nessuna scheda;
+     NVIDIA col driver proprietario finché la strada Vulkan della fase 19 non c'è)
 3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
    condizione della licenza (`DECISIONI.md` §10.22)
+
+⭐ La strada **Vulkan Video** (AMD, NVIDIA) è la fase 19 (`fasi/19-nvidia.md`): si sceglie per
+capacità all'avvio, Vulkan prima e VA-API dove Vulkan non c'è.
 
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
 
 ⚠ **AV1 in hardware non è nella scala** *(`STUDI.md` §web §8-bis, O2)*: in decodifica non porta
-niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. AV1 resta
-come **ripiego software**.
+niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. ⛔ E dalla
+fase 19 AV1 non c'è nemmeno in software: è uscito col ripiego.
 
 ⛔ **Si codifica in BT.709, e l'HDR non si promette** `[S]` *(O3)*: BT.2020/PQ fa cadere il percorso
 a zero copie nel browser, e quello a una copia converte con un risultato slavato. È una scelta del

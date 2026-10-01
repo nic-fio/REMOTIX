@@ -66,9 +66,10 @@ moderno — e un protocollo nostro chiamato **RCP** — *Remotix Control Protoco
 **WebTransport**.
 
 Il video si codifica **sulla scheda** con libva diretta (H.264, HEVC), colori convertiti anch'essi
-sulla scheda (VPP di VA-API); dove la scheda non basta c'è il **ripiego in software** — OpenH264 per
-H.264, SVT-AV1 per AV1, ⛔ niente HEVC in software. L'audio è Opus, con libopus diretta
-(fase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
+sulla scheda (VPP di VA-API). ⛔ **Niente codifica sul processore**: senza una scheda capace di
+codificare REMOTIX non si installa, e il server lo dichiara all'avvio (fase 19,
+[`fasi/19-nvidia.md`](fasi/19-nvidia.md), `DECISIONI.md` §10.27). L'audio è Opus, con libopus
+diretta (fase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 
 > # 📅 COM'ERA IL **25 agosto 2026** — *ripresa di allora, superata*
 >
@@ -752,7 +753,7 @@ H.264, SVT-AV1 per AV1, ⛔ niente HEVC in software. L'audio è Opus, con libopu
 > | la codifica in hardware **funziona** | sulla scheda il tratto di codifica si accorcia di molto, su scena facile e su scena dura |
 > | ⛔ ma il totale **non** migliora | il collo di bottiglia si è spostato: **la conversione dei colori costa più della codifica** ⇒ ⭐ va portata **sulla scheda** — e dalla fase 18 la fa la VPP di VA-API |
 > | il client **decodifica HEVC** | `VideoDecoder`: **120 fotogrammi su 120**, due strade di confezionamento, 5 giri su 5 |
-> | ⛔ **AV1 in hardware NON esiste** sulla UHD 730 | restare su AV1 = restare in software **per sempre** — e dalla fase 18 AV1 resta solo nel ripiego software, con SVT-AV1 |
+> | ⛔ **AV1 in hardware NON esiste** sulla UHD 730 | restare su AV1 = restare in software **per sempre** — e dalla fase 19 AV1 non c'è più: il ripiego software è uscito |
 > | ⛔ **Firefox non ha HEVC** in WebCodecs | ⇒ passare a HEVC **non toglie AV1: lo rende obbligatorio** |
 >
 > ---
