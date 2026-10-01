@@ -52,10 +52,9 @@ import (
 // ⛔ Un pacchetto preparato per un'altra impronta si RIFIUTA (RX-FUORI-002), come un piano (R31); un
 // file del pacchetto alterato o mancante si rifiuta prima di toccare la macchina (RX-FUORI-001).
 // ⭐ RPM Fusion (Fedora, D5) ENTRA nel pacchetto, se il piano lo ha col consenso: porta i driver con
-// H.264 della scheda (fase 18: niente più ffmpeg; il ripiego software è OpenH264, dal deposito Cisco
-// che Fedora accende di serie). Il pacchetto porta rpmfusion-free-release (e rpmfusion-nonfree-release
-// se la scheda è Intel), scaricati in https come li scarica il passo in linea, e i driver risolti;
-// si installano con la firma verificata (la chiave la porta il release).
+// H.264 della scheda (fase 18: niente più ffmpeg; fase 19: niente ripiego sul processore). Il
+// pacchetto porta rpmfusion-free-release (e rpmfusion-nonfree-release se la scheda è Intel),
+// scaricati in https come li scarica il passo in linea, e i driver risolti; si installano con la firma verificata (la chiave la porta il release).
 // ⚠ Limiti dichiarati: zypper e pacman non ancora (RX-FUORI-004); Packman ed EPEL non entrano nel
 // pacchetto: il loro passo scarica dalla rete (RX-FUORI-005).
 

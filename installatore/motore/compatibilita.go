@@ -71,9 +71,9 @@ type Piattaforma struct {
 	GiroIntero        string          `json:"giro_intero"` // data del giro intero verde (T10); "" = mai
 	Derivate          []Derivata      `json:"derivate,omitempty"`
 	H264              H264Piattaforma `json:"h264"`
-	// Depositi: gli archivi che servono a REMOTIX stesso, su qualunque desktop (le librerie del
-	// video senza ffmpeg, fase 18): Alma → EPEL (SVT-AV1) e OpenH264 di Cisco; Fedora e openSUSE →
-	// OpenH264 di Cisco, che lì è acceso di serie (si chiede solo se qualcuno l'ha spento). D5.
+	// Depositi: gli archivi che servono a REMOTIX stesso, su qualunque desktop. Fase 19 (niente
+	// codifica sul processore): resta solo EPEL su Alma, che RPM Fusion per EL (il driver Intel con
+	// H.264) vuole prima di sé; OpenH264 di Cisco e SVT-AV1 sono usciti. D5.
 	Depositi         []string                   `json:"depositi,omitempty"`
 	Desktop          map[string]DesktopCatalogo `json:"desktop"`
 	PacchettiDesktop map[string]string          `json:"pacchetti_desktop"` // desktop → pacchetti (virgole) per installarlo
@@ -88,19 +88,19 @@ type Derivata struct {
 	Nota           string   `json:"nota,omitempty"`
 }
 
-// H264Piattaforma: la codifica video della piattaforma, SENZA ffmpeg (fase 18): sulla scheda con
-// libva e il driver VA della distribuzione; in software con OpenH264. ⭐ Il deposito di terzi serve
+// H264Piattaforma: la codifica video della piattaforma, SENZA ffmpeg (fase 18) e SOLO sulla scheda
+// (fase 19: niente ripiego sul processore): libva e il driver VA della distribuzione, la strada
+// «vaapi» di strade.go. ⭐ Il deposito di terzi serve
 // ai DRIVER, e dipende dal fornitore della scheda (`[M]` 30 set, dai binari dei driver nelle
 // immagini podman): Fedora toglie H.264 sia dal driver Intel (libva-intel-media-driver) sia da Mesa
 // ⇒ RPM Fusion per entrambi (Intel: intel-media-driver, nel ramo NONFREE; AMD:
 // mesa-va-drivers-freeworld); openSUSE toglie H.264 solo da Mesa ⇒ Packman solo per AMD; Alma su
 // AMD non ha VA-API affatto.
 type H264Piattaforma struct {
-	SchedaDiSerie   bool   `json:"scheda_di_serie"`   // ogni scheda Intel/AMD codifica coi pacchetti ufficiali
-	SoftwareDiSerie bool   `json:"software_di_serie"` // OpenH264 vero nei depositi accesi di serie
-	Deposito        string `json:"deposito,omitempty"`
-	Comando         string `json:"comando,omitempty"`
-	AmdSenzaVaapi   bool   `json:"amd_senza_vaapi,omitempty"`
+	SchedaDiSerie bool   `json:"scheda_di_serie"` // ogni scheda Intel/AMD codifica coi pacchetti ufficiali
+	Deposito      string `json:"deposito,omitempty"`
+	Comando       string `json:"comando,omitempty"`
+	AmdSenzaVaapi bool   `json:"amd_senza_vaapi,omitempty"`
 	// PacchettiScheda: fornitore (come in scheda.*.fornitore: Intel, AMD) → i driver da Deposito,
 	// separati da virgola (dopo il consenso, D5). Un fornitore che non c'è codifica di serie, o non
 	// codifica affatto (AmdSenzaVaapi).
@@ -108,10 +108,22 @@ type H264Piattaforma struct {
 	// Nonfree: i fornitori il cui driver sta nel ramo «nonfree» del deposito (RPM Fusion: il driver
 	// Intel completo)
 	Nonfree []string `json:"nonfree,omitempty"`
-	// PacchettiSoftware: OpenH264 VERO, per nome, nella transazione di REMOTIX quando la macchina non
-	// l'ha: dove c'è anche la copia vuota (noopenh264 su Fedora e Alma, libopenh264-8
-	// «~noopenh264» in repo-oss di openSUSE) la risoluzione per libreria potrebbe prendere quella
-	PacchettiSoftware string `json:"pacchetti_software,omitempty"`
+}
+
+// codificaPer: un fornitore di schede codifica H.264 via VA-API su questa piattaforma, coi pacchetti
+// ufficiali o col driver che il catalogo prende dal deposito di terzi (D5). driverSenza: la macchina
+// ha per lui solo un driver costruito senza H.264 (famigliaDriver). Solo Intel e AMD hanno la strada.
+func (h H264Piattaforma) codificaPer(fornitore string, driverSenza bool) bool {
+	switch {
+	case fornitore != "Intel" && fornitore != "AMD":
+		return false
+	case fornitore == "AMD" && h.AmdSenzaVaapi:
+		return false
+	case driverSenza && !h.SchedaDiSerie:
+		// il driver che c'è non codifica: serve quello del deposito, se il catalogo lo nomina
+		return h.Deposito != "" && h.PacchettiScheda[fornitore] != ""
+	}
+	return true
 }
 
 // fornitoriScheda: i fornitori delle schede della macchina (scheda.<nodo>.fornitore); noti=false se
@@ -403,8 +415,13 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		r.Note = append(r.Note, pl.Note...)
 	}
 
+	// fase 19 (DECISIONI §10.27): niente codifica sul processore — senza una scheda che una strada
+	// attiva sappia far codificare (strade.go), REMOTIX non si installa, su nessun desktop
+	if cod, det := VerdettoScheda(pl, p); cod != "" {
+		tutti = append(tutti, Msg(cod, det))
+	}
 	condH264 := condizioniH264(c, pl, p, fam, r)
-	// i depositi che servono a REMOTIX stesso (fase 18: le librerie del video), su ogni desktop
+	// i depositi che servono a REMOTIX stesso (su Alma EPEL, per RPM Fusion), su ogni desktop
 	var condBase []Condizione
 	for _, dep := range DepositiBaseMancanti(pl, p) {
 		dd := c.Depositi[dep]
@@ -520,7 +537,8 @@ func nonVuoto(a, b string) string {
 	return b
 }
 
-// condizioniH264: la codifica H.264, dalla piattaforma e da quel che la macchina ha mostrato.
+// condizioniH264: la codifica H.264, dalla piattaforma e da quel che la macchina ha mostrato. Fase
+// 19: niente ripiego — qui restano il deposito dei driver (D5) e le schede che non codificano.
 // ⛔ UNKNOWN non è PASS: se la prova non si è potuta fare, niente condizione ma un'incognita
 // dichiarata — non un «va tutto bene».
 func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rapporto) []Condizione {
@@ -538,25 +556,15 @@ func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rap
 			Rimedio:   d.Comandi[pl.H264.Comando],
 			Decisione: d.Decisione})
 	}
+	// fase 19: una scheda che non codifica ACCANTO a una che sì (la macchina senza nessuna capace è
+	// già fuori, VerdettoScheda): la si dice, e il video lo fa l'altra
 	if p.V("scheda.nvidia_proprietaria") == "si" {
 		cc = append(cc, Condizione{Codice: "C-HARDWARE", Testo: T("cond.nvidia")})
-		cc = append(cc, Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego")})
-		return cc
 	}
-	if pl != nil && pl.H264.AmdSenzaVaapi {
-		for _, f := range p.Fatti {
-			if strings.HasSuffix(f.Chiave, ".fornitore") && f.Valore == "AMD" {
-				cc = append(cc, Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego_amd", pl.Nome)})
-				return cc
-			}
-		}
+	if forn, _ := fornitoriScheda(p); pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
+		cc = append(cc, Condizione{Codice: "C-HARDWARE", Testo: T("cond.amd_senza_vaapi", pl.Nome)})
 	}
-	switch {
-	case p.V("scheda.nodi") == "nessuno":
-		cc = append(cc, Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego_senza")})
-	case h.Stato != SCONOSCIUTO && h.Valore == "no":
-		cc = append(cc, Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego_no")})
-	case h.Stato == SCONOSCIUTO:
+	if h.Stato == SCONOSCIUTO {
 		r.Incognite = append(r.Incognite, T("inc.h264", h.Nota))
 	}
 	return cc

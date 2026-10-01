@@ -25,14 +25,20 @@ func TestCertificaGuasti(t *testing.T) {
 		atteso string
 	}{
 		{"sana, scheda che codifica", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "VERDE"},
-		{"scheda che non codifica", func(b *banco, m *Motore) {
-			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"né VA-API né libx264"}`, 1)
+		{"scheda che si apre ma non codifica il fotogramma", func(b *banco, m *Motore) {
+			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"il fotogramma non esce","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
 			apri(b)
 		}, "ROSSO"},
-		{"solo il ripiego software", func(b *banco, m *Motore) {
+		// fase 19: niente ripiego sul processore — nessuna scheda capace (uscita 3) è ROSSO, mai a condizioni
+		{"nessuna scheda sa codificare (uscita 3)", func(b *banco, m *Motore) {
+			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 3)
+			apri(b)
+		}, "ROSSO"},
+		// un binario vecchio che dice ancora «software»: non è la scheda ⇒ ROSSO
+		{"il vecchio ripiego software", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"software","codificatore":"libx264","nodo":"","motivo":"niente VA-API"}`, 0)
 			apri(b)
-		}, "A_CONDIZIONI"},
+		}, "ROSSO"},
 		{"prova di codifica che non risponde", func(b *banco, m *Motore) { apri(b) }, "A_CONDIZIONI"},
 		{"PAM rotto (modulo tolto)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
@@ -81,7 +87,7 @@ func TestCertificaGuasti(t *testing.T) {
 	}
 }
 
-// R29 anche nell'installazione: con la scheda che non codifica (né hardware né software) la
+// R29 anche nell'installazione: con la scheda che non codifica (fase 19: e non c'è ripiego) la
 // verifica è rossa e l'installazione si annulla.
 func TestInstallazioneSchedaGuasta(t *testing.T) {
 	b := nuovoBanco(t)
@@ -92,7 +98,7 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 	m := b.motore(t)
 	m.Amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) {
 		if nome == "remotix" {
-			return `{"esito":"nessuno","codificatore":"","nodo":"","motivo":"x"}`, 1, nil
+			return `{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering"}`, 3, nil
 		}
 		return nessunComando(0, nome)
 	}

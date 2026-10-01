@@ -1154,8 +1154,12 @@ La scala:
      `NIENTE_IN_COMUNE`, col motivo;
    - `remotix --prova-codifica` esce con **3** (*nessuna scheda sa codificare*), distinto da 0
      (la scheda codifica), 1 (si apre ma il fotogramma non esce) e 2 (errore d'uso);
-   - l'**installatore** rifiuta già nel controllo preliminare, con la ragione (nessuna scheda;
-     NVIDIA col driver proprietario finché la strada Vulkan della fase 19 non c'è)
+   - l'**installatore** rifiuta già nel controllo preliminare, con la ragione: **RX-GPU-003**
+     nessuna scheda · **RX-GPU-004** solo NVIDIA col driver proprietario (finché la strada Vulkan
+     della fase 19 non c'è) · **RX-GPU-005** nessuna scheda Intel o AMD (virtio, VMware, nouveau) ·
+     **RX-GPU-006** una scheda che su questa distribuzione non codifica e non ha un driver da
+     aggiungere (oggi AMD su Alma). Una scheda che codifica col driver di un deposito di terzi
+     resta un avviso col consenso (D5)
 3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
    condizione della licenza (`DECISIONI.md` §10.22)
 

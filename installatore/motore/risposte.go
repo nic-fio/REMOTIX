@@ -36,7 +36,9 @@ import (
 //	                                      # (consenso.cinture: RITIRATA — D4, le cinture sempre; in un file
 //	                                      #  vecchio si annota fra le «superflue» e non conta)
 //	consenso.firewall = si                # D6: aprire la porta nel firewall (serve solo se firewalld è acceso)
-//	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel, openh264), solo dove serve
+//	consenso.deposito.rpmfusion = si      # D5: un archivio di terzi (rpmfusion, packman, epel), solo dove serve
+//	                                      # (consenso.deposito.openh264: RITIRATA — fase 19, niente ripiego
+//	                                      #  sul processore; in un file vecchio è «superflua»)
 //	                                      # (consenso.aggiornamenti: RITIRATA — D14, REMOTIX si aggiorna col
 //	                                      #  sistema, DECISIONI §10.23; in un file vecchio è «superflua»)
 //
@@ -159,7 +161,7 @@ func (r *FileRisposte) Porta() int {
 }
 
 // DepositiDaChiedere: gli archivi di terzi che su questa macchina servono (D5): quelli di REMOTIX
-// stesso (le librerie del video, fase 18), quello dei driver se la scheda DI QUESTA MACCHINA lo
+// stesso (su Alma EPEL, per RPM Fusion), quello dei driver se la scheda DI QUESTA MACCHINA lo
 // chiede, e quelli dei desktop installati (o di quello che si installerà).
 func DepositiDaChiedere(rap *Rapporto, prof *Profilo, desktopScelto string) []string {
 	visti := map[string]bool{}
@@ -273,14 +275,16 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 	if _, dato := r.Voci["consenso.aggiornamenti"]; dato { // D14: col sistema; la voce vecchia si dice e non conta
 		rif.Superflue = append(rif.Superflue, "consenso.aggiornamenti ("+T("risposte.aggiornamenti_ignorata")+")")
 	}
+	if _, dato := r.Voci["consenso.deposito.openh264"]; dato { // fase 19: niente ripiego, niente deposito Cisco
+		rif.Superflue = append(rif.Superflue, "consenso.deposito.openh264 ("+T("risposte.openh264_ignorata")+")")
+	}
 	servono := map[string]bool{}
 	for _, d := range DepositiDaChiedere(rap, prof, desktop) {
 		servono[d] = true
 	}
 	o.Depositi = nil
-	// l'ordine è quello dei passi: EPEL prima (RPM Fusion per EL e il deposito Cisco per EPEL ne
-	// usano la chiave), poi OpenH264, poi i driver
-	for _, d := range []string{"epel", "openh264", "packman", "rpmfusion"} {
+	// l'ordine è quello dei passi: EPEL prima (RPM Fusion per EL lo vuole prima di sé), poi i driver
+	for _, d := range []string{"epel", "packman", "rpmfusion"} {
 		if consenso("consenso.deposito."+d, servono[d]) {
 			o.Depositi = append(o.Depositi, d)
 		}

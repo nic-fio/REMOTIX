@@ -20,7 +20,7 @@ type OpzioniInstallazione struct {
 	Chiave       string // la chiave pubblica dell'archivio (armatura ASCII), e la sua impronta
 	Impronta     string
 	Utenti       []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
-	Depositi     []string // archivi di terzi col consenso (D5): epel, openh264, rpmfusion, packman
+	Depositi     []string // archivi di terzi col consenso (D5): epel, rpmfusion, packman
 	ApriFirewall bool     // D6
 	Porta        int
 }
@@ -70,7 +70,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	}
 	// D5 (DECISIONI §10.20): senza l'archivio che porta la codifica video, REMOTIX non si installa. Il
 	// piano lo dice (BLOCCANTE, col nome dell'archivio) e Applica si ferma prima di toccare niente.
-	// Vale per i depositi delle librerie di REMOTIX (fase 18) e per quello dei driver della scheda
+	// Vale per i depositi di REMOTIX stesso (su Alma EPEL) e per quello dei driver della scheda
 	manca := DepositiBaseMancanti(rap.pl, prof)
 	if d := DepositoScheda(rap.pl, prof); d != "" {
 		manca = append(manca, d)
@@ -79,12 +79,6 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		if !contiene(o.Depositi, d) {
 			pn.NonFatto = append(pn.NonFatto, Msg("RX-H264-006", nonVuoto(cat.Depositi[d].Nome, d)))
 		}
-	}
-	// OpenH264 VERO nella transazione di REMOTIX, per nome, se la macchina non l'ha (fase 18): dove c'è
-	// anche la copia vuota, risolvere per libreria potrebbe prendere quella
-	software := ""
-	if rap.pl != nil && rap.pl.H264.PacchettiSoftware != "" && prof.V("h264.software") != "si" {
-		software = "," + rap.pl.H264.PacchettiSoftware
 	}
 	if s := SceltaDesktop(rap); s != nil {
 		pn.Scelte = append(pn.Scelte, *s)
@@ -99,7 +93,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		if amb.Famiglia == "debian" {
 			nomi += ",remotix-archive-keyring"
 		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", nomi+software))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", nomi))
 	case o.Pacchetto != "":
 		// uno o più file, separati da virgola, in UNA transazione (T6: remotix e remotix-selinux,
 		// che remotix chiede dove c'è la politica «targeted»)
@@ -115,7 +109,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 			}
 			file, shas = append(file, abs), append(shas, sha)
 		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", strings.Join(file, ","), strings.Join(shas, ","), strings.TrimPrefix(software, ",")))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", strings.Join(file, ","), strings.Join(shas, ","), ""))
 	default:
 		return nil, fmt.Errorf("serve l'archivio di REMOTIX (--archivio URL) o un pacchetto (--pacchetto FILE)")
 	}

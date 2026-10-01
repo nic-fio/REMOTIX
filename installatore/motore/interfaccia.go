@@ -31,7 +31,7 @@ type Domande struct {
 
 // DomandaDeposito: un archivio di terzi da chiedere, e per che cosa serve.
 type DomandaDeposito struct {
-	ID    string `json:"id"`   // rpmfusion · packman · epel · openh264
+	ID    string `json:"id"`   // rpmfusion · packman · epel
 	Nome  string `json:"nome"` // «RPM Fusion (free)»
 	Per   string `json:"per"`  // "h264" · "desktop"
 	Serve bool   `json:"serve"`
@@ -48,8 +48,8 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 	if d.Desktop != nil && desktopScelto == "" {
 		desktopScelto = d.Desktop.Predefinita
 	}
-	// «per il video»: il deposito dei driver che la scheda chiede e quelli delle librerie del video
-	// di REMOTIX (fase 18: OpenH264 di Cisco, EPEL per SVT-AV1 su Alma)
+	// «per il video»: il deposito dei driver che la scheda chiede e quelli di REMOTIX stesso (su Alma
+	// EPEL, che RPM Fusion per EL vuole prima di sé)
 	per264 := map[string]bool{}
 	if rap.pl != nil {
 		if x, _, _ := rap.pl.H264.PerLaScheda(prof); x != "" {

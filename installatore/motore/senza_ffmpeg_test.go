@@ -53,7 +53,7 @@ func TestDepositoPerFornitore(t *testing.T) {
 		}
 	}
 	// RPM Fusion «free» c'è ma il ramo nonfree no: con Intel si chiede lo stesso
-	p := profiloDi("fedora", "44", map[string]string{"deposito.rpmfusion": "presente", "deposito.openh264": "presente"})
+	p := profiloDi("fedora", "44", map[string]string{"deposito.rpmfusion": "presente"})
 	rap := Valuta(cat, p)
 	if got := DepositiDaChiedere(rap, p, ""); strings.Join(got, ",") != "rpmfusion" {
 		t.Errorf("fedora Intel senza nonfree: %v", got)
@@ -62,15 +62,16 @@ func TestDepositoPerFornitore(t *testing.T) {
 	if got := DepositiDaChiedere(rap, p, ""); len(got) != 0 {
 		t.Errorf("fedora Intel con free e nonfree: %v", got)
 	}
-	// Alma: EPEL e OpenH264 di Cisco servono a REMOTIX stesso, prima dei driver
+	// Alma: EPEL serve a REMOTIX stesso (RPM Fusion per EL lo vuole prima di sé), poi i driver; il
+	// deposito Cisco di OpenH264 non c'è più (fase 19)
 	a := profiloDi("almalinux", "10.1", nil)
-	if got := DepositiDaChiedere(Valuta(cat, a), a, ""); strings.Join(got, ",") != "epel,openh264,rpmfusion" {
+	if got := DepositiDaChiedere(Valuta(cat, a), a, ""); strings.Join(got, ",") != "epel,rpmfusion" {
 		t.Errorf("alma Intel: %v", got)
 	}
 }
 
-// Il piano: il deposito col ramo nonfree per Intel, i driver da lì, OpenH264 vero per nome nella
-// transazione di REMOTIX quando la macchina non l'ha; un «no» a un deposito che serve ⇒ RX-H264-006.
+// Il piano: il deposito col ramo nonfree per Intel, i driver da lì, e nient'altro nella transazione
+// di REMOTIX (fase 19: niente OpenH264); un «no» a un deposito che serve ⇒ RX-H264-006.
 func TestPianoSenzaFfmpeg(t *testing.T) {
 	radice := t.TempDir()
 	preparaMacchina(t, radice)
@@ -79,7 +80,7 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 	// «rpm -q» (i pezzi del deposito, per l'impronta): niente installato
 	amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) { return "", 1, nil }
 	cat := catalogoProva(t)
-	fed := profiloDi("fedora", "44", map[string]string{"deposito.openh264": "presente", "h264.software": "no"})
+	fed := profiloDi("fedora", "44", nil)
 	fed.Verificato("h264.scheda", "no", "finto")
 	rap := Valuta(cat, fed)
 	p, err := PianoInstallazione(fed, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.rpm", Porta: 7447, Depositi: []string{"rpmfusion"}})
@@ -103,26 +104,15 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 	if codec == nil || codec.Parametri["nomi"] != "intel-media-driver" || codec.Parametri["da"] != "rpmfusion" {
 		t.Errorf("i driver da RPM Fusion: %+v", codec)
 	}
-	if pacchi == nil || pacchi.Parametri["nomi"] != "openh264" {
-		t.Errorf("OpenH264 vero nella transazione di REMOTIX: %+v", pacchi)
+	if pacchi == nil || pacchi.Parametri["nomi"] != "" {
+		t.Errorf("solo il pacchetto di REMOTIX nella sua transazione: %+v", pacchi)
 	}
 	for _, m := range p.NonFatto {
 		if m.Codice == "RX-H264-006" {
 			t.Errorf("col consenso non si blocca: %+v", m)
 		}
 	}
-	// OpenH264 c'è già (vero): non si chiede per nome
-	fed.Rilevato("h264.software", "si", "finto")
-	p, err = PianoInstallazione(fed, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.rpm", Porta: 7447, Depositi: []string{"rpmfusion"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, a := range p.Azioni {
-		if a.ID == "pacchetti" && a.Parametri["nomi"] != "" {
-			t.Errorf("OpenH264 c'è: %+v", a)
-		}
-	}
-	// Alma senza il consenso a OpenH264 di Cisco: BLOCCATA (D5)
+	// Alma con EPEL ma senza il consenso a RPM Fusion (il driver Intel con H.264): BLOCCATA (D5)
 	alma := profiloDi("almalinux", "10.1", map[string]string{"deposito.epel": "presente"})
 	p, err = PianoInstallazione(alma, Valuta(cat, alma), cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.rpm", Porta: 7447})
 	if err != nil {
@@ -134,34 +124,32 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 			bl += m.Dettaglio + ";"
 		}
 	}
-	if !strings.Contains(bl, "OpenH264") {
-		t.Errorf("alma senza OpenH264 di Cisco: %q", bl)
+	if !strings.Contains(bl, "RPM Fusion") || strings.Contains(bl, "OpenH264") {
+		t.Errorf("alma senza RPM Fusion: %q", bl)
 	}
 }
 
-// Il preflight: i driver di RPM Fusion nelle loro cartelle, la famiglia del driver dal pacchetto, e
-// OpenH264 vero distinto dalla copia vuota (noopenh264: 11-14 KB contro più di 1 MB, `[M]` 30 set).
+// Il preflight: i driver di RPM Fusion nelle loro cartelle e la famiglia del driver dal pacchetto
+// (fase 19: niente più OpenH264 da guardare).
 func TestPreflightSenzaFfmpeg(t *testing.T) {
-	grande := strings.Repeat("x", 1200*1024)
 	casi := []struct {
-		nome     string
-		file     map[string]string
-		fatti    map[string]string
-		scheda   string
-		software string
+		nome   string
+		file   map[string]string
+		fatti  map[string]string
+		scheda string
 	}{
-		{"fedora Intel col driver ridotto, OpenH264 vero",
-			map[string]string{"usr/lib64/dri/iHD_drv_video.so": "", "usr/lib64/libopenh264.so.2.6.0": grande},
-			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44"}, "no", "si"},
-		{"fedora Intel col driver di RPM Fusion (dri-nonfree), la copia vuota",
-			map[string]string{"usr/lib64/dri/iHD_drv_video.so": "", "usr/lib64/dri-nonfree/iHD_drv_video.so": "", "usr/lib64/libopenh264.so.2.6.0": "vuota"},
-			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44", "pacchetto.intel-media-driver": "26.1.5-1.fc44"}, "", "no"},
+		{"fedora Intel col driver ridotto",
+			map[string]string{"usr/lib64/dri/iHD_drv_video.so": ""},
+			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44"}, "no"},
+		{"fedora Intel col driver di RPM Fusion (dri-nonfree)",
+			map[string]string{"usr/lib64/dri/iHD_drv_video.so": "", "usr/lib64/dri-nonfree/iHD_drv_video.so": ""},
+			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44", "pacchetto.intel-media-driver": "26.1.5-1.fc44"}, ""},
 		{"openSUSE AMD con la Mesa ufficiale",
 			map[string]string{"usr/lib64/dri/radeonsi_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1.1"}, "no", "no"},
+			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1.1"}, "no"},
 		{"openSUSE AMD con la Mesa di Packman",
 			map[string]string{"usr/lib64/dri/radeonsi_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1699.2.pm.1"}, "", "no"},
+			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1699.2.pm.1"}, ""},
 	}
 	for _, c := range casi {
 		a := &Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}
@@ -175,31 +163,27 @@ func TestPreflightSenzaFfmpeg(t *testing.T) {
 		if c.scheda == "" && f.Stato != SCONOSCIUTO || c.scheda != "" && (f.Stato != RILEVATO || f.Valore != c.scheda) {
 			t.Errorf("%s: h264.scheda %+v, atteso %q", c.nome, f, c.scheda)
 		}
-		if p.V("h264.software") != c.software {
-			t.Errorf("%s: h264.software %q, atteso %q", c.nome, p.V("h264.software"), c.software)
-		}
 	}
 }
 
 // I depositi della fase 18 nel preflight: il ramo nonfree VERO di RPM Fusion (non steam né
-// nvidia-driver) e OpenH264 di Cisco su Fedora, Alma e openSUSE.
+// nvidia-driver); il deposito Cisco di OpenH264 per EPEL, che una macchina può ancora avere, non è
+// EPEL; e la fase 19 non lo guarda più.
 func TestDepositiSenzaFfmpeg(t *testing.T) {
 	steam := "[rpmfusion-nonfree-steam]\nname=steam\nbaseurl=https://x\nenabled=1\n"
+	cisco := "[epel-cisco-openh264]\nmetalink=https://mirrors.fedoraproject.org/metalink?repo=epel-cisco-openh264-10\nenabled=1\n"
 	for _, c := range []struct {
-		file           map[string]string
-		nonfree, cisco string
+		file    map[string]string
+		nonfree string
 	}{
-		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "assente", "assente"},
-		{map[string]string{"etc/yum.repos.d/rpmfusion-nonfree.repo": "[rpmfusion-nonfree]\nmetalink=x\nenabled=1\n"}, "presente", "assente"},
-		{map[string]string{"etc/yum.repos.d/fedora-cisco-openh264.repo": "[fedora-cisco-openh264]\nenabled=1\n[fedora-cisco-openh264-debuginfo]\nenabled=0\n"}, "assente", "presente"},
-		{map[string]string{"etc/yum.repos.d/fedora-cisco-openh264.repo": "[fedora-cisco-openh264]\nenabled=0\n"}, "assente", "assente"},
-		{map[string]string{"etc/yum.repos.d/epel-cisco-openh264.repo": ContenutoCiscoEpel("10")}, "assente", "presente"},
-		{map[string]string{"etc/zypp/repos.d/openSUSE:repo-openh264.repo": "[openSUSE:repo-openh264]\nenabled=1\nbaseurl=https://codecs.opensuse.org/openh264/openSUSE_Leap_16\n"}, "assente", "presente"},
+		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "assente"},
+		{map[string]string{"etc/yum.repos.d/rpmfusion-nonfree.repo": "[rpmfusion-nonfree]\nmetalink=x\nenabled=1\n"}, "presente"},
+		{map[string]string{"etc/yum.repos.d/epel-cisco-openh264.repo": cisco}, "assente"},
 	} {
 		p := NuovoProfilo(7447)
 		depositi(&Ambiente{Radice: radiceFinta(t, c.file, nil)}, p)
-		if p.V("deposito.rpmfusion-nonfree") != c.nonfree || p.V("deposito.openh264") != c.cisco {
-			t.Errorf("%v: nonfree %q, openh264 %q; attesi %q %q", c.file, p.V("deposito.rpmfusion-nonfree"), p.V("deposito.openh264"), c.nonfree, c.cisco)
+		if p.V("deposito.rpmfusion-nonfree") != c.nonfree || p.V("deposito.openh264") != "" {
+			t.Errorf("%v: nonfree %q, openh264 %q; atteso %q e niente", c.file, p.V("deposito.rpmfusion-nonfree"), p.V("deposito.openh264"), c.nonfree)
 		}
 		if strings.Contains(strings.Join(mapKeys(c.file), ""), "epel-cisco") && p.V("deposito.epel") == "presente" {
 			t.Errorf("il deposito Cisco per EPEL non è EPEL")
