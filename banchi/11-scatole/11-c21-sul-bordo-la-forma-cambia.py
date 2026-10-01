@@ -679,7 +679,9 @@ def foto_piena(g):
             return None
         s = g.cdp.chiama("Page.captureScreenshot", format="png",
                          clip={"x": r[0], "y": r[1], "width": r[2], "height": r[3],
-                               "scale": 1})
+                               # ⚠ il telefono (fase 19 §5) chiede devicePixelRatio:
+                               #   a scala 1 la tela di un telefono e' larga ~400 px
+                               "scale": getattr(g, "scala_foto", 1)})
         return base64.b64decode(s["data"])
     png, _p = g.fotografa_tela()
     return png

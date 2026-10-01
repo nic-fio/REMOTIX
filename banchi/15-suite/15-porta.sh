@@ -6,7 +6,8 @@
 # ⛔ Le prove coi browser veri girano SUL SERVER come nicfio, dall'albero
 #    /media/REMOTIX/src/controllo (lo stesso che usa 11-gancio.sh per C21-C23):
 #    si portano tutti i .py/.sh/.html di banchi/ (niente cartelle di misure),
-#    banchi/11-scatole, banchi/15-suite e fondamenta/strumenti.
+#    banchi/11-scatole, banchi/15-suite, banchi/19-android (il telefono, fase 19 §5)
+#    e fondamenta/strumenti.
 set -euo pipefail
 RADICE=$(cd "$(dirname "$0")/../.." && pwd)
 DEST=${REMOTIX_CONTROLLO:-/media/REMOTIX/src/controllo}
@@ -14,7 +15,7 @@ HOST=${REMOTIX_HOST:-nicfio@192.168.0.2}
 cd "$RADICE"
 elenco=$(
 	ls banchi/*.py banchi/*.sh banchi/*.html banchi/*.js 2>/dev/null
-	find banchi/11-scatole banchi/15-suite -type f ! -name '*.pyc' ! -path '*/__pycache__/*' \
+	find banchi/11-scatole banchi/15-suite banchi/19-android -type f ! -name '*.pyc' ! -path '*/__pycache__/*' \
 		! -name '*registro*.jsonl'
 	find fondamenta/strumenti -type f ! -name '*.pyc'
 )

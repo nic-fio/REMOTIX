@@ -58,7 +58,9 @@ RETE11 = "/media/REMOTIX/rete11"
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 BROWSER = ("firefox", "chrome")
 TETTO_S = 600
-SISTEMA = "Debian 13 · labwc senza schermo 3840x2160 · i5-13500T, Intel UHD 770"
+# ⚠ il telefono (fase 19 §5) dichiara il suo: `banchi/19-android/19-android.py`
+SISTEMA = os.environ.get("REMOTIX_SISTEMA_15") or \
+    "Debian 13 · labwc senza schermo 3840x2160 · i5-13500T, Intel UHD 770"
 INQUILINO = re.compile(r"^c[0-9]+b?u[0-9]+$")
 _serratura = threading.Lock()
 
@@ -96,9 +98,11 @@ def leggi_prove(filtro=""):
             continue
         per_browser = not re.search(r"^PER_BROWSER\s*=\s*False", testo, re.M)
         lunga = bool(re.search(r"^LUNGA\s*=\s*True", testo, re.M))
+        # ⭐ SOLO_TELEFONO = True: la prova ha senso solo col telefono vero (F-031, il tocco)
+        solo_tel = bool(re.search(r"^SOLO_TELEFONO\s*=\s*True", testo, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", testo, re.M)
         prove.append({"file": f, "nome": nome, "corto": corto, "funzioni": funzioni,
-                      "per_browser": per_browser, "lunga": lunga,
+                      "per_browser": per_browser, "lunga": lunga, "solo_telefono": solo_tel,
                       "server": s.group(1) if s else ""})
     return prove
 
@@ -308,6 +312,8 @@ def fila(o, d, prove, meta, esiti):
     for b in o.browser:
         for p in corte:
             if not p["per_browser"] and b != o.browser[0]:
+                continue
+            if p["solo_telefono"] and b != "telefono":
                 continue
             esiti.extend(una_prova(o, p, d, b, base, meta))
     for t in fili:

@@ -121,7 +121,9 @@ def argomenti(doc, extra=None):
     a = argparse.ArgumentParser(description=doc,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--scatola", choices=DESKTOP)
-    a.add_argument("--browser", choices=("firefox", "chrome"), default="firefox")
+    # ⭐ «telefono» = Chrome sul telefono VERO dell'utente (fase 19 §5), comandato dal
+    #   portatile: `banchi/19-android/` (la guida e' `telefono.py`)
+    a.add_argument("--browser", choices=("firefox", "chrome", "telefono"), default="firefox")
     a.add_argument("--guasto", action="store_true",
                    help="anche la passata col guasto innestato, nella stessa sessione")
     a.add_argument("--certifica", action="store_true",
@@ -151,6 +153,8 @@ def argomenti(doc, extra=None):
     o.scena, o.continuita_s, o.registro_cmd = "viva", 8, ""
     o.lascia_acceso = False
     o.salva = ""
+    if o.browser == "telefono":
+        o.largo = 0          # la misura la fa il telefono: niente finestra da dimensionare
     return o
 
 
@@ -260,7 +264,10 @@ class Sessione:
 
     def accendi_browser(self):
         try:
-            self.g = VERI.accendi_guida(self.o.browser, self.o)
+            if self.o.browser == "telefono":
+                self.g = telefono().GuidaTelefono(self.o)
+            else:
+                self.g = VERI.accendi_guida(self.o.browser, self.o)
         except Exception as e:                   # noqa: BLE001
             raise Bloccata("il browser non si e' acceso: %s" % str(e)[:300])
         try:
@@ -370,6 +377,17 @@ class Sessione:
 
 class Bloccata(Exception):
     """La prova non ha potuto guardare: diventa BLOCKED con questa ragione."""
+
+
+_TELEFONO = []
+
+
+def telefono():
+    """Il modulo della guida del telefono vero (`banchi/19-android/telefono.py`),
+    caricato una volta sola e solo da chi lo usa."""
+    if not _TELEFONO:
+        _TELEFONO.append(_carica("telefono", os.path.join(BANCHI, "19-android", "telefono.py")))
+    return _TELEFONO[0]
 
 
 def _q(s):
