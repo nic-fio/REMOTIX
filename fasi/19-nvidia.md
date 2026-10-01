@@ -33,6 +33,14 @@ Si sceglie **per capacità**, all'avvio, non per marca:
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
 
+## 4-bis. La chiusura delle prove di funzionalità
+
+Parola dell'utente (1 ott 2026): *«prima di ritenere chiusi i test di funzionalità voglio verificare di persona che
+tutto sia ok»*. ⇒ Tre cancelli, in ordine: (1) la suite automatica verde in tutti e due i giri (Intel = VA-API,
+Radeon = Vulkan); (2) Android sul telefono dell'utente (§5); (3) **la prova a mano dell'utente** sulle scatole
+(GNOME e KDE sulla Intel, XFCE e LXQt sulla Radeon, utente `nictest`, porte 8511-8514), a server fermo. Solo dopo
+il terzo la fase 19 si dichiara chiusa e il ramo `fase-19` entra in `fase-10-cure`.
+
 ## 5. Android: il telefono vero, comandato da qui
 
 ⭐ **1 ott 2026, parola dell'utente: «ti lancio l'app e il telefono è tuo»** — grazie a **Phonestra** (progetto
