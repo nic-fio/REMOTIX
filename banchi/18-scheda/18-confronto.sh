@@ -30,10 +30,14 @@ costruisci() {
 	#    adesso il codificatore rifiuta dicendolo.  ⚠ libav* qui sotto serve
 	#    SOLO al vecchio.
 	echo "== costruisco 18-confronto-nuovo"
-	gcc $F $INC -o "$USCITA/18-confronto-nuovo" \
+	# ⭐ Fase 19 (innesto, 1 ott 2026): `codificatore.c` porta dentro anche la
+	#    strada Vulkan (`vulkanvideo.c`, `-lvulkan`); questo banco chiede
+	#    `h264_vaapi`/`hevc_vaapi` PER NOME, quindi misura la strada VA-API —
+	#    «niente peggio di prima» sulla Intel e sulla Radeon in VA-API.
+	gcc $F $(pkg-config --cflags vulkan) $INC -Wno-missing-field-initializers -o "$USCITA/18-confronto-nuovo" \
 		banchi/18-scheda/18-confronto.c \
-		src/codificatore.c src/vadiretta.c src/scrittore_bit.c src/colori709.c \
-		src/registro.c $(pkg-config --libs libva libva-drm gbm) -lm || return 1
+		src/codificatore.c src/vadiretta.c src/vulkanvideo.c src/scrittore_bit.c src/colori709.c \
+		src/registro.c $(pkg-config --libs libva libva-drm gbm vulkan) -lm || return 1
 	if nm -u "$USCITA/18-confronto-nuovo" | grep -qE ' (av_|avcodec_|sws_)'; then
 		echo "⛔ il NUOVO chiama ancora ffmpeg"; return 1
 	fi

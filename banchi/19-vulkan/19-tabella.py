@@ -49,10 +49,12 @@ def num(x):
 print(f"{'prova':38} {'ver':7} {'cod':4} {'dec':>4} {'psnr':>6} {'ssim':>6} {'byte':>9} {'chiave':>8} {'delta':>7} {'cod µs':>7} {'prep µs':>7}  ffprobe · psnr y/u/v")
 peggio = []
 for prova, v in per_prova.items():
-    for versione in ("vaapi", "vulkan"):
+    for versione in ("vaapi", "vulkan", "scheda"):
         e = v.get(versione)
         if not e:
-            print(f"{prova:38} {versione:7} MANCA"); continue
+            if versione != "scheda":
+                print(f"{prova:38} {versione:7} MANCA")
+            continue
         t = tempi(prova, versione) or {}
         print(f"{prova:38} {versione:7} {e['codice']:<4} {e['decodificati']:>4} {str(num(e['psnr']) or '')[:6]:>6} {str(e['ssim'])[:6]:>6} "
               f"{e['byte_flusso']:>9} {t.get('chiave',0):>8} {t.get('delta',0):>7.0f} {t.get('cod',0):>7.0f} {t.get('prep',0):>7.0f}  {e['ffprobe']} · {e['psnr']}")
@@ -75,6 +77,26 @@ for prova, v in per_prova.items():
             note.append(f"VULKAN ha codice {b['codice']} e {b.get('errori_decodifica')} errori di decodifica")
         if note:
             peggio.append(f"{prova}: " + " · ".join(note))
+    # ⭐ il prodotto INTEGRATO (motore «scheda», dall'innesto): contro VA-API, stessa regola
+    a, s_ = v.get("vaapi"), v.get("scheda")
+    if a and s_:
+        note = []
+        if a["ffprobe"] != s_["ffprobe"]:
+            note.append(f"ffprobe DIVERSO: «{a['ffprobe']}» → «{s_['ffprobe']}»")
+        if a["decodificati"] != s_["decodificati"]:
+            note.append(f"decodificati {a['decodificati']} → {s_['decodificati']}")
+        pa, ps = num(a["psnr"]), num(s_["psnr"])
+        if pa and ps and ps < pa - 0.5:
+            note.append(f"PSNR {pa:.2f} → {ps:.2f} dB")
+        if a["byte_flusso"] and s_["byte_flusso"] > a["byte_flusso"] * 1.10:
+            note.append(f"byte +{(s_['byte_flusso']/a['byte_flusso']-1)*100:.0f} %")
+        ta, ts = tempi(prova, "vaapi"), tempi(prova, "scheda")
+        if ta and ts and ts["cod"] > ta["cod"] * 1.20:
+            note.append(f"codifica {ta['cod']:.0f} → {ts['cod']:.0f} µs")
+        if s_["codice"] != 0 or int(s_.get("errori_decodifica", 0)) > 0:
+            note.append(f"il PRODOTTO INTEGRATO ha codice {s_['codice']} e {s_.get('errori_decodifica')} errori di decodifica")
+        if note:
+            peggio.append(f"{prova} [prodotto integrato «scheda»]: " + " · ".join(note))
 print()
 if peggio:
     print("⛔ DOVE VULKAN NON E' UGUALE O E' PEGGIO DI VA-API:")

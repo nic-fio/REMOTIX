@@ -1156,16 +1156,21 @@ La scala:
    - `remotix --prova-codifica` esce con **3** (*nessuna scheda sa codificare*), distinto da 0
      (la scheda codifica), 1 (si apre ma il fotogramma non esce) e 2 (errore d'uso);
    - l'**installatore** rifiuta già nel controllo preliminare, con la ragione: **RX-GPU-003**
-     nessuna scheda · **RX-GPU-004** solo NVIDIA col driver proprietario (finché la strada Vulkan
-     della fase 19 non c'è) · **RX-GPU-005** nessuna scheda Intel o AMD (virtio, VMware, nouveau) ·
-     **RX-GPU-006** una scheda che su questa distribuzione non codifica e non ha un driver da
-     aggiungere (oggi AMD su Alma). Una scheda che codifica col driver di un deposito di terzi
-     resta un avviso col consenso (D5)
+     nessuna scheda · **RX-GPU-004** solo NVIDIA col driver proprietario **senza il suo driver
+     Vulkan** (l'ICD `nvidia`: con quello la strada Vulkan Video la prende) · **RX-GPU-005**
+     nessuna scheda Intel, AMD o NVIDIA (virtio, VMware, nouveau) · **RX-GPU-006** una scheda che su
+     questa distribuzione non codifica né in VA-API né in Vulkan e non ha un driver da aggiungere
+     (oggi AMD su Alma senza l'ICD di RADV). Una scheda che codifica col driver di un deposito di
+     terzi resta un avviso col consenso (D5). ⚠ Il controllo preliminare non apre la scheda: legge i
+     driver VA e gli ICD Vulkan sul disco; la prova vera è `--prova-codifica` dopo l'installazione
 3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
    condizione della licenza (`DECISIONI.md` §10.22)
 
-⭐ La strada **Vulkan Video** (AMD, NVIDIA) è la fase 19 (`fasi/19-nvidia.md`): si sceglie per
-capacità all'avvio, Vulkan prima e VA-API dove Vulkan non c'è.
+⭐ La strada **Vulkan Video** (AMD, NVIDIA) è la fase 19 (`fasi/19-nvidia.md`), ✅ innestata il
+1 ott 2026: si sceglie per capacità all'apertura di ogni codificatore (`h264_scheda`/`hevc_scheda`,
+`src/codificatore.c`), Vulkan prima e VA-API dove Vulkan non c'è; `--codifica vulkan|vaapi` la forza
+per le prove, e `--prova-codifica` dice quale ha codificato (`strada`). `[M]` 1 ott 2026 sul server:
+Intel UHD 770 → `vaapi` (H.264 e HEVC), Radeon RX 6800 → `vulkan` (H.264 e HEVC).
 
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.

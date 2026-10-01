@@ -1,7 +1,9 @@
 #!/bin/bash
 # 19-confronto.sh — Vulkan Video (`src/vulkanvideo.c`) contro VA-API (il prodotto,
 # `src/codificatore.c` + `src/vadiretta.c`) sulla STESSA scheda, sul server,
-# dentro `enter.sh --root` (serve l'accesso ai nodi DRM).
+# dentro `enter.sh --root` (serve l'accesso ai nodi DRM).  ⭐ Dall'innesto (1 ott
+# 2026) c'e' il terzo motore `scheda`: il prodotto integrato che sceglie per
+# capacita' (sulla Radeon: Vulkan dentro codificatore.c).
 #
 #   bash /media/REMOTIX/enter.sh --root 'bash /srv/src/f19-vulkan/albero/banchi/19-vulkan/19-confronto.sh [costruisci|tutto|corto|capacita|intel]'
 #
@@ -91,7 +93,8 @@ matrice() {
 			for strada in $strade; do
 				local nome="D$nodo-$codec$prof-$misura-$strada"
 				echo "== $nome"
-				for motore in vaapi vulkan; do
+				# ⭐ dall'innesto: `scheda` = il prodotto integrato (per capacita': Vulkan sulla Radeon)
+				for motore in vaapi vulkan scheda; do
 					prova "$nome" "$motore" "$nodo" "$codec" "$prof" "$misura" "$strada"
 				done
 			done
@@ -101,7 +104,7 @@ matrice() {
 	for codec in h264 hevc; do
 		local base="D$nodo-${codec}8-1920x1080"
 		echo "== $base chiave a richiesta / tela nuova / tetto / qualita'"
-		for motore in vaapi vulkan; do
+		for motore in vaapi vulkan scheda; do
 			prova "$base-chiave" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --chiave-a 40
 			prova "$base-tela" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --ridimensiona-a 60:1280x720
 			prova "$base-tetto" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --tetto 20

@@ -3,10 +3,16 @@
  * codificata da DUE motori sulla STESSA scheda:
  *
  *   --motore vaapi    il codificatore del PRODOTTO (`src/codificatore.c` +
- *                     `src/vadiretta.c`), strada della memoria o della scheda;
+ *                     `src/vadiretta.c`) con la strada VA-API chiesta per nome
+ *                     (`h264_vaapi`), strada della memoria o della scheda;
  *   --motore vulkan   il modulo nuovo `src/vulkanvideo.c`, da solo: dalla
  *                     memoria (`vulkanvideo_codifica_memoria`) o dal DMA-BUF
- *                     (`vulkanvideo_codifica_dmabuf`, copia zero via GBM).
+ *                     (`vulkanvideo_codifica_dmabuf`, copia zero via GBM);
+ *   --motore scheda   ⭐ il PRODOTTO INTEGRATO (dall'innesto, 1 ott 2026):
+ *                     `h264_scheda`/`hevc_scheda`, la strada scelta per
+ *                     capacita' — sulla Radeon e' Vulkan dentro codificatore.c,
+ *                     con tutte le cure a valle dei byte (tetto, cornice,
+ *                     forma).  Il JSON dice quale strada e' uscita.
  *
  * Il guscio e' quello di `banchi/18-scheda/18-confronto.c`: desktop finto ma
  * realistico (testo, finestre, scorrimento, trascinamento, cursore), una riga
@@ -266,7 +272,7 @@ int main(int argc, char **argv)
 		else { fprintf(stderr, "argomento ignoto: %s\n", k); return 2; }
 	}
 	if (!uscita || !l || !a) {
-		fprintf(stderr, "uso: 19-confronto --motore vulkan|vaapi --codec h264|hevc --misura LxA --uscita F [...]\n"
+		fprintf(stderr, "uso: 19-confronto --motore vulkan|vaapi|scheda --codec h264|hevc --misura LxA --uscita F [...]\n"
 		                "     19-confronto --capacita /dev/dri/renderDNNN\n");
 		return 2;
 	}
@@ -313,7 +319,9 @@ int main(int argc, char **argv)
 			codificatore_tetto_banda(tetto);
 		CodificatoreRichiesta r = {
 			.codec = codec,
-			.componente = codec == CODIFICATORE_H264 ? "h264_vaapi" : "hevc_vaapi",
+			.componente = strcmp(motore, "scheda") == 0
+			                  ? (codec == CODIFICATORE_H264 ? "h264_scheda" : "hevc_scheda")
+			                  : (codec == CODIFICATORE_H264 ? "h264_vaapi" : "hevc_vaapi"),
 			.nodo_rendering = nodo,
 			.potenza = CODIFICATORE_POTENZA_LA_DICHIARATA,
 			.larghezza = l, .altezza = a,
@@ -518,12 +526,14 @@ int main(int argc, char **argv)
 	} else {
 		const CodificatoreConfessione *c = codificatore_confessione(cod);
 		printf("{\"esito\":\"%s\",\"codec\":\"%s\",\"strada\":\"%s\",\"codificatore\":\"%s\","
+		       "\"strada_scheda\":\"%s\","
 		       "\"in_hardware\":%s,\"stringa_codec\":\"%s\",\"profondita_flusso\":%d,"
 		       "\"profilo_flusso\":%d,\"livello_flusso\":%d,\"misura_flusso\":\"%ux%u\","
 		       "\"bassa_potenza\":%s,\"modo_bitrate\":%d,\"fotogrammi\":%u,\"chiavi\":%u,"
 		       "\"falliti\":%u,\"byte\":%llu}\n",
 		       falliti ? "con fallimenti" : "ok", nome_codec_arg(codec), strada,
-		       c && c->componente ? c->componente : "", codificatore_in_hardware(cod) ? "true" : "false",
+		       c && c->componente ? c->componente : "", codificatore_strada(cod),
+		       codificatore_in_hardware(cod) ? "true" : "false",
 		       c ? c->stringa_codec : "", c ? c->profondita_flusso : 0, c ? c->profilo_flusso : 0,
 		       c ? c->livello_flusso : 0, c ? c->larghezza_flusso : 0, c ? c->altezza_flusso : 0,
 		       c && c->bassa_potenza ? "true" : "false", c ? c->modo_bitrate : 0, n, chiavi, falliti,
