@@ -12,8 +12,6 @@ Build-Depends: debhelper-compat (= 13),
                libpipewire-0.3-dev,
                libdrm-dev,
                libva-dev,
-               libopenh264-dev,
-               libsvtav1enc-dev,
                libopus-dev,
                libei-dev (>= 1.1),
                libxkbcommon-dev,
@@ -21,11 +19,10 @@ Build-Depends: debhelper-compat (= 13),
                libwayland-dev
 
 # ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  La codifica sulla scheda
-#   con libva diretta (libva-dev porta anche libva-drm), il ripiego con OpenH264
-#   (H.264) e SVT-AV1 (AV1), l'audio con libopus.  `[M]` 30 set, nelle immagini
-#   podman: Debian 13 tutto in main (libopenh264-8 2.6.0, libsvtav1enc2 2.3.0,
-#   libopus0 1.5.2, libva2 2.22); Ubuntu 26.04 libopenh264-8 e libsvtav1enc2 in
-#   universe, il resto in main.
+#   con libva diretta (libva-dev porta anche libva-drm), l'audio con libopus.
+#   `[M]` 30 set, nelle immagini podman: libopus0 1.5.2, libva2 2.22, in main.
+#   ⛔ Fase 19 (1 ott 2026, DECISIONI §10.27): OpenH264 e SVT-AV1, il ripiego
+#   in software, sono USCITI — si codifica solo sulla scheda.
 #   ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`,
 #   fasi/18 §1) — tolta il 30 set (T10: dpkg-checkbuilddeps la chiedeva e il
 #   contenitore della fase 18 non la porta).
@@ -56,12 +53,11 @@ Depends: ${shlibs:Depends},
          wireplumber
 # Recommends (apt li installa di serie; chi usa --no-install-recommends li perde
 #   e `remotix verifica`, T4, lo dira'):
-#   · il driver VA della scheda: senza, la codifica e' solo il ripiego software.
+#   · il driver VA della scheda: senza, NON si codifica (fase 19: niente
+#     ripiego in software; il server lo dichiara all'avvio, e il controllo
+#     preliminare dell'installatore rifiuta prima).
 #     `[M]` 30 set: su Ubuntu 26.04 la Mesa VA sta in mesa-libgallium (che
 #     «fornisce» mesa-va-drivers e va-driver), e va-driver-all tira solo Intel;
-#   · OpenH264, il ripiego H.264 (fase 18): se il binario lo apre con dlopen
-#     dpkg-shlibdeps non lo vede; libopenh264-cisco8 (contrib/universe, il
-#     binario di Cisco) e' la stessa libreria;
 #   · labwc, wlr-randr, xwayland: solo per XFCE e LXQt (il compositore che REMOTIX
 #     avvia; wlr-randr per la cura di LXQt; XFCE 4.20 sotto labwc vuole Xwayland);
 #     ⚠ su una macchina solo GNOME o KDE si installano lo stesso: nei metadati di
@@ -70,7 +66,6 @@ Depends: ${shlibs:Depends},
 #     §10.20) — su Ubuntu REMOTIX avvia la sessione DI SERIE, `ubuntu`, che
 #     c'e' gia' (ubuntu-session); il criterio sta in sessione.c, sessione_gnome().
 Recommends: va-driver-all | va-driver,
-            libopenh264-8 | libopenh264-cisco8,
             labwc,
             wlr-randr,
             xwayland
