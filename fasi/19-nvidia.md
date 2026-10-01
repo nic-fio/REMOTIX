@@ -31,6 +31,14 @@ Si sceglie **per capacità**, all'avvio, non per marca:
    **Radeon = Vulkan** (la scheda passata alle scatole come nella fase 16, `--scheda amd`). Un desktop è a posto
    solo se è verde in tutti e due i giri. T10 ridotto al rifiuto pulito nelle VM; le prove complete
    dell'installatore nei contenitori con la scheda vera.
+⭐ **Le precedenze** (parola dell'utente, 1 ott: *«la precedenza assoluta va alla suite di funzionalità: quelle devono
+restare inalterate. Per la suite delle performance quella dovrà essere rimisurata da capo»*): (a) la suite della
+fase 15 si rilancia **identica** e deve tornare verde sui 4 desktop in tutti e due i giri — ⛔ una prova rossa si
+cura nel **prodotto**, mai ritoccando la prova; l'unica eccezione è una prova che guarda un comportamento cambiato
+apposta dall'utente (oggi: la tela oltre 4096 ridotta invece che rifiutata), e va aggiornata **dichiarandolo** con
+la decisione accanto; (b) la campagna di prestazioni si rifà **da zero**, una volta, a architettura finita, con un
+piano approvato prima dall'utente.
+
 4. ❓ NVIDIA: serve una scheda vera (nel server, o macchina in affitto).
 
 ## 3. Il registro delle modifiche — per il manuale tecnico
