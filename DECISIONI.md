@@ -6213,6 +6213,18 @@ proprietario non codifica via VA-API: si ripiegava sul processore, già prima de
 - ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
   dell'utente: *«basta misure»*).
 
+### 10.28 ✅ La tastiera del telefono si apre solo a richiesta — scelta dell'utente (2 ott 2026)
+
+Parole della scelta: *«Tastiera solo a richiesta»*. `[M]` 2 ott, S23+ con Chrome 154, telefono in mano: la
+tastiera a schermo si apriva da sola (il campo nascosto dell'incolla resta sempre a fuoco) e copriva metà
+del desktop per il 60 % della prova F-031; e non scriveva niente, perché nel modo a tocco nessuno ascoltava i
+tasti. ⇒ **La tastiera non si apre più da sola; la apre un comando quando serve**, e quel che si scrive
+arriva al desktop come §7.3 (lettere come lettere).
+- Il comando è un bottoncino **⌨ in alto a destra**, solo col telefono in mano (disposizione a tocco): si
+  scopre senza manuale, e col modello a trackpad non copre bersagli del desktop. Un gesto della tabella di
+  `SPECIFICHE.md` §7.2 è stato scartato perché non si scopre da solo. Sul computer e sul DeX col mouse non
+  cambia niente.
+
 ---
 
 ## Come si tiene questo documento

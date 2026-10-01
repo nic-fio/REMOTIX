@@ -388,6 +388,23 @@
    *   client.  Fra due puntatori e nessuno, due. */
   body[data-disposizione="classico"][data-agganciato="si"] #schermo { cursor: none; }
   body[data-disposizione="tocco"] #schermo { cursor: none; }
+  /* ⭐ IL COMANDO DELLA TASTIERA A SCHERMO — 2 ottobre 2026, decisione
+   *   dell'utente «Tastiera solo a richiesta» (`DECISIONI.md` §10.28).  Si vede
+   *   SOLO col telefono in mano (disposizione a tocco) e solo con la sessione
+   *   accesa: sul computer e sul DeX col mouse non esiste.  Il perche' della
+   *   forma e del posto sta accanto al codice, in `tastiera_comando()`. */
+  #tastiera-comando { display: none; }
+  body[data-disposizione="tocco"][data-schermo="acceso"] #tastiera-comando {
+    display: block; position: fixed; z-index: 13;
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    width: 40px; height: 40px; padding: 0; margin: 0;
+    border: 1px solid rgba(255,255,255,.35); border-radius: 8px;
+    background: rgba(0,0,0,.45); color: #fff; opacity: .7;
+    font: 22px/38px system-ui, sans-serif; text-align: center;
+    touch-action: none; -webkit-tap-highlight-color: transparent; }
+  body[data-disposizione="tocco"][data-schermo="acceso"] #tastiera-comando[aria-pressed="true"] {
+    background: rgba(40,110,220,.85); opacity: 1; }
   /* ⭐⭐ L'INTERRUTTORE A/B DEL PUNTATORE — tre condizioni, UNA variabile,
    *     commutabili A CALDO dentro la stessa sessione.
    *
@@ -8442,7 +8459,11 @@ const INCOLLA_FUOCO_MS = 400;
 let incolla_campo = null;
 let incolla_restituisci = 0;
 
-function incolla_campo_prendi() {
+/* ⚠ La nascita del campo sta in una funzione sua (2 ottobre 2026) perche' il
+ *   campo ha adesso DUE padroni: l'incolla (qui sotto) e la tastiera a schermo
+ *   a richiesta del telefono in mano (`tastiera_apri()`), che lo vuole anche
+ *   dove gli appunti non sono stati negoziati. */
+function incolla_campo_crea() {
   if (!incolla_campo) {
     incolla_campo = document.createElement("textarea");
     incolla_campo.id = "incolla-nascosto";
@@ -8458,8 +8479,16 @@ function incolla_campo_prendi() {
       "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;"
       + "border:0;padding:0;margin:0;pointer-events:none;z-index:-1";
     document.body.appendChild(incolla_campo);
+    tastiera_ascolta(incolla_campo);
+    tastiera_attributi(modo_in_vigore === "tocco");
   }
+  return incolla_campo;
+}
+
+function incolla_campo_prendi() {
+  incolla_campo_crea();
   incolla_campo.value = "";
+  tastiera_prima = "";
   try { incolla_campo.focus({ preventScroll: true }); } catch (e) { incolla_campo.focus(); }
   clearTimeout(incolla_restituisci);
   /* ⭐⭐ E LA SECONDA STRADA, che non dipende da `clipboardData`: quel che il
@@ -8483,7 +8512,10 @@ function incolla_campo_prendi() {
   APPUNTI.campo_visto = false;
   [100, 250, 500, 900, 1500].forEach((quando) => {
     setTimeout(() => {
-      if (APPUNTI.campo_visto) return;
+      /* ⛔ Con la tastiera a schermo aperta quel che sta nel campo e' una
+       *    parola battuta, non un incolla: annunciarla sarebbe mettere negli
+       *    appunti del desktop quel che l'utente scrive. */
+      if (APPUNTI.campo_visto || tastiera_aperta) return;
       const t = incolla_campo ? incolla_campo.value : "";
       if (!t) return;
       APPUNTI.campo_visto = true;
@@ -8494,7 +8526,11 @@ function incolla_campo_prendi() {
     }, quando);
   });
   incolla_restituisci = setTimeout(() => {
+    /* ⚠ Con la tastiera a schermo aperta il campo e' della tastiera: svuotarlo
+     *   adesso spezzerebbe la parola che l'utente sta componendo. */
+    if (tastiera_aperta) return;
     incolla_campo.value = "";
+    tastiera_prima = "";
     /* ⚠ Il campo NON si sfuoca piu' (vedi `incolla_campo_tieni`): si svuota e
      *   basta.  Sfuocandolo, l'incolla seguente tornerebbe a essere un incolla
      *   su una pagina non modificabile — cioe' il difetto curato. */
@@ -11654,6 +11690,260 @@ function esci_dal_classico() {
   return false;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ LA TASTIERA A SCHERMO, SOLO A RICHIESTA — 2 ottobre 2026, decisione
+ *     dell'utente «Tastiera solo a richiesta» (`DECISIONI.md` §10.28).
+ *
+ * ⛔ IL DIFETTO, `[M]` 2 ott 2026 sul telefono vero (S23+, Chrome 154): il
+ *    campo dell'incolla (`incolla_campo_tieni`) sta SEMPRE a fuoco, e su
+ *    Android un campo di testo a fuoco **apre la tastiera a schermo**.  Col
+ *    telefono in mano restava aperta per il 60 % della prova F-031 e copriva
+ *    la meta' bassa del desktop: i tocchi in quella meta' finivano sulla
+ *    tastiera.
+ * ⛔ E quella tastiera aperta NON scriveva niente: `[M]` 2 ott 2026, pagina
+ *    del prodotto in Chrome col tocco emulato — nel modo a tocco nessuno
+ *    ascoltava ne' i tasti ne' il testo del metodo d'inserimento (il gestore
+ *    dei tasti, `cl_su_keydown`, e' del modo classico e lo si spegne uscendone).
+ *    Lettere battute: zero messaggi partiti.
+ *
+ * ⇒ TRE PEZZI, e valgono SOLO nella disposizione a tocco (il telefono in mano):
+ *   1. il campo porta `inputmode="none"` e `virtualkeyboardpolicy="manual"`:
+ *      a fuoco, la tastiera non si apre da sola.  ⛔ Sul computer e sul DeX col
+ *      mouse (disposizione classica) i due attributi NON ci sono: l'incolla
+ *      (F-014, F-015) e i tasti (F-007, F-009) restano identici;
+ *   2. il comando ⌨ (`tastiera_comando()`) apre e chiude la tastiera;
+ *   3. quel che si batte arriva al desktop remoto come §7.3 vuole — le lettere
+ *      come lettere, Invio e Cancella come posizioni (`tastiera_su_input`,
+ *      `tastiera_su_keydown`).
+ * ══════════════════════════════════════════════════════════════════════════ */
+let tastiera_aperta = false;
+let tastiera_prima = "";        /* il contenuto del campo gia' spedito */
+let tastiera_vista_ridotta = false;
+let tastiera_el = null;
+const TASTIERA_SPEDITE = { lettere: 0, posizioni: 0 };
+/* I tasti che da soli non scrivono e non si spediscono qui. */
+const TASTIERA_MODIFICATORI = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock",
+                                       "AltGraph", "Fn", "OS"]);
+
+function tastiera_attributi(in_tocco) {
+  const f = incolla_campo;
+  if (!f) return;
+  if (in_tocco) {
+    f.setAttribute("inputmode", tastiera_aperta ? "text" : "none");
+    f.setAttribute("virtualkeyboardpolicy", "manual");
+    /* ⚠ Il campo si svuota dopo ogni parola: senza questi due, la tastiera
+     *   vedrebbe sempre un «inizio di frase» e metterebbe la maiuscola a ogni
+     *   parola. */
+    f.setAttribute("autocapitalize", "off");
+    f.setAttribute("autocorrect", "off");
+  } else {
+    for (const a of ["inputmode", "virtualkeyboardpolicy", "autocapitalize", "autocorrect"])
+      f.removeAttribute(a);
+  }
+}
+
+function tastiera_spedisci_posizione(codice, ms) {
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ms);
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 0, ms);
+  TASTIERA_SPEDITE.posizioni++;
+}
+
+function tastiera_spedisci_testo(testo, ms) {
+  for (const ch of Array.from(testo)) {
+    if (ch === "\n" || ch === "\r") { tastiera_spedisci_posizione(CL_POSIZIONE.Enter, ms); continue; }
+    if (ch === "\t") { tastiera_spedisci_posizione(CL_POSIZIONE.Tab, ms); continue; }
+    const p = ch.codePointAt(0);
+    if (p >= 0xD800 && p <= 0xDFFF) continue;
+    cl_spedisci(CL_TIPO.LETTERA, p, 0, ms);
+    TASTIERA_SPEDITE.lettere++;
+  }
+}
+
+function tastiera_in_uso() {
+  return modo_in_vigore === "tocco" && !cl_in_vigore
+         && document.body.dataset.schermo === "acceso";
+}
+
+/* ⭐ IL TESTO DEL METODO D'INSERIMENTO: si spedisce la DIFFERENZA.
+ *
+ * ⚠ Una tastiera a schermo non manda tasti: compone (`keyCode` 229) e poi
+ *   corregge — «cisao» diventa «ciao» riscrivendo la parola.  ⇒ Ogni volta
+ *   che il campo cambia si confronta con quel che e' gia' partito: il pezzo
+ *   comune resta, quel che e' sparito parte come Cancella (posizione 14),
+ *   quel che e' nuovo parte come lettere.  E' la strada di noVNC e di
+ *   Guacamole per la stessa ragione.
+ * ⚠ Fuori dalla composizione il campo si SVUOTA: non accumula, e l'incolla
+ *   (che guarda il campo) non vi trova mai una parola battuta.
+ * ⚠ `[?]` Col campo vuoto il Cancella di Gboard e della tastiera Samsung
+ *   arriva come TASTO (`tastiera_su_keydown`): e' il loro comportamento
+ *   documentato, ma sul telefono vero non e' ancora misurato. */
+function tastiera_su_input(ev) {
+  if (!tastiera_in_uso()) return;
+  const f = incolla_campo;
+  const ms = (ev && ev.timeStamp) || performance.now();
+  const ora = Array.from(f.value), prima = Array.from(tastiera_prima);
+  let i = 0;
+  while (i < ora.length && i < prima.length && ora[i] === prima[i]) i++;
+  for (let k = i; k < prima.length; k++) tastiera_spedisci_posizione(CL_POSIZIONE.Backspace, ms);
+  tastiera_spedisci_testo(ora.slice(i).join(""), ms);
+  tastiera_prima = f.value;
+  if (!(ev && ev.isComposing)) { f.value = ""; tastiera_prima = ""; }
+}
+
+/* ⭐ I TASTI VERI: quelli che la tastiera a schermo manda come tasti (Invio e
+ *   Cancella col campo vuoto, di solito) e quelli di una tastiera Bluetooth
+ *   senza mouse.  ⛔ Si annullano (`preventDefault`), o il campo li
+ *   scriverebbe e `tastiera_su_input` li spedirebbe una seconda volta.
+ * ⚠ Una battuta in composizione (229) NON e' un tasto: la porta l'evento
+ *   `input`.  E le combinazioni con Ctrl/Alt/Super restano al modo classico:
+ *   qui non partono, e non si annullano.
+ * ⚠ Su Android `code` puo' arrivare vuoto: si ripiega sul nome del tasto,
+ *   che per Invio, Cancella, Tab, Esc e frecce coincide col nome della
+ *   posizione. */
+function tastiera_su_keydown(ev) {
+  if (!tastiera_in_uso()) return;
+  if (ev.isComposing || ev.keyCode === 229) return;
+  if (cl_comando(ev) || TASTIERA_MODIFICATORI.has(ev.key) || ev.key === "Dead") return;
+  const ms = ev.timeStamp || performance.now();
+  if (Array.from(ev.key || "").length === 1) {
+    ev.preventDefault();
+    tastiera_spedisci_testo(ev.key, ms);
+    return;
+  }
+  const codice = CL_POSIZIONE[ev.code] !== undefined ? CL_POSIZIONE[ev.code] : CL_POSIZIONE[ev.key];
+  if (codice === undefined) return;
+  ev.preventDefault();
+  tastiera_spedisci_posizione(codice, ms);
+}
+
+function tastiera_ascolta(f) {
+  f.addEventListener("input", tastiera_su_input);
+  f.addEventListener("compositionend", tastiera_su_input);
+  f.addEventListener("keydown", tastiera_su_keydown);
+}
+
+function tastiera_aggiorna_comando() {
+  if (tastiera_el) tastiera_el.setAttribute("aria-pressed", tastiera_aperta ? "true" : "false");
+}
+
+/* ⚠ `blur()` e poi `focus()` DENTRO il gesto dell'utente: e' il gesto che
+ *   permette a Chrome per Android di aprire la tastiera, e il campo che
+ *   «rientra» col nuovo `inputmode` e' quel che gliela fa aprire (o chiudere).
+ *   `navigator.virtualKeyboard` (Chrome) e' la via diretta, dove c'e'. */
+function tastiera_rifocalizza(f) {
+  try { f.blur(); } catch (e) { /* niente */ }
+  try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); }
+}
+
+function tastiera_apri(perche) {
+  const f = incolla_campo_crea();
+  clearTimeout(incolla_restituisci);
+  f.value = "";
+  tastiera_prima = "";
+  tastiera_aperta = true;
+  tastiera_vista_ridotta = false;
+  tastiera_attributi(true);
+  tastiera_rifocalizza(f);
+  try {
+    if (navigator.virtualKeyboard && navigator.virtualKeyboard.show) navigator.virtualKeyboard.show();
+  } catch (e) { /* la via diretta non c'e': resta il fuoco */ }
+  tastiera_aggiorna_comando();
+  nota("tastiera a schermo APERTA — " + perche);
+}
+
+function tastiera_chiudi(perche, rifocalizza) {
+  if (!tastiera_aperta) return;
+  tastiera_aperta = false;
+  tastiera_vista_ridotta = false;
+  const f = incolla_campo;
+  if (f) {
+    tastiera_attributi(modo_in_vigore === "tocco");
+    try {
+      if (navigator.virtualKeyboard && navigator.virtualKeyboard.hide) navigator.virtualKeyboard.hide();
+    } catch (e) { /* niente */ }
+    if (rifocalizza) tastiera_rifocalizza(f);
+    f.value = "";
+    tastiera_prima = "";
+  }
+  tastiera_aggiorna_comando();
+  nota("tastiera a schermo chiusa — " + perche);
+}
+
+/* ⛔⭐ IL COMANDO: un bottoncino ⌨ in ALTO A DESTRA, e c'e' SOLO col telefono
+ *     in mano (il foglio di stile lo mostra con `data-disposizione="tocco"` e
+ *     la sessione accesa).  Le alternative pesate:
+ *
+ *   · un GESTO libero della tabella di §7.2 (quattro dita, due dita tenute…):
+ *     non ruba niente a nessuno, ⛔ ma non si scopre senza leggere un manuale
+ *     — ed e' la seconda condizione della decisione.  Scartato;
+ *   · ⛔ la lezione del 16 agosto 2026 (il foglio di stile, `#scorciatoie-apri`):
+ *     il bottoncino «⌨» in basso a sinistra fu tolto perche' «mi blocca
+ *     tutto».  Ma rubava i clic per due ragioni che qui NON ci sono:
+ *       1. stava sul computer, dove il clic va DOVE STA IL MOUSE: un elemento
+ *          sopra la tela copriva un pezzo di desktop.  ⭐ Col telefono in mano
+ *          vale il modello a trackpad (§7.1): il dito clicca dove sta il
+ *          PUNTATORE, non dove cade.  Un bottoncino di 40 px toglie al dito
+ *          solo un posto da cui partire, e nessun bersaglio del desktop;
+ *       2. apriva una BARRA larga (`z-index:12`) su tutta la fascia bassa.
+ *          Questo apre la tastiera del telefono e basta.
+ *   · ⚠ In ALTO perche' la tastiera aperta copre il fondo dello schermo: in
+ *     basso il comando per chiuderla sparirebbe sotto la tastiera stessa.
+ *   · ⚠ Il prezzo, dichiarato: e' un altro elemento sopra la tela, come
+ *     `#puntatore` (`STUDI.md` §web §1.2 C, S4), e solo nel modo a tocco.
+ *
+ * ⛔ Il bottone NON prende il fuoco: il tocco si annulla (`touchstart` non
+ *    passivo, e decide `touchend`), o il fuoco passerebbe al bottone e la
+ *    tastiera si chiuderebbe da sola.  ⭐ `touchend` e' un gesto dell'utente:
+ *    e' li' dentro che il campo si rifocalizza. */
+function tastiera_commuta(perche) {
+  if (tastiera_aperta) tastiera_chiudi(perche, true);
+  else tastiera_apri(perche);
+}
+
+function tastiera_comando() {
+  if (tastiera_el) return tastiera_el;
+  const b = document.createElement("button");
+  b.id = "tastiera-comando";
+  b.type = "button";
+  b.textContent = "⌨";
+  b.title = "Tastiera";
+  b.setAttribute("aria-label", "Tastiera");
+  b.setAttribute("aria-pressed", "false");
+  b.setAttribute("tabindex", "-1");
+  b.addEventListener("touchstart", function (ev) { ev.preventDefault(); }, { passive: false });
+  b.addEventListener("touchend", function (ev) {
+    ev.preventDefault();
+    tastiera_commuta("comando ⌨ toccato");
+  }, { passive: false });
+  b.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+  /* Il ripiego per un motore che consegnasse il tocco solo come clic. */
+  b.addEventListener("click", function (ev) {
+    ev.preventDefault();
+    tastiera_commuta("comando ⌨ premuto");
+  });
+  document.body.appendChild(b);
+  tastiera_el = b;
+  return b;
+}
+
+/* ⭐ LA TASTIERA CHIUSA DA ANDROID («indietro»): la pagina non riceve nessun
+ *   evento suo, ma la vista visibile torna alta.  ⇒ Se la vista si era
+ *   ridotta (la tastiera c'era) e torna intera, la tastiera e' chiusa: il
+ *   comando torna spento e il campo torna a `inputmode="none"`, cosi' non si
+ *   riapre da sola al prossimo fuoco. */
+function tastiera_vista_cambiata() {
+  if (!tastiera_aperta || !window.visualViewport) return;
+  const ridotta = visualViewport.height < innerHeight * 0.85;
+  if (ridotta) { tastiera_vista_ridotta = true; return; }
+  if (tastiera_vista_ridotta) tastiera_chiudi("chiusa da Android (indietro)", false);
+}
+try {
+  if (window.visualViewport) visualViewport.addEventListener("resize", tastiera_vista_cambiata);
+} catch (e) { /* senza vista visibile resta il comando */ }
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") tastiera_chiudi("la pagina e' stata nascosta", false);
+});
+
 function entra_nel_tocco() {
   const tela = $("schermo");
   /* ⛔ `touch-action: none` messo da qui e non dal foglio di stile: il foglio
@@ -11666,9 +11956,13 @@ function entra_nel_tocco() {
   tela.addEventListener("touchcancel", su_touchcancel, { passive: false });
   tocco_centra_puntatore();
   tocco_puntatore_disegna();
+  tastiera_comando();
+  tastiera_attributi(true);
 }
 function esci_dal_tocco() {
   const tela = $("schermo");
+  tastiera_chiudi("si esce dalla disposizione a tocco", false);
+  tastiera_attributi(false);
   tela.style.touchAction = "";
   tela.removeEventListener("touchstart", su_touchstart);
   tela.removeEventListener("touchmove", su_touchmove);
@@ -11766,6 +12060,13 @@ REMOTIX.tocco = {
   disposizione: function () { return modo_in_vigore; },
   perche: function () { return modo_perche; },
   rivaluta: rivaluta_disposizione,
+  /* La tastiera a schermo a richiesta (`tastiera_comando`): da LEGGERE. */
+  tastiera: function () {
+    const f = incolla_campo;
+    return { aperta: tastiera_aperta, comando: tastiera_el ? tastiera_el.id : null,
+             inputmode: f ? f.getAttribute("inputmode") : null,
+             spedite: Object.assign({}, TASTIERA_SPEDITE) };
+  },
   stato: function () {
     return { in_vigore: modo_in_vigore === "tocco",
              dita: tocco_dita.size, bloccato: tocco_bloccato,

@@ -860,6 +860,12 @@ gesti non si usano. Servono al telefono in mano, che è il ripiego d'emergenza.
 | tap-e-mezzo | trascinamento e selezione |
 | 3 dita tap | clic centrale |
 | pizzico | ingrandisce la **vista** del client |
+| tocco sul bottoncino **⌨** in alto a destra | apre la tastiera del telefono; un altro tocco (o «indietro») la chiude |
+
+⭐ **La tastiera a schermo si apre solo a richiesta** (`DECISIONI.md` §10.28): col telefono in mano non si
+apre da sola, perché coprirebbe metà del desktop. Il bottoncino ⌨ c'è **solo** in questa disposizione — sul
+computer e sul DeX col mouse non esiste — e non toglie niente al desktop: il dito clicca dove sta il puntatore,
+non dove cade (§7.1). Sta in alto perché la tastiera aperta copre il basso.
 
 ⭐ **È un punto di partenza dichiarato, non un impegno.** I gesti si giudicano usandoli, non
 leggendoli: chi trova questa tabella diversa fra sei mesi non ha trovato un difetto.
@@ -877,6 +883,10 @@ Il motivo: una tastiera fisica non manda lettere, manda **posizioni**, ed è il 
 che lettera sia. Se sul filo viaggiassero le posizioni, un client con tastiera americana attaccato
 a una sessione italiana produrrebbe **le lettere sbagliate**. E su Android una tastiera non ha
 posizioni affatto: è un metodo di inserimento che produce testo.
+
+**Sul telefono in mano** vale la stessa regola: quel che si scrive con la tastiera a schermo (aperta col
+bottoncino ⌨, §7.2) arriva come **lettere**, correzioni automatiche comprese — la parola corretta si riscrive
+cancellando quel che era cambiato; Invio e Cancella arrivano come **posizioni**.
 
 ⛔ **Con una precisazione**: `Ctrl+C` non è testo, è un comando. Una battuta viaggia come lettera
 quando **scrive del testo**; quando è premuto un modificatore di comando — Ctrl, Alt, Super —
