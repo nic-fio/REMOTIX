@@ -18,7 +18,7 @@ che il portatile le porta col tunnel ssh (`19-android.py`):
 
 ⛔ LE REGOLE DEL TELEFONO (DECISIONI §10.27, fasi/19 §5):
   - solo Chrome, e solo verso le scatole del server: `vai()` rifiuta ogni
-    indirizzo che non sia https://192.168.0.2:8511-8514 o 8611-8614;
+    indirizzo che non sia https://192.168.0.2:8511-8514 o 8611-8614 (e 8599, il server inesistente del guasto di F-001);
   - una scheda NOSTRA (nuova), mai quelle dell'utente: si apre con /json/new,
     si chiude alla fine; il portatile la segna e la chiude anche se qui si cade;
   - prima di ogni gesto il controllo della chiamata (lo fa lo sportello, una
@@ -41,7 +41,8 @@ import urllib.request
 PORTA_CDP = int(os.environ.get("REMOTIX_TELEFONO_CDP", "19333"))
 SPORTELLO = "http://127.0.0.1:%s" % os.environ.get("REMOTIX_TELEFONO_SPORTELLO", "19334")
 SERVER = os.environ.get("REMOTIX_TELEFONO_HOST", "192.168.0.2")
-PORTE_AMMESSE = set(range(8511, 8515)) | set(range(8611, 8615))
+# 8599: il «server inesistente» del guasto di F-001 (nessuno ascolta: la pagina non si apre)
+PORTE_AMMESSE = set(range(8511, 8515)) | set(range(8611, 8615)) | {8599}
 # ⚠ solo per la prova a secco del banco (19-android.py a-secco): una pagina locale in http
 A_SECCO = os.environ.get("REMOTIX_TELEFONO_A_SECCO") == "1"
 GUARDIA_OGNI_S = 5.0
@@ -359,12 +360,16 @@ class GuidaTelefono(VERI.GuidaCdp):
             dx, dy = max(-lim, min(lim, dx)), max(-lim, min(lim, dy))
             cx, cy = self._centro_tela(geo)
             x0, y0 = cx - dx / 2.0, cy - dy / 2.0
-            punti = [(x0, y0)]
-            if max(abs(dx), abs(dy)) < 14:
-                punti.append((x0 + 12, y0 + 18))
+            # ⚠ la pagina CONSUMA il campione che supera la sbavatura (D_TAP, 9 px
+            #   CSS: `tocco_muovi`, «la sbavatura si consuma»): un primo passo
+            #   di 12 px in verticale che non muove niente, e da li' il movimento
+            #   intero.  Prima il passo consumato era un pezzo di dx: il puntatore
+            #   restava indietro di 9-18 px a ogni giro (2 ott 2026, S23+).
+            sb = 12.0 if y0 + 12.0 + max(dy, 0) < geo["top"] + geo["height"] else -12.0
+            punti = [(x0, y0), (x0, y0 + sb)]
             n = 10
             for i in range(1, n + 1):
-                punti.append((x0 + dx * i / n, y0 + dy * i / n))
+                punti.append((x0 + dx * i / n, y0 + sb + dy * i / n))
             self.dito_cdp(punti)
             time.sleep(0.25)
         p = self.puntatore_vetro(geo)
@@ -384,13 +389,36 @@ class GuidaTelefono(VERI.GuidaCdp):
         """⭐ Un dito VERO che scorre (`adb shell input swipe`) di (dx,dy) px del vetro,
         partendo in modo che i due capi stiano nella tela."""
         da = len(self.tocchi_visti())
+        # ⚠ una passata corta, come la mano su un trackpad: uno scorrimento di
+        #   mezzo schermo in diagonale Chrome non lo passa alla pagina (2 ott
+        #   2026, S23+: 200x284 px CSS ⇒ nessun tocco visto).  Il resto lo fa
+        #   la passata dopo (15-f031 `DITI_VERI_MAX`).
+        lim = 0.3 * min(geo["width"], geo["height"])
+        k = min(1.0, lim / max(abs(dx), abs(dy), 1e-9))
+        dx, dy = dx * k, dy * k
+        # ⚠ la pagina consuma la sbavatura (D_TAP, 9 px CSS, e il campione che la
+        #   supera: `tocco_muovi`): il dito scorre ~10 px in piu', nella stessa
+        #   direzione, o le correzioni piccole non muoverebbero niente
+        n = (dx * dx + dy * dy) ** 0.5
+        if n > 0.5:
+            dx, dy = dx * (n + 10.0) / n, dy * (n + 10.0) / n
         cx, cy = self._centro_tela(geo)
-        x0, y0 = self.vetro_su_schermo(cx - dx / 2.0, cy - dy / 2.0)
-        x1, y1 = self.vetro_su_schermo(cx + dx / 2.0, cy + dy / 2.0)
+        # il dito PARTE dal centro della tela (dove il tocco vero arriva sempre)
+        x0, y0 = self.vetro_su_schermo(cx, cy)
+        x1, y1 = self.vetro_su_schermo(cx + dx, cy + dy)
+        self.ultimo_dito = (round(x0), round(y0), round(x1), round(y1))
         sportello("/scorri", {"x1": round(x0), "y1": round(y0), "x2": round(x1),
                               "y2": round(y1), "ms": int(ms)})
-        time.sleep(0.5)
-        return (self.tocchi_visti(da) or [None])[0]
+        # ⚠ adb via Wi-Fi: il dito puo' partire un po' dopo la risposta dello
+        #   sportello (2 ott 2026: a 0,5 s fisso il primo scorrimento «non c'era»)
+        fine = time.time() + 3.0
+        while True:
+            t = self.tocchi_visti(da)
+            if t or time.time() > fine:
+                break
+            time.sleep(0.2)
+        time.sleep(0.3)
+        return (t or [None])[0]
 
     _scarto = None        # (ox, oy): schermo = scarto + vetro × dpr, dal primo tocco vero
 

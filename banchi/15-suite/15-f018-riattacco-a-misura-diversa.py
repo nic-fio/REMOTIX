@@ -89,11 +89,17 @@ def giudica_misura(fam, prima, dopo, vista_attesa, testo, pannello="alto"):
     vl, va = vista_attesa[0], vista_attesa[1]
     sch = dopo.get("schermo")
     if fam == "segue":
-        if abs(b1[0] - vl) > TOLL_TELA or abs(b1[1] - va) > TOLL_TELA:
-            probl.append("la tela e' %dx%d, la vista %dx%d: la tela NON ha preso la misura "
-                         "della finestra" % (b1[0], b1[1], vl, va))
+        # ⚠ la vista e' in pixel CSS; la tela in pixel del DISPOSITIVO (la pagina:
+        #   `misura_vista()` = vista × devicePixelRatio, tronca).  Sul computer dpr 1 e
+        #   le due coincidono; sul telefono (fase 19 §5, dpr 3,375) no.
+        k = dopo.get("dpr") or 1
+        tl, ta = int(vl * k), int(va * k)
+        detta = "%dx%d" % (vl, va) if k == 1 else "%dx%d (%dx%d CSS × dpr %g)" % (tl, ta, vl, va, k)
+        if abs(b1[0] - tl) > TOLL_TELA or abs(b1[1] - ta) > TOLL_TELA:
+            probl.append("la tela e' %dx%d, la vista %s: la tela NON ha preso la misura "
+                         "della finestra" % (b1[0], b1[1], detta))
         else:
-            bene.append("tela %dx%d per la vista %dx%d" % (b1[0], b1[1], vl, va))
+            bene.append("tela %dx%d per la vista %s" % (b1[0], b1[1], detta))
         if not sch:
             probl.append("lo schermo visto da dentro la sessione non si legge")
         elif abs(sch[0] - b1[0]) > 2 or abs(sch[1] - b1[1]) > 2:
@@ -204,6 +210,10 @@ def certifica():
 def osserva(s, testo, nome, schermo_voluto=None):
     """Tela (campi), schermo da dentro (campo), foto (finestra, testo, bordi)."""
     ob = G.aspetta_tela_ferma(s)
+    try:
+        ob["dpr"] = float(s.g.js("return window.devicePixelRatio || 1;") or 1)
+    except Exception:                            # noqa: BLE001
+        ob["dpr"] = 1
     v = G.aspetta_testo(s, testo, nome, tetto=12)
     # lo schermo visto da dentro: l'ultima riga fresca; se aspettiamo una misura,
     # le si da' qualche secondo (il desktop segue dopo la tela)

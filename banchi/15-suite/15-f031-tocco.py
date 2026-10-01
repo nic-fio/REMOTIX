@@ -53,7 +53,7 @@ FUNZIONI = ("F-031",)
 SOLO_TELEFONO = True
 GESTI = ("dito-muove", "tocco-clic", "tocco-e-mezzo")
 PUNTI_DITO = ((0.25, 0.3), (0.7, 0.6))
-DITI_VERI_MAX = 3        # un utente corregge: fino a tre passate di dito per arrivare
+DITI_VERI_MAX = 8        # un utente corregge: piu' passate corte di dito per arrivare (ognuna ≤ 30 % della tela)
 PAUSA_SANA_S = 0.12      # fra il tap e il secondo contatto (soglia della pagina 0,3 s)
 PAUSA_GUASTO_S = 0.7
 
@@ -89,7 +89,10 @@ def fa_gesto(nome, s, sc, mp, geo, guasto, note):
                     break
                 t = g.scorri_vero(geo, tx - p[0], ty - p[1])
                 if not t:
-                    return S.BLOCKED, "il dito vero non e' arrivato alla pagina (adb swipe)"
+                    return S.BLOCKED, ("il dito vero non e' arrivato alla pagina (adb swipe "
+                                       "da %s per (%.0f,%.0f) px del vetro; tocchi visti %d)"
+                                       % (getattr(g, "ultimo_dito", None), tx - p[0], ty - p[1],
+                                          len(g.tocchi_visti())))
                 note.append("dito su «%s» a (%.0f,%.0f)" % (t.get("su"), t["x"], t["y"]))
             st = sc.aspetta(lambda q, a=atteso: F4.giudica_movimento(q, a)[0] == S.PASS,
                             F4.ATTESA_S)

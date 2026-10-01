@@ -596,16 +596,18 @@ def ssh(riga, t=60, avanti=None):
         return 124, "ssh: nessuna risposta in %d s" % t
 
 
+# ⚠ /sys dentro la scatola e' quello dell'ospite (renderD128 = la Intel anche quando la Radeon
+#   e' mappata dentro): la scheda si legge dalla strada che il server ha dichiarato nel registro.
 SCHEDA_SH = ("P=$(awk '/^pass:/{print $2; exit}' $HOME/SERVER.ssh 2>/dev/null); "
              "printf '%s\\n' \"$P\" | sudo -S -p '' podman exec rete11-gnome "
-             "cat /sys/class/drm/renderD128/device/vendor 2>/dev/null")
+             "sh -c \"grep -ohE 'strada (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\"")
 
 
 def scheda_delle_scatole():
     _c, t = ssh(SCHEDA_SH, 30)
-    if "0x8086" in t:
+    if "strada vaapi" in t:
         return "intel", "Intel UHD 770 (VA-API)"
-    if "0x1002" in t:
+    if "strada vulkan" in t:
         return "radeon", "AMD RX 6800 (Vulkan)"
     return "ignota", "scheda non letta (%s)" % t.strip()[-60:]
 
