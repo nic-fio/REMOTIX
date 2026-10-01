@@ -135,9 +135,9 @@ GUASTI = [
     ("G9-limiti-inventati",
      "i limiti della tela non sono quelli di §4.5: si concede una tela che "
      "ATTACCA rifiuterebbe al ri-attacco",
-     ["\tif (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA ||",
+     ["\tif (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA)",
       "\tif (l < RCP_TELA_L_MINIMA || a < RCP_TELA_A_MINIMA)"],
-     ["\tif (larghezza < 200u || altezza < 200u ||",
+     ["\tif (larghezza < 200u || altezza < 200u)",
       "\tif (l < 200u || a < 200u)"],
      [17]),
 

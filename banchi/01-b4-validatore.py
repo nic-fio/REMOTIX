@@ -595,11 +595,16 @@ def corpo(tipo, nome, le, lato, stato=None):
         le.stringa("la disposizione", massimo=64, regola="RCP.md §4.5")
         # ⛔ I limiti sono normativi, e la parita' non e' pignoleria: una
         #    misura dispari la arrotonda il codificatore, in silenzio.
-        for eti, v, off, mi, ma in (("tela_larghezza", lar, off_lar, 320, 7680),
-                                    ("tela_altezza", alt, off_alt, 240, 4320)):
-            if not (mi <= v <= ma):
+        # ⭐ dal 1 ott 2026 il massimo e' 4096x2304 (`RCP.md` §4.5); ⚠ qui si
+        #    giudica la tela CHIESTA in ATTACCA: sopra il massimo il server la
+        #    riduce e la concede, quindi NON e' una violazione del client —
+        #    si controllano il minimo e la parita', e il massimo resta alla
+        #    tela CONCESSA (SESSIONE e TELA)
+        for eti, v, off, mi, ma in (("tela_larghezza", lar, off_lar, 320, None),
+                                    ("tela_altezza", alt, off_alt, 240, None)):
+            if v < mi:
                 raise NonConforme("RCP.md §4.5",
-                                  f"{eti} = {v}, fuori da {mi}..{ma}",
+                                  f"{eti} = {v}, sotto il minimo {mi}",
                                   le.base + off, off)
             if v % 2:
                 raise NonConforme("RCP.md §4.5", f"{eti} = {v} e' dispari",
@@ -641,7 +646,7 @@ def corpo(tipo, nome, le, lato, stato=None):
     elif nome == "VISTA":
         # ⛔ V1 — §7.1: *«qualunque misura da 1x1 in su e' legale, dispari
         #    compresa»*.  ⚠ Quindi qui si controlla UNA cosa sola, e le altre
-        #    NON si controllano: i limiti 320x240..7680x4320 e la parita' sono
+        #    NON si controllano: i limiti 320x240..4096x2304 e la parita' sono
         #    della TELA, e §7.1 li ha tolti alla vista la sera del 9 agosto
         #    2026 (rilievo R1.17) perche' *«l'utente stringe la finestra del
         #    browser a 300 pixel»* e con la riga vecchia il client aveva tre
@@ -767,8 +772,8 @@ def corpo(tipo, nome, le, lato, stato=None):
                     le.base + off_lar, off_lar)
             if es == 1:
                 for eti, v, off, mi, ma in (
-                        ("tela_larghezza", lar, off_lar, 320, 7680),
-                        ("tela_altezza", alt, off_alt, 240, 4320)):
+                        ("tela_larghezza", lar, off_lar, 320, 4096),
+                        ("tela_altezza", alt, off_alt, 240, 2304)):
                     if not (mi <= v <= ma):
                         raise NonConforme(
                             "RCP.md §4.5",

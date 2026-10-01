@@ -1031,7 +1031,7 @@ static void caso13(void)
  *  D · IL FONDO DI §7.1, I TRE MOTIVI, E I LIMITI DI §4.5 PER LATO
  * ===================================================================== */
 
-/* 14 — ⛔ I QUATTRO SPIGOLI DI §4.5, **PER LATO**: 320x240 .. 7680x4320.
+/* 14 — ⛔ I QUATTRO SPIGOLI DI §4.5, **PER LATO**: 320x240 .. 4096x2304.
  *
  *      ⚠ Il caso 17 di `04-b31` prova un lato solo (l'altezza sotto il minimo).
  *      Un controllo scritto su un lato solo — o con i due minimi scambiati —
@@ -1039,15 +1039,22 @@ static void caso13(void)
  *      al ri-attacco: il server che non concede in `SESSIONE` una tela che
  *      aveva concesso lui stesso in `TELA`.
  *
- *      ATTESO: tutti e quattro `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)`, sessione
- *      VIVA ogni volta, e ZERO richieste al palco. */
+ *      ⭐ DAL 1 OTTOBRE 2026 (tela al massimo 4096x2304, `RCP.md` §4.5) i due
+ *      spigoli SOTTO il minimo si rifiutano come prima, e i due SOPRA il
+ *      massimo si RIDUCONO per lato — 4098x1080 → 4096x1080, 1920x2306 →
+ *      1920x2304 — e si girano al palco.  ⚠ Per lato: una riduzione scritta su
+ *      un lato solo lascerebbe passare l'altro.
+ *
+ *      ATTESO: sotto il minimo `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)`, sessione
+ *      VIVA, ZERO richieste al palco; sopra il massimo nessun `TELA` subito e
+ *      UNA richiesta al palco alla misura ridotta. */
 static void caso14(void)
 {
-	static const uint32_t FUORI[4][2] = {
-	    {318, 600},    /* larghezza sotto il minimo  */
-	    {1600, 238},   /* altezza sotto il minimo    */
-	    {7682, 1080},  /* larghezza oltre il massimo */
-	    {1920, 4322},  /* altezza oltre il massimo   */
+	static const uint32_t FUORI[4][3] = {
+	    {318, 600, 0},            /* larghezza sotto il minimo: rifiuto   */
+	    {1600, 238, 0},           /* altezza sotto il minimo: rifiuto     */
+	    {4098, 1080, 4096},       /* larghezza oltre il massimo: ridotta  */
+	    {1920, 2306, 2304},       /* altezza oltre il massimo: ridotta    */
 	};
 	bool bene = true;
 	int quali = 0;
@@ -1057,26 +1064,37 @@ static void caso14(void)
 		azzera();
 		s = apri_sessione(1920, 1080, NULL, true, false);
 		manda_adatta(s, FUORI[k][0], FUORI[k][1]);
-		bene = quanti_tela == 1 && ultima_tela.esito == 2
-		    && ultima_tela.motivo == 2 && ultima_tela.l == 1920
-		    && ultima_tela.a == 1080 && dopo_la_nascita() == 0 && !chiuso;
+		if (FUORI[k][2] == 0)
+			bene = quanti_tela == 1 && ultima_tela.esito == 2
+			    && ultima_tela.motivo == 2 && ultima_tela.l == 1920
+			    && ultima_tela.a == 1080 && dopo_la_nascita() == 0 && !chiuso;
+		else if (k == 2)
+			bene = quanti_tela == 0 && dopo_la_nascita() == 1
+			    && palco.chiesta_l == FUORI[k][2]
+			    && palco.chiesta_a == FUORI[k][1] && !chiuso;
+		else
+			bene = quanti_tela == 0 && dopo_la_nascita() == 1
+			    && palco.chiesta_l == FUORI[k][0]
+			    && palco.chiesta_a == FUORI[k][2] && !chiuso;
 		if (bene)
 			quali++;
 		rcp_libera(s);
 	}
 	snprintf(detto, sizeof detto,
-	         "%d spigoli su 4 rifiutati con MISURA_FUORI_LIMITI e sessione viva",
+	         "%d spigoli su 4 come atteso (2 rifiutati sotto il minimo, 2 ridotti "
+	         "sopra il massimo), sessione viva",
 	         quali);
 	esito("14 i limiti di §4.5 per lato", bene,
-	      "318x600, 1600x238, 7682x1080, 1920x4322: tutti e quattro "
-	      "MISURA_FUORI_LIMITI, palco intatto, sessione viva",
+	      "318x600 e 1600x238: MISURA_FUORI_LIMITI, palco intatto; 4098x1080 → "
+	      "4096x1080 e 1920x2306 → 1920x2304 girate al palco; sessione viva",
 	      detto);
 }
 
-/* 15 — ⭐ E I LIMITI ESATTI DEVONO PASSARE: 320x240 e 7680x4320 sono DENTRO
+/* 15 — ⭐ E I LIMITI ESATTI DEVONO PASSARE: 320x240 e 4096x2304 sono DENTRO
  *      (§4.5 dice «fra», estremi compresi).  ⚠ Senza questo caso un `<=` scritto
- *      per errore al posto di `<` chiuderebbe fuori le due misure che l'arbitro
- *      nomina, e nessuno se ne accorgerebbe: il caso 14 resterebbe verde.
+ *      per errore al posto di `<` chiuderebbe fuori la misura minima che
+ *      l'arbitro nomina (e ridurrebbe la massima di un passo), e nessuno se ne
+ *      accorgerebbe: il caso 14 resterebbe verde.
  *
  *      ATTESO: tutt'e due GIRATE al palco (nessun `TELA` subito), alla misura
  *      chiesta esatta. */
@@ -1097,16 +1115,16 @@ static void caso15(void)
 	if (bene) {
 		azzera();
 		s = apri_sessione(1920, 1080, NULL, true, false);
-		manda_adatta(s, 7680, 4320);
+		manda_adatta(s, 4096, 2304);
 		bene = quanti_tela == 0 && dopo_la_nascita() == 1
-		    && palco.chiesta_l == 7680 && palco.chiesta_a == 4320 && !chiuso;
+		    && palco.chiesta_l == 4096 && palco.chiesta_a == 2304 && !chiuso;
 		rcp_libera(s);
 	}
 	snprintf(detto, sizeof detto,
-	         "320x240 %s, 7680x4320 girata a %ux%u", piccola ? "girata" : "⛔ NO",
+	         "320x240 %s, 4096x2304 girata a %ux%u", piccola ? "girata" : "⛔ NO",
 	         palco.chiesta_l, palco.chiesta_a);
 	esito("15 gli estremi di §4.5 sono dentro", bene,
-	      "320x240 e 7680x4320 girate al palco tali e quali, nessun TELA subito",
+	      "320x240 e 4096x2304 girate al palco tali e quali, nessun TELA subito",
 	      detto);
 }
 

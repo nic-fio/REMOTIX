@@ -339,12 +339,15 @@ giro "2-tela-a-caldo" 0 2 "1600x900" "TELA(ADATTATA)" \
      "due coppie ADATTA_TELA/TELA in ordine, la seconda a sessione viva" -- \
      --adatta 1264x800 --adatta 1600x900@2 --resta 3
 
-# ⛔ Qui il numero NON si pretende — dipende da quel che il giro 2 ha lasciato —
-#    ma la REGOLA sì, ed è tutta nella provenienza: se la tela alla fine viene
-#    ancora da `SESSIONE`, nessun `TELA(ADATTATA)` l'ha toccata, che è
-#    esattamente «la tela INVARIATA» di §7.1 dopo un rifiuto.
-giro "3-fuori-limiti" 0 1 "?" "SESSIONE" \
-     "TELA(RIFIUTATA, MISURA_FUORI_LIMITI) e la tela INVARIATA — §4.5, §7.1" -- \
+# ⭐ Dal 1 ott 2026 (tela al massimo 4096x2304, `RCP.md` §4.5) sopra il massimo
+#    NON si rifiuta: si concede RIDOTTA — 8000x4320 → 4096x2304 — e la tela
+#    alla fine viene da `TELA(ADATTATA)`.  ⚠ Il numero NON si pretende: il
+#    cliente di questo banco dichiara un `video.misura_massima` nel CIAO, e la
+#    riduzione in proporzione a QUELLO (§4.5) sta sotto 4096x2304; quel che si
+#    pretende e' la provenienza — e' stata CONCESSA, non rifiutata.
+#    (Il rifiuto `MISURA_FUORI_LIMITI` resta solo SOTTO il minimo: §7.1.)
+giro "3-sopra-il-massimo" 0 1 "?" "TELA(ADATTATA)" \
+     "ADATTA_TELA(8000x4320) e TELA(ADATTATA) con la tela RIDOTTA al massimo di §4.5 (e al video.misura_massima del CIAO), non rifiutata" -- \
      --adatta 8000x4320 --resta 2
 
 # ⚠ Qui l'atteso sulla tela finale e' DUE: o il rifiuto (1920x1080), o una
