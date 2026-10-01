@@ -2802,6 +2802,17 @@ const char *codificatore_nome(const Codificatore *c)
 	return c ? c->nome : "(nessuno)";
 }
 
+bool codificatore_vulkan_sul_nodo(const char *nodo)
+{
+	VulkanVideoCapacita cap;
+	char errore[256] = { 0 };
+
+	memset(&cap, 0, sizeof cap);
+	if (!nodo || !vulkanvideo_capacita(nodo, &cap, errore, sizeof errore))
+		return false;
+	return cap.h264.codifica || cap.hevc.codifica;
+}
+
 const char *codificatore_strada(const Codificatore *c)
 {
 	return c ? nome_strada(c->strada) : "";

@@ -249,6 +249,10 @@ int main(int argc, char **argv)
 	int profondita = 8;
 	int chiave_a = -1, ridimensiona_a = -1, qualita_a = -1, qualita_qp = 0;
 	uint32_t ridim_l = 0, ridim_a = 0;
+	/* ⭐ --ciclo K:LxA,LxA,... — ogni K fotogrammi la misura successiva della
+	 *    lista (in giro): il cambio di tela ripetuto, come F-018 lo fa nel
+	 *    prodotto, ma senza browser (la caccia al GPU hang del 1 ott 2026) */
+	uint32_t ciclo_ogni = 0, ciclo_n = 0, ciclo_l[16], ciclo_a[16], ciclo_i = 0;
 
 	for (int i = 1; i < argc; i++) {
 		const char *k = argv[i];
@@ -266,6 +270,15 @@ int main(int argc, char **argv)
 		else if (!strcmp(k, "--qp")) { qp = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--chiave-a")) { chiave_a = atoi(v); i++; }
 		else if (!strcmp(k, "--ridimensiona-a")) { sscanf(v, "%d:%ux%u", &ridimensiona_a, &ridim_l, &ridim_a); i++; }
+		else if (!strcmp(k, "--ciclo")) {
+			const char *q = strchr(v, ':');
+			ciclo_ogni = (uint32_t) atoi(v);
+			while (q && ciclo_n < 16 && sscanf(q + 1, "%ux%u", &ciclo_l[ciclo_n], &ciclo_a[ciclo_n]) == 2) {
+				ciclo_n++;
+				q = strchr(q + 1, ',');
+			}
+			i++;
+		}
 		else if (!strcmp(k, "--qualita-a")) { sscanf(v, "%d:%d", &qualita_a, &qualita_qp); i++; }
 		else if (!strcmp(k, "--tetto")) { tetto = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--sorgente-out")) { sorgente_out = v; i++; }
@@ -373,6 +386,29 @@ int main(int argc, char **argv)
 	bool prossima_chiave = true;
 	printf("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n");
 	for (uint32_t i = 0; i < n; i++) {
+		if (ciclo_ogni && ciclo_n && i && i % ciclo_ogni == 0) {
+			ciclo_i = (ciclo_i + 1) % ciclo_n;
+			ridimensiona_a = (int) i;
+			ridim_l = ciclo_l[ciclo_i];
+			ridim_a = ciclo_a[ciclo_i];
+			fprintf(stderr, "⭐ ciclo: fotogramma %u, tela %ux%u\n", i, ridim_l, ridim_a);
+		}
+		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a && getenv("ORDINE_PRODOTTO")) {
+			/* ⭐ l'ordine del PRODOTTO: la cattura (`wlroots.c`) butta le sue
+			 *    lastre GBM e fa le nuove PRIMA che il codificatore si riapra */
+			for (int b = 0; b < BUFFER_QUANTI; b++)
+				if (buffer[b].bo) {
+					close(buffer[b].fd);
+					gbm_bo_destroy(buffer[b].bo);
+					buffer[b].bo = NULL;
+				}
+			for (int b = 0; b < BUFFER_QUANTI; b++) {
+				buffer[b].bo = gbm_bo_create(gbm, ridim_l, ridim_a, GBM_FORMAT_XRGB8888,
+				                             GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
+				buffer[b].fd = gbm_bo_get_fd(buffer[b].bo);
+				buffer[b].stride = gbm_bo_get_stride(buffer[b].bo);
+			}
+		}
 		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a) {
 			bool ok = vulkan ? vulkanvideo_ridimensiona(vv, ridim_l, ridim_a, errore, sizeof errore)
 			                 : codificatore_ridimensiona(cod, ridim_l, ridim_a, errore, sizeof errore);
@@ -388,12 +424,13 @@ int main(int argc, char **argv)
 			t.passo = ridim_l * 4;
 			free(t.pixel);
 			t.pixel = malloc((size_t) t.passo * ridim_a);
-			for (int b = 0; b < BUFFER_QUANTI; b++)
-				if (buffer[b].bo) {
-					close(buffer[b].fd);
-					gbm_bo_destroy(buffer[b].bo);
-					buffer[b].bo = NULL;
-				}
+			if (!getenv("ORDINE_PRODOTTO"))
+				for (int b = 0; b < BUFFER_QUANTI; b++)
+					if (buffer[b].bo) {
+						close(buffer[b].fd);
+						gbm_bo_destroy(buffer[b].bo);
+						buffer[b].bo = NULL;
+					}
 			generazione++;
 		}
 		if (qualita_a >= 0 && (int) i == qualita_a) {

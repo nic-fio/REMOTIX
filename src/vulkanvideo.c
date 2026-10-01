@@ -2734,6 +2734,42 @@ bool vulkanvideo_qualita(VulkanVideo *v, int qp, char *errore, size_t errore_byt
 	return true;
 }
 
+/*
+ * ⛔ FASE 19 (la caccia al GPU hang, 1 ott 2026) — LE CATENE DENTRO LA
+ *    STRUTTURA.  `Profilo`, `Capacita` e i parameter set puntano a campi della
+ *    STESSA `VulkanVideo` (`profilo.pNext = &profilo.h264`, `lista.pProfiles`,
+ *    `sps.pSequenceParameterSetVui`, ...).  `vulkanvideo_ridimensiona()`
+ *    travasa la struttura per copia: senza questa riga quei puntatori
+ *    resterebbero nella struttura di prima, che subito dopo si LIBERA.
+ *    ⚠ Oggi dopo l'apertura nessuno li segue (il prodotto ridimensiona
+ *    chiudendo e riaprendo, `codificatore.c`), quindi non e' la causa del
+ *    page fault; ma e' un uso dopo la liberazione pronto a scattare al primo
+ *    `immagine_crea(..., profilo=true)` fatto dopo un travaso.
+ */
+static void ripunta(VulkanVideo *v)
+{
+	bool h264 = v->r.codec == VULKANVIDEO_H264;
+
+	v->profilo.h264.pNext = &v->profilo.uso;
+	v->profilo.h265.pNext = &v->profilo.uso;
+	v->profilo.profilo.pNext = h264 ? (void *) &v->profilo.h264 : (void *) &v->profilo.h265;
+	v->profilo.lista.pProfiles = &v->profilo.profilo;
+	v->cap.video.pNext = &v->cap.codifica;
+	v->cap.codifica.pNext = h264 ? (void *) &v->cap.h264 : (void *) &v->cap.h265;
+	if (v->sps264.pSequenceParameterSetVui)
+		v->sps264.pSequenceParameterSetVui = &v->vui264;
+	if (v->vps265.pDecPicBufMgr)
+		v->vps265.pDecPicBufMgr = &v->dpbm265;
+	if (v->vps265.pProfileTierLevel)
+		v->vps265.pProfileTierLevel = &v->ptl265;
+	if (v->sps265.pProfileTierLevel)
+		v->sps265.pProfileTierLevel = &v->ptl265;
+	if (v->sps265.pDecPicBufMgr)
+		v->sps265.pDecPicBufMgr = &v->dpbm265;
+	if (v->sps265.pSequenceParameterSetVui)
+		v->sps265.pSequenceParameterSetVui = &v->vui265;
+}
+
 bool vulkanvideo_ridimensiona(VulkanVideo *v, uint32_t larghezza, uint32_t altezza, char *errore, size_t errore_byte)
 {
 	VulkanVideoRichiesta r;
@@ -2754,6 +2790,8 @@ bool vulkanvideo_ridimensiona(VulkanVideo *v, uint32_t larghezza, uint32_t altez
 		VulkanVideo vecchio = *v;
 		*v = *nuovo;
 		*nuovo = vecchio;
+		ripunta(v);
+		ripunta(nuovo);
 		vulkanvideo_chiudi(nuovo); /* e' il vecchio, travasato */
 	}
 	return true;

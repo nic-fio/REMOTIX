@@ -86,6 +86,7 @@
 #include "appunti.h"
 #include "audio.h"
 #include "cattura.h"
+#include "wlroots.h"
 #include "sentinella.h"
 #include "suono.h"
 #include "codificatore.h"
@@ -5184,6 +5185,39 @@ const char *figlio_codifica_strada_chiesta(void)
 	return strada_codifica;
 }
 
+/*
+ * ⛔ FASE 19 — LE LASTRE DI `wlroots.c` E LA STRADA DI CODIFICA (1 ott 2026).
+ *    Con la codifica Vulkan le lastre GBM devono nascere alla tela massima e
+ *    non morire al cambio di misura (il GPU hang della Radeon: riquadro di
+ *    `WLR_LASTRA_L` in `wlroots.c`); con VA-API no.  ⇒ Si decide UNA volta,
+ *    prima del primo palco, con la stessa regola dei componenti
+ *    (`componente_di()`): «vulkan» si', «vaapi» no, «scheda» = quel che la
+ *    scheda del nodo dichiara (`codificatore_vulkan_sul_nodo`).
+ */
+static void lastre_per_la_strada(void)
+{
+	static bool deciso = false;
+	bool vulkan;
+
+	if (deciso)
+		return;
+	deciso = true;
+	if (!strcmp(strada_codifica, "vulkan"))
+		vulkan = true;
+	else if (!strcmp(strada_codifica, "vaapi"))
+		vulkan = false;
+	else
+		vulkan = codificatore_vulkan_sul_nodo(nodo_rendering);
+	wlr_lastre_alla_tela_massima(vulkan);
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 19: le lastre della cattura wlroots %s (strada chiesta «%s», nodo %s)",
+	              vulkan ? "nascono alla TELA MASSIMA e restano al cambio di misura — la "
+	                       "codifica sara' Vulkan (il GPU hang della Radeon)"
+	                     : "sono della misura giusta e si rifanno al cambio — la codifica "
+	                       "sara' VA-API",
+	              strada_codifica, nodo_rendering);
+}
+
 /* Il nome del componente da chiedere per `codec` sulla strada in vigore. */
 static const char *componente_di(CodecVideo codec)
 {
@@ -6940,10 +6974,11 @@ rimonta_la_cattura:
 	misura_del_palco(&tela_l, &tela_a);
 	/* ⭐ FASE 13 — l'altra porta: la sorgente a tiro.  ⛔ `nodo_del_palco()` non
 	 *    si chiama nemmeno, perché su questa famiglia un nodo non esiste. */
-	if (sessione_su_wlroots())
+	if (sessione_su_wlroots()) {
+		lastre_per_la_strada();
 		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
 		                        CATTURA_COLORE_BGRX, &sbaglio);
-	else
+	} else
 		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
 		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 		                    NULL, &sbaglio);
@@ -7564,6 +7599,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 			*c = NULL;
 		}
 		misura_del_palco(&l, &a);
+		lastre_per_la_strada();
 		nuova = cattura_avvia_wlr(l, a, MOVIMENTO_FPS, strada_del_palco,
 		                          CATTURA_COLORE_BGRX, &sbaglio);
 		if (!nuova) {

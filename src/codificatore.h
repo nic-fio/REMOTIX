@@ -595,6 +595,14 @@ const char *codificatore_nome(const Codificatore *cod);
  *    `CodificatoreConfessione.strada`); "" su NULL. */
 const char *codificatore_strada(const Codificatore *cod);
 
+/* ⭐ FASE 19: la strada «scheda» su questo nodo sara' Vulkan?  Vero se Vulkan
+ *    Video codifica H.264 o HEVC sul nodo (`vulkanvideo_capacita`), cioe' se
+ *    `h264_scheda`/`hevc_scheda` ci aprirebbero Vulkan.  ⚠ E' la risposta di
+ *    PRIMA dell'apertura: una richiesta che Vulkan non sa servire (misura,
+ *    bitrate) ripiega lo stesso su VA-API.  Serve a chi deve prepararsi prima
+ *    del codificatore (le lastre di `wlroots.c`). */
+bool codificatore_vulkan_sul_nodo(const char *nodo);
+
 /* ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): qui c'erano
  *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` e
  *    `codificatore_software_rimedio()` — il ripiego in software (OpenH264,
