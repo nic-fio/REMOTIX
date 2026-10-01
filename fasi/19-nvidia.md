@@ -32,3 +32,27 @@ Si sceglie **per capacità**, all'avvio, non per marca:
 
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
+
+## 5. Android: le prove a mano dell'utente
+
+*Decisione dell'utente (1 ott 2026): «per android i test funzionali li faccio io». Col suo telefono, **Chrome**
+(mai Firefox Android, `DECISIONI.md` §7.18), in rete locale verso le scatole del server (`https://192.168.0.2:8511`
+GNOME · `8512` KDE · `8513` XFCE · `8514` LXQt), utente `nictest`. Ogni riga si segna **PASS / FAIL / BLOCKED** con
+data, desktop, scheda (Intel o Radeon) e, se FAIL, una frase su cosa si è visto; entra nel registro della suite
+con esecutore «utente».*
+
+**Giro pieno**: GNOME, con la scatola sulla **Radeon** (la strada nuova, Vulkan). **Giro corto** (righe 1, 2, 6, 9):
+KDE, XFCE, LXQt.
+
+| # | prova (rif. fase 15) | cosa fare | cosa deve succedere |
+|---|---|---|---|
+| 1 | F-001, F-002 accesso e prima immagine | aprire l'indirizzo, accettare il certificato, entrare | modulo, poi il desktop in vista entro pochi secondi, non nero né a pezzi |
+| 2 | F-031 tocco | tocco su un'icona; tocco e mezzo per trascinare una finestra | il clic arriva dove si tocca; la finestra segue il dito |
+| 3 | F-007, F-009 tastiera | aprire un editor, scrivere «Prova è à @ €», Invio, cancellare | i caratteri giusti, accenti compresi |
+| 4 | F-014, F-015 appunti | copiare un testo sul telefono e incollarlo nell'editor; e al contrario | il testo passa nei due versi |
+| 5 | F-012, F-013 audio e video | aprire un video nel desktop remoto | immagine continua e suono sul telefono |
+| 6 | F-003 aggiornamento | aprire, spostare e chiudere una finestra | lo schermo segue senza resti né ritardi visibili |
+| 7 | F-018 riattacco a misura diversa | ruotare il telefono (verticale ↔ orizzontale), poi ricaricare la pagina | la tela prende la misura nuova (su KDE: resta e si riscala, eccezione) |
+| 8 | F-016, F-017, F-020 stacco e rientro | chiudere Chrome di colpo, riaprirlo, rientrare | la sessione c'è ancora, con l'editor e il testo scritto |
+| 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
+| 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
