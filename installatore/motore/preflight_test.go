@@ -88,8 +88,9 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 			t.Errorf("%s non c'entra più: %v", c, codici)
 		}
 	}
-	if p.V("codifica.strade") != "vaapi" || p.V("codifica.vulkan") != "non attiva" {
-		t.Errorf("le strade: %q, vulkan %q", p.V("codifica.strade"), p.V("codifica.vulkan"))
+	// fase 19: le due strade attive, Vulkan prima; qui senza nessun ICD ⇒ la NVIDIA resta fuori
+	if p.V("codifica.strade") != "vulkan,vaapi" || p.V("codifica.vulkan") != "attiva" || p.V("codifica.vulkan.icd") != "nessuno" {
+		t.Errorf("le strade: %q, vulkan %q, icd %q", p.V("codifica.strade"), p.V("codifica.vulkan"), p.V("codifica.vulkan.icd"))
 	}
 	rap := Valuta(catalogoProva(t), p)
 	for _, d := range DESKTOP {
@@ -256,6 +257,66 @@ func TestTabellaVersioni(t *testing.T) {
 	for _, x := range []string{"| Debian | **13** (Trixie)", "Rocky Linux", "Ubuntu 24.04", "| OpenSSL | 3.5 |", "labwc #2525"} {
 		if !strings.Contains(tab, x) {
 			t.Errorf("la tabella non contiene %q:\n%s", x, tab)
+		}
+	}
+}
+
+// Fase 19, la strada «vulkan» attiva (DECISIONI §10.27): la NVIDIA col driver proprietario e il suo
+// ICD passa (il video lo codifica Vulkan Video); senza l'ICD resta RX-GPU-004; l'AMD con l'ICD di RADV
+// passa anche senza nessun driver VA; l'ICD di llvmpipe (lvp) non è una scheda.
+func TestStradaVulkan(t *testing.T) {
+	base := map[string]string{"etc/os-release": "ID=debian\nVERSION_ID=13\n", "run/systemd/system/.x": "", "usr/bin/gnome-shell": ""}
+	con := func(extra map[string]string) map[string]string {
+		m := map[string]string{}
+		for k, v := range base {
+			m[k] = v
+		}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	nvidia := map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": ""}
+	for _, c := range []struct {
+		nome   string
+		file   map[string]string
+		icd    string
+		schede string
+		codice string
+	}{
+		{"NVIDIA proprietaria con l'ICD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
+			"usr/share/vulkan/icd.d/nvidia_icd.json": "{}"}), "nvidia", "NVIDIA", ""},
+		{"NVIDIA proprietaria senza l'ICD", con(nvidia), "nessuno", "", "RX-GPU-004"},
+		{"NVIDIA proprietaria con l'ICD di llvmpipe soltanto", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
+			"usr/share/vulkan/icd.d/lvp_icd.x86_64.json": "{}"}), "lvp", "", "RX-GPU-004"},
+		{"AMD con RADV e nessun driver VA", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n",
+			"usr/share/vulkan/icd.d/radeon_icd.x86_64.json": "{}", "etc/vulkan/icd.d/radeon_icd.x86_64.json": "{}"}), "radeon", "AMD", ""},
+		{"Intel con ANV: in Vulkan non conta, VA-API sì", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n",
+			"usr/share/vulkan/icd.d/intel_icd.x86_64.json": "{}", "usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so": ""}), "intel", "", ""},
+	} {
+		p := Preflight(&Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}, OpzioniPreflight{})
+		if p.V("codifica.vulkan.icd") != c.icd {
+			t.Errorf("%s: icd %q, atteso %q", c.nome, p.V("codifica.vulkan.icd"), c.icd)
+		}
+		if got := strings.Join(schedeVulkan(nil, p), ","); got != c.schede {
+			t.Errorf("%s: schede vulkan %q, atteso %q", c.nome, got, c.schede)
+		}
+		var gpu []string
+		for _, m := range p.Messaggi {
+			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
+				gpu = append(gpu, m.Codice)
+			}
+		}
+		if strings.Join(gpu, ",") != c.codice {
+			t.Errorf("%s: %v, atteso %q", c.nome, gpu, c.codice)
+		}
+		rap := Valuta(catalogoProva(t), p)
+		got := condizioniDi(rap, "gnome")
+		if c.codice != "" && !strings.HasPrefix(got, "NON_SUPPORTATA "+c.codice) {
+			t.Errorf("%s: gnome %s", c.nome, got)
+		}
+		if c.codice == "" && (strings.HasPrefix(got, "NON_SUPPORTATA") || strings.Contains(got, "C-HARDWARE")) {
+			t.Errorf("%s: gnome %s (con Vulkan la scheda non è fuori)", c.nome, got)
 		}
 	}
 }

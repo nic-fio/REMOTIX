@@ -844,8 +844,8 @@ func (op *Operazione) verifica() (bool, error) {
 }
 
 // provaCodifica: `remotix --prova-codifica` (§6.5-bis; fase 19, niente ripiego sul processore): una
-// riga JSON {"esito":"hardware"|"nessuno","codificatore":…,"nodo":…,"motivo":…,"codec":…,
-// "offerti":…,"hevc":…,"h264":…}; uscita 0 se la scheda ha codificato il fotogramma, 3 se NESSUNA
+// riga JSON {"esito":"hardware"|"nessuno","codificatore":…,"strada":"vulkan"|"vaapi"|"","nodo":…,
+// "motivo":…,"codec":…,"offerti":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; uscita 0 se la scheda ha codificato il fotogramma, 3 se NESSUNA
 // scheda sa codificare (il codificatore non si apre: niente nodo, niente driver, driver senza
 // codifica — il rifiuto dichiarato), 1 se la scheda si apre ma il fotogramma non esce, 2 errore
 // d'uso. Il motore lo lancia da root (elenco chiuso). hardware ⇒ PASS; 3 o 1 ⇒ FAIL; un binario che
@@ -854,7 +854,7 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 	k := Controllo{ID: "codifica-h264", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
 	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
 	var r struct {
-		Esito, Codificatore, Nodo, Motivo, Codec string
+		Esito, Codificatore, Strada, Nodo, Motivo, Codec string
 	}
 	letto := false
 	for _, riga := range strings.Split(out, "\n") {
@@ -862,7 +862,9 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 			letto = true
 		}
 	}
-	det := strings.Join(strings.Fields(r.Esito+" "+r.Codec+" "+r.Codificatore+" "+r.Nodo+" "+r.Motivo), " ")
+	// ⭐ fase 19: `strada` dice QUALE strada della scheda ha codificato (vulkan/vaapi); un binario
+	// che non la scrive (fase 18) passa lo stesso: conta l'esito
+	det := strings.Join(strings.Fields(r.Esito+" "+r.Codec+" "+r.Codificatore+" "+r.Strada+" "+r.Nodo+" "+r.Motivo), " ")
 	switch {
 	case err != nil:
 		k.Esito, k.Dettaglio = "UNKNOWN", err.Error()

@@ -558,7 +558,8 @@ func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rap
 	}
 	// fase 19: una scheda che non codifica ACCANTO a una che sì (la macchina senza nessuna capace è
 	// già fuori, VerdettoScheda): la si dice, e il video lo fa l'altra
-	if p.V("scheda.nvidia_proprietaria") == "si" {
+	// ⭐ fase 19: con l'ICD Vulkan la NVIDIA proprietaria codifica (strada «vulkan») e non è più fuori
+	if p.V("scheda.nvidia_proprietaria") == "si" && !SchedaSullaStrada("vulkan", "NVIDIA", pl, p) {
 		cc = append(cc, Condizione{Codice: "C-HARDWARE", Testo: T("cond.nvidia")})
 	}
 	if forn, _ := fornitoriScheda(p); pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {

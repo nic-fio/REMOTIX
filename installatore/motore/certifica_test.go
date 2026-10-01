@@ -25,6 +25,11 @@ func TestCertificaGuasti(t *testing.T) {
 		atteso string
 	}{
 		{"sana, scheda che codifica", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "VERDE"},
+		// fase 19: la strada Vulkan Video (AMD, NVIDIA) è «hardware» come VA-API
+		{"sana, scheda che codifica in Vulkan", func(b *banco, m *Motore) {
+			m.Amb.Esegui = codifica(`{"esito":"hardware","codificatore":"h264_vulkan","strada":"vulkan","nodo":"/dev/dri/renderD129","motivo":"","codec":"h264","offerti":"hevc,h264","hevc":"hardware","h264":"hardware","hevc_strada":"vulkan","h264_strada":"vulkan"}`, 0)
+			apri(b)
+		}, "VERDE"},
 		{"scheda che si apre ma non codifica il fotogramma", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"il fotogramma non esce","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
 			apri(b)

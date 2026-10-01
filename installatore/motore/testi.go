@@ -38,7 +38,7 @@ var testi = map[string]Testo{
 	"cond.deposito_desktop": {"%s viene da %s", "%s comes from %s"},
 	"cond.deposito_h264":    {"H.264 sulla scheda solo col driver di %s", "H.264 on the card only with the driver from %s"},
 	"cond.deposito_base":    {"REMOTIX su questa distribuzione solo con %s (lo chiede il deposito dei driver della scheda)", "REMOTIX on this distribution only with %s (the card driver repository needs it)"},
-	"cond.nvidia":           {"NVIDIA col driver proprietario: niente codifica H.264 via VA-API, il video lo codifica l'altra scheda (Vulkan Video: fase 19)", "NVIDIA with the proprietary driver: no H.264 encoding via VA-API, video is encoded by the other card (Vulkan Video: phase 19)"},
+	"cond.nvidia":           {"NVIDIA col driver proprietario senza il suo driver Vulkan (ICD): niente codifica su questa scheda, il video lo codifica l'altra scheda", "NVIDIA with the proprietary driver and without its Vulkan driver (ICD): no encoding on this card, video is encoded by the other card"},
 	"cond.amd_senza_vaapi":  {"su %s Mesa è senza VA-API: la scheda AMD non codifica, il video lo codifica l'altra scheda", "on %s Mesa has no VA-API: the AMD card does not encode, video is encoded by the other card"},
 	"pacchetti.trattenuti":  {"i pacchetti nuovi non ci sono più, tranne quelli che restano perché li chiede chi resta: %s", "the new packages are gone, except those kept because something that stays needs them: %s"},
 	"pacchetti.chiesto_da":  {"lo chiede %s", "needed by %s"},
