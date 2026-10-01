@@ -1381,7 +1381,7 @@ nessuna ricodifica, nessun fotogramma trattenuto, memoria mai vicina al limite.
    (I 480p sono stati misurati a **864**×480, passo 3456, dichiarandolo.)
 2. **La strada della memoria** (`sws_scale` + `av_hwframe_transfer_data`): se ne era concluso che
    cedesse alla GPU come la copia zero, con un costo di CPU reale da mettere nel budget. ⚠ La misura
-   non vale più dopo la fase 18 (la conversione ora è nostra). *→ la strada dalla memoria di oggi, misurata: `fasi/18-senza-ffmpeg.md` §5.1 (insieme M) e §4.*
+   non vale più dopo la fase 18 (la conversione ora è nostra).
 3. ⭐⭐ **Il giro lungo non cambia il ritmo, cambia il RITARDO.** 15 s e 60 s danno lo stesso
    Mpixel/s al decimo (1855,9 → 1856,0), ⛔ ma il ritardo mediano passa da **561 a 2317 ms**
    (peggiore 1061 → 4505): **oltre il soffitto l'arretrato cresce con l'esposizione.** È
@@ -1859,7 +1859,7 @@ Con la conversione **BGRA → NV12** nel percorso (`ffmpeg` con `hwupload` dalla
 finito su **`rcs0`, il motore di rendering (le EU)**, non sul `vecs0` che si credeva dedicato, con un
 calo di ritmo e più potenza. *(I numeri della conversione dalla memoria — ritmo, watt, secondi di
 `rcs0` — non valgono più dopo la fase 18: quella strada ora converte in CPU, non con la VPP; sono
-stati tolti.)* *→ `fasi/18-senza-ffmpeg.md` §5.1 (insieme M).*
+stati tolti.)*
 
 ⭐⭐⭐ **Ed era il pezzo che spiegava §6.5**: là il collo era `rcs0` al 99,5 %. ⚠ **E spiegava anche la
 discordanza con §6.4-bis**, che vedeva il VEBOX al 10,55 %: là dietro c'era **un compositore vero**,

@@ -1910,7 +1910,7 @@ lo faccia per quello.
 > ### ⛔⛔ E la stessa sera è arrivato il caso che le fa dire cose OPPOSTE — la pagina nel worker
 >
 > *Si era deciso di tenere la tela sul thread principale (`DECISIONI.md` §2.8); le misure, prese con la
-> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.* *→ la catena rifatta: `fasi/18-senza-ffmpeg.md` §5.3-§5.4.*
+> codifica in software, non valgono più dopo la fase 18 e la tabella è tolta. Resta il verso.* *→ la catena in software, rifatta in 4K: `fasi/18-senza-ffmpeg.md` §5.4.*
 >
 > ⛔ **Sulla catena vera il worker dipingeva di più e sembrava migliore. A saturazione era di gran lunga
 > peggiore. E il ritardo diceva che era peggiore comunque.** ⇒ ⚠ **Quale conclusione si porta a casa dipende da quale grandezza

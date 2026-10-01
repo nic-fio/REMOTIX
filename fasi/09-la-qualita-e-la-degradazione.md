@@ -2706,7 +2706,7 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
 ```
 
 *(I tempi di conversione e codifica della riga sono tolti dopo la fase 18: la conversione non si dimostra
-a copia zero.)* *→ conversione e codifica del primo fotogramma a 4K col binario nuovo, scheda e software: `fasi/18-senza-ffmpeg.md` §5.3, §5.4.*
+a copia zero.)* *→ conversione (in CPU) e codifica del primo fotogramma a 4K senza scheda: `fasi/18-senza-ffmpeg.md` §5.4.*
 ⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
 `hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
 
@@ -2990,7 +2990,7 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
 ⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
 non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
 ⚠ Il tetto «conversione + codifica» del primo fotogramma stava sopra i 40,40 di `barra`. *(I tempi sono
-tolti dopo la fase 18: la conversione non si dimostra a copia zero.)* *→ rifatti: `fasi/18-senza-ffmpeg.md` §5.3, §5.4.*
+tolti dopo la fase 18: la conversione non si dimostra a copia zero.)* *→ in software: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 ## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
 

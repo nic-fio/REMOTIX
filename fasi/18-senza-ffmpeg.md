@@ -76,12 +76,12 @@ cambio. Sono queste, raggruppate in insiemi:
 
 | insieme | che cosa misurava (documento · sezione · cifra vecchia) | banco d'origine | ha senso oggi? | che cosa si fa |
 |---|---|---|---|---|
-| **S — la codifica SENZA scheda** (libx264 / libx265 / libsvtav1 via libavcodec) | DECISIONI §1.13-bis `libsvtav1` preset 10 **22,23 ms/fot** a 1080p (contro hevc_vaapi 3,16); fasi/10 §3.6 ripiego `libx265` **~22 ms contro ~3**; FASI §03 / DECISIONI §2.5 §7.8 / LEZIONI §6.2 / STUDI: la catena della fase 3 su Xvfb con AV1/HEVC in software — ritardo cattura→vetro **74,58 ms** (cattura→primo byte 39,17 = 53 %), tetto dipinti **127,6/s**, worker **+27,6 ms**, 23,93 fot/s; LEZIONI §5 SVT-AV1 a 962 **PSNR 43,3 dB**; RCP §5 / fasi/08 D.2 ripiego `libx264` a 8K **18,7 MiB** per chiave; fasi/09 §0.5 v1 R31 `libx264` 1 992 kbit/s; LEZIONI §0 v1 41→6 ms; §8 sws_scale a più fili 13,8/12,5 ms | `03-palco-codificatori.sh`, `03-b17-ritardo.py`, `03-b16-dipinti.py`, `03-b19-*` (Xvfb, cliente di allora, ffmpeg); `08-D2-ripiego.py` (ffmpeg); v1 | **in parte**: oggi il software è SOLO H.264 con OpenH264 (niente HEVC, niente AV1 come ultimo ripiego, 8K rifiutato: DECISIONI §10.26); la catena della fase 3 (Xvfb, senza desktop) non è più il prodotto | **rifatta** come catena intera coi browser veri in 4K con OpenH264 (§5.4: ritardo, fotogrammi, tempi di conversione e codifica per fotogramma dal registro del figlio) e come **capacità** (§5.5). La qualità OpenH264 contro x264 sta già in §4 (`18-software-confronto.sh`, 30 set: 1080p PSNR-Y 46,4 vs 43,3 dB) |
-| **M — la scheda DALLA MEMORIA** (sws_scale + `av_hwframe_transfer_data`, poi la VPP dalla memoria) | fasi/08 agente C **21,61 ms** per fotogramma a 1080p (sws_scale 5,39 + caricamento 0,98), F4 prima/dopo **22,82 → 6,41 ms**; fasi/09 §13.6 §14.6 4K «conversione **11 466 µs** + codifica 8 895 = 20,4 ms ⇒ ~49/s», 2560×1080 6 652 + 3 827; fasi/10 §6.2 N=24 con **12,0 nuclei**, **6,0 nuclei** per dieci 1080p contro 0,7 in copia zero, `ffmpeg` libero 406,2 fot/s; §5.1 righe MEMORIA; §6.1 taratura del metro GPU con `hwupload` (12,68 % per 1080p30, retta 0,1968·Mpx/s); §6.6 e §6.10 lo studio del ferro con ffmpeg (875/852 fot/s, 24,6 → 50,2 W con la conversione, 1,8/1,47 Gpixel/s, CQP 876,8 / QVBR 816,0 / CBR 812,8); fasi/06 §4.9 `h264_vaapi` 1,6 ms e 5 940 byte; DECISIONI §1.13-bis i `*_vaapi` 3,11-7,28 ms via `hwupload`; RCP §5.2 `-bf 1` −16 % e 67 ms | `08-c-*`, `08-f4-*` (**mancano** in `banchi/`), `10-b88-saturatore.py --strada memoria` (lega libavcodec), `10-b87-metro-gpu.py`, `10-b94-ferro-carico.py`, `03-palco-codificatori.sh` (tutti ffmpeg) | **sì per la strada del prodotto** (oggi: `colori709.c` in CPU + `vaPutImage`), **no per lo studio del ferro con ffmpeg** (misurava ffmpeg, che non c'è più; i contesti 2048/1021 e `vaQueryProcessingRate` restano validi perché di libva) | i banchi originali non girano più (mancano o legano libavcodec): il sostituto è **`banchi/18-scheda/18-confronto.sh`**, già eseguito il 30 set (§4): preparazione dalla memoria **1080p 4 024 → 1 964 µs, 4K 16 720 → 7 816 µs**, qualità pari (±0,02 dB). In più, qui: i tempi di conversione per fotogramma a 4K col binario nelle scatole (§5.4, la riga `TRATTO` del figlio) |
-| **C — le catene intere prese su binari che passavano da quelle strade** (fase 4, 6, 7, 8; e la fase 3) | FASI §04 O2 mano→pixel **139,40 ms**; fasi/08 §1.4, A/B/F1/F2: `input → vetro` **99,07 → 89,86 → 55,20 ms**, distacco **0,27 → 0,16 barre**, F2 70,5 ms; fasi/06 §4.2 §4.8 §5.6 §5.9 (tela girata 4-6 ms, Mutter 32-39, giro `ADATTATA` 42-44, `SESSIONE`→1° fotogramma 14-335 ms), §5.8 contesa con 5 ffmpeg; fasi/07 §8 (audio→video ~400 ms, AV mediana 236 ms), §8-ter netem, §8-quater | `04-b30-anello-input.py`, `08-b67-elastico.py` (portatile + tablet dell'epoca: non riproducibili come allora), `06-b35-tempi.py`, `06-b41-contesa.sh` (ffmpeg), `07-b61-*` | **sì, ma col metro di oggi**: la catena intera in 4K coi browser veri è quella della fase 16 (`16-salita.py`, `16-classifica.py`: ritardo del prodotto p95, giro dell'eco, dipinti/saltati, nascita), presa il 26-27 set col binario `45d048c8` **con ffmpeg** in copia zero | **rifatta** con lo stesso banco della fase 16 e il binario nuovo: gradino 1 in HARDWARE sui 4 desktop (§5.3), da confrontare riga per riga con `intel-b-4k-<desktop>/livello-01`. Le cifre del portatile/tablet (barre, 139,40 ms) non si rifanno: era un altro cliente e un'altra rete |
-| **K — quante sessioni regge il server SENZA scheda** | mai misurato: la fase 16 è tutta in hardware | `16-salita.py` | **sì** (misura nuova chiesta dall'utente) | §5.5: `--senza-scheda` (adattamento dichiarato in §5.2), 4K, i 4 desktop, soglie §9 della fase 16 |
+| **S — la codifica SENZA scheda** (libx264 / libx265 / libsvtav1 via libavcodec) | DECISIONI §1.13-bis `libsvtav1` preset 10 **22,23 ms/fot** a 1080p (contro hevc_vaapi 3,16); fasi/10 §3.6 ripiego `libx265` **~22 ms contro ~3**; FASI §03 / DECISIONI §2.5 §7.8 / LEZIONI §6.2 / STUDI: la catena della fase 3 su Xvfb con AV1/HEVC in software — ritardo cattura→vetro **74,58 ms** (cattura→primo byte 39,17 = 53 %), tetto dipinti **127,6/s**, worker **+27,6 ms**, 23,93 fot/s; LEZIONI §5 SVT-AV1 a 962 **PSNR 43,3 dB**; RCP §5 / fasi/08 D.2 ripiego `libx264` a 8K **18,7 MiB** per chiave; fasi/09 §0.5 v1 R31 `libx264` 1 992 kbit/s; LEZIONI §0 v1 41→6 ms; §8 sws_scale a più fili 13,8/12,5 ms | `03-palco-codificatori.sh`, `03-b17-ritardo.py`, `03-b16-dipinti.py`, `03-b19-*` (Xvfb, cliente di allora, ffmpeg); `08-D2-ripiego.py` (ffmpeg); v1 | **in parte**: oggi il software è SOLO H.264 con OpenH264 (niente HEVC, niente AV1 come ultimo ripiego, 8K rifiutato: DECISIONI §10.26); la catena della fase 3 (Xvfb, senza desktop) non è più il prodotto | **fatto**: la catena intera coi browser veri in 4K con OpenH264 (§5.4: ritardo, fotogrammi, tempi di conversione e codifica per fotogramma dal registro del figlio) e la **capacità** (§5.5). La qualità OpenH264 contro x264 sta già in §4 (`18-software-confronto.sh`, 30 set: 1080p PSNR-Y 46,4 vs 43,3 dB) |
+| **M — la scheda DALLA MEMORIA** (sws_scale + `av_hwframe_transfer_data`, poi la VPP dalla memoria) | fasi/08 agente C **21,61 ms** per fotogramma a 1080p (sws_scale 5,39 + caricamento 0,98), F4 prima/dopo **22,82 → 6,41 ms**; fasi/09 §13.6 §14.6 4K «conversione **11 466 µs** + codifica 8 895 = 20,4 ms ⇒ ~49/s», 2560×1080 6 652 + 3 827; fasi/10 §6.2 N=24 con **12,0 nuclei**, **6,0 nuclei** per dieci 1080p contro 0,7 in copia zero, `ffmpeg` libero 406,2 fot/s; §5.1 righe MEMORIA; §6.1 taratura del metro GPU con `hwupload` (12,68 % per 1080p30, retta 0,1968·Mpx/s); §6.6 e §6.10 lo studio del ferro con ffmpeg (875/852 fot/s, 24,6 → 50,2 W con la conversione, 1,8/1,47 Gpixel/s, CQP 876,8 / QVBR 816,0 / CBR 812,8); fasi/06 §4.9 `h264_vaapi` 1,6 ms e 5 940 byte; DECISIONI §1.13-bis i `*_vaapi` 3,11-7,28 ms via `hwupload`; RCP §5.2 `-bf 1` −16 % e 67 ms | `08-c-*`, `08-f4-*` (**mancano** in `banchi/`), `10-b88-saturatore.py --strada memoria` (lega libavcodec), `10-b87-metro-gpu.py`, `10-b94-ferro-carico.py`, `03-palco-codificatori.sh` (tutti ffmpeg) | **sì per la strada del prodotto** (oggi: `colori709.c` in CPU + `vaPutImage`), **no per lo studio del ferro con ffmpeg** (misurava ffmpeg, che non c'è più; i contesti 2048/1021 e `vaQueryProcessingRate` restano validi perché di libva) | ⛔ **NON FATTO** (fermata dell'utente, 1 ott 06:23): i banchi originali non girano più (mancano o legano libavcodec) e un sostituto sul prodotto non è stato scritto. Resta il confronto del 30 set in §4 (`18-confronto.sh`: preparazione dalla memoria 1080p 4 024 → 1 964 µs, 4K 16 720 → 7 816 µs, qualità pari) |
+| **C — le catene intere prese su binari che passavano da quelle strade** (fase 4, 6, 7, 8; e la fase 3) | FASI §04 O2 mano→pixel **139,40 ms**; fasi/08 §1.4, A/B/F1/F2: `input → vetro` **99,07 → 89,86 → 55,20 ms**, distacco **0,27 → 0,16 barre**, F2 70,5 ms; fasi/06 §4.2 §4.8 §5.6 §5.9 (tela girata 4-6 ms, Mutter 32-39, giro `ADATTATA` 42-44, `SESSIONE`→1° fotogramma 14-335 ms), §5.8 contesa con 5 ffmpeg; fasi/07 §8 (audio→video ~400 ms, AV mediana 236 ms), §8-ter netem, §8-quater | `04-b30-anello-input.py`, `08-b67-elastico.py` (portatile + tablet dell'epoca: non riproducibili come allora), `06-b35-tempi.py`, `06-b41-contesa.sh` (ffmpeg), `07-b61-*` | **sì, ma col metro di oggi**: la catena intera in 4K coi browser veri è quella della fase 16 (`16-salita.py`, `16-classifica.py`: ritardo del prodotto p95, giro dell'eco, dipinti/saltati, nascita), presa il 26-27 set col binario `45d048c8` **con ffmpeg** in copia zero | ⛔ **NON FATTO** come insieme: le misure dell'anello delle fasi 4/6/7/8 (mano→pixel, barre, tratti del portatile, audio→video) non sono state rifatte. È stato rifatto solo il **gradino 1 in HARDWARE in 4K sui 4 desktop** col banco della fase 16 (§5.3), che dice che la catena intera col binario nuovo è quella della fase 16 |
+| **K — quante sessioni regge il server SENZA scheda** | mai misurato: la fase 16 è tutta in hardware | `16-salita.py` | **sì** (misura nuova chiesta dall'utente) | **fatto**: §5.5 — 4K e 1080p sui 4 desktop, 1440p su GNOME e KDE (fin dove è arrivata); ⛔ 1440p su XFCE e LXQt **non fatto** |
 | **non più sensate** | HEVC in software (`libx265`: fasi/10 §3.6, RCP §6.2 CRF, fasi/08 D.2) — il prodotto non lo fa più; AV1 in software come ultimo ripiego; 8K in software (OpenH264 rifiuta oltre 4096×2304, dichiarato); lo studio del ferro **con ffmpeg** (fasi/10 §6.1, §6.6, §6.10 parte ffmpeg); le misure di v1 | — | no | niente: restano tolte |
-| **da riconfermare, non da rifare** (segnalazione) | fasi/16-a3 e 16-stress A3: sulla Radeon gruppi di 5 fotogrammi da ~31 ms ogni 12-40 s, localizzati «dentro `avcodec_send_frame`» — copia zero, quindi valide per §10.26, ma la chiamata non esiste più | `16-salita.py --scheda amd` | sì, un gradino 1 su KDE 4K basta a vedere se i gruppi ci sono ancora | §5.6, se il tempo lo consente |
+| **da riconfermare** | fasi/16-a3 e 16-stress A3: sulla Radeon gruppi di 5 fotogrammi da ~31 ms ogni 12-40 s, localizzati «dentro `avcodec_send_frame`» — copia zero, quindi valide per §10.26, ma la chiamata non esiste più | `16-salita.py --scheda amd` | sì, un gradino 1 su KDE 4K basta a vedere se i gruppi ci sono ancora | **fatto**: §5.6 |
 
 ⚠ **Incoerenze trovate nei diff, da decidere (non toccate qui)**: la seconda ondata ha lasciato in FASI §04
 (O2 139,40 ms, clic 136 → 41 ms), LEZIONI §1.26 (17,48 ms), §1.28/§1.33 (0,47 barre) e DECISIONI §1.13-bis
@@ -128,7 +128,7 @@ volta** (giro `18-scatole-nuove-r`, 21:01→21:10): **8 PASS su 8**. Come nel gi
 D-022): sono i rossi del parallelismo a quattro scatole sulla stessa macchina, non delle scatole. ⇒ Le
 scatole nuove funzionano; da qui le misure, una configurazione alla volta.
 
-### 5.3 Insieme C — la catena intera in HARDWARE col binario nuovo (gradino 1, 4K, i 4 desktop)
+### 5.3 La catena intera in HARDWARE col binario nuovo (gradino 1, 4K, i 4 desktop)
 
 `[M]` 30 set 21:11→22:04 UTC, campagne `f18hw-4k-<desktop>` (`banchi/16-stress/16-coda.sh f18hw` con
 `REMOTIX_16_IN_PIU="--gradini 1 --minuti 10 --minuti-ultimo 10"`: lo stesso banco della fase 16, un
@@ -163,7 +163,7 @@ wlroots dà già NV12 e la conversione è 3,3 ms con 5,3 ms di copia: com'era.) 
 nel vecchio era HEVC (Chrome del controllo corto, 29 064 µs), nel nuovo l'ordine dei browser del controllo
 corto è cambiato: non è una differenza del codificatore.
 
-### 5.4 Insieme S — la catena intera SENZA scheda (OpenH264), 4K, 1 utente
+### 5.4 La catena intera SENZA scheda (OpenH264), 4K, 1 utente (insieme S)
 
 `[M]` 30 set 22:04→23:28 UTC, campagne `f18sw-4k-<desktop>` (`16-coda.sh f18sw`, `REMOTIX_16_IN_PIU=
 "--senza-scheda --minuti 10 --minuti-ultimo 10"`). **Adattamenti dichiarati del banco**: (1) `16-salita.py
@@ -259,3 +259,91 @@ in `fasi/16-stress-e-capacita.md` §14 **restano valide** e la bozza del rapport
 livelli sono GREEN oggi contro DEGRADED il 27 set: il ritardo p95 sta di 1-2 ms sotto i 50 invece che
 sopra — è la stessa dispersione di sempre attorno al tetto, non un miglioramento del codificatore, che
 misura uguale al decimo.)
+
+### 5.5 Quante sessioni regge il server SENZA scheda (insieme K, la misura nuova)
+
+Richiesta dell'utente (1 ott): «quante sessioni regge il server quando codifica senza scheda», coi criteri
+della campagna della fase 16 (§6 gradini 1-4-8-12-16 con ripetizione e ricerca a metà, §7 i quattro
+lavori A/B/C/D — navigazione, file manager, terminale, **video 4K** in Firefox nella sessione —, §9 le
+soglie, un livello = 10 min; §8 la scala: se una misura cede, si scende). Stesso impianto di §5.4
+(`--senza-scheda`, OpenH264 2.6.0 a 4 fette, iHD nascosto, dichiarato dal prodotto in ogni livello).
+Browser alternati Firefox/Chrome, uno per utente, nei compositori annidati sul server. `[M]` 30 set
+22:04 → 1 ott 04:37 UTC; evidenze in `/media/REMOTIX/misure/fase16/f18sw-<misura>-<desktop>/`.
+
+**La matrice** (in parentesi la campagna in HARDWARE della fase 16, `intel-b`, stessa macchina e stesso banco,
+binario `45d048c8`): «buono» = ultimo livello GREEN o DEGRADED non significativo (la regola di
+non-prosecuzione, §6); «GREEN vero» = tutte le sessioni GREEN.
+
+| senza scheda (OpenH264), Intel i5-13500T | GNOME | KDE | XFCE | LXQt |
+|---|---|---|---|---|
+| **4K** 3840×2160: ultimo buono · rottura | **0** · 1 (DEGRADED a 1 utente, §5.4) *(hw: 3 · 4)* | **0** · 1 *(hw: 3 · 4)* | **0** · 1 *(hw: 8 · 9)* | **0** · 1 *(hw: 1 · 2)* |
+| **1080p** 1920×1080: ultimo buono · rottura · GREEN vero | **5** · 6 · 1 *(hw: 12 · 13 · 12)* | **5** · 6 · 4 *(hw: 11 · 12 · 8)* | **4** · 5 · 1 *(hw: 12 · 13 · 12)* | **4** · 5 · 1 *(hw: 12 · 13 · 12)* |
+| **1440p** 2560×1440: ultimo buono · rottura · GREEN vero | **2** · 3 · 2 *(hw: 8 · 9 · 1)* | **2 fin qui** · (4 rotto; il 3 interrotto) · 2 *(hw: 8 · 9 · 4)* | ⛔ non fatto *(hw: 11 · 12 · 8)* | ⛔ non fatto *(hw: 1 · 2 · 1)* |
+
+**1080p, livello per livello** (classe · chi degrada e perché · CPU del recinto `remotix` in nuclei · GPU render
+della Intel, che è condivisa fra le sessioni, i browser-cliente e i compositori annidati):
+
+| 1080p senza scheda | GNOME | KDE | XFCE | LXQt |
+|---|---|---|---|---|
+| 1 utente | GREEN · ritardo p95 43 ms · `remotix` 0,15 · render 6 % | GREEN · 0,29 · 11 % | GREEN · 0,23 · 5 % | GREEN (la prima passata DEGRADED per un blocco di 1,10 s dell'attore che naviga, ripetuta GREEN) · 0,24 · 5 % |
+| 4 utenti | DEGRADED non sign. (u1 A blocco 1,12 s) · 1,39 · **84 %** | GREEN alla ripetizione (la prima: 3 DEGRADED — u1 blocco 1,01 s, u3 C e u4 D ritardo 52-53) · 1,68 · 87 % | DEGRADED non sign. (u4 D ritardo 56) · 1,46 · 79 % | DEGRADED non sign. (u4 D ritardo 58) · 1,47 · 79 % |
+| 5 utenti (ricerca) | DEGRADED non sign. (u4 D ritardo 57) · 1,67 · 86 % ⇒ **ultimo buono** | DEGRADED non sign. (u4 D 57) · 2,00 · 90 % ⇒ **ultimo buono** | **DEGRADED sign.** (4 su 5: ritardo 51-72, D a 71) · 1,69 · 80 % ⇒ rottura | **DEGRADED sign.** (3 su 5: u1 blocco 1,18 s, u4 D 72, u5 A 66) · 1,71 · 80 % ⇒ rottura |
+| 6 utenti (ricerca) | DEGRADED sign. (u4 D 77, u5 A 65) · 1,92 · 88 % ⇒ rottura | DEGRADED sign. (u3 C 55, u4 D 71) · 2,16 · 91 % ⇒ rottura | DEGRADED sign. (3 su 6: A 60, D 73, A 54) · 1,81 · 81 % | DEGRADED sign. (D 64, A 66) · 1,82 · 81 % |
+| 8 utenti (gradino, + ripetizione) | DEGRADED sign. ×2: 8 su 8 (ritardo 51-103, i due D a 96-103) · 2,24 · **99 %** | DEGRADED sign. ×2: 4 su 8 (D a 95-112, A/B/C 53-64) · 2,84 · 99 % | **FAIL ×2**: i due D a **11 fot/s di video su 30** (< 0,4·f) e ritardo 99-103; gli altri 6 DEGRADED (53-89) · 2,04 · 99 % | **FAIL ×2**: i due D a 11,3-11,7 fot/s e ritardo 92-104; 6 DEGRADED (55-78) · 2,06 · 99 % |
+| codifica OpenH264 per fotogramma 1080p (mediana del TRATTO) | A/B/C **5-10 ms** · D (video) **22-30 ms** | 8-10 · 22-25 | 5-10 · 16-28 | 6-10 · 16-26 |
+
+Letture:
+- **Senza scheda, a 1080p, il server regge 4-5 sessioni** coi quattro lavori della fase 16 (contro 11-12 in
+  hardware); a 4K nessuna dentro il tetto dei 50 ms. Il primo a degradare è sempre un utente **D** (il video 4K
+  in Firefox nella sessione): a 1080p un suo fotogramma costa a OpenH264 **22-30 ms** (è tutto cambiamento) contro
+  5-10 ms dei lavori d'ufficio, e il suo ritardo p95 passa i 50 ms già a 4-5 utenti; sui desktop wlroots (XFCE,
+  LXQt) a 8 utenti i D vanno in **FAIL** perché la pagina dipinge 11 fotogrammi al secondo su 30 (< 0,4·f).
+- **Il collo non è la CPU**: a 8 utenti il recinto `remotix` fa 2,0-2,8 nuclei su 20 e la macchina sta al
+  24-33 %; è la **iGPU condivisa**: render al 99 % (i compositori delle sessioni, i 9 browser-cliente che
+  decodificano e disegnano, i 9 labwc annidati — il limite dichiarato della fase 16 §15: il server fa anche da
+  cliente). In hardware la stessa iGPU codificava anche, eppure reggeva 12: la codifica in CPU a 4 fette porta
+  i tempi per fotogramma da 8 a 22-30 ms sui video, e con il render saturo il compositore consegna più tardi.
+  ⇒ Su una macchina senza scheda **vera** (niente iGPU per i browser-cliente, che stanno altrove) il numero
+  potrebbe essere diverso: questo è il limite inferiore misurabile qui, come per la fase 16.
+- Il «GREEN vero» basso (1 su GNOME, XFCE, LXQt) è quasi sempre **un blocco di 1,0-1,2 s** visto dall'attore
+  che naviga (soglia 1 s) — lo stesso che in hardware; i «buono» sono DEGRADED non significativi.
+- Memoria: `remotix` PSS 130-135 MB a 1 utente, 750 MB a 8 (90 MB per sessione in più: i buffer di
+  OpenH264); nessuna crescita nel livello oltre il 5 %.
+
+**1440p (2560×1440), fin dove è arrivata** (`[M]` 1 ott 04:37→06:23 UTC, `f18sw-2k-gnome` intera; `f18sw-2k-kde`
+fermata dall'utente durante il livello 3 della ricerca):
+
+| 1440p senza scheda | GNOME | KDE |
+|---|---|---|
+| 1 utente | GREEN · ritardo p95 48,4 ms (al filo del tetto) · codifica OpenH264 12 ms · `remotix` 0,20 nuclei · render 8 % | GREEN · 49,5 · 11,5 ms · 0,43 · 18 % |
+| 2 utenti (ricerca) | GREEN · 49,9 · 12,5 ms · 0,34 · 14 % ⇒ **ultimo buono** | GREEN · 49,3 · 11,9 ms · 0,54 · 25 % ⇒ **buono fin qui** |
+| 3 utenti (ricerca) | DEGRADED sign. (u1 A 50,8 · u3 C 52,8) · 0,40 · 16 % ⇒ rottura | ⛔ **interrotto** (fermata, 06:23) |
+| 4 utenti (gradino, + ripetizione) | DEGRADED sign. ×2 (3 su 4: A 54-64, B 51-56, **D 96-99**) · 2,02 · 92 % | DEGRADED sign. ×2 (4 su 4: A 56-59, B 56-57, C 59-60, **D 92-93**) · 2,28 · 96 % |
+
+⇒ A 1440p senza scheda il server regge **2 sessioni** (GNOME; KDE almeno 2): già a 1 utente il ritardo p95
+sta a 48-50 ms, cioè sul tetto, con 11-12 ms di OpenH264 per fotogramma; il quarto utente (il video) lo porta
+a 92-99. 1440p su XFCE e LXQt: ⛔ **non fatto**.
+
+### 5.7 Che cosa resta fatto, e che cosa no — alla fermata dell'utente (1 ott 2026, 06:23 UTC)
+
+| | esito |
+|---|---|
+| scatole della suite rifatte dalle ricette, versioni uguali a prima (Firefox fissato), giro di fumo | ✅ §5.2 |
+| la catena intera in HARDWARE col binario nuovo, 4K, gradino 1, 4 desktop | ✅ §5.3 — **indistinguibile** dalla fase 16 |
+| la catena SENZA scheda in 4K, 1 utente, 4 desktop (insieme S) | ✅ §5.4 — DEGRADED (ritardo 87-124 ms), OpenH264 24-26 ms/fotogramma |
+| capacità SENZA scheda (insieme K): 4K e 1080p sui 4 desktop; 1440p GNOME e KDE | ✅ §5.5 — 4K: 0 · 1080p: 5/5/4/4 · 1440p: 2/2 |
+| capacità SENZA scheda a 1440p su XFCE e LXQt; a 3K | ⛔ non fatto |
+| la Radeon: A3 riconfermata senza libavcodec | ✅ §5.6 |
+| insieme M (la scheda dalla memoria col prodotto nelle scatole) | ⛔ non fatto — resta §4 (30 set) |
+| insieme C (l'anello delle fasi 4/6/7/8) | ⛔ non fatto — solo il gradino 1 in hardware di §5.3 |
+| la taratura delle fette di OpenH264 | ⛔ non fatta (candidata, §5.4) |
+
+**Lo stato in cui restano le scatole** (06:24 UTC): `rete11-{gnome,kde,xfce,lxqt}` rifatte dall'immagine nuova
+(driver iHD presente, nessun `.nascosto`), prodotto `4b39195c` e pagina `fb9a18f3`, server accesi in
+**hardware** («H.264: scheda si', software OpenH264 si'», ECCOMI «hevc,h264»), `nictest` e `provanic` dentro,
+nessun inquilino dei banchi, `FERMA` tolto, nessun attore/browser dei banchi vivo; sull'ospite i due `labwc`
+di `15-compositori` di prima (non nostri). Le evidenze: `/media/REMOTIX/misure/fase16/f18hw-4k-*`,
+`f18sw-{4k,fhd,2k}-*`, `f18amd-4k-*` (registro `banchi/16-stress/registro.jsonl` sul server),
+`/media/REMOTIX/misure/fase15/giro18-scatole-nuove{,-r}`, `/media/REMOTIX/misure/fase18/` (costruzione,
+giri, `salite.log`). Gli attrezzi usati e non conservati: `/media/REMOTIX/tmp/{f18-salite,f18-salite-2,
+rimetti-18,costruisci-18}.sh`, `f18-estrai.py` (rapporti degli agenti, non si conservano).

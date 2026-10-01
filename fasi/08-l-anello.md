@@ -237,7 +237,7 @@ fotogrammi dipinti; il quadro di Mutter non si è mosso.)*
 *vetro*. ⇒ **I due numeri non si confrontano**, ed è `LEZIONI.md` §1.28 applicata a noi stessi.
 
 ⚠ **E la dispersione si dichiara**: sul binario di prima, da giro a giro, era di **~15 ms** (i valori
-sono tolti con la fase 18). ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.** *(L'anello di oggi, in hardware e in software, col metro della fase 16: `fasi/18-senza-ffmpeg.md` §5.3-§5.4.)*
+sono tolti con la fase 18). ⭐ **A reggere l'attribuzione non è il totale: sono i tratti.**
 
 ### Le risposte alle domande che la fase aveva in carico
 

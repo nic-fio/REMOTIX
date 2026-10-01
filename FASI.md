@@ -4106,7 +4106,7 @@ una piccola parte dei passi** sta fuori da quei due gruppi.
 > tiene giù un tratto che allora chiamavamo «il disegno».
 > ⚠ ⛔ **E quel nome era falso, corretto il 14 agosto 2026** (deciso dall'utente): il disegno costa
 > poco, e il tratto era **l'attesa del fotogramma dalla GPU** più il disegno. I numeri sono tolti con
-> la fase 18 (catena che passava dalla memoria e da `sws_scale`). *→ la catena in hardware col binario nuovo: `fasi/18-senza-ffmpeg.md` §5.3.* `fasi/rapporti/F4-A2-pagina-dipinge.md` e `F4-A10-anello-input.md`.
+> la fase 18 (catena che passava dalla memoria e da `sws_scale`). `fasi/rapporti/F4-A2-pagina-dipinge.md` e `F4-A10-anello-input.md`.
 
 ⚠ **I limiti di questa misura, dichiarati**: la registrazione stessa gira a 30,3/s, quindi **non può
 vedere niente di più veloce**; e un fotogramma perso dal registratore si conterebbe come una pausa
