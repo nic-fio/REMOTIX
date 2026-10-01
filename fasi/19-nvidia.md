@@ -20,8 +20,12 @@ Si sceglie **per capacità**, all'avvio, non per marca:
 2. Via il ripiego software (`src/ripiego.c`, `src/colori709.c` se non serve più alla strada dalla memoria,
    OpenH264, SVT-AV1) dal prodotto, dai pacchetti, dal catalogo e dal motore dell'installatore; il controllo
    preliminare rifiuta senza una scheda capace, con la ragione.
-3. Le prove: suite sulle 4 scatole (Intel = VA-API, Radeon = Vulkan); T10 ridotto al rifiuto pulito nelle VM, le
-   prove complete nei contenitori con la scheda vera.
+3. **La rete anti-regressione** (parola dell'utente, 1 ott: *«bisognerà rivedere tutti i 4 DE per evitare che uno
+   di loro smetta di funzionare»*): la suite completa della fase 15 gira **due volte** sulle 4 scatole (GNOME, KDE,
+   XFCE, LXQt), coi browser veri in 4K — **Intel = VA-API** (niente deve rompersi di ciò che oggi è verde) e
+   **Radeon = Vulkan** (la scheda passata alle scatole come nella fase 16, `--scheda amd`). Un desktop è a posto
+   solo se è verde in tutti e due i giri. T10 ridotto al rifiuto pulito nelle VM; le prove complete
+   dell'installatore nei contenitori con la scheda vera.
 4. ❓ NVIDIA: serve una scheda vera (nel server, o macchina in affitto).
 
 ## 3. Il registro delle modifiche — per il manuale tecnico
