@@ -921,7 +921,8 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
  *
  *      Diceva 200..8192 su tutt'e due i lati, con l'`[S]` di MS-RDPEDISP
  *      accanto.  ⛔ Ma `RCP.md` §4.5 e' NORMATIVO e dice un'altra cosa —
- *      *«larghezza e altezza della tela DEVONO stare fra 320x240 e 7680x4320»* —
+ *      *«larghezza e altezza della tela DEVONO stare fra 320x240 e 7680x4320»*
+ *      (il massimo di allora) —
  *      e `ATTACCA` la applicava gia'.  ⇒ Erano due regole sullo stesso numero in
  *      due posti, cioe' precisamente quel che il riquadro in fondo a `cattura.h`
  *      dichiara di voler evitare.
@@ -937,9 +938,36 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
  *   (`src/codificatore.c:1373`).  Si tronca in GIU' e si DICE, con `TELA` che
  *   riporta la misura vera.
  *
- * `fuori_l`/`fuori_a` ricevono la misura ammessa piu' vicina (troncata al pari).
- * Ritorna `false` se la richiesta e' fuori dai limiti: allora si risponde
- * `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` e **non** si aggiusta in silenzio. */
+ * ⛔⭐⭐ IL MASSIMO E' 4096x2304 DAL 1 OTTOBRE 2026 — decisione dell'utente
+ *      (fase 19): *«4096 max di larghezza va benissimo, non ho mai preteso di
+ *      piu'»*.  Fino a quel giorno era 7680x4320.
+ *
+ *   · 4096 per LARGHEZZA perche' `[M]` 22 agosto 2026 `h264_vaapi` su
+ *     `EncSliceLP` (Intel) accetta **32-4096 px per lato** (4096x2160 si',
+ *     4112x2160 no), e Firefox su Linux riceve solo H.264: una tela piu' larga
+ *     andava solo in HEVC, cioe' solo su Chrome, e Firefox restava senza video.
+ *   · 2304 per ALTEZZA perche' 4096x2304 sono **36864 macroblocchi**, cioe'
+ *     esattamente il `MaxFS` dei livelli H.264 5.1 e 5.2 (tabella A-1, la
+ *     stessa di `src/vadiretta.c`): e' il 16:9 a 4096, ci sta il DCI
+ *     4096x2160, e oltre servirebbe il livello 6 — che la pagina non dichiara
+ *     (`video.livello = 5.1`).
+ *
+ * ⛔⭐ E SOPRA IL MASSIMO NON SI RIFIUTA PIU': SI RIDUCE.  Un browser su un
+ *    monitor 5K o ultralargo non ha sbagliato niente — ha chiesto la sua
+ *    finestra — e §4.5 permette gia' al server una tela diversa da quella
+ *    chiesta.  ⇒ Il lato che sfora si porta AL MASSIMO, l'altro resta com'e'
+ *    (5120x2880 → 4096x2304, 5120x1440 → 4096x1440): e' la stessa regola che
+ *    la pagina applica in `tela_da_chiedere()`, cosi' server e pagina arrivano
+ *    allo stesso numero.  ⚠ Non si deforma niente: la tela e' il desktop, e la
+ *    pagina la impagina a scala al piu' 1 con le bande (`cornice()`).
+ *    ⛔ SOTTO il minimo invece si rifiuta come prima: li' non c'e' nessuna
+ *    tela legale che ci stia dentro.
+ *
+ * `fuori_l`/`fuori_a` ricevono la misura ammessa piu' vicina: ogni lato oltre
+ * il massimo portato al massimo, poi troncata al pari.  Ritorna `false` solo se
+ * la richiesta e' SOTTO il minimo: allora si risponde
+ * `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)`.  ⚠ Chi deve sapere se la misura e'
+ * stata ridotta confronta `fuori_*` con la richiesta. */
 /* ⛔⭐ IL NUMERO PIU' ALTO CHE §6.2 DEFINISCE PER IL VIDEO — 1 = HEVC,
  *     2 = AV1, 3 = H.264 (`DECISIONI.md` §1.13-ter, 20 agosto 2026).
  *
@@ -952,9 +980,9 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
 #define RCP_CODEC_VIDEO_MAX 3u
 
 #define RCP_TELA_L_MINIMA 320u
-#define RCP_TELA_L_MASSIMA 7680u
+#define RCP_TELA_L_MASSIMA 4096u
 #define RCP_TELA_A_MINIMA 240u
-#define RCP_TELA_A_MASSIMA 4320u
+#define RCP_TELA_A_MASSIMA 2304u
 bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
                         uint32_t *fuori_a);
 

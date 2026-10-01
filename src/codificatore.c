@@ -1669,10 +1669,14 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 *    accetta **32-4096 px per lato** — 4096x2160 si', **4112x2160 no**
 	 *    (*«Hardware does not support encoding at size…»*).  `hevc_vaapi` regge
 	 *    invece fino a 16384x4320.
-	 *    ⚠ E la tela legale di `RCP.md` §4.5 arriva a **7680x4320** ⇒ oltre i
-	 *      4096 px H.264 su questa scheda NON c'e'.  ⛔ FASE 19: e il ripiego
+	 *    ⚠ E la tela legale di `RCP.md` §4.5 arrivava a **7680x4320** ⇒ oltre i
+	 *      4096 px H.264 su questa scheda NON c'era.  ⛔ FASE 19: e il ripiego
 	 *      in software che ieri prendeva il posto e' uscito — oltre il tetto
 	 *      del driver si rifiuta dicendolo, e basta.
+	 *    ⭐ E dal 1 ottobre 2026 la tela si ferma a **4096x2304** (decisione
+	 *      dell'utente, `rcp.h`): su questa scheda il rifiuto non nasce piu'
+	 *      dal protocollo.  ⚠ La domanda resta: il tetto e' del DRIVER, e
+	 *      un'altra scheda puo' dichiararne uno piu' basso.
 	 *
 	 * ⇒ Senza questa domanda il rifiuto arriva **al primo fotogramma**, cioe'
 	 *   dopo che il palco e' montato e qualcuno sta gia' guardando: e' la forma

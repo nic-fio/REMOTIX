@@ -2824,11 +2824,34 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA troncato");
 		return false;
 	}
-	/* ⛔ I limiti e la parita' sono normativi: una misura dispari la
+	/* ⛔⭐ SOPRA IL MASSIMO SI RIDUCE, NON SI CONGEDA — 1 ottobre 2026, tela
+	 *     al massimo 4096x2304 (decisione dell'utente, riquadro in `rcp.h`).
+	 *     Fino a quel giorno una tela oltre 7680x4320 era `ERRORE_PROTOCOLLO`.
+	 *
+	 * ⚠ Un browser su un monitor 5K o ultralargo chiede la sua finestra, e non
+	 *   ha sbagliato niente: §4.5 permette gia' una tela concessa diversa da
+	 *   quella chiesta.  ⇒ Il lato che sfora va al massimo e l'altro resta —
+	 *   la regola di `rcp_misura_ammessa()` e di `tela_da_chiedere()` nella
+	 *   pagina, cosi' `ATTACCA` e `ADATTA_TELA` concedono lo stesso numero.
+	 * ⛔ Si fa PRIMA del controllo della parita': il massimo e' pari, e un
+	 *    5121 che diventa 4096 non e' piu' un dispari da rifiutare. */
+	if (tl > RCP_TELA_L_MASSIMA || ta > RCP_TELA_A_MASSIMA) {
+		uint32_t chiesta_l = tl, chiesta_a = ta;
+		if (tl > RCP_TELA_L_MASSIMA)
+			tl = RCP_TELA_L_MASSIMA;
+		if (ta > RCP_TELA_A_MASSIMA)
+			ta = RCP_TELA_A_MASSIMA;
+		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ATTACCA chiede la tela %ux%u, "
+		       "oltre il massimo %ux%u — la riduco a %ux%u (il lato che sfora "
+		       "al massimo, l'altro com'e')",
+		    chiesta_l, chiesta_a, RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, tl,
+		    ta);
+	}
+	/* ⛔ Il minimo e la parita' restano normativi: una misura dispari la
 	 * arrotonda il codificatore, in silenzio — due misure diverse sotto la
 	 * stessa etichetta, che e' la forma E2. */
-	if (tl < 320 || tl > 7680 || ta < 240 || ta > 4320 || (tl % 2) || (ta % 2)) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "tela fuori dai limiti o dispari");
+	if (tl < RCP_TELA_L_MINIMA || ta < RCP_TELA_A_MINIMA || (tl % 2) || (ta % 2)) {
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "tela sotto il minimo o dispari");
 		return false;
 	}
 	/* ⛔ E l'UNICO limite della vista, §7.1: «qualunque misura da **1x1 in su**».
@@ -3047,7 +3070,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	 *   uno stato in cui i pixel arrivano invece che per uno in cui non arrivano.
 	 *
 	 * ⚠ E i limiti si ricontrollano TUTTI, perche' la misura del palco non e'
-	 *   passata da questo cancello: §4.5 (320..7680 x 240..4320, pari) e il tetto
+	 *   passata da questo cancello: §4.5 (320..4096 x 240..2304, pari) e il tetto
 	 *   del decodificatore di QUESTO client.  ⛔ Se non li passa non si concede e
 	 *   non si tace: se ne occupa `rcp_tela_concessa()`, che al primo fotogramma
 	 *   chiedera' al palco di tornare. */
@@ -3055,13 +3078,15 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		uint32_t pl = 0, pa = 0;
 		if (s->g.tela_del_palco(s->g.ctx, &pl, &pa) && pl && pa
 		    && (pl != tl || pa != ta)) {
-			if (pl < 320 || pl > 7680 || pa < 240 || pa > 4320 || (pl % 2)
-			    || (pa % 2))
+			if (pl < RCP_TELA_L_MINIMA || pl > RCP_TELA_L_MASSIMA
+			    || pa < RCP_TELA_A_MINIMA || pa > RCP_TELA_A_MASSIMA
+			    || (pl % 2) || (pa % 2))
 				reg(s, "⚠ il palco ha la tela %ux%u, che §4.5 non ammette in "
-				       "`SESSIONE` (320..7680 x 240..4320, pari): concedo %ux%u "
+				       "`SESSIONE` (%u..%u x %u..%u, pari): concedo %ux%u "
 				       "come chiesto, e al primo fotogramma si chiedera' al "
 				       "palco di venire qui",
-				    pl, pa, tl, ta);
+				    pl, pa, RCP_TELA_L_MINIMA, RCP_TELA_L_MASSIMA,
+				    RCP_TELA_A_MINIMA, RCP_TELA_A_MASSIMA, tl, ta);
 			else if (s->max_l && (pl > s->max_l || pa > s->max_a))
 				reg(s, "⚠ il palco ha la tela %ux%u, oltre il "
 				       "video.misura_massima di questo client (%ux%u): concedo "
@@ -3514,7 +3539,8 @@ bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
 	 * ⛔⭐ E I LIMITI SONO QUELLI DI §4.5, PER LATO — corretti la notte del 15
 	 *     agosto 2026, refutando.  La prima stesura usava 200..8192 **su
 	 *     entrambi i lati**, e `RCP.md` §4.5 e' normativo: *«larghezza e altezza
-	 *     della tela DEVONO stare fra 320x240 e 7680x4320»*.  ⚠ Le due regole
+	 *     della tela DEVONO stare fra 320x240 e 7680x4320»* (il massimo di
+	 *     allora; oggi 4096x2304).  ⚠ Le due regole
 	 *     erano gia' divergenti — `ATTACCA` applicava §4.5 e `ADATTA_TELA` no —
 	 *     ed era **irraggiungibile** finche' `ADATTA_TELA` rispondeva sempre
 	 *     `COMPOSITORE_INCAPACE`.  ⛔ Il caso concreto: si stringe il bordo
@@ -3524,10 +3550,18 @@ bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
 	 *     stesso in `TELA`.
 	 *
 	 * ⚠ E il tetto vero del compositore resta sotto: `[M]` oltre 16384 per lato
-	 *   `gnome-shell` muore, e 7680 e' molto sotto — vedi il riquadro in `rcp.h`. */
-	if (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA ||
-	    larghezza > RCP_TELA_L_MASSIMA || altezza > RCP_TELA_A_MASSIMA)
+	 *   `gnome-shell` muore, e 4096 e' molto sotto — vedi il riquadro in `rcp.h`.
+	 *
+	 * ⛔⭐ DAL 1 OTTOBRE 2026 SOPRA IL MASSIMO SI RIDUCE, NON SI RIFIUTA
+	 *     (riquadro in `rcp.h`): il lato che sfora va AL MASSIMO, l'altro resta.
+	 *     ⚠ E il tetto si applica sempre PRIMA di troncare: 100000 diventa 4096,
+	 *     non un numero ancora capace di uccidere il compositore. */
+	if (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA)
 		return false;
+	if (larghezza > RCP_TELA_L_MASSIMA)
+		larghezza = RCP_TELA_L_MASSIMA;
+	if (altezza > RCP_TELA_A_MASSIMA)
+		altezza = RCP_TELA_A_MASSIMA;
 	/* ⚠ In GIU', sempre: verso l'alto si uscirebbe dalla finestra del browser, e
 	 * il pixel di troppo tornerebbe come banda o come scala — cioe' come la cosa
 	 * che questa decisione toglie. */
@@ -7255,7 +7289,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    compositore non regge» — cioe' la sessione di chi ci ospita che
 			 *    muore in silenzio. */
 			if (!rcp_misura_ammessa(chiesta_l, chiesta_a, &buona_l, &buona_a)) {
-				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: fuori dai limiti di §4.5 "
+				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: sotto il minimo di §4.5 "
 				       "(%ux%u .. %ux%u) — la tela resta %ux%u",
 				    chiesta_l, chiesta_a, RCP_TELA_L_MINIMA, RCP_TELA_A_MINIMA,
 				    RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, s->tela_l, s->tela_a);
@@ -7263,6 +7297,16 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				           s->tela_l, s->tela_a);
 				break;
 			}
+			/* ⛔⭐ SOPRA IL MASSIMO SI RIDUCE E SI DICE — 1 ottobre 2026, tela al
+			 *     massimo 4096x2304 (riquadro in `rcp.h`).  Un monitor 5K non e'
+			 *     un errore del client: `TELA(ADATTATA)` gli dira' la misura vera,
+			 *     e questa riga dice perche' non e' quella chiesta. */
+			if (chiesta_l > RCP_TELA_L_MASSIMA || chiesta_a > RCP_TELA_A_MASSIMA)
+				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ADATTA_TELA %ux%u oltre il "
+				       "massimo della tela %ux%u — ridotta a %ux%u (il lato che "
+				       "sfora al massimo, l'altro com'e')",
+				    chiesta_l, chiesta_a, RCP_TELA_L_MASSIMA,
+				    RCP_TELA_A_MASSIMA, buona_l, buona_a);
 			/* ⛔⛔ E IL TETTO DEL DECODIFICATORE SI RISPETTA ANCHE QUI — §4.5:
 			 *     *«la tela concessa DEVE rispettare `video.misura_massima` se il
 			 *     client l'ha dichiarata»*.  ⚠ Difetto trovato refutando: questo

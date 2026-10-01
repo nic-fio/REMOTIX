@@ -461,9 +461,11 @@ typedef struct {
 	 * ⛔ Serve perche' il limite NON e' lo stesso fra i codec: `[M]` 22 agosto
 	 *    2026 `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**
 	 *    (4096x2160 si', 4112x2160 no), mentre `hevc_vaapi` regge 16384x4320 —
-	 *    e la tela legale di `RCP.md` §4.5 arriva a **7680x4320**.  ⇒ Oltre i
-	 *    4096 px il ripiego in software per H.264 **e' la regola**, e costa
-	 *    `[M]` 309 ms per chiave a 8K.
+	 *    e la tela legale di `RCP.md` §4.5 arrivava a **7680x4320**.  ⇒ Oltre i
+	 *    4096 px H.264 su quella scheda non c'era.  ⭐ Dal 1 ottobre 2026 la tela
+	 *    si ferma a **4096x2304** (decisione dell'utente) e il caso non nasce
+	 *    piu' dal protocollo; il controllo resta, perche' il tetto e' del
+	 *    DRIVER e un'altra scheda puo' dichiararne uno piu' basso.
 	 *
 	 * ⚠ `misura_massima_letta == false` vuol dire **«non l'ho saputa
 	 *   chiedere»**, che NON e' «non c'e' un limite»: i due valori allora non

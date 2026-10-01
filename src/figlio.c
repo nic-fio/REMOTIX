@@ -8560,7 +8560,8 @@ void figlio_vive(int argc, char **argv)
 						 *     da solo, e `attendi_tela()` a ogni giro impedisce
 						 *     anche al padre di scadere.  ⚠ Sul prodotto vero e'
 						 *     `[?]`: Mutter ha concesso 30 misure su 30 fino a
-						 *     7680x4320 e `rcp_misura_ammessa()` taglia li'.  La
+						 *     7680x4320, e `rcp_misura_ammessa()` dal 1 ottobre
+						 *     2026 taglia a 4096x2304.  La
 						 *     cura sta nella politica di rimontaggio, non qui.
 						 */
 						registro_dice(REG_FIGLIO,
