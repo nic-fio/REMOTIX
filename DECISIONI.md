@@ -6186,6 +6186,17 @@ proprietario non codifica via VA-API: si ripiegava sul processore, già prima de
   Vulkan Video scartato per ora: `[M]` 1 ott, la codifica Vulkan c'è sulla Radeon (RADV, Mesa 25.0) ma sulla
   Intel UHD 770 solo dietro `ANV_DEBUG=video-encode` anche con Mesa 26.2.3 (sperimentale).
 - ⚠ Serve una NVIDIA vera per provarla: nel laboratorio non c'è.
+- ✅ **Vulkan per primo** (parola dell'utente: *«la codifica deve avvenire con strumenti standard, preferibilmente
+  con Vulkan, che accomuna tutte e 4 le architetture»*): la strada si sceglie **per capacità**, non per marca —
+  1) Vulkan Video se la scheda lo offre (oggi AMD, NVIDIA; Intel quando Mesa lo rende stabile), 2) VA-API
+  (oggi Intel, integrata e Arc). NVENC scartato. 🔸 l'opzione sperimentale `ANV_DEBUG=video-encode` su Intel
+  solo come prova, non di serie.
+- ✅ **Niente processore** (parola dell'utente: *«niente cpu senza scheda. Ad oggi anche le vm possono supportare
+  accelerazione hw»*): via il ripiego software (`src/ripiego.c`: OpenH264, SVT-AV1) e le sue dipendenze e
+  depositi (Cisco, `noopenh264`, EPEL per SVT-AV1); senza una scheda capace REMOTIX **non si installa** — il
+  controllo preliminare lo dice prima, con la ragione. Le VM con scheda passata o virtuale (passthrough, vGPU)
+  vanno; le VM senza scheda no. ⇒ Le VM di T10 provano solo il rifiuto pulito; le prove complete nei contenitori
+  con la scheda vera (come §7.5 della fase 17).
 - ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
   dell'utente: *«basta misure»*).
 
