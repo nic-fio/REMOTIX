@@ -328,9 +328,11 @@ def meta_scatola(d):
                              "systemctl show -p ExecStart --value rete11-server 2>/dev/null "
                              "| tr ' ' '\\n' | grep -A1 -E '^--(tetto-sessioni|journal)' "
                              "| tr '\\n' ' '; echo @@; vainfo --display drm --device "
-                             "/dev/dri/renderD128 2>&1 | grep -m1 'Driver version'", 60)
+                             "/dev/dri/renderD128 2>&1 | grep -m1 'Driver version'; echo @@; "
+                             "grep -a -o 'HEVC: .*H.264: scheda [^,]*, software OpenH264 [^ ]*' "
+                             "/var/lib/rete11/registro.log 2>/dev/null | tail -1", 60)
     parti = (t or "").split("@@")
-    while len(parti) < 5:
+    while len(parti) < 6:
         parti.append("")
     for riga in parti[0].splitlines():
         p = riga.split()
@@ -342,6 +344,10 @@ def meta_scatola(d):
     v["journal"] = "--journal" in parti[3]
     # ⭐ il fornitore VA che vede la scatola sul SUO renderD128 (iHD o radeonsi)
     v["driver_va"] = parti[4].split(":", 1)[-1].strip() or "?"
+    # ⭐ fase 18: che cosa il prodotto ha MISURATO all'avvio (la riga dell'ECCOMI):
+    #   «H.264: scheda si' (…), software OpenH264 si'» in hardware; con --senza-scheda
+    #   «H.264: scheda no (…), software OpenH264 si'» — cosi' il livello dichiara la strada
+    v["codifica_video"] = parti[5].strip() or "?"
     return v
 
 
@@ -398,9 +404,25 @@ def rifai_scatola(o, d, tetto, dove):
         if c != 0:
             return False, "11-accendi.sh %s %s non riuscito (codice %s): %s" % (
                 passo, d, c, re.sub(r"\x1b\[[0-9;]*m", "", " ".join((t or "").splitlines()[-3:]))[:300])
+        # ⭐ fase 18, --senza-scheda: PRIMA di accendere il server si nasconde il driver VA
+        #   della scatola (iHD_drv_video.so rinominato), come nel giro di fumo in software
+        #   (fasi/18 §4): il figlio compone l'ambiente da zero e LIBVA_DRIVER_NAME non basta.
+        #   Il compositore continua a disegnare sulla scheda (Mesa iris): e' solo la
+        #   codifica a scendere in OpenH264, che e' la strada del prodotto senza driver.
+        if passo == "prodotto" and getattr(o, "senza_scheda", False):
+            c2, t2 = nella_scatola(d, "cd /usr/lib/x86_64-linux-gnu/dri && mv iHD_drv_video.so "
+                                      "iHD_drv_video.so.nascosto && ls iHD_drv_video.so* ")
+            dice("   scatola driver VA nascosto: codice %s · %s" % (c2, (t2 or "").strip()[:80]))
+            if c2 != 0 or "iHD_drv_video.so.nascosto" not in (t2 or ""):
+                return False, "non ho potuto nascondere iHD_drv_video.so nella scatola: %s" % t2
     ok, perche = scheda_giusta(o, d)
     if not ok:
         return False, perche
+    if getattr(o, "senza_scheda", False):
+        cv = meta_scatola(d).get("codifica_video", "")
+        if "H.264: scheda no (" not in cv or "software OpenH264 si'" not in cv:
+            return False, "il server non dichiara la codifica H.264 in software (dice «%s»)" % cv
+        dice("   ⭐ codifica dichiarata dal prodotto: %s" % cv)
     if tetto:
         v = tetto_in_vigore(d)
         if v != tetto:
@@ -580,11 +602,11 @@ class Salita:
             ok, perche = rifai_scatola(self.o, self.o.scatola, self.o.tetto, dove)
         if ok:
             self.meta_scatola = meta_scatola(self.o.scatola)
-            dice("   scatola: binario %s · pagina %s · %s · dri %s · VA %s" % (
+            dice("   scatola: binario %s · pagina %s · %s · dri %s · VA %s · %s" % (
                 self.meta_scatola.get("binario"), self.meta_scatola.get("pagina"),
                 self.meta_scatola.get("opzioni_server") or "(opzioni predefinite)",
                 ",".join(self.meta_scatola.get("dri_nella_scatola", [])),
-                self.meta_scatola.get("driver_va")))
+                self.meta_scatola.get("driver_va"), self.meta_scatola.get("codifica_video")))
         self.nuova_cartella_attori()
         return ok, perche
 
@@ -1208,6 +1230,10 @@ def main():
                         "browser-cliente restano sulla Intel")
     a.add_argument("--prova", action="store_true",
                    help="salita di prova §13.3: gradini 1,2,4 da 3 minuti; non conta")
+    a.add_argument("--senza-scheda", action="store_true",
+                   help="fase 18: la codifica SENZA scheda (OpenH264) — nella scatola rifatta "
+                        "si nasconde iHD_drv_video.so prima di accendere il server, e si "
+                        "pretende che il registro dica «H.264: scheda no, software OpenH264 si'»")
     a.add_argument("--secco", action="store_true", help="stampa il piano e basta")
     a.add_argument("--attesa-nascita-s", type=int, default=180)
     a.add_argument("--attesa-uscita-s", type=int, default=120)

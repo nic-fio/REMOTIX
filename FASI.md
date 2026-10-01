@@ -1,6 +1,6 @@
 # FASI — che cosa è stato fatto, fase per fase
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
 
 *I documenti delle fasi **chiuse**, cuciti in un documento solo il **16 agosto 2026** per decisione
 dell'utente. ⛔ **Non è un riassunto**: il testo è quello che era, riga per riga, con i titoli
@@ -3815,7 +3815,7 @@ all'apertura soltanto.
 
 **Ritardo cattura → vetro**: ⛔⛔ **SFORA il tetto dei 50 e il traguardo dei 40**, con **6 giri** da ~800
 campioni ciascuno e il **pezzo cieco di 16-40 ms NON compreso**. ⛔ *Il totale e i suoi percentili erano
-misurati con la codifica **senza scheda** (libsvtav1 / libx265): tolti con la fase 18, non valgono più.*
+misurati con la codifica **senza scheda** (libsvtav1 / libx265): tolti con la fase 18, non valgono più.* *→ rifatta coi browser veri in 4K e OpenH264: `fasi/18-senza-ffmpeg.md` §5.4.*
 ⚠ **Non è input → vetro**: il canale di input nasce alla fase 4 (`input` = 0 in **953 su 953**), e
 al suo posto sta il controllo **P1**.
 
@@ -4253,7 +4253,7 @@ scoperto che la differenza non è accademica:
 | al **pixel acceso** (col pezzo cieco) | fuori | ⛔ **fuori anche a fase 8 fatta** |
 
 *⛔ I numeri della tabella — le misure con la codifica in software e le somme dei tratti presi sulla
-stessa catena — sono tolti con la fase 18. Restano gli esiti di allora.*
+stessa catena — sono tolti con la fase 18. Restano gli esiti di allora.* *→ rifatta: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 ⇒ **La stessa architettura è promossa o bocciata a seconda di dove si mette il traguardo.**
 

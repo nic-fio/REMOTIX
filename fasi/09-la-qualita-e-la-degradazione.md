@@ -1,6 +1,6 @@
 # Fase 9 — La qualità e la degradazione
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
 
 Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
@@ -2706,7 +2706,7 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
 ```
 
 *(I tempi di conversione e codifica della riga sono tolti dopo la fase 18: la conversione non si dimostra
-a copia zero.)*
+a copia zero.)* *→ conversione (in CPU) e codifica del primo fotogramma a 4K senza scheda: `fasi/18-senza-ffmpeg.md` §5.4.*
 ⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
 `hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
 
@@ -2990,7 +2990,7 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
 ⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
 non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
 ⚠ Il tetto «conversione + codifica» del primo fotogramma stava sopra i 40,40 di `barra`. *(I tempi sono
-tolti dopo la fase 18: la conversione non si dimostra a copia zero.)*
+tolti dopo la fase 18: la conversione non si dimostra a copia zero.)* *→ in software: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 ## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
 
