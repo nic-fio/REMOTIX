@@ -75,7 +75,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
-            scrittore_bit.c colori709.c audio.c suono.c \
+            vulkanvideo.c scrittore_bit.c colori709.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
             appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
 OGGETTI  := $(SORGENTI:.c=.o)
@@ -181,6 +181,20 @@ override CFLAGS += $(F3_CFLAGS)
 #    libselinux con `dlopen` (Fedora, Alma), e con la glibc vecchia serve.
 DL_LIBS := -ldl
 
+# ⭐⭐ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27) — **Vulkan**: la strada della
+#     scheda che si prova PRIMA di VA-API (`src/vulkanvideo.c`, Vulkan Video:
+#     `VK_KHR_video_encode_queue` + H.264/H.265).  Si collega SOLO il loader
+#     (`libvulkan`, Apache-2.0); i driver (ICD: RADV, NVIDIA, ANV) stanno nel
+#     sistema e li carica il loader a tempo di esecuzione.  Lo shader e' SPIR-V
+#     gia' nel deposito (`vulkanvideo_rgb_nv12_spv.h`): niente glslang qui.
+#   ⚠ Su Debian Trixie: `apt install libvulkan-dev` (1.4.309).  Il minimo
+#     1.3.274 e' l'intestazione in cui le estensioni di codifica video sono
+#     uscite dal provisional (`[R]` SDK 1.3.274, dic 2023; `[?]` non provato
+#     con un'intestazione piu' vecchia).
+F19_CFLAGS := $(shell pkg-config --cflags vulkan)
+F19_LIBS   := $(shell pkg-config --libs   vulkan)
+override CFLAGS += $(F19_CFLAGS)
+
 # ⭐ FASE 18, linea A — `libopus` DIRETTA per l'audio (`src/audio.c`), dal 30
 #    settembre 2026: Opus non passa piu' da libavcodec (`DECISIONI.md` §10.25).
 #    `[M]` 30 set 2026: `opus.pc` 1.5.2 c'e' in `remotix-costruzione` e nel
@@ -280,7 +294,7 @@ endif
 #    sinistra a destra, e all'incontrario mancherebbero i simboli del ponte.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(DL_LIBS)
+        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F19_LIBS) $(DL_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -390,10 +404,12 @@ pulisci:
 #    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
 #       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
 #       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
+#      vulkan 1.3.274         le estensioni di codifica video finali (fase 19,
+#                             `src/vulkanvideo.c`); `[?]` non provato sotto
 MINIMI := openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
-          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3
+          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274
 
 dipendenze:
 	@stato=0; \
@@ -414,7 +430,7 @@ dipendenze:
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
-	         va/va.h va/va_drm.h gbm.h opus.h; do \
+	         va/va.h va/va_drm.h gbm.h opus.h vulkan/vulkan.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
@@ -473,11 +489,19 @@ sentinella.o:     sentinella.h registro.h
 ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
-codificatore.o:   codificatore.h registro.h vadiretta.h scrittore_bit.h colori709.h
+codificatore.o:   codificatore.h registro.h vadiretta.h vulkanvideo.h scrittore_bit.h colori709.h
 # ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni;
 #    i colori BT.709 nostri (la strada «dalla memoria» della scheda).  ⛔ Il
 #    ripiego in software (`ripiego.c`: OpenH264, SVT-AV1) e' uscito, fase 19.
 vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
+# ⭐ FASE 19: la scheda in Vulkan Video, con lo shader SPIR-V incorporato
+#    (`vulkanvideo_rgb_nv12_spv.h`, generato da `banchi/19-vulkan/19-shader.sh`
+#    dal `.comp` accanto: il compilatore di shader NON serve a costruire).
+#    ⚠ `-Wno-missing-field-initializers`: le strutture di Vulkan hanno decine
+#    di campi e si riempiono per nome (`.sType = …`), e l'avviso di `-Wextra`
+#    su ogni `{ .sType }` coprirebbe gli avvisi veri.  Solo su questo oggetto.
+vulkanvideo.o:    vulkanvideo.h registro.h vulkanvideo_rgb_nv12_spv.h
+vulkanvideo.o:    CFLAGS += -Wno-missing-field-initializers
 scrittore_bit.o:  scrittore_bit.h
 colori709.o:      colori709.h
 

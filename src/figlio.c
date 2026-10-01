@@ -1100,13 +1100,13 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char a_tetto[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Sedici: le nove fisse, il NULL, e le SEI parole facoltative in coda —
+	/* ⚠ Diciotto: le nove fisse, il NULL, e le OTTO parole facoltative in coda —
 	 *   `--parlantina`, `--journal`, `--qualita-risale`, `--tetto-banda-mbit` e
-	 *   il suo numero, e `--niente-audio-silenzio`.  Si aggiungono solo se il
-	 *   padre le ha (vedi sotto).  ⛔ Il conto si rifa' a ogni parola nuova: un
-	 *   `argv[]` troppo corto non da' un errore, scrive oltre la fine dello
-	 *   stack. */
-	char *argv[16];
+	 *   il suo numero, `--niente-audio-silenzio`, e ⭐ fase 19 `--codifica` col
+	 *   suo valore.  Si aggiungono solo se il padre le ha (vedi sotto).  ⛔ Il
+	 *   conto si rifa' a ogni parola nuova: un `argv[]` troppo corto non da' un
+	 *   errore, scrive oltre la fine dello stack. */
+	char *argv[18];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -1370,6 +1370,12 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *      ed e' esattamente quel che questa fase ha tolto. */
 	if (!f->fase9_audio_silenzio)
 		argv[na++] = (char *)"--niente-audio-silenzio";
+	/* ⭐ FASE 19: la strada della scheda, se forzata (`--codifica vaapi|vulkan`):
+	 *    il predefinito «scheda» non si passa, e il figlio nasce con lo stesso. */
+	if (strcmp(figlio_codifica_strada_chiesta(), "scheda") != 0) {
+		argv[na++] = (char *)"--codifica";
+		argv[na++] = (char *)figlio_codifica_strada_chiesta();
+	}
 	argv[na] = NULL;
 
 	execve(f->percorso_mio, argv, envp);
@@ -5155,6 +5161,40 @@ static char rifiuto_hardware[512];
  *    provare il ripiego, e' uscito col ripiego: fase 19.) */
 static const char *nodo_rendering = NODO_RENDERING;
 
+/* ⭐ FASE 19 — LA STRADA DELLA SCHEDA (`DECISIONI.md` §10.27).  `scheda` = si
+ *    sceglie PER CAPACITA' (Vulkan Video se c'e' per quel codec, se no VA-API),
+ *    ed e' quel che il prodotto fa; `vulkan`/`vaapi` = quella e basta, per le
+ *    prove e la diagnosi (`--codifica`, dalla riga di comando del server e di
+ *    `--prova-codifica`).  Il nome del componente nasce da qui:
+ *    `h264_scheda`, `hevc_vulkan`, … (`codificatore.h`).  ⛔ Il padre lo passa
+ *    al figlio nella riga di comando (`figli_esegui`): il figlio e' un exec, e
+ *    una statica del padre di qua non arriva. */
+static const char *strada_codifica = "scheda";
+
+bool figlio_codifica_strada(const char *strada)
+{
+	if (!strada || (strcmp(strada, "scheda") && strcmp(strada, "vulkan") && strcmp(strada, "vaapi")))
+		return false;
+	strada_codifica = strada;
+	return true;
+}
+
+const char *figlio_codifica_strada_chiesta(void)
+{
+	return strada_codifica;
+}
+
+/* Il nome del componente da chiedere per `codec` sulla strada in vigore. */
+static const char *componente_di(CodecVideo codec)
+{
+	static char nome[2][32];
+	int quale = codec == CODIFICATORE_H264 ? 0 : 1;
+
+	snprintf(nome[quale], sizeof nome[quale], "%s_%s", codec == CODIFICATORE_H264 ? "h264" : "hevc",
+	         strada_codifica);
+	return nome[quale];
+}
+
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
@@ -5314,7 +5354,10 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	 *   nodi ⇒ AV1 sulla scheda non c'e', e in software nemmeno piu'.
 	 */
 	if (codec == CODIFICATORE_HEVC || codec == CODIFICATORE_H264) {
-		r.componente = (codec == CODIFICATORE_H264) ? "h264_vaapi" : "hevc_vaapi";
+		/* ⭐ Fase 19: `h264_scheda`/`hevc_scheda` — la strada la sceglie il
+		 *    codificatore per capacita' (Vulkan prima, VA-API dopo), o quella
+		 *    forzata con `--codifica`.  Quale e' uscita lo dice il nome. */
+		r.componente = componente_di(codec);
 		r.nodo_rendering = nodo_rendering;
 		r.potenza = POTENZA_RENDERING;
 		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
@@ -5368,8 +5411,9 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	              "⭐ FASE 3: codificatore %d APERTO e TENUTO VIVO fra un "
 	              "fotogramma e l'altro, %ux%u a %d/s — senza questo la "
 	              "predizione non esisterebbe e ogni fotogramma sarebbe una "
-	              "chiave · in vigore: %s",
+	              "chiave · strada %s (chiesta «%s») · in vigore: %s",
 	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS,
+	              codificatore_strada(codif[indice]), strada_codifica,
 	              codificatore_nome(codif[indice]));
 	return codif[indice];
 }
@@ -5401,10 +5445,15 @@ static void codificatori_libera(void)
  *    (OpenH264), e la prova lo DICHIARA con un codice suo.
  *
  * Esce con UNA riga JSON su stdout (il registro va su stderr, come sempre):
- *   {"esito":"hardware"|"nessuno","codificatore":"h264_vaapi"|"",
+ *   {"esito":"hardware"|"nessuno","codificatore":"h264_vulkan"|"h264_vaapi"|"",
+ *    "strada":"vulkan"|"vaapi"|"",
  *    "nodo":"/dev/dri/renderD128"|"","motivo":"...",
  *    "codec":"h264"|"hevc","offerti":"hevc,h264"|"h264"|"",
- *    "hevc":"hardware"|"nessuno","h264":"hardware"|"nessuno"}
+ *    "hevc":"hardware"|"nessuno","h264":"hardware"|"nessuno",
+ *    "hevc_strada":"vulkan"|"vaapi"|"","h264_strada":…}
+ *   ⭐ FASE 19: `strada` e `*_strada` dicono QUALE strada della scheda ha
+ *   codificato (`DECISIONI.md` §10.27: Vulkan Video prima, VA-API dopo); i
+ *   campi di ieri restano com'erano e l'installatore legge `esito` e il codice.
  * e il codice:
  *    0  la scheda ha codificato un fotogramma, e i byte si rileggono;
  *    1  la scheda si apre ma il fotogramma non esce, o non si sa se e' giusto;
@@ -5417,6 +5466,8 @@ static void codificatori_libera(void)
  *      --nodo /dev/dri/…    la scheda da provare invece di NODO_RENDERING (la
  *                           seconda scheda di una macchina che ne ha due, o un
  *                           nodo che non c'e' per provare il rifiuto)
+ *      --codifica vaapi|vulkan|scheda   ⭐ fase 19: la strada, forzata (le due)
+ *                           o per capacita' (`scheda`, il predefinito)
  *    Senza argomenti e' la chiamata dell'installatore.  `offerti` e' quel che il
  *    server OFFRIREBBE al browser con questi stessi argomenti.
  *
@@ -5436,11 +5487,13 @@ static void codificatori_libera(void)
  *    stessa domanda di `--prova-codifica`, fatta all'avvio dal padre per
  *    decidere che cosa offrire nell'`ECCOMI` (`figlio_capacita_video()`). */
 typedef struct {
-	bool hevc_scheda;          /* hevc_vaapi apre e codifica su `nodo` */
-	bool h264_scheda;          /* h264_vaapi idem */
+	bool hevc_scheda;          /* la scheda apre e codifica HEVC su `nodo` */
+	bool h264_scheda;          /* H.264 idem */
 	char nodo[64];
 	char perche_hevc[768];     /* la ragione, quando no */
 	char perche_h264[768];
+	char strada_hevc[16];      /* ⭐ fase 19: «vulkan» / «vaapi» quando si', "" quando no */
+	char strada_h264[16];
 } CapacitaVideo;
 
 /* Apre la scheda per `codec` e codifica finche' non escono byte.  ⚠ Passa da
@@ -5474,9 +5527,8 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 		snprintf(motivo, n,
 		         "nessuna scheda sa codificare %s: «%s» su %s non si apre (%s).  ⛔ REMOTIX "
 		         "codifica solo sulla scheda (fase 19): senza, il video non c'e'",
-		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264",
-		         codec == CODIFICATORE_HEVC ? "hevc_vaapi" : "h264_vaapi", nodo_rendering,
-		         rifiuto_hardware[0] ? rifiuto_hardware : "nessuna ragione");
+		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", componente_di(codec),
+		         nodo_rendering, rifiuto_hardware[0] ? rifiuto_hardware : "nessuna ragione");
 		return false;
 	}
 	*aperto = true;
@@ -5532,11 +5584,15 @@ static void capacita_video_misura(CapacitaVideo *cv)
 	if (!cv->hevc_scheda)
 		snprintf(cv->perche_hevc, sizeof cv->perche_hevc, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
+	else
+		snprintf(cv->strada_hevc, sizeof cv->strada_hevc, "%s", codificatore_strada(codif[1]));
 	codificatori_libera();
 	cv->h264_scheda = prova_un_codec(CODIFICATORE_H264, 3, motivo, sizeof motivo, &byte, &aperto);
 	if (!cv->h264_scheda)
 		snprintf(cv->perche_h264, sizeof cv->perche_h264, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
+	else
+		snprintf(cv->strada_h264, sizeof cv->strada_h264, "%s", codificatore_strada(codif[3]));
 	codificatori_libera();
 }
 
@@ -5551,11 +5607,12 @@ static void capacita_video_offerti(const CapacitaVideo *cv, char *dove, size_t n
 /* Una riga che dice tutto, per il registro e per il `motivo`. */
 static void capacita_video_spiega(const CapacitaVideo *cv, char *dove, size_t n)
 {
-	snprintf(dove, n, "scheda %s — HEVC: %s%.300s%s · H.264: %s%.300s%s", cv->nodo,
-	         cv->hevc_scheda ? "si'" : "NO (", cv->hevc_scheda ? "" : cv->perche_hevc,
-	         cv->hevc_scheda ? "" : ")",
-	         cv->h264_scheda ? "si'" : "NO (", cv->h264_scheda ? "" : cv->perche_h264,
-	         cv->h264_scheda ? "" : ")");
+	snprintf(dove, n, "scheda %s (strada chiesta «%s») — HEVC: %s%.300s%s · H.264: %s%.300s%s",
+	         cv->nodo, strada_codifica,
+	         cv->hevc_scheda ? "si' via " : "NO (",
+	         cv->hevc_scheda ? cv->strada_hevc : cv->perche_hevc, cv->hevc_scheda ? "" : ")",
+	         cv->h264_scheda ? "si' via " : "NO (",
+	         cv->h264_scheda ? cv->strada_h264 : cv->perche_h264, cv->h264_scheda ? "" : ")");
 }
 
 bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
@@ -5659,25 +5716,33 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 	cv.nodo[sizeof cv.nodo - 1] = 0;
 	cv.perche_hevc[sizeof cv.perche_hevc - 1] = 0;
 	cv.perche_h264[sizeof cv.perche_h264 - 1] = 0;
+	cv.strada_hevc[sizeof cv.strada_hevc - 1] = 0;
+	cv.strada_h264[sizeof cv.strada_h264 - 1] = 0;
 	capacita_video_offerti(&cv, offerti, offerti_byte);
 	capacita_video_spiega(&cv, spiegazione, spiegazione_byte);
 	return offerti[0] != 0;
 }
 
-static int prova_esce(const char *esito, const char *codificatore, const char *nodo,
-                      const char *motivo, CodecVideo codec, const CapacitaVideo *cv, int codice)
+static int prova_esce(const char *esito, const char *codificatore, const char *strada,
+                      const char *nodo, const char *motivo, CodecVideo codec,
+                      const CapacitaVideo *cv, int codice)
 {
-	char c[128], n[128], m[4096], o[32], r[64];
+	char c[128], n[128], m[4096], o[32], r[64], s[32], sh[32], s4[32];
 
 	json_testo(c, sizeof c, codificatore);
+	json_testo(s, sizeof s, strada);
 	json_testo(n, sizeof n, nodo);
 	json_testo(m, sizeof m, motivo);
 	capacita_video_offerti(cv, r, sizeof r);
 	json_testo(o, sizeof o, r);
-	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"nodo\":\"%s\",\"motivo\":\"%s\","
-	       "\"codec\":\"%s\",\"offerti\":\"%s\",\"hevc\":\"%s\",\"h264\":\"%s\"}\n",
-	       esito, c, n, m, codec == CODIFICATORE_HEVC ? "hevc" : "h264", o,
-	       cv->hevc_scheda ? "hardware" : "nessuno", cv->h264_scheda ? "hardware" : "nessuno");
+	json_testo(sh, sizeof sh, cv->strada_hevc);
+	json_testo(s4, sizeof s4, cv->strada_h264);
+	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"strada\":\"%s\",\"nodo\":\"%s\","
+	       "\"motivo\":\"%s\",\"codec\":\"%s\",\"offerti\":\"%s\",\"hevc\":\"%s\",\"h264\":\"%s\","
+	       "\"hevc_strada\":\"%s\",\"h264_strada\":\"%s\"}\n",
+	       esito, c, s, n, m, codec == CODIFICATORE_HEVC ? "hevc" : "h264", o,
+	       cv->hevc_scheda ? "hardware" : "nessuno", cv->h264_scheda ? "hardware" : "nessuno", sh,
+	       s4);
 	/* ⛔ Una riga che non esce intera e' «non so», non l'esito che portava. */
 	if (fflush(stdout) != 0)
 		return 1;
@@ -5703,9 +5768,13 @@ int figlio_prova_codifica(int argc, char **argv)
 			indice = 1;
 		} else if (strcmp(argv[i], "--nodo") == 0 && i + 1 < argc) {
 			nodo_rendering = argv[++i];
+		} else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc
+		           && figlio_codifica_strada(argv[i + 1])) {
+			i++;
 		} else {
 			fprintf(stderr,
-			        "uso: remotix --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN]\n"
+			        "uso: remotix --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN] "
+			        "[--codifica scheda|vulkan|vaapi]\n"
 			        "     (--software non c'e' piu': il ripiego in software e' uscito, fase 19)\n");
 			return 2;
 		}
@@ -5724,7 +5793,7 @@ int figlio_prova_codifica(int argc, char **argv)
 			registro_dice(REG_FIGLIO,
 			              "⛔⛔ NESSUNA SCHEDA SA CODIFICARE %s su questa macchina: %s",
 			              codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", motivo);
-		return prova_esce("nessuno", "", "", motivo, codec, &cv,
+		return prova_esce("nessuno", "", "", "", motivo, codec, &cv,
 		                  aperto ? 1 : PROVA_NESSUNA_SCHEDA);
 	}
 	c = codificatore_confessione(codif[indice]);
@@ -5732,8 +5801,9 @@ int figlio_prova_codifica(int argc, char **argv)
 	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec, codificatore_nome(codif[indice]),
 	         spiega);
 	{
-		int fine = prova_esce("hardware", c->componente ? c->componente : "", nodo_rendering,
-		                      motivo, codec, &cv, 0);
+		int fine = prova_esce("hardware", c->componente ? c->componente : "",
+		                      codificatore_strada(codif[indice]), nodo_rendering, motivo, codec,
+		                      &cv, 0);
 		codificatori_libera();
 		return fine;
 	}
@@ -7665,6 +7735,12 @@ void figlio_vive(int argc, char **argv)
 			f9_risale = true;
 		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)
 			f9_tetto = (uint32_t)strtoul(argv[++i], NULL, 10);
+		/* ⭐ FASE 19: la strada della scheda forzata (`--codifica` del server),
+		 *    per la stessa ragione delle tre righe sopra — e' una statica di
+		 *    QUESTO processo, e il padre gliela ripete.  ⚠ Un valore che non
+		 *    si riconosce resta «scheda», e la riga del codificatore lo dice. */
+		else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc)
+			figlio_codifica_strada(argv[++i]);
 		/* ⛔⭐ E QUESTA SI LEGGE NEGATA, perche' nasce ACCESA (24 ago 2026): la
 		 *     parola in coda e' l'ECCEZIONE al predefinito.  ⚠ Un'assenza qui
 		 *     vuol dire «acceso», che e' il contrario delle due righe sopra —

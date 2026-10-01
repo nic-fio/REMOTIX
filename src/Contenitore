@@ -93,6 +93,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libopus-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# ⭐ Fase 19 (`fasi/19-nvidia.md`, `DECISIONI.md` §10.27): Vulkan Video — la
+#    strada della scheda che si prova PRIMA di VA-API (`src/vulkanvideo.c`).
+#    Serve solo il loader e le intestazioni (`libvulkan-dev`, Apache-2.0): lo
+#    SPIR-V dello shader e' gia' nel deposito, il compilatore di shader non
+#    serve, e i driver (ICD) stanno nel sistema che fa girare il prodotto.
+#    `[M]` 1 ott 2026: Debian 13 porta libvulkan-dev 1.4.309.  In uno strato
+#    suo, come gli altri.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libvulkan-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN ldconfig
 ENV PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 

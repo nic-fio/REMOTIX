@@ -315,9 +315,26 @@ typedef struct {
 	CodecVideo codec;
 	/*
 	 * ⛔ Il componente si chiede PER NOME e non si ripiega.
-	 * ⛔ Fase 19: solo i nomi della scheda (`h264_vaapi`, `hevc_vaapi`); NULL
-	 * o un altro nome e `codificatore_nuovo()` rifiuta dicendolo — il ripiego
-	 * in software (OpenH264, SVT-AV1) e' uscito.
+	 * ⛔ Fase 19: solo i nomi della scheda; NULL o un altro nome e
+	 *    `codificatore_nuovo()` rifiuta dicendolo — il ripiego in software
+	 *    (OpenH264, SVT-AV1) e' uscito.  ⭐ E i nomi sono SEI, due per strada
+	 *    piu' due «per capacita'» (1 ott 2026, `DECISIONI.md` §10.27):
+	 *
+	 *      `h264_scheda`  `hevc_scheda`   LA STRADA SI SCEGLIE PER CAPACITA':
+	 *                                     Vulkan Video se la scheda lo offre
+	 *                                     per quel codec (`vulkanvideo_capacita`),
+	 *                                     se no VA-API — e' quel che il prodotto
+	 *                                     chiede;
+	 *      `h264_vulkan`  `hevc_vulkan`   Vulkan Video, e basta: se non c'e' si
+	 *                                     fallisce dicendolo (banchi, diagnosi,
+	 *                                     `--codifica vulkan`);
+	 *      `h264_vaapi`   `hevc_vaapi`    VA-API (`vadiretta.c`), e basta
+	 *                                     (`--codifica vaapi`, e i banchi 18/19
+	 *                                     che misurano QUELLA strada).
+	 *
+	 *    ⛔ La strada scelta finisce nella confessione (`strada`) e nel nome
+	 *       del componente aperto (`componente`), non nel nome chiesto: chi
+	 *       chiede `h264_scheda` rilegge `h264_vulkan` o `h264_vaapi`.
 	 */
 	const char *componente;
 	/*
@@ -436,21 +453,34 @@ typedef struct {
 	 *    rapporto».  Un ritmo di 3 ms senza queste cinque righe accanto e' un
 	 *    numero che vale per una macchina che non si sa quale sia.
 	 */
-	bool in_hardware;             /* la scheda (vadiretta), non il ripiego */
+	bool in_hardware;             /* la scheda (vadiretta o vulkanvideo), non il ripiego */
 	char nodo[64];                /* il nodo CHIESTO, es. /dev/dri/renderD128 */
+	/*
+	 * ⭐ FASE 19 — LA STRADA che ha risposto: `vaapi` (`vadiretta.c`) o
+	 *    `vulkan` (`vulkanvideo.c`).  Si sceglie per CAPACITA' all'apertura
+	 *    (`h264_scheda`/`hevc_scheda`) o per nome, e qui si legge quale delle
+	 *    due si e' aperta davvero.  ⚠ `modi_bitrate` sotto e' nell'alfabeto
+	 *    della strada: `VA_RC_*` per vaapi, `VULKANVIDEO_RC_*` per vulkan.
+	 */
+	char strada[16];
 	/*
 	 * ⭐ Il fornitore che ha RISPOSTO, chiesto a `vaQueryVendorString()` sul
 	 *    display aperto — non dedotto dal nome del nodo.  E' il testimone che
 	 *    dice se «renderD128» e' l'Intel che si credeva o un'altra scheda: sulla
 	 *    macchina di prova i due nodi sono di due fornitori diversi `[M]`.
+	 *    ⭐ Sulla strada Vulkan e' `deviceName` + `driverName`/`driverInfo`
+	 *    della scheda scelta DAL NODO (`VK_EXT_physical_device_drm`).
 	 */
-	char fornitore_va[128];
+	char fornitore_va[256];
 	/*
 	 * ⛔ L'entrypoint: `false` = piena (`VAEntrypointEncSlice`), `true` = bassa
 	 *    potenza (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` dice
 	 *    che la coppia (profilo, entrypoint) e' stata **letta dal driver** con
 	 *    `vaQueryConfigEntrypoints`, non solo chiesta a libavcodec: senza quel
 	 *    controllo «gliel'ho chiesto» e «l'ha fatto» hanno lo stesso aspetto.
+	 *    ⚠ Sulla strada Vulkan l'entrypoint NON ESISTE: tutt'e due restano
+	 *    `false`, e il falso di `bassa_potenza_verificata` li' vuol dire «non
+	 *    c'e' la domanda», non «non ho guardato».
 	 */
 	bool bassa_potenza;
 	bool bassa_potenza_verificata;
@@ -505,7 +535,7 @@ typedef struct {
 	 */
 	uint32_t modi_bitrate;
 	bool modi_bitrate_letti;
-	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR */
+	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
 	int64_t banda_punto;          /* `bit_rate`, bit/s — il punto di lavoro */
 	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ MAI uguale al punto */
 	int banda_serbatoio;          /* `rc_buffer_size`, in **bit** */
@@ -560,6 +590,10 @@ void codificatore_libera(Codificatore *cod);
  * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
  * la riga che finisce nel registro accanto a ogni numero. */
 const char *codificatore_nome(const Codificatore *cod);
+
+/* ⭐ FASE 19: la strada aperta davvero — "vaapi" o "vulkan" (vedi
+ *    `CodificatoreConfessione.strada`); "" su NULL. */
+const char *codificatore_strada(const Codificatore *cod);
 
 /* ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): qui c'erano
  *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` e

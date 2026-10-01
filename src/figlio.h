@@ -602,8 +602,20 @@ void figlio_vive(int argc, char **argv);
  *    codificare (rifiuto dichiarato).  Niente rete, niente sessioni; root non
  *    serve (ma i gruppi del nodo sì).
  * ⭐ FASE 18: gli argomenti che seguono `--prova-codifica` (tutti facoltativi):
- *    `h264`|`hevc`, `--nodo /dev/dri/renderDN`. */
+ *    `h264`|`hevc`, `--nodo /dev/dri/renderDN`, e ⭐ fase 19
+ *    `--codifica scheda|vulkan|vaapi`.  Il JSON porta anche `strada`,
+ *    `hevc_strada` e `h264_strada` («vulkan»/«vaapi»): QUALE strada della
+ *    scheda ha codificato. */
 int figlio_prova_codifica(int argc, char **argv);
+
+/* ⭐ FASE 19 (`DECISIONI.md` §10.27) — la strada della scheda: «scheda» (per
+ *    capacita': Vulkan Video se c'e' per quel codec, se no VA-API — il
+ *    predefinito e quel che il prodotto fa), «vulkan» o «vaapi» (forzata, per
+ *    le prove e la diagnosi).  Torna false su un nome che non e' uno dei tre, e
+ *    allora non cambia niente.  Il padre la passa al figlio nella riga di
+ *    comando (`--codifica`), come le cure della fase 9. */
+bool figlio_codifica_strada(const char *strada);
+const char *figlio_codifica_strada_chiesta(void);
 
 /* ⭐ FASE 18 — la prova ALL'AVVIO del padre: che cosa questa macchina sa
  *    codificare, in un processo a parte (un driver che cade non porta giu' il
