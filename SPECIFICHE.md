@@ -1188,7 +1188,40 @@ lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`A
 `VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
 delle capacità delle due schede sta in `DECISIONI.md` §4.6.
 
+### 11.4-bis Dove la scheda codifica: distribuzioni, schede, depositi
+
+*Decisioni dell'utente del 1 ottobre 2026 (`DECISIONI.md` §10.27): la codifica è **sempre** sulla scheda; i
+driver con i codec, quando una distribuzione li toglie per i brevetti, si chiedono all'amministratore (D5): *«il
+problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX non distribuisce codec.*
+
+| distribuzione | Intel | AMD | NVIDIA (driver proprietario) | desktop |
+|---|---|---|---|---|
+| Debian 13 | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+| Ubuntu 26.04 | ✅ depositi ufficiali (universe) | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+| Fedora 44 | ✅ con **RPM Fusion** (nonfree) | ✅ con **RPM Fusion** (`mesa-va-drivers-freeworld`) | ⚠ Vulkan Video, non provata | i 4 |
+| Red Hat / Alma / Rocky 10 | ✅ con **RPM Fusion EL** + **EPEL** | ⛔ **non supportata**: nessun deposito rimette la codifica AMD | ⚠ Vulkan Video, non provata | ⛔ **solo GNOME e KDE** |
+| openSUSE Leap 16, Tumbleweed | ✅ depositi ufficiali | ✅ con **Packman** | ⚠ Vulkan Video, non provata | i 4 |
+| Arch | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+
+- La famiglia Red Hat si prova su **Alma**, che ne fa le veci (Red Hat è a pagamento).
+- Un «no» al deposito dei driver **blocca** l'installazione (D5): senza, su quella macchina la scheda non codifica.
+- ⚠ **NVIDIA**: la strada è scritta (Vulkan Video) ma nessuno l'ha vista funzionare su una NVIDIA vera — il
+  laboratorio non ne ha. Resta «non provata» finché non si prova (macchina a noleggio o un utente con la scheda).
+- Senza una scheda capace: REMOTIX non si installa (§11.4). Le macchine virtuali vanno solo con la scheda
+  passata alla macchina (passthrough, vGPU).
+- La tela è al massimo **4096×2304** (§6.1-bis): una finestra più grande riceve la tela ridotta.
+
 ### 11.5 I browser serviti, e perché vanno dichiarati
+
+| browser | dove | codec | stato |
+|---|---|---|---|
+| Chrome (e i Blink: Edge…) | Linux, Windows | HEVC, se il dispositivo lo decodifica; altrimenti H.264 | ✅ supportato |
+| Chrome | **Android** | HEVC o H.264 | ✅ supportato (`DECISIONI.md` §7.19) |
+| Firefox | Linux | **H.264** (Firefox su Linux non decodifica HEVC) | ✅ supportato |
+| Firefox | Windows | — | mai provato: né supportato né escluso |
+| Firefox | **Android** | — | ⛔ **fuori dal progetto** (`DECISIONI.md` §7.18) |
+| Safari | macOS, iOS | — | mai provato |
+
 
 ⭐ **La regola dei tre client non decade con il client unico: cambia forma** (`LEZIONI.md` §2.1).
 Una pagina gira su **tre motori scritti da tre squadre che non ci conoscono** — Blink (Chrome,

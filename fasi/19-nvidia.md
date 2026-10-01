@@ -39,6 +39,11 @@ apposta dall'utente (oggi: la tela oltre 4096 ridotta invece che rifiutata), e v
 la decisione accanto; (b) la campagna di prestazioni si rifà **da zero**, una volta, a architettura finita, con un
 piano approvato prima dall'utente.
 
+⭐ **Android** (parola dell'utente, 1 ott: *«ricordiamoci poi il discorso Android»*): nei due giri della suite entra
+anche **Chrome su Android** (l'emulatore sul server, `/media/REMOTIX/android`, come da memoria del progetto: Chrome,
+mai Firefox Android, §7.18), almeno le prove che toccano il client: collegamento, video H.264 e HEVC, tastiera,
+tocco, appunti, rientro.
+
 4. ❓ NVIDIA: serve una scheda vera (nel server, o macchina in affitto).
 
 ## 3. Il registro delle modifiche — per il manuale tecnico
