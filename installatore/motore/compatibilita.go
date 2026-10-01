@@ -108,6 +108,51 @@ type H264Piattaforma struct {
 	// Nonfree: i fornitori il cui driver sta nel ramo «nonfree» del deposito (RPM Fusion: il driver
 	// Intel completo)
 	Nonfree []string `json:"nonfree,omitempty"`
+	// VulkanScheda (fase 19, la strada «vulkan» di strade.go): fornitore → il driver VULKAN dei
+	// depositi UFFICIALI che su questa piattaforma codifica H.264/HEVC, separati da virgola. Il motore
+	// lo installa se la macchina ha quella scheda (VulkanPerLaScheda), senza consenso: è della
+	// distribuzione. Oggi solo AMD (RADV), e solo dove Mesa è costruita coi codec (`[M]` 1 ott 2026,
+	// lo stesso `-Dvideo-codecs` che dà H.264 a radeonsi in VA-API: Debian, Ubuntu, Arch). ⛔ Fedora,
+	// RHEL e openSUSE costruiscono Mesa con `all_free` (niente H.264/H.265 né in VA-API né in RADV):
+	// lì la RADV ufficiale non conta, e il driver coi codec — dove c'è — è del deposito di terzi
+	// (PacchettiScheda, D5). ⛔ Intel no: ANV codifica solo dietro ANV_DEBUG (§10.27), resta a VA-API.
+	// ⛔ NVIDIA no: l'ICD è del driver proprietario e va col suo numero (VulkanNvidia)
+	VulkanScheda map[string]string `json:"vulkan_scheda,omitempty"`
+	// VulkanNvidia: il pacchetto che porta l'ICD Vulkan della NVIDIA (nvidia_icd.json) col driver
+	// proprietario di questa distribuzione. Solo nel rimedio di RX-GPU-004: il motore NON lo installa,
+	// perché deve avere lo stesso numero del driver (che può venire anche dall'installatore di NVIDIA)
+	VulkanNvidia string `json:"vulkan_nvidia,omitempty"`
+}
+
+// VulkanPerLaScheda: i driver Vulkan ufficiali da installare per le schede di QUESTA macchina
+// (VulkanScheda). Senza schede, o senza sapere di che fornitore sono, niente: la strada VA-API
+// resta, e la prova vera è in 7a.
+func (h H264Piattaforma) VulkanPerLaScheda(p *Profilo) []string {
+	if len(h.VulkanScheda) == 0 || p.V("scheda.nodi") == "nessuno" {
+		return nil
+	}
+	forn, noti := fornitoriScheda(p)
+	if !noti {
+		return nil
+	}
+	var nomi []string
+	for f := range h.VulkanScheda {
+		if forn[f] {
+			nomi = append(nomi, f)
+		}
+	}
+	sort.Strings(nomi)
+	var r []string
+	visti := map[string]bool{}
+	for _, f := range nomi {
+		for _, x := range dividiVirgole(h.VulkanScheda[f]) {
+			if !visti[x] {
+				visti[x] = true
+				r = append(r, x)
+			}
+		}
+	}
+	return r
 }
 
 // codificaPer: un fornitore di schede codifica H.264 via VA-API su questa piattaforma, coi pacchetti

@@ -71,7 +71,9 @@ depends=(
 	#    per AMD (RADV), `nvidia-utils` per NVIDIA — `[M]` 1 ott 2026 su Arch
 	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` e'
 	#    un virtuale con piu' fornitori e pacman lo chiederebbe: resta fra gli
-	#    optdepends, e il motore (T4) mette quello della scheda che trova.
+	#    optdepends, e il motore mette quello della scheda che trova (catalogo
+	#    2026.10.01.10, `vulkan_scheda`: AMD → vulkan-radeon; NVIDIA: nvidia-utils
+	#    viene col driver, e il motore lo nomina soltanto nel rimedio).
 	vulkan-icd-loader libvulkan.so
 	libei libei.so                            # >= 1.1: l'input su GNOME e KDE
 	libxkbcommon libxkbcommon.so

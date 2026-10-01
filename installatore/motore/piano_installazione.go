@@ -113,6 +113,15 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	default:
 		return nil, fmt.Errorf("serve l'archivio di REMOTIX (--archivio URL) o un pacchetto (--pacchetto FILE)")
 	}
+	// fase 19: il driver Vulkan ufficiale della scheda (VulkanScheda: oggi RADV per AMD, dove Mesa
+	// codifica). Nei .deb e negli .rpm è solo un «Recommends» (che una macchina senza raccomandati
+	// salta), su Arch un «optdepends» (che pacman non installa mai): lo chiede il motore. Già
+	// installato, il passo lo trova «presente» e non tocca niente
+	if rap.pl != nil {
+		if vk := rap.pl.H264.VulkanPerLaScheda(prof); len(vk) > 0 {
+			pn.Azioni = append(pn.Azioni, PianoPacchetti("vulkan", "", "", strings.Join(vk, ",")))
+		}
+	}
 	// i pezzi che il desktop di serie non porta (C-COMPONENTE: labwc, breeze6-wallpapers, un
 	// carattere scalabile…): li aggiunge il motore, dopo il pacchetto
 	var comp []string

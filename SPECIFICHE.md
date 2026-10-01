@@ -1160,7 +1160,9 @@ La scala:
      Vulkan** (l'ICD `nvidia`: con quello la strada Vulkan Video la prende) · **RX-GPU-005**
      nessuna scheda Intel, AMD o NVIDIA (virtio, VMware, nouveau) · **RX-GPU-006** una scheda che su
      questa distribuzione non codifica né in VA-API né in Vulkan e non ha un driver da aggiungere
-     (oggi AMD su Alma senza l'ICD di RADV). Una scheda che codifica col driver di un deposito di
+     (oggi AMD su Alma: la Mesa di RHEL è costruita senza H.264, in VA-API e in RADV). Il driver
+     Vulkan della scheda AMD, dove quello della distribuzione codifica (Debian, Ubuntu, Arch), lo
+     installa l'installatore (su Arch è solo un pacchetto facoltativo). Una scheda che codifica col driver di un deposito di
      terzi resta un avviso col consenso (D5). ⚠ Il controllo preliminare non apre la scheda: legge i
      driver VA e gli ICD Vulkan sul disco; la prova vera è `--prova-codifica` dopo l'installazione
 3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),

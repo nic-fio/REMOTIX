@@ -106,7 +106,11 @@ func nomeICD(file string) string {
 // senza il suo ICD non conta: il loader non la vedrebbe, e la prova di 7a direbbe «nessuno».
 // ⚠ Che l'ICD ci sia non vuol dire che codifichi: `[?]` la versione minima di Mesa con la codifica RADV
 // di serie non è misurata (`[M]` 25.0.7 sì); chi lo dice è 7a.
-func schedeVulkan(_ *Piattaforma, p *Profilo) []string {
+// ⭐ Col catalogo (pl), per AMD decide la piattaforma: dove la RADV ufficiale codifica (VulkanScheda)
+// conta anche SENZA l'ICD, perché il motore la installa (Arch: `vulkan-radeon` è solo un optdepends);
+// dove Mesa è costruita senza codec (Fedora, RHEL, openSUSE: `all_free`) l'ICD `radeon` non basta, e
+// la scheda AMD la giudica la strada VA-API (col deposito di terzi, se il catalogo lo nomina).
+func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	if p.V("scheda.nodi") == "nessuno" {
 		return nil
 	}
@@ -119,7 +123,11 @@ func schedeVulkan(_ *Piattaforma, p *Profilo) []string {
 		icd[n] = true
 	}
 	var r []string
-	if forn["AMD"] && icd["radeon"] {
+	amd := icd["radeon"]
+	if pl != nil {
+		amd = pl.H264.VulkanScheda["AMD"] != ""
+	}
+	if forn["AMD"] && amd {
 		r = append(r, "AMD")
 	}
 	if forn["NVIDIA"] && icd["nvidia"] && p.V("scheda.nvidia_proprietaria") == "si" {
@@ -193,11 +201,16 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		return "RX-GPU-003", ""
 	case p.V("scheda.nvidia_proprietaria") == "si":
 		// la NVIDIA proprietaria codifica SOLO in Vulkan: se si è qui, il suo ICD non c'è
-		return "RX-GPU-004", strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("codifica.vulkan.icd"), "nessuno")
+		d := strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("codifica.vulkan.icd"), "nessuno")
+		if pl != nil && pl.H264.VulkanNvidia != "" {
+			d += "; su " + pl.Nome + " l'ICD lo porta " + pl.H264.VulkanNvidia
+		}
+		return "RX-GPU-004", d
 	case forn["Intel"] || forn["AMD"]:
 		// c'è una scheda della strada VA-API, ma su questa piattaforma non codifica e nessun driver
 		// del catalogo la completa (AMD su RHEL e derivate; un driver senza H.264 e niente da aggiungere)
-		// — e in Vulkan non c'è (AMD senza l'ICD di RADV; Intel non c'è di serie)
+		// — e in Vulkan non c'è (AMD senza l'ICD di RADV, o con la RADV senza codec della
+		// distribuzione; Intel non c'è di serie)
 		var d []string
 		if pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
 			d = append(d, "AMD su "+pl.Nome+": Mesa costruita senza VA-API")
