@@ -33,7 +33,21 @@ Si sceglie **per capacità**, all'avvio, non per marca:
 | commit | che cosa | perché | misura | installata |
 |---|---|---|---|---|
 
-## 5. Android: le prove a mano dell'utente
+## 5. Android: il telefono vero, comandato da qui
+
+⭐ **1 ott 2026, parola dell'utente: «ti lancio l'app e il telefono è tuo»** — grazie a **Phonestra** (progetto
+dell'utente) il suo telefono (Samsung S23+, Android 16, Chrome 154) è raggiungibile via adb senza fili con la
+chiave già autorizzata da Phonestra: `[M]` collegamento riuscito, Chrome comandabile per intero col protocollo
+DevTools (`adb forward … localabstract:chrome_devtools_remote`), tocchi veri con `adb shell input`. ⇒ Le prove
+della tabella qui sotto si fanno **automatiche**, sul telefono vero, a ogni giro. Il collegamento resta sul
+portatile e arriva alla suite sul server con un tunnel ssh: la chiave del telefono non lascia mai il portatile.
+⛔ Solo Chrome verso le scatole; mai durante una chiamata (`dumpsys telephony.registry`, una riga per SIM); il
+telefono si lascia come lo si è trovato.
+
+*(La tabella era nata come scheda a mano dell'utente; resta come elenco delle prove.)*
+
+### 5.1 Le prove
+
 
 *Decisione dell'utente (1 ott 2026): «per android i test funzionali li faccio io». Col suo telefono, **Chrome**
 (mai Firefox Android, `DECISIONI.md` §7.18), in rete locale verso le scatole del server (`https://192.168.0.2:8511`
