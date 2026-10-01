@@ -45,10 +45,11 @@
  *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria»
  *      converte in CPU con `src/colori709.c` (BT.709 limitato, come ieri) e
  *      carica i piani NV12/P010: niente libswscale, e ⛔ niente VPP dalla
- *      memoria, che e' misurata peggio.  ⭐ E il ripiego in SOFTWARE e' `src/ripiego.c`: OpenH264
- *      per H.264, SVT-AV1 per AV1, i colori di `src/colori709.c`; ⛔ HEVC in
- *      software NON c'e' (x265 e' GPL) e si rifiuta dicendolo.  Nessuna riga
- *      del prodotto passa piu' da ffmpeg.
+ *      memoria, che e' misurata peggio.  Nessuna riga del prodotto passa piu' da
+ *      ffmpeg.  ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): il ripiego in
+ *      SOFTWARE (`src/ripiego.c`: OpenH264, SVT-AV1) e' uscito — *«niente cpu
+ *      senza scheda»*, parole dell'utente.  Senza una scheda capace il server
+ *      lo dichiara all'avvio e non offre codec.
  *
  * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
  *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
@@ -314,9 +315,9 @@ typedef struct {
 	CodecVideo codec;
 	/*
 	 * ⛔ Il componente si chiede PER NOME e non si ripiega.
-	 * NULL = il ripiego in software di quel codec (`openh264` / `svt-av1`,
-	 * `codificatore_ripiego_software()`); ⛔ per HEVC non ce n'e' uno, e
-	 * `codificatore_nuovo()` rifiuta dicendolo.
+	 * ⛔ Fase 19: solo i nomi della scheda (`h264_vaapi`, `hevc_vaapi`); NULL
+	 * o un altro nome e `codificatore_nuovo()` rifiuta dicendolo — il ripiego
+	 * in software (OpenH264, SVT-AV1) e' uscito.
 	 */
 	const char *componente;
 	/*
@@ -553,37 +554,16 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
                                  char *errore, size_t errore_byte);
 void codificatore_libera(Codificatore *cod);
 
-/* Per il registro: «H.264 8 bit via openh264 (in software: OpenH264 2.6.0 ·
- * QP 25 · CABAC · 4 fili)» oppure
- * «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
+/* Per il registro: «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
  * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
  * la riga che finisce nel registro accanto a ogni numero. */
 const char *codificatore_nome(const Codificatore *cod);
 
-/*
- * Il nome del componente che si userebbe se non se ne chiedesse uno — cioe' il
- * RIPIEGO in software di quel codec.
- *
- * ⛔ ESISTE PERCHE' CHI DICHIARA UN RIPIEGO DEVE NOMINARLO, E NOMINARLO GIUSTO.
- *    `figlio.c` scriveva a mano «libx265» dentro la riga del ripiego; dal 20
- *    agosto 2026 quel ramo serve anche H.264, e la riga nominava un componente
- *    che non sarebbe stato aperto.  ⚠ Averlo in due posti sarebbe peggio di
- *    tutt'e due: il giorno in cui il ripiego cambia, il registro racconta
- *    quello vecchio e la caccia parte da li'.
- */
-const char *codificatore_ripiego_software(CodecVideo codec);
-
-/*
- * ⭐ FASE 18 — dice PRIMA di aprire se il ripiego in software sa fare quel
- *    codec a quella profondita' (per H.264: se c'e' OpenH264 VERO, non la copia
- *    vuota), e se no perche'.  Serve alla prova all'avvio di `figlio.c`, che
- *    decide che cosa il server OFFRE al browser, e a `--prova-codifica`.
- * ⛔ Per HEVC rende sempre false: HEVC in software non esiste (x265 e' GPL).
- */
-bool codificatore_software_pronto(CodecVideo codec, int profondita, char *perche,
-                                  size_t perche_byte);
-/* La riga del rimedio quando OpenH264 manca: QUALE pacchetto su QUESTA distro. */
-void codificatore_software_rimedio(char *dove, size_t quanto);
+/* ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): qui c'erano
+ *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` e
+ *    `codificatore_software_rimedio()` — il ripiego in software (OpenH264,
+ *    SVT-AV1) e la riga del pacchetto da installare.  Sono usciti con lui:
+ *    senza una scheda capace REMOTIX non codifica, e lo dichiara. */
 
 /* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);

@@ -157,10 +157,11 @@ static void aiuto(const char *nome)
 	        "REMOTIX — il server (fase 1: il filo nudo)\n"
 	        "\n"
 	        "  %s [opzioni]\n"
-	        "  %s --prova-codifica\n"
-	        "                    un fotogramma in H.264 con la scelta di una\n"
-	        "                    sessione vera; una riga JSON su stdout, esce\n"
-	        "                    0 se codifica (hardware o software), 1 no\n"
+	        "  %s --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN]\n"
+	        "                    un fotogramma con la scelta di una sessione\n"
+	        "                    vera, sulla scheda; una riga JSON su stdout,\n"
+	        "                    esce 0 se la scheda codifica, 3 se nessuna\n"
+	        "                    scheda sa codificare, 1 se si apre e non esce\n"
 	        "\n"
 	        "  --indirizzo IND   su che cosa ascoltare (predefinito: 0.0.0.0)\n"
 	        "  --nome NOME       il nome o l'indirizzo che va nel certificato\n"
@@ -2145,10 +2146,11 @@ int main(int argc, char **argv)
 		              strerror(journal_errno));
 	/* ⭐⭐ FASE 18 — CHE COSA SI OFFRE AL BROWSER, MISURATO ALL'AVVIO.
 	 *     `video.codec` dell'`ECCOMI` (§4.3) dice solo i codec che questa
-	 *     macchina sa fare: HEVC se la scheda lo codifica (in software non
-	 *     esiste), H.264 se la scheda o OpenH264 vero.  ⛔ Decisione dell'utente
-	 *     (30 set 2026): senza scheda e senza OpenH264 NON si rimette AV1 —
-	 *     si dichiara qui, col rimedio, e ogni CIAO finisce in NIENTE_IN_COMUNE. */
+	 *     macchina sa fare: HEVC e H.264 se la SCHEDA li codifica.  ⛔ Fase 19
+	 *     (1 ott 2026, `DECISIONI.md` §10.27), parole dell'utente: *«niente cpu
+	 *     senza scheda»* — il ripiego in software (OpenH264) e' uscito.  Senza
+	 *     una scheda capace si dichiara qui, con la ragione, e ogni CIAO
+	 *     finisce in NIENTE_IN_COMUNE. */
 	{
 		char offerti[32], spiega[1024];
 		registro_dice(REG_AVVIO,
@@ -2162,11 +2164,12 @@ int main(int argc, char **argv)
 			              offerti, spiega);
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessun codec "
-			              "nell'ECCOMI, ogni CIAO finira' in NIENTE_IN_COMUNE — %s.  "
-			              "⛔ AV1 non si rimette al suo posto (decisione dell'utente, "
-			              "30 set 2026): il rimedio e' OpenH264 VERO, o una scheda con "
-			              "i driver di codifica",
+			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessuna scheda "
+			              "capace, nessun codec nell'ECCOMI, ogni CIAO finira' in "
+			              "NIENTE_IN_COMUNE — %s.  ⛔ REMOTIX codifica SOLO sulla scheda "
+			              "(fase 19, niente ripiego in software): serve una scheda con "
+			              "i driver di codifica (VA-API oggi; NVIDIA col driver "
+			              "proprietario arriva con la strada Vulkan)",
 			              spiega);
 	}
 

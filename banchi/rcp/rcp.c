@@ -1896,8 +1896,10 @@ static const char *prima_comune(const char *elenco_client, const char *nostro,
 /* ⭐⭐ FASE 18 (30 set 2026) — L'ELENCO DEI CODEC E' MISURATO, NON SCRITTO.
  *
  * Il padre lo IMPOSTA all'avvio dopo la prova di `figlio_capacita_video()`:
- * «hevc» solo se la scheda codifica HEVC (in software non esiste piu': x265 e'
- * GPL), «h264» se la scheda o OpenH264 vero, «» se niente.  ⛔ Il browser non
+ * «hevc» solo se la scheda codifica HEVC, «h264» solo se la scheda codifica
+ * H.264, «» se niente — ⛔ fase 19 (1 ott 2026, `DECISIONI.md` §10.27): il
+ * ripiego in software (OpenH264) e' uscito, niente processore senza scheda.
+ * ⛔ Il browser non
  * deve ricevere un'offerta che il server non sa mantenere: negoziare «hevc» e
  * poi non aprirlo era uno schermo nero senza una riga che lo nominasse.
  * ⚠ Il predefinito resta quello di ieri per l'innesto dei banchi
@@ -2341,11 +2343,12 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	char sc_codec[257], sc_prof[257], sc_audio[257];
 	int n_codec = 0, n_prof = 0, n_audio = 0;
 	if (!nostro_codec[0]) {
-		/* ⛔ Fase 18: il server non sa codificare niente, e lo dice col nome
-		 *    della causa — il registro dell'avvio porta il rimedio. */
+		/* ⛔ Fase 18-19: il server non sa codificare niente, e lo dice col
+		 *    nome della causa — il registro dell'avvio porta la ragione. */
 		congeda(s, RCP_NIENTE_IN_COMUNE,
-		        "questo server non sa codificare video: nessun codec nell'ECCOMI "
-		        "(ne' scheda ne' OpenH264 vero — vedi il registro dell'avvio)");
+		        "questo server non sa codificare video: nessuna scheda capace, "
+		        "nessun codec nell'ECCOMI (REMOTIX codifica solo sulla scheda — "
+		        "vedi il registro dell'avvio)");
 		return false;
 	}
 	if (!prima_comune(c_codec, nostro_codec, s->codec, sizeof s->codec,

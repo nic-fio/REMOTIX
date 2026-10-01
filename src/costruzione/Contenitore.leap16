@@ -1,14 +1,13 @@
 # Contenitore.leap16 — costruzione di REMOTIX per openSUSE Leap 16.
 #
-# Fase 18, senza ffmpeg: `libopenh264-devel` (le intestazioni: a esecuzione la
-# libreria VERA sta nel deposito `repo-openh264`, quella di repo-oss e' la copia
-# vuota che `ripiego.c` riconosce), `SVT-AV1-devel`, `libopus-devel`.
+# Fase 18, senza ffmpeg: `libopus-devel`.  (OpenH264 e SVT-AV1, il ripiego in
+# software, sono usciti con la fase 19.)
 # ngtcp2 e nghttp3 dentro, statiche (quella di Leap e' 1.6, inutilizzabile).
 FROM registry.opensuse.org/opensuse/leap:16.0
 RUN zypper -n refresh && zypper -n install --no-recommends \
         gcc make pkg-config git cmake ninja diffutils \
         libopenssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
-        libva-devel libopenh264-devel SVT-AV1-devel libopus-devel \
+        libva-devel libopus-devel \
         libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel \
     && zypper -n clean -a
 

@@ -103,7 +103,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 libpipewire-0.3-0 libdrm2 \
-        libopenh264-8 libsvtav1enc2 libopus0 libva-drm2 \
+        libopus0 libva-drm2 \
         libei1 libxkbcommon0 libpam0g libssl3 \
     && rm -rf /var/lib/apt/lists/*
 

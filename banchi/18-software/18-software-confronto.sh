@@ -47,15 +47,26 @@ prepara() {
 }
 
 costruisci() {
+	# ⛔ Fase 19 (1 ott 2026): `src/ripiego.c` e' uscito dal prodotto.  Il banco
+	#    resta come STORIA, e il ripiego lo prende dall'ultimo commit che lo
+	#    aveva (6bacca7) — serve un albero git; il resto e' quello di oggi.
+	local STORIA=$LAVORO/storia-ripiego f
+	mkdir -p "$STORIA"
+	for f in ripiego.c ripiego.h; do
+		[ -s "$STORIA/$f" ] || git -C "$ALBERO" show "6bacca7:src/$f" > "$STORIA/$f" \
+			|| { echo "⛔ $f non c'e' piu' nel prodotto (fase 19) e non si ricava da git 6bacca7"; exit 2; }
+	done
 	gcc -O2 -g -std=gnu11 -D_GNU_SOURCE -DRIPIEGO_BANCO -Wall -Wextra \
-		-o "$BANCO" "$QUI/18-software-confronto.c" "$ALBERO/src/ripiego.c" \
+		-I"$STORIA" -I"$ALBERO/src" \
+		-o "$BANCO" "$QUI/18-software-confronto.c" "$STORIA/ripiego.c" \
 		"$ALBERO/src/colori709.c" "$ALBERO/src/registro.c" \
 		$(pkg-config --cflags openh264) \
 		$(pkg-config --cflags --libs libavcodec libavutil libswscale SvtAv1Enc) \
 		-lyuv -ldl -lm && echo "costruito: $BANCO"
 	# la stessa, con la conversione in C semplice: i byte devono coincidere
 	gcc -O2 -std=gnu11 -D_GNU_SOURCE -DRIPIEGO_BANCO -DCOLORI709_SENZA_SIMD \
-		-o "$BANCO-c" "$QUI/18-software-confronto.c" "$ALBERO/src/ripiego.c" \
+		-I"$STORIA" -I"$ALBERO/src" \
+		-o "$BANCO-c" "$QUI/18-software-confronto.c" "$STORIA/ripiego.c" \
 		"$ALBERO/src/colori709.c" "$ALBERO/src/registro.c" \
 		$(pkg-config --cflags openh264) \
 		$(pkg-config --cflags --libs libavcodec libavutil libswscale SvtAv1Enc) \

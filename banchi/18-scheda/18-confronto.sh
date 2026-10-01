@@ -25,13 +25,15 @@ costruisci() {
 	INC=$(pkg-config --cflags libva libva-drm libavcodec libavutil libswscale gbm libdrm)
 	LIBS=$(pkg-config --libs libva libva-drm libavcodec libavutil libswscale gbm)
 	# ⭐ Il NUOVO e' l'albero del prodotto dopo l'integrazione (fase 18): niente
-	#    ffmpeg — il ripiego e' ripiego.c (OpenH264 via dlopen, SVT-AV1) e i
-	#    colori colori709.c.  ⚠ libav* qui sotto serve SOLO al vecchio.
+	#    ffmpeg — i colori sono colori709.c.  ⛔ Fase 19: il ripiego in software
+	#    (ripiego.c: OpenH264, SVT-AV1) e' uscito, e con lui `--software`, che
+	#    adesso il codificatore rifiuta dicendolo.  ⚠ libav* qui sotto serve
+	#    SOLO al vecchio.
 	echo "== costruisco 18-confronto-nuovo"
-	gcc $F $INC $(pkg-config --cflags openh264 SvtAv1Enc) -o "$USCITA/18-confronto-nuovo" \
+	gcc $F $INC -o "$USCITA/18-confronto-nuovo" \
 		banchi/18-scheda/18-confronto.c \
-		src/codificatore.c src/vadiretta.c src/scrittore_bit.c src/ripiego.c src/colori709.c \
-		src/registro.c $(pkg-config --libs libva libva-drm gbm SvtAv1Enc) -ldl -lm || return 1
+		src/codificatore.c src/vadiretta.c src/scrittore_bit.c src/colori709.c \
+		src/registro.c $(pkg-config --libs libva libva-drm gbm) -lm || return 1
 	if nm -u "$USCITA/18-confronto-nuovo" | grep -qE ' (av_|avcodec_|sws_)'; then
 		echo "⛔ il NUOVO chiama ancora ffmpeg"; return 1
 	fi

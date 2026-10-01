@@ -22,20 +22,21 @@
  *                 CPU (NV12/P010) e poi i piani salgono sulla scheda, com'era
  *                 prima della fase 18 — la VPP dalla memoria e' misurata
  *                 PEGGIO (vedi `prepara_fotogramma()`).
- *   IL RIPIEGO    in SOFTWARE: `ripiego.c` — OpenH264 per H.264, SVT-AV1 per
- *                 AV1, i colori di `colori709.c`; ⛔ HEVC in software NON
- *                 c'e' (x265 e' GPL) e `ripiego_apri()` lo rifiuta dicendolo.
- *                 Qui dentro lo si vede solo attraverso le funzioni `sw_*`.
+ *   ⛔ IL RIPIEGO in SOFTWARE (OpenH264, SVT-AV1: `ripiego.c`) e' USCITO con
+ *                 la fase 19 (1 ott 2026, `DECISIONI.md` §10.27), parole
+ *                 dell'utente: *«niente cpu senza scheda»*.  Un nome che non
+ *                 e' della scheda si rifiuta in `codificatore_nuovo()`, con
+ *                 la ragione: senza scheda capace REMOTIX non codifica.
  *
- * Quel che sta FUORI dalle due meta' — il tetto dei 16 MiB, la scala della
- * degradazione e la risalita, la forma dei byte, la cornice di D-023, il terzo
- * testimone del bitrate — lavora sui BYTE e vale per tutt'e due.
+ * Quel che sta FUORI dalla strada della scheda — il tetto dei 16 MiB, la scala
+ * della degradazione e la risalita, la forma dei byte, la cornice di D-023, il
+ * terzo testimone del bitrate — lavora sui BYTE, e varra' identico per la
+ * strada Vulkan della fase 19.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 #include "codificatore.h"
 #include "colori709.h"
 #include "registro.h"
-#include "ripiego.h"
 #include "scrittore_bit.h"
 #include "vadiretta.h"
 
@@ -1275,18 +1276,14 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
 struct Codificatore {
 	CodificatoreRichiesta richiesta;
 	/* ⛔ Il nome del componente e' un'ETICHETTA di REMOTIX: `h264_vaapi` e
-	 *    `hevc_vaapi` sono la strada della scheda (vadiretta), `openh264` e
-	 *    `svt-av1` il ripiego (`ripiego_componente()`).  I due nomi «_vaapi»
-	 *    restano quelli di ieri perche' `figlio.c` e `--prova-codifica` (fase
-	 *    17) li scrivono e li leggono, e l'installatore li confronta. */
+	 *    `hevc_vaapi` sono la strada della scheda (vadiretta); il ripiego in
+	 *    software (`openh264`, `svt-av1`) e' uscito con la fase 19.  I due nomi
+	 *    «_vaapi» restano quelli di ieri perche' `figlio.c` e `--prova-codifica`
+	 *    (fase 17) li scrivono e li leggono, e l'installatore li confronta. */
 	char nome_componente[64];
-	/* ⭐ IL RIPIEGO IN SOFTWARE (fase 18): OpenH264 o SVT-AV1 dietro
-	 *    `ripiego.h`, coi colori di `colori709.c`.  ⚠ NULL in hardware. */
-	Ripiego *rp;
 	/* ⭐ L'APPOGGIO della strada dalla memoria IN HARDWARE: il fotogramma
 	 *    convertito in CPU (NV12 o P010, `colori709.c`) prima di salire sulla
-	 *    scheda.  Vuoto in software (il ripiego converte da se') e sulla copia
-	 *    zero (il fotogramma e' gia' sulla scheda). */
+	 *    scheda.  Vuoto sulla copia zero (il fotogramma e' gia' sulla scheda). */
 	uint8_t *appoggio;
 	size_t appoggio_byte;
 	CodificatoreConfessione conf;
@@ -1302,16 +1299,17 @@ struct Codificatore {
 	char nome[400];
 
 	/* ───────────────────────────────────────────────────────────────────────
-	 * ⭐ LA META' IN HARDWARE.  ⚠ Tutti NULL/false quando si codifica in
-	 *    software, e il codice che segue lo controlla su `hardware` — non sulla
-	 *    presenza di uno di questi, che sarebbe la stessa cosa scritta in un
-	 *    posto dove un giorno non lo sara' piu'.
+	 * ⭐ LA STRADA DELLA SCHEDA.  ⛔ Dalla fase 19 `hardware` e' sempre vero
+	 *    in un codificatore nato: `codificatore_nuovo()` rifiuta ogni nome che
+	 *    non sia della scheda.  Il campo resta perche' `codificatore_libera()`
+	 *    puo' girare su un codificatore a meta' (il dispositivo non ancora
+	 *    aperto), e perche' la strada Vulkan si innestera' accanto.
 	 */
 	bool hardware;
 	VaDispositivo dispositivo;    /* il nodo aperto: display e fornitore */
 	VAProfile profilo_va;         /* la coppia scelta e VERIFICATA in apri_dispositivo() */
 	VAEntrypoint entrypoint_va;
-	VaDiretta *va;                /* il codificatore sulla scheda: NULL in software */
+	VaDiretta *va;                /* il codificatore sulla scheda */
 	VASurfaceID superficie_pronta; /* l'ingresso riempito da prepara_*, da codificare */
 
 	/* ───────────────────────────────────────────────────────────────────────
@@ -1639,8 +1637,8 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			di(errore, errore_byte,
 			   "su «%s» (%s) il profilo %d NON ha ne' EncSliceLP ne' EncSlice: il "
 			   "driver ne dichiara [%s].  ⛔ Nessuna codifica in hardware per "
-			   "questo profilo — chi chiama scenda sul ripiego in software e lo "
-			   "SCRIVA",
+			   "questo profilo — e senza scheda non si codifica (fase 19: il "
+			   "ripiego in software e' uscito)",
 			   r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
 			   visti[0] ? visti : "nessuno");
 			return -1;
@@ -1672,16 +1670,15 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 *    (*«Hardware does not support encoding at size…»*).  `hevc_vaapi` regge
 	 *    invece fino a 16384x4320.
 	 *    ⚠ E la tela legale di `RCP.md` §4.5 arriva a **7680x4320** ⇒ oltre i
-	 *      4096 px il ripiego in software non e' un'eventualita', **e' la
-	 *      regola**.  ⛔ FASE 18: e OpenH264 si ferma al livello 5.2 (36 864
-	 *      macroblocchi, cioe' 4096x2304): sopra, H.264 su questa scheda NON
-	 *      c'e' ne' in hardware ne' in software, e `ripiego_sa_fare()` lo dice.
+	 *      4096 px H.264 su questa scheda NON c'e'.  ⛔ FASE 19: e il ripiego
+	 *      in software che ieri prendeva il posto e' uscito — oltre il tetto
+	 *      del driver si rifiuta dicendolo, e basta.
 	 *
 	 * ⇒ Senza questa domanda il rifiuto arriva **al primo fotogramma**, cioe'
 	 *   dopo che il palco e' montato e qualcuno sta gia' guardando: e' la forma
 	 *   di `LEZIONI.md` §1.8 — *si dichiara invece di subire*.  Qui invece
 	 *   `codificatore_nuovo()` fallisce **prima**, dicendo il numero del driver,
-	 *   e `figlio.c` scrive il ripiego con la sua riga.
+	 *   e `figlio.c` scrive il rifiuto con la sua riga.
 	 *
 	 * ⛔⛔ E SI CHIEDE AL DRIVER E NON A FFMPEG, che e' la stessa lezione presa
 	 *      dall'altro capo: `[M]` **`-low_power 0` sull'Intel apre lo stesso
@@ -1722,8 +1719,8 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 				di(errore, errore_byte,
 				   "«%s» su «%s» (%s) codifica al massimo %ux%u — chiesto %ux%u.  ⛔ Il "
 				   "driver lo dice PRIMA, e si dichiara invece di scoprirlo al primo "
-				   "fotogramma: chi chiama scenda sul ripiego in software e SCRIVA che "
-				   "ci e' sceso",
+				   "fotogramma (fase 19: senza la scheda non si codifica, niente "
+				   "ripiego in software)",
 				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
 				   attr[0].value, attr[1].value, r->larghezza, r->altezza);
 				return -1;
@@ -2042,68 +2039,13 @@ static int apri_scheda(Codificatore *c, char *errore, size_t errore_byte)
 	return 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * ⛔ CONFINE — IL RIPIEGO SOFTWARE (`ripiego.c`, fase 18): chiudere e aprire.
- *
- * ⭐ Quel che ieri erano cinque scelte da imporre a un codificatore di terzi
- *    (niente fotogrammi B, niente riordino, chiavi solo su richiesta, colori
- *    BT.709 limitati scritti nel flusso, parameter set dentro ogni chiave)
- *    oggi sono la FORMA di `ripiego.h`: un fotogramma dentro, un fotogramma
- *    fuori, Annex-B / OBU con le intestazioni davanti a ogni chiave.  Qui non
- *    c'e' piu' niente da imporre — e la confessione lo scrive lo stesso, perche'
- *    `comprimi_comune()` la legge per tutt'e due le strade.
- * ═══════════════════════════════════════════════════════════════════════════ */
-static void sw_chiudi(Codificatore *c)
-{
-	ripiego_chiudi(c->rp);
-	c->rp = NULL;
-}
-
-/* La richiesta che si passa al ripiego: quella del chiamante, col punto di
- * lavoro IN VIGORE (`abbassa_qualita()` lo sposta, `richiesta` resta intatta). */
-static CodificatoreRichiesta richiesta_del_ripiego(const Codificatore *c)
-{
-	CodificatoreRichiesta r = c->richiesta;
-	r.modo = c->modo_corrente;
-	r.qualita = c->qualita_corrente;
-	r.componente = NULL;
-	r.nodo_rendering = NULL;
-	return r;
-}
-
-static int sw_apri(Codificatore *c, char *errore, size_t errore_byte)
-{
-	const CodificatoreRichiesta r = richiesta_del_ripiego(c);
-
-	c->rp = ripiego_apri(&r, errore, errore_byte);
-	if (!c->rp)
-		return -1;
-
-	/* ───────────────────────────────────────────────────────────────────────
-	 * ⛔ PRIMO TESTIMONE — per costruzione, e si scrive lo stesso: `ripiego.c`
-	 *    non ha fotogrammi B ne' un GLOBAL_HEADER da spegnere, e il secondo
-	 *    testimone (i byte, `forma_va_bene()`) lo verifica a ogni chiave. */
-	c->conf.codec = r.codec;
-	c->conf.componente = ripiego_componente(r.codec);
-	c->conf.profondita_chiesta = r.profondita;
-	c->conf.fotogrammi_b = 0;
-	c->conf.global_header = false;
-	c->conf.in_hardware = false;
-	c->conf.ha_obbedito = true;
-	c->conf.perche_no[0] = 0;
-	c->prossimo_chiave = true; /* ⛔ dopo ogni apertura il primo e' una chiave */
-	return 0;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
 /*
- * ⭐ FASE 18: le due strade si chiudono e si aprono qui, e `abbassa_qualita()`,
- *    `risali_qualita()`, `codificatore_ridimensiona()` chiamano queste due e
- *    non sanno quale delle due sta sotto.  ⚠ In hardware il contesto di
- *    vadiretta porta dentro anche il magazzino d'ingresso e le superfici
- *    ricostruite: chiuderlo e riaprirlo e' quel che ieri facevano le due
- *    liberazioni separate del contesto e del magazzino.
+ * ⭐ Il contesto della scheda si chiude e si apre qui, e `abbassa_qualita()`,
+ *    `risali_qualita()`, `codificatore_ridimensiona()` chiamano queste due.
+ *    ⚠ Il contesto di vadiretta porta dentro anche il magazzino d'ingresso e le
+ *    superfici ricostruite.  ⛔ Fase 19: il ramo del ripiego in software
+ *    (`sw_apri`/`sw_chiudi`, `ripiego.c`) e' uscito — `c->hardware` e' vero
+ *    in ogni codificatore nato, e la guardia resta per quello nato a meta'.
  */
 static void chiudi_contesto(Codificatore *c)
 {
@@ -2111,8 +2053,6 @@ static void chiudi_contesto(Codificatore *c)
 		vadiretta_chiudi(c->va);
 		c->va = NULL;
 		c->superficie_pronta = VA_INVALID_ID;
-	} else {
-		sw_chiudi(c);
 	}
 	c->cornice_decisa = false;
 	c->cornice_attiva = false;
@@ -2120,9 +2060,11 @@ static void chiudi_contesto(Codificatore *c)
 
 static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
 {
-	if (c->hardware)
-		return apri_scheda(c, errore, errore_byte);
-	return sw_apri(c, errore, errore_byte);
+	if (!c->hardware) {
+		di(errore, errore_byte, "nessuna scheda aperta: senza scheda non si codifica (fase 19)");
+		return -1;
+	}
+	return apri_scheda(c, errore, errore_byte);
 }
 
 /*
@@ -2131,8 +2073,7 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
  *    stesure, e ⛔ la seconda si era gia' dimenticata la promozione dichiarata.
  *    Due stesure della stessa cosa sono un posto dove divergere in silenzio.
  *
- * ⭐ FASE 18: in software i piani li tiene `ripiego.c`; in hardware le
- *    superfici d'ingresso le tiene vadiretta, e qui si alloca solo l'APPOGGIO
+ * ⭐ Le superfici d'ingresso le tiene vadiretta, e qui si alloca solo l'APPOGGIO
  *    della strada dalla memoria — NV12 (8 bit) o P010 (10 bit) alla misura
  *    della tela, che `colori709.c` riempie e `vadiretta_carica_*()` carica.
  *    ⚠ Si rifa' a ogni riapertura perche' la misura puo' essere cambiata.
@@ -2208,13 +2149,11 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    raddoppia (`abbassa_qualita()`), mai il contrario. */
 	c->risalita_attesa = RISALITA_ATTESA;
 
-	/* ⭐ FASE 18: senza un nome si va sul ripiego in software di quel codec, e
-	 *    per HEVC il ripiego NON ESISTE: `ripiego_componente()` rende NULL e
-	 *    `ripiego_sa_fare()` qui sotto lo dice con la ragione. */
+	/* ⛔ FASE 19: senza un nome non c'e' niente da aprire — il ripiego in
+	 *    software (OpenH264, SVT-AV1) e' uscito (`DECISIONI.md` §10.27), e qui
+	 *    sotto si rifiuta dicendolo. */
 	const char *nome = richiesta->componente ? richiesta->componente
-	                                         : ripiego_componente(richiesta->codec);
-	if (!nome)
-		nome = "(nessun ripiego in software)";
+	                                         : "(nessun codificatore chiesto)";
 	/*
 	 * ⛔ CHIESTO PER NOME, NESSUN RIPIEGO — la riga di v1
 	 * (`codificatore.c:550-566`) che questo file eredita per intero:
@@ -2244,24 +2183,18 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		}
 	}
 	if (!c->hardware) {
-		/* ⛔ CONFINE — il ripiego: il nome dev'essere quello del componente di
-		 *    `ripiego.c` per quel codec (o nessuno), e `ripiego_sa_fare()` dice
-		 *    PRIMA di aprire se sa fare quel che si chiede — per HEVC, mai. */
-		const char *suo = ripiego_componente(richiesta->codec);
-		if (!suo || strcmp(nome, suo) != 0) {
-			di(errore, errore_byte,
-			   "il codificatore «%s» non esiste: la scheda e' «h264_vaapi»/«hevc_vaapi», "
-			   "il software «%s» — ⛔ non se ne prende un altro, si fallisce dicendolo",
-			   nome, suo ? suo : "niente per HEVC (x265 e' GPL, fase 18)");
-			free(c);
-			return NULL;
-		}
-		if (!ripiego_sa_fare(richiesta, errore, errore_byte)) {
-			free(c);
-			return NULL;
-		}
+		/* ⛔ FASE 19 — NIENTE PROCESSORE SENZA SCHEDA (`DECISIONI.md` §10.27,
+		 *    parole dell'utente: *«niente cpu senza scheda»*).  I codificatori
+		 *    sono quelli della scheda; un altro nome si rifiuta, con la ragione. */
+		di(errore, errore_byte,
+		   "il codificatore «%s» non esiste: REMOTIX codifica SOLO sulla scheda "
+		   "(«h264_vaapi»/«hevc_vaapi») — ⛔ il ripiego in software e' uscito con la "
+		   "fase 19, e non se ne prende un altro",
+		   nome);
+		free(c);
+		return NULL;
 	}
-	if (c->hardware && apri_dispositivo(c, errore, errore_byte) < 0) {
+	if (apri_dispositivo(c, errore, errore_byte) < 0) {
 		codificatore_libera(c);
 		return NULL;
 	}
@@ -2281,20 +2214,14 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    «quale scheda» e «quale entrypoint» accanto e' un numero che vale per
 	 *    una macchina che non si sa quale sia (`LEZIONI.md` §1.1).
 	 */
-	if (c->hardware)
-		snprintf(c->nome, sizeof(c->nome),
-		         "%s %s via %.40s (in HARDWARE · %.60s · %.120s · %s)",
-		         nome_codec(richiesta->codec),
-		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va,
-		         c->conf.bassa_potenza ? "⚠ EncSliceLP, bassa potenza — NON e' la "
-		                                 "codifica piena"
-		                               : "EncSlice, piena");
-	else
-		/* ⭐ Il ripiego dice da se' codec, libreria, versione e regime: «H.264 8
-		 *    bit via OpenH264 2.6.0 (in software · QP 25 · CABAC · 4 fili)» — il
-		 *    numero senza la libreria accanto non direbbe quale codice l'ha fatto. */
-		snprintf(c->nome, sizeof(c->nome), "%s", ripiego_nome(c->rp));
+	snprintf(c->nome, sizeof(c->nome),
+	         "%s %s via %.40s (in HARDWARE · %.60s · %.120s · %s)",
+	         nome_codec(richiesta->codec),
+	         richiesta->profondita == 10 ? "10 bit" : "8 bit",
+	         c->nome_componente, c->conf.nodo, c->conf.fornitore_va,
+	         c->conf.bassa_potenza ? "⚠ EncSliceLP, bassa potenza — NON e' la "
+	                                 "codifica piena"
+	                               : "EncSlice, piena");
 
 	/* ⭐ IL PUNTO DI LAVORO COL SUO NUMERO, non col suo nome.  ⛔ Fino al 23
 	 *    agosto 2026 questa riga diceva *«QP costante»* e taceva il **26**: chi
@@ -2426,15 +2353,8 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *     mai avuto occasione di mordere darebbero lo **stesso** registro, e chi
 	 *     rilegge un banco non saprebbe quale dei due ha misurato.
 	 *
-	 * ⚠ Vale solo in hardware: in software il ripiego resta a CRF, e dirgli
-	 *   «tetto acceso» sarebbe una misura sotto l'etichetta di un'altra.
 	 */
-	if (!c->hardware)
-		registro_dice(REG_CODIFICA,
-		              "il tetto di banda non tocca il ripiego in software: «%s» va a "
-		              "%s, e il controllo del bitrate di fase 9 e' del solo hardware",
-		              c->nome_componente, punto);
-	else if (tetto_pavimento_mbit)
+	if (tetto_pavimento_mbit)
 		registro_dice(REG_CODIFICA,
 		              "⭐ FASE 9: il TETTO DI BANDA e' ACCESO su un pavimento di %u "
 		              "Mbit/s — modo %s (chiesto per nome, mai `auto`), punto di lavoro "
@@ -2487,33 +2407,6 @@ void codificatore_libera(Codificatore *c)
 const char *codificatore_nome(const Codificatore *c)
 {
 	return c ? c->nome : "(nessuno)";
-}
-
-const char *codificatore_ripiego_software(CodecVideo codec)
-{
-	return ripiego_componente(codec);
-}
-
-bool codificatore_software_pronto(CodecVideo codec, int profondita, char *perche,
-                                  size_t perche_byte)
-{
-	CodificatoreRichiesta r;
-
-	memset(&r, 0, sizeof r);
-	r.codec = codec;
-	r.larghezza = 256;
-	r.altezza = 256;
-	r.fotogrammi_al_secondo = 30;
-	r.modo = CODIFICATORE_QUALITA_CRF;
-	r.qualita = 20;
-	r.profondita = profondita;
-	r.formato = CODIFICATORE_PIXEL_BGRX;
-	return ripiego_sa_fare(&r, perche, perche_byte);
-}
-
-void codificatore_software_rimedio(char *dove, size_t quanto)
-{
-	ripiego_rimedio_openh264(dove, quanto);
 }
 
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *c)
@@ -2576,12 +2469,8 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	 *    un'altra non protesta: taglia o riempie, e il difetto si vede solo
 	 *    nell'immagine.
 	 * ⚠ In hardware si riapre anche il MAGAZZINO — le superfici hanno la misura
-	 *   dentro, e riusarle vorrebbe dire caricare 1920 righe dentro 1280.
-	 * ⭐ In software lo fa `ripiego_ridimensiona()`, che richiude e riapre la
-	 *    libreria alla misura nuova (e rifiuta, dicendolo, una misura che il
-	 *    codec non regge). */
-	if (c->hardware)
-		chiudi_contesto(c);
+	 *   dentro, e riusarle vorrebbe dire caricare 1920 righe dentro 1280. */
+	chiudi_contesto(c);
 	c->richiesta.larghezza = larghezza;
 	c->richiesta.altezza = altezza;
 	c->prima_codifica_fatta = false;
@@ -2601,19 +2490,8 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	c->banda_fotogrammi = 0;
 	c->banda_massimo = 0;
 
-	if (c->hardware) {
-		if (apri_contesto(c, errore, errore_byte) < 0)
-			return false;
-	} else if (!ripiego_ridimensiona(c->rp, larghezza, altezza, errore, errore_byte)) {
-		/* ⚠ Il ripiego e' rimasto chiuso: `ripiego_codifica()` lo dira' a ogni
-		 *   fotogramma, e `figlio.c` rifara' il codificatore. */
-		c->cornice_decisa = false;
-		c->cornice_attiva = false;
+	if (apri_contesto(c, errore, errore_byte) < 0)
 		return false;
-	} else {
-		c->cornice_decisa = false;
-		c->cornice_attiva = false;
-	}
 	if (apri_fotogrammi(c, errore, errore_byte) < 0)
 		return false;
 
@@ -3025,10 +2903,6 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
  *     conversione in CPU: Intel 1080p H.264 −1 dB e +82 % di byte, HEVC −4 dB
  *     e +255 %; Radeon −1…−6 dB.  ⇒ La VPP resta alla copia zero, dove il
  *     fotogramma e' gia' sulla scheda e non c'e' una CPU da interpellare.
- *
- * ⭐ In software non c'e' niente da preparare: `ripiego_codifica()` converte e
- *    codifica in un colpo solo, e i suoi due tempi finiscono nelle stesse
- *    caselle (`sw_codifica()`).
  */
 static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t passo,
                                uint64_t *us, uint64_t *us_carico)
@@ -3037,8 +2911,6 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
 
 	*us_carico = 0;
 	*us = 0;
-	if (!c->hardware)
-		return true;
 
 	char errore[256] = { 0 };
 	const uint32_t l = c->richiesta.larghezza, a = c->richiesta.altezza;
@@ -3395,32 +3267,20 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
  *   non c'e' piu' e la riga direbbe zero.
  */
 /*
- * ⭐ FASE 18: IL CAMBIO DI QUALITA' STA IN UN POSTO SOLO, per le due strade.
- *    In hardware si richiude e si riapre il contesto (e il magazzino); in
- *    software lo fa `ripiego_qualita()`, che per H.264 cambia il QP A CALDO
- *    senza richiudere, e per AV1 richiude e riapre.  ⛔ In tutt'e due i casi
- *    il prossimo fotogramma e' una CHIAVE, e lo si scrive qui.
+ * ⭐ IL CAMBIO DI QUALITA' STA IN UN POSTO SOLO: si richiude e si riapre il
+ *    contesto della scheda (e il magazzino).  ⛔ Il prossimo fotogramma e' una
+ *    CHIAVE, e lo si scrive qui.
  */
 static bool cambia_qualita(Codificatore *c, char *errore, size_t errore_byte)
 {
-	if (c->hardware) {
-		chiudi_contesto(c);
-		if (apri_contesto(c, errore, errore_byte) < 0)
-			return false;
-		/* ⛔ In hardware il magazzino e' stato riaperto insieme al contesto: i
-		 *    fotogrammi vanno rilegati, o il prossimo giro caricherebbe su
-		 *    superfici di un magazzino chiuso. */
-		if (apri_fotogrammi(c, errore, errore_byte) < 0)
-			return false;
-	} else {
-		if (!ripiego_qualita(c->rp, c->modo_corrente, c->qualita_corrente, errore,
-		                     errore_byte))
-			return false;
-		/* ⚠ Contesto nuovo (o QP nuovo a caldo): la cornice si ridecide sul
-		 *   prossimo SPS, come dopo un `chiudi_contesto()`. */
-		c->cornice_decisa = false;
-		c->cornice_attiva = false;
-	}
+	chiudi_contesto(c);
+	if (apri_contesto(c, errore, errore_byte) < 0)
+		return false;
+	/* ⛔ Il magazzino e' stato riaperto insieme al contesto: i fotogrammi vanno
+	 *    rilegati, o il prossimo giro caricherebbe su superfici di un magazzino
+	 *    chiuso. */
+	if (apri_fotogrammi(c, errore, errore_byte) < 0)
+		return false;
 	c->prossimo_chiave = true;
 	return true;
 }
@@ -3446,12 +3306,13 @@ static bool abbassa_qualita(Codificatore *c, uint32_t prodotti)
 		              "⚠ RICADUTA: il tetto ha morso subito dopo una risalita ⇒ la "
 		              "prossima si aspetta %u fotogrammi invece di %u.  ⛔ E' la difesa "
 		              "contro lo SBATTIMENTO: ogni giro costa una riapertura e una "
-		              "chiave, [M] 91-108 ms in hardware e 1,8-3,3 s in software",
+		              "chiave, [M] 91-108 ms sulla scheda",
 		              c->risalita_attesa, era);
 	}
 
 	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
-		/* ⚠ Il senza perdita esiste solo in software: il ripiego resta CRF. */
+		/* ⚠ Il senza perdita non esiste sulla scheda (e dalla fase 19 nemmeno
+		 *   altrove): ramo storico, si esce a CRF come prima. */
 		c->modo_corrente = CODIFICATORE_QUALITA_CRF;
 		c->qualita_corrente = CRF_DI_EMERGENZA;
 	} else {
@@ -3611,43 +3472,6 @@ static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte)
 	return true;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * ⛔ CONFINE — IL RIPIEGO SOFTWARE: un fotogramma dentro, un fotogramma fuori.
- *    `ripiego_codifica()` converte (`colori709.c`) e codifica; i byte si
- *    copiano in `c->uscita`, che e' nostro, e i due tempi finiscono nelle
- *    caselle di sempre.  ⚠ Un fotogramma trattenuto (`trattenuto`) si dichiara
- *    e si conta come ieri: e' il ritardo che le scelte di bassa latenza del
- *    ripiego esistono per non avere.
- * ═══════════════════════════════════════════════════════════════════════════ */
-static bool sw_codifica(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                        CodificatoreFotogramma *fuori, uint32_t *in_volo)
-{
-	RipiegoUscita u;
-
-	*in_volo = 0;
-	memset(&u, 0, sizeof u); /* ⚠ `ripiego_codifica()` la azzera solo se arriva a farlo */
-	if (!ripiego_codifica(c->rp, pixel, passo, c->prossimo_chiave, &u)) {
-		if (u.trattenuto) {
-			*in_volo = 1;
-			c->conf.fotogrammi_in_volo = 1;
-			registro_dice(REG_CODIFICA,
-			              "⚠ «%s» ha trattenuto il fotogramma invece di consegnarlo: e' "
-			              "un fotogramma di RITARDO contro i 50 ms di SPECIFICHE.md §3.2",
-			              c->nome_componente);
-		} else {
-			registro_dice(REG_CODIFICA, "⛔ il ripiego non ha codificato il fotogramma");
-		}
-		return false;
-	}
-	fuori->us_conversione = u.us_conversione;
-	fuori->us_codifica = u.us_codifica;
-	fuori->trattenuto = false;
-	if (!metti_in_uscita(c, u.dati, u.byte))
-		return false;
-	c->pacchetto_in_mano = true;
-	return true;
-}
-
 /*
  * ⭐ IL CORPO COMUNE ALLE DUE STRADE — e ce n'e' UNO perche' quel che viene dopo
  *    il fotogramma preparato e' identico: la codifica, il tetto dei 16 MiB, le
@@ -3802,8 +3626,7 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 		fuori->us_caricamento = us_carico;
 
 		uint64_t t0 = adesso_us();
-		uint32_t in_volo = 0;
-		if (c->hardware) {
+		{
 			/* ⭐ FASE 18 — la scheda: un giro, un'attesa, i byte.  Niente
 			 *    EAGAIN per costruzione, niente riordino per costruzione. */
 			const uint8_t *dati = NULL;
@@ -3819,11 +3642,8 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 			fuori->us_codifica = adesso_us() - t0;
 			fuori->trattenuto = false;
 			c->pacchetto_in_mano = true;
-		} else if (!sw_codifica(c, pixel, passo, fuori, &in_volo)) {
-			return false;
 		}
-		/* ⛔ CONFINE — da qui in giu' si lavora sui BYTE in `c->uscita`, e le
-		 *    due strade non si distinguono piu'. */
+		/* ⛔ CONFINE — da qui in giu' si lavora sui BYTE in `c->uscita`. */
 
 		/* ───────────────────────────────────────────────────────────────────
 		 * ⛔ IL TETTO DEI 16 MiB — `RCP.md` §6.2, e vincola CHI SPEDISCE. */
@@ -4081,7 +3901,7 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔ QUESTO PUNTATORE STA **DENTRO** IL PACCHETTO, E `chiudi_contesto()`
-	 *      I BYTE DEL CODIFICATORE LI **LIBERA** (`ripiego_chiudi` / `vadiretta_chiudi`).
+	 *      I BYTE DEL CODIFICATORE LI **LIBERA** (`vadiretta_chiudi`).
 	 *
 	 * ⚠ E' la terza volta in un giorno che qualcuno ci inciampa, quindi la prova
 	 *   sta scritta qui invece di essere rifatta a memoria.  Da qui fino a
@@ -4138,18 +3958,13 @@ bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie 
 {
 	if (!c || !superficie)
 		return false;
-	/* ⛔ IN SOFTWARE QUESTA STRADA NON ESISTE, e lo si dice invece di produrre
-	 *    un'immagine vuota: non c'e' nessun puntatore da leggere, e un
-	 *    codificatore in CPU non sa che farsene di un descrittore.  ⚠ Chi chiama
-	 *    deve aver guardato `codificatore_in_hardware()` PRIMA di chiedere la
-	 *    scheda al produttore — qui e' gia' tardi, e questa riga serve solo a
-	 *    non far passare il difetto in silenzio. */
+	/* ⛔ Senza la scheda aperta questa strada non esiste (fase 19: un
+	 *    codificatore nato e' sempre sulla scheda; la guardia resta per non far
+	 *    passare in silenzio un codificatore nato a meta'). */
 	if (!c->hardware) {
 		registro_dice(REG_CODIFICA,
-		              "⛔⛔ chiesta la COPIA ZERO su «%s», che codifica in SOFTWARE: non "
-		              "c'e' nessun pixel da leggere.  ⚠ Chi cattura deve chiedere la "
-		              "MEMORIA quando il codificatore non e' in hardware — la strada si "
-		              "sceglie prima, non qui",
+		              "⛔⛔ chiesta la COPIA ZERO su «%s», che non ha la scheda aperta: "
+		              "non si importa niente",
 		              c->nome_componente);
 		return false;
 	}
