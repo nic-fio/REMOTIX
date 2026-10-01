@@ -34,4 +34,6 @@ e della pagina del telefono accanto. Alla fine lo script stampa il riassunto e i
 
 **Due cose dette chiare.** La prova 9 (rete che cade) non spegne il Wi-Fi del telefono — si perderebbe il
 collegamento con adb — ma taglia la linea dal lato del server, come fa la suite. Le prove 3-10 scrivono e
-cliccano come mouse e tastiera (il caso DeX); il **dito vero** (tocco, trascinamento col dito) è la prova 2.
+cliccano come mouse e tastiera (il caso DeX); il **dito vero** (tocco, trascinamento col dito) è la prova 2,
+che guarda anche la **tastiera a schermo**: chiusa da sola, aperta e richiusa dal bottoncino ⌨ (lo stato lo
+legge da Android).

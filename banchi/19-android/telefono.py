@@ -13,7 +13,7 @@ che il portatile le porta col tunnel ssh (`19-android.py`):
                     (portatile: `adb forward tcp:9333 localabstract:chrome_devtools_remote`)
   127.0.0.1:19334   lo SPORTELLO del portatile: le sole cose che vogliono adb
                     (chiamata in corso?, Chrome davanti, tocco vero, rotazione,
-                    Chrome fermato di colpo).  ⛔ La chiave del telefono resta sul
+                    Chrome fermato di colpo, tastiera a schermo aperta?).  ⛔ La chiave del telefono resta sul
                     portatile: di qua passano solo domande con nome.
 
 ⛔ LE REGOLE DEL TELEFONO (DECISIONI §10.27, fasi/19 §5):
@@ -419,6 +419,60 @@ class GuidaTelefono(VERI.GuidaCdp):
             time.sleep(0.2)
         time.sleep(0.3)
         return (t or [None])[0]
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  LA TASTIERA A SCHERMO (per 15-f031-tocco.py, «tastiera solo a richiesta»,
+    #  DECISIONI §10.28): lo stato lo dice ANDROID, non la pagina
+    # ═════════════════════════════════════════════════════════════════════════
+    def tastiera_aperta(self):
+        """True/False dalla riga `mInputShown` di `dumpsys input_method` (lo
+        sportello); None se non si legge."""
+        try:
+            return sportello("/tastiera").get("aperta")
+        except RuntimeError:
+            return None
+
+    def aspetta_tastiera(self, voluta, tetto_s=3.0):
+        """Aspetta che la tastiera sia `voluta` (l'animazione di Android dura qualche
+        decimo).  Torna l'ultimo stato letto (True/False/None)."""
+        fine = time.time() + tetto_s
+        while True:
+            a = self.tastiera_aperta()
+            if a is voluta or time.time() > fine:
+                return a
+            time.sleep(0.3)
+
+    def comando_tastiera(self):
+        """Il centro del comando ⌨ della pagina, in coordinate del vetro, o None
+        se la pagina non lo mostra."""
+        return self.js("const b=document.getElementById('tastiera-comando');"
+                       "if(!b||getComputedStyle(b).display==='none') return null;"
+                       "const r=b.getBoundingClientRect();"
+                       "return [r.left+r.width/2, r.top+r.height/2, r.width, r.height];")
+
+    def tocco_vero_in(self, x, y):
+        """⭐ Un TOCCO VERO (`adb shell input tap`) in (x,y) del vetro.  Torna il
+        tocco come l'ha visto la pagina, o None."""
+        self.guardia(subito=True)
+        da = len(self.tocchi_visti())
+        sx, sy = self.vetro_su_schermo(x, y)
+        sportello("/tocca", {"x": round(sx), "y": round(sy)})
+        time.sleep(0.6)
+        return (self.tocchi_visti(da) or [None])[0]
+
+    def scrivi_ime(self, parola):
+        """Una parola come la scrive una tastiera a schermo: composizione lettera per
+        lettera e poi il commit (protocollo DevTools, la strada del metodo
+        d'inserimento: eventi `input`, `keyCode` 229).  Va al campo a fuoco."""
+        self.guardia()
+        c = self.cdp.chiama
+        try:
+            for i in range(1, len(parola) + 1):
+                c("Input.imeSetComposition", text=parola[:i], selectionStart=i, selectionEnd=i)
+                time.sleep(0.08)
+        except Exception:                         # noqa: BLE001
+            pass                                  # senza composizione: resta il commit
+        c("Input.insertText", text=parola)
 
     _scarto = None        # (ox, oy): schermo = scarto + vetro × dpr, dal primo tocco vero
 

@@ -23,8 +23,8 @@ COME E' FATTO
         server 127.0.0.1:19333 → portatile 9333 → adb forward → Chrome DevTools
         server 127.0.0.1:19334 → portatile 9334 → lo SPORTELLO (qui sotto)
   - Lo SPORTELLO e' l'unico che usa adb durante le prove: risponde a poche
-    domande con nome (chiamata?, pronto, tocca, scorri, ruota, uccidi-chrome) e
-    prima di ogni gesto guarda se c'e' una chiamata.  ⛔ La chiave di Phonestra
+    domande con nome (chiamata?, pronto, tocca, scorri, ruota, uccidi-chrome,
+    tastiera?) e prima di ogni gesto guarda se c'e' una chiamata.  ⛔ La chiave di Phonestra
     non lascia il portatile.
   - I risultati entrano nel registro della suite, stesso formato, in un registro
     suo: /media/REMOTIX/misure/fase19-android/registro.jsonl (browser
@@ -226,6 +226,17 @@ class Telefono:
             if time.time() - t0 >= tetto:
                 return False
             time.sleep(max(0.5, min(10, tetto - (time.time() - t0))))
+
+    # -- la tastiera a schermo -----------------------------------------------
+    def tastiera(self):
+        """(True|False|None, dettaglio): la tastiera a schermo e' aperta?  Lo dice il
+        gestore dei metodi d'inserimento (`mInputShown`), non la pagina: e' il fatto
+        che l'utente vede («tastiera solo a richiesta», DECISIONI §10.28)."""
+        c, t = self.sh("dumpsys input_method | grep -m1 mInputShown=", t=15)
+        m = re.search(r"mInputShown=(true|false)", t)
+        if c != 0 or not m:
+            return None, "stato della tastiera illeggibile: %s" % t.strip()[-120:]
+        return m.group(1) == "true", m.group(0)
 
     # -- lo schermo ----------------------------------------------------------
     def schermo(self):
@@ -494,6 +505,12 @@ class Sportello:
             return self.pronto()
         if percorso == "/palco":
             return 200, {"palco": self.tel.palco()}
+        if percorso == "/tastiera":
+            # ⚠ solo una lettura (`dumpsys`): nessun gesto, nessuna guardia
+            aperta, det = self.tel.tastiera()
+            if aperta is None:
+                return 500, det
+            return 200, {"aperta": aperta, "riga": det}
         if percorso == "/mia":
             self.mie.add(d.get("id"))
             return 200, {}
@@ -856,6 +873,7 @@ esac
 case "$r" in
   *telephony.registry*) if [ -f "$D/chiamata" ]; then echo "  mCallState=0"; echo "  mCallState=1"; else echo "  mCallState=0"; echo "  mCallState=0"; fi;;
   *mWakefulness*) echo "  mWakefulness=Awake";;
+  *input_method*) if [ -f "$D/tastiera" ]; then echo "  mInputShown=true"; else echo "  mInputShown=false"; fi;;
   *Lockscreen*|*Keyguard*) echo "  mDreamingLockscreen=false";;
   *"dumpsys package"*) echo "    versionName=154.0.0.0";;
   *pidof*) echo 4242;;
@@ -1026,6 +1044,16 @@ def a_secco(o):
         os.remove(os.path.join(tmp, "chiamata"))
         g.guardia(subito=True)
         esito("finita la chiamata si riprende", True)
+        # la tastiera a schermo: la domanda allo sportello e il metodo della guida
+        esito("tastiera: chiusa ⇒ «aperta» falso", g.tastiera_aperta() is False)
+        open(os.path.join(tmp, "tastiera"), "w").close()
+        esito("tastiera: aperta ⇒ «aperta» vero (dumpsys input_method)",
+              g.aspetta_tastiera(True, 2) is True)
+        os.remove(os.path.join(tmp, "tastiera"))
+        esito("tastiera: richiusa ⇒ falso di nuovo", g.aspetta_tastiera(False, 2) is False)
+        esito("tastiera: lo sportello ha chiesto a adb solo `dumpsys input_method`",
+              "dumpsys input_method | grep -m1 mInputShown=" in
+              open(os.path.join(tmp, "adb.log")).read())
         print("      | ruota: %s" % T.orienta("altro"))
         sp.segna("spegnimento")
         g.chiudi()

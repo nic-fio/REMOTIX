@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 15-f031 — F-031 IL TOCCO (Android): il dito muove il puntatore, il tocco clicca,
-          il tocco-e-mezzo trascina
+          il tocco-e-mezzo trascina; la tastiera a schermo si apre SOLO a richiesta
 
     python3 15-f031-tocco.py --scatola gnome --browser telefono [--guasto]
 
@@ -28,6 +28,15 @@ clicca dove sta il puntatore, non dove cade il dito):
                  secondo contatto la pagina concede 300 ms (`TOCCO_SOGLIE.T_SEQUENZA`)
                  e due comandi `adb shell input` di fila non ci stanno.
 
+  tastiera      «tastiera solo a richiesta» (DECISIONI §10.28, SPECIFICHE §7.2-7.3):
+                 (a) dopo l'accesso e i tre gesti la tastiera a schermo NON e' aperta;
+                 (b) un tocco VERO sul comando ⌨ della pagina la apre, e una parola
+                     scritta come la scrive una tastiera a schermo (composizione e
+                     commit, protocollo DevTools) arriva nel campo «a» della scena;
+                 (c) un secondo tocco sul comando la richiude.
+                 ⭐ Lo stato della tastiera lo dice ANDROID (`dumpsys input_method`,
+                 `mInputShown`, dallo sportello del portatile), non la pagina.
+
   Il puntatore si PORTA sui bersagli con trascinamenti del protocollo (e' la
   preparazione, non il gesto giudicato).  Prima di tutto un dito vero corto
   (taratura): dice dove la pagina sta sullo schermo e mette la pagina nel modo
@@ -37,7 +46,9 @@ GUASTO (--guasto, stessa sessione): ogni gesto A VUOTO, con lo stesso giudice:
   dito-muove ⇒ il dito porta il puntatore FUORI dal blocco · tocco-clic ⇒ il
   puntatore fuori dal bottone · tocco-e-mezzo ⇒ fra il tap e il secondo
   contatto 700 ms (oltre la soglia: non e' piu' un tocco-e-mezzo, e il box non
-  deve muoversi).  Il guasto e' VISTO se OGNI gesto da' rosso.
+  deve muoversi) · tastiera ⇒ il comando A VUOTO (il tocco cade 60 px a sinistra
+  del ⌨): la tastiera non si apre ⇒ rosso.  Il guasto e' VISTO se OGNI gesto
+  da' rosso.
 """
 import os
 import sys
@@ -51,17 +62,108 @@ F4 = S._carica("f004", os.path.join(S.QUI, "15-f004-il-mouse.py"))
 
 FUNZIONI = ("F-031",)
 SOLO_TELEFONO = True
-GESTI = ("dito-muove", "tocco-clic", "tocco-e-mezzo")
+GESTI = ("dito-muove", "tocco-clic", "tocco-e-mezzo", "tastiera")
+PAROLA = "prova"
+SCARTO_GUASTO = 60       # px CSS: il tocco del comando a vuoto cade a sinistra del ⌨
 PUNTI_DITO = ((0.25, 0.3), (0.7, 0.6))
 DITI_VERI_MAX = 8        # un utente corregge: piu' passate corte di dito per arrivare (ognuna ≤ 30 % della tela)
 PAUSA_SANA_S = 0.12      # fra il tap e il secondo contatto (soglia della pagina 0,3 s)
 PAUSA_GUASTO_S = 0.7
 
 
+def giudica_tastiera(prima, aperta, scritto, chiusa):
+    """«Tastiera solo a richiesta».  `prima`/`aperta`/`chiusa`: lo stato letto da
+    Android (True/False/None) prima del comando, dopo il comando, dopo il secondo
+    comando; `scritto`: il campo «a» della scena (None se non letto)."""
+    if prima is None:
+        return S.BLOCKED, "lo stato della tastiera non si legge (sportello /tastiera)"
+    if prima:
+        return S.FAIL, ("⛔ la tastiera a schermo e' APERTA da sola dopo l'accesso e i gesti "
+                        "(la decisione: solo a richiesta)")
+    if aperta is None:
+        return S.BLOCKED, "dopo il comando lo stato della tastiera non si legge"
+    if not aperta:
+        return S.FAIL, "il comando ⌨ NON ha aperto la tastiera"
+    if scritto != PAROLA:
+        return S.FAIL, ("la tastiera e' aperta, ma «%s» scritta NON arriva nel desktop remoto "
+                        "(campo a=%r)" % (PAROLA, scritto))
+    if chiusa is None:
+        return S.BLOCKED, "dopo il secondo comando lo stato della tastiera non si legge"
+    if chiusa:
+        return S.FAIL, "il secondo tocco sul comando ⌨ NON ha chiuso la tastiera"
+    return S.PASS, ("chiusa dopo i gesti; il ⌨ la apre, «%s» arriva nel campo remoto; il ⌨ la "
+                    "richiude" % PAROLA)
+
+
 def certifica():
-    """I giudici sono quelli di F-004: si certificano la'."""
+    """I giudici dei tre gesti sono quelli di F-004: si certificano la'.  Quello
+    della tastiera si certifica qui."""
     print("   F-031 usa i giudici di F-004 (movimento, clic, box): li certifico")
-    return F4.certifica()
+    r = F4.certifica()
+    guai = []
+
+    def prova(cosa, vero):
+        print("   %s %s" % ("⭐ ok " if vero else "⛔ NO ", cosa))
+        if not vero:
+            guai.append(cosa)
+    prova("tastiera: tutto giusto ⇒ PASS", giudica_tastiera(False, True, PAROLA, False)[0] == S.PASS)
+    prova("tastiera: aperta da sola ⇒ FAIL", giudica_tastiera(True, True, PAROLA, False)[0] == S.FAIL)
+    prova("tastiera: il comando a vuoto (non si apre) ⇒ FAIL",
+          giudica_tastiera(False, False, "", False)[0] == S.FAIL)
+    prova("tastiera: aperta ma la parola non arriva ⇒ FAIL",
+          giudica_tastiera(False, True, "", False)[0] == S.FAIL)
+    prova("tastiera: una parola diversa ⇒ FAIL",
+          giudica_tastiera(False, True, "prov", False)[0] == S.FAIL)
+    prova("tastiera: non si richiude ⇒ FAIL", giudica_tastiera(False, True, PAROLA, True)[0] == S.FAIL)
+    prova("tastiera: stato illeggibile ⇒ BLOCKED",
+          giudica_tastiera(None, True, PAROLA, False)[0] == S.BLOCKED)
+    print("⛔ CERTIFICAZIONE FALLITA" if guai else "⭐ CERTIFICATO (tastiera)")
+    return r or (1 if guai else 0)
+
+
+def tastiera(s, sc, mp, geo, guasto, note):
+    """Il gesto «tastiera»: vedi la testata.  Torna (esito, frase)."""
+    g = s.g
+    prima = g.tastiera_aperta()
+    note.append("tastiera dopo i gesti: %s" % {True: "APERTA", False: "chiusa"}.get(prima, "?"))
+    if prima is None or prima:
+        return giudica_tastiera(prima, None, None, None)
+    # il fuoco del desktop remoto nel campo «a»: il puntatore sopra, un tocco VERO
+    R = sc.rett
+    err = g.porta_il_puntatore(geo, *vetro(mp, *F4.centro_r(R["a"])))
+    if err is None or err > 3:
+        return S.BLOCKED, "il puntatore non si porta sul campo «a» (errore %s px)" % err
+    if not g.tap_vero(geo):
+        return S.BLOCKED, "il tocco vero sul campo «a» non e' arrivato alla pagina (adb tap)"
+    st = sc.comanda("fuoco-a")
+    if st is None or st.get("a") != "" or st.get("fuoco") != "a":
+        return S.BLOCKED, "la scena non e' pronta per scrivere: %s" % (st,)
+    k = g.comando_tastiera()
+    if not k:
+        return S.FAIL, "la pagina NON mostra il comando ⌨ col telefono in mano"
+    x, y = (k[0] - SCARTO_GUASTO, k[1]) if guasto else (k[0], k[1])
+    t = g.tocco_vero_in(x, y)
+    note.append("comando%s: tocco su «%s»" % (" A VUOTO" if guasto else "",
+                                             (t or {}).get("su", "nessuno")))
+    aperta = g.aspetta_tastiera(True)
+    scritto = None
+    chiusa = None
+    try:
+        if aperta:
+            g.scrivi_ime(PAROLA)
+            st = sc.aspetta(lambda q: q.get("a") == PAROLA, F4.ATTESA_S)
+            scritto = (st or {}).get("a")
+            k = g.comando_tastiera() or k
+            g.tocco_vero_in(k[0], k[1])
+            chiusa = g.aspetta_tastiera(False)
+    finally:
+        # ⛔ la tastiera non resta aperta sopra le prove dopo (il guasto, le altre righe)
+        if g.tastiera_aperta():
+            k = g.comando_tastiera()
+            if k:
+                g.tocco_vero_in(k[0], k[1])
+                g.aspetta_tastiera(False)
+    return giudica_tastiera(prima, aperta, scritto, chiusa)
 
 
 def vetro(mp, x, y):
@@ -133,6 +235,8 @@ def fa_gesto(nome, s, sc, mp, geo, guasto, note):
         g.dito_cdp([(fx, fy)] + punti, pausa_s=0.04, tieni_s=0.15)
         st = sc.aspetta(lambda q: F4.giudica_box(q, x1 - x0, H)[0] == S.PASS, F4.ATTESA_S)
         return F4.giudica_box(st, x1 - x0, H)
+    if nome == "tastiera":
+        return tastiera(s, sc, mp, geo, guasto, note)
     raise ValueError(nome)
 
 
@@ -183,7 +287,8 @@ def corpo(o, E):
             return
         geo = s.geometria() or geo
         atteso = ("il dito porta il puntatore sul BLU dove punta; il tocco clicca il VERDE; "
-                  "il tocco-e-mezzo trascina il box GIALLO")
+                  "il tocco-e-mezzo trascina il box GIALLO; la tastiera a schermo chiusa dopo i "
+                  "gesti, il ⌨ la apre, «%s» arriva nel campo remoto, il ⌨ la richiude" % PAROLA)
         righe = passata(s, sc, mp, geo, False)
         _p, fin = G2.foto(s, "fine-sana")
         if fin:
@@ -199,7 +304,8 @@ def corpo(o, E):
                 "%s (%s)" % (n, m) for n, e, m in righe if e == S.BLOCKED),
                 atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-031", S.PASS, "tre gesti su tre: l'effetto c'e' nell'applicazione",
+            E.metti("F-031", S.PASS, "quattro gesti su quattro: l'effetto c'e' "
+                    "nell'applicazione, e la tastiera si apre solo a richiesta",
                     atteso=atteso, osservato=oss, evidenze=ev)
         if o.guasto:
             righe = passata(s, sc, mp, geo, True)
