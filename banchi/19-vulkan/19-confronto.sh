@@ -20,6 +20,9 @@ AZIONE=${1:-tutto}
 FOTOGRAMMI=${FOTOGRAMMI:-120}
 NODO_RADEON=${NODO_RADEON:-129}
 NODO_INTEL=${NODO_INTEL:-128}
+# ⭐ i motori del confronto (fase 19, banco NVIDIA): sulla NVIDIA VA-API non codifica, e il
+#    banco `banchi/19-nvidia/` chiede MOTORI="vulkan scheda"
+MOTORI=${MOTORI:-vaapi vulkan scheda}
 FPS=60
 mkdir -p "$USCITA"
 cd "$ALBERO" || exit 1
@@ -68,7 +71,7 @@ prova() {
 	local probe
 	probe=$(ffprobe -v error -f $fmt -show_entries stream=profile,level,width,height,pix_fmt,color_range,color_space,color_transfer,color_primaries -of csv=p=0 "$flusso" 2>/dev/null | head -1)
 	local psnr="" ssim=""
-	if [ -f "$sorgente" ] && [ -z "$(echo "$@" | grep -o ridimensiona)" ]; then
+	if [ -f "$sorgente" ] && [ -z "$(echo "$@" | grep -o -E "ridimensiona|ciclo")" ]; then
 		local pix=yuv420p; [ "$prof" = 10 ] && pix=yuv420p10le
 		psnr=$(ffmpeg -v info -f $fmt -r $FPS -i "$flusso" -f rawvideo -pix_fmt bgr0 -s "$misura" -r $FPS -i "$sorgente" \
 			-lavfi "[1:v]scale=out_color_matrix=bt709:out_range=tv,format=$pix[r];[0:v]format=$pix[a];[a][r]psnr" -f null - 2>&1 \
@@ -94,7 +97,7 @@ matrice() {
 				local nome="D$nodo-$codec$prof-$misura-$strada"
 				echo "== $nome"
 				# ⭐ dall'innesto: `scheda` = il prodotto integrato (per capacita': Vulkan sulla Radeon)
-				for motore in vaapi vulkan scheda; do
+				for motore in $MOTORI; do
 					prova "$nome" "$motore" "$nodo" "$codec" "$prof" "$misura" "$strada"
 				done
 			done
@@ -104,7 +107,7 @@ matrice() {
 	for codec in h264 hevc; do
 		local base="D$nodo-${codec}8-1920x1080"
 		echo "== $base chiave a richiesta / tela nuova / tetto / qualita'"
-		for motore in vaapi vulkan scheda; do
+		for motore in $MOTORI; do
 			prova "$base-chiave" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --chiave-a 40
 			prova "$base-tela" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --ridimensiona-a 60:1280x720
 			prova "$base-tetto" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --tetto 20
@@ -112,6 +115,14 @@ matrice() {
 			prova "$base-tetto2" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --tetto 2
 		done
 		prova "$base-qualita" vulkan "$nodo" "$codec" 8 1920x1080 scheda --qualita-a 60:36
+		# ⭐ la tela in CICLO (il difetto della Radeon, F-018/P-C: 4K→2560→4K): ogni 20 fotogrammi
+		#   la misura cambia (la lista parte dalla misura iniziale: il primo cambio va alla seconda),
+		#   cinque cambi in 120; con ORDINE_PRODOTTO=1 le lastre si rifanno PRIMA che
+		#   il codificatore si riapra, come in `wlroots.c`
+		for motore in $MOTORI; do
+			prova "D$nodo-${codec}8-3840x2160-ciclo" "$motore" "$nodo" "$codec" 8 3840x2160 scheda \
+				--ciclo 20:3840x2160,2560x1440
+		done
 	done
 }
 
