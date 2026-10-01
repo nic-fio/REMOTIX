@@ -204,12 +204,11 @@ def compositore(d, u, lunga):
     """⭐ Il labwc senza schermo DEL desktop (15-compositori.sh): quattro desktop
     in parallelo nello stesso compositore coprono le finestre di Chrome, e Chrome
     coperto non si fotografa.  Le prove LUNGHE (un browser fermo per minuti)
-    vanno nel labwc comune, per non stare sopra al browser della fila."""
+    vanno nel labwc «comune» (acceso da 15-compositori.sh col suo nome, non
+    «wayland-0»: dopo un riavvio quel numero puo' essere di un desktop)."""
     comune = os.environ.get("REMOTIX_WAYLAND_VERI", "wayland-0")
-    if lunga:
-        return comune
     try:
-        s = open("/run/user/%d/15-compositori/%s" % (u, d)).read().strip()
+        s = open("/run/user/%d/15-compositori/%s" % (u, "comune" if lunga else d)).read().strip()
         if s and os.path.exists("/run/user/%d/%s" % (u, s)):
             return s
     except OSError:
