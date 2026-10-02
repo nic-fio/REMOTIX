@@ -106,6 +106,26 @@ Radeon = Vulkan); (2) Android sul telefono dell'utente (§5); (3) **la prova a m
 (prima i 4 desktop sulla **Intel**, poi i 4 sulla **Radeon** — scelta dell'utente; utente `nictest`, porte 8511-8514), a server fermo. Solo dopo
 il terzo la fase 19 si dichiara chiusa e il ramo `fase-19` entra in `fase-10-cure`.
 
+### 4-bis.1 La prova a mano sulla Intel (2 ott 2026)
+
+Prima passata dell'utente sui 4 desktop: *«funziona quasi tutto bene»*, tre segnalazioni.
+1. **Ctrl+C / Ctrl+V «non sempre»** — due difetti veri, curati e misurati (commit `5443a77`, `18419b7`;
+   binario `fbfceb41`, pagina `1fb65a01`): il server concedeva **19 stream unidirezionali in tutta la
+   sessione** (`trasporto.c`, il credito ora si rende alla chiusura), e il `Ctrl+V` partiva prima
+   dell'annuncio degli appunti (la V ora aspetta la lettura, al massimo 400 ms, solo sul `Ctrl+V`).
+   Prova nuova `15-f014c` (gli appunti come li usa la persona): col prodotto vecchio **rossa** (4-5 giri
+   su 5 col testo vecchio), con le cure **verde**; giro `cure-intel-6` **128/128**. ⚠ Nel terminale
+   `Ctrl+V` scrive «^V»: è il terminale (incolla con `Ctrl+Maiusc+V`), non un difetto.
+2. **Il ridimensionamento a caldo** — già fuori dal prodotto dal 17 agosto (`DECISIONI.md` §5.1-bis);
+   riconfermato, tolte le due frasi superate.
+3. **Android, Chrome col mouse: i clic non arrivano** — i clic ora vengono dai pointer events (pagina);
+   verificato dall'utente **col DeX: «i clic funzionano»**. Resta il limite dichiarato dei Samsung
+   (niente hover ⇒ niente forma sui bordi, `SPECIFICHE.md` §7.4). ⚠ La prima segnalazione era fatta con
+   **Phonestra** dal portatile, che inietta eventi nel telefono: da misurare come arrivano (dito o mouse).
+
+✅ **Seconda passata, stesso giorno: «Test incolla ok».** ⇒ **La Intel è chiusa** (Android escluso:
+si rifà sulla Radeon col telefono).
+
 ## 5. Android: il telefono vero, comandato da qui
 
 ⭐ **1 ott 2026, parola dell'utente: «ti lancio l'app e il telefono è tuo»** — grazie a **Phonestra** (progetto
