@@ -954,6 +954,19 @@ due — e i suoi spostamenti muovono **lo stesso puntatore che muove il dito**. 
 due modi di spingerla. L'accelerazione la applica il **client**: applicata da entrambi si
 sommerebbe.
 
+> ⛔ **Superato dal 14-15 agosto 2026**: la cattura del puntatore non scatta più da sola (resta a
+> mano, `REMOTIX.input_classico.aggancia()`), il puntatore è **assoluto** e ogni evento porta la
+> propria posizione (`DECISIONI.md` §5.0-sexies). ⭐ **Dal 2 ottobre 2026 anche i clic** vengono dai
+> pointer events (`pointerdown`/`pointerup`), come i movimenti: su Chrome per Android i `mousedown`
+> di compatibilità nascono solo dopo un tocco riconosciuto, e un clic lungo o un trascinamento non
+> arrivava (prova a mano dell'utente; verificato col DeX lo stesso giorno: *«i clic funzionano»*).
+>
+> ⚠ **Limite dichiarato, non nostro:** sui Samsung (DeX compreso) Chrome **non consegna i movimenti
+> a pulsanti alzati** (noVNC #1727, aperto dal 2022, lo stesso su moonlight-android #573, che è
+> un'app nativa). ⇒ Puntare, cliccare e trascinare colpiscono giusto; **manca l'anteprima**: la forma
+> del puntatore sui bordi delle finestre, i pulsanti che si illuminano, i suggerimenti. Riconfermato
+> dall'utente col DeX il 2 ottobre 2026.
+
 ### 7.5 Che cosa porta il canale di input
 
 | | |

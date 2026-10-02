@@ -52,6 +52,7 @@ GUASTO (stessa sessione, dopo la passata sana):
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -139,6 +140,57 @@ def wl_leggi():
     return r.stdout.decode("utf-8", "replace")
 
 
+def fuoco_al_browser():
+    """Il fuoco della TASTIERA del compositore al browser.  ⚠ `[M]` 2 ott 2026,
+    giro `cure-intel-2`: i tasti di `wtype` non arrivavano a nessuno — il browser
+    del banco riceve clic e tasti da Marionette/CDP, che non passano dal
+    compositore, quindi labwc non gli ha mai dato il fuoco.  La persona il fuoco
+    lo da' cliccando sulla finestra; qui lo si chiede con `wlrctl` (protocollo
+    foreign-toplevel di wlroots).  Torna l'app_id messo a fuoco, o None."""
+    if not shutil.which("wlrctl"):
+        return None
+    try:
+        r = subprocess.run(["wlrctl", "toplevel", "list"], capture_output=True, timeout=5)
+    except subprocess.TimeoutExpired:
+        return None
+    for riga in r.stdout.decode("utf-8", "replace").splitlines():
+        app = riga.split(":", 1)[0].strip()
+        if "firefox" in app.lower() or "chrom" in app.lower():
+            subprocess.run(["wlrctl", "toplevel", "focus", "app_id:" + app],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+            time.sleep(0.2)
+            return app
+    return None
+
+
+def ctrl_dal_sistema(g, lettera):
+    """`Ctrl+<lettera>` battuto DAL SISTEMA GRAFICO (`wtype`, tastiera virtuale di
+    Wayland), non iniettato nel browser.  ⛔ Perche' serve: `[M]` 2 ott 2026, giro
+    `f014c-prima` — col `Ctrl+C` iniettato (Marionette / `Input.dispatchKeyEvent`)
+    Firefox E Chrome dicono di aver scritto negli appunti (`scritti` 1, niente in
+    attesa) e `wl-paste` non vede niente: un client Wayland si prende la selezione
+    solo col numero di serie di un evento d'ingresso VERO del compositore, e un
+    tasto iniettato nel browser non ne ha.  La persona i tasti li batte sulla
+    tastiera: e' questa la strada che le somiglia.  Senza `wtype` si torna al
+    tasto iniettato, e si dichiara."""
+    # ⛔ Ma la combinazione NON si batte con `wtype`: `[M]` giro `cure-intel-3`,
+    #   BLOCKED — `wtype` carica una mappa di tasti SUA, coi codici inventati, e
+    #   la pagina spedisce al desktop la POSIZIONE (`KeyboardEvent.code`): il
+    #   Ctrl+C arrivava come un altro tasto.  ⇒ Dal sistema grafico passa solo un
+    #   Maiusc (la pagina non lo spedisce: «da soli non partono»), che da' al
+    #   browser il fuoco della tastiera e un numero di serie fresco; la
+    #   combinazione resta iniettata, con le posizioni giuste.
+    via = "iniettato"
+    if shutil.which("wtype") and fuoco_al_browser():
+        r = subprocess.run(["wtype", "-k", "Shift_L"], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=10)
+        if r.returncode == 0:
+            via = "serie dal sistema + iniettato"
+            time.sleep(0.1)
+    F14.ctrl(g, lettera)
+    return via
+
+
 def wl_svuota():
     try:
         subprocess.run(["wl-copy", "--clear"], stdout=subprocess.DEVNULL,
@@ -174,7 +226,7 @@ def copia_nella_sessione(g, scena, testo, copia=True):
     det = {"copia_fatta": copia, "stato_prima": stato(g)}
     da = len(q)
     if copia:
-        F14.ctrl(g, "c")
+        det["tasto"] = ctrl_dal_sistema(g, "c")
         fine = time.time() + 5
         while time.time() < fine and not F14.tasto_visto(scena.quaderno()[da:], "c"):
             time.sleep(0.5)
@@ -192,7 +244,7 @@ def incolla_una_volta(g, scena, geo, atteso):
     time.sleep(1.0)
     det["computer_al_ctrl_v"] = wl_leggi()
     det["stato_prima"] = stato(g)
-    F14.ctrl(g, "v")
+    det["tasto"] = ctrl_dal_sistema(g, "v")
     visto, q = scena.aspetta_valore(atteso, da, ATTESA_CAMPO_S)
     det["gesto_arrivato"] = F14.tasto_visto(q, "v")
     det["incollato_dalla_scena"] = [v for t, v in q if t == "P"]
@@ -217,7 +269,7 @@ def p1(g, scena, testo, copia=True):
     det = {"copia_fatta": copia, "stato_prima": stato(g)}
     da = len(scena.quaderno())
     if copia:
-        F14.ctrl(g, "c")
+        det["tasto"] = ctrl_dal_sistema(g, "c")
     t0 = time.time()
     letto, letture = None, []
     while time.time() - t0 < TETTO_P1_S:

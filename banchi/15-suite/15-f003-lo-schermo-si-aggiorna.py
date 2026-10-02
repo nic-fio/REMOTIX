@@ -334,8 +334,9 @@ JS_OSSERVA = r"""
 (function () {
   if (window.__F003__) return;
   const C = window.__F003__ = { giu: 0, su: 0, premuti: 0 };
-  addEventListener('mousedown', function () { C.giu++; }, true);
-  addEventListener('mouseup', function () { C.su++; }, true);
+  // ⚠ 2 ott 2026: pointer events, non `mouse*` (vedi la sonda di C22).
+  addEventListener('pointerdown', function (e) { if (e.pointerType !== 'touch') C.giu++; }, true);
+  addEventListener('pointerup', function (e) { if (e.pointerType !== 'touch') C.su++; }, true);
   addEventListener('pointermove', function (e) { if (e.buttons & 1) C.premuti++; }, true);
 })();
 """
