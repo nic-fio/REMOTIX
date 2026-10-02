@@ -121,7 +121,9 @@ Prima passata dell'utente sui 4 desktop: *«funziona quasi tutto bene»*, tre se
 3. **Android, Chrome col mouse: i clic non arrivano** — i clic ora vengono dai pointer events (pagina);
    verificato dall'utente **col DeX: «i clic funzionano»**. Resta il limite dichiarato dei Samsung
    (niente hover ⇒ niente forma sui bordi, `SPECIFICHE.md` §7.4). ⚠ La prima segnalazione era fatta con
-   **Phonestra** dal portatile, che inietta eventi nel telefono: da misurare come arrivano (dito o mouse).
+   **Phonestra** dal portatile, che inietta eventi nel telefono. ⇒ **Decisione dell'utente (2 ott): la sua
+   prova a mano su Android si fa col DeX**, non con Phonestra (che resta lo strumento dei banchi
+   automatici, `banchi/19-android`).
 
 ✅ **Seconda passata, stesso giorno: «Test incolla ok».** ⇒ **La Intel è chiusa** (Android escluso:
 si rifà sulla Radeon col telefono).
