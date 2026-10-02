@@ -8059,6 +8059,7 @@ async function appunti_annuncia(testo, forza) {
   if (APPUNTI.sessione_proprietaria) forza = true;
   if (!forza && testo === APPUNTI.ultimo_letto) {
     app_diario("annuncio saltato: identico all'ultimo (eco o copia ripetuta)");
+    incolla_trattenuto_lascia("gli appunti non sono cambiati");
     return;
   }
 
@@ -8071,6 +8072,7 @@ async function appunti_annuncia(testo, forza) {
     nota("⛔ §5.4: " + byte.length + " byte negli appunti, oltre il tetto di "
        + APPUNTI_TETTO + ": NON si annunciano al desktop remoto, e non si "
        + "tagliano.  Un testo troncato e' peggio di un testo mancante");
+    incolla_trattenuto_lascia("testo oltre il tetto, non annunciato");
     return;
   }
 
@@ -10710,12 +10712,20 @@ function cl_su_keydown(ev) {
      *   nessuna domanda, e l'annuncio del testo copiato qui arriva tardi.
      *   ⇒ La prima incollata da' il testo REMOTO, la seconda quello giusto.
      *
-     * ⇒ Solo in quel caso — l'ultimo a copiare e' stato il desktop remoto —
-     *   la V si TRATTIENE finche' l'annuncio non e' partito (al massimo
-     *   `INCOLLA_TRATTIENI_MS`).  ⭐ Nessun altro tasto aspetta, e nemmeno
-     *   questo quando gli appunti sono gia' del server: e' la ragione per cui
-     *   §9 rifiuta la cura di Xpra (100 ms su ogni battuta). */
-    if (e_incolla && APPUNTI.acceso && APPUNTI.sessione_proprietaria) {
+     * ⚠ E la coda del server non basta nemmeno quando gli appunti sono suoi:
+     *   `[M]` giro `cure-intel-5`, F-014D 7 su 8 — si copia A sul computer e
+     *   si incolla, poi si copia B: al `Ctrl+V` la domanda arriva al server,
+     *   che chiede al client il trasferimento di A (l'ultimo annunciato) e
+     *   lo serve, mentre l'annuncio di B e' ancora per strada.  La coda
+     *   scatta solo quando il client non ha MAI annunciato niente.
+     *
+     * ⇒ A OGNI `Ctrl+V` la V si TRATTIENE finche' la pagina non ha letto gli
+     *   appunti del computer (l'evento `paste`) e, se sono cambiati, non ha
+     *   fatto partire l'annuncio — al massimo `INCOLLA_TRATTIENI_MS`.  Se non
+     *   sono cambiati si lascia subito.  ⭐ Nessun altro tasto aspetta: §9
+     *   rifiuta la cura di Xpra perche' costa 100 ms su OGNI battuta, e
+     *   questa costa il tempo di un evento `paste` sul solo `Ctrl+V`. */
+    if (e_incolla && APPUNTI.acceso) {
       incolla_trattieni(ev.code, codice, ev.timeStamp);
       return;
     }
