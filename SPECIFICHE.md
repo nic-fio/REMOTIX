@@ -781,7 +781,7 @@ La versione «giusta» scompiglia il lavoro, quella «rotta» lo lascia fermo. (
 proporzioni e si mettono le bande: allungare deforma il testo e lo rende illeggibile.
 
 Il caso è raro per costruzione — all'attacco le proporzioni **combaciano sempre** — e resta solo
-durante il ridimensionamento e nel ripiego di §6.3. Sul telefono in verticale la banda sarebbe
+quando la finestra cambia misura dopo l'attacco (si riscala, `DECISIONI.md` §5.1-bis) e nel ripiego di §6.3. Sul telefono in verticale la banda sarebbe
 enorme: lì serve lo zoom con scorrimento, che è nel ventaglio dei gesti (§7.2).
 
 ### 6.3 Il ripiego su KDE, dichiarato
@@ -790,10 +790,12 @@ Al riattacco a misura diversa su KWin < 6.8 la tela **non può** cambiare. Si ti
 e riscala il client — e non costa una riga in più, perché è lo stesso codice del punto
 «durante la sessione». **Il ripiego si dichiara nel registro.**
 
-### 6.4 «Adatta il desktop a questa finestra»
+### 6.4 ~~«Adatta il desktop a questa finestra»~~ — ⛔ uscita dal prodotto (`DECISIONI.md` §5.1-bis)
 
-Il ridimensionamento vero della tela si fa nella forma della **negoziazione PipeWire** — una strada
-sola per GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.
+~~Il ridimensionamento vero della tela si fa nella forma della **negoziazione PipeWire** — una strada
+sola per GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.~~
+⇒ La misura nuova si prende **solo ricollegandosi** (riattacco, F-018). Riconfermato dall'utente il
+2 ottobre 2026, dopo la sua prova a mano.
 
 > ### ⛔ CORRETTA IL 15 AGOSTO 2026 — «mai come automatismo» non è più vero, e la ragione è una decisione dell'utente
 >

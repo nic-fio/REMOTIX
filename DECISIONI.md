@@ -3747,7 +3747,9 @@ Le tre ragioni, e la terza è quella che ha deciso:
    dell'output, quindi tornando a una misura già vista le finestre vengono **teleportate**
    indietro. La versione «giusta» scompiglia il lavoro; quella «rotta» lo lascia fermo.
 
-**Conseguenze:**
+**Conseguenze:** ⛔ *superate da §5.1-bis (17 ago 2026), e riconfermate dall'utente il 2 ottobre 2026 dopo
+la sua prova a mano: il ridimensionamento a caldo non resta nemmeno come funzione facoltativa; la
+misura nuova si prende solo ricollegandosi. Le tre righe sotto restano come cronaca.*
 - il ridimensionamento del compositore esce dal percorso critico e resta come funzione
   facoltativa («adatta il desktop a questa finestra»), spenta dove il compositore non la sa
   fare, **con la ragione dichiarata** (`CODER.md` §4.2);
