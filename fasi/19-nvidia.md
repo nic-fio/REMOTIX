@@ -166,6 +166,23 @@ KDE, XFCE, LXQt.
 | 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
 | 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
 
+## 6-bis. Da qui si riparte — 2 ottobre 2026, pomeriggio (sessione sospesa dall'utente)
+
+**Stato.** La prova a mano dell'utente (§4-bis.1): **Intel chiusa** («Test incolla ok»). **Radeon**: desktop
+provati dall'utente; restava l'audio su GNOME dopo «Esci» → curato (`b24a6c3`), e l'utente ha confermato
+l'audio su GNOME/Firefox in una sessione NUOVA. Scatole sulla **Radeon**, binario **`54a98acc`**, pagina
+**`d827a225`**; giri automatici `cure-intel-6` 128/128 e `cure-radeon-1` 224/224, `cure-radeon-2` 144/144.
+Lasciata aperta la sessione `nictest` dell'utente su GNOME.
+
+**Prima cosa della sessione nuova, in ordine:**
+1. **Android col DeX** sui 4 desktop (prova a mano dell'utente, porte 8511-8514, `nictest`): era in corso.
+2. Poi, a scatole libere, la prova automatica del caso «Esci → rientra → suona» (non ancora girata):
+   `python3 15-giro.py --giro f012b-1 --desktop gnome,kde,xfce,lxqt --browser firefox --prove f012b`
+   (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); attesa VERDE col binario `54a98acc`.
+   ⚠ La controprova ROSSA col binario vecchio (`remotix.fbfceb41`) non e' fatta.
+3. Chiusura della fase 19 e `fase-19` dentro `fase-10-cure`. ⚠ I commit di oggi sono solo locali: il ramo
+   non e' stato spinto su GitHub.
+
 ## 6. Da qui si riparte (2 ott 2026, sera — sessione chiusa dall'utente)
 
 **Stato.** Suite automatica VERDE sulle due schede (Radeon = Vulkan, giro `19-radeon-3` 669 PASS, i 4 BLOCKED del banco
