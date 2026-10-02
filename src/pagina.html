@@ -7922,6 +7922,8 @@ const APPUNTI = {
      APPUNTI_ANNUNCIO), falso quando l'ultimo annuncio e' partito da qui.
      Vedi «IL `Ctrl+V` DOPO UNA COPIA REMOTA» in `cl_su_keydown`. */
   sessione_proprietaria: false,
+  /* L'ultimo clic o tasto su questa pagina (vedi `appunti_rileggi_prima_di_servire`). */
+  ultimo_gesto_ms: -1e9,
   /* ⛔ L'annuncio d'apertura e' gia' partito?  Vedi `appunti_apri_la_domanda`. */
   aperta: false,
 };
@@ -8124,6 +8126,9 @@ async function appunti_annuncia(testo, forza) {
  *    lettura in ritardo ANNUNCIA lo stesso: l'incollata DOPO parte gia' pronta.
  */
 const APPUNTI_RILETTURA_MS = 3000;
+const APPUNTI_GESTO_MS = 2000;
+for (const tipo of ["pointerdown", "keydown"])
+  addEventListener(tipo, () => { APPUNTI.ultimo_gesto_ms = performance.now(); }, true);
 
 async function appunti_rileggi_prima_di_servire() {
   /* ⛔⛔⭐ E NON SI RILEGGE SE LA STRADA GRATIS HA APPENA CONSEGNATO.
@@ -8167,7 +8172,18 @@ async function appunti_rileggi_prima_di_servire() {
     /* ⛔⭐ E LO SI DICE A CHI STA GUARDANDO, non solo al diario: qualcuno di la'
      *     sta incollando e da qui non parte niente.  ⚠ Solo se non abbiamo
      *     NIENTE da servire: con un testo in mano il silenzio non c'e'. */
-    if (!APPUNTI.mio_testo) {
+    /* ⛔ E SOLO SE A INCOLLARE E' STATO L'UTENTE — 2 ottobre 2026, segnalato
+     *    dall'utente sulla Intel e sulla Radeon: l'avviso compariva a OGNI
+     *    accesso su GNOME e KDE.  Il gestore degli appunti del desktop
+     *    (MetaClipboardManager, klipper) legge da solo la nostra offerta
+     *    appena la sessione nasce: una domanda d'incolla senza nessun gesto
+     *    dell'utente.  ⇒ Senza un clic o un tasto su questa pagina negli
+     *    ultimi `APPUNTI_GESTO_MS`, chi incolla non e' lui: si tace. */
+    const da_gesto = performance.now() - APPUNTI.ultimo_gesto_ms;
+    if (!APPUNTI.mio_testo && da_gesto > APPUNTI_GESTO_MS) {
+      app_diario("niente suggerimento: nessun gesto dell'utente da "
+                 + Math.round(da_gesto) + " ms — a incollare e' il desktop da solo");
+    } else if (!APPUNTI.mio_testo) {
       suggerisci("Per incollare qui quello che hai copiato sul tuo computer, "
                  + "premi Ctrl+V su questa pagina: il tuo browser lascia "
                  + "leggere gli appunti solo in quel momento.", 7000);

@@ -5118,6 +5118,45 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		return false;
 	}
 
+	/*
+	 * ⛔⛔ IL `pipewire-pulse` RIMASTO DALLA SESSIONE DI PRIMA — 2 ottobre 2026,
+	 *      prova a mano dell'utente sulla Radeon: «in GNOME non va l'audio».
+	 *
+	 * `[M]` Dopo «Esci», col gestore d'utente ancora vivo, la sessione che
+	 * finisce ferma `pipewire`, `wireplumber` e `filter-chain` ma NON
+	 * `pipewire-pulse` (14:13:18).  Alla sessione nuova `pipewire` riparte
+	 * (14:13:29) e `pipewire-pulse` resta quello delle 14:04, attaccato a un
+	 * `pipewire` che non c'e' piu': chi suona con PulseAudio (Firefox) parla
+	 * col nulla, e il nostro sink cattura solo silenzio.  Le prove dell'audio
+	 * non lo vedevano perche' aprono sempre una sessione nuova.
+	 *
+	 * ⇒ Se `pipewire` NON e' attivo e `pipewire-pulse` si', quello e' un
+	 *   avanzo: lo si ferma.  Il suo socket resta, e al primo programma che
+	 *   vuole suonare lo riaccende attaccato al `pipewire` giusto.  ⭐ Nessun
+	 *   ramo per desktop: e' il gestore d'utente, uguale per tutti.
+	 */
+	{
+		char *pw[] = { "systemctl", "--user", "is-active", "pipewire.service", NULL };
+		char *pp[] = { "systemctl", "--user", "is-active", "pipewire-pulse.service", NULL };
+		g_autofree char *s_pw = chiedi(pw);
+		g_autofree char *s_pp = chiedi(pp);
+
+		if (s_pw && s_pp) {
+			g_strstrip(s_pw);
+			g_strstrip(s_pp);
+			if (g_strcmp0(s_pw, "active") != 0 && g_strcmp0(s_pp, "active") == 0) {
+				char *ferma[] = { "systemctl", "--user", "stop", "pipewire-pulse.service", NULL };
+
+				registro_dice(REG_SESSIONE,
+				              "⚠ `pipewire-pulse` e' vivo ma `pipewire` no (%s): e' "
+				              "l'avanzo della sessione di prima, e i programmi che "
+				              "suonano con PulseAudio resterebbero muti.  Lo fermo: "
+				              "il socket lo riaccende attaccato al `pipewire` nuovo — %s",
+				              s_pw, esegui(ferma) ? "fermato" : "⛔ NON fermato");
+			}
+		}
+	}
+
 	/* ⛔ LE IMPOSTAZIONI PRIMA DEL COMANDO, per la stessa ragione del drop-in:
 	 *    `gnome-session` fa partire la Shell come prima cosa, e una chiave
 	 *    scritta dopo vale per la sessione SUCCESSIVA — cioe' ha ragione domani. */
