@@ -28,6 +28,7 @@ NOMI = {
     "F-006": "ridimensionare dal bordo", "F-007": "tastiera: caratteri e tasti speciali",
     "F-008": "modificatori e combinazioni", "F-009": "disposizione, accenti, AltGr",
     "F-010": "scorciatoie del desktop", "F-011": "la tela all'attacco", "F-012": "audio",
+    "F-012B": "audio dopo «Esci» e un rientro subito (client PulseAudio)",
     "F-013": "video", "F-014": "appunti, browser → sessione",
     "F-015": "appunti, sessione → browser", "F-016": "stacco",
     "F-015C": "appunti, sessione → computer, senza gesti recenti",
