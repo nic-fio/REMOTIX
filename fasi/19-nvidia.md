@@ -63,7 +63,7 @@ tocco, appunti, rientro.
    ricette, `6c2ca0d`) prima della rete del punto 3, o la Radeon nelle scatole resta a VA-API (e il registro lo
    direbbe: *«Vulkan Video NON è adatta … ⇒ si prova VA-API»*).
    ✅ **Fatto** (1 ott, registro §3): le 4 scatole ricostruite dalle ricette di `fase-19`, con l'ICD RADV dentro; giro Intel VERDE, giro Radeon in Vulkan (col difetto qui sotto).
-6. ❓ **Punto aperto — `remotix.pam`**: nelle scatole `rete11-*` il file PAM è restato quello della fase 18
+6. ✅ **Chiuso il 3 ott 2026 — `remotix.pam`** (`cb6061e`: nelle scatole il file del prodotto, md5 `467ee6bb`, e `utenti-negati`=root come `provisiona.sh`; rete completa `pam-d3-intel` **702 PASS**, 2 BLOCKED = F-030 in parallelo; `banchi/11-scatole/11-pam-root-negato.py`: root respinto dall'elenco e nictest dentro, 4/4). Era: **Punto aperto — `remotix.pam`**: nelle scatole `rete11-*` il file PAM è restato quello della fase 18
    (`rete11/prodotto/remotix.pam`, md5 `d1734958`, `@include common-session-noninteractive` + `pam_systemd`),
    NON quello di `src/remotix.pam` della fase 17/D3 (sshd, `pam_listfile` su `/etc/remotix/utenti-negati`, root
    escluso). La suite è stata rilanciata **identica** alla fase 18 (regola della precedenza), quindi non è stato
