@@ -83,13 +83,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgbm-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): le librerie che prendono il posto di
-#    ffmpeg — OpenH264 e SVT-AV1 per il ripiego, libopus diretta.  ⛔ Niente
-#    libavcodec/libavutil/libswscale: il prodotto non le nomina piu', e
-#    un'immagine che le avesse nasconderebbe un `#include` rimasto.  Niente
-#    libyuv: i colori sono nostri (`src/colori709.c`).  In uno strato suo, come
-#    `libgbm-dev`, per la stessa ragione.
+#    ffmpeg — libopus diretta.  ⛔ Niente libavcodec/libavutil/libswscale: il
+#    prodotto non le nomina piu', e un'immagine che le avesse nasconderebbe un
+#    `#include` rimasto.  Niente libyuv: i colori sono nostri
+#    (`src/colori709.c`).  ⛔ Fase 19: niente OpenH264 e SVT-AV1 — il ripiego
+#    in software e' uscito, e per la stessa ragione l'immagine non li ha.  In
+#    uno strato suo, come `libgbm-dev`.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libopenh264-dev libsvtav1enc-dev libopus-dev \
+        libopus-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ⭐ Fase 19 (`fasi/19-nvidia.md`, `DECISIONI.md` §10.27): Vulkan Video — la
+#    strada della scheda che si prova PRIMA di VA-API (`src/vulkanvideo.c`).
+#    Serve solo il loader e le intestazioni (`libvulkan-dev`, Apache-2.0): lo
+#    SPIR-V dello shader e' gia' nel deposito, il compilatore di shader non
+#    serve, e i driver (ICD) stanno nel sistema che fa girare il prodotto.
+#    `[M]` 1 ott 2026: Debian 13 porta libvulkan-dev 1.4.309.  In uno strato
+#    suo, come gli altri.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ldconfig

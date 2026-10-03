@@ -87,6 +87,17 @@ typedef struct WlrPalco WlrPalco;
  */
 WlrPalco *wlr_apri(GError **sbaglio);
 
+/*
+ * ⛔ FASE 19 — LE LASTRE ALLA TELA MASSIMA, solo se la codifica e' Vulkan.
+ *    Vero ⇒ ogni lastra GBM nasce 4096x2304 e al cambio di misura si rifa'
+ *    solo il `wl_buffer` (il BO non muore finche' vive il palco).  Falso (il
+ *    predefinito) ⇒ lastre della misura giusta, rifatte al cambio.  Il perche'
+ *    e' nel riquadro di `WLR_LASTRA_L` in `wlroots.c`.  ⚠ Del PROCESSO, non
+ *    del palco: la strada di codifica e' una per figlio, e si dice prima del
+ *    primo palco.
+ */
+void wlr_lastre_alla_tela_massima(bool si);
+
 /* La misura che l'uscita ha ADESSO — ⛔ non quella che si vorrebbe.
  *
  * `[M]` 20 settembre 2026: un'uscita headless di labwc nasce **1280×720**

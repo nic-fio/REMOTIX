@@ -524,9 +524,14 @@ static void caso4(void)
 	rcp_libera(s);
 }
 
-/* 5 — la misura fuori dai limiti: si rifiuta SENZA chiudere la sessione
- *     (`RCP.md:483` punto 4: «l'utente che trascina male una finestra non deve
- *     perdere la sessione»). */
+/* 5 — la misura SOPRA IL MASSIMO: dal 1 ottobre 2026 (`RCP.md` §4.5, tela al
+ *     massimo 4096x2304, decisione dell'utente) NON si rifiuta: si RIDUCE al
+ *     massimo — il lato che sfora al massimo, l'altro com'e' — e si gira al
+ *     palco come una misura qualunque, con la riga «RIPIEGO DICHIARATO» nel
+ *     registro.  ⛔ E la sessione resta viva, come prima: 100000x100000 era il
+ *     numero «capace di uccidere il compositore», e qui diventa 4096x2304
+ *     PRIMA di arrivare al palco.  (Fino al 30 set era `TELA(RIFIUTATA,
+ *     MISURA_FUORI_LIMITI)`; il rifiuto resta SOTTO il minimo: caso 17.) */
 static void caso5(void)
 {
 	rcp_sessione *s;
@@ -536,11 +541,12 @@ static void caso5(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 100000, 100000);
-	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 2
-	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && dopo_la_nascita() == 0 && !chiuso;
-	esito("5 misura fuori dai limiti", bene,
-	      "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI), sessione VIVA, palco intatto",
+	bene = quanti_tela == 0 && dopo_la_nascita() == 1
+	    && palco.chiesta_l == RCP_TELA_L_MASSIMA
+	    && palco.chiesta_a == RCP_TELA_A_MASSIMA && !chiuso;
+	esito("5 misura sopra il massimo: ridotta", bene,
+	      "nessun TELA subito, UNA richiesta al palco a 4096x2304 (il massimo di "
+	      "§4.5), sessione VIVA",
 	      dillo());
 	rcp_libera(s);
 }

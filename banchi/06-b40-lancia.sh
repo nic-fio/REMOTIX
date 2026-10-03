@@ -142,8 +142,10 @@ caso "2-tela-a-caldo" sano 0 0 "" "nessuno: dev'essere pulito" \
      "due coppie ADATTA_TELA/TELA in ordine, la seconda a sessione viva" -- \
      --adatta 1264x800 --adatta 1600x900@1 --resta 1
 
-caso "3-fuori-limiti" sano 0 0 "" "nessuno: e' la strada che §7.1 prevede" \
-     "ADATTA_TELA(8000x4320) e TELA(RIFIUTATA, MISURA_FUORI_LIMITI), tela invariata" -- \
+# ⭐ Dal 1 ott 2026 (§4.5, tela al massimo 4096x2304) sopra il massimo lo
+#    specchio RIDUCE come `rcp.c` e concede: l'arbitro deve dire CONFORME.
+caso "3-sopra-il-massimo" sano 0 0 "" "nessuno: e' la strada che §4.5 prevede dal 1 ott 2026" \
+     "ADATTA_TELA(8000x4320) e TELA(ADATTATA) con la tela ridotta al massimo di §4.5 (e al video.misura_massima del CIAO), e l'arbitro dice CONFORME" -- \
      --adatta 8000x4320 --resta 1
 
 # ---------------------------------------------------------------------------
@@ -171,7 +173,7 @@ caso "7-tela-dispari" tela-dispari 0 1 "dispari" "l'ARBITRO (T6, §4.5)" \
 
 caso "8-tela-oltre-massima" tela-oltre-massima 0 1 "video.misura_massima" \
      "l'ARBITRO (§4.5)" \
-     "TELA(ADATTATA, 7680x4320) a un client che ha dichiarato video.misura_massima 3840x2160" -- \
+     "TELA(ADATTATA, 4096x2304) — dentro §4.5 — a un client che ha dichiarato video.misura_massima 3840x2160" -- \
      --adatta 1264x800 --resta 1
 
 caso "9-tela-dopo-vista" tela-dopo-vista 0 1 "subito dopo una VISTA" \

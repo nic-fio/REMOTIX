@@ -24,7 +24,10 @@
  * per fotogramma e il cursore che lampeggia).
  */
 #include "../../src/colori709.h"
-#include "../../src/ripiego.h"
+/* ⛔ Fase 19: `src/ripiego.h` e' uscito dal prodotto.  Il banco resta come
+ *    storia: `18-software-confronto.sh` ricava `ripiego.c/.h` dal commit
+ *    6bacca7 e li passa con `-I`. */
+#include "ripiego.h"
 
 #include <inttypes.h>
 #include <limits.h>

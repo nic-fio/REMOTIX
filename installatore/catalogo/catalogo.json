@@ -1,10 +1,10 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.09.30.8",
-  "sequenza": 8,
-  "emesso": "2026-09-30",
+  "versione": "2026.10.01.10",
+  "sequenza": 10,
+  "emesso": "2026-10-01",
   "motore_minimo": "0.1.0",
-  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, OpenH264, SVT-AV1, libopus; pacchetti e depositi [M] 30 set nelle immagini podman): quel che i documenti sanno il 30 set 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
+  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, libopus; pacchetti e depositi [M] 30 set nelle immagini podman), DECISIONI §10.27 e fasi/19-nvidia.md (niente codifica sul processore: via OpenH264, SVT-AV1 e il deposito di Cisco; senza una scheda capace REMOTIX non si installa; il driver Vulkan della scheda, vulkan_scheda e vulkan_nvidia, [M] 1 ott nelle immagini podman): quel che i documenti sanno il 1 ott 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
   "requisiti": {
     "openssl_minima": "3.5.0",
     "kde_minima": "6.1",
@@ -26,8 +26,8 @@
       "nome": "Packman",
       "decisione": "D5",
       "comandi": {
-        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva   # solo AMD: il driver Intel ufficiale codifica già",
-        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva   # solo AMD: il driver Intel ufficiale codifica già"
+        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # solo AMD: il driver Intel ufficiale codifica già",
+        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # solo AMD: il driver Intel ufficiale codifica già"
       }
     },
     "epel": {
@@ -35,16 +35,6 @@
       "decisione": "",
       "comandi": {
         "rhel": "sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb"
-      }
-    },
-    "openh264": {
-      "nome": "OpenH264 di Cisco",
-      "decisione": "D5",
-      "comandi": {
-        "fedora": "sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1 && sudo dnf install openh264",
-        "rhel": "printf '[epel-cisco-openh264]\\nname=Cisco OpenH264 per EPEL $releasever_major\\nmetalink=https://mirrors.fedoraproject.org/metalink?repo=epel-cisco-openh264-$releasever_major&arch=$basearch\\nenabled=1\\ngpgcheck=1\\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-10\\n' | sudo tee /etc/yum.repos.d/epel-cisco-openh264.repo && sudo dnf install openh264   # DOPO EPEL (la chiave è la sua)",
-        "tumbleweed": "sudo zypper ar -f http://codecs.opensuse.org/openh264/openSUSE_Tumbleweed repo-openh264 && sudo zypper --gpg-auto-import-keys refresh repo-openh264 && sudo zypper install libopenh264-8",
-        "leap16": "sudo zypper ar -f https://codecs.opensuse.org/openh264/openSUSE_Leap_16 repo-openh264 && sudo zypper --gpg-auto-import-keys refresh repo-openh264 && sudo zypper install libopenh264-8"
       }
     }
   },
@@ -68,8 +58,10 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true,
-        "pacchetti_software": "libopenh264-8"
+        "vulkan_scheda": {
+          "AMD": "mesa-vulkan-drivers"
+        },
+        "vulkan_nvidia": "nvidia-vulkan-icd (non-free; col driver nvidia-driver è solo raccomandato)"
       },
       "desktop": {
         "gnome": {
@@ -125,8 +117,10 @@
       ],
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true,
-        "pacchetti_software": "libopenh264-8"
+        "vulkan_scheda": {
+          "AMD": "mesa-vulkan-drivers"
+        },
+        "vulkan_nvidia": "libnvidia-gl-<versione del driver> (manca col driver «headless»)"
       },
       "desktop": {
         "gnome": {
@@ -173,7 +167,6 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": true,
         "deposito": "rpmfusion",
         "comando": "fedora",
         "pacchetti_scheda": {
@@ -183,11 +176,8 @@
         "nonfree": [
           "Intel"
         ],
-        "pacchetti_software": "openh264"
+        "vulkan_nvidia": "xorg-x11-drv-nvidia-libs (RPM Fusion nonfree)"
       },
-      "depositi": [
-        "openh264"
-      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -233,7 +223,6 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": true,
         "deposito": "rpmfusion",
         "comando": "fedora",
         "pacchetti_scheda": {
@@ -243,11 +232,8 @@
         "nonfree": [
           "Intel"
         ],
-        "pacchetti_software": "openh264"
+        "vulkan_nvidia": "xorg-x11-drv-nvidia-libs (RPM Fusion nonfree)"
       },
-      "depositi": [
-        "openh264"
-      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -312,7 +298,6 @@
       ],
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": false,
         "deposito": "rpmfusion",
         "comando": "rhel",
         "amd_senza_vaapi": true,
@@ -321,12 +306,10 @@
         },
         "nonfree": [
           "Intel"
-        ],
-        "pacchetti_software": "openh264"
+        ]
       },
       "depositi": [
-        "epel",
-        "openh264"
+        "epel"
       ],
       "desktop": {
         "gnome": {
@@ -351,8 +334,8 @@
       },
       "note": [
         "dalla 10.1: OpenSSL 3.5",
-        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce: il video in software (OpenH264)",
-        "EPEL serve a REMOTIX stesso (SVT-AV1: svt-av1-libs), OpenH264 viene dal deposito Cisco per EPEL 10 (epel-cisco-openh264, non configurato da epel-release); libyuv non c'è [M] 30 set",
+        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce: e neanche Vulkan Video: la RADV di RHEL è costruita senza H.264 (Mesa «all_free», [M] 1 ott dallo spec): con le sole schede AMD REMOTIX non si installa (RX-GPU-006)",
+        "EPEL resta un deposito di REMOTIX su Alma: RPM Fusion per EL (il driver Intel con H.264) va installato DOPO EPEL, e KDE ne ha bisogno; ⚠ che il driver ne prenda davvero le dipendenze non è rimisurato senza ffmpeg. Fase 19: SVT-AV1 e OpenH264 di Cisco usciti; libyuv non c'è [M] 30 set",
         "SELinux enforcing (§11.1 B), tappa T6"
       ],
       "pacchetti_desktop": {
@@ -390,8 +373,10 @@
       ],
       "h264": {
         "scheda_di_serie": true,
-        "software_di_serie": true,
-        "pacchetti_software": "openh264"
+        "vulkan_scheda": {
+          "AMD": "vulkan-radeon"
+        },
+        "vulkan_nvidia": "nvidia-utils"
       },
       "desktop": {
         "gnome": {
@@ -417,7 +402,7 @@
       },
       "note": [
         "pam_faillock nella pila di serie (D3)",
-        "rolling release: il pacchetto si lega al numero (soname) delle librerie — openh264, svt-av1, libva, opus — non alla versione esatta (§6.2)"
+        "rolling release: il pacchetto si lega al numero (soname) delle librerie — libva, opus — non alla versione esatta (§6.2)"
       ],
       "pacchetti_desktop": {
         "gnome": "gnome",
@@ -439,17 +424,13 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": true,
         "deposito": "packman",
         "comando": "tumbleweed",
         "pacchetti_scheda": {
-          "AMD": "Mesa-dri,Mesa-libva"
+          "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
         },
-        "pacchetti_software": "libopenh264-8"
+        "vulkan_nvidia": "nvidia-gl-G06 o nvidia-gl-G07 (deposito di NVIDIA)"
       },
-      "depositi": [
-        "openh264"
-      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -482,8 +463,7 @@
         }
       },
       "note": [
-        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set",
-        "OpenH264 vero dal deposito repo-openh264 (codecs.opensuse.org, acceso di serie): quello di repo-oss è la copia vuota (noopenh264) [M] 30 set"
+        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set"
       ],
       "pacchetti_desktop": {
         "gnome": "pattern:gnome",
@@ -505,17 +485,13 @@
       "giro_intero": "",
       "h264": {
         "scheda_di_serie": false,
-        "software_di_serie": true,
         "deposito": "packman",
         "comando": "leap16",
         "pacchetti_scheda": {
-          "AMD": "Mesa-dri,Mesa-libva"
+          "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
         },
-        "pacchetti_software": "libopenh264-8"
+        "vulkan_nvidia": "nvidia-gl-G06 o nvidia-gl-G07 (deposito di NVIDIA)"
       },
-      "depositi": [
-        "openh264"
-      ],
       "desktop": {
         "gnome": {
           "supportato": true
@@ -557,8 +533,7 @@
         "lxqt": "pattern:lxqt"
       },
       "note": [
-        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set",
-        "OpenH264 vero dal deposito repo-openh264 (codecs.opensuse.org, acceso di serie): quello di repo-oss è la copia vuota (noopenh264) [M] 30 set"
+        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set"
       ]
     }
   ],
@@ -669,16 +644,6 @@
       "perche": "la codifica sulla scheda, senza ffmpeg (fase 18); la più vecchia della matrice: Debian 13, Alma 10, Leap 16 [M] 30 set"
     },
     {
-      "componente": "OpenH264",
-      "minimo": "2.5 (libopenh264.so.7, Alma 10); 2.6 (so.8) altrove",
-      "perche": "il ripiego H.264 in software; ⛔ la copia vuota «noopenh264» non conta"
-    },
-    {
-      "componente": "SVT-AV1",
-      "minimo": "2.3 (libSvtAv1Enc.so.2)",
-      "perche": "il ripiego AV1 in software; Fedora 44 ha la 3.1 (so.3), Arch e Tumbleweed la 4.2 (so.4)"
-    },
-    {
       "componente": "libopus",
       "minimo": "1.4",
       "perche": "l'audio, senza ffmpeg; Alma 10 ha la 1.4"
@@ -725,8 +690,13 @@
     },
     {
       "componente": "VA-API",
-      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD con i codec); NVIDIA proprietaria no",
-      "perche": "la codifica sulla scheda; altrimenti il ripiego software"
+      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD con i codec); NVIDIA proprietaria no (va con Vulkan Video)",
+      "perche": "la codifica sulla scheda: senza una scheda capace REMOTIX non si installa (DECISIONI §10.27)"
+    },
+    {
+      "componente": "Vulkan Video",
+      "minimo": "loader 1.3.274; un driver con VK_KHR_video_encode_h264/h265: RADV di una Mesa costruita coi codec (AMD), il driver proprietario NVIDIA col suo ICD [?] non provato",
+      "perche": "la strada provata per prima (fase 19, DECISIONI §10.27); senza, la scheda va con VA-API"
     }
   ],
   "fuori_sempre": [

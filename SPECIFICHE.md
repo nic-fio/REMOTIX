@@ -222,7 +222,7 @@ geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali
 | | |
 |---|---|
 | **trasporto** | **WebTransport su HTTP/3**, cioè QUIC con TLS 1.3 obbligatorio — **porta 7447** di serie, configurabile |
-| **codec video** | **H.264** e **HEVC** sulla scheda; in software **H.264** o **AV1** — si negozia col browser (`DECISIONI.md` §1.13) |
+| **codec video** | **H.264** e **HEVC**, **solo sulla scheda** — si negozia col browser (`DECISIONI.md` §1.13); ⛔ niente codifica sul processore (§11.4, `DECISIONI.md` §10.27) |
 | **audio** | Opus, con PCM come base sempre disponibile |
 | **canali** | video · audio · input · cursore · appunti · controllo |
 
@@ -739,6 +739,7 @@ esattamente la condizione in cui vista e tela coincidono e non si scala niente.
 | il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
 | **ruotare il telefono** dopo l'attacco | ⛔ la tela **non gira**: si vedono le bande, e il client riscala impaginando (§6.2). ⚠ Ed è il comportamento **dichiarato**, non un difetto da curare: l'interruttore che la faceva girare è uscito il 17 agosto 2026 (`DECISIONI.md` §5.1-bis). ⭐ Per riavere la misura giusta ci si **riattacca** |
 | uno schermo 4K | la tela nasce 4K, e sono **quattro volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
+| ⭐ **la tela al massimo 4096×2304** (dal 1 ottobre 2026, decisione dell'utente: *«4096 max di larghezza va benissimo, non ho mai preteso di più»*) — uno schermo 5K, 8K o ultralargo | la tela **non si rifiuta**: il lato che sfora si porta al massimo e l'altro resta (5120×2880 → **4096×2304**, 5120×1440 → **4096×1440**), e la pagina la impagina a scala 1 con le bande intorno (§6.2), come ogni tela più piccola della finestra. ⚠ Perché: H.264 sulla scheda Intel si ferma a **4096 px per lato**, e Firefox su Linux riceve solo H.264 — una tela più larga avrebbe avuto video solo su Chrome. 2304 è il 16:9 a 4096 (ci sta il DCI 4096×2160). Il limite è del protocollo, `RCP.md` §4.5; il minimo resta **320×240** |
 
 `[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
 cambiano il numero che il client dichiara:
@@ -859,6 +860,12 @@ gesti non si usano. Servono al telefono in mano, che è il ripiego d'emergenza.
 | tap-e-mezzo | trascinamento e selezione |
 | 3 dita tap | clic centrale |
 | pizzico | ingrandisce la **vista** del client |
+| tocco sul bottoncino **⌨** in alto a destra | apre la tastiera del telefono; un altro tocco (o «indietro») la chiude |
+
+⭐ **La tastiera a schermo si apre solo a richiesta** (`DECISIONI.md` §10.28): col telefono in mano non si
+apre da sola, perché coprirebbe metà del desktop. Il bottoncino ⌨ c'è **solo** in questa disposizione — sul
+computer e sul DeX col mouse non esiste — e non toglie niente al desktop: il dito clicca dove sta il puntatore,
+non dove cade (§7.1). Sta in alto perché la tastiera aperta copre il basso.
 
 ⭐ **È un punto di partenza dichiarato, non un impegno.** I gesti si giudicano usandoli, non
 leggendoli: chi trova questa tabella diversa fra sei mesi non ha trovato un difetto.
@@ -876,6 +883,10 @@ Il motivo: una tastiera fisica non manda lettere, manda **posizioni**, ed è il 
 che lettera sia. Se sul filo viaggiassero le posizioni, un client con tastiera americana attaccato
 a una sessione italiana produrrebbe **le lettere sbagliate**. E su Android una tastiera non ha
 posizioni affatto: è un metodo di inserimento che produce testo.
+
+**Sul telefono in mano** vale la stessa regola: quel che si scrive con la tastiera a schermo (aperta col
+bottoncino ⌨, §7.2) arriva come **lettere**, correzioni automatiche comprese — la parola corretta si riscrive
+cancellando quel che era cambiato; Invio e Cancella arrivano come **posizioni**.
 
 ⛔ **Con una precisazione**: `Ctrl+C` non è testo, è un comando. Una battuta viaggia come lettera
 quando **scrive del testo**; quando è premuto un modificatore di comando — Ctrl, Alt, Super —
@@ -1143,19 +1154,42 @@ via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, 
 in mezzo: REMOTIX imposta i parametri, gestisce i buffer e scrive da sé le intestazioni del flusso.
 La scala:
 
-1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — la strada normale. Anche la **conversione
-   dei colori** si fa sulla scheda (VPP di VA-API)
-2. **ripiego software**: **H.264** con **OpenH264**, **AV1** con **SVT-AV1** usata direttamente.
-   ⛔ **Niente HEVC in software**. La conversione dei colori, nel ripiego, si fa sul processore
+1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — l'unica strada. Sulla copia zero anche la
+   **conversione dei colori** si fa sulla scheda (VPP di VA-API); sulla strada «dalla memoria» i
+   colori si convertono sul processore e i piani salgono sulla scheda, dove si codificano
+2. ⛔ **Niente codifica sul processore** — *decisione dell'utente, 1 ottobre 2026* (`DECISIONI.md`
+   §10.27): *«niente cpu senza scheda»*. Il ripiego in software (OpenH264, SVT-AV1) è **uscito** dal
+   prodotto, dai pacchetti e dall'installatore. Senza una scheda capace di codificare:
+   - il **server** lo dichiara all'avvio nel registro (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*,
+     con la ragione di ogni codec) e l'`ECCOMI` non offre codec: ogni `CIAO` finisce in
+     `NIENTE_IN_COMUNE`, col motivo;
+   - `remotix --prova-codifica` esce con **3** (*nessuna scheda sa codificare*), distinto da 0
+     (la scheda codifica), 1 (si apre ma il fotogramma non esce) e 2 (errore d'uso);
+   - l'**installatore** rifiuta già nel controllo preliminare, con la ragione: **RX-GPU-003**
+     nessuna scheda · **RX-GPU-004** solo NVIDIA col driver proprietario **senza il suo driver
+     Vulkan** (l'ICD `nvidia`: con quello la strada Vulkan Video la prende) · **RX-GPU-005**
+     nessuna scheda Intel, AMD o NVIDIA (virtio, VMware, nouveau) · **RX-GPU-006** una scheda che su
+     questa distribuzione non codifica né in VA-API né in Vulkan e non ha un driver da aggiungere
+     (oggi AMD su Alma: la Mesa di RHEL è costruita senza H.264, in VA-API e in RADV). Il driver
+     Vulkan della scheda AMD, dove quello della distribuzione codifica (Debian, Ubuntu, Arch), lo
+     installa l'installatore (su Arch è solo un pacchetto facoltativo). Una scheda che codifica col driver di un deposito di
+     terzi resta un avviso col consenso (D5). ⚠ Il controllo preliminare non apre la scheda: legge i
+     driver VA e gli ICD Vulkan sul disco; la prova vera è `--prova-codifica` dopo l'installazione
 3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
    condizione della licenza (`DECISIONI.md` §10.22)
+
+⭐ La strada **Vulkan Video** (AMD, NVIDIA) è la fase 19 (`fasi/19-nvidia.md`), ✅ innestata il
+1 ott 2026: si sceglie per capacità all'apertura di ogni codificatore (`h264_scheda`/`hevc_scheda`,
+`src/codificatore.c`), Vulkan prima e VA-API dove Vulkan non c'è; `--codifica vulkan|vaapi` la forza
+per le prove, e `--prova-codifica` dice quale ha codificato (`strada`). `[M]` 1 ott 2026 sul server:
+Intel UHD 770 → `vaapi` (H.264 e HEVC), Radeon RX 6800 → `vulkan` (H.264 e HEVC).
 
 ⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
 a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
 
 ⚠ **AV1 in hardware non è nella scala** *(`STUDI.md` §web §8-bis, O2)*: in decodifica non porta
-niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. AV1 resta
-come **ripiego software**.
+niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. ⛔ E dalla
+fase 19 AV1 non c'è nemmeno in software: è uscito col ripiego.
 
 ⛔ **Si codifica in BT.709, e l'HDR non si promette** `[S]` *(O3)*: BT.2020/PQ fa cadere il percorso
 a zero copie nel browser, e quello a una copia converte con un risultato slavato. È una scelta del
@@ -1171,7 +1205,40 @@ lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`A
 `VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
 delle capacità delle due schede sta in `DECISIONI.md` §4.6.
 
+### 11.4-bis Dove la scheda codifica: distribuzioni, schede, depositi
+
+*Decisioni dell'utente del 1 ottobre 2026 (`DECISIONI.md` §10.27): la codifica è **sempre** sulla scheda; i
+driver con i codec, quando una distribuzione li toglie per i brevetti, si chiedono all'amministratore (D5): *«il
+problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX non distribuisce codec.*
+
+| distribuzione | Intel | AMD | NVIDIA (driver proprietario) | desktop |
+|---|---|---|---|---|
+| Debian 13 | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+| Ubuntu 26.04 | ✅ depositi ufficiali (universe) | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+| Fedora 44 | ✅ con **RPM Fusion** (nonfree) | ✅ con **RPM Fusion** (`mesa-va-drivers-freeworld`) | ⚠ Vulkan Video, non provata | i 4 |
+| Red Hat / Alma / Rocky 10 | ✅ con **RPM Fusion EL** + **EPEL** | ⛔ **non supportata**: nessun deposito rimette la codifica AMD | ⚠ Vulkan Video, non provata | ⛔ **solo GNOME e KDE** |
+| openSUSE Leap 16, Tumbleweed | ✅ depositi ufficiali | ✅ con **Packman** | ⚠ Vulkan Video, non provata | i 4 |
+| Arch | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+
+- La famiglia Red Hat si prova su **Alma**, che ne fa le veci (Red Hat è a pagamento).
+- Un «no» al deposito dei driver **blocca** l'installazione (D5): senza, su quella macchina la scheda non codifica.
+- ⚠ **NVIDIA**: la strada è scritta (Vulkan Video) ma nessuno l'ha vista funzionare su una NVIDIA vera — il
+  laboratorio non ne ha. Resta «non provata» finché non si prova (macchina a noleggio o un utente con la scheda).
+- Senza una scheda capace: REMOTIX non si installa (§11.4). Le macchine virtuali vanno solo con la scheda
+  passata alla macchina (passthrough, vGPU).
+- La tela è al massimo **4096×2304** (§6.1-bis): una finestra più grande riceve la tela ridotta.
+
 ### 11.5 I browser serviti, e perché vanno dichiarati
+
+| browser | dove | codec | stato |
+|---|---|---|---|
+| Chrome (e i Blink: Edge…) | Linux, Windows | HEVC, se il dispositivo lo decodifica; altrimenti H.264 | ✅ supportato |
+| Chrome | **Android** | HEVC o H.264 | ✅ supportato (`DECISIONI.md` §7.19) |
+| Firefox | Linux | **H.264** (Firefox su Linux non decodifica HEVC) | ✅ supportato |
+| Firefox | Windows | — | mai provato: né supportato né escluso |
+| Firefox | **Android** | — | ⛔ **fuori dal progetto** (`DECISIONI.md` §7.18) |
+| Safari | macOS, iOS | — | mai provato |
+
 
 ⭐ **La regola dei tre client non decade con il client unico: cambia forma** (`LEZIONI.md` §2.1).
 Una pagina gira su **tre motori scritti da tre squadre che non ci conoscono** — Blink (Chrome,

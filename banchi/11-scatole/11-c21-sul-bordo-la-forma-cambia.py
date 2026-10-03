@@ -677,6 +677,21 @@ def foto_piena(g):
                  "return [b.left, b.top, b.width, b.height];")
         if not r:
             return None
+        if getattr(g, "scala_foto", 1) != 1:
+            # ⚠ il telefono (fase 19 §5): Chrome Android con `clip.scale` > 1 non
+            #   ingrandisce, RIPETE la pagina a mattonelle (2 ott 2026: la scena tre volte
+            #   in larghezza).  ⇒ la foto del vetro intero, gia' in pixel del dispositivo,
+            #   e il ritaglio della tela qui.
+            import io
+            from PIL import Image
+            s = g.cdp.chiama("Page.captureScreenshot", format="png")
+            im = Image.open(io.BytesIO(base64.b64decode(s["data"])))
+            k = im.size[0] / float(g.js("return window.innerWidth;") or im.size[0])
+            im = im.crop((round(r[0] * k), round(r[1] * k),
+                          round((r[0] + r[2]) * k), round((r[1] + r[3]) * k)))
+            b = io.BytesIO()
+            im.save(b, "PNG")
+            return b.getvalue()
         s = g.cdp.chiama("Page.captureScreenshot", format="png",
                          clip={"x": r[0], "y": r[1], "width": r[2], "height": r[3],
                                "scale": 1})

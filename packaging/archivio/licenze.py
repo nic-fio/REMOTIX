@@ -129,8 +129,8 @@ esecuzione) non stanno nei pacchetti di REMOTIX: le installa il gestore di pacch
 licenza e il testo che la distribuzione porta in /usr/share/doc (o /usr/share/licenses). Dallo SBOM:
 {elenco}
 ⭐ Fase 18 (DECISIONI §10.22, §10.25): REMOTIX non collega più ffmpeg (libavcodec GPL). Al suo posto
-libva (MIT), OpenH264 (BSD-2-Clause), SVT-AV1 (BSD-3-Clause-Clear), libopus (BSD-3-Clause) e — se
-resta — libyuv (BSD-3-Clause). I driver VA (Mesa MIT, intel-media-driver MIT/BSD) si caricano a parte.
+libva (MIT) e libopus (BSD-3-Clause). ⛔ Fase 19 (DECISIONI §10.27): niente codifica in software —
+OpenH264 e SVT-AV1 sono usciti. I driver VA (Mesa MIT, intel-media-driver MIT/BSD) si caricano a parte.
 """
 print(testa)
 for p in parti:

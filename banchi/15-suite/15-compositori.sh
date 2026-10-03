@@ -16,7 +16,10 @@
 set -u
 R=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 C="$R/15-compositori"
-DESKTOP="gnome kde xfce lxqt"
+# ⭐ «comune» = il labwc delle prove LUNGHE (15-giro.py → compositore()): ha un nome suo, cosi'
+#    non dipende da quale socket nasce per primo (1 ott 2026: dopo un riavvio «wayland-0»
+#    era il labwc di gnome, e le F-030 dei quattro desktop finivano sotto il browser di gnome).
+DESKTOP="gnome kde xfce lxqt comune"
 mkdir -p "$C"
 
 accendi() {

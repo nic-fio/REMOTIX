@@ -3,14 +3,16 @@
 # La decisione D7 e' aperta (§3): OpenSSL 3.0 non ha l'API QUIC che ngtcp2_crypto_ossl
 # vuole (>= 3.5).  Nessuna
 # cura qui: il contenitore e' quello «onesto», e il suo registro dice dove cade.
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — il loader e le
+#    intestazioni, `[M]` 1 ott 2026 nell'immagine: 1.4.341 (Ubuntu 26.04).
 FROM docker.io/library/ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential pkg-config git ca-certificates cmake ninja-build \
         libssl-dev libpam0g-dev \
         libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
-        libva-dev libopenh264-dev libsvtav1enc-dev libopus-dev \
-        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev \
+        libva-dev libopus-dev \
+        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

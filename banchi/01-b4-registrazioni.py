@@ -936,24 +936,27 @@ def costruisci():
     #    il client lo dichiara perche' oltre quello **non decodifica**.
     #    Il `CIAO` di `conforme()` dichiara 3840x2160.
     r = conforme()
+    #    ⭐ 4096x2304 e non 7680x4320 (dal 1 ott 2026 il massimo di §4.5 e'
+    #      4096x2304): la misura sta DENTRO i limiti normativi, cosi' quel che
+    #      l'arbitro accusa e' SOLO il tetto dichiarato dal client.
     r.blocchi[5] = (SERVER, 0x00, 0,
                     msg(0x0007, struct.pack("!B", 1)
-                        + struct.pack("!II", 7680, 4320) + s("gnome")),
+                        + struct.pack("!II", 4096, 2304) + s("gnome")),
                     [], CONTINUA, 0)
     casi.append(("38-sessione-oltre-misura-massima", r, 1,
                  ("RCP.md §4.5", r.scostamento(5, 7)),
-                 "⛔ SESSIONE concede 7680x4320 a un client che ha dichiarato "
+                 "⛔ SESSIONE concede 4096x2304 a un client che ha dichiarato "
                  "video.misura_massima = 3840x2160"))
 
     # ── 39. ⛔ §4.5 — e la stessa frase vale per la tela concessa da `TELA` ──
     #    ⚠ Se non valesse, `ADATTA_TELA` sarebbe la porta da cui si supera un
     #      tetto che il client ha dichiarato per non restare al buio.
     r = conforme()
-    r.blocco(CLIENT, adatta(7680, 4320))
-    r.blocco(SERVER, tela(1, 0, 7680, 4320))
+    r.blocco(CLIENT, adatta(4096, 2304))
+    r.blocco(SERVER, tela(1, 0, 4096, 2304))
     casi.append(("39-concessa-oltre-misura-massima", r, 1,
                  ("RCP.md §4.5", r.scostamento(7, 8)),
-                 "⛔ TELA(ADATTATA) concede 7680x4320 oltre la "
+                 "⛔ TELA(ADATTATA) concede 4096x2304 (dentro §4.5) oltre la "
                  "video.misura_massima dichiarata in CIAO"))
 
     # ── 40. ⛔ §8.1 — il `TELA` mandato DOPO il proprio `CONGEDO` ───────────

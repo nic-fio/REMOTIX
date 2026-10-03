@@ -388,6 +388,23 @@
    *   client.  Fra due puntatori e nessuno, due. */
   body[data-disposizione="classico"][data-agganciato="si"] #schermo { cursor: none; }
   body[data-disposizione="tocco"] #schermo { cursor: none; }
+  /* ⭐ IL COMANDO DELLA TASTIERA A SCHERMO — 2 ottobre 2026, decisione
+   *   dell'utente «Tastiera solo a richiesta» (`DECISIONI.md` §10.28).  Si vede
+   *   SOLO col telefono in mano (disposizione a tocco) e solo con la sessione
+   *   accesa: sul computer e sul DeX col mouse non esiste.  Il perche' della
+   *   forma e del posto sta accanto al codice, in `tastiera_comando()`. */
+  #tastiera-comando { display: none; }
+  body[data-disposizione="tocco"][data-schermo="acceso"] #tastiera-comando {
+    display: block; position: fixed; z-index: 13;
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    width: 40px; height: 40px; padding: 0; margin: 0;
+    border: 1px solid rgba(255,255,255,.35); border-radius: 8px;
+    background: rgba(0,0,0,.45); color: #fff; opacity: .7;
+    font: 22px/38px system-ui, sans-serif; text-align: center;
+    touch-action: none; -webkit-tap-highlight-color: transparent; }
+  body[data-disposizione="tocco"][data-schermo="acceso"] #tastiera-comando[aria-pressed="true"] {
+    background: rgba(40,110,220,.85); opacity: 1; }
   /* ⭐⭐ L'INTERRUTTORE A/B DEL PUNTATORE — tre condizioni, UNA variabile,
    *     commutabili A CALDO dentro la stessa sessione.
    *
@@ -412,7 +429,7 @@
   body[data-puntatore="disegnata"][data-disposizione="classico"] #schermo { cursor: none; }
   /* ⚠ Solo sul CLASSICO: nel modo a tocco la freccia disegnata e' l'unico
      puntatore che esista, perche' il dito non ne ha uno da vestire. */
-  body[data-puntatore="sistema"][data-disposizione="classico"] #puntatore { display: none !important; }
+  body[data-puntatore="sistema"][data-disposizione="classico"]:not([data-agganciato="si"]) #puntatore { display: none !important; }
   /* ⚠ E il prezzo si dichiara (`STUDI.md` §web §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -2297,7 +2314,7 @@ function misura_vista() {
  *
  * ⚠ E il tetto vero del compositore sta molto piu' su: `[M]` 14 agosto 2026,
  *   oltre **16384** per lato `gnome-shell` MUORE, e su labwc `32768×32768`
- *   uccide il compositore con zero righe di registro.  7680 e' sotto tutt'e
+ *   uccide il compositore con zero righe di registro.  4096 e' sotto tutt'e
  *   due. */
 /* ⛔⛔⭐ E LA LARGHEZZA SI TRONCA AL MULTIPLO DI 16, NON AL PARI — 24 settembre
  *      2026, fase 14, decisione dell'utente: «curarlo subito».
@@ -2330,14 +2347,33 @@ function misura_vista() {
  *   `margin: 0 auto` ⇒ due bande nere di al piu' 7-8 pixel, FUORI dal buffer.
  *   Il puntatore non se ne accorge: `cl_geometria()` parte da
  *   `getBoundingClientRect()`, che contiene gia' lo scostamento.
- * ⚠ I limiti restano compatibili: 320 e 7680 sono multipli di 16, e il 4K
+ * ⚠ I limiti restano compatibili: 320 e 4096 sono multipli di 16, e il 4K
  *   (3840) pure — li' non cambia niente.  Il server (`rcp_misura_ammessa()`)
  *   chiede solo il PARI, e un multiplo di 16 lo e'.
  * ⭐ E dal 24 set sera anche l'ALTEZZA a multiplo di 16 (vedi sopra): la tela
  *   puo' uscire fino a 15 righe piu' BASSA della finestra, con bande di al piu'
  *   7-8 px sopra e sotto.  240, 2160 e 4320 sono gia' multipli di 16. */
-const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 7680;
-const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 4320;
+/* ⛔⭐⭐ IL MASSIMO E' 4096x2304 DAL 1 OTTOBRE 2026 — decisione dell'utente,
+ *      fase 19: *«4096 max di larghezza va benissimo, non ho mai preteso di
+ *      piu'»*.  Fino a quel giorno era 7680x4320.  Il perche' sta in `rcp.h`
+ *      accanto a `RCP_TELA_L_MASSIMA`: H.264 sulla scheda Intel si ferma a
+ *      4096 px per lato, e Firefox su Linux riceve solo H.264; 2304 e' il 16:9
+ *      a 4096 e il `MaxFS` del livello 5.1 che questa pagina dichiara.
+ *
+ * ⭐ E SOPRA IL MASSIMO LA PAGINA CHIEDE IL MASSIMO, NON RINUNCIA: il lato che
+ *    sfora si porta al massimo e l'altro resta (5120x2880 → 4096x2304,
+ *    5120x1440 → 4096x1440).  ⚠ Non deforma niente: `cornice()` impagina la
+ *    tela a scala al piu' 1 e centrata, e l'avanzo della finestra torna come
+ *    banda — lo stesso caso di una tela concessa piu' piccola della finestra
+ *    (KDE che non ridimensiona, `video.misura_massima`).
+ * ⛔ I numeri sono una COSTANTE DEL PROTOCOLLO (§4.5), non un campo
+ *    dell'`ECCOMI`: un campo nuovo cambierebbe il filo per dire un numero che
+ *    l'arbitro gia' scrive.  E se una pagina vecchia chiede di piu', il server
+ *    riduce con la stessa regola (`rcp_misura_ammessa()`), quindi una
+ *    divergenza costa una riga di registro, non la sessione.
+ * ⚠ 4096 e 2304 sono multipli di 16: il passo qui sotto non li tocca. */
+const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 4096;
+const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 2304;
 const TELA_L_PASSO = 16, TELA_A_PASSO = 16;
 function tela_da_chiedere() {
   const v = misura_vista();
@@ -5911,7 +5947,7 @@ async function collega(utente, parola) {
    *    «la tela e' la finestra» — applicato anche al primo istante.
    *
    * ⚠ E i limiti restano normativi: `tela_da_chiedere()` li applica gia' (fra
-   *   320×240 e 7680×4320, larghezza multipla di 16, altezza PARI), ed e' la
+   *   320×240 e 4096×2304, larghezza multipla di 16, altezza PARI), ed e' la
    *   STESSA funzione che usa il ridimensionamento — due regole sulla stessa misura diventerebbero due
    *   regole diverse il giorno in cui una cambia. */
   const [tela_l, tela_a] = tela_da_chiedere();
@@ -7882,6 +7918,12 @@ const APPUNTI = {
      chiedere il permesso quando la strada gratis ha gia' funzionato: vedi
      `appunti_su_incolla`. */
   ultimo_paste_ms: 0,
+  /* ⭐ Vero quando l'ultimo a copiare e' stato il DESKTOP REMOTO (un suo
+     APPUNTI_ANNUNCIO), falso quando l'ultimo annuncio e' partito da qui.
+     Vedi «IL `Ctrl+V` DOPO UNA COPIA REMOTA» in `cl_su_keydown`. */
+  sessione_proprietaria: false,
+  /* L'ultimo clic o tasto su questa pagina (vedi `appunti_rileggi_prima_di_servire`). */
+  ultimo_gesto_ms: -1e9,
   /* ⛔ L'annuncio d'apertura e' gia' partito?  Vedi `appunti_apri_la_domanda`. */
   aperta: false,
 };
@@ -8012,8 +8054,14 @@ async function appunti_annuncia(testo, forza) {
   /* ⚠ E questo NON e' un difetto: e' l'eco, o una copia gia' annunciata.  ⛔ Ma
      va detto lo stesso, o «l'ho gia' mandato» e «non l'ho mai mandato» hanno la
      stessa faccia dal server — che e' proprio il caso che stiamo cercando. */
+  /* ⛔ Ma se l'ultimo a copiare e' stato il desktop remoto, «identico» non vuol
+     dire «gia' suo»: gli appunti di la' sono dell'applicazione remota, e senza
+     questo annuncio il prossimo `Ctrl+V` incollerebbe il testo REMOTO anche se
+     qui l'utente ha ricopiato lo stesso testo di prima. */
+  if (APPUNTI.sessione_proprietaria) forza = true;
   if (!forza && testo === APPUNTI.ultimo_letto) {
     app_diario("annuncio saltato: identico all'ultimo (eco o copia ripetuta)");
+    incolla_trattenuto_lascia("gli appunti non sono cambiati");
     return;
   }
 
@@ -8026,6 +8074,7 @@ async function appunti_annuncia(testo, forza) {
     nota("⛔ §5.4: " + byte.length + " byte negli appunti, oltre il tetto di "
        + APPUNTI_TETTO + ": NON si annunciano al desktop remoto, e non si "
        + "tagliano.  Un testo troncato e' peggio di un testo mancante");
+    incolla_trattenuto_lascia("testo oltre il tetto, non annunciato");
     return;
   }
 
@@ -8035,7 +8084,9 @@ async function appunti_annuncia(testo, forza) {
 
   const c = new Scrittore().u32(APPUNTI.mio_id).u32(byte.length).byte();
   if (await appunti_manda(T_APPUNTI.ANNUNCIO, c)) {
+    APPUNTI.sessione_proprietaria = false;
     APPUNTI.conti.annunciati++;
+    incolla_trattenuto_lascia("l'annuncio " + APPUNTI.mio_id + " e' partito");
     app_diario("⭐ ANNUNCIATO il trasferimento " + APPUNTI.mio_id + " — "
                + byte.length + " byte");
   } else {
@@ -8075,6 +8126,9 @@ async function appunti_annuncia(testo, forza) {
  *    lettura in ritardo ANNUNCIA lo stesso: l'incollata DOPO parte gia' pronta.
  */
 const APPUNTI_RILETTURA_MS = 3000;
+const APPUNTI_GESTO_MS = 2000;
+for (const tipo of ["pointerdown", "keydown"])
+  addEventListener(tipo, () => { APPUNTI.ultimo_gesto_ms = performance.now(); }, true);
 
 async function appunti_rileggi_prima_di_servire() {
   /* ⛔⛔⭐ E NON SI RILEGGE SE LA STRADA GRATIS HA APPENA CONSEGNATO.
@@ -8118,7 +8172,18 @@ async function appunti_rileggi_prima_di_servire() {
     /* ⛔⭐ E LO SI DICE A CHI STA GUARDANDO, non solo al diario: qualcuno di la'
      *     sta incollando e da qui non parte niente.  ⚠ Solo se non abbiamo
      *     NIENTE da servire: con un testo in mano il silenzio non c'e'. */
-    if (!APPUNTI.mio_testo) {
+    /* ⛔ E SOLO SE A INCOLLARE E' STATO L'UTENTE — 2 ottobre 2026, segnalato
+     *    dall'utente sulla Intel e sulla Radeon: l'avviso compariva a OGNI
+     *    accesso su GNOME e KDE.  Il gestore degli appunti del desktop
+     *    (MetaClipboardManager, klipper) legge da solo la nostra offerta
+     *    appena la sessione nasce: una domanda d'incolla senza nessun gesto
+     *    dell'utente.  ⇒ Senza un clic o un tasto su questa pagina negli
+     *    ultimi `APPUNTI_GESTO_MS`, chi incolla non e' lui: si tace. */
+    const da_gesto = performance.now() - APPUNTI.ultimo_gesto_ms;
+    if (!APPUNTI.mio_testo && da_gesto > APPUNTI_GESTO_MS) {
+      app_diario("niente suggerimento: nessun gesto dell'utente da "
+                 + Math.round(da_gesto) + " ms — a incollare e' il desktop da solo");
+    } else if (!APPUNTI.mio_testo) {
       suggerisci("Per incollare qui quello che hai copiato sul tuo computer, "
                  + "premi Ctrl+V su questa pagina: il tuo browser lascia "
                  + "leggere gli appunti solo in quel momento.", 7000);
@@ -8170,6 +8235,7 @@ async function appunti_ricevuti(byte, completo) {
     }
     APPUNTI.suo_id = corpo.u32();
     APPUNTI.suo_len = corpo.u32();
+    APPUNTI.sessione_proprietaria = true;
     if (APPUNTI.suo_len > APPUNTI_TETTO) {
       await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
         "APPUNTI_ANNUNCIO di " + APPUNTI.suo_len + " byte: §5.4 si ferma a "
@@ -8423,7 +8489,11 @@ const INCOLLA_FUOCO_MS = 400;
 let incolla_campo = null;
 let incolla_restituisci = 0;
 
-function incolla_campo_prendi() {
+/* ⚠ La nascita del campo sta in una funzione sua (2 ottobre 2026) perche' il
+ *   campo ha adesso DUE padroni: l'incolla (qui sotto) e la tastiera a schermo
+ *   a richiesta del telefono in mano (`tastiera_apri()`), che lo vuole anche
+ *   dove gli appunti non sono stati negoziati. */
+function incolla_campo_crea() {
   if (!incolla_campo) {
     incolla_campo = document.createElement("textarea");
     incolla_campo.id = "incolla-nascosto";
@@ -8439,8 +8509,16 @@ function incolla_campo_prendi() {
       "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;"
       + "border:0;padding:0;margin:0;pointer-events:none;z-index:-1";
     document.body.appendChild(incolla_campo);
+    tastiera_ascolta(incolla_campo);
+    tastiera_attributi(modo_in_vigore === "tocco");
   }
+  return incolla_campo;
+}
+
+function incolla_campo_prendi() {
+  incolla_campo_crea();
   incolla_campo.value = "";
+  tastiera_prima = "";
   try { incolla_campo.focus({ preventScroll: true }); } catch (e) { incolla_campo.focus(); }
   clearTimeout(incolla_restituisci);
   /* ⭐⭐ E LA SECONDA STRADA, che non dipende da `clipboardData`: quel che il
@@ -8464,7 +8542,10 @@ function incolla_campo_prendi() {
   APPUNTI.campo_visto = false;
   [100, 250, 500, 900, 1500].forEach((quando) => {
     setTimeout(() => {
-      if (APPUNTI.campo_visto) return;
+      /* ⛔ Con la tastiera a schermo aperta quel che sta nel campo e' una
+       *    parola battuta, non un incolla: annunciarla sarebbe mettere negli
+       *    appunti del desktop quel che l'utente scrive. */
+      if (APPUNTI.campo_visto || tastiera_aperta) return;
       const t = incolla_campo ? incolla_campo.value : "";
       if (!t) return;
       APPUNTI.campo_visto = true;
@@ -8475,7 +8556,11 @@ function incolla_campo_prendi() {
     }, quando);
   });
   incolla_restituisci = setTimeout(() => {
+    /* ⚠ Con la tastiera a schermo aperta il campo e' della tastiera: svuotarlo
+     *   adesso spezzerebbe la parola che l'utente sta componendo. */
+    if (tastiera_aperta) return;
     incolla_campo.value = "";
+    tastiera_prima = "";
     /* ⚠ Il campo NON si sfuoca piu' (vedi `incolla_campo_tieni`): si svuota e
      *   basta.  Sfuocandolo, l'incolla seguente tornerebbe a essere un incolla
      *   su una pagina non modificabile — cioe' il difetto curato. */
@@ -9825,6 +9910,12 @@ function cl_codifica(tipo, id, us, a, b) {
 }
 
 function cl_spedisci(tipo, a, b, ms) {
+  /* La V di un `Ctrl+V` dopo una copia remota aspetta l'annuncio: i tasti
+     battuti nel frattempo si mettono in fila dietro di lei. */
+  if (incolla_trattenuto && tipo === CL_TIPO.POSIZIONE_TASTO) {
+    incolla_trattenuto.fila.push([a, b]);
+    return { tipo: tipo, a: a, b: b, in_fila: true };
+  }
   /* ⛔⭐ IL TRATTO CHE NON HA DENTRO NESSUN SALTO DI RETE, e la pagina lo
    *     calcolava gia' — in `tocco_quando()` — solo per BUTTARLO nella stessa
    *     espressione in cui lo calcolava.
@@ -10170,6 +10261,8 @@ function cl_su_lock() {
    *    con un'altra faccia. */
   document.body.setAttribute("data-agganciato", cl_agganciato ? "si" : "no");
   cl_disegna();
+  if (era && !cl_agganciato) cl_hover_dal_rilascio = 0;
+  if (!era && cl_agganciato) { cl_appena_agganciato = true; cl_spinta = 0; }
   if (era && !cl_agganciato)
     nota("modo classico: `Pointer Lock` rilasciato — il puntatore torna a "
        + "seguire la posizione assoluta del mouse dentro la tela");
@@ -10246,7 +10339,138 @@ function cl_su_pointermove(ev) {
   /* Il dito ha la sua disposizione: qui passa solo cio' che e' un puntatore. */
   if (ev.pointerType === "touch") return;
   cl_visti_pointer++;
+  /* Un passaggio a tasti alzati: la prova che qui l'hover ARRIVA (vedi
+     «LA CATTURA DA SOLA» sotto `cl_su_pointerdown`). */
+  if (!cl_agganciato && ev.buttons === 0) {
+    cl_hover_dal_rilascio++; cl_hover_x = ev.clientX; cl_hover_y = ev.clientY;
+  }
   cl_su_mousemove(ev);
+  /* ⚠ Un SECONDO pulsante premuto (o rilasciato) mentre un altro e' gia' giu'
+     non da' `pointerdown`/`pointerup`: arriva come `pointermove` con `button`
+     diverso da -1 (W3C Pointer Events, «chorded buttons»).  Da quando i clic
+     vengono dai pointer events (vedi `cl_su_pointerdown`) e' qui che si
+     prendono. */
+  if (ev.button >= 0 && cl_pulsanti_da_pointer) {
+    const bit = CL_BIT_DI_BUTTON[ev.button];
+    if (bit === undefined) return;
+    if (ev.buttons & bit) cl_su_mousedown(ev); else cl_su_mouseup(ev);
+  }
+}
+
+/* ⛔⛔ IL CLIC DAGLI EVENTI VERI — 2 ottobre 2026, prova a mano dell'utente:
+ *    «su Android, usando Chrome con tastiera e mouse, i clic del mouse non
+ *    vengono presi».
+ *
+ * Il movimento era gia' passato ai pointer events il 14 agosto (sopra), il
+ * clic no: «un clic e' UN evento e sopravvive» era misurato sul solo DeX.
+ * ⛔ Ma su Android `mousedown`/`mouseup` sono di COMPATIBILITA', e Chrome li
+ *   fa nascere DOPO il tocco riconosciuto quando tratta la pressione come un
+ *   flusso di tocco: `[M]` 2 ott, emulatore API 34, Chrome 113 — col mouse
+ *   arrivano `pointerdown` di tipo `mouse` E `touchstart`/`touchend`, e il
+ *   `mousedown` solo dopo `touchend`.  Una pressione lunga o un trascinamento
+ *   non danno nessun `mousedown`: nessun clic arriva al desktop.
+ *
+ * ⇒ Il clic si prende da `pointerdown`/`pointerup`, lo stesso schema del
+ *   movimento: i `mouse*` restano solo dove `PointerEvent` non esiste.  Il
+ *   `preventDefault` del `pointerdown` (in `cl_su_mousedown`) spegne anche i
+ *   `mouse*` di compatibilita', quindi niente clic doppi.  ⭐ Nessun ramo per
+ *   browser ne' per sistema: e' la strada di tutti i motori che hanno
+ *   `PointerEvent`. */
+let cl_pulsanti_da_pointer = false, cl_detti_pointerdown = 0;
+const CL_BIT_DI_BUTTON = { 0: 1, 1: 4, 2: 2, 3: 8, 4: 16 };
+
+function cl_su_pointerdown(ev) {
+  if (ev.pointerType === "touch") return;
+  /* ⭐ I primi tre si dichiarano: tipo, pulsante e stato dei pulsanti sono i
+     dati che separano «il motore non consegna» da «la pagina scarta». */
+  if (cl_detti_pointerdown < 3) {
+    cl_detti_pointerdown++;
+    nota("modo classico: pointerdown tipo=" + ev.pointerType + " button="
+       + ev.button + " buttons=" + ev.buttons);
+  }
+  /* La cattura tiene il trascinamento sulla tela anche se la mano esce. */
+  try { $("schermo").setPointerCapture(ev.pointerId); } catch (e) { /* niente */ }
+  const manca = cl_hover_manca(ev);
+  cl_su_mousedown(ev);
+  if (manca && cl_utilizzabile()) {
+    nota("MARCA modo classico: l'hover non arriva (" + cl_hover_dal_rilascio
+       + " passaggi a tasti alzati, l'ultimo a " + Math.round(cl_hover_x) + ","
+       + Math.round(cl_hover_y) + " e il clic a " + Math.round(ev.clientX) + ","
+       + Math.round(ev.clientY) + ") — la cattura del puntatore si accende da sola");
+    cl_aggancia();
+  }
+}
+
+/* ── LA CATTURA DA SOLA, DOVE L'HOVER NON ARRIVA — 3 ottobre 2026 ──────────
+ * `[M]` DeX dell'utente (S23, Android 16, Chrome 154 e Samsung Internet 30):
+ *   la posizione arriva SOLO un attimo prima di ogni clic o a tasto premuto
+ *   (noVNC #1727, vedi `cl_su_mousedown`) ⇒ il desktop non sa mai che il
+ *   puntatore e' sul bordo, e la freccia doppia del ridimensionamento non
+ *   compare.  Con la cattura accesa i movimenti a tasti alzati arrivano (>150
+ *   di fila) e il bordo si trascina; l'utente: «con la cattura la situazione
+ *   migliora».
+ * ⇒ AL PRIMO CLIC (scelta dell'utente: «meglio attivarla al primo clic del
+ *   mouse»): si cattura se prima del clic non e' arrivato NESSUN passaggio a
+ *   tasti alzati, o se l'ultimo sta a CL_SALTO_PX o piu' dal punto del clic
+ *   (il clic e' il gesto che `requestPointerLock` pretende).
+ *   ⭐ Nessun ramo per sistema: Samsung Internet sul DeX si dichiara «Linux
+ *   x86_64», e un «e' Android?» lo avrebbe mancato.  Su un computer l'ultimo
+ *   passaggio cade sul punto del clic: non scatta mai.
+ *   ⛔ NON una soglia sul NUMERO di passaggi: `[M]` 3 ott, giro `19-cattura`,
+ *   Firefox del banco con 5 passaggi prima del clic ⇒ catturato su un
+ *   computer (e cosi' chiunque sposti il mouse di pochi millimetri e clicchi).
+ *   ⚠ Il DeX ne manda qualcuno sporadico (2-3 prima di un clic), lontano dal
+ *   punto in cui poi si clicca.
+ * ⚠ Solo `mouse`: una penna senza hover catturata non ha senso.
+ * ⚠ Il conto riparte quando la cattura si rilascia (`cl_su_lock`): sul DeX il
+ *   clic dopo ricattura, su un computer i passaggi tornano e no. */
+const CL_SALTO_PX = 8;
+let cl_hover_dal_rilascio = 0, cl_hover_x = -1, cl_hover_y = -1;
+
+function cl_hover_manca(ev) {
+  if (cl_agganciato || ev.pointerType !== "mouse") return false;
+  if (cl_hover_dal_rilascio === 0) return true;
+  return Math.abs(ev.clientX - cl_hover_x) >= CL_SALTO_PX
+      || Math.abs(ev.clientY - cl_hover_y) >= CL_SALTO_PX;
+}
+
+/* ⭐ E SI ESCE SPINGENDO OLTRE IL BORDO, come nelle macchine virtuali: col
+ *   mouse catturato la barra del DeX e le schede del browser non si
+ *   raggiungono, ed Esc da solo era il fastidio che l'utente aveva gia'
+ *   segnalato.  ⚠ Non al primo pixel oltre: gli angoli attivi del desktop
+ *   remoto (GNOME in alto a sinistra) vogliono il puntatore FERMO sul bordo.
+ *   Si esce dopo CL_SPINTA_USCITA pixel CSS di spinta continua verso fuori;
+ *   tornare dentro azzera la spinta. */
+const CL_SPINTA_USCITA = 160;
+let cl_spinta = 0;
+const CL_SALTO_FINTO = 100;
+let cl_appena_agganciato = false;
+
+function cl_spinta_oltre_il_bordo(kx, ky) {
+  const g = cl_tela();
+  const fuori_x = cl_px < 0 ? -cl_px : (cl_px > g[0] ? cl_px - g[0] : 0);
+  const fuori_y = cl_py < 0 ? -cl_py : (cl_py > g[1] ? cl_py - g[1] : 0);
+  if (fuori_x === 0 && fuori_y === 0) { cl_spinta = 0; return; }
+  cl_spinta += fuori_x * kx / CL_GUADAGNO + fuori_y * ky / CL_GUADAGNO;
+  if (cl_spinta < CL_SPINTA_USCITA) return;
+  cl_spinta = 0;
+  nota("MARCA modo classico: spinto oltre il bordo — la cattura si rilascia");
+  if (document.exitPointerLock) document.exitPointerLock();
+}
+
+function cl_su_pointerup(ev) {
+  if (ev.pointerType === "touch") return;
+  cl_su_mouseup(ev);
+}
+
+function cl_su_pointercancel(ev) {
+  /* Il browser si e' ripreso il puntatore (uno scorrimento, un gesto di
+     sistema): un pulsante rimasto giu' sul desktop e' la trappola del Ctrl. */
+  if (ev.pointerType === "touch" || cl_pulsanti_premuti.size === 0) return;
+  const ms = performance.now();
+  for (const c of cl_pulsanti_premuti) cl_spedisci(CL_TIPO.PULSANTE, c, 0, ms);
+  cl_pulsanti_premuti.clear();
+  nota("modo classico: pointercancel — rilasciati i pulsanti premuti");
 }
 
 function cl_su_mousemove(ev) {
@@ -10269,8 +10493,24 @@ function cl_su_mousemove(ev) {
        questo che si muove alla velocita' della mano e non della rete. */
     const g = cl_geometria();
     const kx = (g.vx * g.sx) || 1, ky = (g.vy * g.sy) || 1;
+    /* ⛔ IL PRIMO MOVIMENTO DOPO LA CATTURA PUO' ESSERE UN SALTO FINTO —
+     *    `[M]` 3 ott, DeX: due volte la cattura appena accesa si e' rilasciata
+     *    nello stesso secondo («spinto oltre il bordo»), e ci e' voluto un
+     *    secondo clic.  Chrome consegna come primo `movementX` dopo la lock la
+     *    distanza dal punto in cui il cursore di sistema era rimasto.  ⇒ Il
+     *    primo, se e' piu' lungo di CL_SALTO_FINTO pixel CSS, non si conta. */
+    const finto = cl_appena_agganciato
+      && (Math.abs(ev.movementX || 0) > CL_SALTO_FINTO
+          || Math.abs(ev.movementY || 0) > CL_SALTO_FINTO);
+    cl_appena_agganciato = false;
+    if (finto) {
+      nota("MARCA modo classico: primo movimento dopo la cattura scartato ("
+         + ev.movementX + "," + ev.movementY + " px): e' il salto del cursore di sistema");
+      return;
+    }
     cl_px += (ev.movementX || 0) * CL_GUADAGNO / kx;
     cl_py += (ev.movementY || 0) * CL_GUADAGNO / ky;
+    cl_spinta_oltre_il_bordo(kx, ky);
   } else {
     /* Ripiego: la posizione assoluta dentro la tela.  ⚠ Qui il puntatore del
        browser sarebbe visibile — non lo e', perche' `cursor: none` vale per
@@ -10390,6 +10630,18 @@ function cl_su_mouseup(ev) {
      rimasto giu' (§7.3, «al distacco si rilascia tutto»). */
   if (c === undefined || !cl_pulsanti_premuti.has(c)) return;
   ev.preventDefault();
+  /* ⛔ ANCHE IL RILASCIO PORTA LA PROPRIA POSIZIONE, come il clic in
+   *    `cl_su_mousedown` — 3 ottobre 2026.  `[M]` giro `19-cattura-2`, Chrome
+   *    su GNOME, F-004: trascinando su «beta gamma delta» il desktop
+   *    selezionava «beta gamma delt», due volte su due.  Da quando il clic
+   *    viene dai pointer events, Chrome puo' consegnare `pointerup` in un punto
+   *    a cui nessun `pointermove` e' arrivato: il desktop rilasciava dove
+   *    l'aveva lasciato il movimento prima.  ⇒ Se il punto del rilascio sta a
+   *    un pixel CSS o piu' dall'ultimo punto grezzo, si manda prima lui.
+   *    Agganciati gli spostamenti sono gia' tutti contati: non serve. */
+  if (!cl_agganciato && (cl_grezzo_x < 0
+      || Math.abs(ev.clientX - cl_grezzo_x) >= 1
+      || Math.abs(ev.clientY - cl_grezzo_y) >= 1)) cl_su_mousemove(ev);
   cl_pulsanti_premuti.delete(c);
   cl_spedisci(CL_TIPO.PULSANTE, c, 0, ev.timeStamp);
 }
@@ -10564,6 +10816,35 @@ function cl_su_keydown(ev) {
      *   modificatore che si sta premendo lo manda il percorso normale, e basta. */
     if (!CL_MODIFICATORI_LETTERA.has(ev.key)) cl_sincronizza_modificatori(ev, ev.timeStamp);
     cl_tasti_premuti.set(ev.code, codice);
+    /* ⛔⛔⭐ IL `Ctrl+V` DOPO UNA COPIA REMOTA — 2 ottobre 2026, prova a mano
+     *      dell'utente: «Ctrl+C e Ctrl+V sembrano non funzionare, o non
+     *      funzionare sempre», su Firefox e su Chrome.
+     *
+     * ⚠ La corsa fra il tasto e l'annuncio la cura il server (`rcp.c`,
+     *   `rcp_appunti_chiedi`) mettendo in coda la domanda — ⛔ ma solo quando
+     *   la domanda arriva AL SERVER, cioe' quando gli appunti del desktop sono
+     *   suoi.  Dopo una copia fatta NEL desktop remoto gli appunti sono
+     *   dell'applicazione remota: il `Ctrl+V` legge da lei, il server non vede
+     *   nessuna domanda, e l'annuncio del testo copiato qui arriva tardi.
+     *   ⇒ La prima incollata da' il testo REMOTO, la seconda quello giusto.
+     *
+     * ⚠ E la coda del server non basta nemmeno quando gli appunti sono suoi:
+     *   `[M]` giro `cure-intel-5`, F-014D 7 su 8 — si copia A sul computer e
+     *   si incolla, poi si copia B: al `Ctrl+V` la domanda arriva al server,
+     *   che chiede al client il trasferimento di A (l'ultimo annunciato) e
+     *   lo serve, mentre l'annuncio di B e' ancora per strada.  La coda
+     *   scatta solo quando il client non ha MAI annunciato niente.
+     *
+     * ⇒ A OGNI `Ctrl+V` la V si TRATTIENE finche' la pagina non ha letto gli
+     *   appunti del computer (l'evento `paste`) e, se sono cambiati, non ha
+     *   fatto partire l'annuncio — al massimo `INCOLLA_TRATTIENI_MS`.  Se non
+     *   sono cambiati si lascia subito.  ⭐ Nessun altro tasto aspetta: §9
+     *   rifiuta la cura di Xpra perche' costa 100 ms su OGNI battuta, e
+     *   questa costa il tempo di un evento `paste` sul solo `Ctrl+V`. */
+    if (e_incolla && APPUNTI.acceso) {
+      incolla_trattieni(ev.code, codice, ev.timeStamp);
+      return;
+    }
     cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ev.timeStamp);
     return;
   }
@@ -10601,6 +10882,32 @@ function cl_su_keydown(ev) {
     }
   }
   cl_spedisci(CL_TIPO.LETTERA, p, 0, ev.timeStamp);
+}
+
+const INCOLLA_TRATTIENI_MS = 400;
+let incolla_trattenuto = null;
+
+/* ⚠ Mentre la V aspetta, OGNI altro tasto aspetta con lei, in fila (vedi
+   `cl_spedisci`): se il Ctrl tornasse su prima che la V parta, al desktop
+   arriverebbe una «v» semplice invece di un incolla. */
+function incolla_trattieni(code, codice, ms) {
+  incolla_trattenuto = { code: code, codice: codice, fila: [], t: performance.now(),
+                         scade: setTimeout(() => incolla_trattenuto_lascia(
+                           "nessun annuncio in " + INCOLLA_TRATTIENI_MS + " ms"),
+                           INCOLLA_TRATTIENI_MS) };
+  app_diario("Ctrl+V dopo una copia remota: la V aspetta l'annuncio");
+}
+
+function incolla_trattenuto_lascia(perche) {
+  const v = incolla_trattenuto;
+  if (!v) return;
+  incolla_trattenuto = null;
+  clearTimeout(v.scade);
+  const ms = performance.now();
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, v.codice, 1, ms);
+  for (const [a, b] of v.fila) cl_spedisci(CL_TIPO.POSIZIONE_TASTO, a, b, ms);
+  app_diario("V lasciata dopo " + Math.round(ms - v.t) + " ms, con "
+             + v.fila.length + " tasti in fila — " + perche);
 }
 
 function cl_su_keyup(ev) {
@@ -10688,14 +10995,27 @@ function cl_entra(perche) {
    * ⇒ `PointerEvent` copre mouse, penna e dito su ogni motore che lo ha, e
    *   `cl_su_pointermove` scarta gia' il dito (che ha la sua disposizione).  I
    *   `mouse*` restano come RIPIEGO, e solo dove `PointerEvent` non esiste. */
-  if (window.PointerEvent) tela.addEventListener("pointermove", cl_su_pointermove);
-  else                     tela.addEventListener("mousemove", cl_su_mousemove);
-  tela.addEventListener("mousedown", cl_su_mousedown);
+  /* ⭐ E dal 2 ottobre 2026 anche i CLIC: stessa porta, stessa ragione
+   *   (vedi `cl_su_pointerdown`).  `touch-action: none` anche qui, non solo
+   *   nel tocco: senza, su Android un trascinamento col mouse diventa uno
+   *   scorrimento della pagina e il browser manda `pointercancel`. */
+  cl_pulsanti_da_pointer = !!window.PointerEvent;
+  if (cl_pulsanti_da_pointer) {
+    tela.addEventListener("pointermove", cl_su_pointermove);
+    tela.addEventListener("pointerdown", cl_su_pointerdown);
+    tela.style.touchAction = "none";
+  } else {
+    tela.addEventListener("mousemove", cl_su_mousemove);
+    tela.addEventListener("mousedown", cl_su_mousedown);
+  }
   tela.addEventListener("wheel", cl_su_wheel, { passive: false });
   tela.addEventListener("contextmenu", cl_su_contextmenu);
   /* Il rilascio si ascolta sulla FINESTRA: un pulsante lasciato andare fuori
      dalla tela non manderebbe mai il suo `mouseup` alla tela. */
-  addEventListener("mouseup", cl_su_mouseup, true);
+  if (cl_pulsanti_da_pointer) {
+    addEventListener("pointerup", cl_su_pointerup, true);
+    addEventListener("pointercancel", cl_su_pointercancel, true);
+  } else addEventListener("mouseup", cl_su_mouseup, true);
   addEventListener("keydown", cl_su_keydown, true);
   addEventListener("keyup", cl_su_keyup, true);
   document.addEventListener("pointerlockchange", cl_su_lock);
@@ -10738,9 +11058,13 @@ function cl_esci() {
   tela.removeEventListener("mousemove", cl_su_mousemove);
   tela.removeEventListener("pointermove", cl_su_pointermove);
   tela.removeEventListener("mousedown", cl_su_mousedown);
+  tela.removeEventListener("pointerdown", cl_su_pointerdown);
+  tela.style.touchAction = "";
   tela.removeEventListener("wheel", cl_su_wheel);
   tela.removeEventListener("contextmenu", cl_su_contextmenu);
   removeEventListener("mouseup", cl_su_mouseup, true);
+  removeEventListener("pointerup", cl_su_pointerup, true);
+  removeEventListener("pointercancel", cl_su_pointercancel, true);
   removeEventListener("keydown", cl_su_keydown, true);
   removeEventListener("keyup", cl_su_keyup, true);
   document.removeEventListener("pointerlockchange", cl_su_lock);
@@ -11635,6 +11959,260 @@ function esci_dal_classico() {
   return false;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ LA TASTIERA A SCHERMO, SOLO A RICHIESTA — 2 ottobre 2026, decisione
+ *     dell'utente «Tastiera solo a richiesta» (`DECISIONI.md` §10.28).
+ *
+ * ⛔ IL DIFETTO, `[M]` 2 ott 2026 sul telefono vero (S23+, Chrome 154): il
+ *    campo dell'incolla (`incolla_campo_tieni`) sta SEMPRE a fuoco, e su
+ *    Android un campo di testo a fuoco **apre la tastiera a schermo**.  Col
+ *    telefono in mano restava aperta per il 60 % della prova F-031 e copriva
+ *    la meta' bassa del desktop: i tocchi in quella meta' finivano sulla
+ *    tastiera.
+ * ⛔ E quella tastiera aperta NON scriveva niente: `[M]` 2 ott 2026, pagina
+ *    del prodotto in Chrome col tocco emulato — nel modo a tocco nessuno
+ *    ascoltava ne' i tasti ne' il testo del metodo d'inserimento (il gestore
+ *    dei tasti, `cl_su_keydown`, e' del modo classico e lo si spegne uscendone).
+ *    Lettere battute: zero messaggi partiti.
+ *
+ * ⇒ TRE PEZZI, e valgono SOLO nella disposizione a tocco (il telefono in mano):
+ *   1. il campo porta `inputmode="none"` e `virtualkeyboardpolicy="manual"`:
+ *      a fuoco, la tastiera non si apre da sola.  ⛔ Sul computer e sul DeX col
+ *      mouse (disposizione classica) i due attributi NON ci sono: l'incolla
+ *      (F-014, F-015) e i tasti (F-007, F-009) restano identici;
+ *   2. il comando ⌨ (`tastiera_comando()`) apre e chiude la tastiera;
+ *   3. quel che si batte arriva al desktop remoto come §7.3 vuole — le lettere
+ *      come lettere, Invio e Cancella come posizioni (`tastiera_su_input`,
+ *      `tastiera_su_keydown`).
+ * ══════════════════════════════════════════════════════════════════════════ */
+let tastiera_aperta = false;
+let tastiera_prima = "";        /* il contenuto del campo gia' spedito */
+let tastiera_vista_ridotta = false;
+let tastiera_el = null;
+const TASTIERA_SPEDITE = { lettere: 0, posizioni: 0 };
+/* I tasti che da soli non scrivono e non si spediscono qui. */
+const TASTIERA_MODIFICATORI = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock",
+                                       "AltGraph", "Fn", "OS"]);
+
+function tastiera_attributi(in_tocco) {
+  const f = incolla_campo;
+  if (!f) return;
+  if (in_tocco) {
+    f.setAttribute("inputmode", tastiera_aperta ? "text" : "none");
+    f.setAttribute("virtualkeyboardpolicy", "manual");
+    /* ⚠ Il campo si svuota dopo ogni parola: senza questi due, la tastiera
+     *   vedrebbe sempre un «inizio di frase» e metterebbe la maiuscola a ogni
+     *   parola. */
+    f.setAttribute("autocapitalize", "off");
+    f.setAttribute("autocorrect", "off");
+  } else {
+    for (const a of ["inputmode", "virtualkeyboardpolicy", "autocapitalize", "autocorrect"])
+      f.removeAttribute(a);
+  }
+}
+
+function tastiera_spedisci_posizione(codice, ms) {
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ms);
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 0, ms);
+  TASTIERA_SPEDITE.posizioni++;
+}
+
+function tastiera_spedisci_testo(testo, ms) {
+  for (const ch of Array.from(testo)) {
+    if (ch === "\n" || ch === "\r") { tastiera_spedisci_posizione(CL_POSIZIONE.Enter, ms); continue; }
+    if (ch === "\t") { tastiera_spedisci_posizione(CL_POSIZIONE.Tab, ms); continue; }
+    const p = ch.codePointAt(0);
+    if (p >= 0xD800 && p <= 0xDFFF) continue;
+    cl_spedisci(CL_TIPO.LETTERA, p, 0, ms);
+    TASTIERA_SPEDITE.lettere++;
+  }
+}
+
+function tastiera_in_uso() {
+  return modo_in_vigore === "tocco" && !cl_in_vigore
+         && document.body.dataset.schermo === "acceso";
+}
+
+/* ⭐ IL TESTO DEL METODO D'INSERIMENTO: si spedisce la DIFFERENZA.
+ *
+ * ⚠ Una tastiera a schermo non manda tasti: compone (`keyCode` 229) e poi
+ *   corregge — «cisao» diventa «ciao» riscrivendo la parola.  ⇒ Ogni volta
+ *   che il campo cambia si confronta con quel che e' gia' partito: il pezzo
+ *   comune resta, quel che e' sparito parte come Cancella (posizione 14),
+ *   quel che e' nuovo parte come lettere.  E' la strada di noVNC e di
+ *   Guacamole per la stessa ragione.
+ * ⚠ Fuori dalla composizione il campo si SVUOTA: non accumula, e l'incolla
+ *   (che guarda il campo) non vi trova mai una parola battuta.
+ * ⚠ `[?]` Col campo vuoto il Cancella di Gboard e della tastiera Samsung
+ *   arriva come TASTO (`tastiera_su_keydown`): e' il loro comportamento
+ *   documentato, ma sul telefono vero non e' ancora misurato. */
+function tastiera_su_input(ev) {
+  if (!tastiera_in_uso()) return;
+  const f = incolla_campo;
+  const ms = (ev && ev.timeStamp) || performance.now();
+  const ora = Array.from(f.value), prima = Array.from(tastiera_prima);
+  let i = 0;
+  while (i < ora.length && i < prima.length && ora[i] === prima[i]) i++;
+  for (let k = i; k < prima.length; k++) tastiera_spedisci_posizione(CL_POSIZIONE.Backspace, ms);
+  tastiera_spedisci_testo(ora.slice(i).join(""), ms);
+  tastiera_prima = f.value;
+  if (!(ev && ev.isComposing)) { f.value = ""; tastiera_prima = ""; }
+}
+
+/* ⭐ I TASTI VERI: quelli che la tastiera a schermo manda come tasti (Invio e
+ *   Cancella col campo vuoto, di solito) e quelli di una tastiera Bluetooth
+ *   senza mouse.  ⛔ Si annullano (`preventDefault`), o il campo li
+ *   scriverebbe e `tastiera_su_input` li spedirebbe una seconda volta.
+ * ⚠ Una battuta in composizione (229) NON e' un tasto: la porta l'evento
+ *   `input`.  E le combinazioni con Ctrl/Alt/Super restano al modo classico:
+ *   qui non partono, e non si annullano.
+ * ⚠ Su Android `code` puo' arrivare vuoto: si ripiega sul nome del tasto,
+ *   che per Invio, Cancella, Tab, Esc e frecce coincide col nome della
+ *   posizione. */
+function tastiera_su_keydown(ev) {
+  if (!tastiera_in_uso()) return;
+  if (ev.isComposing || ev.keyCode === 229) return;
+  if (cl_comando(ev) || TASTIERA_MODIFICATORI.has(ev.key) || ev.key === "Dead") return;
+  const ms = ev.timeStamp || performance.now();
+  if (Array.from(ev.key || "").length === 1) {
+    ev.preventDefault();
+    tastiera_spedisci_testo(ev.key, ms);
+    return;
+  }
+  const codice = CL_POSIZIONE[ev.code] !== undefined ? CL_POSIZIONE[ev.code] : CL_POSIZIONE[ev.key];
+  if (codice === undefined) return;
+  ev.preventDefault();
+  tastiera_spedisci_posizione(codice, ms);
+}
+
+function tastiera_ascolta(f) {
+  f.addEventListener("input", tastiera_su_input);
+  f.addEventListener("compositionend", tastiera_su_input);
+  f.addEventListener("keydown", tastiera_su_keydown);
+}
+
+function tastiera_aggiorna_comando() {
+  if (tastiera_el) tastiera_el.setAttribute("aria-pressed", tastiera_aperta ? "true" : "false");
+}
+
+/* ⚠ `blur()` e poi `focus()` DENTRO il gesto dell'utente: e' il gesto che
+ *   permette a Chrome per Android di aprire la tastiera, e il campo che
+ *   «rientra» col nuovo `inputmode` e' quel che gliela fa aprire (o chiudere).
+ *   `navigator.virtualKeyboard` (Chrome) e' la via diretta, dove c'e'. */
+function tastiera_rifocalizza(f) {
+  try { f.blur(); } catch (e) { /* niente */ }
+  try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); }
+}
+
+function tastiera_apri(perche) {
+  const f = incolla_campo_crea();
+  clearTimeout(incolla_restituisci);
+  f.value = "";
+  tastiera_prima = "";
+  tastiera_aperta = true;
+  tastiera_vista_ridotta = false;
+  tastiera_attributi(true);
+  tastiera_rifocalizza(f);
+  try {
+    if (navigator.virtualKeyboard && navigator.virtualKeyboard.show) navigator.virtualKeyboard.show();
+  } catch (e) { /* la via diretta non c'e': resta il fuoco */ }
+  tastiera_aggiorna_comando();
+  nota("tastiera a schermo APERTA — " + perche);
+}
+
+function tastiera_chiudi(perche, rifocalizza) {
+  if (!tastiera_aperta) return;
+  tastiera_aperta = false;
+  tastiera_vista_ridotta = false;
+  const f = incolla_campo;
+  if (f) {
+    tastiera_attributi(modo_in_vigore === "tocco");
+    try {
+      if (navigator.virtualKeyboard && navigator.virtualKeyboard.hide) navigator.virtualKeyboard.hide();
+    } catch (e) { /* niente */ }
+    if (rifocalizza) tastiera_rifocalizza(f);
+    f.value = "";
+    tastiera_prima = "";
+  }
+  tastiera_aggiorna_comando();
+  nota("tastiera a schermo chiusa — " + perche);
+}
+
+/* ⛔⭐ IL COMANDO: un bottoncino ⌨ in ALTO A DESTRA, e c'e' SOLO col telefono
+ *     in mano (il foglio di stile lo mostra con `data-disposizione="tocco"` e
+ *     la sessione accesa).  Le alternative pesate:
+ *
+ *   · un GESTO libero della tabella di §7.2 (quattro dita, due dita tenute…):
+ *     non ruba niente a nessuno, ⛔ ma non si scopre senza leggere un manuale
+ *     — ed e' la seconda condizione della decisione.  Scartato;
+ *   · ⛔ la lezione del 16 agosto 2026 (il foglio di stile, `#scorciatoie-apri`):
+ *     il bottoncino «⌨» in basso a sinistra fu tolto perche' «mi blocca
+ *     tutto».  Ma rubava i clic per due ragioni che qui NON ci sono:
+ *       1. stava sul computer, dove il clic va DOVE STA IL MOUSE: un elemento
+ *          sopra la tela copriva un pezzo di desktop.  ⭐ Col telefono in mano
+ *          vale il modello a trackpad (§7.1): il dito clicca dove sta il
+ *          PUNTATORE, non dove cade.  Un bottoncino di 40 px toglie al dito
+ *          solo un posto da cui partire, e nessun bersaglio del desktop;
+ *       2. apriva una BARRA larga (`z-index:12`) su tutta la fascia bassa.
+ *          Questo apre la tastiera del telefono e basta.
+ *   · ⚠ In ALTO perche' la tastiera aperta copre il fondo dello schermo: in
+ *     basso il comando per chiuderla sparirebbe sotto la tastiera stessa.
+ *   · ⚠ Il prezzo, dichiarato: e' un altro elemento sopra la tela, come
+ *     `#puntatore` (`STUDI.md` §web §1.2 C, S4), e solo nel modo a tocco.
+ *
+ * ⛔ Il bottone NON prende il fuoco: il tocco si annulla (`touchstart` non
+ *    passivo, e decide `touchend`), o il fuoco passerebbe al bottone e la
+ *    tastiera si chiuderebbe da sola.  ⭐ `touchend` e' un gesto dell'utente:
+ *    e' li' dentro che il campo si rifocalizza. */
+function tastiera_commuta(perche) {
+  if (tastiera_aperta) tastiera_chiudi(perche, true);
+  else tastiera_apri(perche);
+}
+
+function tastiera_comando() {
+  if (tastiera_el) return tastiera_el;
+  const b = document.createElement("button");
+  b.id = "tastiera-comando";
+  b.type = "button";
+  b.textContent = "⌨";
+  b.title = "Tastiera";
+  b.setAttribute("aria-label", "Tastiera");
+  b.setAttribute("aria-pressed", "false");
+  b.setAttribute("tabindex", "-1");
+  b.addEventListener("touchstart", function (ev) { ev.preventDefault(); }, { passive: false });
+  b.addEventListener("touchend", function (ev) {
+    ev.preventDefault();
+    tastiera_commuta("comando ⌨ toccato");
+  }, { passive: false });
+  b.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+  /* Il ripiego per un motore che consegnasse il tocco solo come clic. */
+  b.addEventListener("click", function (ev) {
+    ev.preventDefault();
+    tastiera_commuta("comando ⌨ premuto");
+  });
+  document.body.appendChild(b);
+  tastiera_el = b;
+  return b;
+}
+
+/* ⭐ LA TASTIERA CHIUSA DA ANDROID («indietro»): la pagina non riceve nessun
+ *   evento suo, ma la vista visibile torna alta.  ⇒ Se la vista si era
+ *   ridotta (la tastiera c'era) e torna intera, la tastiera e' chiusa: il
+ *   comando torna spento e il campo torna a `inputmode="none"`, cosi' non si
+ *   riapre da sola al prossimo fuoco. */
+function tastiera_vista_cambiata() {
+  if (!tastiera_aperta || !window.visualViewport) return;
+  const ridotta = visualViewport.height < innerHeight * 0.85;
+  if (ridotta) { tastiera_vista_ridotta = true; return; }
+  if (tastiera_vista_ridotta) tastiera_chiudi("chiusa da Android (indietro)", false);
+}
+try {
+  if (window.visualViewport) visualViewport.addEventListener("resize", tastiera_vista_cambiata);
+} catch (e) { /* senza vista visibile resta il comando */ }
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") tastiera_chiudi("la pagina e' stata nascosta", false);
+});
+
 function entra_nel_tocco() {
   const tela = $("schermo");
   /* ⛔ `touch-action: none` messo da qui e non dal foglio di stile: il foglio
@@ -11647,9 +12225,13 @@ function entra_nel_tocco() {
   tela.addEventListener("touchcancel", su_touchcancel, { passive: false });
   tocco_centra_puntatore();
   tocco_puntatore_disegna();
+  tastiera_comando();
+  tastiera_attributi(true);
 }
 function esci_dal_tocco() {
   const tela = $("schermo");
+  tastiera_chiudi("si esce dalla disposizione a tocco", false);
+  tastiera_attributi(false);
   tela.style.touchAction = "";
   tela.removeEventListener("touchstart", su_touchstart);
   tela.removeEventListener("touchmove", su_touchmove);
@@ -11747,6 +12329,13 @@ REMOTIX.tocco = {
   disposizione: function () { return modo_in_vigore; },
   perche: function () { return modo_perche; },
   rivaluta: rivaluta_disposizione,
+  /* La tastiera a schermo a richiesta (`tastiera_comando`): da LEGGERE. */
+  tastiera: function () {
+    const f = incolla_campo;
+    return { aperta: tastiera_aperta, comando: tastiera_el ? tastiera_el.id : null,
+             inputmode: f ? f.getAttribute("inputmode") : null,
+             spedite: Object.assign({}, TASTIERA_SPEDITE) };
+  },
   stato: function () {
     return { in_vigore: modo_in_vigore === "tocco",
              dita: tocco_dita.size, bloccato: tocco_bloccato,

@@ -157,10 +157,19 @@ static void aiuto(const char *nome)
 	        "REMOTIX — il server (fase 1: il filo nudo)\n"
 	        "\n"
 	        "  %s [opzioni]\n"
-	        "  %s --prova-codifica\n"
-	        "                    un fotogramma in H.264 con la scelta di una\n"
-	        "                    sessione vera; una riga JSON su stdout, esce\n"
-	        "                    0 se codifica (hardware o software), 1 no\n"
+	        "  %s --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN]\n"
+	        "                    [--codifica scheda|vulkan|vaapi]\n"
+	        "                    un fotogramma con la scelta di una sessione\n"
+	        "                    vera, sulla scheda; una riga JSON su stdout,\n"
+	        "                    esce 0 se la scheda codifica, 3 se nessuna\n"
+	        "                    scheda sa codificare, 1 se si apre e non esce\n"
+	        "\n"
+	        "  --codifica STRADA ⭐ fase 19: la strada della scheda — `scheda`\n"
+	        "                    (predefinito: per CAPACITA', Vulkan Video se\n"
+	        "                    la scheda lo offre per quel codec, se no\n"
+	        "                    VA-API), `vulkan` o `vaapi` per forzarla nelle\n"
+	        "                    prove e nella diagnosi (si fallisce dicendolo\n"
+	        "                    se non c'e': niente ripiego sull'altra)\n"
 	        "\n"
 	        "  --indirizzo IND   su che cosa ascoltare (predefinito: 0.0.0.0)\n"
 	        "  --nome NOME       il nome o l'indirizzo che va nel certificato\n"
@@ -1871,6 +1880,17 @@ int main(int argc, char **argv)
 		 *    opzione il comportamento e' quello di ieri byte per byte. */
 		else if (strcmp(a, "--sfratto-ms") == 0 && v)
 			rcp_sfratto_imposta((uint64_t)strtoull(argv[++i], NULL, 10));
+		/* ⭐ FASE 19 — la strada della scheda (`DECISIONI.md` §10.27).  Vale per
+		 *    la prova all'avvio (nel padre, un fork) e per ogni figlio (il padre
+		 *    gliela ripete nella riga di comando).  ⛔ Un nome che non e' uno dei
+		 *    tre e' un errore d'uso, non un «scheda» silenzioso. */
+		else if (strcmp(a, "--codifica") == 0 && v) {
+			if (!figlio_codifica_strada(argv[++i])) {
+				fprintf(stderr, "⛔ --codifica «%s»: si chiede scheda, vulkan o vaapi\n",
+				        argv[i]);
+				return 2;
+			}
+		}
 		/* ⛔⭐ FUNZIONE DI BANCO — fase 7: un tono di prova al posto dell'audio
 		 *     della sessione.  ⚠ Serve a mettere in prova il codificatore, il
 		 *     datagram e il browser con un segnale noto **campione per
@@ -2145,10 +2165,11 @@ int main(int argc, char **argv)
 		              strerror(journal_errno));
 	/* ⭐⭐ FASE 18 — CHE COSA SI OFFRE AL BROWSER, MISURATO ALL'AVVIO.
 	 *     `video.codec` dell'`ECCOMI` (§4.3) dice solo i codec che questa
-	 *     macchina sa fare: HEVC se la scheda lo codifica (in software non
-	 *     esiste), H.264 se la scheda o OpenH264 vero.  ⛔ Decisione dell'utente
-	 *     (30 set 2026): senza scheda e senza OpenH264 NON si rimette AV1 —
-	 *     si dichiara qui, col rimedio, e ogni CIAO finisce in NIENTE_IN_COMUNE. */
+	 *     macchina sa fare: HEVC e H.264 se la SCHEDA li codifica.  ⛔ Fase 19
+	 *     (1 ott 2026, `DECISIONI.md` §10.27), parole dell'utente: *«niente cpu
+	 *     senza scheda»* — il ripiego in software (OpenH264) e' uscito.  Senza
+	 *     una scheda capace si dichiara qui, con la ragione, e ogni CIAO
+	 *     finisce in NIENTE_IN_COMUNE. */
 	{
 		char offerti[32], spiega[1024];
 		registro_dice(REG_AVVIO,
@@ -2162,11 +2183,12 @@ int main(int argc, char **argv)
 			              offerti, spiega);
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessun codec "
-			              "nell'ECCOMI, ogni CIAO finira' in NIENTE_IN_COMUNE — %s.  "
-			              "⛔ AV1 non si rimette al suo posto (decisione dell'utente, "
-			              "30 set 2026): il rimedio e' OpenH264 VERO, o una scheda con "
-			              "i driver di codifica",
+			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessuna scheda "
+			              "capace, nessun codec nell'ECCOMI, ogni CIAO finira' in "
+			              "NIENTE_IN_COMUNE — %s.  ⛔ REMOTIX codifica SOLO sulla scheda "
+			              "(fase 19, niente ripiego in software): serve una scheda con "
+			              "un driver che codifichi — Vulkan Video (AMD con RADV, NVIDIA "
+			              "col driver proprietario) o VA-API (Intel, AMD)",
 			              spiega);
 	}
 

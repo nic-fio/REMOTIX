@@ -10,23 +10,21 @@
 # ⭐ LE DIPENDENZE E IL ROLLING RELEASE (§4.6, §6.2) — la scelta: il pacchetto
 #    si lega al NUMERO DELLA LIBRERIA (soname), non alla versione esatta.
 #    Ogni `libX.so` qui sotto makepkg lo trasforma nel soname che il binario
-#    usa DAVVERO (`libopenh264.so=8-64`), letto dal binario.  Quindi:
-#      · openh264 2.6.0 → 2.6.1 (stesso soname, ABI uguale): si aggiorna libero;
-#      · openh264 2.6 → 2.7 con libopenh264.so.9: `pacman -Syu` RIFIUTA, dicendo
-#        «breaks dependency 'libopenh264.so=8-64' required by remotix», finche'
-#        non si ricostruisce il pacchetto.
-#    ⚠ Fase 18 (niente ffmpeg): svt-av1 su Arch NON dichiara il suo
-#      soname nei «provides» (`[M]` 30 set: `pacman -Si` dice «Provides: None»;
-#      svt-av1 porta libSvtAv1Enc.so.4):
-#      per lei si scrive il nome del pacchetto, e il cambio di soname lo
-#      scopre solo `remotix` che non parte ⇒ si ricostruisce a ogni svt-av1 nuova.  E' quel che fanno i pacchetti di
-#        Arch stessi, e §6.2 lo chiede: «meglio un aggiornamento rifiutato che
-#        uno che rompe in silenzio».
-#    ⛔ La versione ESATTA (`openh264=2.6.0-2`) bloccherebbe ogni aggiornamento
+#    usa DAVVERO (`libopus.so=0-64`), letto dal binario.  Quindi:
+#      · opus 1.6.0 → 1.6.1 (stesso soname, ABI uguale): si aggiorna libero;
+#      · un soname nuovo: `pacman -Syu` RIFIUTA, dicendo «breaks dependency
+#        'libopus.so=0-64' required by remotix», finche' non si ricostruisce il
+#        pacchetto.  E' quel che fanno i pacchetti di Arch stessi, e §6.2 lo
+#        chiede: «meglio un aggiornamento rifiutato che uno che rompe in
+#        silenzio».
+#    ⛔ La versione ESATTA (`opus=1.6.1-1`) bloccherebbe ogni aggiornamento
 #       della libreria, anche quelli di sicurezza, e con lui l'intero `-Syu`: su
 #       una rolling release vuol dire una macchina che non si aggiorna piu'.
-#    ⇒ A carico nostro: ricostruire a ogni cambio di soname (svt-av1 circa una
-#      volta l'anno; OpenSSL, glib, libei, pipewire piu' di rado).
+#    ⇒ A carico nostro: ricostruire a ogni cambio di soname (OpenSSL, glib,
+#      libei, pipewire, di rado).
+#    ⛔ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): openh264 e svt-av1, il
+#      ripiego in software, sono USCITI — svt-av1 era quella senza «provides»
+#      da ricostruire a ogni versione nuova.
 #
 # ⭐ ngtcp2 e nghttp3 DENTRO, statiche, versione fissata (§6.3) — D2 chiusa
 #    («si'», DECISIONI.md §10.6), aggiornamenti di sicurezza a carico nostro.
@@ -61,15 +59,22 @@ depends=(
 	pam libpam.so
 	openssl libssl.so libcrypto.so            # >= 3.5: TLS 1.3 con QUIC nativo
 	# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  Tutto da «extra»,
-	#    `[M]` 30 set: openh264 2.6.0, svt-av1 4.2.0, opus 1.6.1, libva 2.24.1
-	#    (porta anche libva-drm.so).
-	openh264 libopenh264.so                   # il ripiego H.264
-	svt-av1                                   # il ripiego AV1 (libSvtAv1Enc.so.4: niente provides)
+	#    `[M]` 30 set: opus 1.6.1, libva 2.24.1 (porta anche libva-drm.so).
+	#    ⛔ Fase 19: niente openh264 e svt-av1 — si codifica solo sulla scheda.
 	opus libopus.so                           # l'audio
 	# ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1)
 	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
 	libpipewire libpipewire-0.3.so
 	libva libva.so libva-drm.so
+	# ⭐ Fase 19 (`fasi/19-nvidia.md`): Vulkan Video, provata PRIMA di VA-API.
+	#    Il loader si collega; il driver (ICD) e' della scheda: `vulkan-radeon`
+	#    per AMD (RADV), `nvidia-utils` per NVIDIA — `[M]` 1 ott 2026 su Arch
+	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` e'
+	#    un virtuale con piu' fornitori e pacman lo chiederebbe: resta fra gli
+	#    optdepends, e il motore mette quello della scheda che trova (catalogo
+	#    2026.10.01.10, `vulkan_scheda`: AMD → vulkan-radeon; NVIDIA: nvidia-utils
+	#    viene col driver, e il motore lo nomina soltanto nel rimedio).
+	vulkan-icd-loader libvulkan.so
 	libei libei.so                            # >= 1.1: l'input su GNOME e KDE
 	libxkbcommon libxkbcommon.so
 	wayland libwayland-client.so
@@ -98,7 +103,11 @@ depends=(
 	wireplumber
 	pipewire-pulse
 )
-makedepends=(cmake ninja pkgconf)            # wayland-scanner: da `wayland`, gia' in depends
+makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: da `wayland`, gia' in depends; vulkan-headers: fase 19
+optdepends=(
+	'vulkan-radeon: la codifica Vulkan Video sulle schede AMD (RADV), fase 19'
+	'nvidia-utils: la codifica Vulkan Video sulle schede NVIDIA col driver proprietario'
+)
 backup=(
 	etc/remotix/utenti-negati
 	etc/pam.d/remotix

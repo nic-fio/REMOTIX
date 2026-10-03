@@ -536,7 +536,7 @@ def corpo(o, E):
     porta_scena = o.porte_base + 5
     with S.Sessione(o, "014", E) as s:
         g = s.g
-        if o.browser == "chrome":
+        if o.browser in ("chrome", "telefono"):
             # ⭐ il permesso, come lo darebbe l'utente cliccando «Consenti»
             origine = o.url.rstrip("/")
             try:

@@ -377,6 +377,11 @@ def uccidi_browser(s):
     """⛔ kill -9 del browser e di tutti i suoi processi: nessun congedo.
     Torna quanti processi."""
     g = s.g
+    if hasattr(g, "uccidi"):
+        # ⭐ il telefono (fase 19 §5): Chrome fermato di colpo da adb (`am force-stop`)
+        n = g.uccidi()
+        s.g = None
+        return n
     p = getattr(g, "p", None)
     if p is None:
         return 0
@@ -404,6 +409,16 @@ def accendi_a_misura(s, largo, alto):
     (come `Sessione`); il resto: Chrome nasce con `--window-size`, Firefox con
     `SetWindowRect`.  Torna la misura riletta."""
     o = s.o
+    if o.browser == "telefono":
+        # ⭐ il telefono (fase 19 §5) non ha finestre da misurare: la misura nuova e'
+        #   il telefono GIRATO; il 4K di partenza e' il verso in cui l'ha lasciato l'utente
+        print("   telefono: %s" % S.telefono().orienta(
+            "partenza" if (largo, alto) == (3840, 2160) else "altro"), flush=True)
+        s.accendi_browser()
+        try:
+            return s.g.js("return [innerWidth, innerHeight, devicePixelRatio]")
+        except Exception as e:                   # noqa: BLE001
+            return "? (%s)" % e
     vecchio = list(S.VERI.FINESTRA)
     ol, oa = o.largo, o.alto
     try:

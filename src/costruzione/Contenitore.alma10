@@ -1,18 +1,19 @@
 # Contenitore.alma10 — costruzione di REMOTIX per AlmaLinux 10 (con EPEL e CRB).
 #
 # Le -devel stanno in parte in CRB (libei, pipewire); fase 18, senza ffmpeg:
-# `noopenh264-devel` (EPEL: le SOLE intestazioni, che bastano a compilare —
-# a esecuzione serve `openh264` vero dal deposito `epel-cisco-openh264`, e
-# `ripiego.c` riconosce la copia vuota), `svt-av1-devel` e `opus-devel` (EPEL).
+# `opus-devel` (EPEL).  (`noopenh264-devel` e `svt-av1-devel`, il ripiego in
+# software, sono usciti con la fase 19.)
 # ngtcp2 e nghttp3 dentro, statiche (quella di EPEL e' 1.22).
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-loader-devel` (porta
+#    `vulkan-headers`), `[M]` 1 ott 2026 nell'immagine: 1.4.328, in AppStream (non CRB).
 FROM docker.io/library/almalinux:10
 RUN dnf -y install epel-release dnf-plugins-core \
     && dnf config-manager --set-enabled crb \
     && dnf -y install --setopt=install_weak_deps=False \
         gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
         openssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
-        libva-devel noopenh264-devel svt-av1-devel opus-devel \
-        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel \
+        libva-devel opus-devel \
+        libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel vulkan-loader-devel \
     && dnf clean all
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

@@ -48,7 +48,7 @@ func Preflight(a *Ambiente, o OpzioniPreflight) *Profilo {
 	desktop(a, p, fam, pk, o.Pacchetti)
 	depositi(a, p)
 	schede(a, p)
-	h264(a, p, fam)
+	codifica(a, p, fam)
 	sicurezza(a, p)
 	firewall(a, p, o.Porta)
 	pam(a, p, fam)
@@ -166,20 +166,19 @@ var pacchettiFissi = []string{"labwc", "firewalld", "ufw", "nftables",
 	"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl",
 	// la famiglia del driver VA (§4.2, fase 18): Intel completo o ridotto, Mesa coi codec o senza
 	"intel-media-driver", "intel-media-driver-free", "libva-intel-media-driver", "intel-media-va-driver",
-	"intel-media-va-driver-non-free", "mesa-va-drivers", "mesa-va-drivers-freeworld", "mesa-dri-drivers", "Mesa-dri",
-	// OpenH264 (fase 18): il vero o la copia vuota
-	"openh264", "noopenh264", "libopenh264-8", "libopenh264-7"}
+	"intel-media-va-driver-non-free", "mesa-va-drivers", "mesa-va-drivers-freeworld", "mesa-dri-drivers", "Mesa-dri"}
 
 // famigliaDriver: dal pacchetto installato, se il driver VA codifica H.264 (§4.2, fase 18). Fedora:
 // libva-intel-media-driver (già intel-media-driver-free) e la Mesa ufficiale sono costruiti SENZA
 // H.264 — `[M]` 30 set, dai binari: 38 nomi di classe della codifica AVC contro i 114 del driver di
 // RPM Fusion; openSUSE: il driver Intel ufficiale è quello completo (104-115, come RPM Fusion), la Mesa
 // ufficiale è senza h264/h265 («re-disable video codecs», changelog di Mesa-dri), quella di Packman
-// (versione «.pm.») coi codec. Torna, per Intel e AMD, "con", "senza" o "" (non riconosciuto).
-func famigliaDriver(p *Profilo) (intel, amd string) {
+// (versione «.pm.») coi codec. Torna, per Intel e AMD, "con", "senza" o "" (non riconosciuto), e
+// la descrizione (f) per il fatto h264.famiglia_driver. Non scrive niente nel profilo: la usa anche
+// il verdetto sulla scheda (strade.go), dentro Valuta.
+func famigliaDriver(p *Profilo) (intel, amd string, f []string) {
 	c := func(n string) bool { v := p.V("pacchetto." + n); return v != "" && v != "assente" }
 	fam := p.V("distro.famiglia")
-	var f []string
 	switch {
 	case c("intel-media-driver") || c("intel-media-va-driver-non-free") || c("intel-media-va-driver"):
 		intel = "con"
@@ -205,11 +204,6 @@ func famigliaDriver(p *Profilo) (intel, amd string) {
 		amd = "con"
 		f = append(f, "mesa-va-drivers (radeonsi con H.264)")
 	}
-	if len(f) == 0 {
-		p.Sconosciuto("h264.famiglia_driver", "nessun pacchetto di driver VA riconosciuto")
-		return
-	}
-	p.Rilevato("h264.famiglia_driver", strings.Join(f, "; "), "pacchetti installati")
 	return
 }
 
@@ -430,13 +424,11 @@ func depositi(a *Ambiente, p *Profilo) {
 	cerca("deposito.rpmfusion-nonfree", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return id == "rpmfusion-nonfree" || id == "rpmfusion-nonfree-updates"
 	})
+	// EPEL: non il deposito Cisco di OpenH264 per EPEL, che una macchina può ancora avere (fase 18)
 	cerca("deposito.epel", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return strings.Contains(id, "epel") && !strings.Contains(id, "openh264")
 	})
 	cerca("deposito.packman", []string{"/etc/zypp/repos.d"}, parola("packman"))
-	// OpenH264 di Cisco (fase 18): fedora-cisco-openh264 (Fedora, acceso di serie), epel-cisco-openh264
-	// (Alma: non lo configura nessuno), repo-openh264 / openSUSE:repo-openh264 (openSUSE, di serie)
-	cerca("deposito.openh264", []string{"/etc/yum.repos.d", "/etc/zypp/repos.d"}, parola("openh264"))
 }
 
 // Scheda è un nodo di disegno col suo driver.
@@ -488,9 +480,9 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 	for _, s := range r {
 		nomi = append(nomi, filepath.Base(s.Nodo))
 	}
+	// senza nodi il rifiuto lo dà il verdetto sulla scheda (strade.go, RX-GPU-003)
 	if len(nomi) == 0 {
 		p.Rilevato("scheda.nodi", "nessuno", "/sys/class/drm")
-		p.Con("RX-GPU-001", "")
 	} else {
 		p.Rilevato("scheda.nodi", strings.Join(nomi, ","), "/sys/class/drm")
 	}
@@ -519,10 +511,9 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 // davvero (§6.5 punto 1, §6.6.7): la prova vera si fa in 7a col binario di REMOTIX. Qui si legge
 // quel che si può leggere senza lanciare niente. ⭐ Fase 18 (senza ffmpeg): la scheda codifica con
 // libva e il driver VA della distribuzione — si guardano i driver (le cartelle dri, anche
-// dri-nonfree e dri-freeworld di RPM Fusion) e la loro famiglia (famigliaDriver); il ripiego è
-// OpenH264, e si distingue quello vero dalla copia vuota (noopenh264: 11-14 KB contro 1,1-1,4 MB,
-// `[M]` 30 set, Fedora 44, Leap 16, Tumbleweed). La scheda resta SCONOSCIUTA salvo i casi certi:
-// nessun driver, o solo driver costruiti senza H.264.
+// dri-nonfree e dri-freeworld di RPM Fusion) e la loro famiglia (famigliaDriver). Fase 19: è la
+// Rileva della strada «vaapi» (strade.go), e non c'è più un ripiego da guardare. La scheda resta
+// SCONOSCIUTA salvo i casi certi: nessun driver, o solo driver costruiti senza H.264.
 func h264(a *Ambiente, p *Profilo, fam string) {
 	var driver []string
 	visti := map[string]bool{}
@@ -543,54 +534,35 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	} else {
 		p.Rilevato("h264.driver_va", "nessuno", "cartelle dri")
 	}
-	intel, amd := famigliaDriver(p)
+	intel, amd, fd := famigliaDriver(p)
+	if len(fd) == 0 {
+		p.Sconosciuto("h264.famiglia_driver", "nessun pacchetto di driver VA riconosciuto")
+	} else {
+		p.Rilevato("h264.famiglia_driver", strings.Join(fd, "; "), "pacchetti installati")
+	}
 	nota7a := "la prova col fotogramma si fa in 7a, col binario di REMOTIX"
-	forn, _ := fornitoriScheda(p)
+	forn, noti := fornitoriScheda(p)
 	// il caso certo: ogni scheda Intel/AMD della macchina ha solo un driver senza H.264
 	senza := (forn["Intel"] || forn["AMD"]) && (!forn["Intel"] || intel == "senza") && (!forn["AMD"] || amd == "senza")
+	// i codici del driver (dove prenderlo) solo se c'è una scheda della strada: senza Intel né AMD
+	// il motivo è un altro, e lo dice il verdetto (RX-GPU-*)
+	conScheda := !noti || forn["Intel"] || forn["AMD"]
 	switch {
 	case len(driver) == 0:
 		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "cartelle dri", Nota: "nessun driver VA-API"})
-		p.Con(codiceH264(fam), "nessun driver VA-API")
+		if conScheda {
+			p.Con(codiceH264(fam), "nessun driver VA-API")
+		}
 	case senza:
 		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "pacchetti installati", Nota: "driver VA senza H.264: " + p.V("h264.famiglia_driver")})
 		p.Con(codiceH264(fam), "driver VA senza H.264")
 	default:
 		p.Sconosciuto("h264.scheda", "driver "+strings.Join(driver, ",")+": "+nota7a)
-		p.Con("RX-H264-001", nota7a)
-	}
-	// il ripiego software (fase 18): OpenH264, quello vero
-	lib, dim := "", int64(0)
-	for _, g := range []string{"/usr/lib/*/libopenh264.so.*", "/usr/lib64/libopenh264.so.*", "/usr/lib/libopenh264.so.*"} {
-		v, _ := filepath.Glob(a.P(g))
-		sort.Strings(v)
-		for _, x := range v {
-			if st, err := os.Lstat(x); err == nil && st.Mode().IsRegular() {
-				lib, dim = x, st.Size()
-			}
+		if conScheda {
+			p.Con("RX-H264-001", nota7a)
 		}
-		if lib != "" {
-			break
-		}
-	}
-	rel := strings.TrimPrefix(lib, strings.TrimSuffix(a.P("/"), "/"))
-	switch {
-	case lib == "":
-		p.Rilevato("h264.software", "no", "libopenh264.so non trovata")
-		p.Con("RX-H264-005", "OpenH264 manca")
-	case dim < sogliaOpenH264:
-		p.Rilevato("h264.openh264", rel, rel)
-		p.Metti(Fatto{Chiave: "h264.software", Valore: "no", Stato: RILEVATO, Fonte: rel, Nota: fmt.Sprintf("la copia vuota (noopenh264, %d byte)", dim)})
-		p.Con("RX-H264-005", "la copia vuota di OpenH264 (noopenh264)")
-	default:
-		p.Rilevato("h264.openh264", rel, rel)
-		p.Metti(Fatto{Chiave: "h264.software", Valore: "si", Stato: RILEVATO, Fonte: rel, Nota: "OpenH264; " + nota7a})
 	}
 }
-
-// sogliaOpenH264: sotto, la libreria è la copia vuota (noopenh264 di Fedora/EPEL, libopenh264-8
-// «~noopenh264» di openSUSE: 11-14 KB); OpenH264 vero pesa più di 1 MB (`[M]` 30 set).
-const sogliaOpenH264 = 200 * 1024
 
 func codiceH264(fam string) string {
 	switch fam {

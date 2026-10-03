@@ -223,6 +223,48 @@ typedef struct {
  *   ritardo.  Succede tre volte per sessione (e a ogni cambio di misura). */
 #define WLR_LASTRA_NASCITA_S 1.0
 
+/*
+ * ⛔⛔ FASE 19 — LA LASTRA NASCE ALLA TELA MASSIMA E NON MUORE AL CAMBIO DI
+ *      MISURA (1 ott 2026, il GPU hang della Radeon sulla strada Vulkan).
+ *
+ *   Il ridimensionamento si fa cambiando il `wl_buffer` (la misura dichiarata
+ *   al compositore), NON il BO: la lastra GBM nasce `WLR_LASTRA_L x
+ *   WLR_LASTRA_A` (= `RCP_TELA_L/A_MASSIMA` di `rcp.h`, la tela piu' grande
+ *   che il prodotto accetta) e serve ogni misura che ci sta dentro, col suo
+ *   passo.  Muore solo con il palco, con lo spegnimento della scheda, o se
+ *   una misura non ci sta (non succede: la tela si riduce prima, §4.5).
+ *
+ *   ⛔ Perche': GBM (radeonsi) e Vulkan (RADV) nello STESSO processo, sulla
+ *     STESSA scheda, condividono un solo `amdgpu_device` di libdrm — un solo
+ *     file DRM, una sola VM della scheda, un solo spazio di indirizzi (`[M]`:
+ *     le tre lastre stanno nel `drm-client-id` dei BO di RADV, 87 MB «shared»).
+ *     Buttare un BO di GBM e subito dopo far nascere il codificatore Vulkan
+ *     alla misura nuova ⇒ la scheda trova NON MAPPATA un'immagine che RADV
+ *     ha appena legato (`VK_EXT_device_address_binding_report`: BIND e nessun
+ *     UNBIND; il page fault cade dentro l'immagine d'ingresso nuova) ⇒ page
+ *     fault, `VK_ERROR_DEVICE_LOST`, MODE1 reset che azzera la scheda per
+ *     tutti.  E' il driver (kernel amdgpu / winsys di Mesa 25.0.7), non
+ *     l'uso dell'API, ma lo si evita qui: `[M]` 1 ott 2026, F-018 su lxqt
+ *     Radeon/Vulkan, 10 fault su 14 corse con le lastre buttate al cambio,
+ *     0 su 5 con le lastre tenute (e 0 su 5 sulla strada della memoria).
+ *   ⚠ Il prezzo: 3 x 4096x2304x4 = 113 MB di lastre per sessione, anche a
+ *     1080p (erano 3 x la tela).  ⇒ SOLO quando la codifica del figlio e'
+ *     Vulkan (`wlr_lastre_alla_tela_massima()`, deciso in `figlio.c` prima
+ *     del palco): con VA-API restano le lastre della misura giusta.
+ */
+#define WLR_LASTRA_L 4096u
+#define WLR_LASTRA_A 2304u
+
+/* Il predefinito e' FALSO: con VA-API (la Intel, dove radeonsi/iHD stanno da
+ * soli nel processo) il difetto non c'e', e 113 MB per sessione su una
+ * grafica integrata sono RAM di sistema spesa per niente. */
+static bool lastre_massime = false;
+
+void wlr_lastre_alla_tela_massima(bool si)
+{
+	lastre_massime = si;
+}
+
 typedef enum {
 	LASTRA_LIBERA = 0,
 	LASTRA_IN_VOLO, /* nominata nel `copy` del fotogramma in corso      */
@@ -234,6 +276,7 @@ typedef struct {
 	struct wl_buffer *buffer;
 	int fd;
 	uint32_t larghezza, altezza, stride, offset, formato; /* formato: fourcc DRM */
+	uint32_t bo_larghezza, bo_altezza; /* il BO: la misura di nascita (WLR_LASTRA_*) */
 	uint64_t modificatore;
 	LastraStato stato;
 	bool sporca;
@@ -1113,20 +1156,42 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	if (l->buffer && !l->sporca && l->larghezza == larghezza && l->altezza == altezza &&
 	    l->formato == formato)
 		return true; /* quella di prima va bene */
+	if (lastre_massime && l->bo && l->formato == formato && larghezza <= l->bo_larghezza &&
+	    altezza <= l->bo_altezza) {
+		/* ⛔ FASE 19: il BO resta (vedi WLR_LASTRA_L), cambia solo il
+		 *    `wl_buffer`.  ⛔ Regola 3: la misura e' cambiata, quindi la
+		 *    generazione cambia — il codificatore non deve ritrovare in cache
+		 *    l'importazione con la misura vecchia. */
+		if (l->buffer)
+			wl_buffer_destroy(l->buffer);
+		l->buffer = NULL;
+		l->larghezza = larghezza;
+		l->altezza = altezza;
+		p->generazione = generazione_nuova();
+		goto il_buffer;
+	}
 	lastra_butta(p, l);
+	if (lastre_massime && (larghezza > WLR_LASTRA_L || altezza > WLR_LASTRA_A))
+		registro_dice(AREA,
+		              "⚠ wlroots: una tela %ux%u oltre la lastra massima %ux%u — la "
+		              "lastra nasce alla misura chiesta, e cambiando misura MORIRA' (FASE "
+		              "19: sulla Radeon in Vulkan e' il caso del GPU hang)",
+		              larghezza, altezza, WLR_LASTRA_L, WLR_LASTRA_A);
 
 	/* ⭐ LINEARE, chiesto per nome.  ⚠ Se il driver non accetta la lista dei
 	 *   modificatori si riprova con la bandiera LINEAR, che dice la stessa
 	 *   cosa nel dialetto vecchio. */
-	l->bo = gbm_bo_create_with_modifiers2(p->gbm, larghezza, altezza, formato, &lineare, 1,
-	                                      GBM_BO_USE_RENDERING);
+	l->bo_larghezza = (lastre_massime && larghezza < WLR_LASTRA_L) ? WLR_LASTRA_L : larghezza;
+	l->bo_altezza = (lastre_massime && altezza < WLR_LASTRA_A) ? WLR_LASTRA_A : altezza;
+	l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
+	                                      &lineare, 1, GBM_BO_USE_RENDERING);
 	if (!l->bo)
-		l->bo = gbm_bo_create(p->gbm, larghezza, altezza, formato,
+		l->bo = gbm_bo_create(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
 		                      GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR);
 	if (!l->bo) {
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
-		            "gbm non alloca %ux%u fourcc 0x%08x lineare su %s: %s", larghezza,
-		            altezza, formato, p->nodo, g_strerror(errno));
+		            "gbm non alloca %ux%u fourcc 0x%08x lineare su %s: %s",
+		            l->bo_larghezza, l->bo_altezza, formato, p->nodo, g_strerror(errno));
 		return false;
 	}
 	if (gbm_bo_get_plane_count(l->bo) != 1) {
@@ -1167,6 +1232,7 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	 *    generazione cambia ADESSO (regola 3). */
 	p->generazione = generazione_nuova();
 
+il_buffer:
 	p->creato = NULL;
 	p->params_finito = p->params_fallito = false;
 	params = zwp_linux_dmabuf_v1_create_params(p->dmabuf);

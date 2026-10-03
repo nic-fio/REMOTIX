@@ -6213,6 +6213,33 @@ proprietario non codifica via VA-API: si ripiegava sul processore, già prima de
 - ⇒ **Fase 19** (`fasi/19-nvidia.md`). Le misure rifatte della fase 18 si fermano dove sono (parola
   dell'utente: *«basta misure»*).
 
+### 10.28 ✅ La tastiera del telefono si apre solo a richiesta — scelta dell'utente (2 ott 2026)
+
+Parole della scelta: *«Tastiera solo a richiesta»*. `[M]` 2 ott, S23+ con Chrome 154, telefono in mano: la
+tastiera a schermo si apriva da sola (il campo nascosto dell'incolla resta sempre a fuoco) e copriva metà
+del desktop per il 60 % della prova F-031; e non scriveva niente, perché nel modo a tocco nessuno ascoltava i
+tasti. ⇒ **La tastiera non si apre più da sola; la apre un comando quando serve**, e quel che si scrive
+arriva al desktop come §7.3 (lettere come lettere).
+- Il comando è un bottoncino **⌨ in alto a destra**, solo col telefono in mano (disposizione a tocco): si
+  scopre senza manuale, e col modello a trackpad non copre bersagli del desktop. Un gesto della tabella di
+  `SPECIFICHE.md` §7.2 è stato scartato perché non si scopre da solo. Sul computer e sul DeX col mouse non
+  cambia niente.
+
+### 10.29 ✅ Sul DeX la cattura del puntatore si accende al primo clic — scelta dell'utente (3 ott 2026)
+
+Parole della scelta: *«per migliorare l'usabilità in android la cattura meglio attivarla al primo clic del
+mouse»*, e alla fine della prova: *«considerando i limiti di Android direi che abbiamo raggiunto un risultato
+eccellente»*. `[M]` 3 ott, S23 (Android 16) sul DeX, Chrome 154 e Samsung Internet 30, Radeon e Intel: senza
+cattura la posizione arriva solo al clic o a tasto premuto (noVNC #1727, di Android sui Samsung) e la freccia
+doppia del ridimensionamento non compare mai; con la cattura i movimenti a tasti alzati arrivano e il bordo si
+trascina. ⇒ **Il primo clic sulla tela cattura il puntatore dove l'hover non arriva** (nessun passaggio a tasti
+alzati prima del clic, o l'ultimo ad almeno 8 px dal clic: nessun ramo per sistema, Samsung Internet sul DeX si dichiara Linux); **si esce
+spingendo oltre il bordo** (160 px CSS di spinta, così gli angoli attivi restano) **o con Esc**, e il clic
+dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la freccia la disegna la pagina.
+- `[?]` Da riprovare quando Google rilascia la modalità desktop di Android (osservazione dell'utente, 3 ott):
+  la regola guarda il comportamento e non il sistema, quindi si adatta da sé (hover che arriva ⇒ niente
+  cattura); da misurare là: se Chrome concede `Pointer Lock` e se le scorciatoie arrivano alla pagina.
+
 ---
 
 ## Come si tiene questo documento

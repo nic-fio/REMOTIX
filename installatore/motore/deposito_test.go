@@ -11,8 +11,8 @@ import (
 
 // Un deposito di terzi si annulla (disinstallazione): i pacchetti arrivati con lui che qualcosa che
 // resta chiede si TRATTENGONO, e con loro resta il deposito — dichiarato con RX-PACCHETTI-006 (la
-// regola della disinstallazione: si trattiene ciò che serve a chi resta). `[M]` T10, 30 set:
-// fedora44-gnome-iso (libheif e mozilla-openh264 chiedono openh264), alma10-kde (ark, dolphin…).
+// regola della disinstallazione: si trattiene ciò che serve a chi resta). `[M]` T10, 30 set (fase 18,
+// col deposito Cisco): fedora44-gnome-iso (libheif e mozilla-openh264 chiedono openh264), alma10-kde.
 // Prima la disinstallazione si annullava con RX-PACCHETTI-002.
 
 // comandiFinti: un Esecutore che risponde a rpm e dnf come su una Fedora con «installati»,
@@ -92,69 +92,36 @@ func ambienteRpmFinto(t *testing.T, id string, f *comandiFinti) *Ambiente {
 }
 
 func TestDepositoTrattieneChiServe(t *testing.T) {
-	// Fedora: il deposito fedora-cisco-openh264 acceso da noi; openh264 arrivato con lui; libheif
-	// (che resta) lo chiede
-	f := &comandiFinti{installati: []string{"libheif", "remotix", "openh264"},
-		dipendenti: map[string][]string{"openh264": {"libheif"}}}
+	// Fedora: RPM Fusion aggiunto da noi; il driver arrivato con lui (intel-media-driver) lo chiede
+	// gstreamer1-vaapi, che resta. (Fase 18 il caso vero era openh264 dal deposito Cisco, uscito con
+	// la fase 19: la regola è la stessa per ogni deposito di terzi.)
+	f := &comandiFinti{installati: []string{"rpmfusion-free-release", "gstreamer1-vaapi", "remotix", "intel-media-driver"},
+		dipendenti: map[string][]string{"intel-media-driver": {"gstreamer1-vaapi"}}}
 	amb := ambienteRpmFinto(t, "fedora", f)
-	os.WriteFile(filepath.Join(amb.Radice, "etc/yum.repos.d/fedora-cisco-openh264.repo"),
-		[]byte("[fedora-cisco-openh264]\nname=x\nenabled=1\n"), 0o644)
-	d := &deposito{tipo: "openh264", par: map[string]string{"tipo": "openh264"}}
+	d := &deposito{tipo: "rpmfusion", par: map[string]string{"tipo": "rpmfusion"}}
 	c := &Contesto{Amb: amb, Purge: true}
-	prima, _ := json.Marshal(primaDeposito{Origine: DIRETTA, Tipo: "openh264",
-		Stato: map[string]bool{"fedora-cisco-openh264": false}, Rpm: []string{"libheif", "remotix"}})
+	prima, _ := json.Marshal(primaDeposito{Origine: DIRETTA, Tipo: "rpmfusion",
+		Stato: map[string]bool{"rpmfusion-free-release": false}, Rpm: []string{"gstreamer1-vaapi", "remotix", "rpmfusion-free-release"}})
 
 	if err := d.Annulla(c, prima); err != nil {
 		t.Fatalf("Annulla: %v", err)
 	}
 	if len(f.tolti) != 0 {
-		t.Fatalf("niente doveva essere tolto (openh264 lo chiede libheif, e il deposito resta): %v", f.tolti)
+		t.Fatalf("niente doveva essere tolto (intel-media-driver lo chiede gstreamer1-vaapi, e il deposito resta): %v", f.tolti)
 	}
 	ok, det, err := d.Annullata(c, prima)
-	if err != nil || !ok || !strings.Contains(det, "[RX-PACCHETTI-006]") || !strings.Contains(det, "openh264") || !strings.Contains(det, "libheif") {
+	if err != nil || !ok || !strings.Contains(det, "[RX-PACCHETTI-006]") || !strings.Contains(det, "intel-media-driver") || !strings.Contains(det, "gstreamer1-vaapi") {
 		t.Fatalf("Annullata: %v %q %v", ok, det, err)
 	}
 
-	// nessuno lo chiede più (libheif tolto dall'amministratore): il pacchetto e il deposito se ne vanno
-	f2 := &comandiFinti{installati: []string{"remotix", "openh264"}, dipendenti: map[string][]string{}}
-	amb2 := ambienteRpmFinto(t, "fedora", f2)
-	os.WriteFile(filepath.Join(amb2.Radice, "etc/yum.repos.d/fedora-cisco-openh264.repo"),
-		[]byte("[fedora-cisco-openh264]\nname=x\nenabled=1\n"), 0o644)
-	c2 := &Contesto{Amb: amb2, Purge: true}
+	// nessuno lo chiede più: il driver e il deposito se ne vanno
+	f2 := &comandiFinti{installati: []string{"rpmfusion-free-release", "remotix", "intel-media-driver"}, dipendenti: map[string][]string{}}
+	c2 := &Contesto{Amb: ambienteRpmFinto(t, "fedora", f2), Purge: true}
 	if err := d.Annulla(c2, prima); err != nil {
 		t.Fatalf("Annulla 2: %v", err)
 	}
-	if s := strings.Join(f2.tolti, "|"); !strings.Contains(s, "openh264") || !strings.Contains(s, "config-manager") {
-		t.Fatalf("attesi openh264 tolto e il deposito spento: %v", f2.tolti)
-	}
-}
-
-func TestDepositoEpelRestaColCisco(t *testing.T) {
-	// Alma: il deposito Cisco per EPEL (nostro) è stato trattenuto ⇒ epel-release (la sua chiave) resta
-	f := &comandiFinti{installati: []string{"epel-release", "openh264", "ark"}, dipendenti: map[string][]string{}}
-	amb := ambienteRpmFinto(t, "almalinux", f)
-	os.WriteFile(filepath.Join(amb.Radice, fileCiscoEpel), []byte(ContenutoCiscoEpel("10")), 0o644)
-	d := &deposito{tipo: "epel", par: map[string]string{"tipo": "epel"}}
-	c := &Contesto{Amb: amb, Purge: true}
-	prima, _ := json.Marshal(primaDeposito{Origine: DIRETTA, Tipo: "epel",
-		Stato: map[string]bool{"epel-release": false, "crb": false}, Rpm: []string{"openh264", "ark", "epel-release"}})
-	if err := d.Annulla(c, prima); err != nil {
-		t.Fatalf("Annulla: %v", err)
-	}
-	if len(f.tolti) != 0 {
-		t.Fatalf("epel-release doveva restare (il deposito Cisco trattenuto usa la sua chiave): %v", f.tolti)
-	}
-	ok, det, err := d.Annullata(c, prima)
-	if err != nil || !ok || !strings.Contains(det, "[RX-PACCHETTI-006]") || !strings.Contains(det, "epel-release") {
-		t.Fatalf("Annullata: %v %q %v", ok, det, err)
-	}
-	// senza il file Cisco, epel-release se ne va
-	os.Remove(filepath.Join(amb.Radice, fileCiscoEpel))
-	if err := d.Annulla(c, prima); err != nil {
-		t.Fatalf("Annulla 2: %v", err)
-	}
-	if s := strings.Join(f.tolti, "|"); !strings.Contains(s, "epel-release") {
-		t.Fatalf("epel-release doveva essere tolto: %v", f.tolti)
+	if s := strings.Join(f2.tolti, "|"); !strings.Contains(s, "intel-media-driver") || !strings.Contains(s, "rpmfusion-free-release") {
+		t.Fatalf("attesi il driver e il deposito tolti: %v", f2.tolti)
 	}
 }
 

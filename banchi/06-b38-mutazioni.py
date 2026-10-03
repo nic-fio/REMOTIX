@@ -231,7 +231,7 @@ MUTAZIONI = [
      '    elif nome == "ADATTA_TELA":\n'
      '        _o = le.i\n'
      '        _l = le.u32("larghezza"); _a = le.u32("altezza")\n'
-     '        if not (320 <= _l <= 7680 and 240 <= _a <= 4320) or _l % 2 or _a % 2:\n'
+     '        if not (320 <= _l <= 4096 and 240 <= _a <= 2304) or _l % 2 or _a % 2:\n'
      '            raise NonConforme("RCP.md §4.5", "misura fuori dai limiti",\n'
      '                              le.base + _o, _o)\n'
      '        le.fine(nome)\n'
@@ -243,7 +243,7 @@ MUTAZIONI = [
      "⭐ si rimettono alla VISTA i limiti della tela — il rilievo R1.17 "
      "rientrato dal lato dell'arbitro",
      "            if v == 0:",
-     "            if v == 0 or not (320 <= v <= 7680) or v % 2:",
+     "            if v == 0 or not (320 <= v <= 4096) or v % 2:",
      # ⚠ E l'atteso porta anche `34-tela-giro-pieno`, che contiene una
      #   `VISTA(640x401)` dispari di proposito — §7.1 la dichiara legale.
      #   ⛔ Il primo atteso, scritto prima del giro, era INCOMPLETO: e' una

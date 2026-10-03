@@ -310,8 +310,6 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	case video:
 		righe = append(righe, Riga{T("r.video"), T("t.video.deposito", distro), CONSENSO})
 		condizioni = append(condizioni, T("c.cond.video", distro))
-	case prof.V("h264.software") == "si" && prof.V("h264.scheda") == "no":
-		righe = append(righe, Riga{T("r.video"), T("t.video.soft"), DOPO})
 	default:
 		righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
 	}
@@ -384,7 +382,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 	for _, n := range strings.Fields(prof.V("scheda.nodi")) {
 		d = append(d, n+" "+prof.V("scheda."+n+".fornitore")+" "+prof.V("scheda."+n+".driver"))
 	}
-	for _, k := range []string{"h264.scheda", "h264.famiglia_driver", "h264.software", "pam.base", "selinux", "apparmor", "firewall.tipo", "firewall.zona"} {
+	for _, k := range []string{"codifica.strade", "h264.scheda", "h264.famiglia_driver", "codifica.vulkan", "pam.base", "selinux", "apparmor", "firewall.tipo", "firewall.zona"} {
 		if x := prof.V(k); x != "" {
 			d = append(d, k+"="+x)
 		}
@@ -445,6 +443,10 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 		b.Titolo = T("b.titolo.distro")
 		if motivo != nil {
 			b.Perche = motivo.Testo
+			if strings.HasPrefix(motivo.Codice, "RX-GPU-") {
+				// fase 19: la distribuzione va, manca la scheda che codifica il video
+				b.Titolo = T("b.titolo.scheda")
+			}
 		}
 	}
 	if motivo != nil {
@@ -911,11 +913,7 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int, depositoVideo string) 
 			case k.ID == "servizio":
 				v.Prove = append(v.Prove, Riga{T("pr.k.servizio"), t, s})
 			case k.ID == "codifica-h264":
-				et := T("pr.k.h264")
-				if strings.Contains(k.Dettaglio, "software") || strings.Contains(k.Dettaglio, "libx264") || strings.Contains(k.Dettaglio, "openh264") {
-					et = T("pr.k.h264soft")
-				}
-				v.Prove = append(v.Prove, Riga{et, t, s})
+				v.Prove = append(v.Prove, Riga{T("pr.k.h264"), t, s})
 			case k.ID == "pam-risolta":
 				v.Prove = append(v.Prove, Riga{T("pr.k.pam"), t, s})
 			case k.ID == "porta-firewall":

@@ -87,8 +87,10 @@ GUASTI = ("sano", "ammesso-subito", "tela-muta", "tela-non-sollecitata",
           "tela-dispari", "tela-oltre-massima", "tela-dopo-vista",
           "tela-in-piu")
 
-# §4.5: i limiti sono normativi, e i lati sono pari.
-MIN_L, MAX_L, MIN_A, MAX_A = 320, 7680, 240, 4320
+# §4.5: i limiti sono normativi, e i lati sono pari.  ⭐ Dal 1 ott 2026 il
+# massimo e' 4096x2304, e SOPRA il massimo non si rifiuta: si riduce per lato
+# (il lato che sfora al massimo, l'altro com'e'), come fa `rcp.c`.
+MIN_L, MAX_L, MIN_A, MAX_A = 320, 4096, 240, 2304
 
 
 def registra(*cose):
@@ -241,11 +243,19 @@ class Specchio(QuicConnectionProtocol):
                 self.manda(tela_msg(1, 0, 1281, 800))
                 return
             if self.guasto == "tela-oltre-massima":
-                registra("  ⛔ GUASTO «tela-oltre-massima»: concedo 7680x4320")
-                self.manda(tela_msg(1, 0, 7680, 4320))
+                # 4096x2304 e' DENTRO §4.5 ma SOPRA il video.misura_massima
+                # (3840x2160) che il cliente dichiara nel CIAO: e' la regola
+                # del tetto del decodificatore quella che l'arbitro deve vedere
+                registra("  ⛔ GUASTO «tela-oltre-massima»: concedo 4096x2304")
+                self.manda(tela_msg(1, 0, 4096, 2304))
                 return
-            if not (MIN_L <= lar <= MAX_L and MIN_A <= alt <= MAX_A):
-                # §7.1: una richiesta fuori dai limiti e' LECITA, e la risposta
+            if lar > MAX_L or alt > MAX_A:
+                # ⭐ §4.5 dal 1 ott 2026: sopra il massimo si RIDUCE e si dice
+                registra(f"  ⚠ RIPIEGO DICHIARATO (§4.5): {lar}x{alt} oltre il "
+                         f"massimo {MAX_L}x{MAX_A}, ridotta per lato")
+                lar, alt = min(lar, MAX_L), min(alt, MAX_A)
+            if not (MIN_L <= lar and MIN_A <= alt):
+                # §7.1: una richiesta sotto il minimo e' LECITA, e la risposta
                 # e' un rifiuto con il motivo — non una caduta.
                 registra(f"  → TELA(RIFIUTATA, MISURA_FUORI_LIMITI) "
                          f"[{lar}x{alt}]")

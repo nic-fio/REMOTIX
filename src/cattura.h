@@ -512,7 +512,8 @@ const char *cattura_uscita_nome(Cattura *cattura);
  *
  * ⚠ `[?]` E questa scena, sul prodotto vero, non e' misurata: `[M]`
  *   (§5.0-sexies) Mutter ha concesso 30 richieste su 30 da 1x1 a 7680x4320, e
- *   `rcp_misura_ammessa()` taglia proprio a 7680x4320.  ⇒ Qui si dichiara che
+ *   `rcp_misura_ammessa()` tagliava proprio a 7680x4320 (dal 1 ottobre 2026
+ *   taglia a 4096x2304).  ⇒ Qui si dichiara che
  *   cosa succede SE capita, non quanto spesso capiti.
  */
 typedef enum

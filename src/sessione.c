@@ -5118,6 +5118,65 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 		return false;
 	}
 
+	/*
+	 * ⛔⛔ IL `pipewire-pulse` RIMASTO DALLA SESSIONE DI PRIMA — 2 ottobre 2026,
+	 *      prova a mano dell'utente sulla Radeon: «in GNOME non va l'audio».
+	 *
+	 * `[M]` Dopo «Esci», col gestore d'utente ancora vivo, la sessione che
+	 * finisce ferma `pipewire`, `wireplumber` e `filter-chain` ma NON
+	 * `pipewire-pulse` (14:13:18).  Alla sessione nuova `pipewire` riparte
+	 * (14:13:29) e `pipewire-pulse` resta quello delle 14:04, attaccato a un
+	 * `pipewire` che non c'e' piu': chi suona con PulseAudio (Firefox) parla
+	 * col nulla, e il nostro sink cattura solo silenzio.  Le prove dell'audio
+	 * non lo vedevano perche' aprono sempre una sessione nuova.
+	 *
+	 * ⇒ Se `pipewire` NON e' attivo e `pipewire-pulse` si', quello e' un
+	 *   avanzo: lo si ferma.  Il suo socket resta, e al primo programma che
+	 *   vuole suonare lo riaccende attaccato al `pipewire` giusto.  ⭐ Nessun
+	 *   ramo per desktop: e' il gestore d'utente, uguale per tutti.
+	 */
+	{
+		/* ⛔ E NON BASTA «pipewire spento»: `[M]` 3 ott 2026, giro
+		 *    `19-chiusura-intel`, F-012B su GNOME — all'«Esci» si fermano
+		 *    `wireplumber` e `pipewire` (13:34:33) ma non `pipewire-pulse`; al
+		 *    nuovo accesso `pipewire` RIPARTE (13:34:38) e quando si guarda e'
+		 *    gia' attivo ⇒ il controllo non scattava e il pulse vecchio restava.
+		 * ⇒ Si confrontano gli ISTANTI d'avvio: un `pipewire-pulse` partito
+		 *   prima del `pipewire` in vigore e' l'avanzo, qualunque sia l'ordine. */
+		char *pw[] = { "systemctl", "--user", "show", "-p", "ActiveState",
+		               "-p", "ActiveEnterTimestampMonotonic", "pipewire.service", NULL };
+		char *pp[] = { "systemctl", "--user", "show", "-p", "ActiveState",
+		               "-p", "ActiveEnterTimestampMonotonic", "pipewire-pulse.service", NULL };
+		g_autofree char *s_pw = chiedi(pw);
+		g_autofree char *s_pp = chiedi(pp);
+		bool pw_attivo = s_pw && strstr(s_pw, "ActiveState=active\n");
+		bool pp_attivo = s_pp && strstr(s_pp, "ActiveState=active\n");
+		const char *t;
+		unsigned long long da_pw = 0, da_pp = 0;
+
+		if (s_pw && (t = strstr(s_pw, "ActiveEnterTimestampMonotonic=")))
+			da_pw = g_ascii_strtoull(t + 30, NULL, 10);
+		if (s_pp && (t = strstr(s_pp, "ActiveEnterTimestampMonotonic=")))
+			da_pp = g_ascii_strtoull(t + 30, NULL, 10);
+		if (pp_attivo && (!pw_attivo || da_pp < da_pw)) {
+			char *ferma[] = { "systemctl", "--user", "stop", "pipewire-pulse.service", NULL };
+
+			registro_dice(REG_SESSIONE,
+			              "⚠ `pipewire-pulse` (dal %llu) e' piu' vecchio di `pipewire` "
+			              "(%s, dal %llu): e' l'avanzo della sessione di prima, e i "
+			              "programmi che suonano con PulseAudio resterebbero muti.  Lo "
+			              "fermo: il socket lo riaccende attaccato al `pipewire` nuovo — %s",
+			              da_pp, pw_attivo ? "attivo" : "spento", da_pw,
+			              esegui(ferma) ? "fermato" : "⛔ NON fermato");
+		} else {
+			registro_dice(REG_SESSIONE,
+			              "`pipewire-pulse` %s (dal %llu), `pipewire` %s (dal %llu): niente "
+			              "avanzi della sessione di prima",
+			              pp_attivo ? "attivo" : "spento", da_pp,
+			              pw_attivo ? "attivo" : "spento", da_pw);
+		}
+	}
+
 	/* ⛔ LE IMPOSTAZIONI PRIMA DEL COMANDO, per la stessa ragione del drop-in:
 	 *    `gnome-session` fa partire la Shell come prima cosa, e una chiave
 	 *    scritta dopo vale per la sessione SUCCESSIVA — cioe' ha ragione domani. */

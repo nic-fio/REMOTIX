@@ -336,6 +336,10 @@ JS_OSSERVA = r"""
   const C = window.__F003__ = { giu: 0, su: 0, premuti: 0 };
   addEventListener('mousedown', function () { C.giu++; }, true);
   addEventListener('mouseup', function () { C.su++; }, true);
+  /* ⚠ Dal 2 ott 2026 il clic della pagina viene da `pointerdown` e i `mouse*`
+     di compatibilita' non nascono piu': si contano anche i pointer (come C22). */
+  addEventListener('pointerdown', function (e) { if (e.pointerType !== 'touch') C.giu++; }, true);
+  addEventListener('pointerup', function (e) { if (e.pointerType !== 'touch') C.su++; }, true);
   addEventListener('pointermove', function (e) { if (e.buttons & 1) C.premuti++; }, true);
 })();
 """

@@ -45,10 +45,11 @@
  *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria»
  *      converte in CPU con `src/colori709.c` (BT.709 limitato, come ieri) e
  *      carica i piani NV12/P010: niente libswscale, e ⛔ niente VPP dalla
- *      memoria, che e' misurata peggio.  ⭐ E il ripiego in SOFTWARE e' `src/ripiego.c`: OpenH264
- *      per H.264, SVT-AV1 per AV1, i colori di `src/colori709.c`; ⛔ HEVC in
- *      software NON c'e' (x265 e' GPL) e si rifiuta dicendolo.  Nessuna riga
- *      del prodotto passa piu' da ffmpeg.
+ *      memoria, che e' misurata peggio.  Nessuna riga del prodotto passa piu' da
+ *      ffmpeg.  ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): il ripiego in
+ *      SOFTWARE (`src/ripiego.c`: OpenH264, SVT-AV1) e' uscito — *«niente cpu
+ *      senza scheda»*, parole dell'utente.  Senza una scheda capace il server
+ *      lo dichiara all'avvio e non offre codec.
  *
  * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
  *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
@@ -314,9 +315,26 @@ typedef struct {
 	CodecVideo codec;
 	/*
 	 * ⛔ Il componente si chiede PER NOME e non si ripiega.
-	 * NULL = il ripiego in software di quel codec (`openh264` / `svt-av1`,
-	 * `codificatore_ripiego_software()`); ⛔ per HEVC non ce n'e' uno, e
-	 * `codificatore_nuovo()` rifiuta dicendolo.
+	 * ⛔ Fase 19: solo i nomi della scheda; NULL o un altro nome e
+	 *    `codificatore_nuovo()` rifiuta dicendolo — il ripiego in software
+	 *    (OpenH264, SVT-AV1) e' uscito.  ⭐ E i nomi sono SEI, due per strada
+	 *    piu' due «per capacita'» (1 ott 2026, `DECISIONI.md` §10.27):
+	 *
+	 *      `h264_scheda`  `hevc_scheda`   LA STRADA SI SCEGLIE PER CAPACITA':
+	 *                                     Vulkan Video se la scheda lo offre
+	 *                                     per quel codec (`vulkanvideo_capacita`),
+	 *                                     se no VA-API — e' quel che il prodotto
+	 *                                     chiede;
+	 *      `h264_vulkan`  `hevc_vulkan`   Vulkan Video, e basta: se non c'e' si
+	 *                                     fallisce dicendolo (banchi, diagnosi,
+	 *                                     `--codifica vulkan`);
+	 *      `h264_vaapi`   `hevc_vaapi`    VA-API (`vadiretta.c`), e basta
+	 *                                     (`--codifica vaapi`, e i banchi 18/19
+	 *                                     che misurano QUELLA strada).
+	 *
+	 *    ⛔ La strada scelta finisce nella confessione (`strada`) e nel nome
+	 *       del componente aperto (`componente`), non nel nome chiesto: chi
+	 *       chiede `h264_scheda` rilegge `h264_vulkan` o `h264_vaapi`.
 	 */
 	const char *componente;
 	/*
@@ -435,21 +453,34 @@ typedef struct {
 	 *    rapporto».  Un ritmo di 3 ms senza queste cinque righe accanto e' un
 	 *    numero che vale per una macchina che non si sa quale sia.
 	 */
-	bool in_hardware;             /* la scheda (vadiretta), non il ripiego */
+	bool in_hardware;             /* la scheda (vadiretta o vulkanvideo), non il ripiego */
 	char nodo[64];                /* il nodo CHIESTO, es. /dev/dri/renderD128 */
+	/*
+	 * ⭐ FASE 19 — LA STRADA che ha risposto: `vaapi` (`vadiretta.c`) o
+	 *    `vulkan` (`vulkanvideo.c`).  Si sceglie per CAPACITA' all'apertura
+	 *    (`h264_scheda`/`hevc_scheda`) o per nome, e qui si legge quale delle
+	 *    due si e' aperta davvero.  ⚠ `modi_bitrate` sotto e' nell'alfabeto
+	 *    della strada: `VA_RC_*` per vaapi, `VULKANVIDEO_RC_*` per vulkan.
+	 */
+	char strada[16];
 	/*
 	 * ⭐ Il fornitore che ha RISPOSTO, chiesto a `vaQueryVendorString()` sul
 	 *    display aperto — non dedotto dal nome del nodo.  E' il testimone che
 	 *    dice se «renderD128» e' l'Intel che si credeva o un'altra scheda: sulla
 	 *    macchina di prova i due nodi sono di due fornitori diversi `[M]`.
+	 *    ⭐ Sulla strada Vulkan e' `deviceName` + `driverName`/`driverInfo`
+	 *    della scheda scelta DAL NODO (`VK_EXT_physical_device_drm`).
 	 */
-	char fornitore_va[128];
+	char fornitore_va[256];
 	/*
 	 * ⛔ L'entrypoint: `false` = piena (`VAEntrypointEncSlice`), `true` = bassa
 	 *    potenza (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` dice
 	 *    che la coppia (profilo, entrypoint) e' stata **letta dal driver** con
 	 *    `vaQueryConfigEntrypoints`, non solo chiesta a libavcodec: senza quel
 	 *    controllo «gliel'ho chiesto» e «l'ha fatto» hanno lo stesso aspetto.
+	 *    ⚠ Sulla strada Vulkan l'entrypoint NON ESISTE: tutt'e due restano
+	 *    `false`, e il falso di `bassa_potenza_verificata` li' vuol dire «non
+	 *    c'e' la domanda», non «non ho guardato».
 	 */
 	bool bassa_potenza;
 	bool bassa_potenza_verificata;
@@ -460,9 +491,11 @@ typedef struct {
 	 * ⛔ Serve perche' il limite NON e' lo stesso fra i codec: `[M]` 22 agosto
 	 *    2026 `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**
 	 *    (4096x2160 si', 4112x2160 no), mentre `hevc_vaapi` regge 16384x4320 —
-	 *    e la tela legale di `RCP.md` §4.5 arriva a **7680x4320**.  ⇒ Oltre i
-	 *    4096 px il ripiego in software per H.264 **e' la regola**, e costa
-	 *    `[M]` 309 ms per chiave a 8K.
+	 *    e la tela legale di `RCP.md` §4.5 arrivava a **7680x4320**.  ⇒ Oltre i
+	 *    4096 px H.264 su quella scheda non c'era.  ⭐ Dal 1 ottobre 2026 la tela
+	 *    si ferma a **4096x2304** (decisione dell'utente) e il caso non nasce
+	 *    piu' dal protocollo; il controllo resta, perche' il tetto e' del
+	 *    DRIVER e un'altra scheda puo' dichiararne uno piu' basso.
 	 *
 	 * ⚠ `misura_massima_letta == false` vuol dire **«non l'ho saputa
 	 *   chiedere»**, che NON e' «non c'e' un limite»: i due valori allora non
@@ -502,7 +535,7 @@ typedef struct {
 	 */
 	uint32_t modi_bitrate;
 	bool modi_bitrate_letti;
-	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR */
+	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
 	int64_t banda_punto;          /* `bit_rate`, bit/s — il punto di lavoro */
 	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ MAI uguale al punto */
 	int banda_serbatoio;          /* `rc_buffer_size`, in **bit** */
@@ -553,37 +586,28 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
                                  char *errore, size_t errore_byte);
 void codificatore_libera(Codificatore *cod);
 
-/* Per il registro: «H.264 8 bit via openh264 (in software: OpenH264 2.6.0 ·
- * QP 25 · CABAC · 4 fili)» oppure
- * «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
+/* Per il registro: «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
  * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
  * la riga che finisce nel registro accanto a ogni numero. */
 const char *codificatore_nome(const Codificatore *cod);
 
-/*
- * Il nome del componente che si userebbe se non se ne chiedesse uno — cioe' il
- * RIPIEGO in software di quel codec.
- *
- * ⛔ ESISTE PERCHE' CHI DICHIARA UN RIPIEGO DEVE NOMINARLO, E NOMINARLO GIUSTO.
- *    `figlio.c` scriveva a mano «libx265» dentro la riga del ripiego; dal 20
- *    agosto 2026 quel ramo serve anche H.264, e la riga nominava un componente
- *    che non sarebbe stato aperto.  ⚠ Averlo in due posti sarebbe peggio di
- *    tutt'e due: il giorno in cui il ripiego cambia, il registro racconta
- *    quello vecchio e la caccia parte da li'.
- */
-const char *codificatore_ripiego_software(CodecVideo codec);
+/* ⭐ FASE 19: la strada aperta davvero — "vaapi" o "vulkan" (vedi
+ *    `CodificatoreConfessione.strada`); "" su NULL. */
+const char *codificatore_strada(const Codificatore *cod);
 
-/*
- * ⭐ FASE 18 — dice PRIMA di aprire se il ripiego in software sa fare quel
- *    codec a quella profondita' (per H.264: se c'e' OpenH264 VERO, non la copia
- *    vuota), e se no perche'.  Serve alla prova all'avvio di `figlio.c`, che
- *    decide che cosa il server OFFRE al browser, e a `--prova-codifica`.
- * ⛔ Per HEVC rende sempre false: HEVC in software non esiste (x265 e' GPL).
- */
-bool codificatore_software_pronto(CodecVideo codec, int profondita, char *perche,
-                                  size_t perche_byte);
-/* La riga del rimedio quando OpenH264 manca: QUALE pacchetto su QUESTA distro. */
-void codificatore_software_rimedio(char *dove, size_t quanto);
+/* ⭐ FASE 19: la strada «scheda» su questo nodo sara' Vulkan?  Vero se Vulkan
+ *    Video codifica H.264 o HEVC sul nodo (`vulkanvideo_capacita`), cioe' se
+ *    `h264_scheda`/`hevc_scheda` ci aprirebbero Vulkan.  ⚠ E' la risposta di
+ *    PRIMA dell'apertura: una richiesta che Vulkan non sa servire (misura,
+ *    bitrate) ripiega lo stesso su VA-API.  Serve a chi deve prepararsi prima
+ *    del codificatore (le lastre di `wlroots.c`). */
+bool codificatore_vulkan_sul_nodo(const char *nodo);
+
+/* ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): qui c'erano
+ *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` e
+ *    `codificatore_software_rimedio()` — il ripiego in software (OpenH264,
+ *    SVT-AV1) e la riga del pacchetto da installare.  Sono usciti con lui:
+ *    senza una scheda capace REMOTIX non codifica, e lo dichiara. */
 
 /* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);

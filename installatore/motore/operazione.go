@@ -787,7 +787,7 @@ type RapportoVerifica struct {
 	Oggetto    string       `json:"oggetto"`
 	Creato     string       `json:"creato"`
 	Controlli  []Controllo  `json:"controlli"`
-	Condizioni []Condizione `json:"condizioni,omitempty"` // quelle nate dalla verifica (un UNKNOWN con ripiego)
+	Condizioni []Condizione `json:"condizioni,omitempty"` // quelle nate dalla verifica (un UNKNOWN dichiarato)
 }
 
 // verifica (fase 7, qui ridotta alle azioni di prova): ogni azione ricontrollata. ⛔ UNKNOWN non
@@ -817,8 +817,9 @@ func (op *Operazione) verifica() (bool, error) {
 		}
 		rv.Controlli = append(rv.Controlli, k)
 	}
-	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta, con un ripiego
-	// dichiarato (il software): UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS (§6.6.7).
+	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta: FAIL (nessuna scheda che
+	// codifica: fase 19, niente ripiego) ⇒ annullamento; UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS
+	// (§6.6.7).
 	// e la pila PAM che si risolve, e la porta che il firewall lascia passare (certifica.go, R29)
 	if op.Piano.Mestiere == "installazione" {
 		porta := op.m.Porta
@@ -842,16 +843,18 @@ func (op *Operazione) verifica() (bool, error) {
 	return tutto, op.scriviOggetto("verifica.json", rv)
 }
 
-// provaCodifica: `remotix --prova-codifica` (§6.5-bis, nel prodotto da 8c79168): una riga JSON
-// {"esito":"hardware"|"software"|"nessuno","codificatore":…,"nodo":…,"motivo":…}; uscita 0 se il
-// fotogramma è uscito, 1 se «nessuno», 2 errore d'uso. Il motore lo lancia da root (elenco chiuso).
-// hardware ⇒ PASS; software ⇒ PASS col ripiego dichiarato (C-RIPIEGO nella verifica); nessuno ⇒
-// FAIL; un binario che non la conosce o una risposta illeggibile ⇒ UNKNOWN (§6.6.7).
+// provaCodifica: `remotix --prova-codifica` (§6.5-bis; fase 19, niente ripiego sul processore): una
+// riga JSON {"esito":"hardware"|"nessuno","codificatore":…,"strada":"vulkan"|"vaapi"|"","nodo":…,
+// "motivo":…,"codec":…,"offerti":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; uscita 0 se la scheda ha codificato il fotogramma, 3 se NESSUNA
+// scheda sa codificare (il codificatore non si apre: niente nodo, niente driver, driver senza
+// codifica — il rifiuto dichiarato), 1 se la scheda si apre ma il fotogramma non esce, 2 errore
+// d'uso. Il motore lo lancia da root (elenco chiuso). hardware ⇒ PASS; 3 o 1 ⇒ FAIL; un binario che
+// non la conosce o una risposta illeggibile ⇒ UNKNOWN (§6.6.7).
 func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 	k := Controllo{ID: "codifica-h264", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
 	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
 	var r struct {
-		Esito, Codificatore, Nodo, Motivo string
+		Esito, Codificatore, Strada, Nodo, Motivo, Codec string
 	}
 	letto := false
 	for _, riga := range strings.Split(out, "\n") {
@@ -859,7 +862,9 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 			letto = true
 		}
 	}
-	det := strings.TrimSpace(r.Esito + " " + r.Codificatore + " " + r.Nodo + " " + r.Motivo)
+	// ⭐ fase 19: `strada` dice QUALE strada della scheda ha codificato (vulkan/vaapi); un binario
+	// che non la scrive (fase 18) passa lo stesso: conta l'esito
+	det := strings.Join(strings.Fields(r.Esito+" "+r.Codec+" "+r.Codificatore+" "+r.Strada+" "+r.Nodo+" "+r.Motivo), " ")
 	switch {
 	case err != nil:
 		k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
@@ -867,9 +872,8 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 		k.Esito, k.Dettaglio = "UNKNOWN", T("ver.codifica_assente")+": "+ultimeRighe(out, 2)
 	case c == 0 && r.Esito == "hardware":
 		k.Esito, k.Dettaglio = "PASS", det
-	case c == 0 && r.Esito == "software":
-		k.Esito, k.Dettaglio = "PASS", det
-		return k, &Condizione{Codice: "C-RIPIEGO", Testo: T("cond.ripiego_verificato", r.Motivo)}
+	case c == 3:
+		k.Esito, k.Dettaglio = "FAIL", T("ver.nessuna_scheda", nonVuoto(r.Motivo, det))
 	default:
 		k.Esito, k.Dettaglio = "FAIL", det
 	}

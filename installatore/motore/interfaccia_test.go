@@ -103,8 +103,8 @@ func TestSenzaArchivioVideoNonSiInstalla(t *testing.T) {
 	cat := catalogoProva(t)
 	for _, si := range []bool{false, true} {
 		// «si»: RPM Fusion c'è già, col ramo nonfree che la scheda Intel chiede (sulla macchina finta
-		// non si può aggiungere un deposito vero); OpenH264 di Cisco c'è in tutti e due i casi
-		extra := map[string]string{"deposito.openh264": "presente"}
+		// non si può aggiungere un deposito vero)
+		extra := map[string]string{}
 		if si {
 			extra["deposito.rpmfusion"] = "presente"
 			extra["deposito.rpmfusion-nonfree"] = "presente"

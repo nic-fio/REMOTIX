@@ -48,7 +48,7 @@ func TestConsensiNecessari(t *testing.T) {
 	cat := catalogoProva(t)
 	amb := ambienteFinto(t.TempDir()) // firewalld
 	deb := profiloFinto()
-	fed := profiloDi("fedora", "44", map[string]string{"deposito.openh264": "presente"})
+	fed := profiloDi("fedora", "44", nil)
 	fed.Verificato("h264.scheda", "no", "finto")
 	casi := []struct {
 		nome     string
@@ -64,6 +64,8 @@ func TestConsensiNecessari(t *testing.T) {
 		{"debian, archivio", deb, "http://a", "", "consenso.firewall", ""},
 		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.cinture,consenso.aggiornamenti,consenso.deposito.rpmfusion"},
 		{"fedora senza RPM Fusion", fed, "", "consenso.cinture = si\nconsenso.firewall = si\n", "consenso.deposito.rpmfusion", "consenso.cinture"},
+		// fase 19: «consenso.deposito.openh264» di un file vecchio si legge, è superflua e non conta
+		{"fedora, la voce di OpenH264 ritirata", fed, "", "consenso.firewall = si\nconsenso.deposito.rpmfusion = si\nconsenso.deposito.openh264 = si\n", "", "consenso.deposito.openh264"},
 	}
 	for _, c := range casi {
 		r, err := LeggiRisposte(fileRisposte(t, "formato = remotix-risposte/1\n"+c.testo))

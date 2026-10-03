@@ -8,7 +8,7 @@
 #    (`src/costruzione/Contenitore.<bersaglio>`) con `packaging/rpm/costruisci-rpm.sh`.
 #
 # ⭐ Le librerie le calcola rpmbuild leggendo il binario (le «Requires» automatiche
-#    per soname: libva, libopenh264, libSvtAv1Enc, libopus, libssl, libpam, libpipewire,
+#    per soname: libva, libopus, libssl, libpam, libpipewire,
 #    libei, …): e' la
 #    cura di `LEZIONI.md` §2.5-bis.  Qui sotto si scrive A MANO solo quel che rpm
 #    NON puo' vedere, perche' si carica o si esegue a tempo di esecuzione: il
@@ -72,15 +72,9 @@ BuildRequires:  pkgconfig(libpipewire-0.3) >= 0.3.48
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
-# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  OpenH264 (il ripiego H.264),
-#   SVT-AV1 (il ripiego AV1), libopus (l'audio).  `[M]` 30 set, i depositi: Fedora 44
-#   openh264 da fedora-cisco-openh264 (acceso di serie), svt-av1/opus da fedora;
-#   Alma 10 openh264 SOLO dal deposito Cisco per EPEL (epel-cisco-openh264, da
-#   aggiungere), svt-av1 da EPEL, opus da AppStream; openSUSE
-#   libopenh264 da repo-openh264 (codecs.opensuse.org: quello di repo-oss e' la copia
-#   vuota), il resto da repo-oss.
-BuildRequires:  pkgconfig(openh264)
-BuildRequires:  pkgconfig(SvtAv1Enc)
+# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg; libopus (l'audio).
+# ⛔ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): OpenH264 e SVT-AV1, il ripiego
+#   in software, sono USCITI — e con loro il deposito Cisco di OpenH264.
 BuildRequires:  pkgconfig(opus)
 # ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1);
 #   tolta il 30 set (T10).
@@ -89,6 +83,10 @@ BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-scanner)
 BuildRequires:  pkgconfig(gbm)
+# ⭐ Fase 19: Vulkan Video (src/vulkanvideo.c) — solo il loader e le intestazioni
+#   (vulkan-loader-devel; `[M]` 1 ott 2026: 1.4.328 su Alma 10 AppStream, 1.4.341
+#   su Fedora 44).  Il minimo 1.3.274 e' quello del Makefile.
+BuildRequires:  pkgconfig(vulkan) >= 1.3.274
 # ⚠ ngtcp2 >= 1.25.0 e nghttp3: NON sono un BuildRequires, perche' quasi nessuna
 #   distribuzione le ha (§6.3).  Le costruisce il contenitore, SOLO statiche, in
 #   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build controlla che ci
@@ -149,18 +147,15 @@ Requires:       (default-fonts-core-sans if labwc)
 # li toglie non deve rompere il pacchetto.
 Recommends:     mesa-dri-drivers
 Recommends:     (libva-intel-media-driver or intel-media-driver)
-# OpenH264 VERO (fase 18): noopenh264, nel deposito fedora, fornisce la stessa
-# libopenh264.so.8 e non codifica; quello di Cisco lo nomina per nome.
-Recommends:     openh264
+# ⭐ Fase 19: i driver VULKAN di Mesa (RADV per AMD: la strada Vulkan Video, che
+#   il prodotto prova PRIMA di VA-API).  Il loader (vulkan-loader, libvulkan.so.1)
+#   lo calcola rpm dal binario.  NVIDIA: l'ICD arriva col driver proprietario.
+Recommends:     mesa-vulkan-drivers
 %endif
 
 %if 0%{?rhel}
-# ⚠ Alma/RHEL 10 (fase 18): svt-av1-libs sta in EPEL 10 e openh264 nel deposito
-#   Cisco per EPEL 10 (epel-cisco-openh264, che epel-release NON configura): senza
-#   di loro le dipendenze automatiche (libSvtAv1Enc.so.2, libopenh264.so.7) non si
-#   risolvono e l'installazione si ferma.  Il pacchetto NON aggiunge depositi: e'
-#   un passo del motore (§6.0, D5).  (EPEL ha solo noopenh264, la copia vuota.)
-Recommends:     openh264
+# ⛔ Fase 19: qui c'erano svt-av1-libs (EPEL 10) e openh264 (deposito Cisco per
+#   EPEL 10), il ripiego in software — usciti.
 # ⛔ Niente labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): nessuna dipendenza da scrivere.
 # ⛔ Mesa di RHEL 10 e' senza VA-API e EPEL non ha il driver Intel (§4.2): la
 #   codifica sulla scheda c'e' solo con depositi di terzi.
@@ -197,7 +192,8 @@ Ogni utente della macchina entra con la sua parola d'ordine; root no.
 
 ⚠ La codifica H.264 sulla scheda usa i driver della distribuzione: su Fedora e
 Alma serve RPM Fusion, su openSUSE con una scheda AMD Packman, che questo
-pacchetto non aggiunge; il ripiego in software usa OpenH264 di Cisco.
+pacchetto non aggiunge.  Senza una scheda capace di codificare REMOTIX non
+codifica: non c'e' un ripiego in software.
 
 %package selinux
 Summary:        Il modulo SELinux di REMOTIX

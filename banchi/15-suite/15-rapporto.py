@@ -21,7 +21,7 @@ import re
 import sys
 
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
-BROWSER = ("firefox", "chrome")
+BROWSER = ("firefox", "chrome", "telefono")   # telefono: Chrome sul telefono vero (fase 19 §5)
 NOMI = {
     "F-001": "accesso e creazione della sessione", "F-002": "prima immagine",
     "F-003": "aggiornamento dello schermo", "F-004": "mouse", "F-005": "forma del puntatore",

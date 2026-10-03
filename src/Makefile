@@ -33,12 +33,10 @@
 #   ⭐ FASE 18 (30 set 2026, `DECISIONI.md` §10.25): ffmpeg e' USCITO dal
 #      prodotto — nessun `-lavcodec`, `-lavutil`, `-lswscale`.  Al suo posto:
 #   libva, libva-drm            la codifica sulla scheda (`src/vadiretta.c`)
-#   openh264 >= 2.5             SOLO le intestazioni (`src/ripiego.c` apre la
-#                               libreria con `dlopen`, per riconoscere la copia
-#                               vuota «noopenh264» e poter usare il binario di
-#                               Cisco): niente `--libs`, e `-ldl` accanto
-#   SvtAv1Enc >= 2.3            AV1 in software, collegata (`src/ripiego.c`)
 #   (i colori BT.709 sono nostri: `src/colori709.c`, nessuna dipendenza)
+#   ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): OpenH264 e SvtAv1Enc, il
+#      ripiego in software di `src/ripiego.c`, sono USCITI col ripiego —
+#      *«niente cpu senza scheda»*.
 #
 # ⭐ E LA SETTIMA, della FASE 13 (21 settembre 2026):
 #
@@ -54,8 +52,8 @@
 #                             ovunque giri labwc (wlroots la vuole per se').
 #
 # Su Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
-# `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopenh264-dev`,
-# `libsvtav1enc-dev`, `libopus-dev`.  ⚠ `ngtcp2` e `nghttp3` NON
+# `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
+# ⚠ `ngtcp2` e `nghttp3` NON
 # bastano nella versione dei pacchetti (1.11 / 1.8): vanno costruiti dai
 # sorgenti, ed e' quel che fa `banchi/01-b2-costruisci-ngtcp2.sh`.
 #
@@ -77,7 +75,7 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
-            scrittore_bit.c ripiego.c colori709.c audio.c suono.c \
+            vulkanvideo.c scrittore_bit.c colori709.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
             appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
 OGGETTI  := $(SORGENTI:.c=.o)
@@ -177,16 +175,25 @@ F3_CFLAGS := $(shell pkg-config --cflags libva libva-drm)
 F3_LIBS   := $(shell pkg-config --libs   libva libva-drm)
 override CFLAGS += $(F3_CFLAGS)
 
-# ⭐ FASE 18, il RIPIEGO in software (`src/ripiego.c`): OpenH264 e SVT-AV1.
-#    ⛔ OpenH264 SOLO `--cflags`: la libreria si apre con `dlopen` (vedi il
-#       riquadro in `ripiego.c` — la copia vuota «noopenh264» di Fedora/Alma/
-#       openSUSE ha lo stesso nome e non codifica; aperta, la si riconosce).
-#       ⇒ `-ldl` accanto, e nessun `-lopenh264`.
-#    SVT-AV1 collegata come una libreria qualunque (`SvtAv1Enc.pc`).
-#    ⚠ Su Debian Trixie: `apt install libopenh264-dev libsvtav1enc-dev`.
-F18S_CFLAGS := $(shell pkg-config --cflags openh264 SvtAv1Enc)
-F18S_LIBS   := $(shell pkg-config --libs   SvtAv1Enc) -ldl
-override CFLAGS += $(F18S_CFLAGS)
+# ⛔ FASE 19 (1 ott 2026): qui c'erano OpenH264 (solo `--cflags`, aperta con
+#    `dlopen`) e SVT-AV1, il ripiego in software di `src/ripiego.c` — usciti
+#    col ripiego (`DECISIONI.md` §10.27).  ⚠ `-ldl` RESTA: `figlio.c` apre
+#    libselinux con `dlopen` (Fedora, Alma), e con la glibc vecchia serve.
+DL_LIBS := -ldl
+
+# ⭐⭐ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27) — **Vulkan**: la strada della
+#     scheda che si prova PRIMA di VA-API (`src/vulkanvideo.c`, Vulkan Video:
+#     `VK_KHR_video_encode_queue` + H.264/H.265).  Si collega SOLO il loader
+#     (`libvulkan`, Apache-2.0); i driver (ICD: RADV, NVIDIA, ANV) stanno nel
+#     sistema e li carica il loader a tempo di esecuzione.  Lo shader e' SPIR-V
+#     gia' nel deposito (`vulkanvideo_rgb_nv12_spv.h`): niente glslang qui.
+#   ⚠ Su Debian Trixie: `apt install libvulkan-dev` (1.4.309).  Il minimo
+#     1.3.274 e' l'intestazione in cui le estensioni di codifica video sono
+#     uscite dal provisional (`[R]` SDK 1.3.274, dic 2023; `[?]` non provato
+#     con un'intestazione piu' vecchia).
+F19_CFLAGS := $(shell pkg-config --cflags vulkan)
+F19_LIBS   := $(shell pkg-config --libs   vulkan)
+override CFLAGS += $(F19_CFLAGS)
 
 # ⭐ FASE 18, linea A — `libopus` DIRETTA per l'audio (`src/audio.c`), dal 30
 #    settembre 2026: Opus non passa piu' da libavcodec (`DECISIONI.md` §10.25).
@@ -287,7 +294,7 @@ endif
 #    sinistra a destra, e all'incontrario mancherebbero i simboli del ponte.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
-        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F18S_LIBS)
+        $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F19_LIBS) $(DL_LIBS)
 # ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
 #   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
 #   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
@@ -382,10 +389,7 @@ pulisci:
 #    intestazioni ci siano: un'intestazione vecchia c'e', e il compilatore
 #    cade venti righe dopo su una funzione che non esiste.
 #    I minimi, e da dove vengono (`fasi/17-l-installatore.md` §4.4):
-#      openh264 2.5           le due forme dell'ABI che `ripiego.c` conosce
-#                             (2.5 = .so.7 di Alma, 2.6 = .so.8 delle altre)
-#      SvtAv1Enc 2.3          quella misurata (Debian 13); la 3.x di Fedora e
-#                             Arch ha la guardia sulla versione in `ripiego.c`
+#      (openh264 2.5 e SvtAv1Enc 2.3 sono usciti col ripiego, fase 19)
 #      openssl 3.5.0          l'API QUIC nativa (`ngtcp2_crypto_ossl`)
 #      libngtcp2 1.25.0       i `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c`
 #      libnghttp3 1.18.0      quella con cui si costruisce (`src/Contenitore`);
@@ -400,10 +404,12 @@ pulisci:
 #    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
 #       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
 #       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
-MINIMI := openh264:2.5 SvtAv1Enc:2.3 openssl:3.5.0 libva-drm:0 \
+#      vulkan 1.3.274         le estensioni di codifica video finali (fase 19,
+#                             `src/vulkanvideo.c`); `[?]` non provato sotto
+MINIMI := openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
-          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3
+          libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274
 
 dipendenze:
 	@stato=0; \
@@ -424,8 +430,7 @@ dipendenze:
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
 	         openssl/ssl.h security/pam_appl.h \
 	         gio/gio.h pipewire/pipewire.h drm_fourcc.h \
-	         wels/codec_api.h svt-av1/EbSvtAv1Enc.h \
-	         va/va.h va/va_drm.h gbm.h opus.h; do \
+	         va/va.h va/va_drm.h gbm.h opus.h vulkan/vulkan.h; do \
 	  if printf '#include <%s>\nint main(void){return 0;}\n' "$$h" | \
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
@@ -484,12 +489,20 @@ sentinella.o:     sentinella.h registro.h
 ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
-codificatore.o:   codificatore.h registro.h vadiretta.h scrittore_bit.h ripiego.h colori709.h
+codificatore.o:   codificatore.h registro.h vadiretta.h vulkanvideo.h scrittore_bit.h colori709.h
 # ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni;
-#    il ripiego in software (OpenH264, SVT-AV1) e i colori BT.709 nostri.
+#    i colori BT.709 nostri (la strada «dalla memoria» della scheda).  ⛔ Il
+#    ripiego in software (`ripiego.c`: OpenH264, SVT-AV1) e' uscito, fase 19.
 vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
+# ⭐ FASE 19: la scheda in Vulkan Video, con lo shader SPIR-V incorporato
+#    (`vulkanvideo_rgb_nv12_spv.h`, generato da `banchi/19-vulkan/19-shader.sh`
+#    dal `.comp` accanto: il compilatore di shader NON serve a costruire).
+#    ⚠ `-Wno-missing-field-initializers`: le strutture di Vulkan hanno decine
+#    di campi e si riempiono per nome (`.sType = …`), e l'avviso di `-Wextra`
+#    su ogni `{ .sType }` coprirebbe gli avvisi veri.  Solo su questo oggetto.
+vulkanvideo.o:    vulkanvideo.h registro.h vulkanvideo_rgb_nv12_spv.h
+vulkanvideo.o:    CFLAGS += -Wno-missing-field-initializers
 scrittore_bit.o:  scrittore_bit.h
-ripiego.o:        ripiego.h colori709.h codificatore.h registro.h
 colori709.o:      colori709.h
 
 # ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del

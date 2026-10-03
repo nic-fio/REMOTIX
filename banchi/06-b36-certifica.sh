@@ -148,22 +148,26 @@ GUASTI = [
     # ------------------------------------------------------------------ #
     #  D · I LIMITI DI §4.5, PER LATO E AGLI ESTREMI                      #
     # ------------------------------------------------------------------ #
+    # ⭐ Dal 1 ott 2026 (tela al massimo 4096x2304) sopra il massimo si RIDUCE
+    #    per lato in `rcp_misura_ammessa()`: il guasto toglie la riduzione
+    #    dell'altezza, e 1920x2306 arriverebbe al palco com'e'.
     ("H11-un-lato-solo",
-     "il tetto si controlla su un lato solo: 1920x4322 passa, e al ri-attacco "
-     "`ATTACCA` rifiuterebbe una tela che questo stesso server aveva concesso",
-     "\t    larghezza > RCP_TELA_L_MASSIMA || altezza > RCP_TELA_A_MASSIMA)",
-     "\t    larghezza > RCP_TELA_L_MASSIMA)",
+     "il tetto si applica su un lato solo: 1920x2306 arriva al palco tale e "
+     "quale, e al ri-attacco `ATTACCA` ridurrebbe una tela che questo stesso "
+     "server aveva girato intera",
+     "\tif (altezza > RCP_TELA_A_MASSIMA)\n\t\taltezza = RCP_TELA_A_MASSIMA;",
+     "\tif (altezza > RCP_TELA_A_MASSIMA + 4)\n\t\taltezza = RCP_TELA_A_MASSIMA;",
      [14]),
 
     # ⛔⭐ E QUESTO TOCCA **DUE** RIGHE, per la lezione di `04-b31`: il minimo si
     #     controlla due volte (prima del troncamento al pari e dopo), e toccarne
     #     una sola lascerebbe l'altra a mascherare il guasto.
     ("H12-estremi-esclusi",
-     "gli estremi di §4.5 vengono esclusi (`<=` al posto di `<`): 320x240 e "
-     "7680x4320 — le due misure che l'arbitro NOMINA — si rifiutano",
-     ["\tif (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA ||",
+     "gli estremi di §4.5 vengono esclusi (`<=` al posto di `<`): 320x240 — "
+     "la misura minima che l'arbitro NOMINA — si rifiuta",
+     ["\tif (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA)",
       "\tif (l < RCP_TELA_L_MINIMA || a < RCP_TELA_A_MINIMA)"],
-     ["\tif (larghezza <= RCP_TELA_L_MINIMA || altezza <= RCP_TELA_A_MINIMA ||",
+     ["\tif (larghezza <= RCP_TELA_L_MINIMA || altezza <= RCP_TELA_A_MINIMA)",
       "\tif (l <= RCP_TELA_L_MINIMA || a <= RCP_TELA_A_MINIMA)"],
      [15]),
 

@@ -86,6 +86,7 @@
 #include "appunti.h"
 #include "audio.h"
 #include "cattura.h"
+#include "wlroots.h"
 #include "sentinella.h"
 #include "suono.h"
 #include "codificatore.h"
@@ -1100,13 +1101,13 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	char a_tetto[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
-	/* ⚠ Sedici: le nove fisse, il NULL, e le SEI parole facoltative in coda —
+	/* ⚠ Diciotto: le nove fisse, il NULL, e le OTTO parole facoltative in coda —
 	 *   `--parlantina`, `--journal`, `--qualita-risale`, `--tetto-banda-mbit` e
-	 *   il suo numero, e `--niente-audio-silenzio`.  Si aggiungono solo se il
-	 *   padre le ha (vedi sotto).  ⛔ Il conto si rifa' a ogni parola nuova: un
-	 *   `argv[]` troppo corto non da' un errore, scrive oltre la fine dello
-	 *   stack. */
-	char *argv[16];
+	 *   il suo numero, `--niente-audio-silenzio`, e ⭐ fase 19 `--codifica` col
+	 *   suo valore.  Si aggiungono solo se il padre le ha (vedi sotto).  ⛔ Il
+	 *   conto si rifa' a ogni parola nuova: un `argv[]` troppo corto non da' un
+	 *   errore, scrive oltre la fine dello stack. */
+	char *argv[18];
 	/* ⚠ 16 e non 9: alle sette che componiamo noi si aggiungono quelle che
 	 *   `pam_systemd` mette nell'ambiente della sessione — `XDG_SESSION_ID` in
 	 *   testa, che e' quel che a Mutter mancava. */
@@ -1370,6 +1371,12 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
 	 *      ed e' esattamente quel che questa fase ha tolto. */
 	if (!f->fase9_audio_silenzio)
 		argv[na++] = (char *)"--niente-audio-silenzio";
+	/* ⭐ FASE 19: la strada della scheda, se forzata (`--codifica vaapi|vulkan`):
+	 *    il predefinito «scheda» non si passa, e il figlio nasce con lo stesso. */
+	if (strcmp(figlio_codifica_strada_chiesta(), "scheda") != 0) {
+		argv[na++] = (char *)"--codifica";
+		argv[na++] = (char *)figlio_codifica_strada_chiesta();
+	}
 	argv[na] = NULL;
 
 	execve(f->percorso_mio, argv, envp);
@@ -5053,17 +5060,8 @@ static void scatto_chiudi(const char *dir_rilievo, const CatturaFermo *fo,
  *    dichiarato — il punto di lavoro fra qualita' e banda e' la fase 9, come il
  *    preset di x265. */
 #define QP_HARDWARE 26
-/* ⛔⭐ E IL CRF DEL RIPIEGO IN SOFTWARE ADESSO HA UN NOME — 23 agosto 2026.
- *
- *     Era il letterale `20` dentro `codificatore_di()`, e finche' nessuno lo
- *     scriveva nel registro non dava fastidio a nessuno.  ⛔ Ma la riga dei
- *     parametri in vigore (alla nascita, piu' giu') lo DEVE dire, e un numero
- *     scritto in due posti e' un numero che prima o poi ne dice due: il
- *     registro direbbe `20` mentre il codificatore chiede altro, ed e' la
- *     forma peggiore — un numero **falso** che sembra misurato.
- * ⚠ E NON e' «il QP con un altro nome»: CRF e QP sono due grandezze diverse
- *   (vedi `ModoQualita`), e i due valori non si confrontano fra loro. */
-#define CRF_SOFTWARE 20
+/* ⛔ Qui c'era `CRF_SOFTWARE`, il CRF del ripiego in software: e' uscito con
+ *    lui (fase 19, `DECISIONI.md` §10.27). */
 
 /* ⛔ Il nome dell'entrypoint si STAMPA da `POTENZA_RENDERING`, non si scrive a
  *    mano nella riga del registro: e' la stessa forma E2 del difetto del 22
@@ -5155,22 +5153,87 @@ static CodecVideo codec_del_numero(uint8_t numero)
 
 /* Perche' l'hardware non si e' aperto, l'ultima volta che lo si e' provato
  * ("" se si e' aperto, o se non lo si e' provato). */
-static char rifiuto_hardware[256];
-static char rifiuto_software[256];
+static char rifiuto_hardware[512];
 
-/* ⭐ FASE 18 — il nodo su cui si apre la scheda, e se la si salta apposta.
- *    Nella sessione sono SEMPRE `NODO_RENDERING` e «no»: li muove soltanto
- *    `--prova-codifica --nodo … --software`, per provare l'altra scheda o il
- *    ripiego in software su una macchina che ha la scheda (vedi
- *    `figlio_prova_codifica()`).  ⛔ Nessuna variabile d'ambiente li tocca. */
+/* ⭐ FASE 18 — il nodo su cui si apre la scheda.  Nella sessione e' SEMPRE
+ *    `NODO_RENDERING`: lo muove soltanto `--prova-codifica --nodo …`, per
+ *    provare l'altra scheda (vedi `figlio_prova_codifica()`).  ⛔ Nessuna
+ *    variabile d'ambiente lo tocca.  (`--software`, che saltava la scheda per
+ *    provare il ripiego, e' uscito col ripiego: fase 19.) */
 static const char *nodo_rendering = NODO_RENDERING;
-static bool software_forzato = false;
+
+/* ⭐ FASE 19 — LA STRADA DELLA SCHEDA (`DECISIONI.md` §10.27).  `scheda` = si
+ *    sceglie PER CAPACITA' (Vulkan Video se c'e' per quel codec, se no VA-API),
+ *    ed e' quel che il prodotto fa; `vulkan`/`vaapi` = quella e basta, per le
+ *    prove e la diagnosi (`--codifica`, dalla riga di comando del server e di
+ *    `--prova-codifica`).  Il nome del componente nasce da qui:
+ *    `h264_scheda`, `hevc_vulkan`, … (`codificatore.h`).  ⛔ Il padre lo passa
+ *    al figlio nella riga di comando (`figli_esegui`): il figlio e' un exec, e
+ *    una statica del padre di qua non arriva. */
+static const char *strada_codifica = "scheda";
+
+bool figlio_codifica_strada(const char *strada)
+{
+	if (!strada || (strcmp(strada, "scheda") && strcmp(strada, "vulkan") && strcmp(strada, "vaapi")))
+		return false;
+	strada_codifica = strada;
+	return true;
+}
+
+const char *figlio_codifica_strada_chiesta(void)
+{
+	return strada_codifica;
+}
+
+/*
+ * ⛔ FASE 19 — LE LASTRE DI `wlroots.c` E LA STRADA DI CODIFICA (1 ott 2026).
+ *    Con la codifica Vulkan le lastre GBM devono nascere alla tela massima e
+ *    non morire al cambio di misura (il GPU hang della Radeon: riquadro di
+ *    `WLR_LASTRA_L` in `wlroots.c`); con VA-API no.  ⇒ Si decide UNA volta,
+ *    prima del primo palco, con la stessa regola dei componenti
+ *    (`componente_di()`): «vulkan» si', «vaapi» no, «scheda» = quel che la
+ *    scheda del nodo dichiara (`codificatore_vulkan_sul_nodo`).
+ */
+static void lastre_per_la_strada(void)
+{
+	static bool deciso = false;
+	bool vulkan;
+
+	if (deciso)
+		return;
+	deciso = true;
+	if (!strcmp(strada_codifica, "vulkan"))
+		vulkan = true;
+	else if (!strcmp(strada_codifica, "vaapi"))
+		vulkan = false;
+	else
+		vulkan = codificatore_vulkan_sul_nodo(nodo_rendering);
+	wlr_lastre_alla_tela_massima(vulkan);
+	registro_dice(REG_FIGLIO,
+	              "⭐ FASE 19: le lastre della cattura wlroots %s (strada chiesta «%s», nodo %s)",
+	              vulkan ? "nascono alla TELA MASSIMA e restano al cambio di misura — la "
+	                       "codifica sara' Vulkan (il GPU hang della Radeon)"
+	                     : "sono della misura giusta e si rifanno al cambio — la codifica "
+	                       "sara' VA-API",
+	              strada_codifica, nodo_rendering);
+}
+
+/* Il nome del componente da chiedere per `codec` sulla strada in vigore. */
+static const char *componente_di(CodecVideo codec)
+{
+	static char nome[2][32];
+	int quale = codec == CODIFICATORE_H264 ? 0 : 1;
+
+	snprintf(nome[quale], sizeof nome[quale], "%s_%s", codec == CODIFICATORE_H264 ? "h264" : "hevc",
+	         strada_codifica);
+	return nome[quale];
+}
 
 static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
                                      uint32_t tela_l, uint32_t tela_a)
 {
 	CodificatoreRichiesta r;
-	char errore[256];
+	char errore[512];
 	uint8_t prof = profondita_chiesta;
 
 	if (indice >= CODEC_MAX)
@@ -5262,8 +5325,9 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	r.altezza = tela_a;
 	/* ⛔ La cadenza e' UNA, e la stessa che si chiede alla cattura. */
 	r.fotogrammi_al_secondo = MOVIMENTO_FPS;
-	r.modo = CODIFICATORE_QUALITA_CRF;
-	r.qualita = CRF_SOFTWARE;
+	/* ⛔ Sulla scheda non c'e' il CRF: si chiede QP, e si scrive QP. */
+	r.modo = CODIFICATORE_QUALITA_QP;
+	r.qualita = QP_HARDWARE;
 	/* ⛔⭐⭐ QUI C'ERA `10`, SCRITTO A MANO — ed e' il difetto misurato il 17
 	 *      agosto 2026 su Firefox: si dichiarava 8 in `ECCOMI` (§4.3) e si
 	 *      mandavano 10 sul filo.  ⇒ Adesso e' quel che il padre ha negoziato,
@@ -5305,81 +5369,47 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	r.chiavi_ogni = 0;
 
 	/*
-	 * ⭐⭐ HEVC SI PROVA PRIMA IN HARDWARE — e AV1 no, e la ragione e' MISURATA.
+	 * ⭐⭐ LA SCHEDA, E NIENT'ALTRO — fase 19 (1 ott 2026, `DECISIONI.md`
+	 *     §10.27), parole dell'utente: *«niente cpu senza scheda»*.
 	 *
-	 * `[M]` 13 agosto 2026: `av1_vaapi` **compare** nell'elenco di ffmpeg e
-	 * all'uso esce **218**, *«No usable encoding profile found»*, 3 giri su 3;
-	 * `vainfo` da' AV1 in **sola decodifica** su tutti e due i nodi.  ⇒ Provarlo
-	 * in hardware sarebbe un giro speso per un errore gia' noto.
+	 * HEVC e H.264 si aprono sulla scheda (`hevc_vaapi`/`h264_vaapi` su
+	 * `nodo_rendering`), con QP e non CRF.  `[M]` 13 agosto 2026: `h264_vaapi`
+	 * **3,11-3,16 ms** per fotogramma a 1920x1080 10 bit.  ⛔ Se la scheda non
+	 * si apre NON si scende piu' su un codificatore in software (OpenH264 e
+	 * SVT-AV1 sono usciti dal prodotto): il codec non c'e' su questa macchina, e
+	 * lo si dice.  ⚠ Non dovrebbe nemmeno arrivare qui: il padre lo prova
+	 * ALL'AVVIO (`figlio_capacita_video()`) e offre nell'`ECCOMI` solo quel che
+	 * la scheda sa fare — un browser che lo negozia lo stesso vede questa riga,
+	 * e il codice 0x06 di §6.2 dopo l'attesa.  ⛔ Non si cambia codec sotto al
+	 * client: l'ha scelto lui (§4.3).
 	 *
-	 * ⛔ E il ripiego **si dichiara** (`CODER.md` §4.2): un codificatore in
-	 *    software con la stessa etichetta di uno in hardware darebbe due ritmi
-	 *    sotto lo stesso nome, che e' la forma E2.  Qui il registro dice quale
-	 *    dei due e' vivo, e `codificatore_nome()` porta il nodo dentro il nome.
+	 * ⚠ AV1: `[M]` 13 agosto 2026 `av1_vaapi` esce *«No usable encoding
+	 *   profile found»*, e `vainfo` da' AV1 in sola decodifica su tutti e due i
+	 *   nodi ⇒ AV1 sulla scheda non c'e', e in software nemmeno piu'.
 	 */
-	/* ⭐⭐ E DAL 20 AGOSTO ANCHE H.264 SI PROVA IN HARDWARE, per la stessa
-	 *     ragione di HEVC e con la stessa misura accanto: `[M]` 13 agosto 2026,
-	 *     `h264_vaapi` **3,11-3,16 ms** per fotogramma a 1920x1080 10 bit, 20
-	 *     Mbit/s, 120 fotogrammi su 120 — il piu' veloce dei quattro provati.
-	 * ⛔ E il ripiego in software (`openh264`, fase 18) resta DICHIARATO, non
-	 *    la strada. */
-	if ((codec == CODIFICATORE_HEVC || codec == CODIFICATORE_H264) && !software_forzato) {
-		CodificatoreRichiesta hw = r;
-		hw.componente = (codec == CODIFICATORE_H264) ? "h264_vaapi" : "hevc_vaapi";
-		hw.nodo_rendering = nodo_rendering;
-		hw.potenza = POTENZA_RENDERING;
-		/* ⛔ In hardware non c'e' il CRF: si chiede QP, e si scrive QP. */
-		hw.modo = CODIFICATORE_QUALITA_QP;
-		hw.qualita = QP_HARDWARE;
-		codif[indice] = codificatore_nuovo(&hw, errore, sizeof errore);
+	if (codec == CODIFICATORE_HEVC || codec == CODIFICATORE_H264) {
+		/* ⭐ Fase 19: `h264_scheda`/`hevc_scheda` — la strada la sceglie il
+		 *    codificatore per capacita' (Vulkan prima, VA-API dopo), o quella
+		 *    forzata con `--codifica`.  Quale e' uscita lo dice il nome. */
+		r.componente = componente_di(codec);
+		r.nodo_rendering = nodo_rendering;
+		r.potenza = POTENZA_RENDERING;
+		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
 		/* La ragione resta anche fuori dal registro: `--prova-codifica` la
 		 * riporta nel suo `motivo`. */
 		snprintf(rifiuto_hardware, sizeof rifiuto_hardware, "%s",
 		         codif[indice] ? "" : errore);
-		if (!codif[indice] && codec == CODIFICATORE_H264)
-			/* ⛔⭐ E I DUE NOMI SI STAMPANO, NON SI SCRIVONO A MANO — difetto
-			 *     trovato refutando, 22 agosto 2026 (fase 8).  Fino a qui la
-			 *     riga diceva **«hevc_vaapi»** e **«libx265»** scritti dentro le
-			 *     virgolette: dal 20 agosto questo ramo serve ANCHE H.264, e
-			 *     quando a non aprirsi era `h264_vaapi` il registro accusava un
-			 *     codificatore che nessuno aveva chiesto e nominava un ripiego
-			 *     che non sarebbe stato usato.  ⇒ Una riga col numero giusto e
-			 *     **la parola sbagliata accanto**, che e' la forma che manda la
-			 *     caccia dalla parte sbagliata (`LEZIONI.md` §1.20). */
-			registro_dice(REG_FIGLIO,
-			              "⚠ RIPIEGO DICHIARATO: «%s» su %s non si e' "
-			              "aperto (%s) ⇒ si scende su «%s» IN SOFTWARE, che costa "
-			              "un ordine di grandezza in piu' per fotogramma.  ⛔ Non e' "
-			              "un dettaglio del registro: e' il tratto piu' grosso "
-			              "della codifica",
-			              hw.componente, nodo_rendering, errore,
-			              codificatore_ripiego_software(codec));
-	} else if (software_forzato) {
+		if (!codif[indice])
+			snprintf(errore, sizeof errore,
+			         "«%s» su %.40s non si e' aperto (%.150s) ⇒ questo codec NON c'e' su "
+			         "questa macchina: senza scheda non si codifica (fase 19)",
+			         r.componente, nodo_rendering, rifiuto_hardware);
+	} else {
 		snprintf(rifiuto_hardware, sizeof rifiuto_hardware,
-		         "non provato: --software (la scheda si salta apposta)");
-	}
-
-	/* ⛔⛔ FASE 18 — HEVC IN SOFTWARE NON C'E', E NON SI SCENDE.  x265 e' GPL
-	 *      (`DECISIONI.md` §10.25) e un HEVC software con licenza permissiva
-	 *      non esiste: se `hevc_vaapi` non si apre, questo codec NON c'e' su
-	 *      questa macchina.  ⚠ E non dovrebbe nemmeno arrivare qui: il padre
-	 *      lo prova ALL'AVVIO (`figlio_capacita_video()`) e offre «hevc» nel
-	 *      `ECCOMI` solo se la scheda lo sa fare — un browser che lo negozia
-	 *      lo stesso vede questa riga, e il codice 0x06 di §6.2 dopo l'attesa.
-	 *      ⛔ Non si ripiega in silenzio su H.264: il codec l'ha scelto il
-	 *      client (§4.3), e cambiarglielo sotto sarebbe un flusso che il suo
-	 *      decodificatore non aspetta. */
-	if (!codif[indice] && codec == CODIFICATORE_HEVC) {
-		snprintf(rifiuto_software, sizeof rifiuto_software,
-		         "HEVC in software non esiste (x265 e' GPL, fase 18): non si prova");
-		snprintf(errore, sizeof errore,
-		         "«hevc_vaapi» su %.40s non si e' aperto (%.100s); HEVC in software "
-		         "NON c'e' (x265 e' GPL, §10.25): niente ripiego",
-		         nodo_rendering, rifiuto_hardware);
-	} else if (!codif[indice]) {
-		codif[indice] = codificatore_nuovo(&r, errore, sizeof errore);
-		snprintf(rifiuto_software, sizeof rifiuto_software, "%s",
-		         codif[indice] ? "" : errore);
+		         "il codec %d non si codifica sulla scheda (AV1: sola decodifica)",
+		         (int) codec);
+		snprintf(errore, sizeof errore, "%.400s — e senza scheda non si codifica (fase 19)",
+		         rifiuto_hardware);
 	}
 	if (codif[indice]) {
 		codif_prof[indice] = prof;
@@ -5415,8 +5445,9 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 	              "⭐ FASE 3: codificatore %d APERTO e TENUTO VIVO fra un "
 	              "fotogramma e l'altro, %ux%u a %d/s — senza questo la "
 	              "predizione non esisterebbe e ogni fotogramma sarebbe una "
-	              "chiave · in vigore: %s",
+	              "chiave · strada %s (chiesta «%s») · in vigore: %s",
 	              (int)codec, tela_l, tela_a, MOVIMENTO_FPS,
+	              codificatore_strada(codif[indice]), strada_codifica,
 	              codificatore_nome(codif[indice]));
 	return codif[indice];
 }
@@ -5435,66 +5466,78 @@ static void codificatori_libera(void)
  * ⭐ FASE 17 (§6.5-bis, §6.0 fase 7a) — `remotix --prova-codifica`.
  *
  * La certificazione dell'installatore deve sapere se questa macchina codifica
- * davvero un fotogramma in H.264, e COME: la risposta la da' il prodotto, con
- * la sua stessa scelta, non un ffmpeg a parte.  ⇒ Si passa per
+ * davvero un fotogramma in H.264 sulla scheda: la risposta la da' il prodotto,
+ * con la sua stessa scelta, non un programma a parte.  ⇒ Si passa per
  * `codificatore_di()`, cioe' la strada di una sessione vera (H.264, 8 bit — la
  * base di §4.3 —, nessun tetto di livello, BGRx): `h264_vaapi` su
- * `NODO_RENDERING` con `POTENZA_RENDERING` e `QP_HARDWARE`, e se non si apre il
- * ripiego dichiarato `openh264` con `CRF_SOFTWARE`.  Poi si codifica davvero un
- * fotogramma sintetico 256x256, finche' non escono byte (al piu' 8 giri).
+ * `NODO_RENDERING` con `POTENZA_RENDERING` e `QP_HARDWARE`.  Poi si codifica
+ * davvero un fotogramma sintetico 256x256, finche' non escono byte (al piu' 8
+ * giri).
+ *
+ * ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27) — *«niente cpu senza
+ *    scheda»*: se la scheda non si apre non c'e' piu' il ripiego in software
+ *    (OpenH264), e la prova lo DICHIARA con un codice suo.
  *
  * Esce con UNA riga JSON su stdout (il registro va su stderr, come sempre):
- *   {"esito":"hardware"|"software"|"nessuno","codificatore":"h264_vaapi"|"openh264"|"",
+ *   {"esito":"hardware"|"nessuno","codificatore":"h264_vulkan"|"h264_vaapi"|"",
+ *    "strada":"vulkan"|"vaapi"|"",
  *    "nodo":"/dev/dri/renderD128"|"","motivo":"...",
- *    ⭐ fase 18, in piu' (l'installatore legge solo le prime quattro):
  *    "codec":"h264"|"hevc","offerti":"hevc,h264"|"h264"|"",
- *    "hevc":"hardware"|"nessuno","h264":"hardware"|"software"|"nessuno","rimedio":"..."}
- * e il codice: 0 se un fotogramma e' uscito (hardware O software: quale lo dice
- * «esito») · 1 nessuno · 2 resta l'errore d'uso — lo stesso che il motore della linea A
- * aspettava (fasi/17 §13.1, riga di 56c93d3).
+ *    "hevc":"hardware"|"nessuno","h264":"hardware"|"nessuno",
+ *    "hevc_strada":"vulkan"|"vaapi"|"","h264_strada":…}
+ *   ⭐ FASE 19: `strada` e `*_strada` dicono QUALE strada della scheda ha
+ *   codificato (`DECISIONI.md` §10.27: Vulkan Video prima, VA-API dopo); i
+ *   campi di ieri restano com'erano e l'installatore legge `esito` e il codice.
+ * e il codice:
+ *    0  la scheda ha codificato un fotogramma, e i byte si rileggono;
+ *    1  la scheda si apre ma il fotogramma non esce, o non si sa se e' giusto;
+ *    2  errore d'uso;
+ *    3  ⛔ NESSUNA SCHEDA SA CODIFICARE questo codec (niente nodo, niente
+ *       driver, un driver senza codifica): REMOTIX qui non codifica.
  *
- * ⭐ FASE 18 — GLI ARGOMENTI FACOLTATIVI, dopo `--prova-codifica`:
- *      h264 | hevc          quale codec provare (predefinito h264, la base di §4.3;
- *                           ⛔ per hevc il software NON esiste: o la scheda o «nessuno»)
+ * GLI ARGOMENTI FACOLTATIVI, dopo `--prova-codifica`:
+ *      h264 | hevc          quale codec provare (predefinito h264, la base di §4.3)
  *      --nodo /dev/dri/…    la scheda da provare invece di NODO_RENDERING (la
- *                           seconda scheda di una macchina che ne ha due)
- *      --software           si salta la scheda apposta: e' l'unico modo di provare
- *                           il ripiego su una macchina che la scheda ce l'ha
- *    Senza argomenti e' la chiamata dell'installatore, identica a prima.
- *    `offerti` e' quel che il server OFFRIREBBE al browser con questi stessi
- *    argomenti (con `--software`: senza la scheda).
+ *                           seconda scheda di una macchina che ne ha due, o un
+ *                           nodo che non c'e' per provare il rifiuto)
+ *      --codifica vaapi|vulkan|scheda   ⭐ fase 19: la strada, forzata (le due)
+ *                           o per capacita' (`scheda`, il predefinito)
+ *    Senza argomenti e' la chiamata dell'installatore.  `offerti` e' quel che il
+ *    server OFFRIREBBE al browser con questi stessi argomenti.
  *
  * ⛔ «hardware» si dice SOLO se il componente accetta superfici VA-API
  *    (`codificatore_in_hardware`) E un fotogramma e' uscito con dei byte E i
  *    byte si sono riletti (`letto_dal_flusso`).  Tutto quel che non si sa
  *    diventa «nessuno» col motivo — mai un hardware presunto.
  * ⚠ Non serve root, ma i permessi contano: senza il gruppo del nodo (`render`)
- *   un utente vedra' «software» dove root vedrebbe «hardware».  La prova va
+ *   un utente vedra' «nessuno» dove root vedrebbe «hardware».  La prova va
  *   fatta con l'identita' di cui si vuole sapere.
  */
 #define PROVA_LATO 256u
 #define PROVA_GIRI 8
+#define PROVA_NESSUNA_SCHEDA 3
 
-/* ⭐ Quel che questa macchina sa fare, codec per codec: e' la stessa domanda
- *    di `--prova-codifica`, fatta all'avvio dal padre per decidere che cosa
- *    offrire nell'`ECCOMI` (`figlio_capacita_video()`). */
+/* ⭐ Quel che la scheda di questa macchina sa fare, codec per codec: e' la
+ *    stessa domanda di `--prova-codifica`, fatta all'avvio dal padre per
+ *    decidere che cosa offrire nell'`ECCOMI` (`figlio_capacita_video()`). */
 typedef struct {
-	bool hevc_scheda;          /* hevc_vaapi apre e codifica su `nodo` */
-	bool h264_scheda;          /* h264_vaapi idem */
-	bool h264_software;        /* OpenH264 VERO (non la copia vuota) */
+	bool hevc_scheda;          /* la scheda apre e codifica HEVC su `nodo` */
+	bool h264_scheda;          /* H.264 idem */
 	char nodo[64];
 	char perche_hevc[768];     /* la ragione, quando no */
 	char perche_h264[768];
-	char perche_software[320];
-	char rimedio[320];         /* quando OpenH264 manca: il pacchetto per QUESTA distro */
+	char strada_hevc[16];      /* ⭐ fase 19: «vulkan» / «vaapi» quando si', "" quando no */
+	char strada_h264[16];
 } CapacitaVideo;
 
-/* Apre `componente` per `codec` (o il ripiego, con NULL) e codifica finche'
- * non escono byte.  ⚠ Passa da `codificatore_di()`, cioe' dalla strada della
- * sessione: e' la stessa prova che fara' il figlio.  Il codificatore resta
- * aperto in `codif[]` (per la confessione): chi chiama lo libera. */
+/* Apre la scheda per `codec` e codifica finche' non escono byte.  ⚠ Passa da
+ * `codificatore_di()`, cioe' dalla strada della sessione: e' la stessa prova
+ * che fara' il figlio.  Il codificatore resta aperto in `codif[]` (per la
+ * confessione): chi chiama lo libera.  `*aperto` dice se la scheda si e'
+ * aperta — il «no» di chi non si apre e quello di chi non codifica sono due
+ * codici diversi di `--prova-codifica`. */
 static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_t n,
-                           size_t *byte_usciti)
+                           size_t *byte_usciti, bool *aperto)
 {
 	static uint8_t pixel[PROVA_LATO * PROVA_LATO * 4];
 	CodificatoreFotogramma fg;
@@ -5503,28 +5546,26 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 	bool uscito = false;
 
 	*byte_usciti = 0;
+	*aperto = false;
 	profondita_chiesta = 8;
 	livello_chiesto_x10 = 0;
 	formato_ingresso = CODIFICATORE_PIXEL_BGRX;
 	/* ⚠ Si prova DAVVERO, anche se un giro prima ha gia' detto di no: l'attesa
-	 *   fra due tentativi e' della sessione, non della prova — e le due ragioni
-	 *   si azzerano, o si leggerebbe quella del codec provato prima. */
+	 *   fra due tentativi e' della sessione, non della prova — e la ragione si
+	 *   azzera, o si leggerebbe quella del codec provato prima. */
 	codif_riprova_ms[indice] = 0;
 	codif_attesa_ms[indice] = 0;
 	rifiuto_hardware[0] = 0;
-	rifiuto_software[0] = 0;
 	cod = codificatore_di(codec, indice, PROVA_LATO, PROVA_LATO);
 	if (!cod) {
 		snprintf(motivo, n,
-		         "%s non si apre: in hardware («%s» su %s) %s; in software («%s») %s",
-		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264",
-		         codec == CODIFICATORE_HEVC ? "hevc_vaapi" : "h264_vaapi", nodo_rendering,
-		         rifiuto_hardware[0] ? rifiuto_hardware : "non provato",
-		         codificatore_ripiego_software(codec) ? codificatore_ripiego_software(codec)
-		                                              : "nessuno: HEVC in software non c'e'",
-		         rifiuto_software[0] ? rifiuto_software : "nessuna ragione");
+		         "nessuna scheda sa codificare %s: «%s» su %s non si apre (%s).  ⛔ REMOTIX "
+		         "codifica solo sulla scheda (fase 19): senza, il video non c'e'",
+		         codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", componente_di(codec),
+		         nodo_rendering, rifiuto_hardware[0] ? rifiuto_hardware : "nessuna ragione");
 		return false;
 	}
+	*aperto = true;
 	for (int giro = 0; giro < PROVA_GIRI && !uscito; giro++) {
 		/* Una sfumatura che scorre: ogni fotogramma e' diverso dal prima. */
 		for (uint32_t y = 0; y < PROVA_LATO; y++)
@@ -5551,66 +5592,61 @@ static bool prova_un_codec(CodecVideo codec, uint8_t indice, char *motivo, size_
 		codificatore_rilascia(cod);
 	}
 	c = codificatore_confessione(cod);
-	if (!uscito || !c || !c->ha_obbedito || !c->letto_dal_flusso) {
+	if (!uscito || !c || !c->ha_obbedito || !c->letto_dal_flusso
+	    || !codificatore_in_hardware(cod)) {
 		snprintf(motivo, n, "«%s» si apre ma dopo %d fotogrammi non si sa se codifica: %s",
 		         codificatore_nome(cod), PROVA_GIRI,
 		         !uscito ? "nessun byte uscito"
 		         : !c || !c->ha_obbedito ? "il codificatore non ha obbedito"
-		                                 : "i byte non si rileggono");
+		         : !c->letto_dal_flusso  ? "i byte non si rileggono"
+		                                 : "non e' sulla scheda");
 		return false;
 	}
 	return true;
 }
 
-/* La misura, in questo processo: tre domande, e ogni «no» con la sua ragione. */
+/* La misura, in questo processo: due domande, e ogni «no» con la sua ragione. */
 static void capacita_video_misura(CapacitaVideo *cv)
 {
 	size_t byte;
+	bool aperto;
 	char motivo[768];
 
 	memset(cv, 0, sizeof *cv);
 	snprintf(cv->nodo, sizeof cv->nodo, "%s", nodo_rendering);
-	/* ⚠ HEVC: solo la scheda, e la risposta e' quella di `codificatore_di()`
-	 *   — che con la scheda chiusa NON scende (vedi la' il perche'). */
-	cv->hevc_scheda = prova_un_codec(CODIFICATORE_HEVC, 1, motivo, sizeof motivo, &byte)
-	                  && codif[1] && codificatore_in_hardware(codif[1]);
+	cv->hevc_scheda = prova_un_codec(CODIFICATORE_HEVC, 1, motivo, sizeof motivo, &byte, &aperto);
 	if (!cv->hevc_scheda)
 		snprintf(cv->perche_hevc, sizeof cv->perche_hevc, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
+	else
+		snprintf(cv->strada_hevc, sizeof cv->strada_hevc, "%s", codificatore_strada(codif[1]));
 	codificatori_libera();
-	/* H.264: la scheda, e a parte il ripiego — la sessione scende sul secondo
-	 * se la prima manca, e qui si vuole sapere di tutt'e due. */
-	cv->h264_scheda = prova_un_codec(CODIFICATORE_H264, 3, motivo, sizeof motivo, &byte)
-	                  && codif[3] && codificatore_in_hardware(codif[3]);
+	cv->h264_scheda = prova_un_codec(CODIFICATORE_H264, 3, motivo, sizeof motivo, &byte, &aperto);
 	if (!cv->h264_scheda)
 		snprintf(cv->perche_h264, sizeof cv->perche_h264, "%s",
 		         rifiuto_hardware[0] ? rifiuto_hardware : motivo);
+	else
+		snprintf(cv->strada_h264, sizeof cv->strada_h264, "%s", codificatore_strada(codif[3]));
 	codificatori_libera();
-	cv->h264_software = codificatore_software_pronto(CODIFICATORE_H264, 8, cv->perche_software,
-	                                                 sizeof cv->perche_software);
-	if (!cv->h264_software)
-		codificatore_software_rimedio(cv->rimedio, sizeof cv->rimedio);
 }
 
-/* Che cosa si OFFRE, dalla misura: «hevc,h264» · «h264» · «» (niente). */
+/* Che cosa si OFFRE, dalla misura: «hevc,h264» · «hevc» · «h264» · «» (niente). */
 static void capacita_video_offerti(const CapacitaVideo *cv, char *dove, size_t n)
 {
 	snprintf(dove, n, "%s%s%s", cv->hevc_scheda ? "hevc" : "",
-	         cv->hevc_scheda && (cv->h264_scheda || cv->h264_software) ? "," : "",
-	         (cv->h264_scheda || cv->h264_software) ? "h264" : "");
+	         cv->hevc_scheda && cv->h264_scheda ? "," : "",
+	         cv->h264_scheda ? "h264" : "");
 }
 
 /* Una riga che dice tutto, per il registro e per il `motivo`. */
 static void capacita_video_spiega(const CapacitaVideo *cv, char *dove, size_t n)
 {
-	snprintf(dove, n,
-	         "HEVC: %s%s%s · H.264: scheda %s%s%s, software OpenH264 %s%s%s%s%s",
-	         cv->hevc_scheda ? "scheda " : "nessuno (", cv->nodo,
-	         cv->hevc_scheda ? "" : ")",
-	         cv->h264_scheda ? "si' (" : "no (", cv->nodo, ")",
-	         cv->h264_software ? "si'" : "NO",
-	         cv->h264_software ? "" : " — ", cv->h264_software ? "" : cv->perche_software,
-	         cv->rimedio[0] ? " ⇒ rimedio: " : "", cv->rimedio);
+	snprintf(dove, n, "scheda %s (strada chiesta «%s») — HEVC: %s%.300s%s · H.264: %s%.300s%s",
+	         cv->nodo, strada_codifica,
+	         cv->hevc_scheda ? "si' via " : "NO (",
+	         cv->hevc_scheda ? cv->strada_hevc : cv->perche_hevc, cv->hevc_scheda ? "" : ")",
+	         cv->h264_scheda ? "si' via " : "NO (",
+	         cv->h264_scheda ? cv->strada_h264 : cv->perche_h264, cv->h264_scheda ? "" : ")");
 }
 
 bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
@@ -5620,11 +5656,10 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 	 * ⭐⭐ LA PROVA ALL'AVVIO — fase 18, decisione dell'utente (30 set 2026).
 	 *
 	 * Il browser NON deve ricevere nell'`ECCOMI` un codec che il server non sa
-	 * fare: HEVC c'e' solo se la scheda lo codifica (in software non esiste),
-	 * H.264 c'e' se la scheda lo codifica o se OpenH264 e' VERO.  ⛔ E se non
-	 * c'e' nessuno dei due NON si rimette AV1 nella negoziazione: si dichiara
-	 * all'avvio, col rimedio («installare openh264 vero», il pacchetto giusto
-	 * per la distro), e la negoziazione finisce in NIENTE_IN_COMUNE.
+	 * fare: HEVC e H.264 ci sono solo se la SCHEDA li codifica.  ⛔ Fase 19
+	 * (1 ott 2026, §10.27): il ripiego in software (OpenH264) e' uscito — se la
+	 * scheda non sa codificare niente si dichiara all'avvio, con la ragione, e
+	 * la negoziazione finisce in NIENTE_IN_COMUNE.
 	 *
 	 * ⚠ IN UN PROCESSO A PARTE: la prova apre il driver della scheda, e un
 	 *   driver che cade non deve portarsi dietro il server prima che abbia
@@ -5715,29 +5750,33 @@ bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione
 	cv.nodo[sizeof cv.nodo - 1] = 0;
 	cv.perche_hevc[sizeof cv.perche_hevc - 1] = 0;
 	cv.perche_h264[sizeof cv.perche_h264 - 1] = 0;
-	cv.perche_software[sizeof cv.perche_software - 1] = 0;
-	cv.rimedio[sizeof cv.rimedio - 1] = 0;
+	cv.strada_hevc[sizeof cv.strada_hevc - 1] = 0;
+	cv.strada_h264[sizeof cv.strada_h264 - 1] = 0;
 	capacita_video_offerti(&cv, offerti, offerti_byte);
 	capacita_video_spiega(&cv, spiegazione, spiegazione_byte);
 	return offerti[0] != 0;
 }
 
-static int prova_esce(const char *esito, const char *codificatore, const char *nodo,
-                      const char *motivo, CodecVideo codec, const CapacitaVideo *cv, int codice)
+static int prova_esce(const char *esito, const char *codificatore, const char *strada,
+                      const char *nodo, const char *motivo, CodecVideo codec,
+                      const CapacitaVideo *cv, int codice)
 {
-	char c[128], n[128], m[4096], o[32], r[640];
+	char c[128], n[128], m[4096], o[32], r[64], s[32], sh[32], s4[32];
 
 	json_testo(c, sizeof c, codificatore);
+	json_testo(s, sizeof s, strada);
 	json_testo(n, sizeof n, nodo);
 	json_testo(m, sizeof m, motivo);
 	capacita_video_offerti(cv, r, sizeof r);
 	json_testo(o, sizeof o, r);
-	json_testo(r, sizeof r, cv->rimedio);
-	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"nodo\":\"%s\",\"motivo\":\"%s\","
-	       "\"codec\":\"%s\",\"offerti\":\"%s\",\"hevc\":\"%s\",\"h264\":\"%s\",\"rimedio\":\"%s\"}\n",
-	       esito, c, n, m, codec == CODIFICATORE_HEVC ? "hevc" : "h264", o,
-	       cv->hevc_scheda ? "hardware" : "nessuno",
-	       cv->h264_scheda ? "hardware" : cv->h264_software ? "software" : "nessuno", r);
+	json_testo(sh, sizeof sh, cv->strada_hevc);
+	json_testo(s4, sizeof s4, cv->strada_h264);
+	printf("{\"esito\":\"%s\",\"codificatore\":\"%s\",\"strada\":\"%s\",\"nodo\":\"%s\","
+	       "\"motivo\":\"%s\",\"codec\":\"%s\",\"offerti\":\"%s\",\"hevc\":\"%s\",\"h264\":\"%s\","
+	       "\"hevc_strada\":\"%s\",\"h264_strada\":\"%s\"}\n",
+	       esito, c, s, n, m, codec == CODIFICATORE_HEVC ? "hevc" : "h264", o,
+	       cv->hevc_scheda ? "hardware" : "nessuno", cv->h264_scheda ? "hardware" : "nessuno", sh,
+	       s4);
 	/* ⛔ Una riga che non esce intera e' «non so», non l'esito che portava. */
 	if (fflush(stdout) != 0)
 		return 1;
@@ -5751,8 +5790,8 @@ int figlio_prova_codifica(int argc, char **argv)
 	const CodificatoreConfessione *c;
 	CapacitaVideo cv;
 	char motivo[2048], spiega[1024];
-	bool in_hw;
 	size_t byte = 0;
+	bool aperto = false;
 
 	for (int i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "h264") == 0) {
@@ -5763,12 +5802,14 @@ int figlio_prova_codifica(int argc, char **argv)
 			indice = 1;
 		} else if (strcmp(argv[i], "--nodo") == 0 && i + 1 < argc) {
 			nodo_rendering = argv[++i];
-		} else if (strcmp(argv[i], "--software") == 0) {
-			software_forzato = true;
+		} else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc
+		           && figlio_codifica_strada(argv[i + 1])) {
+			i++;
 		} else {
 			fprintf(stderr,
 			        "uso: remotix --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN] "
-			        "[--software]\n");
+			        "[--codifica scheda|vulkan|vaapi]\n"
+			        "     (--software non c'e' piu': il ripiego in software e' uscito, fase 19)\n");
 			return 2;
 		}
 	}
@@ -5780,28 +5821,26 @@ int figlio_prova_codifica(int argc, char **argv)
 	capacita_video_spiega(&cv, spiega, sizeof spiega);
 	registro_dice(REG_FIGLIO, "--prova-codifica: %s", spiega);
 
-	if (!prova_un_codec(codec, indice, motivo, sizeof motivo, &byte)) {
+	if (!prova_un_codec(codec, indice, motivo, sizeof motivo, &byte, &aperto)) {
 		codificatori_libera();
-		return prova_esce("nessuno", "", "", motivo, codec, &cv, 1);
+		if (!aperto)
+			registro_dice(REG_FIGLIO,
+			              "⛔⛔ NESSUNA SCHEDA SA CODIFICARE %s su questa macchina: %s",
+			              codec == CODIFICATORE_HEVC ? "HEVC" : "H.264", motivo);
+		return prova_esce("nessuno", "", "", "", motivo, codec, &cv,
+		                  aperto ? 1 : PROVA_NESSUNA_SCHEDA);
 	}
 	c = codificatore_confessione(codif[indice]);
-	in_hw = codificatore_in_hardware(codif[indice]);
-	if (in_hw) {
-		snprintf(motivo, sizeof motivo,
-		         "un fotogramma %ux%u codificato: %zu byte, %s — %s · %s", PROVA_LATO, PROVA_LATO,
-		         byte, c->stringa_codec, codificatore_nome(codif[indice]), spiega);
+	snprintf(motivo, sizeof motivo, "un fotogramma %ux%u codificato: %zu byte, %s — %s · %s",
+	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec, codificatore_nome(codif[indice]),
+	         spiega);
+	{
+		int fine = prova_esce("hardware", c->componente ? c->componente : "",
+		                      codificatore_strada(codif[indice]), nodo_rendering, motivo, codec,
+		                      &cv, 0);
 		codificatori_libera();
-		return prova_esce("hardware", c->componente ? c->componente : "", nodo_rendering,
-		                  motivo, codec, &cv, 0);
+		return fine;
 	}
-	snprintf(motivo, sizeof motivo,
-	         "l'hardware non si apre («%s» su %s: %s) — ripiego in software: un "
-	         "fotogramma %ux%u codificato, %zu byte, %s · %s",
-	         codec == CODIFICATORE_HEVC ? "hevc_vaapi" : "h264_vaapi", nodo_rendering,
-	         rifiuto_hardware[0] ? rifiuto_hardware : "ragione non data",
-	         PROVA_LATO, PROVA_LATO, byte, c->stringa_codec, spiega);
-	codificatori_libera();
-	return prova_esce("software", c->componente ? c->componente : "", "", motivo, codec, &cv, 0);
 }
 
 /* ⛔⭐ QUALE ISTANTE FINISCE NEI 28 BYTE, E DA DOVE VIENE — il punto 7, deciso
@@ -6127,11 +6166,12 @@ static bool codifica_e_manda(const CatturaFermo *fo, CodecVideo codec,
 	 *     non di pixel), non letto nel nome e non dedotto dall'aver aperto un
 	 *     render node (`LEZIONI.md` §1.11).
 	 *
-	 * ⚠ Il caso esiste: `codificatore_di()` prova prima l'hardware e ripiega in
-	 *   software dichiarandolo — per esempio H.264 oltre i 4096 px, che `[M]` il
-	 *   driver rifiuta.  ⇒ Su quella strada un descrittore non serve a niente, e
-	 *   il palco va rimontato sulla memoria: si segna, e a smontare ci pensa il
-	 *   ciclo, che e' l'unico che tiene il palco. */
+	 * ⚠ Fino alla fase 18 il caso esisteva: `codificatore_di()` ripiegava in
+	 *   software (H.264 oltre i 4096 px, che `[M]` il driver rifiuta).  Dalla
+	 *   fase 19 il ripiego e' uscito e `codificatore_di()` apre solo la scheda;
+	 *   la guardia resta, perche' costa una riga e un codificatore che non
+	 *   fosse sulla scheda non deve ricevere un descrittore.  Si segna, e a
+	 *   smontare ci pensa il ciclo, che e' l'unico che tiene il palco. */
 	if (fo->sulla_scheda && !codificatore_in_hardware(cod)) {
 		if (!scheda_da_abbandonare) {
 			scheda_da_abbandonare = true;
@@ -6934,10 +6974,11 @@ rimonta_la_cattura:
 	misura_del_palco(&tela_l, &tela_a);
 	/* ⭐ FASE 13 — l'altra porta: la sorgente a tiro.  ⛔ `nodo_del_palco()` non
 	 *    si chiama nemmeno, perché su questa famiglia un nodo non esiste. */
-	if (sessione_su_wlroots())
+	if (sessione_su_wlroots()) {
+		lastre_per_la_strada();
 		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
 		                        CATTURA_COLORE_BGRX, &sbaglio);
-	else
+	} else
 		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
 		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 		                    NULL, &sbaglio);
@@ -7166,12 +7207,10 @@ rimonta_la_cattura:
 			                     "flusso-hevc.265", istante_us, fo.larghezza,
 			                     fo.altezza, 0))
 				p.flussi++;
-			if (codifica_e_manda(&fo, CODIFICATORE_AV1, 2, dir_rilievo,
-			                     "flusso-av1.obu", istante_us, fo.larghezza,
-			                     fo.altezza, 0))
-				p.flussi++;
-			/* ⭐ Il terzo, dal 20 agosto: un client che negozia H.264 trova il
-			 *    primo fotogramma gia' in deposito come gli altri due, invece di
+			/* ⛔ AV1 non c'e' piu': si codificava solo in software (SVT-AV1),
+			 *    e il ripiego in software e' uscito con la fase 19. */
+			/* ⭐ Il secondo, dal 20 agosto: un client che negozia H.264 trova il
+			 *    primo fotogramma gia' in deposito come l'altro, invece di
 			 *    aspettare che qualcosa si muova sul desktop. */
 			if (codifica_e_manda(&fo, CODIFICATORE_H264, 3, dir_rilievo,
 			                     "flusso-h264.264", istante_us, fo.larghezza,
@@ -7560,6 +7599,7 @@ static bool rimonta_solo_la_cattura(MutterSessione *m, Cattura **c, uint32_t l,
 			*c = NULL;
 		}
 		misura_del_palco(&l, &a);
+		lastre_per_la_strada();
 		nuova = cattura_avvia_wlr(l, a, MOVIMENTO_FPS, strada_del_palco,
 		                          CATTURA_COLORE_BGRX, &sbaglio);
 		if (!nuova) {
@@ -7731,6 +7771,12 @@ void figlio_vive(int argc, char **argv)
 			f9_risale = true;
 		else if (strcmp(argv[i], "--tetto-banda-mbit") == 0 && i + 1 < argc)
 			f9_tetto = (uint32_t)strtoul(argv[++i], NULL, 10);
+		/* ⭐ FASE 19: la strada della scheda forzata (`--codifica` del server),
+		 *    per la stessa ragione delle tre righe sopra — e' una statica di
+		 *    QUESTO processo, e il padre gliela ripete.  ⚠ Un valore che non
+		 *    si riconosce resta «scheda», e la riga del codificatore lo dice. */
+		else if (strcmp(argv[i], "--codifica") == 0 && i + 1 < argc)
+			figlio_codifica_strada(argv[++i]);
 		/* ⛔⭐ E QUESTA SI LEGGE NEGATA, perche' nasce ACCESA (24 ago 2026): la
 		 *     parola in coda e' l'ECCEZIONE al predefinito.  ⚠ Un'assenza qui
 		 *     vuol dire «acceso», che e' il contrario delle due righe sopra —
@@ -7858,10 +7904,9 @@ void figlio_vive(int argc, char **argv)
 	              MOVIMENTO_FPS, tela_l, tela_a);
 	registro_dice(REG_FIGLIO,
 	              "⭐⛔ PARAMETRI IN VIGORE (fase 9), qualita' e codificatore "
-	              "CHIESTI: QP %d in hardware · CRF %d sul ripiego in software "
-	              "(due grandezze diverse, non si confrontano) · nodo %s · "
-	              "entrypoint %s",
-	              QP_HARDWARE, CRF_SOFTWARE, NODO_RENDERING,
+	              "CHIESTI: QP %d sulla scheda (niente ripiego in software, fase "
+	              "19) · nodo %s · entrypoint %s",
+	              QP_HARDWARE, NODO_RENDERING,
 	              potenza_nome(POTENZA_RENDERING));
 
 	/* ⛔⭐⭐ E QUESTA E' LA RIGA CHE FA CADERE LA FORMA D5 — «un binario stantio
@@ -8627,7 +8672,8 @@ void figlio_vive(int argc, char **argv)
 						 *     da solo, e `attendi_tela()` a ogni giro impedisce
 						 *     anche al padre di scadere.  ⚠ Sul prodotto vero e'
 						 *     `[?]`: Mutter ha concesso 30 misure su 30 fino a
-						 *     7680x4320 e `rcp_misura_ammessa()` taglia li'.  La
+						 *     7680x4320, e `rcp_misura_ammessa()` dal 1 ottobre
+						 *     2026 taglia a 4096x2304.  La
 						 *     cura sta nella politica di rimontaggio, non qui.
 						 */
 						registro_dice(REG_FIGLIO,

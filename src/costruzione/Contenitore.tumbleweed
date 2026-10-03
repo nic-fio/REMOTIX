@@ -1,16 +1,17 @@
 # Contenitore.tumbleweed — costruzione di REMOTIX per openSUSE Tumbleweed.
 #
-# Fase 18, senza ffmpeg: `libopenh264-devel` (le intestazioni: a esecuzione la
-# libreria VERA sta nel deposito `repo-openh264`, quella di repo-oss e' la copia
-# vuota che `ripiego.c` riconosce), `SVT-AV1-devel`, `libopus-devel`.
+# Fase 18, senza ffmpeg: `libopus-devel`.  (OpenH264 e SVT-AV1, il ripiego in
+# software, sono usciti con la fase 19.)
 # ⓘ Tumbleweed ha gia' ngtcp2 1.25 con crypto_ossl: si potrebbe usare quella.
 #   Si costruisce comunque la nostra, statica, per uniformita' (§6.3).
+# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-devel` (loader e
+#    intestazioni), `[M]` 1 ott 2026 nell'immagine: 1.4.357.
 FROM registry.opensuse.org/opensuse/tumbleweed:latest
 RUN zypper -n refresh && zypper -n install --no-recommends \
         gcc make pkg-config git cmake ninja diffutils \
         libopenssl-devel pam-devel glib2-devel pipewire-devel libdrm-devel \
-        libva-devel libopenh264-devel SVT-AV1-devel libopus-devel \
-        libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel \
+        libva-devel libopus-devel \
+        libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel vulkan-devel \
     && zypper -n clean -a
 
 # --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche

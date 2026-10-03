@@ -131,7 +131,7 @@ def dimmi(*a):
 #  sequenza che lo produce: un atteso scritto dopo la misura non e' un atteso.
 # ===========================================================================
 #
-# ⚠ Le misure sono tutte PARI e dentro 320x240..7680x4320 (§4.5) tranne dove il
+# ⚠ Le misure sono tutte PARI e dentro 320x240..4096x2304 (§4.5) tranne dove il
 #   giro dichiara di volerne una fuori: e' il caso `limiti`.
 GIRI = {
     "dieci": {
@@ -156,13 +156,16 @@ GIRI = {
             "318x240 (sotto il minimo) ⇒ RIFIUTATA MISURA_FUORI_LIMITI, "
             "e la tela NON cambia",
             "1281x801 (lati dispari) ⇒ ADATTATA 1280x800 (troncati in giu')",
-            "7682x4320 (sopra il massimo) ⇒ RIFIUTATA MISURA_FUORI_LIMITI",
+            "4098x2304 (sopra il massimo, dal 1 ott 2026) ⇒ NON si rifiuta: "
+            "ridotta a 4096x2304 (§4.5), poi al video.misura_massima del CIAO "
+            "(3840x2160) in proporzione ⇒ ADATTATA 3840x2160, con le DUE righe "
+            "del RIPIEGO DICHIARATO nel registro",
             "3840x2160 ⇒ ADATTATA (e' il video.misura_massima dichiarato in CIAO)",
             "3842x2160 (oltre il video.misura_massima) ⇒ ridotta in proporzione, "
             "lati pari — e la riga del RIPIEGO DICHIARATO sta nel registro",
             "in nessun caso la sessione cade (§3, eccezione 4)",
         ],
-        "misure": [(320, 240), (318, 240), (1281, 801), (7682, 4320),
+        "misure": [(320, 240), (318, 240), (1281, 801), (4098, 2304),
                    (3840, 2160), (3842, 2160), (1280, 800)],
     },
     "incatenate": {
