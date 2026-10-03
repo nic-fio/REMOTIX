@@ -6236,6 +6236,9 @@ trascina. ⇒ **Il primo clic sulla tela cattura il puntatore dove l'hover non a
 alzati prima del clic, o l'ultimo ad almeno 8 px dal clic: nessun ramo per sistema, Samsung Internet sul DeX si dichiara Linux); **si esce
 spingendo oltre il bordo** (160 px CSS di spinta, così gli angoli attivi restano) **o con Esc**, e il clic
 dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la freccia la disegna la pagina.
+- `[?]` Da riprovare quando Google rilascia la modalità desktop di Android (osservazione dell'utente, 3 ott):
+  la regola guarda il comportamento e non il sistema, quindi si adatta da sé (hover che arriva ⇒ niente
+  cattura); da misurare là: se Chrome concede `Pointer Lock` e se le scorciatoie arrivano alla pagina.
 
 ---
 
