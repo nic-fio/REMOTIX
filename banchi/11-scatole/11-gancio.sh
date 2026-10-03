@@ -112,7 +112,11 @@
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
-RADICE=$(git -C "$QUI" rev-parse --show-toplevel 2>/dev/null)
+# ⛔ Dentro un gancio git esporta GIT_DIR: con quella, `--show-toplevel` risponde
+#    la cartella corrente (banchi/11-scatole) e non la radice del deposito —
+#    `[M]` 3 ott 2026, pre-push da un worktree: «non trovo
+#    banchi/11-scatole/fondamenta/strumenti/sshpw.py».  ⇒ Si chiede senza.
+RADICE=$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git -C "$QUI" rev-parse --show-toplevel 2>/dev/null)
 REGISTRO="$QUI/11-gancio-registro.jsonl"
 
 # ⭐⭐ CHE COSA IL PRODOTTO SA FARE, E SU QUALE DESKTOP — la lista sta in UN
