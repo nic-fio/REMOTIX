@@ -10630,6 +10630,18 @@ function cl_su_mouseup(ev) {
      rimasto giu' (§7.3, «al distacco si rilascia tutto»). */
   if (c === undefined || !cl_pulsanti_premuti.has(c)) return;
   ev.preventDefault();
+  /* ⛔ ANCHE IL RILASCIO PORTA LA PROPRIA POSIZIONE, come il clic in
+   *    `cl_su_mousedown` — 3 ottobre 2026.  `[M]` giro `19-cattura-2`, Chrome
+   *    su GNOME, F-004: trascinando su «beta gamma delta» il desktop
+   *    selezionava «beta gamma delt», due volte su due.  Da quando il clic
+   *    viene dai pointer events, Chrome puo' consegnare `pointerup` in un punto
+   *    a cui nessun `pointermove` e' arrivato: il desktop rilasciava dove
+   *    l'aveva lasciato il movimento prima.  ⇒ Se il punto del rilascio sta a
+   *    un pixel CSS o piu' dall'ultimo punto grezzo, si manda prima lui.
+   *    Agganciati gli spostamenti sono gia' tutti contati: non serve. */
+  if (!cl_agganciato && (cl_grezzo_x < 0
+      || Math.abs(ev.clientX - cl_grezzo_x) >= 1
+      || Math.abs(ev.clientY - cl_grezzo_y) >= 1)) cl_su_mousemove(ev);
   cl_pulsanti_premuti.delete(c);
   cl_spedisci(CL_TIPO.PULSANTE, c, 0, ev.timeStamp);
 }
