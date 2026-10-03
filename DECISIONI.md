@@ -6232,8 +6232,8 @@ mouse»*, e alla fine della prova: *«considerando i limiti di Android direi che
 eccellente»*. `[M]` 3 ott, S23 (Android 16) sul DeX, Chrome 154 e Samsung Internet 30, Radeon e Intel: senza
 cattura la posizione arriva solo al clic o a tasto premuto (noVNC #1727, di Android sui Samsung) e la freccia
 doppia del ridimensionamento non compare mai; con la cattura i movimenti a tasti alzati arrivano e il bordo si
-trascina. ⇒ **Il primo clic sulla tela cattura il puntatore dove l'hover non arriva** (meno di 10 passaggi a
-tasti alzati prima del clic: nessun ramo per sistema, Samsung Internet sul DeX si dichiara Linux); **si esce
+trascina. ⇒ **Il primo clic sulla tela cattura il puntatore dove l'hover non arriva** (nessun passaggio a tasti
+alzati prima del clic, o l'ultimo ad almeno 8 px dal clic: nessun ramo per sistema, Samsung Internet sul DeX si dichiara Linux); **si esce
 spingendo oltre il bordo** (160 px CSS di spinta, così gli angoli attivi restano) **o con Esc**, e il clic
 dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la freccia la disegna la pagina.
 

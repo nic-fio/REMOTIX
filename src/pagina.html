@@ -10341,7 +10341,9 @@ function cl_su_pointermove(ev) {
   cl_visti_pointer++;
   /* Un passaggio a tasti alzati: la prova che qui l'hover ARRIVA (vedi
      «LA CATTURA DA SOLA» sotto `cl_su_pointerdown`). */
-  if (!cl_agganciato && ev.buttons === 0) cl_hover_dal_rilascio++;
+  if (!cl_agganciato && ev.buttons === 0) {
+    cl_hover_dal_rilascio++; cl_hover_x = ev.clientX; cl_hover_y = ev.clientY;
+  }
   cl_su_mousemove(ev);
   /* ⚠ Un SECONDO pulsante premuto (o rilasciato) mentre un altro e' gia' giu'
      non da' `pointerdown`/`pointerup`: arriva come `pointermove` con `button`
@@ -10392,8 +10394,9 @@ function cl_su_pointerdown(ev) {
   cl_su_mousedown(ev);
   if (manca && cl_utilizzabile()) {
     nota("MARCA modo classico: l'hover non arriva (" + cl_hover_dal_rilascio
-       + " passaggi a tasti alzati prima di questo clic) — la cattura del"
-       + " puntatore si accende da sola");
+       + " passaggi a tasti alzati, l'ultimo a " + Math.round(cl_hover_x) + ","
+       + Math.round(cl_hover_y) + " e il clic a " + Math.round(ev.clientX) + ","
+       + Math.round(ev.clientY) + ") — la cattura del puntatore si accende da sola");
     cl_aggancia();
   }
 }
@@ -10407,23 +10410,28 @@ function cl_su_pointerdown(ev) {
  *   di fila) e il bordo si trascina; l'utente: «con la cattura la situazione
  *   migliora».
  * ⇒ AL PRIMO CLIC (scelta dell'utente: «meglio attivarla al primo clic del
- *   mouse»): se prima di quel clic sono arrivati meno di CL_HOVER_MINIMO
- *   passaggi a tasti alzati, l'hover qui non arriva, e si cattura (il clic e'
- *   il gesto che `requestPointerLock` pretende).
+ *   mouse»): si cattura se prima del clic non e' arrivato NESSUN passaggio a
+ *   tasti alzati, o se l'ultimo sta a CL_SALTO_PX o piu' dal punto del clic
+ *   (il clic e' il gesto che `requestPointerLock` pretende).
  *   ⭐ Nessun ramo per sistema: Samsung Internet sul DeX si dichiara «Linux
- *   x86_64», e un «e' Android?» lo avrebbe mancato.  Su un computer per
- *   arrivare al punto del clic il mouse ne manda decine: non scatta mai.
- *   ⚠ Il DeX ne manda qualcuno sporadico (`[M]` 3 ott, 2-3 prima di un
- *   clic): per questo una soglia e non lo zero.
+ *   x86_64», e un «e' Android?» lo avrebbe mancato.  Su un computer l'ultimo
+ *   passaggio cade sul punto del clic: non scatta mai.
+ *   ⛔ NON una soglia sul NUMERO di passaggi: `[M]` 3 ott, giro `19-cattura`,
+ *   Firefox del banco con 5 passaggi prima del clic ⇒ catturato su un
+ *   computer (e cosi' chiunque sposti il mouse di pochi millimetri e clicchi).
+ *   ⚠ Il DeX ne manda qualcuno sporadico (2-3 prima di un clic), lontano dal
+ *   punto in cui poi si clicca.
  * ⚠ Solo `mouse`: una penna senza hover catturata non ha senso.
  * ⚠ Il conto riparte quando la cattura si rilascia (`cl_su_lock`): sul DeX il
  *   clic dopo ricattura, su un computer i passaggi tornano e no. */
-const CL_HOVER_MINIMO = 10;
-let cl_hover_dal_rilascio = 0;
+const CL_SALTO_PX = 8;
+let cl_hover_dal_rilascio = 0, cl_hover_x = -1, cl_hover_y = -1;
 
 function cl_hover_manca(ev) {
-  return !cl_agganciato && ev.pointerType === "mouse"
-      && cl_hover_dal_rilascio < CL_HOVER_MINIMO;
+  if (cl_agganciato || ev.pointerType !== "mouse") return false;
+  if (cl_hover_dal_rilascio === 0) return true;
+  return Math.abs(ev.clientX - cl_hover_x) >= CL_SALTO_PX
+      || Math.abs(ev.clientY - cl_hover_y) >= CL_SALTO_PX;
 }
 
 /* ⭐ E SI ESCE SPINGENDO OLTRE IL BORDO, come nelle macchine virtuali: col
