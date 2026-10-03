@@ -103,6 +103,7 @@ tocco, appunti, rientro.
 | `(questo commit)` | **Prova a mano dell'utente, Linux, Intel (3 ott, mattina)** — parole sue: *«sui 4 DE il resize delle finestre funziona», «la selezione del testo funziona»*. `[M]` diario delle 4 scatole: client `piattaforma=Linux`, **nessuna cattura accesa** (la regola del DeX non scatta sul computer). |
 | `(questo commit)` | **Prova a mano dell'utente, Linux, Radeon (3 ott)** — parole sue: *«resize ok anche sulla radeon»*. Scatole rifatte con `19-scatole-scheda.sh amd` (prima fallito: le copie della `shm` dentro devroot, curato in `3535800`). |
 | `(questo commit)` | **Android, prova 2 (F-031 tocco) ROSSA sulla tastiera — e NON è la pagina** — `[M]` 3 ott, S23 (Android 16, Chrome 154, tastiera Samsung 5.9.30.97, nessun aggiornamento da ieri), Radeon, GNOME: «il secondo tocco sul ⌨ NON chiude la tastiera», poi al ritentare «aperta da sola» (conseguenza: era rimasta aperta). Rossa con Phonestra, rossa **senza** Phonestra, e rossa **con la pagina di ieri `3fc5777d`** che il 1 ott era verde ⇒ è cambiato il telefono, non il prodotto. Nessuna tastiera esterna collegata. `[?]` Diversi da ieri: Debug USB acceso oggi dall'utente, Chrome riavviato con `am start`, il telefono stamattina sul DeX. ⭐ **Poi l'utente a mano, telefono in verticale: «la tastiera si apre e si chiude»** ⇒ il rosso è del BANCO. Sospetto da verificare: `telefono.py` `tastiera_aperta()` legge `dumpsys input_method | grep -m1 mInputShown=` — la PRIMA riga, che oggi può non essere quella di Chrome (altri schermi/clienti dopo DeX e Phonestra). La prova 3 non è stata fatta. adb: si entra con `ADB_VENDOR_KEYS=~/.config/Phonestra/adbkey` (la chiave dell'adb del tablet il telefono non la riconosce più). |
+| `cd7c59e` | **La rete completa per chiudere: giro `19-chiusura-intel`, Intel, binario `54a98acc`, pagina `f78df3ed`: 700 PASS, 2 FAIL, 2 BLOCKED (129 min)** — FAIL: F-012B su GNOME (il `pipewire-pulse` della sessione di prima: all'«Esci» `pipewire` si ferma e il pulse no, al nuovo accesso `pipewire` riparte prima del controllo) ⇒ `sessione.c` confronta gli istanti d'avvio; binario **`05e7c7d1`**: F-012B **20/20 PASS** sui 4 desktop × 2 browser. BLOCKED: F-030 (tela nera di Firefox nei primi 45 s) solo con le prove lunghe in parallelo, ogni volta su un desktop diverso (LXQt; poi KDE e XFCE) ⇒ rifatta un desktop alla volta: **4/4 PASS** ⇒ è il carico del banco (4 Firefox in 4K che decodificano sulla stessa Intel che codifica), non il prodotto. |
 
 ## 4-bis. La chiusura delle prove di funzionalità
 
@@ -149,6 +150,18 @@ KDE, XFCE, LXQt.
 | 8 | F-016, F-017, F-020 stacco e rientro | chiudere Chrome di colpo, riaprirlo, rientrare | la sessione c'è ancora, con l'editor e il testo scritto |
 | 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
 | 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
+
+## 7. ✅ FASE 19 CHIUSA — 3 ottobre 2026
+
+Chiusa su parola dell'utente («Chiudi la fase 19»). Stato alla chiusura: binario **`05e7c7d1`**, pagina **`f78df3ed`**,
+scatole sulla **Intel**. Rete completa `19-chiusura-intel` 700 PASS + le cure rifatte verdi (F-012B 20/20, F-030 4/4 da
+sola); prova a mano dell'utente verde su Linux (Intel e Radeon: ridimensionamento, selezione del testo) e sul DeX
+(cattura al primo clic, DECISIONI §10.29; appunti).
+**Lasciato aperto, dichiarato:**
+- F-031 sul telefono in mano: il banco dice che il ⌨ non richiude la tastiera, l'utente a mano vede che la richiude ⇒
+  difetto del BANCO (sospetto `grep -m1 mInputShown`); la prova 3 non fatta. Il tocco è il ripiego (§5-bis), non blocca.
+- F-030 con le prove lunghe in parallelo sulla sola Intel: tela nera di Firefox per carico del banco.
+- Lavori dopo la fase: §6 «Lavori da fare dopo la fase 19».
 
 ## 6. Da qui si riparte (2 ott 2026, sera — sessione chiusa dall'utente)
 
