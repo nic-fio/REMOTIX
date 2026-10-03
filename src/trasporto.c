@@ -298,8 +298,26 @@ static int cb_stream_close(ngtcp2_conn *conn, uint32_t flags, int64_t stream_id,
 	uint64_t codice =
 		(flags & NGTCP2_STREAM_CLOSE2_FLAG_RX_APP_ERROR_CODE_SET) ? rx_code
 	                                                                  : tx_code;
-	(void)conn;
 	(void)sud;
+	/* ⛔⛔ IL CREDITO DEGLI STREAM SI RENDE QUANDO UNO STREAM DEL CLIENTE SI
+	 *      CHIUDE — 2 ottobre 2026, e chiude il `[?]` di `initial_max_streams_uni`.
+	 *
+	 * `[M]` giro `cure-intel-1`, banco `15-f014c`: gli stream unidirezionali del
+	 *   client vanno da 2 a 74, cioe' ESATTAMENTE 19, e poi non se ne apre piu'
+	 *   nessuno — Chrome scrive «Failed to create send stream», su Firefox
+	 *   l'annuncio resta appeso.  ⇒ `ngtcp2` il credito NON lo rinnova da se':
+	 *   l'eccezione che il riquadro sotto sperava non si applica.  Per l'utente:
+	 *   dopo una quindicina di copie gli appunti smettono di funzionare, che e'
+	 *   il «non sempre» della sua prova a mano.
+	 * ⇒ Uno stream del cliente chiuso, uno nuovo concesso: §2.3 vuole «16
+	 *   disponibili in ogni momento», non 16 in tutta la sessione.  E' quel che
+	 *   fa il server d'esempio di `ngtcp2`. */
+	if (!ngtcp2_conn_is_local_stream(conn, stream_id)) {
+		if (ngtcp2_is_bidi_stream(stream_id))
+			ngtcp2_conn_extend_max_streams_bidi(conn, 1);
+		else
+			ngtcp2_conn_extend_max_streams_uni(conn, 1);
+	}
 	return wt_stream_chiuso(c->w, stream_id, codice, con_codice);
 }
 
@@ -658,6 +676,9 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	 *     ⭐ Da cui 19 = 16 + 3: il numero di §2.3 resta 16, e i tre di HTTP/3
 	 *        si dichiarano invece di essere sottratti in silenzio.
 	 *
+	 * ✅ CHIUSA il 2 ottobre 2026: il rinnovo NON e' automatico (`[M]` 19 stream
+	 *    e poi piu' niente) — ora lo fa `cb_stream_close`.  Il testo sotto resta
+	 *    come cronaca.
 	 * `[?]` ⚠ E RESTA UNA DOMANDA APERTA, che si chiude con una misura e non
 	 *   con una riga: `ngtcp2` non alza da se' il tetto degli stream, «tranne
 	 *   quando uno stream si chiude senza che `stream_open` sia stato

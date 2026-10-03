@@ -429,7 +429,7 @@
   body[data-puntatore="disegnata"][data-disposizione="classico"] #schermo { cursor: none; }
   /* ⚠ Solo sul CLASSICO: nel modo a tocco la freccia disegnata e' l'unico
      puntatore che esista, perche' il dito non ne ha uno da vestire. */
-  body[data-puntatore="sistema"][data-disposizione="classico"] #puntatore { display: none !important; }
+  body[data-puntatore="sistema"][data-disposizione="classico"]:not([data-agganciato="si"]) #puntatore { display: none !important; }
   /* ⚠ E il prezzo si dichiara (`STUDI.md` §web §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -7918,6 +7918,12 @@ const APPUNTI = {
      chiedere il permesso quando la strada gratis ha gia' funzionato: vedi
      `appunti_su_incolla`. */
   ultimo_paste_ms: 0,
+  /* ⭐ Vero quando l'ultimo a copiare e' stato il DESKTOP REMOTO (un suo
+     APPUNTI_ANNUNCIO), falso quando l'ultimo annuncio e' partito da qui.
+     Vedi «IL `Ctrl+V` DOPO UNA COPIA REMOTA» in `cl_su_keydown`. */
+  sessione_proprietaria: false,
+  /* L'ultimo clic o tasto su questa pagina (vedi `appunti_rileggi_prima_di_servire`). */
+  ultimo_gesto_ms: -1e9,
   /* ⛔ L'annuncio d'apertura e' gia' partito?  Vedi `appunti_apri_la_domanda`. */
   aperta: false,
 };
@@ -8048,8 +8054,14 @@ async function appunti_annuncia(testo, forza) {
   /* ⚠ E questo NON e' un difetto: e' l'eco, o una copia gia' annunciata.  ⛔ Ma
      va detto lo stesso, o «l'ho gia' mandato» e «non l'ho mai mandato» hanno la
      stessa faccia dal server — che e' proprio il caso che stiamo cercando. */
+  /* ⛔ Ma se l'ultimo a copiare e' stato il desktop remoto, «identico» non vuol
+     dire «gia' suo»: gli appunti di la' sono dell'applicazione remota, e senza
+     questo annuncio il prossimo `Ctrl+V` incollerebbe il testo REMOTO anche se
+     qui l'utente ha ricopiato lo stesso testo di prima. */
+  if (APPUNTI.sessione_proprietaria) forza = true;
   if (!forza && testo === APPUNTI.ultimo_letto) {
     app_diario("annuncio saltato: identico all'ultimo (eco o copia ripetuta)");
+    incolla_trattenuto_lascia("gli appunti non sono cambiati");
     return;
   }
 
@@ -8062,6 +8074,7 @@ async function appunti_annuncia(testo, forza) {
     nota("⛔ §5.4: " + byte.length + " byte negli appunti, oltre il tetto di "
        + APPUNTI_TETTO + ": NON si annunciano al desktop remoto, e non si "
        + "tagliano.  Un testo troncato e' peggio di un testo mancante");
+    incolla_trattenuto_lascia("testo oltre il tetto, non annunciato");
     return;
   }
 
@@ -8071,7 +8084,9 @@ async function appunti_annuncia(testo, forza) {
 
   const c = new Scrittore().u32(APPUNTI.mio_id).u32(byte.length).byte();
   if (await appunti_manda(T_APPUNTI.ANNUNCIO, c)) {
+    APPUNTI.sessione_proprietaria = false;
     APPUNTI.conti.annunciati++;
+    incolla_trattenuto_lascia("l'annuncio " + APPUNTI.mio_id + " e' partito");
     app_diario("⭐ ANNUNCIATO il trasferimento " + APPUNTI.mio_id + " — "
                + byte.length + " byte");
   } else {
@@ -8111,6 +8126,9 @@ async function appunti_annuncia(testo, forza) {
  *    lettura in ritardo ANNUNCIA lo stesso: l'incollata DOPO parte gia' pronta.
  */
 const APPUNTI_RILETTURA_MS = 3000;
+const APPUNTI_GESTO_MS = 2000;
+for (const tipo of ["pointerdown", "keydown"])
+  addEventListener(tipo, () => { APPUNTI.ultimo_gesto_ms = performance.now(); }, true);
 
 async function appunti_rileggi_prima_di_servire() {
   /* ⛔⛔⭐ E NON SI RILEGGE SE LA STRADA GRATIS HA APPENA CONSEGNATO.
@@ -8154,7 +8172,18 @@ async function appunti_rileggi_prima_di_servire() {
     /* ⛔⭐ E LO SI DICE A CHI STA GUARDANDO, non solo al diario: qualcuno di la'
      *     sta incollando e da qui non parte niente.  ⚠ Solo se non abbiamo
      *     NIENTE da servire: con un testo in mano il silenzio non c'e'. */
-    if (!APPUNTI.mio_testo) {
+    /* ⛔ E SOLO SE A INCOLLARE E' STATO L'UTENTE — 2 ottobre 2026, segnalato
+     *    dall'utente sulla Intel e sulla Radeon: l'avviso compariva a OGNI
+     *    accesso su GNOME e KDE.  Il gestore degli appunti del desktop
+     *    (MetaClipboardManager, klipper) legge da solo la nostra offerta
+     *    appena la sessione nasce: una domanda d'incolla senza nessun gesto
+     *    dell'utente.  ⇒ Senza un clic o un tasto su questa pagina negli
+     *    ultimi `APPUNTI_GESTO_MS`, chi incolla non e' lui: si tace. */
+    const da_gesto = performance.now() - APPUNTI.ultimo_gesto_ms;
+    if (!APPUNTI.mio_testo && da_gesto > APPUNTI_GESTO_MS) {
+      app_diario("niente suggerimento: nessun gesto dell'utente da "
+                 + Math.round(da_gesto) + " ms — a incollare e' il desktop da solo");
+    } else if (!APPUNTI.mio_testo) {
       suggerisci("Per incollare qui quello che hai copiato sul tuo computer, "
                  + "premi Ctrl+V su questa pagina: il tuo browser lascia "
                  + "leggere gli appunti solo in quel momento.", 7000);
@@ -8206,6 +8235,7 @@ async function appunti_ricevuti(byte, completo) {
     }
     APPUNTI.suo_id = corpo.u32();
     APPUNTI.suo_len = corpo.u32();
+    APPUNTI.sessione_proprietaria = true;
     if (APPUNTI.suo_len > APPUNTI_TETTO) {
       await APPUNTI.congeda(MOT.ERRORE_PROTOCOLLO,
         "APPUNTI_ANNUNCIO di " + APPUNTI.suo_len + " byte: §5.4 si ferma a "
@@ -9880,6 +9910,12 @@ function cl_codifica(tipo, id, us, a, b) {
 }
 
 function cl_spedisci(tipo, a, b, ms) {
+  /* La V di un `Ctrl+V` dopo una copia remota aspetta l'annuncio: i tasti
+     battuti nel frattempo si mettono in fila dietro di lei. */
+  if (incolla_trattenuto && tipo === CL_TIPO.POSIZIONE_TASTO) {
+    incolla_trattenuto.fila.push([a, b]);
+    return { tipo: tipo, a: a, b: b, in_fila: true };
+  }
   /* ⛔⭐ IL TRATTO CHE NON HA DENTRO NESSUN SALTO DI RETE, e la pagina lo
    *     calcolava gia' — in `tocco_quando()` — solo per BUTTARLO nella stessa
    *     espressione in cui lo calcolava.
@@ -10302,6 +10338,67 @@ function cl_su_pointermove(ev) {
   if (ev.pointerType === "touch") return;
   cl_visti_pointer++;
   cl_su_mousemove(ev);
+  /* ⚠ Un SECONDO pulsante premuto (o rilasciato) mentre un altro e' gia' giu'
+     non da' `pointerdown`/`pointerup`: arriva come `pointermove` con `button`
+     diverso da -1 (W3C Pointer Events, «chorded buttons»).  Da quando i clic
+     vengono dai pointer events (vedi `cl_su_pointerdown`) e' qui che si
+     prendono. */
+  if (ev.button >= 0 && cl_pulsanti_da_pointer) {
+    const bit = CL_BIT_DI_BUTTON[ev.button];
+    if (bit === undefined) return;
+    if (ev.buttons & bit) cl_su_mousedown(ev); else cl_su_mouseup(ev);
+  }
+}
+
+/* ⛔⛔ IL CLIC DAGLI EVENTI VERI — 2 ottobre 2026, prova a mano dell'utente:
+ *    «su Android, usando Chrome con tastiera e mouse, i clic del mouse non
+ *    vengono presi».
+ *
+ * Il movimento era gia' passato ai pointer events il 14 agosto (sopra), il
+ * clic no: «un clic e' UN evento e sopravvive» era misurato sul solo DeX.
+ * ⛔ Ma su Android `mousedown`/`mouseup` sono di COMPATIBILITA', e Chrome li
+ *   fa nascere DOPO il tocco riconosciuto quando tratta la pressione come un
+ *   flusso di tocco: `[M]` 2 ott, emulatore API 34, Chrome 113 — col mouse
+ *   arrivano `pointerdown` di tipo `mouse` E `touchstart`/`touchend`, e il
+ *   `mousedown` solo dopo `touchend`.  Una pressione lunga o un trascinamento
+ *   non danno nessun `mousedown`: nessun clic arriva al desktop.
+ *
+ * ⇒ Il clic si prende da `pointerdown`/`pointerup`, lo stesso schema del
+ *   movimento: i `mouse*` restano solo dove `PointerEvent` non esiste.  Il
+ *   `preventDefault` del `pointerdown` (in `cl_su_mousedown`) spegne anche i
+ *   `mouse*` di compatibilita', quindi niente clic doppi.  ⭐ Nessun ramo per
+ *   browser ne' per sistema: e' la strada di tutti i motori che hanno
+ *   `PointerEvent`. */
+let cl_pulsanti_da_pointer = false, cl_detti_pointerdown = 0;
+const CL_BIT_DI_BUTTON = { 0: 1, 1: 4, 2: 2, 3: 8, 4: 16 };
+
+function cl_su_pointerdown(ev) {
+  if (ev.pointerType === "touch") return;
+  /* ⭐ I primi tre si dichiarano: tipo, pulsante e stato dei pulsanti sono i
+     dati che separano «il motore non consegna» da «la pagina scarta». */
+  if (cl_detti_pointerdown < 3) {
+    cl_detti_pointerdown++;
+    nota("modo classico: pointerdown tipo=" + ev.pointerType + " button="
+       + ev.button + " buttons=" + ev.buttons);
+  }
+  /* La cattura tiene il trascinamento sulla tela anche se la mano esce. */
+  try { $("schermo").setPointerCapture(ev.pointerId); } catch (e) { /* niente */ }
+  cl_su_mousedown(ev);
+}
+
+function cl_su_pointerup(ev) {
+  if (ev.pointerType === "touch") return;
+  cl_su_mouseup(ev);
+}
+
+function cl_su_pointercancel(ev) {
+  /* Il browser si e' ripreso il puntatore (uno scorrimento, un gesto di
+     sistema): un pulsante rimasto giu' sul desktop e' la trappola del Ctrl. */
+  if (ev.pointerType === "touch" || cl_pulsanti_premuti.size === 0) return;
+  const ms = performance.now();
+  for (const c of cl_pulsanti_premuti) cl_spedisci(CL_TIPO.PULSANTE, c, 0, ms);
+  cl_pulsanti_premuti.clear();
+  nota("modo classico: pointercancel — rilasciati i pulsanti premuti");
 }
 
 function cl_su_mousemove(ev) {
@@ -10619,6 +10716,35 @@ function cl_su_keydown(ev) {
      *   modificatore che si sta premendo lo manda il percorso normale, e basta. */
     if (!CL_MODIFICATORI_LETTERA.has(ev.key)) cl_sincronizza_modificatori(ev, ev.timeStamp);
     cl_tasti_premuti.set(ev.code, codice);
+    /* ⛔⛔⭐ IL `Ctrl+V` DOPO UNA COPIA REMOTA — 2 ottobre 2026, prova a mano
+     *      dell'utente: «Ctrl+C e Ctrl+V sembrano non funzionare, o non
+     *      funzionare sempre», su Firefox e su Chrome.
+     *
+     * ⚠ La corsa fra il tasto e l'annuncio la cura il server (`rcp.c`,
+     *   `rcp_appunti_chiedi`) mettendo in coda la domanda — ⛔ ma solo quando
+     *   la domanda arriva AL SERVER, cioe' quando gli appunti del desktop sono
+     *   suoi.  Dopo una copia fatta NEL desktop remoto gli appunti sono
+     *   dell'applicazione remota: il `Ctrl+V` legge da lei, il server non vede
+     *   nessuna domanda, e l'annuncio del testo copiato qui arriva tardi.
+     *   ⇒ La prima incollata da' il testo REMOTO, la seconda quello giusto.
+     *
+     * ⚠ E la coda del server non basta nemmeno quando gli appunti sono suoi:
+     *   `[M]` giro `cure-intel-5`, F-014D 7 su 8 — si copia A sul computer e
+     *   si incolla, poi si copia B: al `Ctrl+V` la domanda arriva al server,
+     *   che chiede al client il trasferimento di A (l'ultimo annunciato) e
+     *   lo serve, mentre l'annuncio di B e' ancora per strada.  La coda
+     *   scatta solo quando il client non ha MAI annunciato niente.
+     *
+     * ⇒ A OGNI `Ctrl+V` la V si TRATTIENE finche' la pagina non ha letto gli
+     *   appunti del computer (l'evento `paste`) e, se sono cambiati, non ha
+     *   fatto partire l'annuncio — al massimo `INCOLLA_TRATTIENI_MS`.  Se non
+     *   sono cambiati si lascia subito.  ⭐ Nessun altro tasto aspetta: §9
+     *   rifiuta la cura di Xpra perche' costa 100 ms su OGNI battuta, e
+     *   questa costa il tempo di un evento `paste` sul solo `Ctrl+V`. */
+    if (e_incolla && APPUNTI.acceso) {
+      incolla_trattieni(ev.code, codice, ev.timeStamp);
+      return;
+    }
     cl_spedisci(CL_TIPO.POSIZIONE_TASTO, codice, 1, ev.timeStamp);
     return;
   }
@@ -10656,6 +10782,32 @@ function cl_su_keydown(ev) {
     }
   }
   cl_spedisci(CL_TIPO.LETTERA, p, 0, ev.timeStamp);
+}
+
+const INCOLLA_TRATTIENI_MS = 400;
+let incolla_trattenuto = null;
+
+/* ⚠ Mentre la V aspetta, OGNI altro tasto aspetta con lei, in fila (vedi
+   `cl_spedisci`): se il Ctrl tornasse su prima che la V parta, al desktop
+   arriverebbe una «v» semplice invece di un incolla. */
+function incolla_trattieni(code, codice, ms) {
+  incolla_trattenuto = { code: code, codice: codice, fila: [], t: performance.now(),
+                         scade: setTimeout(() => incolla_trattenuto_lascia(
+                           "nessun annuncio in " + INCOLLA_TRATTIENI_MS + " ms"),
+                           INCOLLA_TRATTIENI_MS) };
+  app_diario("Ctrl+V dopo una copia remota: la V aspetta l'annuncio");
+}
+
+function incolla_trattenuto_lascia(perche) {
+  const v = incolla_trattenuto;
+  if (!v) return;
+  incolla_trattenuto = null;
+  clearTimeout(v.scade);
+  const ms = performance.now();
+  cl_spedisci(CL_TIPO.POSIZIONE_TASTO, v.codice, 1, ms);
+  for (const [a, b] of v.fila) cl_spedisci(CL_TIPO.POSIZIONE_TASTO, a, b, ms);
+  app_diario("V lasciata dopo " + Math.round(ms - v.t) + " ms, con "
+             + v.fila.length + " tasti in fila — " + perche);
 }
 
 function cl_su_keyup(ev) {
@@ -10743,14 +10895,27 @@ function cl_entra(perche) {
    * ⇒ `PointerEvent` copre mouse, penna e dito su ogni motore che lo ha, e
    *   `cl_su_pointermove` scarta gia' il dito (che ha la sua disposizione).  I
    *   `mouse*` restano come RIPIEGO, e solo dove `PointerEvent` non esiste. */
-  if (window.PointerEvent) tela.addEventListener("pointermove", cl_su_pointermove);
-  else                     tela.addEventListener("mousemove", cl_su_mousemove);
-  tela.addEventListener("mousedown", cl_su_mousedown);
+  /* ⭐ E dal 2 ottobre 2026 anche i CLIC: stessa porta, stessa ragione
+   *   (vedi `cl_su_pointerdown`).  `touch-action: none` anche qui, non solo
+   *   nel tocco: senza, su Android un trascinamento col mouse diventa uno
+   *   scorrimento della pagina e il browser manda `pointercancel`. */
+  cl_pulsanti_da_pointer = !!window.PointerEvent;
+  if (cl_pulsanti_da_pointer) {
+    tela.addEventListener("pointermove", cl_su_pointermove);
+    tela.addEventListener("pointerdown", cl_su_pointerdown);
+    tela.style.touchAction = "none";
+  } else {
+    tela.addEventListener("mousemove", cl_su_mousemove);
+    tela.addEventListener("mousedown", cl_su_mousedown);
+  }
   tela.addEventListener("wheel", cl_su_wheel, { passive: false });
   tela.addEventListener("contextmenu", cl_su_contextmenu);
   /* Il rilascio si ascolta sulla FINESTRA: un pulsante lasciato andare fuori
      dalla tela non manderebbe mai il suo `mouseup` alla tela. */
-  addEventListener("mouseup", cl_su_mouseup, true);
+  if (cl_pulsanti_da_pointer) {
+    addEventListener("pointerup", cl_su_pointerup, true);
+    addEventListener("pointercancel", cl_su_pointercancel, true);
+  } else addEventListener("mouseup", cl_su_mouseup, true);
   addEventListener("keydown", cl_su_keydown, true);
   addEventListener("keyup", cl_su_keyup, true);
   document.addEventListener("pointerlockchange", cl_su_lock);
@@ -10793,9 +10958,13 @@ function cl_esci() {
   tela.removeEventListener("mousemove", cl_su_mousemove);
   tela.removeEventListener("pointermove", cl_su_pointermove);
   tela.removeEventListener("mousedown", cl_su_mousedown);
+  tela.removeEventListener("pointerdown", cl_su_pointerdown);
+  tela.style.touchAction = "";
   tela.removeEventListener("wheel", cl_su_wheel);
   tela.removeEventListener("contextmenu", cl_su_contextmenu);
   removeEventListener("mouseup", cl_su_mouseup, true);
+  removeEventListener("pointerup", cl_su_pointerup, true);
+  removeEventListener("pointercancel", cl_su_pointercancel, true);
   removeEventListener("keydown", cl_su_keydown, true);
   removeEventListener("keyup", cl_su_keyup, true);
   document.removeEventListener("pointerlockchange", cl_su_lock);
