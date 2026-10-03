@@ -6225,6 +6225,18 @@ arriva al desktop come §7.3 (lettere come lettere).
   `SPECIFICHE.md` §7.2 è stato scartato perché non si scopre da solo. Sul computer e sul DeX col mouse non
   cambia niente.
 
+### 10.29 ✅ Sul DeX la cattura del puntatore si accende al primo clic — scelta dell'utente (3 ott 2026)
+
+Parole della scelta: *«per migliorare l'usabilità in android la cattura meglio attivarla al primo clic del
+mouse»*, e alla fine della prova: *«considerando i limiti di Android direi che abbiamo raggiunto un risultato
+eccellente»*. `[M]` 3 ott, S23 (Android 16) sul DeX, Chrome 154 e Samsung Internet 30, Radeon e Intel: senza
+cattura la posizione arriva solo al clic o a tasto premuto (noVNC #1727, di Android sui Samsung) e la freccia
+doppia del ridimensionamento non compare mai; con la cattura i movimenti a tasti alzati arrivano e il bordo si
+trascina. ⇒ **Il primo clic sulla tela cattura il puntatore dove l'hover non arriva** (meno di 10 passaggi a
+tasti alzati prima del clic: nessun ramo per sistema, Samsung Internet sul DeX si dichiara Linux); **si esce
+spingendo oltre il bordo** (160 px CSS di spinta, così gli angoli attivi restano) **o con Esc**, e il clic
+dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la freccia la disegna la pagina.
+
 ---
 
 ## Come si tiene questo documento
