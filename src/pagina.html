@@ -10337,6 +10337,9 @@ function cl_su_pointermove(ev) {
   /* Il dito ha la sua disposizione: qui passa solo cio' che e' un puntatore. */
   if (ev.pointerType === "touch") return;
   cl_visti_pointer++;
+  /* Un passaggio a tasti alzati: la prova che qui l'hover ARRIVA (vedi
+     «LA CATTURA DA SOLA» sotto `cl_su_pointerdown`). */
+  if (!cl_agganciato && ev.buttons === 0) cl_hover_dal_clic++;
   cl_su_mousemove(ev);
   /* ⚠ Un SECONDO pulsante premuto (o rilasciato) mentre un altro e' gia' giu'
      non da' `pointerdown`/`pointerup`: arriva come `pointermove` con `button`
@@ -10383,7 +10386,79 @@ function cl_su_pointerdown(ev) {
   }
   /* La cattura tiene il trascinamento sulla tela anche se la mano esce. */
   try { $("schermo").setPointerCapture(ev.pointerId); } catch (e) { /* niente */ }
+  const salta = cl_salto_al_clic(ev);
   cl_su_mousedown(ev);
+  if (salta && cl_utilizzabile()) {
+    nota("MARCA modo classico: l'hover non arriva (" + cl_salti_di_fila
+       + " clic di fila lontani dall'ultimo punto, nessun passaggio in mezzo)"
+       + " — la cattura del puntatore si accende da sola");
+    cl_aggancia();
+  }
+}
+
+/* ── LA CATTURA DA SOLA, DOVE L'HOVER NON ARRIVA — 3 ottobre 2026 ──────────
+ * `[M]` DeX dell'utente (S23, Android 16, Chrome 154 e Samsung Internet 30):
+ *   la posizione arriva SOLO un attimo prima di ogni clic o a tasto premuto
+ *   (noVNC #1727, vedi `cl_su_mousedown`) ⇒ il desktop non sa mai che il
+ *   puntatore e' sul bordo, e la freccia doppia del ridimensionamento non
+ *   compare.  Con la cattura accesa i movimenti a tasti alzati arrivano (>150
+ *   di fila) e il bordo si trascina; l'utente: «con la cattura la situazione
+ *   migliora».
+ * ⇒ La pagina se ne accorge da sola, senza chiedere che motore sia: un clic
+ *   che cade a CL_SALTO_PX o piu' dall'ultimo punto grezzo, senza nessun
+ *   passaggio a tasti alzati in mezzo, e' un SALTO.  Due di fila ⇒ l'hover qui
+ *   non arriva, e si cattura (il clic e' il gesto che `requestPointerLock`
+ *   pretende).  ⭐ Dove l'hover arriva (ogni computer) il punto grezzo segue la
+ *   mano e un salto non capita mai: non cambia niente.
+ * ⚠ Il doppio clic sul DeX cade nello stesso punto: non e' un salto, ma
+ *   senza passaggi in mezzo non azzera nemmeno il conto.
+ * ⚠ Solo `mouse`: una penna senza hover farebbe salti veri, e catturarla
+ *   non ha senso.
+ * ⭐ Una volta visto, si ricorda in questo browser (`localStorage`, solo una
+ *   comodita'): dalla sessione dopo si cattura al primo clic. */
+const CL_SALTO_PX = 8;
+const CL_CATTURA_RICORDO = "remotix.cattura-da-sola";
+let cl_salti_di_fila = 0, cl_hover_dal_clic = 0;
+let cl_cattura_ricordata = false;
+try { cl_cattura_ricordata = localStorage.getItem(CL_CATTURA_RICORDO) === "si"; }
+catch (e) { /* senza memoria si riconta: due clic */ }
+
+function cl_salto_al_clic(ev) {
+  if (cl_agganciato || ev.pointerType !== "mouse") return false;
+  if (cl_grezzo_x >= 0) {
+    const lontano = Math.abs(ev.clientX - cl_grezzo_x) >= CL_SALTO_PX
+                 || Math.abs(ev.clientY - cl_grezzo_y) >= CL_SALTO_PX;
+    if (lontano && cl_hover_dal_clic === 0) cl_salti_di_fila++;
+    else if (cl_hover_dal_clic > 0) cl_salti_di_fila = 0;
+  }
+  cl_hover_dal_clic = 0;
+  if (cl_salti_di_fila >= 2 && !cl_cattura_ricordata) {
+    cl_cattura_ricordata = true;
+    try { localStorage.setItem(CL_CATTURA_RICORDO, "si"); } catch (e) { /* niente */ }
+  }
+  return cl_salti_di_fila >= 2 || cl_cattura_ricordata;
+}
+
+/* ⭐ E SI ESCE SPINGENDO OLTRE IL BORDO, come nelle macchine virtuali: col
+ *   mouse catturato la barra del DeX e le schede del browser non si
+ *   raggiungono, ed Esc da solo era il fastidio che l'utente aveva gia'
+ *   segnalato.  ⚠ Non al primo pixel oltre: gli angoli attivi del desktop
+ *   remoto (GNOME in alto a sinistra) vogliono il puntatore FERMO sul bordo.
+ *   Si esce dopo CL_SPINTA_USCITA pixel CSS di spinta continua verso fuori;
+ *   tornare dentro azzera la spinta. */
+const CL_SPINTA_USCITA = 160;
+let cl_spinta = 0;
+
+function cl_spinta_oltre_il_bordo(kx, ky) {
+  const g = cl_tela();
+  const fuori_x = cl_px < 0 ? -cl_px : (cl_px > g[0] ? cl_px - g[0] : 0);
+  const fuori_y = cl_py < 0 ? -cl_py : (cl_py > g[1] ? cl_py - g[1] : 0);
+  if (fuori_x === 0 && fuori_y === 0) { cl_spinta = 0; return; }
+  cl_spinta += fuori_x * kx / CL_GUADAGNO + fuori_y * ky / CL_GUADAGNO;
+  if (cl_spinta < CL_SPINTA_USCITA) return;
+  cl_spinta = 0;
+  nota("MARCA modo classico: spinto oltre il bordo — la cattura si rilascia");
+  if (document.exitPointerLock) document.exitPointerLock();
 }
 
 function cl_su_pointerup(ev) {
@@ -10423,6 +10498,7 @@ function cl_su_mousemove(ev) {
     const kx = (g.vx * g.sx) || 1, ky = (g.vy * g.sy) || 1;
     cl_px += (ev.movementX || 0) * CL_GUADAGNO / kx;
     cl_py += (ev.movementY || 0) * CL_GUADAGNO / ky;
+    cl_spinta_oltre_il_bordo(kx, ky);
   } else {
     /* Ripiego: la posizione assoluta dentro la tela.  ⚠ Qui il puntatore del
        browser sarebbe visibile — non lo e', perche' `cursor: none` vale per
