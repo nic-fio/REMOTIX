@@ -128,6 +128,16 @@ Prima passata dell'utente sui 4 desktop: *«funziona quasi tutto bene»*, tre se
 ✅ **Seconda passata, stesso giorno: «Test incolla ok».** ⇒ **La Intel è chiusa** (Android escluso:
 si rifà sulla Radeon col telefono).
 
+### 4-bis.2 La prova a mano su Android col DeX, sulla Radeon (4 ott 2026)
+
+Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `54a98acc`, pagina `d827a225`):
+- audio e video sincronizzati su un video **4K** di YouTube;
+- **stacco e rientro** della sessione mentre il video suona;
+- il **ridimensionamento delle finestre** delle applicazioni;
+- gli **appunti**.
+
+✅ ⇒ **Android col DeX è chiuso**, e con lui il terzo cancello di §4-bis.
+
 ## 5. Android: il telefono vero, comandato da qui
 
 ⭐ **1 ott 2026, parola dell'utente: «ti lancio l'app e il telefono è tuo»** — grazie a **Phonestra** (progetto
