@@ -225,6 +225,16 @@ corte sugli altri tre; in verticale F-003 e F-013 dipendono dalla tela stretta, 
    sul telefono: un dito che parte dalla meta' bassa muove il puntatore (con la tastiera chiusa);
 4. chiusura della fase 19 e `fase-19` dentro `fase-10-cure`.
 
+**L'ordine dei lavori dopo la fase 19** (decisione dell'utente, 4 ott 2026):
+1. **misure di prestazione** (da zero, con un piano che approva l'utente);
+2. **prove di funzionalità sulla macchina NVIDIA** — ⛔ niente misure di prestazione su NVIDIA: la macchina è a
+   noleggio, il tempo è poco. *Proposte di Claude, da confermare:* (a) nello stesso noleggio anche l'installatore,
+   o servirebbe un secondo noleggio; (b) i tempi che il prodotto già scrive nel registro si tengono come
+   osservazione, mai dichiarati come misura;
+3. **versione trial e full**;
+4. **installatore**.
+(Il file di accesso delle scatole, D3, è già fatto: commit `cb6061e`/`1fc64bb`, 3 ott.)
+
 **Lavori da fare dopo la fase 19** (elenco dell'utente, 2 ott 2026):
 - scatole: il file di login `remotix.pam` aggiornato (D3), in un giro a parte;
 - **versione trial e full** (da definire con l'utente);
