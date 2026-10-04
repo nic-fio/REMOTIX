@@ -240,6 +240,9 @@ pomeriggio).** Fase 19 chiusa e spinta (`fase-10-cure` = `fase-19`). Prima cosa:
 delle misure di prestazione**, su **tutte e due le schede del server, Intel e Radeon** (risposta dell'utente, 4 ott: VA-API e Vulkan
 sono due strade del prodotto, ognuna coi suoi numeri). E le due proposte sulla NVIDIA (punto 2) da confermare. Scatole: prodotto `05e7c7d1`/`f78df3ed`
 sui 4 desktop, nessuna sessione dell'utente aperta.
+⭐ **4 ott, sera:** nelle scatole la pagina d'accesso nuova «Satinato» (`2e72f3c`, scelta dall'utente fra le
+20 proposte di `grafica/login-premium/`): prodotto `05e7c7d1`/**`cc09a1aa`**, i 4 server riaccesi (8511-8514) e
+`[M]` serviti con la pagina nuova; il binario non è cambiato.
 
 **Lavori da fare dopo la fase 19** (elenco dell'utente, 2 ott 2026):
 - scatole: il file di login `remotix.pam` aggiornato (D3), in un giro a parte;
