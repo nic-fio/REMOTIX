@@ -594,6 +594,13 @@ prodotto)
 		#   tutto il resto di quella cartella.
 		cp /rete11/attrezzi-gruppi-scheda.sh /opt/remotix/
 		cp /rete11/prodotto/remotix.pam      /etc/pam.d/remotix
+		# ⭐ IL FILE DEGLI UTENTI NEGATI, come src/provisiona.sh — 3 ottobre 2026.
+		# Il PAM del prodotto (fase 17, D3) apre con pam_listfile su questo file,
+		# onerr=fail: senza, NESSUNO entra.  Stesse righe della macchina vera.
+		if [ ! -f /etc/remotix/utenti-negati ]; then
+			install -D -m 644 -o root -g root /dev/null /etc/remotix/utenti-negati
+			echo root > /etc/remotix/utenti-negati
+		fi
 		# ⭐ LE TRE CINTURE DI DECISIONI.md §4.7 — fase 12, 19 settembre 2026.
 		# `[M]` La prova dell utente su KDE: dal menu di Plasma si poteva
 		# spegnere, perche la scatola rispondeva «challenge» e la macchina vera

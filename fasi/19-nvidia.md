@@ -63,7 +63,7 @@ tocco, appunti, rientro.
    ricette, `6c2ca0d`) prima della rete del punto 3, o la Radeon nelle scatole resta a VA-API (e il registro lo
    direbbe: *«Vulkan Video NON è adatta … ⇒ si prova VA-API»*).
    ✅ **Fatto** (1 ott, registro §3): le 4 scatole ricostruite dalle ricette di `fase-19`, con l'ICD RADV dentro; giro Intel VERDE, giro Radeon in Vulkan (col difetto qui sotto).
-6. ❓ **Punto aperto — `remotix.pam`**: nelle scatole `rete11-*` il file PAM è restato quello della fase 18
+6. ✅ **Chiuso il 3 ott 2026 — `remotix.pam`** (`cb6061e`: nelle scatole il file del prodotto, md5 `467ee6bb`, e `utenti-negati`=root come `provisiona.sh`; rete completa `pam-d3-intel` **702 PASS**, 2 BLOCKED = F-030 in parallelo; `banchi/11-scatole/11-pam-root-negato.py`: root respinto dall'elenco e nictest dentro, 4/4). Era: **Punto aperto — `remotix.pam`**: nelle scatole `rete11-*` il file PAM è restato quello della fase 18
    (`rete11/prodotto/remotix.pam`, md5 `d1734958`, `@include common-session-noninteractive` + `pam_systemd`),
    NON quello di `src/remotix.pam` della fase 17/D3 (sshd, `pam_listfile` su `/etc/remotix/utenti-negati`, root
    escluso). La suite è stata rilanciata **identica** alla fase 18 (regola della precedenza), quindi non è stato
@@ -97,6 +97,13 @@ tocco, appunti, rientro.
 | `(questo commit)` | **il labwc «comune» delle prove LUNGHE ha un nome suo** — `banchi/15-suite/15-compositori.sh` accende anche «comune» (socket scritto in `$XDG_RUNTIME_DIR/15-compositori/comune`), `15-giro.py` → `compositore()` lo legge per le prove LUNGHE invece di `REMOTIX_WAYLAND_VERI`/«wayland-0». Nessun giudice toccato | dopo il riavvio del server (1 ott) `15-compositori.sh accendi` era partito per primo e «wayland-0» era il labwc di **gnome**: le F-030 dei quattro desktop finivano lì, sotto il browser della fila di gnome, e una restava coperta ⇒ tela «DEGENERE» nera (T-030-xfce nei giri `19-radeon-ff`/`-3`, T-030-kde in `-3b`). Non era il prodotto: il server mandava il desktop e la pagina dipingeva (registri della scatola e diario della pagina) | `[M]` 1 ott 2026, server: giro `19-radeon-3` (binario `ad3ba33a`, Radeon = Vulkan, 4 desktop × Firefox 153 e Chrome 154, strato tecnico) **669 PASS, 0 FAIL, 4 BLOCKED** (T-030-xfce, T-029-kde, sana+guasto), kernel pulito (0 page fault, 0 reset, 0 fence fallback, 0 ring timeout); da sole: F-030 xfce 2/2 PASS, F-029 kde 3/3 PASS; mini-giro `19-radeon-3b` (f029+f030, 4 desktop) 14 PASS e T-030-kde BLOCKED — la coperta si sposta; **col labwc «comune» curato, mini-giro `19-radeon-3c` (f029+f030, 4 desktop insieme, Firefox) 16/16 PASS**; giro corto `19-intel-3` (f001/f003/f011/f018, Intel = VA-API) **128/128 PASS**. T-029-kde del giro: Plasma non partito 1 avvio su 50 (kcminit fermo, ksplash «eglSwapBuffers failed»), schermo davvero nero: non della codifica | no |
 | `(questo commit)` | **Android sul telefono vero: le prove 1-10 verdi (giro pieno GNOME, corto KDE/XFCE/LXQt), e le cure del banco** — `11-c21` `foto_piena`: col dpr > 1 la foto del vetro intero e il ritaglio (Chrome Android con `clip.scale` > 1 ripete la pagina a mattonelle); `telefono.py`: il dito del protocollo e quello vero consumano la sbavatura come la pagina (D_TAP 9 px: un passo sacrificale, +10 px al dito vero), lo scorrimento vero parte dal centro della tela, corto (≤ 30 %) e atteso fino a 3 s; `15-f031` fino a 8 passate di dito; `telefono.py` ammette la porta 8599 (il server inesistente del guasto di F-001); `19-android.py` legge la scheda dalla strada nel registro della scatola (in `/sys` della scatola renderD128 e' sempre la Intel); `15-f018` confronta la tela con la vista × devicePixelRatio (la pagina: `misura_vista()`) — sul computer dpr 1, esiti invariati (`--certifica` verde) | §5 e §4-bis: il secondo cancello | `[M]` 2 ott 2026, S23+ (Android 16, Chrome 154.0.8037.92), scatole sulla Radeon (Vulkan, `ad3ba33a`). **Verticale, schermo vero** (telefono in mano): GNOME 1 (4/4), 2 F-031 (sana e guasto PASS: dito che muove, tocco che clicca, tocco-e-mezzo che trascina), 3 tastiera, 4 appunti, 7 telefono girato e rimesso (F-018 + P-C: tela 2096x832 per la vista 750x297 CSS × dpr 2,8125, e indietro 1072x1936), 8 Chrome ucciso e rientro, 9 rete che cade, 10 Esci — tutte PASS sana+guasto; KDE/XFCE/LXQt 1 e 9 PASS. ⚠ In verticale la 5 (video: la mira del giudice fuori dal ritaglio sul video stretto, 11 % dei quadri; il video era pieno, nessun mosaico) e la 6 (F-003: la finestra di prova sulla tela larga 1072 il desktop la massimizza, e trascinata si rimpicciolisce) non passano: sono della tela stretta, non del prodotto. **Orizzontale** (Chrome dal cassetto di Phonestra, schermo virtuale 2560x1000 — il caso DeX, suggerimento dell'utente): 6 PASS sui quattro desktop, 5 PASS (video 100 % quadri buoni, audio), 1/3/4/8 PASS. ⚠ Aperto: con l'S23+ uno `adb input swipe` che parte nella meta' bassa della tela durante la sessione non arriva alla pagina (su una pagina vuota si'): da guardare a mano | no |
 | `(questo commit)` | **«Tastiera solo a richiesta» (DECISIONI §10.28)** — `src/pagina.html`: col telefono in mano (disposizione a tocco) il campo nascosto dell'incolla porta `inputmode="none"`, `virtualkeyboardpolicy="manual"`, `autocapitalize`/`autocorrect="off"` (tolti nel classico: computer e DeX col mouse identici); il comando **⌨ in alto a destra** (40 px, solo con `data-disposizione="tocco"` e la sessione accesa; `touchend` nel gesto: `blur`+`focus` col nuovo `inputmode` e `navigator.virtualKeyboard.show/hide`) apre e chiude la tastiera; la chiusura di Android («indietro») si vede dalla `visualViewport` che torna alta. ⭐ E il testo ARRIVA: `tastiera_su_input` spedisce la DIFFERENZA del campo (lettere come `LETTERA`, quel che sparisce come Cancella, `\n` come Invio — correzioni automatiche comprese), `tastiera_su_keydown` i tasti veri (Invio/Cancella col campo vuoto, tastiera Bluetooth senza mouse); il campo si svuota fuori dalla composizione. `incolla_campo_crea()` separato da `incolla_campo_prendi()`; le letture dell'incolla saltano a tastiera aperta. `REMOTIX.tocco.tastiera()` da leggere. Banco: `15-f031` quarto gesto «tastiera» (chiusa dopo i gesti · il ⌨ con un tocco VERO la apre · «prova» via composizione+commit CDP arriva nel campo «a» della scena · il ⌨ la richiude; guasto: il tocco 60 px a sinistra del ⌨ ⇒ rosso; `--certifica` col giudice `giudica_tastiera`); `19-android.py` sportello `/tastiera` (`dumpsys input_method`, `mInputShown`) e adb finto; `telefono.py` `tastiera_aperta`/`aspetta_tastiera`/`comando_tastiera`/`tocco_vero_in`/`scrivi_ime`; SPECIFICHE §7.2-7.3 | `[M]` 2 ott, S23+: la tastiera si apriva da sola e copriva la metà bassa per il 60 % di F-031 (gli `adb swipe` nella metà bassa «non arrivavano»: cadevano sulla tastiera); e non scriveva niente: `[M]` pagina del prodotto in Chrome col tocco emulato, prima della cura, «ciao» dal metodo d'inserimento e dai tasti ⇒ **zero** messaggi (nel modo a tocco nessuno ascoltava) | a secco (2 ott): banco locale sulla pagina del prodotto in Chrome headless 16/16 (tocco: `inputmode=none`, ⌨ visibile, un tocco sulla tela non apre, il ⌨ apre, «ciao » composta arriva, «cisao»→«ciao» = 3 Cancella + «ao», tasti x/Invio/Cancella, la tela a tastiera aperta non la chiude, il ⌨ richiude; classico: niente attributi, niente ⌨, «ci» parte una volta, il testo IME no — come prima); gesto «tastiera» di `15-f031` contro la pagina vera con sportello finto 5/5 (sana PASS, guasto FAIL, aperta da sola FAIL); `15-f031 --certifica` verde; `19-android a-secco` 25/26 (i 4 nuovi verdi; rosso «il puntatore si porta sul bersaglio» già prima: `porta_il_puntatore` non toccato). ⛔ Il telefono vero non l'ho usato: la prova è dell'utente | no |
+| `(questo commit)` | **Il lavoro del 2 ottobre che stava solo sul server, e la freccia sotto cattura sul DeX (3 ottobre)** — riportati da `/media/REMOTIX/src/f19-audio/albero` (binario `54a98acc`, pagina `d827a225`, in vigore nelle scatole dal 2 ott): `sessione.c` ferma il `pipewire-pulse` avanzato dalla sessione di prima (GNOME muto dopo «Esci», prova a mano dell'utente); `trasporto.c` rende il credito degli stream quando uno stream del client si chiude (`[M]` dopo 19 stream gli appunti si fermavano); `pagina.html` gli appunti (niente avviso a ogni accesso su GNOME/KDE senza un gesto dell'utente, il Ctrl+V dopo una copia remota, il secondo pulsante come «chorded button»). ⭐ E una riga nuova, pagina `34fde3d7`: `:not([data-agganciato="si"])` sulla regola che nasconde `#puntatore` nel modo `sistema` — `[M]` sul DeX (S23, Android 16, Chrome 154 e Samsung Internet 30) l'hover non arriva (noVNC #1727: posizione solo prima del clic, id in fila) e la freccia doppia sul bordo non compare mai; con la cattura del puntatore arrivano i movimenti a tasti alzati (>150 di fila) ma la freccia era sparita. Con la riga, l'utente: «con la cattura la situazione migliora», ridimensionamento dal bordo visto nel registro (hover → premuto → trascinato). |
+| `63f5562` `67628ff` `(questo commit)` | **Sul DeX la cattura del puntatore al primo clic (DECISIONI §10.29)** — `src/pagina.html`: `cl_hover_manca()` al `pointerdown` di tipo `mouse` (nessun passaggio a tasti alzati dal caricamento o dall'ultimo rilascio, o l'ultimo a `CL_SALTO_PX`=8 px o più dal clic ⇒ `cl_aggancia()`; ⛔ la prima versione contava i passaggi, <10, e `[M]` giro `19-cattura` il Firefox del banco con 5 passaggi è stato catturato su un computer); `cl_spinta_oltre_il_bordo()` rilascia dopo `CL_SPINTA_USCITA`=160 px CSS di spinta fuori dalla tela; il primo `movementX` dopo la lock oltre `CL_SALTO_FINTO`=100 px si scarta (`[M]` due rilasci nello stesso secondo dell'accensione). `[M]` 3 ott, DeX, Radeon poi Intel: accensione al primo clic su GNOME, KDE, XFCE, LXQt, uscita dal bordo e ricattura, nessun rilascio spurio con la pagina `1f1cbb73`; l'utente: «risultato eccellente». |
+| `8d30a7c` `a0a3aa5` | **La verifica sui computer, e quel che ha trovato** — `[M]` giro `19-cattura` (criterio «<10 passaggi»): il Firefox del banco catturato con 5 passaggi ⇒ criterio nuovo (nessun passaggio, o l'ultimo ad almeno 8 px dal clic). Giro `19-cattura-2` (39 PASS, 1 FAIL, 24 BLOCKED): BLOCKED del banco (porte della scena lasciate dal giro interrotto; C22/F-003 contavano solo i `mousedown`, che la pagina dal 2 ott spegne prendendo il clic da `pointerdown` ⇒ ora contano anche i pointer) e un FAIL vero, Chrome su GNOME selezionava «beta gamma delt»: **anche il rilascio porta la sua posizione** (`cl_su_mouseup`). Giro `19-cattura-3`, pagina `f78df3ed`, Intel: **F-003 F-004 F-006, 4 desktop × Firefox/Chrome, 48/48 PASS**; nessuna cattura accesa dal banco. |
+| `(questo commit)` | **Prova a mano dell'utente, Linux, Intel (3 ott, mattina)** — parole sue: *«sui 4 DE il resize delle finestre funziona», «la selezione del testo funziona»*. `[M]` diario delle 4 scatole: client `piattaforma=Linux`, **nessuna cattura accesa** (la regola del DeX non scatta sul computer). |
+| `(questo commit)` | **Prova a mano dell'utente, Linux, Radeon (3 ott)** — parole sue: *«resize ok anche sulla radeon»*. Scatole rifatte con `19-scatole-scheda.sh amd` (prima fallito: le copie della `shm` dentro devroot, curato in `3535800`). |
+| `(questo commit)` | **Android, prova 2 (F-031 tocco) ROSSA sulla tastiera — e NON è la pagina** — `[M]` 3 ott, S23 (Android 16, Chrome 154, tastiera Samsung 5.9.30.97, nessun aggiornamento da ieri), Radeon, GNOME: «il secondo tocco sul ⌨ NON chiude la tastiera», poi al ritentare «aperta da sola» (conseguenza: era rimasta aperta). Rossa con Phonestra, rossa **senza** Phonestra, e rossa **con la pagina di ieri `3fc5777d`** che il 1 ott era verde ⇒ è cambiato il telefono, non il prodotto. Nessuna tastiera esterna collegata. `[?]` Diversi da ieri: Debug USB acceso oggi dall'utente, Chrome riavviato con `am start`, il telefono stamattina sul DeX. ⭐ **Poi l'utente a mano, telefono in verticale: «la tastiera si apre e si chiude»** ⇒ il rosso è del BANCO. Sospetto da verificare: `telefono.py` `tastiera_aperta()` legge `dumpsys input_method | grep -m1 mInputShown=` — la PRIMA riga, che oggi può non essere quella di Chrome (altri schermi/clienti dopo DeX e Phonestra). La prova 3 non è stata fatta. adb: si entra con `ADB_VENDOR_KEYS=~/.config/Phonestra/adbkey` (la chiave dell'adb del tablet il telefono non la riconosce più). |
+| `cd7c59e` | **La rete completa per chiudere: giro `19-chiusura-intel`, Intel, binario `54a98acc`, pagina `f78df3ed`: 700 PASS, 2 FAIL, 2 BLOCKED (129 min)** — FAIL: F-012B su GNOME (il `pipewire-pulse` della sessione di prima: all'«Esci» `pipewire` si ferma e il pulse no, al nuovo accesso `pipewire` riparte prima del controllo) ⇒ `sessione.c` confronta gli istanti d'avvio; binario **`05e7c7d1`**: F-012B **20/20 PASS** sui 4 desktop × 2 browser. BLOCKED: F-030 (tela nera di Firefox nei primi 45 s) solo con le prove lunghe in parallelo, ogni volta su un desktop diverso (LXQt; poi KDE e XFCE) ⇒ rifatta un desktop alla volta: **4/4 PASS** ⇒ è il carico del banco (4 Firefox in 4K che decodificano sulla stessa Intel che codifica), non il prodotto. |
 
 ## 4-bis. La chiusura delle prove di funzionalità
 
@@ -128,27 +135,15 @@ Prima passata dell'utente sui 4 desktop: *«funziona quasi tutto bene»*, tre se
 ✅ **Seconda passata, stesso giorno: «Test incolla ok».** ⇒ **La Intel è chiusa** (Android escluso:
 si rifà sulla Radeon col telefono).
 
-### 4-bis.2 La prova a mano su Android col DeX, sulla Radeon (4 ott 2026)
+### 4-bis.2 La prova a mano su Android col DeX (4 ott 2026)
 
-Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `05e7c7d1`, pagina `f78df3ed` — vedi la nota sotto):
+Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `05e7c7d1`, pagina `f78df3ed`, il prodotto della chiusura, §7):
 - audio e video sincronizzati su un video **4K** di YouTube;
 - **stacco e rientro** della sessione mentre il video suona;
 - il **ridimensionamento delle finestre** delle applicazioni;
 - gli **appunti**.
 
 ✅ ⇒ **Android col DeX è chiuso**, e con lui il terzo cancello di §4-bis.
-
-⚠ **Nota (4 ott): le scatole giravano un prodotto costruito il 3 ott e mai salvato in git** — binario `05e7c7d1`
-(costruito in `/media/REMOTIX/src/f19-chiusura`), pagina `f78df3ed`. Rispetto a `2b675f5` due modifiche, ora
-riportate nel deposito così come furono costruite:
-1. `src/sessione.c`, l'audio dopo «Esci»: non basta «`pipewire` spento» — `[M]` giro `19-chiusura-intel`, F-012B su
-   GNOME: all'«Esci» si fermano `wireplumber` e `pipewire` ma non `pipewire-pulse`, e al nuovo accesso `pipewire`
-   riparte prima del controllo. ⇒ si confrontano gli istanti d'avvio: un `pipewire-pulse` più vecchio del
-   `pipewire` in vigore è l'avanzo e si ferma;
-2. `src/pagina.html`, **la cattura del puntatore da sola al primo clic** dove l'hover non arriva (DeX, noVNC
-   #1727): scelta dell'utente («meglio attivarla al primo clic del mouse»), nessun ramo per sistema.
-
-⇒ La prova dell'utente col DeX e il giro `f012b-1`/`f012b-2` valgono per **questo** prodotto.
 
 ## 5. Android: il telefono vero, comandato da qui
 
@@ -188,28 +183,27 @@ KDE, XFCE, LXQt.
 | 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
 | 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
 
-## 6-bis. Da qui si riparte — 2 ottobre 2026, pomeriggio (sessione sospesa dall'utente)
+## 7. ✅ FASE 19 CHIUSA — 3 ottobre 2026
 
-**Stato.** La prova a mano dell'utente (§4-bis.1): **Intel chiusa** («Test incolla ok»). **Radeon**: desktop
-provati dall'utente; restava l'audio su GNOME dopo «Esci» → curato (`b24a6c3`), e l'utente ha confermato
-l'audio su GNOME/Firefox in una sessione NUOVA. Scatole sulla **Radeon**, binario **`54a98acc`**, pagina
-**`d827a225`**; giri automatici `cure-intel-6` 128/128 e `cure-radeon-1` 224/224, `cure-radeon-2` 144/144.
-Lasciata aperta la sessione `nictest` dell'utente su GNOME.
+Chiusa su parola dell'utente («Chiudi la fase 19»). Stato alla chiusura: binario **`05e7c7d1`**, pagina **`f78df3ed`**,
+scatole sulla **Intel**. Rete completa `19-chiusura-intel` 700 PASS + le cure rifatte verdi (F-012B 20/20, F-030 4/4 da
+sola); prova a mano dell'utente verde su Linux (Intel e Radeon: ridimensionamento, selezione del testo) e sul DeX
+(cattura al primo clic, DECISIONI §10.29; appunti).
+**Lasciato aperto, dichiarato:**
+- F-031 sul telefono in mano: il banco dice che il ⌨ non richiude la tastiera, l'utente a mano vede che la richiude ⇒
+  difetto del BANCO (sospetto `grep -m1 mInputShown`); la prova 3 non fatta. Il tocco è il ripiego (§5-bis), non blocca.
+- F-030 con le prove lunghe in parallelo sulla sola Intel: tela nera di Firefox per carico del banco.
+- Lavori dopo la fase: §6 «Lavori da fare dopo la fase 19».
 
-**Aggiornamento 4 ott 2026:** ✅ Android col DeX chiuso (§4-bis.2). Il giro `f012b-1` sui 4 desktop si è fermato
-da solo: su **KDE e XFCE** c'erano ancora sessioni `nictest` dell'utente. Su **GNOME e LXQt**: ✅ **VERDE**, PASS=4
-(giro `f012b-1`, impronte `05e7c7d1/f78df3ed`); su **KDE e XFCE** ✅ **VERDE**, PASS=4 (giro `f012b-2`, dopo che l'utente
-ha chiuso le sue sessioni). ⇒ F-012B verde sui 4 desktop.
+### 7-bis. Dopo la chiusura — 4 ottobre 2026
 
-**Prima cosa della sessione nuova, in ordine:**
-1. ~~**Android col DeX**~~ ✅ chiuso il 4 ott.
-2. Poi, a scatole libere, la prova automatica del caso «Esci → rientra → suona» (non ancora girata):
-   `python3 15-giro.py --giro f012b-1 --desktop gnome,kde,xfce,lxqt --browser firefox --prove f012b`
-   (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); ✅ VERDE il 4 ott col binario `05e7c7d1`.
-   ✅ Controprova (4 ott, GNOME): col binario vecchio `fbfceb41` **ROSSA** (giro `f012b-controprova`, FAIL=1 PASS=1);
-   rimesso `05e7c7d1` (pagina `f78df3ed`) e di nuovo **VERDE** (giro `f012b-ritorno`, PASS=2).
-3. Chiusura della fase 19 e `fase-19` dentro `fase-10-cure`. ⚠ I commit di oggi sono solo locali: il ramo
-   non e' stato spinto su GitHub.
+- ✅ **La prova a mano dell'utente col DeX** (§4-bis.2): *«Possiamo chiudere il caso DEX»*.
+- ✅ **F-012B sui 4 desktop** col prodotto della chiusura (`05e7c7d1`/`f78df3ed`), Firefox: giri `f012b-1` (GNOME,
+  LXQt) e `f012b-2` (KDE, XFCE), PASS=8. **Controprova** su GNOME col binario vecchio `fbfceb41`: **ROSSA**
+  (`f012b-controprova`, FAIL=1); rimesso `05e7c7d1`, di nuovo verde (`f012b-ritorno`).
+- 🔀 Due storie riunite: dal 2 ott questo ramo aveva in locale, mai spinte, le prove `15-f014c` (gli appunti come li
+  usa la persona) e `15-f012b` (l'audio dopo «Esci»), che `fase-10-cure` non aveva; il prodotto (`src/`) era già
+  uguale nelle due. Nelle sonde di C22 e F-003 resta la versione della chiusura (conta `mouse*` e pointer insieme).
 
 ## 6. Da qui si riparte (2 ott 2026, sera — sessione chiusa dall'utente)
 

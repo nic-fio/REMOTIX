@@ -14,6 +14,14 @@ DESKTOP=${*:-gnome kde xfce lxqt}
 cd /media/REMOTIX/rete11 || exit 2
 PAROLA=${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}
 esito=0
+# ⛔ La memoria condivisa (`shm`) di ogni scatola si monta ANCHE dentro devroot
+#    (/media/REMOTIX vi e' agganciata con propagazione): `[M]` 3 ott 2026, il
+#    passaggio Intel → Radeon falliva su tutti e 4 («unlinkat …/userdata/shm:
+#    device or resource busy») e le scatole restavano spente.  Si sganciano
+#    prima le copie di devroot; quelle vere le toglie podman.
+for m in $(mount | awk '$3 ~ /devroot\/srv\/remotix\/contenitori\/storage\/overlay-containers\/.*\/userdata\/shm$/ {print $3}'); do
+	printf '%s\n' "$PAROLA" | sudo -S -p '' umount "$m" && echo "   sganciata la copia in devroot: ${m##*overlay-containers/}"
+done
 for d in $DESKTOP; do
 	echo "=== $d $SCHEDA $(date +%T)"
 	for passo in accendi prodotto server; do

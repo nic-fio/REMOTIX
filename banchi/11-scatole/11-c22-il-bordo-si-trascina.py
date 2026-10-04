@@ -293,9 +293,12 @@ JS_OSSERVA = r"""
 (function () {
   if (window.__C22__) return;
   const C = window.__C22__ = { giu: 0, su: 0, premuti: 0, alzati: 0 };
-  // ⚠ 2 ott 2026: si contano i pointer events, non i `mouse*` — dalla cura dei
-  //   clic su Android la pagina chiama preventDefault sul pointerdown, e il
-  //   browser non fa piu' nascere i mousedown/mouseup di compatibilita'.
+  /* ⚠ Dal 2 ott 2026 la pagina prende il clic da `pointerdown` e col suo
+     `preventDefault` spegne i `mousedown` di compatibilita': contarli soli
+     dava «giu 0» e un BLOCKED falso (giro `19-cattura-2`).  Si contano tutti
+     e due: le soglie guardano «almeno uno» e «nessuno». */
+  addEventListener('mousedown', function () { C.giu++; }, true);
+  addEventListener('mouseup', function () { C.su++; }, true);
   addEventListener('pointerdown', function (e) { if (e.pointerType !== 'touch') C.giu++; }, true);
   addEventListener('pointerup', function (e) { if (e.pointerType !== 'touch') C.su++; }, true);
   addEventListener('pointermove', function (e) {
