@@ -237,8 +237,8 @@ corte sugli altri tre; in verticale F-003 e F-013 dipendono dalla tela stretta, 
 
 ⭐ **Da qui si riparte (4 ott 2026, sessione chiusa dall'utente — limite d'uso, si riprende mercoledì 7 ott
 pomeriggio).** Fase 19 chiusa e spinta (`fase-10-cure` = `fase-19`). Prima cosa: `git fetch`, poi il **piano
-delle misure di prestazione**, con la domanda aperta all'utente: *su tutte e due le schede del server (Intel e
-Radeon) o su una sola?* E le due proposte sulla NVIDIA (punto 2) da confermare. Scatole: prodotto `05e7c7d1`/`f78df3ed`
+delle misure di prestazione**, su **tutte e due le schede del server, Intel e Radeon** (risposta dell'utente, 4 ott: VA-API e Vulkan
+sono due strade del prodotto, ognuna coi suoi numeri). E le due proposte sulla NVIDIA (punto 2) da confermare. Scatole: prodotto `05e7c7d1`/`f78df3ed`
 sui 4 desktop, nessuna sessione dell'utente aperta.
 
 **Lavori da fare dopo la fase 19** (elenco dell'utente, 2 ott 2026):
