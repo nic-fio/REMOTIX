@@ -1,0 +1,201 @@
+<!doctype html>
+<!-- Stile: «Fascio di luce» — un cono di luce fredda scende dall'alto e illumina la scheda su un palcoscenico buio.
+     Idea: tutto il resto è spento, così l'occhio va dritto al logo e ai due campi; la luce si accende una volta sola. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --buio:#040508; --scheda:#0d1016; --scheda-alta:#161b25;
+    --testo:#f1f4fa; --tenue:#a0aac4; --etichetta:#cfd6e6;
+    --campo:#07090e; --campo-bordo:#262d3c; --campo-bordo-su:#3a4458;
+    --accento:#1466e0; --accento-scuro:#0a4fc0;
+    --errore-testo:#ffb9b9; --errore-fondo:rgba(255,92,92,.08); --errore-bordo:rgba(255,120,120,.36);
+    --vivo:#2fd39a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:3rem 1rem 2rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--buio); overflow-x:hidden; position:relative;
+  }
+
+  /* la lampada e il fascio: due gradienti conici dal punto della lampada, bordi morbidi senza filtri */
+  .luce{position:fixed; inset:0; pointer-events:none; animation:accende 1.6s ease-out both}
+  .luce::before{ /* la lampada */
+    content:""; position:absolute; left:50%; top:0; width:7rem; height:.35rem; transform:translateX(-50%);
+    border-radius:0 0 .4rem .4rem; background:linear-gradient(90deg,#2a3242,#7f8aa0,#2a3242);
+    box-shadow:0 0 1.6rem .4rem rgba(170,210,255,.35);
+  }
+  .cono{position:absolute; inset:0 0 0 0;
+    background:conic-gradient(from 156deg at 50% -3%,
+      transparent 0deg, rgba(150,195,255,.07) 7deg, rgba(175,210,255,.2) 16deg, rgba(190,220,255,.26) 24deg,
+      rgba(175,210,255,.2) 32deg, rgba(150,195,255,.07) 41deg, transparent 48deg);
+    -webkit-mask-image:linear-gradient(180deg,#000 20%,rgba(0,0,0,.7) 65%,rgba(0,0,0,.3) 100%);
+    mask-image:linear-gradient(180deg,#000 20%,rgba(0,0,0,.7) 65%,rgba(0,0,0,.3) 100%)}
+  .cono.nucleo{background:conic-gradient(from 168deg at 50% -3%,
+      transparent 0deg, rgba(210,230,255,.07) 8deg, rgba(220,235,255,.1) 12deg, rgba(210,230,255,.07) 16deg, transparent 24deg)}
+  .pavimento{position:absolute; left:50%; bottom:-14vh; width:min(70rem,200vw); height:40vh; transform:translateX(-50%);
+    background:radial-gradient(closest-side, rgba(140,190,255,.14), rgba(140,190,255,.04) 60%, transparent)}
+  @keyframes accende{0%{opacity:0} 18%{opacity:.6} 24%{opacity:.25} 40%{opacity:1} 100%{opacity:1}}
+
+  .impianto{position:relative; width:100%; max-width:24rem; text-align:center}
+  .logo{width:13rem; height:auto; color:#fff; display:block; margin:0 auto .75rem; filter:drop-shadow(0 .6rem 1.4rem rgba(26,124,255,.25))}
+  .motto{margin:0 0 2.2rem; color:var(--tenue); font-size:.95rem; line-height:1.45}
+
+  .scheda{
+    position:relative; text-align:left; border-radius:1rem; padding:1.9rem 1.9rem 1.4rem;
+    background:linear-gradient(180deg, var(--scheda-alta), var(--scheda) 45%);
+    border:1px solid #20263a;
+    box-shadow:
+      inset 0 1px 0 rgba(210,230,255,.22),            /* lo spigolo alto preso dalla luce */
+      0 -1px 2.5rem -.6rem rgba(150,200,255,.18),
+      0 2.5rem 4rem -1.2rem rgba(0,0,0,.9);
+    animation:entra .9s .25s ease-out both;
+  }
+  .scheda::before{ /* la luce che cade sulla parte alta della scheda */
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:radial-gradient(120% 60% at 50% -10%, rgba(170,210,255,.10), transparent 60%);
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(14px)}}
+
+  form{display:grid; gap:1.05rem; position:relative}
+  label{display:block; font-size:.8rem; font-weight:600; letter-spacing:.03em; color:var(--etichetta); margin-bottom:.4rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--testo); caret-color:#7fb6ff;
+    padding:.72rem .85rem; border:1px solid var(--campo-bordo); border-radius:.55rem; background:var(--campo);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.5);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:var(--campo-bordo-su)}
+  input:focus{outline:none; border-color:#4d94ff; box-shadow:inset 0 1px 2px rgba(0,0,0,.5), 0 0 0 3px rgba(77,148,255,.3)}
+  input[aria-invalid="true"]{border-color:rgba(255,120,120,.6)}
+  input:disabled{opacity:.5; cursor:not-allowed}
+
+  button{
+    margin-top:.5rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.8rem; border:0; border-radius:.55rem; cursor:pointer;
+    background:linear-gradient(180deg, var(--accento), var(--accento-scuro));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 1px rgba(10,79,192,.6), 0 .8rem 1.6rem -.8rem rgba(26,124,255,.8);
+    display:flex; justify-content:center; align-items:center; gap:.55rem;
+    transition:filter .15s, transform .1s;
+  }
+  button svg{width:1.1rem; height:1.1rem; transition:transform .2s}
+  button:hover{filter:brightness(1.12)}
+  button:hover svg{transform:translateX(3px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid #9cc8ff; outline-offset:3px}
+  button:disabled{cursor:wait; filter:saturate(.5) brightness(.8)}
+  .giro{display:none; width:1rem; height:1rem; border-radius:50%; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; animation:gira .8s linear infinite}
+  button.attesa .giro{display:block} button.attesa svg{display:none}
+  @keyframes gira{to{transform:rotate(1turn)}}
+
+  #avviso, #dichiarazione{position:relative; font-size:.85rem; line-height:1.45; border-radius:.55rem; padding:.7rem .85rem}
+  #avviso{margin:0 0 1.2rem; color:#ffd88a; background:rgba(255,190,70,.07); border:1px solid rgba(255,190,70,.3)}
+  #dichiarazione{margin-top:1rem; color:var(--tenue); border:1px solid #20263a}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+
+  #esito.errore{
+    position:relative; margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start; padding:.7rem .85rem; border-radius:.55rem;
+    font-size:.88rem; line-height:1.4; color:var(--errore-testo); background:var(--errore-fondo); border:1px solid var(--errore-bordo);
+    animation:scuote .4s ease-out;
+  }
+  #esito svg{flex:none; width:1.1rem; height:1.1rem; margin-top:.05rem}
+  @keyframes scuote{25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+
+  .piede{
+    position:relative; margin:1.5rem 0 0; display:flex; justify-content:center; align-items:center; gap:.5rem;
+    font-size:.78rem; color:var(--tenue);
+  }
+  .piede svg{flex:none; width:.9rem; height:.9rem; color:var(--vivo)}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--etichetta); font-size:.95em}
+  .piede .sep{opacity:.5}
+
+  @media (max-width:520px){
+    body{padding:2.6rem 1rem 1.5rem}
+    .logo{width:11rem}
+    .scheda{padding:1.6rem 1.25rem 1.2rem}
+  }
+  .motto, .sotto, #esito span{text-wrap:balance}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="luce" aria-hidden="true">
+  <div class="cono"></div><div class="cono nucleo"></div>
+  <div class="pavimento"></div>
+</div>
+
+<div class="impianto">
+  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+    <defs>
+      <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+      </linearGradient>
+      <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#rx-g)">
+      <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+      <path d="M26 138L214 356H26Z"/>
+      <path d="M150 180H232L442 356H296Z"/>
+    </g>
+    <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+  </svg>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+  <main class="scheda" aria-label="Accesso">
+    <div id="avviso"></div>
+    <form id="modulo" action="#" method="post" novalidate>
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="vai">Collegati
+        <span class="giro" aria-hidden="true"></span>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <div id="esito" role="status" aria-live="polite"></div>
+    <div id="dichiarazione"></div>
+  </main>
+
+  <p class="piede">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+    Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+  </p>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
+  function errore(){
+    esito.className='errore';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
+  }
+  function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
+  modulo.addEventListener('submit',function(ev){
+    ev.preventDefault(); pulisci(); vai.disabled=true; vai.classList.add('attesa');
+    setTimeout(function(){vai.disabled=false; vai.classList.remove('attesa'); errore(); parola.value=''; parola.focus();},700);
+  });
+  [utente,parola].forEach(function(c){c.addEventListener('input',function(){c.removeAttribute('aria-invalid');});});
+  var stato=new URLSearchParams(location.search).get('stato');
+  if(stato==='errore') errore();
+  if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
+  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+})();
+</script>
+</body>
+</html>

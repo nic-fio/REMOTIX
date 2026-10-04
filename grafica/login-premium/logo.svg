@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+    </linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#rx-g)">
+    <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+    <path d="M26 138L214 356H26Z"/>
+    <path d="M150 180H232L442 356H296Z"/>
+  </g>
+  <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+</svg>

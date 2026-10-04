@@ -1,0 +1,217 @@
+<!doctype html>
+<!-- Stile: «R gigante» — fondo chiaro, il segno della R enorme e tagliato dal bordo, in trasparenza e a contorno; il modulo bianco gli sta davanti.
+     Idea: il marchio diventa architettura, come la copertina di una rivista: una sola forma grande, e tutto il resto piccolo e preciso. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#f2f4f8; --carta:#fff; --inchiostro:#0b1430; --tenue:#5a6478; --etichetta:#2a3550;
+    --bordo:#e2e7ef; --campo-bordo:#cfd6e2; --accento:#1a6dff;
+    --err-fondo:#fdf1f2; --err-bordo:#f3c4c9; --err-testo:#b4232c;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    --mono:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px); background:var(--fondo)}
+  body{
+    margin:0; min-height:100vh; min-height:100svh; display:grid; place-items:center; padding:2.5rem 1.25rem;
+    font-family:var(--sans); color:var(--inchiostro); overflow-x:hidden; -webkit-font-smoothing:antialiased;
+    background:radial-gradient(90% 70% at 15% 10%, #fff 0, rgba(255,255,255,0) 60%), var(--fondo);
+  }
+
+  /* ── la R: enorme, tagliata dal bordo destro e da quello in basso ── */
+  .segno{
+    position:fixed; z-index:0; pointer-events:none;
+    height:112vh; aspect-ratio:442/356; left:44vw; top:-6vh;
+    animation:deriva 22s ease-in-out infinite alternate;
+  }
+  .segno svg{display:block; width:100%; height:100%; overflow:visible}
+  .segno .pieno{opacity:.11}
+  .segno .contorno{fill:none; stroke:url(#rx-g2); stroke-width:1.25; vector-effect:non-scaling-stroke; opacity:.6}
+  @keyframes deriva{from{transform:translate3d(0,0,0)} to{transform:translate3d(-1.2vh,1.6vh,0)}}
+
+  /* ── l'impianto: a sinistra la voce, a destra la scheda ── */
+  .impianto{
+    position:relative; z-index:1; width:100%; max-width:64rem;
+    display:grid; grid-template-columns:1fr 23rem; gap:4rem; align-items:center;
+    animation:entra .7s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+  .marchio{width:13rem; max-width:70%; color:var(--inchiostro)}
+  .marchio svg{display:block; width:100%; height:auto}
+  .voce h2{margin:2.2rem 0 1rem; font-size:2.4rem; line-height:1.08; letter-spacing:-.035em; font-weight:760}
+  .voce h2 em{display:block}
+  .voce h2 em{font-style:normal; background:linear-gradient(90deg,#0a4fd0,#1a6dff); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .voce p{margin:0; max-width:26ch; color:var(--tenue); font-size:1.02rem; line-height:1.55}
+
+  .scheda{
+    background:var(--carta); border:1px solid var(--bordo); border-radius:1rem; padding:1.8rem 1.7rem 1.5rem;
+    box-shadow:0 1px 2px rgba(11,20,48,.05), 0 2px 6px rgba(11,20,48,.04), 0 30px 60px -24px rgba(11,40,110,.28);
+  }
+  .scheda h1{margin:0 0 .3rem; font-size:1.15rem; font-weight:680; letter-spacing:-.01em}
+  .scheda .sotto{margin:0 0 1.5rem; font-size:.86rem; color:var(--tenue)}
+
+  form{display:grid; gap:1.05rem}
+  label{display:block; font-size:.8rem; font-weight:620; color:var(--etichetta); margin-bottom:.4rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--inchiostro);
+    padding:.72rem .85rem; border:1px solid var(--campo-bordo); border-radius:.55rem; background:#fbfcfe;
+    box-shadow:inset 0 1px 2px rgba(11,20,48,.04);
+    transition:border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  input:hover{border-color:#aab5c6}
+  input:focus{outline:none; background:#fff; border-color:var(--accento); box-shadow:0 0 0 3px rgba(26,109,255,.18)}
+  input[aria-invalid="true"]{border-color:#e38a93}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(180,35,44,.14)}
+
+  button{
+    margin-top:.4rem; font:inherit; font-size:.98rem; font-weight:640; color:#fff;
+    padding:.8rem 1rem; border:0; border-radius:.55rem; background:var(--inchiostro); cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:.5rem;
+    box-shadow:0 1px 0 rgba(255,255,255,.12) inset, 0 8px 18px -8px rgba(11,20,48,.55);
+    transition:background-color .15s, box-shadow .2s, transform .1s;
+  }
+  button .freccia{width:1.05rem; height:1.05rem; transition:transform .2s; color:#7cc8ff}
+  button:hover{background:#17244d; box-shadow:0 1px 0 rgba(255,255,255,.14) inset, 0 12px 24px -10px rgba(26,109,255,.6)}
+  button:hover .freccia{transform:translateX(3px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid rgba(26,109,255,.45); outline-offset:2px}
+  button:disabled{cursor:progress; background:#4b5570; box-shadow:none; transform:none}
+  button:disabled .freccia{display:none}
+  .ruota{display:none; width:1rem; height:1rem; border-radius:50%; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; animation:gira .8s linear infinite}
+  button:disabled .ruota{display:block}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  #avviso:empty, #esito:empty, #dichiarazione:empty{display:none}
+  #avviso{margin:0 0 1.2rem; padding:.7rem .85rem; border-radius:.55rem; font-size:.86rem; line-height:1.45;
+    background:#fff7e8; border:1px solid #f1d39a; color:#7a4a00}
+  #esito{margin-top:1.1rem}
+  #esito.errore{display:flex; gap:.6rem; align-items:flex-start; padding:.7rem .85rem; border-radius:.55rem; font-size:.88rem; line-height:1.4;
+    background:var(--err-fondo); border:1px solid var(--err-bordo); color:var(--err-testo); animation:compare .35s ease-out both}
+  #esito.errore span{text-wrap:balance}
+  #esito.errore svg{flex:none; width:1.05rem; height:1.05rem; margin-top:.08rem}
+  @keyframes compare{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
+  .scheda.scuoti{animation:scuoti .4s cubic-bezier(.36,.07,.19,.97)}
+  @keyframes scuoti{20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)}}
+  #dichiarazione{margin-top:1rem; padding:.7rem .85rem; border-radius:.55rem; font-size:.84rem; color:var(--etichetta); background:#f5f7fb; border:1px solid var(--bordo)}
+
+  .piede{margin:1.4rem 0 0; padding-top:1.05rem; border-top:1px solid var(--bordo); display:flex; justify-content:space-between; align-items:center; gap:.8rem; flex-wrap:wrap;
+    font-size:.76rem; color:var(--tenue)}
+  .piede span{display:inline-flex; align-items:center; gap:.4rem}
+  .piede svg{width:.85rem; height:.85rem}
+  .piede code{font-family:var(--mono); font-size:.74rem; color:var(--etichetta)}
+  .vivo{width:.45rem; height:.45rem; border-radius:50%; background:#15a06e; box-shadow:0 0 0 3px rgba(21,160,110,.15)}
+
+  @media (max-width:900px){
+    .impianto{grid-template-columns:1fr; gap:2rem; max-width:24rem}
+    .voce h2{font-size:2rem; margin:1.6rem 0 .7rem}
+    .segno{height:58vh; left:34vw; top:-7vh}
+    .segno .contorno{opacity:.4} .segno .pieno{opacity:.08}
+  }
+  @media (max-width:420px){
+    .scheda{padding:1.5rem 1.2rem 1.25rem}
+    .voce h2{font-size:1.55rem}
+    .piede{justify-content:center}
+  }
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+<div class="segno" aria-hidden="true">
+  <svg viewBox="0 0 442 356" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="rx-g2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+      </linearGradient>
+    </defs>
+    <g class="pieno" fill="url(#rx-g2)">
+      <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+      <path d="M26 138L214 356H26Z"/>
+      <path d="M150 180H232L442 356H296Z"/>
+    </g>
+    <g class="contorno">
+      <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+      <path d="M26 138L214 356H26Z"/>
+      <path d="M150 180H232L442 356H296Z"/>
+    </g>
+  </svg>
+</div>
+
+<div class="impianto">
+  <div class="voce">
+    <div class="marchio">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+        <defs>
+          <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+          </linearGradient>
+          <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#rx-g)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+        <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+      </svg>
+    </div>
+    <h2>Il tuo desktop Linux, <em>da qualunque browser.</em></h2>
+    <p>Portatile, telefono o tablet: niente da installare.</p>
+  </div>
+
+  <main class="scheda" aria-labelledby="titolo">
+    <h1 id="titolo">Accedi</h1>
+    <p class="sotto">Con il tuo utente di questo server.</p>
+    <div id="avviso"></div>
+
+    <form id="modulo" novalidate>
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="vai">Collegati
+        <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="ruota" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <div id="esito" role="status" aria-live="polite"></div>
+    <div id="dichiarazione"></div>
+
+    <p class="piede">
+      <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.3 7V5.2a2.7 2.7 0 0 1 5.4 0V7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Connessione cifrata</span>
+      <span><i class="vivo" aria-hidden="true"></i><code>alfa.lan</code></span>
+    </p>
+  </main>
+</div>
+
+<script>
+(function(){
+  var modulo=document.getElementById('modulo'), esito=document.getElementById('esito'), vai=document.getElementById('vai'),
+      scheda=document.querySelector('.scheda'), campi=[document.getElementById('utente'), document.getElementById('parola')];
+  var ICONA='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14" r="1.1" fill="currentColor"/></svg>';
+  function errore(){
+    esito.className='errore'; esito.innerHTML=ICONA+'<span>Utente o parola d\'ordine non validi.</span>';
+    campi.forEach(function(c){c.setAttribute('aria-invalid','true')});
+    scheda.classList.remove('scuoti'); void scheda.offsetWidth; scheda.classList.add('scuoti');
+  }
+  function pulisci(){ if(esito.className){esito.className=''; esito.innerHTML='';} campi.forEach(function(c){c.removeAttribute('aria-invalid')}); }
+  campi.forEach(function(c){c.addEventListener('input',pulisci)});
+  modulo.addEventListener('submit',function(e){
+    e.preventDefault(); pulisci(); vai.disabled=true;
+    setTimeout(function(){vai.disabled=false; errore(); campi[1].select();},900);
+  });
+  if(new URLSearchParams(location.search).get('stato')==='errore') errore();
+})();
+</script>
+</body>
+</html>

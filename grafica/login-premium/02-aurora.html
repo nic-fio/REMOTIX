@@ -1,0 +1,206 @@
+<!doctype html>
+<!-- Stile: «Aurora» — fondo scuro attraversato da tre bande d'aurora ciano e blu che scivolano lentissime; la scheda porta il logo in testa.
+     Idea: un fondo vivo ma quieto, fatto di soli gradienti già sfumati (niente filtri), che si muove con transform e opacità e costa nulla alla scheda grafica. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#03060f; --testo:#eaf1fc; --tenue:#8f9cb6; --etichetta:#c6d1e4;
+    --bordo:rgba(160,210,255,.12); --campo:rgba(4,10,24,.55); --campo-bordo:rgba(170,210,255,.16);
+    --ciano:#00d8ff; --vivo:#2fd39a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:grid; grid-template-columns:minmax(0,1fr); place-items:center; padding:2em 1em;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
+  }
+
+  /* l'aurora: tre ellissi già sfumate dal gradiente, ruotate e allungate; si muovono solo con transform/opacity */
+  .cielo{position:fixed; inset:0; overflow:hidden; pointer-events:none}
+  .banda{position:absolute; left:50%; top:50%; will-change:transform, opacity}
+  .banda.a{
+    width:140vmax; height:34vmax; margin:-17vmax 0 0 -70vmax;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(0,216,255,.30), rgba(0,190,255,.10) 45%, transparent 72%);
+    transform:translate(-8vmax,-22vmax) rotate(-14deg);
+    animation:va-a 46s ease-in-out infinite alternate;
+  }
+  .banda.b{
+    width:130vmax; height:30vmax; margin:-15vmax 0 0 -65vmax;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(26,110,255,.34), rgba(26,90,255,.10) 48%, transparent 72%);
+    transform:translate(10vmax,-6vmax) rotate(-22deg);
+    animation:va-b 58s ease-in-out infinite alternate;
+  }
+  .banda.c{
+    width:110vmax; height:22vmax; margin:-11vmax 0 0 -55vmax;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(60,230,220,.20), rgba(0,200,255,.06) 50%, transparent 72%);
+    transform:translate(-4vmax,16vmax) rotate(-8deg);
+    animation:va-c 64s ease-in-out infinite alternate;
+  }
+  @keyframes va-a{from{transform:translate(-8vmax,-22vmax) rotate(-14deg); opacity:.85} to{transform:translate(6vmax,-16vmax) rotate(-9deg); opacity:1}}
+  @keyframes va-b{from{transform:translate(10vmax,-6vmax) rotate(-22deg); opacity:1} to{transform:translate(-6vmax,-1vmax) rotate(-16deg); opacity:.7}}
+  @keyframes va-c{from{transform:translate(-4vmax,16vmax) rotate(-8deg); opacity:.6} to{transform:translate(8vmax,11vmax) rotate(-13deg); opacity:1}}
+  /* un velo in basso: l'aurora sta in cielo, la terra resta buia */
+  .cielo::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(3,6,15,.85) 100%)}
+
+  .scheda{
+    position:relative; width:100%; max-width:24em; padding:2.2em 2em 1.7em; border-radius:1.25em;
+    background:linear-gradient(180deg, rgba(10,18,38,.78), rgba(5,10,24,.86));
+    border:1px solid var(--bordo);
+    box-shadow:0 2.5em 5em -2em rgba(0,0,0,.8), 0 0 0 1px rgba(0,0,0,.4);
+    -webkit-backdrop-filter:blur(10px) saturate(1.3); backdrop-filter:blur(10px) saturate(1.3);
+    animation:entra .7s cubic-bezier(.2,.7,.2,1) both;
+  }
+  /* il filo di luce sul bordo alto, coi colori del marchio */
+  .scheda::before{
+    content:""; position:absolute; left:1.4em; right:1.4em; top:-1px; height:1px;
+    background:linear-gradient(90deg, transparent, #00d8ff 30%, #1a7cff 70%, transparent);
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(.8em) scale(.985)} to{opacity:1; transform:none}}
+
+  h1{margin:0; font-size:1em; line-height:0; width:100%}
+  h1 svg{width:100%; height:auto; color:#fff}
+  .motto{margin:1em 0 2em; color:var(--tenue); font-size:.88em; line-height:1.45; text-wrap:balance}
+
+  form{display:grid; gap:1.1em}
+  label{display:block; font-size:.8em; font-weight:600; color:var(--etichetta); margin-bottom:.45em}
+  input{
+    width:100%; font:inherit; font-size:1em; color:var(--testo); caret-color:var(--ciano);
+    padding:.75em .9em; border-radius:.7em; border:1px solid var(--campo-bordo); background:var(--campo);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:rgba(170,215,255,.32)}
+  input:focus{outline:none; border-color:var(--ciano); box-shadow:0 0 0 3px rgba(0,216,255,.18), 0 0 1.4em -.3em rgba(0,216,255,.45)}
+  input[aria-invalid="true"]{border-color:rgba(255,125,125,.6)}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(255,110,110,.2)}
+
+  button{
+    margin-top:.55em; font:inherit; font-size:1em; font-weight:650; color:#fff; cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:.55em; padding:.82em; border:0; border-radius:.7em;
+    background:linear-gradient(100deg, #0a62d8, #0646c8 55%, #0a3fb0);
+    box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 .8em 1.8em -.7em rgba(0,170,255,.7);
+    position:relative; overflow:hidden; transition:transform .1s, box-shadow .2s;
+  }
+  /* il riflesso che passa sul bottone al passaggio del puntatore */
+  button::after{
+    content:""; position:absolute; top:0; bottom:0; left:-40%; width:40%;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+    transform:translateX(0); opacity:0; transition:transform .6s ease, opacity .2s;
+  }
+  button:hover::after{transform:translateX(350%); opacity:1}
+  button:hover{box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 .9em 2em -.6em rgba(0,200,255,.85)}
+  button svg{width:1.1em; height:1.1em; transition:transform .2s}
+  button:hover .freccia{transform:translateX(.2em)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--ciano); outline-offset:3px}
+  button:disabled{cursor:progress; opacity:.7; box-shadow:none}
+  button:disabled::after{display:none}
+  .ruota{display:none}
+  button:disabled .freccia{display:none}
+  button:disabled .ruota{display:block; animation:gira .8s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  #avviso, #dichiarazione{margin-top:1em; padding:.7em .85em; border-radius:.7em; font-size:.85em; line-height:1.45;
+    background:rgba(255,196,80,.07); border:1px solid rgba(255,196,80,.28); color:#ffd88a}
+  #avviso{margin:-.8em 0 1.4em}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+  #esito{margin-top:1.1em; font-size:.86em; line-height:1.45}
+  #esito.male{
+    display:flex; gap:.6em; align-items:flex-start; padding:.75em .9em .75em .8em; border-radius:.7em;
+    background:linear-gradient(90deg, rgba(255,90,110,.13), rgba(255,90,110,.04)); border:1px solid rgba(255,120,130,.28);
+    box-shadow:inset 3px 0 0 #ff6b7d; color:#ffbcc4; animation:compare .3s ease-out;
+  }
+  #esito.male::before{
+    content:""; flex:none; width:1.15em; height:1.15em; margin-top:.05em; background:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.3' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3Cpath d='M10 5.6v5.3' stroke='%23000' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.1' r='1.15'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.3' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3Cpath d='M10 5.6v5.3' stroke='%23000' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.1' r='1.15'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  @keyframes compare{from{opacity:0; transform:translateY(-.3em)} to{opacity:1; transform:none}}
+
+  .piede{margin:1.7em 0 0; font-size:.76em; color:var(--tenue); display:flex; align-items:center; justify-content:center; gap:.5em; flex-wrap:wrap}
+  .piede svg{width:1em; height:1em; color:var(--ciano)}
+  .piede .sep{opacity:.5}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--etichetta)}
+
+  @media (max-width:420px){
+    body{padding:1.25em .85em}
+    .scheda{padding:1.8em 1.3em 1.4em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="cielo" aria-hidden="true"><div class="banda a"></div><div class="banda b"></div><div class="banda c"></div></div>
+
+<main class="scheda">
+  <h1>
+    <svg viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+      <defs>
+        <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+        </linearGradient>
+        <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+        </linearGradient>
+      </defs>
+      <g fill="url(#rx-g)">
+        <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+        <path d="M26 138L214 356H26Z"/>
+        <path d="M150 180H232L442 356H296Z"/>
+      </g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </svg>
+  </h1>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <div id="avviso"></div>
+
+  <form id="modulo" action="#" method="post">
+    <div>
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div>
+      <label for="parola">Parola d'ordine</label>
+      <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" id="vai"><span>Collegati</span>
+      <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </form>
+
+  <div id="esito" role="status" aria-live="polite"></div>
+  <div id="dichiarazione"></div>
+
+  <p class="piede">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l6 2.3v4.6c0 3.9-2.6 6.6-6 8.1-3.4-1.5-6-4.2-6-8.1V4.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.4 10l1.8 1.8 3.5-3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Connessione cifrata</span><span class="sep">·</span><code>alfa.lan</code>
+  </p>
+</main>
+<script>
+(function(){
+  var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
+      campi=[document.getElementById("utente"), document.getElementById("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",function(){
+    campi.forEach(function(d){d.removeAttribute("aria-invalid")}); esito.textContent=""; esito.className="";
+  })});
+  if(new URLSearchParams(location.search).get("stato")==="errore") errore();
+  document.getElementById("modulo").addEventListener("submit",function(e){
+    e.preventDefault(); esito.textContent=""; esito.className=""; vai.disabled=true;
+    setTimeout(function(){ vai.disabled=false; errore(); campi[1].select(); }, 700);
+  });
+})();
+</script>
+</body>
+</html>

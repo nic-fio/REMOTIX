@@ -1,0 +1,196 @@
+<!doctype html>
+<!-- Stile: «Costellazione» — su un blu notte, punti e fili sottilissimi (SVG fermo) come una mappa di stelle; tre punti sono minuscoli dispositivi. La scheda galleggia in primo piano.
+     Idea: tanti dispositivi collegati allo stesso server, detto in sordina: il disegno si sente più che vedersi, e lascia la scena al modulo. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#060a17; --scheda:rgba(11,17,34,.92); --bordo:rgba(140,180,255,.14);
+    --testo:#eef2fb; --tenue:#a5b0c8; --fioco:#8e9ab5;
+    --blu:#1a7cff; --ciano:#00d8ff; --rosso:#ff8f8f; --verde:#45d69a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center; padding:2rem 1rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo);
+    background-image:
+      radial-gradient(60rem 40rem at 50% 45%, rgba(26,124,255,.13), transparent 70%),
+      radial-gradient(40rem 30rem at 90% 0%, rgba(0,216,255,.06), transparent 70%);
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+
+  /* — il cielo — */
+  .cielo{position:fixed; inset:0; width:100%; height:100%; pointer-events:none}
+  .cielo .fili path{stroke:#6f93d6; stroke-width:.7; opacity:.32; fill:none}
+  .cielo .nodi circle{fill:#8fb2ec; opacity:.55}
+  .cielo .accesi circle{fill:#5fd2ff; opacity:.9}
+  .cielo .dispositivi *{fill:none; stroke:#7fc6ff; stroke-width:1.2; opacity:.75}
+  .cielo .aloni circle{fill:none; stroke:#00d8ff; stroke-width:1; opacity:0; transform-box:fill-box; transform-origin:center; animation:respira 7s ease-out infinite}
+  .cielo .aloni .a1{animation-delay:2.3s}
+  .cielo .aloni .a2{animation-delay:4.6s}
+  @keyframes respira{0%{opacity:.5; transform:scale(.4)} 60%,100%{opacity:0; transform:scale(2.2)}}
+
+  /* — la scheda — */
+  .scheda{
+    position:relative; width:100%; max-width:24rem; text-align:left;
+    background:var(--scheda); border:1px solid var(--bordo); border-radius:1.1rem;
+    padding:2.2rem 2rem 1.5rem;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    box-shadow:0 1px 0 rgba(255,255,255,.07) inset, 0 40px 90px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.4);
+    animation:arriva .8s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes arriva{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+  .testa{text-align:center; margin-bottom:1.9rem}
+  .logo{display:block; height:1.9rem; width:auto; margin:0 auto; color:#fff}
+  .motto{margin:.95rem auto 0; max-width:21rem; text-wrap:balance; color:var(--tenue); font-size:.9rem; line-height:1.5}
+
+  #avviso{margin:0 0 1.3rem; padding:.75rem .9rem; border-radius:.65rem; font-size:.85rem; line-height:1.45;
+    color:#ffd894; background:rgba(255,190,80,.08); border:1px solid rgba(255,190,80,.26)}
+  #avviso:empty{display:none}
+
+  form{display:grid; gap:1.1rem}
+  label{display:block; font-size:.82rem; font-weight:600; color:#c9d2e6; margin-bottom:.42rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--testo);
+    padding:.75rem .9rem; border:1px solid rgba(140,170,230,.2); border-radius:.6rem; background:rgba(4,8,20,.6);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:rgba(140,170,230,.36)}
+  input:focus{outline:none; border-color:var(--ciano); box-shadow:0 0 0 3px rgba(0,216,255,.18)}
+  input[aria-invalid="true"]{border-color:rgba(255,130,130,.6)}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(255,130,130,.18)}
+
+  button{
+    margin-top:.5rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.82rem 1rem; border:0; border-radius:.6rem; cursor:pointer;
+    background:linear-gradient(135deg, #0b6be6 0%, #0646c8 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 0 0 1px rgba(0,216,255,.25), 0 10px 30px -10px rgba(26,124,255,.65);
+    display:flex; justify-content:center; align-items:center; gap:.55rem;
+    transition:filter .15s, transform .1s, opacity .15s;
+  }
+  button svg{width:1.1rem; height:1.1rem; transition:transform .2s}
+  button:hover{filter:brightness(1.12)}
+  button:hover svg{transform:translateX(3px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--ciano); outline-offset:3px}
+  button:disabled{opacity:.55; cursor:progress; filter:saturate(.5)}
+
+  #esito:empty{display:none}
+  #esito.errore{
+    margin-top:1.1rem; display:flex; gap:.6rem; align-items:center;
+    padding:.65rem .85rem; border-radius:.65rem; font-size:.86rem; line-height:1.4;
+    color:var(--rosso); background:rgba(255,90,90,.08); border:1px solid rgba(255,120,120,.24);
+    animation:arriva .25s ease-out both;
+  }
+  #esito.errore::before{
+    content:"!"; flex:none; display:grid; place-items:center; width:1.15rem; height:1.15rem; border-radius:50%;
+    font-size:.72rem; font-weight:800; color:#1a0c10; background:var(--rosso);
+  }
+  #dichiarazione{margin-top:1rem; padding:.7rem .85rem; border-radius:.65rem; font-size:.82rem; color:var(--tenue); border:1px solid var(--bordo)}
+  #dichiarazione:empty{display:none}
+
+  .piede{
+    margin:1.6rem 0 0; display:flex; justify-content:center; align-items:center; gap:.5rem; flex-wrap:wrap;
+    font-size:.76rem; color:var(--fioco);
+  }
+  .piede .vivo{width:.42rem; height:.42rem; border-radius:50%; background:var(--verde); box-shadow:0 0 0 3px rgba(69,214,154,.16)}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--tenue)}
+
+  @media (max-width:400px){ .scheda{padding:1.8rem 1.3rem 1.3rem} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<svg class="cielo" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <g class="fili"><path d="M529 172L578 57"/><path d="M529 172L370 243"/><path d="M1032 98L874 89"/><path d="M1032 98L937 277"/><path d="M855 374L1014 380"/><path d="M855 374L728 312"/><path d="M855 374L937 277"/><path d="M855 374L748 485"/><path d="M119 507L90 658"/><path d="M119 507L186 372"/><path d="M138 115L221 240"/><path d="M138 115L30 172"/><path d="M684 807L505 797"/><path d="M684 807L839 853"/><path d="M684 807L624 659"/><path d="M221 240L289 140"/><path d="M221 240L186 372"/><path d="M221 240L370 243"/><path d="M996 921L839 853"/><path d="M996 921L1036 782"/><path d="M1533 74L1306 182"/><path d="M1352 302L1306 182"/><path d="M1352 302L1503 450"/><path d="M1352 302L1324 481"/><path d="M505 797L429 681"/><path d="M308 577L287 756"/><path d="M308 577L429 681"/><path d="M1014 380L1153 301"/><path d="M1014 380L937 277"/><path d="M874 89L937 277"/><path d="M514 580L624 659"/><path d="M514 580L459 420"/><path d="M514 580L429 681"/><path d="M728 312L634 405"/><path d="M1253 687L1207 569"/><path d="M1253 687L1377 780"/><path d="M839 853L895 744"/><path d="M1153 301L1306 182"/><path d="M90 658L69 852"/><path d="M1207 569L1324 481"/><path d="M1324 918L1377 780"/><path d="M1324 918L1473 959"/><path d="M760 654L624 659"/><path d="M760 654L895 744"/><path d="M289 140L370 243"/><path d="M459 420L634 405"/><path d="M1498 679L1377 780"/><path d="M1498 679L1503 450"/><path d="M1377 780L1473 959"/><path d="M634 405L748 485"/><path d="M30 172L73 293"/><path d="M186 372L73 293"/><path d="M69 852L232 885"/><path d="M287 756L429 681"/><path d="M287 756L232 885"/><path d="M1503 450L1324 481"/><path d="M1036 782L895 744"/></g>
+  <g class="nodi"><circle cx="529" cy="172" r="1.4"/><circle cx="1032" cy="98" r="1.4"/><circle cx="855" cy="374" r="1.4"/><circle cx="119" cy="507" r="1.4"/><circle cx="684" cy="807" r="1.4"/><circle cx="221" cy="240" r="1.4"/><circle cx="996" cy="921" r="1.4"/><circle cx="1533" cy="74" r="1.4"/><circle cx="1352" cy="302" r="1.4"/><circle cx="505" cy="797" r="1.4"/><circle cx="308" cy="577" r="1.4"/><circle cx="874" cy="89" r="1.4"/><circle cx="514" cy="580" r="1.4"/><circle cx="728" cy="312" r="1.4"/><circle cx="1253" cy="687" r="1.4"/><circle cx="1153" cy="301" r="1.4"/><circle cx="90" cy="658" r="1.4"/><circle cx="1324" cy="918" r="1.4"/><circle cx="760" cy="654" r="1.4"/><circle cx="624" cy="659" r="1.4"/><circle cx="289" cy="140" r="1.4"/><circle cx="459" cy="420" r="1.4"/><circle cx="937" cy="277" r="1.4"/><circle cx="1498" cy="679" r="1.4"/><circle cx="634" cy="405" r="1.4"/><circle cx="30" cy="172" r="1.4"/><circle cx="186" cy="372" r="1.4"/><circle cx="748" cy="485" r="1.4"/><circle cx="1306" cy="182" r="1.4"/><circle cx="287" cy="756" r="1.4"/><circle cx="578" cy="57" r="1.4"/><circle cx="73" cy="293" r="1.4"/><circle cx="1473" cy="959" r="1.4"/><circle cx="1324" cy="481" r="1.4"/><circle cx="1036" cy="782" r="1.4"/><circle cx="232" cy="885" r="1.4"/><circle cx="895" cy="744" r="1.4"/></g>
+  <g class="accesi"><circle cx="138" cy="115" r="2.6"/><circle cx="1503" cy="450" r="2.6"/><circle cx="69" cy="852" r="2.6"/><circle cx="1014" cy="380" r="2.6"/><circle cx="839" cy="853" r="2.6"/></g>
+  <!-- tre punti sono dispositivi: un portatile, un telefono, un monitor -->
+  <g class="dispositivi">
+    <g transform="translate(370 243)"><rect x="-11" y="-8" width="22" height="14" rx="1.5"/><path d="M-14 8.5h28"/></g>
+    <g transform="translate(1207 569)"><rect x="-5.5" y="-9" width="11" height="18" rx="2"/></g>
+    <g transform="translate(1377 780)"><rect x="-12" y="-9" width="24" height="15" rx="1.5"/><path d="M-5 10h10M0 6v4"/></g>
+    <g transform="translate(429 681)"><rect x="-8" y="-6" width="16" height="12" rx="1.5"/></g>
+  </g>
+  <g class="aloni"><circle class="a0" cx="138" cy="115" r="9"/><circle class="a1" cx="1377" cy="780" r="12"/><circle class="a2" cx="1207" cy="569" r="11"/><circle class="a0" cx="1503" cy="450" r="9"/><circle class="a1" cx="370" cy="243" r="12"/></g>
+</svg>
+
+<main class="scheda" aria-labelledby="titolo">
+  <div class="testa">
+    <h1 id="titolo" style="margin:0">
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+        <defs>
+          <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+          </linearGradient>
+          <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#rx-g)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+        <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+      </svg>
+    </h1>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  </div>
+
+  <div id="avviso"></div>
+
+  <form id="modulo" action="#" method="post">
+    <div>
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div>
+      <label for="parola">Parola d'ordine</label>
+      <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" id="vai"><span class="testo">Collegati</span>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+
+  <div id="esito" role="status" aria-live="polite"></div>
+  <div id="dichiarazione"></div>
+
+  <p class="piede"><i class="vivo" aria-hidden="true"></i>Connessione cifrata · <code>alfa.lan</code></p>
+</main>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.className="errore";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  function pulisci(){
+    if(!esito.textContent)return;
+    esito.textContent=""; esito.className="";
+    campi.forEach(function(c){c.removeAttribute("aria-invalid")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",pulisci)});
+  $("modulo").addEventListener("submit",function(ev){
+    ev.preventDefault(); pulisci();
+    vai.disabled=true; testo.textContent="Collegamento…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+  });
+  var stato=new URLSearchParams(location.search).get("stato");
+  if(stato==="errore")errore();
+  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+})();
+</script>
+</body>
+</html>

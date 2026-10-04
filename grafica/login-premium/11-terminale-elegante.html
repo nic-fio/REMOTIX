@@ -1,0 +1,203 @@
+<!doctype html>
+<!-- Stile: «Terminale elegante» — fondo quasi nero, scheda grafite, tre righe di stato in monospace sopra un modulo normale.
+     Idea: il registro degli strumenti per sviluppatori di lusso (Warp, Raycast): precisione da console, cura da prodotto. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#08090b; --scheda:#111216; --scheda-alta:#16171c; --campo:#0b0c0f;
+    --riga:rgba(255,255,255,.075); --riga-forte:rgba(255,255,255,.14);
+    --testo:#ededf2; --tenue:#a3a6b5; --fioco:#8b8ea0;
+    --blu:#1a7cff; --ciano:#00d8ff; --verde:#45d69a; --rosso:#ff8282;
+    --mono:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center; padding:2rem 1rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo);
+    background-image:radial-gradient(70rem 32rem at 50% -12%, rgba(26,124,255,.17), transparent 70%);
+    -webkit-font-smoothing:antialiased;
+  }
+  /* trama di punti appena accennata, che svanisce verso i bordi */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size:1.6rem 1.6rem;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 40%, #000 0%, transparent 65%);
+            mask-image:radial-gradient(ellipse at 50% 40%, #000 0%, transparent 65%);
+  }
+
+  .scheda{
+    position:relative; width:100%; max-width:25rem;
+    background:linear-gradient(180deg, var(--scheda-alta), var(--scheda) 40%);
+    border:1px solid var(--riga); border-radius:1rem; padding:1.9rem 1.8rem 1.3rem;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.06) inset, 0 30px 80px -30px rgba(0,0,0,.9), 0 0 120px -40px rgba(26,124,255,.35);
+    animation:entra .6s cubic-bezier(.2,.7,.2,1) both;
+  }
+  /* il filo di luce sul bordo superiore */
+  .scheda::before{
+    content:""; position:absolute; top:-1px; left:18%; right:18%; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(0,216,255,.7), transparent);
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(8px) scale(.99)} to{opacity:1; transform:none}}
+
+  .logo{display:block; height:1.75rem; width:auto; color:#fff}
+  .motto{margin:.8rem 0 1.4rem; color:var(--tenue); font-size:.92rem; line-height:1.5}
+
+  .console{
+    margin:0 0 1.5rem; padding:.75rem .9rem; border-radius:.6rem;
+    background:var(--campo); border:1px solid var(--riga);
+    font-family:var(--mono); font-size:.74rem; line-height:1.75; color:var(--fioco);
+    overflow:hidden;
+  }
+  .console p{margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .console .pr{display:inline-block; width:0; height:0; margin-right:.6em; vertical-align:.05em; border-left:.45em solid var(--ciano); border-block:.3em solid transparent}
+  .console .ok{display:inline-block; width:1.05em; color:var(--verde)}
+  .console b{font-weight:500; color:var(--testo)}
+  .console .sep{color:#4e5160; padding:0 .15em}
+  .cursore{display:inline-block; width:.5em; height:1em; vertical-align:-.15em; background:var(--tenue); margin-left:.15em; animation:batte 1.2s steps(1) infinite}
+  @keyframes batte{50%{opacity:0}}
+
+  #avviso{margin:0 0 1.2rem; padding:.7rem .85rem; border-radius:.6rem; font-size:.84rem; line-height:1.45;
+    color:#ffd58a; background:rgba(255,190,80,.07); border:1px solid rgba(255,190,80,.25)}
+  #avviso:empty{display:none}
+
+  form{display:grid; gap:1.05rem}
+  label{display:flex; justify-content:space-between; font-size:.8rem; font-weight:550; color:var(--tenue); margin-bottom:.4rem; letter-spacing:.01em}
+  input{
+    width:100%; font:inherit; font-size:.98rem; color:var(--testo);
+    padding:.72rem .85rem; border:1px solid #262830; border-radius:.55rem; background:var(--campo);
+    transition:border-color .15s, box-shadow .15s, background-color .15s;
+    caret-color:var(--ciano);
+  }
+  input:hover{border-color:#383b46}
+  input:focus{outline:none; border-color:var(--blu); background:#0d0f14; box-shadow:0 0 0 3px rgba(26,124,255,.22)}
+  input[aria-invalid="true"]{border-color:rgba(255,110,110,.6)}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(255,110,110,.18)}
+
+  button{
+    margin-top:.4rem; font:inherit; font-size:.96rem; font-weight:600; color:#0b0b0f;
+    padding:.78rem 1rem; border:0; border-radius:.55rem; background:#f2f2f5; cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:.6rem;
+    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 8px 24px -12px rgba(255,255,255,.35);
+    transition:background-color .15s, transform .1s, opacity .15s;
+  }
+  button kbd{
+    font-family:var(--mono); font-size:.72rem; font-weight:500; line-height:1; color:#4a4c57;
+    padding:.22rem .38rem; border-radius:.3rem; background:rgba(0,0,0,.07); border:1px solid rgba(0,0,0,.12);
+  }
+  button:hover{background:#fff}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--ciano); outline-offset:3px}
+  button:disabled{cursor:progress; opacity:.55; transform:none}
+
+  #esito:empty{display:none}
+  #esito.errore{
+    margin-top:1.1rem; padding:.62rem .8rem; border-radius:.55rem;
+    font-family:var(--mono); font-size:.76rem; line-height:1.5; color:var(--rosso);
+    background:rgba(255,90,90,.07); border:1px solid rgba(255,110,110,.22);
+    animation:entra .25s ease-out both;
+  }
+  #esito.errore::before{content:"✕ "; font-weight:700}
+  #dichiarazione{margin-top:1rem; padding:.7rem .85rem; font-size:.82rem; border-radius:.55rem; color:var(--tenue); border:1px solid var(--riga)}
+  #dichiarazione:empty{display:none}
+
+  .piede{
+    margin:1.5rem -1.8rem 0; padding:1rem 1.8rem 0; border-top:1px solid var(--riga);
+    display:flex; justify-content:space-between; align-items:center; gap:1rem;
+    font-family:var(--mono); font-size:.7rem; color:var(--fioco);
+  }
+  .piede span{display:flex; align-items:center; gap:.45rem; white-space:nowrap}
+  .piede svg{width:.85rem; height:.85rem; color:var(--verde)}
+
+  @media (max-width:400px){
+    .scheda{padding:1.6rem 1.25rem 1.1rem}
+    .piede{margin:1.3rem -1.25rem 0; padding:.9rem 1.25rem 0}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<main class="scheda" aria-labelledby="titolo">
+  <h1 id="titolo" style="margin:0">
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+      <defs>
+        <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+        </linearGradient>
+        <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+        </linearGradient>
+      </defs>
+      <g fill="url(#rx-g)">
+        <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+        <path d="M26 138L214 356H26Z"/>
+        <path d="M150 180H232L442 356H296Z"/>
+      </g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </svg>
+  </h1>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+  <div class="console" aria-label="Stato del collegamento">
+    <p><span class="pr" aria-hidden="true"></span><b>alfa.lan</b><span class="sep">·</span>TLS 1.3<span class="sep">·</span>QUIC</p>
+    <p><span class="ok">✓</span>server raggiungibile<span class="sep">·</span>desktop pronto</p>
+    <p><span class="pr" aria-hidden="true"></span>in attesa delle credenziali<span class="cursore" aria-hidden="true"></span></p>
+  </div>
+
+  <div id="avviso"></div>
+
+  <form id="modulo" action="#" method="post">
+    <div>
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div>
+      <label for="parola">Parola d'ordine</label>
+      <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" id="vai"><span class="testo">Collegati</span> <kbd aria-hidden="true">↵</kbd></button>
+  </form>
+
+  <div id="esito" role="status" aria-live="polite"></div>
+  <div id="dichiarazione"></div>
+
+  <footer class="piede">
+    <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>connessione cifrata</span>
+    <span class="destra">alfa.lan</span>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.className="errore";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  function pulisci(){
+    if(!esito.textContent)return;
+    esito.textContent=""; esito.className="";
+    campi.forEach(function(c){c.removeAttribute("aria-invalid")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",pulisci)});
+  $("modulo").addEventListener("submit",function(ev){
+    ev.preventDefault(); pulisci();
+    vai.disabled=true; testo.textContent="Collegamento…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+  });
+  var stato=new URLSearchParams(location.search).get("stato");
+  if(stato==="errore")errore();
+  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+})();
+</script>
+</body>
+</html>

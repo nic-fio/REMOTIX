@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- L'indice delle 20 proposte «premium»: ognuna in miniatura, un clic la apre a schermo pieno. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Le 20 proposte</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px 16px 48px; background: #0d1117; color: #e6edf3;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Cantarell, Ubuntu, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; } p { margin: 0 0 20px; color: #9aa7b4; font-size: 14px; }
+  .griglia { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
+  a.voce { display: block; color: inherit; text-decoration: none; border-radius: 10px; overflow: hidden;
+    background: #161b22; border: 1px solid #30363d; }
+  a.voce:hover, a.voce:focus-visible { border-color: #2f81f7; outline: none; }
+  .finestra { position: relative; aspect-ratio: 16 / 9; overflow: hidden; }
+  .finestra iframe { position: absolute; top: 0; left: 0; width: 1600px; height: 900px; border: 0;
+    transform-origin: 0 0; pointer-events: none; }
+  .nome { padding: 10px 12px; font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+  .nome b { color: #2f81f7; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<h1>La pagina d'accesso — 20 proposte «premium»</h1>
+<p>Un clic apre la proposta a schermo pieno. Aggiungi <code>?stato=errore</code> all'indirizzo per vedere l'errore.</p>
+<div class="griglia" id="griglia"></div>
+<script>
+  const nomi = ["01-notte-profonda","02-aurora","03-diviso","04-grafite","05-vetro-chiaro",
+    "06-orizzonte","07-griglia-prospettica","08-r-gigante","09-bordo-luminoso","10-desktop-fantasma",
+    "11-terminale-elegante","12-editoriale-scuro","13-costellazione","14-blu-profondo","15-minimal-assoluto",
+    "16-schede-sovrapposte","17-fascio-di-luce","18-satinato","19-stato-del-server","20-mobile-prima"];
+  const g = document.getElementById("griglia");
+  for (const n of nomi) {
+    const a = document.createElement("a"); a.className = "voce"; a.href = n + ".html";
+    const [num, ...resto] = n.split("-");
+    a.innerHTML = `<div class="finestra"><iframe loading="lazy" tabindex="-1" src="${n}.html"></iframe></div>
+      <div class="nome"><b>${num}</b>${resto.join(" ")}</div>`;
+    g.append(a);
+  }
+  const scala = () => document.querySelectorAll(".finestra").forEach(f =>
+    f.firstElementChild.style.transform = `scale(${f.clientWidth / 1600})`);
+  addEventListener("resize", scala); scala();
+</script>
+</body>
+</html>

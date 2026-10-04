@@ -1,0 +1,216 @@
+<!doctype html>
+<!-- Stile: «Diviso» — a sinistra un pannello nei blu del marchio col logo grande, il motto e la R in filigrana; a destra il modulo su fondo quasi nero.
+     Idea: la pagina d'ingresso di un prodotto commerciale: metà vetrina del marchio, metà lavoro; sul telefono la vetrina diventa una fascia in alto. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#07090f; --testo:#ecf0f8; --tenue:#8e98ab; --etichetta:#c4ccda;
+    --bordo:rgba(255,255,255,.08); --campo:#0d111a; --campo-bordo:#262d3b;
+    --ciano:#00d8ff; --vivo:#2fd39a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
+  }
+
+  /* --- la vetrina --- */
+  .vetrina{
+    position:relative; overflow:hidden; isolation:isolate;
+    display:flex; flex-direction:column; justify-content:space-between; padding:3em 3.5em;
+    background:
+      radial-gradient(60% 50% at 100% 0%, rgba(0,216,255,.30), transparent 70%),
+      radial-gradient(80% 70% at 100% 100%, rgba(26,124,255,.40), transparent 70%),
+      linear-gradient(135deg, #062466 0%, #041640 50%, #020a22 100%);
+  }
+  /* la R del marchio, enorme e tagliata, in filigrana */
+  .filigrana{position:absolute; z-index:-1; right:-14%; bottom:-18%; width:78%; height:auto; opacity:.16;
+    animation:deriva 30s ease-in-out infinite alternate}
+  @keyframes deriva{from{transform:translate(0,0)} to{transform:translate(-2%,-2%)}}
+  /* una trama finissima di righe, come una retina di schermo */
+  .vetrina::after{content:""; position:absolute; inset:0; z-index:-1; opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 4px)}
+  .vetrina .alto{font-size:.78em; letter-spacing:.18em; text-transform:uppercase; color:rgba(220,236,255,.82); font-weight:600}
+  .vetrina .centro{max-width:32em}
+  h1{margin:0; font-size:1em; line-height:0; width:100%; max-width:30em}
+  h1 svg{width:100%; height:auto; color:#fff; filter:drop-shadow(0 .5em 1.5em rgba(0,10,40,.45))}
+  .motto{margin:1.3em 0 0; font-size:1.55em; line-height:1.25; font-weight:600; letter-spacing:-.015em; color:#fff; text-wrap:balance}
+  .motto span{color:rgba(220,236,255,.8); font-weight:400}
+  .vetrina .basso{display:flex; gap:1.6em; flex-wrap:wrap; font-size:.8em; color:rgba(220,236,255,.82)}
+  .vetrina .basso b{display:block; color:#fff; font-size:1.05em; font-weight:650; margin-bottom:.15em}
+
+  /* --- il modulo --- */
+  .lato{display:grid; place-items:center; padding:3em 2em}
+  .scheda{width:100%; max-width:21em; animation:entra .6s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes entra{from{opacity:0; transform:translateX(.8em)} to{opacity:1; transform:none}}
+  h2{margin:0 0 .3em; font-size:1.6em; font-weight:700; letter-spacing:-.02em}
+  .sotto{margin:0 0 2em; color:var(--tenue); font-size:.92em; line-height:1.45}
+  .sotto code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--etichetta); font-size:.95em}
+
+  form{display:grid; gap:1.15em}
+  label{display:block; font-size:.8em; font-weight:600; color:var(--etichetta); margin-bottom:.45em}
+  input{
+    width:100%; font:inherit; font-size:1em; color:var(--testo); caret-color:var(--ciano);
+    padding:.75em .9em; border-radius:.55em; border:1px solid var(--campo-bordo); background:var(--campo);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:#3a4456}
+  input:focus{outline:none; border-color:#2f8cff; box-shadow:0 0 0 3px rgba(26,124,255,.28)}
+  input[aria-invalid="true"]{border-color:#a8434b}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(255,100,110,.22)}
+
+  button{
+    margin-top:.6em; font:inherit; font-size:1em; font-weight:650; color:#fff; cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:.55em; padding:.82em; border:0; border-radius:.55em;
+    background:#0b5fe0; box-shadow:0 1px 0 rgba(255,255,255,.18) inset;
+    transition:background-color .15s, transform .1s;
+  }
+  button svg{width:1.1em; height:1.1em; transition:transform .2s}
+  button:hover{background:#0a52c6}
+  button:hover .freccia{transform:translateX(.2em)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--ciano); outline-offset:3px}
+  button:disabled{cursor:progress; background:#1d3561; color:#c9d6ee}
+  .ruota{display:none}
+  button:disabled .freccia{display:none}
+  button:disabled .ruota{display:block; animation:gira .8s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  #avviso, #dichiarazione{margin-top:1em; padding:.7em .85em; border-radius:.55em; font-size:.85em; line-height:1.45;
+    background:rgba(255,196,80,.07); border:1px solid rgba(255,196,80,.28); color:#ffd88a}
+  #avviso{margin:-.6em 0 1.4em}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+  #esito{margin-top:1.1em; font-size:.86em; line-height:1.45}
+  #esito.male{
+    display:flex; gap:.6em; align-items:flex-start; padding:.75em .9em; border-radius:.55em;
+    background:#1c0f13; border:1px solid #57262e; color:#ffb8bf; animation:compare .3s ease-out;
+  }
+  #esito.male::before{
+    content:""; flex:none; width:1.15em; height:1.15em; margin-top:.05em; background:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.3' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3Cpath d='M10 5.6v5.3' stroke='%23000' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.1' r='1.15'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.3' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3Cpath d='M10 5.6v5.3' stroke='%23000' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.1' r='1.15'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  @keyframes compare{from{opacity:0; transform:translateY(-.3em)} to{opacity:1; transform:none}}
+
+  .piede{margin:2.2em 0 0; font-size:.76em; color:var(--tenue); display:flex; align-items:center; gap:.5em}
+  .piede svg{width:1em; height:1em}
+  .piede .punto{width:.45em; height:.45em; border-radius:50%; background:var(--vivo); box-shadow:0 0 0 .2em rgba(47,211,154,.16); margin-left:auto}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--etichetta)}
+
+  /* tablet in piedi e telefono: la vetrina diventa una fascia in alto */
+  @media (max-width:860px){
+    body{grid-template-columns:1fr; grid-template-rows:auto 1fr}
+    .vetrina{padding:2.2em 1.4em 2em; min-height:0}
+    .vetrina .alto, .vetrina .basso{display:none}
+    .vetrina .centro{max-width:none}
+    h1{max-width:15em}
+    .motto{font-size:1.05em; margin-top:.9em}
+    .filigrana{width:62%; right:-12%; bottom:-38%}
+    .lato{place-items:start center; padding:2em 1.4em 2.5em}
+    h2{font-size:1.35em}
+    .sotto{margin-bottom:1.6em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<aside class="vetrina">
+  <svg class="filigrana" viewBox="0 0 442 356" aria-hidden="true">
+    <defs>
+      <linearGradient id="rx-g-fil" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#rx-g-fil)">
+      <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+      <path d="M26 138L214 356H26Z"/>
+      <path d="M150 180H232L442 356H296Z"/>
+    </g>
+  </svg>
+  <div class="alto">Desktop remoto · multiutente</div>
+  <div class="centro">
+    <h1>
+      <svg viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+        <defs>
+          <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+          </linearGradient>
+          <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#rx-g)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+        <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+      </svg>
+    </h1>
+    <p class="motto">Il tuo desktop Linux, <span>da qualunque browser.</span></p>
+  </div>
+  <div class="basso">
+    <div><b>Niente da installare</b>Basta un browser moderno</div>
+    <div><b>Un desktop a testa</b>Ognuno la sua sessione</div>
+  </div>
+</aside>
+
+<div class="lato">
+  <main class="scheda">
+    <h2>Accedi</h2>
+    <p class="sotto">Entra nel tuo desktop con l'utente del server.</p>
+    <div id="avviso"></div>
+
+    <form id="modulo" action="#" method="post">
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="vai"><span>Collegati</span>
+        <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </form>
+
+    <div id="esito" role="status" aria-live="polite"></div>
+    <div id="dichiarazione"></div>
+
+    <p class="piede">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      Connessione cifrata <i class="punto" aria-hidden="true"></i><code>alfa.lan</code>
+    </p>
+  </main>
+</div>
+<script>
+(function(){
+  var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
+      campi=[document.getElementById("utente"), document.getElementById("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",function(){
+    campi.forEach(function(d){d.removeAttribute("aria-invalid")}); esito.textContent=""; esito.className="";
+  })});
+  if(new URLSearchParams(location.search).get("stato")==="errore") errore();
+  document.getElementById("modulo").addEventListener("submit",function(e){
+    e.preventDefault(); esito.textContent=""; esito.className=""; vai.disabled=true;
+    setTimeout(function(){ vai.disabled=false; errore(); campi[1].select(); }, 700);
+  });
+})();
+</script>
+</body>
+</html>

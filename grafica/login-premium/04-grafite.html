@@ -1,0 +1,191 @@
+<!doctype html>
+<!-- Stile: «Grafite» — monocromo grafite su una griglia tipografica a dodici colonne, filetti sottili e cifre monospaziate; l'unico colore è il gradiente della R, del fuoco e del bottone.
+     Idea: precisione svizzera: l'ordine della pagina è il lusso, e il blu del marchio pesa di più perché è l'unico. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#111214; --carta:#151619; --testo:#ededee; --tenue:#8f9196; --fioco:#6c6f75;
+    --filo:#2a2c31; --filo-forte:#3b3e44;
+    --marchio:linear-gradient(90deg, #00d8ff, #1a7cff 55%, #0646c8);
+    --mono:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:2.5em 1.5em;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
+  }
+  .foglio{
+    position:relative; width:100%; max-width:54em;
+    display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); column-gap:1.5em;
+    border-top:1px solid var(--filo-forte); border-bottom:1px solid var(--filo-forte);
+    animation:entra .5s ease-out both;
+  }
+  @keyframes entra{from{opacity:0} to{opacity:1}}
+  /* la griglia, visibile appena: dodici colonne di filetti */
+  .foglio::before{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:-1;
+    background:repeating-linear-gradient(90deg, transparent 0 calc((100% + 1.5em)/12 - 1px), rgba(255,255,255,.028) calc((100% + 1.5em)/12 - 1px) calc((100% + 1.5em)/12));
+  }
+
+  .testa, .coda{grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:1em; padding:1.1em 0}
+  .testa{border-bottom:1px solid var(--filo)}
+  .coda{border-top:1px solid var(--filo); font-family:var(--mono); font-size:.7em; color:var(--tenue); letter-spacing:.04em}
+  .coda span{display:flex; align-items:center; gap:.6em}
+  .coda svg{width:1.1em; height:1.1em}
+  h1{margin:0; font-size:1em; line-height:0; width:9.5em}
+  h1 svg{width:100%; height:auto; color:#fff}
+  .server{font-family:var(--mono); font-size:.72em; color:var(--tenue); letter-spacing:.04em; display:flex; align-items:center; gap:.7em}
+  .server b{color:var(--testo); font-weight:500}
+  .server i{width:.42em; height:.42em; border-radius:50%; background:#d9dadc}
+
+  .voce{grid-column:1 / span 6; padding:3.2em 0 3em}
+  .indice{font-family:var(--mono); font-size:.7em; color:var(--fioco); letter-spacing:.08em; margin:0 0 1.6em}
+  h2{margin:0; font-size:3.3em; line-height:.98; font-weight:300; letter-spacing:-.045em}
+  h2 em{font-style:normal; font-weight:650}
+  .motto{margin:1.4em 0 0; max-width:15em; color:var(--tenue); font-size:.95em; line-height:1.5}
+
+  .scheda{grid-column:8 / -1; padding:3.2em 0 3em}
+  form{display:grid; gap:1.7em}
+  .campo{position:relative}
+  label{display:flex; align-items:baseline; gap:.8em; font-size:.75em; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:#c9cbcf; margin-bottom:.35em}
+  label .n{font-family:var(--mono); font-weight:400; color:var(--fioco); letter-spacing:0}
+  input{
+    width:100%; font:inherit; font-size:1.1em; color:var(--testo); caret-color:#00d8ff;
+    padding:.55em 0 .5em; border:0; border-radius:0; background:transparent;
+    border-bottom:1px solid var(--filo-forte); transition:border-color .15s;
+  }
+  /* il filetto del fuoco nei colori del marchio: cresce con transform, non con la geometria */
+  .campo::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--marchio);
+    transform:scaleX(0); transform-origin:0 50%; transition:transform .3s ease}
+  .campo:focus-within::after{transform:scaleX(1)}
+  input:hover{border-bottom-color:#5b5f66}
+  input:focus{outline:none}
+  input[aria-invalid="true"]{border-bottom-color:#c4545c}
+  input:focus-visible{outline:none}
+
+  button{
+    margin-top:.6em; font:inherit; font-size:.95em; font-weight:600; color:#fff; cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center; gap:.6em; padding:.95em 1.1em; border:0; border-radius:2px;
+    background:#0b5fe0; background-image:linear-gradient(90deg, #0b5fe0, #0646c8);
+    letter-spacing:.02em; transition:filter .15s, transform .1s;
+  }
+  button svg{width:1.15em; height:1.15em; transition:transform .2s}
+  button:hover{filter:brightness(1.12)}
+  button:hover .freccia{transform:translateX(.25em)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid #00d8ff; outline-offset:3px}
+  button:disabled{cursor:progress; filter:grayscale(.7) brightness(.8)}
+  .ruota{display:none}
+  button:disabled .freccia{display:none}
+  button:disabled .ruota{display:block; animation:gira .8s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  #avviso, #dichiarazione{margin-top:1.2em; padding:.2em 0 .2em 1em; border-left:2px solid #d9dadc; font-size:.85em; line-height:1.5; color:#d9dadc}
+  #avviso{margin:0 0 1.8em}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+  #esito{margin-top:1.4em; font-size:.85em; line-height:1.5}
+  #esito.male{
+    display:grid; grid-template-columns:auto 1fr; column-gap:1em; align-items:baseline;
+    padding:.15em 0 .15em 1em; border-left:2px solid #ff6b74; color:#ff9aa1; animation:compare .25s ease-out;
+  }
+  #esito.male::before{content:"ERR"; content:"ERR" / ""; font-family:var(--mono); font-size:.82em; letter-spacing:.08em; color:#ff6b74}
+  @keyframes compare{from{opacity:0; transform:translateX(-.3em)} to{opacity:1; transform:none}}
+
+  @media (max-width:760px){
+    body{padding:1.2em 1.1em; place-items:start center}
+    .foglio{column-gap:1em}
+    .voce, .scheda{grid-column:1 / -1}
+    .voce{padding:2.2em 0 0}
+    .scheda{padding:2em 0 2.2em}
+    h2{font-size:2.5em}
+    .indice{margin-bottom:1.1em}
+    .motto{margin-top:1em}
+    .coda{flex-direction:column; align-items:flex-start; gap:.5em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <header class="testa">
+    <h1>
+      <svg viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+        <defs>
+          <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+          </linearGradient>
+          <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#rx-g)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+        <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+      </svg>
+    </h1>
+    <div class="server"><i aria-hidden="true"></i><span>server</span><b>alfa.lan</b></div>
+  </header>
+
+  <section class="voce">
+    <p class="indice" aria-hidden="true">01 — ACCESSO</p>
+    <h2>Il tuo<br><em>desktop Linux.</em></h2>
+    <p class="motto">Da qualunque browser, su questo server.</p>
+  </section>
+
+  <main class="scheda">
+    <div id="avviso"></div>
+    <form id="modulo" action="#" method="post">
+      <div class="campo">
+        <label for="utente"><span class="n" aria-hidden="true">01</span>Utente</label>
+        <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </div>
+      <div class="campo">
+        <label for="parola"><span class="n" aria-hidden="true">02</span>Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="vai"><span>Collegati</span>
+        <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M11.5 5.5L16 10l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
+        <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="1.8"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+    </form>
+    <div id="esito" role="status" aria-live="polite"></div>
+    <div id="dichiarazione"></div>
+  </main>
+
+  <footer class="coda">
+    <span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>CONNESSIONE CIFRATA</span>
+    <span>NIENTE DA INSTALLARE</span>
+  </footer>
+</div>
+<script>
+(function(){
+  var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
+      campi=[document.getElementById("utente"), document.getElementById("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",function(){
+    campi.forEach(function(d){d.removeAttribute("aria-invalid")}); esito.textContent=""; esito.className="";
+  })});
+  if(new URLSearchParams(location.search).get("stato")==="errore") errore();
+  document.getElementById("modulo").addEventListener("submit",function(e){
+    e.preventDefault(); esito.textContent=""; esito.className=""; vai.disabled=true;
+    setTimeout(function(){ vai.disabled=false; errore(); campi[1].select(); }, 700);
+  });
+})();
+</script>
+</body>
+</html>

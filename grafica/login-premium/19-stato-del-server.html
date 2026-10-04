@@ -1,0 +1,257 @@
+<!doctype html>
+<!-- Stile: «Stato del server» — una scheda chiara in due metà: a sinistra il modulo, a destra un riquadro tenue con i dati del server in «chip».
+     Idea: prima di entrare si vede DOVE si entra e che il server è vivo (host, cifratura, protocollo, sessioni, desktop), col tono di un prodotto e non di un cruscotto. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#f4f6fa; --carta:#ffffff; --inchiostro:#0b1430; --tenue:#5b6478; --etichetta:#2b3550;
+    --bordo:#e3e8f0; --campo-bordo:#cfd6e3; --campo-bordo-su:#9aa6bb;
+    --accento:#1466e0; --accento-scuro:#0a4fc0;
+    --pannello-a:#eef4ff; --pannello-b:#f6f9ff; --chip:#ffffff; --chip-bordo:#dbe4f3;
+    --errore-testo:#b42318; --errore-fondo:#fef3f2; --errore-bordo:#fecdca;
+    --vivo:#0f9f6e; --vivo-chiaro:#12b981;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:2.5rem 1.25rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--inchiostro); background:var(--fondo);
+    background-image:
+      radial-gradient(50rem 30rem at 85% -10%, rgba(26,124,255,.10), transparent 60%),
+      radial-gradient(40rem 26rem at -5% 110%, rgba(0,216,255,.09), transparent 60%);
+  }
+
+  .impianto{width:100%; max-width:56rem}
+  .scheda{
+    display:grid; grid-template-columns:1fr 1fr; background:var(--carta); border-radius:1.15rem; overflow:hidden;
+    border:1px solid var(--bordo);
+    box-shadow:0 1px 2px rgba(11,20,48,.04), 0 1.6rem 3.5rem -1.6rem rgba(11,30,80,.28);
+    animation:entra .6s ease-out both;
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(12px)}}
+
+  /* metà sinistra: il modulo */
+  .accesso{padding:2.6rem 2.6rem 2rem; display:flex; flex-direction:column}
+  .logo{width:10.5rem; height:auto; color:#0b1430; display:block; margin:0 0 2.2rem}
+  .accesso h1{margin:0 0 .35rem; font-size:1.4rem; font-weight:700; letter-spacing:-.015em}
+  .motto{margin:0 0 1.7rem; color:var(--tenue); font-size:.92rem; line-height:1.45; text-wrap:balance}
+
+  form{display:grid; gap:1.05rem}
+  label{display:block; font-size:.82rem; font-weight:600; color:var(--etichetta); margin-bottom:.4rem}
+  input{
+    width:100%; font:inherit; font-size:1rem; color:var(--inchiostro);
+    padding:.72rem .85rem; border:1px solid var(--campo-bordo); border-radius:.55rem; background:#fff;
+    box-shadow:0 1px 2px rgba(11,20,48,.05);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:hover{border-color:var(--campo-bordo-su)}
+  input:focus{outline:none; border-color:var(--accento); box-shadow:0 0 0 3px rgba(20,102,224,.18)}
+  input[aria-invalid="true"]{border-color:#f04438; background:#fffbfa}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(240,68,56,.16)}
+  input:disabled{background:#f2f4f8; color:#8a93a6; cursor:not-allowed}
+
+  button{
+    margin-top:.4rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.8rem; border:0; border-radius:.55rem; cursor:pointer; background:var(--inchiostro);
+    box-shadow:0 1px 2px rgba(11,20,48,.3), 0 .6rem 1.2rem -.7rem rgba(11,20,48,.7);
+    display:flex; justify-content:center; align-items:center; gap:.55rem;
+    transition:background .15s, transform .1s;
+  }
+  button svg{width:1.1rem; height:1.1rem; transition:transform .2s}
+  button:hover{background:#1b2a55}
+  button:hover svg{transform:translateX(3px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--accento); outline-offset:3px}
+  button:disabled{cursor:wait; background:#6b7489; box-shadow:none}
+  .giro{display:none; width:1rem; height:1rem; border-radius:50%; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; animation:gira .8s linear infinite}
+  button.attesa .giro{display:block} button.attesa svg{display:none}
+  @keyframes gira{to{transform:rotate(1turn)}}
+
+  #avviso, #dichiarazione{font-size:.85rem; line-height:1.45; border-radius:.55rem; padding:.7rem .85rem}
+  #avviso{margin:0 0 1.2rem; color:#93370d; background:#fffaeb; border:1px solid #fedf89}
+  #dichiarazione{margin-top:1rem; color:var(--tenue); background:#f6f8fb; border:1px solid var(--bordo)}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+
+  #esito.errore{
+    margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start; padding:.72rem .85rem; border-radius:.55rem;
+    font-size:.88rem; line-height:1.4; font-weight:500; color:var(--errore-testo); background:var(--errore-fondo); border:1px solid var(--errore-bordo);
+    animation:scuote .4s ease-out;
+  }
+  #esito svg{flex:none; width:1.1rem; height:1.1rem; margin-top:.05rem}
+  @keyframes scuote{25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+
+  .piede{margin:auto 0 0; padding-top:1.6rem; display:flex; align-items:center; gap:.5rem; font-size:.78rem; color:var(--tenue)}
+  .piede svg{flex:none; width:.9rem; height:.9rem; color:var(--vivo)}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--inchiostro); font-size:.95em}
+  .piede .sep{opacity:.5}
+
+  /* metà destra: lo stato del server */
+  .stato{
+    position:relative; padding:2.6rem 2.4rem 2rem; border-left:1px solid var(--bordo); overflow:hidden;
+    background:linear-gradient(160deg, var(--pannello-a), var(--pannello-b) 60%);
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .stato .segno{position:absolute; right:-2.2rem; bottom:-2.4rem; width:13rem; height:auto; opacity:.07; pointer-events:none}
+  .occhiello{margin:0 0 .5rem; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#4a5878}
+  .stato h2{margin:0; font-size:1.4rem; font-weight:700; letter-spacing:-.015em}
+  .vivo{display:inline-flex; align-items:center; gap:.45rem; margin:.7rem 0 1.8rem; padding:.28rem .7rem .28rem .55rem;
+    border-radius:99rem; background:#e7f8f0; border:1px solid #bfead6; color:#0a6e4c; font-size:.78rem; font-weight:600; align-self:flex-start}
+  .punto{position:relative; width:.5rem; height:.5rem; border-radius:50%; background:var(--vivo-chiaro)}
+  .punto::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--vivo-chiaro); animation:pulsa 2.6s ease-out infinite}
+  @keyframes pulsa{from{transform:scale(1); opacity:.55} to{transform:scale(3); opacity:0}}
+
+  .chip-elenco{position:relative; list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:.65rem}
+  .chip{
+    display:flex; align-items:center; gap:.7rem; padding:.75rem .85rem; border-radius:.75rem;
+    background:var(--chip); border:1px solid var(--chip-bordo);
+    box-shadow:0 1px 2px rgba(11,20,48,.04);
+  }
+  .chip.largo{grid-column:1 / -1}
+  .chip .icona{flex:none; width:2rem; height:2rem; border-radius:.55rem; display:grid; place-items:center;
+    background:linear-gradient(135deg, rgba(0,216,255,.16), rgba(26,124,255,.16)); color:#0d5bd0}
+  .chip .icona svg{width:1.05rem; height:1.05rem}
+  .chip dl{margin:0; min-width:0}
+  .chip dt{font-size:.7rem; color:var(--tenue); letter-spacing:.02em}
+  .chip dd{margin:.1rem 0 0; font-size:.92rem; font-weight:650; color:var(--inchiostro); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .chip dd code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; font-weight:600}
+  .stato .nota{position:relative; margin:1.4rem 0 0; font-size:.75rem; color:var(--tenue)}
+
+  @media (max-width:820px){
+    .impianto{max-width:27rem}
+    .scheda{grid-template-columns:1fr}
+    .stato{border-left:0; border-top:1px solid var(--bordo); padding:1.6rem 1.6rem 1.4rem}
+    .stato h2{font-size:1.2rem}
+    .vivo{margin:.55rem 0 1.2rem}
+    .accesso{padding:2rem 1.6rem 1.6rem}
+    .logo{margin-bottom:1.6rem}
+  }
+  @media (max-width:420px){
+    body{padding:1.25rem .9rem}
+    .accesso{padding:1.8rem 1.25rem 1.4rem}
+    .stato{padding:1.4rem 1.25rem 1.25rem}
+    .chip{padding:.6rem .65rem; gap:.55rem}
+    .chip .icona{width:1.75rem; height:1.75rem}
+  }
+  .motto, .sotto, #esito span{text-wrap:balance}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="impianto">
+  <main class="scheda">
+    <section class="accesso" aria-labelledby="titolo">
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+        <defs>
+          <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+          </linearGradient>
+          <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#rx-g)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+        <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+      </svg>
+      <h1 id="titolo">Accedi</h1>
+      <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+      <div id="avviso"></div>
+
+      <form id="modulo" action="#" method="post" novalidate>
+        <div>
+          <label for="utente">Utente</label>
+          <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </div>
+        <div>
+          <label for="parola">Parola d'ordine</label>
+          <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" id="vai">Collegati
+          <span class="giro" aria-hidden="true"></span>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+
+      <div id="esito" role="status" aria-live="polite"></div>
+      <div id="dichiarazione"></div>
+
+      <p class="piede">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+        Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+      </p>
+    </section>
+
+    <aside class="stato" aria-labelledby="titolo-stato">
+      <!-- il solo segno della R, come filigrana: gradiente con id proprio -->
+      <svg class="segno" viewBox="0 0 442 356" aria-hidden="true">
+        <defs><linearGradient id="rx-g-segno" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient></defs>
+        <g fill="url(#rx-g-segno)">
+          <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+          <path d="M26 138L214 356H26Z"/>
+          <path d="M150 180H232L442 356H296Z"/>
+        </g>
+      </svg>
+      <p class="occhiello">Stato del server</p>
+      <h2 id="titolo-stato">Pronto per collegarti</h2>
+      <span class="vivo"><span class="punto" aria-hidden="true"></span>In linea</span>
+
+      <ul class="chip-elenco">
+        <li class="chip largo">
+          <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="11.5" width="14" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="6" r=".9" fill="currentColor"/><circle cx="6" cy="14" r=".9" fill="currentColor"/></svg></span>
+          <dl><dt>Nome host</dt><dd><code>alfa.lan</code></dd></dl>
+        </li>
+        <li class="chip">
+          <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
+          <dl><dt>Cifratura</dt><dd>TLS 1.3</dd></dl>
+        </li>
+        <li class="chip">
+          <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 2.5L5 11h4.5l-1 6.5L15 9h-4.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+          <dl><dt>Protocollo</dt><dd>QUIC</dd></dl>
+        </li>
+        <li class="chip">
+          <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7.5" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 16.5a4.8 4.8 0 0 1 9.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="13.8" cy="7.6" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13.6 11.6a4 4 0 0 1 3.9 4.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+          <dl><dt>Sessioni attive</dt><dd>3</dd></dl>
+        </li>
+        <li class="chip">
+          <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="10.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 17h6M10 14v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <dl><dt>Desktop</dt><dd>GNOME</dd></dl>
+        </li>
+      </ul>
+      <p class="nota">Dati letti dal server all'apertura della pagina.</p>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
+  function errore(){
+    esito.className='errore';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
+  }
+  function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
+  modulo.addEventListener('submit',function(ev){
+    ev.preventDefault(); pulisci(); vai.disabled=true; vai.classList.add('attesa');
+    setTimeout(function(){vai.disabled=false; vai.classList.remove('attesa'); errore(); parola.value=''; parola.focus();},700);
+  });
+  [utente,parola].forEach(function(c){c.addEventListener('input',function(){c.removeAttribute('aria-invalid');});});
+  var stato=new URLSearchParams(location.search).get('stato');
+  if(stato==='errore') errore();
+  if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
+  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+})();
+</script>
+</body>
+</html>

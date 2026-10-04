@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- Stile: «Minimal assoluto» — nero puro; il logo, due campi segnati da una sola linea, il bottone bianco. Nient'altro, se non un piede sussurrato.
+     Idea: lusso per sottrazione: quando non c'è nulla da guardare, ogni millimetro rimasto deve essere giusto. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{--nero:#000; --bianco:#fff; --grigio:#9b9b9b; --fioco:#7f7f7f; --linea:#333; --rosso:#ff6f6f}
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:3rem 1.5rem 4.5rem;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--bianco); background:var(--nero);
+    -webkit-font-smoothing:antialiased;
+  }
+  main{width:100%; max-width:19rem; animation:appare 1.2s ease-out both}
+  @keyframes appare{from{opacity:0} to{opacity:1}}
+
+  h1{margin:0}
+  .logo{display:block; width:100%; max-width:13.5rem; height:auto; margin:0 auto; color:#fff}
+  .motto{margin:1.1rem 0 3.6rem; text-align:center; font-size:.78rem; letter-spacing:.04em; color:var(--grigio)}
+
+  #avviso{margin:-1.6rem 0 2.4rem; font-size:.82rem; line-height:1.5; text-align:center; color:#f2c46d}
+  #avviso:empty{display:none}
+
+  form{display:grid; gap:2rem}
+  .campo{position:relative}
+  label{display:block; font-size:.68rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--grigio); transition:color .2s}
+  input{
+    display:block; width:100%; font:inherit; font-size:1.05rem; color:var(--bianco);
+    padding:.55rem 0 .6rem; border:0; border-bottom:1px solid var(--linea); border-radius:0; background:transparent;
+    transition:border-color .2s, box-shadow .2s;
+    caret-color:#fff;
+  }
+  input:hover{border-bottom-color:#5a5a5a}
+  input:focus{outline:none; border-bottom-color:#fff; box-shadow:0 1px 0 #fff}
+  .campo:focus-within label{color:#fff}
+  input[aria-invalid="true"]{border-bottom-color:var(--rosso); box-shadow:0 1px 0 var(--rosso)}
+  input[aria-invalid="true"]:focus{box-shadow:0 1px 0 var(--rosso)}
+  .campo:has(input[aria-invalid="true"]) label{color:var(--rosso)}
+  /* niente fondo giallo del riempimento automatico */
+  input:-webkit-autofill{-webkit-text-fill-color:#fff; -webkit-box-shadow:0 0 0 100px #000 inset}
+
+  button{
+    margin-top:1.1rem; font:inherit; font-size:.95rem; font-weight:600; letter-spacing:.02em; color:#000;
+    padding:.9rem 1rem; border:1px solid #fff; border-radius:.2rem; background:#fff; cursor:pointer;
+    transition:background-color .2s, color .2s, opacity .2s;
+  }
+  button:hover{background:#000; color:#fff}
+  button:active{opacity:.85}
+  button:focus-visible{outline:1px solid #fff; outline-offset:4px}
+  button:disabled{cursor:progress; background:transparent; color:var(--grigio); border-color:var(--linea)}
+
+  #esito:empty{display:none}
+  #esito.errore{margin-top:1.5rem; text-align:center; font-size:.84rem; color:var(--rosso); animation:appare .4s ease-out both}
+  #dichiarazione{margin-top:1.4rem; text-align:center; font-size:.8rem; color:var(--grigio)}
+  #dichiarazione:empty{display:none}
+
+  .piede{
+    position:fixed; left:0; right:0; bottom:1.5rem; margin:0; text-align:center;
+    font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--fioco);
+  }
+  @media (max-height:640px){ .piede{position:static; margin-top:3rem} body{padding-bottom:1.5rem} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<main aria-labelledby="titolo">
+  <h1 id="titolo">
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+      <defs>
+        <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+        </linearGradient>
+        <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+        </linearGradient>
+      </defs>
+      <g fill="url(#rx-g)">
+        <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+        <path d="M26 138L214 356H26Z"/>
+        <path d="M150 180H232L442 356H296Z"/>
+      </g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </svg>
+  </h1>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+
+  <div id="avviso"></div>
+
+  <form id="modulo" action="#" method="post">
+    <div class="campo">
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div class="campo">
+      <label for="parola">Parola d'ordine</label>
+      <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" id="vai"><span class="testo">Collegati</span></button>
+  </form>
+
+  <div id="esito" role="status" aria-live="polite"></div>
+  <div id="dichiarazione"></div>
+</main>
+
+<p class="piede">Connessione cifrata · alfa.lan</p>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.className="errore";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  function pulisci(){
+    if(!esito.textContent)return;
+    esito.textContent=""; esito.className="";
+    campi.forEach(function(c){c.removeAttribute("aria-invalid")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",pulisci)});
+  $("modulo").addEventListener("submit",function(ev){
+    ev.preventDefault(); pulisci();
+    vai.disabled=true; testo.textContent="Collegamento…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+  });
+  var stato=new URLSearchParams(location.search).get("stato");
+  if(stato==="errore")errore();
+  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+})();
+</script>
+</body>
+</html>

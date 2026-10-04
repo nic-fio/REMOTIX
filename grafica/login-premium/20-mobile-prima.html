@@ -1,0 +1,222 @@
+<!doctype html>
+<!-- Stile: «Mobile prima» — sul telefono il modulo è un foglio bianco che sale dal basso, coi campi grandi da dito, e il logo sta in alto sul blu notte; sul computer il foglio diventa una scheda centrata.
+     Idea: disegnata a partire dal pollice — tutto quel che si tocca sta nella metà bassa dello schermo, e sul computer resta la stessa pagina, solo raccolta. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1430">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --notte:#0b1430; --notte-b:#0b2463; --testo-fondo:#eaf0ff; --tenue-fondo:#a9b8db;
+    --carta:#ffffff; --inchiostro:#0b1430; --tenue:#5b6478; --etichetta:#2b3550;
+    --campo:#f5f7fb; --campo-bordo:#d5dce8; --campo-bordo-su:#9aa6bb;
+    --accento:#1466e0; --accento-scuro:#0a4fc0;
+    --errore-testo:#b42318; --errore-fondo:#fef3f2; --errore-bordo:#fecdca;
+    --vivo:#0f9f6e;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px); -webkit-text-size-adjust:100%}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo-fondo); overflow-x:hidden;
+    background:
+      radial-gradient(120% 60% at 50% 0%, rgba(0,216,255,.22), transparent 60%),
+      radial-gradient(90% 50% at 100% 40%, rgba(26,124,255,.25), transparent 70%),
+      linear-gradient(180deg, var(--notte), var(--notte-b));
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* TELEFONO (la base): il logo in alto, il foglio che sale dal basso */
+  .cima{
+    flex:1 0 auto; min-height:15rem; display:flex; flex-direction:column; justify-content:center; align-items:center;
+    padding:calc(2rem + env(safe-area-inset-top)) 1.5rem 2.2rem; text-align:center;
+  }
+  .logo{width:min(15rem, 72vw); height:auto; color:#fff; display:block}
+  .motto{margin:1rem 0 0; color:var(--tenue-fondo); font-size:1rem; line-height:1.45; max-width:18rem; text-wrap:balance}
+
+  .foglio{
+    position:relative; background:var(--carta); color:var(--inchiostro);
+    border-radius:1.6rem 1.6rem 0 0;
+    padding:1rem 1.35rem calc(1.4rem + env(safe-area-inset-bottom));
+    box-shadow:0 -1rem 2.5rem -1rem rgba(0,0,0,.45);
+    animation:sale .55s cubic-bezier(.2,.85,.25,1) both;
+  }
+  @keyframes sale{from{transform:translateY(100%)}}
+  .maniglia{display:block; width:2.6rem; height:.3rem; border-radius:99rem; background:#d5dbe6; margin:0 auto 1.3rem}
+  .foglio h1{margin:0 0 .3rem; font-size:1.45rem; font-weight:700; letter-spacing:-.015em}
+  .foglio .sotto{margin:0 0 1.4rem; color:var(--tenue); font-size:.95rem}
+
+  form{display:grid; gap:1.1rem}
+  label{display:block; font-size:.88rem; font-weight:600; color:var(--etichetta); margin-bottom:.45rem}
+  .campo{position:relative}
+  input{
+    width:100%; height:3.4rem; font:inherit; font-size:1.0625rem; color:var(--inchiostro);
+    padding:0 1rem; border:1.5px solid var(--campo-bordo); border-radius:.95rem; background:var(--campo);
+    transition:border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  #parola{padding-right:5.2rem}
+  input:hover{border-color:var(--campo-bordo-su)}
+  input:focus{outline:none; background:#fff; border-color:var(--accento); box-shadow:0 0 0 4px rgba(20,102,224,.16)}
+  input[aria-invalid="true"]{border-color:#f04438; background:#fffbfa}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 4px rgba(240,68,56,.14)}
+  input:disabled{background:#eef1f6; color:#8a93a6; cursor:not-allowed}
+
+  .mostra{
+    position:absolute; right:.45rem; top:50%; transform:translateY(-50%);
+    min-width:4.2rem; height:2.5rem; padding:0 .8rem; border:0; border-radius:.7rem;
+    font:inherit; font-size:.85rem; font-weight:600; color:#0d56c4; background:transparent; cursor:pointer;
+  }
+  .mostra:hover{background:#eaf1fd}
+  .mostra:focus-visible{outline:2px solid var(--accento); outline-offset:1px}
+
+  #vai{
+    margin-top:.5rem; width:100%; height:3.5rem; font:inherit; font-size:1.0625rem; font-weight:650; color:#fff;
+    border:0; border-radius:.95rem; cursor:pointer;
+    background:linear-gradient(180deg, var(--accento), var(--accento-scuro));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 .7rem 1.4rem -.7rem rgba(20,102,224,.85);
+    display:flex; justify-content:center; align-items:center; gap:.6rem;
+    transition:filter .15s, transform .1s;
+  }
+  #vai svg{width:1.2rem; height:1.2rem; transition:transform .2s}
+  #vai:hover{filter:brightness(1.1)}
+  #vai:hover svg{transform:translateX(3px)}
+  #vai:active{transform:scale(.985)}
+  #vai:focus-visible{outline:3px solid #9cc4ff; outline-offset:3px}
+  #vai:disabled{cursor:wait; background:#7d9fd6; box-shadow:none; filter:none; transform:none}
+  .giro{display:none; width:1.1rem; height:1.1rem; border-radius:50%; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; animation:gira .8s linear infinite}
+  #vai.attesa .giro{display:block} #vai.attesa svg{display:none}
+  @keyframes gira{to{transform:rotate(1turn)}}
+
+  #avviso, #dichiarazione{font-size:.9rem; line-height:1.45; border-radius:.95rem; padding:.85rem 1rem}
+  #avviso{margin:0 0 1.2rem; color:#93370d; background:#fffaeb; border:1px solid #fedf89}
+  #dichiarazione{margin-top:1rem; color:var(--tenue); background:#f6f8fb; border:1px solid #e4e8f0}
+  #avviso:empty, #dichiarazione:empty, #esito:empty{display:none}
+
+  #esito.errore{
+    margin-top:1rem; display:flex; gap:.65rem; align-items:flex-start; padding:.85rem 1rem; border-radius:.95rem;
+    font-size:.92rem; line-height:1.4; font-weight:500; color:var(--errore-testo); background:var(--errore-fondo); border:1px solid var(--errore-bordo);
+    animation:scuote .4s ease-out;
+  }
+  #esito svg{flex:none; width:1.2rem; height:1.2rem; margin-top:.02rem}
+  @keyframes scuote{25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+
+  .piede{margin:1.4rem 0 0; display:flex; justify-content:center; align-items:center; gap:.5rem; font-size:.8rem; color:var(--tenue)}
+  .piede svg{flex:none; width:.95rem; height:.95rem; color:var(--vivo)}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--inchiostro); font-size:.95em}
+  .piede .sep{opacity:.5}
+
+  /* COMPUTER: lo stesso foglio, raccolto in una scheda al centro */
+  @media (min-width:720px) and (min-height:560px){
+    body{justify-content:center; align-items:center; padding:2.5rem 1.5rem}
+    .cima{flex:none; min-height:0; padding:0 0 2rem}
+    .logo{width:14rem}
+    .motto{margin-top:.8rem; font-size:.95rem; max-width:none}
+    .foglio{
+      width:100%; max-width:25rem; border-radius:1.25rem; padding:2.1rem 2rem 1.5rem;
+      box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 2rem 4rem -1.5rem rgba(0,0,0,.6);
+      animation:entra .6s ease-out both;
+    }
+    .maniglia{display:none}
+    .foglio h1{font-size:1.3rem}
+    .foglio .sotto{font-size:.9rem; margin-bottom:1.6rem}
+    label{font-size:.82rem; margin-bottom:.4rem}
+    input{height:2.85rem; font-size:1rem; border-width:1px; border-radius:.6rem; padding:0 .85rem}
+    #parola{padding-right:4.6rem}
+    input:focus{box-shadow:0 0 0 3px rgba(20,102,224,.18)}
+    .mostra{height:2.1rem; min-width:3.8rem; border-radius:.45rem; font-size:.8rem; right:.4rem}
+    #vai{height:3rem; font-size:1rem; border-radius:.6rem}
+    #esito.errore, #avviso, #dichiarazione{border-radius:.6rem; font-size:.86rem; padding:.72rem .85rem}
+    .piede{font-size:.78rem; margin-top:1.5rem; padding-top:1.1rem; border-top:1px solid #edf0f5}
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(12px)}}
+  .motto, .sotto, #esito span{text-wrap:balance}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<header class="cima">
+  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+    <defs>
+      <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+      </linearGradient>
+      <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#rx-g)">
+      <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+      <path d="M26 138L214 356H26Z"/>
+      <path d="M150 180H232L442 356H296Z"/>
+    </g>
+    <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+  </svg>
+  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+</header>
+
+<main class="foglio" aria-labelledby="titolo">
+  <span class="maniglia" aria-hidden="true"></span>
+  <h1 id="titolo">Accedi</h1>
+  <p class="sotto">Con l'utente e la parola d'ordine del server.</p>
+  <div id="avviso"></div>
+
+  <form id="modulo" action="#" method="post" novalidate>
+    <div>
+      <label for="utente">Utente</label>
+      <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" required>
+    </div>
+    <div>
+      <label for="parola">Parola d'ordine</label>
+      <div class="campo">
+        <input id="parola" name="parola" type="password" autocomplete="current-password" enterkeyhint="go" required>
+        <button type="button" class="mostra" aria-controls="parola" aria-pressed="false">Mostra</button>
+      </div>
+    </div>
+    <button type="submit" id="vai">Collegati
+      <span class="giro" aria-hidden="true"></span>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+
+  <div id="esito" role="status" aria-live="polite"></div>
+  <div id="dichiarazione"></div>
+
+  <p class="piede">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+    Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+  </p>
+</main>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
+  var mostra=document.querySelector('.mostra');
+  mostra.addEventListener('click',function(){
+    var vedi=parola.type==='password'; parola.type=vedi?'text':'password';
+    mostra.textContent=vedi?'Nascondi':'Mostra'; mostra.setAttribute('aria-pressed',vedi?'true':'false');
+  });
+  function errore(){
+    esito.className='errore';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
+  }
+  function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
+  modulo.addEventListener('submit',function(ev){
+    ev.preventDefault(); pulisci(); vai.disabled=true; vai.classList.add('attesa');
+    setTimeout(function(){vai.disabled=false; vai.classList.remove('attesa'); errore(); parola.value=''; parola.focus();},700);
+  });
+  [utente,parola].forEach(function(c){c.addEventListener('input',function(){c.removeAttribute('aria-invalid');});});
+  var stato=new URLSearchParams(location.search).get('stato');
+  if(stato==='errore') errore();
+  if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
+  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+})();
+</script>
+</body>
+</html>

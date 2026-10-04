@@ -1,0 +1,198 @@
+<!doctype html>
+<!-- Stile: «Editoriale scuro» — a sinistra il logo e un titolo enorme («Il tuo desktop. Ovunque.»), a destra il modulo senza cornice, separati da un filo.
+     Idea: come la copertina di una rivista: la tipografia fa da immagine, e lo spazio vuoto dice «qualità» più di ogni decorazione. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Accesso</title>
+<style>
+  :root{
+    --fondo:#0a0c11; --testo:#f3f4f7; --tenue:#a2a8b8; --fioco:#8a90a2; --filo:rgba(255,255,255,.1);
+    --blu:#1a7cff; --ciano:#00d8ff; --rosso:#ff8a8a; --verde:#45d69a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:clamp(16px, 0.42vw + 10px, 26px)}
+  body{
+    margin:0; min-height:100vh; display:flex; flex-direction:column;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
+    color:var(--testo); background:var(--fondo);
+    background-image:radial-gradient(48rem 36rem at 8% 110%, rgba(6,70,200,.20), transparent 70%);
+    -webkit-font-smoothing:antialiased;
+  }
+  .pagina{
+    flex:1; width:100%; max-width:76rem; margin:0 auto; padding:3.5rem 3rem 2rem;
+    display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); align-items:center; column-gap:0;
+  }
+
+  /* — la copertina — */
+  .copertina{padding-right:4.5rem; animation:sale .9s cubic-bezier(.2,.7,.2,1) both}
+  .logo{display:block; height:2.1rem; width:auto; color:#fff; margin-bottom:3.2rem}
+  .titolo{
+    margin:0; font-weight:760; letter-spacing:-.035em; line-height:.98;
+    font-size:clamp(2.6rem, 4.7vw, 4.6rem);
+  }
+  .titolo span{display:block; white-space:nowrap}
+  .titolo .ovunque{
+    color:var(--ciano);
+    background:linear-gradient(100deg, #00d8ff 0%, #1a7cff 70%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    padding-bottom:.08em;
+  }
+  .motto{margin:1.8rem 0 0; max-width:24rem; color:var(--tenue); font-size:1.05rem; line-height:1.55}
+  .motto strong{color:var(--testo); font-weight:600}
+
+  /* — il modulo — */
+  .accesso{
+    border-left:1px solid var(--filo); padding:1rem 0 1rem 4.5rem; max-width:27rem;
+    animation:sale .9s .12s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes sale{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  .accesso h2{margin:0 0 .4rem; font-size:1.45rem; font-weight:650; letter-spacing:-.015em}
+  .accesso .sotto{margin:0 0 2.2rem; text-wrap:balance; color:var(--tenue); font-size:.92rem}
+
+  #avviso{margin:0 0 1.6rem; padding:.8rem 0 .8rem 1rem; border-left:2px solid #f5b544; font-size:.88rem; line-height:1.5; color:#f6cf8a}
+  #avviso:empty{display:none}
+
+  form{display:grid; gap:1.4rem}
+  label{display:block; font-size:.74rem; font-weight:650; letter-spacing:.12em; text-transform:uppercase; color:var(--fioco); margin-bottom:.55rem}
+  input{
+    width:100%; font:inherit; font-size:1.02rem; color:var(--testo);
+    padding:.85rem 1rem; border:1px solid #2a2f3b; border-radius:.5rem; background:#10131a;
+    transition:border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  input:hover{border-color:#3d4352}
+  input:focus{outline:none; border-color:var(--blu); background:#121620; box-shadow:0 0 0 3px rgba(26,124,255,.25)}
+  input[aria-invalid="true"]{border-color:rgba(255,120,120,.65)}
+  input[aria-invalid="true"]:focus{box-shadow:0 0 0 3px rgba(255,120,120,.2)}
+
+  button{
+    margin-top:.6rem; font:inherit; font-size:1rem; font-weight:650; color:#fff;
+    padding:.92rem 1.2rem; border:0; border-radius:.5rem; cursor:pointer;
+    background:linear-gradient(180deg, #1668ea, #0a50d2);
+    box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 12px 30px -12px rgba(26,124,255,.7);
+    display:flex; justify-content:space-between; align-items:center;
+    transition:filter .15s, transform .1s, opacity .15s;
+  }
+  button svg{width:1.15rem; height:1.15rem; transition:transform .2s}
+  button:hover{filter:brightness(1.08)}
+  button:hover svg{transform:translateX(4px)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--ciano); outline-offset:3px}
+  button:disabled{opacity:.6; cursor:progress; filter:saturate(.6)}
+  button:disabled svg{transform:none}
+
+  #esito:empty{display:none}
+  #esito.errore{
+    margin-top:1.4rem; display:flex; gap:.7rem; align-items:baseline;
+    font-size:.92rem; line-height:1.45; color:var(--rosso);
+    animation:sale .3s ease-out both;
+  }
+  #esito.errore::before{content:""; flex:none; width:1.4rem; height:2px; background:currentColor; transform:translateY(-.3em)}
+  #dichiarazione{margin-top:1.2rem; font-size:.84rem; color:var(--tenue)}
+  #dichiarazione:empty{display:none}
+
+  /* — il piede, come un colophon — */
+  .piede{
+    width:100%; max-width:76rem; margin:0 auto; padding:1.4rem 3rem 1.8rem;
+    display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    font-size:.76rem; letter-spacing:.06em; color:var(--fioco);
+  }
+  .piede span{display:inline-flex; align-items:center; gap:.5rem}
+  .piede .vivo{width:.42rem; height:.42rem; border-radius:50%; background:var(--verde); box-shadow:0 0 0 3px rgba(69,214,154,.15)}
+  .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--tenue); letter-spacing:0}
+
+  @media (max-width:900px){
+    .pagina{grid-template-columns:1fr; padding:2.4rem 1.4rem 1rem; max-width:30rem; align-content:center}
+    .copertina{padding:0 0 2.4rem}
+    .logo{margin-bottom:2rem; height:1.8rem}
+    .titolo{font-size:clamp(2.2rem, 10.6vw, 3.6rem)}
+    .motto{margin-top:1.1rem; font-size:.98rem}
+    .accesso{border-left:0; border-top:1px solid var(--filo); padding:2.2rem 0 0; max-width:none}
+    .accesso .sotto{margin-bottom:1.6rem}
+    .piede{padding:1.2rem 1.4rem 1.6rem; max-width:30rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <header class="copertina">
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+      <defs>
+        <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+        </linearGradient>
+        <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+        </linearGradient>
+      </defs>
+      <g fill="url(#rx-g)">
+        <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+        <path d="M26 138L214 356H26Z"/>
+        <path d="M150 180H232L442 356H296Z"/>
+      </g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </svg>
+    <h1 class="titolo"><span>Il tuo desktop.</span><span class="ovunque">Ovunque.</span></h1>
+    <p class="motto">Il tuo desktop Linux, da qualunque browser: <strong>portatile, telefono o tablet</strong>. Niente da installare.</p>
+  </header>
+
+  <main class="accesso" aria-labelledby="entra">
+    <h2 id="entra">Accedi</h2>
+    <p class="sotto">Con l'utente e la parola d'ordine del server.</p>
+
+    <div id="avviso"></div>
+
+    <form id="modulo" action="#" method="post">
+      <div>
+        <label for="utente">Utente</label>
+        <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="parola">Parola d'ordine</label>
+        <input id="parola" name="parola" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="vai"><span class="testo">Collegati</span>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+
+    <div id="esito" role="status" aria-live="polite"></div>
+    <div id="dichiarazione"></div>
+  </main>
+</div>
+
+<footer class="piede">
+  <span><i class="vivo" aria-hidden="true"></i>Connessione cifrata</span>
+  <span>Server <code>alfa.lan</code></span>
+</footer>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
+  function errore(){
+    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.className="errore";
+    campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
+  }
+  function pulisci(){
+    if(!esito.textContent)return;
+    esito.textContent=""; esito.className="";
+    campi.forEach(function(c){c.removeAttribute("aria-invalid")});
+  }
+  campi.forEach(function(c){c.addEventListener("input",pulisci)});
+  $("modulo").addEventListener("submit",function(ev){
+    ev.preventDefault(); pulisci();
+    vai.disabled=true; testo.textContent="Collegamento…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+  });
+  var stato=new URLSearchParams(location.search).get("stato");
+  if(stato==="errore")errore();
+  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+})();
+</script>
+</body>
+</html>
