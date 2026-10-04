@@ -3740,7 +3740,7 @@ Le tre ragioni, e la terza è quella che ha deciso:
    di comando di KWin (`--virtual --width W --height H`), il modo è `const`, e
    `stream_virtual_output` risponde `Could not find output` per ogni misura `[M]` 8 ago;
 2. la correzione a monte esiste (`kwin!7932`, traguardo 6.8, ottobre) ma **Debian stabile non
-   aggiorna Plasma**: 6.3.6 fino a Forky. Il ripiego non è un'impalcatura temporanea, è un
+   aggiorna Plasma**: 6.3.6 per tutta Trixie (Forky, ancora testing, ha già 6.7.2 `[R]` 4 ott). Il ripiego non è un'impalcatura temporanea, è un
    percorso di codice da mantenere per anni;
 3. ⛔ **e anche dove funziona, fa una cosa peggiore**: ridimensionare un output ridispone le
    finestre dell'utente `[R]`. Su KWin la chiave del `PlacementTracker` contiene la geometria
@@ -3794,6 +3794,10 @@ PipeWire — ma:
   dell'utente** (la chiave del `PlacementTracker` contiene la geometria dell'output, quindi tornando
   a una misura già vista le finestre vengono teleportate). La versione «giusta» scompiglia il
   lavoro; quella «rotta» lo lascia fermo.
+
+✅ **Riconfermata il 4 ottobre 2026, guardando Forky** (Debian 14, Plasma 6.8 previsto): KWin
+ridimensionabile non riapre la voce. *«il dynamic resize non è una funzionalità così importante,
+le cose grosse adesso le abbiamo e funzionano bene, anche su Android»* (l'utente).
 
 #### ⚠ E la richiesta dell'utente che questa decisione ha superato
 
