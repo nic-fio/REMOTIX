@@ -438,80 +438,124 @@
                z-index: 9; pointer-events: none; display: none;
                will-change: transform; }
 
-  /* ═══ LA PAGINA D'ACCESSO «Rete» (grafica/login-mockup/13-rete.html) — 25 set
-     2026.  ⛔ Tutto dentro `.accesso` o sotto `body:not([data-schermo="acceso"])`:
-     col desktop acceso la pagina resta quella di prima.  Le misure sono in `em`
-     sulla grandezza dell'impianto, cosi' crescono col 4K senza toccare `html`. */
+  /* ═══ LA PAGINA D'ACCESSO «Satinato» (grafica/login-premium/18-satinato.html) —
+     4 ottobre 2026, scelta dall'utente fra venti proposte «premium».  Prende il
+     posto di «Rete» (25 set).  ⛔ Tutto dentro `.accesso` o sotto
+     `body:not([data-schermo="acceso"])`: col desktop acceso la pagina resta
+     quella di prima — e la fascia satinata, che e' `position: fixed`, sparisce
+     con `.accesso` (⛔ un livello fisso sopra la tela costerebbe a ogni
+     fotogramma).  Misure in `em` sulla grandezza dell'impianto, cosi' crescono
+     col 4K senza toccare `html`; dove un elemento ha la sua grandezza, i
+     margini sono gia' divisi per quella.  ⭐ Ferro modesto: la grana e' un
+     disegno fermo ripetuto, la fascia si muove solo con `transform`. */
   body:not([data-schermo="acceso"]) {
-    min-height: 100vh; box-sizing: border-box; align-items: center;
-    padding: 1.5rem 1rem; color: #17212e; background: #f7f9fc;
-    background-image: radial-gradient(#dfe7f1 1px, transparent 1px);
-    background-size: 1.5rem 1.5rem;
+    min-height: 100vh; min-height: 100dvh; box-sizing: border-box; align-items: center;
+    padding: 2.5rem 1.25rem; color: #eaf0ff; background: #070b1a; overflow-x: hidden;
   }
   body:not([data-schermo="acceso"]) main { max-width: 64em; }
   body[data-schermo="acceso"] .accesso { display: none; }
-  .accesso { --carta:#fff; --inchiostro:#17212e; --tenue:#556274; --bordo:#e0e6ee;
-    --linea:#9fb3cc; --nodo:#2a6fb0; --accento:#1f6fb5; --accento-scuro:#185b95; --vivo:#16a37a;
+  .accesso { --carta:#fff; --inchiostro:#0b1430; --tenue:#5b6478; --etichetta:#2b3550;
+    --tenue-fondo:#a9b6d6; --campo-bordo:#cfd6e3; --campo-bordo-su:#9aa6bb;
+    --accento:#1466e0; --accento-scuro:#0a4fc0; --vivo:#0f9f6e;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Cantarell, Ubuntu, sans-serif;
-    font-size: clamp(16px, 0.42vw + 10px, 26px); color: var(--inchiostro); color-scheme: light; }
-  .accesso .impianto { width: 100%; max-width: 60em; margin: 0 auto; display: grid;
-    grid-template-columns: 1.1fr 1fr; align-items: center; gap: 3em; }
-  .accesso .rete { width: 100%; height: auto; display: block; }
-  .accesso .rete .filo { fill: none; stroke: var(--linea); stroke-width: 1.4; }
-  .accesso .rete .flusso { fill: none; stroke: var(--nodo); stroke-width: 1.6; stroke-dasharray: 4 14;
-    stroke-linecap: round; animation: rx-scorre 2.4s linear infinite; }
-  .accesso .rete .flusso.b { animation-duration: 3s; animation-direction: reverse; }
-  .accesso .rete .flusso.c { stroke: var(--vivo); animation-duration: 3.6s; }
-  @keyframes rx-scorre { to { stroke-dashoffset: -72; } }
-  .accesso .rete .alone { fill: var(--nodo); opacity: .12; transform-box: fill-box;
-    transform-origin: center; animation: rx-pulsa 2.8s ease-out infinite; }
-  @keyframes rx-pulsa { 0% { transform: scale(.6); opacity: .25; } 100% { transform: scale(1.5); opacity: 0; } }
-  .accesso .rete .corpo { fill: #fff; stroke: #324357; stroke-width: 1.6; }
-  .accesso .rete .schermo { fill: #e8f0fa; }
-  .accesso .rete text { font: 600 11px system-ui, sans-serif; fill: #4b5869; letter-spacing: .06em; }
-  .accesso .scheda { background: var(--carta); border: 1px solid var(--bordo); border-radius: .9em;
-    padding: 2em 1.9em 1.6em;
-    box-shadow: 0 1px 2px rgba(20,30,50,.05), 0 18px 40px -18px rgba(20,40,70,.25);
-    animation: rx-entra .5s ease-out both; }
-  @keyframes rx-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .accesso .marchio { display: flex; align-items: center; gap: .65em; }
-  .accesso .marchio svg { width: 2.2em; height: 2.2em; }
-  .accesso h1 { margin: 0; font-size: 1.45em; letter-spacing: .12em; font-weight: 750; }
-  .accesso .motto { margin: .55em 0 1.6em; color: var(--tenue); font-size: .95em; line-height: 1.45; }
-  .accesso #modulo { display: grid; gap: 1em; }
-  .accesso label { display: block; font-size: .85em; font-weight: 600; margin: 0 0 .35em; }
-  .accesso input { width: 100%; box-sizing: border-box; font: inherit; font-size: 1em;
-    color: var(--inchiostro); padding: .7em .85em; border: 1px solid #c3ccd8; border-radius: .5em;
-    background: #fff; transition: border-color .15s, box-shadow .15s; }
-  .accesso input:hover { border-color: #94a2b5; }
-  .accesso input:focus { outline: none; border-color: var(--accento); box-shadow: 0 0 0 3px rgba(31,111,181,.22); }
-  .accesso #vai { margin-top: .35em; font: inherit; font-size: 1em; font-weight: 650; color: #fff;
-    padding: .8em; border: 0; border-radius: .5em; background: var(--accento); cursor: pointer;
-    display: flex; justify-content: center; align-items: center; gap: .55em;
-    transition: background .15s, transform .1s; }
+    font-size: clamp(16px, 0.42vw + 10px, 26px); color: #eaf0ff; color-scheme: light; }
+
+  /* la fascia satinata: gradienti morbidi su una banda obliqua, e la grana */
+  .accesso .satin { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .accesso .satin::before { content: ""; position: absolute; left: -20%; right: -20%; top: -30%; height: 95%;
+    transform: rotate(-11deg);
+    background:
+      radial-gradient(38% 55% at 18% 70%, rgba(0,216,255,.32), transparent 70%),
+      radial-gradient(40% 60% at 48% 55%, rgba(26,124,255,.42), transparent 70%),
+      radial-gradient(34% 50% at 78% 72%, rgba(98,84,255,.4), transparent 70%),
+      radial-gradient(30% 45% at 64% 30%, rgba(0,180,255,.2), transparent 70%),
+      linear-gradient(180deg, #08143a, #0a1f5c 70%, #0b2a7a);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 72%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 72%, transparent 100%);
+    animation: accesso-respira 14s ease-in-out infinite alternate; }
+  @keyframes accesso-respira { to { transform: rotate(-11deg) translateX(2.5%); } }
+  .accesso .satin::after { content: ""; position: absolute; inset: 0; opacity: .55; background-size: 160px 160px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .accesso .impianto { position: relative; z-index: 1; width: 100%; max-width: 62em; margin: 0 auto;
+    display: grid; grid-template-columns: 1.15fr 1fr; gap: 4.5em; align-items: center; }
+  .accesso .racconto .logo { width: 15em; height: auto; color: #fff; display: block; margin: 0 0 2.2em; }
+  .accesso .racconto h2 { margin: 0 0 .43em; font-size: 2.35em; line-height: 1.12; font-weight: 700;
+    letter-spacing: -.025em; color: #fff; text-wrap: balance; }
+  .accesso .racconto p { margin: 0; font-size: 1.02em; line-height: 1.55; color: var(--tenue-fondo); max-width: 25.5em; }
+  .accesso .punti { list-style: none; margin: 2em 0 0; padding: 0; display: grid; gap: .67em;
+    font-size: .9em; color: #cdd7f0; }
+  .accesso .punti li { display: flex; align-items: center; gap: .67em; }
+  .accesso .punti svg { flex: none; width: 1.11em; height: 1.11em; color: #5fd3ff; }
+
+  .accesso .scheda { background: var(--carta); color: var(--inchiostro); border-radius: 1em;
+    padding: 2.2em 2.1em 1.6em; min-width: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 2px 4px rgba(4,10,40,.2), 0 2.2em 4.5em -1em rgba(2,8,40,.7);
+    animation: accesso-entra .6s ease-out both; }
+  @keyframes accesso-entra { from { opacity: 0; transform: translateY(12px); } }
+  .accesso h1 { margin: 0 0 .26em; font-size: 1.35em; font-weight: 700; letter-spacing: -.015em; }
+  .accesso .sotto { margin: 0 0 1.89em; color: var(--tenue); font-size: .9em; text-wrap: balance; }
+
+  .accesso #modulo { display: grid; gap: 1.1em; }
+  .accesso label { display: block; font-size: .82em; font-weight: 600; color: var(--etichetta); margin: 0 0 .49em; }
+  .accesso input { width: 100%; box-sizing: border-box; font: inherit; font-size: 1em; color: var(--inchiostro);
+    padding: .72em .85em; border: 1px solid var(--campo-bordo); border-radius: .55em; background: #fff;
+    box-shadow: 0 1px 2px rgba(11,20,48,.06); transition: border-color .15s, box-shadow .15s; }
+  .accesso input:hover { border-color: var(--campo-bordo-su); }
+  .accesso input:focus { outline: none; border-color: var(--accento); box-shadow: 0 0 0 3px rgba(20,102,224,.2); }
+
+  .accesso #vai { margin-top: .4em; font: inherit; font-size: 1em; font-weight: 650; color: #fff;
+    padding: .82em; border: 0; border-radius: .55em; cursor: pointer;
+    background: linear-gradient(180deg, var(--accento), var(--accento-scuro));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(11,20,48,.25), 0 .6em 1.2em -.6em rgba(20,102,224,.7);
+    display: flex; justify-content: center; align-items: center; gap: .55em; transition: filter .15s, transform .1s; }
   .accesso #vai svg { width: 1.1em; height: 1.1em; transition: transform .2s; }
-  .accesso #vai:hover { background: var(--accento-scuro); }
+  .accesso #vai:hover { filter: brightness(1.1); }
   .accesso #vai:hover svg { transform: translateX(3px); }
   .accesso #vai:active { transform: translateY(1px); }
-  .accesso #vai:focus-visible { outline: 3px solid #93bde3; outline-offset: 2px; }
-  .accesso #esito { margin-top: 1em; min-height: 0; font-size: .88em; line-height: 1.45;
-    border-radius: .5em; }
+  .accesso #vai:focus-visible { outline: 2px solid var(--accento); outline-offset: 3px; }
+  /* ⭐ Mentre si collega: `disabled` lo mette gia' il gestore dell'invio, e la rotella segue da se'. */
+  .accesso #vai:disabled { cursor: wait; background: #7d9fd6; box-shadow: none; filter: none; }
+  .accesso #vai .giro { display: none; width: 1em; height: 1em; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: accesso-gira .8s linear infinite; }
+  .accesso #vai:disabled .giro { display: block; }
+  .accesso #vai:disabled svg { display: none; }
+  @keyframes accesso-gira { to { transform: rotate(1turn); } }
+
+  .accesso #avviso { margin: 0 0 1.41em; padding: .82em 1em; font-size: .85em; line-height: 1.45;
+    border-radius: .65em; color: #93370d; background: #fffaeb; border: 1px solid #fedf89; }
+  .accesso #dichiarazione { margin-top: 1.18em; padding: .82em 1em; font-size: .85em; line-height: 1.45;
+    border-radius: .65em; color: var(--tenue); background: #f6f8fb; border: 1px solid #e4e8f0; opacity: 1; }
+  .accesso #esito { margin-top: 1.14em; min-height: 0; font-size: .88em; line-height: 1.4; font-weight: 500;
+    border-radius: .62em; text-wrap: balance; }
   .accesso #esito:empty { display: none; }
-  .accesso #esito.male { padding: .7em .85em .7em 2.3em; background: #fdefef no-repeat .8em .8em / 1.1em
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='none' stroke='%23a12020' stroke-width='1.8'/%3E%3Cpath d='M7 7l6 6M13 7l-6 6' stroke='%23a12020' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
-    border: 1px solid #efc3c3; color: #a12020; }
-  .accesso #esito.bene { padding: .7em .85em; background: #ecf8f3; border: 1px solid #b7e4d2; color: #0f6b4f; }
-  .accesso #avviso { border-radius: .5em; margin: 0 0 1.2em; }
-  .accesso #dichiarazione { border-radius: .5em; }
-  .accesso .piede { margin: 1.3em 0 0; font-size: .78em; color: var(--tenue); display: flex;
-    align-items: center; gap: .45em; }
-  .accesso .piede::before { content: ""; flex: none; width: .5em; height: .5em; border-radius: 50%;
-    background: var(--vivo); box-shadow: 0 0 0 3px rgba(22,163,122,.18); }
-  @media (max-width: 820px) {
-    .accesso .impianto { grid-template-columns: 1fr; gap: 1em; max-width: 26em; }
-    .accesso .rete { max-width: 20em; margin: 0 auto; }
+  .accesso #esito.male { padding: .82em .97em .82em 2.6em; color: #b42318; background: #fef3f2 no-repeat .9em .85em / 1.25em
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.2' fill='none' stroke='%23b42318' stroke-width='1.6'/%3E%3Cpath d='M10 5.8v5.4' stroke='%23b42318' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.2' r='1.1' fill='%23b42318'/%3E%3C/svg%3E");
+    border: 1px solid #fecdca; animation: accesso-scuote .4s ease-out; }
+  .accesso #esito.bene { padding: .82em .97em; background: #ecf8f3; border: 1px solid #b7e4d2; color: #0f6b4f; }
+  @keyframes accesso-scuote { 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+
+  .accesso .piede { margin: 2.05em 0 0; padding-top: 1.41em; border-top: 1px solid #edf0f5;
+    display: flex; align-items: center; gap: .64em; font-size: .78em; color: var(--tenue); }
+  .accesso .piede svg { flex: none; width: 1.15em; height: 1.15em; color: var(--vivo); }
+  .accesso .piede code { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    color: var(--inchiostro); font-size: .95em; overflow-wrap: anywhere; }
+  .accesso .piede code:empty { display: none; }
+  .accesso .piede code::before { content: "·"; margin-right: .64em; opacity: .5; color: var(--tenue);
+    font-family: system-ui, sans-serif; }
+
+  @media (max-width: 860px) {
+    .accesso .impianto { grid-template-columns: 1fr; gap: 2em; max-width: 26em; }
+    .accesso .racconto { text-align: center; }
+    .accesso .racconto .logo { width: 12em; margin: 0 auto 1.2em; }
+    .accesso .racconto h2 { margin: 0; font-size: 1.25em; font-weight: 600; line-height: 1.35;
+      letter-spacing: -.01em; color: #dfe7fb; }
+    .accesso .racconto p, .accesso .punti { display: none; }
   }
-  @media (max-width: 400px) { .accesso .scheda { padding: 1.6em 1.2em 1.3em; } }
+  @media (max-width: 420px) {
+    body:not([data-schermo="acceso"]) { padding: 2rem 1rem; }
+    .accesso .scheda { padding: 1.7em 1.3em 1.3em; }
+  }
   @media (prefers-reduced-motion: reduce) {
     .accesso *, .accesso *::before, .accesso *::after { animation: none !important; transition: none !important; }
   }
@@ -519,98 +563,43 @@
 </head>
 <body data-bannato="__BANNATO__" data-restano-ms="__RESTANO_MS__">
 <main>
-  <!-- ⭐ LA PAGINA D'ACCESSO — 25 settembre 2026, scelta dall'utente fra venti
-       proposte (grafica/login-mockup/13-rete.html, «Rete»).  ⛔ Gli ID restano
-       quelli di sempre (`modulo`, `utente`, `parola`, `vai`, `esito`, `avviso`,
-       `dichiarazione`): li usano la pagina e le prove della suite.  Tutto il
-       nuovo sta dentro `.accesso`, che col desktop acceso sparisce. -->
+  <!-- ⭐ LA PAGINA D'ACCESSO — 4 ottobre 2026, «Satinato», scelta dall'utente
+       fra venti proposte «premium» (grafica/login-premium/18-satinato.html);
+       prima era «Rete» (25 set).  ⛔ Gli ID restano quelli di sempre (`modulo`,
+       `utente`, `parola`, `vai`, `esito`, `avviso`, `dichiarazione`): li usano
+       la pagina e le prove della suite.  Tutto il nuovo sta dentro `.accesso`,
+       che col desktop acceso sparisce. -->
   <div class="accesso">
+    <div class="satin" aria-hidden="true"></div>
     <div class="impianto">
-      <svg class="rete" viewBox="0 0 470 390" aria-hidden="true">
-      <!-- sei dispositivi, un server: tanti utenti insieme, ognuno col suo desktop -->
-      <path class="filo" d="M162 33 C267 33 267 196 372 196"/>
-      <path class="filo" d="M74 94 C223 94 223 196 372 196"/>
-      <path class="filo" d="M106 156 C239 156 239 196 372 196"/>
-      <path class="filo" d="M102 223 C237 223 237 196 372 196"/>
-      <path class="filo" d="M74 290 C223 290 223 196 372 196"/>
-      <path class="filo" d="M166 350 C269 350 269 196 372 196"/>
-      <path class="flusso" d="M162 33 C267 33 267 196 372 196"/>
-      <path class="flusso b" d="M74 94 C223 94 223 196 372 196"/>
-      <path class="flusso c" d="M106 156 C239 156 239 196 372 196"/>
-      <path class="flusso" d="M102 223 C237 223 237 196 372 196"/>
-      <path class="flusso b" d="M74 290 C223 290 223 196 372 196"/>
-      <path class="flusso c" d="M166 350 C269 350 269 196 372 196"/>
-
-      <!-- server -->
-      <circle class="alone" cx="405" cy="196" r="56"/>
-      <g transform="translate(372 144)">
-        <rect class="corpo" x="0" y="0" width="64" height="104" rx="6"/>
-        <g fill="#e8f0fa" stroke="#324357" stroke-width="1.2">
-          <rect x="8" y="10" width="48" height="20" rx="2.5"/><rect x="8" y="42" width="48" height="20" rx="2.5"/><rect x="8" y="74" width="48" height="20" rx="2.5"/>
-        </g>
-        <circle cx="47" cy="20" r="2.5" fill="#16a37a"/><circle cx="47" cy="52" r="2.5" fill="#16a37a"/><circle cx="47" cy="84" r="2.5" fill="#2a6fb0"/>
-        <path d="M14 20h20M14 52h20M14 84h20" stroke="#9fb3cc" stroke-width="1.6"/>
-      </g>
-      <text x="404" y="270" text-anchor="middle">SERVER LINUX</text>
-
-      <!-- i dispositivi -->
-      <g transform="translate(70 6)">
-        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
-        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
-        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
-      </g>
-      <g transform="translate(40 68)">
-        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
-        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
-        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
-        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
-      </g>
-      <g transform="translate(10 128)">
-        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
-        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
-        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
-        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
-        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
-        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
-      </g>
-      <g transform="translate(10 196)">
-        <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
-        <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
-        <path d="M0 49h88l-5 6H5z" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M20 11h22M20 17h34M20 23h26" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
-      </g>
-      <g transform="translate(40 264)">
-        <rect class="corpo" x="0" y="0" width="30" height="52" rx="5"/>
-        <rect class="schermo" x="3.5" y="6" width="23" height="38" rx="1.5"/>
-        <circle cx="15" cy="48" r="1.6" fill="#324357"/>
-        <path d="M8 12h10M8 17h14" stroke="#a9bdd6" stroke-width="1.8" stroke-linecap="round"/>
-      </g>
-      <g transform="translate(70 322)">
-        <rect class="corpo" x="0" y="0" width="64" height="42" rx="3.5"/>
-        <rect class="schermo" x="4.5" y="4.5" width="55" height="33" rx="1.5"/>
-        <path d="M24 42l-3 9h22l-3-9" fill="#fff" stroke="#324357" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M17 52h30" stroke="#324357" stroke-width="1.6" stroke-linecap="round"/>
-        <rect class="corpo" x="72" y="4" width="20" height="48" rx="3"/>
-        <path d="M77 12h10M77 17h10" stroke="#9fb3cc" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="82" cy="42" r="2.2" fill="#16a37a"/>
-        <path d="M11 11h20M11 17h30" stroke="#a9bdd6" stroke-width="2" stroke-linecap="round"/>
-      </g>
-    </svg>
+      <section class="racconto">
+        <svg class="logo" viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
+          <defs>
+            <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/>
+            </linearGradient>
+            <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#rx-g)">
+            <path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/>
+            <path d="M26 138L214 356H26Z"/>
+            <path d="M150 180H232L442 356H296Z"/>
+          </g>
+          <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+        </svg>
+        <h2>Il tuo desktop Linux, da qualunque browser.</h2>
+        <p>Portatile, telefono o tablet: apri la pagina, entra, e ritrovi le tue finestre come le avevi lasciate.</p>
+        <ul class="punti">
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Niente da installare</li>
+          <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Un desktop per ogni utente, sullo stesso server</li>
+        </ul>
+      </section>
 
       <section class="scheda" aria-labelledby="titolo">
-        <div class="marchio">
-          <svg viewBox="0 0 44 44" aria-hidden="true">
-                  <rect x="4" y="7" width="36" height="24" rx="3.5" fill="none" stroke="#1f6fb5" stroke-width="2.8"/>
-                  <path d="M16 38h12M22 31v7" stroke="#1f6fb5" stroke-width="2.8" stroke-linecap="round"/>
-                  <circle cx="13" cy="19" r="2.6" fill="#1f6fb5"/><circle cx="31" cy="19" r="2.6" fill="#16a37a"/><circle cx="22" cy="14" r="2" fill="#9fb3cc"/>
-                  <path d="M13 19L22 14L31 19" fill="none" stroke="#9fb3cc" stroke-width="1.4"/>
-                </svg>
-          <h1 id="titolo">REMOTIX</h1>
-        </div>
-        <p class="motto">Il tuo desktop Linux, da qualunque browser: portatile, telefono o tablet.</p>
+        <h1 id="titolo">Accedi</h1>
+        <p class="sotto">Usa l'utente e la parola d'ordine del server.</p>
         <div id="avviso">__AVVISO__</div>
 
         <form id="modulo">
@@ -623,13 +612,19 @@
             <input id="parola" name="parola" type="password" autocomplete="current-password" required>
           </div>
           <button type="submit" id="vai">Collegati
+            <span class="giro" aria-hidden="true"></span>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </form>
 
         <div id="esito" role="status" aria-live="polite"></div>
         <div id="dichiarazione"></div>
-        <p class="piede">Connessione cifrata · niente da installare</p>
+        <!-- ⭐ Il nome del server lo scrive la pagina da `location.hostname`: il
+             server non deve sapere sotto che nome lo raggiungono. -->
+        <p class="piede">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          Connessione cifrata<code id="ospite"></code>
+        </p>
       </section>
     </div>
   </div>
@@ -9675,6 +9670,9 @@ window.addEventListener("keydown", function (ev) {
   if (si) si.addEventListener("click", logout_esegui);
   if (no) no.addEventListener("click", function () { logout_mostra(false); });
 })();
+
+/* ⭐ Il piede della pagina d'accesso dice a che server ci si collega. */
+$("ospite").textContent = location.hostname;
 
 $("modulo").addEventListener("submit", async (ev) => {
   ev.preventDefault();
