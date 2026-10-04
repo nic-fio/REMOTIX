@@ -184,8 +184,13 @@ l'audio su GNOME/Firefox in una sessione NUOVA. Scatole sulla **Radeon**, binari
 **`d827a225`**; giri automatici `cure-intel-6` 128/128 e `cure-radeon-1` 224/224, `cure-radeon-2` 144/144.
 Lasciata aperta la sessione `nictest` dell'utente su GNOME.
 
+**Aggiornamento 4 ott 2026:** ✅ Android col DeX chiuso (§4-bis.2). Il giro `f012b-1` sui 4 desktop si è fermato
+da solo: su **KDE e XFCE** c'erano ancora sessioni `nictest` dell'utente. Lanciato su **GNOME e LXQt** (risultato
+nel registro della suite, giro `f012b-1`); KDE e XFCE si fanno **dopo che l'utente ha detto se chiudere le sue
+sessioni** (domanda fatta, risposta non ancora arrivata).
+
 **Prima cosa della sessione nuova, in ordine:**
-1. **Android col DeX** sui 4 desktop (prova a mano dell'utente, porte 8511-8514, `nictest`): era in corso.
+1. ~~**Android col DeX**~~ ✅ chiuso il 4 ott.
 2. Poi, a scatole libere, la prova automatica del caso «Esci → rientra → suona» (non ancora girata):
    `python3 15-giro.py --giro f012b-1 --desktop gnome,kde,xfce,lxqt --browser firefox --prove f012b`
    (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); attesa VERDE col binario `54a98acc`.
