@@ -429,7 +429,7 @@
   body[data-puntatore="disegnata"][data-disposizione="classico"] #schermo { cursor: none; }
   /* ⚠ Solo sul CLASSICO: nel modo a tocco la freccia disegnata e' l'unico
      puntatore che esista, perche' il dito non ne ha uno da vestire. */
-  body[data-puntatore="sistema"][data-disposizione="classico"] #puntatore { display: none !important; }
+  body[data-puntatore="sistema"][data-disposizione="classico"]:not([data-agganciato="si"]) #puntatore { display: none !important; }
   /* ⚠ E il prezzo si dichiara (`STUDI.md` §web §1.2 C, rilievo S4): un elemento SOPRA
      la tela fa cadere il percorso overlay e la tela desincronizzata.  Il
      puntatore definitivo si disegnera' DENTRO la tela; oggi non si puo', perche'
@@ -10261,6 +10261,8 @@ function cl_su_lock() {
    *    con un'altra faccia. */
   document.body.setAttribute("data-agganciato", cl_agganciato ? "si" : "no");
   cl_disegna();
+  if (era && !cl_agganciato) cl_hover_dal_rilascio = 0;
+  if (!era && cl_agganciato) { cl_appena_agganciato = true; cl_spinta = 0; }
   if (era && !cl_agganciato)
     nota("modo classico: `Pointer Lock` rilasciato — il puntatore torna a "
        + "seguire la posizione assoluta del mouse dentro la tela");
@@ -10337,6 +10339,11 @@ function cl_su_pointermove(ev) {
   /* Il dito ha la sua disposizione: qui passa solo cio' che e' un puntatore. */
   if (ev.pointerType === "touch") return;
   cl_visti_pointer++;
+  /* Un passaggio a tasti alzati: la prova che qui l'hover ARRIVA (vedi
+     «LA CATTURA DA SOLA» sotto `cl_su_pointerdown`). */
+  if (!cl_agganciato && ev.buttons === 0) {
+    cl_hover_dal_rilascio++; cl_hover_x = ev.clientX; cl_hover_y = ev.clientY;
+  }
   cl_su_mousemove(ev);
   /* ⚠ Un SECONDO pulsante premuto (o rilasciato) mentre un altro e' gia' giu'
      non da' `pointerdown`/`pointerup`: arriva come `pointermove` con `button`
@@ -10383,7 +10390,72 @@ function cl_su_pointerdown(ev) {
   }
   /* La cattura tiene il trascinamento sulla tela anche se la mano esce. */
   try { $("schermo").setPointerCapture(ev.pointerId); } catch (e) { /* niente */ }
+  const manca = cl_hover_manca(ev);
   cl_su_mousedown(ev);
+  if (manca && cl_utilizzabile()) {
+    nota("MARCA modo classico: l'hover non arriva (" + cl_hover_dal_rilascio
+       + " passaggi a tasti alzati, l'ultimo a " + Math.round(cl_hover_x) + ","
+       + Math.round(cl_hover_y) + " e il clic a " + Math.round(ev.clientX) + ","
+       + Math.round(ev.clientY) + ") — la cattura del puntatore si accende da sola");
+    cl_aggancia();
+  }
+}
+
+/* ── LA CATTURA DA SOLA, DOVE L'HOVER NON ARRIVA — 3 ottobre 2026 ──────────
+ * `[M]` DeX dell'utente (S23, Android 16, Chrome 154 e Samsung Internet 30):
+ *   la posizione arriva SOLO un attimo prima di ogni clic o a tasto premuto
+ *   (noVNC #1727, vedi `cl_su_mousedown`) ⇒ il desktop non sa mai che il
+ *   puntatore e' sul bordo, e la freccia doppia del ridimensionamento non
+ *   compare.  Con la cattura accesa i movimenti a tasti alzati arrivano (>150
+ *   di fila) e il bordo si trascina; l'utente: «con la cattura la situazione
+ *   migliora».
+ * ⇒ AL PRIMO CLIC (scelta dell'utente: «meglio attivarla al primo clic del
+ *   mouse»): si cattura se prima del clic non e' arrivato NESSUN passaggio a
+ *   tasti alzati, o se l'ultimo sta a CL_SALTO_PX o piu' dal punto del clic
+ *   (il clic e' il gesto che `requestPointerLock` pretende).
+ *   ⭐ Nessun ramo per sistema: Samsung Internet sul DeX si dichiara «Linux
+ *   x86_64», e un «e' Android?» lo avrebbe mancato.  Su un computer l'ultimo
+ *   passaggio cade sul punto del clic: non scatta mai.
+ *   ⛔ NON una soglia sul NUMERO di passaggi: `[M]` 3 ott, giro `19-cattura`,
+ *   Firefox del banco con 5 passaggi prima del clic ⇒ catturato su un
+ *   computer (e cosi' chiunque sposti il mouse di pochi millimetri e clicchi).
+ *   ⚠ Il DeX ne manda qualcuno sporadico (2-3 prima di un clic), lontano dal
+ *   punto in cui poi si clicca.
+ * ⚠ Solo `mouse`: una penna senza hover catturata non ha senso.
+ * ⚠ Il conto riparte quando la cattura si rilascia (`cl_su_lock`): sul DeX il
+ *   clic dopo ricattura, su un computer i passaggi tornano e no. */
+const CL_SALTO_PX = 8;
+let cl_hover_dal_rilascio = 0, cl_hover_x = -1, cl_hover_y = -1;
+
+function cl_hover_manca(ev) {
+  if (cl_agganciato || ev.pointerType !== "mouse") return false;
+  if (cl_hover_dal_rilascio === 0) return true;
+  return Math.abs(ev.clientX - cl_hover_x) >= CL_SALTO_PX
+      || Math.abs(ev.clientY - cl_hover_y) >= CL_SALTO_PX;
+}
+
+/* ⭐ E SI ESCE SPINGENDO OLTRE IL BORDO, come nelle macchine virtuali: col
+ *   mouse catturato la barra del DeX e le schede del browser non si
+ *   raggiungono, ed Esc da solo era il fastidio che l'utente aveva gia'
+ *   segnalato.  ⚠ Non al primo pixel oltre: gli angoli attivi del desktop
+ *   remoto (GNOME in alto a sinistra) vogliono il puntatore FERMO sul bordo.
+ *   Si esce dopo CL_SPINTA_USCITA pixel CSS di spinta continua verso fuori;
+ *   tornare dentro azzera la spinta. */
+const CL_SPINTA_USCITA = 160;
+let cl_spinta = 0;
+const CL_SALTO_FINTO = 100;
+let cl_appena_agganciato = false;
+
+function cl_spinta_oltre_il_bordo(kx, ky) {
+  const g = cl_tela();
+  const fuori_x = cl_px < 0 ? -cl_px : (cl_px > g[0] ? cl_px - g[0] : 0);
+  const fuori_y = cl_py < 0 ? -cl_py : (cl_py > g[1] ? cl_py - g[1] : 0);
+  if (fuori_x === 0 && fuori_y === 0) { cl_spinta = 0; return; }
+  cl_spinta += fuori_x * kx / CL_GUADAGNO + fuori_y * ky / CL_GUADAGNO;
+  if (cl_spinta < CL_SPINTA_USCITA) return;
+  cl_spinta = 0;
+  nota("MARCA modo classico: spinto oltre il bordo — la cattura si rilascia");
+  if (document.exitPointerLock) document.exitPointerLock();
 }
 
 function cl_su_pointerup(ev) {
@@ -10421,8 +10493,24 @@ function cl_su_mousemove(ev) {
        questo che si muove alla velocita' della mano e non della rete. */
     const g = cl_geometria();
     const kx = (g.vx * g.sx) || 1, ky = (g.vy * g.sy) || 1;
+    /* ⛔ IL PRIMO MOVIMENTO DOPO LA CATTURA PUO' ESSERE UN SALTO FINTO —
+     *    `[M]` 3 ott, DeX: due volte la cattura appena accesa si e' rilasciata
+     *    nello stesso secondo («spinto oltre il bordo»), e ci e' voluto un
+     *    secondo clic.  Chrome consegna come primo `movementX` dopo la lock la
+     *    distanza dal punto in cui il cursore di sistema era rimasto.  ⇒ Il
+     *    primo, se e' piu' lungo di CL_SALTO_FINTO pixel CSS, non si conta. */
+    const finto = cl_appena_agganciato
+      && (Math.abs(ev.movementX || 0) > CL_SALTO_FINTO
+          || Math.abs(ev.movementY || 0) > CL_SALTO_FINTO);
+    cl_appena_agganciato = false;
+    if (finto) {
+      nota("MARCA modo classico: primo movimento dopo la cattura scartato ("
+         + ev.movementX + "," + ev.movementY + " px): e' il salto del cursore di sistema");
+      return;
+    }
     cl_px += (ev.movementX || 0) * CL_GUADAGNO / kx;
     cl_py += (ev.movementY || 0) * CL_GUADAGNO / ky;
+    cl_spinta_oltre_il_bordo(kx, ky);
   } else {
     /* Ripiego: la posizione assoluta dentro la tela.  ⚠ Qui il puntatore del
        browser sarebbe visibile — non lo e', perche' `cursor: none` vale per
@@ -10542,6 +10630,18 @@ function cl_su_mouseup(ev) {
      rimasto giu' (§7.3, «al distacco si rilascia tutto»). */
   if (c === undefined || !cl_pulsanti_premuti.has(c)) return;
   ev.preventDefault();
+  /* ⛔ ANCHE IL RILASCIO PORTA LA PROPRIA POSIZIONE, come il clic in
+   *    `cl_su_mousedown` — 3 ottobre 2026.  `[M]` giro `19-cattura-2`, Chrome
+   *    su GNOME, F-004: trascinando su «beta gamma delta» il desktop
+   *    selezionava «beta gamma delt», due volte su due.  Da quando il clic
+   *    viene dai pointer events, Chrome puo' consegnare `pointerup` in un punto
+   *    a cui nessun `pointermove` e' arrivato: il desktop rilasciava dove
+   *    l'aveva lasciato il movimento prima.  ⇒ Se il punto del rilascio sta a
+   *    un pixel CSS o piu' dall'ultimo punto grezzo, si manda prima lui.
+   *    Agganciati gli spostamenti sono gia' tutti contati: non serve. */
+  if (!cl_agganciato && (cl_grezzo_x < 0
+      || Math.abs(ev.clientX - cl_grezzo_x) >= 1
+      || Math.abs(ev.clientY - cl_grezzo_y) >= 1)) cl_su_mousemove(ev);
   cl_pulsanti_premuti.delete(c);
   cl_spedisci(CL_TIPO.PULSANTE, c, 0, ev.timeStamp);
 }

@@ -130,13 +130,25 @@ si rifà sulla Radeon col telefono).
 
 ### 4-bis.2 La prova a mano su Android col DeX, sulla Radeon (4 ott 2026)
 
-Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `54a98acc`, pagina `d827a225`):
+Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `05e7c7d1`, pagina `f78df3ed` — vedi la nota sotto):
 - audio e video sincronizzati su un video **4K** di YouTube;
 - **stacco e rientro** della sessione mentre il video suona;
 - il **ridimensionamento delle finestre** delle applicazioni;
 - gli **appunti**.
 
 ✅ ⇒ **Android col DeX è chiuso**, e con lui il terzo cancello di §4-bis.
+
+⚠ **Nota (4 ott): le scatole giravano un prodotto costruito il 3 ott e mai salvato in git** — binario `05e7c7d1`
+(costruito in `/media/REMOTIX/src/f19-chiusura`), pagina `f78df3ed`. Rispetto a `2b675f5` due modifiche, ora
+riportate nel deposito così come furono costruite:
+1. `src/sessione.c`, l'audio dopo «Esci»: non basta «`pipewire` spento» — `[M]` giro `19-chiusura-intel`, F-012B su
+   GNOME: all'«Esci» si fermano `wireplumber` e `pipewire` ma non `pipewire-pulse`, e al nuovo accesso `pipewire`
+   riparte prima del controllo. ⇒ si confrontano gli istanti d'avvio: un `pipewire-pulse` più vecchio del
+   `pipewire` in vigore è l'avanzo e si ferma;
+2. `src/pagina.html`, **la cattura del puntatore da sola al primo clic** dove l'hover non arriva (DeX, noVNC
+   #1727): scelta dell'utente («meglio attivarla al primo clic del mouse»), nessun ramo per sistema.
+
+⇒ La prova dell'utente col DeX e il giro `f012b-1`/`f012b-2` valgono per **questo** prodotto.
 
 ## 5. Android: il telefono vero, comandato da qui
 
@@ -186,14 +198,14 @@ Lasciata aperta la sessione `nictest` dell'utente su GNOME.
 
 **Aggiornamento 4 ott 2026:** ✅ Android col DeX chiuso (§4-bis.2). Il giro `f012b-1` sui 4 desktop si è fermato
 da solo: su **KDE e XFCE** c'erano ancora sessioni `nictest` dell'utente. Su **GNOME e LXQt**: ✅ **VERDE**, PASS=4
-(giro `f012b-1`, impronte `05e7c7d1/f78df3ed`); KDE e XFCE si fanno **dopo che l'utente ha detto se chiudere le sue
-sessioni** (domanda fatta, risposta non ancora arrivata).
+(giro `f012b-1`, impronte `05e7c7d1/f78df3ed`); su **KDE e XFCE** ✅ **VERDE**, PASS=4 (giro `f012b-2`, dopo che l'utente
+ha chiuso le sue sessioni). ⇒ F-012B verde sui 4 desktop.
 
 **Prima cosa della sessione nuova, in ordine:**
 1. ~~**Android col DeX**~~ ✅ chiuso il 4 ott.
 2. Poi, a scatole libere, la prova automatica del caso «Esci → rientra → suona» (non ancora girata):
    `python3 15-giro.py --giro f012b-1 --desktop gnome,kde,xfce,lxqt --browser firefox --prove f012b`
-   (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); attesa VERDE col binario `54a98acc`.
+   (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); ✅ VERDE il 4 ott col binario `05e7c7d1`.
    ⚠ La controprova ROSSA col binario vecchio (`remotix.fbfceb41`) non e' fatta.
 3. Chiusura della fase 19 e `fase-19` dentro `fase-10-cure`. ⚠ I commit di oggi sono solo locali: il ramo
    non e' stato spinto su GitHub.

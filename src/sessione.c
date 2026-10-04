@@ -5136,24 +5136,44 @@ bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza)
 	 *   ramo per desktop: e' il gestore d'utente, uguale per tutti.
 	 */
 	{
-		char *pw[] = { "systemctl", "--user", "is-active", "pipewire.service", NULL };
-		char *pp[] = { "systemctl", "--user", "is-active", "pipewire-pulse.service", NULL };
+		/* ⛔ E NON BASTA «pipewire spento»: `[M]` 3 ott 2026, giro
+		 *    `19-chiusura-intel`, F-012B su GNOME — all'«Esci» si fermano
+		 *    `wireplumber` e `pipewire` (13:34:33) ma non `pipewire-pulse`; al
+		 *    nuovo accesso `pipewire` RIPARTE (13:34:38) e quando si guarda e'
+		 *    gia' attivo ⇒ il controllo non scattava e il pulse vecchio restava.
+		 * ⇒ Si confrontano gli ISTANTI d'avvio: un `pipewire-pulse` partito
+		 *   prima del `pipewire` in vigore e' l'avanzo, qualunque sia l'ordine. */
+		char *pw[] = { "systemctl", "--user", "show", "-p", "ActiveState",
+		               "-p", "ActiveEnterTimestampMonotonic", "pipewire.service", NULL };
+		char *pp[] = { "systemctl", "--user", "show", "-p", "ActiveState",
+		               "-p", "ActiveEnterTimestampMonotonic", "pipewire-pulse.service", NULL };
 		g_autofree char *s_pw = chiedi(pw);
 		g_autofree char *s_pp = chiedi(pp);
+		bool pw_attivo = s_pw && strstr(s_pw, "ActiveState=active\n");
+		bool pp_attivo = s_pp && strstr(s_pp, "ActiveState=active\n");
+		const char *t;
+		unsigned long long da_pw = 0, da_pp = 0;
 
-		if (s_pw && s_pp) {
-			g_strstrip(s_pw);
-			g_strstrip(s_pp);
-			if (g_strcmp0(s_pw, "active") != 0 && g_strcmp0(s_pp, "active") == 0) {
-				char *ferma[] = { "systemctl", "--user", "stop", "pipewire-pulse.service", NULL };
+		if (s_pw && (t = strstr(s_pw, "ActiveEnterTimestampMonotonic=")))
+			da_pw = g_ascii_strtoull(t + 30, NULL, 10);
+		if (s_pp && (t = strstr(s_pp, "ActiveEnterTimestampMonotonic=")))
+			da_pp = g_ascii_strtoull(t + 30, NULL, 10);
+		if (pp_attivo && (!pw_attivo || da_pp < da_pw)) {
+			char *ferma[] = { "systemctl", "--user", "stop", "pipewire-pulse.service", NULL };
 
-				registro_dice(REG_SESSIONE,
-				              "⚠ `pipewire-pulse` e' vivo ma `pipewire` no (%s): e' "
-				              "l'avanzo della sessione di prima, e i programmi che "
-				              "suonano con PulseAudio resterebbero muti.  Lo fermo: "
-				              "il socket lo riaccende attaccato al `pipewire` nuovo — %s",
-				              s_pw, esegui(ferma) ? "fermato" : "⛔ NON fermato");
-			}
+			registro_dice(REG_SESSIONE,
+			              "⚠ `pipewire-pulse` (dal %llu) e' piu' vecchio di `pipewire` "
+			              "(%s, dal %llu): e' l'avanzo della sessione di prima, e i "
+			              "programmi che suonano con PulseAudio resterebbero muti.  Lo "
+			              "fermo: il socket lo riaccende attaccato al `pipewire` nuovo — %s",
+			              da_pp, pw_attivo ? "attivo" : "spento", da_pw,
+			              esegui(ferma) ? "fermato" : "⛔ NON fermato");
+		} else {
+			registro_dice(REG_SESSIONE,
+			              "`pipewire-pulse` %s (dal %llu), `pipewire` %s (dal %llu): niente "
+			              "avanzi della sessione di prima",
+			              pp_attivo ? "attivo" : "spento", da_pp,
+			              pw_attivo ? "attivo" : "spento", da_pw);
 		}
 	}
 
