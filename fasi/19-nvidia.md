@@ -185,8 +185,8 @@ l'audio su GNOME/Firefox in una sessione NUOVA. Scatole sulla **Radeon**, binari
 Lasciata aperta la sessione `nictest` dell'utente su GNOME.
 
 **Aggiornamento 4 ott 2026:** ✅ Android col DeX chiuso (§4-bis.2). Il giro `f012b-1` sui 4 desktop si è fermato
-da solo: su **KDE e XFCE** c'erano ancora sessioni `nictest` dell'utente. Lanciato su **GNOME e LXQt** (risultato
-nel registro della suite, giro `f012b-1`); KDE e XFCE si fanno **dopo che l'utente ha detto se chiudere le sue
+da solo: su **KDE e XFCE** c'erano ancora sessioni `nictest` dell'utente. Su **GNOME e LXQt**: ✅ **VERDE**, PASS=4
+(giro `f012b-1`, impronte `05e7c7d1/f78df3ed`); KDE e XFCE si fanno **dopo che l'utente ha detto se chiudere le sue
 sessioni** (domanda fatta, risposta non ancora arrivata).
 
 **Prima cosa della sessione nuova, in ordine:**
