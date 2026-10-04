@@ -206,7 +206,8 @@ ha chiuso le sue sessioni). ⇒ F-012B verde sui 4 desktop.
 2. Poi, a scatole libere, la prova automatica del caso «Esci → rientra → suona» (non ancora girata):
    `python3 15-giro.py --giro f012b-1 --desktop gnome,kde,xfce,lxqt --browser firefox --prove f012b`
    (sul server, da `/media/REMOTIX/src/controllo/banchi/15-suite`); ✅ VERDE il 4 ott col binario `05e7c7d1`.
-   ⚠ La controprova ROSSA col binario vecchio (`remotix.fbfceb41`) non e' fatta.
+   ✅ Controprova (4 ott, GNOME): col binario vecchio `fbfceb41` **ROSSA** (giro `f012b-controprova`, FAIL=1 PASS=1);
+   rimesso `05e7c7d1` (pagina `f78df3ed`) e di nuovo **VERDE** (giro `f012b-ritorno`, PASS=2).
 3. Chiusura della fase 19 e `fase-19` dentro `fase-10-cure`. ⚠ I commit di oggi sono solo locali: il ramo
    non e' stato spinto su GitHub.
 
