@@ -390,6 +390,13 @@ dipendenze() {
 	"${APT[@]}" install --no-install-recommends firefox-esr libpci3 >> "$EVID/dipendenze.txt" 2>&1 \
 		&& ok "Firefox ESR: $(firefox-esr --version 2>/dev/null)" \
 		|| { ko "firefox-esr non si installa"; esito dipendenze ROSSO "firefox-esr"; return 1; }
+	# ⭐ 5 ott 2026, `[M]` RTX 4090: Firefox ESR 153 (deposito di Mozilla) alla prima apertura mette
+	#    la finestra «Welcome to Firefox / Terms of Use» SOPRA la pagina di prova, e F-003 non la
+	#    trova.  Le scatole hanno la 140, che non la mostra.  ⇒ La si salta con una regola di
+	#    Firefox (la toglie «pulisci» insieme al pacchetto: e' nella sua cartella).
+	mkdir -p /usr/lib/firefox-esr/distribution
+	printf '%s\n' '{"policies": {"SkipTermsOfUse": true, "DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}' \
+		> /usr/lib/firefox-esr/distribution/policies.json
 	# Chrome: il .deb di Google (si porta il suo deposito: lo toglie «pulisci» con /etc/apt)
 	if ! command -v google-chrome >/dev/null; then
 		curl -fsSL -o /var/tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
