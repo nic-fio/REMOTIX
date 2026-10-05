@@ -6381,6 +6381,19 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   del cliente.
   - Valgono anche per **le macchine di prova**: il server di prova e le 4 scatole (ognuna col suo
     identificativo), o la suite si ferma alla trial di 1 utente.
+- ✅ **IN DEFINITIVA: tre tipi di licenza, tutti per macchina** (utente, 5 ott: *«per rendere le cose semplici
+  prevediamo 3 tipi di licenze»*):
+
+  | tipo | utenti | durata | chi la ottiene |
+  |---|---|---|---|
+  | **trial** | 1 | 30 giorni | chiunque installi |
+  | **full** | illimitati | 1 anno, rinnovo automatico | chi paga |
+  | **eternal** | illimitati | nessuna scadenza | ⛔ **non in vendita**: solo chi vende, per le sue macchine e per le macchine di prova |
+
+  - Aggiunta di Claude: con il controllo in rete **anche la trial si registra sul nostro servizio**, legata
+    all'identificativo della macchina. Una macchina che ha già avuto la sua trial non ne riceve una seconda:
+    si chiude il varco «cancello `/var/lib/remotix` e reinstallo» dichiarato sopra (resta solo chi cambia
+    l'identificativo, come per la full).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
