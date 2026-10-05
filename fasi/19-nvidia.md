@@ -250,3 +250,14 @@ sui 4 desktop, nessuna sessione dell'utente aperta.
 - NVIDIA: la prova sulla macchina noleggiata, col banco gia' pronto (`banchi/19-nvidia/LEGGIMI.md`);
 - prestazioni: le misure da rifare da zero, con un piano che approva l'utente;
 - installatore: le prove nei contenitori con la scheda vera, e una VM senza scheda che deve rifiutare con un messaggio chiaro.
+
+⭐ **5 ott 2026 — si comincia dalla NVIDIA** (utente: *«partirei dai test funzionali su nvidia, visto che devo
+sborsare un po' di soldi»*; e prima delle misure, così le misure restano ad architettura finita). Noleggio
+previsto: **LeaderGPU**, 1× RTX 3090, macchina intera, 64 GB, Xeon E5-2609 v4, 0,62 €/h, al più 48 ore; sistemi
+automatici Ubuntu 22.04/24.04, su richiesta entro un giorno lavorativo (da chiedere: 26.04 o Debian 13, e la
+console d'emergenza). Il banco (`8412ad3`): passo **«aggiorna»** (Ubuntu 20.04/22.04/24.04 ⇒ 26.04 con
+`do-release-upgrade`, un salto e un riavvio alla volta, fino a 10 riavvii dal portatile; ⛔ non si disfa) e
+**memoria di scorta** di 4 GiB sotto i 12 GiB. `[M]` 5 ott, portatile: `prepara` + prova a vuoto Debian 13 col
+prodotto `a8396bc` VERDE come il 1 ott (pulizia identica al principio); in contenitore ubuntu:24.04 ⇒ 26.04 in
+un salto, ubuntu:22.04 ⇒ 24.04 ⇒ 26.04 in due, poi «niente da aggiornare». ⚠ Un contenitore non ha nucleo,
+rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta (per questo la console).
