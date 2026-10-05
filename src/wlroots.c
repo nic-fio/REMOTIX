@@ -210,6 +210,8 @@ typedef struct {
 	bool accesa;
 } Testa;
 
+static void allarga_24(WlrPalco *p, WlrFotogramma *fuori);
+
 /* ⭐ Quante lastre — vedi il riquadro in cima, «le tre regole». */
 #define WLR_LASTRE 3
 
@@ -340,6 +342,19 @@ struct WlrPalco {
 	uint32_t f_nanosecondi;
 
 	bool detto_il_formato;
+	/*
+	 * ⭐ I PIXEL A 24 BIT — 5 ottobre 2026, NVIDIA (RTX 4090, driver 595).
+	 *   `[M]` labwc sulla NVIDIA offre in memoria SOLO `BG24` (3 byte per
+	 *   pixel, stride 3·larghezza), e a valle tutti leggono 4 byte per pixel:
+	 *   ogni fotogramma era SCARTATO («servono passo >= 4·larghezza») e la
+	 *   sessione restava nera.  ⇒ Qui si allargano a 32 bit, una riga alla
+	 *   volta, in una copia nostra: `BG24` (R G B in memoria) → `XB24`
+	 *   (R G B x), `RG24` (B G R) → `XR24` (B G R x), due formati che a valle
+	 *   esistono già.  ⚠ Il prezzo, dichiarato: un passaggio in più sui pixel,
+	 *   solo su questa strada di ripiego.
+	 */
+	uint8_t *largo;
+	gsize largo_byte;
 	/*
 	 * ⭐⭐ IL DANNO — 21 settembre 2026, e l'ha trovato la rete.
 	 *
@@ -803,7 +818,10 @@ static void frame_buffer(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 		registro_dice(AREA,
 		              "wlroots: il compositore dà i pixel in «%s» (%ux%u stride %u) — %s",
 		              nome, larghezza, altezza, stride,
-		              (drm == FOURCC('X', 'B', '2', '4') || drm == FOURCC('A', 'B', '2', '4'))
+		              (drm == FOURCC('B', 'G', '2', '4') || drm == FOURCC('R', 'G', '2', '4'))
+		                  ? "⚠ 3 BYTE PER PIXEL: li allargo io a 4 (x in fondo) prima di "
+		                    "consegnarli — un passaggio in più, solo su questa strada"
+		              : (drm == FOURCC('X', 'B', '2', '4') || drm == FOURCC('A', 'B', '2', '4'))
 		                  ? "cioè R G B x in memoria: l'ordine lo dice al codificatore "
 		                    "chi consuma il fotogramma"
 		                  : "cioè B G R x in memoria, l'ordine che il codificatore "
@@ -2385,10 +2403,44 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	fuori->formato = shm_a_drm(palco->f_shm);
 	fuori->pixel = palco->pixel;
 	fuori->byte = palco->byte;
+	if (fuori->formato == FOURCC('B', 'G', '2', '4') || fuori->formato == FOURCC('R', 'G', '2', '4'))
+		allarga_24(palco, fuori);
 	fuori->secondi = palco->f_secondi;
 	fuori->nanosecondi = palco->f_nanosecondi;
 	fuori->y_invertita = palco->y_invertita;
 	return WLR_FOTOGRAMMA_PRESO;
+}
+
+/* ⭐ I pixel a 24 bit allargati a 32 (vedi `largo` nel palco).  Il byte in
+ *    più vale 0xff; l'ordine dei tre resta, e cambia solo il nome: `BG24` →
+ *    `XB24`, `RG24` → `XR24`. */
+static void allarga_24(WlrPalco *p, WlrFotogramma *fuori)
+{
+	const uint32_t l = fuori->larghezza, a = fuori->altezza;
+	const gsize passo = (gsize)l * 4u, serve = passo * a;
+
+	if (fuori->stride < l * 3u || (gsize)fuori->stride * a > fuori->byte)
+		return; /* ⚠ forma che non torna: lo scarto lo dice chi sta a valle */
+	if (p->largo_byte < serve) {
+		g_free(p->largo);
+		p->largo = g_malloc(serve);
+		p->largo_byte = serve;
+	}
+	for (uint32_t y = 0; y < a; y++) {
+		const uint8_t *q = (const uint8_t *)fuori->pixel + (gsize)y * fuori->stride;
+		uint8_t *d = p->largo + (gsize)y * passo;
+		for (uint32_t x = 0; x < l; x++, q += 3, d += 4) {
+			d[0] = q[0];
+			d[1] = q[1];
+			d[2] = q[2];
+			d[3] = 0xff;
+		}
+	}
+	fuori->formato = fuori->formato == FOURCC('B', 'G', '2', '4') ? FOURCC('X', 'B', '2', '4')
+	                                                              : FOURCC('X', 'R', '2', '4');
+	fuori->pixel = p->largo;
+	fuori->byte = serve;
+	fuori->stride = (uint32_t)passo;
 }
 
 void wlr_chiudi(WlrPalco *palco)
@@ -2410,6 +2462,7 @@ void wlr_chiudi(WlrPalco *palco)
 		wl_buffer_destroy(palco->buffer);
 	if (palco->pixel)
 		munmap(palco->pixel, palco->byte);
+	g_free(palco->largo);
 	if (palco->fd >= 0)
 		close(palco->fd);
 	/* ⭐ le lastre, `gbm`, il nodo — DOPO il fotogramma, che poteva nominarne
