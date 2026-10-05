@@ -6344,8 +6344,10 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   «senza rete» delle voci sopra; il codice firmato e il nome del cliente restano.
   - 🔸 Proposta di Claude, da confermare: **ibrido come Microsoft** — attivazione in rete, controllo
     periodico con **tolleranza** se la rete manca (non si blocca un cliente per un guasto del nostro
-    servizio o della sua linea), e **attivazione senza rete** su richiesta per le reti chiuse (il file
-    firmato di sopra, generato da chi vende);
+    servizio o della sua linea). ⛔ **Niente attivazione senza rete** (utente, 5 ott: *«un server che non
+    abbia un accesso a internet … mi sembra alquanto improbabile, a meno che non si tratti di militari»*):
+    una strada sola, e il file firmato senza rete era il varco più facile da clonare. Restano: il passaggio
+    da un **proxy** (le aziende escono così) e la **tolleranza** ai guasti di rete;
   - 🔸 e **non scritto da noi**: un servizio di licenze esistente, da scegliere dopo un confronto.
   - ⚠ Da dichiarare al cliente: il server manda al nostro servizio il codice e l'identificativo della
     macchina (riservatezza dei dati).
