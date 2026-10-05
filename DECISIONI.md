@@ -6309,9 +6309,19 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   dove comincia il degrado. ⛔ Solo macchine misurate davvero, col loro ferro dichiarato.
   - ⇒ **Il piano delle misure di prestazione** (primo lavoro dopo la fase 19) misura anche **la curva degli
     utenti** su Intel e Radeon: sono le prime due righe della tabella.
-  - 🔸 Proposta di Claude, da confermare: una **prova di capacità** dentro REMOTIX, che simula N sessioni sul
-    server del cliente e dice quanti utenti regge. Chi ha una macchina che noi non abbiamo si misura da solo,
-    durante la trial, prima di comprare.
+  - ✅ **La prova di capacità per il cliente è un programma a sé, accanto al server** (utente, 5 ott: *«remotix
+    allo stato attuale è "trasparente" (non dispone di menu o di un'interfaccia per le attività di servizio):
+    dovremo realizzare una suite di test da fornire allo scopo, "parallela" al server vero e proprio»*). Chi
+    ha una macchina che noi non abbiamo si misura da solo, durante la trial, prima di comprare. Condizioni
+    di Claude:
+    - **lo stesso codice di codifica del server**, costruito insieme a lui e nello stesso pacchetto:
+      un codificatore scritto a parte misurerebbe un'altra cosa;
+    - **leggera**: niente browser né scatole (le suite di laboratorio non si consegnano). Simula N desktop
+      in movimento e misura quanti la scheda ne codifica senza perdere fluidità;
+    - **solo a server fermo**: con sessioni aperte si rifiuta e dice perché, perché misurerebbe solo la
+      capacità che avanza e ruberebbe la scheda agli utenti;
+    - stampa **la stessa riga della tabella pubblica** (ottimale fino a X, poi degrado), confrontabile coi
+      nostri numeri.
   - Sostituisce la controproposta di Claude «vendere fino a 16, l'oltre dopo»: la licenza dice N o
     «illimitati» senza tetto, e la trasparenza fa il resto. Resta il lavoro tecnico del limite deciso
     all'avvio (sopra).
