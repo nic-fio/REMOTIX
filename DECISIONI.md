@@ -5897,7 +5897,7 @@ che ritieni deboli»*): fase 0 TRUST, tre esiti di compatibilità per desktop, i
 con «fai / verifica / annulla» per ogni azione, niente si installa prima che tutto sia scaricato,
 accensione fra verifica statica e dal vivo, ripresa di un'operazione interrotta. ⇒ `fasi/17-l-installatore.md` §6.0.
 
-### 10.5 ✅ TUI e GUI sono irrinunciabili
+### 10.5 ⛔ SUPERATA da §10.31 (5 ott 2026), per la GUI — TUI e GUI sono irrinunciabili
 
 Parola dell'utente: *«su TUI e GUI dico che è un requisito irrinunciabile»*. ⇒ Tre interfacce (CLI, TUI,
 GUI) su un solo motore, nessuna logica d'installazione nelle interfacce, la GUI come l'utente con
@@ -6051,7 +6051,7 @@ ban per indirizzo di REMOTIX (§1.9: 3 fallimenti in 5 minuti ⇒ 12 ore) resta,
 voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password) — ✅ confermato dall'utente:
 *«che root non entri da REMOTIX è corretto, è lo stesso sistema di sicurezza di ssh»*.
 
-### 10.19 ✅ D12: la finestra dell'installatore si disegna con Gio, dentro lo stesso programma
+### 10.19 ⛔ SUPERATA da §10.31 (5 ott 2026) — D12: la finestra dell'installatore si disegna con Gio, dentro lo stesso programma
 
 Scelta dell'utente (30 set 2026), fra tre strade: Chromium incorporato (indipendente, ma due programmi e un
 motore web da mantenere), WebKitGTK della distribuzione (dipendenza, programma non più unico), **Gio**, una
@@ -6396,6 +6396,23 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     l'identificativo, come per la full).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
+
+### 10.31 ✅ L'installatore non ha la finestra: solo una TUI curata (5 ott 2026)
+
+Parole dell'utente: *«niente installer grafico; prevediamo sì un installer con interfaccia professionale, ma
+attraverso una TUI sofisticata»*. ⛔ **Supera** §10.5 per la parte GUI e §10.19 (Gio) per intero.
+
+- ⇒ **Due interfacce, non tre**: la CLI e la TUI (bubbletea/lipgloss, già nel programma), sullo stesso motore.
+  La TUI è l'interfaccia «professionale»: va curata come lo era la finestra (colori, disposizione, parole del
+  prototipo).
+- Perché regge: chi installa un server lo fa da un terminale, via ssh o dalla console, e anche dal desktop
+  `install.sh` si lancia da un terminale. Si toglie la parte più costosa da costruire e da provare:
+  la seconda costruzione con cgo su glibc di Debian 12 (`Contenitore.gui`), le librerie grafiche, polkit e
+  le differenze fra Wayland e X11.
+- ⚠ **Il lavoro che ne viene** (fase dell'installatore): togliere `installatore/interfaccia/gui`,
+  `Contenitore.gui`, `remotix-install-gui`, `install.sh --finestra` e il codice `RX-UI-001`, e la dipendenza
+  da Gio nel `go.mod`; aggiornare `fasi/17-l-installatore.md` §6.6.1 e §6.6.14 e `SPECIFICHE.md`. ⛔ Il codice
+  dell'interfaccia non contiene logica d'installazione (§6.6.1), quindi toglierlo non tocca il motore.
 
 ---
 
