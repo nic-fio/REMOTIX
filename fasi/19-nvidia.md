@@ -282,3 +282,44 @@ rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta
 - **Suite su XFCE, Firefox 153 e Chrome 154: 43 PASS, 0 FAIL, 1 BLOCKED** (F-013 Firefox: l'«orecchio» ha
   raccolto 106 campioni su 120 — misura del banco, non un rosso). Giri: 1 (prima della cura) F-001 rosso e 38
   BLOCKED; 2 (con la cura) 15 PASS; 3 (regola di Firefox) 30 PASS 9 FAIL; 4 (nome allineato) 43 PASS.
+- ⭐ **Copia zero sulla NVIDIA** (`d62958c`): il GBM rifiuta la lastra lineare; la lastra nasce con uno dei
+  modificatori che il codificatore Vulkan dichiara di importare (`0x300000000606014`). Confronto dalla scheda
+  **28 su 28** buoni. Il server consegna a 60/s con ~22 ms dalla cattura ai byte (dalla memoria: ~11/s, ~90 ms).
+
+#### 7-ter.1 Il pannello di XFCE che non si ferma — 5-6 ottobre 2026
+
+`[M]` Dopo la copia zero F-003 su Firefox era rosso in 4 giri su 4 («foto vecchia» di 1-4,7 s), Chrome verde.
+- **Il testimone nuovo** (`wlroots.c`, solo con `--parlantina`): il danno che il compositore DICHIARA, ogni 120
+  fotogrammi — area media, interi, e l'ultimo rettangolo. E una sonda `copy_with_damage` scritta per l'occasione
+  (in memoria, fuori dal prodotto) attaccata alla sessione viva.
+- **Il fatto**: su un desktop FERMO il compositore risponde a 60/s, col danno su un rettangolo di 49 px di
+  altezza in fondo (o 27 in cima): è `xfce4-panel` che si ridisegna a OGNI fotogramma, alternando la posizione
+  della barra centrata per 1280 (x=487) e per la tela vera. ⇒ 60 fotogrammi 4K al secondo per niente, e un
+  cliente lento resta indietro di secondi.
+- **Non è la copia zero**: col pacchetto senza copia zero e lo stesso testimone, il ciclo c'è lo stesso (e
+  F-003 rosso); la copia zero lo fa solo correre più forte (60/s invece di ~11). Il verde «senza copia zero»
+  del primo confronto era una nascita fortunata.
+- **È la gara della nascita** (la stessa di pcmanfm-qt su LXQt, fase 14): l'uscita di labwc nasce 1280x720 e
+  la misura del cliente arriva ~200 ms dopo; se `xfce4-panel` nasce nel mezzo, resta nel ciclo. `[M]`
+  riavviato il pannello (`xfce4-panel -r`) il ciclo sparisce e F-003 torna verde; ridimensionata (`wlr-randr`)
+  una sessione GIÀ nata, il ciclo non nasce. labwc 0.9.3, xfce4-panel 4.20.7, gtk-layer-shell 0.10.0.
+- ⭐ **La cura** (`sessione.c`, `primario_misurato()`, ex `primario_lxqt()`): anche su XFCE il client primario
+  di labwc è un `sh` che dà la misura con `wlr-randr` e poi fa `exec xfce4-session`. La testa della riga
+  (`labwc -m --session`) è la stessa macro di `XFCE4_SESSION_COMPOSITOR`: la cintura del logout non cambia.
+  ⇒ `wlr-randr` entra nei componenti di XFCE **e di LXQt** nel catalogo (2026.10.05.11: mancava su tutte le
+  piattaforme tranne Leap, anche per la cura già esistente di LXQt), e nell'rpm `(wlr-randr if xfce4-session)`.
+- **Misurato**: F-003 verde su Firefox e Chrome; a schermo fermo il server non consegna più niente.
+  **Suite XFCE completa con copia zero e cura: 43 PASS, 1 FAIL** (giro `remotix-nv-ubuntu2404-20261005-2215`).
+
+#### 7-ter.2 F-013 su Firefox: resta rosso — aperto
+
+- L'**immagine** a tratti ferma è del CLIENTE: i browser del banco disegnano in software (labwc pixman,
+  llvmpipe; `CanvasRenderer` di Firefox ~65%) su uno Xeon E5-2630 v4. Controprova `CLIENTE_SCHEDA=1` (il
+  compositore dei browser sulla scheda, solo per la controprova): l'immagine passa.
+- Il **suono** no: udibile 23-56% anche col cliente sulla scheda. Il server spedisce ~50 blocchi al secondo,
+  0 persi, senza buchi; l'«orecchio» dentro la pagina sente il suono a raffiche. Su questa macchina Firefox
+  non l'aveva mai misurato (prima della copia zero: BLOCKED, 104-106 campioni su 120). Firefox qui è il
+  **153 ESR di Mozilla**; sui banchi Intel, dove F-013 passa, è un'altra versione. ⏳ Da capire se è il ferro
+  o Firefox 153 (si prova fuori da questa macchina).
+- **Un difetto del banco**: Ubuntu 26.04 ha i coreutils in Rust, e `tail -5` è un errore (`tail -n 5`
+  funziona). Le prove raccoglievano le evidenze con `tail -N`: corretto in tutti i banchi.
