@@ -595,6 +595,12 @@ suite() {
 	# il compositore DEI BROWSER, come banchi/15-suite/15-compositori.sh: labwc senza schermo a
 	# 3840x2160. ⚠ Disegna in software (pixman): e' il cliente, e non deve dipendere dalla scheda
 	# che si sta provando. La sessione di XFCE invece la accende il PRODOTTO, sulla scheda
+	# ⭐ 6 ott 2026: le scene che le prove aprono DENTRO la sessione (F-021: `accendi_scena`)
+	#    le cercano in /opt/remotix, dove stanno sulle scatole. Se la cartella non c'era, e'
+	#    nostra: `pulisci` la toglie
+	if [ ! -d /opt/remotix ]; then mkdir -p /opt/remotix && touch "$LAVORO/opt-remotix-nostra"; fi
+	cp "$ALBERO"/banchi/11-scatole/11-c*-scena.html /opt/remotix/ 2>/dev/null
+	chmod 755 /opt/remotix; chmod 644 /opt/remotix/*.html 2>/dev/null
 	pkill -u "$UTENTE_BANCO" -x labwc 2>/dev/null
 	# ⛔ 5 ott 2026: `pkill` non aspetta. Se il labwc di prima e' ancora vivo, il suo
 	#    «wayland-0» finisce nell'elenco di «prima», il nuovo rinasce con lo STESSO nome e qui
@@ -695,6 +701,7 @@ pulisci() {
 		loginctl terminate-user "$u" 2>/dev/null
 		pkill -KILL -u "$u" 2>/dev/null
 	done
+	[ -f "$LAVORO/opt-remotix-nostra" ] && rm -rf /opt/remotix
 	# 2. REMOTIX: con l'installatore se l'ha messo lui, poi i nostri due file
 	if [ -x /usr/bin/remotix-install ] || [ -x "$VALIGIA/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install

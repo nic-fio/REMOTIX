@@ -310,6 +310,9 @@ rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta
   piattaforme tranne Leap, anche per la cura già esistente di LXQt), e nell'rpm `(wlr-randr if xfce4-session)`.
 - **Misurato**: F-003 verde su Firefox e Chrome; a schermo fermo il server non consegna più niente.
   **Suite XFCE completa con copia zero e cura: 43 PASS, 1 FAIL** (giro `remotix-nv-ubuntu2404-20261005-2215`).
+- **La cintura del logout col comando nuovo**: F-021 («Esci») **4/4 PASS**, F-012B (il suono dopo «Esci»)
+  4/4, F-004 (il mouse) 4/4, F-012 (il suono) 4/4 — Firefox 153 e Chrome. ⚠ F-021 sulla NVIDIA vuole le scene
+  in `/opt/remotix` come sulle scatole: il banco ce le mette, e `pulisci` le toglie se la cartella era sua.
 
 #### 7-ter.2 F-013 su Firefox: resta rosso — aperto
 
