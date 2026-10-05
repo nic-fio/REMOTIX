@@ -196,9 +196,14 @@ def principale():
     base = 3100 + 10 * 2                     # le porte di debug di XFCE in 15-giro.py
     print("⭐ 19-nv-suite · %s · %s · browser %s · porta %d" % (
         DESKTOP, o.modo, o.browser, o.porta), flush=True)
-    for p in PROVE:
-        if o.prove and not any(x.strip() and x.strip() in p for x in o.prove.split(",")):
-            continue
+    # ⭐ 6 ott 2026: con --prove si sceglie fra TUTTE le prove della fase 15 (es. f012 per il
+    #    suono senza video), non solo fra le sei del giro; «-f012-» non prende f012b
+    scelte = PROVE
+    if o.prove:
+        voluti = ["-%s-" % x.strip() for x in o.prove.split(",") if x.strip()]
+        scelte = [f for f in sorted(os.listdir(SUITE))
+                  if f.startswith("15-f") and f.endswith(".py") and any(v in f for v in voluti)]
+    for p in scelte:
         file = os.path.join(SUITE, p)
         _, per_browser = leggi(file)
         for b in o.browser.split(","):

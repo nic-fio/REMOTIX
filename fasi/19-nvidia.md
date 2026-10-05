@@ -321,5 +321,9 @@ rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta
   non l'aveva mai misurato (prima della copia zero: BLOCKED, 104-106 campioni su 120). Firefox qui è il
   **153 ESR di Mozilla**; sui banchi Intel, dove F-013 passa, è un'altra versione. ⏳ Da capire se è il ferro
   o Firefox 153 (si prova fuori da questa macchina).
+  `[M]` 6 ott: **F-012 (il suono SENZA video) verde su Firefox 153 e Chrome** sulla stessa macchina ⇒ Firefox 153
+  il suono lo riceve e lo suona; si rompe solo col video 4K a 60/s addosso. ⇒ Il sospetto va sul ferro del
+  cliente (Firefox decodifica in software, `RDD` ~45%, su uno Xeon del 2016), non sul prodotto. ⚠ Non è chiuso:
+  manca la prova di Firefox 153 + video 4K su un cliente veloce.
 - **Un difetto del banco**: Ubuntu 26.04 ha i coreutils in Rust, e `tail -5` è un errore (`tail -n 5`
   funziona). Le prove raccoglievano le evidenze con `tail -N`: corretto in tutti i banchi.
