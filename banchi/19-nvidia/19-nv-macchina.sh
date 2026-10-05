@@ -7,6 +7,9 @@
 # (`tutto IP`), in un'unita' di systemd che sopravvive alla caduta di ssh.
 #
 # I PASSI, nell'ordine di `tutto` (fasi/19-nvidia.md §2.4, compito del 1 ott 2026):
+#   aggiorna     una Ubuntu PIU' VECCHIA della 26.04 la porta alla 26.04 con do-release-upgrade,
+#                    un salto e un riavvio alla volta (20.04 ⇒ 22.04 ⇒ 24.04 ⇒ 26.04): i noleggiatori
+#                    offrono Ubuntu, e non sempre la 26.04 (5 ott 2026). ⛔ «pulisci» NON lo disfa
 #   controlli    (a) scheda, driver, nodi DRM, ICD, vulkaninfo con
 #                    VK_KHR_video_encode_h264/h265; e la FOTOGRAFIA della macchina
 #                    com'era (pacchetti, /etc/apt, utenti, unita'): serve a «pulisci»
@@ -114,6 +117,45 @@ fotografa_prima() {
 # ═══════════════════════════════════════════════════════════════════════════
 #  (a) I CONTROLLI
 # ═══════════════════════════════════════════════════════════════════════════
+# Ubuntu vecchia ⇒ un salto di versione e un riavvio (uscita 10); la 26.04 o Debian 13 ⇒ niente.
+# ⛔ Irreversibile: la macchina si restituisce aggiornata, e «pulisci» lo dichiara.
+aggiorna() {
+	log "(0) la versione del sistema"
+	. /etc/os-release
+	if [ "${ID:-}" != ubuntu ] || [ "$(famiglia)" != altra ]; then
+		ok "$(distro): niente da aggiornare"
+		return 0
+	fi
+	local da=$VERSION_ID f="$EVID/aggiorna-$VERSION_ID.txt"
+	case "$da" in 20.04|22.04|24.04) ;; *) ko "ubuntu $da: so salire solo da 20.04, 22.04 e 24.04"; esito aggiorna ROSSO "ubuntu $da"; return 1 ;; esac
+	[ "$(id -u)" = 0 ] || { ko "serve root"; return 1; }
+	# do-release-upgrade si rifiuta se il sistema non e' aggiornato o aspetta un riavvio
+	log "ubuntu $da: prima aggiorno i pacchetti della $da"
+	{ "${APT[@]}" update && "${APT[@]}" dist-upgrade && "${APT[@]}" install ubuntu-release-upgrader-core; } > "$f" 2>&1 \
+		|| { ko "aggiornamento della $da non riuscito ($f)"; esito aggiorna ROSSO "dist-upgrade $da"; return 1; }
+	if [ -f /var/run/reboot-required ]; then
+		touch "$LAVORO/riavvio-chiesto"
+		log "la $da aggiornata chiede un riavvio prima del salto"
+		return 10
+	fi
+	sed -i -E 's/^Prompt=.*/Prompt=lts/' /etc/update-manager/release-upgrades 2>/dev/null
+	log "ubuntu $da: salto alla versione LTS dopo (mezz'ora o piu')"
+	# -f DistUpgradeViewNonInteractive: nessuna domanda, i file di configurazione cambiati si tengono
+	if ! do-release-upgrade -f DistUpgradeViewNonInteractive >> "$f" 2>&1; then
+		# prima della .1 il salto fra LTS non e' ancora offerto: -d lo forza
+		if grep -q -i "no new release" "$f"; then
+			avviso "il salto non e' ancora offerto: lo forzo con -d"
+			do-release-upgrade -d -f DistUpgradeViewNonInteractive >> "$f" 2>&1 \
+				|| { ko "do-release-upgrade -d non riuscito ($f)"; esito aggiorna ROSSO "salto da $da"; return 1; }
+		else
+			ko "do-release-upgrade non riuscito ($f)"; esito aggiorna ROSSO "salto da $da"; return 1
+		fi
+	fi
+	esito aggiorna RIAVVIO "ubuntu $da ⇒ $(. /etc/os-release; echo "$VERSION_ID")"
+	touch "$LAVORO/riavvio-chiesto"
+	return 10
+}
+
 controlli() {
 	log "(a) i controlli iniziali"
 	local f="$EVID/controlli.txt" rosso=0 manca_driver=0
@@ -293,6 +335,26 @@ driver() {
 # ═══════════════════════════════════════════════════════════════════════════
 #  (b) LE DIPENDENZE: il desktop leggero, gli attrezzi delle prove, i browser
 # ═══════════════════════════════════════════════════════════════════════════
+# La memoria di scorta (5 ott 2026: la macchina a noleggio puo' avere 8 GB, il banco ne chiedeva 16).
+# Senza, a memoria finita il sistema uccide il browser a meta' prova, e il rosso sembrerebbe del
+# prodotto.  Sotto i 12 GiB e senza scorta: un file da 4 GiB, che «pulisci» toglie.
+SCORTA=/remotix-nv.scorta
+scorta() {
+	local kib
+	kib=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+	if [ "$kib" -ge $((12 * 1048576)) ]; then ok "memoria $((kib / 1048576)) GiB: la scorta non serve"; return 0; fi
+	if [ -n "$(swapon --noheadings 2>/dev/null)" ]; then ok "memoria $((kib / 1048576)) GiB, scorta gia' presente: $(swapon --noheadings --show=NAME,SIZE | tr '\n' ' ')"; return 0; fi
+	if fallocate -l 4G "$SCORTA" 2>/dev/null || dd if=/dev/zero of="$SCORTA" bs=1M count=4096 status=none; then
+		chmod 600 "$SCORTA"
+		if mkswap "$SCORTA" > /dev/null 2>&1 && swapon "$SCORTA" 2>/dev/null; then
+			ok "memoria $((kib / 1048576)) GiB ⇒ scorta di 4 GiB accesa ($SCORTA)"
+			return 0
+		fi
+	fi
+	rm -f "$SCORTA"
+	avviso "memoria $((kib / 1048576)) GiB e la scorta non si accende: un rosso per memoria finita va letto nel registro del kernel (oom)"
+}
+
 dipendenze() {
 	log "(b) le dipendenze: XFCE sotto labwc, attrezzi, Firefox ESR, Chrome"
 	local fam
@@ -302,6 +364,7 @@ dipendenze() {
 		ok "universe acceso (labwc, xfdesktop4, glslc stanno li')"
 	fi
 	"${APT[@]}" update > "$EVID/dipendenze.txt" 2>&1
+	scorta
 	# il desktop come nella scatola rete11-xfce (banchi/11-scatole/Contenitore.xfce), senza scatola
 	local desktop=(labwc xfce4-session xfce4-panel xfdesktop4 xfce4-terminal thunar xwayland wlr-randr
 		dbus-user-session libpam-systemd sudo fonts-dejavu-core pipewire pipewire-pulse wireplumber wl-clipboard)
@@ -624,6 +687,8 @@ pulisci() {
 		rm -rf "/home/${u:?}"
 	done
 	rm -f /etc/sudoers.d/remotix-nv
+	# 3-bis. la memoria di scorta, se l'avevamo messa noi
+	if [ -f "$SCORTA" ]; then swapoff "$SCORTA" 2>/dev/null; rm -f "$SCORTA"; ok "scorta tolta"; fi
 	# 4. modeset, se l'avevamo messo noi
 	if [ -f /etc/modprobe.d/remotix-nv.conf ]; then
 		rm -f /etc/modprobe.d/remotix-nv.conf
@@ -676,7 +741,7 @@ pulisci() {
 stato() {
 	log "a che punto siamo"
 	local p
-	for p in controlli driver dipendenze remotix codifica confronto suite raccogli; do
+	for p in aggiorna controlli driver dipendenze remotix codifica confronto suite raccogli; do
 		if [ -f "$FATTO/$p" ]; then printf '    %-11s fatto  %s\n' "$p" "$(cat "$FATTO/$p")"; else printf '    %-11s —\n' "$p"; fi
 	done
 	[ -f "$EVID/passi.txt" ] && { echo; sed 's/^/    /' "$EVID/passi.txt"; }
@@ -698,7 +763,7 @@ tutto() {
 		rm -f "$LAVORO/riavvio-chiesto" "$FATTO/controlli" "$FATTO/driver"
 		log "dopo il riavvio: rifaccio controlli e driver"
 	fi
-	for p in controlli driver dipendenze remotix codifica confronto suite raccogli; do
+	for p in aggiorna controlli driver dipendenze remotix codifica confronto suite raccogli; do
 		case " ${RIFAI:-} " in *" $p "*) rm -f "$FATTO/$p" ;; esac
 		if [ -f "$FATTO/$p" ] && [ "$p" != raccogli ]; then
 			log "$p: gia' fatto ($(cat "$FATTO/$p")), salto"
@@ -730,11 +795,11 @@ tutto() {
 
 AZIONE=${1:-stato}
 case "$AZIONE" in
-controlli|driver|dipendenze|remotix|codifica|confronto|suite)
+aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite)
 	passo "$AZIONE"; c=$? ;;
 raccogli|pulisci|stato) "$AZIONE"; c=$? ;;
 tutto) tutto; c=$? ;;
-*) echo "uso: $0 controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto"; exit 2 ;;
+*) echo "uso: $0 aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto"; exit 2 ;;
 esac
 echo "$c" > "$LAVORO/uscita"
 exit "$c"

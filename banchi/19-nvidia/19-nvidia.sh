@@ -177,15 +177,17 @@ pulisci() {
 tutto() {
 	manda
 	avvia tutto || exit 1
-	segui; local u=$?
-	if [ "$u" = 10 ]; then
-		log "il banco chiede un RIAVVIO (driver/ICD/modeset): riavvio e riprendo"
+	segui; local u=$? n=0
+	# piu' di un riavvio (5 ott 2026): l'aggiornamento di Ubuntu ne chiede uno per salto, il driver uno
+	while [ "$u" = 10 ] && [ $n -lt 10 ]; do
+		n=$((n + 1))
+		log "il banco chiede un RIAVVIO ($n; aggiornamento/driver/ICD/modeset): riavvio e riprendo"
 		[ -n "${CONTENITORE:-}" ] && { ko "in un contenitore non si riavvia"; exit 1; }
 		lontano "systemctl reboot" || true
 		aspetta_ssh || exit 1
 		avvia tutto || exit 1
 		segui; u=$?
-	fi
+	done
 	raccogli
 	log "FINE: uscita $u · le evidenze in $MISURE · la pulizia: «$0 pulisci $IP»"
 	return "$u"
