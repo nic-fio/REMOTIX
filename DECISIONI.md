@@ -6351,6 +6351,20 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   - 🔸 e **non scritto da noi**: un servizio di licenze esistente, da scegliere dopo un confronto.
   - ⚠ Da dichiarare al cliente: il server manda al nostro servizio il codice e l'identificativo della
     macchina (riservatezza dei dati).
+- ✅ **IL MODELLO DEFINITIVO: abbonamento annuale per macchina, utenti illimitati** (utente, 5 ott: *«dovendo
+  realizzare un server di licenze, voglio un sistema semplice: si paga anno per anno senza limite agli utenti
+  che remotix gestisce»*). ⛔ **Supera** «la licenza full vale per sempre» e gli scaglioni di utenti
+  (proposta di Claude, mai confermata).
+  - Perché regge adesso e non prima: il controllo in rete c'è comunque, quindi **il rinnovo è automatico**
+    (lo comanda la piattaforma di pagamento) e non serve mandare un codice nuovo ogni anno. Le obiezioni di
+    Claude all'annuale cadono con la rete.
+  - Il programma non conta più gli utenti per la licenza: resta solo il tetto tecnico della macchina,
+    dichiarato nella tabella pubblica. ⇒ Il lavoro «limite deciso all'avvio» resta, il lavoro «numero di
+    utenti nel codice» sparisce. La trial resta 1 utente, 30 giorni.
+  - ⚠ Dichiarato: lo studio con 2 persone e la scuola con 60 pagano uguale. Il prezzo si sceglie tenendone
+    conto.
+  - 🔸 Da confermare: a rinnovo mancato, qualche giorno di tolleranza, poi la stessa finestra della trial
+    scaduta («abbonamento scaduto, rinnova»).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
