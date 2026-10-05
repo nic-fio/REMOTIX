@@ -185,7 +185,25 @@ typedef struct {
 	struct gbm_bo *bo;
 	int fd;
 	uint32_t stride;
+	uint64_t modificatore;
 } Buffer;
+
+/* ⭐ 5 ott 2026, NVIDIA: il suo GBM rifiuta LINEARE + RENDERING. */
+static struct gbm_bo *bo_come_il_prodotto(struct gbm_device *g, uint32_t l, uint32_t a, uint64_t *mod)
+{
+	struct gbm_bo *bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
+	*mod = DRM_FORMAT_MOD_LINEAR;
+	if (!bo) {
+		/* ⚠ Il banco scrive i pixel col processore (`gbm_bo_map`), e la NVIDIA non
+		 *    mappa le sue lastre a blocchi: qui si ripiega sul LINEARE senza
+		 *    RENDERING, che Vulkan importa uguale.  La lastra a blocchi del
+		 *    prodotto la prova la suite (il compositore ci disegna davvero). */
+		bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR);
+		if (bo)
+			fprintf(stderr, "⚠ LINEARE+RENDERING rifiutato: lastra LINEARE senza RENDERING\n");
+	}
+	return bo;
+}
 
 #define BUFFER_QUANTI 4
 
@@ -403,8 +421,7 @@ int main(int argc, char **argv)
 					buffer[b].bo = NULL;
 				}
 			for (int b = 0; b < BUFFER_QUANTI; b++) {
-				buffer[b].bo = gbm_bo_create(gbm, ridim_l, ridim_a, GBM_FORMAT_XRGB8888,
-				                             GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
+				buffer[b].bo = bo_come_il_prodotto(gbm, ridim_l, ridim_a, &buffer[b].modificatore);
 				buffer[b].fd = gbm_bo_get_fd(buffer[b].bo);
 				buffer[b].stride = gbm_bo_get_stride(buffer[b].bo);
 			}
@@ -463,8 +480,7 @@ int main(int argc, char **argv)
 		if (scheda) {
 			Buffer *b = &buffer[i % BUFFER_QUANTI];
 			if (!b->bo) {
-				b->bo = gbm_bo_create(gbm, larghezza_corrente, altezza_corrente, GBM_FORMAT_XRGB8888,
-				                      GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
+				b->bo = bo_come_il_prodotto(gbm, larghezza_corrente, altezza_corrente, &b->modificatore);
 				if (!b->bo) {
 					fprintf(stderr, "⛔ gbm_bo_create\n");
 					return 1;
@@ -487,7 +503,7 @@ int main(int argc, char **argv)
 			s = (CodificatoreSuperficie){
 				.fd = b->fd, .offset = 0, .stride = b->stride,
 				.larghezza = larghezza_corrente, .altezza = altezza_corrente,
-				.formato_drm = DRM_FORMAT_XRGB8888, .modificatore = DRM_FORMAT_MOD_LINEAR,
+				.formato_drm = DRM_FORMAT_XRGB8888, .modificatore = b->modificatore,
 				.generazione = generazione,
 			};
 		}

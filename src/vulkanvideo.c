@@ -2196,6 +2196,52 @@ static VkFormat formato_vulkan_di(uint32_t drm)
 	}
 }
 
+/*
+ * ⭐ I modificatori che questa scheda sa IMPORTARE (e campionare) per un
+ *   formato DRM — 5 ottobre 2026, NVIDIA.  `[M]` RTX 4090, driver 595: lasciato
+ *   libero, il GBM della NVIDIA sceglie `0x300000000e08014`, che Vulkan
+ *   rifiuta (`VK_ERROR_FORMAT_NOT_SUPPORTED`); Vulkan dichiara invece
+ *   `0x300000000606010…15` e il LINEARE.  ⇒ Chi alloca la lastra chiede a GBM
+ *   SOLO questi.  Il LINEARE si lascia fuori: chi chiama l'ha già provato.
+ *   Apre e richiude il dispositivo da sola (si chiama una volta per palco).
+ */
+int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *fuori, int quanti)
+{
+	VkFormat f = formato_vulkan_di(formato_drm);
+	VulkanVideoDispositivo *d;
+	char perche[256] = { 0 };
+	int n = 0;
+
+	if (f == VK_FORMAT_UNDEFINED || !fuori || quanti <= 0)
+		return 0;
+	d = vulkanvideo_apri_dispositivo(nodo, perche, sizeof perche);
+	if (!d)
+		return 0;
+	if (d->ha_dmabuf) {
+		VkDrmFormatModifierPropertiesListEXT l = {
+			.sType = VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT };
+		VkFormatProperties2 p = { .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2, .pNext = &l };
+		vkGetPhysicalDeviceFormatProperties2(d->fisico, f, &p);
+		if (l.drmFormatModifierCount > 0) {
+			l.pDrmFormatModifierProperties = calloc(l.drmFormatModifierCount,
+			                                        sizeof *l.pDrmFormatModifierProperties);
+			if (l.pDrmFormatModifierProperties) {
+				vkGetPhysicalDeviceFormatProperties2(d->fisico, f, &p);
+				for (uint32_t i = 0; i < l.drmFormatModifierCount && n < quanti; i++) {
+					const VkDrmFormatModifierPropertiesEXT *m = &l.pDrmFormatModifierProperties[i];
+					if (m->drmFormatModifier == 0 /* LINEARE */ || m->drmFormatModifierPlaneCount != 1
+					    || !(m->drmFormatModifierTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
+						continue;
+					fuori[n++] = m->drmFormatModifier;
+				}
+				free(l.pDrmFormatModifierProperties);
+			}
+		}
+	}
+	vulkanvideo_chiudi_dispositivo(d);
+	return n;
+}
+
 static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, char *errore, size_t errore_byte)
 {
 	VkDevice dev = v->d->dispositivo;

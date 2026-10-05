@@ -160,6 +160,7 @@
  *     salta per quel fotogramma, dicendolo.
  */
 #include "wlroots.h"
+#include "vulkanvideo.h"
 
 #include "forma.h"
 #include "registro.h"
@@ -355,6 +356,11 @@ struct WlrPalco {
 	 */
 	uint8_t *largo;
 	gsize largo_byte;
+	/* ⭐ I modificatori che il codificatore sa importare (vedi `lastra_prepara`):
+	 *    per il formato `mod_formato`, chiesti una volta. */
+	uint32_t mod_formato;
+	uint64_t mod_ammessi[16];
+	int mod_quanti;
 	/*
 	 * ⭐⭐ IL DANNO — 21 settembre 2026, e l'ha trovato la rete.
 	 *
@@ -1206,10 +1212,43 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	if (!l->bo)
 		l->bo = gbm_bo_create(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
 		                      GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR);
+	/*
+	 * ⭐ 5 ottobre 2026, NVIDIA (RTX 4090, driver 595): `[M]` il GBM della
+	 *   NVIDIA rifiuta LINEARE + RENDERING (`Invalid argument`, con tutti e due
+	 *   i dialetti) e accetta RENDERING col modificatore SUO
+	 *   (`0x300000000e08014`).  ⇒ Solo se il lineare è stato rifiutato, la
+	 *   lastra la sceglie il driver, e il modificatore viaggia col fotogramma:
+	 *   Vulkan lo importa per nome (`VK_EXT_image_drm_format_modifier`), e se
+	 *   non sapesse, lo direbbe all'importazione.  ⛔ Intel e Radeon non
+	 *   passano di qui: a loro il lineare riesce.
+	 */
+	bool scelta_del_driver = false;
+	if (!l->bo) {
+		/* ⛔ Non «quello che vuole il driver»: `[M]` sulla 4090 sceglie un
+		 *    modificatore che Vulkan non importa.  Solo quelli che il
+		 *    codificatore dichiara (`vulkanvideo_modificatori`), chiesti una
+		 *    volta per palco e formato. */
+		int lineare_errno = errno;
+		if (p->mod_formato != formato) {
+			p->mod_formato = formato;
+			p->mod_quanti = vulkanvideo_modificatori(p->nodo, formato, p->mod_ammessi,
+			                                         (int)G_N_ELEMENTS(p->mod_ammessi));
+		}
+		if (p->mod_quanti > 0)
+			l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_larghezza, l->bo_altezza,
+			                                      formato, p->mod_ammessi,
+			                                      (unsigned)p->mod_quanti, GBM_BO_USE_RENDERING);
+		if (!l->bo)
+			errno = lineare_errno;
+		else
+			scelta_del_driver = true;
+	}
 	if (!l->bo) {
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
-		            "gbm non alloca %ux%u fourcc 0x%08x lineare su %s: %s",
-		            l->bo_larghezza, l->bo_altezza, formato, p->nodo, g_strerror(errno));
+		            "gbm non alloca %ux%u fourcc 0x%08x su %s, né lineare né con uno dei "
+		            "%d modificatori che il codificatore importa: %s",
+		            l->bo_larghezza, l->bo_altezza, formato, p->nodo, p->mod_quanti,
+		            g_strerror(errno));
 		return false;
 	}
 	if (gbm_bo_get_plane_count(l->bo) != 1) {
@@ -1222,9 +1261,26 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	l->modificatore = gbm_bo_get_modifier(l->bo);
 	/* ⚠ Col dialetto vecchio il modificatore può tornare INVALID: la bandiera
 	 *   LINEAR però l'ha fissato, e lo si scrive per quel che è. */
-	if (l->modificatore == DRM_FORMAT_MOD_INVALID)
+	if (l->modificatore == DRM_FORMAT_MOD_INVALID && !scelta_del_driver)
 		l->modificatore = DRM_FORMAT_MOD_LINEAR;
-	if (l->modificatore != DRM_FORMAT_MOD_LINEAR) {
+	if (scelta_del_driver) {
+		static bool detto = false;
+		if (l->modificatore == DRM_FORMAT_MOD_INVALID) {
+			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			            "gbm ha rifiutato il lineare, e la lastra del driver non dice "
+			            "il suo modificatore: nessuno la saprebbe importare");
+			lastra_butta(p, l);
+			return false;
+		}
+		if (!detto) {
+			detto = true;
+			registro_dice(AREA,
+			              "⭐ wlroots: il driver rifiuta la lastra LINEARE (NVIDIA): la "
+			              "lastra nasce col modificatore 0x%" G_GINT64_MODIFIER "x, scelto "
+			              "fra i %d che il codificatore Vulkan dichiara di saper importare",
+			              (guint64)l->modificatore, p->mod_quanti);
+		}
+	} else if (l->modificatore != DRM_FORMAT_MOD_LINEAR) {
 		/* ⛔ Si era chiesto LINEARE: un tiling che nessuno ha scelto è
 		 *    un'importazione che nessuno ha provato. */
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
@@ -1272,9 +1328,10 @@ il_buffer:
 	zwp_linux_buffer_params_v1_destroy(params);
 	if (!p->params_finito || p->params_fallito || !p->creato) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "il compositore %s il DMA-BUF %ux%u lineare (passo %u)",
+		            "il compositore %s il DMA-BUF %ux%u (modificatore 0x%" G_GINT64_MODIFIER
+		            "x, passo %u)",
 		            p->params_finito ? "ha RIFIUTATO" : "non ha risposto in tempo per",
-		            larghezza, altezza, l->stride);
+		            larghezza, altezza, (guint64)l->modificatore, l->stride);
 		/* ⚠ Se `created` arrivasse dopo il tetto il `wl_buffer` resterebbe
 		 *   orfano: un oggetto perso, una volta, contro una connessione viva. */
 		lastra_butta(p, l);

@@ -121,6 +121,11 @@ typedef struct VulkanVideoDispositivo VulkanVideoDispositivo;
 VulkanVideoDispositivo *vulkanvideo_apri_dispositivo(const char *nodo, char *errore,
                                                      size_t errore_byte);
 void vulkanvideo_chiudi_dispositivo(VulkanVideoDispositivo *d);
+
+/* I modificatori (non lineari) che la scheda del nodo sa importare e campionare
+ * per `formato_drm`, fino a `quanti`; quanti ne ha scritti (0 = nessuno, o
+ * niente Vulkan).  Apre e richiude il dispositivo da sola. */
+int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *fuori, int quanti);
 const char *vulkanvideo_nome_scheda(const VulkanVideoDispositivo *d);
 const char *vulkanvideo_nome_driver(const VulkanVideoDispositivo *d);
 
