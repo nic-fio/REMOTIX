@@ -6277,7 +6277,16 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     server è senza licenza.
   - ⚠ Dichiarato: chi cancella `/var/lib/remotix` e reinstalla riparte da zero. Il contratto della trial
     (PolyForm Free Trial 1.0.0, 32 giorni) resta la difesa legale.
-- ❓ **Da decidere con l'utente, uno per volta**: la tecnica di sblocco (proposta di Claude: un file di licenza firmato, controllato senza rete); che
+- ✅ **Lo sblocco si fa dalla pagina d'accesso** (utente, 5 ott): *«se la licenza è scaduta sulla stessa
+  finestra si apre un secondo campo dove viene inserito il codice di licenza; il sistema verifica la validità
+  del codice e passa il controllo al modulo di accesso»*. Sequenza: utente e parola d'ordine giuste ⇒ licenza
+  scaduta ⇒ compare il campo del codice ⇒ codice valido ⇒ si entra. Aggiunte di Claude:
+  - il campo si apre anche **durante la trial** («Hai un codice di licenza?»): chi compra prima, o aggiunge
+    utenti, non aspetta la scadenza;
+  - il codice è **firmato** e si verifica **senza rete** (la chiave pubblica sta nel programma, quella privata
+    solo da chi vende): è lungo ~100 caratteri, **si incolla** dall'email. Un codice corto da battere
+    richiederebbe un nostro server di verifica, escluso.
+- ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
 ---
