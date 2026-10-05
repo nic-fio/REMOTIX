@@ -6348,7 +6348,16 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     abbia un accesso a internet … mi sembra alquanto improbabile, a meno che non si tratti di militari»*):
     una strada sola, e il file firmato senza rete era il varco più facile da clonare. Restano: il passaggio
     da un **proxy** (le aziende escono così) e la **tolleranza** ai guasti di rete;
-  - 🔸 e **non scritto da noi**: un servizio di licenze esistente, da scegliere dopo un confronto.
+  - ✅ **La piattaforma di licenze la scriviamo noi** (utente, 5 ott: *«non voglio appoggiarmi a prodotti a
+    pagamento; se serve, la piattaforma di licensing ce la costruiamo noi»*). ⛔ Supera la proposta di Claude
+    di un servizio esistente. Il confronto fatto (5 ott: Keygen, Cryptlex, Polar, Paddle, Lemon Squeezy,
+    Anystack, Gumroad) resta come riferimento per le funzioni: attivazione legata alla macchina, controllo
+    periodico, rinnovo comandato dal pagamento, e per i cloni un **identificativo casuale per ogni avvio**
+    più il controllo periodico, che vede due copie vive sullo stesso codice (è la tecnica dei «processes»
+    di Keygen).
+  - ⚠ **Il pagamento non si può scrivere da noi**: carte, rimborsi e contestazioni passano comunque da un
+    processore di pagamento, che trattiene una percentuale a vendita (nessun canone). Resta da scegliere
+    chi incassa (sotto).
   - ⚠ Da dichiarare al cliente: il server manda al nostro servizio il codice e l'identificativo della
     macchina (riservatezza dei dati).
 - ✅ **IL MODELLO DEFINITIVO: abbonamento annuale per macchina, utenti illimitati** (utente, 5 ott: *«dovendo
