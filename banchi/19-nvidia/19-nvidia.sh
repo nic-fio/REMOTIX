@@ -62,7 +62,7 @@ prepara() {
 	mkdir -p "$VAL/valigia/pacchetti" "$VAL/valigia/bin" "$VAL/valigia/albero"
 	log "i .deb di REMOTIX (src/costruzione/costruisci-deb.sh debian13 ubuntu2604)"
 	if ! USCITA=$USCITA bash "$ALBERO/src/costruzione/costruisci-deb.sh" debian13 ubuntu2604 > "$VAL/costruisci-deb.log" 2>&1; then
-		ko "costruisci-deb.sh non riuscito ($VAL/costruisci-deb.log)"; tail -5 "$VAL/costruisci-deb.log"; exit 1
+		ko "costruisci-deb.sh non riuscito ($VAL/costruisci-deb.log)"; tail -n 5 "$VAL/costruisci-deb.log"; exit 1
 	fi
 	cp "$USCITA"/deb-debian13/remotix_*.deb "$USCITA"/deb-ubuntu2604/remotix_*.deb "$VAL/valigia/pacchetti/" \
 		|| { ko "i .deb non ci sono"; exit 1; }
@@ -131,7 +131,7 @@ avvia() {
 		systemctl reset-failed $UNITA 2>/dev/null; \
 		systemd-run --unit=$UNITA --collect --property=StandardOutput=append:$LAVORO/banco.log \
 		--property=StandardError=append:$LAVORO/banco.log --setenv=FORZA=${FORZA:-0} --setenv=RIFAI='${RIFAI:-}' \
-		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' \
+		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENTE_SCHEDA='${CLIENTE_SCHEDA:-0}' \
 		/bin/bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
 		&& ok "partito"
 }
@@ -170,7 +170,7 @@ aspetta_ssh() {
 
 raccogli() {
 	log "raccolgo l'archivio delle evidenze"
-	lontano "bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh raccogli" | tail -3
+	lontano "bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh raccogli" | tail -n 3
 	local nome sha
 	nome=$(lontano "cat $LAVORO/archivio")
 	sha=$(lontano "cat $LAVORO/archivio.sha256")

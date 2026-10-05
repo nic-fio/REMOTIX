@@ -344,7 +344,7 @@ def corpo(o, E):
             png0, p0 = G1B.foto(s, "inizio", scala=0.5)
             rif = misura(png0) if png0 else rif
         if rif["ciano"] + rif["giallo"] < 0.01:
-            c, t = s.sc.dentro("cat /home/%s/.c15-python3.log 2>&1 | tail -5" % s.chi, 30)
+            c, t = s.sc.dentro("cat /home/%s/.c15-python3.log 2>&1 | tail -n 5" % s.chi, 30)
             G1B.passo("registro della finestra: %s" % t[-400:])
             raise S.Bloccata("la finestra nota non si vede nella foto d'inizio (%s)" % rif)
         ev = [p0]

@@ -160,7 +160,7 @@ def leggi_logind(s, come_root=False):
     chi = "" if come_root else "runuser -u %s -- " % s.chi
     riga = "; ".join(
         "printf '%s=' ; %sbusctl call org.freedesktop.login1 /org/freedesktop/login1 "
-        "org.freedesktop.login1.Manager %s 2>&1 | tail -1" % (k, chi, k) for k in LOGIND)
+        "org.freedesktop.login1.Manager %s 2>&1 | tail -n 1" % (k, chi, k) for k in LOGIND)
     _c, t = s.sc.dentro(riga, 60)
     campi = {}
     for r in t.splitlines():

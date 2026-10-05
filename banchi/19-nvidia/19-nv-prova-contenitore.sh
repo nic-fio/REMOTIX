@@ -51,7 +51,7 @@ for p in controlli dipendenze remotix codifica; do
 	x "bash $M $p"; echo ">> $p: uscita $?"
 done
 echo; echo "######## 19-confronto: solo la costruzione"
-x "ALBERO=/opt/remotix-nv/albero USCITA=/var/lib/remotix-nv/confronto bash /opt/remotix-nv/albero/banchi/19-vulkan/19-confronto.sh costruisci 2>&1 | tail -4"
+x "ALBERO=/opt/remotix-nv/albero USCITA=/var/lib/remotix-nv/confronto bash /opt/remotix-nv/albero/banchi/19-vulkan/19-confronto.sh costruisci 2>&1 | tail -n 4"
 echo ">> costruzione: uscita $?"
 echo; echo "######## suite"
 x "bash $M suite"; echo ">> suite: uscita $?"

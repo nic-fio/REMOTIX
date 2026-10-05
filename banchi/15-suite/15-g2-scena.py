@@ -193,8 +193,8 @@ class Scena:
             "--profile $h/.g2-profilo --kiosk http://127.0.0.1:{p}/ "
             "</dev/null >$h/.g2-firefox.log 2>&1 & "
             "for i in $(seq 1 80); do grep -q caricata $h/g2.log && {{ echo accesa; exit 0; }}; "
-            "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; echo \"socket $d\"; tail -8 $h/.g2-firefox.log; "
-            "tail -3 $h/.g2-servitore.log; tail -3 $h/g2.log; pgrep -u {c} -a firefox | head -3; exit 1".format(
+            "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; echo \"socket $d\"; tail -n 8 $h/.g2-firefox.log; "
+            "tail -n 3 $h/.g2-servitore.log; tail -n 3 $h/g2.log; pgrep -u {c} -a firefox | head -3; exit 1".format(
                 h=self.h, c=self.chi, p=self.porta, srv=b(SERVITORE), pag=b(PAGINA),
                 pref=b(C21.PREFERENZE)), 90)
         return c == 0, t
@@ -203,8 +203,8 @@ class Scena:
     def leggi(self):
         """(R, S, ultimo FATTO) dal quaderno della scena."""
         _c, t = self.sc.dentro(
-            "f=%s/g2.log; grep -a '^R ' $f | tail -1; echo @@; grep -a '^S ' $f | tail -1; "
-            "echo @@; grep -a '^FATTO ' $f | tail -1" % self.h, 30)
+            "f=%s/g2.log; grep -a '^R ' $f | tail -n 1; echo @@; grep -a '^S ' $f | tail -n 1; "
+            "echo @@; grep -a '^FATTO ' $f | tail -n 1" % self.h, 30)
         parti = (t or "").split("@@")
         while len(parti) < 3:
             parti.append("")

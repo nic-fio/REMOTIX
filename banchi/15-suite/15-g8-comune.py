@@ -114,7 +114,7 @@ class MioServer:
             if "pronto: https" in (t or ""):
                 return True, t.strip()
             time.sleep(1)
-        _c, t = dentro(self.sc, "tail -8 %s" % REGISTRO, 30)
+        _c, t = dentro(self.sc, "tail -n 8 %s" % REGISTRO, 30)
         return False, "non ha detto «pronto» in %d s: %s" % (tetto, t[-400:])
 
     def spegni(self):
@@ -229,8 +229,8 @@ def accendi_scena(sc, chi, porta, colore, attesa=45):
         "--profile $h/.g8-profilo --kiosk http://127.0.0.1:{p}/ "
         "</dev/null >$h/.g8-firefox.log 2>&1 & "
         "for i in $(seq 1 {n}); do grep -q caricata $h/g8.log && {{ echo accesa; exit 0; }}; "
-        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -5 $h/.g8-firefox.log; "
-        "echo '-- servitore:'; ss -ltn | grep ':{p} ' ; pgrep -a -u {c} | cut -c1-150 | tail -8; "
+        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -n 5 $h/.g8-firefox.log; "
+        "echo '-- servitore:'; ss -ltn | grep ':{p} ' ; pgrep -a -u {c} | cut -c1-150 | tail -n 8; "
         "exit 1".format(c=chi, p=porta, srv=b(SERVITORE), pag=b(pag),
                         pref=b(S.C21.PREFERENZE), col=rgb(colore), n=attesa * 2), attesa + 60)
     return c == 0, t

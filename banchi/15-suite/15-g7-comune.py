@@ -76,7 +76,7 @@ def server(azione, desktop, *opzioni, secondi=90):
 
 def orologi_in_vigore(desktop):
     """La riga d'avvio coi tre orologi di §5.3: (inattivita_s, abbandono_s, riga)."""
-    _c, t = dentro(desktop, "grep -a '§5.3, i tre orologi' %s | tail -1" % REGISTRO_G7)
+    _c, t = dentro(desktop, "grep -a '§5.3, i tre orologi' %s | tail -n 1" % REGISTRO_G7)
     m1 = re.search(r"inattivita' dell'utente (\d+) s", t or "")
     m2 = re.search(r"abbandono della sessione (\d+) s", t or "")
     return (int(m1.group(1)) if m1 else None, int(m2.group(1)) if m2 else None,

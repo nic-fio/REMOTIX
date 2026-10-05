@@ -128,7 +128,7 @@ def accendi_scena(s, finestra=FINESTRA_SCENA):
         "--profile $h/{pr} http://127.0.0.1:{p}/ "
         "</dev/null >$h/.g6-firefox.log 2>&1 & "
         "for i in $(seq 1 200); do grep -q caricata $h/g6.log && {{ echo accesa; exit 0; }}; "
-        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -5 $h/.g6-firefox.log; "
+        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -n 5 $h/.g6-firefox.log; "
         "exit 1".format(c=s.chi, p=p, pr=PROFILO, srv=b(SERVITORE), pag=b(pagina()),
                         pref=b(PREFERENZE), xul=b(xul)), 150)
     return c == 0, t

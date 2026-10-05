@@ -169,7 +169,7 @@ def corpo(o, E):
                 p = os.path.join(o.evidenze, "f013-video-NON-trovato.jpg")
                 prime[-1].save(p, quality=80)
                 ev.append(p)
-            _c, log = s.come_utente("tail -5 /home/%s/.c15-SDL_VIDEODRIVERwayland.log "
+            _c, log = s.come_utente("tail -n 5 /home/%s/.c15-SDL_VIDEODRIVERwayland.log "
                                     "/home/%s/.c15-*.log 2>/dev/null" % (s.chi, s.chi), 20)
             _c, vivo = segnale(s, "0")
             ev.append(s.salva_testo("ffplay-f013.txt", log))

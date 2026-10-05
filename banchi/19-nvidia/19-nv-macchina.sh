@@ -32,7 +32,8 @@
 # Uscita: 0 verde · 1 rosso · 3 non ho potuto guardare · 10 serve un riavvio
 # (poi si rilancia `tutto`, e riparte dal passo dopo).
 # Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
-# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova),
+# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), CLIENTE_SCHEDA=1
+# (i browser disegnano sulla scheda: solo controprova),
 # RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
 #
 # ⛔ Le prestazioni NON si giudicano qui: i tempi che i banchi scrivono restano
@@ -306,7 +307,7 @@ driver() {
 		else
 			local m srv=""
 			m=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1)
-			[ -z "$m" ] && m=$(dpkg-query -W -f='${Package}\n' 'nvidia-driver-*' 'nvidia-headless-*' 2>/dev/null | grep -o -E '[0-9]{3}' | sort -n | tail -1)
+			[ -z "$m" ] && m=$(dpkg-query -W -f='${Package}\n' 'nvidia-driver-*' 'nvidia-headless-*' 2>/dev/null | grep -o -E '[0-9]{3}' | sort -n | tail -n 1)
 			dpkg-query -W -f='${Package}\n' 2>/dev/null | grep -q -E "^nvidia-(headless|utils|driver)-$m-server$" && srv=-server
 			pk="libnvidia-gl-$m$srv"
 		fi
@@ -466,7 +467,7 @@ remotix() {
 		echo installatore > "$LAVORO/come-installato"
 	else
 		e=$?
-		ko "l'installatore NON ha installato (uscita $e): $(tail -3 "$EVID/installatore-applica.txt" "$EVID/installatore-piano.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
+		ko "l'installatore NON ha installato (uscita $e): $(tail -n 3 "$EVID/installatore-applica.txt" "$EVID/installatore-piano.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
 		avviso "⇒ il rifiuto e' un risultato (evidenze installatore-*); per andare avanti coi passi c-e il pacchetto si mette col gestore"
 		"${APT[@]}" install "$deb" > "$EVID/remotix-apt.txt" 2>&1 \
 			|| { ko "nemmeno apt lo installa (remotix-apt.txt)"; esito remotix ROSSO "non installato"; return 1; }
@@ -491,7 +492,7 @@ remotix() {
 	if [ $pronto = 1 ]; then
 		ok "il server ascolta su $PORTA"
 	else
-		ko "il server non ascolta su $PORTA dopo 60 s"; tail -20 "$LAVORO/registro.log" 2>/dev/null | sed 's/^/      /'
+		ko "il server non ascolta su $PORTA dopo 60 s"; tail -n 20 "$LAVORO/registro.log" 2>/dev/null | sed 's/^/      /'
 		esito remotix ROSSO "non ascolta"; return 1
 	fi
 	grep -a -E 'strada|QUESTO SERVER NON SA|ECCOMI|offerti|⛔' "$LAVORO/registro.log" | head -20 > "$EVID/server-avvio.txt"
@@ -513,7 +514,7 @@ codifica() {
 	prova() {  # prova ETICHETTA ARGOMENTI…
 		local et=$1; shift
 		"$@" > "$LAVORO/prova.json" 2> "$EVID/prova-codifica-$et.registro"; c=$?
-		riga=$(tail -1 "$LAVORO/prova.json")
+		riga=$(tail -n 1 "$LAVORO/prova.json")
 		printf '%s\tcodice %s\t%s\n' "$et" "$c" "$riga" | tee -a "$f"
 	}
 	local cod
@@ -602,8 +603,13 @@ suite() {
 	for j in $(seq 1 40); do pgrep -u "$UTENTE_BANCO" -x labwc > /dev/null || break; sleep 0.25; done
 	local prima
 	prima=$(ls "/run/user/$uid" 2>/dev/null | grep -E '^wayland-[0-9]+$' | sort)
+	# ⭐ CLIENTE_SCHEDA=1 (5 ott 2026): il compositore dei browser sulla scheda (gles2) invece
+	#    che in software — SOLO per la controprova «il rosso è del cliente in software?». Il
+	#    giro lo dichiara, e un giro così NON vale come suite della NVIDIA
+	local rend=pixman
+	[ "${CLIENTE_SCHEDA:-0}" = 1 ] && rend=gles2
 	runuser -u "$UTENTE_BANCO" -- env -u WAYLAND_DISPLAY -u DISPLAY XDG_RUNTIME_DIR="/run/user/$uid" \
-		WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
+		WLR_BACKENDS=headless WLR_RENDERER=$rend WLR_LIBINPUT_NO_DEVICES=1 \
 		setsid labwc < /dev/null > "$u/compositore-browser.log" 2>&1 &
 	local i
 	for i in $(seq 1 40); do
@@ -617,7 +623,8 @@ suite() {
 		usc=$(runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" wlr-randr 2>/dev/null | awk 'NR==1{print $1}')
 		runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" \
 			wlr-randr --output "$usc" --custom-mode 3840x2160 >> "$u/compositore-browser.log" 2>&1
-		ok "il compositore dei browser: $sock ($usc 3840x2160, pixman)"
+		ok "il compositore dei browser: $sock ($usc 3840x2160, $rend)"
+		[ "$rend" = pixman ] || avviso "⛔ CLIENTE_SCHEDA=1: i browser disegnano sulla scheda — controprova, NON la suite della NVIDIA"
 	else
 		modo=headless
 		avviso "il labwc dei browser non e' nato (compositore-browser.log): i browser vanno HEADLESS, e lo si dichiara"
@@ -639,11 +646,11 @@ suite() {
 	# quale strada hanno preso le sessioni vere, e se labwc e' andato sulla scheda o su pixman
 	grep -a -E 'strada (vulkan|vaapi)|pixman|NON SA CODIFICARE|DEVICE_LOST|Xid' "$LAVORO/registro.log" | sort | uniq -c | sort -rn | head -30 \
 		> "$EVID/suite-strade.txt"
-	tail -3 "$EVID/suite.txt" | sed 's/^/      /'
+	tail -n 3 "$EVID/suite.txt" | sed 's/^/      /'
 	case $c in
-	0) ok "suite VERDE"; esito suite VERDE "$(tail -1 "$EVID/suite.txt")" ;;
-	3) avviso "suite con prove non guardate"; esito suite NON-GUARDATA "$(tail -1 "$EVID/suite.txt")" ;;
-	*) ko "suite ROSSA"; esito suite ROSSO "$(tail -1 "$EVID/suite.txt")" ;;
+	0) ok "suite VERDE"; esito suite VERDE "$(tail -n 1 "$EVID/suite.txt")" ;;
+	3) avviso "suite con prove non guardate"; esito suite NON-GUARDATA "$(tail -n 1 "$EVID/suite.txt")" ;;
+	*) ko "suite ROSSA"; esito suite ROSSO "$(tail -n 1 "$EVID/suite.txt")" ;;
 	esac
 	return $c
 }

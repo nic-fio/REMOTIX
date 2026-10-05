@@ -253,10 +253,10 @@ class Scena:
             "</dev/null >$h/.f014-firefox.log 2>&1 & "
             "for i in $(seq 1 200); do grep -q caricata $h/f014.log && {{ echo accesa; exit 0; }}; "
             "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; "
-            "echo --ff; tail -8 $h/.f014-firefox.log; echo --srv; tail -5 $h/.f014-servitore.log; "
-            "echo --ps; ps -u {c} -o pid,args | cut -c1-150 | tail -25; echo --run; ls /run/user/$u; "
+            "echo --ff; tail -n 8 $h/.f014-firefox.log; echo --srv; tail -n 5 $h/.f014-servitore.log; "
+            "echo --ps; ps -u {c} -o pid,args | cut -c1-150 | tail -n 25; echo --run; ls /run/user/$u; "
             "echo --curl; python3 -c \"import urllib.request as u; "
-            "print(len(u.urlopen('http://127.0.0.1:{p}/', timeout=3).read()))\" 2>&1 | tail -1; exit 1"
+            "print(len(u.urlopen('http://127.0.0.1:{p}/', timeout=3).read()))\" 2>&1 | tail -n 1; exit 1"
             .format(h=self.h, c=self.chi, p=self.porta, srv=b(SERVITORE), pag=b(PAGINA),
                     pref=b(PREFERENZE)), 180)
         return c == 0, t
@@ -297,7 +297,7 @@ class Scena:
                 return q
             time.sleep(0.5)
         _c, coda = self.sc.dentro("tail -c 600 %s/f014.log; ls -la %s/.f014-cmd* 2>&1; "
-                                  "tail -3 %s/.f014-servitore.log" % (self.h, self.h, self.h), 30)
+                                  "tail -n 3 %s/.f014-servitore.log" % (self.h, self.h, self.h), 30)
         raise S.Bloccata("la scena non ha eseguito il comando n=%d in 12 s (quaderno: %d righe; "
                          "coda: %s)" % (self.n, len(q), (coda or "")[-500:]))
 
