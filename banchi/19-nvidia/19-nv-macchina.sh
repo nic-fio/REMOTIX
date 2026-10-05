@@ -397,6 +397,15 @@ dipendenze() {
 	mkdir -p /usr/lib/firefox-esr/distribution
 	printf '%s\n' '{"policies": {"SkipTermsOfUse": true, "DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}' \
 		> /usr/lib/firefox-esr/distribution/policies.json
+	# ⭐ 5 ott 2026, `[M]`: il pacchetto di Mozilla fa girare Firefox come «firefox-bin», quello di
+	#    Debian come «firefox-esr» — e le prove della suite (F-016/F-017) cercano e uccidono la scena
+	#    per NOME (`pgrep -x firefox-esr`).  ⇒ Le prove restano IDENTICHE e si allinea il nome: un
+	#    collegamento fisico col nome giusto, nella cartella di Firefox (la toglie «pulisci»).
+	if [ -x /usr/lib/firefox-esr/firefox-bin ] && [ ! -e /usr/lib/firefox-esr/firefox-esr ]; then
+		ln -f /usr/lib/firefox-esr/firefox-bin /usr/lib/firefox-esr/firefox-esr
+		ln -sfn /usr/lib/firefox-esr/firefox-esr /usr/bin/firefox-esr
+		touch "$LAVORO/firefox-esr-nome"
+	fi
 	# Chrome: il .deb di Google (si porta il suo deposito: lo toglie «pulisci» con /etc/apt)
 	if ! command -v google-chrome >/dev/null; then
 		curl -fsSL -o /var/tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
@@ -694,6 +703,12 @@ pulisci() {
 		rm -rf "/home/${u:?}"
 	done
 	rm -f /etc/sudoers.d/remotix-nv
+	# 3-ter. Firefox: la regola e il nome allineato (prima dei pacchetti: sono nella sua cartella)
+	rm -f /usr/lib/firefox-esr/distribution/policies.json
+	if [ -f "$LAVORO/firefox-esr-nome" ]; then
+		rm -f /usr/lib/firefox-esr/firefox-esr
+		ln -sfn ../lib/firefox-esr/firefox /usr/bin/firefox-esr
+	fi
 	# 3-bis. la memoria di scorta, se l'avevamo messa noi
 	if [ -f "$SCORTA" ]; then swapoff "$SCORTA" 2>/dev/null; rm -f "$SCORTA"; ok "scorta tolta"; fi
 	# 4. modeset, se l'avevamo messo noi
