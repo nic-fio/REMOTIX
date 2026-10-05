@@ -381,6 +381,13 @@ struct WlrPalco {
 	 */
 	bool forza_intero, detto_il_danno;
 	bool copia_col_danno; /* la copia in volo è `copy_with_damage` */
+	/* ⭐ Il danno DICHIARATO dal compositore, per fotogramma (solo testimone,
+	 *    con `--parlantina`): `[M]` 5 ott 2026, NVIDIA + copia zero, il
+	 *    compositore risponde a 60/s su un desktop fermo — e la domanda è
+	 *    se lo dichiara cambiato tutto o in un angolo. */
+	uint64_t danno_area_fotogramma, danno_area_somma;
+	uint32_t danno_rett_fotogramma, danno_rett_somma, danno_fotogrammi, danno_interi;
+	uint32_t danno_x, danno_y, danno_l, danno_a; /* l'ultimo rettangolo */
 	WlrConteggi conteggi;
 
 	/* ------------------------------------------------------------------ *
@@ -848,6 +855,29 @@ static void frame_pronto(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 	p->f_secondi = ((uint64_t)sec_alto << 32) | sec_basso;
 	p->f_nanosecondi = nsec;
 	p->pronto = true;
+	if (p->copia_col_danno && registro_parla_molto()) {
+		uint64_t uscita = (uint64_t)p->larghezza * p->altezza;
+
+		p->danno_fotogrammi++;
+		p->danno_area_somma += p->danno_area_fotogramma;
+		p->danno_rett_somma += p->danno_rett_fotogramma;
+		if (uscita && p->danno_area_fotogramma >= uscita)
+			p->danno_interi++;
+		if (p->danno_fotogrammi == 120) {
+			registro_dettaglio(AREA,
+			                   "wlroots: il danno dichiarato, ultimi 120 fotogrammi col danno: "
+			                   "area media %.1f%% dell'uscita %ux%u, %u interi, %.1f "
+			                   "rettangoli per fotogramma (l'ultimo: %ux%u a %u,%u)",
+			                   uscita ? 100.0 * (double)p->danno_area_somma / 120.0 / (double)uscita : 0.0,
+			                   p->larghezza, p->altezza, p->danno_interi,
+			                   p->danno_rett_somma / 120.0, p->danno_l, p->danno_a,
+			                   p->danno_x, p->danno_y);
+			p->danno_fotogrammi = p->danno_interi = p->danno_rett_somma = 0;
+			p->danno_area_somma = 0;
+		}
+	}
+	p->danno_area_fotogramma = 0;
+	p->danno_rett_fotogramma = 0;
 }
 
 static void frame_fallito(void *dati, struct zwlr_screencopy_frame_v1 *f)
@@ -858,7 +888,15 @@ static void frame_fallito(void *dati, struct zwlr_screencopy_frame_v1 *f)
 static void frame_danno(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t x, uint32_t y,
                         uint32_t l, uint32_t a)
 {
-	/* ⚠ Arriva solo con `copy_with_damage`, che questa stesura non usa. */
+	WlrPalco *p = dati;
+
+	/* ⚠ Arriva solo con `copy_with_damage`, prima di `ready`. */
+	p->danno_area_fotogramma += (uint64_t)l * a;
+	p->danno_rett_fotogramma++;
+	p->danno_x = x;
+	p->danno_y = y;
+	p->danno_l = l;
+	p->danno_a = a;
 }
 
 static void frame_dmabuf(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
