@@ -1317,7 +1317,7 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 
 | | |
 |---|---|
-| ✅ **la licenza** | **PolyForm Noncommercial** (`DECISIONI.md` §10.22) — e da qui il vincolo di §11.4: nessuna dipendenza GPL |
+| ✅ **la licenza** | **codice chiuso, trial e versione full a pagamento** (`DECISIONI.md` §10.30, che supera §10.22) — resta il vincolo di §11.4: nessuna dipendenza GPL |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
 | ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |

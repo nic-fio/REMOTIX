@@ -6092,7 +6092,10 @@ server»*; e *«i dati dell'installer restano su un nostro repository, così sia
   `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
 - resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
 
-### 10.22 ✅ La licenza: PolyForm Noncommercial — anche l'uso interno delle aziende è vietato (30 set 2026)
+### 10.22 ⛔ SUPERATA da §10.30 (5 ott 2026) — La licenza: PolyForm Noncommercial — anche l'uso interno delle aziende è vietato (30 set 2026)
+
+> ⛔ **Superata il 5 ott 2026 (§10.30)**: il codice diventa chiuso, con trial e versione full a pagamento. Resta
+> valido quel che qui riguarda ffmpeg (tolto nella fase 18) e la scelta di procedere senza legale.
 
 ✅ **Confermata dall'utente**: *«PolyForm Noncommercial mi sembra adatta ai miei obiettivi attuali»*. Il file
 `LICENSE` si mette al momento della pubblicazione, col **testo ufficiale copiato senza modifiche** dal sito del
@@ -6245,6 +6248,28 @@ dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la 
 - `[?]` Da riprovare quando Google rilascia la modalità desktop di Android (osservazione dell'utente, 3 ott):
   la regola guarda il comportamento e non il sistema, quindi si adatta da sé (hover che arriva ⇒ niente
   cattura); da misurare là: se Chrome concede `Pointer Lock` e se le scorciatoie arrivano alla pagina.
+
+### 10.30 ✅ REMOTIX diventa a codice chiuso, con trial e versione full a pagamento (5 ott 2026)
+
+Parole dell'utente: *«voglio rendere il prodotto utilizzabile in versione trial limitata e in versione full solo
+dopo aver acquistato una licenza di utilizzo»*; alla domanda «paga solo chi lo usa per lavoro (A), o paga
+chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
+
+- **Perché un aut-aut**: con il codice pubblico e modificabile (PolyForm Noncommercial, §10.22), un privato
+  poteva togliere legalmente il limite della trial. Un limite che si fa pagare regge solo se il codice è chiuso.
+- ⇒ **§10.22 è superata**: niente codice pubblico, niente accordo per chi contribuisce. Il deposito
+  `github.com/nic-fio/REMOTIX` è già privato.
+- ✅ **Nessun ostacolo dalle dipendenze**: ffmpeg è uscito nella fase 18. Le dipendenze rimaste (MIT, BSD,
+  Apache) permettono un prodotto chiuso; chiedono solo che le loro licenze viaggino col prodotto (il file
+  generato dallo SBOM, già previsto).
+- ⚠ **Quel che il codice chiuso NON impedisce**: il binario gira sulla macchina del cliente, e chi è
+  determinato può modificarlo. Il controllo della licenza tiene onesti i clienti onesti, non ferma chi copia.
+- ⚠ **Senza legale** (scelta di §10.22): per la trial esiste un testo standard scritto da avvocati, la
+  **PolyForm Free Trial 1.0.0** (prova per 32 giorni). Per la versione full a pagamento **non c'è** un testo
+  PolyForm equivalente: il contratto di vendita resta da scegliere.
+- ❓ **Da decidere con l'utente, uno per volta**: la durata della trial (proposta dell'utente: 1 utente, 30
+  giorni); la tecnica di sblocco (proposta di Claude: un file di licenza firmato, controllato senza rete); che
+  cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
 ---
 
