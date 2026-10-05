@@ -6286,6 +6286,22 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   - il codice è **firmato** e si verifica **senza rete** (la chiave pubblica sta nel programma, quella privata
     solo da chi vende): è lungo ~100 caratteri, **si incolla** dall'email. Un codice corto da battere
     richiederebbe un nostro server di verifica, escluso.
+- ✅ **Cosa mostra la pagina d'accesso, nei tre stati** (controproposta di Claude, accettata dall'utente il 5 ott:
+  *«uno potrebbe decidere di acquistare il prodotto anche solo dopo 2 giorni di utilizzo»*):
+  - **trial**: la scritta «Trial version — restano N giorni» (anche prima delle credenziali: è innocua) e il
+    collegamento «Hai un codice di licenza?», che apre il campo;
+  - **licenza valida**: niente scritta e niente campo; solo un collegamento piccolo «Cambia licenza», per chi
+    aggiunge utenti;
+  - **licenza scaduta**: il campo del codice già aperto.
+  - ⛔ Scartato il campo in grigio: in trial impedirebbe di comprare prima della scadenza, con la licenza
+    occuperebbe spazio senza servire.
+- ✅ **Il tetto tecnico e il tetto commerciale sono due cose** (utente, 5 ott): *«tecnicamente il prodotto ha come
+  limite superiore 16 utenti, ma nessuno vieta di usare remotix con un numero di utenti maggiore se dispone di un
+  server ultrapotente»*. ⇒ La licenza dice **N utenti oppure «illimitati»**, senza legarsi al 16. Il numero
+  di utenti che si collegano davvero è il più basso fra la licenza e quel che regge la macchina.
+  - ⚠ Il lavoro tecnico che ne viene: oggi il 16 è **fisso in compilazione** (`MAX_ATTACCATE` in
+    `src/rcp.c`, §1.11). Per andare oltre su un server potente deve diventare un limite deciso al momento
+    dell'avvio, dalla scheda e dalla configurazione.
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
