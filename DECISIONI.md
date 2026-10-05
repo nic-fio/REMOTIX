@@ -6337,6 +6337,18 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     **clonata** lo porta con sé. Vale la regola di sopra: tiene onesti gli onesti.
   - ⚠ Il prezzo: server cambiato o sistema reinstallato ⇒ identificativo nuovo ⇒ il cliente ti scrive e
     gli generi un codice nuovo, a mano.
+- ✅ **Ci vuole un controllo delle licenze in rete** (utente, 5 ott: *«se il prodotto dev'essere venduto allora è
+  obbligatorio dotarsi di un software di controllo delle licenze … un sistema forse in stile Microsoft o
+  affine»*), dopo che Claude ha mostrato che senza rete la rivendita sottobanco (= copia dell'identificativo
+  della macchina, o macchina virtuale clonata) non si può impedire, ma solo scoraggiare. ⇒ Supera
+  «senza rete» delle voci sopra; il codice firmato e il nome del cliente restano.
+  - 🔸 Proposta di Claude, da confermare: **ibrido come Microsoft** — attivazione in rete, controllo
+    periodico con **tolleranza** se la rete manca (non si blocca un cliente per un guasto del nostro
+    servizio o della sua linea), e **attivazione senza rete** su richiesta per le reti chiuse (il file
+    firmato di sopra, generato da chi vende);
+  - 🔸 e **non scritto da noi**: un servizio di licenze esistente, da scegliere dopo un confronto.
+  - ⚠ Da dichiarare al cliente: il server manda al nostro servizio il codice e l'identificativo della
+    macchina (riservatezza dei dati).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
