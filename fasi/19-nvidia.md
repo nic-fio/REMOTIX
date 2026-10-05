@@ -261,3 +261,24 @@ console d'emergenza). Il banco (`8412ad3`): passo **«aggiorna»** (Ubuntu 20.04
 prodotto `a8396bc` VERDE come il 1 ott (pulizia identica al principio); in contenitore ubuntu:24.04 ⇒ 26.04 in
 un salto, ubuntu:22.04 ⇒ 24.04 ⇒ 26.04 in due, poi «niente da aggiornare». ⚠ Un contenitore non ha nucleo,
 rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta (per questo la console).
+
+### 7-ter. La NVIDIA vera — 5 ottobre 2026, LeaderGPU (RTX 4090)
+
+`[M]` Macchina intera, 1× RTX 4090, Xeon E5-2630 v4, 128 GB; consegnata Ubuntu 24.04, portata dal banco alla
+**26.04.1** (un salto), driver **595.91.07 open** dal deposito di Ubuntu, ICD Vulkan, `modeset=Y`, `renderD128`.
+- **Installatore**: verde, certificato 0. **Codifica**: H.264 e HEVC sulla strada **Vulkan** (`h264_vulkan`,
+  `hevc_vulkan`, «NVIDIA GeForce RTX 4090 · NVIDIA 595.91.07»), HEVC `hev1.1.2.L60.B0` come la RADV.
+- **Confronto dalla memoria**: 12 su 12 buoni, 1080p e 4K, H.264 / HEVC 8 / HEVC 10 (PSNR 38,6–46,2 dB, SSIM
+  0,985–0,996). ⛔ **Dalla scheda (copia zero): 0 su 34** — il GBM della NVIDIA rifiuta `LINEAR|RENDERING`
+  (`Invalid argument`; accetta LINEAR senza RENDERING, o RENDERING col modificatore suo `0x300000000e08014`).
+  Il prodotto ripiega sulla memoria **e lo dichiara**. Cura possibile (lastre col modificatore della scheda e
+  import Vulkan col modificatore): **da decidere**.
+- ⛔ **DIFETTO DEL PRODOTTO trovato e curato** (`129e488`): sulla NVIDIA labwc offre in memoria solo `BG24`
+  (3 byte per pixel); a valle si leggono 4 byte ⇒ ogni fotogramma SCARTATO, sessione nera (F-001 rosso).
+  Cura in `src/wlroots.c`: i 24 bit si allargano a 32 (`BG24`→`XB24`, `RG24`→`XR24`), solo su quella strada.
+- **Due difetti del BANCO, curati senza toccare le prove** (`abb7f1a`, `479630e`): Firefox ESR 153 di Mozilla
+  apre la finestra «Terms of Use» sopra la scena (regola `SkipTermsOfUse`); e gira come `firefox-bin`, mentre
+  F-016/F-017 cercano `firefox-esr` (nome allineato con un collegamento).
+- **Suite su XFCE, Firefox 153 e Chrome 154: 43 PASS, 0 FAIL, 1 BLOCKED** (F-013 Firefox: l'«orecchio» ha
+  raccolto 106 campioni su 120 — misura del banco, non un rosso). Giri: 1 (prima della cura) F-001 rosso e 38
+  BLOCKED; 2 (con la cura) 15 PASS; 3 (regola di Firefox) 30 PASS 9 FAIL; 4 (nome allineato) 43 PASS.
