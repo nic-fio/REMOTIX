@@ -6365,6 +6365,13 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     conto.
   - 🔸 Da confermare: a rinnovo mancato, qualche giorno di tolleranza, poi la stessa finestra della trial
     scaduta («abbonamento scaduto, rinnova»).
+- ✅ **Le licenze «eterne» di chi vende** (utente, 5 ott: *«una versione full di remotix "eterna" che userò io
+  personalmente, o dovrò diventare cliente di me stesso»*). Forma di Claude: ⛔ **niente versione speciale del
+  programma** (un binario senza controllo, se esce, è la versione sbloccata per tutti); ⇒ **licenze senza
+  scadenza nel servizio di licenze**, una per macchina, generate da chi vende. Stesso programma, stessa strada
+  del cliente.
+  - Valgono anche per **le macchine di prova**: il server di prova e le 4 scatole (ognuna col suo
+    identificativo), o la suite si ferma alla trial di 1 utente.
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
