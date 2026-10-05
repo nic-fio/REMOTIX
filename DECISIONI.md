@@ -6267,8 +6267,17 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
 - ⚠ **Senza legale** (scelta di §10.22): per la trial esiste un testo standard scritto da avvocati, la
   **PolyForm Free Trial 1.0.0** (prova per 32 giorni). Per la versione full a pagamento **non c'è** un testo
   PolyForm equivalente: il contratto di vendita resta da scegliere.
-- ❓ **Da decidere con l'utente, uno per volta**: la durata della trial (proposta dell'utente: 1 utente, 30
-  giorni); la tecnica di sblocco (proposta di Claude: un file di licenza firmato, controllato senza rete); che
+- ✅ **La trial: 1 utente, 30 giorni** (utente, 5 ott). *«Scaduti i 30 giorni al login compare una finestra di
+  licenza scaduta e di acquistare il prodotto»*. ⇒ dopo la scadenza **non si entra**: la pagina d'accesso, a
+  credenziali giuste, mostra «licenza scaduta» e il collegamento per acquistare. Il limite di 1 utente lo fa
+  rispettare il programma.
+  - Il conto parte dal **primo avvio del server**; la data sta in `/var/lib/remotix`, e il programma ricorda
+    anche **l'ultima data vista**: se l'orologio torna indietro, vale la più recente.
+  - La finestra compare **dopo** utente e parola d'ordine giuste: chi non ha un account non scopre che il
+    server è senza licenza.
+  - ⚠ Dichiarato: chi cancella `/var/lib/remotix` e reinstalla riparte da zero. Il contratto della trial
+    (PolyForm Free Trial 1.0.0, 32 giorni) resta la difesa legale.
+- ❓ **Da decidere con l'utente, uno per volta**: la tecnica di sblocco (proposta di Claude: un file di licenza firmato, controllato senza rete); che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
 ---
