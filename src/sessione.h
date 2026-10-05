@@ -182,8 +182,14 @@
  *    `rc.xml` che trova, e quello dell'utente nasconderebbe il nostro.  Vedi
  *    `SESSIONE_LABWC_TASTIERA` qui sotto.  ⚠ La riga contiene sempre `labwc`
  *    e `--session`: la cintura del logout resta com'era. */
-#define SESSIONE_RIGA_XFCE "labwc -m --session xfce4-session"
-#define SESSIONE_COMANDO_XFCE "exec " SESSIONE_RIGA_XFCE
+#define SESSIONE_TESTA_XFCE "labwc -m --session"
+#define SESSIONE_PRIMARIO_XFCE "xfce4-session"
+#define SESSIONE_RIGA_XFCE SESSIONE_TESTA_XFCE " " SESSIONE_PRIMARIO_XFCE
+/* ⭐ 5 ott 2026: il COMANDO non è più una costante — il client primario nasce
+ *    dopo la misura del cliente (`primario_misurato()` in sessione.c), come
+ *    su LXQt.  ⚠ La testa è la stessa macro: `labwc` e `--session` restano
+ *    nella riga eseguita E in `XFCE4_SESSION_COMPOSITOR`, e la cintura del
+ *    logout guarda solo quelle due parole (`STUDI.md` §xfce §9.2). */
 /* ⛔ Il processo del compositore, per nome: su XFCE la guardia contro la
  *    seconda sessione non puo' chiedere a systemd — vedi `unita_inattiva()`. */
 #define SESSIONE_PROCESSO_XFCE "labwc"

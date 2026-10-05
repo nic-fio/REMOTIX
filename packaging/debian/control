@@ -63,7 +63,8 @@ Depends: ${shlibs:Depends},
 #     `[M]` 30 set: su Ubuntu 26.04 la Mesa VA sta in mesa-libgallium (che
 #     «fornisce» mesa-va-drivers e va-driver), e va-driver-all tira solo Intel;
 #   · labwc, wlr-randr, xwayland: solo per XFCE e LXQt (il compositore che REMOTIX
-#     avvia; wlr-randr per la cura di LXQt; XFCE 4.20 sotto labwc vuole Xwayland);
+#     avvia; wlr-randr per la cura della misura di LXQt e XFCE; XFCE 4.20 sotto
+#     labwc vuole Xwayland);
 #     ⚠ su una macchina solo GNOME o KDE si installano lo stesso: nei metadati di
 #     un .deb non c'e' «solo se c'e' XFCE».  Un pacchetto per desktop e' da T4;
 #   ⛔ NON gnome-session (la sessione «vanilla» di universe): D8 (DECISIONI

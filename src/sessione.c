@@ -2524,36 +2524,50 @@ static char *scrivi_config_labwc_lxqt(const char *runtime)
  *    prima parola della prima riga (`HEADLESS-1 "Headless output 1"`).  ⇒ Si
  *    prende quello; se è vuoto, niente `wlr-randr`.
  * ⚠ Misura 0 (non nota) ⇒ la riga di oggi, senza `sh` davanti.
+ *
+ * ⭐⭐ 5 ottobre 2026 — LA STESSA GARA SU XFCE, e la stessa cura.
+ * `[M]` NVIDIA (labwc 0.9.3, xfce4-panel 4.20.7, gtk-layer-shell 0.10.0):
+ * se `xfce4-panel` nasce sull'uscita 1280x720 e la misura arriva dopo, il
+ * pannello in basso (centrato) resta in un ciclo — si ridisegna a OGNI
+ * fotogramma, alternando la posizione per 1280 (x=487) e quella per la tela
+ * vera.  Col danno chiesto (`wlroots.c`) il compositore risponde allora a
+ * 60/s su un desktop fermo: il cliente decodifica 60 fotogrammi 4K al
+ * secondo per niente, e su un ferro lento resta indietro di secondi (F-003
+ * rosso su Firefox).  `[M]` Riavviato il pannello, il ciclo sparisce e F-003
+ * torna verde; ridimensionata una sessione GIÀ nata, il ciclo non nasce.
+ * ⇒ È la gara della nascita, come per pcmanfm-qt: `xfce4-session` nasce
+ *   dopo `wlr-randr`.
  * ⚠ Due livelli di citazione: il nostro `sh -c` (quello di `avvia()`) e
  *   `g_shell_parse_argv()` di labwc sul `-S`.  ⇒ `g_shell_quote()` due volte,
  *   e nessuna citazione scritta a mano.
  */
-static char *primario_lxqt(uint32_t larghezza, uint32_t altezza)
+static char *primario_misurato(const char *desktop, const char *primario, uint32_t larghezza,
+                               uint32_t altezza)
 {
 	g_autofree char *copione = NULL;
 	g_autofree char *interno = NULL;
 
 	if (larghezza == 0 || altezza == 0) {
 		registro_dice(REG_SESSIONE,
-		              "⚠ LXQt: misura del cliente non nota (%ux%u) — lxqt-session "
-		              "nasce SENZA la misura data prima; resta la richiesta tardiva",
-		              larghezza, altezza);
-		return g_strdup(SESSIONE_PRIMARIO_LXQT);
+		              "⚠ %s: misura del cliente non nota (%ux%u) — %s nasce SENZA la "
+		              "misura data prima; resta la richiesta tardiva",
+		              desktop, larghezza, altezza, primario);
+		return g_strdup(primario);
 	}
 	copione = g_strdup_printf(
 		"u=$(wlr-randr 2>/dev/null | sed -n '1s/ .*//p'); "
 		"if [ -n \"$u\" ]; then "
-		"echo \"remotix: uscita $u portata a %ux%u PRIMA di lxqt-session\"; "
+		"echo \"remotix: uscita $u portata a %ux%u PRIMA di %s\"; "
 		"wlr-randr --output \"$u\" --custom-mode %ux%u; "
-		"else echo \"remotix: nessuna uscita da wlr-randr, lxqt-session nasce "
+		"else echo \"remotix: nessuna uscita da wlr-randr, %s nasce "
 		"senza la misura\"; fi; "
-		"exec " SESSIONE_PRIMARIO_LXQT,
-		larghezza, altezza, larghezza, altezza);
+		"exec %s",
+		larghezza, altezza, primario, larghezza, altezza, primario, primario);
 	interno = g_shell_quote(copione);
 	registro_dice(REG_SESSIONE,
-	              "⭐ LXQt: la misura del cliente %ux%u si dà all'uscita PRIMA della "
-	              "nascita di lxqt-session (wlr-randr nel client primario di labwc)",
-	              larghezza, altezza);
+	              "⭐ %s: la misura del cliente %ux%u si dà all'uscita PRIMA della "
+	              "nascita di %s (wlr-randr nel client primario di labwc)",
+	              desktop, larghezza, altezza, primario);
 	return g_strdup_printf("sh -c %s", interno);
 }
 
@@ -2632,9 +2646,9 @@ static char *registro_sessione_percorso(void)
 	return NULL;
 }
 
-/* ⭐ `larghezza`/`altezza`: la tela del cliente.  ⚠ Le usa SOLO il ramo LXQt
- *   (`primario_lxqt()`): GNOME e KDE la misura la prendono dal drop-in, XFCE
- *   dalla richiesta tardiva — identici a prima. */
+/* ⭐ `larghezza`/`altezza`: la tela del cliente.  ⚠ Le usano i rami LXQt e
+ *   XFCE (`primario_misurato()`): GNOME e KDE la misura la prendono dal
+ *   drop-in — identici a prima. */
 static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 {
 	g_auto(GStrv) ambiente = NULL;
@@ -2651,11 +2665,19 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 	/* ⭐ FASE 14 — la riga di LXQt si compone (la cartella di `-C` sta sotto
 	 *    `XDG_RUNTIME_DIR`): vive qui, e `comando` la punta. */
 	g_autofree char *comando_lxqt = NULL;
+	g_autofree char *comando_xfce = NULL;
 
 	if (e_kde())
 		comando = SESSIONE_COMANDO_KDE;
-	else if (e_xfce())
-		comando = SESSIONE_COMANDO_XFCE;
+	else if (e_xfce()) {
+		/* ⭐ 5 ott 2026: la misura PRIMA di xfce4-session (`primario_misurato()`) */
+		g_autofree char *primario =
+			primario_misurato("XFCE", SESSIONE_PRIMARIO_XFCE, larghezza, altezza);
+		g_autofree char *primario_citato = g_shell_quote(primario);
+
+		comando_xfce = g_strdup_printf("exec " SESSIONE_TESTA_XFCE " %s", primario_citato);
+		comando = comando_xfce;
+	}
 	else if (e_lxqt()) {
 		g_autofree char *cartella = scrivi_config_labwc_lxqt(g_getenv("XDG_RUNTIME_DIR"));
 
@@ -2663,7 +2685,8 @@ static gboolean avvia(uint32_t larghezza, uint32_t altezza)
 			return FALSE;
 		/* ⚠ `SESSIONE_PROCESSO_XFCE` è `labwc`: il compositore di FAMIGLIA,
 		 *   lo stesso eseguibile — il nome della costante è della fase 13. */
-		g_autofree char *primario = primario_lxqt(larghezza, altezza);
+		g_autofree char *primario =
+			primario_misurato("LXQt", SESSIONE_PRIMARIO_LXQT, larghezza, altezza);
 		g_autofree char *primario_citato = g_shell_quote(primario);
 
 		comando_lxqt = g_strdup_printf("exec " SESSIONE_PROCESSO_XFCE " -C '%s' -S %s",

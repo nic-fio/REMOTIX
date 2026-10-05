@@ -81,7 +81,7 @@ depends=(
 	mesa                                      # libgbm.so.1 (mesa non la dichiara)
 	# ⭐ Non collegati, ma senza il desktop non arriva (§4.6, §11.1):
 	#    XFCE e LXQt girano sotto labwc, che nessun gruppo di Arch porta;
-	#    wlr-randr serve alla cura della misura su LXQt.  ⛔ Come optdepends
+	#    wlr-randr serve alla cura della misura su LXQt e XFCE.  ⛔ Come optdepends
 	#    pacman non li installerebbe mai, e R4 («niente a mano») cadrebbe su
 	#    XFCE e LXQt.  Il prezzo: labwc+wlroots anche su GNOME e KDE.
 	#    ⚠ labwc muore senza un carattere scalabile (labwc #2525, leap16-lxqt

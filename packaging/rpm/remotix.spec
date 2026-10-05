@@ -123,12 +123,13 @@ Requires:       firewalld-filesystem
 
 %if 0%{?fedora}
 # XFCE e LXQt girano sotto labwc (REMOTIX lo avvia; nessun gruppo di serie lo porta,
-# §4.6).  xfce4-session 4.20 e' X11: sotto labwc vuole Xwayland.  LXQt: la misura
-# del monitor passa da wlr-randr (`primario_lxqt()`).  Dipendenze CONDIZIONATE:
+# §4.6).  xfce4-session 4.20 e' X11: sotto labwc vuole Xwayland.  XFCE e LXQt: la
+# misura del monitor passa da wlr-randr (`primario_misurato()`, dal 5 ott anche XFCE).  Dipendenze CONDIZIONATE:
 # solo se quel desktop c'e'.
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+Requires:       (wlr-randr if xfce4-session)
 # Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
 # senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
 # leap16-lxqt).  Legato a labwc, non a un desktop: vale per XFCE e LXQt.
@@ -165,6 +166,7 @@ Recommends:     mesa-vulkan-drivers
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
+Requires:       (wlr-randr if xfce4-session)
 # Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
 # senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
 # leap16-lxqt dell'immagine Minimal-VM).  Legato a labwc, non a un desktop.
