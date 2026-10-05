@@ -6419,6 +6419,22 @@ attraverso una TUI sofisticata»*. ⛔ **Supera** §10.5 per la parte GUI e §10
   da Gio nel `go.mod`; aggiornare `fasi/17-l-installatore.md` §6.6.1 e §6.6.14 e `SPECIFICHE.md`. ⛔ Il codice
   dell'interfaccia non contiene logica d'installazione (§6.6.1), quindi toglierlo non tocca il motore.
 
+### 10.32 ✅ L'interfaccia di REMOTIX è tutta in inglese (5 ott 2026)
+
+Parole dell'utente: *«l'interfaccia di remotix sarà tutta in inglese, così come già fatto per la pagina di
+login»*. ⇒ Tutto quel che legge chi usa o installa REMOTIX è in inglese: la pagina (accesso, avvisi, errori,
+licenza), i messaggi che il server manda alla pagina, la TUI e i messaggi dell'installatore.
+
+- Perché regge: il prodotto si vende fuori dall'Italia, e un'interfaccia sola si scrive e si prova una volta.
+- ⛔ **Non cambia la lingua del progetto**: documenti, commenti, nomi nel codice e rapporti restano in
+  italiano (le convenzioni di sempre). Cambia solo quel che vede il cliente.
+- I testi stanno raccolti in un posto per ogni programma (come `installatore/interfaccia/testi.go`), così
+  un'altra lingua si potrà aggiungere dopo senza cercarli nel codice.
+- ⚠ **Il lavoro che ne viene**: la pagina d'accesso è tradotta (5 ott); restano gli altri testi della pagina,
+  quelli che il server scrive nella pagina (`__AVVISO__` e gli avvisi del ban), la TUI e i messaggi
+  dell'installatore. Le prove della suite cercano gli elementi per `id`, non per testo: la traduzione non le
+  tocca (verificato il 5 ott sulla pagina d'accesso).
+
 ---
 
 ## Come si tiene questo documento
