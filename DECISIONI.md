@@ -6394,6 +6394,11 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     all'identificativo della macchina. Una macchina che ha già avuto la sua trial non ne riceve una seconda:
     si chiude il varco «cancello `/var/lib/remotix` e reinstallo» dichiarato sopra (resta solo chi cambia
     l'identificativo, come per la full).
+- ⏳ **Il pagamento resta in sospeso** (utente, 5 ott: *«per il momento lasciamo in sospeso l'implementazione dei
+  sistemi di pagamento e concentriamoci sul prodotto»*). Scelta aperta: chi vende al posto nostro (Polar,
+  Paddle: ~5% + 0,50 $, IVA e fatture loro) o Stripe (IVA e fatture nostre). ⇒ Il nostro servizio di licenze
+  espone **un ingresso generico «rinnova/sospendi questa licenza»**, che il pagamento chiamerà quando ci sarà:
+  la scelta di dopo non cambia il prodotto. Le licenze full si creano a mano finché il pagamento non c'è.
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
