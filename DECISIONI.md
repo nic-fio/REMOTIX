@@ -6325,6 +6325,9 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   - Sostituisce la controproposta di Claude «vendere fino a 16, l'oltre dopo»: la licenza dice N o
     «illimitati» senza tetto, e la trasparenza fa il resto. Resta il lavoro tecnico del limite deciso
     all'avvio (sopra).
+- ✅ **La licenza full vale per sempre** (utente, 5 ott, «1, per sempre»): si paga una volta, per N utenti o
+  «illimitati». Nel codice firmato non c'è nessuna scadenza; chi vuole più utenti compra un codice nuovo
+  («Cambia licenza»).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
