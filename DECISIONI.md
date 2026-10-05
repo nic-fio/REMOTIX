@@ -6328,6 +6328,15 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
 - ✅ **La licenza full vale per sempre** (utente, 5 ott, «1, per sempre»): si paga una volta, per N utenti o
   «illimitati». Nel codice firmato non c'è nessuna scadenza; chi vuole più utenti compra un codice nuovo
   («Cambia licenza»).
+- ✅ **Il codice vale per una macchina, fisica o virtuale** (utente, 5 ott: *«il codice è per macchina (fisica o
+  virtuale che sia)»*). Il cliente, all'acquisto, manda l'identificativo della macchina (lo mostra la pagina
+  d'accesso accanto al campo del codice); il codice firmato lo contiene, e su un'altra macchina non vale.
+  - L'identificativo è `/etc/machine-id`: esiste uguale su macchine fisiche e virtuali, e non dipende dai
+    pezzi del computer.
+  - ⚠ Dichiarato: chi è amministratore può copiarlo su un'altra macchina, e una macchina virtuale
+    **clonata** lo porta con sé. Vale la regola di sopra: tiene onesti gli onesti.
+  - ⚠ Il prezzo: server cambiato o sistema reinstallato ⇒ identificativo nuovo ⇒ il cliente ti scrive e
+    gli generi un codice nuovo, a mano.
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
