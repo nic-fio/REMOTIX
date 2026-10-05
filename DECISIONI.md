@@ -6302,6 +6302,19 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   - ⚠ Il lavoro tecnico che ne viene: oggi il 16 è **fisso in compilazione** (`MAX_ATTACCATE` in
     `src/rcp.c`, §1.11). Per andare oltre su un server potente deve diventare un limite deciso al momento
     dell'avvio, dalla scheda e dalla configurazione.
+- ✅ **La capacità si dichiara, non si limita** (utente, 5 ott): *«si documenta che su una certa configurazione
+  il sistema garantisce un utilizzo ottimale fino a X utenti, poi comincia la fase di degrado. Chi acquista sa
+  cosa aspettarsi … sarebbe impossibile testare ambienti enterprise, dovrei quantomeno affittare un
+  datacenter»*. ⇒ Una tabella pubblica, **una riga per ogni macchina misurata**: utenti con uso ottimale, e da
+  dove comincia il degrado. ⛔ Solo macchine misurate davvero, col loro ferro dichiarato.
+  - ⇒ **Il piano delle misure di prestazione** (primo lavoro dopo la fase 19) misura anche **la curva degli
+    utenti** su Intel e Radeon: sono le prime due righe della tabella.
+  - 🔸 Proposta di Claude, da confermare: una **prova di capacità** dentro REMOTIX, che simula N sessioni sul
+    server del cliente e dice quanti utenti regge. Chi ha una macchina che noi non abbiamo si misura da solo,
+    durante la trial, prima di comprare.
+  - Sostituisce la controproposta di Claude «vendere fino a 16, l'oltre dopo»: la licenza dice N o
+    «illimitati» senza tetto, e la trasparenza fa il resto. Resta il lavoro tecnico del limite deciso
+    all'avvio (sopra).
 - ❓ **Da decidere con l'utente, uno per volta**: che
   cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
 
