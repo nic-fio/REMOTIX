@@ -31,7 +31,8 @@
 #
 # Uscita: 0 verde · 1 rosso · 3 non ho potuto guardare · 10 serve un riavvio
 # (poi si rilancia `tutto`, e riparte dal passo dopo).
-# Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso),
+# Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
+# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova),
 # RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
 #
 # ⛔ Le prestazioni NON si giudicano qui: i tempi che i banchi scrivono restano
@@ -594,6 +595,11 @@ suite() {
 	# 3840x2160. ⚠ Disegna in software (pixman): e' il cliente, e non deve dipendere dalla scheda
 	# che si sta provando. La sessione di XFCE invece la accende il PRODOTTO, sulla scheda
 	pkill -u "$UTENTE_BANCO" -x labwc 2>/dev/null
+	# ⛔ 5 ott 2026: `pkill` non aspetta. Se il labwc di prima e' ancora vivo, il suo
+	#    «wayland-0» finisce nell'elenco di «prima», il nuovo rinasce con lo STESSO nome e qui
+	#    sotto non si vede niente di nuovo ⇒ browser HEADLESS (784x512) per un giro di fila
+	local j
+	for j in $(seq 1 40); do pgrep -u "$UTENTE_BANCO" -x labwc > /dev/null || break; sleep 0.25; done
 	local prima
 	prima=$(ls "/run/user/$uid" 2>/dev/null | grep -E '^wayland-[0-9]+$' | sort)
 	runuser -u "$UTENTE_BANCO" -- env -u WAYLAND_DISPLAY -u DISPLAY XDG_RUNTIME_DIR="/run/user/$uid" \
@@ -622,7 +628,8 @@ suite() {
 		PATH="$VALIGIA/bin:$PATH" RXNV_REGISTRO="$LAVORO/registro.log" RXNV_SISTEMA="$sistema" \
 		RXNV_VERSIONE="$(head -1 "$VALIGIA/VERSIONE" 2>/dev/null)" \
 		python3 "$QUI/19-nv-suite.py" --registro "$u/registro.jsonl" --evidenze "$u" \
-		--porta "$PORTA" --modo "$modo" > "$EVID/suite.txt" 2>&1
+		--porta "$PORTA" --modo "$modo" ${PROVE:+--prove "$PROVE"} ${BROWSER_SUITE:+--browser "$BROWSER_SUITE"} \
+		> "$EVID/suite.txt" 2>&1
 	local c=$?
 	pkill -u "$UTENTE_BANCO" -x labwc 2>/dev/null
 	python3 "$ALBERO/banchi/15-suite/15-rapporto.py" --registro "$u/registro.jsonl" --giro 19-nvidia --testo \

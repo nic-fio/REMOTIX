@@ -74,15 +74,7 @@ prepara() {
 	cp "$ALBERO/installatore/uscita/remotix-install" "$VAL/valigia/bin/"
 	ok "remotix-install $("$VAL/valigia/bin/remotix-install" versione 2>/dev/null)"
 	log "i banchi (come 15-porta.sh) e i sorgenti per il banco 19"
-	(
-		cd "$ALBERO" || exit 1
-		{
-			ls banchi/*.py banchi/*.sh banchi/*.html banchi/*.js 2>/dev/null
-			find banchi/11-scatole banchi/15-suite banchi/19-vulkan banchi/19-nvidia -type f ! -name '*.pyc' \
-				! -path '*/__pycache__/*' ! -name '*registro*.jsonl' ! -name 'rapporto-*'
-			find src -maxdepth 1 -type f
-		} | tar -cf - -T - | tar -xf - -C "$VAL/valigia/albero"
-	)
+	albero_in_valigia
 	{
 		echo "$hash$sporco ($ramo) · $(git -C "$ALBERO" log -1 --format='%cd %s' --date=short HEAD | cut -c1-120)"
 		echo "preparata: $(date -Is) su $(hostname)"
@@ -92,9 +84,35 @@ prepara() {
 	ok "valigia: $VAL/valigia.tgz ($(du -h "$VAL/valigia.tgz" | cut -f1)) · $(head -1 "$VAL/valigia/VERSIONE")"
 }
 
+# i banchi e i sorgenti dell'albero di ADESSO dentro la valigia (non i pacchetti)
+albero_in_valigia() {
+	rm -rf "$VAL/valigia/albero"
+	mkdir -p "$VAL/valigia/albero"
+	(
+		cd "$ALBERO" || exit 1
+		{
+			ls banchi/*.py banchi/*.sh banchi/*.html banchi/*.js 2>/dev/null
+			find banchi/11-scatole banchi/15-suite banchi/19-vulkan banchi/19-nvidia -type f ! -name '*.pyc' \
+				! -path '*/__pycache__/*' ! -name '*registro*.jsonl' ! -name 'rapporto-*'
+			find src -maxdepth 1 -type f
+		} | tar -cf - -T - | tar -xf - -C "$VAL/valigia/albero"
+	)
+}
+
 manda() {
 	log "manda la valigia a $IP"
 	[ -f "$VAL/valigia.tgz" ] || { ko "manca la valigia: prima «$0 prepara»"; exit 1; }
+	# ⛔ 5 ott 2026: PROVE e BROWSER_SUITE aggiunti al banco DOPO la valigia non arrivavano —
+	#    `manda` spediva i banchi di quando la valigia era stata fatta, e la macchina girava la
+	#    suite intera. ⇒ I banchi (non i pacchetti) si rinfrescano dall'albero a ogni `manda`,
+	#    e la VERSIONE lo dice
+	if [ -d "$VAL/valigia/pacchetti" ]; then
+		albero_in_valigia
+		sed -i '/^banchi rinfrescati:/d' "$VAL/valigia/VERSIONE"
+		echo "banchi rinfrescati: $(date -Is) da $(git -C "$ALBERO" rev-parse --short HEAD)$( \
+			[ -n "$(git -C "$ALBERO" status --porcelain -- banchi)" ] && echo +modifiche)" >> "$VAL/valigia/VERSIONE"
+		tar -C "$VAL/valigia" -czf "$VAL/valigia.tgz" .
+	fi
 	if [ -n "${CONTENITORE:-}" ]; then
 		podman exec "$CONTENITORE" mkdir -p "$LONTANO"
 		podman exec -i "$CONTENITORE" tar -xzf - -C "$LONTANO" < "$VAL/valigia.tgz" || exit 1
@@ -113,6 +131,7 @@ avvia() {
 		systemctl reset-failed $UNITA 2>/dev/null; \
 		systemd-run --unit=$UNITA --collect --property=StandardOutput=append:$LAVORO/banco.log \
 		--property=StandardError=append:$LAVORO/banco.log --setenv=FORZA=${FORZA:-0} --setenv=RIFAI='${RIFAI:-}' \
+		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' \
 		/bin/bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
 		&& ok "partito"
 }
