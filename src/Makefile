@@ -267,7 +267,7 @@ SCANNER    ?= wayland-scanner
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
               virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
-              linux-dmabuf-unstable-v1
+              linux-dmabuf-unstable-v1 ext-data-control-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 # ⭐ FASE 17 — la cartella delle librerie del PREFISSO non e' sempre `lib`:

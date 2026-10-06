@@ -15,6 +15,7 @@
 
 #include "kwin.h"
 #include "registro.h"
+#include "ext-data-control-v1-client-protocol.h"
 #include "wlr-data-control-unstable-v1-client-protocol.h"
 
 /* Quanto si aspetta chi legge o scrive gli appunti: dall'altra parte della
@@ -55,6 +56,8 @@ struct AppuntiKde {
 	struct zwlr_data_control_manager_v1 *gestore;
 	struct wl_seat *seat;
 	uint32_t versione_gestore;
+	const char *protocollo; /* il nome del gestore legato, per il registro */
+	uint32_t nome_ext, versione_ext; /* ext_data_control_manager_v1, se c'e' */
 	struct zwlr_data_control_device_v1 *dispositivo;
 
 	GThread *pompa;
@@ -273,9 +276,15 @@ static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
 	if (!g_strcmp0(interfaccia, zwlr_data_control_manager_v1_interface.name)) {
 		/* La 2 aggiunge la primaria, che non ci serve: si lega quel che c'e'. */
 		appunti->versione_gestore = MIN(versione, 2u);
+		appunti->protocollo = zwlr_data_control_manager_v1_interface.name;
 		appunti->gestore = wl_registry_bind(registro, nome,
 		                                    &zwlr_data_control_manager_v1_interface,
 		                                    appunti->versione_gestore);
+	} else if (!g_strcmp0(interfaccia, ext_data_control_manager_v1_interface.name)) {
+		/* Si lega DOPO il giro del registro, e solo se zwlr manca: vedi
+		 * `lega_ext_se_serve`. */
+		appunti->nome_ext = nome;
+		appunti->versione_ext = versione;
 	} else if (!g_strcmp0(interfaccia, wl_seat_interface.name) && !appunti->seat) {
 		appunti->seat = wl_registry_bind(registro, nome, &wl_seat_interface, 1);
 	}
@@ -286,6 +295,28 @@ static void su_globale_via(void *dati, struct wl_registry *registro, uint32_t no
 }
 
 static const struct wl_registry_listener ascolto_registro = { su_globale, su_globale_via };
+
+/* ⛔ [M] 6 ott 2026, Ubuntu 26.04 / KWin 6.6.6: KWin non espone PIU'
+ *    `zwlr_data_control_manager_v1`, solo lo standard `ext_data_control_manager_v1`
+ *    (wayland-protocols, staging) ⇒ «gli appunti NON si aprono» e F-014/F-014C/
+ *    F-015C rossi.  Su KWin 6.3 (Debian 13) c'era ancora il vecchio.
+ *    ⭐ I due protocolli sono UGUALI NEL FILO: stesse richieste, stessi eventi,
+ *    stessi argomenti, nello stesso ordine (ext v1 = zwlr v2, primaria compresa;
+ *    confrontati gli XML in `protocolli/`).  ⇒ Si lega il gestore col SUO nome
+ *    (`ext_...`, quello che il compositore controlla) e lo si guida con le
+ *    funzioni zwlr: gli opcode e le firme sono gli stessi, e i figli (dispositivo,
+ *    sorgente, offerta) nascono da new_id, dove il nome dell'interfaccia non
+ *    viaggia.  Uno stesso codice per i due, invece di 800 righe doppie.
+ *    Si preferisce zwlr quando ci sono tutti e due: e' la strada gia' provata. */
+static void lega_ext_se_serve(AppuntiKde *appunti)
+{
+	if (appunti->gestore || !appunti->nome_ext)
+		return;
+	appunti->versione_gestore = 1;
+	appunti->protocollo = ext_data_control_manager_v1_interface.name;
+	appunti->gestore = (struct zwlr_data_control_manager_v1 *)wl_registry_bind(
+	    appunti->registro, appunti->nome_ext, &ext_data_control_manager_v1_interface, 1);
+}
 
 /* ------------------------------------------------------------------ *
  * Leggere il testo della sessione
@@ -544,9 +575,11 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 	wl_registry_add_listener(appunti->registro, &ascolto_registro, appunti);
 	wl_display_roundtrip(appunti->display);
 	wl_display_roundtrip(appunti->display);
+	lega_ext_se_serve(appunti);
 	if (!appunti->gestore) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "%s non espone zwlr_data_control_manager_v1", compositore);
+		            "%s non espone ne' zwlr_data_control_manager_v1 ne' "
+		            "ext_data_control_manager_v1", compositore);
 		goto guasto;
 	}
 	if (!appunti->seat) {
@@ -573,8 +606,9 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 	appunti->pompa = g_thread_new("remotix-appunti", thread_pompa, appunti);
 
 	registro_dice(REG_APPUNTI, "⭐ appunti agganciati a %s sul socket «%s» con "
-	                           "zwlr_data_control_manager_v1 v%u",
-	              compositore, appunti->socket, appunti->versione_gestore);
+	                           "%s v%u",
+	              compositore, appunti->socket, appunti->protocollo,
+	              appunti->versione_gestore);
 	return appunti;
 
 guasto:
