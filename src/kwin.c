@@ -806,6 +806,28 @@ int kwin_disposizione(const char *nome, GError **sbaglio)
 	if (!g_dbus_connection_emit_signal(bus, NULL, "/Layouts", "org.kde.keyboard",
 	                                   "reloadConfig", NULL, sbaglio))
 		return -1;
+	/* ⛔ `[M]` 6 ott 2026, KWin 6.6.6 (Ubuntu 26.04): `reloadConfig` non lo
+	 *    ascolta PIU' nessuno — `KeyboardLayout::init()` guarda kxkbrc con un
+	 *    `KConfigWatcher`, cioe' il segnale `org.kde.kconfig.notify
+	 *    ConfigChanged` sul percorso `/kxkbrc`, e rifa' la keymap se fra i
+	 *    gruppi cambiati c'e' «Layout» (`handleXkbConfigChanged`).  Senza, la
+	 *    sessione restava `English (US)` (F-009 rosso).  Si mandano tutti e due:
+	 *    il vecchio per KWin fino al 6.3, questo per i nuovi. */
+	{
+		GVariantBuilder gruppi;
+		const char *chiavi[] = { "LayoutList", "VariantList" };
+		GVariantBuilder nomi;
+
+		g_variant_builder_init(&nomi, G_VARIANT_TYPE("aay"));
+		for (size_t i = 0; i < G_N_ELEMENTS(chiavi); i++)
+			g_variant_builder_add_value(&nomi, g_variant_new_bytestring(chiavi[i]));
+		g_variant_builder_init(&gruppi, G_VARIANT_TYPE("a{saay}"));
+		g_variant_builder_add(&gruppi, "{saay}", "Layout", &nomi);
+		if (!g_dbus_connection_emit_signal(bus, NULL, "/kxkbrc", "org.kde.kconfig.notify",
+		                                   "ConfigChanged",
+		                                   g_variant_new("(a{saay})", &gruppi), sbaglio))
+			return -1;
+	}
 	/* ⚠ Il segnale non ha risposta: si svuota la coda perche' parta ADESSO. */
 	g_dbus_connection_flush_sync(bus, NULL, NULL);
 	return 0;
