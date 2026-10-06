@@ -1786,7 +1786,7 @@ int input_disposizione(Input *in, const char *nome)
 		}
 		registro_dice(AREA,
 		              "disposizione «%s» CHIESTA a KWin (kxkbrc della sessione + "
-		              "org.kde.keyboard reloadConfig) — §5-bis.7. ⚠ chiesta, non ancora in "
+		              "reloadConfig + kconfig ConfigChanged) — §5-bis.7. ⚠ chiesta, non ancora in "
 		              "vigore: lo dira' «KEYMAP CAMBIATA»",
 		              nome);
 		return 0;
