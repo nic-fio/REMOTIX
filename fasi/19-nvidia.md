@@ -373,3 +373,11 @@ software, sul processore lento): il conto che vale è quello dei posti, non la v
   falso. ⇒ `VK_ERROR_TOO_MANY_OBJECTS` ha un nome, e la riga dice «la scheda c'è ma ha FINITO i posti».
 - **Il riprovo già c'era e funziona**: posti liberati dopo 45 s, la sessione ha il primo fotogramma
   ~8 s dopo (riprova a 0,5 → 10 s), F-001 PASS. ⏳ Al browser non si dice niente nel frattempo: da decidere.
+
+#### 7-ter.6 Un'ora di video — 6 ottobre 2026 (scelta dell'utente)
+
+`[M]` GNOME, Chrome, F-013 (video 4K con suono) **19 volte di fila in 60 minuti: 19/19 PASS**, sullo stesso
+server senza riavvii; ogni 30 s la scheda e il padre (`misure/19-nvidia/campioni-sessione-lunga-20261006.txt`):
+memoria della scheda ~913 MB durante le sessioni e **torna a 1 MB** fra l'una e l'altra; il padre `remotix`
+**19,1 → 19,3 MB** di RSS e 11-12 descrittori dal primo all'ultimo campione. ⇒ Nessuna perdita fra una
+sessione e l'altra. ⚠ Quel che NON dice: una sessione sola tenuta un'ora (ognuna qui dura ~3 min).
