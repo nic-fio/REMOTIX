@@ -1458,6 +1458,16 @@ static uint32_t quanti_colori(CatturaColore colore, uint32_t elenco[8])
 	}
 }
 
+static uint64_t mod_scheda[16];
+static int mod_scheda_quanti;
+
+void cattura_modificatori_scheda(const uint64_t *modificatori, int quanti)
+{
+	mod_scheda_quanti = 0;
+	for (int i = 0; modificatori && i < quanti && i < (int)G_N_ELEMENTS(mod_scheda); i++)
+		mod_scheda[mod_scheda_quanti++] = modificatori[i];
+}
+
 static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint32_t larghezza,
                                       uint32_t altezza, uint32_t fotogrammi_al_secondo,
                                       CatturaColore colore, gboolean con_modificatori)
@@ -1510,6 +1520,10 @@ static const struct spa_pod *proposta(struct spa_pod_builder *costruttore, uint3
 		spa_pod_builder_push_choice(costruttore, &cornice[2], SPA_CHOICE_Enum, 0);
 		spa_pod_builder_long(costruttore, DRM_FORMAT_MOD_LINEAR);
 		spa_pod_builder_long(costruttore, DRM_FORMAT_MOD_LINEAR);
+		/* ⭐ 6 ott 2026: solo dove la scheda rifiuta il lineare — vedi
+		 *    `cattura_modificatori_scheda()` in cattura.h. */
+		for (i = 0; i < (uint32_t)mod_scheda_quanti; i++)
+			spa_pod_builder_long(costruttore, mod_scheda[i]);
 		spa_pod_builder_long(costruttore, DRM_FORMAT_MOD_INVALID);
 		spa_pod_builder_pop(costruttore, &cornice[2]);
 	}
@@ -2968,8 +2982,13 @@ gboolean cattura_formato_rifiutato(Cattura *cattura)
 	 *    formato e' un flusso che e' morto dopo essere nato, e li' la strada
 	 *    chiesta esisteva.  ⚠ Su wlroots non c'e' negoziazione PipeWire: il
 	 *    suo ripiego sta in `cattura_avvia_wlr()`. */
+	/* ⭐ 6 ott 2026, `[M]` NVIDIA + GNOME 50: Mutter CONCORDA un formato (col
+	 *    modificatore INVALID), non riesce ad allocarlo, lo ritira, e il flusso
+	 *    va in errore senza aver mai consegnato un buffer.  ⇒ Anche «formato
+	 *    concordato ma nessun fotogramma arrivato» è un rifiuto: la strada
+	 *    chiesta qui non ha mai dato niente. */
 	return cattura && !cattura->wlr && cattura->stato == PW_STREAM_STATE_ERROR &&
-	       !cattura->formato_noto;
+	       (!cattura->formato_noto || cattura->conto.arrivati == 0);
 }
 
 void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi)

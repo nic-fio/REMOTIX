@@ -21,6 +21,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <gbm.h>
+#include <unistd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2240,6 +2242,27 @@ int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *f
 	}
 	vulkanvideo_chiudi_dispositivo(d);
 	return n;
+}
+
+bool vulkanvideo_scheda_rifiuta_il_lineare(const char *nodo)
+{
+	struct gbm_device *g;
+	struct gbm_bo *bo;
+	int fd;
+
+	if (!nodo || (fd = open(nodo, O_RDWR | O_CLOEXEC)) < 0)
+		return false;
+	g = gbm_create_device(fd);
+	if (!g) {
+		close(fd);
+		return false;
+	}
+	bo = gbm_bo_create(g, 64, 64, GBM_FORMAT_XRGB8888, GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR);
+	if (bo)
+		gbm_bo_destroy(bo);
+	gbm_device_destroy(g);
+	close(fd);
+	return bo == NULL;
 }
 
 static Importazione *importa(VulkanVideo *v, const VulkanVideoSuperficie *s, char *errore, size_t errore_byte)

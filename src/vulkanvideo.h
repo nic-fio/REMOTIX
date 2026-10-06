@@ -126,6 +126,11 @@ void vulkanvideo_chiudi_dispositivo(VulkanVideoDispositivo *d);
  * per `formato_drm`, fino a `quanti`; quanti ne ha scritti (0 = nessuno, o
  * niente Vulkan).  Apre e richiude il dispositivo da sola. */
 int vulkanvideo_modificatori(const char *nodo, uint32_t formato_drm, uint64_t *fuori, int quanti);
+/* ⭐ 6 ott 2026: la scheda del nodo rifiuta una lastra LINEARE su cui si disegna
+ * (`gbm_bo_create` LINEAR|RENDERING)?  `[M]` La NVIDIA (driver 595) sì, Intel
+ * e Radeon no.  ⚠ false anche se il nodo non si apre: chi chiede resta sul
+ * lineare di sempre. */
+bool vulkanvideo_scheda_rifiuta_il_lineare(const char *nodo);
 const char *vulkanvideo_nome_scheda(const VulkanVideoDispositivo *d);
 const char *vulkanvideo_nome_driver(const VulkanVideoDispositivo *d);
 

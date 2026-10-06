@@ -87,6 +87,8 @@
 #include "audio.h"
 #include "cattura.h"
 #include "wlroots.h"
+#include "vulkanvideo.h"
+#include <drm_fourcc.h>
 #include "sentinella.h"
 #include "suono.h"
 #include "codificatore.h"
@@ -5218,6 +5220,47 @@ static void lastre_per_la_strada(void)
 	              strada_codifica, nodo_rendering);
 }
 
+/*
+ * ⭐ 6 ott 2026 — LA STRADA DELLA SCHEDA DOVE IL LINEARE NON C'È (Mutter e KWin).
+ * `[M]` NVIDIA (driver 595) + GNOME 50: la proposta di sempre (LINEARE, poi
+ * INVALID) finiva in «no more input formats» e la sessione restava NERA.
+ * ⇒ Se la scheda rifiuta il lineare (la stessa domanda di `wlroots.c`), la
+ *   proposta offre anche i modificatori che il codificatore Vulkan importa.
+ * ⛔ Dove il lineare riesce non cambia niente: nessun modificatore in più.
+ */
+static void modificatori_per_la_strada(void)
+{
+	static bool deciso = false;
+	uint64_t m[16];
+	int n = 0;
+
+	if (deciso || strada_del_palco != CATTURA_STRADA_SCHEDA)
+		return;
+	deciso = true;
+	if (!vulkanvideo_scheda_rifiuta_il_lineare(nodo_rendering))
+		return;
+	n = vulkanvideo_modificatori(nodo_rendering, DRM_FORMAT_XRGB8888, m, (int)G_N_ELEMENTS(m));
+	if (n < (int)G_N_ELEMENTS(m)) {
+		uint64_t a[16];
+		int na = vulkanvideo_modificatori(nodo_rendering, DRM_FORMAT_ARGB8888, a,
+		                                  (int)G_N_ELEMENTS(a));
+		for (int i = 0; i < na && n < (int)G_N_ELEMENTS(m); i++) {
+			bool gia = false;
+			for (int j = 0; j < n; j++)
+				gia = gia || m[j] == a[i];
+			if (!gia)
+				m[n++] = a[i];
+		}
+	}
+	cattura_modificatori_scheda(m, n);
+	registro_dice(REG_FIGLIO,
+	              "⭐ la scheda %s RIFIUTA la lastra lineare (NVIDIA): la proposta della "
+	              "cattura offre anche i %d modificatori che il codificatore Vulkan "
+	              "importa%s",
+	              nodo_rendering, n,
+	              n ? "" : " — ⛔ nessuno: resta il ripiego sulla memoria se il compositore rifiuta");
+}
+
 /* Il nome del componente da chiedere per `codec` sulla strada in vigore. */
 static const char *componente_di(CodecVideo codec)
 {
@@ -6978,10 +7021,12 @@ rimonta_la_cattura:
 		lastre_per_la_strada();
 		cat = cattura_avvia_wlr(tela_l, tela_a, MOVIMENTO_FPS, strada_del_palco,
 		                        CATTURA_COLORE_BGRX, &sbaglio);
-	} else
+	} else {
+		modificatori_per_la_strada();
 		cat = cattura_avvia(nodo_del_palco(mut), tela_l, tela_a, MOVIMENTO_FPS,
 		                    strada_del_palco, CATTURA_COLORE_BGRX, NULL, NULL,
 		                    NULL, &sbaglio);
+	}
 	if (!cat && ripiega_se_rifiutata(
 	                sbaglio && g_error_matches(sbaglio, G_IO_ERROR,
 	                                           G_IO_ERROR_NOT_SUPPORTED),

@@ -330,3 +330,23 @@ rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta
   manca la prova di Firefox 153 + video 4K su un cliente veloce.
 - **Un difetto del banco**: Ubuntu 26.04 ha i coreutils in Rust, e `tail -5` è un errore (`tail -n 5`
   funziona). Le prove raccoglievano le evidenze con `tail -N`: corretto in tutti i banchi.
+
+#### 7-ter.3 GNOME sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente: il tempo di noleggio che resta)
+
+`[M]` GNOME 50.1 (`ubuntu-session`, mutter 50.1) installato accanto a XFCE (`DESKTOP_NV=gnome`); il prodotto,
+trovati tutti e due, sceglie GNOME. ⚠ L'installazione è durata ~4 ore (non spiegato).
+- ⛔ **DIFETTO DEL PRODOTTO, sessione NERA**: la proposta della cattura offriva LINEARE e INVALID; Mutter sulla
+  NVIDIA concordava INVALID, non riusciva ad allocarlo, lo ritirava ⇒ «no more input formats», mai un
+  fotogramma. E il ripiego sulla memoria non scattava: guardava solo «nessun formato concordato».
+  Suite: 4 PASS, 2 FAIL, 38 BLOCKED.
+- ⭐ **La cura**, due pezzi:
+  1. `figlio.c` `modificatori_per_la_strada()` + `cattura_modificatori_scheda()`: se la scheda RIFIUTA la lastra
+     lineare (`vulkanvideo_scheda_rifiuta_il_lineare()`, la stessa domanda di `wlroots.c`), la proposta offre
+     anche i modificatori che il codificatore Vulkan importa, fra LINEARE e INVALID. Dove il lineare riesce
+     (Intel, Radeon) la proposta resta quella di sempre. `[M]` concordato `0x300000000606014`: copia zero.
+  2. `cattura_formato_rifiutato()`: è rifiuto anche «formato concordato ma nessun fotogramma mai arrivato»
+     — la rete sotto, per ogni scheda. ⚠ Da rimisurare su Intel e Radeon (non è stato possibile qui).
+- **Suite GNOME con la cura: 41 PASS, 2 FAIL, 1 BLOCKED** (giro `remotix-nv-ubuntu2404-20261006-0524`):
+  F-013 Firefox (lo stesso di XFCE, §7-ter.2); **F-003 Chrome «chiude»**: chiuso il programma, la finestra
+  resta nella foto per 10,7 s — il server consegna due fotogrammi alla chiusura (l'ultimo di 47 KB) e poi
+  NIENTE: Mutter non manda più danno. Ripetuta 2 volte: verde. ⏳ Intermittente, aperto.

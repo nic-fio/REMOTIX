@@ -432,6 +432,18 @@ typedef enum
  *    E' l'unico punto in cui un rifiuto si vede subito invece di diventare uno
  *    schermo nero molto piu' tardi.
  */
+/*
+ * ⭐ 6 ott 2026 — i modificatori IN PIÙ della strada della scheda (Mutter e KWin).
+ * `[M]` NVIDIA + GNOME 50: la proposta offriva LINEARE e «decidi tu» (INVALID);
+ * Mutter concordava INVALID, non riusciva ad allocarlo, lo toglieva — e
+ * l'intersezione restava vuota («no more input formats»): sessione NERA.
+ * ⇒ Chi sa che la scheda rifiuta il lineare (figlio.c) dà qui i modificatori
+ *   che il codificatore importa, e la proposta li mette fra LINEARE e INVALID.
+ * ⛔ Solo lì: dove il lineare riesce (Intel, Radeon) la proposta resta quella
+ *    di sempre — con più modificatori Mutter sceglierebbe un tiling suo.
+ */
+void cattura_modificatori_scheda(const uint64_t *modificatori, int quanti);
+
 Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
                        uint32_t fotogrammi_al_secondo, CatturaStrada strada, CatturaColore colore,
                        CatturaFotogramma su_fotogramma, CatturaFine su_fine, gpointer dati,
