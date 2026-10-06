@@ -401,3 +401,15 @@ RUN useradd -m -s /bin/bash nictest \
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
+
+# ---------------------------------------------------------------------------
+# ⭐ 6 ott 2026, fase 19 — ⛔ DIPENDENZA DEL PRODOTTO anche su XFCE: `avvia()`
+#   (src/sessione.c, `primario_misurato()`) fa nascere `xfce4-session` DOPO un
+#   `wlr-randr --custom-mode` alla misura del cliente — senza, `xfce4-panel`
+#   nato a 1280x720 puo' restare in un ciclo e ridisegnarsi a ogni fotogramma
+#   (`[M]` NVIDIA, labwc 0.9.3).  ⚠ Se manca, la sessione nasce lo stesso.
+# ⚠ Ultimo strato apposta, come R4 di LXQt.
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wlr-randr \
+    && rm -rf /var/lib/apt/lists/*

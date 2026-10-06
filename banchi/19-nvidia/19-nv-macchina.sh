@@ -410,7 +410,9 @@ dipendenze() {
 	#    Debian come «firefox-esr» — e le prove della suite (F-016/F-017) cercano e uccidono la scena
 	#    per NOME (`pgrep -x firefox-esr`).  ⇒ Le prove restano IDENTICHE e si allinea il nome: un
 	#    collegamento fisico col nome giusto, nella cartella di Firefox (la toglie «pulisci»).
-	if [ -x /usr/lib/firefox-esr/firefox-bin ] && [ ! -e /usr/lib/firefox-esr/firefox-esr ]; then
+	# ⛔ 6 ott 2026: era «solo se il collegamento manca» — dopo un `pulisci` e un giro nuovo il
+	#    collegamento fisico c'era ancora e /usr/bin/firefox-esr no ⇒ F-016 BLOCKED. Si rifà sempre
+	if [ -x /usr/lib/firefox-esr/firefox-bin ]; then
 		ln -f /usr/lib/firefox-esr/firefox-bin /usr/lib/firefox-esr/firefox-esr
 		ln -sfn /usr/lib/firefox-esr/firefox-esr /usr/bin/firefox-esr
 		touch "$LAVORO/firefox-esr-nome"
