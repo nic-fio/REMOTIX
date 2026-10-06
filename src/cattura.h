@@ -694,6 +694,7 @@ typedef struct
 {
 	guint64 arrivati;
 	guint64 danno_pieno, danno_parziale, danno_assente;
+	guint64 fence_aspettate, fence_scadute; /* la GPU del produttore, sulla scheda */
 	guint64 senza_intestazione;
 	guint64 solo_cursore;   /* buffer marcati CORRUPTED: pixel stantii */
 	guint64 stride_zero;    /* ⛔ scartati invece che calcolati        */

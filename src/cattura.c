@@ -11,6 +11,11 @@
 #include <drm_fourcc.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <errno.h>
+#include <linux/dma-buf.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <time.h>
 
 #include "cursore.h"
@@ -137,6 +142,7 @@ struct Cattura
 
 	struct spa_video_info_raw formato;
 	gboolean formato_noto;
+	gboolean detta_fence_assente;
 
 	CatturaFotogramma su_fotogramma;
 	CatturaFine su_fine;
@@ -898,17 +904,65 @@ static gboolean guarda_danno(Cattura *cattura, struct pw_buffer *pacco, CatturaR
 	return TRUE;
 }
 
+/*
+ * ⭐⭐ 6 ott 2026 — L'ATTESA DELLA GPU DEL PRODUTTORE, come sulla strada wlroots.
+ *
+ * `[M]` NVIDIA (driver 595) + GNOME 50, F-003 «chiude» rosso 3 volte su 23: alla
+ * chiusura di una finestra Mutter consegna un buffer GIUSTO (finestra sparita,
+ * ciano 18 su 4096 campioni) e 46 ms dopo un altro col contenuto VECCHIO (la
+ * finestra ancora lì, ciano 565 su 4096) — l'ultimo, e il cliente resta con
+ * quello.  ⇒ Il buffer si leggeva prima che il disegno di Mutter fosse finito:
+ *   sulla NVIDIA la sincronizzazione implicita non ci protegge da sola.
+ * ⇒ Prima di consegnare un DMA-BUF se ne ESTRAE la fence (`EXPORT_SYNC_FILE`,
+ *   lettura) e la si aspetta, al massimo FENCE_TETTO_MS.  Dove la fence è già
+ *   scattata (Intel, Radeon) costa un `ioctl` e un `poll` che tornano subito.
+ * ⚠ Nucleo o driver senza l'ioctl: si dice una volta e si va avanti come prima.
+ */
+#define FENCE_TETTO_MS 50
+
+static void aspetta_il_produttore(Cattura *cattura, int fd)
+{
+	struct dma_buf_export_sync_file sf = { .flags = DMA_BUF_SYNC_READ, .fd = -1 };
+	struct pollfd pfd;
+	int r;
+
+	if (fd < 0)
+		return;
+	if (ioctl(fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &sf) != 0) {
+		if (!cattura->detta_fence_assente) {
+			cattura->detta_fence_assente = TRUE;
+			registro_dice(AREA,
+			              "⚠ la fence dentro il DMA-BUF del produttore non si estrae "
+			              "(DMA_BUF_IOCTL_EXPORT_SYNC_FILE: %s): si conta sulla sola "
+			              "sincronizzazione implicita", g_strerror(errno));
+		}
+		return;
+	}
+	pfd.fd = sf.fd;
+	pfd.events = POLLIN;
+	do {
+		r = poll(&pfd, 1, FENCE_TETTO_MS);
+	} while (r < 0 && errno == EINTR);
+	close(sf.fd);
+	if (r == 0)
+		cattura->conto.fence_scadute++;
+	else
+		cattura->conto.fence_aspettate++;
+}
+
 static void su_processo(void *dati)
 {
 	Cattura *cattura = dati;
 	struct pw_buffer *pacco;
-	struct spa_data *piano;
+	struct spa_data *piano = NULL;
 	struct spa_meta_header *intestazione;
 	CatturaRegione regioni[REGIONI_MAX];
 	CatturaFotogrammaInfo info = { 0 };
 	CatturaConsegna consegna;
 	guint quante = 0;
-	gboolean copre_tutto = FALSE, danno_dichiarato;
+	gboolean copre_tutto = FALSE, danno_dichiarato = FALSE;
+	/* 🔎 6 ott 2026 (testimone, solo con --parlantina): che fine fa OGNI buffer */
+	const char *traccia_fine = "consegnato";
 	uint32_t passo, offset;
 	guint64 disponibili, byte;
 	guint i;
@@ -926,7 +980,7 @@ static void su_processo(void *dati)
 	guarda_cursore(cattura, pacco);
 
 	if (pacco->buffer->n_datas == 0)
-		goto restituisci;
+		{ traccia_fine = "scarto-1"; goto restituisci; }
 	piano = &pacco->buffer->datas[0];
 	cattura->conto.arrivati++;
 
@@ -966,7 +1020,7 @@ static void su_processo(void *dati)
 	if (!piano->chunk)
 	{
 		cattura->conto.senza_pixel++;
-		goto restituisci;
+		{ traccia_fine = "scarto-2"; goto restituisci; }
 	}
 
 	/*
@@ -987,7 +1041,7 @@ static void su_processo(void *dati)
 	if (piano->chunk->flags & SPA_CHUNK_FLAG_CORRUPTED)
 	{
 		cattura->conto.solo_cursore++;
-		goto restituisci;
+		{ traccia_fine = "scarto-3"; goto restituisci; }
 	}
 	intestazione = spa_buffer_find_meta_data(pacco->buffer, SPA_META_Header, sizeof *intestazione);
 	if (!intestazione)
@@ -995,7 +1049,7 @@ static void su_processo(void *dati)
 	else if (intestazione->flags & SPA_META_HEADER_FLAG_CORRUPTED)
 	{
 		cattura->conto.solo_cursore++;
-		goto restituisci;
+		{ traccia_fine = "scarto-4"; goto restituisci; }
 	}
 
 	danno_dichiarato = guarda_danno(cattura, pacco, regioni, &quante, &copre_tutto);
@@ -1005,7 +1059,7 @@ static void su_processo(void *dati)
 	if (passo == 0)
 	{
 		cattura->conto.stride_zero++;
-		goto restituisci;
+		{ traccia_fine = "scarto-5"; goto restituisci; }
 	}
 	offset = (uint32_t) piano->chunk->offset;
 
@@ -1081,7 +1135,7 @@ static void su_processo(void *dati)
 			              "i buffer nuovi: chi legge andrebbe oltre la memoria consegnata",
 			              cattura->formato.size.width, cattura->formato.size.height, passo,
 			              byte, (guint64) passo * cattura->formato.size.height);
-		goto restituisci;
+		{ traccia_fine = "scarto-6"; goto restituisci; }
 	}
 
 	info.pixel = NULL;
@@ -1110,7 +1164,7 @@ static void su_processo(void *dati)
 		if (!piano->data || byte == 0)
 		{
 			cattura->conto.senza_pixel++;
-			goto restituisci;
+			{ traccia_fine = "scarto-7"; goto restituisci; }
 		}
 		info.pixel = (const uint8_t *) piano->data + offset;
 	}
@@ -1133,7 +1187,7 @@ static void su_processo(void *dati)
 			              "produttore non consegna»: e' «non lo so descrivere»",
 			              info.fd, cattura_colore_nome(cattura->formato.format),
 			              cattura->formato.format, pacco->buffer->n_datas);
-		goto restituisci;
+		{ traccia_fine = "scarto-8"; goto restituisci; }
 	}
 
 	if (cattura->su_fotogramma)
@@ -1218,6 +1272,7 @@ static void su_processo(void *dati)
 		 * ═══════════════════════════════════════════════════════════════════ */
 		if (cattura->strada == CATTURA_STRADA_SCHEDA)
 		{
+			aspetta_il_produttore(cattura, info.fd);
 			f->sulla_scheda = TRUE;
 			f->fd = info.fd;
 			f->offset = offset;
@@ -1288,13 +1343,39 @@ static void su_processo(void *dati)
 		                   G_GUINT64_FORMAT ", senza intestazione %" G_GUINT64_FORMAT
 		                   ", di solo cursore %" G_GUINT64_FORMAT
 		                   ", ⭐ sostituiti nel posto %" G_GUINT64_FORMAT
-		                   " (prima del 15 ago erano PERSI)",
+		                   " (prima del 15 ago erano PERSI), fence del produttore aspettate %"
+		                   G_GUINT64_FORMAT " e SCADUTE %" G_GUINT64_FORMAT,
 		                   cattura->conto.arrivati, cattura->conto.buffer_distinti,
 		                   cattura->conto.danno_pieno, cattura->conto.danno_parziale,
 		                   cattura->conto.danno_assente, cattura->conto.senza_intestazione,
-		                   cattura->conto.solo_cursore, cattura->sovrascritti);
+		                   cattura->conto.solo_cursore, cattura->sovrascritti,
+		                   cattura->conto.fence_aspettate, cattura->conto.fence_scadute);
 
 restituisci:
+	if (registro_parla_molto()) {
+		/* 🔎 sui consegnati della scheda: la frazione di pixel CIANO (la finestra di F-003)
+		 *    su 64x64 campioni della memoria mappata — il tiling permuta i pixel, non
+		 *    ne cambia il conto */
+		int ciano = -1;
+		if (trattenuto && piano && piano->type == SPA_DATA_DmaBuf && piano->fd >= 0 &&
+		    piano->maxsize > 0) {
+			uint8_t *m = mmap(NULL, piano->maxsize, PROT_READ, MAP_SHARED, (int) piano->fd, 0);
+			if (m != MAP_FAILED) {
+				guint64 tot = piano->maxsize / 4u, k;
+				ciano = 0;
+				for (k = 0; k < 4096; k++) {
+					const uint8_t *px = m + ((k * 2654435761u) % tot) * 4u;
+					if (px[0] > 230 && px[1] > 230 && px[2] < 30)
+						ciano++;
+				}
+				munmap(m, piano->maxsize);
+			}
+		}
+		registro_dettaglio(AREA, "🔎 buffer %" G_GUINT64_FORMAT ": %s · danno %s (%u regioni%s) · "
+		                   "trattenuto %d · ciano %d/4096", cattura->conto.arrivati, traccia_fine,
+		                   danno_dichiarato ? "si'" : "no", quante, copre_tutto ? ", tutto" : "",
+		                   (int) trattenuto, ciano);
+	}
 	/* ⛔ E QUI STA LA CURA DEL RILASCIO, in una riga: un buffer TRATTENUTO non
 	 *    torna al produttore adesso.  ⚠ Senza questa guardia il DMA-BUF
 	 *    tornerebbe a Mutter nell'istante stesso in cui lo consegniamo a chi
