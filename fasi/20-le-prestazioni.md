@@ -48,12 +48,17 @@ nuovi si confrontano coi vecchi dove serve:
 2. **L'impianto rimesso in piedi sul prodotto di oggi**: i banchi `16-*` sono di prima della fase 18 e 19
    (pagina con WebGL2, niente ffmpeg, strada Vulkan). Ogni misuratore con la sua prova, come allora: un
    misuratore che non ha mai dato rosso non misura.
-3. **Una salita di prova** corta (4 utenti, 4 min a livello) per tarare: non conta.
+3. **Una salita di prova** corta (4 utenti, 5 min a livello) per tarare: non conta.
    **6 ott, prima prova** (Radeon, GNOME, 4K, binario `5c186779`, banchi `d9c86d6`): due difetti del banco,
    nessuno del prodotto, e tutti e due corretti in `16-salita.py`:
    - *livelli da 3 min* = 1 di assestamento + 2 di controllo corto ⇒ il tratto della memoria era **vuoto**,
      «NON MISURATO» ⇒ DEGRADED al primo gradino, salita ferma a 0. Ora la prova fa 4 min, e la salita
      **rifiuta** livelli più corti di controllo + 2 min.
+   - *seconda prova, livelli da 4 min*: la serie della memoria ha 60 punti in 59 s, e `16-classifica` ne
+     vuole più di 60 s ⇒ ancora NON MISURATO. La prova passa a **5 min** (2 min di memoria).
+   - il ritardo input → fotogramma a 4K su GNOME/Radeon, 1 utente: **53–55 ms** (soglia verde 50). Non è un
+     peggioramento: nella fase 16 era 55–59 (`amd-4k-gnome`, `amd-b-4k-gnome`). È la ragione per cui la
+     scala scende; la terza prova si fa a 2K, dove un utente sta sui 23 ms e i gradini possono salire.
    - *«commit del prodotto: ?»*: la salita lo cercava solo in `src/16-prodotto` (fermo al 26 set). Ora legge
      anche `rete11/prodotto/VERSIONE` = `<commit> <md5 a 8>`, valida solo se l'md5 è quello del binario.
      ⇒ **passo fisso della campagna**: compilato il binario finale, si copia in `rete11/prodotto` e si

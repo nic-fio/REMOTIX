@@ -13,7 +13,7 @@
 
     opzioni:  --gradini 1,4,8,12,16  --minuti 10  --minuti-ultimo 30
               --controllo-min 2  --seme-base 1600  --fps-video F  --video URL
-              --tetto 17  --porte-base 9900  --prova (§13.3: 1,2,4 da 4 min)
+              --tetto 17  --porte-base 9900  --prova (§13.3: 1,2,4 da 5 min)
               --scheda intel|amd  (la scheda della SCATOLA, predefinito intel)
 
 LA SCHEDA (§11, due campagne)
@@ -1238,7 +1238,7 @@ def main():
                    help="la scheda della SCATOLA (REMOTIX_SCHEDA di 11-accendi.sh); i "
                         "browser-cliente restano sulla Intel")
     a.add_argument("--prova", action="store_true",
-                   help="salita di prova §13.3: gradini 1,2,4 da 4 minuti; non conta")
+                   help="salita di prova §13.3: gradini 1,2,4 da 5 minuti; non conta")
     a.add_argument("--senza-scheda", action="store_true",
                    help="fase 18: la codifica SENZA scheda (OpenH264) — nella scatola rifatta "
                         "si nasconde iHD_drv_video.so prima di accendere il server, e si "
@@ -1266,11 +1266,12 @@ def main():
             o.gradini = "1,2,4"
         # ⛔ [M] 6 ott (taratura fase 20): 3 min = 1 di assestamento + 2 di controllo
         #    corto ⇒ il tratto della memoria e' VUOTO, «NON MISURATO» ⇒ DEGRADED al primo
-        #    gradino.  4 min lasciano 1 min di memoria.
+        #    gradino.  E a 4 min la serie ha 60 punti in 59 s: 16-classifica ne vuole
+        #    piu' di 60 s ⇒ ancora NON MISURATO.  5 min lasciano 2 min di memoria.
         if "--minuti" not in sys.argv:
-            o.minuti = 4
+            o.minuti = 5
         if "--minuti-ultimo" not in sys.argv:
-            o.minuti_ultimo = 4
+            o.minuti_ultimo = 5
         if not o.campagna.startswith("prova-"):
             o.campagna = "prova-" + o.campagna
     o.gradini = [int(x) for x in str(o.gradini).split(",") if x.strip()]
@@ -1279,9 +1280,9 @@ def main():
     if o.controllo_min > min(o.minuti, o.minuti_ultimo):
         a.error("--controllo-min piu' lungo del livello")
     # il tratto della memoria (16-classifica): dopo 60 s di assestamento, prima del controllo
-    if min(o.minuti, o.minuti_ultimo) * 60 - o.controllo_min * 60 - 60 < 60:
-        a.error("livelli troppo corti: servono almeno --controllo-min + 2 minuti "
-                "(1 di assestamento, 1 per misurare la memoria)")
+    if min(o.minuti, o.minuti_ultimo) * 60 - o.controllo_min * 60 - 60 < 90:
+        a.error("livelli troppo corti: servono almeno --controllo-min + 2.5 minuti "
+                "(1 di assestamento, e la memoria vuole piu' di 60 s di serie)")
     o.tetto = o.tetto or (max(o.gradini) + 1)
     o.largo, o.alto = MISURE_SCHERMO[o.misura]
     prog = os.path.abspath(o.programmi)
