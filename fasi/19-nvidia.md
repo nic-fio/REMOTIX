@@ -351,3 +351,11 @@ trovati tutti e due, sceglie GNOME. ⚠ L'installazione è durata ~4 ore (non sp
   resta nella foto per 10,7 s — il server consegna due fotogrammi alla chiusura (l'ultimo di 47 KB) e poi
   NIENTE: Mutter non manda più danno. Rifatta 8 volte (2 Chrome, poi 3 × Firefox e Chrome): tutte verdi
   ⇒ **1 su 9**. ⏳ Intermittente, aperto: mai visto sulla Intel; da guardare se torna.
+
+#### 7-ter.4 Chiusura del noleggio — 6 ottobre 2026
+
+Scelta dell'utente: si chiude. `19-nvidia.sh pulisci`: REMOTIX disinstallato dall'installatore, 649 pacchetti
+nuovi tolti, `/etc/apt` com'era, nessun pacchetto diverso da prima; valigia e cartelle di lavoro tolte.
+Restano utenti creati dai pacchetti (`colord`, `geoclue`, `pipewire`) e `rxprova` (uid 1003, di un giro di
+prova); riavvio consigliato. ⏳ Aperti: F-013 Firefox (suono col video, §7-ter.2), F-003 «chiude» su GNOME
+(1 su 9, §7-ter.3), il ripiego nuovo da rimisurare su Intel e Radeon.
