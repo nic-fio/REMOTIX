@@ -265,6 +265,9 @@ struct input
 	 *    la disposizione che §5-bis.7 dice di mettere nella sessione.  NULL
 	 *    finche' nessuno l'ha chiesta. */
 	char *negoziata;
+	/* ⭐ Quante volte si e' RICHIESTA a KWin la negoziata vedendo arrivare
+	 *    un'altra keymap (vedi «KWIN NON HA SENTITO» qui sotto). */
+	int richieste_kwin;
 
 	/* ⛔⛔ IL CONTO.  Vedi il riquadro in testa al file. */
 	uint8_t tasti[BIT_BYTE(MAX_TASTO)];
@@ -762,6 +765,35 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	}
 	else
 		registro_dettaglio(AREA, "keymap invariata: %s", impronta);
+
+	/*
+	 * ⛔ KWIN NON HA SENTITO — `[M]` 6 ott 2026, Ubuntu 26.04 / KWin 6.6.6:
+	 *    la negoziata `it` chiesta 1 s dopo l'avvio della sessione (kxkbrc +
+	 *    `reloadConfig`), e la prima keymap arrivata era `English (US)`, per
+	 *    tutta la sessione ⇒ F-009 rosso su Chrome e Firefox.  Il segnale e'
+	 *    senza risposta: se KWin non ha ancora l'oggetto `/Layouts` in ascolto
+	 *    si perde, e kxkbrc l'aveva gia' letto prima che lo scrivessimo.
+	 *    ⇒ La keymap VERA e' la conferma: se non e' la negoziata, si richiede,
+	 *    al massimo 3 volte (un KWin che non la mette mai resta col RIPIEGO
+	 *    DICHIARATO di `tastiera.c`, non con un giro senza fine).
+	 */
+	if (in->kwin && in->negoziata && in->disposizione &&
+	    tastiera_e_questa(in->disposizione, in->negoziata) == 0 && in->richieste_kwin < 3)
+	{
+		g_autoptr(GError) sbaglio_kwin = NULL;
+
+		in->richieste_kwin++;
+		input_rilascia_tutto(in); /* KWin rifa' il dispositivo tastiera */
+		if (kwin_disposizione(in->negoziata, &sbaglio_kwin) == 0)
+			registro_dice(AREA,
+			              "⚠ KWin ha messo «%s» e non la negoziata «%s»: la RICHIEDO (%d di 3)",
+			              tastiera_disposizione(in->disposizione), in->negoziata,
+			              in->richieste_kwin);
+		else
+			registro_dice(AREA, "⚠ KWin ha messo «%s» e non «%s», e richiederla non riesce: %s",
+			              tastiera_disposizione(in->disposizione), in->negoziata,
+			              sbaglio_kwin ? sbaglio_kwin->message : "senza motivo");
+	}
 }
 
 /* ------------------------------------------------------------------ *
@@ -1739,6 +1771,7 @@ int input_disposizione(Input *in, const char *nome)
 		input_rilascia_tutto(in);
 		g_free(in->negoziata);
 		in->negoziata = g_strdup(nome);
+		in->richieste_kwin = 0;
 		if (kwin_disposizione(nome, &sbaglio_kwin) != 0)
 		{
 			registro_dice(AREA,
