@@ -349,4 +349,5 @@ trovati tutti e due, sceglie GNOME. ⚠ L'installazione è durata ~4 ore (non sp
 - **Suite GNOME con la cura: 41 PASS, 2 FAIL, 1 BLOCKED** (giro `remotix-nv-ubuntu2404-20261006-0524`):
   F-013 Firefox (lo stesso di XFCE, §7-ter.2); **F-003 Chrome «chiude»**: chiuso il programma, la finestra
   resta nella foto per 10,7 s — il server consegna due fotogrammi alla chiusura (l'ultimo di 47 KB) e poi
-  NIENTE: Mutter non manda più danno. Ripetuta 2 volte: verde. ⏳ Intermittente, aperto.
+  NIENTE: Mutter non manda più danno. Rifatta 8 volte (2 Chrome, poi 3 × Firefox e Chrome): tutte verdi
+  ⇒ **1 su 9**. ⏳ Intermittente, aperto: mai visto sulla Intel; da guardare se torna.
