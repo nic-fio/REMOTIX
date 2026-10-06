@@ -1702,6 +1702,29 @@ static void sonda_chiudi_frame(WlrPalco *p)
 	p->s_visto_buffer = p->s_copia_partita = false;
 }
 
+/*
+ * I byte di un pixel della sonda, secondo il formato; 0 = non si legge.
+ * ⛔ `[M]` 6 ott 2026, NVIDIA (labwc 0.9.3, Ubuntu 26.04): per la regione 3x3
+ *    labwc offre un formato a **3 byte** (stride 9) — il tetto «stride ≥ l×4»
+ *    lo rifiutava, la sonda restava senza buffer e la forma del puntatore non
+ *    cambiava mai (F-005 rosso su LXQt).  Sulle Intel e Radeon offre XRGB8888.
+ */
+static unsigned sonda_bpp(uint32_t shm)
+{
+	switch (shm) {
+	case WL_SHM_FORMAT_ARGB8888:
+	case WL_SHM_FORMAT_XRGB8888:
+	case WL_SHM_FORMAT_ABGR8888:
+	case WL_SHM_FORMAT_XBGR8888:
+		return 4;
+	case WL_SHM_FORMAT_RGB888:
+	case WL_SHM_FORMAT_BGR888:
+		return 3;
+	default:
+		return 0;
+	}
+}
+
 /* Il buffer della sonda: si rifa' solo se il compositore ne chiede un altro. */
 static bool sonda_buffer(WlrPalco *p)
 {
@@ -1722,7 +1745,8 @@ static bool sonda_buffer(WlrPalco *p)
 	p->s_fd = -1;
 	/* ⛔ Un tetto: la regione e' 3x3, e un compositore che chiede di piu' non
 	 *    sta rispondendo a questa domanda. */
-	if (byte == 0 || byte > 4096 || p->s_f_stride < p->s_f_l * 4u)
+	if (byte == 0 || byte > 4096 || sonda_bpp(p->s_f_shm) == 0 ||
+	    p->s_f_stride < p->s_f_l * sonda_bpp(p->s_f_shm))
 		return false;
 	p->s_fd = memfd_create("remotix-sonda", MFD_CLOEXEC);
 	if (p->s_fd < 0 || ftruncate(p->s_fd, (off_t)byte) != 0)
@@ -1765,6 +1789,7 @@ static void sonda_parti(WlrPalco *p)
 			                    "(%ux%u stride %u): la forma non si guarda, e il client "
 			                    "tiene la sua freccia",
 			              p->s_f_l, p->s_f_a, p->s_f_stride);
+			registro_dice(AREA, "   (formato wl_shm della sonda: 0x%08x)", p->s_f_shm);
 		}
 		p->s_conto.fallite++;
 		sonda_prossima(p);
@@ -1812,6 +1837,13 @@ static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, ui
 	case WL_SHM_FORMAT_XBGR8888:
 		*r = q[0], *g = q[1], *b = q[2];
 		return true;
+	/* DRM: RGB888 = [23:0] R:G:B little endian ⇒ in memoria B, G, R */
+	case WL_SHM_FORMAT_RGB888:
+		*b = q[0], *g = q[1], *r = q[2];
+		return true;
+	case WL_SHM_FORMAT_BGR888:
+		*r = q[0], *g = q[1], *b = q[2];
+		return true;
 	default:
 		return false;
 	}
@@ -1855,8 +1887,9 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 
 				if (centro != (giro == 0))
 					continue;
-				sonda_bgr(p->s_f_shm, px + (gsize)y * p->s_f_stride + x * 4u, &b, &g,
-				          &r);
+				sonda_bgr(p->s_f_shm,
+				          px + (gsize)y * p->s_f_stride + x * sonda_bpp(p->s_f_shm), &b,
+				          &g, &r);
 				trovata = forma_da_pixel(b, g, r, 0xFF);
 				if (trovata >= 0 && !centro)
 					p->s_conto.dai_vicini++;
