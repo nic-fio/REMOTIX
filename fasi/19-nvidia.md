@@ -444,3 +444,28 @@ della prova) su 4096 campioni della memoria mappata (il tiling permuta i pixel, 
   NVIDIA). ⇒ Il secondo fotogramma «con la finestra» è di GNOME 50 sulla NVIDIA, non della nostra cattura
   in sé. ⏳ La prova che separa: GNOME 50 con le animazioni spente (se il secondo fotogramma è l'inizio
   dell'animazione di chiusura, sparisce).
+
+#### 7-ter.12 La suite intera su GNOME e KDE — 6 ottobre 2026 (Ubuntu 26.04: GNOME 50.1, Plasma 6.6.6)
+
+**GNOME** (31 prove, 2 browser): 129 PASS, 7 FAIL, 40 BLOCKED. I BLOCKED sono prove che qui non si fanno
+(porta del server nostro, server G8, tesseract, telefono vero). FAIL: F-013 Firefox (cliente lento, già
+noto) e **F-014C/F-014D/F-015C** (appunti del computer ↔ sessione) su tutti e due i browser: il server
+consegna i byte nei due versi (registro), sul server di casa passano ovunque ⇒ lato cliente di questa
+macchina, ⏳ non chiuso.
+
+**KDE**, primo giro: 115 PASS, 18 FAIL, 43 BLOCKED. Due **difetti veri del prodotto**, tutti e due di
+Plasma 6.6 (sul server di casa c'è il 6.3, e lì passava tutto):
+- **gli appunti non si aprivano**: KWin 6.6 non espone più `zwlr_data_control_manager_v1`, solo lo
+  standard `ext_data_control_manager_v1`. I due sono uguali nel filo (XML confrontati) ⇒ `appunti_kde.c`
+  lega `ext` se `zwlr` manca e lo guida con le stesse funzioni (`2f1ad7d`). [M] «appunti agganciati a KWin
+  con ext_data_control_manager_v1 v1», F-014 Chrome PASS.
+- **la sessione restava inglese** (F-009): KWin 6.6 non ascolta più `org.kde.keyboard reloadConfig`, guarda
+  kxkbrc con un `KConfigWatcher` ⇒ `kwin_disposizione()` manda anche `org.kde.kconfig.notify
+  ConfigChanged` su `/kxkbrc` (gruppo «Layout»). [M] KEYMAP CAMBIATA → «it [Italian]», F-009 PASS=4.
+  Più una rete: se la keymap che arriva non è la negoziata, si richiede (max 3).
+- di passaggio: `19-nv-suite.py` cadeva su una riga tagliata a metà di un'emoji (registro con
+  `backslashreplace`); e i .deb dello stesso giorno si ordinano per hash (`2f1ad7d` < `22c178e`) ⇒ apt li
+  vede come «downgrade»: sul banco `dpkg -r` prima.
+⏳ Restano su KDE: F-007/F-008 su Firefox (tasti RIPETUTI: «Enter» ×10, Ctrl+V incollato 3 volte — la
+ripetizione automatica di KWin quando il rilascio arriva tardi dal cliente lento?), F-003 Firefox (foto
+vecchia fino a 3.4 s), F-026 immagine. Secondo giro intero con le cure in corso.
