@@ -5442,7 +5442,18 @@ static Codificatore *codificatore_di(CodecVideo codec, uint8_t indice,
 		 * riporta nel suo `motivo`. */
 		snprintf(rifiuto_hardware, sizeof rifiuto_hardware, "%s",
 		         codif[indice] ? "" : errore);
-		if (!codif[indice])
+		/* ⭐ 6 ott 2026, `[M]` RTX 4090: la tredicesima codifica insieme torna
+		 *    VK_ERROR_TOO_MANY_OBJECTS.  La scheda c'è ed è PIENA: dire «questo
+		 *    codec non c'è» sarebbe falso, e il riprovo qui sotto la riprende
+		 *    appena un posto si libera. */
+		if (!codif[indice] && strstr(rifiuto_hardware, "TOO_MANY_OBJECTS"))
+			snprintf(errore, sizeof errore,
+			         "«%s» su %.40s non si e' aperto (%.150s) ⇒ la scheda c'e' ma ha FINITO "
+			         "i posti di codifica (il limite del driver: `[M]` 12 insieme sulla "
+			         "RTX 4090) — la sessione resta senza immagine finche' un posto non si "
+			         "libera",
+			         r.componente, nodo_rendering, rifiuto_hardware);
+		else if (!codif[indice])
 			snprintf(errore, sizeof errore,
 			         "«%s» su %.40s non si e' aperto (%.150s) ⇒ questo codec NON c'e' su "
 			         "questa macchina: senza scheda non si codifica (fase 19)",

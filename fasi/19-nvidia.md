@@ -359,3 +359,17 @@ nuovi tolti, `/etc/apt` com'era, nessun pacchetto diverso da prima; valigia e ca
 Restano utenti creati dai pacchetti (`colord`, `geoclue`, `pipewire`) e `rxprova` (uid 1003, di un giro di
 prova); riavvio consigliato. ⏳ Aperti: F-013 Firefox (suono col video, §7-ter.2), F-003 «chiude» su GNOME
 (1 su 9, §7-ter.3), il ripiego nuovo da rimisurare su Intel e Radeon.
+
+#### 7-ter.5 Quante codifiche insieme — 6 ottobre 2026 (scelta dell'utente)
+
+`[M]` RTX 4090, driver 595, ffmpeg 8.0 `h264_vulkan` (la stessa API del prodotto), 4K60 a gradini:
+1 → 122 fps; 8 → 8×31; 9 → 9×28; 10 → 10×25; 12 → 12×21; **16 → 12 riuscite, 4 rifiutate**
+(`AuthorizeEncoderSession: Failed to authorize this encoder instance`). ⇒ **Il driver dà 12 posti di
+codifica in tutto**, contati su TUTTA la scheda (anche i programmi dell'utente che codificano). Il tetto
+di REMOTIX è 10 sessioni: ci sta, con 2 posti di margine. ⚠ I fps qui sono del generatore (`testsrc2` in
+software, sul processore lento): il conto che vale è quello dei posti, non la velocità.
+- **Con i 12 posti occupati** una sessione vera entra («Ammesso») e resta NERA: `vkCreateVideoSessionKHR`
+  torna -10. Il registro diceva «VkResult sconosciuto» e «questo codec NON c'è su questa macchina» —
+  falso. ⇒ `VK_ERROR_TOO_MANY_OBJECTS` ha un nome, e la riga dice «la scheda c'è ma ha FINITO i posti».
+- **Il riprovo già c'era e funziona**: posti liberati dopo 45 s, la sessione ha il primo fotogramma
+  ~8 s dopo (riprova a 0,5 → 10 s), F-001 PASS. ⏳ Al browser non si dice niente nel frattempo: da decidere.
