@@ -89,6 +89,6 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 **Risposte dell'utente (6 ottobre 2026):**
 - 1 ✅ **4 desktop × 2 schede = 8 salite: Intel e Radeon** del server di casa (confermato dall'utente).
 - 3 ✅ **si scende fino al Full HD**.
-- 2 ⏳ **il video: l'utente non sa decidere**. Proposta: il file 4K locale (un film libero della Blender
-  Foundation, CC-BY) — ripetibile fra le 8 salite di tre giorni, confronto Intel/Radeon pulito, niente rete
-  di casa nei numeri; il prezzo è un caso d'uso meno «vero» di YouTube, a parità di lavoro per il server.
+- 2 ✅ **il video: il file 4K locale** (un film libero della Blender Foundation, CC-BY), scelto per la
+  ripetibilità fra le 8 salite. ⚠ La rete NON è una ragione: il server ha una linea da 10/2 Gb/s (detto
+  dall'utente).
