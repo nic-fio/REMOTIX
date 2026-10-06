@@ -421,3 +421,19 @@ la misura data prima di `lxqt-session` (`primario_misurato()`, `wlr-randr`). **S
 F-013 Firefox, il suono del cliente lento (§7-ter.8). ⇒ **Sulla NVIDIA i quattro desktop girano**: XFCE 43/44,
 GNOME 41/44, KDE 41/44, LXQt 43/44; tutti i rossi rimasti sono del cliente lento, tranne F-003 «chiude» su GNOME
 (intermittente, 3 su 23).
+
+#### 7-ter.11 La caccia a F-003 «chiude» su GNOME — 6 ottobre 2026 (scelta dell'utente)
+
+Strumenti (messi da parte in `git stash` «nvidia-chiude-traccia-e-fence», non nel prodotto): una riga per OGNI
+buffer di Mutter con la sua sorte, e sui consegnati della scheda la frazione di pixel CIANO (la finestra
+della prova) su 4096 campioni della memoria mappata (il tiling permuta i pixel, non ne cambia il conto).
+`[M]` 10 sessioni, 3 rosse:
+- alla chiusura Mutter consegna **due** fotogrammi a danno pieno a ~40 ms: il primo SENZA finestra (ciano
+  12-26 su 4096), il secondo **con la finestra di nuovo** (153-653 su 4096; finestra intera = 678); poi per
+  ~1 s nessun buffer, nemmeno di solo cursore. **Succede in TUTTE le sessioni**, verdi e rosse: la prova
+  diventa rossa quando quel secondo fotogramma ha abbastanza ciano da passare la soglia (16%).
+- ⛔ **Ipotesi smentita**: «leggiamo prima che la GPU di Mutter abbia finito». Con l'attesa della fence del
+  DMA-BUF (come sulla strada wlroots): 69 fence aspettate, **0 scadute**, e lo stesso rosso. Tolta.
+- ⏳ Aperto: è l'animazione di chiusura di GNOME 50 (il secondo fotogramma ne è l'inizio) che Mutter smette
+  di registrare mentre teniamo i buffer (la RITENUTA)? Il prossimo passo: la stessa traccia sulla Intel
+  (GNOME 48 di Debian), per vedere se lo schema c'è anche lì.
