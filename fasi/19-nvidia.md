@@ -389,7 +389,8 @@ la cura di XFCE, la proposta coi modificatori, il ripiego «nessun fotogramma ma
 `wlr-randr` messo anche nella scatola XFCE (e in `Contenitore.xfce`). Giro **`19-nvcure-intel`**, 4 desktop
 × Firefox 140 e Chrome 154 + lo strato tecnico: **737 PASS, 0 FAIL, 0 BLOCKED (146 min)**
 (`banchi/15-suite/rapporto-giro19-nvcure-intel.{txt,html}`). ⇒ Le cure non rompono niente sulla Intel.
-⚠ La Radeon non è rifatta.
+E sulla **Radeon** (`19-scatole-scheda.sh amd`, stesso binario, codifica Vulkan): giro **`19-nvcure-radeon`**,
+**737 PASS, 0 FAIL, 0 BLOCKED (146 min)** (`rapporto-giro19-nvcure-radeon.{txt,html}`).
 
 #### 7-ter.8 F-013 su Firefox 153: chiuso — è il ferro del cliente
 
