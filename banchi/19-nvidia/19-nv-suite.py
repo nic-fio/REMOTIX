@@ -165,7 +165,7 @@ def una(o, file, browser, base):
             "osservato": r.get("osservato", ""), "guasto_visto": r.get("guasto_visto"),
             "evidenze": [os.path.join(ev, "uscita.log")] + [x for x in r.get("evidenze") or [] if x],
             "difetto": None})
-    with open(o.registro, "a") as reg:
+    with open(o.registro, "a", errors="backslashreplace") as reg:
         for r in uscita:
             reg.write(json.dumps(r, ensure_ascii=False) + "\n")
     conto = {}
