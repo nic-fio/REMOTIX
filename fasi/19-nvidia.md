@@ -413,3 +413,11 @@ proposta (§7-ter.3) vale anche per KWin**, copia zero. **Suite KDE: 41 PASS, 2 
   ma **F-003 Chrome «chiude» rosso 4 volte su 5** (la finestra chiusa resta a schermo): su KWin un danno
   vuoto a volte porta un cambiamento vero. ⇒ Meglio un cliente lento in ritardo che una finestra fantasma.
   Non è nel prodotto.
+
+#### 7-ter.10 LXQt sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente)
+
+`[M]` LXQt di Ubuntu 26.04 sotto labwc 0.9.3 (Plasma, XFCE e GNOME tolti: il prodotto li sceglierebbe prima),
+la misura data prima di `lxqt-session` (`primario_misurato()`, `wlr-randr`). **Suite LXQt: 43 PASS, 1 FAIL** —
+F-013 Firefox, il suono del cliente lento (§7-ter.8). ⇒ **Sulla NVIDIA i quattro desktop girano**: XFCE 43/44,
+GNOME 41/44, KDE 41/44, LXQt 43/44; tutti i rossi rimasti sono del cliente lento, tranne F-003 «chiude» su GNOME
+(intermittente, 3 su 23).
