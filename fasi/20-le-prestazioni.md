@@ -85,3 +85,11 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 2. **Il video dei lavori D**: YouTube 4K come allora, o subito il file 4K locale (non cambia sotto i piedi, e
    rende le salite ripetibili)?
 3. **La scala**: si scende fino al Full HD come allora, o ci si ferma al 2K?
+
+**Risposte dell'utente (6 ottobre 2026):**
+- 1 ✅ **4 desktop × 2 schede = 8 salite** (Intel e Radeon del server di casa — l'utente ha scritto «nvidia e
+  intel»: la NVIDIA è solo a noleggio, ⏳ da confermare che intendesse la Radeon).
+- 3 ✅ **si scende fino al Full HD**.
+- 2 ⏳ **il video: l'utente non sa decidere**. Proposta: il file 4K locale (un film libero della Blender
+  Foundation, CC-BY) — ripetibile fra le 8 salite di tre giorni, confronto Intel/Radeon pulito, niente rete
+  di casa nei numeri; il prezzo è un caso d'uso meno «vero» di YouTube, a parità di lavoro per il server.
