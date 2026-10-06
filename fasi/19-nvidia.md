@@ -390,3 +390,11 @@ la cura di XFCE, la proposta coi modificatori, il ripiego «nessun fotogramma ma
 × Firefox 140 e Chrome 154 + lo strato tecnico: **737 PASS, 0 FAIL, 0 BLOCKED (146 min)**
 (`banchi/15-suite/rapporto-giro19-nvcure-intel.{txt,html}`). ⇒ Le cure non rompono niente sulla Intel.
 ⚠ La Radeon non è rifatta.
+
+#### 7-ter.8 F-013 su Firefox 153: chiuso — è il ferro del cliente
+
+`[M]` Server di casa (i5-13500T, ~3,3 volte più veloce dello Xeon E5-2630 v4 su un filo: lo stesso conto in
+Python, 1,13 s contro 3,72 s), Firefox **153.4.0esr** di Mozilla in una cartella sua
+(`/media/REMOTIX/strumenti/firefox-153`, davanti nel PATH, con la stessa regola `SkipTermsOfUse`), giro
+`ff153-intel`: **F-013 PASS su XFCE e su GNOME**, sana e guasto (la versione la scrive il registro). ⇒ Il rosso
+di F-013 sulla NVIDIA (immagine e suono) è del cliente lento, non di Firefox 153 né del prodotto.
