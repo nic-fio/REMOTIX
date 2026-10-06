@@ -61,6 +61,11 @@ nuovi si confrontano coi vecchi dove serve:
      scala scende; la terza prova si fa a 2K, dove un utente sta sui 23 ms e i gradini possono salire.
    - **terza prova, 2K, 5 min** (`prova-f20-prova-amd-gnome-2k`): 1, 2, 4 utenti **tutti GREEN**, la memoria
      misurata (remotix 95 → 96 MB, sessioni 2303 → 2301 MB in 119 s). La salita va da capo a fondo.
+   - **le altre tre prove a 2K** (6 ott, 16:50–17:45), una per desktop, le due strade coperte:
+     KDE/Intel e XFCE/Intel 1-2 GREEN, 4 DEGRADED non significativo; LXQt/Radeon 1 GREEN, 2 DEGRADED
+     significativo poi GREEN alla ripetizione, 4 GREEN. Tutti i DEGRADED sono un **blocco dell'immagine di
+     1.03–1.16 s** (soglia 1 s) in un attore solo: misura vera, da guardare nella campagna, non difetto del
+     banco. ⇒ **l'impianto è tarato su 4 desktop × 2 schede**; resta solo il binario finale.
    - *«commit del prodotto: ?»*: la salita lo cercava solo in `src/16-prodotto` (fermo al 26 set). Ora legge
      anche `rete11/prodotto/VERSIONE` = `<commit> <md5 a 8>`, valida solo se l'md5 è quello del binario.
      ⇒ **passo fisso della campagna**: compilato il binario finale, si copia in `rete11/prodotto` e si
