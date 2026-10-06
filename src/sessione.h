@@ -536,6 +536,9 @@ bool sessione_dconf_di_sessione(void);
  * rimette le variabili.  Il riquadro e' in `sessione.c`.
  */
 void sessione_fotografa_gestore(void);
+/* A sessione uscita, chiude quel che resta dell'utente nella SUA session-N.scope
+ * (detto nel registro).  Il perche' sopra la definizione, in sessione.c. */
+void sessione_sgombera_scope(void);
 void sessione_sgombera_gestore(const char *perche);
 
 /*

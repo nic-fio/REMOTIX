@@ -6807,6 +6807,8 @@ static bool prendi_il_palco(uint32_t tela_l, uint32_t tela_a,
 			              "padre, che congeda chi guarda con 0x10");
 			manda(MSG_SESSIONE_FINITA, NULL, 0, NULL, 0);
 			manda(MSG_PALCO, &p, sizeof p, NULL, 0);
+			/* ⭐ e nello scope non resta chi si era staccato dal desktop */
+			sessione_sgombera_scope();
 			/* ⭐ R1/R2: l'utente al monitor trova il gestore com'era */
 			sessione_sgombera_gestore("la sessione e' finita (§7.6)");
 			return false;

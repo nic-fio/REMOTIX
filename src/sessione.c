@@ -3281,13 +3281,130 @@ void sessione_sgombera_gestore(const char *perche)
 
 static bool termina_davvero(void);
 
+/*
+ * I pid del cgroup in cui gira questo processo (la `session-N.scope` di
+ * logind), nostro compreso.  NULL se il cgroup non si legge.
+ */
+static GArray *pid_del_mio_scope(void)
+{
+	g_autofree char *mio = NULL;
+	g_autofree char *procs = NULL;
+	g_autofree char *testo = NULL;
+	g_auto(GStrv) righe = NULL;
+	GArray *pid;
+	const char *via;
+
+	if (!g_file_get_contents("/proc/self/cgroup", &mio, NULL, NULL))
+		return NULL;
+	via = strstr(mio, "0::");
+	if (!via)
+		return NULL;
+	via += 3;
+	procs = g_strdup_printf("/sys/fs/cgroup%.*s/cgroup.procs", (int) strcspn(via, "\n"), via);
+	if (!strstr(procs, ".scope/") || !g_file_get_contents(procs, &testo, NULL, NULL))
+		return NULL;
+	pid = g_array_new(FALSE, FALSE, sizeof(pid_t));
+	righe = g_strsplit(testo, "\n", -1);
+	for (char **r = righe; *r; r++)
+		if (**r) {
+			pid_t p = (pid_t) g_ascii_strtoll(*r, NULL, 10);
+
+			g_array_append_val(pid, p);
+		}
+	return pid;
+}
+
+/* Un pid dello scope che si puo' chiudere: dell'utente, non noi, non il prodotto. */
+static bool superstite(pid_t p, char *nome, gsize n)
+{
+	g_autofree char *percorso = g_strdup_printf("/proc/%d/comm", (int) p);
+	g_autofree char *comm = NULL;
+	GStatBuf st;
+
+	if (p <= 1 || p == getpid() || g_stat(percorso, &st) != 0 || st.st_uid != getuid())
+		return false;
+	if (!g_file_get_contents(percorso, &comm, NULL, NULL))
+		return false;
+	g_strstrip(comm);
+	if (!g_strcmp0(comm, "remotix"))
+		return false;
+	g_strlcpy(nome, comm, n);
+	return true;
+}
+
+/*
+ * ⛔ GLI AVANZI DELLO SCOPE — `[M]` 6 ott 2026, NVIDIA, Ubuntu 26.04, XFCE:
+ *    dopo «Esci» (logout riuscito, labwc morto) nella `session-N.scope`
+ *    restavano `localsearch-3` e `agent` (geoclue), partiti dall'autostart
+ *    XDG che quella macchina ha per i pacchetti di GNOME ⇒ F-021 rosso su
+ *    tutti e due i browser.  Il gestore di sessione chiude i SUOI client; chi
+ *    si e' staccato da lui (D-Bus activation, doppia fork) resta.
+ * ⇒ A sessione uscita, quel che resta nel NOSTRO scope e appartiene
+ *   all'utente se ne va: SIGTERM, 2 s, poi SIGKILL a chi resiste.  Per tutti
+ *   i desktop: lo scope e' la sessione che il prodotto ha aperto, e un
+ *   processo che ci sta dentro dopo la fine e' un avanzo, chiunque l'abbia
+ *   lanciato.  ⚠ Il gestore d'utente (`user@.service`) NON e' lo scope: i
+ *   servizi di systemd --user restano, e quelli li tratta R1/R2.
+ */
+void sessione_sgombera_scope(void)
+{
+	g_autoptr(GArray) pid = pid_del_mio_scope();
+	g_autoptr(GString) nomi = g_string_new(NULL);
+	int colpiti = 0, ostinati = 0;
+	char nome[32];
+
+	if (!pid) {
+		registro_dettaglio(REG_SESSIONE, "avanzi dello scope: il cgroup non si legge, salto");
+		return;
+	}
+	for (guint i = 0; i < pid->len; i++) {
+		pid_t p = g_array_index(pid, pid_t, i);
+
+		if (!superstite(p, nome, sizeof nome) || kill(p, SIGTERM) != 0)
+			continue;
+		colpiti++;
+		if (nomi->len < 200)
+			g_string_append_printf(nomi, " %s", nome);
+	}
+	if (!colpiti) {
+		registro_dettaglio(REG_SESSIONE, "avanzi dello scope: nessuno");
+		return;
+	}
+	for (int giro = 0; giro < 20; giro++) {
+		g_autoptr(GArray) ancora = pid_del_mio_scope();
+		bool vivo = false;
+
+		for (guint i = 0; ancora && i < ancora->len && !vivo; i++)
+			vivo = superstite(g_array_index(ancora, pid_t, i), nome, sizeof nome);
+		if (!vivo)
+			break;
+		g_usleep(100 * 1000);
+	}
+	{
+		g_autoptr(GArray) ancora = pid_del_mio_scope();
+
+		for (guint i = 0; ancora && i < ancora->len; i++) {
+			pid_t p = g_array_index(ancora, pid_t, i);
+
+			if (superstite(p, nome, sizeof nome) && kill(p, SIGKILL) == 0)
+				ostinati++;
+		}
+	}
+	registro_dice(REG_SESSIONE,
+	              "⭐ avanzi dello scope dopo l'uscita: SIGTERM a %d processi (%s)%s",
+	              colpiti, nomi->str + 1,
+	              ostinati ? " — e SIGKILL a chi non e' uscito in 2 s" : "");
+}
+
 /* ⭐ R1/R2: una sessione chiusa da noi lascia il gestore d'utente com'era. */
 bool sessione_termina(void)
 {
 	bool uscita = termina_davvero();
 
-	if (uscita)
+	if (uscita) {
+		sessione_sgombera_scope();
 		sessione_sgombera_gestore("sessione terminata dal prodotto");
+	}
 	return uscita;
 }
 
