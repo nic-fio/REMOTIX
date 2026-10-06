@@ -59,6 +59,8 @@ nuovi si confrontano coi vecchi dove serve:
    - il ritardo input → fotogramma a 4K su GNOME/Radeon, 1 utente: **53–55 ms** (soglia verde 50). Non è un
      peggioramento: nella fase 16 era 55–59 (`amd-4k-gnome`, `amd-b-4k-gnome`). È la ragione per cui la
      scala scende; la terza prova si fa a 2K, dove un utente sta sui 23 ms e i gradini possono salire.
+   - **terza prova, 2K, 5 min** (`prova-f20-prova-amd-gnome-2k`): 1, 2, 4 utenti **tutti GREEN**, la memoria
+     misurata (remotix 95 → 96 MB, sessioni 2303 → 2301 MB in 119 s). La salita va da capo a fondo.
    - *«commit del prodotto: ?»*: la salita lo cercava solo in `src/16-prodotto` (fermo al 26 set). Ora legge
      anche `rete11/prodotto/VERSIONE` = `<commit> <md5 a 8>`, valida solo se l'md5 è quello del binario.
      ⇒ **passo fisso della campagna**: compilato il binario finale, si copia in `rete11/prodotto` e si
