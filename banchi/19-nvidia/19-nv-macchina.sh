@@ -33,7 +33,7 @@
 # (poi si rilancia `tutto`, e riparte dal passo dopo).
 # Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
 # BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), DESKTOP_NV=gnome
-# (GNOME in piu' di XFCE, e la suite su GNOME), CLIENTE_SCHEDA=1
+# (GNOME in piu' di XFCE, e la suite su GNOME; =kde: Plasma, e GNOME tolto), CLIENTE_SCHEDA=1
 # (i browser disegnano sulla scheda: solo controprova),
 # RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
 #
@@ -377,6 +377,16 @@ dipendenze() {
 	#    rete11-gnome (Contenitore.gnome), senza gdm: la sessione la accende il prodotto
 	[ "${DESKTOP_NV:-xfce}" = gnome ] && desktop+=(ubuntu-session gnome-shell gnome-session
 		gnome-terminal nautilus)
+	# ⭐ DESKTOP_NV=kde (6 ott 2026, scelta dell'utente): Plasma come la scatola rete11-kde
+	#    (Contenitore.kde). ⛔ Con GNOME presente il prodotto sceglie GNOME (riconosci_desktop):
+	#    `gnome-session` si TOGLIE prima, e lo si dice
+	if [ "${DESKTOP_NV:-xfce}" = kde ]; then
+		desktop+=(kwin-wayland plasma-workspace plasma-desktop powerdevil konsole dolphin)
+		if dpkg-query -W gnome-session-bin > /dev/null 2>&1; then
+			"${APT[@]}" remove gnome-session-bin >> "$EVID/dipendenze.txt" 2>&1 \
+				&& ok "gnome-session-bin tolto: il prodotto deve trovare Plasma, non GNOME"
+		fi
+	fi
 	# gli attrezzi delle prove: ffmpeg/ffplay (F-013 e il banco 19 MISURANO con ffmpeg: non entra nel
 	# prodotto), python3 con PIL e numpy (il giudice dei pixel), e quel che serve a compilare il banco 19
 	local attrezzi=(ffmpeg python3 python3-numpy python3-pil curl ca-certificates gnupg vulkan-tools
@@ -444,6 +454,7 @@ dipendenze() {
 		echo "labwc: $(labwc --version 2>/dev/null | head -1)"
 		echo "xfce4-session: $(dpkg-query -W -f='${Version}' xfce4-session 2>/dev/null)"
 		echo "gnome-shell: $(dpkg-query -W -f='${Version}' gnome-shell 2>/dev/null)"
+		echo "plasma-workspace: $(dpkg-query -W -f='${Version}' plasma-workspace 2>/dev/null)"
 		echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -1)"
 		echo "mesa/vulkan loader: $(dpkg-query -W -f='${Version}' libvulkan1 2>/dev/null)"
 	} > "$EVID/versioni.txt"
