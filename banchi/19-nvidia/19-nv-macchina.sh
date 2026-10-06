@@ -33,7 +33,7 @@
 # (poi si rilancia `tutto`, e riparte dal passo dopo).
 # Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
 # BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), DESKTOP_NV=gnome
-# (GNOME in piu' di XFCE, e la suite su GNOME; =kde: Plasma, e GNOME tolto), CLIENTE_SCHEDA=1
+# (GNOME in piu' di XFCE, e la suite su GNOME; =kde: Plasma, e GNOME tolto; =lxqt: LXQt, e gli altri tolti), CLIENTE_SCHEDA=1
 # (i browser disegnano sulla scheda: solo controprova),
 # RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
 #
@@ -380,6 +380,24 @@ dipendenze() {
 	# ⭐ DESKTOP_NV=kde (6 ott 2026, scelta dell'utente): Plasma come la scatola rete11-kde
 	#    (Contenitore.kde). ⛔ Con GNOME presente il prodotto sceglie GNOME (riconosci_desktop):
 	#    `gnome-session` si TOGLIE prima, e lo si dice
+	# ⭐ DESKTOP_NV=lxqt (6 ott 2026, scelta dell'utente): LXQt come la scatola rete11-lxqt
+	#    (Contenitore.lxqt). ⛔ Il prodotto sceglie KDE prima di XFCE e XFCE prima di LXQt
+	#    (riconosci_desktop): `plasma-workspace` e `xfce4-session` si TOLGONO prima
+	if [ "${DESKTOP_NV:-xfce}" = lxqt ]; then
+		# ⚠ e i pacchetti di XFCE escono dall'elenco, o l'installazione qui sotto li rimetterebbe
+		local tieni=() x
+		for x in "${desktop[@]}"; do
+			case $x in xfce4-*|xfdesktop4|thunar) ;; *) tieni+=("$x") ;; esac
+		done
+		desktop=("${tieni[@]}" lxqt-session lxqt-core qt6-wayland lxqt-menu-data lxqt-powermanagement
+			kf6-breeze-icon-theme qt6-svg-plugins)
+		local via
+		for via in plasma-workspace xfce4-session gnome-session-bin; do
+			dpkg-query -W "$via" > /dev/null 2>&1 || continue
+			"${APT[@]}" remove "$via" >> "$EVID/dipendenze.txt" 2>&1 \
+				&& ok "$via tolto: il prodotto deve trovare LXQt"
+		done
+	fi
 	if [ "${DESKTOP_NV:-xfce}" = kde ]; then
 		desktop+=(kwin-wayland plasma-workspace plasma-desktop powerdevil konsole dolphin)
 		if dpkg-query -W gnome-session-bin > /dev/null 2>&1; then
@@ -455,6 +473,7 @@ dipendenze() {
 		echo "xfce4-session: $(dpkg-query -W -f='${Version}' xfce4-session 2>/dev/null)"
 		echo "gnome-shell: $(dpkg-query -W -f='${Version}' gnome-shell 2>/dev/null)"
 		echo "plasma-workspace: $(dpkg-query -W -f='${Version}' plasma-workspace 2>/dev/null)"
+		echo "lxqt-session: $(dpkg-query -W -f='${Version}' lxqt-session 2>/dev/null)"
 		echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -1)"
 		echo "mesa/vulkan loader: $(dpkg-query -W -f='${Version}' libvulkan1 2>/dev/null)"
 	} > "$EVID/versioni.txt"
