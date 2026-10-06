@@ -381,3 +381,12 @@ server senza riavvii; ogni 30 s la scheda e il padre (`misure/19-nvidia/campioni
 memoria della scheda ~913 MB durante le sessioni e **torna a 1 MB** fra l'una e l'altra; il padre `remotix`
 **19,1 → 19,3 MB** di RSS e 11-12 descrittori dal primo all'ultimo campione. ⇒ Nessuna perdita fra una
 sessione e l'altra. ⚠ Quel che NON dice: una sessione sola tenuta un'ora (ognuna qui dura ~3 min).
+
+#### 7-ter.7 La rete completa sulla Intel con le cure — 6 ottobre 2026 (in parallelo alla NVIDIA, scelta dell'utente)
+
+`[M]` Server di casa, le 4 scatole rifatte (`19-scatole-scheda.sh intel`), binario **`5c186779`** (`02bb7f3`:
+la cura di XFCE, la proposta coi modificatori, il ripiego «nessun fotogramma mai arrivato»), pagina `ae66b9b4`;
+`wlr-randr` messo anche nella scatola XFCE (e in `Contenitore.xfce`). Giro **`19-nvcure-intel`**, 4 desktop
+× Firefox 140 e Chrome 154 + lo strato tecnico: **737 PASS, 0 FAIL, 0 BLOCKED (146 min)**
+(`banchi/15-suite/rapporto-giro19-nvcure-intel.{txt,html}`). ⇒ Le cure non rompono niente sulla Intel.
+⚠ La Radeon non è rifatta.
