@@ -398,3 +398,18 @@ Python, 1,13 s contro 3,72 s), Firefox **153.4.0esr** di Mozilla in una cartella
 (`/media/REMOTIX/strumenti/firefox-153`, davanti nel PATH, con la stessa regola `SkipTermsOfUse`), giro
 `ff153-intel`: **F-013 PASS su XFCE e su GNOME**, sana e guasto (la versione la scrive il registro). ⇒ Il rosso
 di F-013 sulla NVIDIA (immagine e suono) è del cliente lento, non di Firefox 153 né del prodotto.
+
+#### 7-ter.9 KDE sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente)
+
+`[M]` Plasma di Ubuntu 26.04 (`plasma-workspace`, `kwin-wayland`; `gnome-session-bin` tolto perché il prodotto
+non scelga GNOME), installato in ~1,5 minuti. La cattura di KWin concorda `0x300000000606014`: **la cura della
+proposta (§7-ter.3) vale anche per KWin**, copia zero. **Suite KDE: 41 PASS, 2 FAIL, 1 BLOCKED.**
+- F-013 Firefox: il suono, come su XFCE e GNOME — il cliente lento (§7-ter.8).
+- **F-003 Firefox «foto vecchia» (0,8-2,3 s), 4 su 4 rosso, anche col cliente sulla scheda (`CLIENTE_SCHEDA=1`)**:
+  KWin consegna ~58 fotogrammi/s dove Mutter e labwc ne consegnano ~5-7 (stessa scena), e ~80% arrivano
+  col danno DICHIARATO VUOTO (sulla Intel, KWin di Debian: 0 su 1200). Il server tiene (≈20 ms dalla cattura
+  ai byte); è il cliente lento a non stare dietro a 60 fotogrammi 4K.
+- ⛔ **Cura provata e TOLTA**: rendere subito i fotogrammi col danno dichiarato vuoto. F-003 Firefox verde,
+  ma **F-003 Chrome «chiude» rosso 4 volte su 5** (la finestra chiusa resta a schermo): su KWin un danno
+  vuoto a volte porta un cambiamento vero. ⇒ Meglio un cliente lento in ritardo che una finestra fantasma.
+  Non è nel prodotto.
