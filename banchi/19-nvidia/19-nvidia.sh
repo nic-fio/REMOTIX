@@ -131,7 +131,7 @@ avvia() {
 		systemctl reset-failed $UNITA 2>/dev/null; \
 		systemd-run --unit=$UNITA --collect --property=StandardOutput=append:$LAVORO/banco.log \
 		--property=StandardError=append:$LAVORO/banco.log --setenv=FORZA=${FORZA:-0} --setenv=RIFAI='${RIFAI:-}' \
-		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENTE_SCHEDA='${CLIENTE_SCHEDA:-0}' \
+		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENTE_SCHEDA='${CLIENTE_SCHEDA:-0}' --setenv=DESKTOP_NV='${DESKTOP_NV:-xfce}' \
 		/bin/bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
 		&& ok "partito"
 }

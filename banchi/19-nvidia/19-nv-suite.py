@@ -188,14 +188,17 @@ def principale():
     a.add_argument("--modo", choices=("finestra", "headless"), default="finestra")
     a.add_argument("--prove", default="", help="solo queste (es. f001,f018)")
     a.add_argument("--browser", default=",".join(BROWSER))
+    a.add_argument("--desktop", default="xfce", choices=("gnome", "kde", "xfce", "lxqt"))
     o = a.parse_args()
     if "RXNV_REGISTRO" not in os.environ:
         a.error("manca RXNV_REGISTRO (il file dove il server scrive)")
     os.makedirs(o.evidenze, exist_ok=True)
     tutti = []
-    base = 3100 + 10 * 2                     # le porte di debug di XFCE in 15-giro.py
+    globals()["DESKTOP"] = o.desktop
+    # le porte di debug del desktop come in 15-giro.py
+    base = 3100 + 10 * ("gnome", "kde", "xfce", "lxqt").index(o.desktop)
     print("⭐ 19-nv-suite · %s · %s · browser %s · porta %d" % (
-        DESKTOP, o.modo, o.browser, o.porta), flush=True)
+        o.desktop, o.modo, o.browser, o.porta), flush=True)
     # ⭐ 6 ott 2026: con --prove si sceglie fra TUTTE le prove della fase 15 (es. f012 per il
     #    suono senza video), non solo fra le sei del giro; «-f012-» non prende f012b
     scelte = PROVE

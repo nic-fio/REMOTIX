@@ -32,7 +32,8 @@
 # Uscita: 0 verde · 1 rosso · 3 non ho potuto guardare · 10 serve un riavvio
 # (poi si rilancia `tutto`, e riparte dal passo dopo).
 # Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
-# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), CLIENTE_SCHEDA=1
+# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), DESKTOP_NV=gnome
+# (GNOME in piu' di XFCE, e la suite su GNOME), CLIENTE_SCHEDA=1
 # (i browser disegnano sulla scheda: solo controprova),
 # RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
 #
@@ -370,6 +371,12 @@ dipendenze() {
 	# il desktop come nella scatola rete11-xfce (banchi/11-scatole/Contenitore.xfce), senza scatola
 	local desktop=(labwc xfce4-session xfce4-panel xfdesktop4 xfce4-terminal thunar xwayland wlr-randr
 		dbus-user-session libpam-systemd sudo fonts-dejavu-core pipewire pipewire-pulse wireplumber wl-clipboard)
+	# ⭐ DESKTOP_NV=gnome (6 ott 2026, scelta dell'utente: il tempo di noleggio che resta su GNOME):
+	#    GNOME in PIU' di XFCE. Il prodotto, trovati tutti e due, sceglie GNOME (sessione.c,
+	#    riconosci_desktop); su Ubuntu la sessione di serie «ubuntu» (D8). Come la scatola
+	#    rete11-gnome (Contenitore.gnome), senza gdm: la sessione la accende il prodotto
+	[ "${DESKTOP_NV:-xfce}" = gnome ] && desktop+=(ubuntu-session gnome-shell gnome-session
+		gnome-terminal nautilus)
 	# gli attrezzi delle prove: ffmpeg/ffplay (F-013 e il banco 19 MISURANO con ffmpeg: non entra nel
 	# prodotto), python3 con PIL e numpy (il giudice dei pixel), e quel che serve a compilare il banco 19
 	local attrezzi=(ffmpeg python3 python3-numpy python3-pil curl ca-certificates gnupg vulkan-tools
@@ -434,6 +441,7 @@ dipendenze() {
 		echo "chrome: $(google-chrome --version 2>/dev/null)"
 		echo "labwc: $(labwc --version 2>/dev/null | head -1)"
 		echo "xfce4-session: $(dpkg-query -W -f='${Version}' xfce4-session 2>/dev/null)"
+		echo "gnome-shell: $(dpkg-query -W -f='${Version}' gnome-shell 2>/dev/null)"
 		echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -1)"
 		echo "mesa/vulkan loader: $(dpkg-query -W -f='${Version}' libvulkan1 2>/dev/null)"
 	} > "$EVID/versioni.txt"
@@ -636,12 +644,12 @@ suite() {
 		avviso "il labwc dei browser non e' nato (compositore-browser.log): i browser vanno HEADLESS, e lo si dichiara"
 	fi
 	local sistema
-	sistema="$(. /etc/os-release; echo "$PRETTY_NAME") · $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1) · XFCE sotto labwc · browser: $modo"
+	sistema="$(. /etc/os-release; echo "$PRETTY_NAME") · $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1) · ${DESKTOP_NV:-xfce} · browser: $modo"
 	runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" \
 		PATH="$VALIGIA/bin:$PATH" RXNV_REGISTRO="$LAVORO/registro.log" RXNV_SISTEMA="$sistema" \
 		RXNV_VERSIONE="$(head -1 "$VALIGIA/VERSIONE" 2>/dev/null)" \
 		python3 "$QUI/19-nv-suite.py" --registro "$u/registro.jsonl" --evidenze "$u" \
-		--porta "$PORTA" --modo "$modo" ${PROVE:+--prove "$PROVE"} ${BROWSER_SUITE:+--browser "$BROWSER_SUITE"} \
+		--porta "$PORTA" --modo "$modo" --desktop "${DESKTOP_NV:-xfce}" ${PROVE:+--prove "$PROVE"} ${BROWSER_SUITE:+--browser "$BROWSER_SUITE"} \
 		> "$EVID/suite.txt" 2>&1
 	local c=$?
 	pkill -u "$UTENTE_BANCO" -x labwc 2>/dev/null
