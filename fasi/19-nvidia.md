@@ -438,3 +438,9 @@ della prova) su 4096 campioni della memoria mappata (il tiling permuta i pixel, 
 - ⏳ Aperto: è l'animazione di chiusura di GNOME 50 (il secondo fotogramma ne è l'inizio) che Mutter smette
   di registrare mentre teniamo i buffer (la RITENUTA)? Il prossimo passo: la stessa traccia sulla Intel
   (GNOME 48 di Debian), per vedere se lo schema c'è anche lì.
+- `[M]` **La stessa traccia sulla Radeon** (scatola rete11-gnome, GNOME 48 di Debian, binario `baf0ce80` solo
+  per la prova, poi rimesso `5c186779`): F-003 6 volte, 6 PASS. Alla chiusura **UN** fotogramma, ciano **0**
+  su 4096, e basta; e i buffer di solo cursore sono pochi (~120 in tutta la sessione, contro ~1100 sulla
+  NVIDIA). ⇒ Il secondo fotogramma «con la finestra» è di GNOME 50 sulla NVIDIA, non della nostra cattura
+  in sé. ⏳ La prova che separa: GNOME 50 con le animazioni spente (se il secondo fotogramma è l'inizio
+  dell'animazione di chiusura, sparisce).
