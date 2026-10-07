@@ -495,3 +495,17 @@ su un desktop diverso; col binario `5c186779` mai visto in 2 giri) ⇒ ⏳ prova
   Firefox il rilascio arriva 700–1160 ms dopo la pressione **secondo l'istante del client stesso** (Chrome:
   ≤150 ms) ⇒ il ritardo nasce nel browser sul processore lento; KWin ripete un tasto tenuto oltre ~600 ms,
   come deve con un tasto tenuto davvero. Il prodotto inoltra i tempi giusti.
+
+#### 7-ter.14 Il noleggio chiuso — 7 ottobre 2026, ~11:00 (decisione dell'utente: *«abbiamo svolto dei test esaurienti»*)
+
+- **GNOME «chiude»**: animazioni spente (dconf di sistema `enable-animations=false`) ⇒ F-003 Firefox **20/20
+  PASS**; controprova con le animazioni accese, stesso giorno ⇒ **8/8 PASS** (fermata lì). ⇒ L'ipotesi
+  «animazione di chiusura di GNOME 50» NON è provata: oggi il rosso non compare in nessuna delle due. Resta
+  intermittente (3/23 il 6 ott), causa ignota, e la cattura consegna quel che Mutter le dà.
+- **Appunti del computer** (F-014C/D, F-015C): rossi fissi, tutti i desktop, tutti e due i browser; il server
+  consegna nei due versi e sul server di casa passano ⇒ guasto fra browser e appunti del compositore del
+  banco su quella macchina. ⏳ Non dimostrato; non tocca il prodotto.
+- Evidenze raccolte (`misure/19-nvidia/remotix-nv-ubuntu2404-20261007-0851.tar.gz`), tolto a mano quel che
+  la prova delle animazioni aveva aggiunto (`/etc/dconf/profile/user`, `db/local*`, `dconf-cli`), poi
+  `19-nvidia.sh pulisci`: REMOTIX disinstallato, 1028 pacchetti nuovi tolti, `/etc/apt` com'era, valigia
+  tolta. ⚠ «riavvio consigliato» (driver/modeset tolti): la macchina si restituisce, non serve.
