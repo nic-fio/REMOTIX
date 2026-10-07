@@ -469,3 +469,24 @@ Plasma 6.6 (sul server di casa c'è il 6.3, e lì passava tutto):
 ⏳ Restano su KDE: F-007/F-008 su Firefox (tasti RIPETUTI: «Enter» ×10, Ctrl+V incollato 3 volte — la
 ripetizione automatica di KWin quando il rilascio arriva tardi dal cliente lento?), F-003 Firefox (foto
 vecchia fino a 3.4 s), F-026 immagine. Secondo giro intero con le cure in corso.
+
+#### 7-ter.13 Altri due difetti veri, e il giro di conferma — 6/7 ottobre 2026
+
+- **la forma del puntatore non cambiava mai su LXQt e XFCE** (F-005, solo NVIDIA): labwc sulla NVIDIA
+  offre alla sonda 3x3 un formato wl_shm a **3 byte** (stride 9), e la sonda pretendeva 4 ⇒ «non ha un
+  buffer». `wlroots.c` legge anche RGB888/BGR888 (`sonda_bpp`). [M] F-005 PASS su XFCE e LXQt.
+- **dopo «Esci» restavano processi** (F-021, XFCE su Ubuntu 26.04): `localsearch-3` e `agent` (geoclue),
+  dall'autostart che la macchina ha per i pacchetti di GNOME, nella `session-N.scope`. ⇒
+  `sessione_sgombera_scope()`: a sessione uscita (dal menu o dal prodotto) SIGTERM a quel che resta
+  dell'utente nello scope, 2 s, poi SIGKILL. [M] «SIGTERM a 2 processi (localsearch-3 agent)», F-021 PASS.
+
+**Giro di conferma** sulla NVIDIA col binario `716e35b` (tutte le cure), suite intera:
+GNOME 129/7, KDE 122/12, LXQt 129/7, XFCE 129/7 (PASS/FAIL; i BLOCKED sono le prove che qui non si fanno).
+I FAIL che restano NON sono del prodotto: F-013 Firefox (cliente lento), F-014C/D/F-015C su tutti i desktop
+e i due browser (appunti del computer del cliente; il server consegna nei due versi), e su KDE Firefox
+F-003/F-004/F-007/F-008 (tasti ripetuti, foto vecchie: il cliente lento) e F-026 Chrome (⏳).
+
+**Server di casa**, stesso commit (`716e35b`, binario `e2b1afae`, `rete11/prodotto/VERSIONE` scritta):
+giro `19-finale-intel` **732 PASS, 0 FAIL, 5 BLOCKED**; `19-finale-amd` **733 PASS, 0 FAIL, 4 BLOCKED**.
+Ripetute le bloccate: tutte PASS tranne **F-030 Firefox** (primo fotogramma nero 45 s, una volta per giro
+su un desktop diverso; col binario `5c186779` mai visto in 2 giri) ⇒ ⏳ prova A/B vecchio/nuovo in corso.
