@@ -102,9 +102,15 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 
   | macchina | scheda e strada | misura dello schermo | ottimale fino a | degrado da |
   |---|---|---|---|---|
-  | i5-13500T, 64 GB | Intel UHD 770 · VA-API | 4K | … | … |
-  | i5-13500T, 64 GB | AMD RX 6800 · Vulkan | 4K | … | … |
+  | i5-13500T, 31 GB | Intel UHD 770 · VA-API | 4K | … | … |
+  | i5-13500T, 31 GB | AMD RX 6800 · Vulkan | 4K | … | … |
 
+  ⚠ **La RAM è 31 GB, non 64** (letto con `free` sul server, 7 ott durante la campagna): la tabella va
+  corretta prima di pubblicarla.
+  ⚠ **Intel: 256 MB di memoria video nel BIOS** (annotato dall'utente, 7 ott). Su Linux servono solo all'avvio;
+  dopo, la scheda prende la memoria dalla RAM comune quando serve (memoria condivisa vista a 16 GB durante le
+  salite). ⇒ non è il limite del 4K: lì cedono ritardo e fotogrammi (velocità di copia e compressione), non la
+  memoria. Da provare a parte, a campagna finita: Intel 4K su un desktop, 256 MB contro il massimo del BIOS.
   ⚠ Con la dichiarazione della fase 16, che resta vera: il server fa girare **anche gli N browser**, quindi i
   numeri sono un **limite inferiore**; la rete non è misurata.
 - ⛔ I numeri **non** si scrivono nelle SPECIFICHE come promesse: restano obiettivi di progetto
