@@ -490,3 +490,8 @@ F-003/F-004/F-007/F-008 (tasti ripetuti, foto vecchie: il cliente lento) e F-026
 giro `19-finale-intel` **732 PASS, 0 FAIL, 5 BLOCKED**; `19-finale-amd` **733 PASS, 0 FAIL, 4 BLOCKED**.
 Ripetute le bloccate: tutte PASS tranne **F-030 Firefox** (primo fotogramma nero 45 s, una volta per giro
 su un desktop diverso; col binario `5c186779` mai visto in 2 giri) ⇒ ⏳ prova A/B vecchio/nuovo in corso.
+- ✅ **chiusi, non sono del prodotto** (7 ott mattina): **F-026 KDE Chrome** 3 PASS su 3 ripetuto da solo
+  (era intermittente); **F-007/F-008 KDE Firefox** (tasti ripetuti): nel registro del server, per le sessioni
+  Firefox il rilascio arriva 700–1160 ms dopo la pressione **secondo l'istante del client stesso** (Chrome:
+  ≤150 ms) ⇒ il ritardo nasce nel browser sul processore lento; KWin ripete un tasto tenuto oltre ~600 ms,
+  come deve con un tasto tenuto davvero. Il prodotto inoltra i tempi giusti.
