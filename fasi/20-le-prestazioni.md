@@ -43,6 +43,10 @@ nuovi si confrontano coi vecchi dove serve:
 0. **Il server riavviato e rifatto pulito** (la risposta di Claude all'utente, 5 ott: il riavvio conviene
    qui, non prima). Radice in RAM rifatta con la ricetta (`provisiona.sh`, chiave, pacchetti, le 4 scatole),
    poi si **guarda** che sia vuoto: niente processi, inquilini, compositori rimasti.
+   ⭐ **7 ott, decisione dell'utente** (*«cerchiamo di accelerare i tempi»*): **niente riavvio** — si guarda
+   che il server sia vuoto (processi, inquilini, compositori) e si parte appena il binario è deciso, senza
+   aspettare la fine del noleggio NVIDIA (il rischio dichiarato: una cura nata là nelle ultime ore
+   costringerebbe a rifare le salite già fatte).
 1. **Il commit del giorno**, identificato, con la **suite corta di regressione** della fase 15 sui 4 desktop
    coi due browser. Non verde ⇒ non si misura.
 2. **L'impianto rimesso in piedi sul prodotto di oggi**: i banchi `16-*` sono di prima della fase 18 e 19
