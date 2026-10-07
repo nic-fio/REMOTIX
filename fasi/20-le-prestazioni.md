@@ -47,6 +47,13 @@ nuovi si confrontano coi vecchi dove serve:
    che il server sia vuoto (processi, inquilini, compositori) e si parte appena il binario è deciso, senza
    aspettare la fine del noleggio NVIDIA (il rischio dichiarato: una cura nata là nelle ultime ore
    costringerebbe a rifare le salite già fatte).
+   ⭐ **7 ott 08:19, PARTITA**: `sudo systemd-run --unit=r20-campagna … 16-campagna.sh intel-f20 amd-f20`
+   (coda per scheda: 4K → 3K → 2K → Full HD su GNOME, KDE, XFCE, LXQt; video D = il file 4K locale, 30 fps).
+   Binario `e2b1afae` = commit **`716e35b`** (letto dalla salita: «commit del prodotto: 716e35b»), pagina
+   `ae66b9b4`. Prima: rete di casa 732 + 733 PASS, 0 FAIL; e la prova A/B di F-030 Firefox (primo fotogramma
+   nero) — vecchio `5c186779` 4 su 12, nuovo 3 su 12 ⇒ non viene dalle cure della notte, ⏳ resta aperto.
+   Server guardato vuoto (nessun inquilino, nessun giro, nessun browser). Per fermarla: `touch
+   /media/REMOTIX/misure/fase16/FERMA` (fra una salita e l'altra) o `sudo systemctl stop r20-campagna`.
 1. **Il commit del giorno**, identificato, con la **suite corta di regressione** della fase 15 sui 4 desktop
    coi due browser. Non verde ⇒ non si misura.
 2. **L'impianto rimesso in piedi sul prodotto di oggi**: i banchi `16-*` sono di prima della fase 18 e 19
