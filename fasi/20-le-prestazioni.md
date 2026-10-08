@@ -62,7 +62,7 @@ nuovi si confrontano coi vecchi dove serve:
    stanno sul server), da dichiarare come tale, non del prodotto. La salita interrotta resta in
    `amd-f20-3k-kde-interrotta`. Radice rifatta con la ricetta (pacchetti, earlyoom, storage.conf, linger,
    `provisiona.sh` di `716e35b` + `/etc/ld.so.conf.d/remotix-prodotto.conf` → `rete11/prodotto/lib`:
-   verifica OK), e **ripresa alle 10:42** con lo stesso binario: unità `r20-ripresa`
+   verifica OK; swap `/media/swapfile` 32 GB riattivato alle 10:50, il riavvio l'aveva tolto), e **ripresa alle 10:42** con lo stesso binario: unità `r20-ripresa`
    (`misure/fase16/ripresa-8ott.sh`: Radeon KDE 3K → 2K → Full HD, poi XFCE e LXQt da 4K). Fermarla:
    `FERMA` come sopra o `sudo systemctl stop r20-ripresa`.
 1. **Il commit del giorno**, identificato, con la **suite corta di regressione** della fase 15 sui 4 desktop
