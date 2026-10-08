@@ -6397,6 +6397,15 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     all'identificativo della macchina. Una macchina che ha già avuto la sua trial non ne riceve una seconda:
     si chiude il varco «cancello `/var/lib/remotix` e reinstallo» dichiarato sopra (resta solo chi cambia
     l'identificativo, come per la full).
+- ✅ **Il servizio di licenze gira sul VPS** (utente, 8 ott: *«il server è sulla VPS»*), lo stesso che pubblica
+  l'archivio dei pacchetti (§10.23, D10): una macchina sola da tenere accesa e aggiornata, nessun costo nuovo.
+  - ⚠ **Un punto solo**: se il VPS cade, si fermano insieme gli aggiornamenti e i controlli di licenza. I
+    clienti non se ne accorgono finché dura la **tolleranza** ⇒ la tolleranza va scelta più lunga del tempo
+    che serve a rimettere in piedi il VPS.
+  - 🔸 Proposta di Claude: **la chiave che firma le risposte sta sul VPS, ma non è la radice**. Una radice
+    fuori linea (mai sul VPS) certifica la chiave del VPS, come già fa la catena dell'installatore (radice
+    ed25519 fuori linea, sottochiavi, revoche). Se il VPS viene violato si revoca la sua chiave e se ne
+    certifica una nuova, senza ricompilare il prodotto.
 - ⏳ **Il pagamento resta in sospeso** (utente, 5 ott: *«per il momento lasciamo in sospeso l'implementazione dei
   sistemi di pagamento e concentriamoci sul prodotto»*). Scelta aperta: chi vende al posto nostro (Polar,
   Paddle: ~5% + 0,50 $, IVA e fatture loro) o Stripe (IVA e fatture nostre). ⇒ Il nostro servizio di licenze
