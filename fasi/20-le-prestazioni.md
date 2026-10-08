@@ -94,6 +94,16 @@ nuovi si confrontano coi vecchi dove serve:
      scrive accanto `VERSIONE`.
 4. **Le campagne, una configurazione alla volta** (le prestazioni non si misurano in parallelo):
    Intel = VA-API su GNOME, KDE, XFCE, LXQt; poi Radeon = Vulkan, stesso ordine.
+4b. ⭐ **Il confronto con xrdp, a parità di macchina** (deciso dall'utente l'8 ott: *«sono curioso di vedere
+   come siamo messi e soprattutto avere dei dati oggettivi di confronto»*). ⛔ Oggi «siamo avanti a xrdp» è
+   un giudizio (fasi/08 §2.5, 22 ago, un utente, a occhio), non una misura, e in rete non esiste un banco di
+   carico di xrdp. **Una salita sola**, non la matrice (~3 giorni, scartata per costo): **XFCE, 2K, Intel** —
+   XFCE è nativo su X11, cioè a casa di xrdp, e non lo penalizza; il 2K è il formato che dichiariamo; noi lì
+   facciamo **10** (`intel-f20-2k-xfce`). Stessa scena, stessi gradini, stesse soglie; i clienti sono
+   **FreeRDP** (il browser non parla RDP) ⇒ CPU, RAM, scheda e cadute si confrontano uno a uno; ritardo e
+   fotogrammi si leggono in altro modo e vanno dichiarati come tali. Costo: ~½ giornata per adattare il
+   banco + ~2 ore di salita. Parte **dopo** la campagna, con `r20-ripresa` finita. Esce una riga: «a 2K su
+   XFCE, stessa macchina: REMOTIX 10, xrdp N». Se è vicino, l'utente decide se allargare.
 5. **Il rapporto** e **la tabella pubblica** (§5).
 
 **Quanto dura**, dalla fase 16: ~1 ora e 10 per salita ⇒ ~9 ore di macchina nel caso migliore (8 salite),
