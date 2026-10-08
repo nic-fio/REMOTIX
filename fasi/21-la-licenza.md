@@ -219,6 +219,14 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      di Strasburgo (incendio del centro OVH, marzo 2021: chi aveva le copie nello stesso centro le ha perse).
    - ✅ **sistema: Debian 13 «trixie»** (utente, 8 ott): lo stesso del server di prova e del portatile ⇒ il
      servizio finto in contenitore (§7) si costruisce sulla stessa base, e quello che passa lì vale sul VPS.
+   - ✅ **indirizzo: `remotix.nicfio.it`** (utente, 8 ott: *«al momento appoggiamoci a remotix.nicfio.it»*), il
+     servizio di licenze sotto un percorso con la versione (`https://remotix.nicfio.it/licenze/v1/…`), così lo
+     stesso nome può servire più tardi anche l'archivio dei pacchetti. ⚠ Un dominio dedicato era la proposta di
+     Claude (il nome è scritto nel prodotto, i firewall delle aziende lo autorizzano per nome, lega il prodotto
+     al nome personale); `remotix.com` è già registrato, `.it`/`.eu` da verificare.
+     ⭐ **Obbligatorio nel piano, per questa scelta: il cambio d'indirizzo firmato.** Il servizio può dire al
+     prodotto, dentro l'attestato firmato, «da ora in poi chiedi a X»; il prodotto lo ricorda in `/var/lib/remotix`
+     e ci passa. Un dominio nuovo domani = tenere acceso il vecchio qualche mese, nessun cliente da aggiornare.
 5. **Le sessioni aperte quando la licenza scade**: restano fino all'uscita (proposta) o si chiudono?
 6. **Il clone scoperto**: si avvisa solo chi vende, o si sospende la seconda copia da sola?
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
