@@ -6388,7 +6388,10 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   |---|---|---|---|
   | **trial** | 1 | 30 giorni | chiunque installi |
   | **full** | illimitati | 1 anno, rinnovo automatico | chi paga |
-  | **eternal** | illimitati | nessuna scadenza | ⛔ **non in vendita**: solo chi vende, per le sue macchine e per le macchine di prova |
+  | **gold** | illimitati | nessuna scadenza | ⛔ **non in vendita**: uso privato di chi vende, per le sue macchine e per le macchine di prova |
+
+  - ✅ **Il terzo tipo si chiama «gold»** (utente, 8 ott: *«si vende solo la full, la gold è per uso privato»*):
+    era «eternal», cambia solo il nome. ⛔ Si vende **solo la full**.
 
   - Aggiunta di Claude: con il controllo in rete **anche la trial si registra sul nostro servizio**, legata
     all'identificativo della macchina. Una macchina che ha già avuto la sua trial non ne riceve una seconda:
