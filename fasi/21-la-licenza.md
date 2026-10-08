@@ -197,6 +197,11 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
 
 1. **La tolleranza se la rete manca**: quanti giorni il server continua a far entrare senza riuscire a parlare
    col VPS? (⚠ Va più lunga del tempo per rimettere in piedi il VPS, §10.30; e ogni quante ore si ricontrolla.)
+   ✅ **8 ott: 14 giorni, controllo ogni 24 ore** (utente: *«ok 14 giorni»*, dopo aver proposto 3). Il confronto
+   che l'ha deciso: Microsoft 365 30 giorni, Adobe annuale 99, KMS 180 — la tolleranza protegge il cliente dai
+   guasti **nostri**, e 3 giorni avrebbero bloccato tutti i clienti insieme dopo un fine settimana col VPS giù.
+   L'attestato vale quindi «ultimo contatto riuscito + 14 giorni». ⭐ Con un **avviso all'amministratore dal primo
+   controllo fallito** (pagina d'accesso e registro), con i giorni che restano.
 2. **La tolleranza a rinnovo mancato**: quanti giorni dopo la scadenza della full, prima della finestra «abbonamento
    scaduto, rinnova» (§10.30, ancora 🔸 da confermare)?
 3. **Il contratto di vendita** della full: quale testo (§10.30: per la trial c'è PolyForm Free Trial, per la full
