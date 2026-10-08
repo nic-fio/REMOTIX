@@ -231,6 +231,29 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      (righe «chiave: valore»), ⛔ mai nel deposito. Il VPS si tocca solo al passo dell'installazione del
      servizio, dopo le prove sul servizio finto.
 5. **Le sessioni aperte quando la licenza scade**: restano fino all'uscita (proposta) o si chiudono?
+   ✅ **8 ott, deciso con l'utente** (idea sua, presa da RootSpeak; le due correzioni di Claude accettate: *«ok»*):
+   - ⭐ **si disabilita solo REMOTIX, mai l'accesso al server** (ssh, login locale, PAM del sistema restano
+     intatti): il server è del cliente, l'amministratore che deve rinnovare non va chiuso fuori, e un blocco
+     nato da un guasto nostro (VPS giù) non deve fermare macchine altrui;
+   - **alla scadenza** (= fine della tolleranza, non la data dell'abbonamento) si chiudono i **collegamenti**,
+     i **desktop restano vivi** col lavoro dentro; al ricollegamento la finestra della licenza; dopo il
+     rinnovo ognuno rientra e trova tutto com'era. Nessuno perde lavoro, nessuno continua senza licenza;
+   - **gli avvisi prima**, col comportamento di RootSpeak (insiste, «ho letto», non blocca mai) ma **mostrati
+     nella pagina di REMOTIX** sopra il desktop, non con `zenity`: la pagina la guardano tutti, è uguale sui
+     quattro desktop (niente eccezioni per compositore), e RootSpeak resta un prodotto gratuito a sé;
+
+     | quando | chi | cosa |
+     |---|---|---|
+     | da 7 giorni prima | l'amministratore | registro e pagina d'accesso: è lui che rinnova |
+     | ultimi 3 giorni | tutti gli utenti collegati | **3 messaggi nelle 24 ore**, con «ho letto» |
+     | alla scadenza | tutti | collegamenti chiusi, desktop vivi, finestra della licenza al ritorno |
+
+   - **Il codice di RootSpeak si riusa** (utente: *«il codice è mio e lo puoi riutilizzare»*; è suo, quindi
+     entra in un prodotto chiuso senza vincoli): `src/text.c` `clean_text` (pulizia del testo dai caratteri
+     di controllo), il modello dei tre stati e dei rinvii (inviato, consegnato, confermato; promemoria a
+     intervalli) e il registro degli eventi (`src/event.c`). ⚠ **Non** si riusa la consegna (terminali,
+     `zenity`, agganci della shell): da noi il canale è la pagina. Il codice preso si traduce ai nomi e alle
+     convenzioni di REMOTIX (italiano), con la provenienza scritta in testa al file.
 6. **Il clone scoperto**: si avvisa solo chi vende, o si sospende la seconda copia da sola?
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
    attivo, e dopo la scadenza il prodotto si aggiorna ancora?

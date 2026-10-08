@@ -6401,6 +6401,9 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   l'archivio dei pacchetti (§10.23, D10): una macchina sola da tenere accesa e aggiornata, nessun costo nuovo.
   - ✅ **La tolleranza se la rete manca: 14 giorni**, controllo ogni 24 ore, avviso all'amministratore dal primo
     controllo fallito (utente, 8 ott; `fasi/21-la-licenza.md` §10 domanda 1).
+  - ✅ **Alla scadenza si disabilita solo REMOTIX, mai l'accesso al server**; collegamenti chiusi, desktop vivi;
+    avvisi prima nella pagina (amministratore da 7 giorni, utenti 3 messaggi al giorno negli ultimi 3), col
+    comportamento e parte del codice di RootSpeak (utente, 8 ott; `fasi/21-la-licenza.md` §10 domanda 5).
   - ⚠ **Un punto solo**: se il VPS cade, si fermano insieme gli aggiornamenti e i controlli di licenza. I
     clienti non se ne accorgono finché dura la **tolleranza** ⇒ la tolleranza va scelta più lunga del tempo
     che serve a rimettere in piedi il VPS.
