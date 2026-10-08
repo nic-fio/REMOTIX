@@ -6372,8 +6372,8 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     utenti nel codice» sparisce. La trial resta 1 utente, 30 giorni.
   - ⚠ Dichiarato: lo studio con 2 persone e la scuola con 60 pagano uguale. Il prezzo si sceglie tenendone
     conto.
-  - 🔸 Da confermare: a rinnovo mancato, qualche giorno di tolleranza, poi la stessa finestra della trial
-    scaduta («abbonamento scaduto, rinnova»).
+  - ✅ **A rinnovo mancato: 14 giorni di tolleranza**, avviso sulla pagina d'accesso da 7 giorni prima della
+    scadenza, poi la stessa finestra della trial scaduta («abbonamento scaduto, rinnova») (utente, 8 ott).
 - ✅ **Le licenze «eterne» di chi vende** (utente, 5 ott: *«una versione full di remotix "eterna" che userò io
   personalmente, o dovrò diventare cliente di me stesso»*). Forma di Claude: ⛔ **niente versione speciale del
   programma** (un binario senza controllo, se esce, è la versione sbloccata per tutti); ⇒ **licenze senza

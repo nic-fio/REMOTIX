@@ -204,6 +204,9 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
    controllo fallito** (pagina d'accesso e registro), con i giorni che restano.
 2. **La tolleranza a rinnovo mancato**: quanti giorni dopo la scadenza della full, prima della finestra «abbonamento
    scaduto, rinnova» (§10.30, ancora 🔸 da confermare)?
+   ✅ **8 ott: 14 giorni** (utente: *«ok 14 giorni»*), con l'avviso sulla pagina d'accesso **da 7 giorni prima
+   della scadenza**. Un rinnovo che fallisce è quasi sempre una carta scaduta o rifiutata, e i processori
+   ritentano da soli per una-due settimane: non si ferma chi sta solo cambiando carta.
 3. **Il contratto di vendita** della full: quale testo (§10.30: per la trial c'è PolyForm Free Trial, per la full
    nessun testo standard)?
 4. **Il VPS**: fornitore, sistema operativo, **dominio** con cui i clienti lo raggiungono (serve al certificato
