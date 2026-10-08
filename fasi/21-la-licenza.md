@@ -283,3 +283,72 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      della macchina virtuale ⇒ resta l'avviso (b).
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
    attivo, e dopo la scadenza il prodotto si aggiorna ancora?
+
+## 11. Il confronto con ChatGPT: la soluzione su cui si è convenuto (8 ott 2026, notte)
+
+*Chiesto dall'utente: «intavola un serrato confronto tecnico con ChatGPT … fino a quando non avete una soluzione
+su cui concordate». Modello **GPT-5.6 Sol**, ragionamento al massimo, 3 turni, chiuso con «CONVERGED». Costo
+≈ 2,6 $ (102 mila parole-unità in ingresso, 69 mila in uscita). ⛔ È una **proposta tecnica concordata fra due
+modelli**, non una decisione: le scelte che toccano il commercio e le regole restano all'utente (§11.3). La
+trascrizione non si conserva; qui c'è il risultato.*
+
+### 11.1 Che cosa cambia rispetto alla domanda 6
+
+- ⭐ **La licenza si lega alla «storia» dell'installazione, non al ferro.** Una macchina è un server fisico **o
+  una macchina virtuale** (in cloud il ferro sotto non si vede e cambia). ⇒ Corregge «server fisico».
+- ⭐ **Il cricchetto** (proposta di ChatGPT, al posto dell'«avviso a chi vende»): a ogni controllo (24 ore) il
+  servizio consuma il gettone attuale e ne dà uno nuovo, usabile **una volta**. Un clone parte con lo stesso
+  gettone: uno dei due va avanti, l'altro resta indietro ed è scoperto. Vale anche sulle macchine virtuali, dove
+  il ferro è finto. ⛔ **Non** è il «posto vivo ogni 15 minuti» scartato dall'utente.
+- ⭐ **Spostare REMOTIX su un server nuovo spegnendo il vecchio funziona da solo**, senza scrivere a nessuno:
+  è la stessa storia che continua. Due copie accese insieme invece si separano e una resta indietro.
+- **Niente impronta del ferro né integrazioni coi cloud nella prima versione** (troppo lavoro per uno; il
+  cricchetto copre i cloni). **TPM in una seconda versione**, come rinforzo sui server fisici.
+
+### 11.2 Il disegno, in breve
+
+1. All'attivazione l'installazione crea una **coppia di chiavi** (ed25519, file leggibile solo da root); la
+   licenza si lega alla chiave pubblica; ogni controllo **firma una sfida** del servizio.
+2. L'**attestato firmato** porta tipo, scadenza commerciale, fine della tolleranza, «valido fino a» (mai più di
+   **14 giorni**, controllato anche dal prodotto, gold compresa), storia e numero del gettone.
+3. **Gold**: stesso meccanismo, nessuna scadenza commerciale (campo esplicito), revocabile.
+4. **Chiavi**: radice fuori linea → chiave del VPS che firma solo gli attestati; indirizzi, chiavi valide e
+   revoche in un **elenco firmato dalla radice**; due indirizzi di riserva nel prodotto. HTTPS normale, proxy sì.
+5. **Formato dei messaggi**: binario semplice a lunghezze fisse, firmato, con esempi comuni C/Go e fuzzing.
+6. **Mai un falso clone per un guasto**: la richiesta si scrive su disco **prima** di spedirla e, senza
+   risposta, si rispedisce **identica**; il servizio ricorda l'ultima risposta e la ridà uguale.
+7. Solo il servizio REMOTIX tocca lo stato della licenza; «controlla ora» passa da lui.
+8. **La copia rimasta indietro** (clone, o backup ripristinato) non viene allungata: lavora fino al suo «valido
+   fino a» e mostra all'amministratore un messaggio **neutro** («copia più vecchia, ripristinata?»).
+9. **Il recupero** (ripristino da backup, server morto): chiave nuova + codice di licenza + **conferma via email
+   all'acquirente** (la pagina mostra, il pulsante conferma). Uno ogni 30 giorni; tu puoi sbloccarlo a mano.
+   ⛔ Niente pulsante solo locale: chi clona lo premerebbe e ruberebbe la licenza al cliente vero.
+10. **Spostamento volontario**: la vecchia installazione firma il rilascio, la nuova si attiva.
+11. **Se il VPS torna a un salvataggio vecchio**: i server dei clienti presentano l'ultima prova **firmata dal
+    servizio** e lui si rimette in pari; mai fidarsi di numeri dichiarati dal cliente.
+12. **Trial**: email verificata mai usata **e**, se c'è, l'impronta esatta di scheda madre (UUID + seriale) mai
+    usata; reinstallare durante la trial ridà la stessa data di fine.
+13. **Email dal VPS senza servizi a pagamento** (Postfix solo in uscita, SPF/DKIM/DMARC, rDNS): va bene se OVH
+    lascia aperta la porta 25 e impostare il PTR, e se le prove verso Gmail/Microsoft/Yahoo passano; altrimenti
+    serve un inoltro. ⚠ Da verificare sul VPS.
+14. **Il VPS**: operazioni a transazione, copie cifrate fuori dal VPS, registro delle attivazioni e dei
+    recuperi; pagina di recupero raggiungibile anche a licenza scaduta.
+15. **TPM (seconda versione)**: chiave nata nel TPM, senza toccarne la proprietà né i PCR; un TPM guasto porta
+    al recupero, mai a una chiave in file di nascosto.
+
+### 11.3 Le decisioni che restano all'utente
+
+1. **«Licenza legata alla storia dell'installazione»** al posto di «legata al ferro», con lo spostamento libero
+   spegnendo il vecchio server.
+2. **Un clone può lavorare fino a 14 giorni** prima di fermarsi.
+3. **Una trial per email verificata** (oltre che per macchina): anche un'azienda che prova su due server usa due
+   email.
+4. La trial resta «al meglio»: email usa-e-getta e macchine virtuali nuove in cloud la aggirano.
+5. **Un recupero ogni 30 giorni**, e che cosa ti basta per sbloccarlo a mano.
+6. **Email spedite dal VPS** con il loro rischio di consegna, e il recupero a mano se un'email non arriva.
+7. **La gold deve comunque farsi sentire almeno ogni 14 giorni.**
+8. Per quanto si tengono email degli acquirenti, impronte delle trial e registri (riservatezza).
+9. Quando fare il TPM; le integrazioni coi cloud solo se i clienti le chiedono.
+
+⚠ **La stima di §8 (~72 ore) va rifatta**: il cricchetto, il recupero via email e la posta del VPS sono lavoro
+in più; l'impronta tolta è lavoro in meno.
