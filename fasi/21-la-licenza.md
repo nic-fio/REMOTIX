@@ -269,5 +269,17 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      lì usa altro). Due strade: **(a)** accettarlo e dichiararlo; **(b)** consigliata da Claude: col controllo
      di 24 ore già deciso, due copie vive con la stessa impronta ⇒ **solo un avviso a chi vende**, nessun blocco.
    ⚠ Se si sceglie l'impronta, `/etc/machine-id` da solo (§10.30) non basta più e va riscritto §10.30.
+   - 🔸 **8 ott sera, lo schema portato dall'utente**: all'attivazione l'installazione **genera una coppia di
+     chiavi**, il servizio lega la licenza alla **chiave pubblica** e rende un attestato firmato (prodotto, tipo,
+     scadenza, installazioni massime, identificativo dell'installazione, funzioni); a ogni contatto
+     l'installazione **dimostra di avere la chiave privata**. Giudizio di Claude: ✅ regge ed è una base migliore
+     dell'impronta (prova crittografica invece di valori dichiarati, niente seriali al VPS, nessun falso
+     allarme se cambia un disco); ⚠ ma **da sola non ferma i cloni**: la chiave privata è un file e si copia col
+     disco. ⇒ **controproposta: la chiave privata nasce DENTRO il TPM 2.0** e non ne può uscire; un disco
+     copiato su un altro computer non la porta con sé. Letto l'8 ott: `/sys/class/tpm/tpm0`, versione **2**, sia
+     sul portatile sia sul server di prova. ⚠ Limiti: senza TPM (molti VPS, macchine vecchie) si ricade su
+     chiave in un file + impronta 3/5; un TPM azzerato (BIOS, cambio di scheda madre) = installazione nuova
+     ⇒ lo spostamento dalla pagina d'accesso serve anche qui; un TPM virtuale può essere copiato col clone
+     della macchina virtuale ⇒ resta l'avviso (b).
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
    attivo, e dopo la scadenza il prodotto si aggiorna ancora?
