@@ -255,5 +255,19 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      `zenity`, agganci della shell): da noi il canale è la pagina. Il codice preso si traduce ai nomi e alle
      convenzioni di REMOTIX (italiano), con la provenienza scritta in testa al file.
 6. **Il clone scoperto**: si avvisa solo chi vende, o si sospende la seconda copia da sola?
+   ⏳ **8 ott sera, IN SOSPESO: l'utente ci pensa** (*«qui serve del tempo per pensarci su un attimo»*). Dove
+   eravamo arrivati:
+   - ⛔ **scartato dall'utente**: «il primo che attiva tiene il posto» (posto vivo, battito ogni 15 min,
+     rilascio dopo un'ora) — *«eliminiamo il discorso della data di attivazione, e restiamo sul server fisico»*;
+   - ⭐ **la direzione dell'utente**: legarsi al **server fisico**, ispirandosi a Microsoft e migliorandolo;
+   - 🔸 **la proposta di Claude, da approvare**: impronta a 5 componenti (`product_uuid`, seriale della scheda
+     madre, modello del processore, seriale del disco di sistema, scheda di rete principale), valida con
+     **3 su 5** e aggiornata da sola quando un pezzo cambia; **spostamento dalla pagina d'accesso** senza
+     account né email (la vecchia si libera all'istante, 1 ogni 30 giorni); al VPS **solo le impronte
+     cifrate**, mai i seriali; messaggio che dice **quale** componente è cambiato;
+   - ⚠ **il limite dichiarato**: sulle macchine virtuali il ferro è finto e si copia col clone (anche Microsoft
+     lì usa altro). Due strade: **(a)** accettarlo e dichiararlo; **(b)** consigliata da Claude: col controllo
+     di 24 ore già deciso, due copie vive con la stessa impronta ⇒ **solo un avviso a chi vende**, nessun blocco.
+   ⚠ Se si sceglie l'impronta, `/etc/machine-id` da solo (§10.30) non basta più e va riscritto §10.30.
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
    attivo, e dopo la scadenza il prodotto si aggiorna ancora?
