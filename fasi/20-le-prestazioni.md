@@ -54,6 +54,17 @@ nuovi si confrontano coi vecchi dove serve:
    nero) — vecchio `5c186779` 4 su 12, nuovo 3 su 12 ⇒ non viene dalle cure della notte, ⏳ resta aperto.
    Server guardato vuoto (nessun inquilino, nessun giro, nessun browser). Per fermarla: `touch
    /media/REMOTIX/misure/fase16/FERMA` (fra una salita e l'altra) o `sudo systemctl stop r20-campagna`.
+   ⛔ **8 ott 10:20 UTC, il server incastrato** (riavviato dall'utente): Intel **finita** (16 salite, 04:37),
+   Radeon finiti GNOME (4 misure) e KDE 4K; si è piantato in `amd-f20-3k-kde`, ripetizione del livello 12,
+   dopo un «attore morto» alle 10:09 e il livello 12 FAIL (5 GREEN · 1 DEGRADED · 7 FAIL). Il journal stava
+   in RAM ⇒ la causa non è dimostrata; il quadro è quello del 28 set (fasi/16 §17.3: RAM finita con 13
+   sessioni e 13 browser-cliente sulla stessa macchina). ⇒ È un limite **del banco** (i browser-cliente
+   stanno sul server), da dichiarare come tale, non del prodotto. La salita interrotta resta in
+   `amd-f20-3k-kde-interrotta`. Radice rifatta con la ricetta (pacchetti, earlyoom, storage.conf, linger,
+   `provisiona.sh` di `716e35b` + `/etc/ld.so.conf.d/remotix-prodotto.conf` → `rete11/prodotto/lib`:
+   verifica OK), e **ripresa alle 10:42** con lo stesso binario: unità `r20-ripresa`
+   (`misure/fase16/ripresa-8ott.sh`: Radeon KDE 3K → 2K → Full HD, poi XFCE e LXQt da 4K). Fermarla:
+   `FERMA` come sopra o `sudo systemctl stop r20-ripresa`.
 1. **Il commit del giorno**, identificato, con la **suite corta di regressione** della fase 15 sui 4 desktop
    coi due browser. Non verde ⇒ non si misura.
 2. **L'impianto rimesso in piedi sul prodotto di oggi**: i banchi `16-*` sono di prima della fase 18 e 19
