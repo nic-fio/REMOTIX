@@ -104,6 +104,14 @@ nuovi si confrontano coi vecchi dove serve:
    fotogrammi si leggono in altro modo e vanno dichiarati come tali. Costo: ~½ giornata per adattare il
    banco + ~2 ore di salita. Parte **dopo** la campagna, con `r20-ripresa` finita. Esce una riga: «a 2K su
    XFCE, stessa macchina: REMOTIX 10, xrdp N». Se è vicino, l'utente decide se allargare.
+   ⭐ **8 ott sera, la scelta dell'utente: la versione completa** (§7, ~2 giorni + ~3 ore di macchina), non
+   quella ridotta (solo rottura, CPU e RAM): *«pensavo ad una suite completa anche per xrdp, avremmo un
+   confronto pieno»*. ⚠ «Pieno» ha un limite di costruzione: saltati, buchi e audio **non esistono** dal lato
+   xrdp (§7.3), e nessun lavoro in più li fa comparire. ⛔ **Vincolo dell'utente**: *«che la suite di test
+   non blocchi il lavoro sul sistema di licensing»* (DECISIONI §10.30) ⇒ la **licenza viene prima**; il banco
+   xrdp si scrive accanto, senza togliere ore alla licenza, e prende il server solo quando la licenza non lo
+   usa. Le due cose non si toccano: il confronto usa le misure **già fatte** di `716e35b`, quindi un binario
+   nuovo con la licenza non obbliga a rifare nulla.
 5. **Il rapporto** e **la tabella pubblica** (§5).
 
 **Quanto dura**, dalla fase 16: ~1 ora e 10 per salita ⇒ ~9 ore di macchina nel caso migliore (8 salite),
@@ -267,7 +275,10 @@ si rifà da zero con l'immagine `-xrdp`, senza `prodotto` e senza tetto. Al post
 1. ⚠ **I clienti potrebbero cedere prima del server.** 11-12 FreeRDP che decodificano RemoteFX a 2K, col
    video, **sul processore della stessa macchina**. Se succede, la misura diventa un limite **del banco**.
    Il recinto `browser` lo fa vedere, e va dichiarato com'è, senza farlo passare per un numero di xrdp.
-2. ⚠ **La sonda XDamage non è ancora provata** (`python3-xlib` 0.33). Il ripiego sono i registri di FreeRDP
+2. ✅ **La sonda XDamage: provata l'8 ott sera** sul portatile, in un contenitore Debian 13 (`python3-xlib`
+   0.33, Xvfb, `xclock -update 1`): l'estensione c'è, gli eventi arrivano, **~1 raffica al secondo** come
+   l'orologio. ⚠ La chiamata è `finestra.damage_create(livello)`, non `display.damage_create`. ⇒ Il rischio
+   scende; resta da vederla con FreeRDP che disegna davvero. Il testo di prima, per memoria: Il ripiego sono i registri di FreeRDP
    (`WLOG_LEVEL=DEBUG` sul canale rdpgfx), ma è probabile che nella build di Debian i messaggi dei
    fotogrammi siano spenti. Senza dipinti non si misurano né il ritardo né il blocco ⇒ va provata **per prima**.
 3. ⚠ **xrdp dentro la scatola podman** (systemd, PAM, `pam_systemd`, Xorg come utente, glamor sulla
