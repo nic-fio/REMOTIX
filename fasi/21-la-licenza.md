@@ -209,6 +209,9 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
    ritentano da soli per una-due settimane: non si ferma chi sta solo cambiando carta.
 3. **Il contratto di vendita** della full: quale testo (§10.30: per la trial c'è PolyForm Free Trial, per la full
    nessun testo standard)?
+   ⏳ **8 ott: sospesa** (utente), insieme al pagamento: chi incassa decide che cosa resta da scrivere (Polar o
+   Paddle vendono loro e hanno le loro condizioni d'acquisto, a noi resta la licenza d'uso; con Stripe il
+   venditore siamo noi). ⛔ Non blocca il lavoro: la vendita aspetta comunque il pagamento.
 4. **Il VPS**: fornitore, sistema operativo, **dominio** con cui i clienti lo raggiungono (serve al certificato
    HTTPS e va scritto nel prodotto), chi ha l'accesso.
 5. **Le sessioni aperte quando la licenza scade**: restano fino all'uscita (proposta) o si chiudono?
