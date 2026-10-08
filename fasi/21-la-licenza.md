@@ -70,7 +70,7 @@ già dentro). Così:
 | **mai attivata** (primo avvio senza rete) | ⛔ §10.30: **niente attivazione senza rete** | la pagina dice «il server non ha ancora potuto attivare la licenza: serve l'accesso a internet» |
 
 ⚠ **Le sessioni già aperte non si chiudono** quando la licenza scade: si nega solo l'accesso nuovo.
-(Da confermare, §7 domanda 5.)
+(Da confermare, §10 domanda 5.)
 
 ## 3. Parte 2 — il servizio di licenze sul VPS
 
@@ -103,7 +103,7 @@ binario resta statico). Bastano migliaia di clienti; la copia di riserva è **co
 | `POST /v1/pagamento/rinnova` · `/sospendi` | il pagamento (parte 4) | sposta la scadenza di un anno / sospende |
 | `…/v1/vendita/*` | lo strumento (parte 3) | crea, revoca, elenca |
 
-⛔ **Tutte in HTTPS** (certificato Let's Encrypt del dominio del VPS, §7 domanda 4). Le domande del prodotto
+⛔ **Tutte in HTTPS** (certificato Let's Encrypt del dominio del VPS, §10 domanda 4). Le domande del prodotto
 sono anonime ma legate al codice; quelle di pagamento e vendita hanno una **chiave segreta** ciascuna.
 
 ### 3.4 I cloni
