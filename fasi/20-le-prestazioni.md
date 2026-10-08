@@ -151,3 +151,129 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 - 2 ✅ **il video: il file 4K locale** (un film libero della Blender Foundation, CC-BY), scelto per la
   ripetibilità fra le 8 salite. ⚠ La rete NON è una ragione: il server ha una linea da 10/2 Gb/s (detto
   dall'utente).
+
+## 7. Il banco xrdp: il piano
+
+*Scritto l'**8 ottobre 2026** sera, sul portatile, leggendo il banco `banchi/16-stress/`; il server non
+è stato toccato (gira `r20-ripresa`). Serve al punto 4b di §3. ⛔ Niente codice prima che la campagna
+sia finita e questo piano sia letto.*
+
+⚠ **La stima di §3 punto 4b era troppo bassa.** «Mezza giornata per adattare il banco» non regge: l'attore
+di oggi parla con la **pagina** (Marionette/CDP, la sonda dei dipinti, il diario), e per FreeRDP quella
+parte va rifatta. Stima onesta in §7.6: **~2 giorni di lavoro + ~3 ore di macchina**.
+
+### 7.1 Come nasce oggi una sessione, e che cosa cambia
+
+| oggi (REMOTIX) | xrdp | chi lo fa |
+|---|---|---|
+| scatola `rete11-xfce` rifatta da zero (`11-accendi.sh`), dentro `rete11-server` | **la stessa scatola** con in più `xrdp` e `xorgxrdp` (immagine derivata `rete11-xfce-xrdp`, costruita **una volta**), `rete11-server` **fermo**; `xrdp` e `xrdp-sesman` accesi coi file di Debian **come sono** | `16-salita.py --sistema xrdp` |
+| inquilino `c16NNNuN` creato dall'attore (`suite.Sessione`), PAM della scatola | **uguale**: sesman passa da PAM (`/etc/pam.d/xrdp-sesman` → `common-auth`), l'inquilino è lo stesso | riuso |
+| un **labwc senza schermo** per utente (`16-compositori.sh`), dentro un browser | un **Xvfb** per utente (`:2NN`, 2560×1440) con dentro **`xfreerdp3`** a tutto schermo: `/v:127.0.0.1 /u:… /p:… /cert:ignore /gfx /f /sound:sys:fake /wm-class:remotix-rdp-NN` | `16-compositori-rdp.sh` (nuovo) |
+| l'input: Marionette/CDP sulla tela della pagina | **`xdotool`** sul display dell'Xvfb (mouse, tasti, rotella): l'input passa **dal canale RDP**, come quello dell'utente | `Mani` nuova |
+| la foto: la tela della pagina | la foto dell'Xvfb (`xwd -root` → PIL), **1:1 col desktop** (niente conversione foto → desktop) | `foto_pil` nuova |
+| i dipinti: la sonda nella pagina (ogni 10 ms l'ora di ogni cambio) | **XDamage sull'Xvfb** (`python3-xlib`): ogni volta che FreeRDP disegna, l'ora. ⭐ È la **stessa misura dal lato di chi guarda** | sonda nuova |
+
+⭐ **Perché xfreerdp in Xvfb e non sdl-freerdp nel labwc.** Con Xvfb l'input si inietta con `xdotool`,
+che è collaudato; nel labwc servirebbero `wtype` e un puntatore virtuale, mai provati nel banco. ⚠ **Il
+prezzo, da dichiarare:** FreeRDP decodifica RemoteFX **sul processore** e non usa la scheda Intel. Oggi i
+browser stanno sulla Intel insieme al server; con xrdp no. Sulla scheda xrdp è **avvantaggiato**, sul
+processore **svantaggiato**.
+
+**Il nuovo attore** è `16-attore-rdp.py`, non una modifica di `16-attore.py`. Riusa `Ritmo` (stessi semi,
+stesse scelte nello stesso ordine) e **tutti e quattro i lavori di `16-lavori.py`**: usano solo `dorme`,
+`verifica`, `impulso`, `mani.*`, `foto_pil`, `s.nella_sessione`, `sc.dentro`, `chi`, `desktop`. Di questi
+cambiano tre cose:
+- `nella_sessione`: `DISPLAY=:N` dell'Xorg dell'inquilino (letto da `ps -u <inquilino>`), `XAUTHORITY`,
+  il bus di sessione da `/proc/<xfce4-session>/environ`, senza `MOZ_ENABLE_WAYLAND`;
+- `Mani`: xdotool con le stesse pause e la stessa battitura del `Ritmo`;
+- la foto: dall'Xvfb.
+
+La riga di stato si scrive **nello stesso schema** (`stato.jsonl`, `nascita.json`), così la classifica la legge.
+
+### 7.2 La scena di lavoro: uguale
+
+I quattro profili A/B/C/D girano **dentro la sessione XFCE** come oggi. I file si preparano allo stesso modo
+(`prepara`), le applicazioni sono le stesse (`firefox-esr --kiosk`, `thunar`, `xfce4-terminal`) e
+il video è lo stesso file 4K locale (`/rete11/.c16-video/`). Le verifiche guardano **il disco** (il quaderno,
+la cartella creata, la storia di bash) e **non sanno** se davanti c'è REMOTIX o xrdp.
+⚠ L'unica differenza è che XFCE gira **su X11**, perché xrdp non conosce Wayland. È l'ambiente naturale di xrdp
+(§3 punto 4b), e la sessione la sceglie un `~/.xsession` con `startxfce4` scritto da `prepara`.
+
+### 7.3 Le misure, una per una
+
+| voce (§9, soglie ferme) | xrdp | come |
+|---|---|---|
+| **ritardo input → fotogramma** | ⚠ **in altro modo** | dal lato di chi guarda: p95 al secondo fra l'**impulso** (tasto, clic, tacca) e il **primo dipinto** XDamage dopo. ⛔ Il REMOTIX della campagna è giudicato dal **lato server** («NOSTRO» + 9 ms). ⇒ Nel confronto si mette accanto il **giro** di REMOTIX (`stato.jsonl` → `giro`, il ritardo comando → fotogramma della pagina, **già registrato** in `intel-f20-2k-xfce`): lato cliente contro lato cliente. ⚠ Il giro della pagina include decodifica e disegno, XDamage su Xvfb no: leggero vantaggio a xrdp, dichiarato |
+| **fotogrammi saltati** | ⛔ **non misurato** | FreeRDP riscontra ogni fotogramma (FRAME_ACKNOWLEDGE): xrdp **non manda** quelli che non può, non li salta. Non c'è un «consegnati contro dipinti» da contare |
+| **blocco più lungo dell'immagine** | ✅ **uguale** | stessa funzione (`attese_impulsi`, `pausa_piu_lunga`), ma con i dipinti XDamage |
+| **buchi nella catena del video** | ⛔ **non misurato** | è un contatore della nostra pagina, non ha un equivalente |
+| **video: dipinti al secondo** | ⚠ **in altro modo** | le raffiche XDamage al secondo nella finestra del video (raffiche separate da più di 5 ms). ⚠ xrdp ha `rfx_frame_interval=32 ms` di serie (≈31 al s): col film a 30 fps **non lo penalizza** |
+| **audio udibile** | ⛔ **non misurato** (ma **acceso**) | `pipewire-module-xrdp` nella sessione e `/sound:sys:fake` nel cliente: l'audio **viaggia**, così il carico è pari, ma nessuno lo suona e quindi non si conta |
+| **nascita** | ⚠ **in altro modo** | dall'avvio di xfreerdp (con utente e parola: niente schermata di accesso) al **primo dipinto con il pannello di XFCE**, cioè una foto non degenere; stesse soglie |
+| **caduta, riavvio, errore** | ✅ **equivalente** | xfreerdp esce o scrive `ERRCONNECT_*`; in `/var/log/xrdp.log` e `xrdp-sesman.log` compaiono «connection problem» o «session … terminated» |
+| **controllo funzionale corto** | ⚠ **ridotto** | `16-controllo-corto.py` prova le funzioni F-0xx della pagina e qui non serve. ⇒ Una 17ª sessione FreeRDP entra, batte un comando, lo trova nella storia ed esce: **accesso, tastiera, schermo**, nient'altro |
+| **crescita della memoria** | ✅ **uguale** | da `risorse.jsonl` |
+| **l'input arriva** (verifiche dei lavori) | ✅ **uguale** | gesto → effetto sul disco; ⭐ è **il numero più confrontabile** fra i due |
+
+### 7.4 Le risorse: i recinti di `16-risorse.py`
+
+| recinto | REMOTIX | xrdp |
+|---|---|---|
+| `remotix` (il server) | `rete11-server` + i figli `remotix` | `xrdp`, `xrdp-sesman`, `xrdp-sesexec`, `xrdp-chansrv`, per nome dell'eseguibile, dentro la scatola. ⭐ **Qui** si fa la compressione RemoteFX, sul processore |
+| `sessioni` | compositore e applicazioni degli inquilini | **uguale**, e dentro c'è anche **`Xorg` + xorgxrdp** dell'inquilino, che fa la **cattura** (`rdpCapture`, con glamor sulla Intel) |
+| `browser` (chi guarda) | Firefox/Chrome col segno `remotix-ff-`/`remotix-cr-` | `xfreerdp3` col segno `remotix-rdp-` (già previsto: `--segni-browser`) |
+| `labwc_cliente` | i labwc senza schermo | gli **Xvfb** dei clienti (una riga in più nel riconoscimento) |
+
+⛔ La divisione fra «server» e «sessioni» non è la stessa nei due sistemi: da noi copia il figlio
+`remotix`, in xrdp copia `Xorg`. ⇒ Il confronto si fa sui **totali della scatola** (CPU, RAM, scheda),
+che il campionatore misura già dal cgroup. I recinti spiegano i totali, ma non si mettono uno accanto
+all'altro.
+
+### 7.5 I pacchetti (Debian 13) e la configurazione
+
+| dove | pacchetto | versione | nota |
+|---|---|---|---|
+| scatola | `xrdp` | 0.10.1-3.1+deb13u2 | ⭐ **compilato SENZA H.264**: nessun legame a x264/OpenH264, niente `gfx.toml` (letto sul portatile, stessa versione di Debian 13). Comprime con **RemoteFX** sul processore, e così si misura: è **xrdp come lo installa Debian 13** |
+| scatola | `xorgxrdp` | 1:0.10.2-1 | con **glamor** e `DRMDevice /dev/dri/renderD128` di serie ⇒ la sessione disegna sulla Intel, come la nostra |
+| scatola | `pipewire-module-xrdp` | 0.2-2 | l'audio della sessione |
+| ospite | `freerdp3-x11` | 3.15.0+dfsg-2.1+deb13u3 | il cliente |
+| ospite | `xvfb` · `xdotool` · `python3-xlib` · `x11-apps` | 2:21.1.16 · 1:3.20160805 · 0.33-3 · 7.7 | schermo finto, input, XDamage (⚠ `Xlib.ext.damage` da verificare), `xwd` |
+
+**Configurazione:** quella di Debian **com'è**. Le eccezioni sono tre, tutte necessarie per far partire la prova e non per renderla più veloce:
+`startwm.sh` → `startxfce4` (tramite `~/.xsession`), la porta 3389 libera sull'ospite (⚠ **da guardare** prima, con
+`--network=host`), e `rete11-server` fermo. ⛔ Niente ritocchi a `xrdp.ini` (intervalli dei fotogrammi,
+`max_bpp`): se li tocchiamo noi, il confronto non vale. Un xrdp ricompilato con x264 sarebbe un'**altra**
+prova, da proporre all'utente solo se il risultato lo chiede.
+
+**`16-salita.py --sistema xrdp`**: il controllo del server vuoto è lo stesso, più la porta 3389. La scatola
+si rifà da zero con l'immagine `-xrdp`, senza `prodotto` e senza tetto. Al posto di commit e binario, in
+`livello.json` vanno le versioni dei pacchetti. `server.log` diventa l'estratto di `xrdp.log` e
+`xrdp-sesman.log`, e la classifica gira con `--sistema xrdp`. **Tutto il resto non cambia**: gradini 1,4,8,12,16,
+10 minuti (30 l'ultimo), ripetizione, ricerca a metà, scatola pulita fra le ripetizioni.
+
+### 7.6 Quanto costa, e i rischi
+
+| pezzo | ore |
+|---|---|
+| immagine `rete11-xfce-xrdp`, xrdp acceso nella scatola, **una sessione a mano** fino al desktop | 2 |
+| `16-attore-rdp.py` (Xvfb, xdotool, XDamage, foto, schema di stato) + certifica senza server | 6 |
+| `16-compositori-rdp.sh`, `16-risorse.py` (segno e Xvfb), `16-classifica.py --sistema xrdp` | 3 |
+| `16-salita.py --sistema xrdp` | 2 |
+| prove sul server: 1, 2, 4 utenti da 5 minuti (come §3 punto 3) | 3 |
+| **lavoro** | **~16 ore ≈ 2 giorni** |
+| **la salita** (XFCE 2K Intel, fino a ~11-12 utenti con la ricerca a metà) | **~2½-3 ore di macchina** |
+
+**I rischi:**
+1. ⚠ **I clienti potrebbero cedere prima del server.** 11-12 FreeRDP che decodificano RemoteFX a 2K, col
+   video, **sul processore della stessa macchina**. Se succede, la misura diventa un limite **del banco**.
+   Il recinto `browser` lo fa vedere, e va dichiarato com'è, senza farlo passare per un numero di xrdp.
+2. ⚠ **La sonda XDamage non è ancora provata** (`python3-xlib` 0.33). Il ripiego sono i registri di FreeRDP
+   (`WLOG_LEVEL=DEBUG` sul canale rdpgfx), ma è probabile che nella build di Debian i messaggi dei
+   fotogrammi siano spenti. Senza dipinti non si misurano né il ritardo né il blocco ⇒ va provata **per prima**.
+3. ⚠ **xrdp dentro la scatola podman** (systemd, PAM, `pam_systemd`, Xorg come utente, glamor sulla
+   Intel, Firefox con VA-API su X11) non è mai stato provato. Lo decide la sessione fatta a mano del
+   primo pezzo; se non regge si torna dall'utente **prima** di scrivere il resto.
+
+⚠ **Che cosa NON dirà il confronto:** saltati, buchi e audio. Il ritardo lo dirà **dal lato di chi guarda per
+tutti e due**, non con il numero della tabella REMOTIX. ⭐ **Che cosa dirà bene:** dove si rompe ciascuno
+(stesse soglie per le voci misurate), quanta CPU, RAM e scheda costa ogni utente, e se l'input arriva.
