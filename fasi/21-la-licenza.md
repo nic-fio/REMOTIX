@@ -227,6 +227,9 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      ⭐ **Obbligatorio nel piano, per questa scelta: il cambio d'indirizzo firmato.** Il servizio può dire al
      prodotto, dentro l'attestato firmato, «da ora in poi chiedi a X»; il prodotto lo ricorda in `/var/lib/remotix`
      e ci passa. Un dominio nuovo domani = tenere acceso il vecchio qualche mese, nessun cliente da aggiornare.
+   - ✅ **accesso: ssh** (utente, 8 ott). Le credenziali in `~/VPS.ssh`, stesso formato di `~/SERVER.ssh`
+     (righe «chiave: valore»), ⛔ mai nel deposito. Il VPS si tocca solo al passo dell'installazione del
+     servizio, dopo le prove sul servizio finto.
 5. **Le sessioni aperte quando la licenza scade**: restano fino all'uscita (proposta) o si chiudono?
 6. **Il clone scoperto**: si avvisa solo chi vende, o si sospende la seconda copia da sola?
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
