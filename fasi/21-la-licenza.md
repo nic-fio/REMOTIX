@@ -217,6 +217,8 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
    - ✅ **fornitore: OVH** (utente, 8 ott). ⚠ La base dati delle licenze è l'unica cosa che non si ricostruisce
      (chi ha pagato, quali macchine): va salvata **fuori dal VPS**, ogni giorno — il caso da coprire è quello
      di Strasburgo (incendio del centro OVH, marzo 2021: chi aveva le copie nello stesso centro le ha perse).
+   - ✅ **sistema: Debian 13 «trixie»** (utente, 8 ott): lo stesso del server di prova e del portatile ⇒ il
+     servizio finto in contenitore (§7) si costruisce sulla stessa base, e quello che passa lì vale sul VPS.
 5. **Le sessioni aperte quando la licenza scade**: restano fino all'uscita (proposta) o si chiudono?
 6. **Il clone scoperto**: si avvisa solo chi vende, o si sospende la seconda copia da sola?
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
