@@ -1359,6 +1359,37 @@ scelte superate stanno in `DECISIONI.md` §10.30; come si costruisce, i passi e 
 Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte tecniche (di Claude o concordate
 *con ChatGPT) sono state **tutte confermate dall'utente il 9 ottobre**.*
 
+### 15.0 Le chiavi, in breve — da leggere per prime
+
+*Scritto il 9 ott su richiesta dell'utente (*«adesso ho capito, meglio scrivere queste info nella documentazione»*),
+dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
+
+**Sul server del cliente** ci sono tre cose, e non vanno confuse:
+
+| nome | che cos'è | da dove nasce | a che serve |
+|---|---|---|---|
+| **`LICENSE_KEY`** | la stringa che arriva per email a chi compra (o a chi chiede la trial) | la crea il servizio | dice **quale** licenza (trial, full, gold: la classe la sa il servizio); si usa **una volta sola**, all'installazione o all'upgrade, poi non serve più a nessuno |
+| **`INSTALL_KEY`** | la **firma elettronica di quella installazione** di REMOTIX: una coppia di chiavi, la segreta in un file leggibile solo da root, la pubblica consegnata al servizio | la crea REMOTIX **a caso** alla prima attivazione; ⛔ **non viene dall'hardware** | ogni ora REMOTIX firma con lei la domanda del servizio: «sono sempre io» |
+| **`HW_FINGERPRINT`** | l'impronta dell'hardware (scheda madre, disco, scheda di rete) | si calcola dal ferro | **solo** due cose: una trial per macchina, e descrivere le copie nell'email; ⛔ non decide niente della full |
+
+- ⭐ **La `INSTALL_KEY` è dell'installazione, non del ferro**: è come una firma digitale su una chiavetta, firma chi
+  ha la chiavetta. Chi sposta REMOTIX su un server nuovo spegnendo il vecchio si porta dietro il file e continua;
+  cambiare un disco non cambia niente.
+- ⭐ **Il clone di un server acceso ha la stessa `INSTALL_KEY`**: la firma da sola non distingue le due copie. Le
+  distingue il **biglietto orario**, che vale una volta: la prima copia lo consuma, l'altra arriva con un biglietto
+  già usato ⇒ entro un'ora il servizio sa che sono due (§15.4, §15.8).
+- **La `INSTALL_KEY` non cifra niente**: è un documento d'identità, non una busta chiusa.
+
+**Chi garantisce che cosa**, nello scambio fra REMOTIX e il servizio:
+
+| che cosa | chi lo garantisce |
+|---|---|
+| nessuno legge i dati per strada | **HTTPS**, il lucchetto normale del web |
+| chi chiede è proprio quell'installazione | la **`INSTALL_KEY`** (firma REMOTIX, il servizio verifica) |
+| la risposta («valida fino al…») viene davvero dal servizio | la **chiave del VPS** (firma il servizio, REMOTIX verifica) |
+| la chiave del VPS è autentica, e si può revocare se rubata | la **chiave madre**, fuori linea sul portatile di chi vende (§15.11); ⚠ l'unica insostituibile: persa lei, serve un REMOTIX nuovo per tutti |
+| «rinnova» e «sospendi» vengono davvero dal pagamento | la **chiave del pagamento** |
+
 ### 15.1 I tre tipi di licenza
 
 | tipo | utenti | durata | chi la ottiene |
