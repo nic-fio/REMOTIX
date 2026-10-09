@@ -14,6 +14,10 @@
     background: linear-gradient(135deg, #00d8ff, #1a7cff 45%, #0646c8); }
   .colonna { display: grid; gap: 1.2rem; padding-bottom: 4rem; }
 
+  .attesa { display: grid; gap: .6rem; padding: 1.3rem 1.5rem; border-radius: 1em; background: #eef6fb; border: 1px solid #bfdbea; }
+  .attesa h2 { margin: 0; font-size: 1.1rem; }
+  .attesa p { margin: 0; font-size: .92rem; }
+  .azioni-attesa { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
   .allarme { display: grid; gap: 1rem; padding: 1.4rem 1.5rem; border-radius: 1em; background: var(--giallo-f); border: 1px solid var(--giallo-b); color: var(--giallo-t); }
   .allarme h2 { margin: 0; font-size: 1.1rem; color: #7a2e0e; }
   .allarme p { margin: 0; font-size: .92rem; }
@@ -97,9 +101,17 @@
   </div>
 
   <div class="colonna">
+    <!-- una copia in attesa: §15.3 -->
+    <section class="attesa" aria-labelledby="att">
+      <h2 id="att">A server is waiting for your confirmation</h2>
+      <p><b>Copy C <code>7MPA</code></b> · machine <code>srv-new</code> · from 93.41.12.9 (Fastweb, IT) · asked today at 11:20 with key <code>RXT-…-3TNE</code>.</p>
+      <p>Confirming starts REMOTIX on <code>srv-new</code> and <b>stops it on <code>lab-02</code></b>, the server this license uses now.</p>
+      <div class="azioni-attesa"><button class="pulsante primario piccolo">Activate here</button><button class="pulsante secondario piccolo">Not mine, ignore</button></div>
+    </section>
+
     <!-- lo sdoppiamento: §15.8 -->
     <section class="allarme" aria-labelledby="dop">
-      <h2 id="dop">⚠ License RX-000123 is running on two servers</h2>
+      <h2 id="dop">⚠ License RXF-…-6YRB is running on two servers</h2>
       <p>We found two active copies on <b>9 Oct 2026 at 10:14</b>. One license covers one server: choose the one to keep. Both keep working until <b>20 Oct 2026</b>; after that the license is blocked until you choose.</p>
       <div class="copie">
         <div class="copia">
@@ -107,8 +119,7 @@
           <dl>
             <dt>Last seen</dt><dd>today, 11:02</dd>
             <dt>Public IP</dt><dd>93.41.12.7 · Fastweb · Milan, IT</dd>
-            <dt>Machine</dt><dd><code>srv-office</code> · 192.168.1.20</dd>
-            <dt>Hardware</dt><dd>ASUS PRIME B760M · i5-13500 · 32 GB</dd>
+            <dt>Machine</dt><dd><code>srv-office</code></dd>
           </dl>
           <button class="pulsante secondario piccolo">Keep this one</button>
         </div>
@@ -117,8 +128,7 @@
           <dl>
             <dt>Last seen</dt><dd>today, 10:58</dd>
             <dt>Public IP</dt><dd>51.77.140.3 · OVH · Gravelines, FR</dd>
-            <dt>Machine</dt><dd><code>vps-test</code> · 10.0.0.4</dd>
-            <dt>Hardware</dt><dd>KVM virtual machine · 8 vCPU · 16 GB</dd>
+            <dt>Machine</dt><dd><code>vps-test</code></dd>
           </dl>
           <button class="pulsante secondario piccolo">Keep this one</button>
         </div>
@@ -128,7 +138,7 @@
     <!-- una full -->
     <section class="scheda licenza">
       <div class="capo">
-        <h2>Full license</h2><span class="mono">RX-000123</span><span class="stato attiva">Active</span>
+        <h2>Full license</h2><span class="mono">RXF-…-6YRB</span><span class="stato attiva">Active</span>
         <div class="destra"><button class="pulsante primario piccolo">Renew now</button></div>
       </div>
       <div class="dati">
@@ -140,12 +150,12 @@
       <div class="piede-licenza">
         <label class="interruttore" style="margin:0;font-weight:500;color:var(--inchiostro)"><input type="checkbox"> Automatic renewal</label>
         <span style="font-size:.82rem;color:var(--tenue)">Off by default. If on, we email you 7 days before charging.</span>
-        <div class="destra"><button class="pulsante secondario piccolo">Recover on a new server</button></div>
+        <span style="font-size:.82rem;color:var(--tenue)">New server? Install with the same key and confirm it here.</span>
       </div>
       <details class="storia"><summary>History</summary>
         <ol>
           <li><time>9 Oct 2026</time>Second active copy detected (copy B)</li>
-          <li><time>14 Mar 2026</time>Upgraded from trial to full on <code>srv-office</code></li>
+          <li><time>14 Mar 2026</time>Upgraded from trial to full (same key) on <code>srv-office</code></li>
           <li><time>28 Feb 2026</time>Trial started on <code>srv-office</code></li>
         </ol>
       </details>
@@ -154,14 +164,14 @@
     <!-- una trial nella tolleranza -->
     <section class="scheda licenza">
       <div class="capo">
-        <h2>Trial</h2><span class="mono">RX-000140</span><span class="stato tolleranza">Expired · grace period</span>
+        <h2>Trial</h2><span class="mono">RXT-…-3TNE</span><span class="stato tolleranza">Expired · grace period</span>
         <div class="destra"><a class="pulsante primario piccolo" href="#nuova">Upgrade to full</a></div>
       </div>
       <div class="dati">
         <div><small>Expired</small><span>5 Oct 2026</span></div>
         <div><small>REMOTIX stops</small><span>19 Oct 2026</span></div>
         <div><small>Installation</small><span><code>lab-02</code></span></div>
-        <div><small>Upgrade</small><span><code>remotix licenza upgrade</code></span></div>
+        <div><small>Upgrade</small><span>buy full here, same key</span></div>
       </div>
     </section>
 
@@ -172,17 +182,17 @@
       <div class="offerte">
         <div class="offerta">
           <h3>Free trial</h3>
-          <p class="sotto">14 days · every feature · unlimited users · one server. One trial per machine.</p>
+          <p class="sotto">14 days · every feature · unlimited users · one server. One trial per account.</p>
           <div>
             <div class="riga-prezzo"><span>1 server · 14 days</span><b>Free</b></div>
-            <div class="riga-prezzo"><span>Then</span><span>upgrade to full, nothing to reinstall</span></div>
+            <div class="riga-prezzo"><span>Then</span><span>buy full on the same key, nothing to reinstall</span></div>
           </div>
           <div class="spinta">
             <button class="pulsante secondario" type="button" onclick="document.getElementById('chiave-trial').style.display='grid'; this.style.display='none'">Get my trial key</button>
             <div class="chiave" id="chiave-trial">
               <div class="avviso verde">Your trial key is ready. We also sent it to anna@studio-rossi.it.</div>
               <code>RXT-7KQ2-M9WD-41HZ-PC8V-3TNE-6YRB</code>
-              <small>On your server, as root, run the installer and paste the key. Unused, it expires in 30 days.</small>
+              <small>On your server, as root, run the installer and paste the key, then confirm the server here. Never activated, it expires in 30 days.</small>
             </div>
           </div>
         </div>
