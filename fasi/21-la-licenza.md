@@ -101,16 +101,16 @@ il server e poi definiamo l'interfaccia web»*): ⛔ supera la tabella dell'8 ot
 ogni N ore). Le regole stanno in `SPECIFICHE.md` §15 e qui non si ripetono: ogni riga rimanda. ⏳ **Da approvare**:
 le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
-**A. Il prodotto** (il server del cliente; ogni domanda è firmata con la chiave dell'installazione)
+**A. Il prodotto** (il server del cliente; ogni domanda è firmata con la firma dell'installazione)
 
 | # | operazione | che cosa fa | §15 |
 |---|---|---|---|
-| A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla chiave pubblica, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
-| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (trial → full o gold); stessa chiave dell'installazione, l'anno parte da qui | 15.3 |
+| A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla firma dell'installazione, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
+| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (scala ✅ trial → full → gold); stessa firma dell'installazione, l'anno parte da qui | 15.3 |
 | A3 | **controlla** (ogni ora, e «controlla ora») | consuma il biglietto e ne dà uno nuovo con l'attestato; ridà **la stessa risposta** a una richiesta identica; scopre lo sdoppiamento; dice lo stato (valida, in tolleranza, sospesa, revocata, bloccata, gold doppia) | 15.4, 15.8 |
 | A4 | **stato della copia indietro** | risponde senza consumare biglietti | 15.9 |
 | A5 | **rilascia** | la vecchia installazione firma il rilascio per lo spostamento volontario | 15.9 |
-| A6 | **chiedi il recupero** | numero di licenza + chiave nuova ⇒ email di conferma all'acquirente; rispetta «uno ogni 30 giorni» | 15.9 |
+| A6 | **chiedi il recupero** | numero di licenza + firma dell'installazione nuova ⇒ email di conferma all'acquirente; rispetta «uno ogni 30 giorni» | 15.9 |
 | A7 | **dammi l'elenco firmato** | indirizzi, chiavi valide e revoche, firmati dalla chiave madre | 15.11 |
 | A8 | **descrivi la macchina** | dentro A1-A3: descrizione dell'hardware, IP interni, nome; il servizio tiene solo l'ultima | 15.8, 15.12 |
 
@@ -120,7 +120,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 |---|---|---|
 | B0 | **chiedi una chiave trial**: email (obbligatoria), nome e azienda (facoltativi), ✅ utente 9 ott ⇒ la chiave arriva per email (🔸 e così l'email è confermata, senza link a parte). Dall'installatore o dalla pagina del servizio | 15.7 |
 | B1 | **compra una full**: dalla pagina del servizio (`remotix.nicfio.it`, «Acquista»); chi compra può non essere l'amministratore. ⏳ I dati dipendono dal processore. Finché non c'è, la crea chi vende (D1) | 15.3 |
-| B2 | **scegli la copia** fra le due attive; la tenuta riceve una chiave nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
+| B2 | **scegli la copia** fra le due attive; la tenuta riceve una firma dell'installazione nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
 | B3 | **conferma il recupero** | 15.9 |
 | B4 | **rinnovo automatico sì/no** — 🔸 lo tiene il processore di pagamento, qui solo il collegamento; ⏳ dipende dal processore | 15.6 |
 
@@ -136,8 +136,8 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
 | # | operazione | §15 |
 |---|---|---|
-| D1 | **crea una full**: email dell'acquirente, nota ⇒ numero `RX-…` e codice, email al compratore | 15.1, 15.3 |
-| D2 | **crea una gold**: nota («scatola 3») ⇒ numero e codice | 15.1 |
+| D1 | **crea una full**: email dell'acquirente, nota ⇒ numero `RX-…` e chiave, email al compratore | 15.1, 15.3 |
+| D2 | **crea una gold**: nota («scatola 3») ⇒ numero e chiave | 15.1 |
 | D3 | **dai una chiave trial a mano** (la macchina senza impronta, o chi ha bisogno di più giorni) | 15.7 |
 | D4 | **rinnova a mano** (pagamento fuori processore, finché il processore non c'è) | 15.6 |
 | D5 | **sospendi · riattiva · revoca** | 15.1, 15.10 |
@@ -145,7 +145,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 | D7 | **licenza bloccata da 15 giorni lavorativi**: **sblocca** o **cancella definitivamente** | 15.8 |
 | D8 | **3 sdoppiamenti in 90 giorni**: guarda, **revoca** o lascia | 15.8 |
 | D9 | **sblocca il limite dei 30 giorni** (scambio o recupero) | 15.8, 15.9 |
-| D10 | 🔸 **codice perso prima dell'uso**: annulla il vecchio e ne emette uno nuovo (i codici non si conservano in chiaro, quindi non si possono rimandare) | 15.3 |
+| D10 | 🔸 **chiave persa prima dell'uso**: annulla la vecchia e ne emette una nuova (le chiavi non si conservano in chiaro, quindi non si possono rimandare) | 15.3 |
 | D11 | 🔸 **cambia l'email dell'acquirente** (assistenza), con avviso al vecchio indirizzo | — |
 | D12 | **guarda**: elenco e ricerca (numero, email, stato, ultimo contatto), la storia di una licenza, le copie, il registro | — |
 | D13 | 🔸 **la cassetta «da decidere»**: D6, D7, D8 e le trial «scrivici» in un posto solo, così niente aspetta in silenzio | — |

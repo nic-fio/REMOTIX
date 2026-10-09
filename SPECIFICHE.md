@@ -1384,7 +1384,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
   | scadenza, avvisi, rinnovo | **nessuno** |
   | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
   | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
-  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una chiave nuova. Nessuna pagina di scelta, nessuna fermata automatica |
+  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una firma dell'installazione nuova. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
 - ⭐ **Tutti i giorni sono SOLARI, non lavorativi** (utente, 9 ott): sabati, domeniche e festivi contano. Ogni
@@ -1405,23 +1405,23 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 
 ### 15.3 L'attivazione
 
-1. Chi compra riceve per email il **codice di licenza**: una stringa lunga da incollare. Indica **quale** licenza
+1. Chi compra riceve per email la **chiave di licenza**: una stringa lunga da incollare. Indica **quale** licenza
    si è comprata.
-2. Alla prima attivazione il prodotto crea la **chiave dell'installazione** (una coppia di chiavi; la parte
+2. Alla prima attivazione il prodotto crea la **firma dell'installazione** (una coppia di chiavi crittografiche; la parte
    segreta sta in un file leggibile solo da root e **non lascia mai** il server).
-   Il codice ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
-5. ⛔ **Un codice di attivazione si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
+   La chiave di licenza ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
+5. ⛔ **Una chiave di licenza si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
    attivazione non si riutilizzano mai»*): consumato alla prima attivazione, poi rifiutato per sempre; mai
    rigenerato uguale, nemmeno dopo una revoca o una scadenza. Il servizio tiene per sempre l'**impronta cifrata**
-   dei codici usati (non è un dato personale, quindi non ricade nei tetti di §15.12).
-6. Accanto al codice, chi compra riceve il **numero di licenza** (per esempio `RX-000123`): **non è segreto**, serve
-   al recupero (§15.9) e all'assistenza. ⇒ Il codice attiva, il numero identifica; recupero e spostamento **non
-   usano mai il codice**.
-3. Il servizio lega la licenza alla **chiave pubblica** dell'installazione e risponde con un **attestato
+   delle chiavi usate (non è un dato personale, quindi non ricade nei tetti di §15.12).
+6. Accanto alla chiave, chi compra riceve il **numero di licenza** (per esempio `RX-000123`): **non è segreto**, serve
+   al recupero (§15.9) e all'assistenza. ⇒ La chiave attiva, il numero identifica; recupero e spostamento **non
+   usano mai la chiave**.
+3. Il servizio lega la licenza alla parte pubblica della **firma dell'installazione** e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
 4. ✅ **La licenza la decide la classe della chiave** (utente, 9 ott: *«la licenza è determinata dalla classe della
    chiave»*): c'è una chiave **trial**, una **full** e una **gold**, e ogni installazione ne inserisce una. ⛔ Supera
-   «la trial si attiva senza codice». 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
+   «la trial si attiva senza codice». 🔸 «Chiave» è **solo** quella che si inserisce; la coppia che il server crea per sé si chiama **firma dell'installazione**. 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
    prefisso (`RXT-…`, `RXF-…`, `RXG-…`) per chi legge, ma cambiare il prefisso non cambia niente. La trial resta
    legata in più all'**impronta** (§15.7).
 7. ✅ **L'installazione chiede sempre la chiave** (utente, 9 ott), da root. ✅ **Ogni licenza parte dal momento in cui
@@ -1429,10 +1429,11 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    d'accesso **non ha il campo della chiave**: mostra lo stato, la chiave la mette root.
 8. ✅ **L'upgrade** (utente, 9 ott: *«ci dev'essere una funzione di upgrade per passare da trial a full»*): da root,
    `remotix licenza upgrade <chiave>`, su un REMOTIX già installato. 🔸 Le regole:
-   - si sale e basta: **trial → full**, **trial → gold**; mai all'indietro;
+   - si sale e basta: **trial → full → gold**: ✅ la scala è questa (utente, 9 ott: *«la scala di upgrade è trial -> full -> gold»*);
+     si può saltare un gradino (trial → gold), mai scendere; una full portata a gold perde la scadenza;
    - l'anno della full parte **dall'upgrade** (è il momento in cui la chiave full entra; chi compra al 10° giorno di
      prova non perde 10 giorni);
-   - nessuno viene scollegato, i desktop restano vivi, la chiave dell'installazione resta la stessa: il
+   - nessuno viene scollegato, i desktop restano vivi, la firma dell'installazione resta la stessa: il
      controllo successivo dice «full»;
    - il **rinnovo** di una full non è un upgrade: si paga col numero di licenza, nessuna chiave nuova (§15.6).
 9. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa dopo la prima volta:
@@ -1441,7 +1442,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 
 ### 15.4 Il controllo, ogni 60 minuti
 
-- Ogni ora il prodotto chiede al servizio lo stato della licenza: **firma con la sua chiave** una sfida del
+- Ogni ora il prodotto chiede al servizio lo stato della licenza: **firma con la firma dell'installazione** una sfida del
   servizio e presenta il **biglietto** dell'ultima volta.
 - Il **biglietto** vale **una volta sola**: il servizio lo consuma e ne consegna uno nuovo insieme all'attestato.
   ⇒ Due copie della stessa installazione (un clone, un backup ripristinato) partono con lo stesso biglietto:
@@ -1466,7 +1467,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 - ⭐ **Il rinnovo lo sceglie il cliente** (utente, 9 ott: *«addebitare centinaia o migliaia di euro automaticamente
   sui conti degli acquirenti non è così simpatico … il cliente sceglie il rinnovo automatico o meno»*):
   - **manuale, ed è il predefinito**: il cliente paga indicando il **numero di licenza**; il servizio sposta in
-    avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessun codice nuovo;
+    avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessuna chiave nuova;
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
     «rinnova»; **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
@@ -1531,7 +1532,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    non sceglie niente). Il link vale una volta e scade.
 5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
    dopo 24»). Nel frattempo le due copie funzionano.
-6. **Scelta fatta**: la copia tenuta riceve una **chiave nuova**, l'altra si ferma (i suoi desktop restano vivi
+6. **Scelta fatta**: la copia tenuta riceve una **firma dell'installazione nuova**, l'altra si ferma (i suoi desktop restano vivi
    fino allo spegnimento).
 7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
    utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
@@ -1541,7 +1542,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ Nessuna cancellazione automatica.
 9. **Uno scambio ogni 30 giorni**; chi vende può sbloccarlo a mano. **3 sdoppiamenti in 90 giorni** sulla stessa
    licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
-10. ⛔ **L'impronta descrive, non decide**: a legare la full restano chiave e biglietto. Cambiare un disco o una
+10. ⛔ **L'impronta descrive, non decide**: a legare la full restano firma dell'installazione e biglietto. Cambiare un disco o una
     scheda di rete non fa di un cliente una macchina nuova.
 
 ### 15.9 Spostamento e recupero
@@ -1550,9 +1551,9 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 - **Spostamento volontario** dalla pagina d'accesso: la vecchia installazione **firma il rilascio**, la nuova si
   attiva.
 - **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
-  scrive il **numero di licenza** (non il codice di attivazione, già consumato), e conferma dall'**email
-  dell'acquirente**. Il prodotto crea una **chiave
-  nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
+  scrive il **numero di licenza** (non la chiave di licenza, già consumata), e conferma dall'**email
+  dell'acquirente**. Il prodotto crea una **firma
+  dell'installazione nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
   avvisati a recupero fatto.
   ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
 - La **copia rimasta indietro** non viene allungata: lavora fino al suo «valido fino a» e mostra all'amministratore
@@ -1566,7 +1567,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 |---|---|---|
 | **trial** | «Trial version — restano N giorni» | si entra |
 | **licenza valida** | niente | si entra |
-| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | la finestra della licenza: stato, «Acquista», e che il codice o il recupero li fa l'amministratore (`remotix licenza`) |
+| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | la finestra della licenza: stato, «Acquista», e che chiave e recupero li fa l'amministratore (`remotix licenza`) |
 | **bloccata per due copie** (§15.8) | niente | la pagina **«sistema bloccato»** e il rimando all'email della scelta |
 | **sospesa** (dal pagamento) o **revocata** (da chi vende) | niente | la finestra della licenza, **come una scaduta**, con la frase che spiega la sospensione o la revoca |
 | **mai attivata** (primo avvio senza rete) | niente | *«il server non ha ancora potuto attivare la licenza: serve l'accesso a internet»* |
@@ -1590,7 +1591,7 @@ rimasta indietro.
 
 ### 15.12 La riservatezza
 
-- **Che cosa arriva al servizio**: la chiave pubblica dell'installazione, l'impronta cifrata, la descrizione
+- **Che cosa arriva al servizio**: la parte pubblica della firma dell'installazione, l'impronta cifrata, la descrizione
   dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. Il servizio tiene **solo
   l'ultima** di ogni voce, salvo gli sdoppiamenti.
 - **Quanto si tengono** (tetti, non minimi):
