@@ -1452,33 +1452,27 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
     «rinnova»; 🔸 **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
-  - ✅ **una full scaduta e non rinnovata si blocca dopo 14 giorni** (utente, 9 ott), col rinnovo manuale come
-    con quello automatico.
-- ✅ **Le email all'acquirente prima della scadenza** (utente, 9 ott: *«semplifichiamo»*): nei **3 giorni prima**
-  della scadenza commerciale (72, 48 e 24 ore prima), **1 email al giorno, alle 11** ⇒ **3 email**.
-  ⛔ Superata la regola delle 2 email al giorno (8-10 e 14-18): utente, 9 ott, *«facciamo una sola email al
-  giorno, alle 11; così anche noi ci semplifichiamo la vita»*.
-  - l'ora è quella **locale dell'acquirente**: si usa il fuso orario del suo server (lo manda il prodotto al
-    controllo), o in mancanza quello del suo paese;
-  - si fermano **appena il cliente rinnova**; chi ha il rinnovo automatico riceve invece solo l'avviso
-    dell'addebito.
-- ✅ **Nei 14 giorni di tolleranza dopo la scadenza** (utente, 9 ott: *«infastidisce gli utenti del server ma gli
-  consente di continuare a lavorare»*):
-  - **sui desktop**, nella pagina di REMOTIX, compare il messaggio **«licenza scaduta»** con il **tempo che manca
-    al blocco**; 🔸 forma proposta da Claude: una **fascia fissa** in alto, che **non si chiude** ma **non copre** il
-    lavoro, col conto alla rovescia; negli ultimi 3 giorni in più i 3 messaggi al giorno con «ho letto»;
-  - l'acquirente riceve **1 email al giorno, alle 11** (ora locale) per tutti i 14 giorni, finché non rinnova. A
-    spingere sono i messaggi sui desktop; l'email informa. ⇒ Fino a 14 email invece di 28: metà del rischio di
-    finire nella posta indesiderata.
-- **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
-  dei 14 giorni di tolleranza dopo la scadenza commerciale (o dopo l'ultimo controllo riuscito, se la rete manca).
-- **Gli avvisi**:
+  - ✅ **una licenza scaduta e non rinnovata si blocca dopo 14 giorni solari** (utente, 9 ott), trial compresa.
+- ⭐ **Trial e full si comportano allo stesso modo; cambia solo la durata** (utente, 9 ott: *«ho unificato il
+  comportamento di trial e full: di fatto l'unica differenza è la validità»*). Quel che segue vale per tutte e due.
+- **Il calendario** (processo dell'utente, 9 ott; ⛔ supera le regole precedenti su email e avvisi):
 
-  | quando | chi | dove |
+  | quando | l'acquirente | gli utenti |
   |---|---|---|
-  | **7 giorni prima della scadenza commerciale** (full) · **3 giorni prima della fine** (trial) | l'amministratore | registro e pagina d'accesso |
-  | **ultimi 3 giorni prima della fine** | tutti gli utenti collegati | **3 messaggi nelle 24 ore** nella pagina di REMOTIX, sopra il desktop, con «ho letto»; insistono ma **non bloccano mai** (il modello è RootSpeak) |
+  | **3° giorno lavorativo** prima della scadenza | 1 email: la licenza sta per scadere, invito a rinnovare (o a comprare la full) | un **avviso sul desktop** da confermare con «ho letto» |
+  | **2° giorno lavorativo** prima | 1 email | un avviso con «ho letto» |
+  | **giorno lavorativo** prima | **2 email** | un avviso con «ho letto» |
+  | **scadenza → 14 giorni solari** (tolleranza) | 🔸 1 email al giorno alle 11 (regola precedente, non toccata dal nuovo processo) | la **pagina di avviso «licenza scaduta»** col tempo che manca al blocco; 🔸 **sopra il desktop, si continua a lavorare** (decisione del 9 ott *«consente di continuare a lavorare»*, da riconfermare) |
+  | **dopo i 14 giorni** | — | REMOTIX si ferma (sotto) |
 
+  - 🔸 **«giorno lavorativo» = dal lunedì al venerdì**, uguale in tutto il mondo, senza festivi nazionali
+    (proposta di Claude: i festivi cambiano da paese a paese); i 14 giorni di tolleranza sono **solari**.
+  - 🔸 l'ora delle email: **alle 11**, e la seconda dell'ultimo giorno **alle 16**, ora locale dell'acquirente
+    (fuso orario del suo server o del suo paese);
+  - tutto si ferma **appena il cliente rinnova**; chi ha il rinnovo automatico riceve solo l'avviso dell'addebito;
+  - ⛔ niente più avvisi all'amministratore 7 giorni prima, né 3 messaggi al giorno: un avviso al giorno.
+- **«La fine»** è il momento in cui REMOTIX si ferma davvero: **14 giorni solari dopo la scadenza** (trial e
+  full), o dopo l'ultimo controllo riuscito se la rete manca.
 - **Alla fine**:
   - ⭐ si ferma **solo REMOTIX**; ⛔ **mai** l'accesso al server (ssh, login locale, PAM del sistema restano intatti);
   - i **collegamenti** si chiudono, i **desktop restano vivi** col lavoro dentro;
@@ -1487,18 +1481,19 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 
 ### 15.7 La trial
 
-- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware**, **senza email**.
+- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware**. ⚠ **«senza email» non regge più**: col
+  comportamento unificato la trial riceve le email della scadenza e degli sdoppiamenti (§15.13, da decidere).
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
   del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,
   «Not Specified», tutti zeri) **si scartano** prima del calcolo. Al servizio arrivano solo impronte cifrate.
 - **Una trial per impronta**. Reinstallare durante la trial ridà **la stessa data di fine**; a trial scaduta non
   se ne ottiene un'altra.
-- **Niente doppioni**: due copie attive della stessa trial ⇒ la trial si **disabilita**.
+- **Due copie attive**: come la full (§15.8).
 - Se non resta niente di distintivo, la trial **non parte da sola**: *«questa macchina non può avviare la prova
   automatica: scrivici»*, e chi vende la attiva a mano.
 - ⚠ Dichiarato: una macchina virtuale **nuova** in cloud ha un'impronta nuova, quindi una trial nuova.
 
-### 15.8 La full: due copie attive, sceglie il cliente
+### 15.8 Due copie attive (trial e full): sceglie il cliente
 
 1. **Lo sdoppiamento** si scopre al controllo orario (§15.4), quindi entro un'ora.
 2. Ogni copia riceve un **nome breve** («copia A · 4F7K»), mostrato anche sulla sua pagina d'accesso.
@@ -1508,12 +1503,17 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
    processore, memoria, dischi). E un **link alla pagina di scelta**.
 4. La pagina di scelta **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
    non sceglie niente). 🔸 Il link vale una volta e scade.
-5. **72 ore** per scegliere, **promemoria dopo 24**.
+5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
+   dopo 24»). Nel frattempo le due copie funzionano.
 6. **Scelta fatta**: la copia tenuta riceve una **chiave nuova**, l'altra si ferma (i suoi desktop restano vivi
    fino allo spegnimento).
-7. **Nessuna scelta in 72 ore**: resta la copia col **biglietto più recente**, l'altra si ferma. Una scelta
-   arrivata **dopo** vale comunque.
-8. ⛔ **La licenza non si invalida mai da sola.**
+7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
+   utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
+   qualunque momento, **sblocca** la copia scelta.
+8. ⏳ **Dopo 15 giorni lavorativi** senza scelta: l'utente ha proposto la **cancellazione definitiva** della
+   licenza; Claude propone invece che **resti bloccata** e vada a chi vende, che guarda e decide (una cancellazione
+   automatica colpisce anche il cliente onesto in ferie, e il 9 ott era stato deciso «la licenza non si invalida
+   mai da sola»). **Da decidere** (§15.13).
 9. **Uno scambio ogni 30 giorni**; chi vende può sbloccarlo a mano. **3 sdoppiamenti in 90 giorni** sulla stessa
    licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
 10. ⛔ **L'impronta descrive, non decide**: a legare la full restano chiave e biglietto. Cambiare un disco o una
@@ -1584,6 +1584,10 @@ rimasta indietro.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
 - ❓ **Da decidere con l'utente** (verifica del 9 ott):
+  - **le email della trial**: col comportamento unificato servono email (scadenza, sdoppiamenti), ma la trial era
+    **senza email**. ⇒ un'email all'attivazione della trial? (proposta di Claude: sì, verificata con un link);
+  - **15 giorni lavorativi dopo il blocco per doppione**: cancellazione definitiva (utente) o licenza bloccata che
+    va a chi vende (Claude)? (§15.8);
   1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
      la finestra della licenza con la frase della sospensione, come una scaduta;
   2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
