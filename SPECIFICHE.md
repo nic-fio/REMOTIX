@@ -1356,7 +1356,8 @@ bianco la logica di funzionamento delle licenze; se ci dimentichiamo qualche par
 oro»*. ⭐ **Questo capitolo è il riferimento**: contiene solo le regole **in vigore**. Il perché, le date e le
 scelte superate stanno in `DECISIONI.md` §10.30; come si costruisce, i passi e le ore in
 `fasi/21-la-licenza.md`. ⛔ Se una decisione nuova cambia una regola, si corregge **qui**, nello stesso momento.
-Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
+Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **proposta tecnica** (di Claude o
+*concordata con ChatGPT) **non ancora confermata dall'utente**: elenco in §15.13.*
 
 ### 15.1 I tre tipi di licenza
 
@@ -1364,13 +1365,17 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
 |---|---|---|---|
 | **trial** | illimitati | **14 giorni** | chiunque installi, una volta per macchina |
 | **full** | illimitati | **1 anno**, rinnovo automatico | ⭐ **l'unica in vendita** |
-| **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova |
+| **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova (le **4 scatole** e il server di prova: senza, i banchi si fermerebbero alla trial) |
 
 - Ogni licenza vale per **una macchina**: un server fisico **oppure** una macchina virtuale.
 - **Il programma non conta gli utenti** per nessuna licenza. Quanti utenti regge una macchina lo dice la tabella
   pubblica delle prestazioni, non la licenza.
 - Una **full scaduta** si comporta come una **trial scaduta**: REMOTIX smette di funzionare.
 - Gli **aggiornamenti** sono compresi finché la licenza è attiva.
+- ⛔ **Un programma solo**: niente versione speciale senza controllo, nemmeno per la gold (un binario senza
+  controllo, se esce, è la versione sbloccata per tutti). La gold passa dalla **stessa strada** del cliente ed è
+  **revocabile**.
+- Finché il pagamento non c'è, le **full si creano a mano** con lo strumento di chi vende.
 
 ### 15.2 Le quattro parti
 
@@ -1385,10 +1390,11 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
 
 ### 15.3 L'attivazione
 
-1. Chi compra riceve per email il **codice di licenza**: una stringa lunga (almeno 128 bit casuali) da incollare.
-   Indica **quale** licenza si è comprata. Dopo l'attivazione il prodotto **non lo conserva**.
+1. Chi compra riceve per email il **codice di licenza**: una stringa lunga da incollare. Indica **quale** licenza
+   si è comprata.
 2. Alla prima attivazione il prodotto crea la **chiave dell'installazione** (una coppia di chiavi; la parte
    segreta sta in un file leggibile solo da root e **non lascia mai** il server).
+   🔸 Il codice ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
 3. Il servizio lega la licenza alla **chiave pubblica** dell'installazione e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
 4. La **trial** si attiva senza codice: la lega l'**impronta dell'hardware** (§15.7).
@@ -1403,6 +1409,8 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
 - ⛔ **Un guasto non fa mai un falso clone**: il prodotto scrive la richiesta su disco **prima** di spedirla; se
   la risposta non arriva la rispedisce **identica**, e il servizio ridà **la stessa risposta**.
 - Solo il servizio REMOTIX tocca lo stato della licenza; «controlla ora» passa da lui.
+- **L'orologio**: il prodotto ricorda l'ora più recente vista (sua e del servizio); se l'orologio della macchina
+  torna indietro vale la più recente, così spostarlo non allunga una licenza.
 - La licenza è legata alla **storia dell'installazione**, non al ferro: chi **spegne il vecchio server** e passa
   a uno nuovo (copiando lo stato) continua senza fare niente.
 
@@ -1411,17 +1419,19 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
 - Il prodotto continua a funzionare per **14 giorni dall'ultimo controllo riuscito**.
 - L'amministratore viene avvisato **al primo controllo fallito**, poi **una volta al giorno** (registro e pagina
   d'accesso), con i giorni che restano.
-- ⛔ Nessun attestato vale più di **14 giorni**, nemmeno quello della **gold**: anche la gold deve farsi sentire.
+- 🔸 Nessun attestato vale più di **14 giorni**, nemmeno quello della **gold**: anche la gold deve farsi sentire.
 
 ### 15.6 Scadenza, rinnovo, avvisi
 
 - **Rinnovo fallito** della full (carta scaduta o rifiutata): **14 giorni** di tolleranza dopo la scadenza.
-- **Gli avvisi prima della fine** (della trial, della full, della tolleranza):
+- **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
+  dei 14 giorni di tolleranza dopo la scadenza commerciale (o dopo l'ultimo controllo riuscito, se la rete manca).
+- **Gli avvisi**:
 
   | quando | chi | dove |
   |---|---|---|
-  | **7 giorni prima** (full) · **3 giorni prima** (trial) | l'amministratore | registro e pagina d'accesso |
-  | **ultimi 3 giorni** | tutti gli utenti collegati | **3 messaggi nelle 24 ore** nella pagina di REMOTIX, sopra il desktop, con «ho letto»; insistono ma **non bloccano mai** (il modello è RootSpeak) |
+  | **7 giorni prima della scadenza commerciale** (full) · **3 giorni prima della fine** (trial) | l'amministratore | registro e pagina d'accesso |
+  | **ultimi 3 giorni prima della fine** | tutti gli utenti collegati | **3 messaggi nelle 24 ore** nella pagina di REMOTIX, sopra il desktop, con «ho letto»; insistono ma **non bloccano mai** (il modello è RootSpeak) |
 
 - **Alla fine**:
   - ⭐ si ferma **solo REMOTIX**; ⛔ **mai** l'accesso al server (ssh, login locale, PAM del sistema restano intatti);
@@ -1451,7 +1461,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
    (da **RDAP**); **IP interni** e **nome della macchina**; **descrizione dell'hardware** (scheda madre,
    processore, memoria, dischi). E un **link alla pagina di scelta**.
 4. La pagina di scelta **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
-   non sceglie niente). Il link vale una volta e scade.
+   non sceglie niente). 🔸 Il link vale una volta e scade.
 5. **72 ore** per scegliere, **promemoria dopo 24**.
 6. **Scelta fatta**: la copia tenuta riceve una **chiave nuova**, l'altra si ferma (i suoi desktop restano vivi
    fino allo spegnimento).
@@ -1470,17 +1480,19 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.*
   attiva.
 - **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
   incolla il **codice di licenza**, e conferma dall'**email dell'acquirente**. Il prodotto crea una **chiave
-  nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore avvisati.
+  nuova** e la storia riparte da lì. 🔸 Uno ogni 30 giorni (chi vende può sbloccare); 🔸 acquirente e venditore
+  avvisati a recupero fatto.
   ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
 - La **copia rimasta indietro** non viene allungata: lavora fino al suo «valido fino a» e mostra all'amministratore
   un messaggio **neutro** (*«questa installazione risulta una copia più vecchia, forse un backup ripristinato»*).
+  Chiede il suo stato **ogni ora**, senza consumare biglietti.
 - La pagina del recupero si raggiunge **anche a licenza scaduta**.
 
 ### 15.10 La pagina d'accesso
 
 | stato | prima delle credenziali | dopo utente e parola d'ordine giuste |
 |---|---|---|
-| **trial** | «Trial version — restano N giorni» | si entra; collegamento «Hai un codice di licenza?» |
+| **trial** | «Trial version — restano N giorni» e il collegamento «Hai un codice di licenza?» | si entra |
 | **licenza valida** | niente | si entra; collegamento piccolo «Cambia licenza» |
 | **scaduta** | niente (chi non ha un account non scopre lo stato) | **campo del codice già aperto**, «Recupera», «Acquista» |
 
@@ -1493,18 +1505,18 @@ rimasta indietro.
 - Indirizzi del servizio, chiavi valide e revoche stanno in un **elenco firmato dalla chiave madre**. Il prodotto
   ha dentro **due indirizzi** di partenza. ⇒ Una chiave del VPS rubata si revoca senza ricompilare il prodotto;
   un **dominio nuovo** non obbliga i clienti ad aggiornare.
-- HTTPS con i certificati del sistema, **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
+- HTTPS con i certificati del sistema, 🔸 **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
   la danno le firme dei messaggi, in un **formato binario fisso e firmato**.
 - Il servizio: operazioni a transazione, **copie cifrate fuori dal VPS ogni giorno**, registro di attivazioni,
   recuperi e sblocchi. Se il VPS torna a un salvataggio vecchio, si rimette in pari **solo** con prove firmate da
   lui stesso, mai con numeri dichiarati dal cliente.
-- **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
+- 🔸 **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
   porta 25 e permettere il nome inverso; altrimenti serve un inoltro (decisione dell'utente).
 
 ### 15.12 La riservatezza
 
 - **Che cosa arriva al servizio**: la chiave pubblica dell'installazione, l'impronta cifrata, la descrizione
-  dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. Il servizio tiene **solo
+  dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. 🔸 Il servizio tiene **solo
   l'ultima** di ogni voce, salvo gli sdoppiamenti.
 - **Quanto si tengono** (tetti, non minimi):
 
@@ -1522,3 +1534,13 @@ rimasta indietro.
 - ⛔ attivazione senza rete · conteggio degli utenti · TPM · integrazioni coi cloud (AWS, Google, Azure) ·
   impronta che decide della full · invalidazione automatica di una licenza · blocco dell'accesso al server.
 - ⏳ **Sospesi**: il processore di pagamento e il **contratto di vendita** della full (si decidono insieme).
+- ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
+  ora dura **14**. Da decidere insieme al contratto della full.
+- ❓ **Da decidere con l'utente** (verifica del 9 ott):
+  1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
+     la finestra della licenza con la frase della sospensione, come una scaduta;
+  2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
+     licenza: serve l'accesso a internet»;
+  3. le righe 🔸: gold con attestato di 14 giorni; recupero uno ogni 30 giorni e avviso a recupero fatto; email dal
+     VPS; link della scelta usabile una volta; codice da 128 bit non conservato; niente pinning; solo l'ultima
+     voce tenuta dal servizio.

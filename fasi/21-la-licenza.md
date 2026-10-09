@@ -17,7 +17,7 @@ ordine. ⚠ Vincolo dell'utente (8 ott): **la licenza viene prima del banco xrdp
 | **3. lo strumento di chi vende** | crea full e gold, revoca, elenca le macchine | sul portatile di chi vende, parla col VPS | Go, nello stesso modulo della parte 2 |
 | **4. l'ingresso del pagamento** | «rinnova» / «sospendi questa licenza», generico | sul VPS, nel servizio | Go |
 
-I tre tipi (§10.30, nome «gold» dall'8 ott): **trial** 1 utente · 30 giorni · chiunque; **full** illimitati ·
+I tre tipi (§10.30, nome «gold» dall'8 ott): **trial** ~~1 utente · 30 giorni~~ **illimitati · 14 giorni** (9 ott) · chiunque; **full** illimitati ·
 1 anno con rinnovo automatico · **l'unica in vendita**; **gold** illimitati · senza scadenza · solo chi vende
 (le sue macchine e quelle di prova).
 
@@ -430,5 +430,4 @@ trascrizione non si conserva; qui c'è il risultato.*
    file, biglietto giornaliero, scelta del cliente). Si riapre solo se gli sdoppiamenti diventano un problema
    vero. Fuori anche le integrazioni coi cloud.
 
-⚠ **La stima di §8 (~72 ore) va rifatta**: il cricchetto, il recupero via email e la posta del VPS sono lavoro
-in più; l'impronta tolta è lavoro in meno.
+✅ **La stima di §8 è stata rifatta il 9 ott: ~122 ore** (era ~72).

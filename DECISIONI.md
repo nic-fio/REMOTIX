@@ -6424,8 +6424,8 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
   Paddle: ~5% + 0,50 $, IVA e fatture loro) o Stripe (IVA e fatture nostre). ⇒ Il nostro servizio di licenze
   espone **un ingresso generico «rinnova/sospendi questa licenza»**, che il pagamento chiamerà quando ci sarà:
   la scelta di dopo non cambia il prodotto. Le licenze full si creano a mano finché il pagamento non c'è.
-- ❓ **Da decidere con l'utente, uno per volta**: che
-  cosa compra la versione full (numero di utenti, durata, aggiornamenti); il contratto di vendita.
+- ✅ ~~Da decidere: che cosa compra la full; il contratto di vendita~~ — chiuse il 9 ott (utenti illimitati, 1 anno,
+  aggiornamenti finché attiva, scaduta si ferma); il contratto resta sospeso col pagamento. Vedi `SPECIFICHE.md` §15.
 
 ### 10.31 ✅ L'installatore non ha la finestra: solo una TUI curata (5 ott 2026)
 
