@@ -94,34 +94,79 @@ binario resta statico). Bastano migliaia di clienti; la copia di riserva è **co
 | `trial_date` | ogni `machine-id` che ha già avuto la sua trial (§10.30: una macchina, una trial) |
 | `registro` | ogni operazione dello strumento e del pagamento: chi, quando, che cosa |
 
-### 3.3 Le domande (API)
+### 3.3 Le operazioni del servizio
 
-| domanda | chi la fa | che cosa fa |
+*Riscritta il **9 ottobre 2026** sera, su richiesta dell'utente (*«prima definiamo le operazioni che deve svolgere
+il server e poi definiamo l'interfaccia web»*): ⛔ supera la tabella dell'8 ott (`machine-id`, «avvii», controllo
+ogni N ore). Le regole stanno in `SPECIFICHE.md` §15 e qui non si ripetono: ogni riga rimanda. ⏳ **Da approvare**:
+le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
+
+**A. Il prodotto** (il server del cliente; ogni domanda è firmata con la chiave dell'installazione)
+
+| # | operazione | che cosa fa | §15 |
+|---|---|---|---|
+| A1 | **attiva con codice** | consuma il codice (una volta, per sempre), lega la licenza alla chiave pubblica, dà attestato e primo biglietto | 15.3 |
+| A2 | **chiedi la trial** | riceve impronta ed email, manda il link di conferma; se l'impronta ha già avuto la trial ridà la **stessa** data di fine; se l'impronta è vuota risponde «scrivici» | 15.7 |
+| A3 | **controlla** (ogni ora, e «controlla ora») | consuma il biglietto e ne dà uno nuovo con l'attestato; ridà **la stessa risposta** a una richiesta identica; scopre lo sdoppiamento; dice lo stato (valida, in tolleranza, sospesa, revocata, bloccata, gold doppia) | 15.4, 15.8 |
+| A4 | **stato della copia indietro** | risponde senza consumare biglietti | 15.9 |
+| A5 | **rilascia** | la vecchia installazione firma il rilascio per lo spostamento volontario | 15.9 |
+| A6 | **chiedi il recupero** | numero di licenza + chiave nuova ⇒ email di conferma all'acquirente; rispetta «uno ogni 30 giorni» | 15.9 |
+| A7 | **dammi l'elenco firmato** | indirizzi, chiavi valide e revoche, firmati dalla chiave madre | 15.11 |
+| A8 | **descrivi la macchina** | dentro A1-A3: descrizione dell'hardware, IP interni, nome; il servizio tiene solo l'ultima | 15.8, 15.12 |
+
+**B. L'acquirente** (pagine aperte da un link nell'email: la pagina **mostra**, il pulsante **conferma**)
+
+| # | operazione | §15 |
 |---|---|---|
-| `POST /v1/attiva` | il prodotto | prima volta: con «trial» registra la trial (se la macchina non l'ha già avuta); con un codice lega la licenza alla macchina. Torna l'attestato |
-| `POST /v1/controlla` | il prodotto, ogni N ore | rinnova l'attestato; registra l'avvio; se la licenza è sospesa o scaduta lo dice |
-| `POST /v1/pagamento/rinnova` · `/sospendi` | il pagamento (parte 4) | sposta la scadenza di un anno / sospende |
-| `…/v1/vendita/*` | lo strumento (parte 3) | crea, revoca, elenca |
+| B1 | **conferma l'email della trial** — 🔸 la trial **parte alla conferma**, non prima (altrimenti l'email non conferma niente) | 15.7 |
+| B2 | **scegli la copia** fra le due attive; la tenuta riceve una chiave nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
+| B3 | **conferma il recupero** | 15.9 |
+| B4 | **rinnovo automatico sì/no** — 🔸 lo tiene il processore di pagamento, qui solo il collegamento; ⏳ dipende dal processore | 15.6 |
 
-⛔ **Tutte in HTTPS** (certificato Let's Encrypt del dominio del VPS, §10 domanda 4). Le domande del prodotto
-sono anonime ma legate al codice; quelle di pagamento e vendita hanno una **chiave segreta** ciascuna.
+**C. Il pagamento** (con la sua chiave segreta)
 
-### 3.4 I cloni
+| # | operazione | §15 |
+|---|---|---|
+| C1 | **rinnova** la licenza N di un anno (sblocca anche una scaduta in tolleranza o ferma) | 15.6 |
+| C2 | **sospendi** · 🔸 **riattiva** (un addebito respinto e poi pagato) | 15.10 |
+| C3 | 🔸 **nuova full venduta** ⇒ come D1, con l'email al compratore | 15.3 |
 
-La tecnica dei «processes» (§10.30): ogni avvio del prodotto ha un identificativo casuale suo. Se sulla stessa
-licenza **e sullo stesso `machine-id`** risultano **due avvii vivi** (entrambi controllati entro N ore),
-è una macchina clonata o un identificativo copiato. ⚠ Che cosa fare in quel caso è una **decisione tua**
-(§10 domanda 6): avvisare chi vende, oppure sospendere la seconda.
+**D. Chi vende** (il pannello web; ogni operazione finisce nel registro con chi, quando, perché)
 
-## 4. Parte 3 — lo strumento di chi vende
+| # | operazione | §15 |
+|---|---|---|
+| D1 | **crea una full**: email dell'acquirente, nota ⇒ numero `RX-…` e codice, email al compratore | 15.1, 15.3 |
+| D2 | **crea una gold**: nota («scatola 3») ⇒ numero e codice | 15.1 |
+| D3 | **attiva una trial a mano** (la macchina senza impronta) | 15.7 |
+| D4 | **rinnova a mano** (pagamento fuori processore, finché il processore non c'è) | 15.6 |
+| D5 | **sospendi · riattiva · revoca** | 15.1, 15.10 |
+| D6 | **gold doppia**: guarda le due copie, **disabilita una** | 15.1 |
+| D7 | **licenza bloccata da 15 giorni lavorativi**: **sblocca** o **cancella definitivamente** | 15.8 |
+| D8 | **3 sdoppiamenti in 90 giorni**: guarda, **revoca** o lascia | 15.8 |
+| D9 | **sblocca il limite dei 30 giorni** (scambio o recupero) | 15.8, 15.9 |
+| D10 | 🔸 **codice perso prima dell'uso**: annulla il vecchio e ne emette uno nuovo (i codici non si conservano in chiaro, quindi non si possono rimandare) | 15.3 |
+| D11 | 🔸 **cambia l'email dell'acquirente** (assistenza), con avviso al vecchio indirizzo | — |
+| D12 | **guarda**: elenco e ricerca (numero, email, stato, ultimo contatto), la storia di una licenza, le copie, il registro | — |
+| D13 | 🔸 **la cassetta «da decidere»**: D6, D7, D8 e le trial «scrivici» in un posto solo, così niente aspetta in silenzio | — |
 
-Un comando, `remotix-licenze`, sul portatile:
-- `crea full --cliente "…" --macchina <machine-id>` · `crea gold --macchina <machine-id> --nota "server di prova"`;
-- `revoca <codice>` · `sospendi` / `riattiva`;
-- `elenco` (licenze, macchine, ultimo controllo, cloni sospetti) · `storia <codice>`.
+⛔ **Fuori dal pannello**: tutto quel che firma la **chiave madre** (certificare la chiave del VPS, l'elenco firmato
+delle revoche, §15.11). Resta un comando sul portatile: se il pannello venisse violato, la radice non c'è.
 
-Parla col VPS con la sua chiave segreta. ⚠ Finché il pagamento non c'è (§10.30), **le full si creano a mano da
-qui**.
+**E. L'orologio del servizio** (da solo, ogni ora)
+
+| # | operazione | §15 |
+|---|---|---|
+| E1 | le email della scadenza: 3°, 2° e ultimo giorno lavorativo prima (l'ultimo alle 11 e alle 16), poi una al giorno alle 11 nella tolleranza; si fermano al rinnovo | 15.6 |
+| E2 | l'avviso 7 giorni prima dell'addebito automatico | 15.6 |
+| E3 | sdoppiamenti: un'email al giorno per 7 giorni lavorativi, poi **blocco**; a 15 giorni lavorativi la licenza va nella cassetta di chi vende | 15.8 |
+| E4 | i link (conferme, scelta) scadono | 15.8 |
+| E5 | le cancellazioni: sdoppiamenti a 6 mesi, il resto a 2 anni | 15.12 |
+| E6 | la copia cifrata fuori dal VPS, ogni giorno | 15.11 |
+
+## 4. Parte 3 — il pannello di chi vende
+
+✅ **9 ott, utente: un'interfaccia web** al posto dello strumento a riga di comando (supera §9 «pannello web
+fuori»). Le operazioni sono la sezione D di §3.3. ⏳ L'interfaccia si definisce dopo le operazioni.
 
 ## 5. Parte 4 — l'ingresso del pagamento
 
@@ -198,7 +243,7 @@ posta dal VPS, il formato dei messaggi con le prove comuni C/Go. Escono: il TPM,
 - **il contratto di vendita** della full: è una domanda (§10 domanda 3);
 - **la prova di capacità per il cliente** (§10.30, il programma accanto al server): è un lavoro suo, non della
   licenza; si fa dopo;
-- un **pannello web** per chi vende: lo strumento a riga di comando basta finché i clienti si contano a mano;
+- ~~un **pannello web** per chi vende~~ ⛔ rientrato il 9 ott su richiesta dell'utente (§4);
 - difese contro chi modifica il binario: §10.30 lo dichiara, la licenza tiene onesti gli onesti.
 
 ## 10. Domande per l'utente, una per volta

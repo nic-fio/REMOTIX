@@ -1398,7 +1398,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 |---|---|---|
 | **il prodotto** | il server del cliente | attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
 | **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita la pagina di scelta e di recupero |
-| **lo strumento di chi vende** | il computer di chi vende | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
+| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
 | **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
 
 ⛔ **Non esiste l'attivazione senza rete.** Il prodotto esce anche da un **proxy** aziendale.
