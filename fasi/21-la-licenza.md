@@ -1,10 +1,11 @@
 # Fase 21 — La licenza
 
-*Piano scritto l'**8 ottobre 2026** sera, sul portatile, mentre girava la campagna della fase 20 (il server di
-casa non è stato toccato). ⛔ **Da approvare dall'utente prima di qualunque lavoro.** Le decisioni stanno in
-`DECISIONI.md` §10.30 e qui **non si ripetono**: si rimanda. Questo documento dice **come** si fanno e in che
-ordine. ⚠ Vincolo dell'utente (8 ott): **la licenza viene prima del banco xrdp** (`fasi/20-le-prestazioni.md`
-§3 punto 4b); il banco si scrive accanto senza toglierle ore.*
+*Piano scritto l'**8 ottobre 2026** sera; ⭐ **riscritto il 9 ottobre** dopo la giornata di decisioni
+sulla licenza (classe della chiave, upgrade, sito con area cliente e pannello, accessi, nomi `LICENSE_KEY` /
+`INSTALL_KEY` / `HW_FINGERPRINT`). ⛔ **Da approvare dall'utente prima di qualunque lavoro.** Le **regole** stanno in
+`SPECIFICHE.md` §15 (si legge prima §15.0) e qui **non si ripetono**: questo documento dice **come** si fanno e in
+che ordine. ⚠ Vincolo dell'utente (8 ott): **la licenza viene prima del banco xrdp** (`fasi/20-le-prestazioni.md`
+§3 punto 4b).*
 
 ---
 
@@ -12,65 +13,45 @@ ordine. ⚠ Vincolo dell'utente (8 ott): **la licenza viene prima del banco xrdp
 
 | parte | che cosa fa | dove gira | linguaggio |
 |---|---|---|---|
-| **1. il prodotto** | chiede la licenza, la ricorda, la ricontrolla, la fa rispettare all'accesso | sul server del cliente, dentro `remotix` | C, come il prodotto |
-| **2. il servizio di licenze** | registra le macchine, risponde ai controlli, vede i cloni, ricorda le trial | sul **VPS** (§10.30, 8 ott) | Go (§3.1) |
-| **3. lo strumento di chi vende** | crea full e gold, revoca, elenca le macchine | sul portatile di chi vende, parla col VPS | Go, nello stesso modulo della parte 2 |
-| **4. l'ingresso del pagamento** | «rinnova» / «sospendi questa licenza», generico | sul VPS, nel servizio | Go |
-
-I tre tipi (§10.30, nome «gold» dall'8 ott): **trial** ~~1 utente · 30 giorni~~ **illimitati · 14 giorni** (9 ott) · chiunque; **full** illimitati ·
-1 anno con rinnovo automatico · **l'unica in vendita**; **gold** illimitati · senza scadenza · solo chi vende
-(le sue macchine e quelle di prova).
+| **1. il prodotto** | prende la `LICENSE_KEY` dall'installatore, crea la `INSTALL_KEY`, controlla ogni ora, mostra lo stato, si ferma alla fine; il comando `remotix licenza` | sul server del cliente | C, come il prodotto; l'installatore in Go |
+| **2. il servizio di licenze** | le operazioni A, C, E di §3.3: attivazioni, controlli col biglietto, sdoppiamenti, email, l'orologio | sul **VPS**, `remotix.nicfio.it/licenze/v1/` | Go (§3.1) |
+| **3. il sito** | la vetrina pubblica, la richiesta delle chiavi, l'**area cliente** e il **pannello** di chi vende (§4, §4-bis) | sul VPS: pagine fisse servite da Caddy, le parti vive dal servizio | HTML/CSS dai mockup; Go |
+| **4. la funzione della gold** | crea le gold, fuori dal pannello | sul VPS, un comando, solo via ssh | Go, nello stesso binario |
+| **5. l'ingresso del pagamento** | «rinnova» · «sospendi» · «riattiva» · «nuova full venduta» | sul VPS, nel servizio | Go |
 
 ## 2. Parte 1 — il prodotto
 
 ### 2.1 Dove si innesta, letto nel codice
 
+*`[R]` 8 ott; righe da rileggere prima di scrivere, il codice si muove.*
+
 | che cosa | dove sta oggi | che cosa cambia |
 |---|---|---|
-| **l'accesso** | `src/autenticazione.c:212` `rcp_autentica()` (PAM, `pam_authenticate` :247 e `pam_acct_mgmt` :253), chiamata **solo dal nipote** dell'aiutante (`src/aiutante.c:23-30`); l'esito torna al filo in `src/rcp.c:~2490-2515` | **dopo** credenziali giuste (§10.30: chi non ha un account non scopre lo stato della licenza) il filo guarda lo stato della licenza **in memoria**: niente rete in quel punto, nessun ritardo in più all'accesso |
-| **i rifiuti** | i motivi di `CONGEDO` in `src/rcp.h:113-133` (`0x01`…`0x10`), le frasi in `src/pagina.html:896-999` | due motivi nuovi, da scrivere prima in `RCP.md`: **`0x11 LICENZA_SCADUTA`** (trial o full scaduta: si apre il campo del codice) e **`0x12 LICENZA_UN_UTENTE`** (trial, il posto è già preso). ⚠ `0x0E` resta generico apposta (`pagina.html:964`): la licenza **non** ci va dentro |
-| **la pagina d'accesso** | il modulo in `src/pagina.html:600-625`; i segni sostituiti dal server in `src/pagina.c:420-433` (`__IMPRONTA__`, `__AVVISO__`, `__BANNATO__`) e l'elenco di controllo in `pagina.c:708` | un segno nuovo `__LICENZA__` (stato e giorni rimasti, **innocuo**: §10.30 lo vuole visibile anche prima delle credenziali); il collegamento «Hai un codice di licenza?» / «Cambia licenza»; il campo del codice; **l'identificativo della macchina** accanto al campo (serve a chi compra) |
-| **il codice inserito** | — | viaggia sul canale già cifrato, in un messaggio nuovo di `RCP.md` (dopo l'autenticazione, quindi solo per chi ha un account); il filo lo passa al **messaggero** (§2.2), che lo porta al VPS |
-| **la memoria della licenza** | `/var/lib/remotix/` esiste già (`src/main.c:1768-1770`: `certificati`, `ban`; `src/figlio.c:1658`) | `/var/lib/remotix/licenza/`: l'**attestato** firmato dal VPS (§2.3), l'identificativo casuale di questo avvio, l'ultima data vista (contro l'orologio che torna indietro, §10.30). Permessi come `certificati` |
-| **il tetto delle sessioni** | ⭐ **è già deciso all'avvio**: `--tetto-sessioni N` (`src/main.c:2084`, `rcp_tetto_imposta()` in `src/rcp.c:932`), predefinito **10** (`src/rcp.h:97`). ⚠ `MAX_ATTACCATE` **non esiste più** dal 25 agosto (`src/rcp.c:895-902`): `DECISIONI.md` §10.30 e `fasi/20-le-prestazioni.md` §4 sono rimasti indietro | resta da fare solo la parte amministrativa: l'installatore scrive il tetto in `REMOTIX_OPZIONI` (`packaging/*/remotix.service`) e la documentazione lo dice. ⛔ **La licenza non tocca il tetto**: in trial il limite di 1 è un controllo al posto (§2.4), non un `--tetto-sessioni 1`, perché `rcp_tetto_imposta` vale una volta sola e chi attiva la full a metà giornata dovrebbe riavviare |
+| **l'accesso** | `src/autenticazione.c:212` `rcp_autentica()` (PAM), chiamata **solo dal nipote** dell'aiutante (`src/aiutante.c:23-30`); l'esito torna al filo in `src/rcp.c:~2490-2515` | **dopo** credenziali giuste il filo guarda lo stato della licenza **in memoria**: niente rete in quel punto |
+| **i rifiuti** | i motivi di `CONGEDO` in `src/rcp.h:113-133` (`0x01`…`0x10`), le frasi in `src/pagina.html:896-999` | un motivo nuovo, prima in `RCP.md`: **`0x11 LICENZA`**, con lo stato (scaduta, bloccata per due copie, sospesa, revocata, mai attivata) che sceglie la frase. ⛔ Niente più `0x12` «un utente»: la trial ha utenti illimitati |
+| **la pagina d'accesso** | il modulo in `src/pagina.html:600-625`; i segni in `src/pagina.c:420-433` | un segno `__LICENZA__` (stato e giorni, **innocuo**: prima delle credenziali si vede solo «Trial version — N days left»); gli stati di `SPECIFICHE.md` §15.10; gli **avvisi con «ho letto»** dei giorni lavorativi prima della scadenza; il **nome breve della copia**. ⛔ **Nessun campo per la chiave**: la mette root (§15.3 punto 7) |
+| **la memoria della licenza** | `/var/lib/remotix/` (`src/main.c:1768-1770`) | `/var/lib/remotix/licenza/`: la `INSTALL_KEY` (solo root), l'attestato, il biglietto, la richiesta in volo, l'ora più recente vista |
+| **il tetto delle sessioni** | `--tetto-sessioni N` (`src/main.c:2084`), predefinito 10 | ⛔ **la licenza non lo tocca**: nessuna licenza conta gli utenti |
 
 ### 2.2 Il messaggero: la rete fuori dal filo
 
-⛔ Il server è **un filo solo** (lo stesso motivo per cui PAM sta nell'aiutante, `src/aiutante.c:23-30`): una
-domanda in rete al VPS, con un proxy lento, fermerebbe tutte le sessioni. ⇒ Un **processo a parte**, figlio del
-padre come l'aiutante, che:
-- all'avvio e poi ogni **N ore** (§10, domanda 1) manda al VPS: codice (o «trial»), `/etc/machine-id`,
-  identificativo casuale di questo avvio, versione;
-- passa dal **proxy** se c'è (`https_proxy` dell'ambiente del servizio, o un'opzione in `REMOTIX_OPZIONI`);
-- riceve l'attestato firmato, lo **verifica** e lo scrive su disco; al filo manda solo lo stato («trial, 23
-  giorni» · «full fino al …» · «scaduta» · «sospesa»).
+⛔ Il server è **un filo solo**: una domanda in rete con un proxy lento fermerebbe tutte le sessioni. ⇒ Un
+**processo a parte**, figlio del padre come l'aiutante, che ogni **ora** (e a «controlla ora»):
+- scrive la richiesta **su disco prima di spedirla** e, senza risposta, la rispedisce **identica** (§15.4);
+- firma la sfida con la `INSTALL_KEY` e presenta il biglietto; manda la descrizione della macchina (§15.12);
+- passa dal **proxy** (`https_proxy`, o un'opzione in `REMOTIX_OPZIONI`);
+- verifica l'attestato (chiave del VPS certificata dalla radice, §6) e al filo manda solo lo stato.
 
-**La libreria per parlare HTTPS:** ⭐ proposta **libcurl** — proxy, `https_proxy`, certificati di sistema già
-fatti; licenza MIT-simile (curl), compatibile col codice chiuso (§10.30); c'è in tutte le distribuzioni del
-catalogo. ⚠ È una **dipendenza nuova** del pacchetto. L'alternativa è scrivere il client HTTP sopra OpenSSL
-(già dipendenza, `src/tls.c`), ma il proxy `CONNECT` e i suoi casi sono lavoro che curl ha già.
+**HTTPS:** ⭐ **libcurl** (proxy `CONNECT`, certificati di sistema, licenza compatibile); ⚠ dipendenza nuova del
+pacchetto.
 
-### 2.3 L'attestato
+### 2.3 Il comando `remotix licenza` e l'installatore
 
-Il VPS non manda «sì/no» ma un **attestato firmato** (ed25519): tipo, scadenza, identificativo della macchina,
-**valido fino a** (= ora del controllo + tolleranza). Il prodotto lo verifica con OpenSSL (`EVP_PKEY_ED25519`,
-già dentro). Così:
-- la **tolleranza** se la rete manca è semplice: finché l'attestato è valido si entra, anche senza VPS;
-- un attestato copiato su un'altra macchina non vale (porta il `machine-id`);
-- chi falsifica la risposta del VPS senza la chiave non produce un attestato valido.
-
-### 2.4 Le regole all'accesso
-
-| stato | prima delle credenziali | dopo credenziali giuste |
-|---|---|---|
-| **trial** valida | «Trial version — restano N giorni» + «Hai un codice di licenza?» | si entra se **nessun altro** è dentro, altrimenti `0x12` |
-| **full / gold** valida | niente; solo «Cambia licenza», piccolo | si entra (resta il tetto tecnico) |
-| **scaduta** (trial finita, full non rinnovata, attestato oltre la tolleranza) | niente | `0x11`: il campo del codice **già aperto** |
-| **sospesa** dal VPS (pagamento revocato, clone) | niente | `0x11`, con la frase della sospensione |
-| **mai attivata** (primo avvio senza rete) | ⛔ §10.30: **niente attivazione senza rete** | la pagina dice «il server non ha ancora potuto attivare la licenza: serve l'accesso a internet» |
-
-⚠ **Le sessioni già aperte non si chiudono** quando la licenza scade: si nega solo l'accesso nuovo.
-(Da confermare, §10 domanda 5.)
+- **L'installatore** (`installatore/`, Go: CLI, TUI, GUI) chiede la **`LICENSE_KEY`** e mostra a chi non ce l'ha
+  l'indirizzo del sito; senza domande: `--license-key`. La passa al prodotto; se la rete manca, l'installazione
+  finisce e dice di lanciare `remotix licenza attiva` dopo.
+- **`remotix licenza`**, da root: `stato` · `attiva <chiave>` · `upgrade <chiave>` · `controlla` · `recupera`.
+  Parla col messaggero, non col VPS direttamente.
 
 ## 3. Parte 2 — il servizio di licenze sul VPS
 
@@ -83,16 +64,18 @@ già dentro). Così:
 
 ### 3.2 La base dati
 
-⭐ **SQLite** in un file solo (con la libreria in Go puro `modernc.org/sqlite`, licenza BSD: niente cgo, il
-binario resta statico). Bastano migliaia di clienti; la copia di riserva è **copiare un file**.
+⭐ **SQLite** in un file solo (`modernc.org/sqlite`, Go puro, BSD: il binario resta statico), operazioni a
+transazione, copia cifrata fuori dal VPS ogni giorno (§15.11).
 
 | tabella | che cosa tiene |
 |---|---|
-| `licenze` | codice, tipo (trial/full/gold), cliente, scadenza, stato (attiva/sospesa/revocata), riferimento del pagamento |
-| `macchine` | `machine-id`, licenza, prima e ultima volta vista, versione |
-| `avvii` | identificativo casuale di ogni avvio, macchina, ultimo controllo ⇒ i **cloni** |
-| `trial_date` | ogni `machine-id` che ha già avuto la sua trial (§10.30: una macchina, una trial) |
-| `registro` | ogni operazione dello strumento e del pagamento: chi, quando, che cosa |
+| `licenze` | numero `RX-…`, classe (trial/full/gold), acquirente, inizio, scadenza, stato, rinnovo automatico, riferimento del pagamento |
+| `chiavi` | l'**impronta cifrata** di ogni `LICENSE_KEY` emessa, la classe, usata sì/no, quando scade se mai usata (30 giorni la trial) — per sempre |
+| `installazioni` | la parte pubblica della `INSTALL_KEY`, la licenza, il biglietto in corso, l'ultima risposta (per ridarla uguale), nome breve, ultima descrizione della macchina |
+| `trial_impronte` | ogni `HW_FINGERPRINT` (cifrata) che ha già avuto la trial, con la sua data di fine |
+| `sdoppiamenti` | scoperta, copie, RDAP, scelta o blocco, avvisi mandati |
+| `clienti`, `sessioni` | l'area cliente: email, accesso Google, link usa-e-getta |
+| `registro` | ogni operazione del pannello, del pagamento, della gold e dell'orologio: chi, quando, che cosa |
 
 ### 3.3 Le operazioni del servizio
 
@@ -166,8 +149,8 @@ delle revoche, §15.11). Resta un comando sul portatile: se il pannello venisse 
 
 ## 4. Parte 3 — il pannello di chi vende
 
-✅ **9 ott, utente: un'interfaccia web** al posto dello strumento a riga di comando (supera §9 «pannello web
-fuori»). Le operazioni sono la sezione D di §3.3. ⏳ L'interfaccia si definisce dopo le operazioni.
+✅ **9 ott, utente: un'interfaccia web**, parte riservata del sito (§4-bis). Le operazioni sono la sezione D di
+§3.3, la gold esclusa (funzione dedicata via ssh). ✅ Mockup `grafica/sito-mockup/console.html`.
 
 ## 4-bis. Il sito `remotix.nicfio.it`
 
@@ -186,7 +169,8 @@ file statici in `/srv/www/<sito>`, HTTPS da Let's Encrypt, l'utente `progetti` c
 | ✅ **area cliente** (utente, 9 ott: *«prevedere un'area cliente ci semplifica parecchie cose»*) | chi ha comprato o chiesto una trial | le sue licenze: numero, classe, stato, scadenza, copie attive; **scelta della copia** (B2); **conferma del recupero** (B3); rinnova; rinnovo automatico sì/no (B4); cambio email (D11 diventa sua) | ✅ (utente, 9 ott) **link all'email, senza password**, che vale sempre: si scrive l'email, arriva un link che vale una volta e per poco, e apre l'area per qualche ora; più **«Accedi con Google»** come scorciatoia (l'email arriva già verificata). ⛔ Niente password, niente Facebook; Microsoft per ora no (dubbio dell'utente), si può aggiungere dopo. Le email della scelta e del recupero portano **qui**, non a pagine a parte |
 | **pannello** | chi vende | le operazioni D1-D13 (non la gold, D2) | ✅ **passkey oppure «Accedi con Google»** (utente, 9 ott: *«passkey e/o google»*). 🔸 Le condizioni: Google vale **solo per l'account di chi vende**, scritto nella configurazione, e quell'account deve avere la **verifica in due passaggi**; ogni operazione che crea, rinnova, revoca o cancella manda **subito un avviso a chi vende** (se non l'ha fatta lui, lo sa in un minuto); se si perde l'accesso, un comando via **ssh** sul VPS dà un link per registrare una passkey nuova. ⚠ Con due porte il pannello è forte quanto la più debole: l'account Google |
 
-✅ **Tutto il sito è in inglese, pannello compreso** (utente, 9 ott). Mockup in `grafica/sito-mockup/`.
+✅ **Tutto il sito è in inglese, pannello compreso** (utente, 9 ott). Mockup in `grafica/sito-mockup/`. ✅ Visti e approvati per ora
+la pagina d'accesso e l'area cliente (utente, 9 ott: *«semplice, elegante e senza fronzoli … al momento mi sembrano ok»*).
 
 🔸 **Due parti riservate, costruite insieme e tenute separate** (utente, 9 ott: *«ci sono due versioni della parte
 riservata: quella dei clienti registrati e quella mia»*): **le pagine sono le stesse** (la scheda di una licenza, la
@@ -223,45 +207,48 @@ avvisi a queste due domande. Il prodotto non cambia.
 
 ## 7. Come si prova, senza VPS vero
 
-- ⭐ **Il servizio finto è il servizio vero**, in un contenitore podman sul portatile, con chiavi di prova e un
-  orologio spostabile (per far scadere trial e full in un minuto invece che in 30 giorni o un anno).
+- ⭐ **Il servizio finto è il servizio vero**, in un contenitore podman sul portatile, con chiavi di prova, un
+  **orologio spostabile** (14 giorni in un minuto) e una **posta finta** che raccoglie le email per guardarle.
 - **Il prodotto lo trova** con un'opzione (`--licenze-url`), che il pacchetto non mette mai.
-- **I casi**, uno per banco: trial nuova · trial già data sulla stessa macchina · trial scaduta → codice → si
-  entra · full scaduta e rinnovata dal «pagamento» · VPS spento dentro e oltre la tolleranza · proxy (squid in un
-  contenitore) · attestato copiato su un'altra macchina · clone (due avvii vivi) · chiave del VPS revocata ·
-  orologio della macchina riportato indietro · secondo utente in trial (`0x12`).
-- ⚠ **I banchi di oggi** (la suite corta, le salite della 16) aprono fino a 16 sessioni: senza licenza si
-  fermerebbero a 1. ⇒ Le scatole di prova prendono una **gold di prova** dal servizio finto, come ogni cliente
-  (§10.30: niente versione speciale del programma).
+- **I casi**: trial nuova · trial già data alla stessa impronta (stessa fine) · impronta vuota («scrivici») ·
+  chiave usata due volte · upgrade trial → full → gold · scadenza, avvisi, tolleranza, fine con i desktop vivi ·
+  rinnovo dal «pagamento» · VPS spento dentro e oltre i 14 giorni · proxy (squid in un contenitore) · guasto a metà
+  controllo (mai un falso clone) · clone con scelta, senza scelta (blocco a 7 giorni lavorativi) e a 15 · gold
+  doppia · recupero · VPS tornato a un salvataggio vecchio · chiave del VPS revocata · orologio della macchina
+  indietro · area cliente e pannello nel browser (Marionette, come i banchi della pagina).
+- ⚠ **I banchi di oggi** prendono una **gold di prova** dal servizio finto, come ogni cliente.
 
 ## 8. I passi, in ordine
 
-*Rifatta il **9 ottobre 2026** dopo le decisioni di §10 e §11 (la stima del piano scritto l'8 ott era ~72 ore).
-Entrano: il biglietto giornaliero (qui orario), la scelta del cliente con la pagina e le email, il recupero, la
-posta dal VPS, il formato dei messaggi con le prove comuni C/Go. Escono: il TPM, il conteggio degli utenti
-(trial a utenti illimitati), le integrazioni coi cloud.*
+*Rifatta il **9 ottobre 2026** sera (la stima del mattino era ~122 ore). Entrano: il sito (vetrina, area cliente,
+pannello, accessi con link all'email, Google e passkey), la funzione della gold, l'upgrade, l'installatore che
+chiede la chiave, il comando `remotix licenza`. Escono: il campo della chiave nella pagina, il link di conferma
+della trial (la chiave per email conferma l'indirizzo), il limite di un utente.*
 
 | # | passo | ore |
 |---|---|---|
-| 0 | `RCP.md` coi motivi di chiusura e i messaggi della licenza | 1 |
-| 1 | **le chiavi**: radice fuori linea, chiave del VPS di prova, l'**elenco firmato dalla radice** (indirizzi, chiavi, revoche), ripresi dalla catena A | 6 |
+| 0 | `RCP.md`: `0x11 LICENZA` e i messaggi della licenza | 1 |
+| 1 | **le chiavi**: radice fuori linea, chiave del VPS di prova, l'elenco firmato (indirizzi, chiavi, revoche), dalla catena A | 6 |
 | 2 | **il formato dei messaggi**: binario a lunghezze fisse, firmato; esempi comuni C/Go; fuzzing dei due lettori | 6 |
-| 3 | **il servizio** (Go): attivazione, controllo orario col **biglietto** (consumo atomico, risposta ripetibile, prova firmata per il ritorno a un salvataggio vecchio), sdoppiamenti coi **nomi brevi**, la **pagina di scelta** (72 ore, promemoria a 24, scelta tardiva, 1 ogni 30 giorni, 3 in 90 a chi vende), recupero e spostamento, trial senza doppioni, RDAP, cancellazioni a 6 mesi e 2 anni | 30 |
-| 4 | **la posta dal VPS**: Postfix solo in uscita, SPF/DKIM/DMARC, PTR, i testi delle email, prove verso Gmail/Microsoft/Yahoo | 6 |
-| 5 | **lo strumento** di chi vende: crea full e gold, revoca, trial a mano, sblocco del limite dei 30 giorni, gli sdoppiamenti da guardare | 7 |
-| 6 | **l'ingresso del pagamento** (rinnova/sospendi, senza processore) | 2 |
-| 7 | **il prodotto, il messaggero** (processo a parte, libcurl, proxy): richiesta scritta su disco prima di partire, biglietto, ora fidata, impronta da più fonti con le scritte di fabbrica scartate, descrizione dell'hardware, IP interni | 16 |
-| 8 | **il prodotto, l'accesso**: stato della licenza, alla scadenza collegamenti chiusi e desktop vivi, la copia rimasta indietro | 6 |
-| 9 | **la pagina**: i tre stati, il campo del codice, gli **avvisi alla RootSpeak** con «ho letto» (trial e full), il nome breve della copia, «Recupera», lo spostamento | 10 |
-| 10 | **i banchi**: servizio finto e posta finta in contenitore; guasti a metà controllo, cloni, ritorno del VPS a un salvataggio vecchio, scelta e mancata scelta; la suite corta e le salite con la gold di prova | 16 |
-| 11 | **pacchetti e installatore**: libcurl nelle tre famiglie, la chiave vera nel comando di rilascio | 5 |
-| 12 | **il VPS vero**: servizio, unità, certificato, posta, copie cifrate fuori dal VPS | 6 |
-| 13 | `SPECIFICHE.md`, `DECISIONI.md` §10.30 riallineata, **la bozza dell'informativa** sulla riservatezza (da far controllare) | 5 |
-| | **totale** | **~122 ore ≈ 15 giorni di lavoro** |
+| 3 | **il servizio** (Go): A1-A8 (attivazione per classe, upgrade, biglietto con consumo atomico e risposta ripetibile, recupero, rilascio), le impronte della trial, gli sdoppiamenti coi nomi brevi e RDAP, l'orologio E1-E6, il ritorno a un salvataggio vecchio | 32 |
+| 4 | **la posta dal VPS**: Postfix in uscita, SPF/DKIM/DMARC, PTR, i testi in inglese, prove verso Gmail/Microsoft/Yahoo | 6 |
+| 5 | **il sito pubblico**: le pagine fisse dai mockup, i testi, la richiesta della chiave (B0) | 8 |
+| 6 | **l'area cliente**: link all'email, «Accedi con Google», la scheda della licenza, scelta della copia, recupero, rinnovo automatico, cambio email | 14 |
+| 7 | **il pannello**: passkey e Google (solo il tuo account), D1-D13, la cassetta «da decidere», l'avviso a ogni operazione, la registrazione via ssh | 14 |
+| 8 | **la funzione della gold** (comando via ssh) e **l'ingresso del pagamento** (rinnova, sospendi, riattiva, nuova full) | 4 |
+| 9 | **il prodotto, il messaggero** (processo a parte, libcurl, proxy, richiesta su disco, biglietto, ora fidata, `HW_FINGERPRINT` con le scritte di fabbrica scartate, descrizione della macchina) | 16 |
+| 10 | **il prodotto, l'accesso e il comando** `remotix licenza`: stati, fine con i desktop vivi, copia rimasta indietro | 10 |
+| 11 | **la pagina d'accesso**: gli stati di §15.10, gli avvisi con «ho letto», il nome breve della copia | 8 |
+| 12 | **l'installatore**: la `LICENSE_KEY` in CLI, TUI e GUI, `--license-key`, il caso senza rete | 5 |
+| 13 | **i banchi** (§7) e la suite corta con la gold di prova | 16 |
+| 14 | **pacchetti**: libcurl nelle tre famiglie, la chiave vera solo nel comando di rilascio | 4 |
+| 15 | **il VPS vero**: Caddy col sito, il servizio, l'unità, la posta, le copie cifrate fuori | 6 |
+| 16 | `SPECIFICHE.md`, `DECISIONI.md` §10.30, la **bozza dell'informativa** (da far controllare a un legale) | 5 |
+| | **totale** | **~161 ore ≈ 20 giorni di lavoro** |
 
-⚠ La stima è di chi non ha ancora scritto una riga: il servizio (passo 3), il messaggero (passo 7) e la pagina
-(passo 9) sono i punti dove la storia del progetto dice che si sbaglia per difetto. ⚠ Il passo 4 dipende da OVH
-(porta 25 aperta, PTR impostabile): se OVH non lo permette serve un inoltro, ed è una decisione dell'utente.
+⚠ La stima è di chi non ha ancora scritto una riga: il servizio (3), il messaggero (9) e l'area cliente col
+pannello (6, 7) sono i punti dove la storia del progetto dice che si sbaglia per difetto. ⚠ Il passo 4 dipende da
+OVH (porta 25, PTR). ⚠ «Accedi con Google» chiede di registrare REMOTIX presso Google (un'ora, account di chi vende).
 
 ## 9. Che cosa resta fuori
 
@@ -270,9 +257,14 @@ posta dal VPS, il formato dei messaggi con le prove comuni C/Go. Escono: il TPM,
 - **la prova di capacità per il cliente** (§10.30, il programma accanto al server): è un lavoro suo, non della
   licenza; si fa dopo;
 - ~~un **pannello web** per chi vende~~ ⛔ rientrato il 9 ott su richiesta dell'utente (§4);
+- **la documentazione tecnica** (con la guida al dimensionamento e la tabella delle prestazioni, `fasi/20` §5): il
+  sito ci rimanda, ma si scrive a parte;
+- «Accedi con Microsoft»: dubbio dell'utente, si aggiunge dopo se serve;
 - difese contro chi modifica il binario: §10.30 lo dichiara, la licenza tiene onesti gli onesti.
 
 ## 10. Domande per l'utente, una per volta
+
+*⚠ Storia (8-9 ott): le risposte sono confluite in `SPECIFICHE.md` §15, che vale sopra questa sezione.*
 
 1. **La tolleranza se la rete manca**: quanti giorni il server continua a far entrare senza riuscire a parlare
    col VPS? (⚠ Va più lunga del tempo per rimettere in piedi il VPS, §10.30; e ogni quante ore si ricontrolla.)
