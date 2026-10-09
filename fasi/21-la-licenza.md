@@ -303,6 +303,9 @@ posta dal VPS, il formato dei messaggi con le prove comuni C/Go. Escono: il TPM,
      risponde l'avviso all'amministratore parte **una volta**, poi **una al giorno**, non ogni ora. Anche la copia
      rimasta indietro chiede il suo stato ogni ora (senza consumare biglietti).
 
+> ⭐ **Le regole in vigore della licenza stanno in `SPECIFICHE.md` §15** (9 ott): questo documento resta il piano
+> di lavoro e la storia delle domande.
+
 ## 11. Il confronto con ChatGPT: la soluzione su cui si è convenuto (8 ott 2026, notte)
 
 *Chiesto dall'utente: «intavola un serrato confronto tecnico con ChatGPT … fino a quando non avete una soluzione

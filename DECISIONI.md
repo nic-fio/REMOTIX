@@ -6251,6 +6251,9 @@ dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la 
 
 ### 10.30 ✅ REMOTIX diventa a codice chiuso, con trial e versione full a pagamento (5 ott 2026)
 
+> ⭐ **Le regole in vigore stanno in `SPECIFICHE.md` §15** (9 ott 2026). Qui resta la storia: alcune voci
+> sotto sono state superate da decisioni successive.
+
 Parole dell'utente: *«voglio rendere il prodotto utilizzabile in versione trial limitata e in versione full solo
 dopo aver acquistato una licenza di utilizzo»*; alla domanda «paga solo chi lo usa per lavoro (A), o paga
 chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
