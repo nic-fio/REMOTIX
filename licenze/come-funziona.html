@@ -174,8 +174,8 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
 <table>
   <thead><tr><th>ingresso</th><th>per chi</th><th>come si entra</th><th>che cosa c'è</th></tr></thead>
   <tbody>
-    <tr><td>Pubblico</td><td>chiunque</td><td>libero</td><td>la vetrina, «Prova gratis», «Acquista»: qui, e solo qui, si chiedono le chiavi</td></tr>
-    <tr><td>Area cliente</td><td>chi ha una licenza, trial compresa</td><td>link mandato all'email (vale una volta e per poco, niente password) oppure «Accedi con Google»</td><td>licenze, stato e scadenze, copie attive, scelta della copia, rinnovo e rinnovo automatico sì/no, cambio email</td></tr>
+    <tr><td>Pubblico</td><td>chiunque</td><td>libero</td><td>la vetrina e «Prova gratis»: la trial si chiede da qui. «Acquista» porta all'accesso all'area cliente</td></tr>
+    <tr><td>Area cliente</td><td>chi ha una licenza, trial compresa</td><td>link mandato all'email (vale una volta e per poco, niente password) oppure «Accedi con Google»</td><td><b>l'acquisto della full</b> (solo da qui, dopo l'accesso), licenze, stato e scadenze, copie attive, scelta della copia, rinnovo e rinnovo automatico sì/no, cambio email</td></tr>
     <tr><td>Pannello</td><td>solo tu</td><td>passkey (impronta o PIN) oppure Google, solo col tuo account e con la verifica in due passaggi</td><td>le tue operazioni (sezione 16); ogni operazione importante ti manda subito un avviso. Se resti fuori: ssh sul VPS e una passkey nuova</td></tr>
   </tbody>
 </table>
@@ -267,7 +267,7 @@ stateDiagram-v2
 
 <!-- ============================================================ 5 -->
 <h2 id="attivazione"><span class="n">7</span>L'attivazione <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Dal sito al server funzionante. La chiave si chiede solo dal sito, e l'installatore non chiede dati personali: chiede solo la chiave.</p>
+<p class="testo">Dal sito al server funzionante. La chiave si chiede solo dal sito, e l'installatore non chiede dati personali: chiede solo la chiave. Lo schema mostra la trial; la full si compra solo dall'area cliente, dopo l'accesso, quindi la sua email è già verificata e la chiave arriva lì e per email.</p>
 <pre class="mermaid">
 sequenceDiagram
     autonumber
@@ -505,7 +505,7 @@ sequenceDiagram
 <table>
   <thead><tr><th>chi</th><th>dove</th><th>che cosa fa</th></tr></thead>
   <tbody>
-    <tr><td>Acquirente</td><td>sito, email, area cliente</td><td>chiede la chiave, paga, sceglie il rinnovo automatico o no, sceglie la copia, cambia la sua email</td></tr>
+    <tr><td>Acquirente</td><td>sito, email, area cliente</td><td>chiede la trial dalla vetrina, compra la full dall'area cliente, sceglie il rinnovo automatico o no, sceglie la copia, cambia la sua email</td></tr>
     <tr><td>root sul server</td><td>installatore, comando <span class="cod">remotix licenza</span></td><td>inserisce la chiave (o il numero, nella proposta), fa l'upgrade, guarda lo stato, chiede un controllo subito</td></tr>
     <tr><td>Utenti del server</td><td>pagina d'accesso, desktop</td><td>vedono gli avvisi e lo stato; non toccano mai la licenza</td></tr>
     <tr><td>REMOTIX</td><td>server del cliente</td><td>attiva, controlla ogni ora, mostra gli avvisi, si ferma a licenza scaduta</td></tr>

@@ -1555,7 +1555,11 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 - ✅ **La chiave si chiede SOLO dal sito** (utente, 9 ott: *«serve un sito web dove il cliente inserisce i dati e
   ottiene poi per email il codice»*): `remotix.nicfio.it`, trial e full dallo stesso sito, la `LICENSE_KEY` arriva
   per email. L'installatore **non chiede dati**: chiede solo la `LICENSE_KEY`, e a chi non ce l'ha mostra l'indirizzo
-  del sito. ⇒ **Il link di conferma sparisce**: ricevere la chiave conferma l'email.
+  del sito.
+- ✅ **La full si compra solo dall'area cliente, dopo l'accesso** (utente, 9 ott: *«l'acquisto può essere fatto solo
+  dalla sezione privata dopo essersi loggati al sito»*). «Acquista» sulla vetrina porta all'accesso (link all'email o
+  Google) e poi all'acquisto. ⇒ L'email è verificata prima di pagare, e la licenza nasce già nell'account
+  dell'acquirente. La trial resta dalla pagina pubblica. ⇒ **Il link di conferma sparisce**: ricevere la chiave conferma l'email.
 - **Chiederla e installare giorni dopo non costa niente**: i giorni partono quando la chiave **entra
   nell'installazione**, non quando arriva l'email. 🔸 Una chiave trial **mai usata scade dopo 30 giorni** (pulizia:
   chi la vuole dopo ne chiede un'altra; la trial resta una per `HW_FINGERPRINT`).
