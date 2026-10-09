@@ -101,16 +101,16 @@ il server e poi definiamo l'interfaccia web»*): ⛔ supera la tabella dell'8 ot
 ogni N ore). Le regole stanno in `SPECIFICHE.md` §15 e qui non si ripetono: ogni riga rimanda. ⏳ **Da approvare**:
 le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
-**A. Il prodotto** (il server del cliente; ogni domanda è firmata con la firma dell'installazione)
+**A. Il prodotto** (il server del cliente; ogni domanda è firmata con la `INSTALL_KEY`)
 
 | # | operazione | che cosa fa | §15 |
 |---|---|---|---|
-| A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla firma dell'installazione, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
-| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (scala ✅ trial → full → gold); stessa firma dell'installazione, l'anno parte da qui | 15.3 |
+| A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla `INSTALL_KEY`, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
+| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (scala ✅ trial → full → gold); stessa `INSTALL_KEY`, l'anno parte da qui | 15.3 |
 | A3 | **controlla** (ogni ora, e «controlla ora») | consuma il biglietto e ne dà uno nuovo con l'attestato; ridà **la stessa risposta** a una richiesta identica; scopre lo sdoppiamento; dice lo stato (valida, in tolleranza, sospesa, revocata, bloccata, gold doppia) | 15.4, 15.8 |
 | A4 | **stato della copia indietro** | risponde senza consumare biglietti | 15.9 |
 | A5 | **rilascia** | la vecchia installazione firma il rilascio per lo spostamento volontario | 15.9 |
-| A6 | **chiedi il recupero** | numero di licenza + firma dell'installazione nuova ⇒ email di conferma all'acquirente; rispetta «uno ogni 30 giorni» | 15.9 |
+| A6 | **chiedi il recupero** | numero di licenza + `INSTALL_KEY` nuova ⇒ email di conferma all'acquirente; rispetta «uno ogni 30 giorni» | 15.9 |
 | A7 | **dammi l'elenco firmato** | indirizzi, chiavi valide e revoche, firmati dalla chiave madre | 15.11 |
 | A8 | **descrivi la macchina** | dentro A1-A3: descrizione dell'hardware, IP interni, nome; il servizio tiene solo l'ultima | 15.8, 15.12 |
 
@@ -120,7 +120,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 |---|---|---|
 | B0 | **chiedi una chiave trial**: email (obbligatoria), nome e azienda (facoltativi), ✅ utente 9 ott ⇒ la chiave arriva per email (🔸 e così l'email è confermata, senza link a parte). Dall'installatore o dalla pagina del servizio | 15.7 |
 | B1 | **compra una full**: dalla pagina del servizio (`remotix.nicfio.it`, «Acquista»); chi compra può non essere l'amministratore. ⏳ I dati dipendono dal processore. Finché non c'è, la crea chi vende (D1) | 15.3 |
-| B2 | **scegli la copia** fra le due attive; la tenuta riceve una firma dell'installazione nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
+| B2 | **scegli la copia** fra le due attive; la tenuta riceve una `INSTALL_KEY` nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
 | B3 | **conferma il recupero** | 15.9 |
 | B4 | **rinnovo automatico sì/no** — 🔸 lo tiene il processore di pagamento, qui solo il collegamento; ⏳ dipende dal processore | 15.6 |
 

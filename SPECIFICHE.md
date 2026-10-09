@@ -1384,7 +1384,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
   | scadenza, avvisi, rinnovo | **nessuno** |
   | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
   | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
-  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una firma dell'installazione nuova. Nessuna pagina di scelta, nessuna fermata automatica |
+  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una `INSTALL_KEY` nuova. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
 - ⭐ **Tutti i giorni sono SOLARI, non lavorativi** (utente, 9 ott): sabati, domeniche e festivi contano. Ogni
@@ -1405,23 +1405,23 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 
 ### 15.3 L'attivazione
 
-1. Chi compra riceve per email la **chiave di licenza**: una stringa lunga da incollare. Indica **quale** licenza
+1. Chi compra riceve per email la **`LICENSE_KEY`**: una stringa lunga da incollare. Indica **quale** licenza
    si è comprata.
-2. Alla prima attivazione il prodotto crea la **firma dell'installazione** (una coppia di chiavi crittografiche; la parte
+2. Alla prima attivazione il prodotto crea la **`INSTALL_KEY`** (una coppia di chiavi crittografiche, **casuale**: non viene dall'hardware; la parte
    segreta sta in un file leggibile solo da root e **non lascia mai** il server).
-   La chiave di licenza ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
-5. ⛔ **Una chiave di licenza si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
+   La `LICENSE_KEY` ha **almeno 128 bit casuali** e il prodotto **non la conserva** dopo l'attivazione.
+5. ⛔ **Una `LICENSE_KEY` si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
    attivazione non si riutilizzano mai»*): consumato alla prima attivazione, poi rifiutato per sempre; mai
    rigenerato uguale, nemmeno dopo una revoca o una scadenza. Il servizio tiene per sempre l'**impronta cifrata**
    delle chiavi usate (non è un dato personale, quindi non ricade nei tetti di §15.12).
 6. Accanto alla chiave, chi compra riceve il **numero di licenza** (per esempio `RX-000123`): **non è segreto**, serve
    al recupero (§15.9) e all'assistenza. ⇒ La chiave attiva, il numero identifica; recupero e spostamento **non
    usano mai la chiave**.
-3. Il servizio lega la licenza alla parte pubblica della **firma dell'installazione** e risponde con un **attestato
+3. Il servizio lega la licenza alla parte pubblica della `INSTALL_KEY` e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
 4. ✅ **La licenza la decide la classe della chiave** (utente, 9 ott: *«la licenza è determinata dalla classe della
    chiave»*): c'è una chiave **trial**, una **full** e una **gold**, e ogni installazione ne inserisce una. ⛔ Supera
-   «la trial si attiva senza codice». 🔸 «Chiave» è **solo** quella che si inserisce; la coppia che il server crea per sé si chiama **firma dell'installazione**. 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
+   «la trial si attiva senza codice». ✅ **I nomi** (utente, 9 ott): `LICENSE_KEY` è quella che si inserisce; `INSTALL_KEY` la coppia che il server crea per sé; `HW_FINGERPRINT` l'impronta dell'hardware (§15.7). 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
    prefisso (`RXT-…`, `RXF-…`, `RXG-…`) per chi legge, ma cambiare il prefisso non cambia niente. La trial resta
    legata in più all'**impronta** (§15.7).
 7. ✅ **L'installazione chiede sempre la chiave** (utente, 9 ott), da root. ✅ **Ogni licenza parte dal momento in cui
@@ -1433,7 +1433,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
      si può saltare un gradino (trial → gold), mai scendere; una full portata a gold perde la scadenza;
    - l'anno della full parte **dall'upgrade** (è il momento in cui la chiave full entra; chi compra al 10° giorno di
      prova non perde 10 giorni);
-   - nessuno viene scollegato, i desktop restano vivi, la firma dell'installazione resta la stessa: il
+   - nessuno viene scollegato, i desktop restano vivi, la `INSTALL_KEY` resta la stessa: il
      controllo successivo dice «full»;
    - il **rinnovo** di una full non è un upgrade: si paga col numero di licenza, nessuna chiave nuova (§15.6).
 9. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa dopo la prima volta:
@@ -1442,7 +1442,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 
 ### 15.4 Il controllo, ogni 60 minuti
 
-- Ogni ora il prodotto chiede al servizio lo stato della licenza: **firma con la firma dell'installazione** una sfida del
+- Ogni ora il prodotto chiede al servizio lo stato della licenza: **firma con la sua `INSTALL_KEY`** una sfida del
   servizio e presenta il **biglietto** dell'ultima volta.
 - Il **biglietto** vale **una volta sola**: il servizio lo consuma e ne consegna uno nuovo insieme all'attestato.
   ⇒ Due copie della stessa installazione (un clone, un backup ripristinato) partono con lo stesso biglietto:
@@ -1500,7 +1500,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 
 ### 15.7 La trial
 
-- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware**.
+- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware** (`HW_FINGERPRINT`).
 - ✅ **All'attivazione si chiede un'email, confermata con un link** (utente, 9 ott: *«unifichiamo i 2
   comportamenti, quindi anche per la trial si chiede l'email; ci semplifichiamo la logica di gestione,
   altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
@@ -1532,7 +1532,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    non sceglie niente). Il link vale una volta e scade.
 5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
    dopo 24»). Nel frattempo le due copie funzionano.
-6. **Scelta fatta**: la copia tenuta riceve una **firma dell'installazione nuova**, l'altra si ferma (i suoi desktop restano vivi
+6. **Scelta fatta**: la copia tenuta riceve una **`INSTALL_KEY` nuova**, l'altra si ferma (i suoi desktop restano vivi
    fino allo spegnimento).
 7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
    utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
@@ -1542,7 +1542,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ Nessuna cancellazione automatica.
 9. **Uno scambio ogni 30 giorni**; chi vende può sbloccarlo a mano. **3 sdoppiamenti in 90 giorni** sulla stessa
    licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
-10. ⛔ **L'impronta descrive, non decide**: a legare la full restano firma dell'installazione e biglietto. Cambiare un disco o una
+10. ⛔ **L'impronta descrive, non decide**: a legare la full restano `INSTALL_KEY` e biglietto. Cambiare un disco o una
     scheda di rete non fa di un cliente una macchina nuova.
 
 ### 15.9 Spostamento e recupero
@@ -1551,9 +1551,8 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 - **Spostamento volontario** dalla pagina d'accesso: la vecchia installazione **firma il rilascio**, la nuova si
   attiva.
 - **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
-  scrive il **numero di licenza** (non la chiave di licenza, già consumata), e conferma dall'**email
-  dell'acquirente**. Il prodotto crea una **firma
-  dell'installazione nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
+  scrive il **numero di licenza** (non la `LICENSE_KEY`, già consumata), e conferma dall'**email
+  dell'acquirente**. Il prodotto crea una `INSTALL_KEY` **nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
   avvisati a recupero fatto.
   ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
 - La **copia rimasta indietro** non viene allungata: lavora fino al suo «valido fino a» e mostra all'amministratore
@@ -1591,7 +1590,7 @@ rimasta indietro.
 
 ### 15.12 La riservatezza
 
-- **Che cosa arriva al servizio**: la parte pubblica della firma dell'installazione, l'impronta cifrata, la descrizione
+- **Che cosa arriva al servizio**: la parte pubblica della `INSTALL_KEY`, l'impronta cifrata, la descrizione
   dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. Il servizio tiene **solo
   l'ultima** di ogni voce, salvo gli sdoppiamenti.
 - **Quanto si tengono** (tetti, non minimi):
