@@ -1419,14 +1419,24 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
    usano mai il codice**.
 3. Il servizio lega la licenza alla **chiave pubblica** dell'installazione e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
-4. La **trial** si attiva senza codice: la lega l'**impronta dell'hardware** (§15.7).
-7. ✅ **L'installazione chiede sempre la licenza** (utente, 9 ott: *«l'installazione prevede sempre l'inserimento del
-   codice»*): l'installatore, da root, chiede il **codice** (full o gold) **oppure** l'**email** (trial). ✅ **Ogni
-   licenza parte dall'installazione**, full come trial (*«la full come la trial parte da quando si installa»*).
-   🔸 ⇒ la pagina d'accesso **non ha più il campo del codice**: lo stato lo mostra, il codice lo mette root.
-   ⏳ **Dalla trial alla full** su un server già installato: da decidere (§15.13).
-8. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non può fare dopo la prima volta:
-   `remotix licenza stato` · `trial --email …` (se all'installazione la rete mancava) · `attiva <codice>` ·
+4. ✅ **La licenza la decide la classe della chiave** (utente, 9 ott: *«la licenza è determinata dalla classe della
+   chiave»*): c'è una chiave **trial**, una **full** e una **gold**, e ogni installazione ne inserisce una. ⛔ Supera
+   «la trial si attiva senza codice». 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
+   prefisso (`RXT-…`, `RXF-…`, `RXG-…`) per chi legge, ma cambiare il prefisso non cambia niente. La trial resta
+   legata in più all'**impronta** (§15.7).
+7. ✅ **L'installazione chiede sempre la chiave** (utente, 9 ott), da root. ✅ **Ogni licenza parte dal momento in cui
+   la sua chiave entra nell'installazione** (*«la full come la trial parte da quando si installa»*). 🔸 ⇒ la pagina
+   d'accesso **non ha il campo della chiave**: mostra lo stato, la chiave la mette root.
+8. ✅ **L'upgrade** (utente, 9 ott: *«ci dev'essere una funzione di upgrade per passare da trial a full»*): da root,
+   `remotix licenza upgrade <chiave>`, su un REMOTIX già installato. 🔸 Le regole:
+   - si sale e basta: **trial → full**, **trial → gold**; mai all'indietro;
+   - l'anno della full parte **dall'upgrade** (è il momento in cui la chiave full entra; chi compra al 10° giorno di
+     prova non perde 10 giorni);
+   - nessuno viene scollegato, i desktop restano vivi, la chiave dell'installazione resta la stessa: il
+     controllo successivo dice «full»;
+   - il **rinnovo** di una full non è un upgrade: si paga col numero di licenza, nessuna chiave nuova (§15.6).
+9. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa dopo la prima volta:
+   `remotix licenza stato` · `upgrade <chiave>` · `attiva <chiave>` (se all'installazione la rete mancava) ·
    `controlla` · `recupera`. È lo stesso programma `remotix`, non l'installatore.
 
 ### 15.4 Il controllo, ogni 60 minuti
@@ -1494,13 +1504,11 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
   comportamenti, quindi anche per la trial si chiede l'email; ci semplifichiamo la logica di gestione,
   altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
   diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
-- ✅ **La trial si chiede dall'installatore**, che gira da root (utente, 9 ott: *«solo gli admin del server possono
-  installare remotix»*), mai dalla pagina d'accesso; chiede l'**email** (obbligatoria), **nome** e **azienda**
-  (facoltativi) (utente, 9 ott: *«confermo»*). Senza domande: l'email si passa al comando.
-- ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott: *«la licenza parte dal giorno dell'installazione di
-  remotix»*), all'ora esatta della richiesta; 🔸 REMOTIX però **lavora solo a email confermata**: chi conferma tardi
-  non guadagna giorni. Senza rete all'installazione, la si chiede poi con `remotix licenza trial` (§15.3) e l'ora è quella della prima richiesta riuscita.
-- La full parte anche lei dall'installazione (§15.3 punto 7).
+- ✅ **I dati** (utente, 9 ott, *«confermo»*): **email** (obbligatoria), **nome** e **azienda** (facoltativi).
+- 🔸 **La chiave trial si chiede con quei dati** e **arriva per email**: dall'installatore («non ho una chiave:
+  chiedine una di prova»), o dalla pagina del servizio. ⇒ **Il link di conferma sparisce**: ricevere la chiave
+  conferma l'email. Una chiave trial mai usata **scade dopo 30 giorni**.
+- ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott), cioè da quando la chiave trial entra, all'ora esatta.
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
   del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,
   «Not Specified», tutti zeri) **si scartano** prima del calcolo. Al servizio arrivano solo impronte cifrate.

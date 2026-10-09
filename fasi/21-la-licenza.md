@@ -105,8 +105,8 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
 | # | operazione | che cosa fa | §15 |
 |---|---|---|---|
-| A1 | **attiva con codice** | consuma il codice (una volta, per sempre), lega la licenza alla chiave pubblica, dà attestato e primo biglietto | 15.3 |
-| A2 | **chiedi la trial** | riceve impronta ed email, manda il link di conferma; se l'impronta ha già avuto la trial ridà la **stessa** data di fine; se l'impronta è vuota risponde «scrivici» | 15.7 |
+| A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla chiave pubblica, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
+| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (trial → full o gold); stessa chiave dell'installazione, l'anno parte da qui | 15.3 |
 | A3 | **controlla** (ogni ora, e «controlla ora») | consuma il biglietto e ne dà uno nuovo con l'attestato; ridà **la stessa risposta** a una richiesta identica; scopre lo sdoppiamento; dice lo stato (valida, in tolleranza, sospesa, revocata, bloccata, gold doppia) | 15.4, 15.8 |
 | A4 | **stato della copia indietro** | risponde senza consumare biglietti | 15.9 |
 | A5 | **rilascia** | la vecchia installazione firma il rilascio per lo spostamento volontario | 15.9 |
@@ -118,8 +118,8 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
 | # | operazione | §15 |
 |---|---|---|
-| B0 | **i dati di chi compra** — due pagine, perché nascono in due posti diversi: la **trial** si chiede **dall'installatore** (`remotix-install`, CLI/TUI/GUI, gira da root: utente, 9 ott, *«solo gli admin del server possono installare remotix»*; l'impronta si calcola solo sul server del cliente), con `--email` per l'installazione senza domande; se all'installazione la rete manca, la si chiede dopo da root con `remotix licenza trial` (`SPECIFICHE.md` §15.3 punto 8). ✅ (utente, 9 ott). ⛔ Non dalla pagina d'accesso: lì entra qualunque utente con un account; la **full** si compra **dalla pagina del servizio** (`remotix.nicfio.it`), raggiunta da «Acquista»: chi compra può non essere l'amministratore, e compra prima di installare. Il codice si inserisce **sempre all'installazione**, da root (`SPECIFICHE.md` §15.3 punto 7). ✅ la trial chiede email (obbligatoria), nome e azienda (facoltativi), utente 9 ott; la full: ⏳ dipende dal processore | 15.3, 15.7 |
-| B1 | **conferma l'email della trial** — ✅ i 14 giorni partono dall'**installazione** (utente, 9 ott); 🔸 REMOTIX lavora solo a email confermata, così confermare tardi non allunga niente | 15.7 |
+| B0 | **chiedi una chiave trial**: email (obbligatoria), nome e azienda (facoltativi), ✅ utente 9 ott ⇒ la chiave arriva per email (🔸 e così l'email è confermata, senza link a parte). Dall'installatore o dalla pagina del servizio | 15.7 |
+| B1 | **compra una full**: dalla pagina del servizio (`remotix.nicfio.it`, «Acquista»); chi compra può non essere l'amministratore. ⏳ I dati dipendono dal processore. Finché non c'è, la crea chi vende (D1) | 15.3 |
 | B2 | **scegli la copia** fra le due attive; la tenuta riceve una chiave nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
 | B3 | **conferma il recupero** | 15.9 |
 | B4 | **rinnovo automatico sì/no** — 🔸 lo tiene il processore di pagamento, qui solo il collegamento; ⏳ dipende dal processore | 15.6 |
@@ -138,7 +138,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 |---|---|---|
 | D1 | **crea una full**: email dell'acquirente, nota ⇒ numero `RX-…` e codice, email al compratore | 15.1, 15.3 |
 | D2 | **crea una gold**: nota («scatola 3») ⇒ numero e codice | 15.1 |
-| D3 | **attiva una trial a mano** (la macchina senza impronta) | 15.7 |
+| D3 | **dai una chiave trial a mano** (la macchina senza impronta, o chi ha bisogno di più giorni) | 15.7 |
 | D4 | **rinnova a mano** (pagamento fuori processore, finché il processore non c'è) | 15.6 |
 | D5 | **sospendi · riattiva · revoca** | 15.1, 15.10 |
 | D6 | **gold doppia**: guarda le due copie, **disabilita una** | 15.1 |
@@ -160,7 +160,7 @@ delle revoche, §15.11). Resta un comando sul portatile: se il pannello venisse 
 | E1 | le email della scadenza: 3°, 2° e ultimo giorno lavorativo prima (l'ultimo alle 11 e alle 16), poi una al giorno alle 11 nella tolleranza; si fermano al rinnovo | 15.6 |
 | E2 | l'avviso 7 giorni prima dell'addebito automatico | 15.6 |
 | E3 | sdoppiamenti: un'email al giorno per 7 giorni lavorativi, poi **blocco**; a 15 giorni lavorativi la licenza va nella cassetta di chi vende | 15.8 |
-| E4 | i link (conferme, scelta) scadono | 15.8 |
+| E4 | i link (scelta, recupero) e le chiavi trial mai usate (30 giorni) scadono | 15.8 |
 | E5 | le cancellazioni: sdoppiamenti a 6 mesi, il resto a 2 anni | 15.12 |
 | E6 | la copia cifrata fuori dal VPS, ogni giorno | 15.11 |
 
