@@ -825,6 +825,7 @@ class Attore:
             self.evento("nascita", **nascita)
             if not lavora_dopo_nascita(nascita):
                 codice = 1
+                self.salva_diagnosi()
                 if o.controllo:
                     return codice
                 self.aspetta_la_fine("accesso non riuscito")
@@ -884,6 +885,14 @@ class Attore:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             self.chiudi()
         return codice
+
+    def salva_diagnosi(self):
+        """Una nascita fallita: ~/.xsession-errors e il registro di Xorg dell'inquilino
+        nella cartella, PRIMA che lo sgombero li cancelli."""
+        c, t = self.sc.dentro("for f in /home/%s/.xsession-errors /home/%s/.xorgxrdp.*.log; do "
+                              "echo \"== $f\"; tail -n 60 \"$f\" 2>/dev/null; done" % (self.chi, self.chi), 60)
+        with open(os.path.join(self.cartella, "diagnosi-sessione.txt"), "w") as f:
+            f.write(t or "")
 
     def aspetta_la_fine(self, perche):
         self.evento("in_attesa", perche=perche)

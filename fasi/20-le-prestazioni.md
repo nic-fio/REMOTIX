@@ -249,6 +249,56 @@ dell'ospite**: a 4K, 16 utenti significano 16 decodifiche RemoteFX più 16 Xorg.
 4. **la coda non si ferma per un processo ucciso:** `OOMPolicy=continue`, come in `16-coda.sh`.
 ⇒ Il limite di quanti clienti regge l'ospite resta quello di §7.6 rischio 1, e il recinto `browser` lo mostra.
 
+### 7.8 Il banco è scritto e provato; la campagna NON è partita (9 ott, sera)
+
+**Che cosa c'è** (commit `31d5b50` e seguenti, in `banchi/16-stress/`):
+- `16-attore-rdp.py`: lo stesso ritmo e gli stessi quattro lavori di `16-attore.py`. FreeRDP `/gfx` a tutto
+  schermo in un Xvfb, le mani con XTEST, la foto dall'Xvfb, la sonda XDamage sulla finestra di FreeRDP
+  (raffiche a 5 ms). Con `--controllo` fa il controllo corto ridotto di §7.3 (accesso, schermo, tastiera), con
+  un inquilino per livello (`c16<9NN>u99`), e se la nascita fallisce salva `~/.xsession-errors` e il registro di
+  Xorg;
+- `16-compositori-rdp.sh` (un Xvfb per utente, con `oom_score_adj` 800);
+- `--sistema xrdp` in `16-salita.py` (la scatola, la 3389, xrdp acceso, i registri di xrdp, le versioni dei
+  pacchetti, `dpkg --verify` per dimostrare che la configurazione è quella del pacchetto, la guardia di §7.7,
+  sshd a −900), in `16-risorse.py` (i recinti di §7.4) e in `16-classifica.py` (le voci di §7.3; registro
+  `registro-xrdp.jsonl`);
+- in `16-coda.sh` e `16-campagna.sh`: `REMOTIX_16_SISTEMA=xrdp` e il preventivo delle ore scritto in `campagna.log`
+  dopo ogni salita.
+Tutte le certificazioni passano: attore-rdp, classifica 38 su 38 (4 nuove per xrdp), risorse 21 su 21.
+
+**Misurato** `[M]`, prova XFCE 2K Intel (`prova-x20-xfce-2k`, gradini 1, 2, 4 da 5 minuti):
+- livelli 1, 2 e 3: **GREEN**. Ritardo impulso → disegno, p95 dal lato di chi guarda: 17-41 ms; nascita
+  2,6-2,7 s; video D 24,8 dipinti/s (0,83·f). Le quattro foto del livello 4 sono state guardate e sono giuste:
+  A naviga, B Thunar, C terminale, D il film a tutto schermo;
+- livello 4: **FAIL, due volte su due**, e ogni volta per la stessa voce, cioè il controllo corto: la quinta
+  sessione non nasce.
+
+**⛔ La scoperta: con una sessione che guarda il video, xrdp non fa più entrare nessuno.** `[M]` Riprodotta
+**senza il banco**, con soli `xfreerdp3` e Firefox a mano:
+
+| sessioni già aperte | il film 4K gira in una? | la sessione dopo | scheda |
+|---|---|---|---|
+| 6 in fila, tutte ferme | no | nascono tutte e 6 | Intel |
+| 1 | sì | nasce | Intel e Radeon |
+| 4 | sì | **la 5ª e la 6ª muoiono subito** | Intel e Radeon |
+
+Ogni volta l'**Xorg della sessione nuova va in crash** in xorgxrdp (`rdpCapture`, `(EE) Backtrace` in
+`~/.xorgxrdp.NN.log`), `startxfce4` esce con 1, e FreeRDP riceve `ERRINFO_LOGOFF_BY_USER`. Non dipende dal nome
+dell'inquilino, dal banco o dalla scheda grafica.
+⇒ Nella salita il profilo D entra quarto. Da lì in poi nessun utente nuovo nasce, e **ogni salita di xrdp si
+fermerebbe a 3 utenti**, su tutti i desktop e a tutte le misure, per un crash e non per le risorse. La campagna
+(32 salite, ~1 giorno) produrrebbe soprattutto questo numero, ripetuto 32 volte.
+
+**La decisione è dell'utente**, prima di partire:
+1. **si misura così**: è xrdp come lo installa Debian 13, ed è un risultato vero (a un cliente con 4 colleghi,
+   uno dei quali guarda un video, xrdp rifiuta l'accesso). La campagna dirà 3 ovunque, più CPU, RAM e
+   ritardo fino a 3;
+2. **prima si guarda il crash** (~½ giornata): se viene da glamor (xorgxrdp disegna sulla scheda) basta provare
+   senza, ma è una modifica a `xorg.conf` di xrdp, cioè **fuori** dalla regola «configurazione del pacchetto»
+   di §7.5, e andrebbe dichiarata;
+3. **si cambia l'ordine degli utenti** solo per xrdp (D entra per ultimo). ⛔ Non lo consiglio: la scena non
+   sarebbe più la stessa, e il crash arriverebbe comunque al livello dopo.
+
 *Scritto l'**8 ottobre 2026** sera, sul portatile, leggendo il banco `banchi/16-stress/`; il server non
 è stato toccato (gira `r20-ripresa`). Serve al punto 4b di §3. ⛔ Niente codice prima che la campagna
 sia finita e questo piano sia letto.*
