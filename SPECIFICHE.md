@@ -1387,6 +1387,11 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una chiave nuova. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
+- ⭐ **Tutti i giorni sono SOLARI, non lavorativi** (utente, 9 ott): sabati, domeniche e festivi contano. Ogni
+  periodo (14 giorni della trial, 14 di tolleranza, 72 ore della scelta, 30 giorni fra uno scambio e l'altro…) si
+  conta **in ore esatte dal momento dell'evento**, in tempo universale (14 giorni = 336 ore): niente ambiguità di
+  fusi orari o di «fine giornata». Alle persone si mostra nell'ora locale.
+
 ### 15.2 Le quattro parti
 
 | parte | dove | che cosa fa |
@@ -1447,8 +1452,8 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
     «rinnova»; 🔸 **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
-  - ⏳ **la tolleranza dopo la scadenza** è da ridecidere: i 14 giorni nascevano per le carte rifiutate del rinnovo
-    automatico (domanda aperta, §15.13).
+  - ✅ **una full scaduta e non rinnovata si blocca dopo 14 giorni** (utente, 9 ott), col rinnovo manuale come
+    con quello automatico.
 - 🔸 **Email all'acquirente 30, 7 e 1 giorno prima della scadenza** (chi paga non guarda per forza la pagina del
   server).
 - **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
@@ -1565,8 +1570,6 @@ rimasta indietro.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
 - ❓ **Da decidere con l'utente** (verifica del 9 ott):
-  0. **la tolleranza dopo la scadenza** della full col rinnovo manuale: fermata il giorno stesso, o qualche giorno
-     (proposta di Claude: 7);
   1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
      la finestra della licenza con la frase della sospensione, come una scaduta;
   2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
