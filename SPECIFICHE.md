@@ -1406,6 +1406,9 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 - ⛔ **Un programma solo**: niente versione speciale senza controllo, nemmeno per la gold (un binario senza
   controllo, se esce, è la versione sbloccata per tutti). La gold passa dalla **stessa strada** del cliente ed è
   **revocabile**.
+- ✅ **La gold si rilascia con una funzione dedicata** del servizio, **non dal pannello** né da nessuna strada «normale»
+  (utente, 9 ott). 🔸 Un comando sul VPS, solo via ssh. ⇒ Chi viola il pannello non crea gold. (La «stessa strada» qui
+  sopra riguarda il **programma**: una gold, una volta inserita, si controlla come le altre.)
 - Finché il pagamento non c'è, le **full si creano a mano** con lo strumento di chi vende.
 - ⭐ **La gold è il caso semplice** (utente, 9 ott: *«i controlli sono ancora più ridotti … ma conserva il limite di
   una licenza per macchina»*):

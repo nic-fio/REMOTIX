@@ -137,7 +137,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 | # | operazione | §15 |
 |---|---|---|
 | D1 | **crea una full**: email dell'acquirente, nota ⇒ numero `RX-…` e chiave, email al compratore | 15.1, 15.3 |
-| D2 | **crea una gold**: nota («scatola 3») ⇒ numero e chiave | 15.1 |
+| D2 | ⛔ **non dal pannello**: la gold si crea con una **funzione dedicata** del servizio (✅ utente, 9 ott: *«le licenze gold vengono rilasciate tramite una funzione dedicata del server delle licenze. Non seguono una strada normale»*). 🔸 Un comando sul VPS, raggiungibile solo via ssh con la chiave del portatile: chi viola il pannello non crea gold. Nota («scatola 3») ⇒ numero e chiave | 15.1 |
 | D3 | **dai una chiave trial a mano** (la macchina senza impronta, o chi ha bisogno di più giorni) | 15.7 |
 | D4 | **rinnova a mano** (pagamento fuori processore, finché il processore non c'è) | 15.6 |
 | D5 | **sospendi · riattiva · revoca** | 15.1, 15.10 |
