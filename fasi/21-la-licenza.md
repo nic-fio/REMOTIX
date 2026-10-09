@@ -392,7 +392,21 @@ trascrizione non si conserva; qui c'è il risultato.*
 6. **Email spedite dal VPS** con il loro rischio di consegna, e il recupero a mano se un'email non arriva.
 7. **La gold deve comunque farsi sentire almeno ogni 14 giorni.**
 8. Per quanto si tengono email degli acquirenti, impronte delle trial e registri (riservatezza).
+   ✅ **9 ott: 2 anni** (utente: *«almeno 2 anni»*), ⚠ ma come **tetto, non come minimo** (correzione di Claude: per
+   il GDPR i dati personali si tengono **non oltre** il necessario, e il periodo va scritto nell'informativa):
+   - email dell'acquirente, licenze e registro delle attivazioni: **2 anni dalla fine del rapporto** (ultima
+     scadenza della full);
+   - impronte delle trial: **2 anni dalla trial** (servono a non darne una seconda);
+   - dati di uno sdoppiamento (IP, RDAP, nomi delle macchine, hardware): **6 mesi** dalla scelta, poi resta solo
+     «sdoppiamento del giorno X, risolto così»;
+   - ⚠ fatture e documenti fiscali seguono la legge (in Italia 10 anni), ma li tiene chi incassa: si decide col
+     pagamento. ⛔ Claude non è un legale: l'informativa va fatta controllare prima della vendita.
 9. Quando fare il TPM; le integrazioni coi cloud solo se i clienti le chiedono.
+   ✅ **9 ott: il TPM esce dal piano** (utente: *«non credo che possiamo farci affidamento: non tutte le VM sono
+   configurate per avere il TPM»*). Coerente con la regola «niente eccezioni per compositore»: una protezione che
+   c'è solo su una parte delle macchine non regge il disegno. Il disegno vale **uguale ovunque** (chiave in un
+   file, biglietto giornaliero, scelta del cliente). Si riapre solo se gli sdoppiamenti diventano un problema
+   vero. Fuori anche le integrazioni coi cloud.
 
 ⚠ **La stima di §8 (~72 ore) va rifatta**: il cricchetto, il recupero via email e la posta del VPS sono lavoro
 in più; l'impronta tolta è lavoro in meno.
