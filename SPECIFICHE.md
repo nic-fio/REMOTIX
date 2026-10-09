@@ -1355,46 +1355,58 @@ invecchia in silenzio è peggio di nessun riferimento.
 bianco la logica di funzionamento delle licenze; se ci dimentichiamo qualche particolare quel documento diventa
 oro»*. ⭐ **Questo capitolo è il riferimento**: contiene solo le regole **in vigore**. Il perché, le date e le
 scelte superate stanno in `DECISIONI.md` §10.30; come si costruisce, i passi e le ore in
-`fasi/21-la-licenza.md`. ⛔ Se una decisione nuova cambia una regola, si corregge **qui**, nello stesso momento.
-Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte tecniche (di Claude o concordate
-*con ChatGPT) sono state **tutte confermate dall'utente il 9 ottobre**.*
+`fasi/21-la-licenza.md` (⚠ il piano va riallineato a questa riscrittura prima di approvarlo); la spiegazione con schemi e tabelle in `licenze/come-funziona.html`. ⛔ Se una decisione
+nuova cambia una regola, si corregge **qui e nella pagina**, nello stesso momento. Il codice non c'è ancora: ogni
+riga è una decisione di prodotto.*
 
-### 15.0 Le chiavi, in breve — da leggere per prime
+*⭐ **Riscritto la sera del 9 ottobre**, dopo la semplificazione decisa dall'utente: *«la complessità di un sistema
+aumenta la probabilità di introdurre punti di vulnerabilità e di perdita di controllo del processo»*. Tolti la firma
+dell'installazione (`INSTALL_KEY`), l'impronta dell'hardware (`HW_FINGERPRINT`), il numero di licenza, il recupero
+con conferma via email e l'upgrade con chiave nuova. Il confronto con ChatGPT (stessa sera) ha confermato che firma
+e impronta non proteggevano niente che il biglietto non coprisse già.*
 
-*Scritto il 9 ott su richiesta dell'utente (*«adesso ho capito, meglio scrivere queste info nella documentazione»*),
-dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
+### 15.0 Gli elementi, in breve — da leggere per primi
 
-**Sul server del cliente** ci sono tre cose, e non vanno confuse:
+**Il sistema poggia su tre elementi**, e su nient'altro dal lato del cliente:
 
-| nome | che cos'è | da dove nasce | a che serve |
+| elemento | che cos'è | chi lo crea | a che serve |
 |---|---|---|---|
-| **`LICENSE_KEY`** | la stringa che arriva per email a chi compra (o a chi chiede la trial) | la crea il servizio | dice **quale** licenza (trial, full, gold: la classe la sa il servizio); si usa **una volta sola**, all'installazione o all'upgrade, poi non serve più a nessuno |
-| **`INSTALL_KEY`** | la **firma elettronica di quella installazione** di REMOTIX: una coppia di chiavi, la segreta in un file leggibile solo da root, la pubblica consegnata al servizio | la crea REMOTIX **a caso** alla prima attivazione; ⛔ **non viene dall'hardware** | ogni ora REMOTIX firma con lei la domanda del servizio: «sono sempre io» |
-| **`HW_FINGERPRINT`** | l'impronta dell'hardware (scheda madre, disco, scheda di rete) | si calcola dal ferro | **solo** due cose: una trial per macchina, e descrivere le copie nell'email; ⛔ non decide niente della full |
+| **`LICENSE_KEY`** | stringa lunga casuale (≥ 128 bit) con il prefisso della classe (`RXT-…` trial, `RXF-…` full, `RXG-…` gold) | il servizio | dice **quale** licenza. È l'**unico identificativo**: serve a ogni installazione |
+| **biglietto** | token casuale **usa e getta**, cambia a ogni controllo orario | il servizio | dice **quale copia** è quella viva: un clone presenta un biglietto già consumato e si scopre |
+| **conferma nell'area cliente** | il pulsante «attiva qui» dell'acquirente, dopo l'accesso al sito | l'acquirente | dice **chi** sta usando la licenza: nessuna installazione parte senza |
 
-- ⭐ **La `INSTALL_KEY` è dell'installazione, non del ferro**: è come una firma digitale su una chiavetta, firma chi
-  ha la chiavetta. Chi sposta REMOTIX su un server nuovo spegnendo il vecchio si porta dietro il file e continua;
-  cambiare un disco non cambia niente.
-- ⭐ **Il clone di un server acceso ha la stessa `INSTALL_KEY`**: la firma da sola non distingue le due copie. Le
-  distingue il **biglietto orario**, che vale una volta: la prima copia lo consuma, l'altra arriva con un biglietto
-  già usato ⇒ entro un'ora il servizio sa che sono due (§15.4, §15.8).
-- **La `INSTALL_KEY` non cifra niente**: è un documento d'identità, non una busta chiusa.
+- ✅ **Un solo identificativo** (utente, 9 ott: *«c'è un dato di troppo … lasciamo solo LICENSE_KEY»*): niente
+  numero di licenza a parte. Fuori dall'area cliente (fatture, assistenza, pannello, email) la chiave si mostra
+  **mascherata**: classe e ultime 4 lettere, `RXF-…-6YRB`. Intera la vede solo l'acquirente nella sua area.
+- ✅ **Una chiave non si riassegna mai** a un'altra licenza (supera «una `LICENSE_KEY` si usa una volta»: con la
+  conferma nell'area cliente, una chiave da sola non fa partire niente, quindi può servire a ogni installazione).
+- La chiave **sul server** serve solo fino al primo biglietto: dopo l'attivazione il prodotto la **cancella dal
+  disco** e va avanti coi biglietti. Per reinstallare la si prende dall'area cliente.
+- Chi vende può **rigenerare** una chiave dal pannello, su richiesta: la vecchia smette di valere, la copia attiva
+  continua coi suoi biglietti. ⛔ Nessun pulsante per il cliente: la custodia delle chiavi è dell'azienda (utente,
+  9 ott: *«non vorrei che REMOTIX debba entrare in aree che non sono di sua competenza»*).
 
 **Chi garantisce che cosa**, nello scambio fra REMOTIX e il servizio:
 
 | che cosa | chi lo garantisce |
 |---|---|
 | nessuno legge i dati per strada | **HTTPS**, il lucchetto normale del web |
-| chi chiede è proprio quell'installazione | la **`INSTALL_KEY`** (firma REMOTIX, il servizio verifica) |
+| la copia che chiede è quella viva | il **biglietto** |
+| chi usa la licenza l'ha autorizzato l'acquirente | la **conferma nell'area cliente** |
 | la risposta («valida fino al…») viene davvero dal servizio | la **chiave del VPS** (firma il servizio, REMOTIX verifica) |
 | la chiave del VPS è autentica, e si può revocare se rubata | la **chiave madre**, fuori linea sul portatile di chi vende (§15.11); ⚠ l'unica insostituibile: persa lei, serve un REMOTIX nuovo per tutti |
 | «rinnova» e «sospendi» vengono davvero dal pagamento | la **chiave del pagamento** |
+
+- ⚠ **Dichiarato**: un proxy aziendale che apre l'HTTPS potrebbe leggere un biglietto in transito. Il proxy è
+  dell'azienda del cliente, dentro il suo perimetro come root: non è una minaccia da cui REMOTIX difende.
+- ⚠ **Dichiarato**: chi ha root e vuole davvero aggirare il controllo modificando il programma può farlo. Il sistema
+  tiene onesti gli onesti, gestisce pagamenti e scadenze, e scopre le copie fatte per errore.
 
 ### 15.1 I tre tipi di licenza
 
 | tipo | utenti | durata | chi la ottiene |
 |---|---|---|---|
-| **trial** | illimitati | **14 giorni** | chiunque installi, **una volta per macchina ogni 5 anni** (§15.12) |
+| **trial** | illimitati | **14 giorni** | chi ha un account sul sito: **una per account** (§15.7) |
 | **full** | illimitati | **1 anno**; rinnovo **a scelta del cliente** (§15.6) | ⭐ **l'unica in vendita** |
 | **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova (le **4 scatole** e il server di prova: senza, i banchi si fermerebbero alla trial) |
 
@@ -1408,8 +1420,9 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   **revocabile**.
 - ✅ **La gold si rilascia con una funzione dedicata** del servizio, **non dal pannello** né da nessuna strada «normale»
   (utente, 9 ott). 🔸 Un comando sul VPS, solo via ssh. ⇒ Chi viola il pannello non crea gold. (La «stessa strada» qui
-  sopra riguarda il **programma**: una gold, una volta inserita, si controlla come le altre.)
-- Finché il pagamento non c'è, le **full si creano a mano** con lo strumento di chi vende.
+  sopra riguarda il **programma**: una gold, una volta inserita, si controlla come le altre.) Le installazioni
+  della gold le **conferma chi vende** dal pannello, al posto dell'area cliente.
+- Finché il pagamento non c'è, le **full si creano a mano** dal pannello.
 - ⭐ **La gold è il caso semplice** (utente, 9 ott: *«i controlli sono ancora più ridotti … ma conserva il limite di
   una licenza per macchina»*):
 
@@ -1418,80 +1431,86 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   | scadenza, avvisi, rinnovo | **nessuno** |
   | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
   | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
-  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta si crea da sé una `INSTALL_KEY` nuova (la segreta non lascia mai il server) e la consegna firmata con la vecchia. Nessuna pagina di scelta, nessuna fermata automatica |
+  | due copie attive | **avviso a chi vende**, che **disabilita una delle due** dal pannello; la copia tenuta continua coi suoi biglietti. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
-- ⭐ **Tutti i giorni sono SOLARI, non lavorativi** (utente, 9 ott): sabati, domeniche e festivi contano. Ogni
-  periodo (14 giorni della trial, 14 di tolleranza, 72 ore della scelta, 30 giorni fra uno scambio e l'altro…) si
-  conta **in ore esatte dal momento dell'evento**, in tempo universale (14 giorni = 336 ore): niente ambiguità di
-  fusi orari o di «fine giornata». Alle persone si mostra nell'ora locale.
+- ⭐ **Come si contano i tempi**: ogni periodo si conta **in ore esatte dal momento dell'evento**, in tempo
+  universale (14 giorni = 336 ore): niente ambiguità di fusi orari o di «fine giornata». Alle persone si mostra
+  nell'ora locale. I periodi in **giorni solari** (sabati, domeniche e festivi contano): i 14 giorni della trial,
+  i 14 di tolleranza, i 30 fra uno scambio e l'altro. I periodi in **giorni lavorativi** (dal lunedì al venerdì,
+  uguali in tutto il mondo, senza festivi nazionali): gli avvisi prima della scadenza (§15.6) e i 7 e 15 giorni
+  della scelta fra due copie (§15.8).
 
 ### 15.2 Le quattro parti
 
 | parte | dove | che cosa fa |
 |---|---|---|
-| **il prodotto** | il server del cliente | attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
-| **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita il **sito** (pagine pubbliche e **area cliente**, dove si sceglie la copia e si conferma il recupero) |
-| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea le full (la gold no: ha la sua funzione, §15.1), revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
+| **il prodotto** | il server del cliente | si attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
+| **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | tiene il registro, consegna e consuma i biglietti, scopre gli sdoppiamenti, manda le email, ospita il **sito** (vetrina pubblica e **area cliente**, dove si chiedono trial e full, si confermano le installazioni e si sceglie fra due copie) |
+| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea le full a mano (la gold no: ha la sua funzione, §15.1), conferma le installazioni delle gold, revoca, rigenera una chiave su richiesta, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
 | **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
 
 ⛔ **Non esiste l'attivazione senza rete.** Il prodotto esce anche da un **proxy** aziendale.
 
-### 15.3 L'attivazione
+### 15.3 Chiedere la licenza e attivarla
 
-1. Chi compra riceve per email la **`LICENSE_KEY`**: una stringa lunga da incollare. Indica **quale** licenza
-   si è comprata.
-2. Alla prima attivazione il prodotto crea la **`INSTALL_KEY`** (una coppia di chiavi crittografiche, **casuale**: non viene dall'hardware; la parte
-   segreta sta in un file leggibile solo da root e **non lascia mai** il server).
-   La `LICENSE_KEY` ha **almeno 128 bit casuali** e il prodotto **non la conserva** dopo l'attivazione.
-5. ⛔ **Una `LICENSE_KEY` si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
-   attivazione non si riutilizzano mai»*): consumato alla prima attivazione, poi rifiutato per sempre; mai
-   rigenerato uguale, nemmeno dopo una revoca o una scadenza. Il servizio tiene per sempre l'**impronta cifrata**
-   delle chiavi usate (non è un dato personale, quindi non ricade nei tetti di §15.12).
-6. Accanto alla chiave, chi compra riceve il **numero di licenza** (per esempio `RX-000123`): **non è segreto**, serve
-   al recupero (§15.9) e all'assistenza. ⇒ La chiave attiva, il numero identifica; recupero e spostamento **non
-   usano mai la chiave**.
-3. Il servizio lega la licenza alla parte pubblica della `INSTALL_KEY` e risponde con un **attestato
-   firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
-4. ✅ **La licenza la decide la classe della chiave** (utente, 9 ott: *«la licenza è determinata dalla classe della
-   chiave»*): c'è una chiave **trial**, una **full** e una **gold**, e ogni installazione ne inserisce una. ⛔ Supera
-   «la trial si attiva senza codice». ✅ **I nomi** (utente, 9 ott): `LICENSE_KEY` è quella che si inserisce; `INSTALL_KEY` la coppia che il server crea per sé; `HW_FINGERPRINT` l'impronta dell'hardware (§15.7). 🔸 La classe la conosce il **servizio**, non la stringa: si vede anche nel
-   prefisso (`RXT-…`, `RXF-…`, `RXG-…`) per chi legge, ma cambiare il prefisso non cambia niente. La trial resta
-   legata in più all'**impronta** (§15.7).
-7. ✅ **L'installazione chiede sempre la chiave** (utente, 9 ott), da root. ✅ **Ogni licenza parte dal momento in cui
-   la sua chiave entra nell'installazione** (*«la full come la trial parte da quando si installa»*). 🔸 ⇒ la pagina
-   d'accesso **non ha il campo della chiave**: mostra lo stato, la chiave la mette root.
-8. ✅ **L'upgrade** (utente, 9 ott: *«ci dev'essere una funzione di upgrade per passare da trial a full»*): da root,
-   `remotix licenza upgrade <chiave>`, su un REMOTIX già installato. 🔸 Le regole:
-   - si sale e basta: **trial → full → gold**: ✅ la scala è questa (utente, 9 ott: *«la scala di upgrade è trial -> full -> gold»*);
-     si può saltare un gradino (trial → gold), mai scendere; una full portata a gold perde la scadenza;
-   - l'anno della full parte **dall'upgrade** (è il momento in cui la chiave full entra; chi compra al 10° giorno di
-     prova non perde 10 giorni);
-   - nessuno viene scollegato, i desktop restano vivi; il controllo successivo dice «full»;
-   - ✅ **all'upgrade la `INSTALL_KEY` si rinnova** (utente, 9 ott): il prodotto crea una coppia nuova e la consegna
-     firmata con la vecchia, come nel recupero e nella scelta della copia (§15.8, §15.9). Una copia vecchia
-     dell'installazione (un clone, un backup rimesso in piedi) resta fuori. Nessuno viene scollegato;
-   - ✅ **il numero di licenza resta per tutta la vita dell'installazione** (utente, 9 ott): la storia dice
-     «trial → full il giorno X». Un numero nuovo spezzerebbe assistenza, storia e fatture, e il numero non è segreto;
-   - il **rinnovo** di una full non è un upgrade: si paga col numero di licenza, nessuna chiave nuova (§15.6).
-9. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa dopo la prima volta:
-   `remotix licenza stato` · `upgrade <chiave>` · `attiva <chiave>` (se all'installazione la rete mancava) ·
-   `controlla` · `recupera`. È lo stesso programma `remotix`, non l'installatore.
+1. ✅ **Trial e full si chiedono solo dall'area cliente del sito, dopo l'accesso** (utente, 9 ott: *«serve un sito web
+   dove il cliente inserisce i dati e ottiene poi per email il codice»*; *«l'acquisto può essere fatto solo dalla
+   sezione privata dopo essersi loggati al sito»*; *«facciamola semplice: anche la trial la si chiede dall'area
+   privata»*). «Prova gratis» e «Acquista» sulla vetrina di `remotix.nicfio.it` portano all'accesso, poi alla
+   richiesta. ⇒ Un percorso solo; l'email è verificata prima di qualunque chiave; la licenza nasce già
+   nell'account, e il passaggio da trial a full parte da lì. La `LICENSE_KEY` compare nell'area e arriva anche per
+   email.
+2. ✅ **Due strade per entrare, e niente email usa e getta** (utente, 9 ott): nell'area cliente si entra con il
+   **link mandato all'email** (l'accesso conferma l'indirizzo) oppure con **«Accedi con Google»**; nessuna delle due
+   è obbligatoria. Il servizio **rifiuta le email dei domini temporanei** (mailinator, 10minutemail…) con un
+   elenco pubblico aggiornato ogni giorno, e risponde *«use your work email»*. ⚠ Dichiarato: ferma la gran parte,
+   non i domini nati oggi.
+3. ✅ **I dati** (utente, 9 ott): **email** (obbligatoria), **nome** e **azienda** (facoltativi). Chi chiede una
+   trial diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la
+   full.
+4. **L'installazione**, da root: l'installatore chiede **solo la `LICENSE_KEY`** (nessun dato personale) e, a chi
+   non ce l'ha, mostra l'indirizzo del sito. Il servizio registra una **copia in attesa**: non funziona ancora,
+   riceve subito il suo **primo biglietto**, che però vale solo dopo la conferma. L'installatore mostra *«conferma
+   questo server nella tua area cliente: copia 4F7K»*, e l'acquirente riceve un'email con il link.
+5. **La conferma**: nell'area cliente l'acquirente preme **«attiva qui»** (un link aperto da un filtro di posta
+   non conferma niente). Il servizio risponde con un **attestato firmato** (tipo, scadenza commerciale, fine della
+   tolleranza, «valido fino a») e il server parte. Se la licenza aveva già una copia attiva, l'area cliente lo dice
+   prima della conferma (*«confermando, il server X si ferma»*), e quella copia si ferma al suo controllo successivo.
+6. **Una sola copia in attesa per licenza**; se nessuno la conferma, 🔸 **scade dopo 3 giorni** senza effetti.
+7. ✅ **Ogni licenza parte dal momento in cui il suo server viene confermato** (*«la full come la trial parte da
+   quando si installa»*). Chiederla e installare giorni dopo non costa niente. 🔸 Una trial **mai attivata scade
+   dopo 30 giorni** (pulizia).
+8. 🔸 ⇒ La pagina d'accesso **non ha il campo della chiave**: mostra lo stato, la chiave la mette root.
+9. ✅ **Da trial a full, e a gold** (utente, 9 ott: *«ci dev'essere una funzione di upgrade per passare da trial a
+   full»*; *«la scala di upgrade è trial -> full -> gold»*): si compra la full **sulla stessa licenza** dall'area
+   cliente; la chiave resta la stessa (cambia la classe nel servizio, e il prefisso mostrato) e il server se ne
+   accorge **al controllo dell'ora dopo**, senza comandi e senza scollegare nessuno. L'anno della full parte
+   **dall'acquisto** (chi compra al 10° giorno di prova non perde 10 giorni). Si sale e basta, anche saltando un
+   gradino (trial → gold, da chi vende); mai scendere; una full portata a gold perde la scadenza.
+10. Il **rinnovo** di una full non cambia niente sul server: si paga dall'area cliente e la scadenza si sposta (§15.6).
+11. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa: `remotix licenza stato` ·
+    `attiva <chiave>` (se all'installazione la rete mancava, o per cambiare server) · `controlla` (un controllo
+    subito). È lo stesso programma `remotix`, non l'installatore.
 
 ### 15.4 Il controllo, ogni 60 minuti
 
-- Ogni ora il prodotto chiede al servizio lo stato della licenza: **firma con la sua `INSTALL_KEY`** una sfida del
-  servizio e presenta il **biglietto** dell'ultima volta.
-- Il **biglietto** vale **una volta sola**: il servizio lo consuma e ne consegna uno nuovo insieme all'attestato.
+- Ogni ora il prodotto presenta al servizio il **biglietto** dell'ultima volta. Il servizio verifica che sia
+  l'ultimo emesso per quella copia, lo **consuma** e ne consegna uno nuovo insieme all'attestato.
   ⇒ Due copie della stessa installazione (un clone, un backup ripristinato) partono con lo stesso biglietto:
-  una va avanti, l'altra resta indietro e lo **sdoppiamento è scoperto** (§15.8).
-- ⛔ **Un guasto non fa mai un falso clone**: il prodotto scrive la richiesta su disco **prima** di spedirla; se
-  la risposta non arriva la rispedisce **identica**, e il servizio ridà **la stessa risposta**.
+  una va avanti, l'altra arriva con un biglietto già consumato e lo **sdoppiamento è scoperto** (§15.8).
+- ⛔ **Un guasto non fa mai un falso clone**: ogni richiesta porta un **codice casuale** suo, e il prodotto la
+  scrive su disco **prima** di spedirla. Se la risposta non arriva la rispedisce **identica**, e il servizio ridà
+  **la stessa risposta**. Stesso biglietto con lo stesso codice = ripetizione; stesso biglietto con un codice
+  diverso = due copie.
+- ⚠ Dichiarato: il biglietto scopre le copie che vanno avanti **ciascuna per conto suo** (cloni, backup, VM accese
+  per errore). Copie coordinate apposta da chi ha root restano fuori dalla portata di qualunque controllo locale.
 - Solo il servizio REMOTIX tocca lo stato della licenza; «controlla ora» passa da lui.
 - **L'orologio**: il prodotto ricorda l'ora più recente vista (sua e del servizio); se l'orologio della macchina
   torna indietro vale la più recente, così spostarlo non allunga una licenza.
-- La licenza è legata alla **storia dell'installazione**, non al ferro: chi **spegne il vecchio server** e passa
-  a uno nuovo (copiando lo stato) continua senza fare niente.
+- La licenza segue la **storia dell'installazione**, non il ferro: chi **sposta il server intero** (la VM su un
+  altro host, il disco su una macchina nuova) e spegne il vecchio continua senza fare niente, perché la cartella
+  della licenza viaggia col sistema.
 
 ### 15.5 Quando il servizio non risponde
 
@@ -1504,18 +1523,17 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 
 - ⭐ **Il rinnovo lo sceglie il cliente** (utente, 9 ott: *«addebitare centinaia o migliaia di euro automaticamente
   sui conti degli acquirenti non è così simpatico … il cliente sceglie il rinnovo automatico o meno»*):
-  - **manuale, ed è il predefinito**: il cliente paga indicando il **numero di licenza**; il servizio sposta in
-    avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessuna chiave nuova;
-    ✅ confermato dall'utente il 9 ott, dopo la domanda «non sarebbe meglio un codice nuovo?»: una chiave a ogni
-    rinnovo non aggiunge sicurezza (dopo l'attivazione la chiave non protegge niente; lo fanno `INSTALL_KEY` e
-    biglietto), toglie il rinnovo automatico e blocca chi dimentica di inserirla;
+  - **manuale, ed è il predefinito**: il cliente paga dall'area cliente; il servizio sposta in avanti la scadenza e
+    il server se ne accorge al controllo dell'ora dopo. ✅ Nessuna chiave nuova (utente, 9 ott, dopo la domanda
+    «non sarebbe meglio un codice nuovo?»: una chiave nuova a ogni rinnovo non aggiunge sicurezza, toglie il
+    rinnovo automatico e blocca chi dimentica di inserirla);
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
     «rinnova»; **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
   - ✅ **una licenza scaduta e non rinnovata si blocca dopo 14 giorni solari** (utente, 9 ott), trial compresa.
 - ⭐ **Trial e full si comportano allo stesso modo; cambia solo la durata** (utente, 9 ott: *«ho unificato il
   comportamento di trial e full: di fatto l'unica differenza è la validità»*). Quel che segue vale per tutte e due.
-- **Il calendario** (processo dell'utente, 9 ott; ⛔ supera le regole precedenti su email e avvisi):
+- **Il calendario** (processo dell'utente, 9 ott):
 
   | quando | l'acquirente | gli utenti |
   |---|---|---|
@@ -1525,12 +1543,10 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   | **scadenza → 14 giorni solari** (tolleranza) | 1 email al giorno alle 11 | la **pagina di avviso «licenza scaduta»** col tempo che manca al blocco; **sopra il desktop, si continua a lavorare** |
   | **dopo i 14 giorni** | — | REMOTIX si ferma (sotto) |
 
-  - **«giorno lavorativo» = dal lunedì al venerdì**, uguale in tutto il mondo, senza festivi nazionali
-    (i festivi cambiano da paese a paese); i 14 giorni di tolleranza sono **solari**.
   - l'ora delle email: **alle 11**, e la seconda dell'ultimo giorno **alle 16**, ora locale dell'acquirente
     (fuso orario del suo server o del suo paese);
   - tutto si ferma **appena il cliente rinnova**; chi ha il rinnovo automatico riceve solo l'avviso dell'addebito;
-  - ⛔ niente più avvisi all'amministratore 7 giorni prima, né 3 messaggi al giorno: un avviso al giorno.
+  - ⛔ niente avvisi all'amministratore 7 giorni prima, né 3 messaggi al giorno: un avviso al giorno.
 - **«La fine»** è il momento in cui REMOTIX si ferma davvero: **14 giorni solari dopo la scadenza** (trial e
   full), o dopo l'ultimo controllo riuscito se la rete manca.
 - **Alla fine**:
@@ -1541,79 +1557,57 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 
 ### 15.7 La trial
 
-- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware** (`HW_FINGERPRINT`).
-- ✅ **Chi chiede una chiave dà un'email** (utente, 9 ott: *«unifichiamo i 2 comportamenti, quindi anche per la
-  trial si chiede l'email; ci semplifichiamo la logica di gestione, altrimenti dobbiamo prevedere 2 sistemi quasi
-  paralleli»*). ⛔ Supera «senza email». Chi attiva la trial diventa l'**acquirente** di quella licenza: riceve le
-  email della scadenza e degli sdoppiamenti come la full.
-- ✅ **I dati** (utente, 9 ott, *«confermo»*): **email** (obbligatoria), **nome** e **azienda** (facoltativi).
-- ✅ **Trial e full si chiedono solo dall'area cliente del sito, dopo l'accesso** (utente, 9 ott: *«serve un sito web
-  dove il cliente inserisce i dati e ottiene poi per email il codice»*; *«l'acquisto può essere fatto solo dalla
-  sezione privata dopo essersi loggati al sito»*; *«facciamola semplice: anche la trial la si chiede dall'area
-  privata»*). «Prova gratis» e «Acquista» sulla vetrina di `remotix.nicfio.it` portano all'accesso, poi alla
-  richiesta. ⇒ Un percorso solo; l'email è verificata prima di qualunque chiave; la licenza nasce già
-  nell'account, e l'upgrade da trial a full parte da lì. La `LICENSE_KEY` compare nell'area e arriva anche per
-  email. L'installatore **non chiede dati**: chiede solo la `LICENSE_KEY`, e a chi non ce l'ha mostra l'indirizzo
-  del sito.
-- ✅ **Due strade per entrare, e niente email usa e getta** (utente, 9 ott): nell'area cliente si entra con il
-  **link mandato all'email** (l'accesso conferma l'indirizzo) oppure con **«Accedi con Google»** (l'email arriva
-  già verificata); nessuna delle due è obbligatoria. Il servizio **rifiuta le email dei domini temporanei**
-  (mailinator, 10minutemail…) con un elenco pubblico aggiornato ogni giorno, e risponde *«use your work email»*.
-  ⚠ Dichiarato: ferma la gran parte, non i domini nati oggi; e un account Google nuovo costa poco, quindi Google
-  non è una difesa contro le trial in fila.
-- **Chiederla e installare giorni dopo non costa niente**: i giorni partono quando la chiave **entra
-  nell'installazione**, non quando arriva l'email. 🔸 Una chiave trial **mai usata scade dopo 30 giorni** (pulizia:
-  chi la vuole dopo ne chiede un'altra; la trial resta una per `HW_FINGERPRINT`).
-- ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott), cioè da quando la chiave trial entra, all'ora esatta.
-- **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
-  del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,
-  «Not Specified», tutti zeri) **si scartano** prima del calcolo. Al servizio arrivano solo impronte cifrate.
-- **Una trial per impronta**. Reinstallare durante la trial ridà **la stessa data di fine**; a trial scaduta non
-  se ne ottiene un'altra.
+- **14 giorni, utenti illimitati**, chiesta dall'area cliente (§15.3).
+- ✅ **Una trial per account** (9 ott: con l'email di lavoro verificata e le email usa e getta rifiutate; supera
+  «una per macchina», che si reggeva sull'impronta dell'hardware, tolta). ⚠ Dichiarato: chi crea account nuovi con
+  altre email di lavoro può ottenere altre trial; deve però rifare il server ogni 14 giorni, e si accetta.
+- ✅ **I 14 giorni partono dalla conferma del server** (utente, 9 ott), all'ora esatta.
+- Reinstallare durante la trial non allunga niente: la licenza è la stessa, la data di fine pure.
 - **Due copie attive**: come la full (§15.8).
-- Se non resta niente di distintivo, la trial **non parte da sola**: *«questa macchina non può avviare la prova
-  automatica: scrivici»*, e chi vende la attiva a mano.
-- ⚠ Dichiarato: una macchina virtuale **nuova** in cloud ha un'impronta nuova, quindi una trial nuova.
 
 ### 15.8 Due copie attive (trial e full): sceglie il cliente
 
+*Riguarda le copie che nascono **da sole** (un clone, un backup rimesso in piedi, una VM accesa due volte). Il
+cambio di server voluto passa invece dalla conferma (§15.9).*
+
 1. **Lo sdoppiamento** si scopre al controllo orario (§15.4), quindi entro un'ora.
 2. Ogni copia riceve un **nome breve** («copia A · 4F7K»), mostrato anche sulla sua pagina d'accesso.
-3. Il servizio manda **subito un'email all'acquirente** (e un avviso a chi vende) con, per ogni copia: nome breve;
-   giorno e ora della scoperta e dell'ultimo contatto; **IP pubblico** con fornitore, paese e città approssimata
-   (da **RDAP**); **IP interni** e **nome della macchina**; **descrizione dell'hardware** (scheda madre,
-   processore, memoria, dischi). E un **link all'area cliente** (✅ utente, 9 ott), dove si sceglie.
-4. L'area cliente **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
-   non sceglie niente). Il link vale una volta e scade.
-5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
-   dopo 24»). Nel frattempo le due copie funzionano.
-6. **Scelta fatta**: la copia tenuta si crea da sé una **`INSTALL_KEY` nuova** (la segreta non lascia mai il server) e la consegna firmata con la vecchia, l'altra si ferma (i suoi desktop restano vivi
-   fino allo spegnimento).
+3. Il servizio manda **subito un'email all'acquirente** (e un avviso a chi vende): *«la licenza RXF-…-6YRB gira su
+   due server: scegli quale tenere»*, con il link all'area cliente. ⛔ Nessun dato tecnico nell'email.
+4. L'**area cliente** mostra per ogni copia: nome breve, **nome della macchina**, **IP pubblico** (con fornitore e
+   paese), ora della scoperta e dell'ultimo contatto. La scelta si **conferma con un pulsante**.
+5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott). Nel frattempo le due copie
+   funzionano.
+6. **Scelta fatta**: la copia tenuta continua coi suoi biglietti, l'altra si ferma (i suoi desktop restano vivi fino
+   allo spegnimento).
 7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
-   utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
-   qualunque momento, **sblocca** la copia scelta.
+   utenti vedono la pagina **«sistema bloccato»**. La scelta, fatta in qualunque momento, **sblocca** la copia scelta.
 8. ✅ **Dopo 15 giorni lavorativi** senza scelta la licenza **resta bloccata** e va a chi vende, che decide se
    **sbloccarla** o **cancellarla definitivamente** (utente, 9 ott: *«lasciamo le licenze bloccate; poi sarò io a
    decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ Nessuna cancellazione automatica.
-9. **Uno scambio ogni 30 giorni**; chi vende può sbloccarlo a mano. **3 sdoppiamenti in 90 giorni** sulla stessa
-   licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
-10. ⛔ **L'impronta descrive, non decide**: a legare la full restano `INSTALL_KEY` e biglietto. Cambiare un disco o una
-    scheda di rete non fa di un cliente una macchina nuova.
+9. **Uno scambio ogni 30 giorni** (scelte e cambi di server insieme); chi vende può sbloccarlo a mano.
+   **3 sdoppiamenti in 90 giorni** sulla stessa licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
+10. Cambiare un disco, una scheda di rete o la memoria **non** crea uno sdoppiamento: decide il biglietto, non il ferro.
 
-### 15.9 Spostamento e recupero
+### 15.9 Cambiare server
 
-- **Spostamento a freddo**: si spegne il vecchio server, lo stato passa al nuovo ⇒ continua da solo (§15.4).
-- **Spostamento volontario** dalla pagina d'accesso: la vecchia installazione **firma il rilascio**, la nuova si
-  attiva.
-- **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
-  scrive il **numero di licenza** (non la `LICENSE_KEY`, già consumata), e conferma dall'**email
-  dell'acquirente**. Il prodotto crea una `INSTALL_KEY` **nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
-  avvisati a recupero fatto.
-  ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
-- La **copia rimasta indietro** non viene allungata: lavora fino al suo «valido fino a» e mostra all'amministratore
-  un messaggio **neutro** (*«questa installazione risulta una copia più vecchia, forse un backup ripristinato»*).
-  Chiede il suo stato **ogni ora**, senza consumare biglietti.
-- La pagina del recupero si raggiunge **anche a licenza scaduta**.
+| situazione | che cosa fa il cliente | che cosa succede |
+|---|---|---|
+| **il server intero si sposta** (VM su un altro host, disco copiato su una macchina nuova) | niente | la cartella della licenza viaggia col sistema; si spegne il vecchio e si continua (§15.4) |
+| **server nuovo installato da zero**, col vecchio vivo o morto | root dà la `LICENSE_KEY` all'installatore (o `remotix licenza attiva <chiave>`), l'acquirente conferma nell'area cliente | come una prima installazione (§15.3): copia in attesa, conferma, il nuovo parte, il vecchio (se c'è) si ferma al controllo successivo |
+| **clone o backup rimesso in piedi** per sbaglio | sceglie quale tenere | §15.8 |
+
+- ✅ (utente, 9 ott: *«invece di complicare le cose … dopo 1 ora il sistema rileva l'anomalia e si procede come nel
+  caso del clone»*) ⛔ Supera il recupero con «Recupera» e conferma via email, lo spostamento volontario con la firma
+  del rilascio e la regola delle 72 ore.
+- Se il server nuovo non va, si **riconferma il vecchio** dall'area cliente; conta come scambio (§15.8 punto 9), e
+  chi vende può sbloccare il limite.
+- La **copia rimasta indietro** (un backup rimesso su, la copia non scelta) non viene allungata: lavora fino al suo
+  «valido fino a» e mostra all'amministratore un messaggio **neutro** (*«questa installazione risulta una copia più
+  vecchia, forse un backup ripristinato»*).
+- ⛔ Chi deve confermare, e come l'azienda si organizza quando l'acquirente non c'è, **non è materia di REMOTIX**
+  (utente, 9 ott: *«un'azienda che si affida a un singolo è un'azienda mal gestita … non vorrei che REMOTIX debba
+  entrare in aree che non sono di sua competenza»*). Niente deleghe, ruoli o attivazioni provvisorie.
 
 ### 15.10 La pagina d'accesso
 
@@ -1621,7 +1615,8 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 |---|---|---|
 | **trial** | «Trial version — restano N giorni» | si entra |
 | **licenza valida** | niente | si entra |
-| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | la finestra della licenza: stato, «Acquista», e che chiave e recupero li fa l'amministratore (`remotix licenza`) |
+| **in attesa di conferma** | niente | *«questo server aspetta la conferma nell'area cliente: copia 4F7K»* |
+| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | la finestra della licenza: stato, «Acquista», e che la chiave la mette l'amministratore (`remotix licenza`) |
 | **bloccata per due copie** (§15.8) | niente | la pagina **«sistema bloccato»** e il rimando all'email della scelta |
 | **sospesa** (dal pagamento) o **revocata** (da chi vende) | niente | la finestra della licenza, **come una scaduta**, con la frase che spiega la sospensione o la revoca |
 | **mai attivata** (primo avvio senza rete) | niente | *«il server non ha ancora potuto attivare la licenza: serve l'accesso a internet»* |
@@ -1636,36 +1631,59 @@ rimasta indietro.
   ha dentro **due indirizzi** di partenza. ⇒ Una chiave del VPS rubata si revoca senza ricompilare il prodotto;
   un **dominio nuovo** non obbliga i clienti ad aggiornare.
 - HTTPS con i certificati del sistema, **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
-  la danno le firme dei messaggi, in un **formato binario fisso e firmato**.
-- Il servizio: operazioni a transazione, **copie cifrate fuori dal VPS ogni giorno**, registro di attivazioni,
-  recuperi e sblocchi. Se il VPS torna a un salvataggio vecchio, si rimette in pari **solo** con prove firmate da
-  lui stesso, mai con numeri dichiarati dal cliente.
+  delle risposte la dà la firma del servizio, in un **formato binario fisso e firmato**.
+- Il servizio: operazioni a transazione, **copie cifrate fuori dal VPS ogni giorno**, registro di ogni operazione
+  (chi, quando, che cosa). Se il VPS torna a un salvataggio vecchio, si rimette in pari **solo** con prove firmate
+  da lui stesso, mai con numeri dichiarati dal cliente.
 - **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
   porta 25 e permettere il nome inverso; altrimenti serve un inoltro (decisione dell'utente).
+- ✅ VPS e dominio non hanno un fornitore di riserva (utente, 9 ott): OVH avvisa delle scadenze, la spesa è piccola,
+  e un guasto di OVH si risolve ben dentro i 14 giorni di §15.5.
 
 ### 15.12 La riservatezza
 
-- **Che cosa arriva al servizio**: la parte pubblica della `INSTALL_KEY`, l'impronta cifrata, la descrizione
-  dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. Il servizio tiene **solo
-  l'ultima** di ogni voce, salvo gli sdoppiamenti.
+- **Che cosa arriva al servizio**: il biglietto, il **nome della macchina** e l'**IP pubblico** da cui si collega.
+  Nient'altro: niente hardware, niente IP interni, niente impronte. Il servizio tiene **solo l'ultimo** di ogni
+  voce, salvo gli sdoppiamenti.
 - **Quanto si tengono** (tetti, non minimi):
 
   | dati | per quanto |
   |---|---|
-  | email dell'acquirente, licenze, registro delle attivazioni | **2 anni** dalla fine del rapporto |
-  | impronte delle trial | **5 anni** dalla trial (utente, 9 ott), ma dopo 2 anni **staccate** da email, nome e licenza: resta solo l'impronta cifrata con la data, che basta a dire «questa macchina ha già avuto una trial» e non porta a nessuno. ⇒ La regola è «una trial per macchina ogni 5 anni» |
-  | dati di uno sdoppiamento (IP, RDAP, nomi, hardware) | **6 mesi** dalla scelta, poi solo «sdoppiamento del giorno X, risolto così» |
+  | email dell'acquirente, licenze, registro delle operazioni | **2 anni** dalla fine del rapporto |
+  | dati di uno sdoppiamento (nomi delle macchine, IP pubblici) | **6 mesi** dalla scelta, poi solo «sdoppiamento del giorno X, risolto così» |
 
-- I dati di una copia finiscono nell'email dell'acquirente **anche quando la copia è di altri**: si fa per
-  prevenire le frodi e va scritto nell'**informativa**, da far controllare a un legale prima di vendere.
+- I dati di una copia si vedono nell'area cliente **anche quando la copia è di altri**: si fa per prevenire le frodi
+  e va scritto nell'**informativa**, da far controllare a un legale prima di vendere.
 
 ### 15.13 Che cosa NON c'è
 
-- ⛔ attivazione senza rete · conteggio degli utenti · TPM · integrazioni coi cloud (AWS, Google, Azure) ·
-  impronta che decide della full · invalidazione automatica di una licenza · blocco dell'accesso al server.
+- ⛔ attivazione senza rete · conteggio degli utenti · firma dell'installazione · impronta dell'hardware · TPM ·
+  integrazioni coi cloud (AWS, Google, Azure) · cancellazione automatica di una licenza · blocco dell'accesso al
+  server · deleghe, ruoli o attivazioni provvisorie per l'acquirente · rigenerazione della chiave da parte del
+  cliente.
 - ⏳ **Sospesi**: il processore di pagamento e il **contratto di vendita** della full (si decidono insieme).
+  Quando si sceglierà il processore, il servizio dovrà riconoscere gli avvisi ripetuti (un rinnovo mandato due
+  volte non aggiunge due anni) e gestire rimborsi e storni.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
-- ✅ **Confermati dall'utente il 9 ottobre** (*«i 6 punti li confermo»*): giorni lavorativi dal lunedì al venerdì; le
-  email dell'ultimo giorno alle 11 e alle 16; nei 14 giorni di tolleranza si lavora con l'avviso sopra il desktop
-  e l'email giornaliera; le proposte tecniche di questo capitolo; e i due stati qui sotto (§15.10).
+
+### 15.14 Le due scatole nere: che cosa entra e che cosa esce
+
+✅ (utente, 9 ott: *«immaginiamo il cliente e il server di gestione delle licenze come 2 blackbox: dalle 2 scatole
+nere entrano ed escono dati, quello che succede dentro ogni scatola resta nascosto nella scatola»*). ⇒ **Il contratto
+fra REMOTIX e il servizio è tutto qui.** Ognuna delle due scatole si costruisce, si prova e si cambia dentro senza
+toccare l'altra, finché questi messaggi restano uguali; un messaggio nuovo o un campo nuovo si decide **qui** prima
+del codice. Tutto viaggia in HTTPS; le risposte del servizio sono **firmate** con la chiave del VPS.
+
+| # | da REMOTIX al servizio | dal servizio a REMOTIX | quando |
+|---|---|---|---|
+| 1 | **ATTIVA**: `LICENSE_KEY`, nome della macchina | **IN ATTESA**: nome breve della copia, primo biglietto (vale dopo la conferma) · oppure **RIFIUTATA** col motivo (chiave sconosciuta, revocata, un'altra copia già in attesa) | all'installazione, o con `remotix licenza attiva` |
+| 2 | **CONTROLLO**: biglietto, codice della richiesta, nome della macchina | **ATTESTATO** firmato (tipo, stato, scadenza, fine della tolleranza, «valido fino a», avvisi da mostrare) + biglietto nuovo · oppure **IN ATTESA** · **FERMATI** (copia sostituita o non scelta) · **SDOPPIATA** (biglietto già consumato) | ogni ora, e con `remotix licenza controlla` |
+| 3 | chiede l'**elenco** | **ELENCO** firmato dalla chiave madre: indirizzi del servizio, chiavi del VPS valide, revoche | all'avvio e una volta al giorno |
+
+- **Dentro REMOTIX**, nascosto: dove tiene il biglietto, come mostra gli avvisi, come chiude i collegamenti. Fuori
+  esce solo quel che sta nella colonna di sinistra.
+- **Dentro il servizio**, nascosto: il registro, l'area cliente, il pannello, il pagamento, le email. A REMOTIX
+  arrivano solo le risposte della colonna di destra. Le persone (acquirente, chi vende) e il processore di
+  pagamento entrano nel servizio da porte **sue** (sito, pannello, ingresso del pagamento), che REMOTIX non vede.
+- ⛔ Nessun altro dato esce da REMOTIX: niente hardware, niente IP interni, niente utenti o sessioni.

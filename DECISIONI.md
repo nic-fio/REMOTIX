@@ -6430,6 +6430,20 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
 - ✅ ~~Da decidere: che cosa compra la full; il contratto di vendita~~ — chiuse il 9 ott (utenti illimitati, 1 anno,
   aggiornamenti finché attiva, scaduta si ferma); il contratto resta sospeso col pagamento. Vedi `SPECIFICHE.md` §15.
 
+**9 ottobre 2026, sera — la semplificazione.** Su domanda dell'utente (*«abbiamo parecchi elementi che fanno
+sicurezza: license key, fingerprint, firma, biglietto…»*) e col suo principio (*«la complessità di un sistema aumenta
+la probabilità di introdurre punti di vulnerabilità e di perdita di controllo del processo»*) si sono tolti
+`INSTALL_KEY` (firma e biglietto stanno nella stessa cartella: chi copia l'uno copia l'altro; i cloni li scopre il
+biglietto), `HW_FINGERPRINT` (sulle VM si cambia con un clic; trial «una per account»), il numero di licenza (resta
+solo la `LICENSE_KEY`, mostrata mascherata), il recupero via email, lo spostamento firmato e l'upgrade con chiave
+nuova. Al loro posto un meccanismo solo: ogni installazione parte **in attesa** finché l'acquirente non la conferma
+nell'area cliente. ChatGPT (gpt-5.6-sol, con mandato di smentire) ha confermato che firma e impronta non servivano;
+delle sue correzioni sono entrate le quattro senza pezzi nuovi (primo biglietto alla copia in attesa, codice casuale
+nelle richieste, chiave cancellata dal disco dopo l'attivazione, una sola attesa per licenza), mentre deleghe,
+attivazioni provvisorie, finestre di ritorno e rigenerazione della chiave da parte del cliente sono state escluse
+dall'utente come fuori dal perimetro di REMOTIX. L'interfaccia fra REMOTIX e il servizio è scritta come due scatole
+nere (`SPECIFICHE.md` §15.14). Regole in vigore: `SPECIFICHE.md` §15, riscritto per intero.
+
 ### 10.31 ✅ L'installatore non ha la finestra: solo una TUI curata (5 ott 2026)
 
 Parole dell'utente: *«niente installer grafico; prevediamo sì un installer con interfaccia professionale, ma
