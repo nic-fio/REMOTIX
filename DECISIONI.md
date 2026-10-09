@@ -6442,7 +6442,10 @@ delle sue correzioni sono entrate le quattro senza pezzi nuovi (primo biglietto 
 nelle richieste, chiave cancellata dal disco dopo l'attivazione, una sola attesa per licenza), mentre deleghe,
 attivazioni provvisorie, finestre di ritorno e rigenerazione della chiave da parte del cliente sono state escluse
 dall'utente come fuori dal perimetro di REMOTIX. L'interfaccia fra REMOTIX e il servizio è scritta come due scatole
-nere (`SPECIFICHE.md` §15.14). Regole in vigore: `SPECIFICHE.md` §15, riscritto per intero.
+nere (`SPECIFICHE.md` §15.14). Regole in vigore: `SPECIFICHE.md` §15, riscritto per intero. Subito dopo l'utente ha tolto anche la
+conferma (*«abbiamo complicato il processo … inserisce lo stesso codice e qui si verifica il caso del doppione»*):
+ogni installazione parte subito, e una seconda con la stessa chiave è uno sdoppiamento. Restano due elementi
+(chiave e biglietto) e un gesto (la scelta della copia); in più il cambio server avviene senza fermo.
 
 ### 10.31 ✅ L'installatore non ha la finestra: solo una TUI curata (5 ott 2026)
 
