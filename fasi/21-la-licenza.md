@@ -350,6 +350,24 @@ trascrizione non si conserva; qui c'è il risultato.*
      si invalida mai da sola**;
    - **chi ci riprova**: la stessa licenza sdoppiata **3 volte in 90 giorni** va a chi vende, che guarda e
      decide se revocare. Una persona decide, non un automatismo.
+   ✅ **9 ott, la full: SCEGLIE IL CLIENTE** (idea dell'utente, con le aggiunte di Claude accettate: *«certo»*):
+   - **due copie attive** ⇒ email all'acquirente con i dati delle due e un **link a una pagina di scelta**;
+     **72 ore** per scegliere, promemoria dopo 24;
+   - ogni copia riceve un **nome breve** («copia A · 4F7K»), mostrato anche sulla sua pagina d'accesso: su una
+     macchina virtuale clonata le impronte sono **identiche**, ed è il nome a farle riconoscere;
+   - **i dati per scegliere, leggibili da una persona**: nome breve; giorno e ora della scoperta e dell'ultimo
+     contatto; **IP pubblico** con fornitore, paese e città approssimata (da **RDAP**, il whois strutturato);
+     **IP interni e nome della macchina** (due copie dietro lo stesso router hanno lo stesso IP pubblico);
+     **descrizione dell'hardware** (marca e modello della scheda madre, processore, memoria, dischi) — ⚠ l'impronta
+     cifrata non dice niente a una persona: si manda la descrizione, l'impronta resta per il confronto;
+   - **senza scelta entro 72 ore**: resta la copia col biglietto più recente, l'altra si ferma; ⛔ la licenza **non
+     si invalida mai**; una scelta arrivata dopo vale comunque (uno scambio ogni 30 giorni);
+   - **scelta fatta** ⇒ la copia tenuta riceve una **chiave nuova** (altrimenti, con la stessa chiave, le due si
+     scambierebbero il posto), l'altra si ferma; i suoi desktop restano vivi fino allo spegnimento;
+   - ⛔ **l'impronta descrive, non decide**: a legare la licenza restano chiave e biglietto (cambiare un disco non
+     fa di un cliente una macchina nuova);
+   - ⚠ **riservatezza**: IP, nome della macchina e hardware di una copia finiscono nell'email dell'acquirente (anche
+     quelli di chi ha clonato). Si fa per prevenire le frodi, e va **dichiarato nell'informativa** del prodotto.
 2. **Un clone può lavorare fino a 14 giorni** prima di fermarsi.
 3. **Una trial per email verificata** (oltre che per macchina): anche un'azienda che prova su due server usa due
    email.
