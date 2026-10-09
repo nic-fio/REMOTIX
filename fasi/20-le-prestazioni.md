@@ -155,7 +155,9 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 
 - **La matrice** della fase 16: desktop × scheda, con ultimo livello GREEN, punto di rottura, gradino della
   scala.
-- **La tabella pubblica**, una riga per scheda (e per desktop, se differiscono):
+- **La tabella pubblica**, una riga per scheda (e per desktop, se differiscono). ✅ Sta nella **documentazione
+  tecnica** (la guida al dimensionamento), **non nella home** del sito (utente, 9 ott: *«nella homepage del prodotto
+  di certo le prestazioni non vengono riportate»*); la home ci rimanda con un collegamento:
 
   | macchina | scheda e strada | misura dello schermo | ottimale fino a | degrado da |
   |---|---|---|---|---|

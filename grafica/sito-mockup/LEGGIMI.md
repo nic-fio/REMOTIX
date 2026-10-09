@@ -6,7 +6,7 @@ Le decisioni stanno in `fasi/21-la-licenza.md` §4-bis e in `SPECIFICHE.md` §15
 
 | pagina | che cosa prova |
 |---|---|
-| `index.html` | la vetrina pubblica: apertura, come funziona, confronto, prestazioni (⚠ numeri d'esempio), requisiti, prezzi, domande |
+| `index.html` | la vetrina pubblica: apertura, come funziona, confronto, requisiti, prezzi, domande. ⛔ Niente prestazioni: stanno nella documentazione tecnica (utente, 9 ott) |
 | `trial.html` | la richiesta della chiave: trial (email, nome e azienda facoltativi) e acquisto della full |
 | `signin.html` | l'accesso all'area cliente: Google oppure il link all'email |
 | `account.html` | l'area cliente: lo sdoppiamento con la scelta della copia, una full, una trial nella tolleranza |
