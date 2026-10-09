@@ -353,6 +353,17 @@ trascrizione non si conserva; qui c'è il risultato.*
 2. **Un clone può lavorare fino a 14 giorni** prima di fermarsi.
 3. **Una trial per email verificata** (oltre che per macchina): anche un'azienda che prova su due server usa due
    email.
+   ✅ **9 ott, la trial semplificata dall'utente** (sostituisce la proposta dell'email):
+   - **14 giorni, utenti illimitati** (*«così un'azienda può effettivamente valutare le vere potenzialità del
+     prodotto»*); scaduta, REMOTIX si ferma e serve la full. ⇒ Sparisce il conteggio degli utenti dal programma.
+     ⚠ Claude consigliava 30 giorni per i prodotti da azienda; scelta dell'utente: 14.
+   - **legata alla firma dell'hardware** (UUID e seriale della scheda madre, confronto esatto), **niente email**;
+   - **niente doppioni**: due copie attive della stessa trial ⇒ la trial si disabilita (nessuno ha pagato, nessuna
+     vittima da proteggere).
+   - 🔸 **Da confermare** (proposta di Claude): sulle macchine con un'impronta **finta o mancante** («Not
+     Specified», lo stesso numero su tutte le macchine di un fornitore) la firma non distingue; lì sola si chiede
+     **un'email verificata**. ⚠ Dichiarato: una macchina virtuale **nuova** in cloud ha un'impronta nuova e
+     quindi una trial nuova; si accetta.
 4. La trial resta «al meglio»: email usa-e-getta e macchine virtuali nuove in cloud la aggirano.
 5. **Un recupero ogni 30 giorni**, e che cosa ti basta per sbloccarlo a mano.
 6. **Email spedite dal VPS** con il loro rischio di consegna, e il recupero a mano se un'email non arriva.

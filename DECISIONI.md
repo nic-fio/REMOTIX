@@ -6386,10 +6386,15 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
 
   | tipo | utenti | durata | chi la ottiene |
   |---|---|---|---|
-  | **trial** | 1 | 30 giorni | chiunque installi |
+  | **trial** | ~~1~~ **illimitati** | ~~30~~ **14 giorni** | chiunque installi (⭐ cambiata il 9 ott, sotto) |
   | **full** | illimitati | 1 anno, rinnovo automatico | chi paga |
   | **gold** | illimitati | nessuna scadenza | ⛔ **non in vendita**: uso privato di chi vende, per le sue macchine e per le macchine di prova |
 
+  - ✅ **La trial cambia: 14 giorni, utenti illimitati** (utente, 9 ott: *«eliminiamo il limite di 1 utente, così
+    un'azienda può effettivamente valutare le vere potenzialità del prodotto»*). ⛔ Supera «1 utente, 30 giorni».
+    Scaduta, REMOTIX smette di funzionare e serve la full. Legata alla **firma dell'hardware**, senza doppioni:
+    due copie attive della stessa trial ⇒ la trial si disabilita (qui va bene: nessuno ha pagato). ⇒ Il
+    programma **non conta più gli utenti per nessuna licenza**. Dettagli in `fasi/21-la-licenza.md` §11.3.
   - ✅ **Il terzo tipo si chiama «gold»** (utente, 8 ott: *«si vende solo la full, la gold è per uso privato»*):
     era «eternal», cambia solo il nome. ⛔ Si vende **solo la full**.
 
