@@ -1467,8 +1467,12 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
      si può saltare un gradino (trial → gold), mai scendere; una full portata a gold perde la scadenza;
    - l'anno della full parte **dall'upgrade** (è il momento in cui la chiave full entra; chi compra al 10° giorno di
      prova non perde 10 giorni);
-   - nessuno viene scollegato, i desktop restano vivi, la `INSTALL_KEY` resta la stessa: il
-     controllo successivo dice «full»;
+   - nessuno viene scollegato, i desktop restano vivi; il controllo successivo dice «full»;
+   - ✅ **all'upgrade la `INSTALL_KEY` si rinnova** (utente, 9 ott): il prodotto crea una coppia nuova e la consegna
+     firmata con la vecchia, come nel recupero e nella scelta della copia (§15.8, §15.9). Una copia vecchia
+     dell'installazione (un clone, un backup rimesso in piedi) resta fuori. Nessuno viene scollegato;
+   - ✅ **il numero di licenza resta per tutta la vita dell'installazione** (utente, 9 ott): la storia dice
+     «trial → full il giorno X». Un numero nuovo spezzerebbe assistenza, storia e fatture, e il numero non è segreto;
    - il **rinnovo** di una full non è un upgrade: si paga col numero di licenza, nessuna chiave nuova (§15.6).
 9. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa dopo la prima volta:
    `remotix licenza stato` · `upgrade <chiave>` · `attiva <chiave>` (se all'installazione la rete mancava) ·
@@ -1502,6 +1506,9 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   sui conti degli acquirenti non è così simpatico … il cliente sceglie il rinnovo automatico o meno»*):
   - **manuale, ed è il predefinito**: il cliente paga indicando il **numero di licenza**; il servizio sposta in
     avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessuna chiave nuova;
+    ✅ confermato dall'utente il 9 ott, dopo la domanda «non sarebbe meglio un codice nuovo?»: una chiave a ogni
+    rinnovo non aggiunge sicurezza (dopo l'attivazione la chiave non protegge niente; lo fanno `INSTALL_KEY` e
+    biglietto), toglie il rinnovo automatico e blocca chi dimentica di inserirla;
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
     «rinnova»; **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
