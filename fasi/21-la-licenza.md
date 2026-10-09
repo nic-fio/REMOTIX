@@ -183,8 +183,8 @@ file statici in `/srv/www/<sito>`, HTTPS da Let's Encrypt, l'utente `progetti` c
 |---|---|---|---|
 | **pubblica** | tutti | il prodotto, le prestazioni, i prezzi, i documenti, **«Prova gratis»** e **«Acquista»** (B0, B1) | libero |
 | `/licenze/v1/` | il server del cliente | le domande A1-A8; non è una pagina | firme (`INSTALL_KEY`) |
-| ✅ **area cliente** (utente, 9 ott: *«prevedere un'area cliente ci semplifica parecchie cose»*) | chi ha comprato o chiesto una trial | le sue licenze: numero, classe, stato, scadenza, copie attive; **scelta della copia** (B2); **conferma del recupero** (B3); rinnova; rinnovo automatico sì/no (B4); cambio email (D11 diventa sua) | 🔸 **link all'email, senza password**: si scrive l'email, arriva un link che vale una volta e per poco, e apre l'area per qualche ora. Le email della scelta e del recupero portano **qui**, non a pagine a parte |
-| **pannello** | chi vende | le operazioni D1-D13 | ⏳ da decidere, il più robusto dei tre |
+| ✅ **area cliente** (utente, 9 ott: *«prevedere un'area cliente ci semplifica parecchie cose»*) | chi ha comprato o chiesto una trial | le sue licenze: numero, classe, stato, scadenza, copie attive; **scelta della copia** (B2); **conferma del recupero** (B3); rinnova; rinnovo automatico sì/no (B4); cambio email (D11 diventa sua) | ✅ (utente, 9 ott) **link all'email, senza password**, che vale sempre: si scrive l'email, arriva un link che vale una volta e per poco, e apre l'area per qualche ora; più **«Accedi con Google»** come scorciatoia (l'email arriva già verificata). ⛔ Niente password, niente Facebook; Microsoft per ora no (dubbio dell'utente), si può aggiungere dopo. Le email della scelta e del recupero portano **qui**, non a pagine a parte |
+| **pannello** | chi vende | le operazioni D1-D13 (non la gold, D2) | ✅ **passkey** (utente, 9 ott): impronta o PIN del telefono o del portatile, più un **codice d'emergenza su carta**. ⛔ Mai Google o altri: il pannello non dipende da nessun altro account |
 
 ## 5. Parte 4 — l'ingresso del pagamento
 
