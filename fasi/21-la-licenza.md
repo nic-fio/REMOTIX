@@ -2,7 +2,8 @@
 
 *Piano scritto l'**8 ottobre 2026** sera; ⭐ **riscritto il 9 ottobre** dopo la giornata di decisioni
 sulla licenza (classe della chiave, upgrade, sito con area cliente e pannello, accessi, nomi `LICENSE_KEY` /
-`INSTALL_KEY` / `HW_FINGERPRINT`). ⛔ **Da approvare dall'utente prima di qualunque lavoro.** Le **regole** stanno in
+`INSTALL_KEY` / `HW_FINGERPRINT`). ⛔ **Da approvare dall'utente prima di qualunque lavoro.** ⏸ **Sospeso il 9 ott** (utente: *«per il momento sospendiamo qui il discorso
+licenza. Attendiamo che finisca il lavoro di testing di remotix»*): si riprende da qui, con l'approvazione del piano. Le **regole** stanno in
 `SPECIFICHE.md` §15 (si legge prima §15.0) e qui **non si ripetono**: questo documento dice **come** si fanno e in
 che ordine. ⚠ Vincolo dell'utente (8 ott): **la licenza viene prima del banco xrdp** (`fasi/20-le-prestazioni.md`
 §3 punto 4b).*
