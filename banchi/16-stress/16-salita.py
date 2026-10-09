@@ -424,6 +424,20 @@ def rifai_scatola(o, d, tetto, dove):
             dice("   scatola driver VA nascosto: codice %s · %s" % (c2, (t2 or "").strip()[:80]))
             if c2 != 0 or "iHD_drv_video.so.nascosto" not in (t2 or ""):
                 return False, "non ho potuto nascondere iHD_drv_video.so nella scatola: %s" % t2
+        # ⭐ fase 20, --mesa-vulkan-deb: PRIMA di accendere il server si installa nella scatola
+        #   un altro mesa-vulkan-drivers (il backport di Debian 13), per vedere se il difetto A3
+        #   della Radeon sparisce con RADV >= 25.1, che traduce `ULTRA_LOW_LATENCY` al firmware
+        #   (~/Documenti/AMD §5-ter). Si pretende che dpkg dica la versione del pacchetto.
+        if passo == "prodotto" and getattr(o, "mesa_vulkan_deb", ""):
+            deb = o.mesa_vulkan_deb
+            c2, t2 = sudo("podman cp %s rete11-%s:/tmp/mesa-vulkan.deb" % (_q(deb), d), 120)
+            if c2 == 0:
+                c2, t2 = nella_scatola(d, "dpkg -i /tmp/mesa-vulkan.deb >/dev/null 2>&1; "
+                                          "dpkg-query -W -f '${Version}' mesa-vulkan-drivers", 300)
+            atteso = re.sub(r"^.*mesa-vulkan-drivers_([^_]+)_.*$", r"\1", os.path.basename(deb))
+            dice("   scatola mesa-vulkan-drivers: codice %s · %s" % (c2, (t2 or "").strip()[:80]))
+            if c2 != 0 or (t2 or "").strip() != atteso:
+                return False, "mesa-vulkan-drivers %s non installato nella scatola: %s" % (atteso, t2)
     ok, perche = scheda_giusta(o, d)
     if not ok:
         return False, perche
@@ -1243,6 +1257,9 @@ def main():
                    help="fase 18: la codifica SENZA scheda (OpenH264) — nella scatola rifatta "
                         "si nasconde iHD_drv_video.so prima di accendere il server, e si "
                         "pretende che il registro dica «H.264: scheda no, software OpenH264 si'»")
+    a.add_argument("--mesa-vulkan-deb", default="",
+                   help="fase 20: un mesa-vulkan-drivers_*.deb da installare nella scatola "
+                        "prima del server (il backport per la Radeon, difetto A3)")
     a.add_argument("--secco", action="store_true", help="stampa il piano e basta")
     a.add_argument("--attesa-nascita-s", type=int, default=180)
     a.add_argument("--attesa-uscita-s", type=int, default=120)
