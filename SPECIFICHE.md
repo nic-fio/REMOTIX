@@ -1455,8 +1455,9 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   - ✅ **una full scaduta e non rinnovata si blocca dopo 14 giorni** (utente, 9 ott), col rinnovo manuale come
     con quello automatico.
 - ✅ **Le email all'acquirente prima della scadenza** (utente, 9 ott: *«semplifichiamo»*): nei **3 giorni prima**
-  della scadenza commerciale (72, 48 e 24 ore prima), **2 email al giorno**: una **fra le 8 e le 10**, una **fra le
-  14 e le 18**. ⇒ **6 email** in tutto.
+  della scadenza commerciale (72, 48 e 24 ore prima), **1 email al giorno, alle 11** ⇒ **3 email**.
+  ⛔ Superata la regola delle 2 email al giorno (8-10 e 14-18): utente, 9 ott, *«facciamo una sola email al
+  giorno, alle 11; così anche noi ci semplifichiamo la vita»*.
   - l'ora è quella **locale dell'acquirente**: si usa il fuso orario del suo server (lo manda il prodotto al
     controllo), o in mancanza quello del suo paese;
   - si fermano **appena il cliente rinnova**; chi ha il rinnovo automatico riceve invece solo l'avviso
@@ -1466,9 +1467,9 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   - **sui desktop**, nella pagina di REMOTIX, compare il messaggio **«licenza scaduta»** con il **tempo che manca
     al blocco**; 🔸 forma proposta da Claude: una **fascia fissa** in alto, che **non si chiude** ma **non copre** il
     lavoro, col conto alla rovescia; negli ultimi 3 giorni in più i 3 messaggi al giorno con «ho letto»;
-  - l'acquirente riceve **2 email al giorno** (8-10 e 14-18, ora locale) per tutti i 14 giorni, finché non rinnova.
-    ⚠ Sono fino a 28 email: chi le segna come posta indesiderata danneggia la reputazione del VPS come mittente,
-    da cui partono anche le email della scelta fra due copie. Da tenere d'occhio dopo il lancio.
+  - l'acquirente riceve **1 email al giorno, alle 11** (ora locale) per tutti i 14 giorni, finché non rinnova. A
+    spingere sono i messaggi sui desktop; l'email informa. ⇒ Fino a 14 email invece di 28: metà del rischio di
+    finire nella posta indesiderata.
 - **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
   dei 14 giorni di tolleranza dopo la scadenza commerciale (o dopo l'ultimo controllo riuscito, se la rete manca).
 - **Gli avvisi**:
