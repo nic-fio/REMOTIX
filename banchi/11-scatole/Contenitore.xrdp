@@ -1,0 +1,72 @@
+# ===========================================================================
+# 11-scatole/Contenitore.xrdp — LE SCATOLE CON xrdp, per il confronto
+# ===========================================================================
+#
+# ⭐ fasi/20-le-prestazioni.md §7 (9 ott 2026): la STESSA scatola delle misure di
+#    REMOTIX (`rete11/<desktop>:p0`, dalla sua ricetta) con in piu' xrdp, cosi'
+#    l'unica differenza fra le due salite e' il sistema che porta il desktop.
+#    Decisione dell'utente del 9 ott: i 4 desktop, Intel e Radeon, come REMOTIX.
+#
+#    bash 11-accendi.sh costruisci <desktop>         (prima, se manca)
+#    bash 11-accendi.sh costruisci <desktop>-xrdp    ⇒ questa ricetta, DESKTOP=<desktop>
+#    bash 11-accendi.sh accendi    <desktop>-xrdp
+#
+# ⛔ xrdp come lo installa Debian 13, e la configurazione di Debian COM'E' (§7.5):
+#    niente ritocchi a `xrdp.ini`, o il confronto non vale.
+# ⚠ xrdp non conosce Wayland: qui ogni desktop gira su X11.  E' la sola differenza
+#   di ambiente, ed e' quella di xrdp, non una scelta nostra.
+# ---------------------------------------------------------------------------
+ARG DESKTOP
+FROM localhost/rete11/${DESKTOP}:p0
+ARG DESKTOP
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------------------------
+# 1. xrdp, la cattura per Xorg e l'audio della sessione (§7.5, versioni di trixie).
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xrdp xorgxrdp pipewire-module-xrdp dbus-x11 x11-xserver-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# 2. ⚠ IL DESKTOP SU X11 — le scatole delle misure girano su Wayland e non hanno
+#    i pezzi X11.  Per ciascuno, quel che Debian 13 installa per la sua sessione
+#    «su Xorg», e niente di piu':
+#      gnome  `gnome-session-xsession` (la sessione «GNOME on Xorg»; Mutter 48 fa
+#             ancora X11)
+#      kde    `kwin-x11` (in Plasma 6.3 KWin per X11 e' un pacchetto a parte;
+#             `startplasma-x11` c'e' gia')
+#      xfce   `xfwm4` e `xfce4-settings` (la scatola usa labwc e non ha il
+#             gestore delle finestre di X11)
+#      lxqt   `openbox` (il gestore delle finestre di serie di LXQt su X11)
+#    ⛔ Sono quel che serve al desktop per essere se stesso su X11, non un aiuto
+#       a xrdp.  Il comando della sessione va in `~/.xsession` (§3).
+# ---------------------------------------------------------------------------
+RUN case "$DESKTOP" in \
+      gnome) P="gnome-session-xsession"; S="env XDG_SESSION_TYPE=x11 gnome-session" ;; \
+      kde)   P="kwin-x11";                S="startplasma-x11" ;; \
+      xfce)  P="xfwm4 xfce4-settings";    S="startxfce4" ;; \
+      lxqt)  P="openbox";                 S="startlxqt" ;; \
+      *) echo "desktop sconosciuto: $DESKTOP"; exit 1 ;; \
+    esac \
+    && apt-get update && apt-get install -y --no-install-recommends $P \
+    && rm -rf /var/lib/apt/lists/* \
+    && printf '#!/bin/sh\nexec %s\n' "$S" > /etc/skel/.xsession \
+    && chmod 755 /etc/skel/.xsession \
+    && for u in provanic nictest; do \
+         install -m 755 -o "$u" -g "$u" /etc/skel/.xsession "/home/$u/.xsession"; done
+
+# ---------------------------------------------------------------------------
+# 3. La sessione: `startwm.sh` di Debian lancia `~/.xsession` se c'e' (la prima
+#    delle tre eccezioni di §7.5).  Lo scheletro serve agli inquilini nuovi
+#    (`c16NNNuN`), la copia a mano a quelli gia' fatti.
+#
+# 4. xrdp NON parte da solo: `rete11-server` e xrdp non stanno accesi insieme.
+#    Lo accende `16-salita.py --sistema xrdp` (o la mano: `systemctl start xrdp`).
+#    ⚠ La porta 3389 e' quella dell'ospite (`--network=host`).
+# ---------------------------------------------------------------------------
+RUN systemctl disable xrdp.service xrdp-sesman.service 2>/dev/null || true
+
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

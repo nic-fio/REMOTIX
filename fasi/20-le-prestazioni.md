@@ -198,6 +198,57 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
 
 ## 7. Il banco xrdp: il piano
 
+### 7.0 ⭐ 9 ott 2026, pomeriggio: le decisioni dell'utente, e quel che è già misurato
+
+**Le quattro decisioni** (la licenza è sospesa, quindi il banco xrdp ha via libera, anche sul server):
+1. *«i test su xrdp devono rispecchiare quelli su remotix: 4 DE, Intel e Radeon»* ⇒ **la matrice intera**:
+   8 salite, 4K → Full HD, come `intel-f20` e `amd-f20`. Il punto 4b di §3 (una sola salita XFCE 2K) è superato.
+2. *«fai in modo che la suite lavori in modo autonomo sul server»* ⇒ la stessa struttura di REMOTIX:
+   `16-campagna.sh` → `16-coda.sh` → `16-salita.py --sistema xrdp`, in un'unità systemd, con `FERMA` e la ripresa.
+3. *«e soprattutto evita che il server si blocchi»* ⇒ §7.7.
+4. *«mi aspetto che l'intera suite duri meno dei 3 giorni di remotix»* ⇒ le due campagne di REMOTIX hanno occupato la
+   macchina per ~50 ore (Intel ~22, Radeon ~28). Con lo stesso protocollo la durata dipende da dove cede xrdp:
+   stima **1½-2½ giorni**. ⛔ Niente tetto che tronchi le salite, perché romperebbe la comparabilità. La coda
+   scrive a ogni salita il **preventivo** delle ore rimaste, così uno sforamento si vede subito.
+
+**Il primo pezzo di §7.6 è fatto e misurato** `[M]` (9 ott, 16:00-16:10):
+- **una ricetta sola**, `banchi/11-scatole/Contenitore.xrdp` (`ARG DESKTOP`), costruita **sopra** l'immagine delle
+  misure (`rete11/<desktop>:p0`); `11-accendi.sh costruisci|accendi <desktop>-xrdp`. Più xrdp
+  0.10.1-3.1+deb13u2, xorgxrdp 1:0.10.2-1 e pipewire-module-xrdp 0.2-2. Per stare su X11, ogni desktop riceve il suo
+  pezzo di Debian: GNOME `gnome-session-xsession` (Mutter 48), KDE `kwin-x11` (Plasma 6.3.6), XFCE `xfwm4` e
+  `xfce4-settings`, LXQt `openbox`;
+- **le 8 combinazioni nascono fino al desktop** con `xfreerdp3 /gfx` in un Xvfb 2560×1440 sull'ospite, e le 8 foto
+  sono guardate. Il registro di Xorg dice `rdpPreInit: /dev/dri/renderD128` con `name [amdgpu]` sulla Radeon, quindi
+  la sessione disegna sulla scheda giusta. ⇒ Rischio 3 di §7.6: **chiuso**;
+- **la tastiera arriva** dal canale RDP (`xdotool type` nel terminale, visto nella foto);
+- **la sonda XDamage vede i disegni di FreeRDP**: 63 eventi in 5 s mentre si scrive, 1 a riposo (l'orologio).
+  ⚠ Due condizioni, scoperte sbagliando: `d.damage_query_version()` prima di tutto (senza, **zero** eventi e
+  nessun errore), e il danno va chiesto sulla **finestra di FreeRDP**, non sulla radice (la radice non riceve i
+  disegni dei figli). ⇒ Rischio 2: **chiuso**;
+- ⛔ **la porta 3389 è una sola per tutto l'ospite** (`--network=host`). Al primo giro una scatola xrdp rimasta
+  accesa ha risposto al posto delle altre tre, e le foto sembravano giuste ma erano tutte di XFCE. ⇒ Prima di
+  accendere, la salita spegne **ogni** `rete11-*-xrdp` e vuole la 3389 libera; la foto della nascita si confronta
+  col desktop atteso.
+- sull'ospite: `freerdp3-x11` 3.15.0+dfsg-2.1+deb13u3, `xvfb` 2:21.1.16-1.3+deb13u4, `xdotool`, `python3-xlib`
+  0.33-3, `x11-apps`. ⚠ La radice è in RAM: dopo un riavvio vanno reinstallati (la salita lo controlla).
+
+### 7.7 ⛔ Il server non si deve bloccare
+
+Un server bloccato significa riavvio, e il riavvio perde la chiave ssh e il provisioning: la campagna resta ferma
+finché l'utente non mette mano. Con xrdp il rischio sale, perché i clienti FreeRDP decodificano **sul processore
+dell'ospite**: a 4K, 16 utenti significano 16 decodifiche RemoteFX più 16 Xorg. ⇒ Quattro reti, dalla più esterna:
+1. **la guardia della memoria** nella salita: ogni 2 s legge `MemAvailable` e `/proc/pressure/memory`. Sotto
+   **3 GiB** liberi, o con `full avg10` sopra **20 %**, il livello si chiude subito come **rottura «risorse
+   dell'ospite»** (dichiarata nella classifica, non mescolata con le soglie di §9) e si sgombera. ⚠ Il REMOTIX di
+   `716e35b` non aveva questa guardia: nella tabella la si dichiara, e si guarda nei `risorse.jsonl` della campagna
+   REMOTIX se ci sarebbe mai scattata;
+2. **chi muore prima:** i clienti (Xvfb e FreeRDP) nascono con `OOMScoreAdjust=+800`, quindi se il kernel deve
+   uccidere qualcosa uccide un cliente (un gradino rosso), non `sshd` né la coda;
+3. **chi non muore mai:** `sshd` e l'unità della coda ricevono `OOMScoreAdjust=-900` con un drop-in in `/run`
+   (sparisce al riavvio come tutto il resto, e la campagna lo rimette);
+4. **la coda non si ferma per un processo ucciso:** `OOMPolicy=continue`, come in `16-coda.sh`.
+⇒ Il limite di quanti clienti regge l'ospite resta quello di §7.6 rischio 1, e il recinto `browser` lo mostra.
+
 *Scritto l'**8 ottobre 2026** sera, sul portatile, leggendo il banco `banchi/16-stress/`; il server non
 è stato toccato (gira `r20-ripresa`). Serve al punto 4b di §3. ⛔ Niente codice prima che la campagna
 sia finita e questo piano sia letto.*

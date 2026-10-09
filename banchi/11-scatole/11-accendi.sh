@@ -73,6 +73,14 @@ BASE=$(cd "$(dirname "$0")" && pwd)
 NOME="rete11-$DESKTOP"
 IMMAGINE="rete11/$DESKTOP:p0"
 RICETTA="$BASE/Contenitore.$DESKTOP"
+# ⭐ fase 20 §7: `<desktop>-xrdp` e' la scatola di quel desktop con xrdp, da UNA
+#   ricetta sola (Contenitore.xrdp) costruita sopra l'immagine delle misure.
+DESKTOP_BASE=${DESKTOP%-xrdp}
+ARGOMENTI_RICETTA=""
+if [ "$DESKTOP_BASE" != "$DESKTOP" ]; then
+	RICETTA="$BASE/Contenitore.xrdp"
+	ARGOMENTI_RICETTA="--build-arg DESKTOP=$DESKTOP_BASE"
+fi
 # ⭐ Che cosa il prodotto sa fare, e su quale desktop: la STESSA lista del
 #   gancio, in un posto solo.  ⛔ Se manca, il cancello resta CHIUSO e lo dice.
 if [ -r "$BASE/11-capacita-del-prodotto.sh" ]; then
@@ -138,7 +146,7 @@ case "$DESKTOP" in
   #   FUORI dal limite del contenitore non si esegue affatto ⇒ `[M]` 203/EXEC
   #   «Operation not permitted», powerdevil morto a ogni sessione.  Stessa
   #   ragione di sopra: sulla macchina vera parte, e il permesso la AVVICINA.
-  kde) CAPS="$CAPS_COMUNI --cap-add=SYS_NICE --cap-add=WAKE_ALARM" ;;
+  kde|kde-xrdp) CAPS="$CAPS_COMUNI --cap-add=SYS_NICE --cap-add=WAKE_ALARM" ;;
   *)   CAPS="$CAPS_COMUNI" ;;
 esac
 
@@ -286,7 +294,7 @@ costruisci)
 	fi
 	# ⚠ `--network=host` anche qui: senza, la costruzione non arriva ai
 	#   pacchetti (stessa ragione di sopra, misurata il 25 agosto 2026).
-	podman build --network=host -f "$RICETTA" -t "$IMMAGINE" "$BASE" || exit 1
+	podman build --network=host $ARGOMENTI_RICETTA -f "$RICETTA" -t "$IMMAGINE" "$BASE" || exit 1
 	ok "immagine $IMMAGINE"
 	;;
 
