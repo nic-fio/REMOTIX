@@ -165,24 +165,32 @@ avvisi a queste due domande. Il prodotto non cambia.
 
 ## 8. I passi, in ordine
 
+*Rifatta il **9 ottobre 2026** dopo le decisioni di §10 e §11 (la stima del piano scritto l'8 ott era ~72 ore).
+Entrano: il biglietto giornaliero (qui orario), la scelta del cliente con la pagina e le email, il recupero, la
+posta dal VPS, il formato dei messaggi con le prove comuni C/Go. Escono: il TPM, il conteggio degli utenti
+(trial a utenti illimitati), le integrazioni coi cloud.*
+
 | # | passo | ore |
 |---|---|---|
-| 0 | le risposte alle domande di §10 (almeno 1, 4, 5, 6) e `RCP.md` aggiornato coi due motivi e il messaggio del codice | 3 |
-| 1 | **le chiavi**: radice e chiave del VPS di prova, il certificato, ripresi dalla catena A | 4 |
-| 2 | **il servizio** (Go): base dati, `attiva`, `controlla`, attestato firmato, cloni, trial già date | 14 |
-| 3 | **lo strumento** di chi vende | 5 |
-| 4 | **l'ingresso del pagamento** (le due domande, senza processore) | 2 |
-| 5 | **il prodotto, il messaggero** (processo a parte, libcurl, proxy, attestato su disco, verifica in C) | 10 |
-| 6 | **il prodotto, l'accesso** (stato in memoria, `0x11`/`0x12`, la regola di 1 utente in trial) | 6 |
-| 7 | **la pagina** nei tre stati, il campo del codice, l'identificativo della macchina; le frasi in `pagina.html` | 6 |
-| 8 | **i banchi** di §7, col servizio finto in contenitore; la suite corta e le salite con la gold di prova | 10 |
-| 9 | **pacchetti e installatore**: libcurl fra le dipendenze delle tre famiglie, il tetto in `REMOTIX_OPZIONI`, la chiave vera nel comando di rilascio | 5 |
-| 10 | **il VPS vero**: il servizio, l'unità, il certificato, la copia di riserva della base dati | 4 |
-| 11 | `SPECIFICHE.md` (stati della pagina, riservatezza: il server manda codice e `machine-id`), `DECISIONI.md` §10.30 riallineata su `MAX_ATTACCATE` | 3 |
-| | **totale** | **~72 ore ≈ 9 giorni di lavoro** |
+| 0 | `RCP.md` coi motivi di chiusura e i messaggi della licenza | 1 |
+| 1 | **le chiavi**: radice fuori linea, chiave del VPS di prova, l'**elenco firmato dalla radice** (indirizzi, chiavi, revoche), ripresi dalla catena A | 6 |
+| 2 | **il formato dei messaggi**: binario a lunghezze fisse, firmato; esempi comuni C/Go; fuzzing dei due lettori | 6 |
+| 3 | **il servizio** (Go): attivazione, controllo orario col **biglietto** (consumo atomico, risposta ripetibile, prova firmata per il ritorno a un salvataggio vecchio), sdoppiamenti coi **nomi brevi**, la **pagina di scelta** (72 ore, promemoria a 24, scelta tardiva, 1 ogni 30 giorni, 3 in 90 a chi vende), recupero e spostamento, trial senza doppioni, RDAP, cancellazioni a 6 mesi e 2 anni | 30 |
+| 4 | **la posta dal VPS**: Postfix solo in uscita, SPF/DKIM/DMARC, PTR, i testi delle email, prove verso Gmail/Microsoft/Yahoo | 6 |
+| 5 | **lo strumento** di chi vende: crea full e gold, revoca, trial a mano, sblocco del limite dei 30 giorni, gli sdoppiamenti da guardare | 7 |
+| 6 | **l'ingresso del pagamento** (rinnova/sospendi, senza processore) | 2 |
+| 7 | **il prodotto, il messaggero** (processo a parte, libcurl, proxy): richiesta scritta su disco prima di partire, biglietto, ora fidata, impronta da più fonti con le scritte di fabbrica scartate, descrizione dell'hardware, IP interni | 16 |
+| 8 | **il prodotto, l'accesso**: stato della licenza, alla scadenza collegamenti chiusi e desktop vivi, la copia rimasta indietro | 6 |
+| 9 | **la pagina**: i tre stati, il campo del codice, gli **avvisi alla RootSpeak** con «ho letto» (trial e full), il nome breve della copia, «Recupera», lo spostamento | 10 |
+| 10 | **i banchi**: servizio finto e posta finta in contenitore; guasti a metà controllo, cloni, ritorno del VPS a un salvataggio vecchio, scelta e mancata scelta; la suite corta e le salite con la gold di prova | 16 |
+| 11 | **pacchetti e installatore**: libcurl nelle tre famiglie, la chiave vera nel comando di rilascio | 5 |
+| 12 | **il VPS vero**: servizio, unità, certificato, posta, copie cifrate fuori dal VPS | 6 |
+| 13 | `SPECIFICHE.md`, `DECISIONI.md` §10.30 riallineata, **la bozza dell'informativa** sulla riservatezza (da far controllare) | 5 |
+| | **totale** | **~122 ore ≈ 15 giorni di lavoro** |
 
-⚠ La stima è di chi non ha ancora scritto una riga: il messaggero (passo 5) e la pagina (passo 7) sono i due
-punti dove la storia del progetto dice che si sbaglia per difetto.
+⚠ La stima è di chi non ha ancora scritto una riga: il servizio (passo 3), il messaggero (passo 7) e la pagina
+(passo 9) sono i punti dove la storia del progetto dice che si sbaglia per difetto. ⚠ Il passo 4 dipende da OVH
+(porta 25 aperta, PTR impostabile): se OVH non lo permette serve un inoltro, ed è una decisione dell'utente.
 
 ## 9. Che cosa resta fuori
 
