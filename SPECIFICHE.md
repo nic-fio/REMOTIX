@@ -1394,7 +1394,7 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 
 | tipo | utenti | durata | chi la ottiene |
 |---|---|---|---|
-| **trial** | illimitati | **14 giorni** | chiunque installi, una volta per macchina |
+| **trial** | illimitati | **14 giorni** | chiunque installi, **una volta per macchina ogni 5 anni** (§15.12) |
 | **full** | illimitati | **1 anno**; rinnovo **a scelta del cliente** (§15.6) | ⭐ **l'unica in vendita** |
 | **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova (le **4 scatole** e il server di prova: senza, i banchi si fermerebbero alla trial) |
 
@@ -1648,7 +1648,7 @@ rimasta indietro.
   | dati | per quanto |
   |---|---|
   | email dell'acquirente, licenze, registro delle attivazioni | **2 anni** dalla fine del rapporto |
-  | impronte delle trial | **2 anni** dalla trial |
+  | impronte delle trial | **5 anni** dalla trial (utente, 9 ott), ma dopo 2 anni **staccate** da email, nome e licenza: resta solo l'impronta cifrata con la data, che basta a dire «questa macchina ha già avuto una trial» e non porta a nessuno. ⇒ La regola è «una trial per macchina ogni 5 anni» |
   | dati di uno sdoppiamento (IP, RDAP, nomi, hardware) | **6 mesi** dalla scelta, poi solo «sdoppiamento del giorno X, risolto così» |
 
 - I dati di una copia finiscono nell'email dell'acquirente **anche quando la copia è di altri**: si fa per
