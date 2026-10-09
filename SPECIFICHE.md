@@ -1481,8 +1481,11 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 
 ### 15.7 La trial
 
-- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware**. ⚠ **«senza email» non regge più**: col
-  comportamento unificato la trial riceve le email della scadenza e degli sdoppiamenti (§15.13, da decidere).
+- **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware**.
+- ✅ **All'attivazione si chiede un'email, confermata con un link** (utente, 9 ott: *«unifichiamo i 2
+  comportamenti, quindi anche per la trial si chiede l'email; ci semplifichiamo la logica di gestione,
+  altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
+  diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
   del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,
   «Not Specified», tutti zeri) **si scartano** prima del calcolo. Al servizio arrivano solo impronte cifrate.
@@ -1584,8 +1587,6 @@ rimasta indietro.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
 - ❓ **Da decidere con l'utente** (verifica del 9 ott):
-  - **le email della trial**: col comportamento unificato servono email (scadenza, sdoppiamenti), ma la trial era
-    **senza email**. ⇒ un'email all'attivazione della trial? (proposta di Claude: sì, verificata con un link);
   - **15 giorni lavorativi dopo il blocco per doppione**: cancellazione definitiva (utente) o licenza bloccata che
     va a chi vende (Claude)? (§15.8);
   1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
