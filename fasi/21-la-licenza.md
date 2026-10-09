@@ -169,6 +169,24 @@ delle revoche, §15.11). Resta un comando sul portatile: se il pannello venisse 
 ✅ **9 ott, utente: un'interfaccia web** al posto dello strumento a riga di comando (supera §9 «pannello web
 fuori»). Le operazioni sono la sezione D di §3.3. ⏳ L'interfaccia si definisce dopo le operazioni.
 
+## 4-bis. Il sito `remotix.nicfio.it`
+
+✅ **9 ott, utente**: *«remotix.nicfio.it sarà anche la landing page del progetto, aperto al pubblico e dove si
+"pubblicizza" il prodotto, in modo simile ad esempio a phonestra. Bisogna prevedere delle sotto-sezioni riservate»*.
+
+🔸 **Come si monta**, sullo stesso VPS e con lo stesso schema dei siti che ci sono già (`~/Documenti/VPS`: Caddy,
+file statici in `/srv/www/<sito>`, HTTPS da Let's Encrypt, l'utente `progetti` che pubblica):
+- le **pagine pubbliche** sono **file statici**, come phonestra: niente CMS, niente da violare;
+- tutto quel che è dinamico è **il servizio in Go**, dietro Caddy, sotto percorsi suoi.
+
+| sezione | per chi | che cosa c'è | accesso |
+|---|---|---|---|
+| **pubblica** | tutti | il prodotto, le prestazioni, i prezzi, i documenti, **«Prova gratis»** e **«Acquista»** (B0, B1) | libero |
+| `/licenze/v1/` | il server del cliente | le domande A1-A8; non è una pagina | firme (`INSTALL_KEY`) |
+| **pagine da email** | chi ha ricevuto il link | scelta della copia, conferma del recupero (B2, B3) | link che vale una volta e scade |
+| 🔸 **area cliente** | chi ha comprato | le sue licenze: numero, stato, scadenza, copie attive; rinnova; rinnovo automatico sì/no; recupero; cambio email | ⏳ da decidere |
+| **pannello** | chi vende | le operazioni D1-D13 | ⏳ da decidere, il più robusto dei tre |
+
 ## 5. Parte 4 — l'ingresso del pagamento
 
 Due domande generiche, `rinnova` e `sospendi`, con il riferimento della licenza. ⛔ **Nessun processore scelto**
