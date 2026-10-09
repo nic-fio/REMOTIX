@@ -1428,7 +1428,7 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 | parte | dove | che cosa fa |
 |---|---|---|
 | **il prodotto** | il server del cliente | attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
-| **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita la pagina di scelta e di recupero |
+| **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita il **sito** (pagine pubbliche e **area cliente**, dove si sceglie la copia e si conferma il recupero) |
 | **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
 | **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
 
@@ -1562,8 +1562,8 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 3. Il servizio manda **subito un'email all'acquirente** (e un avviso a chi vende) con, per ogni copia: nome breve;
    giorno e ora della scoperta e dell'ultimo contatto; **IP pubblico** con fornitore, paese e città approssimata
    (da **RDAP**); **IP interni** e **nome della macchina**; **descrizione dell'hardware** (scheda madre,
-   processore, memoria, dischi). E un **link alla pagina di scelta**.
-4. La pagina di scelta **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
+   processore, memoria, dischi). E un **link all'area cliente** (✅ utente, 9 ott), dove si sceglie.
+4. L'area cliente **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
    non sceglie niente). Il link vale una volta e scade.
 5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
    dopo 24»). Nel frattempo le due copie funzionano.

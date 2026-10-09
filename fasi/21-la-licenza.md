@@ -146,7 +146,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 | D8 | **3 sdoppiamenti in 90 giorni**: guarda, **revoca** o lascia | 15.8 |
 | D9 | **sblocca il limite dei 30 giorni** (scambio o recupero) | 15.8, 15.9 |
 | D10 | 🔸 **chiave persa prima dell'uso**: annulla la vecchia e ne emette una nuova (le chiavi non si conservano in chiaro, quindi non si possono rimandare) | 15.3 |
-| D11 | 🔸 **cambia l'email dell'acquirente** (assistenza), con avviso al vecchio indirizzo | — |
+| D11 | 🔸 **cambia l'email dell'acquirente** quando il cliente non ha più accesso alla vecchia (di norma lo fa lui dall'area cliente), con avviso al vecchio indirizzo | — |
 | D12 | **guarda**: elenco e ricerca (numero, email, stato, ultimo contatto), la storia di una licenza, le copie, il registro | — |
 | D13 | 🔸 **la cassetta «da decidere»**: D6, D7, D8 e le trial «scrivici» in un posto solo, così niente aspetta in silenzio | — |
 
@@ -183,8 +183,7 @@ file statici in `/srv/www/<sito>`, HTTPS da Let's Encrypt, l'utente `progetti` c
 |---|---|---|---|
 | **pubblica** | tutti | il prodotto, le prestazioni, i prezzi, i documenti, **«Prova gratis»** e **«Acquista»** (B0, B1) | libero |
 | `/licenze/v1/` | il server del cliente | le domande A1-A8; non è una pagina | firme (`INSTALL_KEY`) |
-| **pagine da email** | chi ha ricevuto il link | scelta della copia, conferma del recupero (B2, B3) | link che vale una volta e scade |
-| 🔸 **area cliente** | chi ha comprato | le sue licenze: numero, stato, scadenza, copie attive; rinnova; rinnovo automatico sì/no; recupero; cambio email | ⏳ da decidere |
+| ✅ **area cliente** (utente, 9 ott: *«prevedere un'area cliente ci semplifica parecchie cose»*) | chi ha comprato o chiesto una trial | le sue licenze: numero, classe, stato, scadenza, copie attive; **scelta della copia** (B2); **conferma del recupero** (B3); rinnova; rinnovo automatico sì/no (B4); cambio email (D11 diventa sua) | 🔸 **link all'email, senza password**: si scrive l'email, arriva un link che vale una volta e per poco, e apre l'area per qualche ora. Le email della scelta e del recupero portano **qui**, non a pagine a parte |
 | **pannello** | chi vende | le operazioni D1-D13 | ⏳ da decidere, il più robusto dei tre |
 
 ## 5. Parte 4 — l'ingresso del pagamento
