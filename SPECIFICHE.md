@@ -1405,6 +1405,13 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 2. Alla prima attivazione il prodotto crea la **chiave dell'installazione** (una coppia di chiavi; la parte
    segreta sta in un file leggibile solo da root e **non lascia mai** il server).
    🔸 Il codice ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
+5. ⛔ **Un codice di attivazione si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
+   attivazione non si riutilizzano mai»*): consumato alla prima attivazione, poi rifiutato per sempre; mai
+   rigenerato uguale, nemmeno dopo una revoca o una scadenza. Il servizio tiene per sempre l'**impronta cifrata**
+   dei codici usati (non è un dato personale, quindi non ricade nei tetti di §15.12).
+6. Accanto al codice, chi compra riceve il **numero di licenza** (per esempio `RX-000123`): **non è segreto**, serve
+   al recupero (§15.9) e all'assistenza. ⇒ Il codice attiva, il numero identifica; recupero e spostamento **non
+   usano mai il codice**.
 3. Il servizio lega la licenza alla **chiave pubblica** dell'installazione e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
 4. La **trial** si attiva senza codice: la lega l'**impronta dell'hardware** (§15.7).
@@ -1489,7 +1496,8 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 - **Spostamento volontario** dalla pagina d'accesso: la vecchia installazione **firma il rilascio**, la nuova si
   attiva.
 - **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
-  incolla il **codice di licenza**, e conferma dall'**email dell'acquirente**. Il prodotto crea una **chiave
+  scrive il **numero di licenza** (non il codice di attivazione, già consumato), e conferma dall'**email
+  dell'acquirente**. Il prodotto crea una **chiave
   nuova** e la storia riparte da lì. 🔸 Uno ogni 30 giorni (chi vende può sbloccare); 🔸 acquirente e venditore
   avvisati a recupero fatto.
   ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
