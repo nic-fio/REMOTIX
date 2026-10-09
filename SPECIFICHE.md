@@ -1542,24 +1542,25 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 ### 15.7 La trial
 
 - **14 giorni, utenti illimitati**, legata all'**impronta dell'hardware** (`HW_FINGERPRINT`).
-- ✅ **All'attivazione si chiede un'email, confermata con un link** (utente, 9 ott: *«unifichiamo i 2
-  comportamenti, quindi anche per la trial si chiede l'email; ci semplifichiamo la logica di gestione,
-  altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
-  diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
+- ✅ **Chi chiede una chiave dà un'email** (utente, 9 ott: *«unifichiamo i 2 comportamenti, quindi anche per la
+  trial si chiede l'email; ci semplifichiamo la logica di gestione, altrimenti dobbiamo prevedere 2 sistemi quasi
+  paralleli»*). ⛔ Supera «senza email». Chi attiva la trial diventa l'**acquirente** di quella licenza: riceve le
+  email della scadenza e degli sdoppiamenti come la full.
 - ✅ **I dati** (utente, 9 ott, *«confermo»*): **email** (obbligatoria), **nome** e **azienda** (facoltativi).
-- ✅ **Due strade per l'email, e niente email usa e getta** (utente, 9 ott): la chiave si chiede con l'**email**
-  (la chiave che vi arriva conferma l'indirizzo, niente link: vedi sotto) oppure con **«Accedi con Google»** (l'email arriva già verificata); nessuna delle due è
-  obbligatoria. Il servizio **rifiuta le email dei domini temporanei** (mailinator, 10minutemail…) con un elenco
-  pubblico aggiornato ogni giorno, e risponde *«use your work email»*. ⚠ Dichiarato: ferma la gran parte, non i
-  domini nati oggi; e un account Google nuovo costa poco, quindi Google non è una difesa contro le trial in fila.
-- ✅ **La chiave si chiede SOLO dal sito** (utente, 9 ott: *«serve un sito web dove il cliente inserisce i dati e
-  ottiene poi per email il codice»*): `remotix.nicfio.it`, trial e full dallo stesso sito, la `LICENSE_KEY` arriva
-  per email. L'installatore **non chiede dati**: chiede solo la `LICENSE_KEY`, e a chi non ce l'ha mostra l'indirizzo
+- ✅ **Trial e full si chiedono solo dall'area cliente del sito, dopo l'accesso** (utente, 9 ott: *«serve un sito web
+  dove il cliente inserisce i dati e ottiene poi per email il codice»*; *«l'acquisto può essere fatto solo dalla
+  sezione privata dopo essersi loggati al sito»*; *«facciamola semplice: anche la trial la si chiede dall'area
+  privata»*). «Prova gratis» e «Acquista» sulla vetrina di `remotix.nicfio.it` portano all'accesso, poi alla
+  richiesta. ⇒ Un percorso solo; l'email è verificata prima di qualunque chiave; la licenza nasce già
+  nell'account, e l'upgrade da trial a full parte da lì. La `LICENSE_KEY` compare nell'area e arriva anche per
+  email. L'installatore **non chiede dati**: chiede solo la `LICENSE_KEY`, e a chi non ce l'ha mostra l'indirizzo
   del sito.
-- ✅ **La full si compra solo dall'area cliente, dopo l'accesso** (utente, 9 ott: *«l'acquisto può essere fatto solo
-  dalla sezione privata dopo essersi loggati al sito»*). «Acquista» sulla vetrina porta all'accesso (link all'email o
-  Google) e poi all'acquisto. ⇒ L'email è verificata prima di pagare, e la licenza nasce già nell'account
-  dell'acquirente. La trial resta dalla pagina pubblica. ⇒ **Il link di conferma sparisce**: ricevere la chiave conferma l'email.
+- ✅ **Due strade per entrare, e niente email usa e getta** (utente, 9 ott): nell'area cliente si entra con il
+  **link mandato all'email** (l'accesso conferma l'indirizzo) oppure con **«Accedi con Google»** (l'email arriva
+  già verificata); nessuna delle due è obbligatoria. Il servizio **rifiuta le email dei domini temporanei**
+  (mailinator, 10minutemail…) con un elenco pubblico aggiornato ogni giorno, e risponde *«use your work email»*.
+  ⚠ Dichiarato: ferma la gran parte, non i domini nati oggi; e un account Google nuovo costa poco, quindi Google
+  non è una difesa contro le trial in fila.
 - **Chiederla e installare giorni dopo non costa niente**: i giorni partono quando la chiave **entra
   nell'installazione**, non quando arriva l'email. 🔸 Una chiave trial **mai usata scade dopo 30 giorni** (pulizia:
   chi la vuole dopo ne chiede un'altra; la trial resta una per `HW_FINGERPRINT`).
