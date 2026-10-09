@@ -19,6 +19,9 @@
   --rosso: #b23a3a;
   --rosso-tenue: #f8e5e5;
   --grigio-tenue: #eceff3;
+  --scatola: #1f2733;
+  --scatola-testo: #f2f5f9;
+  --scatola-tenue: #a9b4c3;
   --f-titolo: "Literata", Georgia, "Times New Roman", serif;
   --f-testo: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --f-codice: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -28,6 +31,7 @@
     --bg: #12161c; --carta: #1a2029; --fg: #e4e8ee; --tenue: #9aa5b4; --linea: #303a47;
     --accento: #5fb4d3; --accento-tenue: #1a3440; --biglietto: #e09a55; --biglietto-tenue: #3a2a1a;
     --verde: #6cc28f; --verde-tenue: #1c3326; --rosso: #e27c7c; --rosso-tenue: #3a1f1f; --grigio-tenue: #232a34;
+    --scatola: #050709; --scatola-testo: #e8edf3; --scatola-tenue: #8f9bab;
     color-scheme: dark;
   }
 }
@@ -35,6 +39,7 @@
   --bg: #12161c; --carta: #1a2029; --fg: #e4e8ee; --tenue: #9aa5b4; --linea: #303a47;
   --accento: #5fb4d3; --accento-tenue: #1a3440; --biglietto: #e09a55; --biglietto-tenue: #3a2a1a;
   --verde: #6cc28f; --verde-tenue: #1c3326; --rosso: #e27c7c; --rosso-tenue: #3a1f1f; --grigio-tenue: #232a34;
+  --scatola: #050709; --scatola-testo: #e8edf3; --scatola-tenue: #8f9bab;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--f-testo); font-size: 17px; line-height: 1.6; }
@@ -81,169 +86,179 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
 <div class="pagina">
 
 <header class="apertura">
-  <div class="occhiello">REMOTIX · licenze · 9 ottobre 2026</div>
+  <div class="occhiello">REMOTIX · licenze · 9 ottobre 2026, sera</div>
   <h1>Il sistema delle licenze</h1>
-  <p class="sommario testo">Il processo dall'inizio alla fine, visto dall'alto: chi c'è, che cosa si scambiano, e che cosa succede in ogni caso. Il riferimento resta <code>SPECIFICHE.md</code> §15. Questa pagina lo racconta e non aggiunge regole; se le due non coincidono, vale §15. Sostituisce il vecchio promemoria in Markdown.</p>
-  <p class="testo">Legenda: <span class="etichetta e-deciso">deciso</span> è scritto in §15 · <span class="etichetta e-proposta">proposta</span> è in discussione, non ancora scritta · <span class="etichetta e-aperto">da sistemare</span> è una contraddizione trovata nei documenti.</p>
+  <p class="sommario testo">Il processo dall'inizio alla fine, visto dall'alto: le due scatole nere, che cosa si scambiano, e che cosa succede in ogni caso. Il riferimento resta <code>SPECIFICHE.md</code> §15. Questa pagina lo racconta e non aggiunge regole; se le due non coincidono, vale §15.</p>
+  <p class="testo">Legenda: <span class="etichetta e-deciso">deciso</span> è scritto in §15 · <span class="etichetta e-proposta">proposta</span> è scritto ma va ancora confermato · <span class="etichetta e-aperto">aperto</span> è ancora da decidere.</p>
   <nav class="indice" aria-label="Indice">
-    <a href="#parti">1 · Le parti</a><a href="#sito">2 · Il sito</a><a href="#oggetti">3 · Le cinque cose</a><a href="#garanzie">4 · Chi garantisce</a><a href="#tipi">5 · I tre tipi</a>
-    <a href="#vita">6 · La vita di una licenza</a><a href="#attivazione">7 · L'attivazione</a><a href="#controllo">8 · Il controllo orario</a>
-    <a href="#scadenza">9 · Scadenza e rinnovo</a><a href="#rete">10 · Senza rete</a><a href="#upgrade">11 · L'upgrade</a>
-    <a href="#trial">12 · La trial</a><a href="#copie">13 · Due copie</a><a href="#cambio">14 · Cambiare server</a><a href="#accesso">15 · La pagina d'accesso</a><a href="#chi">16 · Chi fa che cosa</a><a href="#retro">17 · Dietro le quinte</a><a href="#non">18 · Che cosa non c'è</a><a href="#aperti">19 · Punti aperti</a>
+    <a href="#scatole">1 · Le due scatole nere</a><a href="#elementi">2 · I tre elementi</a><a href="#sito">3 · Il sito</a>
+    <a href="#tipi">4 · I tre tipi</a><a href="#vita">5 · La vita di una licenza</a><a href="#attivazione">6 · Chiedere e attivare</a>
+    <a href="#controllo">7 · Il controllo orario</a><a href="#scadenza">8 · Scadenza e rinnovo</a><a href="#rete">9 · Senza rete</a>
+    <a href="#upgrade">10 · Da trial a full</a><a href="#copie">11 · Due copie</a><a href="#cambio">12 · Cambiare server</a>
+    <a href="#accesso">13 · Che cosa vede chi si collega</a><a href="#chi">14 · Chi fa che cosa</a><a href="#retro">15 · Dietro le quinte</a>
+    <a href="#non">16 · Che cosa non c'è</a><a href="#aperti">17 · Punti aperti</a>
   </nav>
 </header>
 
 <!-- ============================================================ 1 -->
-<h2 id="parti"><span class="n">1</span>Le parti in gioco</h2>
-<p class="testo">Sono quattro programmi o pagine, più due persone e la chiave che tieni sul portatile. Il centro di tutto è il <b>servizio delle licenze</b> sul tuo VPS: è l'unico che sa la verità su ogni licenza.</p>
+<h2 id="scatole"><span class="n">1</span>Le due scatole nere <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">REMOTIX sul server del cliente e il servizio delle licenze sul tuo VPS sono due scatole nere. Fra loro passano solo tre messaggi; quello che succede dentro ciascuna resta dentro. Ognuna si può costruire, provare e cambiare senza toccare l'altra, finché i messaggi restano uguali.</p>
 
 <figure>
 <div class="scorre">
-<svg viewBox="0 0 980 470" role="img" aria-label="Schema delle parti: server del cliente, servizio delle licenze sul VPS con sito, area cliente e pannello, portatile con la chiave madre, processore di pagamento, acquirente">
+<svg viewBox="0 0 980 470" role="img" aria-label="Due scatole nere: REMOTIX sul server del cliente a sinistra e il servizio delle licenze a destra; fra loro tre messaggi: attiva, controllo, elenco. Le persone e il pagamento entrano nel servizio da porte proprie.">
   <defs>
-    <marker id="fr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accento)"/></marker>
-    <marker id="frg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--tenue)"/></marker>
+    <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accento)"/></marker>
+    <marker id="fb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--biglietto)"/></marker>
+    <marker id="fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--tenue)"/></marker>
   </defs>
-  <!-- server del cliente -->
-  <rect x="20" y="150" width="250" height="170" rx="12" style="fill:var(--grigio-tenue);stroke:var(--linea)"/>
-  <text x="40" y="180" font-weight="700" font-size="16">Server del cliente</text>
-  <text x="40" y="202" class="piccolo">REMOTIX installato da root</text>
-  <rect x="40" y="218" width="210" height="84" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="54" y="242" font-size="13.5">• firma dell'installazione</text>
-  <text x="54" y="264" font-size="13.5">• ultimo biglietto ricevuto</text>
-  <text x="54" y="286" font-size="13.5">• attestato «valido fino al…»</text>
+  <!-- scatola REMOTIX -->
+  <rect x="20" y="60" width="230" height="300" rx="14" style="fill:var(--scatola)"/>
+  <text x="40" y="96" font-weight="700" font-size="17" style="fill:var(--scatola-testo)">REMOTIX</text>
+  <text x="40" y="118" font-size="13" style="fill:var(--scatola-tenue)">sul server del cliente</text>
+  <text x="40" y="300" font-size="12.5" style="fill:var(--scatola-tenue)">dentro, nascosto: dove tiene</text>
+  <text x="40" y="318" font-size="12.5" style="fill:var(--scatola-tenue)">il biglietto, come avvisa,</text>
+  <text x="40" y="336" font-size="12.5" style="fill:var(--scatola-tenue)">come chiude i collegamenti</text>
 
-  <!-- VPS -->
-  <rect x="370" y="90" width="300" height="290" rx="12" style="fill:var(--accento-tenue);stroke:var(--accento)"/>
-  <text x="390" y="120" font-weight="700" font-size="16">Servizio delle licenze</text>
-  <text x="390" y="141" class="piccolo mono">VPS · remotix.nicfio.it</text>
-  <rect x="390" y="156" width="260" height="58" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="404" y="180" font-size="13.5" font-weight="700">Registro delle licenze</text>
-  <text x="404" y="200" class="piccolo">biglietti, copie, scadenze, storia</text>
-  <rect x="390" y="224" width="125" height="68" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="402" y="250" font-size="13.5" font-weight="700">Sito</text>
-  <text x="402" y="270" class="piccolo">vetrina, chiave,</text>
-  <text x="402" y="285" class="piccolo">area cliente</text>
-  <rect x="525" y="224" width="125" height="68" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="537" y="250" font-size="13.5" font-weight="700">Pannello</text>
-  <text x="537" y="270" class="piccolo">solo tuo</text>
-  <text x="537" y="285" class="piccolo">passkey o Google</text>
-  <rect x="390" y="302" width="260" height="58" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="404" y="326" font-size="13.5" font-weight="700">Funzione della gold</text>
-  <text x="404" y="346" class="piccolo">un comando, solo via ssh</text>
+  <!-- scatola servizio -->
+  <rect x="610" y="60" width="230" height="300" rx="14" style="fill:var(--scatola)"/>
+  <text x="630" y="96" font-weight="700" font-size="17" style="fill:var(--scatola-testo)">Servizio licenze</text>
+  <text x="630" y="118" font-size="13" style="fill:var(--scatola-tenue)" class="mono">VPS · remotix.nicfio.it</text>
+  <text x="630" y="282" font-size="12.5" style="fill:var(--scatola-tenue)">dentro, nascosto: il registro,</text>
+  <text x="630" y="300" font-size="12.5" style="fill:var(--scatola-tenue)">l'area cliente, il pannello,</text>
+  <text x="630" y="318" font-size="12.5" style="fill:var(--scatola-tenue)">il pagamento, le email</text>
 
-  <!-- portatile -->
-  <rect x="760" y="20" width="200" height="100" rx="12" style="fill:var(--carta);stroke:var(--linea);stroke-dasharray:5 4"/>
-  <text x="776" y="50" font-weight="700" font-size="15">Il tuo portatile</text>
-  <text x="776" y="72" font-size="13.5">chiave madre</text>
-  <text x="776" y="92" class="piccolo">fuori linea, mai sul VPS</text>
+  <!-- messaggio 1 -->
+  <line x1="252" y1="150" x2="606" y2="150" style="stroke:var(--accento);stroke-width:2" marker-end="url(#fa)"/>
+  <text x="270" y="142" font-size="13.5" font-weight="700" style="fill:var(--accento)">1 · ATTIVA</text>
+  <text x="372" y="142" font-size="12.5" class="piccolo">chiave, nome macchina</text>
+  <line x1="606" y1="172" x2="252" y2="172" style="stroke:var(--accento);stroke-width:1.4;stroke-dasharray:6 4" marker-end="url(#fa)"/>
+  <text x="270" y="190" font-size="12.5" class="piccolo">in attesa (nome copia, primo biglietto) · rifiutata</text>
 
-  <!-- pagamento -->
-  <rect x="760" y="190" width="200" height="90" rx="12" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="776" y="220" font-weight="700" font-size="15">Pagamento</text>
-  <text x="776" y="242" font-size="13.5">«rinnova», «sospendi»</text>
-  <text x="776" y="262" class="piccolo">processore non ancora scelto</text>
+  <!-- messaggio 2 -->
+  <line x1="252" y1="220" x2="606" y2="220" style="stroke:var(--biglietto);stroke-width:2" marker-end="url(#fb)"/>
+  <text x="270" y="212" font-size="13.5" font-weight="700" style="fill:var(--biglietto)">2 · CONTROLLO</text>
+  <text x="400" y="212" font-size="12.5" class="piccolo">ogni ora: biglietto, codice, nome</text>
+  <line x1="606" y1="242" x2="252" y2="242" style="stroke:var(--biglietto);stroke-width:1.4;stroke-dasharray:6 4" marker-end="url(#fb)"/>
+  <text x="270" y="260" font-size="12.5" class="piccolo">attestato firmato + biglietto nuovo</text>
+  <text x="270" y="276" font-size="12.5" class="piccolo">oppure: in attesa · fermati · sdoppiata</text>
 
-  <!-- acquirente -->
-  <rect x="760" y="350" width="200" height="90" rx="12" style="fill:var(--carta);stroke:var(--linea)"/>
-  <text x="776" y="380" font-weight="700" font-size="15">L'acquirente</text>
-  <text x="776" y="402" font-size="13.5">riceve le email,</text>
-  <text x="776" y="420" font-size="13.5">sceglie nell'area cliente</text>
+  <!-- messaggio 3 -->
+  <line x1="252" y1="314" x2="606" y2="314" style="stroke:var(--tenue);stroke-width:1.6" marker-end="url(#fg)"/>
+  <text x="270" y="306" font-size="13.5" font-weight="700" style="fill:var(--tenue)">3 · ELENCO</text>
+  <line x1="606" y1="332" x2="252" y2="332" style="stroke:var(--tenue);stroke-width:1.2;stroke-dasharray:6 4" marker-end="url(#fg)"/>
+  <text x="270" y="350" font-size="12.5" class="piccolo">indirizzi, chiavi valide, revoche (firmato dalla chiave madre)</text>
 
-  <!-- frecce -->
-  <line x1="272" y1="225" x2="366" y2="200" style="stroke:var(--accento);stroke-width:2" marker-end="url(#fr)"/>
-  <text x="278" y="196" font-size="12.5" style="fill:var(--accento)">ogni ora: firma + biglietto</text>
-  <line x1="366" y1="262" x2="272" y2="282" style="stroke:var(--accento);stroke-width:2" marker-end="url(#fr)"/>
-  <text x="282" y="300" font-size="12.5" style="fill:var(--accento)">attestato + biglietto nuovo</text>
-  <line x1="758" y1="80" x2="672" y2="130" style="stroke:var(--tenue);stroke-width:1.6;stroke-dasharray:5 4" marker-end="url(#frg)"/>
-  <text x="684" y="92" class="piccolo">autorizza</text>
-  <line x1="758" y1="235" x2="672" y2="200" style="stroke:var(--tenue);stroke-width:1.6" marker-end="url(#frg)"/>
-  <line x1="672" y1="300" x2="758" y2="385" style="stroke:var(--tenue);stroke-width:1.6" marker-end="url(#frg)"/>
-  <text x="684" y="368" class="piccolo">email</text>
-  <line x1="758" y1="410" x2="455" y2="296" style="stroke:var(--tenue);stroke-width:1.2;stroke-dasharray:3 3" marker-end="url(#frg)"/>
-  <text x="560" y="410" class="piccolo">entra nell'area cliente</text>
+  <!-- porte del servizio -->
+  <rect x="880" y="40" width="90" height="56" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
+  <text x="892" y="64" font-size="13" font-weight="700">Acquirente</text>
+  <text x="892" y="82" class="piccolo">area cliente</text>
+  <rect x="880" y="182" width="90" height="56" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
+  <text x="892" y="206" font-size="13" font-weight="700">Tu</text>
+  <text x="892" y="224" class="piccolo">pannello, ssh</text>
+  <rect x="880" y="324" width="90" height="56" rx="8" style="fill:var(--carta);stroke:var(--linea)"/>
+  <text x="892" y="348" font-size="13" font-weight="700">Pagamento</text>
+  <text x="892" y="366" class="piccolo">da scegliere</text>
+  <line x1="878" y1="68" x2="844" y2="100" style="stroke:var(--tenue);stroke-width:1.4" marker-end="url(#fg)"/>
+  <line x1="878" y1="210" x2="844" y2="210" style="stroke:var(--tenue);stroke-width:1.4" marker-end="url(#fg)"/>
+  <line x1="878" y1="352" x2="844" y2="330" style="stroke:var(--tenue);stroke-width:1.4" marker-end="url(#fg)"/>
+
+  <text x="20" y="410" font-size="13.5">Tutto viaggia in HTTPS. Le risposte del servizio sono firmate con la chiave del VPS: REMOTIX si fida solo di quelle.</text>
+  <text x="20" y="432" font-size="13.5">REMOTIX non vede le porte di destra: persone e pagamento parlano solo col servizio.</text>
+  <text x="20" y="454" font-size="13.5">Da REMOTIX non esce nient'altro: niente hardware, niente IP interni, niente utenti o sessioni.</text>
 </svg>
 </div>
-<figcaption>Il server del cliente parla solo col servizio. Tutto il resto (sito, area cliente, pannello) sono pagine dello stesso servizio, ciascuna con il suo ingresso. La chiave madre sul tuo portatile non partecipa ai controlli: serve solo a garantire la chiave del VPS e a revocarla se venisse rubata.</figcaption>
+<figcaption>Il contratto fra le due scatole è <code>SPECIFICHE.md</code> §15.14. Un messaggio nuovo o un campo nuovo si decide lì, prima del codice.</figcaption>
 </figure>
 
-<!-- ============================================================ 1b -->
-<h2 id="sito"><span class="n">2</span>Il sito <span class="cod">remotix.nicfio.it</span> <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Tre ingressi sullo stesso servizio, tutto in inglese. Le pagine della licenza sono le stesse per cliente e venditore; cambiano l'ingresso e i pulsanti, così un errore nell'area cliente non apre il pannello.</p>
 <div class="scorre">
 <table>
-  <thead><tr><th>ingresso</th><th>per chi</th><th>come si entra</th><th>che cosa c'è</th></tr></thead>
+  <thead><tr><th>#</th><th>da REMOTIX al servizio</th><th>dal servizio a REMOTIX</th><th>quando</th></tr></thead>
   <tbody>
-    <tr><td>Pubblico</td><td>chiunque</td><td>libero</td><td>la vetrina. «Prova gratis» e «Acquista» portano all'accesso all'area cliente</td></tr>
-    <tr><td>Area cliente</td><td>chi ha una licenza, trial compresa</td><td>link mandato all'email (vale una volta e per poco, niente password) oppure «Accedi con Google»</td><td><b>la richiesta della trial e l'acquisto della full</b> (solo da qui, dopo l'accesso), licenze, stato e scadenze, copie attive, scelta della copia, rinnovo e rinnovo automatico sì/no, cambio email</td></tr>
-    <tr><td>Pannello</td><td>solo tu</td><td>passkey (impronta o PIN) oppure Google, solo col tuo account e con la verifica in due passaggi</td><td>le tue operazioni (sezione 16); ogni operazione importante ti manda subito un avviso. Se resti fuori: ssh sul VPS e una passkey nuova</td></tr>
+    <tr><td>1 · ATTIVA</td><td>la chiave di licenza, il nome della macchina</td><td><b>in attesa</b>: nome breve della copia, primo biglietto (vale dopo la conferma) · oppure <b>rifiutata</b>, col motivo</td><td>all'installazione, o col comando <span class="cod">remotix licenza attiva</span></td></tr>
+    <tr><td>2 · CONTROLLO</td><td>il biglietto, un codice casuale della richiesta, il nome della macchina</td><td><b>attestato</b> firmato (tipo, stato, scadenza, tolleranza, «valido fino a», avvisi) + biglietto nuovo · oppure <b>in attesa</b> · <b>fermati</b> · <b>sdoppiata</b></td><td>ogni ora</td></tr>
+    <tr><td>3 · ELENCO</td><td>la richiesta</td><td>indirizzi del servizio, chiavi del VPS valide, revoche, firmati dalla chiave madre</td><td>all'avvio e una volta al giorno</td></tr>
   </tbody>
 </table>
 </div>
 
 <!-- ============================================================ 2 -->
-<h2 id="oggetti"><span class="n">3</span>Le cinque cose da non confondere</h2>
-<p class="testo">Tre stanno sul server del cliente, due girano fra cliente e servizio. Ognuna risponde a una domanda diversa.</p>
+<h2 id="elementi"><span class="n">2</span>I tre elementi <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Tutto il sistema poggia su tre cose, ciascuna con un lavoro suo. Firma dell'installazione, impronta dell'hardware e numero di licenza sono stati tolti: non proteggevano niente che questi tre non coprano già.</p>
 <div class="scorre">
 <table>
-  <thead><tr><th>nome</th><th>risponde a</th><th>com'è fatta</th><th>chi la crea</th><th>segreta?</th><th>esempio della vita reale</th></tr></thead>
+  <thead><tr><th>elemento</th><th>risponde a</th><th>com'è fatto</th><th>chi lo crea</th><th>nella vita reale</th></tr></thead>
   <tbody>
-    <tr><td>Chiave di licenza<br><span class="cod">LICENSE_KEY</span></td><td>«quale licenza ho comprato?»</td><td>stringa lunga, si usa <b>una volta</b></td><td>il servizio, la manda per email</td><td>sì, finché non è usata</td><td>il codice di attivazione di una carta prepagata</td></tr>
-    <tr><td>Numero di licenza<br><span class="cod">RX-000123</span></td><td>«di chi stiamo parlando?»</td><td>breve, resta <b>per sempre</b></td><td>il servizio</td><td>no</td><td>il numero di contratto in fattura</td></tr>
-    <tr><td>Firma dell'installazione<br><span class="cod">INSTALL_KEY</span></td><td>«chi sei?»</td><td>coppia di chiavi casuale, la parte segreta resta sul server</td><td>REMOTIX, alla prima attivazione</td><td>sì</td><td>la firma su un documento d'identità</td></tr>
-    <tr><td>Biglietto</td><td>«a che punto sei?»</td><td>numero casuale, vale <b>una volta</b>, cambia ogni ora</td><td>il servizio</td><td>sì</td><td>il biglietto del turno, strappato a ogni chiamata</td></tr>
-    <tr><td>Impronta<br><span class="cod">HW_FINGERPRINT</span></td><td>«che macchina è?»</td><td>cifrata, da scheda madre, disco, scheda di rete</td><td>REMOTIX, dall'hardware</td><td>no</td><td>la descrizione dell'auto sul libretto</td></tr>
+    <tr><td>Chiave di licenza<br><span class="cod">LICENSE_KEY</span></td><td>«quale licenza?»</td><td>stringa lunga, con la classe davanti (<span class="cod">RXT</span> trial, <span class="cod">RXF</span> full, <span class="cod">RXG</span> gold). È l'unico identificativo; fuori dall'area cliente si mostra mascherata: <span class="cod">RXF-…-6YRB</span></td><td>il servizio</td><td>il codice di un abbonamento</td></tr>
+    <tr><td>Biglietto</td><td>«quale copia è quella viva?»</td><td>numero casuale, vale una volta, cambia ogni ora</td><td>il servizio</td><td>il biglietto del turno, strappato a ogni chiamata</td></tr>
+    <tr><td>Conferma nell'area cliente</td><td>«chi la sta usando?»</td><td>il pulsante «attiva qui» dell'acquirente, dopo l'accesso</td><td>l'acquirente</td><td>la firma sul modulo di consegna</td></tr>
   </tbody>
 </table>
 </div>
-<div class="nota testo">La firma da sola non basta: se il server viene clonato, il clone ha la stessa firma, perché è un file copiato insieme al resto. A smascherare le copie è il <b>biglietto</b>, che si può usare una volta sola (sezione 8). L'impronta descrive la macchina e conta solo per la trial.</div>
-
-<!-- ============================================================ 2b -->
-<h2 id="garanzie"><span class="n">4</span>Chi garantisce che cosa <span class="etichetta e-deciso">deciso</span></h2>
+<ul class="punti">
+  <li>La chiave da sola non fa partire niente: ogni installazione resta in attesa finché l'acquirente non la conferma. Per questo può servire a ogni installazione, e non si riassegna mai a un'altra licenza.</li>
+  <li>Sul server la chiave serve solo fino al primo biglietto, poi il programma la cancella dal disco e va avanti coi biglietti.</li>
+  <li>Se un cliente vuole una chiave nuova, la rigeneri tu dal pannello: la vecchia smette di valere, il server attivo non se ne accorge.</li>
+</ul>
 <div class="scorre">
 <table>
   <thead><tr><th>che cosa</th><th>chi lo garantisce</th></tr></thead>
   <tbody>
-    <tr><td>nessuno legge i dati per strada</td><td>HTTPS, il lucchetto normale del web (senza vincoli a un certificato, perché i proxy aziendali devono funzionare)</td></tr>
-    <tr><td>chi chiede è proprio quel server</td><td>la firma dell'installazione: REMOTIX firma, il servizio verifica</td></tr>
+    <tr><td>nessuno legge i dati per strada</td><td>HTTPS (senza vincoli a un certificato, perché i proxy aziendali devono funzionare)</td></tr>
+    <tr><td>la copia che chiede è quella viva</td><td>il biglietto</td></tr>
+    <tr><td>chi usa la licenza l'ha autorizzato l'acquirente</td><td>la conferma nell'area cliente</td></tr>
     <tr><td>la risposta viene davvero dal servizio</td><td>la chiave del VPS: il servizio firma, REMOTIX verifica</td></tr>
-    <tr><td>la chiave del VPS è buona, e si revoca se rubata</td><td>la chiave madre, fuori linea sul tuo portatile, con una copia di riserva. È l'unica insostituibile: persa lei, serve un REMOTIX nuovo per tutti</td></tr>
+    <tr><td>la chiave del VPS è buona, e si revoca se rubata</td><td>la chiave madre, fuori linea sul tuo portatile. È l'unica insostituibile</td></tr>
     <tr><td>«rinnova» e «sospendi» vengono davvero dal pagamento</td><td>la chiave del pagamento</td></tr>
   </tbody>
 </table>
 </div>
-<p class="testo">Indirizzi del servizio, chiavi valide e revoche stanno in un elenco firmato dalla chiave madre, e REMOTIX nasce con due indirizzi di partenza: una chiave del VPS rubata si revoca, e un dominio nuovo non obbliga i clienti ad aggiornare.</p>
+<div class="nota testo"><b>Dichiarato:</b> chi ha root sul server e vuole davvero aggirare il controllo, modificando il programma, può farlo; e un proxy aziendale che apre l'HTTPS è dentro casa del cliente. Il sistema tiene onesti gli onesti, gestisce pagamenti e scadenze, e scopre le copie fatte per errore.</div>
 
 <!-- ============================================================ 3 -->
-<h2 id="tipi"><span class="n">5</span>I tre tipi di licenza <span class="etichetta e-deciso">deciso</span></h2>
+<h2 id="sito"><span class="n">3</span>Il sito <span class="cod">remotix.nicfio.it</span> <span class="etichetta e-deciso">deciso</span></h2>
 <div class="scorre">
 <table>
-  <thead><tr><th>tipo</th><th>durata</th><th>chi la ottiene</th><th>utenti</th><th>avvisi di scadenza</th><th>due copie attive</th></tr></thead>
+  <thead><tr><th>ingresso</th><th>per chi</th><th>come si entra</th><th>che cosa c'è</th></tr></thead>
   <tbody>
-    <tr><td>Trial</td><td>14 giorni dall'installazione</td><td>chiunque, una per macchina ogni 5 anni</td><td>illimitati</td><td>sì</td><td>sceglie l'acquirente</td></tr>
-    <tr><td>Full</td><td>1 anno dall'installazione, poi rinnovo</td><td>chi compra (l'unica in vendita)</td><td>illimitati</td><td>sì</td><td>sceglie l'acquirente</td></tr>
-    <tr><td>Gold</td><td>nessuna scadenza</td><td>solo tu, per le tue macchine e le prove</td><td>illimitati</td><td>no</td><td>ti avvisa, e ne disabiliti una tu</td></tr>
+    <tr><td>Pubblico</td><td>chiunque</td><td>libero</td><td>la vetrina. «Prova gratis» e «Acquista» portano all'accesso</td></tr>
+    <tr><td>Area cliente</td><td>chi ha un account</td><td>link mandato all'email (niente password) oppure Google. Email usa e getta rifiutate</td><td>la richiesta della trial e l'acquisto della full (solo da qui), le licenze con stato e scadenze, la conferma dei server, la scelta fra due copie, il rinnovo e il rinnovo automatico sì/no, il cambio email</td></tr>
+    <tr><td>Pannello</td><td>solo tu</td><td>passkey oppure Google, solo col tuo account e con la verifica in due passaggi</td><td>le tue operazioni (sezione 14); ogni operazione importante ti manda un avviso. Se resti fuori: ssh sul VPS e una passkey nuova</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================================================ 4 -->
+<h2 id="tipi"><span class="n">4</span>I tre tipi di licenza <span class="etichetta e-deciso">deciso</span></h2>
+<div class="scorre">
+<table>
+  <thead><tr><th>tipo</th><th>durata</th><th>chi la ottiene</th><th>chi conferma i server</th><th>due copie attive</th></tr></thead>
+  <tbody>
+    <tr><td>Trial</td><td>14 giorni dalla conferma</td><td>una per account</td><td>l'acquirente</td><td>sceglie l'acquirente</td></tr>
+    <tr><td>Full</td><td>1 anno dall'acquisto, poi rinnovo</td><td>chi compra (l'unica in vendita)</td><td>l'acquirente</td><td>sceglie l'acquirente</td></tr>
+    <tr><td>Gold</td><td>nessuna scadenza</td><td>solo tu, col comando via ssh</td><td>tu, dal pannello</td><td>ti avvisa, e ne disabiliti una tu</td></tr>
   </tbody>
 </table>
 </div>
 <ul class="punti">
   <li>Ogni licenza vale per <b>una macchina</b>: un server fisico oppure una macchina virtuale.</li>
-  <li>Il programma <b>non conta gli utenti</b>: quanti ne regge una macchina lo dice la tabella pubblica delle prestazioni.</li>
+  <li>Il programma <b>non conta gli utenti</b>: quanti ne regge una macchina lo dice la tabella delle prestazioni.</li>
   <li>Gli aggiornamenti sono compresi finché la licenza è attiva.</li>
-  <li>Si sale e non si scende: <b>trial → full → gold</b>, anche saltando un gradino.</li>
-  <li><b>Un programma solo</b> per tutti e tre, gold compresa: una versione senza controllo, se uscisse, sarebbe la versione sbloccata per tutti.</li>
-  <li>Finché il pagamento non c'è, le full le crei tu a mano dal pannello. Le gold solo con il comando via ssh.</li>
+  <li>Si sale e non si scende: <b>trial → full → gold</b>.</li>
+  <li><b>Un programma solo</b> per tutti e tre, gold compresa.</li>
 </ul>
 
-<!-- ============================================================ 4 -->
-<h2 id="vita"><span class="n">6</span>La vita di una licenza</h2>
-<p class="testo">Tutti gli stati in cui può trovarsi una licenza, e che cosa la fa passare dall'uno all'altro. In ogni stato «fermo» si chiudono solo i collegamenti di REMOTIX: i desktop restano vivi e l'accesso al server (ssh, login) non viene mai toccato.</p>
+<!-- ============================================================ 5 -->
+<h2 id="vita"><span class="n">5</span>La vita di una licenza</h2>
+<p class="testo">Tutti gli stati, e che cosa fa passare dall'uno all'altro. Quando REMOTIX si ferma si chiudono solo i suoi collegamenti: i desktop restano vivi e l'accesso al server (ssh, login) non viene mai toccato.</p>
 <pre class="mermaid">
 stateDiagram-v2
     direction LR
-    [*] --> Chiesta: la chiave arriva per email
-    Chiesta --> Attiva: root la inserisce nell'installatore
-    Chiesta --> [*]: trial mai usata, scade dopo 30 giorni
+    [*] --> Chiesta: dall'area cliente
+    Chiesta --> InAttesa: root inserisce la chiave
+    Chiesta --> [*]: trial mai attivata, dopo 30 giorni
+    InAttesa --> Attiva: l'acquirente conferma
+    InAttesa --> Chiesta: nessuna conferma in 3 giorni
     Attiva --> Attiva: controllo ogni ora, biglietto nuovo
     Attiva --> InScadenza: ultimi 3 giorni lavorativi
     InScadenza --> Attiva: rinnovo
@@ -251,71 +266,70 @@ stateDiagram-v2
     Tolleranza --> Attiva: rinnovo
     Tolleranza --> Ferma: dopo 14 giorni solari
     Ferma --> Attiva: rinnovo
-    Attiva --> DueCopie: due biglietti si contraddicono
-    DueCopie --> Attiva: l'acquirente sceglie la copia
+    Attiva --> DueCopie: biglietto già consumato
+    DueCopie --> Attiva: l'acquirente sceglie
     DueCopie --> Bloccata: nessuna scelta in 7 giorni lavorativi
     Bloccata --> Attiva: scelta, o sblocco da te
     Bloccata --> Cancellata: lo decidi tu, dopo 15 giorni lavorativi
     Attiva --> Sospesa: dal pagamento
     Attiva --> Revocata: da te
     Sospesa --> Attiva: pagamento regolare
-    note right of Tolleranza
-        si lavora, con l'avviso
-        sopra il desktop
-    end note
 </pre>
 
-<!-- ============================================================ 5 -->
-<h2 id="attivazione"><span class="n">7</span>L'attivazione <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Dal sito al server funzionante. La chiave si chiede solo dal sito, e l'installatore non chiede dati personali: chiede solo la chiave. Trial e full si chiedono solo dall'area cliente, dopo l'accesso: un percorso solo, con l'email già verificata.</p>
+<!-- ============================================================ 6 -->
+<h2 id="attivazione"><span class="n">6</span>Chiedere e attivare <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Un percorso solo per trial e full, e lo stesso per la prima installazione e per ogni cambio di server.</p>
 <pre class="mermaid">
 sequenceDiagram
     autonumber
     actor A as Acquirente
-    participant S as Sito
+    participant S as Sito e area cliente
     participant V as Servizio licenze
     actor R as root sul server
     participant P as REMOTIX
     A->>S: «Prova gratis» o «Acquista»
-    S->>S: rifiuta le email usa e getta
-    S-->>A: link d'accesso per email (oppure Google)
-    A->>S: entra nell'area cliente, chiede la trial o paga la full
+    S-->>A: link d'accesso per email, oppure Google
+    A->>S: entra, chiede la trial o paga la full
     S->>V: crea la licenza
-    V-->>A: chiave e numero RX-000123, nell'area e per email
-    Note over A,R: anche giorni dopo, i giorni partono da qui sotto
+    V-->>A: la chiave, nell'area e per email
     R->>P: installatore, incolla la chiave
-    P->>P: crea la sua firma (INSTALL_KEY)
-    P->>V: chiave + firma pubblica + impronta
-    V->>V: segna la chiave come usata, per sempre
-    V-->>P: attestato firmato + primo biglietto
-    P-->>R: licenza attiva, trial o full
+    P->>V: 1 · ATTIVA (chiave, nome macchina)
+    V-->>P: in attesa: «copia 4F7K», primo biglietto
+    V-->>A: email: un server chiede la licenza
+    A->>S: «attiva qui» sulla copia 4F7K
+    P->>V: 2 · CONTROLLO (biglietto)
+    V-->>P: attestato firmato + biglietto nuovo: parte
+    P->>P: cancella la chiave dal disco
 </pre>
+<ul class="punti">
+  <li>I giorni partono dalla conferma, non da quando arriva l'email: chiederla oggi e installare la settimana prossima non costa niente.</li>
+  <li>Una sola copia in attesa per licenza; se nessuno la conferma, scade <span class="etichetta e-proposta">3 giorni</span> e non succede niente.</li>
+  <li>La pagina d'accesso del server non ha il campo della chiave: la chiave la mette root.</li>
+</ul>
 
-<!-- ============================================================ 6 -->
-<h2 id="controllo"><span class="n">8</span>Il controllo ogni ora, e come si scoprono le copie <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Ogni ora il server si presenta al servizio con la sua firma e con il biglietto ricevuto l'ora prima. Il servizio lo strappa e ne dà uno nuovo. Una copia del server ha in mano lo stesso biglietto dell'originale, e quando lo presenta lo trova già strappato.</p>
+<!-- ============================================================ 7 -->
+<h2 id="controllo"><span class="n">7</span>Il controllo ogni ora, e come si scoprono le copie <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Ogni ora il server presenta il biglietto ricevuto l'ora prima. Il servizio lo strappa e ne dà uno nuovo. Una copia del server ha in mano lo stesso biglietto dell'originale, e quando lo presenta lo trova già strappato.</p>
 
 <figure>
 <div class="scorre">
-<svg viewBox="0 0 980 360" role="img" aria-label="Il biglietto: in alto un server solo che consegna 41 e riceve 42, poi 43; in basso un clone che presenta 41 già strappato e fa scoprire lo sdoppiamento">
+<svg viewBox="0 0 980 360" role="img" aria-label="Il biglietto: in alto un server solo che consegna 41 e riceve 42; in basso un clone che presenta 41 già strappato e fa scoprire lo sdoppiamento">
   <text x="20" y="30" font-weight="700" font-size="15">Un server solo</text>
-  <g>
-    <rect x="20" y="48" width="150" height="56" rx="8" style="fill:var(--grigio-tenue);stroke:var(--linea)"/>
-    <text x="34" y="72" font-size="13.5" font-weight="700">Server</text>
-    <text x="34" y="92" class="piccolo">ore 10:00</text>
-    <rect x="230" y="56" width="70" height="40" rx="6" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
-    <text x="246" y="81" class="mono" font-size="15" font-weight="600" style="fill:var(--biglietto)">n.41</text>
-    <line x1="170" y1="76" x2="226" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
-    <rect x="360" y="48" width="170" height="56" rx="8" style="fill:var(--accento-tenue);stroke:var(--accento)"/>
-    <text x="374" y="72" font-size="13.5" font-weight="700">Servizio</text>
-    <text x="374" y="92" class="piccolo">41 è l'ultimo? sì</text>
-    <line x1="300" y1="76" x2="356" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
-    <rect x="590" y="56" width="70" height="40" rx="6" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
-    <text x="606" y="81" class="mono" font-size="15" font-weight="600" style="fill:var(--biglietto)">n.42</text>
-    <line x1="530" y1="76" x2="586" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
-    <text x="680" y="70" font-size="13.5">ore 11:00 consegna il 42,</text>
-    <text x="680" y="90" font-size="13.5">riceve il 43… e così via</text>
-  </g>
+  <rect x="20" y="48" width="150" height="56" rx="8" style="fill:var(--grigio-tenue);stroke:var(--linea)"/>
+  <text x="34" y="72" font-size="13.5" font-weight="700">Server</text>
+  <text x="34" y="92" class="piccolo">ore 10:00</text>
+  <rect x="230" y="56" width="70" height="40" rx="6" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
+  <text x="246" y="81" class="mono" font-size="15" font-weight="600" style="fill:var(--biglietto)">n.41</text>
+  <line x1="170" y1="76" x2="226" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
+  <rect x="360" y="48" width="170" height="56" rx="8" style="fill:var(--accento-tenue);stroke:var(--accento)"/>
+  <text x="374" y="72" font-size="13.5" font-weight="700">Servizio</text>
+  <text x="374" y="92" class="piccolo">41 è l'ultimo? sì</text>
+  <line x1="300" y1="76" x2="356" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
+  <rect x="590" y="56" width="70" height="40" rx="6" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
+  <text x="606" y="81" class="mono" font-size="15" font-weight="600" style="fill:var(--biglietto)">n.42</text>
+  <line x1="530" y1="76" x2="586" y2="76" style="stroke:var(--biglietto);stroke-width:1.6"/>
+  <text x="680" y="70" font-size="13.5">ore 11:00 consegna il 42,</text>
+  <text x="680" y="90" font-size="13.5">riceve il 43… e così via</text>
 
   <line x1="20" y1="132" x2="960" y2="132" style="stroke:var(--linea)"/>
 
@@ -345,41 +359,38 @@ sequenceDiagram
   <line x1="530" y1="212" x2="586" y2="212" style="stroke:var(--biglietto);stroke-width:1.6"/>
   <rect x="590" y="272" width="370" height="56" rx="8" style="fill:var(--rosso-tenue);stroke:var(--rosso)"/>
   <text x="606" y="296" font-size="14" font-weight="700" style="fill:var(--rosso)">Sdoppiamento scoperto</text>
-  <text x="606" y="316" font-size="13">ci sono due copie: parte la scelta (sezione 13)</text>
+  <text x="606" y="316" font-size="13">ci sono due copie: parte la scelta (sezione 11)</text>
   <line x1="530" y1="300" x2="586" y2="300" style="stroke:var(--rosso);stroke-width:1.6"/>
 </svg>
 </div>
-<figcaption>Il registro dei biglietti sta sul VPS, fuori dalla portata del cliente: un biglietto non si può fabbricare né riusare. Per questo lo sdoppiamento si scopre al massimo entro un'ora. Se la rete cade a metà, il server rispedisce la stessa richiesta e riceve la stessa risposta: un guasto non viene scambiato per un clone.</figcaption>
+<figcaption>Il registro dei biglietti sta sul VPS, fuori dalla portata del cliente. Ogni richiesta porta anche un codice casuale: se la rete cade e il server ripete la stessa richiesta, riceve la stessa risposta; un clone, che ha lo stesso biglietto ma un codice diverso, viene scoperto. Il biglietto scopre le copie che vanno avanti ciascuna per conto suo (cloni, backup, VM accese per errore).</figcaption>
 </figure>
 
-<!-- ============================================================ 7 -->
-<h2 id="scadenza"><span class="n">9</span>Scadenza e rinnovo <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Trial e full si comportano allo stesso modo, cambia solo la durata. Il rinnovo lo sceglie il cliente: <b>manuale</b> (il predefinito: paga indicando il numero di licenza) o <b>automatico</b> (solo se lo attiva lui, con un'email 7 giorni prima di ogni addebito). In entrambi i casi nessuna chiave nuova: il servizio sposta avanti la data, e il server se ne accorge al controllo dell'ora dopo.</p>
+<!-- ============================================================ 8 -->
+<h2 id="scadenza"><span class="n">8</span>Scadenza e rinnovo <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Trial e full si comportano allo stesso modo, cambia solo la durata. Il rinnovo lo sceglie il cliente dall'area cliente: <b>manuale</b> (il predefinito) o <b>automatico</b> (solo se lo attiva lui, con un'email 7 giorni prima di ogni addebito). Nessuna chiave nuova: il servizio sposta avanti la data, e il server se ne accorge al controllo dell'ora dopo.</p>
 
 <figure>
 <div class="scorre">
 <svg viewBox="0 0 980 250" role="img" aria-label="Linea del tempo della scadenza: tre giorni lavorativi di avvisi, la scadenza, quattordici giorni solari di tolleranza in cui si lavora, poi REMOTIX si ferma">
   <rect x="40" y="70" width="300" height="34" rx="6" style="fill:var(--accento-tenue);stroke:var(--accento)"/>
   <text x="54" y="92" font-size="13.5">licenza attiva</text>
-  <rect x="340" y="70" width="190" height="34" rx="0" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
+  <rect x="340" y="70" width="190" height="34" style="fill:var(--biglietto-tenue);stroke:var(--biglietto)"/>
   <text x="352" y="92" font-size="13.5">avvisi</text>
-  <rect x="530" y="70" width="290" height="34" rx="0" style="fill:var(--rosso-tenue);stroke:var(--rosso)"/>
+  <rect x="530" y="70" width="290" height="34" style="fill:var(--rosso-tenue);stroke:var(--rosso)"/>
   <text x="542" y="92" font-size="13.5">tolleranza: si lavora con l'avviso</text>
   <rect x="820" y="70" width="130" height="34" rx="6" style="fill:var(--grigio-tenue);stroke:var(--linea)"/>
   <text x="834" y="92" font-size="13.5" font-weight="700">ferma</text>
-
   <line x1="340" y1="56" x2="340" y2="120" style="stroke:var(--tenue)"/>
   <line x1="403" y1="104" x2="403" y2="114" style="stroke:var(--tenue)"/>
   <line x1="466" y1="104" x2="466" y2="114" style="stroke:var(--tenue)"/>
   <line x1="530" y1="50" x2="530" y2="124" style="stroke:var(--rosso);stroke-width:2"/>
   <line x1="820" y1="50" x2="820" y2="124" style="stroke:var(--fg);stroke-width:2"/>
-
-  <text x="340" y="44" font-size="12.5" class="piccolo" text-anchor="middle">−3 lav.</text>
-  <text x="403" y="44" font-size="12.5" class="piccolo" text-anchor="middle">−2 lav.</text>
-  <text x="466" y="44" font-size="12.5" class="piccolo" text-anchor="middle">−1 lav.</text>
+  <text x="340" y="44" class="piccolo" text-anchor="middle">−3 lav.</text>
+  <text x="403" y="44" class="piccolo" text-anchor="middle">−2 lav.</text>
+  <text x="466" y="44" class="piccolo" text-anchor="middle">−1 lav.</text>
   <text x="530" y="40" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--rosso)">scadenza</text>
   <text x="820" y="40" font-size="13" font-weight="700" text-anchor="middle">+14 giorni solari</text>
-
   <text x="340" y="144" class="piccolo">1 email ·</text>
   <text x="340" y="160" class="piccolo">avviso sul desktop</text>
   <text x="403" y="182" class="piccolo">1 email · avviso</text>
@@ -392,56 +403,26 @@ sequenceDiagram
   <text x="40" y="236" font-size="13.5">Il rinnovo, in qualunque punto, ferma tutto e riporta la licenza ad «attiva»: ognuno rientra e ritrova il suo desktop.</text>
 </svg>
 </div>
-<figcaption>Avvisi nei giorni lavorativi (lunedì–venerdì, uguali in tutto il mondo), tolleranza in giorni solari. Le email partono nell'ora locale dell'acquirente.</figcaption>
+<figcaption>Avvisi in giorni lavorativi (lunedì–venerdì, uguali in tutto il mondo), tolleranza in giorni solari. Le email partono nell'ora locale dell'acquirente.</figcaption>
 </figure>
 
-<!-- ============================================================ 8 -->
-<h2 id="rete"><span class="n">10</span>Quando il server non raggiunge il servizio <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Rete interrotta, proxy guasto, VPS fermo: il server continua a funzionare per <b>14 giorni dall'ultimo controllo riuscito</b>, gold compresa. L'amministratore viene avvisato al primo controllo fallito e poi una volta al giorno, con i giorni che restano. Non esiste l'attivazione senza rete: il primo collegamento serve sempre. Se qualcuno sposta indietro l'orologio della macchina, il server usa l'ora più recente che ha visto, così la licenza non si allunga.</p>
-
 <!-- ============================================================ 9 -->
-<h2 id="upgrade"><span class="n">11</span>L'upgrade <span class="etichetta e-deciso">deciso</span></h2>
-<div class="scorre">
-<table>
-  <thead><tr><th>che cosa</th><th>come va</th></tr></thead>
-  <tbody>
-    <tr><td>il comando</td><td>da root: <span class="cod">remotix licenza upgrade &lt;chiave&gt;</span>, su un REMOTIX già installato</td></tr>
-    <tr><td>la chiave</td><td>nuova, della classe più alta, usata una volta e poi bruciata</td></tr>
-    <tr><td>il numero di licenza</td><td>resta lo stesso: la storia dice «trial → full il giorno X»</td></tr>
-    <tr><td>la firma del server</td><td>si rinnova: il server se ne crea una nuova e la consegna firmata con la vecchia. Una copia vecchia (clone, backup) resta fuori</td></tr>
-    <tr><td>l'anno della full</td><td>parte dall'upgrade: chi compra al decimo giorno di prova non perde dieci giorni</td></tr>
-    <tr><td>gli utenti</td><td>nessuno viene scollegato</td></tr>
-  </tbody>
-</table>
-</div>
-
-<!-- ============================================================ 9b -->
-<h2 id="trial"><span class="n">12</span>La trial e l'impronta <span class="etichetta e-deciso">deciso</span></h2>
-<div class="scorre">
-<table>
-  <thead><tr><th>regola</th><th>come va</th></tr></thead>
-  <tbody>
-    <tr><td>come si chiede</td><td>dall'area cliente, dopo l'accesso col link all'email oppure con Google; nome e azienda facoltativi. Le email usa e getta vengono rifiutate: «use your work email»</td></tr>
-    <tr><td>quando partono i 14 giorni</td><td>all'ora esatta in cui la chiave entra nell'installazione, non quando arriva l'email</td></tr>
-    <tr><td>chiave mai usata</td><td>scade dopo 30 giorni; chi la vuole dopo ne chiede un'altra</td></tr>
-    <tr><td>quante</td><td>una per macchina ogni 5 anni</td></tr>
-    <tr><td>l'impronta</td><td>da scheda madre (UUID e seriale), disco di sistema, scheda di rete. Le scritte di fabbrica finte («To be filled by O.E.M.», tutti zeri) si scartano. Al servizio arriva solo cifrata</td></tr>
-    <tr><td>reinstallare durante la prova</td><td>ridà la stessa data di fine</td></tr>
-    <tr><td>macchina che non si distingue</td><td>la trial non parte da sola: «scrivici», e la attivi tu a mano</td></tr>
-    <tr><td>il limite, dichiarato</td><td>una VM nuova ha un'impronta nuova, quindi una trial nuova. Si accetta: chi lo fa deve rifare il server ogni 14 giorni</td></tr>
-  </tbody>
-</table>
-</div>
+<h2 id="rete"><span class="n">9</span>Quando il server non raggiunge il servizio <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Rete interrotta, proxy guasto, VPS fermo: il server continua a funzionare per <b>14 giorni dall'ultimo controllo riuscito</b>, gold compresa. L'amministratore viene avvisato al primo controllo fallito e poi una volta al giorno. Non esiste l'attivazione senza rete. Se qualcuno sposta indietro l'orologio della macchina, il server usa l'ora più recente che ha visto, così la licenza non si allunga. Per VPS e dominio non c'è un fornitore di riserva: un guasto di OVH si risolve ben dentro i 14 giorni.</p>
 
 <!-- ============================================================ 10 -->
-<h2 id="copie"><span class="n">13</span>Due copie attive <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Vale per trial e full. Per la gold no: ti arriva un avviso e ne disabiliti una tu dal pannello.</p>
+<h2 id="upgrade"><span class="n">10</span>Da trial a full <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Nessun comando sul server. L'acquirente compra la full sulla stessa licenza dall'area cliente: la chiave resta la stessa (cambia la classe), il server se ne accorge al controllo dell'ora dopo, e nessuno viene scollegato. L'anno parte dall'acquisto, quindi chi compra al decimo giorno di prova non perde dieci giorni. Si sale e basta, anche saltando un gradino (trial → gold, solo da te); una full portata a gold perde la scadenza.</p>
+
+<!-- ============================================================ 11 -->
+<h2 id="copie"><span class="n">11</span>Due copie attive <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Riguarda le copie nate da sole: un clone, un backup rimesso in piedi, una VM accesa due volte. Vale per trial e full; per la gold ti arriva un avviso e ne disabiliti una tu dal pannello.</p>
 <pre class="mermaid">
 flowchart TD
-    A[Due biglietti si contraddicono] --> B[Ogni copia riceve un nome breve<br/>es. «copia A · 4F7K»]
-    B --> C[Email all'acquirente con il link<br/>all'area cliente, e avviso a te]
-    C --> D{L'acquirente sceglie<br/>nell'area cliente?}
-    D -- sì --> E[La copia scelta si rifà la firma<br/>e continua. L'altra si ferma]
+    A[Biglietto già consumato] --> B[Ogni copia riceve un nome breve<br/>es. «copia A · 4F7K»]
+    B --> C[Email all'acquirente: due server, scegli.<br/>Nessun dato tecnico. Avviso a te]
+    C --> D{Sceglie nell'area cliente?<br/>vede nome macchina, IP pubblico, ultimo contatto}
+    D -- sì --> E[La copia scelta continua coi suoi biglietti.<br/>L'altra si ferma]
     D -- non ancora --> F[Le due copie funzionano.<br/>1 email al giorno]
     F --> G{Passati 7 giorni<br/>lavorativi?}
     G -- no --> D
@@ -450,109 +431,93 @@ flowchart TD
     I -- sì --> E
     I -- dopo 15 giorni lavorativi --> J[Decidi tu: sblocchi o cancelli]
 </pre>
-<p class="testo">Limiti: uno scambio ogni 30 giorni (puoi sbloccarlo tu), e con 3 sdoppiamenti in 90 giorni la licenza arriva a te, che decidi se revocarla. Cambiare un disco o una scheda di rete non crea uno sdoppiamento, perché a decidere sono firma e biglietto, non l'impronta.</p>
+<p class="testo">Limiti: uno scambio ogni 30 giorni (scelte e cambi di server insieme; puoi sbloccarlo tu), e con 3 sdoppiamenti in 90 giorni la licenza arriva a te. Cambiare un disco o una scheda di rete non crea uno sdoppiamento: decide il biglietto, non il ferro.</p>
 
-<!-- ============================================================ 11 -->
-<h2 id="cambio"><span class="n">14</span>Cambiare server <span class="etichetta e-proposta">proposta</span></h2>
-<p class="testo">Oggi §15.9 descrive tre strade (a freddo, spostamento volontario con la firma del rilascio, «Recupera» con conferma via email). La proposta su cui ci siamo fermati ne lascia due, e usa per tutto il meccanismo delle due copie.</p>
+<!-- ============================================================ 12 -->
+<h2 id="cambio"><span class="n">12</span>Cambiare server <span class="etichetta e-deciso">deciso</span></h2>
 <div class="scorre">
 <table>
   <thead><tr><th>situazione</th><th>che cosa fa il cliente</th><th>che cosa succede</th></tr></thead>
   <tbody>
-    <tr><td>il server intero si sposta<br>(VM su un altro host, disco copiato)</td><td>niente</td><td>la cartella della licenza viaggia con il sistema: una sola copia parla, il servizio non vede differenze</td></tr>
-    <tr><td>server nuovo installato da zero<br>(il vecchio è vivo o morto)</td><td>all'installatore dà il <b>numero di licenza</b> invece della chiave</td><td>il servizio vede subito una seconda copia. La nuova resta <b>in attesa</b>, senza funzionare, finché l'acquirente non la sceglie nell'area cliente. Scelta fatta: la nuova parte, la vecchia (se c'è) si ferma. Se nessuno sceglie, dopo qualche giorno l'attesa scade</td></tr>
-    <tr><td>clone o backup rimesso in piedi per sbaglio</td><td>sceglie quale tenere</td><td>come nella sezione 13: le due copie funzionano intanto, e c'è il tempo di scegliere</td></tr>
+    <tr><td>il server intero si sposta<br>(VM su un altro host, disco copiato)</td><td>niente</td><td>la cartella della licenza viaggia col sistema: si spegne il vecchio e si continua</td></tr>
+    <tr><td>server nuovo installato da zero<br>(il vecchio è vivo o morto)</td><td>root dà la chiave all'installatore, l'acquirente conferma</td><td>come una prima installazione (sezione 6). L'area cliente avvisa prima: «confermando, il server X si ferma». Il vecchio si ferma al suo controllo successivo</td></tr>
+    <tr><td>clone o backup rimesso in piedi per sbaglio</td><td>sceglie quale tenere</td><td>sezione 11</td></tr>
   </tbody>
 </table>
 </div>
-<pre class="mermaid">
-sequenceDiagram
-    actor R as root sul server nuovo
-    participant N as REMOTIX nuovo
-    participant V as Servizio licenze
-    actor A as Acquirente
-    participant O as Server vecchio
-    R->>N: installatore, numero RX-000123
-    N->>V: numero + firma nuova
-    V-->>N: copia in attesa, non funziona ancora
-    V-->>A: email: un server nuovo chiede la licenza
-    A->>V: area cliente, «tieni questa»
-    V-->>N: attestato + biglietto: parte
-    V-->>O: al prossimo controllo: questa copia si ferma
-</pre>
-<p class="testo">Perché la copia nuova resta in attesa: il numero non è segreto. Se bastasse a far partire una copia funzionante, chi lo conosce avrebbe giorni di uso gratis, e potrebbe far bloccare un cliente che non legge le email. In attesa, invece, non succede niente finché l'acquirente non decide.</p>
-<div class="nota testo"><b>Il rischio che resta:</b> chi controlla la casella dell'acquirente può scegliere la sua copia. Ogni sdoppiamento avvisa anche te, e il server vero mostra l'avviso entro un'ora. Il danno massimo sono alcune ore di fermo, che ripari dal pannello: il registro dice chi ha scelto e quando.</div>
+<ul class="punti">
+  <li>Se il server nuovo non va, si riconferma il vecchio dall'area cliente (conta come scambio; il limite lo sblocchi tu).</li>
+  <li>Chi deve confermare, e come l'azienda si organizza quando l'acquirente non c'è, non è materia di REMOTIX: niente deleghe, ruoli o attivazioni provvisorie.</li>
+</ul>
 
-<!-- ============================================================ 11b -->
-<h2 id="accesso"><span class="n">15</span>Che cosa vede chi si collega <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">La pagina d'accesso non ha il campo della chiave: le chiavi le mette root. Chi non ha un account non scopre lo stato della licenza.</p>
+<!-- ============================================================ 13 -->
+<h2 id="accesso"><span class="n">13</span>Che cosa vede chi si collega <span class="etichetta e-deciso">deciso</span></h2>
 <div class="scorre">
 <table>
   <thead><tr><th>stato</th><th>prima di utente e parola d'ordine</th><th>dopo</th></tr></thead>
   <tbody>
     <tr><td>trial</td><td>«Trial version — restano N giorni»</td><td>si entra</td></tr>
     <tr><td>licenza valida</td><td>niente</td><td>si entra</td></tr>
-    <tr><td>scaduta, dopo la tolleranza</td><td>niente</td><td>la finestra della licenza: stato, «Acquista», e che chiave e cambio server li fa l'amministratore</td></tr>
+    <tr><td>in attesa di conferma</td><td>niente</td><td>«questo server aspetta la conferma nell'area cliente: copia 4F7K»</td></tr>
+    <tr><td>scaduta, dopo la tolleranza</td><td>niente</td><td>la finestra della licenza: stato, «Acquista», e che la chiave la mette l'amministratore</td></tr>
     <tr><td>bloccata per due copie</td><td>niente</td><td>la pagina «sistema bloccato» e il rimando all'email della scelta</td></tr>
     <tr><td>sospesa o revocata</td><td>niente</td><td>come una scaduta, con la frase che spiega perché</td></tr>
     <tr><td>mai attivata (primo avvio senza rete)</td><td>niente</td><td>«il server non ha ancora potuto attivare la licenza: serve l'accesso a internet»</td></tr>
   </tbody>
 </table>
 </div>
-<p class="testo">In più, quando servono: i giorni che restano, il nome breve della copia, e per una copia rimasta indietro (un backup rimesso su) un messaggio neutro: «questa installazione risulta una copia più vecchia».</p>
+<p class="testo">In più, quando servono: i giorni che restano, il nome breve della copia, e per una copia rimasta indietro un messaggio neutro: «questa installazione risulta una copia più vecchia, forse un backup ripristinato».</p>
 
-<!-- ============================================================ 12 -->
-<h2 id="chi"><span class="n">16</span>Chi fa che cosa</h2>
+<!-- ============================================================ 14 -->
+<h2 id="chi"><span class="n">14</span>Chi fa che cosa</h2>
 <div class="scorre">
 <table>
   <thead><tr><th>chi</th><th>dove</th><th>che cosa fa</th></tr></thead>
   <tbody>
-    <tr><td>Acquirente</td><td>sito, email, area cliente</td><td>entra nell'area cliente, chiede la trial o compra la full, sceglie il rinnovo automatico o no, sceglie la copia, cambia la sua email</td></tr>
-    <tr><td>root sul server</td><td>installatore, comando <span class="cod">remotix licenza</span></td><td>inserisce la chiave (o il numero, nella proposta), fa l'upgrade, guarda lo stato, chiede un controllo subito</td></tr>
+    <tr><td>Acquirente</td><td>area cliente, email</td><td>chiede la trial, compra la full, conferma i server, sceglie fra due copie, rinnova o attiva il rinnovo automatico, cambia la sua email</td></tr>
+    <tr><td>root sul server</td><td>installatore, <span class="cod">remotix licenza</span></td><td>inserisce la chiave; guarda lo stato (<span class="cod">stato</span>), chiede un controllo subito (<span class="cod">controlla</span>), riattiva su un server nuovo (<span class="cod">attiva</span>)</td></tr>
     <tr><td>Utenti del server</td><td>pagina d'accesso, desktop</td><td>vedono gli avvisi e lo stato; non toccano mai la licenza</td></tr>
-    <tr><td>REMOTIX</td><td>server del cliente</td><td>attiva, controlla ogni ora, mostra gli avvisi, si ferma a licenza scaduta</td></tr>
+    <tr><td>REMOTIX</td><td>server del cliente</td><td>i tre messaggi della sezione 1; mostra gli avvisi; si ferma a licenza scaduta</td></tr>
     <tr><td>Servizio</td><td>VPS</td><td>tiene il registro, dà e strappa i biglietti, scopre le copie, manda le email</td></tr>
-    <tr><td>Tu</td><td>pannello (passkey o Google), ssh per la gold, portatile per la chiave madre</td><td>crei le full a mano (finché non c'è il pagamento) e le gold, revochi, sblocchi, decidi sulle licenze bloccate; ricevi un avviso a ogni operazione</td></tr>
+    <tr><td>Tu</td><td>pannello, ssh, portatile</td><td>crei le full a mano (finché non c'è il pagamento) e le gold col comando via ssh; confermi i server delle gold; revochi; rigeneri una chiave su richiesta; sblocchi; decidi sulle licenze bloccate</td></tr>
     <tr><td>Pagamento</td><td>processore, da scegliere</td><td>dice al servizio «rinnova» o «sospendi»</td></tr>
   </tbody>
 </table>
 </div>
 
-<!-- ============================================================ 12b -->
-<h2 id="retro"><span class="n">17</span>Dietro le quinte: posta, copie di sicurezza, dati <span class="etichetta e-deciso">deciso</span></h2>
+<!-- ============================================================ 15 -->
+<h2 id="retro"><span class="n">15</span>Dietro le quinte: posta, copie di sicurezza, dati <span class="etichetta e-deciso">deciso</span></h2>
 <ul class="punti">
   <li><b>Le email</b> partono dal VPS (Postfix solo in uscita, SPF, DKIM, DMARC). Condizione: OVH deve lasciare aperta la porta 25 e permettere il nome inverso; altrimenti serve un servizio d'inoltro.</li>
   <li><b>Copie cifrate</b> del registro fuori dal VPS, ogni giorno. Se il VPS torna a una copia vecchia, si rimette in pari solo con prove firmate da lui stesso, mai con numeri dichiarati dal cliente.</li>
-  <li><b>Ogni operazione</b> (attivazioni, sblocchi, revoche, pannello, pagamento) finisce nel registro: chi, quando, che cosa.</li>
+  <li><b>Ogni operazione</b> finisce nel registro: chi, quando, che cosa.</li>
+  <li><b>La chiave madre</b> non sta mai sul VPS. Indirizzi del servizio, chiavi valide e revoche stanno in un elenco firmato da lei, e REMOTIX nasce con due indirizzi: una chiave del VPS rubata si revoca, e un dominio nuovo non obbliga i clienti ad aggiornare.</li>
 </ul>
 <div class="scorre">
 <table>
   <thead><tr><th>dati</th><th>quanto si tengono, al massimo</th></tr></thead>
   <tbody>
-    <tr><td>email dell'acquirente, licenze, registro delle attivazioni</td><td>2 anni dalla fine del rapporto</td></tr>
-    <tr><td>impronte delle trial</td><td>5 anni; dopo 2 anni staccate da email e licenza (resta solo l'impronta cifrata con la data)</td></tr>
-    <tr><td>dati di uno sdoppiamento (IP, nomi, hardware)</td><td>6 mesi dalla scelta, poi solo «sdoppiamento del giorno X, risolto così»</td></tr>
-    <tr><td>chiavi già usate</td><td>per sempre, solo come impronta cifrata, perché non tornino mai valide</td></tr>
+    <tr><td>che cosa arriva da REMOTIX</td><td>solo biglietto, nome della macchina e IP pubblico; il servizio tiene solo l'ultimo</td></tr>
+    <tr><td>email dell'acquirente, licenze, registro delle operazioni</td><td>2 anni dalla fine del rapporto</td></tr>
+    <tr><td>dati di uno sdoppiamento (nomi delle macchine, IP pubblici)</td><td>6 mesi dalla scelta, poi solo «sdoppiamento del giorno X, risolto così»</td></tr>
   </tbody>
 </table>
 </div>
 <p class="testo">L'informativa sulla privacy va fatta controllare a un legale prima di vendere.</p>
 
-<!-- ============================================================ 12c -->
-<h2 id="non"><span class="n">18</span>Che cosa non c'è, apposta</h2>
-<p class="testo">Attivazione senza rete · conteggio degli utenti · TPM · integrazioni con AWS, Google o Azure · impronta che decide della full · cancellazione automatica di una licenza (decidi sempre tu) · blocco dell'accesso al server (ssh e login restano sempre).</p>
+<!-- ============================================================ 16 -->
+<h2 id="non"><span class="n">16</span>Che cosa non c'è, apposta</h2>
+<p class="testo">Attivazione senza rete · conteggio degli utenti · firma dell'installazione · impronta dell'hardware · TPM · integrazioni con AWS, Google o Azure · cancellazione automatica di una licenza (decidi sempre tu) · blocco dell'accesso al server · deleghe, ruoli o attivazioni provvisorie · rigenerazione della chiave da parte del cliente.</p>
 
-<!-- ============================================================ 13 -->
-<h2 id="aperti"><span class="n">19</span>Punti aperti</h2>
-<div class="aperto testo"><span class="etichetta e-aperto">da sistemare</span> <b>Giorni solari o lavorativi.</b> §15.1 dice «tutti i giorni sono solari, non lavorativi». §15.6 (gli avvisi prima della scadenza) e §15.8 (i 7 e i 15 giorni della scelta) usano invece giorni lavorativi. Le regole più recenti sono quelle lavorative; va corretta la frase di §15.1.</div>
-<div class="aperto testo"><span class="etichetta e-aperto">da sistemare</span> <b>Le «72 ore della scelta».</b> §15.1 cita ancora «72 ore della scelta», ma §15.8 l'ha sostituita con 7 giorni lavorativi.</div>
-<div class="aperto testo"><span class="etichetta e-proposta">proposta</span> <b>Cambiare server</b> (sezione 14): da approvare. Se va bene, §15.9 si riscrive e spariscono «Recupera», lo spostamento volontario e il comando <span class="cod">recupera</span>.</div>
-<div class="aperto testo"><span class="etichetta e-proposta">proposta</span> <b>I dati delle copie nell'email.</b> Oggi l'email dello sdoppiamento contiene IP, nomi delle macchine e hardware. Proposta: l'email dice solo «ci sono due copie, scegli», e i dettagli si vedono nell'area cliente (dove si cancellano dopo 6 mesi). Senza la città da RDAP, che non è affidabile.</div>
-<div class="aperto testo"><span class="etichetta e-aperto">sospeso</span> <b>Il contratto della trial.</b> La licenza PolyForm Free Trial indicata a suo tempo prevede 32 giorni, la trial ne dura 14: si decide insieme al contratto della full.</div>
-<div class="aperto testo"><span class="etichetta e-aperto">sospeso</span> <b>Pagamento e contratto.</b> Il processore non è scelto; quando lo sarà, il servizio dovrà riconoscere gli avvisi ripetuti, così un rinnovo mandato due volte non aggiunge due anni.</div>
+<!-- ============================================================ 17 -->
+<h2 id="aperti"><span class="n">17</span>Punti aperti</h2>
+<div class="aperto testo"><span class="etichetta e-proposta">proposta</span> <b>Quanto dura l'attesa di conferma.</b> Scritto 3 giorni, poi la copia in attesa scade senza effetti. Da confermare.</div>
+<div class="aperto testo"><span class="etichetta e-aperto">aperto</span> <b>Il piano della fase 21</b> (<code>fasi/21-la-licenza.md</code>) parla ancora di firma, impronta, recupero e upgrade con chiave: va riallineato a questa versione prima di approvarlo, e le ore si riducono.</div>
+<div class="aperto testo"><span class="etichetta e-aperto">aperto</span> <b>Il contratto della trial.</b> La licenza PolyForm Free Trial indicata a suo tempo prevede 32 giorni, la trial ne dura 14: si decide insieme al contratto della full.</div>
+<div class="aperto testo"><span class="etichetta e-aperto">sospeso</span> <b>Pagamento e contratto.</b> Il processore non è scelto. Quando lo sarà, il servizio dovrà riconoscere gli avvisi ripetuti (un rinnovo mandato due volte non aggiunge due anni) e gestire rimborsi e storni.</div>
 
 <footer>
-  Fonte: <code>SPECIFICHE.md</code> §15 al commit <code>fc7289e</code> (9 ottobre 2026) e la discussione dello stesso giorno. Il piano di lavoro è in <code>fasi/21-la-licenza.md</code>. ⛔ Ogni decisione nuova si scrive in §15 e qui, nello stesso momento.
+  Fonte: <code>SPECIFICHE.md</code> §15, riscritto la sera del 9 ottobre 2026 (commit <code>d863eca</code>). ⛔ Ogni decisione nuova si scrive in §15 e qui, nello stesso momento.
 </footer>
 
 </div>
