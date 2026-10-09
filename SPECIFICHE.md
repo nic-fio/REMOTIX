@@ -1356,8 +1356,8 @@ bianco la logica di funzionamento delle licenze; se ci dimentichiamo qualche par
 oro»*. ⭐ **Questo capitolo è il riferimento**: contiene solo le regole **in vigore**. Il perché, le date e le
 scelte superate stanno in `DECISIONI.md` §10.30; come si costruisce, i passi e le ore in
 `fasi/21-la-licenza.md`. ⛔ Se una decisione nuova cambia una regola, si corregge **qui**, nello stesso momento.
-Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **proposta tecnica** (di Claude o
-*concordata con ChatGPT) **non ancora confermata dall'utente**: elenco in §15.13.*
+Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte tecniche (di Claude o concordate
+*con ChatGPT) sono state **tutte confermate dall'utente il 9 ottobre**.*
 
 ### 15.1 I tre tipi di licenza
 
@@ -1409,7 +1409,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
    si è comprata.
 2. Alla prima attivazione il prodotto crea la **chiave dell'installazione** (una coppia di chiavi; la parte
    segreta sta in un file leggibile solo da root e **non lascia mai** il server).
-   🔸 Il codice ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
+   Il codice ha **almeno 128 bit casuali** e il prodotto **non lo conserva** dopo l'attivazione.
 5. ⛔ **Un codice di attivazione si usa UNA volta e non si riutilizza mai** (utente, 9 ott: *«ovviamente i codici di
    attivazione non si riutilizzano mai»*): consumato alla prima attivazione, poi rifiutato per sempre; mai
    rigenerato uguale, nemmeno dopo una revoca o una scadenza. Il servizio tiene per sempre l'**impronta cifrata**
@@ -1450,7 +1450,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   - **manuale, ed è il predefinito**: il cliente paga indicando il **numero di licenza**; il servizio sposta in
     avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessun codice nuovo;
   - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
-    «rinnova»; 🔸 **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
+    «rinnova»; **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
     spegne in qualunque momento;
   - ✅ **una licenza scaduta e non rinnovata si blocca dopo 14 giorni solari** (utente, 9 ott), trial compresa.
 - ⭐ **Trial e full si comportano allo stesso modo; cambia solo la durata** (utente, 9 ott: *«ho unificato il
@@ -1462,12 +1462,12 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   | **3° giorno lavorativo** prima della scadenza | 1 email: la licenza sta per scadere, invito a rinnovare (o a comprare la full) | un **avviso sul desktop** da confermare con «ho letto» |
   | **2° giorno lavorativo** prima | 1 email | un avviso con «ho letto» |
   | **giorno lavorativo** prima | **2 email** | un avviso con «ho letto» |
-  | **scadenza → 14 giorni solari** (tolleranza) | 🔸 1 email al giorno alle 11 (regola precedente, non toccata dal nuovo processo) | la **pagina di avviso «licenza scaduta»** col tempo che manca al blocco; 🔸 **sopra il desktop, si continua a lavorare** (decisione del 9 ott *«consente di continuare a lavorare»*, da riconfermare) |
+  | **scadenza → 14 giorni solari** (tolleranza) | 1 email al giorno alle 11 | la **pagina di avviso «licenza scaduta»** col tempo che manca al blocco; **sopra il desktop, si continua a lavorare** |
   | **dopo i 14 giorni** | — | REMOTIX si ferma (sotto) |
 
-  - 🔸 **«giorno lavorativo» = dal lunedì al venerdì**, uguale in tutto il mondo, senza festivi nazionali
-    (proposta di Claude: i festivi cambiano da paese a paese); i 14 giorni di tolleranza sono **solari**.
-  - 🔸 l'ora delle email: **alle 11**, e la seconda dell'ultimo giorno **alle 16**, ora locale dell'acquirente
+  - **«giorno lavorativo» = dal lunedì al venerdì**, uguale in tutto il mondo, senza festivi nazionali
+    (i festivi cambiano da paese a paese); i 14 giorni di tolleranza sono **solari**.
+  - l'ora delle email: **alle 11**, e la seconda dell'ultimo giorno **alle 16**, ora locale dell'acquirente
     (fuso orario del suo server o del suo paese);
   - tutto si ferma **appena il cliente rinnova**; chi ha il rinnovo automatico riceve solo l'avviso dell'addebito;
   - ⛔ niente più avvisi all'amministratore 7 giorni prima, né 3 messaggi al giorno: un avviso al giorno.
@@ -1505,7 +1505,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
    (da **RDAP**); **IP interni** e **nome della macchina**; **descrizione dell'hardware** (scheda madre,
    processore, memoria, dischi). E un **link alla pagina di scelta**.
 4. La pagina di scelta **mostra**; la scelta si **conferma con un pulsante** (un link aperto da un filtro di posta
-   non sceglie niente). 🔸 Il link vale una volta e scade.
+   non sceglie niente). Il link vale una volta e scade.
 5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
    dopo 24»). Nel frattempo le due copie funzionano.
 6. **Scelta fatta**: la copia tenuta riceve una **chiave nuova**, l'altra si ferma (i suoi desktop restano vivi
@@ -1529,7 +1529,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 - **Recupero** (backup ripristinato, copia rimasta indietro, server morto): l'amministratore preme **«Recupera»**,
   scrive il **numero di licenza** (non il codice di attivazione, già consumato), e conferma dall'**email
   dell'acquirente**. Il prodotto crea una **chiave
-  nuova** e la storia riparte da lì. 🔸 Uno ogni 30 giorni (chi vende può sbloccare); 🔸 acquirente e venditore
+  nuova** e la storia riparte da lì. Uno ogni 30 giorni (chi vende può sbloccare); acquirente e venditore
   avvisati a recupero fatto.
   ⛔ Non esiste un pulsante «adotta» solo locale: chi clona lo premerebbe.
 - La **copia rimasta indietro** non viene allungata: lavora fino al suo «valido fino a» e mostra all'amministratore
@@ -1543,7 +1543,10 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 |---|---|---|
 | **trial** | «Trial version — restano N giorni» e il collegamento «Hai un codice di licenza?» | si entra |
 | **licenza valida** | niente | si entra; collegamento piccolo «Cambia licenza» |
-| **scaduta** | niente (chi non ha un account non scopre lo stato) | **campo del codice già aperto**, «Recupera», «Acquista» |
+| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | **campo del codice già aperto**, «Recupera», «Acquista» |
+| **bloccata per due copie** (§15.8) | niente | la pagina **«sistema bloccato»** e il rimando all'email della scelta |
+| **sospesa** (dal pagamento) o **revocata** (da chi vende) | niente | la finestra della licenza, **come una scaduta**, con la frase che spiega la sospensione o la revoca |
+| **mai attivata** (primo avvio senza rete) | niente | *«il server non ha ancora potuto attivare la licenza: serve l'accesso a internet»* |
 
 In più, quando servono: l'avviso dei giorni che restano, il nome breve della copia, il messaggio della copia
 rimasta indietro.
@@ -1554,18 +1557,18 @@ rimasta indietro.
 - Indirizzi del servizio, chiavi valide e revoche stanno in un **elenco firmato dalla chiave madre**. Il prodotto
   ha dentro **due indirizzi** di partenza. ⇒ Una chiave del VPS rubata si revoca senza ricompilare il prodotto;
   un **dominio nuovo** non obbliga i clienti ad aggiornare.
-- HTTPS con i certificati del sistema, 🔸 **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
+- HTTPS con i certificati del sistema, **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
   la danno le firme dei messaggi, in un **formato binario fisso e firmato**.
 - Il servizio: operazioni a transazione, **copie cifrate fuori dal VPS ogni giorno**, registro di attivazioni,
   recuperi e sblocchi. Se il VPS torna a un salvataggio vecchio, si rimette in pari **solo** con prove firmate da
   lui stesso, mai con numeri dichiarati dal cliente.
-- 🔸 **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
+- **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
   porta 25 e permettere il nome inverso; altrimenti serve un inoltro (decisione dell'utente).
 
 ### 15.12 La riservatezza
 
 - **Che cosa arriva al servizio**: la chiave pubblica dell'installazione, l'impronta cifrata, la descrizione
-  dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. 🔸 Il servizio tiene **solo
+  dell'hardware, gli IP interni, il nome della macchina e l'IP da cui si collega. Il servizio tiene **solo
   l'ultima** di ogni voce, salvo gli sdoppiamenti.
 - **Quanto si tengono** (tetti, non minimi):
 
@@ -1585,11 +1588,6 @@ rimasta indietro.
 - ⏳ **Sospesi**: il processore di pagamento e il **contratto di vendita** della full (si decidono insieme).
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
-- ❓ **Da decidere con l'utente** (verifica del 9 ott):
-  1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
-     la finestra della licenza con la frase della sospensione, come una scaduta;
-  2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
-     licenza: serve l'accesso a internet»;
-  3. le righe 🔸: recupero uno ogni 30 giorni e avviso a recupero fatto; email dal
-     VPS; link della scelta usabile una volta; codice da 128 bit non conservato; niente pinning; solo l'ultima
-     voce tenuta dal servizio.
+- ✅ **Confermati dall'utente il 9 ottobre** (*«i 6 punti li confermo»*): giorni lavorativi dal lunedì al venerdì; le
+  email dell'ultimo giorno alle 11 e alle 16; nei 14 giorni di tolleranza si lavora con l'avviso sopra il desktop
+  e l'email giornaliera; le proposte tecniche di questo capitolo; e i due stati qui sotto (§15.10).
