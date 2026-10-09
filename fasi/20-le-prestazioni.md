@@ -134,7 +134,13 @@ nella scatola prima del server (`16-salita.py --mesa-vulkan-deb`, `misure/fase16
 | ritardo p95 | 53,95 / 55,72 ms | **21,45 ms** | 35,18 ms |
 | NOSTRO p95 dei p95 | 45,0 / 46,7 ms | **12,4 ms** | 26,2 ms |
 
-⇒ ⏳ Le salite complete dei 4 desktop a 4K sono in corso; la tabella pubblica dirà la versione di Mesa.
+**Le 4 salite a 4K, finite il 9 ott alle 11:13** (ultimo livello buono, RADV 25.0.7 → 26.1.6): GNOME **0 → 4**,
+KDE 0 → 0 (foto vecchia di 1,6-2,2 s con un utente, tetto 1 s), XFCE **2 → 0** e LXQt **3 → 0** (input perso:
+2 tasti su 11 e 1 su 13 con un utente, ritardo buono a 33 ms; confermato dalla ripetizione).
+⇒ ⛔ **Chiusa qui, per decisione dell'utente (9 ott): Mesa 26 non è nel perimetro**, era solo la verifica della causa.
+La causa di A3 su GNOME è il driver, non REMOTIX. I tasti persi su XFCE e LXQt compaiono **solo** con Mesa 26, quindi
+anche loro vengono dal driver. Il prodotto resta su RADV 25.0.7 di Debian 13 e la tabella pubblica riporta le misure
+`amd-f20`.
 
 **2. «Buono 12, verde vero 1» (es. Intel XFCE Full HD): non è una contraddizione.** «Buono» ammette un DEGRADED non
 significativo (al massimo un attore su quattro); «verde vero» li vuole tutti verdi. A 4, 8 e 12 utenti c'era **un
