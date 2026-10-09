@@ -13,18 +13,25 @@
 #   pagina fb9a18f3 — WebGL, DECISIONI §9.4); quella della notte («intel») resta nel
 #   registro come il «prima».
 # Il SIGTERM (systemctl stop) si passa alla coda in corso, che lo passa alla salita.
+# ⭐ fasi/20 §7.0: REMOTIX_16_SISTEMA=xrdp ⇒ ogni salita con `--sistema xrdp` (il confronto
+#   con xrdp: campagne intel-x20 amd-x20, unita' r20-xrdp, con -p OOMScoreAdjust=-900);
+#   la coda riceve quanti desktop restano dopo di lei, per il preventivo delle ore.
 set -u
 QUI=$(cd "$(dirname "$0")" && pwd)
 M=/media/REMOTIX/misure/fase16
 figlio=""; ferma=0
 trap 'ferma=1; [ -n "$figlio" ] && kill -TERM "$figlio"' TERM INT
+TUTTE=$#; I=0
 for etichetta in "$@"; do
+	I=$((I + 1))
 	[ "$ferma" = 1 ] && break
 	[ -e "$M/FERMA" ] && break
 	extra=""
 	case "$etichetta" in amd*) extra="--scheda amd" ;; esac
+	[ "${REMOTIX_16_SISTEMA:-}" = xrdp ] && extra="$extra --sistema xrdp"
 	echo "$(date '+%F %T') ▶ campagna $etichetta ($extra)" >> "$M/campagna.log"
-	REMOTIX_16_IN_PIU="$extra" bash "$QUI/16-coda.sh" "$etichetta" gnome kde xfce lxqt &
+	REMOTIX_16_IN_PIU="$extra" REMOTIX_16_DESKTOP_DOPO=$(( (TUTTE - I) * 4 )) \
+		bash "$QUI/16-coda.sh" "$etichetta" gnome kde xfce lxqt &
 	figlio=$!
 	wait "$figlio"; while kill -0 "$figlio" 2>/dev/null; do wait "$figlio"; done
 	figlio=""

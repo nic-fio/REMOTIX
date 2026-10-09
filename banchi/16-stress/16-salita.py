@@ -85,6 +85,22 @@ LE EVIDENZE (§10) in /media/REMOTIX/misure/fase16/<campagna>/:
 
 ⛔ Le soglie sono di 16-classifica.py (§9, ferme): qui non si giudica niente,
    si legge la classe che dice lui.
+
+--sistema xrdp (fasi/20-le-prestazioni.md §7, 9 ott 2026) — la STESSA salita contro xrdp:
+  la scatola e' `rete11-<desktop>-xrdp` (Contenitore.xrdp), e prima di accenderla si
+  spegne OGNI rete11-*-xrdp e si pretende la 3389 libera (`--network=host`: una porta
+  sola per l'ospite; il 9 ott una scatola rimasta accesa rispondeva al posto delle
+  altre); xrdp e xrdp-sesman si accendono coi file di Debian COM'E'; i clienti sono
+  16-attore-rdp.py negli Xvfb di 16-compositori-rdp.sh; il controllo corto e'
+  16-attore-rdp.py --controllo (§7.3, ridotto); server.log = le righe nuove di
+  /var/log/xrdp.log e xrdp-sesman.log; livello.json porta le versioni dei pacchetti al
+  posto di commit e binario; 16-classifica.py --sistema xrdp.  Niente tetto delle
+  sessioni (xrdp non ne ha uno nostro).
+  ⛔ §7.7, IL SERVER NON SI DEVE BLOCCARE: la GUARDIA legge ogni 2 s MemAvailable e
+  /proc/pressure/memory; sotto 3 GiB liberi o con «full avg10» sopra 20 il livello si
+  chiude SUBITO (SIGTERM agli attori) come FAIL «risorse dell'ospite», senza ripetizione
+  (ripeterlo vorrebbe dire rimettere il server sull'orlo).  sshd riceve
+  oom_score_adj −900 (e un drop-in in /run), i clienti +800.
 """
 import argparse
 import datetime
@@ -115,6 +131,12 @@ UID = os.getuid()
 RUN = "/run/user/%d" % UID
 COMPOSITORI = os.path.join(RUN, "16-compositori")
 INQUILINO_16 = re.compile(r"^c16[0-9]+u[0-9]+$")
+COMPOSITORI_RDP = os.path.join(RUN, "16-compositori-rdp")
+GUARDIA_MEM_MB = 3 * 1024           # §7.7: sotto, il livello si chiude
+GUARDIA_PSI_FULL = 20.0             # §7.7: «full avg10» oltre, il livello si chiude
+PACCHETTI_XRDP = ("xrdp", "xorgxrdp", "pipewire-module-xrdp", "xserver-xorg-core", "xfwm4", "openbox",
+                  "kwin-x11", "gnome-session-xsession", "firefox-esr", "mesa-va-drivers")
+PACCHETTI_OSPITE_XRDP = ("freerdp3-x11", "xvfb", "python3-xlib", "x11-utils", "python3-pil")
 AMBIENTE_BROWSER = {
     "XDG_RUNTIME_DIR": RUN, "REMOTIX_SCHERMO_ANNIDATO": "1", "REMOTIX_SUL_SERVER": "1",
     "MOZ_ENABLE_WAYLAND": "1",
@@ -303,6 +325,13 @@ def ambiente_browser(s):
     return amb
 
 
+def ambiente_rdp(d):
+    """L'ambiente dei clienti xrdp: il loro Xvfb, niente Wayland."""
+    amb = dict(os.environ, DISPLAY=d, XDG_RUNTIME_DIR=RUN, REMOTIX_SUL_SERVER="1")
+    amb.pop("WAYLAND_DISPLAY", None)
+    return amb
+
+
 def browser_fuori_scheda(dirliv):
     """Dalla serie delle risorse: i processi dei browser-cliente (recinti `browser`
     e `labwc_cliente`) che disegnano su una scheda che NON e' la Intel."""
@@ -382,7 +411,7 @@ def perche_non_vuoto(d):
             guai.append("in rete11-%s ci sono sessioni: %s" % (d, " ".join(chi)))
     me = os.getpid()
     t = comando(["pgrep", "-u", str(UID), "-af",
-                 "marionette|remote-debugging-port|16-attore|16-controllo-corto"])
+                 "marionette|remote-debugging-port|16-attore|16-controllo-corto|xfreerdp3"])
     browser = [r for r in t.splitlines() if r.strip() and not r.startswith("%d " % me)
                and "pgrep" not in r]
     if browser:
@@ -463,6 +492,139 @@ def tetto_in_vigore(d):
     return int(m.group(1)) if m else None
 
 
+def meta_scatola_xrdp(d):
+    """Dentro la scatola xrdp: le versioni, la scheda, e se la configurazione di xrdp e'
+    quella del pacchetto (dpkg --verify: nessuna riga = file intatti)."""
+    v = {"binario": None, "pagina": None, "opzioni_server": "xrdp di Debian 13, configurazione del pacchetto",
+         "codifica_video": "RemoteFX sul processore (xrdp di Debian senza H.264)"}
+    _c, t = nella_scatola(d, "dpkg-query -W -f '${Package}=${Version}\\n' %s 2>/dev/null; echo @@; "
+                             "ls /dev/dri; echo @@; dpkg --verify xrdp xorgxrdp 2>&1 | grep -v '^$' "
+                             "| head -5; echo @@; vainfo --display drm --device /dev/dri/renderD128 2>&1 "
+                             "| grep -m1 'Driver version'" % " ".join(PACCHETTI_XRDP), 60)
+    parti = (t or "").split("@@") + ["", "", "", ""]
+    v["pacchetti"] = dict(x.split("=", 1) for x in parti[0].split() if "=" in x)
+    v["dri_nella_scatola"] = parti[1].split()
+    v["xrdp_configurazione"] = "del pacchetto (dpkg --verify pulito)" if not parti[2].strip() \
+        else "⚠ MODIFICATA: " + " | ".join(parti[2].strip().splitlines())
+    v["driver_va"] = parti[3].split(":", 1)[-1].strip() or "?"
+    v["driver_video"] = ["%s=%s" % kv for kv in sorted(v["pacchetti"].items())
+                         if kv[0] in ("mesa-va-drivers",)]
+    t = comando(["dpkg-query", "-W", "-f", "${Package}=${Version}\n"] + list(PACCHETTI_OSPITE_XRDP))
+    v["pacchetti_ospite"] = dict(x.split("=", 1) for x in t.split() if "=" in x)
+    return v
+
+
+def ospite_pronto_xrdp():
+    """⚠ La radice dell'ospite e' in RAM: dopo un riavvio i pacchetti del cliente non ci
+    sono piu'.  Si guardano, e se mancano si installano (dichiarato).  (ok, motivo)"""
+    t = comando(["dpkg-query", "-W", "-f", "${Package} ${db:Status-Status}\n"] + list(PACCHETTI_OSPITE_XRDP))
+    mancano = [p for p in PACCHETTI_OSPITE_XRDP if "%s installed" % p not in t]
+    if not mancano:
+        return True, ""
+    dice("   ⚠ sull'ospite mancano %s: li installo" % " ".join(mancano))
+    c, t = sudo("DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends %s"
+                % " ".join(mancano), 900)
+    if c != 0:
+        return False, "pacchetti del cliente non installati sull'ospite: %s" % (t or "")[-300:]
+    return True, ""
+
+
+def proteggi_ssh():
+    """§7.7: se il kernel deve uccidere qualcosa, NON sshd (senza, la macchina resta
+    irraggiungibile e un riavvio perde chiave e provisioning).  Subito sui processi
+    vivi, e un drop-in in /run per un riavvio di sshd (sparisce col riavvio, come tutto)."""
+    c, t = sudo("for p in $(pgrep -x 'sshd|sshd-session'); do echo -900 > /proc/$p/oom_score_adj; done; "
+                "mkdir -p /run/systemd/system/ssh.service.d && printf '[Service]\\nOOMScoreAdjust=-900\\n' "
+                "> /run/systemd/system/ssh.service.d/remotix-oom.conf && systemctl daemon-reload && "
+                "for p in $(pgrep -x 'sshd|sshd-session'); do cat /proc/$p/oom_score_adj; done | sort | uniq -c", 60)
+    dice("   sshd protetto dal kernel (oom_score_adj): %s" % " · ".join((t or "?").split("\n"))[:120])
+
+
+def rifai_scatola_xrdp(o, d, dove):
+    """La scatola xrdp da zero: le altre xrdp spente, la 3389 libera, accendi, xrdp
+    acceso, la scheda guardata.  (ok, motivo)"""
+    os.makedirs(dove, exist_ok=True)
+    for s in scatole_accese():
+        if s.endswith("-xrdp"):
+            c, t = sudo("podman rm -f -t 10 %s" % s, 120)
+            dice("   spenta %s (la 3389 e' una per l'ospite): codice %s" % (s, c))
+    t = comando(["ss", "-ltnH", "sport = :3389"])
+    if t.strip():
+        return False, "la porta 3389 dell'ospite e' occupata: %s" % t.strip()[:160]
+    ok, perche = ospite_pronto_xrdp()
+    if not ok:
+        return False, perche
+    t0 = time.time()
+    c, t = sudo("cd %s && env REMOTIX_SCHEDA=%s bash 11-accendi.sh accendi %s" % (RETE11, o.scheda, d), 900)
+    with open(os.path.join(dove, "scatola-accendi.log"), "a") as f:
+        f.write("=== %s\n%s\n" % (ora(), t))
+    ultima = [x for x in (t or "").splitlines() if x.strip()][-1:] or [""]
+    dice("   scatola accendi %s: codice %s in %.0f s · %s" % (d, c, time.time() - t0,
+                                                            re.sub(r"\x1b\[[0-9;]*m", "", ultima[0])[:120]))
+    if c != 0:
+        return False, "11-accendi.sh accendi %s non riuscito (codice %s): %s" % (
+            d, c, re.sub(r"\x1b\[[0-9;]*m", "", " ".join((t or "").splitlines()[-3:]))[:300])
+    c, t = nella_scatola(d, "systemctl start xrdp-sesman xrdp && for i in $(seq 1 60); do "
+                            "ss -ltnH 'sport = :3389' | grep -q . && { systemctl is-active xrdp xrdp-sesman "
+                            "| tr '\\n' ' '; exit 0; }; sleep 0.25; done; systemctl status xrdp --no-pager "
+                            "| tail -5; exit 1", 120)
+    dice("   xrdp acceso: codice %s · %s" % (c, (t or "").strip()[:100]))
+    if c != 0:
+        return False, "xrdp non ascolta sulla 3389 nella scatola: %s" % (t or "")[-300:]
+    return scheda_giusta(o, d)
+
+
+class Guardia(threading.Thread):
+    """§7.7: ogni 2 s MemAvailable e la pressione della memoria; `motivo` quando scatta."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.motivo = None
+        self.ultima = {}
+        self.vivo = True
+
+    @staticmethod
+    def leggi():
+        mem = psi = None
+        try:
+            m = re.search(r"MemAvailable:\s+(\d+)", open("/proc/meminfo").read())
+            mem = int(m.group(1)) // 1024 if m else None
+        except OSError:
+            pass
+        try:
+            m = re.search(r"^full avg10=([\d.]+)", open("/proc/pressure/memory").read(), re.M)
+            psi = float(m.group(1)) if m else None
+        except OSError:
+            pass
+        return mem, psi
+
+    @staticmethod
+    def giudica(mem, psi):
+        if mem is not None and mem < GUARDIA_MEM_MB:
+            return "memoria disponibile %d MB < %d MB" % (mem, GUARDIA_MEM_MB)
+        if psi is not None and psi > GUARDIA_PSI_FULL:
+            return "pressione della memoria full avg10 %.1f %% > %.0f %%" % (psi, GUARDIA_PSI_FULL)
+        return None
+
+    def run(self):
+        while self.vivo:
+            mem, psi = self.leggi()
+            self.ultima = {"mem_disponibile_mb": mem, "psi_full_avg10": psi}
+            m = self.giudica(mem, psi)
+            if m and not self.motivo:
+                self.motivo = m
+                dice("⛔ GUARDIA DELL'OSPITE (§7.7): %s — chiudo il livello" % m)
+            time.sleep(2)
+
+    def riarma(self, attesa_s=180):
+        """Prima di un livello: si aspetta che la memoria sia tornata (al piu' `attesa_s`)."""
+        fine = time.time() + attesa_s
+        while time.time() < fine and self.giudica(*self.leggi()):
+            time.sleep(5)
+        self.motivo = None
+        return self.giudica(*self.leggi())
+
+
 SGOMBERO_16 = r"""
 for u in $(awk -F: '$1 ~ /^c16[0-9]+u[0-9]+$/ {print $1}' /etc/passwd); do
   id=$(id -u "$u" 2>/dev/null)
@@ -489,13 +651,28 @@ def sgombera_16(d):
 # ═══════════════════════════════════════════════════════════════════════════
 #  I COMPOSITORI
 # ═══════════════════════════════════════════════════════════════════════════
+SISTEMA = {"xrdp": False}
+
+
 def compositori(azione, *arg):
-    r = subprocess.run(["bash", os.path.join(QUI, "16-compositori.sh"), azione] + list(arg),
+    prog = "16-compositori-rdp.sh" if SISTEMA["xrdp"] else "16-compositori.sh"
+    r = subprocess.run(["bash", os.path.join(QUI, prog), azione] + list(arg),
                        capture_output=True, text=True, errors="replace", timeout=300)
     return r.returncode, r.stdout + r.stderr
 
 
+def display_di(n):
+    """xrdp: il display dell'Xvfb di questo utente (16-compositori-rdp.sh), se vivo."""
+    try:
+        d = open(os.path.join(COMPOSITORI_RDP, "u%02d" % n)).read().strip()
+    except OSError:
+        return None
+    return d if d.startswith(":") and os.path.exists("/tmp/.X11-unix/X%s" % d[1:]) else None
+
+
 def socket_di(n):
+    if SISTEMA["xrdp"]:
+        return display_di(n)
     try:
         s = open(os.path.join(COMPOSITORI, "u%02d" % n)).read().strip()
     except OSError:
@@ -521,12 +698,13 @@ class Attore:
             raise RuntimeError("il compositore u%02d non c'e'" % self.n)
         largo, alto = self.o.largo, self.o.alto
         cmd = [sys.executable, self.o.prog_attore, "--scatola", self.o.scatola,
-               "--utente", str(self.n), "--wayland", s, "--dir", self.cartella,
+               "--utente", str(self.n), "--display" if SISTEMA["xrdp"] else "--wayland", s,
+               "--dir", self.cartella,
                "--seme", str(self.o.seme_base + self.n), "--largo", str(largo),
                "--alto", str(alto), "--porte-base", str(self.o.porte_base + 10 * self.n)]
         if self.o.video:
             cmd += ["--video", self.o.video]
-        amb = ambiente_browser(s)
+        amb = ambiente_browser(s) if not SISTEMA["xrdp"] else ambiente_rdp(s)
         os.makedirs(self.dir_utente, exist_ok=True)
         self.log = open(os.path.join(self.cartella, "utente-%02d.log" % self.n), "a")
         self.log.write("=== %s %s\n" % (ora(), " ".join(cmd)))
@@ -578,6 +756,11 @@ class Salita:
                       "utenti_vivi": 0, "utenti_attesi": 0, "classe_ultimo": None,
                       "storia": self.storia, "prova": o.prova}
         self.meta = {}
+        self.guardia = None
+        self.ospite = None               # §7.7: il motivo, se la guardia e' scattata nel livello
+        if o.guardia:
+            self.guardia = Guardia()
+            self.guardia.start()
 
     # -- lo stato per il coordinatore ----------------------------------------
     def aggiorna(self, **k):
@@ -619,11 +802,19 @@ class Salita:
         self.ferma_attori()
         if self.o.non_rifare:
             dice("⚠ --non-rifare: la scatola NON si rifa' (solo prove dell'impianto)")
-            sgombera_16(self.o.scatola)
+            sgombera_16(self.o.cont)
             ok, perche = True, ""
+        elif SISTEMA["xrdp"]:
+            ok, perche = rifai_scatola_xrdp(self.o, self.o.cont, dove)
         else:
             ok, perche = rifai_scatola(self.o, self.o.scatola, self.o.tetto, dove)
-        if ok:
+        if ok and SISTEMA["xrdp"]:
+            self.meta_scatola = meta_scatola_xrdp(self.o.cont)
+            dice("   scatola: %s · xrdp %s · configurazione %s · dri %s · VA %s" % (
+                self.o.cont, self.meta_scatola["pacchetti"].get("xrdp"),
+                self.meta_scatola.get("xrdp_configurazione"),
+                ",".join(self.meta_scatola.get("dri_nella_scatola", [])), self.meta_scatola.get("driver_va")))
+        elif ok:
             self.meta_scatola = meta_scatola(self.o.scatola)
             dice("   scatola: binario %s · pagina %s · %s · dri %s · VA %s · %s" % (
                 self.meta_scatola.get("binario"), self.meta_scatola.get("pagina"),
@@ -644,6 +835,9 @@ class Salita:
         for n in nuovi:
             if self.fermati:
                 return False, "fermata da fuori"
+            if self.guardia and self.guardia.motivo:
+                self.ospite = self.guardia.motivo
+                return False, "risorse dell'ospite: %s" % self.guardia.motivo
             a = Attore(self.o, n, livello, self.cartella_attori)
             try:
                 s = a.avvia()
@@ -654,7 +848,8 @@ class Salita:
                 n, a.proc.pid, s, self.o.seme_base + n, self.o.porte_base + 10 * n))
             self.aggiorna(fase="entrano gli utenti", utenti_attesi=n_fino)
             fine = time.time() + self.o.attesa_nascita_s
-            while time.time() < fine and a.vivo() and not a.e_nato() and not self.fermati:
+            while time.time() < fine and a.vivo() and not a.e_nato() and not self.fermati \
+                    and not (self.guardia and self.guardia.motivo):
                 time.sleep(0.5)
             if a.e_nato():
                 dice("     utente %02d nato in %.1f s" % (n, a.nato - a.partito))
@@ -676,7 +871,12 @@ class Salita:
                "--livello", str(livello), "--dir", dirliv, "--browser", browser,
                "--porte-base", str(self.o.porte_base), "--largo", str(self.o.largo),
                "--alto", str(self.o.alto)]
-        amb = ambiente_browser(s)
+        if SISTEMA["xrdp"]:
+            browser = "freerdp"
+            cmd += ["--controllo", "--display", s, "--seme", str(self.o.seme_base + 99)]
+            amb = ambiente_rdp(s)
+        else:
+            amb = ambiente_browser(s)
         dice("   controllo corto: %s su %s" % (browser, s))
         with open(os.path.join(dirliv, "controllo-corto.log"), "w") as log:
             try:
@@ -770,7 +970,31 @@ class Salita:
                     except OSError:
                         shutil.copy2(p, q)
 
+    def registro_server_xrdp(self, dirliv, segno, t0, t1):
+        """xrdp: server.log = le righe NUOVE di xrdp.log e xrdp-sesman.log dal segno."""
+        d = self.o.cont
+        seg = segno or {}
+        parti = []
+        for nome in ("xrdp.log", "xrdp-sesman.log"):
+            _c, t = nella_scatola(d, "tail -n +%d /var/log/%s 2>/dev/null" % (seg.get(nome, 0) + 1, nome), 300)
+            parti.append("== /var/log/%s\n%s" % (nome, t or ""))
+        open(os.path.join(dirliv, "server.log"), "w").write("\n".join(parti) + "\n")
+        da, a = "@%d" % int(t0), "@%d" % int(t1 + 1)
+        _c, t = nella_scatola(d, "journalctl -p err -o json --since %s --until %s --no-pager 2>/dev/null "
+                                 "| tail -n 200000" % (da, a), 300)
+        open(os.path.join(dirliv, "journal-err.jsonl"), "w").write(
+            "\n".join(r for r in (t or "").splitlines() if r.startswith("{")) + "\n")
+        _c, t = nella_scatola(d, "journalctl -u xrdp -u xrdp-sesman --since %s --until %s --no-pager "
+                                 "-o short-iso-precise 2>&1 | tail -n 500000" % (da, a), 300)
+        open(os.path.join(dirliv, "journal-server.log"), "w").write(t or "")
+        _c, t = nella_scatola(d, "journalctl --since %s --until %s --no-pager "
+                                 "-o short-iso-precise 2>&1 | tail -n 500000" % (da, a), 300)
+        open(os.path.join(dirliv, "journal-scatola.log"), "w").write(t or "")
+        return ["server.log", "journal-err.jsonl", "journal-server.log", "journal-scatola.log"]
+
     def registro_server(self, dirliv, segno, t0, t1):
+        if SISTEMA["xrdp"]:
+            return self.registro_server_xrdp(dirliv, segno, t0, t1)
         d = self.o.scatola
         files = []
         if segno is not None:
@@ -801,6 +1025,8 @@ class Salita:
                "--finestra-s", str(int(self.o.controllo_min * 60)), "--json"]
         if self.o.fps_video:
             cmd += ["--fps-video", str(self.o.fps_video)]
+        if SISTEMA["xrdp"]:
+            cmd += ["--sistema", "xrdp"]
         if self.o.prova:
             cmd.append("--secco")            # §13.3: la salita di prova non conta
         try:
@@ -821,14 +1047,30 @@ class Salita:
         dice("══ %s: %d utenti, %s min (%s) ══" % (nome, n, minuti, tipo))
         self.aggiorna(fase="livello", gradino=n, livello_dir=dirliv, tipo_livello=tipo)
         t_inizio = time.time()
-        _c, t = nella_scatola(o.scatola, "wc -l < /var/lib/rete11/registro.log 2>/dev/null", 60)
-        try:
-            segno = int((t or "").split()[-1])
-        except (ValueError, IndexError):
-            segno = None
+        if self.guardia:
+            ancora = self.guardia.riarma()
+            if ancora:
+                dice("⚠ la guardia dice ancora «%s» dopo l'attesa: il livello parte lo stesso" % ancora)
+        self.ospite = None
+        if SISTEMA["xrdp"]:
+            _c, t = nella_scatola(o.cont, "for f in xrdp.log xrdp-sesman.log; do echo $f $(wc -l < "
+                                          "/var/log/$f 2>/dev/null || echo 0); done", 60)
+            segno = {}
+            for r in (t or "").splitlines():
+                p_ = r.split()
+                if len(p_) == 2 and p_[1].isdigit():
+                    segno[p_[0]] = int(p_[1])
+        else:
+            _c, t = nella_scatola(o.scatola, "wc -l < /var/lib/rete11/registro.log 2>/dev/null", 60)
+            try:
+                segno = int((t or "").split()[-1])
+            except (ValueError, IndexError):
+                segno = None
         # ⛔ 16-risorse.py gira da ROOT (smaps_rollup e fdinfo degli inquilini):
         #   sudo -S, la parola sullo stdin; sudo passa il SIGTERM al figlio.
-        cmd_r = [sys.executable, o.prog_risorse, "--scatola", o.scatola, "--dir", dirliv]
+        cmd_r = [sys.executable, o.prog_risorse, "--scatola", o.cont, "--dir", dirliv]
+        if SISTEMA["xrdp"]:
+            cmd_r += ["--sistema", "xrdp", "--segni-browser", "remotix-rdp-"]
         if not o.risorse_senza_root:
             cmd_r = ["sudo", "-S", "-p", ""] + cmd_r
         risorse = subprocess.Popen(
@@ -844,6 +1086,9 @@ class Salita:
         entrata_ok, perche_entrata = self.entrano(n, n)
         entrati = sorted(a.n for a in self.attori.values() if a.proc is not None)
         nati = sorted(a.n for a in self.attori.values() if a.nato)
+        if not entrata_ok and self.ospite:
+            for a in self.attori.values():
+                a.segnale(signal.SIGTERM)
         if not entrata_ok:
             # ⛔ compositore o attore che non parte: il livello NON e' buono
             #   (classe «?», che ferma la salita come una classe illeggibile)
@@ -869,6 +1114,13 @@ class Salita:
         fatto_controllo = False
         foto = None                      # {"t": invio, "attesi": [...], "fatte": [...]}
         while not self.fermati and entrata_ok:
+            if self.guardia and self.guardia.motivo:
+                self.ospite = self.guardia.motivo
+                eventi.append({"t": ora(), "evento": "guardia dell'ospite", "ragione": self.ospite,
+                               "misura": dict(self.guardia.ultima)})
+                for a in self.attori.values():
+                    a.segnale(signal.SIGTERM)          # via subito: i clienti liberano la memoria
+                break
             adesso = time.time()
             for a in self.attori.values():
                 if not a.vivo() and not a.morto_annotato:
@@ -898,7 +1150,7 @@ class Salita:
                 break
             prossimo = ora_foto if foto is None else (inizio_controllo if not fatto_controllo
                                                        else fine)
-            time.sleep(min(5, max(0.5, prossimo - adesso)))
+            time.sleep(min(2 if self.guardia else 5, max(0.5, prossimo - adesso)))
         t_fine = time.time()
         self.aggiorna(fase="registro")
         risorse.send_signal(signal.SIGTERM)
@@ -906,7 +1158,7 @@ class Salita:
             risorse.wait(timeout=30)
         except subprocess.TimeoutExpired:
             sudo("pkill -KILL -f %s" % _q("[1]6-risorse.py --scatola %s --dir %s" % (
-                o.scatola, dirliv)), 30)
+                o.cont, dirliv)), 30)
         files = self.registro_server(dirliv, segno, t_inizio, t_fine)
         schede_b = browser_fuori_scheda(dirliv)
         if schede_b and schede_b["fuori_intel"]:
@@ -922,7 +1174,7 @@ class Salita:
             "inizio_lavoro": iso(t_lavoro), "fine": round(t_fine, 3), "fine_iso": iso(t_fine),
             "durata_s": round(t_fine - t_inizio), "durata_lavoro_s": round(t_fine - t_lavoro),
             "utenti": [{"utente": a.n, "profilo": "ABCD"[(a.n - 1) % 4],
-                        "browser": "firefox" if a.n % 2 else "chrome",
+                        "browser": "freerdp" if SISTEMA["xrdp"] else ("firefox" if a.n % 2 else "chrome"),
                         "nuovo": bool(a.nato and a.nato >= t_inizio) or a.partito >= t_inizio}
                        for _k, a in sorted(self.attori.items())],
             "vivi_alla_fine": sorted(
@@ -938,7 +1190,9 @@ class Salita:
             "foto_piena": foto, "inizio_finestra": iso(inizio_controllo),
             "inizio_finestra_t": round(inizio_controllo, 3),
             "schede_browser": schede_b,
-            "eventi": eventi, "attori_da": self.cartella_attori, "prova": o.prova})
+            "eventi": eventi, "attori_da": self.cartella_attori, "prova": o.prova,
+            "sistema": o.sistema, "ospite_esaurito": self.ospite,
+            "guardia": dict(self.guardia.ultima) if self.guardia else None})
         ms = getattr(self, "meta_scatola", {})
         riga.update({"scatola_" + k: v for k, v in ms.items()})
         # ⭐ i campi di §10 coi nomi che legge 16-classifica.py (BASE)
@@ -955,6 +1209,11 @@ class Salita:
                     commit=self.meta.get("commit_prodotto") or
                     "banchi %s" % self.meta.get("commit_banchi"), binario=ms.get("binario"),
                     pagina=ms.get("pagina"), nucleo=self.meta.get("kernel"))
+        if SISTEMA["xrdp"]:
+            pk = ms.get("pacchetti") or {}
+            riga.update(commit="xrdp %s · xorgxrdp %s · freerdp %s" % (
+                pk.get("xrdp"), pk.get("xorgxrdp"), (ms.get("pacchetti_ospite") or {}).get("freerdp3-x11")),
+                tetto_sessioni=None, scheda_browser="nessuna (FreeRDP decodifica sul processore)")
         scrivi_json(os.path.join(dirliv, "livello.json"), riga)
         if self.fermati:
             # ⛔ un livello interrotto da fuori non si classifica: non e' durato
@@ -970,6 +1229,11 @@ class Salita:
                 perche_c = "ENTRATA FALLITA (%d entrati su %d): %s · la classifica diceva %s" % (
                     len(entrati), n, perche_entrata, classe)
                 classe, signif = "?", False
+        if self.ospite and not self.fermati:
+            # ⛔ §7.7: il livello chiuso dalla guardia e' una ROTTURA dichiarata
+            perche_c = "⛔ RISORSE DELL'OSPITE (§7.7): %s · la classifica diceva %s — %s" % (
+                self.ospite, classe, perche_c[:200])
+            classe, signif = "FAIL", True
         self.livelli_fatti += 1
         riga.update(classe=classe, significativo=signif, ragione_classe=perche_c)
         with open(os.path.join(self.base, "salita.jsonl"), "a", encoding="utf-8") as f:
@@ -989,7 +1253,10 @@ class Salita:
         dice("⭐ SALITA %s · %s · %s (%dx%d) · gradini %s · %s min (ultimo %s) · tetto %d%s" % (
             o.campagna, o.scatola, o.misura, o.largo, o.alto, ",".join(map(str, o.gradini)),
             o.minuti, o.minuti_ultimo, o.tetto, " · PROVA (non conta)" if o.prova else ""))
-        dice("   scheda della scatola: %s · browser-cliente sulla Intel" % o.scheda)
+        dice("   scheda della scatola: %s · %s" % (o.scheda, "SISTEMA xrdp, clienti FreeRDP sul processore"
+                                                  if SISTEMA["xrdp"] else "browser-cliente sulla Intel"))
+        if SISTEMA["xrdp"]:
+            proteggi_ssh()
         dice("   commit del prodotto: %s" % (self.meta["commit_prodotto"] or
                                             "? (16-prodotto assente o binario diverso)"))
         dice("   kernel %s · %s · binario %s · pagina %s · banchi %s" % (
@@ -1007,6 +1274,11 @@ class Salita:
             minuti = o.minuti_ultimo if i == len(o.gradini) - 1 else o.minuti
             classe, signif, _d = self.livello(n, minuti, "livello-%02d" % n, "gradino")
             if self.fermati:
+                break
+            if cattivo(classe, signif) and self.ospite:
+                rotto = n
+                dice("⛔ %d utenti: chiuso dalla guardia dell'ospite (%s) — rottura, senza ripetere "
+                     "(§7.7)" % (n, self.ospite))
                 break
             if cattivo(classe, signif):
                 dice("⚠ %d utenti: %s — si RIPETE nelle stesse condizioni (§14), da scatola "
@@ -1062,11 +1334,18 @@ class Salita:
         self.aggiorna(fase="sgombero")
         self.ferma_attori()
         try:
-            sgombera_16(o.scatola)
+            sgombera_16(o.cont)
         except Exception as e:                   # noqa: BLE001
             dice("⚠ sgombero: %s" % e)
         c, t = compositori("spegni")
         dice("   compositori spenti (%d)" % t.count("spento"))
+        if self.guardia:
+            self.guardia.vivo = False
+        if SISTEMA["xrdp"]:
+            # la scatola xrdp si spegne: libera la 3389 e la memoria per chi viene dopo
+            c, t = sudo("podman rm -f -t 10 rete11-%s" % o.cont, 120)
+            dice("   scatola rete11-%s spenta (codice %s)" % (o.cont, c))
+            return
         if not o.lascia_tetto and o.tetto and not o.non_rifare:
             c, t = sudo("cd %s && bash 11-accendi.sh server %s" % (RETE11, o.scatola), 300)
             dice("   server rimesso col tetto predefinito (codice %s, tetto %s)" % (
@@ -1260,6 +1539,10 @@ def main():
     a.add_argument("--mesa-vulkan-deb", default="",
                    help="fase 20: un mesa-vulkan-drivers_*.deb da installare nella scatola "
                         "prima del server (il backport per la Radeon, difetto A3)")
+    a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
+                   help="xrdp: la stessa salita contro xrdp di Debian 13 (fasi/20 §7)")
+    a.add_argument("--guardia", action="store_true",
+                   help="la guardia dell'ospite di fasi/20 §7.7 (sempre accesa con --sistema xrdp)")
     a.add_argument("--secco", action="store_true", help="stampa il piano e basta")
     a.add_argument("--attesa-nascita-s", type=int, default=180)
     a.add_argument("--attesa-uscita-s", type=int, default=120)
@@ -1301,12 +1584,18 @@ def main():
         a.error("livelli troppo corti: servono almeno --controllo-min + 2.5 minuti "
                 "(1 di assestamento, e la memoria vuole piu' di 60 s di serie)")
     o.tetto = o.tetto or (max(o.gradini) + 1)
+    SISTEMA["xrdp"] = o.sistema == "xrdp"
+    o.cont = o.scatola + "-xrdp" if SISTEMA["xrdp"] else o.scatola
+    o.guardia = o.guardia or SISTEMA["xrdp"]
     o.largo, o.alto = MISURE_SCHERMO[o.misura]
     prog = os.path.abspath(o.programmi)
     o.prog_attore = os.path.join(prog, "16-attore.py")
     o.prog_risorse = os.path.join(prog, "16-risorse.py")
     o.prog_classifica = os.path.join(prog, "16-classifica.py")
     o.prog_controllo = os.path.join(QUI, "16-controllo-corto.py")
+    if SISTEMA["xrdp"]:
+        o.prog_attore = os.path.join(prog, "16-attore-rdp.py")
+        o.prog_controllo = os.path.join(QUI, "16-attore-rdp.py")
     if o.secco:
         tot = sum(o.minuti for _ in o.gradini[:-1]) + o.minuti_ultimo
         print("piano: %s · scheda %s · %s · gradini %s · %s min + ultimo %s ≈ %.0f min di lavoro (+ nascite, "
@@ -1339,7 +1628,7 @@ def main():
         dice("⛔ BLOCKED: %s" % guaio)
         return 3
     sal = Salita(o)
-    guai = perche_non_vuoto(o.scatola)
+    guai = perche_non_vuoto(o.cont)
     # ⚠ [M] 26 set, 00:01: la salita di prima aveva appena sgomberato e la sessione
     #   dell'inquilino era ancora in chiusura (logind) 6 s dopo ⇒ BLOCKED falso.  Chi
     #   sta chiudendo si aspetta fino a 120 s; chi resta dopo e' un server non vuoto.
@@ -1347,7 +1636,7 @@ def main():
         if not guai:
             break
         time.sleep(10)
-        guai = perche_non_vuoto(o.scatola)
+        guai = perche_non_vuoto(o.cont)
     if guai:
         sal.stato["server_non_vuoto"] = guai
         if not o.anche_se_non_vuoto:

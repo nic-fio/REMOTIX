@@ -125,6 +125,21 @@ Una voce che si applica e non ha dati vale DEGRADED col segno `non_misurato`,
 e conta come DEGRADED SIGNIFICATIVO (non si sa di quanto): la salita si ferma
 e si guarda l'impianto, invece di salire su un numero che non c'e'.
 
+--sistema xrdp (fasi/20 §7.3, 9 ott 2026): le serie di 16-attore-rdp.py.  Stesse soglie, e
+            le voci si leggono cosi':
+  ritardo   p95 dei `ritardi_ms` delle righe (impulso → primo disegno XDamage dopo, dal
+            LATO DI CHI GUARDA: tasto, clic, tacca), sulla finestra; con meno di 5
+            campioni nella finestra, su tutto il livello (detto nella nota).  ⚠ Non e'
+            il «NOSTRO + 9 ms» di REMOTIX (lato server): si confronta col GIRO della
+            pagina.  Profilo D senza impulsi: la voce non si applica.  «Input perso» ⇒
+            FAIL come sempre.
+  saltati, buchi, audio  ⛔ NON MISURATI PER COSTRUZIONE: xrdp non manda i fotogrammi
+            che non puo', non ha contatori nella pagina, e l'audio viaggia senza essere
+            suonato.  Non entrano nella classe (sono in `misure.non_misurati_per_costruzione`).
+  caduta    dall'attore (xfreerdp uscito, la finestra sparita); il registro di xrdp
+            non ha l'ora nella forma del nostro e non si legge per le cadute.
+  registro  le righe vanno in registro-xrdp.jsonl, col campo `sistema`.
+
 IL LIVELLO (§9): GREEN se tutte le sessioni (e le voci di livello) sono
 GREEN; DEGRADED se almeno una e' DEGRADED e nessuna FAIL; FAIL se almeno una e'
 FAIL.  DEGRADED SIGNIFICATIVO = piu' di un quarto delle sessioni DEGLI ATTORI
@@ -335,8 +350,39 @@ def delta(righe, chiave):
 
 
 # ─────────────────────────────── una sessione ──────────────────────────────
+NON_MISURATI_XRDP = ("saltati_pct", "buchi_al_min", "audio_udibile_pct")
+
+
+def voce_ritardo_xrdp(dentro, righe, prof, misure, t_liv=None):
+    """xrdp: il ritardo dal lato di chi guarda (impulso → primo disegno XDamage).
+    → voce, o None se la voce non si applica (profilo D senza impulsi)."""
+    camp = [x for r in dentro for x in (r.get("ritardi_ms") or [])]
+    eco = [x for r in dentro for x in (r.get("ritardi_eco_ms") or [])]
+    dove = "finestra"
+    if len(camp) < 5:
+        tutte = [r for r in righe if t_liv is None or t_liv[0] - 1 <= r.get("t", 0) <= t_liv[1] + 1]
+        camp2 = [x for r in tutte for x in (r.get("ritardi_ms") or [])]
+        if len(camp2) > len(camp):
+            camp, dove = camp2, "tutto il livello (nella finestra %d campioni)" % len(camp)
+            eco = [x for r in tutte for x in (r.get("ritardi_eco_ms") or [])]
+    misure["xrdp_ritardi"] = {"campioni": len(camp), "p95_ms": _tondo(p95(camp)) if camp else None,
+                              "mediana_ms": _tondo(sorted(camp)[len(camp) // 2]) if camp else None,
+                              "eco_campioni": len(eco), "eco_p95_ms": _tondo(p95(eco)) if eco else None,
+                              "su": dove}
+    if not camp:
+        if prof == "D":
+            misure["ritardo_non_si_applica"] = "profilo D: nessun impulso"
+            return None
+        return non_misurato("nessun impulso chiuso da un disegno XDamage (righe `ritardi_ms` vuote)")
+    v = p95(camp)
+    misure["ritardo_p95_ms"] = _tondo(v)
+    return voce_misurata("ritardo_p95_ms", v, "xrdp, LATO DI CHI GUARDA: p95 di %d attese impulso → primo "
+                         "disegno XDamage (%s); a eco %s ms su %d" % (
+                             len(camp), dove, _tondo(p95(eco)) if eco else "—", len(eco)))
+
+
 def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, rete=None, tratti=None,
-             desktop=None, t_liv=None):
+             desktop=None, t_liv=None, sistema=None):
     """`nuovo`: True/False dall'elenco di livello.json; None se l'elenco non
     c'e' (allora la nascita si giudica solo se `accesso_ms` cade in `t_liv`)."""
     righe = jsonl(os.path.join(dir_u, "stato.jsonl"))
@@ -361,6 +407,8 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         if d_video:
             voci["video_frazione_f"] = non_misurato(perche)
             voci["audio_udibile_pct"] = non_misurato(perche)
+        if sistema == "xrdp" and prof == "D":
+            voci.pop("ritardo_p95_ms", None)
     else:
         dt = fin[-1]["t"] - fin[0]["t"]
         misure["finestra_s"] = round(dt, 1)
@@ -392,7 +440,10 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         misure["input_azioni"] = len(inp)
         misure["input_persi"] = len(persi)
         misure["input_latenza_p95_ms"] = _tondo(p95(lat)) if lat else None
-        vr = voce_ritardo(info["inquilino"], tratti, desktop, misure)
+        if sistema == "xrdp":
+            vr = voce_ritardo_xrdp(dentro, righe, prof, misure, t_liv)
+        else:
+            vr = voce_ritardo(info["inquilino"], tratti, desktop, misure)
         rit = vr["valore"] if vr else None
         if persi:
             voci["ritardo_p95_ms"] = fallita(_tondo(rit), "input PERSO: %d azioni su %d senza effetto (%s)"
@@ -400,6 +451,8 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
                                                 ", ".join(str(x.get("azione")) for x in persi[:3])))
         elif vr:
             voci["ritardo_p95_ms"] = vr
+        elif sistema == "xrdp":
+            pass                               # profilo D senza impulsi: non si applica
         else:
             voci["ritardo_p95_ms"] = non_misurato("nessuna riga «NOSTRO nel secondo» del figlio per %s nella "
                                                   "finestra (binario prima di ebc9dcd? le righe TRATTO si "
@@ -505,10 +558,15 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
                                      "pagina ricaricata o sessione riattaccata" % ripartenze)
     # il ritardo del prodotto non ha bisogno dell'attore: senza righe di stato
     #   lo si prende lo stesso dalle righe TRATTO del figlio
-    if len(fin) < 2:
+    if len(fin) < 2 and sistema != "xrdp":
         vr = voce_ritardo(info["inquilino"], tratti, desktop, misure)
         if vr:
             voci["ritardo_p95_ms"] = vr
+    if sistema == "xrdp":
+        tolte = [v for v in NON_MISURATI_XRDP if v in voci]
+        for v in tolte:
+            voci.pop(v)
+        misure["non_misurati_per_costruzione"] = tolte
     # ── caduta: il registro del server (tutto il livello) ──
     inq = info["inquilino"]
     ev = [e for e in log_eventi if e["inquilino"] == inq or e["inquilino"] == "*"] if inq else \
@@ -984,7 +1042,7 @@ def _senza_ripetuti(v):
 
 # ─────────────────────────────── il livello ────────────────────────────────
 def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=None, fuso_log=0.0,
-               journal_scatola=None):
+               journal_scatola=None, sistema=None):
     meta = jfile(os.path.join(cart, "livello.json")) or {}
     # f: --fps-video, poi livello.json, poi il video scelto nel piano (30 quadri/s)
     fps_video = fps_video or meta.get("fps_video") or FPS_VIDEO_SCELTO
@@ -1012,7 +1070,8 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
         mu = utenti_meta.get(n)
         nuovo = bool(mu.get("nuovo")) if mu else (False if ha_elenco else None)
         info, misure, voci = sessione(d, w0, w1, fps_video, mu, nuovo,
-                                      corto, ev, tratto, rete, tratti, meta.get("desktop"), (t_inizio, w1))
+                                      corto, ev, tratto, rete, tratti, meta.get("desktop"), (t_inizio, w1),
+                                      sistema)
         if journal and info.get("inquilino"):
             misure["journal_err"] = journal["per_inquilino"].get(info["inquilino"], 0)
         sess.append((d, info, misure, voci))
@@ -1098,7 +1157,7 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
             "voci_livello": lv, "risorse": ris, "classe": c_liv, "significativo": significativo,
             "n_degradate": n_deg, "n_attori": n_att, "sig_voci": sig_voci, "campagna": campagna or meta.get("campagna"),
             "livello": livello if livello is not None else meta.get("livello", len(sess)),
-            "cart": cart}
+            "cart": cart, "sistema": sistema or "remotix"}
 
 
 BASE = ("desktop", "scheda", "driver", "misura", "commit", "binario", "pagina", "nucleo",
@@ -1107,7 +1166,7 @@ BASE = ("desktop", "scheda", "driver", "misura", "commit", "binario", "pagina", 
 
 def righe_registro(g):
     m = g["meta"]
-    base = {"campagna": g["campagna"], "livello": g["livello"]}
+    base = {"campagna": g["campagna"], "livello": g["livello"], "sistema": g.get("sistema", "remotix")}
     for k in BASE:
         base[k] = m.get(k)
     base["finestra"] = [_ora(g["w0"]), _ora(g["w1"])] if g["w1"] else None
@@ -1521,6 +1580,39 @@ def certifica():
                len(rr) == 5 and rr[0]["tipo"] == "livello" and all(
                    k in rr[1] for k in ("campagna", "livello", "utente", "profilo", "browser", "desktop",
                                         "scheda", "misura", "commit", "classe", "ragione", "evidenze")))
+
+        print(" 3. --sistema xrdp (fasi/20 §7.3)")
+
+        def rdp(prof, inq, rit=30.0, persi=False):
+            def riga(t, k):
+                r = {"t": t, "utente": int(inq[-2:]), "profilo": prof, "browser": "freerdp",
+                     "inquilino": inq, "sistema": "xrdp", "conti": {"dipinti": int(k * 30)},
+                     "lavoro": True, "blocco_max_ms": int(rit) if prof != "D" else 40}
+                if prof != "D":
+                    r["ritardi_ms"] = [rit, rit]
+                    r["input"] = [{"ok": not persi or k < 550, "latenza_ms": 150, "azione": "tasti"}]
+                return r
+            return {"profilo": prof, "riga": riga}
+        xq = [rdp("A", "c16u01"), rdp("B", "c16u02"), rdp("C", "c16u03"), rdp("D", "c16u04")]
+        g = classifica(livello("xrdp-verde", xq), sistema="xrdp")
+        s1, s4 = g["sessioni"][0][3], g["sessioni"][3][3]
+        guarda("xrdp sano ⇒ GREEN, senza saltati/buchi/audio, ritardo dal lato di chi guarda",
+               g["classe"] == "GREEN" and "saltati_pct" not in s1 and "audio_udibile_pct" not in s4
+               and s1["ritardo_p95_ms"]["valore"] == 30.0 and "ritardo_p95_ms" not in s4,
+               _ragione_livello(g, _conti(g)))
+        # ⛔ GUASTO: lo stesso livello letto da REMOTIX (senza --sistema) e' NON MISURATO
+        g = classifica(livello("xrdp-come-remotix", xq))
+        guarda("⛔ GUASTO: le serie xrdp lette senza --sistema xrdp ⇒ non misurato (DEGRADED)",
+               g["classe"] == "DEGRADED" and g["significativo"])
+        u = list(xq)
+        u[2] = rdp("C", "c16u03", rit=200.0)
+        g = classifica(livello("xrdp-lento", u), sistema="xrdp")
+        guarda("⛔ GUASTO: xrdp con 200 ms impulso → disegno ⇒ FAIL", g["classe"] == "FAIL"
+               and g["sessioni"][2][3]["ritardo_p95_ms"]["classe"] == "FAIL")
+        u = list(xq)
+        u[1] = rdp("B", "c16u02", persi=True)
+        g = classifica(livello("xrdp-perso", u), sistema="xrdp")
+        guarda("⛔ GUASTO: xrdp con input perso ⇒ FAIL", g["classe"] == "FAIL")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     n, ok = len(esiti), sum(esiti)
@@ -1549,6 +1641,8 @@ def main():
     a.add_argument("--journal-scatola", choices=("gnome", "kde", "xfce", "lxqt"), default=None,
                    help="se manca journal-err.jsonl nel livello, lo chiede alla scatola (root)")
     a.add_argument("--secco", action="store_true", help="non scrive nel registro")
+    a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
+                   help="xrdp: le serie di 16-attore-rdp.py (fasi/20 §7.3); registro-xrdp.jsonl")
     a.add_argument("--json", action="store_true", help="stampa anche le righe del registro")
     a.add_argument("--certifica", action="store_true")
     o = a.parse_args()
@@ -1556,8 +1650,10 @@ def main():
         return certifica()
     if not o.livello_dir:
         a.error("serve --livello-dir (o --certifica)")
+    if o.sistema == "xrdp" and o.registro == REGISTRO:
+        o.registro = os.path.join(QUI, "registro-xrdp.jsonl")
     g = classifica(o.livello_dir, o.fps_video, o.finestra_s, o.campagna, o.livello, o.fuso_log,
-                   o.journal_scatola)
+                   o.journal_scatola, o.sistema)
     stampa(g)
     righe = righe_registro(g)
     if o.json:

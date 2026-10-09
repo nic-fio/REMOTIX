@@ -42,6 +42,14 @@ PROCESSO, e il cgroup serve a dire «dentro la scatola» e a contare il totale:
             banco, un Firefox dell'utente non lo ha.  (Se l'attore lanciasse
             ogni browser con `systemd-run --user --scope --unit=r16-browser-NN`
             il recinto sarebbe anche un cgroup: qui basta aggiungere il segno.)
+  ⭐ --sistema xrdp (fasi/20 §7.4): la scatola e' `rete11-<desktop>-xrdp`; il recinto
+            `remotix` e' xrdp (eseguibili xrdp, xrdp-sesman, xrdp-sesexec, xrdp-chansrv, o
+            le unita' xrdp.service / xrdp-sesman.service) — QUI si comprime RemoteFX;
+            `sessioni` comprende l'Xorg di ogni inquilino (xorgxrdp, la cattura);
+            `browser` sono gli xfreerdp3 (segno `remotix-rdp-`); `labwc_cliente` anche
+            gli Xvfb.  `remotix_pid` e' il demone xrdp (il padre delle connessioni).
+            ⛔ Le due divisioni non si confrontano recinto per recinto: il confronto si
+            fa sui TOTALI della scatola.
   + a parte, e NON recinti: `altro_scatola` (i processi di root della scatola
     che non sono remotix: systemd, journald, logind…) e `labwc_cliente` (i
     compositori senza schermo dei browser, utente dei banchi, sull'ospite).
@@ -112,6 +120,7 @@ import time
 CLK = os.sysconf("SC_CLK_TCK")
 PAG_KB = os.sysconf("SC_PAGE_SIZE") // 1024
 SEGNI_BROWSER = ("remotix-ff-", "remotix-cr-")
+XRDP_EXE = ("xrdp", "xrdp-sesman", "xrdp-sesexec", "xrdp-chansrv")
 RECINTI = ("remotix", "sessioni", "browser")
 EXTRA = ("altro_scatola", "labwc_cliente")
 
@@ -249,8 +258,9 @@ def pss_kb(proc, pid):
 class Campionatore:
     def __init__(self, scatola, proc="/proc", sys_="/sys", contenitore=None,
                  orologio=time.monotonic, segni_browser=SEGNI_BROWSER,
-                 pss_ogni=5, scopri=True):
+                 pss_ogni=5, scopri=True, sistema="remotix"):
         self.scatola = scatola
+        self.sistema = sistema
         self.proc, self.sys = proc, sys_
         self.cgroot = sys_ + "/fs/cgroup"
         self.orologio = orologio
@@ -474,7 +484,15 @@ class Campionatore:
             s["ch"] = ch
             dentro = bool(pref) and (i["cg"] == pref or i["cg"].startswith(pref + "/"))
             s["dentro"] = dentro
-            if dentro:
+            if dentro and self.sistema == "xrdp":
+                if (i["exe"] in XRDP_EXE or (i["exe"] is None and s["comm"] in XRDP_EXE)
+                        or "/xrdp.service" in i["cg"] or "/xrdp-sesman.service" in i["cg"]):
+                    rec[pid] = "remotix"
+                elif i["uid"] >= 1000 and i["uid"] != 65534:
+                    rec[pid] = "sessioni"
+                else:
+                    rec[pid] = "altro_scatola"
+            elif dentro:
                 if (i["cg"].endswith("/rete11-server.service")
                         or "/rete11-server.service/" in i["cg"]
                         or i["exe"] == "remotix" or (i["exe"] is None and s["comm"] == "remotix")):
@@ -485,7 +503,8 @@ class Campionatore:
                     rec[pid] = "altro_scatola"
             elif self.segni and any(g in i["cmd"] for g in self.segni):
                 radici_browser[pid] = "chrome" if "remotix-cr-" in i["cmd"] else (
-                    "firefox" if "remotix-ff-" in i["cmd"] else "browser")
+                    "firefox" if "remotix-ff-" in i["cmd"] else (
+                        "freerdp" if "remotix-rdp-" in i["cmd"] else "browser"))
         # i discendenti (un livello alla volta: la radice vince sul figlio col segno)
         radice_di = {}
         pila = [(r, r) for r in radici_browser
@@ -500,7 +519,8 @@ class Campionatore:
                 if not procs[c]["dentro"]:
                     pila.append((c, r))
         for pid, s in procs.items():
-            if pid not in rec and not s["dentro"] and s["comm"] == "labwc" and s["i"]["uid"] >= 1000:
+            if pid not in rec and not s["dentro"] and s["comm"] in ("labwc", "Xvfb") \
+                    and s["i"]["uid"] >= 1000:
                 rec[pid] = "labwc_cliente"
 
         # 3. CPU, memoria, fd grafici per processo
@@ -660,11 +680,15 @@ class Campionatore:
         for r in RECINTI:
             if tot[r]["processi"] == 0:
                 avvisi.append("⚠ recinto %s VUOTO: nessun processo trovato" % r)
-        if self.cont and tot["remotix"]["processi"] and not padre["processi"]:
+        if self.sistema != "xrdp" and self.cont and tot["remotix"]["processi"] and not padre["processi"]:
             avvisi.append("⚠ remotix: nessun processo nel cgroup rete11-server.service (il padre?)")
-        pids_rx = sorted(p for p, r in rec.items() if r == "remotix"
-                         and "rete11-server.service" in procs[p]["i"]["cg"]
-                         and rec.get(procs[p]["ppid"]) != "remotix")
+        if self.sistema == "xrdp":
+            pids_rx = sorted(p for p, r in rec.items() if r == "remotix" and procs[p]["comm"] == "xrdp"
+                             and procs.get(procs[p]["ppid"], {}).get("comm") != "xrdp")
+        else:
+            pids_rx = sorted(p for p, r in rec.items() if r == "remotix"
+                             and "rete11-server.service" in procs[p]["i"]["cg"]
+                             and rec.get(procs[p]["ppid"]) != "remotix")
         if any(v["pss_mancanti"] for v in tot.values()):
             avvisi.append("⚠ PSS illeggibile per %d processi (non si e' root?)"
                           % sum(v["pss_mancanti"] for v in tot.values()))
@@ -747,7 +771,8 @@ def _pulisci(v):
 # ─────────────────────────────── giro ──────────────────────────────────────
 def gira(o):
     os.makedirs(o.dir, exist_ok=True)
-    c = Campionatore(o.scatola, segni_browser=o.segni_browser.split(","), pss_ogni=o.pss_ogni)
+    c = Campionatore(o.scatola, segni_browser=o.segni_browser.split(","), pss_ogni=o.pss_ogni,
+                     sistema=o.sistema)
     fermo = {"si": False}
 
     def ferma(*_):
@@ -1054,7 +1079,10 @@ def certifica():
 def main():
     a = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    a.add_argument("--scatola", choices=("gnome", "kde", "xfce", "lxqt"))
+    a.add_argument("--scatola", choices=("gnome", "kde", "xfce", "lxqt", "gnome-xrdp", "kde-xrdp",
+                                         "xfce-xrdp", "lxqt-xrdp"))
+    a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
+                   help="xrdp: il recinto «remotix» e' xrdp (fasi/20 §7.4)")
     a.add_argument("--dir")
     a.add_argument("--intervallo", type=float, default=1.0)
     a.add_argument("--durata", type=float, default=0)

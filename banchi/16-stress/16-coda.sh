@@ -35,6 +35,12 @@
 #    salita.jsonl): «buono» per la salita comprende i DEGRADED non significativi (la
 #    regola di non-prosecuzione), il GREEN vero e' un'altra cosa e si scrive a parte.
 #
+# ⭐ fasi/20 §7.0 (9 ott 2026, l'utente: «mi aspetto che l'intera suite duri meno dei 3 giorni
+#    di remotix»): dopo ogni salita la coda scrive in campagna.log il PREVENTIVO delle ore
+#    rimaste — fra il caso migliore (ogni desktop che manca regge alla prima misura) e il
+#    peggiore (scende per tutta la scala), con la durata media delle salite fatte;
+#    REMOTIX_16_DESKTOP_DOPO dice quanti desktop restano nelle campagne dopo questa.
+#
 # Variabili: REMOTIX_16_VIDEO (il file del profilo D), REMOTIX_16_FPS (la sua f),
 #            REMOTIX_16_MISURE (la scala, predefinita «4k 3k 2k fhd»),
 #            REMOTIX_16_IN_PIU (opzioni in piu' per 16-salita.py, es. «--scheda amd»).
@@ -52,6 +58,22 @@ SCALA=${REMOTIX_16_MISURE:-4k 3k 2k fhd}
 LOG=$MISURE_DIR/coda-$SCHEDA.log
 STATO=$MISURE_DIR/coda-$SCHEDA.jsonl
 mkdir -p "$MISURE_DIR"
+FATTE=0; SECONDI=0
+DOPO=${REMOTIX_16_DESKTOP_DOPO:-0}
+# preventivo <desktop corrente> <misure rimaste per lui> <desktop rimasti dopo di lui>
+preventivo() {
+	python3 - "$FATTE" "$SECONDI" "$2" "$3" "$DOPO" "$(echo $SCALA | wc -w)" <<'PY' >>"$MISURE_DIR/campagna.log"
+import sys, datetime
+f, s, qui, resto, dopo, scala = map(int, sys.argv[1:])
+m = s / f if f else 0
+lo = (qui + resto + dopo) * m if qui else (resto + dopo) * m
+hi = (qui + (resto + dopo) * scala) * m
+print("%s   preventivo: %d salite fatte, media %.0f min · restano fra %.1f e %.1f ore (fine fra il %s e il %s)" % (
+    datetime.datetime.now().strftime("%F %T"), f, m / 60, lo / 3600, hi / 3600,
+    (datetime.datetime.now() + datetime.timedelta(seconds=lo)).strftime("%d/%m %H:%M"),
+    (datetime.datetime.now() + datetime.timedelta(seconds=hi)).strftime("%d/%m %H:%M")))
+PY
+}
 
 dice() { echo "$(date '+%F %T') $*" | tee -a "$LOG"; }
 segna() {  # desktop misura campagna codice ultimo_green
@@ -88,8 +110,12 @@ trap ferma TERM INT
 dice "▶ coda $SCHEDA: desktop «$DESKTOP» · scala «$SCALA» · video $VIDEO (f=$FPS)"
 [ -f "$VIDEO" ] || { dice "⛔ il video non c'e': $VIDEO"; exit 2; }
 
+N_DESKTOP=$(echo $DESKTOP | wc -w); I_DESKTOP=0
 for d in $DESKTOP; do
+	I_DESKTOP=$((I_DESKTOP + 1))
+	I_MISURA=0
 	for m in $SCALA; do
+		I_MISURA=$((I_MISURA + 1))
 		if [ -e "$MISURE_DIR/FERMA" ]; then dice "⏹ FERMA trovato: mi fermo"; exit 0; fi
 		esito=""
 		for tentativo in 1 2; do
@@ -98,6 +124,7 @@ for d in $DESKTOP; do
 			[ -e "$MISURE_DIR/$camp/salita.jsonl" ] && camp="$camp-$(date +%H%M)"
 			dice "── salita $camp (tentativo $tentativo)"
 			# shellcheck disable=SC2086
+			T_SALITA=$(date +%s)
 			python3 "$QUI/16-salita.py" --scatola "$d" --campagna "$camp" --misura "$m" \
 				--video "$VIDEO" --fps-video "$FPS" ${REMOTIX_16_IN_PIU:-} \
 				>>"$MISURE_DIR/coda-$SCHEDA-salite.log" 2>&1 </dev/null &
@@ -106,6 +133,7 @@ for d in $DESKTOP; do
 			wait "$figlio"; c=$?
 			while kill -0 "$figlio" 2>/dev/null; do wait "$figlio"; c=$?; done
 			figlio=""
+			FATTE=$((FATTE + 1)); SECONDI=$((SECONDI + $(date +%s) - T_SALITA))
 			verde=$(ultimo_green "$camp")
 			segna "$d" "$m" "$camp" "$c" "$verde"
 			dice "   $camp: codice $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('buono', s.get('ultimo_buono'), '· rottura', s.get('rottura'), '·', s.get('fase'))" "$MISURE_DIR/$camp/stato.json" 2>/dev/null || echo 'stato illeggibile')) · ultimo GREEN vero: $verde"
@@ -120,6 +148,12 @@ for d in $DESKTOP; do
 			esito=$c
 			break
 		done
+		restano_qui=$(( $(echo $SCALA | wc -w) - I_MISURA ))
+		case "$esito" in
+		1) ;;
+		*) restano_qui=0 ;;
+		esac
+		preventivo "$d" "$restano_qui" "$((N_DESKTOP - I_DESKTOP))"
 		case "$esito" in
 		0) dice "✅ $d regge 16 utenti a $m (ultimo GREEN vero: $verde)"; break ;;
 		1) dice "↘ $d cede a $m (ultimo GREEN vero: $verde): scendo di misura" ;;
