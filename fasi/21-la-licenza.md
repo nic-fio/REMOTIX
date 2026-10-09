@@ -360,10 +360,15 @@ trascrizione non si conserva; qui c'è il risultato.*
    - **legata alla firma dell'hardware** (UUID e seriale della scheda madre, confronto esatto), **niente email**;
    - **niente doppioni**: due copie attive della stessa trial ⇒ la trial si disabilita (nessuno ha pagato, nessuna
      vittima da proteggere).
-   - 🔸 **Da confermare** (proposta di Claude): sulle macchine con un'impronta **finta o mancante** («Not
-     Specified», lo stesso numero su tutte le macchine di un fornitore) la firma non distingue; lì sola si chiede
-     **un'email verificata**. ⚠ Dichiarato: una macchina virtuale **nuova** in cloud ha un'impronta nuova e
-     quindi una trial nuova; si accetta.
+   - ✅ **L'impronta si ricava da più elementi dell'hardware** (utente, 9 ott: *«l'impronta si ricava da elementi
+     multipli dell'hardware»*; la genera il client, quindi c'è sempre): UUID e seriale della scheda madre,
+     seriale del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by
+     O.E.M.», «Not Specified», tutti zeri) **si scartano** prima del calcolo: altrimenti macchine diverse
+     avrebbero la stessa impronta e un cliente innocente risulterebbe un doppione. ⇒ Nel caso raro in cui
+     non resta niente di distintivo, la trial **non parte da sola**: «questa macchina non può avviare la prova
+     automatica: scrivici», e chi vende la attiva a mano dallo strumento delle licenze. **Niente email.**
+     ⚠ Dichiarato: una macchina virtuale **nuova** in cloud ha un'impronta nuova, quindi una trial nuova; si
+     accetta.
 4. La trial resta «al meglio»: email usa-e-getta e macchine virtuali nuove in cloud la aggirano.
 5. **Un recupero ogni 30 giorni**, e che cosa ti basta per sbloccarlo a mano.
 6. **Email spedite dal VPS** con il loro rischio di consegna, e il recupero a mano se un'email non arriva.
