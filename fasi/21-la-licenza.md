@@ -186,6 +186,12 @@ file statici in `/srv/www/<sito>`, HTTPS da Let's Encrypt, l'utente `progetti` c
 | ✅ **area cliente** (utente, 9 ott: *«prevedere un'area cliente ci semplifica parecchie cose»*) | chi ha comprato o chiesto una trial | le sue licenze: numero, classe, stato, scadenza, copie attive; **scelta della copia** (B2); **conferma del recupero** (B3); rinnova; rinnovo automatico sì/no (B4); cambio email (D11 diventa sua) | ✅ (utente, 9 ott) **link all'email, senza password**, che vale sempre: si scrive l'email, arriva un link che vale una volta e per poco, e apre l'area per qualche ora; più **«Accedi con Google»** come scorciatoia (l'email arriva già verificata). ⛔ Niente password, niente Facebook; Microsoft per ora no (dubbio dell'utente), si può aggiungere dopo. Le email della scelta e del recupero portano **qui**, non a pagine a parte |
 | **pannello** | chi vende | le operazioni D1-D13 (non la gold, D2) | ✅ **passkey oppure «Accedi con Google»** (utente, 9 ott: *«passkey e/o google»*). 🔸 Le condizioni: Google vale **solo per l'account di chi vende**, scritto nella configurazione, e quell'account deve avere la **verifica in due passaggi**; ogni operazione che crea, rinnova, revoca o cancella manda **subito un avviso a chi vende** (se non l'ha fatta lui, lo sa in un minuto); se si perde l'accesso, un comando via **ssh** sul VPS dà un link per registrare una passkey nuova. ⚠ Con due porte il pannello è forte quanto la più debole: l'account Google |
 
+🔸 **Due parti riservate, costruite insieme e tenute separate** (utente, 9 ott: *«ci sono due versioni della parte
+riservata: quella dei clienti registrati e quella mia»*): **le pagine sono le stesse** (la scheda di una licenza, la
+sua storia, le copie), e il pannello ci aggiunge i pulsanti di chi vende; ma **ingresso, sessione e controllo dei
+permessi sono separati** (indirizzo suo, accesso suo). ⇒ Meno lavoro, e un errore nell'area cliente non apre il
+pannello.
+
 ## 5. Parte 4 — l'ingresso del pagamento
 
 Due domande generiche, `rinnova` e `sospendi`, con il riferimento della licenza. ⛔ **Nessun processore scelto**
