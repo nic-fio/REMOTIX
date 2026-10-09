@@ -1461,6 +1461,14 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
     controllo), o in mancanza quello del suo paese;
   - si fermano **appena il cliente rinnova**; chi ha il rinnovo automatico riceve invece solo l'avviso
     dell'addebito.
+- ✅ **Nei 14 giorni di tolleranza dopo la scadenza** (utente, 9 ott: *«infastidisce gli utenti del server ma gli
+  consente di continuare a lavorare»*):
+  - **sui desktop**, nella pagina di REMOTIX, compare il messaggio **«licenza scaduta»** con il **tempo che manca
+    al blocco**; 🔸 forma proposta da Claude: una **fascia fissa** in alto, che **non si chiude** ma **non copre** il
+    lavoro, col conto alla rovescia; negli ultimi 3 giorni in più i 3 messaggi al giorno con «ho letto»;
+  - l'acquirente riceve **2 email al giorno** (8-10 e 14-18, ora locale) per tutti i 14 giorni, finché non rinnova.
+    ⚠ Sono fino a 28 email: chi le segna come posta indesiderata danneggia la reputazione del VPS come mittente,
+    da cui partono anche le email della scelta fra due copie. Da tenere d'occhio dopo il lancio.
 - **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
   dei 14 giorni di tolleranza dopo la scadenza commerciale (o dopo l'ultimo controllo riuscito, se la rete manca).
 - **Gli avvisi**:
