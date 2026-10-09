@@ -1420,6 +1420,14 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 3. Il servizio lega la licenza alla **chiave pubblica** dell'installazione e risponde con un **attestato
    firmato** (tipo, scadenza commerciale, fine della tolleranza, «valido fino a», il primo **biglietto**).
 4. La **trial** si attiva senza codice: la lega l'**impronta dell'hardware** (§15.7).
+7. 🔸 **Dalla trial alla full** (9 ott, alla domanda dell'utente *«come si passa da trial a full? l'installer funziona
+   solo una volta»*): il codice si incolla nella **pagina d'accesso** («Hai un codice di licenza?», §15.10) **oppure**
+   da root con `remotix licenza attiva <codice>`. Basta avere il codice: è segreto e arriva solo a chi ha pagato.
+   La chiave dell'installazione resta la stessa, nessuno viene scollegato, i desktop restano vivi; l'attestato
+   successivo dice «full». La trial finisce lì.
+8. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non può fare dopo la prima volta:
+   `remotix licenza stato` · `trial --email …` (se all'installazione la rete mancava) · `attiva <codice>` ·
+   `controlla` · `recupera`. È lo stesso programma `remotix`, non l'installatore.
 
 ### 15.4 Il controllo, ogni 60 minuti
 
@@ -1491,7 +1499,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
   (facoltativi) (utente, 9 ott: *«confermo»*). Senza domande: l'email si passa al comando.
 - ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott: *«la licenza parte dal giorno dell'installazione di
   remotix»*), all'ora esatta della richiesta; 🔸 REMOTIX però **lavora solo a email confermata**: chi conferma tardi
-  non guadagna giorni. Senza rete all'installazione, l'ora è quella della prima richiesta riuscita.
+  non guadagna giorni. Senza rete all'installazione, la si chiede poi con `remotix licenza trial` (§15.3) e l'ora è quella della prima richiesta riuscita.
 - 🔸 **La full** parte dall'**attivazione del codice** (chi passa dalla trial alla full ha installato settimane prima;
   chi compra e installa dopo non perde mesi).
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
@@ -1550,7 +1558,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
 | stato | prima delle credenziali | dopo utente e parola d'ordine giuste |
 |---|---|---|
 | **trial** | «Trial version — restano N giorni» e il collegamento «Hai un codice di licenza?» | si entra |
-| **licenza valida** | niente | si entra; collegamento piccolo «Cambia licenza» |
+| **licenza valida** | niente | si entra; 🔸 cambiare una full ancora valida si fa solo da root (`remotix licenza attiva`): un utente qualsiasi non deve poterla sostituire per sbaglio |
 | **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | **campo del codice già aperto**, «Recupera», «Acquista» |
 | **bloccata per due copie** (§15.8) | niente | la pagina **«sistema bloccato»** e il rimando all'email della scelta |
 | **sospesa** (dal pagamento) o **revocata** (da chi vende) | niente | la finestra della licenza, **come una scaduta**, con la frase che spiega la sospensione o la revoca |
