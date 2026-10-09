@@ -1537,9 +1537,13 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
   diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
 - ✅ **I dati** (utente, 9 ott, *«confermo»*): **email** (obbligatoria), **nome** e **azienda** (facoltativi).
-- 🔸 **La chiave trial si chiede con quei dati** e **arriva per email**: dall'installatore («non ho una chiave:
-  chiedine una di prova»), o dalla pagina del servizio. ⇒ **Il link di conferma sparisce**: ricevere la chiave
-  conferma l'email. Una chiave trial mai usata **scade dopo 30 giorni**.
+- ✅ **La chiave si chiede SOLO dal sito** (utente, 9 ott: *«serve un sito web dove il cliente inserisce i dati e
+  ottiene poi per email il codice»*): `remotix.nicfio.it`, trial e full dallo stesso sito, la `LICENSE_KEY` arriva
+  per email. L'installatore **non chiede dati**: chiede solo la `LICENSE_KEY`, e a chi non ce l'ha mostra l'indirizzo
+  del sito. ⇒ **Il link di conferma sparisce**: ricevere la chiave conferma l'email.
+- **Chiederla e installare giorni dopo non costa niente**: i giorni partono quando la chiave **entra
+  nell'installazione**, non quando arriva l'email. 🔸 Una chiave trial **mai usata scade dopo 30 giorni** (pulizia:
+  chi la vuole dopo ne chiede un'altra; la trial resta una per `HW_FINGERPRINT`).
 - ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott), cioè da quando la chiave trial entra, all'ora esatta.
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
   del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,

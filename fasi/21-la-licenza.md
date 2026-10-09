@@ -118,7 +118,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
 | # | operazione | §15 |
 |---|---|---|
-| B0 | **chiedi una chiave trial**: email (obbligatoria), nome e azienda (facoltativi), ✅ utente 9 ott ⇒ la chiave arriva per email (🔸 e così l'email è confermata, senza link a parte). Dall'installatore o dalla pagina del servizio | 15.7 |
+| B0 | **chiedi una chiave trial**: email (obbligatoria), nome e azienda (facoltativi), ✅ utente 9 ott ⇒ la chiave arriva per email (🔸 e così l'email è confermata, senza link a parte). ✅ **Solo dal sito** del servizio (utente, 9 ott); l'installatore chiede solo la `LICENSE_KEY` | 15.7 |
 | B1 | **compra una full**: dalla pagina del servizio (`remotix.nicfio.it`, «Acquista»); chi compra può non essere l'amministratore. ⏳ I dati dipendono dal processore. Finché non c'è, la crea chi vende (D1) | 15.3 |
 | B2 | **scegli la copia** fra le due attive; la tenuta riceve una `INSTALL_KEY` nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
 | B3 | **conferma il recupero** | 15.9 |
