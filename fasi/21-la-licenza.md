@@ -90,7 +90,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 | # | operazione | che cosa fa | §15 |
 |---|---|---|---|
 | A1 | **attiva con la chiave** | la classe della chiave decide la licenza (trial, full, gold); consuma la chiave (una volta, per sempre), lega la licenza alla `INSTALL_KEY`, dà attestato e primo biglietto; per la trial controlla anche l'impronta: già avuta ⇒ **stessa** data di fine, vuota ⇒ «scrivici» | 15.3, 15.7 |
-| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (scala ✅ trial → full → gold); stessa `INSTALL_KEY`, l'anno parte da qui | 15.3 |
+| A2 | **upgrade** | su un'installazione attiva consuma una chiave di classe più alta (scala ✅ trial → full → gold); `INSTALL_KEY` **rinnovata** (la crea il server, firmata con la vecchia; ✅ utente, 9 ott), stesso numero di licenza, l'anno parte da qui | 15.3 |
 | A3 | **controlla** (ogni ora, e «controlla ora») | consuma il biglietto e ne dà uno nuovo con l'attestato; ridà **la stessa risposta** a una richiesta identica; scopre lo sdoppiamento; dice lo stato (valida, in tolleranza, sospesa, revocata, bloccata, gold doppia) | 15.4, 15.8 |
 | A4 | **stato della copia indietro** | risponde senza consumare biglietti | 15.9 |
 | A5 | **rilascia** | la vecchia installazione firma il rilascio per lo spostamento volontario | 15.9 |

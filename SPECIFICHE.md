@@ -1418,7 +1418,7 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   | scadenza, avvisi, rinnovo | **nessuno** |
   | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
   | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
-  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una `INSTALL_KEY` nuova. Nessuna pagina di scelta, nessuna fermata automatica |
+  | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta si crea da sé una `INSTALL_KEY` nuova (la segreta non lascia mai il server) e la consegna firmata con la vecchia. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
 - ⭐ **Tutti i giorni sono SOLARI, non lavorativi** (utente, 9 ott): sabati, domeniche e festivi contano. Ogni
@@ -1432,7 +1432,7 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
 |---|---|---|
 | **il prodotto** | il server del cliente | attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
 | **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita il **sito** (pagine pubbliche e **area cliente**, dove si sceglie la copia e si conferma il recupero) |
-| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
+| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea le full (la gold no: ha la sua funzione, §15.1), revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
 | **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
 
 ⛔ **Non esiste l'attivazione senza rete.** Il prodotto esce anche da un **proxy** aziendale.
@@ -1577,7 +1577,7 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
    non sceglie niente). Il link vale una volta e scade.
 5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott; ⛔ supera «72 ore, promemoria
    dopo 24»). Nel frattempo le due copie funzionano.
-6. **Scelta fatta**: la copia tenuta riceve una **`INSTALL_KEY` nuova**, l'altra si ferma (i suoi desktop restano vivi
+6. **Scelta fatta**: la copia tenuta si crea da sé una **`INSTALL_KEY` nuova** (la segreta non lascia mai il server) e la consegna firmata con la vecchia, l'altra si ferma (i suoi desktop restano vivi
    fino allo spegnimento).
 7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
    utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
