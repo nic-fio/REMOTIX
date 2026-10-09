@@ -417,6 +417,9 @@ trascrizione non si conserva; qui c'è il risultato.*
    macchina** resta. Due copie attive ⇒ **avviso a chi vende con tutti i dettagli** e **chi vende disabilita una
    delle due** (utente: *«devo avere la facoltà di disabilitare uno dei doppioni»*). Senza rete: **14 giorni**,
    come le altre (utente, 9 ott; Claude proponeva 90). Regole in `SPECIFICHE.md` §15.1.
+   ✅ **9 ott: i codici di attivazione non si riutilizzano mai** (utente). Conseguenza (Claude): il recupero, che
+   nel disegno concordato chiedeva di reincollare il codice, usa invece il **numero di licenza** (non segreto) più
+   la conferma via email; il codice attiva una volta sola. `SPECIFICHE.md` §15.3.
 8. Per quanto si tengono email degli acquirenti, impronte delle trial e registri (riservatezza).
    ✅ **9 ott: 2 anni** (utente: *«almeno 2 anni»*), ⚠ ma come **tetto, non come minimo** (correzione di Claude: per
    il GDPR i dati personali si tengono **non oltre** il necessario, e il periodo va scritto nell'informativa):
