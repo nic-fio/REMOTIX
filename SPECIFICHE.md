@@ -1398,7 +1398,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 |---|---|---|
 | **il prodotto** | il server del cliente | attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
 | **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | registra attivazioni e trial, consegna i biglietti, scopre gli sdoppiamenti, manda le email, ospita la pagina di scelta e di recupero |
-| **lo strumento di chi vende** | il computer di chi vende | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti |
+| **lo strumento di chi vende** | il computer di chi vende | crea full e gold, revoca, attiva una trial a mano, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
 | **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
 
 ⛔ **Non esiste l'attivazione senza rete.** Il prodotto esce anche da un **proxy** aziendale.
@@ -1513,10 +1513,9 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
    utenti vedono la pagina **«sistema bloccato»** (⛔ supera «resta la copia più recente»). La scelta, fatta in
    qualunque momento, **sblocca** la copia scelta.
-8. ⏳ **Dopo 15 giorni lavorativi** senza scelta: l'utente ha proposto la **cancellazione definitiva** della
-   licenza; Claude propone invece che **resti bloccata** e vada a chi vende, che guarda e decide (una cancellazione
-   automatica colpisce anche il cliente onesto in ferie, e il 9 ott era stato deciso «la licenza non si invalida
-   mai da sola»). **Da decidere** (§15.13).
+8. ✅ **Dopo 15 giorni lavorativi** senza scelta la licenza **resta bloccata** e va a chi vende, che decide se
+   **sbloccarla** o **cancellarla definitivamente** (utente, 9 ott: *«lasciamo le licenze bloccate; poi sarò io a
+   decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ Nessuna cancellazione automatica.
 9. **Uno scambio ogni 30 giorni**; chi vende può sbloccarlo a mano. **3 sdoppiamenti in 90 giorni** sulla stessa
    licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
 10. ⛔ **L'impronta descrive, non decide**: a legare la full restano chiave e biglietto. Cambiare un disco o una
@@ -1587,8 +1586,6 @@ rimasta indietro.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
 - ❓ **Da decidere con l'utente** (verifica del 9 ott):
-  - **15 giorni lavorativi dopo il blocco per doppione**: cancellazione definitiva (utente) o licenza bloccata che
-    va a chi vende (Claude)? (§15.8);
   1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
      la finestra della licenza con la frase della sospensione, come una scaduta;
   2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
