@@ -1370,6 +1370,14 @@ Ogni installazione parte subito; una seconda è uno sdoppiamento, e si sceglie c
 
 ### 15.0 Gli elementi, in breve — da leggere per primi
 
+⭐ **Una licenza risponde a due domande** (osservazione dell'utente, 9 ott: *«il 90% dell'attività si riduce alla
+gestione dei cloni/doppioni»*):
+- **dove**: su quale server gira. Primo acquisto, cambio server, server rifatto, clone, backup, chiave prestata
+  sono tutti la stessa domanda, e hanno la stessa risposta: il biglietto scopre il doppione, l'acquirente sceglie
+  (§15.8);
+- **fino a quando**: scadenza, rinnovo, tolleranza (§15.6).
+Tutto il resto (sito, pannello, chiave madre, pagamento) serve a rispondere a queste due in modo affidabile.
+
 **Il sistema poggia su due elementi**, e su nient'altro dal lato del cliente; più **un gesto** dell'acquirente:
 
 | elemento | che cos'è | chi lo crea | a che serve |
