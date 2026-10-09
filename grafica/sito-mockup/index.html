@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Your Linux desktop, in your browser</title>
+<link rel="stylesheet" href="stile.css">
+<style>
+  /* l'apertura */
+  .apertura { padding: 3rem 0 5rem; }
+  .apertura .impianto { display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 960px) { .apertura { padding: 4rem 0 7rem; } .apertura .impianto { grid-template-columns: 1.05fr 1fr; gap: 4rem; } }
+  .apertura h1 { margin: 1.6rem 0 .5em; font-size: clamp(2.1rem, 4.2vw, 3.3rem); line-height: 1.08; letter-spacing: -.03em; color: #fff; text-wrap: balance; }
+  .apertura .sotto { margin: 0; font-size: 1.12rem; color: var(--tenue-fondo); max-width: 31em; }
+  .apertura .bottoni { display: flex; flex-wrap: wrap; gap: .75rem; margin: 2rem 0 1.6rem; }
+  .apertura .bottoni .pulsante { font-size: 1rem; padding: .8em 1.35em; }
+  .punti { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6em 1.6em; font-size: .9rem; color: var(--chiaro-fondo); }
+  .punti li { display: flex; align-items: center; gap: .5em; }
+  .punti svg { width: 1.1em; height: 1.1em; color: var(--ciano); flex: none; }
+
+  /* il finto browser con dentro un desktop */
+  .finestra { border-radius: .9em; background: #0e1a3f; box-shadow: var(--ombra-notte); overflow: hidden; }
+  .finestra .barra { display: flex; align-items: center; gap: .45rem; padding: .6rem .8rem; background: #121f4a; }
+  .finestra .barra i { width: .62rem; height: .62rem; border-radius: 50%; background: #2c3a6b; display: block; }
+  .finestra .indirizzo { margin-left: .6rem; flex: 1; font-size: .74rem; color: var(--tenue-fondo); background: #0b1638;
+    border-radius: .4em; padding: .3em .7em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .desk { aspect-ratio: 16 / 10; position: relative;
+    background: radial-gradient(120% 90% at 20% 10%, #2a5bd7, transparent 60%), radial-gradient(90% 80% at 90% 90%, #6b4fe0, transparent 60%), #1b2b6b; }
+  .desk .pannello { position: absolute; left: 0; right: 0; top: 0; height: 6%; background: rgba(8,14,40,.75);
+    display: flex; align-items: center; padding: 0 3%; gap: 3%; }
+  .desk .pannello b { width: 9%; height: 32%; border-radius: 3px; background: rgba(255,255,255,.35); }
+  .desk .pannello b:last-child { margin-left: auto; width: 6%; }
+  .desk .app { position: absolute; border-radius: 6px; background: #f6f8fc; box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
+  .desk .app::before { content: ""; display: block; height: 9%; min-height: 10px; background: #e3e8f1; }
+  .desk .a1 { left: 7%; top: 14%; width: 54%; height: 62%; }
+  .desk .a2 { left: 48%; top: 34%; width: 44%; height: 54%; background: #0f1530; }
+  .desk .a2::before { background: #1d2547; }
+  .desk .righe { padding: 6% 7%; display: grid; gap: 6%; }
+  .desk .righe i { display: block; height: .38rem; border-radius: 3px; background: #d5dbe7; }
+  .desk .righe i:nth-child(3n) { width: 62%; }
+  .desk .a2 .righe i { background: #3fd38a; opacity: .7; height: .3rem; }
+  .desk .a2 .righe i:nth-child(2n) { background: #5fd3ff; width: 70%; }
+
+  /* le sezioni */
+  .sezione { padding: 4.5rem 0; }
+  .sezione.bianca { background: var(--carta); }
+  .occhiello { font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accento); margin: 0 0 .7em; }
+  .sezione h2 { margin: 0 0 .5em; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; max-width: 22em; }
+  .sezione .guida { margin: 0 0 2.6rem; color: var(--tenue); font-size: 1.05rem; max-width: 40em; }
+  .griglia { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .griglia.tre { grid-template-columns: repeat(3, 1fr); } .griglia.due { grid-template-columns: repeat(2, 1fr); } }
+  .voce h3 { margin: .8em 0 .35em; font-size: 1.08rem; }
+  .voce p { margin: 0; color: var(--tenue); font-size: .95rem; }
+  .icona { width: 2.6rem; height: 2.6rem; border-radius: .7rem; display: grid; place-items: center; color: var(--accento);
+    background: linear-gradient(180deg, #eef4ff, #e1ebff); box-shadow: inset 0 0 0 1px #cfdcfb; }
+  .icona svg { width: 1.3rem; height: 1.3rem; }
+
+  /* il confronto */
+  .confronto td:first-child { font-weight: 600; }
+  .si { color: var(--vivo); font-weight: 700; }
+  .no { color: #98a2b3; }
+
+  /* le prestazioni */
+  .nota-ferro { margin-top: 1rem; font-size: .85rem; color: var(--tenue); }
+
+  /* i prezzi */
+  .prezzi { display: grid; gap: 1.2rem; grid-template-columns: 1fr; max-width: 52rem; }
+  @media (min-width: 720px) { .prezzi { grid-template-columns: 1fr 1fr; } }
+  .prezzo { display: flex; flex-direction: column; gap: 1rem; padding: 2rem; }
+  .prezzo.in-vista { outline: 2px solid var(--accento); }
+  .prezzo h3 { margin: 0; font-size: 1.15rem; }
+  .prezzo .cifra { font-size: 2.3rem; font-weight: 750; letter-spacing: -.03em; line-height: 1; }
+  .prezzo .cifra small { font-size: .9rem; font-weight: 500; color: var(--tenue); letter-spacing: 0; }
+  .prezzo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
+  .prezzo li { display: flex; gap: .55em; }
+  .prezzo li svg { width: 1.15em; height: 1.15em; flex: none; color: var(--vivo); margin-top: .2em; }
+  .prezzo .pulsante { margin-top: auto; }
+
+  /* domande */
+  details { background: var(--carta); border-radius: .8em; box-shadow: var(--ombra); padding: 1.05rem 1.3rem; }
+  details + details { margin-top: .7rem; }
+  summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+  summary::after { content: "+"; color: var(--accento); font-weight: 700; }
+  details[open] summary::after { content: "–"; }
+  details p { margin: .8em 0 0; color: var(--tenue); font-size: .95rem; }
+
+  /* l'invito finale */
+  .invito { padding: 4rem 0; text-align: center; }
+  .invito h2 { color: #fff; margin: 0 auto .4em; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; max-width: 20em; }
+  .invito p { color: var(--tenue-fondo); margin: 0 auto 1.8rem; max-width: 34em; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 1640 360">
+      <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </symbol>
+    <symbol id="spunta" viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="notte">
+  <div class="satin"></div>
+  <header class="testata">
+    <div class="contenitore riga">
+      <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+      <nav aria-label="Main">
+        <a href="#how">How it works</a><a href="#performance">Performance</a><a href="#requirements">Requirements</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
+      </nav>
+      <div class="azioni">
+        <a class="pulsante vetro piccolo" href="signin.html">Sign in</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="apertura">
+    <div class="contenitore impianto">
+      <div>
+        <h1>Your Linux desktop, in your browser.</h1>
+        <p class="sotto">REMOTIX turns a Linux server into desktops for your whole team. Open a browser on a laptop, a phone or a tablet, sign in, and find your windows just as you left them.</p>
+        <div class="bottoni">
+          <a class="pulsante primario" href="trial.html">Try it free for 14 days</a>
+          <a class="pulsante vetro" href="#how">See how it works</a>
+        </div>
+        <ul class="punti">
+          <li><svg><use href="#spunta"/></svg>Nothing to install on the client</li>
+          <li><svg><use href="#spunta"/></svg>A desktop for each user</li>
+          <li><svg><use href="#spunta"/></svg>Hardware video encoding</li>
+        </ul>
+      </div>
+      <div class="finestra" aria-hidden="true">
+        <div class="barra"><i></i><i></i><i></i><span class="indirizzo">https://desktop.yourcompany.com</span></div>
+        <div class="desk">
+          <div class="pannello"><b></b><b></b><b></b></div>
+          <div class="app a1"><div class="righe"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="app a2"><div class="righe"><i></i><i></i><i></i><i></i><i></i></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<main>
+  <section class="sezione bianca" id="how">
+    <div class="contenitore">
+      <p class="occhiello">How it works</p>
+      <h2>One server, one web page. Nothing else.</h2>
+      <p class="guida">REMOTIX runs on your Linux server and serves its own page. Whoever connects needs only a modern browser: Windows, macOS, Linux, Android, ChromeOS.</p>
+      <div class="griglia tre">
+        <div class="scheda voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+          <h3>A real desktop per user</h3>
+          <p>GNOME, KDE Plasma, XFCE or LXQt. Each user gets their own session on the same server, isolated from the others.</p>
+        </div>
+        <div class="scheda voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>It waits for you</h3>
+          <p>Close the browser, change device, come back tomorrow: the session keeps running and your windows are still there.</p>
+        </div>
+        <div class="scheda voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+          <h3>Fast on a modest server</h3>
+          <p>The graphics card compresses the screen in H.264, and the browser decodes it in hardware. Video, audio and clipboard included.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione" id="why">
+    <div class="contenitore">
+      <p class="occhiello">Why REMOTIX</p>
+      <h2>Built for Linux, not adapted to it.</h2>
+      <p class="guida">Remote desktop protocols were designed around Windows. REMOTIX speaks its own protocol over WebTransport, straight to the Linux compositor.</p>
+      <div class="scheda scorre" style="padding:.4rem .6rem">
+        <table class="tabella confronto">
+          <thead><tr><th></th><th>REMOTIX</th><th>RDP</th><th>VNC</th></tr></thead>
+          <tbody>
+            <tr><td>Client to install</td><td class="si">None, a browser</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Session survives a disconnect</td><td class="si">Yes</td><td>Depends</td><td>Depends</td></tr>
+            <tr><td>Hardware encoding on Linux</td><td class="si">Intel, AMD, NVIDIA</td><td class="no">Limited</td><td class="no">No</td></tr>
+            <tr><td>Works from a phone</td><td class="si">Yes, in the browser</td><td>With an app</td><td>With an app</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione bianca" id="performance">
+    <div class="contenitore">
+      <p class="occhiello">Performance</p>
+      <h2>Measured, and declared with the hardware.</h2>
+      <p class="guida">How many users a server holds depends on the server. These are our measurements on a modest machine, every user moving windows, typing and playing video at the same time.</p>
+      <div class="scheda scorre" style="padding:.4rem .6rem">
+        <table class="tabella">
+          <thead><tr><th>Graphics</th><th>Desktop</th><th class="num">Full HD</th><th class="num">2K</th><th class="num">4K</th></tr></thead>
+          <tbody>
+            <tr><td>Intel UHD 770 (integrated)</td><td>XFCE</td><td class="num">12</td><td class="num">10</td><td class="num">8</td></tr>
+            <tr><td>Intel UHD 770 (integrated)</td><td>GNOME</td><td class="num">11</td><td class="num">8</td><td class="num">1</td></tr>
+            <tr><td>AMD Radeon RX 6800</td><td>KDE Plasma</td><td class="num">15</td><td class="num">15</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota-ferro">Users with a smooth experience · Intel Core i5-13500T, 32 GB RAM · ⚠ mockup: sample figures, not final.</p>
+    </div>
+  </section>
+
+  <section class="sezione" id="requirements">
+    <div class="contenitore">
+      <p class="occhiello">Requirements</p>
+      <h2>What you need.</h2>
+      <div class="griglia due">
+        <div class="scheda voce">
+          <h3>The server</h3>
+          <p>A Linux machine, physical or virtual, with internet access for the license. Debian, Ubuntu, Fedora and their families. An Intel, AMD or NVIDIA graphics card is recommended; without one REMOTIX encodes in software and declares it.</p>
+        </div>
+        <div class="scheda voce">
+          <h3>Whoever connects</h3>
+          <p>Chrome or Edge on Windows, Linux and Android; Firefox on Linux. Nothing to install, no plug-in, no account on our side.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione bianca" id="pricing">
+    <div class="contenitore">
+      <p class="occhiello">Pricing</p>
+      <h2>One license per server. Unlimited users.</h2>
+      <p class="guida">We don't count users: the license covers one machine. Updates are included while the license is active.</p>
+      <div class="prezzi">
+        <div class="scheda prezzo">
+          <h3>Trial</h3>
+          <div class="cifra">Free <small>· 14 days</small></div>
+          <ul>
+            <li><svg><use href="#spunta"/></svg>Every feature, unlimited users</li>
+            <li><svg><use href="#spunta"/></svg>One trial per machine</li>
+            <li><svg><use href="#spunta"/></svg>Upgrade to full without reinstalling</li>
+          </ul>
+          <a class="pulsante secondario" href="trial.html">Get a trial key</a>
+        </div>
+        <div class="scheda prezzo in-vista">
+          <h3>Full</h3>
+          <div class="cifra">€ — <small>/ server / year</small></div>
+          <ul>
+            <li><svg><use href="#spunta"/></svg>Everything in the trial, for a year</li>
+            <li><svg><use href="#spunta"/></svg>Renew by hand or automatically, your choice</li>
+            <li><svg><use href="#spunta"/></svg>Move it to a new server whenever you want</li>
+          </ul>
+          <a class="pulsante primario" href="trial.html#buy">Buy a license</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione" id="faq">
+    <div class="contenitore" style="max-width:52rem">
+      <p class="occhiello">FAQ</p>
+      <h2>Questions.</h2>
+      <details><summary>Can I use REMOTIX on Windows servers?</summary><p>No. REMOTIX serves Linux desktops only. You can connect from Windows, though: any modern browser will do.</p></details>
+      <details><summary>What happens if my server loses internet access?</summary><p>REMOTIX keeps working for 14 days from the last successful license check, and tells the administrator how many days are left.</p></details>
+      <details><summary>Does the license stop my server if it expires?</summary><p>Only REMOTIX stops, after 14 days of grace. SSH and local logins are never touched, and running desktops stay alive until you renew.</p></details>
+      <details><summary>I'm moving to a new server. Do I need a new key?</summary><p>No. Copy REMOTIX over and switch the old server off: the license follows the installation.</p></details>
+    </div>
+  </section>
+
+  <section class="notte invito">
+    <div class="satin"></div>
+    <div class="contenitore">
+      <h2>Try it on your own server.</h2>
+      <p>Request a trial key, install REMOTIX, and open your first desktop in the browser.</p>
+      <a class="pulsante primario" href="trial.html">Try it free for 14 days</a>
+    </div>
+  </section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <div class="colonne">
+      <div><a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+        <p style="margin:1rem 0 0;max-width:22em">Remote Linux desktops in the browser.</p></div>
+      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#performance">Performance</a></li><li><a href="#pricing">Pricing</a></li></ul></div>
+      <div><h4>Account</h4><ul><li><a href="signin.html">Sign in</a></li><li><a href="trial.html">Trial key</a></li><li><a href="account.html">My licenses</a></li></ul></div>
+      <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Contact</a></li></ul></div>
+    </div>
+    <div class="fondo">© 2026 REMOTIX</div>
+  </div>
+</footer>
+
+<div class="nastro">Mockup · <a href="account.html">account</a> · <a href="console.html">console</a></div>
+</body>
+</html>

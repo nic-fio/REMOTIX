@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console — REMOTIX</title>
+<link rel="stylesheet" href="stile.css">
+<style>
+  body { background: var(--fondo); }
+  .telaio { display: grid; grid-template-columns: 1fr; min-height: 100vh; }
+  @media (min-width: 960px) { .telaio { grid-template-columns: 15rem 1fr; } }
+  .lato { position: relative; color: #eaf0ff; background: var(--notte); padding: 1.1rem 16px; overflow: hidden; isolation: isolate; }
+  @media (min-width: 960px) { .lato { padding: 1.6rem 1.2rem; } }
+  .lato .satin::before { top: 30%; height: 80%; }
+  .lato .marchio svg { height: 1.4rem; }
+  .lato .ruolo { display: inline-block; margin: .9rem 0 1.6rem; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ciano); background: rgba(95,211,255,.12); box-shadow: inset 0 0 0 1px rgba(95,211,255,.35); padding: .25em .6em; border-radius: .4em; }
+  .lato nav { display: flex; gap: .3rem; overflow-x: auto; }
+  @media (min-width: 960px) { .lato nav { flex-direction: column; } }
+  .lato nav a { display: flex; align-items: center; gap: .6rem; padding: .55rem .75rem; border-radius: .55em; color: var(--chiaro-fondo);
+    text-decoration: none; font-size: .9rem; white-space: nowrap; }
+  .lato nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .lato nav a[aria-current] { background: rgba(255,255,255,.12); color: #fff; font-weight: 600; }
+  .lato nav .conto { margin-left: auto; font-size: .72rem; font-weight: 700; color: #fff; background: #d92d20; border-radius: 99em; padding: .1em .55em; }
+  .lato .chi { display: none; position: absolute; bottom: 1.4rem; left: 1.2rem; right: 1.2rem; font-size: .78rem; color: var(--tenue-fondo); }
+  @media (min-width: 960px) { .lato .chi { display: block; } }
+
+  .corpo { padding: 1.6rem 16px 4rem; min-width: 0; }
+  @media (min-width: 960px) { .corpo { padding: 2.2rem 2.5rem 4rem; } }
+  .corpo h1 { margin: 0 0 .2em; font-size: 1.6rem; letter-spacing: -.02em; }
+  .corpo .sotto { margin: 0 0 1.6rem; color: var(--tenue); font-size: .92rem; }
+  .corpo h2 { font-size: 1.05rem; margin: 2.4rem 0 .9rem; display: flex; align-items: center; gap: .6rem; }
+
+  .contatori { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: .5rem; }
+  @media (min-width: 760px) { .contatori { grid-template-columns: repeat(4, 1fr); } }
+  .contatori .scheda { padding: 1.1rem 1.2rem; }
+  .contatori small { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); font-weight: 650; }
+  .contatori b { font-size: 1.8rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .contatori span { font-size: .8rem; color: var(--tenue); margin-left: .3rem; }
+
+  .cassetta { display: grid; gap: .8rem; }
+  .caso { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; align-items: start; padding: 1.1rem 1.3rem; }
+  @media (min-width: 760px) { .caso { grid-template-columns: auto 1fr auto; align-items: center; } }
+  .caso .segno { width: 2.4rem; height: 2.4rem; border-radius: .7rem; display: grid; place-items: center; font-size: 1.1rem; grid-row: span 2; }
+  @media (min-width: 760px) { .caso .segno { grid-row: auto; } }
+  .segno.rosso { background: var(--rosso-f); color: var(--rosso-t); }
+  .segno.giallo { background: var(--giallo-f); color: var(--giallo-t); }
+  .segno.oro { background: #fff6e0; color: #7a4a00; }
+  .segno.blu { background: #eff4ff; color: #1849a9; }
+  .caso h3 { margin: 0; font-size: .98rem; }
+  .caso p { margin: .2em 0 0; font-size: .86rem; color: var(--tenue); }
+  .caso .azioni { display: flex; gap: .5rem; flex-wrap: wrap; grid-column: 2; }
+  @media (min-width: 760px) { .caso .azioni { grid-column: auto; justify-content: flex-end; } }
+
+  .filtri { display: flex; flex-wrap: wrap; gap: .6rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--bordo); }
+  .filtri input { flex: 1 1 16rem; }
+  .filtri select { flex: 0 1 11rem; width: auto; }
+  .elenco { padding: 0; overflow: hidden; }
+  .elenco td .mono { font-weight: 600; }
+  .elenco td small { display: block; color: var(--tenue); font-size: .8rem; }
+  .elenco tr:hover td { background: #fafbfd; }
+
+  .nuova { display: grid; gap: 1rem; grid-template-columns: 1fr; padding: 1.4rem; }
+  @media (min-width: 760px) { .nuova { grid-template-columns: 1fr 1fr auto; align-items: end; } }
+  .registro { font-size: .84rem; }
+  .registro td:first-child { white-space: nowrap; color: var(--tenue); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 1640 360">
+      <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="telaio">
+  <aside class="lato notte">
+    <div class="satin"></div>
+    <a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a><br>
+    <span class="ruolo">Console</span>
+    <nav aria-label="Console">
+      <a href="#decide" aria-current="page">To decide <span class="conto">4</span></a>
+      <a href="#licenses">Licenses</a>
+      <a href="#new">New full license</a>
+      <a href="#log">Log</a>
+    </nav>
+    <div class="chi">Signed in with passkey<br>Every action sends you a notice.</div>
+  </aside>
+
+  <main class="corpo">
+    <h1>Good morning.</h1>
+    <p class="sotto">Friday 9 October 2026 · service healthy · last backup 03:00</p>
+
+    <div class="contatori">
+      <div class="scheda"><small>Active full</small><b>38</b><span>+3 this month</span></div>
+      <div class="scheda"><small>Trials running</small><b>12</b><span>4 expiring</span></div>
+      <div class="scheda"><small>In grace period</small><b>2</b></div>
+      <div class="scheda"><small>Checks / hour</small><b>61</b></div>
+    </div>
+
+    <h2 id="decide">To decide <span class="stato bloccata">4 waiting</span></h2>
+    <div class="cassetta">
+      <div class="scheda caso">
+        <div class="segno rosso"><b>!</b></div>
+        <div><h3>RX-000097 blocked for 15 working days</h3><p>Two copies, the buyer never chose. studio-bianchi.it · last contact 22 Sep</p></div>
+        <div class="azioni"><button class="pulsante secondario piccolo">Look</button><button class="pulsante primario piccolo">Unblock</button><button class="pulsante pericolo piccolo">Delete for good</button></div>
+      </div>
+      <div class="scheda caso">
+        <div class="segno oro">★</div>
+        <div><h3>Gold RX-000002 on two machines</h3><p>“box 3” · copy A on NIC-OS 192.168.0.2, copy B on 192.168.0.9</p></div>
+        <div class="azioni"><button class="pulsante secondario piccolo">Disable A</button><button class="pulsante secondario piccolo">Disable B</button></div>
+      </div>
+      <div class="scheda caso">
+        <div class="segno giallo">⚠</div>
+        <div><h3>RX-000088 split 3 times in 90 days</h3><p>Copies on three different networks since July. Revoke, or leave it?</p></div>
+        <div class="azioni"><button class="pulsante secondario piccolo">Look</button><button class="pulsante secondario piccolo">Leave it</button><button class="pulsante pericolo piccolo">Revoke</button></div>
+      </div>
+      <div class="scheda caso">
+        <div class="segno blu">✉</div>
+        <div><h3>Trial without a fingerprint</h3><p>marco@lab-ferri.eu · a virtual machine with no distinctive hardware: “write to us”.</p></div>
+        <div class="azioni"><button class="pulsante primario piccolo">Send a trial key</button><button class="pulsante secondario piccolo">Ignore</button></div>
+      </div>
+    </div>
+
+    <h2 id="licenses">Licenses</h2>
+    <div class="scheda elenco">
+      <div class="filtri">
+        <input type="search" placeholder="Number, email, company, machine…">
+        <select><option>All classes</option><option>Trial</option><option>Full</option><option>Gold</option></select>
+        <select><option>Any state</option><option>Active</option><option>Grace period</option><option>Blocked</option><option>Suspended</option><option>Revoked</option></select>
+      </div>
+      <div class="scorre">
+        <table class="tabella">
+          <thead><tr><th>Number</th><th>Class</th><th>State</th><th>Buyer</th><th>Expires</th><th>Last check</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="mono">RX-000123</span></td><td>Full</td><td><span class="stato tolleranza">2 copies</span></td><td>Anna Rossi<small>anna@studio-rossi.it</small></td><td>14 Mar 2027</td><td>11:02</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+            <tr><td><span class="mono">RX-000140</span></td><td>Trial</td><td><span class="stato tolleranza">Grace · 10 days</span></td><td>Anna Rossi<small>anna@studio-rossi.it</small></td><td>5 Oct 2026</td><td>10:40</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+            <tr><td><span class="mono">RX-000131</span></td><td>Full</td><td><span class="stato attiva">Active</span></td><td>Ferri Lab<small>it@lab-ferri.eu</small></td><td>2 Jun 2027</td><td>11:05</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+            <tr><td><span class="mono">RX-000097</span></td><td>Full</td><td><span class="stato bloccata">Blocked</span></td><td>Studio Bianchi<small>info@studio-bianchi.it</small></td><td>30 Jan 2027</td><td>22 Sep</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+            <tr><td><span class="mono">RX-000002</span></td><td>Gold</td><td><span class="stato gold">Gold</span></td><td>box 3<small>test machine</small></td><td>never</td><td>11:04</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+            <tr><td><span class="mono">RX-000076</span></td><td>Full</td><td><span class="stato sospesa">Suspended</span></td><td>Delta Srl<small>admin@delta.it</small></td><td>8 Dec 2026</td><td>10:59</td><td><button class="pulsante secondario piccolo">Open</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="new">New full license</h2>
+    <form class="scheda nuova" onsubmit="event.preventDefault()">
+      <div><label for="em">Buyer email</label><input id="em" type="email" placeholder="buyer@company.com"></div>
+      <div><label for="nt">Note <span class="facoltativo">· optional</span></label><input id="nt" type="text" placeholder="bank transfer 9 Oct, invoice 41"></div>
+      <button class="pulsante primario" type="submit">Create and email the key</button>
+    </form>
+    <p style="font-size:.82rem;color:var(--tenue);margin:.7rem 0 0">Gold licenses are not created here: they come from the dedicated command on the server, over ssh.</p>
+
+    <h2 id="log">Log</h2>
+    <div class="scheda scorre" style="padding:.3rem .6rem">
+      <table class="tabella registro">
+        <tbody>
+          <tr><td>11:02</td><td>Two copies detected on <span class="mono">RX-000123</span>, buyer emailed</td></tr>
+          <tr><td>09:40</td><td>You created <span class="mono">RX-000131</span> for it@lab-ferri.eu (passkey, laptop)</td></tr>
+          <tr><td>03:00</td><td>Encrypted backup copied off the server · 4.1 MB</td></tr>
+          <tr><td>yesterday</td><td>Payment: <span class="mono">RX-000076</span> suspended (charge refused)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<div class="nastro">Mockup · <a href="account.html">account</a></div>
+</body>
+</html>

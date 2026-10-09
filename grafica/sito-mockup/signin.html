@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — REMOTIX</title>
+<link rel="stylesheet" href="stile.css">
+<style>
+  body { background: var(--notte); }
+  .pieno { min-height: 100vh; display: flex; flex-direction: column; }
+  .centro { flex: 1; display: grid; place-items: center; padding: 2rem 16px 4rem; }
+  .scheda { width: 100%; max-width: 26rem; padding: 2.2rem 2rem 1.6rem; animation: entra .6s ease-out both; }
+  @keyframes entra { from { opacity: 0; transform: translateY(12px); } }
+  .scheda h1 { margin: 0 0 .25em; font-size: 1.35rem; letter-spacing: -.015em; }
+  .scheda .sotto { margin: 0 0 1.6rem; color: var(--tenue); font-size: .9rem; }
+  .pulsante { width: 100%; padding: .8em; font-size: .98rem; }
+  .oppure { display: flex; align-items: center; gap: .8rem; margin: 1.3rem 0; color: var(--tenue); font-size: .8rem; }
+  .oppure::before, .oppure::after { content: ""; flex: 1; height: 1px; background: var(--bordo); }
+  .esito { display: none; margin-top: 1rem; }
+  .piede-scheda { margin: 1.8rem 0 0; padding-top: 1.2rem; border-top: 1px solid #edf0f5; font-size: .8rem; color: var(--tenue); text-align: center; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 1640 360">
+      <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </symbol>
+  </defs>
+</svg>
+<div class="notte pieno">
+  <div class="satin"></div>
+  <header class="testata"><div class="contenitore riga"><a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a></div></header>
+  <div class="centro">
+    <section class="scheda">
+      <h1>Sign in to your account</h1>
+      <p class="sotto">See your licenses, renewals and installations.</p>
+      <a class="pulsante secondario" href="account.html">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>
+        Continue with Google</a>
+      <div class="oppure">or</div>
+      <form class="campi" onsubmit="event.preventDefault(); document.getElementById('esito').style.display='block'">
+        <div><label for="email">Email</label><input id="email" type="email" placeholder="you@company.com" required></div>
+        <button class="pulsante primario" type="submit">Email me a sign-in link</button>
+      </form>
+      <div class="avviso verde esito" id="esito">We sent a link to your inbox. It works once and expires in 15 minutes.</div>
+      <p class="piede-scheda">No password to remember. The link goes to the address on your license.</p>
+    </section>
+  </div>
+</div>
+<div class="nastro">Mockup</div>
+</body>
+</html>
