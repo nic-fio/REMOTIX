@@ -299,6 +299,14 @@ fermerebbe a 3 utenti**, su tutti i desktop e a tutte le misure, per un crash e 
 3. **si cambia l'ordine degli utenti** solo per xrdp (D entra per ultimo). ⛔ Non lo consiglio: la scena non
    sarebbe più la stessa, e il crash arriverebbe comunque al livello dopo.
 
+⭐ **La scelta dell'utente (9 ott, sera): la 1.** *«se xrdp ha dei difetti meglio: vuol dire che il nostro prodotto
+e' migliore»*. ⇒ **Campagna partita il 9 ott alle 17:47** (unità `r20-xrdp`, `16-campagna.sh intel-x20 amd-x20`,
+`REMOTIX_16_SISTEMA=xrdp`), con la configurazione del pacchetto (`dpkg --verify` pulito).
+⏳ **Dopo la campagna, un'ora: il crash fuori dalla scatola.** xrdp installato sull'ospite, 4 sessioni con una che
+guarda il film, poi la 5ª. Le misure valgono in ogni caso; il controllo decide come si racconta il crash. Se
+compare anche fuori dalla scatola, «xrdp non fa entrare il quinto» si scrive. Se non compare, si dichiara come
+limite della prova in contenitore e si torna dall'utente.
+
 *Scritto l'**8 ottobre 2026** sera, sul portatile, leggendo il banco `banchi/16-stress/`; il server non
 è stato toccato (gira `r20-ripresa`). Serve al punto 4b di §3. ⛔ Niente codice prima che la campagna
 sia finita e questo piano sia letto.*
