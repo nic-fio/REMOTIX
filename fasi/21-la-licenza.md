@@ -283,6 +283,17 @@ punti dove la storia del progetto dice che si sbaglia per difetto.
      della macchina virtuale ⇒ resta l'avviso (b).
 7. **Che cosa compra la full oltre a utenti e durata**: gli aggiornamenti sono compresi finché l'abbonamento è
    attivo, e dopo la scadenza il prodotto si aggiorna ancora?
+   ✅ **9 ott** (utente: *«una licenza full scaduta si comporta come una trial, semplicemente il sistema smette di
+   funzionare»*): finita la tolleranza di 14 giorni, la full scaduta **si ferma** come la trial; la domanda sugli
+   aggiornamenti dopo la scadenza non si pone. Aggiornamenti compresi finché la full è attiva.
+   - **Avvisi prima della scadenza anche per la trial** (utente), come la full: amministratore da 3 giorni prima
+     (la trial ne dura 14), utenti collegati 3 messaggi al giorno negli ultimi 3 giorni, nella pagina.
+   - ✅ **Il controllo ogni 60 minuti, non ogni 24 ore** (utente). ⭐ Migliora: uno sdoppiamento si scopre entro
+     un'ora e le 72 ore della scelta partono prima; lo stato di una licenza revocata o rinnovata arriva subito.
+     Costo trascurabile: 1000 clienti = 24 mila controlli al giorno, un piccolo VPS li regge. ⚠ Due regole che
+     ne vengono: la **tolleranza resta 14 giorni dall'ultimo controllo riuscito** (non cambia); e se il VPS non
+     risponde l'avviso all'amministratore parte **una volta**, poi **una al giorno**, non ogni ora. Anche la copia
+     rimasta indietro chiede il suo stato ogni ora (senza consumare biglietti).
 
 ## 11. Il confronto con ChatGPT: la soluzione su cui si è convenuto (8 ott 2026, notte)
 
