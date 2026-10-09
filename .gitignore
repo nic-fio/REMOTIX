@@ -71,3 +71,7 @@ costruzione-uscita/
 # ⛔ Le chiavi dei rilasci (la privata compresa): stanno nel progetto ma NON nel deposito
 #    (parola dell'utente, 1 ott 2026: «per il momento la lasciamo nella cartella locale del progetto»).
 /.chiavi/
+
+# Archivi grezzi delle misure: troppo grandi per git (GitHub rifiuta oltre 100 MB).
+# Stanno nelle release di GitHub (es. tag misure-19-nvidia); qui resta solo SHA256SUMS.
+misure/**/*.tar.gz
