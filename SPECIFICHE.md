@@ -1486,6 +1486,14 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* *Le proposte
   comportamenti, quindi anche per la trial si chiede l'email; ci semplifichiamo la logica di gestione,
   altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
   diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
+- ✅ **La trial si chiede dall'installatore**, che gira da root (utente, 9 ott: *«solo gli admin del server possono
+  installare remotix»*), mai dalla pagina d'accesso; chiede l'**email** (obbligatoria), **nome** e **azienda**
+  (facoltativi) (utente, 9 ott: *«confermo»*). Senza domande: l'email si passa al comando.
+- ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott: *«la licenza parte dal giorno dell'installazione di
+  remotix»*), all'ora esatta della richiesta; 🔸 REMOTIX però **lavora solo a email confermata**: chi conferma tardi
+  non guadagna giorni. Senza rete all'installazione, l'ora è quella della prima richiesta riuscita.
+- 🔸 **La full** parte dall'**attivazione del codice** (chi passa dalla trial alla full ha installato settimane prima;
+  chi compra e installa dopo non perde mesi).
 - **L'impronta** la calcola il prodotto da **più parti dell'hardware**: UUID e seriale della scheda madre, seriale
   del disco di sistema, indirizzo della scheda di rete. Le **scritte di fabbrica** («To be filled by O.E.M.»,
   «Not Specified», tutti zeri) **si scartano** prima del calcolo. Al servizio arrivano solo impronte cifrate.
