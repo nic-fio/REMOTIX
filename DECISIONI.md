@@ -6398,7 +6398,10 @@ chiunque e il codice diventa chiuso (B)?» ha risposto **B**.
     Scaduta, REMOTIX smette di funzionare e serve la full. Legata alla **firma dell'hardware**, senza doppioni:
     due copie attive della stessa trial ⇒ la trial si disabilita (qui va bene: nessuno ha pagato). ⇒ Il
     programma **non conta più gli utenti per nessuna licenza**. Dettagli in `fasi/21-la-licenza.md` §11.3.
-  - ✅ **Il terzo tipo si chiama «gold»** (utente, 8 ott: *«si vende solo la full, la gold è per uso privato»*):
+  - ✅ **Il rinnovo della full lo sceglie il cliente: manuale (predefinito) o automatico** (utente, 9 ott). ⛔ Supera
+  «1 anno, rinnovo automatico» e «il rinnovo è automatico (lo comanda la piattaforma di pagamento)». Perché:
+  *«addebitare centinaia o migliaia di euro automaticamente … non è così simpatico»*. Regole in `SPECIFICHE.md` §15.6.
+- ✅ **Il terzo tipo si chiama «gold»** (utente, 8 ott: *«si vende solo la full, la gold è per uso privato»*):
     era «eternal», cambia solo il nome. ⛔ Si vende **solo la full**.
 
   - Aggiunta di Claude: con il controllo in rete **anche la trial si registra sul nostro servizio**, legata

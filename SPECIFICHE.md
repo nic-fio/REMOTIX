@@ -1364,7 +1364,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 | tipo | utenti | durata | chi la ottiene |
 |---|---|---|---|
 | **trial** | illimitati | **14 giorni** | chiunque installi, una volta per macchina |
-| **full** | illimitati | **1 anno**, rinnovo automatico | ⭐ **l'unica in vendita** |
+| **full** | illimitati | **1 anno**; rinnovo **a scelta del cliente** (§15.6) | ⭐ **l'unica in vendita** |
 | **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova (le **4 scatole** e il server di prova: senza, i banchi si fermerebbero alla trial) |
 
 - Ogni licenza vale per **una macchina**: un server fisico **oppure** una macchina virtuale.
@@ -1440,7 +1440,17 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 
 ### 15.6 Scadenza, rinnovo, avvisi
 
-- **Rinnovo fallito** della full (carta scaduta o rifiutata): **14 giorni** di tolleranza dopo la scadenza.
+- ⭐ **Il rinnovo lo sceglie il cliente** (utente, 9 ott: *«addebitare centinaia o migliaia di euro automaticamente
+  sui conti degli acquirenti non è così simpatico … il cliente sceglie il rinnovo automatico o meno»*):
+  - **manuale, ed è il predefinito**: il cliente paga indicando il **numero di licenza**; il servizio sposta in
+    avanti la scadenza e il server se ne accorge al controllo dell'ora dopo. Nessun codice nuovo;
+  - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
+    «rinnova»; 🔸 **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
+    spegne in qualunque momento;
+  - ⏳ **la tolleranza dopo la scadenza** è da ridecidere: i 14 giorni nascevano per le carte rifiutate del rinnovo
+    automatico (domanda aperta, §15.13).
+- 🔸 **Email all'acquirente 30, 7 e 1 giorno prima della scadenza** (chi paga non guarda per forza la pagina del
+  server).
 - **«La fine»** è il momento in cui REMOTIX si ferma davvero: per la trial il 14° giorno; per la full la fine
   dei 14 giorni di tolleranza dopo la scadenza commerciale (o dopo l'ultimo controllo riuscito, se la rete manca).
 - **Gli avvisi**:
@@ -1555,6 +1565,8 @@ rimasta indietro.
 - ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
   ora dura **14**. Da decidere insieme al contratto della full.
 - ❓ **Da decidere con l'utente** (verifica del 9 ott):
+  0. **la tolleranza dopo la scadenza** della full col rinnovo manuale: fermata il giorno stesso, o qualche giorno
+     (proposta di Claude: 7);
   1. che cosa vede chi usa una licenza **sospesa** (dal pagamento) o **revocata** (da chi vende): proposta del piano,
      la finestra della licenza con la frase della sospensione, come una scaduta;
   2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
