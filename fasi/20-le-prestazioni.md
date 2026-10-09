@@ -117,6 +117,34 @@ nuovi si confrontano coi vecchi dove serve:
 **Quanto dura**, dalla fase 16: ~1 ora e 10 per salita ⇒ ~9 ore di macchina nel caso migliore (8 salite),
 ~35 se si scende per tutta la scala. A blocchi, anche di notte, e ⛔ **mai mentre l'utente usa il server**.
 
+### 3-bis. Dopo la campagna: le due stranezze (9 ott 2026)
+
+**1. Radeon 4K, GNOME e KDE «0 utenti»: è il driver, e la cura c'è.** `[M]` Nei registri di `amd-f20-4k-gnome` la
+Radeon usa la strada **Vulkan** con **RADV 25.0.7** (Debian 13), e REMOTIX chiede `ULTRA_LOW_LATENCY`
+(`src/vulkanvideo.c:629`). Il progetto `~/Documenti/AMD` (§5-ter) ha misurato che RADV 25.0.7 la accetta ma non la
+traduce al firmware; da Mesa **25.1** sì. Con un utente il livello era DEGRADED per il solo ritardo (51-56 ms,
+soglia 50), tutto il resto verde: l'anomalia A3 (gruppi di 5 fotogrammi da 31 ms).
+Salite ripetute con **`mesa-vulkan-drivers 26.1.6-1~bpo13+1`** (il **backport ufficiale di Debian 13**) installato
+nella scatola prima del server (`16-salita.py --mesa-vulkan-deb`, `misure/fase16/mesa26-9ott.sh`, campagne
+`amd-m26-4k-*`, binario `716e35b` invariato):
+
+| Radeon GNOME 4K, 1 utente | RADV 25.0.7 (`amd-f20`) | **RADV 26.1.6** (`amd-m26`) | Intel, per confronto |
+|---|---|---|---|
+| classe | DEGRADED (due volte) | **GREEN** | GREEN |
+| ritardo p95 | 53,95 / 55,72 ms | **21,45 ms** | 35,18 ms |
+| NOSTRO p95 dei p95 | 45,0 / 46,7 ms | **12,4 ms** | 26,2 ms |
+
+⇒ ⏳ Le salite complete dei 4 desktop a 4K sono in corso; la tabella pubblica dirà la versione di Mesa.
+
+**2. «Buono 12, verde vero 1» (es. Intel XFCE Full HD): non è una contraddizione.** «Buono» ammette un DEGRADED non
+significativo (al massimo un attore su quattro); «verde vero» li vuole tutti verdi. A 4, 8 e 12 utenti c'era **un
+solo attore** DEGRADED, sempre per il **blocco dell'immagine** di 1,06-1,11 s (soglia 1 s). `[M]` Nel caso
+`intel-f20-fhd-xfce/livello-04` (utente 1, profilo A, che batte testo) il **server risponde a ogni tasto in 23-40 ms**
+(registro: `input id=1524…1545` → `fotogramma SPEDITO`), nessun fotogramma saltato, nessun input perso. `[?]` Il
+secondo «fermo» nasce **prima** del server o nel confronto fra l'ora dei tasti ricostruita dall'attore
+(`ore_dei_tasti`, dal ritorno della catena di Marionette) e l'ora dei dipinti della pagina: **da verificare** prima
+di chiamarlo difetto, con l'attore che scrive ogni impulso e il dipinto che gli attribuisce.
+
 ## 4. Il limite dei 16, dichiarato
 
 Il prodotto oggi ha **16 sessioni fisse nel programma** (`MAX_ATTACCATE` in `src/rcp.c`, DECISIONI §1.11).
