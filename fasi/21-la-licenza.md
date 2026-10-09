@@ -118,6 +118,7 @@ le righe 🔸 sono proposte di Claude, nate dai buchi che §15 lascia.*
 
 | # | operazione | §15 |
 |---|---|---|
+| B0 | 🔸 **i dati di chi compra** — due pagine, perché nascono in due posti diversi: la **trial** si chiede **dalla pagina di REMOTIX** sul server del cliente (l'impronta si calcola solo lì; la mostra a chi entra con un account amministratore, quando la licenza non è mai stata attivata); la **full** si compra **dalla pagina del servizio** (`remotix.nicfio.it`), raggiunta da «Acquista»: chi compra può non essere l'amministratore, e compra prima di installare. Il prodotto, per la full, chiede solo il codice. ⏳ Quali dati in ciascuna: da decidere | 15.3, 15.7 |
 | B1 | **conferma l'email della trial** — 🔸 la trial **parte alla conferma**, non prima (altrimenti l'email non conferma niente) | 15.7 |
 | B2 | **scegli la copia** fra le due attive; la tenuta riceve una chiave nuova, l'altra si ferma; sblocca anche una licenza già bloccata | 15.8 |
 | B3 | **conferma il recupero** | 15.9 |
