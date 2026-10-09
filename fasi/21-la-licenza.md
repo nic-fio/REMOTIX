@@ -415,8 +415,8 @@ trascrizione non si conserva; qui c'è il risultato.*
 7. **La gold deve comunque farsi sentire almeno ogni 14 giorni.**
    ✅ **9 ott, la gold semplificata** (utente): nessuna scadenza, nessun avviso, nessun rinnovo; **una per
    macchina** resta. Due copie attive ⇒ **avviso a chi vende con tutti i dettagli** e **chi vende disabilita una
-   delle due** (utente: *«devo avere la facoltà di disabilitare uno dei doppioni»*). 🔸 Senza rete: **90 giorni**
-   invece di 14 (proposta di Claude, l'utente non ha ancora risposto). Regole in `SPECIFICHE.md` §15.1.
+   delle due** (utente: *«devo avere la facoltà di disabilitare uno dei doppioni»*). Senza rete: **14 giorni**,
+   come le altre (utente, 9 ott; Claude proponeva 90). Regole in `SPECIFICHE.md` §15.1.
 8. Per quanto si tengono email degli acquirenti, impronte delle trial e registri (riservatezza).
    ✅ **9 ott: 2 anni** (utente: *«almeno 2 anni»*), ⚠ ma come **tetto, non come minimo** (correzione di Claude: per
    il GDPR i dati personali si tengono **non oltre** il necessario, e il periodo va scritto nell'informativa):

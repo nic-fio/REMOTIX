@@ -1383,7 +1383,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
   |---|---|
   | scadenza, avvisi, rinnovo | **nessuno** |
   | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
-  | se la rete manca | 🔸 **90 giorni** (proposta di Claude, da confermare) |
+  | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
   | due copie attive | **avviso a chi vende con tutti i dettagli** (gli stessi dell'email della full, §15.8), e chi vende **disabilita una delle due** dallo strumento delle licenze; la copia tenuta riceve una chiave nuova. Nessuna pagina di scelta, nessuna fermata automatica |
   | revoca | da chi vende |
 
@@ -1429,7 +1429,7 @@ Il codice non c'è ancora: ogni riga è una decisione di prodotto.* 🔸 = **pro
 - Il prodotto continua a funzionare per **14 giorni dall'ultimo controllo riuscito**.
 - L'amministratore viene avvisato **al primo controllo fallito**, poi **una volta al giorno** (registro e pagina
   d'accesso), con i giorni che restano.
-- Nessun attestato della trial o della full vale più di **14 giorni**; la gold 🔸 **90** (§15.1).
+- ⛔ Nessun attestato vale più di **14 giorni**, **gold compresa** (utente, 9 ott): un valore solo per tutte.
 
 ### 15.6 Scadenza, rinnovo, avvisi
 
@@ -1551,6 +1551,6 @@ rimasta indietro.
      la finestra della licenza con la frase della sospensione, come una scaduta;
   2. il **primo avvio senza rete**: proposta del piano, la pagina dice «il server non ha ancora potuto attivare la
      licenza: serve l'accesso a internet»;
-  3. le righe 🔸: gold con 90 giorni senza rete; recupero uno ogni 30 giorni e avviso a recupero fatto; email dal
+  3. le righe 🔸: recupero uno ogni 30 giorni e avviso a recupero fatto; email dal
      VPS; link della scelta usabile una volta; codice da 128 bit non conservato; niente pinning; solo l'ultima
      voce tenuta dal servizio.
