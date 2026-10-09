@@ -52,6 +52,23 @@
   .storia li { position: relative; }
   .storia li::before { content: ""; position: absolute; left: -1.38rem; top: .45em; width: .6rem; height: .6rem; border-radius: 50%; background: #fff; border: 2px solid var(--accento); }
   .storia time { color: var(--tenue); margin-right: .5em; }
+
+  /* la richiesta di una licenza nuova: trial e full, solo da qui (SPECIFICHE §15.7) */
+  .nuova { padding: 1.4rem 1.5rem 1.5rem; }
+  .nuova > h2 { margin: 0 0 .2rem; font-size: 1.15rem; }
+  .nuova > p { margin: 0 0 1.2rem; color: var(--tenue); font-size: .9rem; }
+  .offerte { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .offerte { grid-template-columns: 1fr 1fr; } }
+  .offerta { display: flex; flex-direction: column; gap: .8rem; border: 1px solid var(--bordo); border-radius: .8em; padding: 1.2rem 1.3rem; min-width: 0; }
+  .offerta h3 { margin: 0; font-size: 1.05rem; }
+  .offerta .sotto { margin: 0; color: var(--tenue); font-size: .88rem; }
+  .riga-prezzo { display: flex; justify-content: space-between; align-items: baseline; padding: .55rem 0; border-bottom: 1px solid var(--bordo); font-size: .9rem; }
+  .riga-prezzo b { font-size: 1.1rem; }
+  .offerta .pulsante { align-self: flex-start; }
+  .offerta .spinta { margin-top: auto; display: grid; gap: .8rem; }
+  .chiave { display: none; gap: .6rem; }
+  .chiave code { display: block; overflow-x: auto; white-space: nowrap; padding: .6em .8em; border-radius: .5em; background: #f1f4f9; font-size: .85rem; }
+  .chiave small { color: var(--tenue); font-size: .8rem; }
 </style>
 </head>
 <body>
@@ -76,7 +93,7 @@
 <main class="contenitore">
   <div class="titolo">
     <div><h1>My licenses</h1><p>2 licenses · 3 installations</p></div>
-    <a class="pulsante primario piccolo" href="trial.html#buy">Buy another license</a>
+    <a class="pulsante primario piccolo" href="#nuova">Get a license</a>
   </div>
 
   <div class="colonna">
@@ -138,13 +155,45 @@
     <section class="scheda licenza">
       <div class="capo">
         <h2>Trial</h2><span class="mono">RX-000140</span><span class="stato tolleranza">Expired · grace period</span>
-        <div class="destra"><a class="pulsante primario piccolo" href="trial.html#buy">Upgrade to full</a></div>
+        <div class="destra"><a class="pulsante primario piccolo" href="#nuova">Upgrade to full</a></div>
       </div>
       <div class="dati">
         <div><small>Expired</small><span>5 Oct 2026</span></div>
         <div><small>REMOTIX stops</small><span>19 Oct 2026</span></div>
         <div><small>Installation</small><span><code>lab-02</code></span></div>
         <div><small>Upgrade</small><span><code>remotix licenza upgrade</code></span></div>
+      </div>
+    </section>
+
+    <!-- licenza nuova: trial e full si chiedono SOLO da qui, dopo l'accesso (§15.7) -->
+    <section class="scheda nuova" id="nuova" aria-labelledby="nuova-t">
+      <h2 id="nuova-t">Get a new license</h2>
+      <p>One license covers one server. The key appears here and in your inbox; the license starts when the key enters the installation, not before.</p>
+      <div class="offerte">
+        <div class="offerta">
+          <h3>Free trial</h3>
+          <p class="sotto">14 days · every feature · unlimited users · one server. One trial per machine.</p>
+          <div class="spinta">
+            <button class="pulsante secondario" type="button" onclick="document.getElementById('chiave-trial').style.display='grid'; this.style.display='none'">Get my trial key</button>
+            <div class="chiave" id="chiave-trial">
+              <div class="avviso verde">Your trial key is ready. We also sent it to anna@studio-rossi.it.</div>
+              <code>RXT-7KQ2-M9WD-41HZ-PC8V-3TNE-6YRB</code>
+              <small>On your server, as root, run the installer and paste the key. Unused, it expires in 30 days.</small>
+            </div>
+          </div>
+        </div>
+        <div class="offerta">
+          <h3>Full license</h3>
+          <p class="sotto">1 year · every feature · unlimited users · one server · updates included.</p>
+          <div>
+            <div class="riga-prezzo"><span>1 server · 1 year</span><b>€ —</b></div>
+            <div class="riga-prezzo"><span>Renewal</span><span>by hand <span style="color:var(--tenue)">(default)</span></span></div>
+          </div>
+          <div class="spinta">
+            <button class="pulsante primario" type="button">Continue to payment</button>
+            <div class="avviso grigio">⏳ The payment processor is not chosen yet: until then full licenses are created by hand.</div>
+          </div>
+        </div>
       </div>
     </section>
   </div>
