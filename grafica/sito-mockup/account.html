@@ -65,7 +65,7 @@
   .riga-prezzo { display: flex; justify-content: space-between; align-items: baseline; padding: .55rem 0; border-bottom: 1px solid var(--bordo); font-size: .9rem; }
   .riga-prezzo b { font-size: 1.1rem; }
   .offerta .pulsante { align-self: flex-start; }
-  .offerta .spinta { margin-top: auto; display: grid; gap: .8rem; }
+  .offerta .spinta { display: grid; gap: .8rem; }
   .chiave { display: none; gap: .6rem; }
   .chiave code { display: block; overflow-x: auto; white-space: nowrap; padding: .6em .8em; border-radius: .5em; background: #f1f4f9; font-size: .85rem; }
   .chiave small { color: var(--tenue); font-size: .8rem; }
@@ -173,6 +173,10 @@
         <div class="offerta">
           <h3>Free trial</h3>
           <p class="sotto">14 days · every feature · unlimited users · one server. One trial per machine.</p>
+          <div>
+            <div class="riga-prezzo"><span>1 server · 14 days</span><b>Free</b></div>
+            <div class="riga-prezzo"><span>Then</span><span>upgrade to full, nothing to reinstall</span></div>
+          </div>
           <div class="spinta">
             <button class="pulsante secondario" type="button" onclick="document.getElementById('chiave-trial').style.display='grid'; this.style.display='none'">Get my trial key</button>
             <div class="chiave" id="chiave-trial">
@@ -191,7 +195,7 @@
           </div>
           <div class="spinta">
             <button class="pulsante primario" type="button">Continue to payment</button>
-            <div class="avviso grigio">⏳ The payment processor is not chosen yet: until then full licenses are created by hand.</div>
+            <div class="avviso grigio">The payment processor is not chosen yet: until then full licenses are created by hand.</div>
           </div>
         </div>
       </div>
