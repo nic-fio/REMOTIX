@@ -14,10 +14,6 @@
     background: linear-gradient(135deg, #00d8ff, #1a7cff 45%, #0646c8); }
   .colonna { display: grid; gap: 1.2rem; padding-bottom: 4rem; }
 
-  .attesa { display: grid; gap: .6rem; padding: 1.3rem 1.5rem; border-radius: 1em; background: #eef6fb; border: 1px solid #bfdbea; }
-  .attesa h2 { margin: 0; font-size: 1.1rem; }
-  .attesa p { margin: 0; font-size: .92rem; }
-  .azioni-attesa { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
   .allarme { display: grid; gap: 1rem; padding: 1.4rem 1.5rem; border-radius: 1em; background: var(--giallo-f); border: 1px solid var(--giallo-b); color: var(--giallo-t); }
   .allarme h2 { margin: 0; font-size: 1.1rem; color: #7a2e0e; }
   .allarme p { margin: 0; font-size: .92rem; }
@@ -101,14 +97,6 @@
   </div>
 
   <div class="colonna">
-    <!-- una copia in attesa: §15.3 -->
-    <section class="attesa" aria-labelledby="att">
-      <h2 id="att">A server is waiting for your confirmation</h2>
-      <p><b>Copy C <code>7MPA</code></b> · machine <code>srv-new</code> · from 93.41.12.9 (Fastweb, IT) · asked today at 11:20 with key <code>RXT-…-3TNE</code>.</p>
-      <p>Confirming starts REMOTIX on <code>srv-new</code> and <b>stops it on <code>lab-02</code></b>, the server this license uses now.</p>
-      <div class="azioni-attesa"><button class="pulsante primario piccolo">Activate here</button><button class="pulsante secondario piccolo">Not mine, ignore</button></div>
-    </section>
-
     <!-- lo sdoppiamento: §15.8 -->
     <section class="allarme" aria-labelledby="dop">
       <h2 id="dop">⚠ License RXF-…-6YRB is running on two servers</h2>
@@ -150,7 +138,7 @@
       <div class="piede-licenza">
         <label class="interruttore" style="margin:0;font-weight:500;color:var(--inchiostro)"><input type="checkbox"> Automatic renewal</label>
         <span style="font-size:.82rem;color:var(--tenue)">Off by default. If on, we email you 7 days before charging.</span>
-        <span style="font-size:.82rem;color:var(--tenue)">New server? Install with the same key and confirm it here.</span>
+        <span style="font-size:.82rem;color:var(--tenue)">New server? Install with the same key: both work until you choose here.</span>
       </div>
       <details class="storia"><summary>History</summary>
         <ol>
@@ -192,7 +180,7 @@
             <div class="chiave" id="chiave-trial">
               <div class="avviso verde">Your trial key is ready. We also sent it to anna@studio-rossi.it.</div>
               <code>RXT-7KQ2-M9WD-41HZ-PC8V-3TNE-6YRB</code>
-              <small>On your server, as root, run the installer and paste the key, then confirm the server here. Never activated, it expires in 30 days.</small>
+              <small>On your server, as root, run the installer and paste the key: REMOTIX starts at once. Never activated, it expires in 30 days.</small>
             </div>
           </div>
         </div>

@@ -91,7 +91,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
   <p class="sommario testo">Il processo dall'inizio alla fine, visto dall'alto: le due scatole nere, che cosa si scambiano, e che cosa succede in ogni caso. Il riferimento resta <code>SPECIFICHE.md</code> §15. Questa pagina lo racconta e non aggiunge regole; se le due non coincidono, vale §15.</p>
   <p class="testo">Legenda: <span class="etichetta e-deciso">deciso</span> è scritto in §15 · <span class="etichetta e-proposta">proposta</span> è scritto ma va ancora confermato · <span class="etichetta e-aperto">aperto</span> è ancora da decidere.</p>
   <nav class="indice" aria-label="Indice">
-    <a href="#scatole">1 · Le due scatole nere</a><a href="#elementi">2 · I tre elementi</a><a href="#sito">3 · Il sito</a>
+    <a href="#scatole">1 · Le due scatole nere</a><a href="#elementi">2 · Due elementi e un gesto</a><a href="#sito">3 · Il sito</a>
     <a href="#tipi">4 · I tre tipi</a><a href="#vita">5 · La vita di una licenza</a><a href="#attivazione">6 · Chiedere e attivare</a>
     <a href="#controllo">7 · Il controllo orario</a><a href="#scadenza">8 · Scadenza e rinnovo</a><a href="#rete">9 · Senza rete</a>
     <a href="#upgrade">10 · Da trial a full</a><a href="#copie">11 · Due copie</a><a href="#cambio">12 · Cambiare server</a>
@@ -133,7 +133,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
   <text x="270" y="142" font-size="13.5" font-weight="700" style="fill:var(--accento)">1 · ATTIVA</text>
   <text x="372" y="142" font-size="12.5" class="piccolo">chiave, nome macchina</text>
   <line x1="606" y1="172" x2="252" y2="172" style="stroke:var(--accento);stroke-width:1.4;stroke-dasharray:6 4" marker-end="url(#fa)"/>
-  <text x="270" y="190" font-size="12.5" class="piccolo">in attesa (nome copia, primo biglietto) · rifiutata</text>
+  <text x="270" y="190" font-size="12.5" class="piccolo">attestato firmato + primo biglietto · rifiutata</text>
 
   <!-- messaggio 2 -->
   <line x1="252" y1="220" x2="606" y2="220" style="stroke:var(--biglietto);stroke-width:2" marker-end="url(#fb)"/>
@@ -141,7 +141,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
   <text x="400" y="212" font-size="12.5" class="piccolo">ogni ora: biglietto, codice, nome</text>
   <line x1="606" y1="242" x2="252" y2="242" style="stroke:var(--biglietto);stroke-width:1.4;stroke-dasharray:6 4" marker-end="url(#fb)"/>
   <text x="270" y="260" font-size="12.5" class="piccolo">attestato firmato + biglietto nuovo</text>
-  <text x="270" y="276" font-size="12.5" class="piccolo">oppure: in attesa · fermati · sdoppiata</text>
+  <text x="270" y="276" font-size="12.5" class="piccolo">oppure: fermati · sdoppiata</text>
 
   <!-- messaggio 3 -->
   <line x1="252" y1="314" x2="606" y2="314" style="stroke:var(--tenue);stroke-width:1.6" marker-end="url(#fg)"/>
@@ -175,28 +175,29 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
 <table>
   <thead><tr><th>#</th><th>da REMOTIX al servizio</th><th>dal servizio a REMOTIX</th><th>quando</th></tr></thead>
   <tbody>
-    <tr><td>1 · ATTIVA</td><td>la chiave di licenza, il nome della macchina</td><td><b>in attesa</b>: nome breve della copia, primo biglietto (vale dopo la conferma) · oppure <b>rifiutata</b>, col motivo</td><td>all'installazione, o col comando <span class="cod">remotix licenza attiva</span></td></tr>
-    <tr><td>2 · CONTROLLO</td><td>il biglietto, un codice casuale della richiesta, il nome della macchina</td><td><b>attestato</b> firmato (tipo, stato, scadenza, tolleranza, «valido fino a», avvisi) + biglietto nuovo · oppure <b>in attesa</b> · <b>fermati</b> · <b>sdoppiata</b></td><td>ogni ora</td></tr>
+    <tr><td>1 · ATTIVA</td><td>la chiave di licenza, il nome della macchina</td><td><b>attestato</b> firmato + primo biglietto: REMOTIX parte subito (se la licenza gira già altrove, anche il nome breve della copia: è uno sdoppiamento) · oppure <b>rifiutata</b>, col motivo</td><td>all'installazione, o col comando <span class="cod">remotix licenza attiva</span></td></tr>
+    <tr><td>2 · CONTROLLO</td><td>il biglietto, un codice casuale della richiesta, il nome della macchina</td><td><b>attestato</b> firmato (tipo, stato, scadenza, tolleranza, «valido fino a», avvisi) + biglietto nuovo · oppure <b>fermati</b> · <b>sdoppiata</b></td><td>ogni ora</td></tr>
     <tr><td>3 · ELENCO</td><td>la richiesta</td><td>indirizzi del servizio, chiavi del VPS valide, revoche, firmati dalla chiave madre</td><td>all'avvio e una volta al giorno</td></tr>
   </tbody>
 </table>
 </div>
 
 <!-- ============================================================ 2 -->
-<h2 id="elementi"><span class="n">2</span>I tre elementi <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Tutto il sistema poggia su tre cose, ciascuna con un lavoro suo. Firma dell'installazione, impronta dell'hardware e numero di licenza sono stati tolti: non proteggevano niente che questi tre non coprano già.</p>
+<h2 id="elementi"><span class="n">2</span>Due elementi e un gesto <span class="etichetta e-deciso">deciso</span></h2>
+<p class="testo">Tutto il sistema poggia su due elementi e su un gesto dell'acquirente. Firma dell'installazione, impronta dell'hardware, numero di licenza e conferma delle installazioni sono stati tolti: non servivano a niente che questi non coprano già.</p>
 <div class="scorre">
 <table>
   <thead><tr><th>elemento</th><th>risponde a</th><th>com'è fatto</th><th>chi lo crea</th><th>nella vita reale</th></tr></thead>
   <tbody>
     <tr><td>Chiave di licenza<br><span class="cod">LICENSE_KEY</span></td><td>«quale licenza?»</td><td>stringa lunga, con la classe davanti (<span class="cod">RXT</span> trial, <span class="cod">RXF</span> full, <span class="cod">RXG</span> gold). È l'unico identificativo; fuori dall'area cliente si mostra mascherata: <span class="cod">RXF-…-6YRB</span></td><td>il servizio</td><td>il codice di un abbonamento</td></tr>
     <tr><td>Biglietto</td><td>«quale copia è quella viva?»</td><td>numero casuale, vale una volta, cambia ogni ora</td><td>il servizio</td><td>il biglietto del turno, strappato a ogni chiamata</td></tr>
-    <tr><td>Conferma nell'area cliente</td><td>«chi la sta usando?»</td><td>il pulsante «attiva qui» dell'acquirente, dopo l'accesso</td><td>l'acquirente</td><td>la firma sul modulo di consegna</td></tr>
+    <tr><td><i>il gesto:</i> scelta della copia</td><td>«quale server tiene la licenza?»</td><td>nell'area cliente, quando la licenza gira su due server</td><td>l'acquirente</td><td>dire quale delle due auto tiene il contrassegno</td></tr>
   </tbody>
 </table>
 </div>
 <ul class="punti">
-  <li>La chiave da sola non fa partire niente: ogni installazione resta in attesa finché l'acquirente non la conferma. Per questo può servire a ogni installazione, e non si riassegna mai a un'altra licenza.</li>
+  <li>La chiave fa partire REMOTIX subito. Inserita su un secondo server, fa partire anche quello, ed è uno sdoppiamento: funzionano tutti e due finché l'acquirente non sceglie. Così si cambia server senza un minuto di fermo. La chiave non si riassegna mai a un'altra licenza.</li>
+  <li>Chi presta o perde la chiave dà a un altro al massimo 7 giorni lavorativi di uso: poi, senza scelta, la licenza si blocca per tutti e due. Il rischio resta a carico di chi ha fatto uscire la chiave.</li>
   <li>Sul server la chiave serve solo fino al primo biglietto, poi il programma la cancella dal disco e va avanti coi biglietti.</li>
   <li>Se un cliente vuole una chiave nuova, la rigeneri tu dal pannello: la vecchia smette di valere, il server attivo non se ne accorge.</li>
 </ul>
@@ -206,7 +207,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
   <tbody>
     <tr><td>nessuno legge i dati per strada</td><td>HTTPS (senza vincoli a un certificato, perché i proxy aziendali devono funzionare)</td></tr>
     <tr><td>la copia che chiede è quella viva</td><td>il biglietto</td></tr>
-    <tr><td>chi usa la licenza l'ha autorizzato l'acquirente</td><td>la conferma nell'area cliente</td></tr>
+    <tr><td>quale server tiene la licenza, se sono due</td><td>la scelta dell'acquirente</td></tr>
     <tr><td>la risposta viene davvero dal servizio</td><td>la chiave del VPS: il servizio firma, REMOTIX verifica</td></tr>
     <tr><td>la chiave del VPS è buona, e si revoca se rubata</td><td>la chiave madre, fuori linea sul tuo portatile. È l'unica insostituibile</td></tr>
     <tr><td>«rinnova» e «sospendi» vengono davvero dal pagamento</td><td>la chiave del pagamento</td></tr>
@@ -222,7 +223,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
   <thead><tr><th>ingresso</th><th>per chi</th><th>come si entra</th><th>che cosa c'è</th></tr></thead>
   <tbody>
     <tr><td>Pubblico</td><td>chiunque</td><td>libero</td><td>la vetrina. «Prova gratis» e «Acquista» portano all'accesso</td></tr>
-    <tr><td>Area cliente</td><td>chi ha un account</td><td>link mandato all'email (niente password) oppure Google. Email usa e getta rifiutate</td><td>la richiesta della trial e l'acquisto della full (solo da qui), le licenze con stato e scadenze, la conferma dei server, la scelta fra due copie, il rinnovo e il rinnovo automatico sì/no, il cambio email</td></tr>
+    <tr><td>Area cliente</td><td>chi ha un account</td><td>link mandato all'email (niente password) oppure Google. Email usa e getta rifiutate</td><td>la richiesta della trial e l'acquisto della full (solo da qui), le licenze con stato e scadenze, la scelta fra due copie, il rinnovo e il rinnovo automatico sì/no, il cambio email</td></tr>
     <tr><td>Pannello</td><td>solo tu</td><td>passkey oppure Google, solo col tuo account e con la verifica in due passaggi</td><td>le tue operazioni (sezione 14); ogni operazione importante ti manda un avviso. Se resti fuori: ssh sul VPS e una passkey nuova</td></tr>
   </tbody>
 </table>
@@ -232,11 +233,11 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
 <h2 id="tipi"><span class="n">4</span>I tre tipi di licenza <span class="etichetta e-deciso">deciso</span></h2>
 <div class="scorre">
 <table>
-  <thead><tr><th>tipo</th><th>durata</th><th>chi la ottiene</th><th>chi conferma i server</th><th>due copie attive</th></tr></thead>
+  <thead><tr><th>tipo</th><th>durata</th><th>chi la ottiene</th><th>chi sceglie fra due copie</th><th>due copie attive</th></tr></thead>
   <tbody>
-    <tr><td>Trial</td><td>14 giorni dalla conferma</td><td>una per account</td><td>l'acquirente</td><td>sceglie l'acquirente</td></tr>
-    <tr><td>Full</td><td>1 anno dall'acquisto, poi rinnovo</td><td>chi compra (l'unica in vendita)</td><td>l'acquirente</td><td>sceglie l'acquirente</td></tr>
-    <tr><td>Gold</td><td>nessuna scadenza</td><td>solo tu, col comando via ssh</td><td>tu, dal pannello</td><td>ti avvisa, e ne disabiliti una tu</td></tr>
+    <tr><td>Trial</td><td>14 giorni dall'installazione</td><td>una per account</td><td>l'acquirente</td><td>funzionano tutte e due, poi blocco</td></tr>
+    <tr><td>Full</td><td>1 anno dall'acquisto, poi rinnovo</td><td>chi compra (l'unica in vendita)</td><td>l'acquirente</td><td>funzionano tutte e due, poi blocco</td></tr>
+    <tr><td>Gold</td><td>nessuna scadenza</td><td>solo tu, col comando via ssh</td><td>tu, dal pannello</td><td>ti avvisa; nessun blocco automatico</td></tr>
   </tbody>
 </table>
 </div>
@@ -255,10 +256,8 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--linea)
 stateDiagram-v2
     direction LR
     [*] --> Chiesta: dall'area cliente
-    Chiesta --> InAttesa: root inserisce la chiave
+    Chiesta --> Attiva: root inserisce la chiave
     Chiesta --> [*]: trial mai attivata, dopo 30 giorni
-    InAttesa --> Attiva: l'acquirente conferma
-    InAttesa --> Chiesta: nessuna conferma in 3 giorni
     Attiva --> Attiva: controllo ogni ora, biglietto nuovo
     Attiva --> InScadenza: ultimi 3 giorni lavorativi
     InScadenza --> Attiva: rinnovo
@@ -266,7 +265,7 @@ stateDiagram-v2
     Tolleranza --> Attiva: rinnovo
     Tolleranza --> Ferma: dopo 14 giorni solari
     Ferma --> Attiva: rinnovo
-    Attiva --> DueCopie: biglietto già consumato
+    Attiva --> DueCopie: stessa chiave su un altro server, o un clone
     DueCopie --> Attiva: l'acquirente sceglie
     DueCopie --> Bloccata: nessuna scelta in 7 giorni lavorativi
     Bloccata --> Attiva: scelta, o sblocco da te
@@ -278,7 +277,7 @@ stateDiagram-v2
 
 <!-- ============================================================ 6 -->
 <h2 id="attivazione"><span class="n">6</span>Chiedere e attivare <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Un percorso solo per trial e full, e lo stesso per la prima installazione e per ogni cambio di server.</p>
+<p class="testo">Un percorso solo per trial e full. Il cliente compra, inserisce la chiave, e REMOTIX parte.</p>
 <pre class="mermaid">
 sequenceDiagram
     autonumber
@@ -294,17 +293,16 @@ sequenceDiagram
     V-->>A: la chiave, nell'area e per email
     R->>P: installatore, incolla la chiave
     P->>V: 1 · ATTIVA (chiave, nome macchina)
-    V-->>P: in attesa: «copia 4F7K», primo biglietto
-    V-->>A: email: un server chiede la licenza
-    A->>S: «attiva qui» sulla copia 4F7K
-    P->>V: 2 · CONTROLLO (biglietto)
-    V-->>P: attestato firmato + biglietto nuovo: parte
+    V-->>P: attestato firmato + primo biglietto: parte
     P->>P: cancella la chiave dal disco
+    loop ogni ora
+        P->>V: 2 · CONTROLLO (biglietto)
+        V-->>P: attestato + biglietto nuovo
+    end
 </pre>
 <ul class="punti">
-  <li>I giorni partono dalla conferma, non da quando arriva l'email: chiederla oggi e installare la settimana prossima non costa niente.</li>
-  <li>Una sola copia in attesa per licenza; se nessuno la conferma, scade <span class="etichetta e-proposta">3 giorni</span> e non succede niente.</li>
-  <li>La pagina d'accesso del server non ha il campo della chiave: la chiave la mette root.</li>
+  <li>I giorni partono dall'installazione, non da quando arriva l'email: chiederla oggi e installare la settimana prossima non costa niente.</li>
+    <li>La pagina d'accesso del server non ha il campo della chiave: la chiave la mette root.</li>
 </ul>
 
 <!-- ============================================================ 7 -->
@@ -416,10 +414,10 @@ sequenceDiagram
 
 <!-- ============================================================ 11 -->
 <h2 id="copie"><span class="n">11</span>Due copie attive <span class="etichetta e-deciso">deciso</span></h2>
-<p class="testo">Riguarda le copie nate da sole: un clone, un backup rimesso in piedi, una VM accesa due volte. Vale per trial e full; per la gold ti arriva un avviso e ne disabiliti una tu dal pannello.</p>
+<p class="testo">Riguarda tutte le copie in più: quelle nate da sole (un clone, un backup rimesso in piedi, una VM accesa due volte) e quelle volute (la stessa chiave su un server nuovo). Vale per trial e full; per la gold ti arriva un avviso e ne disabiliti una tu dal pannello.</p>
 <pre class="mermaid">
 flowchart TD
-    A[Biglietto già consumato] --> B[Ogni copia riceve un nome breve<br/>es. «copia A · 4F7K»]
+    A[Stessa chiave su un altro server,<br/>o biglietto già consumato] --> B[Ogni copia riceve un nome breve<br/>es. «copia A · 4F7K»]
     B --> C[Email all'acquirente: due server, scegli.<br/>Nessun dato tecnico. Avviso a te]
     C --> D{Sceglie nell'area cliente?<br/>vede nome macchina, IP pubblico, ultimo contatto}
     D -- sì --> E[La copia scelta continua coi suoi biglietti.<br/>L'altra si ferma]
@@ -440,14 +438,14 @@ flowchart TD
   <thead><tr><th>situazione</th><th>che cosa fa il cliente</th><th>che cosa succede</th></tr></thead>
   <tbody>
     <tr><td>il server intero si sposta<br>(VM su un altro host, disco copiato)</td><td>niente</td><td>la cartella della licenza viaggia col sistema: si spegne il vecchio e si continua</td></tr>
-    <tr><td>server nuovo installato da zero<br>(il vecchio è vivo o morto)</td><td>root dà la chiave all'installatore, l'acquirente conferma</td><td>come una prima installazione (sezione 6). L'area cliente avvisa prima: «confermando, il server X si ferma». Il vecchio si ferma al suo controllo successivo</td></tr>
+    <tr><td>server nuovo installato da zero<br>(il vecchio è vivo o morto)</td><td>root dà la chiave all'installatore, poi l'acquirente sceglie il nuovo</td><td>il nuovo parte subito. Se il vecchio è vivo è uno sdoppiamento: funzionano tutti e due finché l'acquirente non sceglie il nuovo, poi il vecchio si ferma. Nessun minuto di fermo</td></tr>
     <tr><td>clone o backup rimesso in piedi per sbaglio</td><td>sceglie quale tenere</td><td>sezione 11</td></tr>
   </tbody>
 </table>
 </div>
 <ul class="punti">
-  <li>Se il server nuovo non va, si riconferma il vecchio dall'area cliente (conta come scambio; il limite lo sblocchi tu).</li>
-  <li>Chi deve confermare, e come l'azienda si organizza quando l'acquirente non c'è, non è materia di REMOTIX: niente deleghe, ruoli o attivazioni provvisorie.</li>
+  <li>Se il server nuovo non va, finché la scelta non è fatta il vecchio funziona ancora; dopo, si sceglie di nuovo il vecchio (conta come scambio; il limite lo sblocchi tu).</li>
+  <li>Chi deve scegliere, e come l'azienda si organizza quando l'acquirente non c'è, non è materia di REMOTIX: niente deleghe, ruoli, conferme o attivazioni provvisorie.</li>
 </ul>
 
 <!-- ============================================================ 13 -->
@@ -458,7 +456,6 @@ flowchart TD
   <tbody>
     <tr><td>trial</td><td>«Trial version — restano N giorni»</td><td>si entra</td></tr>
     <tr><td>licenza valida</td><td>niente</td><td>si entra</td></tr>
-    <tr><td>in attesa di conferma</td><td>niente</td><td>«questo server aspetta la conferma nell'area cliente: copia 4F7K»</td></tr>
     <tr><td>scaduta, dopo la tolleranza</td><td>niente</td><td>la finestra della licenza: stato, «Acquista», e che la chiave la mette l'amministratore</td></tr>
     <tr><td>bloccata per due copie</td><td>niente</td><td>la pagina «sistema bloccato» e il rimando all'email della scelta</td></tr>
     <tr><td>sospesa o revocata</td><td>niente</td><td>come una scaduta, con la frase che spiega perché</td></tr>
@@ -474,12 +471,12 @@ flowchart TD
 <table>
   <thead><tr><th>chi</th><th>dove</th><th>che cosa fa</th></tr></thead>
   <tbody>
-    <tr><td>Acquirente</td><td>area cliente, email</td><td>chiede la trial, compra la full, conferma i server, sceglie fra due copie, rinnova o attiva il rinnovo automatico, cambia la sua email</td></tr>
+    <tr><td>Acquirente</td><td>area cliente, email</td><td>chiede la trial, compra la full, sceglie fra due copie, rinnova o attiva il rinnovo automatico, cambia la sua email</td></tr>
     <tr><td>root sul server</td><td>installatore, <span class="cod">remotix licenza</span></td><td>inserisce la chiave; guarda lo stato (<span class="cod">stato</span>), chiede un controllo subito (<span class="cod">controlla</span>), riattiva su un server nuovo (<span class="cod">attiva</span>)</td></tr>
     <tr><td>Utenti del server</td><td>pagina d'accesso, desktop</td><td>vedono gli avvisi e lo stato; non toccano mai la licenza</td></tr>
     <tr><td>REMOTIX</td><td>server del cliente</td><td>i tre messaggi della sezione 1; mostra gli avvisi; si ferma a licenza scaduta</td></tr>
     <tr><td>Servizio</td><td>VPS</td><td>tiene il registro, dà e strappa i biglietti, scopre le copie, manda le email</td></tr>
-    <tr><td>Tu</td><td>pannello, ssh, portatile</td><td>crei le full a mano (finché non c'è il pagamento) e le gold col comando via ssh; confermi i server delle gold; revochi; rigeneri una chiave su richiesta; sblocchi; decidi sulle licenze bloccate</td></tr>
+    <tr><td>Tu</td><td>pannello, ssh, portatile</td><td>crei le full a mano (finché non c'è il pagamento) e le gold col comando via ssh; scegli fra due copie di una gold; revochi; rigeneri una chiave su richiesta; sblocchi; decidi sulle licenze bloccate</td></tr>
     <tr><td>Pagamento</td><td>processore, da scegliere</td><td>dice al servizio «rinnova» o «sospendi»</td></tr>
   </tbody>
 </table>
@@ -507,17 +504,16 @@ flowchart TD
 
 <!-- ============================================================ 16 -->
 <h2 id="non"><span class="n">16</span>Che cosa non c'è, apposta</h2>
-<p class="testo">Attivazione senza rete · conteggio degli utenti · firma dell'installazione · impronta dell'hardware · TPM · integrazioni con AWS, Google o Azure · cancellazione automatica di una licenza (decidi sempre tu) · blocco dell'accesso al server · deleghe, ruoli o attivazioni provvisorie · rigenerazione della chiave da parte del cliente.</p>
+<p class="testo">Attivazione senza rete · conteggio degli utenti · firma dell'installazione · impronta dell'hardware · TPM · integrazioni con AWS, Google o Azure · cancellazione automatica di una licenza (decidi sempre tu) · blocco dell'accesso al server · deleghe, ruoli o attivazioni provvisorie · conferma delle installazioni o copie in attesa · rigenerazione della chiave da parte del cliente.</p>
 
 <!-- ============================================================ 17 -->
 <h2 id="aperti"><span class="n">17</span>Punti aperti</h2>
-<div class="aperto testo"><span class="etichetta e-proposta">proposta</span> <b>Quanto dura l'attesa di conferma.</b> Scritto 3 giorni, poi la copia in attesa scade senza effetti. Da confermare.</div>
 <div class="aperto testo"><span class="etichetta e-aperto">aperto</span> <b>Il piano della fase 21</b> (<code>fasi/21-la-licenza.md</code>) parla ancora di firma, impronta, recupero e upgrade con chiave: va riallineato a questa versione prima di approvarlo, e le ore si riducono.</div>
 <div class="aperto testo"><span class="etichetta e-aperto">aperto</span> <b>Il contratto della trial.</b> La licenza PolyForm Free Trial indicata a suo tempo prevede 32 giorni, la trial ne dura 14: si decide insieme al contratto della full.</div>
 <div class="aperto testo"><span class="etichetta e-aperto">sospeso</span> <b>Pagamento e contratto.</b> Il processore non è scelto. Quando lo sarà, il servizio dovrà riconoscere gli avvisi ripetuti (un rinnovo mandato due volte non aggiunge due anni) e gestire rimborsi e storni.</div>
 
 <footer>
-  Fonte: <code>SPECIFICHE.md</code> §15, riscritto la sera del 9 ottobre 2026 (commit <code>d863eca</code>). ⛔ Ogni decisione nuova si scrive in §15 e qui, nello stesso momento.
+  Fonte: <code>SPECIFICHE.md</code> §15, riscritto la sera del 9 ottobre 2026 (commit <code>2a13612</code>). ⛔ Ogni decisione nuova si scrive in §15 e qui, nello stesso momento.
 </footer>
 
 </div>

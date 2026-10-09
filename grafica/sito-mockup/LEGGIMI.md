@@ -8,7 +8,7 @@ Le decisioni stanno in `fasi/21-la-licenza.md` §4-bis e in `SPECIFICHE.md` §15
 |---|---|
 | `index.html` | la vetrina pubblica: apertura, come funziona, confronto, requisiti, prezzi, domande. ⛔ Niente prestazioni: stanno nella documentazione tecnica (utente, 9 ott) |
 | `signin.html` | l'accesso all'area cliente: Google oppure il link all'email. È anche la porta di «Prova gratis» e «Acquista» |
-| `account.html` | l'area cliente: lo sdoppiamento con la scelta della copia, una full, una trial nella tolleranza, e **«Get a new license»**: trial e full si chiedono solo da qui (9 ott, `trial.html` tolta); in cima, **un server in attesa di conferma**. Le licenze si mostrano con la chiave mascherata (`RXF-…-6YRB`), senza numero |
+| `account.html` | l'area cliente: lo sdoppiamento con la scelta della copia, una full, una trial nella tolleranza, e **«Get a new license»**: trial e full si chiedono solo da qui (9 ott, `trial.html` tolta). Le licenze si mostrano con la chiave mascherata (`RXF-…-6YRB`), senza numero |
 | `console.html` | il pannello di chi vende: «da decidere», le licenze, la full a mano, il registro |
 
 Si aprono direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
