@@ -340,6 +340,16 @@ trascrizione non si conserva; qui c'è il risultato.*
 
 1. **«Licenza legata alla storia dell'installazione»** al posto di «legata al ferro», con lo spostamento libero
    spegnendo il vecchio server.
+   ✅ **9 ott: accettata** (utente: *«la tua proposta è migliorativa»*), con le tre aggiunte nate dalla sua
+   proposta «al massimo 2 chiavi uguali attive, dopo 14 giorni la chiave si invalida» (⛔ scartata: invalidare
+   la licenza punisce la vittima di un clone — e diventa un'arma per bloccare un concorrente — e una chiave
+   ricavata dal ferro riapre i falsi allarmi e non distingue le macchine virtuali clonate):
+   - **due copie scoperte** ⇒ **subito un'email all'acquirente** col link di recupero già pronto, e un avviso a
+     chi vende;
+   - **entro 14 giorni** si ferma la copia **senza** la conferma dall'email dell'acquirente; ⛔ **la licenza non
+     si invalida mai da sola**;
+   - **chi ci riprova**: la stessa licenza sdoppiata **3 volte in 90 giorni** va a chi vende, che guarda e
+     decide se revocare. Una persona decide, non un automatismo.
 2. **Un clone può lavorare fino a 14 giorni** prima di fermarsi.
 3. **Una trial per email verificata** (oltre che per macchina): anche un'azienda che prova su due server usa due
    email.
