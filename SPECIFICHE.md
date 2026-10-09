@@ -1547,8 +1547,8 @@ dopo che i nomi lo avevano confuso. ✅ I nomi sono suoi.*
   altrimenti dobbiamo prevedere 2 sistemi quasi paralleli»*). ⛔ Supera «senza email». Chi attiva la trial
   diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la full.
 - ✅ **I dati** (utente, 9 ott, *«confermo»*): **email** (obbligatoria), **nome** e **azienda** (facoltativi).
-- ✅ **Due strade per l'email, e niente email usa e getta** (utente, 9 ott): la chiave si chiede con un'**email
-  confermata da un link** oppure con **«Accedi con Google»** (l'email arriva già verificata); nessuna delle due è
+- ✅ **Due strade per l'email, e niente email usa e getta** (utente, 9 ott): la chiave si chiede con l'**email**
+  (la chiave che vi arriva conferma l'indirizzo, niente link: vedi sotto) oppure con **«Accedi con Google»** (l'email arriva già verificata); nessuna delle due è
   obbligatoria. Il servizio **rifiuta le email dei domini temporanei** (mailinator, 10minutemail…) con un elenco
   pubblico aggiornato ogni giorno, e risponde *«use your work email»*. ⚠ Dichiarato: ferma la gran parte, non i
   domini nati oggi; e un account Google nuovo costa poco, quindi Google non è una difesa contro le trial in fila.
