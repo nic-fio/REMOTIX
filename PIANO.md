@@ -1,534 +1,534 @@
-# PIANO — le fasi, in ordine, e come si chiudono
+# PIANO — the phases, in order, and how they close
 
-*Aperto il 9 agosto 2026, dopo `SPECIFICHE.md` e `RCP.md` e prima di qualunque riga di codice.*
+*Opened on 9 Aug 2026, after `SPECIFICHE.md` and `RCP.md` and before any line of code.*
 
 ---
 
-## 0. Come è fatto questo piano
+## 0. How this plan is made
 
-**Una fase è una cosa sola che si può mostrare.** Se a fine fase non c'è niente che l'utente possa
-guardare e giudicare, la fase è divisa male.
+**A phase is a single thing that can be shown.** If at the end of a phase there is nothing the user can
+look at and judge, the phase is badly divided.
 
-Ogni fase ha quattro cose, e la terza è quella che di solito si dimentica:
+Every phase has four things, and the third is the one usually forgotten:
 
 | | |
 |---|---|
-| **che cosa produce** | in una riga |
-| **che cosa vede l'utente** | e giudica — è il criterio di chiusura, non il documento |
-| **il banco** | ⛔ **scritto prima di sviluppare**, non dopo |
-| **il documento** | `fasi/NN-nome.md`, **aperto quando si apre la fase** — e alla chiusura diventa un capitolo di [`FASI.md`](FASI.md) |
+| **what it produces** | in one line |
+| **what the user sees** | and judges — it is the closing criterion, not the document |
+| **the bench** | ⛔ **written before developing**, not after |
+| **the document** | `fasi/NN-nome.md`, **opened when the phase opens** — and at closing it becomes a chapter of [`FASI.md`](FASI.md) |
 
-### 0.1 La regola che tiene in piedi il resto
+### 0.1 The rule that holds up the rest
 
-> ⛔ **Il documento di fase si apre all'inizio e si riempie strada facendo. Non si scrive alla
-> fine.**
+> ⛔ **The phase document is opened at the start and filled along the way. It is not written at the
+> end.**
 
-Un documento scritto dopo è un **resoconto**, e in un resoconto le misure si *ricordano* invece di
-essere *registrate*. È `LEZIONI.md` §9.8: si aggiorna nello stesso momento, con la data e la
-fonte.
+A document written afterwards is a **report**, and in a report the measurements are *remembered* instead of
+being *recorded*. It is `LEZIONI.md` §9 point 8: one updates at the same moment, with the date and the
+source.
 
-> #### ⭐ E dove vive quel documento — *cambiato il 16 agosto 2026, per decisione dell'utente*
+> #### ⭐ And where that document lives — *changed on 16 Aug 2026, by the user's decision*
 >
-> ⚠ *La regola qui sopra **non è toccata**. Cambia solo il posto in cui il documento sta.*
+> ⚠ *The rule above **is not touched**. Only the place where the document lives changes.*
 >
 > | | |
 > |---|---|
-> | **la fase in corso** | ha un file suo, `fasi/NN-nome.md`, aperto il giorno in cui si apre la fase ⇒ si lavora sempre su un file piccolo |
-> | **la fase chiusa** | diventa un **capitolo di `FASI.md`**, ripiegato dentro alla chiusura |
+> | **the phase in progress** | has its own file, `fasi/NN-nome.md`, opened on the day the phase opens ⇒ one always works on a small file |
+> | **the closed phase** | becomes a **chapter of `FASI.md`**, folded in at closing |
 >
-> ⇒ Il progetto tiene **dieci documenti a fase chiusa e undici mentre si lavora**, e non si edita
-> mai un file da settemila righe nel mezzo di una fase.
+> ⇒ The project keeps **ten documents with the phase closed and eleven while working**, and one never edits
+> a seven-thousand-line file in the middle of a phase.
 >
-> ⛔ **E quel che questo NON allenta**: il capitolo non si scrive alla chiusura, si **sposta** un
-> documento che esisteva già. Un capitolo che comparisse in `FASI.md` senza essere mai esistito
-> come file avrebbe violato §0.1 — e **si vedrebbe**, perché le sue misure non avrebbero l'ora
-> accanto.
+> ⛔ **And what this does NOT loosen**: the chapter is not written at closing, a document that already existed is
+> **moved**. A chapter that appeared in `FASI.md` without ever having existed
+> as a file would have violated §0.1 — and **it would show**, because its measurements would not have the time
+> next to them.
 
-⭐ E ha un effetto collaterale che vale da solo: **se non sai scrivere il banco all'inizio, non hai
-ancora capito la fase.** Una fase che non sa dire come si misurerà non è pronta ad aprirsi.
+⭐ And it has a side effect that is worth something on its own: **if you cannot write the bench at the start, you have not
+yet understood the phase.** A phase that cannot say how it will be measured is not ready to open.
 
-### 0.2 Il modello del documento di fase
+### 0.2 The model of the phase document
 
 ```markdown
-# Fase N — <titolo>
-Aperta il <data> · Chiusa il <data>
+# Phase N — <title>
+Opened on <date> · Closed on <date>
 
-## Che cosa deve produrre
-Una riga. E: che cosa l'utente vede e giudica alla fine.
+## What it must produce
+One line. And: what the user sees and judges at the end.
 
-## Il banco                      ← scritto PRIMA di sviluppare
-Come si misura, con quale scena, quale numero ci aspettiamo.
-E il controllo positivo: come so che questo banco sa vedere il difetto?
+## The bench                      ← written BEFORE developing
+How it is measured, with which scene, which number we expect.
+And the positive control: how do I know this bench can see the defect?
 
-## Che cosa è stato sviluppato
-File, righe, a cosa servono.
+## What was developed
+Files, lines, what they are for.
 
-## Le misure                     ← riempito strada facendo
-| che cosa | atteso | misurato | data |
-La scena dichiarata accanto a ogni numero.
+## The measurements               ← filled in along the way
+| what | expected | measured | date |
+The scene declared next to every number.
 
-## ⛔ Che cosa NON ha funzionato
-I vicoli ciechi, con il motivo. Anche quelli imbarazzanti.
+## ⛔ What did NOT work
+The dead ends, with the reason. Even the embarrassing ones.
 
-## Le decisioni prodotte
-Collegamenti a DECISIONI.md §x.y — **non copie**.
+## The decisions produced
+Links to DECISIONI.md §x.y — **not copies**.
 
-## Che cosa resta [?]
-Quel che la fase lascia aperto, dichiarato invece che dimenticato.
+## What remains [?]
+What the phase leaves open, declared instead of forgotten.
 
-## Il giudizio dell'utente
-La frase vera, con la data.
+## The user's judgement
+The real sentence, with the date.
 ```
 
-### 0.3 Le quattro regole del piano
+### 0.3 The four rules of the plan
 
-1. ⛔ **Le decisioni stanno in `DECISIONI.md`, una sola volta.** Il documento di fase **rimanda**,
-   non copia. Undici registri delle decisioni sono undici posti dove cercare, e prima o poi due si
-   contraddicono.
-2. ⛔ **«Che cosa non ha funzionato» si riempie anche quando fa una brutta figura.** Il capitolo
-   più utile di v1 — i sette vicoli ciechi di `LEZIONI.md` §8 — esiste solo perché i fallimenti
-   erano stati scritti. Un vicolo cieco documentato costa meno di uno riscoperto.
-3. ⛔ **Una fase si chiude su una misura giudicata dall'utente**, non su un documento completo. È
-   l'invariante I8.
-4. ⛔ **Il banco si certifica prima di essere creduto.** Ogni fase, prima di dichiarare un numero,
-   dimostra che il suo banco sa vedere il difetto che cerca (`LEZIONI.md` §1.2 e §1.9).
+1. ⛔ **Decisions live in `DECISIONI.md`, only once.** The phase document **refers**,
+   it does not copy. Eleven decision registers are eleven places to look, and sooner or later two
+   contradict each other.
+2. ⛔ **«What did not work» is filled in even when it looks bad.** The most
+   useful chapter of v1 — the seven dead ends of `LEZIONI.md` §8 — exists only because the failures
+   had been written down. A documented dead end costs less than one rediscovered.
+3. ⛔ **A phase closes on a measurement judged by the user**, not on a complete document. It is
+   invariant I8.
+4. ⛔ **The bench is certified before being believed.** Every phase, before declaring a number,
+   proves that its bench can see the defect it is looking for (`LEZIONI.md` §1.2 and §1.9).
 
-### 0.4 Il metodo: sviluppo agentico e revisione avversariale
+### 0.4 The method: agentic development and adversarial review
 
-Il lavoro è fatto da due tipi di agenti, con le regole nei loro documenti — [`CODER.md`](CODER.md)
-e [`REVIEWER.md`](REVIEWER.md). Qui sta **quando** intervengono dentro una fase, che è la parte che
-quei documenti non dicono.
+The work is done by two kinds of agents, with the rules in their documents — [`CODER.md`](CODER.md)
+and [`REVIEWER.md`](REVIEWER.md). Here is **when** they step in within a phase, which is the part those
+documents do not say.
 
-#### Il revisore è uno dei tre sostituti dell'arbitro che abbiamo perso
+#### The reviewer is one of the three substitutes for the referee we lost
 
-⭐ È la ragione per cui la revisione qui pesa più che in un progetto normale. In v1 l'arbitro era
-**mstsc**: quando sbagliavamo a capire la specifica, un client altrui protestava — gratis, subito,
-senza che nessuno dovesse accorgersene. Buttando RDP quel segnale è sparito, e **due programmi
-scritti dalla stessa mano che vanno d'accordo non confermano niente**.
+⭐ It is the reason why review weighs more here than in a normal project. In v1 the referee was
+**mstsc**: when we misunderstood the specification, someone else's client protested — for free, at once,
+without anybody having to notice. By throwing away RDP that signal disappeared, and **two programs
+written by the same hand that agree with each other confirm nothing**.
 
-Le tre cose che lo sostituiscono, e nessuna basta da sola:
+The three things that replace it, and none is enough on its own:
 
 | | |
 |---|---|
-| **`RCP.md`** | l'arbitro **scritto**: dice chi ha torto, ma solo se qualcuno lo consulta |
-| **il validatore del filo** | l'arbitro **meccanico**: vede i byte non conformi, ma solo quelli |
-| **la revisione avversariale** | l'arbitro **che ragiona**: è l'unico che può accorgersi che server e client condividono lo **stesso** fraintendimento |
+| **`RCP.md`** | the **written** referee: it says who is wrong, but only if someone consults it |
+| **the wire validator** | the **mechanical** referee: it sees non-compliant bytes, but only those |
+| **adversarial review** | the referee **that reasons**: it is the only one that can notice that server and client share the **same** misunderstanding |
 
-#### I tre momenti in cui il revisore interviene
+#### The three moments when the reviewer steps in
 
-⛔ **Non uno solo, e il primo non è sul prodotto.**
+⛔ **Not just one, and the first is not on the product.**
 
-| Quando | Su che cosa | Perché lì |
+| When | On what | Why there |
 |---|---|---|
-| **1. appena il banco esiste**, prima di scrivere il prodotto | il **banco** | `REVIEWER.md` §1: *il banco è il primo imputato*. Un difetto nel prodotto lo trova un banco buono; un difetto nel banco non lo trova niente, e avvelena ogni misura successiva **perché dà fiducia** |
-| **2. quando il codice c'è**, prima di misurarlo | il **prodotto** | misurare codice che contraddice già una regola scritta è tempo speso per sapere una cosa che si sapeva |
-| **3. prima della chiusura** | il **documento di fase** | che ogni numero abbia la sua scena dichiarata, che i fallimenti ci siano, che le `[?]` non siano state promosse a fatti in silenzio |
+| **1. as soon as the bench exists**, before writing the product | the **bench** | `REVIEWER.md` §1: *the bench is the first defendant*. A defect in the product is found by a good bench; a defect in the bench is found by nothing, and it poisons every later measurement **because it gives confidence** |
+| **2. when the code is there**, before measuring it | the **product** | measuring code that already contradicts a written rule is time spent learning something already known |
+| **3. before closing** | the **phase document** | that every number has its declared scene, that the failures are there, that the `[?]` have not been silently promoted to facts |
 
-#### La postura avversariale, in concreto
+#### The adversarial posture, in concrete terms
 
-Non è un tono: sono quattro pratiche.
+It is not a tone: it is four practices.
 
-1. ⛔ **Il revisore riceve il codice e la specifica, non il ragionamento di chi l'ha scritto.** Una
-   spiegazione del perché è giusto **àncora** chi legge, e trasforma la ricerca di contraddizioni
-   in una verifica di coerenza con la spiegazione.
-2. ⛔ **Si prova a rompere, non a confermare.** Per ogni invariante che la modifica tocca, il
-   revisore costruisce **l'ingresso concreto** che lo violerebbe. Se non riesce a costruirlo, lo
-   dichiara — è informazione anche quella.
-3. ⛔ **Un rilievo si chiude con una misura, non con una discussione.** `[R]` si corregge; `[?]` si
-   **misura**, e la misura è del coder, sul ferro. Il revisore non misura e non riscrive.
-4. ⛔ **Una revisione verde non è un'approvazione.** È «non ho trovato niente», e va dichiarata con
-   quelle parole. Il verdetto ha sempre la forma *«questo contraddice X»*, mai *«questo è giusto»*.
+1. ⛔ **The reviewer receives the code and the specification, not the reasoning of whoever wrote it.** An
+   explanation of why it is right **anchors** the reader, and turns the search for contradictions
+   into a check of consistency with the explanation.
+2. ⛔ **One tries to break, not to confirm.** For every invariant the change touches, the
+   reviewer builds **the concrete input** that would violate it. If he cannot build it, he
+   declares it — that is information too.
+3. ⛔ **A finding is closed with a measurement, not with a discussion.** `[R]` is corrected; `[?]` is
+   **measured**, and the measurement belongs to the coder, on the iron. The reviewer does not measure and does not rewrite.
+4. ⛔ **A green review is not an approval.** It is «I found nothing», and it must be declared with
+   those words. The verdict always has the form *«this contradicts X»*, never *«this is right»*.
 
-⚠ **E la separazione dei mestieri va difesa in tutt'e due i versi**: il coder non chiede al revisore
-di misurare al suo posto, e non riscrive il codice su un `[?]` senza prima misurarlo.
+⚠ **And the separation of trades must be defended in both directions**: the coder does not ask the reviewer
+to measure in his place, and does not rewrite the code on a `[?]` without first measuring it.
 
 ---
 
-## 1. Un binario solo
+## 1. A single track
 
-*Riscritto il 9 agosto 2026: `DECISIONI.md` §1.6 toglie i client dedicati, e con essi il binario B.*
+*Rewritten on 9 Aug 2026: `DECISIONI.md` §1.6 removes the dedicated clients, and with them track B.*
 
-⛔ **Il piano aveva due binari perché i client erano due.** Adesso il client è **una pagina web**,
-servita dal server, e le cinque fasi Android — A1-A5 — **non esistono più**: quel che portavano
-dentro è diventato lavoro dentro le fasi del binario unico, ed è scritto qui sotto perché nessuno
-lo perda.
+⛔ **The plan had two tracks because there were two clients.** Now the client is **a web page**,
+served by the server, and the five Android phases — A1-A5 — **no longer exist**: what they carried
+has become work inside the phases of the single track, and it is written below so that nobody
+loses it.
 
 ```
-  server + pagina web
+  server + web page
   0 ─ 1 ─ 2 ─ 3 ─ 4 ─ 5 ─ 6 ─ 7 ─ 8 ─ 9 ─ 10 ─ 11 ─ 12 ─ 13
       │
-      ├─ sonda del BROWSER  ⭐ prima di tutto, e decide la forma del resto
-      └─ cliente di prova, scritto dalla SPECIFICA
+      ├─ BROWSER probe  ⭐ before everything, and it decides the shape of the rest
+      └─ test client, written from the SPECIFICATION
 ```
 
-### 1.1 ⛔ Il cliente di prova adesso vale il doppio
+### 1.1 ⛔ The test client is now worth double
 
-*Scritto il 9 agosto 2026 quando Android fu spostato in fondo, e rimasto vero quando Android è
-sparito del tutto — per una ragione più forte.*
+*Written on 9 Aug 2026 when Android was moved to the end, and still true when Android
+disappeared altogether — for a stronger reason.*
 
-Il secondo client serviva a una cosa sola: accorgersi che **server e client condividono lo stesso
-fraintendimento** (`DECISIONI.md` §0.4). Prima ce n'erano due e la difesa era debole; adesso **ce n'è uno solo**,
-e senza un secondo lettore il protocollo sarebbe validato da **una sola** implementazione, scritta
-dalla stessa mano che ha scritto il server.
+The second client served one thing only: noticing that **server and client share the same
+misunderstanding** (`DECISIONI.md` §0.4). Before there were two and the defence was weak; now **there is only one**,
+and without a second reader the protocol would be validated by **a single** implementation, written
+by the same hand that wrote the server.
 
 | | |
 |---|---|
-| **il cliente di prova** | poche centinaia di righe, **in un linguaggio diverso dal server e dalla pagina**, scritto leggendo `RCP.md` e **mai** il codice. Aggiunto alla **fase 1**, cresce con le fasi |
-| perché non basta il validatore | il validatore dice «questo byte non è conforme»; il cliente di prova dice **«voi due vi siete capiti su una cosa che la specifica non dice»** |
-| ⭐ **e una difesa che arriva gratis** | la pagina gira su **tre motori** scritti da tre squadre che non ci conoscono. Quando due sono d'accordo e il terzo no, quel difetto **si dichiara da solo** — è il pezzo di arbitro che avevamo perso con `mstsc` (`DECISIONI.md` §1.6) |
+| **the test client** | a few hundred lines, **in a language different from the server and the page**, written by reading `RCP.md` and **never** the code. Added at **phase 1**, it grows with the phases |
+| why the validator is not enough | the validator says «this byte is not compliant»; the test client says **«you two have agreed on something the specification does not say»** |
+| ⭐ **and a defence that comes for free** | the page runs on **three engines** written by three teams that do not know us. When two agree and the third does not, that defect **declares itself** — it is the piece of referee we had lost with `mstsc` (`DECISIONI.md` §1.6) |
 
-### 1.2 ⭐ La sonda del browser — prima di tutto, perché decide la forma del resto
+### 1.2 ⭐ The browser probe — before everything, because it decides the shape of the rest
 
-*Sostituisce la sonda Android, e cambia di natura: quella rispondeva a una domanda sola, questa a
-quattro, e tre di esse cambiano quel che si scrive.*
+*It replaces the Android probe, and changes nature: that one answered a single question, this one
+four, and three of them change what gets written.*
 
-⛔ **Va fatta prima di scegliere la libreria QUIC e prima di scrivere il filo**, non alla fase 2:
-`DECISIONI.md` §6.4 dipende dal suo esito, perché il server deve portare HTTP/3 e WebTransport.
+⛔ **It must be done before choosing the QUIC library and before writing the wire**, not at phase 2:
+`DECISIONI.md` §6.4 depends on its outcome, because the server must carry HTTP/3 and WebTransport.
 
-| # | La domanda | Che cosa decide |
+| # | The question | What it decides |
 |---|---|---|
-| **S1** | ⛔ l'eccezione che l'utente concede sul certificato della **pagina** (TCP) **copre anche la sessione WebTransport** (UDP)? | se il predefinito «un clic» funziona ovunque, o se serve `serverCertificateHashes` — e allora **su iPhone resta solo il certificato vero** (`DECISIONI.md` §1.7) |
-| **S2** | il browser del **telefono vero** decodifica **HEVC Main10 in hardware**? | `[S]` documentato da Chrome 108, mai misurato da noi. ⚠ **Non è più un muro** ma una cosa da dichiarare (`DECISIONI.md` §2.7) |
-| **S3** | quante **scorciatoie** si perdono, motore per motore — e la clipboard nel verso dispositivo → sessione? | che cosa la pagina deve **dichiarare spento**, e quali browser conviene consigliare (`SPECIFICHE.md` §7.3-bis, §9) |
-| **S4** | quanto costa in **ritardo** dipingere: dal fotogramma decodificato al pixel sullo schermo | è metà del tetto dei 50 ms, e dipende dalla strada scelta per la GPU |
+| **S1** | ⛔ does the exception the user grants on the **page**'s certificate (TCP) **also cover the WebTransport session** (UDP)? | whether the default «one click» works everywhere, or whether `serverCertificateHashes` is needed — and then **on iPhone only the real certificate remains** (`DECISIONI.md` §1.7) |
+| **S2** | does the browser of the **real phone** decode **HEVC Main10 in hardware**? | `[S]` documented since Chrome 108, never measured by us. ⚠ **It is no longer a wall** but a thing to declare (`DECISIONI.md` §2.7) |
+| **S3** | how many **shortcuts** are lost, engine by engine — and the clipboard in the device → session direction? | what the page must **declare switched off**, and which browsers it is advisable to recommend (`SPECIFICHE.md` §7.3-bis, §9) |
+| **S4** | how much painting costs in **delay**: from the decoded frame to the pixel on the screen | it is half of the 50 ms ceiling, and it depends on the road chosen for the GPU |
 
-> ### ⛔ Corretto la notte del 9 agosto 2026 — rilievi **R3.4** e **R4.3**, e l'ordine era circolare
+> ### ⛔ Corrected on the night of 9 Aug 2026 — findings **R3.4** and **R4.3**, and the order was circular
 >
-> Questo paragrafo dice *«prima di scegliere la libreria QUIC e prima di scrivere il filo»*, e
-> `STUDI.md` §web §7 aggiunge *«nessuna richiede una riga di prodotto»*. **Tre delle misure non stanno in
-> piedi senza un server WebTransport**, cioè senza la libreria che si sta scegliendo:
+> This paragraph says *«before choosing the QUIC library and before writing the wire»*, and
+> `STUDI.md` §web §7 adds *«none requires a line of product»*. **Three of the measurements do not stand
+> up without a WebTransport server**, that is without the library being chosen:
 >
 > | | |
 > |---|---|
-> | **S1** | il controllo positivo è *«la connessione con l'impronta pubblicata **deve riuscire**»* |
-> | ⛔ **S4** | vuole un server che **spedisca fotogrammi codificati** e un decodificatore che li accetti: non è «senza prodotto», è **la fase 3** — e pretende pure **una riga di protocollo** (`RCP.md` **§7.5** — `BANCO_MARCA` `0x000F` e `BANCO_ESITO` `0x0010`). ⚠ *Questa riga mandava a `RCP.md` §12, dove la voce è **sbarrata**: fu chiusa la notte del 9 agosto e resa normativa in §7.5, e chi seguiva il rimando trovava una voce cancellata. Corretto il 12 agosto 2026, trovato da **F2.4**.* |
-> | la misura del **datagram** | vuole un ricevente |
+> | **S1** | the positive control is *«the connection with the published fingerprint **must succeed**»* |
+> | ⛔ **S4** | it wants a server that **sends encoded frames** and a decoder that accepts them: it is not «without product», it is **phase 3** — and it even demands **a line of protocol** (`RCP.md` **§7.5** — `BANCO_MARCA` `0x000F` and `BANCO_ESITO` `0x0010`). ⚠ *This line pointed to `RCP.md` §12, where the entry is **struck through**: it was closed on the night of 9 Aug and made normative in §7.5, and whoever followed the reference found a deleted entry. Corrected on 12 Aug 2026, found by **F2.4**.* |
+> | the **datagram** measurement | it wants a receiver |
 >
-> ⭐ **L'ordine onesto**: prima le misure che non toccano il filo — la durata dell'eccezione, la
-> decodifica, la tastiera, la tela dichiarata, il segno della rotella — poi **il banco della
-> libreria**, che produce un server minimo da cinquanta righe, e **sopra quello** il certificato e
-> il datagram. ⚠ E se la candidata cambia, **quelle due si rifanno**: un controllo positivo preso su
-> un motore diverso da quello del prodotto è la forma **E10**.
+> ⭐ **The honest order**: first the measurements that do not touch the wire — the duration of the exception, the
+> decoding, the keyboard, the declared canvas, the sign of the wheel — then **the library
+> bench**, which produces a minimal fifty-line server, and **on top of that** the certificate and
+> the datagram. ⚠ And if the candidate changes, **those two are redone**: a positive control taken on
+> an engine different from the product's is form **E10**.
 >
-> Il conto completo, con i dispositivi che ciascuna pretende, sta in `FASI.md` §01-filo-nudo.
+> The complete account, with the devices each one demands, is in `FASI.md` §01-filo-nudo.
 
-⛔ **E si dichiara riuscita solo con la prova che sia hardware davvero.** Nel browser **il nome del
-decodificatore non c'è**: la prova indiretta va costruita con cura — ritmo sostenuto, occupazione
-della CPU, e il caso opposto scritto prima (`LEZIONI.md` §1.11: per ogni prova indiretta si scrive
-che aspetto avrebbe il contrario, o la prova non distingue).
+⛔ **And it is declared successful only with the proof that it really is hardware.** In the browser **the name of the
+decoder is not there**: the indirect proof must be built with care — sustained rhythm, CPU
+occupation, and the opposite case written first (`LEZIONI.md` §1.11: for every indirect proof one writes
+what the opposite would look like, or the proof does not distinguish).
 
-⛔ **Sul dispositivo vero, mai su un browser di comodo.** «Il Chrome del portatile decodifica in
-hardware» non dice **niente** del Chrome del telefono: è la forma d'errore **E10** con un
-travestimento nuovo (`DECISIONI.md` §5-bis.0-ter).
+⛔ **On the real device, never on a convenient browser.** «The laptop's Chrome decodes in
+hardware» says **nothing** about the phone's Chrome: it is error form **E10** in a new
+disguise (`DECISIONI.md` §5-bis.0-ter).
 
-### 1.3 📖 E prima della pagina, uno studio: XPRA
+### 1.3 📖 And before the page, a study: XPRA
 
-*Aggiunto il 9 agosto 2026, ed è il **punto 0 della ricetta** di `LEZIONI.md` §9 — «chi, al mondo,
-fa già questa cosa?» — applicato al client web.*
+*Added on 9 Aug 2026, and it is **point 0 of the recipe** of `LEZIONI.md` §9 — «who, in the world,
+already does this thing?» — applied to the web client.*
 
-Xpra ha un client HTML5 che fa questo mestiere da anni, e l'utente lo ha usato. Si studia **come si
-comporta**, non come è fatto dentro: come dipinge, la tastiera nel browser, gli appunti, il
-cursore, il ridimensionamento, il ritardo. ⚠ Il **trasporto no**: Xpra è su WebSocket, noi su
-WebTransport, e quel pezzo non si eredita. Confine e ragione in `DECISIONI.md` §1.6.
+Xpra has an HTML5 client that has been doing this job for years, and the user has used it. One studies **how it
+behaves**, not how it is made inside: how it paints, the keyboard in the browser, the clipboard, the
+cursor, resizing, delay. ⚠ **Not the transport**: Xpra is on WebSocket, we are on
+WebTransport, and that piece is not inherited. Boundary and reason in `DECISIONI.md` §1.6.
 
-> ### ✅ FATTO il 14 agosto 2026 — [`STUDI.md` §xpra](STUDI.md#xpra) — ⛔ **e in ritardo, con un prezzo pagato**
+> ### ✅ DONE on 14 Aug 2026 — [`STUDI.md` §xpra](STUDI.md#xpra) — ⛔ **and late, with a price paid**
 >
-> ⛔ *Questo studio doveva stare **prima della pagina**, ed è stato fatto **dopo**: l'ha chiesto
-> l'utente una seconda volta, davanti al prodotto che finalmente si usava e con un difetto in mano
+> ⛔ *This study should have come **before the page**, and it was done **after**: the user asked for it
+> a second time, in front of the product that was finally being used and with a defect in hand
 > («il puntatore sembra catturato… studia la soluzione di XPRA»).*
 >
-> | che cosa ha trovato | |
+> | what it found | |
 > |---|---|
-> | ⭐⭐ **il cursore lo veste il browser** (`css("cursor", "url(…) x y, auto")`), e la cattura del puntatore è **un bottone**, non un automatismo | ✅ **adottato lo stesso giorno** — e ha smontato `SPECIFICHE.md` §7.1, ch`SPECIFICHE.md` e contraddiceva §7.5 |
-> | ⭐⭐ **il primo fotogramma si CHIEDE** (`buffer_refresh` con `refresh-now`), non si aspetta | ⏳ **è il lavoro sul tempo di apparizione del desktop**: `[M]` la maggior parte di quel tempo era spesa ad aspettare |
-> | ⭐ **il client dice la sua misura e il server ridimensiona** (`configure_display`) | ✅ **fatto, ma solo a un capo**: la misura si dice e si prende **all'attacco e al riattacco** (`RCP.md` §4.5, `ADATTA_TELA`). ⛔ *Durante* la sessione no — uscito il 17 agosto 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra qui fa una cosa che noi **abbiamo deciso di non fare**, non una che ci manca |
+> | ⭐⭐ **the cursor is dressed by the browser** (`css("cursor", "url(…) x y, auto")`), and pointer capture is **a button**, not an automatism | ✅ **adopted the same day** — and it dismantled `SPECIFICHE.md` §7.1, which contradicted §7.5 (`SPECIFICHE.md`) |
+> | ⭐⭐ **the first frame is ASKED FOR** (`buffer_refresh` with `refresh-now`), not waited for | ⏳ **it is the work on the time for the desktop to appear**: `[M]` most of that time was spent waiting |
+> | ⭐ **the client says its size and the server resizes** (`configure_display`) | ✅ **done, but only at one end**: the size is said and taken **at attach and at reattach** (`RCP.md` §4.5, `ADATTA_TELA`). ⛔ *During* the session no — removed on 17 Aug 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra here does a thing we **decided not to do**, not one we lack |
 >
-> ⇒ ⚠ **Il costo di aver saltato il punto 0 non è stato il tempo dello studio**: è il codice scritto
-> nel frattempo, e il difetto trovato dall'utente in trenta secondi d'uso invece che da noi.
+> ⇒ ⚠ **The cost of having skipped point 0 was not the time of the study**: it is the code written
+> in the meantime, and the defect found by the user in thirty seconds of use instead of by us.
 
 ---
 
-# IL SERVER E LA PAGINA
+# THE SERVER AND THE PAGE
 
-## Fase 0 — L'ambiente e i banchi
+## Phase 0 — The environment and the benches
 
-**Produce**: la macchina che compila, e i banchi di v1 rimessi in funzione.
+**It produces**: the machine that compiles, and v1's benches put back to work.
 
-**L'utente vede**: i numeri di v1 **riprodotti** — la cadenza di cattura di Mutter e di KWin
-misurata in v1. Non è un risultato di prodotto: è il **controllo positivo di tutto il progetto**.
-Se il banco non sa riprodurre un numero che sappiamo vero, ogni misura futura è sospetta.
+**The user sees**: v1's numbers **reproduced** — the capture cadence of Mutter and of KWin
+measured in v1. It is not a product result: it is the **positive control of the whole project**.
+If the bench cannot reproduce a number we know to be true, every future measurement is suspect.
 
-> ⛔ *13 agosto 2026, e va letto insieme alla riga qui sopra: **il numero di v1 non si riproduce**:
-> la cadenza che Mutter consegna dipende da quella che gli si chiede, e rinegoziandola cambia. Non è
-> il banco che sbaglia: quel numero non è una proprietà del compositore — ⚠ e che sia il resto di una
-> divisione troncata è `[R]`, letto nel codice, **non misurato** (`STUDI.md` §gnome §8.2; la «legge su 13
-> punti» che si leggeva qui il 13 agosto **è caduta la sera stessa**). ⇒ Il controllo positivo di
-> questa fase va rifatto **contro le celle pulite di `banchi/03-b14-esiti.jsonl`**, non contro il
-> numero. Le misure stanno in `FASI.md` §03-movimento.*
+> ⛔ *13 Aug 2026, and it must be read together with the line above: **v1's number does not reproduce**:
+> the cadence Mutter delivers depends on the one asked of it, and renegotiating it changes it. It is not
+> the bench that is wrong: that number is not a property of the compositor — ⚠ and that it is the remainder of a
+> truncated division is `[R]`, read in the code, **not measured** (`STUDI.md` §gnome §8.2; the «law on 13
+> points» that could be read here on 13 Aug **fell the same evening**). ⇒ The positive control of
+> this phase must be redone **against the clean cells of `banchi/03-b14-esiti.jsonl`**, not against the
+> number. The measurements are in `FASI.md` §03-movimento.*
 
-**Il banco**: `fondamenta/banchi/banco-compositori/misura-cattura.c` e `banco.sh`, che rigenera da sé le
-scene di prova.
+**The bench**: `fondamenta/banchi/banco-compositori/misura-cattura.c` and `banco.sh`, which regenerates the
+test scenes by itself.
 
-**Si riusa**: tutto `fondamenta/banchi/` (262 file), `fondamenta/banco/` per il provisioning.
+**Reused**: all of `fondamenta/banchi/` (262 files), `fondamenta/banco/` for provisioning.
 
-⛔ **Passo zero, e senza di questo la fase non parte: GNOME non è più installato sul server**
-`[M]` — `dpkg-query` dice *not-installed*, non c'è una `gnome.desktop` (`STUDI.md` §gnome §2). Il
-controllo positivo di tutto il progetto è la riproduzione della cadenza di Mutter misurata in v1,
-e oggi non è eseguibile. Si rimette GNOME **prima** di credere a qualunque numero.
+⛔ **Step zero, and without it the phase does not start: GNOME is no longer installed on the server**
+`[M]` — `dpkg-query` says *not-installed*, there is no `gnome.desktop` (`STUDI.md` §gnome §2). The
+positive control of the whole project is reproducing the Mutter cadence measured in v1,
+and today it cannot be executed. GNOME is put back **before** believing any number.
 
-⚠ Da fare qui e non dopo: installare `vainfo` sul ferro di prova e **confermare** le capacità del
-codificatore Intel, che oggi sono `[?]` ricavate dalla generazione del chip (`DECISIONI.md` §4.6).
+⚠ To be done here and not later: install `vainfo` on the test iron and **confirm** the capabilities of the
+Intel encoder, which today are `[?]` derived from the chip's generation (`DECISIONI.md` §4.6).
 
-⚠ **E il ripristino si prova riavviando**, non rileggendo lo script: in v1 il primo riavvio vero
-ha mostrato due pezzi mancanti che nessun documento dichiarava (`LEZIONI.md` §2.5-bis). Vale
-adesso, non solo alla fase 13 — perché è adesso che la macchina viene rimessa in piedi.
+⚠ **And the restore is tested by rebooting**, not by rereading the script: in v1 the first real reboot
+showed two missing pieces that no document declared (`LEZIONI.md` §2.5-bis). It holds
+now, not only at phase 13 — because it is now that the machine is being put back on its feet.
 
-> ## ⛔ L'ambiente Android decade — 9 agosto 2026
+> ## ⛔ The Android environment lapses — 9 Aug 2026
 >
-> Questa fase prevedeva SDK, emulatore (AVD), `adb` e il collegamento al telefono, per la sonda
-> della fase 2. **Con `DECISIONI.md` §1.6 non serve più niente di tutto questo**: non c'è
-> un'applicazione da costruire, e la sonda è **una pagina web**.
+> This phase planned SDK, emulator (AVD), `adb` and the connection to the phone, for the probe
+> of phase 2. **With `DECISIONI.md` §1.6 none of this is needed any more**: there is no
+> application to build, and the probe is **a web page**.
 >
-> ⭐ **Il telefono vero resta**, ed è più importante di prima: è lo strumento di misura di **S2** e
-> **S4** (§1.2 *(di questo documento)*). Ma ci si arriva **aprendo un indirizzo nel browser**, che è la cosa più economica
-> che questo progetto abbia mai chiesto a un dispositivo di prova.
+> ⭐ **The real phone stays**, and it is more important than before: it is the measuring instrument for **S2** and
+> **S4** (§1.2 *(of this document)*). But one gets there **by opening an address in the browser**, which is the cheapest
+> thing this project has ever asked of a test device.
 >
-> ⚠ *Il riquadro sull'emulatore che segue è tenuto per storia: la sua conclusione — «nessun numero
-> si dichiara su un emulatore» — sopravvive nella forma «nessun numero si dichiara su un browser
-> che non sia quello del dispositivo vero».*
+> ⚠ *The box on the emulator that follows is kept for history: its conclusion — «no number
+> is declared on an emulator» — survives in the form «no number is declared on a browser
+> that is not the real device's».*
 
-> ### L'emulatore copre più di quanto sembri — ma non la decodifica
+> ### The emulator covers more than it seems — but not decoding
 >
-> *Verificato il 9 agosto 2026, dopo che una prima stesura lo aveva liquidato troppo in fretta.*
+> *Verified on 9 Aug 2026, after a first draft had dismissed it too hastily.*
 >
-> ⭐ **Esiste il Desktop AVD**, profilo hardware «13.5" Freeform», da Android 11 in su; la
-> versione Android 13 ha aggiunto **scorciatoie da tastiera e supporto mouse** oltre al
-> ridimensionamento a trascinamento e al drag-and-drop. E **Samsung stessa documenta
-> l'emulatore per DeX**: *«If you don't have the DeX Station, you can test your app resize
-> behavior in Android Studio using Android Virtual Device»*, alla densità e risoluzione
-> equivalenti a DeX (160 dpi, 1080×1920).
+> ⭐ **The Desktop AVD exists**, hardware profile «13.5" Freeform», from Android 11 upwards; the
+> Android 13 version added **keyboard shortcuts and mouse support** besides
+> drag-resizing and drag-and-drop. And **Samsung itself documents
+> the emulator for DeX**: *«If you don't have the DeX Station, you can test your app resize
+> behavior in Android Studio using Android Virtual Device»*, at the density and resolution
+> equivalent to DeX (160 dpi, 1080×1920).
 >
-> Quindi **il modello di interazione è testabile lì**: finestra freeform, mouse vero, tastiera
-> vera, bordi che si trascinano. È gran parte delle fasi **A1** e **A3**.
+> So **the interaction model can be tested there**: freeform window, real mouse, real
+> keyboard, draggable edges. It is a large part of phases **A1** and **A3**.
 >
-> ⚠ Con l'avvertenza che Samsung mette nella stessa pagina: l'emulatore **simula, non replica**
-> — la modalità freeform si abilita da riga di comando ed è *«not reflective of actual DeX
+> ⚠ With the warning Samsung gives on the same page: the emulator **simulates, it does not replicate**
+> — freeform mode is enabled from the command line and is *«not reflective of actual DeX
 > hardware behavior»*.
 >
-> ⛔ **Quel che l'emulatore NON dà, e va tenuto fermo:**
+> ⛔ **What the emulator does NOT give, and must be held firm:**
 >
 > | | |
 > |---|---|
-> | **la decodifica in hardware** | il suo MediaCodec non è il silicio del telefono. `[?]` Non si è riusciti a stabilire che esponga un decodificatore HEVC hardware; l'unico riscontro trovato è chi sull'emulatore **non trova profili HEVC 4K** |
-> | il ritardo vero, la batteria, la rete che cambia | non attendibili |
-> | la parità con DeX vero | approssimazione, non replica |
+> | **hardware decoding** | its MediaCodec is not the phone's silicon. `[?]` It could not be established that it exposes a hardware HEVC decoder; the only evidence found is people who on the emulator **find no 4K HEVC profiles** |
+> | the real delay, the battery, the changing network | not reliable |
+> | parity with real DeX | approximation, not replica |
 >
-> > ⛔ **Da cui la regola, che resta:** *si sviluppa sull'emulatore, si misura sul telefono.*
-> > **Nessun numero di questo progetto viene dichiarato su un emulatore.**
+> > ⛔ **Hence the rule, which stays:** *one develops on the emulator, one measures on the phone.*
+> > **No number of this project is declared on an emulator.**
 >
-> ⚠ È `REVIEWER.md` **E10** — *una prova verde sul client sbagliato*. Un emulatore che dice
-> «funziona» mentre il telefono no è un banco verde col difetto vivo, ed è la forma che a v1 è
-> costata di più: una correzione scritta su un banco che non riproduceva il difetto, spedita
-> all'utente, **che ha peggiorato le cose**.
+> ⚠ It is `REVIEWER.md` **E10** — *a green test on the wrong client*. An emulator that says
+> «it works» while the phone does not is a green bench with the defect alive, and it is the form that cost v1
+> the most: a correction written on a bench that did not reproduce the defect, shipped
+> to the user, **which made things worse**.
 >
-> **Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro** — e il banco di
-> lavoro è più largo di quanto la prima stesura dicesse.
+> **The real phone is the measuring instrument; the emulator is the workbench** — and the
+> workbench is wider than the first draft said.
 
 ---
 
-## Fase 1 — Il filo nudo
+## Phase 1 — The bare wire
 
-**Produce**: la stretta di mano di RCP su **WebTransport**, dai due lati. Niente video, niente
+**It produces**: the RCP handshake over **WebTransport**, on both sides. No video, no
 input.
 
-**L'utente vede**: ⭐ **apre un indirizzo nel browser**, digita utente e password, e la pagina dice
-*«ammesso, sessione nuova, tela 1920×1080, desktop GNOME»*. O dice perché no.
+**The user sees**: ⭐ **he opens an address in the browser**, types user and password, and the page says
+*«admitted, new session, canvas 1920×1080, GNOME desktop»*. Or it says why not.
 
-⛔ **E prima di tutto il resto, la sonda del browser** (§1.2 *(di questo documento)*): quattro misure che decidono la forma
-di quel che si scrive dopo — a cominciare da **quale libreria QUIC**, che adesso deve portare
-HTTP/3 e WebTransport (`DECISIONI.md` §6.4).
+⛔ **And before everything else, the browser probe** (§1.2 *(of this document)*): four measurements that decide the shape
+of what is written afterwards — starting with **which QUIC library**, which now must carry
+HTTP/3 and WebTransport (`DECISIONI.md` §6.4).
 
-⚠ **Il server acquista qui il suo secondo mestiere**: servire la pagina. Due ascoltatori con lo
-stesso numero di porta — **TCP** per il primo caricamento, **UDP** per HTTP/3 e WebTransport — e
-l'annuncio `Alt-Svc` che li lega. ⛔ Dimenticarlo non dà errore: dà **una pagina che si apre e un
-desktop che non arriva mai** (`RCP.md` §2.4).
+⚠ **The server acquires its second trade here**: serving the page. Two listeners with the
+same port number — **TCP** for the first load, **UDP** for HTTP/3 and WebTransport — and
+the `Alt-Svc` announcement that ties them. ⛔ Forgetting it gives no error: it gives **a page that opens and a
+desktop that never arrives** (`RCP.md` §2.4).
 
-**Il banco**:
-- ⛔ **la stretta di mano su DUE connessioni, mai una**: in v1 un certificato condiviso uccideva il
-  server **alla seconda**, e una prova a connessione singola resta verde per sempre
+**The bench**:
+- ⛔ **the handshake on TWO connections, never one**: in v1 a shared certificate killed the
+  server **at the second**, and a single-connection test stays green forever
   (`LEZIONI.md` §2.1);
-- il **validatore del filo** nella sua prima forma: legge una registrazione e dice quale byte non è
-  conforme a `RCP.md` §6;
-- ⛔ **e le prove di violazione**: tipo sconosciuto, lunghezza sbagliata, messaggio nello stato
-  sbagliato. La connessione **deve cadere ogni volta**. Un banco che non prova a violare il
-  protocollo non prova il protocollo (`RCP.md` §11).
+- the **wire validator** in its first form: it reads a recording and says which byte is not
+  compliant with `RCP.md` §6;
+- ⛔ **and the violation tests**: unknown type, wrong length, message in the wrong
+  state. The connection **must drop every time**. A bench that does not try to violate the
+  protocol does not test the protocol (`RCP.md` §11).
 
-**Controllo positivo del validatore**: gli si dà una registrazione **con un errore dentro** e si
-verifica che lo veda. Uno strumento che non ha mai trovato niente non è pulito: è non certificato.
+**Positive control of the validator**: it is given a recording **with an error inside** and one
+verifies that it sees it. A tool that has never found anything is not clean: it is uncertified.
 
-⭐ **E qui nasce il cliente di prova** (§1.1 *(di questo documento)*): la stretta di mano scritta **una seconda volta**, in
-un linguaggio diverso, **leggendo solo `RCP.md`**. Chi lo scrive non guarda il C né la pagina — se
-li guardasse ne erediterebbe i fraintendimenti, e non servirebbe più a niente. Cresce di fase in
-fase insieme al protocollo.
+⭐ **And here the test client is born** (§1.1 *(of this document)*): the handshake written **a second time**, in
+a different language, **reading only `RCP.md`**. Whoever writes it does not look at the C or the page — if
+he looked at them he would inherit their misunderstandings, and it would no longer serve any purpose. It grows from phase to
+phase together with the protocol.
 
-**Si riusa**: `autenticazione.c` (144 righe, PAM), `registro.c` (140).
+**Reused**: `autenticazione.c` (144 lines, PAM), `registro.c` (140).
 
-⛔ **Ma `autenticazione.c` va cambiato in un punto, e non è un dettaglio**: rifiuta chiunque non
-sia l'utente che possiede il processo (`autenticazione_utente_atteso()`, dall'uid effettivo). Era
-giusto in v1, dove il server girava dentro la sessione di una persona; **contraddice il
-multi-tenant** di `SPECIFICHE.md` §5.5, dove il servizio è di sistema e serve dieci utenti diversi.
-Chi lo riusa senza toglierlo ottiene un server che funziona **solo per sé** — e il sintomo, per
-tutti gli altri, è «credenziali errate».
+⛔ **But `autenticazione.c` must be changed in one point, and it is not a detail**: it rejects anyone who is not
+the user owning the process (`autenticazione_utente_atteso()`, from the effective uid). It was
+right in v1, where the server ran inside one person's session; **it contradicts the
+multi-tenant** of `SPECIFICHE.md` §5.5, where the service is a system one and serves ten different users.
+Whoever reuses it without removing that gets a server that works **only for itself** — and the symptom, for
+everyone else, is «wrong credentials».
 
 ---
 
-## Fase 2 — Il primo fotogramma
+## Phase 2 — The first frame
 
-**Produce**: cattura da una sessione GNOME vera → codifica → filo → **`VideoDecoder`** → tela della
-pagina. Un'immagine ferma.
+**It produces**: capture from a real GNOME session → encoding → wire → **`VideoDecoder`** → the page's
+canvas. A still image.
 
-**L'utente vede**: ⭐ **il proprio desktop, dentro una scheda del browser**. Fermo, ma suo — e da
-qualunque dispositivo, che è la cosa che alla fase 2 di v1 non c'era.
+**The user sees**: ⭐ **his own desktop, inside a browser tab**. Still, but his — and from
+any device, which is the thing that phase 2 of v1 did not have.
 
-**Il banco**: il fotogramma decodificato confrontato con quello catturato. Non «il programma non è
-crollato»: **i pixel**.
+**The bench**: the decoded frame compared with the captured one. Not «the program did not
+crash»: **the pixels**.
 
-**Si riusa**: `cattura.c` (1060 righe), `mutter.c` (353), `superficie.c` (675), `immagine.c` (273),
-`codificatore.c` (889, da riportare a HEVC), `palco.c` per la parte di montaggio.
+**Reused**: `cattura.c` (1060 lines), `mutter.c` (353), `superficie.c` (675), `immagine.c` (273),
+`codificatore.c` (889, to be brought back to HEVC), `palco.c` for the mounting part.
 
-> ### ⛔ Una domanda che la fase 1 ha trovato e che morde QUI — `[M]` 10 agosto 2026
+> ### ⛔ A question that phase 1 found and that bites HERE — `[M]` 10 Aug 2026
 >
-> *Trovata dalla sonda S7, dopo tre giri andati a vuoto, dal controllo che dice «la pagina non vede
-> nemmeno muoversi il puntatore». Portata qui l'11 agosto 2026 invece di essere riscoperta da un
-> utente (`web/rapporti/S-esiti-sonda.md` §8, voce **S.4**).*
+> *Found by probe S7, after three rounds that came to nothing, by the check that says «the page does not see
+> even the pointer move». Brought here on 11 Aug 2026 instead of being rediscovered by a
+> user (`web/rapporti/S-esiti-sonda.md` §8, entry **S.4**).*
 >
-> ⛔ **In una sessione GNOME senza dispositivi di input fisici, se il client parte PRIMA che il
-> puntatore virtuale di `libei` esista, non riceve nulla** — né rotella, né bottoni, **né il
-> movimento del puntatore**. Se parte **dopo**, riceve tutto. `[M]`, ed è **l'ordine** a essere
-> misurato.
+> ⛔ **In a GNOME session without physical input devices, if the client starts BEFORE the
+> virtual pointer of `libei` exists, it receives nothing** — no wheel, no buttons, **not even the
+> pointer's movement**. If it starts **after**, it receives everything. `[M]`, and it is **the order** that is
+> measured.
 >
-> ⚠ **E non è che l'iniezione non arrivi**: Mutter la riceve in tutt'e due i casi —
-> `org.gnome.Mutter.IdleMonitor.GetIdletime` cade da **35 952 ms a 1 013 ms** al primo movimento.
-> ⛔ **Il compositore la prende e non la consegna alla finestra.**
+> ⚠ **And it is not that the injection does not arrive**: Mutter receives it in both cases —
+> `org.gnome.Mutter.IdleMonitor.GetIdletime` drops from **35 952 ms to 1 013 ms** at the first movement.
+> ⛔ **The compositor takes it and does not deliver it to the window.**
 >
-> `[?]` **La causa non è verificata**: la spiegazione plausibile — una sessione senza dispositivi
-> annuncia un `wl_seat` **senza puntatore**, e il cliente partito prima non si iscrive mai — non è
-> stata provata. Quel che è `[M]` è l'ordine.
+> `[?]` **The cause is not verified**: the plausible explanation — a session without devices
+> announces a `wl_seat` **without a pointer**, and the client started earlier never subscribes — has not
+> been tested. What is `[M]` is the order.
 >
-> ⛔ **Perché riguarda il prodotto, e riguarda questa fase e la 6**: nel prodotto la sessione grafica
-> nasce **senza alcun dispositivo di input**, e le applicazioni aperte **prima** che un client si
-> colleghi potrebbero trovarsi nello stesso stato — l'utente muove il mouse e quella finestra non
-> risponde. ⇒ **Il banco di questa fase apre l'applicazione DOPO aver creato i dispositivi**, o
-> misura una scena che il prodotto non avrà mai.
+> ⛔ **Why it concerns the product, and concerns this phase and phase 6**: in the product the graphical session
+> is born **without any input device**, and the applications opened **before** a client
+> connects could find themselves in the same state — the user moves the mouse and that window does not
+> respond. ⇒ **The bench of this phase opens the application AFTER creating the devices**, or
+> it measures a scene the product will never have.
 
-⚠ Qui la codifica è **software**, di proposito: l'accelerazione viene dopo, e metterla prima
-significherebbe non sapere quale dei due pezzi sbaglia. ⭐ *E infatti è arrivata dopo, ma **prima**
-della fase che la prometteva: la codifica in hardware è entrata nel prodotto il **13 agosto 2026**,
-a fase 3 in corso, per poter misurare il prima e il dopo con lo stesso banco. La fase 8 non si
-chiama più «l'accelerazione»: si chiama **«la copia zero»**, ed è quel che ne resta.*
+⚠ Here encoding is **software**, on purpose: acceleration comes later, and putting it first
+would mean not knowing which of the two pieces is wrong. ⭐ *And indeed it came later, but **before**
+the phase that promised it: hardware encoding entered the product on **13 Aug 2026**,
+with phase 3 in progress, so as to be able to measure the before and the after with the same bench. Phase 8 is no longer
+called «the acceleration»: it is called **«zero copy»**, and it is what is left of it.*
 
-⛔ **E qui nasce la sessione GNOME, che v1 avviava senza mai averla studiata** — le trappole sono
-in `STUDI.md` §gnome §3 e valgono tutte al primo avvio, non dopo: `SHELL` va messa **vuota**, o
-`gnome-session` si ri-esegue dentro una shell di login e si riporta dentro `~/.profile` `[R]`;
-~~`--virtual-monitor WxH` **non è opzionale**, perché in headless la sessione parte altrimenti
-**viva, completa e nera**~~; il drop-in dell'unità della Shell si scrive in
+⛔ **And here the GNOME session is born, which v1 started without ever having studied it** — the traps are
+in `STUDI.md` §gnome §3 and they all hold at the first start, not later: `SHELL` must be set **empty**, or
+`gnome-session` re-executes itself inside a login shell and pulls in `~/.profile` `[R]`;
+~~`--virtual-monitor WxH` **is not optional**, because in headless mode the session otherwise starts
+**alive, complete and black**~~; the drop-in for the Shell unit is written in
 `src/sessione.c` · `scrivi_dropin()`.
-> ⛔⛔ **ROVESCIATO il 14 agosto 2026, fase 4 · A1** *(riallineato al codice il 28)*. Oggi il
-> prodotto **NON chiede** `--virtual-monitor`, e anzi **rifiuta** un `ExecStart` che lo chieda
-> ancora: se lo trova, scrive a registro che *«c'è un drop-in che vince sul mio»* e torna `FALSE`.
-> ⭐ La ragione è misurata (`[M]` 14 agosto, banco `04-b20`): col monitor chiesto, `RecordVirtual`
-> ne montava un **secondo** e registrava quello — GNOME lasciava barra, dock e finestre sul primo,
-> e **l'utente guardava uno schermo vuoto**. Senza, `RecordVirtual` monta **l'unico** monitor e la
-> shell ci va sopra.
+> ⛔⛔ **REVERSED on 14 Aug 2026, phase 4 · A1** *(realigned to the code on the 28th)*. Today the
+> product **does NOT ask for** `--virtual-monitor`, and indeed **refuses** an `ExecStart` that still asks
+> for it: if it finds one, it writes to the log *«c'è un drop-in che vince sul mio»* and returns `FALSE`.
+> ⭐ The reason is measured (`[M]` 14 Aug, bench `04-b20`): with the monitor requested, `RecordVirtual`
+> mounted a **second** one and recorded that — GNOME left bar, dock and windows on the first,
+> and **the user was looking at an empty screen**. Without it, `RecordVirtual` mounts **the only** monitor and the
+> shell goes on it.
 
-⭐ E una prova da fare **guasta di proposito** (M9 di `STUDI.md` §gnome §13): senza `--virtual-monitor`,
-per imparare che aspetto ha il guasto. Una sessione nera e perfettamente viva è la cosa che si
-scambia per un difetto di cattura, e si cerca per mezza giornata dalla parte sbagliata.
+⭐ And a test to do **deliberately broken** (M9 of `STUDI.md` §gnome §13): without `--virtual-monitor`,
+to learn what the fault looks like. A black and perfectly alive session is the thing that gets
+mistaken for a capture defect, and one searches for half a day in the wrong direction.
 
-⛔ **E qui la sonda del browser torna, sul serio invece che in prova** (§1.2 *(di questo documento)*): il primo fotogramma
-vero dato a `VideoDecoder` **sul telefono**, per sapere se lo decodifica in hardware e se
-restituisce davvero **10 bit**.
+⛔ **And here the browser probe comes back, for real instead of as a test** (§1.2 *(of this document)*): the first real
+frame given to `VideoDecoder` **on the phone**, to know whether it decodes it in hardware and whether it
+really returns **10 bits**.
 
 | | |
 |---|---|
-| 1 | decodifica **HEVC Main10 in hardware**? `[S]` Chrome lo documenta dalla 108; nel browser **il nome del decodificatore non c'è**, quindi la prova è indiretta e va costruita col caso opposto scritto prima (`LEZIONI.md` §1.11) |
-| 2 | ⛔ **e restituisce davvero 10 bit?** `[?]` La documentazione di mpv segnala che sul percorso `mediacodec` il supporto a 10 bit è **limitato e l'uscita torna a 8 bit** — è la prima indicazione contraria al desiderato di `SPECIFICHE.md` §3.1, e arriva dal lato dove non abbiamo margine (`DECISIONI.md` §2.3-bis) |
+| 1 | does it decode **HEVC Main10 in hardware**? `[S]` Chrome documents it since 108; in the browser **the decoder's name is not there**, so the proof is indirect and must be built with the opposite case written first (`LEZIONI.md` §1.11) |
+| 2 | ⛔ **and does it really return 10 bits?** `[?]` mpv's documentation reports that on the `mediacodec` path 10-bit support is **limited and the output goes back to 8 bits** — it is the first indication against what `SPECIFICHE.md` §3.1 wants, and it comes from the side where we have no margin (`DECISIONI.md` §2.3-bis) |
 
-⚠ **Che cosa cambia se la risposta fosse no**, ed è cambiato il 9 agosto: **non è più un muro**. Il
-massimo lo offre il server, l'altezza la mette il client (`DECISIONI.md` §2.7): un dispositivo che
-decodifica in software è un fatto da **misurare e dichiarare**, non un difetto nostro. ⛔ Ma
-dichiarato **va dichiarato**: un ripiego silenzioso resta vietato anche quando la colpa è di
-qualcun altro.
+⚠ **What changes if the answer were no**, and it changed on 9 Aug: **it is no longer a wall**. The
+maximum is offered by the server, the height is set by the client (`DECISIONI.md` §2.7): a device that
+decodes in software is a fact to **measure and declare**, not a defect of ours. ⛔ But
+declared **it must be declared**: a silent fallback stays forbidden even when the fault is
+someone else's.
 
 ---
 
-> # 📅 COM'ERA IL **20 agosto 2026** — *«la caccia è chiusa, e adesso si attua»*
+> # 📅 HOW IT WAS ON **20 Aug 2026** — *«the hunt is closed, and now it is implemented»*
 >
-> ⚠ **Non si riparte da qui**: il punto d'ingresso del progetto è il riquadro **⏸** in testa a `README.md`.
+> ⚠ **One does not restart from here**: the project's entry point is the **⏸** box at the top of `README.md`.
 >
-> *La caccia agli artefatti si è chiusa la sera del **17 agosto** con il giudizio dell'utente —
-> **«NIENTE ARTEFATTI!»** — su un banco. ⛔ **Nel prodotto la cura non c'è ancora**, e finché non
-> c'è l'utente vede quel che vedeva prima.*
+> *The hunt for artefacts closed on the evening of **17 Aug** with the user's judgement —
+> **«NIENTE ARTEFATTI!»** — on a bench. ⛔ **In the product the cure is not there yet**, and until it
+> is there the user sees what he saw before.*
 >
-> ## Che cosa si è saputo, in tre righe
->
-> | | |
-> |---|---|
-> | ⛔ **la colpa non era nostra** | i pixel **entrano giusti** nella tela e si rompono **andando allo schermo**: `getImageData` legge il magazzino, non lo schermo ⇒ ogni banco che rilegge la tela era verde **per costruzione** |
-> | ⭐ **la cura è misurata** | `createImageBitmap()` + `transferFromImageBitmap()` su un contesto **`bitmaprenderer`** — `DECISIONI.md` §5.4, prove in `fasi/06-la-tela-e-la-vista.md` §4.9 |
-> | ⛔ **e AV1 esce dal prodotto** | Firefox per **Android** non ha né HEVC né AV1 ⇒ **H.264**, `avc1.640032` già verificato — `DECISIONI.md` §1.13-ter |
->
-> ⛔ **Le otto ipotesi morte non si rifanno**: le sette del riquadro precedente (flusso AV1 rotto ·
-> allineamento 962→968 · misura sbagliata alla pagina · errori del decodificatore · percorso di
-> disegno della pagina · profondità 10/8 · xrdp+RemoteFX) ⛔ **più il `VideoDecoder`**, scagionato
-> da `copyTo` contro la verità. Ognuna ha la sua misura in `fasi/06-la-tela-e-la-vista.md` §4.9.
->
-> ## ⭐ IL LAVORO CHE VIENE, in quest'ordine
->
-> **1. ⭐⭐ La cura dentro `src/pagina.html`** — ⭐ **FATTA il 20 agosto 2026**, ed è in servizio
-> sulla **7730**: `dipinti == consegnati`, `tard 0`, `err 0`, tela nitida a 1:1 col testimone
-> Marionette (`fasi/06-la-tela-e-la-vista.md` §4.9). ⏳ **Aspetta il giudizio dell'utente**, che è l'unica cosa che
-> può chiuderla: nessun banco vede questo difetto. ⚠ E resta `[?]` **quanto costa
-> `createImageBitmap`** — il conto da battere è quello del `drawImage` che sostituisce.
->
-> *Quel che è stato fatto, per chi rilegge:* è quel che l'utente **vede**, e andava davanti a tutto.
-> Spariscono le **due** tele 2D (`deposito_p.drawImage(f)` e `pennello.drawImage(deposito)`); la
-> tela visibile diventa `bitmaprenderer`; il deposito **non serve più** perché
-> `transferFromImageBitmap` dimensiona la tela da sé e il contenuto sopravvive al
-> ridimensionamento; il centraggio si fa **col CSS**. ⚠ E si **misura il costo**:
-> `createImageBitmap` è asincrona ed entra nel ritardo.
-> ⛔ **Chi giudica è l'utente, sulla sua scena** — nessun banco può vedere questo difetto (I8).
->
-> **2. H.264 nel prodotto** — `RCP.md` §4.3/§6.2 (il terzo numero di codec **si aggiunge**),
-> `codificatore.c` (H.264 sulla scheda e il lettore dei NAL che riconosce l'**IDR**), `figlio.c`, e in
-> `pagina.html` la scala di preferenza e il flusso di prova della sonda. ⚠ Con dentro la `[?]`
-> della **scala di colore** del decodificatore hardware: +8 livelli sulle zone chiare.
->
-> **3. ⚠ E resta la fase 6 aperta**: il suo `fasi/06-la-tela-e-la-vista.md` §8 aspetta ancora il giudizio su due scene — il
-> trascinamento del bordo e il clic tenuto giù.
->
-> ## ⚙ Lo stato della macchina — verificato il 20 agosto 2026
+> ## What was learned, in three lines
 >
 > | | |
 > |---|---|
-> | **dove si lavora** | il deposito `git` sta sul **CHUWI** (`192.168.0.3`), che è anche la macchina da cui l'utente **guarda** |
-> | **dove gira** | `NIC-OS`, **192.168.0.2**: `remotix-7700.service` e `remotix-7730.service` **tutt'e due vivi**, e la macchina **non si è riavviata** |
-> | ⛔ **il deposito ha lavoro non commesso** | `figlio.c` (lo **scatto a comando**, `SIGUSR1`), `pagina.html` (la riga `MARCA` che dice **chi sta parlando**), e i banchi `07-b48`/`b49`/`b50` |
-> | si riaccende con | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
-> | ⛔ le porte occupate | 7448 · 7700 · 7710 · 7720 · **7730** |
-> | ⚠ il browser mette in cache | serve **`Ctrl+Maiusc+R`** dopo ogni cambio della pagina |
+> | ⛔ **the fault was not ours** | the pixels **enter the canvas correct** and break **on their way to the screen**: `getImageData` reads the store, not the screen ⇒ every bench that reads back the canvas was green **by construction** |
+> | ⭐ **the cure is measured** | `createImageBitmap()` + `transferFromImageBitmap()` on a **`bitmaprenderer`** context — `DECISIONI.md` §5.4, proofs in `fasi/06-la-tela-e-la-vista.md` §4.9 |
+> | ⛔ **and AV1 leaves the product** | Firefox for **Android** has neither HEVC nor AV1 ⇒ **H.264**, `avc1.640032` already verified — `DECISIONI.md` §1.13-ter |
 >
-> ## ⛔ E i due difetti nostri che la caccia ha lasciato per strada
+> ⛔ **The eight dead hypotheses are not redone**: the seven of the previous box (broken AV1 stream ·
+> alignment 962→968 · wrong size at the page · decoder errors · the page's drawing
+> path · depth 10/8 · xrdp+RemoteFX) ⛔ **plus the `VideoDecoder`**, cleared
+> by `copyTo` against the truth. Each has its measurement in `fasi/06-la-tela-e-la-vista.md` §4.9.
 >
-> **`?video=worker` non dipinge su Firefox**, e la causa è in mano: gli stream trasferiti al worker
-> non vengono mai letti, quindi non si chiudono, e si esauriscono i **1024** stream unidirezionali
-> di credito («il client ne concede ancora 0 … il delta che veniva dopo il 1023»). ⛔ E
-> `postMessage` **non lancia**: la premessa del commento in `pagina.html` è falsa, quindi il
-> ripiego non scatta mai. ⇒ La cura è un **riscontro**: se entro N ms il worker non ha letto il
-> primo byte, si dichiara e si ripiega.
+> ## ⭐ THE WORK TO COME, in this order
 >
-> ⚠ **E la verifica su Chrome è ancora in scadenza**: dopo la cura della profondità Chrome non
-> l'ha più guardato nessuno.
+> **1. ⭐⭐ The cure inside `src/pagina.html`** — ⭐ **DONE on 20 Aug 2026**, and it is in service
+> on **7730**: `dipinti == consegnati`, `tard 0`, `err 0`, sharp canvas at 1:1 with the Marionette
+> witness (`fasi/06-la-tela-e-la-vista.md` §4.9). ⏳ **It waits for the user's judgement**, which is the only thing that
+> can close it: no bench sees this defect. ⚠ And it remains `[?]` **how much
+> `createImageBitmap` costs** — the account to beat is that of the `drawImage` it replaces.
+>
+> *What was done, for whoever rereads:* it is what the user **sees**, and it had to come before everything.
+> The **two** 2D canvases disappear (`deposito_p.drawImage(f)` and `pennello.drawImage(deposito)`); the
+> visible canvas becomes `bitmaprenderer`; the store **is no longer needed** because
+> `transferFromImageBitmap` sizes the canvas by itself and the content survives
+> resizing; centring is done **with CSS**. ⚠ And **the cost is measured**:
+> `createImageBitmap` is asynchronous and enters the delay.
+> ⛔ **The judge is the user, on his scene** — no bench can see this defect (I8).
+>
+> **2. H.264 in the product** — `RCP.md` §4.3/§6.2 (the third codec number **is added**),
+> `codificatore.c` (H.264 on the card and the NAL reader that recognises the **IDR**), `figlio.c`, and in
+> `pagina.html` the preference ladder and the probe's test stream. ⚠ With inside it the `[?]`
+> of the hardware decoder's **colour range**: +8 levels on the light areas.
+>
+> **3. ⚠ And phase 6 remains open**: its `fasi/06-la-tela-e-la-vista.md` §8 still waits for the judgement on two scenes — the
+> edge drag and the click held down.
+>
+> ## ⚙ The state of the machine — verified on 20 Aug 2026
+>
+> | | |
+> |---|---|
+> | **where one works** | the `git` repository is on the **CHUWI** (`192.168.0.3`), which is also the machine from which the user **looks** |
+> | **where it runs** | `NIC-OS`, **192.168.0.2**: `remotix-7700.service` and `remotix-7730.service` **both alive**, and the machine **has not rebooted** |
+> | ⛔ **the repository has uncommitted work** | `figlio.c` (the **on-command snapshot**, `SIGUSR1`), `pagina.html` (the `MARCA` line that says **who is speaking**), and the benches `07-b48`/`b49`/`b50` |
+> | it is switched back on with | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
+> | ⛔ the ports in use | 7448 · 7700 · 7710 · 7720 · **7730** |
+> | ⚠ the browser caches | **`Ctrl+Shift+R`** is needed after every change of the page |
+>
+> ## ⛔ And the two defects of ours the hunt left along the way
+>
+> **`?video=worker` does not paint on Firefox**, and the cause is in hand: the streams transferred to the worker
+> are never read, so they are not closed, and the **1024** unidirectional streams
+> of credit run out («il client ne concede ancora 0 … il delta che veniva dopo il 1023»). ⛔ And
+> `postMessage` **does not throw**: the premise of the comment in `pagina.html` is false, so the
+> fallback never triggers. ⇒ The cure is a **check**: if within N ms the worker has not read the
+> first byte, it is declared and one falls back.
+>
+> ⚠ **And the verification on Chrome is still due**: after the depth cure nobody has
+> looked at Chrome again.
 >
 > ---
 
