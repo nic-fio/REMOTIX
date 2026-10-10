@@ -1,0 +1,422 @@
+{"file": "avvia-server.sh", "prima": "ACCESO pid ", "dopo": "RUNNING pid "}
+{"file": "avvia-server.sh", "prima": "MORTO", "dopo": "DEAD"}
+{"file": "spegni.sh", "prima": "spento ", "dopo": "stopped "}
+{"file": "spegni.sh", "prima": "gia' spento", "dopo": "already stopped"}
+{"file": "check-env.sh", "prima": "sistema:  ", "dopo": "system:   "}
+{"file": "check-env.sh", "prima": "librerie di sviluppo:", "dopo": "development libraries:"}
+{"file": "check-env.sh", "prima": "MANCANTE", "dopo": "MISSING"}
+{"file": "check-env.sh", "prima": "presente", "dopo": "present"}
+{"file": "check-env.sh", "prima": "sorgenti: /srv/src -> %U:%G modo %a", "dopo": "sources:  /srv/src -> %U:%G mode %a"}
+{"file": "check-env.sh", "prima": "spazio:   ... liberi", "dopo": "space:    ... free"}
+{"file": "filo.sh", "prima": "⛔ non si scrive ", "dopo": "⛔ cannot write "}
+{"file": "filo.sh", "prima": "Si accende il server NOSTRO sulla ", "dopo": "Starting OUR server on "}
+{"file": "filo.sh", "prima": "morto subito", "dopo": "died at once"}
+{"file": "filo.sh", "prima": "    uscita cliente «", "dopo": "    client exit «"}
+{"file": "filo.sh", "prima": "log \"PRIMA connessione — il cliente di prova di B3 (aioquic), che legge solo RCP.md\"", "dopo": "log \"FIRST connection — the B3 test client (aioquic), which reads only RCP.md\""}
+{"file": "filo.sh", "prima": "L'arbitro di B4 giudica i byte della prima", "dopo": "The B4 arbiter judges the bytes of the first"}
+{"file": "filo.sh", "prima": "    uscita validatore: ", "dopo": "    validator exit: "}
+{"file": "filo.sh", "prima": "SECONDA connessione, dopo che la prima si e' chiusa (LEZIONI 2.1)", "dopo": "SECOND connection, after the first has closed (LEZIONI 2.1)"}
+{"file": "filo.sh", "prima": "log \"Il registro del server\"", "dopo": "log \"The server log\""}
+{"file": "filo.sh", "prima": "log \"Si spegne\"", "dopo": "log \"Stopping\""}
+{"file": "filo.sh", "prima": "TERM non e' bastato", "dopo": "TERM was not enough"}
+{"file": "filo.sh", "prima": "ok \"fermato\"", "dopo": "ok \"stopped\""}
+{"file": "fumo.sh", "prima": "Chi occupa la porta ", "dopo": "Who holds port "}
+{"file": "fumo.sh", "prima": "echo \"    (nessuno in UDP)\"", "dopo": "echo \"    (nobody on UDP)\""}
+{"file": "fumo.sh", "prima": "echo \"    (nessuno in TCP)\"", "dopo": "echo \"    (nobody on TCP)\""}
+{"file": "fumo.sh", "prima": "log \"Si accende\"", "dopo": "log \"Starting\""}
+{"file": "fumo.sh", "prima": "il server gira, pid ", "dopo": "the server is running, pid "}
+{"file": "fumo.sh", "prima": "il server e' MORTO subito", "dopo": "the server DIED at once"}
+{"file": "fumo.sh", "prima": "Il registro d'avvio", "dopo": "The startup log"}
+{"file": "fumo.sh", "prima": "log \"I due certificati sul disco\"", "dopo": "log \"The two certificates on disk\""}
+{"file": "fumo.sh", "prima": "echo \"    -- permessi delle chiavi:\"", "dopo": "echo \"    -- key permissions:\""}
+{"file": "fumo.sh", "prima": "L'impronta calcolata da openssl, per confronto indipendente", "dopo": "The fingerprint computed by openssl, for an independent comparison"}
+{"file": "fumo.sh", "prima": "log \"GET / in TLS\"", "dopo": "log \"GET / over TLS\""}
+{"file": "fumo.sh", "prima": "log \"Le due intestazioni di isolamento (SPECIFICHE.md 11.5)\"", "dopo": "log \"The two isolation headers (SPECIFICHE.md 11.5)\""}
+{"file": "fumo.sh", "prima": "MANCA: ", "dopo": "MISSING: "}
+{"file": "fumo.sh", "prima": "L'impronta DENTRO la pagina", "dopo": "The fingerprint INSIDE the page"}
+{"file": "fumo.sh", "prima": "la pagina porta l'impronta del certificato di sessione", "dopo": "the page carries the fingerprint of the session certificate"}
+{"file": "fumo.sh", "prima": "la pagina NON porta l'impronta", "dopo": "the page does NOT carry the fingerprint"}
+{"file": "fumo.sh", "prima": "il segno __IMPRONTA__ e' rimasto non sostituito", "dopo": "the __IMPRONTA__ marker was left unreplaced"}
+{"file": "fumo.sh", "prima": "ok \"nessun segno non sostituito\"", "dopo": "ok \"no unreplaced marker\""}
+{"file": "fumo.sh", "prima": "GET /impronta (l'endpoint di RCP.md 4.1-bis)", "dopo": "GET /impronta (the endpoint of RCP.md 4.1-bis)"}
+{"file": "fumo.sh", "prima": "l'endpoint serve l'impronta corrente", "dopo": "the endpoint serves the current fingerprint"}
+{"file": "fumo.sh", "prima": "l'endpoint NON serve l'impronta corrente", "dopo": "the endpoint does NOT serve the current fingerprint"}
+{"file": "fumo.sh", "prima": "ok \"anche /impronta esce isolato\"", "dopo": "ok \"/impronta too goes out isolated\""}
+{"file": "fumo.sh", "prima": "ko \"/impronta NON esce isolato\"", "dopo": "ko \"/impronta does NOT go out isolated\""}
+{"file": "fumo.sh", "prima": "log \"GET /qualcosa-che-non-esiste\"", "dopo": "log \"GET /something-that-does-not-exist\""}
+{"file": "fumo.sh", "prima": "    stato: ", "dopo": "    status: "}
+{"file": "fumo.sh", "prima": "log \"I DUE ascoltatori con lo stesso numero di porta (RCP.md 2.4)\"", "dopo": "log \"The TWO listeners with the same port number (RCP.md 2.4)\""}
+{"file": "fumo.sh", "prima": "ko \"niente UDP\"", "dopo": "ko \"no UDP\""}
+{"file": "fumo.sh", "prima": "ko \"niente TCP\"", "dopo": "ko \"no TCP\""}
+{"file": "fumo.sh", "prima": "log \"Si spegne\"", "dopo": "log \"Stopping\""}
+{"file": "fumo.sh", "prima": "non si e' fermato con TERM", "dopo": "it did not stop with TERM"}
+{"file": "fumo.sh", "prima": "ok \"fermato\"", "dopo": "ok \"stopped\""}
+{"file": "fumo.sh", "prima": "log \"Il registro completo\"", "dopo": "log \"The full log\""}
+{"file": "resto.sh", "prima": "⛔ non si scrive ", "dopo": "⛔ cannot write "}
+{"file": "resto.sh", "prima": "log \"1. LA ROTAZIONE — un certificato di sessione a cui restano meno di 2 giorni\"", "dopo": "log \"1. THE ROTATION — a session certificate with less than 2 days left\""}
+{"file": "resto.sh", "prima": "generato da REMOTIX", "dopo": "generated by REMOTIX"}
+{"file": "resto.sh", "prima": "    impronta PRIMA: ", "dopo": "    fingerprint BEFORE: "}
+{"file": "resto.sh", "prima": "morto", "dopo": "dead"}
+{"file": "resto.sh", "prima": "    impronta DOPO:  ", "dopo": "    fingerprint AFTER:  "}
+{"file": "resto.sh", "prima": "il certificato di sessione E' stato ruotato all'avvio / NON ruotato", "dopo": "the session certificate WAS rotated at startup / NOT rotated"}
+{"file": "resto.sh", "prima": "il nuovo scade fra $GIORNI giorni (tetto 14) / scade fra $GIORNI giorni", "dopo": "the new one expires in $GIORNI days (ceiling 14) / expires in $GIORNI days"}
+{"file": "resto.sh", "prima": "ok \"/impronta serve la NUOVA\" || ko \"/impronta serve una impronta vecchia\"", "dopo": "ok \"/impronta serves the NEW one\" || ko \"/impronta serves an old fingerprint\""}
+{"file": "resto.sh", "prima": "ok \"la pagina porta la NUOVA\" || ko \"la pagina porta una impronta vecchia\"", "dopo": "ok \"the page carries the NEW one\" || ko \"the page carries an old fingerprint\""}
+{"file": "resto.sh", "prima": "e lo dice nel registro / il registro tace sulla rotazione", "dopo": "and it says so in the log / the log is silent about the rotation"}
+{"file": "resto.sh", "prima": "2. IL CERTIFICATO DELL'AMMINISTRATORE non si rigenera (RCP.md 4.1, B13.3)", "dopo": "2. THE ADMINISTRATOR'S CERTIFICATE is not regenerated (RCP.md 4.1, B13.3)"}
+{"file": "resto.sh", "prima": "il certificato della pagina NON e' stato toccato / e' stato RIGENERATO: viola §4.1", "dopo": "the page certificate was NOT touched / it was REGENERATED: violates §4.1"}
+{"file": "resto.sh", "prima": "e lo dichiara nel registro / il registro non lo dice", "dopo": "and it declares it in the log / the log does not say so"}
+{"file": "resto.sh", "prima": "log \"3. IL BAN — tre autenticazioni fallite, poi la pagina lo DICE (SPECIFICHE 4.2)\"", "dopo": "log \"3. THE BAN — three failed authentications, then the page SAYS so (SPECIFICHE 4.2)\""}
+{"file": "resto.sh", "prima": "    tentativo $i: uscita ", "dopo": "    attempt $i: exit "}
+{"file": "resto.sh", "prima": "log \"   il quarto, e la pagina\"", "dopo": "log \"   the fourth, and the page\""}
+{"file": "resto.sh", "prima": "ok \"⭐ la pagina SI CARICA e dice che i tentativi sono esauriti\"", "dopo": "ok \"⭐ the page LOADS and says the attempts are exhausted\""}
+{"file": "resto.sh", "prima": "ko \"la pagina non lo dice\"", "dopo": "ko \"the page does not say so\""}
+{"file": "resto.sh", "prima": "echo \"    -- il file dei ban:\"", "dopo": "echo \"    -- the ban file:\""}
+{"file": "resto.sh", "prima": "   e lo SBLOCCO (SPECIFICHE 4.2: l'altra via d'uscita)", "dopo": "   and the UNBAN (SPECIFICHE 4.2: the other way out)"}
+{"file": "resto.sh", "prima": "echo \"    uscita: $?\"", "dopo": "echo \"    exit: $?\""}
+{"file": "resto.sh", "prima": "echo \"    -- il file dei ban dopo lo sblocco:\"", "dopo": "echo \"    -- the ban file after the unban:\""}
+{"file": "resto.sh", "prima": "log \"   e la pagina torna normale\"", "dopo": "log \"   and the page goes back to normal\""}
+{"file": "resto.sh", "prima": "l'avviso c'e' ancora / l'avviso e' sparito", "dopo": "the notice is still there / the notice is gone"}
+{"file": "banchi/sonda/racc.py", "prima": "=== esito:", "dopo": "=== outcome:"}
+{"file": "banchi/sonda/racc.py", "prima": "richiesta: (letto da banchi/sonda/lancia.sh: grep -c '^richiesta: ' — cambiato insieme in '^request: ')", "dopo": "request: "}
+{"file": "banchi/sonda/racc.py", "prima": "raccoglitore su 127.0.0.1:", "dopo": "collector on 127.0.0.1:"}
+{"file": "banchi/sonda/lancia.sh", "prima": "firefox non c'e'", "dopo": "firefox is not there"}
+{"file": "banchi/sonda/lancia.sh", "prima": "xvfb-run non c'e'", "dopo": "xvfb-run is not there"}
+{"file": "banchi/sonda/lancia.sh", "prima": "L'impronta la si chiede AL SERVER, non la si indovina", "dopo": "The fingerprint is asked OF THE SERVER, not guessed"}
+{"file": "banchi/sonda/lancia.sh", "prima": "nessuna impronta da https://", "dopo": "no fingerprint from https://"}
+{"file": "banchi/sonda/lancia.sh", "prima": "    impronta: ", "dopo": "    fingerprint: "}
+{"file": "banchi/sonda/lancia.sh", "prima": "raccoglitore morto", "dopo": "collector dead"}
+{"file": "banchi/sonda/lancia.sh", "prima": "raccoglitore su 127.0.0.1:", "dopo": "collector on 127.0.0.1:"}
+{"file": "banchi/sonda/lancia.sh", "prima": "giro «", "dopo": "round «"}
+{"file": "banchi/sonda/lancia.sh", "prima": "<NON SI STAMPA>", "dopo": "<NOT PRINTED>"}
+{"file": "banchi/sonda/lancia.sh", "prima": "⛔ non si scrive ", "dopo": "⛔ cannot write "}
+{"file": "banchi/sonda/lancia.sh", "prima": "    -- D12/ps: la PAROLA vista $vp volte · il PROFILO (che in argv c'e')\n       visto $vf volte", "dopo": "    -- D12/ps: the PASSWORD seen $vp times · the PROFILE (which is in argv)\n       seen $vf times"}
+{"file": "banchi/sonda/lancia.sh", "prima": "⚠ non ho visto in «ps» nemmeno il profilo, che in «argv» c'era di / sicuro: allora lo zero della parola e' «non ho guardato», non «non / c'era».  ⛔ Non e' un verde, e si dichiara.", "dopo": "⚠ I did not see in «ps» even the profile, which was surely in «argv»: / so the password's zero means «I did not look», not «it was not / there».  ⛔ It is not a green, and it is declared."}
+{"file": "banchi/sonda/lancia.sh", "prima": "⛔⛔ LA PAROLA E' ANCORA IN «ps» ($vp volte su $vf): D12 NON e' chiuso qui", "dopo": "⛔⛔ THE PASSWORD IS STILL IN «ps» ($vp times out of $vf): D12 is NOT closed here"}
+{"file": "banchi/sonda/lancia.sh", "prima": "⭐ D12 chiuso per misura: nello stesso istante «ps» vedeva il profilo / ($vf volte) e NON vedeva la parola", "dopo": "⭐ D12 closed by measurement: at the same instant «ps» saw the profile / ($vf times) and did NOT see the password"}
+{"file": "banchi/sonda/lancia.sh", "prima": "    -- dopo 30 s col TERM usano ancora il profilo: ", "dopo": "    -- after 30 s of TERM these still use the profile: "}
+{"file": "banchi/sonda/lancia.sh", "prima": "⛔ questi processi hanno ancora il profilo aperto: / NON cancello: cancellarlo adesso vorrebbe dire farselo riscrivere", "dopo": "⛔ these processes still have the profile open: / NOT deleting: deleting it now would mean having it rewritten"}
+{"file": "banchi/sonda/lancia.sh", "prima": "    -- browser spento, e lo dice /proc: nessun processo ha piu' «$prof»\n       fra i suoi argomenti (atteso $(( g / 2 )) s)", "dopo": "    -- browser stopped, and /proc says so: no process has «$prof»\n       among its arguments any more (waited $(( g / 2 )) s)"}
+{"file": "banchi/sonda/lancia.sh", "prima": "    -- il profilo di questo giro conteneva la parola in $sporchi file / (il frammento resta nella sessione salvata del browser: e' il / limite dichiarato della cura).  Il profilo si butta adesso.", "dopo": "    -- this round's profile held the password in $sporchi files / (the fragment stays in the browser's saved session: it is the / declared limit of the cure).  The profile is thrown away now."}
+{"file": "banchi/sonda/lancia.sh", "prima": "⛔ il profilo $prof e' TORNATO ($resta file) 5 s dopo la cancellazione: / qualcuno lo sta ancora scrivendo, e la cura non ha tenuto", "dopo": "⛔ the profile $prof CAME BACK ($resta files) 5 s after the deletion: / someone is still writing it, and the cure did not hold"}
+{"file": "banchi/sonda/lancia.sh", "prima": "profilo buttato, e cinque secondi dopo il disco lo conferma ancora", "dopo": "profile thrown away, and five seconds later the disk still confirms it"}
+{"file": "banchi/sonda/lancia.sh", "prima": "nessun esito in $i secondi", "dopo": "no outcome in $i seconds"}
+{"file": "banchi/sonda/lancia.sh", "prima": "    -- richieste ricevute dal raccoglitore: ", "dopo": "    -- requests received by the collector: "}
+{"file": "banchi/sonda/lancia.sh", "prima": "esito ricevuto dopo $i secondi", "dopo": "outcome received after $i seconds"}
+{"file": "banchi/sonda/lancia.sh", "prima": "        esito : / motore: / detta :", "dopo": "        outcome: / engine : / detail :"}
+{"file": "banchi/sonda/lancia.sh", "prima": "esiti: ammesso=$E1 respinto=$E2", "dopo": "outcomes: ammesso=$E1 respinto=$E2"}
+{"file": "sonda-rcp.html", "prima": "<title>sonda RCP</title>", "dopo": "<title>RCP probe</title>"}
+{"file": "sonda-rcp.html", "prima": "\"la sessione e' stata chiusa dall'utente\"", "dopo": "\"the session was closed by the user\""}
+{"file": "sonda-rcp.html", "prima": "\"silenzio troppo lungo: la sessione e' scaduta\"", "dopo": "\"silence too long: the session expired\""}
+{"file": "sonda-rcp.html", "prima": "\"la sessione e' stata abbandonata\"", "dopo": "\"the session was abandoned\""}
+{"file": "sonda-rcp.html", "prima": "\"ha prevalso la sessione locale su quella macchina\"", "dopo": "\"the local session on that machine took precedence\""}
+{"file": "sonda-rcp.html", "prima": "\"quell'utente e' gia' collegato localmente\"", "dopo": "\"that user is already signed in locally\""}
+{"file": "sonda-rcp.html", "prima": "\"il server e' pieno\"", "dopo": "\"the server is full\""}
+{"file": "sonda-rcp.html", "prima": "\"utente o parola d'ordine non corretti\"", "dopo": "\"incorrect username or password\""}
+{"file": "sonda-rcp.html", "prima": "\"i tentativi da questo indirizzo sono esauriti: riprova fra dodici ore, o sblocca l'indirizzo dal server\"", "dopo": "\"the attempts from this address are used up: try again in twelve hours, or unblock the address from the server\""}
+{"file": "sonda-rcp.html", "prima": "\"il server e questa pagina non hanno niente in comune da parlare\"", "dopo": "\"the server and this page have nothing in common to speak\""}
+{"file": "sonda-rcp.html", "prima": "\"versione del protocollo incompatibile\"", "dopo": "\"incompatible protocol version\""}
+{"file": "sonda-rcp.html", "prima": "\"errore di protocollo\"", "dopo": "\"protocol error\""}
+{"file": "sonda-rcp.html", "prima": "\"il server si sta spegnendo\"", "dopo": "\"the server is shutting down\""}
+{"file": "sonda-rcp.html", "prima": "\"tempo scaduto durante la stretta di mano\"", "dopo": "\"timed out during the handshake\""}
+{"file": "sonda-rcp.html", "prima": "\"quella sessione non si puo' servire\"", "dopo": "\"that session cannot be served\""}
+{"file": "sonda-rcp.html", "prima": "\"quell'utente e' gia' collegato da un altro dispositivo\"", "dopo": "\"that user is already connected from another device\""}
+{"file": "sonda-rcp.html", "prima": "\"messaggio oltre 1 MiB: il server viola §6.1\"", "dopo": "\"message over 1 MiB: the server violates §6.1\""}
+{"file": "sonda-rcp.html", "prima": "stato ", "dopo": "status "}
+{"file": "sonda-rcp.html", "prima": "impronta: il certificato e' stato ruotato da quando questa pagina e' stata servita — si usa quella nuova", "dopo": "fingerprint: the certificate has been rotated since this page was served — using the new one"}
+{"file": "sonda-rcp.html", "prima": "impronta: /impronta non risponde ( … ): si usa quella servita con la pagina", "dopo": "fingerprint: /impronta does not answer ( … ): using the one served with the page"}
+{"file": "sonda-rcp.html", "prima": "\"Questo browser non ha WebTransport: serve Chrome/Edge, Firefox o Safari 26+.\"", "dopo": "\"This browser has no WebTransport: you need Chrome/Edge, Firefox or Safari 26+.\""}
+{"file": "sonda-rcp.html", "prima": "apro ", "dopo": "opening "}
+{"file": "sonda-rcp.html", "prima": "sessione chiusa dal server: codice ", "dopo": "session closed by the server: code "}
+{"file": "sonda-rcp.html", "prima": "sessione chiusa con errore: ", "dopo": "session closed with error: "}
+{"file": "sonda-rcp.html", "prima": "sessione WebTransport aperta", "dopo": "WebTransport session open"}
+{"file": "sonda-rcp.html", "prima": "CIAO mandato ( … capacita')", "dopo": "CIAO sent ( … capabilities)"}
+{"file": "sonda-rcp.html", "prima": "Il server ha chiuso il canale senza rispondere.", "dopo": "The server closed the channel without answering."}
+{"file": "sonda-rcp.html", "prima": "congedato", "dopo": "dismissed"}
+{"file": "sonda-rcp.html", "prima": "Il server ha risposto 0x … invece di ECCOMI.", "dopo": "The server answered 0x … instead of ECCOMI."}
+{"file": "sonda-rcp.html", "prima": "ECCOMI: versione ", "dopo": "ECCOMI: version "}
+{"file": "sonda-rcp.html", "prima": "CREDENZIALI mandate — ⛔ e la parola non compare in nessun\\n  registro HTTP perche' arriva dal FRAMMENTO, che il browser non\\n  manda al server (R12-A.34).  \\u26a0 Resta nella cronologia del\\n  browser: il profilo di questo giro si butta a fine giro", "dopo": "CREDENZIALI sent — ⛔ and the password appears in no\\n  HTTP log because it comes from the FRAGMENT, which the browser does not\\n  send to the server (R12-A.34).  \\u26a0 It stays in the browser's\\n  history: this round's profile is thrown away at the end of the round"}
+{"file": "sonda-rcp.html", "prima": "Il server ha chiuso il canale senza rispondere alle credenziali.", "dopo": "The server closed the channel without answering the credentials."}
+{"file": "sonda-rcp.html", "prima": "respinto, motivo 0x", "dopo": "refused, reason 0x"}
+{"file": "sonda-rcp.html", "prima": "Il server ha risposto 0x … invece di AMMESSO.", "dopo": "The server answered 0x … instead of AMMESSO."}
+{"file": "sonda-rcp.html", "prima": "ATTACCA: tela … , vista … , disposizione «", "dopo": "ATTACCA: canvas … , view … , layout «"}
+{"file": "sonda-rcp.html", "prima": "Il server ha chiuso il canale senza rispondere ad ATTACCA.", "dopo": "The server closed the channel without answering ATTACCA."}
+{"file": "sonda-rcp.html", "prima": "Il server ha risposto 0x … invece di SESSIONE.", "dopo": "The server answered 0x … instead of SESSIONE."}
+{"file": "sonda-rcp.html", "prima": "Ammesso, sessione {nuova|ripresa}, tela … , desktop  (letto alla riga 338 da /^Ammesso/ — cambiato insieme in /^Admitted/)", "dopo": "Admitted, {new|resumed} session, canvas … , desktop "}
+{"file": "banchi/14-f1-forma.sh", "prima": "⛔ il parser Python non legge ew-resize in ", "dopo": "⛔ the Python parser cannot read ew-resize in "}
+{"file": "banchi/14-f1-forma.sh", "prima": "attesi dal parser Python: ew-resize ${L}x${A} punto ${X},${Y}", "dopo": "expected by the Python parser: ew-resize ${L}x${A} hotspot ${X},${Y}"}
+{"file": "banchi/14-f1-forma.sh", "prima": "echo \"----- registro del modulo\"", "dopo": "echo \"----- module log\""}
+{"file": "banchi/14-f1-forma.sh", "prima": "(cartella di lavoro: ", "dopo": "(working folder: "}
+{"file": "banchi/14-f1-forma.c", "prima": "uso: %s lavoro temi l a x y temi-guasti temi-vuoti temi-misti\\n", "dopo": "usage: %s work themes w h x y faulty-themes empty-themes mixed-themes\\n"}
+{"file": "banchi/14-f1-forma.c", "prima": "    ⛔ «%s»: pixel %02x%02x%02x%02x decodificato %d\\n", "dopo": "    ⛔ «%s»: pixel %02x%02x%02x%02x decoded %d\\n"}
+{"file": "banchi/14-f1-forma.c", "prima": "tema scritto (%s), %d file su %d riletti e decodificati / si'", "dopo": "theme written (%s), %d files of %d read back and decoded / yes"}
+{"file": "banchi/14-f1-forma.c", "prima": "colori distinti %s, distanza minima da nero/bianco 0x%02x, riconosciuti %ld su 16M opachi (attesi %d) / si'", "dopo": "distinct colours %s, minimum distance from black/white 0x%02x, recognised %ld of 16M opaque (expected %d) / yes"}
+{"file": "banchi/14-f1-forma.c", "prima": "«%s» dal tema reale: %s, %ux%u punto %d,%d (attesi %dx%d, %d,%d), %d pixel trasparenti e %d opachi / caricata / NON caricata", "dopo": "«%s» from the real theme: %s, %ux%u hotspot %d,%d (expected %dx%d, %d,%d), %d transparent pixels and %d opaque / loaded / NOT loaded"}
+{"file": "banchi/14-f1-forma.c", "prima": "«size_hor» con un breeze_cursors che ce l'ha ⇒ l'alias di Adwaita (ew-resize), non il disegno dell'altro tema", "dopo": "«size_hor» with a breeze_cursors that has it ⇒ the Adwaita alias (ew-resize), not the other theme's drawing"}
+{"file": "banchi/14-f1-forma.c", "prima": "banco 14-f1: come su KDE", "dopo": "bench 14-f1: as on KDE"}
+{"file": "banchi/14-f1-forma.c", "prima": "\"1x1 del colore di «ew-resize» ⇒ consegnata %ux%u punto %d,%d\"", "dopo": "\"1x1 of the colour of «ew-resize» ⇒ delivered %ux%u hotspot %d,%d\""}
+{"file": "banchi/14-f1-forma.c", "prima": "\"stesso colore al buffer dopo ⇒ nessun invio\"", "dopo": "\"same colour in the next buffer ⇒ nothing sent\""}
+{"file": "banchi/14-f1-forma.c", "prima": "\"32x32 uniforme dello stesso colore ⇒ invariato\"", "dopo": "\"uniform 32x32 of the same colour ⇒ unchanged\""}
+{"file": "banchi/14-f1-forma.c", "prima": "\"1x1 del colore di «text» ⇒ consegnata %ux%u punto %d,%d\"", "dopo": "\"1x1 of the colour of «text» ⇒ delivered %ux%u hotspot %d,%d\""}
+{"file": "banchi/14-f1-forma.c", "prima": "bitmap vera (il caso di GNOME) ⇒ consegnata com'e', il dizionario non scatta", "dopo": "real bitmap (the GNOME case) ⇒ delivered as it is, the dictionary does not trigger"}
+{"file": "banchi/14-f1-forma.c", "prima": "index.theme corrotto / temi assenti", "dopo": "corrupted index.theme / themes absent"}
+{"file": "banchi/14-f1-forma.c", "prima": "banco 14-f1: guasto", "dopo": "bench 14-f1: fault"}
+{"file": "banchi/14-f1-forma.c", "prima": "guasto «%s»: forme caricate %d (attese 0), consegnate dalla cucitura %d (attese 0: il client tiene la sua freccia)", "dopo": "fault «%s»: shapes loaded %d (expected 0), delivered by the seam %d (expected 0: the client keeps its arrow)"}
+{"file": "banchi/14-f1-forma.c", "prima": "%s — %d rossi\\n", "dopo": "%s — %d red\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "== 13-w1 — il primo fotogramma tirato da wlroots ==\\n", "dopo": "== 13-w1 — the first frame pulled from wlroots ==\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   %d fotogrammi, attesa %.1f s ciascuno\\n\\n\"", "dopo": "\"   %d frames, wait %.1f s each\\n\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"  ⛔ non ho potuto aprire la cattura: %s\\n\"", "dopo": "\"  ⛔ could not open the capture: %s\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   uscita «%s», %ux%u\\n\"", "dopo": "\"   output «%s», %ux%u\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   ⭐ strada della SCHEDA accesa\\n\"", "dopo": "\"   ⭐ CARD route on\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   ⛔ strada della SCHEDA NEGATA: %s — si misura la MEMORIA, e questa riga lo dice\\n", "dopo": "   ⛔ CARD route DENIED: %s — the MEMORY route is measured, and this line says so\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   misura chiesta %ux%u — esito della RICHIESTA: %s\\n / accettata / era già così / rifiutata / annullata (serial vecchio) / il compositore non sa cambiarla", "dopo": "   size asked %ux%u — outcome of the REQUEST: %s\\n / accepted / it already was / refused / cancelled (old serial) / the compositor cannot change it"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   ⭐ e l'uscita RILETTA è %ux%u: la misura è cambiata davvero\\n", "dopo": "   ⭐ and the output READ BACK is %ux%u: the size really changed\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   ⛔ ma l'uscita RILETTA è %ux%u: NON è cambiata\\n", "dopo": "   ⛔ but the output READ BACK is %ux%u: it did NOT change\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "  ⛔ fotogramma %d: %s — %s\\n / il compositore ha detto NO / scaduto / il filo è caduto / senza motivo", "dopo": "  ⛔ frame %d: %s — %s\\n / the compositor said NO / timed out / the wire dropped / no reason"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   primo fotogramma: %ux%u stride %u formato %s%s — %s\\n /  ⚠ Y INVERTITA / sulla SCHEDA (lastra lineare, fence estratta) / sulla SCHEDA (⚠ senza fence: implicita) / in MEMORIA", "dopo": "   first frame: %ux%u stride %u format %s%s — %s\\n /  ⚠ Y INVERTED / on the CARD (linear slab, fence extracted) / on the CARD (⚠ no fence: implicit) / in MEMORY"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "   ⭐ il CONTENUTO: %u colori distinti, %.1f%% dei campioni non è nero\\n", "dopo": "   ⭐ the CONTENT: %u distinct colours, %.1f%% of the samples are not black\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\\n   ultimo fotogramma: %u colori distinti, %.1f%% non nero ⇒ /tmp/13-w1.ppm\\n", "dopo": "\\n   last frame: %u distinct colours, %.1f%% not black ⇒ /tmp/13-w1.ppm\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\\n   chiesti … · presi … · falliti … · scaduti …\\n", "dopo": "\\n   asked … · taken … · failed … · timed out …\\n"}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   tempo per fotogramma: %.1f ms in media, %.1f ms il peggiore\\n\"", "dopo": "\"   time per frame: %.1f ms on average, %.1f ms the worst\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   strada: %d sulla SCHEDA, %d in MEMORIA\"", "dopo": "\"   route: %d on the CARD, %d in MEMORY\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\" — attesa della GPU dopo `ready` %.2f ms in media\"", "dopo": "\" — GPU wait after `ready` %.2f ms on average\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   riprese dopo una scadenza: %d (il fotogramma PENDENTE)\\n\"", "dopo": "\"   resumed after a timeout: %d (the PENDING frame)\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"   lastra tenuta in mano e riempita di nuovo: %d %s\\n\"", "dopo": "\"   slab kept in hand and filled again: %d %s\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"⛔⛔ labwc ha scritto in una lastra IN MANO\"", "dopo": "\"⛔⛔ labwc wrote into a slab IN HAND\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"\\n  ⛔⛔ ROSSO — una lastra in mano è stata riusata %d volte\\n\"", "dopo": "\"\\n  ⛔⛔ ROSSO — a slab in hand was reused %d times\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"\\n  ⛔⛔ ROSSO — %d fotogrammi su %d\\n\"", "dopo": "\"\\n  ⛔⛔ ROSSO — %d frames of %d\\n\""}
+{"file": "banchi/13-w1-un-fotogramma.c", "prima": "\"\\n  ⭐ VERDE — %d fotogrammi su %d, tirati uno per uno\\n\"", "dopo": "\"\\n  ⭐ VERDE — %d frames of %d, pulled one by one\\n\""}
+{"file": "banchi/12-c20-veri.py", "prima": "(nessuna risposta in %d s)", "dopo": "(no answer in %d s)"}
+{"file": "banchi/12-c20-veri.py", "prima": "nessun socket wayland / manca %s", "dopo": "no wayland socket / missing %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "accesa / non si e vista", "dopo": "started / it was not seen"}
+{"file": "banchi/12-c20-veri.py", "prima": "\"desktop scuro ma vivo (%s colori distinti): %s\"", "dopo": "\"dark but alive desktop (%s distinct colours): %s\""}
+{"file": "banchi/12-c20-veri.py", "prima": "\"⚠ misura non cambiata: %s\"", "dopo": "\"⚠ size not changed: %s\""}
+{"file": "banchi/12-c20-veri.py", "prima": "\"finestra %sx%s (dpr %s)\"", "dopo": "\"window %sx%s (dpr %s)\""}
+{"file": "banchi/12-c20-veri.py", "prima": "\"⚠ misura non riletta: %s\"", "dopo": "\"⚠ size not read back: %s\""}
+{"file": "banchi/12-c20-veri.py", "prima": "   palco: %s", "dopo": "   stage: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "la pagina non si apre: ", "dopo": "the page does not open: "}
+{"file": "banchi/12-c20-veri.py", "prima": "primo accesso: ", "dopo": "first login: "}
+{"file": "banchi/12-c20-veri.py", "prima": "   ⭐ primo accesso: %s", "dopo": "   ⭐ first login: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "primo accesso senza immagine: ", "dopo": "first login without image: "}
+{"file": "banchi/12-c20-veri.py", "prima": "non leggo il registro del server", "dopo": "I cannot read the server log"}
+{"file": "banchi/12-c20-veri.py", "prima": "il gesto «Esci» non ha risposto (codice %s): %s", "dopo": "the «Log out» gesture did not answer (code %s): %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "%d s dopo «Esci» il prodotto non ha dichiarato la sessione finita", "dopo": "%d s after «Log out» the product has not declared the session over"}
+{"file": "banchi/12-c20-veri.py", "prima": "   ⭐ «Esci»: dopo %.1f s il prodotto dice «%s»", "dopo": "   ⭐ «Log out»: after %.1f s the product says «%s»"}
+{"file": "banchi/12-c20-veri.py", "prima": "   %s la pagina dopo «Esci»: modulo %s · esito «%s» / VISIBILE / NON visibile", "dopo": "   %s the page after «Log out»: form %s · outcome «%s» / VISIBLE / NOT visible"}
+{"file": "banchi/12-c20-veri.py", "prima": "   ⚠ il modulo non c'e': ricarico, come farebbe l'utente", "dopo": "   ⚠ the form is not there: reloading, as the user would"}
+{"file": "banchi/12-c20-veri.py", "prima": "dopo la ricarica: ", "dopo": "after the reload: "}
+{"file": "banchi/12-c20-veri.py", "prima": "dopo «Esci» NON RIENTRA: %s", "dopo": "after «Log out» it does NOT GET BACK IN: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "   %s secondo accesso: %s", "dopo": "   %s second login: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "secondo accesso senza immagine: ", "dopo": "second login without image: "}
+{"file": "banchi/12-c20-veri.py", "prima": "la scena non si accende: %s", "dopo": "the scene does not start: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "   ⭐ scena accesa (%s)", "dopo": "   ⭐ scene started (%s)"}
+{"file": "banchi/12-c20-veri.py", "prima": "   luminanze (%d fotografie, %d fotogrammi dipinti): %s", "dopo": "   luminances (%d photographs, %d frames painted): %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "   ⚠ chiusura del browser: %s", "dopo": "   ⚠ closing the browser: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "help=\"quanto resta il primo accesso prima di «Esci»\"", "dopo": "help=\"how long the first login stays before «Log out»\""}
+{"file": "banchi/12-c20-veri.py", "prima": "help=\"secondi fra la sessione finita e il nuovo accesso\"", "dopo": "help=\"seconds between the session ending and the new login\""}
+{"file": "banchi/12-c20-veri.py", "prima": "⛔ non so come si dice «Esci» in %s ⇒ 3", "dopo": "⛔ I do not know how to say «Log out» in %s ⇒ 3"}
+{"file": "banchi/12-c20-veri.py", "prima": "⭐ 12-c20-veri · %s (%s) · %s · inquilino %s · browser %s · %s", "dopo": "⭐ 12-c20-veri · %s (%s) · %s · tenant %s · browser %s · %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "finestre vere", "dopo": "real windows"}
+{"file": "banchi/12-c20-veri.py", "prima": "   «Esci» si dice: %s", "dopo": "   «Log out» is said: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "⛔ non ho potuto creare %s: %s", "dopo": "⛔ I could not create %s: %s"}
+{"file": "banchi/12-c20-veri.py", "prima": "il banco e' caduto: %r", "dopo": "the bench fell over: %r"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ nessuno scatto (echo nello script remoto; letto da questo stesso file: \"⛔ nessuno scatto\" in out — cambiati insieme)", "dopo": "⛔ no snapshot"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ il flusso e' vuoto o non c'e': niente da decodificare", "dopo": "⛔ the stream is empty or missing: nothing to decode"}
+{"file": "banchi/10-f1-testimone.py", "prima": "nessun fotogramma (cercato nel registro di banchi/01-b3-cliente.py, già tradotto in «[vid]  ⛔ no frame taken from the wire»)", "dopo": "no frame"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO GUARDATO: nessun fotogramma e' arrivato dal filo.  ⚠ Non e' «lo schermo era nero»: e' che il palco non ha consegnato niente, o la sessione non si e' aperta", "dopo": "⛔ I DID NOT LOOK: no frame arrived from the wire.  ⚠ It is not \"the screen was black\": it is that the stage delivered nothing, or the session did not open"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO GUARDATO: %d fotogrammi sono arrivati ma `ffmpeg` non ha prodotto lo scatto", "dopo": "⛔ I DID NOT LOOK: %d frames arrived but `ffmpeg` did not produce the snapshot"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO GUARDATO: lo scatto non e' arrivato qui (%s)", "dopo": "⛔ I DID NOT LOOK: the snapshot did not arrive here (%s)"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO POTUTO CERTIFICARE: senza `numpy`/`Pillow` e senza `03-marca.py` accanto, la lettura dei pixel non si fa.\n   ⚠ E questo NON e' un verde: e' il terzo esito.", "dopo": "⛔ I COULD NOT CERTIFY: without `numpy`/`Pillow` and without `03-marca.py` next to me, the pixel reading cannot be done.\n   ⚠ And this is NOT a green: it is the third outcome."}
+{"file": "banchi/10-f1-testimone.py", "prima": "   %s %-42s atteso %-28s ottenuto %s", "dopo": "   %s %-42s expected %-28s got %s"}
+{"file": "banchi/10-f1-testimone.py", "prima": "  ⭐ SANO → ⛔ GUASTO → ⭐ RISANATO, su ciascun predicato\n", "dopo": "  ⭐ HEALTHY → ⛔ FAULTY → ⭐ HEALED, on each predicate\n"}
+{"file": "banchi/10-f1-testimone.py", "prima": "  P1 · il registro del cliente: quanti fotogrammi sono ARRIVATI", "dopo": "  P1 · the client log: how many frames ARRIVED"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   [vid]  12 fotogrammi (2 chiavi), 1920x1080, scritti in /x.264 (finto registro di 01-b3-cliente, allineato al suo testo inglese)", "dopo": "   [vid]  12 frames (2 keys), 1920x1080, written to /x.264"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   [vid]  ⛔ nessun fotogramma preso dal filo", "dopo": "   [vid]  ⛔ no frame taken from the wire"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   ⛔ il cliente e' morto prima di aprire la sessione", "dopo": "   ⛔ the client died before opening the session"}
+{"file": "banchi/10-f1-testimone.py", "prima": "sano: / guasto G1…G12 / risanato (nomi delle prove di --certifica)", "dopo": "healthy: / fault G1…G12 / healed"}
+{"file": "banchi/10-f1-testimone.py", "prima": "\n  P2 · lo scatto: «non l'ho letto» non e' «e' nero»", "dopo": "\n  P2 · the snapshot: «I did not read it» is not «it is black»"}
+{"file": "banchi/10-f1-testimone.py", "prima": "\n  P3 · il verdetto: ⛔ «un PNG che c'e'» non e' «un PNG che mostra»", "dopo": "\n  P3 · the verdict: ⛔ «a PNG that exists» is not «a PNG that shows»"}
+{"file": "banchi/10-f1-testimone.py", "prima": "\n  P4 · la taratura: la marca c'e', ed e' del MIO giro", "dopo": "\n  P4 · the calibration: the mark is there, and it is from MY round"}
+{"file": "banchi/10-f1-testimone.py", "prima": "  sano %d · guasto %d · risanato %d", "dopo": "  healthy %d · faulty %d · healed %d"}
+{"file": "banchi/10-f1-testimone.py", "prima": "  ⛔ NON CERTIFICATO: %s", "dopo": "  ⛔ NOT CERTIFIED: %s"}
+{"file": "banchi/10-f1-testimone.py", "prima": "  ✅ certificato: 4 predicati, 12 guasti innestati, tutti hanno morso", "dopo": "  ✅ certified: 4 predicates, 12 faults grafted, all of them bit"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ senza `--fuori` non so dove mettere l'immagine", "dopo": "⛔ without `--fuori` I do not know where to put the image"}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO GUARDATO — e questo non e' «lo schermo era nero».", "dopo": "⛔ I DID NOT LOOK — and this is not «the screen was black»."}
+{"file": "banchi/10-f1-testimone.py", "prima": "⛔ NON HO GIUDICATO: lo scatto c'e' (%s) ma non ho potuto leggerne i pixel (manca `numpy`/`Pillow` qui?).", "dopo": "⛔ I DID NOT JUDGE: the snapshot is there (%s) but I could not read its pixels (`numpy`/`Pillow` missing here?)."}
+{"file": "banchi/10-f1-testimone.py", "prima": "⭐ HO GUARDATO «%s» sulla porta %d", "dopo": "⭐ I LOOKED AT «%s» on port %d"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   dal filo   %d fotogrammi (%d chiavi), %s", "dopo": "   from the wire  %d frames (%d keys), %s"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   lo scatto  %s  (%dx%d)", "dopo": "   the snapshot   %s  (%dx%d)"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   il quadro  ⇒ %s   media %.1f · dev %.1f · colori %d · accesi %.4f · diversi dal fondo %.4f", "dopo": "   the picture    ⇒ %s   mean %.1f · dev %.1f · colours %d · lit %.4f · different from background %.4f"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   le soglie  luma nero %.0f · nero sotto %.4f di accesi · quasi nero sotto media %.1f · tinta unita sotto %.4f di diversi", "dopo": "   the thresholds black luma %.0f · black below %.4f lit · nearly black below mean %.1f · flat colour below %.4f different"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   ⛔ LA MARCA: non ho potuto leggerla (fotogramma troppo piccolo, o manca il lettore).  ⚠ Non e' «non c'e'»", "dopo": "   ⛔ THE MARK: I could not read it (frame too small, or the reader is missing).  ⚠ It is not «it is not there»"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   ⛔ LA MARCA NON C'E' — %s", "dopo": "   ⛔ THE MARK IS NOT THERE — %s"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   ⛔ LA MARCA C'E' MA NON E' MIA: giro 0x%08x, e i miei erano %s.  ⚠ Sto guardando il desktop di qualcun altro", "dopo": "   ⛔ THE MARK IS THERE BUT IT IS NOT MINE: round 0x%08x, and mine were %s.  ⚠ I am looking at someone else's desktop"}
+{"file": "banchi/10-f1-testimone.py", "prima": "   ⭐ LA MARCA C'E' ED E' MIA: giro «%s», disegno %d, contrasto %.3f  ⇒ **il testimone sta guardando QUEL desktop**", "dopo": "   ⭐ THE MARK IS THERE AND IT IS MINE: round «%s», drawing %d, contrast %.3f  ⇒ **the witness is looking at THAT desktop**"}
+{"file": "banchi/10-f1-testimone.py", "prima": "testi di --help (description, --fuori, --resta, --marca, --sveglia, --tutti, --json)", "dopo": "translated --help texts"}
+{"file": "banchi/12-client-veri.py", "prima": "la pagina si apre e il modulo c'e'", "dopo": "the page opens and the form is there"}
+{"file": "banchi/12-client-veri.py", "prima": "ammessa con utente e parola", "dopo": "admitted with user and password"}
+{"file": "banchi/12-client-veri.py", "prima": "primo fotogramma, pixel non degeneri", "dopo": "first frame, non-degenerate pixels"}
+{"file": "banchi/12-client-veri.py", "prima": "continuita' dei fotogrammi", "dopo": "continuity of the frames"}
+{"file": "banchi/12-client-veri.py", "prima": "input: tasto e mouse/tocco arrivano al server", "dopo": "input: key and mouse/touch reach the server"}
+{"file": "banchi/12-client-veri.py", "prima": "errori JavaScript e di rete", "dopo": "JavaScript and network errors"}
+{"file": "banchi/12-client-veri.py", "prima": "riconnessione: ricarica, rientra, primo fotogramma", "dopo": "reconnection: reload, log in again, first frame"}
+{"file": "banchi/12-client-veri.py", "prima": "PIL non c'e': non posso leggere la fotografia", "dopo": "PIL is not there: I cannot read the photograph"}
+{"file": "banchi/12-client-veri.py", "prima": "fotografia illeggibile: %s", "dopo": "unreadable photograph: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "fotografia di %dx%d: la tela non ha misura", "dopo": "photograph of %dx%d: the canvas has no size"}
+{"file": "banchi/12-client-veri.py", "prima": "%dx%d · colori distinti %d · dominante %.1f%% (%d,%d,%d) · ", "dopo": "%dx%d · distinct colours %d · dominant %.1f%% (%d,%d,%d) · "}
+{"file": "banchi/12-client-veri.py", "prima": "luminanza media %.0f dev %.1f", "dopo": "mean luminance %.0f dev %.1f"}
+{"file": "banchi/12-client-veri.py", "prima": "PIL non c'e'", "dopo": "PIL is not there"}
+{"file": "banchi/12-client-veri.py", "prima": "tela nera ⇒ %s (%s) · sfumatura ⇒ %s (%s)", "dopo": "black canvas ⇒ %s (%s) · gradient ⇒ %s (%s)"}
+{"file": "banchi/12-client-veri.py", "prima": "degenere", "dopo": "degenerate"}
+{"file": "banchi/12-client-veri.py", "prima": "⛔ NON degenere", "dopo": "⛔ NOT degenerate"}
+{"file": "banchi/12-client-veri.py", "prima": "non degenere", "dopo": "not degenerate"}
+{"file": "banchi/12-client-veri.py", "prima": "⛔ degenere", "dopo": "⛔ degenerate"}
+{"file": "banchi/12-client-veri.py", "prima": "eccezione nel banco: %s", "dopo": "exception in the bench: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "la tela non ha area visibile: %s", "dopo": "the canvas has no visible area: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "eccezione: %s", "dopo": "exception: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "rete: %s (%s)", "dopo": "network: %s (%s)"}
+{"file": "banchi/12-client-veri.py", "prima": "", "dopo": ""}
+{"file": "banchi/12-client-veri.py", "prima": "", "dopo": ""}
+{"file": "banchi/12-client-veri.py", "prima": "finestra vera", "dopo": "real window"}
+{"file": "banchi/12-client-veri.py", "prima": "HEADLESS — senza GPU, tutto in software", "dopo": "HEADLESS — no GPU, all in software"}
+{"file": "banchi/12-client-veri.py", "prima": "   ⏳ accendo l'emulatore «%s»…", "dopo": "   ⏳ starting the emulator «%s»…"}
+{"file": "banchi/12-client-veri.py", "prima": "l'emulatore non ha finito l'avvio in 300 s", "dopo": "the emulator did not finish booting in 300 s"}
+{"file": "banchi/12-client-veri.py", "prima": "%s %s su Android %s (emulatore «%s», GPU swiftshader: SOFTWARE)", "dopo": "%s %s on Android %s (emulator «%s», swiftshader GPU: SOFTWARE)"}
+{"file": "banchi/12-client-veri.py", "prima": "   ⏹ spengo l'emulatore (l'avevo acceso io)", "dopo": "   ⏹ stopping the emulator (I had started it)"}
+{"file": "banchi/12-client-veri.py", "prima": "finestra vera", "dopo": "real window"}
+{"file": "banchi/12-client-veri.py", "prima": "HEADLESS — senza GPU, tutto in software", "dopo": "HEADLESS — no GPU, all in software"}
+{"file": "banchi/12-client-veri.py", "prima": "uscita di Firefox illeggibile: %s", "dopo": "Firefox output unreadable: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "nessun --registro-cmd", "dopo": "no --registro-cmd"}
+{"file": "banchi/12-client-veri.py", "prima": "il comando del registro non ha risposto: %s", "dopo": "the log command did not answer: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "il comando del registro e' fallito (%d): %s", "dopo": "the log command failed (%d): %s"}
+{"file": "banchi/12-client-veri.py", "prima": "non ho potuto guardare: ", "dopo": "I could not look: "}
+{"file": "banchi/12-client-veri.py", "prima": "la pagina non si apre: %s", "dopo": "the page does not open: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "il modulo d'accesso non c'e' (url %s): «%s»", "dopo": "the login form is not there (url %s): «%s»"}
+{"file": "banchi/12-client-veri.py", "prima": "il modulo c'e' ma manca un campo: %s", "dopo": "the form is there but a field is missing: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "il modulo c'e' ma `window.REMOTIX` no: lo script si e' fermato", "dopo": "the form is there but `window.REMOTIX` is not: the script stopped"}
+{"file": "banchi/12-client-veri.py", "prima": "indirizzo BANNATO: «%s»", "dopo": "address BANNED: «%s»"}
+{"file": "banchi/12-client-veri.py", "prima": "il modulo c'e' ma non si vede (bannato=%s)", "dopo": "the form is there but cannot be seen (bannato=%s)"}
+{"file": "banchi/12-client-veri.py", "prima": "%s · modulo visibile%s", "dopo": "%s · form visible%s"}
+{"file": "banchi/12-client-veri.py", "prima": " ⚠ BANNATO", "dopo": " ⚠ BANNED"}
+{"file": "banchi/12-client-veri.py", "prima": "mandato", "dopo": "sent"}
+{"file": "banchi/12-client-veri.py", "prima": "non ho potuto compilare il modulo: %s", "dopo": "I could not fill in the form: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "Ammesso", "dopo": "Admitted"}
+{"file": "banchi/12-client-veri.py", "prima": "la pagina dice: «%s»", "dopo": "the page says: «%s»"}
+{"file": "banchi/12-client-veri.py", "prima": "nessuna ammissione in %d s (esito «%s», sessione=%s); ultime ", "dopo": "no admission in %d s (outcome «%s», session=%s); last "}
+{"file": "banchi/12-client-veri.py", "prima": "righe della pagina: %s", "dopo": "lines of the page: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "CREDENZIALI mandate", "dopo": "CREDENZIALI sent"}
+{"file": "banchi/12-client-veri.py", "prima": "nessun fotogramma dipinto in %d s (dipinti=%s, consegnati=%s, ", "dopo": "no frame painted in %d s (dipinti=%s, consegnati=%s, "}
+{"file": "banchi/12-client-veri.py", "prima": "fotografia fallita: %s", "dopo": "photograph failed: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d in %.1f s, ma i pixel non li ho potuti ", "dopo": "dipinti=%d in %.1f s, but I could not look at the "}
+{"file": "banchi/12-client-veri.py", "prima": "guardare: %s", "dopo": "pixels: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d, pixel non giudicabili: %s", "dopo": "dipinti=%d, pixels not judgeable: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d ma la tela e' DEGENERE fino al tetto di %d s ", "dopo": "dipinti=%d but the canvas is DEGENERATE up to the ceiling of %d s "}
+{"file": "banchi/12-client-veri.py", "prima": "(%d fotografie): %s", "dopo": "(%d photographs): %s"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d · primo fotogramma a %.1f s, desktop NON degenere a ", "dopo": "dipinti=%d · first frame at %.1f s, desktop NOT degenerate at "}
+{"file": "banchi/12-client-veri.py", "prima": "%.1f s dopo %d fotografie degeneri (la prima: %s) · %s", "dopo": "%.1f s after %d degenerate photographs (the first: %s) · %s"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d dopo %.1f s · %s", "dopo": "dipinti=%d after %.1f s · %s"}
+{"file": "banchi/12-client-veri.py", "prima": "movimento fallito: %s", "dopo": "move failed: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "%d fotogrammi nuovi in %.0f s (scena «%s»%s)", "dopo": "%d new frames in %.0f s (scene «%s»%s)"}
+{"file": "banchi/12-client-veri.py", "prima": ", %d movimenti", "dopo": ", %d moves"}
+{"file": "banchi/12-client-veri.py", "prima": " · ⛔ e la sessione non c'e' piu': «%s»", "dopo": " · ⛔ and the session is gone: «%s»"}
+{"file": "banchi/12-client-veri.py", "prima": " · su una scena ferma zero e' possibile: dichiara ", "dopo": " · on a still scene zero is possible: declare "}
+{"file": "banchi/12-client-veri.py", "prima": "`--scena viva` o `muovi` per un giudizio", "dopo": "`--scena viva` or `muovi` for a judgement"}
+{"file": "banchi/12-client-veri.py", "prima": " · ⚠ il cursore lo disegna la pagina: se il desktop ", "dopo": " · ⚠ the cursor is drawn by the page: if the desktop "}
+{"file": "banchi/12-client-veri.py", "prima": "non reagisce al passaggio, rifai con una scena viva", "dopo": "does not react to the passage, redo it with a live scene"}
+{"file": "banchi/12-client-veri.py", "prima": "la pagina non ha la cucitura dell'input (`REMOTIX_INPUT` e' null)", "dopo": "the page has no input seam (`REMOTIX_INPUT` is null)"}
+{"file": "banchi/12-client-veri.py", "prima": "non sono riuscito ad avvolgere `REMOTIX_INPUT.manda` (%s)", "dopo": "I could not wrap `REMOTIX_INPUT.manda` (%s)"}
+{"file": "banchi/12-client-veri.py", "prima": "tocco", "dopo": "tap"}
+{"file": "banchi/12-client-veri.py", "prima": "trascinamento", "dopo": "drag"}
+{"file": "banchi/12-client-veri.py", "prima": "movimento", "dopo": "move"}
+{"file": "banchi/12-client-veri.py", "prima": "clic", "dopo": "click"}
+{"file": "banchi/12-client-veri.py", "prima": "tasto %s", "dopo": "key %s"}
+{"file": "banchi/12-client-veri.py", "prima": "l'iniezione non e' partita (%s): %s", "dopo": "the injection did not start (%s): %s"}
+{"file": "banchi/12-client-veri.py", "prima": "la pagina ha spedito %s", "dopo": "the page sent %s"}
+{"file": "banchi/12-client-veri.py", "prima": "NIENTE", "dopo": "NOTHING"}
+{"file": "banchi/12-client-veri.py", "prima": "%s dopo %s: l'input non esce dalla pagina", "dopo": "%s after %s: the input does not leave the page"}
+{"file": "banchi/12-client-veri.py", "prima": "il tasto", "dopo": "the key"}
+{"file": "banchi/12-client-veri.py", "prima": "il mouse/tocco", "dopo": "the mouse/touch"}
+{"file": "banchi/12-client-veri.py", "prima": "nessun --registro-cmd", "dopo": "no --registro-cmd"}
+{"file": "banchi/12-client-veri.py", "prima": "%s · nel registro del server %d righe d'input nuove (tasto %d, ", "dopo": "%s · in the server log %d new input lines (key %d, "}
+{"file": "banchi/12-client-veri.py", "prima": " · ⛔ la pagina NON ha spedito ", "dopo": " · ⛔ the page did NOT send "}
+{"file": "banchi/12-client-veri.py", "prima": " e ", "dopo": " and "}
+{"file": "banchi/12-client-veri.py", "prima": " · ⛔ al server non e' arrivato ", "dopo": " · ⛔ the server did not receive "}
+{"file": "banchi/12-client-veri.py", "prima": " e ", "dopo": " and "}
+{"file": "banchi/12-client-veri.py", "prima": "il tasto", "dopo": "the key"}
+{"file": "banchi/12-client-veri.py", "prima": "il mouse", "dopo": "the mouse"}
+{"file": "banchi/12-client-veri.py", "prima": "%s · id piu' alto tornato in un fotogramma: %s (%s)", "dopo": "%s · highest id returned in a frame: %s (%s)"}
+{"file": "banchi/12-client-veri.py", "prima": "nessuno", "dopo": "none"}
+{"file": "banchi/12-client-veri.py", "prima": " · ⛔ la pagina NON ha spedito ", "dopo": " · ⛔ the page did NOT send "}
+{"file": "banchi/12-client-veri.py", "prima": " e ", "dopo": " and "}
+{"file": "banchi/12-client-veri.py", "prima": " ⇒ il server li ha applicati tutti fino a %d", "dopo": " ⇒ the server applied all of them up to %d"}
+{"file": "banchi/12-client-veri.py", "prima": " · nessun ritorno che copra tutti e due: senza registro ", "dopo": " · no return covering both: without the server "}
+{"file": "banchi/12-client-veri.py", "prima": "del server non posso dire se sono arrivati", "dopo": "log I cannot tell whether they arrived"}
+{"file": "banchi/12-client-veri.py", "prima": "         rete  %s", "dopo": "         net   %s"}
+{"file": "banchi/12-client-veri.py", "prima": "%d errori JS · %d di rete · %d righe «⛔» dichiarate dalla pagina", "dopo": "%d JS errors · %d network · %d «⛔» lines declared by the page"}
+{"file": "banchi/12-client-veri.py", "prima": " · ⚠ ne' raccoglitore nella pagina ne' uscita: ", "dopo": " · ⚠ neither collector in the page nor output: "}
+{"file": "banchi/12-client-veri.py", "prima": " (le «⛔» della pagina sono elencate, non giudicate)", "dopo": " (the page's «⛔» are listed, not judged)"}
+{"file": "banchi/12-client-veri.py", "prima": "nessun --registro-cmd", "dopo": "no --registro-cmd"}
+{"file": "banchi/12-client-veri.py", "prima": "registro del server: ", "dopo": "server log: "}
+{"file": "banchi/12-client-veri.py", "prima": "(a) non e' verde", "dopo": "(a) is not green"}
+{"file": "banchi/12-client-veri.py", "prima": "(b) non e' verde", "dopo": "(b) is not green"}
+{"file": "banchi/12-client-veri.py", "prima": "nessun primo fotogramma", "dopo": "no first frame"}
+{"file": "banchi/12-client-veri.py", "prima": "la sessione non c'e'", "dopo": "the session is not there"}
+{"file": "banchi/12-client-veri.py", "prima": "dopo la ricarica: ", "dopo": "after the reload: "}
+{"file": "banchi/12-client-veri.py", "prima": "dopo la ricarica non rientra: ", "dopo": "after the reload it does not get back in: "}
+{"file": "banchi/12-client-veri.py", "prima": "rientrata (%s) · %s", "dopo": "back in (%s) · %s"}
+{"file": "banchi/12-client-veri.py", "prima": "la ricarica non e' riuscita dal banco: %s", "dopo": "the bench could not reload: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "il modulo non ricompare in %d s", "dopo": "the form does not reappear in %d s"}
+{"file": "banchi/12-client-veri.py", "prima": "   ⛔ il browser non si e' acceso: %s", "dopo": "   ⛔ the browser did not start: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "browser non acceso: %s", "dopo": "browser not started: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "   palco: %s", "dopo": "   stage: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "   ⛔ il banco e' caduto: %s", "dopo": "   ⛔ the bench fell over: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "il banco e' caduto: %s", "dopo": "the bench fell over: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "non guardato: prova di certificazione", "dopo": "not looked at: certification test"}
+{"file": "banchi/12-client-veri.py", "prima": "   nota: %s", "dopo": "   note: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "   ⚠ chiusura del browser: %s", "dopo": "   ⚠ closing the browser: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "\n══════════ CERTIFICAZIONE DEL BANCO ══════════", "dopo": "\n══════════ CERTIFICATION OF THE BENCH ══════════"}
+{"file": "banchi/12-client-veri.py", "prima": "   giudice dei pixel: %s — %s", "dopo": "   pixel judge: %s — %s"}
+{"file": "banchi/12-client-veri.py", "prima": "⭐ sa dire degenere", "dopo": "⭐ can say degenerate"}
+{"file": "banchi/12-client-veri.py", "prima": "⛔ CIECO", "dopo": "⛔ BLIND"}
+{"file": "banchi/12-client-veri.py", "prima": " · certifica: porta vuota", "dopo": " · certify: empty port"}
+{"file": "banchi/12-client-veri.py", "prima": "%s porta vuota", "dopo": "%s empty port"}
+{"file": "banchi/12-client-veri.py", "prima": "(a)=%s — atteso 1", "dopo": "(a)=%s — expected 1"}
+{"file": "banchi/12-client-veri.py", "prima": " · certifica: parola sbagliata", "dopo": " · certify: wrong password"}
+{"file": "banchi/12-client-veri.py", "prima": "%s parola sbagliata", "dopo": "%s wrong password"}
+{"file": "banchi/12-client-veri.py", "prima": "(a)=%s: senza pagina non si certifica (b)", "dopo": "(a)=%s: without the page (b) cannot be certified"}
+{"file": "banchi/12-client-veri.py", "prima": "%s parola sbagliata", "dopo": "%s wrong password"}
+{"file": "banchi/12-client-veri.py", "prima": "(b)=1 per rifiuto: %s", "dopo": "(b)=1 by refusal: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "%s parola sbagliata", "dopo": "%s wrong password"}
+{"file": "banchi/12-client-veri.py", "prima": "(b)=1 ma NON per rifiuto (il server non ha risposto alle ", "dopo": "(b)=1 but NOT by refusal (the server did not answer the "}
+{"file": "banchi/12-client-veri.py", "prima": "credenziali): %s", "dopo": "credentials): %s"}
+{"file": "banchi/12-client-veri.py", "prima": "%s parola sbagliata", "dopo": "%s wrong password"}
+{"file": "banchi/12-client-veri.py", "prima": "⛔ (b)=%s con la parola sbagliata: banco CIECO", "dopo": "⛔ (b)=%s with the wrong password: bench BLIND"}
+{"file": "banchi/12-client-veri.py", "prima": "\n══════════ ESITO DELLA CERTIFICAZIONE ══════════", "dopo": "\n══════════ OUTCOME OF THE CERTIFICATION ══════════"}
+{"file": "banchi/12-client-veri.py", "prima": "⭐ certificato", "dopo": "⭐ certified"}
+{"file": "banchi/12-client-veri.py", "prima": "⛔ NON certificato", "dopo": "⛔ NOT certified"}
+{"file": "banchi/12-client-veri.py", "prima": "⚠ 3 non certificabile qui", "dopo": "⚠ 3 not certifiable here"}
+{"file": "banchi/12-client-veri.py", "prima": "o nella variabile REMOTIX_PAROLA", "dopo": "or in the REMOTIX_PAROLA variable"}
+{"file": "banchi/12-client-veri.py", "prima": "finestra vera invece di headless (Firefox e Chrome)", "dopo": "real window instead of headless (Firefox and Chrome)"}
+{"file": "banchi/12-client-veri.py", "prima": "tetto per l'ammissione e per il primo fotogramma", "dopo": "ceiling for admission and for the first frame"}
+{"file": "banchi/12-client-veri.py", "prima": "il tasto da premere: Control da solo non fa niente sul desktop", "dopo": "the key to press: Control alone does nothing on the desktop"}
+{"file": "banchi/12-client-veri.py", "prima": "dove cliccare/toccare, in frazioni della tela", "dopo": "where to click/tap, in fractions of the canvas"}
+{"file": "banchi/12-client-veri.py", "prima": "solo movimento, niente clic (desktop con cose delicate)", "dopo": "movement only, no click (desktop with delicate things)"}
+{"file": "banchi/12-client-veri.py", "prima": "comando shell che stampa il registro del server", "dopo": "shell command that prints the server log"}
+{"file": "banchi/12-client-veri.py", "prima": "misura della finestra dei browser, LxA", "dopo": "size of the browsers' window, WxH"}
+{"file": "banchi/12-client-veri.py", "prima": "cartella dove lasciare le fotografie", "dopo": "folder where to leave the photographs"}
+{"file": "banchi/12-client-veri.py", "prima": "non spegnere l'emulatore se l'ha acceso il banco", "dopo": "do not stop the emulator if the bench started it"}
+{"file": "banchi/12-client-veri.py", "prima": "browser sconosciuto: %s", "dopo": "unknown browser: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "serve --parola (o REMOTIX_PAROLA)", "dopo": "--parola is needed (or REMOTIX_PAROLA)"}
+{"file": "banchi/12-client-veri.py", "prima": "⭐ 12-client-veri · %s · utente %s · browser %s · tetto %d s · scena «%s» · %s", "dopo": "⭐ 12-client-veri · %s · user %s · browser %s · ceiling %d s · scene «%s» · %s"}
+{"file": "banchi/12-client-veri.py", "prima": "finestre vere", "dopo": "real windows"}
+{"file": "banchi/12-client-veri.py", "prima": "HEADLESS (senza GPU)", "dopo": "HEADLESS (no GPU)"}
+{"file": "banchi/12-client-veri.py", "prima": "\n══════════ VERDETTI ══════════", "dopo": "\n══════════ VERDICTS ══════════"}
+{"file": "banchi/12-client-veri.py", "prima": "manca il modulo", "dopo": "the form is missing"}
+{"file": "banchi/12-client-veri.py", "prima": "mandato (valore di ritorno di JS_ENTRA, confrontato in entra(): r != \"mandato\" — cambiati insieme)", "dopo": "sent"}
+{"file": "banchi/12-client-veri.py", "prima": "risorsa non caricata: ", "dopo": "resource not loaded: "}
+{"file": "banchi/12-client-veri.py", "prima": "eccezione: ", "dopo": "exception: "}
+{"file": "banchi/12-client-veri.py", "prima": "promessa rifiutata: ", "dopo": "rejected promise: "}
+{"file": "banchi/12-client-veri.py", "prima": "Ammesso (startswith sull'esito della pagina — ricerca nel prodotto, allineata a src/pagina.html «Admitted, »)", "dopo": "Admitted"}
+{"file": "banchi/12-client-veri.py", "prima": "CREDENZIALI mandate (ricerca nel registro della pagina, allineata a «CREDENZIALI sent (the password appears in no log)»)", "dopo": "CREDENZIALI sent"}
+{"file": "banchi/12-client-veri.py", "prima": "dipinti=%d in %.1f s, ma i pixel non li ho potuti guardare: %s  ⚠ LETTO DA banchi/15-suite/15-f022-orologi.py:183 («non li ho potuti guardare» in m) — fuori dal gruppo b05, da allineare", "dopo": "dipinti=%d in %.1f s, but I could not look at the pixels: %s"}
+{"file": "banchi/12-client-veri.py", "prima": "colori distinti %d (letto da banchi/12-c20-veri.py desktop_scuro_ma_vivo: re.search(r\"colori distinti (\\d+)\") — cambiati insieme)", "dopo": "distinct colours %d"}

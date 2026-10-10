@@ -1,0 +1,101 @@
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  ⛔ non si apre il file temporaneo per il registro\\n", "dopo": "  ⛔ the temporary file for the log cannot be opened\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  ⛔ non si dirotta stderr\\n", "dopo": "  ⛔ stderr cannot be redirected\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] formato negoziato: %ux%u  (negoziazione n.%d)\\n", "dopo": "      [stage] negotiated format: %ux%u  (negotiation no.%d)\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] nodo %u, regge da %ux%u a %ux%u\\n", "dopo": "      [stage] node %u, holds from %ux%u to %ux%u\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] ⛔ non si apre\\n", "dopo": "      [stage] ⛔ does not open\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] ripropone %s %ux%u..%ux%u → %d\\n", "dopo": "      [stage] re-offers %s %ux%u..%ux%u → %d\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "FISSA", "dopo": "FIXED"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "intervallo", "dopo": "range"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  \\033[1;31mNO\\033[0m  %s\\n        atteso: %s\\n        visto:  %s\\n", "dopo": "  \\033[1;31mNO\\033[0m  %s\\n        expected: %s\\n        seen:     %s\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "1 controllo positivo: flusso sano ⇒ ZERO, e lo strumento vede", "dopo": "1 positive control: healthy stream ⇒ ZERO, and the instrument sees"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "il palco finto si apre", "dopo": "the fake stage opens"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ il palco finto NON si e' aperto", "dopo": "⛔ the fake stage did NOT open"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "la cattura si aggancia al nodo del palco finto", "dopo": "the capture attaches to the fake stage's node"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ cattura_avvia ha detto no", "dopo": "⛔ cattura_avvia said no"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "lo strumento %s la riga d'avvio; negoziata %ux%u; cattura_prendi → %s (%s); riga MISURA DIVERGENTE: %s", "dopo": "the instrument %s the start line; negotiated %ux%u; cattura_prendi → %s (%s); DIVERGENT SIZE line: %s"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "VEDE", "dopo": "SEES"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON vede", "dopo": "⛔ does NOT see"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "FATTA", "dopo": "DONE"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ GUASTO", "dopo": "⛔ FAULT"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "senza errore", "dopo": "no error"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ LA NOMINA", "dopo": "⛔ NAMES IT"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "assente", "dopo": "absent"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "riga d'avvio VISTA · negoziata 1920x1080 · cattura_prendi = ZERO (NON guasto) · nessuna MISURA DIVERGENTE", "dopo": "start line SEEN · negotiated 1920x1080 · cattura_prendi = ZERO (NOT fault) · no DIVERGENT SIZE"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "2 il flusso morto si SA, e quanto costa saperlo", "dopo": "2 the dead stream is KNOWN, and what knowing it costs"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "senza dettaglio", "dopo": "no detail"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "ridimensiona → %d (0 = «chiesta»); poi %d giri da 8 ms (%d ZERO) e il GUASTO arriva a %.1f ms; il messaggio %s lo stato: «%s»", "dopo": "resize → %d (0 = «requested»); then %d rounds of 8 ms (%d ZERO) and the FAULT arrives at %.1f ms; the message %s the state: «%s»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "NOMINA", "dopo": "NAMES"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON nomina", "dopo": "⛔ does NOT name"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⇒ per SMENTIRE la proposta 1: GUASTO entro 100 ms (non un timeout) e un messaggio che nomina lo stato «error»", "dopo": "⇒ to DISPROVE proposal 1: FAULT within 100 ms (not a timeout) and a message that names the state «error»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "3 il rimontaggio alla misura che ha ucciso il palco", "dopo": "3 the remount at the size that killed the stage"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "%d `cattura_avvia()` su %d hanno RESTITUITO un palco a 2560x1440 (misura che il palco non regge), ma solo %d erano ancora VIVI 300 ms dopo: %s.  Il rifiuto: «%s»", "dopo": "%d `cattura_avvia()` out of %d RETURNED a stage at 2560x1440 (a size the stage cannot hold), but only %d were still ALIVE 300 ms later: %s.  The refusal: «%s»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ nessuno ⇒ `figlio.c:6299` riproverebbe la stessa misura all'infinito, con l'attesa CORTA di `:6385`", "dopo": "⛔ none ⇒ `figlio.c:6299` would retry the same size forever, with the SHORT wait of `:6385`"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⭐ qualcuno regge ⇒ non e' un cappio", "dopo": "⭐ some hold ⇒ it is not a noose"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "0 palchi vivi su 3 (⇒ il ciclo di `figlio.c:6299` non ne esce da solo), e `cattura_avvia()` che RIESCE lo stesso", "dopo": "0 live stages out of 3 (⇒ the loop of `figlio.c:6299` does not get out by itself), and `cattura_avvia()` that SUCCEEDS all the same"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "4 due ridimensionamenti incatenati ⇒ MISURA DIVERGENTE?", "dopo": "4 two chained resizes ⇒ DIVERGENT SIZE?"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [catena] chieste A=%ux%u poi B=%ux%u ⇒ «%s»\\n", "dopo": "      [chain] requested A=%ux%u then B=%ux%u ⇒ «%s»\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [catena] ritardo %5d us: %d colpi su %d\\n", "dopo": "      [chain] delay %5d us: %d hits out of %d\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "su %d catene di due ridimensionamenti (8 ritardi spazzolati) la riga MISURA DIVERGENTE %s%d; chiesta finale %ux%u, negoziata %ux%u", "dopo": "over %d chains of two resizes (8 delays swept) the DIVERGENT SIZE line %s%d; final requested %ux%u, negotiated %ux%u"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⭐ E' COMPARSA ⇒ la proposta 3 e' SMENTITA, il ramo si raggiunge dall'esterno — primo colpo col ritardo di us ", "dopo": "⭐ APPEARED ⇒ proposal 3 is DISPROVED, the branch is reachable from outside — first hit with the delay in us "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON compare ⇒ la proposta 3 REGGE; catene spese: ", "dopo": "⛔ does NOT appear ⇒ proposal 3 HOLDS; chains spent: "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "la riga COMPARE (⇒ proposta 3 smentita)", "dopo": "the line APPEARS (⇒ proposal 3 disproved)"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "5 il produttore prova a IMPORRE la sua misura", "dopo": "5 the producer tries to IMPOSE its size"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "il palco ha preteso 1600x900 fissi; chiesta %ux%u, negoziata %ux%u; flusso %s; MISURA DIVERGENTE: %s", "dopo": "the stage demanded a fixed 1600x900; requested %ux%u, negotiated %ux%u; stream %s; DIVERGENT SIZE: %s"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ vivo", "dopo": "⛔ alive"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ COMPARSA ⇒ il produttore IMPONE, e il caso 4 ha una seconda sorgente", "dopo": "⛔ APPEARED ⇒ the producer IMPOSES, and case 4 has a second source"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "assente ⇒ il rettangolo FISSO regge: o quel valore, o l'insieme vuoto", "dopo": "absent ⇒ the FIXED rectangle holds: either that value, or the empty set"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "negoziata ancora 1920x1080 · flusso in error · NESSUNA divergenza (⇒ il produttore non puo' imporre)", "dopo": "still negotiated 1920x1080 · stream in error · NO divergence (⇒ the producer cannot impose)"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "6 i due accessori bastano a ricostruire la divergenza", "dopo": "6 the two accessors are enough to reconstruct the divergence"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "prima: chiesta %ux%u, negoziata %s%ux%u.  Dopo la richiesta che il palco non regge: chiesta %ux%u, negoziata %s%ux%u ⇒ la divergenza %s dai due accessori pubblici, e senza il campo privato", "dopo": "before: requested %ux%u, negotiated %s%ux%u.  After the request the stage cannot hold: requested %ux%u, negotiated %s%ux%u ⇒ the divergence %s from the two public accessors, and without the private field"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ IGNOTA ", "dopo": "⛔ UNKNOWN "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ IGNOTA ", "dopo": "⛔ UNKNOWN "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "SI LEGGE", "dopo": "CAN BE READ"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ non si legge", "dopo": "⛔ cannot be read"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "chiesta 2560x1440 · negoziata 1920x1080, tutt'e due leggibili da `cattura.h` senza un terzo accessore", "dopo": "requested 2560x1440 · negotiated 1920x1080, both readable from `cattura.h` without a third accessor"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "\\n== 06-b5: le tre proposte di 06-b40, messe alla prova per SMENTIRLE ==\\n\\n", "dopo": "\\n== 06-b5: the three proposals of 06-b40, put to the test to DISPROVE them ==\\n\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "\\n  passati %d, falliti %d\\n\\n", "dopo": "\\n  passed %d, failed %d\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ IL CANARINO: sta sul tasto 30 in tutte e tre. Se NON arriva, la prova non e' rossa: e' INVALIDA (il fuoco non e' sul testimone)", "dopo": "⭐ THE CANARY: it is on key 30 in all three. If it does NOT arrive, the test is not red: it is INVALID (the focus is not on the witness)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ la prova cattiva: 44 su it/us, 21 su de — con la keymap vecchia su de esce una «y», cioe' un carattere DIVERSO", "dopo": "⛔ the nasty test: 44 on it/us, 21 on de — with the old keymap on de a «y» comes out, that is a DIFFERENT character"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della z", "dopo": "the twin of the z"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ esiste su it, NON esiste su us: qui il guasto e' un'ASSENZA", "dopo": "⛔ exists on it, does NOT exist on us: here the fault is an ABSENCE"}
+{"file": "banchi/06-b34-tabella.c", "prima": "chiocciola", "dopo": "at-sign"}
+{"file": "banchi/06-b34-tabella.c", "prima": "si sposta: AltGr+ò su it, Maiusc+2 su us", "dopo": "moves: AltGr+ò on it, Shift+2 on us"}
+{"file": "banchi/06-b34-tabella.c", "prima": "come la è: solo su it", "dopo": "like the è: only on it"}
+{"file": "banchi/06-b34-tabella.c", "prima": "un segno che si sposta fra tutte e tre", "dopo": "a symbol that moves among all three"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "u-doppioacuto (ű)", "dopo": "u-double-acute (ű)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ hu: era RIFIUTATA dall'elenco fisso. Non esiste su it/us/de", "dopo": "⛔ hu: was REJECTED by the fixed list. Does not exist on it/us/de"}
+{"file": "banchi/06-b34-tabella.c", "prima": "o-doppioacuto (ő)", "dopo": "o-double-acute (ő)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della ű", "dopo": "the twin of the ű"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ hu e' QWERTZ come de: la z si sposta rispetto a it", "dopo": "⛔ hu is QWERTZ like de: the z moves relative to it"}
+{"file": "banchi/06-b34-tabella.c", "prima": "i-senza-punto (ı)", "dopo": "dotless-i (ı)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ tr: era RIFIUTATA. Il carattere piu' turco che c'e'", "dopo": "⛔ tr: was REJECTED. The most Turkish character there is"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della ı", "dopo": "the twin of the ı"}
+{"file": "banchi/06-b34-tabella.c", "prima": "alfa (α)", "dopo": "alpha (α)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ gr: era RIFIUTATA, e non e' nemmeno latina", "dopo": "⛔ gr: was REJECTED, and it is not even Latin"}
+{"file": "banchi/06-b34-tabella.c", "prima": "ji ucraina (ї)", "dopo": "Ukrainian yi (ї)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ ua: era RIFIUTATA. Cirillico, e diverso dal russo", "dopo": "⛔ ua: was REJECTED. Cyrillic, and different from Russian"}
+{"file": "banchi/06-b34-tabella.c", "prima": "u-doppioacuto (ű)", "dopo": "u-double-acute (ű)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ IL CONTROLLO NEGATIVO: su it NON deve esistere", "dopo": "⭐ THE NEGATIVE CONTROL: on it it must NOT exist"}
+{"file": "banchi/06-b34-tabella.c", "prima": "i-senza-punto (ı)", "dopo": "dotless-i (ı)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ il controllo negativo della ı", "dopo": "⭐ the negative control of the ı"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# 06-b34 caso 7 — l'atteso delle disposizioni ESOTICHE\\n", "dopo": "# 06-b34 case 7 — the expected result of the EXOTIC layouts\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# calcolato da `src/tastiera.c`, cioe' dal prodotto (CODER.md §3.3 e §3.6)\\n\\n", "dopo": "# computed by `src/tastiera.c`, that is by the product (CODER.md §3.3 and §3.6)\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "%-4s U+%04X %-20s ⛔ DISPOSIZIONE NON APERTA: %s\\n", "dopo": "%-4s U+%04X %-20s ⛔ LAYOUT NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": " canarino=U+%04X", "dopo": " canary=U+%04X"}
+{"file": "banchi/06-b34-tabella.c", "prima": " ⛔ NESSUN CANARINO", "dopo": " ⛔ NO CANARY"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ %s NON APERTA: %s\\n", "dopo": "⛔ %s NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# 06-b34 — l'atteso, calcolato da `src/tastiera.c` (CODER.md §3.3)\\n", "dopo": "# 06-b34 — the expected result, computed by `src/tastiera.c` (CODER.md §3.3)\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# posizione = i codici EVDEV che il prodotto manderebbe, in ordine\\n", "dopo": "# position = the EVDEV codes the product would send, in order\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# «-» = NON producibile: RCP.md §7.3 obbliga a non mandare NIENTE\\n\\n", "dopo": "# «-» = NOT producible: RCP.md §7.3 requires sending NOTHING\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "DISPOSIZIONE %-9s ⛔ NON APERTA: %s\\n", "dopo": "LAYOUT %-9s ⛔ NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "DISPOSIZIONE %-9s (%s)\\n", "dopo": "LAYOUT %-9s (%s)\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# le ragioni delle prove\\n", "dopo": "# the reasons for the tests\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ manca «%s»: il banco non si costruisce.\\n", "dopo": "  ⛔ «%s» is missing: the bench cannot be built.\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  --  pipewire %s · glib %s · carico %s\\n", "dopo": "  --  pipewire %s · glib %s · load %s\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ nessun `pipewire` in ascolto per questo utente: il palco finto\\n", "dopo": "  ⛔ no `pipewire` listening for this user: the fake stage\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "     non ha dove registrarsi, e un rosso qui non sarebbe del prodotto.\\n", "dopo": "     has nowhere to register, and a red here would not come from the product.\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ non compila\\n", "dopo": "  ⛔ does not compile\\n"}

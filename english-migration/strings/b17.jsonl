@@ -1,0 +1,924 @@
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "il browser non si e' acceso: %s", "dopo": "the browser did not start: %s"}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "la pagina non si apre: ", "dopo": "the page does not open: "}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "non entra: ", "dopo": "does not get in: "}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "non presa: %s", "dopo": "not taken: %s"}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "desktop visto: ", "dopo": "desktop seen: "}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "entra, ma il desktop non si vede: ", "dopo": "gets in, but the desktop is not visible: "}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "il banco e' caduto: %r", "dopo": "the bench crashed: %r"}
+{"file": "banchi/17-distro/17-t1c-browser.py", "prima": "serve --parola (o REMOTIX_PAROLA)", "dopo": "--parola is required (or REMOTIX_PAROLA)"}
+{"file": "banchi/17-distro/17-t1c-guarda.sh", "prima": "⛔ nessun nodo Intel: non accendo labwc sulla scheda sbagliata", "dopo": "⛔ no Intel node: not starting labwc on the wrong GPU"}
+{"file": "banchi/17-distro/17-t1c-guarda.sh", "prima": "⛔ labwc non ha aperto un socket", "dopo": "⛔ labwc did not open a socket"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "==> $m: copio binario ($q), pagina e file di sistema", "dopo": "==> $m: copying binary ($q), page and system files"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "==> $m: dipendenze di esecuzione", "dopo": "==> $m: runtime dependencies"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "⛔ librerie mancanti:", "dopo": "⛔ missing libraries:"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "==> $m: prodotto e PAM", "dopo": "==> $m: product and PAM"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "==> $m: utente di prova", "dopo": "==> $m: test user"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "==> $m: REMOTIX come servizio sulla 7447", "dopo": "==> $m: REMOTIX as a service on 7447"}
+{"file": "banchi/17-distro/17-t3-gruppi.sh", "prima": "remotix: nessun nodo /dev/dri su questa macchina: nessun gruppo della scheda da dare", "dopo": "remotix: no /dev/dri node on this machine: no GPU group to give"}
+{"file": "banchi/17-distro/17-t3-gruppi.sh", "prima": "remotix: $p iscritto a $g (la sessione remota non ha il seat: senza, pagina bianca)", "dopo": "remotix: $p enrolled in $g (the remote session has no seat: without it, blank page)"}
+{"file": "banchi/17-distro/17-t3-gruppi.sh", "prima": "remotix: ⛔ $p NON iscritto a $g (gpasswd ha rifiutato)", "dopo": "remotix: ⛔ $p NOT enrolled in $g (gpasswd refused)"}
+{"file": "banchi/17-distro/17-t3-gruppi.sh", "prima": "remotix: $p tolto da $g (ce l'aveva messo il passo del motore)", "dopo": "remotix: $p removed from $g (the engine step had put it there)"}
+{"file": "banchi/17-distro/17-t3-gruppi.sh", "prima": "uso: $0 iscrivi|annulla", "dopo": "usage: $0 iscrivi|annulla"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "servizio: ", "dopo": "service: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "in ascolto sulla 7447: ", "dopo": "listening on 7447: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "gruppi della scheda: ", "dopo": "GPU groups: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "cinture attive: ", "dopo": "active belts: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "logind in vigore: ", "dopo": "logind in force: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "  sleep in vigore: ", "dopo": "  sleep in force: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "== systemctl start remotix (a mano): deve rifiutare con RX-INST-001", "dopo": "== systemctl start remotix (by hand): must refuse with RX-INST-001"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "dopo start: ", "dopo": "after start: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "  RX-INST-001 nel registro: ", "dopo": "  RX-INST-001 in the log: "}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "passo sconosciuto: $passo", "dopo": "unknown step: $passo"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "solo famiglia .deb: $m", "dopo": ".deb family only: $m"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "   impronta «$1»: ", "dopo": "   fingerprint \\\"$1\\\": "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": " righe", "dopo": " lines"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> spengo e torno a «cliente»", "dopo": "==> powering off and back to \\\"cliente\\\""}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "⛔ $m e' gia' accesa: la usa qualcun altro", "dopo": "⛔ $m is already running: someone else is using it"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "⛔ gia' 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> $m: foto «cliente», accensione", "dopo": "==> $m: \\\"cliente\\\" snapshot, power on"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> la persona «prova», gia' nel gruppo del nodo card (R33)", "dopo": "==> the person \\\"prova\\\", already in the card node's group (R33)"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "   uscita $? — ", "dopo": "   exit $? — "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "abilitato: ", "dopo": "enabled: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "attivo: ", "dopo": "active: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "in ascolto sulla 7447: ", "dopo": "listening on 7447: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "cintura tasti in vigore: ", "dopo": "key belt in force: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "cintura sospensione in vigore: ", "dopo": "suspend belt in force: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "regola polkit in vigore: ", "dopo": "polkit rule in force: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "librerie mancanti (da prova, ambiente vuoto): ", "dopo": "missing libraries (as prova, empty environment): "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> R40: systemctl start remotix, senza installatore", "dopo": "==> R40: systemctl start remotix, without installer"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "avvii: ", "dopo": "starts: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": " ripartenze", "dopo": " restarts"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> ⚠ I PASSI DEL MOTORE, fatti A MANO (T4-T5): gruppi, cinture, marca, enable --now", "dopo": "==> ⚠ THE ENGINE STEPS, done BY HAND (T4-T5): groups, belts, marker, enable --now"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "gruppo: prova + ", "dopo": "group: prova + "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "cartella nuova: ", "dopo": "new folder: "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "cinture: 3 file in /etc", "dopo": "belts: 3 files in /etc"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "marca: installazione-confermata", "dopo": "marker: installazione-confermata"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> il browser vero (Chrome) su 127.0.0.1:$PRX", "dopo": "==> the real browser (Chrome) on 127.0.0.1:$PRX"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> reinstallazione (R5)", "dopo": "==> reinstall (R5)"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": " righe diverse fra «browser» e «reinstallato»", "dopo": " lines differ between \\\"browser\\\" and \\\"reinstallato\\\""}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "==> ⚠ i passi del motore DISFATTI a mano, poi apt-get purge remotix (R6)", "dopo": "==> ⚠ the engine steps UNDONE by hand, then apt-get purge remotix (R6)"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "tolta la cartella ", "dopo": "removed folder "}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "disfatto: prova - $g", "dopo": "undone: prova - $g"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": " righe diverse", "dopo": " lines differ"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "macchina non della famiglia .rpm: $m", "dopo": "machine not of the .rpm family: $m"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "abilitato: ", "dopo": "enabled: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "  acceso: ", "dopo": "  running: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "in ascolto sulla 7447: ", "dopo": "listening on 7447: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "cinture attive: ", "dopo": "active belts: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "gruppi: ", "dopo": "groups: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "firewalld remotix aperto: ", "dopo": "firewalld remotix open: "}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "firewalld: spento", "dopo": "firewalld: off"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "firewalld acceso: il servizio remotix si apre (D6, col consenso: qui a mano)", "dopo": "firewalld on: the remotix service is opened (D6, with consent: here by hand)"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "firewalld: remotix richiuso", "dopo": "firewalld: remotix closed again"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "passo sconosciuto: $passo", "dopo": "unknown step: $passo"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "==> spengo e torno a «$FOTO»", "dopo": "==> powering off and back to \\\"$FOTO\\\""}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "⛔ $m e' gia' accesa", "dopo": "⛔ $m is already running"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "⛔ gia' 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "==> $m: foto «$FOTO», accensione", "dopo": "==> $m: \\\"$FOTO\\\" snapshot, power on"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "   impronta «$1»: ", "dopo": " fingerprint \\\"$1\\\": "}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "==> A. deposito EPEL + htop + file + unità + firewall, poi un gruppo impossibile: si annulla tutto", "dopo": "==> A. EPEL repository + htop + file + unit + firewall, then an impossible group: everything is rolled back"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "   verifica: uscita $?", "dopo": "   check: exit $?"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "   piano: uscita $? — ", "dopo": "   plan: exit $? — "}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": " passi", "dopo": " steps"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "   applica: uscita $?", "dopo": "   apply: exit $?"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": " righe diverse fra «prima» e «dopo l'annullamento»:", "dopo": " lines differ between \\\"before\\\" and \\\"after the rollback\\\":"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "==> B. lo stesso piano con un utente vero: CONFERMATA, e la porta aperta da fuori", "dopo": "==> B. the same plan with a real user: CONFIRMED, and the port open from outside"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "vive: ", "dopo": "runtime: "}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "permanente: ", "dopo": "permanent: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> spengo e torno com'era", "dopo": "==> powering off and back to how it was"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> la persona «prova», gia' nel gruppo del nodo card (R33); la sua chiave ssh per R43", "dopo": "==> the person \\\"prova\\\", already in the card node's group (R33); their ssh key for R43"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> il motore e il pacchetto nella VM", "dopo": "==> the engine and the package into the VM"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> 2. verifica, piano, approva, applica (da root)", "dopo": "==> 2. check, plan, approve, apply (as root)"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "bersaglio: ", "dopo": "target: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "   prima: ", "dopo": "   before: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "servizio: ", "dopo": "service: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "uscita", "dopo": "exit"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> 2b. certifica (sola lettura) sulla macchina sana", "dopo": "==> 2b. certify (read only) on the healthy machine"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> R29: la certificazione su una macchina guasta apposta non dice mai VERDE", "dopo": "==> R29: certification on a deliberately broken machine never says GREEN"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "-- guasto 1: la pila PAM di REMOTIX nomina un modulo che non c'è", "dopo": "-- fault 1: the REMOTIX PAM stack names a module that does not exist"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "-- guasto 2: niente libx264 ($L) e niente VA-API: la codifica non riesce", "dopo": "-- fault 2: no libx264 ($L) and no VA-API: encoding fails"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "-- guasto 3: il servizio spento da altri", "dopo": "-- fault 3: the service stopped by someone else"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "-- di nuovo com'era", "dopo": "-- back to how it was"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> 4. R43: una sessione ssh di «prova» con un orologio", "dopo": "==> 4. R43: an ssh session of \\\"prova\\\" with a clock"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "processi di prova: ", "dopo": "processes of prova: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "==> 5. disinstalla --purge, approva, applica", "dopo": "==> 5. uninstall --purge, approve, apply"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "orologio ssh: ", "dopo": "ssh clock: "}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "processi grafici nel gestore d utente: ", "dopo": "graphical processes in the user manager: "}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$m: non è nella matrice (bash 17-scatola.sh elenco)", "dopo": "$m: not in the matrix (bash 17-scatola.sh elenco)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "REMOTIX_SCHEDA=«$SCHEDA»: vale intel o amd", "dopo": "REMOTIX_SCHEDA=\\\"$SCHEDA\\\": must be intel or amd"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "${S:-ignoto}", "dopo": "${S:-unknown}"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "la scatola $NOME si è fermata", "dopo": "the box $NOME has stopped"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "ssh non risponde dopo $1 s", "dopo": "ssh not answering after $1 s"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "ssh risponde dopo ${t} s", "dopo": "ssh answers after ${t} s"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "manca $QUI/Contenitore.$FAM", "dopo": "missing $QUI/Contenitore.$FAM"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "manca $CHIAVE.pub", "dopo": "missing $CHIAVE.pub"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "costruzione di $m fallita", "dopo": "build of $m failed"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "immagine $IMMAGINE", "dopo": "image $IMMAGINE"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME buttata giù: ripartirà dall'immagine $IMMAGINE (la «foto» ${1:-cliente})", "dopo": "$NOME torn down: it will start again from the image $IMMAGINE (the \\\"snapshot\\\" ${1:-cliente})"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME è già accesa", "dopo": "$NOME is already running"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "manca l'immagine $IMMAGINE: bash 17-scatola.sh costruisci $m", "dopo": "missing image $IMMAGINE: bash 17-scatola.sh costruisci $m"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "già $accese scatole t17 accese (tetto $TETTO)", "dopo": "already $accese t17 boxes running (cap $TETTO)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "non trovo la scheda $SCHEDA (driver $DRV): non accendo su un'altra", "dopo": "cannot find the $SCHEDA GPU (driver $DRV): not starting on another one"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "podman run fallito", "dopo": "podman run failed"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME accesa (systemd: $S; scheda $CARD→card0, $RENDER→renderD128${VERI:+ e col nome vero}; ssh :$PSSH, REMOTIX :$PRX)", "dopo": "$NOME running (systemd: $S; GPU $CARD→card0, $RENDER→renderD128${VERI:+ and with the real name}; ssh :$PSSH, REMOTIX :$PRX)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME è già spenta", "dopo": "$NOME is already stopped"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME spenta (resta, spenta)", "dopo": "$NOME stopped (it stays, stopped)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "$NOME è spenta", "dopo": "$NOME is stopped"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "podman restart fallito", "dopo": "podman restart failed"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "la scatola non è ripartita (StartedAt invariato)", "dopo": "the box did not restart (StartedAt unchanged)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "riavviata: il contenitore è ripartito ($a0 → $a1; systemd $S)", "dopo": "rebooted: the container restarted ($a0 → $a1; systemd $S)"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "verbo sconosciuto: $verbo", "dopo": "unknown verb: $verbo"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "immagine", "dopo": "image"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": " · ACCESA", "dopo": " · RUNNING"}
+{"file": "banchi/17-distro/scatole/comune.sh", "prima": "t10: $N non c'e', la scheda non e' entrata", "dopo": "t10: $N is missing, the GPU did not come in"}
+{"file": "banchi/17-distro/scatole/comune.sh", "prima": "t10: $GR e' gia' $G", "dopo": "t10: $GR is already $G"}
+{"file": "banchi/17-distro/scatole/comune.sh", "prima": "t10: i file del gruppo $A hanno seguito il gruppo a 1$G", "dopo": "t10: the files of group $A followed the group to 1$G"}
+{"file": "banchi/17-distro/scatole/comune.sh", "prima": "t10: $GR allineato a $G (era di ${A:-nessuno})", "dopo": "t10: $GR aligned to $G (it belonged to ${A:-nobody})"}
+{"file": "banchi/17-distro/scatole/Contenitore.alma10", "prima": "DESKTOP=«$DESKTOP»: su Alma 10 solo gnome|kde", "dopo": "DESKTOP=\\\"$DESKTOP\\\": on Alma 10 only gnome|kde"}
+{"file": "banchi/17-distro/scatole/Contenitore.arch", "prima": "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt", "dopo": "DESKTOP=\\\"$DESKTOP\\\": gnome|kde|xfce|lxqt"}
+{"file": "banchi/17-distro/scatole/Contenitore.debian13", "prima": "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt", "dopo": "DESKTOP=\\\"$DESKTOP\\\": gnome|kde|xfce|lxqt"}
+{"file": "banchi/17-distro/scatole/Contenitore.fedora44", "prima": "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt", "dopo": "DESKTOP=\\\"$DESKTOP\\\": gnome|kde|xfce|lxqt"}
+{"file": "banchi/17-distro/scatole/Contenitore.suse", "prima": "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt", "dopo": "DESKTOP=\\\"$DESKTOP\\\": gnome|kde|xfce|lxqt"}
+{"file": "banchi/17-distro/scatole/Contenitore.ubuntu2604", "prima": "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt", "dopo": "DESKTOP=\\\"$DESKTOP\\\": gnome|kde|xfce|lxqt"}
+{"file": "banchi/17-distro/iso-risposte/arch.sh", "prima": "RX-ARCH: inizio $(date)", "dopo": "RX-ARCH: start $(date)"}
+{"file": "banchi/17-t2/catena.sh", "prima": "azione: $(head -1 azione.txt) alle $(sed -n 3p azione.txt)", "dopo": "action: $(head -1 azione.txt) at $(sed -n 3p azione.txt)"}
+{"file": "banchi/17-t2/catena.sh", "prima": "-- morti registrate (esclusi sleep e comandi del banco):", "dopo": "-- recorded deaths (excluding sleep and bench commands):"}
+{"file": "banchi/17-t2/t2box.py", "prima": "### processi dell'utente (uid %s) e del padre %s", "dopo": "### processes of the user (uid %s) and of the parent %s"}
+{"file": "banchi/17-t2/tabella.sh", "prima": "$r | azione $A | padre $p morto $mp | figlio $f morto $mf | altre morti utente dopo l'azione: $mu | compositore prima $comp_prima| al riattacco $comp_ri| ultimo battito terminale $(", "dopo": "$r | action $A | parent $p dead $mp | child $f dead $mf | other user deaths after the action: $mu | compositor before $comp_prima| at reattach $comp_ri| last terminal beat $("}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "serratura presa da: %s — aspetto", "dopo": "lock held by: %s — waiting"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "inquilino %s, entro col browser", "dopo": "tenant %s, entering with the browser"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "entra: %s %s", "dopo": "enter: %s %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "entra fallito: ", "dopo": "enter failed: "}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "spostato $p", "dopo": "moved $p"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "spostati in sessione: %s", "dopo": "moved into the session: %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "testimoni: %s", "dopo": "witnesses: %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "sorveglianza pronta", "dopo": "watch ready"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "padre %s figlio %s", "dopo": "parent %s child %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "AZIONE %s alle %s → %s", "dopo": "ACTION %s at %s → %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "servizio riacceso: rc %s", "dopo": "service restarted: rc %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "riattacco: %s %s", "dopo": "reattach: %s %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "ore al riattacco: %s", "dopo": "times at reattach: %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "ultime ore: %s", "dopo": "last times: %s"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "inquilino sgomberato", "dopo": "tenant cleared"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "fatto", "dopo": "done"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "=== %s: CADUTO %r", "dopo": "=== %s: CRASHED %r"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "servizio riacceso dopo la caduta: rc %s", "dopo": "service restarted after the crash: rc %s"}
+{"file": "banchi/17-t6/t6-giornale.sh", "prima": "--- pam e audit (servizio remotix):", "dopo": "--- pam and audit (remotix service):"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "⛔ $m è già accesa", "dopo": "⛔ $m is already running"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "⛔ già 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "zone in /etc: $(ls", "dopo": "zones in /etc: $(ls"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "$m ($foto): $(wc -l <", "dopo": "$m ($foto): $(wc -l <"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": " righe", "dopo": " lines"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== $m ($foto), pacchetti di $b: ", "dopo": "== $m ($foto), packages of $b: "}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== 0. prima: $PRIMA", "dopo": "== 0. before: $PRIMA"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== 1. il firewall prima", "dopo": "== 1. the firewall before"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== 2. installa", "dopo": "== 2. install"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== il firewall dopo l'installazione", "dopo": "== the firewall after installation"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== 3. R19/R20 (ora della VM: $INIZIO)", "dopo": "== 3. R19/R20 (VM time: $INIZIO)"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "-- la parola GIUSTA, da REMOTIX e da ssh:", "dopo": "-- the RIGHT password, from REMOTIX and from ssh:"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "-- faillock --reset, e di nuovo:", "dopo": "-- faillock --reset, and again:"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== 5. disinstalla", "dopo": "== 5. uninstall"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== il firewall dopo la disinstallazione", "dopo": "== the firewall after uninstallation"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "== i rifiuti SELinux di tutto il giro", "dopo": "== the SELinux denials of the whole round"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   giornale: ", "dopo": "   journal: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "⛔ $m è già accesa", "dopo": "⛔ $m is already running"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "⛔ già 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "assente", "dopo": "absent"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   verifica: uscita $?", "dopo": "   check: exit $?"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   piano: uscita $? — ", "dopo": " plan: exit $? — "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": " passi", "dopo": " steps"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   applica: uscita $?", "dopo": "   apply: exit $?"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "servizio: ", "dopo": "service: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   entra $u: uscita $? — ", "dopo": "   enter $u: exit $? — "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   rifiuti (tutti): ", "dopo": "   denials (all): "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": " — legati a remotix: ", "dopo": " — tied to remotix: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "sbloccato", "dopo": "unlocked"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "zona ", "dopo": "zone "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "vive: ", "dopo": "runtime: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "permanenti: ", "dopo": "permanent: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "ssh: dentro come $(id -un)", "dopo": "ssh: in as $(id -un)"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   ssh con la parola: uscita ${PIPESTATUS[0]}", "dopo": "   ssh with the password: exit ${PIPESTATUS[0]}"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   disinstalla: uscita $? — ", "dopo": "   uninstall: exit $? — "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "moduli remotix: ", "dopo": "remotix modules: "}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "   $m spenta, tornata a «$foto»", "dopo": "   $m powered off, back to \\\"$foto\\\""}
+{"file": "banchi/17-t6/t6-seguiti.sh", "prima": "== giornale", "dopo": "== journal"}
+{"file": "banchi/17-t6/t6-seguiti.sh", "prima": "== sessione", "dopo": "== session"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "prodotto %s: %s", "dopo": "product %s: %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "spostato $p", "dopo": "moved $p"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "testimoni di %s: %s", "dopo": "witnesses of %s: %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "%s (%s) entra: %s %s", "dopo": "%s (%s) enters: %s %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "%s: palco prima %s", "dopo": "%s: stage before %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "tolto $g", "dopo": "removed $g"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "gruppi della scheda tolti a %s: %s", "dopo": "GPU groups removed from %s: %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "ritrovati: %s", "dopo": "found again: %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "terzo utente %s: entra=%s — %s", "dopo": "third user %s: enters=%s — %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "nessuna risposta", "dopo": "no answer"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "%s rientra: %s in %s s — %s", "dopo": "%s re-enters: %s in %s s — %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "%s: palco %s → %s, persi %s", "dopo": "%s: stage %s → %s, lost %s"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "server non partito", "dopo": "server did not start"}
+{"file": "banchi/17-t7/t7-aggiorna.py", "prima": "entra fallito: %s %s", "dopo": "enter failed: %s %s"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "aspetto la serratura (ora: ", "dopo": "waiting for the lock (now: "}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "serratura PRESA", "dopo": "lock TAKEN"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "⛔ manca $P/remotix.4fb3287d", "dopo": "⛔ missing $P/remotix.4fb3287d"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "⛔ remotix.pam.prima non e' d1734958", "dopo": "⛔ remotix.pam.prima is not d1734958"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "binario nuovo: $NUOVO", "dopo": "new binary: $NUOVO"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "===== la suite corta col binario $NUOVO", "dopo": "===== the short suite with the binary $NUOVO"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "rimetto il binario 4fb3287d e il PAM d1734958", "dopo": "putting back the 4fb3287d binary and the d1734958 PAM"}
+{"file": "banchi/17-t7/t7-campagna.sh", "prima": "FINE — la serratura si libera", "dopo": "END — the lock is released"}
+{"file": "banchi/17-t7/t7-fine.sh", "prima": "rimetto il binario 4fb3287d e il PAM d1734958", "dopo": "putting back the 4fb3287d binary and the d1734958 PAM"}
+{"file": "banchi/17-t7/t7-fine.sh", "prima": "FINE — la serratura si libera", "dopo": "END — the lock is released"}
+{"file": "banchi/17-t7/t7-abbandono.py", "prima": "%s [%s abbandono] %s", "dopo": "%s [%s abandonment] %s"}
+{"file": "banchi/17-t7/t7-abbandono.py", "prima": "entra: %s %s", "dopo": "enter: %s %s"}
+{"file": "banchi/17-t7/t7-abbandono.py", "prima": "riavvio con --abbandono-s %d: %s", "dopo": "restart with --abbandono-s %d: %s"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "RAM=${RX_VM_RAM:-6144}   # MB; la prova di carico da 8 decide se scendere a 4096", "dopo": "RAM=${RX_VM_RAM:-6144}   # MB; the load test with 8 decides whether to go down to 4096"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "die() { printf '\\n\\033[1;31mERRORE\\033[0m %s\\n' \"$*\" >&2; exit 1; }", "dopo": "die() { printf '\\n\\033[1;31mERROR\\033[0m %s\\n' \"$*\" >&2; exit 1; }"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$k\" -lt 5 ] || die \"desktop sconosciuto: $de (uno di: $DESKTOP)\"", "dopo": "[ \"$k\" -lt 5 ] || die \"unknown desktop: $de (one of: $DESKTOP)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"$r\" ] || die \"distribuzione sconosciuta: $dis (vedi: 17-vm.sh elenco)\"", "dopo": "[ -n \"$r\" ] || die \"unknown distribution: $dis (see: 17-vm.sh elenco)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$de\" != nudo ] || die \"lo stato ISO vuole un desktop: <distro>-<desktop>-iso\"", "dopo": "[ \"$de\" != nudo ] || die \"the ISO state wants a desktop: <distro>-<desktop>-iso\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "VARS=\"$DIR/ovmf-vars.fd\"   # la NVRAM UEFI: c'e' solo per le macchine che la usano", "dopo": "VARS=\"$DIR/ovmf-vars.fd\"   # the UEFI NVRAM: it exists only for the machines that use it"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "AVVIA_EXTRA=()   # argomenti in piu' per QEMU in cmd_avvia (impronta: -snapshot)", "dopo": "AVVIA_EXTRA=()   # extra arguments for QEMU in cmd_avvia (impronta: -snapshot)"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"la VM si e' fermata (console: $CONSOLE)\"", "dopo": "accesa || die \"the VM has stopped (console: $CONSOLE)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$t\" -lt \"$1\" ] || die \"ssh non risponde dopo $1 s (console: $CONSOLE)\"", "dopo": "[ \"$t\" -lt \"$1\" ] || die \"ssh does not answer after $1 s (console: $CONSOLE)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"ssh risponde dopo ${t} s\"", "dopo": "ok \"ssh answers after ${t} s\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "printf '%-11s %-3s %-6s %-6s %s\\n' distro num ssh remotix stato", "dopo": "printf '%-11s %-3s %-6s %-6s %s\\n' distro num ssh remotix state"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -f \"$DISCO\" ] && s=\"creata\"", "dopo": "[ -f \"$DISCO\" ] && s=\"created\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa && s=\"ACCESA (pid $(cat \"$PID\"))\"", "dopo": "accesa && s=\"ON (pid $(cat \"$PID\"))\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: immagine ufficiale\"", "dopo": "log \"$D: official image\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"gia' scaricata ($(du -h \"$BASE_IMG\" | cut -f1))\"", "dopo": "ok \"already downloaded ($(du -h \"$BASE_IMG\" | cut -f1))\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"$f\" ] || die \"nessun file «$ESPR» in $URL\"", "dopo": "[ -n \"$f\" ] || die \"no file «$ESPR» in $URL\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "inf \"scarico $u\"", "dopo": "inf \"downloading $u\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "curl -fL -sS -o \"$BASE_IMG.parte\" \"$u\" || die \"scaricamento fallito\"", "dopo": "curl -fL -sS -o \"$BASE_IMG.parte\" \"$u\" || die \"download failed\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"scaricata ($(du -h \"$BASE_IMG\" | cut -f1)), sha256 $(sha256sum \"$BASE_IMG\" | cut -c1-16)…\"", "dopo": "ok \"downloaded ($(du -h \"$BASE_IMG\" | cut -f1)), sha256 $(sha256sum \"$BASE_IMG\" | cut -c1-16)…\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "final_message: \"rx-$D pronta dopo \\$UPTIME s\"", "dopo": "final_message: \"rx-$D ready after \\$UPTIME s\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "\"$DIR/seme/user-data\" \"$DIR/seme/meta-data\" || die \"seme.iso non costruito\"", "dopo": "\"$DIR/seme/user-data\" \"$DIR/seme/meta-data\" || die \"seme.iso not built\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: disco\"", "dopo": "log \"$D: disk\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"gia' presente ($(du -h \"$DISCO\" | cut -f1) usati)\"", "dopo": "ok \"already present ($(du -h \"$DISCO\" | cut -f1) used)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"sovrapposizione sull'immagine di base ($DISCO_GRANDE)\"", "dopo": "ok \"overlay on the base image ($DISCO_GRANDE)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "tiene=$(cat \"$DIR/chi\" 2>/dev/null || echo \"sconosciuto (acceso prima della guardia)\")", "dopo": "tiene=$(cat \"$DIR/chi\" 2>/dev/null || echo \"unknown (turned on before the guard)\")"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$D gia' accesa (pid $(cat \"$PID\"), da «$tiene»)\"", "dopo": "ok \"$D already on (pid $(cat \"$PID\"), by «$tiene»)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "die \"$D e' gia' accesa e la tiene «$tiene»: non la si usa in due (RX_VM_CONDIVIDI=1 solo se e' voluto)\"", "dopo": "die \"$D is already on and «$tiene» holds it: it is not used by two (RX_VM_CONDIVIDI=1 only if wanted)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -f \"$DISCO\" ] || die \"disco assente: 17-vm.sh crea $D\"", "dopo": "[ -f \"$DISCO\" ] || die \"disk missing: 17-vm.sh crea $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -w /dev/kvm ] || die \"/dev/kvm non scrivibile: usermod -aG kvm $USER e rientra\"", "dopo": "[ -w /dev/kvm ] || die \"/dev/kvm not writable: usermod -aG kvm $USER and log in again\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: avvio (ssh :$PORTA_SSH, REMOTIX :$PORTA_RX)\"", "dopo": "log \"$D: boot (ssh :$PORTA_SSH, REMOTIX :$PORTA_RX)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"qemu pid $(cat \"$PID\"), di «$CHI_IO»\"", "dopo": "ok \"qemu pid $(cat \"$PID\"), of «$CHI_IO»\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || { ok \"$D gia' spenta\"; return; }", "dopo": "accesa || { ok \"$D already off\"; return; }"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: spegnimento\"", "dopo": "log \"$D: shutdown\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "if accesa; then kill \"$(cat \"$PID\")\"; sleep 2; inf \"forzata dopo 90 s\"; fi", "dopo": "if accesa; then kill \"$(cat \"$PID\")\"; sleep 2; inf \"forced after 90 s\"; fi"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"spenta\"", "dopo": "ok \"off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"$D e' spenta\"", "dopo": "accesa || die \"$D is off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: riavvio vero dell'ospite\"", "dopo": "log \"$D: real reboot of the guest\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$b0\" != \"$b1\" ] || die \"boot_id invariato: la macchina non si e' riavviata\"", "dopo": "[ \"$b0\" != \"$b1\" ] || die \"boot_id unchanged: the machine did not reboot\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"riavviata (boot_id cambiato)\"", "dopo": "ok \"rebooted (boot_id changed)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"${1:-}\" ] || die \"manca il nome della foto\"", "dopo": "[ -n \"${1:-}\" ] || die \"the photo name is missing\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa && die \"prima: 17-vm.sh ferma $D (la foto si fa a macchina ferma)\"", "dopo": "accesa && die \"first: 17-vm.sh ferma $D (the photo is taken with the machine stopped)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"foto «$1» ($(du -h \"$DIR/foto-$1.qcow2\" | cut -f1))\"", "dopo": "ok \"photo «$1» ($(du -h \"$DIR/foto-$1.qcow2\" | cut -f1))\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -f \"$DIR/foto-${1:-}.qcow2\" ] || die \"nessuna foto «${1:-}» per $D\"", "dopo": "[ -f \"$DIR/foto-${1:-}.qcow2\" ] || die \"no photo «${1:-}» for $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa && die \"prima: 17-vm.sh ferma $D\"", "dopo": "accesa && die \"first: 17-vm.sh ferma $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$D e' tornata alla foto «$1»\"", "dopo": "ok \"$D is back to the photo «$1»\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa && die \"prima: 17-vm.sh ferma $D\"", "dopo": "accesa && die \"first: 17-vm.sh ferma $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "comando_desktop() {  # stampa il comando per $D0 (distro) e $DE", "dopo": "comando_desktop() {  # prints the command for $D0 (distro) and $DE"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$DE\" != nudo ] || die \"$D non ha desktop da vestire (usa <distro>-<desktop>)\"", "dopo": "[ \"$DE\" != nudo ] || die \"$D has no desktop to dress (use <distro>-<desktop>)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "c=$(comando_desktop \"${D%%-*}\") || die \"$D: questa distribuzione non offre $DE (fuori dalla matrice)\"", "dopo": "c=$(comando_desktop \"${D%%-*}\") || die \"$D: this distribution does not offer $DE (outside the matrix)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"$D e' spenta\"", "dopo": "accesa || die \"$D is off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: installo il desktop come il cliente\"", "dopo": "log \"$D: installing the desktop like the customer\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ssh_vm \"$c\" > \"$DIR/vesti.log\" 2>&1 || { tail -20 \"$DIR/vesti.log\"; die \"installazione del desktop fallita\"; }", "dopo": "ssh_vm \"$c\" > \"$DIR/vesti.log\" 2>&1 || { tail -20 \"$DIR/vesti.log\"; die \"desktop installation failed\"; }"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$DE installato in $((SECONDS - t0)) s ($(ssh_vm 'df -h / | tail -1' | awk '{print $3}') usati)\"", "dopo": "ok \"$DE installed in $((SECONDS - t0)) s ($(ssh_vm 'df -h / | tail -1' | awk '{print $3}') used)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"sessioni Wayland: $(ssh_vm 'ls /usr/share/wayland-sessions 2>/dev/null | tr \"", "dopo": "ok \"Wayland sessions: $(ssh_vm 'ls /usr/share/wayland-sessions 2>/dev/null | tr \""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"$r\" ] || die \"$DIS: nessuna ISO nella tabella\"", "dopo": "[ -n \"$r\" ] || die \"$DIS: no ISO in the table\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "scarica_iso() {  # -> ISO_FILE, scaricata e VERIFICATA con la sha256 del sito ufficiale", "dopo": "scarica_iso() {  # -> ISO_FILE, downloaded and VERIFIED with the sha256 of the official site"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: l'ISO ufficiale\"", "dopo": "log \"$D: the official ISO\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"$somme\" ] || die \"nessun file delle somme «$ISO_SOMME» in $ISO_URL\"", "dopo": "[ -n \"$somme\" ] || die \"no checksum file «$ISO_SOMME» in $ISO_URL\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"${nome:-}\" ] || die \"nessuna ISO «$ISO_ESPR» in $somme\"", "dopo": "[ -n \"${nome:-}\" ] || die \"no ISO «$ISO_ESPR» in $somme\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$nome (gia' verificata)\"; return", "dopo": "ok \"$nome (already verified)\"; return"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "inf \"scarico ${ISO_URL%/}/$nome\"", "dopo": "inf \"downloading ${ISO_URL%/}/$nome\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "curl -fL -sS -o \"$ISO_FILE.parte\" \"${ISO_URL%/}/$nome\" || die \"scaricamento fallito\"", "dopo": "curl -fL -sS -o \"$ISO_FILE.parte\" \"${ISO_URL%/}/$nome\" || die \"download failed\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "inf \"verifico la sha256 ($somme)\"", "dopo": "inf \"verifying the sha256 ($somme)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "mv \"$ISO_FILE\" \"$ISO_FILE.sbagliata\"; die \"$nome: sha256 diversa da quella ufficiale\"; }", "dopo": "mv \"$ISO_FILE\" \"$ISO_FILE.sbagliata\"; die \"$nome: sha256 different from the official one\"; }"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$nome, sha256 ${atteso:0:16}… come da $somme\"", "dopo": "ok \"$nome, sha256 ${atteso:0:16}… as per $somme\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "prepara_risposte() {  # le risposte dell'installatore in $DIR/risposte, servite in HTTP", "dopo": "prepara_risposte() {  # the installer's answers in $DIR/risposte, served over HTTP"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -f \"$RISPOSTE/$1\" ] || die \"manca $RISPOSTE/$1\"", "dopo": "[ -f \"$RISPOSTE/$1\" ] || die \"$RISPOSTE/$1 is missing\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "*) die \"$DIS: nessuna risposta scritta\" ;;", "dopo": "*) die \"$DIS: no written answers\" ;;"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"risposte: $(ls \"$r\" | tr '\\n' ' ')\"", "dopo": "ok \"answers: $(ls \"$r\" | tr '\\n' ' ')\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "comando_iso() {  # la riga del kernel dell'installatore (nessuna seriale: resterebbe nel sistema)", "dopo": "comando_iso() {  # the installer's kernel line (no serial: it would stay in the system)"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "monitor() {  # monitor <comando HMP>: senza socat, che sul server non c'e'", "dopo": "monitor() {  # monitor <HMP command>: without socat, which is not on the server"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "cmd_hmp() {  # un comando del monitor di QEMU (sendkey, mouse_move, mouse_button…)", "dopo": "cmd_hmp() {  # a QEMU monitor command (sendkey, mouse_move, mouse_button…)"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"$D e' spenta\"", "dopo": "accesa || die \"$D is off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"$D e' spenta\"", "dopo": "accesa || die \"$D is off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -s \"$f\" ] || die \"schermata non fatta\"", "dopo": "[ -s \"$f\" ] || die \"screenshot not taken\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"schermata: $f\"", "dopo": "ok \"screenshot: $f\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -n \"$ISO\" ] || die \"uso: 17-vm.sh da-iso <distro>-<desktop>-iso (una di: $ISO_MACCHINE)\"", "dopo": "[ -n \"$ISO\" ] || die \"usage: 17-vm.sh da-iso <distro>-<desktop>-iso (one of: $ISO_MACCHINE)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "case \" $ISO_MACCHINE \" in *\" ${D%-iso} \"*) ;; *) die \"${D%-iso}: nessuna risposta scritta (una di: $ISO_MACCHINE)\" ;; esac", "dopo": "case \" $ISO_MACCHINE \" in *\" ${D%-iso} \"*) ;; *) die \"${D%-iso}: no written answers (one of: $ISO_MACCHINE)\" ;; esac"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa && die \"$D e' accesa: prima 17-vm.sh ferma $D\"", "dopo": "accesa && die \"$D is on: first 17-vm.sh ferma $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -w /dev/kvm ] || die \"/dev/kvm non scrivibile: usermod -aG kvm $USER e rientra\"", "dopo": "[ -w /dev/kvm ] || die \"/dev/kvm not writable: usermod -aG kvm $USER and log in again\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: kernel e initrd dell'installatore, dall'ISO\"", "dopo": "log \"$D: kernel and initrd of the installer, from the ISO\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -s \"$DIR/iso-kernel\" ] && [ -s \"$DIR/iso-initrd\" ] || die \"kernel o initrd non trovati nell'ISO\"", "dopo": "[ -s \"$DIR/iso-kernel\" ] && [ -s \"$DIR/iso-initrd\" ] || die \"kernel or initrd not found in the ISO\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"etichetta «$ETICHETTA»\"", "dopo": "ok \"label «$ETICHETTA»\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "WEB=\"http://10.0.2.2:$PORTA_WEB\"     # 10.0.2.2 e' il server visto dalla rete utente di QEMU", "dopo": "WEB=\"http://10.0.2.2:$PORTA_WEB\"     # 10.0.2.2 is the server as seen from QEMU's user network"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"preparata senza accendere niente (RX_ISO_SOLO_PREPARA)\"; return", "dopo": "ok \"prepared without turning anything on (RX_ISO_SOLO_PREPARA)\"; return"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: disco NUOVO ($DISCO_GRANDE) e NVRAM UEFI nuova\"", "dopo": "log \"$D: NEW disk ($DISCO_GRANDE) and new UEFI NVRAM\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"fatto\"", "dopo": "ok \"done\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "kill -0 \"$web\" 2>/dev/null || die \"il servitore delle risposte non parte (porta $PORTA_WEB occupata? un altro da-iso?): $DIR/web.log\"", "dopo": "kill -0 \"$web\" 2>/dev/null || die \"the answer server does not start (port $PORTA_WEB busy? another da-iso?): $DIR/web.log\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: installazione automatica dall'ISO (senza schermo; per guardare: 17-vm.sh schermo $D)\"", "dopo": "log \"$D: automatic installation from the ISO (without screen; to watch: 17-vm.sh schermo $D)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"qemu pid $(cat \"$PID\"); a fine installazione l'installatore riavvia e QEMU esce (-no-reboot)\"", "dopo": "ok \"qemu pid $(cat \"$PID\"); at the end of installation the installer reboots and QEMU exits (-no-reboot)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ $((t % 600)) -ne 0 ] || inf \"$((t / 60)) min: disco $(du -h \"$DISCO\" | cut -f1)\"", "dopo": "[ $((t % 600)) -ne 0 ] || inf \"$((t / 60)) min: disk $(du -h \"$DISCO\" | cut -f1)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "kill \"$(cat \"$PID\")\"; die \"installazione non finita in $limite s (schermata: $DIR/schermo-scaduto.png)\"", "dopo": "kill \"$(cat \"$PID\")\"; die \"installation not finished in $limite s (screenshot: $DIR/schermo-scaduto.png)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "grep -q '\" 200 ' \"$DIR/web.log\" || die \"l'installatore non ha mai chiesto le risposte (web.log)\"", "dopo": "grep -q '\" 200 ' \"$DIR/web.log\" || die \"the installer never asked for the answers (web.log)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "! grep -q 'RX-ESITO: FALLITA' \"$CONSOLE\" || die \"l'installatore dice FALLITA (console: $CONSOLE)\"", "dopo": "! grep -q 'RX-ESITO: FALLITA' \"$CONSOLE\" || die \"the installer says FALLITA (console: $CONSOLE)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$(du -k \"$DISCO\" | cut -f1)\" -gt 1500000 ] || die \"disco quasi vuoto ($(du -h \"$DISCO\" | cut -f1)): installazione non fatta\"", "dopo": "[ \"$(du -k \"$DISCO\" | cut -f1)\" -gt 1500000 ] || die \"disk almost empty ($(du -h \"$DISCO\" | cut -f1)): installation not done\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"installazione finita in $((t_inst / 60)) min ($(du -h \"$DISCO\" | cut -f1) sul disco)\"", "dopo": "ok \"installation finished in $((t_inst / 60)) min ($(du -h \"$DISCO\" | cut -f1) on the disk)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: primo avvio dal disco installato\"", "dopo": "log \"$D: first boot from the installed disk\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ssh_vm 'sudo -n true' || die \"sudo senza parola non va\"", "dopo": "ssh_vm 'sudo -n true' || die \"passwordless sudo does not work\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"sudo senza parola\"", "dopo": "ok \"passwordless sudo\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"graphical.target raggiunto\"", "dopo": "ok \"graphical.target reached\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "inf \"⚠ graphical.target NON attivo\"", "dopo": "inf \"⚠ graphical.target NOT active\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "printf 'data %s\\nISO %s\\ninstallazione %s s\\nin tutto %s s\\n' \"$(date -Is)\" \\", "dopo": "printf 'date %s\\nISO %s\\ninstallation %s s\\nin all %s s\\n' \"$(date -Is)\" \\"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"$D pronta, foto «iso», in tutto $(((SECONDS - t0) / 60)) min\"", "dopo": "ok \"$D ready, photo «iso», in all $(((SECONDS - t0) / 60)) min\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v sistema \"$PRETTY_NAME, kernel $(uname -r)\"", "dopo": "v system \"$PRETTY_NAME, kernel $(uname -r)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v selinux \"$(if [ -r /sys/fs/selinux/enforce ]; then [ \"$(cat /sys/fs/selinux/enforce)\" = 1 ] && echo Enforcing || echo Permissive; else echo assente; fi)\"", "dopo": "v selinux \"$(if [ -r /sys/fs/selinux/enforce ]; then [ \"$(cat /sys/fs/selinux/enforce)\" = 1 ] && echo Enforcing || echo Permissive; else echo absent; fi)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v apparmor \"$(sudo aa-status --enabled 2>/dev/null && echo attivo || echo spento/assente)\"", "dopo": "v apparmor \"$(sudo aa-status --enabled 2>/dev/null && echo active || echo off/absent)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"altri firewall\" \"$(for u in ufw nftables iptables; do systemctl is-enabled $u >/dev/null 2>&1 && printf \"%s \" $u; done)\"", "dopo": "v \"other firewalls\" \"$(for u in ufw nftables iptables; do systemctl is-enabled $u >/dev/null 2>&1 && printf \"%s \" $u; done)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ \"$(systemctl is-active firewalld 2>/dev/null)\" = active ] && v \"  zona\" \"$(sudo firewall-cmd --get-default-zone): servizi [$(sudo firewall-cmd --list-services)] porte [$(sudo firewall-cmd --list-ports)]\"", "dopo": "[ \"$(systemctl is-active firewalld 2>/dev/null)\" = active ] && v \"  zone\" \"$(sudo firewall-cmd --get-default-zone): services [$(sudo firewall-cmd --list-services)] ports [$(sudo firewall-cmd --list-ports)]\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v ufw \"$(command -v ufw >/dev/null && sudo ufw status | head -1 || echo assente)\"", "dopo": "v ufw \"$(command -v ufw >/dev/null && sudo ufw status | head -1 || echo absent)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v nft \"$(sudo nft list ruleset 2>/dev/null | grep -c . ) righe di regole\"", "dopo": "v nft \"$(sudo nft list ruleset 2>/dev/null | grep -c . ) rule lines\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"accesso autom.\" \"$(grep -hsiE \"^[[:space:]]*(AutomaticLoginEnable|AutomaticLogin|User|Session)[[:space:]]*=|^DISPLAYMANAGER(_AUTOLOGIN)?=\" /etc/gdm/custom.conf /etc/gdm3/custom.conf /etc/gdm3/daemon.conf /etc/sddm.conf /etc/sddm.conf.d/* /etc/sysconfig/displaymanager 2>/dev/null | tr \"\\n\" \" \")\"", "dopo": "v \"autologin\" \"$(grep -hsiE \"^[[:space:]]*(AutomaticLoginEnable|AutomaticLogin|User|Session)[[:space:]]*=|^DISPLAYMANAGER(_AUTOLOGIN)?=\" /etc/gdm/custom.conf /etc/gdm3/custom.conf /etc/gdm3/daemon.conf /etc/sddm.conf /etc/sddm.conf.d/* /etc/sysconfig/displaymanager 2>/dev/null | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"sessioni wayland\" \"$(ls /usr/share/wayland-sessions 2>/dev/null | tr \"\\n\" \" \")\"", "dopo": "v \"wayland sessions\" \"$(ls /usr/share/wayland-sessions 2>/dev/null | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"sessioni x11\" \"$(ls /usr/share/xsessions 2>/dev/null | tr \"\\n\" \" \")\"", "dopo": "v \"x11 sessions\" \"$(ls /usr/share/xsessions 2>/dev/null | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"obiettivo\" \"$(systemctl get-default)\"", "dopo": "v \"target\" \"$(systemctl get-default)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v rete \"NetworkManager=$(systemctl is-active NetworkManager) networkd=$(systemctl is-active systemd-networkd) wicked=$(systemctl is-active wicked 2>/dev/null) netplan=[$(ls /etc/netplan 2>/dev/null | tr \"\\n\" \" \")]\"", "dopo": "v network \"NetworkManager=$(systemctl is-active NetworkManager) networkd=$(systemctl is-active systemd-networkd) wicked=$(systemctl is-active wicked 2>/dev/null) netplan=[$(ls /etc/netplan 2>/dev/null | tr \"\\n\" \" \")]\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v cloud-init \"$(command -v cloud-init >/dev/null && echo presente || echo assente)\"", "dopo": "v cloud-init \"$(command -v cloud-init >/dev/null && echo present || echo absent)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v pacchetti \"$( (dpkg-query -W 2>/dev/null || rpm -qa 2>/dev/null || pacman -Q 2>/dev/null) | wc -l)\"", "dopo": "v packages \"$( (dpkg-query -W 2>/dev/null || rpm -qa 2>/dev/null || pacman -Q 2>/dev/null) | wc -l)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v flatpak \"$(command -v flatpak >/dev/null && flatpak remotes --columns=name 2>/dev/null | tr \"\\n\" \" \" || echo assente)\"", "dopo": "v flatpak \"$(command -v flatpak >/dev/null && flatpak remotes --columns=name 2>/dev/null | tr \"\\n\" \" \" || echo absent)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v snap \"$(command -v snap >/dev/null && snap list 2>/dev/null | awk \"NR>1{print \\$1}\" | tr \"\\n\" \" \" || echo assente)\"", "dopo": "v snap \"$(command -v snap >/dev/null && snap list 2>/dev/null | awk \"NR>1{print \\$1}\" | tr \"\\n\" \" \" || echo absent)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v radice \"$(findmnt -no FSTYPE /) su $(findmnt -no SOURCE /)\"", "dopo": "v root-fs \"$(findmnt -no FSTYPE /) on $(findmnt -no SOURCE /)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v lingua \"$(localectl status | sed -n \"s/.*LANG=//p\") / tastiera $(localectl status | sed -n \"s/.*X11 Layout: //p\")\"", "dopo": "v language \"$(localectl status | sed -n \"s/.*LANG=//p\") / keyboard $(localectl status | sed -n \"s/.*X11 Layout: //p\")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v fuso \"$(timedatectl show -p Timezone --value)\"", "dopo": "v timezone \"$(timedatectl show -p Timezone --value)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"gruppi utente\" \"$(id -nG)\"", "dopo": "v \"user groups\" \"$(id -nG)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"utenti umani\" \"$(awk -F: \"\\$3>=1000 && \\$3<60000 {print \\$1}\" /etc/passwd | tr \"\\n\" \" \")\"", "dopo": "v \"human users\" \"$(awk -F: \"\\$3>=1000 && \\$3<60000 {print \\$1}\" /etc/passwd | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v faillock \"$(grep -lsr pam_faillock /etc/pam.d /usr/lib/pam.d 2>/dev/null | wc -l) file PAM\"", "dopo": "v faillock \"$(grep -lsr pam_faillock /etc/pam.d /usr/lib/pam.d 2>/dev/null | wc -l) PAM files\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"unita abilitate\" \"$(systemctl list-unit-files --state=enabled --no-legend | wc -l)\"", "dopo": "v \"enabled units\" \"$(systemctl list-unit-files --state=enabled --no-legend | wc -l)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v snapper \"$(command -v snapper >/dev/null && sudo snapper list-configs 2>/dev/null | awk \"NR>2{print \\$1}\" | tr \"\\n\" \" \" || echo assente) $(command -v snapper >/dev/null && echo \"($(sudo snapper list 2>/dev/null | grep -c \"^ *[0-9]\") foto)\")\"", "dopo": "v snapper \"$(command -v snapper >/dev/null && sudo snapper list-configs 2>/dev/null | awk \"NR>2{print \\$1}\" | tr \"\\n\" \" \" || echo absent) $(command -v snapper >/dev/null && echo \"($(sudo snapper list 2>/dev/null | grep -c \"^ *[0-9]\") snapshots)\")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v raccomandati \"apt=$(apt-config dump APT::Install-Recommends 2>/dev/null | sed -n \"s/.*\\\"\\(.*\\)\\\";/\\1/p\") zypp.onlyRequires=$(grep -hsE \"^[[:space:]]*solver.onlyRequires\" /etc/zypp/zypp.conf /etc/zypp/zypp.conf.d/* /usr/etc/zypp/zypp.conf /usr/etc/zypp/zypp.conf.d/* 2>/dev/null | tr -d \" \" | tr \"\\n\" \" \") dnf=$(grep -hs install_weak_deps /etc/dnf/dnf.conf /etc/dnf/libdnf5.conf.d/* 2>/dev/null | tr -d \" \" | tr \"\\n\" \" \")\"", "dopo": "v recommends \"apt=$(apt-config dump APT::Install-Recommends 2>/dev/null | sed -n \"s/.*\\\"\\(.*\\)\\\";/\\1/p\") zypp.onlyRequires=$(grep -hsE \"^[[:space:]]*solver.onlyRequires\" /etc/zypp/zypp.conf /etc/zypp/zypp.conf.d/* /usr/etc/zypp/zypp.conf /usr/etc/zypp/zypp.conf.d/* 2>/dev/null | tr -d \" \" | tr \"\\n\" \" \") dnf=$(grep -hs install_weak_deps /etc/dnf/dnf.conf /etc/dnf/libdnf5.conf.d/* 2>/dev/null | tr -d \" \" | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"gruppi video/render\" \"$(getent group video render | cut -d: -f1,4 | tr \"\\n\" \" \")\"", "dopo": "v \"video/render groups\" \"$(getent group video render | cut -d: -f1,4 | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "v \"in ascolto\" \"$(sudo ss -Hltnu 2>/dev/null | awk \"{print \\$1\\\"/\\\"\\$5}\" | sort -u | tr \"\\n\" \" \")\"", "dopo": "v \"listening\" \"$(sudo ss -Hltnu 2>/dev/null | awk \"{print \\$1\\\"/\\\"\\$5}\" | sort -u | tr \"\\n\" \" \")\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "[ -f \"$DIR/foto-$foto.qcow2\" ] || die \"nessuna foto «$foto» per $D\"", "dopo": "[ -f \"$DIR/foto-$foto.qcow2\" ] || die \"no photo «$foto» for $D\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "accesa || die \"$D e' spenta\"", "dopo": "accesa || die \"$D is off\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "log \"$D: impronta ($nome)\"", "dopo": "log \"$D: fingerprint ($nome)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "ok \"spenta (le modifiche di -snapshot se ne vanno con lei)\"", "dopo": "ok \"off (the -snapshot changes go away with it)\""}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "riga \"${1:?manca la distribuzione}\"; shift; \"cmd_$c\" \"$@\" ;;", "dopo": "riga \"${1:?the distribution is missing}\"; shift; \"cmd_$c\" \"$@\" ;;"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "riga \"${1:?manca la distribuzione}\"; shift; \"cmd_$c\" \"$@\" ;;", "dopo": "riga \"${1:?the distribution is missing}\"; shift; \"cmd_$c\" \"$@\" ;;"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "riga \"${1:?manca la distribuzione}\"; shift; ssh_vm \"$@\" ;;", "dopo": "riga \"${1:?the distribution is missing}\"; shift; ssh_vm \"$@\" ;;"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "riga \"${1:?manca la macchina (<distro>-<desktop>-iso)}\"; shift; cmd_da_iso \"$@\" ;;", "dopo": "riga \"${1:?the machine is missing (<distro>-<desktop>-iso)}\"; shift; cmd_da_iso \"$@\" ;;"}
+{"file": "banchi/17-distro/17-vm.sh", "prima": "riga \"${1:?manca la macchina}\"; shift; \"cmd_$c\" \"$@\" ;;", "dopo": "riga \"${1:?the machine is missing}\"; shift; \"cmd_$c\" \"$@\" ;;"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "m0=${1:?macchina}; stato=${2:-cliente}", "dopo": "m0=${1:?machine}; stato=${2:-cliente}"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "case $stato in cliente) m=$m0; foto=cliente ;; iso) m=$m0-iso; foto=iso ;; scatola) m=$m0-scatola; foto=cliente; SCATOLA=1 ;; *) echo \"stato: cliente | iso | scatola\"; exit 2 ;; esac", "dopo": "case $stato in cliente) m=$m0; foto=cliente ;; iso) m=$m0-iso; foto=iso ;; scatola) m=$m0-scatola; foto=cliente; SCATOLA=1 ;; *) echo \"state: cliente | iso | scatola\"; exit 2 ;; esac"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "*) echo \"macchina sconosciuta: $m0\"; exit 2;;", "dopo": "*) echo \"unknown machine: $m0\"; exit 2;;"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "PSSH=$((2300 + 10 * n + k)); PRX=$((7500 + 10 * n + k)); PG=7447   # PG: la porta DENTRO la macchina", "dopo": "PSSH=$((2300 + 10 * n + k)); PRX=$((7500 + 10 * n + k)); PG=7447   # PG: the port INSIDE the machine"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   impronta «$1»: $(wc -l <\"$E/impronta-$1.txt\") righe\"; }", "dopo": "say \"   fingerprint «$1»: $(wc -l <\"$E/impronta-$1.txt\") lines\"; }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> LASCIA=1: la VM $m resta ACCESA per la diagnosi (poi: 17-vm.sh ferma $m; torna $m $foto)\"", "dopo": "say \"==> LASCIA=1: the VM $m stays ON for diagnosis (then: 17-vm.sh ferma $m; torna $m $foto)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> spengo e rimetto la foto «$foto»\"", "dopo": "say \"==> shutting down and putting back the photo «$foto»\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if pgrep -f \"qemu-system.*-name rx-$m \" >/dev/null; then echo \"⛔ $m e' gia' accesa: la usa qualcun altro\"; exit 2; fi", "dopo": "if pgrep -f \"qemu-system.*-name rx-$m \" >/dev/null; then echo \"⛔ $m is already on: someone else is using it\"; exit 2; fi"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "[ \"$(pgrep -c '^qemu-system')\" -lt 4 ] || { echo \"⛔ gia' 4 VM accese\"; exit 2; }", "dopo": "[ \"$(pgrep -c '^qemu-system')\" -lt 4 ] || { echo \"⛔ already 4 VMs on\"; exit 2; }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "[ -s \"$x\" ] && [ -s \"$x.sha256\" ] || { echo \"⛔ manca $x (o il suo .sha256): i due .run di packaging/rilascio.sh\"; exit 2; }", "dopo": "[ -s \"$x\" ] && [ -s \"$x.sha256\" ] || { echo \"⛔ $x (or its .sha256) is missing: the two .run files of packaging/rilascio.sh\"; exit 2; }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 0. $m: foto «$foto», accensione (ssh :$PSSH, REMOTIX :$PRX${SCATOLA:+ — SCATOLA con la scheda vera})\"", "dopo": "say \"==> 0. $m: photo «$foto», power on (ssh :$PSSH, REMOTIX :$PRX${SCATOLA:+ — BOX with the real card})\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "RN=$(porta_run \"$RUN_N\") || { say \"⛔ il .run N non entra nella macchina\"; exit 1; }", "dopo": "RN=$(porta_run \"$RUN_N\") || { say \"⛔ the .run N does not get into the machine\"; exit 1; }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   check prima della preparazione: uscita $?; manca: $(sed -n '/^MISSING/,/^$/p' \"$E/check-prima.txt\" | grep -oE 'RX-[A-Z]+-[0-9]+[^[]*' | tr '\\n' ' ' | cut -c1-300)\"", "dopo": "say \"   check before the preparation: exit $?; missing: $(sed -n '/^MISSING/,/^$/p' \"$E/check-prima.txt\" | grep -oE 'RX-[A-Z]+-[0-9]+[^[]*' | tr '\\n' ' ' | cut -c1-300)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 0b. l'AMMINISTRATORE prepara la macchina (17-amministratore.sh: §10.36, REMOTIX non lo fa)\"", "dopo": "say \"==> 0b. the ADMINISTRATOR prepares the machine (17-amministratore.sh: §10.36, REMOTIX does not do it)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   check dopo la preparazione: uscita $u\"; sed -n '/^MISSING/,/^$/p' \"$E/check-dopo.txt\" | sed 's/^/   /' | tee -a \"$E/giro.log\"", "dopo": "say \"   check after the preparation: exit $u\"; sed -n '/^MISSING/,/^$/p' \"$E/check-dopo.txt\" | sed 's/^/   /' | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 1. impronta «prima»\"", "dopo": "say \"==> 1. «prima» fingerprint\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 2. installa come l'amministratore: sudo sh $RN install, e «y» alla domanda\"", "dopo": "say \"==> 2. install as the administrator: sudo sh $RN install, and «y» to the question\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   install: uscita $u in $(( $(date +%s) - T0 )) s — $OP\"", "dopo": "say \"   install: exit $u in $(( $(date +%s) - T0 )) s — $OP\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "vm \"echo \\\"pacchetti: \\$( (dpkg-query -W -f='\\${Package}=\\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\\n' ' ')\\\"", "dopo": "vm \"echo \\\"packages: \\$( (dpkg-query -W -f='\\${Package}=\\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\\n' ' ')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"servizio: \\$(systemctl is-enabled remotix 2>&1) \\$(systemctl is-active remotix 2>&1) · pid \\$(systemctl show -p MainPID --value remotix) · in ascolto $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ')\\\"", "dopo": "echo \\\"service: \\$(systemctl is-enabled remotix 2>&1) \\$(systemctl is-active remotix 2>&1) · pid \\$(systemctl show -p MainPID --value remotix) · listening on $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "B=\\$(ls /usr/libexec/remotix/remotix /usr/lib/remotix/remotix 2>/dev/null | head -1); echo \\\"R4 librerie non trovate (uid prova): \\$(sudo -u prova ldd \\$B 2>&1 | grep -c 'not found') · libav nel binario: \\$(ldd \\$B | grep -c 'libav\\|libswscale')\\\"", "dopo": "B=\\$(ls /usr/libexec/remotix/remotix /usr/lib/remotix/remotix 2>/dev/null | head -1); echo \\\"R4 libraries not found (uid prova): \\$(sudo -u prova ldd \\$B 2>&1 | grep -c 'not found') · libav in the binary: \\$(ldd \\$B | grep -c 'libav\\|libswscale')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo --- status:; sudo /usr/bin/remotix-install status 2>&1; echo \\\"certifica: uscita \\$?\\\"", "dopo": "echo --- status:; sudo /usr/bin/remotix-install status 2>&1; echo \\\"certify: exit \\$?\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo --- registro d avvio:; sudo journalctl -u remotix.service --no-pager -b 2>/dev/null | grep -aE 'codec offerti|OpenH264|pronto|RX-|⛔' | tail -6 | cut -c1-200\" >\"$E/installato.txt\" 2>&1", "dopo": "echo --- startup log:; sudo journalctl -u remotix.service --no-pager -b 2>/dev/null | grep -aE 'codec offered|OpenH264|ready|RX-|⛔' | tail -6 | cut -c1-200\" >\"$E/installato.txt\" 2>&1"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "grep -E 'pacchetti:|servizio:|R4 |Certification|certifica: uscita|codec offerti' \"$E/installato.txt\" | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\"", "dopo": "grep -E 'packages:|service:|R4 |Certification|certify: exit|codec offered' \"$E/installato.txt\" | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if [ $u = 0 ] && echo \"$OP\" | grep -qE 'CONFIRMED' && certifica_va \"$E/installato.txt\" && grep -q 'servizio: enabled active' \"$E/installato.txt\" && grep -q \"in ascolto $PG: [1-9]\" \"$E/installato.txt\" && grep -q 'non trovate (uid prova): 0' \"$E/installato.txt\"; then", "dopo": "if [ $u = 0 ] && echo \"$OP\" | grep -qE 'CONFIRMED' && certifica_va \"$E/installato.txt\" && grep -q 'service: enabled active' \"$E/installato.txt\" && grep -q \"listening on $PG: [1-9]\" \"$E/installato.txt\" && grep -q 'not found (uid prova): 0' \"$E/installato.txt\"; then"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 3. il browser vero (Chrome) su 127.0.0.1:$PRX\"", "dopo": "say \"==> 3. the real browser (Chrome) on 127.0.0.1:$PRX\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   uscita $? — $(grep -E '^T1C ' \"$E/browser-1.log\" | cut -c1-300)\"", "dopo": "say \"   exit $? — $(grep -E '^T1C ' \"$E/browser-1.log\" | cut -c1-300)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if [ -n \"$SCATOLA\" ]; then say \"==> 4. riavvio DEL CONTENITORE (il riavvio vero della macchina non si prova in scatola: §7.5), e si rientra\"", "dopo": "if [ -n \"$SCATOLA\" ]; then say \"==> 4. reboot OF THE CONTAINER (the real reboot of the machine is not tested in a box: §7.5), and back in\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "else say \"==> 4. riavvio vero della macchina (R15), e si rientra\"; fi", "dopo": "else say \"==> 4. real reboot of the machine (R15), and back in\"; fi"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "grep -E 'riavviata' \"$E/riavvia.log\" | tail -1 | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\"", "dopo": "grep -E 'rebooted' \"$E/riavvia.log\" | tail -1 | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "vm \"echo \\\"servizio: \\$(systemctl is-active remotix 2>&1) · in ascolto $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ')\\\"\" | tee -a \"$E/giro.log\"", "dopo": "vm \"echo \\\"service: \\$(systemctl is-active remotix 2>&1) · listening on $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ')\\\"\" | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   uscita $? — $(grep -E '^T1C ' \"$E/browser-2.log\" | cut -c1-300)\"", "dopo": "say \"   exit $? — $(grep -E '^T1C ' \"$E/browser-2.log\" | cut -c1-300)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 5. aggiorna a N+1: il .run N+1 rilanciato, un browser resta collegato\"", "dopo": "say \"==> 5. update to N+1: the .run N+1 run again, a browser stays connected\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "RN1=$(porta_run \"$RUN_N1\") || { say \"⛔ il .run N+1 non entra nella macchina\"; esito_passo aggiorna FAIL; exit 1; }", "dopo": "RN1=$(porta_run \"$RUN_N1\") || { say \"⛔ the .run N+1 does not get into the machine\"; esito_passo aggiorna FAIL; exit 1; }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if [ -f \"$E/browser-agg/pronto\" ]; then say \"   collegato: il desktop si vede\"; else say \"   ⛔ il browser non si collega: $(tail -2 \"$E/browser-agg.log\" | cut -c1-200)\"; esito_passo aggiorna FAIL; exit 1; fi", "dopo": "if [ -f \"$E/browser-agg/pronto\" ]; then say \"   connected: the desktop is visible\"; else say \"   ⛔ the browser does not connect: $(tail -2 \"$E/browser-agg.log\" | cut -c1-200)\"; esito_passo aggiorna FAIL; exit 1; fi"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   palco prima: $(tr '\\n' ' ' <\"$E/palco-prima.txt\")\"", "dopo": "say \"   stage before: $(tr '\\n' ' ' <\"$E/palco-prima.txt\")\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "vm \"cd /tmp && sha256sum -c $RN1.sha256 && printf 'y\\\\n' | sudo sh $RN1 install; echo \\\"aggiornamento: uscita \\$?\\\"", "dopo": "vm \"cd /tmp && sha256sum -c $RN1.sha256 && printf 'y\\\\n' | sudo sh $RN1 install; echo \\\"update: exit \\$?\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo --- remotix.service dal journal:", "dopo": "echo --- remotix.service from the journal:"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix 2>/dev/null | grep -aE 'RITROVAT|pronto|Stopp|Start|Reload|RX-' | tail -12 | cut -c1-200\" >\"$E/aggiorna.txt\" 2>&1", "dopo": "sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix 2>/dev/null | grep -aE 'FOUND AGAIN|ready|Stopp|Start|Reload|RX-' | tail -12 | cut -c1-200\" >\"$E/aggiorna.txt\" 2>&1"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   aggiornamento col .run N+1 in $(( $(date +%s) - T0 )) s: $(grep -E 'aggiornamento: uscita' \"$E/aggiorna.txt\")\"", "dopo": "say \"   update with the .run N+1 in $(( $(date +%s) - T0 )) s: $(grep -E 'update: exit' \"$E/aggiorna.txt\")\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "grep -aE 'remotix|RITROVAT' \"$E/aggiorna.txt\" | tail -8 | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\"", "dopo": "grep -aE 'remotix|FOUND AGAIN' \"$E/aggiorna.txt\" | tail -8 | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   palco dopo:  $(tr '\\n' ' ' <\"$E/palco-dopo.txt\")\"", "dopo": "say \"   stage after: $(tr '\\n' ' ' <\"$E/palco-dopo.txt\")\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "vm \"echo \\\"pacchetti: \\$( (dpkg-query -W -f='\\${Package}=\\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\\n' ' ')\\\"", "dopo": "vm \"echo \\\"packages: \\$( (dpkg-query -W -f='\\${Package}=\\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\\n' ' ')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"servizio: \\$(systemctl is-active remotix 2>&1) · pid \\$(systemctl show -p MainPID --value remotix)\\\"", "dopo": "echo \\\"service: \\$(systemctl is-active remotix 2>&1) · pid \\$(systemctl show -p MainPID --value remotix)\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "sudo sh -c '/usr/bin/remotix-install status >/tmp/c.txt 2>&1'; echo \\\"certifica: uscita \\$?\\\"; sudo cat /tmp/c.txt\" >\"$E/aggiornato.txt\" 2>&1", "dopo": "sudo sh -c '/usr/bin/remotix-install status >/tmp/c.txt 2>&1'; echo \\\"certify: exit \\$?\\\"; sudo cat /tmp/c.txt\" >\"$E/aggiornato.txt\" 2>&1"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "grep -E 'pacchetti:|servizio:|Certification|certifica: uscita' \"$E/aggiornato.txt\" | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\"", "dopo": "grep -E 'packages:|service:|Certification|certify: exit' \"$E/aggiornato.txt\" | cut -c1-200 | sed 's/^/   /' | tee -a \"$E/giro.log\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if grep -q 'aggiornamento: uscita 0' \"$E/aggiorna.txt\" && grep -E '^T8 ' \"$E/browser-agg.log\" | grep -q '\"esito\": *\"PASS\"' && cmp -s \"$E/palco-prima.txt\" \"$E/palco-dopo.txt\" && [ -s \"$E/palco-prima.txt\" ] && grep -q \"pacchetti:.*${VERSIONE_N1:-NON_DATA}\" \"$E/aggiornato.txt\" && certifica_va \"$E/aggiornato.txt\"; then", "dopo": "if grep -q 'update: exit 0' \"$E/aggiorna.txt\" && grep -E '^T8 ' \"$E/browser-agg.log\" | grep -q '\"esito\": *\"PASS\"' && cmp -s \"$E/palco-prima.txt\" \"$E/palco-dopo.txt\" && [ -s \"$E/palco-prima.txt\" ] && grep -q \"packages:.*${VERSIONE_N1:-NON_DATA}\" \"$E/aggiornato.txt\" && certifica_va \"$E/aggiornato.txt\"; then"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"==> 6. disinstalla --purge, con una sessione ssh di «prova» che scrive l'ora (R43)\"", "dopo": "say \"==> 6. uninstall --purge, with an ssh session of «prova» writing the time (R43)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   registri di sessione nelle case prima: $(tr '\\n' ' ' <\"$E/registri-prima.txt\")\"", "dopo": "say \"   session logs in the homes before: $(tr '\\n' ' ' <\"$E/registri-prima.txt\")\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   disinstalla: uscita $u in $(( $(date +%s) - T0 )) s — $OPD\"", "dopo": "say \"   uninstall: exit $u in $(( $(date +%s) - T0 )) s — $OPD\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   registri di sessione nelle case dopo: $(tr '\\n' ' ' <\"$E/registri-dopo.txt\")(nessuno = bene)\"", "dopo": "say \"   session logs in the homes after: $(tr '\\n' ' ' <\"$E/registri-dopo.txt\")(none = good)\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "vm \"a=\\$(sudo tail -1 ~prova/orologio.txt); sleep 3; b=\\$(sudo tail -1 ~prova/orologio.txt); echo \\\"R43 orologio ssh: \\$a → \\$b\\\"", "dopo": "vm \"a=\\$(sudo tail -1 ~prova/orologio.txt); sleep 3; b=\\$(sudo tail -1 ~prova/orologio.txt); echo \\\"R43 ssh clock: \\$a → \\$b\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"sessioni: \\$(loginctl list-sessions --no-legend | grep -c prova) di prova · desktop di prova: \\$(pgrep -u prova -c -x 'gnome-shell|kwin_wayland|labwc|plasmashell|lxqt-panel|xfce4-panel')\\\"", "dopo": "echo \\\"sessions: \\$(loginctl list-sessions --no-legend | grep -c prova) of prova · desktops of prova: \\$(pgrep -u prova -c -x 'gnome-shell|kwin_wayland|labwc|plasmashell|lxqt-panel|xfce4-panel')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"pacchetti rimasti: \\$( (dpkg-query -W -f='\\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null; pacman -Qq 2>/dev/null | grep remotix) | tr '\\n' ' ')\\\"", "dopo": "echo \\\"packages left: \\$( (dpkg-query -W -f='\\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null; pacman -Qq 2>/dev/null | grep remotix) | tr '\\n' ' ')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"servizio: \\$(systemctl is-active remotix 2>&1) · in ascolto $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ') · /var/lib/remotix: \\$(sudo ls -A /var/lib/remotix 2>&1 | tr '\\n' ' ')\\\"", "dopo": "echo \\\"service: \\$(systemctl is-active remotix 2>&1) · listening on $PG: \\$(sudo ss -Htulpn | grep -c ':$PG ') · /var/lib/remotix: \\$(sudo ls -A /var/lib/remotix 2>&1 | tr '\\n' ' ')\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "echo \\\"archivi di remotix (devono essere 0: §10.36): \\$(ls /etc/apt/sources.list.d /etc/yum.repos.d /etc/zypp/repos.d 2>/dev/null | grep -ci remotix) · pacman.conf: \\$(grep -c remotix /etc/pacman.conf 2>/dev/null)\\\"", "dopo": "echo \\\"remotix repositories (must be 0: §10.36): \\$(ls /etc/apt/sources.list.d /etc/yum.repos.d /etc/zypp/repos.d 2>/dev/null | grep -ci remotix) · pacman.conf: \\$(grep -c remotix /etc/pacman.conf 2>/dev/null)\\\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "say \"   R6: $(grep -c '^[<>]' \"$E/diff-R6.txt\") righe diverse, di cui $(wc -l <\"$E/diff-R6-remotix.txt\") residui remotix NON attesi, $(wc -l <\"$E/diff-R6-attesi.txt\") attesi (storia del motore); gruppi di prova prima «$G1» dopo «$G2»\"", "dopo": "say \"   R6: $(grep -c '^[<>]' \"$E/diff-R6.txt\") different lines, of which $(wc -l <\"$E/diff-R6-remotix.txt\") remotix leftovers NOT expected, $(wc -l <\"$E/diff-R6-attesi.txt\") expected (engine's history); groups of prova before «$G1» after «$G2»\""}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "a=$(grep 'R43 orologio' \"$E/dopo.txt\" | sed 's/.*: //'); a1=${a%% →*}; a2=${a##*→ }", "dopo": "a=$(grep 'R43 ssh clock' \"$E/dopo.txt\" | sed 's/.*: //'); a1=${a%% →*}; a2=${a##*→ }"}
+{"file": "banchi/17-distro/17-t10.sh", "prima": "if [ $u = 0 ] && echo \"$OPD\" | grep -q 'CONFIRMED' && [ -z \"$(grep 'pacchetti rimasti:' \"$E/dopo.txt\" | cut -d: -f2 | tr -d ' ')\" ] && [ \"$a1\" != \"$a2\" ] && grep -q 'desktop di prova: 0' \"$E/dopo.txt\" && [ \"$G1\" = \"$G2\" ] && [ ! -s \"$E/diff-R6-remotix.txt\" ] && grep -q 'sessione.log' \"$E/registri-prima.txt\" && [ ! -s \"$E/registri-dopo.txt\" ]; then", "dopo": "if [ $u = 0 ] && echo \"$OPD\" | grep -q 'CONFIRMED' && [ -z \"$(grep 'packages left:' \"$E/dopo.txt\" | cut -d: -f2 | tr -d ' ')\" ] && [ \"$a1\" != \"$a2\" ] && grep -q 'desktops of prova: 0' \"$E/dopo.txt\" && [ \"$G1\" = \"$G2\" ] && [ ! -s \"$E/diff-R6-remotix.txt\" ] && grep -q 'sessione.log' \"$E/registri-prima.txt\" && [ ! -s \"$E/registri-dopo.txt\" ]; then"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "MIN=${1:?minuti}; shift", "dopo": "MIN=${1:?minutes}; shift"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "echo \"⭐ prova di carico: ${#M[@]} VM × ${RX_VM_RAM:-6144} MB × ${RX_VM_CPU:-4} cpu, $MIN min → $OUT\"", "dopo": "echo \"⭐ load test: ${#M[@]} VM × ${RX_VM_RAM:-6144} MB × ${RX_VM_CPU:-4} cpu, $MIN min → $OUT\""}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "grep -q \"ssh risponde\" \"$OUT/avvio-$m.txt\" || { echo \"⛔ $m non è partita\"; cat \"$OUT/avvio-$m.txt\"; }", "dopo": "grep -q \"ssh answers\" \"$OUT/avvio-$m.txt\" || { echo \"⛔ $m did not start\"; cat \"$OUT/avvio-$m.txt\"; }"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "echo \"codificatore: $ENC\"", "dopo": "echo \"encoder: $ENC\""}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "echo \"   lavoro acceso: $(for m in \"${M[@]}\"; do printf \"%s=%s \" \"$m\" \"$(grep -o \"codificatore: .*\" \"$OUT/lavoro-$m.txt\" | cut -d\" \" -f2)\"; done)\"", "dopo": "echo \"   work on: $(for m in \"${M[@]}\"; do printf \"%s=%s \" \"$m\" \"$(grep -o \"encoder: .*\" \"$OUT/lavoro-$m.txt\" | cut -d\" \" -f2)\"; done)\""}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "echo \"   VM spente e tornate alla foto «cliente» (una alla volta)\"", "dopo": "echo \"   VMs shut down and back to the «cliente» photo (one at a time)\""}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "righe=righe[3:]   # i primi 30 s: il lavoro che si avvia", "dopo": "righe=righe[3:]   # the first 30 s: the work starting up"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"memoria disponibile minima ≥ 3072 MB\", min(disp)>=3072, \"%d MB\"%min(disp)),", "dopo": "(\"minimum available memory ≥ 3072 MB\", min(disp)>=3072, \"%d MB\"%min(disp)),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"scambio medio < 100 KiB/s (colonne si+so di vmstat)\", sum(sw)/len(sw)<100, \"%.0f\"%(sum(sw)/len(sw))),", "dopo": "(\"average swap < 100 KiB/s (vmstat si+so columns)\", sum(sw)/len(sw)<100, \"%.0f\"%(sum(sw)/len(sw))),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"ogni codifica ≥ 29 fps\", bool(fps) and min(fps)>=29, \"min %.1f fps\"%(min(fps) if fps else -1)),", "dopo": "(\"every encoding ≥ 29 fps\", bool(fps) and min(fps)>=29, \"min %.1f fps\"%(min(fps) if fps else -1)),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"nessun fps sconosciuto (UNKNOWN non è PASS)\", ignoti==0, \"%d letture mancate\"%ignoti),", "dopo": "(\"no unknown fps (UNKNOWN is not PASS)\", ignoti==0, \"%d missed readings\"%ignoti),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"ogni VM risponde entro 2 s\", max(ssh)<=2000, \"max %d ms\"%max(ssh)),", "dopo": "(\"every VM answers within 2 s\", max(ssh)<=2000, \"max %d ms\"%max(ssh)),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "(\"nessuna uccisione (earlyoom/oom), journal letto\", sys.argv[2]==\"0\", sys.argv[2]),", "dopo": "(\"no kill (earlyoom/oom), journal read\", sys.argv[2]==\"0\", sys.argv[2]),"}
+{"file": "banchi/17-distro/17-carico.sh", "prima": "print(\"⇒ REGGE\" if all(ok for _,ok,_ in esiti) else \"⇒ NON REGGE\")", "dopo": "print(\"⇒ HOLDS\" if all(ok for _,ok,_ in esiti) else \"⇒ DOES NOT HOLD\")"}
+{"file": "banchi/17-distro/17-amministratore.sh", "prima": "m=${1:?macchina}; porta=${2:-7447}", "dopo": "m=${1:?machine}; porta=${2:-7447}"}
+{"file": "banchi/17-distro/17-amministratore.sh", "prima": "echo \"== $m · schede:${forn:- nessuna} · porta $porta\"", "dopo": "echo \"== $m · cards:${forn:- none} · port $porta\""}
+{"file": "banchi/17-distro/17-amministratore.sh", "prima": "*) echo \"⛔ macchina sconosciuta: $m\"; exit 2 ;;", "dopo": "*) echo \"⛔ unknown machine: $m\"; exit 2 ;;"}
+{"file": "banchi/17-distro/17-amministratore.sh", "prima": "echo \"== fatto\"", "dopo": "echo \"== done\""}
+{"file": "banchi/17-distro/17-t10-giro.sh", "prima": "export VERSIONE_N1=${VERSIONE_N1:?la versione N+1, per esempio 0.18.1-2}", "dopo": "export VERSIONE_N1=${VERSIONE_N1:?the N+1 version, for example 0.18.1-2}"}
+{"file": "banchi/17-distro/17-t10-giro.sh", "prima": "echo \"== giro T10 $(date -u +%FT%TZ), $P alla volta: $(echo $MATRICE | wc -w) macchine\" | tee -a \"$T10/giro.log\"", "dopo": "echo \"== T10 round $(date -u +%FT%TZ), $P at a time: $(echo $MATRICE | wc -w) machines\" | tee -a \"$T10/giro.log\""}
+{"file": "banchi/17-distro/17-t10-giro.sh", "prima": "echo \"== fine in $(( ($(date +%s) - T0) / 60 )) min\" | tee -a \"$T10/giro.log\"", "dopo": "echo \"== end in $(( ($(date +%s) - T0) / 60 )) min\" | tee -a \"$T10/giro.log\""}
+{"file": "banchi/17-t8/t8-catenab.sh", "prima": "remotix prima: $a · dopo: $b", "dopo": "remotix before: $a · after: $b"}
+{"file": "banchi/17-t8/t8-guasta.sh", "prima": "guasto: $1", "dopo": "fault: $1"}
+{"file": "banchi/17-t8/t8-porta.sh", "prima": "archivio ($DOVE): %{http_code}\\n", "dopo": "archive ($DOVE): %{http_code}\\n"}
+{"file": "banchi/17-t8/t8-porta.sh", "prima": "terzi: %{http_code}\\n", "dopo": "third-party: %{http_code}\\n"}
+{"file": "banchi/17-t8/t8-terzi.sh", "prima": "chiave ESTRANEA di prova (T8, di nessuno)", "dopo": "FOREIGN test key (T8, nobody's)"}
+{"file": "banchi/17-t8/t8-terzi.sh", "prima": "Description: pacchetto di prova della fase 17 T8 (R18)", "dopo": "Description: test package of phase 17 T8 (R18)"}
+{"file": "banchi/17-t8/t8-terzi.sh", "prima": "prova T8", "dopo": "T8 test"}
+{"file": "banchi/17-t8/t8-terzi.sh", "prima": "Summary: prova T8 (R18)", "dopo": "Summary: T8 test (R18)"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "⛔ $m è già accesa", "dopo": "⛔ $m is already running"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "⛔ già 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "archivio: HTTP %{http_code}\\n", "dopo": "archive: HTTP %{http_code}\\n"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "terzi: solo debian13 e fedora44", "dopo": "terzi: only debian13 and fedora44"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   impronta «$nome»: ", "dopo": " fingerprint \\\"$nome\\\": "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": " righe; depositi: ", "dopo": " lines; repositories: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": " righe", "dopo": " lines"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "sha256: uscita $?", "dopo": "sha256: exit $?"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "uscita", "dopo": "exit"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "uscita: $?", "dopo": "exit: $?"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   aggiornamento del sistema in ", "dopo": "   system upgrade in "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": " righe di pacchetti", "dopo": " package lines"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   disinstalla: uscita $? — ", "dopo": "   uninstall: exit $? — "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "pacchetti rimasti: ", "dopo": "packages left: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "archivi: ", "dopo": "archives: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": " · servizio: ", "dopo": " · service: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   verifica: uscita $?", "dopo": "   check: exit $?"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   piano: uscita $? — ", "dopo": "   plan: exit $? — "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": " passi", "dopo": " steps"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   applica: uscita $? in", "dopo": "   apply: exit $? in"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "pacchetti: ", "dopo": "packages: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "servizio: ", "dopo": "service: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   collegato: il desktop si vede (", "dopo": "   connected: the desktop is visible ("}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   ⛔ non collegato:", "dopo": "   ⛔ not connected:"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "processi di prova: ", "dopo": "processes of prova: "}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "   $m spenta, tornata a «cliente»", "dopo": "   $m powered off, back to \\\"cliente\\\""}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "la pagina non si apre: ", "dopo": "the page does not open: "}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "non entra: ", "dopo": "does not get in: "}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "prima dell'aggiornamento il desktop non si vede: ", "dopo": "before the upgrade the desktop is not visible: "}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "nessun «via» entro %d s", "dopo": "no \\\"via\\\" within %d s"}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "dopo l'aggiornamento non rientra: ", "dopo": "after the upgrade it does not get back in: "}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "desktop rivisto dopo l'aggiornamento", "dopo": "desktop seen again after the upgrade"}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "rientra, ma il desktop non si vede: ", "dopo": "gets back in, but the desktop is not visible: "}
+{"file": "banchi/17-t8/t8-browser.py", "prima": "il banco è caduto: %r", "dopo": "the bench crashed: %r"}
+{"file": "banchi/17-t9/t9-porta.sh", "prima": "motore ", "dopo": "engine "}
+{"file": "banchi/17-t9/t9-porta.sh", "prima": "archivio di T9: %{http_code}\\n", "dopo": "T9 archive: %{http_code}\\n"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "macchina sconosciuta: $m", "dopo": "unknown machine: $m"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "⛔ $m è già accesa", "dopo": "⛔ $m is already running"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "⛔ già 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "archivio di T9: HTTP %{http_code}\\n", "dopo": "T9 archive: HTTP %{http_code}\\n"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "archivio di T9: NON raggiungibile", "dopo": "T9 archive: NOT reachable"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   prepara: ", "dopo": "   prepare: "}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   pacchetto: ", "dopo": "   bundle: "}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   installa: uscita $u in", "dopo": "   install: exit $u in"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   cloud-init finito in ", "dopo": " cloud-init finished in "}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": " s (dall'accensione)", "dopo": " s (from power-on)"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   guarda: uscita $?", "dopo": "   guarda: exit $?"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "nessuna cattura", "dopo": "no capture"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "   $m spenta, tornata a «cliente»", "dopo": "   $m powered off, back to \\\"cliente\\\""}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "cattura vuota", "dopo": "empty capture"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "TCP %d (inoltro del banco)", "dopo": "TCP %d (bench forward)"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "TCP %s → %s:%d (seguito)", "dopo": "TCP %s → %s:%d (follow-up)"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "TCP da %s:%d", "dopo": "TCP from %s:%d"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "UDP 7447 (inoltro del banco, QUIC)", "dopo": "UDP 7447 (bench forward, QUIC)"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "UDP da %s:%d", "dopo": "UDP from %s:%d"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "IPv6 (vicinato, multicast)", "dopo": "IPv6 (neighbour, multicast)"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "%d pacchetti sulla scheda della VM (MAC %s)", "dopo": "%d packets on the VM's interface (MAC %s)"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "in ENTRATA (gli inoltri del banco, e le risposte della VM):", "dopo": "INCOMING (the bench's forwards, and the VM's replies):"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "COMINCIATI dalla VM (primo · ultimo · pacchetti):", "dopo": "STARTED by the VM (first · last · packets):"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "   ← nella finestra dell'installazione", "dopo": "   ← in the installation window"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": "finestra dell'installazione %s-%s UTC: %d tentativi verso fuori%s", "dopo": "installation window %s-%s UTC: %d attempts towards the outside%s"}
+{"file": "banchi/17-t9/t9-rete.py", "prima": " — NESSUN accesso alla rete", "dopo": " — NO network access"}
+{"file": "banchi/17-t9/t9-gui.sh", "prima": "⛔ già 4 VM accese", "dopo": "⛔ 4 VMs already running"}
+{"file": "banchi/17-t9/t9-gui.sh", "prima": "   $m spenta, tornata a «cliente»", "dopo": "   $m powered off, back to \\\"cliente\\\""}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "  visto «%s», mando %r (byte %d del flusso)", "dopo": "  saw \\\"%s\\\", sending %r (byte %d of the stream)"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "macchina?", "dopo": "machine?"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "UGUALI nelle tre", "dopo": "SAME in all three"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "DIVERSI", "dopo": "DIFFERENT"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "   cli ↔ %s: %d righe diverse", "dopo": "   cli ↔ %s: %d lines differ"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "approvazione %-4s %s, da %s", "dopo": "approval %-4s %s, by %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-001, F-002 accesso e prima immagine", "dopo": "F-001, F-002 login and first image"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-031 tocco", "dopo": "F-031 touch"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-007, F-009 tastiera", "dopo": "F-007, F-009 keyboard"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-014, F-015 appunti", "dopo": "F-014, F-015 clipboard"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-012, F-013 audio e video", "dopo": "F-012, F-013 audio and video"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-003 aggiornamento", "dopo": "F-003 update"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-018 riattacco a misura diversa (telefono girato)", "dopo": "F-018 reattach at a different size (phone rotated)"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-016, F-017, F-020 stacco e rientro", "dopo": "F-016, F-017, F-020 detach and re-entry"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-019 la rete cade", "dopo": "F-019 the network drops"}
+{"file": "banchi/19-android/19-android.py", "prima": "F-021 Esci", "dopo": "F-021 Exit"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb non c'e' (%s)", "dopo": "adb is missing (%s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb non ha risposto in %d s", "dopo": "adb did not answer in %d s"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb non risponde: %s", "dopo": "adb is not answering: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono non visto, e la chiave di Phonestra non c'e' (%s)", "dopo": "phone not seen, and Phonestra's key is missing (%s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono non visto da adb%s.  Apri Phonestra sul portatile (adb ", "dopo": "phone not seen by adb%s.  Open Phonestra on the laptop (wireless "}
+{"file": "banchi/19-android/19-android.py", "prima": "senza fili col telefono acceso e sulla stessa rete), poi rilancia.", "dopo": "adb with the phone on and on the same network), then run again."}
+{"file": "banchi/19-android/19-android.py", "prima": " (provato %s)", "dopo": " (tried %s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "piu' dispositivi visti da adb (%s): REMOTIX_TELEFONO=<seriale>", "dopo": "more than one device seen by adb (%s): REMOTIX_TELEFONO=<serial>"}
+{"file": "banchi/19-android/19-android.py", "prima": "stato delle chiamate illeggibile: %s", "dopo": "call state unreadable: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "%d righe mCallState, accese: %s", "dopo": "%d mCallState lines, active: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "nessuna", "dopo": "none"}
+{"file": "banchi/19-android/19-android.py", "prima": "📞 chiamata finita dopo %.0f s: riprendo", "dopo": "📞 call ended after %.0f s: resuming"}
+{"file": "banchi/19-android/19-android.py", "prima": "📞 %s — ASPETTO (nessun gesto sul telefono)", "dopo": "📞 %s — WAITING (no gesture on the phone)"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiamata in corso", "dopo": "call in progress"}
+{"file": "banchi/19-android/19-android.py", "prima": "stato della tastiera illeggibile: %s", "dopo": "keyboard state unreadable: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "acceso", "dopo": "on"}
+{"file": "banchi/19-android/19-android.py", "prima": "SPENTO", "dopo": "OFF"}
+{"file": "banchi/19-android/19-android.py", "prima": "bloccato", "dopo": "locked"}
+{"file": "banchi/19-android/19-android.py", "prima": "sbloccato", "dopo": "unlocked"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome %s su Android %s · %s %s (telefono vero, Wi-Fi)", "dopo": "Chrome %s on Android %s · %s %s (real phone, Wi-Fi)"}
+{"file": "banchi/19-android/19-android.py", "prima": "DevTools del Chrome del telefono non raggiungibile: %s", "dopo": "DevTools of the phone's Chrome not reachable: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "nessuno stato da ripristinare", "dopo": "no state to restore"}
+{"file": "banchi/19-android/19-android.py", "prima": "⛔ telefono non visto: NON ripristinato (lo stato resta in %s)", "dopo": "⛔ phone not seen: NOT restored (the state stays in %s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "⛔ chiamata in corso da troppo: NON ripristinato (rilancia `ripristina`)", "dopo": "⛔ call in progress for too long: NOT restored (run `ripristina` again)"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiuse %d schede nostre (verso le scatole)", "dopo": "closed %d tabs of ours (towards the boxes)"}
+{"file": "banchi/19-android/19-android.py", "prima": "⚠ schede dell'utente che non ritrovo: %s", "dopo": "⚠ user's tabs I cannot find again: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "le %d schede dell'utente ci sono tutte", "dopo": "the user's %d tabs are all there"}
+{"file": "banchi/19-android/19-android.py", "prima": "⚠ schede non controllate: %s", "dopo": "⚠ tabs not checked: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "rotazione rimessa: automatica=%s, verso=%s", "dopo": "rotation restored: automatic=%s, orientation=%s"}
+{"file": "banchi/19-android/19-android.py", "prima": "spegnimento dello schermo rimesso a %s ms", "dopo": "screen timeout restored to %s ms"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome richiuso (era chiuso quando sono arrivato)", "dopo": "Chrome closed again (it was closed when I arrived)"}
+{"file": "banchi/19-android/19-android.py", "prima": "sportello: ", "dopo": "counter: "}
+{"file": "banchi/19-android/19-android.py", "prima": "chiamata in corso sul telefono da piu' di %d s", "dopo": "call in progress on the phone for more than %d s"}
+{"file": "banchi/19-android/19-android.py", "prima": "🔓 il telefono e' %s: accendilo e sbloccalo (aspetto 3 minuti)", "dopo": "🔓 the phone is %s: turn it on and unlock it (waiting 3 minutes)"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono %s: non tocco niente", "dopo": "phone %s: not touching anything"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome portato davanti", "dopo": "Chrome brought to the front"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiusa la scheda rimasta %s", "dopo": "closed the leftover tab %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "tocco fuori dallo schermo: %s", "dopo": "tap outside the screen: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "tocco %d,%d", "dopo": "tap %d,%d"}
+{"file": "banchi/19-android/19-android.py", "prima": "dito fuori dallo schermo: %s", "dopo": "finger outside the screen: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "dito %s in %d ms", "dopo": "finger %s in %d ms"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome fermato di colpo (force-stop)", "dopo": "Chrome stopped abruptly (force-stop)"}
+{"file": "banchi/19-android/19-android.py", "prima": "lo sportello non conosce %s", "dopo": "the counter does not know %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "girato: %s", "dopo": "rotated: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "verticale", "dopo": "portrait"}
+{"file": "banchi/19-android/19-android.py", "prima": "orizzontale", "dopo": "landscape"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono %s", "dopo": "phone %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "verticale", "dopo": "portrait"}
+{"file": "banchi/19-android/19-android.py", "prima": "orizzontale", "dopo": "landscape"}
+{"file": "banchi/19-android/19-android.py", "prima": "lo sportello e' caduto: %s", "dopo": "the counter crashed: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "ssh: nessuna risposta in %d s", "dopo": "ssh: no answer in %d s"}
+{"file": "banchi/19-android/19-android.py", "prima": "sh -c \"grep -ohE 'strada (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\"", "dopo": "sh -c \"grep -ohE 'route (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\""}
+{"file": "banchi/19-android/19-android.py", "prima": "strada vaapi", "dopo": "route vaapi"}
+{"file": "banchi/19-android/19-android.py", "prima": "strada vulkan", "dopo": "route vulkan"}
+{"file": "banchi/19-android/19-android.py", "prima": "scheda non letta (%s)", "dopo": "GPU not read (%s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "Il telefono", "dopo": "The phone"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb vede il telefono: %s", "dopo": "adb sees the phone: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "📞 chiamata in corso (%s): aspetta che finisca, poi rilancia", "dopo": "📞 call in progress (%s): wait for it to end, then run again"}
+{"file": "banchi/19-android/19-android.py", "prima": "nessuna chiamata (%s)", "dopo": "no call (%s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "schermo %s", "dopo": "screen %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome (%s) non c'e' sul telefono", "dopo": "Chrome (%s) is not on the phone"}
+{"file": "banchi/19-android/19-android.py", "prima": "DevTools raggiungibile: %s", "dopo": "DevTools reachable: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "schede aperte dell'utente: %d (non si toccano)", "dopo": "user's open tabs: %d (not touched)"}
+{"file": "banchi/19-android/19-android.py", "prima": "%s — sul telefono: Impostazioni › Opzioni sviluppatore › Debug USB acceso?", "dopo": "%s — on the phone: Settings › Developer options › USB debugging on?"}
+{"file": "banchi/19-android/19-android.py", "prima": "Chrome chiuso: la prova lo apre e alla fine lo richiude (DevTools si guarda allora)", "dopo": "Chrome closed: the test opens it and closes it again at the end (DevTools is checked then)"}
+{"file": "banchi/19-android/19-android.py", "prima": "Le scatole viste dal telefono", "dopo": "The boxes seen from the phone"}
+{"file": "banchi/19-android/19-android.py", "prima": "il server %s %s dal telefono (ping)", "dopo": "the server %s %s from the phone (ping)"}
+{"file": "banchi/19-android/19-android.py", "prima": "risponde", "dopo": "answers"}
+{"file": "banchi/19-android/19-android.py", "prima": "NON risponde", "dopo": "does NOT answer"}
+{"file": "banchi/19-android/19-android.py", "prima": "porta %d: %s", "dopo": "port %d: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "scatola sulla porta %d %s", "dopo": "box on port %d %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "in ascolto", "dopo": "listening"}
+{"file": "banchi/19-android/19-android.py", "prima": "NON risponde", "dopo": "does NOT answer"}
+{"file": "banchi/19-android/19-android.py", "prima": "Il server", "dopo": "The server"}
+{"file": "banchi/19-android/19-android.py", "prima": "ssh %s non va: %s", "dopo": "ssh %s does not work: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "sul server gira gia' un giro (%s): le scatole sono sue, aspetta", "dopo": "a round is already running on the server (%s): the boxes are its own, wait"}
+{"file": "banchi/19-android/19-android.py", "prima": "nessun altro giro sul server", "dopo": "no other round on the server"}
+{"file": "banchi/19-android/19-android.py", "prima": "scatole sulla scheda: %s", "dopo": "boxes on the GPU: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "non si parte: sistema le righe rosse", "dopo": "not starting: fix the red lines"}
+{"file": "banchi/19-android/19-android.py", "prima": "Pronto", "dopo": "Ready"}
+{"file": "banchi/19-android/19-android.py", "prima": "le prove vanno da 1 a 10 (fasi/19-nvidia.md §5.1)", "dopo": "tests go from 1 to 10 (fasi/19-nvidia.md §5.1)"}
+{"file": "banchi/19-android/19-android.py", "prima": "i banchi non arrivano al server: %s", "dopo": "the benches do not reach the server: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "Prova %d · %s · %s", "dopo": "Test %d · %s · %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiamata in corso da troppo", "dopo": "call in progress for too long"}
+{"file": "banchi/19-android/19-android.py", "prima": "⭐ GIRO", "dopo": "⭐ ROUND"}
+{"file": "banchi/19-android/19-android.py", "prima": "nessuna riga nel registro (codice %s): %s", "dopo": "no line in the log (code %s): %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "c'e' uno stato di partenza non ripristinato (%s): prima ", "dopo": "there is an unrestored starting state (%s): first "}
+{"file": "banchi/19-android/19-android.py", "prima": "Il piano: %s", "dopo": "The plan: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "annotato il telefono come l'ho trovato: Chrome %s, %d schede, rotazione %s, ", "dopo": "recorded the phone as I found it: Chrome %s, %d tabs, rotation %s, "}
+{"file": "banchi/19-android/19-android.py", "prima": "spegnimento %s ms", "dopo": "screen timeout %s ms"}
+{"file": "banchi/19-android/19-android.py", "prima": "aperto", "dopo": "open"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiuso", "dopo": "closed"}
+{"file": "banchi/19-android/19-android.py", "prima": "%s · scatole su %s · server 192.168.0.2", "dopo": "%s · boxes on %s · server 192.168.0.2"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiamata", "dopo": "call in progress"}
+{"file": "banchi/19-android/19-android.py", "prima": "📞 una chiamata ha interrotto la prova %d: la rifaccio", "dopo": "📞 a call interrupted test %d: redoing it"}
+{"file": "banchi/19-android/19-android.py", "prima": "interrotto: rimetto a posto il telefono", "dopo": "interrupted: putting the phone back in order"}
+{"file": "banchi/19-android/19-android.py", "prima": "Il telefono come l'ho trovato", "dopo": "The phone as I found it"}
+{"file": "banchi/19-android/19-android.py", "prima": "Riassunto (giro %s)", "dopo": "Summary (round %s)"}
+{"file": "banchi/19-android/19-android.py", "prima": "    %s prova %d %s %s [%s]: %s", "dopo": "    %s test %d %s %s [%s]: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "registro: %s:%s/registro.jsonl · evidenze in %s/giro%s/", "dopo": "log: %s:%s/registro.jsonl · evidence in %s/giro%s/"}
+{"file": "banchi/19-android/19-android.py", "prima": "rapporto: ssh %s python3 %s/banchi/15-suite/15-rapporto.py --registro ", "dopo": "report: ssh %s python3 %s/banchi/15-suite/15-rapporto.py --registro "}
+{"file": "banchi/19-android/19-android.py", "prima": "A SECCO 1 — senza telefono", "dopo": "DRY RUN 1 — without phone"}
+{"file": "banchi/19-android/19-android.py", "prima": "«controlla» dice telefono non visto ed esce con 2", "dopo": "\"controlla\" says phone not seen and exits with 2"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono non visto", "dopo": "phone not seen"}
+{"file": "banchi/19-android/19-android.py", "prima": "codice %d", "dopo": "code %d"}
+{"file": "banchi/19-android/19-android.py", "prima": "«prova 1» si ferma allo stesso punto, senza toccare il server", "dopo": "\"prova 1\" stops at the same point, without touching the server"}
+{"file": "banchi/19-android/19-android.py", "prima": "telefono non visto", "dopo": "phone not seen"}
+{"file": "banchi/19-android/19-android.py", "prima": "Il server", "dopo": "The server"}
+{"file": "banchi/19-android/19-android.py", "prima": "codice %d", "dopo": "code %d"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb ha avuto solo «devices» (nessun connect senza chiave, nessuna shell)", "dopo": "adb got only \"devices\" (no connect without key, no shell)"}
+{"file": "banchi/19-android/19-android.py", "prima": "A SECCO 2 — la guida del telefono contro un Chrome del portatile", "dopo": "DRY RUN 2 — the phone driver against a laptop Chrome"}
+{"file": "banchi/19-android/19-android.py", "prima": "data:text/html,<title>scheda dell'utente</title><h1>sua</h1>", "dopo": "data:text/html,<title>user's tab</title><h1>theirs</h1>"}
+{"file": "banchi/19-android/19-android.py", "prima": "con l'adb finto il telefono e' «visto»", "dopo": "with the fake adb the phone is \"seen\""}
+{"file": "banchi/19-android/19-android.py", "prima": "annotate le schede dell'utente", "dopo": "user's tabs recorded"}
+{"file": "banchi/19-android/19-android.py", "prima": "la guida apre una scheda SUA", "dopo": "the driver opens a tab of ITS OWN"}
+{"file": "banchi/19-android/19-android.py", "prima": "rifiuta un indirizzo fuori dalle scatole", "dopo": "refuses an address outside the boxes"}
+{"file": "banchi/19-android/19-android.py", "prima": "rifiuta un indirizzo fuori dalle scatole", "dopo": "refuses an address outside the boxes"}
+{"file": "banchi/19-android/19-android.py", "prima": "solo alle scatole", "dopo": "only to the server's boxes"}
+{"file": "banchi/19-android/19-android.py", "prima": "va alla «scatola» (pagina locale)", "dopo": "goes to the \"box\" (local page)"}
+{"file": "banchi/19-android/19-android.py", "prima": "fotografia della tela via CDP", "dopo": "photo of the canvas via CDP"}
+{"file": "banchi/19-android/19-android.py", "prima": "clic, tasto e dito arrivano alla pagina", "dopo": "click, key and finger reach the page"}
+{"file": "banchi/19-android/19-android.py", "prima": "il quaderno dei tocchi li vede", "dopo": "the touch notebook sees them"}
+{"file": "banchi/19-android/19-android.py", "prima": "il puntatore si porta sul bersaglio (lontano e a 4 px)", "dopo": "the pointer is brought onto the target (far and at 4 px)"}
+{"file": "banchi/19-android/19-android.py", "prima": "errori %s e %s px", "dopo": "errors %s and %s px"}
+{"file": "banchi/19-android/19-android.py", "prima": "con una chiamata la guardia ferma il gesto", "dopo": "with a call the guard stops the gesture"}
+{"file": "banchi/19-android/19-android.py", "prima": "con una chiamata la guardia ferma il gesto (409)", "dopo": "with a call the guard stops the gesture (409)"}
+{"file": "banchi/19-android/19-android.py", "prima": "…anche un clic", "dopo": "…a click too"}
+{"file": "banchi/19-android/19-android.py", "prima": "…anche un clic", "dopo": "…a click too"}
+{"file": "banchi/19-android/19-android.py", "prima": "finita la chiamata si riprende", "dopo": "once the call is over we resume"}
+{"file": "banchi/19-android/19-android.py", "prima": "tastiera: chiusa ⇒ «aperta» falso", "dopo": "keyboard: closed ⇒ \"aperta\" false"}
+{"file": "banchi/19-android/19-android.py", "prima": "tastiera: aperta ⇒ «aperta» vero (dumpsys input_method)", "dopo": "keyboard: open ⇒ \"aperta\" true (dumpsys input_method)"}
+{"file": "banchi/19-android/19-android.py", "prima": "tastiera: richiusa ⇒ falso di nuovo", "dopo": "keyboard: closed again ⇒ false again"}
+{"file": "banchi/19-android/19-android.py", "prima": "tastiera: lo sportello ha chiesto a adb solo `dumpsys input_method`", "dopo": "keyboard: the counter asked adb only `dumpsys input_method`"}
+{"file": "banchi/19-android/19-android.py", "prima": "      | ruota: %s", "dopo": "      | rotate: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "chiusa la scheda nostra, quella dell'utente c'e'", "dopo": "our tab closed, the user's is there"}
+{"file": "banchi/19-android/19-android.py", "prima": "evidenza della chiusura salvata", "dopo": "evidence of the closing saved"}
+{"file": "banchi/19-android/19-android.py", "prima": "il ripristino chiude le schede verso le scatole e lascia le sue", "dopo": "the restore closes the tabs towards the boxes and leaves the user's"}
+{"file": "banchi/19-android/19-android.py", "prima": "ripristino: rotazione e spegnimento rimessi", "dopo": "restore: rotation and screen timeout put back"}
+{"file": "banchi/19-android/19-android.py", "prima": "lo stato di partenza e' chiuso (ripristinato)", "dopo": "the starting state is closed (restored)"}
+{"file": "banchi/19-android/19-android.py", "prima": "adb finto: nessun comando fuori dalla lista", "dopo": "fake adb: no command outside the list"}
+{"file": "banchi/19-android/19-android.py", "prima": "lasciato %s", "dopo": "left %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "A SECCO: %d/%d verdi", "dopo": "DRY RUN: %d/%d green"}
+{"file": "banchi/19-android/19-android.py", "prima": "prova: 1..10 o «tutte»", "dopo": "prova: 1..10 or \"tutte\""}
+{"file": "banchi/19-android/19-android.py", "prima": "nome del giro (default 19-android-<scheda>)", "dopo": "name of the round (default 19-android-<gpu>)"}
+{"file": "banchi/19-android/19-android.py", "prima": "non tentare `adb connect`: solo il telefono gia' visto", "dopo": "do not try `adb connect`: only the phone already seen"}
+{"file": "banchi/19-android/19-android.py", "prima": "a-secco: lascia la cartella", "dopo": "a-secco: keep the folder"}
+{"file": "banchi/19-android/19-android.py", "prima": "desktop sconosciuto: %s", "dopo": "unknown desktop: %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "niente da ripristinare (%s non c'e')", "dopo": "nothing to restore (%s is missing)"}
+{"file": "banchi/19-android/19-android.py", "prima": "Il telefono come l'ho trovato (%s)", "dopo": "The phone as I found it (%s)"}
+{"file": "banchi/19-android/telefono.py", "prima": "chiamata in corso sul telefono", "dopo": "call in progress on the phone"}
+{"file": "banchi/19-android/telefono.py", "prima": "sportello %s: %s %s", "dopo": "counter %s: %s %s"}
+{"file": "banchi/19-android/telefono.py", "prima": "lo sportello del portatile non risponde (%s): il tunnel ssh ", "dopo": "the laptop's counter does not answer (%s): is the ssh tunnel "}
+{"file": "banchi/19-android/telefono.py", "prima": "c'e'?  %s", "dopo": "there?  %s"}
+{"file": "banchi/19-android/telefono.py", "prima": "la scheda nuova non compare nell'elenco del telefono", "dopo": "the new tab does not appear in the phone's list"}
+{"file": "banchi/19-android/telefono.py", "prima": "%s su Android (palco non letto: %s)", "dopo": "%s on Android (stage not read: %s)"}
+{"file": "banchi/19-android/telefono.py", "prima": "⛔ il telefono va solo alle scatole del server, non a %s", "dopo": "⛔ the phone goes only to the server's boxes, not to %s"}
+{"file": "banchi/19-android/19-android.py", "prima": "(finto) $r", "dopo": "(fake) $r"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "serve l'indirizzo della macchina", "dopo": "the machine's address is required"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "prepara: la valigia (prima del noleggio, sul portatile)", "dopo": "prepara: the suitcase (before the rental, on the laptop)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "serve podman", "dopo": "podman is required"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "    ⚠ il ramo e' «$ramo», non fase-19: la valigia porta $hash$sporco, e lo dice", "dopo": "    ⚠ the branch is \\\"$ramo\\\", not fase-19: the suitcase carries $hash$sporco, and says so"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "i .deb di REMOTIX (src/costruzione/costruisci-deb.sh debian13 ubuntu2604)", "dopo": "the REMOTIX .debs (src/costruzione/costruisci-deb.sh debian13 ubuntu2604)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "costruisci-deb.sh non riuscito ($VAL/costruisci-deb.log)", "dopo": "costruisci-deb.sh failed ($VAL/costruisci-deb.log)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "i .deb non ci sono", "dopo": "the .debs are missing"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "l'installatore (installatore/costruisci.sh)", "dopo": "the installer (installatore/costruisci.sh)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "installatore non costruito ($VAL/costruisci-installatore.log)", "dopo": "installer not built ($VAL/costruisci-installatore.log)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "i banchi (come 15-porta.sh) e i sorgenti per il banco 19", "dopo": "the benches (like 15-porta.sh) and the sources for bench 19"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "preparata: $(date -Is) su $(hostname)", "dopo": "prepared: $(date -Is) on $(hostname)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "manda la valigia a $IP", "dopo": "sending the suitcase to $IP"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "manca la valigia: prima «$0 prepara»", "dopo": "the suitcase is missing: first \\\"$0 prepara\\\""}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "avvia «$p» sulla macchina (un'unita' di systemd: ssh puo' cadere)", "dopo": "starting \\\"$p\\\" on the machine (a systemd unit: ssh may drop)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "il banco gira gia' ($UNITA)", "dopo": "the bench is already running ($UNITA)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "partito", "dopo": "started"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "seguo il banco (Ctrl-C non lo ferma: rilancia «segui»)", "dopo": "following the bench (Ctrl-C does not stop it: run \\\"segui\\\" again)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "il banco ha finito: uscita $u", "dopo": "the bench has finished: exit $u"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "il banco non gira e non ha scritto l'uscita (fermato a mano?)", "dopo": "the bench is not running and has not written its exit code (stopped by hand?)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "la macchina risponde", "dopo": "the machine answers"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "dopo 15 minuti la macchina non risponde", "dopo": "after 15 minutes the machine does not answer"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "raccolgo l'archivio delle evidenze", "dopo": "collecting the evidence archive"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "nessun archivio", "dopo": "no archive"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "$MISURE/$nome (sha256 uguale)", "dopo": "$MISURE/$nome (sha256 equal)"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "sha256 diverso: rifai «raccogli»", "dopo": "sha256 differs: run \\\"raccogli\\\" again"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "pulisco la macchina", "dopo": "cleaning the machine"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "valigia e cartella di lavoro tolte", "dopo": "suitcase and work folder removed"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "il banco chiede un RIAVVIO ($n; aggiornamento/driver/ICD/modeset): riavvio e riprendo", "dopo": "the bench asks for a REBOOT ($n; upgrade/driver/ICD/modeset): rebooting and resuming"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "in un contenitore non si riavvia", "dopo": "a container cannot be rebooted"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "FINE: uscita $u · le evidenze in $MISURE · la pulizia: «$0 pulisci $IP»", "dopo": "END: exit $u · the evidence in $MISURE · the cleanup: \\\"$0 pulisci $IP\\\""}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "bersaglio: debian13 o ubuntu2604", "dopo": "target: debian13 or ubuntu2604"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "immagine non costruita", "dopo": "image not built"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": ">> $p: uscita $?", "dopo": ">> $p: exit $?"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "######## 19-confronto: solo la costruzione", "dopo": "######## 19-confronto: build only"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": ">> costruzione: uscita $?", "dopo": ">> build: exit $?"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": ">> suite: uscita $?", "dopo": ">> suite: exit $?"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "######## il server, visto da dentro", "dopo": "######## the server, seen from inside"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "######## il confronto col principio", "dopo": "######## the comparison with the start"}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "pacchetti in piu': ", "dopo": "extra packages: "}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "pacchetti in meno: ", "dopo": "missing packages: "}
+{"file": "banchi/19-nvidia/19-nv-prova-contenitore.sh", "prima": "/etc/apt: uguale a prima", "dopo": "/etc/apt: same as before"}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "valigia: ", "dopo": "suitcase: "}
+{"file": "banchi/19-nvidia/19-nvidia.sh", "prima": "banchi rinfrescati: $(date -Is) da ", "dopo": "benches refreshed: $(date -Is) from "}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "(nessuna risposta in %d s)", "dopo": "(no answer within %d s)"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "oltre i %d minuti: la prova e' stata fermata", "dopo": "over %d minutes: the test was stopped"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "il banco non ha potuto lanciare la prova: %r", "dopo": "the bench could not launch the test: %r"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "la prova non ha dato un giudizio per %s (vedi uscita.log)", "dopo": "the test gave no verdict for %s (see uscita.log)"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "manca RXNV_REGISTRO (il file dove il server scrive)", "dopo": "RXNV_REGISTRO is missing (the file the server writes to)"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "⭐ 19-nv-suite · %s · %s · browser %s · porta %d", "dopo": "⭐ 19-nv-suite · %s · %s · browser %s · port %d"}
+{"file": "banchi/19-nvidia/19-nv-suite.py", "prima": "FINE %s", "dopo": "END %s"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "fotografata la macchina com'era: $(wc -l < ", "dopo": "snapshot of the machine as it was: $(wc -l < "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": ") pacchetti, $(wc -l < ", "dopo": ") packages, $(wc -l < "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": ") utenti", "dopo": ") users"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(0) la versione del sistema", "dopo": "(0) the system version"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$(distro): niente da aggiornare", "dopo": "$(distro): nothing to upgrade"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ubuntu $da: so salire solo da 20.04, 22.04 e 24.04", "dopo": "ubuntu $da: I can only upgrade from 20.04, 22.04 and 24.04"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "serve root", "dopo": "root is required"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ubuntu $da: prima aggiorno i pacchetti della $da", "dopo": "ubuntu $da: first upgrading the packages of $da"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "aggiornamento della $da non riuscito ($f)", "dopo": "upgrade of $da failed ($f)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "la $da aggiornata chiede un riavvio prima del salto", "dopo": "the upgraded $da asks for a reboot before the hop"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ubuntu $da: salto alla versione LTS dopo (mezz'ora o piu')", "dopo": "ubuntu $da: hop to the next LTS version (half an hour or more)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il salto non e' ancora offerto: lo forzo con -d", "dopo": "the hop is not offered yet: forcing it with -d"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "do-release-upgrade -d non riuscito ($f)", "dopo": "do-release-upgrade -d failed ($f)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "salto da $da", "dopo": "hop from $da"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "do-release-upgrade non riuscito ($f)", "dopo": "do-release-upgrade failed ($f)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "salto da $da", "dopo": "hop from $da"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(a) i controlli iniziali", "dopo": "(a) the initial checks"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "serve root", "dopo": "root is required"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //') ($(nproc) fili)", "dopo": "$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //') ($(nproc) threads)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "distribuzione $(distro): REMOTIX vuole Debian 13 o Ubuntu 26.04 (OpenSSL 3.5, labwc, libei)", "dopo": "distribution $(distro): REMOTIX wants Debian 13 or Ubuntu 26.04 (OpenSSL 3.5, labwc, libei)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "distribuzione $(distro)", "dopo": "distribution $(distro)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vulkan-tools e pciutils installati per guardare", "dopo": "vulkan-tools and pciutils installed to look"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vulkan-tools/pciutils non installati", "dopo": "vulkan-tools/pciutils not installed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nessuna scheda NVIDIA sul bus PCI", "dopo": "no NVIDIA card on the PCI bus"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "scheda: $pci", "dopo": "card: $pci"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "driver NVIDIA $ver: serve 550 o piu' (Vulkan Video encode)", "dopo": "NVIDIA driver $ver: 550 or newer is required (Vulkan Video encode)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$nome non ha il codificatore video (NVENC): qui REMOTIX non puo' codificare", "dopo": "$nome has no video encoder (NVENC): REMOTIX cannot encode here"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "statistiche dell'encoder presenti in nvidia-smi -q", "dopo": "encoder statistics present in nvidia-smi -q"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nvidia-smi non risponde: il driver non c'e' (o non e' caricato) ⇒ lo mette il passo «driver»", "dopo": "nvidia-smi does not answer: the driver is missing (or not loaded) ⇒ the \\\"driver\\\" step installs it"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nvidia-drm modeset=$ms ⇒ il passo «driver» lo mette a 1 (serve a GBM, cioe' a labwc sulla scheda)", "dopo": "nvidia-drm modeset=$ms ⇒ the \\\"driver\\\" step sets it to 1 (GBM needs it, i.e. labwc on the card)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "la NVIDIA e' renderD128 (il nodo su cui codifica il server)", "dopo": "the NVIDIA is renderD128 (the node the server encodes on)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "la NVIDIA e' $nv, non renderD128: il SERVER codifica su renderD128 ($riga) ⇒ la suite (e) non e' valida e si salta; (c) e (d) si fanno sul nodo giusto", "dopo": "the NVIDIA is $nv, not renderD128: the SERVER encodes on renderD128 ($riga) ⇒ suite (e) is not valid and is skipped; (c) and (d) are done on the right node"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il driver c'e' ma nessun renderD* e' della NVIDIA (nvidia-drm non caricato?)", "dopo": "the driver is there but no renderD* belongs to the NVIDIA (nvidia-drm not loaded?)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nessun ICD Vulkan della NVIDIA ⇒ lo mette il passo «driver» (e l'installatore, senza, direbbe RX-GPU-004)", "dopo": "no NVIDIA Vulkan ICD ⇒ the \\\"driver\\\" step installs it (and the installer, without it, would say RX-GPU-004)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vulkaninfo: codifica H.264 e H.265, dmabuf, modificatori, nodo DRM", "dopo": "vulkaninfo: H.264 and H.265 encoding, dmabuf, modifiers, DRM node"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vulkaninfo: mancano$mancano", "dopo": "vulkaninfo: missing$mancano"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "controlli VERDI", "dopo": "checks GREEN"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "controlli ROSSI (vedi $f)", "dopo": "checks RED (see $f)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vedi controlli.txt", "dopo": "see controlli.txt"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il driver NVIDIA, il suo ICD Vulkan, modeset", "dopo": "the NVIDIA driver, its Vulkan ICD, modeset"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il driver manca: lo installo dalla distribuzione", "dopo": "the driver is missing: installing it from the distribution"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "installazione del driver fallita (driver-installa.txt)", "dopo": "driver installation failed (driver-installa.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "installazione fallita", "dopo": "installation failed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ubuntu-drivers install fallito (driver-installa.txt)", "dopo": "ubuntu-drivers install failed (driver-installa.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "installazione fallita", "dopo": "installation failed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "driver installato: serve un riavvio", "dopo": "driver installed: a reboot is needed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "l'ICD Vulkan della NVIDIA manca (driver «senza grafica»?): $pk", "dopo": "the NVIDIA Vulkan ICD is missing (\\\"headless\\\" driver?): $pk"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ICD: $(icd_nvidia || echo 'ANCORA NIENTE')", "dopo": "ICD: $(icd_nvidia || echo 'STILL NOTHING')"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ANCORA NIENTE", "dopo": "STILL NOTHING"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$pk non si installa: il driver non e' quello della distribuzione? Rimedio a mano", "dopo": "$pk does not install: is the driver not the distribution's? Fix by hand"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "ICD mancante", "dopo": "ICD missing"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nvidia-drm modeset=1 in /etc/modprobe.d/remotix-nv.conf (lo toglie «pulisci»): serve un riavvio", "dopo": "nvidia-drm modeset=1 in /etc/modprobe.d/remotix-nv.conf (\\\"pulisci\\\" removes it): a reboot is needed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "driver/ICD/modeset cambiati", "dopo": "driver/ICD/modeset changed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "driver, ICD e modeset a posto: niente da fare", "dopo": "driver, ICD and modeset in place: nothing to do"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "memoria $((kib / 1048576)) GiB: la scorta non serve", "dopo": "memory $((kib / 1048576)) GiB: no swap needed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "memoria $((kib / 1048576)) GiB, scorta gia' presente: $(swapon --noheadings --show=NAME,SIZE | tr '\\n' ' ')", "dopo": "memory $((kib / 1048576)) GiB, swap already present: $(swapon --noheadings --show=NAME,SIZE | tr '\\n' ' ')"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "memoria $((kib / 1048576)) GiB ⇒ scorta di 4 GiB accesa ($SCORTA)", "dopo": "memory $((kib / 1048576)) GiB ⇒ 4 GiB swap turned on ($SCORTA)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "memoria $((kib / 1048576)) GiB e la scorta non si accende: un rosso per memoria finita va letto nel registro del kernel (oom)", "dopo": "memory $((kib / 1048576)) GiB and the swap does not turn on: a red from memory running out must be read in the kernel log (oom)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(b) le dipendenze: XFCE sotto labwc, attrezzi, Firefox ESR, Chrome", "dopo": "(b) the dependencies: XFCE under labwc, tools, Firefox ESR, Chrome"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "universe acceso (labwc, xfdesktop4, glslc stanno li')", "dopo": "universe enabled (labwc, xfdesktop4, glslc live there)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$via tolto: il prodotto deve trovare LXQt", "dopo": "$via removed: the product must find LXQt"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "gnome-session-bin tolto: il prodotto deve trovare Plasma, non GNOME", "dopo": "gnome-session-bin removed: the product must find Plasma, not GNOME"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "apt-get install fallito (dipendenze.txt)", "dopo": "apt-get install failed (dipendenze.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "apt fallito", "dopo": "apt failed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "desktop e attrezzi", "dopo": "desktop and tools"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "firefox-esr non si installa", "dopo": "firefox-esr does not install"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "Chrome non si installa", "dopo": "Chrome does not install"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(b) REMOTIX dal .deb, con l'installatore", "dopo": "(b) REMOTIX from the .deb, with the installer"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nessun .deb per $(distro) in $VALIGIA/pacchetti", "dopo": "no .deb for $(distro) in $VALIGIA/pacchetti"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "manca il .deb", "dopo": "the .deb is missing"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "pacchetto: $(basename ", "dopo": "package: $(basename "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "verifica: codici $(cat ", "dopo": "check: codes $(cat "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "l'installatore ha installato REMOTIX", "dopo": "the installer installed REMOTIX"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "l'installatore NON ha installato (uscita $e): $(tail -n 3 ", "dopo": "the installer did NOT install (exit $e): $(tail -n 3 "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "⇒ il rifiuto e' un risultato (evidenze installatore-*); per andare avanti coi passi c-e il pacchetto si mette col gestore", "dopo": "⇒ the refusal is a result (evidence installatore-*); to go on with steps c-e the package is installed with the package manager"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nemmeno apt lo installa (remotix-apt.txt)", "dopo": "not even apt installs it (remotix-apt.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "non installato", "dopo": "not installed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il server ascolta su $PORTA", "dopo": "the server listens on $PORTA"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il server non ascolta su $PORTA dopo 60 s", "dopo": "the server is not listening on $PORTA after 60 s"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "non ascolta", "dopo": "not listening"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "certifica: uscita $c", "dopo": "certify: exit $c"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": ") · verifica: $(cat ", "dopo": ") · check: $(cat "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": ") · certifica $c", "dopo": ") · certify $c"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "manca $BIN", "dopo": "missing $BIN"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "binario assente", "dopo": "binary absent"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "%s\\tcodice %s\\t%s\\n", "dopo": "%s\\tcode %s\\t%s\\n"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "H.264 e HEVC sulla scheda, strada vulkan", "dopo": "H.264 and HEVC on the card, route vulkan"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "h264 e hevc: strada vulkan", "dopo": "h264 and hevc: route vulkan"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "la strada non e' «vulkan» per H.264 e HEVC (vedi prova-codifica.txt)", "dopo": "the route is not \\\"vulkan\\\" for H.264 and HEVC (see prova-codifica.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "vedi prova-codifica.txt", "dopo": "see prova-codifica.txt"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(d) banchi/19-vulkan/19-confronto.sh sulla NVIDIA", "dopo": "(d) banchi/19-vulkan/19-confronto.sh on the NVIDIA"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "nessun nodo NVIDIA", "dopo": "no NVIDIA node"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "niente nodo", "dopo": "no node"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "19-confronto: $buone prove su $tot col codice 0 e ogni fotogramma decodificato", "dopo": "19-confronto: $buone tests out of $tot with code 0 and every frame decoded"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "19-confronto: uscita $c, $buone prove buone su $tot (confronto.txt, esiti.jsonl)", "dopo": "19-confronto: exit $c, $buone good tests out of $tot (confronto.txt, esiti.jsonl)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$buone/$tot, uscita $c", "dopo": "$buone/$tot, exit $c"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(e) la suite della fase 15, sottoinsieme, su XFCE", "dopo": "(e) the phase 15 suite, subset, on XFCE"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il server codifica su renderD128 e la NVIDIA e' «${nv:-nessuno}»: la suite qui non direbbe niente della NVIDIA", "dopo": "the server encodes on renderD128 and the NVIDIA is \\\"${nv:-none}\\\": the suite here would say nothing about the NVIDIA"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "la NVIDIA non e' renderD128", "dopo": "the NVIDIA is not renderD128"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il server non ascolta su $PORTA", "dopo": "the server is not listening on $PORTA"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "server spento", "dopo": "server off"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il compositore dei browser: $sock ($usc 3840x2160, $rend)", "dopo": "the browsers' compositor: $sock ($usc 3840x2160, $rend)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "⛔ CLIENTE_SCHEDA=1: i browser disegnano sulla scheda — controprova, NON la suite della NVIDIA", "dopo": "⛔ CLIENTE_SCHEDA=1: the browsers draw on the card — counter-test, NOT the NVIDIA suite"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "il labwc dei browser non e' nato (compositore-browser.log): i browser vanno HEADLESS, e lo si dichiara", "dopo": "the browsers' labwc was not born (compositore-browser.log): the browsers go HEADLESS, and that is declared"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "suite VERDE", "dopo": "suite GREEN"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "suite con prove non guardate", "dopo": "suite with tests not looked at"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "suite ROSSA", "dopo": "suite RED"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(f) raccolgo registri ed evidenze", "dopo": "(f) collecting logs and evidence"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "archivio: $LAVORO/$nome ($(du -h ", "dopo": "archive: $LAVORO/$nome ($(du -h "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "(g) pulisco", "dopo": "(g) cleaning"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "l'archivio non risulta portato sul portatile ($LAVORO/raccolto): prima «19-nvidia.sh raccogli IP» (o FORZA=1)", "dopo": "the archive does not appear to have been taken to the laptop ($LAVORO/raccolto): first \\\"19-nvidia.sh raccogli IP\\\" (or FORZA=1)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "manca la fotografia di com'era la macchina ($PRIMA): non so che cosa togliere", "dopo": "the snapshot of how the machine was is missing ($PRIMA): I do not know what to remove"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "REMOTIX disinstallato dall'installatore", "dopo": "REMOTIX uninstalled by the installer"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "l'installatore non ha disinstallato (disinstalla.txt): tolgo col gestore", "dopo": "the installer did not uninstall (disinstalla.txt): removing with the package manager"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "scorta tolta", "dopo": "swap removed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "apt toglierebbe anche pacchetti che c'erano: $(echo ", "dopo": "apt would also remove packages that were there: $(echo "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": " | tr '\\n' ' ') ⇒ non tolgo niente col gestore", "dopo": " | tr '\\n' ' ') ⇒ removing nothing with the package manager"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "tolti $(echo ", "dopo": "removed $(echo "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": " | wc -l) pacchetti nuovi", "dopo": " | wc -l) new packages"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "apt-get purge con errori (purge.txt)", "dopo": "apt-get purge with errors (purge.txt)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "/etc/apt com'era", "dopo": "/etc/apt as it was"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "pacchetti diversi da prima: ${dopo_p:-nessuno}", "dopo": "packages different from before: ${dopo_p:-none}"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "utenti in piu' (dai pacchetti): ${dopo_u:-nessuno}", "dopo": "extra users (from the packages): ${dopo_u:-none}"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "riavvio consigliato: $([ $riavvio = 1 ] && echo si || echo no)", "dopo": "reboot recommended: $([ $riavvio = 1 ] && echo yes || echo no)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "RIAVVIO CONSIGLIATO: driver o modeset tolti", "dopo": "REBOOT RECOMMENDED: driver or modeset removed"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "pulito (la valigia $VALIGIA e $LAVORO li toglie il portatile, a script finito)", "dopo": "clean (the suitcase $VALIGIA and $LAVORO are removed by the laptop, once the script ends)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "a che punto siamo", "dopo": "where we are"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "    %-11s fatto  %s\\n", "dopo": "    %-11s done   %s\\n"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "uscita $c · $(date -Is)", "dopo": "exit $c · $(date -Is)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "dopo il riavvio: rifaccio controlli e driver", "dopo": "after the reboot: redoing checks and driver"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$p: gia' fatto ($(cat ", "dopo": "$p: already done ($(cat "}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": ")), salto", "dopo": ")), skipping"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "SERVE UN RIAVVIO: poi si rilancia «tutto»", "dopo": "A REBOOT IS NEEDED: then \\\"tutto\\\" is run again"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "controlli ROSSI: mi fermo (FORZA=1 per andare avanti lo stesso)", "dopo": "checks RED: stopping (FORZA=1 to go on anyway)"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "$p non riuscito: senza, i passi dopo non hanno senso", "dopo": "$p failed: without it, the later steps make no sense"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "FINE", "dopo": "END"}
+{"file": "banchi/19-nvidia/19-nv-macchina.sh", "prima": "uso: $0 aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto", "dopo": "usage: $0 aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⚠ LINEARE+RENDERING rifiutato: lastra LINEARE senza RENDERING\\n", "dopo": "⚠ LINEAR+RENDERING refused: LINEAR slab without RENDERING\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "argomento ignoto: %s\\n", "dopo": "unknown argument: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "uso: 19-confronto --motore", "dopo": "usage: 19-confronto --motore"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ il dispositivo Vulkan non si e' aperto: %s\\n", "dopo": "⛔ the Vulkan device did not open: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ il codificatore Vulkan non si e' aperto: %s\\n", "dopo": "⛔ the Vulkan encoder did not open: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ il codificatore non si e' aperto: %s\\n", "dopo": "⛔ the encoder did not open: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ strada della scheda chiesta, ma il codificatore e' in software\\n", "dopo": "⛔ card path requested, but the encoder is in software\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ non apro i file d'uscita\\n", "dopo": "⛔ cannot open the output files\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ GBM non si apre su %s\\n", "dopo": "⛔ GBM does not open on %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⭐ ciclo: fotogramma %u, tela %ux%u\\n", "dopo": "⭐ cycle: frame %u, canvas %ux%u\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ qualita': %s\\n", "dopo": "⛔ quality: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⚠ --qualita-a vale solo per il motore vulkan (nel prodotto scatta dal tetto dei 16 MiB)\\n", "dopo": "⚠ --qualita-a applies only to the vulkan engine (in the product it is triggered by the 16 MiB cap)\\n"}
+{"file": "banchi/19-vulkan/19-confronto.c", "prima": "⛔ fotogramma %u: %s\\n", "dopo": "⛔ frame %u: %s\\n"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "== costruisco 19-confronto", "dopo": "== building 19-confronto"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "⛔ il banco chiama ffmpeg", "dopo": "⛔ the bench calls ffmpeg"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "== costruito", "dopo": "== built"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "   $nome $motore: codice $codice · ${byte:-0} byte · decodificati ${decodificati:-?} · psnr", "dopo": "   $nome $motore: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "== $base chiave a richiesta / tela nuova / tetto / qualita'", "dopo": "== $base key on request / new canvas / cap / quality"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "== capacita' Intel senza e con ANV_DEBUG=video-encode", "dopo": "== Intel capabilities without and with ANV_DEBUG=video-encode"}
+{"file": "banchi/19-vulkan/19-confronto.sh", "prima": "azione ignota: $AZIONE", "dopo": "unknown action: $AZIONE"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": "FAIL {prova}: manca una versione", "dopo": "FAIL {prova}: one version is missing"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": "NON PROVATO {prova}: Chrome non decodifica {b.get('codec')} qui (serve la GPU)", "dopo": "NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": " · misura {b.get('misura')} · errori {b['errori']} · impronte {'uguali' if a['impronte']==b['impronte'] else 'DIVERSE'}", "dopo": " · size {b.get('misura')} · errors {b['errori']} · fingerprints {'equal' if a['impronte']==b['impronte'] else 'DIFFERENT'}"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": "{passati} PASS · {rossi} FAIL · {non_provati} non provati", "dopo": "{passati} PASS · {rossi} FAIL · {non_provati} not tested"}
+{"file": "banchi/19-vulkan/19-shader.sh", "prima": "⛔ ne' glslc ne' glslangValidator", "dopo": "⛔ neither glslc nor glslangValidator"}
+{"file": "banchi/19-vulkan/19-shader.sh", "prima": "scritto $USCITA ($(wc -c < \"$USCITA\") byte)", "dopo": "written $USCITA ($(wc -c < \"$USCITA\") bytes)"}
+{"file": "banchi/19-vulkan/19-shader.sh", "prima": "/* generato da banchi/19-vulkan/19-shader.sh da src/vulkanvideo_rgb_nv12.comp: non si tocca a mano */", "dopo": "/* generated by banchi/19-vulkan/19-shader.sh from src/vulkanvideo_rgb_nv12.comp: do not edit by hand */"}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "MANCA", "dopo": "MISSING"}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "ffprobe DIVERSO: ", "dopo": "ffprobe DIFFERENT: "}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "decodificati ", "dopo": "decoded "}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "codifica ", "dopo": "encoding "}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "VULKAN ha codice {b['codice']} e {b.get('errori_decodifica')} errori di decodifica", "dopo": "VULKAN has code {b['codice']} and {b.get('errori_decodifica')} decoding errors"}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "il PRODOTTO INTEGRATO ha codice {s_['codice']} e {s_.get('errori_decodifica')} errori di decodifica", "dopo": "the INTEGRATED PRODUCT has code {s_['codice']} and {s_.get('errori_decodifica')} decoding errors"}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "{prova} [prodotto integrato «scheda»]: ", "dopo": "{prova} [integrated product «scheda»]: "}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "⛔ DOVE VULKAN NON E' UGUALE O E' PEGGIO DI VA-API:", "dopo": "⛔ WHERE VULKAN IS NOT EQUAL TO OR IS WORSE THAN VA-API:"}
+{"file": "banchi/19-vulkan/19-tabella.py", "prima": "⭐ nessuna prova in cui Vulkan sia peggio di VA-API (ffprobe, decodifica, PSNR, byte, tempi)", "dopo": "⭐ no test in which Vulkan is worse than VA-API (ffprobe, decoding, PSNR, bytes, times)"}

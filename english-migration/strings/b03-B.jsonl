@@ -1,0 +1,118 @@
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ xkbcommon non c'e' (pkg-config): il banco non puo' misurare niente.", "dopo": "⛔ xkbcommon is missing (pkg-config): the bench cannot measure anything."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— 1. IL PRODOTTO — src/tastiera.c ————", "dopo": "———— 1. THE PRODUCT — src/tastiera.c ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ il prodotto non compila", "dopo": "⛔ the product does not compile"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— 2. LA CERTIFICAZIONE — quattro difetti messi apposta ————", "dopo": "———— 2. THE CERTIFICATION — four defects planted on purpose ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "     (se una di queste righe dicesse VERDE, il banco non proverebbe niente)", "dopo": "     (if one of these lines said VERDE, the bench would prove nothing)"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "U+00E9) su «us»", "dopo": "U+00E9) on «us»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "U+00E9) su «it»", "dopo": "U+00E9) on «it»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "sessione «it» + negoziata «us»", "dopo": "session «it» + negotiated «us»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "manda la «e» al posto della «é»", "dopo": "sends the «e» instead of the «é»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "dimentica i modificatori", "dopo": "forgets the modifiers"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "ripiega su «us» in silenzio", "dopo": "falls back to «us» silently"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "si fida del nome negoziato, non della keymap della sessione", "dopo": "trusts the negotiated name, not the keymap of the session"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ il guasto $G non compila:", "dopo": "⛔ fault $G does not compile:"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "  ✅ guasto %d (%s) ⇒ il banco dice ROSSO, e sulla prova giusta\\n", "dopo": "  ✅ fault %d (%s) ⇒ the bench says ROSSO, and on the right test\\n"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "     ⇒ IL BANCO NON E' CERTIFICATO: il suo verde non vale niente.", "dopo": "     ⇒ THE BENCH IS NOT CERTIFIED: its green is worth nothing."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— L'ESITO ————", "dopo": "———— THE OUTCOME ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ IL BANCO NON E' CERTIFICATO — non si crede al suo verde (CODER.md §3.3).", "dopo": "⛔ THE BENCH IS NOT CERTIFIED — its green is not believed (CODER.md §3.3)."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "   i file: $FUORI", "dopo": "   the files: $FUORI"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "✅ il banco e' CERTIFICATO: ha visto tutt'e quattro i difetti, ciascuno sulla sua prova.", "dopo": "✅ the bench is CERTIFIED: it saw all four defects, each on its own test."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "✅ e src/tastiera.c passa: banchi/04-b25-esiti.jsonl", "dopo": "✅ and src/tastiera.c passes: banchi/04-b25-esiti.jsonl"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ ma src/tastiera.c NON passa (uscita $PRODOTTO): banchi/04-b25-esiti.jsonl", "dopo": "⛔ but src/tastiera.c does NOT pass (exit $PRODOTTO): banchi/04-b25-esiti.jsonl"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "   i file del giro: $FUORI", "dopo": "   the files of the run: $FUORI"}
+{"file": "banchi/04-b25-guasti.c", "prima": "della sessione", "dopo": "the session's"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc(sx)", "dopo": "Shift(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc(dx)", "dopo": "Shift(R)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Ctrl(sx)", "dopo": "Ctrl(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Alt(sx)", "dopo": "Alt(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "BlocMaiusc", "dopo": "CapsLock"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "BlocNum", "dopo": "NumLock"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "«%s» (U+%04X) su «%s» %s", "dopo": "«%s» (U+%04X) on «%s» %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ deve uscire", "dopo": "⇒ must come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ NON producibile", "dopo": "⇒ NOT producible"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "il SIMULATORE non ha compilato la disposizione — non ho saputo guardare", "dopo": "the SIMULATOR did not compile the layout — I could not look"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "tastiera_apri(\\\"%s\\\") ha detto NULL: %s", "dopo": "tastiera_apri(\\\"%s\\\") said NULL: %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessun motivo)", "dopo": "(no reason)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha ritornato -1 (errore) invece di %d", "dopo": "returned -1 (error) instead of %d"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro", "dopo": "said NO and sent nothing — it is the case to write in the log"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto SI (%s) e sarebbe uscita «%s» (U+%04X) al posto di «%s»: ", "dopo": "⛔ said YES (%s) and «%s» (U+%04X) would have come out instead of «%s»: "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "una LETTERA DIVERSA, che RCP.md §7.3 vieta", "dopo": "a DIFFERENT LETTER, which RCP.md §7.3 forbids"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto «non producibile» un carattere che quella disposizione ha", "dopo": "⛔ said «not producible» for a character that layout has"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto SI ma con n=%zu posizioni (il massimo e' %d)", "dopo": "said YES but with n=%zu positions (the maximum is %d)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battendo %s esce «%s» — la strada e' %s%s", "dopo": "typing %s gives «%s» — the route is %s%s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "con modificatore", "dopo": "with modifier"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "diretta", "dopo": "direct"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ esce «%s» ma la sequenza %s LASCIA UN MODIFICATORE PREMUTO", "dopo": "⛔ «%s» comes out but the sequence %s LEAVES A MODIFIER PRESSED"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ battendo %s esce «%s» (U+%04X), non «%s» (U+%04X)", "dopo": "⛔ typing %s gives «%s» (U+%04X), not «%s» (U+%04X)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — I CONTROLLI DELLO STRUMENTO (senza questi, «non e' uscito niente» e «non ho\\n", "dopo": "\\n  — THE TOOL'S CONTROLS (without these, «nothing came out» and «I could not\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    saputo guardare» hanno lo stesso aspetto — CODER.md §3.10)\\n", "dopo": "    look» look the same — CODER.md §3.10)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "controllo positivo: il simulatore compila «it»", "dopo": "positive control: the simulator compiles «it»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "no — il banco non puo' misurare niente", "dopo": "no — the bench cannot measure anything"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ positivo: il simulatore vede una lettera che ESCE di sicuro", "dopo": "⭐ positive: the simulator sees a letter that surely COMES OUT"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battuto il tasto 30 su «it», e' uscita «a»", "dopo": "typed key 30 on «it», «a» came out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battuto il tasto 30, NON e' uscita una «a»", "dopo": "typed key 30, an «a» did NOT come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "tasto 26 senza Maiusc ⇒ «%s» (U+%04X), e NON e' la «e'» accentata", "dopo": "key 26 without Shift ⇒ «%s» (U+%04X), and it is NOT the accented «e'»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ negativo: il simulatore DISTINGUE i livelli", "dopo": "⭐ negative: the simulator DISTINGUISHES the levels"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc+26 ⇒ «%s» (U+%04X): il simulatore APPLICA i modificatori", "dopo": "Shift+26 ⇒ «%s» (U+%04X): the simulator APPLIES the modifiers"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ il simulatore applica i modificatori", "dopo": "⭐ the simulator applies the modifiers"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ «%s» non si carica ⇒ DEVE fallire e DIRLO", "dopo": "⛔ «%s» does not load ⇒ MUST fail and SAY SO"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NULL, col motivo: «%s»", "dopo": "NULL, with the reason: «%s»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NULL ma SENZA motivo: chi legge il registro non sa perche'", "dopo": "NULL but WITHOUT a reason: whoever reads the log does not know why"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ RIPIEGO SILENZIOSO: ha ritornato una tastiera («%s») per una disposizione ", "dopo": "⛔ SILENT FALLBACK: it returned a keyboard («%s») for a layout "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "che non esiste%s. Il sintomo per l'utente e' «scrive le lettere sbagliate», e ", "dopo": "that does not exist%s. The symptom for the user is «it types the wrong letters», and "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "nessuno collega le due cose (CODER.md §4.2)", "dopo": "nobody connects the two things (CODER.md §4.2)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(senza nome)", "dopo": "(no name)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": " — e per giunta scrive", "dopo": " — and it even types"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "i nomi delle due disposizioni si distinguono", "dopo": "the names of the two layouts are distinguishable"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "una delle due non si e' aperta: la prova non si e' potuta fare", "dopo": "one of the two did not open: the test could not be done"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ i nomi delle due disposizioni si DISTINGUONO", "dopo": "⭐ the names of the two layouts are DISTINGUISHABLE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "gli ingressi illegali si distinguono dal «non producibile»", "dopo": "illegal inputs are distinguished from «not producible»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "«it» non si e' aperta", "dopo": "«it» did not open"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "surrogato ⇒ %d, fuori intervallo ⇒ %d (attesi -1 e -1)", "dopo": "surrogate ⇒ %d, out of range ⇒ %d (expected -1 and -1)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "gli ingressi illegali NON si confondono col «non producibile»", "dopo": "illegal inputs are NOT confused with «not producible»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "sessione «%s» + negoziata «%s», «%s» (U+%04X) %s", "dopo": "session «%s» + negotiated «%s», «%s» (U+%04X) %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessuna)", "dopo": "(none)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ deve uscire", "dopo": "⇒ must come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ NON producibile", "dopo": "⇒ NOT producible"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho potuto costruire la disposizione della sessione: NON HO MISURATO", "dopo": "I could not build the session's layout: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "la keymap della sessione non si e' aperta: %s", "dopo": "the session's keymap did not open: %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(senza motivo)", "dopo": "(no reason)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto NO e non ha mandato niente", "dopo": "said NO and sent nothing"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto SI (%s): comparirebbe «%s»", "dopo": "⛔ said YES (%s): «%s» would appear"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto «non producibile» (%d) un carattere che LA SESSIONE ha: si e' ", "dopo": "⛔ said «not producible» (%d) for a character THE SESSION has: it "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "fidato del nome negoziato invece che della disposizione vera", "dopo": "trusted the negotiated name instead of the real layout"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battendo %s sulla disposizione DELLA SESSIONE esce «%s»", "dopo": "typing %s on THE SESSION'S layout gives «%s»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ battendo %s sulla disposizione DELLA SESSIONE esce «%s» (U+%04X), non «%s»: ", "dopo": "⛔ typing %s on THE SESSION'S layout gives «%s» (U+%04X), not «%s»: "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "UNA LETTERA DIVERSA", "dopo": "A DIFFERENT LETTER"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ si puo' riaprire piu' volte senza perdere niente", "dopo": "⭐ it can be reopened several times without losing anything"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NON HO MISURATO", "dopo": "I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "it⇒%d (%zu pos.), poi us⇒%d (%zu pos.), poi ANCORA it⇒%d (%zu pos.)", "dopo": "it⇒%d (%zu pos.), then us⇒%d (%zu pos.), then AGAIN it⇒%d (%zu pos.)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ due disposizioni vive insieme non si rimescolano", "dopo": "⭐ two layouts alive together do not get mixed up"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "il registro: sessione «%s» + negoziata «%s» ⇒ %s", "dopo": "the log: session «%s» + negotiated «%s» ⇒ %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessuna)", "dopo": "(none)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "DEVE dichiarare il ripiego", "dopo": "MUST declare the fallback"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NON deve gridare al ripiego", "dopo": "must NOT cry fallback"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho costruito la disposizione: NON HO MISURATO", "dopo": "I did not build the layout: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho potuto dirottare il registro: NON HO MISURATO", "dopo": "I could not redirect the log: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ non ho letto NESSUNA riga di registro: non so distinguere il ", "dopo": "⛔ I read NO log line at all: I cannot tell "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "silenzio dal non aver guardato", "dopo": "silence from not having looked"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "%ld righe di registro, «RIPIEGO DICHIARATO» %s", "dopo": "%ld log lines, «FALLBACK DECLARED» %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "c'e'", "dopo": "present"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non c'e'", "dopo": "absent"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ non riesco a scrivere %s\\n", "dopo": "⛔ I cannot write %s\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n== BANCO 04-b25 — LA TASTIERA: dalla lettera al martelletto\\n", "dopo": "\\n== BENCH 04-b25 — THE KEYBOARD: from the letter to the hammer\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "   il metro e' IL CARATTERE CHE ESCE da un `xkb_state` indipendente,\\n", "dopo": "   the yardstick is THE CHARACTER THAT COMES OUT of an independent `xkb_state`,\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "   non il codice che il modulo dice di aver scelto.\\n", "dopo": "   not the code the module says it chose.\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n⛔ LO STRUMENTO NON E' CERTIFICATO: non misuro niente.\\n", "dopo": "\\n⛔ THE TOOL IS NOT CERTIFIED: I measure nothing.\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — LE LETTERE (PIANO.md righe 630-632)\\n", "dopo": "\\n  — THE LETTERS (PIANO.md lines 630-632)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — LO STESSO CARATTERE, DUE STRADE (SPECIFICHE.md §7.3: Maiusc e AltGr\\n", "dopo": "\\n  — THE SAME CHARACTER, TWO ROUTES (SPECIFICHE.md §7.3: Shift and AltGr\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    non sono comandi, servono a FARE la lettera)\\n", "dopo": "    are not commands, they serve to MAKE the letter)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — QUEL CHE NON E' SCRIVIBILE SI DICHIARA, NON SI FALSIFICA\\n", "dopo": "\\n  — WHAT CANNOT BE TYPED IS DECLARED, NOT FALSIFIED\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔ LA TRAPPOLA: IL RIPIEGO SILENZIOSO\\n", "dopo": "\\n  — ⛔ THE TRAP: THE SILENT FALLBACK\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — GLI INGRESSI CHE IL PROTOCOLLO VIETA\\n", "dopo": "\\n  — THE INPUTS THE PROTOCOL FORBIDS\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔⛔ LA DISPOSIZIONE LA CONSEGNA LA SESSIONE, NON LA SCEGLIE IL NOME\\n", "dopo": "\\n  — ⛔⛔ THE LAYOUT IS HANDED OVER BY THE SESSION, NOT CHOSEN BY THE NAME\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    (il caso per cui il contratto e' cambiato: sessione «it», client «us»)\\n", "dopo": "    (the case for which the contract changed: session «it», client «us»)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔ E LA RIGA DEL REGISTRO, NEI DUE VERSI\\n", "dopo": "\\n  — ⛔ AND THE LOG LINE, IN BOTH DIRECTIONS\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n== %d prove, %d ROSSE  ⇒  %s\\n\\n", "dopo": "\\n== %d tests, %d RED  ⇒  %s\\n\\n"}
+{"file": "banchi/04-b25-guasti.c", "prima": "la disposizione non si compila", "dopo": "the layout does not compile"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "  ⛔ guasto %d (%s) NON e' stato visto: uscita=%d, righe rosse attese=%d\\n", "dopo": "  ⛔ fault %d (%s) was NOT seen: exit=%d, expected red lines=%d\\n"}

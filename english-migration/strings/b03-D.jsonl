@@ -1,0 +1,87 @@
+{"file": "banchi/04-b31-tela.c", "prima": "  \\033[1;31mNO\\033[0m  %-34s\\n        atteso: %s\\n        visto:  %s\\n", "dopo": "  \\033[1;31mNO\\033[0m  %-34s\\n        expected: %s\\n        seen:     %s\\n"}
+{"file": "banchi/04-b31-tela.c", "prima": "TELA usciti %d (esito %u motivo %u -> %ux%u), richieste al palco ", "dopo": "TELA sent %d (outcome %u reason %u -> %ux%u), requests to the stage "}
+{"file": "banchi/04-b31-tela.c", "prima": "%d (di cui %d alla nascita, §4.5), tela in vigore %ux%u", "dopo": "%d (of which %d at birth, §4.5), canvas in force %ux%u"}
+{"file": "banchi/04-b31-tela.c", "prima": "1 la strada buona", "dopo": "1 the good road"}
+{"file": "banchi/04-b31-tela.c", "prima": "nessun TELA prima del fotogramma, poi UNO solo con 1600x900", "dopo": "no TELA before the frame, then only ONE with 1600x900"}
+{"file": "banchi/04-b31-tela.c", "prima": "2 la misura che c'e' gia'", "dopo": "2 the size already there"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(ADATTATA 1920x1080) subito, ZERO richieste al palco", "dopo": "ONE TELA(ADATTATA 1920x1080) at once, ZERO requests to the stage"}
+{"file": "banchi/04-b31-tela.c", "prima": "3 due ADATTA_TELA di fila", "dopo": "3 two ADATTA_TELA in a row"}
+{"file": "banchi/04-b31-tela.c", "prima": "due TELA in tutto: NON_ORA alla prima, ADATTATA 1280x720 alla seconda", "dopo": "two TELA in all: NON_ORA to the first, ADATTATA 1280x720 to the second"}
+{"file": "banchi/04-b31-tela.c", "prima": "4 il palco non consegna", "dopo": "4 the stage does not deliver"}
+{"file": "banchi/04-b31-tela.c", "prima": "niente prima del fondo, poi UN TELA(RIFIUTATA, NON_ORA), tela 1920x1080", "dopo": "nothing before the deadline, then ONE TELA(RIFIUTATA, NON_ORA), canvas 1920x1080"}
+{"file": "banchi/04-b31-tela.c", "prima": "5 misura sopra il massimo: ridotta", "dopo": "5 size above the maximum: reduced"}
+{"file": "banchi/04-b31-tela.c", "prima": "nessun TELA subito, UNA richiesta al palco a 4096x2304 (il massimo di ", "dopo": "no TELA at once, ONE request to the stage at 4096x2304 (the maximum of "}
+{"file": "banchi/04-b31-tela.c", "prima": "§4.5), sessione VIVA", "dopo": "§4.5), session ALIVE"}
+{"file": "banchi/04-b31-tela.c", "prima": "6 la misura dispari, troncata", "dopo": "6 the odd size, truncated"}
+{"file": "banchi/04-b31-tela.c", "prima": "al palco 2132x1200 (troncata al pari), e il TELA porta quella", "dopo": "to the stage 2132x1200 (truncated to even), and the TELA carries that"}
+{"file": "banchi/04-b31-tela.c", "prima": "7 il palco concede altro (§4.5)", "dopo": "7 the stage grants other (§4.5)"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(ADATTATA 1366x768), e la tela in vigore e' quella VERA", "dopo": "ONE TELA(ADATTATA 1366x768), and the canvas in force is the REAL one"}
+{"file": "banchi/04-b31-tela.c", "prima": "SESSIONE concede %ux%u", "dopo": "SESSIONE grants %ux%u"}
+{"file": "banchi/04-b31-tela.c", "prima": "8 il ri-attacco", "dopo": "8 the re-attach"}
+{"file": "banchi/04-b31-tela.c", "prima": "SESSIONE concede 1912x1044 (quella del palco, §4.5), non 1920x1080", "dopo": "SESSIONE grants 1912x1044 (the stage's, §4.5), not 1920x1080"}
+{"file": "banchi/04-b31-tela.c", "prima": "9 il palco fa di testa sua", "dopo": "9 the stage goes its own way"}
+{"file": "banchi/04-b31-tela.c", "prima": "ZERO TELA (uno non richiesto farebbe chiudere il client), il palco ", "dopo": "ZERO TELA (an unrequested one would make the client close), the stage "}
+{"file": "banchi/04-b31-tela.c", "prima": "richiamato a 1920x1080 con l'attesa che cresce", "dopo": "called back to 1920x1080 with the growing wait"}
+{"file": "banchi/04-b31-tela.c", "prima": "10 oltre il tetto del client", "dopo": "10 beyond the client's ceiling"}
+{"file": "banchi/04-b31-tela.c", "prima": "ridotta a 2560x1440 (proporzioni tenute) e concessa, MAI 3840x2160", "dopo": "reduced to 2560x1440 (proportions kept) and granted, NEVER 3840x2160"}
+{"file": "banchi/04-b31-tela.c", "prima": "11 ospite senza palco", "dopo": "11 host without a stage"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, COMPOSITORE_INCAPACE), sessione viva", "dopo": "ONE TELA(RIFIUTATA, COMPOSITORE_INCAPACE), session alive"}
+{"file": "banchi/04-b31-tela.c", "prima": "12 la richiesta non parte", "dopo": "12 the request does not leave"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, NON_ORA) subito", "dopo": "ONE TELA(RIFIUTATA, NON_ORA) at once"}
+{"file": "banchi/04-b31-tela.c", "prima": "13 il fotogramma vecchio in volo", "dopo": "13 the old frame in flight"}
+{"file": "banchi/04-b31-tela.c", "prima": "la misura VECCHIA non chiude la richiesta; poi TELA(1600x900)", "dopo": "the OLD size does not close the request; then TELA(1600x900)"}
+{"file": "banchi/04-b31-tela.c", "prima": "14 due richieste incatenate", "dopo": "14 two chained requests"}
+{"file": "banchi/04-b31-tela.c", "prima": "la risposta della PRIMA non chiude la SECONDA: la tela finisce a ", "dopo": "the answer to the FIRST does not close the SECOND: the canvas ends at "}
+{"file": "banchi/04-b31-tela.c", "prima": "1280x720, quella che l'utente ha chiesto per ultima", "dopo": "1280x720, the one the user asked for last"}
+{"file": "banchi/04-b31-tela.c", "prima": "15 il palco rinuncia", "dopo": "15 the stage gives up"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, NON_ORA) subito, non dopo il fondo", "dopo": "ONE TELA(RIFIUTATA, NON_ORA) at once, not after the deadline"}
+{"file": "banchi/04-b31-tela.c", "prima": "16 il palco ce l'aveva gia'", "dopo": "16 the stage already had it"}
+{"file": "banchi/04-b31-tela.c", "prima": "TELA(ADATTATA 1280x720) alla risposta del palco, senza fondo", "dopo": "TELA(ADATTATA 1280x720) at the stage's answer, without deadline"}
+{"file": "banchi/04-b31-tela.c", "prima": "17 sotto il minimo di §4.5", "dopo": "17 below the minimum of §4.5"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", "dopo": "ONE TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240"}
+{"file": "banchi/04-b31-tela.c", "prima": "18 due sessioni, un palco solo", "dopo": "18 two sessions, one stage only"}
+{"file": "banchi/04-b31-tela.c", "prima": "chi non ha il posto NON comanda (zero richieste al palco, e se torna ", "dopo": "whoever lacks the slot does NOT command (zero requests to the stage, and "}
+{"file": "banchi/04-b31-tela.c", "prima": "a parlare e' 0x0F); chi ce l'ha si'", "dopo": "if it speaks again it is 0x0F); whoever has it does"}
+{"file": "banchi/04-b31-tela.c", "prima": "19 la tela si dichiara alla nascita", "dopo": "19 the canvas is declared at birth"}
+{"file": "banchi/04-b31-tela.c", "prima": "UNA richiesta al palco gia' con l'ATTACCA, a 1600x900 (§4.5: nasce ", "dopo": "ONE request to the stage already with ATTACCA, at 1600x900 (§4.5: it is "}
+{"file": "banchi/04-b31-tela.c", "prima": "gia' cosi' invece di doverla cambiare — sono i 17 s di coda)", "dopo": "born that way instead of having to change it — those are the 17 s of tail)"}
+{"file": "banchi/04-b31-tela.c", "prima": "\\n== 04-b31: la tela che cambia (RCP.md §7.1, §6.2) ==\\n\\n", "dopo": "\\n== 04-b31: the changing canvas (RCP.md §7.1, §6.2) ==\\n\\n"}
+{"file": "banchi/04-b31-tela.c", "prima": "\\n  passati %d, falliti %d\\n\\n", "dopo": "\\n  passed %d, failed %d\\n\\n"}
+{"file": "banchi/04-in8-costruisci.sh", "prima": "⛔ NON costruiti", "dopo": "⛔ NOT built"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n== stato dei monitor (%s) ==\\n", "dopo": "\\n== monitor state (%s) ==\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  monitor %-10s «%s» modo %s  %dx%d @%.2f  pref=%d  ", "dopo": "  monitor %-10s «%s» mode %s  %dx%d @%.2f  pref=%d  "}
+{"file": "banchi/04-in8-misura.c", "prima": "scale ammesse:", "dopo": "allowed scales:"}
+{"file": "banchi/04-in8-misura.c", "prima": "  LOGICO  a (%d,%d)  SCALA %.6f  trasf %u  primario %d  ->", "dopo": "  LOGICAL  at (%d,%d)  SCALE %.6f  transf %u  primary %d  ->"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] FORMATO CONCORDATO: %ux%u  (chiesto %ux%u)  %s\\n", "dopo": "[%6.3f s] AGREED FORMAT: %ux%u  (asked %ux%u)  %s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⭐ ESATTO", "dopo": "⭐ EXACT"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ DIVERSO — arrotondato in silenzio", "dopo": "⛔ DIFFERENT — rounded silently"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] stato: %s -> %s%s%s\\n", "dopo": "[%6.3f s] state: %s -> %s%s%s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  errore: ", "dopo": "  error: "}
+{"file": "banchi/04-in8-misura.c", "prima": "  pixel non neri: %.2f%%   ultime 4 colonne: luminanza media %.1f   ", "dopo": "  non-black pixels: %.2f%%   last 4 columns: mean luminance %.1f   "}
+{"file": "banchi/04-in8-misura.c", "prima": "ultime 4 righe: %.1f\\n", "dopo": "last 4 rows: %.1f\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  griglia:", "dopo": "  grid:"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] fotogramma %d: %u byte, passo %d\\n", "dopo": "[%6.3f s] frame %d: %u bytes, stride %d\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] fotogramma NUOVO %d: %u byte, passo %d  ", "dopo": "[%6.3f s] NEW frame %d: %u bytes, stride %d  "}
+{"file": "banchi/04-in8-misura.c", "prima": "(buco dalla richiesta: %.1f ms; dall'ultimo vecchio: %.1f ms)\\n", "dopo": "(hole since the request: %.1f ms; since the last old one: %.1f ms)\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === dopo %d s: %d fotogrammi alla prima misura ===\\n", "dopo": "\\n[%6.3f s] === after %d s: %d frames at the first size ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "prima misura", "dopo": "first size"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] raffica: %d chieste, %d concordate ESATTE\\n", "dopo": "[%6.3f s] burst: %d asked, %d agreed EXACT\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === CAMBIO A CALDO: chiedo %ux%u ===\\n", "dopo": "\\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === dopo il cambio: %d fotogrammi nuovi ===\\n", "dopo": "\\n[%6.3f s] === after the change: %d new frames ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] raffica FINALE: %d chieste, %d concordate ESATTE\\n", "dopo": "[%6.3f s] FINAL burst: %d asked, %d agreed EXACT\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "seconda misura", "dopo": "second size"}
+{"file": "banchi/04-in8-misura.c", "prima": "uso: %s <L> <A> [<L2> <A2>] [secondi]\\n", "dopo": "usage: %s <L> <A> [<L2> <A2>] [seconds]\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "PRIMA di tutto", "dopo": "BEFORE everything"}
+{"file": "banchi/04-in8-misura.c", "prima": "flusso: %s\\n", "dopo": "stream: %s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ nessun nodo\\n", "dopo": "⛔ no node\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "nodo PipeWire: %u\\n", "dopo": "PipeWire node: %u\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ PipeWire non risponde\\n", "dopo": "⛔ PipeWire does not answer\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n== riepilogo ==\\n  chiesti %ux%u -> ottenuti %ux%u, %d fotogrammi\\n", "dopo": "\\n== summary ==\\n  asked %ux%u -> got %ux%u, %d frames\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  poi chiesti %ux%u -> %d fotogrammi nuovi\\n", "dopo": "  then asked %ux%u -> %d new frames\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  NON C'E'\\n", "dopo": "  %-12s  NOT THERE\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⛔ APERTURA RIFIUTATA: %s\\n", "dopo": "  %-12s  %dx%d %-12s  ⛔ OPEN REFUSED: %s\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d  ⛔ il fotogramma non si alloca\\n", "dopo": "  %-12s  %dx%d  ⛔ the frame cannot be allocated\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⚠ aperto, ma il FOTOGRAMMA e' rifiutato: %s\\n", "dopo": "  %-12s  %dx%d %-12s  ⚠ opened, but the FRAME is refused: %s\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⭐ APERTO (coded %dx%d), primo pacchetto: %s (%d byte)\\n", "dopo": "  %-12s  %dx%d %-12s  ⭐ OPENED (coded %dx%d), first packet: %s (%d bytes)\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "SI", "dopo": "YES"}
+{"file": "banchi/04-in8-parita.c", "prima": "in attesa", "dopo": "pending"}

@@ -1,0 +1,139 @@
+{"file": "banchi/04-b28-gesti.py", "prima": "inquadratura tronca: restano %d byte", "dopo": "truncated framing: %d bytes left"}
+{"file": "banchi/04-b28-gesti.py", "prima": "corpo troncato: dichiarati %d, ce ne sono %d", "dopo": "truncated body: %d declared, %d present"}
+{"file": "banchi/04-b28-gesti.py", "prima": "tipo 0x%04X: non e' del canale di input (§2.5)", "dopo": "type 0x%04X: not on the input channel (§2.5)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "corpo di %d byte: id e istante non ci stanno", "dopo": "body of %d bytes: id and instant do not fit"}
+{"file": "banchi/04-b28-gesti.py", "prima": "id 0: §7.3 lo riserva a «nessun input»", "dopo": "id 0: §7.3 reserves it for «no input»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "PUNTATORE di %d byte, ne vuole 20", "dopo": "PUNTATORE of %d bytes, it wants 20"}
+{"file": "banchi/04-b28-gesti.py", "prima": "PULSANTE di %d byte, ne vuole 15", "dopo": "PULSANTE of %d bytes, it wants 15"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ROTELLA di %d byte, ne vuole 20", "dopo": "ROTELLA of %d bytes, it wants 20"}
+{"file": "banchi/04-b28-gesti.py", "prima": "tipo 0x%04X sconosciuto sul canale di input", "dopo": "unknown type 0x%04X on the input channel"}
+{"file": "banchi/04-b28-gesti.py", "prima": "c'e' una ROTELLA: non era un tap", "dopo": "there is a ROTELLA: it was not a tap"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic %s attesi 1, contati %d (pulsanti: %s)", "dopo": "%s clicks expected 1, counted %d (buttons: %s)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "sul filo ci sono anche altri pulsanti: %s", "dopo": "there are other buttons on the wire too: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un clic %s e basta", "dopo": "one %s click and nothing else"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un trascinamento ha prodotto un pulsante", "dopo": "a drag produced a button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "solo %d PUNTATORE per un trascinamento di 200 px", "dopo": "only %d PUNTATORE for a 200 px drag"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito e' andato a destra e il puntatore no: da %d a %d", "dopo": "the finger went right and the pointer did not: from %d to %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d PUNTATORE, da x=%d a x=%d, nessun pulsante", "dopo": "%d PUNTATORE, from x=%d to x=%d, no button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "uno scorrimento a due dita ha prodotto un pulsante", "dopo": "a two-finger scroll produced a button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessuna ROTELLA", "dopo": "no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ROTELLA non multipla di 60 (§7.3, il mezzo scatto): ", "dopo": "ROTELLA not a multiple of 60 (§7.3, the half notch): "}
+{"file": "banchi/04-b28-gesti.py", "prima": "le dita sono scese e l'asse verticale non e' positivo ", "dopo": "the fingers went down and the vertical axis is not positive "}
+{"file": "banchi/04-b28-gesti.py", "prima": "(%d): `RCP.md` §7.3 vuole +120 per la rotella IN SU, e ", "dopo": "(%d): `RCP.md` §7.3 wants +120 for the wheel UP, and "}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita che scendono spingono il foglio in giu'", "dopo": "two fingers going down push the sheet down"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA, somma verticale +%d, tutte multiple di 60", "dopo": "%d ROTELLA, vertical sum +%d, all multiples of 60"}
+{"file": "banchi/04-b28-gesti.py", "prima": "attesi 4 eventi del sinistro (giu,su,giu,su), contati %d", "dopo": "expected 4 left-button events (down,up,down,up), counted %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "l'ordine non e' giu,su,giu,su: %s", "dopo": "the order is not down,up,down,up: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "solo %d PUNTATORE fra il premuto e il rilasciato: il ", "dopo": "only %d PUNTATORE between pressed and released: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "tasto e' rimasto giu' senza trascinare niente", "dopo": "button stayed down without dragging anything"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il puntatore non si e' mosso mentre il tasto era giu'", "dopo": "the pointer did not move while the button was down"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic, poi premuto + %d PUNTATORE + rilasciato — ", "dopo": "click, then pressed + %d PUNTATORE + released — "}
+{"file": "banchi/04-b28-gesti.py", "prima": "il trascinamento c'e'", "dopo": "the drag is there"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il pizzico ha spedito %d messaggi: §7.2 dice che ", "dopo": "the pinch sent %d messages: §7.2 says it "}
+{"file": "banchi/04-b28-gesti.py", "prima": "ingrandisce la VISTA, non l'applicazione", "dopo": "zooms the VIEW, not the application"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessun messaggio sul filo (zoom non letto)", "dopo": "no message on the wire (zoom not read)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessun messaggio sul filo, ma la vista non si e' ingrandita (zoom %.2f)", "dopo": "no message on the wire, but the view did not zoom in (zoom %.2f)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "zero byte sul filo, e la vista e' a %.2fx", "dopo": "zero bytes on the wire, and the view is at %.2fx"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto di 400 ms fermo ha prodotto un clic: la ", "dopo": "a still 400 ms contact produced a click: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "soglia dei 180 ms non e' guardata", "dopo": "180 ms threshold is not checked"}
+{"file": "banchi/04-b28-gesti.py", "prima": "400 ms fermi, nessun clic (T_TAP = 180 ms)", "dopo": "400 ms still, no click (T_TAP = 180 ms)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto scivolato di 30 px ha prodotto un clic (D_TAP = 9 px)", "dopo": "a contact that slid 30 px produced a click (D_TAP = 9 px)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "scivolato di 30 px e il puntatore non si e' mosso affatto", "dopo": "slid 30 px and the pointer did not move at all"}
+{"file": "banchi/04-b28-gesti.py", "prima": "30 px di scivolata: %d PUNTATORE, nessun clic", "dopo": "30 px of sliding: %d PUNTATORE, no click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic SINISTRO: le due dita erano scollate di 30 ms e il ", "dopo": "LEFT click: the two fingers were 30 ms apart and the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "conteggio non ha guardato il massimo di dita contemporanee", "dopo": "count did not look at the maximum of simultaneous fingers"}
+{"file": "banchi/04-b28-gesti.py", "prima": "e' uscito un clic destro da due contatti che non si ", "dopo": "a right click came out of two contacts that do not "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sovrappongono: il comportamento e' cambiato rispetto a ", "dopo": "overlap: the behaviour has changed from "}
+{"file": "banchi/04-b28-gesti.py", "prima": "quel che il rapporto A8 dichiara — si rilegge il rapporto", "dopo": "what the A8 report declares — reread the report"}
+{"file": "banchi/04-b28-gesti.py", "prima": "attesi 2 clic sinistri (il difetto dichiarato), contati %d", "dopo": "expected 2 left clicks (the declared defect), counted %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "2 clic sinistri: e' il difetto DICHIARATO — sotto la ", "dopo": "2 left clicks: it is the DECLARED defect — below an "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sovrapposizione di un campione un clic destro esce come ", "dopo": "overlap of one sample a right click comes out as a "}
+{"file": "banchi/04-b28-gesti.py", "prima": "doppio clic sinistro", "dopo": "double left click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non sono quattro eventi giu,su,giu,su: %s", "dopo": "they are not four events down,up,down,up: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ci sono %d PUNTATORE dentro un doppio clic fermo: il ", "dopo": "there are %d PUNTATORE inside a still double click: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "desktop remoto lo leggerebbe come un trascinamento", "dopo": "remote desktop would read it as a drag"}
+{"file": "banchi/04-b28-gesti.py", "prima": "quattro eventi del sinistro, zero PUNTATORE — e' un doppio clic", "dopo": "four left-button events, zero PUNTATORE — it is a double click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "350 ms fermi e poi scorrimento: e' uscito un pulsante", "dopo": "350 ms still and then scrolling: a button came out"}
+{"file": "banchi/04-b28-gesti.py", "prima": "350 ms fermi e poi scorrimento: nessuna ROTELLA", "dopo": "350 ms still and then scrolling: no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA dopo 350 ms di dita ferme, nessun clic", "dopo": "%d ROTELLA after 350 ms of still fingers, no click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita che si allontanano hanno prodotto %d ROTELLA: ", "dopo": "two fingers moving apart produced %d ROTELLA: "}
+{"file": "banchi/04-b28-gesti.py", "prima": "pizzico e rotella si confondono", "dopo": "pinch and wheel are confused"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessuna rotella, ma nemmeno lo zoom e' cambiato (%.2f)", "dopo": "no wheel, but the zoom did not change either (%.2f)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non letto", "dopo": "not read"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita parallele e nessuna ROTELLA", "dopo": "two parallel fingers and no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita parallele hanno ingrandito la vista a %.2fx: ", "dopo": "two parallel fingers zoomed the view to %.2fx: "}
+{"file": "banchi/04-b28-gesti.py", "prima": "e' stato letto come un pizzico", "dopo": "it was read as a pinch"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA, vista ferma a %s", "dopo": "%d ROTELLA, view still at %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito rimasto dopo uno scorrimento ha mosso il ", "dopo": "the finger left after a scroll moved the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore (%d PUNTATORE): a fine scorrimento il ", "dopo": "pointer (%d PUNTATORE): at the end of the scroll the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore salta", "dopo": "pointer jumps"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito residuo non ha mosso il puntatore", "dopo": "the leftover finger did not move the pointer"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la fase non e' stata registrata affatto", "dopo": "⛔ the phase was not recorded at all"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ violazione di RCP.md §7.3: %s", "dopo": "⛔ violation of RCP.md §7.3: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d messaggi, id da %d a %d, crescente su tutto il canale", "dopo": "%d messages, id from %d to %d, increasing over the whole channel"}
+{"file": "banchi/04-b28-gesti.py", "prima": "gli identificatori non crescono su tutto il canale: %s", "dopo": "the identifiers do not increase over the whole channel: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto di 400 ms fermo che manda un clic (la soglia T_TAP non guardata)", "dopo": "a still 400 ms contact that sends a click (the T_TAP threshold not checked)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita a 30 ms che escono come due clic sinistri invece di un destro", "dopo": "two fingers 30 ms apart that come out as two left clicks instead of one right"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il segno della rotella invertito (`RCP.md` §7.3, forma E11)", "dopo": "the wheel sign inverted (`RCP.md` §7.3, form E11)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il tap-e-mezzo che preme e rilascia senza trascinare — cioe' un doppio clic", "dopo": "the tap-and-a-half that presses and releases without dragging — that is, a double click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il pizzico che spedisce una rotella invece di ingrandire la vista", "dopo": "the pinch that sends a wheel instead of zooming the view"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⭐ CERTIFICAZIONE DEL GIUDICE — verde → rosso → verde, su cinque", "dopo": "⭐ CERTIFICATION OF THE JUDGE — green → red → green, on five"}
+{"file": "banchi/04-b28-gesti.py", "prima": "   guasti, uno per famiglia di confusione.\n", "dopo": "   faults, one per family of confusion.\n"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la registrazione SANA non e' verde: il giudice e' rotto.", "dopo": "⛔ the HEALTHY recording is not green: the judge is broken."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ registrazione SANA: %d casi, tutti verdi", "dopo": "  ✅ HEALTHY recording: %d cases, all green"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ guasto «%s»: il giudice NON lo vede.", "dopo": "  ⛔ fault «%s»: the judge does NOT see it."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ guasto «%s»: visto, ma ha tinto di rosso anche %s", "dopo": "  ⚠ fault «%s»: seen, but it also turned %s red"}
+{"file": "banchi/04-b28-gesti.py", "prima": "       (un giudice che sanguina non sa dire DOVE sta il difetto)", "dopo": "       (a judge that bleeds cannot say WHERE the defect is)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ %-36s rosso solo su %s", "dopo": "  ✅ %-36s red only on %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la registrazione RISANATA non torna verde.", "dopo": "⛔ the HEALED recording does not turn green again."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ registrazione RISANATA: torna verde", "dopo": "  ✅ HEALED recording: green again"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⭐ il giudice e' certificato.", "dopo": "⭐ the judge is certified."}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ il giudice NON e' certificato: non si misura niente.", "dopo": "⛔ the judge is NOT certified: nothing is measured."}
+{"file": "banchi/04-b28-gesti.py", "prima": "non c'e'", "dopo": "not here"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  servitore su http://127.0.0.1:%d — pagina del PRODOTTO, %d byte", "dopo": "  server on http://127.0.0.1:%d — the PRODUCT's page, %d bytes"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ questo Chrome non ha `setFocusEmulationEnabled`", "dopo": "  ⚠ this Chrome does not have `setFocusEmulationEnabled`"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ la pagina non ha risposto alla scena", "dopo": "  ⛔ the page did not answer the scene"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ la disposizione in vigore e' «%s», non «tocco»: il banco ", "dopo": "  ⛔ the layout in force is «%s», not «tocco»: the bench "}
+{"file": "banchi/04-b28-gesti.py", "prima": "misurerebbe l'altra meta' della pagina", "dopo": "would measure the other half of the page"}
+{"file": "banchi/04-b28-gesti.py", "prima": "le scene e i casi del giudice non combaciano", "dopo": "the scenes and the judge's cases do not match"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ GUASTO DELLO STRUMENTO nella fase %s (%s)", "dopo": "  ⚠ TOOL FAULT in phase %s (%s)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "fase %s: %s", "dopo": "phase %s: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ %d guasti dello strumento, riagganciati: %s", "dopo": "  ⚠ %d tool faults, reconnected: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`body[data-disposizione]` = «%s» (il PRODOTTO l'ha ", "dopo": "`body[data-disposizione]` = «%s» (the PRODUCT "}
+{"file": "banchi/04-b28-gesti.py", "prima": "scritto, non il banco)", "dopo": "wrote it, not the bench)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "all'avvio «%s»; dopo un DITO «%s»; dopo un CLIC di ", "dopo": "at start «%s»; after a FINGER «%s»; after a mouse "}
+{"file": "banchi/04-b28-gesti.py", "prima": "mouse «%s»; dopo un altro DITO «%s»", "dopo": "CLICK «%s»; after another FINGER «%s»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ atteso tocco → classico → tocco; la spia dice: %s", "dopo": "  ⛔ expected tocco → classico → tocco; the spy says: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non si e' riusciti a rientrare nel classico", "dopo": "could not get back into classic"}
+{"file": "banchi/04-b28-gesti.py", "prima": "in classico: tocco in vigore %s, classico in ", "dopo": "in classic: touch in force %s, classic in "}
+{"file": "banchi/04-b28-gesti.py", "prima": "vigore %s; dopo il gesto: disposizione «%s», ", "dopo": "force %s; after the gesture: layout «%s», "}
+{"file": "banchi/04-b28-gesti.py", "prima": "classico in vigore %s; il gesto ha prodotto %d ", "dopo": "classic in force %s; the gesture produced %d "}
+{"file": "banchi/04-b28-gesti.py", "prima": "messaggi, di cui %d PULSANTE (clic fantasma)", "dopo": "messages, of which %d PULSANTE (ghost click)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "in disposizione a tocco il puntatore visibile e' «%s»", "dopo": "in touch layout the visible pointer is «%s»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`REMOTIX_PUNTATORE` c'e': %s; cucitura rotta: %s", "dopo": "`REMOTIX_PUNTATORE` is there: %s; seam broken: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ `muovi()` non accende `cl_noto`: in tocco il ", "dopo": "  ⛔ `muovi()` does not turn on `cl_noto`: in touch the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore condiviso resta invisibile — cura di UNA ", "dopo": "shared pointer stays invisible — a cure of ONE "}
+{"file": "banchi/04-b28-gesti.py", "prima": "riga nell'ancora F4-INPUT-CLASSICO (anello A7)", "dopo": "line in the F4-INPUT-CLASSICO anchor (link A7)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`REMOTIX_CLASSICO` (ancora F4-INPUT-CLASSICO, anello A7): %s", "dopo": "`REMOTIX_CLASSICO` (F4-INPUT-CLASSICO anchor, link A7): %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nell'ancora F4-TOCCO non compare niente che venga dal ", "dopo": "in the F4-TOCCO anchor nothing appears that comes from the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sistema operativo", "dopo": "operating system"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ compaiono: %s", "dopo": "⛔ they appear: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "\n  %d verdi su %d misurati", "dopo": "\n  %d green out of %d measured"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ %d NON MISURATI per un guasto dello strumento: %s", "dopo": "  ⚠ %d NOT MEASURED because of a tool fault: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "    (⛔ non sono verdi e non sono rossi: si rifa' il giro)", "dopo": "    (⛔ they are neither green nor red: the run is redone)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ REMOTIX.tocco non esiste", "dopo": "⛔ REMOTIX.tocco does not exist"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 1. IL GIUDICE SI CERTIFICA PRIMA DELLA MISURA (CODER.md §3.3) ══", "dopo": "══ 1. THE JUDGE IS CERTIFIED BEFORE THE MEASUREMENT (CODER.md §3.3) ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "⛔ il giudice non e' certificato: non si misura niente.", "dopo": "⛔ the judge is not certified: nothing is measured."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 2. LA SCENA ══", "dopo": "══ 2. THE SCENE ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  utente        $(id -un) (uid $(id -u))", "dopo": "  user          $(id -un) (uid $(id -u))"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  sessione      XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} ", "dopo": "  session       XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} "}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  ⚠ la finestra si apre sul desktop VERO, e il tocco e' DICHIARATO dal", "dopo": "  ⚠ the window opens on the REAL desktop, and touch is DECLARED by the"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "    banco (CDP): quel che si misura sono i confini del riconoscitore.", "dopo": "    bench (CDP): what is measured are the boundaries of the recogniser."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "⛔ la porta $p e' gia' occupata: mi fermo invece di misurare la", "dopo": "⛔ port $p is already taken: I stop instead of measuring"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "   pagina di qualcun altro.", "dopo": "   someone else's page."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  chrome pid $CHROME, diagnosi su $DIAGNOSI, profilo $PROFILO", "dopo": "  chrome pid $CHROME, debugging on $DIAGNOSI, profile $PROFILO"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 4. LA MISURA ══", "dopo": "══ 4. THE MEASUREMENT ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 5. DOVE SI RICONTROLLA ══", "dopo": "══ 5. WHERE TO RECHECK ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  esiti     $QUI/04-b28-esiti.jsonl", "dopo": "  outcomes  $QUI/04-b28-esiti.jsonl"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  registro  $REGISTRO   (i byte, in esadecimale, gesto per gesto)", "dopo": "  log       $REGISTRO   (the bytes, in hexadecimal, gesture by gesture)"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  rigiudica python3 banchi/04-b28-gesti.py --verdetto $REGISTRO", "dopo": "  rejudge   python3 banchi/04-b28-gesti.py --verdetto $REGISTRO"}

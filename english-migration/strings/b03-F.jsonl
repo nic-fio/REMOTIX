@@ -1,0 +1,105 @@
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== il protocollo xdg-shell", "dopo": "== the xdg-shell protocol"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "⛔ $XDG non c'e'", "dopo": "⛔ $XDG is not there"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   fatti xdg-shell-client-protocol.h e xdg-shell-protocol.c", "dopo": "   made xdg-shell-client-protocol.h and xdg-shell-protocol.c"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== il testimone", "dopo": "== the witness"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "⛔ il testimone NON e' stato costruito", "dopo": "⛔ the witness was NOT built"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== la marca: che cosa c'e' DENTRO il binario", "dopo": "== the mark: what is INSIDE the binary"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   ⭐ c'e' la riga che dice, DAL LATO CHE RICEVE, che la tela e' cambiata", "dopo": "   ⭐ the line is there that says, FROM THE RECEIVING SIDE, that the canvas has changed"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   ⛔ la riga RITELA non c'e': il testimone non saprebbe dire di essere", "dopo": "   ⛔ the RITELA line is not there: the witness could not say it has"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "      stato ridimensionato, e «non e' successo niente» e «non l'ho", "dopo": "      been resized, and «nothing happened» and «I did not"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "      visto» avrebbero lo stesso aspetto", "dopo": "      see it» would look the same"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "== l'iniettore del risveglio", "dopo": "== the wake-up injector"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "⛔ l'iniettore NON e' stato costruito", "dopo": "⛔ the injector was NOT built"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "== la marca: che cosa c'e' DENTRO il binario", "dopo": "== the mark: what is INSIDE the binary"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   la riga di «cattura_risveglia»: $R", "dopo": "   the line of «cattura_risveglia»: $R"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⭐ dentro c'e' la funzione del PRODOTTO, non una sua imitazione", "dopo": "   ⭐ inside is the PRODUCT's function, not an imitation of it"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⛔ la riga di `cattura_risveglia()` non ci sta: questo binario NON", "dopo": "   ⛔ the line of `cattura_risveglia()` is not there: this binary does NOT"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "      contiene la funzione sotto prova — ogni misura sarebbe di", "dopo": "      contain the function under test — every measurement would be of"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "      un'altra cosa", "dopo": "      something else"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   la riga degli ORFANI di src/input.c: $O", "dopo": "   the line of the ORPHANS of src/input.c: $O"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⛔ manca: non e' collegato l'input del prodotto", "dopo": "   ⛔ missing: the product's input is not linked in"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO", "dopo": "⛔ $GRUPPI_SCHEDA_SH is missing: without it, the tenant would be born BLIND"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ va lanciato DA ROOT", "dopo": "⛔ it must be launched AS ROOT"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "L'utente della sottofase 6.1: $UTENTE (uid $UID_B)", "dopo": "The user of sub-phase 6.1: $UTENTE (uid $UID_B)"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' gia' — non lo rifaccio (una sessione per utente, I2)", "dopo": "already there — I do not redo it (one session per user, I2)"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ useradd non e' riuscito", "dopo": "⛔ useradd did not succeed"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "creato", "dopo": "created"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la parola d'ordine non e' stata posta: PAM dira' sempre di no", "dopo": "⛔ the password was not set: PAM will always say no"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "parola d'ordine posta", "dopo": "password set"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "gruppi: $(id -nG ", "dopo": "groups: $(id -nG "}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ enable-linger fallito", "dopo": "⛔ enable-linger failed"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato", "dopo": "linger on: /run/user/$UID_B will live even with nobody connected"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "La sessione GNOME di $UTENTE — ⭐ SENZA --virtual-monitor", "dopo": "The GNOME session of $UTENTE — ⭐ WITHOUT --virtual-monitor"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'utente non c'e': fai «utente»", "dopo": "⛔ the user is not there: do «utente»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ non ho fatto $DIR", "dopo": "⛔ I did not make $DIR"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⭐ MUTTER_DEBUG=$MUTTER_DEBUG nel drop-in", "dopo": "⭐ MUTTER_DEBUG=$MUTTER_DEBUG in the drop-in"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "scritto $FILE", "dopo": "wrote $FILE"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ MA la sessione e' gia' viva: MUTTER_DEBUG NON e' in vigore. Fai «sessione-via» prima", "dopo": "⚠ BUT the session is already alive: MUTTER_DEBUG is NOT in force. Do «sessione-via» first"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' gia' una sessione viva — non la rifaccio", "dopo": "there is already a live session — I do not redo it"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "la sessione non c'e': aspetto che il gestore sia inactive", "dopo": "the session is not there: I wait for the manager to be inactive"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ il gestore non se ne va: ULTIMA SPIAGGIA — butto giu' tutto", "dopo": "⚠ the manager does not go away: LAST RESORT — I tear everything down"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il bus non e' tornato", "dopo": "⛔ the bus did not come back"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ non ho rifatto $DIR", "dopo": "⛔ I did not remake $DIR"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "il gestore di sessione e' inactive: gnome-session puo' ripartire", "dopo": "the session manager is inactive: gnome-session can start again"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "PipeWire e' vivo: senza, la cattura non avrebbe nessun nodo", "dopo": "PipeWire is alive: without it, the capture would have no node"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ PipeWire NON e' vivo: la cattura non trovera' nessun nodo", "dopo": "⚠ PipeWire is NOT alive: the capture will find no node"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "ExecStart in vigore: $VIG", "dopo": "ExecStart in force: $VIG"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' «--no-x11»", "dopo": "«--no-x11» is there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ c'e' ancora «--virtual-monitor»: la scena non e' quella che credo", "dopo": "⛔ «--virtual-monitor» is still there: the scene is not the one I believe"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la sessione non e' partita in $((g/2)) s", "dopo": "⛔ the session did not start in $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "sessione viva dopo $((g/2)) s", "dopo": "session alive after $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ Uccido la sessione grafica di $UTENTE", "dopo": "⛔ I kill the graphical session of $UTENTE"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la sessione non e' morta", "dopo": "⛔ the session did not die"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "la sessione grafica e' morta", "dopo": "the graphical session is dead"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "serve la misura, es. 1264x800", "dopo": "the size is needed, e.g. 1264x800"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il testimone Wayland sul monitor $M", "dopo": "The Wayland witness on monitor $M"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $TESTIMONE non c'e': fai «costruisci»", "dopo": "⛔ $TESTIMONE is not there: do «costruisci»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "aperto: $(grep '", "dopo": "open: $(grep '"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il testimone NON si e' aperto:", "dopo": "⛔ the witness did NOT open:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "testimone spento", "dopo": "witness off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il terminale col testimone — l'applicazione che nessuno riavviera'", "dopo": "The terminal with the witness — the application nobody will restart"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "processi «b33-ciclo-invii»: $n · gnome-terminal-server: $m", "dopo": "processes «b33-ciclo-invii»: $n · gnome-terminal-server: $m"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "il terminale e' aperto, e il ciclo aspetta gli Invio", "dopo": "the terminal is open, and the loop waits for the Enters"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il terminale NON si e' aperto: quel che segue non misura niente", "dopo": "⛔ the terminal did NOT open: what follows measures nothing"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "terminale spento", "dopo": "terminal off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "L'iniettore del risveglio, tela $M", "dopo": "The wake-up injector, canvas $M"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $INIETTORE non c'e': fai «06-b33-risveglio-costruisci.sh»", "dopo": "⛔ $INIETTORE is not there: do «06-b33-risveglio-costruisci.sh»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il server della $PORTA e' acceso (pid $pid): spegnilo, o le sessioni sono due", "dopo": "⛔ the $PORTA server is on (pid $pid): switch it off, or there are two sessions"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la fifo non si crea", "dopo": "⛔ the fifo cannot be created"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "l'iniettore e' PRONTO dopo $((g/2)) s", "dopo": "the injector is READY after $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'iniettore NON e' pronto:", "dopo": "⛔ the injector is NOT ready:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'iniettore non e' vivo: il comando «$*» non lo legge nessuno", "dopo": "⛔ the injector is not alive: nobody reads the command «$*»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "iniettore spento", "dopo": "injector off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il server della sottofase 6.1, sulla $PORTA — DA ROOT", "dopo": "The server of sub-phase 6.1, on $PORTA — AS ROOT"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $D/remotix non c'e'", "dopo": "⛔ $D/remotix is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $D/pagina.html non c'e'", "dopo": "⛔ $D/pagina.html is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la $PORTA e' gia' occupata", "dopo": "⛔ $PORTA is already taken"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ /etc/pam.d/remotix non c'e'", "dopo": "⛔ /etc/pam.d/remotix is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ manca una libreria:", "dopo": "⛔ a library is missing:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il server e' morto subito:", "dopo": "⛔ the server died at once:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "acceso, pid $pid, $(ss -tuln | grep -c ", "dopo": "on, pid $pid, $(ss -tuln | grep -c "}
+{"file": "banchi/06-b33-terreno.sh", "prima": ") ascoltatori", "dopo": ") listeners"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Spengo la $PORTA", "dopo": "I switch off $PORTA"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "non c'era niente sulla $PORTA", "dopo": "there was nothing on $PORTA"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "spento, e nessun figlio MIO e' rimasto orfano", "dopo": "off, and no child of MINE was left orphaned"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ figli MIEI orfani:$restano", "dopo": "⛔ orphaned children of MINE:$restano"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Tolgo l'utente della sottofase 6.1", "dopo": "I remove the user of sub-phase 6.1"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "fatto", "dopo": "done"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Stato", "dopo": "State"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "utente $UTENTE: $(id ", "dopo": "user $UTENTE: $(id "}
+{"file": "banchi/06-b33-terreno.sh", "prima": "server $PORTA: spento", "dopo": "server $PORTA: off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "figlio: $f", "dopo": "child: $f"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "figlio: nessuno", "dopo": "child: none"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "registro: $(stat -c %s ", "dopo": "log: $(stat -c %s "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) byte", "dopo": " 2>/dev/null || echo 0) bytes"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "testimone: $(pgrep -u ", "dopo": "witness: $(pgrep -u "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " -f 06-b33-testimone | wc -l) vivo, $(wc -l < ", "dopo": " -f 06-b33-testimone | wc -l) alive, $(wc -l < "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) righe viste", "dopo": " 2>/dev/null || echo 0) lines seen"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "terminale: $(pgrep -u ", "dopo": "terminal: $(pgrep -u "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " -f b33-ciclo-invii | wc -l) vivo, $(wc -l < ", "dopo": " -f b33-ciclo-invii | wc -l) alive, $(wc -l < "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) Invio ricevuti", "dopo": " 2>/dev/null || echo 0) Enters received"}
+{"file": "banchi/06-b33-testimone.c", "prima": "nessun compositore Wayland", "dopo": "no Wayland compositor"}
+{"file": "banchi/06-b33-testimone.c", "prima": "il compositore non espone shell o memoria", "dopo": "the compositor does not expose shell or memory"}
+{"file": "banchi/06-b33-testimone.c", "prima": "nessuno schermo %ux%u fra i %d annunciati", "dopo": "no %ux%u screen among the %d announced"}
+{"file": "banchi/06-b33-testimone.c", "prima": "B33 testimone", "dopo": "B33 witness"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "%s— ascoltatori (NON miei)\\n", "dopo": "%s— listeners (NOT mine)\\n"}

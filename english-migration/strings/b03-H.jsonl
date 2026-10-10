@@ -1,0 +1,181 @@
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "uso: $0 [guarda|allinea]", "dopo": "usage: $0 [guarda|allinea]"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "1. I tre file che B3 copia dentro l'innesto", "dopo": "1. The three files that B3 copies into the graft"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ non posso confrontare «$f»: manca $( [ -f ", "dopo": "⛔ cannot compare «$f»: missing $( [ -f "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "$f identico  ($a)", "dopo": "$f identical  ($a)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $f DIVERSO — sorgente $a · innesto $b", "dopo": "⛔ $f DIFFERENT — source $a · graft $b"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   righe che cambiano: $(diff ", "dopo": "   lines that change: $(diff "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ con dei file mancanti non allineo niente", "dopo": "⛔ with missing files I align nothing"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⚠ 01-b0-terreno.sh confronta solo rcp.c; qui si guardano tutti e tre", "dopo": "⚠ 01-b0-terreno.sh compares only rcp.c; here all three are checked"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ il binario e' PIU' VECCHIO di:$VECCHIO", "dopo": "⛔ the binary is OLDER than:$VECCHIO"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⇒ va ricostruito anche se le impronte combaciano", "dopo": "   ⇒ it must be rebuilt even if the fingerprints match"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "e il binario e' piu' nuovo di tutti e tre ($(stat -c %y ", "dopo": "and the binary is newer than all three ($(stat -c %y "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $BINARIO non c'e': l'innesto non e' mai stato costruito", "dopo": "⛔ $BINARIO is not there: the graft has never been built"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": " (manca il binario)", "dopo": " (binary missing)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⭐ l'innesto e' gia' allineato ai sorgenti, e il binario e' di dopo", "dopo": "⭐ the graft is already aligned with the sources, and the binary comes after"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "niente da copiare e niente da ricostruire: si va dritti al terreno", "dopo": "nothing to copy and nothing to rebuild: straight to the terrain"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "2. ⛔ C'e' un guasto innestato dentro l'innesto?", "dopo": "2. ⛔ Is there a grafted fault inside the graft?"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ «$m» compare $n volta/e in examples/rcp.c", "dopo": "⛔ «$m» appears $n time(s) in examples/rcp.c"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "nessuna traccia di «$m»", "dopo": "no trace of «$m»"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ NON TOCCO NIENTE: c'e' un guasto innestato, e ricopiarci sopra il", "dopo": "⛔ I TOUCH NOTHING: there is a grafted fault, and copying the"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   sorgente lo toglierebbe SOTTO chi lo sta misurando — quel giro", "dopo": "   source over it would remove it FROM UNDER whoever is measuring it — that round"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   scriverebbe «il banco non e' diventato rosso» di un banco a cui", "dopo": "   would write «the bench did not turn red» of a bench whose"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   e' stato tolto l'imputato di mano.", "dopo": "   accused was taken out of its hands."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⇒ Aspetta che il giro finisca, o toglilo con «--togli».", "dopo": "   ⇒ Wait for the round to finish, or remove it with «--togli»."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "«guarda» si ferma qui: per copiare e ricostruire, «allinea»", "dopo": "«guarda» stops here: to copy and rebuild, «allinea»"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "3. Si copia il sorgente dentro l'innesto", "dopo": "3. Copying the source into the graft"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ la copia di «$f» e' fallita", "dopo": "⛔ copying «$f» failed"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "$f copiato, e le impronte adesso combaciano ($a)", "dopo": "$f copied, and the fingerprints now match ($a)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $f copiato ma le impronte NON combaciano", "dopo": "⛔ $f copied but the fingerprints do NOT match"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "4. Si ricostruisce — e si guarda l'ESITO, non il binario", "dopo": "4. Rebuilding — and looking at the OUTCOME, not at the binary"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⭐ bsslserver ricostruito", "dopo": "⭐ bsslserver rebuilt"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ la compilazione e' FALLITA: il binario che c'e' e' quello di", "dopo": "⛔ the build FAILED: the binary that is there is the"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   prima, e adesso il sorgente e' cambiato sotto di lui — cioe'", "dopo": "   old one, and now the source has changed under it — i.e."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   la scena PEGGIORE.  L'errore:", "dopo": "   the WORST scene.  The error:"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⛔ e non c'e' nemmeno il registro di ninja: non ho letto niente", "dopo": "   ⛔ and there is not even the ninja log: I read nothing"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "5. ⛔ E lo dice il terreno, non io", "dopo": "5. ⛔ And the terrain says it, not me"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "\\n    \\033[1;32m⭐ innesto allineato, e il terreno regge\\033[0m\\n", "dopo": "\\n    \\033[1;32m⭐ graft aligned, and the terrain holds\\033[0m\\n"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "\\n    \\033[1;31m⛔ il terreno NON regge (uscita %s): non lanciare banchi\\033[0m\\n", "dopo": "\\n    \\033[1;31m⛔ the terrain does NOT hold (exit %s): do not launch benches\\033[0m\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "uso: $0 [guarda|allinea|prova]", "dopo": "usage: $0 [guarda|allinea|prova]"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "0. Gli alberi, dichiarati (B0.1: si dichiara E si verifica)", "dopo": "0. The trees, declared (B0.1: declare AND verify)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "sorgente (CHUWI): $FONTE", "dopo": "source (CHUWI): $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "prodotto (NIC-OS): $DEST", "dopo": "product (NIC-OS): $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ l'albero sorgente non c'e': $FONTE", "dopo": "⛔ the source tree is not there: $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ in $FONTE non c'e' nessun file: non allineo niente e non dico che va bene", "dopo": "⛔ there is no file in $FONTE: I align nothing and I do not say it is fine"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$N_QUI file nell'albero sorgente", "dopo": "$N_QUI files in the source tree"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "P. ⭐ IL CONTROLLO POSITIVO — «questo attrezzo sa dire di NO?»", "dopo": "P. ⭐ THE POSITIVE CHECK — «can this tool say NO?»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ Un attrezzo che dicesse sempre «allineato» sarebbe peggio di nessun", "dopo": "⛔ A tool that always said «aligned» would be worse than no"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   attrezzo: darebbe fiducia (CODER.md §4.6).  Qui la divergenza si", "dopo": "   tool: it would give confidence (CODER.md §4.6).  Here the divergence is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   COSTRUISCE, su una copia che non e' di nessuno, e l'atteso lo", "dopo": "   BUILT, on a copy that belongs to nobody, and the expected result is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   confronta il programma — non chi legge (B0.4).", "dopo": "   compared by the program — not by whoever reads (B0.4)."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "copia di prova: $SCRATCH   ·   file da sporcare: $SPORCA", "dopo": "test copy: $SCRATCH   ·   file to dirty: $SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto fare la copia di prova", "dopo": "⛔ I could not make the test copy"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "copia fatta", "dopo": "copy made"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n  ---- giro 1: i due alberi COMBACIANO, e ci si aspetta che taccia\\n", "dopo": "\\n  ---- round 1: the two trees MATCH, and it is expected to stay silent\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n  ---- giro 2: UN file sporcato, e ci si aspetta che lo dica\\n", "dopo": "\\n  ---- round 2: ONE file dirtied, and it is expected to say so\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "printf '\\n# riga aggiunta dalla prova di attrezzi-allinea-prodotto.sh\\n' >> $SCRATCH/$SPORCA", "dopo": "printf '\\n# line added by the test of attrezzi-allinea-prodotto.sh\\n' >> $SCRATCH/$SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto sporcare $SPORCA", "dopo": "⛔ I could not dirty $SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ la copia di prova non si e' cancellata: $SCRATCH", "dopo": "⚠ the test copy was not deleted: $SCRATCH"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "P. Il verdetto della prova", "dopo": "P. The verdict of the test"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "giro 1: uscita 0 — con gli alberi identici TACE", "dopo": "round 1: exit 0 — with identical trees it STAYS SILENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ giro 1: uscita $G1 invece di 0.  O gli alberi non erano allineati", "dopo": "⛔ round 1: exit $G1 instead of 0.  Either the trees were not aligned"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   prima della prova, o l'attrezzo dice di no anche quando non c'e'", "dopo": "   before the test, or the tool says no even when there is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   niente da dire — e allora i suoi «no» non valgono niente.", "dopo": "   nothing to say — and then its «no»s are worth nothing."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "giro 2: uscita 1 — la divergenza costruita l'ha vista", "dopo": "round 2: exit 1 — it saw the built divergence"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ giro 2: uscita $G2 invece di 1: NON ha visto un file cambiato", "dopo": "⛔ round 2: exit $G2 instead of 1: it did NOT see a changed file"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "DIVERSO", "dopo": "DIFFERENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "^.*$SPORCA DIVERSO", "dopo": "^.*$SPORCA DIFFERENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "e lo dice del file GIUSTO: «$SPORCA DIVERSO» compare nell'uscita", "dopo": "and it says it of the RIGHT file: «$SPORCA DIFFERENT» appears in the output"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ e' diventato rosso ma non nomina «$SPORCA»: e' rosso per un'altra", "dopo": "⛔ it turned red but does not name «$SPORCA»: it is red for another"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ragione, e questo non e' un controllo positivo", "dopo": "   reason, and this is not a positive check"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " DIVERSO — ", "dopo": " DIFFERENT — "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "e ne nomina UNO SOLO ($N_DIV): sa distinguere, non solo protestare", "dopo": "and it names ONLY ONE ($N_DIV): it can tell apart, not just protest"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ dichiara $N_DIV file diversi, e ne ho sporcato uno: non distingue", "dopo": "⛔ it declares $N_DIV different files, and I dirtied one: it does not tell apart"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n    %s⭐ IL CONTROLLO POSITIVO PASSA: tace quando combaciano, e quando%s\\n", "dopo": "\\n    %s⭐ THE POSITIVE CHECK PASSES: silent when they match, and when%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   divergono lo dice, e dice quale.%s\\n", "dopo": "    %s   they diverge it says so, and says which.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n    %s⛔ IL CONTROLLO POSITIVO NON PASSA: %s cose su 4 non tornano.%s\\n", "dopo": "\\n    %s⛔ THE POSITIVE CHECK DOES NOT PASS: %s things out of 4 do not add up.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   ⇒ i verdetti di questo attrezzo non valgono finche non torna.%s\\n", "dopo": "    %s   ⇒ the verdicts of this tool are worthless until it adds up.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "1. Le impronte, file per file", "dopo": "1. The fingerprints, file by file"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ l'albero del prodotto non c'e' di la': $DEST", "dopo": "⛔ the product tree is not there over there: $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere le impronte di la':", "dopo": "⛔ I could not read the fingerprints over there:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere le date di la'", "dopo": "⛔ I could not read the dates over there"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f NON C'E' di la' — $a", "dopo": "⛔ $f is NOT THERE over there — $a"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f DIVERSO — qui $a · la' $b", "dopo": "⛔ $f DIFFERENT — here $a · there $b"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   righe che cambiano: $(diff ", "dopo": "   lines that change: $(diff "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⚠ non ho potuto riportare la copia di la': non conto le righe", "dopo": "   ⚠ I could not bring back the copy from over there: I do not count the lines"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$UGUALI file su $N_QUI gia' identici", "dopo": "$UGUALI files out of $N_QUI already identical"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ di la' ci sono file che qui non esistono, e NON li tocco:$SOLO_LA", "dopo": "⚠ over there there are files that do not exist here, and I do NOT touch them:$SOLO_LA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   (non li cancello: cancellare di nascosto e' come copiare di nascosto)", "dopo": "   (I do not delete them: deleting on the quiet is like copying on the quiet)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "2. Il binario e' piu' nuovo dei sorgenti?", "dopo": "2. Is the binary newer than the sources?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ di la' non c'e' nessun binario «remotix»: il prodotto non e' mai stato", "dopo": "⛔ over there there is no «remotix» binary: the product has never been"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   costruito in $DEST", "dopo": "   built in $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " (manca il binario)", "dopo": " (binary missing)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ il binario e' PIU' VECCHIO di:$VECCHIO", "dopo": "⛔ the binary is OLDER than:$VECCHIO"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " '+%Y-%m-%d %H:%M:%S %Z')  (orologio di CHUWI)", "dopo": " '+%Y-%m-%d %H:%M:%S %Z')  (CHUWI clock)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⇒ va ricostruito anche se le impronte combaciano", "dopo": "   ⇒ it must be rebuilt even if the fingerprints match"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "il binario e' piu' nuovo di tutti i sorgenti ($(date -d ", "dopo": "the binary is newer than all the sources ($(date -d "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " '+%Y-%m-%d %H:%M:%S %Z'), orologio di CHUWI)", "dopo": " '+%Y-%m-%d %H:%M:%S %Z'), CHUWI clock)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⭐ il prodotto di la' e' gia' allineato ai sorgenti, e il binario e' di dopo", "dopo": "⭐ the product over there is already aligned with the sources, and the binary comes after"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "niente da copiare e niente da ricostruire: si va dritti al terreno", "dopo": "nothing to copy and nothing to rebuild: straight to the terrain"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "3. ⛔ C'e' un guasto innestato in uno dei due alberi?", "dopo": "3. ⛔ Is there a grafted fault in one of the two trees?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere la marca da 01-b12-guasti.py: NON dico che", "dopo": "⛔ I could not read the mark from 01-b12-guasti.py: I do NOT say that"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   non ci sono guasti — dico che non ho guardato", "dopo": "   there are no faults — I say I did not look"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ marca di B11 non letta: non guardo a meta'", "dopo": "⛔ B11 mark not read: I do not look halfway"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "aghi letti dai cataloghi: «$MARCA12» · «$MARCA11»", "dopo": "needles read from the catalogues: «$MARCA12» · «$MARCA11»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$m» compare NELL'ALBERO SORGENTE:", "dopo": "⛔ «$m» appears IN THE SOURCE TREE:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto cercare «$m» in $FONTE (grep: $s)", "dopo": "⛔ I could not search for «$m» in $FONTE (grep: $s)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "nessuna traccia di «$m» in $FONTE", "dopo": "no trace of «$m» in $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$m» compare NEL PRODOTTO di la':", "dopo": "⛔ «$m» appears IN THE PRODUCT over there:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto cercare «$m» in $DEST (uscita $s)", "dopo": "⛔ I could not search for «$m» in $DEST (exit $s)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "nessuna traccia di «$m» in $DEST", "dopo": "no trace of «$m» in $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ NON TOCCO NIENTE: c'e' un guasto innestato.", "dopo": "⛔ I TOUCH NOTHING: there is a grafted fault."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   Se sta nell'albero SORGENTE, copiarlo lo metterebbe nel prodotto che", "dopo": "   If it is in the SOURCE tree, copying it would put it into the product that"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   tutti interrogano; se sta nel PRODOTTO, ricopiarci sopra lo", "dopo": "   everybody queries; if it is in the PRODUCT, copying over it would"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   toglierebbe SOTTO chi lo sta misurando — e quel giro direbbe «il", "dopo": "   remove it FROM UNDER whoever is measuring it — and that round would say «the"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   banco non e' diventato rosso» di un banco a cui e' stato tolto", "dopo": "   bench did not turn red» of a bench whose"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   l'imputato di mano.", "dopo": "   accused was taken out of its hands."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⇒ Aspetta che il giro finisca, o toglilo con «--togli».", "dopo": "   ⇒ Wait for the round to finish, or remove it with «--togli»."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "«guarda» si ferma qui: per copiare e ricostruire, «allinea»", "dopo": "«guarda» stops here: to copy and rebuild, «allinea»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "4. Si copiano i sorgenti dentro il prodotto", "dopo": "4. Copying the sources into the product"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ la copia di «$f» e' fallita", "dopo": "⛔ copying «$f» failed"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$f» copiato ma non ho potuto rileggerlo", "dopo": "⛔ «$f» copied but I could not read it back"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$f copiato, e le impronte adesso combaciano ($a)", "dopo": "$f copied, and the fingerprints now match ($a)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f copiato ma le impronte NON combaciano: $a ≠ $b", "dopo": "⛔ $f copied but the fingerprints do NOT match: $a ≠ $b"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "5. Si ricostruisce — con il file di casa, e si guarda l'ESITO", "dopo": "5. Rebuilding — with the house file, and looking at the OUTCOME"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ non ho potuto togliere il registro vecchio: quel che leggero potrebbe essere di prima", "dopo": "⚠ I could not remove the old log: what I read might be from before"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ il registro della costruzione non si e' potuto riportare", "dopo": "⚠ the build log could not be brought back"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⭐ remotix ricostruito", "dopo": "⭐ remotix rebuilt"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ la costruzione e' FALLITA (uscita $S_COSTR): il binario che c'e' e'", "dopo": "⛔ the build FAILED (exit $S_COSTR): the binary that is there is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   quello di prima, e adesso i sorgenti sono cambiati sotto di lui —", "dopo": "   the old one, and now the sources have changed under it —"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   cioe' la scena PEGGIORE.  L'errore:", "dopo": "   i.e. the WORST scene.  The error:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⛔ e non c'e' nemmeno il registro: non ho letto niente", "dopo": "   ⛔ and there is not even the log: I read nothing"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "6. ⛔ E lo dice il terreno, non io", "dopo": "6. ⛔ And the terrain says it, not me"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "7. ⛔ E il processo vivo sta eseguendo il binario nuovo?", "dopo": "7. ⛔ And is the live process running the new binary?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "sorgenti allineati e binario ricostruito NON bastano: il server acceso", "dopo": "aligned sources and a rebuilt binary are NOT enough: the running server"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "gira ancora quello di prima, ed e' il difetto delle tredici ore.", "dopo": "still runs the old one, and that is the thirteen-hour defect."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⛔ il terreno NON regge (uscita %s): non lanciare banchi.%s\\n", "dopo": "    %s⛔ the terrain does NOT hold (exit %s): do not launch benches.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   server acceso NON sta eseguendo quel binario (uscita %s).%s\\n", "dopo": "    %s   running server is NOT executing that binary (exit %s).%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "       ⇒ La cura, da chi ha in mano la porta:\\n", "dopo": "       ⇒ The cure, by whoever holds the port:\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "         questa famiglia di attrezzi esiste per non fare.\\n", "dopo": "         this family of tools exists to avoid.\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⭐ prodotto allineato: sorgenti, binario e processo dicono la stessa cosa.%s\\n", "dopo": "    %s⭐ product aligned: sources, binary and process say the same thing.%s\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔\\033[0m  nessun nodo `cardN`/`renderDN` in /dev/dri: su questa\\n", "dopo": "%s\\033[1;31m⛔\\033[0m  no `cardN`/`renderDN` node in /dev/dri: on this\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    macchina il compositore disegnera in SOFTWARE, e nessun gruppo\\n", "dopo": "%s    machine the compositor will draw in SOFTWARE, and no group\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    puo rimediare.  ⚠ Il numero che questo banco misurera NON e\\n", "dopo": "%s    can fix that.  ⚠ The number this bench will measure is NOT\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    quello del prodotto in hardware.\\n", "dopo": "%s    that of the product in hardware.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m il gid %s (di %s) NON ha nessun nome in /etc/group qui:\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m gid %s (of %s) has NO name in /etc/group here:\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    l inquilino «%s» non ci puo entrare, e la sua sessione NASCERA\\n", "dopo": "%s    the tenant «%s» cannot join it, and their session WILL BE BORN\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    CIECA.  ⭐ La cura, da root: `groupadd -g %s scheda%s`\\n", "dopo": "%s    BLIND.  ⭐ The cure, as root: `groupadd -g %s scheda%s`\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔\\033[0m  `usermod -aG %s %s` NON e riuscito\\n", "dopo": "%s\\033[1;31m⛔\\033[0m  `usermod -aG %s %s` did NOT succeed\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m «%s» NON E NEL GRUPPO DELLA SCHEDA «%s» (gid %s, il gruppo\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m «%s» IS NOT IN THE CARD GROUP «%s» (gid %s, the group\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    di %s)\\n", "dopo": "%s    of %s)\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⛔ LA SUA SESSIONE NASCEREBBE E NON VEDREBBE NIENTE: zero fotogrammi,\\n", "dopo": "%s    ⛔ ITS SESSION WOULD BE BORN AND SEE NOTHING: zero frames,\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    nessuna finestra si apre, e il ciclo gira in tondo fra «ZERO MONITOR»\\n", "dopo": "%s    no window opens, and the loop goes round and round between «ZERO MONITOR»\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    e «monitor virtuale montato» (fase 10 §7.4 — [M] 0 su 4 senza, 17 su 17 con).\\n", "dopo": "%s    and «virtual monitor mounted» (phase 10 §7.4 — [M] 0 out of 4 without, 17 out of 17 with).\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⛔ QUESTO BANCO NON DEVE MISURARE: misurerebbe un prodotto che non esiste.\\n", "dopo": "%s    ⛔ THIS BENCH MUST NOT MEASURE: it would measure a product that does not exist.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» era gia nei gruppi dei nodi della scheda (%s): la sua\\n", "dopo": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» was already in the groups of the card nodes (%s): their\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    sessione puo vedere in hardware\\n", "dopo": "%s    session can see in hardware\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» messo nei gruppi LETTI DAI NODI: %s (gid %s)\\n", "dopo": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» put into the groups READ FROM THE NODES: %s (gid %s)\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m i gruppi sono stati AGGIUNTI ADESSO, ma «%s» aveva gia dei\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m the groups were ADDED JUST NOW, but «%s» already had\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    processi vivi: un processo tiene i gruppi che aveva quando e NATO.\\n", "dopo": "%s    live processes: a process keeps the groups it had when it was BORN.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⇒ La sessione che sta girando e ANCORA CIECA.\\n", "dopo": "%s    ⇒ The session that is running is STILL BLIND.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⭐ La cura, da root, e poi si rifa questo passo:\\n", "dopo": "%s    ⭐ The cure, as root, and then redo this step:\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⚠ NON lo faccio io: butterebbe giu anche la sessione di un altro banco (I2).\\n", "dopo": "%s    ⚠ I do NOT do it: it would also take down the session of another bench (I2).\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "uso: bash %s UTENTE   |   bash %s --testo\\n", "dopo": "usage: bash %s USER   |   bash %s --testo\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "    ⛔ va lanciato DA ROOT\\n", "dopo": "    ⛔ must be run AS ROOT\\n"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ manca $GRUPPI_SCHEDA_SH: gli inquilini nascerebbero CIECHI", "dopo": "⛔ $GRUPPI_SCHEDA_SH is missing: the tenants would be born BLIND"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ $GRUPPI_SCHEDA_SH --testo non ha stampato niente", "dopo": "⛔ $GRUPPI_SCHEDA_SH --testo printed nothing"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ non si crea $FUORI/tmp", "dopo": "⛔ cannot create $FUORI/tmp"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "utente '$1' gia' presente", "dopo": "user '$1' already present"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "utente '$1' creato (uid $2)", "dopo": "user '$1' created (uid $2)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ non si scrive $PAROLA_FUORI", "dopo": "⛔ cannot write $PAROLA_FUORI"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di '$1' impostata da un file 0600 — mai in una riga di comando", "dopo": "password of '$1' set from a 0600 file — never on a command line"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ chpasswd per '$1' esce $stato: la parola NON e' stata impostata", "dopo": "⛔ chpasswd for '$1' exits $stato: the password was NOT set"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔⛔ '$1' NON e' nei gruppi della scheda (uscita $stato): NON usare questo utente per misurare", "dopo": "⛔⛔ '$1' is NOT in the card groups (exit $stato): do NOT use this user to measure"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di 'prova2' riletta da $CRED", "dopo": "password of 'prova2' read back from $CRED"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di 'prova2' generata e scritta in $CRED (0600)", "dopo": "password of 'prova2' generated and written to $CRED (0600)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "$u: parola d'ordine cifrata presente in /etc/shadow", "dopo": "$u: encrypted password present in /etc/shadow"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ $u: NON ha una parola utilizzabile — PAM lo rifiutera'", "dopo": "⛔ $u: has NO usable password — PAM will reject it"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⛔ i SORGENTI sono allineati e il binario e'\"'\"' di adesso, ma il%s\\n", "dopo": "    %s⛔ the SOURCES are aligned and the binary is from now, but the%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "       ⚠ Non la faccio io: sulla 7448 possono esserci giri di altri,\\n", "dopo": "       ⚠ I do not do it: on 7448 there may be rounds by other people,\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "         e spegnere un server sotto chi lo misura e'\"'\"' il danno che\\n", "dopo": "         and shutting a server down under whoever is measuring it is the damage that\\n"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "    OK  ⭐ \\$u e' nei gruppi dei nodi della scheda: \\$(id -nG \\$u)", "dopo": "    OK  ⭐ \\$u is in the groups of the card nodes: \\$(id -nG \\$u)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "    NO  ⛔⛔ \\$u NON e' nei gruppi \\$m: la sua sessione NASCE CIECA", "dopo": "    NO  ⛔⛔ \\$u is NOT in the groups \\$m: its session IS BORN BLIND"}

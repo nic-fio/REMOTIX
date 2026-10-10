@@ -1,0 +1,216 @@
+{"file": "banchi/06-b33-risveglio.sh", "prima": "serve il file 0600 con la parola di sudo", "dopo": "needs the 0600 file with the sudo password"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "serve il file 0600 con la parola di sudo", "dopo": "needs the 0600 file with the sudo password"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ %s non si legge\\n", "dopo": "⛔ %s cannot be read\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ %s non si legge\\n", "dopo": "⛔ %s cannot be read\\n"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il testimone non si apre", "dopo": "⛔ THE BENCH: the witness does not open"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S0 · IL CONTROLLO ZERO — lo strumento sa vedere un clic?", "dopo": "S0 · THE ZERO CHECK — can the instrument see a click?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "clic senza nessun ricambio, testimone aperto prima", "dopo": "click with no replacement at all, witness opened first"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S1 · TRE RISVEGLI A MANO ALZATA — §7.1 dice 3 ricambi, e zero ADATTA_TELA", "dopo": "S1 · THREE WAKE-UPS WITH HAND RAISED — §7.1 says 3 replacements, and zero ADATTA_TELA"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "tre cattura_risveglia() su scena ferma, niente premuto", "dopo": "three cattura_risveglia() on a still scene, nothing pressed"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S2 · ⛔ IL PULSANTE TENUTO GIU' MENTRE LA CATTURA SI RISVEGLIA", "dopo": "S2 · ⛔ THE BUTTON HELD DOWN WHILE THE CAPTURE WAKES UP"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "BTN_LEFT e Ctrl tenuti giu' durante UN cattura_risveglia(), scena ferma", "dopo": "BTN_LEFT and Ctrl held down during ONE cattura_risveglia(), still scene"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S3 · LA PORTA GIA' NOTA — la stessa scena con un RIDIMENSIONAMENTO", "dopo": "S3 · THE ALREADY KNOWN DOOR — the same scene with a RESIZE"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "BTN_LEFT e Ctrl tenuti giu' durante un cattura_ridimensiona() (§4.6)", "dopo": "BTN_LEFT and Ctrl held down during a cattura_ridimensiona() (§4.6)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S4 · ⭐ SI GUARISCE SENZA TOCCARE LA SESSIONE?", "dopo": "S4 · ⭐ CAN IT BE HEALED WITHOUT TOUCHING THE SESSION?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "il danno, rifatto apposta per poi guarirlo", "dopo": "the damage, redone on purpose to then heal it"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "E adesso stacco SOLO il cliente EIS — gnome-shell NON si tocca", "dopo": "And now I detach ONLY the EIS client — gnome-shell is NOT touched"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ non si riaccende", "dopo": "⛔ it does not come back on"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: testimone", "dopo": "⛔ THE BENCH: witness"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "gnome-shell e' lo STESSO processo ($PRIMA_SHELL): il posto non e' nuovo", "dopo": "gnome-shell is the SAME process ($PRIMA_SHELL): the seat is not new"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ gnome-shell e' cambiato ($PRIMA_SHELL → $DOPO_SHELL): il verde che segue non vale", "dopo": "⛔ gnome-shell has changed ($PRIMA_SHELL → $DOPO_SHELL): the green that follows does not count"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "lo stesso desktop, dopo il riattacco del solo cliente EIS", "dopo": "the same desktop, after reattaching only the EIS client"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S5 · ⭐ UN'APPLICAZIONE VERA sopravvive alla guarigione?", "dopo": "S5 · ⭐ DOES A REAL APPLICATION survive the healing?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il terminale non si apre", "dopo": "⛔ THE BENCH: the terminal does not open"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "Invio ricevuti PRIMA: $PRIMA", "dopo": "Enters received BEFORE: $PRIMA"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "il terminale riceve gli Invio PRIMA della guarigione ($((MEZZO - PRIMA)))", "dopo": "the terminal receives the Enters BEFORE the healing ($((MEZZO - PRIMA)))"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il terminale non riceve niente nemmeno prima, la scena non regge", "dopo": "⛔ THE BENCH: the terminal receives nothing even before, the scene does not hold"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ la cura «C» e' scattata (la riga GUARIGIONE c'e')", "dopo": "⭐ cure \\\"C\\\" kicked in (the HEALING line is there)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ la cura «C» NON e' scattata: quel che segue non misura la guarigione", "dopo": "⛔ cure \\\"C\\\" did NOT kick in: what follows does not measure the healing"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "Invio ricevuti DOPO la guarigione: $DOPO (erano $MEZZO)", "dopo": "Enters received AFTER the healing: $DOPO (they were $MEZZO)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ l'applicazione VERA ha ricevuto $((DOPO - MEZZO)) Invio DOPO la guarigione", "dopo": "⭐ the REAL application received $((DOPO - MEZZO)) Enters AFTER the healing"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ ne ha ricevuti $((DOPO - MEZZO)) invece di 2: un cliente GTK NON regge il", "dopo": "⛔ it received $((DOPO - MEZZO)) instead of 2: a GTK client does NOT withstand the"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "   cambio di capacita' del posto ⇒ il prezzo della cura «C» e' molto piu'", "dopo": "   seat capability change ⇒ the price of cure \\\"C\\\" is much higher"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "   alto di quel che si e' dichiarato, e va riportato al coordinatore", "dopo": "   than what was declared, and must be reported to the coordinator"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ tutte le scene hanno dato quel che l'atteso dichiarava", "dopo": "⭐ all scenes gave what the expectation declared"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ almeno una scena non e' verde: guarda i sotto-giri qui sopra", "dopo": "⛔ at least one scene is not green: look at the sub-rounds above"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ non so fare «$COSA»", "dopo": "⛔ I do not know how to do \\\"$COSA\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ SRC=%s non sta sotto /media/REMOTIX/src: il contenitore non lo vede,\\n", "dopo": "⛔ SRC=%s is not under /media/REMOTIX/src: the container does not see it,\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   e un guasto innestato li dentro non arriverebbe MAI al binario.\\n", "dopo": "   and a fault injected in there would NEVER reach the binary.\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ LAV=%s non sta sotto /media/REMOTIX/tmp: il binario uscirebbe da\\n", "dopo": "⛔ LAV=%s is not under /media/REMOTIX/tmp: the binary would come out in\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   una parte e il terreno lo cercherebbe da un altra.\\n", "dopo": "   one place and the terrain would look for it in another.\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: non riesco a cancellare $f ⇒ leggerei l'esito di IERI", "dopo": "⛔ THE BENCH: I cannot delete $f ⇒ I would read YESTERDAY's outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: il giro «$1» non ha retto (uscita $e) — la scena non si e'", "dopo": "⛔ THE BENCH: round \\\"$1\\\" did not hold (exit $e) — the scene was not"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   montata, e NON c'e' nessun verdetto da confrontare.  Coda:", "dopo": "   mounted, and there is NO verdict to compare.  Tail:"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: il giro «$1» e' uscito $e ma non ha scritto NESSUN esito", "dopo": "⛔ THE BENCH: round \\\"$1\\\" exited $e but wrote NO outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   in $f ⇒ il giudice non ha nemmeno parlato", "dopo": "   in $f ⇒ the judge did not even speak"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: in $f non c'e' nessuna riga «s2-tenuto»", "dopo": "⛔ THE BENCH: in $f there is no \\\"s2-tenuto\\\" line"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "giro $1: $(grep -acE 'OK|NO|DIFETTO|NON_IN_SCENA' \"$LAV/giro-$1.log\") righe di verdetto", "dopo": "round $1: $(grep -acE 'OK|NO|DIFETTO|NON_IN_SCENA' \"$LAV/giro-$1.log\") verdict lines"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "0. Le copie SANE dei due file che i guasti toccano", "dopo": "0. The HEALTHY copies of the two files the faults touch"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "non ho fatto la copia di $f", "dopo": "I did not make the copy of $f"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "$f salvato ($(wc -l < \"$SANI/$f\") righe)", "dopo": "$f saved ($(wc -l < \"$SANI/$f\") lines)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "1. Il giro SANO — ⛔ e se questo non e' verde non si certifica niente", "dopo": "1. The HEALTHY round — ⛔ and if this is not green nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il sano non compila", "dopo": "⛔ the healthy tree does not compile"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ senza il giro sano non si certifica niente", "dopo": "⛔ without the healthy round nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa sana: $SANA", "dopo": "healthy map: $SANA"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro SANO ha dei rossi: il banco non e' certificabile", "dopo": "⛔ the HEALTHY round has reds: the bench cannot be certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro SANO ha ancora dei DIFETTO_VIVO: le cure «A» e «C»", "dopo": "⛔ the HEALTHY round still has DIFETTO_VIVO: cures \\\"A\\\" and \\\"C\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   non sono dentro, oppure non funzionano.  Non si certifica", "dopo": "   are not in, or they do not work.  Nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "il giro sano e' tutto verde", "dopo": "the healthy round is all green"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "s/.*devono CAMBIARE: //p", "dopo": "s/.*must CHANGE: //p"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "2.$G — devono cambiare: $ATTESO   (in $FILE)", "dopo": "2.$G — must change: $ATTESO   (in $FILE)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G non si e' innestato: NON e' «il guasto non fa niente»", "dopo": "⛔ $G was not injected: this is NOT \\\"the fault does nothing\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G non compila:", "dopo": "⛔ $G does not compile:"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G: il giro non ha girato ⇒ non si puo' dire NIENTE su questo guasto", "dopo": "⛔ $G: the round did not run ⇒ NOTHING can be said about this fault"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa guasta: $GUASTA", "dopo": "faulty map: $GUASTA"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "casi cambiati: ${OTT:-nessuno}", "dopo": "changed cases: ${OTT:-none}"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "nessuno", "dopo": "none"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⭐ $G ha cambiato ESATTAMENTE i casi dichiarati ($ATTESO)", "dopo": "⭐ $G changed EXACTLY the declared cases ($ATTESO)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G doveva cambiare «${A% }» e ha cambiato «${B:-nulla}».", "dopo": "⛔ $G should have changed \\\"${A% }\\\" and changed \\\"${B:-nothing}\\\"."}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   ⚠ O il guasto non e' quello che credo, o il banco non sa vederlo,", "dopo": "   ⚠ Either the fault is not what I believe, or the bench cannot see it,"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   o ne vede piu' di uno: si corregge l'ATTESO con la ragione scritta", "dopo": "   or it sees more than one: the EXPECTATION is corrected with the reason written"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   accanto, non il verdetto", "dopo": "   next to it, not the verdict"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "3. Si rimettono i file SANI e si ricostruisce", "dopo": "3. The HEALTHY files are put back and rebuilt"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "risanato e ricostruito", "dopo": "restored and rebuilt"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il risanamento NON ha ricostruito: l'albero resta GUASTO", "dopo": "⛔ the restoration did NOT rebuild: the tree stays FAULTY"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa risanata: $RIS", "dopo": "restored map: $RIS"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "il giro risanato e' identico al sano", "dopo": "the restored round is identical to the healthy one"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il risanato NON e' tornato come il sano: $RIS", "dopo": "⛔ the restored one did NOT come back like the healthy one: $RIS"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro risanato non ha girato: ⚠ NON si puo' dire che l'albero sia", "dopo": "⛔ the restored round did not run: ⚠ it CANNOT be said that the tree is"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   tornato sano, e resta il dubbio che ci sia dentro un guasto", "dopo": "   healthy again, and the doubt remains that a fault is inside"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "Esito", "dopo": "Outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "esiti: $ESITI", "dopo": "results: $ESITI"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "la cura «C» non scatta: `guarisci()` non viene mai chiamata", "dopo": "cure \"C\" does not kick in: `guarisci()` is never called"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "gli orfani dei PULSANTI non si segnano: il registro torna a dire «fatto»", "dopo": "the orphans of the BUTTONS are not marked: the log goes back to saying \"done\""}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "NON-GUASTO MISURATO: il riattacco non chiude il descrittore vecchio", "dopo": "MEASURED NON-FAULT: the reattach does not close the old descriptor"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "SECONDO NON-GUASTO MISURATO: non si manda il distacco a libei", "dopo": "SECOND MEASURED NON-FAULT: the detach is not sent to libei"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "ne' distacco ne' chiusura: il contesto vecchio resta vivo e connesso", "dopo": "neither detach nor close: the old context stays alive and connected"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "    ⇒ devono CAMBIARE: %s", "dopo": "    ⇒ must CHANGE: %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "nessuno", "dopo": "none"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "06-b33 §7.1 — i guasti innestati", "dopo": "06-b33 §7.1 — the injected faults"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ servono --albero e --guasto (oppure --elenco)", "dopo": "⛔ --albero and --guasto are needed (or --elenco)"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ guasto ignoto: %s", "dopo": "⛔ unknown fault: %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ l'ancora di %s compare %d volte in %s (ne serve UNA): il guasto NON si innesta, e questo NON e' «il guasto non fa niente»", "dopo": "⛔ the anchor of %s appears %d times in %s (ONE is needed): the fault is NOT injected, and this is NOT \"the fault does nothing\""}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⭐ %s innestato in %s", "dopo": "⭐ %s injected into %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG1 innestato: la cura «C» non scatta */", "dopo": "/* fault RG1 injected: cure \"C\" does not kick in */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG2 innestato: gli orfani dei pulsanti non si segnano */", "dopo": "/* fault RG2 injected: the orphans of the buttons are not marked */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG3 innestato: NON si chiude */", "dopo": "/* fault RG3 injected: it is NOT closed */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG4 innestato: niente distacco, si molla e basta */", "dopo": "/* fault RG4 injected: no detach, it just lets go */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG5 innestato: il contesto vecchio resta VIVO e connesso */", "dopo": "/* fault RG5 injected: the old context stays ALIVE and connected */"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "06-b33 §7.1 — il verdetto", "dopo": "06-b33 §7.1 — the verdict"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "(non dichiarata)", "dopo": "(not declared)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "\\n== 06-b33 §7.1 · giudizio «{a.etichetta}» · modo {a.modo}", "dopo": "\\n== 06-b33 §7.1 · judgement «{a.etichetta}» · mode {a.modo}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   scena: {a.scena}", "dopo": "   scene: {a.scena}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "\\n   {len(casi)} casi · {rossi} rossi · {vivi} difetti vivi dichiarati · {fuori} fuori scena", "dopo": "\\n   {len(casi)} cases · {rossi} red · {vivi} live defects declared · {fuori} out of scene"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   esiti: {a.esiti}", "dopo": "   results: {a.esiti}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risveglio", "dopo": "wake-up"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "ridimensionamento", "dopo": "resize"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NESSUNA", "dopo": "NONE"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "pulsanti", "dopo": "buttons"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "tasti", "dopo": "keys"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "pulsanti E tasti", "dopo": "buttons AND keys"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RILASCIATI %d (orfani rimasti %u)", "dopo": "RELEASED %d (orphans left %u)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante il risveglio", "dopo": "ERRORE: the input channel dropped during the wake-up"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RISVEGLIO n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) ⛔ e NESSUNO ha toccato la tela", "dopo": "WAKE-UP n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) ⛔ and NOBODY touched the canvas"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante l'attesa", "dopo": "ERRORE: the input channel dropped during the wait"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "dormito %ld ms", "dopo": "slept %ld ms"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante il ridimensionamento", "dopo": "ERRORE: the input channel dropped during the resize"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RIDIMENSIONATO a %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)", "dopo": "RESIZED to %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "comando ignoto: «%s»", "dopo": "unknown command: «%s»"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "sessione aperta: nodo %u, descrittore EIS %d", "dopo": "session open: node %u, EIS descriptor %d"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "senza motivo dichiarato", "dopo": "no reason declared"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il flusso non e' attivo dopo 20 s (%s)", "dopo": "ERRORE: the stream is not active after 20 s (%s)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "senza spiegazione", "dopo": "no explanation"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "cattura attiva a %ux%u sul nodo %u", "dopo": "capture active at %ux%u on node %u"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "⚠ il nostro monitor non si sa per nome: NON dico quale sia", "dopo": "⚠ our monitor is not known by name: I do NOT say which one it is"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto", "dopo": "ERRORE: the input channel dropped"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: nessun dispositivo ASSOLUTO con una regione dopo 20 s", "dopo": "ERRORE: no ABSOLUTE device with a region after 20 s"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il compositore ha chiuso il canale di input", "dopo": "ERRORE: the compositor closed the input channel"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "⛔ stdin chiuso senza «fine»: esco SENZA rilasciare", "dopo": "⛔ stdin closed without «fine»: I exit WITHOUT releasing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto", "dopo": " buttons were PRESSED on the device the compositor has just removed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto", "dopo": " keys were PRESSED on the device the compositor has just removed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON PARTE: era premuto su un dispositivo", "dopo": "DOES NOT LEAVE: it was pressed on a device"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON PARTE: era premuto su una tastiera", "dopo": "DOES NOT LEAVE: it was pressed on a keyboard"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "GUARIGIONE (n.", "dopo": "HEALING (n."}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "canale EIS RIFATTO", "dopo": "EIS channel REDONE"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "RISVEGLIO n\\.(\\d+) esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)", "dopo": "WAKE-UP n\\.(\\d+) esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "RIDIMENSIONATO a \\S+ esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)", "dopo": "RESIZED to \\S+ esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha parlato", "dopo": "C0 the instrument has spoken"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: il registro dell'iniettore e' VUOTO", "dopo": "⛔ THE BENCH: the injector's log is EMPTY"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha parlato", "dopo": "C0 the instrument has spoken"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " righe dall'iniettore — ⚠ e in questa scena il testimone NON e' lo strumento: non si inietta niente che debba arrivargli", "dopo": " lines from the injector — ⚠ and in this scene the witness is NOT the instrument: nothing is injected that should reach it"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha visto qualcosa", "dopo": "C0 the instrument has seen something"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "ZERO righe del testimone dopo n=", "dopo": "ZERO witness lines after n="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ": ⛔ IL BANCO, NON IL PRODOTTO — il testimone non era aperto, o non aveva il fuoco", "dopo": ": ⛔ THE BENCH, NOT THE PRODUCT — the witness was not open, or did not have the focus"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha visto qualcosa", "dopo": "C0 the instrument has seen something"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " righe dopo n=", "dopo": " lines after n="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "S0 il clic arriva quando NON c'e' nessun ricambio", "dopo": "S0 the click arrives when there is NO replacement"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "BTN_LEFT giu' ", "dopo": "BTN_LEFT down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ IL BANCO: senza questo verde nessun altro rosso significa niente", "dopo": " — ⛔ THE BENCH: without this green no other red means anything"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "S0-bis e NESSUN risveglio e' stato chiesto", "dopo": "S0-bis and NO wake-up was requested"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risvegli nel registro dell'iniettore: ", "dopo": "wake-ups in the injector's log: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 0)", "dopo": " (expected 0)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L1 i tre risvegli sono partiti", "dopo": "L1 the three wake-ups went off"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risvegli=", "dopo": "wake-ups="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " esiti=", "dopo": " outcomes="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 3, tutti esito=1)", "dopo": " (expected 3, all esito=1)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L2 ⭐ OGNI risveglio ricrea i dispositivi — §7.1", "dopo": "L2 ⭐ EVERY wake-up recreates the devices — §7.1"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "delta di ricambi_puntatore per risveglio: ", "dopo": "delta of ricambi_puntatore per wake-up: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso [1,1,1] o piu').  ⛔ Se fossero zeri, §7.1 E' FALSA e va corretta: `[R]` `meta-screen-cast-virtual-stream-src.c:283` chiama `meta_eis_viewport_notify_changed()` a ogni `..._src_enable()`", "dopo": " (expected [1,1,1] or more).  ⛔ If they were zeros, §7.1 IS FALSE and must be corrected: `[R]` `meta-screen-cast-virtual-stream-src.c:283` calls `meta_eis_viewport_notify_changed()` at every `..._src_enable()`"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L3 e NESSUNO ha toccato la tela", "dopo": "L3 and NOBODY touched the canvas"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "chiamate a cattura_ridimensiona(): ", "dopo": "calls to cattura_ridimensiona(): "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 0) — e' la meta' della tesi che rende §7.1 una porta NUOVA", "dopo": " (expected 0) — it is the half of the thesis that makes §7.1 a NEW door"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L4 a mano alzata NON ci sono orfani", "dopo": "L4 with the hand raised there are NO orphans"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "nessuna riga di orfani, ne' di pulsanti ne' di tasti, com'e' giusto", "dopo": "no orphans line, neither of buttons nor of keys, as it should be"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ c'e' la riga degli orfani (", "dopo": "⛔ the orphans line ("}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ") senza che nulla fosse premuto: il conto di input.c e' sporco", "dopo": ") is there without anything being pressed: the count of input.c is dirty"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T0 la porta si e' aperta: i dispositivi sono ricambiati", "dopo": "T0 the door opened: the devices were replaced"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "porta=", "dopo": "door="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", delta di ricambi_puntatore=", "dopo": ", delta of ricambi_puntatore="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso ≥1).  ⛔ Se fosse 0 il difetto NON e' stato riprodotto, e quel che segue non misura niente", "dopo": " (expected ≥1).  ⛔ If it were 0 the defect was NOT reproduced, and what follows measures nothing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T1 il PULSANTE era premuto al momento del ricambio", "dopo": "T1 the BUTTON was pressed at the moment of the replacement"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "`input.c` dichiara gli orfani dei PULSANTI, dunque il pulsante c'era", "dopo": "`input.c` declares the orphans of the BUTTONS, so the button was there"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: nessun orfano di PULSANTI dichiarato", "dopo": "⛔ THE BENCH: no orphan of BUTTONS declared"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — c'e' solo quello dei TASTI, che e' un'altra cosa: al cambio di viewport la tastiera non ricambia, quindi questa scena non ha fatto quel che credeva", "dopo": " — there is only the KEYS one, which is another thing: at the viewport change the keyboard is not replaced, so this scene did not do what it believed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — o non si e' premuto niente, o il ricambio e' arrivato prima della pressione", "dopo": " — either nothing was pressed, or the replacement arrived before the press"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T2 il testimone ha visto il pulsante SCENDERE", "dopo": "T2 the witness saw the button GO DOWN"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "BTN_LEFT giu' visto", "dopo": "BTN_LEFT down seen"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: il testimone non ha visto nemmeno la pressione", "dopo": "⛔ THE BENCH: the witness did not even see the press"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T3 ⛔ il rilascio del pulsante arriva al desktop (prima o dopo, purche' arrivi)", "dopo": "T3 ⛔ the button release reaches the desktop (before or after, as long as it arrives)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "il rilascio arriva — ⭐ allora questa porta e' curata", "dopo": "the release arrives — ⭐ so this door is cured"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON arriva: il posto conta il pulsante ancora giu' (`meta-seat-impl.c:899-908`), e `handle_button` (`meta-eis-client.c:612-621`) ingoia in silenzio il rilascio sul dispositivo nuovo", "dopo": "it does NOT arrive: the seat counts the button as still down (`meta-seat-impl.c:899-908`), and `handle_button` (`meta-eis-client.c:612-621`) silently swallows the release on the new device"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T4 ⭐⭐ un clic FRESCO, dopo tutto, arriva ancora?", "dopo": "T4 ⭐⭐ does a FRESH click, after all, still arrive?"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "clic fresco: giu' ", "dopo": "fresh click: down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ da adesso il desktop NON PRENDE PIU' UN CLIC, per tutta la sessione: e' «su Android il mouse non prende piu' i click»", "dopo": " — ⛔ from now on the desktop DOES NOT TAKE A CLICK ANY MORE, for the whole session: it is \"on Android the mouse no longer takes clicks\""}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T5 il TASTO invece va giu' e torna su (controllo interno alla scena)", "dopo": "T5 the KEY instead goes down and comes back up (check inside the scene)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "questa scena non batte nessun Ctrl: non c'e' niente da giudicare", "dopo": "this scene presses no Ctrl: there is nothing to judge"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T5 il TASTO invece va giu' e torna su (controllo interno alla scena)", "dopo": "T5 the KEY instead goes down and comes back up (check inside the scene)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "Ctrl giu' ", "dopo": "Ctrl down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ non arriva nemmeno il tasto: la causa NON e' il ricambio del PUNTATORE, e T3/T4 stanno accusando la cosa sbagliata", "dopo": " — ⛔ not even the key arrives: the cause is NOT the replacement of the POINTER, and T3/T4 are accusing the wrong thing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T6 e un tasto FRESCO arriva ancora", "dopo": "T6 and a FRESH key still arrives"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "questa scena non batte nessun Invio: non c'e' niente da giudicare", "dopo": "this scene presses no Enter: there is nothing to judge"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T6 e un tasto FRESCO arriva ancora", "dopo": "T6 and a FRESH key still arrives"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "Invio visto", "dopo": "Enter seen"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ nemmeno la tastiera funziona piu': il danno e' piu' largo di quel che §4.6 descrive", "dopo": "⛔ not even the keyboard works any more: the damage is wider than what §4.6 describes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "la riga c'e': il registro NON dice «fatto» mentre il desktop resta bloccato", "dopo": "the line is there: the log does NOT say \"done\" while the desktop stays stuck"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⭐ la riga non c'e' — ed e' giusto: il rilascio e' ARRIVATO, quindi non c'era nessun ripiego da dichiarare", "dopo": "⭐ the line is not there — and that is right: the release ARRIVED, so there was no fallback to declare"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ il rilascio del pulsante non e' arrivato E il suo percorso tace: e' il verde che non e' vero (`CODER.md` §4.6)", "dopo": "⛔ the button release did not arrive AND its path stays silent: it is the green that is not true (`CODER.md` §4.6)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ".  ⚠ C'e' la riga della TASTIERA, che e' un'altra cosa e non vale per il pulsante", "dopo": ".  ⚠ The KEYBOARD line is there, which is another thing and does not count for the button"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "» · modo ", "dopo": "» · mode "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   scena: ", "dopo": "   scene: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " casi · ", "dopo": " cases · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " rossi · ", "dopo": " red · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " difetti vivi dichiarati · ", "dopo": " live defects declared · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " fuori scena", "dopo": " out of scene"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   esiti: ", "dopo": "   results: "}

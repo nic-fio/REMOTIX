@@ -1,0 +1,1005 @@
+{"file": "banchi/03-marca.py", "prima": "la marca NON c'e' in nessuno dei %d scorrimenti provati (± %d px).  Il migliore diceva: %s", "dopo": "the mark is NOT there in any of the %d offsets tried (± %d px).  The best one said: %s"}
+{"file": "banchi/03-marca.py", "prima": "l'immagine non e' ne' grigia ne' a tre canali: %s", "dopo": "the image is neither grey nor three-channel: %s"}
+{"file": "banchi/03-marca.py", "prima": "il contrasto fra le celle e' %.3f, sotto il minimo %.2f: qui non c'e' un segnale a due livelli", "dopo": "the contrast between the cells is %.3f, below the minimum %.2f: there is no two-level signal here"}
+{"file": "banchi/03-marca.py", "prima": "i primi 8 bit valgono 0x%02X invece del sync 0x%02X", "dopo": "the first 8 bits are 0x%02X instead of the sync 0x%02X"}
+{"file": "banchi/03-marca.py", "prima": "il sync c'e' ma il CRC non torna: letto 0x%04X, calcolato 0x%04X ⇒ la marca c'era e si e' rotta, oppure e' un caso", "dopo": "the sync is there but the CRC does not match: read 0x%04X, computed 0x%04X ⇒ the mark was there and broke, or it is chance"}
+{"file": "banchi/03-marca.py", "prima": "marca della versione %d, questo lettore legge la %d: i campi non stanno nello stesso posto e leggerla darebbe numeri plausibili e falsi", "dopo": "mark of version %d, this reader reads version %d: the fields are not in the same place and reading it would give plausible and false numbers"}
+{"file": "banchi/03-marca.py", "prima": "il lettore della marca della scena", "dopo": "the scene's mark reader"}
+{"file": "banchi/03-marca.py", "prima": "dato un fotogramma, dice se la marca c'e'", "dopo": "given a frame, says whether the mark is there"}
+{"file": "banchi/03-marca.py", "prima": "⚠ solo per il controllo positivo", "dopo": "⚠ only for the positive control"}
+{"file": "banchi/03-marca.py", "prima": "i disegni del client, letti da fuori", "dopo": "the client's drawings, read from outside"}
+{"file": "banchi/03-marca.py", "prima": "il numero a 32 bit di un nome di giro", "dopo": "the 32-bit number of a round name"}
+{"file": "banchi/03-marca.py", "prima": "⭐ costruisce l'--identita-pagina di M8 leggendo il giro DAI PIXEL", "dopo": "⭐ builds M8's --identita-pagina by reading the round FROM THE PIXELS"}
+{"file": "banchi/03-marca.py", "prima": "i nomi dei giri noti, separati da virgola: e' l'elenco con cui si inverte il numero della marca", "dopo": "the names of the known rounds, comma-separated: it is the list used to invert the mark's number"}
+{"file": "banchi/03-marca.py", "prima": "⚠ se non lo dichiari, M8 NON finge di averlo guardato", "dopo": "⚠ if you do not declare it, M8 does NOT pretend to have looked"}
+{"file": "banchi/03-marca.py", "prima": "il JSON dei conti della pagina", "dopo": "the JSON of the page's counts"}
+{"file": "banchi/03-marca.py", "prima": "⭐ il giro e' LETTO DAI PIXEL del fotogramma dipinto, non dichiarato dal prodotto: la marca lo porta dentro la scena e il prodotto la trasporta senza saperlo", "dopo": "⭐ the round is READ FROM THE PIXELS of the painted frame, not declared by the product: the mark carries it inside the scene and the product carries the mark without knowing"}
+{"file": "banchi/03-marca.py", "prima": "⛔ la marca non ci sta: serve almeno %dx%d, l'immagine e' %dx%d", "dopo": "⛔ the mark does not fit: it needs at least %dx%d, the image is %dx%d"}
+{"file": "banchi/03-marca.py", "prima": "⛔ non ho potuto GUARDARE: il fotogramma e' %dx%d e il blocco della marca finisce a %dx%d.  ⚠ Non e' «la marca non c'e'»: e' «la marca non ci starebbe»", "dopo": "⛔ I could not LOOK: the frame is %dx%d and the mark block ends at %dx%d.  ⚠ It is not «the mark is not there»: it is «the mark would not fit»"}
+{"file": "banchi/03-marca.py", "prima": "nessuna posizione provata", "dopo": "no position tried"}
+{"file": "banchi/03-marca.py", "prima": "⛔ «%s» non esiste: la scena non e' mai partita, oppure ha un altro nome (--shm).  ⚠ Non e' «ha disegnato zero volte»", "dopo": "⛔ «%s» does not exist: the scene never started, or it has another name (--shm).  ⚠ It is not «it drew zero times»"}
+{"file": "banchi/03-marca.py", "prima": "«%s» non e' un blocco di 03-scena (magia 0x%08X)", "dopo": "«%s» is not a 03-scena block (magic 0x%08X)"}
+{"file": "banchi/03-marca.py", "prima": "⛔ blocco di versione %d, questo lettore legge la %d: i campi non stanno nello stesso posto", "dopo": "⛔ block of version %d, this reader reads version %d: the fields are not in the same place"}
+{"file": "banchi/03-marca.py", "prima": "⛔ %d RIENTRI: `disegna()` e' stata chiamata dentro sé stessa — un gestore di eventi ha disegnato", "dopo": "⛔ %d RE-ENTRIES: `disegna()` was called inside itself — an event handler drew"}
+{"file": "banchi/03-marca.py", "prima": "⛔ fino a %d `wl_surface.frame` IN VOLO insieme (ne e' ammesso 1): la scena disegna senza essere invitata, e il ritmo si moltiplica per quel numero", "dopo": "⛔ up to %d `wl_surface.frame` IN FLIGHT together (1 is allowed): the scene draws without being invited, and the rate is multiplied by that number"}
+{"file": "banchi/03-marca.py", "prima": "⛔ %d giri di CORSA A VUOTO", "dopo": "⛔ %d BUSY-LOOP rounds"}
+{"file": "banchi/03-marca.py", "prima": "⚠ il processo %d che ha scritto questo blocco NON e' piu' vivo: questi sono i suoi ultimi numeri, non i numeri di adesso", "dopo": "⚠ process %d that wrote this block is NO longer alive: these are its last numbers, not the numbers of now"}
+{"file": "banchi/03-marca.py", "prima": "⛔ %.0f disegni/s su un monitor a %.1f Hz: piu' di una volta e mezza il refresh non e' un ritmo, e' una corsa a vuoto", "dopo": "⛔ %.0f drawings/s on a %.1f Hz monitor: more than one and a half times the refresh is not a rate, it is a busy loop"}
+{"file": "banchi/03-marca.py", "prima": "⛔ «%s» e' grezzo: senza --larghezza e --altezza non so che forma abbia, e indovinarla vorrebbe dire leggere la marca nel posto sbagliato", "dopo": "⛔ «%s» is raw: without --larghezza and --altezza I do not know its shape, and guessing it would mean reading the mark in the wrong place"}
+{"file": "banchi/03-marca.py", "prima": "⛔ «%s»: %d byte, ne servivano %d per %dx%d rgb24", "dopo": "⛔ «%s»: %d bytes, %d were needed for %dx%d rgb24"}
+{"file": "banchi/03-marca.py", "prima": "⛔ la marca NON e' nei pixel del fotogramma dipinto: %s.  ⚠ Qui non si indovina il giro in corso — sarebbe la costante che fa passare", "dopo": "⛔ the mark is NOT in the pixels of the painted frame: %s.  ⚠ Here we do not guess the current round — it would be the constant that makes it pass"}
+{"file": "banchi/03-marca.py", "prima": "⛔ «%s» ha bisogno di numpy, e su questa macchina non c'e'.\n   ⚠ Non e' un difetto della marca: e' che la LETTURA DEI PIXEL si fa dove numpy c'e' (su CHUWI).\n   ⭐ Quel che funziona QUI senza numpy: «03-marca.py conta» (i disegni del client, letti dal blocco condiviso) e «03-marca.py nome» (il numero a 32 bit di un giro).\n   ⇒ o si copia il fotogramma dove numpy c'e', o si installa python3-numpy.", "dopo": "⛔ «%s» needs numpy, and this machine does not have it.\n   ⚠ It is not a defect of the mark: the PIXEL READING is done where numpy is (on CHUWI).\n   ⭐ What works HERE without numpy: «03-marca.py conta» (the client's drawings, read from the shared block) and «03-marca.py nome» (the 32-bit number of a round).\n   ⇒ either copy the frame to where numpy is, or install python3-numpy."}
+{"file": "banchi/03-marca.py", "prima": "«%s» e' %d byte, ne servono %d: la struttura non e' quella", "dopo": "«%s» is %d bytes, %d are needed: the structure is not that one"}
+{"file": "banchi/03-marca.py", "prima": "⛔ «%s» e' un RELITTO: `seq` vale %d — dispari — e NON e' cambiato in %d tentativi.  Una scrittura e' rimasta aperta, cioe' la scena e' morta (o e' ferma) a meta'.  ⚠ Il processo %d %s.  ⛔ Nessun numero di tentativi lo trovera' mai pari: non si aspetta, si riparte la scena (il blocco si riazzera all'avvio).", "dopo": "⛔ «%s» is a WRECK: `seq` is %d — odd — and has NOT changed in %d attempts.  A write was left open, i.e. the scene died (or is stuck) halfway.  ⚠ Process %d %s.  ⛔ No number of attempts will ever find it even: do not wait, restart the scene (the block is reset at startup)."}
+{"file": "banchi/03-marca.py", "prima": "⛔ `seq` cambia (%d → %d in %d tentativi) e non l'ho mai preso pari: questa si' e' contesa.  ⚠ Non e' mai stata osservata nemmeno con una scena a 1034 disegni/s — se la vedi, riportala.", "dopo": "⛔ `seq` changes (%d → %d in %d attempts) and I never caught it even: this really is contention.  ⚠ It was never observed, not even with a scene at 1034 drawings/s — if you see it, report it."}
+{"file": "banchi/03-marca.py", "prima": "e' ancora vivo — allora e' BLOCCATO, non morto", "dopo": "is still alive — so it is STUCK, not dead"}
+{"file": "banchi/03-marca.py", "prima": "non esiste piu'", "dopo": "no longer exists"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "IGNOTO: non c'e' nessun gnome-shell da interrogare", "dopo": "UNKNOWN: there is no gnome-shell to ask"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "IGNOTO: non riesco a leggere /proc/$pid/cmdline (lettura negata?)", "dopo": "UNKNOWN: I cannot read /proc/$pid/cmdline (read denied?)"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "SI, ed e' CHIESTO: gnome-shell gira con --headless", "dopo": "YES, and it is ASKED FOR: gnome-shell runs with --headless"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "    riga di comando: $cmdline", "dopo": "    command line: $cmdline"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "IGNOTO: --headless non c'e' nella riga di comando, e il registro di", "dopo": "UNKNOWN: --headless is not on the command line, and Mutter's log"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "        Mutter e' vuoto ($REGISTRO_SHELL).  Non e' «Mutter non l'ha", "dopo": "        is empty ($REGISTRO_SHELL).  It is not «Mutter did not"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "        detto»: e' «non lo abbiamo sentito».", "dopo": "        say it»: it is «we did not hear it»."}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "SI, ma per ACCIDENTE: Mutter dice «No seat assigned, running headlessly».", "dopo": "YES, but by ACCIDENT: Mutter says «No seat assigned, running headlessly»."}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "    ⚠ Funziona, ma nessuna nostra riga lo chiede — DECISIONI.md §4.3-bis", "dopo": "    ⚠ It works, but none of our lines asks for it — DECISIONI.md §4.3-bis"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "      dice che va dichiarato, non ereditato dalla mancanza di un seat.", "dopo": "      says it must be declared, not inherited from the lack of a seat."}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "NO: ne' chiesto ne' accidentale.", "dopo": "NO: neither asked for nor accidental."}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "    Con un seat assegnato il blocco schermo REVOCA cattura e input", "dopo": "    With a seat assigned the screen lock REVOKES capture and input"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "    (STUDI.md §gnome §4, DECISIONI.md §4.3-bis).  Le sessioni logind:", "dopo": "    (STUDI.md §gnome §4, DECISIONI.md §4.3-bis).  The logind sessions:"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "gestore di sessione vivo ma senza compositore: fermo tutto e riparto", "dopo": "session manager alive but without a compositor: stopping everything and restarting"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "⛔ non si e' fermata in tempo", "dopo": "⛔ it did not stop in time"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "c'e' gia' una sessione: ", "dopo": "there is already a session: "}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "⛔ la sessione NON e' partita entro 40 s.  Ultime righe:", "dopo": "⛔ the session did NOT start within 40 s.  Last lines:"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "sessione avviata", "dopo": "session started"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": " processo/i", "dopo": " process(es)"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "gnome-shell:  nessuno", "dopo": "gnome-shell:  none"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "fermata", "dopo": "stopped"}
+{"file": "banchi/00-sessione-gnome.sh", "prima": "uso: $0 {avvia|stato|ferma|registro [n]}", "dopo": "usage: $0 {avvia|stato|ferma|registro [n]}"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ xkbcommon non c'e' (pkg-config): il banco non puo' misurare niente.", "dopo": "⛔ xkbcommon is missing (pkg-config): the bench cannot measure anything."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— 1. IL PRODOTTO — src/tastiera.c ————", "dopo": "———— 1. THE PRODUCT — src/tastiera.c ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ il prodotto non compila", "dopo": "⛔ the product does not compile"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— 2. LA CERTIFICAZIONE — quattro difetti messi apposta ————", "dopo": "———— 2. THE CERTIFICATION — four defects planted on purpose ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "     (se una di queste righe dicesse VERDE, il banco non proverebbe niente)", "dopo": "     (if one of these lines said VERDE, the bench would prove nothing)"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "U+00E9) su «us»", "dopo": "U+00E9) on «us»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "U+00E9) su «it»", "dopo": "U+00E9) on «it»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "sessione «it» + negoziata «us»", "dopo": "session «it» + negotiated «us»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "manda la «e» al posto della «é»", "dopo": "sends the «e» instead of the «é»"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "dimentica i modificatori", "dopo": "forgets the modifiers"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "ripiega su «us» in silenzio", "dopo": "falls back to «us» silently"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "si fida del nome negoziato, non della keymap della sessione", "dopo": "trusts the negotiated name, not the keymap of the session"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ il guasto $G non compila:", "dopo": "⛔ fault $G does not compile:"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "  ✅ guasto %d (%s) ⇒ il banco dice ROSSO, e sulla prova giusta\\n", "dopo": "  ✅ fault %d (%s) ⇒ the bench says ROSSO, and on the right test\\n"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "     ⇒ IL BANCO NON E' CERTIFICATO: il suo verde non vale niente.", "dopo": "     ⇒ THE BENCH IS NOT CERTIFIED: its green is worth nothing."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "———— L'ESITO ————", "dopo": "———— THE OUTCOME ————"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ IL BANCO NON E' CERTIFICATO — non si crede al suo verde (CODER.md §3.3).", "dopo": "⛔ THE BENCH IS NOT CERTIFIED — its green is not believed (CODER.md §3.3)."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "   i file: $FUORI", "dopo": "   the files: $FUORI"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "✅ il banco e' CERTIFICATO: ha visto tutt'e quattro i difetti, ciascuno sulla sua prova.", "dopo": "✅ the bench is CERTIFIED: it saw all four defects, each on its own test."}
+{"file": "banchi/04-b25-lancia.sh", "prima": "✅ e src/tastiera.c passa: banchi/04-b25-esiti.jsonl", "dopo": "✅ and src/tastiera.c passes: banchi/04-b25-esiti.jsonl"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "⛔ ma src/tastiera.c NON passa (uscita $PRODOTTO): banchi/04-b25-esiti.jsonl", "dopo": "⛔ but src/tastiera.c does NOT pass (exit $PRODOTTO): banchi/04-b25-esiti.jsonl"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "   i file del giro: $FUORI", "dopo": "   the files of the run: $FUORI"}
+{"file": "banchi/04-b25-guasti.c", "prima": "della sessione", "dopo": "the session's"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc(sx)", "dopo": "Shift(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc(dx)", "dopo": "Shift(R)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Ctrl(sx)", "dopo": "Ctrl(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Alt(sx)", "dopo": "Alt(L)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "BlocMaiusc", "dopo": "CapsLock"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "BlocNum", "dopo": "NumLock"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "«%s» (U+%04X) su «%s» %s", "dopo": "«%s» (U+%04X) on «%s» %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ deve uscire", "dopo": "⇒ must come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ NON producibile", "dopo": "⇒ NOT producible"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "il SIMULATORE non ha compilato la disposizione — non ho saputo guardare", "dopo": "the SIMULATOR did not compile the layout — I could not look"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "tastiera_apri(\\\"%s\\\") ha detto NULL: %s", "dopo": "tastiera_apri(\\\"%s\\\") said NULL: %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessun motivo)", "dopo": "(no reason)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha ritornato -1 (errore) invece di %d", "dopo": "returned -1 (error) instead of %d"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto NO e non ha mandato niente — e' il caso da scrivere nel registro", "dopo": "said NO and sent nothing — it is the case to write in the log"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto SI (%s) e sarebbe uscita «%s» (U+%04X) al posto di «%s»: ", "dopo": "⛔ said YES (%s) and «%s» (U+%04X) would have come out instead of «%s»: "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "una LETTERA DIVERSA, che RCP.md §7.3 vieta", "dopo": "a DIFFERENT LETTER, which RCP.md §7.3 forbids"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto «non producibile» un carattere che quella disposizione ha", "dopo": "⛔ said «not producible» for a character that layout has"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto SI ma con n=%zu posizioni (il massimo e' %d)", "dopo": "said YES but with n=%zu positions (the maximum is %d)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battendo %s esce «%s» — la strada e' %s%s", "dopo": "typing %s gives «%s» — the route is %s%s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "con modificatore", "dopo": "with modifier"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "diretta", "dopo": "direct"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ esce «%s» ma la sequenza %s LASCIA UN MODIFICATORE PREMUTO", "dopo": "⛔ «%s» comes out but the sequence %s LEAVES A MODIFIER PRESSED"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ battendo %s esce «%s» (U+%04X), non «%s» (U+%04X)", "dopo": "⛔ typing %s gives «%s» (U+%04X), not «%s» (U+%04X)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — I CONTROLLI DELLO STRUMENTO (senza questi, «non e' uscito niente» e «non ho\\n", "dopo": "\\n  — THE TOOL'S CONTROLS (without these, «nothing came out» and «I could not\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    saputo guardare» hanno lo stesso aspetto — CODER.md §3.10)\\n", "dopo": "    look» look the same — CODER.md §3.10)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "controllo positivo: il simulatore compila «it»", "dopo": "positive control: the simulator compiles «it»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "no — il banco non puo' misurare niente", "dopo": "no — the bench cannot measure anything"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ positivo: il simulatore vede una lettera che ESCE di sicuro", "dopo": "⭐ positive: the simulator sees a letter that surely COMES OUT"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battuto il tasto 30 su «it», e' uscita «a»", "dopo": "typed key 30 on «it», «a» came out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battuto il tasto 30, NON e' uscita una «a»", "dopo": "typed key 30, an «a» did NOT come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "tasto 26 senza Maiusc ⇒ «%s» (U+%04X), e NON e' la «e'» accentata", "dopo": "key 26 without Shift ⇒ «%s» (U+%04X), and it is NOT the accented «e'»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ negativo: il simulatore DISTINGUE i livelli", "dopo": "⭐ negative: the simulator DISTINGUISHES the levels"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "Maiusc+26 ⇒ «%s» (U+%04X): il simulatore APPLICA i modificatori", "dopo": "Shift+26 ⇒ «%s» (U+%04X): the simulator APPLIES the modifiers"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ il simulatore applica i modificatori", "dopo": "⭐ the simulator applies the modifiers"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ «%s» non si carica ⇒ DEVE fallire e DIRLO", "dopo": "⛔ «%s» does not load ⇒ MUST fail and SAY SO"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NULL, col motivo: «%s»", "dopo": "NULL, with the reason: «%s»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NULL ma SENZA motivo: chi legge il registro non sa perche'", "dopo": "NULL but WITHOUT a reason: whoever reads the log does not know why"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ RIPIEGO SILENZIOSO: ha ritornato una tastiera («%s») per una disposizione ", "dopo": "⛔ SILENT FALLBACK: it returned a keyboard («%s») for a layout "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "che non esiste%s. Il sintomo per l'utente e' «scrive le lettere sbagliate», e ", "dopo": "that does not exist%s. The symptom for the user is «it types the wrong letters», and "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "nessuno collega le due cose (CODER.md §4.2)", "dopo": "nobody connects the two things (CODER.md §4.2)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(senza nome)", "dopo": "(no name)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": " — e per giunta scrive", "dopo": " — and it even types"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "i nomi delle due disposizioni si distinguono", "dopo": "the names of the two layouts are distinguishable"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "una delle due non si e' aperta: la prova non si e' potuta fare", "dopo": "one of the two did not open: the test could not be done"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ i nomi delle due disposizioni si DISTINGUONO", "dopo": "⭐ the names of the two layouts are DISTINGUISHABLE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "gli ingressi illegali si distinguono dal «non producibile»", "dopo": "illegal inputs are distinguished from «not producible»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "«it» non si e' aperta", "dopo": "«it» did not open"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "surrogato ⇒ %d, fuori intervallo ⇒ %d (attesi -1 e -1)", "dopo": "surrogate ⇒ %d, out of range ⇒ %d (expected -1 and -1)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "gli ingressi illegali NON si confondono col «non producibile»", "dopo": "illegal inputs are NOT confused with «not producible»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "sessione «%s» + negoziata «%s», «%s» (U+%04X) %s", "dopo": "session «%s» + negotiated «%s», «%s» (U+%04X) %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessuna)", "dopo": "(none)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ deve uscire", "dopo": "⇒ must come out"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⇒ NON producibile", "dopo": "⇒ NOT producible"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho potuto costruire la disposizione della sessione: NON HO MISURATO", "dopo": "I could not build the session's layout: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "la keymap della sessione non si e' aperta: %s", "dopo": "the session's keymap did not open: %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(senza motivo)", "dopo": "(no reason)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "ha detto NO e non ha mandato niente", "dopo": "said NO and sent nothing"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto SI (%s): comparirebbe «%s»", "dopo": "⛔ said YES (%s): «%s» would appear"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ ha detto «non producibile» (%d) un carattere che LA SESSIONE ha: si e' ", "dopo": "⛔ said «not producible» (%d) for a character THE SESSION has: it "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "fidato del nome negoziato invece che della disposizione vera", "dopo": "trusted the negotiated name instead of the real layout"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "battendo %s sulla disposizione DELLA SESSIONE esce «%s»", "dopo": "typing %s on THE SESSION'S layout gives «%s»"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ battendo %s sulla disposizione DELLA SESSIONE esce «%s» (U+%04X), non «%s»: ", "dopo": "⛔ typing %s on THE SESSION'S layout gives «%s» (U+%04X), not «%s»: "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "UNA LETTERA DIVERSA", "dopo": "A DIFFERENT LETTER"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ si puo' riaprire piu' volte senza perdere niente", "dopo": "⭐ it can be reopened several times without losing anything"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NON HO MISURATO", "dopo": "I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "it⇒%d (%zu pos.), poi us⇒%d (%zu pos.), poi ANCORA it⇒%d (%zu pos.)", "dopo": "it⇒%d (%zu pos.), then us⇒%d (%zu pos.), then AGAIN it⇒%d (%zu pos.)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⭐ due disposizioni vive insieme non si rimescolano", "dopo": "⭐ two layouts alive together do not get mixed up"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "il registro: sessione «%s» + negoziata «%s» ⇒ %s", "dopo": "the log: session «%s» + negotiated «%s» ⇒ %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "(nessuna)", "dopo": "(none)"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "DEVE dichiarare il ripiego", "dopo": "MUST declare the fallback"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "NON deve gridare al ripiego", "dopo": "must NOT cry fallback"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho costruito la disposizione: NON HO MISURATO", "dopo": "I did not build the layout: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non ho potuto dirottare il registro: NON HO MISURATO", "dopo": "I could not redirect the log: I DID NOT MEASURE"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ non ho letto NESSUNA riga di registro: non so distinguere il ", "dopo": "⛔ I read NO log line at all: I cannot tell "}
+{"file": "banchi/04-b25-tastiera.c", "prima": "silenzio dal non aver guardato", "dopo": "silence from not having looked"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "%ld righe di registro, «RIPIEGO DICHIARATO» %s", "dopo": "%ld log lines, «FALLBACK DECLARED» %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "c'e'", "dopo": "present"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "non c'e'", "dopo": "absent"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "⛔ non riesco a scrivere %s\\n", "dopo": "⛔ I cannot write %s\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n== BANCO 04-b25 — LA TASTIERA: dalla lettera al martelletto\\n", "dopo": "\\n== BENCH 04-b25 — THE KEYBOARD: from the letter to the hammer\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "   il metro e' IL CARATTERE CHE ESCE da un `xkb_state` indipendente,\\n", "dopo": "   the yardstick is THE CHARACTER THAT COMES OUT of an independent `xkb_state`,\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "   non il codice che il modulo dice di aver scelto.\\n", "dopo": "   not the code the module says it chose.\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n⛔ LO STRUMENTO NON E' CERTIFICATO: non misuro niente.\\n", "dopo": "\\n⛔ THE TOOL IS NOT CERTIFIED: I measure nothing.\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — LE LETTERE (PIANO.md righe 630-632)\\n", "dopo": "\\n  — THE LETTERS (PIANO.md lines 630-632)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — LO STESSO CARATTERE, DUE STRADE (SPECIFICHE.md §7.3: Maiusc e AltGr\\n", "dopo": "\\n  — THE SAME CHARACTER, TWO ROUTES (SPECIFICHE.md §7.3: Shift and AltGr\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    non sono comandi, servono a FARE la lettera)\\n", "dopo": "    are not commands, they serve to MAKE the letter)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — QUEL CHE NON E' SCRIVIBILE SI DICHIARA, NON SI FALSIFICA\\n", "dopo": "\\n  — WHAT CANNOT BE TYPED IS DECLARED, NOT FALSIFIED\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔ LA TRAPPOLA: IL RIPIEGO SILENZIOSO\\n", "dopo": "\\n  — ⛔ THE TRAP: THE SILENT FALLBACK\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — GLI INGRESSI CHE IL PROTOCOLLO VIETA\\n", "dopo": "\\n  — THE INPUTS THE PROTOCOL FORBIDS\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔⛔ LA DISPOSIZIONE LA CONSEGNA LA SESSIONE, NON LA SCEGLIE IL NOME\\n", "dopo": "\\n  — ⛔⛔ THE LAYOUT IS HANDED OVER BY THE SESSION, NOT CHOSEN BY THE NAME\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "    (il caso per cui il contratto e' cambiato: sessione «it», client «us»)\\n", "dopo": "    (the case for which the contract changed: session «it», client «us»)\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n  — ⛔ E LA RIGA DEL REGISTRO, NEI DUE VERSI\\n", "dopo": "\\n  — ⛔ AND THE LOG LINE, IN BOTH DIRECTIONS\\n"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "\\n== %d prove, %d ROSSE  ⇒  %s\\n\\n", "dopo": "\\n== %d tests, %d RED  ⇒  %s\\n\\n"}
+{"file": "banchi/04-b25-guasti.c", "prima": "la disposizione non si compila", "dopo": "the layout does not compile"}
+{"file": "banchi/04-b25-lancia.sh", "prima": "  ⛔ guasto %d (%s) NON e' stato visto: uscita=%d, righe rosse attese=%d\\n", "dopo": "  ⛔ fault %d (%s) was NOT seen: exit=%d, expected red lines=%d\\n"}
+{"file": "banchi/04-b28-gesti.py", "prima": "inquadratura tronca: restano %d byte", "dopo": "truncated framing: %d bytes left"}
+{"file": "banchi/04-b28-gesti.py", "prima": "corpo troncato: dichiarati %d, ce ne sono %d", "dopo": "truncated body: %d declared, %d present"}
+{"file": "banchi/04-b28-gesti.py", "prima": "tipo 0x%04X: non e' del canale di input (§2.5)", "dopo": "type 0x%04X: not on the input channel (§2.5)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "corpo di %d byte: id e istante non ci stanno", "dopo": "body of %d bytes: id and instant do not fit"}
+{"file": "banchi/04-b28-gesti.py", "prima": "id 0: §7.3 lo riserva a «nessun input»", "dopo": "id 0: §7.3 reserves it for «no input»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "PUNTATORE di %d byte, ne vuole 20", "dopo": "PUNTATORE of %d bytes, it wants 20"}
+{"file": "banchi/04-b28-gesti.py", "prima": "PULSANTE di %d byte, ne vuole 15", "dopo": "PULSANTE of %d bytes, it wants 15"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ROTELLA di %d byte, ne vuole 20", "dopo": "ROTELLA of %d bytes, it wants 20"}
+{"file": "banchi/04-b28-gesti.py", "prima": "tipo 0x%04X sconosciuto sul canale di input", "dopo": "unknown type 0x%04X on the input channel"}
+{"file": "banchi/04-b28-gesti.py", "prima": "c'e' una ROTELLA: non era un tap", "dopo": "there is a ROTELLA: it was not a tap"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic %s attesi 1, contati %d (pulsanti: %s)", "dopo": "%s clicks expected 1, counted %d (buttons: %s)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "sul filo ci sono anche altri pulsanti: %s", "dopo": "there are other buttons on the wire too: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un clic %s e basta", "dopo": "one %s click and nothing else"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un trascinamento ha prodotto un pulsante", "dopo": "a drag produced a button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "solo %d PUNTATORE per un trascinamento di 200 px", "dopo": "only %d PUNTATORE for a 200 px drag"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito e' andato a destra e il puntatore no: da %d a %d", "dopo": "the finger went right and the pointer did not: from %d to %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d PUNTATORE, da x=%d a x=%d, nessun pulsante", "dopo": "%d PUNTATORE, from x=%d to x=%d, no button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "uno scorrimento a due dita ha prodotto un pulsante", "dopo": "a two-finger scroll produced a button"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessuna ROTELLA", "dopo": "no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ROTELLA non multipla di 60 (§7.3, il mezzo scatto): ", "dopo": "ROTELLA not a multiple of 60 (§7.3, the half notch): "}
+{"file": "banchi/04-b28-gesti.py", "prima": "le dita sono scese e l'asse verticale non e' positivo ", "dopo": "the fingers went down and the vertical axis is not positive "}
+{"file": "banchi/04-b28-gesti.py", "prima": "(%d): `RCP.md` §7.3 vuole +120 per la rotella IN SU, e ", "dopo": "(%d): `RCP.md` §7.3 wants +120 for the wheel UP, and "}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita che scendono spingono il foglio in giu'", "dopo": "two fingers going down push the sheet down"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA, somma verticale +%d, tutte multiple di 60", "dopo": "%d ROTELLA, vertical sum +%d, all multiples of 60"}
+{"file": "banchi/04-b28-gesti.py", "prima": "attesi 4 eventi del sinistro (giu,su,giu,su), contati %d", "dopo": "expected 4 left-button events (down,up,down,up), counted %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "l'ordine non e' giu,su,giu,su: %s", "dopo": "the order is not down,up,down,up: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "solo %d PUNTATORE fra il premuto e il rilasciato: il ", "dopo": "only %d PUNTATORE between pressed and released: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "tasto e' rimasto giu' senza trascinare niente", "dopo": "button stayed down without dragging anything"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il puntatore non si e' mosso mentre il tasto era giu'", "dopo": "the pointer did not move while the button was down"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic, poi premuto + %d PUNTATORE + rilasciato — ", "dopo": "click, then pressed + %d PUNTATORE + released — "}
+{"file": "banchi/04-b28-gesti.py", "prima": "il trascinamento c'e'", "dopo": "the drag is there"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il pizzico ha spedito %d messaggi: §7.2 dice che ", "dopo": "the pinch sent %d messages: §7.2 says it "}
+{"file": "banchi/04-b28-gesti.py", "prima": "ingrandisce la VISTA, non l'applicazione", "dopo": "zooms the VIEW, not the application"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessun messaggio sul filo (zoom non letto)", "dopo": "no message on the wire (zoom not read)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessun messaggio sul filo, ma la vista non si e' ingrandita (zoom %.2f)", "dopo": "no message on the wire, but the view did not zoom in (zoom %.2f)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "zero byte sul filo, e la vista e' a %.2fx", "dopo": "zero bytes on the wire, and the view is at %.2fx"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto di 400 ms fermo ha prodotto un clic: la ", "dopo": "a still 400 ms contact produced a click: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "soglia dei 180 ms non e' guardata", "dopo": "180 ms threshold is not checked"}
+{"file": "banchi/04-b28-gesti.py", "prima": "400 ms fermi, nessun clic (T_TAP = 180 ms)", "dopo": "400 ms still, no click (T_TAP = 180 ms)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto scivolato di 30 px ha prodotto un clic (D_TAP = 9 px)", "dopo": "a contact that slid 30 px produced a click (D_TAP = 9 px)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "scivolato di 30 px e il puntatore non si e' mosso affatto", "dopo": "slid 30 px and the pointer did not move at all"}
+{"file": "banchi/04-b28-gesti.py", "prima": "30 px di scivolata: %d PUNTATORE, nessun clic", "dopo": "30 px of sliding: %d PUNTATORE, no click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "clic SINISTRO: le due dita erano scollate di 30 ms e il ", "dopo": "LEFT click: the two fingers were 30 ms apart and the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "conteggio non ha guardato il massimo di dita contemporanee", "dopo": "count did not look at the maximum of simultaneous fingers"}
+{"file": "banchi/04-b28-gesti.py", "prima": "e' uscito un clic destro da due contatti che non si ", "dopo": "a right click came out of two contacts that do not "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sovrappongono: il comportamento e' cambiato rispetto a ", "dopo": "overlap: the behaviour has changed from "}
+{"file": "banchi/04-b28-gesti.py", "prima": "quel che il rapporto A8 dichiara — si rilegge il rapporto", "dopo": "what the A8 report declares — reread the report"}
+{"file": "banchi/04-b28-gesti.py", "prima": "attesi 2 clic sinistri (il difetto dichiarato), contati %d", "dopo": "expected 2 left clicks (the declared defect), counted %d"}
+{"file": "banchi/04-b28-gesti.py", "prima": "2 clic sinistri: e' il difetto DICHIARATO — sotto la ", "dopo": "2 left clicks: it is the DECLARED defect — below an "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sovrapposizione di un campione un clic destro esce come ", "dopo": "overlap of one sample a right click comes out as a "}
+{"file": "banchi/04-b28-gesti.py", "prima": "doppio clic sinistro", "dopo": "double left click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non sono quattro eventi giu,su,giu,su: %s", "dopo": "they are not four events down,up,down,up: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "ci sono %d PUNTATORE dentro un doppio clic fermo: il ", "dopo": "there are %d PUNTATORE inside a still double click: the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "desktop remoto lo leggerebbe come un trascinamento", "dopo": "remote desktop would read it as a drag"}
+{"file": "banchi/04-b28-gesti.py", "prima": "quattro eventi del sinistro, zero PUNTATORE — e' un doppio clic", "dopo": "four left-button events, zero PUNTATORE — it is a double click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "350 ms fermi e poi scorrimento: e' uscito un pulsante", "dopo": "350 ms still and then scrolling: a button came out"}
+{"file": "banchi/04-b28-gesti.py", "prima": "350 ms fermi e poi scorrimento: nessuna ROTELLA", "dopo": "350 ms still and then scrolling: no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA dopo 350 ms di dita ferme, nessun clic", "dopo": "%d ROTELLA after 350 ms of still fingers, no click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita che si allontanano hanno prodotto %d ROTELLA: ", "dopo": "two fingers moving apart produced %d ROTELLA: "}
+{"file": "banchi/04-b28-gesti.py", "prima": "pizzico e rotella si confondono", "dopo": "pinch and wheel are confused"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nessuna rotella, ma nemmeno lo zoom e' cambiato (%.2f)", "dopo": "no wheel, but the zoom did not change either (%.2f)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non letto", "dopo": "not read"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita parallele e nessuna ROTELLA", "dopo": "two parallel fingers and no ROTELLA"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita parallele hanno ingrandito la vista a %.2fx: ", "dopo": "two parallel fingers zoomed the view to %.2fx: "}
+{"file": "banchi/04-b28-gesti.py", "prima": "e' stato letto come un pizzico", "dopo": "it was read as a pinch"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d ROTELLA, vista ferma a %s", "dopo": "%d ROTELLA, view still at %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito rimasto dopo uno scorrimento ha mosso il ", "dopo": "the finger left after a scroll moved the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore (%d PUNTATORE): a fine scorrimento il ", "dopo": "pointer (%d PUNTATORE): at the end of the scroll the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore salta", "dopo": "pointer jumps"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il dito residuo non ha mosso il puntatore", "dopo": "the leftover finger did not move the pointer"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la fase non e' stata registrata affatto", "dopo": "⛔ the phase was not recorded at all"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ violazione di RCP.md §7.3: %s", "dopo": "⛔ violation of RCP.md §7.3: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "%d messaggi, id da %d a %d, crescente su tutto il canale", "dopo": "%d messages, id from %d to %d, increasing over the whole channel"}
+{"file": "banchi/04-b28-gesti.py", "prima": "gli identificatori non crescono su tutto il canale: %s", "dopo": "the identifiers do not increase over the whole channel: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "un contatto di 400 ms fermo che manda un clic (la soglia T_TAP non guardata)", "dopo": "a still 400 ms contact that sends a click (the T_TAP threshold not checked)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "due dita a 30 ms che escono come due clic sinistri invece di un destro", "dopo": "two fingers 30 ms apart that come out as two left clicks instead of one right"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il segno della rotella invertito (`RCP.md` §7.3, forma E11)", "dopo": "the wheel sign inverted (`RCP.md` §7.3, form E11)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il tap-e-mezzo che preme e rilascia senza trascinare — cioe' un doppio clic", "dopo": "the tap-and-a-half that presses and releases without dragging — that is, a double click"}
+{"file": "banchi/04-b28-gesti.py", "prima": "il pizzico che spedisce una rotella invece di ingrandire la vista", "dopo": "the pinch that sends a wheel instead of zooming the view"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⭐ CERTIFICAZIONE DEL GIUDICE — verde → rosso → verde, su cinque", "dopo": "⭐ CERTIFICATION OF THE JUDGE — green → red → green, on five"}
+{"file": "banchi/04-b28-gesti.py", "prima": "   guasti, uno per famiglia di confusione.\n", "dopo": "   faults, one per family of confusion.\n"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la registrazione SANA non e' verde: il giudice e' rotto.", "dopo": "⛔ the HEALTHY recording is not green: the judge is broken."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ registrazione SANA: %d casi, tutti verdi", "dopo": "  ✅ HEALTHY recording: %d cases, all green"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ guasto «%s»: il giudice NON lo vede.", "dopo": "  ⛔ fault «%s»: the judge does NOT see it."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ guasto «%s»: visto, ma ha tinto di rosso anche %s", "dopo": "  ⚠ fault «%s»: seen, but it also turned %s red"}
+{"file": "banchi/04-b28-gesti.py", "prima": "       (un giudice che sanguina non sa dire DOVE sta il difetto)", "dopo": "       (a judge that bleeds cannot say WHERE the defect is)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ %-36s rosso solo su %s", "dopo": "  ✅ %-36s red only on %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ la registrazione RISANATA non torna verde.", "dopo": "⛔ the HEALED recording does not turn green again."}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ✅ registrazione RISANATA: torna verde", "dopo": "  ✅ HEALED recording: green again"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⭐ il giudice e' certificato.", "dopo": "⭐ the judge is certified."}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ il giudice NON e' certificato: non si misura niente.", "dopo": "⛔ the judge is NOT certified: nothing is measured."}
+{"file": "banchi/04-b28-gesti.py", "prima": "non c'e'", "dopo": "not here"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  servitore su http://127.0.0.1:%d — pagina del PRODOTTO, %d byte", "dopo": "  server on http://127.0.0.1:%d — the PRODUCT's page, %d bytes"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ questo Chrome non ha `setFocusEmulationEnabled`", "dopo": "  ⚠ this Chrome does not have `setFocusEmulationEnabled`"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ la pagina non ha risposto alla scena", "dopo": "  ⛔ the page did not answer the scene"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ la disposizione in vigore e' «%s», non «tocco»: il banco ", "dopo": "  ⛔ the layout in force is «%s», not «tocco»: the bench "}
+{"file": "banchi/04-b28-gesti.py", "prima": "misurerebbe l'altra meta' della pagina", "dopo": "would measure the other half of the page"}
+{"file": "banchi/04-b28-gesti.py", "prima": "le scene e i casi del giudice non combaciano", "dopo": "the scenes and the judge's cases do not match"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ GUASTO DELLO STRUMENTO nella fase %s (%s)", "dopo": "  ⚠ TOOL FAULT in phase %s (%s)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "fase %s: %s", "dopo": "phase %s: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ %d guasti dello strumento, riagganciati: %s", "dopo": "  ⚠ %d tool faults, reconnected: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`body[data-disposizione]` = «%s» (il PRODOTTO l'ha ", "dopo": "`body[data-disposizione]` = «%s» (the PRODUCT "}
+{"file": "banchi/04-b28-gesti.py", "prima": "scritto, non il banco)", "dopo": "wrote it, not the bench)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "all'avvio «%s»; dopo un DITO «%s»; dopo un CLIC di ", "dopo": "at start «%s»; after a FINGER «%s»; after a mouse "}
+{"file": "banchi/04-b28-gesti.py", "prima": "mouse «%s»; dopo un altro DITO «%s»", "dopo": "CLICK «%s»; after another FINGER «%s»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ atteso tocco → classico → tocco; la spia dice: %s", "dopo": "  ⛔ expected tocco → classico → tocco; the spy says: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "non si e' riusciti a rientrare nel classico", "dopo": "could not get back into classic"}
+{"file": "banchi/04-b28-gesti.py", "prima": "in classico: tocco in vigore %s, classico in ", "dopo": "in classic: touch in force %s, classic in "}
+{"file": "banchi/04-b28-gesti.py", "prima": "vigore %s; dopo il gesto: disposizione «%s», ", "dopo": "force %s; after the gesture: layout «%s», "}
+{"file": "banchi/04-b28-gesti.py", "prima": "classico in vigore %s; il gesto ha prodotto %d ", "dopo": "classic in force %s; the gesture produced %d "}
+{"file": "banchi/04-b28-gesti.py", "prima": "messaggi, di cui %d PULSANTE (clic fantasma)", "dopo": "messages, of which %d PULSANTE (ghost click)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "in disposizione a tocco il puntatore visibile e' «%s»", "dopo": "in touch layout the visible pointer is «%s»"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`REMOTIX_PUNTATORE` c'e': %s; cucitura rotta: %s", "dopo": "`REMOTIX_PUNTATORE` is there: %s; seam broken: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⛔ `muovi()` non accende `cl_noto`: in tocco il ", "dopo": "  ⛔ `muovi()` does not turn on `cl_noto`: in touch the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "puntatore condiviso resta invisibile — cura di UNA ", "dopo": "shared pointer stays invisible — a cure of ONE "}
+{"file": "banchi/04-b28-gesti.py", "prima": "riga nell'ancora F4-INPUT-CLASSICO (anello A7)", "dopo": "line in the F4-INPUT-CLASSICO anchor (link A7)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "`REMOTIX_CLASSICO` (ancora F4-INPUT-CLASSICO, anello A7): %s", "dopo": "`REMOTIX_CLASSICO` (F4-INPUT-CLASSICO anchor, link A7): %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "nell'ancora F4-TOCCO non compare niente che venga dal ", "dopo": "in the F4-TOCCO anchor nothing appears that comes from the "}
+{"file": "banchi/04-b28-gesti.py", "prima": "sistema operativo", "dopo": "operating system"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ compaiono: %s", "dopo": "⛔ they appear: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "\n  %d verdi su %d misurati", "dopo": "\n  %d green out of %d measured"}
+{"file": "banchi/04-b28-gesti.py", "prima": "  ⚠ %d NON MISURATI per un guasto dello strumento: %s", "dopo": "  ⚠ %d NOT MEASURED because of a tool fault: %s"}
+{"file": "banchi/04-b28-gesti.py", "prima": "    (⛔ non sono verdi e non sono rossi: si rifa' il giro)", "dopo": "    (⛔ they are neither green nor red: the run is redone)"}
+{"file": "banchi/04-b28-gesti.py", "prima": "⛔ REMOTIX.tocco non esiste", "dopo": "⛔ REMOTIX.tocco does not exist"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 1. IL GIUDICE SI CERTIFICA PRIMA DELLA MISURA (CODER.md §3.3) ══", "dopo": "══ 1. THE JUDGE IS CERTIFIED BEFORE THE MEASUREMENT (CODER.md §3.3) ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "⛔ il giudice non e' certificato: non si misura niente.", "dopo": "⛔ the judge is not certified: nothing is measured."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 2. LA SCENA ══", "dopo": "══ 2. THE SCENE ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  utente        $(id -un) (uid $(id -u))", "dopo": "  user          $(id -un) (uid $(id -u))"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  sessione      XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} ", "dopo": "  session       XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} "}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  ⚠ la finestra si apre sul desktop VERO, e il tocco e' DICHIARATO dal", "dopo": "  ⚠ the window opens on the REAL desktop, and touch is DECLARED by the"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "    banco (CDP): quel che si misura sono i confini del riconoscitore.", "dopo": "    bench (CDP): what is measured are the boundaries of the recogniser."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "⛔ la porta $p e' gia' occupata: mi fermo invece di misurare la", "dopo": "⛔ port $p is already taken: I stop instead of measuring"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "   pagina di qualcun altro.", "dopo": "   someone else's page."}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  chrome pid $CHROME, diagnosi su $DIAGNOSI, profilo $PROFILO", "dopo": "  chrome pid $CHROME, debugging on $DIAGNOSI, profile $PROFILO"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 4. LA MISURA ══", "dopo": "══ 4. THE MEASUREMENT ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "══ 5. DOVE SI RICONTROLLA ══", "dopo": "══ 5. WHERE TO RECHECK ══"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  esiti     $QUI/04-b28-esiti.jsonl", "dopo": "  outcomes  $QUI/04-b28-esiti.jsonl"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  registro  $REGISTRO   (i byte, in esadecimale, gesto per gesto)", "dopo": "  log       $REGISTRO   (the bytes, in hexadecimal, gesture by gesture)"}
+{"file": "banchi/04-b28-lancia.sh", "prima": "  rigiudica python3 banchi/04-b28-gesti.py --verdetto $REGISTRO", "dopo": "  rejudge   python3 banchi/04-b28-gesti.py --verdetto $REGISTRO"}
+{"file": "banchi/04-b31-tela.c", "prima": "  \\033[1;31mNO\\033[0m  %-34s\\n        atteso: %s\\n        visto:  %s\\n", "dopo": "  \\033[1;31mNO\\033[0m  %-34s\\n        expected: %s\\n        seen:     %s\\n"}
+{"file": "banchi/04-b31-tela.c", "prima": "TELA usciti %d (esito %u motivo %u -> %ux%u), richieste al palco ", "dopo": "TELA sent %d (outcome %u reason %u -> %ux%u), requests to the stage "}
+{"file": "banchi/04-b31-tela.c", "prima": "%d (di cui %d alla nascita, §4.5), tela in vigore %ux%u", "dopo": "%d (of which %d at birth, §4.5), canvas in force %ux%u"}
+{"file": "banchi/04-b31-tela.c", "prima": "1 la strada buona", "dopo": "1 the good road"}
+{"file": "banchi/04-b31-tela.c", "prima": "nessun TELA prima del fotogramma, poi UNO solo con 1600x900", "dopo": "no TELA before the frame, then only ONE with 1600x900"}
+{"file": "banchi/04-b31-tela.c", "prima": "2 la misura che c'e' gia'", "dopo": "2 the size already there"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(ADATTATA 1920x1080) subito, ZERO richieste al palco", "dopo": "ONE TELA(ADATTATA 1920x1080) at once, ZERO requests to the stage"}
+{"file": "banchi/04-b31-tela.c", "prima": "3 due ADATTA_TELA di fila", "dopo": "3 two ADATTA_TELA in a row"}
+{"file": "banchi/04-b31-tela.c", "prima": "due TELA in tutto: NON_ORA alla prima, ADATTATA 1280x720 alla seconda", "dopo": "two TELA in all: NON_ORA to the first, ADATTATA 1280x720 to the second"}
+{"file": "banchi/04-b31-tela.c", "prima": "4 il palco non consegna", "dopo": "4 the stage does not deliver"}
+{"file": "banchi/04-b31-tela.c", "prima": "niente prima del fondo, poi UN TELA(RIFIUTATA, NON_ORA), tela 1920x1080", "dopo": "nothing before the deadline, then ONE TELA(RIFIUTATA, NON_ORA), canvas 1920x1080"}
+{"file": "banchi/04-b31-tela.c", "prima": "5 misura sopra il massimo: ridotta", "dopo": "5 size above the maximum: reduced"}
+{"file": "banchi/04-b31-tela.c", "prima": "nessun TELA subito, UNA richiesta al palco a 4096x2304 (il massimo di ", "dopo": "no TELA at once, ONE request to the stage at 4096x2304 (the maximum of "}
+{"file": "banchi/04-b31-tela.c", "prima": "§4.5), sessione VIVA", "dopo": "§4.5), session ALIVE"}
+{"file": "banchi/04-b31-tela.c", "prima": "6 la misura dispari, troncata", "dopo": "6 the odd size, truncated"}
+{"file": "banchi/04-b31-tela.c", "prima": "al palco 2132x1200 (troncata al pari), e il TELA porta quella", "dopo": "to the stage 2132x1200 (truncated to even), and the TELA carries that"}
+{"file": "banchi/04-b31-tela.c", "prima": "7 il palco concede altro (§4.5)", "dopo": "7 the stage grants other (§4.5)"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(ADATTATA 1366x768), e la tela in vigore e' quella VERA", "dopo": "ONE TELA(ADATTATA 1366x768), and the canvas in force is the REAL one"}
+{"file": "banchi/04-b31-tela.c", "prima": "SESSIONE concede %ux%u", "dopo": "SESSIONE grants %ux%u"}
+{"file": "banchi/04-b31-tela.c", "prima": "8 il ri-attacco", "dopo": "8 the re-attach"}
+{"file": "banchi/04-b31-tela.c", "prima": "SESSIONE concede 1912x1044 (quella del palco, §4.5), non 1920x1080", "dopo": "SESSIONE grants 1912x1044 (the stage's, §4.5), not 1920x1080"}
+{"file": "banchi/04-b31-tela.c", "prima": "9 il palco fa di testa sua", "dopo": "9 the stage goes its own way"}
+{"file": "banchi/04-b31-tela.c", "prima": "ZERO TELA (uno non richiesto farebbe chiudere il client), il palco ", "dopo": "ZERO TELA (an unrequested one would make the client close), the stage "}
+{"file": "banchi/04-b31-tela.c", "prima": "richiamato a 1920x1080 con l'attesa che cresce", "dopo": "called back to 1920x1080 with the growing wait"}
+{"file": "banchi/04-b31-tela.c", "prima": "10 oltre il tetto del client", "dopo": "10 beyond the client's ceiling"}
+{"file": "banchi/04-b31-tela.c", "prima": "ridotta a 2560x1440 (proporzioni tenute) e concessa, MAI 3840x2160", "dopo": "reduced to 2560x1440 (proportions kept) and granted, NEVER 3840x2160"}
+{"file": "banchi/04-b31-tela.c", "prima": "11 ospite senza palco", "dopo": "11 host without a stage"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, COMPOSITORE_INCAPACE), sessione viva", "dopo": "ONE TELA(RIFIUTATA, COMPOSITORE_INCAPACE), session alive"}
+{"file": "banchi/04-b31-tela.c", "prima": "12 la richiesta non parte", "dopo": "12 the request does not leave"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, NON_ORA) subito", "dopo": "ONE TELA(RIFIUTATA, NON_ORA) at once"}
+{"file": "banchi/04-b31-tela.c", "prima": "13 il fotogramma vecchio in volo", "dopo": "13 the old frame in flight"}
+{"file": "banchi/04-b31-tela.c", "prima": "la misura VECCHIA non chiude la richiesta; poi TELA(1600x900)", "dopo": "the OLD size does not close the request; then TELA(1600x900)"}
+{"file": "banchi/04-b31-tela.c", "prima": "14 due richieste incatenate", "dopo": "14 two chained requests"}
+{"file": "banchi/04-b31-tela.c", "prima": "la risposta della PRIMA non chiude la SECONDA: la tela finisce a ", "dopo": "the answer to the FIRST does not close the SECOND: the canvas ends at "}
+{"file": "banchi/04-b31-tela.c", "prima": "1280x720, quella che l'utente ha chiesto per ultima", "dopo": "1280x720, the one the user asked for last"}
+{"file": "banchi/04-b31-tela.c", "prima": "15 il palco rinuncia", "dopo": "15 the stage gives up"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, NON_ORA) subito, non dopo il fondo", "dopo": "ONE TELA(RIFIUTATA, NON_ORA) at once, not after the deadline"}
+{"file": "banchi/04-b31-tela.c", "prima": "16 il palco ce l'aveva gia'", "dopo": "16 the stage already had it"}
+{"file": "banchi/04-b31-tela.c", "prima": "TELA(ADATTATA 1280x720) alla risposta del palco, senza fondo", "dopo": "TELA(ADATTATA 1280x720) at the stage's answer, without deadline"}
+{"file": "banchi/04-b31-tela.c", "prima": "17 sotto il minimo di §4.5", "dopo": "17 below the minimum of §4.5"}
+{"file": "banchi/04-b31-tela.c", "prima": "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", "dopo": "ONE TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240"}
+{"file": "banchi/04-b31-tela.c", "prima": "18 due sessioni, un palco solo", "dopo": "18 two sessions, one stage only"}
+{"file": "banchi/04-b31-tela.c", "prima": "chi non ha il posto NON comanda (zero richieste al palco, e se torna ", "dopo": "whoever lacks the slot does NOT command (zero requests to the stage, and "}
+{"file": "banchi/04-b31-tela.c", "prima": "a parlare e' 0x0F); chi ce l'ha si'", "dopo": "if it speaks again it is 0x0F); whoever has it does"}
+{"file": "banchi/04-b31-tela.c", "prima": "19 la tela si dichiara alla nascita", "dopo": "19 the canvas is declared at birth"}
+{"file": "banchi/04-b31-tela.c", "prima": "UNA richiesta al palco gia' con l'ATTACCA, a 1600x900 (§4.5: nasce ", "dopo": "ONE request to the stage already with ATTACCA, at 1600x900 (§4.5: it is "}
+{"file": "banchi/04-b31-tela.c", "prima": "gia' cosi' invece di doverla cambiare — sono i 17 s di coda)", "dopo": "born that way instead of having to change it — those are the 17 s of tail)"}
+{"file": "banchi/04-b31-tela.c", "prima": "\\n== 04-b31: la tela che cambia (RCP.md §7.1, §6.2) ==\\n\\n", "dopo": "\\n== 04-b31: the changing canvas (RCP.md §7.1, §6.2) ==\\n\\n"}
+{"file": "banchi/04-b31-tela.c", "prima": "\\n  passati %d, falliti %d\\n\\n", "dopo": "\\n  passed %d, failed %d\\n\\n"}
+{"file": "banchi/04-in8-costruisci.sh", "prima": "⛔ NON costruiti", "dopo": "⛔ NOT built"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n== stato dei monitor (%s) ==\\n", "dopo": "\\n== monitor state (%s) ==\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  monitor %-10s «%s» modo %s  %dx%d @%.2f  pref=%d  ", "dopo": "  monitor %-10s «%s» mode %s  %dx%d @%.2f  pref=%d  "}
+{"file": "banchi/04-in8-misura.c", "prima": "scale ammesse:", "dopo": "allowed scales:"}
+{"file": "banchi/04-in8-misura.c", "prima": "  LOGICO  a (%d,%d)  SCALA %.6f  trasf %u  primario %d  ->", "dopo": "  LOGICAL  at (%d,%d)  SCALE %.6f  transf %u  primary %d  ->"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] FORMATO CONCORDATO: %ux%u  (chiesto %ux%u)  %s\\n", "dopo": "[%6.3f s] AGREED FORMAT: %ux%u  (asked %ux%u)  %s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⭐ ESATTO", "dopo": "⭐ EXACT"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ DIVERSO — arrotondato in silenzio", "dopo": "⛔ DIFFERENT — rounded silently"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] stato: %s -> %s%s%s\\n", "dopo": "[%6.3f s] state: %s -> %s%s%s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  errore: ", "dopo": "  error: "}
+{"file": "banchi/04-in8-misura.c", "prima": "  pixel non neri: %.2f%%   ultime 4 colonne: luminanza media %.1f   ", "dopo": "  non-black pixels: %.2f%%   last 4 columns: mean luminance %.1f   "}
+{"file": "banchi/04-in8-misura.c", "prima": "ultime 4 righe: %.1f\\n", "dopo": "last 4 rows: %.1f\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  griglia:", "dopo": "  grid:"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] fotogramma %d: %u byte, passo %d\\n", "dopo": "[%6.3f s] frame %d: %u bytes, stride %d\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] fotogramma NUOVO %d: %u byte, passo %d  ", "dopo": "[%6.3f s] NEW frame %d: %u bytes, stride %d  "}
+{"file": "banchi/04-in8-misura.c", "prima": "(buco dalla richiesta: %.1f ms; dall'ultimo vecchio: %.1f ms)\\n", "dopo": "(hole since the request: %.1f ms; since the last old one: %.1f ms)\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === dopo %d s: %d fotogrammi alla prima misura ===\\n", "dopo": "\\n[%6.3f s] === after %d s: %d frames at the first size ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "prima misura", "dopo": "first size"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] raffica: %d chieste, %d concordate ESATTE\\n", "dopo": "[%6.3f s] burst: %d asked, %d agreed EXACT\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === CAMBIO A CALDO: chiedo %ux%u ===\\n", "dopo": "\\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n[%6.3f s] === dopo il cambio: %d fotogrammi nuovi ===\\n", "dopo": "\\n[%6.3f s] === after the change: %d new frames ===\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "[%6.3f s] raffica FINALE: %d chieste, %d concordate ESATTE\\n", "dopo": "[%6.3f s] FINAL burst: %d asked, %d agreed EXACT\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "seconda misura", "dopo": "second size"}
+{"file": "banchi/04-in8-misura.c", "prima": "uso: %s <L> <A> [<L2> <A2>] [secondi]\\n", "dopo": "usage: %s <L> <A> [<L2> <A2>] [seconds]\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "PRIMA di tutto", "dopo": "BEFORE everything"}
+{"file": "banchi/04-in8-misura.c", "prima": "flusso: %s\\n", "dopo": "stream: %s\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ nessun nodo\\n", "dopo": "⛔ no node\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "nodo PipeWire: %u\\n", "dopo": "PipeWire node: %u\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "⛔ PipeWire non risponde\\n", "dopo": "⛔ PipeWire does not answer\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "\\n== riepilogo ==\\n  chiesti %ux%u -> ottenuti %ux%u, %d fotogrammi\\n", "dopo": "\\n== summary ==\\n  asked %ux%u -> got %ux%u, %d frames\\n"}
+{"file": "banchi/04-in8-misura.c", "prima": "  poi chiesti %ux%u -> %d fotogrammi nuovi\\n", "dopo": "  then asked %ux%u -> %d new frames\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  NON C'E'\\n", "dopo": "  %-12s  NOT THERE\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⛔ APERTURA RIFIUTATA: %s\\n", "dopo": "  %-12s  %dx%d %-12s  ⛔ OPEN REFUSED: %s\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d  ⛔ il fotogramma non si alloca\\n", "dopo": "  %-12s  %dx%d  ⛔ the frame cannot be allocated\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⚠ aperto, ma il FOTOGRAMMA e' rifiutato: %s\\n", "dopo": "  %-12s  %dx%d %-12s  ⚠ opened, but the FRAME is refused: %s\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "  %-12s  %dx%d %-12s  ⭐ APERTO (coded %dx%d), primo pacchetto: %s (%d byte)\\n", "dopo": "  %-12s  %dx%d %-12s  ⭐ OPENED (coded %dx%d), first packet: %s (%d bytes)\\n"}
+{"file": "banchi/04-in8-parita.c", "prima": "SI", "dopo": "YES"}
+{"file": "banchi/04-in8-parita.c", "prima": "in attesa", "dopo": "pending"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "serve il file 0600 con la parola di sudo", "dopo": "needs the 0600 file with the sudo password"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "serve il file 0600 con la parola di sudo", "dopo": "needs the 0600 file with the sudo password"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ %s non si legge\\n", "dopo": "⛔ %s cannot be read\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ %s non si legge\\n", "dopo": "⛔ %s cannot be read\\n"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il testimone non si apre", "dopo": "⛔ THE BENCH: the witness does not open"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S0 · IL CONTROLLO ZERO — lo strumento sa vedere un clic?", "dopo": "S0 · THE ZERO CHECK — can the instrument see a click?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "clic senza nessun ricambio, testimone aperto prima", "dopo": "click with no replacement at all, witness opened first"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S1 · TRE RISVEGLI A MANO ALZATA — §7.1 dice 3 ricambi, e zero ADATTA_TELA", "dopo": "S1 · THREE WAKE-UPS WITH HAND RAISED — §7.1 says 3 replacements, and zero ADATTA_TELA"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "tre cattura_risveglia() su scena ferma, niente premuto", "dopo": "three cattura_risveglia() on a still scene, nothing pressed"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S2 · ⛔ IL PULSANTE TENUTO GIU' MENTRE LA CATTURA SI RISVEGLIA", "dopo": "S2 · ⛔ THE BUTTON HELD DOWN WHILE THE CAPTURE WAKES UP"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "BTN_LEFT e Ctrl tenuti giu' durante UN cattura_risveglia(), scena ferma", "dopo": "BTN_LEFT and Ctrl held down during ONE cattura_risveglia(), still scene"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S3 · LA PORTA GIA' NOTA — la stessa scena con un RIDIMENSIONAMENTO", "dopo": "S3 · THE ALREADY KNOWN DOOR — the same scene with a RESIZE"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "BTN_LEFT e Ctrl tenuti giu' durante un cattura_ridimensiona() (§4.6)", "dopo": "BTN_LEFT and Ctrl held down during a cattura_ridimensiona() (§4.6)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S4 · ⭐ SI GUARISCE SENZA TOCCARE LA SESSIONE?", "dopo": "S4 · ⭐ CAN IT BE HEALED WITHOUT TOUCHING THE SESSION?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "il danno, rifatto apposta per poi guarirlo", "dopo": "the damage, redone on purpose to then heal it"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "E adesso stacco SOLO il cliente EIS — gnome-shell NON si tocca", "dopo": "And now I detach ONLY the EIS client — gnome-shell is NOT touched"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ non si riaccende", "dopo": "⛔ it does not come back on"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: testimone", "dopo": "⛔ THE BENCH: witness"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "gnome-shell e' lo STESSO processo ($PRIMA_SHELL): il posto non e' nuovo", "dopo": "gnome-shell is the SAME process ($PRIMA_SHELL): the seat is not new"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ gnome-shell e' cambiato ($PRIMA_SHELL → $DOPO_SHELL): il verde che segue non vale", "dopo": "⛔ gnome-shell has changed ($PRIMA_SHELL → $DOPO_SHELL): the green that follows does not count"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "lo stesso desktop, dopo il riattacco del solo cliente EIS", "dopo": "the same desktop, after reattaching only the EIS client"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "S5 · ⭐ UN'APPLICAZIONE VERA sopravvive alla guarigione?", "dopo": "S5 · ⭐ DOES A REAL APPLICATION survive the healing?"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il terminale non si apre", "dopo": "⛔ THE BENCH: the terminal does not open"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "Invio ricevuti PRIMA: $PRIMA", "dopo": "Enters received BEFORE: $PRIMA"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "il terminale riceve gli Invio PRIMA della guarigione ($((MEZZO - PRIMA)))", "dopo": "the terminal receives the Enters BEFORE the healing ($((MEZZO - PRIMA)))"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ IL BANCO: il terminale non riceve niente nemmeno prima, la scena non regge", "dopo": "⛔ THE BENCH: the terminal receives nothing even before, the scene does not hold"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ la cura «C» e' scattata (la riga GUARIGIONE c'e')", "dopo": "⭐ cure \\\"C\\\" kicked in (the HEALING line is there)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ la cura «C» NON e' scattata: quel che segue non misura la guarigione", "dopo": "⛔ cure \\\"C\\\" did NOT kick in: what follows does not measure the healing"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "Invio ricevuti DOPO la guarigione: $DOPO (erano $MEZZO)", "dopo": "Enters received AFTER the healing: $DOPO (they were $MEZZO)"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ l'applicazione VERA ha ricevuto $((DOPO - MEZZO)) Invio DOPO la guarigione", "dopo": "⭐ the REAL application received $((DOPO - MEZZO)) Enters AFTER the healing"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ ne ha ricevuti $((DOPO - MEZZO)) invece di 2: un cliente GTK NON regge il", "dopo": "⛔ it received $((DOPO - MEZZO)) instead of 2: a GTK client does NOT withstand the"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "   cambio di capacita' del posto ⇒ il prezzo della cura «C» e' molto piu'", "dopo": "   seat capability change ⇒ the price of cure \\\"C\\\" is much higher"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "   alto di quel che si e' dichiarato, e va riportato al coordinatore", "dopo": "   than what was declared, and must be reported to the coordinator"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⭐ tutte le scene hanno dato quel che l'atteso dichiarava", "dopo": "⭐ all scenes gave what the expectation declared"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ almeno una scena non e' verde: guarda i sotto-giri qui sopra", "dopo": "⛔ at least one scene is not green: look at the sub-rounds above"}
+{"file": "banchi/06-b33-risveglio.sh", "prima": "⛔ non so fare «$COSA»", "dopo": "⛔ I do not know how to do \\\"$COSA\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ SRC=%s non sta sotto /media/REMOTIX/src: il contenitore non lo vede,\\n", "dopo": "⛔ SRC=%s is not under /media/REMOTIX/src: the container does not see it,\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   e un guasto innestato li dentro non arriverebbe MAI al binario.\\n", "dopo": "   and a fault injected in there would NEVER reach the binary.\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ LAV=%s non sta sotto /media/REMOTIX/tmp: il binario uscirebbe da\\n", "dopo": "⛔ LAV=%s is not under /media/REMOTIX/tmp: the binary would come out in\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   una parte e il terreno lo cercherebbe da un altra.\\n", "dopo": "   one place and the terrain would look for it in another.\\n"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: non riesco a cancellare $f ⇒ leggerei l'esito di IERI", "dopo": "⛔ THE BENCH: I cannot delete $f ⇒ I would read YESTERDAY's outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: il giro «$1» non ha retto (uscita $e) — la scena non si e'", "dopo": "⛔ THE BENCH: round \\\"$1\\\" did not hold (exit $e) — the scene was not"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   montata, e NON c'e' nessun verdetto da confrontare.  Coda:", "dopo": "   mounted, and there is NO verdict to compare.  Tail:"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: il giro «$1» e' uscito $e ma non ha scritto NESSUN esito", "dopo": "⛔ THE BENCH: round \\\"$1\\\" exited $e but wrote NO outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   in $f ⇒ il giudice non ha nemmeno parlato", "dopo": "   in $f ⇒ the judge did not even speak"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ IL BANCO: in $f non c'e' nessuna riga «s2-tenuto»", "dopo": "⛔ THE BENCH: in $f there is no \\\"s2-tenuto\\\" line"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "giro $1: $(grep -acE 'OK|NO|DIFETTO|NON_IN_SCENA' \"$LAV/giro-$1.log\") righe di verdetto", "dopo": "round $1: $(grep -acE 'OK|NO|DIFETTO|NON_IN_SCENA' \"$LAV/giro-$1.log\") verdict lines"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "0. Le copie SANE dei due file che i guasti toccano", "dopo": "0. The HEALTHY copies of the two files the faults touch"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "non ho fatto la copia di $f", "dopo": "I did not make the copy of $f"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "$f salvato ($(wc -l < \"$SANI/$f\") righe)", "dopo": "$f saved ($(wc -l < \"$SANI/$f\") lines)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "1. Il giro SANO — ⛔ e se questo non e' verde non si certifica niente", "dopo": "1. The HEALTHY round — ⛔ and if this is not green nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il sano non compila", "dopo": "⛔ the healthy tree does not compile"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ senza il giro sano non si certifica niente", "dopo": "⛔ without the healthy round nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa sana: $SANA", "dopo": "healthy map: $SANA"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro SANO ha dei rossi: il banco non e' certificabile", "dopo": "⛔ the HEALTHY round has reds: the bench cannot be certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro SANO ha ancora dei DIFETTO_VIVO: le cure «A» e «C»", "dopo": "⛔ the HEALTHY round still has DIFETTO_VIVO: cures \\\"A\\\" and \\\"C\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   non sono dentro, oppure non funzionano.  Non si certifica", "dopo": "   are not in, or they do not work.  Nothing is certified"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "il giro sano e' tutto verde", "dopo": "the healthy round is all green"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "s/.*devono CAMBIARE: //p", "dopo": "s/.*must CHANGE: //p"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "2.$G — devono cambiare: $ATTESO   (in $FILE)", "dopo": "2.$G — must change: $ATTESO   (in $FILE)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G non si e' innestato: NON e' «il guasto non fa niente»", "dopo": "⛔ $G was not injected: this is NOT \\\"the fault does nothing\\\""}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G non compila:", "dopo": "⛔ $G does not compile:"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G: il giro non ha girato ⇒ non si puo' dire NIENTE su questo guasto", "dopo": "⛔ $G: the round did not run ⇒ NOTHING can be said about this fault"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa guasta: $GUASTA", "dopo": "faulty map: $GUASTA"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "casi cambiati: ${OTT:-nessuno}", "dopo": "changed cases: ${OTT:-none}"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "nessuno", "dopo": "none"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⭐ $G ha cambiato ESATTAMENTE i casi dichiarati ($ATTESO)", "dopo": "⭐ $G changed EXACTLY the declared cases ($ATTESO)"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ $G doveva cambiare «${A% }» e ha cambiato «${B:-nulla}».", "dopo": "⛔ $G should have changed \\\"${A% }\\\" and changed \\\"${B:-nothing}\\\"."}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   ⚠ O il guasto non e' quello che credo, o il banco non sa vederlo,", "dopo": "   ⚠ Either the fault is not what I believe, or the bench cannot see it,"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   o ne vede piu' di uno: si corregge l'ATTESO con la ragione scritta", "dopo": "   or it sees more than one: the EXPECTATION is corrected with the reason written"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   accanto, non il verdetto", "dopo": "   next to it, not the verdict"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "3. Si rimettono i file SANI e si ricostruisce", "dopo": "3. The HEALTHY files are put back and rebuilt"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "risanato e ricostruito", "dopo": "restored and rebuilt"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il risanamento NON ha ricostruito: l'albero resta GUASTO", "dopo": "⛔ the restoration did NOT rebuild: the tree stays FAULTY"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "mappa risanata: $RIS", "dopo": "restored map: $RIS"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "il giro risanato e' identico al sano", "dopo": "the restored round is identical to the healthy one"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il risanato NON e' tornato come il sano: $RIS", "dopo": "⛔ the restored one did NOT come back like the healthy one: $RIS"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "⛔ il giro risanato non ha girato: ⚠ NON si puo' dire che l'albero sia", "dopo": "⛔ the restored round did not run: ⚠ it CANNOT be said that the tree is"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "   tornato sano, e resta il dubbio che ci sia dentro un guasto", "dopo": "   healthy again, and the doubt remains that a fault is inside"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "Esito", "dopo": "Outcome"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "esiti: $ESITI", "dopo": "results: $ESITI"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "la cura «C» non scatta: `guarisci()` non viene mai chiamata", "dopo": "cure \"C\" does not kick in: `guarisci()` is never called"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "gli orfani dei PULSANTI non si segnano: il registro torna a dire «fatto»", "dopo": "the orphans of the BUTTONS are not marked: the log goes back to saying \"done\""}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "NON-GUASTO MISURATO: il riattacco non chiude il descrittore vecchio", "dopo": "MEASURED NON-FAULT: the reattach does not close the old descriptor"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "SECONDO NON-GUASTO MISURATO: non si manda il distacco a libei", "dopo": "SECOND MEASURED NON-FAULT: the detach is not sent to libei"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "ne' distacco ne' chiusura: il contesto vecchio resta vivo e connesso", "dopo": "neither detach nor close: the old context stays alive and connected"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "    ⇒ devono CAMBIARE: %s", "dopo": "    ⇒ must CHANGE: %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "nessuno", "dopo": "none"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "06-b33 §7.1 — i guasti innestati", "dopo": "06-b33 §7.1 — the injected faults"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ servono --albero e --guasto (oppure --elenco)", "dopo": "⛔ --albero and --guasto are needed (or --elenco)"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ guasto ignoto: %s", "dopo": "⛔ unknown fault: %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⛔ l'ancora di %s compare %d volte in %s (ne serve UNA): il guasto NON si innesta, e questo NON e' «il guasto non fa niente»", "dopo": "⛔ the anchor of %s appears %d times in %s (ONE is needed): the fault is NOT injected, and this is NOT \"the fault does nothing\""}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "⭐ %s innestato in %s", "dopo": "⭐ %s injected into %s"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG1 innestato: la cura «C» non scatta */", "dopo": "/* fault RG1 injected: cure \"C\" does not kick in */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG2 innestato: gli orfani dei pulsanti non si segnano */", "dopo": "/* fault RG2 injected: the orphans of the buttons are not marked */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG3 innestato: NON si chiude */", "dopo": "/* fault RG3 injected: it is NOT closed */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG4 innestato: niente distacco, si molla e basta */", "dopo": "/* fault RG4 injected: no detach, it just lets go */"}
+{"file": "banchi/06-b33-risveglio-guasti.py", "prima": "/* guasto RG5 innestato: il contesto vecchio resta VIVO e connesso */", "dopo": "/* fault RG5 injected: the old context stays ALIVE and connected */"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "06-b33 §7.1 — il verdetto", "dopo": "06-b33 §7.1 — the verdict"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "(non dichiarata)", "dopo": "(not declared)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "\\n== 06-b33 §7.1 · giudizio «{a.etichetta}» · modo {a.modo}", "dopo": "\\n== 06-b33 §7.1 · judgement «{a.etichetta}» · mode {a.modo}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   scena: {a.scena}", "dopo": "   scene: {a.scena}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "\\n   {len(casi)} casi · {rossi} rossi · {vivi} difetti vivi dichiarati · {fuori} fuori scena", "dopo": "\\n   {len(casi)} cases · {rossi} red · {vivi} live defects declared · {fuori} out of scene"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   esiti: {a.esiti}", "dopo": "   results: {a.esiti}"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risveglio", "dopo": "wake-up"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "ridimensionamento", "dopo": "resize"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NESSUNA", "dopo": "NONE"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "pulsanti", "dopo": "buttons"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "tasti", "dopo": "keys"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "pulsanti E tasti", "dopo": "buttons AND keys"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RILASCIATI %d (orfani rimasti %u)", "dopo": "RELEASED %d (orphans left %u)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante il risveglio", "dopo": "ERRORE: the input channel dropped during the wake-up"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RISVEGLIO n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) ⛔ e NESSUNO ha toccato la tela", "dopo": "WAKE-UP n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) ⛔ and NOBODY touched the canvas"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante l'attesa", "dopo": "ERRORE: the input channel dropped during the wait"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "dormito %ld ms", "dopo": "slept %ld ms"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto durante il ridimensionamento", "dopo": "ERRORE: the input channel dropped during the resize"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "RIDIMENSIONATO a %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)", "dopo": "RESIZED to %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "comando ignoto: «%s»", "dopo": "unknown command: «%s»"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "sessione aperta: nodo %u, descrittore EIS %d", "dopo": "session open: node %u, EIS descriptor %d"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "senza motivo dichiarato", "dopo": "no reason declared"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il flusso non e' attivo dopo 20 s (%s)", "dopo": "ERRORE: the stream is not active after 20 s (%s)"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "senza spiegazione", "dopo": "no explanation"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "cattura attiva a %ux%u sul nodo %u", "dopo": "capture active at %ux%u on node %u"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "⚠ il nostro monitor non si sa per nome: NON dico quale sia", "dopo": "⚠ our monitor is not known by name: I do NOT say which one it is"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il canale di input e' caduto", "dopo": "ERRORE: the input channel dropped"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: nessun dispositivo ASSOLUTO con una regione dopo 20 s", "dopo": "ERRORE: no ABSOLUTE device with a region after 20 s"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "ERRORE: il compositore ha chiuso il canale di input", "dopo": "ERRORE: the compositor closed the input channel"}
+{"file": "banchi/06-b33-risveglio.c", "prima": "⛔ stdin chiuso senza «fine»: esco SENZA rilasciare", "dopo": "⛔ stdin closed without «fine»: I exit WITHOUT releasing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto", "dopo": " buttons were PRESSED on the device the compositor has just removed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto", "dopo": " keys were PRESSED on the device the compositor has just removed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON PARTE: era premuto su un dispositivo", "dopo": "DOES NOT LEAVE: it was pressed on a device"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON PARTE: era premuto su una tastiera", "dopo": "DOES NOT LEAVE: it was pressed on a keyboard"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "GUARIGIONE (n.", "dopo": "HEALING (n."}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "canale EIS RIFATTO", "dopo": "EIS channel REDONE"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "RISVEGLIO n\\.(\\d+) esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)", "dopo": "WAKE-UP n\\.(\\d+) esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "RIDIMENSIONATO a \\S+ esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)", "dopo": "RESIZED to \\S+ esito=(-?\\d+) ricambi_puntatore \\d+ → \\d+ \\(delta (-?\\d+)\\)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha parlato", "dopo": "C0 the instrument has spoken"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: il registro dell'iniettore e' VUOTO", "dopo": "⛔ THE BENCH: the injector's log is EMPTY"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha parlato", "dopo": "C0 the instrument has spoken"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " righe dall'iniettore — ⚠ e in questa scena il testimone NON e' lo strumento: non si inietta niente che debba arrivargli", "dopo": " lines from the injector — ⚠ and in this scene the witness is NOT the instrument: nothing is injected that should reach it"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha visto qualcosa", "dopo": "C0 the instrument has seen something"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "ZERO righe del testimone dopo n=", "dopo": "ZERO witness lines after n="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ": ⛔ IL BANCO, NON IL PRODOTTO — il testimone non era aperto, o non aveva il fuoco", "dopo": ": ⛔ THE BENCH, NOT THE PRODUCT — the witness was not open, or did not have the focus"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "C0 lo strumento ha visto qualcosa", "dopo": "C0 the instrument has seen something"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " righe dopo n=", "dopo": " lines after n="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "S0 il clic arriva quando NON c'e' nessun ricambio", "dopo": "S0 the click arrives when there is NO replacement"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "BTN_LEFT giu' ", "dopo": "BTN_LEFT down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ IL BANCO: senza questo verde nessun altro rosso significa niente", "dopo": " — ⛔ THE BENCH: without this green no other red means anything"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "S0-bis e NESSUN risveglio e' stato chiesto", "dopo": "S0-bis and NO wake-up was requested"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risvegli nel registro dell'iniettore: ", "dopo": "wake-ups in the injector's log: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 0)", "dopo": " (expected 0)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L1 i tre risvegli sono partiti", "dopo": "L1 the three wake-ups went off"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "risvegli=", "dopo": "wake-ups="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " esiti=", "dopo": " outcomes="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 3, tutti esito=1)", "dopo": " (expected 3, all esito=1)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L2 ⭐ OGNI risveglio ricrea i dispositivi — §7.1", "dopo": "L2 ⭐ EVERY wake-up recreates the devices — §7.1"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "delta di ricambi_puntatore per risveglio: ", "dopo": "delta of ricambi_puntatore per wake-up: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso [1,1,1] o piu').  ⛔ Se fossero zeri, §7.1 E' FALSA e va corretta: `[R]` `meta-screen-cast-virtual-stream-src.c:283` chiama `meta_eis_viewport_notify_changed()` a ogni `..._src_enable()`", "dopo": " (expected [1,1,1] or more).  ⛔ If they were zeros, §7.1 IS FALSE and must be corrected: `[R]` `meta-screen-cast-virtual-stream-src.c:283` calls `meta_eis_viewport_notify_changed()` at every `..._src_enable()`"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L3 e NESSUNO ha toccato la tela", "dopo": "L3 and NOBODY touched the canvas"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "chiamate a cattura_ridimensiona(): ", "dopo": "calls to cattura_ridimensiona(): "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso 0) — e' la meta' della tesi che rende §7.1 una porta NUOVA", "dopo": " (expected 0) — it is the half of the thesis that makes §7.1 a NEW door"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "L4 a mano alzata NON ci sono orfani", "dopo": "L4 with the hand raised there are NO orphans"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "nessuna riga di orfani, ne' di pulsanti ne' di tasti, com'e' giusto", "dopo": "no orphans line, neither of buttons nor of keys, as it should be"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ c'e' la riga degli orfani (", "dopo": "⛔ the orphans line ("}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ") senza che nulla fosse premuto: il conto di input.c e' sporco", "dopo": ") is there without anything being pressed: the count of input.c is dirty"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T0 la porta si e' aperta: i dispositivi sono ricambiati", "dopo": "T0 the door opened: the devices were replaced"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "porta=", "dopo": "door="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", delta di ricambi_puntatore=", "dopo": ", delta of ricambi_puntatore="}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " (atteso ≥1).  ⛔ Se fosse 0 il difetto NON e' stato riprodotto, e quel che segue non misura niente", "dopo": " (expected ≥1).  ⛔ If it were 0 the defect was NOT reproduced, and what follows measures nothing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T1 il PULSANTE era premuto al momento del ricambio", "dopo": "T1 the BUTTON was pressed at the moment of the replacement"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "`input.c` dichiara gli orfani dei PULSANTI, dunque il pulsante c'era", "dopo": "`input.c` declares the orphans of the BUTTONS, so the button was there"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: nessun orfano di PULSANTI dichiarato", "dopo": "⛔ THE BENCH: no orphan of BUTTONS declared"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — c'e' solo quello dei TASTI, che e' un'altra cosa: al cambio di viewport la tastiera non ricambia, quindi questa scena non ha fatto quel che credeva", "dopo": " — there is only the KEYS one, which is another thing: at the viewport change the keyboard is not replaced, so this scene did not do what it believed"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — o non si e' premuto niente, o il ricambio e' arrivato prima della pressione", "dopo": " — either nothing was pressed, or the replacement arrived before the press"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T2 il testimone ha visto il pulsante SCENDERE", "dopo": "T2 the witness saw the button GO DOWN"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "BTN_LEFT giu' visto", "dopo": "BTN_LEFT down seen"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ IL BANCO: il testimone non ha visto nemmeno la pressione", "dopo": "⛔ THE BENCH: the witness did not even see the press"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T3 ⛔ il rilascio del pulsante arriva al desktop (prima o dopo, purche' arrivi)", "dopo": "T3 ⛔ the button release reaches the desktop (before or after, as long as it arrives)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "il rilascio arriva — ⭐ allora questa porta e' curata", "dopo": "the release arrives — ⭐ so this door is cured"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "NON arriva: il posto conta il pulsante ancora giu' (`meta-seat-impl.c:899-908`), e `handle_button` (`meta-eis-client.c:612-621`) ingoia in silenzio il rilascio sul dispositivo nuovo", "dopo": "it does NOT arrive: the seat counts the button as still down (`meta-seat-impl.c:899-908`), and `handle_button` (`meta-eis-client.c:612-621`) silently swallows the release on the new device"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T4 ⭐⭐ un clic FRESCO, dopo tutto, arriva ancora?", "dopo": "T4 ⭐⭐ does a FRESH click, after all, still arrive?"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "clic fresco: giu' ", "dopo": "fresh click: down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ da adesso il desktop NON PRENDE PIU' UN CLIC, per tutta la sessione: e' «su Android il mouse non prende piu' i click»", "dopo": " — ⛔ from now on the desktop DOES NOT TAKE A CLICK ANY MORE, for the whole session: it is \"on Android the mouse no longer takes clicks\""}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T5 il TASTO invece va giu' e torna su (controllo interno alla scena)", "dopo": "T5 the KEY instead goes down and comes back up (check inside the scene)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "questa scena non batte nessun Ctrl: non c'e' niente da giudicare", "dopo": "this scene presses no Ctrl: there is nothing to judge"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T5 il TASTO invece va giu' e torna su (controllo interno alla scena)", "dopo": "T5 the KEY instead goes down and comes back up (check inside the scene)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "Ctrl giu' ", "dopo": "Ctrl down "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ", su ", "dopo": ", up "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "si", "dopo": "yes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " — ⛔ non arriva nemmeno il tasto: la causa NON e' il ricambio del PUNTATORE, e T3/T4 stanno accusando la cosa sbagliata", "dopo": " — ⛔ not even the key arrives: the cause is NOT the replacement of the POINTER, and T3/T4 are accusing the wrong thing"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T6 e un tasto FRESCO arriva ancora", "dopo": "T6 and a FRESH key still arrives"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "questa scena non batte nessun Invio: non c'e' niente da giudicare", "dopo": "this scene presses no Enter: there is nothing to judge"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T6 e un tasto FRESCO arriva ancora", "dopo": "T6 and a FRESH key still arrives"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "Invio visto", "dopo": "Enter seen"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ nemmeno la tastiera funziona piu': il danno e' piu' largo di quel che §4.6 descrive", "dopo": "⛔ not even the keyboard works any more: the damage is wider than what §4.6 describes"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "la riga c'e': il registro NON dice «fatto» mentre il desktop resta bloccato", "dopo": "the line is there: the log does NOT say \"done\" while the desktop stays stuck"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⭐ la riga non c'e' — ed e' giusto: il rilascio e' ARRIVATO, quindi non c'era nessun ripiego da dichiarare", "dopo": "⭐ the line is not there — and that is right: the release ARRIVED, so there was no fallback to declare"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "dopo": "T7 the impossible release of the BUTTON is DECLARED"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "⛔ il rilascio del pulsante non e' arrivato E il suo percorso tace: e' il verde che non e' vero (`CODER.md` §4.6)", "dopo": "⛔ the button release did not arrive AND its path stays silent: it is the green that is not true (`CODER.md` §4.6)"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": ".  ⚠ C'e' la riga della TASTIERA, che e' un'altra cosa e non vale per il pulsante", "dopo": ".  ⚠ The KEYBOARD line is there, which is another thing and does not count for the button"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "» · modo ", "dopo": "» · mode "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   scena: ", "dopo": "   scene: "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " casi · ", "dopo": " cases · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " rossi · ", "dopo": " red · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " difetti vivi dichiarati · ", "dopo": " live defects declared · "}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": " fuori scena", "dopo": " out of scene"}
+{"file": "banchi/06-b33-risveglio-giudice.py", "prima": "   esiti: ", "dopo": "   results: "}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== il protocollo xdg-shell", "dopo": "== the xdg-shell protocol"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "⛔ $XDG non c'e'", "dopo": "⛔ $XDG is not there"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   fatti xdg-shell-client-protocol.h e xdg-shell-protocol.c", "dopo": "   made xdg-shell-client-protocol.h and xdg-shell-protocol.c"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== il testimone", "dopo": "== the witness"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "⛔ il testimone NON e' stato costruito", "dopo": "⛔ the witness was NOT built"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "== la marca: che cosa c'e' DENTRO il binario", "dopo": "== the mark: what is INSIDE the binary"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   ⭐ c'e' la riga che dice, DAL LATO CHE RICEVE, che la tela e' cambiata", "dopo": "   ⭐ the line is there that says, FROM THE RECEIVING SIDE, that the canvas has changed"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "   ⛔ la riga RITELA non c'e': il testimone non saprebbe dire di essere", "dopo": "   ⛔ the RITELA line is not there: the witness could not say it has"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "      stato ridimensionato, e «non e' successo niente» e «non l'ho", "dopo": "      been resized, and «nothing happened» and «I did not"}
+{"file": "banchi/06-b33-costruisci.sh", "prima": "      visto» avrebbero lo stesso aspetto", "dopo": "      see it» would look the same"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "== l'iniettore del risveglio", "dopo": "== the wake-up injector"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "⛔ l'iniettore NON e' stato costruito", "dopo": "⛔ the injector was NOT built"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "== la marca: che cosa c'e' DENTRO il binario", "dopo": "== the mark: what is INSIDE the binary"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   la riga di «cattura_risveglia»: $R", "dopo": "   the line of «cattura_risveglia»: $R"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⭐ dentro c'e' la funzione del PRODOTTO, non una sua imitazione", "dopo": "   ⭐ inside is the PRODUCT's function, not an imitation of it"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⛔ la riga di `cattura_risveglia()` non ci sta: questo binario NON", "dopo": "   ⛔ the line of `cattura_risveglia()` is not there: this binary does NOT"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "      contiene la funzione sotto prova — ogni misura sarebbe di", "dopo": "      contain the function under test — every measurement would be of"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "      un'altra cosa", "dopo": "      something else"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   la riga degli ORFANI di src/input.c: $O", "dopo": "   the line of the ORPHANS of src/input.c: $O"}
+{"file": "banchi/06-b33-risveglio-costruisci.sh", "prima": "   ⛔ manca: non e' collegato l'input del prodotto", "dopo": "   ⛔ missing: the product's input is not linked in"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO", "dopo": "⛔ $GRUPPI_SCHEDA_SH is missing: without it, the tenant would be born BLIND"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ va lanciato DA ROOT", "dopo": "⛔ it must be launched AS ROOT"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "L'utente della sottofase 6.1: $UTENTE (uid $UID_B)", "dopo": "The user of sub-phase 6.1: $UTENTE (uid $UID_B)"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' gia' — non lo rifaccio (una sessione per utente, I2)", "dopo": "already there — I do not redo it (one session per user, I2)"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ useradd non e' riuscito", "dopo": "⛔ useradd did not succeed"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "creato", "dopo": "created"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la parola d'ordine non e' stata posta: PAM dira' sempre di no", "dopo": "⛔ the password was not set: PAM will always say no"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "parola d'ordine posta", "dopo": "password set"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "gruppi: $(id -nG ", "dopo": "groups: $(id -nG "}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ enable-linger fallito", "dopo": "⛔ enable-linger failed"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato", "dopo": "linger on: /run/user/$UID_B will live even with nobody connected"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "La sessione GNOME di $UTENTE — ⭐ SENZA --virtual-monitor", "dopo": "The GNOME session of $UTENTE — ⭐ WITHOUT --virtual-monitor"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'utente non c'e': fai «utente»", "dopo": "⛔ the user is not there: do «utente»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ non ho fatto $DIR", "dopo": "⛔ I did not make $DIR"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⭐ MUTTER_DEBUG=$MUTTER_DEBUG nel drop-in", "dopo": "⭐ MUTTER_DEBUG=$MUTTER_DEBUG in the drop-in"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "scritto $FILE", "dopo": "wrote $FILE"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ MA la sessione e' gia' viva: MUTTER_DEBUG NON e' in vigore. Fai «sessione-via» prima", "dopo": "⚠ BUT the session is already alive: MUTTER_DEBUG is NOT in force. Do «sessione-via» first"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' gia' una sessione viva — non la rifaccio", "dopo": "there is already a live session — I do not redo it"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "la sessione non c'e': aspetto che il gestore sia inactive", "dopo": "the session is not there: I wait for the manager to be inactive"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ il gestore non se ne va: ULTIMA SPIAGGIA — butto giu' tutto", "dopo": "⚠ the manager does not go away: LAST RESORT — I tear everything down"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il bus non e' tornato", "dopo": "⛔ the bus did not come back"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ non ho rifatto $DIR", "dopo": "⛔ I did not remake $DIR"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "il gestore di sessione e' inactive: gnome-session puo' ripartire", "dopo": "the session manager is inactive: gnome-session can start again"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "PipeWire e' vivo: senza, la cattura non avrebbe nessun nodo", "dopo": "PipeWire is alive: without it, the capture would have no node"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⚠ PipeWire NON e' vivo: la cattura non trovera' nessun nodo", "dopo": "⚠ PipeWire is NOT alive: the capture will find no node"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "ExecStart in vigore: $VIG", "dopo": "ExecStart in force: $VIG"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "c'e' «--no-x11»", "dopo": "«--no-x11» is there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ c'e' ancora «--virtual-monitor»: la scena non e' quella che credo", "dopo": "⛔ «--virtual-monitor» is still there: the scene is not the one I believe"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la sessione non e' partita in $((g/2)) s", "dopo": "⛔ the session did not start in $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "sessione viva dopo $((g/2)) s", "dopo": "session alive after $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ Uccido la sessione grafica di $UTENTE", "dopo": "⛔ I kill the graphical session of $UTENTE"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la sessione non e' morta", "dopo": "⛔ the session did not die"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "la sessione grafica e' morta", "dopo": "the graphical session is dead"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "serve la misura, es. 1264x800", "dopo": "the size is needed, e.g. 1264x800"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il testimone Wayland sul monitor $M", "dopo": "The Wayland witness on monitor $M"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $TESTIMONE non c'e': fai «costruisci»", "dopo": "⛔ $TESTIMONE is not there: do «costruisci»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "aperto: $(grep '", "dopo": "open: $(grep '"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il testimone NON si e' aperto:", "dopo": "⛔ the witness did NOT open:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "testimone spento", "dopo": "witness off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il terminale col testimone — l'applicazione che nessuno riavviera'", "dopo": "The terminal with the witness — the application nobody will restart"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "processi «b33-ciclo-invii»: $n · gnome-terminal-server: $m", "dopo": "processes «b33-ciclo-invii»: $n · gnome-terminal-server: $m"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "il terminale e' aperto, e il ciclo aspetta gli Invio", "dopo": "the terminal is open, and the loop waits for the Enters"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il terminale NON si e' aperto: quel che segue non misura niente", "dopo": "⛔ the terminal did NOT open: what follows measures nothing"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "terminale spento", "dopo": "terminal off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "L'iniettore del risveglio, tela $M", "dopo": "The wake-up injector, canvas $M"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $INIETTORE non c'e': fai «06-b33-risveglio-costruisci.sh»", "dopo": "⛔ $INIETTORE is not there: do «06-b33-risveglio-costruisci.sh»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il server della $PORTA e' acceso (pid $pid): spegnilo, o le sessioni sono due", "dopo": "⛔ the $PORTA server is on (pid $pid): switch it off, or there are two sessions"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la fifo non si crea", "dopo": "⛔ the fifo cannot be created"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "l'iniettore e' PRONTO dopo $((g/2)) s", "dopo": "the injector is READY after $((g/2)) s"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'iniettore NON e' pronto:", "dopo": "⛔ the injector is NOT ready:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ l'iniettore non e' vivo: il comando «$*» non lo legge nessuno", "dopo": "⛔ the injector is not alive: nobody reads the command «$*»"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "iniettore spento", "dopo": "injector off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Il server della sottofase 6.1, sulla $PORTA — DA ROOT", "dopo": "The server of sub-phase 6.1, on $PORTA — AS ROOT"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $D/remotix non c'e'", "dopo": "⛔ $D/remotix is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ $D/pagina.html non c'e'", "dopo": "⛔ $D/pagina.html is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ la $PORTA e' gia' occupata", "dopo": "⛔ $PORTA is already taken"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ /etc/pam.d/remotix non c'e'", "dopo": "⛔ /etc/pam.d/remotix is not there"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ manca una libreria:", "dopo": "⛔ a library is missing:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ il server e' morto subito:", "dopo": "⛔ the server died at once:"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "acceso, pid $pid, $(ss -tuln | grep -c ", "dopo": "on, pid $pid, $(ss -tuln | grep -c "}
+{"file": "banchi/06-b33-terreno.sh", "prima": ") ascoltatori", "dopo": ") listeners"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Spengo la $PORTA", "dopo": "I switch off $PORTA"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "non c'era niente sulla $PORTA", "dopo": "there was nothing on $PORTA"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "spento, e nessun figlio MIO e' rimasto orfano", "dopo": "off, and no child of MINE was left orphaned"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "⛔ figli MIEI orfani:$restano", "dopo": "⛔ orphaned children of MINE:$restano"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Tolgo l'utente della sottofase 6.1", "dopo": "I remove the user of sub-phase 6.1"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "fatto", "dopo": "done"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "Stato", "dopo": "State"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "utente $UTENTE: $(id ", "dopo": "user $UTENTE: $(id "}
+{"file": "banchi/06-b33-terreno.sh", "prima": "server $PORTA: spento", "dopo": "server $PORTA: off"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "figlio: $f", "dopo": "child: $f"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "figlio: nessuno", "dopo": "child: none"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "registro: $(stat -c %s ", "dopo": "log: $(stat -c %s "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) byte", "dopo": " 2>/dev/null || echo 0) bytes"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "testimone: $(pgrep -u ", "dopo": "witness: $(pgrep -u "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " -f 06-b33-testimone | wc -l) vivo, $(wc -l < ", "dopo": " -f 06-b33-testimone | wc -l) alive, $(wc -l < "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) righe viste", "dopo": " 2>/dev/null || echo 0) lines seen"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "terminale: $(pgrep -u ", "dopo": "terminal: $(pgrep -u "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " -f b33-ciclo-invii | wc -l) vivo, $(wc -l < ", "dopo": " -f b33-ciclo-invii | wc -l) alive, $(wc -l < "}
+{"file": "banchi/06-b33-terreno.sh", "prima": " 2>/dev/null || echo 0) Invio ricevuti", "dopo": " 2>/dev/null || echo 0) Enters received"}
+{"file": "banchi/06-b33-testimone.c", "prima": "nessun compositore Wayland", "dopo": "no Wayland compositor"}
+{"file": "banchi/06-b33-testimone.c", "prima": "il compositore non espone shell o memoria", "dopo": "the compositor does not expose shell or memory"}
+{"file": "banchi/06-b33-testimone.c", "prima": "nessuno schermo %ux%u fra i %d annunciati", "dopo": "no %ux%u screen among the %d announced"}
+{"file": "banchi/06-b33-testimone.c", "prima": "B33 testimone", "dopo": "B33 witness"}
+{"file": "banchi/06-b33-terreno.sh", "prima": "%s— ascoltatori (NON miei)\\n", "dopo": "%s— listeners (NOT mine)\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  ⛔ non si apre il file temporaneo per il registro\\n", "dopo": "  ⛔ the temporary file for the log cannot be opened\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  ⛔ non si dirotta stderr\\n", "dopo": "  ⛔ stderr cannot be redirected\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] formato negoziato: %ux%u  (negoziazione n.%d)\\n", "dopo": "      [stage] negotiated format: %ux%u  (negotiation no.%d)\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] nodo %u, regge da %ux%u a %ux%u\\n", "dopo": "      [stage] node %u, holds from %ux%u to %ux%u\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] ⛔ non si apre\\n", "dopo": "      [stage] ⛔ does not open\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [palco] ripropone %s %ux%u..%ux%u → %d\\n", "dopo": "      [stage] re-offers %s %ux%u..%ux%u → %d\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "FISSA", "dopo": "FIXED"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "intervallo", "dopo": "range"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "  \\033[1;31mNO\\033[0m  %s\\n        atteso: %s\\n        visto:  %s\\n", "dopo": "  \\033[1;31mNO\\033[0m  %s\\n        expected: %s\\n        seen:     %s\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "1 controllo positivo: flusso sano ⇒ ZERO, e lo strumento vede", "dopo": "1 positive control: healthy stream ⇒ ZERO, and the instrument sees"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "il palco finto si apre", "dopo": "the fake stage opens"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ il palco finto NON si e' aperto", "dopo": "⛔ the fake stage did NOT open"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "la cattura si aggancia al nodo del palco finto", "dopo": "the capture attaches to the fake stage's node"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ cattura_avvia ha detto no", "dopo": "⛔ cattura_avvia said no"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "lo strumento %s la riga d'avvio; negoziata %ux%u; cattura_prendi → %s (%s); riga MISURA DIVERGENTE: %s", "dopo": "the instrument %s the start line; negotiated %ux%u; cattura_prendi → %s (%s); DIVERGENT SIZE line: %s"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "VEDE", "dopo": "SEES"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON vede", "dopo": "⛔ does NOT see"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "FATTA", "dopo": "DONE"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ GUASTO", "dopo": "⛔ FAULT"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "senza errore", "dopo": "no error"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ LA NOMINA", "dopo": "⛔ NAMES IT"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "assente", "dopo": "absent"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "riga d'avvio VISTA · negoziata 1920x1080 · cattura_prendi = ZERO (NON guasto) · nessuna MISURA DIVERGENTE", "dopo": "start line SEEN · negotiated 1920x1080 · cattura_prendi = ZERO (NOT fault) · no DIVERGENT SIZE"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "2 il flusso morto si SA, e quanto costa saperlo", "dopo": "2 the dead stream is KNOWN, and what knowing it costs"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "senza dettaglio", "dopo": "no detail"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "ridimensiona → %d (0 = «chiesta»); poi %d giri da 8 ms (%d ZERO) e il GUASTO arriva a %.1f ms; il messaggio %s lo stato: «%s»", "dopo": "resize → %d (0 = «requested»); then %d rounds of 8 ms (%d ZERO) and the FAULT arrives at %.1f ms; the message %s the state: «%s»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "NOMINA", "dopo": "NAMES"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON nomina", "dopo": "⛔ does NOT name"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⇒ per SMENTIRE la proposta 1: GUASTO entro 100 ms (non un timeout) e un messaggio che nomina lo stato «error»", "dopo": "⇒ to DISPROVE proposal 1: FAULT within 100 ms (not a timeout) and a message that names the state «error»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "3 il rimontaggio alla misura che ha ucciso il palco", "dopo": "3 the remount at the size that killed the stage"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "%d `cattura_avvia()` su %d hanno RESTITUITO un palco a 2560x1440 (misura che il palco non regge), ma solo %d erano ancora VIVI 300 ms dopo: %s.  Il rifiuto: «%s»", "dopo": "%d `cattura_avvia()` out of %d RETURNED a stage at 2560x1440 (a size the stage cannot hold), but only %d were still ALIVE 300 ms later: %s.  The refusal: «%s»"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ nessuno ⇒ `figlio.c:6299` riproverebbe la stessa misura all'infinito, con l'attesa CORTA di `:6385`", "dopo": "⛔ none ⇒ `figlio.c:6299` would retry the same size forever, with the SHORT wait of `:6385`"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⭐ qualcuno regge ⇒ non e' un cappio", "dopo": "⭐ some hold ⇒ it is not a noose"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "0 palchi vivi su 3 (⇒ il ciclo di `figlio.c:6299` non ne esce da solo), e `cattura_avvia()` che RIESCE lo stesso", "dopo": "0 live stages out of 3 (⇒ the loop of `figlio.c:6299` does not get out by itself), and `cattura_avvia()` that SUCCEEDS all the same"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "4 due ridimensionamenti incatenati ⇒ MISURA DIVERGENTE?", "dopo": "4 two chained resizes ⇒ DIVERGENT SIZE?"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [catena] chieste A=%ux%u poi B=%ux%u ⇒ «%s»\\n", "dopo": "      [chain] requested A=%ux%u then B=%ux%u ⇒ «%s»\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "      [catena] ritardo %5d us: %d colpi su %d\\n", "dopo": "      [chain] delay %5d us: %d hits out of %d\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "su %d catene di due ridimensionamenti (8 ritardi spazzolati) la riga MISURA DIVERGENTE %s%d; chiesta finale %ux%u, negoziata %ux%u", "dopo": "over %d chains of two resizes (8 delays swept) the DIVERGENT SIZE line %s%d; final requested %ux%u, negotiated %ux%u"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⭐ E' COMPARSA ⇒ la proposta 3 e' SMENTITA, il ramo si raggiunge dall'esterno — primo colpo col ritardo di us ", "dopo": "⭐ APPEARED ⇒ proposal 3 is DISPROVED, the branch is reachable from outside — first hit with the delay in us "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ NON compare ⇒ la proposta 3 REGGE; catene spese: ", "dopo": "⛔ does NOT appear ⇒ proposal 3 HOLDS; chains spent: "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "la riga COMPARE (⇒ proposta 3 smentita)", "dopo": "the line APPEARS (⇒ proposal 3 disproved)"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "5 il produttore prova a IMPORRE la sua misura", "dopo": "5 the producer tries to IMPOSE its size"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "il palco ha preteso 1600x900 fissi; chiesta %ux%u, negoziata %ux%u; flusso %s; MISURA DIVERGENTE: %s", "dopo": "the stage demanded a fixed 1600x900; requested %ux%u, negotiated %ux%u; stream %s; DIVERGENT SIZE: %s"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ vivo", "dopo": "⛔ alive"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ COMPARSA ⇒ il produttore IMPONE, e il caso 4 ha una seconda sorgente", "dopo": "⛔ APPEARED ⇒ the producer IMPOSES, and case 4 has a second source"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "assente ⇒ il rettangolo FISSO regge: o quel valore, o l'insieme vuoto", "dopo": "absent ⇒ the FIXED rectangle holds: either that value, or the empty set"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "negoziata ancora 1920x1080 · flusso in error · NESSUNA divergenza (⇒ il produttore non puo' imporre)", "dopo": "still negotiated 1920x1080 · stream in error · NO divergence (⇒ the producer cannot impose)"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "6 i due accessori bastano a ricostruire la divergenza", "dopo": "6 the two accessors are enough to reconstruct the divergence"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "prima: chiesta %ux%u, negoziata %s%ux%u.  Dopo la richiesta che il palco non regge: chiesta %ux%u, negoziata %s%ux%u ⇒ la divergenza %s dai due accessori pubblici, e senza il campo privato", "dopo": "before: requested %ux%u, negotiated %s%ux%u.  After the request the stage cannot hold: requested %ux%u, negotiated %s%ux%u ⇒ the divergence %s from the two public accessors, and without the private field"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ IGNOTA ", "dopo": "⛔ UNKNOWN "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ IGNOTA ", "dopo": "⛔ UNKNOWN "}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "SI LEGGE", "dopo": "CAN BE READ"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "⛔ non si legge", "dopo": "⛔ cannot be read"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "chiesta 2560x1440 · negoziata 1920x1080, tutt'e due leggibili da `cattura.h` senza un terzo accessore", "dopo": "requested 2560x1440 · negotiated 1920x1080, both readable from `cattura.h` without a third accessor"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "\\n== 06-b5: le tre proposte di 06-b40, messe alla prova per SMENTIRLE ==\\n\\n", "dopo": "\\n== 06-b5: the three proposals of 06-b40, put to the test to DISPROVE them ==\\n\\n"}
+{"file": "banchi/06-b5-esiti-cattura.c", "prima": "\\n  passati %d, falliti %d\\n\\n", "dopo": "\\n  passed %d, failed %d\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ IL CANARINO: sta sul tasto 30 in tutte e tre. Se NON arriva, la prova non e' rossa: e' INVALIDA (il fuoco non e' sul testimone)", "dopo": "⭐ THE CANARY: it is on key 30 in all three. If it does NOT arrive, the test is not red: it is INVALID (the focus is not on the witness)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ la prova cattiva: 44 su it/us, 21 su de — con la keymap vecchia su de esce una «y», cioe' un carattere DIVERSO", "dopo": "⛔ the nasty test: 44 on it/us, 21 on de — with the old keymap on de a «y» comes out, that is a DIFFERENT character"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della z", "dopo": "the twin of the z"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ esiste su it, NON esiste su us: qui il guasto e' un'ASSENZA", "dopo": "⛔ exists on it, does NOT exist on us: here the fault is an ABSENCE"}
+{"file": "banchi/06-b34-tabella.c", "prima": "chiocciola", "dopo": "at-sign"}
+{"file": "banchi/06-b34-tabella.c", "prima": "si sposta: AltGr+ò su it, Maiusc+2 su us", "dopo": "moves: AltGr+ò on it, Shift+2 on us"}
+{"file": "banchi/06-b34-tabella.c", "prima": "come la è: solo su it", "dopo": "like the è: only on it"}
+{"file": "banchi/06-b34-tabella.c", "prima": "un segno che si sposta fra tutte e tre", "dopo": "a symbol that moves among all three"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "u-doppioacuto (ű)", "dopo": "u-double-acute (ű)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ hu: era RIFIUTATA dall'elenco fisso. Non esiste su it/us/de", "dopo": "⛔ hu: was REJECTED by the fixed list. Does not exist on it/us/de"}
+{"file": "banchi/06-b34-tabella.c", "prima": "o-doppioacuto (ő)", "dopo": "o-double-acute (ő)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della ű", "dopo": "the twin of the ű"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ hu e' QWERTZ come de: la z si sposta rispetto a it", "dopo": "⛔ hu is QWERTZ like de: the z moves relative to it"}
+{"file": "banchi/06-b34-tabella.c", "prima": "i-senza-punto (ı)", "dopo": "dotless-i (ı)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ tr: era RIFIUTATA. Il carattere piu' turco che c'e'", "dopo": "⛔ tr: was REJECTED. The most Turkish character there is"}
+{"file": "banchi/06-b34-tabella.c", "prima": "il gemello della ı", "dopo": "the twin of the ı"}
+{"file": "banchi/06-b34-tabella.c", "prima": "alfa (α)", "dopo": "alpha (α)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ gr: era RIFIUTATA, e non e' nemmeno latina", "dopo": "⛔ gr: was REJECTED, and it is not even Latin"}
+{"file": "banchi/06-b34-tabella.c", "prima": "ji ucraina (ї)", "dopo": "Ukrainian yi (ї)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ ua: era RIFIUTATA. Cirillico, e diverso dal russo", "dopo": "⛔ ua: was REJECTED. Cyrillic, and different from Russian"}
+{"file": "banchi/06-b34-tabella.c", "prima": "u-doppioacuto (ű)", "dopo": "u-double-acute (ű)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ IL CONTROLLO NEGATIVO: su it NON deve esistere", "dopo": "⭐ THE NEGATIVE CONTROL: on it it must NOT exist"}
+{"file": "banchi/06-b34-tabella.c", "prima": "i-senza-punto (ı)", "dopo": "dotless-i (ı)"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⭐ il controllo negativo della ı", "dopo": "⭐ the negative control of the ı"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# 06-b34 caso 7 — l'atteso delle disposizioni ESOTICHE\\n", "dopo": "# 06-b34 case 7 — the expected result of the EXOTIC layouts\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# calcolato da `src/tastiera.c`, cioe' dal prodotto (CODER.md §3.3 e §3.6)\\n\\n", "dopo": "# computed by `src/tastiera.c`, that is by the product (CODER.md §3.3 and §3.6)\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "%-4s U+%04X %-20s ⛔ DISPOSIZIONE NON APERTA: %s\\n", "dopo": "%-4s U+%04X %-20s ⛔ LAYOUT NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": " canarino=U+%04X", "dopo": " canary=U+%04X"}
+{"file": "banchi/06-b34-tabella.c", "prima": " ⛔ NESSUN CANARINO", "dopo": " ⛔ NO CANARY"}
+{"file": "banchi/06-b34-tabella.c", "prima": "⛔ %s NON APERTA: %s\\n", "dopo": "⛔ %s NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# 06-b34 — l'atteso, calcolato da `src/tastiera.c` (CODER.md §3.3)\\n", "dopo": "# 06-b34 — the expected result, computed by `src/tastiera.c` (CODER.md §3.3)\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# posizione = i codici EVDEV che il prodotto manderebbe, in ordine\\n", "dopo": "# position = the EVDEV codes the product would send, in order\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# «-» = NON producibile: RCP.md §7.3 obbliga a non mandare NIENTE\\n\\n", "dopo": "# «-» = NOT producible: RCP.md §7.3 requires sending NOTHING\\n\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "DISPOSIZIONE %-9s ⛔ NON APERTA: %s\\n", "dopo": "LAYOUT %-9s ⛔ NOT OPENED: %s\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "senza motivo", "dopo": "no reason given"}
+{"file": "banchi/06-b34-tabella.c", "prima": "DISPOSIZIONE %-9s (%s)\\n", "dopo": "LAYOUT %-9s (%s)\\n"}
+{"file": "banchi/06-b34-tabella.c", "prima": "# le ragioni delle prove\\n", "dopo": "# the reasons for the tests\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ manca «%s»: il banco non si costruisce.\\n", "dopo": "  ⛔ «%s» is missing: the bench cannot be built.\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  --  pipewire %s · glib %s · carico %s\\n", "dopo": "  --  pipewire %s · glib %s · load %s\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ nessun `pipewire` in ascolto per questo utente: il palco finto\\n", "dopo": "  ⛔ no `pipewire` listening for this user: the fake stage\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "     non ha dove registrarsi, e un rosso qui non sarebbe del prodotto.\\n", "dopo": "     has nowhere to register, and a red here would not come from the product.\\n"}
+{"file": "banchi/06-b5-esiti-cattura.sh", "prima": "  ⛔ non compila\\n", "dopo": "  ⛔ does not compile\\n"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "uso: $0 [guarda|allinea]", "dopo": "usage: $0 [guarda|allinea]"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "1. I tre file che B3 copia dentro l'innesto", "dopo": "1. The three files that B3 copies into the graft"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ non posso confrontare «$f»: manca $( [ -f ", "dopo": "⛔ cannot compare «$f»: missing $( [ -f "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "$f identico  ($a)", "dopo": "$f identical  ($a)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $f DIVERSO — sorgente $a · innesto $b", "dopo": "⛔ $f DIFFERENT — source $a · graft $b"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   righe che cambiano: $(diff ", "dopo": "   lines that change: $(diff "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ con dei file mancanti non allineo niente", "dopo": "⛔ with missing files I align nothing"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⚠ 01-b0-terreno.sh confronta solo rcp.c; qui si guardano tutti e tre", "dopo": "⚠ 01-b0-terreno.sh compares only rcp.c; here all three are checked"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ il binario e' PIU' VECCHIO di:$VECCHIO", "dopo": "⛔ the binary is OLDER than:$VECCHIO"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⇒ va ricostruito anche se le impronte combaciano", "dopo": "   ⇒ it must be rebuilt even if the fingerprints match"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "e il binario e' piu' nuovo di tutti e tre ($(stat -c %y ", "dopo": "and the binary is newer than all three ($(stat -c %y "}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $BINARIO non c'e': l'innesto non e' mai stato costruito", "dopo": "⛔ $BINARIO is not there: the graft has never been built"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": " (manca il binario)", "dopo": " (binary missing)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⭐ l'innesto e' gia' allineato ai sorgenti, e il binario e' di dopo", "dopo": "⭐ the graft is already aligned with the sources, and the binary comes after"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "niente da copiare e niente da ricostruire: si va dritti al terreno", "dopo": "nothing to copy and nothing to rebuild: straight to the terrain"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "2. ⛔ C'e' un guasto innestato dentro l'innesto?", "dopo": "2. ⛔ Is there a grafted fault inside the graft?"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ «$m» compare $n volta/e in examples/rcp.c", "dopo": "⛔ «$m» appears $n time(s) in examples/rcp.c"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "nessuna traccia di «$m»", "dopo": "no trace of «$m»"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ NON TOCCO NIENTE: c'e' un guasto innestato, e ricopiarci sopra il", "dopo": "⛔ I TOUCH NOTHING: there is a grafted fault, and copying the"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   sorgente lo toglierebbe SOTTO chi lo sta misurando — quel giro", "dopo": "   source over it would remove it FROM UNDER whoever is measuring it — that round"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   scriverebbe «il banco non e' diventato rosso» di un banco a cui", "dopo": "   would write «the bench did not turn red» of a bench whose"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   e' stato tolto l'imputato di mano.", "dopo": "   accused was taken out of its hands."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⇒ Aspetta che il giro finisca, o toglilo con «--togli».", "dopo": "   ⇒ Wait for the round to finish, or remove it with «--togli»."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "«guarda» si ferma qui: per copiare e ricostruire, «allinea»", "dopo": "«guarda» stops here: to copy and rebuild, «allinea»"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "3. Si copia il sorgente dentro l'innesto", "dopo": "3. Copying the source into the graft"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ la copia di «$f» e' fallita", "dopo": "⛔ copying «$f» failed"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "$f copiato, e le impronte adesso combaciano ($a)", "dopo": "$f copied, and the fingerprints now match ($a)"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ $f copiato ma le impronte NON combaciano", "dopo": "⛔ $f copied but the fingerprints do NOT match"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "4. Si ricostruisce — e si guarda l'ESITO, non il binario", "dopo": "4. Rebuilding — and looking at the OUTCOME, not at the binary"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⭐ bsslserver ricostruito", "dopo": "⭐ bsslserver rebuilt"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "⛔ la compilazione e' FALLITA: il binario che c'e' e' quello di", "dopo": "⛔ the build FAILED: the binary that is there is the"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   prima, e adesso il sorgente e' cambiato sotto di lui — cioe'", "dopo": "   old one, and now the source has changed under it — i.e."}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   la scena PEGGIORE.  L'errore:", "dopo": "   the WORST scene.  The error:"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "   ⛔ e non c'e' nemmeno il registro di ninja: non ho letto niente", "dopo": "   ⛔ and there is not even the ninja log: I read nothing"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "5. ⛔ E lo dice il terreno, non io", "dopo": "5. ⛔ And the terrain says it, not me"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "\\n    \\033[1;32m⭐ innesto allineato, e il terreno regge\\033[0m\\n", "dopo": "\\n    \\033[1;32m⭐ graft aligned, and the terrain holds\\033[0m\\n"}
+{"file": "banchi/attrezzi-allinea-innesto.sh", "prima": "\\n    \\033[1;31m⛔ il terreno NON regge (uscita %s): non lanciare banchi\\033[0m\\n", "dopo": "\\n    \\033[1;31m⛔ the terrain does NOT hold (exit %s): do not launch benches\\033[0m\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "uso: $0 [guarda|allinea|prova]", "dopo": "usage: $0 [guarda|allinea|prova]"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "0. Gli alberi, dichiarati (B0.1: si dichiara E si verifica)", "dopo": "0. The trees, declared (B0.1: declare AND verify)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "sorgente (CHUWI): $FONTE", "dopo": "source (CHUWI): $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "prodotto (NIC-OS): $DEST", "dopo": "product (NIC-OS): $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ l'albero sorgente non c'e': $FONTE", "dopo": "⛔ the source tree is not there: $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ in $FONTE non c'e' nessun file: non allineo niente e non dico che va bene", "dopo": "⛔ there is no file in $FONTE: I align nothing and I do not say it is fine"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$N_QUI file nell'albero sorgente", "dopo": "$N_QUI files in the source tree"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "P. ⭐ IL CONTROLLO POSITIVO — «questo attrezzo sa dire di NO?»", "dopo": "P. ⭐ THE POSITIVE CHECK — «can this tool say NO?»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ Un attrezzo che dicesse sempre «allineato» sarebbe peggio di nessun", "dopo": "⛔ A tool that always said «aligned» would be worse than no"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   attrezzo: darebbe fiducia (CODER.md §4.6).  Qui la divergenza si", "dopo": "   tool: it would give confidence (CODER.md §4.6).  Here the divergence is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   COSTRUISCE, su una copia che non e' di nessuno, e l'atteso lo", "dopo": "   BUILT, on a copy that belongs to nobody, and the expected result is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   confronta il programma — non chi legge (B0.4).", "dopo": "   compared by the program — not by whoever reads (B0.4)."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "copia di prova: $SCRATCH   ·   file da sporcare: $SPORCA", "dopo": "test copy: $SCRATCH   ·   file to dirty: $SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto fare la copia di prova", "dopo": "⛔ I could not make the test copy"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "copia fatta", "dopo": "copy made"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n  ---- giro 1: i due alberi COMBACIANO, e ci si aspetta che taccia\\n", "dopo": "\\n  ---- round 1: the two trees MATCH, and it is expected to stay silent\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n  ---- giro 2: UN file sporcato, e ci si aspetta che lo dica\\n", "dopo": "\\n  ---- round 2: ONE file dirtied, and it is expected to say so\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "printf '\\n# riga aggiunta dalla prova di attrezzi-allinea-prodotto.sh\\n' >> $SCRATCH/$SPORCA", "dopo": "printf '\\n# line added by the test of attrezzi-allinea-prodotto.sh\\n' >> $SCRATCH/$SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto sporcare $SPORCA", "dopo": "⛔ I could not dirty $SPORCA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ la copia di prova non si e' cancellata: $SCRATCH", "dopo": "⚠ the test copy was not deleted: $SCRATCH"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "P. Il verdetto della prova", "dopo": "P. The verdict of the test"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "giro 1: uscita 0 — con gli alberi identici TACE", "dopo": "round 1: exit 0 — with identical trees it STAYS SILENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ giro 1: uscita $G1 invece di 0.  O gli alberi non erano allineati", "dopo": "⛔ round 1: exit $G1 instead of 0.  Either the trees were not aligned"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   prima della prova, o l'attrezzo dice di no anche quando non c'e'", "dopo": "   before the test, or the tool says no even when there is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   niente da dire — e allora i suoi «no» non valgono niente.", "dopo": "   nothing to say — and then its «no»s are worth nothing."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "giro 2: uscita 1 — la divergenza costruita l'ha vista", "dopo": "round 2: exit 1 — it saw the built divergence"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ giro 2: uscita $G2 invece di 1: NON ha visto un file cambiato", "dopo": "⛔ round 2: exit $G2 instead of 1: it did NOT see a changed file"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "DIVERSO", "dopo": "DIFFERENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "^.*$SPORCA DIVERSO", "dopo": "^.*$SPORCA DIFFERENT"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "e lo dice del file GIUSTO: «$SPORCA DIVERSO» compare nell'uscita", "dopo": "and it says it of the RIGHT file: «$SPORCA DIFFERENT» appears in the output"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ e' diventato rosso ma non nomina «$SPORCA»: e' rosso per un'altra", "dopo": "⛔ it turned red but does not name «$SPORCA»: it is red for another"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ragione, e questo non e' un controllo positivo", "dopo": "   reason, and this is not a positive check"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " DIVERSO — ", "dopo": " DIFFERENT — "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "e ne nomina UNO SOLO ($N_DIV): sa distinguere, non solo protestare", "dopo": "and it names ONLY ONE ($N_DIV): it can tell apart, not just protest"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ dichiara $N_DIV file diversi, e ne ho sporcato uno: non distingue", "dopo": "⛔ it declares $N_DIV different files, and I dirtied one: it does not tell apart"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n    %s⭐ IL CONTROLLO POSITIVO PASSA: tace quando combaciano, e quando%s\\n", "dopo": "\\n    %s⭐ THE POSITIVE CHECK PASSES: silent when they match, and when%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   divergono lo dice, e dice quale.%s\\n", "dopo": "    %s   they diverge it says so, and says which.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "\\n    %s⛔ IL CONTROLLO POSITIVO NON PASSA: %s cose su 4 non tornano.%s\\n", "dopo": "\\n    %s⛔ THE POSITIVE CHECK DOES NOT PASS: %s things out of 4 do not add up.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   ⇒ i verdetti di questo attrezzo non valgono finche non torna.%s\\n", "dopo": "    %s   ⇒ the verdicts of this tool are worthless until it adds up.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "1. Le impronte, file per file", "dopo": "1. The fingerprints, file by file"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ l'albero del prodotto non c'e' di la': $DEST", "dopo": "⛔ the product tree is not there over there: $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere le impronte di la':", "dopo": "⛔ I could not read the fingerprints over there:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere le date di la'", "dopo": "⛔ I could not read the dates over there"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f NON C'E' di la' — $a", "dopo": "⛔ $f is NOT THERE over there — $a"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f DIVERSO — qui $a · la' $b", "dopo": "⛔ $f DIFFERENT — here $a · there $b"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   righe che cambiano: $(diff ", "dopo": "   lines that change: $(diff "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⚠ non ho potuto riportare la copia di la': non conto le righe", "dopo": "   ⚠ I could not bring back the copy from over there: I do not count the lines"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$UGUALI file su $N_QUI gia' identici", "dopo": "$UGUALI files out of $N_QUI already identical"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ di la' ci sono file che qui non esistono, e NON li tocco:$SOLO_LA", "dopo": "⚠ over there there are files that do not exist here, and I do NOT touch them:$SOLO_LA"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   (non li cancello: cancellare di nascosto e' come copiare di nascosto)", "dopo": "   (I do not delete them: deleting on the quiet is like copying on the quiet)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "2. Il binario e' piu' nuovo dei sorgenti?", "dopo": "2. Is the binary newer than the sources?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ di la' non c'e' nessun binario «remotix»: il prodotto non e' mai stato", "dopo": "⛔ over there there is no «remotix» binary: the product has never been"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   costruito in $DEST", "dopo": "   built in $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " (manca il binario)", "dopo": " (binary missing)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ il binario e' PIU' VECCHIO di:$VECCHIO", "dopo": "⛔ the binary is OLDER than:$VECCHIO"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " '+%Y-%m-%d %H:%M:%S %Z')  (orologio di CHUWI)", "dopo": " '+%Y-%m-%d %H:%M:%S %Z')  (CHUWI clock)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⇒ va ricostruito anche se le impronte combaciano", "dopo": "   ⇒ it must be rebuilt even if the fingerprints match"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "il binario e' piu' nuovo di tutti i sorgenti ($(date -d ", "dopo": "the binary is newer than all the sources ($(date -d "}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": " '+%Y-%m-%d %H:%M:%S %Z'), orologio di CHUWI)", "dopo": " '+%Y-%m-%d %H:%M:%S %Z'), CHUWI clock)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⭐ il prodotto di la' e' gia' allineato ai sorgenti, e il binario e' di dopo", "dopo": "⭐ the product over there is already aligned with the sources, and the binary comes after"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "niente da copiare e niente da ricostruire: si va dritti al terreno", "dopo": "nothing to copy and nothing to rebuild: straight to the terrain"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "3. ⛔ C'e' un guasto innestato in uno dei due alberi?", "dopo": "3. ⛔ Is there a grafted fault in one of the two trees?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto leggere la marca da 01-b12-guasti.py: NON dico che", "dopo": "⛔ I could not read the mark from 01-b12-guasti.py: I do NOT say that"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   non ci sono guasti — dico che non ho guardato", "dopo": "   there are no faults — I say I did not look"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ marca di B11 non letta: non guardo a meta'", "dopo": "⛔ B11 mark not read: I do not look halfway"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "aghi letti dai cataloghi: «$MARCA12» · «$MARCA11»", "dopo": "needles read from the catalogues: «$MARCA12» · «$MARCA11»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$m» compare NELL'ALBERO SORGENTE:", "dopo": "⛔ «$m» appears IN THE SOURCE TREE:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto cercare «$m» in $FONTE (grep: $s)", "dopo": "⛔ I could not search for «$m» in $FONTE (grep: $s)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "nessuna traccia di «$m» in $FONTE", "dopo": "no trace of «$m» in $FONTE"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$m» compare NEL PRODOTTO di la':", "dopo": "⛔ «$m» appears IN THE PRODUCT over there:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ non ho potuto cercare «$m» in $DEST (uscita $s)", "dopo": "⛔ I could not search for «$m» in $DEST (exit $s)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "nessuna traccia di «$m» in $DEST", "dopo": "no trace of «$m» in $DEST"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ NON TOCCO NIENTE: c'e' un guasto innestato.", "dopo": "⛔ I TOUCH NOTHING: there is a grafted fault."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   Se sta nell'albero SORGENTE, copiarlo lo metterebbe nel prodotto che", "dopo": "   If it is in the SOURCE tree, copying it would put it into the product that"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   tutti interrogano; se sta nel PRODOTTO, ricopiarci sopra lo", "dopo": "   everybody queries; if it is in the PRODUCT, copying over it would"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   toglierebbe SOTTO chi lo sta misurando — e quel giro direbbe «il", "dopo": "   remove it FROM UNDER whoever is measuring it — and that round would say «the"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   banco non e' diventato rosso» di un banco a cui e' stato tolto", "dopo": "   bench did not turn red» of a bench whose"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   l'imputato di mano.", "dopo": "   accused was taken out of its hands."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⇒ Aspetta che il giro finisca, o toglilo con «--togli».", "dopo": "   ⇒ Wait for the round to finish, or remove it with «--togli»."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "«guarda» si ferma qui: per copiare e ricostruire, «allinea»", "dopo": "«guarda» stops here: to copy and rebuild, «allinea»"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "4. Si copiano i sorgenti dentro il prodotto", "dopo": "4. Copying the sources into the product"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ la copia di «$f» e' fallita", "dopo": "⛔ copying «$f» failed"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ «$f» copiato ma non ho potuto rileggerlo", "dopo": "⛔ «$f» copied but I could not read it back"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "$f copiato, e le impronte adesso combaciano ($a)", "dopo": "$f copied, and the fingerprints now match ($a)"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ $f copiato ma le impronte NON combaciano: $a ≠ $b", "dopo": "⛔ $f copied but the fingerprints do NOT match: $a ≠ $b"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "5. Si ricostruisce — con il file di casa, e si guarda l'ESITO", "dopo": "5. Rebuilding — with the house file, and looking at the OUTCOME"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ non ho potuto togliere il registro vecchio: quel che leggero potrebbe essere di prima", "dopo": "⚠ I could not remove the old log: what I read might be from before"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⚠ il registro della costruzione non si e' potuto riportare", "dopo": "⚠ the build log could not be brought back"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⭐ remotix ricostruito", "dopo": "⭐ remotix rebuilt"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "⛔ la costruzione e' FALLITA (uscita $S_COSTR): il binario che c'e' e'", "dopo": "⛔ the build FAILED (exit $S_COSTR): the binary that is there is"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   quello di prima, e adesso i sorgenti sono cambiati sotto di lui —", "dopo": "   the old one, and now the sources have changed under it —"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   cioe' la scena PEGGIORE.  L'errore:", "dopo": "   i.e. the WORST scene.  The error:"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "   ⛔ e non c'e' nemmeno il registro: non ho letto niente", "dopo": "   ⛔ and there is not even the log: I read nothing"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "6. ⛔ E lo dice il terreno, non io", "dopo": "6. ⛔ And the terrain says it, not me"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "7. ⛔ E il processo vivo sta eseguendo il binario nuovo?", "dopo": "7. ⛔ And is the live process running the new binary?"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "sorgenti allineati e binario ricostruito NON bastano: il server acceso", "dopo": "aligned sources and a rebuilt binary are NOT enough: the running server"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "gira ancora quello di prima, ed e' il difetto delle tredici ore.", "dopo": "still runs the old one, and that is the thirteen-hour defect."}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⛔ il terreno NON regge (uscita %s): non lanciare banchi.%s\\n", "dopo": "    %s⛔ the terrain does NOT hold (exit %s): do not launch benches.%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s   server acceso NON sta eseguendo quel binario (uscita %s).%s\\n", "dopo": "    %s   running server is NOT executing that binary (exit %s).%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "       ⇒ La cura, da chi ha in mano la porta:\\n", "dopo": "       ⇒ The cure, by whoever holds the port:\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "         questa famiglia di attrezzi esiste per non fare.\\n", "dopo": "         this family of tools exists to avoid.\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⭐ prodotto allineato: sorgenti, binario e processo dicono la stessa cosa.%s\\n", "dopo": "    %s⭐ product aligned: sources, binary and process say the same thing.%s\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔\\033[0m  nessun nodo `cardN`/`renderDN` in /dev/dri: su questa\\n", "dopo": "%s\\033[1;31m⛔\\033[0m  no `cardN`/`renderDN` node in /dev/dri: on this\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    macchina il compositore disegnera in SOFTWARE, e nessun gruppo\\n", "dopo": "%s    machine the compositor will draw in SOFTWARE, and no group\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    puo rimediare.  ⚠ Il numero che questo banco misurera NON e\\n", "dopo": "%s    can fix that.  ⚠ The number this bench will measure is NOT\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    quello del prodotto in hardware.\\n", "dopo": "%s    that of the product in hardware.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m il gid %s (di %s) NON ha nessun nome in /etc/group qui:\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m gid %s (of %s) has NO name in /etc/group here:\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    l inquilino «%s» non ci puo entrare, e la sua sessione NASCERA\\n", "dopo": "%s    the tenant «%s» cannot join it, and their session WILL BE BORN\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    CIECA.  ⭐ La cura, da root: `groupadd -g %s scheda%s`\\n", "dopo": "%s    BLIND.  ⭐ The cure, as root: `groupadd -g %s scheda%s`\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔\\033[0m  `usermod -aG %s %s` NON e riuscito\\n", "dopo": "%s\\033[1;31m⛔\\033[0m  `usermod -aG %s %s` did NOT succeed\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m «%s» NON E NEL GRUPPO DELLA SCHEDA «%s» (gid %s, il gruppo\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m «%s» IS NOT IN THE CARD GROUP «%s» (gid %s, the group\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    di %s)\\n", "dopo": "%s    of %s)\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⛔ LA SUA SESSIONE NASCEREBBE E NON VEDREBBE NIENTE: zero fotogrammi,\\n", "dopo": "%s    ⛔ ITS SESSION WOULD BE BORN AND SEE NOTHING: zero frames,\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    nessuna finestra si apre, e il ciclo gira in tondo fra «ZERO MONITOR»\\n", "dopo": "%s    no window opens, and the loop goes round and round between «ZERO MONITOR»\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    e «monitor virtuale montato» (fase 10 §7.4 — [M] 0 su 4 senza, 17 su 17 con).\\n", "dopo": "%s    and «virtual monitor mounted» (phase 10 §7.4 — [M] 0 out of 4 without, 17 out of 17 with).\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⛔ QUESTO BANCO NON DEVE MISURARE: misurerebbe un prodotto che non esiste.\\n", "dopo": "%s    ⛔ THIS BENCH MUST NOT MEASURE: it would measure a product that does not exist.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» era gia nei gruppi dei nodi della scheda (%s): la sua\\n", "dopo": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» was already in the groups of the card nodes (%s): their\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    sessione puo vedere in hardware\\n", "dopo": "%s    session can see in hardware\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» messo nei gruppi LETTI DAI NODI: %s (gid %s)\\n", "dopo": "%s\\033[1;32mOK\\033[0m  ⭐ «%s» put into the groups READ FROM THE NODES: %s (gid %s)\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s\\033[1;31m⛔⛔\\033[0m i gruppi sono stati AGGIUNTI ADESSO, ma «%s» aveva gia dei\\n", "dopo": "%s\\033[1;31m⛔⛔\\033[0m the groups were ADDED JUST NOW, but «%s» already had\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    processi vivi: un processo tiene i gruppi che aveva quando e NATO.\\n", "dopo": "%s    live processes: a process keeps the groups it had when it was BORN.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⇒ La sessione che sta girando e ANCORA CIECA.\\n", "dopo": "%s    ⇒ The session that is running is STILL BLIND.\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⭐ La cura, da root, e poi si rifa questo passo:\\n", "dopo": "%s    ⭐ The cure, as root, and then redo this step:\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    ⚠ NON lo faccio io: butterebbe giu anche la sessione di un altro banco (I2).\\n", "dopo": "%s    ⚠ I do NOT do it: it would also take down the session of another bench (I2).\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "uso: bash %s UTENTE   |   bash %s --testo\\n", "dopo": "usage: bash %s USER   |   bash %s --testo\\n"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "    ⛔ va lanciato DA ROOT\\n", "dopo": "    ⛔ must be run AS ROOT\\n"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ manca $GRUPPI_SCHEDA_SH: gli inquilini nascerebbero CIECHI", "dopo": "⛔ $GRUPPI_SCHEDA_SH is missing: the tenants would be born BLIND"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ $GRUPPI_SCHEDA_SH --testo non ha stampato niente", "dopo": "⛔ $GRUPPI_SCHEDA_SH --testo printed nothing"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ non si crea $FUORI/tmp", "dopo": "⛔ cannot create $FUORI/tmp"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "utente '$1' gia' presente", "dopo": "user '$1' already present"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "utente '$1' creato (uid $2)", "dopo": "user '$1' created (uid $2)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ non si scrive $PAROLA_FUORI", "dopo": "⛔ cannot write $PAROLA_FUORI"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di '$1' impostata da un file 0600 — mai in una riga di comando", "dopo": "password of '$1' set from a 0600 file — never on a command line"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ chpasswd per '$1' esce $stato: la parola NON e' stata impostata", "dopo": "⛔ chpasswd for '$1' exits $stato: the password was NOT set"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔⛔ '$1' NON e' nei gruppi della scheda (uscita $stato): NON usare questo utente per misurare", "dopo": "⛔⛔ '$1' is NOT in the card groups (exit $stato): do NOT use this user to measure"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di 'prova2' riletta da $CRED", "dopo": "password of 'prova2' read back from $CRED"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "parola di 'prova2' generata e scritta in $CRED (0600)", "dopo": "password of 'prova2' generated and written to $CRED (0600)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "$u: parola d'ordine cifrata presente in /etc/shadow", "dopo": "$u: encrypted password present in /etc/shadow"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "⛔ $u: NON ha una parola utilizzabile — PAM lo rifiutera'", "dopo": "⛔ $u: has NO usable password — PAM will reject it"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "    %s⛔ i SORGENTI sono allineati e il binario e'\"'\"' di adesso, ma il%s\\n", "dopo": "    %s⛔ the SOURCES are aligned and the binary is from now, but the%s\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "       ⚠ Non la faccio io: sulla 7448 possono esserci giri di altri,\\n", "dopo": "       ⚠ I do not do it: on 7448 there may be rounds by other people,\\n"}
+{"file": "banchi/attrezzi-allinea-prodotto.sh", "prima": "         e spegnere un server sotto chi lo misura e'\"'\"' il danno che\\n", "dopo": "         and shutting a server down under whoever is measuring it is the damage that\\n"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "    OK  ⭐ \\$u e' nei gruppi dei nodi della scheda: \\$(id -nG \\$u)", "dopo": "    OK  ⭐ \\$u is in the groups of the card nodes: \\$(id -nG \\$u)"}
+{"file": "banchi/attrezzi-utenti.sh", "prima": "    NO  ⛔⛔ \\$u NON e' nei gruppi \\$m: la sua sessione NASCE CIECA", "dopo": "    NO  ⛔⛔ \\$u is NOT in the groups \\$m: its session IS BORN BLIND"}

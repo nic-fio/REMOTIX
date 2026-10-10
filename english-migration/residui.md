@@ -38,3 +38,17 @@
 - pagina: "Ctrl+Alt+Canc" → "Ctrl+Alt+Del" (etichetta visibile, ma è anche dato in SC_BOTTONI)
 - pagina: riga diario audio «ricevuti … suonati … BUCHI … fuoco si/NO» letta a regex da 09-b74 → token col programma + banchi
 - pagina: CONGEDO dalla pagina tradotti (solo log server) ok
+- prodotto: «FALLBACK DECLARED» (tastiera.c, input.c) vs «DECLARED FALLBACK» (rcp.c, main.c, sessione.c, wlroots.c) → unificare (04-b25 segue tastiera.c)
+- pagina: ancore «ANCORA F4-… — INIZIO/FINE» italiane (04-b28 le legge) → token col programma, o a mano insieme
+- marche «REMOTIX B12 GUASTO»/«REMOTIX B11» (attrezzi-allinea-innesto.sh:129) ↔ cataloghi
+- difetti preesistenti banchi: 06-b33 RG4/RG5 ancore con una tab (input.c:1250 ne ha due); certifica.sh $ESITI non definita
+- banchi 17: messaggi ${1:?…} tradotti solo in parte → uniformare (tradurre tutti)
+- src/vulkanvideo_rgb_nv12_spv.h: prima riga italiana (generata da 19-shader.sh, ora inglese) → allineare a mano
+- RIPRESA/NUOVA stato di SESSIONE, guardiano: chiamate=, aree del registro → programma
+- ⭐ RICONCILIAZIONE FRA GRUPPI DI BANCHI (dopo l'ondata): chi legge l'uscita di un banco tradotto da un altro gruppo. Segnalati: uscita 01-b3-cliente.py ← 09-b77, 07-b64-rete, 07-b65, 09-b70, 09-b76, 01-b6-tetti, 11-c3/c6/c17/c24; registro innesto B3 ← 01-b8-lancia.sh:489,499, 01-b8-cronometro.py:712,1113,2011 («bans loaded:», «not banned»); 15-f021-esci.py:109 «la pagina ha CHIUSO la sessione»; 01-b7-congedo.py «errore N»; 15-f022 ← 12-client-veri «could not look at the»
+- banchi/rcp/ gemelli: ricopiare da src/ (l'appiglio di 01-b11-guasto-innesta combacia solo così)
+- ⚠ separatori numerici: b04 ha cambiato «11,000 cicli» in «11.000 cycles» nei commenti (rischio di invertire migliaia/decimali) → controllo finale dei numeri nei testi tradotti (banchi 07/09)
+- b81 passo 0 rosso già in HEAD: CAMPI_LM non conosce 7 campi nuovi della riga linea-morta
+- incidente: un aiutante (b11b) ha fatto git stash/pop per pochi secondi durante l'ondata dei banchi → controllo finale: nessun banco tradotto tornato italiano
+- C8 righe 849/851 riepilogo «A · il browser rende la pagina» letto da C14 RIGA_A → cambiare insieme
+- C24 RIGA_NASCITA «formato negoziato»; 16-classifica «il palco di «…» se n'e' andato» → doppia forma (registri vecchi)
