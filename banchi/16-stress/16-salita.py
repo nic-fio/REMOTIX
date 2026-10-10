@@ -367,7 +367,8 @@ def meta_scatola(d):
                              "| tr ' ' '\\n' | grep -A1 -E '^--(tetto-sessioni|journal)' "
                              "| tr '\\n' ' '; echo @@; vainfo --display drm --device "
                              "/dev/dri/renderD128 2>&1 | grep -m1 'Driver version'; echo @@; "
-                             "grep -a -o 'HEVC: .*H.264: scheda [^,]*, software OpenH264 [^ ]*' "
+                             "grep -a -o -E 'HEVC: .*H.264: scheda [^,]*, software OpenH264 [^ ]*"
+                             "|card .* HEVC: .* H.264: .*' "
                              "/var/lib/rete11/registro.log 2>/dev/null | tail -1", 60)
     parti = (t or "").split("@@")
     while len(parti) < 6:
@@ -382,9 +383,11 @@ def meta_scatola(d):
     v["journal"] = "--journal" in parti[3]
     # ⭐ the VA provider the box sees on ITS renderD128 (iHD or radeonsi)
     v["driver_va"] = parti[4].split(":", 1)[-1].strip() or "?"
-    # ⭐ phase 18: what the product MEASURED at startup (the ECCOMI line):
-    #   «H.264: scheda si' (…), software OpenH264 si'» in hardware; with --senza-scheda
-    #   «H.264: scheda no (…), software OpenH264 si'» — this way the level declares the route
+    # ⭐ phase 18: what the product MEASURED at startup (the ECCOMI line).  BOTH forms:
+    #   today's binary (phase 19, §10.27, card only) writes
+    #   «card N (route requested «…») — HEVC: yes via …|NO (…) · H.264: yes via …|NO (…)»;
+    #   a phase 18 binary (Italian, with OpenH264) wrote «HEVC: … H.264: scheda no (…),
+    #   software OpenH264 si'» — this way the level declares the route
     v["codifica_video"] = parti[5].strip() or "?"
     return v
 
@@ -472,7 +475,14 @@ def rifai_scatola(o, d, tetto, dove):
         return False, perche
     if getattr(o, "senza_scheda", False):
         cv = meta_scatola(d).get("codifica_video", "")
+        # ⛔ phase 19 (§10.27): the product has NO software encoder any more.  Only a
+        #   phase 18 binary in the box (old Italian line) can still climb without a card;
+        #   today's binary declares «H.264: NO (…)» and offers no codec at all.
         if "H.264: scheda no (" not in cv or "software OpenH264 si'" not in cv:
+            if " H.264: NO (" in cv:
+                return False, "--senza-scheda has nothing to measure: since phase 19 (§10.27) the " \
+                              "product has no software encoder, and without the card it offers " \
+                              "no codec (it says «%s»)" % cv
             return False, "the server does not declare H.264 encoding in software (it says «%s»)" % cv
         dice("   ⭐ encoding declared by the product: %s" % cv)
     if tetto:
@@ -799,7 +809,7 @@ class Salita:
 
     def scatola_pulita(self, dove):
         """Actors out, tenants out, box rebuilt with the cap.  (ok, reason)"""
-        self.aggiorna(fase="rifaccio la scatola")
+        self.aggiorna(fase="rebuilding the box")
         self.ferma_attori()
         if self.o.non_rifare:
             dice("⚠ --non-rifare: the box is NOT rebuilt (only tests of the setup)")
@@ -847,7 +857,7 @@ class Salita:
             self.attori[n] = a
             dice("   + user %02d (pid %d, %s, seed %d, ports %d)" % (
                 n, a.proc.pid, s, self.o.seme_base + n, self.o.porte_base + 10 * n))
-            self.aggiorna(fase="entrano gli utenti", utenti_attesi=n_fino)
+            self.aggiorna(fase="users entering", utenti_attesi=n_fino)
             fine = time.time() + self.o.attesa_nascita_s
             while time.time() < fine and a.vivo() and not a.e_nato() and not self.fermati \
                     and not (self.guardia and self.guardia.motivo):
@@ -936,7 +946,7 @@ class Salita:
             len(fatte), len(vivi), time.time() - t,
             (" · ⚠ missing %s" % mancano) if mancano else ""))
         if mancano:
-            eventi.append({"t": ora(), "evento": "foto mancanti", "utenti": mancano})
+            eventi.append({"t": ora(), "evento": "photos missing", "utenti": mancano})
         self.aggiorna(fase="lavoro")
         return {"t": iso(t), "t_s": round(t, 3), "attesi": sorted(a.n for a in vivi),
                 "fatte": sorted(fatte), "durata_s": round(time.time() - t, 1)}
@@ -1093,7 +1103,7 @@ class Salita:
         if not entrata_ok:
             # ⛔ compositor or actor that does not start: the level is NOT good
             #   (class «?», which stops the climb like an unreadable class)
-            eventi.append({"t": ora(), "evento": "entrata fallita", "ragione": perche_entrata,
+            eventi.append({"t": ora(), "evento": "entry failed", "ragione": perche_entrata,
                            "attesi": n, "entrati": len(entrati), "nati": len(nati)})
             dice("⛔ ENTRY FAILED (%d entered of %d, %d born): %s — the level will be «?»" % (
                 len(entrati), n, len(nati), perche_entrata))
@@ -1117,7 +1127,7 @@ class Salita:
         while not self.fermati and entrata_ok:
             if self.guardia and self.guardia.motivo:
                 self.ospite = self.guardia.motivo
-                eventi.append({"t": ora(), "evento": "guardia dell'ospite", "ragione": self.ospite,
+                eventi.append({"t": ora(), "evento": "host guard", "ragione": self.ospite,
                                "misura": dict(self.guardia.ultima)})
                 for a in self.attori.values():
                     a.segnale(signal.SIGTERM)          # out at once: the clients free the memory
@@ -1126,7 +1136,7 @@ class Salita:
             for a in self.attori.values():
                 if not a.vivo() and not a.morto_annotato:
                     a.morto_annotato = True
-                    eventi.append({"t": ora(), "evento": "attore morto", "utente": a.n,
+                    eventi.append({"t": ora(), "evento": "actor dead", "utente": a.n,
                                    "codice": a.proc.returncode})
                     dice("   ⛔ user %02d exited (code %s)" % (a.n, a.proc.returncode))
             if foto is None and adesso >= ora_foto:
@@ -1164,7 +1174,7 @@ class Salita:
         schede_b = browser_fuori_scheda(dirliv)
         if schede_b and schede_b["fuori_intel"]:
             dice("   ⛔ client browser on a card that is not the Intel: %s" % schede_b["fuori_intel"])
-            eventi.append({"t": ora(), "evento": "browser fuori dalla Intel",
+            eventi.append({"t": ora(), "evento": "browser off the Intel",
                            "dettaglio": schede_b["fuori_intel"]})
         self.taglia_attori(dirliv, t_inizio, t_fine)
         riga = dict(self.meta, **{
@@ -1538,7 +1548,9 @@ def main():
     a.add_argument("--senza-scheda", action="store_true",
                    help="phase 18: encoding WITHOUT a card (OpenH264) — in the rebuilt box "
                         "iHD_drv_video.so is hidden before turning on the server, and we "
-                        "require the log to say «H.264: scheda no, software OpenH264 si'»")
+                        "require the log to say «H.264: scheda no, software OpenH264 si'».  "
+                        "Only a phase 18 binary can do it: since phase 19 (§10.27) the product "
+                        "encodes only on the card, and the climb stops at once")
     a.add_argument("--mesa-vulkan-deb", default="",
                    help="phase 20: a mesa-vulkan-drivers_*.deb to install in the box "
                         "before the server (the backport for the Radeon, defect A3)")

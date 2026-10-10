@@ -19,7 +19,7 @@
 #   prepara <answers>          (connected) prepare-offline; the bundle goes back to the server in
 #                              esiti/<m>/fuori-linea.tar
 #   fuori-linea <answers>      (no network) the bundle inside, and install --offline --answers
-#   r21 <answers>              "cliente" snapshot, a NEW cloud-init seed (cloud-init-r21.yaml: user
+#   r21 <answers>              (retired, §10.36) "cliente" snapshot, a NEW cloud-init seed (cloud-init-r21.yaml: user
 #                              prova, answer file, curl install.sh | sh), power on; nobody touches
 #                              it until cloud-init has finished; then the installation log
 #   guarda                     a real Chrome enters and looks at the desktop (17-t1c-guarda.sh, its own labwc)
@@ -95,6 +95,9 @@ fuori-linea)
 	grep -E 'BLOCKED|FAILED|RX-(FUORI|RISPOSTE|PIANO)' "$E/installa.txt" | head -6 | sed 's/^/   /'
 	;;
 r21)
+	# ⛔ RETIRED (10 Oct 2026, §10.36): the .run prints no «install.sh: uscita» line (nor any
+	#   equivalent: there is no script that downloads and checks the engine). The body stays as history.
+	echo "⛔ step «r21» retired (DECISIONI §10.36): the seed ran «curl install.sh | sh», and install.sh no longer exists — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"; exit 2
 	r=${1:-risposte-debian.conf}
 	limite
 	S=$E/seme; rm -rf "$S"; mkdir -p "$S"

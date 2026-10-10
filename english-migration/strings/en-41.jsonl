@@ -104,3 +104,15 @@
 {"file": "banchi/02-cattura-prodotto.c", "prima": "\t\tesito = \"ZERO FOTOGRAMMI\";", "dopo": "\t\tesito = \"ZERO FRAMES\";"}
 {"file": "banchi/02-cattura-prodotto.c", "prima": "\t\tesito = \"TIPO DICHIARATO, PIXEL NON LETTI (dmabuf)\";", "dopo": "\t\tesito = \"TYPE DECLARED, PIXELS NOT READ (dmabuf)\";"}
 {"file": "banchi/02-cattura-prodotto.c", "prima": "\t\tesito = \"UN FOTOGRAMMA\";", "dopo": "\t\tesito = \"ONE FRAME\";"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "", "dopo": "--senza-scheda has nothing to measure: since phase 19 (§10.27) the product has no software encoder, and without the card it offers no codec (it says «%s»)"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "phase 18: encoding WITHOUT a card (OpenH264) — in the rebuilt box iHD_drv_video.so is hidden before turning on the server, and we require the log to say «H.264: scheda no, software OpenH264 si'»", "dopo": "phase 18: encoding WITHOUT a card (OpenH264) — in the rebuilt box iHD_drv_video.so is hidden before turning on the server, and we require the log to say «H.264: scheda no, software OpenH264 si'».  Only a phase 18 binary can do it: since phase 19 (§10.27) the product encodes only on the card, and the climb stops at once"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "rifaccio la scatola", "dopo": "rebuilding the box"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "entrano gli utenti", "dopo": "users entering"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "guardia dell'ospite", "dopo": "host guard"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "browser fuori dalla Intel", "dopo": "browser off the Intel"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "foto mancanti", "dopo": "photos missing"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "entrata fallita", "dopo": "entry failed"}
+{"file": "banchi/16-stress/16-salita.py", "prima": "attore morto", "dopo": "actor dead"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "", "dopo": "⛔ step «script» retired (DECISIONI §10.36): install.sh and the engine checked against its sha256 no longer exist — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "", "dopo": "⛔ step «r21» retired (DECISIONI §10.36): the seed ran «curl install.sh | sh», and install.sh no longer exists — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"}
+{"file": "banchi/02-figlio-prova.py", "prima": "⭐ and had it delivered, someone else's store would have refused it (the guard of `main.c`)", "dopo": ""}
