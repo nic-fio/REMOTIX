@@ -47,7 +47,7 @@ defect that phase 15 should have seen, we go back to the suite.
 - certified commit: `d121715` (tag `fase15-giro2-congelato`), binary `b1443a0b`; the new login
   page is `c5279e66` (264 PASS out of 264 in the tests that go through the form);
 - ⚠ the campaign's commit will be **the one of the day** (with journald and the configurable cap
-  it already exists): it is identified and the short regression suite is run **first** (§13).
+  already there): it is identified and the short regression suite is run **first** (§13).
 
 ## 4. The setup: the real path, all on the same machine
 
@@ -525,7 +525,7 @@ detach and re-attach, re-attach at a different size; 4 desktops × 2 browsers): 
 | (questo commit) | job B on LXQt: deletion is Shift+Del and «y» (pcmanfm-qt: the menu's Del did not trigger; «No» is the dialog's default button), snapshot on failure | `[M]` 27 Sep: «input perso: cancella» gave FAIL to LXQt already at 2 users — defect of the bench, not of the product; the LXQt 4K and 3K climbs are redone |
 | `07-b46` | `REMOTIX_FF_PREFS`: extra preferences in the benches' Firefox profile | to repeat a measure with software decoding |
 | (questo commit) | `16-lavori.py`, actor A: `aspetta()` reads the WHOLE group of rows of the notebook before returning, and before choosing wheel or key the actor rereads the position | anomaly A4: the «lost» PageDown on KDE was the actor's (old position, page already at the bottom). In force on the server from **13:58 UTC on 27 Sep**, that is from the second user of `amd-b-4k-gnome` onwards (user 01 of that step started at 13:55 with the earlier code) |
-| (questo commit) | **the boxes' lock**: `/media/REMOTIX/rete11/.scatole.lock` (flock) taken by `15-giro.py`, `16-salita.py` and `11-gancio.sh` (not by the «carte»); whoever holds it writes so inside; the children inherit `REMOTIX_SCATOLE_TENUTE`; `sgombera_inquilini` does nothing without that variable. ⚠ Not in `/run/lock`: sticky folder + `fs.protected_regular`, root does not reopen nicfio's file | it closes the «user unknown» of 29 Sep (see D-022 in §17.1): every link of the hook cleared out ALL the `c<n>u<n>` tenants, and a push during a suite round deleted the tenants just born ⇒ failed logins ⇒ ban of 192.168.0.2 (12 h) | short round `16-corta-serratura-2` (4 desktops × 2 browsers, 60 min) with a «carte» push halfway: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 clear-outs; «rete» hook with the lock held: **refused** (rc 1, «le tiene gia' un altro banco»); with the boxes free it starts (rc 0, no red) | copied to the server, 29 Sep |
+| (questo commit) | **the boxes' lock**: `/media/REMOTIX/rete11/.scatole.lock` (flock) taken by `15-giro.py`, `16-salita.py` and `11-gancio.sh` (not by the «carte»); whoever holds it writes so inside; the children inherit `REMOTIX_SCATOLE_TENUTE`; `sgombera_inquilini` does nothing without that variable. ⚠ Not in `/run/lock`: sticky folder + `fs.protected_regular`, root does not reopen nicfio's file | it closes the «user unknown» of 29 Sep (see D-022 in §17.1): every mesh of the hook cleared out ALL the `c<n>u<n>` tenants, and a push during a suite round deleted the tenants just born ⇒ failed logins ⇒ ban of 192.168.0.2 (12 h) | short round `16-corta-serratura-2` (4 desktops × 2 browsers, 60 min) with a «carte» push halfway: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 clear-outs; «rete» hook with the lock held: **refused** (rc 1, «le tiene gia' un altro banco»); with the boxes free it starts (rc 0, no red) | copied to the server, 29 Sep |
 
 ### 17.3 The server's environment (volatile: rootfs in RAM)
 

@@ -149,7 +149,7 @@ single actor** DEGRADED, always for the **image stall** of 1.06-1.11 s (threshol
 (log: `input id=1524…1545` → `fotogramma SPEDITO`), no frame skipped, no input lost. `[?]` The
 «still» second is born **before** the server or in the comparison between the time of the keys reconstructed by the actor
 (`ore_dei_tasti`, from the return of the Marionette chain) and the time of the page's paints: **to be verified** before
-calling it a defect, with the actor writing every impulse and the paint that attributes it.
+calling it a defect, with the actor writing every impulse and the paint it attributes to it.
 
 ⭐ **10 Oct 2026, morning — verified on the files, without touching the server** `[M]`: in `intel-f20-fhd-xfce` the stalls above
 threshold are 7 (levels 4, 8, 12: user 1 profile A, users 7 and 3 profile C), all 1.05-1.13 s, all **Firefox**,
@@ -556,7 +556,7 @@ the same. To make it permanent next to the data the command of §3-bis.2 is enou
 How to read them:
 - **REMOTIX bears from 1.8 to 15 times xrdp's users** («good») in every cell where xrdp bears at least one
   (the minimum: Radeon GNOME Full HD, 11 against 6; the maximum: Radeon KDE 2K and Full HD, 15 against 1); at 4K xrdp
-  bears none, REMOTIX from 1 to 8 on the Intel and 2-3 on the Radeon (XFCE, LXQt). In «true green» there are
+  holds none, REMOTIX from 1 to 8 on the Intel and 2-3 on the Radeon (XFCE, LXQt). In «true green» there are
   **three even cells**: Intel KDE 3K (1 and 1) and Radeon 4K GNOME and KDE (neither of the two); in the other 29 REMOTIX is
   ahead.
 - **15 is the bench's ceiling, not the Radeon's**: in the 7 cells at 15, level 16 falls **only** because the

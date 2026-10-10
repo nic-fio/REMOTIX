@@ -247,7 +247,7 @@ binary, page, commit and the counts. `--testo` for the terminal, `--html` for a 
 **The technical layer** — `15-giro.py --strato-tecnico` (or `--solo-strato-tecnico`): for every desktop, in
 parallel, **C7 C9 C18 C19**, each healthy and with its fault (`--lascia-un-processo`, `--togli-nome
 tutto`, `--senza-usermod`, `--lascia-un-inquilino`), launched by `11-accendi.sh`; then **C14** with the
-four together. ⛔ Before every link the same **clear-out** as `11-gancio.sh` (see D-013).
+four together. ⛔ Before every mesh the same **clear-out** as `11-gancio.sh` (see D-013).
 
 **In the net** — the **`suite`** family of `banchi/11-scatole/11-gancio.sh` (`227611d`, 25 Sep 09:35):
 `GIRA_SUITE` launches `15-giro.py --giro ${GIRO_SUITE:-rete} --strato-tecnico` as the browsers' user,
@@ -328,7 +328,7 @@ From `banchi/15-suite/difetti.jsonl`, with the state written in the file. Classe
 | D-010 | F-002 on XFCE: the black desktop judged degenerate without the «dark but alive» tolerance | xfce | C | cured | `15-f001` |
 | D-011 | clocks on XFCE: the bench waited 45 s for the first «non-degenerate» frame without gestures, and the shortened inactivity closed the session | xfce, ff and ch | C | cured | `e670ee3` · `15-f022` |
 | D-012 | C9 BLOCKED: the log's «forma» area (`src/forma.c`, phase 14) unknown | kde, xfce, lxqt | C | cured | `11-c9` |
-| D-013 | C19 FAIL: the technical layer did not clear out the tenants between one link and the next | all | C | cured | `15-giro.py` |
+| D-013 | C19 FAIL: the technical layer did not clear out the tenants between one mesh and the next | all | C | cured | `15-giro.py` |
 | D-014 | XFCE with Firefox, video: the audio context never «running», 40 s of silence | xfce/ff | ? | not reproduced | `15-f013` (watches in round 2) |
 | D-015 | GNOME: the negotiated layout is written into the **user's** dconf and stays there | gnome | B | open | `ddcf28d` `85697c9` · `15-f009`, `15-f031b` |
 | D-017 | XFCE: the product writes into the user's xfconf channels entries that are not lock/reboot/suspend/stand-by, and deletes `~/.cache/sessions` | xfce | B | open | `85697c9` `7543c6a` · `15-f031b` |
@@ -388,8 +388,8 @@ product.
   know ⇒ BLOCKED on kde, xfce, lxqt. The whole net had not been redone after phase 14 (decision
   of 24 Sep): the first round finds it. The BLOCKED was honest: *«un verde che le ignora sarebbe un verde
   che non le ha guardate»*.
-- **C19 and the clear-out** (D-013). The links delete their tenant **before** creating it, not
-  after; `11-gancio.sh` clears out between one link and the next, the round's technical layer did not ⇒ C19 saw
+- **C19 and the clear-out** (D-013). The meshes delete their tenant **before** creating it, not
+  after; `11-gancio.sh` clears out between one mesh and the next, the round's technical layer did not ⇒ C19 saw
   C9's tenants. It is the same lesson as phase 14's red C19: whoever redoes a round outside the
   hook must redo **the clear-out too**.
 - **F-021 and the empty slice** (D-016). After «Esci» the log slice can be empty: empty does not mean
