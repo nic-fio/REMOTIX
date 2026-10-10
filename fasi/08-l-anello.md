@@ -2885,886 +2885,886 @@ keep them, the place is `banchi/` with a `08-…` name.
 
 ---
 
-## 4-B · ⭐⭐⭐ AGENTE B — il banco del trascinamento, e **il locale ha un numero** · *22 agosto 2026*
+## 4-B · ⭐⭐⭐ AGENT B — the drag bench, and **local has a number** · *22 Aug 2026*
 
-> ### ⭐⭐⭐ LA SPECIFICA DELL'UTENTE SMETTE DI ESSERE UN DESIDERIO: adesso il «locale» è misurato
+> ### ⭐⭐⭐ THE USER'S SPECIFICATION STOPS BEING A WISH: now «local» is measured
 >
 > *«La mia specifica è avere un'esperienza utente il più vicina possibile a una situazione locale,
-> ma non identica: quello è impossibile.»* — §1.1. ⛔ **Finché il locale non aveva un numero, quella
-> frase non era collaudabile da nessuno.** Adesso ce l'ha.
+> ma non identica: quello è impossibile.»* — §1.1. ⛔ **As long as local had no number, that
+> sentence could not be tested by anyone.** Now it has one.
 >
-> | | ritardo | distacco | **in barre del titolo** |
+> | | delay | gap | **in title bars** |
 > |---|---|---|---|
-> | ⭐ **il locale**, stesso banco stessa scena | **27,58 ms** | 94 px | **0,13** |
+> | ⭐ **local**, same bench same scene | **27.58 ms** | 94 px | **0.13** |
 >
-> *(Le righe di REMOTIX, tre giri concordi entro l'1 %, e dell'utente a occhio, sul prodotto di prima
-> della copia zero — la strada dalla memoria con `sws_scale` — sono tolte con la fase 18.)*
+> *(The rows of REMOTIX, three rounds agreeing within 1 %, and of the user by eye, on the product from before
+> zero copy — the road from memory with `sws_scale` — are removed with phase 18.)*
 >
-> ⇒ ⭐⭐ **La differenza col locale è esattamente quel che aggiungiamo noi sopra al compositore.** Il
-> mandato della fase si riscrive in una riga: **accorciare quella differenza.**
+> ⇒ ⭐⭐ **The difference from local is exactly what we add on top of the compositor.** The
+> phase's mandate is rewritten in one line: **shorten that difference.**
 >
-> ⭐ **E l'utente aveva ragione anche sul limite**: il locale **non è zero** — è 27,58 ms, perché
-> anche lì c'è un compositore e uno schermo. *«Ma non identica: quello è impossibile»* è confermato
-> dalla misura, non concesso per cortesia.
+> ⭐ **And the user was right about the limit too**: local **is not zero** — it is 27.58 ms, because
+> there too there is a compositor and a screen. *«Ma non identica: quello è impossibile»* is confirmed
+> by measurement, not conceded out of courtesy.
 >
-> ⚠ **E lo scarto fra il banco e l'occhio dell'utente si dichiara invece di limarlo a parole**: il banco gira a
-> **1560 px** di larghezza, l'utente a **2560** — più pixel, più lavoro per fotogramma. `[?]` La
-> differenza non è spiegata, ed è la prima cosa da rifare alla sua misura.
+> ⚠ **And the discrepancy between the bench and the user's eye is declared instead of being smoothed away with words**: the bench runs at
+> **1560 px** of width, the user at **2560** — more pixels, more work per frame. `[?]` The
+> difference is not explained, and it is the first thing to redo at his size.
 
-*22 agosto 2026. Da inserire in `fasi/08-l-anello.md` §3 (sviluppo), §4 (misure), §5 (non ha
-funzionato) e §7 (resta `[?]`).*
+*22 Aug 2026. To be inserted in `fasi/08-l-anello.md` §3 (development), §4 (measurements), §5 (did not
+work) and §7 (remains `[?]`).*
 
 ---
 
-## 1 · Che cosa è stato costruito
+## 1 · What was built
 
-| file | che cos'è |
+| file | what it is |
 |---|---|
-| `banchi/08-b67-elastico.py` | ⭐⭐ **il banco**: la mano dell'utente, la lettura dell'eco nei pixel, le tre unità, la separazione della rete, i buchi, i tredici guasti innestati |
-| `banchi/08-b67-lancia.sh` | il lanciatore: porte, albero, contenitore, terreno, scena, misura |
-| `banchi/08-b67-locale.py` | ⭐⭐ **il termine di paragone locale**, misurato sul ferro dal blocco condiviso della scena |
-| `banchi/08-b67-esiti.jsonl` | i verbali dei giri |
+| `banchi/08-b67-elastico.py` | ⭐⭐ **the bench**: the user's hand, reading the echo in the pixels, the three units, separating the network, the holes, the thirteen injected faults |
+| `banchi/08-b67-lancia.sh` | the launcher: ports, tree, container, ground, scene, measurement |
+| `banchi/08-b67-locale.py` | ⭐⭐ **the local term of comparison**, measured on the iron from the scene's shared block |
+| `banchi/08-b67-esiti.jsonl` | the reports of the rounds |
 
-⛔ **Non è stata toccata una riga di `src/`.**
+⛔ **Not one line of `src/` was touched.**
 
-⭐ **E niente è stato ricopiato che si potesse importare**: il palco, la distribuzione, il regime e
-il **lettore certificato della marca** vengono da `03-b17-ritardo.py`; l'eco e il lettore del blocco
-condiviso da `04-b30-anello-input.py`; **la scena è `04-b30-scena.c` senza una riga cambiata**; il
-terreno è `04-b32-terreno.sh` **guidato dall'ambiente**, non una sua copia. L'unico pezzo ricopiato
-è `batti()` (il `thisisunsafe`), e la ragione sta scritta accanto: il modulo che lo contiene fa
-`argparse` a livello di modulo, e importarlo lancerebbe un altro banco.
+⭐ **And nothing that could be imported was recopied**: the stage, the distribution, the steady state and
+the **certified mark reader** come from `03-b17-ritardo.py`; the echo and the shared-block reader
+from `04-b30-anello-input.py`; **the scene is `04-b30-scena.c` without a line changed**; the
+ground is `04-b32-terreno.sh` **driven by the environment**, not a copy of it. The only piece recopied
+is `batti()` (the `thisisunsafe`), and the reason is written next to it: the module that contains it does
+`argparse` at module level, and importing it would launch another bench.
 
 ---
 
-## 2 · ⛔⛔ La porta 7741 **non era libera**, ed era di un altro agente della fase
+## 2 · ⛔⛔ Port 7741 **was not free**, and it belonged to another agent of the phase
 
-`[M]` `ss -tulnp` prima di toccarla:
+`[M]` `ss -tulnp` before touching it:
 
 ```
 udp 0.0.0.0:7741  users:(("remotix",pid=3446627))
     /media/REMOTIX/src/08-a-src/src/remotix --porta 7741
       --ban-file /media/REMOTIX/tmp/08-a/ban-7741
-udp 0.0.0.0:7740 / 7742  ("python3")  → il PONTE di 08-a
+udp 0.0.0.0:7740 / 7742  ("python3")  → the BRIDGE of 08-a
 ```
 
-⇒ ⛔ **Il mandato mi assegnava una porta che l'agente A stava già usando.** Non l'ho presa e non
-l'ho spenta: `LEZIONI.md` §1.24 — *due banchi sulla stessa porta si ammazzano in silenzio, e il
-rosso compare sul terzo* — e il ban-file era il suo, quindi un mio errore avrebbe bannato lui.
+⇒ ⛔ **The mandate assigned me a port that agent A was already using.** I did not take it and did not
+switch it off: `LEZIONI.md` §1.24 — *two benches on the same port kill each other silently, and the
+red appears on the third* — and the ban-file was his, so a mistake of mine would have banned him.
 
-⭐ **Il mio terreno, tutto separato**: porta **7746** · utente **`provab8`** (uid 1043) · albero
-`/media/REMOTIX/src/08-b-src` · lavoro `/media/REMOTIX/tmp/08-b` (ban-file e socket propri) ·
-scena `/dev/shm/remotix-08-b`. ⛔ **7730 e 7731 — i due server dell'utente — non sono mai state
-toccate**, e si contano prima e dopo ogni passo.
+⭐ **My ground, all separate**: port **7746** · user **`provab8`** (uid 1043) · tree
+`/media/REMOTIX/src/08-b-src` · work `/media/REMOTIX/tmp/08-b` (own ban-file and socket) ·
+scene `/dev/shm/remotix-08-b`. ⛔ **7730 and 7731 — the user's two servers — were never
+touched**, and they are counted before and after every step.
 
-⚠ **Per il coordinatore**: se il piano assegnava 7741 a due agenti, la tabella delle porte della
-fase 8 va corretta prima del prossimo giro.
+⚠ **For the coordinator**: if the plan assigned 7741 to two agents, the port table of
+phase 8 must be corrected before the next round.
 
 ---
 
-## 3 · Che cosa misura, e come si chiude l'anello
+## 3 · What it measures, and how the loop is closed
 
-**La grandezza è il distacco fra la freccia e la finestra che la insegue**, e non è un ritardo:
+**The quantity is the gap between the arrow and the window chasing it**, and it is not a delay:
 
 ```
-distacco = velocità della mano × ritardo dell'anello
+gap = speed of the hand × delay of the loop
 ```
 
-`[R]` La freccia la muove il **browser**, alla velocità della mano (`pagina.html`: il cursore di
-sistema *e* la freccia disegnata, tutt'e due locali). La finestra insegue con **tutto** il ritardo.
-⇒ Il distacco si apre quando la mano accelera e si richiude quando rallenta.
+`[R]` The arrow is moved by the **browser**, at the speed of the hand (`pagina.html`: the system
+cursor *and* the drawn arrow, both local). The window chases with **all** the delay.
+⇒ The gap opens when the hand accelerates and closes again when it slows down.
 
-### L'anello si chiude **due volte**, e le due si guardano in faccia
+### The loop is closed **twice**, and the two look each other in the face
 
-1. ⭐⭐ **L'ECO NEI PIXEL** — `04-b30-scena.c` dipinge in una seconda marca **le coordinate stesse
-   dell'evento che il compositore le ha consegnato**. Il banco legge quella marca **dalla tela
-   dipinta** e sa *dove sta la finestra che l'utente vede in questo istante*. È il confine
-   **SCOMODO**, ed è **l'unico dei due che sa dare i pixel**: l'eco *è* una posizione.
-2. **IL CAMPO `input` DEI 28 BYTE** — `RCP.md` §6.2, che la pagina raccoglie già in `REMOTIX.giro`.
-   Il banco avvolge `GIRO.torna`. È il confine **COMODO**: il fotogramma è *arrivato*, non ancora
-   decodificato né dipinto.
+1. ⭐⭐ **THE ECHO IN THE PIXELS** — `04-b30-scena.c` paints in a second mark **the very coordinates
+   of the event the compositor delivered to it**. The bench reads that mark **from the painted
+   canvas** and knows *where the window the user sees is at this instant*. It is the
+   **AWKWARD** boundary, and it is **the only one of the two that can give pixels**: the echo *is* a position.
+2. **THE `input` FIELD OF THE 28 BYTES** — `RCP.md` §6.2, which the page already collects in `REMOTIX.giro`.
+   The bench wraps `GIRO.torna`. It is the **CONVENIENT** boundary: the frame has *arrived*, not yet
+   decoded or painted.
 
-⭐ **L'accoppiamento è per COORDINATE**, non per tempo: la traiettoria non ripassa mai sullo stesso
-pixel, quindi un eco individua **un** evento. ⛔ E quando non lo individua (mano ripassata, evento
-mai partito) il campione **si butta e si conta**.
+⭐ **The pairing is by COORDINATES**, not by time: the trajectory never passes again over the same
+pixel, so an echo identifies **one** event. ⛔ And when it does not identify it (hand passed again, event
+never sent) the sample **is thrown away and counted**.
 
-### ⛔ Il prologo è nuovo, e la ragione è una misura
+### ⛔ The prologue is new, and the reason is a measurement
 
-Quello di A10 legge i pixel dal **deposito**. `[R]` Dal 21 agosto la strada del disegno è
-`bitmaprenderer` (`DECISIONI.md` §5.4) e **il deposito non esiste più** (`this.deposito = null`).
-Un prologo copiato avrebbe letto `null` a ogni fotogramma. ⇒ Qui i pixel si leggono dalla **vista**,
-e il confine del disegno è l'avvolgimento di **`transferFromImageBitmap`** — non di
-`VideoDecoder.output`, che su questa strada ritorna **prima** che la tela sia cambiata (il
-`createImageBitmap` è asincrono) e regalerebbe un fotogramma intero.
+A10's reads the pixels from the **store**. `[R]` Since 21 Aug the drawing road is
+`bitmaprenderer` (`DECISIONI.md` §5.4) and **the store no longer exists** (`this.deposito = null`).
+A copied prologue would have read `null` at every frame. ⇒ Here the pixels are read from the **view**,
+and the drawing boundary is the wrapping of **`transferFromImageBitmap`** — not of
+`VideoDecoder.output`, which on this road returns **before** the canvas has changed (the
+`createImageBitmap` is asynchronous) and would give away a whole frame.
 
-### Le TRE unità, e nessuna esce da sola (Q6)
+### The THREE units, and none comes out alone (Q6)
 
-millisecondi (per noi) · **pixel di distacco** (per l'utente) · ⭐⭐ **frazioni della barra del
-titolo** (invariante di scala — è l'unità che ha già retto al confronto con xrdp a risoluzione
-diversa).
+milliseconds (for us) · **pixels of gap** (for the user) · ⭐⭐ **fractions of the title
+bar** (scale-invariant — it is the unit that already held up in the comparison with xrdp at a different
+resolution).
 
 ---
 
-## 4 · ⭐⭐ I PRIMI NUMERI — `[M]` 22 agosto 2026
+## 4 · ⭐⭐ THE FIRST NUMBERS — `[M]` 22 Aug 2026
 
-**Palco dichiarato**: server `192.168.0.2:7746`, utente `provab8`, sessione GNOME headless, monitor
-virtuale **1560 × 888 @ 60 Hz**, scena `04-b30-scena.c` a schermo intero. Client: Chrome su Xvfb
-**sul portatile**, `bitmaprenderer`, formato **BGRX**. Rete **WiFi vera** (`wlo1`) in mezzo.
-⛔ Prestazioni **su Intel UHD 730 integrata**, non su una scheda potente.
+**Declared stage**: server `192.168.0.2:7746`, user `provab8`, headless GNOME session, virtual
+monitor **1560 × 888 @ 60 Hz**, scene `04-b30-scena.c` full screen. Client: Chrome on Xvfb
+**on the laptop**, `bitmaprenderer`, format **BGRX**. **Real WiFi** network (`wlo1`) in between.
+⛔ Performance **on an integrated Intel UHD 730**, not on a powerful card.
 
-**Tre giri indipendenti, e concordavano entro l'1 %.** *Si erano misurati ritardo ai due confini,
-distacco in px e in barre, il pezzo nostro e il ritmo dei fotogrammi visti; le misure, prese sul
-binario dalla memoria con `sws_scale`, non valgono più dopo la fase 18. Restano la rete misurata
-nello stesso giro — 2,7 · 2,8 · 2,7 ms (3,9-4,1 %) — e la mano: 3 185 · 3 178 · 3 226 px/s.*
+**Three independent rounds, and they agreed within 1 %.** *Delay at the two boundaries,
+gap in px and in bars, our piece and the rhythm of the frames seen had been measured; the measurements, taken on the
+binary from memory with `sws_scale`, are no longer valid after phase 18. What remains is the network measured
+in the same round — 2.7 · 2.8 · 2.7 ms (3.9-4.1 %) — and the hand: 3 185 · 3 178 · 3 226 px/s.*
 
-### ⭐⭐ E il termine di paragone locale, misurato — non supposto
+### ⭐⭐ And the local term of comparison, measured — not assumed
 
-`[M]` `08-b67-locale.py`, **la stessa scena, sulla stessa macchina, senza di noi**, letto dal blocco
-condiviso col seqlock verificato:
+`[M]` `08-b67-locale.py`, **the same scene, on the same machine, without us**, read from the
+shared block with the seqlock verified:
 
-| tratto | mediana | p95 |
+| segment | median | p95 |
 |---|---|---|
-| 1. la **scena** (eco ricevuto → dipinto) | 7,29 ms | 16,00 |
-| 2. il **compositore** (dipinto → **presentato**, `wp_presentation`) | 20,01 ms | 25,07 |
-| 3. ⭐⭐ **L'ANELLO LOCALE** (eco → sullo schermo) | **27,58 ms** | 32,30 |
+| 1. the **scene** (echo received → painted) | 7.29 ms | 16.00 |
+| 2. the **compositor** (painted → **presented**, `wp_presentation`) | 20.01 ms | 25.07 |
+| 3. ⭐⭐ **THE LOCAL LOOP** (echo → on screen) | **27.58 ms** | 32.30 |
 
-⇒ 📏 alla mediana dell'utente (3 400 px/s): **94 px**, cioè **0,13 barre del titolo**.
-⚠ `n = 29` su 83 chiusi (54 buttati dal setaccio): **è un primo numero con un denominatore
-piccolo**, e va rifatto più lungo.
+⇒ 📏 at the user's median (3 400 px/s): **94 px**, that is **0.13 title bars**.
+⚠ `n = 29` out of 83 closed (54 thrown away by the sieve): **it is a first number with a small
+denominator**, and it must be redone longer.
 
-### ⭐⭐ La riga che conta, e sta in una unità sola
+### ⭐⭐ The line that counts, and it is in a single unit
 
-| | barre del titolo | ms |
+| | title bars | ms |
 |---|---|---|
-| **locale** (lo stesso compositore, senza di noi) | **0,13** | 27,6 |
+| **local** (the same compositor, without us) | **0.13** | 27.6 |
 
-*(Le righe di REMOTIX — il banco e il giudizio dell'utente — sul prodotto di prima della copia zero
-sono tolte con la fase 18.)*
+*(The rows of REMOTIX — the bench and the user's judgement — on the product from before zero copy
+are removed with phase 18.)*
 
-⇒ ⭐ **La differenza col locale è quel che aggiungiamo noi** sopra al compositore: è il pezzo su cui
-questa fase può lavorare.
+⇒ ⭐ **The difference from local is what we add** on top of the compositor: it is the piece on which
+this phase can work.
 
-⚠ **E lo scarto fra il banco e l'utente NON si spiega da qui**, ed è una `[?]` aperta:
-il banco gira a **1560 px**, l'utente a **2560** — più pixel da catturare, codificare e spedire per
-ogni fotogramma — e la sua sessione ha un desktop vero addosso invece di una scena.
+⚠ **And the discrepancy between the bench and the user is NOT explained from here**, and it is an open `[?]`:
+the bench runs at **1560 px**, the user at **2560** — more pixels to capture, encode and send for
+every frame — and his session has a real desktop on it instead of a scene.
 
-### ⭐ E un fatto che nessuno cercava: **il confine comodo si regala metà del numero**
+### ⭐ And a fact nobody was looking for: **the convenient boundary gives away half of the number**
 
-`[M]` (i valori, sul binario dalla memoria, sono tolti con la fase 18). ⇒ ⛔ Chi misurasse l'anello col solo campo `input` dei 28 byte —
-cioè con `REMOTIX.giro`, che è quel che la pagina mostra all'utente in diagnostica —
-**direbbe la metà del vero**. Il numero della pagina è un limite inferiore, ed è dichiarato tale
-nel suo commento; ma ora c'è la misura di **quanto** vale quel limite.
+`[M]` (the values, on the binary from memory, are removed with phase 18). ⇒ ⛔ Whoever measured the loop with only the `input` field of the 28 bytes —
+that is with `REMOTIX.giro`, which is what the page shows the user in diagnostics —
+**would say half of the truth**. The page's number is a lower limit, and it is declared as such
+in its comment; but now there is the measurement of **how much** that limit is worth.
 
 ---
 
-## 5 · La certificazione: **13 guasti innestati su 13 accusati**
+## 5 · The certification: **13 injected faults out of 13 accused**
 
-`python3 banchi/08-b67-elastico.py --certifica` — gira sul portatile, senza rete e senza server,
-e finisce **0**. Ogni verde è messo alla prova con un guasto che **deve** far diventare rosso il
-banco:
+`python3 banchi/08-b67-elastico.py --certifica` — runs on the laptop, without network and without server,
+and ends **0**. Every green is put to the test with a fault that **must** turn the
+bench red:
 
-| | guasto innestato | preso da |
+| | injected fault | caught by |
 |---|---|---|
-| G1 | l'eco è **fermo** (la finestra non insegue) | Q4 |
-| G2 | l'eco è **illeggibile** (rumore nei pixel) | Q0, Q3 |
-| G3 | ⛔ **niente da giudicare** (zero marche) | Q0, Q3 → **uscita 3** |
-| G4 | la mano è **lenta** (300 px/s invece di 3 400) | Q1 |
-| G5 | le due marche sono di **due fotogrammi diversi** | Q2 |
-| G6 | le celle in 0-1 invece che 0-255 (il difetto del 13 agosto) | Q13 |
-| G7 | ⛔ la **rete non è misurata** in questo giro | Q9 |
-| G8 | ritardo **negativo** (fotogramma prima dell'evento) | Q0 |
-| G9 | ⛔ il server **trasforma** le coordinate (§7.3 violata) | Q0, Q5 |
-| G10 | la traiettoria **ripassa** sugli stessi pixel (accoppiamento ambiguo) | Q0, Q5 |
-| G11 | ⭐ un **buco di 300 ms** innestato nel mezzo | il rilevatore dei buchi lo trova |
-| G12 | il **costo del banco** non è misurato | Q12 |
-| G13 | si consegnano **solo i millisecondi** | Q6 |
+| G1 | the echo is **still** (the window does not chase) | Q4 |
+| G2 | the echo is **unreadable** (noise in the pixels) | Q0, Q3 |
+| G3 | ⛔ **nothing to judge** (zero marks) | Q0, Q3 → **exit 3** |
+| G4 | the hand is **slow** (300 px/s instead of 3 400) | Q1 |
+| G5 | the two marks are from **two different frames** | Q2 |
+| G6 | the cells in 0-1 instead of 0-255 (the defect of 13 Aug) | Q13 |
+| G7 | ⛔ the **network is not measured** in this round | Q9 |
+| G8 | **negative** delay (frame before the event) | Q0 |
+| G9 | ⛔ the server **transforms** the coordinates (§7.3 violated) | Q0, Q5 |
+| G10 | the trajectory **passes again** over the same pixels (ambiguous pairing) | Q0, Q5 |
+| G11 | ⭐ a **300 ms hole** injected in the middle | the hole detector finds it |
+| G12 | the **cost of the bench** is not measured | Q12 |
+| G13 | **only the milliseconds** are delivered | Q6 |
 
-### ⭐⭐ E la taratura è **doppia**, ed è il pezzo che vale di più
+### ⭐⭐ And the calibration is **double**, and it is the piece worth most
 
-Si innesta un ritardo **noto** e si pretende che salgano **tutt'e due** le unità:
+A **known** delay is injected and **both** units are required to rise:
 
-| innesto | il **tempo** sale di | atteso | il **distacco** sale di | atteso |
+| injection | the **time** rises by | expected | the **gap** rises by | expected |
 |---|---|---|---|---|
-| +30 ms | 30,0 ms | 30 | 94 px | 96 |
-| +60 ms | 60,0 ms | 60 | 164 px | 192 |
+| +30 ms | 30.0 ms | 30 | 94 px | 96 |
+| +60 ms | 60.0 ms | 60 | 164 px | 192 |
 
-⛔ **Perché conta**: se il banco ricavasse il distacco dividendo il ritardo per una costante, questa
-prova passerebbe **per costruzione**. Qui il distacco viene dai **pixel** (l'eco) e il ritardo dai
-**tempi**: le due si muovono insieme nel rapporto della velocità **solo se tutt'e due sono vere**.
+⛔ **Why it counts**: if the bench derived the gap by dividing the delay by a constant, this
+test would pass **by construction**. Here the gap comes from the **pixels** (the echo) and the delay from the
+**times**: the two move together in the ratio of the speed **only if both are true**.
 
-### ⭐ Il controllo positivo, e ha corretto **me**
+### ⭐ The positive control, and it corrected **me**
 
-Su una traccia in cui la finestra insegue la mano **senza nessun ritardo** il banco trova
-**0 px** e **4,0 ms**. ⛔ La prima stesura di Q11 pretendeva 0,0 ms e **si accusava da sola**:
-i 4 ms sono **la grana della mano** (un evento ogni 8 ms, i fotogrammi cadono in mezzo ⇒ mezzo
-passo), e nemmeno un anello perfetto potrebbe scendere sotto. ⇒ La soglia è **un passo della mano**,
-ed è scritta col perché.
+On a trace in which the window chases the hand **with no delay at all** the bench finds
+**0 px** and **4.0 ms**. ⛔ The first draft of Q11 demanded 0.0 ms and **accused itself**:
+the 4 ms are **the grain of the hand** (one event every 8 ms, the frames fall in between ⇒ half a
+step), and not even a perfect loop could go below it. ⇒ The threshold is **one step of the hand**,
+and it is written with the why.
 
-⛔ **Il controllo negativo**: 3 000 sonde di rumore attraverso il lettore certificato → **0 falsi su
+⛔ **The negative control**: 3 000 noise probes through the certified reader → **0 false out of
 3 000**.
 
 ---
 
-## 6 · ⛔ Che cosa NON ha funzionato — quattro rossi, tutti del banco
+## 6 · ⛔ What did NOT work — four reds, all the bench's
 
-⭐ **Nessuno dei quattro era del prodotto**, e tutti e quattro sono stati trovati dal banco stesso.
+⭐ **None of the four was the product's**, and all four were found by the bench itself.
 
-1. ⛔⛔ **`[M]` 0 eco su 826 — e la causa era la PANORAMICA di GNOME.**
-   Quando la sessione si apre senza finestre, GNOME mostra «Activities» e la scena ci compare dentro
-   come **miniatura ridotta e spostata**: la marca c'è nei pixel ma non è né a (0,0) né in scala
-   1:1, e ogni CRC salta. ⭐ **L'ho vista solo fotografando la tela** — un contrasto di 0,65 con
-   sync 0x00 non lo dice. ⇒ Cura: il banco **batte `Escape` sul desktop remoto** e riprova, fino a
-   tre volte; e il verde arriva solo quando la marca si legge con `scorrimento [0,0]` e
+1. ⛔⛔ **`[M]` 0 echoes out of 826 — and the cause was GNOME's OVERVIEW.**
+   When the session opens without windows, GNOME shows «Activities» and the scene appears inside it
+   as a **reduced and shifted thumbnail**: the mark is there in the pixels but it is neither at (0,0) nor at scale
+   1:1, and every CRC fails. ⭐ **I saw it only by photographing the canvas** — a contrast of 0.65 with
+   sync 0x00 does not say it. ⇒ Cure: the bench **presses `Escape` on the remote desktop** and retries, up to
+   three times; and green arrives only when the mark is read with `scorrimento [0,0]` and
    `contrasto 1,0`.
-   ⚠ **E prima ancora avevo saltato il passo dello SCORRIMENTO**, che `04-b30` documenta come
-   costato *«0 marche su 966»*. Ho ripreso lo stesso rosso pari pari credendolo un dettaglio di
-   A10: **la lezione di un altro banco vale solo se la si esegue.**
+   ⚠ **And even before that I had skipped the SHIFT step**, which `04-b30` documents as having
+   cost *«0 marks out of 966»*. I took the same red word for word believing it a detail of
+   A10: **another bench's lesson is worth something only if it is carried out.**
 
-2. ⛔ **`[M]` un picco di 531 079 px/s** — cioè una mano che non è di nessuno.
-   Il pilota consegnava **tutti** i punti scaduti nello stesso giro: quando il filo principale era
-   occupato a decodificare restava indietro e poi sparava cinque movimenti nello stesso
-   millisecondo. ⇒ Cura: **un solo movimento per giro**, i vecchi si saltano e **si contano** —
-   che è quel che fa un mouse vero quando il browser fonde gli eventi.
+2. ⛔ **`[M]` a peak of 531 079 px/s** — that is a hand that belongs to nobody.
+   The driver delivered **all** the expired points in the same round: when the main thread was
+   busy decoding it fell behind and then fired five movements in the same
+   millisecond. ⇒ Cure: **a single movement per round**, the old ones are skipped and **counted** —
+   which is what a real mouse does when the browser coalesces events.
 
-3. ⛔ **`[M]` 450 000 px/s e poi 26 132 px/s** — due gradini nella traiettoria.
-   La serpentina **ripartiva dall'alto** arrivata in fondo (un teletrasporto), e poi **scendeva a
-   scalini** di una riga intera al rimbalzo (245 px in 8 ms su uno schermo largo). ⇒ Cura: si
-   rimbalza sfasando di mezza riga, e **la discesa è continua** (una diagonale). `[M]` Verificato:
-   0 punti ripetuti su 3 125, mediana 3 500 px/s, p90 7 250, picco 13 500.
+3. ⛔ **`[M]` 450 000 px/s and then 26 132 px/s** — two steps in the trajectory.
+   The serpentine **restarted from the top** once it reached the bottom (a teleport), and then **went down in
+   steps** of a whole row at the bounce (245 px in 8 ms on a wide screen). ⇒ Cure: it
+   bounces offset by half a row, and **the descent is continuous** (a diagonal). `[M]` Verified:
+   0 repeated points out of 3 125, median 3 500 px/s, p90 7 250, peak 13 500.
 
-4. ⛔ **`[M]` l'anello locale diceva 11,71 ms mentre le sue due parti facevano 7,29 + 20,01 = 27,3**
-   — cioè un totale **più piccolo delle sue parti**, che è impossibile.
-   Il setaccio («un disegno non può precedere l'evento che lo causa») era applicato **solo al primo
-   tratto**: tre denominatori diversi sotto la stessa tabella. ⇒ Cura: un setaccio solo, applicato
-   una volta, e i buttati si contano (54 su 83). Il numero vero è **27,58 ms**.
+4. ⛔ **`[M]` the local loop said 11.71 ms while its two parts made 7.29 + 20.01 = 27.3**
+   — that is a total **smaller than its parts**, which is impossible.
+   The sieve («a drawing cannot precede the event that causes it») was applied **only to the first
+   segment**: three different denominators under the same table. ⇒ Cure: a single sieve, applied
+   once, and the discarded ones are counted (54 out of 83). The real number is **27.58 ms**.
 
-⚠ **E una cosa che non ho fatto**: il costo della lettura dei pixel è `[M]` **7,6 ms mediani per
-fotogramma** (Q12), sul **filo principale**, cioè lo stesso che decodifica e dipinge. L'ho dimezzato
-(una sola riconsegna dalla GPU invece di due) **ma non tolto**: è un errore sistematico dentro ogni
-numero di questo banco, e sta dichiarato invece che sperato piccolo.
+⚠ **And one thing I did not do**: the cost of reading the pixels is `[M]` **7.6 ms median per
+frame** (Q12), on the **main thread**, that is the same one that decodes and paints. I halved it
+(a single readback from the GPU instead of two) **but did not remove it**: it is a systematic error inside every
+number of this bench, and it is declared instead of hoped small.
 
 ---
 
-## 7 · Che cosa resta `[?]`
+## 7 · What remains `[?]`
 
 | | |
 |---|---|
-| ⏳ **lo scarto fra il banco e l'occhio dell'utente** | il banco misura **meno** elastico di quel che l'utente riferisce. Candidati: la **risoluzione** (1560 contro 2560 — più pixel per fotogramma), il **desktop vero** contro una scena sola, e la velocità a cui lui guarda. ⛔ Non è deducibile: si rifà il giro a 2560 |
-| ⏳ **i sei buchi** | `[M]` nessun buco sui tre giri (i conteggi, sul binario dalla memoria, sono tolti con la fase 18), contro i **6 in 17,5 s** dell'utente. ⛔ Il rilevatore FUNZIONA (G11 lo prova su un buco innestato), quindi *su questa scena e su questa rete i buchi non ci sono*. ⇒ Sono della sua scena, della sua risoluzione, o del suo momento di WiFi — e restano `[?]` |
-| ⏳ **la mano è SINTETICA** | i `PointerEvent` nascono dentro la pagina: ⛔ il pezzo cieco in ingresso **non c'è affatto**, e per questo non si somma. ⚠ E gli eventi non vengono **fusi** dal browser come quelli veri. La strada `--mano cdp` (eventi *fidati*, consegnati da Chrome) è prevista e **non è ancora stata girata** |
-| ⏳ **l'anello locale ha n = 29** | il numero c'è, il denominatore è piccolo: va rifatto su un giro lungo |
-| ⏳ **il ritmo è 30/s, non 60** | `[M]` circa la metà dei fotogrammi che la scena disegna (i valori, sul binario dalla memoria, sono tolti con la fase 18). ⇒ **metà si perdono per strada**, e questo banco lo *vede* ma non lo *spiega* |
-| ⏳ **la taratura sul FERRO** | Q7/Q8 girano sul sintetico. Il ponte di A10 (`04-b30-ponte.py`) sa innestare un ritardo noto sul filo vero, e il terreno lo prevede: **non è stato girato** |
-| `[?]` **il codificatore e la sua scheda** | il banco **non** verifica che la codifica sia in hardware. `provab8` è nel gruppo `render` (verificato), ma «ha aperto un render node» non prova niente (`LEZIONI.md` §1.11) |
-| ⏳⏳ **il mio numero contro quello dell'agente A** *(valori tolti, fase 18)* | ⛔ **I due numeri vanno riconciliati prima che uno dei due entri in un documento come «l'anello».** Non si sommano e non si sottraggono finché non è scritto, per ciascuno, *quale confine* e *quale scena*: il mio chiude al **disegno finito** su una scena di prova a **1560 px**, e la sua mano è **sintetica**. ⚠ Finché la riconciliazione non c'è, il mio numero vale come **misura dell'elastico su questa scena**, non come «l'anello di REMOTIX» |
+| ⏳ **the discrepancy between the bench and the user's eye** | the bench measures **less** rubber band than the user reports. Candidates: the **resolution** (1560 against 2560 — more pixels per frame), the **real desktop** against a single scene, and the speed at which he looks. ⛔ It cannot be deduced: the round is redone at 2560 |
+| ⏳ **the six holes** | `[M]` no hole over the three rounds (the counts, on the binary from memory, are removed with phase 18), against the user's **6 in 17.5 s**. ⛔ The detector WORKS (G11 proves it on an injected hole), so *on this scene and on this network the holes are not there*. ⇒ They belong to his scene, his resolution, or his WiFi moment — and they remain `[?]` |
+| ⏳ **the hand is SYNTHETIC** | the `PointerEvent`s are born inside the page: ⛔ the blind piece on input **is not there at all**, and that is why it is not added. ⚠ And the events are not **coalesced** by the browser like real ones. The `--mano cdp` road (*trusted* events, delivered by Chrome) is planned and **has not yet been run** |
+| ⏳ **the local loop has n = 29** | the number is there, the denominator is small: it must be redone on a long round |
+| ⏳ **the rhythm is 30/s, not 60** | `[M]` about half of the frames the scene draws (the values, on the binary from memory, are removed with phase 18). ⇒ **half get lost along the way**, and this bench *sees* it but does not *explain* it |
+| ⏳ **the calibration on the IRON** | Q7/Q8 run on the synthetic. A10's bridge (`04-b30-ponte.py`) can inject a known delay on the real wire, and the ground provides for it: **it has not been run** |
+| `[?]` **the encoder and its card** | the bench does **not** verify that encoding is in hardware. `provab8` is in the `render` group (verified), but «it opened a render node» proves nothing (`LEZIONI.md` §1.11) |
+| ⏳⏳ **my number against agent A's** *(values removed, phase 18)* | ⛔ **The two numbers must be reconciled before either goes into a document as «the loop».** They are neither added nor subtracted until it is written, for each, *which boundary* and *which scene*: mine closes at the **finished drawing** on a test scene at **1560 px**, and its hand is **synthetic**. ⚠ Until the reconciliation exists, my number counts as a **measurement of the rubber band on this scene**, not as «the REMOTIX loop» |
 
 ---
 
-## 8 · Come si rigira
+## 8 · How to rerun it
 
 ```bash
-bash banchi/08-b67-lancia.sh certifica          # qui, senza server: 13 guasti su 13
-bash banchi/08-b67-lancia.sh porta costruisci   # albero e contenitore
+bash banchi/08-b67-lancia.sh certifica          # here, without a server: 13 faults out of 13
+bash banchi/08-b67-lancia.sh porta costruisci   # tree and container
 bash banchi/08-b67-lancia.sh scena-costruisci
 bash banchi/08-b67-lancia.sh terreno accendi
-bash banchi/08-b67-lancia.sh aggancia           # il monitor virtuale nasce col figlio
+bash banchi/08-b67-lancia.sh aggancia           # the virtual monitor is born with the child
 bash banchi/08-b67-lancia.sh scena-avvia
 bash banchi/08-b67-lancia.sh misura 25
 ```
 
-⚠ **Il server sulla 7746 e la scena sono rimasti ACCESI**, così il coordinatore può rigirare senza
-rimontare il terreno. Si spengono con `bash banchi/08-b67-lancia.sh spegni` — ⛔ che tocca **solo**
-le mie cose.
+⚠ **The server on 7746 and the scene were left RUNNING**, so the coordinator can rerun without
+remounting the ground. They are switched off with `bash banchi/08-b67-lancia.sh spegni` — ⛔ which touches **only**
+my things.
 
 
 ---
 
-## 4-D · ⭐⭐ AGENTE D — `EncSliceLP` e il peso delle chiavi · **rientrato il 22 agosto 2026**
+## 4-D · ⭐⭐ AGENT D — `EncSliceLP` and the weight of keyframes · **back on 22 Aug 2026**
 
-*Due `[?]` che stavano nei documenti da settimane, chiuse tutte e due con la misura. ⛔ E due
-difetti veri trovati in `codificatore.c`, girati al suo proprietario invece che curati di nascosto.*
+*Two `[?]` that had been in the documents for weeks, both closed with measurement. ⛔ And two
+real defects found in `codificatore.c`, passed to its owner instead of being cured on the sly.*
 
-*Misurato il 22 agosto 2026 sulla macchina di prova (`192.168.0.2`), dentro il contenitore
-(`enter.sh`). Ferro: **Intel UHD 730 integrata** — `/dev/dri/renderD128`, driver **iHD 25.2.3**,
-VA-API 1.22 — e, come solo controllo, la **Radeon RX 6800** su `renderD129` (Mesa 25.0.7,
+*Measured on 22 Aug 2026 on the test machine (`192.168.0.2`), inside the container
+(`enter.sh`). Iron: **integrated Intel UHD 730** — `/dev/dri/renderD128`, driver **iHD 25.2.3**,
+VA-API 1.22 — and, only as a control, the **Radeon RX 6800** on `renderD129` (Mesa 25.0.7,
 radeonsi navi21). ffmpeg 7.1.5, libavcodec 61.19.101.
-⛔ Nessuno dei due server dell'utente (7730, 7731) è stato toccato: questi banchi non aprono
-nessuna porta, sono codifiche fuori linea.*
+⛔ Neither of the user's two servers (7730, 7731) was touched: these benches open
+no port, they are offline encodings.*
 
 ---
 
-## D.1 · ⛔ `EncSliceLP` **NON** sa produrre i sotto-livelli temporali
+## D.1 · ⛔ `EncSliceLP` can **NOT** produce temporal sub-layers
 
-⭐ **La risposta è NO, ed è misurata a tre porte diverse — che si chiudono tutte.**
+⭐ **The answer is NO, and it is measured at three different doors — which all close.**
 
-`RCP.md` §5.2 diceva: *«se `EncSliceLP` dell'Intel li sappia produrre non lo sa nessuno, ed è una
-misura della fase 8»*. Adesso lo si sa.
+`RCP.md` §5.2 said: *«whether Intel's `EncSliceLP` can produce them nobody knows, and it is a
+phase 8 measurement»*. Now it is known.
 
-### D.1.1 La prima porta: il driver **non li dichiara** — e i due controlli positivi lo inchiodano
+### D.1.1 The first door: the driver **does not declare them** — and the two positive controls nail it down
 
-`[M]` `vaGetConfigAttributes` su `renderD128`, attributo `VAConfigAttribEncRateControlExt` (è quello
-che porta `max_num_temporal_layers_minus1`), banco `banchi/08-D1-attributi-va.c`:
+`[M]` `vaGetConfigAttributes` on `renderD128`, attribute `VAConfigAttribEncRateControlExt` (it is the one
+that carries `max_num_temporal_layers_minus1`), bench `banchi/08-D1-attributi-va.c`:
 
-| profilo, entrypoint | nodo | `EncRateControlExt` | sotto-livelli |
+| profile, entrypoint | node | `EncRateControlExt` | sub-layers |
 |---|---|---|---|
-| H264 ConstrainedBaseline · Main · High, **`EncSliceLP`** | Intel | ⛔ **NON SUPPORTATO** | — |
-| HEVC Main · Main10 · Main444 · Main444_10, **`EncSliceLP`** | Intel | ⛔ **NON SUPPORTATO** | — |
+| H264 ConstrainedBaseline · Main · High, **`EncSliceLP`** | Intel | ⛔ **NOT SUPPORTED** | — |
+| HEVC Main · Main10 · Main444 · Main444_10, **`EncSliceLP`** | Intel | ⛔ **NOT SUPPORTED** | — |
 | ⭐ **VP9** Profile0/1/2/3, **`EncSliceLP`** | Intel | `0x00000107` | **8** |
-| ⭐ H264 ×3 e HEVC Main/Main10, `EncSlice` | AMD | `0x00000103` | **4** |
+| ⭐ H264 ×3 and HEVC Main/Main10, `EncSlice` | AMD | `0x00000103` | **4** |
 
-⛔ **7 profili su 7** dicono no sul percorso che ci riguarda. ⭐ **E i due controlli positivi sono
-la parte che vale**:
+⛔ **7 profiles out of 7** say no on the path that concerns us. ⭐ **And the two positive controls are
+the part that counts**:
 
-- **stesso nodo, stesso driver, stesso entrypoint `EncSliceLP`**: su VP9 i sotto-livelli ci sono, e
-  sono otto ⇒ il «no» **non è del percorso a bassa potenza in quanto tale**, ed è del binomio
+- **same node, same driver, same `EncSliceLP` entrypoint**: on VP9 the sub-layers are there, and
+  there are eight ⇒ the «no» **does not belong to the low-power path as such**, it belongs to the pair
   (codec, entrypoint);
-- **stessa libva, stesso banco, altro nodo**: su AMD `EncSlice` ci sono per H.264 *e* per HEVC ⇒ il
-  «no» **non è del codec in astratto**, e **non è della mia sonda**.
+- **same libva, same bench, other node**: on AMD `EncSlice` they are there for H.264 *and* for HEVC ⇒ the
+  «no» **does not belong to the codec in the abstract**, and **it does not belong to my probe**.
 
-⚠ Questa è la porta che si legge nel driver, e da sola non basterebbe: il mandato chiedeva una
-misura, non la documentazione. Le altre due sono nei byte.
+⚠ This is the door read in the driver, and alone it would not be enough: the mandate asked for a
+measurement, not documentation. The other two are in the bytes.
 
-### D.1.2 La seconda porta: **nei byte che escono non c'è nessun sotto-livello**
+### D.1.2 The second door: **in the bytes that come out there is no sub-layer**
 
-`[M]` `banchi/08-D1-struttura.py` e `08-D1-costo.py`. Sei configurazioni su `EncSliceLP`
-(`-bf` 0, 1, 2/d1, 2/d2, 4/d1, 4/d3), 120 fotogrammi della **scena vera dell'utente** ciascuna,
-QP 26 come il prodotto. Si legge `nuh_temporal_id_plus1` in **ogni** intestazione NAL e
-`sps_max_sub_layers_minus1` nell'SPS:
+`[M]` `banchi/08-D1-struttura.py` and `08-D1-costo.py`. Six configurations on `EncSliceLP`
+(`-bf` 0, 1, 2/d1, 2/d2, 4/d1, 4/d3), 120 frames of the **user's real scene** each,
+QP 26 like the product. `nuh_temporal_id_plus1` is read in **every** NAL header and
+`sps_max_sub_layers_minus1` in the SPS:
 
-⇒ ⛔ **6 celle su 6: `sps_max_sub_layers = 1`, e il 100 % dei NAL VCL porta `temporal_id = 0`.**
-E la stessa cosa sul controllo AMD `EncSlice` (1 cella su 1): **ffmpeg non li produce nemmeno dove
-l'hardware li dichiara**, perché nell'elenco completo delle opzioni di `hevc_vaapi` e `h264_vaapi`
-**non esiste nessuna opzione per chiederli** `[R]` (c'è `b_depth`, e basta).
+⇒ ⛔ **6 cells out of 6: `sps_max_sub_layers = 1`, and 100 % of the VCL NALs carry `temporal_id = 0`.**
+And the same on the AMD `EncSlice` control (1 cell out of 1): **ffmpeg does not produce them even where
+the hardware declares them**, because in the complete list of options of `hevc_vaapi` and `h264_vaapi`
+**there is no option to ask for them** `[R]` (there is `b_depth`, and that is all).
 
-⇒ ⛔ **Le porte chiuse sono due e indipendenti**: il chip non li dichiara, e la nostra unica strada
-verso il chip non saprebbe chiederli comunque.
+⇒ ⛔ **The closed doors are two and independent**: the chip does not declare them, and our only road
+to the chip would not be able to ask for them anyway.
 
-### D.1.3 ⭐⭐ La terza porta: **prova a smentirti** — il lettore, e il guasto innestato
+### D.1.3 ⭐⭐ The third door: **try to disprove yourself** — the reader, and the injected fault
 
-⛔ *«Non ho visto sotto-livelli»* può voler dire *«il mio lettore è rotto»*. Due testimoni,
+⛔ *«I saw no sub-layers»* can mean *«my reader is broken»*. Two witnesses,
 `banchi/08-D1-testimone.py`:
 
-| testimone | `[M]` |
+| witness | `[M]` |
 |---|---|
-| **`libx265` con `temporal-layers=2:bframes=8`**, 48 fotogrammi | `temporal_id` **{0: 25, 1: 23}**, `sps_max_sub_layers = **2**` ⇒ ⭐ **il lettore li vede quando ci sono** |
-| **i bit alzati a mano** su un nostro flusso (59 intestazioni portate a `nuh_temporal_id_plus1 = 2`) | il lettore ne conta **59 su 59**, esatte |
+| **`libx265` with `temporal-layers=2:bframes=8`**, 48 frames | `temporal_id` **{0: 25, 1: 23}**, `sps_max_sub_layers = **2**` ⇒ ⭐ **the reader sees them when they are there** |
+| **the bits raised by hand** on one of our flows (59 headers brought to `nuh_temporal_id_plus1 = 2`) | the reader counts **59 out of 59**, exactly |
 
-⭐ **E `LEZIONI.md` §1.8 si è presentata da sola, dalla parte buona**: chiesto
-`temporal-layers=**1**`, x265 **rifiuta a voce alta** — *«No support for temporal sublayers less
-than 2; Disabling temporal layers»* — e produce `temporal_id` tutti a zero. ⇒ Al primo giro il mio
-controllo positivo **è fallito**, e per un giro la misura è rimasta senza testimone (§«che cosa non
-ha funzionato», punto 4). Un banco che avesse guardato solo il codice di uscita avrebbe scritto
-«x265 non li fa» ed è **falso**.
+⭐ **And `LEZIONI.md` §1.8 showed up by itself, on the good side**: asked for
+`temporal-layers=**1**`, x265 **refuses out loud** — *«No support for temporal sublayers less
+than 2; Disabling temporal layers»* — and produces `temporal_id` all at zero. ⇒ At the first round my
+positive control **failed**, and for one round the measurement stayed without a witness (§«what did not
+work», point 4). A bench that had looked only at the exit code would have written
+«x265 does not do them» and it is **false**.
 
-⇒ ⛔ **Lo zero su `EncSliceLP` è del codificatore, non del banco.**
+⇒ ⛔ **The zero on `EncSliceLP` belongs to the encoder, not to the bench.**
 
-### D.1.4 ⭐ Però una **parte** di quel che i sotto-livelli servivano a fare si ottiene già oggi
+### D.1.4 ⭐ But **part** of what the sub-layers were meant to do is already obtained today
 
-I sotto-livelli servivano a *«buttare certi fotogrammi senza rompere niente»*. **Quel risultato lì
-`EncSliceLP` lo dà**, per un'altra strada: le **figure non di riferimento** — in HEVC i NAL di tipo
-`TRAIL_N` — che compaiono appena si chiede `-bf ≥ 1` (nel prodotto è `c->ctx->max_b_frames`,
-`codificatore.c` ⚠ *(il codice citato non c'e' piu': da rileggere)*, oggi **0**).
+The sub-layers were meant to *«drop certain frames without breaking anything»*. **That result
+`EncSliceLP` does give**, by another road: the **non-reference pictures** — in HEVC the NALs of type
+`TRAIL_N` — which appear as soon as one asks for `-bf ≥ 1` (in the product it is `c->ctx->max_b_frames`,
+`codificatore.c` ⚠ *(the cited code is no longer there: to be reread)*, today **0**).
 
-`[M]` `banchi/08-D1-costo.py`, sorgente **grezza NV12 a cadenza fissa**, 120 fotogrammi
-2560×1080 della scena dell'utente, `hevc_vaapi` `EncSliceLP` QP 26 (`entrypoint` **confessato da
-libavcodec**, non dedotto):
+`[M]` `banchi/08-D1-costo.py`, **raw NV12 source at fixed cadence**, 120 frames
+2560×1080 of the user's scene, `hevc_vaapi` `EncSliceLP` QP 26 (`entrypoint` **confessed by
+libavcodec**, not deduced):
 
-| cella | byte (120 fot.) | buttabili | **ritardo di riordino** | PSNR | SSIM | buttandole |
+| cell | bytes (120 fr.) | droppable | **reordering delay** | PSNR | SSIM | dropping them |
 |---|---|---|---|---|---|---|
-| `-bf 0` — **il prodotto oggi** | 89 457 | **0**/120 | **0 ms** | 52,973 | 0,998174 | — |
-| `-bf 1` | 75 119 | 59/120 | **67 ms (2 fot.)** | 52,908 | 0,998155 | PULITA, −12 % byte |
-| `-bf 2 -b_depth 1` | 66 445 | 79/120 | 100 ms (3 fot.) | 52,852 | 0,998135 | PULITA, −21 % |
-| `-bf 2 -b_depth 2` | 66 683 | 39/120 | 133 ms (4 fot.) | 52,853 | 0,998135 | PULITA, −10 % |
-| `-bf 4 -b_depth 1` | 66 255 | 95/120 | 167 ms (5 fot.) | 52,796 | 0,998110 | PULITA, −36 % |
-| `-bf 4 -b_depth 3` | 62 055 | 23/120 | 234 ms (7 fot.) | 52,797 | 0,998109 | PULITA, −7 % |
+| `-bf 0` — **the product today** | 89 457 | **0**/120 | **0 ms** | 52.973 | 0.998174 | — |
+| `-bf 1` | 75 119 | 59/120 | **67 ms (2 fr.)** | 52.908 | 0.998155 | CLEAN, −12 % bytes |
+| `-bf 2 -b_depth 1` | 66 445 | 79/120 | 100 ms (3 fr.) | 52.852 | 0.998135 | CLEAN, −21 % |
+| `-bf 2 -b_depth 2` | 66 683 | 39/120 | 133 ms (4 fr.) | 52.853 | 0.998135 | CLEAN, −10 % |
+| `-bf 4 -b_depth 1` | 66 255 | 95/120 | 167 ms (5 fr.) | 52.796 | 0.998110 | CLEAN, −36 % |
+| `-bf 4 -b_depth 3` | 62 055 | 23/120 | 234 ms (7 fr.) | 52.797 | 0.998109 | CLEAN, −7 % |
 
-**Come si chiedono**: `-bf N` (in C: `ctx->max_b_frames = N`), niente altro. `-b_depth` sposta
-**quante** figure sono buttabili, non **se** lo sono.
+**How they are requested**: `-bf N` (in C: `ctx->max_b_frames = N`), nothing else. `-b_depth` moves
+**how many** pictures are droppable, not **whether** they are.
 
-**Che cosa costano in qualità**: `[M]` **niente di misurabile** — da `-bf 0` a `-bf 1` il PSNR
-scende di **0,065 dB** e lo SSIM di **0,00002**.
-**Che cosa costano in banda**: `[M]` **la fanno risparmiare**: −16 % a `-bf 1`, fino a −31 %.
-⛔ **Che cosa costano davvero**: **il riordino**. Già `-bf 1` mette **due fotogrammi** fra la
-cattura e l'uscita — `[M]` **67 ms** a 30/s — cioè **da solo sfonda i 50 ms** che `DECISIONI.md`
-§2.4 dà a **tutto** il pezzo nostro.
+**What they cost in quality**: `[M]` **nothing measurable** — from `-bf 0` to `-bf 1` the PSNR
+drops by **0.065 dB** and the SSIM by **0.00002**.
+**What they cost in bandwidth**: `[M]` **they save it**: −16 % at `-bf 1`, up to −31 %.
+⛔ **What they really cost**: **reordering**. Already `-bf 1` puts **two frames** between
+capture and output — `[M]` **67 ms** at 30/s — that is **on its own it breaks the 50 ms** that `DECISIONI.md`
+§2.4 gives to **all** of our piece.
 
-⇒ ⛔ **Su questo ferro non esiste un modo a ritardo zero di avere fotogrammi buttabili.**
-⇒ ⭐ **La riga di `RCP.md` §5.2 — «ogni abbandono costa una chiave» — resta in vigore, e adesso ha
-una misura sotto invece di una `[?]`.**
+⇒ ⛔ **On this iron there is no zero-delay way to have droppable frames.**
+⇒ ⭐ **The line of `RCP.md` §5.2 — «every abandonment costs a keyframe» — stays in force, and now it has
+a measurement under it instead of a `[?]`.**
 
-⚠ *E il prodotto è già protetto se qualcuno provasse a toccare quel numero*: `codificatore.c` · `comprimi_comune()`
-guarda `dts ≠ pts` e **scrive nel registro** che il codificatore riordina. La riga
-`max_b_frames = 0` è giusta com'è: ⛔ **non si tocca.**
+⚠ *And the product is already protected should anyone try to touch that number*: `codificatore.c` · `comprimi_comune()`
+looks at `dts ≠ pts` and **writes in the log** that the encoder reorders. The line
+`max_b_frames = 0` is right as it is: ⛔ **it is not touched.**
 
-### D.1.5 ⭐⭐ E il verde più importante di D.1 è stato **smentito su richiesta**
+### D.1.5 ⭐⭐ And the most important green of D.1 was **disproved on request**
 
-⛔ *«Il flusso tagliato decodifica senza errori»* **non prova niente**, e §5.2 lo dice testualmente:
-a un delta mancante il decodificatore **non solleva nessun errore**. ⇒ La prova sono i **pixel**.
-`banchi/08-D1-smentita.py`, flusso `-bf 1`, 120 fotogrammi, impronta SHA-256 di **ogni** immagine
-decodificata, confrontata con le immagini del flusso **intero**:
+⛔ *«The cut flow decodes without errors»* **proves nothing**, and §5.2 says so literally:
+at a missing delta the decoder **raises no error**. ⇒ The proof is the **pixels**.
+`banchi/08-D1-smentita.py`, flow `-bf 1`, 120 frames, SHA-256 fingerprint of **every** decoded
+image, compared with the images of the **whole** flow:
 
-| | figure tolte | immagini | errori del decodificatore | **identiche al flusso intero** |
+| | pictures removed | images | decoder errors | **identical to the whole flow** |
 |---|---|---|---|---|
-| **il verde**: buttate tutte le `TRAIL_N` | 59 | 61 | nessuno | ⭐ **61/61 — 100,0 %** |
-| ⭐ **guasto innestato**: buttata **1 `TRAIL_R` su 10** | 6 | 114 | *«Could not find ref with POC 20»* | ⛔ **19/114 — 16,7 %** |
-| ⭐ **guasto pesante**: buttate **tutte** le `TRAIL_R` | 60 | 60 | *«Could not find ref with POC 2»* | ⛔ **1/60 — 1,7 %** |
+| **the green**: all `TRAIL_N` dropped | 59 | 61 | none | ⭐ **61/61 — 100.0 %** |
+| ⭐ **injected fault**: dropped **1 `TRAIL_R` in 10** | 6 | 114 | *«Could not find ref with POC 20»* | ⛔ **19/114 — 16.7 %** |
+| ⭐ **heavy fault**: dropped **all** `TRAIL_R` | 60 | 60 | *«Could not find ref with POC 2»* | ⛔ **1/60 — 1.7 %** |
 
-⇒ Il verde **diventa rosso** quando si butta la cosa sbagliata, e di quanto: **100 % → 16,7 %**
-togliendo **sei** figure su 120. Il banco distingue.
+⇒ The green **turns red** when the wrong thing is dropped, and by how much: **100 % → 16.7 %**
+removing **six** pictures out of 120. The bench distinguishes.
 
 ---
 
-## D.2 · Quanto pesa una chiave, contro il tetto dei 16 MiB
+## D.2 · How much a keyframe weighs, against the 16 MiB ceiling
 
-**Il tetto è 16 777 216 byte** (`RCP.md` §6.2). Metodo: **ogni** fotogramma è una chiave (`-g 1`,
-`idr_interval 0`), e si misura l'**accesso intero** — VPS+SPS+PPS+SEI+IDR — cioè quel che il
-protocollo mette in un chunk `key`, non il solo slice. Regime del prodotto: `EncSliceLP`,
-`rc_mode=CQP`, **QP 26** (`figlio.c` · `QP_HARDWARE`). ⛔ Le misure del ripiego in software (`libx264`/`libx265`) sono tolte: non valgono più dopo la fase 18.
+**The ceiling is 16 777 216 bytes** (`RCP.md` §6.2). Method: **every** frame is a keyframe (`-g 1`,
+`idr_interval 0`), and the **whole access unit** is measured — VPS+SPS+PPS+SEI+IDR — that is what the
+protocol puts in a `key` chunk, not the slice alone. Product regime: `EncSliceLP`,
+`rc_mode=CQP`, **QP 26** (`figlio.c` · `QP_HARDWARE`). ⛔ The measurements of the software fallback (`libx264`/`libx265`) are removed: they are no longer valid after phase 18.
 
-⛔ **I 10 bit qui sono OTTO PROMOSSI, e si dichiara**: `DECISIONI.md` §2.3-ter ha misurato che dalla
-cattura di Mutter i 10 bit veri non escono per nessuna strada. Le righe `main10` qui sotto misurano
-l'**etichetta**, non il contenuto — e infatti `[M]` a 8K costano **meno** di `main` (250 355 contro
-251 288 byte): la profondità dichiarata non porta informazione che non ci sia.
+⛔ **The 10 bits here are EIGHT PROMOTED, and it is declared**: `DECISIONI.md` §2.3-ter measured that from
+Mutter's capture real 10 bits do not come out by any road. The `main10` rows below measure
+the **label**, not the content — and indeed `[M]` at 8K they cost **less** than `main` (250 355 against
+251 288 bytes): the declared depth carries no information that is not there.
 
-### D.2.1 ⭐ Alla tela dell'utente il tetto **non si può sfondare**
+### D.2.1 ⭐ At the user's canvas the ceiling **cannot be broken**
 
-`[M]` `banchi/08-D2-misure.py`, il video vero girato dall'utente il 22 agosto (2560×1080, 404
-fotogrammi), **ogni fotogramma una chiave**:
+`[M]` `banchi/08-D2-misure.py`, the real video shot by the user on 22 Aug (2560×1080, 404
+frames), **every frame a keyframe**:
 
-| | n | min | **mediana** | p90 | **massimo** | quota del tetto |
+| | n | min | **median** | p90 | **maximum** | share of the ceiling |
 |---|---|---|---|---|---|---|
-| `hevc_vaapi` `EncSliceLP` QP 26 | **404** | 20 328 | **20 817** | 21 070 | **21 433 byte** | **0,13 %** |
-| `h264_vaapi` `EncSliceLP` QP 26 | **404** | 24 160 | **24 956** | 25 282 | **25 621 byte** | **0,15 %** |
+| `hevc_vaapi` `EncSliceLP` QP 26 | **404** | 20 328 | **20 817** | 21 070 | **21 433 bytes** | **0.13 %** |
+| `h264_vaapi` `EncSliceLP` QP 26 | **404** | 24 160 | **24 956** | 25 282 | **25 621 bytes** | **0.15 %** |
 
-⇒ ⭐ **Il margine è 782×.** E il tetto lì non si raggiunge **nemmeno di proposito**
-(`banchi/08-D2-scala.py`, n=8 per riga, sorgente grezza, codificatore isolato):
+⇒ ⭐ **The margin is 782×.** And the ceiling is not reached there **even on purpose**
+(`banchi/08-D2-scala.py`, n=8 per row, raw source, isolated encoder):
 
-| scena, 2560×1080 | massimo | quota |
+| scene, 2560×1080 | maximum | share |
 |---|---|---|
-| il desktop vero | 20 259 byte | 0,1 % |
-| il desktop + **grana forte** (`noise=alls=30`) | 758 513 byte | 4,5 % |
-| ⛔ **rumore uniforme** — il caso peggiore che esista | **2 529 464 byte (2,412 MiB)** | **15,1 %** |
+| the real desktop | 20 259 bytes | 0.1 % |
+| the desktop + **strong grain** (`noise=alls=30`) | 758 513 bytes | 4.5 % |
+| ⛔ **uniform noise** — the worst case there is | **2 529 464 bytes (2.412 MiB)** | **15.1 %** |
 
-⇒ ⛔⭐ **Alla tela di 2560×1080 il difetto di forma di §6.2 è irraggiungibile**: perfino il rumore
-puro sta **6,6 volte** sotto.
+⇒ ⛔⭐ **At the 2560×1080 canvas the shape defect of §6.2 is unreachable**: even pure noise
+stays **6.6 times** below.
 
-### D.2.2 ⛔ A 7680×4320 il tetto **si sfonda davvero**
+### D.2.2 ⛔ At 7680×4320 the ceiling **really is broken**
 
-La scena 8K non si inventa e non si ingrandisce: ⛔ **ingrandire cancella il dettaglio e
-sottostima**. Si prende il desktop vero e lo si **affianca 3×4** — dodici immagini diverse — così la
-densità di dettaglio per pixel resta quella vera. `[M]` `banchi/08-D2-misure.py` e `08-D2-scala.py`,
+The 8K scene is not invented and not enlarged: ⛔ **enlarging deletes detail and
+underestimates**. One takes the real desktop and **tiles it 3×4** — twelve different images — so that the
+density of detail per pixel stays the real one. `[M]` `banchi/08-D2-misure.py` and `08-D2-scala.py`,
 `hevc_vaapi` `EncSliceLP` QP 26:
 
-| scena, 7680×4320 | n | massimo | quota del tetto |
+| scene, 7680×4320 | n | maximum | share of the ceiling |
 |---|---|---|---|
-| ⚠ *il desktop **ingrandito** invece che affiancato — il caso comodo* | 6 | *76 520 byte* | *0,5 %* |
-| **il desktop affiancato** (dettaglio nativo) | 33 (27 distinte) | **251 288 byte (0,240 MiB)** | **1,5 %** |
-| lo stesso, etichetta `main10` (8 bit promossi) | 33 | 250 355 byte | 1,5 % |
-| il desktop + grana `alls=10` | 8 | 660 939 byte | 3,9 % |
-| il desktop + grana `alls=30` | 8 | 9 136 749 byte (8,713 MiB) | **54,5 %** |
-| il desktop + grana `alls=60` | 8 | 15 926 065 byte (15,188 MiB) | ⚠ **94,9 %** |
-| ⛔ **rumore uniforme** | 8 | **30 319 727 byte (28,915 MiB)** | ⛔ **180,7 % — sfonda 8/8** |
+| ⚠ *the desktop **enlarged** instead of tiled — the convenient case* | 6 | *76 520 bytes* | *0.5 %* |
+| **the tiled desktop** (native detail) | 33 (27 distinct) | **251 288 bytes (0.240 MiB)** | **1.5 %** |
+| the same, label `main10` (8 bits promoted) | 33 | 250 355 bytes | 1.5 % |
+| the desktop + grain `alls=10` | 8 | 660 939 bytes | 3.9 % |
+| the desktop + grain `alls=30` | 8 | 9 136 749 bytes (8.713 MiB) | **54.5 %** |
+| the desktop + grain `alls=60` | 8 | 15 926 065 bytes (15.188 MiB) | ⚠ **94.9 %** |
+| ⛔ **uniform noise** | 8 | **30 319 727 bytes (28.915 MiB)** | ⛔ **180.7 % — breaks through 8/8** |
 
-⚠ **E l'ingrandimento sottostima di 3,3 volte**: è la ragione per cui il mosaico esiste.
+⚠ **And enlarging underestimates by 3.3 times**: it is the reason the mosaic exists.
 
-⇒ ⛔ **Risposta alla `[?]` di `RCP.md` §6.2: sì, il tetto si sfonda**, alla misura massima che §4.5
-dichiara legale, con contenuto quasi incomprimibile. **Ma con un desktop vero, no** — nemmeno a 8K,
-dove sta al **1,5 %**.
+⇒ ⛔ **Answer to the `[?]` of `RCP.md` §6.2: yes, the ceiling is broken**, at the maximum size §4.5
+declares legal, with almost incompressible content. **But with a real desktop, no** — not even at 8K,
+where it stays at **1.5 %**.
 
-### D.2.3 ⛔ Oltre i 4096 px l'H.264 in hardware non c'è — e si scende in software
+### D.2.3 ⛔ Beyond 4096 px H.264 in hardware is not there — and one drops to software
 
-⛔ **`h264_vaapi` su questo chip si ferma a 4096 px per lato** — `[M]` *«Hardware does not support
-encoding at size 4112x2160 (constraints: width 32-4096 height 32-4096)»*, mentre 4096×2160 passa
-(41 566 byte, n=10). ⇒ **Oltre i 4096 px l'H.264 in hardware NON C'È**, e la tela legale arriva a
-7680: là si scende sul ripiego in software. `[M]` `hevc_vaapi` invece regge 7680×4320, 8192×4320 e
-perfino 16384×4320 (6 chiavi su 6 ciascuno).
+⛔ **`h264_vaapi` on this chip stops at 4096 px per side** — `[M]` *«Hardware does not support
+encoding at size 4112x2160 (constraints: width 32-4096 height 32-4096)»*, while 4096×2160 passes
+(41 566 bytes, n=10). ⇒ **Beyond 4096 px H.264 in hardware IS NOT THERE**, and the legal canvas goes up to
+7680: there one drops to the software fallback. `[M]` `hevc_vaapi` instead holds 7680×4320, 8192×4320 and
+even 16384×4320 (6 keyframes out of 6 each).
 
-⛔ Si era misurato che il ripiego in software (`libx264`) **sfondava il tetto prima** dell'hardware, con
-un filmato granuloso a schermo intero su tela 8K; ⚠ **la misura non vale più dopo la fase 18** (il
-ripiego è cambiato) ed è tolta.
+⛔ It had been measured that the software fallback (`libx264`) **broke the ceiling earlier** than the hardware, with
+a grainy full-screen clip on an 8K canvas; ⚠ **the measurement is no longer valid after phase 18** (the
+fallback has changed) and it is removed.
 
-### D.2.4 ⛔⛔ E qui c'è il difetto vero: **la scala delle ricodifiche è corta di UNO scalino**
+### D.2.4 ⛔⛔ And here is the real defect: **the re-encode ladder is ONE rung short**
 
 `[R]` `codificatore.c` · `RICODIFICHE_MASSIME` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
-La scala è dunque **QP 26 → 32 → 38** (hardware; in software lo stesso con CRF), e dopo il terzo
-tentativo `:2203` **restituisce `false`: il fotogramma NON parte.**
+The ladder is therefore **QP 26 → 32 → 38** (hardware; in software the same with CRF), and after the third
+attempt `:2203` **returns `false`: the frame does NOT leave.**
 
-`[M]` sul caso che sfonda, 7680×4320, n=8 per riga:
+`[M]` on the case that breaks through, 7680×4320, n=8 per row:
 
-| tentativo | hardware `hevc_vaapi` LP | esito |
+| attempt | hardware `hevc_vaapi` LP | outcome |
 |---|---|---|
-| 0 | QP 26 → 28,915 MiB | ⛔ sopra 8/8 |
-| 1 | QP 32 → 22,442 MiB | ⛔ sopra 8/8 |
-| 2 | QP 38 → **16,654 MiB** | ⛔ **sopra 8/8** |
-| **3 — che non c'è** | *QP 44 → 11,056 MiB* | *0/8, ce l'avrebbe fatta* |
+| 0 | QP 26 → 28.915 MiB | ⛔ above 8/8 |
+| 1 | QP 32 → 22.442 MiB | ⛔ above 8/8 |
+| 2 | QP 38 → **16.654 MiB** | ⛔ **above 8/8** |
+| **3 — which is not there** | *QP 44 → 11.056 MiB* | *0/8, it would have made it* |
 
-*(Le colonne del software, `libx264`, sono tolte: non valgono più dopo la fase 18. Allora davano lo
-stesso verdetto.)*
+*(The software columns, `libx264`, are removed: they are no longer valid after phase 18. At the time they gave the
+same verdict.)*
 
-⇒ ⛔⛔ **Manca uno scalino solo**, su tutt'e due i percorsi, e il tentativo che manca è quello che
-sarebbe bastato. **QP 38 sta al 104,1 % del tetto**: si perde per il **4 %**.
+⇒ ⛔⛔ **Only one rung is missing**, on both paths, and the missing attempt is the one that
+would have been enough. **QP 38 stands at 104.1 % of the ceiling**: it loses by **4 %**.
 
-⛔ **E la conseguenza è quella che `RCP.md` §5.2 esiste per non avere.** Se il fotogramma che «non
-parte» è una **chiave**, §5.2 dice *«il server NON DEVE abbandonare un fotogramma chiave»*: il
-client resta rotto, manda `RICHIEDI_CHIAVE`, e ogni richiesta fa rifare **tre** ricodifiche che non
-producono niente. `[M]` **Ogni tentativo a 8K costa 91-108 ms in hardware** ⇒ **~300 ms** buttati per
-fotogramma, a ripetizione (in software molto di più; la misura è tolta, fase 18). **È la spirale.**
+⛔ **And the consequence is the one `RCP.md` §5.2 exists to avoid.** If the frame that «does not
+leave» is a **keyframe**, §5.2 says *«the server MUST NOT abandon a keyframe»*: the
+client stays broken, sends `RICHIEDI_CHIAVE`, and every request makes it redo **three** re-encodes that
+produce nothing. `[M]` **Every attempt at 8K costs 91-108 ms in hardware** ⇒ **~300 ms** thrown away per
+frame, repeatedly (in software much more; the measurement is removed, phase 18). **It is the spiral.**
 
-⚠ **Quanto è raggiungibile**: serve una tela vicina agli 8K **e** contenuto quasi incomprimibile.
-Alla tela dell'utente, mai (§D.2.1). ⇒ È un difetto **vero e dimostrato**, non **urgente**.
-
----
-
-## ⛔ Che cosa NON ha funzionato — e sette cose sbagliate le ho fatte io
-
-1. ⛔⛔ **Il denominatore era finto, e me ne sono accorto perché era troppo bello.** Le prime 33
-   chiavi a 8K uscivano **tutte di 243 497 byte esatti**: impossibile su 33 immagini diverse. Causa:
-   `-fps_mode cfr -r 30` sta **dopo** il filtro `tile=3x4`, che consegna 2,5 immagini al secondo ⇒
-   la conversione di cadenza le **duplicava dodici volte**. Le immagini distinte erano **tre**, non
-   trentatré. ⇒ Rifatto senza conversione: **27 distinte su 33**, e le misure vanno da 243 496 a
-   251 288. ⭐ *La regola che ha salvato il numero: un massimo uguale alla mediana è un allarme, non
-   un bel risultato.*
-2. ⛔ **La prima misura di qualità era priva di senso** — PSNR **16,47 dB** in tutte le celle, e
-   identico a cinque decimali. Non era una qualità: era un **disallineamento**, perché confrontavo
-   una codifica a cadenza fissa con la sorgente **a cadenza variabile** del video dell'utente. Rifatto
-   da una sorgente **grezza NV12 già a cadenza fissa**: **52,9 dB**.
-3. ⛔ **`-max_frame_size` non è una via d'uscita**: `[M]` `hevc_vaapi` lo **rifiuta** in CQP, 3
-   tentativi su 3 — *«Max frame size is invalid in CQP rate control mode»*. Era il candidato più
-   comodo per il tetto e non esiste.
-4. ⛔ **Il mio primo controllo positivo è fallito**: `libx265` con `temporal-layers=**1**` non
-   produce sotto-livelli e **lo dichiara** (*«No support for temporal sublayers less than 2»*).
-   Per un giro la misura di D.1 è rimasta senza testimone. Con `=2` funziona.
-5. ⛔⛔ **`-low_power 0` sull'Intel apre lo stesso `VAEntrypointEncSliceLP`** `[M]`, e ffmpeg **non
-   fallisce**: prende quel che c'è. ⇒ Chiunque misuri «LP contro entrypoint pieno» su questo chip
-   passando da ffmpeg produce **due misure sotto la stessa etichetta**, che è `LEZIONI.md` §1.8 in
-   piena regola. ⚠ **Riga da consegnare alla fase 9**, che quella domanda ce l'ha in carico: sul
-   ferro di casa il confronto **non si può fare**, perché l'entrypoint pieno non c'è — si fa
-   sull'AMD, e allora cambiano insieme chip e driver.
-6. ⛔ Le opzioni di colore passate come opzioni **di uscita** su un ingresso grezzo fanno inserire a
-   ffmpeg un `auto_scale` che la catena VA-API rifiuta (*«Impossible to convert between the formats
-   supported by the filter Parsed_hwupload»*). Un giro perso; nei banchi definitivi il colore si
-   dichiara alla sorgente o non si dichiara, e **le misure di D.2 non ne dipendono**.
-7. ⚠ **La scena 8K non è un desktop 8K vero**, ed è dichiarato: è il desktop 2560×1080 dell'utente
-   affiancato 3×4. Nessuno ha un desktop 8K da fotografare.
+⚠ **How reachable it is**: it takes a canvas close to 8K **and** almost incompressible content.
+At the user's canvas, never (§D.2.1). ⇒ It is a **real and proven** defect, not an **urgent** one.
 
 ---
 
-## `[?]` Che cosa resta aperto
+## ⛔ What did NOT work — and seven wrong things I did myself
 
-1. `[?]` ⭐ **Un programma che facesse la codifica VA-API da sé — senza ffmpeg — potrebbe
-   costruire i sotto-livelli su `EncSliceLP`?** Non è escluso, e l'indizio è misurato:
-   `[M]` `VAConfigAttribEncPackedHeaders = 0x1f` su `EncSliceLP` vuol dire che **è l'applicazione a
-   impacchettare VPS/SPS/PPS e le intestazioni di slice** ⇒ `nuh_temporal_id_plus1` **lo scrive il
-   software, non il chip**; e `EncMaxRefFrames` dà **L0 = 3** riferimenti, cioè lo spazio per una
-   piramide di **P** (che **non riordina**, quindi **non costa ritardo**). ⛔ Nessuno l'ha provato.
-   Chiuderla vuol dire scrivere un codificatore VA-API nostro: giorni di lavoro, e la decisione è di
-   chi possiede `codificatore.c`. ⚠ Finché è aperta, `RCP.md` §5.2 **non cambia**.
-2. `[?]` **I 10 bit veri** restano non misurabili da qui: `DECISIONI.md` §2.3-ter, Mutter dà BGRx.
-   Tutto quel che qui porta l'etichetta `main10` è **otto bit promossi**, e alle 8K costa `[M]`
-   **933 byte in meno** di `main` — cioè l'etichetta non porta informazione.
-3. `[?]` **Se un desktop 8K vero somigli al mosaico o alla grana.** Il mosaico è un surrogato
-   dichiarato.
-4. `[?]` **Il regime senza perdita** (`CODIFICATORE_QUALITA_LOSSLESS`) non è nel percorso di
-   `figlio.c` e non l'ho misurato; a 8K un fotogramma senza perdita a 8 bit vale **47 MiB** di soli
-   pixel grezzi, quindi sfonderebbe per costruzione. Se un giorno si accende, va misurato.
+1. ⛔⛔ **The denominator was fake, and I noticed because it was too nice.** The first 33
+   keyframes at 8K all came out **exactly 243 497 bytes**: impossible on 33 different images. Cause:
+   `-fps_mode cfr -r 30` comes **after** the `tile=3x4` filter, which delivers 2.5 images per second ⇒
+   the cadence conversion **duplicated them twelve times**. The distinct images were **three**, not
+   thirty-three. ⇒ Redone without conversion: **27 distinct out of 33**, and the measurements range from 243 496 to
+   251 288. ⭐ *The rule that saved the number: a maximum equal to the median is an alarm, not
+   a nice result.*
+2. ⛔ **The first quality measurement was meaningless** — PSNR **16.47 dB** in all cells, and
+   identical to five decimals. It was not a quality: it was a **misalignment**, because I was comparing
+   a fixed-cadence encoding with the user's video source **at variable cadence**. Redone
+   from a **raw NV12 source already at fixed cadence**: **52.9 dB**.
+3. ⛔ **`-max_frame_size` is not a way out**: `[M]` `hevc_vaapi` **refuses** it in CQP, 3
+   attempts out of 3 — *«Max frame size is invalid in CQP rate control mode»*. It was the most
+   convenient candidate for the ceiling and it does not exist.
+4. ⛔ **My first positive control failed**: `libx265` with `temporal-layers=**1**` does not
+   produce sub-layers and **declares it** (*«No support for temporal sublayers less than 2»*).
+   For one round the D.1 measurement stayed without a witness. With `=2` it works.
+5. ⛔⛔ **`-low_power 0` on Intel opens the same `VAEntrypointEncSliceLP`** `[M]`, and ffmpeg **does not
+   fail**: it takes what there is. ⇒ Anyone measuring «LP against full entrypoint» on this chip
+   going through ffmpeg produces **two measurements under the same label**, which is `LEZIONI.md` §1.8 by the
+   book. ⚠ **A line to deliver to phase 9**, which has that question in its charge: on the
+   home iron the comparison **cannot be made**, because the full entrypoint is not there — it is made
+   on AMD, and then chip and driver change together.
+6. ⛔ The colour options passed as **output** options on a raw input make
+   ffmpeg insert an `auto_scale` that the VA-API chain refuses (*«Impossible to convert between the formats
+   supported by the filter Parsed_hwupload»*). One round lost; in the final benches the colour is
+   declared at the source or not declared, and **the D.2 measurements do not depend on it**.
+7. ⚠ **The 8K scene is not a real 8K desktop**, and it is declared: it is the user's 2560×1080 desktop
+   tiled 3×4. Nobody has an 8K desktop to photograph.
 
 ---
 
-## ⚠ Da girare al proprietario di `src/codificatore.c` — io **non l'ho toccato**
+## `[?]` What remains open
 
-| # | dove | che cosa, e perché |
+1. `[?]` ⭐ **Could a program doing VA-API encoding by itself — without ffmpeg —
+   build the sub-layers on `EncSliceLP`?** It is not excluded, and the clue is measured:
+   `[M]` `VAConfigAttribEncPackedHeaders = 0x1f` on `EncSliceLP` means that **it is the application that
+   packs VPS/SPS/PPS and the slice headers** ⇒ `nuh_temporal_id_plus1` **is written by the
+   software, not by the chip**; and `EncMaxRefFrames` gives **L0 = 3** references, that is room for a
+   pyramid of **P** (which **does not reorder**, so **costs no delay**). ⛔ Nobody has tried it.
+   Closing it means writing a VA-API encoder of our own: days of work, and the decision belongs to
+   whoever owns `codificatore.c`. ⚠ As long as it is open, `RCP.md` §5.2 **does not change**.
+2. `[?]` **Real 10 bits** remain unmeasurable from here: `DECISIONI.md` §2.3-ter, Mutter gives BGRx.
+   Everything here that carries the `main10` label is **eight bits promoted**, and at 8K it costs `[M]`
+   **933 bytes less** than `main` — that is the label carries no information.
+3. `[?]` **Whether a real 8K desktop resembles the mosaic or the grain.** The mosaic is a declared
+   surrogate.
+4. `[?]` **The lossless regime** (`CODIFICATORE_QUALITA_LOSSLESS`) is not on the path of
+   `figlio.c` and I did not measure it; at 8K a lossless 8-bit frame is worth **47 MiB** of raw
+   pixels alone, so it would break through by construction. If one day it is switched on, it must be measured.
+
+---
+
+## ⚠ To pass to the owner of `src/codificatore.c` — I **did not touch it**
+
+| # | where | what, and why |
 |---|---|---|
-| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **oppure** `:46` `#define CRF_PASSO 6` | ⛔ **La scala è corta di uno scalino**, misurato su tutt'e due i percorsi (§D.2.4): l'ultimo tentativo lascia **16,654 MiB** in hardware, e il quarto ce l'avrebbe fatta *(i numeri del software sono tolti: fase 18)*. ⭐ **Meglio alzare il PASSO che il numero di tentativi**: `[M]` ogni tentativo a 8K costa **91-108 ms** in hardware, quindi un passo da **9** costa un terzo di un tentativo in più. ⚠ Il numero esatto è un punto di lavoro fra qualità e banda ⇒ **è della fase 9**: io porto solo la prova che **3×6 non basta** |
-| **2** | `codificatore.c:2203-2207` — la resa | ⛔⛔ Quando si arrende restituisce `false` **anche per una CHIAVE**, e `RCP.md` §5.2 vieta di abbandonare le chiavi. ⇒ Per una chiave non ci si può arrendere: si continua a scendere finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si scrive nel registro che l'immagine è uscita brutta. Abbandonarla lascia il client rotto **per sempre**, e ogni `RICHIEDI_CHIAVE` che segue costa tre ricodifiche **che non producono niente**: è la spirale di §5.2 |
-| **3** | `codificatore.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* `c->ctx->max_b_frames = 0` | ⛔ **Non si tocca, e adesso c'è il numero accanto**: metterlo a 1 darebbe `[M]` 59 figure buttabili su 120 e −16 % di banda a qualità invariata, **ma 67 ms di riordino** — da solo oltre i 50 ms di `DECISIONI.md` §2.4. ⭐ Il commento «deciso, non ereditato» merita la misura sotto |
-| **4** | *nessuna riga: è una cosa che non esiste* | ⚠ `-max_frame_size` **non** è utilizzabile come tetto: `[M]` `hevc_vaapi` lo rifiuta in CQP, 3/3. Se qualcuno ci pensasse, è già misurato che non c'è |
-| **5** | ⚠ **fuori da `codificatore.c`** — riguarda `figlio.c` / la trattativa della tela | `[M]` `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**: **4096×2160 sì, 4112×2160 no**. La tela legale di `RCP.md` §4.5 arriva a **7680×4320** ⇒ oltre i 4096 il ripiego `libx264` non è un'eventualità, è **la regola**, e a 8K costa `[M]` **309 ms** per chiave sul desktop e **1,2-3,3 s** sul granuloso. `hevc_vaapi` invece regge fino a 16384×4320 `[M]`. ⇒ Vale la pena leggerlo dal driver invece di scoprirlo al primo fotogramma |
+| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **or** `:46` `#define CRF_PASSO 6` | ⛔ **The ladder is one rung short**, measured on both paths (§D.2.4): the last attempt leaves **16.654 MiB** in hardware, and the fourth would have made it *(the software numbers are removed: phase 18)*. ⭐ **Better to raise the STEP than the number of attempts**: `[M]` every attempt at 8K costs **91-108 ms** in hardware, so a step of **9** costs a third of one more attempt. ⚠ The exact number is a working point between quality and bandwidth ⇒ **it belongs to phase 9**: I only bring the proof that **3×6 is not enough** |
+| **2** | `codificatore.c:2203-2207` — the surrender | ⛔⛔ When it gives up it returns `false` **even for a KEYFRAME**, and `RCP.md` §5.2 forbids abandoning keyframes. ⇒ For a keyframe one cannot give up: one keeps going down until it fits — `[M]` **QP 51 gives 1.771 MiB at 8K**, so it **always** fits — and one writes in the log that the image came out ugly. Abandoning it leaves the client broken **forever**, and every `RICHIEDI_CHIAVE` that follows costs three re-encodes **that produce nothing**: it is the spiral of §5.2 |
+| **3** | `codificatore.c` ⚠ *(the cited code is no longer there: to be reread)* `c->ctx->max_b_frames = 0` | ⛔ **It is not touched, and now there is the number next to it**: setting it to 1 would give `[M]` 59 droppable pictures out of 120 and −16 % of bandwidth at unchanged quality, **but 67 ms of reordering** — on its own beyond the 50 ms of `DECISIONI.md` §2.4. ⭐ The comment «decided, not inherited» deserves the measurement under it |
+| **4** | *no line: it is something that does not exist* | ⚠ `-max_frame_size` is **not** usable as a ceiling: `[M]` `hevc_vaapi` refuses it in CQP, 3/3. Should anyone think of it, it is already measured that it is not there |
+| **5** | ⚠ **outside `codificatore.c`** — it concerns `figlio.c` / the canvas negotiation | `[M]` `h264_vaapi` on `EncSliceLP` accepts **32-4096 px per side**: **4096×2160 yes, 4112×2160 no**. The legal canvas of `RCP.md` §4.5 goes up to **7680×4320** ⇒ beyond 4096 the `libx264` fallback is not an eventuality, it is **the rule**, and at 8K it costs `[M]` **309 ms** per keyframe on the desktop and **1.2-3.3 s** on the grainy one. `hevc_vaapi` instead holds up to 16384×4320 `[M]`. ⇒ It is worth reading it from the driver instead of discovering it at the first frame |
 
 ---
 
-## I banchi
+## The benches
 
-Copiati nel worktree, ⚠ **con il prefisso `08-D` per non pestare i nomi degli altri agenti** — il
-coordinatore li rinumeri come vuole:
+Copied into the worktree, ⚠ **with the prefix `08-D` so as not to tread on the other agents' names** — the
+coordinator can renumber them as he likes:
 
-| banco | che cosa risponde |
+| bench | what it answers |
 |---|---|
-| `banchi/08-D1-attributi-va.c` | che cosa dichiara il driver su ogni (profilo, entrypoint) dei due nodi |
-| `banchi/08-D1-struttura.py` | `temporal_id` e `sps_max_sub_layers` nei byte che escono |
-| `banchi/08-D1-costo.py` | banda, PSNR/SSIM, riordino e figure buttabili per ogni `-bf` |
-| `banchi/08-D1-smentita.py` | ⭐ la prova a pixel + i due guasti innestati |
-| `banchi/08-D1-testimone.py` | ⭐ i due controlli positivi del lettore di `temporal_id` |
-| `banchi/08-D2-misure.py` | le chiavi in byte, con il denominatore vero |
-| `banchi/08-D2-scala.py` | dal desktop vero al rumore, codificatore isolato |
-| `banchi/08-D2-ripiego.py` | lo stesso in software, e la scala delle ricodifiche |
+| `banchi/08-D1-attributi-va.c` | what the driver declares on every (profile, entrypoint) of the two nodes |
+| `banchi/08-D1-struttura.py` | `temporal_id` and `sps_max_sub_layers` in the bytes that come out |
+| `banchi/08-D1-costo.py` | bandwidth, PSNR/SSIM, reordering and droppable pictures for every `-bf` |
+| `banchi/08-D1-smentita.py` | ⭐ the pixel proof + the two injected faults |
+| `banchi/08-D1-testimone.py` | ⭐ the two positive controls of the `temporal_id` reader |
+| `banchi/08-D2-misure.py` | the keyframes in bytes, with the real denominator |
+| `banchi/08-D2-scala.py` | from the real desktop to noise, isolated encoder |
+| `banchi/08-D2-ripiego.py` | the same in software, and the re-encode ladder |
 
-Si girano sulla macchina di prova dentro il contenitore, da `/srv/src/08-D`, dove sta anche la
-scena (`scena-utente.webm`, il video del 22 agosto).
+They are run on the test machine inside the container, from `/srv/src/08-D`, where the
+scene also is (`scena-utente.webm`, the video of 22 Aug).
 
 
 ---
 
-## 5 · ⛔ Che cosa NON ha funzionato
+## 5 · ⛔ What did NOT work
 
-*⭐ Nove agenti hanno dichiarato i propri errori invece di consegnare solo i risultati. È la parte
-del documento che vale di più, e si legge prima delle misure.*
+*⭐ Nine agents declared their own errors instead of delivering only the results. It is the part
+of the document worth most, and it is read before the measurements.*
 
-### 5.1 ⛔⛔ Gli errori del COORDINATORE, che sono i più cari
+### 5.1 ⛔⛔ The COORDINATOR's errors, which are the costliest
 
 | | |
 |---|---|
-| ⛔⛔ **ho lanciato le misure in parallelo** | `[M]` la contesa spostava lo stesso anello di parecchi millisecondi (valori tolti, fase 18). Ha prodotto un numero falso (17,48 ms) **promosso a bersaglio della fase**, con un agente dedicato che è tornato dicendo che non c'era niente da curare. 📖 `LEZIONI.md` §1.26 |
-| ⛔⛔ **ho scritto una riga che era un artefatto** | *«l'occhio dell'utente e lo strumento si accordano entro il 7 %»* — la riga più citata della giornata. Il conto tornava **per compensazione**: accostava il ritardo di una grandezza alla velocità di un'altra. 📖 §1.28 |
-| ⛔ **ho attribuito alla contesa un numero che non era suo** | e l'ho scritto **dentro una lezione**, che è il posto dove un errore dura di più. Smentito da un quarto agente **mentre la lezione veniva scritta** |
-| ⛔ **«tutta la prima ondata è contaminata»** | `[M]` falso: sul banco del distacco il carico non gonfia niente (70,7 contro 70,3). Crederlo avrebbe fatto **buttare misure buone** |
-| ⛔ **due collisioni di terreno** | una **porta** già presa (se n'è accorto l'agente, non io) e un **utente** già preso — al secondo il terreno ha **riposto la parola d'ordine** di un agente vivo. ⇒ §1.24 va estesa oltre la porta |
-| ⛔ **la stima del tempo** | ho ordinato «prima si strumenta, poi si cura» — **l'ordine era giusto** — ma ho stimato male il tempo, e alla fine della prima ondata **la copia zero non era stata fatta** |
+| ⛔⛔ **I launched the measurements in parallel** | `[M]` contention moved the same loop by several milliseconds (values removed, phase 18). It produced a false number (17.48 ms) **promoted to target of the phase**, with a dedicated agent who came back saying there was nothing to cure. 📖 `LEZIONI.md` §1.26 |
+| ⛔⛔ **I wrote a line that was an artefact** | *«the user's eye and the tool agree within 7 %»* — the most-cited line of the day. The calculation came out right **by compensation**: it paired the delay of one quantity with the speed of another. 📖 §1.28 |
+| ⛔ **I attributed to contention a number that was not its own** | and I wrote it **inside a lesson**, which is the place where an error lasts longest. Disproved by a fourth agent **while the lesson was being written** |
+| ⛔ **«the whole first wave is contaminated»** | `[M]` false: on the gap bench the load inflates nothing (70.7 against 70.3). Believing it would have made **good measurements be thrown away** |
+| ⛔ **two ground collisions** | a **port** already taken (the agent noticed, not me) and a **user** already taken — at the second the ground **set the password again** of a living agent. ⇒ §1.24 must be extended beyond the port |
+| ⛔ **the time estimate** | I ordered «first one instruments, then one cures» — **the order was right** — but I estimated the time badly, and at the end of the first wave **zero copy had not been done** |
 
-### 5.2 ⛔ Gli errori dei banchi, e ognuno avrebbe prodotto un numero falso
+### 5.2 ⛔ The benches' errors, and each would have produced a false number
 
-- ⛔ **un denominatore finto**: 33 chiavi a 8K tutte identiche **al byte**, perché una conversione di cadenza duplicava la stessa immagine dodici volte. ⭐ Beccato perché **il massimo era uguale alla mediana** — *un risultato troppo bello è un allarme*;
-- ⛔ **una qualità priva di senso** (16,47 dB in tutte le celle): non era una qualità, era un **disallineamento** fra cadenza fissa e variabile;
-- ⛔ **quattro falsi rossi in una sera**, e accusavano tutti **lo stato normale**, cioè il giro di controllo. ⭐ *Un falso rosso costa quanto un falso verde: tutt'e due scollegano il colore dal fatto*;
-- ⛔ **la panoramica di GNOME** mostrava la scena come **miniatura**: 0 eco su 826, scoperto solo *fotografando* quel che il banco guardava;
-- ⛔ **il banco non sapeva leggere la strada di disegno viva**: 0 sonde su 304, e ⭐ **è uscito col codice «non ho niente da giudicare»** invece che con un verde;
-- ⛔ **`--window-size` di Chrome ignorato** (profilo `maximized`): tre giri buttati;
-- ⛔ **un agente ha rotto il proprio banco con una propria cura** — e il banco è **morto** invece di consegnare numeri falsi.
+- ⛔ **a fake denominator**: 33 keyframes at 8K all identical **to the byte**, because a cadence conversion duplicated the same image twelve times. ⭐ Caught because **the maximum was equal to the median** — *a result that is too nice is an alarm*;
+- ⛔ **a meaningless quality** (16.47 dB in all cells): it was not a quality, it was a **misalignment** between fixed and variable cadence;
+- ⛔ **four false reds in one evening**, and they all accused **the normal state**, that is the control round. ⭐ *A false red costs as much as a false green: both disconnect the colour from the fact*;
+- ⛔ **GNOME's Overview** showed the scene as a **thumbnail**: 0 echoes out of 826, discovered only by *photographing* what the bench was looking at;
+- ⛔ **the bench could not read the live drawing road**: 0 probes out of 304, and ⭐ **it exited with the code «I have nothing to judge»** instead of with a green;
+- ⛔ **Chrome's `--window-size` ignored** (`maximized` profile): three rounds thrown away;
+- ⛔ **an agent broke his own bench with a cure of his own** — and the bench **died** instead of delivering false numbers.
 
-### 5.3 ⛔ E i difetti del prodotto trovati per strada — **nessuno era il bersaglio**
-
-| | |
-|---|---|
-| ⛔⛔ **una chiave abbandonata** | dopo tre ricodifiche il codificatore rinunciava **anche a una chiave**, che `RCP.md` §5.2 vieta ⇒ il client resta rotto **per sempre** e ogni `RICHIEDI_CHIAVE` costa tre ricodifiche che non producono niente. **È la spirale** |
-| ⛔ **la scala corta di uno scalino** | l'ultimo tentativo lasciava 16,654 MiB contro un tetto di 16,777: **si perdeva per il 4 %** |
-| ⛔⛔ **il passo non multiplo di 64** | il desktop usciva **inclinato di qualche pixel per riga, senza nessun errore**, coi millisecondi già perfetti. 1552 e 1544 distano **otto pixel** e danno verdetti opposti |
-| ⛔ **un cronometro che misurava il banco** | `vetro_ms` **avvolgeva** il banco: diceva 8-10 ms per un trasferimento che ne costa 0,06 |
-| ⛔ **la diagnostica che costava un quarto del tratto** | ogni pixel di ogni fotogramma, per una riga di registro scritta **una volta sola** |
-| ⛔ **il ripiego nominava il codificatore sbagliato** | da quando quel ramo serve anche H.264 |
-
-### 5.4 ⛔ E una cura che non ha reso quel che aveva tolto
-
-Tolta la diagnostica dai pixel (7,28 ms), ⛔ **il totale è sceso molto meno**, perché `sws_scale`
-se n'è ripreso una parte: la scansione **gli scaldava la cache** *(i millisecondi del totale e di
-`sws_scale` sono tolti: fase 18)*. ⛔⛔ **E i
-fotogrammi consegnati non erano saliti** (i conteggi sono tolti: fase 18). ⇒ Per la regola di §2.2 punto 1 **non era
-ancora una vittoria**, e sta scritto così. ⭐ *(La vittoria è arrivata dopo, con la copia zero.)*
-
-## 6 · Le decisioni prodotte
-
-### 6.1 ⛔ CHIUSA PRIMA DI APRIRSI: l'anello in parallelo — 22 agosto 2026
-
-Mettere l'anello in pipeline — codificare l'N mentre si cattura l'N+1 — alzerebbe i fotogrammi al
-secondo pagandoli con **un fotogramma di ritardo in più**.
-
-⛔ **Su questa scena è il peggiore degli scambi**: ai picchi dell'utente (12 400 px/s) un fotogramma
-in più vale **da 200 a 350 pixel** di distacco — **mezza finestra**. ⇒ Comprerebbe il contorno
-vendendo il piatto.
-
-⭐⭐ **E non serviva una misura nuova per saperlo**: `SPECIFICHE.md` §3.2 lo vietava già —
-*«ogni memoria intermedia compra fluidità e vende risposta»*, *«una scelta che alza il ritmo
-peggiorando il ritardo non si fa»*. ⇒ La riga era scritta **prima** che il difetto avesse un nome, e
-questa fase è la prova che serviva.
-
-### 6.3 ✅ La cura del rilascio: **trattenere il `pw_buffer`**, non chiedere la timeline
-
-Le due schermate che si alternavano erano un problema di **release**, non di *acquire*. Due cure
-possibili; scelta la ritenuta, ⭐ **e la ragione è `LEZIONI.md` §1.25**: la ritenuta è **nostra e
-vale su ogni compositore**, la timeline dipende da quel che Mutter offre.
-
-⚠ **E il prezzo dell'onestà è dichiarato**: `[M]` il controllo positivo **non ha riprodotto il
-danno** (10 marche su 10 anche senza attesa GPU). ⇒ **Prudenza, non necessità misurata.** ⭐ Ma il
-guasto è servito lo stesso: senza `vaSyncSurface` la conversione scende 2,86 → 0,38 e la codifica
-sale 2,43 → 4,67, totale 6,19 → 6,05 ⇒ **l'attesa costa zero** e dice dov'è il punto giusto.
-
-### 6.4 ✅ Il passo si **misura**, non si calcola — e il ripiego si **dichiara**
-
-`[M]` iHD non onora un passo non multiplo di 64 byte ⇒ desktop **inclinato senza errori**. ⇒ Il
-passo si legge **dal chunk**, mai dedotto dalla larghezza; se non è importabile il palco **si
-rimonta sulla memoria dichiarandolo nel registro**; al cambio di tela la copia zero **si riprova**.
-
-⛔ **E non si aggiusta il problema restringendo le tele**: sarebbe curare il caso comodo. La cura
-vale su **ogni** tela e **ogni** driver (§1.25).
-
-### 6.5 ✅ Una **chiave** non si abbandona mai
-
-`RCP.md` §5.2 lo dice e il codice non lo faceva. ⇒ Per una chiave non ci si arrende: si scende
-finché entra — `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi entra **sempre** — e si **scrive nel
-registro** che l'immagine è uscita brutta. ⭐ *Un'immagine brutta è recuperabile, un client rotto per
-sempre no* (invariante **I1**: brutta e viva).
-
-### 6.6 ✅ `max_b_frames = 0` **non si tocca** — e adesso ha il numero accanto
-
-`[M]` Metterlo a 1 darebbe 59 figure buttabili su 120 e **−16 % di banda a qualità invariata**
-(−0,065 dB) — sembra un affare. ⛔ **Costa 67 ms di riordino**, che da solo sfonda i 50 ms dati a
-*tutto* il pezzo nostro.
-
-### 6.7 ⏳ Sul tavolo, NON decisa: ritardare la freccia per chiudere l'elastico
-
-Se la freccia venisse disegnata **in ritardo**, alla posizione che il fotogramma sta portando invece
-che a quella della mano, il distacco **sparirebbe** — freccia e finestra si muoverebbero insieme.
-
-⛔ **Il prezzo è il puntatore che risponde in ritardo**, e va contro una decisione già presa: la
-freccia è locale **apposta**, perché sul DeX a 1,1 fotogrammi al secondo *«è come se si perdessero
-gli input»* — non se ne perdeva nessuno, non si **vedeva** che arrivavano (`pagina.html`, 14 agosto).
-
-⇒ 🔸 **È una decisione di prodotto, e la prende l'utente — con i numeri in mano, non adesso.**
-
----
-
-## 7 · Che cosa resta `[?]`
+### 5.3 ⛔ And the product defects found along the way — **none was the target**
 
 | | |
 |---|---|
-| ⏳ **a quale velocità guarda l'utente** | *(il conto px → ms, sul prodotto di allora, è tolto con la fase 18)*. ⛔ **Non è deducibile**: si misura l'anello, non si chiede a lui |
-| ⏳ **i ~16 ms non spiegati** | dentro `cattura → primo byte` stanno conversione, caricamento e codifica *(i loro tempi, sulla strada di `sws_scale`, sono tolti: fase 18)* — e **~16 che nessuno dei tre spiega**. ⚠ Un margine, non un difetto |
-| ⏳ **gli altri cinque tratti** | la fase 4 dice «sei da ~25 ms». ⛔ **Questo documento ne ha nominato uno solo.** Gli altri cinque vanno aperti |
-| ⏳ **i sei buchi** | del WiFi (§2.4) o nostri? Il banco li separa |
-| `[?]` **il codificatore e la sua scheda** | VA-API sceglie da sé; se cercasse la discreta — chiusa da udev — ripiegherebbe in CPU **in silenzio** (`DECISIONI.md` §4.6-ter) |
-| `[?]` **`EncSliceLP` e i sotto-livelli temporali** | senza, ogni fotogramma abbandonato costa una chiave intera (`RCP.md` §5.2) |
-| `[?]` **quanto pesa una chiave 8K** | contro il tetto dei 16 MiB di `RCP.md` |
-| ✅ ~~**il puntatore doppio**~~ | **SMENTITO dall'utente il 22 agosto 2026**: *«non ci sono doppi puntatori»*. 📖 §7.3 |
+| ⛔⛔ **an abandoned keyframe** | after three re-encodes the encoder gave up **even on a keyframe**, which `RCP.md` §5.2 forbids ⇒ the client stays broken **forever** and every `RICHIEDI_CHIAVE` costs three re-encodes that produce nothing. **It is the spiral** |
+| ⛔ **the ladder one rung short** | the last attempt left 16.654 MiB against a ceiling of 16.777: **it lost by 4 %** |
+| ⛔⛔ **the stride not a multiple of 64** | the desktop came out **skewed by a few pixels per row, without any error**, with the milliseconds already perfect. 1552 and 1544 are **eight pixels** apart and give opposite verdicts |
+| ⛔ **a stopwatch that measured the bench** | `vetro_ms` **wrapped** the bench: it said 8-10 ms for a transfer that costs 0.06 |
+| ⛔ **the diagnostics that cost a quarter of the segment** | every pixel of every frame, for a log line written **only once** |
+| ⛔ **the fallback named the wrong encoder** | ever since that branch also serves H.264 |
 
-### 7.1 ⭐ Le due strade già provate — non si rifanno
+### 5.4 ⛔ And a cure that did not pay back what it had removed
 
-- `createImageBitmap`: ⚠ **non 3,8 ms — sono 1,05 / 0,41**, rifatti il 22 agosto (📖 §4-F3 e §4-F1).
-  ⛔ Il 3,8 era di un altro palco e **non si cita più senza rifarlo**. Resta vero che è già **nove
-  volte meglio** del disegno 2D di prima;
-- ⛔ **`?video=worker` funziona e NON rende**: abbassa il tetto del **19 %**. Chi apre questa fase
-  non la rifaccia.
+With the pixel diagnostics removed (7.28 ms), ⛔ **the total dropped much less**, because `sws_scale`
+took back part of it: the scan **was warming its cache** *(the milliseconds of the total and of
+`sws_scale` are removed: phase 18)*. ⛔⛔ **And the
+delivered frames had not risen** (the counts are removed: phase 18). ⇒ By the rule of §2.2 point 1 **it was not
+yet a victory**, and it is written that way. ⭐ *(The victory came later, with zero copy.)*
 
-### 7.3 · ⛔⭐ **Il «puntatore doppio» non esiste** — e a smentirlo è stato l'occhio dell'utente
+## 6 · The decisions produced
 
-*22 agosto 2026. Il punto era stato aperto e un agente ci stava già lavorando: **fermato dopo pochi
-minuti**, su una frase sola.*
+### 6.1 ⛔ CLOSED BEFORE OPENING: the parallel loop — 22 Aug 2026
 
-⛔ **Il codice lo dichiara come un difetto vivo.** `src/pagina.html`, nel commento del 14 agosto:
-*«Il cursore del browser resta VISIBILE, e la freccia la disegniamo lo stesso. ⚠ Se ne vedono **due
-sovrapposti** — brutto, e §7.1 lo chiama un difetto»*. Ed è la ragione per cui esiste l'interruttore
-`data-puntatore` a tre condizioni, con `due` come valore per difetto **chiamato «il DIFETTO» dal
-codice stesso**.
+Putting the loop in a pipeline — encoding frame N while capturing N+1 — would raise the frames per
+second paying for them with **one more frame of delay**.
 
-⭐⭐ **E l'utente, guardando lo schermo vero, dice che non c'è**, due volte e la seconda più netta:
-*«non ci sono doppi puntatori»* e poi **«io vedo solo un puntatore»** — dopo aver già confermato,
-poche ore prima, che *«sì, la freccia si vede»*. ⇒ **Uno, e si vede.**
+⛔ **On this scene it is the worst of trades**: at the user's peaks (12 400 px/s) one more frame
+is worth **from 200 to 350 pixels** of gap — **half a window**. ⇒ It would buy the side dish
+selling the main course.
 
-⇒ ⛔ **Il difetto è dichiarato dal codice e non si manifesta.** È la forma di `LEZIONI.md` §1.20
-rovesciata: lì il giudizio era staccato dalla misura, qui **un commento è staccato dal prodotto** —
-e ha resistito otto giorni perché nessuno aveva chiesto all'unico arbitro che poteva vederlo.
+⭐⭐ **And no new measurement was needed to know it**: `SPECIFICHE.md` §3.2 already forbade it —
+*«every intermediate buffer buys fluidity and sells response»*, *«a choice that raises the rhythm
+worsening the delay is not made»*. ⇒ The line was written **before** the defect had a name, and
+this phase is the proof that was needed.
 
-⚠ **Che cosa NON si conclude da qui**, e va scritto o la prossima lettura sbaglia: *«ne vedo uno»*
-non dice **quale**. Restano due mondi possibili — le due frecce **coincidono** esattamente (quindi
-sono indistinguibili e il difetto è cosmetico e nullo), **oppure la seconda non viene disegnata
-affatto** (e allora sul DeX potrebbe mancare proprio quella che serve). `[?]` La distinzione costa
-poco e **non è stata fatta**: l'utente ha chiuso il punto, e un punto chiuso dall'arbitro non si
-riapre per curiosità.
+### 6.3 ✅ The cure of the release: **retain the `pw_buffer`**, do not request the timeline
 
-⚠ **E l'una vale l'altra per il prodotto sul desktop**, che è quel che l'utente giudica. ⛔ Non
-sarebbe più vero sul **DeX**, dove la freccia disegnata esiste per una ragione misurata — a 1,1
-fotogrammi al secondo il desktop sembra morto se non la disegna il client. ⇒ Chi un giorno tocca il
-DeX **riapra la domanda lì**, non qui.
+The two screens that alternated were a problem of **release**, not of *acquire*. Two possible
+cures; retention chosen, ⭐ **and the reason is `LEZIONI.md` §1.25**: retention is **ours and
+holds on every compositor**, the timeline depends on what Mutter offers.
 
-⇒ ⭐ **Il commento del codice va corretto**, perché oggi manda a cercare un difetto che non c'è. ⏳
-Lo farà chi tocca quel file per un'altra ragione — **non si apre un giro per questo**.
+⚠ **And the price of honesty is declared**: `[M]` the positive control **did not reproduce the
+damage** (10 marks out of 10 even without the GPU wait). ⇒ **Prudence, not measured necessity.** ⭐ But the
+fault was useful all the same: without `vaSyncSurface` the conversion drops 2.86 → 0.38 and encoding
+rises 2.43 → 4.67, total 6.19 → 6.05 ⇒ **the wait costs zero** and says where the right point is.
 
-### 7.2 ⛔ Che cosa NON è di questa fase
+### 6.4 ✅ The stride is **measured**, not computed — and the fallback is **declared**
 
-i **10 bit veri** → il muro è nella cattura, non nella codifica (Mutter dà BGRx da ogni strada) · la
-**rete stretta** e il **punto di lavoro fra qualità e banda** → fase 9 · la **qualità di
-`EncSliceLP` contro l'entrypoint pieno** → fase 9 · il **ridimensionamento dinamico** → fuori dal
-progetto · il **multi-tenant** → fase 10, ⚠ ma aspetta il numero vero che esce da qui.
+`[M]` iHD does not honour a stride that is not a multiple of 64 bytes ⇒ desktop **skewed without errors**. ⇒ The
+stride is read **from the chunk**, never deduced from the width; if it is not importable the stage **is
+remounted on memory declaring it in the log**; on a canvas change zero copy **retries**.
+
+⛔ **And the problem is not fixed by restricting the canvases**: that would be curing the convenient case. The cure
+holds on **every** canvas and **every** driver (§1.25).
+
+### 6.5 ✅ A **keyframe** is never abandoned
+
+`RCP.md` §5.2 says so and the code did not do it. ⇒ For a keyframe one does not give up: one goes down
+until it fits — `[M]` **QP 51 gives 1.771 MiB at 8K**, so it **always** fits — and one **writes in the
+log** that the image came out ugly. ⭐ *An ugly image can be recovered, a client broken forever
+cannot* (invariant **I1**: ugly and alive).
+
+### 6.6 ✅ `max_b_frames = 0` **is not touched** — and now it has the number next to it
+
+`[M]` Setting it to 1 would give 59 droppable pictures out of 120 and **−16 % of bandwidth at unchanged quality**
+(−0.065 dB) — it looks like a bargain. ⛔ **It costs 67 ms of reordering**, which on its own breaks the 50 ms given to
+*all* of our piece.
+
+### 6.7 ⏳ On the table, NOT decided: delaying the arrow to close the rubber band
+
+If the arrow were drawn **late**, at the position the frame is carrying instead
+of at the hand's, the gap **would disappear** — arrow and window would move together.
+
+⛔ **The price is a pointer that responds late**, and it goes against a decision already taken: the
+arrow is local **on purpose**, because on the DeX at 1.1 frames per second *«è come se si perdessero
+gli input»* — none was being lost, one could not **see** that they arrived (`pagina.html`, 14 Aug).
+
+⇒ 🔸 **It is a product decision, and the user takes it — with the numbers in hand, not now.**
 
 ---
 
-## 8 · Il giudizio dell'utente
+## 7 · What remains `[?]`
 
-### 8.1 ⭐ L'apertura — 22 agosto 2026
+| | |
+|---|---|
+| ⏳ **at what speed the user looks** | *(the px → ms calculation, on the product of the time, is removed with phase 18)*. ⛔ **It cannot be deduced**: one measures the loop, one does not ask him |
+| ⏳ **the unexplained ~16 ms** | inside `cattura → primo byte` there are conversion, upload and encoding *(their times, on the `sws_scale` road, are removed: phase 18)* — and **~16 that none of the three explains**. ⚠ A margin, not a defect |
+| ⏳ **the other five segments** | phase 4 says «six of ~25 ms». ⛔ **This document has named only one.** The other five must be opened up |
+| ⏳ **the six holes** | the WiFi's (§2.4) or ours? The bench separates them |
+| `[?]` **the encoder and its card** | VA-API chooses by itself; if it looked for the discrete card — closed by udev — it would fall back to CPU **silently** (`DECISIONI.md` §4.6-ter) |
+| `[?]` **`EncSliceLP` and the temporal sub-layers** | without them, every abandoned frame costs a whole keyframe (`RCP.md` §5.2) |
+| `[?]` **how much an 8K keyframe weighs** | against the 16 MiB ceiling of `RCP.md` |
+| ✅ ~~**the double pointer**~~ | **DISPROVED by the user on 22 Aug 2026**: *«non ci sono doppi puntatori»*. 📖 §7.3 |
+
+### 7.1 ⭐ The two roads already tried — they are not redone
+
+- `createImageBitmap`: ⚠ **not 3.8 ms — they are 1.05 / 0.41**, redone on 22 Aug (📖 §4-F3 and §4-F1).
+  ⛔ The 3.8 belonged to another stage and **is no longer cited without redoing it**. It remains true that it is already **nine
+  times better** than the earlier 2D drawing;
+- ⛔ **`?video=worker` works and does NOT pay off**: it lowers the ceiling by **19 %**. Whoever opens this phase
+  should not redo it.
+
+### 7.3 · ⛔⭐ **The «double pointer» does not exist** — and it was the user's eye that disproved it
+
+*22 Aug 2026. The point had been opened and an agent was already working on it: **stopped after a few
+minutes**, on a single sentence.*
+
+⛔ **The code declares it as a live defect.** `src/pagina.html`, in the comment of 14 Aug:
+*«The browser cursor stays VISIBLE, and we draw the arrow anyway. ⚠ **Two overlapping** ones
+are seen — ugly, and §7.1 calls it a defect»*. And it is the reason why the switch
+`data-puntatore` with three conditions exists, with `due` as the default value **called «the DEFECT» by the
+code itself**.
+
+⭐⭐ **And the user, looking at the real screen, says it is not there**, twice and the second time more sharply:
+*«non ci sono doppi puntatori»* and then **«io vedo solo un puntatore»** — after having already confirmed,
+a few hours earlier, that *«sì, la freccia si vede»*. ⇒ **One, and it is visible.**
+
+⇒ ⛔ **The defect is declared by the code and does not manifest itself.** It is the shape of `LEZIONI.md` §1.20
+turned upside down: there the judgement was detached from the measurement, here **a comment is detached from the product** —
+and it lasted eight days because nobody had asked the only referee who could see it.
+
+⚠ **What is NOT concluded from here**, and it must be written or the next reading goes wrong: *«ne vedo uno»*
+does not say **which one**. Two possible worlds remain — the two arrows **coincide** exactly (so
+they are indistinguishable and the defect is cosmetic and null), **or the second is not drawn
+at all** (and then on the DeX precisely the one that is needed could be missing). `[?]` The distinction costs
+little and **has not been made**: the user closed the point, and a point closed by the referee is not
+reopened out of curiosity.
+
+⚠ **And either is as good as the other for the product on the desktop**, which is what the user judges. ⛔ It would
+no longer be true on the **DeX**, where the drawn arrow exists for a measured reason — at 1.1
+frames per second the desktop looks dead if the client does not draw it. ⇒ Whoever one day touches the
+DeX **should reopen the question there**, not here.
+
+⇒ ⭐ **The code comment must be corrected**, because today it sends people looking for a defect that is not there. ⏳
+Whoever touches that file for another reason will do it — **a round is not opened for this**.
+
+### 7.2 ⛔ What does NOT belong to this phase
+
+**real 10 bits** → the wall is in capture, not in encoding (Mutter gives BGRx from every road) · the
+**narrow network** and the **working point between quality and bandwidth** → phase 9 · the **quality of
+`EncSliceLP` against the full entrypoint** → phase 9 · **dynamic resizing** → outside the
+project · **multi-tenant** → phase 10, ⚠ but it waits for the real number that comes out of here.
+
+---
+
+## 8 · The user's judgement
+
+### 8.1 ⭐ The opening — 22 Aug 2026
 
 > *«Di sicuro siamo avanti a xrdp, ma se possiamo limare ancora qualcosa allora ok.»*
 
-⇒ ⭐ **Il via libera, e il metro**: non «raggiungere un numero», ma **limare**.
+⇒ ⭐ **The go-ahead, and the yardstick**: not «reach a number», but **trim**.
 
-### 8.2 ⭐⭐ E il confronto con xrdp l'ha fatto lui, subito — 22 agosto 2026
+### 8.2 ⭐⭐ And he made the comparison with xrdp himself, right away — 22 Aug 2026
 
-*Si è collegato dal notebook al tablet con l'altro utente e ha rifatto la stessa prova.*
+*He connected from the notebook to the tablet with the other user and redid the same test.*
 
 > *«Confermo: siamo avanti, e di non poco. Non posso darti i numeri ma già si vede molto bene
 > ad occhio.»*
 
-⚠ Giudizio, **non misura** — e §2.5 spiega perché vale lo stesso, e perché **non chiude la fase**.
+⚠ Judgement, **not measurement** — and §2.5 explains why it counts all the same, and why it **does not close the phase**.
 
-### 8.3 ⭐⭐⭐ **«È ok»** — 22 agosto 2026, sera, sul prodotto con la copia zero accesa
+### 8.3 ⭐⭐⭐ **«È ok»** — 22 Aug 2026, evening, on the product with zero copy on
 
-*Il server della porta **7790**, ramo `fase-1` con tutto il lavoro della giornata dentro, tela
-2560×1080 (passo 10240, multiplo di 64 ⇒ **la copia zero è accesa**, non ripiega). L'utente si
-collega, trascina una finestra veloce come nel suo video del mattino, e giudica:*
+*The server on port **7790**, branch `fase-1` with all the day's work inside, canvas
+2560×1080 (stride 10240, multiple of 64 ⇒ **zero copy is on**, it does not fall back). The user
+connects, drags a window as fast as in his video of the morning, and judges:*
 
 > ### ⭐⭐⭐ *«è ok»*
 
-⇒ ⭐ **È il mandato della fase, chiuso dall'unico giudizio che lo poteva chiudere.** Il mandato era
-suo — *«l'unico piccolo appunto è un'ottimizzazione sulle performance grafiche»* (§8.1) — e la
-specifica pure: *«un'esperienza utente il più vicina possibile a una situazione locale»* (§1.1).
+⇒ ⭐ **It is the phase's mandate, closed by the only judgement that could close it.** The mandate was
+his — *«l'unico piccolo appunto è un'ottimizzazione sulle performance grafiche»* (§8.1) — and the
+specification too: *«un'esperienza utente il più vicina possibile a una situazione locale»* (§1.1).
 
-**Il cammino della giornata, nella sua unità:**
+**The day's path, in his unit:**
 
-| | barre del titolo | |
+| | title bars | |
 |---|---|---|
-| il **locale** — il pavimento, misurato (n=254, alla sua tela) | **0,142** | |
-| ⭐ REMOTIX **a sera** | **0,16 · 0,16** | **1,23 × il locale** |
+| **local** — the floor, measured (n=254, at his canvas) | **0.142** | |
+| ⭐ REMOTIX **in the evening** | **0.16 · 0.16** | **1.23 × local** |
 
-*(La riga «al mattino», sulla strada dalla memoria con `sws_scale`, è tolta: non vale più dopo la fase 18.)*
+*(The «in the morning» row, on the road from memory with `sws_scale`, is removed: it is no longer valid after phase 18.)*
 
-⚠ **Che cosa questo giudizio dice e che cosa NON dice**, e la distinzione va tenuta:
-- ⭐ **dice** che la cura ha funzionato dove conta — sull'occhio dell'utente, sul suo ferro, sulla
-  sua scena;
-- ⛔ **non dice** se la **previsione falsificabile** di §4-F2 abbia retto. Quella prevedeva
-  **0,31-0,46 barre** sul suo schermo, e *«è ok»* è un'accettazione, **non una frazione**. ⏳ Finché
-  non c'è la frazione, la spiegazione dello scarto resta **plausibile e non confermata**.
+⚠ **What this judgement says and what it does NOT say**, and the distinction must be kept:
+- ⭐ it **says** that the cure worked where it counts — on the user's eye, on his iron, on his
+  scene;
+- ⛔ it **does not say** whether the **falsifiable prediction** of §4-F2 held. That predicted
+  **0.31-0.46 bars** on his screen, and *«è ok»* is an acceptance, **not a fraction**. ⏳ Until
+  the fraction exists, the explanation of the discrepancy remains **plausible and unconfirmed**.
 
-⛔ **E non si scriva che la previsione è confermata**: sarebbe la forma di `LEZIONI.md` §1.20 — *il
-giudizio staccato dalla misura* — con l'aggravante di farlo nel documento che quella lezione la
-cita.
+⛔ **And let nobody write that the prediction is confirmed**: it would be the shape of `LEZIONI.md` §1.20 — *the
+judgement detached from the measurement* — with the aggravation of doing it in the document that cites that
+lesson.
 
-### 8.4 ⛔⭐ **La frazione è arrivata, ed è FUORI dalla previsione — dalla parte buona**
+### 8.4 ⛔⭐ **The fraction has arrived, and it is OUTSIDE the prediction — on the good side**
 
-*Chiesta con un righello concreto (la barra del titolo e i suoi tre punti riconoscibili), per non
-far stimare una frazione a mente. La risposta dell'utente, 22 agosto 2026:*
+*Asked with a concrete ruler (the title bar and its three recognisable points), so as not to
+make him estimate a fraction in his head. The user's answer, 22 Aug 2026:*
 
 > ### *«Il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»*
 >
-> *e, alla chiusura:* **«per me è ok»**
+> *and, at the close:* **«per me è ok»**
 
-⛔⛔ **La previsione di §4-F2 diceva 0,31-0,46 barre. L'utente ne riferisce ~0.** ⇒ **La previsione
-NON ha retto**, ed è caduta **dalla parte favorevole** — che è il verso in cui è più facile
-accettarla senza guardarla.
+⛔⛔ **The prediction of §4-F2 said 0.31-0.46 bars. The user reports ~0.** ⇒ **The prediction
+did NOT hold**, and it fell **on the favourable side** — which is the direction in which it is easiest
+to accept it without looking at it.
 
-⚠ **E i nostri numeri non prevedono lo zero nemmeno adesso**: `[M]` l'anello vale **55,20 ms**, e a
-`[M]` **3 400 px/s** — la velocità misurata dal video dell'utente — farebbero **188 px, cioè 0,26
-barre**. ⇒ ⛔ **«Fedelmente» non è quel che l'aritmetica dice**, e la differenza non è spiegata.
+⚠ **And our numbers do not predict zero even now**: `[M]` the loop is worth **55.20 ms**, and at
+`[M]` **3 400 px/s** — the speed measured from the user's video — they would make **188 px, that is 0.26
+bars**. ⇒ ⛔ **«Fedelmente» is not what the arithmetic says**, and the difference is not explained.
 
-#### ⭐ Una spiegazione è stata ESCLUSA, e va detto perché era la più pericolosa
+#### ⭐ One explanation was EXCLUDED, and it must be said because it was the most dangerous
 
-`[R]` **Il cammino del puntatore non è stato toccato oggi**: `git log` su `src/pagina.html` per il
-22 agosto dà un solo commit di questa fase (**F3**, `REMOTIX.tratti()`, **sola misura**), e il diff
-non contiene **nessuna riga** con `puntatore`, `cursor`, `freccia` o `agganciato`.
+`[R]` **The pointer's path was not touched today**: `git log` on `src/pagina.html` for
+22 Aug gives a single commit of this phase (**F3**, `REMOTIX.tratti()`, **measurement only**), and the diff
+contains **no line** with `puntatore`, `cursor`, `freccia` or `agganciato`.
 
-⇒ ⭐ **Cade l'ipotesi peggiore**, che sarebbe stata invisibile a un giudizio positivo: che la freccia
-avesse smesso di essere **locale** e arrivasse ormai **in ritardo insieme al fotogramma**. In quel
-caso il distacco sparirebbe **senza che il ritardo sia sceso** — cioè il prodotto sembrerebbe curato
-esattamente nella misura in cui è peggiorato. ⛔ **Non è andata così**: la freccia è ancora locale, e
-il miglioramento è vero.
+⇒ ⭐ **The worst hypothesis falls**, which would have been invisible to a positive judgement: that the arrow
+had stopped being **local** and was now arriving **late together with the frame**. In that
+case the gap would disappear **without the delay having dropped** — that is the product would look cured
+exactly to the extent that it had got worse. ⛔ **That is not what happened**: the arrow is still local, and
+the improvement is real.
 
-#### ⏳ Che cosa resta `[?]`, e non si chiude con un giudizio
+#### ⏳ What remains `[?]`, and is not closed with a judgement
 
-Due spiegazioni in piedi, **nessuna misurata**:
-1. `[?]` **l'utente ha trascinato più piano** di quando ha girato il video (3 400 px/s mediani): il
-   distacco è `velocità × ritardo`, quindi a mano lenta lo zero è atteso;
-2. `[?]` **sotto una certa soglia il distacco smette di essere percepibile** e «fedelmente» vuol dire
-   «non ci faccio più caso», non «zero pixel».
+Two explanations still standing, **neither measured**:
+1. `[?]` **the user dragged more slowly** than when he shot the video (3 400 px/s median): the
+   gap is `velocità × ritardo`, so with a slow hand zero is expected;
+2. `[?]` **below a certain threshold the gap stops being perceptible** and «fedelmente» means
+   «I no longer notice it», not «zero pixels».
 
-⚠ ⛔ **La differenza fra le due non è accademica**: la seconda direbbe che abbiamo una soglia di
-percezione da cui derivare un traguardo, la prima che la misura va rifatta. ⇒ **Nessuna delle due si
-scrive come conclusione**, e il modello di §1.28 resta `[?]`: **ha predetto male due volte di
-seguito, in versi opposti**, e questo è un fatto sul modello, non sull'utente.
+⚠ ⛔ **The difference between the two is not academic**: the second would say that we have a perception
+threshold from which to derive a target, the first that the measurement must be redone. ⇒ **Neither of the two is
+written as a conclusion**, and the model of §1.28 remains `[?]`: **it predicted badly twice in
+a row, in opposite directions**, and this is a fact about the model, not about the user.
 
-⭐⭐ **Quel che invece è chiuso, e lo chiude lui**: *«per me è ok»*. Il mandato della fase era suo, e
-il giudizio è suo. ⛔ Il modello che spiega *perché* resta un lavoro aperto — ⚠ **ed è lavoro nostro,
-non altro tempo dell'utente.**
+⭐⭐ **What instead is closed, and he closes it**: *«per me è ok»*. The phase's mandate was his, and
+the judgement is his. ⛔ The model that explains *why* remains open work — ⚠ **and it is our work,
+not more of the user's time.**
