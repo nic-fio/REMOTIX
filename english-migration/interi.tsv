@@ -2211,9 +2211,6 @@ ritmo_atteso	expected_rate	word order
 ritmo_sano	healthy_rate	word order
 ritrovati_all_avvio	found_again_at_startup	"all_startup" was a mistranslation of all'avvio
 rovescia32	reverse32	bit reversal of a 32-bit word, not "flips"
-rx_decodifica	rx_decode	wasm export is a verb: decode
-rx_pacchetto	rx_packet	pacchetto = network/Opus packet, not package
-rx_pacchetto_max	rx_packet_max	twin of rx_pacchetto
 s_in_attesa	s_pending	coalesced probe waiting to start: pending
 sa_scrivere_nella_cache	can_write_cache	sa = can, not "sa"
 salta_ancora	skip_left	frames still to skip
@@ -2935,3 +2932,48 @@ passo_scena	scene_step	twins move together / English word order
 ragione	rationale	reason is taken by motivo in the same files
 RIGA_RAMPA	RAMP_LINE	English word order, like ramp_line
 ricevuti	received	log key of the rete-quic line (ricevuti=, ricevuti_d → received_d in dati.tsv): one stem «received» for writers and readers; the clash in 07-b64-rete.py is a format string (false)
+# ── en-44: the Opus WebAssembly exports (src/opus-wasm/decodifica.c ↔ the page, 18-a1/chrome.html, confronta.mjs) ──
+rx_apri	rx_apri	wasm export of opus.wasm: the embedded blob keeps it until the wasm is rebuilt; the JS member is never "ours" so it would not follow
+rx_pacchetto	rx_pacchetto	wasm export of opus.wasm (as rx_apri)
+rx_pacchetto_max	rx_pacchetto_max	wasm export of opus.wasm (as rx_apri)
+rx_uscita	rx_uscita	wasm export of opus.wasm (as rx_apri)
+rx_decodifica	rx_decodifica	wasm export of opus.wasm (as rx_apri)
+# ── en-44: review of the 76 merges met in a scope (the loser's alternative) ──
+ATTESI	EXPECTED_COUNT	number of engines expected (-eq 0); AWAITED misleads
+MOTIVO	REASON_TEXT	§8.2 reason code → sentence table (MOT is the code enum)
+amm	accepted	bool "was admitted"; adm is a non-word
+allineati	aligned_pulses	list of pulses after alignment; in_line is the wrong sense
+tutto	overall	overall verdict (py) / all-ok flag (go); "everything" misleads
+attaccata	is_attached	bool "holds a registry slot"; attached_to suggests a pointer
+scat	box_stats	cgroup mem/cpu dict of the box; bx is a non-word
+morta	dead_run	result of a dead delivery run; no _v suffix
+degeneri	degenerate_count	counter; no _v suffix
+dett	details	message buffer; det is cryptic
+uscito	has_exited	loop bool; no _v suffix
+ritrovato	recovered	user found again after detach; "refound" is not English
+nuova	new_one	new Cattura*/Tastiera*; no _v suffix
+congelato	frozen_run	result of the frozen run; no _v suffix
+sani	healthy_runs	results of the healthy pass; sound_ok is odd
+gancio_locali	hook_locals	hook for the "locals" (users) query
+gancio_locali_ctx	hook_locals_ctx	its context, same as above
+tastiera_aperta	keyboard_is_open	bool state; kbd_open reads as a verb
+ult	prev	previous instant in a monotonic check; lst is a non-word
+lunghe	long_tests	list of long tests; lengthy is odd
+massima	max_dims	(w,h) max size tuple; no _v suffix
+nomina	label_of	function formatting a label; "naming" is a noun
+inesistenti	nonexistent_names	*args of nonexistent user names
+oscurato	is_obscured	predicate method; darkened is another meaning
+vecchi	stale	count of stale blocks thrown away; prior misleads
+pag	page_map	dict of page name → html; pg is cryptic
+letti	readings	colour names read back, not bytes
+pronte	ready_count	counter of ready themes; prepared misleads
+rileggi	reread_cmd	argv for re-reading xfconf; read_again reads as a verb
+corri	run_loop	actor's main method; run_it is awkward
+scansiona	scan_edge	scans along the edge X; scan_it is awkward
+la_scena	set_up_scene	function that builds the scene; the_scene is a noun
+visti	seen_items	lists/maps of things seen; seen_n means a count
+seriale	serial_number	monitor serial string; serial_v
+fermi	stills	stall durations / still frames; halted is odd for a list
+tollerati	tolerated_count	counter; allowed_n is another meaning
+forn	card_vendors	map of GPU vendors present; supplier duplicates vendor
+scritto	n_written	snprintf return length; wrote is a verb

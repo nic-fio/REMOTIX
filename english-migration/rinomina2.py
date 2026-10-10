@@ -255,7 +255,7 @@ EXT = ("c|h|go|py|sh|md|html|js|mjs|css|json|jsonl|log|txt|tsv|conf|service|spec
        "mod|sum|png|svg|tgz|xml|yml|yaml|ks|wasm|run|deb|rpm|toml|err|out|csv|pdf|mp4|tmpfiles|install|cil|te|fc")
 PATHISH_AFTER = re.compile(r"(/|\.(%s)(?![A-Za-z0-9_]))" % EXT)
 ITALIAN_STOP = set("""il lo la gli le una uno di del della dei delle degli che non con sono questo questa
-quando anche perché perche già gia più piu nel nella nei sul sulla alla ai dal dalla fra
+quando anche perché già gia più piu nel nella nei sul sulla alla ai dal dalla fra
 è ogni tutto tutti cosa così cosi quindi però pero ancora""".split())     # no per/come/se/ma: English too
 LOGLIKE = re.compile(r"^\s*(\[[^\]]*\]|\d\d:\d\d|\d{4}-\d\d-\d\d|[⭐⛔📄⚠✅❌🟢🔴]|[A-Z][A-Z ]{6,}:)")
 
@@ -299,8 +299,10 @@ def prose_pieces(seg):
 
 def italian_prose(s):
     # a kebab or snake compound (d13-delta-alla-misura-nuova) is ONE word, a name, not a sentence
-    w = re.findall(r"[A-Za-zàèéìòù][\wàèéìòù'-]*", s.lower())
-    n = sum(1 for x in w if x in ITALIAN_STOP)
+    # a word glued to a dot is a member, not prose (REMOTIX.tocco.perche, R.giro.quando.size); and the
+    # same stop word twice (perche: perche) is a key and its value, not a sentence
+    w = [m.group(0) for m in re.finditer(r"(?<!\w)(?<!\w\.)[A-Za-zàèéìòù][\wàèéìòù'-]*(?!\w|\.\w)", s.lower())]
+    n = len({x for x in w if x in ITALIAN_STOP})
     return n >= 2 or (n >= 1 and len(w) >= 3) or bool(re.search(r"[àèìòù]", s))
 
 
@@ -681,6 +683,10 @@ def scan(root, files, skips):
                 elif lang in ("c", "go", "py", "js", "css"):
                     pass
             elif k == "string":
+                if lang in ("js", "html") and seg.startswith("`"):
+                    # a template literal that is JS source (the page's worker shell): the keys of its
+                    # object literals are members of ours, read back as s.key on the other side
+                    fi.massign |= set(re.findall(r"(?m)(?:[{,]|\*/|^)\s*([A-Za-z_][A-Za-z0-9_]*)\s*:(?!:)", seg))
                 s = strip_quotes(seg)
                 if DATA_LIKE.match(s) and not f.startswith("docs/"):     # the manual's strings are text
                     fi.datalit[s] += 1
@@ -1427,6 +1433,11 @@ def rewrite(text, lang, regs, M, keep_lines, path, frozen=None, lang_own=None):
         if dyn_ext else set()
 
     css_own = lang_own.get("css", set())
+    # a shell function or variable defined in this file is a name, even when a directory of the tree has
+    # its spelling (impronta() vs installatore/prove/impronta)
+    sh_own = set(re.findall(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)", text, re.M)) | \
+        set(re.findall(r"(?:^|[;\s])(?:local[ \t]+|export[ \t]+|readonly[ \t]+)?([A-Za-z_]\w*)=", text, re.M)) \
+        if lang in ("sh", "make", "conf") else set()
 
     def css_sub(seg):
         # CSS: only our names (selectors, custom properties, keyframes, data-*): a property, a value or
@@ -1484,7 +1495,7 @@ def rewrite(text, lang, regs, M, keep_lines, path, frozen=None, lang_own=None):
                 return t              # n + ".html" builds testo.html: the bare stem is a file name
             if is_path(seg, s, m.end()):
                 return t           # a path: renamed with the files (step 2)
-            if k == "code" and lang in ("sh", "make", "conf") and t in REPO_NAMES:
+            if k == "code" and lang in ("sh", "make", "conf") and t in REPO_NAMES and t not in sh_own:
                 return t           # a bare file or directory name in a command (gofmt -l motore)
             changes[(t, M[t])] += 1
             return M[t]

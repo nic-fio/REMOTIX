@@ -218,7 +218,8 @@ def css_names(seg):
                 if m:
                     ours.add(m.group(1))
                 continue
-            for m in re.finditer(r"(?<![\w-])[.#](%s)" % CSS_IDENT, text):
+            # a compound selector (#esito.bene, a.attivo) glues a class to the name before it
+            for m in re.finditer(r"(?<!-)[.#](%s)" % CSS_IDENT, text):
                 if not m.group(1)[:1].isdigit():
                     ours.add(m.group(1))
             for m in re.finditer(r"\[\s*(%s)" % CSS_IDENT, text):
