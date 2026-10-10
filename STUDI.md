@@ -177,6 +177,7 @@ says it wants to avoid, and **the synthesis was the only place where it could be
 
 **D. ⛔ The background tab freezes after five minutes** *(added by R2; it was in S2 §3.8
 and I had not reported it)*.
+
 A group of pages is **frozen** if it stays hidden and silent for more than **five minutes**,
 and the documented exemption requires an open WebRTC channel or a live media track `[S]`.
 ⛔ **The architecture of §6.1 — WebTransport and nothing else — does not fall within the exemption.** S2 marks it as
