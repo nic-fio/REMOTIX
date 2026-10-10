@@ -52,8 +52,9 @@ Name:           remotix
 Version:        %{?rx_versione}%{!?rx_versione:0.17.0}
 Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
 Summary:        This machine's desktop in the browser
-# ⚠ The product license is not chosen yet (private repository).
-License:        LicenseRef-Proprietary
+# Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
+# source readable, no modifications, no redistribution. Its text is LICENSE.md.
+License:        LicenseRef-REMOTIX
 URL:            https://github.com/nic-fio/REMOTIX
 # An archive of src/, banchi/rcp/ (the twin copy that `make` compares) and
 # packaging/rpm/, made by `costruisci-rpm.sh`.
@@ -347,6 +348,7 @@ if [ -x /usr/bin/remotix-install ]; then
 fi
 
 %files
+%license LICENSE.md
 %license THIRD-PARTY-LICENSES
 %dir %{_libexecdir}/remotix
 %{_libexecdir}/remotix/remotix

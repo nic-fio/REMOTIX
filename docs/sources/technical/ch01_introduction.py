@@ -50,8 +50,8 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
         ["Sessions", "Wayland only; X11 applications run through XWayland"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C, {righe(conta('pagina.html'))} lines of page, "
          f"{righe(conta('.go'))} lines of Go"],
-        ["Licence", "Free of charge (DECISIONI.md §10.33); the licence text in " + c("LICENSE.md")
-         + " is still a draft"],
+        ["Licence", "Our own text, " + c("LICENSE.md") + " (DECISIONI.md §10.39): free for personal and "
+         "non-profit use, source readable, no modifications, no redistribution; not open source"],
     ], "«TAB» — REMOTIX at a glance") + \
     p("<b>Why a protocol of our own, and why a browser.</b> REMOTIX v1 spoke RDP and stopped at its phase 11, after "
       "serving GNOME and KDE: the three walls it hit — the H.264 ceiling, an Android client decoding in software and "
@@ -215,7 +215,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
     "├── PIANO.md · FASI.md · MASTERPLAN.md  # the plan, the closed phases, what is left for the end",
     "├── LEZIONI.md · STUDI.md  # how to measure; the studies of the desktops, the web and xpra",
     "├── CODER.md · REVIEWER.md  # rules for who writes code and for who reviews it",
-    "└── LICENSE.md  # draft licence text, not yet approved",
+    "└── LICENSE.md  # the licence (DECISIONI.md §10.39)",
 ], "«FIG» — The repository's folders") + \
     table(["Path", "Contents"], [
         [c("src/"), "The product. Every " + c(".c") + "/" + c(".h") + " pair is one module; " + c("pagina.html")

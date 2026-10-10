@@ -181,6 +181,7 @@ package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
 	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
+	install -Dm644 "$srcdir/remotix-$pkgver/LICENSE.md" "$pkgdir/usr/share/licenses/remotix/LICENSE.md"
 	install -Dm644 "$srcdir/remotix-$pkgver/THIRD-PARTY-LICENSES" \
 		"$pkgdir/usr/share/licenses/remotix/THIRD-PARTY-LICENSES"
 	# R24 (T8): the versions of the static libraries LINKED, from the pkg-config of

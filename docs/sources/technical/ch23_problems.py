@@ -56,11 +56,6 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          "firewall.",
          c("installatore/motore/preflight.go") + ", " + c("installatore/motore/ambiente.go"),
          "An administrator may meet a code the catalogue says no longer exists."],
-        ["<b>The package metadata still speaks of the old licence and in Italian.</b> The Debian copyright file says "
-         "proprietary, licence not yet decided; the spec says " + c("LicenseRef-Proprietary") + " and its summaries "
-         "and descriptions are Italian.",
-         c("packaging/debian/copyright") + ", " + c("packaging/rpm/remotix.spec"),
-         "Contradicts DECISIONI.md §10.33 (free of charge) and §10.32 (the product speaks English)."],
         ["<b>Parts of the interface are still in Italian</b>: the farewell sentences of the page, the logout "
          "notice, the ban notice served by the page server.",
          c("src/pagina.html") + ", " + c("src/pagina.c"),

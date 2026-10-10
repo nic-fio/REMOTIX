@@ -17,11 +17,12 @@ Name:           remotix-install
 Version:        %{rx_versione}
 Release:        %{rx_rilascio}
 Summary:        The REMOTIX installation engine
-License:        LicenseRef-Proprietary
+License:        LicenseRef-REMOTIX
 URL:            https://github.com/nic-fio/REMOTIX
 Source0:        remotix-install
 Source1:        README
 Source2:        THIRD-PARTY-LICENSES
+Source3:        LICENSE.md
 ExclusiveArch:  x86_64
 
 %description
@@ -37,6 +38,7 @@ this package.
 install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/remotix-install
 install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/README
 install -D -m 0644 %{SOURCE2} %{buildroot}%{_defaultlicensedir}/remotix-install/THIRD-PARTY-LICENSES
+install -D -m 0644 %{SOURCE3} %{buildroot}%{_defaultlicensedir}/remotix-install/LICENSE.md
 
 %posttrans
 # after an upgrade: records the versions, says whether the installation is still certified
@@ -47,4 +49,5 @@ install -D -m 0644 %{SOURCE2} %{buildroot}%{_defaultlicensedir}/remotix-install/
 %{_bindir}/remotix-install
 %dir %{_datadir}/remotix-install
 %{_datadir}/remotix-install/README
+%license %{_defaultlicensedir}/remotix-install/LICENSE.md
 %license %{_defaultlicensedir}/remotix-install/THIRD-PARTY-LICENSES
