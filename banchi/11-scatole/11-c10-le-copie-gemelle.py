@@ -31,7 +31,7 @@ repository, and they are there **on purpose**:
 
 ⇒ ⭐ **They are the same module mounted on two hosts** — `src/Makefile`, box
   «THE THREE COPIES THAT MUST BE ONE» (finding R12.3, night of 10 August
-  2026), and `DECISIONI.md` §1.12 box «the silent place», where the cell of
+  2026), and `DECISIONI.md` §1.12 box «the mute slot», where the cell of
   `RCP.md` §0-bis declares that the two copies are **identical byte for byte**.
 
 ⛔ **And until that night they were identical BY LUCK, not by construction**:

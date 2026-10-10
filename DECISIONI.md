@@ -941,7 +941,7 @@ want the encoder. ⛔ Until it is there, it is **code present that nobody has se
 the same form as the per-address counter that **B5** found: it read well, and did
 nothing.
 
-*Consequences to be written: `SPECIFICHE.md` §5.5 and `FASI.md` §01-filo-nudo, «I ripieghi di fase».*
+*Consequences to be written: `SPECIFICHE.md` §5.5 and `FASI.md` §01-filo-nudo, «The phase fallbacks».*
 
 ### 1.12 ✅ ⭐ The cure for the farewell is **out of phase, and declared** — phase 1 stays closed at 12 out of 14
 

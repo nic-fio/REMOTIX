@@ -232,7 +232,7 @@ voce(
     "A — the list: §4.3 says «capabilities of the server», and the choice travels only "
     "in the server log and then in the `codec` field of the frame "
     "header (§6.2)",
-    "B — the choice: §4.3 says «The server is the one who chooses», and the only place "
+    "B — the choice: §4.3 says «The one who chooses is the server», and the only place "
     "where the client could read it is this capability",
     "the test client **reads no capability of `ECCOMI`**: it reads the "
     "two bytes of the version and throws away the rest.  It is reading A by omission, "
@@ -243,9 +243,9 @@ voce(
     "The symptom, far from here, is «the browser does not open the stream» — the same "
     "as finding O12 on `video.livello`",
     appigli_rcp=[
-        "| **ECCOMI** | server → client. Versione scelta, capacità del server |",
-        "⛔ **Chi sceglie è il server**, dentro l'intersezione",
-        "La scelta **DEVE** essere scritta nel registro del server",
+        "| **ECCOMI** | server → client. Chosen version, server capabilities |",
+        "⛔ **The one who chooses is the server**, inside the intersection",
+        "The choice **MUST** be written in the server log",
     ],
     appigli_cliente=['versione = struct.unpack("!H", corpo[:2])[0]'],
     byte=lambda: (
@@ -274,10 +274,10 @@ voce(
     "the day an implementation applied the mapping, the reason "
     "would arrive as a huge number and the reader would print its low "
     "byte: **a wrong reason instead of an error**, which is worse than a "
-    "silence (§3.1: «the third point is the one that saves the diagnoses»)",
+    "silence (§3.1: «The third point is the one that saves diagnoses»)",
     appigli_rcp=[
-        "**DEVE** chiudere la **sessione WebTransport** con il codice d'errore "
-        "applicativo pari al\n   **codice del motivo** di §8.2",
+        "**MUST** close the **WebTransport session** with the application error "
+        "code equal to the\n   **reason code** of §8.2",
     ],
     appigli_cliente=["return b[j + 3]      # the four bytes of the code, the lowest"],
     byte=lambda: (
@@ -309,9 +309,9 @@ voce(
     "makes §4.2 trigger first, so the peer records «channel closed» instead "
     "of the reason.  It is the same family as finding R1.4, on the same point",
     appigli_rcp=[
-        "⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, "
-        "chiude la sessione.",
-        "**DEVE** mandare `CONGEDO` (§8) con il motivo, sul canale di controllo",
+        "⛔ **In bytes**: a FIN on that stream, from either of the two parties, "
+        "closes the session.",
+        "**MUST** send `CONGEDO` (§8) with the reason, on the control channel",
     ],
     appigli_cliente=[
         "self._quic.send_stream_data(self.controllo, dati, end_stream=False)",
@@ -335,7 +335,7 @@ voce(
     "a violation or are they a reserve for future versions?",
     "A — violation: §6.1 wants `lunghezza` to be «the exact number of bytes "
     "of the body», and a body longer than what the type expects is «a "
-    "length inconsistent with what the type expects» ⇒ `ERRORE_PROTOCOLLO`",
+    "length inconsistent with what the type provides for» ⇒ `ERRORE_PROTOCOLLO`",
     "B — reserve: `lunghezza` is authoritative, the fields the type "
     "declares are read and the rest is skipped.  It is the only way §9 could "
     "widen a message without changing the major version",
@@ -349,9 +349,9 @@ voce(
     "extra bytes nothing happens; the day it happens, one of the two "
     "says compliant and the other closes the connection",
     appigli_rcp=[
-        "⛔ `lunghezza` **DEVE** essere il numero esatto dei byte del corpo.",
-        "Un ricevente che legge una\nlunghezza incoerente con quel che il tipo "
-        "prevede **DEVE** chiudere con `ERRORE_PROTOCOLLO`.",
+        "⛔ `lunghezza` **MUST** be the exact number of bytes of the body.",
+        "A receiver that reads a\nlength inconsistent with what the type provides "
+        "for **MUST** close with `ERRORE_PROTOCOLLO`.",
     ],
     appigli_cliente=[
         'tipo, lung = struct.unpack("!HI", self.arrivati[:6])',
@@ -383,9 +383,9 @@ voce(
     "or would get in, depending on who wrote the server, and neither of the two "
     "would be outside the specification",
     appigli_rcp=[
-        "⛔ Se l'intersezione di `video.codec` è **vuota**, il server **DEVE** "
-        "congedare con\n`NIENTE_IN_COMUNE`.",
-        "⚠ Ma se **dopo lo scarto l'elenco resta vuoto**, si congeda con "
+        "⛔ If the intersection of `video.codec` is **empty**, the server **MUST** "
+        "send the farewell\n`NIENTE_IN_COMUNE`.",
+        "⚠ But if **after discarding\n  the list remains empty**, the farewell is "
         "`NIENTE_IN_COMUNE`",
     ],
     appigli_cliente=['("video.codec", "hevc,av1"), ("video.profondita", "8,10")'],
@@ -418,10 +418,10 @@ voce(
     "the thing §4.6 exists to prevent.  ⭐ And it is exactly the hole that "
     "line 4 was born to close: `DECISIONI.md` §7.17",
     appigli_rcp=[
-        "| ⭐ **apertura del canale di controllo** *(il primo stream "
-        "bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |",
-        "| ⭐ **apertura della sessione WebTransport** | **apertura del canale "
-        "di controllo** | **5 s**",
+        "| ⭐ **opening of the control channel** *(the first bidirectional stream "
+        "of the session)* | `CIAO` received | **5 s** |",
+        "| ⭐ **opening of the WebTransport session** | **opening of the control "
+        "channel** | **5 s**",
     ],
     byte=None,
     nota="⛔ **No byte changes**, and it must be said instead of inventing one: the "
@@ -461,9 +461,9 @@ voce(
     "that client sees the CONNECT refused and the diagnosis that comes out of it is an "
     "HTTP status, that is outside RCP and outside all the reasons of §8.2",
     appigli_rcp=[
-        "| **l'indirizzo della sessione** | `https://<host>:<porta>/rcp/1` |",
-        "⛔ **Il server NON DEVE accettare una sessione WebTransport su un percorso "
-        "diverso.**",
+        "| **the session address** | `https://<host>:<porta>/rcp/1` |",
+        "⛔ **The server MUST NOT accept a WebTransport session on a different "
+        "path.**",
     ],
     appigli_cliente=['(b"origin", f"https://{autorita}".encode()),'],
     byte=lambda: (
@@ -483,7 +483,7 @@ voce(
     "L8", "§4.5",
     "A `desktop` outside the six names: is it an out-of-range field (§3) or is it "
     "a diagnostic string not to be looked at?",
-    "A — §3 applies: «an out-of-range field» is in the list of §3, "
+    "A — §3 applies: «a field out of range» is in the list of §3, "
     "so the client closes with `ERRORE_PROTOCOLLO`",
     "B — it is not looked at: §4.5 says, in the same paragraph, that the client **MUST "
     "NOT** change behaviour based on its value",
@@ -493,10 +493,10 @@ voce(
     "session just opened.  ⚠ The two readings are in **six lines**, one "
     "under the other, and they are opposite",
     appigli_rcp=[
-        "└── stringa desktop             uno fra: gnome · kde · xfce · lxqt · "
-        "cinnamon · sconosciuto",
-        "Il campo `desktop` è per la diagnosi: il client\n**NON DEVE** cambiare "
-        "comportamento in base al suo valore",
+        "└── stringa desktop             one of: gnome · kde · xfce · lxqt · "
+        "cinnamon · unknown",
+        "The `desktop` field is for diagnosis: the client\n**MUST NOT** change "
+        "behaviour based on its value",
     ],
     appigli_cliente=['desktop = corpo[11:11 + n].decode()'],
     byte=lambda: (
@@ -526,9 +526,9 @@ voce(
     "notice: a field that is always zero and an absent field look the "
     "same — form E8",
     appigli_rcp=[
-        " ├── u64      stream         l'identificatore dello stream QUIC",
-        "⛔ **Ogni intero ha un solo significato di «assente»**, e va dichiarato "
-        "dove serve: non esistono valori sentinella impliciti.",
+        " ├── u64      stream         the identifier of the QUIC stream",
+        "⛔ **Every integer has a single meaning of «absent»**, and it must be "
+        "declared where needed: there are no\nimplicit sentinel values.",
     ],
     appigli_cliente=['out += struct.pack("!BBQIH", verso, 0x00, 0, len(carico), len(osc))'],
     byte=lambda: (
@@ -556,10 +556,10 @@ voce(
     "on the page while it was doing what §8.1 requires of it (§4.4, box "
     "of 10 Aug 2026)",
     appigli_rcp=[
-        "⛔ **E dopo `RESPINTO` al client resta una cosa sola che può dire: "
+        "⛔ **And after `RESPINTO` the client has only one thing left it may say: "
         "`CONGEDO`.**",
-        "⛔ Chi chiude **DEVE** mandare `CONGEDO` con un motivo **prima** di "
-        "chiudere la **sessione",
+        "⛔ Whoever closes **MUST** send `CONGEDO` with a reason **before** closing "
+        "the **WebTransport",
     ],
     byte=lambda: (
         inquadratura(0x000C, bytes([0x01]) + stringa("")),
@@ -587,9 +587,9 @@ voce(
     "path, which however is the one it is already using.  ⛔ The two lines do not "
     "quote each other, and it is the exact shape of finding R1.2",
     appigli_rcp=[
-        "`CIAO` porta la versione maggiore che il client sa parlare; `ECCOMI` "
-        "quella scelta dal server.",
-        "⛔ **E le due DEVONO coincidere**: un `CIAO(versione=2)` su `/rcp/1` è "
+        "`CIAO` carries the major version the client can speak; `ECCOMI` the one "
+        "chosen by the server.",
+        "⛔ **And the two MUST coincide**: a `CIAO(versione=2)` on `/rcp/1` is "
         "`VERSIONE_INCOMPATIBILE`",
     ],
     appigli_cliente=['out = struct.pack("!HH", 1, len(voci))'],
@@ -609,7 +609,7 @@ voce(
     "A — yes: §4.5 dictates the limits two lines away from the drawing that contains "
     "`vista_larghezza` and `vista_altezza`, and does not distinguish",
     "B — no: the view does not have the canvas constraints, «any size from 1×1 "
-    "up is legal, odd included»",
+    "upwards is lawful, odd included»",
     "the test client sends **view = canvas** (`--larghezza`/`--altezza` for "
     "all four fields): ⚠ once again the question avoided, not "
     "answered",
@@ -619,9 +619,9 @@ voce(
     "section of the `VISTA` message: whoever implements `ATTACCA` by reading §4.5 "
     "has no reason to go there",
     appigli_rcp=[
-        "⛔ **I limiti, e sono normativi**: larghezza e altezza della tela "
-        "**DEVONO** stare fra **320×240** e",
-        "⛔ **La vista non ha i vincoli della tela**",
+        "⛔ **The limits, and they are normative**: width and height of the "
+        "**granted** canvas **MUST** be between",
+        "⛔ **The view does not have the constraints of the canvas**",
     ],
     appigli_cliente=[
         'struct.pack("!IIII", a.larghezza, a.altezza,\n                                     a.larghezza, a.altezza)',

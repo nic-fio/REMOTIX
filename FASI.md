@@ -5556,7 +5556,7 @@ that unmasks the error: `nicfio` has their **local** graphical session, `prova` 
 
 1. ✅ **Releasing keys on detach, WITH A KEY REALLY PRESSED** — `[M]` **16 Aug,
    tested with the browser on two of the four paths, and the witness is the real desktop.**
-   `RCP.md` §11 calls it *«la regola col rapporto danno/costo più alto del documento»*.
+   `RCP.md` §11 calls it *«the rule with the highest damage/cost ratio in the document»*.
    ⇒ **It holds**, and the times are those of §6-bis below. ⛔ But the test found **two defects**,
    one closed and one open: the line that always said `0` (closed) and **the silence clock**
    (point 4, and now it has a measurement).

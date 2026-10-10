@@ -204,7 +204,7 @@ int input_pulsante(Input *, uint16_t codice, int premuto);
 /*
  * ⛔ Units of 120 per notch, and THE SIGN OF THE VERTICAL AXIS IS INVERTED IN
  *    HERE — once only, in one place only.  It is `[M]` 10 August 2026
- *    (`RCP.md` §7.3, box «Il segno della rotella»): the client sends +120
+ *    (`RCP.md` §7.3, box «The sign of the wheel»): the client sends +120
  *    when the user turns up, and the two conventions are opposite.
  * ⚠ And half notches exist: 60 is NOT rounded to zero.  `STUDI.md` §gnome §9 says
  *   that `ei_device_scroll_discrete` does an integer division by 120 and
