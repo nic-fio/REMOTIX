@@ -1,6 +1,6 @@
 ---
 name: le-prove-le-eseguo-io
-description: "«Se non mi dai il tempo di fare le prove non si va da nessuna parte; altrimenti falle tu» — i banchi da browser li guido io con Marionette, non li faccio aprire a lui"
+description: "«Se non mi dai il tempo di fare le prove non si va da nessuna parte; altrimenti falle tu» — I drive the browser benches with Marionette, I do not have him open them"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,41 +8,41 @@ metadata:
   modified: 2026-08-17T17:36:50.026Z
 ---
 
-⛔ **17 agosto 2026, e la frase è sua**: *«se non mi dai il tempo di fare le
+⛔ **17 Aug 2026, and the sentence is his**: *«se non mi dai il tempo di fare le
 prove non si va da nessuna parte»* — *«altrimenti falle tu»* — *«tanto hai il
 controllo del tablet»*.
 
-Era successo questo: gli avevo chiesto di aprire lo stesso banco sei volte con
-sei interruttori diversi, **e intanto cambiavo la pagina sotto**. Le sue misure
-descrivevano versioni che non esistevano più.
+This is what had happened: I had asked him to open the same bench six times with
+six different switches, **and meanwhile I was changing the page underneath**. His measurements
+described versions that no longer existed.
 
-**Why:** un giro di banco costa a me trenta secondi e a lui un'interruzione; e
-una pagina che cambia fra una sua apertura e l'altra produce numeri che non si
-possono confrontare — cioè lo fa lavorare per niente.
+**Why:** a bench round costs me thirty seconds and him an interruption; and
+a page that changes between one of his openings and the next produces numbers that cannot
+be compared — that is, it makes him work for nothing.
 
 **How to apply:**
-- ⭐ un banco che gira nel browser **lo guido io**: `banchi/07-b48-testimone.py`
-  accende un Firefox vero col protocollo Marionette, fa tutti i giri e legge
-  `window.RISULTATO` — nessuna coordinata, nessun occhio;
-- ⛔ **non** chiedergli di aprire più di UN indirizzo per volta, e non toccare
-  la pagina finché non ha risposto;
-- ⚠ `--visibile` gli apre una finestra sullo schermo: si avvisa **prima**, non
-  dopo;
-- quel che resta suo è il **giudizio** — «gli artefatti ci sono», «l'audio fa
-  schifo» — che nessun banco sa dare: vedi [[la-prova-la-fa-lutente]].
+- ⭐ a bench that runs in the browser **I drive it**: `banchi/07-b48-testimone.py`
+  starts a real Firefox with the Marionette protocol, does all the rounds and reads
+  `window.RISULTATO` — no coordinates, no eyes;
+- ⛔ do **not** ask him to open more than ONE address at a time, and do not touch
+  the page until he has answered;
+- ⚠ `--visibile` opens a window on his screen: warn him **before**, not
+  after;
+- what stays his is the **judgment** — «gli artefatti ci sono», «l'audio fa
+  schifo» — which no bench can give: see [[la-prova-la-fa-lutente]].
 
-⛔⛔ **E il 20 agosto 2026 l'ha detto più forte**: *«non voglio fare più test:
+⛔⛔ **And on 20 Aug 2026 he said it louder**: *«non voglio fare più test:
 hai il controllo del PC, sistema tutto e fai le prove su chrome e firefox»* —
-dopo che gli avevo fatto ricaricare la pagina tre volte per difetti che un
-banco avrebbe trovato da solo in due minuti.
+after I had made him reload the page three times for defects that a
+bench would have found by itself in two minutes.
 
-⭐ **Lo strumento che ne è nato**: `banchi/07-b51-due-browser.py` — Firefox con
-Marionette **e** Chrome col protocollo di diagnosi (CDP), quattro controlli per
-browser, e l'input verificato **dal registro del server** (dove è arrivato il
-clic), non dalla pagina. ⛔ Da usare **prima** di chiamarlo a guardare.
+⭐ **The tool that came out of it**: `banchi/07-b51-due-browser.py` — Firefox with
+Marionette **and** Chrome with the diagnostics protocol (CDP), four checks per
+browser, and the input verified **from the server's log** (where the
+click arrived), not from the page. ⛔ To be used **before** calling him to look.
 
-⚠ **E la regola sotto**: *un solo motore non è una prova, è mezza prova*. La
-cura di `DECISIONI.md` §5.4 era misurata su Firefox e su Chrome ha rotto
-immagine **e** input.
+⚠ **And the rule underneath**: *a single engine is not a test, it is half a test*. The
+cure of `DECISIONI.md` §5.4 was measured on Firefox and on Chrome it broke
+image **and** input.
 
-Vedi [[via-libera-permanente]], [[nic-regista-non-programmatore]].
+See [[via-libera-permanente]], [[nic-regista-non-programmatore]].

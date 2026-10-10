@@ -1,6 +1,6 @@
 ---
 name: ritmo-di-lavoro
-description: "Su REMOTIX l'utente vuole codice che avanza, non relazioni; le sue regole di prodotto non si discutono né si misurano"
+description: "On REMOTIX the user wants code that advances, not reports; his product rules are neither discussed nor measured"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,29 +8,29 @@ metadata:
   modified: 2026-08-11T03:33:03.751Z
 ---
 
-Su REMOTIX l'utente misura una sessione da **quanto prodotto è avanzato**, non da quanti
-documenti sono stati messi in pari. Il 10 agosto 2026, dopo una giornata di sole misure e
-documenti: *«Ti stai bloccando sulla burocrazia anziché mandare avanti il progetto. Da stamattina
+On REMOTIX the user measures a session by **how much the product has advanced**, not by how many
+documents have been brought up to date. On 10 Aug 2026, after a day of only measurements and
+documents: *«Ti stai bloccando sulla burocrazia anziché mandare avanti il progetto. Da stamattina
 non è stato sviluppato quasi nulla»*.
 
-**Perché:** il metodo del progetto (registrare le decisioni, marcare `[M]`/`[R]`/`[S]`/`[?]`,
-certificare i banchi) è **suo** e non va abbandonato — è nato perché v1 è morto su misure che non
-misuravano. Ma il metodo è il **come**, non il **cosa**: se a fine giornata non c'è codice nuovo,
-per lui la sessione è persa, per quanto siano curati i documenti.
+**Why:** the project's method (recording decisions, marking `[M]`/`[R]`/`[S]`/`[?]`,
+certifying the benches) is **his** and must not be abandoned — it was born because v1 died on measurements that did not
+measure. But the method is the **how**, not the **what**: if at the end of the day there is no new code,
+for him the session is lost, however well kept the documents are.
 
-**Come si applica:**
+**How to apply:**
 
-- registrare una decisione dove va — è la sua regola — ma **in un posto solo**, non in cinque
-  documenti in una passata;
-- quando qualcosa è rotto, **eseguirlo** invece di diagnosticarlo leggendo: *«B8 l'ho diagnosticato
-  leggendo invece che eseguendo»* è stato l'errore che ha fatto scattare il rimprovero;
-- quando pone una **regola di prodotto** (la forma del ban, i tre tentativi, la finestra dei
-  5 minuti) non aspetta un'analisi né una misura: *«qui non ci sono chiacchiere o test da fare: è
-  una regola che guida la scrittura del codice»*. Si scrive e si va avanti — le conseguenze si
-  dichiarano in due righe, non si trasformano in una discussione;
-- le domande vanno **raggruppate e poste una volta**, con una raccomandazione, non una alla volta;
-- quando dice di non fermarsi, non si chiedono conferme intermedie: si lavora e si riferisce alla
-  fine.
+- record a decision where it belongs — it is his rule — but **in one place only**, not in five
+  documents in one pass;
+- when something is broken, **run it** instead of diagnosing it by reading: *«B8 l'ho diagnosticato
+  leggendo invece che eseguendo»* was the mistake that triggered the reproach;
+- when he sets a **product rule** (the shape of the ban, the three attempts, the window of
+  5 minutes) he does not wait for an analysis or a measurement: *«qui non ci sono chiacchiere o test da fare: è
+  una regola che guida la scrittura del codice»*. It is written and we move on — the consequences are
+  declared in two lines, not turned into a discussion;
+- questions must be **grouped and asked once**, with a recommendation, not one at a time;
+- when he says not to stop, no intermediate confirmations are asked: work, and report at the
+  end.
 
-⚠ Il rovescio, che resta vero: non si arrotonda un numero per far tornare un verde, e non si
-dichiara fatto quel che non è stato provato. Su questo non ha mai chiesto di andare più veloce.
+⚠ The reverse, which stays true: a number is not rounded to make a green come out, and what has not been tested is not
+declared done. On this he has never asked to go faster.

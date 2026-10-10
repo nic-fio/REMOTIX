@@ -1,6 +1,6 @@
 ---
 name: documentazione-v1-misurata
-description: "~/Documenti/REMOTIX è la documentazione di v1 (600 KB di misure): si legge PRIMA di rifare una cosa che in v1 funzionava"
+description: "~/Documenti/REMOTIX is the documentation of v1 (600 KB of measurements): read it BEFORE redoing something that worked in v1"
 metadata: 
   node_type: memory
   type: reference
@@ -8,30 +8,30 @@ metadata:
   modified: 2026-08-17T10:00:01.747Z
 ---
 
-`~/Documenti/REMOTIX/` — **non** è codice, è la **documentazione di v1**, e
-porta misure che in V2 non sono state rifatte:
+`~/Documenti/REMOTIX/` — it is **not** code, it is the **documentation of v1**, and
+it carries measurements that were not redone in V2:
 
-| file | che cosa contiene |
+| file | what it contains |
 |---|---|
-| `REFERENCE.md` (168 KB) | le regole misurate: **R25** il ritmo dei blocchi audio, **R26** la priorità di tempo reale, R27 il codificatore hardware, R24 il segno del PCM |
-| `SPECIFICA.md` (134 KB) | §7.5 il sink virtuale creato da noi |
-| `PIANO.md`, `LEZIONI.md` | le fasi di v1 e il metodo |
-| `protocollo-rdp.md`, `xrdp-funzionalita.md` | il protocollo morto, tenuto per le lezioni |
+| `REFERENCE.md` (168 KB) | the measured rules: **R25** the rhythm of the audio blocks, **R26** the real-time priority, R27 the hardware encoder, R24 the sign of the PCM |
+| `SPECIFICA.md` (134 KB) | §7.5 the virtual sink created by us |
+| `PIANO.md`, `LEZIONI.md` | the phases of v1 and the method |
+| `protocollo-rdp.md`, `xrdp-funzionalita.md` | the dead protocol, kept for the lessons |
 
-⛔ **R26 è quella che è costata di più a non leggerla**: un processo con
-`RLIMIT_RTPRIO` a zero non può chiedere `SCHED_FIFO`, PipeWire se la vede
-negare, e il sintomo è **audio che scoppietta quando il desktop lavora** —
-invisibile a ogni controllo sul filo. Si concede nell'**unità systemd**
-(`LimitRTPRIO=20`, `LimitNICE=-11`), non nel codice.
+⛔ **R26 is the one that cost the most for not reading it**: a process with
+`RLIMIT_RTPRIO` at zero cannot ask for `SCHED_FIFO`, PipeWire gets it
+denied, and the symptom is **audio that crackles when the desktop is working** —
+invisible to every check on the wire. It is granted in the **systemd unit**
+(`LimitRTPRIO=20`, `LimitNICE=-11`), not in the code.
 
-**Why:** il 17 agosto 2026 ho inseguito per ore un difetto dell'audio che v1
-aveva già misurato e scritto il 5 agosto. È stato Nic a dire *«nella prima
+**Why:** on 17 Aug 2026 I chased for hours an audio defect that v1
+had already measured and written down on 5 Aug. It was Nic who said *«nella prima
 versione l'audio funzionava, esamina quella cartella»*.
 
-**How to apply:** è il **punto 0 della ricetta** di `LEZIONI.md` §9 — *«chi, al
-mondo, fa già questa cosa?»* — nella variante che conta di più: **chi, in casa
-nostra, l'ha già risolta?** Prima di scrivere un pezzo che v1 aveva, si cerca
-qui. ⚠ Il codice di v1 sta altrove (`REMOTIX/fondamenta/remotix-c/src/`): questa
-cartella sono le **misure**.
+**How to apply:** it is **point 0 of the recipe** of `LEZIONI.md` §9 — *«chi, al
+mondo, fa già questa cosa?»* — in the variant that counts most: **who, in our
+own house, has already solved it?** Before writing a piece that v1 had, look
+here. ⚠ The code of v1 is elsewhere (`REMOTIX/fondamenta/remotix-c/src/`): this
+folder is the **measurements**.
 
-Vedi [[misura-anche-chi-ascolta]], [[remotix-convenzioni]].
+See [[misura-anche-chi-ascolta]], [[remotix-convenzioni]].

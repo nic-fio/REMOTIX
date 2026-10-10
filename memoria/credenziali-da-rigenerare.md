@@ -1,37 +1,37 @@
 ---
 name: credenziali-da-rigenerare
-description: 28 ago 2026 le credenziali del server erano state CANCELLATE dal tablet; RIFATTE il 18 set 2026 (chiave nuova, parola d'ordine invariata)
+description: on 28 Aug 2026 the server credentials had been DELETED from the tablet; REDONE on 18 Sep 2026 (new key, password unchanged)
 metadata:
   type: project
 ---
 
-⭐ **RIFATTE il 18 settembre 2026**: `~/SERVER.ssh` (righe `host:` `user:` `pass:`), chiave `ed25519` nuova, installata sul server. La parola d'ordine del server e' **rimasta `nicfio`** — vedi [[deposito-su-github]]. La ricetta completa sta in [[riavvio-perde-la-chiave-ssh]].
+⭐ **REDONE on 18 Sep 2026**: `~/SERVER.ssh` (lines `host:` `user:` `pass:`), new `ed25519` key, installed on the server. The server's password **stayed `nicfio`** — see [[deposito-su-github]]. The complete recipe is in [[riavvio-perde-la-chiave-ssh]].
 
-~~Sul tablet non c'e' piu' nessuna credenziale del server.~~ (vero dal 28 ago al 18 set 2026) Cancellate il 28 agosto
-2026 per decisione di Nic — *«le rigenereremo quando il server tornera' disponibile»* —
-prima della pulizia della macchina.
+~~On the tablet there is no longer any server credential.~~ (true from 28 Aug to 18 Sep 2026) Deleted on 28 Aug
+2026 by Nic's decision — *«le rigenereremo quando il server tornera' disponibile»* —
+before the cleanup of the machine.
 
-Cancellati (sovrascritti, non solo scollegati): `~/SERVER.ssh`, `~/.ssh/id_ed25519`
-e la pubblica, i certificati TLS in `~/.local/state/remotix/` e in `~/.remotix-f26/`.
-⭐ **Restano apposta** l'accesso a GitHub (`~/.config/gh/hosts.yml`) e a Claude
-(`~/.claude/.credentials.json`): git parla con GitHub in **HTTPS col gettone `gh`**,
-non con la chiave ssh, quindi cancellarla non ha toccato il deposito.
+Deleted (overwritten, not just unlinked): `~/SERVER.ssh`, `~/.ssh/id_ed25519`
+and the public one, the TLS certificates in `~/.local/state/remotix/` and in `~/.remotix-f26/`.
+⭐ **Kept on purpose**: access to GitHub (`~/.config/gh/hosts.yml`) and to Claude
+(`~/.claude/.credentials.json`): git talks to GitHub over **HTTPS with the `gh` token**,
+not with the ssh key, so deleting it did not touch the repository.
 
-## ⛔ Il conto da pagare, e non e' un difetto
+## ⛔ The bill to pay, and it is not a defect
 
-`fondamenta/strumenti/sshpw.py` legge `~/SERVER.ssh`, e **46 richiami** passano di
-li'. Finche' la credenziale non c'e', quei banchi **non raggiungono la macchina**:
-e' voluto, non e' un guasto da diagnosticare.
+`fondamenta/strumenti/sshpw.py` reads `~/SERVER.ssh`, and **46 calls** go through
+it. As long as the credential is not there, those benches **do not reach the machine**:
+it is intended, it is not a fault to diagnose.
 
-## Quando il server torna — nell'ordine
+## When the server comes back — in order
 
-1. `ssh-keygen -t ed25519` — chiave nuova sul tablet (o sulla macchina nuova).
-2. Parola d'ordine nuova sul server, e riscritta in `~/SERVER.ssh` (una riga).
-3. `ssh-copy-id -i ~/.ssh/id_ed25519.pub nicfio@192.168.0.2` — e ⚠ va rifatto a
-   **ogni riavvio**: il rootfs e' live in RAM. Vedi [[riavvio-perde-la-chiave-ssh]].
-4. ⛔⛔ **I 9 file dei banchi con la parola d'ordine `sudo` in chiaro**
-   (`printf 'nicfio\n' | sudo -S ...`) vanno rifatti nello stesso giro: con una
-   parola d'ordine nuova sul server smettono di funzionare comunque, ⇒ e' il
-   momento giusto per fargliela **leggere da un file** invece che scriverla dentro.
-   ⭐ E' anche l'unica cosa che separa il deposito dal poter diventare pubblico.
-   Vedi [[deposito-su-github]].
+1. `ssh-keygen -t ed25519` — new key on the tablet (or on the new machine).
+2. New password on the server, and rewritten in `~/SERVER.ssh` (one line).
+3. `ssh-copy-id -i ~/.ssh/id_ed25519.pub nicfio@192.168.0.2` — and ⚠ it must be redone at
+   **every reboot**: the rootfs is live in RAM. See [[riavvio-perde-la-chiave-ssh]].
+4. ⛔⛔ **The 9 bench files with the `sudo` password in clear text**
+   (`printf 'nicfio\n' | sudo -S ...`) must be redone in the same round: with a
+   new password on the server they stop working anyway, ⇒ it is the
+   right moment to have them **read it from a file** instead of writing it inside.
+   ⭐ It is also the only thing that separates the repository from being able to become public.
+   See [[deposito-su-github]].

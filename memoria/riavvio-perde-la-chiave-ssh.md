@@ -1,49 +1,49 @@
 ---
 name: riavvio-perde-la-chiave-ssh
-description: "Il rootfs di 192.168.0.2 vive in RAM: ogni riavvio cancella chiave, pacchetti, utenti; e dal 18 set 2026 la ricetta per rifare il server DA ZERO"
+description: "The rootfs of 192.168.0.2 lives in RAM: every reboot wipes key, packages, users; and since 18 Sep 2026 the recipe to rebuild the server FROM SCRATCH"
 metadata:
   type: project
 ---
 
-La macchina di prova (`192.168.0.2`, hostname `NIC-OS`) ha il **rootfs in RAM** (avvia `live.img`
-da `/mnt`, ~210 pacchetti, niente GNOME). ⇒ Un riavvio porta via `authorized_keys`, gli utenti di
-prova, polkit, i drop-in, **e tutti i pacchetti installati** (GNOME, podman, python3). Resta solo
-quel che sta sui dischi: `/media` (NVMe) e `/srv` (sda), che l'utente monta a mano dopo l'avvio.
+The test machine (`192.168.0.2`, hostname `NIC-OS`) has its **rootfs in RAM** (it boots `live.img`
+from `/mnt`, ~210 packages, no GNOME). ⇒ A reboot takes away `authorized_keys`, the test
+users, polkit, the drop-ins, **and all installed packages** (GNOME, podman, python3). Only
+what is on the disks stays: `/media` (NVMe) and `/srv` (sda), which the user mounts by hand after boot.
 
-**Why:** i banchi entrano con `ssh -o BatchMode=yes`; senza chiave nessuna misura è possibile, e la
-diagnosi «la macchina è spenta» è sbagliata: il ping risponde.
+**Why:** the benches get in with `ssh -o BatchMode=yes`; without the key no measurement is possible, and the
+diagnosis «the machine is off» is wrong: ping answers.
 
-## ⭐ La ricetta, provata il 18 settembre 2026 — server ripartito DA ZERO
+## ⭐ The recipe, tried on 18 Sep 2026 — server restarted FROM SCRATCH
 
-Quel giorno `/media/REMOTIX` **non c'era più**: l'aveva cancellato l'utente stesso (con
-`/media/root`) prima di chiamarmi. ⇒ Si è rifatto tutto, e l'ordine giusto è questo:
+That day `/media/REMOTIX` **was no longer there**: the user himself had deleted it (with
+`/media/root`) before calling me. ⇒ Everything was redone, and the right order is this:
 
-0. ⛔ **la strada verso internet**: il profilo di NetworkManager dice gateway `192.168.0.1` ma la
-   rotta di default **non c'era** ⇒ `apt` falliva con «does not have a Release file».
-   Cura volatile: `sudo ip route add default via 192.168.0.1 dev enp6s0`.
-1. **chiave**: `~/SERVER.ssh` sul tablet (tre righe `host:` `user:` `pass:`; la parola è ancora
-   `nicfio`), `ssh-keygen -t ed25519`, e la pubblica in `authorized_keys` passando da
+0. ⛔ **the road to the internet**: the NetworkManager profile says gateway `192.168.0.1` but the
+   default route **was not there** ⇒ `apt` failed with «does not have a Release file».
+   Volatile cure: `sudo ip route add default via 192.168.0.1 dev enp6s0`.
+1. **key**: `~/SERVER.ssh` on the tablet (three lines `host:` `user:` `pass:`; the password is still
+   `nicfio`), `ssh-keygen -t ed25519`, and the public one into `authorized_keys` going through
    `fondamenta/strumenti/sshpw.py`.
-2. **contenitore di compilazione**: copiare `fondamenta/banco/*.sh` in `/media/REMOTIX/` e lanciare
-   `provision.sh` (mmdebstrap trixie → `devroot`, ~4 min). ⚠ Serve un **pty** perché `sudo` resti
-   valido: `ssh -tt … 'printf "nicfio\n" | sudo -S -v && bash …'`.
-3. **ngtcp2 1.25 / nghttp3 1.18** in `/media/REMOTIX/src/b2` (stesse versioni di `src/Contenitore`;
-   nghttp3 in `b2/prefisso`, ngtcp2 costruita in `b2/ngtcp2/build`) — dentro `enter.sh`.
-4. **prodotto**: `git archive HEAD src banchi/rcp` in `src/04-vero-src/`, poi
-   `enter.sh "bash /srv/src/04-vero-src/src/costruisci.sh"`. Le tre librerie vanno **copiate** in
-   `src/04-vero-src/src/lib-remotix/`, che `provisiona.sh` registra con `ldconfig`.
-5. **pacchetti dell'ospite**: l'elenco `PKGS` di `fondamenta/banco/provision-server.sh` + `podman
-   crun netavark fuse-overlayfs uidmap python3 nftables rsync git`, con la cache in
+2. **build container**: copy `fondamenta/banco/*.sh` into `/media/REMOTIX/` and run
+   `provision.sh` (mmdebstrap trixie → `devroot`, ~4 min). ⚠ A **pty** is needed for `sudo` to stay
+   valid: `ssh -tt … 'printf "nicfio\n" | sudo -S -v && bash …'`.
+3. **ngtcp2 1.25 / nghttp3 1.18** in `/media/REMOTIX/src/b2` (same versions as `src/Contenitore`;
+   nghttp3 in `b2/prefisso`, ngtcp2 built in `b2/ngtcp2/build`) — inside `enter.sh`.
+4. **product**: `git archive HEAD src banchi/rcp` into `src/04-vero-src/`, then
+   `enter.sh "bash /srv/src/04-vero-src/src/costruisci.sh"`. The three libraries must be **copied** into
+   `src/04-vero-src/src/lib-remotix/`, which `provisiona.sh` registers with `ldconfig`.
+5. **host packages**: the `PKGS` list of `fondamenta/banco/provision-server.sh` + `podman
+   crun netavark fuse-overlayfs uidmap python3 nftables rsync git`, with the cache in
    `/media/REMOTIX/cache/apt-host`.
-6. `sudo bash src/provisiona.sh` e poi `… verifica` ⇒ deve dire «la macchina e' nello stato che il
-   prodotto si aspetta» (dal 18 set scrive anche la regola dei **quattro comandi senza password** dei banchi, ✅ decisa dall'utente: senza, il gancio remoto si blocca al primo `sudo`). ⚠ `gpu-udev.sh` deve essere **eseguibile** in `/media/REMOTIX/`.
-7. **scatole**: `/etc/containers/storage.conf` con `graphroot = /media/REMOTIX/contenitori/storage`
-   (così le immagini **sopravvivono** al riavvio; il file in `/etc` no, va riscritto);
+6. `sudo bash src/provisiona.sh` and then `… verifica` ⇒ it must say «la macchina e' nello stato che il
+   prodotto si aspetta» (since 18 Sep it also writes the rule of the benches' **four commands without password**, ✅ decided by the user: without it, the remote hook gets stuck at the first `sudo`). ⚠ `gpu-udev.sh` must be **executable** in `/media/REMOTIX/`.
+7. **boxes**: `/etc/containers/storage.conf` with `graphroot = /media/REMOTIX/contenitori/storage`
+   (so the images **survive** the reboot; the file in `/etc` does not, it must be rewritten);
    `/media/REMOTIX/rete11/` = `banchi/11-scatole/*` + `10-f1-testimone.py` +
    `attrezzi-gruppi-scheda.sh` + `prodotto/{remotix,pagina.html,remotix.pam,01-b3-cliente.py,lib/}`;
-   poi `11-accendi.sh costruisci|accendi|passo0|prodotto|server <desktop>` per i quattro.
-8. ⛔ **la rete si lancia SUL SERVER**, non dal tablet: `gira` dal tablet non trova nessuna scatola
-   e dà tutto «non ho potuto guardare». Sul server:
+   then `11-accendi.sh costruisci|accendi|passo0|prodotto|server <desktop>` for the four.
+8. ⛔ **the net is launched ON THE SERVER**, not from the tablet: `gira` from the tablet finds no box
+   and gives everything «non ho potuto guardare». On the server:
    `sudo systemd-run --unit=… bash /media/REMOTIX/rete11/11-gancio.sh gira --famiglia tutto`.
 
-Vedi [[credenziali-da-rigenerare]], [[costruire-serve-il-contenitore]], [[la-prova-la-fa-lutente]].
+See [[credenziali-da-rigenerare]], [[costruire-serve-il-contenitore]], [[la-prova-la-fa-lutente]].

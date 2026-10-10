@@ -1,6 +1,6 @@
 ---
 name: remotix-requisito-prestazione
-description: "REMOTIX — dal 7 agosto 2026 l'utente pone i NUMERI e la tecnica li serve: 30 fps a 1080p minimo, 60 fps a 4K desiderato. La fase 10 è azzerata e l'approccio della fase 9 è giudicato sbagliato"
+description: "REMOTIX — since 7 Aug 2026 the user sets the NUMBERS and the technique serves them: 30 fps at 1080p minimum, 60 fps at 4K desired. Phase 10 is reset and the approach of phase 9 is judged wrong"
 metadata: 
   node_type: memory
   type: project
@@ -8,7 +8,7 @@ metadata:
   modified: 2026-08-07T17:36:59.417Z
 ---
 
-Il **7 agosto 2026, a fine giornata**, l'utente ha capovolto il modo di lavorare del progetto:
+On **7 Aug 2026, at the end of the day**, the user turned the project's way of working upside down:
 
 > *«Adesso scrivo quello che voglio, tu decidi cosa ci vuole per ottenerlo, e non dirmi i dettagli
 > tecnici che non li capisco. Le soluzioni tecniche devono essere prese in funzione di questi
@@ -16,92 +16,92 @@ Il **7 agosto 2026, a fine giornata**, l'utente ha capovolto il modo di lavorare
 
 | | |
 |---|---|
-| **MINIMO** | **30 fotogrammi al secondo a 1080p, 24 bit di colore** |
-| **DESIDERATO** | **60 fotogrammi al secondo a 4K, 32 bit di colore** |
+| **MINIMUM** | **30 frames per second at 1080p, 24 bits of colour** |
+| **DESIRED** | **60 frames per second at 4K, 32 bits of colour** |
 
-Sta in **§3.1 di `SPECIFICA.md`**, e il conto di fattibilità — che cosa è raggiungibile, su quali
-client, a che prezzo — in **§3.1-bis**. Una scelta tecnica si giustifica **mostrando che avvicina
-uno di quei due numeri**; se non li muove, non si fa.
+It is in **§3.1 of `SPECIFICA.md`**, and the feasibility count — what is reachable, on which
+clients, at what price — in **§3.1-bis**. A technical choice is justified **by showing that it brings
+one of those two numbers closer**; if it does not move them, it is not done.
 
-**Perché è successo, ed è la parte da non perdere.** La fase 9 ha ottimizzato i **millisecondi di
-CPU per fotogramma** (41 → 6) senza che nessuno avesse mai misurato i **fotogrammi al secondo
-consegnati**. Misurati la sera del 7 agosto: **18**, e non li limita il codificatore — la cattura ne
-consegna 17,7 e il server ne spedisce 17,9, cioè **si spedisce tutto quel che il compositore dà**.
-Una fase intera spesa su un pezzo che non era il collo di bottiglia. L'utente: *«abbiamo sbagliato
+**Why it happened, and it is the part not to lose.** Phase 9 optimised the **milliseconds of
+CPU per frame** (41 → 6) without anybody ever having measured the **frames per second
+delivered**. Measured on the evening of 7 Aug: **18**, and it is not the encoder that limits them — the capture
+delivers 17.7 and the server sends 17.9, that is **everything the compositor gives is sent**.
+A whole phase spent on a piece that was not the bottleneck. The user: *«abbiamo sbagliato
 proprio l'approccio sulle performance»*.
 
-**Stato lasciato il 7 agosto 2026:**
+**State left on 7 Aug 2026:**
 
-- **fase 10 AZZERATA** su richiesta dell'utente: codice tornato alla chiusura della fase 9, banchi
-  rimossi, riquadro in `PIANO.md` con i tre motivi del fallimento. Restano **le misure** in
-  `REFERENCE.md` (R31, §5.1, §10.2) e **le decisioni dell'utente**: risoluzione adattiva fuori,
-  AVC444 fuori (gli aveva dato problemi di luminanza), codifica per regioni fuori, e **i 10 Mbps
-  sono un pavimento, non un budget** — «spendere meno banda» non è un guadagno per questo prodotto;
-- **fase 9 sotto giudizio**: non azzerata, ma il suo approccio è quello che l'utente contesta. Le tre
-  strade proposte (togliere solo la copia zero / azzerare tutto / azzerare l'approccio) sono
-  nell'ultima parte della conversazione; l'utente ha scelto la terza di fatto, ponendo i numeri;
-- **il server** (`192.168.0.2:3392`) è nello stato di chiusura della fase 9: copia zero **spenta**,
-  bitrate a banda costante, più la sola correzione della locale (senza, il terminale della sessione
-  non parte).
+- **phase 10 RESET** at the user's request: code back to the closure of phase 9, benches
+  removed, box in `PIANO.md` with the three reasons for the failure. What remains are **the measurements** in
+  `REFERENCE.md` (R31, §5.1, §10.2) and **the user's decisions**: adaptive resolution out,
+  AVC444 out (it had given him luminance problems), region encoding out, and **the 10 Mbps
+  are a floor, not a budget** — «spending less bandwidth» is not a gain for this product;
+- **phase 9 under judgment**: not reset, but its approach is the one the user disputes. The three
+  roads proposed (remove only zero-copy / reset everything / reset the approach) are
+  in the last part of the conversation; the user in fact chose the third, by setting the numbers;
+- **the server** (`192.168.0.2:3392`) is in the state of the closure of phase 9: zero-copy **off**,
+  constant-bandwidth bitrate, plus only the locale correction (without it, the session's terminal
+  does not start).
 
-## ✅ IL COMPITO È STATO ESEGUITO LA SERA DEL 7 AGOSTO 2026
+## ✅ THE TASK WAS CARRIED OUT ON THE EVENING OF 7 AUG 2026
 
-*Le tabelle per intero stanno in **R32** di `REFERENCE.md`; il banco in
-`/media/REMOTIX/tmp/banco-compositori`, fuori dal prodotto (misuratore PipeWire proprio, client per
-il protocollo di KWin, client screencopy per wlroots).*
+*The full tables are in **R32** of `REFERENCE.md`; the bench in
+`/media/REMOTIX/tmp/banco-compositori`, outside the product (own PipeWire meter, client for
+KWin's protocol, screencopy client for wlroots).*
 
-**La risposta, in una riga: i 18 fotogrammi erano nostri.** REMOTIX dichiara alla cattura un massimo
-di **30**, e Mutter ne consegna **18**. Dichiarandone **60** ne consegna **37**. Si ottengono circa
-**sei decimi** di quel che si chiede, e oltre i 60 non si sale.
+**The answer, in one line: the 18 frames were ours.** REMOTIX declares to the capture a maximum
+of **30**, and Mutter delivers **18**. Declaring **60** it delivers **37**. One gets about
+**six tenths** of what is asked for, and it does not go above 60.
 
 | | |
 |---|---|
-| il client disegna | **60 fps**, su monitor virtuale a **60,000 Hz** |
-| **Mutter** ne consegna | **35–37**, uguale da 1080p a 4K |
-| **KWin 6.3.6** (DMA-BUF) | **59–60**, a ogni risoluzione |
-| **sway / labwc** (wlroots) | **61** a 1080p e 1440p, 40 a 4K |
+| the client draws | **60 fps**, on a virtual monitor at **60.000 Hz** |
+| **Mutter** delivers | **35–37**, the same from 1080p to 4K |
+| **KWin 6.3.6** (DMA-BUF) | **59–60**, at every resolution |
+| **sway / labwc** (wlroots) | **61** at 1080p and 1440p, 40 at 4K |
 
-**Quel che è caduto**, e non va rimesso in piedi: risoluzione e profondità di colore **non costano
-niente** alla cattura (4K rende come 1080p, BGRA come BGRx); la copia zero **non porta fotogrammi**
-(36,6 contro 34,0), porta CPU; il carico della GPU non sposta il numero; a desktop fermo la consegna
-è **zero**, come da specifica.
+**What fell**, and must not be stood up again: resolution and colour depth **cost
+nothing** to the capture (4K performs like 1080p, BGRA like BGRx); zero-copy **does not bring frames**
+(36.6 against 34.0), it brings CPU; GPU load does not move the number; with the desktop still the delivery
+is **zero**, as per specification.
 
-**Il minimo dell'utente è raggiungibile** (37 > 30) cambiando una riga. **Il desiderato non lo è su
-GNOME**: il tetto è Mutter, che perde il 40 % dei ridisegni — e **la fase 11 diventa anche la strada
-per i 60 fps**, perché gli altri due compositori quel tetto non ce l'hanno.
+**The user's minimum is reachable** (37 > 30) by changing one line. **The desired one is not on
+GNOME**: the ceiling is Mutter, which loses 40 % of the redraws — and **phase 11 also becomes the road
+to 60 fps**, because the other two compositors do not have that ceiling.
 
-## E la catena intera, misurata subito dopo
+## And the whole chain, measured right after
 
-Con `--fotogrammi 60` invece di 30, **fino al client**: 1080p da **18,7 a 32,4** — il minimo
-superato. Due cose che ne escono e che valgono da sole:
+With `--fotogrammi 60` instead of 30, **all the way to the client**: 1080p from **18.7 to 32.4** — the minimum
+exceeded. Two things that come out of it and are worth something by themselves:
 
-- ⛔ **la copia zero non porta fotogrammi**: 31,5 contro 32,4. Taglia la CPU per fotogramma da 16 a
-  3 ms. R29 si riprende per il consumo, non per la fluidità;
-- ⚠ **il 4K resta NON misurato**: il banco dà 17, ma il tappo è il client di prova che decodifica in
-  software (`in volo 2 di 2` su 835 campioni, server a 0,08 core). Il regolatore della fase 7 su un
-  collegamento veloce concede **2 posti**, quindi la portata è quella con cui il client riscontra.
-  Serve un client con decodifica hardware prima di dire qualunque cosa sul 4K.
+- ⛔ **zero-copy does not bring frames**: 31.5 against 32.4. It cuts the CPU per frame from 16 to
+  3 ms. R29 is picked up again for consumption, not for smoothness;
+- ⚠ **4K stays NOT measured**: the bench gives 17, but the cap is the test client which decodes in
+  software (`in volo 2 di 2` over 835 samples, server at 0.08 cores). The regulator of phase 7 on a
+  fast link grants **2 slots**, so the throughput is the one at which the client acknowledges.
+  A client with hardware decoding is needed before saying anything about 4K.
 
-## ✅ Chiuso il 7 agosto 2026: acceso, giudicato sui tre client, e messo nel codice
+## ✅ Closed on 7 Aug 2026: turned on, judged on the three clients, and put in the code
 
-| Client | Codec | Ritmo dal registro | Giudizio dell'utente |
+| Client | Codec | Rhythm from the log | User's judgment |
 |---|---|---|---|
-| `xfreerdp3` | AVC420 | 32–33 | a posto |
-| **mstsc** | AVC420 in GPU | **29–33** | «va benissimo» |
+| `xfreerdp3` | AVC420 | 32–33 | fine |
+| **mstsc** | AVC420 on GPU | **29–33** | «va benissimo» |
 | **RDM** Android | RemoteFX Progressive | **23–29** | «performance eccellenti» |
 
-**Il 60 sta in `main.c`**, non in `/etc/default/remotix` (che vive in RAM e si sarebbe perso al primo
-riavvio). Binario ridistribuito e verificato con la sola configurazione predefinita: **33,3 fps a
-1080p** sulla catena intera.
+**The 60 is in `main.c`**, not in `/etc/default/remotix` (which lives in RAM and would have been lost at the first
+reboot). Binary redeployed and verified with the default configuration only: **33.3 fps at
+1080p** on the whole chain.
 
-**La previsione su RDM era sbagliata** — era stato previsto «neutro, forse peggio sull'audio» per via
-di RemoteFX Progressive in software — e il motivo per cui era sbagliata è la cosa da ricordare: **i
-18 fotogrammi erano un tappo nostro a monte di tutto**; tolto quello, ogni client ha preso quanto
-sapeva reggere, e ne aveva in avanzo. Nessuno dei due lati era al limite: lo era il numero che
-dichiaravamo.
+**The prediction on RDM was wrong** — «neutral, maybe worse on audio» had been predicted because
+of RemoteFX Progressive in software — and the reason why it was wrong is the thing to remember: **the
+18 frames were a cap of ours upstream of everything**; with that removed, every client took as much as it
+could handle, and had some to spare. Neither of the two sides was at its limit: the number we
+declared was.
 
-⛔ **Resta da fare subito**: il 60 vive in `/etc/default/remotix`, cioè in RAM. Va portato **nel
-codice** (`main.c`, `fotogrammi = 30`), o al primo riavvio si perde — esattamente come si perse la
-riga della copia zero. Vedi [[remotix-prove-sul-banco-non-sull-utente]] regola 6.
+⛔ **Still to do at once**: the 60 lives in `/etc/default/remotix`, that is in RAM. It must be brought **into the
+code** (`main.c`, `fotogrammi = 30`), or at the first reboot it is lost — exactly as the
+zero-copy line was lost. See [[remotix-prove-sul-banco-non-sull-utente]] rule 6.
 
-Vedi [[remotix-oltre-rdp]] e [[remotix-fase9-ripresa]].
+See [[remotix-oltre-rdp]] and [[remotix-fase9-ripresa]].

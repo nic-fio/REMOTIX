@@ -1,53 +1,53 @@
 ---
 name: il-banco-si-prepara-prima
-description: "«Non chiamarmi se non funziona» — la scena si prepara e si GUARDA prima di chiedere un giudizio, e un contatore non è guardare"
+description: "«Non chiamarmi se non funziona» — the scene is prepared and LOOKED AT before asking for a judgment, and a counter is not looking"
 metadata:
   type: feedback
 ---
 
-⭐ **25 agosto 2026, fase 10.** Gli avevo dato indirizzo e credenziali chiedendo
-di guardare il prodotto. Lui, tre volte, fino a smettere: *«Firefox non
+⭐ **25 Aug 2026, phase 10.** I had given him address and credentials asking him
+to look at the product. He, three times, until he stopped: *«Firefox non
 funziona»* · ⛔ **«senza Firefox nessun test di rilievo ha senso, quindi non
 chiamarmi se non funziona»** · *«io non faccio più niente, non posso fare test in
 queste condizioni»*.
 
-⛔⛔ **E poi la correzione che rimette a fuoco tutto**:
+⛔⛔ **And then the correction that brings everything back into focus**:
 
 > **«Il Firefox che deve funzionare è quello del SERVER, non quello del tablet.»**
 
-⇒ Non è un impiccio di banco: ⛔ **un desktop remoto in cui non si apre un
-browser non è un desktop remoto.** È il prodotto visto dall'utente.
+⇒ It is not a bench nuisance: ⛔ **a remote desktop in which a browser
+does not open is not a remote desktop.** It is the product as seen by the user.
 
-⛔ **E la parte grave non era il browser: era che non lo sapevo.** Ho provato
-**quattro strade** per vedere l'immagine di quel desktop — lo scatto interno del
-figlio (`SIGUSR1`), la fotografia dello schermo (GNOME non la dà), la tela della
-pagina via Marionette, il conteggio dei fotogrammi — e ⛔ **nessuna mi ha dato il
-quadro**. Ho dichiarato la scena pronta **senza averla guardata**.
+⛔ **And the serious part was not the browser: it was that I did not know it.** I tried
+**four roads** to see the image of that desktop — the child's internal
+snapshot (`SIGUSR1`), the screenshot (GNOME does not give it), the page's
+canvas via Marionette, the frame count — and ⛔ **none gave me the
+picture**. I declared the scene ready **without having looked at it**.
 
-**Why:** il suo giudizio è l'invariante I8, cioè il metro ultimo del prodotto —
-⛔ **e ogni chiamata a vuoto ne consuma un pezzo.** È l'unico strumento del
-progetto che non si può ricostruire. Il suo tempo serve a **guardare**, non a far
-partire le cose né a scoprire che sono rotte.
+**Why:** his judgment is invariant I8, that is the ultimate meter of the product —
+⛔ **and every empty call consumes a piece of it.** It is the only tool of the
+project that cannot be rebuilt. His time is for **looking**, not for starting
+things up nor for discovering that they are broken.
 
 **How to apply:**
-- ⛔ **prima di chiamarlo, GUARDA la scena tu**: non «il processo è vivo», non
-  «sono passati 493 fotogrammi» — ⭐ **l'immagine**. *493 fotogrammi neri sono
-  493 fotogrammi*;
-- ⭐ **il testimone che fa vedere si tara come ogni metro**: si mette nel desktop
-  una **marca riconoscibile** (`04-b30-scena --giro NOME`) e si verifica che il
-  testimone la ritrovi, ⛔ **più il controllo negativo**: col desktop nero deve
-  dire «nero», non restituire un'immagine qualunque;
-- ⛔ **se non ha potuto guardare deve tornare «non lo so», mai un'immagine
-  vuota**: *«non ho guardato»* non è *«è nero»*;
-- se la scena non si riesce a preparare, ⭐ **si riferisce il buco** — quali
-  strade ho provato, dove si è fermata ciascuna, che cosa servirebbe — e **non
-  gli si chiede di provarci lui**.
+- ⛔ **before calling him, LOOK at the scene yourself**: not «the process is alive», not
+  «493 frames have gone through» — ⭐ **the image**. *493 black frames are
+  493 frames*;
+- ⭐ **the witness that shows is calibrated like every meter**: put in the desktop
+  a **recognisable mark** (`04-b30-scena --giro NOME`) and verify that the
+  witness finds it, ⛔ **plus the negative control**: with the desktop black it must
+  say «black», not return just any image;
+- ⛔ **if it could not look it must return «I don't know», never an empty
+  image**: *«I did not look»* is not *«it is black»*;
+- if the scene cannot be prepared, ⭐ **report the gap** — which
+  roads I tried, where each one stopped, what would be needed — and **do not
+  ask him to try it himself**.
 
-⚠ **E una premessa che avevo sbagliato**: la macchina di prova non ha schermo, e
-da questo avevo concluso *«il browser deve girare sul suo computer»*. ⛔ Falso:
-il browser deve girare **dentro la sessione remota**, che uno schermo ce l'ha —
-è quella che il prodotto serve.
+⚠ **And a premise I had got wrong**: the test machine has no screen, and
+from this I had concluded *«the browser must run on his computer»*. ⛔ False:
+the browser must run **inside the remote session**, which does have a screen —
+it is the one the product serves.
 
-Vedi [[la-prova-la-fa-lutente]], [[le-prove-le-eseguo-io]],
+See [[la-prova-la-fa-lutente]], [[le-prove-le-eseguo-io]],
 [[come-guarda-nic-lo-schermo]], [[nic-regista-non-programmatore]],
 [[testimone-sul-desktop-vero]].

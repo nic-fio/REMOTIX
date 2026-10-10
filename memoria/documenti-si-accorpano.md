@@ -1,6 +1,6 @@
 ---
 name: documenti-si-accorpano
-description: "Nic vuole pochi documenti grossi, non tanti piccoli — e i rapporti degli agenti non si conservano"
+description: "Nic wants few big documents, not many small ones — and the agents' reports are not kept"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,21 +8,21 @@ metadata:
   modified: 2026-08-16T19:21:06.702Z
 ---
 
-Il 16 agosto 2026 Nic ha portato la documentazione da **111 file a 10**: gli otto studi in
-`STUDI.md`, i sei documenti di fase in `FASI.md`, e i **94 rapporti degli agenti cancellati**
+On 16 Aug 2026 Nic brought the documentation from **111 files to 10**: the eight studies into
+`STUDI.md`, the six phase documents into `FASI.md`, and the **94 agent reports deleted**
 («non dovrebbero servire più»).
 
-**Why:** un file in più è un posto in più dove cercare, e prima o poi due si contraddicono —
-è già successo (`SESSIONE.md` e il documento della fase 5 tenevano le stesse misure, e
-divergevano). Il conto dei file lo guarda lui, e lo trova alto prima che lo trovi io.
+**Why:** one more file is one more place to search, and sooner or later two contradict each other —
+it has already happened (`SESSIONE.md` and the phase 5 document held the same measurements, and
+diverged). He is the one who watches the file count, and he finds it high before I do.
 
-**How to apply:** non produrre un file di rapporto per ogni agente o per ogni indagine. Quel
-che una fase misura va **nel documento della fase**, che alla chiusura diventa un capitolo di
-`FASI.md` — è l'unico posto da cui un numero sopravvive. Quando si accorpa: **non si riassume**,
-si sposta il testo riga per riga e si contano le righe prima e dopo; e le chiavi dei capitoli
-restano i nomi che avevano i file, così i rimandi vecchi si ritrovano.
+**How to apply:** do not produce a report file for every agent or every investigation. What
+a phase measures goes **into the phase document**, which at closure becomes a chapter of
+`FASI.md` — it is the only place from which a number survives. When merging: **do not summarise**,
+move the text line by line and count the lines before and after; and the chapter keys
+stay the names the files had, so the old cross-references can still be found.
 
-⛔ E un doppione si riconosce **dai numeri, non dai titoli**: undici sezioni su quattordici di
-`SESSIONE.md` erano copie, tre no — e dai titoli sembravano tutte uguali.
+⛔ And a duplicate is recognised **by the numbers, not by the titles**: eleven sections out of fourteen of
+`SESSIONE.md` were copies, three were not — and by the titles they all looked the same.
 
-Vedi [[processo-proporzionato-non-cerimonia]] e [[remotix-convenzioni]].
+See [[processo-proporzionato-non-cerimonia]] and [[remotix-convenzioni]].

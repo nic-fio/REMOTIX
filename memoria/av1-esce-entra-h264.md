@@ -1,6 +1,6 @@
 ---
 name: av1-esce-entra-h264
-description: "17 ago 2026, deciso dall'utente: AV1 esce dal prodotto, entra H.264 — Firefox Android non ha né HEVC né AV1, e qui l'AV1 è l'unico codec senza hardware"
+description: "17 Aug 2026, decided by the user: AV1 leaves the product, H.264 comes in — Firefox Android has neither HEVC nor AV1, and here AV1 is the only codec without hardware"
 metadata: 
   node_type: memory
   type: project
@@ -8,67 +8,67 @@ metadata:
   modified: 2026-08-17T17:37:11.600Z
 ---
 
-⛔⛔ **Deciso dall'utente il 17 agosto 2026**: *«la scelta è obbligata: dobbiamo
-abbandonare AV1»*, e il sostituto scelto è **H.264**.
+⛔⛔ **Decided by the user on 17 Aug 2026**: *«la scelta è obbligata: dobbiamo
+abbandonare AV1»*, and the chosen replacement is **H.264**.
 
-**La causa, ed è sua**: **Firefox per Android non supporta né HEVC né AV1.**
-⇒ Per quel browser il prodotto non esisteva, il che contraddice la riga
-d'apertura del `README` — *«nessun client da installare, basta un browser
+**The cause, and it is his**: **Firefox for Android supports neither HEVC nor AV1.**
+⇒ For that browser the product did not exist, which contradicts the opening
+line of the `README` — *«nessun client da installare, basta un browser
 moderno»*.
 
-**E la misura che la conferma** (`vainfo` sul CHUWI, 17 ago):
+**And the measurement that confirms it** (`vainfo` on the CHUWI, 17 Aug):
 
-| codec | decodifica sul tablet | Firefox | codifica sul server |
+| codec | decoding on the tablet | Firefox | encoding on the server |
 |---|---|---|---|
-| HEVC | ⭐ hardware | ⛔ **no** | ⭐ hardware, 3,16 ms |
-| AV1 | ⛔ **nessun profilo** | sì | ⛔ **non esiste**, solo software |
-| H.264 | ⭐ hardware | sì | ⭐ hardware, **3,11 ms** (il più veloce) |
-| VP9 | ⭐ hardware | sì | ⭐ hardware, 6,95-7,28 ms |
+| HEVC | ⭐ hardware | ⛔ **no** | ⭐ hardware, 3.16 ms |
+| AV1 | ⛔ **no profile** | yes | ⛔ **does not exist**, software only |
+| H.264 | ⭐ hardware | yes | ⭐ hardware, **3.11 ms** (the fastest) |
+| VP9 | ⭐ hardware | yes | ⭐ hardware, 6.95-7.28 ms |
 
-⇒ AV1 era **l'unico codec senza hardware da nessuna parte** in questo impianto.
+⇒ AV1 was **the only codec without hardware anywhere** in this setup.
 
-⭐ **E la stringa è già verificata**: `avc1.640032` (High, livello 5.0) —
-Firefox l'accetta e decodifica 300 fotogrammi su 300 con zero errori
-(`banchi/07-b48`). Non va indovinata.
+⭐ **And the string is already verified**: `avc1.640032` (High, level 5.0) —
+Firefox accepts it and decodes 300 frames out of 300 with zero errors
+(`banchi/07-b48`). It does not need to be guessed.
 
-⚠ **Due cose misurate che serviranno scrivendo il codificatore:**
-- il fotogramma che WebCodecs consegna su Firefox è **`BGRX`**, non planare: la
-  conversione di colore la fa già il decodificatore;
-- il decodificatore H.264 **in hardware** su questa macchina converte con una
-  scala diversa da `ffmpeg`: **+8 livelli sulle zone chiare**, liscio e
-  uniforme. Non è un guasto di blocchi, ma è un colore sbagliato per l'utente.
+⚠ **Two measured things that will be needed when writing the encoder:**
+- the frame that WebCodecs delivers on Firefox is **`BGRX`**, not planar: the
+  colour conversion is already done by the decoder;
+- the **hardware** H.264 decoder on this machine converts with a
+  different scale from `ffmpeg`: **+8 levels on the light areas**, smooth and
+  uniform. It is not a block fault, but it is a wrong colour for the user.
 
-**Il lavoro che ne segue** (non ancora fatto): `RCP.md` §4.3 e §6.2 (il registro
-dei codec, oggi `1` = HEVC, `2` = AV1), `codificatore.c` (`h264_vaapi` **e** il
-lettore dei NAL che riconosce l'IDR, perché §5.2 vuole la chiave vera),
-`figlio.c` (il terzo codec nelle strutture per-codec), `pagina.html`
-(`CODEC_RCP`, la preferenza, e il flusso di prova della sonda, che è dipinto
-davvero e va fabbricato).
+**The work that follows from it** (not done yet): `RCP.md` §4.3 and §6.2 (the registry
+of codecs, today `1` = HEVC, `2` = AV1), `codificatore.c` (`h264_vaapi` **and** the
+NAL reader that recognises the IDR, because §5.2 wants the true key),
+`figlio.c` (the third codec in the per-codec structures), `pagina.html`
+(`CODEC_RCP`, the preference, and the probe's test stream, which is actually
+painted and has to be manufactured).
 
-⭐⭐ **FATTO il 20 agosto 2026**: `rcp.h` (`RCP_CODEC_VIDEO_MAX`), `rcp.c`
-(`hevc,h264`), `codificatore.c` (`h264_vaapi`, 1,6 ms; lettore Annex-B e SPS di
-H.264), `figlio.c`, `pagina.html` (sonde **generate**, `avc1.6400<liv esa>`).
-⛔ E il numero **2 resta AV1 per sempre**: non si riusa.
+⭐⭐ **DONE on 20 Aug 2026**: `rcp.h` (`RCP_CODEC_VIDEO_MAX`), `rcp.c`
+(`hevc,h264`), `codificatore.c` (`h264_vaapi`, 1.6 ms; Annex-B reader and SPS of
+H.264), `figlio.c`, `pagina.html` (**generated** probes, `avc1.6400<liv esa>`).
+⛔ And the number **2 stays AV1 forever**: it is not reused.
 
-⚠ **La trappola pagata**: un numero nuovo entra in cinque posti e uno resta
-indietro — quattro array per-codec lunghi `[3]` (scrittura fuori dai limiti che
-sporcava la variabile accanto) e una guardia **silenziosa** in
-`wt_video_diffondi()` che buttava ogni fotogramma. Vedi `LEZIONI.md` §1.17.
+⚠ **The trap we paid for**: a new number goes into five places and one stays
+behind — four per-codec arrays of length `[3]` (an out-of-bounds write that
+dirtied the variable next to it) and a **silent** guard in
+`wt_video_diffondi()` that threw away every frame. See `LEZIONI.md` §1.17.
 
-⛔⛔⭐ **E IL 21 AGOSTO 2026 LA PREMESSA E' RISULTATA INCOMPLETA — misurato sul
-telefono vero.** Firefox 154 su Android 16 non e' un browser «senza HEVC e senza
-AV1»: e' un browser **senza WebCodecs**. `[M]` La pagina, nel registro del
-server: *«WebCodecs NON c'e'»*, e `typeof VideoDecoder === "undefined"`.
+⛔⛔⭐ **AND ON 21 AUG 2026 THE PREMISE TURNED OUT TO BE INCOMPLETE — measured on the
+real phone.** Firefox 154 on Android 16 is not a browser «without HEVC and without
+AV1»: it is a browser **without WebCodecs**. `[M]` The page, in the server's
+log: *«WebCodecs NON c'e'»*, and `typeof VideoDecoder === "undefined"`.
 
-⇒ **Il passaggio a H.264 NON ha aperto Firefox Android**, e nessun codec potra'
-mai farlo: in `pagina.html` la strada verso i pixel e' UNA — WebCodecs — e non
-c'e' **nessuna** occorrenza di `MediaSource`. ⚠ La decisione su H.264 resta
-buona per gli altri motivi della tabella qui sopra (l'AV1 senza hardware da
-nessuna parte), ma la ragione «cosi' Firefox Android funziona» **era falsa**.
+⇒ **The switch to H.264 did NOT open Firefox Android**, and no codec will
+ever be able to: in `pagina.html` the road to the pixels is ONE — WebCodecs — and there is
+**no** occurrence of `MediaSource`. ⚠ The decision on H.264 stays
+good for the other reasons in the table above (AV1 without hardware
+anywhere), but the reason «so Firefox Android works» **was false**.
 
-⚠ **Chrome per Android ha WebCodecs**: li' il prodotto ha una strada. E se un
-giorno si volesse Firefox Android, serve un secondo percorso di disegno (MSE con
-un `<video>`), che e' lavoro vero e cambia il ritardo — non un interruttore.
+⚠ **Chrome for Android has WebCodecs**: there the product has a road. And if one
+day Firefox Android were wanted, a second drawing path is needed (MSE with
+a `<video>`), which is real work and changes the delay — not a switch.
 
-Vedi [[niente-eccezioni-per-compositore]], [[prestazioni-sul-ferro-modesto]],
+See [[niente-eccezioni-per-compositore]], [[prestazioni-sul-ferro-modesto]],
 [[i-quadrati-sono-della-tela-2d]].

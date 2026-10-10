@@ -1,6 +1,6 @@
 ---
 name: remotix-fase10-chiusa
-description: "REMOTIX fase 10 (qualità) — chiusa il 7 agosto 2026 dal giudizio dell'utente senza essere rifatta: «la qualità va bene così»"
+description: "REMOTIX phase 10 (quality) — closed on 7 Aug 2026 by the user's judgment without being redone: «la qualità va bene così»"
 metadata: 
   node_type: memory
   type: project
@@ -8,25 +8,25 @@ metadata:
   modified: 2026-08-07T17:39:15.403Z
 ---
 
-La **fase 10 è chiusa il 7 agosto 2026**, e non perché sia stata fatta: perché l'utente, provato il
-punto di lavoro nuovo sui tre client, ha detto **«la qualità va bene così»**. Il metro è quel che si
-vede (§7 di `SPECIFICA.md`), e ha risposto.
+**Phase 10 was closed on 7 Aug 2026**, and not because it was done: because the user, having tried the
+new working point on the three clients, said **«la qualità va bene così»**. The meter is what one
+sees (§7 of `SPECIFICA.md`), and it answered.
 
-Era già stata **azzerata** quella mattina dopo un fallimento istruttivo (si era spedito sul server di
-lavoro un cambio a quel che si vede validato solo sul banco, e si era ottimizzato nella direzione
-sbagliata). Adesso non va nemmeno rifatta.
+It had already been **reset** that morning after an instructive failure (a change to what one sees,
+validated only on the bench, had been shipped to the working server, and it had been optimised in the wrong
+direction). Now it does not even need to be redone.
 
-**La ragione tecnica che si somma al giudizio, ed è la cosa da non perdere:** quel che la fase 10
-avrebbe ottimizzato è precisamente ciò che l'utente ha dichiarato di **non** volere ottimizzato. R31
-misura che a banda costante un desktop fermo spende quasi dieci megabit per niente — ma i 10 Mbps
-sono **un pavimento, non un budget**. Il controllo attuale è quindi allineato alla decisione, non in
-difetto.
+**The technical reason that adds to the judgment, and it is the thing not to lose:** what phase 10
+would have optimised is precisely what the user declared he does **not** want optimised. R31
+measures that at constant bandwidth a still desktop spends almost ten megabits for nothing — but the 10 Mbps
+are **a floor, not a budget**. The current control is therefore aligned with the decision, not
+deficient.
 
-**Che cosa regge al posto suo**: il regolatore della fase 7 (misurato: 30 → 23 fps con la rete
-strozzata a 250 kbit/s, senza mai bloccarsi). L'adattamento di **risoluzione** non esiste e non si
-può fare — lo rende un client su tre.
+**What holds up in its place**: the regulator of phase 7 (measured: 30 → 23 fps with the network
+throttled to 250 kbit/s, without ever freezing). **Resolution** adaptation does not exist and cannot
+be done — one client out of three makes it so.
 
-⚠ **Il limite del giudizio, dichiarato**: dato su rete di casa, RTT 5–19 ms, banda abbondante. Se
-REMOTIX uscirà di casa, la domanda è un'altra e la fase si riapre.
+⚠ **The limit of the judgment, declared**: given on a home network, RTT 5–19 ms, plenty of bandwidth. If
+REMOTIX goes out of the house, the question is another one and the phase reopens.
 
-Vedi [[remotix-requisito-prestazione]] e [[remotix-prove-sul-banco-non-sull-utente]].
+See [[remotix-requisito-prestazione]] and [[remotix-prove-sul-banco-non-sull-utente]].

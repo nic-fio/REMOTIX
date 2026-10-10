@@ -1,6 +1,6 @@
 ---
 name: la-prova-la-fa-lutente
-description: "Un desktop vuoto è il testimone peggiore possibile — le prove che chiudono una fase le fa Nic, con un lavoro vero dentro"
+description: "An empty desktop is the worst possible witness — the tests that close a phase are done by Nic, with real work inside"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,34 +8,34 @@ metadata:
   modified: 2026-08-16T18:02:58.631Z
 ---
 
-⭐ **Il 16 agosto 2026 la fase 5 l'ha chiusa una prova di Nic, non una mia.**
-Tutte le mie avevano un **desktop vuoto** — e un desktop vuoto, appena rinato, è
-identico a com'era: è il testimone peggiore possibile per la domanda «la
-sessione è sopravvissuta?». Io me n'ero accorto solo guardando i **PID**.
+⭐ **On 16 Aug 2026 phase 5 was closed by a test of Nic's, not one of mine.**
+All of mine had an **empty desktop** — and an empty desktop, just reborn, is
+identical to how it was: it is the worst possible witness for the question «did the
+session survive?». I had noticed only by looking at the **PIDs**.
 
-La sua: si logga massimizzato, lancia un ciclo infinito nel terminale, chiude il
-browser, rimpicciolisce la finestra, rientra — e il ciclo girava ancora.
-⇒ In un gesto solo: I4, il riattacco a misura diversa, e la scena su cui la fase
-si giudica.
+His: he logs in maximised, launches an infinite loop in the terminal, closes the
+browser, shrinks the window, comes back in — and the loop was still running.
+⇒ In a single gesture: I4, the reattach at a different size, and the scene on which the phase
+is judged.
 
-**E le cose che solo lui può provare vanno chieste a lui**, non aggirate:
-il rifiuto del secondo dispositivo (`0x0F`) l'ha chiuso col **telefono vero**;
-la scheda congelata in secondo piano l'ha chiusa lasciandola lì undici minuti —
-la mia misura non contava, perché Chrome **non congela una scheda sotto
-automazione** (contatore nella pagina: 542 battiti su 544).
+**And the things only he can test must be asked of him**, not worked around:
+the refusal of the second device (`0x0F`) he closed with the **real phone**;
+the tab frozen in the background he closed by leaving it there eleven minutes —
+my measurement did not count, because Chrome **does not freeze a tab under
+automation** (counter in the page: 542 beats out of 544).
 
-**Why:** i difetti che contano escono quando il prodotto viene *usato*. In un
-pomeriggio le sue tre segnalazioni hanno trovato il modulo d'accesso rimasto
-sotto il desktop e il ritorno al modulo collegato a 2 motivi su 15 — cose che
-nessun banco guardava.
+**Why:** the defects that count come out when the product is *used*. In one
+afternoon his three reports found the login form left
+under the desktop and the return to the form tied to 2 reasons out of 15 — things that
+no bench looked at.
 
 **How to apply:**
-- ⛔ **mai riavviare il server mentre lui sta misurando**: l'ho fatto due volte
-  dopo aver detto che avrei chiesto, e ogni volta gli ho rotto la prova a metà;
-- prima di una sua prova, **confermare lo stato dal registro** (per esempio
-  «occupati adesso: 1») invece di farlo tentare a vuoto;
-- quando indica un sintomo, **leggere il codice** — non la sua schermata: due
-  volte su tre ho tolto la cosa sbagliata guardando l'immagine.
+- ⛔ **never restart the server while he is measuring**: I did it twice
+  after saying I would ask, and each time I broke his test halfway;
+- before one of his tests, **confirm the state from the log** (for example
+  «occupati adesso: 1») instead of having him try in vain;
+- when he points at a symptom, **read the code** — not his screenshot: two
+  times out of three I removed the wrong thing by looking at the image.
 
-Vedi [[testimone-sul-desktop-vero]], [[processo-proporzionato-non-cerimonia]],
+See [[testimone-sul-desktop-vero]], [[processo-proporzionato-non-cerimonia]],
 [[nic-regista-non-programmatore]].

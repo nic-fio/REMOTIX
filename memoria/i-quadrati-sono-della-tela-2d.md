@@ -1,6 +1,6 @@
 ---
 name: i-quadrati-sono-della-tela-2d
-description: "I blocchi 64x192 non erano di REMOTIX: è la tela 2D che si rompe andando allo schermo. `bitmaprenderer` è pulito, e la caccia è chiusa il 17 ago 2026"
+description: "The 64x192 blocks were not REMOTIX's: it is the 2D canvas that breaks on its way to the screen. `bitmaprenderer` is clean, and the hunt was closed on 17 Aug 2026"
 metadata: 
   node_type: memory
   type: project
@@ -8,62 +8,62 @@ metadata:
   modified: 2026-08-17T18:01:46.539Z
 ---
 
-⭐⭐⭐ **17 agosto 2026, sera — la caccia è chiusa, e la colpa NON era nostra.**
-L'utente vedeva blocchi rettangolari da **64×192** che si spostavano col
-contenuto. Sono stati scagionati, uno per uno e con la misura accanto:
+⭐⭐⭐ **17 Aug 2026, evening — the hunt is closed, and the fault was NOT ours.**
+The user saw rectangular blocks of **64×192** that moved with the
+content. They were cleared, one by one and with the measurement alongside:
 
-| imputato | la prova |
+| suspect | the evidence |
 |---|---|
-| la cattura / Mutter | `scatto-ingresso.bgrx` preso **mentre i blocchi erano in vista**: pulito |
-| il codificatore, 300 delta in catena | gli stessi byte via `ffmpeg`: **0 superblocchi rovinati su 600**, media 1,68 |
-| la forma dei pezzi | 300 unità temporali, 1 fotogramma ciascuna, nessun nascosto |
-| `VideoDecoder` | `copyTo` contro la verità: 0 fuori posto |
-| la tela **riletta** | `getImageData` contro la verità: **0 su 180 000**, peggio 2,9 livelli |
-| **la tela DIPINTA sullo schermo** | ⛔ **fotografata col cellulare: i rettangoli ci sono** |
+| the capture / Mutter | `scatto-ingresso.bgrx` taken **while the blocks were in view**: clean |
+| the encoder, 300 deltas in a chain | the same bytes via `ffmpeg`: **0 superblocks damaged out of 600**, mean 1.68 |
+| the shape of the pieces | 300 temporal units, 1 frame each, no hidden ones |
+| `VideoDecoder` | `copyTo` against the truth: 0 out of place |
+| the canvas **read back** | `getImageData` against the truth: **0 out of 180 000**, worst 2.9 levels |
+| **the canvas PAINTED on the screen** | ⛔ **photographed with the mobile phone: the rectangles are there** |
 
-⇒ **I pixel entrano giusti nella tela e si rompono quando la tela va allo
-schermo.** Nessun programma può leggerli lì: `getImageData` legge il magazzino,
-non quel che il compositore ha acceso.
+⇒ **The pixels enter the canvas right and break when the canvas goes to the
+screen.** No program can read them there: `getImageData` reads the backing store,
+not what the compositor has lit.
 
-⛔ **E non è il browser**: Firefox **e** Chrome fanno lo stesso. Non è la GPU in
-generale: `ffplay` e YouTube — che dipingono in un **`<video>`** — sono
-**puliti**. È la strada della **`<canvas>` 2D**.
+⛔ **And it is not the browser**: Firefox **and** Chrome do the same. It is not the GPU in
+general: `ffplay` and YouTube — which paint into a **`<video>`** — are
+**clean**. It is the road of the **2D `<canvas>`**.
 
-⭐⭐ **LA CURA, misurata**: dipingere con **`createImageBitmap()` +
-`transferFromImageBitmap()`** su un contesto **`bitmaprenderer`**, che non ha il
-magazzino 2D. Giudizio dell'utente sulla stessa scena: *«NIENTE ARTEFATTI!»*
+⭐⭐ **THE CURE, measured**: paint with **`createImageBitmap()` +
+`transferFromImageBitmap()`** on a **`bitmaprenderer`** context, which does not have the
+2D backing store. The user's judgment on the same scene: *«NIENTE ARTEFATTI!»*
 
-⭐⭐ **ED È NEL PRODOTTO dal 20 agosto 2026** (`src/pagina.html`): una sola
-conversione invece di due `drawImage`, il deposito non serve più
-(`transferFromImageBitmap` dimensiona la tela da sé e il contenuto sopravvive al
-ridimensionamento), numero d'ordine + epoca perché `createImageBitmap` è
-asincrona, e `?tela=2d` accende la strada vecchia per confronto. `[M]` col
-testimone Marionette: `dipinti == consegnati`, `tard 0`, `err 0`, PNG nitido.
-⏳ **Manca il giudizio dell'utente sul PRODOTTO** (finora era su un banco), e
-`[?]` quanto costa `createImageBitmap` — il conto da battere è 34,03 ms.
+⭐⭐ **AND IT IS IN THE PRODUCT since 20 Aug 2026** (`src/pagina.html`): a single
+conversion instead of two `drawImage`, the store is no longer needed
+(`transferFromImageBitmap` sizes the canvas by itself and the content survives
+resizing), sequence number + epoch because `createImageBitmap` is
+asynchronous, and `?tela=2d` turns on the old road for comparison. `[M]` with the
+Marionette witness: `dipinti == consegnati`, `tard 0`, `err 0`, sharp PNG.
+⏳ **The user's judgment on the PRODUCT is missing** (so far it was on a bench), and
+`[?]` how much `createImageBitmap` costs — the figure to beat is 34.03 ms.
 
-**Che cosa comportava, e adesso è fatto:**
-- oggi il fotogramma passa da **due** tele 2D: `deposito_p.drawImage(f)` e poi
+**What it involved, and now it is done:**
+- today the frame goes through **two** 2D canvases: `deposito_p.drawImage(f)` and then
   `componi()` → `pennello.drawImage(deposito)`;
-- ⭐ il **cursore non è dipinto sulla tela** — è un cursore CSS — quindi la tela
-  visibile non deve comporre niente, e `bitmaprenderer` le basta;
-- ⚠ l'unica cosa che si perde è **centrare/incorniciare** quando la finestra è
-  più larga dell'immagine: si fa col CSS;
-- ⚠ e va **misurato il costo**: `createImageBitmap` è asincrona, e il ritardo è
-  il numero per cui esiste la fase 3.
+- ⭐ the **cursor is not painted on the canvas** — it is a CSS cursor — so the visible
+  canvas does not have to composite anything, and `bitmaprenderer` is enough for it;
+- ⚠ the only thing lost is **centring/framing** when the window is
+  wider than the image: it is done with CSS;
+- ⚠ and **the cost must be measured**: `createImageBitmap` is asynchronous, and the delay is
+  the number for which phase 3 exists.
 
-Il banco che lo dimostra è `banchi/07-b48` (+ `07-b49` per l'occhio) e **non ha
-una riga di REMOTIX dentro**.
+The bench that proves it is `banchi/07-b48` (+ `07-b49` for the eye) and it **does not have
+a single line of REMOTIX inside**.
 
-⛔⛔⭐ **20 agosto 2026: erano DUE difetti sovrapposti, non uno.** La cura
-`bitmaprenderer` ha ripulito **Chrome** e su **Firefox** i blocchi restavano.
-Il secondo imputato è il suo **decodificatore AV1**, isolato con tre immagini
-dello stesso istante (`banchi/07-b52`): cattura pulita · flusso spedito riletto
-da `ffmpeg/dav1d` pulito su 22 delta · Chrome pulito · **Firefox a blocchi**, con
-`dipinti == consegnati` e zero errori.
+⛔⛔⭐ **20 Aug 2026: they were TWO overlapping defects, not one.** The
+`bitmaprenderer` cure cleaned up **Chrome** and on **Firefox** the blocks stayed.
+The second suspect is its **AV1 decoder**, isolated with three images
+of the same instant (`banchi/07-b52`): clean capture · sent stream read back
+by `ffmpeg/dav1d` clean over 22 deltas · Chrome clean · **Firefox in blocks**, with
+`dipinti == consegnati` and zero errors.
 
-⭐⭐ **La cura è H.264, ed è nel prodotto dal 20 agosto**: stessa scena, 35
-consegnati = 35 dipinti, **nessun blocco**. ⇒ La decisione [[av1-esce-entra-h264]],
-nata per Firefox Android, era anche la cura di questo.
+⭐⭐ **The cure is H.264, and it is in the product since 20 Aug**: same scene, 35
+delivered = 35 painted, **no blocks**. ⇒ The decision [[av1-esce-entra-h264]],
+born for Firefox Android, was also the cure for this.
 
-Vedi [[av1-esce-entra-h264]], [[le-prove-le-eseguo-io]], [[la-prova-la-fa-lutente]].
+See [[av1-esce-entra-h264]], [[le-prove-le-eseguo-io]], [[la-prova-la-fa-lutente]].

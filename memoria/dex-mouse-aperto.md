@@ -1,6 +1,6 @@
 ---
 name: dex-mouse-aperto
-description: "Il mouse sul DeX: il sintomo vero è «si muove solo col tasto premuto», è noVNC #1727 e non è nostro — e la cura è «due tele 1:1»"
+description: "The mouse on DeX: the real symptom is «it moves only with the button pressed», it is noVNC #1727 and it is not ours — and the cure is «two canvases 1:1»"
 metadata:
   node_type: memory
   type: project
@@ -8,60 +8,60 @@ metadata:
   modified: 2026-08-15T05:47:38.706Z
 ---
 
-⭐ **Il sintomo vero si è saputo solo la sera del 14 agosto 2026**, con le parole
-dell'utente: *«per attivare il puntatore del desktop devo premere il tasto
+⭐ **The real symptom became known only on the evening of 14 Aug 2026**, in the
+user's words: *«per attivare il puntatore del desktop devo premere il tasto
 sinistro; se muovo il mouse il puntatore del server non si muove, se lo muovo
 col tasto premuto allora si muove»*.
 
-⇒ È **noVNC #1727** — *«Moving hardware mouse without drag ignored on Chrome
-Android»*, aperto dal 2022, specifico di **Samsung**, riprodotto da KasmVNC
-#222, Kasm #20 e ⭐ **moonlight-android #573, che è un'app NATIVA**. ⛔ **Non è
-nostro e non si cura**: su quel dispositivo i movimenti a pulsanti alzati non
-arrivano alla pagina.
+⇒ It is **noVNC #1727** — *«Moving hardware mouse without drag ignored on Chrome
+Android»*, open since 2022, specific to **Samsung**, reproduced by KasmVNC
+#222, Kasm #20 and ⭐ **moonlight-android #573, which is a NATIVE app**. ⛔ **It is not
+ours and it cannot be cured**: on that device movements with buttons up do not
+reach the page.
 
-⛔ **Le quattro cure della sera sono tutte fuori bersaglio** e sono state
-comunque corrette perché erano difetti veri: `CURSORE_FORMA` ricevuta e buttata,
-i tre modi del puntatore, **l'84 % dei movimenti spediti due volte** (erano
-registrati sia `mousemove` sia `pointermove`), e il clic che non portava la
-propria posizione. Nessuna ha cambiato il sintomo.
+⛔ **The four cures of the evening are all off target** and were
+corrected anyway because they were real defects: `CURSORE_FORMA` received and thrown away,
+the three pointer modes, **84 % of movements sent twice** (both
+`mousemove` and `pointermove` were registered), and the click that did not carry
+its own position. None of them changed the symptom.
 
-⭐⭐ **La cura vera l'ha disegnata l'utente**: *«abbiamo due tele, quella del
-server e quella del client — bisogna solo convertire le coordinate»*, e poi
+⭐⭐ **The real cure was designed by the user**: *«abbiamo due tele, quella del
+server e quella del client — bisogna solo convertire le coordinate»*, and then
 *«se i compositori sanno dare la misura esatta, non servono nemmeno le
-conversioni»*. ⇒ `DECISIONI.md` **§5.0-sexies**, e il difetto diventa
-**innocuo** invece che curato: ogni evento porta la propria posizione, quindi
-**puntare e cliccare colpisce giusto anche senza hover**. Si perde solo
-l'anteprima (pulsanti che non si illuminano, niente suggerimenti).
+conversioni»*. ⇒ `DECISIONI.md` **§5.0-sexies**, and the defect becomes
+**harmless** instead of cured: every event carries its own position, so
+**pointing and clicking hit right even without hover**. Only the
+preview is lost (buttons that do not light up, no tooltips).
 
-⛔ **Due `[?]` sono MORTE, non ripescarle**: `cursor: none` **non** toglie i
-movimenti su Android (era `pointermove` che mancava, e in Android
-`dispatchPointerEvent()` viene prima di `maybeUpdatePointerIcon()`); e la
-cattura del puntatore **peggiora** (`movementX` è ricostruito da Chromium).
+⛔ **Two `[?]` are DEAD, do not fish them out again**: `cursor: none` does **not** remove the
+movements on Android (it was `pointermove` that was missing, and in Android
+`dispatchPointerEvent()` comes before `maybeUpdatePointerIcon()`); and pointer
+capture **makes it worse** (`movementX` is reconstructed by Chromium).
 
-**Why:** per due giorni si è curato **un giudizio** — *«è inutilizzabile»* —
-invece di **un sintomo**. La domanda che ha risolto tutto era *«che cosa vedi
-esattamente succedere?»*, e non è stata fatta. ⚠ E la contraddizione che la
-conteneva era nel registro da ore: 213 movimenti registrati dal server mentre
-l'utente ne vedeva zero.
+**Why:** for two days **a judgment** was cured — *«è inutilizzabile»* —
+instead of **a symptom**. The question that solved everything was *«che cosa vedi
+esattamente succedere?»*, and it was not asked. ⚠ And the contradiction that
+contained it had been in the log for hours: 213 movements recorded by the server while
+the user saw zero.
 
-**How to apply:** leggere `fasi/rapporti/F4-IN-6-punto-fermo.md` (il punto
-fermo) e `F4-IN-7-due-tele.md` (il disegno in byte).
+**How to apply:** read `fasi/rapporti/F4-IN-6-punto-fermo.md` (the fixed
+point) and `F4-IN-7-due-tele.md` (the design in bytes).
 
-✅ **E la cura è STATA SCRITTA la notte del 15 agosto 2026**: la catena
-`figli_ritela()` → `cattura_ridimensiona()` c'è, e `[M]` la tela del server
-prende la misura della finestra (1264×800), la scala di disegno vale **1,000**
-(`pixelated`) e GNOME *Impostazioni → Displays* **dentro la sessione remota**
-dichiara «Resolution 1264 × 800». ⇒ Puntare e cliccare colpisce, e il testo non
-è più interpolato. Il rapporto è `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+✅ **And the cure WAS WRITTEN on the night of 15 Aug 2026**: the chain
+`figli_ritela()` → `cattura_ridimensiona()` is there, and `[M]` the server's canvas
+takes the size of the window (1264×800), the drawing scale is **1.000**
+(`pixelated`) and GNOME *Settings → Displays* **inside the remote session**
+declares «Resolution 1264 × 800». ⇒ Pointing and clicking hit, and the text is
+no longer interpolated. The report is `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 
-⚠ **Il difetto di Chrome resta quello che era**: l'hover non arriva, quindi
-niente anteprima (pulsanti che non si illuminano, niente suggerimenti). Quel che
-è cambiato è che **non è più un problema di correttezza**.
+⚠ **Chrome's defect stays what it was**: hover does not arrive, so
+no preview (buttons that do not light up, no tooltips). What
+changed is that **it is no longer a correctness problem**.
 
-✅ **E il DeX l'ha giudicato il 15 agosto 2026**: *«sia su Linux sia su Android
-(DeX) è tutto perfetto»*. ⇒ Il `[?]` del mezzo pixel (il `margin: 0 auto` quando
-`clientWidth × devicePixelRatio` è dispari) **non si presenta** — ⚠ ma nessuno
-l'ha misurato: se un giorno il testo del terminale tornasse sfrangiato su una
-larghezza dispari, la prima cosa da guardare è quella.
+✅ **And DeX judged it on 15 Aug 2026**: *«sia su Linux sia su Android
+(DeX) è tutto perfetto»*. ⇒ The `[?]` of the half pixel (the `margin: 0 auto` when
+`clientWidth × devicePixelRatio` is odd) **does not show up** — ⚠ but nobody
+measured it: if one day the terminal text came back frayed on an
+odd width, that is the first thing to look at.
 
-Vedi anche [[agenti-a-refutare]] e [[utente-prova-si-conserva]].
+See also [[agenti-a-refutare]] and [[utente-prova-si-conserva]].

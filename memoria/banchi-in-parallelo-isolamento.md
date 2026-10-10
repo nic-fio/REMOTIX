@@ -1,6 +1,6 @@
 ---
 name: banchi-in-parallelo-isolamento
-description: "Come far girare più banchi REMOTIX insieme senza avvelenarsi: porta, ban-file e socket propri per ciascuno"
+description: "How to run several REMOTIX benches together without poisoning each other: own port, ban-file and socket for each"
 metadata: 
   node_type: memory
   type: project
@@ -8,22 +8,22 @@ metadata:
   modified: 2026-08-11T13:55:27.696Z
 ---
 
-Più banchi possono girare **in parallelo** contro il prodotto solo se ciascuno accende
-**il proprio server**: `remotix --porta N --ban-file … --comando-socket …`. Senza,
-il ban di §4.4-bis (per indirizzo, 12 ore) fatto scattare da un banco mette fuori uso
-tutti gli altri, perché partono tutti dallo stesso indirizzo.
+Several benches can run **in parallel** against the product only if each one starts
+**its own server**: `remotix --porta N --ban-file … --comando-socket …`. Without that,
+the ban of §4.4-bis (per address, 12 hours) triggered by one bench puts out of action
+all the others, because they all start from the same address.
 
-Assegnazione usata l'11 agosto 2026, cinque agenti insieme: 7471-75 (B8) · 7481-85 (B13) ·
-7491-95 (B10) · 7501-05 (P1/P5) · 7511-15. ⛔ La 7447 è dell'innesto e la 7448 del prodotto
-acceso: non si toccano.
+Assignment used on 11 Aug 2026, five agents together: 7471-75 (B8) · 7481-85 (B13) ·
+7491-95 (B10) · 7501-05 (P1/P5) · 7511-15. ⛔ 7447 belongs to the graft and 7448 to the running
+product: they are not touched.
 
-E tre regole di convivenza che sono costate meno di quanto avrebbero potuto:
-- ogni agente possiede **file suoi** e i file condivisi si toccano solo con `Edit` su
-  un'ancora unica, mai riscrivendoli interi (un `--put` dell'intero registro ha rischiato
-  di cancellare la riga di un altro);
-- **nessun agente scrive `.md` e nessuno fa `git`**: i documenti si scrivono alla fine,
-  a codice fermo — è il rilievo R12C, e il git a più mani si pesta l'indice;
-- i guasti di certificazione si innestano su una **copia** dell'albero del prodotto, o
-  per qualche minuto gli altri misurano un binario bugiardo.
+And three rules of coexistence that cost less than they could have:
+- each agent owns **its own files** and shared files are touched only with `Edit` on
+  a unique anchor, never rewriting them whole (a `--put` of the whole log risked
+  deleting another agent's line);
+- **no agent writes `.md` and nobody does `git`**: documents are written at the end,
+  with the code frozen — it is finding R12C, and git with several hands tramples the index;
+- certification faults are grafted onto a **copy** of the product tree, or
+  for a few minutes the others measure a lying binary.
 
-Vedi [[remotix-convenzioni]] e [[via-libera-permanente]].
+See [[remotix-convenzioni]] and [[via-libera-permanente]].

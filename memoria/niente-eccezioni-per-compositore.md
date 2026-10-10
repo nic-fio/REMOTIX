@@ -1,6 +1,6 @@
 ---
 name: niente-eccezioni-per-compositore
-description: "Una funzione che non si può fare su tutti i desktop supportati esce dal prodotto, invece di restare dietro un interruttore"
+description: "A function that cannot be done on all supported desktops leaves the product, instead of staying behind a switch"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,22 +8,22 @@ metadata:
   modified: 2026-08-17T05:29:49.571Z
 ---
 
-Se una funzione si può fare su un compositore e non su un altro, Nic la toglie invece di
-tenerla dietro un interruttore o un ramo condizionato. Parole sue, 17 agosto 2026, decidendo
-sul ridimensionamento a caldo della tela: *«non voglio mettere delle eccezioni nel progetto.
-Il dynamic resolution esce dalle funzionalità di Remotix»* — e valeva anche per una funzione
-già scritta, misurata (6 ms su Mutter) e verde in banco.
+If a function can be done on one compositor and not on another, Nic removes it instead of
+keeping it behind a switch or a conditional branch. His words, 17 Aug 2026, deciding
+on the live resizing of the canvas: *«non voglio mettere delle eccezioni nel progetto.
+Il dynamic resolution esce dalle funzionalità di Remotix»* — and it held even for a function
+already written, measured (6 ms on Mutter) and green on the bench.
 
-**Why:** un prodotto che fa cose diverse a seconda di chi lo ospita costa due rami, due banchi
-e una spiegazione all'utente per ognuno — e il ramo povero resta vivo per anni, perché le
-distribuzioni stabili non aggiornano i desktop. Nello stesso spirito aveva già fermato il
+**Why:** a product that does different things depending on who hosts it costs two branches, two benches
+and an explanation to the user for each — and the poor branch stays alive for years, because
+stable distributions do not update their desktops. In the same spirit he had already stopped
 multi-monitor («non è previsto dal progetto. Sei andato fuori strada»).
 
-**How to apply:** prima di proporre o scrivere una funzione che tocca il compositore, dire
-subito su quali dei desktop supportati si può fare e su quali no — quello, non il costo in
-millisecondi, è il dato che decide. Se la risposta è «su uno sì e su un altro no», la proposta
-da portargli è toglierla, non nasconderla dietro un interruttore spento. ⚠ Non confondere il
-caso con quello che resta legittimo: una cosa fatta **prima che la sessione esista** (la tela
-presa dalla misura della finestra all'attacco) non è un'eccezione, perché ogni compositore la
-sa fare a modo suo. L'eccezione è cambiare a caldo. Vedi [[processo-proporzionato-non-cerimonia]]
-e [[nic-regista-non-programmatore]].
+**How to apply:** before proposing or writing a function that touches the compositor, say
+at once on which of the supported desktops it can be done and on which not — that, not the cost in
+milliseconds, is the datum that decides. If the answer is «on one yes and on another no», the proposal
+to bring him is to remove it, not to hide it behind a switched-off switch. ⚠ Do not confuse the
+case with the one that stays legitimate: something done **before the session exists** (the canvas
+taken from the window size at attach) is not an exception, because every compositor
+knows how to do it in its own way. The exception is changing live. See [[processo-proporzionato-non-cerimonia]]
+and [[nic-regista-non-programmatore]].

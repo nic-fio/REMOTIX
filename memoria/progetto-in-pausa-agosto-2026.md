@@ -1,44 +1,44 @@
 ---
 name: progetto-in-pausa-agosto-2026
-description: in pausa dal 27 ago al 18 set 2026 (intervento); RIPRESO il 18 set col server rifatto da zero; il 28 il progetto e' passato su GitHub e la documentazione e' stata bonificata. Si riprende da KDE, col server che torna dall'assistenza
+description: paused from 27 Aug to 18 Sep 2026 (surgery); RESUMED on 18 Sep with the server rebuilt from scratch; on the 28th the project moved to GitHub and the documentation was cleaned up. It resumes from KDE, with the server coming back from repair
 metadata:
   type: project
 ---
 
-⭐ **RIPRESO il 18 settembre 2026**: server riprovisionato da zero ([[riavvio-perde-la-chiave-ssh]]), e il primo giro della rete e' il collaudo.
+⭐ **RESUMED on 18 Sep 2026**: server reprovisioned from scratch ([[riavvio-perde-la-chiave-ssh]]), and the first round of the net is the acceptance test.
 
-**REMOTIX e' stato in pausa dal 27 agosto 2026** — Nic ha un intervento chirurgico. Si
-riprende fra qualche settimana. ⛔ Non c'e' niente lasciato a meta': la fase 11 e'
-chiusa, e il punto d'ingresso e' il riquadro ⏸ in testa a `README.md`.
+**REMOTIX was paused from 27 Aug 2026** — Nic is having surgery. It
+resumes in a few weeks. ⛔ Nothing has been left halfway: phase 11 is
+closed, and the entry point is the ⏸ box at the top of `README.md`.
 
-## Che cosa e' successo il 28 agosto, a progetto fermo
+## What happened on 28 Aug, with the project stopped
 
-⭐ Due cose, e Nic le ha chiamate *«un compito non piu' rimandabile»*:
+⭐ Two things, and Nic called them *«un compito non piu' rimandabile»*:
 
-1. **Il progetto e' uscito dal tablet.** Vive su `github.com/nic-fio/REMOTIX`,
-   privato. Il tablet e' stato svuotato: v1 cancellato, credenziali cancellate,
-   41 → 33 GB. Vedi [[deposito-su-github]] e [[credenziali-da-rigenerare]].
+1. **The project left the tablet.** It lives on `github.com/nic-fio/REMOTIX`,
+   private. The tablet was emptied: v1 deleted, credentials deleted,
+   41 → 33 GB. See [[deposito-su-github]] and [[credenziali-da-rigenerare]].
 
-2. **La documentazione e' stata bonificata.** 272 coordinate di riga marce, 78
-   rimandi ciechi, 36 link rotti, 2 documenti vincolanti che mandavano alla
-   specifica di v1, 4 affermazioni che il codice aveva gia' smentito, e una
-   sezione (`DECISIONI.md` §4.6-septies) citata da cinque documenti e **mai
-   scritta**. ⇒ Tutto chiuso, e ⭐ **la rete adesso ha `C16`**, che da' rosso da
-   sola se una carta ricomincia a mentire — anche su un commit di soli documenti,
-   che prima non faceva scattare niente.
+2. **The documentation was cleaned up.** 272 rotten line coordinates, 78
+   blind cross-references, 36 broken links, 2 binding documents that pointed to the
+   specification of v1, 4 statements that the code had already disproved, and a
+   section (`DECISIONI.md` §4.6-septies) quoted by five documents and **never
+   written**. ⇒ All closed, and ⭐ **the net now has `C16`**, which goes red by
+   itself if a paper starts lying again — even on a documents-only commit,
+   which before triggered nothing.
 
-## Quando il server torna dall'assistenza, nell'ordine
+## When the server comes back from repair, in order
 
-1. Rifare le credenziali — [[credenziali-da-rigenerare]]. ⛔ Finche' non ci sono,
-   i 46 richiami di `sshpw.py` non raggiungono la macchina: **e' voluto, non e' un
-   guasto**.
-2. Nello stesso giro, togliere la parola d'ordine `sudo` in chiaro dai 9 banchi —
-   e' l'unica cosa che tiene il deposito privato per forza.
-3. ⭐ Il primo giro della rete anti-regressione vale anche come **collaudo del
-   rebranding e della bonifica**: nessuna delle due e' stata riprovata sul ferro.
-4. Poi si riprende il lavoro vero: **la fase 12, KDE** — i tre rossi di `C1` su
-   kde/xfce/lxqt non sono un difetto, sono il mandato.
+1. Redo the credentials — [[credenziali-da-rigenerare]]. ⛔ As long as they are not there,
+   the 46 calls of `sshpw.py` do not reach the machine: **it is intended, it is not a
+   fault**.
+2. In the same round, remove the clear-text `sudo` password from the 9 benches —
+   it is the only thing that forces the repository to stay private.
+3. ⭐ The first round of the anti-regression net also counts as **acceptance test of the
+   rebranding and of the cleanup**: neither of the two has been retested on the hardware.
+4. Then the real work resumes: **phase 12, KDE** — the three reds of `C1` on
+   kde/xfce/lxqt are not a defect, they are the mandate.
 
-⚠ Resta aperto, e non e' urgente: 23 banchi della fase 8 non sono mai stati
-committati ⇒ quelle misure non sono riproducibili. ⭐ Decisione di Nic: *«le
-misure tienile come stanno»*. Sta scritto in `banchi/11-scatole/11-c16-eccezioni.txt`.
+⚠ Still open, and not urgent: 23 benches of phase 8 were never
+committed ⇒ those measurements are not reproducible. ⭐ Nic's decision: *«le
+misure tienile come stanno»*. It is written in `banchi/11-scatole/11-c16-eccezioni.txt`.

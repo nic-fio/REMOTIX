@@ -1,6 +1,6 @@
 ---
 name: costruire-serve-il-contenitore
-description: "Come si costruisce REMOTIX: due strade, podman sul portatile per compilare ed enter.sh sulla macchina di prova per far girare"
+description: "How REMOTIX is built: two roads, podman on the laptop to compile and enter.sh on the test machine to run"
 metadata:
   node_type: memory
   type: project
@@ -8,31 +8,31 @@ metadata:
   originSessionId: 704c141d-0a68-4975-8670-6223b9edf97e
 ---
 
-✅ **Sciolto la notte del 15 agosto 2026, senza chiedere all'utente.** Il blocco
-del 14 agosto («non riesco a costruire il C») era **un errore di percorso**:
-dentro `bash /media/REMOTIX/enter.sh` il `/srv/src` che si vede **È**
-`/media/REMOTIX/src` dell'host — l'`enter.sh` lo monta con `--bind`. I sorgenti
-erano stati copiati in `/srv/src/...` **dell'host**, che è un'altra cartella.
+✅ **Resolved on the night of 15 Aug 2026, without asking the user.** The block
+of 14 Aug («non riesco a costruire il C») was **a path mistake**:
+inside `bash /media/REMOTIX/enter.sh` the `/srv/src` you see **IS**
+the host's `/media/REMOTIX/src` — `enter.sh` mounts it with `--bind`. The sources
+had been copied into the **host's** `/srv/src/...`, which is another folder.
 
-⭐ **Due strade, e rispondono a due domande diverse:**
+⭐ **Two roads, and they answer two different questions:**
 
-| domanda | strada |
+| question | road |
 |---|---|
-| **«compila?»** — venti secondi, mentre si scrive | `bash src/costruisci-in-contenitore.sh` sul portatile: `podman` **da utente**, niente `sudo`, l'albero montato, il binario esce **dell'utente**. L'immagine si fa una volta: `podman build -t remotix-costruzione -f src/Contenitore src/` (~4 min: dentro ci sono ngtcp2 1.25 e nghttp3 1.18 dai sorgenti) |
-| **«gira?»** — solo lì | sulla macchina di prova: `tar` dei sorgenti in `/media/REMOTIX/src/04-vero-src/`, poi `bash /media/REMOTIX/enter.sh --root 'bash /srv/src/04-vero-src/src/costruisci.sh'`, poi `sudo -S -p 'Password:' /media/REMOTIX/tmp/riavvia-7700.sh` |
+| **«compila?»** — twenty seconds, while writing | `bash src/costruisci-in-contenitore.sh` on the laptop: `podman` **as user**, no `sudo`, the tree mounted, the binary comes out **owned by the user**. The image is made once: `podman build -t remotix-costruzione -f src/Contenitore src/` (~4 min: inside are ngtcp2 1.25 and nghttp3 1.18 from source) |
+| **«gira?»** — only there | on the test machine: `tar` of the sources into `/media/REMOTIX/src/04-vero-src/`, then `bash /media/REMOTIX/enter.sh --root 'bash /srv/src/04-vero-src/src/costruisci.sh'`, then `sudo -S -p 'Password:' /media/REMOTIX/tmp/riavvia-7700.sh` |
 
-⛔ **Il binario del contenitore NON si copia sulla macchina di prova**: è legato
-a ngtcp2/nghttp3 di `/usr/local` **dentro l'immagine**, e là servono quelli di
-`/media/REMOTIX/src/b2`. Il `riavvia-7700.sh` lo verifica e rifiuta di partire.
+⛔ **The container's binary is NOT copied to the test machine**: it is tied
+to the ngtcp2/nghttp3 of `/usr/local` **inside the image**, and there the ones from
+`/media/REMOTIX/src/b2` are needed. `riavvia-7700.sh` checks it and refuses to start.
 
-**Why:** «compila» non è «gira», e stanotte sono servite tutt'e due dieci volte:
-si scrive e si compila sul portatile, si prova sulla macchina vera. La password
-di `sudo` sulla macchina di prova è quella di `~/SERVER.ssh` e si passa con
-`printf 'nicfio\n' | sudo -S -p 'Password: ' -v` **prima** di chiamare
-`enter.sh`, senza redirezioni attorno a `enter.sh`.
+**Why:** «compila» is not «gira», and tonight both were needed ten times:
+you write and compile on the laptop, you test on the real machine. The password
+for `sudo` on the test machine is the one in `~/SERVER.ssh` and is passed with
+`printf 'nicfio\n' | sudo -S -p 'Password: ' -v` **before** calling
+`enter.sh`, without redirections around `enter.sh`.
 
-**How to apply:** la pagina non ha bisogno di costruzione, si copia e basta —
-ma il server va **riavviato**, perché `pagina.c` la legge una volta all'avvio.
-E per leggere il registro: `sudo -S -p 'Password:' tail /media/REMOTIX/tmp/04-vero/registro.log`.
+**How to apply:** the page needs no build, it is just copied —
+but the server must be **restarted**, because `pagina.c` reads it once at startup.
+And to read the log: `sudo -S -p 'Password:' tail /media/REMOTIX/tmp/04-vero/registro.log`.
 
-Vedi [[dex-mouse-aperto]] e `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §1.
+See [[dex-mouse-aperto]] and `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §1.

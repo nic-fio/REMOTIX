@@ -1,6 +1,6 @@
 ---
 name: remotix-fase9-ripresa
-description: "REMOTIX fase 9 — chiusa il 7 agosto 2026 con la copia zero rinviata: l'accelerazione in GPU c'è, il DMA-BUF no, e il vincolo per chi lo riprende"
+description: "REMOTIX phase 9 — closed on 7 Aug 2026 with zero-copy postponed: GPU acceleration is there, DMA-BUF is not, and the constraint for whoever picks it up"
 metadata: 
   node_type: memory
   type: project
@@ -8,30 +8,30 @@ metadata:
   modified: 2026-08-07T09:08:14.642Z
 ---
 
-La **fase 9 è chiusa il 7 agosto 2026**, con l'accelerazione hardware che funziona
-(AVC420 via `h264_vaapi` in GPU, verificato su `xfreerdp3` e mstsc) e la **cattura a
-copia zero rinviata**. Il racconto sta in `PIANO.md` (riquadro fase 9) e in
-`REFERENCE.md` R27-R30, in particolare **R29 sesto punto**.
+**Phase 9 was closed on 7 Aug 2026**, with hardware acceleration working
+(AVC420 via `h264_vaapi` on the GPU, verified on `xfreerdp3` and mstsc) and **zero-copy
+capture postponed**. The account is in `PIANO.md` (phase 9 box) and in
+`REFERENCE.md` R27-R30, in particular **R29 sixth point**.
 
-**Lo stato del server**: `REMOTIX_DMABUF=0` è il predefinito, scritto in
-`provision-server.sh` con il perché. Costa 18 ms di CPU per fotogramma invece di 6.
-La porta di lavoro è la **3392** (3389, 3390 e 3391 sono dei banchi).
+**The state of the server**: `REMOTIX_DMABUF=0` is the default, written in
+`provision-server.sh` with the reason why. It costs 18 ms of CPU per frame instead of 6.
+The working port is **3392** (3389, 3390 and 3391 belong to the benches).
 
-**Il difetto rinviato**, per non ricominciare da capo: il buffer che Mutter presta a
-copia zero **non è un fotogramma, è un *diff*** — ricicla quattro buffer e vi ridipinge
-solo la regione cambiata (282 fotogrammi su 300). Chi lo prende per intero consegna
-schermate già passate. La correzione giusta — accumulo delle regioni su una superficie
-persistente — **è scritta e ha peggiorato le cose su mstsc**: sta dietro
-`REMOTIX_ACCUMULO=1`, spenta. Il primo sospetto di quel che manca è
+**The postponed defect**, so as not to start from scratch: the buffer that Mutter lends in
+zero-copy **is not a frame, it is a *diff*** — it recycles four buffers and repaints into them
+only the changed region (282 frames out of 300). Whoever takes it whole delivers
+screens already past. The right correction — accumulating the regions on a persistent
+surface — **is written and made things worse on mstsc**: it is behind
+`REMOTIX_ACCUMULO=1`, off. The first suspect for what is missing is
 `SPA_META_SyncTimeline`.
 
-**Il vincolo per chi riprende, ed è la lezione della giornata:** prima il banco che il
-difetto lo fa comparire **da solo**, poi la correzione. Le due riproduzioni costruite il
-7 agosto — client nel contenitore su loopback, client in LAN — restavano verdi mentre il
-difetto era vivo nell'uso reale, e la correzione validata lì è stata collaudata
-dall'utente. Senza quel banco, la copia zero non si fa.
+**The constraint for whoever picks it up, and it is the lesson of the day:** first the bench that makes the
+defect appear **by itself**, then the correction. The two reproductions built on
+7 Aug — client in the container on loopback, client on the LAN — stayed green while the
+defect was alive in real use, and the correction validated there was put to the test
+by the user. Without that bench, zero-copy is not done.
 
-**Da fare ancora**: la prova su **RDM** sul percorso in memoria; `h264_qsv` e
-`h264_nvenc` restano non misurati.
+**Still to do**: the test on **RDM** on the in-memory path; `h264_qsv` and
+`h264_nvenc` remain unmeasured.
 
-Vedi [[remotix-metodo-documentazione]] e [[remotix-microfono-sospeso]].
+See [[remotix-metodo-documentazione]] and [[remotix-microfono-sospeso]].
