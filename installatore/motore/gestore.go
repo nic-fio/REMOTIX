@@ -281,12 +281,18 @@ type gestoreDnf struct{ a *Ambiente }
 
 func (g *gestoreDnf) Nome() string { return "dnf" }
 
+// rpmEVR: rpm's [epoch:]version-release, written as dnf and zypper write it in the transaction they
+// resolve («1:1.7.0-9.fc44»; no epoch, no «:»). ⚠ Without the epoch the installed packages never matched
+// the resolved ones that have one: `[M]` installa-91, fedora44, 10 Oct — «packages: HALF_DONE 104 of 112»,
+// the 8 missing exactly libglvnd ×4, libogg, libtheora, libvisual, libvorbis.
+const rpmEVR = `%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}`
+
 func rpmVersioni(a *Ambiente, nomi []string) (map[string]string, error) {
 	r := map[string]string{}
 	if len(nomi) == 0 {
 		return r, nil
 	}
-	out, _, err := a.Esegui(time.Minute, "rpm", append([]string{"-q", "--qf", `%{NAME} %{VERSION}-%{RELEASE}\n`}, nomi...)...)
+	out, _, err := a.Esegui(time.Minute, "rpm", append([]string{"-q", "--qf", `%{NAME} ` + rpmEVR + `\n`}, nomi...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +370,7 @@ var archi = map[string]bool{"x86_64": true, "noarch": true, "i686": true, "aarch
 func (g *gestoreDnf) presenti(file, nomi []string) ([]Artefatto, error) {
 	var r []Artefatto
 	for _, f := range file {
-		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `RX %{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n`, f)
+		out, err := esegui(g.a, time.Minute, "rpm", "-qp", "--qf", `RX %{NAME} `+rpmEVR+` %{ARCH}\n`, f)
 		if err != nil {
 			return nil, err
 		}

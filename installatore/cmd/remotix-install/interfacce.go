@@ -44,5 +44,5 @@ func tuiCmd(arg []string) (int, error) {
 	}
 	s := interfaccia.NuovaSessione(interfaccia.Config{Operazioni: c.operazioni, Fonti: c.fonti,
 		Base: motore.OpzioniInstallazione{Pacchetti: c.pacchetti}, Chi: chi(), Modo: "by hand, in the TUI (remotix-install tui)"})
-	return tui.Avvia(s)
+	return tui.Avvia(s, c.porta)
 }

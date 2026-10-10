@@ -2,8 +2,12 @@ package tui
 
 import (
 	"io"
+	"strconv"
 	"strings"
 	"testing"
+
+	"remotix/installatore/interfaccia"
+	"remotix/installatore/motore"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -120,5 +124,36 @@ func TestPortaNelPiano(t *testing.T) {
 	m.tasto(tea.KeyMsg{Type: tea.KeyEsc})
 	if m.modPorta || m.porta != "7447" {
 		t.Errorf("esc: port %q, editing %v", m.porta, m.modPorta)
+	}
+}
+
+// motoreFinto: records the port the check is asked for.
+type motoreFinto struct{ porta int }
+
+func (f *motoreFinto) Controlla(porta int) (*interfaccia.Controllo, error) {
+	f.porta = porta
+	return &interfaccia.Controllo{Domande: motore.DomandeDaFare(nil, porta)}, nil
+}
+func (f *motoreFinto) Piano(map[string]string) (*motore.Piano, error) { return nil, nil }
+func (f *motoreFinto) Applica(string, func(motore.EventoPubblico)) (*interfaccia.Esito, error) {
+	return nil, nil
+}
+func (f *motoreFinto) Ferma()  {}
+func (f *motoreFinto) Chiudi() {}
+
+// --port N: the check examines N (not 7447) and the plan's box starts from N; without --port, 7447.
+func TestPortaDaRigaDiComando(t *testing.T) {
+	for _, c := range []struct{ data, attesa int }{{8640, 8640}, {0, 7447}, {70000, 7447}} {
+		f := &motoreFinto{}
+		m := nuovoModello(f, lipgloss.NewRenderer(io.Discard))
+		m.iniziale(c.data)
+		msg := m.Init()()
+		if f.porta != c.attesa {
+			t.Errorf("--port %d: the check examined %d, want %d", c.data, f.porta, c.attesa)
+		}
+		m.Update(msg)
+		if m.porta != strconv.Itoa(c.attesa) {
+			t.Errorf("--port %d: the plan starts from %q, want %d", c.data, m.porta, c.attesa)
+		}
 	}
 }
