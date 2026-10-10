@@ -6549,6 +6549,7 @@ dei sysadmin, non agli utenti normali»*.
   campi inglesi con la prossima versione del formato del catalogo) e una parte dei **dettagli** diagnostici che
   accompagnano i codici (fra parentesi dopo il messaggio, e nel registro). Il messaggio e il rimedio di ogni codice
   sono in inglese, e una prova (`TestTesti`) ferma ogni lettera accentata o parola italiana che ci rientri.
+- ✅ **Fatto il 10 ott 2026**, commit `a1c31ae`: costruzione statica, `go vet` pulito, `go test` 208 PASS (sottoprove comprese), 0 FAIL.
 
 ---
 

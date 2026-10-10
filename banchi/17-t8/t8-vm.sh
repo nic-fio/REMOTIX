@@ -90,7 +90,7 @@ sudo /root/remotix-install versione" | tee "$E/motore.txt"
 script)
 	# le risposte: la persona «prova» nei gruppi della scheda; firewall e RPM Fusion col consenso (D5,
 	# D6: il motore annota quelli che su questa macchina non servono)
-	vm "printf 'formato = remotix-risposte/1\nlingua = it\nutenti = prova\nconsenso.firewall = si\n' | sudo tee /root/risposte.conf >/dev/null
+	vm "printf 'formato = remotix-risposte/1\nutenti = prova\nconsenso.firewall = si\n' | sudo tee /root/risposte.conf >/dev/null
 [ -e /etc/fedora-release ] && echo 'consenso.deposito.rpmfusion = si' | sudo tee -a /root/risposte.conf >/dev/null
 cd /tmp && curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
 sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh" >"$E/script.txt" 2>&1
