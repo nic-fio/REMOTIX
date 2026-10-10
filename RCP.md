@@ -1432,7 +1432,7 @@ implicit sentinel values.
 ⛔ `lunghezza` **MUST** be the exact number of bytes of the body. A receiver that reads a
 length inconsistent with what the type provides for **MUST** close with `ERRORE_PROTOCOLLO`.
 
-⛔ No message **MUST** exceed **1 MiB**. Whoever announces a larger one violates the protocol.
+⛔ A message **MUST NOT** exceed **1 MiB**. Whoever announces a larger one violates the protocol.
 
 ⛔ **And the length is checked before allocating.** A receiver that allocates `lunghezza` bytes and then
 checks has already given away a megabyte to anyone who can write six bytes.
