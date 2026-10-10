@@ -5607,523 +5607,522 @@ sai in che condizioni** — non *uguale dappertutto*.
 > che guardi un flusso per volta, e questa è la seconda volta in cinque giorni che questa fase
 > produce quattro anelli verdi e un'esperienza sbagliata (`LEZIONI.md` §2.7).
 
-### 7.17 ✅ La sessione che non apre mai il canale di controllo: **5 secondi**
+### 7.17 ✅ The session that never opens the control channel: **5 seconds**
 
-> ## ✅ **CINQUE SECONDI** — deciso dall'utente l'**11 agosto 2026**
+> ## ✅ **FIVE SECONDS** — decided by the user on **11 Aug 2026**
 >
-> ⛔ **Dall'apertura della sessione WebTransport all'apertura del canale di controllo passano al
-> massimo 5 s**, poi il server chiude con `TEMPO_SCADUTO` `0x0D`. ⇒ `RCP.md` §4.6, la riga che
-> mancava.
+> ⛔ **From the opening of the WebTransport session to the opening of the control channel at most
+> 5 s pass**, then the server closes with `TEMPO_SCADUTO` `0x0D`. ⇒ `RCP.md` §4.6, the row that
+> was missing.
 >
-> ⭐ **Perché 5 s, cioè lo stesso numero del primo tetto**: aprire il canale è il **primo atto
-> obbligatorio** della sessione (`RCP.md` §2.5), non dipende da quanto è veloce a digitare una
-> persona, e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
+> ⭐ **Why 5 s, that is the same number as the first cap**: opening the channel is the **first mandatory
+> act** of the session (`RCP.md` §2.5), it does not depend on how fast a person types, and it does not
+> depend on the network any more than the `CIAO` does.
 >
-> ⛔ **Che cosa chiude**: era **l'ultimo modo, in questa fase, di occupare un posto senza dire chi
-> si è**. ⚠ E il tempo di inattività di QUIC non lo copriva — quello conta il **silenzio**, e una
-> sessione che scrive su un altro stream non è silenziosa: teneva il posto **a tempo
-> indeterminato**.
+> ⛔ **What it closes**: it was **the last way, in this phase, to occupy a slot without saying who
+> you are**. ⚠ And QUIC's idle timeout did not cover it — that one counts **silence**, and a
+> session that writes on another stream is not silent: it held the slot **indefinitely**.
 >
-> ### ⭐ E qui le quattro decisioni dell'11 agosto si incastrano
+> ### ⭐ And here the four decisions of 11 Aug fit together
 >
 > | | |
 > |---|---|
-> | **§7.15** | il canale di controllo non esiste ancora, quindi il `CONGEDO` **non si manda**: senza la condizione decisa un'ora prima, questa riga imporrebbe un byte su un canale mai nato |
-> | **§7.14** | e il motivo viaggia dove viaggia sempre quando il canale non c'è: nel **codice d'errore applicativo della chiusura** (§3.1 punto 3) |
-> | **§4.1-bis** | ⛔ è una chiusura decisa dal server, e **ha il suo motivo dicibile**: `TEMPO_SCADUTO`. Non è una sessione sana che viene buttata fuori — è una sessione che non è mai cominciata |
+> | **§7.15** | the control channel does not exist yet, so the `CONGEDO` **is not sent**: without the condition decided an hour earlier, this row would require a byte on a channel never born |
+> | **§7.14** | and the reason travels where it always travels when the channel is not there: in the **application error code of the close** (§3.1 point 3) |
+> | **§4.1-bis** | ⛔ it is a close decided by the server, and **it has its sayable reason**: `TEMPO_SCADUTO`. It is not a healthy session being thrown out — it is a session that never began |
 >
-> ⚠ **Non serve nessun tipo di messaggio nuovo**, e conta: la finestra di §9 è chiusa dal 10 agosto
-> 2026. `TEMPO_SCADUTO` c'era già.
+> ⚠ **No new message type is needed**, and that matters: the window of §9 has been closed since 10 Aug
+> 2026. `TEMPO_SCADUTO` was already there.
 >
-> ⛔ **E resta da misurare**: `B6` guadagna un quarto caso — apri la sessione, non aprire il canale,
-> e verifica che a 5 s arrivi `0x0D` **nel codice di chiusura**, non sul canale. Il banco oggi non
-> ce l'ha: fino ad allora questa riga è **scritta e non provata**.
+> ⛔ **And it remains to be measured**: `B6` gains a fourth case — open the session, do not open the channel,
+> and check that at 5 s `0x0D` arrives **in the close code**, not on the channel. The bench does not
+> have it today: until then this row is **written and not tested**.
 
-*Posta l'11 agosto 2026 da una **misura**, non da una lettura: il banco **B6** (rilievo **R12-A.25**,
-e `FASI.md` §01-filo-nudo B6). Riguarda `RCP.md` §4.6. La domanda com'era posta resta qui sotto.*
+*Raised on 11 Aug 2026 by a **measurement**, not by a reading: bench **B6** (finding **R12-A.25**,
+and `FASI.md` §01-filo-nudo B6). It concerns `RCP.md` §4.6. The question as it was posed stays below.*
 
-**Il fatto, e sono due.** B6 ha chiuso la `[?]` **R3.27** — *da quale istante parte il primo tetto* —
-e la risposta è: **dall'apertura del canale di controllo**, non dalla fine del TLS. `RCP.md` §4.6
-riga 1 è stata corretta di quella parola l'11 agosto. ⛔ **Ma il banco ha dato una seconda risposta,
-e dice che curare la parola non basta**: se il cronometro parte dall'apertura del **canale**, chi apre
-la **sessione** WebTransport e il canale non lo apre mai **non ha addosso nessun tetto**. §4.6 non ha
-una riga per quello stato: la tabella comincia da *«`CIAO` ricevuto»*, e prima del `CIAO` c'è uno
-stato in cui il server non conta niente.
+**The fact, and there are two.** B6 closed the `[?]` **R3.27** — *from which instant the first cap starts*
+— and the answer is: **from the opening of the control channel**, not from the end of TLS. `RCP.md` §4.6
+row 1 was corrected by that word on 11 Aug. ⛔ **But the bench gave a second answer,
+and it says that curing the word is not enough**: if the stopwatch starts at the opening of the **channel**, whoever opens
+the WebTransport **session** and never opens the channel **has no cap on them at all**. §4.6 has no
+row for that state: the table starts from *«`CIAO` received»*, and before the `CIAO` there is a
+state in which the server counts nothing.
 
-| | **A — un quarto tetto** | **B — nessun tetto, e si dichiara** |
+| | **A — a fourth cap** | **B — no cap, and it is declared** |
 |---|---|---|
-| **che cosa dice** | dall'apertura della **sessione** all'apertura del **canale di controllo** passa al massimo *N* secondi, poi `CONGEDO(TEMPO_SCADUTO)` | quello stato lo copre il solo tempo di inattività di QUIC (30 s di **silenzio**), e §4.6 lo scrive invece di lasciarlo implicito |
-| ⛔ **che cosa cambia sul filo** | arriva un `CONGEDO(0x0D)` — sul canale che non c'è, quindi **solo** il codice `0x0D` nella chiusura della sessione (§3.1 punto 3) — dove oggi non arriva niente | niente arriva, ed è **quel che succede oggi**: la differenza è che smette di essere un'omissione |
-| **il costo** | un tetto in più da misurare, e un client lento a chiamare l'API si vede chiudere la sessione appena aperta | ⛔ una sessione che non manda `CIAO` ma **tiene il filo occupato** su un altro stream non scade **mai**: il posto resta preso |
+| **what it says** | from the opening of the **session** to the opening of the **control channel** at most *N* seconds pass, then `CONGEDO(TEMPO_SCADUTO)` | that state is covered only by QUIC's idle timeout (30 s of **silence**), and §4.6 writes it down instead of leaving it implicit |
+| ⛔ **what changes on the wire** | a `CONGEDO(0x0D)` arrives — on the channel that is not there, so **only** the code `0x0D` in the session close (§3.1 point 3) — where today nothing arrives | nothing arrives, and it is **what happens today**: the difference is that it stops being an omission |
+| **the cost** | one more cap to measure, and a client slow to call the API sees the session closed as soon as it is opened | ⛔ a session that does not send `CIAO` but **keeps the wire busy** on another stream **never** expires: the slot stays taken |
 
-**Il caso concreto, e non è di laboratorio.** Una pagina apre la sessione WebTransport, poi il
-browser va in secondo piano o la rete cade fra i due passi. Con **A** la sessione muore con un motivo
-leggibile; con **B** resta lì finché QUIC non si annoia — e se qualcosa continua a scrivere su un
-altro stream, non si annoia mai. ⚠ È la connessione che *«tiene un posto e non lo dichiara a
-nessuno»*, cioè la frase con cui §4.6 si apre: la sezione esiste per questo caso e non lo copre.
+**The concrete case, and it is not a lab one.** A page opens the WebTransport session, then the
+browser goes into the background or the network drops between the two steps. With **A** the session dies with a readable
+reason; with **B** it stays there until QUIC gets bored — and if something keeps writing on another
+stream, it never gets bored. ⚠ It is the connection that *«holds a slot and declares it to
+no one»*, that is the sentence §4.6 opens with: the section exists for this case and does not cover it.
 
-⭐ **Quale mi sembra più difendibile, e la ragione: A, con lo stesso numero della riga 1 — 5 s.**
-Non per simmetria: perché l'apertura del canale di controllo è **il primo atto obbligatorio** della
-sessione (§2.5), non dipende dall'utente, e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
-⛔ Ma è una riga normativa che aggiunge un tetto a un'implementazione conforme, quindi **resta ❓**
-finché non la decidi: `RCP.md` §4.6 porta la riga marcata ❓ e rimanda qui, e §12 la dichiara fra le
-cose che RCP/1 lascia aperte. ⭐ **Non serve nessun tipo di messaggio nuovo** — il motivo è
-`TEMPO_SCADUTO`, che c'è già — e questo conta, perché la finestra di §9 è chiusa dal 10 agosto.
+⭐ **Which one seems more defensible to me, and the reason: A, with the same number as row 1 — 5 s.**
+Not for symmetry: because opening the control channel is **the first mandatory act** of the
+session (§2.5), it does not depend on the user, and it does not depend on the network any more than the `CIAO` does.
+⛔ But it is a normative row that adds a cap to a conforming implementation, so **it stays ❓**
+until you decide it: `RCP.md` §4.6 carries the row marked ❓ and refers here, and §12 lists it among the
+things RCP/1 leaves open. ⭐ **No new message type is needed** — the reason is
+`TEMPO_SCADUTO`, which is already there — and this matters, because the window of §9 has been closed since 10 Aug.
 
-**Come si chiude:** un numero, o *«nessun tetto»*. Con la prima, §4.6 guadagna una riga e B6 un caso;
-con la seconda, §4.6 guadagna comunque **la riga che dichiara lo stato**, perché un buco dichiarato e
-un buco dimenticato non si distinguono dopo tre mesi.
+**How it closes:** a number, or *«no cap»*. With the first, §4.6 gains a row and B6 a case;
+with the second, §4.6 still gains **the row that declares the state**, because a declared hole and
+a forgotten hole cannot be told apart after three months.
 
-### 7.21 ✅ ⭐ **I gruppi della scheda li mette REMOTIX** — deciso dall'utente, 20 settembre 2026
+### 7.21 ✅ ⭐ **REMOTIX puts the user in the card's groups** — decided by the user, 20 Sep 2026
 
-*Domanda dell'utente: «REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
-Normalmente le distro non ce li mettono, potrebbe essere un problema?» — e la risposta è sì, oggi
-quell'utente **si collega e non vede niente**: `[M]` 27 ago 2026, 0 sessioni su 4 senza i gruppi,
-17 su 17 con. ⛔ E nessun errore lo dice: si vede una pagina bianca.*
+*The user's question: «REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
+Normalmente le distro non ce li mettono, potrebbe essere un problema?» — and the answer is yes, today
+that user **connects and sees nothing**: `[M]` 27 Aug 2026, 0 sessions out of 4 without the groups,
+17 out of 17 with them. ⛔ And no error says so: one sees a blank page.*
 
-**La causa, ed è strutturale:** su un desktop normale il permesso sui nodi `/dev/dri` lo dà logind
-con un'ACL (`uaccess`) a chi occupa un **seat**. ⇒ Una sessione remota un seat non ce l'ha di
-proposito, quindi quell'ACL non arriva mai e restano **solo i gruppi**.
+**The cause, and it is structural:** on a normal desktop the permission on the `/dev/dri` nodes is given by logind
+with an ACL (`uaccess`) to whoever occupies a **seat**. ⇒ A remote session has no seat on
+purpose, so that ACL never arrives and **only the groups** remain.
 
-**La decisione dell'utente, in due pezzi:**
+**The user's decision, in two pieces:**
 
-| quando | chi | che cosa |
+| when | who | what |
 |---|---|---|
-| **all'installazione** | `src/provisiona.sh` | iscrive **tutte le persone già sulla macchina** — `UID_MIN..UID_MAX` LETTI da `/etc/login.defs`, e solo chi ha una shell vera: gli account di servizio restano fuori |
-| **in esercizio** | il prodotto (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`) | ogni utente nuovo, **alla prima connessione**, viene iscritto e il suo gestore d'utente fatto rinascere |
+| **at installation** | `src/provisiona.sh` | enrols **all the people already on the machine** — `UID_MIN..UID_MAX` READ from `/etc/login.defs`, and only those with a real shell: service accounts stay out |
+| **in operation** | the product (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`) | every new user, **at the first connection**, is enrolled and their user manager reborn |
 
-⛔ **E cambia una divisione che era scritta** (I7: *«il prodotto mette quel che riguarda la SESSIONE;
-i conti, i gruppi, polkit e PAM stanno in `provisiona.sh`»*). Da oggi il prodotto tocca anche i
-gruppi. ⇒ Le due garanzie che tengono la cosa onesta, e sono nel codice:
-1. si fa **dopo** che PAM ha detto di sì — non si concede niente a chi bussa e basta;
-2. **ogni iscrizione si scrive nel registro**, con nome e gruppi: un permesso dato in silenzio è un
-   permesso che nessuno ricorda di avere dato.
+⛔ **And it changes a division that was written down** (I7: *«the product sets what concerns the SESSION;
+accounts, groups, polkit and PAM live in `provisiona.sh`»*). From today the product touches the
+groups too. ⇒ The two guarantees that keep the thing honest, and they are in the code:
+1. it is done **after** PAM has said yes — nothing is granted to whoever merely knocks;
+2. **every enrolment is written to the log**, with name and groups: a permission given in silence is a
+   permission nobody remembers having given.
 
-⚠ E i nomi dei gruppi non sono inchiodati: si chiedono ai nodi (`stat -c %g`), perché `video` e
-`render` sono i nomi di **questa** distribuzione.
+⚠ And the group names are not hard-coded: they are asked of the nodes (`stat -c %g`), because `video` and
+`render` are the names of **this** distribution.
 
-`[M]` 20 set 2026, scatola `kde`: utente `senzagr` creato senza gruppi ⇒ col binario di prima
-**zero fotogrammi**; col binario nuovo il registro dice «PRIMA CONNESSIONE: ce lo metto io»,
-`id -nG` passa da `senzagr` a `senzagr video render`, e arrivano **105 fotogrammi**. Sul server
-vero, `provisiona.sh` ha iscritto **3 persone** e `nicfio` è passato da `nicfio sudo` a
+`[M]` 20 Sep 2026, box `kde`: user `senzagr` created without groups ⇒ with the previous binary
+**zero frames**; with the new binary the log says «PRIMA CONNESSIONE: ce lo metto io»,
+`id -nG` goes from `senzagr` to `senzagr video render`, and **105 frames** arrive. On the real
+server, `provisiona.sh` enrolled **3 people** and `nicfio` went from `nicfio sudo` to
 `nicfio sudo video render`.
 
-⭐ **E VALE SU TUTTI I DESKTOP** — chiesto dall'utente il 21 set 2026 (*«deve funzionare per tutti i
-DE, non solo per KDE»*) e misurato il 22. ⚠ Non c'era niente da estendere: l'iscrizione sta nel
-**padre**, prima del `fork`, e il compositore non lo conosce nemmeno — era la **misura** a fermarsi a
-kde. `[M]` 22 set 2026, inquilini senza gruppi, **browser veri** con finestra vera
+⭐ **And IT HOLDS ON ALL DESKTOPS** — asked by the user on 21 Sep 2026 (*«deve funzionare per tutti i
+DE, non solo per KDE»*) and measured on the 22nd. ⚠ There was nothing to extend: the enrolment sits in the
+**parent**, before the `fork`, and the compositor does not even know about it — it was the **measurement** that stopped at
+kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real window
 (`banchi/12-client-veri.py --visibile`):
 
-| scatola | Firefox 140 | Chrome 153 | che cosa ha fatto il prodotto |
+| box | Firefox 140 | Chrome 153 | what the product did |
 |---|---|---|---|
-| **gnome** | ⭐ PASS (1° fotogramma 1,6 s) | ⭐ PASS (1,2 s) | `id -nG`: `sgruppig`/`sgruppic` → `… video render` |
-| **xfce** | ⭐ PASS (0,6 s) | ⭐ PASS (0,9 s) | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
+| **gnome** | ⭐ PASS (1st frame 1.6 s) | ⭐ PASS (1.2 s) | `id -nG`: `sgruppig`/`sgruppic` → `… video render` |
+| **xfce** | ⭐ PASS (0.6 s) | ⭐ PASS (0.9 s) | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
 
-⛔ **E la rete non lo guardava**, perché **ogni maglia mette i gruppi al suo inquilino da sé**
-(`garantisci_i_gruppi`): quando il cliente arriva, il prodotto non ha più niente da iscrivere ⇒ la
-rete poteva essere tutta verde con questo pezzo rotto. ⇒ Maglia **C18**
-(`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), l'unica che arriva **senza** gruppi;
-guasto innestato `--senza-usermod`. `[M]` 22 set 2026: VERDE e guasto VISTO su gnome e xfce.
+⛔ **And the safety net was not watching it**, because **every mesh gives its tenant the groups by itself**
+(`garantisci_i_gruppi`): when the client arrives, the product has nothing left to enrol ⇒ the
+safety net could be all green with this piece broken. ⇒ Mesh **C18**
+(`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), the only one that arrives **without** groups;
+injected fault `--senza-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
 
 ---
 
-## 8. ✅ Le decisioni della fase 15 — la suite funzionale e la bonifica del giro 1
+## 8. ✅ The decisions of phase 15 — the functional suite and the clean-up of round 1
 
-*Dopo il giro 1 della suite (`fasi/15-suite-funzionale.md`, «Il giro 1»): 25 settembre 2026, mattina.
-Più l'eccezione di KDE, decisa la sera del 24 insieme alla fase.*
+*After round 1 of the suite (`fasi/15-suite-funzionale.md`, «Round 1»): 25 Sep 2026, morning.
+Plus the KDE exception, decided on the evening of the 24th together with the phase.*
 
-### 8.1 ✅ La sessione KDE nasce vuota — salvo la scelta dell'utente
+### 8.1 ✅ The KDE session is born empty — unless the user chose otherwise
 
-Deciso dall'utente, 25 set 2026 (difetto **D-005**: dopo «Esci» Plasma riapriva da solo il programma
-che era aperto, mentre la pagina promette una sessione NUOVA; `[R]` il ripristino di riserva di Plasma
-6.3 su Wayland, `org.kde.plasma-fallback-session-restore.desktop`).
+Decided by the user, 25 Sep 2026 (defect **D-005**: after «Esci» Plasma reopened by itself the program
+that was open, while the page promises a NEW session; `[R]` Plasma 6.3's reserve restore
+on Wayland, `org.kde.plasma-fallback-session-restore.desktop`).
 
-La sessione remota KDE parte **vuota** di suo: `ksmserverrc` con `loginMode=emptySession` **nella
-cartella della sessione**, non nelle impostazioni dell'utente. ⭐ Ma se l'utente in Impostazioni ha
-scelto «ripristina la sessione salvata», **vince la sua scelta** (l'opzione A delle proposte).
-Cura: `aa4014d` sul ramo `bonifica-15`.
+The remote KDE session starts **empty** by itself: `ksmserverrc` with `loginMode=emptySession` **in the
+session's folder**, not in the user's settings. ⭐ But if the user has chosen in Settings
+«ripristina la sessione salvata», **their choice wins** (option A of the proposals).
+Cure: `aa4014d` on branch `bonifica-15`.
 
-### 8.2 ✅ ⭐ Le impostazioni dell'utente non si toccano — tranne blocco, riavvio, sospensione, stand-by
+### 8.2 ✅ ⭐ The user's settings are not touched — except lock, reboot, suspend, stand-by
 
-Deciso dall'utente, 25 set 2026, in due tempi:
-- *«le impostazioni utente non si toccano»* — su nessun desktop;
-- precisata la stessa mattina: *«Le impostazioni dell'utente non si toccano TRANNE quelle che
+Decided by the user, 25 Sep 2026, in two steps:
+- *«le impostazioni utente non si toccano»* — on no desktop;
+- refined the same morning: *«Le impostazioni dell'utente non si toccano TRANNE quelle che
   riguardano blocco-schermo, riavvio sistema, sospensione e stand-by: queste sono impostazioni
   pericolose per altri utenti presenti sulla macchina»*.
 
-| | dove si scrive |
+| | where it is written |
 |---|---|
-| **blocco dello schermo, riavvio, sospensione, stand-by** | nelle impostazioni **dell'utente**, persistenti: pericolose per le altre persone sulla macchina |
-| **tutto il resto** (disposizione della tastiera, voci di menu, scorciatoie, «Esci» visibile, cambio utente, Ctrl+Alt+F…) | **solo nella sessione remota**, sui quattro desktop; alla fine della sessione l'utente ritrova le sue |
+| **screen lock, reboot, suspend, stand-by** | in the **user's** settings, persistent: dangerous for the other people on the machine |
+| **everything else** (keyboard layout, menu entries, shortcuts, «Esci» visible, user switching, Ctrl+Alt+F…) | **only in the remote session**, on the four desktops; at the end of the session the user finds theirs again |
 
-⇒ Tre difetti di classe B aperti dalla decisione: **D-015** GNOME (la disposizione negoziata finiva in
-`org.gnome.desktop.input-sources` del dconf dell'utente), **D-017** XFCE (canali xfconf dell'utente e
-`~/.cache/sessions` cancellata), **D-018** LXQt (`~/.config/lxqt/*.conf` e voci `Hidden` in
-`~/.local/share/applications`). KDE era già a posto (`kxkbrc` della sessione). Cure: `ddcf28d`,
-`85697c9`, `7543c6a`, `e8115e5` su `bonifica-15`; la prova che sorveglia è **F-031B**
-(`banchi/15-suite/15-f031b-impostazioni-intatte.py`: le impostazioni lette dal disco prima dell'accesso
-e dopo «Esci»).
+⇒ Three class B defects opened by the decision: **D-015** GNOME (the negotiated layout ended up in
+`org.gnome.desktop.input-sources` of the user's dconf), **D-017** XFCE (the user's xfconf channels and
+`~/.cache/sessions` deleted), **D-018** LXQt (`~/.config/lxqt/*.conf` and `Hidden` entries in
+`~/.local/share/applications`). KDE was already fine (the session's `kxkbrc`). Cures: `ddcf28d`,
+`85697c9`, `7543c6a`, `e8115e5` on `bonifica-15`; the test that watches over it is **F-031B**
+(`banchi/15-suite/15-f031b-impostazioni-intatte.py`: the settings read from disk before login
+and after «Esci»).
 
-🔸 Derivato (`7543c6a`): su XFCE Sospendi, Iberna e Sonno ibrido del dialogo di «Esci» contano come
-**sospensione** ⇒ sono permesse, e restano nel canale dell'utente.
+🔸 Derived (`7543c6a`): on XFCE Suspend, Hibernate and Hybrid Sleep in the «Esci» dialog count as
+**suspend** ⇒ they are allowed, and stay in the user's channel.
 
-### 8.3 ✅ La frase della linea caduta
+### 8.3 ✅ The sentence for the dropped line
 
-Deciso dall'utente, 25 set 2026 (**D-002**: la linea cade e la pagina resta congelata col desktop, senza
-una parola). Quando il trasporto si chiude senza un CONGEDO, la pagina torna al modulo e dice:
+Decided by the user, 25 Sep 2026 (**D-002**: the line drops and the page stays frozen with the desktop, without
+a word). When the transport closes without a CONGEDO, the page goes back to the form and says:
 
 > *«il collegamento con il server si è interrotto: per rientrare scrivi di nuovo la parola d'ordine»*
 
-Cura: `c7a67ea` su `bonifica-15`.
+Cure: `c7a67ea` on `bonifica-15`.
 
-### 8.4 ✅ Il server spento si dice subito
+### 8.4 ✅ A server that is off is said at once
 
-Deciso dall'utente, 25 set 2026 (**D-009**: a server spento la pagina impiegava 31 s a dire «Non si
-collega»). Si dice **subito**, ~1 s, dal rifiuto di rete di `/impronta`, senza aspettare i 30 s del
-browser su WebTransport. 🔸 Solo il rifiuto di rete: uno stato HTTP o un corpo illeggibile restano come
-prima, e un server lento non ha orologi (si aspetta la sua risposta). Cura: `e719d08` su `bonifica-15`.
+Decided by the user, 25 Sep 2026 (**D-009**: with the server off the page took 31 s to say «Non si
+collega»). It is said **at once**, ~1 s, from the network refusal of `/impronta`, without waiting for the browser's 30 s
+on WebTransport. 🔸 Only the network refusal: an HTTP status or an unreadable body stay as
+before, and a slow server has no clocks (its answer is awaited). Cure: `e719d08` on `bonifica-15`.
 
-### 8.5 ✅ ⭐ D-006: un decodificatore Opus nostro, in WebAssembly, per tutti i browser
+### 8.5 ✅ ⭐ D-006: an Opus decoder of our own, in WebAssembly, for all browsers
 
-Deciso dall'utente, 25 set 2026. Il difetto: Firefox con un video nella sessione ha buchi di suono
-corti e ripetuti; Chrome no. `[M]` 25 set, senza l'orecchio del banco, 60 s su lxqt e kde: Firefox+video
-**3-5 riarmi**, Firefox senza video 0, Chrome 0, Firefox+video in PCM 0 ⇒ il decodificatore Opus di
-Firefox (WebCodecs `AudioDecoder`). Una prima cura lato pagina è stata tolta (`b40856d`): coi browser
-veri peggiorava.
+Decided by the user, 25 Sep 2026. The defect: Firefox with a video in the session has short, repeated
+sound gaps; Chrome does not. `[M]` 25 Sep, without the bench's ear, 60 s on lxqt and kde: Firefox+video
+**3-5 re-arms**, Firefox without video 0, Chrome 0, Firefox+video in PCM 0 ⇒ Firefox's Opus decoder
+(WebCodecs `AudioDecoder`). A first page-side cure was removed (`b40856d`): with real browsers
+it made things worse.
 
-L'utente: *«concordo sulla soluzione D [dichiararlo], ma il problema va risolto con la soluzione B
+The user: *«concordo sulla soluzione D [dichiararlo], ma il problema va risolto con la soluzione B
 [decodificatore Opus nostro in WebAssembly nella pagina, per TUTTI i browser], che è la scelta che ci
 consente di avere un prodotto bugs-free»*.
 
-⇒ Si dichiara, **e** si fa la B: il decodificatore Opus in WebAssembly nella pagina, **per tutti** i
-browser, non un ramo per Firefox.
-⛔ **Prima del giro 2.**
+⇒ It is declared, **and** B is done: the Opus decoder in WebAssembly in the page, **for all**
+browsers, not a branch for Firefox.
+⛔ **Before round 2.**
 
-### 8.6 ✅ L'eccezione di KDE al riattacco a misura diversa
+### 8.6 ✅ The KDE exception on reattach at a different size
 
-Deciso dall'utente il **24 settembre 2026, sera**, aprendo la fase 15 (`fasi/15-suite-funzionale.md`,
-«Le decisioni dell'utente»). Al riattacco a misura diversa (F-018, percorso C):
-- su **GNOME, XFCE, LXQt** la tela prende la misura nuova e il desktop la segue (sfondo, pannello);
-- su **KDE** la tela resta quella vecchia e **il browser riscala**: è l'**atteso**, non un FAIL.
+Decided by the user on **24 Sep 2026, evening**, opening phase 15 (`fasi/15-suite-funzionale.md`,
+«The user's decisions»). On reattach at a different size (F-018, path C):
+- on **GNOME, XFCE, LXQt** the canvas takes the new size and the desktop follows it (wallpaper, panel);
+- on **KDE** the canvas stays the old one and **the browser rescales**: it is the **expected**, not a FAIL.
 
-Conferma da parte dell'utente, per la suite, del ripiego di §5.0-bis (🔸 fino a oggi): KWin di Debian
-stabile (6.3.6; fino a 6.7.4 nessun ramo rilasciato ha il ridimensionamento a caldo) non cambia misura
-a sessione viva, e riavviarlo distruggerebbe la sessione. `[M]` giro 1: F-018 e P-C **PASS** su KDE
-coi due browser, con quest'atteso.
+Confirmation by the user, for the suite, of the fallback of §5.0-bis (🔸 until today): KWin in Debian
+stable (6.3.6; up to 6.7.4 no released branch has hot resizing) does not change size
+with the session live, and restarting it would destroy the session. `[M]` round 1: F-018 and P-C **PASS** on KDE
+with both browsers, with this expectation.
 
-## 9. ✅ Le decisioni della fase 16 — stress e capacità
+## 9. ✅ The decisions of phase 16 — stress and capacity
 
-*Prese dall'utente il 25 e 26 settembre 2026. Il racconto, le misure e le evidenze stanno in
-`fasi/16-stress-e-capacita.md` (§2, §9, §17); qui la decisione e basta.*
+*Taken by the user on 25 and 26 Sep 2026. The account, the measurements and the evidence are in
+`fasi/16-stress-e-capacita.md` (§2, §9, §17); here only the decision.*
 
-### 9.1 ✅ Il registro va nel journal di sistema
+### 9.1 ✅ The log goes into the system journal
 
-Con `--journal` il prodotto scrive i suoi **eventi** anche nel journal (`journalctl -t remotix`), con i
-campi `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE` e la gravità presa dal segno in
-testa alla riga (⛔ = errore, ⚠ = avviso). La **parlantina** resta solo nel file. Il file resta per chi
-amministra.
+With `--journal` the product also writes its **events** to the journal (`journalctl -t remotix`), with the
+fields `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE` and the severity taken from the sign at the
+head of the line (⛔ = error, ⚠ = warning). The **chatter** stays only in the file. The file stays for whoever
+administers.
 
-### 9.2 ✅ Nel registro non entra mai quel che l'utente batte
+### 9.2 ✅ What the user types never enters the log
 
-Né caratteri né codici di tasto: si scrive «un carattere», «tasto premuto/rilasciato». Il codice resta
-solo per i **modificatori** e i **pulsanti del mouse**. Vale anche per il carattere non producibile
-(RCP §7.3): si dichiara **che** c'è stato, non **quale**.
+Neither characters nor key codes: it writes «a character», «key pressed/released». The code stays
+only for **modifiers** and **mouse buttons**. It also holds for the non-producible character
+(RCP §7.3): it is declared **that** there was one, not **which**.
 
-### 9.3 ✅ La campagna: salita a gradini, tetto a 17, soglie §9
+### 9.3 ✅ The campaign: climb in steps, cap at 17, §9 thresholds
 
-Gradini 1 → 4 → 8 → 12 → 16 con la ricerca a metà (non un utente alla volta); tetto delle sessioni a
-**17** durante la campagna, perché il 17° è solo il controllo corto; soglie di §9 approvate, con il
-video in proporzione alla sua frequenza e la memoria dei browser che si registra ma non classifica.
+Steps 1 → 4 → 8 → 12 → 16 with bisection (not one user at a time); session cap at
+**17** during the campaign, because the 17th is only the short control; §9 thresholds approved, with
+video in proportion to its frequency and the browsers' memory recorded but not classifying.
 
-### 9.4 ✅ Firefox disegna con WebGL (anomalia A1) — decisione del 26 set 2026, mattina
+### 9.4 ✅ Firefox draws with WebGL (anomaly A1) — decision of 26 Sep 2026, morning
 
-La campagna ha misurato che in Firefox la strada di disegno di serie (`bitmaprenderer`, scelta il 20
-ago 2026 contro i quadrati della tela 2D) rilegge ogni fotogramma dalla GPU (~34 ms a 4K) e fa saltare
-l'11–50 % dei fotogrammi già con un utente. L'utente ha scelto di **curare adesso** (strada WebGL2)
-invece di chiudere la campagna col difetto dichiarato: suite corta + prove della tela + **suo sguardo
-contro i quadrati**, poi si rifanno le salite interessate.
+The campaign measured that in Firefox the default drawing route (`bitmaprenderer`, chosen on 20
+Aug 2026 against the 2D canvas squares) reads every frame back from the GPU (~34 ms at 4K) and drops
+11–50 % of frames already with one user. The user chose to **cure now** (WebGL2 route)
+instead of closing the campaign with the defect declared: short suite + canvas tests + **his own look
+for the squares**, then the affected climbs are redone.
 
-### 9.5 ✅ Il rallentamento della Radeon in 4K (A3) è del driver: si documenta, non si aggira — 29 set 2026
+### 9.5 ✅ The Radeon's 4K slowdown (A3) is the driver's: it is documented, not worked around — 29 Sep 2026
 
-Esclusi con misure frequenza, VPP, barriera del compositore ed EFC, il ritardo sta dentro la codifica
-del VCN (gruppi di 5 fotogrammi da ~31 ms, una sessione alla volta). Parola dell'utente: *«è fuori dal
+With frequency, VPP, compositor barrier and EFC ruled out by measurement, the delay sits inside the VCN's
+encoding (groups of 5 frames at ~31 ms, one session at a time). The user's word: *«è fuori dal
 nostro ambito. Se in futuro il problema dovesse essere risolto allora REMOTIX diverrà più capace di
-reggere un maggior carico»*. ⇒ Nessun aggiramento nel prodotto; il 4K della Radeon si dichiara limitato
-dal driver; il difetto è documentato nei minimi particolari in `fasi/16-a3-radeon-vcn.md`, perché
-l'utente possa decidere di aiutare gli sviluppatori del driver.
-Aggiunta del 29 set 2026: Mesa 26.1.6 non cura (100 e 102 lenti contro 100 e 105). Parola dell'utente:
+reggere un maggior carico»*. ⇒ No workaround in the product; the Radeon's 4K is declared limited
+by the driver; the defect is documented in every detail in `fasi/16-a3-radeon-vcn.md`, so that
+the user can decide to help the driver's developers.
+Addition of 29 Sep 2026: Mesa 26.1.6 does not cure it (100 and 102 slow against 100 and 105). The user's word:
 *«stiamo andando fuori scope, questo è un problema dei driver AMD, non di REMOTIX. Aprirò a questo scopo
-un progetto apposito»*. ⇒ In REMOTIX il lavoro su A3 si chiude qui: niente riproduzione minima (§6.2 del
-dossier) né altri esperimenti; il dossier e il ramo `a3-esperimenti` sono il punto di partenza del progetto nuovo.
+un progetto apposito»*. ⇒ In REMOTIX the work on A3 closes here: no minimal reproduction (§6.2 of the
+dossier) nor other experiments; the dossier and the `a3-esperimenti` branch are the starting point of the new project.
 
 ---
 
-### 9.6 ✅ Il logo ufficiale di REMOTIX — 29 set 2026
+### 9.6 ✅ REMOTIX's official logo — 29 Sep 2026
 
-Parola dell'utente: *«è il logo ufficiale del progetto»*. ⇒ `grafica/logo/remotix-logo.png`
-(PNG 2172×724, sha256 `192ce831…384104`), in testa al `README.md`. È l'originale: le varianti
-(icona, favicon, versione scura) si ricavano da questo, non lo sostituiscono.
+The user's word: *«è il logo ufficiale del progetto»*. ⇒ `grafica/logo/remotix-logo.png`
+(PNG 2172×724, sha256 `192ce831…384104`), at the top of `README.md`. It is the original: the variants
+(icon, favicon, dark version) are derived from it, they do not replace it.
 
 
-## 10. ✅ REMOTIX su Linux in generale, e l'installatore — 29 set 2026
+## 10. ✅ REMOTIX on Linux in general, and the installer — 29 Sep 2026
 
-### 10.1 ✅ Non solo Debian: prima un'indagine sulle distribuzioni
+### 10.1 ✅ Not only Debian: first a survey of the distributions
 
-Parola dell'utente: *«al momento REMOTIX è stato sviluppato su Debian Trixie, ma l'obiettivo è farlo
+The user's word: *«al momento REMOTIX è stato sviluppato su Debian Trixie, ma l'obiettivo è farlo
 girare su Linux in generale. Per ottenere questo risultato, e quindi avere basi solide per costruire
-l'installer, è necessario fare un'indagine approfondita sulle principali distro»*. Famiglie:
-Debian/Ubuntu (e Mint), Fedora/RHEL (Rocky, Alma), Arch (Manjaro), openSUSE (aggiunta nell'indagine).
-⚠ Già visto nel codice: `src/remotix.pam` usa `@include common-auth`, che esiste solo su Debian e Ubuntu.
+l'installer, è necessario fare un'indagine approfondita sulle principali distro»*. Families:
+Debian/Ubuntu (and Mint), Fedora/RHEL (Rocky, Alma), Arch (Manjaro), openSUSE (added in the survey).
+⚠ Already seen in the code: `src/remotix.pam` uses `@include common-auth`, which exists only on Debian and Ubuntu.
 
-### 10.2 ✅ L'installatore è professionale, di assoluta eccellenza
+### 10.2 ✅ The installer is professional, of absolute excellence
 
-Parola dell'utente: *«REMOTIX dovrà essere dotato di un sistema di installazione professionale, di
-assoluta eccellenza»*. ⇒ È un requisito del prodotto, non una rifinitura: l'installatore si progetta
-sull'indagine di §10.1 e su come installano i prodotti migliori, e si misura come il resto.
+The user's word: *«REMOTIX dovrà essere dotato di un sistema di installazione professionale, di
+assoluta eccellenza»*. ⇒ It is a product requirement, not a finishing touch: the installer is designed
+on the survey of §10.1 and on how the best products install, and it is measured like the rest.
 
-### 10.3 ✅ Le prove dell'installatore in macchine virtuali, una per desktop
+### 10.3 ✅ The installer tests in virtual machines, one per desktop
 
-Parola dell'utente: *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento
-dell'installer, quindi la potenza bruta della GPU non serve. Passiamo dai container alle VM»*; e *«4 VM
+The user's word: *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento
+dell'installer, quindi la potenza bruta della GPU non serve. Passiamo dai container alle VM»*; and *«4 VM
 distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»*. ⇒ `fasi/17-l-installatore.md` §7.
 
-### 10.4 ✅ Il motore d'installazione in otto fasi
+### 10.4 ✅ The installation engine in eight phases
 
-Proposta dell'utente, adottata: PREFLIGHT · COMPATIBILITY · PLANNING · CONSENT & SAFETY · ACQUISITION ·
-INSTALLATION & CONFIGURATION · VERIFICATION & CERTIFICATION · COMMIT / ROLLBACK. Con tre regole: le fasi
-5-6 le esegue il gestore di pacchetti della distribuzione; il ritorno indietro è nostro (registro delle
-azioni); il consenso può arrivare da un file. Rafforzata su richiesta dell'utente (*«migliorala nei punti
-che ritieni deboli»*): fase 0 TRUST, tre esiti di compatibilità per desktop, il piano come documento
-con «fai / verifica / annulla» per ogni azione, niente si installa prima che tutto sia scaricato,
-accensione fra verifica statica e dal vivo, ripresa di un'operazione interrotta. ⇒ `fasi/17-l-installatore.md` §6.0.
+The user's proposal, adopted: PREFLIGHT · COMPATIBILITY · PLANNING · CONSENT & SAFETY · ACQUISITION ·
+INSTALLATION & CONFIGURATION · VERIFICATION & CERTIFICATION · COMMIT / ROLLBACK. With three rules: phases
+5-6 are carried out by the distribution's package manager; going back is ours (log of
+actions); consent can come from a file. Strengthened at the user's request (*«migliorala nei punti
+che ritieni deboli»*): phase 0 TRUST, three compatibility outcomes per desktop, the plan as a document
+with «do / verify / undo» for each action, nothing is installed before everything is downloaded,
+switch-on between static and live verification, resumption of an interrupted operation. ⇒ `fasi/17-l-installatore.md` §6.0.
 
-### 10.5 ⛔ SUPERATA da §10.31 (5 ott 2026), per la GUI — TUI e GUI sono irrinunciabili
+### 10.5 ⛔ SUPERSEDED by §10.31 (5 Oct 2026), for the GUI — TUI and GUI are indispensable
 
-Parola dell'utente: *«su TUI e GUI dico che è un requisito irrinunciabile»*. ⇒ Tre interfacce (CLI, TUI,
-GUI) su un solo motore, nessuna logica d'installazione nelle interfacce, la GUI come l'utente con
-polkit. Lo strumento è la decisione D12. `fasi/17-l-installatore.md` §6.6.1.
+The user's word: *«su TUI e GUI dico che è un requisito irrinunciabile»*. ⇒ Three interfaces (CLI, TUI,
+GUI) on a single engine, no installation logic in the interfaces, the GUI as the user with
+polkit. The tool is decision D12. `fasi/17-l-installatore.md` §6.6.1.
 
-### 10.6 ✅ Le dipendenze che mancano le porta REMOTIX — con un'eccezione e un confine
+### 10.6 ✅ Missing dependencies are brought by REMOTIX — with one exception and one boundary
 
-Parola dell'utente (29 set 2026): *«usiamo questa regola generale per non impazzire: se ci sono
+The user's word (29 Sep 2026): *«usiamo questa regola generale per non impazzire: se ci sono
 pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*.
 
-- **La regola**: una libreria o un attrezzo di cui REMOTIX ha bisogno, **assente o troppo vecchio** nella
-  distribuzione, lo porta REMOTIX (dentro il binario o nel suo pacchetto). Se la distribuzione ce l'ha
-  giusto, si usa il suo (gli aggiornamenti di sicurezza sono suoi). ⇒ **D2 chiusa: sì**, ngtcp2 e nghttp3
-  dentro, con gli aggiornamenti di sicurezza a carico nostro.
-- ⛔ **L'eccezione: i codec brevettati** (H.264: x264, ffmpeg completa, Mesa coi codec). REMOTIX non li
-  include né li scarica da sé — sarebbe distribuirli; restano all'archivio esterno riconosciuto (RPM
-  Fusion, Packman) aggiunto dal motore **col consenso** (D5).
-- ⛔ **Il confine: i desktop.** Un desktop che la distribuzione non ha (XFCE e LXQt su Alma/RHEL) non lo
-  porta REMOTIX: quella combinazione resta fuori dalla matrice.
+- **The rule**: a library or a tool REMOTIX needs, **missing or too old** in the
+  distribution, is brought by REMOTIX (inside the binary or in its package). If the distribution has it
+  right, its own is used (security updates are its). ⇒ **D2 closed: yes**, ngtcp2 and nghttp3
+  inside, with the security updates our burden.
+- ⛔ **The exception: patented codecs** (H.264: x264, full ffmpeg, Mesa with the codecs). REMOTIX neither
+  includes them nor downloads them by itself — that would be distributing them; they stay with the recognised external repository (RPM
+  Fusion, Packman) added by the engine **with consent** (D5).
+- ⛔ **The boundary: the desktops.** A desktop the distribution does not have (XFCE and LXQt on Alma/RHEL) is not
+  brought by REMOTIX: that combination stays out of the matrix.
 
-### 10.7 ⛔ *(superata da §10.36)* Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
+### 10.7 ⛔ *(superseded by §10.36)* Without a desktop: either it is installed (with consent), or REMOTIX does not install
 
-Proposta dell'utente (29 set 2026), adottata: *«se REMOTIX non trova nessun desktop installato, o chiede di
-installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli archivi della
-distribuzione, si installa senza schermata d'accesso locale né avvio in grafica, ed è dichiarato come
-azione «al meglio». `fasi/17-l-installatore.md` §6.6 e R38.
+The user's proposal (29 Sep 2026), adopted: *«se REMOTIX non trova nessun desktop installato, o chiede di
+installarlo all'utente oppure REMOTIX non si installa»*. The desktop comes from the distribution's
+repositories, is installed without a local login screen or graphical boot, and is declared as a
+«best effort» action. `fasi/17-l-installatore.md` §6.6 and R38.
 
-### 10.8 ✅ Ubuntu 24.04 fuori: si parte dalla 26.04
+### 10.8 ✅ Ubuntu 24.04 out: we start from 26.04
 
-Parola dell'utente (29 set 2026): *«partiamo dalla 26.04»*. Su 24.04 solo GNOME sarebbe stato possibile, al
-prezzo di portare dentro OpenSSL 3.5 (e i suoi aggiornamenti di sicurezza) e di due adattamenti per
-ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22. La matrice scende a 26 macchine.
+The user's word (29 Sep 2026): *«partiamo dalla 26.04»*. On 24.04 only GNOME would have been possible, at the
+price of bringing in OpenSSL 3.5 (and its security updates) and of two adaptations for
+ffmpeg 6.1 and libei 1.2. Mint 22 stays out with it. The matrix goes down to 26 machines.
 
-### 10.9 ✅ Il principio: un prodotto nuovo, su tecnologie di nuova generazione
+### 10.9 ✅ The principle: a new product, on new-generation technologies
 
-Parola dell'utente (30 set 2026): *«la scelta di lasciare fuori certe versioni delle distro è coerente con
+The user's word (30 Sep 2026): *«la scelta di lasciare fuori certe versioni delle distro è coerente con
 lo spirito del progetto: si tratta di un prodotto nuovo che adotta tecnologie di nuova generazione, è una
-scelta di design netta»*. ⇒ Wayland, QUIC/WebTransport, i desktop nelle versioni che li supportano; niente
-X11 né librerie di ripiego per inseguire versioni vecchie.
+scelta di design netta»*. ⇒ Wayland, QUIC/WebTransport, the desktops in the versions that support them; no
+X11 nor fallback libraries to chase old versions.
 
-E il ciclo di vita, perché la scelta resti netta nel tempo:
-- una versione nuova di una distribuzione **entra** nella matrice quando ha i componenti minimi
-  (`fasi/17-l-installatore.md` §3.1) e passa il giro sulle VM;
-- una versione **esce** quando la distribuzione smette di aggiornarla: niente supporto oltre la vita che le
-  dà chi la fa.
+And the life cycle, so that the choice stays clean over time:
+- a new version of a distribution **enters** the matrix when it has the minimum components
+  (`fasi/17-l-installatore.md` §3.1) and passes the round on the VMs;
+- a version **leaves** when the distribution stops updating it: no support beyond the life given to it
+  by whoever makes it.
 
-### 10.10 ✅ Il ritmo: una versione all'anno per le novità, la manutenzione quando serve; e l'aggiornamento automatico
+### 10.10 ✅ The rate: one version a year for new features, maintenance when needed; and automatic updates
 
-Parole dell'utente (30 set 2026): *«la mia intenzione è quella di aggiornare REMOTIX almeno una volta
-l'anno»*; e, visti i ritmi delle distribuzioni: *«bisognerà pensare per REMOTIX ad una funzione di
+User's words (30 Sep 2026): *«la mia intenzione è quella di aggiornare REMOTIX almeno una volta
+l'anno»*; and, given the distributions' rates: *«bisognerà pensare per REMOTIX ad una funzione di
 auto-aggiornamento in base alla distro su cui è installata»*.
 
-- **Due binari**: la **versione annuale** (le novità, suite completa e giro intero sulle VM) e gli
-  **aggiornamenti di manutenzione** senza novità, quando servono: correzioni di sicurezza delle librerie che
-  REMOTIX porta dentro (§10.6), ricostruzioni per le distribuzioni a rilascio continuo (Arch, Tumbleweed:
-  ogni cambio di ffmpeg), e il **catalogo** firmato — che si aggiorna da solo, senza un REMOTIX nuovo, e fa
-  entrare le versioni nuove delle distribuzioni a metà anno.
-- **L'aggiornamento automatico passa dal gestore di pacchetti della distribuzione**, alimentato dai nostri
-  archivi firmati (T8): ⛔ REMOTIX non scarica né sostituisce da sé il proprio binario (due verità su che cosa
-  è installato, e un bersaglio). Un timer di REMOTIX controlla ogni giorno l'archivio e il catalogo; ogni
-  aggiornamento passa dal percorso che non chiude i desktop (T7).
-- 🔸 **D14, aperta**: che cosa si applica da solo — proposta: sicurezza e ricostruzioni automatiche, la versione
-  annuale su scelta dell'amministratore; alternativa: solo avviso.
+- **Two tracks**: the **annual version** (new features, full suite and full round on the VMs) and the
+  **maintenance updates** with no new features, when needed: security fixes for the libraries that
+  REMOTIX brings inside (§10.6), rebuilds for the rolling-release distributions (Arch, Tumbleweed:
+  every ffmpeg change), and the signed **catalogue** — which updates by itself, without a new REMOTIX, and lets
+  the distributions' new versions in mid-year.
+- **Automatic updates go through the distribution's package manager**, fed by our
+  signed repositories (T8): ⛔ REMOTIX does not download or replace its own binary by itself (two truths about what
+  is installed, and a target). A REMOTIX timer checks the repository and the catalogue every day; every
+  update goes through the path that does not close the desktops (T7).
+- 🔸 **D14, open**: what applies by itself — proposal: security and rebuilds automatic, the annual
+  version at the administrator's choice; alternative: notice only.
 
-### 10.11 ✅ Flatpak e AppImage accantonati: pacchetti nativi dal nostro archivio
+### 10.11 ✅ Flatpak and AppImage set aside: native packages from our repository
 
-Parola dell'utente (30 set 2026): *«accantoniamo l'idea flatpak/appimage. Continuiamo sulla strada originale,
-alla fine mi sembra quella più semplice e coerente»*. ⇒ REMOTIX si distribuisce in **pacchetti nativi** negli
-**archivi firmati di REMOTIX** (tutto il materiale da noi, installato dal gestore di pacchetti della
-distribuzione); l'installatore dirige, non copia file. Uno studio su Flatpak/AppImage era partito ed è stato
-fermato. ⚠ Resta da guardare, alla decisione D9 (distribuzioni immutabili), la strada di systemd fatta per i
-servizi di sistema (`systemd-sysext`, portable services).
+The user's word (30 Sep 2026): *«accantoniamo l'idea flatpak/appimage. Continuiamo sulla strada originale,
+alla fine mi sembra quella più semplice e coerente»*. ⇒ REMOTIX is distributed in **native packages** in the
+**signed REMOTIX repositories** (all the material from us, installed by the distribution's package
+manager); the installer directs, it does not copy files. A study on Flatpak/AppImage had started and was
+stopped. ⚠ Still to be looked at, at decision D9 (immutable distributions), the systemd route made for
+system services (`systemd-sysext`, portable services).
 
-### 10.12 ✅ L'installatore è l'unica via per installare REMOTIX
+### 10.12 ✅ The installer is the only way to install REMOTIX
 
-Parola dell'utente (30 set 2026): *«l'unica via per installare REMOTIX è l'installer»*. Siccome un pacchetto
-in un archivio si può sempre installare a mano, la regola si fa valere **per costruzione**:
-1. **il pacchetto porta solo i pezzi, inerti**: programma, pagina, file di configurazione; non accende il
-   servizio, non tocca gruppi né firewall; le tre cinture ci stanno **spente** (in `/usr/share/remotix/`), le
-   attiva il motore col consenso (D4);
-2. **l'installatore monta i pezzi** (gruppi, cinture, firewall, desktop, accensione) e tutto passa dal
-   **suo** registro: una sola traccia, una disinstallazione più pulita;
-3. **due vie sole: l'installatore, oppure il codice sorgente a mano** (scaricare il codice, cercarsi le
-   dipendenze, installarle, tirare su i servizi, configurarli — a proprio rischio). Parola dell'utente, 30
-   set: *«o usa l'installer o deve scaricarsi il codice a mano, andarsi a cercare i pacchetti con le
-   dipendenze e installarseli, tirar su i servizi, configurarli»*. ⇒ REMOTIX non prevede una via intermedia:
-   **né blocchi né opzioni apposta** per chi parte senza installatore (corretto due volte il 30 set: prima
-   era un rifiuto secco, poi un'opzione esplicita). Resta solo un'informazione per l'assistenza: `remotix
-   stato` dice se l'installazione è **certificata dall'installatore** o no;
-4. **gli aggiornamenti automatici restano** (§10.10): il gestore di pacchetti aggiorna i pezzi, poi richiama
-   l'installatore, che verifica e riaccende senza chiudere i desktop.
+The user's word (30 Sep 2026): *«l'unica via per installare REMOTIX è l'installer»*. Since a package
+in a repository can always be installed by hand, the rule is enforced **by construction**:
+1. **the package carries only the pieces, inert**: program, page, configuration files; it does not switch on the
+   service, does not touch groups or firewall; the three belts are in it **switched off** (in `/usr/share/remotix/`), the
+   engine activates them with consent (D4);
+2. **the installer assembles the pieces** (groups, belts, firewall, desktop, switch-on) and everything goes through
+   **its** log: a single trace, a cleaner uninstall;
+3. **only two ways: the installer, or the source code by hand** (download the code, look for the
+   dependencies, install them, bring up the services, configure them — at one's own risk). The user's word, 30
+   Sep: *«o usa l'installer o deve scaricarsi il codice a mano, andarsi a cercare i pacchetti con le
+   dipendenze e installarseli, tirar su i servizi, configurarli»*. ⇒ REMOTIX provides no middle way:
+   **neither blocks nor dedicated options** for whoever starts without the installer (corrected twice on 30 Sep: first
+   it was a flat refusal, then an explicit option). Only a piece of information for support remains: `remotix
+   stato` says whether the installation is **certified by the installer** or not;
+4. **automatic updates stay** (§10.10): the package manager updates the pieces, then calls
+   the installer, which verifies and switches back on without closing the desktops.
 
-### 10.13 ✅ REMOTIX sarà open source
+### 10.13 ✅ REMOTIX will be open source
 
-Parola dell'utente (30 set 2026): *«REMOTIX sarà opensource»*. Conseguenze da decidere a suo tempo:
-🔸 **la licenza** (GPL o permissiva; pesa anche sui codec: x264 è GPL, `DECISIONI.md` ~§5113 aveva già escluso
-x265 come ripiego); **D10** (dove si costruiscono i pacchetti): con un progetto pubblico diventa possibile
-OBS di openSUSE; **D11** (la chiave): la fiducia pubblica richiede una chiave madre custodita bene.
+The user's word (30 Sep 2026): *«REMOTIX sarà opensource»*. Consequences to be decided in due course:
+🔸 **the licence** (GPL or permissive; it also weighs on the codecs: x264 is GPL, `DECISIONI.md` ~§5113 had already ruled out
+x265 as a fallback); **D10** (where the packages are built): with a public project
+openSUSE's OBS becomes possible; **D11** (the key): public trust requires a well-guarded root key.
 
-### 10.14 ✅ L'installatore è un programma solo, monolitico
+### 10.14 ✅ The installer is a single, monolithic program
 
-Parola dell'utente (30 set 2026): *«l'installer è un programma che non chiama altri sottoprogrammi strani. È un
+The user's word (30 Sep 2026): *«l'installer è un programma che non chiama altri sottoprogrammi strani. È un
 sistema complesso e monolitico»*. ⇒
-- **un solo eseguibile** (`remotix-install`): motore, CLI, TUI e GUI; niente script né programmi di appoggio
-  nostri;
-- con i servizi del sistema (systemd, logind, firewalld, polkit) parla **dall'interno**, attraverso le loro
-  interfacce ufficiali (D-Bus), senza lanciare programmi;
-- **un elenco chiuso di programmi di sistema** si lancia solo dove non c'è un'interfaccia stabile: il gestore
-  di pacchetti della distribuzione (`apt`, `dnf`, `zypper`, `pacman` — regola 1 del motore) e i comandi dei
-  gruppi (`usermod`, `gpasswd`); col percorso completo, argomenti fissi, ogni chiamata nel registro;
-- **la GUI** gira come l'utente (non da root: Wayland), e per le operazioni da amministratore lo stesso
-  eseguibile **rilancia sé stesso** con i permessi chiesti a polkit — un file, due ruoli.
+- **a single executable** (`remotix-install`): engine, CLI, TUI and GUI; no scripts or helper programs
+  of ours;
+- it talks with the system's services (systemd, logind, firewalld, polkit) **from the inside**, through their
+  official interfaces (D-Bus), without launching programs;
+- **a closed list of system programs** is launched only where there is no stable interface: the distribution's
+  package manager (`apt`, `dnf`, `zypper`, `pacman` — engine rule 1) and the group
+  commands (`usermod`, `gpasswd`); with the full path, fixed arguments, every call in the log;
+- **the GUI** runs as the user (not as root: Wayland), and for administrator operations the same
+  executable **relaunches itself** with the permissions asked of polkit — one file, two roles.
 
-### 10.15 ⛔ *(superata da §10.35)* L'installatore parla italiano e inglese, secondo la lingua del sistema
+### 10.15 ⛔ *(superseded by §10.35)* The installer speaks Italian and English, according to the system language
 
-Parola dell'utente (30 set 2026): *«l'installer lo rendiamo bilingue: italiano e inglese. La scelta della
+The user's word (30 Sep 2026): *«l'installer lo rendiamo bilingue: italiano e inglese. La scelta della
 lingua la rendiamo coerente con le impostazioni linguistiche dell'OS sottostante (variabili di ambiente)»*.
-⇒ la lingua si legge nell'ordine standard `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`: italiano se la prima
-indicata è italiano, **inglese in tutti gli altri casi** (anche tedesco, francese…); ⚠ quando l'installatore
-si rilancia con i permessi (polkit ripulisce l'ambiente) la lingua scelta si **passa esplicitamente** alla
-parte da amministratore; nell'installazione senza domande il file di risposte può fissarla. I **codici**
-`RX-…` restano uguali nelle due lingue: sono quelli che si cercano nel manuale e nell'assistenza.
+⇒ the language is read in the standard order `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`: Italian if the first
+one given is Italian, **English in all other cases** (German, French… too); ⚠ when the installer
+relaunches itself with the permissions (polkit cleans the environment) the chosen language is **passed explicitly** to the
+administrator part; in an unattended installation the answer file can fix it. The `RX-…` **codes**
+stay the same in both languages: they are the ones looked up in the manual and in support.
 
-### 10.16 ✅ La disinstallazione: l'amministratore avvisa, l'installatore chiude le sessioni REMOTIX e pulisce
+### 10.16 ✅ Uninstalling: the administrator warns, the installer closes the REMOTIX sessions and cleans up
 
-Parola dell'utente (30 set 2026): *«è un'operazione fatta dall'admin del server. La soluzione più pulita è che
+The user's word (30 Sep 2026): *«è un'operazione fatta dall'admin del server. La soluzione più pulita è che
 l'admin avverta gli utenti nelle modalità classiche (email, WhatsApp…). Poi, quando avvia la
 disinstallazione, l'installer chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia
-del sistema»*. ⇒ Nessun sistema di avvisi in REMOTIX e **nessuna domanda in più**: chi è ancora collegato viene
-chiuso e basta (*«erano già stati avvertiti prima»*); il piano porta solo la riga «chiudo le sessioni
-REMOTIX ancora aperte (N)»; si chiudono le sessioni REMOTIX e i programmi nati dentro di esse, **non** gli altri processi
-dell'utente (una sua sessione locale o ssh resta). `fasi/17-l-installatore.md` §6.5-bis, R43.
+del sistema»*. ⇒ No warning system in REMOTIX and **no extra question**: whoever is still connected is
+simply closed (*«erano già stati avvertiti prima»*); the plan carries only the row «close the REMOTIX
+sessions still open (N)»; the REMOTIX sessions and the programs born inside them are closed, **not** the user's other
+processes (a local or ssh session of theirs stays). `fasi/17-l-installatore.md` §6.5-bis, R43.
 
-### 10.17 ✅ Un sistema per avvisare gli utenti collegati: progetto a parte, fuori da REMOTIX
+### 10.17 ✅ A system to warn connected users: a separate project, outside REMOTIX
 
-Parola dell'utente (30 set 2026): *«la disinstallazione mi ha fatto venire in mente che serve un sistema per
+The user's word (30 Sep 2026): *«la disinstallazione mi ha fatto venire in mente che serve un sistema per
 avvisare gli utenti collegati a un sistema. Ma questo è un progetto a parte che non riguarda REMOTIX»*. ⇒ In
-REMOTIX niente avvisi (§10.16). Nota per quel progetto: le sessioni REMOTIX sono desktop normali, quindi un
-avviso sul desktop dell'utente le raggiungerebbe senza che REMOTIX ne sappia niente.
+REMOTIX no warnings (§10.16). Note for that project: REMOTIX sessions are normal desktops, so a
+warning on the user's desktop would reach them without REMOTIX knowing anything about it.
 
-### 10.18 ✅ D3: REMOTIX rispecchia l'autenticazione del sistema (PAM), blocco dei conti compreso
+### 10.18 ✅ D3: REMOTIX mirrors the system's authentication (PAM), account lockout included
 
-Parola dell'utente (30 set 2026): *«non voglio che REMOTIX si disallinei rispetto all'autenticazione di default
-del sistema, deve rispecchiare PAM»*. ⇒ Il file PAM di REMOTIX usa **la stessa pila dell'accesso remoto
-standard** della distribuzione (quella di ssh: `system-remote-login` su Arch, `password-auth` + `postlogin` su
-Fedora/Alma, `common-*` su Debian/Ubuntu/openSUSE), con quel che contiene: `pam_faillock` dove la
-distribuzione lo ha (resta il rischio del blocco del conto a distanza, lo stesso di ssh, governato
-dall'amministratore in `/etc/security/faillock.conf`), e **`pam_selinux` su Fedora/Alma come ssh** ⇒ il rifiuto
-SELinux del figlio si cura con una **regola SELinux di REMOTIX** (come Cockpit), non togliendo la riga (T6). Il
-ban per indirizzo di REMOTIX (§1.9: 3 fallimenti in 5 minuti ⇒ 12 ore) resta, in aggiunta. Unica differenza
-voluta: **root escluso**, come ssh di serie (`PermitRootLogin` senza password) — ✅ confermato dall'utente:
+The user's word (30 Sep 2026): *«non voglio che REMOTIX si disallinei rispetto all'autenticazione di default
+del sistema, deve rispecchiare PAM»*. ⇒ REMOTIX's PAM file uses **the same stack as the distribution's standard
+remote login** (ssh's: `system-remote-login` on Arch, `password-auth` + `postlogin` on
+Fedora/Alma, `common-*` on Debian/Ubuntu/openSUSE), with what it contains: `pam_faillock` where the
+distribution has it (the risk of remote account lockout remains, the same as ssh's, governed
+by the administrator in `/etc/security/faillock.conf`), and **`pam_selinux` on Fedora/Alma like ssh** ⇒ the
+SELinux refusal of the child is cured with a **REMOTIX SELinux rule** (like Cockpit), not by removing the line (T6). REMOTIX's
+per-address ban (§1.9: 3 failures in 5 minutes ⇒ 12 hours) stays, in addition. The only intended
+difference: **root excluded**, like default ssh (`PermitRootLogin` without password) — ✅ confirmed by the user:
 *«che root non entri da REMOTIX è corretto, è lo stesso sistema di sicurezza di ssh»*.
 
-### 10.19 ⛔ SUPERATA da §10.31 (5 ott 2026) — D12: la finestra dell'installatore si disegna con Gio, dentro lo stesso programma
+### 10.19 ⛔ SUPERSEDED by §10.31 (5 Oct 2026) — D12: the installer's window is drawn with Gio, inside the same program
 
-Scelta dell'utente (30 set 2026), fra tre strade: Chromium incorporato (indipendente, ma due programmi e un
-motore web da mantenere), WebKitGTK della distribuzione (dipendenza, programma non più unico), **Gio**, una
-libreria per interfacce in Go che disegna tutto da sé — *«ok per Gio»*. Nasce da una sua proposta: *«schermate
-con un motore di rendering integrato, così da rendere l'installer indipendente dai browser dell'utente»*. ⇒ La
-GUI vive nello stesso programma del motore, identica sui quattro desktop, senza browser; le schermate non sono
-HTML ma si riscrivono in Go **dal prototipo** (colori, caratteri, disposizione, parole comuni, «password»). La
-TUI, nel terminale, con una libreria Go dello stesso programma. ⚠ Da verificare nella costruzione: Gio sotto
-Linux usa le librerie grafiche del sistema (Wayland, X11, EGL) — il motore deve continuare a partire anche su
-una macchina senza desktop (dove si usa la TUI).
+The user's choice (30 Sep 2026), among three routes: embedded Chromium (independent, but two programs and a
+web engine to maintain), the distribution's WebKitGTK (a dependency, the program no longer single), **Gio**, a
+Go library for interfaces that draws everything by itself — *«ok per Gio»*. It comes from a proposal of his: *«schermate
+con un motore di rendering integrato, così da rendere l'installer indipendente dai browser dell'utente»*. ⇒ The
+GUI lives in the same program as the engine, identical on the four desktops, without a browser; the screens are not
+HTML but are rewritten in Go **from the prototype** (colours, fonts, layout, common words, «password»). The
+TUI, in the terminal, with a Go library in the same program. ⚠ To be verified during the build: Gio under
+Linux uses the system's graphics libraries (Wayland, X11, EGL) — the engine must keep starting even on
+a machine without a desktop (where the TUI is used).
 
-### 10.20 ✅ D5, D6, D8, D13 — parole dell'utente (30 set 2026)
+### 10.20 ✅ D5, D6, D8, D13 — user's words (30 Sep 2026)
 
 - **D5**: *«si chiede il consenso e si installa. Se l'utente nega il consenso allora REMOTIX non si installa»* ⇒
-  dove serve un archivio esterno per la codifica (RPM Fusion, Packman, EPEL), il consenso è richiesto; un «no» ⇒
-  BLOCCATA, niente toccato.
+  where an external repository is needed for encoding (RPM Fusion, Packman, EPEL), consent is required; a «no» ⇒
+  BLOCKED, nothing touched.
 - **D6**: *«l'installer apre la porta che l'utente ha scelto sul firewall (per il router ovviamente non può essere
-  REMOTIX a pensarci, a meno che non vogliamo supportare UPnP)»* ⇒ la porta si apre sul firewall della macchina;
-  il router resta all'amministratore (UPnP: vedi la nota sotto).
+  REMOTIX a pensarci, a meno che non vogliamo supportare UPnP)»* ⇒ the port is opened on the machine's firewall;
+  the router stays with the administrator (UPnP: see the note below).
 - **D8**: *«l'utente vede il desktop originale di Ubuntu (o altrimenti saremo costretti a implementare un nostro
-  session manager)»* ⇒ su Ubuntu la sessione **`ubuntu`** (quella che si vede davanti al monitor), non il GNOME
-  «vanilla»: REMOTIX avvia la sessione GNOME **di serie della distribuzione**; niente `gnome-session` in più.
-- **D13**: *«di base sì, ma potremo farci dei piccoli miglioramenti»* ⇒ il prototipo è la base della GUI.
+  session manager)»* ⇒ on Ubuntu the **`ubuntu`** session (the one seen in front of the monitor), not «vanilla»
+  GNOME: REMOTIX starts the distribution's **default** GNOME session; no extra `gnome-session`.
+- **D13**: *«di base sì, ma potremo farci dei piccoli miglioramenti»* ⇒ the prototype is the basis of the GUI.
 
-⚠ Nota su UPnP (D6): aprire da sé una porta sul router renderebbe il server raggiungibile da internet senza che
-l'amministratore l'abbia deciso, e molti router lo tengono spento per sicurezza ⇒ proposta: **niente UPnP**; il
-benvenuto dice quale porta inoltrare sul router, TCP e UDP.
+⚠ Note on UPnP (D6): opening a port on the router by itself would make the server reachable from the internet without
+the administrator having decided it, and many routers keep it off for security ⇒ proposal: **no UPnP**; the
+welcome says which port to forward on the router, TCP and UDP.
 
-### 10.21 ✅ D11 semplificata: una chiave sola, quella dell'archivio
+### 10.21 ✅ D11 simplified: a single key, the repository's
 
-Parole dell'utente (30 set 2026): *«stiamo complicando le cose. L'installer originale che l'utente scarica avrà
+User's words (30 Sep 2026): *«stiamo complicando le cose. L'installer originale che l'utente scarica avrà
 un codice sha256 che l'utente potrà controllare … per i pacchetti l'installer usa il package manager del
-server»*; e *«i dati dell'installer restano su un nostro repository, così siamo al sicuro»*. ⇒
-- **una sola chiave**: quella che firma i pacchetti e l'archivio di REMOTIX — indispensabile, perché apt, dnf,
-  zypper e pacman rifiutano un archivio di terzi non firmato;
-- **via la seconda catena** (motore e catalogo firmati a parte, sottochiavi, revoche): l'installatore scaricato
-  a mano si verifica con lo **sha256** pubblicato (HTTPS); il **catalogo** viaggia dentro il pacchetto
-  `remotix-install` e si aggiorna come ogni pacchetto, dal nostro archivio;
-- resta da decidere solo **dove si custodisce quella chiave** e la sua copia di riserva: insieme a D10.
+server»*; and *«i dati dell'installer restano su un nostro repository, così siamo al sicuro»*. ⇒
+- **a single key**: the one that signs REMOTIX's packages and repository — indispensable, because apt, dnf,
+  zypper and pacman refuse an unsigned third-party repository;
+- **the second chain goes** (engine and catalogue signed separately, subkeys, revocations): the installer downloaded
+  by hand is verified with the published **sha256** (HTTPS); the **catalogue** travels inside the
+  `remotix-install` package and updates like every package, from our repository;
+- only **where that key is kept** and its backup copy remain to be decided: together with D10.
 
-### 10.22 ⛔ SUPERATA da §10.30 (5 ott 2026) — La licenza: PolyForm Noncommercial — anche l'uso interno delle aziende è vietato (30 set 2026)
+### 10.22 ⛔ SUPERSEDED by §10.30 (5 Oct 2026) — The licence: PolyForm Noncommercial — companies' internal use is forbidden too (30 Sep 2026)
 
-> ⛔ **Superata il 5 ott 2026 (§10.30)**: il codice diventa chiuso, con trial e versione full a pagamento. Resta
-> valido quel che qui riguarda ffmpeg (tolto nella fase 18) e la scelta di procedere senza legale.
+> ⛔ **Superseded on 5 Oct 2026 (§10.30)**: the code becomes closed, with a trial and a paid full version. What
+> concerns ffmpeg here (removed in phase 18) and the choice to proceed without a lawyer stay valid.
 
-✅ **Confermata dall'utente**: *«PolyForm Noncommercial mi sembra adatta ai miei obiettivi attuali»*. Il file
-`LICENSE` si mette al momento della pubblicazione, col **testo ufficiale copiato senza modifiche** dal sito del
-progetto PolyForm. La tappa per togliere ffmpeg resta: è la condizione perché la licenza non urti la GPL.
+✅ **Confirmed by the user**: *«PolyForm Noncommercial mi sembra adatta ai miei obiettivi attuali»*. The
+`LICENSE` file is put in at publication time, with the **official text copied without changes** from the
+PolyForm project's site. The milestone to remove ffmpeg stays: it is the condition for the licence not to clash with the GPL.
 
-Parole dell'utente: *«REMOTIX è un prodotto opensource. Si può usare liberamente e redistribuire liberamente.
+User's words: *«REMOTIX è un prodotto opensource. Si può usare liberamente e redistribuire liberamente.
 Il codice si può modificare e redistribuire ma citando progetto/codice originale. È vietato l'uso
 commerciale. Il codice non può essere modificato e redistribuito a pagamento»*; *«le aziende non possono
 usarlo come strumento di lavoro, ne trarrebbero un vantaggio economico»*; *«non voglio accollarmi le spese per
 un legale»*.
 
-- ⚠ Una licenza con divieto commerciale **non è «open source»** secondo la definizione ufficiale (OSI): è «a
-  codice disponibile». Il nome da usare va scelto di conseguenza.
-- **La licenza**: **PolyForm Noncommercial 1.0.0**, il testo originale **senza modifiche** (scritto da
-  avvocati, gratuito, fatto per il software): uso, modifica e ridistribuzione per scopi non commerciali, con la
-  citazione dell'originale; vietato alle aziende come strumento di lavoro e vietata la vendita.
-- ⛔ **Il conflitto con ffmpeg**: REMOTIX usa la libavcodec della distribuzione, costruita sotto **GPL** su
-  Debian, Ubuntu, Arch e con RPM Fusion/Packman; una licenza non commerciale non è compatibile con la GPL. ⇒
-  **Tappa nuova (dopo la chiusura dell'installatore): togliere ffmpeg da REMOTIX** — la codifica sulla scheda
-  direttamente con **libva** (MIT), il ripiego software con **OpenH264** (BSD) al posto di x264. Dopo, tutte le
-  dipendenze sono permissive (MIT, BSD, Apache) e la licenza — come un'eventuale vendita del prodotto —
-  non ha più conflitti.
-- **Senza legale** (scelta dell'utente): solo licenze standard non modificate, nessuna dipendenza GPL, il file
-  delle licenze dei componenti generato dallo SBOM, e un accordo standard per chi contribuirà (per restare
-  proprietario di tutto il codice, condizione di una vendita). Rischio residuo basso, dichiarato.
-- Una **vendita** del prodotto cede i diritti sul **nostro** codice; ffmpeg non è nostro e, tolta la
-  dipendenza, non la tocca. I **brevetti** dei codec (H.264, HEVC) restano una questione a parte per chi
-  vende.
+- ⚠ A licence with a commercial ban **is not «open source»** according to the official definition (OSI): it is
+  «source available». The name to use must be chosen accordingly.
+- **The licence**: **PolyForm Noncommercial 1.0.0**, the original text **without changes** (written by
+  lawyers, free, made for software): use, modification and redistribution for non-commercial purposes, with
+  credit to the original; forbidden to companies as a work tool and sale forbidden.
+- ⛔ **The conflict with ffmpeg**: REMOTIX uses the distribution's libavcodec, built under **GPL** on
+  Debian, Ubuntu, Arch and with RPM Fusion/Packman; a non-commercial licence is not compatible with the GPL. ⇒
+  **New milestone (after the installer is closed): remove ffmpeg from REMOTIX** — encoding on the card
+  directly with **libva** (MIT), the software fallback with **OpenH264** (BSD) in place of x264. After that, all the
+  dependencies are permissive (MIT, BSD, Apache) and the licence — like a possible sale of the product —
+  has no more conflicts.
+- **Without a lawyer** (the user's choice): only unmodified standard licences, no GPL dependency, the
+  components' licence file generated from the SBOM, and a standard agreement for whoever contributes (to remain
+  owner of all the code, a condition for a sale). Low residual risk, declared.
+- A **sale** of the product transfers the rights on **our** code; ffmpeg is not ours and, once the
+  dependency is removed, it does not touch it. The codec **patents** (H.264, HEVC) remain a separate matter for whoever
+  sells.
 
 ### 10.23 ✅ D14: REMOTIX updates with the system — no update system of our own
 
@@ -6571,76 +6570,76 @@ dei sysadmin, non agli utenti normali»*.
   C product writes. ⚠ The product command `remotix` still has its options in Italian (`--porta`,
   `--indirizzo`, `--certificati`, `--prova-codifica`…): a job of its own.
 
-### 10.36 ✅ L'installatore semplice, e REMOTIX che non modifica il sistema (10 ott 2026)
+### 10.36 ✅ The simple installer, and REMOTIX that does not modify the system (10 Oct 2026)
 
-Decisioni dell'utente prese in sequenza il 10 ottobre, con le sue parole. Supera §10.7 (il desktop installato da
-REMOTIX) e le parti di §10.12, §10.21 e §10.23 che contraddicono quel che segue. ⏳ Il lavoro non è ancora fatto:
-`fasi/17-l-installatore.md` dirà quando.
+Decisions of the user taken in sequence on 10 Oct, in his words. Supersedes §10.7 (the desktop installed by
+REMOTIX) and the parts of §10.12, §10.21 and §10.23 that contradict what follows. ⏳ The work is not done yet:
+`fasi/17-l-installatore.md` will say when.
 
-- ⭐ **Il principio**: *«la chiave di tutto è che remotix non modifica i sistemi su cui viene installato: dice cosa
+- ⭐ **The principle**: *«la chiave di tutto è che remotix non modifica i sistemi su cui viene installato: dice cosa
   gli serve e poi sta all'admin provvedere»*; *«remotix dice semplicemente cosa manca. Il cosa installare e il come è
-  una decisione non di remotix»*. ⇒ Escono dal motore: archivi di terzi (RPM Fusion, EPEL, Packman), driver della
-  scheda e driver Vulkan, componenti dei desktop (labwc, caratteri…), il desktop (*«se manca il desktop non sarà
-  certo remotix a installarlo»*), l'apertura del firewall, le cinture di sistema (polkit, logind, sleep). `check` dice
-  cosa manca, **senza suggerire pacchetti o comandi**. Le voci tolte dai menu dentro le sessioni restano: sono il
-  comportamento delle sessioni di REMOTIX, non il sistema.
-- ⭐ **L'eccezione voluta**: l'iscrizione ai gruppi della scheda resta **automatica** (installazione e prima
-  connessione, §7.21): *«non si installano pacchetti senza autorizzazione ma si fa in modo che gli utenti possano
-  accedere»*. ⚠ Solo `render`, se non impedisce l'uso del desktop né peggiora le prestazioni (da provare sui
-  quattro desktop): `video` dà anche `/dev/fb*` e le webcam (visto sul tablet). Poi un gruppo apposito `remotix`;
-  le ACL solo se servono e misurate (logind riscrive le ACL `uaccess` di `renderD*`).
-- **Comandi**: da 14 a 5 + `tui` — `check`, `install` (mostra il piano coi pacchetti esatti dalla simulazione del
-  gestore, poi *«Proceed? [y/N]»* dallo stdin, come apt), `uninstall`, `status` (stato + verifiche),
-  `prepare-offline`. Via piano/approva/applica, dry-run, resume/rollback come comandi (*«cerchiamo di semplificare
+  una decisione non di remotix»*. ⇒ Out of the engine go: third-party repositories (RPM Fusion, EPEL, Packman), card
+  drivers and Vulkan drivers, desktop components (labwc, fonts…), the desktop itself (*«se manca il desktop non sarà
+  certo remotix a installarlo»*), opening the firewall, the system belts (polkit, logind, sleep). `check` says
+  what is missing, **without suggesting packages or commands**. The items removed from the menus inside the sessions stay: they are the
+  behaviour of REMOTIX's sessions, not the system.
+- ⭐ **The wanted exception**: membership of the card groups stays **automatic** (installation and first
+  connection, §7.21): *«non si installano pacchetti senza autorizzazione ma si fa in modo che gli utenti possano
+  accedere»*. ⚠ Only `render`, if it neither prevents the use of the desktop nor worsens performance (to be tested on the
+  four desktops): `video` also gives `/dev/fb*` and the webcams (seen on the tablet). Then a dedicated `remotix` group;
+  ACLs only if needed and measured (logind rewrites the `uaccess` ACLs of `renderD*`).
+- **Commands**: from 14 to 5 + `tui` — `check`, `install` (shows the plan with the exact packages from the package
+  manager's simulation, then *«Proceed? [y/N]»* from stdin, like apt), `uninstall`, `status` (state + checks),
+  `prepare-offline`. Gone: plan/approve/apply, dry-run, resume/rollback as commands (*«cerchiamo di semplificare
   la vita»*).
-- **Niente modalità senza domande** (via il file di risposte): *«chi installa su molte macchine si prepara uno
+- **No mode without questions** (the answers file is gone): *«chi installa su molte macchine si prepara uno
   script bash»*.
-- **Installazione interrotta**: si annulla e si rifà da capo, mai ripresa a metà (*«non mi piace l'idea di lasciare
-  un sistema a metà»*); prima si sistema il gestore (es. `dpkg --configure -a`); nessun ritentare automatico. Una
-  disinstallazione interrotta si porta a termine.
-- **Non reinventare il gestore** (*«non reinventare la ruota duplicando funzioni già supportate dai gestori dei
-  pacchetti»*): risoluzione, firme, dipendenze e autoremove li fa il gestore; il motore non ha cache né sha256 propri
-  dei pacchetti.
-- **Il pacchetto unico, niente archivio da aggiungere** (*«sono più orientato all'idea del pacchetto di
+- **Interrupted installation**: it is cancelled and redone from scratch, never resumed half-way (*«non mi piace l'idea di lasciare
+  un sistema a metà»*); first the package manager is fixed (e.g. `dpkg --configure -a`); no automatic retry. An
+  interrupted uninstallation is carried through to the end.
+- **Do not reinvent the package manager** (*«non reinventare la ruota duplicando funzioni già supportate dai gestori dei
+  pacchetti»*): resolution, signatures, dependencies and autoremove are done by the package manager; the engine has no cache nor sha256 of its own
+  for the packages.
+- **The single package, no repository to add** (*«sono più orientato all'idea del pacchetto di
   installazione unico. Questo evita che l'admin debba aggiungere fonti esterne che è sempre un gesto mal visto»*):
-  un file solo (es. `remotix-<versione>.run`, sha256 pubblicato) con l'installatore e i pacchetti di tutte le
-  distribuzioni; il gestore installa da una cartella locale. Aggiornare = scaricare il `.run` nuovo e rilanciarlo.
-  Supera la parte di §10.23 sull'aggiornamento con `apt upgrade` da un archivio nostro.
-- **Le distribuzioni ad aggiornamento continuo restano** (Arch, Tumbleweed; e Fedora): *«chi usa arch è consapevole
+  a single file (e.g. `remotix-<versione>.run`, sha256 published) with the installer and the packages of all the
+  distributions; the package manager installs from a local folder. Upgrading = downloading the new `.run` and running it again.
+  Supersedes the part of §10.23 on upgrading with `apt upgrade` from a repository of ours.
+- **Rolling-release distributions stay** (Arch, Tumbleweed; and Fedora): *«chi usa arch è consapevole
   che in qualunque momento la macchina potrebbe avere problemi. Quello che noi possiamo fare al massimo è fare in
   modo che remotix usi librerie piuttosto stabili, ma non possiamo garantire la stabilità su sistemi per loro natura
-  soggetti a problemi di affidabilità»*. ⇒ Nel manuale: certificate per la produzione Debian, Ubuntu LTS, Alma (Rocky
-  e RHEL compatibili), Leap; Fedora, Arch, Tumbleweed provate a ogni campagna ma senza garanzia sugli
-  aggiornamenti del sistema. Da fare: le librerie fragili dentro il binario (come ngtcp2/nghttp3), e il servizio che
-  all'avvio prova la codifica e lo dice chiaro in `remotix status` se un aggiornamento l'ha rotta.
-- ✅ **Fatto il 10 ott 2026** (commit `2e16f8f` motore, `8bcb881` il .run, `623ea90` banchi):
-  `fasi/17-l-installatore.md` §6.6.16. Restano da provare sul ferro (la campagna sulle distribuzioni) e due
-  punti aperti: solo `render` nei gruppi della scheda, e le licenze dei componenti di terzi nel .run.
-- ✅ **I pezzi dei desktop sono dipendenze di REMOTIX, non mancanze** (utente, 10 ott 2026: *«trattiamo i 3
+  soggetti a problemi di affidabilità»*. ⇒ In the manual: certified for production Debian, Ubuntu LTS, Alma (Rocky
+  and RHEL compatible), Leap; Fedora, Arch, Tumbleweed tested at every campaign but with no guarantee about
+  system updates. To do: the fragile libraries inside the binary (like ngtcp2/nghttp3), and the service that
+  at start-up tries encoding and says clearly in `remotix status` if an update broke it.
+- ✅ **Done on 10 Oct 2026** (commits `2e16f8f` engine, `8bcb881` the .run, `623ea90` benches):
+  `fasi/17-l-installatore.md` §6.6.16. Still to be tested on the hardware (the campaign on the distributions) and two
+  open points: only `render` in the card groups, and the licences of the third-party components in the .run.
+- ✅ **The desktop pieces are dependencies of REMOTIX, not things missing** (user, 10 Oct 2026: *«trattiamo i 3
   componenti come normali dipendenze di remotix. basta che l'installer li mostri come tali nella sezione piano»*):
-  labwc e wlr-randr per XFCE e LXQt, e un carattere scalabile se la macchina non ne ha, li aggiunge il motore ai
-  pacchetti da installare; il gestore li prende dagli archivi della distribuzione come le altre dipendenze e la
-  simulazione li mostra nel piano, nel gruppo «Dependencies of REMOTIX» con «needed by REMOTIX for XFCE». Lo stesso
-  vale per l'altro pezzo del catalogo, breeze6-wallpapers (KDE su Tumbleweed). Se la distribuzione non ha il
-  pacchetto, la simulazione fallisce e lì si ferma (RX-PACCHETTI-005). Il carattere per famiglia torna nel catalogo
-  (`carattere_scalabile`, 2026.10.10.14). Fatto il 10 ott, commit `facc27a` (con la TUI rifatta: fasi/17 §6.6.16).
+  labwc and wlr-randr for XFCE and LXQt, and a scalable font if the machine has none, are added by the engine to the
+  packages to install; the package manager takes them from the distribution's repositories like the other dependencies and the
+  simulation shows them in the plan, in the group «Dependencies of REMOTIX» with «needed by REMOTIX for XFCE». The same
+  holds for the other piece of the catalogue, breeze6-wallpapers (KDE on Tumbleweed). If the distribution does not have the
+  package, the simulation fails and stops there (RX-PACCHETTI-005). The font per family comes back into the catalogue
+  (`carattere_scalabile`, 2026.10.10.14). Done on 10 Oct, commit `facc27a` (with the TUI redone: fasi/17 §6.6.16).
 
 
-### 10.37 ✅ Il manuale tecnico: in inglese, sul modello di Phonestra (10 ott 2026)
+### 10.37 ✅ The technical manual: in English, on the model of Phonestra (10 Oct 2026)
 
-Scelte dell'utente (10 ott 2026):
-- **in inglese**, come l'interfaccia (§10.32, §10.35): messaggi e codici `RX-…` combaciano parola per parola;
-- **stile, struttura e tipo di contenuti presi dal manuale tecnico di Phonestra** (*«solo che questo manuale sarà
-  almeno 10 volte più lungo e complesso»*): parla a **chi mantiene REMOTIX** (interni, protocollo, catture, codifica,
-  prove, costruzione, estensioni, mappa dei file), non a chi lo installa;
-- **per ora si scrive solo quello tecnico**; la guida per il sysadmin (installazione, comandi, codici) resta da
-  decidere.
+The user's choices (10 Oct 2026):
+- **in English**, like the interface (§10.32, §10.35): messages and `RX-…` codes match word for word;
+- **style, structure and kind of content taken from Phonestra's technical manual** (*«solo che questo manuale sarà
+  almeno 10 volte più lungo e complesso»*): it speaks to **whoever maintains REMOTIX** (internals, protocol, capture, encoding,
+  tests, build, extensions, file map), not to whoever installs it;
+- **for now only the technical one is written**; the sysadmin guide (installation, commands, codes) remains to be
+  decided.
 
-🔸 Derivato da me, correggibile: come in Phonestra il manuale è **generato** — `docs/sources/technical/chNN_*.py`, un
-file per capitolo, ⇒ `docs/Technical Manual.html` con `python3 docs/sources/build.py`; `style.css` e `manual.js` sono
-il **canone comune** copiato byte per byte da Phonestra (che non si modifica in un progetto solo); `--controlla`
-verifica che file, funzioni, variabili `REMOTIX_*` e codici `RX-` citati esistano nel codice, e che non resti
-italiano. Prestazioni e capacità aspettano la campagna xrdp.
+🔸 Derived by me, correctable: as in Phonestra the manual is **generated** — `docs/sources/technical/chNN_*.py`, one
+file per chapter, ⇒ `docs/Technical Manual.html` with `python3 docs/sources/build.py`; `style.css` and `manual.js` are
+the **common canon** copied byte for byte from Phonestra (which is not modified in a single project); `--controlla`
+checks that the files, functions, `REMOTIX_*` variables and `RX-` codes cited exist in the code, and that no Italian
+is left. Performance and capacity wait for the xrdp campaign.
 
 ### 10.38 ✅ REMOTIX is fully English: code, documents, page, commits (10 Oct 2026)
 
@@ -6756,9 +6755,9 @@ soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*
 **declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
 at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
 
-## Come si tiene questo documento
+## How this document is kept
 
-Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
-si risponde in fondo. Una voce 🔸 che l'utente conferma diventa ✅. Una voce ✅ si riapre solo
-con una misura che la smentisce — e allora si riscrive **nello stesso momento**, con la data e
-la fonte (`CODER.md` §5).
+An ❓ item that gets an answer **is moved** to the section it belongs to and changes mark; it is not
+answered at the bottom. A 🔸 item that the user confirms becomes ✅. A ✅ item is reopened only
+with a measurement that refutes it — and then it is rewritten **at the same moment**, with the date and
+the source (`CODER.md` §5).
