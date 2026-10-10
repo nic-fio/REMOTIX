@@ -163,6 +163,17 @@ livelli 1-8); Chrome, che batte i tasti uno per uno via CDP con l'ora vera, non 
 ce l'ha. Le celle «verde vero» di REMOTIX tagliate **solo** da un blocco Firefox: Intel XFCE Full HD (1, buono 12),
 GNOME 3K (1, buono 4), XFCE 3K (4, buono 8). ⏳ Cura proposta: l'ora del tasto la scrive la **pagina** (l'evento
 `keydown`), non la ricostruisce l'attore; e le salite già fatte si riclassificano dai file, senza rifarle.
+✅ **Curato il 10 ott 2026** (commit «🧪 fase 20 §3-bis.2», `banchi/16-stress/16-attore.py`): la sonda che
+l'attore inietta nella pagina (non il prodotto: `src/pagina.html` non cambia) annota in cattura su `window` l'ora
+di ogni `keydown`, `pointerdown` e `wheel`, nello stesso orologio dei dipinti; `allinea_impulsi` rimette ogni
+impulso a quell'ora (stima di Marionette o CDP solo se la pagina non ha visto il gesto: allora resta un blocco
+vero). Ogni riga di `stato.jsonl` porta `impulsi_pagina: [dalla pagina, totali]`. ⭐ La causa, vista nelle prove:
+una catena trattenuta sposta in AVANTI i tasti battuti prima della fermata, oltre il loro eco, e l'attesa diventa
+quella del dipinto successivo — il cursore che lampeggia, ~1,1 s. ⏳ **Riclassificazione da fare a campagna
+xrdp finita**, sul server, per ogni salita `intel-f20-*` e `amd-f20-*`:
+`cd /media/REMOTIX/src/controllo/banchi/16-stress && for s in /media/REMOTIX/misure/fase16/{intel,amd}-f20-*/; do python3 16-riclassifica.py --salita "$s"; done`
+(scrive accanto `riclassificata.json` e `livello-NN/classifica-riclassificata.log`; esce 2 se un livello senza righe
+toccate cambia classe, cioè se il giudizio rifatto non è quello della salita).
 
 ## 4. Il limite dei 16, dichiarato
 

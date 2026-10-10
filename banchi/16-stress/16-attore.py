@@ -213,7 +213,8 @@ const e = document.getElementById('esito');
 const G = R && R.giro;
 const giro = G && G.campioni ? { visti: G.visti, campioni: G.campioni.map(x => Math.round(x * 10) / 10) } : null;
 const dt = window.__C16 ? window.__C16.t.splice(0) : null;
-return { riga: riga, lung: t.length, giro: giro, dipinti_t: dt, nuove: nuove, sessione: !!(s && s.sessione),
+const gt = window.__C16 && window.__C16.g ? window.__C16.g.splice(0) : null;
+return { riga: riga, lung: t.length, giro: giro, dipinti_t: dt, gesti_t: gt, nuove: nuove, sessione: !!(s && s.sessione),
   schermo: document.body ? (document.body.dataset.schermo || null) : null,
   fuoco: document.hasFocus(), visibile: document.visibilityState,
   esito: e ? e.textContent.slice(0, 200) : null, esito_classe: e ? e.className : null,
@@ -231,7 +232,20 @@ CONTI_DELTA = ("consegnati", "dipinti", "salt", "buchi", "tard", "chiavi_chieste
 SONDA_DIPINTI = r"""
 (function () {
   if (window.__C16) return;
-  const C = window.__C16 = { t: [], ultimo: null };
+  const C = window.__C16 = { t: [], g: [], ultimo: null };
+  /* ⭐ L'ora dei GESTI come la pagina li riceve (stesso orologio dei dipinti):
+     `ore_dei_tasti` la ricostruiva dal ritorno di Marionette, e una catena
+     trattenuta metteva il tasto DOPO il suo stesso eco (fasi/20 §3-bis.2).
+     In cattura su window: arriva prima di ogni gestore della pagina. */
+  const g = function (tipo) {
+    return function (e) {
+      C.g.push([Date.now(), tipo, tipo === 'k' ? String(e.key) : '']);
+      if (C.g.length > 20000) C.g.splice(0, 5000);
+    };
+  };
+  window.addEventListener('keydown', g('k'), true);
+  window.addEventListener('pointerdown', g('p'), true);
+  window.addEventListener('wheel', g('w'), { capture: true, passive: true });
   setInterval(function () {
     const s = window.REMOTIX && window.REMOTIX.schermo;
     const d = s && s.conti ? s.conti.dipinti : null;
@@ -343,6 +357,52 @@ def ore_dei_tasti(t_ritorno, durate_ms):
     for d in durate_ms:
         out.append(t_ritorno - resto)
         resto -= d / 1000.0
+    return out
+
+
+def gesto_combacia(atteso, ricevuto):
+    """Il gesto battuto dall'attore e quello ricevuto dalla pagina sono lo
+    stesso tipo; per un carattere stampabile anche lo stesso tasto (un Invio,
+    un Tab, un tasto speciale: basta il tipo, i nomi cambiano fra i motori)."""
+    tipo, tasto = atteso
+    if ricevuto[1] != tipo:
+        return False
+    stampabile = lambda t: len(t) == 1 and t.isprintable() and not t.isspace()  # noqa: E731
+    if tipo == "k" and tasto and stampabile(tasto):
+        return ricevuto[2] == tasto
+    if tipo == "k":
+        # un tasto speciale non si confonde con una lettera battuta senza attesa prima di lui
+        return not stampabile(ricevuto[2] or "")
+    return True
+
+
+def allinea_impulsi(pendenti, gesti, tolleranza_s=0.25, indietro_s=10.0):
+    """⭐ L'ora VERA degli impulsi: per ogni impulso dell'attore (ora stimata,
+    gesto), nell'ordine, il primo gesto ancora libero dello stesso tipo che la
+    pagina ha ricevuto non oltre `tolleranza_s` dopo la stima.  ⇒ le ore da
+    usare (quella della pagina, o la stima se la pagina non l'ha visto: un
+    gesto che non arriva resta un impulso, e se l'immagine non cambia e' un
+    blocco vero).  `gesti`: [[ms, tipo, tasto], …] della sonda.
+    ⚠ La stima di `ore_dei_tasti` non e' mai PRIMA del gesto vero: una catena
+    trattenuta da Marionette sposta in AVANTI tutti i tasti battuti prima
+    della fermata, fino oltre il loro eco, e l'attesa diventava quella del
+    dipinto successivo (il cursore che lampeggia: ~1,1 s, fasi/20 §3-bis.2)."""
+    gs = sorted(((g[0] / 1000.0, g[1], g[2] if len(g) > 2 else "") for g in (gesti or [])),
+                key=lambda g: g[0])
+    out, j = [], 0
+    for stima, gesto in pendenti:
+        k = j
+        while k < len(gs) and not (stima - indietro_s <= gs[k][0] <= stima + tolleranza_s
+                                   and gesto_combacia(gesto, gs[k])):
+            if gs[k][0] > stima + tolleranza_s:
+                k = len(gs)
+                break
+            k += 1
+        if gesto is not None and k < len(gs):
+            out.append(gs[k][0])
+            j = k + 1
+        else:
+            out.append(stima)
     return out
 
 
@@ -535,6 +595,42 @@ def certifica():
           at_vecchie[0] > 2.5 and at_nuove[0] < 1.2,
           "prima %.2f s, ora %.2f s" % (at_vecchie[0], at_nuove[0]))
 
+    print("── l'ora dei gesti (dalla pagina)")
+    # ⛔ GUASTO visto il 7 ott (fasi/20 §3-bis.2, intel-f20-fhd-xfce): Marionette trattiene
+    #   la catena 1,0 s DOPO l'ultimo tasto.  Tasti veri a 100,0/100,2/100,5, eco dipinti
+    #   30 ms dopo ciascuno, il cursore che lampeggia a 102,0; la catena torna a 102,0
+    #   invece che a 101,0 ⇒ la stima mette ogni tasto 1 s dopo il suo eco.
+    veri = [100.0, 100.2, 100.5]
+    dipinti = [100.03, 100.23, 100.53, 102.0]
+    stime = ore_dei_tasti(102.0, [200, 300, 500])
+    at_stime, _ = attese_impulsi(stime, dipinti, 103.0)
+    gesti = [[int(x * 1000), "k", c] for x, c in zip(veri, "abc")]
+    allineate = allinea_impulsi([(t, ("k", c)) for t, c in zip(stime, "abc")], gesti)
+    at_pagina, _ = attese_impulsi(allineate, dipinti, 103.0)
+    prova("GUASTO visto: con la stima di Marionette trattenuta il blocco e' ~1 s",
+          max(at_stime) > 0.9, "%.2f s" % max(at_stime))
+    prova("con l'ora della pagina il ritardo di Marionette NON diventa blocco",
+          max(at_pagina) < 0.05 and [round(x, 3) for x in allineate] == veri,
+          "%.3f s, ore %s" % (max(at_pagina), allineate))
+    # un tasto che la pagina non ha mai ricevuto resta un impulso (a ora stimata) ⇒ blocco vero
+    persi = allinea_impulsi([(t, ("k", c)) for t, c in zip(stime, "abc")], gesti[:2])
+    at_persi, ap_persi = attese_impulsi(persi, dipinti[:2], 108.0)
+    prova("GUASTO visto: un tasto mai arrivato alla pagina resta un blocco",
+          persi[2] == stime[2] and max(at_persi) > 5.0, "%s %s" % (at_persi, ap_persi))
+    al = allinea_impulsi([(10.0, ("k", "x")), (10.3, ("k", "")), (10.6, ("p", "")), (10.9, ("w", ""))],
+                         [[9800, "k", "y"], [9850, "k", "x"], [10100, "k", "Enter"],
+                          [10400, "p", ""], [10700, "w", ""], [10750, "w", ""]])
+    prova("ogni gesto col suo tipo e, per un carattere, col suo tasto",
+          [round(x, 2) for x in al] == [9.85, 10.1, 10.4, 10.7], str(al))
+    prova("niente sonda ⇒ le stime di prima", allinea_impulsi([(5.0, ("k", "a"))], None) == [5.0])
+    prova("un Invio atteso non prende le lettere battute senza attesa prima di lui",
+          allinea_impulsi([(10.5, ("k", ""))], [[10000, "k", "l"], [10100, "k", "s"],
+                                                [10200, "k", "Enter"]]) == [10.2])
+    prova("un gesto di molto PRIMA della stima non e' il suo",
+          allinea_impulsi([(50.0, ("k", "a"))], [[20000, "k", "a"]]) == [50.0])
+    prova("un gesto molto DOPO la stima non e' il suo",
+          allinea_impulsi([(5.0, ("k", "a"))], [[9000, "k", "a"]]) == [5.0])
+
     print("── la nascita")
     prova("desktop verde ⇒ ok", esito_nascita(True, False) == ("ok", None))
     prova("degenere al tetto ⇒ «degenere»", esito_nascita(False, True)[0] == "degenere")
@@ -660,6 +756,7 @@ class Attore:
         self.errori_finestra = []
         self.giro_eco_finestra = []
         self.impulsi = []
+        self.impulsi_pendenti = []       # (ora stimata, gesto): l'ora vera la dice la pagina
         self.dipinti_t = []
         self.entrato = False
         self.muti = 0
@@ -715,10 +812,12 @@ class Attore:
         if not ok:
             print("   [%02d %s] ⚠ input NON verificato: %s" % (self.n, self.profilo, v), flush=True)
 
-    def impulso(self, t):
+    def impulso(self, t, gesto=None):
         """Un input che DEVE cambiare l'immagine (un carattere battuto, un Invio
-        nel terminale, un clic su un collegamento, una tacca che scorre)."""
-        self.impulsi.append(t)
+        nel terminale, un clic su un collegamento, una tacca che scorre).
+        `gesto` (tipo, tasto): ("k", carattere), ("p", "") clic, ("w", "") tacca;
+        con lui l'ora la decide la pagina (`allinea_impulsi`), `t` e' la stima."""
+        self.impulsi_pendenti.append((t, gesto))
 
     # -- il cuore: segnali, foto, stato ---------------------------------------
     def cuore(self):
@@ -784,6 +883,12 @@ class Attore:
         # ⭐ il blocco piu' lungo: dai tempi dei dipinti e dagli impulsi
         pt = [x / 1000.0 for x in (p.get("dipinti_t") or [])]
         self.dipinti_t = [x for x in self.dipinti_t if x > ora - 30] + pt
+        # ⭐ gli impulsi all'ora in cui la PAGINA ha ricevuto il gesto
+        allineati = allinea_impulsi(self.impulsi_pendenti, p.get("gesti_t"))
+        dalla_pagina = sum(1 for a, (st, _g) in zip(allineati, self.impulsi_pendenti) if a != st)
+        tot_impulsi = len(self.impulsi_pendenti)
+        self.impulsi += allineati
+        self.impulsi_pendenti = []
         blocco, lavoro = None, False
         if self.profilo == "D":
             if self.video_in_corso():
@@ -797,7 +902,8 @@ class Attore:
                  "giro": p.get("giro"), "giro_eco": self.giro_eco_finestra,
                  "input": self.ver_finestra,
                  "blocco_max_ms": None if blocco is None else round(blocco * 1000),
-                 "lavoro": lavoro, "caduta": caduta, "errori": errori + self.errori_finestra,
+                 "lavoro": lavoro, "impulsi_pagina": [dalla_pagina, tot_impulsi],
+                 "caduta": caduta, "errori": errori + self.errori_finestra,
                  "sessione": p.get("sessione"), "schermo": p.get("schermo"),
                  "fuoco": p.get("fuoco"), "visibile": p.get("visibile")}
         if self.prec:
@@ -1132,7 +1238,7 @@ class Mani:
                                        {"type": "pointerUp", "button": bottone}]}])
             t -= pausa / 1000.0
         if atteso:
-            self.a.impulso(t)
+            self.a.impulso(t, ("p", ""))
         self.a.conta("clic_mouse")
         return t
 
@@ -1162,7 +1268,7 @@ class Mani:
             t = self._wd([{"type": "wheel", "id": "rotella", "actions": az}]) - pause / 1000.0
         t = t or time.time()
         if atteso:
-            self.a.impulso(t)
+            self.a.impulso(t, ("w", ""))
         self.a.conta("tacche")
         return t
 
@@ -1178,7 +1284,7 @@ class Mani:
                 {"type": "keyDown", "value": v}, {"type": "pause", "duration": P},
                 {"type": "keyUp", "value": v}, {"type": "pause", "duration": P}]}]) - 2 * P / 1000.0
         if atteso:
-            self.a.impulso(t)
+            self.a.impulso(t, ("k", ""))
         return t
 
     def combo(self, mod, tasto):
@@ -1234,7 +1340,7 @@ class Mani:
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyDown", key=c, code=cd,
                                           windowsVirtualKeyCode=vk, text=c, unmodifiedText=c)
                         if atteso:
-                            self.a.impulso(time.time())     # al RITORNO del keyDown
+                            self.a.impulso(time.time(), ("k", c))     # stima: al RITORNO del keyDown
                         time.sleep(ten / 1000.0)
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=c, code=cd,
                                           windowsVirtualKeyCode=vk)
@@ -1250,8 +1356,8 @@ class Mani:
                 #   programmata dalla partenza: il ritardo di Marionette non e' un blocco
                 t_ret = self._wd([{"type": "key", "id": "tastiera", "actions": az}])
                 if atteso:
-                    for k in ore_dei_tasti(t_ret, durate):
-                        self.a.impulso(k)
+                    for k, (c, _tb) in zip(ore_dei_tasti(t_ret, durate), pz):
+                        self.a.impulso(k, ("k", c))
         self.a.conta("tasti")
         return time.time()
 
