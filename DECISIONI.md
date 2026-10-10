@@ -6694,3 +6694,18 @@ Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e ca
 si risponde in fondo. Una voce 🔸 che l'utente conferma diventa ✅. Una voce ✅ si riapre solo
 con una misura che la smentisce — e allora si riscrive **nello stesso momento**, con la data e
 la fonte (`CODER.md` §5).
+
+### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026)
+
+User's words, after the report «on KDE the desktop sits at half height» (Windows + Chrome, and a friend on Zorin OS
+from Trieste, all re-attaching the same session): *«abbiamo già rinunciato al dynamic resize per i limiti di kwin.
+ma riprendere una sessione e non avere il resize al reattach non è accettabile»*.
+
+- The cause, measured: the session was born 2544×912 on an ultrawide screen; every later attach from another size
+  kept that canvas (SPECIFICHE §6.3, KWin 6.3.6 cannot resize a virtual output), and the page put it at the top with
+  white below. The page is fixed (canvas centred, black bands, commit `c10c1e5` merged in `258f752`).
+- ⇒ **The rule of §5.0-sexies now holds on KDE without exception**: the canvas takes the window's size at birth AND
+  at reattach. Resizing during the session stays out (§5.1-bis).
+- 🔸 The way being tried (10 Oct): on reattach to a different size, create a new virtual output of the right size
+  and remove the old one, as when a monitor is swapped; the expected price is that KDE rearranges the windows. To
+  be confirmed on the hardware (branch `fix-kde-riattacco`).
