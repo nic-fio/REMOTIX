@@ -540,14 +540,15 @@ S_REPRO = p("The goal (R23) is four levels of reproducibility: binary, package, 
       + c("Provides: bundled(…)") + "). " + c("packaging/archivio/sbom.py") + " (SPDX per package, red if declared and linked "
       "differ) and " + c("packaging/archivio/licenze.py") + " (THIRD-PARTY-LICENSES with the text of every licence, "
       "including the Go modules of " + c("vendor/") + ") were written for the signed archive's publishing step, which "
-      "no longer exists: nothing calls them. Not settled yet: putting the licences back into the " + c(".run")
-      + " (an open point of §10.36).") + \
-    warn("the package metadata still say the licence is proprietary (" + c("debian/copyright") + ": "
-         "“License: proprietary”, with a note that the distribution licence is not decided yet; "
-         + c("License: LicenseRef-Proprietary") + " in both specs; " + c("LicenseRef-REMOTIX")
-         + " in both PKGBUILDs), while " + c("DECISIONI.md") + " §10.33 makes REMOTIX free of charge with a draft "
-         "licence awaiting the user's approval. The package descriptions and summaries are still in Italian, against "
-         "§10.32 (everything the administrator reads is English).", "Doc vs code.")
+      "no longer exists: nothing calls them. The committed " + c("THIRD-PARTY-LICENSES") + " is what every package "
+      "and the " + c(".run") + " carry; " + c("rilascio.sh") + " step 2 stops if it does not name a component at the "
+      "version that goes in.") + \
+    p("REMOTIX's own licence is " + c("LICENSE.md") + " (DECISIONI.md §10.39), our own text, declared as "
+      + c("LicenseRef-REMOTIX") + " everywhere: " + c("License:") + " in both rpm specs (and " + c("%license LICENSE.md")
+      + "), " + c("license=") + " in both PKGBUILDs (with the file in " + c("/usr/share/licenses/<pkg>/")
+      + "), a DEP-5 " + c("debian/copyright") + " whose last stand-alone paragraph gets the text of " + c("LICENSE.md")
+      + " appended by " + c("costruisci-deb.sh") + " (one copy of the text, in the repository root), the same for the "
+      "engine's .deb, and " + c("LICENSE.md") + " next to " + c("THIRD-PARTY-LICENSES") + " in the " + c(".run") + ".")
 
 S_VERSIONS = p("One version per release, written in several dialects.", lead=True) + \
     table(["Artifact", "Release " + c("X.Y.Z-R"), "Without a release (development)"], [

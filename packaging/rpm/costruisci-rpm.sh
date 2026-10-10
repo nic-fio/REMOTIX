@@ -57,7 +57,7 @@ costruisci_uno()
 		|| { echo "$b pacchetto=NO remotix-firewalld.xml is not valid XML" | tee "$u/esito.txt"; return 1; }
 	tar -C "$ALBERO" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
-		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm THIRD-PARTY-LICENSES
+		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm THIRD-PARTY-LICENSES LICENSE.md
 	cp "$QUI/remotix.spec" "$lav/SPECS/"
 
 	echo "== $b: rpmbuild (log in $u/rpmbuild.log)"

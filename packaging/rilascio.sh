@@ -18,7 +18,7 @@
 #   4. the ENGINE packages (packaging/motore/pacchetti-motore.sh): it stays on the machine
 #      (status, uninstall, post-upgrade);
 #   5. the .RUN: the installatore/run.sh header (with the version and the payload's sha256 written
-#      inside) and below it the tar.gz with the engine, THIRD-PARTY-LICENSES and packages/<target>/
+#      inside) and below it the tar.gz with the engine, LICENSE.md, THIRD-PARTY-LICENSES and packages/<target>/
 #      (product + engine for each distribution); next to it its .sha256, to be published on the website.
 #
 # Environment:
@@ -52,7 +52,7 @@ RUN=$USCITA/remotix-$VERSIONE.run
 
 passo "1. the tree ($VERSIONE, targets: $BERSAGLI)"
 COMMIT=$(git -C "$ALBERO" rev-parse HEAD)
-SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES)
+SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)
 if [ -n "$SPORCO" ]; then
 	[ "${RX_SPORCO:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$SPORCO"; exit 1; }
 	echo "⚠ RX_SPORCO=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
@@ -115,7 +115,7 @@ RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
 passo "5. the .run ($RUN)"
 C=$LAV/carico
 mkdir -p "$C/packages"
-cp "$LAV/motore-bin/remotix-install" "$TPL" "$C/"
+cp "$LAV/motore-bin/remotix-install" "$ALBERO/LICENSE.md" "$TPL" "$C/"
 for b in "${deb[@]}"; do
 	mkdir -p "$C/packages/$b"
 	cp "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$C/packages/$b/"
