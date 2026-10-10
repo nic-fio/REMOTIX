@@ -346,7 +346,7 @@ reversibilita	reversible
 riavvia	reboot	
 riavvio	reboot	
 ricerca	lookup	
-ricevuti	got_n	
+ricevuti	received_n	fallback keeps the stem «received» of the log keys (ricevuti=, ricevuti_d); got_n split the family
 ridimensiona	rescale	
 ridotta	shrunk	
 riferimento	ref	
