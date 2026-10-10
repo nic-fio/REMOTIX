@@ -1,475 +1,475 @@
-# Fase 15 — La suite funzionale
+# Phase 15 — The functional suite
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measures, on the machine of the time. With phase 18 (without ffmpeg) those that the change invalidated were removed — encoding without a card and colour conversion with swscale; those of encoding on the card and of the audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-*Decisa il **24 settembre 2026**, sera. Da aprire in una sessione nuova.*
+*Decided on **24 Sep 2026**, evening. To be opened in a new session.*
 
-## Perché esiste
+## Why it exists
 
-Il 24 settembre, a fine fase 14, l'utente ha provato a mano e ha trovato **sei difetti** che la rete
-anti-regressione non aveva visto (`fasi/14-lxqt.md`, «La sera del 24 settembre»): il bordo che non si
-afferra, Maiusc+freccia, la striscia di Firefox in larghezza e in altezza, il blocco di LXQt, il clic di
-Chrome, l'«Esci» di LXQt che fa rinascere la sessione. ⇒ La rete guarda i **pezzi** (il fotogramma arriva,
-il tasto arriva al server); non guarda quel che **l'utente fa** (seleziono un testo, afferro un bordo,
-esco). La fase 15 guarda quello.
+On 24 September, at the end of phase 14, the user tested by hand and found **six defects** that the
+anti-regression net had not seen (`fasi/14-lxqt.md`, «La sera del 24 settembre»): the border that cannot be
+grabbed, Shift+arrow, the Firefox strip in width and in height, the LXQt lock, Chrome's click,
+LXQt's «Esci» that makes the session be reborn. ⇒ The net looks at the **pieces** (the frame arrives,
+the key arrives at the server); it does not look at what **the user does** (I select a text, I grab a border,
+I log out). Phase 15 looks at that.
 
-L'utente: *«Prima si verifica che REMOTIX faccia correttamente ciò che deve fare. Solo dopo si misura
-quanto carico il sistema è in grado di sostenere.»* ⇒ La fase 15 viene **prima** della fase 16 (stress e
-capacità) e del sistema d'installazione.
+The user: *«Prima si verifica che REMOTIX faccia correttamente ciò che deve fare. Solo dopo si misura
+quanto carico il sistema è in grado di sostenere.»* ⇒ Phase 15 comes **before** phase 16 (stress and
+capacity) and the installation system.
 
-## Le decisioni dell'utente (24 set 2026, sera)
+## The user's decisions (24 Sep 2026, evening)
 
-| | decisione |
+| | decision |
 |---|---|
-| **sostituisce la rete intera** | *«eviterei la rete intera… questi test la sostituiscono»*. Sotto la suite resta solo uno **strato tecnico corto**: C7 (non resta niente), C9 (il registro dice di chi), C14 (le scatole non si disturbano), C18 (i gruppi della scheda), C19 (la scatola resta pulita) |
-| **browser veri** | Firefox e Chrome sul server, finestre vere; il cliente Python e gli script **non certificano** (possono solo diagnosticare) |
-| **la matrice nasce da `SPECIFICHE.md`** | e si rivede con l'utente **prima** di scrivere una sola prova nuova |
-| **via** le funzioni che REMOTIX non ha | risoluzione a caldo (uscita il 17 ago 2026, `DECISIONI.md` §5.1-bis), multi-monitor, riaggancio per «ID di sessione» (si rientra con utente e parola) |
-| **dentro** quelle che il documento non aveva | appunti nei due versi · forma del puntatore · disposizione di tastiera, accenti, AltGr · stesso utente da due schede (fantasma, sfratto) · i tre orologi di §5.3 · parola sbagliata e ban · tocco Android |
-| **aggiunta dell'utente** | stacco e **riattacco a misura diversa** |
-| ⭐ **eccezione dichiarata** | al riattacco a misura diversa, su **KDE** (KWin < 6.8, `SPECIFICHE.md` ~851) la tela resta quella vecchia e **il browser riscala**: su KDE è l'atteso, non un FAIL. Su GNOME, XFCE, LXQt la tela prende la misura nuova. Da scrivere anche in `DECISIONI.md` |
-| **il rapporto serve alla BONIFICA** | ogni esecuzione registrata, ogni FAIL un difetto numerato |
-| **il ciclo** | giro 1 ⇒ elenco dei difetti ⇒ bonifica ⇒ **giro 2 completo con esito ZERO difetti** ⇒ fase 16 |
-| ⛔ **congelamento** | fra la fine della bonifica e il giro 2 non si toccano né il prodotto né le prove; se il giro 2 trova un difetto, lo si cura e si rifà il giro 2 **completo**, non la sola prova rossa |
-| **ogni prova ha il suo guasto innestato** | una prova che non ha mai dato rosso non è una prova (come C21-C24) |
-| **durata** | ogni prova < 10 minuti (l'utente: *«limitiamole ad un massimo di 10 minuti»*); la suite intera: obiettivo < 1 ora |
+| **it replaces the whole net** | *«eviterei la rete intera… questi test la sostituiscono»*. Under the suite only a **short technical layer** remains: C7 (nothing is left), C9 (the log says whose), C14 (the boxes do not disturb each other), C18 (the card's groups), C19 (the box stays clean) |
+| **real browsers** | Firefox and Chrome on the server, real windows; the Python client and the scripts **do not certify** (they can only diagnose) |
+| **the matrix is born from `SPECIFICHE.md`** | and is reviewed with the user **before** writing a single new test |
+| **out** the functions REMOTIX does not have | hot resolution (removed on 17 Aug 2026, `DECISIONI.md` §5.1-bis), multi-monitor, re-attach by «ID di sessione» (you get back in with user and password) |
+| **in** those the document did not have | clipboard in both directions · pointer shape · keyboard layout, accents, AltGr · same user from two tabs (ghost, eviction) · the three clocks of §5.3 · wrong password and ban · Android touch |
+| **the user's addition** | detach and **re-attach at a different size** |
+| ⭐ **declared exception** | at re-attach at a different size, on **KDE** (KWin < 6.8, `SPECIFICHE.md` ~851) the canvas stays the old one and **the browser rescales**: on KDE it is the expected result, not a FAIL. On GNOME, XFCE, LXQt the canvas takes the new size. To be written in `DECISIONI.md` too |
+| **the report serves the CLEAN-UP** | every execution recorded, every FAIL a numbered defect |
+| **the cycle** | round 1 ⇒ list of defects ⇒ clean-up ⇒ **complete round 2 with outcome ZERO defects** ⇒ phase 16 |
+| ⛔ **freeze** | between the end of the clean-up and round 2 neither the product nor the tests are touched; if round 2 finds a defect, it is cured and round 2 is redone **complete**, not just the red test |
+| **every test has its grafted fault** | a test that has never given red is not a test (like C21-C24) |
+| **duration** | every test < 10 minutes (the user: *«limitiamole ad un massimo di 10 minuti»*); the whole suite: goal < 1 hour |
 
-## I desktop, i browser, le combinazioni
+## The desktops, the browsers, the combinations
 
-- **Desktop**: GNOME (8511), KDE (8512), XFCE (8513), LXQt (8514) — le scatole `rete11-*`.
-- **Browser**: Firefox 140 e Chrome 154, **veri**, sul server, nel labwc senza schermo a 3840x2160
+- **Desktops**: GNOME (8511), KDE (8512), XFCE (8513), LXQt (8514) — the `rete11-*` boxes.
+- **Browsers**: Firefox 140 and Chrome 154, **real**, on the server, in the labwc without a screen at 3840x2160
   (`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 REMOTIX_SCHERMO_ANNIDATO=1
   REMOTIX_SUL_SERVER=1 REMOTIX_CHROME_OPZIONI=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1`).
-- **Chrome Android**: colonna **dell'utente**, col suo telefono (sull'emulatore Chrome non parte, 19 set).
-- ⇒ **8 suite per giro** (4 desktop × 2 browser), più la colonna Android a mano.
-- ⚠ La matrice dei browser resta **separata** da quella dei desktop (documento dell'utente, §25).
+- **Chrome Android**: the **user's** column, with the user's phone (on the emulator Chrome does not start, 19 Sep).
+- ⇒ **8 suites per round** (4 desktops × 2 browsers), plus the Android column by hand.
+- ⚠ The browser matrix stays **separate** from the desktop one (the user's document, §25).
 
-## La matrice (proposta, da rivedere con l'utente)
+## The matrix (proposal, to be reviewed with the user)
 
-`[?]` = copertura esistente da verificare; «nuova» = prova da scrivere.
+`[?]` = existing coverage to be verified; «nuova» = test to be written.
 
-| ID | funzione | cosa si guarda (dalla fotografia o dal campo, non da un contatore) | copertura oggi |
+| ID | function | what is looked at (from the snapshot or from the field, not from a counter) | coverage today |
 |---|---|---|---|
-| F-001 | accesso e creazione della sessione | pagina, modulo, ammissione, desktop in vista | `12-client-veri` a-b, C1 |
-| F-002 | prima immagine | desktop disegnato, non degenere, entro il tetto | `12-client-veri` c |
-| F-003 | aggiornamento dello schermo | finestra aperta/chiusa, spostata, cambi rapidi | C2, C3 (Python) ⇒ nuova coi browser |
-| F-004 | mouse | movimento, clic sinistro e destro, doppio clic, trascinamento, selezione | `12-client-veri` e ⇒ nuova (effetto a schermo) |
-| F-005 | forma del puntatore | freccia, I sul testo, freccia doppia sul bordo | **C21** |
-| F-006 | ridimensionare dal bordo | il bordo destro si sposta, gli altri no | **C22** |
-| F-007 | tastiera: caratteri e tasti speciali | Invio, Backspace, Esc, frecce, Tab dentro un'applicazione | C4 (Python) ⇒ nuova coi browser |
-| F-008 | modificatori e combinazioni | Maiusc+frecce, Ctrl+Maiusc+frecce, Ctrl+C/V nell'applicazione | **C23** (+ allargare) |
-| F-009 | disposizione, accenti, AltGr | «è», «à», «@», «€» con disposizione it | nuova |
-| F-010 | scorciatoie del desktop | quelle d'uso funzionano; quelle pericolose (blocco) no | nuova |
-| F-011 | la tela all'attacco | misura della finestra, multiplo di 16, niente striscia verde, sfondo pieno | foto di `12-client-veri` ⇒ nuova |
-| F-012 | audio | un'applicazione vera suona, il browser riceve suono non silenzio | C5 (Python) ⇒ nuova coi browser |
-| F-013 | video | un video in un'applicazione: immagine continua e suono | nuova |
-| F-014 | appunti, browser → sessione | incollato nell'applicazione | C17 (Python) ⇒ nuova |
-| F-015 | appunti, sessione → browser | copiato nella sessione, arriva al browser | C17 (Python) ⇒ nuova |
-| F-016 | stacco (detach) | la sessione resta, i programmi restano | C6 (Python) ⇒ nuova |
-| F-017 | riattacco alla stessa misura | ritrovo lo stato (finestra, testo scritto) | C6 ⇒ nuova |
-| F-018 | **riattacco a misura diversa** | GNOME/XFCE/LXQt: tela nuova, desktop che la segue (sfondo, pannello); **KDE: tela vecchia, riscalata (eccezione)** | nuova |
-| F-019 | perdita di rete e rientro | linea morta: il filo cade, si rientra a mano, la sessione c'è | nuova (⚠ come simulare la rete: da decidere) |
-| F-020 | browser chiuso di colpo, poi nuova connessione | la sessione c'è ancora, ci si riattacca | `12-client-veri` g (ricarica) ⇒ nuova |
-| F-021 | «Esci» dal menu | la sessione finisce, i programmi si chiudono, la pagina torna al modulo, niente rinascita | `12-c20-veri`, **C24** (dieci volte) |
-| F-022 | orologio del silenzio (30 s) | cliente muto ⇒ staccato, sessione viva | nuova, orologi accorciati |
-| F-023 | orologio d'inattività (1800 s) | ⇒ `--inattivita-s` corto | nuova, orologi accorciati |
-| F-024 | orologio d'abbandono (3600 s) | la sessione si chiude coi programmi | nuova, orologi accorciati |
-| F-025 | stesso utente da due schede | fantasma, sfratto dopo 15 s, `GIA_ATTIVA_REMOTA` | nuova |
-| F-026 | più utenti insieme (2-3) | sessioni indipendenti, input e immagine non si mescolano | C14 (Python) ⇒ nuova |
-| F-027 | parola sbagliata | rifiuto chiaro, nessuna sessione | nuova |
-| F-028 | ban | dopo N errori la porta si chiude per quell'indirizzo; `GIA_ATTIVA_REMOTA` non conta | nuova |
-| F-029 | voci pericolose assenti | niente blocco, sospensione, riavvio, spegnimento nel menu; «Esci» c'è | nuova (foto del menu) |
-| F-030 | lo schermo non si spegne e non si blocca da solo | 11 minuti fermi, schermo acceso | nuova (⚠ supera i 10 min: da accorciare o dichiarare) |
-| F-031 | tocco (Android) | tocco, tocco e mezzo per trascinare | **utente**, a mano |
+| F-001 | login and creation of the session | page, form, admission, desktop in view | `12-client-veri` a-b, C1 |
+| F-002 | first image | desktop drawn, not degenerate, within the cap | `12-client-veri` c |
+| F-003 | screen update | window opened/closed, moved, quick changes | C2, C3 (Python) ⇒ new with the browsers |
+| F-004 | mouse | movement, left and right click, double click, drag, selection | `12-client-veri` e ⇒ new (effect on screen) |
+| F-005 | pointer shape | arrow, I-beam on text, double arrow on the border | **C21** |
+| F-006 | resizing from the border | the right border moves, the others do not | **C22** |
+| F-007 | keyboard: characters and special keys | Enter, Backspace, Esc, arrows, Tab inside an application | C4 (Python) ⇒ new with the browsers |
+| F-008 | modifiers and combinations | Shift+arrows, Ctrl+Shift+arrows, Ctrl+C/V in the application | **C23** (+ widen) |
+| F-009 | layout, accents, AltGr | «è», «à», «@», «€» with the it layout | new |
+| F-010 | desktop shortcuts | the useful ones work; the dangerous ones (lock) do not | new |
+| F-011 | the canvas at attach | window size, multiple of 16, no green strip, full background | snapshot of `12-client-veri` ⇒ new |
+| F-012 | audio | a real application plays, the browser receives sound not silence | C5 (Python) ⇒ new with the browsers |
+| F-013 | video | a video in an application: continuous image and sound | new |
+| F-014 | clipboard, browser → session | pasted in the application | C17 (Python) ⇒ new |
+| F-015 | clipboard, session → browser | copied in the session, arrives at the browser | C17 (Python) ⇒ new |
+| F-016 | detach | the session stays, the programs stay | C6 (Python) ⇒ new |
+| F-017 | re-attach at the same size | I find the state again (window, text written) | C6 ⇒ new |
+| F-018 | **re-attach at a different size** | GNOME/XFCE/LXQt: new canvas, desktop following it (background, panel); **KDE: old canvas, rescaled (exception)** | new |
+| F-019 | network loss and re-entry | dead line: the wire drops, you get back in by hand, the session is there | new (⚠ how to simulate the network: to be decided) |
+| F-020 | browser closed abruptly, then new connection | the session is still there, you re-attach to it | `12-client-veri` g (reload) ⇒ new |
+| F-021 | «Esci» from the menu | the session ends, the programs close, the page goes back to the form, no rebirth | `12-c20-veri`, **C24** (ten times) |
+| F-022 | silence clock (30 s) | mute client ⇒ detached, session alive | new, clocks shortened |
+| F-023 | inactivity clock (1800 s) | ⇒ short `--inattivita-s` | new, clocks shortened |
+| F-024 | abandonment clock (3600 s) | the session closes with the programs | new, clocks shortened |
+| F-025 | same user from two tabs | ghost, eviction after 15 s, `GIA_ATTIVA_REMOTA` | new |
+| F-026 | several users together (2-3) | independent sessions, input and image do not mix | C14 (Python) ⇒ new |
+| F-027 | wrong password | clear refusal, no session | new |
+| F-028 | ban | after N errors the port closes for that address; `GIA_ATTIVA_REMOTA` does not count | new |
+| F-029 | dangerous entries absent | no lock, suspend, reboot, shutdown in the menu; «Esci» is there | new (snapshot of the menu) |
+| F-030 | the screen does not turn off nor lock by itself | 11 minutes idle, screen on | new (⚠ exceeds 10 min: to be shortened or declared) |
+| F-031 | touch (Android) | tap, tap-and-a-half to drag | **user**, by hand |
 
-**Percorsi completi** (documento dell'utente, §26): A creazione→desktop→input→stacco→riattacco→input ·
-B creazione→attività→perdita rete→rientro→attività · C creazione→riattacco a misura diversa→riattacco
-indietro · D creazione→video/audio→perdita rete→rientro · E creazione→browser chiuso→attesa→nuova
-connessione · F creazione→applicazione aperta→stacco→attesa→riattacco→stato. ⚠ C è cambiato: la
-risoluzione a caldo non c'è, il cambio di misura si fa solo riattaccandosi.
+**Complete paths** (the user's document, §26): A creation→desktop→input→detach→re-attach→input ·
+B creation→activity→network loss→re-entry→activity · C creation→re-attach at a different size→re-attach
+back · D creation→video/audio→network loss→re-entry · E creation→browser closed→wait→new
+connection · F creation→application open→detach→wait→re-attach→state. ⚠ C has changed: hot
+resolution does not exist, the size change is done only by re-attaching.
 
-**Prove negative** (§27, adattate): utente inesistente · parola sbagliata · sessione già chiusa con «Esci»
-(si rientra e nasce una sessione NUOVA, pulita) · rete non disponibile (la pagina non si raggiunge: cosa
-dice) · stesso utente già attivo da un altro dispositivo.
+**Negative tests** (§27, adapted): non-existent user · wrong password · session already closed with «Esci»
+(you get back in and a NEW, clean session is born) · network not available (the page cannot be reached: what
+it says) · same user already active from another device.
 
-**Numero delle prove.** 30 funzioni automatiche × 4 desktop × 2 browser = **240 caselle**; 6 percorsi ×
-8 = **48**; ~5 negative × 4 desktop = **20** (le negative non dipendono dal browser: una sola passata) ⇒
-**circa 300 esecuzioni per giro**, più la colonna Android a mano. Non 300 sessioni: una suite per desktop
-e browser **fa nascere la sessione una volta** e prova le funzioni in fila come un utente vero; solo le
-prove che chiudono o riattaccano ne fanno nascere un'altra.
+**Number of tests.** 30 automatic functions × 4 desktops × 2 browsers = **240 cells**; 6 paths ×
+8 = **48**; ~5 negatives × 4 desktops = **20** (the negatives do not depend on the browser: a single pass) ⇒
+**about 300 executions per round**, plus the Android column by hand. Not 300 sessions: a suite per desktop
+and browser **makes the session be born once** and tests the functions in a row like a real user; only the
+tests that close or re-attach make another one be born.
 
-## Come si esegue
+## How it is run
 
-- **una suite per (desktop, browser)**, i **quattro desktop in parallelo** (una scatola ciascuno,
-  browser e porte di debug separati — `banchi-in-parallelo-isolamento`), i due browser uno dopo l'altro;
-- ogni prova: inquilino della rete (`c<n>u<n>`, visto da C19 e dallo sgombero), scena nota nella
-  sessione, giudizio dalla **fotografia** o dal **valore del campo**, **mai** da un contatore;
-- ogni prova ha `--certifica` (funzioni pure) e il suo **guasto innestato** (esito al rovescio: 0 = visto);
-- esiti: **PASS**, **FAIL**, **BLOCKED** (= non ho potuto guardare, *con la ragione*: un BLOCKED non è
-  un PASS);
-- ⛔ la suite **rifà le scatole da zero**: prima di lanciarla si chiede all'utente se sta provando a mano
-  (24 set: una sua sessione `nictest` chiusa senza avviso);
-- le prove automatiche restano **nella rete**: la suite è la nuova rete (famiglia nuova in `11-gancio.sh`).
+- **one suite per (desktop, browser)**, the **four desktops in parallel** (one box each,
+  separate browsers and debug ports — `banchi-in-parallelo-isolamento`), the two browsers one after the other;
+- every test: a tenant of the net (`c<n>u<n>`, seen by C19 and by the clear-out), known scene in the
+  session, judgement from the **snapshot** or from the **value of the field**, **never** from a counter;
+- every test has `--certifica` (pure functions) and its **grafted fault** (outcome reversed: 0 = seen);
+- outcomes: **PASS**, **FAIL**, **BLOCKED** (= I could not look, *with the reason*: a BLOCKED is not
+  a PASS);
+- ⛔ the suite **redoes the boxes from zero**: before launching it the user is asked whether they are testing by hand
+  (24 Sep: a `nictest` session of theirs closed without warning);
+- the automatic tests stay **in the net**: the suite is the new net (new family in `11-gancio.sh`).
 
-## Che cosa si registra, e come
+## What is recorded, and how
 
-**1. Il registro delle esecuzioni** — `banchi/15-suite/registro.jsonl`, **solo aggiunte, mai
-cancellazioni** (un giro ripetuto resta con tutti i suoi giri: è così che si vede una gara), una riga per
-esecuzione:
+**1. The execution log** — `banchi/15-suite/registro.jsonl`, **additions only, never
+deletions** (a repeated round stays with all its rounds: that is how a race is seen), one row per
+execution:
 
-| campo | esempio |
+| field | example |
 |---|---|
-| `giro` | `1`, `2`, o `bonifica` |
+| `giro` | `1`, `2`, or `bonifica` |
 | `test` / `funzione` | `T-018-kde-firefox` / `F-018` |
 | `desktop` · `browser` · `versione` | `kde` · `firefox` · `140.16.0` |
 | `sistema` | `Debian 13, labwc senza schermo 3840x2160` |
 | `binario` · `pagina` · `commit` | md5 `7dfd6a96` · md5 `87268f13` · `53d07b4` |
 | `inizio` · `durata_s` | ISO 8601 · `41` |
 | `esito` | `PASS` / `FAIL` / `BLOCKED` |
-| `ragione` | una frase: che cosa si è visto (obbligatoria per FAIL e BLOCKED) |
-| `atteso` · `osservato` | le due frasi, come nel caso di test |
-| `guasto_visto` | `true`/`false` per la passata col guasto innestato |
-| `evidenze` | percorsi: foto prima/dopo, registro del prodotto, errori JS del browser, righe RCP/WebTransport |
-| `difetto` | `D-007` se il FAIL ha aperto o toccato un difetto |
+| `ragione` | one sentence: what was seen (mandatory for FAIL and BLOCKED) |
+| `atteso` · `osservato` | the two sentences, as in the test case |
+| `guasto_visto` | `true`/`false` for the pass with the grafted fault |
+| `evidenze` | paths: snapshots before/after, product log, browser JS errors, RCP/WebTransport lines |
+| `difetto` | `D-007` if the FAIL opened or touched a defect |
 
-**2. Le evidenze** — sul server in `/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<test>/`
-(foto a scala 1, `registro.log` della scatola tagliato sull'intervallo, console del browser, `journalctl`
-dell'inquilino quando serve). Collegate al Test ID e al commit.
+**2. The evidence** — on the server in `/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<test>/`
+(snapshots at scale 1, the box's `registro.log` cut to the interval, browser console, the tenant's `journalctl`
+when needed). Linked to the Test ID and to the commit.
 
-**3. L'elenco dei difetti** — `banchi/15-suite/difetti.jsonl` (e il rapporto lo mostra):
-`id` (D-001…), che cosa si vede (con le parole dell'utente se l'ha trovato lui), desktop e browser dove
-succede, **classe** (A regressione vera · B assunzione di un desktop nel codice comune · C difetto del
-banco · D invariante sbagliato, ⛔ mai come scorciatoia), **stato** (aperto · in cura · curato ·
-verificato), la causa misurata, il commit della cura, **la prova che da quel giorno lo sorveglia**.
+**3. The list of defects** — `banchi/15-suite/difetti.jsonl` (and the report shows it):
+`id` (D-001…), what is seen (with the user's words if they found it), desktop and browser where it
+happens, **class** (A real regression · B a desktop's assumption in the common code · C defect of the
+bench · D wrong invariant, ⛔ never as a shortcut), **state** (open · in cure · cured ·
+verified), the measured cause, the commit of the cure, **the test that watches over it from that day**.
 
-**4. Il rapporto** — si **genera** dal registro, non si scrive a mano: la matrice funzione × desktop ×
-browser con l'ultimo esito e il commit su cui è stato misurato; l'elenco dei difetti col loro stato; per
-ogni casella FAIL/BLOCKED la ragione e il link alle evidenze. Serve alla **bonifica**, non all'utente;
-si può pubblicare anche come pagina privata aggiornata a ogni giro.
+**4. The report** — it is **generated** from the log, not written by hand: the function × desktop ×
+browser matrix with the last outcome and the commit on which it was measured; the list of defects with their state; for
+every FAIL/BLOCKED cell the reason and the link to the evidence. It serves the **clean-up**, not the user;
+it can also be published as a private page updated at every round.
 
-## Limiti da dichiarare, e decisioni ancora aperte
+## Limits to declare, and decisions still open
 
-- `[?]` **perdita di rete** (F-019, percorsi B e D): sul server non ci sono `tc`/`wondershaper`; col
-  browser sul server si può strozzare `lo` o un veth; il percorso vero è dal tablet (`wondershaper`,
-  [[wondershaper-sul-tablet]]). **Da decidere con l'utente.**
-- **orologi lunghi** (F-022…F-024, F-030): si provano con gli orologi accorciati da riga di comando
-  (`--inattivita-s`, abbandono) su una scatola dedicata; dichiarato.
-- **Android**: all'utente.
-- il **puntino di 1 px** sotto la punta del puntatore (prezzo della forma su KDE e labwc): giudizio
-  dell'utente, da registrare come voce della matrice (F-005).
+- `[?]` **network loss** (F-019, paths B and D): on the server there are no `tc`/`wondershaper`; with the
+  browser on the server `lo` or a veth can be throttled; the real path is from the tablet (`wondershaper`,
+  [[wondershaper-sul-tablet]]). **To be decided with the user.**
+- **long clocks** (F-022…F-024, F-030): they are tested with the clocks shortened from the command line
+  (`--inattivita-s`, abandonment) on a dedicated box; declared.
+- **Android**: to the user.
+- the **1 px dot** under the pointer's tip (the price of the shape on KDE and labwc): the user's
+  judgement, to be recorded as an entry of the matrix (F-005).
 
-## L'ordine
+## The order
 
-1. la matrice qui sopra **rivista con l'utente**;
-2. le prove nuove, in parallelo (un agente per gruppo di funzioni), ognuna col suo guasto, dentro la rete;
-3. il registro, l'elenco dei difetti e il generatore del rapporto;
-4. **giro 1** (le 8 suite) + colonna Android dell'utente ⇒ elenco dei difetti;
-5. **bonifica**;
-6. ⛔ congelamento, **giro 2**: zero difetti ⇒ fase 16.
+1. the matrix above **reviewed with the user**;
+2. the new tests, in parallel (one agent per group of functions), each with its fault, inside the net;
+3. the log, the list of defects and the report generator;
+4. **round 1** (the 8 suites) + the user's Android column ⇒ list of defects;
+5. **clean-up**;
+6. ⛔ freeze, **round 2**: zero defects ⇒ phase 16.
 
 ---
 
-## Come è stata costruita
+## How it was built
 
-*24 settembre notte → 25 settembre 2026, mattina (`9264c52`, `d9743dc`).*
+*24 September night → 25 September 2026, morning (`9264c52`, `d9743dc`).*
 
-**Dieci gruppi di prove**, scritti in parallelo (un agente per gruppo), ognuno con la sua base comune
-importata e non copiata:
+**Ten groups of tests**, written in parallel (one agent per group), each with its common base
+imported and not copied:
 
-| gruppo | funzioni | prove | attrezzi comuni |
+| group | functions | tests | common tools |
 |---|---|---|---|
 | **G1** | F-001 F-002 F-003 F-011 | `15-f001` `15-f003` `15-f011` | — |
-| **G1b** «il desktop si comporta da desktop remoto» | F-010 F-029 F-030 | `15-f010` `15-f029` `15-f030` | `15-g1b-comune.py` (clic e tasti veri al browser, OCR della foto); `15-g1b-esplora.py` solo diagnosi |
-| **G2** mouse e tastiera | F-004 F-007 F-009 | `15-f004` `15-f007` `15-f009` | `15-g2-scena.py`: una pagina nota servita nella casa dell'inquilino e aperta in kiosk **dentro** la sessione |
-| **G3** | F-005 F-006 F-008 | `15-f005` `15-f006` `15-f008` | `15-g3-comune.py`: C21, C22, C23 della fase 14 importate così come sono |
-| **G4** audio e video | F-012 F-013 | `15-f012` `15-f013` | `15-g4-comune.py`: l'**orecchio** nella pagina e l'occhio sul video |
-| **G5** appunti | F-014 F-015 | `15-f014` | — |
-| **G6** stacco e riattacco | F-016 F-017 F-018 F-020, P-A P-C P-E P-F | `15-f016` `15-f018` `15-f020` | `15-g6-comune.py` (la scena e i giudici puri) |
-| **G7** la rete che cade e gli orologi | F-019 F-022 F-023 F-024, P-B P-D | `15-f019` `15-f022` | `15-g7-comune.py` + `15-g7-server.sh`: un **secondo server** del prodotto per scatola (porte 8611-8614, orologi accorciati da riga di comando), e la **linea morta simulata sul server con nftables** (una tabella nostra che scarta l'UDP della sola porta della prova) |
-| **G8** gli utenti, la parola, il ban | F-025 F-026 F-027 F-028, N-1 N-3 N-4 | `15-f025` `15-f026` `15-f027` `15-n027` | `15-g8-comune.py` + `15-g8-server.sh`: secondo server con porte 8621-8624, ban-file, socket e registro **suoi** (`banchi-in-parallelo-isolamento`) |
+| **G1b** «il desktop si comporta da desktop remoto» | F-010 F-029 F-030 | `15-f010` `15-f029` `15-f030` | `15-g1b-comune.py` (real clicks and keys to the browser, OCR of the snapshot); `15-g1b-esplora.py` diagnosis only |
+| **G2** mouse and keyboard | F-004 F-007 F-009 | `15-f004` `15-f007` `15-f009` | `15-g2-scena.py`: a known page served in the tenant's home and opened in kiosk **inside** the session |
+| **G3** | F-005 F-006 F-008 | `15-f005` `15-f006` `15-f008` | `15-g3-comune.py`: C21, C22, C23 of phase 14 imported as they are |
+| **G4** audio and video | F-012 F-013 | `15-f012` `15-f013` | `15-g4-comune.py`: the **ear** in the page and the eye on the video |
+| **G5** clipboard | F-014 F-015 | `15-f014` | — |
+| **G6** detach and re-attach | F-016 F-017 F-018 F-020, P-A P-C P-E P-F | `15-f016` `15-f018` `15-f020` | `15-g6-comune.py` (the scene and the pure judges) |
+| **G7** the network dropping and the clocks | F-019 F-022 F-023 F-024, P-B P-D | `15-f019` `15-f022` | `15-g7-comune.py` + `15-g7-server.sh`: a **second server** of the product per box (ports 8611-8614, clocks shortened from the command line), and the **dead line simulated on the server with nftables** (a table of ours that drops the UDP of only the test's port) |
+| **G8** the users, the password, the ban | F-025 F-026 F-027 F-028, N-1 N-3 N-4 | `15-f025` `15-f026` `15-f027` `15-n027` | `15-g8-comune.py` + `15-g8-server.sh`: second server with ports 8621-8624, ban-file, socket and log **of its own** (`banchi-in-parallelo-isolamento`) |
 | **G10** «Esci» | F-021 | `15-f021` | — |
 
-⚠ I nomi G1 e G5 qui sopra sono ricostruiti: le loro prove non scrivono il gruppo in testa (G5 compare
-solo in un rilievo di `suite.py`, il profilo di Firefox). Gli altri li scrivono le prove stesse.
+⚠ The names G1 and G5 above are reconstructed: their tests do not write the group at the head (G5 appears
+only in a note of `suite.py`, the Firefox profile). The others are written by the tests themselves.
 
-⇒ **25 prove** che coprono F-001…F-030, i percorsi A-F e le negative N-1, N-3, N-4. Ogni prova
-dichiara in testa, come righe di testo, che cosa guarda: `FUNZIONI = (…)`, e se serve
-`PER_BROWSER = False` (una volta sola, con Firefox: F-027/F-028, F-030, le negative), `LUNGA = True`,
+⇒ **25 tests** covering F-001…F-030, the paths A-F and the negatives N-1, N-3, N-4. Every test
+declares at its head, as lines of text, what it looks at: `FUNZIONI = (…)`, and if needed
+`PER_BROWSER = False` (once only, with Firefox: F-027/F-028, F-030, the negatives), `LUNGA = True`,
 `SERVER = "15-g7-server.sh"`.
 
-**La base comune** — `banchi/15-suite/suite.py`. Una sola lingua per tutte le prove:
-- riga di comando: `--scatola` e `--browser` (uno solo), `--guasto` (dopo la passata sana, la passata
-  col guasto innestato **nella stessa sessione**, esito al rovescio), `--certifica` (solo le funzioni
-  pure), `--evidenze`, `--porte-base` (porte di debug dei browser, ⛔ diverse per ogni desktop in
-  parallelo), 4K di default;
-- uscita: una riga `SUITE {…}` per funzione guardata, che il giro raccoglie; codice 0 tutto PASS · 1
-  almeno un FAIL o un guasto non visto · 3 almeno un BLOCKED;
-- l'inquilino si chiama `c15<nnn>u<n>` (C19 e lo sgombero lo riconoscono) e si sgombera **sempre**;
-- si appoggia a `12-client-veri.py` (le guide dei browser: Marionette per Firefox, CDP per Chrome),
-  `12-c20-veri.py` (la scatola, il registro del server, gli inquilini) e `11-c21-…` (foto a piena
-  risoluzione);
-- ⭐ sul server i comandi dentro le scatole vanno con `sudo podman exec` **locale**, non per ssh verso
-  sé stesso: `[M]` 24 set, dieci agenti insieme, sshd ne troncava una parte ⇒ inquilini non creati e
-  BLOCKED che non erano del prodotto (rilievo del G7).
+**The common base** — `banchi/15-suite/suite.py`. A single language for all the tests:
+- command line: `--scatola` and `--browser` (only one), `--guasto` (after the healthy pass, the pass
+  with the grafted fault **in the same session**, outcome reversed), `--certifica` (only the pure
+  functions), `--evidenze`, `--porte-base` (the browsers' debug ports, ⛔ different for every desktop in
+  parallel), 4K by default;
+- output: one `SUITE {…}` line per function looked at, which the round collects; code 0 all PASS · 1
+  at least one FAIL or one fault not seen · 3 at least one BLOCKED;
+- the tenant is called `c15<nnn>u<n>` (C19 and the clear-out recognise it) and is **always** cleared out;
+- it relies on `12-client-veri.py` (the browser drivers: Marionette for Firefox, CDP for Chrome),
+  `12-c20-veri.py` (the box, the server's log, the tenants) and `11-c21-…` (full-resolution
+  snapshots);
+- ⭐ on the server the commands inside the boxes go with **local** `sudo podman exec`, not over ssh towards
+  itself: `[M]` 24 Sep, ten agents together, sshd truncated part of them ⇒ tenants not created and
+  BLOCKED that were not the product's (G7's note).
 
-**Il giro** — `banchi/15-suite/15-giro.py`, sul server come `nicfio` (i browser veri stanno là; i
-banchi ci arrivano con `15-porta.sh`, una prova sola si lancia con `15-una.sh`):
-- trova le prove `15-f*.py` e `15-n*.py` e ne legge le dichiarazioni;
-- ⭐ **i quattro desktop in parallelo**, una fila per desktop; nella fila Firefox e poi Chrome; porte di
-  debug diverse per desktop;
-- ogni prova con `--guasto`, tetto **10 minuti** (oltre: BLOCKED «oltre i 10 minuti», e il processo si
-  uccide);
-- ⛔ prima di partire guarda se nelle scatole c'è una persona (chiunque non sia un inquilino
-  `c<n>u<n>`): se c'è, si ferma. Le scatole si rifanno da zero con `15-rifai-scatole.sh`, solo col via
-  dell'utente (permesso dato il 25 set).
+**The round** — `banchi/15-suite/15-giro.py`, on the server as `nicfio` (the real browsers live there; the
+benches get there with `15-porta.sh`, a single test is launched with `15-una.sh`):
+- it finds the tests `15-f*.py` and `15-n*.py` and reads their declarations;
+- ⭐ **the four desktops in parallel**, one row per desktop; in the row Firefox and then Chrome; different debug
+  ports per desktop;
+- every test with `--guasto`, cap **10 minutes** (beyond: BLOCKED «oltre i 10 minuti», and the process is
+  killed);
+- ⛔ before starting it looks whether there is a person in the boxes (anyone who is not a
+  `c<n>u<n>` tenant): if there is, it stops. The boxes are redone from zero with `15-rifai-scatole.sh`, only with the
+  user's go-ahead (permission given on 25 Sep).
 
-⭐ **Un labwc senza schermo per desktop** — `15-compositori.sh accendi|spegni|stato`, 3840x2160 ciascuno.
-`[M]` gruppi G2 e G8, 25 set: coi quattro desktop nello **stesso** labwc le finestre di Chrome si
-coprono a vicenda, e **Chrome coperto non ridipinge**: `Page.captureScreenshot` resta appeso (una foto
-appesa 17 minuti, tre corse finite a 900 s). Firefox si fotografa anche coperto, Chrome no. ⇒ Ogni
-desktop ha il suo compositore, e in ciascuno un browser alla volta; il giro legge il socket da
-`$XDG_RUNTIME_DIR/15-compositori/<desktop>` e lo passa come `WAYLAND_DISPLAY`.
+⭐ **One labwc without a screen per desktop** — `15-compositori.sh accendi|spegni|stato`, 3840x2160 each.
+`[M]` groups G2 and G8, 25 Sep: with the four desktops in the **same** labwc Chrome's windows
+cover each other, and **covered Chrome does not repaint**: `Page.captureScreenshot` stays hung (a snapshot
+hung for 17 minutes, three runs ended at 900 s). Firefox can be photographed even when covered, Chrome cannot. ⇒ Every
+desktop has its own compositor, and in each one browser at a time; the round reads the socket from
+`$XDG_RUNTIME_DIR/15-compositori/<desktop>` and passes it as `WAYLAND_DISPLAY`.
 
-**Il registro** — `/media/REMOTIX/misure/fase15/registro.jsonl` sul server, copiato in
-`banchi/15-suite/registro.jsonl`; solo aggiunte, una riga per esecuzione coi campi della tabella qui
-sopra (più `passata`: `sana` o `guasto`, e `prova`). Le evidenze in
-`/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<prova>/` (l'uscita intera in `uscita.log`,
-foto e console dentro). I difetti in `banchi/15-suite/difetti.jsonl`.
+**The log** — `/media/REMOTIX/misure/fase15/registro.jsonl` on the server, copied into
+`banchi/15-suite/registro.jsonl`; additions only, one row per execution with the fields of the table
+above (plus `passata`: `sana` or `guasto`, and `prova`). The evidence in
+`/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<prova>/` (the whole output in `uscita.log`,
+snapshots and console inside). The defects in `banchi/15-suite/difetti.jsonl`.
 
-**Il rapporto** — `banchi/15-suite/15-rapporto.py`, **generato dal registro, mai scritto a mano**:
-la matrice funzione × desktop × browser con l'ultimo esito della passata sana del giro scelto e il segno
-del guasto, i difetti col loro stato, per ogni casella FAIL o BLOCKED la ragione e le evidenze; in testa
-binario, pagina, commit e i conti. `--testo` per il terminale, `--html` per una pagina.
+**The report** — `banchi/15-suite/15-rapporto.py`, **generated from the log, never written by hand**:
+the function × desktop × browser matrix with the last outcome of the healthy pass of the chosen round and the mark
+of the fault, the defects with their state, for every FAIL or BLOCKED cell the reason and the evidence; at the head
+binary, page, commit and the counts. `--testo` for the terminal, `--html` for a page.
 
     python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl \
         --difetti banchi/15-suite/difetti.jsonl --giro 1 --testo
 
-**Lo strato tecnico** — `15-giro.py --strato-tecnico` (o `--solo-strato-tecnico`): per ogni desktop, in
-parallelo, **C7 C9 C18 C19**, ciascuna sana e col suo guasto (`--lascia-un-processo`, `--togli-nome
-tutto`, `--senza-usermod`, `--lascia-un-inquilino`), lanciate da `11-accendi.sh`; poi **C14** con le
-quattro insieme. ⛔ Prima di ogni maglia la stessa **sgomberata** di `11-gancio.sh` (vedi D-013).
+**The technical layer** — `15-giro.py --strato-tecnico` (or `--solo-strato-tecnico`): for every desktop, in
+parallel, **C7 C9 C18 C19**, each healthy and with its fault (`--lascia-un-processo`, `--togli-nome
+tutto`, `--senza-usermod`, `--lascia-un-inquilino`), launched by `11-accendi.sh`; then **C14** with the
+four together. ⛔ Before every link the same **clear-out** as `11-gancio.sh` (see D-013).
 
-**Nella rete** — famiglia **`suite`** di `banchi/11-scatole/11-gancio.sh` (`227611d`, 25 set 09:35):
-`GIRA_SUITE` lancia `15-giro.py --giro ${GIRO_SUITE:-rete} --strato-tecnico` come l'utente dei browser,
-dall'albero intero dei banchi; il gancio avvisa «⛔ ~2 ore». È la nuova rete, come deciso il 24 set.
+**In the net** — the **`suite`** family of `banchi/11-scatole/11-gancio.sh` (`227611d`, 25 Sep 09:35):
+`GIRA_SUITE` launches `15-giro.py --giro ${GIRO_SUITE:-rete} --strato-tecnico` as the browsers' user,
+from the whole tree of the benches; the hook warns «⛔ ~2 ore». It is the new net, as decided on 24 Sep.
 
-## Il giro 1 — 25 settembre 2026
+## Round 1 — 25 Sep 2026
 
-`[M]` Binario **`7dfd6a96`**, pagina **`87268f13`** (quelli consegnati dalla fase 14), banchi
-`9264c52`+modifiche; Debian 13, labwc senza schermo 3840x2160, i5-13500T con Intel UHD 770; Firefox
-140.16.0 e Chrome 154.0.8037.57, finestre vere. Dalle 04:09 alle 06:12 (ora del server 02:09-04:12
-UTC): **123 minuti** per le 8 suite e lo strato tecnico, più C14 (786 s). La prova più lunga: F-030,
-490 s, sotto il tetto dei 10 minuti.
+`[M]` Binary **`7dfd6a96`**, page **`87268f13`** (those delivered by phase 14), benches
+`9264c52`+changes; Debian 13, labwc without a screen 3840x2160, i5-13500T with Intel UHD 770; Firefox
+140.16.0 and Chrome 154.0.8037.57, real windows. From 04:09 to 06:12 (server time 02:09-04:12
+UTC): **123 minutes** for the 8 suites and the technical layer, plus C14 (786 s). The longest test: F-030,
+490 s, below the 10-minute cap.
 
-**609 esecuzioni** nel registro:
+**609 executions** in the log:
 
-| passata | PASS | FAIL | BLOCKED | totale |
+| pass | PASS | FAIL | BLOCKED | total |
 |---|---|---|---|---|
-| **sana** (quella che conta per la matrice) | 256 | 42 | 7 | 305 |
-| **col guasto** | 299 (guasto **visto**) | 0 | 5 | 304 |
-| **insieme** | 555 | 42 | 12 | 609 |
+| **healthy** (the one that counts for the matrix) | 256 | 42 | 7 | 305 |
+| **with the fault** | 299 (fault **seen**) | 0 | 5 | 304 |
+| **together** | 555 | 42 | 12 | 609 |
 
-⇒ **nessun guasto innestato sfuggito**: dei 304, 299 visti e 5 BLOCKED (le stesse caselle bloccate
-della passata sana). **C14 VERDE** (le quattro scatole non si disturbano).
+⇒ **no grafted fault escaped**: of the 304, 299 seen and 5 BLOCKED (the same cells blocked
+in the healthy pass). **C14 GREEN** (the four boxes do not disturb each other).
 
-**Le caselle non verdi della passata sana** (tutte le altre `ok` — F-001, F-003…F-008, F-010…F-012,
-F-014…F-016, F-018, F-020, F-022, F-026…F-030, i percorsi A-F, le negative N-1 N-3 N-4, C7, C18, e C9 su
+**The non-green cells of the healthy pass** (all the others `ok` — F-001, F-003…F-008, F-010…F-012,
+F-014…F-016, F-018, F-020, F-022, F-026…F-030, the paths A-F, the negatives N-1 N-3 N-4, C7, C18, and C9 on
 gnome):
 
-| | gnome ff/ch | kde ff/ch | xfce ff/ch | lxqt ff/ch | difetto |
+| | gnome ff/ch | kde ff/ch | xfce ff/ch | lxqt ff/ch | defect |
 |---|---|---|---|---|---|
-| **F-002** prima immagine | ok / ok | ok / ok | FAIL / FAIL | ok / ok | D-010 (banco) |
-| **F-009** accenti, AltGr | ok / ok | FAIL / FAIL | ok / ok | ok / ok | D-008 |
+| **F-002** first image | ok / ok | ok / ok | FAIL / FAIL | ok / ok | D-010 (bench) |
+| **F-009** accents, AltGr | ok / ok | FAIL / FAIL | ok / ok | ok / ok | D-008 |
 | **F-013** video | FAIL / ok | ok / ok | FAIL / ok | FAIL / ok | D-006, D-014 |
-| **F-017** riattacco stessa misura | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-001 |
-| **F-019** la rete cade | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-002 |
-| **F-021** «Esci» | FAIL (guasto BLOCKED) / ok | FAIL / FAIL | ok / ok | ok / ok | D-003, D-005, D-016 |
-| **F-023** inattività | FAIL / ok | FAIL / FAIL | BLOCKED / BLOCKED | FAIL / ok | D-003, D-011 |
-| **F-024** abbandono | ok / ok | ok / ok | BLOCKED / BLOCKED | ok / ok | D-011 |
-| **F-025** stesso utente, due schede | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-002 |
-| **C9** il registro dice di chi | ok | BLOCKED | BLOCKED | BLOCKED | D-012 (banco) |
-| **C19** la scatola resta pulita | FAIL | FAIL | FAIL | FAIL | D-013 (banco) |
+| **F-017** re-attach same size | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-001 |
+| **F-019** the network drops | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-002 |
+| **F-021** «Esci» | FAIL (fault BLOCKED) / ok | FAIL / FAIL | ok / ok | ok / ok | D-003, D-005, D-016 |
+| **F-023** inactivity | FAIL / ok | FAIL / FAIL | BLOCKED / BLOCKED | FAIL / ok | D-003, D-011 |
+| **F-024** abandonment | ok / ok | ok / ok | BLOCKED / BLOCKED | ok / ok | D-011 |
+| **F-025** same user, two tabs | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | FAIL / FAIL | D-002 |
+| **C9** the log says whose | ok | BLOCKED | BLOCKED | BLOCKED | D-012 (bench) |
+| **C19** the box stays clean | FAIL | FAIL | FAIL | FAIL | D-013 (bench) |
 
-Quel che si è visto, con le parole del registro:
-- **F-017** (8/8): lo stato si ritrova (finestra in foto, striscia di testo, gettone invariato) **ma**
-  la pagina dice «Ammesso, sessione nuova, … desktop sconosciuto» a una sessione ripresa;
+What was seen, in the log's words:
+- **F-017** (8/8): the state is found again (window in the snapshot, strip of text, token unchanged) **but**
+  the page says «Ammesso, sessione nuova, … desktop sconosciuto» to a resumed session;
 - **F-019** (8/8): *«il filo cade e la pagina NON lo dice: desktop congelato senza una parola (si rientra
-  solo ricaricando di propria iniziativa)»*; **F-025** (8/8) cade sul punto 3, la stessa cosa;
-- **F-023**: *«staccato per inattività, ma la pagina non lo dice»* (il congedo c'è, a 12-13 s col tetto
-  di 12 s; la pagina resta vestita da desktop);
-- **F-021** kde: la sessione finisce pulita, ma **il rientro non è pulito** (Plasma riapre il programma);
-- **F-009** kde: *«RIPIEGO DICHIARATO: lo schema org.gnome.desktop.input-sources non c'è»* ⇒ la sessione
-  resta English (US);
-- **F-013** Firefox: gnome udibile 89 %, lxqt 75 %, buchi fino a 0,3-0,4 s; xfce: il contesto audio
-  della pagina **mai** «running», 0 % per 40 s;
-- **F-002** xfce: la foto a piena risoluzione giudicata degenere (62-72 colori, 98 % nero: lo sfondo
-  della scatola).
+  solo ricaricando di propria iniziativa)»*; **F-025** (8/8) falls at point 3, the same thing;
+- **F-023**: *«staccato per inattività, ma la pagina non lo dice»* (the farewell is there, at 12-13 s with the cap
+  of 12 s; the page stays dressed as a desktop);
+- **F-021** kde: the session ends clean, but **the re-entry is not clean** (Plasma reopens the program);
+- **F-009** kde: *«RIPIEGO DICHIARATO: lo schema org.gnome.desktop.input-sources non c'è»* ⇒ the session
+  stays English (US);
+- **F-013** Firefox: gnome audible 89 %, lxqt 75 %, holes up to 0.3-0.4 s; xfce: the page's audio context
+  **never** «running», 0 % for 40 s;
+- **F-002** xfce: the full-resolution snapshot judged degenerate (62-72 colours, 98 % black: the box's
+  background).
 
-⇒ 42 FAIL e 12 BLOCKED riportati a **14 difetti** (D-001…D-014): 8 del prodotto, 3 del banco curati
-subito, 3 da indagare o decidere (`774595d`). Nel corso della bonifica se ne sono aggiunti cinque
-(D-015…D-019). Chrome Android: colonna dell'utente, a mano.
+⇒ 42 FAIL and 12 BLOCKED brought back to **14 defects** (D-001…D-014): 8 of the product, 3 of the bench cured
+at once, 3 to investigate or decide (`774595d`). During the clean-up five more were added
+(D-015…D-019). Chrome Android: the user's column, by hand.
 
-## I difetti
+## The defects
 
-Da `banchi/15-suite/difetti.jsonl`, con lo stato scritto nel file. Classi: **A** regressione vera ·
-**B** assunzione di un desktop nel codice comune · **C** difetto del banco · **?** da stabilire.
+From `banchi/15-suite/difetti.jsonl`, with the state written in the file. Classes: **A** real regression ·
+**B** a desktop's assumption in the common code · **C** defect of the bench · **?** to be established.
 
-| id | che cosa si vede | dove | classe | stato | cura · prova |
+| id | what is seen | where | class | state | cure · test |
 |---|---|---|---|---|---|
-| D-001 | dopo l'accesso la pagina dice sempre «sessione nuova» e «desktop sconosciuto», anche a sessione ripresa | tutti, ff e ch | A | in cura | `9ff4c1f` · `15-f016` (F-017 8/8) |
-| D-002 | la linea cade (o il browser congelato si risveglia): la pagina resta congelata col desktop, non dice niente, non torna al modulo | tutti, ff e ch (F-019 8/8, F-025 8/8) | A | in cura | `c7a67ea` · `15-f019` |
-| D-003 | dopo il congedo per inattività (e dopo «Esci») un fotogramma in volo ri-veste la pagina da desktop: modulo nascosto | F-023 su 4 caselle, F-021 gnome/ff | A | in cura | `c7a67ea` · `15-f022` |
-| D-004 | una sessione aperta e mai toccata non scade mai per abbandono | codice (`[R]`) | A | in cura | `9ff4c1f` · `15-f024b` |
-| D-005 | KDE: dopo «Esci» il nuovo accesso non è pulito, Plasma riapre il programma | kde, ff e ch | B | in cura | `aa4014d` · `15-f021` |
-| D-006 | Firefox con un video: buchi di suono corti e ripetuti (0,1-0,4 s); Chrome no | gnome/ff 89 %, lxqt/ff 75 % | A | da confermare sul dispositivo vero | prima cura tolta (`b40856d`) · `15-f013` |
-| D-007 | XFCE: riattaccandosi più piccoli, una finestra grande resta in parte fuori dal bordo | xfce | ? | da giudicare (l'utente) | — |
-| D-008 | KDE: la disposizione della tastiera del browser non si applica («è à ò ù é ç ° §» non escono) | kde, ff e ch | B | in cura | `aa4014d` · `15-f009` |
-| D-009 | a server spento la pagina impiega 31 s a dire «Non si collega» | tutti, ff | A | da decidere | `e719d08` · `15-n027` |
-| D-010 | F-002 su XFCE: il desktop nero giudicato degenere senza la tolleranza «scuro ma vivo» | xfce | C | curato | `15-f001` |
-| D-011 | orologi su XFCE: il banco aspettava 45 s il primo fotogramma «non degenere» senza gesti, e l'inattività accorciata chiudeva la sessione | xfce, ff e ch | C | curato | `e670ee3` · `15-f022` |
-| D-012 | C9 BLOCKED: l'area «forma» del registro (`src/forma.c`, fase 14) sconosciuta | kde, xfce, lxqt | C | curato | `11-c9` |
-| D-013 | C19 FAIL: lo strato tecnico non sgomberava gli inquilini fra una maglia e l'altra | tutti | C | curato | `15-giro.py` |
-| D-014 | XFCE con Firefox, video: il contesto audio mai «running», 40 s di silenzio | xfce/ff | ? | non riprodotto | `15-f013` (sorveglia nel giro 2) |
-| D-015 | GNOME: la disposizione negoziata si scrive nel dconf dell'**utente** e ci resta | gnome | B | aperto | `ddcf28d` `85697c9` · `15-f009`, `15-f031b` |
-| D-017 | XFCE: il prodotto scrive nei canali xfconf dell'utente voci che non sono blocco/riavvio/sospensione/stand-by, e cancella `~/.cache/sessions` | xfce | B | aperto | `85697c9` `7543c6a` · `15-f031b` |
-| D-018 | LXQt: il prodotto scrive in `~/.config/lxqt/*.conf` e mette voci `Hidden` nelle applicazioni dell'utente | lxqt | B | aperto | `85697c9` `e8115e5` · `15-f031b` |
-| D-016 | F-021 gnome/ff BLOCKED: la fetta di registro vuota dopo «Esci» letta come «non letta», e il guasto non rientrava in una sessione viva | gnome/ff | C | curato | `c3741d3` · `15-f021` |
-| D-019 | P-B e P-D su xfce/ch: dopo il rientro l'immagine sembrava quasi ferma (cambi 0,9-1,6 %) | xfce/ch | C | curato | `2f6c0a2` · `15-f019` |
+| D-001 | after login the page always says «sessione nuova» and «desktop sconosciuto», even with a resumed session | all, ff and ch | A | in cure | `9ff4c1f` · `15-f016` (F-017 8/8) |
+| D-002 | the line drops (or the frozen browser wakes up): the page stays frozen with the desktop, says nothing, does not go back to the form | all, ff and ch (F-019 8/8, F-025 8/8) | A | in cure | `c7a67ea` · `15-f019` |
+| D-003 | after the farewell for inactivity (and after «Esci») a frame in flight re-dresses the page as a desktop: form hidden | F-023 on 4 cells, F-021 gnome/ff | A | in cure | `c7a67ea` · `15-f022` |
+| D-004 | a session opened and never touched never expires for abandonment | code (`[R]`) | A | in cure | `9ff4c1f` · `15-f024b` |
+| D-005 | KDE: after «Esci» the new login is not clean, Plasma reopens the program | kde, ff and ch | B | in cure | `aa4014d` · `15-f021` |
+| D-006 | Firefox with a video: short and repeated sound holes (0.1-0.4 s); Chrome not | gnome/ff 89 %, lxqt/ff 75 % | A | to be confirmed on the real device | first cure removed (`b40856d`) · `15-f013` |
+| D-007 | XFCE: re-attaching smaller, a large window stays partly beyond the border | xfce | ? | to be judged (the user) | — |
+| D-008 | KDE: the browser's keyboard layout is not applied («è à ò ù é ç ° §» do not come out) | kde, ff and ch | B | in cure | `aa4014d` · `15-f009` |
+| D-009 | with the server off the page takes 31 s to say «Non si collega» | all, ff | A | to be decided | `e719d08` · `15-n027` |
+| D-010 | F-002 on XFCE: the black desktop judged degenerate without the «dark but alive» tolerance | xfce | C | cured | `15-f001` |
+| D-011 | clocks on XFCE: the bench waited 45 s for the first «non-degenerate» frame without gestures, and the shortened inactivity closed the session | xfce, ff and ch | C | cured | `e670ee3` · `15-f022` |
+| D-012 | C9 BLOCKED: the log's «forma» area (`src/forma.c`, phase 14) unknown | kde, xfce, lxqt | C | cured | `11-c9` |
+| D-013 | C19 FAIL: the technical layer did not clear out the tenants between one link and the next | all | C | cured | `15-giro.py` |
+| D-014 | XFCE with Firefox, video: the audio context never «running», 40 s of silence | xfce/ff | ? | not reproduced | `15-f013` (watches in round 2) |
+| D-015 | GNOME: the negotiated layout is written into the **user's** dconf and stays there | gnome | B | open | `ddcf28d` `85697c9` · `15-f009`, `15-f031b` |
+| D-017 | XFCE: the product writes into the user's xfconf channels entries that are not lock/reboot/suspend/stand-by, and deletes `~/.cache/sessions` | xfce | B | open | `85697c9` `7543c6a` · `15-f031b` |
+| D-018 | LXQt: the product writes into `~/.config/lxqt/*.conf` and puts `Hidden` entries in the user's applications | lxqt | B | open | `85697c9` `e8115e5` · `15-f031b` |
+| D-016 | F-021 gnome/ff BLOCKED: the empty log slice after «Esci» read as «not read», and the fault did not re-enter a live session | gnome/ff | C | cured | `c3741d3` · `15-f021` |
+| D-019 | P-B and P-D on xfce/ch: after re-entry the image looked almost still (changes 0.9-1.6 %) | xfce/ch | C | cured | `2f6c0a2` · `15-f019` |
 
-⚠ Per D-015, D-017 e D-018 il file dice ancora «aperto», ma le cure sono sul ramo `bonifica-15`
-(sezione «La bonifica»). Per D-009 la cura è scritta dopo la decisione dell'utente. Le cure del banco
-(classe C) stanno su `fase-10-cure`.
+⚠ For D-015, D-017 and D-018 the file still says «aperto», but the cures are on the `bonifica-15` branch
+(section «The clean-up»). For D-009 the cure is written after the user's decision. The bench's cures
+(class C) are on `fase-10-cure`.
 
-## Le decisioni dell'utente del 25 settembre
+## The user's decisions of 25 September
 
-Mattina, dopo il giro 1. Registrate anche in `DECISIONI.md` §8.
+Morning, after round 1. Also recorded in `DECISIONI.md` §8.
 
-| difetto | decisione |
+| defect | decision |
 |---|---|
-| **D-005** | la sessione remota KDE parte **vuota** di suo (`loginMode=emptySession` nella cartella della sessione); ma se l'utente in Impostazioni ha scelto «ripristina la sessione salvata», **vince la sua scelta** |
-| ⭐ **D-015, D-017, D-018** | *«le impostazioni utente non si toccano»* — su nessun desktop. Precisata la stessa mattina: *«Le impostazioni dell'utente non si toccano TRANNE quelle che riguardano blocco-schermo, riavvio sistema, sospensione e stand-by: queste sono impostazioni pericolose per altri utenti presenti sulla macchina»*. ⇒ Quelle quattro famiglie si scrivono nelle impostazioni dell'utente (persistenti); tutto il resto (tastiera, voci di menu, scorciatoie, «Esci» visibile, cambio utente, Ctrl+Alt+F…) vale **solo per la sessione remota**, sui quattro desktop |
-| **D-002** | la frase *«il collegamento con il server si è interrotto: per rientrare scrivi di nuovo la parola d'ordine»* va bene |
-| **D-009** | il server spento si dice **subito** (~1 s, dal rifiuto di `/impronta`), non dopo i 30 s del browser |
-| ⭐ **D-006** | *«concordo sulla soluzione D [dichiararlo], ma il problema va risolto con la soluzione B [decodificatore Opus nostro in WebAssembly nella pagina, per TUTTI i browser], che è la scelta che ci consente di avere un prodotto bugs-free»* ⇒ B si fa **prima del giro 2** |
+| **D-005** | the KDE remote session starts **empty** by itself (`loginMode=emptySession` in the session's folder); but if the user in Settings chose «restore the saved session», **their choice wins** |
+| ⭐ **D-015, D-017, D-018** | *«le impostazioni utente non si toccano»* — on no desktop. Specified the same morning: *«Le impostazioni dell'utente non si toccano TRANNE quelle che riguardano blocco-schermo, riavvio sistema, sospensione e stand-by: queste sono impostazioni pericolose per altri utenti presenti sulla macchina»*. ⇒ Those four families are written into the user's settings (persistent); everything else (keyboard, menu entries, shortcuts, «Esci» visible, user switching, Ctrl+Alt+F…) holds **only for the remote session**, on the four desktops |
+| **D-002** | the sentence *«il collegamento con il server si è interrotto: per rientrare scrivi di nuovo la parola d'ordine»* is fine |
+| **D-009** | the server being off is said **at once** (~1 s, from the refusal of `/impronta`), not after the browser's 30 s |
+| ⭐ **D-006** | *«concordo sulla soluzione D [dichiararlo], ma il problema va risolto con la soluzione B [decodificatore Opus nostro in WebAssembly nella pagina, per TUTTI i browser], che è la scelta che ci consente di avere un prodotto bugs-free»* ⇒ B is done **before round 2** |
 
-## La bonifica
+## The clean-up
 
-Sul ramo **`bonifica-15`** (`git log fase-10-cure..bonifica-15 --oneline`), le cure del prodotto; le
-correzioni del banco nate su `fase-10-cure` ci sono riportate con le fusioni «bonifica-15: …».
+On the **`bonifica-15`** branch (`git log fase-10-cure..bonifica-15 --oneline`), the product's cures; the
+bench corrections born on `fase-10-cure` are brought over with the «bonifica-15: …» merges.
 
-| commit | che cosa cura |
+| commit | what it cures |
 |---|---|
-| `9ff4c1f` | **D-001**: `SESSIONE` dice `2 = RIPRESA` quando la sessione grafica di quell'utente c'era già al verdetto di PAM, e il nome vero del desktop (gnome/kde/xfce/lxqt). **D-004**: l'orologio dell'abbandono parte alla **nascita** del palco (il riattacco non lo rinnova, decisione del 16 ago) |
-| `e3c8804` | prova nuova **F-024b** (`15-f024b-sessione-mai-toccata.py`): server G7 con `--abbandono-s 60`, nessun gesto ⇒ la riga «§5.3 — ABBANDONO» entro 90 s; guasto = l'orologio di serie |
-| `c7a67ea` | **D-002**: la chiusura del trasporto senza CONGEDO dice la frase decisa dall'utente e torna al modulo. **D-003**: `torna_al_modulo()` chiude lo schermo prima di togliere il vestito, i fotogrammi in volo si buttano |
-| `aa4014d` | **D-005**: KDE nasce vuoto (`ksmserverrc loginMode=emptySession` della sessione). **D-008**: la disposizione arriva a KWin (`kxkbrc` della sessione con `[$i]` + `org.kde.keyboard reloadConfig`); la frase falsa del ripiego corretta |
-| `202b514` → `b40856d` | **D-006**, prima cura (l'ora del contesto stantia su Firefox): **tolta**. `[M]` coi browser veri peggiorava: lxqt udibile 68 % (giro 1: 75 %), buco 1,2 s, gnome FAIL |
-| `e719d08` | **D-009**: `/impronta` rifiutata dalla rete ⇒ «il server non risponde: è spento o non raggiungibile», senza aprire WebTransport; un server lento non ha orologi |
-| `ddcf28d` | **D-015** (GNOME): la disposizione e le chiavi della sessione in un **dconf della sessione** (`DCONF_PROFILE`: `service-db:shm/remotix` in cima, `user-db:user` sotto in sola lettura), svuotato a ogni nascita |
-| `85697c9` | **D-015/D-017/D-018**, la regola intera: GNOME le permesse (`sleep-inactive-*`, `idle-delay`, `lock-enabled`) all'utente, le altre alla sessione; XFCE un xfconf **della sessione** (proprietà `locked` in una cartella in testa a `XDG_CONFIG_DIRS` di xfconfd), `SessionName=REMOTIX` + `SaveOnExit=false` al posto di `rm ~/.cache/sessions`; LXQt panel.conf e voci `Hidden` nelle cartelle della sessione |
-| `db117f4` | prova nuova **F-031B** (`15-f031b-impostazioni-intatte.py`, una volta per desktop): dconf, xfconf, lxqt, applications, kxkbrc, `~/.cache/sessions` letti dal disco prima dell'accesso e dopo «Esci»; guasto = scrittura persistente simulata |
-| `7543c6a` · `a0101a6` | **D-017**: Sospendi, Iberna, Sonno ibrido sono sospensione ⇒ permesse, di nuovo nel canale dell'utente; nella sessione restano 4 chiavi. Il guasto di `13-w2` rifatto |
-| `e8115e5` | **D-018**: `lxqt-panel` all'avvio riscriveva nel panel.conf dell'utente ⇒ ora `--configfile $XDG_RUNTIME_DIR/remotix/lxqt-pannello.conf` |
-| `5792418` `7fccca7` `f99b6e7` `0efffe4` `4382bbc` `cb7b025` `f0bbf01` | il banco riallineato: registro, C9, strato tecnico (D-012, D-013), D-016, D-019, D-011, la famiglia `suite` |
+| `9ff4c1f` | **D-001**: `SESSIONE` says `2 = RIPRESA` when that user's graphical session already existed at PAM's verdict, and the real name of the desktop (gnome/kde/xfce/lxqt). **D-004**: the abandonment clock starts at the **birth** of the stage (the re-attach does not renew it, decision of 16 Aug) |
+| `e3c8804` | new test **F-024b** (`15-f024b-sessione-mai-toccata.py`): G7 server with `--abbandono-s 60`, no gesture ⇒ the line «§5.3 — ABBANDONO» within 90 s; fault = the default clock |
+| `c7a67ea` | **D-002**: the closing of the transport without CONGEDO says the sentence decided by the user and goes back to the form. **D-003**: `torna_al_modulo()` closes the screen before removing the dress, the frames in flight are thrown away |
+| `aa4014d` | **D-005**: KDE is born empty (the session's `ksmserverrc loginMode=emptySession`). **D-008**: the layout reaches KWin (the session's `kxkbrc` with `[$i]` + `org.kde.keyboard reloadConfig`); the false sentence of the fallback corrected |
+| `202b514` → `b40856d` | **D-006**, first cure (the stale context time on Firefox): **removed**. `[M]` with the real browsers it got worse: lxqt audible 68 % (round 1: 75 %), hole 1.2 s, gnome FAIL |
+| `e719d08` | **D-009**: `/impronta` refused by the network ⇒ «il server non risponde: è spento o non raggiungibile», without opening WebTransport; a slow server has no clocks |
+| `ddcf28d` | **D-015** (GNOME): the layout and the session's keys in a **session dconf** (`DCONF_PROFILE`: `service-db:shm/remotix` on top, `user-db:user` below read-only), emptied at every birth |
+| `85697c9` | **D-015/D-017/D-018**, the whole rule: GNOME the permitted ones (`sleep-inactive-*`, `idle-delay`, `lock-enabled`) to the user, the others to the session; XFCE a **session** xfconf (`locked` properties in a folder at the head of xfconfd's `XDG_CONFIG_DIRS`), `SessionName=REMOTIX` + `SaveOnExit=false` instead of `rm ~/.cache/sessions`; LXQt panel.conf and `Hidden` entries in the session's folders |
+| `db117f4` | new test **F-031B** (`15-f031b-impostazioni-intatte.py`, once per desktop): dconf, xfconf, lxqt, applications, kxkbrc, `~/.cache/sessions` read from disk before the login and after «Esci»; fault = simulated persistent write |
+| `7543c6a` · `a0101a6` | **D-017**: Suspend, Hibernate, Hybrid sleep are suspension ⇒ permitted, back in the user's channel; in the session 4 keys remain. The fault of `13-w2` redone |
+| `e8115e5` | **D-018**: `lxqt-panel` at startup rewrote the user's panel.conf ⇒ now `--configfile $XDG_RUNTIME_DIR/remotix/lxqt-pannello.conf` |
+| `5792418` `7fccca7` `f99b6e7` `0efffe4` `4382bbc` `cb7b025` `f0bbf01` | the bench realigned: log, C9, technical layer (D-012, D-013), D-016, D-019, D-011, the `suite` family |
 
-⚠ Resta prima del giro 2: **D-006 soluzione B** (Opus in WebAssembly), D-007 al giudizio dell'utente,
-D-014 sorvegliato. Poi ⛔ congelamento e **giro 2 completo**.
+⚠ What remains before round 2: **D-006 solution B** (Opus in WebAssembly), D-007 to the user's judgement,
+D-014 watched. Then ⛔ freeze and **complete round 2**.
 
-## Lezioni
+## Lessons
 
-Sette difetti **del banco** trovati dal giro stesso: ognuno un verde o un rosso che non era del
-prodotto.
+Seven defects **of the bench** found by the round itself: each one a green or a red that did not belong to the
+product.
 
-- **La foto su sfondo nero** (D-010, D-011). Lo sfondo della scatola XFCE è nero, e in 4K il giudice
-  dei pixel dice «degenere» a ogni foto (62-72 colori, 98 % nero). Il primo fotogramma aveva la
-  tolleranza «scuro ma vivo», la foto a piena risoluzione no. ⇒ Un giudice va provato **su tutti e
-  quattro** gli sfondi, non su quello più colorato.
-- **C9 e l'area «forma»** (D-012). `src/forma.c` (fase 14) scrive nel registro un'area che C9 non
-  conosceva ⇒ BLOCKED su kde, xfce, lxqt. La rete intera non era stata rifatta dopo la fase 14 (decisione
-  del 24 set): il primo giro la trova. Il BLOCKED era onesto: *«un verde che le ignora sarebbe un verde
+- **The snapshot on a black background** (D-010, D-011). The XFCE box's background is black, and in 4K the pixel
+  judge says «degenerate» at every snapshot (62-72 colours, 98 % black). The first frame had the
+  «dark but alive» tolerance, the full-resolution snapshot did not. ⇒ A judge must be tested **on all
+  four** backgrounds, not on the most colourful one.
+- **C9 and the «forma» area** (D-012). `src/forma.c` (phase 14) writes into the log an area that C9 did not
+  know ⇒ BLOCKED on kde, xfce, lxqt. The whole net had not been redone after phase 14 (decision
+  of 24 Sep): the first round finds it. The BLOCKED was honest: *«un verde che le ignora sarebbe un verde
   che non le ha guardate»*.
-- **C19 e lo sgombero** (D-013). Le maglie cancellano il loro inquilino **prima** di crearlo, non
-  dopo; `11-gancio.sh` sgombera fra una maglia e l'altra, lo strato tecnico del giro no ⇒ C19 vedeva
-  gli inquilini di C9. È la stessa lezione del C19 rosso della fase 14: chi rifà un giro fuori dal
-  gancio deve rifare **anche lo sgombero**.
-- **F-021 e la fetta vuota** (D-016). Dopo «Esci» la fetta di registro può essere vuota: vuota non vuol
-  dire «non letta». E la passata col guasto deve rientrare in una sessione **viva**, se no il suo
-  gesto parla a un bus che non c'è.
-- **L'orologio accorciato contro l'ingresso lento** (D-011). A 12 s l'inattività era più corta della
-  nascita di XFCE in 4K (CONGEDO 0x02 subito dopo il primo fotogramma); a 25 s ancora no, perché la
-  causa vera era il banco che fotografava per 45 s senza gesti. ⇒ Nelle fasi a orologi corti il primo
-  fotogramma si guarda con un tetto **più corto dell'orologio**. Un orologio accorciato accorcia anche
-  la pazienza del banco.
-- **Le pause fisse contro l'animazione** (D-019). Il giudice del movimento fotografava ogni ~0,9 s,
-  cioè il mezzo giro del triangolo di `weston-simple-egl`: foto sempre nello stesso punto, «immagine
-  ferma» a immagine viva. ⇒ Pause **irregolari** e confronto fra **tutte** le coppie.
-- **L'orecchio innocente ma gonfiante** (D-006). L'orecchio del G4 sostituisce il collegamento audio
-  della pagina: il sospetto era che i buchi di Firefox fossero suoi. `[M]` misurato **senza orecchio**
-  (60 s, lxqt e kde): Firefox+video 3-5 riarmi anche col video nel worker, Firefox senza video 0,
-  Chrome 0, Firefox+video in PCM 0, CPU del server 11-14 % ⇒ il difetto è **vero** (il decodificatore
-  Opus di Firefox), l'orecchio non lo crea. Ma lo **gonfia**: le percentuali di F-013 (75-89 %) non sono
-  la misura del difetto. E la prima cura, scritta su un banco che non somigliava a Firefox vero, coi
-  browser veri peggiorava: tolta.
+- **C19 and the clear-out** (D-013). The links delete their tenant **before** creating it, not
+  after; `11-gancio.sh` clears out between one link and the next, the round's technical layer did not ⇒ C19 saw
+  C9's tenants. It is the same lesson as phase 14's red C19: whoever redoes a round outside the
+  hook must redo **the clear-out too**.
+- **F-021 and the empty slice** (D-016). After «Esci» the log slice can be empty: empty does not mean
+  «not read». And the pass with the fault must re-enter a **live** session, otherwise its
+  gesture talks to a bus that is not there.
+- **The shortened clock against the slow start** (D-011). At 12 s the inactivity was shorter than
+  XFCE's birth in 4K (CONGEDO 0x02 right after the first frame); at 25 s still not, because the
+  real cause was the bench photographing for 45 s without gestures. ⇒ In the phases with short clocks the first
+  frame is looked at with a cap **shorter than the clock**. A shortened clock also shortens
+  the bench's patience.
+- **The fixed pauses against the animation** (D-019). The movement judge photographed every ~0.9 s,
+  that is half a turn of `weston-simple-egl`'s triangle: snapshot always at the same point, «image
+  still» with a live image. ⇒ **Irregular** pauses and comparison between **all** pairs.
+- **The ear, innocent but inflating** (D-006). G4's ear replaces the page's audio
+  connection: the suspicion was that Firefox's holes were its own. `[M]` measured **without the ear**
+  (60 s, lxqt and kde): Firefox+video 3-5 re-arms even with the video in the worker, Firefox without video 0,
+  Chrome 0, Firefox+video in PCM 0, server CPU 11-14 % ⇒ the defect is **real** (Firefox's Opus
+  decoder), the ear does not create it. But it **inflates** it: F-013's percentages (75-89 %) are not
+  the measure of the defect. And the first cure, written on a bench that did not resemble real Firefox, got worse with the
+  real browsers: removed.
 
 ---
 
-## ⭐⭐ IL GIRO 2 — 25 settembre 2026: ZERO DIFETTI
+## ⭐⭐ ROUND 2 — 25 Sep 2026: ZERO DEFECTS
 
-`[M]` Prodotto e prove **congelati** al commit `d121715` (segno `fase15-giro2-congelato`), binario
-**`b1443a0b`**, pagina **`942f2873`**; scatole rifatte da zero; 11:25 → 13:38 (133 minuti), i quattro
-desktop in parallelo, Firefox 140 e Chrome 154 veri, 3840x2160, più lo strato tecnico e C14.
+`[M]` Product and tests **frozen** at commit `d121715` (tag `fase15-giro2-congelato`), binary
+**`b1443a0b`**, page **`942f2873`**; boxes redone from zero; 11:25 → 13:38 (133 minutes), the four
+desktops in parallel, real Firefox 140 and Chrome 154, 3840x2160, plus the technical layer and C14.
 
-| | esecuzioni | esito |
+| | executions | outcome |
 |---|---|---|
-| passate sane | 329 | **329 PASS** — 0 FAIL, 0 BLOCKED |
-| passate col guasto innestato | 328 | **328 guasti visti** — nessuno sfuggito |
-| strato tecnico (C7 C9 C18 C19 × 4, C14) | compreso sopra | tutto verde |
+| healthy passes | 329 | **329 PASS** — 0 FAIL, 0 BLOCKED |
+| passes with the grafted fault | 328 | **328 faults seen** — none escaped |
+| technical layer (C7 C9 C18 C19 × 4, C14) | included above | all green |
 
-Funzioni coperte: F-001…F-030 (F-031, il tocco su Android, resta dell'utente col telefono), F-018b e
-F-018c (le finestre dentro lo schermo al riattacco a misura diversa, nate con D-007), F-024b (la
-sessione mai toccata scade), F-031B (le impostazioni dell'utente intatte dopo la sessione remota, e il
-gestore d'utente pulito), i percorsi A-F, le negative N-1, N-3, N-4.
+Functions covered: F-001…F-030 (F-031, touch on Android, stays the user's with the phone), F-018b and
+F-018c (the windows inside the screen at re-attach at a different size, born with D-007), F-024b (the
+never-touched session expires), F-031B (the user's settings intact after the remote session, and the
+user manager clean), the paths A-F, the negatives N-1, N-3, N-4.
 
-⇒ **Il cancello della fase 15 è passato**: giro 1 ⇒ 21 voci (14 del prodotto, 7 del banco) ⇒ bonifica
-⇒ giro 2 a zero. Tutte le voci sono «verificato (giro 2)»; D-014 non si è ripetuto.
+⇒ **The phase-15 gate is passed**: round 1 ⇒ 21 entries (14 of the product, 7 of the bench) ⇒ clean-up
+⇒ round 2 at zero. All the entries are «verificato (giro 2)»; D-014 did not repeat.
 
-**Il rapporto**, generato dal registro e mai scritto a mano:
-`banchi/15-suite/rapporto-giro2.html` (e `.txt`), `banchi/15-suite/rapporto-giro1.html` (e `.txt`); il
-registro intero di tutti i giri — giro 1, caselle rifatte, verifiche della bonifica, prove generali,
-giro 2 — è `banchi/15-suite/registro.jsonl` (2455 righe, solo aggiunte), i difetti
-`banchi/15-suite/difetti.jsonl`; le evidenze sul server in `/media/REMOTIX/misure/fase15/giro2/`.
+**The report**, generated from the log and never written by hand:
+`banchi/15-suite/rapporto-giro2.html` (and `.txt`), `banchi/15-suite/rapporto-giro1.html` (and `.txt`); the
+whole log of all the rounds — round 1, cells redone, clean-up checks, general rehearsals,
+round 2 — is `banchi/15-suite/registro.jsonl` (2455 lines, additions only), the defects
+`banchi/15-suite/difetti.jsonl`; the evidence on the server in `/media/REMOTIX/misure/fase15/giro2/`.
 
-**Come si rifà**: `bash banchi/15-suite/15-porta.sh`, poi sul server (con le scatole rifatte:
+**How to redo it**: `bash banchi/15-suite/15-porta.sh`, then on the server (with the boxes redone:
 `bash …/15-suite/15-rifai-scatole.sh`) `python3 …/15-suite/15-giro.py --giro <nome> --strato-tecnico`;
-oppure `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`. Il rapporto:
+or `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`. The report:
 `python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl --difetti
 banchi/15-suite/difetti.jsonl --giro <nome> --html <file>`.
 
-### Che cosa è entrato nel prodotto con la bonifica
+### What entered the product with the clean-up
 
-| difetto | che cosa si vedeva | la cura |
+| defect | what was seen | the cure |
 |---|---|---|
-| D-001 | «sessione nuova» e «desktop sconosciuto» anche a sessione ripresa | SESSIONE dice RIPRESA (2) e il desktop vero |
-| D-002, D-021 | linea caduta o browser congelato: pagina muta sul desktop fermo | la pagina lo dice e torna al modulo, anche nella finestra fra SESSIONE e l'apertura dell'input |
-| D-003 | dopo lo stacco o «Esci» un fotogramma in volo rimetteva il desktop sopra il modulo | `Schermo.chiudi()` al congedo |
-| D-004 | una sessione mai toccata non scadeva mai | l'orologio dell'abbandono parte alla nascita |
-| D-005 | KDE riapriva i programmi dopo «Esci» | sessione Plasma vuota di suo (salvo scelta dell'utente) |
-| D-006 | buchi di suono con Firefox e un video (decodificatore Opus di Firefox) | **decodificatore Opus nostro in WebAssembly** (libopus 1.5.2), per tutti i browser |
-| D-007 | XFCE/LXQt: al riattacco più piccolo finestre in parte fuori dallo schermo | il prodotto fa riportare dentro le finestre a labwc |
-| D-008 | KDE: gli accenti non uscivano | la disposizione negoziata arriva a KWin (kxkbrc della sessione) |
-| D-009 | server spento: 31 s prima di «Non si collega» | detto subito |
-| D-015, D-017, D-018, D-020 | REMOTIX scriveva nelle impostazioni dell'utente e lasciava tracce nel gestore d'utente | le impostazioni dell'utente non si toccano, salvo blocco/riavvio/sospensione/stand-by; tutto il resto vale solo per la sessione remota e si toglie alla fine |
+| D-001 | «sessione nuova» and «desktop sconosciuto» even with a resumed session | SESSIONE says RIPRESA (2) and the real desktop |
+| D-002, D-021 | line dropped or browser frozen: page mute over the still desktop | the page says so and goes back to the form, also in the window between SESSIONE and the opening of the input |
+| D-003 | after the detach or «Esci» a frame in flight put the desktop back over the form | `Schermo.chiudi()` at the farewell |
+| D-004 | a never-touched session never expired | the abandonment clock starts at birth |
+| D-005 | KDE reopened the programs after «Esci» | Plasma session empty by itself (unless the user chooses otherwise) |
+| D-006 | sound holes with Firefox and a video (Firefox's Opus decoder) | **our own Opus decoder in WebAssembly** (libopus 1.5.2), for all browsers |
+| D-007 | XFCE/LXQt: at a smaller re-attach windows partly off the screen | the product makes labwc bring the windows back inside |
+| D-008 | KDE: the accents did not come out | the negotiated layout reaches KWin (the session's kxkbrc) |
+| D-009 | server off: 31 s before «Non si collega» | said at once |
+| D-015, D-017, D-018, D-020 | REMOTIX wrote into the user's settings and left traces in the user manager | the user's settings are not touched, except lock/reboot/suspend/stand-by; everything else holds only for the remote session and is removed at the end |
 
-⚠ **Resta dell'utente**: la colonna Android (F-031) col suo telefono, e il giudizio a orecchio
-dell'audio di Firefox col video sul tablet (D-006 è verde in suite; il giudice ultimo è lui).
+⚠ **What stays the user's**: the Android column (F-031) with the user's phone, and the judgement by ear
+of Firefox's audio with the video on the tablet (D-006 is green in the suite; the final judge is the user).
 
-### La prova a mano dell'utente — 25 settembre 2026, pomeriggio
+### The user's hand test — 25 Sep 2026, afternoon
 
-Binario `b1443a0b`, sulle quattro scatole vere (8511-8514). **Linux** (tablet, Firefox e Chrome):
-tutto bene. **Android** (Galaxy S23+, Chrome): sul Wi-Fi a **2,4 GHz** perdite di fotogrammi; `[M]` dal
-diario della pagina e dal server: 0,6 % di pacchetti persi (63 su 9877), 37 fotogrammi saltati su 2199
-(1,7 %, sempre col decodificatore in pari: arrivi a gruppi dopo le ritrasmissioni), 222 pezzetti d'audio
-mai arrivati — contro 0 pacchetti persi del tablet nelle stesse ore. Sul Wi-Fi a **5 GHz**: fluido
-(l'utente), `[M]` 0 pacchetti persi e 0 saltati su gnome, xfce e lxqt; su lxqt 7 saltati su 4067.
-⇒ Non è REMOTIX e non è la potenza del telefono: è la rete a 2,4 GHz. ⚠ Come REMOTIX si comporta su una
-rete che perde lo 0,6 % dei pacchetti resta una domanda vera: va nella **fase 16**.
+Binary `b1443a0b`, on the four real boxes (8511-8514). **Linux** (tablet, Firefox and Chrome):
+all fine. **Android** (Galaxy S23+, Chrome): on the **2.4 GHz** Wi-Fi frame losses; `[M]` from the
+page's diary and from the server: 0.6 % of packets lost (63 out of 9877), 37 frames skipped out of 2199
+(1.7 %, always with the decoder caught up: arrivals in groups after the retransmissions), 222 bits of audio
+never arrived — against 0 packets lost by the tablet in the same hours. On the **5 GHz** Wi-Fi: smooth
+(the user), `[M]` 0 packets lost and 0 skipped on gnome, xfce and lxqt; on lxqt 7 skipped out of 4067.
+⇒ It is not REMOTIX and it is not the phone's power: it is the 2.4 GHz network. ⚠ How REMOTIX behaves on a
+network that loses 0.6 % of the packets remains a real question: it goes into **phase 16**.

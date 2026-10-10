@@ -1,134 +1,134 @@
-# A3 — La Radeon rallenta la codifica a gruppi di 5 fotogrammi (dossier per gli sviluppatori del driver)
+# A3 — The Radeon slows down encoding in groups of 5 frames (dossier for the driver's developers)
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measures, on the machine of the time. With phase 18 (without ffmpeg) those that the change invalidated were removed — encoding without a card and colour conversion with swscale; those of encoding on the card and of the audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-> Stato: **aperto, fuori dall'ambito di REMOTIX** — decisione dell'utente del 29 set 2026
-> («è fuori dal nostro ambito»; strada 2: documentare e segnalare, non aggirare). Se il driver
-> lo risolve, la Radeon in 4K reggerà più utenti senza toccare REMOTIX.
-> Contesto nella fase: `fasi/16-stress-e-capacita.md`, «Anomalia A3». Evidenze compatte in
-> `misure/fase16/` (i livelli citati sotto); grezzi nell'archivio `fase16-grezzi-2026-09-29.tar.zst`.
+> State: **open, outside REMOTIX's scope** — the user's decision of 29 Sep 2026
+> («è fuori dal nostro ambito»; route 2: document and report, do not work around). If the driver
+> solves it, the Radeon in 4K will bear more users without touching REMOTIX.
+> Context in the phase: `fasi/16-stress-e-capacita.md`, «Anomalia A3». Compact evidence in
+> `misure/fase16/` (the levels cited below); raw data in the archive `fase16-grezzi-2026-09-29.tar.zst`.
 
-## 1. In breve (per chi decide)
+## 1. In brief (for whoever decides)
 
-REMOTIX comprime ogni fotogramma del desktop in H.264 con la scheda. Sulla **AMD Radeon RX 6800**
-un fotogramma costa di solito **8,5–8,7 ms**; ogni 12–40 secondi arriva un **gruppo di esattamente
-5 fotogrammi consecutivi da ~31 ms ciascuno** (≈ 8,7 + 22 ms). Sulla Intel UHD 770 lo stesso lavoro
-non lo fa mai (p99 8,7 ms, massimo 10,4). Il p95 del ritardo sale oltre i 50 ms di SPECIFICHE §3.2
-e in 4K la Radeon risulta reggere 0–3 utenti contro i 13–15 del 3K. Le cause nostre sono state
-escluse una per una con misure; il rallentamento sta **dentro la chiamata di codifica del VCN**.
+REMOTIX compresses every desktop frame in H.264 with the card. On the **AMD Radeon RX 6800**
+a frame usually costs **8.5–8.7 ms**; every 12–40 seconds a **group of exactly
+5 consecutive frames of ~31 ms each** arrives (≈ 8.7 + 22 ms). On the Intel UHD 770 the same work
+never does it (p99 8.7 ms, maximum 10.4). The delay's p95 rises beyond the 50 ms of SPECIFICHE §3.2
+and in 4K the Radeon turns out to bear 0–3 users against the 13–15 of 3K. Our own causes were
+excluded one by one with measures; the slowdown is **inside the VCN's encoding call**.
 
-## 2. La macchina
+## 2. The machine
 
-| cosa | valore |
+| what | value |
 |---|---|
-| scheda | AMD Radeon RX 6800, PCI `1002:73bf` rev `c3`, sottosistema `e437`, VBIOS `113-2437SM2-U16` |
-| famiglia | navi21 (RDNA2), VCN 3.0 |
-| firmware VCN | `0x0412100e` (da `amdgpu_firmware_info`); SMC 58.91.0 |
-| nucleo | Linux 7.0 (Debian 13 «trixie»), DRM 3.64 |
+| card | AMD Radeon RX 6800, PCI `1002:73bf` rev `c3`, subsystem `e437`, VBIOS `113-2437SM2-U16` |
+| family | navi21 (RDNA2), VCN 3.0 |
+| VCN firmware | `0x0412100e` (from `amdgpu_firmware_info`); SMC 58.91.0 |
+| kernel | Linux 7.0 (Debian 13 «trixie»), DRM 3.64 |
 | Mesa | 25.0.7-2+deb13u1, radeonsi, LLVM 19.1.7 — `VA Driver version: Mesa Gallium driver 25.0.7-2+deb13u1 for AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)` |
 | libva | 2.22.0 (VA-API 1.22) |
 | FFmpeg | 7.1.5-0+deb13u1 (libavcodec `h264_vaapi` / `hevc_vaapi`) |
-| CPU | Intel i5-13500T (la iGPU UHD 770 è l'altra scheda della macchina, usata per il confronto) |
-| compositori | GNOME/Mutter 48, KDE/KWin 6 (Plasma), labwc (XFCE, LXQt) — il fenomeno è su tutti |
+| CPU | Intel i5-13500T (the UHD 770 iGPU is the machine's other card, used for comparison) |
+| compositors | GNOME/Mutter 48, KDE/KWin 6 (Plasma), labwc (XFCE, LXQt) — the phenomenon is on all of them |
 
-## 3. Che cosa fa REMOTIX (la catena, in dettaglio)
+## 3. What REMOTIX does (the chain, in detail)
 
-1. **Cattura**: ScreenCast del compositore via PipeWire; il fotogramma arriva come **DMA-BUF
-   BGRx 8 bit, modificatore `0x0` (LINEAR)**, es. 3776×2016 passo 15104 (4K meno i bordi della
-   finestra del browser). Buffer riciclati dal compositore: 4 su KDE, 6 su GNOME.
-2. **Importazione**: il DMA-BUF diventa una superficie VA-API (`vaCreateSurfaces` con
-   `VASurfaceAttribExternalBuffers`/DRM PRIME), in cache per buffer (`src/codificatore.c`,
+1. **Capture**: the compositor's ScreenCast via PipeWire; the frame arrives as an **8-bit BGRx
+   DMA-BUF, modifier `0x0` (LINEAR)**, e.g. 3776×2016 stride 15104 (4K minus the borders of the
+   browser window). Buffers recycled by the compositor: 4 on KDE, 6 on GNOME.
+2. **Import**: the DMA-BUF becomes a VA-API surface (`vaCreateSurfaces` with
+   `VASurfaceAttribExternalBuffers`/DRM PRIME), cached per buffer (`src/codificatore.c`,
    `importa_dmabuf`).
-3. **Conversione**: VA-API VideoProc RGB→NV12 in una superficie del magazzino di libavcodec
-   (`converti_sulla_gpu`). ⚠ Su radeonsi 25.0.7 dal 16° fotogramma il VPP **non converte**: registra
-   la sorgente RGB e torna (EFC, `frontends/va/postproc.c` ~486–507), e la conversione la fa il
-   **VCN dentro la codifica** leggendo il buffer RGB lineare (`picture.c` ~1203–1207).
-4. **Codifica**: `h264_vaapi`, entrypoint **`VAEntrypointEncSlice`** (la Radeon non dichiara
-   `EncSliceLP`), **CQP QP 26**, profilo High, livello imposto 5.1, **`async_depth=1`**,
-   `idr_interval=0`, GOP infinito (IDR solo a richiesta), nessun B-frame (verificato: `dts == pts`
-   su ogni pacchetto), `initial_pool_size` 8. Un `avcodec_send_frame` + `avcodec_receive_packet`
-   per fotogramma, fino a 60/s chiesti, consegnati solo quando la scena cambia.
-5. Spedizione su WebTransport; decodifica nel browser (fuori dal tratto misurato).
+3. **Conversion**: VA-API VideoProc RGB→NV12 into a surface of libavcodec's pool
+   (`converti_sulla_gpu`). ⚠ On radeonsi 25.0.7 from the 16th frame the VPP **does not convert**: it records
+   the RGB source and returns (EFC, `frontends/va/postproc.c` ~486–507), and the conversion is done by the
+   **VCN inside the encoding** reading the linear RGB buffer (`picture.c` ~1203–1207).
+4. **Encoding**: `h264_vaapi`, entrypoint **`VAEntrypointEncSlice`** (the Radeon does not declare
+   `EncSliceLP`), **CQP QP 26**, High profile, level imposed 5.1, **`async_depth=1`**,
+   `idr_interval=0`, infinite GOP (IDR only on request), no B-frames (verified: `dts == pts`
+   on every packet), `initial_pool_size` 8. One `avcodec_send_frame` + `avcodec_receive_packet`
+   per frame, up to 60/s requested, delivered only when the scene changes.
+5. Sending over WebTransport; decoding in the browser (outside the measured stretch).
 
-Una sessione = un processo figlio = **un proprio `VADisplay`, un proprio contesto VPP e un proprio
-contesto di codifica** sulla stessa scheda. Con N utenti ci sono N contesti VCN in parallelo.
+One session = one child process = **its own `VADisplay`, its own VPP context and its own
+encoding context** on the same card. With N users there are N VCN contexts in parallel.
 
-## 4. Le misure
+## 4. The measures
 
-### 4.1 La forma del fenomeno
-Riga per fotogramma del figlio (`registro_dettaglio`), es. da `a3-misura-kde/livello-01/server.log`:
+### 4.1 The shape of the phenomenon
+The child's per-frame line (`registro_dettaglio`), e.g. from `a3-misura-kde/livello-01/server.log`:
 ```
 codec 3: 421 byte, delta, caricamento 0 us, codifica 31035 us (invio 31031), barriera 18 us, conversione 41 us
 ```
-- **Bimodale**: mediana 8,5–8,7 ms; p99 ~31 ms; massimo 32–35 ms. Nessun valore intermedio.
-- **Sempre 5 fotogrammi di fila** (64 gruppi su 64 contati nelle campagne `amd-freq-*`,
-  `amd-b-4k-kde`, `amd-b-4k-gnome`; più un fotogramma isolato da 25,7 ms in tutto), ciascuno
-  **30,4–32,1 ms**.
-- **Non dipende dalla dimensione**: delta da 300 byte e fotogrammi da 480 KB costano uguale nel
-  gruppo. **Nessuna chiave** dentro un gruppo.
-- **Conta fotogrammi, non tempo**: un gruppo su GNOME si allunga su 1,2 s (2 lenti, 1,16 s di
-  scena ferma senza fotogrammi, poi altri 3 lenti); un altro su 0,8 s con 200 ms fra l'uno e l'altro.
-- **Ogni 12–40 s**; 11 gruppi su 13 cominciano entro 1,5 s da un'azione dell'utente che fa
-  ridisegnare (clic, rotella, tasto), ma non all'istante: es. clic alle 13:25:08.78, fotogrammi a
-  8,5 ms fino al gruppo alle 13:25:10.31, su fotogrammi statici (~303 byte).
-- **Per sessione**: in `amd-b-4k-kde` (20:41:01.889 e 20:41:06.296 UTC) la sessione u99 fa 5 × 31 ms
-  mentre **u1, sulla stessa scheda e lo stesso VCN, codifica a 8,4–8,9 ms negli stessi istanti**; in
-  `amd-freq-auto` i gruppi di u1 e u99 non coincidono mai.
-- **Scheda quasi ferma** nei secondi dei gruppi: motore grafico 2–6 %.
-- **Tutti i compositori** (GNOME, KDE, XFCE, LXQt) e tutte le misure; in 3K e sotto il p95 regge
-  perché i gruppi pesano meno sul totale.
+- **Bimodal**: median 8.5–8.7 ms; p99 ~31 ms; maximum 32–35 ms. No intermediate value.
+- **Always 5 frames in a row** (64 groups out of 64 counted in the campaigns `amd-freq-*`,
+  `amd-b-4k-kde`, `amd-b-4k-gnome`; plus one isolated frame of 25.7 ms in all), each
+  **30.4–32.1 ms**.
+- **It does not depend on size**: 300-byte deltas and 480 KB frames cost the same in the
+  group. **No key** inside a group.
+- **It counts frames, not time**: a group on GNOME stretches over 1.2 s (2 slow, 1.16 s of
+  still scene without frames, then 3 more slow); another over 0.8 s with 200 ms between one and the next.
+- **Every 12–40 s**; 11 groups out of 13 begin within 1.5 s of a user action that makes
+  the page redraw (click, wheel, key), but not instantly: e.g. click at 13:25:08.78, frames at
+  8.5 ms up to the group at 13:25:10.31, on static frames (~303 bytes).
+- **Per session**: in `amd-b-4k-kde` (20:41:01.889 and 20:41:06.296 UTC) session u99 does 5 × 31 ms
+  while **u1, on the same card and the same VCN, encodes at 8.4–8.9 ms at the same instants**; in
+  `amd-freq-auto` the groups of u1 and u99 never coincide.
+- **Card almost idle** in the seconds of the groups: graphics engine 2–6 %.
+- **All compositors** (GNOME, KDE, XFCE, LXQt) and all sizes; at 3K and below the p95 holds
+  because the groups weigh less on the total.
 
-### 4.2 Confronto con la Intel, stessa macchina e stesso lavoro
-`intel-b-4k-kde/livello-01`: 5732 fotogrammi, codifica mediana 8,1 ms, p99 8,7, massimo 10,4 —
-nessun gruppo. (Sulla Intel il VPP è reale: VEBOX, conversione ~8,6 ms separata.)
+### 4.2 Comparison with the Intel, same machine and same work
+`intel-b-4k-kde/livello-01`: 5732 frames, encoding median 8.1 ms, p99 8.7, maximum 10.4 —
+no group. (On the Intel the VPP is real: VEBOX, separate conversion ~8.6 ms.)
 
-## 5. Le ipotesi escluse, con la misura
+## 5. The hypotheses excluded, with the measure
 
-| ipotesi | esperimento | risultato |
+| hypothesis | experiment | result |
 |---|---|---|
-| frequenza bassa della scheda che risale piano | `power_dpm_force_performance_level` = `auto` contro `high`, KDE 4K, 1 utente, due gradini ciascuno (`amd-freq-auto`, `amd-freq-alta`) | NOSTRO p95 39,3/38,6 ms (auto) contro 37,5/42,0 ms (high): **uguale** |
-| VPP sugli shader in fila dietro al ridisegno del desktop | lettura di Mesa 25.0.7 + risorse per motore | il VPP non gira sugli shader (EFC); motore grafico 2–6 %; **e i gruppi sono per sessione**: esclusa ogni contesa globale |
-| attesa implicita della scrittura del compositore sul DMA-BUF | **esperimento 1** (binario `3e510160`, ramo `a3-esperimenti`): `DMA_BUF_IOCTL_EXPORT_SYNC_FILE` (`DMA_BUF_SYNC_READ`) + `poll` prima dell'importazione, misurato a parte; codifica divisa in invio/ricezione | barriera **0,37 ms** sui normali, **0,02 ms** sui lenti; i 22 ms sono **tutti dentro `avcodec_send_frame`** (ricezione 0,0 ms); 100 e 105 lenti per gradino (`a3-misura-kde`) |
-| il VCN che legge il buffer RGB lineare (EFC) | **esperimento 2** (binario `39e3ed86`): conversione doppia sul primo fotogramma ⇒ per la regola di `postproc.c` Mesa spegne l'EFC per sempre; ogni fotogramma passa da una NV12 vera | conversione vera 0,75 ms mediana; **gruppi identici**: 95 e 106 lenti per gradino, p99 31,1–31,3 ms (`a3-senza-efc-kde`) |
-| riciclo dei buffer del compositore, cadenza di cattura | conti dei buffer e del produttore | 4 buffer su KDE, 6 su GNOME, il gruppo è sempre 5; il produttore non è in ritardo (i fotogrammi si accodano durante il gruppo e si smaltiscono a 31 ms) |
-| chiavi, dimensione, contenuto | righe per fotogramma | nessuna chiave nei gruppi; 300 B e 480 KB costano uguale |
-| un difetto di Mesa 25.0.7 già corretto più avanti | **gradino 1, 29 set 2026**: nella scatola KDE Mesa **26.1.6** (`trixie-backports`, `26.1.6-1~bpo13+1`: `mesa-va-drivers`, `mesa-libgallium`, `libgl1-mesa-dri`, `libegl-mesa0`, `libglx-mesa0`, `libgbm1`), `vainfo` conferma «Mesa Gallium driver 26.1.6»; binario di prodotto `4fb3287d`, stessa scena di 6.1, due gradini da 6 min (`a3-mesa26-kde`) | **100 e 102 lenti** per gradino (su 5209 e 5168 codifiche), tutti fra 30,4 e 39,0 ms, mediana 31,0 ms; raffiche: 18 da 5, una da 4, 3, 2, 1 ⇒ **identico a 25.0.7**: Mesa più nuova non cura |
+| low card frequency rising slowly | `power_dpm_force_performance_level` = `auto` against `high`, KDE 4K, 1 user, two steps each (`amd-freq-auto`, `amd-freq-alta`) | OURS p95 39.3/38.6 ms (auto) against 37.5/42.0 ms (high): **equal** |
+| VPP on the shaders queued behind the desktop redraw | reading of Mesa 25.0.7 + resources per engine | the VPP does not run on the shaders (EFC); graphics engine 2–6 %; **and the groups are per session**: any global contention excluded |
+| implicit wait for the compositor's write on the DMA-BUF | **experiment 1** (binary `3e510160`, branch `a3-esperimenti`): `DMA_BUF_IOCTL_EXPORT_SYNC_FILE` (`DMA_BUF_SYNC_READ`) + `poll` before the import, measured separately; encoding split into send/receive | fence **0.37 ms** on the normal ones, **0.02 ms** on the slow ones; the 22 ms are **all inside `avcodec_send_frame`** (receive 0.0 ms); 100 and 105 slow per step (`a3-misura-kde`) |
+| the VCN reading the linear RGB buffer (EFC) | **experiment 2** (binary `39e3ed86`): double conversion on the first frame ⇒ by the rule of `postproc.c` Mesa turns off the EFC for good; every frame goes through a real NV12 | real conversion 0.75 ms median; **identical groups**: 95 and 106 slow per step, p99 31.1–31.3 ms (`a3-senza-efc-kde`) |
+| recycling of the compositor's buffers, capture cadence | counts of the buffers and of the producer | 4 buffers on KDE, 6 on GNOME, the group is always 5; the producer is not late (frames queue up during the group and are drained at 31 ms) |
+| keys, size, content | per-frame lines | no key in the groups; 300 B and 480 KB cost the same |
+| a defect of Mesa 25.0.7 already corrected later | **step 1, 29 Sep 2026**: in the KDE box Mesa **26.1.6** (`trixie-backports`, `26.1.6-1~bpo13+1`: `mesa-va-drivers`, `mesa-libgallium`, `libgl1-mesa-dri`, `libegl-mesa0`, `libglx-mesa0`, `libgbm1`), `vainfo` confirms «Mesa Gallium driver 26.1.6»; product binary `4fb3287d`, same scene as 6.1, two steps of 6 min (`a3-mesa26-kde`) | **100 and 102 slow** per step (out of 5209 and 5168 encodings), all between 30.4 and 39.0 ms, median 31.0 ms; bursts: 18 of 5, one of 4, 3, 2, 1 ⇒ **identical to 25.0.7**: newer Mesa does not cure |
 
-⇒ **Resta**: con `async_depth=1` `avcodec_send_frame` include la sottomissione al VCN e l'attesa del
-risultato; il tempo in più è lì dentro, per un contesto di codifica alla volta, per 5 fotogrammi.
-Non è un difetto già chiuso in Mesa: con la 26.1.6 (settembre 2026) il fenomeno è identico, quindi
-va segnalato anche sulla versione corrente. Candidati non ancora provati: **stato interno del contesto VCN / firmware** (5 = un numero di slot?
-una finestra del controllo di frequenza per istanza?), **posizione della superficie** (buffer lineare
-da ~30 MB migrato fra GTT e VRAM), **superfici non tiled**.
+⇒ **What remains**: with `async_depth=1` `avcodec_send_frame` includes the submission to the VCN and the wait for the
+result; the extra time is in there, for one encoding context at a time, for 5 frames.
+It is not a defect already closed in Mesa: with 26.1.6 (September 2026) the phenomenon is identical, so
+it must be reported on the current version too. Candidates not yet tested: **internal state of the VCN context / firmware** (5 = a number of slots?
+a window of the frequency control per instance?), **position of the surface** (linear buffer
+of ~30 MB migrated between GTT and VRAM), **non-tiled surfaces**.
 
-## 6. Come si riproduce
+## 6. How to reproduce it
 
-### 6.1 Con REMOTIX (riproduzione garantita)
-Sul server di prova, scatola KDE con la sola Radeon (`REMOTIX_SCHEDA=amd`), un utente col browser
-in 4K che naviga (profilo A di `banchi/16-stress/16-lavori.py`):
+### 6.1 With REMOTIX (guaranteed reproduction)
+On the test server, KDE box with the Radeon alone (`REMOTIX_SCHEDA=amd`), one user with the browser
+in 4K browsing (profile A of `banchi/16-stress/16-lavori.py`):
 ```
 python3 banchi/16-stress/16-salita.py --scatola kde --misura 4k --campagna a3-riproduci \
     --gradini 1 --minuti 6 --minuti-ultimo 6 --scheda amd \
     --video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_x4.mp4 --fps-video 30
 ```
-poi nel `server.log` del livello: `grep "] codec [0-9]*: [0-9]* byte"` e contare le codifiche
-> 20 ms (atteso ~100 in 6 minuti, a gruppi di 5). Col binario del ramo `a3-esperimenti` la riga
-porta anche invio, barriera e conversione.
+then in the level's `server.log`: `grep "] codec [0-9]*: [0-9]* byte"` and count the encodings
+> 20 ms (expected ~100 in 6 minutes, in groups of 5). With the binary of the `a3-esperimenti` branch the line
+also carries send, fence and conversion.
 
-### 6.2 Riproduzione minima, senza REMOTIX (⏳ da scrivere — il primo passo per il driver)
-Un programma C di ~200 righe: `vaCreateSurfaces` da un DMA-BUF lineare BGRx 3776×2016 (o una
-superficie RGB32 riempita a mano), `vaProcess` in NV12, codifica `VAEntrypointEncSlice` H.264 CQP
-26 un fotogramma alla volta con `vaSyncSurface` sul coded buffer, 60/s per 5 minuti, cambiando una
-piccola regione a ogni fotogramma; registrare il tempo di ciascun `vaEndPicture`+sync. Varianti:
-un contesto contro due in parallelo; superficie lineare contro tiled; `async_depth` 1 contro 2.
-Se si riproduce lì, il rapporto a Mesa diventa indipendente da REMOTIX.
+### 6.2 Minimal reproduction, without REMOTIX (⏳ to be written — the first step for the driver)
+A C program of ~200 lines: `vaCreateSurfaces` from a linear BGRx 3776×2016 DMA-BUF (or an
+RGB32 surface filled by hand), `vaProcess` to NV12, `VAEntrypointEncSlice` H.264 CQP
+26 encoding one frame at a time with `vaSyncSurface` on the coded buffer, 60/s for 5 minutes, changing a
+small region at every frame; record the time of each `vaEndPicture`+sync. Variants:
+one context against two in parallel; linear surface against tiled; `async_depth` 1 against 2.
+If it reproduces there, the report to Mesa becomes independent of REMOTIX.
 
-## 7. Le evidenze
+## 7. The evidence
 - `misure/fase16/a3-misura-kde/`, `a3-senza-efc-kde/`, `a3-mesa26-kde/`, `amd-freq-auto/`, `amd-freq-alta/`,
-  `amd-b-4k-kde/`, `amd-b-4k-gnome/`, `intel-b-4k-kde/` — giudizi e diari (nel deposito);
-- le righe per fotogramma (`server.log` di ogni livello) nell'archivio dei grezzi;
-- il codice degli esperimenti: ramo `a3-esperimenti`, commit `18b6437`;
-- l'analisi di Mesa 25.0.7: `postproc.c` 470–510 (la regola EFC), `picture.c` ~1203–1207.
+  `amd-b-4k-kde/`, `amd-b-4k-gnome/`, `intel-b-4k-kde/` — judgements and diaries (in the repository);
+- the per-frame lines (`server.log` of every level) in the raw archive;
+- the code of the experiments: branch `a3-esperimenti`, commit `18b6437`;
+- the analysis of Mesa 25.0.7: `postproc.c` 470–510 (the EFC rule), `picture.c` ~1203–1207.
 
 ## 8. Draft of the upstream report (Mesa GitLab, radeonsi / VA-API)
 

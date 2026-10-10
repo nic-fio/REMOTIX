@@ -1,549 +1,549 @@
-# Fase 16 — Stress e capacità
+# Phase 16 — Stress and capacity
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measures, on the machine of the time. With phase 18 (without ffmpeg) those that the change invalidated were removed — encoding without a card and colour conversion with swscale; those of encoding on the card and of the audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-*Decisa dall'utente il **25 settembre 2026**, pomeriggio, a fase 15 chiusa a zero difetti. Questo
-documento fissa **prima** dei test tutto quel che la campagna farà: le decisioni, l'impianto, i
-lavori, le misure, le soglie. ⛔ Le soglie di §9 si approvano prima della campagna e **non si
-toccano dopo**. I test veri partono in una **sessione nuova**, da questo documento.*
+*Decided by the user on **25 Sep 2026**, afternoon, with phase 15 closed at zero defects. This
+document fixes **before** the tests everything the campaign will do: the decisions, the setup, the
+jobs, the measures, the thresholds. ⛔ The thresholds of §9 are approved before the campaign and **are not
+touched afterwards**. The real tests start in a **new session**, from this document.*
 
 ---
 
-## 1. La domanda
+## 1. The question
 
-La fase 15 ha detto: **REMOTIX funziona** (giro 2: 329 PASS su 329, 328 guasti visti su 328).
-La fase 16 chiede: **quanto carico regge REMOTIX continuando a funzionare?**
+Phase 15 said: **REMOTIX works** (round 2: 329 PASS out of 329, 328 faults seen out of 328).
+Phase 16 asks: **how much load does REMOTIX bear while continuing to work?**
 
-- limite di progetto: **16 utenti contemporanei**, senza licenze per utente o per sessione;
-- non si presume che 16 reggano: si cerca l'**ultimo livello nominale**, i livelli di
-  **degradazione**, l'eventuale **punto di rottura**;
-- oltre 16 solo come **prova di sovraccarico**, classificata a parte, e mai necessaria;
-- il risultato è una **proprietà della configurazione misurata** (desktop, scheda, commit,
-  misura dello schermo, carico), non una promessa per ogni macchina.
+- project limit: **16 concurrent users**, without per-user or per-session licences;
+- it is not assumed that 16 hold: we look for the **last nominal level**, the levels of
+  **degradation**, the possible **breaking point**;
+- beyond 16 only as an **overload test**, classified separately, and never necessary;
+- the result is a **property of the measured configuration** (desktop, card, commit,
+  screen size, load), not a promise for every machine.
 
-⛔ La fase 16 **non** si usa per compensare un difetto funzionale: se un livello mostra un
-difetto che la fase 15 avrebbe dovuto vedere, si torna alla suite.
+⛔ Phase 16 is **not** used to compensate for a functional defect: if a level shows a
+defect that phase 15 should have seen, we go back to the suite.
 
-## 2. Le decisioni dell'utente (25 settembre 2026)
+## 2. The user's decisions (25 Sep 2026)
 
-| | decisione | perché |
+| | decision | why |
 |---|---|---|
-| **i browser-cliente girano SUL SERVER** | *«è inevitabile che la macchina di test dev'essere lo stesso server su cui gira remotix»* | il tablet è un collo (grafica e Wi-Fi) e falserebbe tutto (`[M]` fase 15: in 4K il tablet perde fotogrammi, il server no; il telefono sul 2,4 GHz perdeva lo 0,6 % dei pacchetti) |
-| ⇒ **conti separati** | REMOTIX · sessioni · browser misurati ciascuno per conto suo (§6) | il server fa due lavori: produce i desktop e li guarda |
-| ⇒ **il risultato è un limite INFERIORE** | «N utenti su questo server, **che intanto fa girare anche gli N browser**» | con clienti separati la capacità sarebbe uguale o più alta, mai più bassa |
-| **il tetto delle sessioni alzato a 16** | oggi `--tetto-sessioni 10` (fase 10) rifiuterebbe l'undicesimo | si alza per la campagna, si dichiara in ogni registrazione, poi si rimette; oltre 16 solo in sovraccarico |
-| **4K per tutti** | *«puntiamo al 4K, che è il valore a cui aspira Remotix»* | è la misura delle specifiche (`prove-in-4k`) |
-| **la scala delle misure** | se il 4K va in FAIL: **3K → 2K → Full HD** | vedi §8 |
-| **YouTube 4K: 1 utente su 4** | rotazione fissa dei quattro profili | vedi §5 |
-| **due campagne** | Intel UHD 770 integrata, poi **AMD Radeon RX 6800 16 GB** | la RX 6800 va montata sul server; prima la si prova con un utente solo (§11) |
-| **la salita a gradini: 1 → 4 → 8 → 12 → 16** (25 set, sera) | *«forse avevo esagerato»*: un utente alla volta costava 24–96 ore di macchina | il punto di rottura si trova lo stesso, preciso a un utente, con la ricerca a metà (§6); si perde solo la curva utente per utente dove è tutto verde |
-| **tetto a 17 durante la campagna** (25 set, sera) | scelta 1 di due: al gradino 16 il controllo corto (§7) è la 17ª sessione, per ~70 s | i 16 utenti restano 16 e il carico è uguale a quello degli altri gradini; il 17° è solo il controllo, dichiarato in ogni livello; a fine campagna il tetto torna al predefinito |
-| **logging nel journal di sistema** | `journalctl`, niente sistemi propri al suo posto | vedi §12 |
+| **the client browsers run ON THE SERVER** | *«è inevitabile che la macchina di test dev'essere lo stesso server su cui gira remotix»* | the tablet is a bottleneck (graphics and Wi-Fi) and would falsify everything (`[M]` phase 15: in 4K the tablet loses frames, the server does not; the phone on 2.4 GHz lost 0.6 % of the packets) |
+| ⇒ **separate accounts** | REMOTIX · sessions · browsers each measured on its own (§6) | the server does two jobs: it produces the desktops and watches them |
+| ⇒ **the result is a LOWER bound** | «N utenti su questo server, **che intanto fa girare anche gli N browser**» | with separate clients the capacity would be equal or higher, never lower |
+| **the session cap raised to 16** | today `--tetto-sessioni 10` (phase 10) would refuse the eleventh | it is raised for the campaign, declared in every recording, then put back; beyond 16 only in overload |
+| **4K for everyone** | *«puntiamo al 4K, che è il valore a cui aspira Remotix»* | it is the specifications' size (`prove-in-4k`) |
+| **the scale of sizes** | if 4K goes FAIL: **3K → 2K → Full HD** | see §8 |
+| **YouTube 4K: 1 user in 4** | fixed rotation of the four profiles | see §5 |
+| **two campaigns** | Intel UHD 770 integrated, then **AMD Radeon RX 6800 16 GB** | the RX 6800 must be mounted on the server; first it is tested with a single user (§11) |
+| **the climb in steps: 1 → 4 → 8 → 12 → 16** (25 Sep, evening) | *«forse avevo esagerato»*: one user at a time cost 24–96 hours of machine | the breaking point is found all the same, precise to one user, with the search halfway (§6); only the user-by-user curve is lost where everything is green |
+| **cap at 17 during the campaign** (25 Sep, evening) | choice 1 of two: at step 16 the short check (§7) is the 17th session, for ~70 s | the 16 users stay 16 and the load is the same as at the other steps; the 17th is only the check, declared at every level; at the end of the campaign the cap goes back to the default |
+| **logging in the system journal** | `journalctl`, no systems of our own in its place | see §12 |
 
-## 3. Le precondizioni — tutte soddisfatte il 25 settembre 2026
+## 3. The preconditions — all satisfied on 25 Sep 2026
 
-- fase 15 chiusa: funzioni utente, stacco/riattacco, rientro, immagine, input, tela e misure,
-  audio/video, perdita di rete, percorsi, browser (Firefox 140, Chrome 154) — **zero difetti**;
-- commit certificato: `d121715` (segno `fase15-giro2-congelato`), binario `b1443a0b`; la pagina
-  d'accesso nuova è `c5279e66` (264 PASS su 264 nelle prove che passano dal modulo);
-- ⚠ il commit della campagna sarà **quello del giorno** (con journald e il tetto configurabile
-  già c'è): lo si identifica e si fa girare **prima** la suite corta di regressione (§13).
+- phase 15 closed: user functions, detach/re-attach, re-entry, image, input, canvas and sizes,
+  audio/video, network loss, paths, browsers (Firefox 140, Chrome 154) — **zero defects**;
+- certified commit: `d121715` (tag `fase15-giro2-congelato`), binary `b1443a0b`; the new login
+  page is `c5279e66` (264 PASS out of 264 in the tests that go through the form);
+- ⚠ the campaign's commit will be **the one of the day** (with journald and the configurable cap
+  it already exists): it is identified and the short regression suite is run **first** (§13).
 
-## 4. L'impianto: il percorso vero, tutto sulla stessa macchina
+## 4. The setup: the real path, all on the same machine
 
-**utente automatico → browser vero (Firefox o Chrome) → API del browser → WebTransport/HTTP3/QUIC
-→ RCP → REMOTIX → sessione grafica vera → applicazione vera**
+**automatic user → real browser (Firefox or Chrome) → browser API → WebTransport/HTTP3/QUIC
+→ RCP → REMOTIX → real graphical session → real application**
 
-| pezzo | come | perché |
+| piece | how | why |
 |---|---|---|
-| **un compositore per utente** | 16 `labwc` senza schermo, ognuno a 3840×2160, uno per browser | `[M]` fase 15: una finestra di Chrome coperta da un'altra smette di disegnare (foto appese fino a 17 min) — con 16 finestre 4K nello stesso compositore misureremmo quello |
-| **i browser** | alternati: gli utenti dispari Firefox, i pari Chrome | i due motori serviti (`SPECIFICHE` §11.5) |
-| **gli utenti** | inquilini nuovi `c16uNN`, uno per livello, nella scatola del desktop sotto prova (`rete11-<desktop>`) | come la suite: nati da zero, sgomberati alla fine |
-| **l'automazione** | l'input arriva **dal browser** (Marionette/CDP, eventi veri), come nella suite; le applicazioni si lanciano dentro la sessione come l'utente | nessun cliente finto: il percorso è quello di un utente |
-| **la rete** | locale al server (il browser si collega a `192.168.0.2`) | ⚠ non misura il Wi-Fi: la rete vera è una questione a parte (§15) |
+| **one compositor per user** | 16 `labwc` without a screen, each at 3840×2160, one per browser | `[M]` phase 15: a Chrome window covered by another stops drawing (snapshots hung for up to 17 min) — with 16 4K windows in the same compositor we would measure that |
+| **the browsers** | alternating: odd users Firefox, even ones Chrome | the two engines served (`SPECIFICHE` §11.5) |
+| **the users** | new tenants `c16uNN`, one per level, in the box of the desktop under test (`rete11-<desktop>`) | like the suite: born from zero, cleared out at the end |
+| **the automation** | the input arrives **from the browser** (Marionette/CDP, real events), as in the suite; the applications are launched inside the session as the user | no fake client: the path is a user's |
+| **the network** | local to the server (the browser connects to `192.168.0.2`) | ⚠ it does not measure the Wi-Fi: the real network is a separate matter (§15) |
 
-**Chi fa gli utenti** (proposta dell'utente del 25 set: *«sub-agenti per simulare gli utenti che
-si collegano a quel server»*, e la forma scelta):
+**Who plays the users** (the user's proposal of 25 Sep: *«sub-agenti per simulare gli utenti che
+si collegano a quel server»*, and the form chosen):
 
-- ogni utente è un **attore indipendente**: un suo processo, il suo browser, il suo compositore,
-  il suo orologio — partono e lavorano **in parallelo e senza sincronia fra loro**, come persone
-  diverse; nessun direttore unico che li fa muovere a turno;
-- l'attore è un **programma**, non un agente di intelligenza artificiale: un agente impiega
-  secondi a decidere ogni gesto (il ritmo dell'input diventerebbe quello del modello, non di una
-  persona), non rifà mai due volte la stessa cosa (le salite non si potrebbero ripetere né
-  confrontare Intel/Radeon) e per 16 utenti × 3 ore costerebbe moltissimo;
-- il **realismo** viene dal ritmo: pause, ordine delle azioni e velocità di battitura variano
-  come in una persona, estratti da un **seme** fissato per utente — ogni salita è diversa dentro
-  e identica fra una campagna e l'altra;
-- i **subagenti** si usano dove rendono: costruire in parallelo i quattro lavori e i misuratori;
-  e, durante la campagna, uno per sessione a **leggere le evidenze** di un livello DEGRADED o FAIL
-  e cercarne la causa mentre la salita è ferma.
+- every user is an **independent actor**: its own process, its own browser, its own compositor,
+  its own clock — they start and work **in parallel and without synchrony among them**, like different
+  people; no single director making them move in turn;
+- the actor is a **program**, not an artificial-intelligence agent: an agent takes
+  seconds to decide every gesture (the input's rate would become the model's, not a
+  person's), never does the same thing twice (the climbs could not be repeated nor
+  compared Intel/Radeon) and for 16 users × 3 hours would cost a great deal;
+- the **realism** comes from the rate: pauses, order of actions and typing speed vary
+  as in a person, drawn from a **seed** fixed per user — every climb is different inside
+  and identical from one campaign to the next;
+- **subagents** are used where they pay off: building the four jobs and the meters in parallel;
+  and, during the campaign, one per session to **read the evidence** of a DEGRADED or FAIL level
+  and look for its cause while the climb is stopped.
 
-⛔ Il cliente Python e gli script che imitano un browser **non** fanno carico: possono solo
-aiutare a diagnosticare (§4 del documento dell'utente).
+⛔ The Python client and the scripts that imitate a browser do **not** make load: they can only
+help diagnose (§4 of the user's document).
 
-## 5. I quattro lavori, e come si distribuiscono
+## 5. The four jobs, and how they are distributed
 
-Gli utenti entrano **a gradini** (§6); il lavoro di ciascuno è fissato dal suo numero e **non
-cambia** in nessuna campagna:
+The users enter **in steps** (§6); each one's job is fixed by its number and **does not
+change** in any campaign:
 
-| utente | profilo | che cosa fa, in ciclo, per tutta la durata |
+| user | profile | what it does, in a cycle, for the whole duration |
 |---|---|---|
-| 1, 5, 9, 13 | **A — navigazione** | un browser dentro la sessione (Firefox ESR della scatola) apre pagine in giro fra un elenco fisso (testo, immagini, una pagina lunga che scorre), clicca, scorre con la rotella |
-| 2, 6, 10, 14 | **B — file manager** | il file manager del desktop: apre cartelle, ne crea e ne cancella in una cartella di prova, apre e chiude finestre, cambia vista |
-| 3, 7, 11, 15 | **C — terminale** | il terminale del desktop: comandi con uscita (`ls`, `find`, `top` per qualche secondo, un file di testo che scorre), battuti dalla tastiera del browser |
-| 4, 8, 12, 16 | **D — YouTube 4K** | un video YouTube in 4K a schermo intero, sempre lo stesso (fissato nel piano d'esecuzione), riprodotto in Firefox ESR dentro la sessione, **per tutta la salita** |
+| 1, 5, 9, 13 | **A — browsing** | a browser inside the session (the box's Firefox ESR) opens pages in turn from a fixed list (text, images, a long page that scrolls), clicks, scrolls with the wheel |
+| 2, 6, 10, 14 | **B — file manager** | the desktop's file manager: opens folders, creates and deletes some in a test folder, opens and closes windows, changes view |
+| 3, 7, 11, 15 | **C — terminal** | the desktop's terminal: commands with output (`ls`, `find`, `top` for a few seconds, a text file scrolling), typed from the browser's keyboard |
+| 4, 8, 12, 16 | **D — YouTube 4K** | a YouTube video in 4K full screen, always the same (fixed in the execution plan), played in Firefox ESR inside the session, **for the whole climb** |
 
-⇒ a 16 utenti: **4 video 4K** e 12 lavori d'ufficio. ⚠ Il video pesa sulla stessa scheda che
-codifica e disegna: è voluto, è l'uso vero. `[?]` Serve internet dal server: `[M]` 25 set
-raggiungibile. Se YouTube cambia qualcosa sotto (pubblicità, qualità automatica), si ripiega su
-**un file video 4K locale** fisso, dichiarato — la scelta si fa nel piano d'esecuzione e non cambia
-fra le campagne.
+⇒ at 16 users: **4 4K videos** and 12 office jobs. ⚠ The video weighs on the same card that
+encodes and draws: it is intended, it is real use. `[?]` Internet is needed from the server: `[M]` 25 Sep
+reachable. If YouTube changes something underneath (ads, automatic quality), we fall back on
+**a fixed local 4K video file**, declared — the choice is made in the execution plan and does not change
+between campaigns.
 
-## 6. La salita e i controlli
+## 6. The climb and the checks
 
-**PREPARARE → AVVIARE → SALIRE AL GRADINO → 10 MINUTI → CONTROLLARE → REGISTRARE → RIPETERE**
-sui gradini **1 → 4 → 8 → 12 → 16** utenti (decisione dell'utente, 25 set sera), oppure fino a un
-limite reale dimostrato. Gli utenti di un gradino entrano uno dopo l'altro, ciascuno quando il
-precedente ha il primo fotogramma (così si misura anche la nascita sotto carico).
+**PREPARE → START → CLIMB TO THE STEP → 10 MINUTES → CHECK → RECORD → REPEAT**
+on the steps **1 → 4 → 8 → 12 → 16** users (the user's decision, 25 Sep evening), or up to a
+demonstrated real limit. The users of a step enter one after the other, each when the
+previous one has its first frame (so birth under load is measured too).
 
-1. scatola rifatta da zero, server acceso col tetto a 16, nessun altro carico sul server;
-2. si accende il primo utente e il suo lavoro;
-3. **10 minuti** di lavoro continuo (il carico è **cumulativo**: chi c'era continua);
-4. **controllo** (§7) negli ultimi 2 minuti del livello;
-5. si registra (§10), poi si sale al gradino successivo;
-6. **all'ultimo gradino (16) il livello dura 30 minuti**, non 10: è la prova delle perdite di
-   memoria a pieno carico, che coi gradini radi non si vede più salendo.
+1. box redone from zero, server on with the cap at 16, no other load on the server;
+2. the first user and its job are started;
+3. **10 minutes** of continuous work (the load is **cumulative**: whoever was there continues);
+4. **check** (§7) in the last 2 minutes of the level;
+5. it is recorded (§10), then we climb to the next step;
+6. **at the last step (16) the level lasts 30 minutes**, not 10: it is the test of memory
+   leaks at full load, which with sparse steps is no longer seen while climbing.
 
-**La ricerca a metà**: se un gradino va in FAIL (dopo la ripetizione di §14), si prova a metà
-fra l'ultimo gradino buono e quello rotto, e si stringe finché si sa l'ultimo livello GREEN
-**preciso a un utente** (es. 8 buono, 12 FAIL ⇒ 10; 10 buono ⇒ 11; 10 FAIL ⇒ 9). Ogni livello
-della ricerca riparte da scatola pulita coi suoi N utenti.
+**The search halfway**: if a step goes FAIL (after the repetition of §14), we try halfway
+between the last good step and the broken one, and narrow down until the last GREEN level is known
+**precise to one user** (e.g. 8 good, 12 FAIL ⇒ 10; 10 good ⇒ 11; 10 FAIL ⇒ 9). Every level
+of the search restarts from a clean box with its N users.
 
-**Regola di non-prosecuzione**: se un controllo dice **DEGRADED significativo** o **FAIL**, non si
-sale in automatico: il livello si osserva, si documenta, si diagnostica, si classifica e si
-**ripete** nelle stesse condizioni (§14). Lo scopo non è arrivare a 16 a ogni costo.
+**Non-continuation rule**: if a check says **DEGRADED significant** or **FAIL**, we do not
+climb automatically: the level is observed, documented, diagnosed, classified and
+**repeated** under the same conditions (§14). The aim is not to reach 16 at any cost.
 
-⚠ Durata: 5 gradini (l'ultimo da 30 minuti) più 0–2 livelli di ricerca ≈ **1 ora e 10 per salita**.
-Quattro desktop × due schede ≈ **9 ore** di misure nel caso migliore, ~35 con tutta la scala (§8),
-contro le 24–96 del piano a un utente alla volta. Si fanno a blocchi, anche di notte.
+⚠ Duration: 5 steps (the last of 30 minutes) plus 0–2 search levels ≈ **1 hour 10 per climb**.
+Four desktops × two cards ≈ **9 hours** of measures in the best case, ~35 with the whole scale (§8),
+against the 24–96 of the one-user-at-a-time plan. They are done in blocks, at night too.
 
-## 7. Il controllo di ogni livello
+## 7. The check of every level
 
-**Il comportamento, misurato in ogni sessione:**
+**The behaviour, measured in every session:**
 
-| che cosa | da dove |
+| what | from where |
 |---|---|
-| l'immagine si aggiorna | foto della tela di ogni browser a intervalli: cambia quando il lavoro cambia; nessun blocco lungo |
-| fotogrammi dipinti, saltati, buchi | il diario della pagina (`dipinti`, `video X→Y`, `salt`, `buchi`) — mandato al server ogni 5 s, già esiste |
-| **ritardo input → fotogramma** | quello che il prodotto misura dal suo lato (`SPECIFICHE` §3.2: **tetto 50 ms**, traguardo 40 ms), più una sonda dal browser di un utente-sentinella |
-| l'input arriva | ogni lavoro batte e clicca: il suo effetto si vede (testo nel terminale, cartella creata) |
-| l'audio (utenti D) | il diario della pagina (`suonati`, `BUCHI`, `mancati`) |
-| nascita di un utente nuovo | tempo dall'accesso al primo fotogramma del nuovo utente |
-| **controllo funzionale corto** | su UN utente per livello, a rotazione: accesso già fatto → input (F-004/F-007 ridotti) → immagine (F-003 ridotto) → appunti (F-014) — le funzioni certificate devono restare in piedi |
-| errori | registro del server (RCP, WebTransport/QUIC, sessione), console dei browser, journal |
+| the image updates | snapshot of every browser's canvas at intervals: it changes when the job changes; no long stall |
+| frames painted, skipped, holes | the page's diary (`dipinti`, `video X→Y`, `salt`, `buchi`) — sent to the server every 5 s, it already exists |
+| **input → frame delay** | what the product measures from its side (`SPECIFICHE` §3.2: **cap 50 ms**, target 40 ms), plus a probe from the browser of a sentinel user |
+| input arrives | every job types and clicks: its effect is seen (text in the terminal, folder created) |
+| the audio (D users) | the page's diary (`suonati`, `BUCHI`, `mancati`) |
+| birth of a new user | time from login to the new user's first frame |
+| **short functional check** | on ONE user per level, in rotation: login already done → input (F-004/F-007 reduced) → image (F-003 reduced) → clipboard (F-014) — the certified functions must stay up |
+| errors | server log (RCP, WebTransport/QUIC, session), browser consoles, journal |
 
-**Le risorse, per recinto** (cgroup di systemd: `remotix` · `sessioni` · `browser`):
+**The resources, per enclosure** (systemd cgroups: `remotix` · `sessioni` · `browser`):
 
-| risorsa | misure |
+| resource | measures |
 |---|---|
-| **processore** | totale, per recinto, per sessione; carico medio; processi e thread |
-| **memoria** | totale, per recinto, per sessione (PSS); crescita nel livello (indizio di perdita) |
-| **scheda grafica** | uso dei motori (disegno, video: codifica e decodifica) **per processo**, dal kernel (`/proc/<pid>/fdinfo` drm-engine); frequenza; temperatura; strozzatura. Intel: `intel_gpu_top` (da installare). AMD: fdinfo amdgpu, `radeontop` o `amdgpu_top` |
-| **memoria video** | RX 6800: VRAM usata; Intel: memoria condivisa |
-| **rete** | byte ricevuti/spediti per sessione (il registro QUIC di REMOTIX: `persi`, `spediti`, ritrasmissioni) |
-| **REMOTIX** | sessioni vive, rifiuti, code del codificatore, fotogrammi abbandonati, «budget», tempi di nascita |
+| **processor** | total, per enclosure, per session; load average; processes and threads |
+| **memory** | total, per enclosure, per session (PSS); growth within the level (a hint of a leak) |
+| **graphics card** | engine usage (drawing, video: encoding and decoding) **per process**, from the kernel (`/proc/<pid>/fdinfo` drm-engine); frequency; temperature; throttling. Intel: `intel_gpu_top` (to be installed). AMD: amdgpu fdinfo, `radeontop` or `amdgpu_top` |
+| **video memory** | RX 6800: VRAM used; Intel: shared memory |
+| **network** | bytes received/sent per session (REMOTIX's QUIC log: `persi`, `spediti`, retransmissions) |
+| **REMOTIX** | live sessions, refusals, encoder queues, frames dropped, «budget», birth times |
 
-## 8. La scala delle misure
+## 8. The scale of sizes
 
-| gradino | misura dello schermo di ogni utente |
+| step | screen size of every user |
 |---|---|
 | 4K | 3840×2160 |
 | 3K | 3200×1800 |
 | 2K | 2560×1440 |
 | Full HD | 1920×1080 |
 
-Se un gradino arriva al **FAIL con N utenti**, il gradino successivo **riparte da 1 utente e
-risale sugli stessi gradini** (§6): ogni misura ha la sua curva completa e confrontabile. Si scende finché si arriva a 16
-nominali o si finisce la scala.
+If a step reaches **FAIL with N users**, the next step **restarts from 1 user and
+climbs back on the same steps** (§6): every size has its own complete and comparable curve. We go down until we reach 16
+nominal or the scale runs out.
 
-## 9. Le soglie — ✅ APPROVATE dall'utente il 25 set 2026 (sera), ora ferme
+## 9. The thresholds — ✅ APPROVED by the user on 25 Sep 2026 (evening), now fixed
 
-*Proposta del 25 settembre 2026. Un valore alto di una risorsa **da solo non è un FAIL**: la
-classificazione nasce dal comportamento, e le risorse servono a spiegarlo.*
+*Proposal of 25 Sep 2026. A high value of a resource **on its own is not a FAIL**: the
+classification is born from behaviour, and the resources serve to explain it.*
 
-| misura (per sessione, nel controllo del livello) | **GREEN** | **DEGRADED** | **FAIL** |
+| measure (per session, in the level's check) | **GREEN** | **DEGRADED** | **FAIL** |
 |---|---|---|---|
-| ritardo input → fotogramma (prodotto, p95) | ≤ 50 ms (il tetto di §3.2) | 50–150 ms | > 150 ms, o input perso |
-| fotogrammi saltati dalla pagina | ≤ 2 % | 2–10 % | > 10 % |
-| blocco più lungo dell'immagine con lavoro in corso | ≤ 1 s | 1–3 s | > 3 s, o immagine ferma |
-| buchi nella catena del video (chiavi richieste) | 0 | ≤ 1 al minuto | > 1 al minuto |
-| video 4K (utenti D): fotogrammi dipinti al secondo, **in proporzione alla frequenza del video scelto** (f) | ≥ 0,8·f | 0,4·f – 0,8·f | < 0,4·f |
-| audio (utenti D): suono udibile | ≥ 99 % | 95–99 % | < 95 % |
-| nascita di un utente nuovo (accesso → primo fotogramma) | ≤ 5 s | 5–15 s | > 15 s, o rifiuto |
-| controllo funzionale corto | tutto PASS | — | un FAIL |
-| sessione caduta, riavvio, errore RCP/QUIC che stacca | nessuno | — | uno qualunque |
-| memoria dei recinti `remotix` e `sessioni` nel livello, a lavoro stabile (il recinto `browser` si **registra** ma non classifica: la cache di un Firefox che naviga cresce da sola) | crescita ≤ 5 % | 5–15 % (si segnala) | > 15 % e continua (perdita) |
+| input → frame delay (product, p95) | ≤ 50 ms (the cap of §3.2) | 50–150 ms | > 150 ms, or input lost |
+| frames skipped by the page | ≤ 2 % | 2–10 % | > 10 % |
+| longest image stall with work in progress | ≤ 1 s | 1–3 s | > 3 s, or image still |
+| holes in the video chain (keys requested) | 0 | ≤ 1 per minute | > 1 per minute |
+| 4K video (D users): frames painted per second, **in proportion to the frequency of the chosen video** (f) | ≥ 0.8·f | 0.4·f – 0.8·f | < 0.4·f |
+| audio (D users): audible sound | ≥ 99 % | 95–99 % | < 95 % |
+| birth of a new user (login → first frame) | ≤ 5 s | 5–15 s | > 15 s, or refusal |
+| short functional check | all PASS | — | one FAIL |
+| session dropped, restart, RCP/QUIC error that detaches | none | — | any one |
+| memory of the `remotix` and `sessioni` enclosures within the level, with stable work (the `browser` enclosure is **recorded** but does not classify: the cache of a browsing Firefox grows on its own) | growth ≤ 5 % | 5–15 % (it is flagged) | > 15 % and continuing (leak) |
 
-**Quale ritardo classifica** — `[M]` diagnosi del 25 set sera (scatola xfce, 1 utente, terminale,
-460 lettere; evidenze in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). Il giro della pagina
-(tasto → fotogramma che lo porta) in 4K fa **45 / 54 ms** (p50/p95), ma dentro c'è lavoro che non
-è nostro:
+**Which delay classifies** — `[M]` diagnosis of the evening of 25 Sep (xfce box, 1 user, terminal,
+460 letters; evidence in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). The page round trip
+(key → frame that carries it) in 4K makes **45 / 54 ms** (p50/p95), but inside there is work that is not
+ours:
 
-| tratto (4K, p50/p95 ms) | | di chi |
+| stretch (4K, p50/p95 ms) | | whose |
 |---|---|---|
-| la pagina manda il tasto → il terminale lo riceve | 4,9 / 8,7 | **nostro** (limitato dal `poll` di 8 ms del figlio, `figlio.c` `MOVIMENTO_ATTESA_S`) |
-| il terminale disegna l'eco | 10,2 / 16,6 | applicazione |
-| il compositore compone e ce lo copia | 14,5 / 19,0 | compositore |
-| conversione + codifica + spedizione → pagina | 14,0 / 14,9 | **nostro** |
-| decodifica e disegno nel browser (fuori dal giro) | Firefox 38, Chrome 3,4 | browser |
+| the page sends the key → the terminal receives it | 4.9 / 8.7 | **ours** (limited by the child's 8 ms `poll`, `figlio.c` `MOVIMENTO_ATTESA_S`) |
+| the terminal draws the echo | 10.2 / 16.6 | application |
+| the compositor composes and copies it to us | 14.5 / 19.0 | compositor |
+| conversion + encoding + sending → page | 14.0 / 14.9 | **ours** |
+| decoding and drawing in the browser (outside the round trip) | Firefox 38, Chrome 3.4 | browser |
 
-⇒ Il **pezzo nostro** è ~19 / 24 ms, sotto il tetto di 50. Quindi, come dicono §7 («quello che il
-prodotto misura dal suo lato») e la riga qui sotto («prodotto»): **classifica il ritardo del
-prodotto** = p95 dei massimi al secondo della riga del figlio `TRATTO cattura → byte fuori` + 9 ms
-(il tetto costruttivo del tratto d'ingresso). ⚠ Sulla strada wlroots quella riga conta la copia
-due volte (~4 ms in più): è dal lato prudente e non si corregge durante la campagna. Il **giro della
-pagina** (`giro_eco`, solo battitura) si **registra** come ritardo dell'esperienza e non classifica.
-Candidata di cura per dopo la campagna: il socket del padre nello stesso `poll` del figlio
+⇒ **Our piece** is ~19 / 24 ms, below the cap of 50. So, as §7 says («what the
+product measures from its side») and the row below («product»): **the product's delay classifies**
+= p95 of the per-second maxima of the child's line `TRATTO cattura → byte fuori` + 9 ms
+(the constructive cap of the input stretch). ⚠ On the wlroots route that line counts the copy
+twice (~4 ms more): it is on the prudent side and is not corrected during the campaign. The **page
+round trip** (`giro_eco`, typing only) is **recorded** as the experience delay and does not classify.
+Cure candidate for after the campaign: the parent's socket in the same `poll` as the child
 (~4 ms p50, ~8 ms p95).
 
-**Il livello** è GREEN se **tutte** le sessioni sono GREEN; DEGRADED se almeno una è DEGRADED e
-nessuna FAIL; FAIL se almeno una è FAIL. **DEGRADED significativo** = più di un quarto delle
-sessioni DEGRADED, o una sola misura oltre metà della fascia DEGRADED.
+**The level** is GREEN if **all** sessions are GREEN; DEGRADED if at least one is DEGRADED and
+none FAIL; FAIL if at least one is FAIL. **DEGRADED significant** = more than a quarter of the
+sessions DEGRADED, or a single measure beyond half of the DEGRADED band.
 
-## 10. Che cosa si registra
+## 10. What is recorded
 
-Come la fase 15, un **registro a sole aggiunte**, `banchi/16-stress/registro.jsonl`, una riga per
-**livello** e una per **sessione in quel livello**:
+Like phase 15, an **append-only log**, `banchi/16-stress/registro.jsonl`, one row per
+**level** and one per **session in that level**:
 
-`campagna` (es. `intel-4k-gnome`) · `livello` (1, 4, 8, 12, 16 e quelli della ricerca) · `utente` · `profilo` · `browser` e versione
-· `desktop` · `scheda` e driver · `misura` · `commit` · binario · pagina · kernel · `inizio` ·
-`durata_s` · tutte le misure di §7 · `classe` (GREEN/DEGRADED/FAIL) · `ragione` · `evidenze`.
+`campagna` (e.g. `intel-4k-gnome`) · `livello` (1, 4, 8, 12, 16 and those of the search) · `utente` · `profilo` · `browser` and version
+· `desktop` · `scheda` and driver · `misura` · `commit` · binary · page · kernel · `inizio` ·
+`durata_s` · all the measures of §7 · `classe` (GREEN/DEGRADED/FAIL) · `ragione` · `evidenze`.
 
-Le **evidenze** stanno sul server in `/media/REMOTIX/misure/fase16/<campagna>/livello-NN/`: foto
-di ogni tela, diario delle pagine, registro del server e journal tagliati sul livello, le serie
-delle risorse (una riga al secondo), console dei browser. Devono bastare a dire **che cosa
-succedeva** nel momento della degradazione.
+The **evidence** sits on the server in `/media/REMOTIX/misure/fase16/<campagna>/livello-NN/`: snapshots
+of every canvas, the pages' diary, server log and journal cut to the level, the resource
+series (one row per second), browser consoles. They must be enough to say **what was
+happening** at the moment of degradation.
 
-Il **rapporto** si genera dal registro (come `15-rapporto.py`): la curva di ogni campagna, la
-matrice finale, i colli di bottiglia.
+The **report** is generated from the log (like `15-rapporto.py`): the curve of every campaign, the
+final matrix, the bottlenecks.
 
-## 11. Le due campagne
+## 11. The two campaigns
 
-| | Intel integrata | Radeon RX 6800 |
+| | Intel integrated | Radeon RX 6800 |
 |---|---|---|
-| scheda | Intel UHD 770 (i5-13500T) | AMD RX 6800, 16 GB |
-| codifica | VA-API, iHD (`[M]` fase 11) | VA-API, radeonsi — ⚠ **mai provata**: prima un accesso con un utente, che il codificatore AMD parta davvero |
-| ordine | GNOME, KDE, XFCE, LXQt | stesso ordine, stesse condizioni |
-| si registra | CPU, GPU, driver, RAM, kernel, distribuzione, browser, misura, rete, commit | idem, più VRAM |
+| card | Intel UHD 770 (i5-13500T) | AMD RX 6800, 16 GB |
+| encoding | VA-API, iHD (`[M]` phase 11) | VA-API, radeonsi — ⚠ **never tested**: first a login with one user, to see that the AMD encoder really starts |
+| order | GNOME, KDE, XFCE, LXQt | same order, same conditions |
+| recorded | CPU, GPU, driver, RAM, kernel, distribution, browser, size, network, commit | same, plus VRAM |
 
-⚠ Il server ha la radice in RAM: montare la scheda vuol dire un riavvio, e il riavvio perde
-chiave ssh e pacchetti (`riavvio-perde-la-chiave-ssh`) — la ricetta è pronta.
+⚠ The server has its root in RAM: mounting the card means a reboot, and the reboot loses
+ssh key and packages (`riavvio-perde-la-chiave-ssh`) — the recipe is ready.
 
-**La matrice finale:**
+**The final matrix:**
 
 | desktop | Intel iGPU | Radeon RX 6800 |
 |---|---:|---:|
-| GNOME | ultimo livello GREEN · punto di rottura · gradino | idem |
+| GNOME | last GREEN level · breaking point · step | same |
 | KDE | … | … |
 | XFCE | … | … |
 | LXQt | … | … |
 
-Ogni casella rimanda alla sua salita nel registro. Il confronto Intel/Radeon si fa **sui dati**:
-livello nominale, degradazione, CPU, RAM, GPU, VRAM, rete, errori, tempi di nascita e primo
-fotogramma, stabilità — senza conclusioni oltre quel che i dati mostrano.
+Every cell refers to its climb in the log. The Intel/Radeon comparison is made **on the data**:
+nominal level, degradation, CPU, RAM, GPU, VRAM, network, errors, birth and first
+frame times, stability — with no conclusions beyond what the data show.
 
-## 12. Il journal di sistema (lavoro da fare prima)
+## 12. The system journal (work to do first)
 
-Oggi REMOTIX scrive su un file suo (`registro.log`, dallo standard output). Nella fase 16:
+Today REMOTIX writes to a file of its own (`registro.log`, from standard output). In phase 16:
 
-- il registro va nel **journal** (`journalctl -u <unità>`), con i campi strutturati utili
-  (area, inquilino, livello di gravità) — il file resta solo se chi amministra lo chiede;
-- eventi: avvio/arresto, sessioni, trasporto, orologi, rientri, RCP, codifica, input, permessi,
-  configurazione, anomalie;
-- ⛔ **mai** parole d'ordine, gettoni, chiavi, contenuto dello schermo o dell'input (le battute
-  si registrano come «tasto», mai come carattere).
+- the log goes into the **journal** (`journalctl -u <unità>`), with the useful structured fields
+  (area, tenant, severity level) — the file stays only if the administrator asks for it;
+- events: start/stop, sessions, transport, clocks, re-entries, RCP, encoding, input, permissions,
+  configuration, anomalies;
+- ⛔ **never** passwords, tokens, keys, screen or input content (keystrokes
+  are logged as «tasto», never as a character).
 
-## 13. Prima della campagna
+## 13. Before the campaign
 
-0. **server riavviato** (deciso dall'utente il 25 set, per partire puliti), `/media` intatto:
-   la radice in RAM va rifatta coi passi 0, 1, 5, 6 e 7 della ricetta
-   (`riavvio-perde-la-chiave-ssh`: rotta, chiave, pacchetti dell'ospite, `provisiona.sh`,
-   `storage.conf` e le quattro scatole) — contenitore di compilazione, librerie e immagini stanno
-   su `/media` e restano; poi si **guarda** che il server sia vuoto (niente processi, inquilini,
-   compositori rimasti) prima della prima misura;
-   `[M]` **fatto il 25 set sera**: radice verificata da `provisiona.sh verifica`, scatole su
-   `b1443a0b`/`c5279e66`, fumo F-001/F-002 **16 PASS su 16** (4 desktop × 2 browser). Alla
-   ricetta mancavano tre pezzi, ora aggiunti: `labwc` e `wlr-randr` (dalla cache apt),
-   Chrome (`/media/REMOTIX/cache/chrome.deb`) e `~/SERVER.ssh` sul server (0600: la suite ci
-   legge la parola di sudo — la copia la fa l'utente);
-1. il journal (§12) e il tetto configurabile, con la **suite corta di regressione** della fase 15
-   (accesso, input, immagine, appunti, «Esci», orologi — sui 4 desktop coi due browser) su quel
+0. **server rebooted** (decided by the user on 25 Sep, to start clean), `/media` intact:
+   the root in RAM must be redone with steps 0, 1, 5, 6 and 7 of the recipe
+   (`riavvio-perde-la-chiave-ssh`: route, key, host packages, `provisiona.sh`,
+   `storage.conf` and the four boxes) — build container, libraries and images sit
+   on `/media` and remain; then we **look** that the server is empty (no processes, tenants,
+   compositors left over) before the first measure;
+   `[M]` **done on the evening of 25 Sep**: root verified by `provisiona.sh verifica`, boxes on
+   `b1443a0b`/`c5279e66`, smoke F-001/F-002 **16 PASS out of 16** (4 desktops × 2 browsers). The
+   recipe was missing three pieces, now added: `labwc` and `wlr-randr` (from the apt cache),
+   Chrome (`/media/REMOTIX/cache/chrome.deb`) and `~/SERVER.ssh` on the server (0600: the suite
+   reads the sudo password from it — the copy is made by the user);
+1. the journal (§12) and the configurable cap, with the **short regression suite** of phase 15
+   (login, input, image, clipboard, «Esci», clocks — on the 4 desktops with the two browsers) on that
    commit;
-2. l'impianto: 16 compositori, i tre recinti, le serie delle risorse, i quattro lavori
-   automatici, il controllo funzionale corto, il registro e il rapporto — ogni pezzo **con la
-   sua prova**, come nella suite (un misuratore che non ha mai dato rosso non misura);
-3. una **salita di prova** corta (4 utenti, 3 minuti a livello) per tarare l'impianto, che non
-   conta;
-4. le soglie di §9 **approvate dall'utente**.
+2. the setup: 16 compositors, the three enclosures, the resource series, the four automatic
+   jobs, the short functional check, the log and the report — every piece **with its
+   own test**, as in the suite (a meter that has never given red does not measure);
+3. a short **trial climb** (4 users, 3 minutes per level) to calibrate the setup, which does not
+   count;
+4. the thresholds of §9 **approved by the user**.
 
-## 14. Anomalie e ripetizioni
+## 14. Anomalies and repetitions
 
-1. preservare le evidenze; 2. non cambiare niente subito; 3. analizzare; 4. cercare la causa;
-5. **ripetere nelle stesse condizioni**; 6. confrontare. Se REMOTIX cambia: nuovo commit, suite
-corta di regressione, e **si rifà la salita interessata**. Un FAIL resta legato alla sua
-configurazione (desktop, scheda, commit, lavoro, utenti, sintomo) e non si generalizza.
+1. preserve the evidence; 2. change nothing straight away; 3. analyse; 4. look for the cause;
+5. **repeat under the same conditions**; 6. compare. If REMOTIX changes: new commit, short
+regression suite, and **the climb concerned is redone**. A FAIL stays tied to its
+configuration (desktop, card, commit, job, users, symptom) and is not generalised.
 
-### Anomalia A1 — Firefox in 4K salta i fotogrammi già con un utente (25 set, notte)
+### Anomaly A1 — Firefox in 4K skips frames already with one user (25 Sep, night)
 
-`[M]` salita di prova (GNOME 4K, 1 utente, Firefox cliente): 489 consegnati, 433 dipinti, **11,5 %
-saltati ⇒ FAIL** già al primo gradino; Chrome nelle stesse condizioni 3–6 %. Diagnosi (evidenze in
-`/media/REMOTIX/misure/fase16/diagnosi-ff-hw/`): il Firefox cliente decodifica **già in hardware**
-(VA-API, 2,3 ms di motore video a fotogramma, come Chrome); il collo è la strada di disegno della
-pagina: in Firefox 140 `createImageBitmap(VideoFrame)` fa una **rilettura sincrona dalla GPU**
-(~34 ms a 4K, sul thread principale, bug Mozilla 1788206), la coda del decodificatore supera 2 e la
-pagina salta (`saltati_coda`). Con la decodifica software si scende al 12 %, ancora sopra il 10.
-⇒ È un limite del **prodotto con Firefox in 4K** (la pagina), non del server né del carico: la
-campagna lo misura così com'è, e al 4K ogni gradino con un utente Firefox ne risente.
-Cura candidata, da misurare dopo la campagna: disegno con **WebGL2 `texImage2D(VideoFrame)`**
-(via DMA-BUF senza rilettura in ESR 140; stima < 2 ms), banco pronto in
-`banchi/16-stress/16-banco-tela.html` (vie `bmp` e `gl`, criteri: disegno < 3 ms, saltati < 5 %, e
-la foto del vetro col testimone per escludere i blocchi della 2D).
+`[M]` trial climb (GNOME 4K, 1 user, Firefox client): 489 delivered, 433 painted, **11.5 %
+skipped ⇒ FAIL** already at the first step; Chrome under the same conditions 3–6 %. Diagnosis (evidence in
+`/media/REMOTIX/misure/fase16/diagnosi-ff-hw/`): the Firefox client decodes **already in hardware**
+(VA-API, 2.3 ms of video engine per frame, like Chrome); the bottleneck is the page's drawing route:
+in Firefox 140 `createImageBitmap(VideoFrame)` does a **synchronous readback from the GPU**
+(~34 ms at 4K, on the main thread, Mozilla bug 1788206), the decoder queue goes above 2 and the
+page skips (`saltati_coda`). With software decoding it drops to 12 %, still above 10.
+⇒ It is a limit of the **product with Firefox in 4K** (the page), not of the server nor of the load: the
+campaign measures it as it is, and at 4K every step with a Firefox user is affected.
+Cure candidate, to be measured after the campaign: drawing with **WebGL2 `texImage2D(VideoFrame)`**
+(via DMA-BUF without readback in ESR 140; estimate < 2 ms), bench ready in
+`banchi/16-stress/16-banco-tela.html` (routes `bmp` and `gl`, criteria: drawing < 3 ms, skipped < 5 %, and
+the snapshot of the glass with the witness to exclude the 2D's stalls).
 
-### Anomalia A2 — in LXQt il terminale apre `dash`, non la shell dell'utente (27 set)
+### Anomaly A2 — on LXQt the terminal opens `dash`, not the user's shell (27 Sep)
 
-`[M]` Il profilo C su LXQt non lavorava: qterminal apriva **`/bin/sh` (dash)**, senza `.bashrc`
-né storia. Causa (corretta il 28 set, `[M]` su una sessione XFCE viva): fuori da GNOME le sessioni nascono **senza `SHELL`** — l'ambiente si compone da zero e non la mette; su GNOME è **`SHELL=` vuota** di proposito (`src/sessione.c`
-~1682, `src/figlio.c` ~1159 — voluta per la trappola della shell di login di `gnome-session`), e
-qtermwidget senza `SHELL` ripiega su `/bin/sh`; thunar/xfce4-terminal, konsole e gnome-terminal
-leggono la shell da passwd e non se ne accorgono. ⇒ **È un difetto funzionale del prodotto**
-(un utente LXQt che apre il terminale non trova la sua shell), che la fase 15 non ha visto: è
-**D-022**, da curare DOPO la campagna (la trappola è solo di GNOME: fuori da GNOME, `SHELL` dalla
-riga di passwd) con la sua prova nella suite. Per non fermare la campagna su un difetto che non
-tocca la capacità, l'attore apre `qterminal -e bash` — **dichiarato**, ed è l'unico punto in cui
-il banco non usa il prodotto come lo userebbe una persona.
+`[M]` Profile C on LXQt did not work: qterminal opened **`/bin/sh` (dash)**, without `.bashrc`
+or history. Cause (corrected on 28 Sep, `[M]` on a live XFCE session): outside GNOME sessions are born **without `SHELL`** — the environment is composed from zero and does not put it in; on GNOME it is **`SHELL=` empty** on purpose (`src/sessione.c`
+~1682, `src/figlio.c` ~1159 — intended for the trap of `gnome-session`'s login shell), and
+qtermwidget without `SHELL` falls back to `/bin/sh`; thunar/xfce4-terminal, konsole and gnome-terminal
+read the shell from passwd and do not notice. ⇒ **It is a functional defect of the product**
+(an LXQt user who opens the terminal does not find their shell), which phase 15 did not see: it is
+**D-022**, to be cured AFTER the campaign (the trap is GNOME's only: outside GNOME, `SHELL` from the
+passwd line) with its test in the suite. In order not to stop the campaign on a defect that does not
+touch capacity, the actor opens `qterminal -e bash` — **declared**, and it is the only point where
+the bench does not use the product as a person would use it.
 
-### Anomalia A3 — Radeon, 4K: ritardo a picchi e tela larga 3824 senza immagine (27 set)
+### Anomaly A3 — Radeon, 4K: spiky delay and 3824-wide canvas without an image (27 Sep)
 
-`[M]` `amd-4k-gnome` (binario 45d048c8, Radeon RX 6800, radeonsi 25.0.7), **1 utente**:
-- **ritardo**: NOSTRO mediana **9,1–9,3 ms** ma p95 dei p95 **45–50 ms** (max 60 ms), sulla Intel
-  allo stesso livello restava verde fino a 3 utenti ⇒ DEGRADED a 1 utente, due volte. Il lavoro
-  normale è veloce; sono picchi. `[?]` Chi li fa (codifica VCN, la copia dalla scheda, il
-  compositore): da misurare dopo la campagna, prima di giudicare la Radeon in 4K.
-- **tela 3824 × 2064**: il controllo con **Chrome** (finestra 3840×2073, tela 3824) non ha mai
-  avuto un fotogramma: 99 volte «il flusso MOSTRA 3840x2064 … la tela è 3824x2064» e 99 volte «il
-  codec 1 non ha consegnato il fotogramma dalla SCHEDA». Mutter ha dato un monitor largo 3840
-  invece dei 3824 chiesti, e il figlio rifiuta la misura diversa. Con Firefox (altra larghezza)
-  il controllo passava. Sulla Intel lo stesso Chrome nasceva. ⇒ **difetto funzionale del
-  prodotto** sulla Radeon (una tela larga non multipla di 64 resta nera): **D-023**, da curare
-  dopo la campagna con la sua prova nella suite. Evidenze:
+`[M]` `amd-4k-gnome` (binary 45d048c8, Radeon RX 6800, radeonsi 25.0.7), **1 user**:
+- **delay**: OURS median **9.1–9.3 ms** but p95 of the p95s **45–50 ms** (max 60 ms), on the Intel
+  at the same level it stayed green up to 3 users ⇒ DEGRADED at 1 user, twice. The normal work
+  is fast; they are spikes. `[?]` Who makes them (VCN encoding, the copy from the card, the
+  compositor): to be measured after the campaign, before judging the Radeon in 4K.
+- **canvas 3824 × 2064**: the check with **Chrome** (window 3840×2073, canvas 3824) never
+  had a frame: 99 times «il flusso MOSTRA 3840x2064 … la tela è 3824x2064» and 99 times «il
+  codec 1 non ha consegnato il fotogramma dalla SCHEDA». Mutter gave a monitor 3840 wide
+  instead of the 3824 requested, and the child refuses the different size. With Firefox (another width)
+  the check passed. On the Intel the same Chrome was born. ⇒ **functional defect of the
+  product** on the Radeon (a wide canvas not a multiple of 64 stays black): **D-023**, to be cured
+  after the campaign with its test in the suite. Evidence:
   `misure/fase16/amd-4k-gnome/livello-01-ripetizione/journal-err.jsonl`.
-  ⭐ **Causa e cura, 27 set**: non è Mutter, è il **driver** — `hevc_vaapi` su radeonsi dichiara
-  nel flusso il multiplo di 64 senza finestra di conformità (lo fa anche `ffmpeg` da riga di
-  comando: 2544 → 2560), mentre H.264 sulla stessa scheda è giusto; Chrome sceglie HEVC. La
-  cura scrive la cornice nell'SPS con `hevc_metadata` (§17.1). ⇒ **Tutte le sessioni Chrome
-  della campagna Radeon col binario 45d048c8 sono nere per D-023**: quei gradini misurano il
-  difetto, non la capacità, e si rifanno col binario curato.
+  ⭐ **Cause and cure, 27 Sep**: it is not Mutter, it is the **driver** — `hevc_vaapi` on radeonsi declares
+  in the stream the multiple of 64 without a conformance window (`ffmpeg` from the command
+  line does it too: 2544 → 2560), while H.264 on the same card is right; Chrome chooses HEVC. The
+  cure writes the frame into the SPS with `hevc_metadata` (§17.1). ⇒ **All the Chrome sessions
+  of the Radeon campaign with the binary 45d048c8 are black because of D-023**: those steps measure the
+  defect, not the capacity, and are redone with the cured binary.
 
-### Anomalia A4 — il PageDown «perso» su KDE era dell'attore (27 set)
+### Anomaly A4 — the «lost» PageDown on KDE was the actor's (27 Sep)
 
-`[M]` A 1 utente, su tutte le campagne fatte: **KDE 14 PageDown senza effetto su 49** (Intel e
-Radeon), gli altri desktop **0 su 172**; clic, battitura e rotella su KDE: 0 persi. Il tasto
-**arriva** al server (`POSIZIONE_TASTO` premuto e rilasciato nel registro). Tutti i persi
-vengono **dopo una rotella** (o dopo un altro PageDown perso); dopo un clic o una navigazione,
-mai. Causa: `aspetta()` dell'attore tornava alla prima riga buona e perdeva le posizioni dopo,
-quindi dopo una rotella credeva la pagina a metà mentre era in fondo, e sceglieva PageDown su una
-pagina che non poteva scendere. Su KDE la rotella sposta di più (`scroll_discrete`, 144 unità) e
-il fondo si tocca più spesso. ⇒ **Difetto del banco, non del prodotto**; cura in §17.2. Ha fatto
-FAIL `amd-freq-*` e ha pesato su `intel-b-4k-kde` e `amd-4k-kde`. ⚠ Le frecce su/giù che
-l'utente aveva notato a mano restano una domanda separata: questo banco non le prova.
-`[M]` **Verifica, 27 set sera** (`amd-b-4k-kde`, attore curato): 10 PageDown, **0 persi**; il
-gradino da 1 utente cede ora solo per il ritardo (A3, NOSTRO p95 ~41 ms + 9), non più per input.
+`[M]` At 1 user, on all the campaigns done: **KDE 14 PageDown with no effect out of 49** (Intel and
+Radeon), the other desktops **0 out of 172**; clicks, typing and wheel on KDE: 0 lost. The key
+**arrives** at the server (`POSIZIONE_TASTO` pressed and released in the log). All the lost ones
+come **after a wheel** (or after another lost PageDown); after a click or a navigation,
+never. Cause: the actor's `aspetta()` returned at the first good row and lost the positions after it,
+so after a wheel it believed the page to be halfway while it was at the bottom, and chose PageDown on a
+page that could not go down. On KDE the wheel moves more (`scroll_discrete`, 144 units) and
+the bottom is touched more often. ⇒ **Defect of the bench, not of the product**; cure in §17.2. It made
+`amd-freq-*` FAIL and weighed on `intel-b-4k-kde` and `amd-4k-kde`. ⚠ The up/down arrows that
+the user had noticed by hand remain a separate question: this bench does not test them.
+`[M]` **Verification, evening of 27 Sep** (`amd-b-4k-kde`, actor cured): 10 PageDown, **0 lost**; the
+1-user step now gives way only because of the delay (A3, OURS p95 ~41 ms + 9), no longer because of input.
 
-### Anomalia A3, seconda metà — il ritardo della Radeon NON è la frequenza (27 set)
+### Anomaly A3, second half — the Radeon's delay is NOT the frequency (27 Sep)
 
-`[M]` KDE 4K, 1 utente, binario 28a947f5, due gradini per condizione: NOSTRO p95 dei p95
-**39,3 / 38,6 ms** con `power_dpm_force_performance_level=auto`, **37,5 / 42,0 ms** con `high`;
-mediana 8,8 ms in tutti e quattro. ⇒ Ipotesi smentita; la scheda è tornata su `auto`. `[?]`
-Resta da capire da dove vengono i picchi (la codifica ha mediana dei p95 ~20 ms).
+`[M]` KDE 4K, 1 user, binary 28a947f5, two steps per condition: OURS p95 of the p95s
+**39.3 / 38.6 ms** with `power_dpm_force_performance_level=auto`, **37.5 / 42.0 ms** with `high`;
+median 8.8 ms in all four. ⇒ Hypothesis refuted; the card went back to `auto`. `[?]`
+It remains to understand where the spikes come from (encoding has a median of the p95s of ~20 ms).
 
-`[M]` **Dove stanno i picchi** (registro del server, `amd-freq-auto/livello-01`, 3322 fotogrammi):
-la codifica è bimodale — mediana **8,7 ms**, p99 **31 ms** — e i lenti arrivano **a gruppi di 5
-consecutivi da 31 ms**, ogni 12–40 s, su delta piccolissimi (300–1500 byte); la Intel sullo stesso
-lavoro: p99 8,7 ms, max 10,4. 11 gruppi su 13 cominciano entro 1,5 s da un'azione che fa
-ridisegnare la pagina (clic, rotella, tasto). `[?]` **Ipotesi**, da verificare: su radeonsi la
-conversione RGB → NV12 del VPP gira sugli **shader** (coda grafica), in fila dietro al
-ridisegno del desktop della sessione; sulla Intel la fa un blocco dedicato (VEBOX). Se è così,
-la cura candidata è una priorità alta per il contesto VPP, o la conversione dentro il
-codificatore dove la scheda lo permette. I tempi sono presi dalla chiamata di codifica, che
-comprende l'attesa del VPP.
+`[M]` **Where the spikes are** (server log, `amd-freq-auto/livello-01`, 3322 frames):
+encoding is bimodal — median **8.7 ms**, p99 **31 ms** — and the slow ones arrive **in groups of 5
+consecutive at 31 ms**, every 12–40 s, on very small deltas (300–1500 bytes); the Intel on the same
+work: p99 8.7 ms, max 10.4. 11 groups out of 13 begin within 1.5 s of an action that makes
+the page redraw (click, wheel, key). `[?]` **Hypothesis**, to be verified: on radeonsi the
+VPP's RGB → NV12 conversion runs on the **shaders** (graphics queue), queued behind the
+redraw of the session's desktop; on the Intel a dedicated block (VEBOX) does it. If so,
+the cure candidate is a high priority for the VPP context, or the conversion inside the
+encoder where the card allows it. The times are taken from the encoding call, which
+includes the wait for the VPP.
 
-⛔ **Ipotesi SMENTITA, 29 set** (agente a refutare, sorgenti di Mesa 25.0.7 e registri):
-- su radeonsi il VPP **non converte**: dal 16° fotogramma `postproc.c` registra la sorgente RGB e
-  torna (EFC), e la conversione RGB→NV12 la fa il **VCN dentro la codifica** leggendo il buffer
-  lineare del compositore (conversione misurata 0,03 ms, contro 8,6 ms di VEBOX sulla Intel);
-- i gruppi sono **sempre 5 fotogrammi** (64 su 64), ~8,7 + 22 ms, **qualunque la dimensione**
-  (300 B come 480 KB) e **anche distanziati nel tempo** (un gruppo su GNOME dura 1,2 s): conta
-  fotogrammi, non tempo;
-- **per sessione**: in `amd-b-4k-kde` u99 fa 5×31 ms mentre u1, sulla stessa scheda e lo stesso
-  VCN, codifica a 8,5 ms negli stessi istanti; scheda grafica al 2–6 %.
-  ⇒ Niente coda comune, niente priorità da alzare. `[?]` Candidate: l'attesa implicita sul buffer
-  del compositore di quella sessione, il buffer lineare da 30 MB in memoria di sistema (GTT), o
-  lo stato del contesto VCN. **Esperimenti proposti**: (1) misurare prima — attesa esplicita della
-  barriera del DMA-BUF (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`) fuori da «codifica», e codifica divisa
-  in invio/ricezione; (2) spegnere l'EFC (un `vaProcess` in più all'apertura: Mesa lo disattiva
-  per sempre) così il VCN legge una NV12 in VRAM, al costo di ~1–2 ms di copia. Da fare prima di
-  giudicare il 4K della Radeon.
+⛔ **Hypothesis REFUTED, 29 Sep** (agent sent to refute, Mesa 25.0.7 sources and logs):
+- on radeonsi the VPP **does not convert**: from the 16th frame `postproc.c` records the RGB source and
+  returns (EFC), and the RGB→NV12 conversion is done by the **VCN inside the encoding** reading the
+  compositor's linear buffer (conversion measured 0.03 ms, against 8.6 ms of VEBOX on the Intel);
+- the groups are **always 5 frames** (64 out of 64), ~8.7 + 22 ms, **whatever the size**
+  (300 B as 480 KB) and **even spread out in time** (one group on GNOME lasts 1.2 s): it counts
+  frames, not time;
+- **per session**: in `amd-b-4k-kde` u99 does 5×31 ms while u1, on the same card and the same
+  VCN, encodes at 8.5 ms at the same instants; graphics card at 2–6 %.
+  ⇒ No common queue, no priority to raise. `[?]` Candidates: the implicit wait on the buffer
+  of that session's compositor, the 30 MB linear buffer in system memory (GTT), or
+  the state of the VCN context. **Proposed experiments**: (1) measure first — explicit wait on the
+  DMA-BUF fence (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`) outside «codifica», and encoding split
+  into send/receive; (2) turn off the EFC (one extra `vaProcess` at opening: Mesa disables it
+  for good) so the VCN reads an NV12 in VRAM, at the cost of ~1–2 ms of copy. To be done before
+  judging the Radeon's 4K.
 
-`[M]` **I due esperimenti, 29 set mattina** (ramo `a3-esperimenti`, commit `18b6437`, binari
-`3e510160` e `39e3ed86`; KDE 4K Radeon, 1 utente, due gradini ciascuno; evidenze
+`[M]` **The two experiments, 29 Sep morning** (branch `a3-esperimenti`, commit `18b6437`, binaries
+`3e510160` and `39e3ed86`; KDE 4K Radeon, 1 user, two steps each; evidence
 `misure/fase16/a3-misura-kde`, `a3-senza-efc-kde`):
-1. **la barriera del compositore NON c'entra**: aspettata esplicitamente e misurata a parte, vale
-   0,37 ms sui fotogrammi normali e **0,02 ms su quelli lenti**; e i 22 ms in più stanno **tutti
-   dentro `avcodec_send_frame`** (ricezione 0,0 ms): con `async_depth=1` è il VCN che codifica;
-   ancora 100 e 105 fotogrammi lenti per gradino;
-2. **l'EFC NON c'entra**: spento (conversione vera, 0,75 ms mediana), i gruppi da 5 × 31 ms restano
-   identici — 95 e 106 lenti per gradino, codifica p99 31,1–31,3 ms.
-⇒ Il ritardo è **dentro la codifica del VCN** della Radeon, una sessione per volta, 5 fotogrammi
-ogni 12–40 s. Resta da provare: le superfici con il tiling della scheda (invece del lineare), la
-codifica in un contesto nuovo; e, se nessuna delle due, è un comportamento del driver/firmware da
-segnalare a Mesa con la scena riprodotta. Il 4K della Radeon nel riepilogo resta con questa riserva.
+1. **the compositor's fence has NOTHING to do with it**: waited for explicitly and measured separately, it is worth
+   0.37 ms on the normal frames and **0.02 ms on the slow ones**; and the extra 22 ms sit **all
+   inside `avcodec_send_frame`** (receive 0.0 ms): with `async_depth=1` it is the VCN that encodes;
+   still 100 and 105 slow frames per step;
+2. **the EFC has NOTHING to do with it**: turned off (real conversion, 0.75 ms median), the groups of 5 × 31 ms stay
+   identical — 95 and 106 slow per step, encoding p99 31.1–31.3 ms.
+⇒ The delay is **inside the Radeon's VCN encoding**, one session at a time, 5 frames
+every 12–40 s. What remains to be tested: the surfaces with the card's tiling (instead of linear), the
+encoding in a new context; and, if neither, it is a behaviour of the driver/firmware to be
+reported to Mesa with the scene reproduced. The Radeon's 4K in the summary stays with this reservation.
 
-`[M]` **Gradino 1 (29 set 2026): Mesa 26.1.6 non cura.** Scatola KDE con Mesa 26.1.6 da
-`trixie-backports`, stesso binario `4fb3287d`, KDE 4K Radeon 1 utente, due gradini da 6 min
-(`a3-mesa26-kde`): **100 e 102** codifiche > 20 ms (con 25.0.7: 100 e 105), a raffiche di 5, mediana
-31,0 ms. ⇒ Il manuale NON può dire «Radeon: serve Mesa ≥ X»; il prossimo passo per chi vuole aiutare
-il driver è la riproduzione minima senza REMOTIX (dossier §6.2). La scatola è tornata a Mesa 25.0.7
-(ricostruita dall'immagine).
+`[M]` **Step 1 (29 Sep 2026): Mesa 26.1.6 does not cure.** KDE box with Mesa 26.1.6 from
+`trixie-backports`, same binary `4fb3287d`, KDE 4K Radeon 1 user, two steps of 6 min
+(`a3-mesa26-kde`): **100 and 102** encodings > 20 ms (with 25.0.7: 100 and 105), in bursts of 5, median
+31.0 ms. ⇒ The manual can NOT say «Radeon: serve Mesa ≥ X»; the next step for whoever wants to help
+the driver is the minimal reproduction without REMOTIX (dossier §6.2). The box went back to Mesa 25.0.7
+(rebuilt from the image).
 
-✅ **Decisione dell'utente, 29 set 2026**: *«è fuori dal nostro ambito»* — A3 **non si aggira** in
-REMOTIX; si documenta nei minimi particolari per poterlo portare agli sviluppatori del driver:
-**`fasi/16-a3-radeon-vcn.md`** (macchina, catena, misure, ipotesi escluse, riproduzione, bozza del
-rapporto per Mesa). Il 4K della Radeon nel riepilogo è limitato dal driver, e lo si dichiara.
+✅ **The user's decision, 29 Sep 2026**: *«è fuori dal nostro ambito»* — A3 **is not worked around** in
+REMOTIX; it is documented in minute detail so that it can be brought to the driver's developers:
+**`fasi/16-a3-radeon-vcn.md`** (machine, chain, measures, hypotheses excluded, reproduction, draft of the
+report for Mesa). The Radeon's 4K in the summary is limited by the driver, and this is declared.
 
-### Nota A5 — KDE Full HD sulla Radeon: il video dell'utente 4 si ferma 1–3 s (28 set, notte)
+### Note A5 — KDE Full HD on the Radeon: user 4's video stops for 1–3 s (28 Sep, night)
 
-`[M]` `amd-b-fhd-kde`, livelli 12 e 16: l'unico DEGRADED è l'utente 4 (profilo D, video 4K,
-Chrome), «blocco più lungo dell'immagine» 1,1–2,7 s, mentre i fotogrammi **arrivano e si
-dipingono tutti** (6622 consegnati = 6622 dipinti, 0 buchi). Lo stesso utente su GNOME Radeon
-(0,11 s) e su KDE Intel (0,08 s) è verde ⇒ **non è la cura D-023** (attiva anche su GNOME). `[?]`
-Ipotesi: il lettore video dentro la sessione KDE si ferma (l'immagine arriva ma non cambia). Da
-guardare dopo la campagna, prima di chiudere KDE Full HD Radeon a 15.
+`[M]` `amd-b-fhd-kde`, levels 12 and 16: the only DEGRADED is user 4 (profile D, 4K video,
+Chrome), «blocco più lungo dell'immagine» 1.1–2.7 s, while the frames **all arrive and are
+painted** (6622 delivered = 6622 painted, 0 holes). The same user on GNOME Radeon
+(0.11 s) and on KDE Intel (0.08 s) is green ⇒ **it is not the D-023 cure** (active on GNOME too). `[?]`
+Hypothesis: the video player inside the KDE session stops (the image arrives but does not change). To
+be looked at after the campaign, before closing KDE Full HD Radeon at 15.
 
-⭐ **Chiusa, 29 set (agente a refutare, registri dei livelli)**: è il **riavvio del file del video**.
-Il lettore gira il file da ~634 s con `loop`; ogni blocco dell'utente 4 cade a t≈630–634 o t≈0–6 s
-del lettore, ogni ~10,5 min, e il lettore stesso conta 60–90 fotogrammi persi a ogni giro. Lo
-stesso succede su GNOME Radeon (2,8–4,4 s) e KDE Intel (1,5 s): KDE Radeon era DEGRADED solo
-perché le sue finestre di giudizio cadevano sul giro. Lato nostro, nel buco: la cattura gira
-(«attese a vuoto» +123/s), i fotogrammi consegnati restano fermi (il compositore non dà danno),
-nessuna chiave richiesta, rete pulita; i buchi al server coincidono al millisecondo con quelli
-dell'attore (2,685 contro 2,68 s). ⇒ **Non è REMOTIX**, è il banco. Cura del banco (non fatta):
-un file più lungo del livello (`ffmpeg -stream_loop`, senza ricodifica), o le righe attorno al
-giro dichiarate ed escluse. Sul riepilogo pesa poco: tocca il numero severo di KDE Full HD Radeon.
-⭐ **Cura del banco fatta, 29 set**: `video/bbb_sunflower_2160p_30fps_x4.mp4`, lo stesso file
-concatenato 4 volte senza ricodifica (`ffmpeg -stream_loop 3 -c copy`, 2538 s = 42 min, sha256 in
-`video/SHA256SUMS`), più lungo di qualunque livello; `16-coda.sh` lo usa di serie. `[M]` provato
-il 29 set (`a5-video-lungo-kde`, KDE Full HD Radeon, 4 utenti, 12 min: col file vecchio il giro
-sarebbe caduto a 10,5 min, dentro la finestra 10–12): utente 4 **GREEN, blocco 0,08 s**, livello
-tutto GREEN (5 su 5).
+⭐ **Closed, 29 Sep (agent sent to refute, the levels' logs)**: it is the **restart of the video file**.
+The player runs the ~634 s file with `loop`; every stall of user 4 falls at t≈630–634 or t≈0–6 s
+of the player, every ~10.5 min, and the player itself counts 60–90 frames lost at each lap. The
+same happens on GNOME Radeon (2.8–4.4 s) and KDE Intel (1.5 s): KDE Radeon was DEGRADED only
+because its judging windows fell on the lap. On our side, in the hole: the capture runs
+(«attese a vuoto» +123/s), the frames delivered stay still (the compositor gives no damage),
+no key requested, clean network; the holes at the server coincide to the millisecond with those
+of the actor (2.685 against 2.68 s). ⇒ **It is not REMOTIX**, it is the bench. Cure of the bench (not done):
+a file longer than the level (`ffmpeg -stream_loop`, without re-encoding), or the rows around the
+lap declared and excluded. On the summary it weighs little: it touches the strict number of KDE Full HD Radeon.
+⭐ **Cure of the bench done, 29 Sep**: `video/bbb_sunflower_2160p_30fps_x4.mp4`, the same file
+concatenated 4 times without re-encoding (`ffmpeg -stream_loop 3 -c copy`, 2538 s = 42 min, sha256 in
+`video/SHA256SUMS`), longer than any level; `16-coda.sh` uses it by default. `[M]` tested
+on 29 Sep (`a5-video-lungo-kde`, KDE Full HD Radeon, 4 users, 12 min: with the old file the lap
+would have fallen at 10.5 min, inside the 10–12 window): user 4 **GREEN, stall 0.08 s**, level
+all GREEN (5 out of 5).
 
-### Le frecce su/giù (segnalate dall'utente a mano) — studio del 29 set
+### The up/down arrows (reported by the user by hand) — study of 29 Sep
 
-Lettura del codice (agente), **nessuna prova ancora**. Le frecce passano da `POSIZIONE_TASTO`, che
-tiene uno stato in pagina e nel server (le lettere no): un difetto di stato colpisce le frecce e
-risparmia la battitura. Meccanismi in ordine: (1) in pagina un rilascio perso lascia il codice in
-`cl_tasti_premuti` e la pressione dopo si scarta in silenzio (`cl_su_keyup` torna subito quando
-`cl_nel_modulo`); (2) su Mutter/KWin la tastiera di libei in pausa o ricambiata
-(`tastiera_attiva` falso) scarta la pressione; (3) fra padre e figlio il socket non bloccante
-scarta un input su `EAGAIN` quando il figlio è in ritardo; (4) le frecce del tastierino con
-BlocNum spento arrivano come KP_8/KP_2; (5) tasti scartati come composizione IME. `[M]` nei
-registri di tutta la campagna: **0** input non partiti verso il figlio, **1** ricambio di
-tastiera (u2).
-✅ **Chiuso il 29 set 2026, senza prova**: la sola segnalazione (26 set, 16:39) l'utente l'aveva
-ritirata un minuto dopo (*«ignora questo messaggio, è un errore»*) ed era entrata nei punti aperti per
-sbaglio; nessun difetto osservato, C23 (Maiusc+frecce) verde. Parola dell'utente: *«ok, levale»*. Se
-ricapita, si riapre con desktop e programma, e la prova mirata di 200 frecce è già descritta qui sopra.
+Reading of the code (agent), **no test yet**. The arrows go through `POSIZIONE_TASTO`, which
+keeps a state in the page and in the server (letters do not): a state defect hits the arrows and
+spares typing. Mechanisms in order: (1) in the page a lost release leaves the code in
+`cl_tasti_premuti` and the next press is silently discarded (`cl_su_keyup` returns at once when
+`cl_nel_modulo`); (2) on Mutter/KWin the libei keyboard paused or exchanged
+(`tastiera_attiva` false) discards the press; (3) between parent and child the non-blocking socket
+discards an input on `EAGAIN` when the child is late; (4) the keypad arrows with
+NumLock off arrive as KP_8/KP_2; (5) keys discarded as IME composition. `[M]` in the
+logs of the whole campaign: **0** inputs not sent on to the child, **1** keyboard
+exchange (u2).
+✅ **Closed on 29 Sep 2026, without a test**: the only report (26 Sep, 16:39) had been withdrawn by the user
+one minute later (*«ignora questo messaggio, è un errore»*) and had entered the open points by
+mistake; no defect observed, C23 (Shift+arrows) green. The user's words: *«ok, levale»*. If
+it happens again, it is reopened with desktop and program, and the targeted test of 200 arrows is already described above.
 
-## 15. Limiti dichiarati
+## 15. Declared limits
 
-- **il server fa anche da cliente**: il risultato è un limite inferiore (§2);
-- **la rete non è misurata**: browser e server sulla stessa macchina. Come REMOTIX regge una rete
-  che perde pacchetti (`[M]` 0,6 % sul Wi-Fi a 2,4 GHz, fase 15) è una domanda a parte, da
-  aggiungere dopo (strozzatura dal tablet, `wondershaper-sul-tablet`);
-- **YouTube** è un servizio esterno: se cambia, si passa al file locale dichiarato (§5);
-- la **prova oltre 16** è sovraccarico, fuori dalla certificazione.
+- **the server also acts as the client**: the result is a lower bound (§2);
+- **the network is not measured**: browser and server on the same machine. How REMOTIX bears a network
+  that loses packets (`[M]` 0.6 % on the 2.4 GHz Wi-Fi, phase 15) is a separate question, to be
+  added later (throttling from the tablet, `wondershaper-sul-tablet`);
+- **YouTube** is an external service: if it changes, we switch to the declared local file (§5);
+- the **test beyond 16** is overload, outside the certification.
 
-## 16. Criterio di successo dei 16 utenti
+## 16. Success criterion for the 16 users
 
-Per **una** configurazione, il requisito è verificato quando: 16 sessioni vere sono attive
-insieme · ognuna col suo lavoro · chi c'era continua · il controllo dei 16 è completo e **GREEN**
-secondo §9 · le evidenze sono raccolte · il risultato è legato a un commit · la salita è
-riproducibile o documentata abbastanza da rifarla.
+For **one** configuration, the requirement is verified when: 16 real sessions are active
+together · each with its own job · whoever was there continues · the check of the 16 is complete and **GREEN**
+according to §9 · the evidence is collected · the result is tied to a commit · the climb is
+reproducible or documented well enough to redo it.
 
-⚠ **Gli orari**: i registri del server, le cartelle delle misure e le righe `[hh:mm:ss]` delle salite
-sono in **UTC** (il server non ha un fuso impostato); l'ora italiana (CEST, settembre) è **UTC + 2**.
+⚠ **The times**: the server's logs, the measures' folders and the `[hh:mm:ss]` rows of the climbs
+are in **UTC** (the server has no time zone set); Italian time (CEST, September) is **UTC + 2**.
 
-## 17. Le modifiche della fase 16 — il registro per il manuale tecnico
+## 17. The changes of phase 16 — the log for the technical manual
 
-*Richiesta dell'utente, 26 set 2026: ogni modifica si annota qui, perché a fine lavori se ne scrive
-il **manuale tecnico** di REMOTIX. Una riga per modifica: che cosa, perché, la misura, il commit, e se
-è **installata** (nel binario o nella pagina delle scatole) o no. Le decisioni dell'utente stanno in
+*The user's request, 26 Sep 2026: every change is noted here, because at the end of the work REMOTIX's
+**technical manual** is written from it. One row per change: what, why, the measure, the commit, and whether
+it is **installed** (in the binary or in the boxes' page) or not. The user's decisions sit in
 `DECISIONI.md` §9.*
 
-### 17.1 Il prodotto (`src/`)
+### 17.1 The product (`src/`)
 
-| commit | che cosa | perché | misura | installata |
+| commit | what | why | measure | installed |
 |---|---|---|---|---|
-| `62753e7` | **registro nel journal** (`--journal`): protocollo nativo del journal, una `sendmsg` per riga, non bloccante; campi `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; gravità 3/4/6 dal segno ⛔/⚠ in testa al corpo; la parlantina NON va al journal; il figlio lo riceve dal padre (`argv[16]`) | §12, DECISIONI §9.1 | 33 righe su 33 con i campi; stderr identico senza l'opzione | sì, da `bdde6bb1` |
-| `62753e7` | **l'input non si scrive**: `rcp.c` (e il gemello `banchi/rcp/rcp.c`), `tastiera.c`, `input.c` — niente `U+XXXX` né codici di tasto, salvo modificatori e pulsanti | §12, DECISIONI §9.2 | audit di tutte le chiamate `registro_*` | sì |
-| `62753e7` | `Makefile`: ogni oggetto dipende da `registro.h` | `registro.h` è diventato di macro (`__FILE__`/`__LINE__`) e una costruzione a metà non collegava | — | — |
-| `ebc9dcd` | **riga «NOSTRO nel secondo»** del figlio: p95, massimo e mediana di *copia → byte fuori* sui soli fotogrammi di quel secondo | la riga TRATTO usa un anello di 512 fotogrammi (un picco resta dentro 8–17 s) e comincia dal `pts` del compositore; §3.2 chiede il **pezzo nostro** | diagnosi del giro in 4K: nostro ~19/24 ms su 45/54 (§9, «Quale ritardo classifica») | sì, da `4cba76f6` |
-| `97e94fe` | **entrypoint del codificatore scelto sulla capacità dichiarata** dal driver: `EncSliceLP` se c'è (Intel, identico), se no `EncSlice` piena (radeonsi), dichiarato; il software solo se non c'è nessuno dei due | la Radeon non ha la bassa potenza ⇒ il prodotto codificava in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena», NOSTRO p95 17–29 ms | sì, `3fe94e8b` (binario della campagna Intel) |
-| `86598d6` | **primo fotogramma della scheda giudicato a campione** (griglia 64×64, tetto 250 ms) invece di leggere tutta la lastra DMA-BUF | su una scheda discreta la lastra è in VRAM: leggerla dalla CPU costava **63,7 s** e la sessione non nasceva | `[M]` 26 set, Radeon, XFCE e GNOME 4K: **5,7–6,2 ms** (prima 63,7 s), codifica `h264_vaapi` in HARDWARE su radeonsi, sessioni GREEN | sì, `45d048c8` |
-| `ea0f82a` | **strada di disegno WebGL2** nella pagina (`?tela=gl`): `texImage2D(VideoFrame)` sincrono, `close()` subito, quad a schermo intero, stessi contatori | anomalia A1: in Firefox `createImageBitmap(VideoFrame)` rilegge dalla GPU (~34 ms a 4K) ⇒ 11–50 % saltati con 1 utente | da misurare; poi sguardo dell'utente contro i quadrati (DECISIONI §9.4) | **no** (candidata) |
+| `62753e7` | **log in the journal** (`--journal`): the journal's native protocol, one `sendmsg` per line, non-blocking; fields `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; severity 3/4/6 from the ⛔/⚠ mark at the head of the body; the chatter does NOT go to the journal; the child receives it from the parent (`argv[16]`) | §12, DECISIONI §9.1 | 33 lines out of 33 with the fields; stderr identical without the option | yes, from `bdde6bb1` |
+| `62753e7` | **input is not written**: `rcp.c` (and the twin `banchi/rcp/rcp.c`), `tastiera.c`, `input.c` — no `U+XXXX` nor key codes, except modifiers and buttons | §12, DECISIONI §9.2 | audit of all the `registro_*` calls | yes |
+| `62753e7` | `Makefile`: every object depends on `registro.h` | `registro.h` became macros (`__FILE__`/`__LINE__`) and a half build did not link | — | — |
+| `ebc9dcd` | **«NOSTRO nel secondo» line** of the child: p95, maximum and median of *copy → bytes out* over only the frames of that second | the TRATTO line uses a ring of 512 frames (a spike stays inside for 8–17 s) and starts from the compositor's `pts`; §3.2 asks for **our piece** | diagnosis of the round trip in 4K: ours ~19/24 ms out of 45/54 (§9, «Quale ritardo classifica») | yes, from `4cba76f6` |
+| `97e94fe` | **encoder entrypoint chosen on the capability declared** by the driver: `EncSliceLP` if present (Intel, identical), otherwise full `EncSlice` (radeonsi), declared; software only if neither is present | the Radeon has no low power ⇒ the product encoded in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena», OURS p95 17–29 ms | yes, `3fe94e8b` (binary of the Intel campaign) |
+| `86598d6` | **first frame from the card judged by sampling** (64×64 grid, cap 250 ms) instead of reading the whole DMA-BUF slab | on a discrete card the slab is in VRAM: reading it from the CPU cost **63.7 s** and the session was not born | `[M]` 26 Sep, Radeon, XFCE and GNOME 4K: **5.7–6.2 ms** (before 63.7 s), `h264_vaapi` encoding in HARDWARE on radeonsi, sessions GREEN | yes, `45d048c8` |
+| `ea0f82a` | **WebGL2 drawing route** in the page (`?tela=gl`): synchronous `texImage2D(VideoFrame)`, `close()` at once, full-screen quad, same counters | anomaly A1: in Firefox `createImageBitmap(VideoFrame)` reads back from the GPU (~34 ms at 4K) ⇒ 11–50 % skipped with 1 user | to be measured; then the user's look against the squares (DECISIONI §9.4) | **no** (candidate) |
 
-| (questo commit) | **la regola del salto pesata col costo del disegno**: si salta il disegno se `coda > 2` **e** `coda × costo_disegno() > 16 ms` (costo = mediana della parte sincrona del richiamo, + il vetro sulla strada asincrona); più i contatori `cq`/`cu` (coda alla consegna e all'uscita), `dec8`, `eta`, `ric` nel diario | la regola «coda > 2» (14 ago 2026) salvava i 34 ms del disegno 2D; con WebGL (0,26 ms) non salva niente e buttava il 12 % | Firefox di serie: salta come prima (15 = i fotogrammi a coda ≥ 3), ritardo invariato (36,8 ms); Chrome e WebGL: non scatta; da validare su KDE 4K con `?tela=gl` | **no** |
+| (questo commit) | **the skip rule weighted with the drawing cost**: the drawing is skipped if `coda > 2` **and** `coda × costo_disegno() > 16 ms` (cost = median of the synchronous part of the callback, + the glass on the asynchronous route); plus the counters `cq`/`cu` (queue at delivery and at exit), `dec8`, `eta`, `ric` in the diary | the «coda > 2» rule (14 Aug 2026) saved the 34 ms of 2D drawing; with WebGL (0.26 ms) it saves nothing and threw away 12 % | default Firefox: skips as before (15 = the frames at queue ≥ 3), delay unchanged (36.8 ms); Chrome and WebGL: it does not trigger; to be validated on KDE 4K with `?tela=gl` | **no** |
 
-| (questo commit) | **WebGL2 diventa la strada di disegno di serie** per tutti i browser; `?tela=bmp` (o `2d`, `desincronizzata`) rimette le strade di prima per confronto; senza WebGL2 la pagina ripiega su `bitmaprenderer` e lo scrive | anomalia A1; DECISIONI §9.4 | giudizio dell'utente allo schermo (KDE, Firefox, video 4K e acquario WebGL a 30 000 pesci): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — niente blocchi 64×192 | dopo la suite corta |
+| (questo commit) | **WebGL2 becomes the default drawing route** for all browsers; `?tela=bmp` (or `2d`, `desincronizzata`) puts back the earlier routes for comparison; without WebGL2 the page falls back to `bitmaprenderer` and writes so | anomaly A1; DECISIONI §9.4 | the user's judgement at the screen (KDE, Firefox, 4K video and WebGL aquarium with 30 000 fish): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — no 64×192 blocks | after the short suite |
 
-| (questo commit) | **D-023, la cornice che il driver non scrive**: se il primo SPS di un contesto dichiara una misura più grande della tela di meno di un blocco (64), `codificatore.c` fa passare i pacchetti con l'SPS (le chiavi) da `hevc_metadata`/`h264_metadata` con `crop_right`/`crop_bottom`, e lo dichiara (riga «⭐ D-023»); qualunque altra differenza resta rifiutata da `forma_va_bene()` | anomalia A3: sulla Radeon (radeonsi 25.0.7) `hevc_vaapi` dichiara il multiplo di 64 senza finestra di conformità (anche da `ffmpeg` a riga di comando) ⇒ ogni sessione HEVC — Chrome — a una tela non multipla di 64 restava **nera** | `banchi/16-stress/16-d023-cornice.sh`, 4 tele vere × 2 codec: Radeon **8 PASS** (PSNR 47 dB, l'immagine è 1:1), senza la cura **HEVC 4 FAIL su 4**; Intel 8 PASS, la cura non scatta mai | **sì**, binario **`28a947f5`** (da `678a2da`), 27 set: suite corta sulla Radeon, 4 desktop × 2 browser, **352 PASS su 352**; nei registri delle scatole la cura è scattata 62 volte, 0 flussi rifiutati |
+| (questo commit) | **D-023, the frame the driver does not write**: if the first SPS of a context declares a size larger than the canvas by less than one block (64), `codificatore.c` passes the packets with the SPS (the keys) through `hevc_metadata`/`h264_metadata` with `crop_right`/`crop_bottom`, and declares it (line «⭐ D-023»); any other difference stays refused by `forma_va_bene()` | anomaly A3: on the Radeon (radeonsi 25.0.7) `hevc_vaapi` declares the multiple of 64 without a conformance window (from command-line `ffmpeg` too) ⇒ every HEVC session — Chrome — at a canvas not a multiple of 64 stayed **black** | `banchi/16-stress/16-d023-cornice.sh`, 4 real canvases × 2 codecs: Radeon **8 PASS** (PSNR 47 dB, the image is 1:1), without the cure **HEVC 4 FAIL out of 4**; Intel 8 PASS, the cure never triggers | **yes**, binary **`28a947f5`** (from `678a2da`), 27 Sep: short suite on the Radeon, 4 desktops × 2 browsers, **352 PASS out of 352**; in the boxes' logs the cure triggered 62 times, 0 streams refused |
 
-| (questo commit) | **D-022, la `SHELL` fuori da GNOME**: `sessione.c`, in coda all'ambiente della sessione, `SHELL` dalla riga di passwd dell'utente per KDE, XFCE e LXQt (GNOME resta vuota: trappola di `gnome-session`); senza shell in passwd lo dice | anomalia A2: `[M]` in una sessione XFCE viva `labwc` e `xfce4-panel` senza `SHELL`, `systemd --user` con `/bin/bash`; qterminal ripiegava su `/bin/sh` | `banchi/15-suite/15-f032-la-shell-dell-utente.py` (F-032): sui 4 desktop la `SHELL` della sessione (vuota su GNOME), e su LXQt `qterminal` lanciato con l'ambiente del pannello apre `bash`: **4 PASS**, guasto rosso sui 4; col binario di prima (28a947f5) LXQt **FAIL** («SHELL della sessione None») | **sì**, binario **`4fb3287d`**, 29 set (dopo la campagna); suite corta con F-032 in parallelo sui 4 desktop: 328 PASS, 4 FAIL, 36 BLOCKED — le 16 combinazioni rosse **rifatte una alla volta: 16 su 16 PASS**. I rossi erano quasi tutti «utente o parola d'ordine non corretti» con `pam_unix: user unknown` per un inquilino creato 7 s prima (`[M]` gnome 04:40:04 creato, 04:40:11 sconosciuto) e solo col giro in parallelo: `[?]` difetto del banco o dell'ambiente, da capire; il 26 set lo stesso giro era 352/352 |
-**Binario e pagina della campagna nuova** (da `e4e05dc`): binario **`45d048c8`**, pagina **`fb9a18f3`** —
-suite corta estesa (accesso, input, immagine, appunti, «Esci», orologi, più tela all'attacco, video,
-stacco e riattacco, riattacco a misura diversa; 4 desktop × 2 browser): **352 PASS su 352**, 26 set.
+| (questo commit) | **D-022, the `SHELL` outside GNOME**: `sessione.c`, at the end of the session's environment, `SHELL` from the user's passwd line for KDE, XFCE and LXQt (GNOME stays empty: `gnome-session`'s trap); without a shell in passwd it says so | anomaly A2: `[M]` in a live XFCE session `labwc` and `xfce4-panel` without `SHELL`, `systemd --user` with `/bin/bash`; qterminal fell back to `/bin/sh` | `banchi/15-suite/15-f032-la-shell-dell-utente.py` (F-032): on the 4 desktops the session's `SHELL` (empty on GNOME), and on LXQt `qterminal` launched with the panel's environment opens `bash`: **4 PASS**, fault red on the 4; with the earlier binary (28a947f5) LXQt **FAIL** («SHELL della sessione None») | **yes**, binary **`4fb3287d`**, 29 Sep (after the campaign); short suite with F-032 in parallel on the 4 desktops: 328 PASS, 4 FAIL, 36 BLOCKED — the 16 red combinations **redone one at a time: 16 out of 16 PASS**. The reds were almost all «utente o parola d'ordine non corretti» with `pam_unix: user unknown` for a tenant created 7 s earlier (`[M]` gnome 04:40:04 created, 04:40:11 unknown) and only with the round in parallel: `[?]` defect of the bench or of the environment, to be understood; on 26 Sep the same round was 352/352 |
+**Binary and page of the new campaign** (from `e4e05dc`): binary **`45d048c8`**, page **`fb9a18f3`** —
+extended short suite (login, input, image, clipboard, «Esci», clocks, plus canvas at attach, video,
+detach and re-attach, re-attach at a different size; 4 desktops × 2 browsers): **352 PASS out of 352**, 26 Sep.
 
-### 17.2 L'impianto di prova (banchi e scatole)
+### 17.2 The test setup (benches and boxes)
 
-| commit | che cosa | perché |
+| commit | what | why |
 |---|---|---|
-| `8e7f9ec` | `11-accendi.sh server`: `--journal` e il tetto da `REMOTIX_TETTO_SESSIONI` | §12 e §2 (tetto a 17) |
-| `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, una scheda sola dentro la scatola | campagna Radeon (§11) |
-| `8f7bbd8` | i nodi della scheda entrano **anche col nome vero** quando non sono `card0`/`renderD128` | `[M]` libdrm ricostruisce il nome dal numero del nodo: senza quel nodo il compositore non annunciava il DMA-BUF e la VA-API non si apriva (Radeon: 205 ms → 17–29 ms) |
-| vari | `banchi/16-stress/`: attore, risorse, classifica, salita, controllo corto, compositori, coda, rapporto, banco della tela | l'impianto di §4–§10; corretto dopo una revisione avversaria (6 difetti) e dopo le prime salite vere (§14) |
-| (questo commit) | lavoro C su LXQt: `qterminal -e bash`, e l'attore controlla la shell sotto il terminale | anomalia A2 (D-022, difetto del prodotto: `SHELL=` vuota ⇒ dash) — aggiramento dichiarato del banco, la cura del prodotto è dopo la campagna |
-| (questo commit) | lavoro B su LXQt: la cancellazione è Maiusc+Canc e «y» (pcmanfm-qt: il Canc del menu non scattava; «No» è il bottone predefinito del dialogo), foto al fallimento | `[M]` 27 set: «input perso: cancella» dava FAIL a LXQt già a 2 utenti — difetto del banco, non del prodotto; le salite LXQt 4K e 3K si rifanno |
-| `07-b46` | `REMOTIX_FF_PREFS`: preferenze in più nel profilo Firefox dei banchi | per ripetere una misura con la decodifica software |
-| (questo commit) | `16-lavori.py`, attore A: `aspetta()` legge TUTTO il gruppo di righe del quaderno prima di tornare, e prima di scegliere rotella o tasto l'attore rilegge la posizione | anomalia A4: il PageDown «perso» su KDE era dell'attore (posizione vecchia, pagina già in fondo). In vigore sul server dalle **13:58 UTC del 27 set**, cioè dal secondo utente di `amd-b-4k-gnome` in poi (l'utente 01 di quel gradino è partito alle 13:55 col codice di prima) |
-| (questo commit) | **la serratura delle scatole**: `/media/REMOTIX/rete11/.scatole.lock` (flock) presa da `15-giro.py`, `16-salita.py` e `11-gancio.sh` (non dalle «carte»); chi la tiene lo scrive dentro; i figli ereditano `REMOTIX_SCATOLE_TENUTE`; `sgombera_inquilini` non fa niente senza quella variabile. ⚠ Non in `/run/lock`: cartella sticky + `fs.protected_regular`, root non riapre il file di nicfio | chiude il «user unknown» del 29 set (vedi D-022 in §17.1): ogni maglia del gancio sgombera TUTTI gli inquilini `c<n>u<n>`, e un push durante un giro della suite cancellava gli inquilini appena nati ⇒ accessi falliti ⇒ ban di 192.168.0.2 (12 h) | giro corto `16-corta-serratura-2` (4 desktop × 2 browser, 60 min) con un push «carte» a metà: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 sgomberi; gancio «rete» con la serratura tenuta: **rifiutato** (rc 1, «le tiene gia' un altro banco»); a scatole libere parte (rc 0, nessun rosso) | copiata sul server, 29 set |
+| `8e7f9ec` | `11-accendi.sh server`: `--journal` and the cap from `REMOTIX_TETTO_SESSIONI` | §12 and §2 (cap at 17) |
+| `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, a single card inside the box | Radeon campaign (§11) |
+| `8f7bbd8` | the card's nodes enter **with their real name too** when they are not `card0`/`renderD128` | `[M]` libdrm rebuilds the name from the node number: without that node the compositor did not announce DMA-BUF and VA-API would not open (Radeon: 205 ms → 17–29 ms) |
+| various | `banchi/16-stress/`: actor, resources, classification, climb, short check, compositors, queue, report, canvas bench | the setup of §4–§10; corrected after an adversarial review (6 defects) and after the first real climbs (§14) |
+| (questo commit) | job C on LXQt: `qterminal -e bash`, and the actor checks the shell under the terminal | anomaly A2 (D-022, product defect: `SHELL=` empty ⇒ dash) — declared workaround of the bench, the product's cure is after the campaign |
+| (questo commit) | job B on LXQt: deletion is Shift+Del and «y» (pcmanfm-qt: the menu's Del did not trigger; «No» is the dialog's default button), snapshot on failure | `[M]` 27 Sep: «input perso: cancella» gave FAIL to LXQt already at 2 users — defect of the bench, not of the product; the LXQt 4K and 3K climbs are redone |
+| `07-b46` | `REMOTIX_FF_PREFS`: extra preferences in the benches' Firefox profile | to repeat a measure with software decoding |
+| (questo commit) | `16-lavori.py`, actor A: `aspetta()` reads the WHOLE group of rows of the notebook before returning, and before choosing wheel or key the actor rereads the position | anomaly A4: the «lost» PageDown on KDE was the actor's (old position, page already at the bottom). In force on the server from **13:58 UTC on 27 Sep**, that is from the second user of `amd-b-4k-gnome` onwards (user 01 of that step started at 13:55 with the earlier code) |
+| (questo commit) | **the boxes' lock**: `/media/REMOTIX/rete11/.scatole.lock` (flock) taken by `15-giro.py`, `16-salita.py` and `11-gancio.sh` (not by the «carte»); whoever holds it writes so inside; the children inherit `REMOTIX_SCATOLE_TENUTE`; `sgombera_inquilini` does nothing without that variable. ⚠ Not in `/run/lock`: sticky folder + `fs.protected_regular`, root does not reopen nicfio's file | it closes the «user unknown» of 29 Sep (see D-022 in §17.1): every link of the hook cleared out ALL the `c<n>u<n>` tenants, and a push during a suite round deleted the tenants just born ⇒ failed logins ⇒ ban of 192.168.0.2 (12 h) | short round `16-corta-serratura-2` (4 desktops × 2 browsers, 60 min) with a «carte» push halfway: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 clear-outs; «rete» hook with the lock held: **refused** (rc 1, «le tiene gia' un altro banco»); with the boxes free it starts (rc 0, no red) | copied to the server, 29 Sep |
 
-### 17.3 L'ambiente del server (volatile: rootfs in RAM)
+### 17.3 The server's environment (volatile: rootfs in RAM)
 
-Alla ricetta di rifacimento dopo un riavvio si aggiungono: `labwc`, `wlr-randr`, Chrome da
-`/media/REMOTIX/cache/chrome.deb`, `~/SERVER.ssh` (0600) sul server, `loginctl enable-linger nicfio`
-(la coda notturna vive senza sessioni ssh), e l'unità della coda con `TimeoutStopSec=1200`,
+To the rebuilding recipe after a reboot are added: `labwc`, `wlr-randr`, Chrome from
+`/media/REMOTIX/cache/chrome.deb`, `~/SERVER.ssh` (0600) on the server, `loginctl enable-linger nicfio`
+(the night queue lives without ssh sessions), and the queue's unit with `TimeoutStopSec=1200`,
 `KillMode=mixed`, `OOMPolicy=continue`.
 
-⛔ **Il blocco del 28 set, 08:42 (06:42 UTC)**: `amd-b-3k-xfce`, gradino da 16 utenti (17 sessioni
-e 17 browser-cliente sulla stessa macchina): la RAM è finita, il killer del nucleo uccideva Chrome
-a ripetizione fra stalli RCU, e il sistema è rimasto **incastrato** — ping sì, ssh e REMOTIX no —
-finché l'utente lo ha riavviato. Evidenze: foto della console (utente), l'ultima riga della salita
-«controllo corto: BLOCKED» alle 06:41:49 UTC. ⇒ Due cambi d'ambiente, dal 28 set 09:05:
-- **swap da 16 a 32 GB** (l'utente, sul disco): non cambia i limiti misurati, che cadono dove la
-  RAM finisce; allunga il tempo prima del killer;
-- **`earlyoom`** (`/etc/default/earlyoom`: `-m 5 -s 100 -r 60`, preferisce i processi di Chrome e
-  Firefox, evita `remotix`, `systemd`, `sshd`, `podman`, `conmon`, i compositori, `python3`): con
-  la RAM disponibile sotto il 5 % chiude un browser **prima** che la macchina si incastri. Un
-  browser chiuso è un FAIL di quel livello, com'era prima; la differenza è che la notte continua.
-  ⚠ Va nella ricetta dopo ogni riavvio (il rootfs è in RAM).
+⛔ **The lock-up of 28 Sep, 08:42 (06:42 UTC)**: `amd-b-3k-xfce`, step of 16 users (17 sessions
+and 17 client browsers on the same machine): the RAM ran out, the kernel's killer killed Chrome
+over and over amid RCU stalls, and the system stayed **stuck** — ping yes, ssh and REMOTIX no —
+until the user rebooted it. Evidence: photo of the console (the user), the climb's last line
+«controllo corto: BLOCKED» at 06:41:49 UTC. ⇒ Two changes to the environment, from 28 Sep 09:05:
+- **swap from 16 to 32 GB** (the user, on the disk): it does not change the measured limits, which fall where the
+  RAM runs out; it lengthens the time before the killer;
+- **`earlyoom`** (`/etc/default/earlyoom`: `-m 5 -s 100 -r 60`, prefers Chrome and
+  Firefox processes, avoids `remotix`, `systemd`, `sshd`, `podman`, `conmon`, the compositors, `python3`): with
+  available RAM below 5 % it closes a browser **before** the machine gets stuck. A
+  closed browser is a FAIL of that level, as it was before; the difference is that the night goes on.
+  ⚠ It goes into the recipe after every reboot (the rootfs is in RAM).
 
