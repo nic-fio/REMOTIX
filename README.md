@@ -1336,8 +1336,8 @@ the folders contain**. Completed on 11 Aug 2026, finding **R12C.1**.*
 
 ## The conventions
 
-**We write in Italian**, documents and comments. Names in the code too: `palco`, `cattura`,
-`sentinella`, `appunti`.
+**Everything is in English** — code, documents, page, commits (`DECISIONI.md` §10.38, 10 Oct 2026). Some names
+in the code are still Italian (`palco`, `cattura`, `sentinella`, `appunti`) until the mechanical rename.
 
 **The marks** say how much a statement is worth, and must always be put:
 
