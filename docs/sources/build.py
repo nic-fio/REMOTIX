@@ -366,7 +366,7 @@ def file_map(groups, cap):
     mancano = sorted(set(tutti) - set(citati))
     in_piu = sorted(set(citati) - set(tutti))
     if mancano or in_piu:
-        raise SystemExit("mappa dei file del manuale da aggiornare (technical/ch17_map.py):"
+        raise SystemExit("mappa dei file del manuale da aggiornare (technical/ch22_map.py):"
                          + "".join(f"\n  manca {f}" for f in mancano)
                          + "".join(f"\n  non esiste più {f}" for f in in_piu))
     out = []

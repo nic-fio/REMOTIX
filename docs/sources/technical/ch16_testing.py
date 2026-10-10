@@ -10,14 +10,14 @@ LAYERS = fig(
     + box(670, 70, 190, 48, "C10 C12 C13 C15 C16", "the net that needs git", "navy")
     + arrow(450, 134, 450, 160)
     + zone(20, 162, 860, 92, "On the test machine, in containers with the real graphics card")
-    + box(40, 192, 250, 48, "Safety net (11-scatole)", "24 meshes, 4 desktop boxes", "blue")
-    + box(325, 192, 250, 48, "Functional suite (15-suite)", "4 desktops x 2 real browsers", "blue")
-    + box(610, 192, 250, 48, "Stress and capacity (16-stress)", "1 to 16 users per box", "blue")
+    + box(40, 192, 250, 48, "Safety net (banchi/11-scatole)", "24 meshes, 4 desktop boxes", "blue")
+    + box(325, 192, 250, 48, "Functional suite (banchi/15-suite)", "4 desktops x 2 real browsers", "blue")
+    + box(610, 192, 250, 48, "Stress (banchi/16-stress)", "1 to 16 users per box", "blue")
     + arrow(450, 256, 450, 282)
     + zone(20, 284, 860, 92, "Elsewhere: other machines and devices")
-    + box(40, 314, 250, 48, "Distributions (17-distro)", "QEMU VMs and boxes", "dark")
-    + box(325, 314, 250, 48, "NVIDIA bench (19-nvidia)", "a rented machine", "dark")
-    + box(610, 314, 250, 48, "Android bench (19-android)", "the user's phone, adb", "dark"),
+    + box(40, 314, 250, 48, "Distributions (banchi/17-distro)", "QEMU VMs and boxes", "dark")
+    + box(325, 314, 250, 48, "NVIDIA bench (banchi/19-nvidia)", "a rented machine", "dark")
+    + box(610, 314, 250, 48, "Android bench (banchi/19-android)", "the user's phone, adb", "dark"),
     900, 390, "«FIG» — The layers of testing, from the cheapest to the most expensive")
 
 S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to compositors, the GPU, PAM, "
@@ -40,7 +40,7 @@ S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to
          "what the user does: 30-odd functions on 4 desktops with Firefox and Chrome"],
         ["Stress", c("banchi/16-stress/"), "overnight campaigns", "how many users stay GREEN, per desktop and card"],
         ["Distributions", c("banchi/17-distro/"), "before declaring a release ready",
-         "install, reboot, system update, uninstall on 26 distribution × desktop combinations"],
+         "install, reboot, update to the next release, uninstall on 26 distribution × desktop combinations"],
         ["Encoders and devices", c("banchi/18-*") + ", " + c("banchi/19-*"), "when the encoder or a platform changes",
          "old vs new encoder paths, Vulkan vs VA-API, NVIDIA, Android"],
     ], "«TAB» — What tests REMOTIX, and when") + \
@@ -80,8 +80,9 @@ S2 = p("The bench folder is a record, not a toolbox: most files were written for
         [c("14-stress/"), "14", "the first night-stress harness, run from the tablet; superseded by " + c("16-stress/")],
         [c("15-suite/"), "15", "the functional suite with real browsers, its register and defect list"],
         [c("16-stress/"), "16, 20", "the stress ramp, the actors, the classifier; the xrdp comparison twin"],
-        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t9/"), "17", "distribution VMs and boxes, the T-stage "
-         "benches of the installer (T4, T8, T9 are kept as history and are not run)"],
+        [c("17-distro/") + ", " + c("17-t2/") + " … " + c("17-t9/"), "17", "distribution VMs and boxes, the benches of "
+         "the installer's milestones T2–T9 (T4, T8 and T9 are kept as history and are not run, except "
+         + c("t8-browser.py") + ", which T10 still uses)"],
         [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "18", "old-vs-new comparisons when ffmpeg "
          "left the product"],
         [c("19-vulkan/") + ", " + c("19-nvidia/") + ", " + c("19-android/"), "19", "Vulkan Video vs VA-API, the NVIDIA "
@@ -104,9 +105,9 @@ S3 = p("Every bench and every mesh speaks the same small language. The rules are
     table(["Exit code", "Meaning", "Retried?"], [
         [c("0"), "a judgement: it holds", "never"],
         [c("1"), "a judgement: it does not hold", "never"],
-        [c("2"), "the terrain does not hold, or the usage is wrong", "never: a bad terrain is looked at"],
+        [c("2"), "the test setup does not hold, or the usage is wrong", "never: a bad setup is inspected"],
         [c("3"), "could not look: something did not speak (with the reason)", "never"],
-        [c("4"), "the turn never came (the GPU or box lock was not obtained)", "yes"],
+        [c("4"), "the turn never came (the card lock was not obtained)", "yes"],
     ], "«TAB» — The exit codes of benches and meshes") + \
     p("Code 3 is not requeued on purpose: re-running until the wanted number appears is how the project once "
       "had to withdraw two conclusions. A single 3 is neutral; <b>a frequent 3 is a bench defect</b>. The "
@@ -130,15 +131,15 @@ S3 = p("Every bench and every mesh speaks the same small language. The rules are
         ["<b>Start from zero.</b> A new user, a new session, never a reused one",
          "the session born blind stayed invisible for days because every test reused a session that already had a monitor"],
         ["<b>Whoever opens, closes</b> — scenes, browsers, tenants, in a " + c("finally")
-         + ", even when the bench falls", "ten terminals and ten infinite loops left on a person's desktop (§9-ter)"],
+         + ", even when the bench falls", "ten terminals and ten infinite loops left on a person's desktop (" + c("LEZIONI.md") + " §9-ter)"],
         ["<b>Silence is not success.</b> A bench that prints nothing did not succeed",
-         "a command nested three times lost its quotes, ran nothing and returned 0 (§1.46)"],
+         "a command nested three times lost its quotes, ran nothing and returned 0 (" + c("LEZIONI.md") + " §1.46)"],
     ], "«TAB» — The rules every bench follows") + \
     p("<b>Isolation.</b> Benches share one test machine, so they count everything they could share: port, ban "
       "file, socket, working directory, tree, user, uid and shared-memory name (" + c("LEZIONI.md")
       + " §1.24, §1.26). Two benches on the same port once killed each other silently, and the survivor's probe "
       "kept knocking with its credentials until the server banned the machine's own address for twelve hours. "
-      "Tenants created by benches are named " + c("c&lt;n&gt;u&lt;n&gt;") + " (regular expression "
+      "Tenants created by benches are named " + c("c<n>u<n>") + " (regular expression "
       + c("^c[0-9]+b?u[0-9]+$") + "), so that cleanup and C19 recognise them and never touch a person's account.") + \
     table(["Lock", "File", "Protects"], [
         [c("netem") + " lock", c("09-lucchetto.py"), "the queueing discipline on " + c("lo") + ": two benches "
@@ -148,7 +149,8 @@ S3 = p("Every bench and every mesh speaks the same small language. The rules are
         ["GPU lock", "the same module, another directory", "measurements that need the card alone; a mesh whose "
          "turn never came exits 4"],
         ["Box lock", c("/media/REMOTIX/rete11/.scatole.lock") + " (" + c("flock") + ")", "the four boxes: taken by "
-         + c("15-giro.py") + ", " + c("16-salita.py") + " and " + c("11-gancio.sh") + "; the holder writes its name "
+         + c("15-giro.py") + " (the suite round), " + c("16-salita.py") + " (the stress climb) and " + c("11-gancio.sh")
+         + " (the hook); the holder writes its name "
          "inside, children inherit the right through an environment variable, and tenant cleanup does nothing "
          "without it"],
     ], "«TAB» — The three locks") + \
@@ -166,9 +168,10 @@ S4 = p("The safety net runs in four containers, one per desktop, on the test mac
         [c("rete11-kde"), c("Contenitore.kde"), "Plasma (KWin)", "8512"],
         [c("rete11-xfce"), c("Contenitore.xfce"), "XFCE on labwc", "8513"],
         [c("rete11-lxqt"), c("Contenitore.lxqt"), "LXQt on labwc", "8514"],
-        [c("rete11-&lt;d&gt;-xrdp"), c("Contenitore.xrdp"), "the same desktop on X11 under Debian's xrdp", "—"],
-    ], "«TAB» — The boxes") + \
-    p("All recipes start from " + c("debian:13") + " and boot " + c("systemd") + " as PID 1. Three rules keep "
+        [c("rete11-<d>-xrdp"), c("Contenitore.xrdp"), "the same desktop on X11 under Debian's xrdp", "—"],
+    ], "«TAB» — The boxes (" + c("Contenitore.<d>") + " is the Containerfile of each box)") + \
+    p("The four desktop recipes start from " + c("debian:13") + " (" + c("Contenitore.xrdp") + " is built on top of "
+      "a desktop box's image) and boot " + c("systemd") + " as PID 1. Three rules keep "
       "them honest. <b>R1</b>: one binary, built once, copied into all four — and its libraries taken from where "
       "the real server takes them (a box once ran the right binary against a same-named " + c("libngtcp2.so.16")
       + " of another version, started cleanly and died at the first client with " + c("Unreachable")
@@ -177,7 +180,7 @@ S4 = p("The safety net runs in four containers, one per desktop, on the test mac
       "recipes.") + \
     table(["Permission", "What breaks without it"], [
         [c("--systemd=always"), "the question of step 0 cannot even be asked"],
-        [c("--device") + " card and render node", "the real card; " + c("11-accendi.sh") + " maps exactly one card "
+        [c("--device") + " card and render node", "the real card; " + c("11-accendi.sh") + " (switch on) maps exactly one card "
          "(Intel or the Radeon) as " + c("card0") + "/" + c("renderD128") + ", and also under its real name, because "
          "libdrm rebuilds the name from the minor number"],
         [c("--cap-add=AUDIT_CONTROL") + ", " + c("AUDIT_WRITE"), c("pam_loginuid.so") + " is " + c("required")
@@ -200,11 +203,11 @@ S4 = p("The safety net runs in four containers, one per desktop, on the test mac
     p("<b>Step 0</b> (" + c("11-passo0.sh") + ") validated the container before anything was built on it: the "
       "first process is systemd; logind knows the user and opens a session; linger starts the user manager "
       "without a login; a user unit starts inside the session; when the session closes, children really die; "
-      + c("/run/user/&lt;uid&gt;") + " exists and belongs to this box; the session bus answers; a compositor "
+      + c("/run/user/<uid>") + " exists and belongs to this box; the session bus answers; a compositor "
       "announces an output and a real client draws; the card and the hardware encoder are reachable. Measured "
       "on 26 Aug 2026: 18 verdicts green out of 18, on all four boxes.") + \
     p("<b>Adapters</b> keep the list of checks blind to the desktop. Each box carries, at the same path, a "
-      "short " + c("adattatore.&lt;d&gt;.sh") + " that answers three questions — what is your name, which package "
+      "short " + c("adattatore.<d>.sh") + " (adapter) that answers three questions — what is your name, which package "
       "do you come from, how do I start you — for example " + c("WLR_BACKENDS=headless") + " for labwc where "
       "Mutter wants " + c("--headless") + " and KWin " + c("--virtual") + ". The boundary is written in phase 11 "
       "§3.7: an adapter says how to start and look at a desktop, never how the product behaves; an adapter "
@@ -228,42 +231,42 @@ S5 = p("The checks of the net are called meshes (" + c("maglie") + " in the code
          "the server's own report of the monitor, then the image: the mark present and the image not degenerate",
          "a session without a monitor ⇒ red; colours shifted on purpose ⇒ must stay green"],
         [c("C2"), "a window opens", "the pixel, never the process count",
-         c("--applicazione-che-muore") + "; " + c("--finestra-che-non-si-apre") + " (alive, never paints)"],
+         c("--applicazione-che-muore") + " (the application dies); " + c("--finestra-che-non-si-apre") + " (alive, never paints)"],
         [c("C3"), "frames arrive and the scene changes", "consecutive frames differ; not collapsed",
-         c("--fotogramma-ripetuto") + ", " + c("--codificatore-fermo") + "; " + c("--scena-ferma")
-         + " is the negative control and must not be red"],
+         c("--fotogramma-ripetuto") + " (repeated frame), " + c("--codificatore-fermo") + " (stopped encoder); "
+         + c("--scena-ferma") + " (still scene) is the negative control and must not be red"],
         [c("C4"), "a key reaches the screen", "image · key · image, and only the expected zone changes",
-         c("--senza-tasto") + ", " + c("--scena-sorda")],
+         c("--senza-tasto") + " (no key), " + c("--scena-sorda") + " (a scene that ignores keys)"],
         [c("C5"), "sound is there and is not silence", "RMS of the samples reaching the client: threshold "
-         "328/32767 (−40 dBFS), at least 200 blocks, at least 50 % above threshold", c("--senza-sorgente")],
+         "328/32767 (−40 dBFS), at least 200 blocks, at least 50 % above threshold", c("--senza-sorgente") + " (no sound source)"],
         [c("C6"), "detach and find it again", "the child's pid and the windows in the image after reattaching",
-         c("--uccidi-la-sessione")],
+         c("--uccidi-la-sessione") + " (kill the session)"],
         [c("C7"), "everything closes and nothing remains", "fingerprint before and after: processes, sockets, "
-         "units, the card", c("--lascia-un-processo") + "; " + c("--solo-distacco") + " must stay green (I4)"],
+         "units, the card", c("--lascia-un-processo") + " (leave a process behind); " + c("--solo-distacco") + " (detach only) must stay green (I4)"],
         [c("C8"), "the second user opens the browser", "Firefox paints a full-screen " + c("#FF00FF")
-         + " page: ±48 per channel, at least 25 % of the image", c("--senza-cura") + ": only the <i>second</i> "
+         + " page: ±48 per channel, at least 25 % of the image", c("--senza-cura") + " (without the cure): only the <i>second</i> "
          "user must fail, or the test is void"],
         [c("C8b"), "and that page is seen from the client", "the difference between the first frame "
          "(no page) and the last (page)", c("--senza-cura")],
         [c("C9"), "every log line says whose it is", "two tenants alive together; every mandatory line names one",
-         c("--togli-nome") + " on a copy of the log slice"],
+         c("--togli-nome") + " (strip the name) on a copy of the log slice"],
         [c("C10"), "the twin copies of RCP match", "the files listed in " + c("src/Makefile") + ", byte by byte",
          "a copy with one byte changed"],
         [c("C17"), "the clipboard works both ways, also for whoever reattaches",
-         "A device→session, B session→device, R a reattaching client gets it", c("--senza-copia")],
+         "A device→session, B session→device, R a reattaching client gets it", c("--senza-copia") + " (no copy)"],
         [c("C18"), "the product adds a new user to the card's groups", "groups before, the log during, groups after",
-         c("--senza-usermod")],
+         c("--senza-usermod") + " (no " + c("usermod") + ")"],
         [c("C20"), "after «Log Out» and a new login the screen does not flicker",
-         "luminance of the second login's frames; the encoder discards the old ones", c("--scena-che-lampeggia")],
+         "luminance of the second login's frames; the encoder discards the old ones", c("--scena-che-lampeggia") + " (a flashing scene)"],
         [c("C21"), "the real pointer shape reaches the browser", "the cursor image the page gives the browser",
          c("--forma-sbagliata") + " (expectations shifted by one)"],
         [c("C22"), "a window edge can be dragged", "the right edge in the canvas photograph, before and after",
-         c("--senza-pulsante")],
+         c("--senza-pulsante") + " (no button press)"],
         [c("C23"), "Shift+arrows select, and Shift does not stick", "the remote field read from the photograph",
-         c("--senza-maiusc")],
+         c("--senza-maiusc") + " (no Shift)"],
         [c("C24"), "«Log Out» ends the session every time, not 19 times out of 20",
          "the product's log and the client, for T seconds after the gesture, 10 rounds at varying times",
-         c("--rientra-subito")],
+         c("--rientra-subito") + " (log in again at once)"],
         "The net itself",
         [c("C11"), "all boxes are aligned", "what is installed <i>inside</i> the running boxes: base, Mesa, libva, "
          "PipeWire, Firefox, libc… and the product's md5; only the desktop must differ",
@@ -273,14 +276,14 @@ S5 = p("The checks of the net are called meshes (" + c("maglie") + " in the code
         [c("C13"), "the certification is recent", "in the last rounds a fault was injected and seen",
          "red if the red came from another mesh, naming the mesh that missed the fault"],
         [c("C14"), "the boxes do not disturb each other", "the same probe alone and in parallel, same verdict",
-         c("--smentisci") + " forces different fingerprints ⇒ 4 red out of 4"],
+         c("--smentisci") + " (disprove) forces different fingerprints ⇒ 4 red out of 4"],
         [c("C15"), "the remote half really runs", "the merged register: a mesh that needed a box reached a verdict",
          "with the test machine off for good, C12 and C13 stay green; C15 goes red"],
         [c("C16"), "the documents do not lie about the repository", "no line coordinates into our code; every "
          "cited path exists (or carries an external mark); no dead links; one single resume header",
          "exceptions only in " + c("11-c16-eccezioni.txt") + ", each with where the file really is"],
         [c("C19"), "nothing of the net survives in a box", "users, homes and processes in the net's name space",
-         c("--lascia-un-inquilino") + ", " + c("--lascia-una-casa")],
+         c("--lascia-un-inquilino") + " (leave a tenant), " + c("--lascia-una-casa") + " (leave a home)"],
     ], "«TAB» — The meshes of the safety net") + \
     p("Images are judged with three poor checks and no knowledge of what a desktop looks like: a mark with a "
       "declared tolerance (compositors apply colour profiles, and H.264 4:2:0 subsamples exactly the chroma); "
@@ -309,7 +312,7 @@ HOOK = seq([("Laptop", "git repository", "navy"), ("11-gancio.sh", "decide", "bl
     (0, 1, "git push: pre-push hook"),
     (1, 1, "changed paths ⇒ family"),
     (1, 1, "local half: C10, its fault, C15"),
-    (1, 2, "systemd-run unit rete11-gancio"),
+    (1, 2, "systemd-run unit rete11-gancio.service"),
     (2, 2, "meshes run in the boxes"),
     (2, 1, "exit code file and register", True),
     (1, 0, "merged register, one line per round", True),
@@ -320,16 +323,17 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
        "A hook that asks «do you want to run the net?» does not run on the day one is in a hurry, and those are "
        "the days things break.", lead=True) + HOOK + \
     table(["Family", "Triggered by", "What runs", "Cost"], [
-        [c("desktop-nuovo"), "a new " + c("Contenitore.&lt;name&gt;") + " added (wins over everything)",
+        [c("desktop-nuovo") + " (new desktop)", "a new " + c("Contenitore.<name>") + " added (wins over everything)",
          "everything on the new box, then C1×2 on the old ones, then " + c("rete-intera"), "hours"],
-        [c("funziona"), c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
+        [c("funziona") + " (it works)", c("src/") + " or " + c("web/") + " changed", "C10 and its fault, C11, C1(gnome)×2 — under a "
          "180 s ceiling", "173 s measured on 26 Aug 2026"],
-        [c("rete-intera"), c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
+        [c("rete-intera") + " (whole net)", c("11-accendi.sh") + ", a recipe, " + c("11-c8-*") + " or " + c("11-c14-*"),
          c("rete") + " plus C14, which takes all four boxes", "about 800 s"],
-        [c("rete"), "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
+        [c("rete") + " (net)", "anything else under " + c("banchi/"), "C10 and its fault, C11, C12, C13, C15, C16",
          "about 11 s on the test machine, 1 s on the laptop"],
-        [c("carte"), "only " + c("*.md") + " files", "C16", "0.79 s"],
-        [c("tutto"), "only by name (" + c("--famiglia tutto") + "), before closing a phase",
+        [c("carte") + " (papers)", c("*.md") + " files and nothing under " + c("src/") + ", " + c("web/") + " or " + c("banchi/"), "C16", "0.79 s"],
+        [c("niente") + " (nothing)", "anything else (the installer, the manual sources…)", "nothing, and the hook says so", "—"],
+        [c("tutto") + " (everything)", "only by name (" + c("--famiglia tutto") + "), before closing a phase",
          "boxes rebuilt clean; per box: step 0, C1×10, C8, C5, C7, C9, C18 each with its fault, the product meshes, "
          "C19; then " + c("rete-intera"), "hours (7,896 s on 27 Aug 2026)"],
         [c("suite"), "only by name", "the functional suite with its technical layer", "about 2 hours"],
@@ -350,7 +354,7 @@ S6 = p("The net runs by itself: " + c("11-gancio.sh") + " is installed as a git 
         [c("gnome") + ", " + c("kde") + ", " + c("xfce") + ", " + c("lxqt"), c("immagine input appunti forma")],
         ["any other", "none: all product meshes skip, and the log says the product does not know that desktop"],
     ], "«TAB» — The capability gate (" + c("11-capacita-del-prodotto.sh") + ")") + \
-    p("Product meshes C2, C3, C4, C6, C8b, C17 and C20 ask the gate whether the desktop has what they need "
+    p("Product meshes C2, C3, C4, C6, C8b, C17 and C20–C23 (C24 runs under the gate of C20) ask the gate whether the desktop has what they need "
       "(image, input, clipboard, shape) and, if not, skip with the missing capability in the register. A "
       "capability is opened only in the increment in which the mesh that judges it has given green <i>and</i> "
       "seen its fault — not when the code exists. The gate never softens a judgement: a mesh that passes runs "
@@ -435,7 +439,7 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
         ["F-031 · F-031B · F-032", "touch (the user, on Android); user settings untouched; the user's shell",
          c("15-f031-tocco.py") + ", " + c("15-f031b-impostazioni-intatte.py") + ", " + c("15-f032-la-shell-dell-utente.py")],
     ], "«TAB» — The suite's functions and the files that test them") + \
-    p("Every test is a script " + c("15-fNNN-&lt;name&gt;.py") + " that declares, as plain text lines, what it "
+    p("Every test is a script " + c("15-fNNN-<name>.py") + " that declares, as plain text lines, what it "
       "looks at: " + c("FUNZIONI = (…)") + ", and if needed " + c("PER_BROWSER = False") + " (runs once, with "
       "Firefox), " + c("LUNGA = True") + " (runs in parallel with the others of its desktop) and "
       + c("SERVER = \"15-g7-server.sh\"") + " (needs its own server). The common base " + c("suite.py")
@@ -449,23 +453,23 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
       "machine for the others. The dead line is simulated on the server with a private nftables table that "
       "drops the UDP of the test's port only.") + \
     p(c("15-giro.py") + " runs a round on the server: it finds the " + c("15-f*.py") + " and " + c("15-n*.py")
-      + " tests, runs the four desktops in parallel (one queue each, Firefox then Chrome, distinct debugging "
+      + " (negative) tests, runs the four desktops in parallel (one queue each, Firefox then Chrome, distinct debugging "
       "ports), kills any test after 10 minutes as BLOCKED, refuses to start if a person (anyone who is not a "
-      "bench tenant) has a session in a box, and with " + c("--strato-tecnico") + " adds C7, C9, C18, C19 per box "
+      "bench tenant) has a session in a box, and with " + c("--strato-tecnico") + " (technical layer) adds C7, C9, C18, C19 per box "
       "and C14 at the end. Each desktop has its own headless labwc at 3840×2160 (" + c("15-compositori.sh")
       + "): in a shared compositor Chrome windows covered each other, and a covered Chrome window does not "
       "repaint — one screenshot hung for 17 minutes.") + \
     table(["Field", "Example"], [
-        [c("giro") + " · " + c("passata"), c("1") + ", " + c("2") + ", " + c("bonifica") + " · " + c("sana") + " or " + c("guasto")],
-        [c("test") + " / " + c("funzione"), c("T-018-kde-firefox") + " / " + c("F-018")],
+        [c("giro") + " (round) · " + c("passata") + " (pass)", c("1") + ", " + c("2") + ", " + c("bonifica") + " (clean-up) · " + c("sana") + " (healthy) or " + c("guasto") + " (faulted)"],
+        [c("test") + " / " + c("funzione") + " (function)", c("T-018-kde-firefox") + " / " + c("F-018")],
         [c("desktop") + " · " + c("browser") + " · " + c("versione"), c("kde") + " · " + c("firefox") + " · " + c("140.16.0")],
-        [c("binario") + " · " + c("pagina") + " · " + c("commit"), "md5 prefixes of binary and page, the commit"],
-        [c("esito") + " · " + c("ragione"), "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
-        [c("atteso") + " · " + c("osservato"), "the two sentences of the test case"],
-        [c("guasto_visto"), "true or false on the faulted pass"],
-        [c("evidenze") + " · " + c("difetto"), "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
+        [c("binario") + " (binary) · " + c("pagina") + " (page) · " + c("commit"), "md5 prefixes of binary and page, the commit"],
+        [c("esito") + " (outcome) · " + c("ragione") + " (reason)", "PASS, FAIL or BLOCKED; one sentence, mandatory for FAIL and BLOCKED"],
+        [c("atteso") + " (expected) · " + c("osservato") + " (observed)", "the two sentences of the test case"],
+        [c("guasto_visto") + " (fault seen)", "true or false on the faulted pass"],
+        [c("evidenze") + " (evidence) · " + c("difetto") + " (defect)", "paths of photos, logs and console; " + c("D-007") + " if a defect was opened or touched"],
     ], "«TAB» — One line of the suite register (" + c("banchi/15-suite/registro.jsonl") + ", append-only)") + \
-    p("Defects go to " + c("difetti.jsonl") + " with a class — <b>A</b> true regression, <b>B</b> one desktop's "
+    p("Defects go to " + c("difetti.jsonl") + " (the defect list) with a class — <b>A</b> true regression, <b>B</b> one desktop's "
       "assumption in common code, <b>C</b> bench defect, <b>D</b> wrong invariant (never as a shortcut) — a "
       "state, the measured cause, the commit of the cure and the test that guards it from then on. The report "
       "(" + c("15-rapporto.py") + ", " + c("--testo") + " or " + c("--html") + ") is generated from the register, "
@@ -473,11 +477,12 @@ S8 = p("On 24 Sep 2026 the user tried the product by hand and found six defects 
       "every FAIL or BLOCKED the reason and its evidence.") + \
     table(["Round", "Executions", "Result"], [
         ["round 1, 25 Sep 2026", "609 (305 healthy, 304 faulted)", "42 FAIL and 7 BLOCKED on the healthy pass, "
-         "no injected fault escaped; 14 defects, 7 of them in the bench, 21 entries by the end of the clean-up"],
+         "no injected fault escaped; 14 defects (8 of the product, 3 of the bench, 3 to investigate), 21 entries by the "
+         "end of the clean-up (14 of the product, 7 of the bench)"],
         ["round 2, 25 Sep 2026 (frozen at " + c("d121715") + ")", "657 (329 healthy, 328 faulted), technical layer included",
          "<b>329 PASS out of 329, 328 faults seen out of 328</b> — the gate of phase 15 passed"],
     ], "«TAB» — The two rounds of phase 15 (test machine, 4 desktops, Firefox 140 and Chrome 154, 3840×2160)") + \
-    p("Seven of the round-1 defects were in the bench, each a green or a red that was not the product's: a "
+    p("The bench entries were each a green or a red that was not the product's: a "
       "pixel judge tried only on the most colourful wallpaper (XFCE's is black), C9 not knowing the new "
       + c("forma") + " log area, cleanup not done between meshes, an empty log slice read as «not read», a "
       "shortened clock shorter than XFCE's 4K start, fixed pauses synchronised with the animation they were "
@@ -533,7 +538,7 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
         "«N users on this server, which meanwhile also runs the N browsers».", lead=True) + RAMP + \
     p("Each user is an independent <b>actor</b> (" + c("16-attore.py") + "): its own process, browser, labwc "
       "compositor and clock, no conductor. Odd users drive Firefox, even users Chrome; tenants are "
-      + c("c16&lt;NNN&gt;u&lt;N&gt;") + ", created and always removed by the actor, with exactly one login "
+      + c("c16<NNN>u<N>") + ", created and always removed by the actor, with exactly one login "
       "attempt so that a ban is impossible. Actors are programs, not AI agents: an agent would set the rhythm "
       "of input by its own thinking time and never repeat itself, while a seed per user makes every climb "
       "different inside and identical across campaigns. The four workloads (" + c("16-lavori.py") + ") are "
@@ -555,22 +560,23 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
         ["birth of a new user (login → first frame)", "≤ 5 s", "5–15 s", "> 15 s, or refused"],
         ["short functional check", "all PASS", "—", "one FAIL"],
         ["dropped session, restart, RCP/QUIC error that detaches", "none", "—", "any"],
-        ["memory growth of the " + c("remotix") + " and " + c("sessioni") + " enclosures", "≤ 5 %", "5–15 %", "> 15 % and growing"],
+        ["memory growth of the " + c("remotix") + " and " + c("sessioni") + " (sessions) process sets", "≤ 5 %", "5–15 %", "> 15 % and growing"],
     ], "«TAB» — The thresholds, approved by the user on 25 Sep 2026 and frozen (" + c("SOGLIE") + " in " + c("16-classifica.py") + ")") + \
     p("A level is GREEN if every session is GREEN, FAIL if one is FAIL; «significant DEGRADED» (more than a "
       "quarter of sessions, or one measure past the middle of its band) stops the climb for diagnosis and a "
       "repetition under the same conditions. A FAIL starts a bisection between the last good step and the "
       "broken one, precise to one user. If 4K fails the whole climb is redone at 3K (3200×1800), then 2K, then "
-      "Full HD. The delay that classifies is the product's own share: the p95 of the child's per-second "
-      "«capture → bytes out» maxima plus 9 ms, the constructive ceiling of the input leg; the page's round trip is "
-      "recorded as the experienced delay but does not classify.") + \
+      "Full HD. The delay that classifies is the product's own share: the p95, over the judging window, of the "
+      "per-second p95 values the child writes for its own work (copy → bytes out, frames of that second only), "
+      "plus 9 ms, the constructive ceiling of the input leg (the child's 8 ms poll); the child's «capture → bytes "
+      "out» lines and the page's round trip are recorded, the latter as the experienced delay, but do not classify.") + \
     p("Resources are sampled once a second by " + c("16-risorse.py") + " (as root, or it declares what it could "
-      "not read) for three enclosures — " + c("remotix") + ", " + c("sessioni") + ", " + c("browser") + " — with "
-      "PSS memory and per-process GPU engine use from " + c("/proc/&lt;pid&gt;/fdinfo") + ". A high resource "
+      "not read) for three process sets — " + c("remotix") + ", " + c("sessioni") + ", " + c("browser") + " — with "
+      "PSS memory and per-process GPU engine use from " + c("/proc/<pid>/fdinfo") + ". A high resource "
       "alone is never a FAIL: classification comes from behaviour, and resources explain it. At every level "
       + c("16-controllo-corto.py") + " opens one extra session (the 17th at the top step, hence a session ceiling "
       "of 17 during the campaign) and runs reduced F-004, F-007, F-003 and F-014.") + \
-    p("Campaigns run unattended overnight as a queue (" + c("16-coda.sh") + ", " + c("16-campagna.sh") + ") "
+    p("Campaigns run unattended overnight as a queue (" + c("16-coda.sh") + " the queue, " + c("16-campagna.sh") + " one campaign) "
       "inside a " + c("systemd-run") + " unit with three settings that are not optional: "
       + c("OOMPolicy=continue") + " (a browser killed for memory is a red step to measure, not the end of the night), "
       + c("TimeoutStopSec=1200") + " and " + c("KillMode=mixed") + " (the queue alone receives the stop and lets "
@@ -591,19 +597,19 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
         "no graphics card, in boxes for everything that needs the encoder.", lead=True) + \
     table(["Piece", "What it is"], [
         [c("17-vm.sh"), "QEMU directly, no libvirt, no root; user-mode network with port forwarding; the disk is an "
-         "overlay on the untouched official cloud image. Machines are " + c("&lt;distro&gt;-&lt;desktop&gt;") + "; ssh on "
+         "overlay on the untouched official cloud image. Machines are " + c("<distro>-<desktop>") + "; ssh on "
          + c("2300 + 10·N + k") + ", REMOTIX on " + c("7500 + 10·N + k") + " (k: bare 0, gnome 1, kde 2, xfce 3, lxqt 4). "
-         "Verbs: " + c("crea") + ", " + c("avvia") + ", " + c("vesti") + " (installs the desktop group), " + c("ssh") + ", "
-         + c("ferma") + ", " + c("riavvia") + " (a real reboot, checked through " + c("boot_id") + "), "
-         + c("fotografa") + "/" + c("torna") + ", " + c("azzera")],
+         "Verbs: " + c("crea") + " (create), " + c("avvia") + " (start), " + c("vesti") + " (dress: installs the desktop group), " + c("ssh") + ", "
+         + c("ferma") + " (stop), " + c("riavvia") + " (a real reboot, checked through " + c("boot_id") + "), "
+         + c("fotografa") + "/" + c("torna") + " (snapshot/restore), " + c("azzera") + " (reset to the base image)"],
         ["states", "<b>BASE</b> the cloud image after cloud-init · <b>DESKTOP</b> plus the distribution's official desktop "
-         "group (snapshot " + c("cliente") + ") · <b>ISO</b> installed from the official ISO with its automatic installer "
-         "(answers in " + c("iso-risposte/") + "; differences in " + c("iso-differenze.md") + "). If a verdict differs "
+         "group (snapshot " + c("cliente") + ", customer) · <b>ISO</b> installed from the official ISO with its automatic installer "
+         "(answers in " + c("iso-risposte/") + ", differences from DESKTOP in " + c("iso-differenze.md") + "). If a verdict differs "
          "between DESKTOP and ISO, ISO is the truth"],
         [c("17-t10.sh"), "the script of one machine: back to the snapshot, fingerprints of " + c("/etc") + ", " + c("/usr")
          + ", groups, units and firewall; install from the release's single " + c(".run") + " file; a real browser logs in and "
-         "sees the desktop; real reboot and login again; system update to release N+1 with a browser attached and the "
-         "desktop alive; uninstall with purge and compare fingerprints"],
+         "sees the desktop; real reboot and login again; update to REMOTIX release N+1 (the next " + c(".run") + ") with a "
+         "browser attached and the desktop alive; uninstall with purge and compare fingerprints"],
         [c("17-t10-giro.sh"), "the same over many machines, four at a time"],
         [c("17-amministratore.sh"), "plays the administrator before installing (third-party repositories, drivers with "
          "H.264): since 10 Oct 2026 REMOTIX does not modify the system and " + c("check") + " says what is missing"],
@@ -621,14 +627,16 @@ S11 = p("Phase 17 tests REMOTIX where an administrator would install it: on the 
       "desktop, SELinux enforcing logs no denial, PAM behaves as sshd on every family, bench markers are absent "
       "from the package, an interrupted installation resumes.") + \
     note("since phase 19 the installer refuses a machine without a card that encodes, so the daily round must move "
-         "to the boxes. On 10 Oct 2026 the 26 box recipes were written but none had been built yet (they are built "
-         "on the test machine, after the xrdp campaign). Not settled yet: the first full round in boxes.",
+         "to the boxes. On 10 Oct 2026 the box recipes for the 26 combinations (one per distribution, with the desktop "
+         "as argument) were written but none had been built yet (they are built on the test machine, after the xrdp "
+         "campaign). Not settled yet: the first full round in boxes.",
          "Boxes for all combinations.") + \
     p(c("17-t2/") + " measured what kills desktops when the service stops (nothing does, 29 Sep 2026); "
       + c("17-t6/") + " PAM, SELinux and firewall per family; " + c("17-t7/") + " updating without closing "
       "desktops on the four boxes. " + c("17-t4-motore.sh") + ", " + c("17-t8/") + " and " + c("17-t9/")
       + " test an installer that no longer exists (separate plan and apply, signed archive, answer files) and are "
-      "kept as history; their headers say so and they are not run.")
+      "kept as history; their headers say so and they are not run — except " + c("t8-browser.py") + ", the browser "
+      "that stays attached during the update, which " + c("17-t10.sh") + " still uses.")
 
 # ── 16.12 ────────────────────────────────────────────────────────────────────
 S12 = p("When an encoder path changes, the old path stays alive as a term of comparison until the new one has "
@@ -643,7 +651,7 @@ S12 = p("When an encoder path changes, the old path stays alive as a term of com
         [c("19-vulkan/"), "Vulkan Video (" + c("vulkanvideo.c") + ") against VA-API on the same card, and the integrated "
          "engine that chooses by capability", c("ffmpeg") + "/" + c("ffprobe") + " only as measuring tools (PSNR, SSIM, "
          "profile, level), plus a Chrome decoding test"],
-        [c("19-nvidia/"), "REMOTIX on a rented NVIDIA machine", "one command prepares a suitcase on the laptop; on the rental "
+        [c("19-nvidia/"), "REMOTIX on a rented NVIDIA machine", "one command prepares a bundle on the laptop; on the rental "
          "day it upgrades the OS if needed, installs the driver, XFCE, browsers and REMOTIX with its installer, proves "
          "H.264 and HEVC on the card, runs the encoder comparison and part of the suite, brings evidence home, then cleans up"],
         [c("19-android/"), "ten suite tests on the user's own phone with Chrome, through adb",
@@ -651,8 +659,8 @@ S12 = p("When an encoder path changes, the old path stays alive as a term of com
     ], "«TAB» — Encoder and platform benches") + \
     p("Three small folders complete the picture. " + c("rcp/") + " holds the twin of the RCP module that phase 1 "
       "grafted into ngtcp2's example server; the build of the product refuses to compile if the two copies "
-      "differ, and " + c("GEMELLO=nessuno") + " must be declared to build without the comparison. "
-      + c("prodotto/") + " has the smoke test of the server inside the build container (" + c("fumo.sh") + ") and "
+      "differ, and " + c("GEMELLO=nessuno") + " (twin = none) must be declared to build without the comparison. "
+      + c("prodotto/") + " has the smoke test of the server inside the build container (" + c("fumo.sh") + ", smoke) and "
       "its pages; " + c("sonda/") + " a real-browser probe that collects what the page saw.")
 
 # ── 16.13 ────────────────────────────────────────────────────────────────────
@@ -662,7 +670,7 @@ S13 = p("Benches are written and compiled on the laptop; they run on the test ma
         + c("/media/REMOTIX") + ".", lead=True) + \
     table(["Path on the test machine", "Contents"], [
         [c("/media/REMOTIX/rete11"), "the safety-net tree, the box images' context, the remote half of the hook"],
-        [c("/media/REMOTIX/src/controllo"), "the benches copied by " + c("15-porta.sh") + " for the suite and the real-browser meshes"],
+        [c("/media/REMOTIX/src/controllo"), "the benches copied by " + c("15-porta.sh") + " (carry over) for the suite and the real-browser meshes"],
         [c("/media/REMOTIX/misure/fase15"), "the suite register and per-round evidence"],
         [c("/media/REMOTIX/misure/fase16"), "the stress campaigns, one folder per climb and level"],
         [c("/media/REMOTIX/vm17"), "the distribution VMs"],

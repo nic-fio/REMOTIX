@@ -102,7 +102,7 @@ NOMI = [
      "from the birth of the stage to its end." + v("Where state lives")),
     (c("registro"), "<i>Register, log.</i> In the server, the log module (" + c("registro.c") + "), the only place "
      "that writes lines. In the installer, the write-ahead log of an operation (" + c("registro.go") + ")."
-     + v("The registro module", "The write-ahead log and resume")),
+     + v("The log module", "The write-ahead log and resume")),
     (c("riserva"), "<i>Reserve.</i> " + c("--riserva") + ": the share of an idle tenant's worst case the budget "
      "keeps aside." + v("Admission: the session cap and the budget")),
     (c("ritmo"), "<i>Rate</i> (frame rate). The rate regulator holds a frame back when two live deltas are "
@@ -226,8 +226,8 @@ M_Z = [
      "WebAssembly." + v("The Opus encoder", "Playing audio in the page")),
     ("PAM", "Pluggable Authentication Modules: the machine's own password check, service " + c("remotix") + ", a "
      "copy of the distribution's sshd stack." + v("Authentication with PAM", "The PAM service files")),
-    ("Phase", "A unit of the project's work with its bench and closing criterion, numbered 0 to 20; bench file "
-     "prefixes carry the phase number." + v("The documents of the project")),
+    ("Phase", "A unit of the project's work with its bench and closing criterion, numbered 0 to 21 (phase 21, "
+     "the licence, was closed without being built); bench file prefixes carry the phase number." + v("The documents of the project")),
     ("PipeWire", "The media server that carries the screen stream on GNOME and KDE and the session's sound."
      + v("PipeWire negotiation, resize and wake-up")),
     ("polkit", "The authorisation service; the first belt is a polkit rule that refuses power-off and its relatives."
@@ -274,7 +274,7 @@ M_Z = [
     ("XKB, xkbcommon", "Keyboard layouts and keymaps; " + c("tastiera.c") + " reads the session's keymap with "
      "xkbcommon." + v("From a letter to key positions")),
     ("xrdp", "The X11 remote desktop server REMOTIX is compared against in the phase 20 campaign."
-     + v("The boxes of the safety net")),
+     + v("The boxes of the safety net", "Stress and capacity benches")),
 ]
 
 CHAPTER = ("Glossary", [

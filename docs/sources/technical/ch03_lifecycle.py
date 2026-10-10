@@ -4,12 +4,13 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
        "the machine can do and writes it in the log, so that a missing piece is read at startup rather than "
        "discovered by the first user.", lead=True) + steps([
     "<b>Role.</b> With " + c("--figlio-interno") + " as first argument the process is a child and goes to "
-    + c("figlio_vive()") + "; with " + c("--prova-codifica") + " it encodes one frame on the GPU, prints one JSON "
+    + c("figlio_vive()") + "; with " + c("--prova-codifica") + " (encoding test) it encodes one frame on the GPU, prints one JSON "
     "line and exits (0 the GPU encodes, 1 it opens but no frame comes out, 2 usage error, 3 no GPU can encode).",
     "<b>Options.</b> The command line is read; an unknown option prints the usage and exits with 2. Options that "
-    "no longer exist (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--sblocca") + ") exit with "
+    "no longer exist (" + c("--ritmo-adattivo") + ", " + c("--linea-morta") + ", " + c("--sblocca") + " — adaptive pace, "
+    "dead line, unblock) exit with "
     "2 and a sentence saying what replaced them, instead of being silently ignored. Without a real "
-    + c("--nome") + " (empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
+    + c("--nome") + " (the name; empty, " + c("0.0.0.0") + " or " + c("::") + ") the server refuses to start: the "
     "certificate must carry the name the browser will use.",
     "<b>Signals.</b> " + c("SIGINT") + " and " + c("SIGTERM") + " only set a flag that ends the loop; "
     + c("SIGPIPE") + " is ignored. With " + c("--journal") + " every log line also goes to the systemd journal ("
@@ -17,8 +18,8 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>The GPU.</b> A forked process opens each encoder on a 256×256 frame (" + c("figlio_capacita_video()")
     + "); its answer, or its silence after 30 s, decides the codecs that the " + c("ECCOMI") + " will offer. In a "
     "separate process because a driver that crashes must not take the server down before it has a port. With no "
-    "GPU that encodes, the log says so with the reason for each codec and every " + c("CIAO") + " will end in "
-    + c("NIENTE_IN_COMUNE") + ".",
+    "GPU that encodes, the log says so with the reason for each codec and every " + c("CIAO") + " (the client's "
+    "hello) will end in " + c("NIENTE_IN_COMUNE") + " (nothing in common).",
     "<b>The desktop.</b> " + c("sessione_desktop()") + " recognises the desktop from the programs in the "
     + c("PATH") + " and the log says which, and why; on KDE " + c("kwin_verifica_permesso()") + " checks that the "
     + c(".desktop") + " file that lets KWin offer screen capture to this binary is in place.",
@@ -42,8 +43,9 @@ S1 = p("The server starts from " + c("main()") + " in " + c("main.c") + ". Befor
     "<b>QUIC.</b> " + c("trasporto_apri()") + " binds the UDP port; then the hooks between transport and children "
     "are registered, the sentinel connects to the system bus, and the desktops left alive by a previous server "
     "are looked for (" + rif("Desktops found again after a restart") + ").",
-    "<b>The page.</b> " + c("pagina_apri()") + " binds the TCP port. The log line “ready: https://name:port — the "
-    "WebTransport session lives on " + c("/rcp/1") + "” is the moment the server can be used.",
+    "<b>The page.</b> " + c("pagina_apri()") + " binds the TCP port. The log line " + c("⭐ pronto: https://NAME:PORT")
+    + " (“ready”), which goes on to say that the WebTransport session lives on " + c("/rcp/1") + ", is the moment "
+    "the server can be used.",
 ]) + \
     table(["Exit", "When"], [
         ["0", "orderly shutdown after " + c("SIGTERM") + " or " + c("SIGINT")],
@@ -77,7 +79,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
          + " (the last " + c("--nome") + " wins)"],
         [c("EnvironmentFile"), "two of them: " + c("/usr/share/remotix/remotix.conf") + ", and the optional "
          "(leading " + c("-") + ") " + c("/etc/remotix/remotix.conf.d/*.conf") + "; they define "
-         + c("REMOTIX_PORTA") + " and " + c("REMOTIX_OPZIONI")],
+         + c("REMOTIX_PORTA") + " (the port) and " + c("REMOTIX_OPZIONI") + " (extra options)"],
         [c("REMOTIX_PORTA"), "7447 by default, in " + c("/usr/share/remotix/remotix.conf") + "; the package's "
          "defaults are never edited, the administrator's choices go in " + c("/etc/remotix/remotix.conf.d/")],
         [c("/bin/sh -c 'exec …'"), "only to expand the variables; " + c("exec") + " keeps the server as the main "
@@ -89,11 +91,13 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
          "which the program then verifies"],
         [c("Restart=on-failure") + ", " + c("RestartSec=2"), "a crash restarts the server in 2 s; the desktops are "
          "found again"],
-        ["no test options", c("--rilievo") + ", " + c("--comando-socket") + ", " + c("--audio-prova") + " and "
-         + c("--parlantina") + " are not in the packaged command line; the rpm build refuses them"],
+        ["no test options", c("--rilievo") + " (frame dump), " + c("--comando-socket") + " (unblock socket), "
+         + c("--audio-prova") + " (test tone), " + c("--parlantina") + " (verbose log) and " + c("--sblocca")
+         + " are not in the packaged command line; the rpm build script (" + c("costruisci-rpm.sh")
+         + ") refuses them"],
     ], "«TAB» — The unit's settings") + \
     warn("with no " + c("--comando-socket") + " in the packaged command line, a banned address can only wait for "
-         "its 12 hours: the unblock command promised by SPECIFICHE §4.2 is there only if the administrator adds "
+         "its 12 hours: the unblock command promised by SPECIFICHE.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPZIONI") + " (the " + c("tmpfiles") + " entry creates "
          + c("/run/remotix") + " for that socket). No code path of the server exits with 78, so "
          + c("RestartPreventExitStatus=78") + " never applies today.", "Two gaps of the unit.") + \
@@ -115,13 +119,13 @@ LOGIN = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("PAM hel
     ("nota", 1, "stages full? budget? then fork"),
     (1, 3, "fork, PAM session, execve"),
     (3, 1, "MSG_SONO", True),
-    ("sep", "one second after CREDENZIALI, for every answer"),
+    ("sep", "one second after the credentials arrived, for every answer"),
     (1, 0, "AMMESSO", True),
     (0, 1, "ATTACCA: canvas, view, layout"),
     (1, 0, "SESSIONE: new or resumed", True),
     (1, 3, "canvas, codec"),
     (3, 4, "setsid --fork: the desktop"),
-    (3, 1, "TELA: wait", True),
+    (3, 1, "MSG_TELA: wait", True),
     ("nota", 3, "retries every 200 ms"),
     (3, 4, "virtual monitor, stream"),
     (3, 1, "MSG_PALCO, frames", True),
@@ -129,7 +133,10 @@ LOGIN = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("PAM hel
 ], "«FIG» — From the password to the first frame", width=900)
 
 S3 = p("A login crosses three processes. The page proves nothing until the server has shown its certificate; the "
-       "password goes to a PAM process; the yes produces a child; only then does the client attach.", lead=True) + \
+       "password goes to a PAM process; the yes produces a child; only then does the client attach. The message names "
+       "are those of " + c("RCP.md") + ": " + c("CIAO") + " (hello) and " + c("ECCOMI") + " (here I am), "
+       + c("CREDENZIALI") + " (credentials), " + c("AMMESSO") + " (admitted), " + c("ATTACCA") + " (attach) and "
+       + c("SESSIONE") + " (session).", lead=True) + \
     LOGIN + \
     p("<b>The verdict.</b> The server writes the request to the PAM helper and goes back to its loop ("
       + rif("The PAM helper process") + "). Every answer to " + c("CREDENZIALI") + " — admitted or refused — leaves "
@@ -144,9 +151,9 @@ S3 = p("A login crosses three processes. The page proves nothing until the serve
       "a " + c("gnome-shell") + "):") + \
     table(["Question", "If not", "Reason code"], [
         ["Does a stage still fit? Children plus found-again desktops below the cap", "no child; farewell",
-         c("0x0E SESSIONE_NON_SERVIBILE") + " — an administrative limit"],
+         c("0x0E SESSIONE_NON_SERVIBILE") + " (the session cannot be served) — an administrative limit"],
         ["Does the composition budget allow one more canvas? (only with " + c("--budget-mpixel-s") + ")",
-         "no child; farewell", c("0x06 BUDGET_PIENO") + " — a physical limit"],
+         "no child; farewell", c("0x06 BUDGET_PIENO") + " (budget full) — a physical limit"],
         ["Was the child born? (" + c("figli_assicura_da()") + ")", "the reason is in the line above in the log; "
          "farewell", c("0x0E")],
     ], "«TAB» — The checks between PAM's yes and the child") + \
@@ -234,7 +241,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
     p("<b>First login: the GPU's groups.</b> A user who is not in the groups of the " + c("/dev/dri") + " nodes "
       "(" + c("card*") + " belongs to " + c("video") + ", " + c("renderD*") + " to " + c("render") + ") would get a "
       "session that renders in software with llvmpipe — slow, not broken, so nobody would suspect it. Since 20 "
-      "September 2026 (DECISIONI §7.21) the server, as root, runs " + c("usermod -aG") + " for the missing groups "
+      "September 2026 (DECISIONI.md §7.21) the server, as root, runs " + c("usermod -aG") + " for the missing groups "
       "before forking the child, appends one JSON line per group to " + c("/var/lib/remotix/gruppi-iscritti.jsonl")
       + " (so that uninstalling removes only what REMOTIX added) and, unless the user already has a live REMOTIX "
       "desktop, runs " + c("loginctl terminate-user") + " so that their user manager restarts with the new "
@@ -242,7 +249,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
     warn(c("loginctl terminate-user") + " ends <b>every</b> logind session of that user, an SSH login included. It "
          "only happens once per user, at their first REMOTIX login without the groups. Not settled yet: whether only "
          + c("render") + " should be added (" + c("video") + " also opens " + c("/dev/fb*") + " and webcams), "
-         "DECISIONI §10.36.", "First login ends the user's other sessions.") + \
+         "DECISIONI.md §10.36.", "First login ends the user's other sessions.") + \
     p("<b>After the first stage</b> the child, once per life, inhibits suspend and idle (on GNOME through "
       + c("org.gnome.SessionManager.Inhibit") + " with flags 4|8, never the logout flag, or the user would lose their "
       "only way out; on KDE through PowerDevil; XFCE and LXQt by configuration), then asks the sentinel whether its "
@@ -286,8 +293,9 @@ S5 = p("The stage is what the child mounts on the user's desktop: a virtual moni
 S6 = p("Detaching is the normal end of a connection, and it ends nothing else: the slot frees, the stage stays.",
        lead=True) + \
     table(["How the client goes", "What the server sees", "Reason"], [
-        ["the tab or the browser closes, the device is switched off", c("CONGEDO") + " from the page if it is in "
-         "time, otherwise the QUIC connection dies", c("0x01 CHIUSO_DALL_UTENTE") + ", or none"],
+        ["the tab or the browser closes, the device is switched off", c("CONGEDO") + " (farewell) from the page if it "
+         "is in time, otherwise the QUIC connection dies", c("0x01 CHIUSO_DALL_UTENTE") + " (closed by the user), or "
+         "none"],
         ["the network drops", "no packet for 30 s: the client is detached and its slot is free", "none"],
         ["no input for 30 minutes", "the server detaches the client; logging in again is needed",
          c("0x02 INATTIVITA")],
@@ -302,19 +310,20 @@ S6 = p("Detaching is the normal end of a connection, and it ends nothing else: t
     p("<b>Reattaching.</b> When the same user logs in again, " + c("figli_pid_di()") + " finds their child: no fork, "
       + c("SESSIONE") + " says <i>resumed</i>, and the server sends " + c("MSG_RIMANDA_PALCO") + " so that the "
       "child resends the last keyframe it kept for each codec — the user sees their desktop at once — and owes a new "
-      "keyframe. The page then asks for its own canvas with " + c("ADATTA_TELA") + " (" + rif("The browser page")
+      "keyframe. The page then asks for its own canvas with " + c("ADATTA_TELA") + " (fit the canvas; " + rif("The browser page")
       + "). A reattach does not renew the abandonment clock: only input does.") + \
     table(["Situation", "Result"], [
         ["the user's previous client is alive and attached", "the new one is refused, " + c("0x0F GIA_ATTIVA_REMOTA")
-         + " (I2)"],
+         + " (already active remotely; I2)"],
         ["the previous client has been silent for more than 15 s and the new one is the same user",
-         "the slot is taken from the ghost and given to the newcomer (" + c("--sfratto-ms") + ", default 15000, "
+         "the slot is taken from the ghost and given to the newcomer (" + c("--sfratto-ms") + " — eviction —, default 15000, "
          "half the silence clock: the browser's keep-alive is silent for up to 15 s, measured)"],
-        ["the user has a local graphical session", "the attach is refused, " + c("0x05 GIA_ATTIVA_LOCALE")],
+        ["the user has a local graphical session", "the attach is refused, " + c("0x05 GIA_ATTIVA_LOCALE")
+         + " (already active locally)"],
         ["the user opens a local session while attached remotely", "the remote client is dismissed at the next sweep (every 2 s), "
-         + c("0x04 SESSIONE_LOCALE_PREVALSA") + " (" + c("wt_sorveglia_locali()") + ")"],
+         + c("0x04 SESSIONE_LOCALE_PREVALSA") + " (the local session prevailed; " + c("wt_sorveglia_locali()") + ")"],
     ], "«TAB» — One graphical session per user") + \
-    note("SPECIFICHE §5.1 says that when a local session starts “the remote one is closed”. The code dismisses the "
+    note("SPECIFICHE.md §5.1 says that when a local session starts “the remote one is closed”. The code dismisses the "
          "remote <i>client</i>; the remote desktop is not ended and, if nobody touches it, ends with the abandonment "
          "clock.", "Local wins: what is closed.")
 
@@ -345,12 +354,13 @@ S7 = p("Stopping the server does not stop the desktops: the server, the PAM help
       "and desktops are closed, not killed.") + \
     tip("a package upgrade restarts the server with " + c("try-restart") + " only if it was running; the users' "
         "desktops survive and the new server finds them again. Before stopping the service by hand, look at who is "
-        "connected anyway: their clients are dismissed with " + c("0x0C SERVER_IN_CHIUSURA") + ".", "Upgrades.")
+        "connected anyway: their clients are dismissed with " + c("0x0C SERVER_IN_CHIUSURA") + " (server shutting "
+        "down).", "Upgrades.")
 
 S8 = p("Three clocks run on different scales — seconds, minutes, an hour — and each ends something different.",
        lead=True) + \
     table(["Clock", "Default", "Option", "What happens", "Reason"], [
-        ["client silence", "30 s", "fixed (" + c("SILENZIO") + ")", "the client counts as detached: its slot is "
+        ["client silence", "30 s", "fixed (" + c("SILENZIO") + ", silence)", "the client counts as detached: its slot is "
          "free and the next device enters", "none"],
         ["user inactivity", "30 min", c("--inattivita-s") + " (0 = off)", "the client is detached; the desktop "
          "stays; user and password are needed again", c("0x02 INATTIVITA")],
@@ -373,18 +383,19 @@ S8 = p("Three clocks run on different scales — seconds, minutes, an hour — a
       "2026, on the test machine (31 GB of RAM), an abandoned GNOME session used 477 MB (PSS) — 182 MB of it "
       + c("gnome-shell") + ", 116 MB the child — and about 0.017 % of a core, without growing over time. Not a "
       "leak, a fixed cost; the user chose to pay it for an hour rather than six.") + \
-    note("all three values are written in the log at startup, with “OFF” when set to 0.", "Logged at startup.")
+    note("all three values are written in one log line at startup; a clock set to 0 is marked "
+         + c("(SPENTA)") + " or " + c("(SPENTO)") + " (off).", "Logged at startup.")
 
 USCITA = seq([("Page", "browser", "light"), ("Server", "root", "navy"), ("Child", "the user", "blue"),
               ("Desktop", "compositor", "grey")], [
     (0, 1, "TERMINA_SESSIONE"),
-    (1, 0, "CONGEDO 0x10 to the user's other clients", True),
+    (1, 0, "farewell 0x10 SESSIONE_TERMINATA to the user's other clients", True),
     (1, 2, "MSG_INPUT: end the session"),
     (2, 3, "polite logout, then forced"),
     ("nota", 2, "leftovers: SIGTERM, 2 s, SIGKILL"),
     ("nota", 2, "drop-ins and environment restored"),
     (2, 1, "exit 0", True),
-    (1, 0, "CONGEDO 0x10 (if still attached)", True),
+    (1, 0, "farewell 0x10 (if still attached)", True),
 ], "«FIG» — Ctrl+Alt+End: the page asks, the child ends the desktop", width=900)
 
 S9 = p("Only the user ends their session; the server ends it only when it is abandoned. Either way the reason is sent "
@@ -394,12 +405,13 @@ S9 = p("Only the user ends their session; the server ends it only when it is aba
         ["“Log out” from the desktop's menu", "logind ends the session and with it the child, its leader; the "
          "server reaps the child and " + c("congeda_figlio()") + " dismisses the clients. If the child sees the "
          "session die first, it sends " + c("MSG_SESSIONE_FINITA") + " and the server does the same",
-         c("0x10 SESSIONE_TERMINATA")],
-        [c("Ctrl+Alt+End") + " in the page, after a confirmation", c("TERMINA_SESSIONE") + " → "
+         c("0x10 SESSIONE_TERMINATA") + " (session ended)"],
+        [c("Ctrl+Alt+End") + " in the page, after a confirmation", c("TERMINA_SESSIONE") + " (end the session) → "
          + c("termina_al_figlio()") + ": the user's other clients are dismissed, the child receives "
          + c("FIGLI_INPUT_TERMINA") + " and calls " + c("sessione_termina()"), c("0x10")],
         ["60 minutes without input", c("abbandono_scaduto()") + ": clients dismissed, then the same request to the "
-         "child; for a desktop found again, a child is forked to close it", c("0x03 SESSIONE_ABBANDONATA")],
+         "child; for a desktop found again, a child is forked to close it", c("0x03 SESSIONE_ABBANDONATA")
+         + " (session abandoned)"],
     ], "«TAB» — The ways a graphical session ends") + USCITA + \
     p(c("sessione_termina()") + " asks politely, then insists: on GNOME " + c("Logout") + " with mode 1, then mode 2 "
       "(forced); on KDE an orderly logout, then forced; on XFCE and LXQt the session manager's exit, then killing "
@@ -415,7 +427,7 @@ S9 = p("Only the user ends their session; the server ends it only when it is aba
       "page goes back to the login form with its sentence for " + c("0x10") + " (the session has ended and its "
       "programs were closed), out of full screen and pointer lock.") + \
     note("" + c("0x01") + " promises “reattach and you will find everything”, which after a logout is false; "
-         + c("0x10") + " exists so that the two endings never share a code (DECISIONI §4.1-quater).",
+         + c("0x10") + " exists so that the two endings never share a code (DECISIONI.md §4.1-quater).",
          "Why a new reason.")
 
 S10 = p("When systemd stops the unit, the server says goodbye to every client before it closes QUIC, then lets its "
@@ -425,7 +437,7 @@ S10 = p("When systemd stops the unit, the server says goodbye to every client be
     + "). The server keeps reading and running timers until nothing is left to say, for at most 4 s by the clock "
     "(it used to count turns, which on a fast machine gave up after three tenths of a second while the safety "
     "net for the closing capsule was 3 s).",
-    "Then it keeps the connections alive for another 50 turns of 10 ms: a capsule handed to ngtcp2 is not yet on "
+    "Then, if every session has said all it had to say, it keeps the connections alive for another 50 turns of 10 ms: a capsule handed to ngtcp2 is not yet on "
     "the wire, and without this wait Firefox saw the service vanish with no reason (bench B7, 11 August 2026). "
     "The log says how many turns each phase took, or which connections still had something to say.",
     "Clean-up, in this order: the PAM helper (" + c("SIGTERM") + " to the dispatcher), the sentinel, the unblock "
@@ -453,7 +465,7 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
         [c("/usr/share/remotix/cinture/"), "package", "the three belts, <b>disabled</b>: the polkit rule, the logind "
          "keys, the sleep settings"],
         [c("/etc/remotix/remotix.conf.d/"), "administrator", "their choices, " + c("VARIABLE=value") + " lines"],
-        [c("/etc/remotix/utenti-negati"), "package", "users PAM refuses outright; contains " + c("root")],
+        [c("/etc/remotix/utenti-negati"), "package", "denied users: those PAM refuses outright; contains " + c("root")],
         [c("/etc/pam.d/remotix"), "package", "the PAM stack of the family (" + c("/usr/lib/pam.d/remotix")
          + " on openSUSE)"],
         [c("/usr/share/applications/org.kde.remotix.desktop"), "package", "lets KWin offer screen capture to the "
@@ -486,36 +498,36 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
         [c("~/.local/state/remotix/sessione.log"), "the desktop's own output", "kept; if the folder is not safe, "
          + c("$XDG_RUNTIME_DIR/remotix-sessione.log") + " instead, declared"],
     ], "«TAB» — Per-user files, written by the child") + \
-    p("The user's own settings are not changed, with the exceptions DECISIONI §8.2 allows — lock, reboot, suspend and "
+    p("The user's own settings are not changed, with the exceptions DECISIONI.md §8.2 allows — lock, reboot, suspend and "
       "stand-by removed — detailed per desktop in " + rif("The four desktops") + ". The session log is created with "
       + c("O_NOFOLLOW") + " in a folder that must be the user's, not a link and not writable by others: until phase "
       "17 it lived in " + c("/tmp") + " under a predictable name, and another user could pre-create it.") + \
-    warn("since DECISIONI §10.36 (10 October 2026) the installer no longer puts the belts in force: on a packaged "
+    warn("since DECISIONI.md §10.36 (10 October 2026) the installer no longer puts the belts in force: on a packaged "
          "machine nobody forbids power-off unless the administrator enables the files in "
          + c("/usr/share/remotix/cinture/") + ". The child checks and writes it in the log at every first stage; "
-         "SPECIFICHE §11.3 still says power-off is taken from everyone.", "The belts are off by default.")
+         "SPECIFICHE.md §11.3 still says power-off is taken from everyone.", "The belts are off by default.")
 
 S12 = p("A defect in this chain rarely names its cause: the user sees “black”, “slow” or “nothing happens”. "
         "Start from the symptom, find the step, then read the log of the area that owns it.", lead=True) + \
     table(["Symptom", "Step to check", "Where"], [
         ["the login is refused for every user, right passwords included", "the PAM file; " + c("utenti-negati")
          + " missing makes " + c("pam_listfile") + " refuse everyone", c("guarda_il_servizio_pam()") + " line at "
-         "startup; the PAM helper's “could not judge” line"],
+         "startup; the " + c("PAM NON HA POTUTO GIUDICARE") + " (PAM could not judge) line"],
         ["the desktop never appears", "the logind session (the child's first line: runtime directory and bus "
          "present?); the server started inside a user session; no desktop recognised", c("figlio") + " area; "
          + c("MSG_SONO") + " line"],
         ["it appears after many seconds", "a previous session still dying (the child waits for it); the birth window",
-         c("sessione") + " area: “not yet inactive”"],
+         c("sessione") + " area: " + c("non e' ancora finita") + " (not yet over)"],
         ["black bands, a “broken” desktop, clicks in the wrong place", "the canvas: the stage was born at a size "
          "nobody asked for", c("MSG_TELA") + " lines, chosen and obtained"],
         ["everything is slow, even typing in a terminal", "the GPU's groups: the compositor renders with llvmpipe",
          "first-login lines of the " + c("figlio") + " area"],
         ["the desktop shows but does not react", "the input channel (libei, KWin EIS, wlr virtual devices)",
-         "“input” lines after the stage"],
+         c("input") + " area lines after the stage"],
         ["the machine can be powered off from the session", "the belts", "the child's power-off line"],
         ["a user logged out and the desktop came back", "the three-state rule after logout", c("figlio")
          + " area"],
-        ["a user is refused with “no session available”", "stages full: children plus desktops found again, "
+        ["a user is refused with " + c("0x0E") + " (the session cannot be served)", "stages full: children plus desktops found again, "
          "which last until logout or abandonment", "the " + c("0x0E") + " line with the counts"],
     ], "«TAB» — From symptom to step")
 

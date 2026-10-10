@@ -57,8 +57,8 @@ DOVE = fig(
     + box(472, 114, 176, 50, "Queue threshold", "video_sgombra(), 100 ms", "navy")
     + box(472, 184, 176, 50, "Dead line", "stall 5 s · silence 10 s", "navy")
     + box(692, 44, 176, 50, "Stream reader", "FIN or RESET, open order", "blue")
-    + box(692, 114, 176, 50, "Hole rule", "one key request per hole", "blue")
-    + box(692, 184, 176, 50, "Decoder queue skip", "only if drawing is the neck", "light")
+    + box(692, 114, 176, 50, "Gap rule", "one key request per gap", "blue")
+    + box(692, 184, 176, 50, "Decoder queue skip", "only if drawing is the bottleneck", "light")
     + arrow(120, 96, 120, 112) + arrow(210, 130, 250, 76)
     + arrow(340, 96, 340, 112) + arrow(340, 166, 340, 182)
     + arrow(430, 69, 470, 69) + arrow(560, 96, 560, 112)
@@ -68,7 +68,7 @@ DOVE = fig(
 
 S2 = p("Quality is not decided in one place. The encoder lives in the per-user child process, the budget "
        "and the admission in the parent's main loop, the line-facing regulators in the parent's WebTransport "
-       "layer, and the last word — what reaches the glass — in the page. Each piece decides only on what it "
+       "layer, and the last word — what reaches the screen — in the page. Each piece decides only on what it "
        "can measure locally.", lead=True) + DOVE + \
     table(["Mechanism", "Option (default)", "Process / file", "What it changes"], [
         "Line-facing cures (phase 9, on by default since 24 Aug 2026)",
@@ -98,7 +98,7 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
     ], "«TAB» — Every quality and capacity switch, its default and where it lives") + \
     p("Two of these live in the child, which is a separate program started with " + c("execve") + " and a "
       "freshly composed environment: they cannot travel as environment variables. " + c("figli_fase9()")
-      + " stores them and the child's command line carries " + c("--qualita-risale") + " and "
+      + " (the phase 9 settings for the children) stores them and the child's command line carries " + c("--qualita-risale") + " and "
       + c("--tetto-banda-mbit") + " (and the audio-silence switch) when it is built. Every switch writes its "
       "value in force at startup, <i>on and off</i>: “switched off” and “never had to act” must not look the "
       "same in the log.") + \
@@ -106,7 +106,7 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
          + " and " + c("--linea-morta") + " no longer exist: typing them prints an explanation and exits with "
          "status 2. The temporary environment bridge for the queue threshold was removed on 23 August 2026 "
          "when the option arrived: two ways to set the same value are two numbers that can diverge.",
-         "One road per switch.")
+         "One way per switch.")
 
 # ── 3. Encoder rate control ───────────────────────────────────────────────
 S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HARDWARE") + " in "
@@ -115,7 +115,7 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
        "controller with a ceiling in which the QP still acts as the quality factor.", lead=True) + \
     p("Constant QP is the direct translation of I1 and of “never coarsen”: the quantiser is fixed, so the "
       "image of a quiet desktop never gets worse, and the bandwidth is simply what comes out. Measured on the "
-      "test machine on 23 August 2026 (2560×1080, " + c("EncSliceLP") + " on the Intel UHD 730, QP 26, 30 s "
+      "test machine on 23 August 2026 (2560×1080, " + c("EncSliceLP") + " on the Intel UHD 770, QP 26, 30 s "
       "per point), the real desktop of the user moving at full screen cost <b>0.204 Mbit/s</b>; a film with "
       "grain at full screen cost <b>58.7 Mbit/s</b>. (The phase 9 document later found that this series had "
       "been taken with the test client negotiating HEVC; re-measured in H.264 the same night, the hard case "
@@ -132,7 +132,8 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
     p("Under VBR the QP is silently ignored, which would turn the quality ladder and the quality rise into "
       "no-ops: a component that ignores an option without saying so is precisely the failure this file exists "
       "to avoid. The three numbers of the cap are <b>derived</b> from the floor given on the command line, never "
-      "written by hand (" + c("tetto_filo()") + ", " + c("tetto_punto()") + ", " + c("tetto_serbatoio_bit()") + "):") + \
+      "written by hand (" + c("tetto_filo()") + " (wire), " + c("tetto_punto()") + " (working point), "
+      + c("tetto_serbatoio_bit()") + " (buffer in bits)):") + \
     table(["Number", "Rule", "At 20 Mbit/s", "Why"], [
         ["Wire (max rate)", c("TETTO_QUOTA_FILO") + " = 80 % of the floor", "16 Mbit/s",
          "Measured: with zero video, audio, input, clipboard and QUIC overhead take 2.4 Mbit/s; 16 + 2.4 = 92 % of the floor"],
@@ -141,13 +142,13 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
         ["Buffer (VBV)", c("TETTO_VBV_MS") + " = 40 ms of the wire", "640 kbit",
          "The 40 ms target of our piece, not the 50 ms cap. v1 used " + c("bit_rate / 2") + ", which is half a <i>second</i>"],
     ], "«TAB» — The three numbers of the bandwidth cap, derived from the floor") + \
-    p("The mode is <b>asked for by name</b> (" + c("modo_bitrate_voluto()") + ") and checked against the mask the "
+    p("The mode is <b>asked for by name</b> (" + c("modo_bitrate_voluto()") + ", the wanted bitrate mode) and checked against the mask the "
       "driver declares: on VA-API the declared rate-control bits are read with " + c("vaGetConfigAttributes")
       + " and printed in clear, and a mode the driver does not declare makes the encoder fail loudly instead "
-      "of falling back to a mode nobody chose. " + c("tetto_in_tre_numeri()") + " refuses a working point "
-      "not below the wire and a non-positive buffer, and " + c("serbatoio_entro_i_50_ms()") + " refuses a buffer "
+      "of falling back to a mode nobody chose. " + c("tetto_in_tre_numeri()") + " (the cap in three numbers) refuses a working point "
+      "not below the wire and a non-positive buffer, and " + c("serbatoio_entro_i_50_ms()") + " (buffer within 50 ms) refuses a buffer "
       "longer than 50 ms. On Vulkan Video, which has no QVBR, the cap becomes VBR with the requested QP as the "
-      "floor of the controller (" + c("apri_scheda_vulkan()") + "); without the cap the card must declare CQP.") + \
+      "floor of the controller (" + c("apri_scheda_vulkan()") + ", which opens the Vulkan encoder); without the cap the card must declare CQP.") + \
     warn("the cap applies only to hardware encoding — since phase 19 there is no other kind — and the value "
          "passed is a <i>floor</i>, not a ceiling. The code comments and the phase 9 measurements use 20 Mbit/s; "
          "the declared product floor is 30 (" + c("DECISIONI.md") + " §3.1-sexies). Whoever switches the cap on "
@@ -160,15 +161,15 @@ S3 = p("By default the encoder runs at a <b>constant QP of 26</b> (" + c("QP_HAR
 S4 = p("RCP.md §6.2 forbids a video frame larger than 16 MiB: the sender must re-encode it at a lower quality "
        "and log it, never send it. That rule is the only thing that moves the QP of a running encoder.",
        lead=True) + \
-    p("When a frame comes out of the card above " + c("TETTO_FOTOGRAMMA") + " (16 777 216 bytes), "
-      + c("comprimi_comune()") + " logs it, records the step on which the cap bit (" + c("qualita_fallita") + "), "
-      "and " + c("abbassa_qualita()") + " raises the QP by " + c("CRF_PASSO") + " = 9, capped at 51. Changing "
-      "quality closes and reopens the card context (" + c("cambia_qualita()") + "), so the next frame is "
+    p("When a frame comes out of the card above " + c("TETTO_FOTOGRAMMA") + " (the frame ceiling, 16 777 216 "
+      "bytes), " + c("comprimi_comune()") + " (the shared compression path) logs it, records the step on which the cap bit (" + c("qualita_fallita") + "), "
+      "and " + c("abbassa_qualita()") + " (lower the quality) raises the QP by " + c("CRF_PASSO") + " (the step) = 9, capped at 51. Changing "
+      "quality closes and reopens the card context (" + c("cambia_qualita()") + ", change the quality), so the next frame is "
       "always a <b>keyframe</b>. The ladder from the default is therefore 26 → 35 → 44 → 51.") + \
     table(["Frame", "How far down", "If it still does not fit"], [
         ["Keyframe", "The whole ladder: a keyframe may not be abandoned (RCP.md §5.2)",
          "At 51 it is not sent, and the log says “nothing left to lower”"],
-        ["Delta", c("RICODIFICHE_MASSIME") + " = 3 encodings in total: 26, 35, 44 — two descents, both tried",
+        ["Delta", c("RICODIFICHE_MASSIME") + " (maximum re-encodings) = 3 encodings in total: 26, 35, 44 — two descents, both tried",
          "Abandoned. The reopened context makes the next frame a keyframe, so the client never loses its reference"],
     ], "«TAB» — How a frame over the cap is handled") + \
     p("The step was 6 until 22 August 2026, and it was one step short: at 7680×4320 with almost incompressible "
@@ -182,9 +183,9 @@ S4 = p("RCP.md §6.2 forbids a video frame larger than 16 MiB: the sender must r
       "the cap. A percentage of 100 or less would be a descent out of prudence, which I1 forbids, and the line "
       "would prove it on its own.") + \
     note("until 23 August 2026 the delta branch was dead code: the counter read " + c("prossimo_chiave")
-         + " inside the loop, and every reopen set it, so a delta always walked the whole ladder while the "
+         + " (next frame is a key) inside the loop, and every reopen set it, so a delta always walked the whole ladder while the "
          "startup line claimed it stopped after three attempts. The frame's kind is now decided once, before "
-         "the first descent (" + c("chiave_chiesta") + ").", "A dead branch, fixed.")
+         "the first descent (" + c("chiave_chiesta") + ", key requested).", "A dead branch, fixed.")
 
 # ── 5. Quality recovery ────────────────────────────────────────────────────
 S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exceptional frame left the "
@@ -197,9 +198,9 @@ S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exc
         ["Back onto the failed step", "twice the wait", "The step where the cap bit is a measured fact, not a suspicion"],
         [c("RISALITA_ATTESA_MAX"), "3840 frames (~64 s)", "The wait doubles at every relapse and never comes back down"],
     ], "«TAB» — The numbers of the quality rise") + \
-    p(c("risali_qualita()") + " runs at the entry of the next frame, never with a packet in hand (closing the "
+    p(c("risali_qualita()") + " (raise the quality) runs at the entry of the next frame, never with a packet in hand (closing the "
       "context frees its bytes). It climbs one step at a time and never above the quality the caller "
-      "requested. A relapse right after a climb doubles the wait (" + c("risalito_da_poco") + "). The two "
+      "requested. A relapse right after a climb doubles the wait (" + c("risalito_da_poco") + ", recently raised). The two "
       "defences against flapping are the eighth-of-the-cap margin — a scene sitting at 95 % of the cap never "
       "produces a calm frame — and the doubling, which halves the reopen rate at every round. If the context "
       "does not reopen at the new value, it falls back to the old one: climbing is optional, and a cure that "
@@ -210,24 +211,24 @@ S5 = p("Before phase 9 the QP was a ratchet: four writes, all downwards. One exc
 # ── 6. The queue threshold ────────────────────────────────────────────────
 S6 = p("Each video frame travels on its own unidirectional QUIC stream. When a newer frame is produced while an "
        "older delta still has bytes in <i>our</i> send queue, RCP.md §5.1 allows (it does not require) a "
-       + c("RESET_STREAM") + " of the old one. " + c("video_sgombra()") + " decides when to use that permission.",
+       + c("RESET_STREAM") + " of the old one. " + c("video_sgombra()") + " (clear the video queue) decides when to use that permission.",
        lead=True) + \
     p("Until 23 August 2026 every older delta was abandoned at once. On the test machine, with a 3-second dip "
       "to 10 Mbit/s and a 1920×1080 scene, abandonments and keyframes went <b>one to one</b>, even on the wide "
-      "line: each abandon opened a hole, each hole asked for a keyframe, and the abandoning itself was "
+      "line: each abandon opened a gap, each gap asked for a keyframe, and the abandoning itself was "
       "manufacturing keyframes. Since 24 August a delta is abandoned only if the video queue cannot drain "
       "within " + c("WT_SGOMBRA_SOGLIA_MS") + " = 100 ms:") + \
     code("""
-attesa_ms = byte_in_coda_video * smoothed_rtt / cwnd      (from ngtcp2)
-          = byte_in_coda_video / 2500                     (fallback: no rtt/cwnd yet, 20 Mbit/s)
-attesa <= soglia            -> keep every delta (counted, one log line per state change)
-attesa >  soglia            -> abandon the live deltas still in our queue
-attesa >  soglia, a KEY in queue -> keep the deltas behind it (22 Sep 2026)
+wait_ms = video_queue_bytes * smoothed_rtt / cwnd       (from ngtcp2)
+        = video_queue_bytes / 2500                      (fallback: no rtt/cwnd yet, 20 Mbit/s)
+wait <= threshold            -> keep every delta (counted, one log line per state change)
+wait >  threshold            -> abandon the live deltas still in our queue
+wait >  threshold, a KEY in queue -> keep the deltas behind it (22 Sep 2026)
 """, "text", "The decision of video_sgombra()") + \
     p("Only bytes still in our own queue are considered; what has already been handed to ngtcp2 is not taken "
       "back (nothing would be saved). The last rule was added on 22 September 2026 after a user test with a 4K "
       "video on KDE: a ~300 KB keyframe in the queue pushed the wait above the threshold on its own, abandoning "
-      "the deltas behind it did not shorten it, but opened a hole, which requested another large keyframe — "
+      "the deltas behind it did not shorten it, but opened a gap, which requested another large keyframe — "
       "abandons climbed by one per keyframe, 7 → 13 in 6 s, and then the dead line fired. Behind a keyframe "
       "the deltas are kept, and braking production is left to the rate regulator.") + \
     p("The price, measured 23–24 August 2026 (bench 09-b79, together with the rate regulator): up to "
@@ -237,10 +238,10 @@ attesa >  soglia, a KEY in queue -> keep the deltas behind it (22 Sep 2026)
 
 # ── 7. The rate regulator ─────────────────────────────────────────────────
 S7 = p("The rate regulator is the only mechanism that lowers the frame rate, and it does so on a local fact: "
-       "<b>" + c("arretrato") + "</b>, the number of live, non-key deltas that still have bytes in our send "
+       "<b>" + c("arretrato") + "</b> (backlog), the number of live, non-key deltas that still have bytes in our send "
        "queue, read when a new frame arrives and before " + c("video_sgombra()") + ".", lead=True) + \
-    p(c("ritmo_frena()") + " returns “do not send” when " + c("arretrato") + " reaches " + c("WT_RITMO_POSTI")
-      + " = 2: one frame of overlap is allowed, two left behind are not. Nothing comes from outside — no loss "
+    p(c("ritmo_frena()") + " (rate brake) returns “do not send” when " + c("arretrato") + " reaches "
+      + c("WT_RITMO_POSTI") + " (rate slots) = 2: one frame of overlap is allowed, two left behind are not. Nothing comes from outside — no loss "
       "rate, no reorder, no client silence can distort it — and there is no state to climb back: the quantity "
       "is re-read at every frame, so the episode ends by itself when the queue empties. Keyframes never pass "
       "through it; they have their own pacing (" + rif("Keyframe request pacing") + ").") + \
@@ -251,14 +252,14 @@ S7 = p("The rate regulator is the only mechanism that lowers the frame rate, and
         ["It brakes downstream of the encoder", "The dropped frame was already encoded and the encoder's "
          "references moved on. Since 23 September 2026 a drop marks the stream as damaged ("
          + c("rcp_video_scartato_prima_del_filo()") + ") and requests a keyframe at once (" + c("video_regola()")
-         + "). Without it the client saw an image decaying into tiles with every counter green (27 and 38 "
-         "drops, 0 holes, 1 key in the session)"],
-        ["One keyframe per episode", c("serve_chiave") + " is a boolean cleared only when the key has left whole, "
+         + ", the only place that asks the stage for a key). Without it the client saw an image decaying into tiles with every counter green (27 and 38 "
+         "drops, 0 gaps, 1 key in the session)"],
+        ["One keyframe per episode", c("serve_chiave") + " (key needed) is a boolean cleared only when the key has left whole, "
          "and deltas behind that key are not abandoned"],
-        ["Two log lines per episode", "“the rate GOES DOWN” with " + c("arretrato") + ", posts, queue bytes, "
+        ["Two log lines per episode", c("il ritmo SCENDE") + " (the rate goes down) with " + c("arretrato") + ", slots, queue bytes, "
          + c("cwnd") + ", " + c("cwnd_left") + ", bytes in flight, RTT and the queue inside the network ("
-         + c("smoothed_rtt - min_rtt") + "); “the rate GOES UP” with the duration. Never one line per frame"],
-        ["One line per second while on", c("ritmo_ciclo()") + " prints how many times " + c("arretrato")
+         + c("smoothed_rtt - min_rtt") + "); " + c("il ritmo RISALE") + " (the rate goes back up) with the duration. Never one line per frame"],
+        ["One line per second while on", c("ritmo_ciclo()") + " (the once-a-second rate tick) prints how many times " + c("arretrato")
          + " was read: <i>zero reads</i> means a still scene, not “zero backlog”"],
     ], "«TAB» — What the regulator depends on and what it costs") + \
     p("Measured in the phase 9 paired comparison: keyframes dropped from 51.7–88.1 % of frames to 0.0–5.6 %, "
@@ -279,27 +280,28 @@ S8 = p("A keyframe is about ten times a delta. Asking for one at every sign of t
        "RCP.md §5.2 names: during a burst of losses the requests multiply and every keyframe worsens the "
        "condition that caused it. Both ends pace their requests.", lead=True) + \
     table(["Where", "Constant", "Value", "Rule"], [
-        ["Page", "—", "1 per hole, re-asked after 1 s", c("Schermo.buco()") + ": while a hole is open no second "
+        ["Page", "—", "1 per gap, re-asked after 1 s", c("Schermo.buco()") + " (Screen.gap): while a gap is open no second "
          "request is sent; if the key has not arrived after 1 s it is asked again (the server may ignore one)"],
         ["Server, RCP", c("V_GRAZIA_CHIAVE"), "200 ms", "A request within 200 ms of the last keyframe sent may be ignored"],
         ["Server, towards the child", c("WT_CHIAVE_RICHIESTA_MS"), "150 ms", "The floor between two requests to the capture process"],
         ["", c("WT_CHIAVE_MARGINE_PC"), "120 %", "Margin on the time the last key needs to leave: "
          + c("chiave_byte × rtt / cwnd")],
         ["", c("WT_CHIAVE_TETTO_MS"), "2000 ms", "The longest the image may stay broken: after that a key is asked anyway"],
-        ["", c("WT_CHIAVE_DEBITO_TETTO_MS"), "1000 ms", "Second belt: while the key debt is on, every refused frame can re-ask, independently of the heartbeat"],
+        ["", c("WT_CHIAVE_DEBITO_TETTO_MS"), "1000 ms", "A second safeguard: while the key debt is on, every refused frame can re-ask, independently of the heartbeat"],
     ], "«TAB» — The pacing of keyframe requests") + \
     p(c("chiave_intervallo_ms()") + " first looks at a fact: if the previous keyframe still has bytes in our "
       "queue, the answer is the 2-second ceiling. Otherwise it computes, from ngtcp2's own " + c("cwnd")
       + " and smoothed RTT, how long a keyframe of the last size needs to leave, adds 20 %, and never goes below "
-      "150 ms or above 2 s. Every change of the interval is logged with the bandwidth it was derived from.") + \
+      "150 ms or above 2 s. Every change of the interval by 100 ms or more is logged with the bandwidth it was "
+      "derived from.") + \
     table(["Scene (30 s, PCM audio)", "Interval", "Audio blocks before → after", "Video frames before → after"], [
         ["3 Mbit/s, still desktop", "150 (inert)", "6 009 → 6 002", "1 → 1"],
         ["15 Mbit/s, moving desktop", "150 (inert)", "4 076 · 3 944 → 3 984 · 3 830", "743 · 742 → 683 · 677"],
         ["3 Mbit/s, moving desktop", "~171 ms", "371 · 462 → 1 552 · 1 595 · 1 725", "115 · 99 → 89 · 128"],
         ["1 Mbit/s, moving desktop", "600–1000 ms", "15 → 577", "57 → 47"],
     ], "«TAB» — Bench 07-b65, 21 Aug 2026 evening, test machine, alternating runs differing by one line") + \
-    p("Where there is bandwidth the cure declares itself inert (“the measured bandwidth is enough: the 150 ms "
-      "floor remains”, 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
+    p("Where there is bandwidth the cure declares itself inert (" + c("la banda misurata basta: resta il fondo di 150 ms")
+      + ", “the measured bandwidth is enough: the 150 ms floor remains”, 100 times out of 101 at 15 Mbit/s). On a narrow line the image stays broken longer after "
       "a loss — that is the price, and it is visible — and in exchange the audio, whose datagrams found "
       + c("cwnd_left = 0") + " behind keyframes asked faster than they could leave, gets through.")
 
@@ -313,17 +315,17 @@ S9 = p("The fifth cure is of another kind: it does not decide how well the deskt
         ["<b>Silence</b>", "No packet from the client for N s, with at least " + c("WT_LM_MIN_PROVE") + " = 2 of our "
          "packets sent in the meantime", c("WT_LM_SILENZIO_S") + " = 10 s"],
     ], "«TAB» — The two causes of the dead line") + \
-    p(c("linea_morta_giudica()") + " evaluates both from two monotonic local counters (video bytes handed to "
+    p(c("linea_morta_giudica()") + " (judge the dead line) evaluates both from two monotonic local counters (video bytes handed to "
       "ngtcp2, frames offered by the child) and from ngtcp2's received-packet counter; time enters only as the "
-      "distance between two samples. When either fires, " + c("linea_morta_scatta()") + " writes one line "
+      "distance between two samples. When either fires, " + c("linea_morta_scatta()") + " (fire the dead line) writes one line "
       "starting with " + c("linea-morta") + " that carries every number of the decision (" + c("causa=") + ", "
       + c("stallo_ms=") + ", " + c("silenzio_ms=") + ", " + c("prove=") + ", " + c("cwnd=") + ", " + c("ritmo_giu=")
       + " …), and the transport, the only owner of the QUIC connection, closes it. With the dead line on, the "
       "transport's PINGs move from 10 s to half the silence threshold (5 s), or “the client does not answer” "
       "and “we never asked” would look the same.") + \
-    p("The stall threshold sits 5.0× above the longest empty second of " + c("raffica-1") + " (a line that "
-      "holds, 23.94 frames/s) and 2.9× below the 14.26 s freeze of " + c("raffica-forte") + " (a line that serves "
-      "nobody); on " + c("casa-cattiva") + ", the worst line that holds for ten minutes, the stall never exceeded "
+    p("The stall threshold sits 5.0× above the longest empty second of " + c("raffica-1") + " (burst 1, a line that "
+      "holds, 23.94 frames/s) and 2.9× below the 14.26 s freeze of " + c("raffica-forte") + " (strong burst, a line that serves "
+      "nobody); on " + c("casa-cattiva") + " (bad home line), the worst line that holds for ten minutes, the stall never exceeded "
       "500 ms — a margin above 10× (measured 23–24 Aug 2026, test machine, " + c("netem") + " profiles). It is the "
       "most expensive cure: a wrong threshold would throw out someone who is working, so whoever touches "
       + c("WT_LM_STALLO_MS") + " must measure those two margins again.") + \
@@ -359,10 +361,10 @@ S10 = p("Two of the five phase 9 cures change nothing the user sees, and were sw
 
 # ── 11. The composition budget ────────────────────────────────────────────
 S11 = p("Until 25 August 2026 the server accepted everyone and starved everyone together: on the saturated "
-        "scene the eleventh user entered with " + c("negati 0") + " and the first session fell from 39.60 to "
+        "scene the eleventh user entered with " + c("negati 0") + " (refused: 0) and the first session fell from 39.60 to "
         "0.96 frames/s (−97.6 %). " + c("src/budget.c") + " is the cure: it computes, before a desktop is "
         "started, whether the machine can afford one more.", lead=True) + \
-    table(["Where it gives way (Intel UHD 730, i5-13500T, 24 Aug 2026)", "Ceiling"], [
+    table(["Where it gives way (Intel UHD 770, i5-13500T, 24 Aug 2026)", "Ceiling"], [
         ["The encoder alone (the two VDBOX engines)", "1.86 Gpixel/s in H.264 · 2.33 in HEVC"],
         ["<b>Composition</b> (the render engine " + c("rcs0") + ")", "<b>0.97 Gpixel/s — half</b>"],
     ], "«TAB» — Why the currency is the composed pixel, not the encoded one") + \
@@ -373,22 +375,22 @@ S11 = p("Until 25 August 2026 the server accepted everyone and starved everyone 
       "0.6 % across canvas sizes while frames/s differ by 74.9 %: the budget can only <i>count</i> composition, "
       "and it counts it in composed pixels per second.") + \
     code("""
-regge(dentro, nuovo)  <=>  somma_domanda(dentro) + peggiore(nuovo)  <=  C * 1.01
-                           AND  no tenant's median delay > 22.9 ms
+fits(inside, new)  <=>  sum of demand(inside) + peggiore(new)  <=  C * 1.01
+                         AND  no tenant's median delay > 22.9 ms
 
-domanda(t)  = peggiore(t)                      if t never delivered, or has no delay sample
+demand(t)   = peggiore(t)                           if t never delivered, or has no delay sample
             = max(consegnato(t), F * peggiore(t))   otherwise
-peggiore(t) = tela_l * tela_a * 39.54 / 1e6    Mpixel/s
-""", "text", "The admission rule of budget.c") + \
+peggiore(t) = canvas_width * canvas_height * 39.54 / 1e6    Mpixel/s
+""", "text", "The admission rule of budget.c (peggiore = worst case, consegnato = delivered)") + \
     table(["Constant", "Value", "Origin"], [
-        [c("BUDGET_RITMO_MAX_FOT_S"), "39.54 frames/s", "What one session alone delivered on this hardware, first step of the climb to eleven (1920×1080 H.264, saturated scene). The second number of the machine: re-measure it with the first"],
+        [c("BUDGET_RITMO_MAX_FOT_S"), "39.54 frames/s", "What one session alone delivered on this hardware, first step of the climb to eleven sessions (1920×1080 H.264, saturated scene). The second number of the machine: re-measure it with the first"],
         [c("BUDGET_RITARDO_AFFANNO_MS"), "22.9 ms", "Geometric mean of healthy steps (≤ 13.1 ms) and broken steps (≥ 39.9 ms), which do not overlap. Valid for that scene and that hardware"],
         [c("BUDGET_RISERVA_PREDEFINITA"), "0.5", "With F = 0.5 the predictor makes 0 false yes and 0 false no on the data available"],
         [c("BUDGET_TOLLERANZA"), "1 %", "The repeatability of the meter (±0.6 %); the capacity is a peak that was seen to hold"],
         [c("SECCHI") + " × " + c("SECCHIO_US"), "8 × 250 ms = 2 s", "Window of delivered pixels; buckets let an idle tenant decay to zero"],
-        [c("RITARDI"), "32 samples, median", "One hiccup must not refuse a user; ~0.8 s at 40 frames/s"],
+        [c("RITARDI") + " (delays)", "32 samples, median", "One hiccup must not refuse a user; ~0.8 s at 40 frames/s"],
     ], "«TAB» — The numbers of the budget") + \
-    p("<b>The accumulator.</b> " + c("deposita_fotogramma()") + " in " + c("src/main.c") + " already received every "
+    p("<b>The accumulator.</b> " + c("deposita_fotogramma()") + " (deposit a frame) in " + c("src/main.c") + " already received every "
       "frame of every child with width, height and capture instant, so no new channel between processes was "
       "needed: " + c("budget_deposita()") + " is called there, before the frame is broadcast and without any "
       "“is someone watching” guard. That is deliberate: a session whose client has left keeps encoding until its "
@@ -407,8 +409,8 @@ peggiore(t) = tela_l * tela_a * 39.54 / 1e6    Mpixel/s
     p("<b>Unknown is not zero.</b> A tenant that has not yet delivered a full 2-second window, or has no delay "
       "sample, is counted at its worst case; its canvas is that of its last frame or, if none, the stage canvas, "
       "the largest any session can get. The newcomer is counted at the minimum of the stage canvas and its "
-      + c("video.misura_massima") + " (" + c("wt_misura_massima_di()") + "), because the real canvas is only "
-      "decided at " + c("SESSIONE") + ", later. A missing monotonic clock gives " + c("BUDGET_NON_SO") + ", which "
+      + c("video.misura_massima") + " (" + c("wt_misura_massima_di()") + ", the maximum size declared by that user's client), because the real canvas is only "
+      "decided at " + c("SESSIONE") + ", later. A missing monotonic clock gives " + c("BUDGET_NON_SO") + " (“I don't know”), which "
       "admits and logs: a budget that refused for having failed to measure would make the user pay for our fault.") + \
     warn("the budget is off by default (" + c("--budget-mpixel-s 0") + ") and never calibrates itself. Before the "
          "machine has given way once, the highest capacity read is a lower bound, not a ceiling. Whoever types "
@@ -440,10 +442,11 @@ AMMISSIONE = seq(
 S12 = p("A refusal decided after the desktop has started is not a refusal: it is a login followed by an "
         "eviction. Measured in phase 10: a user who was never admitted had 42 processes and a "
         + c("gnome-shell") + ". Since 25 August 2026 both limits are checked in " + c("consegna_verdetto()")
-        + " <b>before</b> " + c("figli_assicura_da()") + " starts the child.", lead=True) + AMMISSIONE + \
-    table(["Check", "Counted on", "Refusal", "Phrase on the page"], [
+        + " (deliver the verdict) <b>before</b> " + c("figli_assicura_da()") + " (ensure the user's child) starts "
+        "the child.", lead=True) + AMMISSIONE + \
+    table(["Check", "Counted on", "Refusal", "Phrase on the page (translated)"], [
         ["<b>Session cap</b> — " + c("--tetto-sessioni") + " (10)", c("palchi_quanti()")
-         + ": live children plus desktops found at startup and awaiting reattach",
+         + " (how many stages): live children plus desktops found at startup and awaiting reattach",
          c("0x0E SESSIONE_NON_SERVIBILE") + " — an administrative limit",
          "the server could not open the session, it is not your fault; retry, and ask the administrator if it repeats"],
         ["<b>Composition budget</b> — " + c("--budget-mpixel-s"), "every stage with a child, plus the found desktops",
@@ -453,8 +456,8 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
     p("The two refusals are deliberately different (" + c("fasi/10-multi-tenant-e-il-budget.md") + " §8.1 D5): "
       "two different facts may not share an outcome. Neither is checked on a <b>resume</b> — a user whose stage "
       "already exists is already inside both counts, and refusing their reattach would be a false no on capacity "
-      "they are spending anyway. The refusal is sent <i>after</i> " + c("trasporto_verdetto()") + ", through "
-      + c("wt_congeda_utente()") + ": that order resets the failed-password counter of the address, and the "
+      "they are spending anyway. The refusal is sent <i>after</i> " + c("trasporto_verdetto()") + " (hand the verdict to the transport), "
+      "through " + c("wt_congeda_utente()") + " (dismiss every connection of the user): that order resets the failed-password counter of the address, and the "
       "client never sees " + c("AMMESSO") + ", only the farewell. The body of the " + c("CONGEDO") + " carries "
       "the figures (demand, declared capacity, the newcomer's worst case) for the log; the page shows its own "
       "phrase and does not print the body (RCP.md §7.1).") + \
@@ -470,18 +473,18 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
     p(c("--tetto-sessioni N") + " sizes the four tables that count a user — the attached seats in "
       + c("src/rcp.c") + ", the children in " + c("src/figlio.c") + ", the presence table in " + c("src/main.c")
       + ", the stages in " + c("src/webtransport.c") + " — which used to be five hand-written copies (16, 16, 16, 16 "
-      "and an 8). " + c("MAX_IN_VOLO") + " in " + c("src/aiutante.c") + " stays separate on purpose: it counts PAM "
+      "and an 8). " + c("MAX_IN_VOLO") + " (maximum in flight) in " + c("src/aiutante.c") + " stays separate on purpose: it counts PAM "
       "verifications in flight, not sessions. The count of refusals, " + c("negati") + ", is written even with the "
       "budget off, because reading zero there is the fact that proves the product behaves as before.")
 
 # ── 13. Capacity measured ─────────────────────────────────────────────────
 S13 = p("How many sessions fit depends on the hardware and on the scene, and is not promised. The phase 10 "
-        "numbers below were measured on one machine — Intel Core i5-13500T with the integrated Intel UHD 730 "
+        "numbers below were measured on one machine — Intel Core i5-13500T with the integrated Intel UHD 770 "
         "(" + c("renderD128") + "), 31 GB, 1920×1080 H.264, GNOME — on 24–25 August 2026.", lead=True) + \
     table(["Scene", "Sessions that fit", "Note"], [
-        ["Saturated — the whole screen changes at every frame", "<b>6</b>", "The number the user judged: “six RDP sessions on a modest integrated GPU is not a bad result” (§4.6-septies)"],
+        ["Saturated — the whole screen changes at every frame", "<b>6</b>", "The number the user judged: “considering that we are on a not particularly powerful integrated Intel card, 6 RDP sessions active at the same time does not seem a bad result to me” (DECISIONI.md §4.6-septies)"],
         ["Real desktop — windows, dragging, normal work", "<b>at least 11</b>", "The ceiling was not found: the bench ran out of users, not the machine"],
-    ], "«TAB» — Phase 10 capacity on the Intel UHD 730") + \
+    ], "«TAB» — Phase 10 capacity on the Intel UHD 770") + \
     table(["Step", "Budget off", "Budget on (" + c("--budget-mpixel-s 480 --riserva 0.5") + ")"], [
         ["6", "472.5 Mpx/s · 37.98 frames/s · 0 I1 violations", "478.7 Mpx/s · 38.47 frames/s · 0 violations"],
         ["7", "396.0 Mpx/s · 27.28 frames/s · 6 violations", "refused with " + c("CONGEDO 0x06")],

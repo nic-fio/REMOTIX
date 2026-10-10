@@ -35,12 +35,12 @@ FILES = table(["File", "What it does"], [
     [c("src/tls.c"), "Two " + c("SSL_CTX") + ": the QUIC one (ALPN " + c("h3") + ", 0-RTT off) and the TCP one (ALPN "
      + c("http/1.1") + ")."],
     [c("src/certificati.c"), "Generates, loads and rotates the two ECDSA P-256 certificates, and computes the "
-     "SHA-256 fingerprint of the session certificate."],
+     "SHA-256 fingerprint (" + c("impronta") + ") of the session certificate."],
     [c("src/pagina.c"), "The TCP listener: serves " + c("pagina.html") + " with the fingerprint written into it, the "
      + c("/impronta") + " endpoint and the " + c("/diario") + " log endpoint."],
     [c("src/main.c"), "Owns the single " + c("poll") + " loop, reads the command-line options (" + c("--porta") + ", "
      + c("--nome") + ", " + c("--certificati") + ", " + c("--pagina") + ", " + c("--ban-file") + "), checks the "
-     "certificate every 60 s and shuts everything down with " + c("SERVER_IN_CHIUSURA") + "."],
+     "certificate every 60 s and shuts everything down with " + c("SERVER_IN_CHIUSURA") + " (server shutting down)."],
 ], "«TAB» — The files of the transport")
 
 S1 = p("REMOTIX has no client program: the client is the browser. A web page cannot open a bare QUIC connection, "
@@ -133,7 +133,7 @@ S4 = p("Each connection gets the same transport parameters, set in " + c("traspo
         [c("disable_active_migration"), "not sent", "Migration is the reason QUIC was chosen: the phone that moves from "
          "Wi-Fi to mobile keeps its session (SPECIFICHE.md §8.4)."],
         ["0-RTT", "refused", c("SSL_CTX_set_max_early_data(ctx, 0)") + ": 0-RTT data can be replayed, and the second "
-         "message of RCP is " + c("CREDENZIALI") + ". The gain would be one round trip on a session that lasts hours."],
+         "message of RCP is " + c("CREDENZIALI") + " (credentials). The gain would be one round trip on a session that lasts hours."],
         ["ALPN", c("h3"), "Chosen by the browser; the server only accepts it (" + c("scegli_alpn()") + " rejects a "
          "client that does not offer it)."],
         ["TLS", "1.3 minimum", c("SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)") + "."],
@@ -154,7 +154,7 @@ S4 = p("Each connection gets the same transport parameters, set in " + c("traspo
         + " at ngtcp2's default (CUBIC). See " + rif("Congestion and the send queue") + ".",
     ]) + \
     note("a comment in " + c("rcp.c") + " (above " + c("SILENZIO") + ") still says " + c("max_idle_timeout") + " is 120 "
-         "seconds; the code announces 30 s. The 30-second seat rule is enforced by RCP on its own clock either way.",
+         "seconds; the code announces 30 s. The 30-second attach-slot rule is enforced by RCP on its own clock either way.",
          "Stale comment.")
 
 # ── Certificates ────────────────────────────────────────────────────────
@@ -164,10 +164,11 @@ S5 = p("There are two certificates, not one, and they are kept apart down to the
        "14 days, so it rotates on its own.", lead=True) + \
     table(["", "Page certificate (long-lived)", "Session certificate (short-lived)"], [
         ["Files in " + c("--certificati") + " (default " + c("/var/lib/remotix/certificati") + ")",
-         c("pagina.pem") + ", " + c("pagina.key") + ", marker " + c("pagina.nostro"),
+         c("pagina.pem") + ", " + c("pagina.key") + ", marker " + c("pagina.nostro") + " (“ours”)",
          c("sessione.pem") + ", " + c("sessione.key") + ", marker " + c("sessione.nostro")],
         ["Validity", c("CERT_GIORNI_PAGINA") + " = 365 days", c("CERT_GIORNI_SESSIONE") + " = 13 days"],
-        ["Rotation", "never automatic", "when fewer than " + c("CERT_MARGINE_GIORNI") + " = 2 days remain; checked every "
+        ["Rotation", "never while running; at startup a certificate REMOTIX generated is regenerated if it has "
+         "expired", "when fewer than " + c("CERT_MARGINE_GIORNI") + " = 2 days remain; checked every "
          "60 s by " + c("certificati_ruota_se_serve()") + ", which makes the caller rebuild the QUIC " + c("SSL_CTX")],
         ["Presented on", "TCP 7447", "UDP 7447"],
         ["Trusted by the browser through", "the user's one-time exception (or a real CA)", c("serverCertificateHashes")
@@ -247,7 +248,8 @@ S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection
          + c("__IMPRONTA__") + " (session fingerprint), " + c("__AVVISO__") + " (the ban notice, empty if not banned), "
          + c("__BANNATO__") + " (" + c("si") + "/" + c("no") + ") and " + c("__RESTANO_MS__") + " (milliseconds left "
          "on the ban)."],
-        [c("/impronta"), "200, " + c("application/json"), c("{\"algoritmo\":\"sha-256\",\"impronta\":…,\"esadecimale\":…,\"rotazioni\":N}")],
+        [c("/impronta"), "200, " + c("application/json"), c("{\"algoritmo\":\"sha-256\",\"impronta\":…,\"esadecimale\":…,\"rotazioni\":N}")
+         + " — algorithm, fingerprint in base64, the same in hexadecimal, rotations since start"],
         [c("/diario?…"), "204", "The page writes a line into the server log (printable ASCII only, truncated and marked "
          "when too long). It is how the page's own diagnostics reach the journal."],
         ["anything else", "404", "—"],
@@ -260,8 +262,9 @@ S7 = p(c("pagina.c") + " is a small HTTPS/1.1 server: one request per connection
       "14 August 2026) and shared memory. The third header is not optional: with " + c("require-corp") + " the browser "
       "refuses any sub-resource that does not declare it, and the symptom does not mention isolation — the resource "
       "simply does not load.") + \
-    p("A banned address still gets the page, with HTTP status 200 and the notice «attempts exhausted» plus the hours and "
-      "minutes left. The page is served even when banned because whoever is banned by mistake is almost always the owner, "
+    p("A banned address still gets the page, with HTTP status 200 and a notice that begins " + c("tentativi esauriti")
+      + " (attempts exhausted) and gives the hours and minutes left; the notice is written in Italian in "
+      + c("pagina.c") + ". The page is served even when banned because whoever is banned by mistake is almost always the owner, "
       "and a server that looks dead for half a day is the worst diagnosis; 200 rather than a 4xx because an intermediary "
       "or the browser may replace the body of an error response with its own page, and the sentence the owner must read "
       "would vanish. The ban itself is described in " + rif("Credentials, the fixed delay and the address ban") + ".")
@@ -297,11 +300,11 @@ S8 = p(c("webtransport.c") + " is the layer on top of ngtcp2 and nghttp3. It cov
         "and the connection fails, logged.",
         "<b>One session per connection.</b> " + c("w->sessione") + " holds the stream id of the CONNECT; " +
         c("WT_TETTO_CANALE_NS") + " (5 s) starts when the session opens: if the client does not open the control "
-        "channel in time, the session is closed with " + c("TEMPO_SCADUTO") + " in the closing code (DECISIONI.md §7.17).",
-        "<b>Client streams are classified by their first bytes</b> (" + c("enum genere") + "): undecided, WebTransport "
+        "channel in time, the session is closed with " + c("TEMPO_SCADUTO") + " (timed out) in the closing code (DECISIONI.md §7.17).",
+        "<b>Client streams are classified by their first bytes</b> (" + c("enum genere") + ", the kind): undecided, WebTransport "
         "bidirectional (the control channel), HTTP/3 (handed to nghttp3), WebTransport unidirectional for input ("
         + c("0x01") + "), for clipboard (" + c("0x02") + "), lawful but not served, or already judged a violation. "
-        "The channel is recognised by the high byte of the first RCP " + c("tipo") + " after the preamble, never by the "
+        "The channel is recognised by the high byte of the first RCP " + c("tipo") + " (message type) after the preamble, never by the "
         "stream number (" + rif("RCP: channels and stream identification") + ").",
         "<b>The closing capsule goes inside a " + c("DATA") + " frame.</b> Written bare, its first byte " + c("0x68")
         + " makes the browser read a two-byte frame type " + c("0x2843") + ", an unknown HTTP/3 frame that RFC 9114 "
@@ -312,7 +315,7 @@ S8 = p(c("webtransport.c") + " is the layer on top of ngtcp2 and nghttp3. It cov
         "message sent immediately before the session is closed.",
         "<b>A capsule from the client</b> is parsed into its code and handed to " + c("rcp_chiusa_dal_client()") + "; a "
         "code outside " + c("0x01") + "–" + c("0x0F") + " is logged as a violation of §3.1 and recorded as "
-        + c("ERRORE_PROTOCOLLO") + ".",
+        + c("ERRORE_PROTOCOLLO") + " (protocol error).",
     ])
 
 # ── Streams vs datagrams ────────────────────────────────────────────────
@@ -321,7 +324,8 @@ S9 = p("Each RCP channel uses the QUIC piece that matches its needs. The single 
        "is no longer useful with " + c("RESET_STREAM") + " so that its unsent bytes never leave.", lead=True) + \
     table(["Channel", "QUIC piece", "Opened by", "How many"], [
         ["control", "the first bidirectional stream of the session", "client", "one for the whole session"],
-        ["video", "unidirectional stream", "server", "one per frame, none before " + c("SESSIONE")],
+        ["video", "unidirectional stream", "server", "one per frame, none before " + c("SESSIONE") + " (the server's "
+         "answer to the attach)"],
         ["input", "unidirectional stream", "client", "exactly one, opened after " + c("SESSIONE") + " and kept open"],
         ["clipboard", "unidirectional stream", "both", "one per message (DECISIONI.md §5-ter.7)"],
         ["audio", "datagram", "server", "one block per datagram"],
@@ -349,24 +353,24 @@ S9 = p("Each RCP channel uses the QUIC piece that matches its needs. The single 
     warn(c("ngtcp2_conn_writev_stream()") + " does not copy the bytes: it keeps our pointer and re-reads it to "
          "retransmit. Until 23 August 2026 a frame was freed once serialised, and a 525 298-byte frame served by "
          + c("mmap") + " crashed the server (SEGV in " + c("memmove") + "); smaller frames silently retransmitted garbage "
-         "from the heap. A queue element now has two states: " + c("consegnato") + " (all bytes handed to ngtcp2, kept "
-         "allocated) and " + c("morto") + " (freed), reached only from an acknowledgement covering the bytes, the closing "
+         "from the heap. A queue element now has two states: " + c("consegnato") + " (delivered: all bytes handed to ngtcp2, kept "
+         "allocated) and " + c("morto") + " (dead: freed), reached only from an acknowledgement covering the bytes, the closing "
          "of the stream or its reset.", "The send buffer belongs to us until acknowledged.")
 
 # ── Keep-alive and dead line ────────────────────────────────────────────
 S10 = p("Three different clocks watch a connection, and they measure different things: QUIC's idle timeout measures "
-        "the silence of the network, RCP's 30-second clock decides who holds a seat, and the dead-line detector decides "
+        "the silence of the network, RCP's 30-second clock decides who holds an attach slot, and the dead-line detector decides "
         "when a line has stopped carrying anything.", lead=True) + \
     table(["Clock", "Value", "Measures", "Effect"], [
         ["QUIC idle timeout", "30 s", "no packet at all", "ngtcp2 drops the connection silently"],
         ["RCP silence (" + c("SILENZIO") + ")", "30 s", "no authenticated packet from the client (" + c("rcp_segno_di_vita()") + ")",
-         "the client is detached: its seat is freed, the connection is left open"],
+         "the client is detached: its attach slot is freed, the connection is left open"],
         ["Dead line, silence", c("--linea-morta-silenzio-s") + ", default 10 s", "no packet from the client while at least "
          "two of ours went out", "the connection is closed (" + c("CONNECTION_CLOSE") + ") and the user reconnects by hand"],
         ["Dead line, stall", c("--linea-morta-stallo-ms") + ", default 5000 ms", "no video byte left while there was "
          "video to send", "same"],
     ], "«TAB» — The clocks of a connection") + \
-    p("<b>Transport PINGs.</b> While the RCP state is anything but " + c("finita") + ", the server arms ngtcp2's keep-alive ("
+    p("<b>Transport PINGs.</b> While the RCP state is anything but " + c("finita") + " (finished), the server arms ngtcp2's keep-alive ("
       + c("ngtcp2_conn_set_keep_alive_timeout()") + ") every " + c("WT_TIENILA_VIVA_NS") + " = 10 s, or half of the dead-line "
       "silence when the detector is on — 5 s with the defaults. They exist for two reasons. RCP.md §4.6 gives the user 60 s "
       "to type the password, but nothing travels while they type and the 30-second QUIC idle timeout would kill the "
@@ -374,7 +378,7 @@ S10 = p("Three different clocks watch a connection, and they measure different t
       "scene packets arrived every 15 002–15 005 ms, Chrome's keep-alive, half the 30 s ceiling. PINGs carry no "
       "information and have no reply to interpret, so they are not the application heartbeat that RCP forbids.") + \
     p("<b>Why the silence clock looks at packets, not RCP bytes.</b> Counting RCP bytes, a user who was only reading lost "
-      "the seat after 30 s and a second device took it (measured 16 August 2026: detached at 30 013 ms with the connection "
+      "their attach slot after 30 s and a second device took it (measured 16 August 2026: detached at 30 013 ms with the connection "
       "alive). The 30-second clock now looks at the last decrypted and authenticated packet; the minutes-long inactivity "
       "clock (" + rif("RCP: session clocks") + ") is the one that looks at what the user sends.") + \
     p("<b>Why the dead line looks at stall, not loss.</b> The first version on 23 August 2026 used ngtcp2's "
@@ -423,7 +427,7 @@ S12 = p("One QUIC connection carries at most one WebTransport session and one RC
     "<b>First packet.</b> " + c("trasporto_leggi()") + " receives with " + c("recvmsg") + " (with the destination address "
     "from " + c("IP_PKTINFO") + "/" + c("IPV6_RECVPKTINFO") + "), " + c("ngtcp2_accept") + " checks the Initial packet, "
     "and a new " + c("connessione") + " is created with an 18-byte server connection id. The source address in text "
-    "form becomes the " + c("provenienza") + " used for the ban and the logs.",
+    "form becomes the " + c("provenienza") + " (provenance) used for the ban and the logs.",
     "<b>Handshake keys ready.</b> " + c("wt_app_pronta()") + " opens HTTP/3: three unidirectional streams of our own "
     "(control, QPACK encoder, decoder) with the rewritten " + c("SETTINGS") + ".",
     "<b>CONNECT.</b> The session opens on " + c("/rcp/1") + " and the 5-second deadline for the control channel starts.",

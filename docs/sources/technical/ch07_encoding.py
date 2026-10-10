@@ -18,7 +18,7 @@ VIA = fig(
     900, 236, "«FIG» — The encoder: one front, two GPU paths chosen by capability, three helpers")
 
 S1 = p("REMOTIX encodes every frame on the GPU, in H.264 or HEVC, into Annex-B that the browser's WebCodecs "
-       + c("VideoDecoder") + " decodes. " + c("codificatore.c") + " is the front: it chooses the GPU path by "
+       + c("VideoDecoder") + " decodes. " + c("codificatore.c") + " (the encoder) is the front: it chooses the GPU path by "
        "capability — Vulkan Video if the card encodes that codec through Vulkan, VA-API otherwise — and keeps "
        "everything that works on the bytes (shape checks, keyframes, the 16 MiB ceiling, quality steps, the "
        "level check) in one place for both paths. ffmpeg left the product in phase 18 and the software "
@@ -32,14 +32,14 @@ S1 = p("REMOTIX encodes every frame on the GPU, in H.264 or HEVC, into Annex-B t
         [c("vulkanvideo_rgb_nv12.comp"), "Compute shader RGB → NV12/P010, BT.709 limited; compiled into "
          + c("vulkanvideo_rgb_nv12_spv.h") + ", which is kept in the repository so the product needs no shader "
          "compiler"],
-        [c("vadiretta.c") + " / " + c("vadiretta.h"), "libva used directly: configuration, sequence/picture/slice "
+        [c("vadiretta.c") + " / " + c("vadiretta.h") + " (direct VA-API)", "libva used directly: configuration, sequence/picture/slice "
          "parameters, packed headers, begin/render/end, the coded buffer"],
         [c("colori709.c") + " / " + c("colori709.h"), "BGRx/RGBx → YUV 4:2:0 BT.709 limited in CPU (SSE2), for "
          "the VA-API memory path"],
         [c("scrittore_bit.c") + " / " + c("scrittore_bit.h"), "Bit writer: " + c("u(n)") + ", " + c("ue(v)")
          + ", " + c("se(v)") + ", trailing bits, NAL units with emulation prevention"],
-        [c("figlio.c"), "Asks for the encoder (" + c("codificatore_di()") + "), feeds it, probes the GPU at "
-         "startup (" + c("figlio_capacita_video()") + ") and for the installer (" + c("--prova-codifica") + ")"],
+        [c("figlio.c") + " (the per-user child)", "Asks for the encoder (" + c("codificatore_di()") + "), feeds it, probes the GPU at "
+         "startup (" + c("figlio_capacita_video()") + ") and for the installer (" + c("--prova-codifica") + ", the encoding probe)"],
     ], "«TAB» — The files of the encoder")
 
 # ── 7.2 ─────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ S2 = p("RCP/1 numbers the video codecs in the frame header: <b>1 = HEVC, 2 = AV1
         ["13 Aug 2026", "Encoding on the GPU brought forward to phase 3", "HEVC on VA-API cost 3.16–3.24 ms per "
          "1920×1080 frame against tens of ms in software; " + c("av1_vaapi") + " exited with «No usable encoding "
          "profile found» and " + c("vainfo") + " listed AV1 for decoding only on both cards"],
-        ["20 Aug 2026", "AV1 out, H.264 in (§1.13-ter, the user's decision)", "Firefox for Android had neither HEVC "
+        ["17–20 Aug 2026", "AV1 out, H.264 in (§1.13-ter: the user's decision of 17 Aug, implemented 20 Aug)", "Firefox for Android had neither HEVC "
          "nor AV1; H.264 was the only codec in hardware at both ends (3.11 ms on the server, hardware decoding on "
          "the tablet); and Firefox painted rectangular blocks with AV1 where Chrome and dav1d were clean on the "
          "same bytes"],
@@ -73,13 +73,13 @@ S2 = p("RCP/1 numbers the video codecs in the frame header: <b>1 = HEVC, 2 = AV1
       "browser must never be offered a codec the server cannot keep: negotiating HEVC and then failing to open "
       "it was a black screen with no line naming it.") + \
     table(["Capability", "Page (" + c("pagina.html") + ")", "Server (" + c("rcp.c") + ")"], [
-        [c("video.codec"), "Probed by decoding: " + c("PREFERENZA") + " = " + c("[\"hevc\", \"h264\"]")
+        [c("video.codec"), "Probed by decoding: " + c("PREFERENZA") + " (preference) = " + c("[\"hevc\", \"h264\"]")
          + ", filtered to the codecs that reach the pixel in this browser", "The measured list; the "
          "negotiated codec is the first entry of the <b>browser's</b> list that the server also offers ("
          + c("prima_comune()") + ")"],
         [c("video.profondita"), "The depths that painted, in the order 8, 10", c("8,10") + "; the client must "
          "include 8. With this page the result is 8"],
-        [c("video.livello"), c("LIVELLO_DICHIARATO") + " = " + c("5.1"), "A ceiling the encoder must respect ("
+        [c("video.livello"), c("LIVELLO_DICHIARATO") + " (declared level) = " + c("5.1"), "A ceiling the encoder must respect ("
          + rif("Bytes, levels and the confession") + ")"],
     ], "«TAB» — The video capabilities exchanged in the handshake") + \
     p("The codec string the page passes to " + c("VideoDecoder.configure()") + " is built by "
@@ -103,7 +103,7 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
        "fallback to another component, profile or depth, because two measurements under one label are worse "
        "than none.", lead=True) + \
     table(["Name", "Path", "Used by"], [
-        [c("h264_scheda") + ", " + c("hevc_scheda"), "By capability: Vulkan Video if " + c("vulkan_adatta()")
+        [c("h264_scheda") + ", " + c("hevc_scheda") + " (" + c("scheda") + " = card)", "By capability: Vulkan Video if " + c("vulkan_adatta()")
          + " says the card fits this request, otherwise VA-API (and the log says why)", "The product (default)"],
         [c("h264_vulkan") + ", " + c("hevc_vulkan"), "Vulkan only; failure if unavailable",
          c("--codifica vulkan") + ", benches, diagnosis"],
@@ -111,7 +111,7 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
          c("--codifica vaapi") + ", the phase 18/19 benches"],
     ], "«TAB» — The six component names") + \
     p(c("figlio.c") + " builds the name from the codec and the path in force (" + c("componente_di()")
-      + "); the path is " + c("scheda") + " unless the server was started with " + c("--codifica scheda|vulkan|vaapi")
+      + "); the path is " + c("scheda") + " (by capability) unless the server was started with " + c("--codifica scheda|vulkan|vaapi")
       + ", which the parent repeats on every child's command line (the child is an " + c("exec") + ", a static "
       "of the parent would not reach it). The name actually opened — " + c("h264_vulkan") + " or "
       + c("h264_vaapi") + " — is what " + c("codificatore_nome()") + " and the log report, together with the node, "
@@ -155,6 +155,10 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
     code('{"esito":"hardware","codificatore":"h264_vaapi","strada":"vaapi","nodo":"/dev/dri/renderD128",\n'
          ' "motivo":"…","codec":"h264","offerti":"hevc,h264","hevc":"hardware","h264":"hardware",\n'
          ' "hevc_strada":"vaapi","h264_strada":"vaapi"}', "text", "The probe's answer (shape)") + \
+    p(c("esito") + " (outcome) is " + c("hardware") + " or " + c("nessuno") + " (none); " + c("strada") + " is the path "
+      "that encoded; " + c("offerti") + " (offered) is what the server would offer the browser with the same arguments; "
+      + c("hevc") + "/" + c("h264") + " and " + c("hevc_strada") + "/" + c("h264_strada") + " give the same answer per codec. "
+      "The installer reads " + c("esito") + " and the exit code.") + \
     table(["Exit code", "Meaning"], [
         ["0", "The GPU encoded a frame and the bytes were read back"],
         ["1", "The GPU opens but no frame came out, or it cannot be told whether it is right"],
@@ -162,8 +166,8 @@ S3 = p("The encoder is asked for <b>by name</b>, and the name says how the path 
         ["3", "No GPU can encode this codec (no node, no driver, a driver without encoding)"],
     ], "«TAB» — Exit codes of --prova-codifica") + \
     p("“hardware” is said only if the component accepts GPU surfaces, a frame came out with bytes, and the bytes "
-      "were read back (" + c("letto_dal_flusso") + "). Permissions matter: without the node's group "
-      "(" + c("render") + ") a user sees “none” where root would see “hardware”, so the probe must run with the "
+      "were read back (" + c("letto_dal_flusso") + ", read from the stream). Permissions matter: without the node's group "
+      "(" + c("render") + ") a user sees " + c("nessuno") + " (none) where root would see " + c("hardware") + ", so the probe must run with the "
       "identity in question. How the installer uses it is in " + rif("The installer") + ".")
 
 # ── 7.4 ─────────────────────────────────────────────────────────────────────
@@ -173,7 +177,7 @@ S4 = p("Until phase 18 the VA-API path was libavcodec's " + c("h264_vaapi") + " 
        "begin/render/end for each frame. Its governing rule is to reproduce exactly what ffmpeg 7.1 did, field "
        "by field, so that the browser receives the same kind of stream.", lead=True) + \
     table(["Choice", "Value", "Why"], [
-        ["GOP", c("intra_period = intra_idr_period = INT_MAX") + " when " + c("chiavi_ogni") + " = 0",
+        ["GOP", c("intra_period = intra_idr_period = INT_MAX") + " when " + c("chiavi_ogni") + " (keyframe interval) = 0",
          "Keyframes only on request (" + rif("Keyframes on demand") + ")"],
         ["B frames", "None: " + c("ip_period = 1"), "Latency weighs more than compression: a frame waiting for the "
          "next one is a frame of delay"],
@@ -190,7 +194,7 @@ S4 = p("Until phase 18 the VA-API path was libavcodec's " + c("h264_vaapi") + " 
          "Asked by name and verified against the driver's mask (" + rif("Quality, degradation and budget") + ")"],
         ["Level", "Computed as ffmpeg did (" + c("ff_h264_guess_level") + " logic) or imposed from "
          + c("video.livello"), "The client's level is a must"],
-        ["Coded buffer", "3 × width × height + 64 KiB (" + c("CODED_MARGINE") + ")", "ffmpeg's rule: an "
+        ["Coded buffer", "3 × aligned surface width × height + 64 KiB (" + c("CODED_MARGINE") + ")", "ffmpeg's rule: an "
          "uncompressed frame bounds a compressed one"],
         ["Synchronisation", "Each frame waits for the GPU (" + c("vaSyncBuffer") + " or " + c("vaSyncSurface")
          + ")", "There is no " + c("async_depth") + " any more: libavcodec's default of 2 was never asked for"],
@@ -229,7 +233,7 @@ S5 = p("Vulkan Video is the path the user asked for first (1 Oct 2026: “with s
          "DPB slots, input format, whether the shader can write the input image directly. The installer's "
          "preflight uses the same discovery."],
         ["Latency", "Asks " + c("VK_VIDEO_ENCODE_TUNING_MODE_ULTRA_LOW_LATENCY_KHR") + "; if the driver refuses, "
-         "retries with the default and records it (" + c("ritardo_minimo_chiesto") + ")."],
+         "retries with the default and records it (" + c("ritardo_minimo_chiesto") + ", minimum latency requested)."],
         ["Parameters", c("StdVideo*") + " with the same values " + c("vadiretta.c") + " writes: High 8 bit or "
          "Main/Main 10, no B, one reference, BT.709 limited in the VUI, level computed like ffmpeg or imposed. "
          + c("SLOT_DPB") + " = 2, " + c("INGRESSI") + " = 2 input images in rotation, one slice per frame."],
@@ -239,8 +243,8 @@ S5 = p("Vulkan Video is the path the user asked for first (1 Oct 2026: “with s
         ["HEVC level fix", "RADV (Mesa 25.0.7) wrote " + c("general_level_idc = 40") + " for level 4.0 instead of "
          "120 — the H.264 alphabet. " + c("correggi_livello_hevc()") + " fixes the byte in the returned "
          "VPS/SPS, walking the RBSP with its emulation bytes, and logs it."],
-        ["Rate control", "CQP by default; with the ceiling VBR (average = working point, maximum = line, buffer in "
-         "bits). Vulkan has no QVBR: the requested QP becomes the regulator's <i>minimum</i> QP."],
+        ["Rate control", "CQP by default; with the ceiling VBR (average = working point, maximum = maximum rate, "
+         "buffer in milliseconds computed from the VBV bits). Vulkan has no QVBR: the requested QP becomes the regulator's <i>minimum</i> QP."],
         ["Input, zero copy", "The DMA-BUF is imported (" + c("VK_EXT_external_memory_dma_buf") + ", "
          + c("VK_EXT_image_drm_format_modifier") + "), cached for up to " + c("IMPORTAZIONI_MAX") + " = 8 buffers "
          "and discarded when the producer's generation changes."],
@@ -315,7 +319,7 @@ S7 = p("Since phase 18 REMOTIX writes H.264 and HEVC headers itself. " + c("scri
          "RBSP with emulation prevention (" + c("00 00 0x") + " with x ≤ 3 → " + c("00 00 03 0x") + "); 0 if the "
          "output is too small"],
     ], "«TAB» — The bit writer") + \
-    p("A field that does not fit sets " + c("traboccato") + " and whoever closes the NAL sees it: a truncated "
+    p("A field that does not fit sets " + c("traboccato") + " (overflowed) and whoever closes the NAL sees it: a truncated "
       "header looks like a header. The NAL header itself receives no emulation bytes, as in ffmpeg's "
       + c("cbs_h2645") + ".") + \
     h4("The cropping window rewrite (D-023)") + \
@@ -323,7 +327,7 @@ S7 = p("Since phase 18 REMOTIX writes H.264 and HEVC headers itself. " + c("scri
       "<i>declaring</i> 2560×1344 — the card codes the multiple of its 64-pixel block and does not write the "
       "conformance window. The byte check rightly refused a stream whose size differs from the canvas, Chrome "
       "chose HEVC, Chrome's canvases are never multiples of 64: a session black forever. "
-      + c("cornice_al_suo_posto()") + " decides on the first SPS of each encoder context: if the stream is larger "
+      + c("cornice_al_suo_posto()") + " (“the window in its place”) decides on the first SPS of each encoder context: if the stream is larger "
       "than the canvas by less than 64 pixels on each side and by even amounts, the window is written. "
       + c("riscrivi_sps_con_cornice()") + " re-reads the SPS up to the cropping flag, rewrites the head identical, "
       "sets the flag with the four offsets (in chroma units, i.e. half pixels for 4:2:0, added to any that "
@@ -345,13 +349,13 @@ S8 = p("Decision D1 of phase 2: <b>pure Annex-B and no " + c("description") + "<
         "the SPS is read with the bit reader (" + c("leggi_sps_h264()") + ", " + c("leggi_sps_hevc()")
         + "), and the depth and the displayed size in the bytes must equal what was requested; the size coded "
         "and the size displayed are kept apart (" + c("larghezza_codificata") + " vs " + c("larghezza_flusso")
-        + ": on radeonsi 1080p is coded as 1088 and cropped).",
+        + ", coded width vs stream width: on radeonsi 1080p is coded as 1088 and cropped).",
         "a frame larger than 16 MiB is never sent (" + rif("Frame ceiling and quality steps") + ")."]) + \
     p("<b>The confession.</b> " + c("codificatore_confessione()") + " returns what the encoder actually did, from "
       "two independent witnesses: the context (component opened, path, vendor, entry point verified, size limits, "
-      "rate-control mask and mode read back, working point, line, VBV in bits and milliseconds) and the bytes "
+      "rate-control mask and mode read back, working point, maximum rate, VBV in bits and milliseconds) and the bytes "
       "(depth, profile, level, tier, sizes, chroma format, " + c("stringa_codec") + "). If they disagree, the "
-      "component disobeyed: " + c("ha_obbedito") + " becomes false and nothing is sent. The reason is history: "
+      "component disobeyed: " + c("ha_obbedito") + " (obeyed) becomes false and nothing is sent. The reason is history: "
       "libsvtav1 printed «Error parsing option» on an unknown option and exited 0; v1 had a CBR nobody asked for "
       "that only the bandwidth bill revealed (lesson R31).") + \
     table(["Codec", "Field in the SPS", "Level 5.1 is written as"], [
@@ -382,7 +386,7 @@ S9 = p("The GOP is infinite (" + c("chiavi_ogni") + " = 0): periodic keyframes a
         ["First frame at a new canvas", c("codificatore_ridimensiona()") + " closes and reopens the context; a delta "
          "at the new size in Chrome HEVC raised nothing and painted a broken image at the old size (12 Aug 2026)"],
         ["The client asks", c("RICHIEDI_CHIAVE") + " → the parent sends the child a video message with "
-         + c("chiave = 1") + " → " + c("debito_chiave") + " → " + c("codificatore_chiedi_chiave()")
+         + c("chiave = 1") + " → " + c("debito_chiave") + " (key debt) → " + c("codificatore_chiedi_chiave()")
          + " before compressing, not after"],
         ["A delta was abandoned", "RCP/1: the server must send a key as soon as it can, without waiting to be asked"],
         ["The encoder was rebuilt", "Depth, level or channel order changed; or a quality step reopened the context"],
@@ -399,12 +403,12 @@ S10 = p("RCP/1 forbids a video frame larger than 16 MiB: it must be re-encoded a
     table(["Constant", "Value", "Meaning"], [
         [c("QP_HARDWARE"), "26", "The constant QP the product asks (" + c("figlio.c") + "); a declared "
          "convenience value, the working point belongs to phase 9"],
-        [c("CRF_DI_EMERGENZA") + " / " + c("CRF_PASSO"), "24 / 9", "Steps when the ceiling bites: from QP 26 the "
+        [c("CRF_DI_EMERGENZA") + " / " + c("CRF_PASSO"), "24 / 9", "Emergency CRF and step. Steps when the ceiling bites: from QP 26 the "
          "ladder is 35, 44, 51"],
         [c("RICODIFICHE_MASSIME"), "3", "Encodings allowed for a <i>delta</i> (26, 35, 44); a key walks the ladder "
          "to the end, because a key may not be abandoned"],
-        [c("RISALITA_MARGINE"), "2 MiB", "A frame counts as comfortably under the ceiling below one eighth of it"],
-        [c("RISALITA_ATTESA") + " / " + c("RISALITA_ATTESA_MAX"), "120 / 3840 frames", "Quiet frames before "
+        [c("RISALITA_MARGINE"), "2 MiB", "Climb-back margin: a frame counts as comfortably under the ceiling below one eighth of it"],
+        [c("RISALITA_ATTESA") + " / " + c("RISALITA_ATTESA_MAX"), "120 / 3840 frames", "Climb-back wait: quiet frames before "
          "climbing one step; doubles on every relapse (about 2 s to 64 s at 60/s)"],
     ], "«TAB» — The ceiling and the quality ladder") + \
     p("The step was 6 until 22 Aug 2026: at 7680×4320 on nearly incompressible content QP 38 gave 16.654 MiB (8 "
@@ -413,9 +417,9 @@ S10 = p("RCP/1 forbids a video frame larger than 16 MiB: it must be re-encoded a
       "was 21,433 bytes, 0.13 % of the ceiling: the defect is real and far from urgent. Every quality change "
       "closes and reopens the context, and the next frame is a key.") + \
     p("Two server-wide switches change what the user sees and are therefore <b>off by default</b> (invariant I6): "
-      + c("--qualita-risale") + " (" + c("codificatore_qualita_risale()") + ", climbing back up the ladder) and "
+      + c("--qualita-risale") + " (" + c("codificatore_qualita_risale()") + ", climbing back up the quality ladder) and "
       + c("--tetto-banda-mbit N") + " (" + c("codificatore_tetto_banda()") + ", QVBR on VA-API / VBR on Vulkan "
-      "with line = 80 % of the floor, working point = 75 % of the line — never equal, or the Intel driver "
+      "with maximum rate = 80 % of the declared floor, working point = 75 % of the maximum rate — never equal, or the Intel driver "
       "deduces CBR — and a 40 ms VBV). Their numbers, measurements and the third witness (the bytes per 10 s "
       "window) are described in " + rif("Quality, degradation and budget") + ".")
 
@@ -427,7 +431,7 @@ S11 = p(c("codificatore_ridimensiona()") + " reopens the encoder at the new size
     p("The 4096-pixel width is the user's decision of 1 Oct 2026 (“4096 max width is fine; it is more than 4K”): "
       "H.264 on the Intel GPU stops there (32–4096 per side), and Firefox receives only H.264. Before, the legal "
       "canvas reached 7680×4320 and wider H.264 canvases had nowhere to go. The driver's own maximum is still "
-      "read at every opening (" + c("misura_massima_l") + "/" + c("misura_massima_a") + "), because another card "
+      "read at every opening (" + c("misura_massima_l") + "/" + c("misura_massima_a") + ", maximum width/height), because another card "
       "may declare less.") + \
     p("Encoding at a size that is not a multiple of the block: H.264 writes the cropping window itself (16-pixel "
       "macroblocks); HEVC relies on the driver, and where the driver does not write it, on D-023 ("
@@ -458,7 +462,7 @@ S12 = p("Phase 18 (closed 30 Sep 2026) removed ffmpeg; phase 19 (closed 3 Oct 20
         ["From memory, after returning to CPU conversion", "Quality equal (Intel 1080p H.264 38.926 → 38.925 dB), "
          "preparation time halved (1080p 4024 → 1964 µs; 4K 16720 → 7816 µs). The intermediate attempt with the "
          "VPP from memory was worse (−1.0 dB and +82 % bytes at 1080p H.264) and was dropped"],
-        ["Functional suite on the four desktop boxes, Firefox 140 and Chrome 154, 3840×2160",
+        ["Functional suite on the four desktop test boxes, Firefox 140 and Chrome 154, 3840×2160",
          "673 PASS, 0 FAIL, 0 BLOCKED (30 Sep 2026)"],
         ["Whole chain, 4K, 1 user per desktop, old binary with ffmpeg vs new", "Indistinguishable: product latency "
          "p95 35.3 / 38.7 / 36.1 / 36.6 ms (GNOME / KDE / XFCE / LXQt) against 33.2 / 39.6 / 36.4 / 36.2; encode "
@@ -494,16 +498,17 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         [c("POTENZA_RENDERING"), c("CODIFICATORE_POTENZA_LA_DICHIARATA"), c("figlio.c")],
         [c("QP_HARDWARE"), "26", c("figlio.c")],
         [c("CODEC_MAX"), "4 (index by codec number)", c("figlio.c")],
-        [c("PROVA_LATO") + " / " + c("PROVA_GIRI"), "256 / 8", c("figlio.c")],
+        [c("PROVA_LATO") + " / " + c("PROVA_GIRI"), "256 / 8 (probe side in px / probe attempts)", c("figlio.c")],
         [c("TETTO_FOTOGRAMMA"), "16 MiB", c("codificatore.c")],
         [c("ALLINEAMENTO_SCHEDA"), "64 bytes (DMA-BUF stride)", c("codificatore.c")],
-        [c("IMPORTATE_MAX") + " / " + c("SUPERFICI_PRONTE"), "8 / 4", c("codificatore.c")],
+        [c("IMPORTATE_MAX") + " / " + c("SUPERFICI_PRONTE"), "8 / 4 (imported buffers / ready surfaces)", c("codificatore.c")],
         [c("BANDA_FINESTRA_US"), "10 s", c("codificatore.c")],
         [c("RICOSTRUITE") + " / " + c("CODED_MARGINE"), "3 / 64 KiB", c("vadiretta.c")],
         [c("SLOT_DPB") + " / " + c("INGRESSI") + " / " + c("IMPORTAZIONI_MAX"), "2 / 2 / 8", c("vulkanvideo.c")],
     ], "«TAB» — Encoder constants") + \
-    tip("the log area of the encoder is " + c("video") + "; the line «codificatore … APERTO» names the path "
-        "chosen and requested, the component, node, vendor and entry point actually in force. "
+    tip("the log area of the encoder is " + c("video") + "; the line that starts with " + c("aperto:") + " (opened) names the codec, "
+        "depth, component, node, vendor and (on VA-API) the entry point actually in force, and the line before it says "
+        "which path was taken and whether it was asked by name or by capability. "
         + c("remotix --prova-codifica") + " with " + c("--codifica vulkan") + " or " + c("--codifica vaapi")
         + " reproduces one path in isolation; the comparison benches are " + c("banchi/18-scheda/18-confronto.sh")
         + " and " + c("banchi/19-vulkan/19-confronto.sh") + ", and the shader is rebuilt with "

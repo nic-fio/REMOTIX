@@ -6,35 +6,35 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
     table(["Principle", "What it means in the code", "Where it comes from"], [
         ["<b>Detect capabilities, not the distribution</b>", "At startup the server checks what is there — which "
          "desktop, which GPU encodes which codec, whether the PAM file exists — chooses the best path and writes "
-         "in the log what is missing", "SPECIFICHE §2.1"],
+         "in the log what is missing", "SPECIFICHE.md §2.1"],
         ["<b>Degrade, but say so</b>", "Every missing piece has a fallback, and every fallback is written in the "
-         "log: a silent fallback gives two behaviours under the same label", "SPECIFICHE §2.2, " + c("CODER.md")
+         "log: a silent fallback gives two behaviours under the same label", "SPECIFICHE.md §2.2, " + c("CODER.md")
          + " §4.2"],
         ["<b>Depend, do not rewrite</b>", "logind, PAM, PipeWire, libei, xkbcommon, ngtcp2: one of each, the same "
-         "everywhere, used as they are", "SPECIFICHE §2.3"],
+         "everywhere, used as they are", "SPECIFICHE.md §2.3"],
         ["<b>Depend on the compositor, not on its surroundings</b>", "Only the compositor delivers frames and "
          "accepts input, so " + c("mutter.c") + ", " + c("kwin.c") + " and " + c("wlroots.c") + " exist. Screen "
          "lockers, idle daemons, power managers and display managers are not chased: REMOTIX keeps its own lock "
-         "(the 30-minute detach) and turns theirs off", "DECISIONI §0.1"],
+         "(the 30-minute detach) and turns theirs off", "DECISIONI.md §0.1"],
         ["<b>Talk to the compositor directly</b>", "Private D-Bus and Wayland interfaces, never "
          + c("xdg-desktop-portal") + ": a portal asks a person in front of the screen for permission, and an "
-         "unattended server has nobody to click", "SPECIFICHE §2.5"],
+         "unattended server has nobody to click", "SPECIFICHE.md §2.5"],
         ["<b>No exceptions per compositor</b>", "A feature that works on one desktop and not on another leaves the "
          "product instead of hiding behind a switch (live resizing left on 17 August 2026 for this reason)",
-         "DECISIONI §0.1, §5.1-bis"],
+         "DECISIONI.md §0.1, §5.1-bis"],
         ["<b>On the user's screen, their desktop and nothing else</b>", "No marks, no service boxes; test functions "
-         "are not in the installed binary", "SPECIFICHE §2.6, DECISIONI §7.16"],
+         "are not in the installed binary", "SPECIFICHE.md §2.6, DECISIONI.md §7.16"],
         ["<b>One job per process</b>", "The server checks passwords through a helper process and captures through "
          "a child process per user, because root cannot join a user's session bus and only root can verify "
-         "another user's password", "DECISIONI §1.10, §1.10-bis"],
+         "another user's password", "DECISIONI.md §1.10, §1.10-bis"],
         ["<b>The server never ends a healthy session without a reason</b>", "Every close carries a reason code of "
-         + c("RCP.md") + " §8.2 and a sentence the user reads; only the user ends their session", "DECISIONI §4.1-bis"],
+         + c("RCP.md") + " §8.2 and a sentence the user reads; only the user ends their session", "DECISIONI.md §4.1-bis"],
         ["<b>Encode on the GPU only</b>", "VA-API or Vulkan Video; a machine without a GPU that encodes declares "
-         "it at startup and offers no codec", "DECISIONI §10.27"],
+         "it at startup and offers no codec", "DECISIONI.md §10.27"],
         ["<b>REMOTIX does not modify the system</b>", "It says what it needs; the administrator provides it. The "
          "one deliberate exception: adding users to the GPU's groups, so that their session is not blind",
-         "DECISIONI §10.36, §7.21"],
-        ["<b>No GPL dependencies</b>", "All the server's libraries are MIT, BSD or Apache", "SPECIFICHE §11.4"],
+         "DECISIONI.md §10.36, §7.21"],
+        ["<b>No GPL dependencies</b>", "All the server's libraries are MIT, BSD or Apache", "SPECIFICHE.md §11.4"],
     ], "«TAB» — The principles that shaped REMOTIX") + \
     p("Eight <b>invariants</b>, inherited from v1 and renumbered in " + c("CODER.md") + " §2, are quoted in the "
       "comments next to the lines that keep them. A change that breaks one of them is a defect even if every test "
@@ -45,7 +45,7 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
          "resolution, and never the connection", rif("Quality, degradation and budget")],
         ["I2", "One graphical session per user; a local session wins over the remote one; a second remote "
          "connection is refused with an explicit reason", c("figli_assicura()") + " looks before forking; "
-         + c("GIA_ATTIVA_REMOTA") + " in " + c("rcp.c")],
+         + c("GIA_ATTIVA_REMOTA") + " (already active remotely) in " + c("rcp.c")],
         ["I3", "The authentication guard starts from “denied”: whoever has not passed the validator receives no "
          "pixel and controls nothing", "the single " + c("1") + " byte of the PAM helper; the kernel-stamped "
          "credentials on every child message"],
@@ -71,10 +71,10 @@ PROCESSI = fig(
     + arrow(130, 98, 130, 126) + arrow(330, 98, 330, 126, "#475569") + arrow(130, 182, 130, 220)
     + path([(422, 80), (432, 80), (432, 248), (422, 248)], "#475569")
     + zone(470, 12, 410, 135, "logind session of user A (session scope)")
-    + box(490, 44, 175, 52, "Child of A", "remotix-figlio · uid of A", "blue")
+    + box(490, 44, 175, 52, "Child of A", "--figlio-interno · uid of A", "blue")
     + box(690, 44, 170, 52, "Desktop of A", "compositor + programs", "light")
     + zone(470, 167, 410, 135, "logind session of user B (session scope)")
-    + box(490, 199, 175, 52, "Child of B", "remotix-figlio · uid of B", "blue")
+    + box(490, 199, 175, 52, "Child of B", "--figlio-interno · uid of B", "blue")
     + box(690, 199, 170, 52, "Desktop of B", "compositor + programs", "light")
     + arrow(422, 62, 488, 62) + arrow(422, 82, 488, 214)
     + arrow(667, 70, 688, 70, "#475569", True) + arrow(667, 225, 688, 225, "#475569", True)
@@ -82,15 +82,16 @@ PROCESSI = fig(
     900, 314, "«FIG» — The processes: the server's tree, and one child per user (fork, PAM session, execve) in that user's logind session")
 
 S2 = p("REMOTIX is one binary, " + c("/usr/libexec/remotix/remotix") + ", that plays several roles. The server "
-       "forks the others; the children re-execute the same binary with " + c("--figlio-interno") + " so that they "
+       "forks the others; the children re-execute the same binary with " + c("--figlio-interno") + " (internal child) so that they "
        "start from a clean process image, as a different user.", lead=True) + PROCESSI + \
     table(["Process", "Runs as", "Born", "Dies", "Job"], [
         [c("remotix") + " (the server)", "root", "started by systemd (" + c("ExecStart") + ")",
          "on " + c("SIGTERM") + "/" + c("SIGINT") + ", after saying farewell to every client",
          "ports, TLS, QUIC, RCP, the ban, the bridge between connections and children"],
-        ["codec probe", "root", "forked by " + c("figlio_capacita_video()") + " before anything else",
+        ["codec probe", "root", "forked by " + c("figlio_capacita_video()") + " at startup, before the ports are opened",
          "after writing its result on a pipe (the server waits at most 30 s)",
-         "opens each GPU encoder on a 256×256 frame to decide which codecs the " + c("ECCOMI") + " offers"],
+         "opens each GPU encoder on a 256×256 frame to decide which codecs the " + c("ECCOMI") + " (the server's "
+         "answer to the client's hello) offers"],
         ["PAM dispatcher", "root", c("aiutante_accendi()") + ", before the ports are open",
          "with the server (" + c("PR_SET_PDEATHSIG") + ", or end of file on its socket)",
          "reads a request and forks; never calls PAM itself"],
@@ -148,7 +149,7 @@ S3 = p("The server is a single thread around one " + c("poll()") + " in " + c("m
       "process with one thread — the only condition in which forking a program that links threaded libraries is "
       "safe. The PAM verdict used to block this loop: measured on 11 August 2026 on the test machine (Intel "
       "i5-13500T), 1.0 to 2.2 s per attempt, most of it added by " + c("pam_faildelay") + " on failed attempts. "
-      "With video that would have frozen every user's screen whenever someone else logged in (DECISIONI §1.10).") + \
+      "With video that would have frozen every user's screen whenever someone else logged in (DECISIONI.md §1.10).") + \
     p("<b>The bridge.</b> " + c("main.c") + " is the only file that knows both the transport and the children. A "
       "small " + c("struct ponte") + " carries the two, and " + c("webtransport.c") + " and " + c("figlio.c")
       + " call each other only through hooks registered at startup:") + \
@@ -175,9 +176,9 @@ S3 = p("The server is a single thread around one " + c("poll()") + " in " + c("m
     ], "«TAB» — The hooks that join the transport and the children")
 
 S4 = p("Checking a password is the only thing the server needs root for besides changing user, and PAM can take "
-       "seconds. So it happens in another process, in a three-storey shape decided by the user on 11 August 2026: a "
+       "seconds. So it happens in another process, in a three-tier shape decided by the user on 11 August 2026: a "
        "process, not a thread, because PAM is not reliably reentrant.", lead=True) + \
-    table(["Storey", "What it does", "Why"], [
+    table(["Tier", "What it does", "Why"], [
         ["the server", "writes a request on a " + c("SOCK_SEQPACKET") + " socket pair and goes back to "
          + c("poll()"), "the loop never waits for PAM"],
         ["the dispatcher", "started once by " + c("aiutante_accendi()") + "; reads a request, forks, zeroes its "
@@ -186,7 +187,7 @@ S4 = p("Checking a password is the only thing the server needs root for besides 
         ["the grandchild", "arms " + c("alarm(20)") + ", calls " + c("rcp_autentica_da()") + " once, sends "
          "back the request number and one byte, exits", "no process ever touches libpam twice: reentrancy is not "
          "at stake, and ten users logging in together do not queue"],
-    ], "«TAB» — The three storeys of the PAM helper") + \
+    ], "«TAB» — The three tiers of the PAM helper") + \
     p("The request carries the case number (" + c("pratica") + ", 64 bits), the user name (up to 256 bytes), the "
       "password (up to 1024) and the client's bare address for " + c("PAM_RHOST") + " (taken from the "
       + c("[address]:port") + " form, with an IPv4-mapped prefix removed). The grandchild runs the service "
@@ -213,16 +214,16 @@ S4 = p("Checking a password is the only thing the server needs root for besides 
          "different quantity.", "MAX_IN_VOLO.")
 
 S5 = p("For every admitted user the server forks one child that becomes that user. Two facts measured on 12 August "
-       "2026 force this shape (DECISIONI §1.10-bis): root cannot connect to a user's session bus — "
+       "2026 force this shape (DECISIONI.md §1.10-bis): root cannot connect to a user's session bus — "
        + c("gdbus") + " to Mutter fails with “The connection is closed” — and only root can verify another user's "
        "password with PAM, because " + c("pam_unix") + " outside root goes through " + c("unix_chkpwd") + ". Without "
        "the bus there is no capture; without root there is no authentication.", lead=True) + \
     p("<b>Before forking</b>, " + c("figli_assicura_da()") + " looks for an existing child of that user and returns "
-      "it (I2: two connections of the same user share one child, and one stage). It refuses, with a log line, a name "
-      "that PAM admitted but NSS cannot resolve, uid 0 (the child exists not to be root), a full table, a failed "
-      + c("socketpair") + " or " + c("SO_PASSCRED") + ". It then adds the user to the GPU's groups if needed "
-      "(" + rif("Birth of a session") + "), opens a " + c("SOCK_SEQPACKET") + " pair with " + c("SO_PASSCRED")
-      + " on the server's end, and forks. In the forked process " + c("diventa_ed_esegui()") + " does, in order:") + \
+      "it (I2: two connections of the same user share one child, and one stage). It refuses, with a log line, a full "
+      "table, a name that PAM admitted but NSS cannot resolve, and uid 0 (the child exists not to be root). It then "
+      "adds the user to the GPU's groups if needed (" + rif("Birth of a session") + "), opens a "
+      + c("SOCK_SEQPACKET") + " pair with " + c("SO_PASSCRED") + " on the server's end — refusing, again with a "
+      "log line, if either fails — and forks. In the forked process " + c("diventa_ed_esegui()") + " does, in order:") + \
     table(["Step", "What", "Why"], [
         ["1", "moves its end of the socket to descriptor 3 and closes every descriptor from 4 up ("
          + c("close_range") + ")", "the child is forked after the ports are open and must not keep them"],
@@ -247,8 +248,9 @@ S5 = p("For every admitted user the server forks one child that becomes that use
     ], "«TAB» — How a child becomes its user") + \
     p("The child's command line is " + c("remotix-figlio --figlio-interno <user> <uid> <gid> <width> <height> "
       "<serial> <dir|->") + ", followed by the switches the child must share with the server: " + c("--parlantina")
-      + ", " + c("--journal") + ", " + c("--qualita-risale") + ", " + c("--tetto-banda-mbit N") + ", "
-      + c("--niente-audio-silenzio") + " and " + c("--codifica vulkan|vaapi") + ". They travel on the command "
+      + " (verbose log), " + c("--journal") + ", " + c("--qualita-risale") + " (let the quality climb back), "
+      + c("--tetto-banda-mbit N") + " (the bandwidth floor in Mbit/s), " + c("--niente-audio-silenzio")
+      + " (do not suppress silent audio blocks) and " + c("--codifica vulkan|vaapi") + " (the encoding path). They travel on the command "
       "line because the environment is rebuilt from nothing. The server refuses to fork children if its own "
       "binary was replaced on disk (" + c("/proc/self/exe") + " ends with " + c("(deleted)") + ").") + \
     p("<b>Identity is a fact of the kernel, not a promise of the code.</b> Once running, " + c("figlio_vive()")
@@ -278,11 +280,11 @@ S6 = p("Server and children talk over the " + c("SOCK_SEQPACKET") + " pair creat
        "message boundaries, so a message can neither arrive in halves nor merge with the next one. Every message "
        "starts with the same header.", lead=True) + \
     table(["Field", "Type", "Value"], [
-        [c("magia"), "4 bytes", c("FIG1")],
-        [c("tipo"), "u16", "the message type, below"],
+        [c("magia") + " (magic)", "4 bytes", c("FIG1")],
+        [c("tipo") + " (type)", "u16", "the message type, below"],
         [c("versione"), "u16", c("FIGLIO_VERSIONE") + " = 1"],
-        [c("matricola"), "u64", "the child's serial number, given by the server at the fork"],
-        [c("uid_dichiarato"), "u32", "the uid the sender claims; checked against the kernel's credentials"],
+        [c("matricola") + " (serial)", "u64", "the child's serial number, given by the server at the fork"],
+        [c("uid_dichiarato") + " (declared uid)", "u32", "the uid the sender claims; checked against the kernel's credentials"],
         [c("byte"), "u32", "bytes of body after the header"],
     ], "«TAB» — The header of a server–child message (struct testa)") + \
     table(["Type", "Name", "Direction", "Body"], [
@@ -320,11 +322,11 @@ S7 = p("The sentinel answers three questions for which logind is the authority, 
        "and a mutex in a server that has one thread on purpose.", lead=True) + \
     table(["Question", "Function", "Asked by", "Used for"], [
         ["Does this user have a local graphical session now?", c("sentinella_locale()"), "the server, at "
-         + c("ATTACCA"), "refusing the attach with " + c("0x05 GIA_ATTIVA_LOCALE")],
+         + c("ATTACCA"), "refusing the attach with " + c("0x05 GIA_ATTIVA_LOCALE") + " (already active locally)"],
         ["Which of these users have one?", c("sentinella_locali()"), "the server, every 2 s",
-         "dismissing a remote client with " + c("0x04 SESSIONE_LOCALE_PREVALSA")],
+         "dismissing a remote client with " + c("0x04 SESSIONE_LOCALE_PREVALSA") + " (the local session prevailed)"],
         ["Is my session without a seat?", c("sentinella_senza_seat()"), "the child, once, after the first stage",
-         "proving the session is headless (DECISIONI §4.3-bis)"],
+         "proving the session is headless (DECISIONI.md §4.3-bis)"],
         ["Is power-off really forbidden?", c("sentinella_spegnimento_vietato()"), "the child, once",
          "proving the belts are in force: " + c("CanPowerOff") + ", " + c("CanReboot") + ", "
          + c("CanSuspend") + " and " + c("CanHibernate") + " must all say " + c("no")],
@@ -374,7 +376,7 @@ S8 = p("Each process has its own loop. Only the child has threads, and they are 
     p("On labwc (XFCE, LXQt) the capture and the virtual devices run on the child's own loop with Wayland calls; "
       "on GNOME the D-Bus calls to Mutter iterate a private GLib context. The encoder runs synchronously in the "
       "child's loop: capture, encode, send, then the next frame. Encoding frame N while capturing N+1 would raise "
-      "the frame rate and add delay, and SPECIFICHE §3.2 forbids that trade.")
+      "the frame rate and add delay, and SPECIFICHE.md §3.2 forbids that trade.")
 
 S9 = p("Each piece of state has one owner and one lifetime. The rule in the code is that a global is a second place "
        "where something can be alive or dead, so shared things travel in structures (" + c("struct ponte")
@@ -407,10 +409,11 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
       + c("--tetto-sessioni N") + " moves it at startup, and " + c("rcp_tetto()") + " is read once by every table "
       "that counts users: the attach slots of " + c("rcp.c") + ", the children of " + c("figlio.c") + ", the "
       "presence table of " + c("main.c") + " and the stages of " + c("webtransport.c") + ". Until 25 August 2026 "
-      "these were five hand copies of 16 (one of them 8) while SPECIFICHE promised 10.") + \
+      "these were five hand copies of 16 (one of them 8) while SPECIFICHE.md promised 10.") + \
     tip("the cap counts <b>stages</b>, not connections: a user who closed their browser still holds a stage until "
         "logout or abandonment. " + c("palchi_quanti()") + " adds the children and the found-again desktops; a new "
-        "user who finds them all taken is refused with " + c("0x0E SESSIONE_NON_SERVIBILE") + " before any process "
+        "user who finds them all taken is refused with " + c("0x0E SESSIONE_NON_SERVIBILE") + " (the session cannot be "
+        "served) before any process "
         "is forked.", "Stages, not connections.")
 
 CHAPTER = ("Overall architecture", [

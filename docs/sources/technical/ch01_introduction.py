@@ -31,8 +31,8 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
       "network or switching device leaves it running, and the next login finds the same windows. Only the user ends "
       "it, with “Log out” from the desktop menu or " + c("Ctrl+Alt+End") + " in the page, or the server closes it "
       "after 60 minutes without input.") + \
-    p("Several users can work on the same machine at once, each in their own desktop (10 by default, "
-      + c("--tetto-sessioni") + "). The video is encoded only on the graphics card (VA-API on Intel and AMD, Vulkan "
+    p("Several users can work on the same machine at once, each in their own desktop (10 by default, set with "
+      + c("--tetto-sessioni") + ", the session cap). The video is encoded only on the graphics card (VA-API on Intel and AMD, Vulkan "
       "Video on AMD and NVIDIA) in H.264 or HEVC; the audio travels as Opus in QUIC datagrams; keyboard, pointer, "
       "touch and the text clipboard travel in both directions.") + \
     table(["Item", "Value"], [
@@ -44,19 +44,19 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
         ["Protocol", "RCP/1 over WebTransport, path " + c("/rcp/1") + "; port " + c("7447") + " on TCP (the page) "
          "and on UDP (QUIC)"],
         ["Video", "H.264 and HEVC, negotiated with the browser, encoded only on the GPU (no CPU encoder since 1 Oct "
-         "2026, DECISIONI §10.27); no ffmpeg"],
+         "2026, DECISIONI.md §10.27); no ffmpeg"],
         ["Desktops", "GNOME, KDE Plasma, XFCE and LXQt (the last two on the labwc compositor); one desktop per "
-         "machine (DECISIONI §0.6)"],
+         "machine (DECISIONI.md §0.6)"],
         ["Sessions", "Wayland only; X11 applications run through XWayland"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C, {righe(conta('pagina.html'))} lines of page, "
          f"{righe(conta('.go'))} lines of Go"],
-        ["Licence", "Free of charge (DECISIONI §10.33); the licence text in " + c("LICENSE.md")
+        ["Licence", "Free of charge (DECISIONI.md §10.33); the licence text in " + c("LICENSE.md")
          + " is still a draft"],
     ], "«TAB» — REMOTIX at a glance") + \
     p("<b>Why a protocol of our own, and why a browser.</b> REMOTIX v1 spoke RDP and stopped at its phase 11, after "
       "serving GNOME and KDE: the three walls it hit — the H.264 ceiling, an Android client decoding in software and "
-      "the full colour that RDP could not carry — were walls of RDP, not of the problem (DECISIONI §1.1). Dropping "
-      "Windows as a server removed RDP. On 9 August 2026 the dedicated clients went too (DECISIONI §1.6): "
+      "the full colour that RDP could not carry — were walls of RDP, not of the problem (DECISIONI.md §1.1). Dropping "
+      "Windows as a server removed RDP. On 9 August 2026 the dedicated clients went too (DECISIONI.md §1.6): "
       "WebTransport gives a browser exactly the bricks RCP had been designed on — independent QUIC streams, so that "
       "a frame can be abandoned without blocking the next one, and datagrams for the audio — and the protocol did "
       "not change by one line. The heritage of v1 (about 17,500 lines of C, its test benches and its studies of the "
@@ -68,18 +68,18 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
     table(["Browser", "Where", "Video codec", "Status"], [
         ["Chrome, Edge and the other Blink browsers", "Linux, Windows", "HEVC if the device decodes it, otherwise "
          "H.264", "supported"],
-        ["Chrome", "Android", "HEVC or H.264", "supported (DECISIONI §7.19)"],
+        ["Chrome", "Android", "HEVC or H.264", "supported (DECISIONI.md §7.19)"],
         ["Firefox", "Linux", "H.264 (Firefox on Linux does not decode HEVC)", "supported"],
         ["Firefox", "Windows", "—", "never tested: neither supported nor excluded"],
-        ["Firefox", "Android", "—", "not supported: it has no WebCodecs (DECISIONI §7.18)"],
+        ["Firefox", "Android", "—", "not supported: it has no WebCodecs (DECISIONI.md §7.18)"],
         ["Safari", "macOS, iOS", "—", "never tested"],
-    ], "«TAB» — The browsers, as SPECIFICHE §11.5 declares them") + \
-    p("<b>What REMOTIX deliberately does not do</b> (SPECIFICHE §12): Windows as a server; any application to "
+    ], "«TAB» — The browsers, as SPECIFICHE.md §11.5 declares them") + \
+    p("<b>What REMOTIX deliberately does not do</b> (SPECIFICHE.md §12): Windows as a server; any application to "
       "install on the client; X11 desktop sessions; redirection of disks, printers, serial ports or smart cards; "
       "file transfer; images and files in the clipboard (text only); multi-monitor as a feature; stylus pressure "
       "and tilt; native multi-finger touch (a place is reserved in the protocol); recording the session to a file; "
       "compatibility with RDP, VNC or SPICE clients.") + \
-    note("SPECIFICHE §3 sets a minimum of 480p, 25 fps, 24 bit, a desired 4K, 60 fps, 10 bit per channel, and a "
+    note("SPECIFICHE.md §3 sets a minimum of 480p, 25 fps, 24 bit, a desired 4K, 60 fps, 10 bit per channel, and a "
          "delay of at most 50 ms (target 40 ms) from the input arriving to the frame leaving. Since 30 September "
          "2026 these are <b>design goals, not measured promises</b> (user decision): performance tests depend too "
          "much on the hardware. The parameters the product really uses — session cap, clocks, ban, minimum "
@@ -100,12 +100,12 @@ S2 = p("A few concepts recur in every chapter. Most of them have an Italian name
          rif("The per-user child process")],
         ["<b>Stage</b> (" + c("palco") + ")", "What the child mounts on the user's desktop: the virtual monitor, the "
          "capture stream, the input channel, the clipboard and the cursor. It belongs to the session, not to the "
-         "connection (invariant I4)", c("prendi_il_palco()"), rif("The stage and the virtual monitor")],
+         "connection (invariant I4)", c("prendi_il_palco()") + " (take the stage)", rif("The stage and the virtual monitor")],
         ["<b>Graphical session</b>", "The user's desktop, started by the child with " + c("setsid --fork")
          + " inside the user's logind session and therefore outside the service's unit", c("sessione.c"),
          rif("Birth of a session")],
         ["<b>Canvas</b> (" + c("tela") + ")", "The size of the remote desktop: the browser window's size at attach "
-         "time, at most 4096×2304; it does not change while the client stays", c("ATTACCA") + ", " + c("TELA"),
+         "time, at most 4096×2304; it does not change while the client stays", c("ATTACCA") + " (attach), " + c("TELA"),
          rif("The RCP/1 protocol")],
         ["<b>View</b> (" + c("vista") + ")", "The size at which the page draws the canvas; it follows the window "
          "without touching the desktop", c("VISTA"), rif("The browser page")],
@@ -114,7 +114,7 @@ S2 = p("A few concepts recur in every chapter. Most of them have an Italian name
         ["<b>Attach slot</b> (" + c("posto") + ")", "The place of a user's connection in RCP's registry: one per "
          "user; freed when the client detaches or falls silent for 30 s", c("rcp.c"), rif("Detach and reattach")],
         ["<b>Farewell</b> (" + c("CONGEDO") + ")", "The message that closes an RCP session, always with a reason "
-         "code and a sentence: the server never closes without saying why (DECISIONI §4.1-bis)", c("rcp.h"),
+         "code and a sentence: the server never closes without saying why (DECISIONI.md §4.1-bis)", c("rcp.h"),
          rif("The RCP/1 protocol")],
         ["<b>Sentinel</b> (" + c("sentinella") + ")", "The code that asks logind whether a user has a local "
          "graphical session, and checks that the remote one has no seat and cannot power the machine off",
@@ -126,7 +126,7 @@ S2 = p("A few concepts recur in every chapter. Most of them have an Italian name
          c("budget.c"), rif("Quality, degradation and budget")],
         ["<b>Belts</b> (" + c("cinture") + ")", "The three system settings that forbid power-off, reboot and "
          "suspend to every user: a polkit rule, logind settings for the power key and lid, and sleep settings. "
-         "The packages ship them disabled", c("remotix-niente-spegnimento.rules"),
+         "The packages ship them disabled", c("remotix-niente-spegnimento.rules") + " (no power-off)",
          rif("Files on the machine")],
     ], "«TAB» — Basic concepts") + \
     p("The design is held together by eight <b>invariants</b>, numbered in " + c("CODER.md") + " §2 and quoted "
@@ -134,7 +134,7 @@ S2 = p("A few concepts recur in every chapter. Most of them have an Italian name
     note("REMOTIX recognises the desktop from what is installed (" + c("riconosci_desktop()") + " looks for "
          + c("gnome-session") + ", " + c("startplasma-wayland") + ", " + c("xfce4-session") + " and "
          + c("lxqt-session") + " in the " + c("PATH") + "). Machines with more than one desktop are out of scope "
-         "(DECISIONI §0.6): if two are present, one is chosen — GNOME before KDE, XFCE before LXQt — and the "
+         "(DECISIONI.md §0.6): if two are present, one is chosen — GNOME before KDE, XFCE before LXQt — and the "
          "ambiguity is written in the log at startup.", "One desktop per machine.")
 
 S3 = p("The server's code is split by job. This is the map the manual follows chapter by chapter; the line counts "
@@ -185,7 +185,9 @@ S3 = p("The server's code is split by job. This is the map the manual follows ch
 
 S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds everything: the product, the "
        "installer, the packages, the test benches, the measurements and the documents. Documents and code comments "
-       "are in Italian; the product's interface and this manual are in English.", lead=True) + tree([
+       "are in Italian; this manual is in English, and so is most of the page the user sees — but some of the "
+       "sentences the page shows, such as the reasons of a farewell (" + c("MOTIVO") + " in " + c("pagina.html")
+       + ") and the ban notice, are still in Italian.", lead=True) + tree([
     "REMOTIX/",
     "├── src/  # the product: the server in C, the page, PAM files, build scripts",
     "│   ├── protocolli/  # the Wayland protocol XML files the server is built against",
@@ -221,7 +223,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          + " and " + c("remotix.pam.arch") + " are the PAM stacks per family. " + c("provisiona.sh") + ", "
          + c("riavvia-7700.sh") + " and " + c("riavvia-7900.sh") + " prepare the test machine and restart a "
          "server there as a transient system unit; they are not installed."],
-        [c("src/costruzione/"), "One " + c("Contenitore") + " recipe per distribution (Debian 13, Ubuntu 24.04 and "
+        [c("src/costruzione/"), "One " + c("Contenitore") + " (container) recipe per distribution (Debian 13, Ubuntu 24.04 and "
          "26.04, Fedora 44, Alma 10, Leap 16, Tumbleweed, Arch), " + c("costruisci-tutti.sh") + ", "
          + c("costruisci-deb.sh") + " and " + c("quic-statiche.sh") + ", which builds ngtcp2 and nghttp3 as static "
          "libraries because almost no distribution ships the version needed."],
@@ -246,7 +248,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
         [c("grafica/"), "The official logo (" + c("grafica/logo/") + ", embedded in this manual's cover) and the "
          "mockups of the login page, the installer and the site."],
         [c("licenze/"), "A page describing the licensing system that was designed and then dropped on 10 October "
-         "2026 (DECISIONI §10.33): history only."],
+         "2026 (DECISIONI.md §10.33): history only."],
     ], "«TAB» — What is in the repository") + \
     warn("several documents carry a status box at the top that was true on the day it was written: "
          + c("README.md") + " still describes " + c("src/") + " as “not in git” and the project as paused, and "

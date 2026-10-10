@@ -50,21 +50,22 @@ S_ROADS = p("REMOTIX is never built on the host and never with sudo: every build
             "user, with the source tree mounted inside. There are four roads, and they share images and scripts.",
             lead=True) + ROADS + \
     table(["Road", "Command", "Output", "Used for"], [
-        ["Development", c("bash src/costruisci-in-contenitore.sh [target]"), c("src/remotix"), "every-day work; "
+        ["Development", c("bash src/costruisci-in-contenitore.sh [make-target]") + " (build in the container)",
+         c("src/remotix"), "every-day work; "
          "the binary is tied to the container's libraries and is never committed (" + c(".gitignore") + ")"],
-        ["Per-distribution check", c("src/costruzione/costruisci-tutti.sh [target…]"),
-         c("costruzione-uscita/<target>/") + ": binary, logs, " + c("ldd") + ", versions", "does it compile and link "
-         "cleanly on each distribution"],
+        ["Per-distribution check", c("src/costruzione/costruisci-tutti.sh [target…]") + " (build all)",
+         c("costruzione-uscita/<target>/") + " (build output): binary, logs, " + c("ldd") + ", versions",
+         "does it compile and link cleanly on each distribution"],
         ["Packages", c("src/costruzione/costruisci-deb.sh") + ", " + c("packaging/rpm/costruisci-rpm.sh") + ", "
          + c("packaging/arch/costruisci.sh"), c(".deb") + ", " + c(".rpm") + ", " + c(".pkg.tar.zst") + " with checks",
          "the native recipes, called by the release"],
-        ["Release", c("packaging/rilascio.sh X.Y.Z-R"), c("costruzione-uscita/rilasci/remotix-X.Y.Z-R.run"),
+        ["Release", c("packaging/rilascio.sh X.Y.Z-R") + " (release)", c("costruzione-uscita/rilasci/remotix-X.Y.Z-R.run"),
          "the one deliverable (" + rif("The release command") + ")"],
     ], "«TAB» — How to build what") + \
     p("Why containers: on 14 Aug 2026 the C code could not be built at all — the laptop lacked ngtcp2 and nghttp3, "
       "the test machine's live root file system had no compiler, and the container there did not see the source tree. "
       "A rootless podman container on the laptop, with the tree mounted and the binary coming out on the host, "
-      "solved it (" + c("src/Contenitore") + " header). The per-target containers came with phase 17 (§6.2): the "
+      "solved it (the header of " + c("src/Contenitore") + ", the Containerfile). The per-target containers came with phase 17 (" + c("fasi/17-l-installatore.md") + " §6.2): the "
       "binary is not portable between distributions (OpenSSL, libei, PipeWire… differ in version and soname), so each target "
       "is compiled inside its own root.") + \
     note("everything temporary goes under " + c("costruzione-uscita/") + " (ignored by git) or "
@@ -73,27 +74,27 @@ S_ROADS = p("REMOTIX is never built on the host and never with sudo: every build
 
 DEP_ROWS = [
     ["ngtcp2 ≥ 1.25 + " + c("ngtcp2_crypto_ossl"), "QUIC, and the bridge to OpenSSL's native QUIC API",
-     c("trasporto.c") + ", " + c("tls.c"), "built from source, static (" + rif("Static ngtcp2 and nghttp3") + ")"],
+     c("trasporto.c") + " (transport)" + ", " + c("tls.c"), "built from source, static (" + rif("Static ngtcp2 and nghttp3") + ")"],
     ["nghttp3 ≥ 1.18", "HTTP/3 and extended CONNECT", c("webtransport.c"), "built from source, static"],
     ["OpenSSL ≥ 3.5", "TLS 1.3 with the native QUIC API; X.509 for the two certificates", c("tls.c") + ", "
-     + c("certificati.c"), "distribution"],
-    ["libpam", "authentication", c("autenticazione.c") + ", " + c("aiutante.c"), "distribution"],
-    ["gio-2.0 ≥ 2.80", "the session bus: virtual monitor and Mutter's ScreenCast (named once for two users)",
-     c("sessione.c") + ", " + c("mutter.c"), "distribution"],
-    ["libpipewire-0.3 ≥ 0.3.48", "the frame stream; audio", c("cattura.c") + ", " + c("suono.c"), "distribution"],
+     + c("certificati.c") + " (certificates)", "distribution"],
+    ["libpam", "authentication", c("autenticazione.c") + ", " + c("aiutante.c") + " (the PAM helper)", "distribution"],
+    ["gio-2.0 ≥ 2.80", "the session bus: virtual monitor and Mutter's ScreenCast (named once, though two parts use it)",
+     c("sessione.c") + " (session)" + ", " + c("mutter.c"), "distribution"],
+    ["libpipewire-0.3 ≥ 0.3.48", "the frame stream; audio", c("cattura.c") + " (capture)" + ", " + c("suono.c") + " (sound)", "distribution"],
     ["libdrm", "only the " + c("DRM_FORMAT_MOD_*") + " headers: in CFLAGS, never in LIBS", c("cattura.c"),
      "distribution"],
-    ["libva, libva-drm", "encoding on the card (since phase 18, without ffmpeg)", c("vadiretta.c") + ", "
-     + c("codificatore.c"), "distribution"],
+    ["libva, libva-drm", "encoding on the card (since phase 18, without ffmpeg)", c("vadiretta.c") + " (direct VA-API)" + ", "
+     + c("codificatore.c") + " (encoder)", "distribution"],
     ["vulkan ≥ 1.3.274", "the loader only; Vulkan Video tried before VA-API (phase 19); the SPIR-V shader is in the "
      "tree", c("vulkanvideo.c"), "distribution"],
     ["opus ≥ 1.3", "audio encoding (since phase 18)", c("audio.c"), "distribution"],
     ["libei-1.0 ≥ 1.1.0", "input injection on GNOME and KDE", c("input.c"), "distribution"],
-    ["xkbcommon", "which key produces this letter in this layout", c("tastiera.c"), "distribution"],
+    ["xkbcommon", "which key produces this letter in this layout", c("tastiera.c") + " (keyboard)", "distribution"],
     ["wayland-client + " + c("wayland-scanner"), "KWin and wlroots protocols, generated at every build",
      c("kwin.c") + ", " + c("wlroots.c"), "distribution"],
     ["gbm", "the GPU buffer labwc copies into (wlroots card path)", c("wlroots.c"), "distribution"],
-    [c("-ldl"), "libselinux opened with " + c("dlopen") + " on Fedora and Alma", c("figlio.c"), "libc"],
+    [c("-ldl"), "libselinux opened with " + c("dlopen") + " on Fedora and Alma", c("figlio.c") + " (the per-user child)", "libc"],
     [c("-lm"), "the test tone's " + c("sin()") + " — kept explicit, not left to glibc", c("webtransport.c"), "libc"],
 ]
 
@@ -103,11 +104,11 @@ S_DEPS = p("The Makefile's header lists every library with the piece of code tha
            "software encoder (OpenH264, SVT-AV1).", lead=True) + \
     table(["Library", "What for", "Code", "Where it comes from"], DEP_ROWS, "«TAB» — The declared build dependencies of "
           + c("src/Makefile")) + \
-    table(["pkg-config module", "Minimum checked by " + c("make dipendenze")],
+    table(["pkg-config module", "Minimum checked by " + c("make dipendenze") + " (dependencies)"],
           [[c(m), "none (presence only)" if v == "0" else esc(v)] for m, v in MINIMI],
-          "«TAB» — " + c("MINIMI") + ", read from " + c("src/Makefile") + " when the manual is built") + \
+          "«TAB» — " + c("MINIMI") + " (minimums), read from " + c("src/Makefile") + " when the manual is built") + \
     p(c("make dipendenze") + " checks each module and then compiles a one-line program per header ("
-      + "the ngtcp2, VA-DRM, Vulkan headers…). It has three outcomes, "
+      + "the ngtcp2, OpenSSL, PAM, VA-DRM, Vulkan headers…). It has three outcomes, "
       "and says which: OK, NO (too old, with the version found), and ?? (pkg-config does not know the module — which "
       "with a prefix may only mean the " + c(".pc") + " is not on the path). The package recipes run it before "
       "compiling (" + c("override_dh_auto_configure") + ", the PKGBUILD's " + c("build()") + ").") + \
@@ -117,26 +118,26 @@ S_DEPS = p("The Makefile's header lists every library with the piece of code tha
 
 S_MAKEFILE = p(c("src/Makefile") + " builds one program, " + c("remotix") + ", from " + str(len(SORGENTI))
                + " C files and " + str(len(PROTOCOLLI)) + " Wayland protocols. " + c("make") + " (target "
-               + c("tutto") + ") runs " + c("impronte") + " first, then links.", lead=True) + \
+               + c("tutto") + ", “all”) runs " + c("impronte") + " (fingerprints) first, then links.", lead=True) + \
     table(["Variable / target", "What it is"], [
-        [c("SORGENTI"), ", ".join(c(s) for s in SORGENTI)],
-        [c("PROTOCOLLI"), ", ".join(c(x) for x in PROTOCOLLI) + " — XML in " + c("src/protocolli/") + "; "
+        [c("SORGENTI") + " (sources)", ", ".join(c(s) for s in SORGENTI)],
+        [c("PROTOCOLLI") + " (protocols)", ", ".join(c(x) for x in PROTOCOLLI) + " — XML in " + c("src/protocolli/") + "; "
          + c("wayland-scanner") + " generates the client header and the private code of each at every "
          "build (only the XML is in git)"],
         [c("CFLAGS"), c("-O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter") + " by default ("
          + c("?=") + "); then " + c("override CFLAGS +=") + " adds " + c("-D_GNU_SOURCE") + " and the pkg-config flags"],
         [c("LIBS"), c("-lngtcp2_crypto_ossl") + " first, then " + c("-lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm")
          + " and the pkg-config libraries"],
-        [c("PREFISSO"), "where ngtcp2/nghttp3 are installed when pkg-config does not find them: the libdir is asked to "
+        [c("PREFISSO") + " (prefix)", "where ngtcp2/nghttp3 are installed when pkg-config does not find them: the libdir is asked to "
          "pkg-config <i>inside</i> the prefix (" + c("PKG_CONFIG_LIBDIR") + ", without " + c("PKG_CONFIG_PATH")
          + "), then " + c("-L") + " and " + c("-rpath")],
-        [c("GEMELLO"), "the twin copy to compare (" + c("../banchi/rcp") + " by default, " + c("nessuno") + " to "
-         "declare not comparing)"],
+        [c("GEMELLO") + " (twin)", "the twin copy to compare (" + c("../banchi/rcp") + " by default, " + c("nessuno")
+         + " (none) to declare not comparing)"],
         [c("impronte"), "the twin-copy check (" + rif("The twin-copy check") + ")"],
         [c("dipendenze"), "the dependency check (" + rif("Declared build dependencies") + ")"],
-        [c("banco-w1"), "the wlroots capture bench " + c("banchi/13-w1-un-fotogramma.c") + ", linked with the "
-         "<i>product's</i> " + c("wlroots.o") + " and " + c("registro.o") + ", not a copy"],
-        [c("pulisci"), "removes objects, binary and generated protocol files"],
+        [c("banco-w1"), "the wlroots capture bench " + c("banchi/13-w1-un-fotogramma.c") + " (one frame), linked "
+         "with the <i>product's</i> " + c("wlroots.o") + " and " + c("registro.o") + " (the log), not a copy"],
+        [c("pulisci") + " (clean)", "removes objects, binary and generated protocol files"],
     ], "«TAB» — The Makefile, part by part") + \
     p("Each object lists the headers it includes (the “seams” between parts written in parallel): without them "
       + c("make") + " would keep an object compiled against yesterday's contract — a program that links and misbehaves "
@@ -169,7 +170,8 @@ S_TWINS = p(c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c") + "
       "recipe copies " + c("banchi/rcp/") + " next to " + c("src/") + ". The concrete case it prevents: changing the "
       "ban duration in " + c("src/rcp.c") + " while the benches keep testing the old copy and stay green.")
 
-S_DEVBOX = p(c("src/Contenitore") + " is the every-day build image, " + c("localhost/remotix-costruzione") + ": Debian 13 "
+S_DEVBOX = p(c("src/Contenitore") + " is the every-day build image, " + c("localhost/remotix-costruzione")
+             + " (the REMOTIX build image): Debian 13 "
              "with the declared development packages, and nghttp3 1.18.0 and ngtcp2 1.25.0 built from source at fixed "
              "tags (shared libraries in " + c("/usr/local") + ", unlike the package images). Extra packages "
              "(" + c("libgbm-dev") + ", " + c("libopus-dev") + ", " + c("libvulkan-dev") + ") sit in layers of their "
@@ -184,8 +186,8 @@ bash src/costruisci-in-contenitore.sh pulisci      # removes the objects""", "ba
         ["the whole tree mounted at " + c("/albero"), "the twin-copy check needs " + c("../banchi/rcp")],
         ["no " + c(":Z"), "it would relabel the user's source tree"],
         ["missing image ⇒ exit 3 with the command to type", "an absent image is not a failure to guess"],
-        ["after a successful build, " + c("banchi/04-b31-tela.c") + " is compiled with " + c("src/rcp.c")
-         + " and run", "the strongest bench on the most delicate module stayed red for a day in August because nobody "
+        ["after a successful build, " + c("banchi/04-b31-tela.c") + " (the canvas bench) is compiled with "
+         + c("src/rcp.c") + " by the host's gcc, if there is one, and run", "the strongest bench on the most delicate module stayed red for a day in August because nobody "
          "ran it; now it runs where everybody passes anyway, in two seconds, and does not stop the build"],
     ], "«TAB» — Decisions in " + c("costruisci-in-contenitore.sh")) + \
     note(c("libwayland-dev") + " (for " + c("wayland-client") + " and " + c("wayland-scanner") + ") is not named in "
@@ -196,17 +198,21 @@ bash src/costruisci-in-contenitore.sh pulisci      # removes the objects""", "ba
       + "): it looks for ngtcp2/nghttp3 in " + c("PREFISSO") + ", " + c("NGTCP2") + ", " + c("NGHTTP3") + " (defaults "
       "under " + c("/srv/src/b2") + "), requires OpenSSL ≥ 3.5, deletes the old binary before building (so “it exists” "
       "means “it is new”), and then greps the binary for marker strings, with a positive control that the search tool "
-      "itself works.")
+      "itself works. Last, if they are missing and it can write them, it installs " + c("/etc/pam.d/remotix")
+      + " from " + c("src/remotix.pam") + " and " + c("/etc/remotix/utenti-negati") + " (the denied users) with "
+      + c("root") + ".")
 
 TARGETS = [
     ["debian13", c("debian:13"), "apt", "1.11 / 1.8", "also the .deb tools layer (debhelper, lintian)"],
     ["ubuntu2604", c("ubuntu:26.04"), "apt", "1.16", "also the .deb tools layer"],
-    ["fedora44", c("fedora:44"), "dnf", "1.21", c("vulkan-loader-devel") + " 1.4.341 (measured 1 Oct 2026)"],
+    ["fedora44", c("registry.fedoraproject.org/fedora:44"), "dnf", "1.21", c("vulkan-loader-devel") + " 1.4.341 (measured 1 Oct 2026)"],
     ["alma10", c("almalinux:10"), "dnf + EPEL + CRB", "1.22 (EPEL)", "libei and pipewire devel in CRB, opus in EPEL"],
     ["arch", c("archlinux:latest"), "pacman", "1.25 with crypto_ossl", "labwc, wlr-randr, wireplumber, "
      "pipewire-pulse installed because makepkg wants runtime depends present"],
-    ["tumbleweed", c("opensuse/tumbleweed:latest"), "zypper", "1.25 with crypto_ossl", c("pkgconfig(gbm)")],
-    ["leap16", c("opensuse/leap:16.0"), "zypper", "1.6 (unusable)", c("pkgconfig(gbm)")],
+    ["tumbleweed", c("registry.opensuse.org/opensuse/tumbleweed:latest"), "zypper", "1.25 with crypto_ossl",
+     "gbm asked as " + c("pkgconfig(gbm)")],
+    ["leap16", c("registry.opensuse.org/opensuse/leap:16.0"), "zypper", "1.6 (unusable)",
+     "gbm asked as " + c("pkgconfig(gbm)")],
     ["ubuntu2404", c("ubuntu:24.04"), "apt", "—", "only to see where it stops (OpenSSL 3.0 has no QUIC API); not "
      "released"],
 ]
@@ -218,21 +224,23 @@ S_TARGETS = p(c("src/costruzione/Contenitore.<target>") + " is one image per tar
     table(["Target", "Base image", "Manager", "ngtcp2 / nghttp3 the distribution has", "Notes"], TARGETS,
           "«TAB» — The per-target build images (the distribution's own versions are why ours are built)") + \
     p(c("src/costruzione/costruisci-tutti.sh [target…]") + " (all eight by default) builds the image, copies "
-      + c("src/") + " and " + c("banchi/rcp/") + " into " + c("$CACHE/albero-<target>") + " — eight targets on the "
-      "same " + c("src/") + " would step on each other's objects — runs " + c("make pulisci tutto") + ", and writes in "
-      + c("costruzione-uscita/<target>/") + ": the binary, " + c("immagine.log") + ", " + c("compilazione.log") + ", "
-      + c("versioni.txt") + " (OpenSSL, opus, libva, libei, pipewire, glib, gcc, ngtcp2, nghttp3), " + c("ldd.txt")
-      + " run inside the target, and " + c("esito.txt") + ". " + c("ldd") + " is not clean if any library is "
+      + c("src/") + " and " + c("banchi/rcp/") + " into " + c("$CACHE/albero-<target>") + " (a copy of the tree) — "
+      "eight targets on the same " + c("src/") + " would step on each other's objects — runs " + c("make pulisci")
+      + " and " + c("make tutto") + " inside the image, and writes in "
+      + c("costruzione-uscita/<target>/") + ": the binary, " + c("immagine.log") + " (image build), "
+      + c("compilazione.log") + " (compilation), " + c("versioni.txt") + " (the versions of OpenSSL, opus, libva, "
+      "libei, pipewire, glib, gcc, ngtcp2, nghttp3), " + c("ldd.txt") + " run inside the target, and "
+      + c("esito.txt") + " (one-line outcome: compiles yes/no, ldd clean yes/no). " + c("ldd") + " is not clean if any library is "
       "“not found”, if ngtcp2/nghttp3 are dynamic, if ffmpeg (" + c("libav*") + ", " + c("libswscale") + ", "
       + c("libx264/5") + ") or a software encoder (" + c("openh264") + ", " + c("SvtAv1") + ") appears.")
 
-S_QUIC = p(c("src/costruzione/quic-statiche.sh") + " builds nghttp3 " + c("v1.18.0") + " and ngtcp2 " + c("v1.25.0")
+S_QUIC = p(c("src/costruzione/quic-statiche.sh") + " (static QUIC) builds nghttp3 " + c("v1.18.0") + " and ngtcp2 " + c("v1.25.0")
            + " (with " + c("-DENABLE_OPENSSL=ON") + ", which produces " + c("libngtcp2_crypto_ossl") + ") from their git "
            "tags with CMake and Ninja, <b>static only</b>, PIC, libdir fixed to " + c("lib") + ", into "
            + c("/usr/local/lib") + ". It fails if any " + c(".so") + " of them is there: the linker would prefer it.",
            lead=True) + \
     table(["Choice", "Why"], [
-        ["inside the binary (D2, DECISIONS §10.6)", "ngtcp2 ≥ 1.25.0 is required by the "
+        ["inside the binary (D2, " + c("DECISIONI.md") + " §10.6)", "ngtcp2 ≥ 1.25.0 is required by the "
          + c("NGTCP2_STREAM_CLOSE2_FLAG_*") + " flags of " + c("trasporto.c") + ", with the " + c("ngtcp2_crypto_ossl")
          + " bridge, and almost no distribution has it; security updates of these two become REMOTIX's job"],
         ["static, not a private " + c(".so"), "no library outside the system paths; the "
@@ -266,19 +274,19 @@ S_DEB = p(c("packaging/debian/") + " is copied to " + c("debian/") + " in a fres
     table(["Step of " + c("debian/rules"), "What"], [
         ["configure", c("make -C src dipendenze")],
         ["build", "pkg-config must say 1.25.0 and 1.18.0; " + c("src/rcp.c") + " must have " + c("BANCO_ACCESO 0")
-         + " (R13); " + c("make tutto") + " with " + c("CFLAGS") + " = dpkg's hardening flags + " + c("-std=gnu11")
+         + " (the bench function switched off, R13); " + c("make tutto") + " with " + c("CFLAGS") + " = dpkg's hardening flags + " + c("-std=gnu11")
          + " + warnings"],
         ["install", "the files of " + rif("What the packages install") + ", plus " + c("incorporate.json")],
         ["systemd", c("dh_installsystemd --no-enable --no-start --restart-after-upgrade") + ": never enabled or "
          "started by the package; on upgrade restarted only if it was active or enabled"],
     ], "«TAB» — " + c("debian/rules")) + \
     p("After the build " + c("costruisci-deb.sh") + " runs lintian and checks the <i>finished</i> package, not the "
-      "tree, writing one line per check in " + c("controlli.txt") + ":") + \
+      "tree, writing one line per check in " + c("controlli.txt") + " (checks):") + \
     table(["Check", "How"], [
         ["R13 — bench function off", "the marker sentence absent from the binary extracted from the .deb <b>and</b> "
          "present in an " + c("rcp.o") + " built with " + c("BANCO_ACCESO 1") + " (the positive control: otherwise "
          "“not found” could mean “cannot search”); no bench option in the unit's ExecStart"],
-        ["R14 — no bench files", "the file list against a blacklist: provisioning, sudoers, gpu-udev, restart "
+        ["R14 — no bench files", "the file list against a blacklist: test files (" + c("prova") + "), provisioning, sudoers, gpu-udev, restart "
          "scripts, " + c("ld.so.conf") + ", " + c("banchi") + ", " + c("/opt/") + ", keys and certificates"],
         ["R4 — no missing libraries", c("ldd") + " of the extracted binary inside the target: nothing “not found”, no "
          "dynamic ngtcp2/nghttp3"],
@@ -287,7 +295,7 @@ S_DEB = p(c("packaging/debian/") + " is copied to " + c("debian/") + " in a fres
     ], "«TAB» — Checks on the finished .deb") + \
     p("Measured 29 Sep 2026 (commit cdefd1f): lintian 0 errors, 0 warnings; R13, R14, R4 green; R23 two identical "
       "builds on Debian 13 and Ubuntu 26.04. After " + c("apt install") + " on debian13-gnome and ubuntu2604-kde the "
-      "service was disabled and inactive, nothing listened on 7447, groups were unchanged (fasi/17 §13.1).")
+      "service was disabled and inactive, nothing listened on 7447, groups were unchanged (fasi/17 §13.2).")
 
 S_RPM = p(c("packaging/rpm/remotix.spec") + " is one spec with " + c("%if 0%{?fedora}") + ", " + c("0%{?rhel}")
           + " and " + c("0%{?suse_version}") + " branches, as Cockpit does, built by "
@@ -301,20 +309,21 @@ S_RPM = p(c("packaging/rpm/remotix.spec") + " is one spec with " + c("%if 0%{?fe
          + c("(wlr-randr if lxqt-session)") + ", " + c("(xorg-x11-server-Xwayland if labwc)") + " / "
          + c("(xwayland if labwc)") + ", a scalable font " + c("if labwc") + ", " + c("(breeze6-wallpapers if plasma6-workspace)")
          + " on openSUSE"],
-        ["Recommends", "the VA drivers (Mesa, Intel) and " + c("mesa-vulkan-drivers") + "; on Fedora and openSUSE the "
-         "distribution's drivers do not encode H.264 for some cards, and the package does not add RPM Fusion or "
-         "Packman"],
+        ["Recommends", "on Fedora " + c("mesa-dri-drivers") + ", the Intel VA driver and " + c("mesa-vulkan-drivers")
+         + "; on openSUSE " + c("Mesa-libva") + " and " + c("intel-media-driver") + "; on Alma nothing (RHEL 10's Mesa "
+         "has no VA-API and EPEL has no Intel driver). The distribution's drivers do not encode H.264 for some cards, "
+         "and the package does not add RPM Fusion or Packman"],
         ["Bundled", c("Provides: bundled(ngtcp2) = 1.25.0") + ", " + c("bundled(nghttp3) = 1.18.0") + "; "
          + c("%build") + " fails if pkg-config reports other versions"],
         ["Flags", c("%{optflags} -std=gnu11") + " in the environment; on openSUSE also " + c("-fPIE -pie")],
         ["PAM", c("remotix.pam.fedora") + " in " + c("/etc/pam.d") + " (" + c("%config(noreplace)") + "); "
          + c("remotix.pam.suse") + " in " + c("/usr/lib/pam.d") + " on openSUSE"],
         [c("remotix-selinux"), "noarch subpackage: the policy module (" + c("remotix_t") + ", "
-         + c("remotix_exec_t") + ", " + c("remotix_var_lib_t") + ", " + c("remotix_var_run_t") + ") built against "
-         "<i>that</i> distribution's policy, and " + c("remotix_porta.cil") + " for port 7447 TCP and UDP; required "
-         "only " + c("if selinux-policy-targeted") + "; " + c("rx_selinux_permissivo") + " builds a permissive domain "
+         + c("remotix_exec_t") + ", " + c("remotix_port_t") + ", " + c("remotix_var_lib_t") + ", " + c("remotix_var_run_t") + ") built against "
+         "<i>that</i> distribution's policy, and " + c("remotix_porta.cil") + " (the port) for port 7447 TCP and UDP; required "
+         "only " + c("if selinux-policy-targeted") + "; " + c("rx_selinux_permissivo") + " (permissive) builds a permissive domain "
          "for measuring, never for release"],
-        [c("%ghost"), "the certificates, " + c(".nostro") + " markers and ban files the service creates, so a remove "
+        [c("%ghost"), "the certificates, the " + c(".nostro") + " (“ours”) markers and the ban files the service creates, so a remove "
          "cleans them (measured on Tumbleweed in T3: without them " + c("/var/lib/remotix") + " stayed)"],
         ["Scriptlets", c("%post") + " only " + c("%tmpfiles_create") + " (no " + c("%systemd_post") + ": a machine "
          "preset “enable *” would enable the service); " + c("%preun") + " stops and disables; " + c("%postun")
@@ -337,7 +346,7 @@ S_ARCH = p(c("packaging/arch/PKGBUILD") + " is built by " + c("packaging/arch/co
         ["depends by soname", c("libopus.so") + ", " + c("libssl.so") + ", " + c("libva.so") + "… become the exact "
          "sonames the binary uses: a library update with the same soname goes through, a new soname makes "
          + c("pacman -Syu") + " refuse until we rebuild — “better a refused update than one that breaks silently” "
-         "(§6.2); an exact version would block every security update"],
+         "(fasi/17 §6.2); an exact version would block every security update"],
         ["Unconditional runtime depends", c("labwc") + ", " + c("wlr-randr") + " (pacman has no conditional depends; "
          "as optdepends they would never be installed), " + c("pipewire") + ", " + c("wireplumber") + ", "
          + c("pipewire-pulse") + " (the xfce4 group has no audio: measured 29 Sep on arch-xfce)"],
@@ -376,7 +385,7 @@ INSTALLED = [
     ["who cannot log in", c("/etc/remotix/utenti-negati") + " = " + c("root"), "same", "same"],
     ["KWin capture permission", c("/usr/share/applications/org.kde.remotix.desktop"), "same", "same (" + c("Exec=")
      + " the Arch path)"],
-    ["guards, switched off", c("/usr/share/remotix/cinture/") + ": no power-off rule, no-suspend, keys", "same", "same"],
+    ["guards, switched off", c("/usr/share/remotix/cinture/") + " (the guards): no power-off rule, no-suspend, keys", "same", "same"],
     ["firewall definition", c("/etc/ufw/applications.d/remotix") + " (profile REMOTIX)", c("/usr/lib/firewalld/services/remotix.xml"),
      c("/usr/lib/firewalld/services/remotix.xml")],
     ["SELinux", "—", c("remotix-selinux") + " subpackage", "—"],
@@ -384,10 +393,10 @@ INSTALLED = [
 
 S_INSTALLED = p("The three families install the same pieces in the same places, except where the distribution's "
                 "conventions differ. The package carries <b>inert pieces</b> only: it never enables or starts the "
-                "service, never touches groups, firewall or system configuration (§10.12, kept by §10.36).", lead=True) + \
+                "service, never touches groups, firewall or system configuration (" + c("DECISIONI.md") + " §10.12, kept by §10.36).", lead=True) + \
     table(["Piece", ".deb", ".rpm", "Arch"], INSTALLED, "«TAB» — What the REMOTIX package installs, per family") + \
     p("The KWin permission file is byte-for-byte what the product would check (" + c("kwin_verifica_permesso()")
-      + "), so the product finds it right and never writes to " + c("/usr") + ". Never in any package (§6.4, R14): test "
+      + "), so the product finds it right and never writes to " + c("/usr") + ". Never in any package (fasi/17 §6.4, R14): test "
       "users, bench sudoers, " + c("gpu-udev.sh") + ", " + c("riavvia-*.sh") + ", " + c("provisiona.sh") + ", "
       + c("ld.so.conf.d") + " entries.") + \
     table(["Removed by the package scripts", ".deb (" + c("postrm purge") + ")", ".rpm (on erase)", "Arch (" + c("post_remove") + ", every removal)"], [
@@ -401,7 +410,8 @@ S_INSTALLED = p("The three families install the same pieces in the same places, 
          "the guards ship switched off and nothing switches them on; the firewall definitions are only names an "
          "administrator may use. Not settled yet: whether the guard files stay in the packages.", "Doc vs code.")
 
-S_ENGINE = p(c("installatore/costruisci.sh") + " builds " + c("installatore/uscita/remotix-install") + " in "
+S_ENGINE = p(c("installatore/costruisci.sh") + " (the installer's build script) builds "
+             + c("installatore/uscita/remotix-install") + " (" + c("uscita") + ": output) in "
              + c("docker.io/library/golang:1.25") + ": " + c("CGO_ENABLED=0") + ", " + c("GOFLAGS=-mod=vendor") + ", "
              + c("GOPROXY=off") + ", " + c("GOTOOLCHAIN=local") + ", " + c("-trimpath -ldflags '-s -w'") + ", Go caches "
              "in " + c("installatore/.cache/") + ". Go is not installed on the laptop and does not need to be.",
@@ -414,31 +424,31 @@ RX_VERSIONE=1.0.0 installatore/costruisci.sh   # -X remotix/installatore/motore.
     p("Static and without cgo, the engine runs on every distribution before any package is there — Debian's glibc or "
       "Alma's. Until 10 Oct 2026 there was a second, cgo build for the Gio GUI on Debian 12's glibc; with the GUI gone "
       "(§10.31) " + c("vendor/") + " went from 37 to 14 MB and there is one build.") + \
-    p(c("packaging/motore/pacchetti-motore.sh") + " (called by the release) packages that one binary three times, "
+    p(c("packaging/motore/pacchetti-motore.sh") + " (engine packages; called by the release) packages that one binary three times, "
       "refusing if the binary's " + c("version") + " is not the release's:") + \
     table(["Package", "Built with", "Contents and scripts"], [
         [c("remotix-install_V-R_amd64.deb"), c("dpkg-deb --root-owner-group -Zxz") + ", " + c("SOURCE_DATE_EPOCH"),
          c("/usr/bin/remotix-install") + ", " + c("/usr/share/remotix-install/README") + "; Depends systemd; postinst "
          "on upgrade: " + c("post-upgrade")],
-        [c("remotix-install-V-R.x86_64.rpm"), c("rpmbuild") + " in " + c("fedora:44") + " with "
+        [c("remotix-install-V-R.x86_64.rpm"), c("rpmbuild") + " in " + c("registry.fedoraproject.org/fedora:44") + " with "
          + c("remotix-install.spec"), "the same files; " + c("%posttrans") + " " + c("post-upgrade") + "; no "
          "brp-strip (" + c("__os_install_post") + " nil): measured 30 Sep, rpm's strip changed the binary, and the "
          "package must hold byte for byte the engine that installed it"],
         [c("remotix-install-V-R-x86_64.pkg.tar.zst"), c("makepkg --nodeps") + " in the Arch image", "the same files; " + c("!strip") + "; " + c("post_upgrade") + " " + c("post-upgrade")],
     ], "«TAB» — The engine packages (" + c("packaging/motore/") + ")") + \
     note("the engine's Arch package is built in " + c("localhost/remotix-costruzione-arch") + " even when " + c("BERSAGLI")
-         + " excludes Arch: the image must exist for any release.", "Release prerequisite.")
+         + " (the targets) excludes Arch: the image must exist for any release.", "Release prerequisite.")
 
 REL_FLOW = flow([
     ("1. Tree", "a commit, nothing dirty", "dark"),
     ("2. Engine", "tests, static build", "blue"),
     ("3. Product", ".deb · .rpm · Arch", "blue"),
     ("4. Engine pkgs", "three families", "blue"),
-    ("5. Payload", "tar.gz, sha256", "navy"),
-    ("6. .run", "+ its sha256 file", "green"),
+    ("5. .run", "payload, header, sha256", "navy"),
+    ("6. Summary", "RELEASES.txt, message", "green"),
 ], "«FIG» — The steps of " + c("packaging/rilascio.sh") + "; it stops at the first error", width=900)
 
-S_RELEASE = p(c("packaging/rilascio.sh X.Y.Z-R") + " is the one command of a release (" + c("0.17.0-7")
+S_RELEASE = p(c("packaging/rilascio.sh X.Y.Z-R") + " is the one command of a release (for example " + c("0.17.0-7")
               + ": X.Y.Z is REMOTIX's version, R the package revision of a rebuild). The same version goes to everything: "
               "the product packages, the engine and its packages.", lead=True) + REL_FLOW + \
     table(["Step", "What it does", "Stops if"], [
@@ -449,23 +459,25 @@ S_RELEASE = p(c("packaging/rilascio.sh X.Y.Z-R") + " is the one command of a rel
          "prints the catalogue line", "any " + c("FAIL") + " or " + c("gofmt:") + " line; the binary does not say X.Y.Z"],
         ["3. the product", c("costruisci-deb.sh") + " (debian13, ubuntu2604), " + c("costruisci-rpm.sh") + " (fedora44, "
          "alma10, tumbleweed, leap16), " + c("packaging/arch/costruisci.sh") + ", with " + c("RX_VERSIONE")
-         + "/" + c("RX_REVISIONE"), "a recipe fails; an rpm target without " + c("pacchetto=si") + " in its "
+         + "/" + c("RX_REVISIONE"), "a recipe fails; an rpm target without " + c("pacchetto=si") + " (package = yes) in its "
          + c("esito.txt")],
         ["4. the engine packages", c("pacchetti-motore.sh"), "a package fails"],
-        ["5. the payload", c("packages/<target>/") + " = product packages + the engine package of that family; the "
-         "static engine at the root; " + c("tar --sort=name --owner=0 --group=0 --numeric-owner --mtime=@<commit time>")
-         + " | " + c("gzip -n -9"), "—"],
-        ["6. the .run", c("run.sh") + " with " + c("VERSIONE") + " and " + c("PAYLOAD_SHA256") + " filled in by "
-         + c("sed") + " (checked with grep), the payload appended, " + c("<run>.sha256") + " written, "
-         + c("sh <run> version") + " run, a line appended to " + c("RELEASES.txt"), "the header did not take the sha256"],
+        ["5. the .run", "the payload: " + c("packages/<target>/") + " = product packages + the engine package of that "
+         "family, the static engine at the root, " + c("tar --sort=name --owner=0 --group=0 --numeric-owner "
+         "--mtime=@<commit time>") + " | " + c("gzip -n -9") + "; then " + c("run.sh") + " with " + c("VERSIONE")
+         + " (version) and " + c("PAYLOAD_SHA256") + " filled in by " + c("sed") + " (checked with grep), the payload "
+         "appended, " + c("<run>.sha256") + " written, " + c("sh <run> version") + " run",
+         "the header did not take the sha256"],
+        ["6. the summary", "a line appended to " + c("RELEASES.txt") + " (version, time, commit, targets, sha256) and "
+         "the final message", "—"],
     ], "«TAB» — " + c("rilascio.sh") + " step by step") + \
     table(["Variable", "Default", "Meaning"], [
         [c("BERSAGLI"), c("debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch"), "targets in the " + c(".run")],
-        [c("USCITA"), c("costruzione-uscita/rilasci"), "where the " + c(".run") + " goes"],
-        [c("RX_SPORCO=1"), "unset", "accept a dirty tree (the packages say so); never for a published release"],
+        [c("USCITA") + " (output)", c("costruzione-uscita/rilasci"), "where the " + c(".run") + " goes"],
+        [c("RX_SPORCO=1") + " (dirty)", "unset", "accept a dirty tree (the packages say so); never for a published release"],
     ], "«TAB» — The release's environment") + \
     p("Work files stay in " + c("costruzione-uscita/rilascio-X.Y.Z-R/") + ": " + c("rilascio.log") + " (the journal of "
-      "the release), " + c("prove-motore.log") + ", the product packages, the engine packages, the payload. The rpm "
+      "the release), " + c("prove-motore.log") + " (the engine tests), the product packages, the engine packages, the payload. The rpm "
       "containers leave files owned by another sub-uid, so the folder is removed with " + c("podman unshare rm -rf")
       + ". The final message gives the sha256 to publish next to the file, over HTTPS, and the install command "
       + c("sudo sh remotix-X.Y.Z-R.run") + ".")
@@ -530,20 +542,23 @@ S_REPRO = p("The goal (R23) is four levels of reproducibility: binary, package, 
       "including the Go modules of " + c("vendor/") + ") were written for the signed archive's publishing step, which "
       "no longer exists: nothing calls them. Not settled yet: putting the licences back into the " + c(".run")
       + " (an open point of §10.36).") + \
-    warn("the package metadata still say the licence is proprietary and undecided (" + c("debian/copyright") + ": "
-         "“License: proprietary”; " + c("License: LicenseRef-Proprietary") + " in both specs; "
-         + c("LicenseRef-REMOTIX") + " in the PKGBUILDs), while §10.33 makes REMOTIX free of charge with a draft "
+    warn("the package metadata still say the licence is proprietary (" + c("debian/copyright") + ": "
+         "“License: proprietary”, with a note that the distribution licence is not decided yet; "
+         + c("License: LicenseRef-Proprietary") + " in both specs; " + c("LicenseRef-REMOTIX")
+         + " in both PKGBUILDs), while " + c("DECISIONI.md") + " §10.33 makes REMOTIX free of charge with a draft "
          "licence awaiting the user's approval. The package descriptions and summaries are still in Italian, against "
          "§10.32 (everything the administrator reads is English).", "Doc vs code.")
 
 S_VERSIONS = p("One version per release, written in several dialects.", lead=True) + \
     table(["Artifact", "Release " + c("X.Y.Z-R"), "Without a release (development)"], [
         ["REMOTIX .deb", c("X.Y.Z-R+deb13") + ", " + c("X.Y.Z-R+ubuntu26.04"), c("0.17.0~gitYYYYMMDD.<hash>-1+deb13")
-         + " (" + c(".modificato") + " added for a dirty tree)"],
-        ["REMOTIX .rpm", "Version X.Y.Z, Release R%{?dist} (" + c("rx_versione") + ", " + c("rx_rilascio") + ")",
-         "0.17.0-1 (the spec's defaults; the manual reads its version from there)"],
+         + " (" + c(".modificato") + ", “modified”, added for a dirty tree)"],
+        ["REMOTIX .rpm", "Version X.Y.Z, Release R%{?dist} (the macros " + c("rx_versione") + " and " + c("rx_rilascio")
+         + ", version and release)", "0.17.0-1 (the spec's defaults; without " + c("RX_VERSIONE") + ", "
+         + c("costruisci-rpm.sh") + " reads the version from there)"],
         ["REMOTIX Arch", c("pkgver=X.Y.Z") + ", " + c("pkgrel=R"), "the PKGBUILD's " + c("pkgver") + "/" + c("pkgrel")],
-        ["engine", c("VersioneMotore") + " = X.Y.Z via " + c("-ldflags -X"), c("0.1.0") + " (" + c("formato.go") + ")"],
+        ["engine", c("VersioneMotore") + " (engine version) = X.Y.Z via " + c("-ldflags -X"), c("0.1.0") + " ("
+         + c("installatore/motore/formato.go") + ")"],
         ["engine packages", "X.Y.Z-R", "—"],
         ["the .run", c("remotix-X.Y.Z-R.run") + ", " + c("version") + " prints " + c("REMOTIX X.Y.Z-R"), "—"],
         ["object format", c("remotix-install/3") + " (independent of the release)", ""],
@@ -552,8 +567,8 @@ S_VERSIONS = p("One version per release, written in several dialects.", lead=Tru
       "a new catalogue ships only with a new release.")
 
 S_OPUS = p("The browser decodes Opus with a small WebAssembly module, embedded as base64 in " + c("src/pagina.html")
-           + " between the " + c("OPUS_WASM_INIZIO") + " / " + c("OPUS_WASM_FINE") + " markers. "
-           + c("src/opus-wasm/costruisci.sh") + " rebuilds it reproducibly.", lead=True) + \
+           + " between the " + c("OPUS_WASM_INIZIO") + " / " + c("OPUS_WASM_FINE") + " (start / end) markers. "
+           + c("src/opus-wasm/costruisci.sh") + " (build) rebuilds it reproducibly.", lead=True) + \
     table(["Pinned input", "Value"], [
         ["libopus", "1.5.2, tarball checked against a fixed sha256"],
         ["toolchain", "the official emscripten image (4.0.15) pinned <b>by digest</b>, run with " + c("--network=none")],
@@ -561,7 +576,7 @@ S_OPUS = p("The browser decodes Opus with a small WebAssembly module, embedded a
          "(old phone browsers); standalone wasm, no imports, 1 MiB memory, no growth"],
         ["output", c("src/opus-wasm/opus.wasm") + " and its " + c(".sha256") + ", then embedded into the page"],
     ], "«TAB» — The Opus decoder build") + \
-    p(c("sh src/opus-wasm/costruisci.sh --verifica") + " checks that the page carries exactly " + c("opus.wasm")
+    p(c("sh src/opus-wasm/costruisci.sh --verifica") + " (verify) checks that the page carries exactly " + c("opus.wasm")
       + ". The decoder's role in the page is described in " + rif("Audio and clipboard") + ".")
 
 S_PITFALLS = p("Problems already met while building, and the cure now in the scripts — so nobody meets them twice.",

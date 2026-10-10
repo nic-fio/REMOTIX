@@ -23,7 +23,7 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
        "behind the four desktops, and they deliver frames in two opposite directions. GNOME and KDE "
        "<i>push</i> frames through a PipeWire node; labwc (the compositor REMOTIX runs under XFCE and LXQt) "
        "has no node at all, and frames are <i>pulled</i> one by one. All three end up behind one interface, "
-       + c("cattura.h") + ", which the per-user child process (" + c("figlio.c") + ") uses in the same way "
+       + c("cattura.h") + " (capture), which the per-user child process (" + c("figlio.c") + ") uses in the same way "
        "on every desktop.", lead=True) + FAMIGLIE + \
     table(["", "GNOME (Mutter)", "KDE Plasma (KWin)", "XFCE and LXQt (labwc)"], [
         ["Module that opens the source", c("mutter.c") + " — " + c("mutter_apri()"),
@@ -31,8 +31,8 @@ S1 = p("REMOTIX does not grab the physical screen: every session has its own vir
         ["How frames arrive", "Pushed, PipeWire node from " + c("RecordVirtual"),
          "Pushed, PipeWire node from " + c("stream_output"), "Pulled: " + c("capture_output") + " → "
          + c("copy") + " → " + c("ready") + " per frame"],
-        ["Virtual output", "Created by " + c("RecordVirtual") + " at every stage assembly (" + c("Meta-1")
-         + ", product name «Virtual remote monitor»)", c("Virtual-0") + ", created by " + c("kwin_wayland --virtual --width W --height H")
+        ["Virtual output", "Created by " + c("RecordVirtual") + " every time the stage is mounted (" + c("Meta-1")
+         + ", product name «Virtual remote monitor»)", c("Virtual-0") + ", created by " + c("kwin_wayland_wrapper --virtual --width W --height H")
          + " when the session is born", "Headless output of labwc (" + c("HEADLESS-1") + "), born 1280×720"],
         ["Access gate", "None beyond the user's own D-Bus session (direct compositor interfaces, no portal)",
          "A " + c(".desktop") + " file that lists the protocol in " + c("X-KDE-Wayland-Interfaces"),
@@ -69,7 +69,7 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
          + " up to " + c("MOVIMENTO_FPS") + " (60).", "“Send a frame when something changes.” On a still "
          "desktop nothing arrives, and that is a result, not a fault."],
     ], "«TAB» — The three rules of the capture") + \
-    p("The negotiated facts are exposed in " + c("CatturaConsegna") + " (read with " + c("cattura_consegna()")
+    p("The negotiated facts are exposed in " + c("CatturaConsegna") + " (capture delivery; read with " + c("cattura_consegna()")
       + "), four groups that the code downstream reads instead of recomputing:") + \
     ul(["<b>buffer type</b> — requested (" + c("strada_chiesta") + ", " + c("buffer_chiesto") + ") and "
         "declared by the producer (" + c("buffer_dichiarato") + "), in separate fields: what arrives is the "
@@ -85,12 +85,12 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
       + c("pixel_misurati") + " sits beside the results so that “not black” and “not looked at” cannot be "
       "confused. Sampling one pixel in eight (0.10 ms) was measured and rejected: a frame black except for one "
       "region would be reported as black.") + \
-    table(["Outcome of " + c("cattura_prendi()"), "Meaning", "What the caller does"], [
+    table(["Outcome of " + c("cattura_prendi()") + " (take a frame)", "Meaning", "What the caller does"], [
         [c("CATTURA_PRESA_FATTA"), "A frame was copied into memory", "Encode from " + c("pixel")],
         [c("CATTURA_PRESA_PIXEL_ALTROVE"), "A frame was delivered on the GPU path: " + c("pixel")
          + " is NULL, " + c("fd") + "/" + c("offset") + "/" + c("stride") + "/" + c("modificatore")
          + " describe a DMA-BUF that is <b>retained</b>", "Encode from the descriptor, then "
-         + c("cattura_fermo_libera()")],
+         + c("cattura_fermo_libera()") + " (release the frame)"],
         [c("CATTURA_PRESA_ZERO"), "The stream was active for the whole wait and nothing arrived (still desktop)",
          "Nothing; it is a legitimate zero"],
         [c("CATTURA_PRESA_GUASTO"), "The stream was never active, or has died", "Report, remount the stage"],
@@ -100,7 +100,7 @@ S2 = p("The capture has one job, written at the top of " + c("cattura.h") + ": d
          "pixels live only for the duration of the callback: the copy into REMOTIX's buffer is made there, "
          "and frames that arrive while nobody is waiting are only counted, not copied.",
          "Real-time thread.") + \
-    p(c("CatturaFermo") + " also carries the timing of the part of the path that precedes the encoder, in "
+    p(c("CatturaFermo") + " (the captured frame) also carries the timing of the part of the path that precedes the encoder, in "
       "microseconds of " + c("CLOCK_MONOTONIC") + " (the same clock as " + c("figlio.c") + " and "
       + c("codificatore.c") + "): " + c("us_arrivo") + " (when the frame was parked), " + c("us_copia")
       + " (the " + c("memcpy") + " in the callback), " + c("us_allocazione") + " (0 when the buffer was reused), "
@@ -152,7 +152,7 @@ S3 = p("On GNOME REMOTIX talks to Mutter's direct D-Bus interfaces, " + c("org.g
         ["Wait for the node", c("ATTESA_NODO_MS") + " = 10000", "The node arrives as a signal; without a ceiling "
          "a lost signal would wait forever."],
     ], "«TAB» — What RecordVirtual is asked") + \
-    p("The virtual monitor is mounted by the program at every stage assembly, never by configuration. In v1 "
+    p("The virtual monitor is mounted by the program every time the stage is mounted, never by configuration. In v1 "
       "the GNOME branch lost width and height and the monitor lived in a provisioning script; on 12 Aug 2026 "
       "a session ran for two days alive, complete and black. Putting the protection in the program means "
       "removing it takes intent.") + \
@@ -307,7 +307,7 @@ S6 = p("labwc has no PipeWire node. It offers " + c("zwlr_screencopy_manager_v1"
        "user's decision of 20 Sep 2026 (“we ask for them”), which also bought control of the pointer and of the "
        "output size.", lead=True) + \
     p("<b>Why a separate module.</b> " + c("cattura.c") + " was built on the push direction and " + c("figlio.c")
-      + " uses it in 35 places; rewriting them two ways would have put GNOME and KDE at risk to serve the new "
+      + " uses it in dozens of places; rewriting them two ways would have put GNOME and KDE at risk to serve the new "
       "desktops. The shape copies the clipboard's precedent (" + c("appunti_apri()") + " / "
       + c("appunti_apri_kde()") + "): a second constructor, " + c("cattura_avvia_wlr()") + ", and every public "
       "function of " + c("cattura.c") + " hands over to " + c("wlroots.c") + " at the top when the capture is a "
@@ -481,7 +481,7 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
          + c("cursore_mai_nascondere()") + " is on (KDE)"],
         ["Unchanged", c("bitmap_offset = 0") + " (the metadata comes with every buffer)", "Nothing; the series "
          "number grows only on a real change"],
-        ["Changed", "A new bitmap", "The shape, converted from RGBA to BGRA premultiplied, cropped to 256×256 "
+        ["Changed", "A new bitmap", "The shape, converted from premultiplied RGBA to premultiplied BGRA, cropped to 256×256 "
          "(" + c("CURSORE_MAX_LATO") + ") and the crop logged"],
     ], "«TAB» — The four cursor states that cursore.c separates") + \
     p("After a hidden period Mutter sends “unchanged” when the pointer comes back, so " + c("cursore.c")
@@ -505,14 +505,14 @@ S9 = p("The pointer is drawn by the page, not baked into the video: the image st
 S10 = p("Until 24 Sep 2026 the real pointer shape (resize arrows on a border, the I-beam on text, the hand on "
         "links) reached the browser only on GNOME. The user decided it must reach it on all four desktops, and "
         "the design approved was an <b>encoded theme plus a dictionary</b> (" + c("forma.h") + ", "
-        + c("forma.c") + ").", lead=True) + \
+        + c("forma.c") + ", «forma» = shape).", lead=True) + \
     p("KWin and labwc draw the pointer into the captured image, so their sessions already ran with an invisible "
       "cursor theme made of 1×1 transparent images. The compositor drew nothing, and the metadata carried the "
       "same nothing. In the encoded theme each shape is still a 1×1 image, but <b>opaque</b> and of a colour of "
       "its own. The server writes the theme before the desktop starts; the child reads the colour and looks up "
       "the real image in a real theme on disk.") + \
     table(["Item", "Value"], [
-        ["Theme name", c("FORMA_TEMA") + " = " + c("remotix-invisibile") + " (unchanged, so the sessions' "
+        ["Theme name", c("FORMA_TEMA") + " = " + c("remotix-invisibile") + " (“remotix-invisible”; unchanged, so the sessions' "
          + c("XCURSOR_THEME") + " did not change by one letter)"],
         ["Where", c("<runtime>/remotix/icons/remotix-invisibile/") + " written by " + c("forma_tema_scrivi()")
          + "; " + c("<runtime>/remotix/icons") + " goes into " + c("XCURSOR_PATH") + "; no " + c("Inherits=")
@@ -567,7 +567,7 @@ S11 = p("The constants of the capture, where they live and what set them.", lead
         [c("FORMA_QUANTE") + " / " + c("FORMA_MISURA"), "78 / 24", c("forma.h"), "Encoded theme"],
     ], "«TAB» — Capture constants") + \
     p("Every capture line in the log carries the area " + c("cattura") + " (also from " + c("kwin.c") + " and "
-      + c("wlroots.c") + ": whoever reads the log looks for pixels under one word). The stage assembly line says "
+      + c("wlroots.c") + ": whoever reads the log looks for pixels under one word). The log line written when the stage is mounted says "
       "which path was mounted, because a “conversion 0.9 ms” on the GPU path and one on the memory path are not "
       "the same quantity; see " + rif("Logging and diagnostics") + ".") + \
     tip("the benches that prove these rules are in " + c("banchi/") + ": " + c("06-b5-esiti-cattura.c")
