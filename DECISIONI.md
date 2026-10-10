@@ -6711,6 +6711,11 @@ server side (the N100 refetching and redecoding 4K on seek, or REMOTIX's audio u
 the two, because the tablet's REMOTIX log needs administrator rights and the CPU sampler started after the video. It
 follows §7.19.
 
+✅ **Closed by the user, same evening, after the heavy 4K seek test**: *«il limite è proprio il 4K e mi ritengo
+soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*. ⇒ 4K seek on an N100 is the
+**declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
+at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
