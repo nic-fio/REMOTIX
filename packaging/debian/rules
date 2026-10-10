@@ -53,6 +53,8 @@ override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
 	install -D -m 0644 src/pagina.html         $(B)/usr/share/remotix/pagina.html
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
+	# LICENSE.md §8: the licences of the third-party components inside the package, with their texts
+	install -D -m 0644 THIRD-PARTY-LICENSES     $(B)/usr/share/doc/remotix/THIRD-PARTY-LICENSES
 	# R24 (T8): the versions of the LINKED static libraries, read by pkg-config in the
 	#    container that built the binary: the archive's SBOM reads them.
 	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \

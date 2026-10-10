@@ -1,6 +1,8 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: remotix
 Upstream-Contact: nicfio <nicfio@gmail.com>
+Comment: The licences of all the third-party components incorporated in this
+ package, with their full texts: /usr/share/doc/remotix/THIRD-PARTY-LICENSES.
 
 Files: *
 Copyright: 2026 nicfio

@@ -6,8 +6,8 @@
 #     sudo sh remotix-VERSION.run tui        the same installation in a text interface
 #
 # This header is packaging/rilascio.sh's: below the __PAYLOAD__ line there is a tar.gz with the
-# installation engine (remotix-install) and the REMOTIX packages of every supported distribution
-# (packages/<target>/). Nothing is added to the system's repositories: the package manager installs
+# installation engine (remotix-install), THIRD-PARTY-LICENSES (the licences of the third-party
+# components inside) and the REMOTIX packages of every supported distribution (packages/<target>/). Nothing is added to the system's repositories: the package manager installs
 # those files, and takes their dependencies from the repositories the machine already has.
 # REMOTIX does not change the system: what is missing is said, and providing it is up to the administrator.
 set -eu

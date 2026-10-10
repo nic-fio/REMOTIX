@@ -347,6 +347,7 @@ if [ -x /usr/bin/remotix-install ]; then
 fi
 
 %files
+%license THIRD-PARTY-LICENSES
 %dir %{_libexecdir}/remotix
 %{_libexecdir}/remotix/remotix
 %dir %{_datadir}/remotix

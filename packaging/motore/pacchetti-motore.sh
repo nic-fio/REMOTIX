@@ -32,13 +32,14 @@ export TMPDIR=$L
 vm=$("$MOTORE" version | awk '{print $1}')
 [ "$vm" = "$V" ] || { echo "⛔ the engine $MOTORE says $vm, the release is $V"; exit 1; }
 cp "$MOTORE" "$L/remotix-install"
-cp "$M/README" "$L/"
+cp "$M/README" "$ALBERO/THIRD-PARTY-LICENSES" "$L/"
 echo "== the engine $V-$R ($(sha256sum "$L/remotix-install" | cut -c1-16)…)"
 
 echo "== engine .deb"
 D=$L/deb; mkdir -p "$D/DEBIAN" "$D/usr/bin" "$D/usr/share/remotix-install"
 install -m 755 "$L/remotix-install" "$D/usr/bin/"
 install -m 644 "$L/README" "$D/usr/share/remotix-install/"
+install -D -m 644 "$L/THIRD-PARTY-LICENSES" "$D/usr/share/doc/remotix-install/THIRD-PARTY-LICENSES"
 cat >"$D/DEBIAN/control" <<EOF
 Package: remotix-install
 Version: $V-$R
@@ -68,7 +69,7 @@ SOURCE_DATE_EPOCH=$(git -C "$ALBERO" log -1 --format=%ct) \
 
 echo "== engine .rpm (fedora:44)"
 P=$L/rpm; mkdir -p "$P/SOURCES" "$P/SPECS"
-cp "$L/remotix-install" "$L/README" "$P/SOURCES/"
+cp "$L/remotix-install" "$L/README" "$L/THIRD-PARTY-LICENSES" "$P/SOURCES/"
 cp "$M/remotix-install.spec" "$P/SPECS/"
 podman run --rm -v "$P:/lavoro:Z" registry.fedoraproject.org/fedora:44 sh -c "
 	dnf -y -q install rpm-build systemd-rpm-macros >/dev/null 2>&1
@@ -78,7 +79,7 @@ cp "$P"/RPMS/x86_64/remotix-install-*.rpm "$U/"
 
 echo "== engine Arch package"
 A=$L/arch; mkdir -p "$A"
-cp "$L/remotix-install" "$L/README" "$M/PKGBUILD" "$M/remotix-install.install" "$A/"
+cp "$L/remotix-install" "$L/README" "$L/THIRD-PARTY-LICENSES" "$M/PKGBUILD" "$M/remotix-install.install" "$A/"
 podman run --rm --userns=keep-id -v "$A:/pkg" -w /pkg -e HOME=/pkg -e RX_VERSIONE="$V" -e RX_RILASCIO="$R" \
 	-e SOURCE_DATE_EPOCH="$(git -C "$ALBERO" log -1 --format=%ct)" localhost/remotix-costruzione-arch \
 	makepkg -f --noconfirm --nodeps >"$U/makepkg.log" 2>&1 || { tail -20 "$U/makepkg.log"; exit 1; }
