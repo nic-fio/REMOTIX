@@ -23,7 +23,7 @@
 # which also has CLI and TUI (DECISIONI §10.19). The static build has another digest, and the plan
 # carries it written (motore.digest): with two different binaries the comparison removes it and says so.
 set -uo pipefail
-m=${1:?macchina}; passo=${2:?passo}
+m=${1:?machine}; passo=${2:?step}
 R=/media/REMOTIX/vm17
 D=$R/t9-gui/r36/$m
 V="bash $R/17-vm.sh"

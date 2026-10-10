@@ -19,7 +19,7 @@
 #   6. power off and back to the snapshot
 # Evidence in /media/REMOTIX/vm17/t6/esiti/<machine>/ (giro.txt is the summary).
 set -uo pipefail
-m=${1:?macchina}; foto=${2:?foto}; b=${3:?bersaglio}; opz=${4:-}; fl_on=${5:-}; fl_off=${6:-}
+m=${1:?machine}; foto=${2:?photo}; b=${3:?target}; opz=${4:-}; fl_on=${5:-}; fl_off=${6:-}
 T6=/media/REMOTIX/vm17/t6
 E=$T6/esiti/$m
 P=$T6/pacchetti/$b

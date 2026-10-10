@@ -116,7 +116,7 @@ costruisci() {  # costruisci <m>
 	ok "image $IMMAGINE"
 }
 
-verbo=${1:?verbo}; shift
+verbo=${1:?verb}; shift
 case $verbo in
 elenco)
 	for x in $(macchine); do
@@ -135,7 +135,7 @@ costruisci-tutte)
 	exit 0 ;;
 esac
 
-scegli "${1:?macchina}"; shift
+scegli "${1:?machine}"; shift
 case $verbo in
 porte) echo "$PSSH $PRX" ;;
 stato) P ps -a --filter "name=^$NOME\$" --format '{{.Names}} {{.Status}} {{.Image}}' ;;

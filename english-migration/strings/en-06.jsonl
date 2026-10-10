@@ -1,0 +1,197 @@
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "{prova:38} {versione:7} MANCA", "dopo": "{prova:38} {versione:7} MISSING"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "ffprobe DIVERSO: «{a['ffprobe']}» → «{b['ffprobe']}»", "dopo": "ffprobe DIFFERENT: «{a['ffprobe']}» → «{b['ffprobe']}»"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "decodificati {a['decodificati']} → {b['decodificati']}", "dopo": "decoded {a['decodificati']} → {b['decodificati']}"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "codifica {ta['cod']:.0f} → {tb['cod']:.0f} µs", "dopo": "encoding {ta['cod']:.0f} → {tb['cod']:.0f} µs"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "il NUOVO ha codice {b['codice']} e {b.get('errori_decodifica')} errori di decodifica", "dopo": "the NEW one has code {b['codice']} and {b.get('errori_decodifica')} decoding errors"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "⛔ DOVE IL NUOVO NON E' UGUALE O E' PEGGIO:", "dopo": "⛔ WHERE THE NEW ONE IS NOT EQUAL OR IS WORSE:"}
+{"file": "banchi/18-scheda/18-tabella.py", "prima": "⭐ nessuna prova in cui il nuovo sia peggio del vecchio (ffprobe, decodifica, PSNR, byte, tempi)", "dopo": "⭐ no test in which the new one is worse than the old (ffprobe, decoding, PSNR, bytes, times)"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "⛔ il NUOVO chiama ancora ffmpeg", "dopo": "⛔ the NEW one still calls ffmpeg"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "== costruisco 18-confronto-nuovo", "dopo": "== building 18-confronto-nuovo"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "== costruisco 18-confronto-vecchio", "dopo": "== building 18-confronto-vecchio"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "== costruiti", "dopo": "== built"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "   $nome $versione: codice $codice · ${byte:-0} byte · decodificati ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe", "dopo": "   $nome $versione: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "== $base chiave a richiesta / tela nuova / tetto", "dopo": "== $base key on request / new canvas / cap"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "azione ignota: $AZIONE", "dopo": "unknown action: $AZIONE"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "FAIL {prova}: manca una versione", "dopo": "FAIL {prova}: a version is missing"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "NON PROVATO {prova}: Chrome non decodifica {b.get('codec')} qui (serve la GPU)", "dopo": "NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (it needs the GPU)"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "{prova}: vecchio {a['decodificati']}/{a['chunk']} nuovo {b['decodificati']}/{b['chunk']} · misura {b.get('misura')} · errori {b['errori']} · impronte {'uguali' if a['impronte']==b['impronte'] else 'DIVERSE'}", "dopo": "{prova}: old {a['decodificati']}/{a['chunk']} new {b['decodificati']}/{b['chunk']} · size {b.get('misura')} · errors {b['errori']} · fingerprints {'equal' if a['impronte']==b['impronte'] else 'DIFFERENT'}"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "{passati} PASS · {rossi} FAIL · {non_provati} non provati", "dopo": "{passati} PASS · {rossi} FAIL · {non_provati} not tested"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.html", "prima": " (mostra ", "dopo": " (shown "}
+{"file": "banchi/18-scheda/18-decodifica-chrome.html", "prima": "configure non supportata", "dopo": "configure not supported"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "argomento ignoto: %s\\n", "dopo": "unknown argument: %s\\n"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "uso: 18-confronto --codec h264|hevc --misura LxA --uscita F [...]\\n", "dopo": "usage: 18-confronto --codec h264|hevc --misura LxA --uscita F [...]\\n"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "⛔ il codificatore non si e' aperto: %s\\n", "dopo": "⛔ the encoder did not open: %s\\n"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "⛔ strada della scheda chiesta, ma il codificatore e' in software\\n", "dopo": "⛔ card path requested, but the encoder is in software\\n"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "⛔ non apro i file d'uscita\\n", "dopo": "⛔ cannot open the output files\\n"}
+{"file": "banchi/18-scheda/18-confronto.c", "prima": "⛔ GBM non si apre su %s\\n", "dopo": "⛔ GBM does not open on %s\\n"}
+{"file": "banchi/17-distro/17-t1c-guarda.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t1c-guarda.sh", "prima": "porta", "dopo": "port"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t1c-installa.sh", "prima": "bersaglio", "dopo": "target"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "nome", "dopo": "name"}
+{"file": "banchi/17-distro/17-t3-pacchetto.sh", "prima": "pacchetto", "dopo": "package"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t3-prova.sh", "prima": "file .deb", "dopo": ".deb file"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-distro/17-t3-rpm.sh", "prima": "nome", "dopo": "name"}
+{"file": "banchi/17-distro/17-t4-alma.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-distro/17-t4-motore.sh", "prima": "pacchetto", "dopo": "package"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "verbo", "dopo": "verb"}
+{"file": "banchi/17-distro/scatole/17-scatola.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "foto", "dopo": "photo"}
+{"file": "banchi/17-t6/t6-giro.sh", "prima": "bersaglio", "dopo": "target"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t6/t6-leggi-pam.sh", "prima": "foto", "dopo": "photo"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-t6/t6-vm.sh", "prima": "foto", "dopo": "photo"}
+{"file": "banchi/17-t8/t8-guasta.sh", "prima": "guasto", "dopo": "fault"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-t8/t8-vm.sh", "prima": "nome", "dopo": "name"}
+{"file": "banchi/17-t9/t9-gui.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t9/t9-gui.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-t9/t9-gui.sh", "prima": "nome", "dopo": "name"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t9/t9-r36.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/17-t9/t9-vm.sh", "prima": "passo", "dopo": "step"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": "cartella con i flussi *.bin e esiti.jsonl", "dopo": "folder with the *.bin streams and esiti.jsonl"}
+{"file": "banchi/17-t8/t8-terzi.sh", "prima": "uscita", "dopo": "output"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "cartella con i flussi *.bin e esiti.jsonl", "dopo": "folder with the *.bin streams and esiti.jsonl"}
+{"file": "banchi/18-a1/costruisci.sh", "prima": "⛔ l'oggetto nuovo chiama ancora libavcodec", "dopo": "⛔ the new object still calls libavcodec"}
+{"file": "banchi/18-a1/costruisci.sh", "prima": "⭐ audio-nuovo.o: nessun simbolo av_/avcodec_ indefinito", "dopo": "⭐ audio-nuovo.o: no undefined av_/avcodec_ symbol"}
+{"file": "banchi/18-a1/chrome.py", "prima": "⛔ NIENTE DA GIUDICARE: in %s non trovo il modulo fra i segni", "dopo": "⛔ NOTHING TO JUDGE: in %s I cannot find the module between the markers"}
+{"file": "banchi/18-a1/chrome.py", "prima": "⛔ NIENTE DA GIUDICARE: google-chrome non c'e'", "dopo": "⛔ NOTHING TO JUDGE: google-chrome is not there"}
+{"file": "banchi/18-a1/chrome.py", "prima": "⛔ NIENTE DA GIUDICARE: la pagina non ha risposto in 90 s", "dopo": "⛔ NOTHING TO JUDGE: the page did not answer within 90 s"}
+{"file": "banchi/18-a1/chrome.py", "prima": "⭐ VERDE — Chrome decodifica il nuovo come il vecchio, e a un soffio dal nativo del server", "dopo": "⭐ VERDE — Chrome decodes the new one like the old one, and a whisker away from the server's native"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   errore rispetto alla sorgente, %s (SNR per tratto, pre-skip %d):\\n", "dopo": "   error against the source, %s (SNR per stretch, pre-skip %d):\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "      %-22s sorgente a zero; energia decodificata %.0f\\n", "dopo": "      %-22s source at zero; decoded energy %.0f\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "\\n== braccio: codec %u (%s), cura del silenzio %s\\n", "dopo": "\\n== arm: codec %u (%s), silence cure %s\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   -- apertura del vecchio:\\n", "dopo": "   -- opening the old one:\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   -- apertura del nuovo:\\n", "dopo": "   -- opening the new one:\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "⛔ NIENTE DA GIUDICARE: un codificatore non si apre\\n", "dopo": "⛔ NOTHING TO JUDGE: an encoder does not open\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "⛔ non scrivo in %s\\n", "dopo": "⛔ cannot write in %s\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   ⭐ pacchetti e decodifica nativa scritti in %s\\n", "dopo": "   ⭐ packets and native decoding written in %s\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   -- chiusura:\\n", "dopo": "   -- closing:\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   blocchi entrati           %u\\n", "dopo": "   blocks in                 %u\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   TOC codice %d               %10llu %10llu\\n", "dopo": "   TOC code %d                 %10llu %10llu\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   pacchetti che il decodificatore rifiuta: %d\\n", "dopo": "   packets the decoder refuses: %d\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   campioni decodificati diversi fra vecchio e nuovo: %ld su %ld\\n", "dopo": "   decoded samples different between old and new: %ld of %ld\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   ⛔ ROSSO: %d blocchi con esito diverso, il primo al blocco %d\\n", "dopo": "   ⛔ ROSSO: %d blocks with a different outcome, the first at block %d\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "== 18-a1 · Opus senza ffmpeg · %d blocchi da 20 ms (%.0f s) · %s\\n", "dopo": "== 18-a1 · Opus without ffmpeg · %d blocks of 20 ms (%.0f s) · %s\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "VECCHIO", "dopo": "OLD"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "NUOVO", "dopo": "NEW"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "vecchio", "dopo": "old"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "nuovo", "dopo": "new"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "A parlato", "dopo": "A speech"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "B musica", "dopo": "B music"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "C silenzio digitale", "dopo": "C digital silence"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "D salti", "dopo": "D jumps"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "E buchi di un blocco", "dopo": "E one-block gaps"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "F quasi silenzio", "dopo": "F near silence"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "G rumore forte", "dopo": "G loud noise"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "H tono puro", "dopo": "H pure tone"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "ibrido", "dopo": "hybrid"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "ACCESA", "dopo": "ON"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "SPENTA", "dopo": "OFF"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "pacchetti usciti", "dopo": "packets out"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "blocchi taciuti", "dopo": "blocks muted"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "byte in tutto", "dopo": "bytes in all"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "pacchetto piu' piccolo", "dopo": "smallest packet"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "pacchetto medio", "dopo": "mean packet"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "pacchetto piu' grosso", "dopo": "biggest packet"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "pacchetti da 1-2 byte (DTX)", "dopo": "1-2 byte packets (DTX)"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "   ⭐ VERDE: %u blocchi, ogni esito e ogni pacchetto IDENTICO byte per byte\\n", "dopo": "   ⭐ VERDE: %u blocks, every outcome and every packet IDENTICAL byte for byte\\n"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "⭐ VERDE — il nuovo e' indistinguibile dal vecchio", "dopo": "⭐ VERDE — the new one is indistinguishable from the old one"}
+{"file": "banchi/18-a1/18-a1-opus-senza-ffmpeg.c", "prima": "⛔ ROSSO — vedi i bracci qui sopra", "dopo": "⛔ ROSSO — see the arms above"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ l'encoder «libopus» non c'e' in questa libavcodec.  ⚠ Non si ripiega su PCM da qui: il codec e' negoziato (§4.3), e spedire PCM a chi aspetta Opus produce RUMORE invece di un errore", "dopo": "⛔ the «libopus» encoder is not in this libavcodec.  ⚠ No fallback to PCM from here: the codec is negotiated (§4.3), and sending PCM to someone expecting Opus produces NOISE instead of an error"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ libopus ha scelto blocchi da %d fotogrammi, e §5.3 ne vuole %d (20 ms).  Non si adatta in silenzio: si dichiara", "dopo": "⛔ libopus chose blocks of %d frames, and §5.3 wants %d (20 ms).  It does not adapt silently: it is declared"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⭐ Opus aperto: 48 000 Hz, 2 canali, blocchi da %d fotogrammi (20 ms), %d bit/s — encoder «libopus» di libavcodec", "dopo": "⭐ Opus opened: 48 000 Hz, 2 channels, blocks of %d frames (20 ms), %d bit/s — libavcodec's «libopus» encoder"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "cura del silenzio digitale: %s", "dopo": "digital silence cure: %s"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⭐ ACCESA — i blocchi tutti a zero non si spediscono.  E' il PREDEFINITO dal 24 agosto 2026 (decisione dell'utente).  `[M]` 09-b84: 102,1 volte meno traffico a schermo fermo (557,6 → 5,5 kbit/s), 1 248 blocchi taciuti su 1 248.  ⚠ Il prezzo: i «mancati» del cliente salgono di 2 su 5 000.  ⛔ Si spegne con `--niente-audio-silenzio`", "dopo": "⭐ ON — blocks that are all zero are not sent.  It is the DEFAULT since 24 August 2026 (the user's decision).  `[M]` 09-b84: 102.1 times less traffic with the screen still (557.6 → 5.5 kbit/s), 1 248 blocks muted of 1 248.  ⚠ The price: the client's «mancati» rise by 2 in 5 000.  ⛔ Switched off with `--niente-audio-silenzio`"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ SPENTA a mano (`--niente-audio-silenzio`) — si spedisce anche il silenzio, cioe' il prodotto fino al 23 agosto 2026.  ⚠ E NON e' il predefinito: dal 24 agosto nasce ACCESA", "dopo": "⛔ OFF by hand (`--niente-audio-silenzio`) — silence is sent too, that is the product until 23 August 2026.  ⚠ And it is NOT the default: since 24 August it is born ON"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⭐ PCM aperto: 48 000 Hz, 2 canali, s16 little-endian, blocchi da %u fotogrammi (5 ms) = %u byte (§5.3)", "dopo": "⭐ PCM opened: 48 000 Hz, 2 channels, s16 little-endian, blocks of %u frames (5 ms) = %u bytes (§5.3)"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ codec audio %u sconosciuto: RCP/1 ne definisce due, 1 = Opus e 2 = PCM (§6.3)", "dopo": "⛔ unknown audio codec %u: RCP/1 defines two, 1 = Opus and 2 = PCM (§6.3)"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "conto della cura del silenzio (%s): %llu blocchi taciuti su %llu entrati, %llu usciti sul filo — codec %u", "dopo": "silence cure count (%s): %llu blocks muted of %llu in, %llu out on the wire — codec %u"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "ACCESA, ed e' il predefinito dal 24 ago 2026", "dopo": "ON, and it is the default since 24 Aug 2026"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "SPENTA a mano, --niente-audio-silenzio", "dopo": "OFF by hand, --niente-audio-silenzio"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⭐ silenzio DIGITALE: %llu blocchi non spediti su %llu entrati (I6, cura accesa).  ⚠ Chi riceve vedra' un salto di `istante` e lo contera' fra i «mancati»: e' un buco VOLUTO, non una perdita", "dopo": "⭐ DIGITAL silence: %llu blocks not sent of %llu in (I6, cure on).  ⚠ The receiver will see a jump in `istante` and will count it among the «mancati»: it is a WANTED gap, not a loss"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ libopus ha trattenuto un blocco (EAGAIN) — e `banchi/07-b44` dice che non succede mai.  ⚠ Da qui in poi l'`istante` di §6.3 puo' non essere quello del blocco spedito", "dopo": "⛔ libopus held back a block (EAGAIN) — and `banchi/07-b44` says it never happens.  ⚠ From here on the `istante` of §6.3 may not be that of the block sent"}
+{"file": "banchi/18-a1/audio-vecchio.c", "prima": "⛔ pacchetto Opus di %d byte, oltre il tetto di %d — buttato invece che troncato", "dopo": "⛔ Opus packet of %d bytes, over the ceiling of %d — dropped instead of truncated"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ non apro %s\\n", "dopo": "⛔ cannot open %s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ %s: non ci sono %zu byte\\n", "dopo": "⛔ %s: %zu bytes are not there\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  impronta dell'uscita (fotogramma 0): 8 bit %016", "dopo": "  fingerprint of the output (frame 0): 8 bit %016"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "colori %ux%u, %d fotogrammi, mediane:\\n", "dopo": "colours %ux%u, %d frames, medians:\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  tempo 8 bit : nostro %.2f ms · sws_scale %.2f ms · libyuv ARGBToI420 (BT.601!) %.2f ms\\n", "dopo": "  time 8 bit : ours %.2f ms · sws_scale %.2f ms · libyuv ARGBToI420 (BT.601!) %.2f ms\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  tempo 10 bit: nostro %.2f ms · sws_scale %.2f ms\\n", "dopo": "  time 10 bit: ours %.2f ms · sws_scale %.2f ms\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  scarto nostro/sws 8 bit: Y max %d (%.4f%% dei campioni diversi) · U max %d · V max %d ", "dopo": "  gap ours/sws 8 bit: Y max %d (%.4f%% of samples differ) · U max %d · V max %d "}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "(croma diverso %.4f%%) · PSNR minimo Y %.2f U %.2f V %.2f dB\\n", "dopo": "(chroma differs %.4f%%) · minimum PSNR Y %.2f U %.2f V %.2f dB\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  scarto nostro/sws 10 bit: max %d livelli su 1023\\n", "dopo": "  gap ours/sws 10 bit: max %d levels out of 1023\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  libyuv (BT.601) contro sws (BT.709): PSNR minimo Y %.2f U %.2f dB  ⛔ matrice sbagliata\\n", "dopo": "  libyuv (BT.601) against sws (BT.709): minimum PSNR Y %.2f U %.2f dB  ⛔ wrong matrix\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  BGRx %06x → nostro Y %3u U %3u V %3u · sws Y %3u U %3u V %3u\\n", "dopo": "  BGRx %06x → ours Y %3u U %3u V %3u · sws Y %3u U %3u V %3u\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  grigi con croma diverso da 128: %d su 256\\n", "dopo": "  greys with chroma other than 128: %d out of 256\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  NV12: nostro %.2f ms · sws %.2f ms (medie) · scarto max %d · PSNR minimo %.2f dB\\n", "dopo": "  NV12: ours %.2f ms · sws %.2f ms (averages) · max gap %d · minimum PSNR %.2f dB\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  P010: nostro %.2f ms · sws %.2f ms (medie) · scarto max %d livelli su 1023\\n", "dopo": "  P010: ours %.2f ms · sws %.2f ms (averages) · max gap %d levels out of 1023\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  RGBx scambiato contro BGRx: %s\\n", "dopo": "  RGBx swapped against BGRx: %s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ DIVERSI", "dopo": "⛔ DIFFERENT"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "byte identici", "dopo": "identical bytes"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "codec: h264, av1 o hevc", "dopo": "codec: h264, av1 or hevc"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "aperto: %s\\n", "dopo": "opened: %s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "vecchia strada non aperta", "dopo": "old route not opened"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ fotogramma %d non codificato\\n", "dopo": "⛔ frame %d not encoded\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ fotogramma %d non codificato (vecchia)\\n", "dopo": "⛔ frame %d not encoded (vecchia)\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "%s %s %ux%u: %d fotogrammi · apertura %.1f ms · conversione media %.2f ms · ", "dopo": "%s %s %ux%u: %d frames · opening %.1f ms · average conversion %.2f ms · "}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "codifica media %.2f ms · %.1f KiB/fotogramma · chiavi %d · chiave chiesta al %d %s · ", "dopo": "average encoding %.2f ms · %.1f KiB/frame · keys %d · key requested at %d %s · "}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "riaperture per EAGAIN %d\\n", "dopo": "reopenings for EAGAIN %d\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ NON USCITA", "dopo": "⛔ NOT EMITTED"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "uscita", "dopo": "emitted"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ evento %d: %s\\n", "dopo": "⛔ event %d: %s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "qualita' +9 (riapertura)", "dopo": "quality +9 (reopening)"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "qualita' -9 (riapertura)", "dopo": "quality -9 (reopening)"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "misura nuova (riapertura)", "dopo": "new size (reopening)"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ fotogramma %d\\n", "dopo": "⛔ frame %d\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  %s %s fotogramma %2d %ux%u: %s%s%.1f ms di evento · codifica %.1f ms · ", "dopo": "  %s %s frame %2d %ux%u: %s%s%.1f ms of event · encoding %.1f ms · "}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "%zu byte · %s%s\\n", "dopo": "%zu bytes · %s%s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "CHIAVE", "dopo": "KEY"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": " ⛔ chiesta e non uscita", "dopo": " ⛔ requested and not emitted"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "H.264 senza perdita", "dopo": "H.264 lossless"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "AV1 senza perdita", "dopo": "AV1 lossless"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  %-22s si apre (%.0f ms) · %s · primo fotogramma %s, %zu byte\\n", "dopo": "  %-22s opens (%.0f ms) · %s · first frame %s, %zu bytes\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "USCITO", "dopo": "EMITTED"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "⛔ NON uscito", "dopo": "⛔ NOT emitted"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "  %-22s RIFIUTATO: %s\\n", "dopo": "  %-22s REFUSED: %s\\n"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "modo: colori | sorgente | codifica | eventi | rifiuti", "dopo": "mode: colori | sorgente | codifica | eventi | rifiuti"}
+{"file": "banchi/18-software/18-software-confronto.c", "prima": "argomenti sbagliati", "dopo": "wrong arguments"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "⛔ manca $LAVORO/l1.png (lo sfondo vero)", "dopo": "⛔ $LAVORO/l1.png is missing (the real wallpaper)"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "⛔ $f non c'e' piu' nel prodotto (fase 19) e non si ricava da git 6bacca7", "dopo": "⛔ $f is no longer in the product (phase 19) and cannot be extracted from git 6bacca7"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "costruito: $BANCO", "dopo": "built: $BANCO"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "costruito: $BANCO-c (senza SIMD)", "dopo": "built: $BANCO-c (without SIMD)"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "PSNR-Y media %.2f min %.2f · PSNR-YUV media %.2f", "dopo": "PSNR-Y avg %.2f min %.2f · PSNR-YUV avg %.2f"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": " · SSIM media %.5f min %.5f", "dopo": " · SSIM avg %.5f min %.5f"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": " · PSNR-RGB media %.2f min %.2f\\n", "dopo": " · PSNR-RGB avg %.2f min %.2f\\n"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "righe d'errore del decodificatore: $errori", "dopo": "decoder error lines: $errori"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "  decodificati da ffmpeg: ", "dopo": "  decoded by ffmpeg: "}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": " su 30 · righe d'errore: ", "dopo": " out of 30 · error lines: "}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "'fotogrammi'", "dopo": "'frames'"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "  … e in C semplice:", "dopo": "  … and in plain C:"}
+{"file": "banchi/18-software/18-software-confronto.sh", "prima": "passo ignoto: $PASSO", "dopo": "unknown step: $PASSO"}
+{"file": "banchi/18-software/18-software-webcodecs.py", "prima": "f\"⛔ {flusso} [{codec}, {hw}]: nessun esito in 120 s · console: {righe[-4:]}", "dopo": "f\"⛔ {flusso} [{codec}, {hw}]: no outcome in 120 s · console: {righe[-4:]}"}
+{"file": "banchi/18-software/18-software-webcodecs.py", "prima": "f\"{flusso} [{codec}, {hw}]: supportato {e['supportato']} · {e['uscite']} fotogrammi ", "dopo": "f\"{flusso} [{codec}, {hw}]: supported {e['supportato']} · {e['uscite']} frames "}
+{"file": "banchi/18-software/18-software-webcodecs.py", "prima": "f\"su {e.get('chunk')} chunk · {e.get('l')}x{e.get('a')} {e.get('formato')} · errori ", "dopo": "f\"from {e.get('chunk')} chunks · {e.get('l')}x{e.get('a')} {e.get('formato')} · errors "}
+{"file": "banchi/18-software/18-software-webcodecs.py", "prima": "f\"{e['errori'] or 'nessuno'} · luma identica a ffmpeg in {uguali} su {len(rif)}", "dopo": "f\"{e['errori'] or 'none'} · luma identical to ffmpeg in {uguali} out of {len(rif)}"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "18 · WebCodecs sul flusso del ripiego", "dopo": "18 · WebCodecs on the fallback stream"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "in corso…", "dopo": "running…"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "F18 supportato", "dopo": "F18 supported"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "F18 primo fotogramma", "dopo": "F18 first frame"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "F18 mandati", "dopo": "F18 sent"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "coda", "dopo": "queue"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "F18 svuotato, uscite", "dopo": "F18 flushed, outputs"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "copyTo fallite: ", "dopo": "copyTo failed: "}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "F18 impronte fatte", "dopo": "F18 fingerprints done"}
+{"file": "banchi/18-software/18-software-webcodecs.html", "prima": "eccezione: ", "dopo": "exception: "}

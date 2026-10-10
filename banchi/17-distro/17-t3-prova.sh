@@ -32,7 +32,7 @@
 # Evidence in $T3/esiti/<machine>/.
 # ⚠ One VM only (fasi/17 §7.1): the machine is powered off even if the test crashes.
 set -uo pipefail
-m=${1:?macchina}; DEB=${2:?file .deb}
+m=${1:?machine}; DEB=${2:?.deb file}
 R=/media/REMOTIX/vm17
 T3=${T3:-$R/t3}
 QUI=$(cd "$(dirname "$0")" && pwd)

@@ -16,7 +16,7 @@
 # ⚠ One browser at a time in the labwc: a covered Chrome window cannot be
 #   photographed (15-compositori.sh).
 set -u
-m=${1:?macchina}; p=${2:?porta}; b=${3:-chrome}
+m=${1:?machine}; p=${2:?port}; b=${3:-chrome}
 QUI=$(cd "$(dirname "$0")" && pwd)
 T1C=${T1C:-/media/REMOTIX/vm17/t1c}
 R=/run/user/$(id -u)

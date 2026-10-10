@@ -1,32 +1,32 @@
 /*
- * 18-software-confronto.c — fase 18, linea V-software: il ripiego in software
- * VECCHIO (libavcodec libx264/libsvtav1 + sws_scale, con le opzioni di
- * `codificatore.c`) contro il NUOVO (`src/ripiego.c`: OpenH264, SVT-AV1 diretta,
- * `src/colori709.c`), sulla STESSA sequenza di immagini di desktop.
+ * 18-software-confronto.c — phase 18, V-software line: the OLD software
+ * fallback (libavcodec libx264/libsvtav1 + sws_scale, with the options of
+ * `codificatore.c`) against the NEW one (`src/ripiego.c`: OpenH264, SVT-AV1 direct,
+ * `src/colori709.c`), on the SAME sequence of desktop images.
  *
- * Modi:
- *   colori   L A DIR N              nostro contro sws_scale (tempo e scarto), e
- *                                   libyuv ARGBToI420 (BT.601) per riferimento
- *   sorgente L A DIR N uscita.raw    scrive la sequenza in bgr0 (per ffmpeg)
+ * Modes:
+ *   colori   L A DIR N              ours against sws_scale (time and gap), and
+ *                                   libyuv ARGBToI420 (BT.601) for reference
+ *   sorgente L A DIR N uscita.raw    writes the sequence in bgr0 (for ffmpeg)
  *   codifica CODEC STRADA L A DIR N uscita [CHIAVE_A]
  *            CODEC = h264|av1 · STRADA = vecchia|nuova
- *            scrive uscita (.h264 Annex B / .obu) e uscita.csv (un fotogramma
- *            per riga: n, byte, chiave, us_conversione, us_codifica)
+ *            writes uscita (.h264 Annex B / .obu) and uscita.csv (one frame
+ *            per line: n, byte, chiave, us_conversione, us_codifica)
  *   eventi   CODEC STRADA L A DIR uscita
- *            chiave su richiesta, cambio di qualita' a caldo, cambio di misura:
- *            i tempi di ognuno e il flusso da far decodificare a ffmpeg
- *   rifiuti                          quel che il nuovo NON fa, detto
+ *            key on request, quality change on the fly, size change:
+ *            the time of each one and the stream for ffmpeg to decode
+ *   rifiuti                          what the new one does NOT do, stated
  *
- * La scena (in unita' 1080p, scalata per L/1920): lo sfondo vero di LXQt
- * (`l1.png` della macchina di prova), una finestra d'editor con codice vero
- * che SCORRE (fotogrammi 0-59, una riga per fotogramma), poi la finestra
- * TRASCINATA (60-89, 12 px per fotogramma), poi si SCRIVE (90-119: un carattere
- * per fotogramma e il cursore che lampeggia).
+ * The scene (in 1080p units, scaled by L/1920): the real LXQt wallpaper
+ * (`l1.png` of the test machine), an editor window with real code
+ * that SCROLLS (frames 0-59, one line per frame), then the window
+ * DRAGGED (60-89, 12 px per frame), then TYPING (90-119: one character
+ * per frame and the blinking cursor).
  */
 #include "../../src/colori709.h"
-/* ⛔ Fase 19: `src/ripiego.h` e' uscito dal prodotto.  Il banco resta come
- *    storia: `18-software-confronto.sh` ricava `ripiego.c/.h` dal commit
- *    6bacca7 e li passa con `-I`. */
+/* ⛔ Phase 19: `src/ripiego.h` has left the product.  The bench stays as
+ *    history: `18-software-confronto.sh` extracts `ripiego.c/.h` from commit
+ *    6bacca7 and passes them with `-I`. */
 #include "ripiego.h"
 
 #include <inttypes.h>
@@ -49,7 +49,7 @@ static uint64_t ora_us(void)
 	return (uint64_t) t.tv_sec * 1000000u + (uint64_t) t.tv_nsec / 1000u;
 }
 
-/* il nome della strada per le righe: vecchia · corretta · nuova */
+/* the route name for the output lines: vecchia · corretta · nuova */
 static const char *strada = "?";
 
 static void muori(const char *m)
@@ -59,26 +59,26 @@ static void muori(const char *m)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * LA SCENA
+ * THE SCENE
  * ═══════════════════════════════════════════════════════════════════════════ */
 typedef struct {
 	uint32_t l, a;
 	uint8_t *sfondo;      /* l x a bgr0 */
 	uint8_t *doc;         /* dl x da bgr0 */
 	uint32_t dl, da;
-	uint8_t *quadro;      /* il fotogramma composto */
+	uint8_t *quadro;      /* the composed frame */
 } Scena;
 
 static uint8_t *leggi(const char *percorso, size_t attesi)
 {
 	FILE *f = fopen(percorso, "rb");
 	if (!f) {
-		fprintf(stderr, "⛔ non apro %s\n", percorso);
+		fprintf(stderr, "⛔ cannot open %s\n", percorso);
 		exit(1);
 	}
 	uint8_t *p = malloc(attesi);
 	if (!p || fread(p, 1, attesi, f) != attesi) {
-		fprintf(stderr, "⛔ %s: non ci sono %zu byte\n", percorso, attesi);
+		fprintf(stderr, "⛔ %s: %zu bytes are not there\n", percorso, attesi);
 		exit(1);
 	}
 	fclose(f);
@@ -122,14 +122,14 @@ static void scena_fotogramma(Scena *s, int n)
 	int wx = (int) ((120 + 12 * sposta) * k), wy = (int) (90 * k);
 	int ww = (int) (1100 * k), wh = (int) (820 * k), barra = (int) (32 * k);
 
-	/* la finestra: bordo, barra del titolo, tre bottoni */
+	/* the window: border, title bar, three buttons */
 	riempi(s, wx - 1, wy - 1, ww + 2, wh + 2, 0x00303840);
 	riempi(s, wx, wy, ww, barra, 0x00e4e4e4);
 	riempi(s, wx, wy + barra - 1, ww, 1, 0x00b0b0b0);
 	for (int b = 0; b < 3; b++)
 		riempi(s, wx + ww - (int) ((30 + 28 * b) * k), wy + (int) (10 * k),
 		       (int) (12 * k), (int) (12 * k), b == 0 ? 0x003040e0 : 0x00808080);
-	/* il contenuto: il documento dallo scorrimento in giu' */
+	/* the content: the document from the scroll position down */
 	int cx = wx + (int) (4 * k), cy = wy + barra;
 	int cw = (int) s->dl, ch = wh - barra - (int) (4 * k);
 	int off = (int) (18 * k) * scorri;
@@ -144,8 +144,8 @@ static void scena_fotogramma(Scena *s, int n)
 		memcpy(s->quadro + ((size_t) yy * s->l + x0) * 4,
 		       s->doc + ((size_t) (off + r) * s->dl + (x0 - cx)) * 4, (size_t) (x1 - x0) * 4);
 	}
-	/* si scrive: un carattere per fotogramma su una riga vuota in basso,
-	 * e il cursore che lampeggia ogni 8 fotogrammi */
+	/* typing: one character per frame on an empty line at the bottom,
+	 * and the cursor blinking every 8 frames */
 	if (n >= 90) {
 		int ry = cy + ch - (int) (60 * k);
 		riempi(s, cx, ry - (int) (4 * k), cw, (int) (22 * k), 0x00fffff0);
@@ -160,7 +160,7 @@ static void scena_fotogramma(Scena *s, int n)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * LA STRADA VECCHIA — le opzioni di `codificatore.c` (fase 17), copiate
+ * THE OLD ROUTE — the options of `codificatore.c` (phase 17), copied
  * ═══════════════════════════════════════════════════════════════════════════ */
 typedef struct {
 	CodecVideo codec;
@@ -197,8 +197,8 @@ static int vecchia_contesto(Vecchia *v)
 		         "crf=%d:bframes=0:open-gop=0:repeat-headers=1:"
 		         "rc-lookahead=0:threads=1:sliced-threads=0:keyint=-1:min-keyint=-1:"
 		         "log-level=error%s", v->qualita,
-		         /* ⚠ SOLO per il banco: la «vecchia corretta», cioe' la riga
-		          *   che avrebbe tolto il fotogramma trattenuto */
+		         /* ⚠ ONLY for the bench: the "corrected old one", i.e. the line
+		          *   that would have removed the held-back frame */
 		         getenv("VECCHIA_X264_EXTRA") ? getenv("VECCHIA_X264_EXTRA") : "");
 		if (av_opt_set(v->ctx->priv_data, "x264-params", par, 0) < 0)
 			return -1;
@@ -261,9 +261,9 @@ static int vecchia_apri(Vecchia *v, CodecVideo codec, uint32_t l, uint32_t a, in
 	return vecchia_contesto(v);
 }
 
-/* Come `comprimi_comune()`: un fotogramma dentro, un pacchetto fuori; se il
- * codificatore lo trattiene (EAGAIN) si svuota e si RIAPRE, e il prossimo e'
- * una chiave — esattamente la strada del prodotto. */
+/* Like `comprimi_comune()`: one frame in, one packet out; if the
+ * encoder holds it back (EAGAIN) it is flushed and REOPENED, and the next one
+ * is a key — exactly the product's route. */
 static bool vecchia_codifica(Vecchia *v, const uint8_t *px, bool chiave, uint64_t *us_conv,
                              uint64_t *us_cod, bool *e_chiave, uint8_t **dati, size_t *byte,
                              bool *riaperto)
@@ -303,7 +303,7 @@ static bool vecchia_codifica(Vecchia *v, const uint8_t *px, bool chiave, uint64_
 	*byte = (size_t) v->pk->size;
 	av_packet_unref(v->pk);
 	if (*riaperto) {
-		/* la riapertura del prodotto, e il suo costo sta nel tempo */
+		/* the product's reopening, and its cost goes into the time */
 		uint64_t t2 = ora_us();
 		vecchia_chiudi_contesto(v);
 		vecchia_contesto(v);
@@ -321,7 +321,7 @@ static void vecchia_chiudi(Vecchia *v)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * I MODI
+ * THE MODES
  * ═══════════════════════════════════════════════════════════════════════════ */
 static int confronta(const uint8_t *a, const uint8_t *b, size_t n, int *massimo,
                      double *media, size_t *diversi)
@@ -412,14 +412,14 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		t_s10[i] = ora_us() - t0;
 
 		if (i == 0) {
-			/* l'impronta dell'uscita: la strada SSE2 e quella in C semplice
-			 * devono dare gli STESSI byte (il banco si compila due volte) */
+			/* the fingerprint of the output: the SSE2 route and the plain C one
+			 * must give the SAME bytes (the bench is compiled twice) */
 			uint64_t h = 1469598103934665603u, h10 = h;
 			for (size_t q = 0; q < ny * 3 / 2; q++)
 				h = (h ^ nostro[q]) * 1099511628211u;
 			for (size_t q = 0; q < ny * 3 / 2; q++)
 				h10 = (h10 ^ n10[q]) * 1099511628211u;
-			printf("  impronta dell'uscita (fotogramma 0): 8 bit %016" PRIx64 " · 10 bit %016" PRIx64 "\n", h, h10);
+			printf("  fingerprint of the output (frame 0): 8 bit %016" PRIx64 " · 10 bit %016" PRIx64 "\n", h, h10);
 		}
 		int m;
 		double med;
@@ -462,19 +462,19 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 	qsort(t_y, (size_t) n, 8, mediana_u64);
 	qsort(t_n10, (size_t) n, 8, mediana_u64);
 	qsort(t_s10, (size_t) n, 8, mediana_u64);
-	printf("colori %ux%u, %d fotogrammi, mediane:\n", l, a, n);
-	printf("  tempo 8 bit : nostro %.2f ms · sws_scale %.2f ms · libyuv ARGBToI420 (BT.601!) %.2f ms\n",
+	printf("colours %ux%u, %d frames, medians:\n", l, a, n);
+	printf("  time 8 bit : ours %.2f ms · sws_scale %.2f ms · libyuv ARGBToI420 (BT.601!) %.2f ms\n",
 	       t_n[n / 2] / 1000.0, t_s[n / 2] / 1000.0, t_y[n / 2] / 1000.0);
-	printf("  tempo 10 bit: nostro %.2f ms · sws_scale %.2f ms\n", t_n10[n / 2] / 1000.0,
+	printf("  time 10 bit: ours %.2f ms · sws_scale %.2f ms\n", t_n10[n / 2] / 1000.0,
 	       t_s10[n / 2] / 1000.0);
-	printf("  scarto nostro/sws 8 bit: Y max %d (%.4f%% dei campioni diversi) · U max %d · V max %d "
-	       "(croma diverso %.4f%%) · PSNR minimo Y %.2f U %.2f V %.2f dB\n",
+	printf("  gap ours/sws 8 bit: Y max %d (%.4f%% of samples differ) · U max %d · V max %d "
+	       "(chroma differs %.4f%%) · minimum PSNR Y %.2f U %.2f V %.2f dB\n",
 	       mY, 100.0 * (double) dY / ((double) ny * n), mU, mV,
 	       100.0 * (double) dC / (2.0 * nc * n), pY, pU, pV);
-	printf("  scarto nostro/sws 10 bit: max %d livelli su 1023\n", m10);
-	printf("  libyuv (BT.601) contro sws (BT.709): PSNR minimo Y %.2f U %.2f dB  ⛔ matrice sbagliata\n",
+	printf("  gap ours/sws 10 bit: max %d levels out of 1023\n", m10);
+	printf("  libyuv (BT.601) against sws (BT.709): minimum PSNR Y %.2f U %.2f dB  ⛔ wrong matrix\n",
 	       py601, pu601);
-	/* i grigi e i primari, a mano */
+	/* the greys and the primaries, by hand */
 	uint8_t px[4 * 4 * 2];
 	const uint32_t prove[] = { 0x00000000, 0x00ffffff, 0x00808080, 0x00ff0000, 0x0000ff00,
 	                           0x000000ff };
@@ -493,7 +493,7 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		int ps[4] = { 4, 2, 2 };
 		sws_scale(p, pi, pa, 0, 2, po, ps);
 		sws_freeContext(p);
-		printf("  BGRx %06x → nostro Y %3u U %3u V %3u · sws Y %3u U %3u V %3u\n", prove[i], y[0],
+		printf("  BGRx %06x → ours Y %3u U %3u V %3u · sws Y %3u U %3u V %3u\n", prove[i], y[0],
 		       u[0], v[0], ys[0], us[0], vs[0]);
 	}
 	int grigi_male = 0;
@@ -507,11 +507,11 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		if (u[0] != 128 || v[0] != 128)
 			grigi_male++;
 	}
-	printf("  grigi con croma diverso da 128: %d su 256\n", grigi_male);
+	printf("  greys with chroma other than 128: %d out of 256\n", grigi_male);
 
-	/* ⭐ NV12 e P010: la strada della scheda quando i pixel arrivano dalla
-	 *    memoria (la linea scheda, 30 set: la VPP li' e' peggio di swscale).
-	 *    Stesso confronto, contro sws_scale verso NV12 / P010LE. */
+	/* ⭐ NV12 and P010: the card route when the pixels come from
+	 *    memory (the card line, 30 Sep: the VPP there is worse than swscale).
+	 *    Same comparison, against sws_scale to NV12 / P010LE. */
 	{
 		struct SwsContext *s12 = sws_getContext((int) l, (int) a, AV_PIX_FMT_BGR0, (int) l,
 		                                        (int) a, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL,
@@ -559,15 +559,15 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 					m010 = dd;
 			}
 		}
-		printf("  NV12: nostro %.2f ms · sws %.2f ms (medie) · scarto max %d · PSNR minimo %.2f dB\n",
+		printf("  NV12: ours %.2f ms · sws %.2f ms (averages) · max gap %d · minimum PSNR %.2f dB\n",
 		       tn / 1000.0 / giri, ts / 1000.0 / giri, m12, p12);
-		printf("  P010: nostro %.2f ms · sws %.2f ms (medie) · scarto max %d livelli su 1023\n",
+		printf("  P010: ours %.2f ms · sws %.2f ms (averages) · max gap %d levels out of 1023\n",
 		       tn10 / 1000.0 / giri, ts10 / 1000.0 / giri, m010);
 		sws_freeContext(s12);
 		sws_freeContext(s010);
 	}
-	/* RGBx (labwc): lo stesso fotogramma coi byte R e B scambiati deve dare
-	 * GLI STESSI byte YUV che BGRx sull'originale. */
+	/* RGBx (labwc): the same frame with the R and B bytes swapped must give
+	 * THE SAME YUV bytes as BGRx on the original. */
 	{
 		scena_fotogramma(&s, 30);
 		colori709_a_i420(s.quadro, l * 4, l, a, COLORI709_BGRX, nostro, l, nostro + ny, l / 2,
@@ -579,8 +579,8 @@ static int modo_colori(uint32_t l, uint32_t a, const char *dir, int n)
 		}
 		colori709_a_i420(s.quadro, l * 4, l, a, COLORI709_RGBX, suo, l, suo + ny, l / 2,
 		                 suo + ny + nc, l / 2);
-		printf("  RGBx scambiato contro BGRx: %s\n",
-		       memcmp(nostro, suo, ny * 3 / 2) ? "⛔ DIVERSI" : "byte identici");
+		printf("  RGBx swapped against BGRx: %s\n",
+		       memcmp(nostro, suo, ny * 3 / 2) ? "⛔ DIFFERENT" : "identical bytes");
 	}
 	return 0;
 }
@@ -606,7 +606,7 @@ static CodecVideo codec_di(const char *s)
 		return CODIFICATORE_AV1;
 	if (!strcmp(s, "hevc"))
 		return CODIFICATORE_HEVC;
-	muori("codec: h264, av1 o hevc");
+	muori("codec: h264, av1 or hevc");
 	return 0;
 }
 
@@ -620,7 +620,7 @@ static CodificatoreRichiesta richiesta(CodecVideo codec, uint32_t l, uint32_t a)
 	r.fotogrammi_al_secondo = 60;
 	r.modo = CODIFICATORE_QUALITA_CRF;
 	const char *q = getenv("QUALITA");
-	r.qualita = q ? atoi(q) : 20; /* ⭐ CRF_SOFTWARE di `figlio.c` */
+	r.qualita = q ? atoi(q) : 20; /* ⭐ CRF_SOFTWARE of `figlio.c` */
 	const char *p = getenv("PROFONDITA");
 	r.profondita = p ? atoi(p) : 8;
 	const char *lv = getenv("LIVELLO");
@@ -649,9 +649,9 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 			fprintf(stderr, "⛔ ripiego_apri: %s\n", err);
 			return 1;
 		}
-		fprintf(stderr, "aperto: %s\n", ripiego_nome(rp));
+		fprintf(stderr, "opened: %s\n", ripiego_nome(rp));
 	} else if (vecchia_apri(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10) < 0) {
-		muori("vecchia strada non aperta");
+		muori("old route not opened");
 	}
 	uint64_t us_apri = ora_us() - t0;
 	uint64_t tot_conv = 0, tot_cod = 0, tot_byte = 0;
@@ -667,7 +667,7 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 		if (nuova) {
 			RipiegoUscita u;
 			if (!ripiego_codifica(rp, s.quadro, l * 4, chiedi, &u)) {
-				fprintf(stderr, "⛔ fotogramma %d non codificato\n", i);
+				fprintf(stderr, "⛔ frame %d not encoded\n", i);
 				return 1;
 			}
 			uc = u.us_conversione;
@@ -678,7 +678,7 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 		} else {
 			bool rip;
 			if (!vecchia_codifica(&v, s.quadro, chiedi, &uc, &ue, &k, &dv, &b, &rip)) {
-				fprintf(stderr, "⛔ fotogramma %d non codificato (vecchia)\n", i);
+				fprintf(stderr, "⛔ frame %d not encoded (vecchia)\n", i);
 				return 1;
 			}
 			d = dv;
@@ -696,13 +696,13 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 	}
 	fclose(fo);
 	fclose(fc);
-	printf("%s %s %ux%u: %d fotogrammi · apertura %.1f ms · conversione media %.2f ms · "
-	       "codifica media %.2f ms · %.1f KiB/fotogramma · chiavi %d · chiave chiesta al %d %s · "
-	       "riaperture per EAGAIN %d\n",
+	printf("%s %s %ux%u: %d frames · opening %.1f ms · average conversion %.2f ms · "
+	       "average encoding %.2f ms · %.1f KiB/frame · keys %d · key requested at %d %s · "
+	       "reopenings for EAGAIN %d\n",
 	       codec == CODIFICATORE_H264 ? "H.264" : "AV1", strada, l, a, n,
 	       us_apri / 1000.0, tot_conv / 1000.0 / n, tot_cod / 1000.0 / n,
 	       tot_byte / 1024.0 / n, chiavi, chiave_a,
-	       chiave_a < 0 ? "-" : chiave_mancata ? "⛔ NON USCITA" : "uscita",
+	       chiave_a < 0 ? "-" : chiave_mancata ? "⛔ NOT EMITTED" : "emitted",
 	       nuova ? 0 : v.riaperture);
 	if (nuova)
 		ripiego_chiudi(rp);
@@ -711,7 +711,7 @@ static int modo_codifica(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, c
 	return 0;
 }
 
-/* chiave su richiesta, qualita' a caldo, misura nuova: tempi e flusso */
+/* key on request, quality on the fly, new size: times and stream */
 static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, const char *dir,
                        const char *uscita)
 {
@@ -733,8 +733,8 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 	} else {
 		vecchia_apri(&v, codec, l, a, r.profondita, r.qualita, r.livello_x10);
 	}
-	/* 0-9 misura 1 (chiave chiesta al 5), 10: qualita' +9 (la discesa di
-	 * `abbassa_qualita()`), 15: qualita' di nuovo giu', 20-29 misura 2 */
+	/* 0-9 size 1 (key requested at 5), 10: quality +9 (the drop of
+	 * `abbassa_qualita()`), 15: quality back down, 20-29 size 2 */
 	for (int i = 0; i < 30; i++) {
 		Scena *sc = i < 20 ? &s : &s2;
 		uint32_t ll = i < 20 ? l : l2, aa = i < 20 ? a : a2;
@@ -748,7 +748,7 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 				bool ok = i == 20 ? ripiego_ridimensiona(rp, l2, a2, err, sizeof err)
 				                  : ripiego_qualita(rp, r.modo, q, err, sizeof err);
 				if (!ok) {
-					fprintf(stderr, "⛔ evento %d: %s\n", i, err);
+					fprintf(stderr, "⛔ event %d: %s\n", i, err);
 					return 1;
 				}
 			} else {
@@ -756,8 +756,8 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 				vecchia_apri(&v, codec, ll, aa, r.profondita, q, r.livello_x10);
 			}
 			us_ev = ora_us() - t0;
-			evento = i == 10 ? "qualita' +9 (riapertura)" : i == 15 ? "qualita' -9 (riapertura)"
-			                                                        : "misura nuova (riapertura)";
+			evento = i == 10 ? "quality +9 (reopening)" : i == 15 ? "quality -9 (reopening)"
+			                                                        : "new size (reopening)";
 			chiedi = true;
 		}
 		scena_fotogramma(sc, i * 3);
@@ -769,7 +769,7 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 		if (nuova) {
 			RipiegoUscita u;
 			if (!ripiego_codifica(rp, sc->quadro, ll * 4, chiedi, &u)) {
-				fprintf(stderr, "⛔ fotogramma %d\n", i);
+				fprintf(stderr, "⛔ frame %d\n", i);
 				return 1;
 			}
 			ue = u.us_codifica;
@@ -785,11 +785,11 @@ static int modo_eventi(CodecVideo codec, bool nuova, uint32_t l, uint32_t a, con
 		}
 		fwrite(d, 1, b, fo);
 		if (*evento || chiedi || i == 0 || i == 21)
-			printf("  %s %s fotogramma %2d %ux%u: %s%s%.1f ms di evento · codifica %.1f ms · "
-			       "%zu byte · %s%s\n",
+			printf("  %s %s frame %2d %ux%u: %s%s%.1f ms of event · encoding %.1f ms · "
+			       "%zu bytes · %s%s\n",
 			       codec == CODIFICATORE_H264 ? "H.264" : "AV1", strada, i,
 			       ll, aa, evento, *evento ? " " : "", us_ev / 1000.0, ue / 1000.0, b,
-			       k ? "CHIAVE" : "delta", chiedi && !k ? " ⛔ chiesta e non uscita" : "");
+			       k ? "KEY" : "delta", chiedi && !k ? " ⛔ requested and not emitted" : "");
 		free(dv);
 	}
 	fclose(fo);
@@ -811,13 +811,13 @@ static int modo_rifiuti(void)
 	} casi[] = {
 		{ "HEVC 1080p", CODIFICATORE_HEVC, 1920, 1080, 8, CODIFICATORE_QUALITA_CRF },
 		{ "H.264 10 bit", CODIFICATORE_H264, 1920, 1080, 10, CODIFICATORE_QUALITA_CRF },
-		{ "H.264 senza perdita", CODIFICATORE_H264, 1920, 1080, 8, CODIFICATORE_QUALITA_LOSSLESS },
+		{ "H.264 lossless", CODIFICATORE_H264, 1920, 1080, 8, CODIFICATORE_QUALITA_LOSSLESS },
 		{ "H.264 4096x2304", CODIFICATORE_H264, 4096, 2304, 8, CODIFICATORE_QUALITA_CRF },
 		{ "H.264 5120x2880", CODIFICATORE_H264, 5120, 2880, 8, CODIFICATORE_QUALITA_CRF },
 		{ "H.264 7680x4320", CODIFICATORE_H264, 7680, 4320, 8, CODIFICATORE_QUALITA_CRF },
 		{ "H.264 5120x1440", CODIFICATORE_H264, 5120, 1440, 8, CODIFICATORE_QUALITA_CRF },
 		{ "AV1 7680x4320", CODIFICATORE_AV1, 7680, 4320, 8, CODIFICATORE_QUALITA_CRF },
-		{ "AV1 senza perdita", CODIFICATORE_AV1, 1920, 1080, 8, CODIFICATORE_QUALITA_LOSSLESS },
+		{ "AV1 lossless", CODIFICATORE_AV1, 1920, 1080, 8, CODIFICATORE_QUALITA_LOSSLESS },
 		{ "AV1 10 bit 1080p", CODIFICATORE_AV1, 1920, 1080, 10, CODIFICATORE_QUALITA_CRF },
 	};
 	for (size_t i = 0; i < sizeof casi / sizeof *casi; i++) {
@@ -829,15 +829,15 @@ static int modo_rifiuti(void)
 		Ripiego *rp = ripiego_apri(&r, perche, sizeof perche);
 		double ms = (ora_us() - t0) / 1000.0;
 		if (rp) {
-			/* e un fotogramma vero, se si e' aperto: grigio con una sfumatura */
+			/* and a real frame, if it opened: grey with a gradient */
 			size_t np = (size_t) r.larghezza * r.altezza * 4;
 			uint8_t *px = malloc(np);
 			for (size_t k = 0; k < np; k++)
 				px[k] = (uint8_t) (k / 4 % r.larghezza * 255 / r.larghezza);
 			RipiegoUscita u;
 			bool ok = ripiego_codifica(rp, px, r.larghezza * 4, true, &u);
-			printf("  %-22s si apre (%.0f ms) · %s · primo fotogramma %s, %zu byte\n", casi[i].cosa,
-			       ms, ripiego_nome(rp), ok ? "USCITO" : "⛔ NON uscito", ok ? u.byte : 0);
+			printf("  %-22s opens (%.0f ms) · %s · first frame %s, %zu bytes\n", casi[i].cosa,
+			       ms, ripiego_nome(rp), ok ? "EMITTED" : "⛔ NOT emitted", ok ? u.byte : 0);
 			if (ok && getenv("SCRIVI")) {
 				char nome[128];
 				snprintf(nome, sizeof nome, "%s/rifiuto-%zu.%s", getenv("SCRIVI"), i,
@@ -849,7 +849,7 @@ static int modo_rifiuti(void)
 			free(px);
 			ripiego_chiudi(rp);
 		} else {
-			printf("  %-22s RIFIUTATO: %s\n", casi[i].cosa, perche);
+			printf("  %-22s REFUSED: %s\n", casi[i].cosa, perche);
 		}
 	}
 	return 0;
@@ -859,16 +859,16 @@ int main(int argc, char **argv)
 {
 	if (argc >= 4) {
 		strada = argv[3];
-		/* ⭐ La «corretta» e' la vecchia con le DUE righe che le mancavano
-		 *    (`[M]` 30 set 2026, questo banco): `keyint=-1` x264 lo porta a 1,
-		 *    cioe' OGNI fotogramma e' una IDR; e senza `force-cfr` x264 tiene
-		 *    un fotogramma in canna (`b_vfr_input`), cioe' EAGAIN e riapertura
-		 *    a ogni giro.  E' il miglior x264 che il prodotto potesse avere. */
+		/* ⭐ The "corretta" is the old one with the TWO lines it was missing
+		 *    (`[M]` 30 Sep 2026, this bench): x264 turns `keyint=-1` into 1,
+		 *    i.e. EVERY frame is an IDR; and without `force-cfr` x264 keeps
+		 *    one frame in the pipe (`b_vfr_input`), i.e. EAGAIN and reopening
+		 *    at every round.  It is the best x264 the product could have had. */
 		if (!strcmp(strada, "corretta"))
 			setenv("VECCHIA_X264_EXTRA", ":force-cfr=1:keyint=infinite", 1);
 	}
 	if (argc < 2)
-		muori("modo: colori | sorgente | codifica | eventi | rifiuti");
+		muori("mode: colori | sorgente | codifica | eventi | rifiuti");
 	const char *m = argv[1];
 	if (!strcmp(m, "colori") && argc >= 6)
 		return modo_colori((uint32_t) atoi(argv[2]), (uint32_t) atoi(argv[3]), argv[4],
@@ -885,6 +885,6 @@ int main(int argc, char **argv)
 		                   (uint32_t) atoi(argv[4]), (uint32_t) atoi(argv[5]), argv[6], argv[7]);
 	if (!strcmp(m, "rifiuti"))
 		return modo_rifiuti();
-	muori("argomenti sbagliati");
+	muori("wrong arguments");
 	return 1;
 }

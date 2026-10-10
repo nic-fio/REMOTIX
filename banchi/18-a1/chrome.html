@@ -1,16 +1,16 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>18-a1 · Opus nel browser</title>
+<title>18-a1 · Opus in the browser</title>
 <script>
 /*
- * 18-a1 — il BROWSER VERO decodifica i pacchetti del nuovo `audio.c` con il
- * decodificatore DELLA PAGINA (D-006: libopus 1.5.2 in WebAssembly, preso da
- * `src/pagina.html` fra i due segni, non da un'altra copia), e li paragona:
- *   · al vecchio (libavcodec) decodificato nello stesso modo, campione per
- *     campione;
- *   · alla decodifica NATIVA del server (`opus_decode_float`, `nuovo.f32`).
- * Il gesto e la programmazione dei blocchi di `suona()` NON si provano qui:
- * non dipendono da chi codifica.
+ * 18-a1 — the REAL BROWSER decodes the packets of the new `audio.c` with the
+ * PAGE's decoder (D-006: libopus 1.5.2 in WebAssembly, taken from
+ * `src/pagina.html` between the two markers, not from another copy), and compares them:
+ *   · with the old one (libavcodec) decoded the same way, sample by
+ *     sample;
+ *   · with the server's NATIVE decoding (`opus_decode_float`, `nuovo.f32`).
+ * The gesture and the block scheduling of `suona()` are NOT tested here:
+ * they do not depend on who encodes.
  */
 async function prendi(u) {
   const r = await fetch(u);

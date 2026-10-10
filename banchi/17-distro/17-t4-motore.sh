@@ -26,7 +26,7 @@
 #   6. power off and back to "cliente" (even if the test crashes).
 # Evidence in $T4/esiti/<machine>/.
 set -uo pipefail
-m=${1:?macchina}; MOT=${2:?remotix-install}; PKG=${3:?pacchetto}
+m=${1:?machine}; MOT=${2:?remotix-install}; PKG=${3:?package}
 R=/media/REMOTIX/vm17
 T4=${T4:-$R/t4}
 QUI=$(cd "$(dirname "$0")" && pwd)
