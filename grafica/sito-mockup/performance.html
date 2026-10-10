@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX — Performance under load</title>
+<link rel="stylesheet" href="stile.css">
+<style>
+  .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
+  @media (min-width: 720px) { .largo { padding: 0 40px; } }
+  :root { --remotix: #2a78d6; --xrdp: #eb6834; --griglia: #e6e9ef; --asse: #8a93a3; --superficie: #fcfcfb; }
+  .blu { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); }
+  .testata .riga { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
+  .testata nav { display: none; gap: 2.2rem; margin: 0 auto; font-size: .95rem; }
+  .testata nav a { color: var(--chiaro-fondo); text-decoration: none; }
+  .testata nav a:hover, .testata nav a[aria-current] { color: #fff; }
+  .testata .azioni { margin-left: auto; }
+  @media (min-width: 900px) { .testata nav { display: flex; } .testata .azioni { margin-left: 0; } }
+  .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accento); margin: 0 0 .8em; }
+  .blu .occhiello { color: var(--ciano); }
+  .apertura { padding: 2.5rem 0 3.5rem; }
+  .apertura h1 { margin: 0 0 .4em; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.06; letter-spacing: -.03em; max-width: 15em; }
+  .apertura .sotto { margin: 0; max-width: 46em; font-size: 1.12rem; color: var(--chiaro-fondo); }
+  .cifre { display: grid; gap: 1rem; grid-template-columns: 1fr; margin-top: 2.4rem; }
+  @media (min-width: 900px) { .cifre { grid-template-columns: repeat(3, 1fr); } }
+  .cifra { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); border-radius: 1rem; padding: 1.3rem 1.4rem; }
+  .cifra b { display: block; font-size: clamp(2rem, 3.4vw, 2.8rem); letter-spacing: -.03em; line-height: 1.05; }
+  .cifra span { display: block; margin-top: .4rem; color: var(--chiaro-fondo); font-size: .95rem; }
+  .ferro { margin-top: 1.6rem; font-size: .9rem; color: var(--chiaro-fondo); }
+  .ferro b { color: #fff; font-weight: 600; }
+
+  .sezione { padding: 4.5rem 0; }
+  .sezione.chiara { background: #fff; }
+  .sezione.grigia { background: #f4f6fa; }
+  .sezione h2 { margin: 0 0 .4em; font-size: clamp(1.7rem, 2.8vw, 2.4rem); line-height: 1.12; letter-spacing: -.025em; }
+  .guida { margin: 0 0 1.8rem; color: var(--tenue); font-size: 1.05rem; max-width: 50em; }
+
+  /* controlli: una riga sopra i grafici */
+  .controlli { display: flex; flex-wrap: wrap; gap: .8rem 1.6rem; align-items: center; margin-bottom: 1.4rem; }
+  .segmenti { display: inline-flex; background: #eef1f6; border-radius: .6rem; padding: .2rem; }
+  .segmenti button { font: inherit; font-size: .9rem; font-weight: 600; border: 0; background: transparent; color: var(--tenue); padding: .45em 1em; border-radius: .45rem; cursor: pointer; }
+  .segmenti button[aria-pressed="true"] { background: #fff; color: var(--inchiostro); box-shadow: 0 1px 2px rgba(11,20,48,.12); }
+  .legenda { display: flex; gap: 1.2rem; font-size: .9rem; color: var(--etichetta); }
+  .legenda span { display: inline-flex; align-items: center; gap: .45rem; }
+  .legenda i { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+
+  .multipli { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .multipli { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1200px) { .multipli { grid-template-columns: repeat(4, 1fr); } }
+  .pannello { background: var(--superficie); border-radius: 1rem; box-shadow: var(--ombra); padding: 1rem 1rem .6rem; min-width: 0; }
+  .pannello h3 { margin: 0 0 .2rem; font-size: 1rem; }
+  .pannello p.sot { margin: 0 0 .4rem; font-size: .8rem; color: var(--tenue); }
+  svg.grafico { display: block; width: 100%; height: auto; overflow: visible; }
+  svg.grafico text { font-family: inherit; fill: var(--tenue); font-size: 11px; }
+  svg.grafico .etich { fill: var(--etichetta); font-weight: 600; }
+  svg.grafico .griglia { stroke: var(--griglia); stroke-width: 1; }
+  svg.grafico .base { stroke: #cfd6e3; stroke-width: 1; }
+  svg.grafico .colpo { cursor: default; }
+  svg.grafico .colpo:hover + .barra, svg.grafico .barra.attiva { filter: brightness(1.12); }
+  .suggerimento { position: fixed; z-index: 30; pointer-events: none; background: #0b1430; color: #fff; font-size: .82rem; line-height: 1.4; padding: .5rem .7rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,.25); opacity: 0; transition: opacity .1s; max-width: 18rem; }
+  .suggerimento b { display: block; }
+  .nota { margin: 1rem 0 0; font-size: .88rem; color: var(--tenue); max-width: 60em; }
+  .avviso-muro { margin-top: 1.2rem; display: flex; gap: .9rem; align-items: flex-start; background: #fff8ef; border: 1px solid #f6d7b8; border-radius: .9rem; padding: 1rem 1.2rem; font-size: .93rem; color: #6b3b10; max-width: 70em; }
+  .avviso-muro b { color: #4a2708; }
+  details.tabella { margin-top: 1.2rem; }
+  details.tabella summary { cursor: pointer; font-weight: 600; color: var(--accento); font-size: .92rem; }
+  .scorre { overflow-x: auto; }
+  table.dati { border-collapse: collapse; font-size: .88rem; margin-top: .8rem; min-width: 40rem; }
+  table.dati th, table.dati td { padding: .5rem .7rem; border-bottom: 1px solid #e9edf3; text-align: right; font-variant-numeric: tabular-nums; }
+  table.dati th:first-child, table.dati td:first-child { text-align: left; }
+  table.dati th { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); }
+
+  .due { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 1000px) { .due { grid-template-columns: 1fr 1fr; } }
+  ul.corto { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; max-width: 60em; color: var(--tenue); }
+  .metodo { display: grid; gap: 1rem 2.5rem; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .metodo { grid-template-columns: 1fr 1fr; } }
+  .metodo h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+  .metodo p, .metodo li { color: var(--tenue); font-size: .95rem; }
+  .metodo ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+
+  .piede-chiaro { background: #fff; border-top: 1px solid var(--bordo); padding: 1.6rem 0; }
+  .piede-chiaro .riga { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
+  .piede-chiaro .marchio { color: var(--inchiostro); }
+  .piede-chiaro .marchio svg { height: 1.6rem; }
+  .piede-chiaro nav { display: flex; gap: 1.8rem; flex-wrap: wrap; }
+  .piede-chiaro nav a { color: var(--tenue); text-decoration: none; }
+  .piede-chiaro .destra { margin-left: auto; color: var(--tenue); font-size: .82rem; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 1640 360">
+      <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="blu">
+  <header class="testata">
+    <div class="largo riga">
+      <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+      <nav aria-label="Main"><a href="index.html#features">Features</a><a href="performance.html" aria-current="page">Performance</a><a href="index.html#download">Download</a><a href="#">Docs</a></nav>
+      <div class="azioni"><a class="pulsante primario" href="index.html#download">Get started</a></div>
+    </div>
+  </header>
+  <section class="apertura">
+    <div class="largo">
+      <p class="occhiello">Performance report · October 2026</p>
+      <h1>Anyone is fast with one user. REMOTIX stays fast with many.</h1>
+      <p class="sotto">The same server, the same desktops, the same workload, measured step by step from one user up to sixteen: REMOTIX against xrdp, the remote desktop server most Linux machines use today.</p>
+      <div class="cifre">
+        <div class="cifra"><b>1.8× – 15×</b><span>more users than xrdp on the same machine, wherever xrdp holds at least one</span></div>
+        <div class="cifra"><b>29 – 30 fps</b><span>for a 30 fps film at every level where all users are green; xrdp drops about 1 frame in 5, even alone</span></div>
+        <div class="cifra"><b>1.5× – 4.6×</b><span>fewer server CPU cores than xrdp with four users in Full HD: the graphics card does the encoding</span></div>
+      </div>
+      <p class="ferro"><b>One machine:</b> Intel Core i5-13500T, 31 GB RAM, Debian 13. Two graphics cards in turn: the <b>integrated Intel UHD 770</b> and an <b>AMD Radeon RX 6800</b>. REMOTIX build 716e35b; xrdp 0.10.1 with xorgxrdp 0.10.2, as packaged by Debian 13.</p>
+    </div>
+  </section>
+</div>
+
+<main>
+  <section class="sezione chiara" id="capacity">
+    <div class="largo">
+      <p class="occhiello">Capacity</p>
+      <h2>How many people can work at the same time</h2>
+      <p class="guida">Users who keep working within the limits (latency, video smoothness, input) at each screen size. Every user runs the same mix: typing, scrolling, moving windows, one of them watching a film.</p>
+      <div class="controlli">
+        <div class="segmenti" role="group" aria-label="Graphics card">
+          <button type="button" data-scheda="intel" aria-pressed="true">Intel UHD 770 (integrated)</button>
+          <button type="button" data-scheda="amd" aria-pressed="false">AMD Radeon RX 6800</button>
+        </div>
+        <div class="legenda" aria-hidden="true"><span><i style="background:var(--remotix)"></i>REMOTIX</span><span><i style="background:var(--xrdp)"></i>xrdp</span></div>
+      </div>
+      <div class="multipli" id="capacita"></div>
+      <p class="nota">16 users is the ceiling of the test bench, not of the card: on the Radeon, at 2K and Full HD, all sixteen users were still green. At 4K on the Radeon, GNOME and KDE hold no one with either product: that is the Vulkan driver shipped by Debian 13 (Mesa 25.0); with Mesa 26 GNOME reaches 4.</p>
+      <div class="avviso-muro">
+        <span aria-hidden="true">⚠</span>
+        <div><b>Read the xrdp figures on XFCE and LXQt as a lower bound.</b> xrdp needs, for every session, a block of shared memory as large as the screen. The test boxes had the container default of 64 MB of shared memory, and from there the next xrdp session could not start: 0, 1, 3 and 6 users at 4K, 3K, 2K and Full HD, exactly. On a normal installation that memory is half the RAM and the wall is not there. REMOTIX does not keep the screen in shared memory: in the same boxes, with the same limit, it reached 16 users. The video, CPU and memory figures below do not depend on this.</div>
+      </div>
+      <details class="tabella"><summary>Show the numbers as a table</summary><div class="scorre" id="tabella-capacita"></div></details>
+    </div>
+  </section>
+
+  <section class="sezione grigia" id="video">
+    <div class="largo">
+      <p class="occhiello">Video and resources</p>
+      <h2>Smooth video, and a lighter server</h2>
+      <p class="guida">Four users in Full HD, on the integrated Intel card. With a single user the two are even: same latency, and xrdp is even a little lighter on XFCE and LXQt. The difference opens as users are added, because REMOTIX hands the video encoding to the graphics card.</p>
+      <div class="due">
+        <div class="pannello"><h3>Film at 30 fps: frames shown per second</h3><p class="sot">Range over all levels where every user is green, both cards</p><div id="grafico-video"></div></div>
+        <div class="pannello"><h3>Server CPU cores used, 4 users, Full HD</h3><p class="sot">Server, compositors and applications of the sessions · Intel UHD 770</p><div id="grafico-cpu"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione chiara" id="method">
+    <div class="largo">
+      <p class="occhiello">Method and limits</p>
+      <h2>How it was measured, in short</h2>
+      <ul class="corto">
+        <li>Users are added one at a time, up to 16, at 4K, 3K, 2K and Full HD, on GNOME, KDE Plasma, XFCE and LXQt; each one types, scrolls and moves windows, and one watches a 4K film. A level counts when every user keeps latency under 50 ms and the video at 80% of its frame rate or more.</li>
+        <li>One machine, and a modest one: the Intel card is the integrated one. The clients ran on the server itself, so REMOTIX's figures are a lower bound. xrdp is used as Debian 13 packages it.</li>
+        <li>xrdp is the remote desktop server most Linux machines use today; other products were not measured.</li>
+        <li>Full tables and analysis: the technical manual, chapter «Performance and capacity».</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="piede-chiaro">
+  <div class="largo riga">
+    <a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+    <nav><a href="index.html#features">Features</a><a href="performance.html">Performance</a><a href="index.html#download">Download</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
+    <span class="destra">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
+  </div>
+</footer>
+
+<div class="suggerimento" id="suggerimento" role="status"></div>
+<div class="nastro">Mockup</div>
+
+<script>
+// Data: fasi/20-le-prestazioni.md §8 (10 Oct 2026). Capacity = users who hold («buono»), allowing one
+// non-significant degraded actor; «verde» = every user green. 0 = not even one user.
+const DESKTOP = ["GNOME", "KDE", "XFCE", "LXQt"];
+const MISURE = [["4k", "4K"], ["3k", "3K (3200×1800)"], ["2k", "2K"], ["fhd", "Full HD"]];
+const CAPACITA = {
+  intel: { // [REMOTIX verde, REMOTIX buono, xrdp verde, xrdp buono] per desktop
+    "4k":  [[1,1,0,0],[3,3,0,0],[4,8,0,0],[7,7,0,0]],
+    "3k":  [[4,4,1,1],[1,5,1,1],[8,8,1,1],[8,8,1,1]],
+    "2k":  [[4,8,1,1],[4,8,1,1],[10,10,3,3],[10,10,3,3]],
+    "fhd": [[11,11,5,5],[10,10,1,1],[12,12,6,6],[11,11,6,6]],
+  },
+  amd: {
+    "4k":  [[0,0,0,0],[0,0,0,0],[2,2,0,0],[3,3,0,0]],
+    "3k":  [[4,10,1,1],[4,9,1,1],[12,13,1,1],[15,15,1,1]],
+    "2k":  [[11,11,1,1],[15,15,1,1],[15,15,3,3],[15,15,3,3]],
+    "fhd": [[11,11,4,6],[15,15,1,1],[15,15,6,6],[15,15,6,6]],
+  },
+};
+const SCHEDA = { intel: "Intel UHD 770", amd: "AMD Radeon RX 6800" };
+const CPU = { remotix: [0.93, 1.11, 1.08, 1.05], xrdp: [4.31, 3.22, 1.61, 1.53] };
+const VIDEO = [["REMOTIX", 29.0, 30.3, "remotix"], ["xrdp", 23.1, 24.9, "xrdp"]];
+
+const NS = "http://www.w3.org/2000/svg";
+const colore = s => getComputedStyle(document.documentElement).getPropertyValue("--" + s).trim();
+function el(nome, attr, figlio) {
+  const e = document.createElementNS(NS, nome);
+  for (const k in attr) e.setAttribute(k, attr[k]);
+  if (figlio != null) e.textContent = figlio;
+  return e;
+}
+// a column with a 4 px rounded data-end and a square base
+function colonna(x, y, w, h) {
+  const r = Math.min(4, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+const sugg = document.getElementById("suggerimento");
+function mostra(ev, html) { sugg.innerHTML = html; sugg.style.opacity = 1; sposta(ev); }
+function sposta(ev) {
+  const w = sugg.offsetWidth, h = sugg.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY - h - 12;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y < 8) y = ev.clientY + 16;
+  sugg.style.left = x + "px"; sugg.style.top = y + "px";
+}
+function nascondi() { sugg.style.opacity = 0; }
+function aggancia(nodo, html) {
+  nodo.addEventListener("pointerenter", ev => mostra(ev, html));
+  nodo.addEventListener("pointermove", sposta);
+  nodo.addEventListener("pointerleave", nascondi);
+}
+
+// grouped columns: groups = desktops, two series; one shared y scale (0-16)
+function colonneRaggruppate(contenitore, valori, opz) {
+  const W = opz.W || 340, H = opz.H || 220, m = { t: 14, r: 6, b: 26, l: 26 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "grafico", role: "img", "aria-label": opz.titolo });
+  const max = opz.max, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const y = v => m.t + ih - (v / max) * ih;
+  for (const t of opz.tacche) {
+    svg.append(el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? "base" : "griglia" }));
+    svg.append(el("text", { x: m.l - 6, y: y(t) + 4, "text-anchor": "end" }, opz.formato(t)));
+  }
+  const banda = iw / valori.length, bw = Math.min(22, (banda - 14) / 2);
+  valori.forEach((g, i) => {
+    const cx = m.l + banda * i + banda / 2;
+    svg.append(el("text", { x: cx, y: H - 8, "text-anchor": "middle", class: "etich" }, DESKTOP[i]));
+    const coppia = [["remotix", g[0]], ["xrdp", g[1]]];
+    coppia.forEach(([serie, v], j) => {
+      const x = cx - bw - 1 + j * (bw + 2); // 2 px surface gap between the pair
+      const h = Math.max(v === 0 ? 0 : 1, (v / max) * ih);
+      const p = el("path", { d: v === 0 ? `M${x},${y(0) - 2}h${bw}v2h-${bw}Z` : colonna(x, y(0) - h, bw, h), fill: v === 0 ? "#cfd6e3" : colore(serie), class: "barra" });
+      const colpo = el("rect", { x: x - 3, y: m.t, width: bw + 6, height: ih + 4, fill: "transparent", class: "colpo" });
+      svg.append(colpo, p);
+      aggancia(colpo, opz.suggerimento(i, serie, v));
+    });
+  });
+  contenitore.append(svg);
+}
+
+function disegnaCapacita(scheda) {
+  const box = document.getElementById("capacita");
+  box.textContent = "";
+  for (const [k, nome] of MISURE) {
+    const pan = document.createElement("div");
+    pan.className = "pannello";
+    pan.innerHTML = `<h3>${nome}</h3><p class="sot">Users who keep working · ${SCHEDA[scheda]}</p>`;
+    const righe = CAPACITA[scheda][k];
+    colonneRaggruppate(pan, righe.map(r => [r[1], r[3]]), {
+      titolo: `Capacity at ${nome} on ${SCHEDA[scheda]}`, max: 16, tacche: [0, 4, 8, 12, 16], formato: t => t,
+      suggerimento: (i, serie, v) => {
+        const r = righe[i], verde = serie === "remotix" ? r[0] : r[2];
+        const chi = serie === "remotix" ? "REMOTIX" : "xrdp";
+        return `<b>${chi} · ${DESKTOP[i]} · ${nome}</b>${v === 0 ? "not even one user" : v + (v === 1 ? " user" : " users") + (verde !== v ? ` (all green up to ${verde})` : " , all green")}`.replace(" ,", ",");
+      },
+    });
+    box.append(pan);
+  }
+  document.getElementById("tabella-capacita").innerHTML =
+    `<table class="dati"><thead><tr><th>${SCHEDA[scheda]}</th>${MISURE.map(([, n]) => `<th>${n}: REMOTIX</th><th>${n}: xrdp</th>`).join("")}</tr></thead><tbody>` +
+    DESKTOP.map((d, i) => `<tr><td>${d}</td>${MISURE.map(([k]) => { const r = CAPACITA[scheda][k][i]; return `<td>${r[1] || "—"}</td><td>${r[3] || "—"}</td>`; }).join("")}</tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function disegnaVideo() {
+  const W = 560, H = 150, m = { t: 18, r: 20, b: 30, l: 78 }, iw = W - m.l - m.r;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "grafico", role: "img", "aria-label": "Frames shown per second for a 30 fps film" });
+  const x = v => m.l + ((v - 20) / 12) * iw;
+  for (const t of [20, 22, 24, 26, 28, 30, 32]) {
+    svg.append(el("line", { x1: x(t), x2: x(t), y1: m.t - 6, y2: H - m.b, class: "griglia" }));
+    svg.append(el("text", { x: x(t), y: H - 10, "text-anchor": "middle" }, t));
+  }
+  svg.append(el("line", { x1: x(30), x2: x(30), y1: m.t - 10, y2: H - m.b, stroke: "#0b1430", "stroke-width": 1.5 }));
+  svg.append(el("text", { x: x(30), y: m.t - 12, "text-anchor": "middle", class: "etich" }, "film: 30"));
+  svg.append(el("line", { x1: x(24), x2: x(24), y1: m.t - 6, y2: H - m.b, stroke: "#8a93a3", "stroke-width": 1, "stroke-dasharray": "0" }));
+  VIDEO.forEach(([nome, lo, hi, serie], i) => {
+    const cy = m.t + 22 + i * 44;
+    svg.append(el("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", class: "etich" }, nome));
+    svg.append(el("line", { x1: x(lo), x2: x(hi), y1: cy, y2: cy, stroke: colore(serie), "stroke-width": 8, "stroke-linecap": "round" }));
+    const colpo = el("rect", { x: x(lo) - 10, y: cy - 14, width: x(hi) - x(lo) + 20, height: 28, fill: "transparent" });
+    svg.append(colpo);
+    aggancia(colpo, `<b>${nome}</b>${lo.toFixed(1)} – ${hi.toFixed(1)} frames per second`);
+  });
+  svg.append(el("text", { x: x(24) + 4, y: H - m.b - 4, "font-size": 10 }, "green threshold 24"));
+  document.getElementById("grafico-video").append(svg);
+}
+
+function disegnaRisorse(id, dati, max, tacche, unita, titolo) {
+  const box = document.getElementById(id);
+  colonneRaggruppate(box, DESKTOP.map((_, i) => [dati.remotix[i], dati.xrdp[i]]), {
+    titolo, max, tacche, formato: t => t, W: 560, H: 170,
+    suggerimento: (i, serie, v) => `<b>${serie === "remotix" ? "REMOTIX" : "xrdp"} · ${DESKTOP[i]}</b>${v.toFixed(2).replace(/0$/, "")} ${unita}` +
+      (serie === "xrdp" ? ` · ${(v / dati.remotix[i]).toFixed(1)}× REMOTIX` : ""),
+  });
+}
+
+document.querySelectorAll(".segmenti button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".segmenti button").forEach(o => o.setAttribute("aria-pressed", o === b));
+  try { localStorage.setItem("rx-scheda", b.dataset.scheda); } catch (e) {}
+  disegnaCapacita(b.dataset.scheda);
+}));
+let iniziale = "intel";
+try { iniziale = localStorage.getItem("rx-scheda") || "intel"; } catch (e) {}
+document.querySelector(`.segmenti button[data-scheda="${iniziale}"]`)?.click();
+disegnaVideo();
+disegnaRisorse("grafico-cpu", CPU, 5, [0, 1, 2, 3, 4, 5], "cores", "Server CPU cores, 4 users, Full HD");
+</script>
+</body>
+</html>
