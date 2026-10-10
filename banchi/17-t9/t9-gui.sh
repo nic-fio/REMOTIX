@@ -1,5 +1,8 @@
 #!/bin/bash
 #
+# ⛔ STORIA: la GUI dell'installatore è stata tolta il 10 ott 2026 (DECISIONI §10.31). Questo banco ha
+# provato R36/R37 il 30 set e non gira più (manca remotix-install-gui); resta come documento della prova.
+#
 # t9-gui.sh — fase 17, T9: la FINESTRA dell'installatore sul desktop vero di una VM «cliente»
 # (lo schermo virtuale di QEMU, la schermata d'accesso della distribuzione, il desktop dell'utente,
 # il dialogo di polkit), guidata dal monitor di QEMU: tavoletta assoluta per i clic, sendkey per i

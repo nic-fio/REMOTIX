@@ -10,11 +10,11 @@ import (
 	"remotix/installatore/motore"
 )
 
-// Ogni chiave usata dalle schermate (vista, TUI, GUI) c'è, nelle due lingue (DECISIONI §10.15, R42).
+// Ogni chiave usata dalle schermate (vista e TUI) c'è, nelle due lingue (DECISIONI §10.15, R42).
 func TestTestiInterfaccia(t *testing.T) {
 	re := regexp.MustCompile(`\bT\("([a-z0-9_.]+)"`)
 	var file []string
-	for _, g := range []string{"*.go", "tui/*.go", "gui/*.go"} {
+	for _, g := range []string{"*.go", "tui/*.go"} {
 		m, _ := filepath.Glob(g)
 		file = append(file, m...)
 	}

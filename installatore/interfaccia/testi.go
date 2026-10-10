@@ -34,7 +34,6 @@ var testi = map[string]due{
 	"dettagli.nascondi": {"Nascondi i dettagli tecnici", "Hide the technical details"},
 	"attendi.controllo": {"Controllo la macchina…", "Checking the machine…"},
 	"attendi.piano":     {"Preparo il piano…", "Preparing the plan…"},
-	"attendi.permessi":  {"Servono i permessi da amministratore: li chiedo al sistema.", "Administrator permissions are needed: I am asking the system."},
 	"salvato":           {"Salvato in %s", "Saved in %s"},
 
 	// 1 · il controllo
@@ -236,7 +235,6 @@ var testi = map[string]due{
 	"b.titolo.parte":      {"Non ho potuto rimettere tutto com'era", "I could not put everything back as it was"},
 	"b.titolo.video":      {"Senza il componente per il video REMOTIX non si installa", "Without the video component REMOTIX is not installed"},
 	"pr.router":           {"Da fuori della rete locale: inoltra sul router la porta %d, TCP e UDP, verso %s.", "From outside the local network: forward port %d, TCP and UDP, on the router to %s."},
-	"b.titolo.permessi":   {"Senza i permessi da amministratore non posso continuare", "Without administrator permissions I cannot continue"},
 	"b.titolo.interrotta": {"L'installazione si è interrotta", "The installation was interrupted"},
 	"b.sotto.intatta":     {"Non ho toccato niente: la macchina è esattamente com'era.", "I did not touch anything: the machine is exactly as it was."},
 	"b.sotto.annullata":   {"Quel che avevo fatto l'ho annullato, passo per passo.", "What I had done I undid, step by step."},

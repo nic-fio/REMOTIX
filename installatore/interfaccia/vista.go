@@ -992,9 +992,6 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 		if m.Codice == "RX-H264-006" {
 			b.Titolo = T("b.titolo.video")
 		}
-		if m.Codice == "RX-UI-004" {
-			b.Titolo = T("b.titolo.permessi")
-		}
 		b.Perche, b.CheFare, b.Codice = m.Testo, m.Rimedio, m.Codice
 		b.Dettagli = m.Dettaglio
 	}

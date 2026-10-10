@@ -8,16 +8,16 @@
 # remotix-archive-keyring. Che cosa fa, in ordine, e si ferma al primo errore:
 #   1. l'albero è quello di un commit (niente modifiche non committate in src/, packaging/,
 #      installatore/, banchi/rcp/): i pacchetti dicono da quale commit vengono;
-#   2. il MOTORE: le prove (installatore/costruisci.sh prove, tutte verdi), poi le DUE costruzioni
-#      (statica e con la finestra, DECISIONI §10.19) con la versione del rilascio; il catalogo sta
-#      dentro (DECISIONI §10.21);
+#   2. il MOTORE: le prove (installatore/costruisci.sh prove, tutte verdi), poi la costruzione
+#      statica con la versione del rilascio (la finestra è stata tolta: DECISIONI §10.31); il
+#      catalogo sta dentro (DECISIONI §10.21);
 #   3. i pacchetti del PRODOTTO per le tre famiglie, con gli script che ci sono: .deb (Debian 13,
 #      Ubuntu 26.04: src/costruzione/costruisci-deb.sh), .rpm (Fedora 44, Alma 10, Tumbleweed, Leap 16:
 #      packaging/rpm/costruisci-rpm.sh), Arch (packaging/arch/costruisci.sh);
 #   4. i pacchetti del MOTORE e della CHIAVE (packaging/archivio/pacchetti-motore.sh);
 #   5. l'ARCHIVIO (packaging/archivio/pubblica.sh): i pacchetti al loro posto, firmati con l'UNICA
 #      chiave (quella DI PROVA in .chiavi/ del progetto, ignorata da git finché D10 non dà la vera);
-#      i due motori col loro sha256; install.sh con gli sha256 dei motori scritti dentro, e il suo
+#      il motore col suo sha256; install.sh con lo sha256 del motore scritti dentro, e il suo
 #      sha256; indici e firme, SBOM, il file delle licenze dei componenti, SHA256SUMS;
 #   6. il riassunto: la riga per RILASCI.txt dell'archivio, lo sha256 di install.sh da pubblicare
 #      sul sito, e il comando per caricare l'archivio (D10 aperta: l'indirizzo è un segnaposto).
@@ -71,14 +71,13 @@ if [ -e "$ARCHIVIO/RILASCI.txt" ] && grep -q "^$VERSIONE " "$ARCHIVIO/RILASCI.tx
 	echo "⛔ $VERSIONE è già nell'archivio (RILASCI.txt): serve una revisione nuova"; exit 1
 fi
 
-passo "2. il motore: le prove e le due costruzioni ($V)"
+passo "2. il motore: le prove e la costruzione ($V)"
 "$INST/costruisci.sh" prove >"$LAV/prove-motore.log" 2>&1 || { tail -30 "$LAV/prove-motore.log"; echo "⛔ le prove del motore"; exit 1; }
 if grep -qE '^(FAIL|gofmt:)' "$LAV/prove-motore.log"; then tail -30 "$LAV/prove-motore.log"; echo "⛔ le prove del motore"; exit 1; fi
 grep -E '^ok ' "$LAV/prove-motore.log" | tee -a "$REG"
 RX_VERSIONE=$V "$INST/costruisci.sh" >>"$REG" 2>&1
-RX_VERSIONE=$V "$INST/costruisci.sh" gui >>"$REG" 2>&1
 mkdir -p "$LAV/motore-bin"
-cp "$INST/uscita/remotix-install" "$INST/uscita/remotix-install-gui" "$LAV/motore-bin/"
+cp "$INST/uscita/remotix-install" "$LAV/motore-bin/"
 [ "$("$LAV/motore-bin/remotix-install" versione | awk '{print $1}')" = "$V" ] || { echo "⛔ il motore non dice $V"; exit 1; }
 "$LAV/motore-bin/remotix-install" catalogo | head -1 | tee -a "$REG"
 
@@ -124,7 +123,7 @@ done
 if [ $arch = 1 ]; then
 	$PUB aggiungi "$CANALE" arch "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst
 fi
-$PUB motore "$LAV/motore-bin/remotix-install" "$LAV/motore-bin/remotix-install-gui"
+$PUB motore "$LAV/motore-bin/remotix-install"
 $PUB script
 podman run --rm docker.io/library/golang:1.25 cat /usr/local/go/LICENSE >"$LAV/LICENSE-go"
 LICENZA_GO=$LAV/LICENSE-go $PUB rigenera 2>&1 | tee -a "$REG"
@@ -138,7 +137,6 @@ REMOTIX $VERSIONE — pronto in $ARCHIVIO
   install.sh sha256 (da pubblicare sul sito, in HTTPS):
       $SHA_IS
   motore:      $(cut -c1-64 "$ARCHIVIO/motore/remotix-install.sha256")
-  con finestra: $(cut -c1-64 "$ARCHIVIO/motore/remotix-install-gui.sha256")
   caricarlo (D10 aperta, l'indirizzo è un segnaposto) — senza --delete: le versioni vecchie restano:
       rsync -a "$ARCHIVIO/" $DESTINAZIONE
   il giornale del rilascio: $REG

@@ -11,7 +11,6 @@ che chiede di accompagnare il programma:
      nei nostri pacchetti, hanno la licenza della distribuzione — si elencano;
   3. il motore (remotix-install, Go statico): la libreria di Go (<licenza-di-go>, dal contenitore di
      costruzione) e i moduli di installatore/vendor/ (modules.txt) col LICENSE di ognuno;
-  4. la costruzione con la finestra: i caratteri incorporati (OFL 1.1, interfaccia/gui/risorse/).
 Un componente senza testo di licenza trovato si SEGNA («DA VERIFICARE») e l'uscita è 1: il file non
 dice mai più di quel che sa.
 """
@@ -109,12 +108,6 @@ for riga in open(os.path.join(vendor, "modules.txt")):
     if lic == "DA VERIFICARE":
         mancano.append(f"{mod} {ver}: licenza non riconosciuta")
     sezione(mod, ver, lic, "modulo Go nel binario di remotix-install (" + ", ".join(os.path.relpath(x, vendor) for x in trovato) + ")", testo)
-
-# 4. i caratteri della finestra
-for f in sorted(glob.glob(os.path.join(inst, "interfaccia", "gui", "risorse", "OFL-*.txt"))):
-    nome = os.path.basename(f)[4:-4]
-    t = open(f).read()
-    sezione("carattere " + nome, "", spdx(t), "incorporato in remotix-install-gui (la finestra)", t)
 
 # 2. le librerie della distribuzione
 elenco = "\n".join("   · " + x for x in sorted(dinamiche)) or "   (nessuna: lo SBOM non ne elenca)"

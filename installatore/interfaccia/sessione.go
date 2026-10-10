@@ -1,11 +1,10 @@
-// Package interfaccia: quel che TUI e GUI hanno in comune (T9, fasi/17 §6.6.1, DECISIONI §10.14).
+// Package interfaccia: quel che la TUI mostra (T9, fasi/17 §6.6.1, DECISIONI §10.14, §10.31).
 //
 //   - la SESSIONE: il lato del motore, da root. Esamina la macchina, fa il piano dalle risposte,
 //     lo applica. È il motore e basta: le stesse funzioni della riga di comando (Preflight, Valuta,
-//     DomandeDaFare, PianoDaScelte, Applica). La TUI (che gira da root nel terminale) la usa
-//     direttamente; la GUI (che gira come l'utente, R37) la raggiunge rilanciando lo stesso
-//     eseguibile con pkexec, e ci parla in JSON a righe (protocollo.go);
-//   - la VISTA: gli oggetti del motore detti in parole comuni (vista.go), identica per TUI e GUI.
+//     DomandeDaFare, PianoDaScelte, Applica). La TUI, che gira da root nel terminale, la usa
+//     direttamente (la GUI, che la raggiungeva con pkexec, è stata tolta il 10 ott: §10.31);
+//   - la VISTA: gli oggetti del motore detti in parole comuni (vista.go).
 //
 // ⛔ Nessuna logica d'installazione qui: che cosa chiedere e che cosa fare lo decide il motore.
 package interfaccia
@@ -17,10 +16,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,9 +27,6 @@ import (
 
 	"remotix/installatore/motore"
 )
-
-// Formato dei messaggi fra finestra e motore.
-const Formato = "remotix-interfaccia/1"
 
 // Controllo: quel che il motore sa della macchina (fasi 0-2), per la prima schermata.
 type Controllo struct {
@@ -55,8 +49,8 @@ type Esito struct {
 	Errore      *motore.Messaggio   `json:"errore,omitempty"`
 }
 
-// Motore: quel che le interfacce possono chiedere. Due realizzazioni: la Sessione (in questo
-// processo, da root) e il Cliente (la Sessione in un processo da root rilanciato con pkexec).
+// Motore: quel che l'interfaccia può chiedere. La realizza la Sessione (in questo processo, da root);
+// le prove della TUI ne mettono una finta.
 type Motore interface {
 	Controlla(porta int) (*Controllo, error)
 	Piano(voci map[string]string) (*motore.Piano, error)
@@ -264,12 +258,4 @@ func ImprontaTLS(percorso string) string {
 		parti = append(parti, x[i:i+2])
 	}
 	return strings.Join(parti, ":")
-}
-
-// ChiDaUID: il nome della persona che ha chiesto i permessi (pkexec mette PKEXEC_UID).
-func ChiDaUID(uid string) string {
-	if u, err := user.LookupId(uid); err == nil {
-		return u.Username
-	}
-	return fmt.Sprintf("uid %s", uid)
 }

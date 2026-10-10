@@ -68,12 +68,8 @@ func main() {
 		codice, err = installa(arg)
 	case "prepara-fuori-linea":
 		codice, err = preparaFuoriLinea(arg)
-	case "gui":
-		codice, err = guiCmd(arg)
 	case "tui":
 		codice, err = tuiCmd(arg)
-	case "motore-interfaccia":
-		codice, err = motoreInterfaccia(arg)
 	case "versione", "--version":
 		fmt.Println(motore.VersioneMotore, motore.Formato)
 	case "aiuto", "help", "--help", "-h":

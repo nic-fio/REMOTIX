@@ -159,10 +159,10 @@ var Codici = map[string]Codice{
 	"RX-AZIONE-006":    {BLOCCANTE, ServeAnnullamento, "L'installazione è stata fermata da chi installa: quel che era già fatto si annulla.", ""},
 
 	// le interfacce (T9, DECISIONI §10.14, §10.19): TUI e GUI
-	"RX-UI-001": {BLOCCANTE, ServeAzione, "Questa costruzione di remotix-install non ha la finestra (è quella statica, per le macchine senza desktop).", "remotix-install tui (nel terminale), oppure install.sh --finestra, che scarica la costruzione con la finestra."},
-	"RX-UI-002": {BLOCCANTE, ServeAzione, "La finestra non si apre: non c'è una sessione grafica (né WAYLAND_DISPLAY né DISPLAY), o le sue librerie non rispondono.", "remotix-install tui, nel terminale."},
-	"RX-UI-003": {BLOCCANTE, ServeAzione, "La finestra non gira da amministratore (root): chiede lei i permessi, a polkit, quando servono.", "Lanciarla come utente normale, senza sudo."},
-	"RX-UI-004": {BLOCCANTE, ServeAzione, "I permessi da amministratore non sono stati dati (polkit ha rifiutato o la richiesta è stata chiusa): niente è stato toccato.", "Rilanciare e inserire la password di un amministratore."},
+	"RX-UI-001": {INFO, ServeAzione, "(ritirato: DECISIONI §10.31, niente GUI) Questa costruzione di remotix-install non ha la finestra (è quella statica, per le macchine senza desktop).", ""},
+	"RX-UI-002": {INFO, ServeAzione, "(ritirato: DECISIONI §10.31, niente GUI) La finestra non si apre: non c'è una sessione grafica (né WAYLAND_DISPLAY né DISPLAY), o le sue librerie non rispondono.", ""},
+	"RX-UI-003": {INFO, ServeAzione, "(ritirato: DECISIONI §10.31, niente GUI) La finestra non gira da amministratore (root): chiede lei i permessi, a polkit, quando servono.", ""},
+	"RX-UI-004": {INFO, ServeAzione, "(ritirato: DECISIONI §10.31, niente GUI) I permessi da amministratore non sono stati dati (polkit ha rifiutato o la richiesta è stata chiusa): niente è stato toccato.", ""},
 	"RX-UI-005": {BLOCCANTE, ServeAzione, "La parte da amministratore del motore si è interrotta.", "remotix-install stato dice a che punto è l'operazione; remotix-install riprendi o annulla."},
 	"RX-UI-006": {BLOCCANTE, ServeAzione, "La TUI chiede un terminale e i permessi da amministratore.", "sudo remotix-install tui"},
 

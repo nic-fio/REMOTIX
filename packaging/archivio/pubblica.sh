@@ -3,10 +3,10 @@
 # §6.6.10), dai pacchetti già costruiti. Lo chiama il comando di rilascio (packaging/rilascio.sh).
 #
 #   pubblica.sh aggiungi <canale> <bersaglio> FILE…   un pacchetto nel suo posto (deb, rpm, pacman)
-#   pubblica.sh motore   FILE [FILE-GUI]               il motore (e la costruzione con la finestra) per
-#                                                      install.sh, ognuno col suo .sha256 accanto
-#   pubblica.sh script                                 install.sh alla radice, con lo sha256 dei due
-#                                                      motori SCRITTO DENTRO, e install.sh.sha256
+#   pubblica.sh motore   FILE                          il motore per install.sh, col suo .sha256
+#                                                      accanto (la finestra è stata tolta: §10.31)
+#   pubblica.sh script                                 install.sh alla radice, con lo sha256 del
+#                                                      motore SCRITTO DENTRO, e install.sh.sha256
 #   pubblica.sh rigenera                               indici e firme, SBOM (R24), licenze, SHA256SUMS
 #
 #   canale: stabile · candidato.  bersaglio: debian13, ubuntu2604, fedora44, alma10, arch, …
@@ -17,7 +17,7 @@
 #   rpm/<canale>/<bersaglio>/*.rpm (firmati) + repodata/ (repomd.xml.asc: repo_gpgcheck=1)
 #   pacman/<canale>/x86_64/*.pkg.tar.zst(.sig) + remotix.db(.sig): il database ha la versione più
 #        nuova di ogni pacchetto; le VECCHIE restano come file (pacman -U, il ritorno indietro R11)
-#   install.sh, install.sh.sha256, motore/remotix-install(-gui)(.sha256), chiavi/ (la chiave
+#   install.sh, install.sh.sha256, motore/remotix-install(.sha256), chiavi/ (la chiave
 #   pubblica), sbom/<pacchetto>.spdx.json, LICENZE-COMPONENTI.txt, SHA256SUMS
 # ⭐ Le versioni vecchie non si cancellano mai da qui: tornare indietro (R11) vuol dire che ci sono.
 # ⭐ UNA chiave sola (DECISIONI §10.21): quella che firma pacchetti e metadati, verificata dal gestore
@@ -65,21 +65,19 @@ motore() {
 	mkdir -p "$ARCHIVIO/motore"
 	for f in "$@"; do
 		n=$(basename "$f")
-		case $n in remotix-install | remotix-install-gui) ;; *) echo "⛔ $n: il motore si chiama remotix-install(-gui)"; exit 2 ;; esac
+		case $n in remotix-install) ;; *) echo "⛔ $n: il motore si chiama remotix-install"; exit 2 ;; esac
 		cp "$f" "$ARCHIVIO/motore/$n"
 		(cd "$ARCHIVIO/motore" && sha256sum "$n" >"$n.sha256")
 		echo "   motore/$n $(cut -c1-16 "$ARCHIVIO/motore/$n.sha256")…"
 	done
 }
 
-# lo script d'ingresso: gli sha256 dei due motori SCRITTI DENTRO (l'amministratore verifica lo script
+# lo script d'ingresso: lo sha256 del motore SCRITTO DENTRO (l'amministratore verifica lo script
 # con lo sha256 pubblicato sul sito, e lo script verifica il motore con quello che porta)
 script() {
-	local s g
+	local s
 	s=$(cut -d' ' -f1 "$ARCHIVIO/motore/remotix-install.sha256")
-	g=$(cut -d' ' -f1 "$ARCHIVIO/motore/remotix-install-gui.sha256" 2>/dev/null || true)
-	sed -e "s/^SHA256_MOTORE=''\$/SHA256_MOTORE='$s'/" -e "s/^SHA256_MOTORE_GUI=''\$/SHA256_MOTORE_GUI='$g'/" \
-		"$INST/install.sh" >"$ARCHIVIO/install.sh"
+	sed -e "s/^SHA256_MOTORE=''\$/SHA256_MOTORE='$s'/" "$INST/install.sh" >"$ARCHIVIO/install.sh"
 	grep -q "^SHA256_MOTORE='$s'\$" "$ARCHIVIO/install.sh" || { echo "⛔ install.sh: la riga SHA256_MOTORE non c'è"; exit 1; }
 	(cd "$ARCHIVIO" && sha256sum install.sh >install.sh.sha256)
 	echo "   install.sh $(cut -d' ' -f1 "$ARCHIVIO/install.sh.sha256") (da pubblicare sul sito)"

@@ -21,9 +21,6 @@
 #   --dry-run           il controllo e il PIANO che si applicherebbe: niente viene toccato (da root)
 #   --risposte FILE     installazione SENZA DOMANDE dal file di risposte (§6.6.12)
 #   --lingua it|en      altrimenti dalla lingua del sistema (DECISIONI §10.15)
-#   --finestra          la FINESTRA (GUI), da utente nel desktop: scarica la costruzione con la
-#                       finestra (motore/remotix-install-gui, DECISIONI §10.19); i
-#                       permessi da amministratore li chiede lei a polkit quando servono
 #   --tui               le schermate nel terminale (da root), per ssh e console
 #   --insicuro          (solo prove) accetta un archivio in http:// anche senza lo sha256 scritto qui
 #   -- …                il resto va al motore così com'è
@@ -31,11 +28,10 @@
 # Tutto il corpo sta in funzioni, e l'ultima riga chiama main: uno scaricamento interrotto a metà
 # (curl | sh) non esegue un pezzo di script.
 #
-# Le due righe SHA256_ le scrive il comando di rilascio (TestScript controlla che qui siano vuote).
+# La riga SHA256_MOTORE la scrive il comando di rilascio (TestScript controlla che qui siano vuote).
 # ARCHIVIO_PREDEFINITO: l'indirizzo pubblico dell'archivio (D10 aperta: per ora non c'è).
 
 SHA256_MOTORE=''
-SHA256_MOTORE_GUI=''
 ARCHIVIO_PREDEFINITO=''
 
 # ---------------------------------------------------------------- lingua e messaggi
@@ -133,8 +129,8 @@ verifica_sha256() {
 # ---------------------------------------------------------------- main
 
 uso() {
-	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- opzioni del motore]" \
-		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --finestra | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- engine options]"
+	dice "uso: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- opzioni del motore]" \
+		"usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --tui] [--risposte FILE] [--lingua it|en] [--insicuro] [-- engine options]"
 }
 
 main() {
@@ -148,7 +144,6 @@ main() {
 		--canale=*) CANALE=${1#*=} ;;
 		--verifica) MODO=verifica ;;
 		--dry-run) MODO=prova ;;
-		--finestra | --window) MODO=finestra ;;
 		--tui) MODO=tui ;;
 		--insicuro) INSICURO=1 ;;
 		--risposte) RISPOSTE=${2:-}; shift ;;
@@ -176,11 +171,7 @@ main() {
 	fi
 	# --dry-run vuole root anche lui: il piano legge i file che toccherebbe (polkit, logind), e da
 	# utente non si leggono (`[M]` 30 set, debian13-gnome: «lstat /etc/polkit-1/rules.d/…: permission denied»)
-	# la finestra, al contrario, NON gira da root (R37): polkit dà i permessi alla sua parte da root
-	if [ "$MODO" = finestra ]; then
-		[ "$(id -u)" -ne 0 ] || errore "la finestra non si lancia da root: senza sudo (i permessi li chiede lei). RX-UI-003" "the window is not launched as root: without sudo (it asks for permissions itself). RX-UI-003"
-		[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] || errore "non c'è una sessione grafica: usa --tui (da root). RX-UI-002" "there is no graphical session: use --tui (as root). RX-UI-002"
-	elif [ "$MODO" != verifica ] && [ "$(id -u)" -ne 0 ]; then
+	if [ "$MODO" != verifica ] && [ "$(id -u)" -ne 0 ]; then
 		errore "l'installazione e --dry-run vanno lanciati da root (sudo sh install.sh …); --verifica no." "installation and --dry-run must be run as root (sudo sh install.sh …); --verifica need not."
 	fi
 	riconosci
@@ -188,11 +179,9 @@ main() {
 	T=$(mktemp -d "${TMPDIR:-/tmp}/remotix-install.XXXXXX") || errore "mktemp" "mktemp"
 	trap 'rm -rf "$T"' EXIT
 	trap 'exit 130' INT TERM
-	# due costruzioni dello stesso sorgente (DECISIONI §10.19): la statica va ovunque; quella con la
-	# finestra è legata alle librerie grafiche del sistema e si scarica solo per --finestra
+	# una costruzione sola, statica: va ovunque (la finestra è stata tolta, DECISIONI §10.31)
 	M=$T/remotix-install
 	NOME=remotix-install ATTESO=$SHA256_MOTORE
-	[ "$MODO" = finestra ] && NOME=remotix-install-gui ATTESO=$SHA256_MOTORE_GUI
 	DA="questo script" DA_EN="this script"
 	if [ -z "$ATTESO" ]; then
 		# una copia di sviluppo: lo sha256 pubblicato accanto al motore, e SOLO in HTTPS (in http chi
@@ -218,11 +207,6 @@ main() {
 	comuni="--archivio $ARCHIVIO --canale $CANALE"
 	[ -n "$LINGUA_DATA" ] && comuni="$comuni --lingua $L"
 	case $MODO in
-	finestra)
-		# la lingua va passata sempre: polkit ripulisce l'ambiente della parte da root (§10.15)
-		"$M" gui --archivio "$ARCHIVIO" --canale "$CANALE" --lingua "$L" "$@"
-		exit $?
-		;;
 	tui)
 		# curl | sh: lo standard input è lo script; le schermate vogliono il terminale
 		"$M" tui --archivio "$ARCHIVIO" --canale "$CANALE" --lingua "$L" "$@" </dev/tty

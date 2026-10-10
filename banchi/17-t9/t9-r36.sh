@@ -1,5 +1,8 @@
 #!/bin/bash
 #
+# ⛔ STORIA: la GUI dell'installatore è stata tolta il 10 ott 2026 (DECISIONI §10.31). Questo banco ha
+# provato R36/R37 il 30 set e non gira più (manca remotix-install-gui); resta come documento della prova.
+#
 # t9-r36.sh — fase 17, T9, R36: la stessa installazione guidata da CLI, TUI e GUI su tre copie della
 # stessa macchina (la foto «cliente», preparata allo stesso modo da t9-gui.sh accendi) dà lo stesso
 # piano, lo stesso insieme risolto, lo stesso registro (a parte gli orari) e lo stesso certificato.

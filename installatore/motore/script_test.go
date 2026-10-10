@@ -6,15 +6,15 @@ import (
 	"testing"
 )
 
-// Lo script d'ingresso verifica il motore con lo sha256 (DECISIONI §10.21): le righe SHA256_ le
-// scrive il comando di rilascio (packaging/rilascio.sh) nella copia pubblicata; nel deposito ci
-// sono, e sono VUOTE (una copia di sviluppo prende lo sha256 pubblicato accanto al motore).
+// Lo script d'ingresso verifica il motore con lo sha256 (DECISIONI §10.21): la riga SHA256_MOTORE la
+// scrive il comando di rilascio (packaging/rilascio.sh) nella copia pubblicata; nel deposito c'è,
+// ed è VUOTA (una copia di sviluppo prende lo sha256 pubblicato accanto al motore).
 func TestScript(t *testing.T) {
 	b, err := os.ReadFile("../install.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range []string{"SHA256_MOTORE", "SHA256_MOTORE_GUI"} {
+	for _, v := range []string{"SHA256_MOTORE"} {
 		if !regexp.MustCompile(`(?m)^` + v + `=''$`).Match(b) {
 			t.Errorf("install.sh: manca la riga %s='' (la riempie il comando di rilascio)", v)
 		}
