@@ -63,7 +63,7 @@
 
   /* dispositivi disegnati, con dentro la schermata vera */
   .schermo { position: relative; overflow: hidden; background: linear-gradient(160deg, #1d2b6e 0%, #4b3ca8 45%, #f08a5d 75%, #233a7a 100%); }
-  .schermo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .schermo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
   .laptop { max-width: 34rem; margin: 0 auto; }
   .laptop .coperchio { padding: 2.2% 2.2% 2.6%; border-radius: 1rem 1rem .3rem .3rem; background: #0c1020; box-shadow: 0 0 0 1px #2a3352, 0 30px 60px rgba(0,0,0,.4); }
   .laptop .schermo { aspect-ratio: 16 / 10; border-radius: .25rem; }
@@ -220,7 +220,8 @@
   .telefono .desk-alloggio { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); aspect-ratio: 16 / 10; container-type: size; }
 
   /* browser provati e Android */
-  .browser-griglia { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
+  .browser-griglia { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+  .browser-griglia > * { min-width: 0; }
   @media (min-width: 1000px) { .browser-griglia { grid-template-columns: 7fr 5fr; } }
   .scheda-b { background: #f6f8fc; border-radius: 1.2rem; padding: 2rem 2.2rem; box-shadow: inset 0 0 0 1px var(--bordo); }
   .scheda-b h3 { margin: 0 0 1.2rem; font-size: 1.45rem; letter-spacing: -.02em; }
@@ -234,6 +235,19 @@
   .matrice .no { color: #b42318; }
   .logo-b { width: 1.6rem; height: 1.6rem; flex: none; background: var(--c); -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
   .logo-b.grande { display: block; width: 2.8rem; height: 2.8rem; margin-bottom: 1rem; }
+  .matrice .segno { display: none; }
+  .matrice-scorre { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -.4rem; }
+  @media (max-width: 600px) {
+    .scheda-b { padding: 1.4rem 1.2rem; }
+    .matrice { font-size: .85rem; }
+    .matrice th, .matrice td { padding: .7rem .45rem; }
+    .matrice td:first-child { gap: .45rem; }
+    .matrice .ok, .matrice .nd, .matrice .no { white-space: nowrap; }
+    .famiglia .telefono { width: 22%; }
+    .matrice .parola { display: none; }
+    .matrice th { font-size: .66rem; letter-spacing: .02em; padding: .6rem .35rem; }
+    .matrice .segno { display: inline; font-size: .78rem; }
+  }
   .nota-b { margin: 1.2rem 0 0; font-size: .88rem; color: var(--tenue); }
   .android p { margin: 0 0 1.2rem; color: var(--tenue); }
   .android h3 { margin-bottom: .5rem; }
@@ -297,7 +311,7 @@
         </div>
         <div class="freccia" aria-hidden="true">⟷</div>
         <div class="portatile">
-          <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate/gnome.png" alt="A GNOME desktop served by REMOTIX in a browser" onerror="this.remove()"></div></div><div class="base"></div></div>
+          <div class="laptop"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="A KDE Plasma desktop served by REMOTIX in a browser" onerror="this.remove()"></div></div><div class="base"></div></div>
           <div class="didascalia">Your desktop, in the browser<small>No client required</small></div>
         </div>
       </div>
@@ -328,9 +342,9 @@
         </ul>
       </div>
       <div class="famiglia" aria-hidden="true">
-        <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate/kde.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div>
-        <div class="tablet"><div class="schermo"><img src="schermate/xfce.png" alt="" onerror="this.remove()"></div></div>
-        <div class="telefono"><div class="schermo"><img src="schermate/telefono.png" alt="" onerror="this.remove()"></div></div>
+        <div class="laptop"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div>
+        <div class="tablet"><div class="schermo" data-vera="si"><img src="schermate-vere/gnome-desktop-canvas.png" alt="" onerror="this.remove()"></div></div>
+        <div class="telefono"><div class="schermo" data-vera="si"><img src="schermate-vere/phone-gnome-dpr2.png" alt="" onerror="this.remove()"></div></div>
       </div>
     </div>
   </section>
@@ -341,13 +355,13 @@
         <div class="scheda-b">
           <p class="occhiello">Tested browsers</p>
           <h3>Open it in the browser you already use.</h3>
-          <table class="matrice">
+          <div class="matrice-scorre"><table class="matrice">
             <thead><tr><th></th><th>Windows</th><th>Linux</th><th>Android</th></tr></thead>
             <tbody>
-              <tr><td><i class="logo-b" style="--c:#4285F4;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/googlechrome.svg)"></i>Chrome</td><td class="ok">✓ Tested</td><td class="ok">✓ Tested</td><td class="ok">✓ Tested</td></tr>
-              <tr><td><i class="logo-b" style="--c:#FF7139;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/firefoxbrowser.svg)"></i>Firefox</td><td class="nd">Not tested yet</td><td class="ok">✓ Tested</td><td class="no">Not supported</td></tr>
+              <tr><td><i class="logo-b" style="--c:#4285F4;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/googlechrome.svg)"></i>Chrome</td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td></tr>
+              <tr><td><i class="logo-b" style="--c:#FF7139;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/firefoxbrowser.svg)"></i>Firefox</td><td class="nd"><span class="parola">Not tested yet</span><span class="segno">not tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="no"><span class="parola">Not supported</span><span class="segno">✗</span></td></tr>
             </tbody>
-          </table>
+          </table></div>
           <p class="nota-b">REMOTIX needs WebTransport and WebCodecs, both in current Chrome and Firefox. Safari, macOS and iOS have not been tested yet.</p>
         </div>
         <div class="scheda-b android">
@@ -379,7 +393,7 @@
           <div class="figura"><div class="mini-server"><i></i><i></i><i></i><i></i></div></div></div>
         <div class="tratteggio" aria-hidden="true">- - →</div>
         <div class="passo"><h3><i>3.</i>Your desktop</h3><p>and applications</p>
-          <div class="figura"><div class="laptop" style="width:9rem"><div class="coperchio"><div class="schermo"><img src="schermate/gnome.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div></div></div>
+          <div class="figura"><div class="laptop" style="width:9rem"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div></div></div>
       </div>
     </div>
   </section>
@@ -480,7 +494,7 @@ budget.ods  mockup.png  notes.md  plan.odt
 <script>
   // il desktop simulato in ogni schermo: si toglie da solo se dentro c'è una schermata vera
   document.querySelectorAll('.schermo').forEach(function (sch) {
-    if (sch.querySelector('img[src]') && sch.dataset.vera === 'si') return;
+    if (sch.dataset.vera === 'si') return;
     var img = sch.querySelector('img'); if (img) img.remove();
     var d = document.getElementById('desk-kde').content.cloneNode(true);
     if (sch.closest('.telefono')) { var a = document.createElement('div'); a.className = 'desk-alloggio'; a.appendChild(d); sch.appendChild(a); }
