@@ -6249,7 +6249,7 @@ dopo ricattura. Sui computer l'hover arriva e non scatta mai. Con la cattura la 
   la regola guarda il comportamento e non il sistema, quindi si adatta da sé (hover che arriva ⇒ niente
   cattura); da misurare là: se Chrome concede `Pointer Lock` e se le scorciatoie arrivano alla pagina.
 
-### 10.30 ✅ REMOTIX diventa a codice chiuso, con trial e versione full a pagamento (5 ott 2026)
+### 10.30 ⛔ *(superata da §10.33)* REMOTIX diventa a codice chiuso, con trial e versione full a pagamento (5 ott 2026)
 
 > ⭐ **Le regole in vigore stanno in `SPECIFICHE.md` §15** (9 ott 2026). Qui resta la storia: alcune voci
 > sotto sono state superate da decisioni successive.
@@ -6479,6 +6479,25 @@ licenza), i messaggi che il server manda alla pagina, la TUI e i messaggi dell'i
   quelli che il server scrive nella pagina (`__AVVISO__` e gli avvisi del ban), la TUI e i messaggi
   dell'installatore. Le prove della suite cercano gli elementi per `id`, non per testo: la traduzione non le
   tocca (verificato il 5 ott sulla pagina d'accesso).
+
+### 10.33 ✅ Niente licenze: REMOTIX è gratuito (10 ott 2026)
+
+> Supera §10.30 e, con lei, tutto `SPECIFICHE.md` §15 e il piano `fasi/21-la-licenza.md`, che restano come storia.
+
+Parole dell'utente: *«niente licenze. Remotix sarà un progetto freeware. La comunità di Linux apprezzerà il
+gesto, poi se qualche azienda volesse acquistare il prodotto si faccia avanti. Quindi allo stato del progetto il
+prossimo step sarà l'installer»*.
+
+- **Che cosa esce**: trial e full, `LICENSE_KEY`, biglietto orario, il servizio sul VPS, il sito con area
+  cliente e pannello, l'ingresso del pagamento. ⇒ La fase 21 (~161 ore) non si costruisce.
+- **Perché regge**: è il pezzo più complesso rimasto, e non serviva a far funzionare REMOTIX ma a farlo pagare.
+  Toglierlo toglie anche un servizio esposto in rete da tenere vivo e da difendere (*complessità =
+  vulnerabilità*). L'installatore perde il passo della chiave: REMOTIX parte appena installato.
+- **Il prossimo passo**: chiudere l'installatore (`fasi/17-l-installatore.md`), cioè le chiavi vere dei
+  rilasci al posto di quelle di prova (D10, D11, D14) e il giro intero col binario di oggi.
+- ❓ **Aperta, la decide l'utente**: gratuito a codice chiuso, o a codice aperto. Il motivo che aveva chiuso il
+  codice (§10.30: con il codice aperto un privato toglie il limite della trial) è sparito con la trial.
+  Resta, finché il codice è chiuso, il vincolo di §11.4 delle SPECIFICHE: nessuna dipendenza GPL.
 
 ---
 

@@ -1,5 +1,8 @@
 # Fase 21 — La licenza
 
+> ⛔ **Chiusa senza costruire, 10 ottobre 2026** (`DECISIONI.md` §10.33): niente licenze, REMOTIX è gratuito.
+> Il piano resta come storia.
+
 *Piano scritto l'**8 ottobre 2026** sera; ⭐ **riscritto il 9 ottobre** dopo la giornata di decisioni
 sulla licenza (classe della chiave, upgrade, sito con area cliente e pannello, accessi, nomi `LICENSE_KEY` /
 `INSTALL_KEY` / `HW_FINGERPRINT`). ⛔ **Da approvare dall'utente prima di qualunque lavoro.** ⏸ **Sospeso il 9 ott** (utente: *«per il momento sospendiamo qui il discorso

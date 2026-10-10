@@ -1317,7 +1317,7 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 
 | | |
 |---|---|
-| ✅ **la licenza** | **codice chiuso, trial e versione full a pagamento** (`DECISIONI.md` §10.30, che supera §10.22) — resta il vincolo di §11.4: nessuna dipendenza GPL |
+| ✅ **la licenza** | ⭐ **niente licenze: REMOTIX è gratuito** (`DECISIONI.md` §10.33, 10 ott 2026, che supera §10.30). ❓ Aperto: codice chiuso o aperto. Finché è chiuso resta il vincolo di §11.4: nessuna dipendenza GPL |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
 | ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |
@@ -1350,6 +1350,9 @@ invecchia in silenzio è peggio di nessun riferimento.
 ---
 
 ## 15. La licenza
+
+> ⛔ **Abolito il 10 ottobre 2026** (`DECISIONI.md` §10.33): niente licenze, REMOTIX è gratuito. Il capitolo resta
+> come storia del sistema che era stato deciso; **nessuna regola qui sotto è in vigore**.
 
 *Scritto il **9 ottobre 2026**, su richiesta dell'utente: *«meglio creare un documento dove viene messo nero su
 bianco la logica di funzionamento delle licenze; se ci dimentichiamo qualche particolare quel documento diventa
