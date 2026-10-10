@@ -672,7 +672,7 @@ including the control one**.
 > decision would leave the contradiction standing instead of closing it.
 >
 > ⛔ **And a premise that was false must be stated, because it is the one with which the decision was taken**:
-> *«the server never closes on its own initiative»*. It does, and it is the most measured behaviour
+> *«the server never strikes first on its own initiative»*. It does strike, and it is the most measured behaviour
 > of phase 1 — the three ceilings of §4.6 seen to trip by **B6** (5.0 · 60.1 · 10.0 s), the **36
 > violations out of 36** of **B5** after each of which the server closes, `RESPINTO`,
 > `TROPPI_TENTATIVI` and `GIA_ATTIVA_REMOTA`. ⭐ The decision **does not change**: precisely because the
