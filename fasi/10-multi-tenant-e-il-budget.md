@@ -631,19 +631,19 @@ measurement is named line by line.
 
 ---
 
-## §5 · Che cosa è stato sviluppato
+## §5 · What was developed
 
-> ⭐ **Il terzo giro, e il primo in cui `src/` si tocca** — *25 agosto 2026*, sull'ordine del regista:
+> ⭐ **The third round, and the first in which `src/` is touched** — *25 Aug 2026*, on the director's order:
 > *«prima applica le patch, poi scrivi il prodotto e dopo rifai i test»*.
-> ⛔ **Ogni cura è provata col ROSSO PRIMA e il VERDE DOPO**, stessa scena e stesso banco, più il
-> **controllo negativo** che rimette il difetto e verifica che il banco **torni rosso**.
+> ⛔ **Every cure is tested with RED BEFORE and GREEN AFTER**, same scene and same bench, plus the
+> **negative control** that puts the defect back and verifies that the bench **goes red again**.
 
-### 5.1 ⭐⭐⭐ IL FIGLIO CHE MORIVA SUL PASSO — **e non era il passo**
+### 5.1 ⭐⭐⭐ THE CHILD THAT DIED ON THE STRIDE — **and it was not the stride**
 
-**Il difetto** (§6.8): con una larghezza di finestra che dà un passo del DMA-BUF non multiplo di 64,
-il figlio dichiara *«rimonto il palco sulla MEMORIA»* e **2 ms dopo muore di SIGSEGV**.
+**The defect** (§6.8): with a window width that gives a DMA-BUF stride not a multiple of 64,
+the child declares *«rimonto il palco sulla MEMORIA»* and **2 ms later dies of SIGSEGV**.
 
-#### ⭐⭐ La riga che cadeva — **letta dal core, non dedotta**
+#### ⭐⭐ The line that fell — **read from the core, not deduced**
 
 ```
 #0  ei_disconnect ()          da libei.so.1
@@ -652,95 +652,95 @@ il figlio dichiara *«rimonto il palco sulla MEMORIA»* e **2 ms dopo muore di S
 #4  figlio_vive (…)           at figlio.c:7777
 ```
 
-`[M]` E dallo stesso core: `puntatore = NULL`, `tastiera_dev = NULL`, `regione_nota = 0` — il canale
-EIS era stato aperto **33 ms prima** e la stretta di mano di `libei` **non era ancora arrivata**.
-⇒ ⛔⛔ **Non è il passo a uccidere: è CHIUDERE UN CANALE EIS APPENA NATO.**
+`[M]` And from the same core: `puntatore = NULL`, `tastiera_dev = NULL`, `regione_nota = 0` — the EIS
+channel had been opened **33 ms earlier** and the `libei` handshake **had not arrived yet**.
+⇒ ⛔⛔ **It is not the stride that kills: it is CLOSING A NEWBORN EIS CHANNEL.**
 
-⭐ **E la prova all'incontrario**: `[M]` la stessa tela storta chiesta a palco **maturo** (20 s) ⇒ la
-guardia morde, il ripiego monta, **il figlio sopravvive**.
+⭐ **And the proof the other way round**: `[M]` the same crooked canvas asked of a **mature** stage (20 s) ⇒ the
+guard bites, the fallback mounts, **the child survives**.
 
-#### La cura — **si rimonta il solo flusso, non tutto il palco**
+#### The cure — **only the stream is remounted, not the whole stage**
 
-Solo `src/figlio.c` (+115 righe, −4): `rimonta_solo_la_cattura()` ferma e riapre la `Cattura` **sullo
-stesso nodo PipeWire**, e rifà la sola cucitura che vive lì. `smonta_il_palco()` **resta come ripiego**
-per il caso in cui il flusso non si riapra.
+Only `src/figlio.c` (+115 lines, −4): `rimonta_solo_la_cattura()` stops and reopens the `Cattura` **on the
+same PipeWire node**, and redoes only the seam that lives there. `smonta_il_palco()` **remains as a fallback**
+for the case in which the stream does not reopen.
 
-⭐⭐ **È la cura del difetto, non del sintomo**: la strada dei pixel è una proprietà **del flusso**, non
-della sessione grafica — il canale di input, gli appunti e la sessione `RemoteDesktop` venivano
-buttati **per cambiare una cosa che non li riguarda**.
-⛔ **La tela NON è stata allineata**: quel che l'utente vede **non cambia** (niente **I6**).
+⭐⭐ **It is the cure of the defect, not of the symptom**: the pixel route is a property **of the stream**, not
+of the graphical session — the input channel, the clipboard and the `RemoteDesktop` session were being
+thrown away **to change something that does not concern them**.
+⛔ **The canvas was NOT aligned**: what the user sees **does not change** (no **I6**).
 
-`[M]` **E costa 500 volte meno**: il cambio di strada impiega **2 ms** (4 misure su 4) contro
-**1 031 ms** dello smontaggio pieno — e il padre non riceve più *«il palco se n'è andato»*
-⇒ **nessun congedo `0x10`**.
+`[M]` **And it costs 500 times less**: the route change takes **2 ms** (4 measurements out of 4) against
+**1 031 ms** for the full teardown — and the parent no longer receives *«il palco se n'è andato»*
+⇒ **no `0x10` farewell**.
 
-#### ⭐ Il rosso prima, il verde dopo
+#### ⭐ Red before, green after
 
-| | binario **pristino** | binario **curato** |
+| | **pristine** binary | **cured** binary |
 |---|---|---|
-| vista **1268** (passo 5072 ⛔) | ⛔ **morto 3 su 3** | ⭐ **0 su 3**, e *«vivo, desktop acceso»* 3 su 3 |
-| vista 1280 (passo 5120 ✅) | 0 su 3 | 0 su 3 |
+| view **1268** (stride 5072 ⛔) | ⛔ **dead 3 out of 3** | ⭐ **0 out of 3**, and *«vivo, desktop acceso»* 3 out of 3 |
+| view 1280 (stride 5120 ✅) | 0 out of 3 | 0 out of 3 |
 
-**E la consegna, contata** (banco nuovo `10-c2-ripiego.py`, `--certifica` **27/27**):
+**And the delivery, counted** (new bench `10-c2-ripiego.py`, `--certifica` **27/27**):
 
-| tela | passo | esito | fot. | byte/fot | strada |
+| canvas | stride | outcome | fr. | bytes/fr | route |
 |---|---|---|---|---|---|
-| 1268×714 | 5072 ⛔ | ⭐ **consegnano 3/3** | 10 | 2 743 | MEMORIA |
-| 1280×714 | 5120 ✅ | 3/3 | 11 | 2 780 | SCHEDA |
-| ⭐⭐ **854×480** — *il minimo di `SPECIFICHE.md` §5.5* | 3416 ⛔ | ⭐ **consegnano 3/3** | 9 | 1 895 | MEMORIA |
+| 1268×714 | 5072 ⛔ | ⭐ **deliver 3/3** | 10 | 2 743 | MEMORY |
+| 1280×714 | 5120 ✅ | 3/3 | 11 | 2 780 | CARD |
+| ⭐⭐ **854×480** — *the minimum of `SPECIFICHE.md` §5.5* | 3416 ⛔ | ⭐ **deliver 3/3** | 9 | 1 895 | MEMORY |
 
-⭐ **La guardia della copia zero ha morso 3 volte su 3**: la strada della memoria **è stata percorsa
-davvero**, non aggirata.
+⭐ **The zero-copy guard bit 3 times out of 3**: the memory route **was really
+travelled**, not bypassed.
 
-**Il controllo negativo**: rimesso il file pristino ⇒ ⛔ **1268: 0/2 consegnano, 2 morti · 854×480:
-0/2, 2 morti**. Rimesso il curato ⇒ verde. ⭐ **Sano → guasto → risanato, girato.**
-⭐⭐ **E il rosso ha aggiunto un fatto che non era in nessun documento: moriva anche 854×480, il
-minimo dichiarato — nessuno l'aveva mai portato fino alla morte.**
+**The negative control**: pristine file put back ⇒ ⛔ **1268: 0/2 deliver, 2 dead · 854×480:
+0/2, 2 dead**. Cured one put back ⇒ green. ⭐ **Healthy → fault → healed, run.**
+⭐⭐ **And the red added a fact that was in no document: 854×480 died too, the
+declared minimum — nobody had ever taken it all the way to death.**
 
-⇒ ⭐⭐ **Il difetto era UNO SOLO**: curato il ripiego, la guardia della copia zero **smette di essere un
-vicolo cieco e diventa una scelta di prestazioni**, e `SPECIFICHE.md` §5.5 **smette di promettere una
-tela che il prodotto non sapeva fare**.
+⇒ ⭐⭐ **The defect was ONE ONLY**: with the fallback cured, the zero-copy guard **stops being a
+dead end and becomes a performance choice**, and `SPECIFICHE.md` §5.5 **stops promising a
+canvas the product could not do**.
 
-#### ⛔ E quel che la cura NON cura — dichiarato, e fuori dal mandato
+#### ⛔ And what the cure does NOT cure — declared, and outside the mandate
 
-⛔⛔ **Il difetto vero di `libei` resta latente**: `input_chiudi()` chiama `ei_disconnect()` **anche su
-un contesto che non ha mai completato la stretta di mano**, e lì `libei` cade. ⇒ Restano esposti gli
-**altri due** `smonta_il_palco()` — *«il palco se n'è andato»* e quello d'uscita: **se il compositore
-muore nelle prime decine di millisecondi di vita di un palco, lo stesso SIGSEGV torna.**
-`[?]` Non provato (non si riesce a temporizzare a mano). ⭐ La cura sarebbe di **poche righe in
-`input.c`**: non disconnettere finché nessun dispositivo è mai comparso.
+⛔⛔ **The real `libei` defect stays latent**: `input_chiudi()` calls `ei_disconnect()` **even on
+a context that never completed the handshake**, and there `libei` falls. ⇒ The
+**other two** `smonta_il_palco()` remain exposed — *«il palco se n'è andato»* and the exit one: **if the compositor
+dies in the first tens of milliseconds of a stage's life, the same SIGSEGV comes back.**
+`[?]` Not tested (it cannot be timed by hand). ⭐ The cure would be **a few lines in
+`input.c`**: do not disconnect as long as no device has ever appeared.
 
-⚠ Altre due: il rimontaggio **presume che il nodo PipeWire sopravviva** alla disconnessione del
-consumatore — `[M]` su Mutter **13 volte su 13**, anche in ping-pong fra tre tele, ⛔ ma su un altro
-compositore potrebbe non valere (per questo il ripiego pieno è rimasto) · e sul cambio di strada
-**non si forza una chiave**: corretto, misurato, ⚠ **ma è un comportamento nuovo** rispetto a prima.
+⚠ Two more: the remount **presumes that the PipeWire node survives** the disconnection of the
+consumer — `[M]` on Mutter **13 times out of 13**, even in ping-pong among three canvases, ⛔ but on another
+compositor it might not hold (that is why the full fallback stayed) · and on the route change
+**no keyframe is forced**: correct, measured, ⚠ **but it is a new behaviour** compared with before.
 
-⚠ **E una dichiarazione di onestà sul terreno**: `[M]` i server di altri tre incarichi erano vivi
-durante la campagna. ⭐ Le grandezze riferite sono **conteggi** (morti, fotogrammi, byte) e una latenza
-di 2 ms, non ritmi di GPU; e il rosso ↔ verde si è ribaltato **col binario, non col carico** — il
-controllo negativo è girato con **più** vicini del verde, non meno.
+⚠ **And a declaration of honesty about the ground**: `[M]` the servers of three other assignments were alive
+during the campaign. ⭐ The quantities reported are **counts** (deaths, frames, bytes) and a latency
+of 2 ms, not GPU rates; and the red ↔ green flipped **with the binary, not with the load** — the
+negative control ran with **more** neighbours than the green, not fewer.
 
-### 5.2 ⭐⭐⭐ IL REGISTRO ADESSO DICE DI CHI È — **dal 4,4 % al 100 %**
+### 5.2 ⭐⭐⭐ THE LOG NOW SAYS WHOSE IT IS — **from 4.4 % to 100 %**
 
-**Il difetto** (§4.2 R10-A4, §6.7): con più di un inquilino il registro — *lo strumento con cui ogni
-difetto della fase 9 e della fase 10 è stato trovato* — **smette di dire di chi parla**.
+**The defect** (§4.2 R10-A4, §6.7): with more than one tenant the log — *the tool with which every
+defect of phase 9 and phase 10 was found* — **stops saying whom it is talking about**.
 
-#### ⭐⭐ Il rosso prima, il verde dopo, e il controllo negativo — **tre binari, stessa scena**
+#### ⭐⭐ Red before, green after, and the negative control — **three binaries, same scene**
 
-`[M]` Quattro sessioni GNOME vere di quattro utenti diversi, scene diverse, 1080p, sotto lucchetto.
-Banco `10-b96-registro.py` **riusato, non riscritto**.
+`[M]` Four real GNOME sessions of four different users, different scenes, 1080p, under the lock.
+Bench `10-b96-registro.py` **reused, not rewritten**.
 
-| | **ROSSO** | ⭐ **VERDE** | **NEGATIVO** (difetto rimesso) |
+| | **RED** | ⭐ **GREEN** | **NEGATIVE** (defect put back) |
 |---|---|---|---|
-| attribuibili **in tutto** | 25,3 % | ⭐ **75,8 %** | 25,4 % |
-| ⛔ attribuibili **DI DIAGNOSI** | **4,4 %** | ⭐⭐ **100,0 %** (20 277 su 20 277) | **4,4 %** |
-| ⛔⛔ **prova cieca** — spengo una scena, chiedo chi si è fermato | si vede 2/4 · **nomi 0 su 4** | ⭐⭐ si vede 4/4 · **nomi 4 su 4, tutti GIUSTI** | si vede 3/4 · **nomi 0 su 4** |
-| righe ambigue | 0 | 0 | 0 |
+| attributable **overall** | 25.3 % | ⭐ **75.8 %** | 25.4 % |
+| ⛔ attributable **DIAGNOSTIC** | **4.4 %** | ⭐⭐ **100.0 %** (20 277 out of 20 277) | **4.4 %** |
+| ⛔⛔ **blind test** — I switch off a scene, I ask who stopped | seen 2/4 · **names 0 out of 4** | ⭐⭐ seen 4/4 · **names 4 out of 4, all RIGHT** | seen 3/4 · **names 0 out of 4** |
+| ambiguous lines | 0 | 0 | 0 |
 
-⭐ **Il rosso riproduce §6.7 quasi cifra per cifra** (là: 25,3 % · 4,2 % · 0 nomi su 4).
+⭐ **The red reproduces §6.7 almost digit for digit** (there: 25.3 % · 4.2 % · 0 names out of 4).
 
-Le tre famiglie che §6.7 misurava a **0,0 %** — `fotogramma-spedito` (18 179 righe, **la più
-voluminosa del prodotto**), `ciclo-cattura`, `audio-blocchi` — passano tutte a **100,0 %**.
+The three families §6.7 measured at **0.0 %** — `fotogramma-spedito` (18 179 lines, **the most
+voluminous of the product**), `ciclo-cattura`, `audio-blocchi` — all go to **100.0 %**.
 
 ```
 07:29:41.112 rcp     fotogramma 214 SPEDITO: delta 1920x1080, codec 3, …
@@ -748,479 +748,479 @@ voluminosa del prodotto**), `ciclo-cattura`, `audio-blocchi` — passano tutte a
 07:30:12.398 figlio  [provadec6] ciclo: 1108 fotogrammi consegnati (0 chiavi), 12 attese a vuoto
 ```
 
-**Il costo, misurato invece che previsto** (§6.7 prevedeva +7,8 %): `[M]` **+5,4 %** di byte per riga,
-⭐ **righe al secondo invariate**. ⛔ **E l'atomicità regge**, che era il rischio: `[M]` **0 orfane e 0
-innestate** su 234 123 righe; la più lunga che porta l'identità è **822 byte, il 20 % di `PIPE_BUF`**.
-⭐ E il rivelatore **non è cieco**: innestandone, ne trova 4 su 4.
+**The cost, measured instead of predicted** (§6.7 predicted +7.8 %): `[M]` **+5.4 %** bytes per line,
+⭐ **lines per second unchanged**. ⛔ **And atomicity holds**, which was the risk: `[M]` **0 orphaned and 0
+interleaved** over 234 123 lines; the longest one carrying the identity is **822 bytes, 20 % of `PIPE_BUF`**.
+⭐ And the detector **is not blind**: injecting some, it finds 4 out of 4.
 
-#### Che cosa è cambiato — **quattro file, e tre per pochissime righe**
+#### What changed — **four files, and three of them for very few lines**
 
-`registro.h` (+56) e `registro.c` (+79) portano l'identità; ⚠ **`webtransport.c` solo alle righe
-2116-2139** (il gancio che buttava `ctx`), ⚠ **`figlio.c` solo alle 5953-5971** (il figlio che posa il
-proprio nome). ⛔ **`rcp.c` NON è stato toccato** — l'identità arriva dal gancio, e le copie gemelle
-di R12.3 restano intatte.
+`registro.h` (+56) and `registro.c` (+79) carry the identity; ⚠ **`webtransport.c` only at lines
+2116-2139** (the hook that threw away `ctx`), ⚠ **`figlio.c` only at 5953-5971** (the child that sets its
+own name). ⛔ **`rcp.c` was NOT touched** — the identity arrives from the hook, and the twin copies
+of R12.3 stay intact.
 
-⭐⭐ **E una deviazione dall'incarico, dichiarata e migliore**: invece del **pid** è stato posato il
-**nome utente**. Costa uguale, cura le stesse 359 righe **più le 70 di `codificatore.c`**, e
-⭐ **non ha bisogno del ponte** — che era l'argomento più forte del rilievo (*registro ruotato ⇒ riga
-muta per sempre*). ⇒ Le tre avvertenze di §6.7 **si chiudono da sé**: che `REG_CODIFICA` sia la stessa
-stringa di `REG_VIDEO` non conta più, che l'area `figlio` la scriva **anche il padre** non conta più,
-e il ponte non serve più.
+⭐⭐ **And a deviation from the assignment, declared and better**: instead of the **pid** the
+**user name** was set. It costs the same, cures the same 359 lines **plus the 70 of `codificatore.c`**, and
+⭐ **does not need the bridge** — which was the strongest argument of the finding (*rotated log ⇒ line
+mute forever*). ⇒ The three caveats of §6.7 **close by themselves**: that `REG_CODIFICA` is the same
+string as `REG_VIDEO` no longer matters, that the `figlio` area is written **by the parent too** no longer matters,
+and the bridge is no longer needed.
 
-⭐ E tre scelte di dettaglio che valgono: la parentesi si compone **in un punto solo**, in testa al
-**corpo** e non fra ora e area (⇒ **un lettore vecchio continua a leggere**); l'identità si
-**ripulisce** (`]` e a-capo → `_`), perché **una riga spezzata è plausibile e falsa**; e ⛔ **chi non
-sa TACE** — niente parentesi, niente byte.
+⭐ And three detail choices that count: the bracket is composed **in one place only**, at the head of the
+**body** and not between time and area (⇒ **an old reader keeps reading**); the identity is
+**cleaned** (`]` and newline → `_`), because **a split line is plausible and false**; and ⛔ **whoever does not
+know STAYS SILENT** — no bracket, no bytes.
 
-#### ⚠ Che cosa la cura NON cura
+#### ⚠ What the cure does NOT cure
 
-⛔ **Le 100 righe di `webtransport.c`** — `[M]` la famiglia `wt stream uni … per un fotogramma`,
-**18 211 righe**, resta a **0,0 %**. ⭐ Il meccanismo per curarla **c'è già**: 76 in funzioni che hanno
-già il contesto, 24 nei ganci. ⚠ È stata lasciata perché quel file era **di un altro incarico dello
-stesso giro** · le dieci `fprintf(stderr,…)` dirette restano mute (**nessuna è di diagnosi**) · le
-righe **di terzi** non le tocca nessuno · ⚠ **cambia il formato**: chi legge spezzando in «ora · area ·
-corpo» continua a funzionare, chi àncora sul corpo deve tollerare `[nome] ` in testa.
+⛔ **The 100 lines of `webtransport.c`** — `[M]` the family `wt stream uni … per un fotogramma`,
+**18 211 lines**, stays at **0.0 %**. ⭐ The mechanism to cure it **already exists**: 76 in functions that already have
+the context, 24 in the hooks. ⚠ It was left because that file belonged **to another assignment of the
+same round** · the ten direct `fprintf(stderr,…)` stay mute (**none is diagnostic**) · the
+**third-party** lines nobody touches · ⚠ **the format changes**: whoever reads by splitting into «ora · area ·
+corpo» keeps working, whoever anchors on the body must tolerate `[nome] ` at the head.
 
-#### ⭐ Le cinque cose che non ci si aspettava
+#### ⭐ The five things nobody expected
 
-1. ⛔⛔ **Col difetto addosso il registro è PEGGIO di quanto §6.7 dicesse**: la prova cieca vede il
-   guasto **solo 2 volte su 4** — non è soltanto muto, ⛔ **a volte non fa nemmeno VEDERE che qualcuno
-   si è fermato**. Col verde: **4 su 4**.
-2. ⭐ Il classificatore che **indovina** passa dal **96,5 %** di sbagliate al **3,3 %** — non perché
-   indovini meglio, ⭐ **ma perché non ha quasi più righe mute su cui indovinare**.
-3. ⛔⛔ **Il primo giro è caduto sul terreno, e aveva ragione lui**: il controllo ha visto che l'albero
-   spedito **non era quello che il banco stava leggendo**. ⚠ **Senza quel predicato si sarebbe
-   misurato il binario giusto leggendo il sorgente sbagliato.**
-4. ⛔ Il primissimo tentativo è partito **nel secondo in cui il banco precedente mollava il lucchetto e
-   stava ancora sgomberando** ⇒ *«il terreno non regge»* e *«non regge ANCORA»* **hanno la stessa
-   faccia**. Curato con un respiro e un ritentativo.
-5. ⭐ Una famiglia era **già** attribuibile al 100 % anche nel rosso, perché **si nomina da sé nel
-   corpo** ⇒ ⚠ **il registro non era muto: era muto proprio dove serviva.**
+1. ⛔⛔ **With the defect on, the log is WORSE than §6.7 said**: the blind test sees the
+   fault **only 2 times out of 4** — it is not only mute, ⛔ **sometimes it does not even SHOW that someone
+   stopped**. With the green: **4 out of 4**.
+2. ⭐ The classifier that **guesses** goes from **96.5 %** wrong to **3.3 %** — not because
+   it guesses better, ⭐ **but because it has almost no mute lines left to guess on**.
+3. ⛔⛔ **The first round fell on the ground check, and the check was right**: it saw that the tree
+   shipped **was not the one the bench was reading**. ⚠ **Without that predicate one would have
+   measured the right binary while reading the wrong source.**
+4. ⛔ The very first attempt started **in the second in which the previous bench was letting go of the lock and
+   was still clearing** ⇒ *«il terreno non regge»* and *«non regge ANCORA»* **have the same
+   face**. Cured with a breath and a retry.
+5. ⭐ One family was **already** 100 % attributable even in the red, because **it names itself in the
+   body** ⇒ ⚠ **the log was not mute: it was mute exactly where it was needed.**
 
-⭐ **E il banco è stato migliorato dove era nato storto**: il predicato che *misurava* il difetto senza
-**giudicarlo** adesso sa dare rosso sulla cura; la pulizia finale non usa più **due modelli globali**
-(⛔ era la quinta trappola di §7.3, **scritta nel codice**: ammazzava i clienti di chiunque altro); e
-`--certifica` passa da 26 a **31 casi**, coi cinque nuovi che coprono *nome sbagliato ⇒ ROSSO* e
-*nome giusto ma diagnosi ancora al 4,2 % ⇒ ROSSO lo stesso*.
+⭐ **And the bench was improved where it was born crooked**: the predicate that *measured* the defect without
+**judging it** now can give red on the cure; the final cleanup no longer uses **two global patterns**
+(⛔ it was the fifth trap of §7.3, **written in the code**: it killed anyone else's clients); and
+`--certifica` goes from 26 to **31 cases**, with the five new ones covering *wrong name ⇒ RED* and
+*right name but diagnostics still at 4.2 % ⇒ RED all the same*.
 
 ---
 
-### 5.3 ⭐⭐⭐ IL GUARDIANO CURATO ALLA RADICE — e ⛔ **due sfratti su tre non si sono riprodotti**
+### 5.3 ⭐⭐⭐ THE GUARDIAN CURED AT THE ROOT — and ⛔ **two evictions out of three did not reproduce**
 
-`[M]` 25 agosto 2026, sotto lucchetto, terreno **21 su 21**. ⭐ **Due binari costruiti dagli STESSI
-sorgenti meno la cura**, scambiati **senza ricompilare**, ognuno col suo `md5` dichiarato.
+`[M]` 25 Aug 2026, under the lock, ground **21 out of 21**. ⭐ **Two binaries built from the SAME
+sources minus the cure**, swapped **without recompiling**, each with its declared `md5`.
 
-#### ⭐⭐ P4 · Il guardiano di logind — **da N chiamate a UNA**
+#### ⭐⭐ P4 · The logind guardian — **from N calls to ONE**
 
-La cella che §6.13 aveva isolato: **N=7, D=286 ms**, cioè *esattamente il bilancio che il codice si
-concede*.
+The cell §6.13 had isolated: **N=7, D=286 ms**, that is *exactly the balance the code allows
+itself*.
 
-| braccio | **chiamate per ripasso** | fot/s a sessione | p95 |
+| arm | **calls per pass** | fps per session | p95 |
 |---|---|---|---|
-| rosso, D=0 | 7,5 | 30,20 | 66-84 ms |
-| ⛔ **rosso, D=286** | **7,2** | ⛔ **1,45** | ⛔ **2 010-2 040 ms** |
-| verde, D=0 | ⭐ **1,07** | 26,99 | 74-104 ms |
-| ⭐ **verde, D=286** | ⭐ **1,07** | ⭐ **25,48** (−5,6 %) | 74-136 ms |
-| ⛔ **controllo negativo** | **7,24** | ⛔ **0,85** (−97 %) | **2 011-2 043 ms** |
+| red, D=0 | 7.5 | 30.20 | 66-84 ms |
+| ⛔ **red, D=286** | **7.2** | ⛔ **1.45** | ⛔ **2 010-2 040 ms** |
+| green, D=0 | ⭐ **1.07** | 26.99 | 74-104 ms |
+| ⭐ **green, D=286** | ⭐ **1.07** | ⭐ **25.48** (−5.6 %) | 74-136 ms |
+| ⛔ **negative control** | **7.24** | ⛔ **0.85** (−97 %) | **2 011-2 043 ms** |
 
-⭐ §6.13 dava 1,3 fot/s con p95 di due secondi: **ritrovato** (1,45 e 0,85), e la cura lo riporta a
-**25,5 fot/s con 7 sessioni su 7 attaccate**.
-⭐⭐ **E la colonna che prova la cura ALLA RADICE è la prima**: una `ListSessions` risponde per **tutti**
-gli inquilini ⇒ **da N a 1**. Era la cura che i numeri suggerivano (§6.13), e i numeri avevano ragione.
+⭐ §6.13 gave 1.3 fps with a p95 of two seconds: **found again** (1.45 and 0.85), and the cure brings it back to
+**25.5 fps with 7 sessions out of 7 attached**.
+⭐⭐ **And the column that proves the cure AT THE ROOT is the first**: one `ListSessions` answers for **all**
+the tenants ⇒ **from N to 1**. It was the cure the numbers suggested (§6.13), and the numbers were right.
 
-⚠ **E un predicato è stato TOLTO perché dava rosso su codice giusto**: il rilievo *«col guardiano lento
-un inquilino nuovo non riesce a collegarsi»* **non si presenta a D=286** — `[M]` il nuovo entra in
-**9 s** senza cura e in **2 s** con. §6.13 l'aveva visto **a D=5 000**, che è un'altra cella.
+⚠ **And a predicate was REMOVED because it gave red on correct code**: the finding *«col guardiano lento
+un inquilino nuovo non riesce a collegarsi»* **does not arise at D=286** — `[M]` the newcomer gets in within
+**9 s** without the cure and **2 s** with it. §6.13 had seen it **at D=5 000**, which is another cell.
 
 #### ⭐⭐ P2/P5 · *«il nostro silenzio contato come silenzio della rete»*
 
-⭐⭐⭐ **E la riga stampava già la prova che la rete non c'entrava**: `persi=0` **e `cwnd_left=13200`** —
-**la finestra di congestione era larga**. ⇒ **C'era posto per spedire; non abbiamo spedito perché non
-stavamo girando.**
+⭐⭐⭐ **And the line was already printing the proof that the network had nothing to do with it**: `persi=0` **and `cwnd_left=13200`** —
+**the congestion window was wide**. ⇒ **There was room to send; we did not send because we were not
+looping.**
 
-| braccio | esito |
+| arm | outcome |
 |---|---|
-| ⛔ **prima** | `linea-morta causa=stallo stallo_ms=12001 usciti_byte=0 persi=0 cwnd_left=13200` — su una sessione che **nella stessa cella faceva 40,36 fot/s**, ⛔ e **nessuna riga diceva perché** |
-| ⭐ **dopo** | ⭐ **zero sfratti**; la guardia si arma **6 volte**, buco peggiore **10 902 ms** |
-| ⭐ **e non morde chi non deve** | 90 s di macchina sana ⇒ **zero** righe |
-| ⛔ **controllo negativo** | lo sfratto **torna**, firma identica |
-| ⭐⭐ **e la linea morta funziona ANCORA** | `kill -9` sul client ⇒ **sfrattato lo stesso** in tutt'e due i binari |
+| ⛔ **before** | `linea-morta causa=stallo stallo_ms=12001 usciti_byte=0 persi=0 cwnd_left=13200` — on a session that **in the same cell was doing 40.36 fps**, ⛔ and **no line said why** |
+| ⭐ **after** | ⭐ **zero evictions**; the guard arms **6 times**, worst gap **10 902 ms** |
+| ⭐ **and it does not bite whom it should not** | 90 s of healthy machine ⇒ **zero** lines |
+| ⛔ **negative control** | the eviction **comes back**, identical signature |
+| ⭐⭐ **and the dead line STILL works** | `kill -9` on the client ⇒ **evicted all the same** in both binaries |
 
-**La cura**: `wt_giro_del_padre()` + un budget dichiarato — se fra due passate del ciclo passa più di
-quello, **la linea morta non giudica quel giro e i conti ripartono**, con una riga che lo dice.
-⛔⭐ **E il pezzo di disegno che vale**: *un buco conta come **progresso**, non come tempo da
-sottrarre* — sottrarlo terrebbe l'orologio indietro per sempre, e **un client davvero morto non
-verrebbe riconosciuto mai**.
+**The cure**: `wt_giro_del_padre()` + a declared budget — if more than that passes between two passes of the loop,
+**the dead line does not judge that round and the counts restart**, with a line that says so.
+⛔⭐ **And the piece of design that counts**: *a gap counts as **progress**, not as time to
+subtract* — subtracting it would keep the clock behind forever, and **a client really dead would never
+be recognised**.
 
-⭐⭐ **E la riga dello sfratto porta adesso SETTE testimoni nuovi** (`fermo_ms=`, `giri_fermi=`,
-`saltati=`, `ritmo_giu=`, `ritmo_arretrato=`, `ritmo_posti=`, `ritmo_scesi=`): §6.15 ha dovuto
-**appaiare due righe a occhio** per dire *«il regolatore tratteneva»* — ⭐ **adesso lo dice la riga
-dello sfratto.**
+⭐⭐ **And the eviction line now carries SEVEN new witnesses** (`fermo_ms=`, `giri_fermi=`,
+`saltati=`, `ritmo_giu=`, `ritmo_arretrato=`, `ritmo_posti=`, `ritmo_scesi=`): §6.15 had to
+**pair two lines by eye** to say *«il regolatore tratteneva»* — ⭐ **now the eviction line
+says it.**
 
-⭐ E `sentinella_conti()` **ha finalmente un chiamante**: `[M]` con due sessioni, `chiamate=29 → 59 →
-89`, cioè **30 al minuto = una per ripasso**, `peggiore_ms=6`. E `LENTA_MS` scende da 20 a **10**,
-perché `[M]` a 20 **non avrebbe parlato mai**.
+⭐ And `sentinella_conti()` **finally has a caller**: `[M]` with two sessions, `chiamate=29 → 59 →
+89`, that is **30 per minute = one per pass**, `peggiore_ms=6`. And `LENTA_MS` drops from 20 to **10**,
+because `[M]` at 20 **it would never have spoken**.
 
-#### ⛔⛔ E la parte onesta: **due difetti su tre non si sono riprodotti**
+#### ⛔⛔ And the honest part: **two defects out of three did not reproduce**
 
 | | |
 |---|---|
-| ⛔ **l'anello di §6.15 NON si è riprodotto** | `[M]` cinque sessioni sature, 150 s, **tutt'e due i binari** → 37,6-38,1 fot/s a testa, ritardo 10-12 ms, **zero sfratti**. ⇒ Il banco dice *«non giudico»*: ⭐ **«non si è presentato» non è «è curato»**. **P2 resta aperto**, e quel che la cura lascia è l'**attribuzione**, perché la prossima riproduzione lo dica in **una riga sola** |
-| ⛔ **P5 nella forma in cui era scritto non si riproduce** | `[M]` una sessione, **30 s di buco fra due scene** su ciclo sano ⇒ **nessuno sfratto**, `PING` ogni 5 s e risposta entro 1 s. ⇒ ⭐ **Il margine «due volte» di §6.8 regge finché il ciclo gira**: a romperlo è **il ciclo fermo, non il buco** |
+| ⛔ **the loop of §6.15 did NOT reproduce** | `[M]` five saturated sessions, 150 s, **both binaries** → 37.6-38.1 fps each, latency 10-12 ms, **zero evictions**. ⇒ The bench says *«non giudico»*: ⭐ **«non si è presentato» non è «è curato»**. **P2 stays open**, and what the cure leaves is the **attribution**, so that the next reproduction says it in **one single line** |
+| ⛔ **P5 in the form it was written does not reproduce** | `[M]` one session, **30 s of gap between two scenes** on a healthy loop ⇒ **no eviction**, `PING` every 5 s and answer within 1 s. ⇒ ⭐ **The «due volte» margin of §6.8 holds as long as the loop runs**: what breaks it is **the stopped loop, not the gap** |
 
-⭐⭐ **E lo sfratto ingiusto si COMANDA**: `[M]` bloccare il ciclo del padre lo riproduce **3 volte su
-3**, con firma identica — **senza bisogno della scena satura**. ⇒ È quella la scena giusta per
-misurarlo, e adesso c'è.
+⭐⭐ **And the unfair eviction can be COMMANDED**: `[M]` blocking the parent's loop reproduces it **3 times out of
+3**, with identical signature — **without needing the saturated scene**. ⇒ That is the right scene to
+measure it, and now it exists.
 
-#### ⚠ Il prezzo, dichiarato
+#### ⚠ The price, declared
 
-⛔ **La cura di P4 toglie `N`, non `D`**: a N=7/D=286 resta un pedaggio del **5,6 %**. Toglierlo vuol
-dire spostare la domanda **fuori** dal ciclo, su un aiutante come si è già fatto per PAM — **è
-un'altra decisione** · ⚠ **la guardia costa un ritardo di riconoscimento**: un client che muore
-*durante* un buco è riconosciuto fino a una soglia più tardi, ed è visibile in `giri_fermi=` e
-`saltati=` (`[M]` **zero** su macchina sana).
+⛔ **The P4 cure removes `N`, not `D`**: at N=7/D=286 a toll of **5.6 %** remains. Removing it means
+moving the question **out** of the loop, onto a helper as was already done for PAM — **it is
+another decision** · ⚠ **the guard costs a recognition delay**: a client that dies
+*during* a gap is recognised up to one threshold later, and it is visible in `giri_fermi=` and
+`saltati=` (`[M]` **zero** on a healthy machine).
 
-`[?]` **Il verso positivo dell'invariante I2** (una sessione locale vera che vince sulla remota) non è
-stato provato: sulla macchina **non c'è nessuna sessione con seat**, e crearne una vorrebbe dire
-toccare il desktop dell'utente. ⭐ Mitigazione: le due forme condividono **un corpo solo**.
+`[?]` **The positive direction of invariant I2** (a real local session that wins over the remote one) was not
+tested: on the machine **there is no session with a seat**, and creating one would mean
+touching the user's desktop. ⭐ Mitigation: the two forms share **one single body**.
 
-#### I guasti innestati — **44 su 44**, e ⭐ **14 casi su 44 finiscono in «non giudico»**
+#### The injected faults — **44 out of 44**, and ⭐ **14 cases out of 44 end in «non giudico»**
 
-leva non presa · zero chiamate · sfratto con `persi=0` / senza sfratti / **con perdita vera** ·
-registro non letto · guardia che si arma **sotto** soglia · guardia che morde **una macchina sana** ·
-chiamate per ripasso **nei due versi** · ritmo che cala e che non cala.
+lever not taken · zero calls · eviction with `persi=0` / without evictions / **with real loss** ·
+log not read · guard that arms **under** threshold · guard that bites **a healthy machine** ·
+calls per pass **in both directions** · rate that drops and that does not drop.
 
-⚠ **Cinque difetti di banco trovati facendoli girare**: il file del ritardo con due nomi diversi
-(⭐ **la guardia «LA LEVA NON HA PRESO» ha salvato due celle**) · il metro dei fotogrammi non tarato ·
-`ETXTBSY` copiando sopra un binario in esecuzione · `0x0F` invece della stretta di mano (posto non
-ancora liberato) · ⛔ e **`scatti=None` che diventava `[]`** — *«non ho letto»* trasformato in
-*«zero»*, ⭐ **proprio la confusione che tutti i predicati esistono per non fare**, trovata dal
+⚠ **Five bench defects found by running them**: the delay file with two different names
+(⭐ **the «LA LEVA NON HA PRESO» guard saved two cells**) · the frame meter not calibrated ·
+`ETXTBSY` copying over a running binary · `0x0F` instead of the handshake (slot not
+yet freed) · ⛔ and **`scatti=None` becoming `[]`** — *«non ho letto»* turned into
+*«zero»*, ⭐ **exactly the confusion all the predicates exist to avoid**, found by
 `--certifica`.
 
-⚠⚠ **E due dichiarazioni di onestà**: ⛔ `10-b97-guardiano.py` porta **ancora** un `pkill` con modello
-**globale** — la quinta trappola di §7.3, **scritta nel codice**, quella che ha già combaciato con 24
-clienti vivi di un altro banco · e ⛔ **una rottura d'isolamento propria, dichiarata**: 1-2 sessioni di
-messa a punto aperte mentre il lucchetto era di un altro incarico. ⭐ Le scene erano spente quasi
-sempre, **nessuno di quei numeri è riferito**, e da lì in poi si è misurato **solo col lucchetto in
-mano**.
+⚠⚠ **And two declarations of honesty**: ⛔ `10-b97-guardiano.py` **still** carries a `pkill` with a
+**global** pattern — the fifth trap of §7.3, **written in the code**, the one that already matched 24
+live clients of another bench · and ⛔ **an isolation breach of our own, declared**: 1-2 tuning
+sessions opened while the lock belonged to another assignment. ⭐ The scenes were off almost
+always, **none of those numbers is reported**, and from then on we measured **only with the lock in
+hand**.
 
 ---
 
-### 5.4 ⭐⭐⭐ L'UNDICESIMO ADESSO LO SA — e i quattro `16` sono diventati **uno**
+### 5.4 ⭐⭐⭐ THE ELEVENTH NOW KNOWS — and the four `16`s have become **one**
 
-`[M]` 25 agosto 2026, albero compilato col tetto a **2**, sotto lucchetto. ⭐ **E il banco verifica la
-scena prima di giudicare**: *«palchi 2 su 2 (PIENI) e posti 1 su 2 (ce n'è uno LIBERO)»* — cioè
-esattamente il difetto: **la tabella dei figli piena mentre quella dei posti ha posto**.
+`[M]` 25 Aug 2026, tree compiled with the cap at **2**, under the lock. ⭐ **And the bench verifies the
+scene before judging**: *«palchi 2 su 2 (PIENI) e posti 1 su 2 (ce n'è uno LIBERO)»* — that is
+exactly the defect: **the children table full while the slots table has room**.
 
-| | ⛔ **ROSSO** (il prodotto di ieri) | ⭐ **VERDE** |
+| | ⛔ **RED** (yesterday's product) | ⭐ **GREEN** |
 |---|---|---|
-| sul filo, **letto nel client** | ⛔⛔ **niente**: `AMMESSO` · `SESSIONE` · *«ancora attaccato dopo 60,0 s: niente è caduto»* | ⭐ `CONGEDO invece di AMMESSO: motivo 0x0E` |
-| pixel | ⛔ **nessun fotogramma in 60 s** | l'`AMMESSO` non arriva mai: **non c'è pagina nera da avere** |
-| quanto ci mette | ⛔ **61,6 s, e non migliora mai** | ⭐ **0,6 s** |
-| il corpo | — | *«i palchi di questo server sono tutti impegnati (2 su 2): sono sessioni grafiche vive, che si liberano al logout o dopo l'abbandono»* |
-| ⛔ **la frase che l'utente LEGGE** (Firefox vero) | ⛔⛔ **«Ammesso, sessione nuova, tela 1188×714, desktop sconosciuto»** | *«quella sessione non si può servire»*, ⭐ byte-identica alla voce `0x0E` del file servito |
-| desktop acceso al respinto | 0 `gnome-shell`, 4 processi | 0 `gnome-shell`, 4 processi |
-| **verdetto** | ⛔ **3 rossi su 8, 1 «non ho misurato»** | ⭐ **8 predicati, 0 rossi, 0 «non ho misurato»** |
+| on the wire, **read in the client** | ⛔⛔ **nothing**: `AMMESSO` · `SESSIONE` · *«ancora attaccato dopo 60,0 s: niente è caduto»* | ⭐ `CONGEDO invece di AMMESSO: motivo 0x0E` |
+| pixels | ⛔ **no frame in 60 s** | the `AMMESSO` never arrives: **there is no black page to have** |
+| how long it takes | ⛔ **61.6 s, and it never gets better** | ⭐ **0.6 s** |
+| the body | — | *«i palchi di questo server sono tutti impegnati (2 su 2): sono sessioni grafiche vive, che si liberano al logout o dopo l'abbandono»* |
+| ⛔ **the sentence the user READS** (real Firefox) | ⛔⛔ **«Ammesso, sessione nuova, tela 1188×714, desktop sconosciuto»** | *«quella sessione non si può servire»*, ⭐ byte-identical to the `0x0E` entry of the served file |
+| desktop switched on for the rejected one | 0 `gnome-shell`, 4 processes | 0 `gnome-shell`, 4 processes |
+| **verdict** | ⛔ **3 reds out of 8, 1 «non ho misurato»** | ⭐ **8 predicates, 0 reds, 0 «non ho misurato»** |
 
-> #### ⛔⛔ E la cosa peggiore l'ha detta **il browser vero**, e nessuno l'aveva prevista
+> #### ⛔⛔ And the worst thing was said by **the real browser**, and nobody had foreseen it
 >
-> Il difetto **non è** *«una pagina nera senza spiegazione»*. È che la pagina scrive **«Ammesso,
-> sessione nuova, tela 1188×714»** — cioè ⛔ **rassicura l'utente**, e poi non gli manda un pixel per
-> sempre.
-> ⭐ **Un nero muto lo fa dubitare; un «sei dentro» lo fa aspettare.**
+> The defect **is not** *«una pagina nera senza spiegazione»*. It is that the page writes **«Ammesso,
+> sessione nuova, tela 1188×714»** — that is, ⛔ **it reassures the user**, and then never sends them a pixel,
+> forever.
+> ⭐ **A mute black makes them doubt; a «you are in» makes them wait.**
 
-#### I quattro `16` — e ⛔ **il quinto che resta separato, con la ragione scritta**
+#### The four `16`s — and ⛔ **the fifth that stays separate, with the reason written**
 
-⭐ Un solo numero, `RCP_TETTO_SESSIONI` in `rcp.h`, col riquadro che elenca i quattro posti in cui era
-scritto a mano **e i tre commenti che dichiaravano un legame inesistente**. Lo seguono ora
-`MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c` — ⭐ *il commento che diceva «lo seguirà dallo stesso
-posto» adesso è vero*), `QUANTI_PRESENTI` (`main.c`), e ⭐⭐ **`WT_PALCHI`, che da 8 sale con loro**:
-mordeva a **nove**, cioè **prima del dieci promesso**.
-⛔ **E `MAX_IN_VOLO` resta 16 e resta SEPARATO**, col riquadro che spiega perché: è **un'altra
-grandezza** — le autenticazioni *in volo*, che si contano anche **con zero sessioni**.
+⭐ One single number, `RCP_TETTO_SESSIONI` in `rcp.h`, with the box that lists the four places where it was
+written by hand **and the three comments that declared a non-existent link**. Now following it are
+`MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c` — ⭐ *the comment that said «lo seguirà dallo stesso
+posto» is now true*), `QUANTI_PRESENTI` (`main.c`), and ⭐⭐ **`WT_PALCHI`, which rises from 8 with them**:
+it bit at **nine**, that is **before the promised ten**.
+⛔ **And `MAX_IN_VOLO` stays 16 and stays SEPARATE**, with the box that explains why: it is **another
+quantity** — the authentications *in flight*, which are counted even **with zero sessions**.
 
-⭐ E il `return` **muto** di `presenza_segna()` diventa un **ripiego dichiarato**, una riga sola e non
-una per gesto (`CODER.md` §4.2).
+⭐ And the **mute** `return` of `presenza_segna()` becomes a **declared fallback**, one single line and not
+one per gesture (`CODER.md` §4.2).
 
-⭐⭐ **E la prova dei `#define` si legge DOPO IL PREPROCESSORE**, non nei sorgenti: *guardare come sono
-scritti è la domanda sbagliata*, ed è l'errore che quel commento faceva da mesi.
+⭐⭐ **And the proof of the `#define`s is read AFTER THE PREPROCESSOR**, not in the sources: *looking at how they are
+written is the wrong question*, and it is the error that comment had been making for months.
 
-#### ⭐ Perché `0x0E` e non `0x06` — la ragione, accanto alla riga
+#### ⭐ Why `0x0E` and not `0x06` — the reason, next to the line
 
-`0x06 BUDGET_PIENO` dice *«questa macchina non ha più capacità di codifica»*: un limite **fisico**.
-Qui il limite è **una tabella piena di palchi che nessuno sta guardando** — **amministrativo**, che è
-quel che `0x0E` già dice. ⇒ **D5**: i due motivi **si aggiungono**, e `0x06` è del giro del budget.
+`0x06 BUDGET_PIENO` says *«questa macchina non ha più capacità di codifica»*: a **physical** limit.
+Here the limit is **a table full of stages nobody is watching** — **administrative**, which is
+what `0x0E` already says. ⇒ **D5**: the two reasons **add up**, and `0x06` belongs to the budget round.
 
-⚠ **E la frase della pagina meriterebbe parole diverse, ma non queste**: `0x0E` copre ormai **cinque**
-casi, e precisarla per uno la renderebbe **falsa** per gli altri quattro. ⭐ Il caso nuovo però è
-**l'unico dei cinque che abbia un gesto e un tempo** — l'utente può chiedere a un collega di uscire, e
-comunque migliora all'abbandono. ⛔ **È una decisione del regista.**
+⚠ **And the page's sentence would deserve different words, but not these**: `0x0E` now covers **five**
+cases, and making it precise for one would make it **false** for the other four. ⭐ The new case however is
+**the only one of the five that has a gesture and a time** — the user can ask a colleague to log out, and
+in any case it gets better at abandonment. ⛔ **It is a decision for the director.**
 
-#### Il controllo negativo — **quattro guasti innestati e girati, più 38 fuori campo**
+#### The negative control — **four faults injected and run, plus 38 off-field**
 
-`congedo-muto` ⇒ ⛔ **3 rossi su 8** (è il rosso della tabella) · `figli-slegati` ⇒ ⛔ `v[16]` contro
-`attaccate[2]`, **il rosso di §6.4 riprodotto** · `palchi-otto` ⇒ `palchi[8]` · `presenti-slegati` ⇒
-`presenti[16]` · **risanato** ⇒ ⭐ tutti a 2, e `volo[16]`.
-E fuori campo `--certifica`: **38 su 38**, di cui **5 tarature del metro che girano anche nel giro
-vero**, e ⛔ *«il fiato vuoto non è uno zero»* · ⚠ *«RESPINTO ⇒ non ho misurato, mai respinto
+`congedo-muto` ⇒ ⛔ **3 reds out of 8** (it is the red of the table) · `figli-slegati` ⇒ ⛔ `v[16]` against
+`attaccate[2]`, **the red of §6.4 reproduced** · `palchi-otto` ⇒ `palchi[8]` · `presenti-slegati` ⇒
+`presenti[16]` · **healed** ⇒ ⭐ all at 2, and `volo[16]`.
+And off-field `--certifica`: **38 out of 38**, of which **5 meter calibrations that run in the real
+round too**, and ⛔ *«il fiato vuoto non è uno zero»* · ⚠ *«RESPINTO ⇒ non ho misurato, mai respinto
 correttamente»*.
 
-#### ⛔⛔ E tre conseguenze che riguardano tutti
+#### ⛔⛔ And three consequences that concern everyone
 
-1. ⛔⛔ **La cura ROMPE il terreno di `10-b93`**, e **nel modo peggiore**: quel copione fa `sed` su un
-   `#define` che **non esiste più**, il `sed` esce **0 senza sostituire**, il terreno **dichiara
-   successo**, il tetto resta 16, e il banco finisce in *«non ho misurato»*. ⭐ **La cura è una riga**,
-   e va fatta prima di rifare i test.
-2. ⛔ **`POSTO_NIENTE_PIU_POSTI` non è più raggiungibile da un utente nuovo**: posti pieni ⇒ figli
-   pieni, e il no arriva **prima**. ⇒ La cura di **R9.3**, vista scattare per la prima volta in §6.4,
-   **diventa praticamente non osservabile** — il ramo resta come rete. ⭐ **Ed è D6 che si avvera**:
-   `[M]` il respinto ha **0 `gnome-shell` e 4 processi**, contro i **42 processi e 1 `gnome-shell`**
-   di §6.4.
-3. ⛔⛔ **Gli utenti condivisi si rubano la parola d'ordine, e lo paga il ban di TUTTI**: `[M]` il
-   primo giro è morto con un utente **respinto per credenziali** su una parola posata mezz'ora prima
-   — `07-b64-terreno.sh utente` **la riscrive a ogni chiamata**, e l'ultimo che chiama vince.
-   ⛔⛔ **E ogni respinto consuma uno dei tre tentativi del ban per INDIRIZZO, che dura dodici ore e
-   mette fuori uso ogni altro agente.** ⇒ ⭐ **La cura vera è del coordinamento**, non del banco: quel
-   copione non deve rifare la parola a un utente che esiste già.
+1. ⛔⛔ **The cure BREAKS the ground of `10-b93`**, and **in the worst way**: that script runs `sed` on a
+   `#define` that **no longer exists**, the `sed` exits **0 without substituting**, the ground **declares
+   success**, the cap stays 16, and the bench ends in *«non ho misurato»*. ⭐ **The cure is one line**,
+   and it must be done before redoing the tests.
+2. ⛔ **`POSTO_NIENTE_PIU_POSTI` is no longer reachable by a new user**: slots full ⇒ children
+   full, and the no arrives **earlier**. ⇒ The cure of **R9.3**, seen triggering for the first time in §6.4,
+   **becomes practically unobservable** — the branch stays as a net. ⭐ **And it is D6 coming true**:
+   `[M]` the rejected one has **0 `gnome-shell` and 4 processes**, against the **42 processes and 1 `gnome-shell`**
+   of §6.4.
+3. ⛔⛔ **Shared users steal each other's password, and EVERYONE's ban pays for it**: `[M]` the
+   first round died with a user **rejected for credentials** on a password set half an hour earlier
+   — `07-b64-terreno.sh utente` **rewrites it at every call**, and the last one to call wins.
+   ⛔⛔ **And every rejected one consumes one of the three attempts of the ban by ADDRESS, which lasts twelve hours and
+   puts every other agent out of action.** ⇒ ⭐ **The real cure belongs to coordination**, not to the bench: that
+   script must not redo the password of a user that already exists.
 
-⚠ **Che cosa la cura NON cura**: ⛔ **non è il budget** — il tetto resta un `#define`, e questo giro lo
-rende **possibile** (un numero solo invece di quattro copie) · ⛔ **il prezzo dichiarato**: chi supera
-PAM e non ha un palco riceve `0x0E`, chi sbaglia la parola `0x07` ⇒ **il motivo dice che la parola era
-giusta**. È lo stesso prezzo che il codice paga già oggi, ⭐ **ed è il costo di non lasciare l'utente
-davanti a un nero**.
-`[?]` `WT_PALCHI` da 8 a 16 **non è stato provato a nove utenti**: qui è corretto **per costruzione**,
-non misurato.
+⚠ **What the cure does NOT cure**: ⛔ **it is not the budget** — the cap stays a `#define`, and this round makes it
+**possible** (one single number instead of four copies) · ⛔ **the declared price**: whoever passes
+PAM and has no stage receives `0x0E`, whoever gets the password wrong `0x07` ⇒ **the reason says that the password was
+right**. It is the same price the code already pays today, ⭐ **and it is the cost of not leaving the user
+in front of a black screen**.
+`[?]` `WT_PALCHI` from 8 to 16 **was not tested with nine users**: here it is correct **by construction**,
+not measured.
 
 ---
 
-### 5.5 ⛔⛔ LA LENTE SULLA CUCITURA — **il prodotto regge, i BANCHI no**
+### 5.5 ⛔⛔ THE LENS ON THE STITCHING — **the product holds, the BENCHES do not**
 
-*25 agosto 2026, mandato avversariale di sola lettura. La tesi da smentire era mia:* ⛔ *«le quattro
+*25 Aug 2026, adversarial read-only mandate. The thesis to refute was mine:* ⛔ *«le quattro
 cure sono state cucite senza conflitti e l'albero compila ⇒ vanno bene insieme»*.
 
-⭐ **La prima metà regge**: nel **prodotto** non c'è nessun incrocio che uccide — **tredici piste
-verificate e scartate**, riga per riga (il `WT_PALCHI` raddoppiato contro i cicli che lo percorrono ·
-il gancio del registro chiamato con la sessione già liberata · i puntatori tenuti attraverso i
-congedi nel lotto · l'`#include` nuovo che tira dentro un simbolo · l'identità che sopravvive al
-rimontaggio · l'invariante **I4** · `presenti[]` che trabocca · e i tipi dei sette campi nuovi).
+⭐ **The first half holds**: in the **product** there is no crossing that kills — **thirteen leads
+verified and discarded**, line by line (the doubled `WT_PALCHI` against the loops that walk it ·
+the log hook called with the session already freed · the pointers held across the
+farewells in the batch · the new `#include` that pulls in a symbol · the identity that survives the
+remount · invariant **I4** · `presenti[]` overflowing · and the types of the seven new fields).
 
-⛔⛔ **La seconda metà è FALSA, e nel verso peggiore: le cure si sono rotte a vicenda NEI BANCHI.**
-⇒ *«Compila» non era «funziona insieme», e nemmeno «si può ancora misurare».*
+⛔⛔ **The second half is FALSE, and in the worst direction: the cures broke each other IN THE BENCHES.**
+⇒ *«It compiles» was not «it works together», nor even «it can still be measured».*
 
-| # | il rilievo | quanto |
+| # | the finding | how much |
 |---|---|---|
-| **R1** | ⛔⛔⛔ **La cura del registro rompe il metro dei fotogrammi di CINQUE banchi**, e ⛔ **lo zero che ne esce ACCUSA il prodotto**: `resa()` con zero corrispondenze **non torna `None`, torna 0** — e il suo stesso commento dice che zero su scena viva *«è un GUASTO»*. ⇒ Il banco riferisce che il server **non ha spedito un pixel** mentre li spediva tutti. È la regola *«`None` non è zero»* **rotta dall'interno**, e tocca **il punto 1 della fase** | ⛔⛔⛔ |
-| **R2** | ⛔ `10-b2-terreno.sh` ha **lo stesso `sed` morto** già curato in `10-b93` — ⛔ e la sua guardia è **cieca nel verso permissivo**: cerca la stringa vecchia, non la trova, **e quindi NON dà rosso**, andando a misurare *«tabella piena»* su una tabella da sedici | ⛔⛔ |
-| **R3** | `i_due_numeri()` di `10-b93` è **muto per sempre** — *«una tabella da None»* — ⛔ **e `--certifica` resta VERDE**, perché inietta i dizionari a mano. **Strumento verde, misura spenta** | ⛔ |
-| **R4** | ⛔ **Nessuna delle righe nuove della cura del ciclo porta il nome**: 93 chiamate mute contro **una sola** che nomina. ⇒ **Il «4,4 % → 100 %» è stato misurato su un albero che non conteneva l'altra cura**, e ⛔ **la riga dello sfratto — la più importante della fase 9 — è fra le mute** | ⛔ |
-| **R5** | ⛔ `fermo_ms=` nella riga dello sfratto è il contatore **GLOBALE** mentre il commento accanto dice *«da quando questa sessione è nata»*. ⇒ Su un server acceso da un giorno, uno sfratto dopo dieci secondi direbbe `fermo_ms=40000`: chi legge **assolve la rete quando la rete c'entrava** — ⭐ **l'errore INVERSO di quello che la cura esiste per togliere** | ⛔ |
-| **R6** | Un **secondo** ramo diventato irraggiungibile oltre a quello già dichiarato: *«N figli già vivi»* non uscirà mai più | ⚠ osservabilità |
-| **R7** | Due commenti nuovi che **mentono**: uno dice che una riga la scrive `main.c` (⛔ non la scrive nessuno: se un giorno si collega il gancio sbagliato, **il ripasso si spegne senza una riga**), l'altro promette nella riga il **numero degli inquilini**, che ⛔ **non c'è** — ed è proprio il denominatore che serve per **rifiutare** la cura | ⚠ |
-| **R8** | ⛔ **`WT_RIPASSO_INSIEME 32` è la QUINTA copia a mano**, nata **nel giro che ne ha unificate quattro**, e il suo commento si lega a *«i sedici posti»* — **un letterale, non il `#define`** | ⚠ oggi, ⛔ **il giorno del budget** |
-| **R9** | La cura del buco del ciclo riazzera **anche** l'orologio dello **stallo** ⇒ su una macchina in cui il ciclo supera il budget più spesso di una volta ogni cinque secondi, ⛔ **né stallo né silenzio scattano mai**: la linea morta **smette di esistere**. ⭐ Non è silenzioso (`saltati=` cresce), ⛔ ma **nessun predicato guarda quel numero**, e il prezzo è stato misurato a 1, 2, 5 e 7 sessioni — **mai a dieci** | ⚠ |
+| **R1** | ⛔⛔⛔ **The log cure breaks the frame meter of FIVE benches**, and ⛔ **the zero that comes out of it ACCUSES the product**: `resa()` with zero matches **does not return `None`, it returns 0** — and its own comment says that zero on a live scene *«è un GUASTO»*. ⇒ The bench reports that the server **did not send a pixel** while it was sending them all. It is the rule *«`None` non è zero»* **broken from the inside**, and it touches **point 1 of the phase** | ⛔⛔⛔ |
+| **R2** | ⛔ `10-b2-terreno.sh` has **the same dead `sed`** already cured in `10-b93` — ⛔ and its guard is **blind in the permissive direction**: it looks for the old string, does not find it, **and therefore does NOT give red**, going on to measure *«tabella piena»* on a table of sixteen | ⛔⛔ |
+| **R3** | `i_due_numeri()` of `10-b93` is **mute forever** — *«una tabella da None»* — ⛔ **and `--certifica` stays GREEN**, because it injects the dictionaries by hand. **Green instrument, measurement off** | ⛔ |
+| **R4** | ⛔ **None of the new lines of the loop cure carries the name**: 93 mute calls against **one single** that names. ⇒ **The «4.4 % → 100 %» was measured on a tree that did not contain the other cure**, and ⛔ **the eviction line — the most important of phase 9 — is among the mute ones** | ⛔ |
+| **R5** | ⛔ `fermo_ms=` in the eviction line is the **GLOBAL** counter while the comment next to it says *«da quando questa sessione è nata»*. ⇒ On a server running for a day, an eviction after ten seconds would say `fermo_ms=40000`: whoever reads it **acquits the network when the network was involved** — ⭐ **the INVERSE error of the one the cure exists to remove** | ⛔ |
+| **R6** | A **second** branch become unreachable besides the one already declared: *«N figli già vivi»* will never come out again | ⚠ observability |
+| **R7** | Two new comments that **lie**: one says a line is written by `main.c` (⛔ nobody writes it: if one day the wrong hook is connected, **the pass switches off without a line**), the other promises in the line the **number of tenants**, which ⛔ **is not there** — and it is precisely the denominator needed to **reject** the cure | ⚠ |
+| **R8** | ⛔ **`WT_RIPASSO_INSIEME 32` is the FIFTH hand copy**, born **in the round that unified four of them**, and its comment ties itself to *«i sedici posti»* — **a literal, not the `#define`** | ⚠ today, ⛔ **on the day of the budget** |
+| **R9** | The cure of the loop gap **also** resets the **stall** clock ⇒ on a machine on which the loop exceeds the budget more often than once every five seconds, ⛔ **neither stall nor silence ever triggers**: the dead line **stops existing**. ⭐ It is not silent (`saltati=` grows), ⛔ but **no predicate looks at that number**, and the price was measured at 1, 2, 5 and 7 sessions — **never at ten** | ⚠ |
 
-#### ⭐ Che cosa è stato curato subito, e da chi
+#### ⭐ What was cured at once, and by whom
 
-**R1** — i cinque modelli adesso leggono **tutt'e due le forme di riga** (il gruppo dell'identità è
-**facoltativo**), e ⭐⭐ **al metro è stata aggiunta la guardia che l'avrebbe preso da sé**: si contano
-le occorrenze **crude** della parola nel testo, e se ce ne sono ma il modello non ne prende
-**nessuna**, il banco **si rifiuta di riferire zero** e dice che è il metro a essere rotto.
-⇒ *Uno zero vero e uno zero da modello morto hanno la stessa faccia: l'unico modo di distinguerli è
-guardare il testo con occhi più grossolani.*
+**R1** — the five patterns now read **both line forms** (the identity group is
+**optional**), and ⭐⭐ **the meter was given the guard that would have caught it by itself**: the
+**raw** occurrences of the word in the text are counted, and if there are some but the pattern takes
+**none**, the bench **refuses to report zero** and says it is the meter that is broken.
+⇒ *A real zero and a dead-pattern zero have the same face: the only way to tell them apart is to
+look at the text with coarser eyes.*
 
-**R2** e **R3** — curati in due posti (dal coordinamento e da chi stava misurando), col `sed` che
-adesso **conta se ha morso** e il lettore che legge **il numero unico** tenendo la lettura dei due
-nomi **come controllo**.
+**R2** and **R3** — cured in two places (by the coordination and by whoever was measuring), with the `sed` that
+now **counts whether it bit** and the reader that reads **the single number** keeping the reading of the two
+names **as a check**.
 
-**R4**, **R5**, **R7**, **R8** restano **aperti e assegnati**: sono cure di prodotto, e questo giro
-**prova, non cura**.
+**R4**, **R5**, **R7**, **R8** stay **open and assigned**: they are product cures, and this round
+**tests, it does not cure**.
 
-#### ⛔ E due difetti dei terreni condivisi, trovati mentre si misurava
+#### ⛔ And two defects of the shared grounds, found while measuring
 
-1. ⛔⛔ **`accendi` usciva ZERO su un server MORTO**: `[M]` con un'opzione che il binario non conosce,
-   il server stampa la propria guida ed esce, e il terreno diceva *«OK server 1265806 sulla porta
-   8260»* **uscendo 0**, con l'unità già `inactive` e **nessun ascoltatore**. ⇒ Un banco che si
-   fidasse direbbe «acceso», poi «la tabella non si riempie», e ⛔ **finirebbe per accusare il
-   prodotto di un difetto che era un'opzione inesistente**. ⭐ Curato: *«acceso»* vuol dire adesso
-   **che qualcuno ascolta**, e se non ascolta nessuno si stampano le righe che dicono perché.
-2. ⚠ **`RIFAI_PAROLA` non attraversava l'`ssh`**: la cura del mattino — *non rifare la parola a un
-   utente che esiste già* — era stata messa nella metà che gira **sul server**, ma la variabile non
-   era nell'elenco che le si passa. ⇒ **Non faceva niente, in silenzio.** Curata.
+1. ⛔⛔ **`accendi` exited ZERO on a DEAD server**: `[M]` with an option the binary does not know,
+   the server prints its own help and exits, and the ground said *«OK server 1265806 sulla porta
+   8260»* **exiting 0**, with the unit already `inactive` and **no listener**. ⇒ A bench that
+   trusted it would say «on», then «the table does not fill», and ⛔ **would end up accusing the
+   product of a defect that was a non-existent option**. ⭐ Cured: *«acceso»* now means
+   **that someone is listening**, and if nobody listens the lines that say why are printed.
+2. ⚠ **`RIFAI_PAROLA` did not cross the `ssh`**: the morning's cure — *do not redo the password of a
+   user that already exists* — had been put in the half that runs **on the server**, but the variable was not
+   in the list passed to it. ⇒ **It did nothing, silently.** Cured.
 
-#### ⭐ E una domanda chiusa **per lettura**, che vale la pena scrivere
+#### ⭐ And a question closed **by reading**, which is worth writing down
 
-⛔ **`POSTO_NIENTE_PIU_POSTI` non è più raggiungibile da nessuna strada.** L'utente nuovo è fermato
-**prima** dell'`ATTACCA`; e la strada del figlio che muore non ci arriva, perché la morte passa da
-`wt_congeda_utente` → `congeda` → `posto_lascia`, che **libera il posto di pari passo**.
-⇒ ⭐ **La cura di R9.3, vista scattare per la PRIMA volta in §6.4, torna a essere non osservabile** —
-⚠ **ma stavolta perché il no arriva prima e meglio**: i due rami restano come **rete**.
+⛔ **`POSTO_NIENTE_PIU_POSTI` is no longer reachable by any route.** The new user is stopped
+**before** the `ATTACCA`; and the route of the dying child does not get there, because the death goes through
+`wt_congeda_utente` → `congeda` → `posto_lascia`, which **frees the slot in step**.
+⇒ ⭐ **The cure of R9.3, seen triggering for the FIRST time in §6.4, goes back to being unobservable** —
+⚠ **but this time because the no arrives earlier and better**: the two branches stay as a **net**.
 
 ---
 
-### 5.6 ⭐⭐⭐⭐ GLI UNDICI DESKTOP VERI SULL'ALBERO CUCITO — **le quattro cure non costano niente**
+### 5.6 ⭐⭐⭐⭐ THE ELEVEN REAL DESKTOPS ON THE STITCHED TREE — **the four cures cost nothing**
 
-`[M]` 25 agosto 2026, albero con le **quattro cure cucite**, undici utenti veri, gradini da 45 s a
-regime, ⭐ **terreno 21 su 21 prima di OGNI scena**.
+`[M]` 25 Aug 2026, tree with the **four cures stitched**, eleven real users, steps of 45 s at
+steady state, ⭐ **ground 21 out of 21 before EVERY scene**.
 
-#### ⭐⭐ L'àncora ritrova il SEI — quindi i numeri si confrontano
+#### ⭐⭐ The anchor finds the SIX again — so the numbers can be compared
 
-`[M]` `capienza = 6`, dirupo **all'ottavo** (29,63 → 1,85 fot/s), e il banco lo dichiara da sé.
+`[M]` `capienza = 6`, cliff **at the eighth** (29.63 → 1.85 fps), and the bench declares it by itself.
 
-| | **ferma** (11) | ⭐ **vero** (11) | **satura** (6) | **satura** (11) |
+| | **still** (11) | ⭐ **real** (11) | **saturated** (6) | **saturated** (11) |
 |---|---|---|---|---|
-| fot/s a testa | 0,02 · *(0,02)* | **9,67** · *(9,79)* | 38,62 · *(38,54)* | 0,98 · *(0,97)* |
-| ritardo mediano | 15,1 ms | ⭐ **8,0 ms** · *(8,0)* | 11,3 · *(11,2)* | 1 121,7 · *(1 134,7)* |
-| GPU **render** | ⭐ **0,0 %** · *(0,0)* | 22,2 % · *(22,3)* | 88,2 % · *(88,8)* | 99,5 % · *(99,6)* |
-| GPU **VEBOX** | 0,0 % | ⚠ **23,9 %** · *(24,1)* | 51,6 % · *(52,6)* | 0,9 % |
-| PSS totale | 2 031,8 MiB · *(2 028)* | 3 374,9 · *(3 382)* | 1 262,4 · *(1 257)* | 2 208,5 · *(2 209)* |
-| violazioni di **I1** | 0 | ⭐ **0** · *(0)* | 0 | ⛔ **38** · *(37)* |
+| fps each | 0.02 · *(0.02)* | **9.67** · *(9.79)* | 38.62 · *(38.54)* | 0.98 · *(0.97)* |
+| median latency | 15.1 ms | ⭐ **8.0 ms** · *(8.0)* | 11.3 · *(11.2)* | 1 121.7 · *(1 134.7)* |
+| GPU **render** | ⭐ **0.0 %** · *(0.0)* | 22.2 % · *(22.3)* | 88.2 % · *(88.8)* | 99.5 % · *(99.6)* |
+| GPU **VEBOX** | 0.0 % | ⚠ **23.9 %** · *(24.1)* | 51.6 % · *(52.6)* | 0.9 % |
+| total PSS | 2 031.8 MiB · *(2 028)* | 3 374.9 · *(3 382)* | 1 262.4 · *(1 257)* | 2 208.5 · *(2 209)* |
+| violations of **I1** | 0 | ⭐ **0** · *(0)* | 0 | ⛔ **38** · *(37)* |
 
-*(fra parentesi i numeri di §6.12, **prima** delle cure)* ⇒ ⭐⭐ **ogni colonna combacia entro l'1-3 %.**
+*(in brackets the numbers of §6.12, **before** the cures)* ⇒ ⭐⭐ **every column matches within 1-3 %.**
 
-#### Le quattro domande, con la risposta
+#### The four questions, with the answer
 
-1. ⭐ **Il desktop vero regge undici senza un graffio: sì.** `[M]` la prima sessione va da 10,43 a
-   **9,55** fot/s dall'una all'undicesima — **−8,4 %**, sotto la tolleranza (§6.12: −7,7 %) — con
-   **zero violazioni di I1, zero non giudicati**, ritardo **piatto** (8,6 → 8,5 ms) e zero chiavi.
-2. ⭐⭐ **Undici desktop FERMI costano ancora GPU zero**: `[M]` 0,0 % su tutti e quattro i motori a
-   ogni gradino, **RC6 100 %, GT 0 MHz**. ⇒ ⭐ **Il disegno del budget non va rifatto.**
-3. ⭐ **Il registro costa quel che dichiara, e meno di quanto si temeva**: `[M]` **445,6 righe/s ·
-   58,7 kB/s · 131,7 byte/riga**, e ⭐⭐ **il costo per riga NON cresce col numero di inquilini**
-   (115,8 → 119,6 byte/riga da 1 a 7 sessioni; le righe/s crescono **linearmente**). ⇒ Ritmo e ritardo
-   **non ne risentono**.
-   ⭐⭐ **E l'attribuzione REGGE a undici**: `[M]` righe di diagnosi **100,0 %**, **11 nomi distinti su
-   11**, **0 righe ambigue**, e ⛔ **l'atomicità tiene: 0 orfane, 0 innestate, 0 troncate su 524 552
-   righe**, la più lunga **823 byte** — identica agli 822 misurati a quattro sessioni.
-4. ⚠ **Il dirupo non si è mosso**: `[M]` **870,65 Mpixel/s ridisegnati reggono, 991,44 crollano**, e la
-   retta dà il soffitto a **846,3** contro i ~842 di §6.12 — ⭐ **0,5 % di scarto**, e dentro i
-   873-953 di §6.15.
+1. ⭐ **Does the real desktop hold eleven without a scratch: yes.** `[M]` the first session goes from 10.43 to
+   **9.55** fps from the first to the eleventh — **−8.4 %**, under the tolerance (§6.12: −7.7 %) — with
+   **zero violations of I1, zero not judged**, **flat** latency (8.6 → 8.5 ms) and zero keyframes.
+2. ⭐⭐ **Eleven STILL desktops still cost zero GPU**: `[M]` 0.0 % on all four engines at
+   every step, **RC6 100 %, GT 0 MHz**. ⇒ ⭐ **The budget design does not need redoing.**
+3. ⭐ **The log costs what it declares, and less than was feared**: `[M]` **445.6 lines/s ·
+   58.7 kB/s · 131.7 bytes/line**, and ⭐⭐ **the cost per line does NOT grow with the number of tenants**
+   (115.8 → 119.6 bytes/line from 1 to 7 sessions; the lines/s grow **linearly**). ⇒ Rate and latency
+   **are not affected**.
+   ⭐⭐ **And the attribution HOLDS at eleven**: `[M]` diagnostic lines **100.0 %**, **11 distinct names out of
+   11**, **0 ambiguous lines**, and ⛔ **atomicity holds: 0 orphaned, 0 interleaved, 0 truncated over 524 552
+   lines**, the longest **823 bytes** — identical to the 822 measured at four sessions.
+4. ⚠ **The cliff has not moved**: `[M]` **870.65 Mpixel/s redrawn hold, 991.44 collapse**, and the
+   line gives the ceiling at **846.3** against the ~842 of §6.12 — ⭐ **0.5 % deviation**, and inside the
+   873-953 of §6.15.
 
-#### ⭐ Le cure viste lavorare, una per una
+#### ⭐ The cures seen working, one by one
 
-- **il guardiano** — `[M]` **30-31 chiamate al minuto, cioè UNA per ripasso, identiche da 1 a 11
-  sessioni** e **anche dentro il crollo**. `giri_fermi=0`, `giro_peggiore_ms=0`. ⭐ Prima della cura
-  sarebbe stato `N × D`.
-- **l'anello** — ⭐ `[M]` **zero sfratti ingiusti in 27 minuti**, compresi **cinque minuti di crollo a
-  1 fot/s con 1,1 s di ritardo**. Le 22 righe `linea-morta` del giro cadono **tutte** nei due istanti
-  in cui il banco ammazza i clienti. ⇒ ⭐ **La linea morta non è incondizionata e sa ancora mordere.**
-- **il tetto** — a undici: `posti occupati 11 · negati 0`, corretto. ⛔ **La cura non è stata
-  sollecitata**: servirebbero diciassette utenti.
-- **il ripiego del passo** — ⛔ **non sollecitato**: le tele sono 1920×1080, passo multiplo di 64.
-  `[M]` **zero SIGSEGV**, e le 44 morti di figlio del giro sono **tutte segnale 15**, cioè lo sgombero.
+- **the guardian** — `[M]` **30-31 calls per minute, that is ONE per pass, identical from 1 to 11
+  sessions** and **even inside the collapse**. `giri_fermi=0`, `giro_peggiore_ms=0`. ⭐ Before the cure
+  it would have been `N × D`.
+- **the loop** — ⭐ `[M]` **zero unfair evictions in 27 minutes**, including **five minutes of collapse at
+  1 fps with 1.1 s of latency**. The 22 `linea-morta` lines of the round fall **all** in the two instants
+  in which the bench kills the clients. ⇒ ⭐ **The dead line is not unconditional and can still bite.**
+- **the cap** — at eleven: `posti occupati 11 · negati 0`, correct. ⛔ **The cure was not
+  stressed**: seventeen users would be needed.
+- **the stride fallback** — ⛔ **not stressed**: the canvases are 1920×1080, stride a multiple of 64.
+  `[M]` **zero SIGSEGV**, and the 44 child deaths of the round are **all signal 15**, that is the clearing.
 
-#### ⛔ Le quattro cose che non ci si aspettava
+#### ⛔ The four things nobody expected
 
-1. ⛔⛔ **La colonna CPU di §6.12 non è quasi mai nostra.** `[M]` alla satura a undici la macchina legge
-   **15,1 %**, ma il server del banco costa **0,01 nuclei** e i suoi clienti **0,01**. Al primo gradino
-   «vero» la macchina è all'**1,7 %**, al primo «satura» al **9,3 %**, **con lo stesso carico proprio**.
-   ⇒ ⛔ **Le CPU più basse di questo giro non sono un merito delle cure: sono gli altri inquilini della
-   macchina di prova.** ⚠ *Chi confronta quella colonna fra due giri sta confrontando il traffico degli
-   altri banchi.*
-2. ⛔ **Il buco di `webtransport.c` dichiarato in §5.2 è il QUARTO di tutto il registro**: `[M]`
-   **73 091 righe su 299 709**, allo **0,0 %** di attribuzione. ⇒ **Non è una coda: è la seconda
-   famiglia per volume**, e a undici sessioni **resta muta**.
-3. ⭐ **Il VEBOX passa avanti al render anche sull'albero cucito** (23,9 % contro 22,2 %) — ⛔ **e i
-   VEBOX sono UNO**, i VDBOX due. Conferma §6.12 per la **seconda** volta.
-4. ⚠⚠ **Il lucchetto è stato preso scassinando il precedente di UN SECONDO**: `[M]` la scadenza altrui
-   cadeva alle 11:14:53, il corridore ha vinto alle **11:14:54** dopo 6 689 giri. ⭐ Prima di misurare
-   si è verificato che **nessun `remotix` fosse vivo e nessuna porta in ascolto**. ⛔ **Ma è la sesta
-   trappola di §7.3 vista dall'altro lato, ed è un pelo**: un turno sottostimato di due secondi
-   avrebbe fatto misurare **sopra** a chi c'era.
+1. ⛔⛔ **The CPU column of §6.12 is almost never ours.** `[M]` at saturated with eleven the machine reads
+   **15.1 %**, but the bench's server costs **0.01 cores** and its clients **0.01**. At the first «vero»
+   step the machine is at **1.7 %**, at the first «satura» at **9.3 %**, **with the same own load**.
+   ⇒ ⛔ **The lower CPUs of this round are not a merit of the cures: they are the other tenants of the
+   test machine.** ⚠ *Whoever compares that column between two rounds is comparing the traffic of the
+   other benches.*
+2. ⛔ **The hole of `webtransport.c` declared in §5.2 is a QUARTER of the whole log**: `[M]`
+   **73 091 lines out of 299 709**, at **0.0 %** attribution. ⇒ **It is not a tail: it is the second
+   family by volume**, and at eleven sessions it **stays mute**.
+3. ⭐ **The VEBOX overtakes the render engine on the stitched tree too** (23.9 % against 22.2 %) — ⛔ **and the
+   VEBOXes are ONE**, the VDBOXes two. It confirms §6.12 for the **second** time.
+4. ⚠⚠ **The lock was taken by breaking into the previous one by ONE SECOND**: `[M]` the other's expiry
+   fell at 11:14:53, the racer won at **11:14:54** after 6 689 rounds. ⭐ Before measuring
+   it was verified that **no `remotix` was alive and no port listening**. ⛔ **But it is the sixth
+   trap of §7.3 seen from the other side, and it was a hair**: a turn underestimated by two seconds
+   would have made us measure **on top of** whoever was there.
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **La prova cieca a undici sessioni** non è stata fatta: il banco porta un elenco **fisso di
-quattro** sessioni, e estenderlo vorrebbe dire **toccare un banco certificato in un giro la cui regola
-è «non si cura niente»**. ⭐ Quel che si può dire col numero è **il meccanismo su cui la prova cieca
-poggia**: attribuzione **100,0 %** e **11 nomi su 11**, contro il 4,2 % e **0 nomi su 4** di §6.7 ·
-⛔ **il soffitto del desktop vero**: a undici la GPU sta al 22-24 % — **sono finiti gli utenti, non la
-macchina** · ⛔ **la rete vera**: i clienti girano sulla stessa macchina · ⚠ il **+5,4 %** di byte per
-riga **non è stato rimisurato**: servirebbe un secondo albero senza la cura.
+⛔ **The blind test at eleven sessions** was not done: the bench carries a **fixed list of
+four** sessions, and extending it would mean **touching a certified bench in a round whose rule
+is «non si cura niente»**. ⭐ What can be said with the number is **the mechanism on which the blind test
+rests**: attribution **100.0 %** and **11 names out of 11**, against the 4.2 % and **0 names out of 4** of §6.7 ·
+⛔ **the ceiling of the real desktop**: at eleven the GPU sits at 22-24 % — **the users ran out, not the
+machine** · ⛔ **the real network**: the clients run on the same machine · ⚠ the **+5.4 %** bytes per
+line **was not re-measured**: a second tree without the cure would be needed.
 
-⚠ **E una rottura d'isolamento dichiarata, che è ancora nel codice**: `10-b92-dieci.py` porta nel suo
-`finally` un `pkill` con **modello globale** — ⛔ **la quinta trappola di §7.3, scritta nel codice**.
-Non ha combaciato con nessuno **solo perché si è sempre girato col lucchetto in mano**.
+⚠ **And a declared isolation breach, which is still in the code**: `10-b92-dieci.py` carries in its
+`finally` a `pkill` with a **global pattern** — ⛔ **the fifth trap of §7.3, written in the code**.
+It matched nobody **only because we always ran with the lock in hand**.
 
 ---
 
-### 5.7 ⭐⭐⭐⭐⭐ IL BUDGET — **il prodotto smette di accettare tutti e affamare tutti insieme**
+### 5.7 ⭐⭐⭐⭐⭐ THE BUDGET — **the product stops accepting everyone and starving everyone together**
 
-`[M]` 25 agosto 2026, scena **satura** 1920×1080 H.264, gradini da 30 s, undici utenti veri, sotto
-lucchetto, ⭐ **terreno 21 su 21 a ogni braccio**.
+`[M]` 25 Aug 2026, **saturated** scene 1920×1080 H.264, steps of 30 s, eleven real users, under the
+lock, ⭐ **ground 21 out of 21 at every arm**.
 
-| gradino | ⛔ **ROSSO** — budget spento | ⭐ **VERDE** — `--budget-mpixel-s 480 --riserva 0.5` |
+| step | ⛔ **RED** — budget off | ⭐ **GREEN** — `--budget-mpixel-s 480 --riserva 0.5` |
 |---|---|---|
-| 6 | 472,5 Mpx/s · 37,98 fot/s · I1 rossi **0** | 478,7 Mpx/s · **38,47 fot/s** · I1 rossi **0** |
-| 7 | 396,0 Mpx/s · **27,28** fot/s · ⛔ **I1 rossi 6** | ⛔⭐ **`CONGEDO 0x06 BUDGET_PIENO`** |
-| 8 | 35,3 Mpx/s · ⛔ **2,12 fot/s** | ⭐ **non esiste** |
-| `0x06` emessi | **0** | **1** |
-| verdetto del banco | 8 gradini · ⛔ **28 rossi** | 7 gradini · ⭐ **1 rosso** (il no del budget) |
+| 6 | 472.5 Mpx/s · 37.98 fps · I1 reds **0** | 478.7 Mpx/s · **38.47 fps** · I1 reds **0** |
+| 7 | 396.0 Mpx/s · **27.28** fps · ⛔ **I1 reds 6** | ⛔⭐ **`CONGEDO 0x06 BUDGET_PIENO`** |
+| 8 | 35.3 Mpx/s · ⛔ **2.12 fps** | ⭐ **does not exist** |
+| `0x06` emitted | **0** | **1** |
+| bench verdict | 8 steps · ⛔ **28 reds** | 7 steps · ⭐ **1 red** (the budget's no) |
 
-⭐ **E la riga che l'ha detto porta i numeri**:
+⭐ **And the line that said it carries the numbers**:
 
 > *««provamt7» ha superato PAM ma NON entra: le **6 sessioni già aperte ne chiedono 496 dei 480
 > Mpixel/s dichiarati**, e la tua ne chiederebbe altri 82 (1920×1080 a 39,5 fot/s)»*
 
-⇒ ⭐⭐ **Il figlio non nasce** (**D6**), e il no esce **sul filo**.
+⇒ ⭐⭐ **The child is not born** (**D6**), and the no goes out **on the wire**.
 
-#### I quattro controlli, tutti girati
+#### The four checks, all run
 
 | | |
 |---|---|
-| ⛔ **il controllo negativo** | rispento il budget, stessa scena ⇒ **8 gradini · 26 rossi**, `2,14 fot/s` all'ottavo, `0x06 = 0`. ⭐ **Il rosso torna** |
-| ⭐⭐ **la prova che vale doppio** | **dieci sessioni FERME col budget acceso ⇒ ZERO rifiutate**. *Un budget che rifiutasse dieci inquilini che non costano niente sbaglierebbe quanto uno che ammette l'ottavo* |
-| ⭐ **il controllo positivo, e costa 30 s** | budget a **40** Mpx/s, **sotto il costo di una sola** 1080p ⇒ **la PRIMA è rifiutata**, `0x06` sul filo, **zero processi accesi** |
-| ⭐ **il metro tarato PRIMA** | il modulo vero montato e confrontato col predittore certificato: ⭐ **8 scene su 8 combaciano**, e ritrova i numeri di §6.9 **per costruzione** — la sesta satura entra e la settima no · la decima ferma entra e l'undicesima no · a otto strozzate il conto sui pixel direbbe *«c'è posto»* (328 ≤ 484,8) e ⛔ **la porta del ritardo rifiuta** a 654 ms. Due controlli negativi mordono: la manopola nei due versi, e **spento non nega mai** |
+| ⛔ **the negative control** | budget switched off again, same scene ⇒ **8 steps · 26 reds**, `2,14 fot/s` at the eighth, `0x06 = 0`. ⭐ **The red comes back** |
+| ⭐⭐ **the test that counts double** | **ten STILL sessions with the budget on ⇒ ZERO refused**. *A budget that refused ten tenants who cost nothing would be as wrong as one that admits the eighth* |
+| ⭐ **the positive control, and it costs 30 s** | budget at **40** Mpx/s, **below the cost of one single** 1080p ⇒ **the FIRST is refused**, `0x06` on the wire, **zero processes switched on** |
+| ⭐ **the meter calibrated FIRST** | the real module mounted and compared with the certified predictor: ⭐ **8 scenes out of 8 match**, and it finds the numbers of §6.9 again **by construction** — the sixth saturated gets in and the seventh does not · the tenth still one gets in and the eleventh does not · at eight throttled the count on pixels would say *«c'è posto»* (328 ≤ 484.8) and ⛔ **the latency gate refuses** at 654 ms. Two negative controls bite: the knob in both directions, and **off never denies** |
 
-#### ⭐⭐ La cosa che non ci si aspettava, ed è il motivo per cui funziona
+#### ⭐⭐ The thing nobody expected, and it is the reason it works
 
-`[M]` Al **sesto** gradino il budget conta **496** Mpixel/s mentre la macchina ne consegna **478,7**.
-⛔ **Non è un errore**: è **la riserva che lavora**. La domanda contata è un **maggiorante** del
-consegnato, ⇒ ⭐⭐ **ed è precisamente quel margine a far cadere il no sul SETTIMO invece che
-sull'ottavo — cioè PRIMA del dirupo invece che dentro.**
+`[M]` At the **sixth** step the budget counts **496** Mpixel/s while the machine delivers **478.7**.
+⛔ **It is not an error**: it is **the reserve at work**. The counted demand is an **upper bound** of the
+delivered, ⇒ ⭐⭐ **and it is precisely that margin that makes the no fall on the SEVENTH instead of
+on the eighth — that is, BEFORE the cliff instead of inside it.**
 
-#### Che cosa è cambiato
+#### What changed
 
-`src/budget.h` + `src/budget.c` (**nuovi**) · in `main.c` la domanda di capacità **davanti a**
-`figli_assicura()` e l'accumulo **dentro** `deposita_fotogramma()` — ⭐ **senza guardie, quindi vede
-anche i fantasmi** · le tre opzioni e le righe d'avvio · `rcp.h`/`rcp.c` gli accessori e
-`attaccate[]` **allocata**, col predefinito che scende **da 16 a 10** · `figlio.c`, `webtransport.c` e
-`main.c` con le altre tre tabelle **allocate** · `registro.h` l'area nuova · le gemelle R12.3
-allineate.
-⇒ ⭐ **I quattro `#define` unificati dalla cura precedente diventano un tetto CONFIGURABILE**, che era
-il debito con la scadenza scritta.
+`src/budget.h` + `src/budget.c` (**new**) · in `main.c` the capacity question **in front of**
+`figli_assicura()` and the accumulation **inside** `deposita_fotogramma()` — ⭐ **without guards, so it sees
+the ghosts too** · the three options and the startup lines · `rcp.h`/`rcp.c` the accessors and
+`attaccate[]` **allocated**, with the default going down **from 16 to 10** · `figlio.c`, `webtransport.c` and
+`main.c` with the other three tables **allocated** · `registro.h` the new area · the R12.3 twins
+aligned.
+⇒ ⭐ **The four `#define`s unified by the previous cure become a CONFIGURABLE cap**, which was
+the debt with the written deadline.
 
-**Il contratto del banco scritto prima è rispettato in tutti e cinque i punti**: i nomi delle opzioni
-· la riga d'avvio nel registro **acceso e spento** · `0x06` col corpo **e le cifre** · `0x06 ≠ 0x0E` ·
-i `negati` a ogni verdetto **anche a budget spento**.
+**The bench contract written beforehand is respected in all five points**: the option names
+· the startup line in the log **on and off** · `0x06` with the body **and the figures** · `0x06 ≠ 0x0E` ·
+the `negati` at every verdict **even with the budget off**.
 
-#### ⛔ Il difetto che il budget ha smascherato nella frase, e la sua cura
+#### ⛔ The defect the budget unmasked in the sentence, and its cure
 
-**«Rimpicciolisci la finestra» era FALSA al cancello.** Il `0x06` si decide **prima che nasca il
-palco**, e lì l'unico numero di tela in mano è `video.misura_massima`, che è il tetto del
-**DECODIFICATORE del client** — non della finestra (`pagina.html` · `VIA_MSE()` lo scrive a lettere, e `:1608`
-lo misura con `VideoDecoder.isConfigSupported`). ⇒ ⛔ **Chi rimpiccioliva e riprovava riceveva lo
-stesso identico no.**
-⭐ La moneta resta il **pixel** — mai le teste, che sono l'altro ramo — ⛔ **ma la leva è il
-DISPOSITIVO, non la finestra**.
-✅ **Curata**: la frase adesso dice l'unica cosa vera, cioè **quando la capacità torna**.
+**«Rimpicciolisci la finestra» was FALSE at the gate.** The `0x06` is decided **before the
+stage is born**, and there the only canvas number in hand is `video.misura_massima`, which is the ceiling of the
+client's **DECODER** — not of the window (`pagina.html` · `VIA_MSE()` spells it out, and `:1608`
+measures it with `VideoDecoder.isConfigSupported`). ⇒ ⛔ **Whoever shrank and retried received the
+very same no.**
+⭐ The currency stays the **pixel** — never the heads, which are the other branch — ⛔ **but the lever is the
+DEVICE, not the window**.
+✅ **Cured**: the sentence now says the only true thing, that is **when the capacity comes back**.
 
-#### Le `[?]` e i difetti di banco
+#### The `[?]` and the bench defects
 
-`[?]` **`--tetto-sessioni` è verificato solo nella riga d'avvio** (chiesto 7 → in vigore 7): le quattro
-tabelle lo seguono **per costruzione**, non è stato portato al soffitto con sette utenti ·
-`[?]` **la soglia del ritardo non ha mai morso da sola**: ha deciso sempre il conto sui pixel ·
-`[?]` **la pista dei buffer non attraversa il confine di processo** — quel numero vive nel figlio, e
-qui c'è la sola misura.
+`[?]` **`--tetto-sessioni` is verified only in the startup line** (asked 7 → in force 7): the four
+tables follow it **by construction**, it was not taken to the ceiling with seven users ·
+`[?]` **the latency threshold has never bitten on its own**: the count on pixels always decided ·
+`[?]` **the buffer lead does not cross the process border** — that number lives in the child, and
+here there is only the measurement.
 
-⛔ **Quattro difetti di banco, tre non suoi**: ⛔ un `exec` su un copione **non eseguibile** ha ucciso
-la prima campagna **dopo** che aveva già preso e mollato il lucchetto (**un'ora persa**; `[M]` 146
-copioni dei banchi erano senza `+x`, curati tutti) · una divisione per zero sul riassunto di una scena
-**ferma** · tre terreni che fanno `sed` su un `#define` che adesso vale 10 — ⭐ **e la cura non è
-aggiustare il `sed`, è TOGLIERLO**: `--tetto-sessioni N` fa **a runtime** quel che loro facevano
-ricompilando · ⛔ **e uno è suo, dichiarato**: il riepilogo stampa «uscita 1» per tutti e cinque i
-bracci, e i cinque `1` **vogliono dire cose diverse** — inservibile come giudizio, e i numeri veri
-vanno letti dalle tabelle.
+⛔ **Four bench defects, three not its own**: ⛔ an `exec` on a **non-executable** script killed
+the first campaign **after** it had already taken and released the lock (**an hour lost**; `[M]` 146
+bench scripts were without `+x`, all cured) · a division by zero in the summary of a **still**
+scene · three grounds that run `sed` on a `#define` that is now 10 — ⭐ **and the cure is not
+fixing the `sed`, it is REMOVING it**: `--tetto-sessioni N` does **at runtime** what they did by
+recompiling · ⛔ **and one is its own, declared**: the summary prints «uscita 1» for all five
+arms, and the five `1`s **mean different things** — useless as a judgement, and the real numbers
+must be read from the tables.
 
 ---
 
