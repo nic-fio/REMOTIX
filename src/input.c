@@ -1943,7 +1943,7 @@ int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 	/*
 	 * ⛔⛔ THE SIGN OF THE VERTICAL AXIS IS INVERTED HERE, ONCE ONLY.
 	 *
-	 * `[M]` 10 August 2026 (`RCP.md` §7.3, box «Il segno della rotella»):
+	 * `[M]` 10 August 2026 (`RCP.md` §7.3, box «The sign of the wheel»):
 	 * injecting `+120` the remote page **goes down** — `deltaY = +114`, that is the
 	 * content moves towards the end of the document.  And `RCP.md` §7.3 fixes the other
 	 * half: the client sends `+120` when the user turns the wheel **up**.

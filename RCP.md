@@ -904,7 +904,7 @@ tripped look the same.
 > **whoever gave the command sees it exit with zero**. Since the night of 10 Aug 2026 the two
 > implementations speak the same protocol of **one line on a Unix socket `0600`** — `SBLOCCA
 > <indirizzo>` → `TOLTO` / `NON-BANNATO`, and `PING` → `PONG` to say *«the command is there»*. The full
-> account is in `FASI.md` §01-filo-nudo («Che cosa NON ha funzionato»), not here.
+> account is in `FASI.md` §01-filo-nudo («What did NOT work»), not here.
 
 ⭐ **The fixed delay stays, and it is not redundant with the ban.** The server **MUST NOT** answer
 `CREDENZIALI` before **one second** has passed since reception, **even when the answer is
@@ -1034,7 +1034,7 @@ SESSIONE
  ├── u8      stato               1 = NUOVA, 2 = RIPRESA
  ├── u32     tela_larghezza      ⚠ the GRANTED canvas
  ├── u32     tela_altezza
- └── stringa desktop             one of: gnome · kde · xfce · lxqt · cinnamon · sconosciuto
+ └── stringa desktop             one of: gnome · kde · xfce · lxqt · cinnamon · unknown
 ```
 
 ⭐ **The granted canvas can be different from the one asked for**, and it is the case of the fallback on KDE

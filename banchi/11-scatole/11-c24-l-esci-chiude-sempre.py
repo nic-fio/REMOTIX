@@ -40,7 +40,7 @@ On LXQt «Log out» made the session BE REBORN instead of closing it.  `[M]` 16
 times out of 20 with yesterday's binary, **1 out of 20** with this morning's: it is a
 RACE, and the outcome depends on the moment in which the user chooses «Log out».
 
-`[R]` `src/figlio.c`, «IT WAS THERE AND NOW IT IS NOT ANY MORE»: the child tells a
+`[R]` `src/figlio.c`, «IT WAS THERE AND NOW IT IS NO LONGER»: the child tells a
 session that was NEVER there (⇒ it makes it be born) from one that was there and the user
 closed (⇒ ⛔ it does NOT redo it, it sends away whoever watches with 0x10).  The distinction
 lies entirely in `vista_viva`: if the session dies BEFORE the child has
@@ -64,7 +64,7 @@ seen it alive, for it «it was never there», and it writes «I AM MAKING IT BE 
 The first idea was: instead of the gesture, SIGKILL to the tenant's compositor
 ⇒ the stage falls without the user having closed it ⇒ «it must be reborn».
 ⛔ **It is wrong, and it is the product that says so.**  `src/figlio.c`, in the same
-box «IT WAS THERE AND NOW IT IS NOT ANY MORE»:
+box «IT WAS THERE AND NOW IT IS NO LONGER»:
 
     «⚠ And the same holds if the compositor DIED by itself: from our side
      it is indistinguishable from a logout, and the right behaviour is the same
