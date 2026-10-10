@@ -1,0 +1,185 @@
+<title>REMOTIX installer TUI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;600&family=Sora:wght@600&display=swap">
+<style>
+/* Layout: una colonna di schede, ognuna = una schermata del terminale (80 colonne) + la sua spiegazione accanto */
+:root {
+  --bg: #F3F5F9; --fg: #1B2232; --muted: #5B6578; --line: #D5DBE6; --card: #FFFFFF; --accent: #0A5FE0;
+  --t-bg: #0E131D; --t-fg: #D5DCE8; --t-dim: #7D889C; --t-blue: #5A9BFF; --t-green: #3EC27E; --t-amber: #E3A82F; --t-red: #F0625A; --t-line: #3A4457; --t-sel: #22324D;
+  --f-disp: "Sora", "IBM Plex Sans", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #10141C; --fg: #E2E7EF; --muted: #98A2B5; --line: #2A3242; --card: #161C27; --accent: #5A9BFF; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #10141C; --fg: #E2E7EF; --muted: #98A2B5; --line: #2A3242; --card: #161C27; --accent: #5A9BFF; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; }
+header h1 { font-family: var(--f-disp); font-weight: 600; font-size: 1.7rem; margin: 0 0 .3rem; text-wrap: balance; }
+header h1 b { color: var(--accent); }
+header p { color: var(--muted); max-width: 68ch; margin: 0; }
+.flow { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 18px 0 8px; font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.flow span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: var(--card); }
+section.s { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 20px 28px; align-items: start; margin-top: 40px; }
+@media (max-width: 1100px) { section.s { grid-template-columns: minmax(0, 1fr); } }
+.term { overflow-x: auto; background: var(--t-bg); border-radius: 10px; box-shadow: 0 1px 0 var(--line), 0 10px 30px rgba(10, 20, 40, .18); }
+.term pre { margin: 0; padding: 14px 16px; font-family: var(--f-mono); font-size: 13px; line-height: 1.45; color: var(--t-fg); white-space: pre; }
+.note h2 { font-family: var(--f-disp); font-weight: 600; font-size: 1.15rem; margin: 0 0 .4rem; }
+.note .tag { display: inline-block; font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: .3rem; }
+.note p, .note li { max-width: 62ch; }
+.note ul { padding-left: 1.1rem; margin: .4rem 0; }
+.note li { margin: .2rem 0; }
+.note code { font-family: var(--f-mono); font-size: .9em; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.b { color: var(--t-blue); font-weight: 700 } .g { color: var(--t-green); font-weight: 700 } .a { color: var(--t-amber); font-weight: 700 }
+.r { color: var(--t-red); font-weight: 700 } .d { color: var(--t-dim) } .w { font-weight: 700 } .l { color: var(--t-line) }
+.sel { background: var(--t-sel); }
+footer { margin-top: 48px; color: var(--muted); font-size: 13px; max-width: 70ch; }
+</style>
+
+<div class="wrap">
+<header>
+  <h1><b>REMOTIX</b> · l'installatore nel terminale</h1>
+  <p>Proposta per la TUI dopo le decisioni del 10 ottobre (DECISIONI §10.36): REMOTIX non modifica il sistema, dice cosa manca; quattro passi; una cornice fissa da 80 colonne, che va bene anche via ssh. I testi delle schermate sono in inglese, come il prodotto; le spiegazioni accanto sono per noi.</p>
+  <div class="flow"><span>1 Check</span><span>2 Plan</span><span>3 Install</span><span>4 Ready</span></div>
+</header>
+<main id="schermate"></main>
+<footer>Esempio realistico: Debian 13 con GNOME 48, Intel UHD 770 (il server di prova), porta predefinita 7447. Il blocco d'esempio è una Fedora 44 KDE con Radeon senza i driver con H.264. Tutti i dati sono di esempio.</footer>
+</div>
+
+<script>
+// Ogni schermata: righe di segmenti [testo, classe]. Il disegnatore riempie fino a 76 colonne utili e mette la cornice (80 in tutto).
+const W = 76;
+const len = s => [...s].length;
+function riga(seg) {
+  let out = '', n = 0;
+  for (const [t, c] of seg) { n += len(t); out += c ? `<span class="${c}">${esc(t)}</span>` : esc(t); }
+  return '<span class="l">│</span> ' + out + ' '.repeat(Math.max(0, W - n)) + ' <span class="l">│</span>';
+}
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function testa(sx, dx) {
+  const mezzo = W + 2 - len(sx) - len(dx) - 6;
+  return `<span class="l">╭─ </span><span class="b">REMOTIX</span><span class="w">${esc(sx.slice(7))}</span><span class="l"> ${'─'.repeat(mezzo)} </span><span class="d">${esc(dx)}</span><span class="l"> ─╮</span>`;
+}
+const sep = '<span class="l">├' + '─'.repeat(W + 2) + '┤</span>';
+const piede = '<span class="l">╰' + '─'.repeat(W + 2) + '╯</span>';
+function passi(cur) {
+  const nomi = ['Check', 'Plan', 'Install', 'Ready'], seg = [];
+  nomi.forEach((n, i) => {
+    if (i) seg.push(['  ›  ', 'd']);
+    if (i < cur) seg.push(['✓ ' + n, 'g']); else if (i === cur) seg.push(['● ' + n, 'b']); else seg.push(['○ ' + n, 'd']);
+  });
+  return seg;
+}
+function col(et, testo, stato, cl) { // etichetta 18, testo 46, stato 12
+  const pad = (s, n) => s + ' '.repeat(Math.max(0, n - len(s)));
+  return [[pad(et, 18), ''], [pad(testo, 46), ''], [stato, cl]];
+}
+function schermo(sx, dx, cur, corpo, tasti) {
+  const L = [testa(sx, dx)];
+  if (cur !== null) L.push(riga(passi(cur)));
+  L.push(sep, riga([]));
+  corpo.forEach(r => L.push(riga(r)));
+  L.push(riga([]), sep, riga(tasti), piede);
+  return L.join('\n');
+}
+const DX = 'Debian 13 · GNOME 48';
+const S = [
+ { tag: 'Passo 1 · tutto a posto', h: 'Check: cosa c\'è', p: [
+   'Una riga per ogni requisito, con lo stato a destra. Niente domande: si guarda e basta, e non si tocca niente.',
+   'Gli avvisi (ambra) non fermano: qui la sospensione automatica, che staccherebbe tutti gli utenti remoti. REMOTIX la segnala, non la cambia.',
+   'Con <code>d</code> si aprono i dettagli tecnici (driver, versioni, percorsi) per chi li vuole.'],
+   t: schermo('REMOTIX 1.0 · Installation', DX, 0, [
+     col('System', 'Debian 13 (trixie) · certified', '✓ OK', 'g'),
+     col('Desktop', 'GNOME 48 · Wayland', '✓ OK', 'g'),
+     col('Graphics card', 'Intel UHD 770 · H.264 encode (VA-API)', '✓ OK', 'g'),
+     col('Audio', 'PipeWire 1.4.2', '✓ OK', 'g'),
+     col('Port 7447', 'free', '✓ OK', 'g'),
+     col('Users', '3 people can log in (PAM: sshd rules)', '✓ OK', 'g'),
+     col('Idle suspend', 'the machine can suspend when idle', '! WARNING', 'a'),
+     [],
+     [['Nothing is missing.', 'w']],
+     [['Warning: an idle suspend would disconnect every remote user.', 'd']],
+   ], [['enter', 'w'], [' continue · ', 'd'], ['d', 'w'], [' details · ', 'd'], ['q', 'w'], [' quit', 'd']]) },
+
+ { tag: 'Passo 1 · manca qualcosa', h: 'Check: cosa manca', p: [
+   'Il cuore del nuovo principio: REMOTIX dice <b>cosa</b> manca, non <b>come</b> procurarselo. Nessun nome di pacchetto, nessun comando da copiare.',
+   'L\'installazione non può proseguire: l\'unico tasto utile è uscire. L\'amministratore provvede e rilancia.',
+   'Il codice <code>RX-GPU-005</code> resta per chi cerca nel manuale o chiede assistenza.'],
+   t: schermo('REMOTIX 1.0 · Installation', 'Fedora 44 · KDE Plasma 6.4', 0, [
+     col('System', 'Fedora 44 · compatible, not certified', '✓ OK', 'g'),
+     col('Desktop', 'KDE Plasma 6.4 · Wayland', '✓ OK', 'g'),
+     col('Graphics card', 'AMD Radeon RX 6800', '✗ MISSING', 'r'),
+     [['                  ', ''], ['no driver that encodes H.264 on this card', 'd']],
+     [['                  ', ''], ['(VA-API or Vulkan Video)', 'd']],
+     col('Audio', 'PipeWire 1.4.7', '✓ OK', 'g'),
+     col('Port 7447', 'free', '✓ OK', 'g'),
+     [],
+     [['REMOTIX cannot be installed yet.', 'r']],
+     [['Provide what is missing, then run the installer again.', '']],
+     [['RX-GPU-005', 'd']],
+   ], [['q', 'w'], [' quit · ', 'd'], ['d', 'w'], [' details', 'd']]) },
+
+ { tag: 'Passo 2', h: 'Plan: cosa succederà, e la domanda', p: [
+   'L\'unica scelta rimasta è la porta, modificabile qui con <code>tab</code>. Tutto il resto è un elenco di fatti.',
+   'I pacchetti sono quelli esatti, dalla simulazione del gestore (apt, dnf, zypper, pacman): versioni e dimensione prima del sì, come fa apt.',
+   'L\'iscrizione al gruppo <code>render</code> è l\'unica modifica a ciò che c\'era, ed è dichiarata con i nomi.',
+   'Il firewall non compare: REMOTIX non lo apre. Lo dirà la schermata finale.'],
+   t: schermo('REMOTIX 1.0 · Installation', DX, 1, [
+     [['Port      ', 'w'], ['[ 7447 ]', 'sel'], ['   TCP and UDP', 'd']],
+     [],
+     [['Packages', 'w'], ['   from REMOTIX 1.0 and Debian\'s own repositories', 'd']],
+     [['  + remotix            1.0-1         from this installer      3.1 MB', '']],
+     [['  + libei1             1.3.0-1       debian/trixie          ', ''], ['  41 kB', '']],
+     [['  + pipewire-bin       1.4.2-1       debian/trixie          ', ''], [' 312 kB', '']],
+     [['                                     4 new · 0 changed · 3.5 MB', 'd']],
+     [],
+     [['Users added to group render', 'w'], ['   alice, bob, carol', '']],
+     [['Service', 'w'], ['   remotix.service, started after the final check', '']],
+     [],
+     [['Everything above is undone by ', 'd'], ['remotix-install uninstall', 'b'], ['.', 'd']],
+   ], [['Proceed? ', 'w'], ['y', 'g'], [' yes · ', 'd'], ['n', 'r'], [' no · ', 'd'], ['tab', 'w'], [' edit port · ', 'd'], ['d', 'w'], [' details', 'd']]) },
+
+ { tag: 'Passo 3', h: 'Install: l\'avanzamento', p: [
+   'La barra e i passi, uno per riga: fatto, in corso, da fare. Con <code>r</code> si vede il registro dal vivo (le righe del gestore dei pacchetti).',
+   '<code>a</code> ferma e rimette com\'era: si chiude il passo in corso, poi si annulla tutto. Se la macchina si spegne a metà, al prossimo avvio dell\'installatore si annulla e si riparte da capo (§10.36).'],
+   t: schermo('REMOTIX 1.0 · Installation', DX, 2, [
+     [['Installing packages', 'w'], ['                                        62 %', '']],
+     [['███████████████████████████████', 'b'], ['███████████████████', 'd']],
+     [],
+     [['  ✓ ', 'g'], ['Packages checked by apt', '']],
+     [['  ◐ ', 'b'], ['Installing 4 packages', 'b']],
+     [['  ○ ', 'd'], ['Adding alice, bob, carol to group render', 'd']],
+     [['  ○ ', 'd'], ['Final check: encoding on the graphics card', 'd']],
+     [['  ○ ', 'd'], ['Starting remotix.service', 'd']],
+   ], [['a', 'w'], [' stop and undo · ', 'd'], ['r', 'w'], [' log', 'd']]) },
+
+ { tag: 'Passo 4', h: 'Ready: dove entrare, e cosa resta da fare', p: [
+   'L\'indirizzo da aprire nel browser, in evidenza.',
+   'La porta la apre l\'amministratore: REMOTIX dice quale e che il firewall in questo momento la chiude (o che non c\'è un firewall attivo).',
+   'Le prove finali in una riga ciascuna; l\'impronta del certificato per chi vuole verificarla al primo accesso.'],
+   t: schermo('REMOTIX 1.0 · Installation', DX, 3, [
+     [['✓ REMOTIX is running.', 'g']],
+     [],
+     [['OPEN IN A BROWSER', 'w']],
+     [['  https://192.168.0.2:7447', 'b']],
+     [['  certificate SHA-256  4F:1A:9C:…:E2:07', 'd']],
+     [],
+     [['TO DO', 'w']],
+     [['  ! ', 'a'], ['Port 7447 TCP+UDP is closed by firewalld (zone public).', '']],
+     [['    Open it, and forward it on the router for access from outside.', 'd']],
+     [],
+     [['WHO CAN LOG IN', 'w']],
+     [['  Any account that can log in by ssh, root excluded.', '']],
+     [],
+     [['FINAL CHECKS', 'w']],
+     [['  Encoding on the graphics card     ', ''], ['H.264 · VA-API · 4K', 'g']],
+     [['  Service                           ', ''], ['active, port 7447', 'g']],
+     [['  Desktop session                   ', ''], ['GNOME 48 starts', 'g']],
+   ], [['enter', 'w'], [' close · ', 'd'], ['r', 'w'], [' log · ', 'd'], ['d', 'w'], [' details', 'd']]) },
+];
+const M = document.getElementById('schermate');
+for (const s of S) {
+  const sec = document.createElement('section'); sec.className = 's';
+  sec.innerHTML = `<div class="term"><pre>${s.t}</pre></div><div class="note"><span class="tag">${s.tag}</span><h2>${s.h}</h2>${s.p.map(x => `<p>${x}</p>`).join('')}</div>`;
+  M.appendChild(sec);
+}
+</script>
