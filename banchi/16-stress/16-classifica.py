@@ -1309,7 +1309,8 @@ def certifica():
                 f.write(log)
                 # the child's TRATTO rows, one per second per tenant: max 30 ms
                 #   unless `tratto` = {tenant: max, or None for NO row}
-                #   (in the OLD Italian form: the logs of the running campaign)
+                #   (BOTH forms: odd tenants in the OLD Italian form of the logs of the
+                #   running campaign, even tenants in the new English form)
                 for i, u in enumerate(utenti):
                     inq = "c16u%02d" % (i + 1)
                     mx = (tratto or {}).get(inq, 30.0)
@@ -1317,13 +1318,22 @@ def certifica():
                         continue
                     for k in range(470, 601):
                         o = _dt.datetime.fromtimestamp(T0 + k, _dt.timezone.utc).strftime("%H:%M:%S.000")
-                        f.write("%s figlio  [%s] ⭐ TRATTO cattura → byte fuori: mediana %.2f ms (max %.2f) su "
-                                "512 fotogrammi del campione, 9000 in tutto — produttore 24.00 (max 60.00)\n"
-                                % (o, inq, 43.0, 6339.0))
-                        if mx != "solo-tratto":
+                        if i % 2 == 0:
+                            f.write("%s figlio  [%s] ⭐ TRATTO cattura → byte fuori: mediana %.2f ms (max %.2f) su "
+                                    "512 fotogrammi del campione, 9000 in tutto — produttore 24.00 (max 60.00)\n"
+                                    % (o, inq, 43.0, 6339.0))
+                        else:
+                            f.write("%s figlio  [%s] ⭐ STRETCH capture → byte out: median %.2f ms (max %.2f) over "
+                                    "512 frames of the sample, 9000 in all — producer 24.00 (max 60.00)\n"
+                                    % (o, inq, 43.0, 6339.0))
+                        if mx != "solo-tratto" and i % 2 == 0:
                             f.write("%s figlio  [%s] ⭐ NOSTRO nel secondo (copia → byte fuori, §3.2): p95 %.2f "
                                     "ms · max %.2f · mediana %.2f · 30 fotogrammi\n" % (o, inq, mx, mx * 1.5,
                                                                                          mx * 0.6))
+                        elif mx != "solo-tratto":
+                            f.write("%s figlio  [%s] ⭐ OURS in the second (copy → byte out, §3.2): p95 %.2f "
+                                    "ms · max %.2f · median %.2f · 30 frames\n" % (o, inq, mx, mx * 1.5,
+                                                                                    mx * 0.6))
             json.dump(corto or {"utente": 1, "esiti": {"F-003": "PASS", "F-004": "PASS",
                                                        "F-007": "PASS", "F-014": "PASS"}},
                       open(os.path.join(c, "controllo-corto.json"), "w"))
@@ -1463,6 +1473,16 @@ def certifica():
         g = classifica(livello("caduta-log", quattro, log=log))
         guarda("log: the session is over ⇒ FAIL; after the end of the level and any «rifiut» ⇒ no",
                [classe_di(s[3]) for s in g["sessioni"]] == ["GREEN", "GREEN", "FAIL", "GREEN"])
+        # the same in the new English form of the product (english-migration/strings)
+        log = ("%s rcp     [c16u03] ⛔ CLIENT FIN on the control channel (stream 4): §4.2, "
+               "the session is over\n" % hh)
+        log += ("%s rcp     [c16u01] ⛔ CLIENT FIN on the control channel (stream 4): §4.2, "
+                "the session is over\n" % dopo)
+        log += ("%s main    ⛔ the stage of «c16u02» (uid 4002) has gone: from now on their sessions "
+                "no longer receive frames\n" % hh)
+        g = classifica(livello("caduta-log-en", quattro, log=log))
+        guarda("log, English form: the session is over / the stage has gone ⇒ FAIL; after the end ⇒ no",
+               [classe_di(s[3]) for s in g["sessioni"]] == ["GREEN", "FAIL", "FAIL", "GREEN"])
         # the network and the journal: recorded, they do not classify
         rq = ""
         for k in range(0, 31):
@@ -1490,6 +1510,10 @@ def certifica():
         g = classifica(livello("rifiuto-log", quattro, log="%s rcp     [c16u04] ⛔ posto NEGATO a c16u04 da "
                                                            "x: il registro delle sessioni e' PIENO\n" % hh))
         guarda("posto NEGATO in the log ⇒ birth FAIL",
+               g["sessioni"][3][3].get("nascita_s", {}).get("classe") == "FAIL")
+        g = classifica(livello("rifiuto-log-en", quattro, log="%s rcp     [c16u04] ⛔ slot DENIED to c16u04 from "
+                                                              "x: the session registry of this server is FULL\n" % hh))
+        guarda("slot DENIED (English form) in the log ⇒ birth FAIL",
                g["sessioni"][3][3].get("nascita_s", {}).get("classe") == "FAIL")
         g = classifica(livello("riavvio-pid", quattro, pid=lambda k: 111 if k < 300 else 222))
         guarda("parent's pid changed in resources ⇒ level FAIL",

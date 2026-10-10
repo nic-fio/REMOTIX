@@ -1,18 +1,18 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Banco tela</title>
+<title>Canvas bench</title>
 <!--
-  Banco «strada del disegno» — Firefox 140, VideoFrame VA-API → vetro.
-  Uso:  banco-tela.html?via=bmp|gl&file=prova.h264&fps=60&secondi=30
-    via=bmp  createImageBitmap(f) + bitmaprenderer   (strada di oggi)
-    via=gl   WebGL2 texImage2D(f) + triangolo pieno  (candidata)
-  Il file è H.264 Annex-B con AUD (una unità d'accesso per AUD), fatto sul server:
+  «Drawing path» bench — Firefox 140, VideoFrame VA-API → glass.
+  Usage:  banco-tela.html?via=bmp|gl&file=prova.h264&fps=60&secondi=30
+    via=bmp  createImageBitmap(f) + bitmaprenderer   (today's path)
+    via=gl   WebGL2 texImage2D(f) + full triangle    (candidate)
+  The file is H.264 Annex-B with AUD (one access unit per AUD), made on the server:
     ffmpeg -f lavfi -i testsrc2=3840x2160:r=60 -t 30 -pix_fmt yuv420p \
       -c:v libx264 -profile:v high -level 5.1 -bf 0 -g 600 \
       -x264-params aud=1 -preset veryfast prova.h264
-  Esito: window.ESITO (JSON) e document.title = "FATTO" alla fine.
-  Profilo Firefox: webgl.perf.max-warnings=20 per vedere in console
-  «Missed GPU-copy fast-path: ...» se la via veloce NON scatta.
+  Outcome: window.ESITO (JSON) and document.title = "FATTO" at the end.
+  Firefox profile: webgl.perf.max-warnings=20 to see in the console
+  «Missed GPU-copy fast-path: ...» if the fast path does NOT kick in.
 -->
 <body style="margin:0;background:#000">
 <canvas id="t" style="width:100vw;height:100vh;display:block"></canvas>
@@ -48,8 +48,8 @@ function prepara(l, a) {
     gl.texParameteri(gl.TEXTURE_2D, k, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  /* ⚠ condizioni della via veloce (TexUnpackBlob.cpp BlitPreventReason):
-     livello 0, offset 0, RGBA/UNSIGNED_BYTE, niente UNPACK_SKIP, stesso spazio colore. */
+  /* ⚠ conditions of the fast path (TexUnpackBlob.cpp BlitPreventReason):
+     level 0, offset 0, RGBA/UNSIGNED_BYTE, no UNPACK_SKIP, same colour space. */
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   gl.viewport(0, 0, l, a);
@@ -67,7 +67,7 @@ function disegna(f) {
     return;
   }
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, f);
-  f.close();                               /* ⭐ chiuso SUBITO: la via veloce ha già copiato */
+  f.close();                               /* ⭐ closed AT ONCE: the fast path has already copied */
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   R.disegno_ms.push(performance.now() - t0); R.dipinti++;
 }
@@ -80,11 +80,11 @@ function uscita(f) {
   if (R.formato === null) R.formato = f.format;
   if (!gl && !ctx) prepara(f.displayWidth, f.displayHeight);
   R.coda_max = Math.max(R.coda_max, dec.decodeQueueSize);
-  if (dec.decodeQueueSize > 2) { R.saltati_coda++; f.close(); return; }   /* la regola della pagina */
+  if (dec.decodeQueueSize > 2) { R.saltati_coda++; f.close(); return; }   /* the page's rule */
   disegna(f);
 }
 
-function unita(buf) {                      /* Annex-B → unità d'accesso sull'AUD (nal 9) */
+function unita(buf) {                      /* Annex-B → access units on the AUD (nal 9) */
   const u = new Uint8Array(buf), inizi = [];
   for (let i = 0; i + 4 < u.length; i++)
     if (u[i] === 0 && u[i+1] === 0 && u[i+2] === 1 && (u[i+3] & 31) === 9)
@@ -114,7 +114,7 @@ function p95(v) { if (!v.length) return null; const s = [...v].sort((a,b)=>a-b);
   const passo = 1000 / FPS, t_inizio = performance.now();
   let n = 0;
   await new Promise((fine) => {
-    const giro = () => {                   /* consegna al ritmo del server, come il filo */
+    const giro = () => {                   /* delivers at the server's pace, like the wire */
       const dovuti = Math.floor((performance.now() - t_inizio) / passo);
       while (n <= dovuti) {
         const a = au[n % au.length];

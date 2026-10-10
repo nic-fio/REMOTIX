@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""FINTO di 16-attore.py — solo per provare 16-salita.py: rispetta il contratto
-(argomenti, DIR/utente-NN/stato.jsonl ogni 5 s, nascita.json, SIGUSR1 = una
-«foto», SIGTERM = esce pulito) ma NON apre browser ne' sessioni.
-FINTO_MUORE=N: l'utente N esce da solo dopo 20 s (per vedere l'evento)."""
+"""FAKE of 16-attore.py — only to test 16-salita.py: it keeps the contract
+(arguments, DIR/utente-NN/stato.jsonl every 5 s, nascita.json, SIGUSR1 = a
+«photo», SIGTERM = clean exit) but opens NO browser and no sessions.
+FINTO_MUORE=N: user N exits by itself after 20 s (to see the event)."""
 import argparse, json, os, signal, sys, time
 a = argparse.ArgumentParser()
 for k in ("--scatola", "--wayland", "--dir", "--video"):
@@ -17,7 +17,7 @@ fine, foto = [False], [0]
 signal.signal(signal.SIGTERM, lambda *_: fine.__setitem__(0, True))
 def scatta(*_):
     foto[0] += 1
-    open(os.path.join(d, "foto-%d-%d.txt" % (int(time.time()), foto[0])), "w").write("foto finta\n")
+    open(os.path.join(d, "foto-%d-%d.txt" % (int(time.time()), foto[0])), "w").write("fake photo\n")
 signal.signal(signal.SIGUSR1, scatta)
 time.sleep(2)
 json.dump({"t": time.time(), "utente": o.utente, "nascita_s": 2.0, "wayland": o.wayland,
@@ -32,4 +32,4 @@ while not fine[0]:
         time.sleep(0.1)
     if os.environ.get("FINTO_MUORE") == str(o.utente) and time.time() - t0 > 20:
         sys.exit(7)
-print("attore finto %d: sgombero" % o.utente, flush=True)
+print("fake actor %d: clearing out" % o.utente, flush=True)

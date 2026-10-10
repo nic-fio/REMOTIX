@@ -1,0 +1,172 @@
+{"file": "banchi/16-stress/16-d023-cornice.c", "prima": "uso: 16-d023-cornice --codec hevc|h264 --misura LxA ", "dopo": "usage: 16-d023-cornice --codec hevc|h264 --misura LxA "}
+{"file": "banchi/16-stress/16-d023-cornice.c", "prima": "⛔ %s: non ci sono %zu byte di BGRx %ux%u\\n", "dopo": "⛔ %s: there are not %zu bytes of BGRx %ux%u\\n"}
+{"file": "banchi/16-stress/16-d023-cornice.c", "prima": "⛔ il codificatore non si e' aperto: %s\\n", "dopo": "⛔ the encoder did not open: %s\\n"}
+{"file": "banchi/16-stress/16-d023-cornice.c", "prima": "⛔ fotogramma %u non prodotto (vedi il registro)\\n", "dopo": "⛔ frame %u not produced (see the log)\\n"}
+{"file": "banchi/16-stress/16-d023-cornice.c", "prima": "%s %ux%u: %u fotogrammi su %u, %u chiavi · %s\\n", "dopo": "%s %ux%u: %u frames of %u, %u keyframes · %s\\n"}
+{"file": "banchi/16-stress/16-d023-cornice.sh", "prima": "uso: 16-d023-cornice.sh /percorso/16-d023-cornice [nodo]", "dopo": "usage: 16-d023-cornice.sh /path/16-d023-cornice [node]"}
+{"file": "banchi/16-stress/16-d023-cornice.sh", "prima": "FAIL $codec $m: il prodotto non ha spedito (", "dopo": "FAIL $codec $m: the product did not send ("}
+{"file": "banchi/16-stress/16-d023-cornice.sh", "prima": "PASS $codec $m: il flusso dichiara $letta · PSNR $psnr dB · righe D-023 $cornice · ", "dopo": "PASS $codec $m: the stream declares $letta · PSNR $psnr dB · D-023 lines $cornice · "}
+{"file": "banchi/16-stress/16-d023-cornice.sh", "prima": "FAIL $codec $m: il flusso dichiara $letta · PSNR $psnr dB · righe D-023 $cornice", "dopo": "FAIL $codec $m: the stream declares $letta · PSNR $psnr dB · D-023 lines $cornice"}
+{"file": "banchi/16-stress/16-banco-tela.html", "prima": "Banco tela", "dopo": "Canvas bench"}
+{"file": "banchi/16-stress/finti/16-attore.py", "prima": "foto finta\\n", "dopo": "fake photo\\n"}
+{"file": "banchi/16-stress/finti/16-attore.py", "prima": "attore finto %d: sgombero", "dopo": "fake actor %d: clearing out"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la cartella del livello (livello-NN)", "dopo": "the level folder (livello-NN)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il numero dell'inquilino c16<livello>u<utente> (99)", "dopo": "the number of the tenant c16<livello>u<utente> (99)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "solo queste funzioni (F-004,F-003…): prove del banco", "dopo": "only these functions (F-004,F-003…): tests of the bench"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la pagina non si apre: ", "dopo": "the page does not open: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "l'accesso: ", "dopo": "the access: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "nessun fotogramma dipinto %d s dopo l'accesso", "dopo": "no painted frame %d s after the access"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il primo fotogramma: ", "dopo": "the first frame: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "`REMOTIX_PUNTATORE.geometria` non c'e'", "dopo": "`REMOTIX_PUNTATORE.geometria` is not there"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la tela e' %sx%s e non %dx%d dopo 40 s", "dopo": "the canvas is %sx%s and not %dx%d after 40 s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "gia' entrato", "dopo": "already entered"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "movimento sul blocco BLU dove punta, clic sul VERDE contato, box spostato", "dopo": "movement on the BLUE block where it points, click on the GREEN counted, box moved"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "gesti rossi: ", "dopo": "red gestures: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "gesti non guardati: ", "dopo": "gestures not looked at: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "%d gesti su %d (ridotto): l'effetto c'e' nell'applicazione", "dopo": "%d gestures of %d (reduced): the effect is there in the application"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "ogni gesto a vuoto ha dato rosso", "dopo": "every gesture into nothing gave red"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "gesti a vuoto VERDI lo stesso: ", "dopo": "gestures into nothing GREEN anyway: "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "un gesto a vuoto non si e' potuto guardare", "dopo": "a gesture into nothing could not be looked at"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "   ⚠ rosso (%s): lo rifaccio per confermarlo", "dopo": "   ⚠ red (%s): doing it again to confirm it"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "⚠ ROSSO al primo tentativo (%s), verde al secondo", "dopo": "⚠ RED at the first attempt (%s), green at the second"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "rosso due volte: %s · %s", "dopo": "red twice: %s · %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "senza %s: %s", "dopo": "without %s: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la tela non si fotografa", "dopo": "the canvas cannot be photographed"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "prima di aprire c'e' gia' del ciano (%.2f %%)", "dopo": "before opening there is already some cyan (%.2f %%)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la casa non si prepara: %s", "dopo": "the home cannot be prepared: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "firefox-esr non parte: %s", "dopo": "firefox-esr does not start: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "firefox-esr non e' rimasto vivo: %s", "dopo": "firefox-esr did not stay alive: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la foto e' cambiata (%.1f %%) ma non mostra la pagina di prova", "dopo": "the photo changed (%.1f %%) but does not show the test page"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "firefox-esr vivo da %.0f s e la foto e' IDENTICA a quella di prima: lo schermo non si aggiorna", "dopo": "firefox-esr alive for %.0f s and the photo is IDENTICAL to the one before: the screen does not update"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il ciano non e' largo quanto la finestra chiesta: un'anteprima?", "dopo": "the cyan is not as wide as the requested window: a preview?"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il contatore non si legge: %s", "dopo": "the counter cannot be read: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "   cambi rapidi, serie %d: %s %s", "dopo": "   fast changes, series %d: %s %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "serie 1: %s %s · serie 2: %s", "dopo": "series 1: %s %s · series 2: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "apre e cambia: le foto seguono lo schermo (ridotto: niente trascinamento)", "dopo": "opens and changes: the photos follow the screen (reduced: no drag)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la passata sana non e' verde: il guasto si giudica solo su una passata sana", "dopo": "the healthy pass is not green: the fault is judged only on a healthy pass"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "foto di PRIMA ⇒ ", "dopo": "photo from BEFORE ⇒ "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la geometria della tela non c'e'", "dopo": "the canvas geometry is not there"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "gli appunti della pagina non sono accesi: %s", "dopo": "the page's clipboard is not on: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la scena degli appunti non si accende: %s", "dopo": "the clipboard scene does not start: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la tastiera non arriva al campo della scena (una «q» ⇒ %r)", "dopo": "the keyboard does not reach the scene's field (a «q» ⇒ %r)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il Ctrl+V non e' arrivato all'applicazione: e' la tastiera, non gli appunti — ", "dopo": "the Ctrl+V did not reach the application: it is the keyboard, not the clipboard — "}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": " · (Ctrl+V ribattuto una volta)", "dopo": " · (Ctrl+V typed again once)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "copia non fatta ⇒ il campo remoto vale %r (%s); atteso senza accenti ⇒ %s", "dopo": "copy not done ⇒ the remote field is %r (%s); expected without accents ⇒ %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "⭐ controllo corto · %s · livello %d · %s · %s · %s", "dopo": "⭐ short check · %s · level %d · %s · %s · %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "   ⚠ permesso appunti NON concesso: %s", "dopo": "   ⚠ clipboard permission NOT granted: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "   nascita: %s · %s", "dopo": "   birth: %s · %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la sessione del controllo non e' nata: %s", "dopo": "the check's session was not born: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "   sveglia: %s", "dopo": "   wake-up: %s"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la prova non ha dato un giudizio (difetto del banco)", "dopo": "the test gave no judgement (defect of the bench)"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "la passata col guasto non ha dato un giudizio", "dopo": "the pass with the fault gave no judgement"}
+{"file": "banchi/16-stress/16-controllo-corto.py", "prima": "il banco e' caduto: %r", "dopo": "the bench crashed: %r"}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"   [%02d] ⚠ un comando nella scatola ha preso %.1f s: %s\"", "dopo": "\"   [%02d] ⚠ a command in the box took %.1f s: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il servitore delle pagine non parte: %s\"", "dopo": "\"the page server does not start: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"firefox-esr non si lancia: %s\"", "dopo": "\"firefox-esr does not launch: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"la prima pagina non ha detto «carica» in 60 s\"", "dopo": "\"the first page did not say «carica» in 60 s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"firefox-esr --kiosk sulla pagina «testo» (max scroll %d)\"", "dopo": "\"firefox-esr --kiosk on the «testo» page (max scroll %d)\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il campo di testo non lascia il fuoco (Esc e clic)\"", "dopo": "\"the text field does not leave the focus (Esc and click)\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "%s %d tacche (giu/su)", "dopo": "%s %d notches (down/up)"}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s non si lancia: %s\"", "dopo": "\"%s does not launch: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s non e' vivo dopo 30 s\"", "dopo": "\"%s is not alive after 30 s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s su ~/prova16, finestra %s\"", "dopo": "\"%s on ~/prova16, window %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"NON trovata (uso il centro)\"", "dopo": "\"NOT found (using the centre)\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s non c'e' piu': la rilancio\"", "dopo": "\"%s is no longer there: relaunching it\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s non c'e' piu': lo rilancio\"", "dopo": "\"%s is no longer there: relaunching it\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%d cartelle (%s)\"", "dopo": "\"%d folders (%s)\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s con sotto %s e non bash: la storia (~/.c16-storia) non si scriverebbe mai\"", "dopo": "\"%s with %s under it and not bash: the history (~/.c16-storia) would never be written\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"%s, finestra %s, sotto %s, prima riga %s\"", "dopo": "\"%s, window %s, under it %s, first line %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "(nessun figlio) / arrivata / NON arrivata", "dopo": "(no child) / arrived / NOT arrived"}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"fonte video non riconosciuta: %r\"", "dopo": "\"video source not recognised: %r\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il file video %s non c'e' sull'ospite\"", "dopo": "\"the video file %s is not on the host\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il file video non si aggancia in %s: %s\"", "dopo": "\"the video file cannot be hooked in %s: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il file video %s non si legge DENTRO la scatola\"", "dopo": "\"the video file %s cannot be read INSIDE the box\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"il servitore non parte: %s\"", "dopo": "\"the server does not start: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "\"video %s %s in riproduzione: %s\"", "dopo": "\"video %s %s playing: %s\""}
+{"file": "banchi/16-stress/16-lavori.py", "prima": "il video non e' partito in 90 s: %s / nessuna riga", "dopo": "the video did not start in 90 s: %s / no row"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "coretemp pacchetto CPU (la iGPU non ha sensore suo)", "dopo": "coretemp CPU package (the iGPU has no sensor of its own)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "⛔ scatola rete11-%s NON trovata (podman inspect): recinti remotix e sessioni non misurabili", "dopo": "⛔ box rete11-%s NOT found (podman inspect): enclosures remotix and sessioni not measurable"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "⚠ recinto %s VUOTO: nessun processo trovato", "dopo": "⚠ enclosure %s EMPTY: no process found"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "⚠ remotix: nessun processo nel cgroup rete11-server.service (il padre?)", "dopo": "⚠ remotix: no process in the cgroup rete11-server.service (the parent?)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "⚠ PSS illeggibile per %d processi (non si e' root?)", "dopo": "⚠ PSS unreadable for %d processes (not root?)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "16-risorse --certifica  (/proc e /sys finti, orologio finto)", "dopo": "16-risorse --certifica  (fake /proc and /sys, fake clock)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "CERTIFICA %s — %d su %d", "dopo": "CERTIFICATION %s — %d of %d"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "servono --scatola e --dir (o --certifica)", "dopo": "--scatola and --dir are needed (or --certifica)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "xrdp: il recinto «remotix» e' xrdp (fasi/20 §7.4)", "dopo": "xrdp: the «remotix» enclosure is xrdp (fasi/20 §7.4)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "⚠ 16-risorse non gira da root: PSS e fdinfo degli altri utenti saranno illeggibili (e lo dira' in `avvisi`)", "dopo": "⚠ 16-risorse is not running as root: PSS and fdinfo of the other users will be unreadable (and it will say so in `avvisi`)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "fdinfo i915, video su 2 motori", "dopo": "fdinfo i915, video on 2 engines"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix video %s %% (atteso 50: 1 s occupato su 1 s, capacita' 2)", "dopo": "remotix video %s %% (expected 50: 1 s busy over 1 s, capacity 2)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "fdinfo i915, disegno", "dopo": "fdinfo i915, drawing"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "sessioni disegno %s %% (atteso 25)", "dopo": "sessioni drawing %s %% (expected 25)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "memoria grafica per client", "dopo": "graphics memory per client"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix %s MB (atteso 2: 2048 KiB residenti)", "dopo": "remotix %s MB (expected 2: 2048 KiB resident)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "i tre recinti", "dopo": "the three enclosures"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix %d (padre + figlio) · sessioni %d · browser %d (il Firefox dell'utente SENZA segno resta fuori)", "dopo": "remotix %d (parent + child) · sessioni %d · browser %d (the user's Firefox WITHOUT a mark stays out)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "per inquilino", "dopo": "per tenant"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "figlio di remotix e sessione attribuiti all'inquilino 4013", "dopo": "remotix's child and session attributed to tenant 4013"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "CPU per processo", "dopo": "CPU per process"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix %.3f core (attesi %.3f: 150 tick in 1 s)", "dopo": "remotix %.3f cores (expected %.3f: 150 ticks in 1 s)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "CPU delle sessioni dal cgroup (processi brevi)", "dopo": "CPU of the sessions from the cgroup (short processes)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "sessioni %.3f core = scatola 2,000 − remotix; non attribuita %.3f (quel che il cgroup ha visto e nessun processo vivo si porta: i processi brevi)", "dopo": "sessioni %.3f cores = box 2.000 − remotix; unattributed %.3f (what the cgroup saw and no live process carries: the short processes)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "macchina", "dopo": "machine"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "cpu %s %% (atteso 50)", "dopo": "cpu %s %% (expected 50)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "sessioni %s MB (atteso 1)", "dopo": "sessioni %s MB (expected 1)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "nessun avviso quando i recinti sono pieni", "dopo": "no warning when the enclosures are full"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "il pid del padre remotix", "dopo": "the pid of the remotix parent"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix_pid %s (atteso 10)", "dopo": "remotix_pid %s (expected 10)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "client duplicato contato UNA volta", "dopo": "duplicated client counted ONCE"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "disegno %s %% (atteso 50; contato tre volte darebbe 150)", "dopo": "drawing %s %% (expected 50; counted three times it would give 150)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "browser Chrome riconosciuto dal profilo", "dopo": "Chrome browser recognised from the profile"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "amdgpu gfx/enc + xe cicli", "dopo": "amdgpu gfx/enc + xe cycles"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "disegno %s %% (attesi 25 gfx + 30 xe rcs) · video %s %% (atteso 50 enc)", "dopo": "drawing %s %% (expected 25 gfx + 30 xe rcs) · video %s %% (expected 50 enc)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "%s MB (attesi 4)", "dopo": "%s MB (expected 4)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "motore fermo ⇒ 0 %", "dopo": "idle engine ⇒ 0 %"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "disegno %s %%", "dopo": "drawing %s %%"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "pid riusato: niente CPU negativa o gigante", "dopo": "reused pid: no negative or giant CPU"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "remotix %s core (il processo nuovo parte da zero; confuso col vecchio darebbe 5)", "dopo": "remotix %s cores (the new process starts from zero; mistaken for the old one it would give 5)"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "recinto remotix vuoto segnalato", "dopo": "empty remotix enclosure reported"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "recinto browser vuoto segnalato", "dopo": "empty browser enclosure reported"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "recinto sessioni pieno NON segnalato", "dopo": "full sessioni enclosure NOT reported"}
+{"file": "banchi/16-stress/16-risorse.py", "prima": "scatola assente segnalata", "dopo": "missing box reported"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "16-rapporto — IL RAPPORTO DELLA FASE 16, GENERATO DAL REGISTRO (mai scritto a mano)", "dopo": "16-rapporto — THE PHASE 16 REPORT, GENERATED FROM THE REGISTER (never written by hand)"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "    python3 16-rapporto.py --certifica      (registro sintetico in una cartella sua)\n\nDal registro di `16-classifica.py` (§10: una riga per livello, una per sessione):\n- la MATRICE FINALE di §11, desktop × scheda: per ogni misura dello schermo\n  (4K → 3K → 2K → Full HD) l'ultimo livello GREEN, il primo livello in FAIL\n  (il punto di rottura) e il primo DEGRADED;\n- la CURVA di ogni campagna per gradino: una riga per livello (l'ULTIMA\n  registrazione di quel livello: il registro si aggiunge soltanto, e una\n  ripetizione di §14 prende il posto della prima — le ripetizioni si contano),\n  con le misure peggiori delle sessioni e le risorse; e un grafico delle\n  risorse per gradino (CPU della macchina, disegno e video della scheda,\n  memoria usata — tutte in %, un solo asse);\n- i COLLI DI BOTTIGLIA: al primo livello non GREEN di ogni campagna (o\n  all'ultimo, se e' tutta verde), la risorsa piu' carica e i recinti che la\n  consumano;\n- per ogni livello non GREEN: le ragioni delle sessioni e le evidenze.", "dopo": "    python3 16-rapporto.py --certifica      (synthetic register in a folder of its own)\n\nFrom the register of `16-classifica.py` (§10: one row per level, one per session):\n- the FINAL MATRIX of §11, desktop × card: for every screen size\n  (4K → 3K → 2K → Full HD) the last GREEN level, the first level in FAIL\n  (the breaking point) and the first DEGRADED;\n- the CURVE of every campaign per step: one row per level (the LAST\n  recording of that level: the register is only appended to, and a\n  repetition of §14 takes the place of the first — repetitions are counted),\n  with the worst measures of the sessions and the resources; and a chart of the\n  resources per step (machine CPU, drawing and video of the card,\n  memory used — all in %, a single axis);\n- the BOTTLENECKS: at the first non-GREEN level of every campaign (or\n  at the last, if it is all green), the most loaded resource and the enclosures that\n  consume it;\n- for every non-GREEN level: the reasons of the sessions and the evidence."}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "SERIE = ((\"cpu\", \"CPU della macchina\"), (\"disegno\", \"scheda: disegno\"),\n         (\"video\", \"scheda: video\"), (\"mem\", \"memoria usata\"))\nBREVI = {\"cpu\": \"CPU\", \"disegno\": \"disegno\", \"video\": \"video\", \"mem\": \"memoria\"}", "dopo": "SERIE = ((\"cpu\", \"machine CPU\"), (\"disegno\", \"card: drawing\"),\n         (\"video\", \"card: video\"), (\"mem\", \"memory used\"))\nBREVI = {\"cpu\": \"CPU\", \"disegno\": \"drawing\", \"video\": \"video\", \"mem\": \"memory\"}"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "    out = [\"FASE 16 — %d campagne\" % len(c)]", "dopo": "    out = [\"PHASE 16 — %d campaigns\" % len(c)]"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"\\n%s (%s · %s · %s) — regge %s · ultimo GREEN %s · rottura %s\"", "dopo": "\"\\n%s (%s · %s · %s) — holds %s · last GREEN %s · break %s\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"  %3s utenti  %-8s %s  cpu %s%% disegno %s%% video %s%% mem %s%%%s\"", "dopo": "\"  %3s users  %-8s %s  cpu %s%% drawing %s%% video %s%% mem %s%%%s\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"  (%d registrazioni)\"", "dopo": "\"  (%d recordings)\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"  collo a %s utenti: %s %.0f %% — %s\"", "dopo": "\"  bottleneck at %s users: %s %.0f %% — %s\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "    L, A, sx, sy = 44, 30, 640, 220          # margini e area", "dopo": "    L, A, sx, sy = 44, 30, 640, 220          # margins and area"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "aria-label='risorse per gradino'", "dopo": "aria-label='resources per step'"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": ">utenti →</text>", "dopo": ">users →</text>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<title>%s utenti · %s: %.1f %%</title>", "dopo": "<title>%s users · %s: %.1f %%</title>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<span>sotto l'asse: la classe del livello \"", "dopo": "<span>below the axis: the class of the level \""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<html lang='it'>", "dopo": "<html lang='en'>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<title>Stress e capacità</title>", "dopo": "<title>Stress and capacity</title>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<h1>Fase 16 — stress e capacità</h1>\",\n         \"<p class='tenue'>Generato dal registro. Misurato su: %s. Soglie di §9 (approvate il 25 set 2026). \"\n         \"⚠ I browser girano sullo stesso server: ogni numero è un limite <b>inferiore</b>.</p>\"\n         % e(\"; \".join(\"commit %s · binario %s · pagina %s\" % x for x in impronte) or \"—\")]", "dopo": "\"<h1>Phase 16 — stress and capacity</h1>\",\n         \"<p class='tenue'>Generated from the register. Measured on: %s. Thresholds of §9 (approved on 25 Sep 2026). \"\n         \"⚠ The browsers run on the same server: every number is a <b>lower</b> bound.</p>\"\n         % e(\"; \".join(\"commit %s · binary %s · page %s\" % x for x in impronte) or \"—\")]"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<h2>Riepilogo: quanti utenti insieme</h2><p class='tenue'>Il numero grande: utenti \"\n             \"insieme con <b>tutti</b> sotto i 50 ms e ogni altra misura GREEN (§9). Sotto, «regge»: \"\n             \"il livello in cui al massimo un utente su quattro è appena oltre (mai sopra 100 ms) e \"\n             \"nessuno fallisce. Livelli provati: 1, 4, 8, 12, 16, e la ricerca fra due gradini \"\n             \"solo dove la salita si è rotta.</p>\"", "dopo": "\"<h2>Summary: how many users together</h2><p class='tenue'>The big number: users \"\n             \"together with <b>all</b> under 50 ms and every other measure GREEN (§9). Below, «holds»: \"\n             \"the level at which at most one user in four is just over (never above 100 ms) and \"\n             \"nobody fails. Levels tried: 1, 4, 8, 12, 16, and the search between two steps \"\n             \"only where the climb broke.</p>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<small>non misurato</small>", "dopo": "<small>not measured</small>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<small>regge %d</small>", "dopo": "<small>holds %d</small>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<h2>La matrice finale</h2><p class='tenue'>Per ogni misura dello schermo: l'ultimo livello \"\n             \"GREEN · il punto di rottura (primo FAIL). Ogni riga rimanda alla sua salita.</p>\"", "dopo": "\"<h2>The final matrix</h2><p class='tenue'>For every screen size: the last level \"\n             \"in GREEN · the breaking point (first FAIL). Every row links to its climb.</p>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "</a> regge <b>%s</b> · ultimo GREEN <b>%s</b> · rottura <b>%s</b>\"", "dopo": "</a> holds <b>%s</b> · last GREEN <b>%s</b> · break <b>%s</b>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<h2>I colli di bottiglia</h2><p class='tenue'>Al primo livello non GREEN di ogni campagna (o \"\n             \"all'ultimo, se è tutta verde): la risorsa più carica, e i recinti che la consumano. Una \"\n             \"risorsa alta da sola non è un FAIL: spiega il comportamento, non lo giudica.</p>\"", "dopo": "\"<h2>The bottlenecks</h2><p class='tenue'>At the first non-GREEN level of every campaign (or \"\n             \"at the last, if it is all green): the most loaded resource, and the enclosures that consume it. A \"\n             \"high resource on its own is not a FAIL: it explains the behaviour, it does not judge it.</p>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "</b> a %s utenti %s — <b>", "dopo": "</b> at %s users %s — <b>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "(\" · strozzatura: \"", "dopo": "(\" · throttling: \""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": " · commit %s · nucleo %s</p>", "dopo": " · commit %s · kernel %s</p>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<div class='scorre'><table><thead><tr><th>utenti</th><th>classe</th><th>sessioni</th>\"\n                 \"<th>ritardo p95</th><th>saltati</th><th>blocco</th><th>buchi/min</th><th>video</th>\"\n                 \"<th>audio</th><th>nascita</th><th>CPU</th><th>disegno</th><th>video (scheda)</th>\"\n                 \"<th>memoria</th></tr></thead><tbody>\"", "dopo": "\"<div class='scorre'><table><thead><tr><th>users</th><th>class</th><th>sessions</th>\"\n                 \"<th>delay p95</th><th>skipped</th><th>freeze</th><th>gaps/min</th><th>video</th>\"\n                 \"<th>audio</th><th>birth</th><th>CPU</th><th>drawing</th><th>video (card)</th>\"\n                 \"<th>memory</th></tr></thead><tbody>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<span class='tenue'>%d volte</span>", "dopo": "<span class='tenue'>%d times</span>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"</tbody></table></div><p class='tenue'>Le misure delle sessioni sono le PEGGIORI del \"\n                 \"livello; le risorse sono medie nella finestra di controllo (la memoria: il massimo).</p>\"", "dopo": "\"</tbody></table></div><p class='tenue'>The session measures are the WORST of the \"\n                 \"level; the resources are averages in the check window (memory: the maximum).</p>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "<summary>%s %s utenti — %s</summary>", "dopo": "<summary>%s %s users — %s</summary>"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"<p>%s utente %s (%s, %s, %s): %s</p>\"", "dopo": "\"<p>%s user %s (%s, %s, %s): %s</p>\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"ragione\": \"sintetico\", \"evidenze\"", "dopo": "\"ragione\": \"synthetic\", \"evidenze\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "\"ragione\": \"sintetico: blocco 4 s\" if", "dopo": "\"ragione\": \"synthetic: freeze 4 s\" if"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "guarda(\"la ricerca a meta': ultimo GREEN 10, rottura 11\",", "dopo": "guarda(\"the bisection: last GREEN 10, break 11\","}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "guarda(\"la ripetizione di §14 prende il posto della prima\",", "dopo": "guarda(\"the repetition of §14 takes the place of the first\","}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "guarda(\"il collo: la scheda (disegno) al primo non GREEN, col recinto browser in testa\",\n               co[\"livello\"] == 11 and co[\"risorsa\"] == \"scheda: disegno\"", "dopo": "guarda(\"the bottleneck: the card (drawing) at the first non-GREEN, with the browser enclosure on top\",\n               co[\"livello\"] == 11 and co[\"risorsa\"] == \"card: drawing\""}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "guarda(\"la pagina: matrice, curva, colli, dettagli\",\n               \"La matrice finale\" in p and \"<svg\" in p and \"I colli di bottiglia\" in p and \"<details>\" in p\n               and \"ultimo GREEN <b>10</b> · rottura <b>11</b>\" in p and \"ultimo GREEN <b>16</b>\" in p,", "dopo": "guarda(\"the page: matrix, curve, bottlenecks, details\",\n               \"The final matrix\" in p and \"<svg\" in p and \"The bottlenecks\" in p and \"<details>\" in p\n               and \"last GREEN <b>10</b> · break <b>11</b>\" in p and \"last GREEN <b>16</b>\" in p,"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "guarda(\"⛔ GUASTO: un registro vuoto non inventa caselle\", \"ultimo GREEN\" not in pagina([]))", "dopo": "guarda(\"⛔ FAULT: an empty register does not invent cells\", \"last GREEN\" not in pagina([]))"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "print(\"CERTIFICA %s — %d su %d\" %", "dopo": "print(\"CERTIFY %s — %d of %d\" %"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "help=\"scrive un registro sintetico di prova in questo percorso ed esce\")", "dopo": "help=\"writes a synthetic test register at this path and exits\")"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "help=\"solo queste etichette (es. intel-b amd-b intel-c); per casella vince la piu' recente\")", "dopo": "help=\"only these labels (e.g. intel-b amd-b intel-c); per cell the most recent wins\")"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "print(\"⚠ sostituite da una salita piu' recente: %s\" %", "dopo": "print(\"⚠ replaced by a more recent climb: %s\" %"}
+{"file": "banchi/16-stress/16-rapporto.py", "prima": "print(\"→ %s (%d righe del registro)\" %", "dopo": "print(\"→ %s (%d register rows)\" %"}
