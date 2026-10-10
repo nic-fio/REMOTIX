@@ -5217,7 +5217,7 @@ had given it up as non-existent.
 > any moment**, exactly as KDE brought resizing with `kwin!7932`. Whoever
 > reopens this item **must reclone `muffin` and redo the four searches** before trusting
 > `STUDI.md` §cinnamon: a reference that ages silently is worse than no reference
-> (`LEZIONI.md` §9.8).
+> (`LEZIONI.md` §9 point 8).
 
 ---
 

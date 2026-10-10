@@ -628,7 +628,7 @@ above contradict nothing of what was written: **they were not there**.
    product**, on the user's device, which is the only place where the question has an answer.
 3. ⚠ **A chapter that ages in months, not years.** Compositors are frozen by Debian; browsers
    update themselves, and **two of the five most important things in this study are from
-   2026** — one from May, one from January. `LEZIONI.md` §9.8 says to update documents when
+   2026** — one from May, one from January. `LEZIONI.md` §9 point 8 says to update documents when
    a measurement contradicts them; here it must be added that **even without measurements, this file expires**.
 4. ⭐ **Whoever reads other people's code finds cures nobody would invent.** Resynchronising the
    modifiers **from mouse events** (§5.4) cannot be deduced: it is found only by looking at how
