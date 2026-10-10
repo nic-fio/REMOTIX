@@ -548,7 +548,7 @@ scratch) · **189** (⭐ and with the host's cache emptied, to get the cold disk
 ⇒ The real number is **~187 and stable**: the margin on 240 was **54 frames, 29 %**.
 
 `[?]` Why more are needed inside the complete round (379 frames in all against 249) is not
-measured. The suspicion is written: between two benches on the same seat **the previous seat stays
+measured. The suspicion is written: between two benches on the same slot **the previous slot stays
 attached for about twenty seconds**, and C2(kde) in the round comes right after C9(kde), which made
 two sessions.
 
@@ -613,7 +613,7 @@ browsers):
 `[M]` The photo of the desktop: panel at the top, Home and File System icons, the dock at the bottom, the
 folders **blue** (the channels are right). ⚠ The wallpaper is **black**: the box lacks the
 wallpapers package — it is the box, not the product.
-⚠ The page says "unknown desktop" on XFCE — ⛔ **and it says it on GNOME and KDE too**: the server
+⚠ The page says «desktop sconosciuto» ("unknown desktop") on XFCE — ⛔ **and it says it on GNOME and KDE too**: the server
 sends the fixed string of phase 1 (`src/rcp.c`, message `SESSIONE`). It does not belong to this phase, and
 touching it would touch GNOME and KDE: it stays as it is.
 
@@ -924,7 +924,7 @@ The user, 23 Sep: *«prima si chiudono i punti aperti»*. How they were at 19 h 
   ⭐ **Of the two possible routes the first was chosen, and the second was refused with the
   reasons in the clear.** Closing the QUIC connection when the last session goes away would have seemed
   more honest, but "session finished, connection still alive" is a state **foreseen twice in
-  this same file**, and both times the choice was to free the SEAT and leave the transport
+  this same file**, and both times the choice was to free the SLOT and leave the transport
   standing: `fin_dal_client()` («la pagina che chiude la parte scrivente del canale e tiene viva la
   connessione») and `chiusa_dal_client()` («il posto si lascia adesso … aspettare lo smontaggio del
   trasporto vuol dire tenerlo occupato addosso a chi si ricollega subito»). And `wt_stream_chiuso()`
@@ -972,13 +972,13 @@ The user, 23 Sep: *«prima si chiudono i punti aperti»*. How they were at 19 h 
   playing, so "audio muted on return" was neither confirmed nor refuted.
 
 - ⏳ **The stage stops capturing when the TRANSPORT dies, not when the client TAKES ITS LEAVE** —
-  23 Sep 2026, found while curing the dead line. At farewell we free the seat (`posto LASCIATO …
+  23 Sep 2026, found while curing the dead line. At farewell we free the slot (`posto LASCIATO …
   occupati adesso: 0`) but we do **not** turn off the capture: it stops only when the QUIC
   connection goes away. In between every frame is captured, encoded, offered, **refused** by
   `rcp_video_apri()` (`src/rcp.c`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) and put on record as
   `⛔ NIENTE VIDEO: «SESSIONE» non è stata spedita (stato finita)`.
   ⇒ It is work done for nobody **and** a ⛔ line that looks like a fault. 🔸 The sensible cure is
-  to turn off the frame loop on the same event that frees the seat — ⚠ but it must be checked against
+  to turn off the frame loop on the same event that frees the slot — ⚠ but it must be checked against
   I4 ("the stage stays standing"), which is another thing: stopping the *capture* is not dismantling the stage.
 
 - ✅ **THE NET AFTER THE CURE OF THE GHOSTS HAS RUN** — 22 Sep 2026, `--famiglia tutto --scatola "gnome kde
