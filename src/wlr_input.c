@@ -716,7 +716,7 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 			return NULL;
 		}
 		registro_dice(AREA,
-		              "⚠ FALLBACK DECLARED: the session did not hand over its keymap — "
+		              "⚠ DECLARED FALLBACK: the session did not hand over its keymap — "
 		              "presenting the ENVIRONMENT's (layout «%s»).  ⛔ It may not be "
 		              "the session's: the layout negotiated with the client corrects it",
 		              xkb_keymap_layout_get_name(w->keymap, 0) ?: "unnamed");

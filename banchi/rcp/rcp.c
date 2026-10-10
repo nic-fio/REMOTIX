@@ -428,7 +428,7 @@ uint64_t rcp_inattivita(void) { return inattivita_ms; }
  * Here there were 64 KiB, and §6.1 says «no message MUST exceed 1 MiB» —
  * that is **up to 1 MiB is conforming**.  The two numbers sat two lines
  * apart and did not agree: every message between 64 KiB and 1 MiB died with
- * `ERRORE_PROTOCOLLO` and the detail «troppi byte in attesa di un corpo»,
+ * `ERRORE_PROTOCOLLO` and the detail «too many bytes waiting for a body»,
  * before its header was even looked at.  ⚠ A `CIAO` with
  * four hundred capabilities with a legitimate and unknown name (≈ 82 KiB) is
  * conforming to §6.1 and §4.3 in every part, and §3 exception 1 requires
@@ -2074,7 +2074,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 {
 	uint16_t versione = le_u16(l);
 	if (l->corto) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO senza versione");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO without version");
 		return false;
 	}
 	/* ⛔ §2.4: «the two MUST match» — the path `/rcp/1` says 1, and a
@@ -2099,7 +2099,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 *   would pass here the version of the path, not a constant. */
 	if (versione != RCP_VERSIONE) {
 		congeda(s, RCP_VERSIONE_INCOMPATIBILE,
-		        "la versione del CIAO non e' quella del percorso");
+		        "the CIAO version is not the one of the path");
 		return false;
 	}
 	uint16_t quante = le_u16(l);
@@ -2148,15 +2148,15 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		size_t ln = le_str(l, nome, sizeof nome);
 		size_t lv = le_str(l, valore, sizeof valore);
 		if (l->corto) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "elenco delle capacita' troncato");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "capability list truncated");
 			return false;
 		}
 		if (!nome_lecito(nome, ln)) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "nome di capacita' fuori forma");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "malformed capability name");
 			return false;
 		}
 		if (lv == 0) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "capacita' con valore vuoto");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "capability with an empty value");
 			return false;
 		}
 		/* ⚠ The order of the two terms of the `||` is not indifferent and is not
@@ -2164,7 +2164,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		 *   reading beyond the buffer when the string does not fit (see the
 		 *   comment of `le_str`, and suspicion R9.18 which stays open). */
 		if (lv > 256 || !testo_stampabile(valore, lv)) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "valore di capacita' non valido");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "invalid capability value");
 			return false;
 		}
 		/* ⛔ A repeated name is ERRORE_PROTOCOLLO: «the last one wins» and «the
@@ -2196,7 +2196,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			}
 		}
 		if (ripetuto) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "capacita' ripetuta");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "repeated capability");
 			return false;
 		}
 		/* ⛔ A capability from the wrong side is ERRORE_PROTOCOLLO: the name is
@@ -2343,12 +2343,12 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	 * passes — and nobody applies the line of §4.3. */
 	if (!voce_presente(c_audio, "pcm")) {
 		congeda(s, RCP_NIENTE_IN_COMUNE,
-		        "il client non dichiara pcm in audio.codec");
+		        "the client does not declare pcm in audio.codec");
 		return false;
 	}
 	if (!voce_presente(c_prof, "8")) {
 		congeda(s, RCP_NIENTE_IN_COMUNE,
-		        "il client non dichiara 8 in video.profondita");
+		        "the client does not declare 8 in video.profondita");
 		return false;
 	}
 	/* ⛔ If the intersection is empty the client is sent away with
@@ -2371,7 +2371,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 	                  sizeof s->profondita, sc_prof, sizeof sc_prof, &n_prof) ||
 	    !prima_comune(c_audio, NOSTRO_AUDIO, s->audio, sizeof s->audio,
 	                  sc_audio, sizeof sc_audio, &n_audio)) {
-		congeda(s, RCP_NIENTE_IN_COMUNE, "nessun codec condiviso");
+		congeda(s, RCP_NIENTE_IN_COMUNE, "no shared codec");
 		return false;
 	}
 	/* ⛔ The choice is WRITTEN: a successful negotiation with the opposite
@@ -2408,7 +2408,7 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	 * the same thing where one happens to look. */
 	if (l->corto) {
 		memset(parola, 0, sizeof parola);
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "CREDENZIALI troncate");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "CREDENZIALI truncated");
 		return false;
 	}
 	/* §4.4: the ranges.  An empty string is legal by §6.0, and without
@@ -2416,7 +2416,7 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	 * conforming — and an attacker would increment no counter. */
 	if (lu < 1 || lu > 256 || lp < 1 || lp > 1024) {
 		memset(parola, 0, sizeof parola);
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "utente o parola fuori intervallo");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "user or password out of range");
 		return false;
 	}
 	/* ⛔ §4.3 applies to capabilities, but the reason for `testo_stampabile`
@@ -2427,7 +2427,7 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	if (!testo_stampabile(utente, lu)) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
-		        "l'utente non e' testo UTF-8 stampabile");
+		        "the user is not printable UTF-8 text");
 		return false;
 	}
 	/* ⚠ Of the password ONLY the NUL byte is checked, and the reason is the
@@ -2437,8 +2437,8 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	if (strlen(parola) != lp) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
-		        "la parola contiene un byte nullo: quel che arriva e quel che "
-		        "si giudicherebbe sarebbero due cose diverse");
+		        "the password contains a null byte: what arrives and what "
+		        "would be judged would be two different things");
 		return false;
 	}
 	snprintf(s->utente, sizeof s->utente, "%s", utente);
@@ -2633,7 +2633,7 @@ static bool disposizione_ben_formata(const char *d, size_t n)
  * `[?]` ⚠ **And the list below is from phase 1, and it must be declared.**
  *   «What the system knows» is known by the system, not by RCP: a real server
  *   asks XKB.  In phase 1 there is no compositor (`SESSIONE` declares
- *   `desktop=sconosciuto`), so there is nobody to ask, and the choice is a
+ *   `desktop=unknown`), so there is nobody to ask, and the choice is a
  *   fixed list.  ⛔ What the bench tests is **that the two faults are
  *   distinct**, not which layouts exist: the day the question goes to XKB,
  *   this function changes and B5 stays as it is. */
@@ -2660,7 +2660,7 @@ static bool disposizione_nell_elenco(const char *d)
  *      **`hu`, `tr`, `gr` and `ua` exist in `/usr/share/X11/xkb/symbols/` on
  *      this machine and were refused** with `SESSIONE_NON_SERVIBILE`.
  *      ⇒ A Hungarian user was denied the session by a hand-written list, and
- *        the log told them «disposizione sconosciuta a questa macchina» — a
+ *        the log told them «layout unknown to this machine» — a
  *        FALSE sentence, which is the worst way of being wrong.
  *
  *      ⚠ And as long as the declared layout touched nothing the defect was
@@ -2760,8 +2760,8 @@ static void applica_disposizione(rcp_sessione *s, const char *perche)
  *    `S_STACCATA`, and whatever was pressed released (§7.3).  ⭐ From there
  *    `torna_a_parlare()` already knows what to do with it should the wire come
  *    back to life: the slot is no longer its own, and it gets `0x0F` with the
- *    sentence «il posto di questa sessione e' stato preso da un altro client
- *    mentre questa taceva» — which in that case is TRUE.  ⚠ Verified by reading
+ *    sentence «the slot of this session was taken by another client
+ *    while this one was silent» — which in that case is TRUE.  ⚠ Verified by reading
  *    it, not taken for granted: that function restarts **only** from
  *    `S_STACCATA`, and that is why the state is changed here and one does not
  *    just remove the slot (finding R9.2). */
@@ -2838,7 +2838,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	 *    truncation has been ruled out. */
 	size_t ld = le_str(l, disp, sizeof disp);
 	if (l->corto) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA troncato");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA truncated");
 		return false;
 	}
 	/* ⛔⭐ ABOVE THE MAXIMUM IT IS REDUCED, THE CLIENT IS NOT SENT AWAY — 1 Oct
@@ -2869,7 +2869,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	 * encoder, in silence — two different sizes under the same label, which is
 	 * the E2 shape. */
 	if (tl < RCP_TELA_L_MINIMA || ta < RCP_TELA_A_MINIMA || (tl % 2) || (ta % 2)) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "tela sotto il minimo o dispari");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "canvas below the minimum or odd");
 		return false;
 	}
 	/* ⛔ And the ONLY limit of the view, §7.1: «any size **from 1x1 up**».
@@ -2880,12 +2880,12 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	 *    and the defect would show further on — when someone divided by it. */
 	if (!vl || !va) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
-		        "vista con un lato a zero: §7.1 ammette qualunque misura da 1x1 "
-		        "in su, e lo zero non e' una misura");
+		        "view with a zero side: §7.1 admits any size from "
+		        "1x1 up, and zero is not a size");
 		return false;
 	}
 	if (!disposizione_ben_formata(disp, ld)) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "disposizione fuori forma");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "malformed layout");
 		return false;
 	}
 	if (!disposizione_conosciuta(s, disp)) {
@@ -2893,7 +2893,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		 * body», and `congeda()` puts it there.  The detail is NOT shown to the
 		 * user (§8.2): the client builds the sentence from the code. */
 		char d[128];
-		snprintf(d, sizeof d, "disposizione sconosciuta a questa macchina: %s",
+		snprintf(d, sizeof d, "layout unknown to this machine: %s",
 		         disp);
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE, d);
 		return false;
@@ -2928,8 +2928,8 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 			/* ⛔ The detail in the body does NOT name the other session:
 			 * §8.2 says what the client may know. */
 			congeda(s, RCP_GIA_ATTIVA_LOCALE,
-			        "c'e' gia' una sessione grafica locale di questo "
-			        "utente");
+			        "this user already has a local graphical "
+			        "session");
 			return false;
 		}
 	} else {
@@ -2969,7 +2969,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		                 "2026 the default is 15000)");
 		/* ⛔⛔ AND THE SENTENCE NO LONGER DIAGNOSES — 23 Aug 2026.
 		 *
-		 * It said «c'e' gia' un client attaccato a questa sessione», and the
+		 * It said «there is already a client attached to this session», and the
 		 * client built from it **«you already have an active session
 		 * elsewhere»**.  ⛔ For whoever reads it after their wire dropped that
 		 * sentence is FALSE: that session is theirs, and it died a moment
@@ -2988,8 +2988,8 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		 *   That line changes only if the director chooses the sentence — it is
 		 *   the only thing in this cure that is not decided alone. */
 		snprintf(dett, sizeof dett,
-		         "il posto di questa sessione risulta occupato da un client che "
-		         "ha dato un segno di vita %llu ms fa",
+		         "the slot of this session is held by a client that "
+		         "gave a sign of life %llu ms ago",
 		         (unsigned long long)muto);
 		congeda(s, RCP_GIA_ATTIVA_REMOTA, dett);
 		return false;
@@ -3005,7 +3005,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		       "has no session elsewhere",
 		    s->utente, s->provenienza, posti_occupati(), tetto_in_vigore);
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE,
-		        "il registro delle sessioni di questo server e' pieno");
+		        "the session registry of this server is full");
 		return false;
 	}
 	s->attaccata = true;
@@ -3056,8 +3056,8 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		if (cl > s->max_l || ca > s->max_a) {
 			char d[160];
 			snprintf(d, sizeof d,
-			         "video.misura_massima=%ux%u e' sotto la tela minima "
-			         "legale di 320x240 (§4.5)",
+			         "video.misura_massima=%ux%u is below the minimum legal "
+			         "canvas of 320x240 (§4.5)",
 			         s->max_l, s->max_a);
 			reg(s, "⛔ canvas NOT granted to %s: requested %ux%u, ceiling %ux%u — "
 			       "not even 320x240 fits under it",
@@ -3132,12 +3132,12 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	scrittore w = {corpo, sizeof corpo, 0, false};
 	/* ⭐ D-001 (phase 15): the REAL state and desktop, if the host knows them —
 	 *    the why is on the two hooks in `rcp.h`.  ⚠ Without hooks it stays what
-	 *    it was: `NUOVA` and `sconosciuto`. */
+	 *    it was: `NUOVA` and `unknown`. */
 	bool ripresa = s->g.sessione_ripresa && s->g.sessione_ripresa(s->g.ctx);
 	const char *desktop = s->g.desktop ? s->g.desktop(s->g.ctx) : NULL;
 
 	if (!desktop || !desktop[0])
-		desktop = "sconosciuto";
+		desktop = "unknown";
 	sc_byte(&w, ripresa ? 2 : 1); /* §4.5: 1 = NUOVA, 2 = RIPRESA */
 	sc_u32(&w, tl);
 	sc_u32(&w, ta);
@@ -4820,25 +4820,25 @@ static bool coordinate_ammesse(rcp_sessione *s, uint32_t id, uint32_t x,
 	 * cover — «out of range» alone would send people looking for the defect in
 	 * the client even when the defect is a second expired by one millisecond. */
 	if (s->tela_prec_l && !grazia_aperta)
-		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela in vigore "
-		               "%ux%u (§7.3: 0<=x<%u, 0<=y<%u), e il secondo di grazia "
-		               "di §7.1 e' scaduto da %llu ms",
+		viola_input(s, "PUNTATORE id=%u at (%u,%u): outside the canvas in "
+		               "force %ux%u (§7.3: 0<=x<%u, 0<=y<%u), and the grace second "
+		               "of §7.1 expired %llu ms ago",
 		            id, x, y, s->tela_l, s->tela_a, s->tela_l, s->tela_a,
 		            (unsigned long long)(ora > s->tela_grazia_da + TELA_GRAZIA
 		                                     ? ora - s->tela_grazia_da -
 		                                           TELA_GRAZIA
 		                                     : 0));
 	else if (grazia_aperta)
-		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela in vigore "
-		               "%ux%u E fuori dalla precedente %ux%u — la grazia di §7.1 "
-		               "copre le coordinate della tela vecchia, non le "
-		               "coordinate sbagliate",
+		viola_input(s, "PUNTATORE id=%u at (%u,%u): outside the canvas in "
+		               "force %ux%u AND outside the previous %ux%u — the grace of "
+		               "§7.1 covers the coordinates of the old canvas, "
+		               "not wrong coordinates",
 		            id, x, y, s->tela_l, s->tela_a, s->tela_prec_l,
 		            s->tela_prec_a);
 	else
-		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela %ux%u — "
-		               "§7.3 vuole 0<=x<%u e 0<=y<%u, e l'angolo in basso a "
-		               "destra e' (%u,%u)",
+		viola_input(s, "PUNTATORE id=%u at (%u,%u): outside the canvas %ux%u "
+		               "— §7.3 wants 0<=x<%u and 0<=y<%u, and the bottom right "
+		               "corner is (%u,%u)",
 		            id, x, y, s->tela_l, s->tela_a, s->tela_l, s->tela_a,
 		            s->tela_l - 1, s->tela_a - 1);
 	return false;
@@ -4860,9 +4860,9 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	 * was injected» without also saying «the first was injected» —
 	 * that is the implicit sentinel value §6.0 forbids. */
 	if (id == 0) {
-		viola_input(s, "%s con id=0: §7.3 riserva lo zero e gli da' il "
-		               "significato «nessun input» nel campo `input` dei "
-		               "fotogrammi (§6.2)",
+		viola_input(s, "%s with id=0: §7.3 reserves zero and gives it "
+		               "the meaning «no input» in the `input` field of "
+		               "the frames (§6.2)",
 		            nome_input(tipo));
 		return false;
 	}
@@ -4880,9 +4880,9 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	 *    rule it is a violation.  A bench that sent only increasing ids within
 	 *    each type would not tell the two implementations apart. */
 	if (id <= s->inp_ultimo_id) {
-		viola_input(s, "%s con id=%u, e l'ultimo id di QUESTO CANALE era %u: "
-		               "§7.3 vuole che cresca di almeno uno su tutto il canale, "
-		               "non uno per tipo",
+		viola_input(s, "%s with id=%u, and the last id of THIS CHANNEL was %u: "
+		               "§7.3 wants it to grow by at least one over the whole channel, "
+		               "not one per type",
 		            nome_input(tipo), id, s->inp_ultimo_id);
 		return false;
 	}
@@ -4913,8 +4913,8 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 * until one of the two sends 2 by mistake, and then the key stays
 		 * down forever and nobody knows why. */
 		if (premuto > 1) {
-			viola_input(s, "%s id=%u codice=%u con premuto=%u: §7.3 ammette 1 "
-			               "(premuto) e 0 (rilasciato), e nient'altro",
+			viola_input(s, "%s id=%u codice=%u with premuto=%u: §7.3 admits 1 "
+			               "(pressed) and 0 (released), and nothing else",
 			            nome_input(tipo), id, codice, premuto);
 			return false;
 		}
@@ -4992,15 +4992,15 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *   copying the first onto the second would refuse a character that
 		 *   the arbiter allows. */
 		if (car > 0x10FFFFu) {
-			viola_input(s, "LETTERA id=%u con carattere U+%X: §7.3 vuole un "
-			               "valore scalare Unicode, da 0 a 0x10FFFF",
+			viola_input(s, "LETTERA id=%u with character U+%X: §7.3 wants a "
+			               "Unicode scalar value, from 0 to 0x10FFFF",
 			            id, car);
 			return false;
 		}
 		if (car >= 0xD800u && car <= 0xDFFFu) {
-			viola_input(s, "LETTERA id=%u con carattere U+%04X: e' meta' di una "
-			               "coppia surrogata, e §7.3 li esclude — un valore "
-			               "scalare Unicode non comprende 0xD800-0xDFFF",
+			viola_input(s, "LETTERA id=%u with character U+%04X: it is half of a "
+			               "surrogate pair, and §7.3 excludes them — a Unicode "
+			               "scalar value does not include 0xD800-0xDFFF",
 			            id, car);
 			return false;
 		}
@@ -5017,8 +5017,8 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		/* Never reached: `misura_input()` has already refused the types it does
 		 * not know, before buffering a byte.  The line is here so that the
 		 * day the two lists drifted apart someone would say so. */
-		viola_input(s, "tipo %#06x sul canale di input: §7.3 ne definisce cinque, "
-		               "da 0x0101 a 0x0105",
+		viola_input(s, "type %#06x on the input channel: §7.3 defines five, from "
+		               "0x0101 to 0x0105",
 		            tipo);
 		return false;
 	}
@@ -5308,8 +5308,8 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	 *     side: if `SESSIONE` has not gone out, the client has not received it,
 	 *     and no packet loss can change that. */
 	if (!s->sessione_spedita) {
-		viola_input(s, "byte sullo stream di input (%lld) prima che `SESSIONE` "
-		               "sia partita: §2.5 lo apre DOPO averla ricevuta (stato: "
+		viola_input(s, "bytes on the input stream (%lld) before `SESSIONE` "
+		               "has gone out: §2.5 opens it AFTER receiving it (state: "
 		               "%s)",
 		            (long long)stream, NOMI_STATO[s->stato]);
 		return false;
@@ -5324,8 +5324,8 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		    (long long)stream,
 		    ha_canale_input(s) ? "connected" : "⚠ NOT connected");
 	} else if (stream != s->inp_stream) {
-		viola_input(s, "un SECONDO stream di input (%lld) mentre il primo (%lld) "
-		               "e' ancora quello: §2.5 ne ammette uno solo",
+		viola_input(s, "a SECOND input stream (%lld) while the first (%lld) "
+		               "is still the one: §2.5 admits only one",
 		            (long long)stream, (long long)s->inp_stream);
 		return false;
 	}
@@ -5369,8 +5369,8 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			/* Never reached as long as the pruning below works: the line
 			 * is there so that the day it did not work someone would say so,
 			 * instead of going round in circles. */
-			viola_input(s, "accumulo dello stream di input pieno (%zu byte) "
-			               "senza un messaggio intero: e' un difetto NOSTRO",
+			viola_input(s, "input stream accumulation full (%zu bytes) "
+			               "without a whole message: it is OUR defect",
 			            s->inp_acc_len);
 			return false;
 		}
@@ -5391,33 +5391,33 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			 * is «video from the client»: they are violations with different names,
 			 * and §3.1 point 1 wants the name. */
 			if ((tipo >> 8) != 0x01) {
-				const char *chi = (tipo >> 8) == 0x00   ? "il CONTROLLO, che vive "
-				                                          "solo sul primo stream "
-				                                          "bidirezionale"
-				                  : (tipo >> 8) == 0x02 ? "gli APPUNTI, che "
-				                                          "vogliono uno stream "
-				                                          "loro per trasferimento"
-				                  : (tipo >> 8) == 0x03 ? "il VIDEO, che e' del "
-				                                          "server e va nell'altro "
-				                                          "verso"
-				                  : (tipo >> 8) == 0x04 ? "l'AUDIO, che vive solo "
-				                                          "sui datagram"
-				                                        : "un canale che §2.5 non "
-				                                          "definisce";
+				const char *chi = (tipo >> 8) == 0x00   ? "CONTROL, which lives "
+				                                          "only on the first "
+				                                          "bidirectional stream"
+				                  : (tipo >> 8) == 0x02 ? "the CLIPBOARD, "
+				                                          "which wants a stream "
+				                                          "of its own per transfer"
+				                  : (tipo >> 8) == 0x03 ? "VIDEO, which belongs to "
+				                                          "the server and goes the "
+				                                          "other way"
+				                  : (tipo >> 8) == 0x04 ? "AUDIO, which lives only "
+				                                          "on datagrams"
+				                                        : "a channel that §2.5 does "
+				                                          "not define";
 				/* ⚠ `0x%02x` and not `%#04x`: the latter, on the value ZERO, does
 				 *   not print the prefix — it writes `0000` — and the control
 				 *   channel is precisely `0x00`.  The most important high byte
 				 *   of all would have been the only unreadable one. */
-				viola_input(s, "tipo %#06x sullo stream di input: il byte alto "
-				               "0x%02x e' %s (§2.5)",
+				viola_input(s, "type %#06x on the input stream: the high byte "
+				               "0x%02x is %s (§2.5)",
 				            tipo, (unsigned)(tipo >> 8), chi);
 				return false;
 			}
 
 			uint32_t attesa = misura_input(tipo);
 			if (attesa == 0) {
-				viola_input(s, "tipo %#06x sul canale di input: §7.3 ne "
-				               "definisce CINQUE — 0x0101 PUNTATORE, 0x0102 "
+				viola_input(s, "type %#06x on the input channel: §7.3 "
+				               "defines FIVE — 0x0101 PUNTATORE, 0x0102 "
 				               "PULSANTE, 0x0103 ROTELLA, 0x0104 LETTERA, 0x0105 "
 				               "POSIZIONE_TASTO",
 				            tipo);
@@ -5430,19 +5430,19 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			 * defects in the client. */
 			if (lung != attesa) {
 				if (lung > MAX_CORPO)
-					viola_input(s, "%s (%#06x) annuncia %u byte di corpo: oltre "
-					               "il tetto di 1 MiB di §6.1, e §7.3 ne vuole "
-					               "%u esatti",
+					viola_input(s, "%s (%#06x) announces %u body bytes: beyond "
+					               "the 1 MiB ceiling of §6.1, and §7.3 wants "
+					               "exactly %u",
 					            nome_input(tipo), tipo, lung, attesa);
 				else
-					viola_input(s, "%s (%#06x) annuncia %u byte di corpo e §7.3 "
-					               "ne prevede %u (%u di id+istante piu' %u "
-					               "suoi): %s",
+					viola_input(s, "%s (%#06x) announces %u body bytes and §7.3 "
+					               "expects %u (%u of id+istante plus %u of its "
+					               "own): %s",
 					            nome_input(tipo), tipo, lung, attesa, I_COMUNI,
 					            attesa - I_COMUNI,
-					            lung > attesa ? "byte in PIU', e §6.0 non ammette "
-					                            "riempimento"
-					                          : "byte in MENO");
+					            lung > attesa ? "EXTRA bytes, and §6.0 admits "
+					                            "no padding"
+					                          : "MISSING bytes");
 				return false;
 			}
 			/* ⛔⭐ `(size_t)6u`, AND NOT `6u` — found by the bench certification
@@ -5869,16 +5869,16 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *    reserved.  An announcement with `trasferimento = 0` is not a poor
 		 *    announcement: it is an identifier that can never be asked for. */
 		if (trasf == 0) {
-			viola_appunti(s, "APPUNTI_ANNUNCIO con trasferimento 0: §7.4 li "
-			                 "numera da 1, e lo 0 vuol dire «nessun annuncio»");
+			viola_appunti(s, "APPUNTI_ANNUNCIO with transfer 0: §7.4 numbers "
+			                 "them from 1, and 0 means «no announcement»");
 			return false;
 		}
 		/* ⛔ §5.4: the ceiling binds the sender first of all, but whoever
 		 *    receives a larger announcement must not get ready to take it in: it
 		 *    is a client that has violated §5.4, and §3 makes no discounts. */
 		if (quanti > RCP_APPUNTI_TETTO) {
-			viola_appunti(s, "APPUNTI_ANNUNCIO di %u byte: §5.4 si ferma a %u, e "
-			                 "oltre il tetto NON si annuncia affatto",
+			viola_appunti(s, "APPUNTI_ANNUNCIO of %u bytes: §5.4 stops at %u, and beyond "
+			                 "the ceiling NOTHING is announced at all",
 			              quanti, RCP_APPUNTI_TETTO);
 			return false;
 		}
@@ -5953,8 +5953,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *    «live» includes superseded ones: see the case just below, which is
 		 *    the FIFTH exception declared in §3. */
 		if (trasf == 0 || trasf > s->app_mio_id) {
-			viola_appunti(s, "APPUNTI_CHIEDI per il trasferimento %u, che non "
-			                 "corrisponde a nessun annuncio: ne ho fatti %u "
+			viola_appunti(s, "APPUNTI_CHIEDI for transfer %u, which "
+			                 "matches no announcement: I have made %u "
 			                 "(§7.4)",
 			              trasf, s->app_mio_id);
 			return false;
@@ -6013,9 +6013,9 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		/* ⛔ §7.4: «an `APPUNTI_TESTO` nobody asked for is
 		 *    `ERRORE_PROTOCOLLO`: the clipboard is pulled, not pushed». */
 		if (s->app_serial_n == 0) {
-			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) che "
-			                 "nessuno ha chiesto: §7.4 — gli appunti si tirano, "
-			                 "non si spingono",
+			viola_appunti(s, "APPUNTI_TESTO (transfer %u, %zu bytes) that "
+			                 "nobody asked for: §7.4 — the clipboard is "
+			                 "pulled, not pushed",
 			              trasf, byte);
 			return false;
 		}
@@ -6029,10 +6029,10 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *   by construction, and §7.4 says it is served with the current text and
 		 *   **is not an error**.  ⇒ One compares with what one ASKED FOR. */
 		if (trasf != s->app_chiesto_id && trasf != s->app_suo_id) {
-			viola_appunti(s, "APPUNTI_TESTO per il trasferimento %u, che non ho "
-			                 "mai chiesto (ho chiesto il %u, l'annuncio vivo e' "
-			                 "il %u): §7.4 — gli appunti si tirano, non si "
-			                 "spingono",
+			viola_appunti(s, "APPUNTI_TESTO for transfer %u, which I never "
+			                 "asked for (I asked for %u, the live announcement "
+			                 "is %u): §7.4 — the clipboard is pulled, "
+			                 "not pushed",
 			              trasf, s->app_chiesto_id, s->app_suo_id);
 			return false;
 		}
@@ -6052,8 +6052,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *   one announced back then — demanding the old length would refuse
 		 *   precisely what the exception allows. */
 		if (trasf == s->app_suo_id && byte != s->app_suo_len) {
-			viola_appunti(s, "APPUNTI_TESTO porta %zu byte e l'annuncio %u ne "
-			                 "dichiarava %u (§7.4)",
+			viola_appunti(s, "APPUNTI_TESTO carries %zu bytes and announcement "
+			                 "%u declared %u (§7.4)",
 			              byte, trasf, s->app_suo_len);
 			return false;
 		}
@@ -6062,8 +6062,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *    delivered to the compositor is a defect of OURS with the face of a
 		 *    defect of the desktop. */
 		if (!utf8_valido(testo, byte)) {
-			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) non e' "
-			                 "UTF-8 valido, e §5.4 lo pretende",
+			viola_appunti(s, "APPUNTI_TESTO (transfer %u, %zu bytes) is not "
+			                 "valid UTF-8, and §5.4 demands it",
 			              trasf, byte);
 			return false;
 		}
@@ -6081,9 +6081,9 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		 *   refuse **any text copied from an editor**.  The right rule is
 		 *   stricter than UTF-8 and wider than «printable». */
 		if (memchr(testo, 0, byte)) {
-			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) porta "
-			                 "uno zero in mezzo: quel che si incollerebbe "
-			                 "sarebbe piu' corto di quel che l'annuncio prometteva",
+			viola_appunti(s, "APPUNTI_TESTO (transfer %u, %zu bytes) carries "
+			                 "a zero in the middle: what would be pasted "
+			                 "would be shorter than what the announcement promised",
 			              trasf, byte);
 			return false;
 		}
@@ -6097,8 +6097,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		/* ⛔ §7.4 defines THREE, and the high byte has already been recognised
 		 *    as `0x02`: here we are on a clipboard channel type that does not
 		 *    exist.  §3: it is not ignored. */
-		viola_appunti(s, "tipo %#06x sul canale appunti: §7.4 ne definisce TRE — "
-		                 "0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO",
+		viola_appunti(s, "type %#06x on the clipboard channel: §7.4 defines THREE "
+		                 "— 0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO",
 		              tipo);
 		return false;
 	}
@@ -6134,8 +6134,8 @@ static int appunti_posto(rcp_sessione *s, int64_t stream)
 	if (libero < 0) {
 		/* ⛔ All halfway through a message: it is a client that opens streams and
 		 *    does not finish them, and it is no longer a tolerance — it is §3. */
-		viola_appunti(s, "%d stream di appunti aperti insieme e tutti a meta' di "
-		                 "un messaggio: §2.5 ne vuole uno per trasferimento",
+		viola_appunti(s, "%d clipboard streams open together and all halfway "
+		                 "through a message: §2.5 wants one per transfer",
 		              A_STREAM_MAX);
 		return -1;
 	}
@@ -6169,8 +6169,8 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 
 	/* ⛔ §2.5, like input: nothing before `SESSIONE` has gone out. */
 	if (!s->sessione_spedita) {
-		viola_appunti(s, "byte sullo stream di appunti (%lld) prima che "
-		                 "`SESSIONE` sia partita (stato: %s)",
+		viola_appunti(s, "bytes on the clipboard stream (%lld) before "
+		                 "`SESSIONE` has gone out (state: %s)",
 		              (long long)stream, NOMI_STATO[s->stato]);
 		return false;
 	}
@@ -6179,8 +6179,8 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	 *    ⚠ It is NOT a tolerance: it is a non-negotiated capability used all
 	 *    the same, that is the case §4.3 exists to make impossible. */
 	if (!s->negozia_appunti) {
-		viola_appunti(s, "byte sul canale appunti da un client che non ha "
-		                 "dichiarato `appunti.testo` in `CIAO` (§4.3)");
+		viola_appunti(s, "bytes on the clipboard channel from a client that "
+		                 "did not declare `appunti.testo` in `CIAO` (§4.3)");
 		return false;
 	}
 
@@ -6215,8 +6215,8 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 
 				/* ⛔ §2.5: on this stream the high byte is 0x02. */
 				if ((tipo >> 8) != 0x02) {
-					viola_appunti(s, "tipo %#06x sullo stream di appunti: il "
-					                 "byte alto 0x%02x non e' il canale appunti "
+					viola_appunti(s, "type %#06x on the clipboard stream: the "
+					                 "high byte 0x%02x is not the clipboard channel "
 					                 "(§2.5)",
 					              tipo, (unsigned)(tipo >> 8));
 					return false;
@@ -6238,20 +6238,20 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 					attesa_max = A_TESTO_MINIMO + RCP_APPUNTI_TETTO;
 					break;
 				default:
-					viola_appunti(s, "tipo %#06x sul canale appunti: §7.4 ne "
-					                 "definisce TRE — 0x0201 ANNUNCIO, 0x0202 "
+					viola_appunti(s, "type %#06x on the clipboard channel: §7.4 "
+					                 "defines THREE — 0x0201 ANNUNCIO, 0x0202 "
 					                 "CHIEDI, 0x0203 TESTO",
 					              tipo);
 					return false;
 				}
 				if (lung < attesa_min || lung > attesa_max) {
-					viola_appunti(s, "il messaggio %#06x annuncia %u byte di "
-					                 "corpo e §7.4 ne vuole fra %u e %u: %s",
+					viola_appunti(s, "message %#06x announces %u body bytes "
+					                 "and §7.4 wants between %u and %u: %s",
 					              tipo, lung, attesa_min, attesa_max,
 					              lung < attesa_min
-					                  ? "byte in MENO"
-					                  : "byte in PIU' — e oltre il tetto di §5.4 "
-					                    "il testo non si annuncia affatto");
+					                  ? "MISSING bytes"
+					                  : "EXTRA bytes — and beyond the ceiling of §5.4 "
+					                    "the text is not announced at all");
 					return false;
 				}
 				s->app_in[i].tipo = tipo;
@@ -6343,14 +6343,14 @@ static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
 	uint32_t ultimo = le_u32(l);
 	if (l->corto) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
-		        "RICHIEDI_CHIAVE senza `ultimo_numero`");
+		        "RICHIEDI_CHIAVE without `ultimo_numero`");
 		return false;
 	}
 	/* §5.2: it is served only with the session open — before there are no
 	 * frames to notice anything about. */
 	if (!s->sessione_spedita) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
-		        "RICHIEDI_CHIAVE prima di SESSIONE: non c'e' nessun fotogramma");
+		        "RICHIEDI_CHIAVE before SESSIONE: there is no frame");
 		return false;
 	}
 	/* ⛔ §7.1: «`ultimo_numero`: the last decoded frame, **0 if
@@ -6415,14 +6415,14 @@ static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
 {
 	uint32_t id = le_u32(l), colore = le_u32(l), ritardo = le_u32(l);
 	if (l->corto) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA troncato");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA truncated");
 		return false;
 	}
 	/* ⛔ §7.5: «0 is reserved».  A zero id is not a wrong bench parameter,
 	 * it is a malformed message: here the session drops.
 	 * ⚠ Our choice — the document says «reserved» and does not say the outcome. */
 	if (id == 0) {
-		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA con id 0, che e' riservato");
+		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA with id 0, which is reserved");
 		return false;
 	}
 
@@ -6908,7 +6908,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		 * together with §5.4) — finding B-14: here `lung` is the BODY, and the
 		 * longest body allowed is `MAX_MESSAGGIO - 6`. */
 		if (lung > MAX_CORPO) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "messaggio oltre 1 MiB");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "message over 1 MiB");
 			return false;
 		}
 		if (s->acc_len < 6u + lung)
@@ -6916,7 +6916,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 
 		/* §2.5: on the control channel the high byte of the type is 0x00. */
 		if ((tipo >> 8) != 0x00) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "byte alto del tipo non e' controllo");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "high byte of the type is not control");
 			return false;
 		}
 		/* ⛔ AND HERE, BEFORE ANY EFFECT: the declared length must be the one of
@@ -6925,8 +6925,8 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		if (misura_campi(tipo, s->acc + 6, lung, &attesa) && attesa != lung) {
 			char d[128];
 			snprintf(d, sizeof d,
-			         "tipo %#06x: la lunghezza dichiara %u byte e i campi che "
-			         "il tipo prevede ne occupano %zu",
+			         "type %#06x: the length declares %u bytes and the "
+			         "fields the type expects take %zu",
 			         tipo, lung, attesa);
 			congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 			return false;
@@ -6936,21 +6936,21 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		switch (tipo) {
 		case T_CIAO:
 			if (s->stato != S_ATTESA_CIAO) {
-				congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO nello stato sbagliato");
+				congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO in the wrong state");
 				return false;
 			}
 			avanti = tratta_ciao(s, &l);
 			break;
 		case T_CREDENZIALI:
 			if (s->stato != S_ATTESA_CREDENZIALI) {
-				congeda(s, RCP_ERRORE_PROTOCOLLO, "CREDENZIALI nello stato sbagliato");
+				congeda(s, RCP_ERRORE_PROTOCOLLO, "CREDENZIALI in the wrong state");
 				return false;
 			}
 			avanti = tratta_credenziali(s, &l, ora);
 			break;
 		case T_ATTACCA:
 			if (s->stato != S_ATTESA_ATTACCA) {
-				congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA nello stato sbagliato");
+				congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA in the wrong state");
 				return false;
 			}
 			avanti = tratta_attacca(s, &l, ora);
@@ -6961,7 +6961,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 * state like all the others. */
 			if (s->stato != S_ATTIVA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "BANCO_MARCA nello stato sbagliato");
+				        "BANCO_MARCA in the wrong state");
 				return false;
 			}
 			avanti = tratta_banco_marca(s, &l);
@@ -6976,7 +6976,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *   of the server. */
 			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "RICHIEDI_CHIAVE nello stato sbagliato");
+				        "RICHIEDI_CHIAVE in the wrong state");
 				return false;
 			}
 			avanti = tratta_richiedi_chiave(s, &l, ora);
@@ -6994,7 +6994,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 */
 			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "TERMINA_SESSIONE nello stato sbagliato");
+				        "TERMINA_SESSIONE in the wrong state");
 				return false;
 			}
 			reg(s, "⭐ §7.6: %s asked to LEAVE — the graphical session "
@@ -7009,7 +7009,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *     and that nobody receives, that is finding B-7.
 			 */
 			congeda(s, RCP_SESSIONE_TERMINATA,
-			        "l'utente ha chiesto di uscire dalla sessione");
+			        "the user asked to leave the session");
 			if (s->g.termina_sessione)
 				s->g.termina_sessione(s->g.ctx);
 			else
@@ -7046,7 +7046,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			size_t ld = le_str(&l, dett, sizeof dett);
 			if (l.corto) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "CONGEDO senza motivo o senza dettaglio");
+				        "CONGEDO without reason or without detail");
 				return false;
 			}
 			/* ⚠ The detail is validated on the BYTES THAT ARRIVED, not on the
@@ -7055,14 +7055,14 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *   our field is judged instead of ignored. */
 			if (!utf8_valido((const char *)(l.b + p + 2), ld)) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "il dettaglio del CONGEDO non e' UTF-8 valido (§6.0)");
+				        "the CONGEDO detail is not valid UTF-8 (§6.0)");
 				return false;
 			}
 			if (!motivo_di_82(motivo)) {
 				char d[96];
 				snprintf(d, sizeof d,
-				         "CONGEDO con motivo %#04x, che non e' un motivo di "
-				         "§8.2 (e il codice 0 §3.1 lo vieta)",
+				         "CONGEDO with reason %#04x, which is not a reason "
+				         "of §8.2 (and §3.1 forbids code 0)",
 				         motivo);
 				congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 				return false;
@@ -7153,7 +7153,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 
 			if (l.corto) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "VISTA corta: §7.1 vuole due u32");
+				        "VISTA short: §7.1 wants two u32");
 				return false;
 			}
 			/* ⛔ The state: §7.1 puts `VISTA` among the messages of the session,
@@ -7161,8 +7161,8 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    Same guard as `ADATTA_TELA`, and for the same reason. */
 			if (!s->sessione_spedita) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "VISTA prima di SESSIONE: §7.1 la ammette solo a "
-				        "sessione aperta");
+				        "VISTA before SESSIONE: §7.1 admits it only with "
+				        "the session open");
 				return false;
 			}
 			/* ⛔ The only limit, and zero lies outside it — as in `ATTACCA`, and
@@ -7171,8 +7171,8 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    it becomes a function. */
 			if (!nuova_l || !nuova_a) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "VISTA con un lato a zero: §7.1 ammette qualunque "
-				        "misura da 1x1 in su, e lo zero non e' una misura");
+				        "VISTA with a zero side: §7.1 admits any "
+				        "size from 1x1 up, and zero is not a size");
 				return false;
 			}
 			reg(s, "VISTA: the client's window goes from %ux%u to %ux%u (§7.1) "
@@ -7222,7 +7222,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 
 			if (l.corto) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "DISPOSIZIONE corta: §7.1 vuole una stringa");
+				        "DISPOSIZIONE short: §7.1 wants a string");
 				return false;
 			}
 			/* ⛔ The state, as for `VISTA`: §7.1 puts `DISPOSIZIONE` among the
@@ -7230,8 +7230,8 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    nothing to change. */
 			if (!s->sessione_spedita) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "DISPOSIZIONE prima di SESSIONE: §7.1 la ammette solo "
-				        "a sessione aperta");
+				        "DISPOSIZIONE before SESSIONE: §7.1 admits it only with "
+				        "the session open");
 				return false;
 			}
 			/* ⛔ The FORM stays `ERRORE_PROTOCOLLO` here too, and it is not an
@@ -7241,7 +7241,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			 *    «hu» only has a keyboard this machine does not have. */
 			if (!disposizione_ben_formata(nuova, ln)) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "DISPOSIZIONE fuori forma");
+				        "DISPOSIZIONE malformed");
 				return false;
 			}
 			if (!disposizione_conosciuta(s, nuova)) {
@@ -7297,13 +7297,13 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 
 			if (l.corto) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "ADATTA_TELA corto: §7.1 vuole due u32");
+				        "ADATTA_TELA short: §7.1 wants two u32");
 				return false;
 			}
 			if (!s->sessione_spedita) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
-				        "ADATTA_TELA prima di SESSIONE: §7.1 lo ammette solo a "
-				        "sessione aperta");
+				        "ADATTA_TELA before SESSIONE: §7.1 admits it only with "
+				        "the session open");
 				return false;
 			}
 			/* ⛔⭐ AND HERE NO GUARD ON THE SLOT IS NEEDED, and it must be said
@@ -7543,15 +7543,15 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			}
 			char d[160];
 			if (del_server)
-				snprintf(d, sizeof d, "tipo %#06x: e' del server, non del client",
+				snprintf(d, sizeof d, "type %#06x: it belongs to the server, not to the client",
 				         tipo);
 			else if (del_client)
 				snprintf(d, sizeof d,
-				         "tipo %#06x %s: e' del client e §7.1 lo definisce, ma "
-				         "la fase 1 non lo serve ancora",
+				         "type %#06x %s: it belongs to the client and §7.1 defines it, "
+				         "but phase 1 does not serve it yet",
 				         tipo, del_client);
 			else
-				snprintf(d, sizeof d, "tipo %#06x sconosciuto sul controllo",
+				snprintf(d, sizeof d, "unknown type %#06x on control",
 				         tipo);
 			congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 			return false;
@@ -7566,7 +7566,7 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		 * drifted apart, that is if someone changed a body in one place only. */
 		if (l.i != lung) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO,
-			        "il corpo ha byte in piu' dei campi previsti");
+			        "the body has more bytes than the expected fields");
 			return false;
 		}
 		size_t prima = s->acc_len;
@@ -7634,8 +7634,8 @@ static bool torna_a_parlare(rcp_sessione *s)
 	       "to another client: §8.2 0x0F, and this time it is true",
 	    s->utente);
 	congeda(s, RCP_GIA_ATTIVA_REMOTA,
-	        "il posto di questa sessione e' stato preso da un altro "
-	        "client mentre questa taceva");
+	        "the slot of this session was taken by another client "
+	        "while this one was silent");
 	return false;
 }
 
@@ -7691,13 +7691,13 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 	while (len) {
 		size_t spazio = MAX_ACCUMULO - s->acc_len;
 		if (spazio == 0) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "troppi byte in attesa di un corpo");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "too many bytes waiting for a body");
 			return false;
 		}
 		size_t quanti = len < spazio ? len : spazio;
 		int esito = accumula(s, dati, quanti);
 		if (esito == 0) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "troppi byte in attesa di un corpo");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "too many bytes waiting for a body");
 			return false;
 		}
 		if (esito < 0) {
@@ -7706,7 +7706,7 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 			 *   served» — and carries the detail in the body.  Our choice, and
 			 *   declared here so that it is not read as a rule. */
 			congeda(s, RCP_SESSIONE_NON_SERVIBILE,
-			        "memoria esaurita nell'accumulo del canale di controllo");
+			        "out of memory in the control channel accumulation");
 			return false;
 		}
 		dati += quanti;
@@ -8033,8 +8033,8 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 	    ora - s->ultimo_byte > inattivita_ms) {
 		char d[192];
 		snprintf(d, sizeof d,
-		         "%llu ms senza input dell'utente (tetto %llu): §5.3, e per "
-		         "rientrare servono utente e parola d'ordine",
+		         "%llu ms without user input (ceiling %llu): §5.3, and "
+		         "getting back in takes user and password",
 		         (unsigned long long)(ora - s->ultimo_byte),
 		         (unsigned long long)inattivita_ms);
 		reg(s, "⭐ §5.3 — INACTIVITY: %s.  ⚠ The graphical session STAYS (I4): "
@@ -8067,7 +8067,7 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 	}
 	if (tetto && ora - s->da_quando > tetto) {
 		char d[64];
-		snprintf(d, sizeof d, "scaduto il tetto per %s", quale);
+		snprintf(d, sizeof d, "ceiling expired for %s", quale);
 		congeda(s, RCP_TEMPO_SCADUTO, d);
 		return false;
 	}

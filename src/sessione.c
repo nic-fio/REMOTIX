@@ -82,7 +82,7 @@
  * ⛔⛔ BUT WITH `ATTESA_RISPOSTA_MS` (5 s) THAT POLL BECOMES A WAIT.  The
  *     name has an owner, the call leaves, and the Shell that is still
  *     being born does not answer: we stay there a good five seconds.  `[M]` 16
- *     August 2026, round 4 of twelve: between «IL BUS DI SESSIONE E' MIO» and
+ *     August 2026, round 4 of twelve: between «THE SESSION BUS IS MINE» and
  *     the next line **seventeen seconds** pass, and in between the log does not
  *     have **a single line** — three five-second polls in a row.
  *
@@ -4984,8 +4984,8 @@ static gpointer guardia_di_powerdevil(gpointer dati)
 				bus, POWERDEVIL, "/org/kde/Solid/PowerManagement/PolicyAgent",
 				"org.kde.Solid.PowerManagement.PolicyAgent", "AddInhibition",
 				g_variant_new("(uss)", 4u, "REMOTIX",
-			                      "una sessione remota e' viva: lo schermo non si "
-			                      "spegne e la sessione non e' inattiva"),
+			                      "a remote session is alive: the screen does not "
+			                      "turn off and the session is not idle"),
 				G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS,
 				NULL, &sbaglio);
 			if (risposta) {
@@ -5099,8 +5099,8 @@ guint32 sessione_inibisci(void)
 		bus, "org.gnome.SessionManager", "/org/gnome/SessionManager",
 		"org.gnome.SessionManager", "Inhibit",
 		g_variant_new("(susu)", "REMOTIX", 0u,
-	                      "una sessione remota e' viva: la macchina non deve "
-	                      "sospendersi ne' considerarsi inattiva",
+	                      "a remote session is alive: the machine must "
+	                      "not suspend nor consider itself idle",
 	                      (guint32)(4u | 8u)),
 		G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_RISPOSTA_MS, NULL,
 		&sbaglio);

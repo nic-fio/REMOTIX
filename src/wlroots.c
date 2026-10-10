@@ -1676,12 +1676,12 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
  *   B G R A.  The alpha of the output buffer means nothing (the output is
  *   opaque): 0xFF is passed, and the check is done by exact green and blue.
  * ⚠ THE COST: every probe is a 3x3 read from the compositor's renderer.
- *   `[M]` 24 Sep 2026, rete14-lxqt (Intel UHD 730, canvas 1344x870), pointer
+ *   `[M]` 24 Sep 2026, rete14-lxqt (Intel UHD 770, canvas 1344x870), pointer
  *   moved at ~55 Hz for 30 s over qterminal, two rounds per case:
- *       no probe         labwc 4,9-5,1%   figlio 11,2%   painted 55,1-55,3/s
- *       probe at 60 Hz   labwc 6,3-6,4%   figlio 11,6-11,8%   55,0-55,2/s
- *       probe at 30 Hz   labwc 5,7%       figlio 11,6-11,7%   55,1-55,3/s
- *   ⇒ +1,4 points of labwc CPU (+0,5 for the child), frames unchanged:
+ *       no probe         labwc 4.9-5.1%   figlio 11.2%   painted 55.1-55.3/s
+ *       probe at 60 Hz   labwc 6.3-6.4%   figlio 11.6-11.8%   55.0-55.2/s
+ *       probe at 30 Hz   labwc 5.7%       figlio 11.6-11.7%   55.1-55.3/s
+ *   ⇒ +1.4 points of labwc CPU (+0.5 for the child), frames unchanged:
  *     below the 2-point threshold, and the thinning stays OFF.  If one day
  *     it were needed: SONDA_MINIMO_US 33333 is the 30 Hz measured above.
  */

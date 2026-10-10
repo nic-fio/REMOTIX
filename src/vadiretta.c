@@ -89,7 +89,7 @@ bool vadiretta_apri_dispositivo(const char *nodo, VaDispositivo *d, char *errore
 	}
 	fornitore = vaQueryVendorString(d->display);
 	snprintf(d->fornitore, sizeof d->fornitore, "%s",
-	         fornitore ? fornitore : "(il driver non dice il suo nome)");
+	         fornitore ? fornitore : "(the driver does not say its name)");
 	return true;
 }
 
@@ -281,8 +281,8 @@ struct VaDiretta {
 
 #define INTESTAZIONE_MAX 512
 
-/* The three colour numbers, declared and not inherited (`codificatore.c`,
- * «COLOUR IS DECLARED»): BT.709 on all three entries, limited
+/* The three colour numbers, declared and not inherited (as
+ * `converti_sulla_gpu()` in `codificatore.c` imposes the matrix): BT.709 on all three entries, limited
  * range.  They are the values of `AVCOL_PRI_BT709`/`AVCOL_TRC_BT709`/
  * `AVCOL_SPC_BT709` = 1, and the full-range flag at 0. */
 #define COLORE_PRIMARI 1

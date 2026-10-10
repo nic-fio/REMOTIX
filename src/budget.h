@@ -71,7 +71,7 @@
  *
  * ⚠ AND THE TWO THINGS THIS THRESHOLD IS **NOT**:
  *   · **it is not universal**: it belongs to **that scene** (1080p H.264, real
- *     GNOME desktops, on i5-13500T + UHD 730).  On other hardware it must be
+ *     GNOME desktops, on i5-13500T + UHD 770).  On other hardware it must be
  *     measured again;
  *   · **it is not the quantity of the mechanism**: the delay the parent
  *     measures is an **upper bound** of the compositor's buffer hold time —
@@ -163,7 +163,7 @@
 /* ⛔⭐ THE MAXIMUM RATE PER SESSION — `[M]` **39.54 fps**, and it is not a
  *     choice: it is what **one session alone** delivered on this hardware,
  *     first step of the climb to eleven (§6.9, `10-b99-misure.jsonl`, scene
- *     `satura`, 1920×1080, H.264, i5-13500T · Intel UHD 730 `renderD128`,
+ *     `satura`, 1920×1080, H.264, i5-13500T · Intel UHD 770 `renderD128`,
  *     phase 9 cures on).
  *
  * ⛔⛔ IT IS THE SECOND NUMBER OF THE MACHINE, and it is measured **together**

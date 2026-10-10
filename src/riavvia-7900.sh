@@ -73,7 +73,7 @@
 #
 #      `[M]` 16 August 2026, after a restart given via ssh: `loginctl` showed
 #      NO session for `prova`, `/run/user/1001` did not exist, and
-#      the log repeated *«NON ho il bus di sessione: Could not connect: No
+#      the log repeated *«I do NOT have the session bus: Could not connect: No
 #      such file or directory»* — that is eight bench rounds failed out of eight, and
 #      the face of the defect was "the desktop does not start".
 #
@@ -114,7 +114,7 @@ if [ -f "$LAV/pid" ]; then
   fi
 fi
 # ⚠ And we wait for the port to really free up: `[M]` 16 August, a start
-#   right after got «⛔ non mi lego a 0.0.0.0:7900 in UDP: Address
+#   right after got «⛔ cannot bind to 0.0.0.0:7900 over UDP: Address
 #   already in use» and the new server died without anyone looking.
 i=0
 while ss -uln 2>/dev/null | grep -q ':7900 ' && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
@@ -158,7 +158,7 @@ echo "server $NUOVO, unit $UNITA.service"
 # ⛔⭐ AND WE WAIT FOR THE LIST TO BE THERE, instead of just reading it.
 #
 # `[M]` 16 August 2026: this check printed an **empty** list and
-# right below «⭐ sono quelle di /media/REMOTIX/src/b2» — that is it gave the OK
+# right below «⭐ they are those of /media/REMOTIX/src/b2» — that is it gave the OK
 # without having looked at anything.  ⇒ Between `systemd-run` returning the `MainPID` and the
 # dynamic loader having finished mapping some milliseconds pass, and in
 # that window `/proc/PID/maps` does not yet have the libraries.

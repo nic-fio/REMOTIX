@@ -1535,7 +1535,7 @@ static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
  *         · seven blocks above 20 s: 74 · 56 · 62 · 25 · **370** · 53 · 56;
  *         · inside the blocks **45 278** frames captured, composed,
  *           encoded and thrown away before the wire (~13 GB of encoding for
- *           nobody, on an integrated Intel UHD 730);
+ *           nobody, on an integrated Intel UHD 770);
  *         · the image NEVER breaks (1146 snapshots, zero faulty cells):
  *           ⇒ it was not corruption, it was a **block**.
  *
@@ -6325,8 +6325,8 @@ size_t wt_sorveglia_locali(void)
 			                 "remote session is being closed — §5.1, reason 0x04",
 			                 nomi[k], quali[k][0] ? quali[k] : "no detail");
 			wt_congeda(chi[k], RCP_SESSIONE_LOCALE_PREVALSA,
-			           "e' stata aperta una sessione grafica locale su questa "
-			           "macchina");
+			           "a local graphical session has been opened on this "
+			           "machine");
 			congedate++;
 		}
 	}
@@ -7484,23 +7484,23 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 
 	switch (canale) {
 	case 0x00:
-		guasto = "il canale di CONTROLLO su uno stream unidirezionale: il "
-		         "controllo vive solo sul primo stream bidirezionale (§2.5)";
+		guasto = "the CONTROL channel on a unidirectional stream: control "
+		         "lives only on the first bidirectional stream (§2.5)";
 		break;
 	case 0x03:
-		guasto = "il canale VIDEO dal client: e' del server, verso sbagliato "
+		guasto = "the VIDEO channel from the client: it belongs to the server, wrong direction "
 		         "(§2.5)";
 		break;
 	case 0x04:
-		guasto = "il canale AUDIO su uno stream: l'audio vive solo sui "
-		         "datagram (§2.5, §6.3)";
+		guasto = "the AUDIO channel on a stream: audio lives only on "
+		         "datagrams (§2.5, §6.3)";
 		break;
 	case 0x01:
 	case 0x02:
 		break;
 	default:
-		guasto = "byte alto del tipo sconosciuto su uno stream "
-		         "unidirezionale (§2.5)";
+		guasto = "unknown high byte of the type on a unidirectional "
+		         "stream (§2.5)";
 		break;
 	}
 	g->genere = guasto           ? G_UNI_KO
@@ -7673,8 +7673,8 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 			                 (long)w->rcp_stream, (long)stream_id);
 		if (w->rcp)
 			rcp_violazione(w->rcp,
-			               "due stream bidirezionali dal client dentro "
-			               "la sessione (§2.5)");
+			               "two bidirectional streams from the client inside "
+			               "the session (§2.5)");
 	}
 	registro_dice_di(REG_WT, wt_chi(w), "stream %ld is WebTransport, session %llu",
 	                 (long)stream_id, (unsigned long long)sessione);

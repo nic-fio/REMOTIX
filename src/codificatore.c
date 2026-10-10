@@ -4047,7 +4047,7 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *   above the ceiling"** at attempt 2 and at 3.  ⚠ It is the contamination, seen
 	 *   from outside: whoever rereads that bench was looking at the wrong label.
 	 *
-	 * ⛔⛔ THE FALSIFIABLE PREDICTION — `[?]`, and the hardware is the integrated Intel UHD 730,
+	 * ⛔⛔ THE FALSIFIABLE PREDICTION — `[?]`, and the hardware is the integrated Intel UHD 770,
 	 *      not a powerful card.  The `[M]` numbers are agent D's,
 	 *      22 Aug 2026, 7680x4320 with nearly incompressible content:
 	 *      key at QP 38 = 16.654 MiB · at QP 44 = 11.056 MiB · at QP 51 =

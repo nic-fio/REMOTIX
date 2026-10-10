@@ -94,7 +94,7 @@ wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
  * `2 = RIPRESA`, §4.5). */
 bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa);
 /* ⭐ D-001: the desktop name for `SESSIONE` (`gnome · kde · xfce · lxqt ·
- * sconosciuto`), one per process — `main.c` sets it at startup. */
+ * unknown`), one per process — `main.c` sets it at startup. */
 void wt_desktop(const char *nome);
 void wt_libera(wt *w);
 
