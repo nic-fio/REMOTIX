@@ -130,7 +130,7 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
 	if s.cat == nil {
-		return nil, errors.New("prima il controllo")
+		return nil, errors.New("run the check first")
 	}
 	porta, _ := strconv.Atoi(voci["porta"])
 	if porta != 0 && porta != s.porta {

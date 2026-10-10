@@ -184,11 +184,7 @@ func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
 		}
 	}
 	if len(ds) == 0 && rap != nil && rap.SenzaDesktop {
-		if motore.LinguaAttuale() == motore.IT {
-			ds = append(ds, "nessun desktop")
-		} else {
-			ds = append(ds, "no desktop")
-		}
+		ds = append(ds, "no desktop")
 	}
 	return strings.Join(append(parti, ds...), " · ")
 }
@@ -270,7 +266,6 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	var righe []Riga
 	// sistema
 	piatt := strings.TrimSpace(distro + " " + prof.V("distro.versione"))
-	// il rapporto è scritto nella lingua di questa sessione (la stessa, passata con --lingua)
 	if strings.HasPrefix(rap.Riconosciuta, strings.SplitN(motore.T("comp.nella_matrice", ""), " (", 2)[0]) {
 		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.ok", piatt), OK})
 	} else {
@@ -533,13 +528,9 @@ func VistaDelleScelte(c *Controllo) *VistaScelte {
 }
 
 func numero(n int) string {
-	it := []string{"", "Una", "Due", "Tre", "Quattro", "Cinque", "Sei"}
 	en := []string{"", "One", "Two", "Three", "Four", "Five", "Six"}
-	if n >= len(it) {
+	if n >= len(en) {
 		return fmt.Sprint(n)
-	}
-	if motore.LinguaAttuale() == motore.IT {
-		return it[n]
 	}
 	return en[n]
 }

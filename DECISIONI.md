@@ -6011,7 +6011,7 @@ sistema complesso e monolitico»*. ⇒
 - **la GUI** gira come l'utente (non da root: Wayland), e per le operazioni da amministratore lo stesso
   eseguibile **rilancia sé stesso** con i permessi chiesti a polkit — un file, due ruoli.
 
-### 10.15 ✅ L'installatore parla italiano e inglese, secondo la lingua del sistema
+### 10.15 ⛔ *(superata da §10.35)* L'installatore parla italiano e inglese, secondo la lingua del sistema
 
 Parola dell'utente (30 set 2026): *«l'installer lo rendiamo bilingue: italiano e inglese. La scelta della
 lingua la rendiamo coerente con le impostazioni linguistiche dell'OS sottostante (variabili di ambiente)»*.
@@ -6525,6 +6525,30 @@ esigenze e le specifiche, e chi vuole usare il prodotto installa quello che serv
   per Vulkan Video si ferma lì, con un messaggio, e non con un REMOTIX installato che non va.
 - Coerente con §10.27 (niente codifica sul processore) e con [*niente eccezioni per compositore*]: quel che il
   sistema non dà, REMOTIX non lo rattoppa.
+
+### 10.35 ✅ L'installatore parla solo inglese (10 ott 2026)
+
+> Supera §10.15 (l'installatore bilingue, secondo la lingua del sistema).
+
+Parole dell'utente: *«solo inglese»*, e poi *«usare solo l'inglese non è una rinuncia. remotix è destinato al mondo
+dei sysadmin, non agli utenti normali»*.
+
+- **Perché regge**: chi installa è un amministratore di sistema, e per lui l'inglese è la lingua del mestiere. Un
+  testo solo da curare e da provare, e niente messaggi che cambiano con la lingua impostata sulla macchina.
+- ⭐ **La lingua dei desktop non c'entra** (precisazione dell'utente, 10 ott: *«remotix mostra i desktop dei PC, e
+  dipende dalla macchina su cui è installato il desktop … installo remotix su un sistema che ha la localizzazione
+  in italiano. Gli utenti si collegano e vedono i loro programmi e il desktop in italiano»*). La lingua dei
+  desktop e dei programmi che gli utenti vedono è quella della macchina: REMOTIX non la tocca. In inglese è solo
+  il testo **proprio** di REMOTIX: l'installatore, la pagina d'accesso, gli avvisi (§10.32).
+- **Che cosa cambia**: niente scelta della lingua (via `--lingua`, la lettura di `LANG`/`LANGUAGE`, la voce
+  `lingua` del file di risposte, che ora è una voce sconosciuta e ferma il file con RX-RISPOSTE-002 come ogni
+  altra); un catalogo solo di testi e di codici, in inglese (`motore/codici.go`, `motore/testi.go`,
+  `interfaccia/testi.go`; via `codici_en.go`); `install.sh` in inglese; le descrizioni delle opzioni in inglese.
+  I banchi che leggono l'uscita del motore (`17-t10.sh` in testa) cercano le parole inglesi.
+- ⚠ **Resta in italiano, per ora**: i motivi e le note del catalogo delle combinazioni (sono dati: avranno i loro
+  campi inglesi con la prossima versione del formato del catalogo) e una parte dei **dettagli** diagnostici che
+  accompagnano i codici (fra parentesi dopo il messaggio, e nel registro). Il messaggio e il rimedio di ogni codice
+  sono in inglese, e una prova (`TestTesti`) ferma ogni lettera accentata o parola italiana che ci rientri.
 
 ---
 

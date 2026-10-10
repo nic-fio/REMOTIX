@@ -902,7 +902,7 @@ come allora e che cosa è cambiato.
   **sha256** (§6.6.10: scritto nello script dal comando di rilascio) e gli passa la mano (`installa`,
   `verifica`, `piano`); `--verifica`
   (anche da utente), `--dry-run` (da root: il piano legge i file che toccherebbe), `--risposte`,
-  `--lingua`; bilingue; il motore sta in una cartella temporanea; ⛔ nessun file del prodotto copiato
+  `--lingua`; bilingue (⛔ dal 10 ott 2026 solo inglese, senza `--lingua`: `DECISIONI.md` §10.35); il motore sta in una cartella temporanea; ⛔ nessun file del prodotto copiato
   (lo controlla anche `TestScript`). `pubblica.sh script` lo mette nell'archivio con gli sha256 dei due
   motori dentro, e `install.sh.sha256` accanto (quello da pubblicare sul sito);
 - **cloud-init** (R21): `banchi/17-t9/cloud-init-r21.yaml`, un user-data che scrive il file di risposte e
@@ -1115,7 +1115,7 @@ Ognuna gira sulle VM di §7; «rosso se» è la condizione che la fa fallire.
 | R39 | l'aggiornamento passa dal gestore di pacchetti e non chiude i desktop | (D14, §10.23) un rilascio N+1 fatto col comando di rilascio, con un catalogo nuovo; l'aggiornamento DEL SISTEMA (`apt upgrade`, `dnf upgrade`, `pacman -Syu`) con un browser collegato | un file di REMOTIX cambiato fuori dal gestore di pacchetti; un desktop chiuso o rinato (processo diverso); il catalogo nuovo non in uso; `certifica` non verde dopo |
 | R40 | ⭐ il pacchetto da solo non accende niente | `apt install`/`dnf install`/`pacman -U` del solo pacchetto su una VM «cliente»: impronte prima e dopo, porte in ascolto, gruppi; poi `remotix stato` | il servizio acceso o in ascolto; un gruppo, una regola del firewall o una cintura attivati; `remotix stato` che non dica «installazione non certificata» |
 | R41 | un programma solo | durante un'installazione completa, l'albero dei processi figli del motore (`/proc`) | un processo che non sia il motore stesso o un programma dell'elenco chiuso; uno script eseguito; una chiamata a un programma non annotata nel registro |
-| R42 | la lingua segue il sistema | la stessa installazione con `LANG=it_IT.UTF-8`, `LANG=en_US.UTF-8`, `LANG=de_DE.UTF-8` e `LANGUAGE=it:en`, in GUI (che si rilancia con polkit) e in TUI | una schermata o un messaggio nella lingua sbagliata; un codice `RX-…` diverso fra le lingue |
+| R42 | ⛔ *ritirata il 10 ott 2026: l'installatore parla solo inglese (`DECISIONI.md` §10.35)* — la lingua segue il sistema | la stessa installazione con `LANG=it_IT.UTF-8`, `LANG=en_US.UTF-8`, `LANG=de_DE.UTF-8` e `LANGUAGE=it:en`, in GUI (che si rilancia con polkit) e in TUI | una schermata o un messaggio nella lingua sbagliata; un codice `RX-…` diverso fra le lingue |
 | R43 | la disinstallazione chiude solo le sessioni REMOTIX | un utente con un desktop REMOTIX aperto e, insieme, una sessione ssh con un processo che scrive l'ora ogni secondo; disinstallazione | il desktop REMOTIX ancora vivo; il processo della sessione ssh interrotto |
 
 ---

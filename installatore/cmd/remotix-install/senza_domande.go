@@ -23,11 +23,11 @@ func installa(arg []string) (int, error) {
 	fs := flag.NewFlagSet("installa", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "", "dove scrivere il piano (predefinito /var/lib/remotix/piani/piano-<id>.json)")
-	eventi := fs.Bool("eventi", false, "eventi in JSON, una riga ciascuno")
-	utente := fs.String("utente", "", "a mano: le persone da iscrivere ai gruppi della scheda (vuoto: tutte)")
-	apri := fs.Bool("apri-firewall", false, "a mano: aprire la porta nel firewall (D6)")
-	depositi := fs.String("deposito", "", "a mano: archivi di terzi col consenso (D5)")
+	uscita := fs.String("uscita", "", "where to write the plan (default /var/lib/remotix/piani/piano-<id>.json)")
+	eventi := fs.Bool("eventi", false, "events as JSON, one line each")
+	utente := fs.String("utente", "", "by hand: the people to add to the graphics card groups (empty: all)")
+	apri := fs.Bool("apri-firewall", false, "by hand: open the port in the firewall")
+	depositi := fs.String("deposito", "", "by hand: third-party repositories, with consent")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
@@ -129,8 +129,8 @@ func preparaFuoriLinea(arg []string) (int, error) {
 	fs := flag.NewFlagSet("prepara-fuori-linea", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "", "la cartella del pacchetto (nuova o vuota)")
-	filePiano := fs.String("piano", "", "il piano d'installazione (i suoi passi di pacchetti)")
+	uscita := fs.String("uscita", "", "the bundle directory (new or empty)")
+	filePiano := fs.String("piano", "", "the installation plan (its package steps)")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}

@@ -70,14 +70,14 @@ motore)
 installa)
 	opz=${1:-}
 	f=$(cat "$E/pacchetti.txt")
-	vm "sudo /root/remotix-install verifica --lingua it" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
+	vm "sudo /root/remotix-install verifica" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
 	grep -E 'RX-(PAM|SELINUX|FW)' "$E/verifica.txt" | head -8 | sed 's/^/   /'
-	vm "cd /tmp && sudo /root/remotix-install piano --installa --pacchetto $f --utente prova $opz --uscita /root/piano.json --lingua it" >"$E/piano.txt" 2>&1
+	vm "cd /tmp && sudo /root/remotix-install piano --installa --pacchetto $f --utente prova $opz --uscita /root/piano.json" >"$E/piano.txt" 2>&1
 	echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
-	vm "sudo /root/remotix-install approva /root/piano.json --lingua it" >>"$E/piano.txt" 2>&1
+	vm "sudo /root/remotix-install approva /root/piano.json" >>"$E/piano.txt" 2>&1
 	T0=$(date +%s)
-	vm "sudo /root/remotix-install applica /root/piano.json --lingua it" >"$E/applica.txt" 2>&1
-	echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/applica.txt")"
+	vm "sudo /root/remotix-install applica /root/piano.json" >"$E/applica.txt" 2>&1
+	echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/applica.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/applica.txt" | head -8 | sed 's/^/   /'
 	vm "echo servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix); sudo ss -Htulpn | grep ':7447 '; ps -eZ 2>/dev/null | grep -E ' remotix$' ; ls -Z /usr/libexec/remotix/remotix /usr/lib/remotix/remotix 2>/dev/null; sudo semodule -l 2>/dev/null | grep remotix; rpm -q remotix remotix-selinux 2>/dev/null" | tee "$E/installato.txt" | sed 's/^/   /'
 	;;
@@ -131,10 +131,10 @@ ssh-parola)
 	echo "   ssh con la parola: uscita ${PIPESTATUS[0]}"; rm -f "$a"
 	;;
 disinstalla)
-	vm "sudo /root/remotix-install disinstalla --purge --uscita /root/disinstalla.json --lingua it" >"$E/disinstalla-piano.txt" 2>&1
-	vm "sudo /root/remotix-install approva /root/disinstalla.json --lingua it" >>"$E/disinstalla-piano.txt" 2>&1
-	vm "sudo /root/remotix-install applica /root/disinstalla.json --lingua it" >"$E/disinstalla.txt" 2>&1
-	echo "   disinstalla: uscita $? — $(grep -E '^operazione ' "$E/disinstalla.txt")"
+	vm "sudo /root/remotix-install disinstalla --purge --uscita /root/disinstalla.json" >"$E/disinstalla-piano.txt" 2>&1
+	vm "sudo /root/remotix-install approva /root/disinstalla.json" >>"$E/disinstalla-piano.txt" 2>&1
+	vm "sudo /root/remotix-install applica /root/disinstalla.json" >"$E/disinstalla.txt" 2>&1
+	echo "   disinstalla: uscita $? — $(grep -E '^operation ' "$E/disinstalla.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/disinstalla.txt" | head -6 | sed 's/^/   /'
 	vm "rpm -q remotix remotix-selinux 2>/dev/null; sudo semodule -l 2>/dev/null | grep -c remotix | sed 's/^/moduli remotix: /'; systemctl is-active remotix 2>&1"
 	;;

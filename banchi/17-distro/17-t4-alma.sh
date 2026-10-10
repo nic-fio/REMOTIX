@@ -36,13 +36,13 @@ impronta() {
 impronta prima
 
 echo "==> A. deposito EPEL + htop + file + unità + firewall, poi un gruppo impossibile: si annulla tutto"
-vm "cd /tmp && sudo /root/remotix-install verifica --lingua it" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
+vm "cd /tmp && sudo /root/remotix-install verifica" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
 grep -E 'firewall|RX-FW|deposito' "$E/verifica.txt" | head -8 | sed 's/^/   /'
-vm "cd /tmp && sudo /root/remotix-install piano --deposito epel --pacchetti htop --apri-firewall --utente nessuno-si-chiama-cosi --uscita /root/piano-a.json --lingua it && sudo /root/remotix-install approva /root/piano-a.json" >"$E/piano-a.txt" 2>&1
+vm "cd /tmp && sudo /root/remotix-install piano --deposito epel --pacchetti htop --apri-firewall --utente nessuno-si-chiama-cosi --uscita /root/piano-a.json && sudo /root/remotix-install approva /root/piano-a.json" >"$E/piano-a.txt" 2>&1
 echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano-a.txt") passi"
 T0=$(date +%s)
-vm "sudo /root/remotix-install applica /root/piano-a.json --lingua it" >"$E/applica-a.txt" 2>&1
-echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/applica-a.txt")"
+vm "sudo /root/remotix-install applica /root/piano-a.json" >"$E/applica-a.txt" 2>&1
+echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/applica-a.txt")"
 grep -E ': (FATTA|FALLITA|ANNULLATA|ANNULLAMENTO_FALLITO)' "$E/applica-a.txt" | cut -c1-160 | sed 's/^/   /'
 vm "sudo sh -c 'grep -h COMANDO /var/lib/remotix/operazioni/*/registro.jsonl' | sed 's/.*dettaglio\":\"//; s/\"}//' | cut -c1-200" >"$E/comandi-a.txt" 2>&1
 sed 's/^/   /' "$E/comandi-a.txt"
@@ -52,8 +52,8 @@ echo "   R28: $(grep -c '^[<>]' "$E/diff-a.txt") righe diverse fra «prima» e �
 grep '^[<>]' "$E/diff-a.txt" | cut -c1-160 | head -30 | sed 's/^/      /'
 
 echo "==> B. lo stesso piano con un utente vero: CONFERMATA, e la porta aperta da fuori"
-vm "cd /tmp && sudo /root/remotix-install piano --deposito epel --pacchetti htop --apri-firewall --utente nicfio --uscita /root/piano-b.json --lingua it && sudo /root/remotix-install approva /root/piano-b.json" >"$E/piano-b.txt" 2>&1
-vm "sudo /root/remotix-install applica /root/piano-b.json --lingua it" >"$E/applica-b.txt" 2>&1
-echo "   applica: uscita $? — $(grep -E '^operazione ' "$E/applica-b.txt")"
+vm "cd /tmp && sudo /root/remotix-install piano --deposito epel --pacchetti htop --apri-firewall --utente nicfio --uscita /root/piano-b.json && sudo /root/remotix-install approva /root/piano-b.json" >"$E/piano-b.txt" 2>&1
+vm "sudo /root/remotix-install applica /root/piano-b.json" >"$E/applica-b.txt" 2>&1
+echo "   applica: uscita $? — $(grep -E '^operation ' "$E/applica-b.txt")"
 vm "echo vive: \$(sudo firewall-cmd --query-port=7447/tcp) \$(sudo firewall-cmd --query-port=7447/udp); echo permanente: \$(sudo firewall-cmd --permanent --query-port=7447/tcp) \$(sudo firewall-cmd --permanent --query-port=7447/udp); rpm -q htop epel-release; dnf repolist --enabled | grep -E 'crb|epel'; systemctl is-enabled remotix-prova-motore.service; id nicfio" >"$E/b-fuori.txt" 2>&1
 sed 's/^/   /' "$E/b-fuori.txt"

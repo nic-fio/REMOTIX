@@ -18,7 +18,7 @@ func fileRisposte(t *testing.T, testo string) string {
 // Il file di risposte: formato, voci conosciute, valori ammessi. Un errore di battitura in un
 // consenso non passa mai in silenzio.
 func TestLeggiRisposte(t *testing.T) {
-	buono := "# prova\nformato = remotix-risposte/1\nlingua = it\nporta = 7500\nconsenso.cinture = sì\nconsenso.firewall = NO # commento\n"
+	buono := "# prova\nformato = remotix-risposte/1\nporta = 7500\nconsenso.cinture = sì\nconsenso.firewall = NO # commento\n"
 	r, err := LeggiRisposte(fileRisposte(t, buono))
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestLeggiRisposte(t *testing.T) {
 		"formato = remotix-risposte/1\nconsenso.cinture = forse\n": "RX-RISPOSTE-003",
 		"formato = remotix-risposte/1\nporta = 99999\n":            "RX-RISPOSTE-003",
 		"formato = remotix-risposte/1\ndesktop = cinnamon\n":       "RX-RISPOSTE-003",
-		"formato = remotix-risposte/1\nlingua = de\n":              "RX-RISPOSTE-003",
+		"formato = remotix-risposte/1\nlingua = it\n":              "RX-RISPOSTE-002", // voce tolta (DECISIONI §10.35)
 		"formato = remotix-risposte/1\nporta = 1\nporta = 2\n":     "RX-RISPOSTE-002", // due volte
 		"formato = remotix-risposte/1\nsolo una parola\n":          "RX-RISPOSTE-002",
 	} {

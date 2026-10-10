@@ -26,7 +26,6 @@ import (
 // Il formato (remotix-risposte/1), testo semplice, una voce per riga, «#» per i commenti:
 //
 //	formato = remotix-risposte/1          # obbligatoria, sempre la prima voce che si guarda
-//	lingua = it                           # it · en (DECISIONI §10.15; se manca: la lingua del sistema)
 //	porta = 7447                          # TCP (la pagina) e UDP (QUIC); se manca: 7447
 //	archivio = https://…                  # l'archivio di REMOTIX (o --archivio); canale = stabile · candidato
 //	utenti = tutti                        # chi mettere nei gruppi della scheda: «tutti» o nomi separati da virgola
@@ -71,7 +70,7 @@ type RifRisposte struct {
 }
 
 var vociNote = map[string]bool{
-	"formato": true, "lingua": true, "porta": true, "archivio": true, "canale": true, "utenti": true,
+	"formato": true, "porta": true, "archivio": true, "canale": true, "utenti": true,
 	"desktop": true, "consenso.cinture": true, "consenso.firewall": true, "consenso.aggiornamenti": true,
 	"consenso.deposito.epel": true, "consenso.deposito.rpmfusion": true, "consenso.deposito.packman": true,
 	"consenso.deposito.openh264": true,
@@ -120,9 +119,6 @@ func LeggiRisposte(percorso string) (*FileRisposte, error) {
 	}
 	if f := r.Voci["formato"]; f != FormatoRisposte {
 		return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("formato «%s», serve «%s»", f, FormatoRisposte))
-	}
-	if v, ok := r.Voci["lingua"]; ok && v != "it" && v != "en" {
-		return nil, Errore("RX-RISPOSTE-003", "lingua = «"+v+"» (it · en)")
 	}
 	if v, ok := r.Voci["porta"]; ok {
 		if p, err := strconv.Atoi(v); err != nil || p < 1 || p > 65535 {

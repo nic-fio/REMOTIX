@@ -73,7 +73,7 @@ cmd)
 prepara)
 	r=${1:-risposte-debian.conf}
 	T0=$(date +%s)
-	vm "sudo rm -rf /root/fuori-linea; sudo /root/remotix-install prepara-fuori-linea --archivio $ARCH --risposte /root/$r --uscita /root/fuori-linea --lingua it" 2>&1 | tee "$E/prepara.txt"
+	vm "sudo rm -rf /root/fuori-linea; sudo /root/remotix-install prepara-fuori-linea --archivio $ARCH --risposte /root/$r --uscita /root/fuori-linea" 2>&1 | tee "$E/prepara.txt"
 	echo "   prepara: $(( $(date +%s) - T0 )) s"
 	vm "sudo tar -C /root -cf - fuori-linea" >"$E/fuori-linea.tar"
 	echo "   pacchetto: $(du -h "$E/fuori-linea.tar" | cut -f1) in $E/fuori-linea.tar"
@@ -83,10 +83,10 @@ fuori-linea)
 	pac=${PACCHETTO:-$E/fuori-linea.tar}
 	vm "sudo rm -rf /root/fuori-linea && sudo tar -C /root -xf -" <"$pac"
 	T0=$(date +%s); date -u +%T >"$E/finestra.txt"
-	vm "sudo /root/remotix-install installa --fuori-linea /root/fuori-linea --risposte /root/$r --lingua it" >"$E/installa.txt" 2>&1
+	vm "sudo /root/remotix-install installa --fuori-linea /root/fuori-linea --risposte /root/$r" >"$E/installa.txt" 2>&1
 	u=$?; date -u +%T >>"$E/finestra.txt"
-	echo "   installa: uscita $u in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/installa.txt")"
-	grep -E 'BLOCCATA|FALLITA|RX-(FUORI|RISPOSTE|PIANO)' "$E/installa.txt" | head -6 | sed 's/^/   /'
+	echo "   installa: uscita $u in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/installa.txt")"
+	grep -E 'BLOCKED|FAILED|RX-(FUORI|RISPOSTE|PIANO)' "$E/installa.txt" | head -6 | sed 's/^/   /'
 	;;
 r21)
 	r=${1:-risposte-debian.conf}
@@ -109,7 +109,7 @@ PY
 	RX_VM_SEME=$S/seme.iso $V avvia "$m" >"$E/avvia-r21.log" 2>&1 || { tail "$E/avvia-r21.log"; exit 1; }
 	echo "   cloud-init finito in $(( $(date +%s) - T0 )) s (dall'accensione)"
 	vm "sudo cloud-init status --long | head -8; echo ---; sudo cat /var/log/remotix-installa.log; echo ---; sudo grep -E 'remotix|runcmd' /var/log/cloud-init-output.log | tail -5" >"$E/r21.txt" 2>&1
-	grep -E 'status:|install.sh: uscita|^operazione |VERIFICATA|Firma del motore|RX-RISPOSTE|BLOCCATA' "$E/r21.txt" | sed 's/^/   /'
+	grep -E 'status:|install.sh: uscita|^operation |VERIFIED|RX-RISPOSTE|BLOCKED' "$E/r21.txt" | sed 's/^/   /'
 	;;
 guarda)
 	mkdir -p "$T9/t1c"

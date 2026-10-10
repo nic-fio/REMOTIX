@@ -24,15 +24,6 @@ import (
 )
 
 func main() {
-	// --lingua prima di tutto: quando la parte da amministratore è rilanciata (polkit ripulisce
-	// l'ambiente) la lingua arriva da qui (DECISIONI §10.15)
-	for i, a := range os.Args {
-		if v, ok := strings.CutPrefix(a, "--lingua="); ok {
-			motore.ImpostaLingua(v)
-		} else if (a == "--lingua" || a == "-lingua") && i+1 < len(os.Args) {
-			motore.ImpostaLingua(os.Args[i+1])
-		}
-	}
 	uso := motore.T("cli.uso", motore.VersioneMotore, motore.Formato)
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, uso)
@@ -89,24 +80,22 @@ func main() {
 
 // comuni: le opzioni di tutti i comandi.
 type comuni struct {
-	operazioni, catalogo, archivio, canale, lingua string
-	porta                                          int
-	risposte, fuoriLinea                           string
+	operazioni, catalogo, archivio, canale string
+	porta                                  int
+	risposte, fuoriLinea                   string
 }
 
 func (c *comuni) aggiungi(fs *flag.FlagSet) {
-	fs.StringVar(&c.operazioni, "operazioni", "/var/lib/remotix/operazioni", "dove stanno le operazioni")
-	fs.StringVar(&c.catalogo, "catalogo", "", "un catalogo dato a mano, al posto di quello del motore (è dell'amministratore)")
-	fs.StringVar(&c.archivio, "archivio", "", "l'archivio firmato di REMOTIX (URL di base)")
-	fs.StringVar(&c.canale, "canale", "stabile", "il canale dell'archivio: stabile o candidato")
-	fs.IntVar(&c.porta, "porta", 7447, "la porta di REMOTIX (TCP e UDP)")
-	fs.StringVar(&c.lingua, "lingua", "", "it o en (già letta in main)")
-	fs.StringVar(&c.risposte, "risposte", "", "il file di risposte: l'installazione senza domande (§6.6.12)")
-	fs.StringVar(&c.fuoriLinea, "fuori-linea", "", "il pacchetto fuori linea (prepara-fuori-linea): l'archivio è quello, senza rete")
+	fs.StringVar(&c.operazioni, "operazioni", "/var/lib/remotix/operazioni", "where the operations are kept")
+	fs.StringVar(&c.catalogo, "catalogo", "", "a catalogue given by hand, instead of the engine's (the administrator's responsibility)")
+	fs.StringVar(&c.archivio, "archivio", "", "the signed REMOTIX archive (base URL)")
+	fs.StringVar(&c.canale, "canale", "stabile", "the archive channel: stabile or candidato")
+	fs.IntVar(&c.porta, "porta", 7447, "the REMOTIX port (TCP and UDP)")
+	fs.StringVar(&c.risposte, "risposte", "", "the answer file: installation without questions")
+	fs.StringVar(&c.fuoriLinea, "fuori-linea", "", "the offline bundle (prepara-fuori-linea): it is the archive, no network")
 }
 
-// leggiRisposte: il file di risposte, se c'è. Fissa la lingua (se non data con --lingua), e dà
-// l'archivio e il canale se la riga di comando non li dice.
+// leggiRisposte: il file di risposte, se c'è. Dà l'archivio e il canale se la riga di comando non li dice.
 func (c *comuni) leggiRisposte() (*motore.FileRisposte, error) {
 	if c.risposte == "" {
 		return nil, nil
@@ -114,9 +103,6 @@ func (c *comuni) leggiRisposte() (*motore.FileRisposte, error) {
 	r, err := motore.LeggiRisposte(c.risposte)
 	if err != nil {
 		return nil, err
-	}
-	if l := r.Voci["lingua"]; l != "" && c.lingua == "" {
-		motore.ImpostaLingua(l)
 	}
 	if c.archivio == "" && c.fuoriLinea == "" {
 		c.archivio = r.Voci["archivio"]
@@ -195,7 +181,7 @@ func argomenti(fs *flag.FlagSet, arg []string) ([]string, error) {
 	}
 }
 
-// T: il catalogo dei testi del motore (una lingua per volta, DECISIONI §10.15).
+// T: il catalogo dei testi del motore (in inglese, DECISIONI §10.35).
 var T = motore.T
 
 func chi() string {
@@ -216,7 +202,7 @@ func verifica(arg []string) (int, error) {
 	fs := flag.NewFlagSet("verifica", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	comeJSON := fs.Bool("json", false, "profilo e rapporto in JSON")
+	comeJSON := fs.Bool("json", false, "profile and report as JSON")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
@@ -340,14 +326,14 @@ func piano(arg []string) error {
 	fs := flag.NewFlagSet("piano", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "", "dove scrivere il piano (predefinito piano-<mestiere>.json)")
-	utente := fs.String("utente", "", "prova: chi mettere nel gruppo video; installazione: le persone da iscrivere ai gruppi della scheda, separate da virgola (vuoto: tutte le persone della macchina)")
-	apri := fs.Bool("apri-firewall", false, "mettere nel piano l'apertura della porta (D6)")
-	comeJSON := fs.Bool("json", false, "stampa anche il piano in JSON")
-	installa := fs.Bool("installa", false, "il piano dell'INSTALLAZIONE di REMOTIX (invece del piano di prova)")
-	pacchetto := fs.String("pacchetto", "", "installazione: il pacchetto di REMOTIX da un file (.deb/.rpm/.pkg.tar.zst), invece dell'archivio")
-	depositi := fs.String("deposito", "", "installazione: archivi di terzi col consenso (D5), separati da virgola: epel, rpmfusion, packman")
-	nomi := fs.String("pacchetti", "", "prova: pacchetti dai depositi da far installare (separati da virgola)")
+	uscita := fs.String("uscita", "", "where to write the plan (default piano-<mestiere>.json)")
+	utente := fs.String("utente", "", "test: who to put in the video group; installation: the people to add to the graphics card groups, comma separated (empty: everyone on the machine)")
+	apri := fs.Bool("apri-firewall", false, "put opening the port in the plan")
+	comeJSON := fs.Bool("json", false, "also print the plan as JSON")
+	installa := fs.Bool("installa", false, "the REMOTIX INSTALLATION plan (instead of the test plan)")
+	pacchetto := fs.String("pacchetto", "", "installation: the REMOTIX package from a file (.deb/.rpm/.pkg.tar.zst), instead of the archive")
+	depositi := fs.String("deposito", "", "installation: third-party repositories with consent, comma separated: epel, rpmfusion, packman")
+	nomi := fs.String("pacchetti", "", "test: repository packages to install (comma separated)")
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
@@ -415,9 +401,9 @@ func disinstalla(arg []string) error {
 	fs := flag.NewFlagSet("disinstalla", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "piano-disinstallazione.json", "dove scrivere il piano")
-	purge := fs.Bool("purge", false, "togliere anche la configurazione (come apt purge)")
-	comeJSON := fs.Bool("json", false, "stampa anche il piano in JSON")
+	uscita := fs.String("uscita", "piano-disinstallazione.json", "where to write the plan")
+	purge := fs.Bool("purge", false, "also remove the configuration (like apt purge)")
+	comeJSON := fs.Bool("json", false, "also print the plan as JSON")
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
@@ -474,8 +460,7 @@ func mostraPiano(p *motore.Piano, uscitaFile string) error {
 
 func approva(arg []string) error {
 	fs := flag.NewFlagSet("approva", flag.ContinueOnError)
-	desktop := fs.String("desktop", "", "la risposta alla domanda sul desktop, se il piano la fa")
-	fs.String("lingua", "", "it o en (già letta in main)")
+	desktop := fs.String("desktop", "", "the answer to the desktop question, if the plan asks it")
 	pos, err := argomenti(fs, arg)
 	if err != nil {
 		return err
@@ -505,8 +490,8 @@ func opera(cmd string, arg []string) (int, error) {
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	eventi := fs.Bool("eventi", false, "eventi in JSON, una riga ciascuno")
-	approvaOra := fs.Bool("approva", false, "il consenso è dato adesso, da chi lancia il comando")
+	eventi := fs.Bool("eventi", false, "events as JSON, one line each")
+	approvaOra := fs.Bool("approva", false, "consent is given now, by whoever runs the command")
 	pos, err := argomenti(fs, arg)
 	if err != nil {
 		return 2, err
@@ -648,7 +633,7 @@ func mostraCatalogo(arg []string) error {
 	fs := flag.NewFlagSet("catalogo", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	tabella := fs.Bool("tabella", false, "le tabelle di §3.1, in markdown")
+	tabella := fs.Bool("tabella", false, "the supported-versions tables, in markdown")
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
@@ -670,7 +655,7 @@ func certifica(arg []string) (int, error) {
 	fs := flag.NewFlagSet("certifica", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	comeJSON := fs.Bool("json", false, "in JSON")
+	comeJSON := fs.Bool("json", false, "as JSON")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}

@@ -96,8 +96,8 @@ cd /tmp && curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.
 sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh" >"$E/script.txt" 2>&1
 	echo "   install.sh: $(grep -E 'install.sh: ' "$E/script.txt")"
 	T0=$(date +%s)
-	vm "cd /tmp && sudo sh install.sh --archivio $ARCH --risposte /root/risposte.conf --lingua it" >>"$E/script.txt" 2>&1
-	echo "   install.sh --risposte: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione |Motore VERIFICATO' "$E/script.txt" | tr '\n' ' ')"
+	vm "cd /tmp && sudo sh install.sh --archivio $ARCH --risposte /root/risposte.conf" >>"$E/script.txt" 2>&1
+	echo "   install.sh --risposte: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation |Engine VERIFIED' "$E/script.txt" | tr '\n' ' ')"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/script.txt" | head -8 | sed 's/^/   /'
 	;;
 aggiorna)
@@ -110,30 +110,30 @@ sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix | grep 
 	grep -aE 'remotix|installazione certificata|versioni di REMOTIX|RX-|uscita:|RITROVAT' "$E"/aggiorna-*.txt | tail -16 | cut -c1-220 | sed 's/^/   /'
 	;;
 disinstalla)
-	vm "sudo /usr/bin/remotix-install disinstalla --purge --uscita /root/d.json --lingua it >/dev/null && sudo /usr/bin/remotix-install applica /root/d.json --approva --lingua it" >"$E/disinstalla.txt" 2>&1
-	echo "   disinstalla: uscita $? — $(grep -E '^operazione ' "$E/disinstalla.txt")"
+	vm "sudo /usr/bin/remotix-install disinstalla --purge --uscita /root/d.json >/dev/null && sudo /usr/bin/remotix-install applica /root/d.json --approva" >"$E/disinstalla.txt" 2>&1
+	echo "   disinstalla: uscita $? — $(grep -E '^operation ' "$E/disinstalla.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/disinstalla.txt" | head -6 | sed 's/^/   /'
 	vm "echo \"pacchetti rimasti: \$( (dpkg-query -W -f='\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null) | tr '\n' ' ')\"
 echo \"archivi: \$(ls /etc/apt/sources.list.d /etc/yum.repos.d 2>/dev/null | grep -ci remotix) · servizio: \$(systemctl is-active remotix 2>&1) · /var/lib/remotix: \$(sudo ls /var/lib/remotix 2>&1 | tr '\n' ' ')\"" | tee -a "$E/disinstalla.txt"
 	;;
 installa)
 	canale=${1:-stabile}
-	vm "sudo /root/remotix-install verifica --archivio $ARCH --canale $canale --lingua it" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
+	vm "sudo /root/remotix-install verifica --archivio $ARCH --canale $canale" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
 	grep -E '^Fiducia|^Catalogo' "$E/verifica.txt" | sed 's/^/   /'
-	vm "cd /tmp && sudo /root/remotix-install piano --installa --archivio $ARCH --canale $canale --utente prova ${PIANO_OPZ:-} --uscita /root/piano.json --lingua it" >"$E/piano.txt" 2>&1
+	vm "cd /tmp && sudo /root/remotix-install piano --installa --archivio $ARCH --canale $canale --utente prova ${PIANO_OPZ:-} --uscita /root/piano.json" >"$E/piano.txt" 2>&1
 	echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
-	vm "sudo /root/remotix-install approva /root/piano.json --lingua it" >>"$E/piano.txt" 2>&1
+	vm "sudo /root/remotix-install approva /root/piano.json" >>"$E/piano.txt" 2>&1
 	T0=$(date +%s)
-	vm "sudo /root/remotix-install applica /root/piano.json --lingua it" >"$E/applica.txt" 2>&1
-	echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operazione ' "$E/applica.txt")"
+	vm "sudo /root/remotix-install applica /root/piano.json" >"$E/applica.txt" 2>&1
+	echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/applica.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/applica.txt" | head -8 | sed 's/^/   /'
 	;;
 stato)
 	vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install remotix-archive-keyring 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix) · pid \$(systemctl show -p MainPID --value remotix)\"
-sudo /usr/bin/remotix-install stato --lingua it
-sudo /usr/bin/remotix-install catalogo --lingua it 2>&1 | head -1
-sudo /usr/bin/remotix-install certifica --lingua it 2>&1 | head -1
+sudo /usr/bin/remotix-install stato
+sudo /usr/bin/remotix-install catalogo 2>&1 | head -1
+sudo /usr/bin/remotix-install certifica 2>&1 | head -1
 sudo sh -c 'cat /var/lib/remotix/aggiornamenti.json 2>/dev/null'; echo" 2>&1 | tee "$E/stato-$(t).txt"
 	;;
 collega)
@@ -154,7 +154,7 @@ echo processi di prova: \$(pgrep -u prova | wc -l)
 loginctl list-sessions --no-legend | grep prova" | tee "$E/palco-$(t).txt"
 	;;
 motore-cmd)
-	vm "sudo /usr/bin/remotix-install $* --lingua it" 2>&1 | tee -a "$E/comandi.txt"
+	vm "sudo /usr/bin/remotix-install $*" 2>&1 | tee -a "$E/comandi.txt"
 	;;
 spegni)
 	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" cliente >/dev/null 2>&1; echo "   $m spenta, tornata a «cliente»"

@@ -38,23 +38,18 @@ func TestTestiInterfaccia(t *testing.T) {
 				t.Errorf("%s: la chiave %q manca", f, k)
 				continue
 			}
-			if x.it == "" || x.en == "" {
-				t.Errorf("%q: manca una lingua: %+v", k, x)
+			if x == "" {
+				t.Errorf("%q: testo vuoto", k)
 			}
 		}
 	}
 	if usate < 50 {
 		t.Errorf("trovate solo %d chiavi: l'espressione non le vede?", usate)
 	}
-	for k, x := range testi {
-		if strings.Count(x.it, "%") != strings.Count(x.en, "%") {
-			t.Errorf("%q: argomenti diversi fra le lingue: %q / %q", k, x.it, x.en)
-		}
-	}
 }
 
 // Il controllo in parole comuni: niente nomi di driver o bus fuori dai dettagli tecnici; i
-// cartellini nelle due lingue.
+// cartellini in inglese (DECISIONI §10.35).
 func TestVistaControlloParoleComuni(t *testing.T) {
 	prof := motore.NuovoProfilo(7447)
 	for k, v := range map[string]string{"distro.id": "fedora", "distro.versione": "44", "distro.nome": "Fedora Linux 44 (Workstation Edition)",
@@ -65,8 +60,7 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 	rap := &motore.Rapporto{Riconosciuta: motore.T("comp.nella_matrice", "Fedora 44"),
 		Desktop: []motore.EsitoDesktop{{Desktop: "gnome", Installato: "50.5", Livello: motore.COMPATIBILE}}}
 	dom := &motore.Domande{Porta: 7447, Firewall: "chiuso", Depositi: []motore.DomandaDeposito{{ID: "rpmfusion", Nome: "RPM Fusion", Per: "h264", Serve: true}}}
-	for _, l := range []string{"it", "en"} {
-		motore.ImpostaLingua(l)
+	for _, l := range []string{"en"} {
 		v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 		if v.Esito != CONDIZIONI {
 			t.Errorf("%s: esito %v, atteso a condizioni", l, v.Esito)
@@ -83,9 +77,8 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 			t.Errorf("%s: intestazione %q", l, v.Intestazione)
 		}
 	}
-	motore.ImpostaLingua("it")
 	s := VistaDelleScelte(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
-	if s.Titolo != "Tre cose da decidere" || len(s.Domande) != 2 {
+	if s.Titolo != "Three things to decide" || len(s.Domande) != 2 {
 		t.Errorf("scelte: %q, %d domande", s.Titolo, len(s.Domande))
 	}
 }
