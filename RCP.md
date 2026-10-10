@@ -1,994 +1,995 @@
-# RCP — Remotix Control Protocol, versione 1
+# RCP — Remotix Control Protocol, version 1
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio stay, because the new stream is identical (comparison of 30 Sep 2026). User's decision. The measurements redone after the change (1 Oct 2026) are in `fasi/18-senza-ffmpeg.md` §5.*
 
-*Scritto il 9 agosto 2026, prima di qualunque riga di codice.*
-*Completato il 9 agosto 2026, dopo il censimento di §0-bis — sempre prima di qualunque riga di codice.*
+*Written on 9 Aug 2026, before any line of code.*
+*Completed on 9 Aug 2026, after the census of §0-bis — still before any line of code.*
 
-> ## 0. ⛔ Perché questo documento esiste, e perché viene prima
+> ## 0. ⛔ Why this document exists, and why it comes first
 >
-> *⚠ Il numero è del 10 agosto 2026, rilievo **R11.18**: quattro righe di questo documento
-> (§3, §5.2, §7.5, §11.1) e una di `FASI.md` §01-filo-nudo citavano «§0» come l'argomento portante,
-> e §0 non esisteva — la numerazione cominciava da §0-bis. Adesso esiste, e non cambia una parola
-> del testo.*
+> *⚠ The number dates from 10 Aug 2026, finding **R11.18**: four lines of this document
+> (§3, §5.2, §7.5, §11.1) and one of `FASI.md` §01-filo-nudo cited «§0» as the load-bearing argument,
+> and §0 did not exist — the numbering started from §0-bis. Now it exists, and it does not change a word
+> of the text.*
 >
-> In v1 l'arbitro era **mstsc**: se disegnava, era giusto. Quando il nostro server sbagliava a
-> capire la specifica RDP, un client altrui lo diceva subito, gratis.
+> In v1 the referee was **mstsc**: if it drew, it was right. When our server misunderstood
+> the RDP specification, someone else's client said so at once, for free.
 >
-> In V2 client e server sono **nostri**. Se il server emette una sciocchezza, il nostro client la
-> accetterà volentieri — perché lo stesso fraintendimento è compilato in tutti e due. **Due
-> programmi scritti dalla stessa mano che vanno d'accordo non confermano niente**: ripetono lo
-> stesso presupposto.
+> In V2 client and server are **ours**. If the server emits nonsense, our client will
+> gladly accept it — because the same misunderstanding is compiled into both. **Two
+> programs written by the same hand that agree with each other confirm nothing**: they repeat the
+> same assumption.
 >
-> Da cui il mestiere di questo documento: **è lui l'arbitro**. Non descrive quel che il codice fa,
-> stabilisce quel che il codice deve fare, ed è scritto abbastanza preciso da poter **dare torto**
-> a un'implementazione. Se una riga qui è ambigua, è un difetto di questo file, non
-> un'interpretazione del programmatore.
+> Hence the job of this document: **it is the referee**. It does not describe what the code does,
+> it establishes what the code must do, and it is written precisely enough to be able to **prove wrong**
+> an implementation. If a line here is ambiguous, it is a defect of this file, not
+> an interpretation for the programmer.
 >
-> **Che cosa è normativo**: tutto ciò che è scritto con **DEVE**, **NON DEVE**, **PUÒ**. Il resto è
-> spiegazione, e non vincola.
+> **What is normative**: everything written with **MUST**, **MUST NOT**, **MAY**. The rest is
+> explanation, and does not bind.
 
 ---
 
-## 0-bis. ⭐ Il censimento del 9 agosto, e che cosa ha chiuso
+## 0-bis. ⭐ The census of 9 Aug, and what it closed
 
-*Fatto all'apertura della fase 1, rileggendo il documento con una domanda sola: **due persone che
-lo leggono da sole scrivono lo stesso byte?***
+*Done at the opening of phase 1, rereading the document with a single question: **do two people who
+read it on their own write the same byte?***
 
-La risposta era **no**, e non per una sfumatura. La prima stesura definiva **il fotogramma** (28
-byte esatti) e **il datagram audio** (12), cioè le due cose che portano i pixel e il suono — e dei
-**venti messaggi di controllo, di input e di appunti** dava il **nome** e una descrizione a parole.
-Il canale che porta la stretta di mano, cioè quello che la fase 1 deve scrivere, era il meno
-specificato di tutti.
+The answer was **no**, and not by a nuance. The first draft defined **the frame** (28
+bytes exactly) and **the audio datagram** (12), that is the two things that carry the pixels and the sound — and of
+the **twenty control, input and clipboard messages** it gave the **name** and a description in words.
+The channel that carries the handshake, that is the one phase 1 must write, was the least
+specified of all.
 
-| | Prima | Adesso |
+| | Before | Now |
 |---|---|---|
-| corpi di messaggio definiti byte per byte | 2 su 22 | **26 su 26** (§6, §7) — ⚠ *diceva «22 su 22», e il conto era della prima stesura: i due tipi aggiunti il 9 agosto portavano il totale a 24, e i **due della funzione di banco** (§7.5, la notte del 9) a **26**. Corretto dal rilievo **R1.29**, e non è pedanteria — quella casella è **l'unica prova che il documento porta di essere completo**, e chi la verificava contando ne trovava di più* |
-| tipi elementari (numeri, stringhe, elenchi) | — | §6.0 |
-| come si riconosce a quale canale appartiene uno stream | — | §2.5 |
-| che cosa pretende il trasporto (finestre, stream, migrazione, 0-RTT) | 3 parametri | §2.3 |
-| la porta | — | §2.4 |
-| che cosa fa un'implementazione dopo `ERRORE_PROTOCOLLO` | «chiude» | §3.1 |
-| il recupero dopo un fotogramma abbandonato | ⛔ **non esisteva** | §5.2 |
-| il formato dell'audio | «Opus, PCM» | §5.3 |
-| la limitazione dei tentativi | `[?]` in `SPECIFICHE.md` §4.2 | §4.4-bis |
+| message bodies defined byte by byte | 2 of 22 | **26 of 26** (§6, §7) — ⚠ *it said «22 su 22», and the count was from the first draft: the two types added on 9 Aug brought the total to 24, and the **two of the bench function** (§7.5, the night of the 9th) to **26**. Corrected by finding **R1.29**, and it is not pedantry — that cell is **the only proof the document carries of being complete**, and whoever checked it by counting found more* |
+| elementary types (numbers, strings, lists) | — | §6.0 |
+| how to recognise which channel a stream belongs to | — | §2.5 |
+| what the transport demands (windows, streams, migration, 0-RTT) | 3 parameters | §2.3 |
+| the port | — | §2.4 |
+| what an implementation does after `ERRORE_PROTOCOLLO` | «chiude» | §3.1 |
+| recovery after an abandoned frame | ⛔ **did not exist** | §5.2 |
+| the audio format | «Opus, PCM» | §5.3 |
+| rate limiting of attempts | `[?]` in `SPECIFICHE.md` §4.2 | §4.4-bis |
 
-⛔ **E un buco che non era una lacuna ma un difetto di disegno**: §5.1 concede al server di
-**abbandonare** un fotogramma con `RESET_STREAM`, e il video è compresso con predizione fra
-fotogrammi. Abbandonarne uno da cui i successivi dipendono lascia il decodificatore rotto **finché
-non arriva un fotogramma chiave** — e non c'era modo né di dire che un fotogramma è chiave, né di
-chiederne uno. La cura sta in §5.2 e costa **zero byte** all'intestazione: entra nei valori del
-campo `tipo`, che erano indefiniti.
+⛔ **And a hole that was not a gap but a design defect**: §5.1 allows the server to
+**abandon** a frame with `RESET_STREAM`, and the video is compressed with prediction between
+frames. Abandoning one on which the following ones depend leaves the decoder broken **until
+a keyframe arrives** — and there was no way either to say that a frame is a keyframe, or to
+ask for one. The cure is in §5.2 and costs **zero bytes** in the header: it fits in the values of the
+`tipo` field, which were undefined.
 
-⚠ **Le chiusure sono marcate 🔸 in `DECISIONI.md` §1.5**: sono conseguenze scritte da me, non
-pronunciate dall'utente, e si correggono senza discussione. Quel che resta volutamente aperto sta
-in §12, dichiarato invece che dimenticato.
+⚠ **The closures are marked 🔸 in `DECISIONI.md` §1.5**: they are consequences written by me, not
+pronounced by the user, and they are corrected without discussion. What deliberately stays open is
+in §12, declared instead of forgotten.
 
-> ### ⭐ Sette righe entrate il **12 agosto 2026**, dalla sotto-fase F2.4 della fase 2
+> ### ⭐ Seven lines that came in on **12 Aug 2026**, from sub-phase F2.4 of phase 2
 >
-> *Trovate scrivendo il banco del canale video **prima** del prodotto, e proposte in
-> `fasi/rapporti/F2-4-filo.md` col testo pronto; applicate qui dal
-> coordinatore. ⛔ **Nessuna aggiunge un tipo di messaggio, un motivo di congedo o un campo a un
-> messaggio esistente**: la clausola di §9 è consumata dal 10 agosto, e ogni riga sta dentro quel
-> divieto.*
+> *Found while writing the bench of the video channel **before** the product, and proposed in
+> `fasi/rapporti/F2-4-filo.md` with the text ready; applied here by the
+> coordinator. ⛔ **None adds a message type, a farewell reason or a field to an
+> existing message**: the clause of §9 has been spent since 10 Aug, and every line stays inside that
+> prohibition.*
 >
-> ⚠ **Quattro sono letture doppie vere** — due implementazioni conformi producono **byte diversi per
-> lo stesso ingresso** — e **tre sono regole derivate**, che si ricavano da §1 e §3 ma che nessuna
-> riga scrive. Confonderle gonfierebbe il conto: una regola derivata non fa divergere due
-> implementazioni attente, una lettura doppia sì.
+> ⚠ **Four are true double readings** — two conforming implementations produce **different bytes for
+> the same input** — and **three are derived rules**, which follow from §1 and §3 but which no
+> line writes. Confusing them would inflate the count: a derived rule does not make two careful
+> implementations diverge, a double reading does.
 >
-> | | Dove | Che cosa chiude |
+> | | Where | What it closes |
 > |---|---|---|
-> | ⭐ **P2** | §6.2 `numero` | *lettura doppia, la più grave*: il contatore non diceva **da dove parte**, e §7.1 dà allo `0` il significato «nessun fotogramma» ⇒ `RICHIEDI_CHIAVE(0)` voleva dire **due cose** — il valore sentinella implicito che §6.0 vieta |
-> | ⭐ **P6** | §5.2 | *lettura doppia, e morde nella fase 2*: un **delta in apertura** era conforme a ogni riga, e il client **non aveva modo di accorgersene** — nessun buco nei `numero`, e il decodificatore non solleva errori |
-> | ⭐ **P5** | §6.2 `largh.`/`altezza` | *lettura doppia*: *«è sempre quella della tela»* **descrive** e non comanda, e nessuna riga diceva che cosa fa **chi riceve** una misura diversa — chiudere o riscalare |
-> | ⭐ **P3** | §2.5 riga `0x03` | *lettura doppia*: §2.5 vieta per nome il controllo su uno stream unidirezionale e l'audio su uno stream, ma **per il video non diceva su che stream viva** |
-> | **P1** | §2.5 riga «video» | *derivata*: per chi **riceve** si ricava da §1 e §3; per chi **manda** non si ricavava da nessuna parte — ed è l'invariante **I3** lasciata senza una riga sul filo |
-> | **P4** | §6.2 | *derivata*: un **FIN prima dei 28 byte** non è un fotogramma corto, è una lunghezza che non torna |
-> | ⭐ **P7** | §11.1 | *trovata dall'**arbitro meccanico***, non da una rilettura: la registrazione non portava **come si è chiuso lo stream**, e senza quel byte un fotogramma abbandonato e uno troncato per errore sono identici — la forma **E8**, rientrata dalla finestra |
+> | ⭐ **P2** | §6.2 `numero` | *double reading, the most serious*: the counter did not say **where it starts**, and §7.1 gives `0` the meaning «nessun fotogramma» ⇒ `RICHIEDI_CHIAVE(0)` meant **two things** — the implicit sentinel value that §6.0 forbids |
+> | ⭐ **P6** | §5.2 | *double reading, and it bites in phase 2*: a **delta at the opening** conformed to every line, and the client **had no way to notice** — no hole in the `numero` values, and the decoder raises no errors |
+> | ⭐ **P5** | §6.2 `largh.`/`altezza` | *double reading*: *«è sempre quella della tela»* **describes** and does not command, and no line said what **the receiver** of a different size does — close or rescale |
+> | ⭐ **P3** | §2.5 row `0x03` | *double reading*: §2.5 forbids by name control on a unidirectional stream and audio on a stream, but **for video it did not say which stream it lives on** |
+> | **P1** | §2.5 row «video» | *derived*: for the **receiver** it follows from §1 and §3; for the **sender** it followed from nowhere — and it is invariant **I3** left without a line on the wire |
+> | **P4** | §6.2 | *derived*: a **FIN before the 28 bytes** is not a short frame, it is a length that does not add up |
+> | ⭐ **P7** | §11.1 | *found by the **mechanical referee***, not by a rereading: the recording did not carry **how the stream was closed**, and without that byte an abandoned frame and one truncated by mistake are identical — form **E8**, back in through the window |
 >
-> ### ⛔⛔ E due ore dopo, DUE DI QUESTE SETTE ERANO SBAGLIATE — corrette lo stesso giorno
+> ### ⛔⛔ And two hours later, TWO OF THESE SEVEN WERE WRONG — corrected the same day
 >
-> *E non le ha trovate una rilettura: le ha trovate **chi doveva farle rispettare**, cioè l'agente che
-> propagava le sette righe ai due arbitri. Applicare una regola è un modo di leggerla che rileggerla
-> non è.*
+> *And it was not a rereading that found them: they were found by **whoever had to enforce them**, that is the agent that
+> was propagating the seven lines to the two referees. Applying a rule is a way of reading it that rereading it
+> is not.*
 >
-> ⛔ **P5 uccideva una sessione sana.** La riga scriveva *«DEVONO valere la tela concessa in
-> `SESSIONE`»*, ⚠ ma §7.1 ha `ADATTA_TELA`, e `TELA` risponde con *«la tela in vigore **dopo** questo
-> messaggio»*. ⇒ `SESSIONE` concede 1920×1080 · l'utente trascina la finestra · il client manda
-> `ADATTA_TELA(1280,720)` · il server risponde `TELA(ADATTATA…)` e cattura a quella misura · il
-> fotogramma porta `largh. = 1280` · ⛔ **e il client lo rifiuta e chiude**. Un server conforme a §7.1
-> ucciso da un client conforme a §6.2 — ed è **esattamente la scena che §7.1 protegge** con la sua
-> eccezione 4: *«l'utente che trascina male una finestra non deve perdere la sessione»*. ⭐ La cura è
-> **una parola**: «la tela **in vigore**» al posto di «la tela concessa in `SESSIONE`».
+> ⛔ **P5 killed a healthy session.** The line wrote *«DEVONO valere la tela concessa in
+> `SESSIONE`»*, ⚠ but §7.1 has `ADATTA_TELA`, and `TELA` answers with *«la tela in vigore **dopo** questo
+> messaggio»*. ⇒ `SESSIONE` grants 1920×1080 · the user drags the window · the client sends
+> `ADATTA_TELA(1280,720)` · the server answers `TELA(ADATTATA…)` and captures at that size · the
+> frame carries `largh. = 1280` · ⛔ **and the client rejects it and closes**. A server conforming to §7.1
+> killed by a client conforming to §6.2 — and it is **exactly the scene that §7.1 protects** with its
+> exception 4: *«l'utente che trascina male una finestra non deve perdere la sessione»*. ⭐ The cure is
+> **one word**: «la tela **in vigore**» (the canvas in force) in place of «la tela concessa in `SESSIONE`».
 >
-> ⚠ **E P2 riportava in circolo il valore che aveva appena riservato.** L'aritmetica di `numero` è
-> **modulo 2³²** e §6.2 dichiara che una sessione può durare più di un giro del contatore: al giro,
-> `0xFFFFFFFF` passa a **`0`**, che P2 aveva riservato due ore prima, e nessuna riga diceva di
-> saltarlo. Curato: **da `0xFFFFFFFF` si passa a `1`**.
+> ⚠ **And P2 put back into circulation the value it had just reserved.** The arithmetic of `numero` is
+> **modulo 2³²** and §6.2 declares that a session can last more than one wrap of the counter: at the wrap,
+> `0xFFFFFFFF` goes to **`0`**, which P2 had reserved two hours before, and no line said to
+> skip it. Cured: **from `0xFFFFFFFF` it goes to `1`**.
 >
-> ⇒ ⭐ **Cinque righe su sette erano giuste, due no — e il costo di scoprirlo è stato scriverne il
-> banco.** È il momento 1 di `PIANO.md` §0.4 che funziona nel verso in cui nessuno se lo aspetta: il
-> banco non ha trovato un difetto nel prodotto, ha trovato **un difetto nell'arbitro**.
+> ⇒ ⭐ **Five lines of seven were right, two were not — and the cost of finding out was writing their
+> bench.** It is moment 1 of `PIANO.md` §0.4 working in the direction nobody expects: the
+> bench did not find a defect in the product, it found **a defect in the referee**.
 
-⛔ **E la finestra per farlo È CHIUSA**: §9 vieta di aggiungere tipi di messaggio dentro una
-versione maggiore, e quel divieto protegge le implementazioni esistenti. **Adesso esistono.** Da qui
-in poi questo documento si tocca **solo** come dice §9, senza sconti.
+⛔ **And the window to do it IS CLOSED**: §9 forbids adding message types within a
+major version, and that prohibition protects the existing implementations. **Now they exist.** From here
+on this document is touched **only** as §9 says, with no discounts.
 
-> ⚠ *Questa riga diceva* «⭐ **E la finestra per farlo è adesso** … quel divieto protegge le
-> implementazioni esistenti, e **oggi non ne esiste nessuna**» — *e §9 diceva la stessa cosa con le
-> stesse parole. Era vero fino al 10 agosto 2026; il primo byte è stato scritto quel giorno, e le
-> due righe sono rimaste indietro. **Chi le avesse lette dopo avrebbe aggiunto un tipo di messaggio
-> con la benedizione scritta dell'arbitro**, cioè lo strappo che §12 dichiara di aver chiuso.
-> Corrette l'11 agosto 2026, rilievo **R12C.2**.*
+> ⚠ *This line said* «⭐ **E la finestra per farlo è adesso** … quel divieto protegge le
+> implementazioni esistenti, e **oggi non ne esiste nessuna**» — *and §9 said the same thing with the
+> same words. It was true until 10 Aug 2026; the first byte was written that day, and the
+> two lines were left behind. **Whoever had read them afterwards would have added a message type
+> with the written blessing of the referee**, that is the breach that §12 declares it has closed.
+> Corrected on 11 Aug 2026, finding **R12C.2**.*
 >
-> ⛔ **Le implementazioni di RCP/1 che esistono, contate l'11 agosto 2026** `[M]` (`wc -l`,
+> ⛔ **The implementations of RCP/1 that exist, counted on 11 Aug 2026** `[M]` (`wc -l`,
 > `md5sum`):
-> · `src/rcp.c` + `rcp.h` — `[M]` **12 agosto 2026: 2.764 / 239 righe** (erano 2.592 / 197 l'11);
-> · `banchi/rcp/rcp.c` + `rcp.h` — **identici byte per byte** (`md5` `6d858886…` e `62415feb…`,
->   erano `1adce15b…` e `0458f154…`);
+> · `src/rcp.c` + `rcp.h` — `[M]` **12 Aug 2026: 2,764 / 239 lines** (they were 2,592 / 197 on the 11th);
+> · `banchi/rcp/rcp.c` + `rcp.h` — **identical byte for byte** (`md5` `6d858886…` and `62415feb…`,
+>   they were `1adce15b…` and `0458f154…`);
 >
-> ⚠ *I numeri sono cresciuti per la cura di `DECISIONI.md` §1.10 — la verifica PAM fuori dal filo
-> unico — e ⛔ **il filo non è cambiato di un byte**: questa è una casella di **censimento**, non una
-> riga normativa, e va riallineata quando il codice cresce o diventa una misura che descrive il
-> codice di ieri. Riallineata il 12 agosto 2026, su segnalazione dell'agente che ha fatto la cura.*
->   ⚠ *`rcp.c` diceva **2.566 righe** e `md5` `cb7af778…`: sono cambiati la tarda serata dell'11
->   agosto 2026, per la riga di registro del **posto lasciato** sulla strada del congedo — la cura
->   sta nel codice, commentata. ⛔ E i due numeri si aggiornano **insieme**, o la riga che dichiara
->   l'identità delle due copie diventa una promessa che nessuno verifica: a farla rispettare è il
->   `Makefile`, che confronta `src/` con `banchi/rcp/` e si ferma se divergono.*
-> · `banchi/01-b3-cliente.py` — **il secondo lettore**, in un altro linguaggio;
-> · `src/pagina.html` — il terzo, in JavaScript;
-> · e due che leggono il formato senza parlarlo: `banchi/01-b4-validatore.py` (l'arbitro meccanico)
->   e `banchi/01-b11-pagina.html`.
+> ⚠ *The numbers grew because of the cure of `DECISIONI.md` §1.10 — the PAM check off the single
+> thread — and ⛔ **the wire has not changed by one byte**: this is a **census** cell, not a
+> normative line, and it must be realigned when the code grows or it becomes a measurement that describes
+> yesterday's code. Realigned on 12 Aug 2026, on a report from the agent that made the cure.*
+>   ⚠ *`rcp.c` said **2,566 lines** and `md5` `cb7af778…`: they changed late in the evening of 11
+>   Aug 2026, for the log line of the **attach slot left** on the farewell path — the cure
+>   is in the code, commented. ⛔ And the two numbers are updated **together**, or the line that declares
+>   the identity of the two copies becomes a promise nobody checks: what enforces it is the
+>   `Makefile`, which compares `src/` with `banchi/rcp/` and stops if they diverge.*
+> · `banchi/01-b3-cliente.py` — **the second reader**, in another language;
+> · `src/pagina.html` — the third, in JavaScript;
+> · and two that read the format without speaking it: `banchi/01-b4-validatore.py` (the mechanical referee)
+>   and `banchi/01-b11-pagina.html`.
 
 ---
 
-## 1. Il modello, in una pagina
+## 1. The model, on one page
 
 ```
         CLIENT                                            SERVER
           │                                                 │
-          │  ⓪  la PAGINA, in TCP     porta 7447             │
-          │◀──── e qui l'utente vede l'avviso, una volta ────│
+          │  ⓪  the PAGE, over TCP       port 7447           │
+          │◀──── and here the user sees the warning, once ───│
           │                                                 │
-          │  ①  WebTransport su HTTP/3   UDP 7447            │
+          │  ①  WebTransport over HTTP/3   UDP 7447          │
           │────────────────────────────────────────────────▶│
-          │  ② il BROWSER verifica l'impronta che            │
-          │     la pagina gli ha dichiarato                  │
+          │  ② the BROWSER checks the fingerprint that       │
+          │     the page declared to it                      │
           │                                                 │
-          │  ③  CIAO  (versione, capacità del client)        │
+          │  ③  CIAO  (version, client capabilities)         │
           │────────────────────────────────────────────────▶│
-          │◀──── ECCOMI (versione, capacità del server) ─────│
+          │◀──── ECCOMI (version, server capabilities) ──────│
           │                                                 │
           │  ④  CREDENZIALI                        ── PAM ──▶│
-          │◀──── AMMESSO  /  RESPINTO(motivo) ───────────────│
+          │◀──── AMMESSO  /  RESPINTO(reason) ───────────────│
           │                                                 │
-          │  ⑤  ATTACCA (tela, disposizione, vista)          │
-          │◀──── SESSIONE (stato, tela concessa) ────────────│
+          │  ⑤  ATTACCA (canvas, layout, view)               │
+          │◀──── SESSIONE (state, granted canvas) ───────────│
           │                                                 │
-          │        ══════ da qui i canali scorrono ══════    │
-          │◀═══ video: uno stream per fotogramma ═══════════ │
-          │◀═══ audio: datagram ════════════════════════════ │
-          │═══▶ input: uno stream riservato ════════════════ │
-          │◀══▶ controllo · appunti ════════════════════════ │
+          │        ══════ from here the channels flow ══════ │
+          │◀═══ video: one stream per frame ════════════════ │
+          │◀═══ audio: datagrams ═══════════════════════════ │
+          │═══▶ input: one reserved stream ═════════════════ │
+          │◀══▶ control · clipboard ════════════════════════ │
 ```
 
-Tre cose che questo disegno dice e che vanno lette:
+Three things this drawing says and that must be read:
 
-1. **il server dimostra chi è prima che la password parta** — invariante I3 applicata
-   all'ordine (`SPECIFICHE.md` §4.1);
-2. **l'autenticazione precede l'attacco**: chi non è ammesso non nomina nemmeno una sessione;
-3. **la tela si concorda all'attacco**, e da lì non cambia finché il client resta
+1. **the server proves who it is before the password leaves** — invariant I3 applied
+   to the order (`SPECIFICHE.md` §4.1);
+2. **authentication precedes attaching**: whoever is not admitted does not even name a session;
+3. **the canvas is agreed at attach**, and from there it does not change while the client stays
    (`SPECIFICHE.md` §6.1).
 
-⛔ **L'ordine dei cinque passi non ammette permute.** Un messaggio che arriva in uno stato in cui
-non è previsto è `ERRORE_PROTOCOLLO` (§3). È la trappola 1 di `LEZIONI.md` §4, dove ogni permuta
-era punita con un errore diverso e nessuno diceva «hai sbagliato l'ordine»: qui lo dice.
+⛔ **The order of the five steps admits no permutations.** A message that arrives in a state in which
+it is not expected is `ERRORE_PROTOCOLLO` (§3). It is trap 1 of `LEZIONI.md` §4, where every permutation
+was punished with a different error and nobody said «hai sbagliato l'ordine»: here it is said.
 
 ---
 
-## 2. Il trasporto
+## 2. The transport
 
-**WebTransport su HTTP/3**, cioè **QUIC** versione 1 (RFC 9000) con **TLS 1.3 obbligatorio**. Non
-esiste un modo in chiaro, e RCP non scorre mai su TCP.
+**WebTransport over HTTP/3**, that is **QUIC** version 1 (RFC 9000) with **TLS 1.3 mandatory**. There
+is no cleartext mode, and RCP never flows over TCP.
 
-> ### ⭐ Cambiato il 9 agosto 2026 — e il protocollo non ha perso una riga
+> ### ⭐ Changed on 9 Aug 2026 — and the protocol did not lose a line
 >
-> `DECISIONI.md` §1.6: **niente client dedicati, il client è il browser**. Una pagina non può
-> aprire una connessione QUIC nuda, ma **WebTransport le dà gli stessi mattoni** su cui §5.1 era
-> stato disegnato: stream unidirezionali indipendenti, l'abbandono di uno stream, i datagram,
-> la migrazione della connessione.
+> `DECISIONI.md` §1.6: **no dedicated clients, the client is the browser**. A page cannot
+> open a bare QUIC connection, but **WebTransport gives it the same bricks** on which §5.1 had
+> been designed: independent unidirectional streams, the abandonment of a stream, datagrams,
+> connection migration.
 >
-> ⭐ **Quel che cambia sta tutto in questo capitolo e in §4.1**: come si arriva alla connessione e
-> chi si fida di chi. **I messaggi, l'inquadratura, i canali e i corpi non cambiano di un byte** —
-> §3 e da §5 in poi valgono identici.
+> ⭐ **What changes is all in this chapter and in §4.1**: how the connection is reached and
+> who trusts whom. **The messages, the framing, the channels and the bodies do not change by one byte** —
+> §3 and §5 onwards hold identically.
 >
-> ⚠ **E il server acquista un mestiere**: prima ascoltava QUIC e basta, adesso **serve anche la
-> pagina**. Sono due ascoltatori con lo stesso numero di porta — **UDP** per HTTP/3 e WebTransport,
-> **TCP** per il primo caricamento — perché un browser che apre `https://…` parte in TCP e passa a
-> QUIC solo se il server glielo annuncia con `Alt-Svc`.
+> ⚠ **And the server takes on a job**: before it listened to QUIC and that was all, now **it also serves the
+> page**. They are two listeners with the same port number — **UDP** for HTTP/3 and WebTransport,
+> **TCP** for the first load — because a browser that opens `https://…` starts over TCP and moves to
+> QUIC only if the server announces it with `Alt-Svc`.
 
-### 2.1 Come si usano i pezzi di QUIC
+### 2.1 How the pieces of QUIC are used
 
-QUIC non è «TCP che va più veloce»: porta quattro cose che questo protocollo usa
-deliberatamente, e che vanno usate **invece** di reimplementarle (`SPECIFICHE.md` §2 punto 3,
-*«dipendere, non riscrivere»* — ⚠ *questa riga citava un «§2.3» che in `SPECIFICHE.md` non esiste:
-§2 non ha sottosezioni. Corretto il 10 agosto 2026, rilievo **R11.18***).
+QUIC is not «TCP che va più veloce»: it carries four things that this protocol uses
+deliberately, and that must be used **instead of** reimplementing them (`SPECIFICHE.md` §2 point 3,
+*«dipendere, non riscrivere»* — ⚠ *this line cited a «§2.3» that does not exist in `SPECIFICHE.md`:
+§2 has no subsections. Corrected on 10 Aug 2026, finding **R11.18***).
 
-| Pezzo di QUIC | A che serve qui |
+| Piece of QUIC | What it is for here |
 |---|---|
-| **stream indipendenti** | un fotogramma in ritardo non blocca il successivo: il blocco di testa è per stream, non per connessione |
-| **`RESET_STREAM`** | ⭐ **abbandonare un fotogramma** che non serve più, invece di spedirlo tardi |
-| **datagram** | l'audio, che è piccolo e preferisce perdere un pacchetto che aspettarlo |
-| **migrazione della connessione** | il telefono passa da WiFi a rete mobile senza che la sessione se ne accorga |
-| **controllo di congestione** | la misura di quanto porta la linea, che in v1 andava ricavata a mano |
-| **tempo di inattività** | i 30 secondi di silenzio di `SPECIFICHE.md` §5.3 |
+| **independent streams** | a late frame does not block the next one: head-of-line blocking is per stream, not per connection |
+| **`RESET_STREAM`** | ⭐ **abandoning a frame** that is no longer needed, instead of sending it late |
+| **datagrams** | audio, which is small and prefers losing a packet to waiting for it |
+| **connection migration** | the phone moves from WiFi to mobile network without the session noticing |
+| **congestion control** | the measure of how much the line carries, which in v1 had to be worked out by hand |
+| **idle timeout** | the 30 seconds of silence of `SPECIFICHE.md` §5.3 |
 
-### 2.2 Parametri obbligatori
+### 2.2 Mandatory parameters
 
-| Parametro | Valore | Perché |
+| Parameter | Value | Why |
 |---|---|---|
-| `max_idle_timeout` | **30 s**, imposto dal server | è l'orologio del silenzio: scaduto, il client è staccato |
-| datagram | **DEVONO** essere abilitati sulla connessione HTTP/3 | l'audio |
-| ALPN | `h3` | ⛔ lo negozia il browser, non noi: una pagina non sceglie l'ALPN |
-| **l'indirizzo della sessione** | `https://<host>:<porta>/rcp/1` | ⭐ **è qui che vive l'identità del protocollo**, al posto dell'ALPN: il numero dopo la barra è la **versione maggiore** |
+| `max_idle_timeout` | **30 s**, set by the server | it is the silence clock: once it expires, the client is detached |
+| datagrams | **MUST** be enabled on the HTTP/3 connection | audio |
+| ALPN | `h3` | ⛔ the browser negotiates it, not us: a page does not choose the ALPN |
+| **the session address** | `https://<host>:<porta>/rcp/1` | ⭐ **this is where the identity of the protocol lives**, in place of the ALPN: the number after the slash is the **major version** |
 
-⛔ **Il server NON DEVE accettare una sessione WebTransport su un percorso diverso.** Un percorso
-sconosciuto si rifiuta con lo stato HTTP di rifiuto, e si scrive nel registro: è §3 applicata al
-primo byte, prima ancora che RCP cominci.
+⛔ **The server MUST NOT accept a WebTransport session on a different path.** An unknown path
+is refused with the HTTP refusal status, and is written in the log: it is §3 applied to the
+first byte, even before RCP begins.
 
-⚠ **Perché la versione sta nel percorso e non solo nel `CIAO`.** Con l'ALPN il rifiuto arrivava
-prima di spendere una connessione; qui l'ALPN è `h3` e non è nostro, quindi il posto più a monte in
-cui possiamo dire «questa versione non la parlo» è il percorso. ⛔ Resta comunque obbligatorio il
-controllo di versione in `CIAO`/`ECCOMI` (§9): **il percorso non lo sostituisce** — un percorso si
-può digitare a mano, e un controllo che si può aggirare digitando non è un controllo.
+⚠ **Why the version is in the path and not only in `CIAO`.** With the ALPN the refusal arrived
+before spending a connection; here the ALPN is `h3` and is not ours, so the most upstream place in
+which we can say «questa versione non la parlo» is the path. ⛔ The version check in `CIAO`/`ECCOMI` (§9)
+remains mandatory all the same: **the path does not replace it** — a path can
+be typed by hand, and a check that can be bypassed by typing is not a check.
 
-⛔ **E le due DEVONO coincidere**: un `CIAO(versione=2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`, non
-una negoziazione da risolvere. Un percorso sconosciuto si rifiuta con **404**.
+⛔ **And the two MUST coincide**: a `CIAO(versione=2)` on `/rcp/1` is `VERSIONE_INCOMPATIBILE`, not
+a negotiation to resolve. An unknown path is refused with **404**.
 
-> ⚠ *Le due righe qui sopra sono della sera del 9 agosto 2026, rilievo **R1.24**.* Il documento
-> diceva che il percorso «non sostituisce» il controllo, e **non diceva che i due dovessero
-> concordare**: §9 fa scegliere al server la versione più alta che non superi quella del `CIAO`,
-> quindi un `CIAO(2)` su `/rcp/1` produceva tre esiti tutti difendibili — `ECCOMI(2)`,
-> `ERRORE_PROTOCOLLO`, `VERSIONE_INCOMPATIBILE`. E lo stato HTTP del rifiuto non era scritto: 404,
-> 400 e 421 erano tutti leciti, e la pagina non li distingue.
+> ⚠ *The two lines above are from the evening of 9 Aug 2026, finding **R1.24**.* The document
+> said that the path «non sostituisce» the check, and **did not say that the two had to
+> agree**: §9 makes the server choose the highest version that does not exceed that of `CIAO`,
+> so a `CIAO(2)` on `/rcp/1` produced three outcomes all defensible — `ECCOMI(2)`,
+> `ERRORE_PROTOCOLLO`, `VERSIONE_INCOMPATIBILE`. And the HTTP status of the refusal was not written: 404,
+> 400 and 421 were all lawful, and the page does not tell them apart.
 
-⛔ **NON DEVE esistere un battito applicativo.** Il tempo di inattività di QUIC fa già quel
-mestiere, e un secondo meccanismo produrrebbe due verità sullo stesso fatto.
+⛔ **There MUST NOT be an application-level heartbeat.** The QUIC idle timeout already does that
+job, and a second mechanism would produce two truths about the same fact.
 
-### 2.3 ⭐ Il credito degli stream, e che cosa non possiamo più pretendere
+### 2.3 ⭐ Stream credit, and what we can no longer demand
 
-*Aggiunta il 9 agosto 2026 e riscritta lo stesso giorno, dopo `DECISIONI.md` §1.6.*
+*Added on 9 Aug 2026 and rewritten the same day, after `DECISIONI.md` §1.6.*
 
-⛔ **La prima stesura di questo paragrafo dettava al client i parametri di trasporto QUIC** —
-quanti stream, quanta finestra, niente 0-RTT, niente `disable_active_migration`. **Con un browser
-non si può: quei parametri li sceglie lui**, e nessuna riga di questo documento glieli cambia. Ciò
-che resta normativo è quel che tocca a **noi** — il server — e quel che va **misurato invece che
-preteso**.
+⛔ **The first draft of this paragraph dictated the QUIC transport parameters to the client** —
+how many streams, how much window, no 0-RTT, no `disable_active_migration`. **With a browser
+it cannot be done: it chooses those parameters**, and no line of this document changes them for it. What
+stays normative is what falls to **us** — the server — and what must be **measured instead of
+demanded**.
 
 | | |
 |---|---|
-| **il server DEVE concedere credito** al client per i suoi stream unidirezionali: almeno **16** disponibili in ogni momento — ⛔ **cioè almeno 19 dichiarati al livello QUIC** (vedi il riquadro) | il client apre uno stream di input e uno per ogni trasferimento di appunti. Se il credito finisse, **l'input non partirebbe affatto** e il sintomo sarebbe «il desktop non risponde» |
+| **the server MUST grant credit** to the client for its unidirectional streams: at least **16** available at any moment — ⛔ **that is at least 19 declared at the QUIC level** (see the box) | the client opens one input stream and one for each clipboard transfer. If the credit ran out, **input would not leave at all** and the symptom would be «il desktop non risponde» |
 
-> ### ⛔ I 16 sono **disponibili a RCP**, non dichiarati sul filo — e la differenza è di tre
+> ### ⛔ The 16 are **available to RCP**, not declared on the wire — and the difference is three
 >
-> *Aggiunto l'11 agosto 2026, rilievo **A** del punto 4 della sessione. La riga qui sopra diceva
-> «almeno 16» e basta: ⛔ **chi la implementava alla lettera scriveva `initial_max_streams_uni = 16`
-> ed era conforme al documento e in violazione della sua ragione.** È il difetto **B-12**, trovato
-> nel prodotto la notte del 10 agosto e curato lì — e l'arbitro non lo diceva.*
+> *Added on 11 Aug 2026, finding **A** of point 4 of the session. The line above said
+> «almeno 16» and that was all: ⛔ **whoever implemented it to the letter wrote `initial_max_streams_uni = 16`
+> and conformed to the document while violating its reason.** It is defect **B-12**, found
+> in the product on the night of 10 Aug and cured there — and the referee did not say it.*
 >
-> ⛔ **WebTransport non ha un credito suo.** Nelle bozze ≤ 07 ogni stream unidirezionale di
-> WebTransport **è** uno stream unidirezionale di QUIC, sullo stesso contatore di HTTP/3. E HTTP/3
-> se ne prende **tre** appena la connessione nasce — il suo stream di controllo e i due di QPACK —
-> e ⛔ **non li chiude mai**.
+> ⛔ **WebTransport has no credit of its own.** In drafts ≤ 07 every unidirectional stream of
+> WebTransport **is** a unidirectional QUIC stream, on the same counter as HTTP/3. And HTTP/3
+> takes **three** of them as soon as the connection is born — its control stream and the two of QPACK —
+> and ⛔ **never closes them**.
 >
-> ⇒ **16 dichiarati = 13 disponibili a RCP**, e i tre stream mancanti si perdono in silenzio: il
-> sintomo non è un errore ma *«il desktop non risponde»*, cioè il sintomo che questa riga esiste per
-> impedire.
+> ⇒ **16 declared = 13 available to RCP**, and the three missing streams are lost in silence: the
+> symptom is not an error but *«il desktop non risponde»*, that is the symptom this line exists to
+> prevent.
 >
 > | | |
 > |---|---|
-> | quel che il server **dichiara** in `initial_max_streams_uni` | ⛔ **almeno 19** |
-> | quel che resta a RCP dopo i tre di HTTP/3 | **16**, che è il numero normativo |
-> | ⚠ e il conto **non si crede, si misura** | la sonda del trasporto conta gli unidirezionali che il pari ha davvero aperto e giudica `dichiarati − contati ≥ 16`. `[?]` **su un browser i tre potrebbero essere di più** — uno stream di *grease*, per dire — e nessuno l'ha misurato |
+> | what the server **declares** in `initial_max_streams_uni` | ⛔ **at least 19** |
+> | what remains to RCP after the three of HTTP/3 | **16**, which is the normative number |
+> | ⚠ and the count **is not believed, it is measured** | the transport probe counts the unidirectional streams the peer has really opened and judges `dichiarati − contati ≥ 16`. `[?]` **on a browser the three could be more** — a *grease* stream, for instance — and nobody has measured it |
 >
-> ⚠ **E il numero giusto è 19 anche quando sembra generoso**: le due parole che decidono in questa
-> riga sono **«disponibili»** — non «dichiarati» — e **«in ogni momento»**. La lettura che salva il
-> 16 rende parole morte tutt'e due.
-| **il server DEVE reggere il rifiuto di aprire uno stream** invece di considerarlo un errore fatale | il video consuma **uno stream per fotogramma**: a 60 al secondo, il credito che il browser concede si consuma in fretta |
+> ⚠ **And the right number is 19 even when it looks generous**: the two words that decide in this
+> line are **«disponibili»** (available) — not «dichiarati» (declared) — and **«in ogni momento»** (at any moment). The reading that saves the
+> 16 makes both of them dead words.
+| **the server MUST withstand the refusal to open a stream** instead of considering it a fatal error | video consumes **one stream per frame**: at 60 per second, the credit the browser grants is consumed fast |
 
-> ### ⛔ «Il credito viene rinnovato mano a mano che gli stream si chiudono» — **FALSO, e misurato**
+> ### ⛔ «Il credito viene rinnovato mano a mano che gli stream si chiudono» — **FALSE, and measured**
 >
-> *13 agosto 2026, fase 3. La riga qui sopra finiva così, e chi la leggeva ne ricavava una
-> garanzia: chiudi gli stream e il posto torna. ⛔ **Non torna per forza.***
+> *13 Aug 2026, phase 3. The line above ended like that, and whoever read it drew a
+> guarantee from it: close the streams and the room comes back. ⛔ **It does not necessarily come back.***
 >
-> ⛔ **Il rinnovo del credito è POLITICA DEL PARI, non una conseguenza della chiusura.** Chiudere uno
-> stream non restituisce niente da sé: il limite sale **solo** quando il pari decide di mandare un
-> `MAX_STREAMS` più alto, e **quando** lo manda lo decide lui. `[M]` **con il rinnovo del pari
-> spento, il credito resta fermo anche a stream tutti chiusi.** ⇒ La riga vecchia non descriveva il
-> protocollo: descriveva un pari gentile.
+> ⛔ **The renewal of credit is THE PEER'S POLICY, not a consequence of closing.** Closing a
+> stream gives nothing back by itself: the limit rises **only** when the peer decides to send a
+> higher `MAX_STREAMS`, and **when** it sends it is its decision. `[M]` **with the peer's renewal
+> switched off, the credit stays still even with all streams closed.** ⇒ The old line did not describe the
+> protocol: it described a kind peer.
 >
-> ⇒ **Che cosa resta normativo, e non cambia**: il server **DEVE reggere il rifiuto** di aprire uno
-> stream (riga qui sopra) e **DEVE** buttare il fotogramma — mai una chiave (riga qui sotto). ⛔ Quel
-> che cade è la **rassicurazione**: non si scrive codice che *aspetta* il posto contando sul rinnovo,
-> perché il rinnovo non è nostro e può non arrivare.
+> ⇒ **What stays normative, and does not change**: the server **MUST withstand the refusal** to open a
+> stream (line above) and **MUST** throw away the frame — never a keyframe (line below). ⛔ What
+> falls is the **reassurance**: no code is written that *waits* for the room counting on the renewal,
+> because the renewal is not ours and may not arrive.
 >
-> ⛔⛔ **E NON si scrive che il prodotto cade sotto credito basso: non è misurato.** *Un giro del 13
-> agosto ha prodotto uno `STREAM_LIMIT_ERROR`, e per qualche ora è sembrato un difetto del prodotto.
-> Non lo era: il **banco** annunciava il credito **dopo** la stretta di mano — cosa che RFC 9000 §4.6
-> vieta — quindi il `6` **non è mai stato annunciato sul filo**. Il server aveva **128 posti
-> concessi** e ne ha aperti **14**. ⇒ **`ngtcp2` non ha violato niente, e lì il prodotto non ha un
-> difetto.** Quel che regge di quella giornata è la riga qui sopra, che è un'altra cosa.*
+> ⛔⛔ **And it is NOT written that the product falls over under low credit: it is not measured.** *A run of 13
+> Aug produced a `STREAM_LIMIT_ERROR`, and for a few hours it looked like a defect of the product.
+> It was not: the **bench** announced the credit **after** the handshake — something RFC 9000 §4.6
+> forbids — so the `6` **was never announced on the wire**. The server had **128 slots
+> granted** and opened **14**. ⇒ **`ngtcp2` violated nothing, and there the product has no
+> defect.** What holds from that day is the line above, which is another matter.*
 >
-> ⭐ **E cercando il difetto falso ne è uscito uno vero, ed era peggiore: `B-18`.** Uno dei tre
-> percorsi di abbandono di un delta — proprio quello **per mancanza di posto** — **non accendeva la
-> richiesta di chiave**. ⛔ **Un solo delta saltato per credito esaurito sfasciava l'immagine per
-> sempre e in silenzio**, e la catena del silenzio è questa: il fotogramma non è mai stato spedito
-> ⇒ il `numero` **non è consumato** (§6.2) ⇒ **nessun buco** nella successione ⇒ il client non ha di
-> che accorgersene e **non può chiedere la chiave** ⇒ e con un GOP infinito non ne arriva più una da
-> sola. ⇒ **È la ragione per cui la riga qui sotto obbliga il server a produrre la chiave da sé**:
-> in questo caso il client non ha nessun modo di chiederla.
-| ⛔ **e quando il credito manca si butta il fotogramma — ma MAI una chiave** | aspettare un posto libero è una coda, e ogni coda **compra fluidità e vende risposta** (`SPECIFICHE.md` §3.2). Un **delta** vecchio non serve più: ne sta già arrivando uno nuovo. ⛔ Un fotogramma **chiave** invece si aspetta, perché è l'unica cosa che rimette in piedi il decodificatore (§5.2). E in tutt'e due i casi **si scrive nel registro** |
+> ⭐ **And while looking for the false defect a real one came out, and it was worse: `B-18`.** One of the three
+> paths of abandoning a delta — precisely the one **for lack of room** — **did not switch on the
+> keyframe request**. ⛔ **A single delta skipped for exhausted credit wrecked the picture for
+> good and in silence**, and the chain of silence is this: the frame was never sent
+> ⇒ the `numero` **is not consumed** (§6.2) ⇒ **no hole** in the sequence ⇒ the client has nothing
+> to notice and **cannot ask for the keyframe** ⇒ and with an infinite GOP none arrives any more on its
+> own. ⇒ **This is the reason the line below obliges the server to produce the keyframe by itself**:
+> in this case the client has no way of asking for it.
+| ⛔ **and when credit is lacking the frame is thrown away — but NEVER a keyframe** | waiting for a free slot is a queue, and every queue **buys smoothness and sells responsiveness** (`SPECIFICHE.md` §3.2). An old **delta** is no longer needed: a new one is already arriving. ⛔ A **keyframe** instead is waited for, because it is the only thing that puts the decoder back on its feet (§5.2). And in both cases **it is written in the log** |
 
-> ⛔ *Corretta la sera del 9 agosto 2026, rilievo **R1.9**, e la sequenza che la rompeva è questa.*
-> La linea peggiora, il server abbandona un delta e — come §5.2 gli impone — prepara subito una
-> **chiave**. In quel momento il credito è esaurito, perché è la stessa condizione che ha prodotto
-> l'abbandono. La riga vecchia ordinava di **buttare**: il fotogramma buttato era la chiave, che
-> §5.2 vieta di abbandonare con un ⛔. Due righe normative opposte, e nessuna citava l'altra.
+> ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.9**, and the sequence that broke it is this.*
+> The line gets worse, the server abandons a delta and — as §5.2 requires — immediately prepares a
+> **keyframe**. At that moment the credit is exhausted, because it is the same condition that produced
+> the abandonment. The old line ordered to **throw away**: the frame thrown away was the keyframe, which
+> §5.2 forbids abandoning with a ⛔. Two opposite normative lines, and neither cited the other.
 >
-> ⚠ E il caso si richiudeva su sé stesso: il client chiede una chiave, il server la produce, il
-> credito manca ancora, la butta ancora — **schermo fermo, e nessuna riga nel registro che dica
-> perché**, perché l'obbligo di registro di §5.1 parla di *abbandono* e lì lo stream non era mai
-> nato. Ora l'obbligo copre tutt'e due i casi.
-| **il server NON DEVE offrire 0-RTT** | i dati 0-RTT si possono **ripetere**, e il secondo messaggio è `CREDENZIALI`. Il guadagno è un giro di rete su una sessione che dura ore |
-| **il server NON DEVE disabilitare la migrazione** | è la ragione per cui QUIC è stato scelto (`SPECIFICHE.md` §8.4): il telefono che passa da WiFi a rete mobile |
+> ⚠ And the case closed back on itself: the client asks for a keyframe, the server produces it, the
+> credit is still lacking, it throws it away again — **frozen screen, and no line in the log saying
+> why**, because the log obligation of §5.1 speaks of *abandonment* and there the stream had never
+> been born. Now the obligation covers both cases.
+| **the server MUST NOT offer 0-RTT** | 0-RTT data can be **replayed**, and the second message is `CREDENZIALI`. The gain is one network round trip on a session that lasts hours |
+| **the server MUST NOT disable migration** | it is the reason QUIC was chosen (`SPECIFICHE.md` §8.4): the phone that moves from WiFi to mobile network |
 
-`[?]` **Quanti stream al secondo regga davvero ciascun browser non lo sa nessuno**, e non si legge:
-si misura. ⚠ È la forma di difetto che un banco corto **non vede** — funziona per i primi secondi e
-si ferma dopo (`LEZIONI.md` §1.4) — ed è per questo che §11 ha un banco apposta, che tiene la
-sessione viva **oltre i primi 256 fotogrammi**.
+`[?]` **How many streams per second each browser really withstands nobody knows**, and it is not read:
+it is measured. ⚠ It is the form of defect a short bench **does not see** — it works for the first seconds and
+stops afterwards (`LEZIONI.md` §1.4) — and that is why §11 has a dedicated bench, which keeps the
+session alive **beyond the first 256 frames**.
 
-### 2.4 🔸 La porta
+### 2.4 🔸 The port
 
-**7447**, e sono **due ascoltatori con lo stesso numero**: **UDP** per HTTP/3 e WebTransport,
-**TCP** per il primo caricamento della pagina. È il valore predefinito, e **PUÒ** essere cambiato
-dalla configurazione del server: l'utente digita `https://indirizzo:7447` nel browser, e poi utente
-e password nella pagina.
+**7447**, and they are **two listeners with the same number**: **UDP** for HTTP/3 and WebTransport,
+**TCP** for the first load of the page. It is the default value, and it **MAY** be changed
+by the server configuration: the user types `https://indirizzo:7447` in the browser, and then user
+and password in the page.
 
-> ⛔ **Corretto il 9 agosto 2026 dalla misura S1** — questa riga diceva: *«il server DEVE annunciare
-> `Alt-Svc: h3=":7447"` sulla risposta TCP, o il browser non passerà mai a QUIC»*. **È falsa**, ed
-> era mia: **WebTransport non usa `Alt-Svc` affatto** — zero occorrenze nelle tre specifiche, con
-> controllo positivo `[S]`. Una sessione WebTransport apre **la sua** connessione HTTP/3 verso
-> l'indirizzo che le si dà, senza scoperta e senza negoziazione a monte.
+> ⛔ **Corrected on 9 Aug 2026 by measurement S1** — this line said: *«il server DEVE annunciare
+> `Alt-Svc: h3=":7447"` sulla risposta TCP, o il browser non passerà mai a QUIC»*. **It is false**, and it
+> was mine: **WebTransport does not use `Alt-Svc` at all** — zero occurrences in the three specifications, with
+> a positive control `[S]`. A WebTransport session opens **its own** HTTP/3 connection towards
+> the address it is given, without discovery and without upstream negotiation.
 >
-> ⭐ **E toglie di mezzo un pericolo che avevo dichiarato**: il ripiego silenzioso su TCP — «la
-> pagina si apre e il desktop non arriva mai» — **non può accadere**, perché non c'è nessun ripiego
-> da fare.
+> ⭐ **And it removes a danger I had declared**: the silent fallback to TCP — «la
+> pagina si apre e il desktop non arriva mai» — **cannot happen**, because there is no fallback
+> to make.
 
-⚠ **Il TCP serve solo a consegnare la pagina**, e le basta HTTP/1.1. Da lì in poi il browser apre
-la sessione WebTransport per conto suo, sull'UDP.
+⚠ **TCP serves only to deliver the page**, and HTTP/1.1 is enough for it. From there on the browser opens
+the WebTransport session on its own, over UDP.
 
-⚠ Scelta il 9 agosto 2026 verificando che sia libera in `/etc/services` di Debian Trixie `[M]`.
-`[?]` **Non è stata verificata la registrazione IANA**: se un giorno servisse un numero
-registrato, questa riga si cambia senza toccare nient'altro.
+⚠ Chosen on 9 Aug 2026 after checking that it is free in `/etc/services` of Debian Trixie `[M]`.
+`[?]` **The IANA registration has not been checked**: if one day a registered number were needed,
+this line is changed without touching anything else.
 
-### 2.5 ⛔ Gli stream: chi apre che cosa, e come si riconoscono
+### 2.5 ⛔ The streams: who opens what, and how they are recognised
 
-*Questo paragrafo chiude il buco più insidioso del censimento: chi riceve uno stream
-unidirezionale deve sapere **che cosa** c'è dentro prima di leggerlo, e non c'era scritto da
-nessuna parte.*
+*This paragraph closes the most insidious hole of the census: whoever receives a unidirectional
+stream must know **what** is inside before reading it, and it was not written
+anywhere.*
 
-| Stream | Chi lo apre | Quanti |
+| Stream | Who opens it | How many |
 |---|---|---|
-| **controllo** — il **primo** stream bidirezionale della sessione | il client | uno solo, per tutta la sessione |
-| **video** — unidirezionale | il server | uno **per fotogramma**, ⛔ e **nessuno prima di aver spedito `SESSIONE`**. ⚠ Il divieto vincola **chi manda**: chi riceve non lo può misurare sull'ordine in cui gli arrivano le cose, perché il canale di controllo e lo stream del fotogramma sono **due stream QUIC indipendenti** e niente ne ordina la consegna (§6.2). ⇒ Il client dichiara `ERRORE_PROTOCOLLO` **solo** se non ha ancora spedito `ATTACCA`: §4.5 fa di `SESSIONE` la risposta ad `ATTACCA`, quindi lì il server **non può** averla spedita, e il client lo sa **senza guardare la rete**. ⛔ Se `ATTACCA` è partito e `SESSIONE` non è ancora arrivata il client **NON DEVE chiudere**: **trattiene** il fotogramma e lo scrive nel registro, e lo giudica quando `SESSIONE` arriva — che arriva per forza, perché il canale di controllo è affidabile e ordinato e §4.5 vieta al server di rispondere con un silenzio. ⚠ E l'invariante **I3** resta intera: chi ha spedito `ATTACCA` è già passato da `AMMESSO`, cioè dal validatore |
+| **control** — the **first** bidirectional stream of the session | the client | only one, for the whole session |
+| **video** — unidirectional | the server | one **per frame**, ⛔ and **none before having sent `SESSIONE`**. ⚠ The prohibition binds **the sender**: the receiver cannot measure it on the order in which things reach it, because the control channel and the stream of the frame are **two independent QUIC streams** and nothing orders their delivery (§6.2). ⇒ The client declares `ERRORE_PROTOCOLLO` **only** if it has not yet sent `ATTACCA`: §4.5 makes `SESSIONE` the answer to `ATTACCA`, so there the server **cannot** have sent it, and the client knows it **without looking at the network**. ⛔ If `ATTACCA` has left and `SESSIONE` has not yet arrived the client **MUST NOT close**: it **holds back** the frame and writes it in the log, and judges it when `SESSIONE` arrives — which necessarily arrives, because the control channel is reliable and ordered and §4.5 forbids the server to answer with a silence. ⚠ And invariant **I3** stays whole: whoever has sent `ATTACCA` has already passed through `AMMESSO`, that is through the validator |
 
-> ### ⛔ La riga qui sopra è stata riscritta il **13 agosto 2026** — rilievo **P20**
+> ### ⛔ The line above was rewritten on **13 Aug 2026** — finding **P20**
 >
-> *Diceva:* «*chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`*». ⛔ **E «chi ne riceve uno
-> prima» è una grandezza sostitutiva**: chi riceve non ha altro da misurare che l'ordine in cui il
-> proprio strato di rete gli consegna gli eventi, e i due stream sono indipendenti. ⇒ Bastava
-> **perdere il pacchetto che porta `SESSIONE`** perché un client conforme uccidesse una sessione in
-> cui il server aveva fatto tutto giusto — **I1 rotta perché la linea perde pacchetti**, cioè la
-> condizione che I1 esiste per proteggere.
+> *It said:* «*chi ne riceve uno prima chiude con `ERRORE_PROTOCOLLO`*». ⛔ **And «chi ne riceve uno
+> prima» is a substitute quantity**: the receiver has nothing to measure other than the order in which its
+> own network layer delivers events to it, and the two streams are independent. ⇒ It was enough to
+> **lose the packet that carries `SESSIONE`** for a conforming client to kill a session in
+> which the server had done everything right — **I1 broken because the line loses packets**, that is the
+> condition I1 exists to protect.
 >
-> ⚠ *È la **sesta** della famiglia* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13, e
-> ⭐ la **settima** è del 24 agosto 2026 — vedi il riquadro subito sotto). E
-> anche la prima cura proposta — «solo se, quando il fotogramma arriva, i byte di `SESSIONE` non sono
-> ancora arrivati» — restava un sostituto: sposta la misura dal risveglio della coroutine ai byte, e
-> **i byte li ritarda la rete**. Sarebbe stata la settima stesura.*
+> ⚠ *It is the **sixth** of the family* **P8 → P11 → P13 → P14 → P19 → P20** *(`LEZIONI.md` §1.13, and
+> ⭐ the **seventh** is of 24 Aug 2026 — see the box just below). And
+> even the first cure proposed — «solo se, quando il fotogramma arriva, i byte di `SESSIONE` non sono
+> ancora arrivati» — remained a substitute: it moves the measurement from the wake-up of the coroutine to the bytes, and
+> **the bytes are delayed by the network**. It would have been the seventh draft.*
 >
-> ⭐ **La grandezza vera è quel che il client ha spedito LUI** — `ATTACCA` — ed è la forma generale
-> del campo `numero` di P14: **locale, monotona, indipendente dalla consegna**.
+> ⭐ **The true quantity is what the client has sent ITSELF** — `ATTACCA` — and it is the general form
+> of the `numero` field of P14: **local, monotonic, independent of delivery**.
 >
-> ### ⭐⭐ **P21** — *24 agosto 2026, fase 9*: la settima, e stavolta la famiglia ha colpito **il server**
+> ### ⭐⭐ **P21** — *24 Aug 2026, phase 9*: the seventh, and this time the family struck **the server**
 >
-> ⛔ La prima stesura della cura *«dichiara morta una linea che perde troppo»* usava
-> **`pkt_lost / pkt_sent`** di ngtcp2 dentro una finestra: due contatori **locali a chi manda**, che
-> sembravano rispettare la regola della famiglia alla lettera.
+> ⛔ The first draft of the cure *«dichiara morta una linea che perde troppo»* used
+> ngtcp2's **`pkt_lost / pkt_sent`** within a window: two counters **local to the sender**, which
+> seemed to respect the family's rule to the letter.
 >
-> ⛔⛔ **E ordinava i due casi al contrario.** `[M]` Una linea che **regge** dieci minuti (jitter
-> 40±20 ms, 2 % di perdita vera) ne dichiarava il **512‰**; una che **non regge** il **123‰**. ⇒
-> Nessuna soglia poteva separarle. La ragione è la stessa di sempre: **ngtcp2 conta un pacchetto
-> sorpassato come perso**, quindi su una linea che riordina quella frazione **misura il riordino**,
-> non la perdita. Era una **grandezza sostitutiva**, e non si vedeva perché è locale e monotona.
+> ⛔⛔ **And it ordered the two cases backwards.** `[M]` A line that **holds** for ten minutes (jitter
+> 40±20 ms, 2 % of true loss) declared **512‰** of it; one that **does not hold** **123‰**. ⇒
+> No threshold could separate them. The reason is the same as always: **ngtcp2 counts an overtaken
+> packet as lost**, so on a line that reorders, that fraction **measures the reordering**,
+> not the loss. It was a **substitute quantity**, and it did not show because it is local and monotonic.
 >
-> ⭐ **La grandezza vera è quel che il server sa di NON aver fatto**: *da quanto tempo non esce un
-> fotogramma pur avendone da mandare* — lo **stallo dell'uscita**. `[M]` Separa i due casi di
-> sessanta volte (0,50 s contro 30,06 s), ed è locale, monotona e indipendente dalla consegna come
-> chiede la famiglia.
+> ⭐ **The true quantity is what the server knows it has NOT done**: *how long a frame has not
+> left although it has some to send* — the **output stall**. `[M]` It separates the two cases by
+> sixty times (0.50 s against 30.06 s), and it is local, monotonic and independent of delivery as
+> the family asks.
 >
-> ⇒ ⚠ **La lezione che P21 aggiunge alle sei prima**: *«locale e monotona»* **non basta**. Una
-> grandezza va provata **sui due estremi noti**, e deve **ordinarli nel verso giusto** — se non lo
-> fa, non è una taratura da rifare: è la grandezza sbagliata (`LEZIONI.md` §1.33). ⛔ E non l'ha trovata
-> una rilettura: l'ha trovata il **cliente di prova** al suo primo giro contro un server che
-> spedisce davvero.
-| **input** — unidirezionale | il client | **uno solo**, aperto ⛔ **dopo aver ricevuto `SESSIONE`** e tenuto aperto |
-| **appunti** — unidirezionale | entrambi | uno **per trasferimento** |
+> ⇒ ⚠ **The lesson P21 adds to the six before**: *«locale e monotona»* **is not enough**. A
+> quantity must be tested **on the two known extremes**, and must **order them in the right direction** — if it does
+> not, it is not a calibration to redo: it is the wrong quantity (`LEZIONI.md` §1.33). ⛔ And it was not found
+> by a rereading: it was found by the **test client** on its first run against a server that
+> really sends.
+| **input** — unidirectional | the client | **only one**, opened ⛔ **after having received `SESSIONE`** and kept open |
+| **clipboard** — unidirectional | both | one **per transfer** |
 
-⛔ **Il client NON DEVE aprire stream bidirezionali oltre lo 0. Il server NON DEVE aprire stream
-bidirezionali.** Chi ne riceve uno chiude con `ERRORE_PROTOCOLLO`.
+⛔ **The client MUST NOT open bidirectional streams beyond 0. The server MUST NOT open bidirectional
+streams.** Whoever receives one closes with `ERRORE_PROTOCOLLO`.
 
-> ### ⛔⛔ Prima di leggere: **i «primi due byte» non sono i primi byte dello stream** — rilievo P18
+> ### ⛔⛔ Before reading: **the «primi due byte» are not the first bytes of the stream** — finding P18
 >
-> *12 agosto 2026. Trovato dal **cliente di prova**, al suo primo giro dal vivo, e non da una
-> rilettura: `[M]` il giro è finito rosso con «canale di controllo mai aperto», e la causa era che
-> il cliente applicava questa riga **alla lettera**.*
+> *12 Aug 2026. Found by the **test client**, on its first live run, and not by a
+> rereading: `[M]` the run ended red with «canale di controllo mai aperto», and the cause was that
+> the client applied this line **to the letter**.*
 >
-> ⛔ Su WebTransport ogni stream porta un **preambolo**: il tipo di stream (`0x54` per gli
-> unidirezionali, `0x41` per i bidirezionali, in codifica variabile — sul filo `40 54` e `40 41`)
-> seguito dal **numero della sessione**. ⇒ Chi legge i «primi due byte» **dello stream** ricava
-> canale `0x40`, che non è nessuno dei cinque, e **chiude ogni fotogramma con
+> ⛔ On WebTransport every stream carries a **preamble**: the stream type (`0x54` for
+> unidirectional, `0x41` for bidirectional, in variable-length encoding — on the wire `40 54` and `40 41`)
+> followed by the **session number**. ⇒ Whoever reads the «primi due byte» **of the stream** derives
+> channel `0x40`, which is none of the five, and **closes every frame with
 > `ERRORE_PROTOCOLLO`**.
 >
-> ⇒ **I due byte sono i primi del carico RCP**, cioè quel che resta **dopo** il preambolo di
-> WebTransport, che lo strato di trasporto consuma e non consegna.
+> ⇒ **The two bytes are the first of the RCP payload**, that is what remains **after** the WebTransport
+> preamble, which the transport layer consumes and does not deliver.
 >
-> ⚠ **E questo è il difetto muto che §0 di questo documento esiste per impedire.** Il server e la
-> pagina andavano d'accordo **perché li ha scritti la stessa mano**: nessuno dei due leggeva questa
-> riga, e la riga era falsa. ⭐ A trovarlo è stato **l'unico lettore che RCP.md l'ha letto senza
-> guardare il codice** — cioè precisamente il pezzo di arbitro che `PIANO.md` §1.1 dice di aver
-> comprato al posto di `mstsc`, e che qui ha ripagato il proprio costo alla prima esecuzione.
+> ⚠ **And this is the silent defect that §0 of this document exists to prevent.** The server and the
+> page agreed **because the same hand wrote them**: neither of the two read this
+> line, and the line was false. ⭐ What found it was **the only reader that read RCP.md without
+> looking at the code** — that is precisely the piece of referee that `PIANO.md` §1.1 says it
+> bought in place of `mstsc`, and that here paid back its own cost on the first run.
 
-⭐ **Come si riconosce il canale**: si leggono i **primi due byte del carico RCP** — cioè quel che
-resta **dopo** il preambolo di WebTransport (§2.4), che il trasporto consuma — e sono in ogni
-caso un campo `tipo` (§6). Il byte alto dice il canale:
+⭐ **How the channel is recognised**: one reads the **first two bytes of the RCP payload** — that is what
+remains **after** the WebTransport preamble (§2.4), which the transport consumes — and they are in any
+case a `tipo` field (§6). The high byte says the channel:
 
-| Byte alto di `tipo` | Canale | Che cosa segue |
+| High byte of `tipo` | Channel | What follows |
 |---|---|---|
-| `0x00` | controllo | l'inquadratura di §6.1 — e su uno stream unidirezionale è `ERRORE_PROTOCOLLO`: il controllo vive solo sul **primo stream bidirezionale della sessione** (§4.2) |
-| `0x01` | input | l'inquadratura di §6.1, un messaggio dopo l'altro |
-| `0x02` | appunti | l'inquadratura di §6.1 |
-| `0x03` | video | l'intestazione di 28 byte di §6.2, **senza** inquadratura — ⛔ e **solo su uno stream unidirezionale aperto dal server**: un `0x03` sul canale di controllo è `ERRORE_PROTOCOLLO`, come lo è un `0x00` su uno stream unidirezionale |
-| `0x04` | audio | ⛔ solo su datagram (§6.3). Su uno stream è `ERRORE_PROTOCOLLO` |
+| `0x00` | control | the framing of §6.1 — and on a unidirectional stream it is `ERRORE_PROTOCOLLO`: control lives only on the **first bidirectional stream of the session** (§4.2) |
+| `0x01` | input | the framing of §6.1, one message after another |
+| `0x02` | clipboard | the framing of §6.1 |
+| `0x03` | video | the 28-byte header of §6.2, **without** framing — ⛔ and **only on a unidirectional stream opened by the server**: a `0x03` on the control channel is `ERRORE_PROTOCOLLO`, as is a `0x00` on a unidirectional stream |
+| `0x04` | audio | ⛔ only on datagrams (§6.3). On a stream it is `ERRORE_PROTOCOLLO` |
 
-⛔ Un byte alto diverso da questi cinque è `ERRORE_PROTOCOLLO`. E un canale usato **nel verso
-sbagliato** — un `0x01` che arriva dal server, un `0x03` che arriva dal client — lo è a sua volta.
+⛔ A high byte other than these five is `ERRORE_PROTOCOLLO`. And a channel used **in the wrong
+direction** — a `0x01` that arrives from the server, a `0x03` that arrives from the client — is one in its
+turn.
 
-> ⛔ *Corretto il 10 agosto 2026, rilievo **R11.9**: la riga del `0x00` diceva «il controllo vive
-> solo sullo **stream 0**», ed era il resto della stesura a QUIC nudo che §4.2 aveva già tolto la
-> sera del 9 agosto (rilievo R1.5). Il rilievo R1.5 nominava **anche** questa sezione, e la cura
-> era stata applicata a uno solo dei due luoghi.*
+> ⛔ *Corrected on 10 Aug 2026, finding **R11.9**: the `0x00` row said «il controllo vive
+> solo sullo **stream 0**», and it was the remainder of the bare-QUIC draft that §4.2 had already removed on the
+> evening of 9 Aug (finding R1.5). Finding R1.5 named **this section too**, and the cure
+> had been applied to only one of the two places.*
 >
-> ⛔ **Il canale si riconosce dal byte alto di `tipo`, mai dal numero dello stream**, e la seconda
-> risposta alla stessa domanda era rimasta qui dentro — cioè nella sezione che §0-bis presenta come
-> la cura del «buco più insidioso». Chi implementava §2.5 alla lettera scriveva un ricevente che
-> cerca il canale di controllo per numero, e la diagnosi che ne usciva era *«il client non apre il
-> canale»* **mentre il client lo aveva aperto**. ⚠ *La stessa parola sopravviveva nella tabella di
-> §5, ed è stata tolta lì insieme a questa.*
+> ⛔ **The channel is recognised by the high byte of `tipo`, never by the stream number**, and the second
+> answer to the same question had remained in here — that is in the section that §0-bis presents as
+> the cure of the «buco più insidioso». Whoever implemented §2.5 to the letter wrote a receiver that
+> looks for the control channel by number, and the diagnosis that came out was *«il client non apre il
+> canale»* **while the client had opened it**. ⚠ *The same word survived in the table of
+> §5, and it was removed there together with this one.*
 
 ---
 
-## 3. ⛔ La regola di rigore
+## 3. ⛔ The rigor rule
 
-> **Un'implementazione RCP che riceve qualcosa che non capisce DEVE chiudere la connessione con
-> `ERRORE_PROTOCOLLO` e scrivere nel registro che cosa non ha capito. NON DEVE ignorarlo, NON DEVE
-> indovinare, NON DEVE proseguire.**
+> **An RCP implementation that receives something it does not understand MUST close the connection with
+> `ERRORE_PROTOCOLLO` and write in the log what it did not understand. It MUST NOT ignore it, MUST NOT
+> guess, MUST NOT carry on.**
 
-Vale per: un tipo di messaggio sconosciuto, una lunghezza che non torna, un campo fuori intervallo,
-un messaggio arrivato nello stato sbagliato della macchina, un canale usato nel verso sbagliato.
+It applies to: an unknown message type, a length that does not add up, a field out of range,
+a message arrived in the wrong state of the machine, a channel used in the wrong direction.
 
-**Perché è scritta come prima regola e non fra le note.** Un parser indulgente è comodissimo il
-primo giorno e velenoso per sempre: se il server comincia a emettere un campo sbagliato e il client
-lo ignora educatamente, il difetto **non si vede** — e siccome non c'è più un client altrui che
-protesti (§0), non lo vedrà nessuno finché non produrrà un sintomo lontano e incomprensibile.
+**Why it is written as the first rule and not among the notes.** A lenient parser is very convenient the
+first day and poisonous forever: if the server starts emitting a wrong field and the client
+politely ignores it, the defect **does not show** — and since there is no longer someone else's client to
+protest (§0), nobody will see it until it produces a distant and incomprehensible symptom.
 
-È `REVIEWER.md` §5 applicata al filo: *«l'indulgenza che nasconde è esattamente ciò che devi
+It is `REVIEWER.md` §5 applied to the wire: *«l'indulgenza che nasconde è esattamente ciò che devi
 togliere»*.
 
-⚠ **Le eccezioni sono otto, e sono tutte qui.** Fuori da questo elenco non se ne inventano:
+⚠ **The exceptions are eight, and they are all here.** Outside this list none are invented:
 
-| # | Dove | Che cosa si tollera, e perché |
+| # | Where | What is tolerated, and why |
 |---|---|---|
-| 1 | §4.3 | una **capacità** sconosciuta — nome o valore — si ignora: è il meccanismo con cui le versioni future si capiscono. ⚠ È ignorare *un'offerta*, non *un comando* |
-| 2 | §6.3 | un **datagram** corrotto o troppo corto si scarta invece di chiudere: è per definizione inaffidabile, e punirlo punirebbe la rete |
-| 3 | §7.1 | dopo un cambio di tela, **un secondo di grazia** sulle coordinate vecchie: è l'unico momento in cui i due lati hanno legittimamente due verità |
-| 4 | §7.1 | una misura **fuori limiti** in `ADATTA_TELA` si rifiuta con `TELA(MISURA_FUORI_LIMITI)` invece di chiudere — ⭐ dal 1 ott 2026 solo **sotto il minimo**: sopra il massimo si concede ridotta (§4.5). ⚠ *Non era dichiarata (rilievo **R1.10**): lo stesso valore fuori intervallo uccide la connessione in `ATTACCA` e non in `ADATTA_TELA`, e la differenza è voluta — **l'utente che trascina male una finestra non deve perdere la sessione*** |
-| 5 | §5.2 e §7.4 | una `RICHIEDI_CHIAVE` ripetuta entro 200 ms **si può ignorare**, e un `APPUNTI_CHIEDI` fuori tempo **si serve** invece di essere un errore. ⚠ *Nemmeno queste erano dichiarate (rilievo **R1.15**)* |
-| 6 | §6.2 | dopo un cambio di tela si tollerano i fotogrammi che portano **una misura che è stata in vigore da quando la coda ha cominciato a svuotarsi**, e la tolleranza finisce quando arriva **la prima chiave alla misura nuova** (§5.2), non a orologio. Sono partiti prima che il `TELA` arrivasse, e gli stream sono indipendenti. ⚠ *È l'eccezione 3 scritta per l'altro verso del filo — quella copre le coordinate che salgono, questa i fotogrammi che scendono. Senza, la cura di **P5** del 12 agosto 2026 fa chiudere il client davanti a un server conforme a §7.1* |
-| 7 | §2.5 | uno **stream video arrivato prima di `SESSIONE`** quando l'`ATTACCA` è già partito **non chiude**: si **trattiene** e si giudica quando `SESSIONE` arriva. ⚠ *L'ordine fra due stream QUIC non è quello del filo, e bastava un pacchetto perso perché un client conforme uccidesse una sessione sana — rilievo **P20*** |
-| 8 | §6.2 | un fotogramma la cui misura **nessuna tela ha mai avuto** **non chiude** finché resta una **`ADATTA_TELA` senza risposta**: si **trattiene** e si rigiudica quando il `TELA` arriva, riuscito o rifiutato. ⚠ *Perché §4.5 permette al server di concedere una tela **diversa da quella chiesta** — rilievo **P21*** |
+| 1 | §4.3 | an unknown **capability** — name or value — is ignored: it is the mechanism by which future versions understand each other. ⚠ It is ignoring *an offer*, not *a command* |
+| 2 | §6.3 | a corrupted or too short **datagram** is discarded instead of closing: it is unreliable by definition, and punishing it would punish the network |
+| 3 | §7.1 | after a canvas change, **one second of grace** on the old coordinates: it is the only moment in which the two sides legitimately have two truths |
+| 4 | §7.1 | an **out-of-limits** size in `ADATTA_TELA` is refused with `TELA(MISURA_FUORI_LIMITI)` instead of closing — ⭐ since 1 Oct 2026 only **below the minimum**: above the maximum it is granted reduced (§4.5). ⚠ *It was not declared (finding **R1.10**): the same out-of-range value kills the connection in `ATTACCA` and not in `ADATTA_TELA`, and the difference is intended — **the user who drags a window badly must not lose the session*** |
+| 5 | §5.2 and §7.4 | a `RICHIEDI_CHIAVE` repeated within 200 ms **may be ignored**, and an `APPUNTI_CHIEDI` out of time **is served** instead of being an error. ⚠ *These were not declared either (finding **R1.15**)* |
+| 6 | §6.2 | after a canvas change, frames are tolerated that carry **a size that has been in force since the queue started to drain**, and the tolerance ends when **the first keyframe at the new size** arrives (§5.2), not by the clock. They left before the `TELA` arrived, and the streams are independent. ⚠ *It is exception 3 written for the other direction of the wire — that one covers the coordinates going up, this one the frames coming down. Without it, the cure of **P5** of 12 Aug 2026 makes the client close in front of a server conforming to §7.1* |
+| 7 | §2.5 | a **video stream arrived before `SESSIONE`** when the `ATTACCA` has already left **does not close**: it is **held back** and judged when `SESSIONE` arrives. ⚠ *The order between two QUIC streams is not that of the wire, and one lost packet was enough for a conforming client to kill a healthy session — finding **P20*** |
+| 8 | §6.2 | a frame whose size **no canvas has ever had** **does not close** as long as there is an **`ADATTA_TELA` without answer**: it is **held back** and judged again when the `TELA` arrives, successful or refused. ⚠ *Because §4.5 allows the server to grant a canvas **different from the one asked** — finding **P21*** |
 
-> ⛔ **Le righe 7 e 8 sono entrate il 13 agosto 2026, rilievo P22 — ed erano già comandate altrove.**
-> §2.5 e §6.2 ordinavano quelle due tolleranze mentre **questo elenco dichiarava che le eccezioni
-> erano sei e che fuori di qui non se ne inventano**. ⇒ Un client scritto leggendo §3 **chiudeva**
-> proprio le sessioni sane che le altre due righe salvavano.
-> ⚠ *È la seconda volta che questo elenco resta indietro: la prima fu **P12**, il 12 agosto. ⭐ Da qui
-> la regola: **chi scrive una tolleranza altrove aggiunge la riga qui nello stesso momento**, o le due
-> metà si separano — ed è la forma che questo documento paga più spesso.*
+> ⛔ **Rows 7 and 8 came in on 13 Aug 2026, finding P22 — and they were already commanded elsewhere.**
+> §2.5 and §6.2 ordered those two tolerances while **this list declared that the exceptions
+> were six and that outside here none are invented**. ⇒ A client written by reading §3 **closed**
+> precisely the healthy sessions that the other two lines saved.
+> ⚠ *It is the second time this list has been left behind: the first was **P12**, on 12 Aug. ⭐ Hence
+> the rule: **whoever writes a tolerance elsewhere adds the row here at the same moment**, or the two
+> halves separate — and it is the form this document pays most often.*
 
-⛔ **E ogni tolleranza va scritta nel registro.** Una tolleranza silenziosa è indistinguibile da un
-difetto, ed è precisamente l'indulgenza che questa sezione esiste per togliere.
+⛔ **And every tolerance must be written in the log.** A silent tolerance is indistinguishable from a
+defect, and it is precisely the leniency this section exists to remove.
 
-### 3.1 Che cosa vuol dire «chiudere», in byte
+### 3.1 What «chiudere» means, in bytes
 
-*Aggiunta il 9 agosto 2026: «chiude la connessione» ammetteva almeno tre implementazioni diverse,
-e due di esse fanno sparire il motivo proprio quando serve.*
+*Added on 9 Aug 2026: «chiude la connessione» admitted at least three different implementations,
+and two of them make the reason disappear exactly when it is needed.*
 
-Chi rileva la violazione, **in quest'ordine**:
+Whoever detects the violation, **in this order**:
 
-1. **DEVE** scrivere nel registro *che cosa* non ha capito — il tipo ricevuto, la lunghezza, lo
-   stato in cui si trovava. Non «errore di protocollo»;
-2. **DEVE** mandare `CONGEDO` (§8) con il motivo, sul canale di controllo, **se il canale di
-   controllo è ancora utilizzabile**;
-3. **DEVE** chiudere la **sessione WebTransport** con il codice d'errore applicativo pari al
-   **codice del motivo** di §8.2.
+1. **MUST** write in the log *what* it did not understand — the type received, the length, the
+   state it was in. Not «errore di protocollo»;
+2. **MUST** send `CONGEDO` (§8) with the reason, on the control channel, **if the control
+   channel is still usable**;
+3. **MUST** close the **WebTransport session** with the application error code equal to the
+   **reason code** of §8.2.
 
-> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.4**.* Questa riga diceva «la connessione QUIC
-> con `CONNECTION_CLOSE` di tipo applicativo». **Una pagina non lo può fare**: l'API espone la
-> chiusura *della sessione*, con il proprio codice, non quella della connessione HTTP/3 sotto — che
-> può reggere altro. Erano due piani diversi, e §8.1 imponeva la regola anche al client, cioè a chi
-> non ha l'API. Un programmatore chiudeva la sessione e dichiarava assolta la regola; l'altro
-> cercava l'API della connessione, non la trovava, e lasciava il punto 3 non implementato — **ed era
-> conforme al testo quanto il primo**.
+> ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.4**.* This line said «la connessione QUIC
+> con `CONNECTION_CLOSE` di tipo applicativo». **A page cannot do it**: the API exposes the
+> closing *of the session*, with its own code, not that of the HTTP/3 connection underneath — which
+> may carry other things. They were two different planes, and §8.1 imposed the rule on the client too, that is on whoever
+> does not have the API. One programmer closed the session and declared the rule fulfilled; the other
+> looked for the connection API, did not find it, and left point 3 unimplemented — **and was
+> as conforming to the text as the first**.
 
-⭐ **Il terzo punto è quello che salva le diagnosi**: se il congedo non arriva — perché lo stream
-era rotto, perché il messaggio era illeggibile — il motivo viaggia comunque, dentro la chiusura
-della sessione. In v1 il server scriveva «congedo il client» e il client leggeva «errore di rete»
-per **tre fasi** (`LEZIONI.md` §1.7): qui i due lati hanno due strade per dirsi la stessa cosa, e
-il collaudo di §11 verifica **dal lato che riceve** che almeno una delle due sia arrivata.
+⭐ **The third point is the one that saves diagnoses**: if the farewell does not arrive — because the stream
+was broken, because the message was unreadable — the reason travels all the same, inside the closing
+of the session. In v1 the server wrote «congedo il client» and the client read «errore di rete»
+for **three phases** (`LEZIONI.md` §1.7): here the two sides have two roads to tell each other the same thing, and
+the acceptance test of §11 checks **from the receiving side** that at least one of the two has arrived.
 
-⚠ Il codice **0** significa «chiusura senza motivo» e **NON DEVE** essere usato: ogni chiusura ha
-un motivo di §8.2.
+⚠ Code **0** means «chiusura senza motivo» and **MUST NOT** be used: every closing has
+a reason from §8.2.
 
 ---
 
-## 4. La stretta di mano
+## 4. The handshake
 
-### 4.1 Prima ancora: il certificato
+### 4.1 Even before: the certificate
 
-> ### ⭐ Riscritta due volte il 9 agosto 2026 — e la seconda volta da una misura
+> ### ⭐ Rewritten twice on 9 Aug 2026 — and the second time by a measurement
 >
-> **Prima stesura**: quattro passi che il client doveva implementare — calcola l'impronta,
-> confronta col ricordo, interrompi se cambia, accetta in silenzio se non c'è.
+> **First draft**: four steps the client had to implement — compute the fingerprint,
+> compare it with the remembered one, stop if it changes, accept silently if there is none.
 >
-> **Seconda**: «quei passi li fa già il browser, non è più codice nostro».
+> **Second**: «quei passi li fa già il browser, non è più codice nostro».
 >
-> ⛔ **Terza, ed è quella buona**: per il caricamento della **pagina** è vero, per la sessione
-> **WebTransport no** — l'eccezione dell'utente non la copre né su Chrome né su Firefox `[R]`
-> (misura **S1**, `web/rapporti/S1-certificato.md`). Quindi il certificato della sessione
-> **si dichiara**, e il posto dove dichiararlo è la pagina.
+> ⛔ **Third, and it is the good one**: for loading the **page** it is true, for the
+> **WebTransport** session it is not — the user's exception does not cover it on Chrome or on Firefox `[R]`
+> (measurement **S1**, `web/rapporti/S1-certificato.md`). So the certificate of the session
+> **is declared**, and the place to declare it is the page.
 
-**Quel che resta normativo, ed è tutto dalla parte del server:**
+**What stays normative, and it is all on the server side:**
 
 | | |
 |---|---|
-| **la chiave** | **DEVE** essere **ECDSA P-256**. ⛔ Non Ed25519 e **mai RSA**: P-256 è l'unica che tiene aperta anche la strada di `serverCertificateHashes` `[S]`, e una chiave scelta oggi per comodità chiuderebbe quella porta senza che nessuno se ne accorga |
-| **la generazione** | il server se lo genera all'installazione, e tiene la chiave privata con permessi `0600` |
-| **il nome** | il certificato **DEVE** portare come `subjectAltName` l'indirizzo su cui il server risponde — nome o indirizzo IP. ⚠ Un browser che trova un `SAN` che non combacia mostra **un avviso diverso**, e alcuni non offrono nemmeno il clic per proseguire |
-| **il certificato vero** | se l'amministratore ne installa uno emesso da un'autorità, il server **DEVE** usarlo e **non DEVE** rigenerare il proprio. È la strada senza avvisi (`SPECIFICHE.md` §4.1) |
+| **the key** | **MUST** be **ECDSA P-256**. ⛔ Not Ed25519 and **never RSA**: P-256 is the only one that also keeps open the road of `serverCertificateHashes` `[S]`, and a key chosen today for convenience would close that door without anyone noticing |
+| **the generation** | the server generates it at installation, and keeps the private key with permissions `0600` |
+| **the name** | the certificate **MUST** carry as `subjectAltName` the address on which the server answers — name or IP address. ⚠ A browser that finds a `SAN` that does not match shows **a different warning**, and some do not even offer the click to proceed |
+| **the real certificate** | if the administrator installs one issued by an authority, the server **MUST** use it and **MUST NOT** regenerate its own. It is the road without warnings (`SPECIFICHE.md` §4.1) |
 
-⛔ **E due certificati, non uno** — la regola sta in §4.1-bis, e va letta prima di scrivere il
+⛔ **And two certificates, not one** — the rule is in §4.1-bis, and it must be read before writing the
 server.
 
-> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.2**.* Qui c'era scritto, con un ⛔, che *«la
-> pagina e la sessione WebTransport devono presentare **lo stesso** certificato»*, mentre §4.1-bis
-> ne impone **due** con un altro ⛔. Due righe normative che si contraddicono, e nessuna citava
-> l'altra: chi obbediva a questa serviva alla pagina un certificato che l'altra obbliga a
-> rigenerare ogni quattordici giorni, **facendo ricomparire l'avviso ogni due settimane** — cioè
-> il sintomo che §4.1-bis dichiara come conseguenza dell'errore opposto.
+> ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.2**.* Here it was written, with a ⛔, that *«la
+> pagina e la sessione WebTransport devono presentare **lo stesso** certificato»*, while §4.1-bis
+> imposes **two** of them with another ⛔. Two normative lines that contradict each other, and neither cited
+> the other: whoever obeyed this one served the page a certificate that the other obliges to
+> regenerate every fourteen days, **making the warning reappear every two weeks** — that is
+> the symptom §4.1-bis declares as the consequence of the opposite mistake.
 >
-> ⭐ **Il fatto che scioglie il nodo** era già in casa, in `web/rapporti/S1-certificato.md`: con
-> `serverCertificateHashes` il browser **non guarda l'eccezione**, guarda l'impronta. Quindi i due
-> certificati non devono essere «lo stesso» — devono essere **dichiarati in due modi diversi**, e
-> l'utente vede un avviso solo, quello della pagina.
+> ⭐ **The fact that unties the knot** was already in the house, in `web/rapporti/S1-certificato.md`: with
+> `serverCertificateHashes` the browser **does not look at the exception**, it looks at the fingerprint. So the two
+> certificates must not be «lo stesso» — they must be **declared in two different ways**, and
+> the user sees only one warning, the page's.
 
-`[?]` **Quel che resta da misurare è solo Safari**: se lì l'eccezione basti da sola, cioè se si
-possa fare a meno di pubblicare l'impronta. ⚠ *La domanda generale che stava qui — «l'eccezione
-copre WebTransport?» — **ha già risposta per due motori su tre**, ed è no: la dà il riquadro in cima
-a questa sezione. Tenerla aperta faceva pianificare una misura già fatta (rilievo **R1.25**).*
+`[?]` **What remains to be measured is only Safari**: whether there the exception is enough by itself, that is whether
+publishing the fingerprint can be done without. ⚠ *The general question that stood here — «l'eccezione
+copre WebTransport?» — **already has an answer for two engines out of three**, and it is no: the box at the top
+of this section gives it. Keeping it open made people plan a measurement already done (finding **R1.25**).*
 
-### 4.1-bis ⛔ `serverCertificateHashes` — **la strada normale**, non una rete di sicurezza
+### 4.1-bis ⛔ `serverCertificateHashes` — **the normal road**, not a safety net
 
-*Promossa da rete di sicurezza a strada principale la sera del 9 agosto 2026, dopo la misura S1:
-non era un'alternativa, è **l'unico meccanismo** che i browser espongono per un server senza
-dominio.*
+*Promoted from safety net to main road on the evening of 9 Aug 2026, after measurement S1:
+it was not an alternative, it is **the only mechanism** browsers expose for a server without a
+domain.*
 
-> ⛔ *Corretta la notte del 9 agosto 2026, rilievo **R4.4** della revisione del banco della fase 1.*
-> La riga «chi resta fuori» diceva *«`[S]` WebKit non lo implementa: su Safari, iPhone e iPad la
-> strada è l'eccezione»*. **È falsa da ottobre 2025**, e `STUDI.md` §web §3.1 e `DECISIONI.md` §1.7 erano
-> già stati corretti **lo stesso 9 agosto**: questo documento no.
+> ⛔ *Corrected on the night of 9 Aug 2026, finding **R4.4** of the review of the phase 1 bench.*
+> The row «chi resta fuori» said *«`[S]` WebKit non lo implementa: su Safari, iPhone e iPad la
+> strada è l'eccezione»*. **It has been false since October 2025**, and `STUDI.md` §web §3.1 and `DECISIONI.md` §1.7 had
+> already been corrected **on the same 9 Aug**: this document had not.
 >
-> ⛔ **E il danno era di quelli che non fanno rumore, perché questo file è l'arbitro.** Chi lo
-> leggeva alla lettera scriveva il ramo *«su Safari l'impronta non serve, si va di eccezione o di
-> certificato vero»* — e lo scriveva **conforme alla specifica**, mentre chi leggeva `STUDI.md` §web
-> pubblicava l'impronta per tutti e tre. Due implementazioni divergenti, entrambe con ragione.
-> ⚠ E un banco che avesse applicato il criterio *«una libreria che va con Chrome e non con Safari
-> non è una libreria che va»* avrebbe **bocciato entrambe le candidate**.
+> ⛔ **And the damage was of the kind that makes no noise, because this file is the referee.** Whoever
+> read it to the letter wrote the branch *«su Safari l'impronta non serve, si va di eccezione o di
+> certificato vero»* — and wrote it **conforming to the specification**, while whoever read `STUDI.md` §web
+> published the fingerprint for all three. Two diverging implementations, both in the right.
+> ⚠ And a bench that had applied the criterion *«una libreria che va con Chrome e non con Safari
+> non è una libreria che va»* would have **failed both candidates**.
 
 | | |
 |---|---|
-| **che cos'è** | l'impronta SHA-256 del certificato della sessione viaggia **dentro la pagina**, e il browser accetta senza avvisi. È il nostro modello di fiducia, fatto con la leva che i browser offrono apposta. ⛔ **Dei byte DER del certificato** — non della chiave pubblica e non dei byte PEM. ⚠ *Il DER mancava qui e c'era in `DECISIONI.md` §1.5 riga 7 dal 9 agosto (rilievo R1.14): allineato la notte del 10 agosto 2026, ed è lo stesso danno di allora — chi calcola l'impronta sull'involucro sbagliato ottiene un confronto che **non combacia mai**, col sintomo «WebTransport non si connette» e nessun errore che nomini l'impronta* |
-| ⭐ **e non è più `[S]`** | `[M]` **9 agosto 2026**, su **due motori indipendenti**: una sessione WebTransport verso un certificato **autofirmato ECDSA P-256 di 13 giorni**, con l'impronta pubblicata nella pagina e **nessun avviso**, si è aperta su **Chrome 151** (30,2 ms) e su **Firefox 140** (52,0 ms), e i byte sono tornati identici da tutt'e due. Banco `banchi/01-b2-*`, documento `FASI.md` §01-filo-nudo |
-| ⚠ **e quel che i due motori NON provano** | sono due squadre che non ci conoscono, quindi il loro accordo vale — ⛔ **ma chi serviva era `aioquic`, non una nostra implementazione**: questo misura **il modello di fiducia**, non il server. E **Safari resta fuori per decisione** (`DECISIONI.md` §1.8) |
-| **il vincolo** | `[S]` certificato valido **meno di 14 giorni**, chiave **ECDSA P-256**, niente RSA, impronta **SHA-256**, e `allowPooling` a `false` |
-| ⭐ **perché la rotazione non si vede** | è **il server stesso a servire la pagina**: rigenera il certificato prima che scada e ci scrive dentro l'impronta corrente. L'utente non tocca niente e non sa che esista |
-| ⛔ **che cosa non copre** | **il caricamento della pagina**, che è una connessione TCP a sé. Lì resta l'avviso con il clic — o il certificato vero, per chi ha un dominio |
-| ⭐ **e la stessa strada è DISPONIBILE su tutti e tre i motori** | `[R]` **WebKit lo ha implementato il 2 ottobre 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) ed è spedito in **Safari 26.4**: iPhone e iPad hanno **la stessa** strada degli altri due, non una da salvare. ⛔ **Disponibile, non verificata**: su Safari nessuno l'ha provata (riga sopra, `DECISIONI.md` §1.8), e *«vale su»* sarebbe un'affermazione di funzionamento sostenuta da `[R]`, cioè dalla lettura di un commit — forma **E1**. ⚠ *Corretto il 10 agosto 2026, rilievo **R11.16**: questa riga e quella sopra dicevano, nella stessa tabella, che vale su tre motori e che Safari resta fuori. Questo file è l'**arbitro**, cioè il posto in cui una deduzione pesa più che nella documentazione del prodotto* |
+| **what it is** | the SHA-256 fingerprint of the session certificate travels **inside the page**, and the browser accepts without warnings. It is our trust model, made with the lever browsers offer on purpose. ⛔ **Of the DER bytes of the certificate** — not of the public key and not of the PEM bytes. ⚠ *DER was missing here and was in `DECISIONI.md` §1.5 row 7 since 9 Aug (finding R1.14): aligned on the night of 10 Aug 2026, and it is the same damage as then — whoever computes the fingerprint on the wrong envelope gets a comparison that **never matches**, with the symptom «WebTransport non si connette» and no error naming the fingerprint* |
+| ⭐ **and it is no longer `[S]`** | `[M]` **9 Aug 2026**, on **two independent engines**: a WebTransport session towards a **self-signed ECDSA P-256 certificate of 13 days**, with the fingerprint published in the page and **no warning**, opened on **Chrome 151** (30.2 ms) and on **Firefox 140** (52.0 ms), and the bytes came back identical from both. Bench `banchi/01-b2-*`, document `FASI.md` §01-filo-nudo |
+| ⚠ **and what the two engines DO NOT prove** | they are two teams that do not know us, so their agreement counts — ⛔ **but what served was `aioquic`, not an implementation of ours**: this measures **the trust model**, not the server. And **Safari stays out by decision** (`DECISIONI.md` §1.8) |
+| **the constraint** | `[S]` certificate valid **less than 14 days**, **ECDSA P-256** key, no RSA, **SHA-256** fingerprint, and `allowPooling` at `false` |
+| ⭐ **why the rotation does not show** | it is **the server itself that serves the page**: it regenerates the certificate before it expires and writes the current fingerprint into it. The user touches nothing and does not know it exists |
+| ⛔ **what it does not cover** | **loading the page**, which is a TCP connection of its own. There the warning with the click remains — or the real certificate, for whoever has a domain |
+| ⭐ **and the same road is AVAILABLE on all three engines** | `[R]` **WebKit implemented it on 2 Oct 2025** (bug 300057, `NetworkTransportSessionCocoa.mm`) and it ships in **Safari 26.4**: iPhone and iPad have **the same** road as the other two, not one to be rescued. ⛔ **Available, not verified**: on Safari nobody has tried it (row above, `DECISIONI.md` §1.8), and *«vale su»* would be a claim of working supported by `[R]`, that is by reading a commit — form **E1**. ⚠ *Corrected on 10 Aug 2026, finding **R11.16**: this row and the one above said, in the same table, that it holds on three engines and that Safari stays out. This file is the **referee**, that is the place where a deduction weighs more than in the product documentation* |
 
-⛔ **Da cui due certificati, e vanno tenuti distinti nel codice**: uno **longevo** per la pagina, che
-è quello su cui l'utente concede l'eccezione e che quindi **non deve cambiare** più spesso del
-necessario; uno **a scadenza breve** per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire
-l'avviso ogni due settimane, e nessuno collegherebbe le due cose.
+⛔ **Hence two certificates, and they must be kept distinct in the code**: a **long-lived** one for the page, which
+is the one on which the user grants the exception and which therefore **must not change** more often than
+necessary; a **short-lived** one for the session, which rotates by itself. ⚠ Confusing them makes the warning
+reappear every two weeks, and nobody would connect the two things.
 
-⛔ **E l'impronta che la pagina ha in mano invecchia.** Una scheda lasciata aperta due settimane
-tiene l'impronta di un certificato che nel frattempo è stato ruotato: alla riconnessione il browser
-rifiuta, e il sintomo è *«non si collega più e non dice perché»*. Le due cure, e **la seconda è
-quella scelta**:
-
-| | |
-|---|---|
-| ricaricare la pagina | funziona e butta via lo stato: l'utente perde quel che stava guardando |
-| ⭐ **chiedere l'impronta corrente** | ⛔ **e non passa da RCP**: la sessione non è ancora aperta, quindi non c'è un canale su cui chiedere. La pagina la ritira **dal server che l'ha servita**, con una richiesta ordinaria, e riprova |
-
-⚠ *Riportata la sera del 9 agosto 2026 dal rapporto S1 (rilievo **O6**), che la dichiarava come
-«va deciso dove sta questo aggiornamento in RCP». La risposta è: **fuori** da RCP.*
-
-⚠ **E la conseguenza sul collaudo, che vale in ogni caso**: un banco che prova la fiducia **DEVE**
-provare anche il **secondo** collegamento, e un terzo con la chiave cambiata. La prova a
-collegamento singolo resta verde per sempre (`LEZIONI.md` §2.1).
-
-### 4.2 Il canale di controllo
-
-Il client apre il **primo stream bidirezionale della sessione WebTransport**. Quello è il canale di
-controllo, resta aperto per tutta la sessione, e il suo chiudersi **è** la fine della sessione.
-
-> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.5**: qui c'era «(identificatore 0)», ed è un
-> resto della stesura a QUIC nudo.* In una connessione HTTP/3 lo stream QUIC numero 0 è già
-> occupato — è quello della richiesta che **stabilisce la sessione WebTransport stessa** — e l'API
-> non espone nessun numero: apre uno stream e restituisce un oggetto. Chi leggeva «0» alla lettera
-> cercava il canale di controllo dove non arriverà mai, con la diagnosi «il client non apre il
-> canale» **mentre il client lo ha aperto**.
-
-⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, chiude la sessione.
-Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire **su nessun canale,
-compreso quello di controllo**.
-
-> ### ✅ Deciso l'11 agosto 2026 dall'utente: **il silenzio** — `DECISIONI.md` §7.14
->
-> *Fino a oggi questa riga vietava di spedire «sugli altri canali» e taceva sul controllo. Su uno
-> stream bidirezionale il `FIN` di una parte non chiude il verso dell'altra, quindi chi lo riceveva
-> **poteva** mandare il `CONGEDO` che §8.1 impone a chi chiude: **byte diversi per lo stesso
-> ingresso** — nove contro zero — e due implementazioni divergenti senza che nessuna avesse torto
-> (rilievo **R11.22**).*
->
-> ⛔ **Chi riceve il `FIN` non spedisce più niente, nemmeno sul canale di controllo.** Il motivo
-> viaggia per la **seconda strada** di §3.1 punto 3 — il codice d'errore applicativo della chiusura
-> della sessione — che non ha bisogno di un canale vivo.
->
-> ⭐ **E a decidere è stata una misura, non una lettura.** `[M]` 10 agosto 2026, difetto 2 di B11:
-> **Chrome butta un messaggio spedito subito prima di chiudere la sessione.** Il `CONGEDO`
-> dell'altra lettura sarebbe un **DEVE che un motore su due non può onorare** — la forma che il
-> rilievo R1.4 ha già dichiarato difetto. La seconda strada di §3.1, invece, ha funzionato su
-> tutt'e due i motori.
->
-> ⚠ **Il prezzo è pagato in §8.1**, non qui: quella sezione impone il congedo a «chi chiude», e da
-> oggi porta scritto che **chi ha ricevuto un `FIN` non è «chi chiude»**. Senza quella frase questa
-> decisione lascerebbe in piedi la contraddizione invece di chiuderla.
->
-> ⛔ **E una premessa che era falsa va detta, perché è quella con cui la decisione è stata presa**:
-> *«il server non attacca mai di sua iniziativa»*. Attacca, ed è il comportamento più misurato
-> della fase 1 — i tre tetti di §4.6 visti scattare da **B6** (5,0 · 60,1 · 10,0 s), le **36
-> violazioni su 36** di **B5** dopo ciascuna delle quali il server chiude, `RESPINTO`,
-> `TROPPI_TENTATIVI` e `GIA_ATTIVA_REMOTA`. ⭐ La decisione **non cambia**: proprio perché il
-> server chiude spesso, quel che fa chi riceve conta — ed è la misura su Chrome a scegliere, non
-> la rarità del caso.
-
-### 4.3 `CIAO` e `ECCOMI`
+⛔ **And the fingerprint the page holds grows old.** A tab left open for two weeks
+holds the fingerprint of a certificate that has meanwhile been rotated: on reconnection the browser
+refuses, and the symptom is *«non si collega più e non dice perché»*. The two cures, and **the second is
+the one chosen**:
 
 | | |
 |---|---|
-| **CIAO** | client → server. Versione maggiore del protocollo, capacità del client |
-| **ECCOMI** | server → client. Versione scelta, capacità del server |
+| reloading the page | it works and throws away the state: the user loses what they were looking at |
+| ⭐ **asking for the current fingerprint** | ⛔ **and it does not go through RCP**: the session is not yet open, so there is no channel on which to ask. The page fetches it **from the server that served it**, with an ordinary request, and tries again |
 
-**Il corpo, in byte** (i tipi elementari sono in §6.0):
+⚠ *Brought over on the evening of 9 Aug 2026 from report S1 (finding **O6**), which declared it as
+«va deciso dove sta questo aggiornamento in RCP». The answer is: **outside** RCP.*
+
+⚠ **And the consequence on acceptance testing, which holds in any case**: a bench that tests trust **MUST**
+also test the **second** connection, and a third with the key changed. The
+single-connection test stays green forever (`LEZIONI.md` §2.1).
+
+### 4.2 The control channel
+
+The client opens the **first bidirectional stream of the WebTransport session**. That is the control
+channel, it stays open for the whole session, and its closing **is** the end of the session.
+
+> ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.5**: here there was «(identificatore 0)», and it is a
+> remainder of the bare-QUIC draft.* In an HTTP/3 connection QUIC stream number 0 is already
+> taken — it is that of the request that **establishes the WebTransport session itself** — and the API
+> exposes no number: it opens a stream and returns an object. Whoever read «0» to the letter
+> looked for the control channel where it will never arrive, with the diagnosis «il client non apre il
+> canale» **while the client has opened it**.
+
+⛔ **In bytes**: a FIN on that stream, from either of the two parties, closes the session.
+Whoever receives it **MUST** consider it finished; it **MUST NOT** keep sending **on any channel,
+including the control one**.
+
+> ### ✅ Decided on 11 Aug 2026 by the user: **silence** — `DECISIONI.md` §7.14
+>
+> *Until today this line forbade sending «sugli altri canali» and was silent about control. On a
+> bidirectional stream the `FIN` of one party does not close the direction of the other, so whoever received it
+> **could** send the `CONGEDO` that §8.1 imposes on whoever closes: **different bytes for the same
+> input** — nine against zero — and two diverging implementations without either being wrong
+> (finding **R11.22**).*
+>
+> ⛔ **Whoever receives the `FIN` sends nothing more, not even on the control channel.** The reason
+> travels by the **second road** of §3.1 point 3 — the application error code of the closing
+> of the session — which does not need a live channel.
+>
+> ⭐ **And what decided was a measurement, not a reading.** `[M]` 10 Aug 2026, defect 2 of B11:
+> **Chrome throws away a message sent just before closing the session.** The `CONGEDO`
+> of the other reading would be **a MUST that one engine out of two cannot honour** — the form that
+> finding R1.4 has already declared a defect. The second road of §3.1, instead, worked on
+> both engines.
+>
+> ⚠ **The price is paid in §8.1**, not here: that section imposes the farewell on «chi chiude», and from
+> today it carries written that **whoever has received a `FIN` is not «chi chiude»**. Without that sentence this
+> decision would leave the contradiction standing instead of closing it.
+>
+> ⛔ **And a premise that was false must be stated, because it is the one with which the decision was taken**:
+> *«il server non attacca mai di sua iniziativa»*. It does, and it is the most measured behaviour
+> of phase 1 — the three ceilings of §4.6 seen to trip by **B6** (5.0 · 60.1 · 10.0 s), the **36
+> violations out of 36** of **B5** after each of which the server closes, `RESPINTO`,
+> `TROPPI_TENTATIVI` and `GIA_ATTIVA_REMOTA`. ⭐ The decision **does not change**: precisely because the
+> server closes often, what the receiver does matters — and it is the measurement on Chrome that chooses, not
+> the rarity of the case.
+
+### 4.3 `CIAO` and `ECCOMI`
+
+| | |
+|---|---|
+| **CIAO** | client → server. Major version of the protocol, client capabilities |
+| **ECCOMI** | server → client. Chosen version, server capabilities |
+
+**The body, in bytes** (the elementary types are in §6.0):
 
 ```
 CIAO / ECCOMI
  ├── u16   versione
- └── elenco di capacità:
+ └── list of capabilities:
        u16  quante
-       per ciascuna:  stringa nome  ·  stringa valore
+       for each:  stringa nome  ·  stringa valore
 ```
 
-In `CIAO` la `versione` è **la maggiore che il client sa parlare**; in `ECCOMI` è **quella scelta
-dal server** (§9). RCP/1 vale **1**.
+In `CIAO` the `versione` is **the highest the client can speak**; in `ECCOMI` it is **the one chosen
+by the server** (§9). RCP/1 is **1**.
 
-Le **capacità** sono coppie nome-valore. Un nome sconosciuto si ignora (§3, eccezione). I nomi
-definiti in RCP/1:
+The **capabilities** are name-value pairs. An unknown name is ignored (§3, exception). The names
+defined in RCP/1:
 
-| Nome | Chi lo dichiara | Valori |
+| Name | Who declares it | Values |
 |---|---|---|
-| `video.codec` | entrambi | elenco fra `hevc`, `h264`, in ordine di preferenza. ⛔ **`av1` è uscito il 20 agosto 2026** (`DECISIONI.md` §1.13-ter): il nome resta definito e il suo numero resta il **2** per sempre, ma non si negozia più |
-| `video.profondita` | entrambi | elenco fra `8`, `10` |
-| `video.livello` | client | il livello massimo che sa decodificare, es. `5.1`. ⛔ Il server **DEVE** emettere un flusso di livello non superiore, e **non lo indovina**: un livello dichiarato troppo basso non dà un errore di rete, **fa rifiutare la configurazione dal decodificatore** e il sintomo è «il browser non apre il flusso» *(rilievo **O12**)* |
-| `video.misura_massima` | client | `LARGHEZZAxALTEZZA` che sa decodificare, es. `3840x2160` |
-| `audio.codec` | entrambi | elenco fra `opus`, `pcm` |
-| `input.tocco` | client | `si`, `no` — riservato, in RCP/1 vale sempre `no` |
-| `appunti.testo` | entrambi | `si`, `no` |
-| `client.nome` | client | testo libero per il registro, es. `remotix-linux 0.1.0` |
-| `banco.marca` | server | `si`, `no` — ⭐ *nuova, 9 ago notte*: la **funzione di banco** di §7.5 è accesa. ⛔ Vale `no` in ogni installazione normale, e un server che la dichiarasse `si` per errore lo **scrive nel registro a ogni avvio** |
+| `video.codec` | both | list among `hevc`, `h264`, in order of preference. ⛔ **`av1` left on 20 Aug 2026** (`DECISIONI.md` §1.13-ter): the name stays defined and its number stays **2** forever, but it is no longer negotiated |
+| `video.profondita` | both | list among `8`, `10` |
+| `video.livello` | client | the maximum level it can decode, e.g. `5.1`. ⛔ The server **MUST** emit a stream of level not higher, and **does not guess it**: a level declared too low does not give a network error, **it makes the decoder refuse the configuration** and the symptom is «il browser non apre il flusso» *(finding **O12**)* |
+| `video.misura_massima` | client | `LARGHEZZAxALTEZZA` it can decode, e.g. `3840x2160` |
+| `audio.codec` | both | list among `opus`, `pcm` |
+| `input.tocco` | client | `si`, `no` — reserved, in RCP/1 it is always `no` |
+| `appunti.testo` | both | `si`, `no` |
+| `client.nome` | client | free text for the log, e.g. `remotix-linux 0.1.0` |
+| `banco.marca` | server | `si`, `no` — ⭐ *new, night of 9 Aug*: the **bench function** of §7.5 is on. ⛔ It is `no` in every normal installation, and a server that declared it `si` by mistake **writes it in the log at every start** |
 
-⛔ **La forma dei nomi e dei valori è vincolata**, o «ignorare quel che non si conosce» diventa
+⛔ **The form of names and values is constrained**, or «ignorare quel che non si conosce» becomes
 «indovinare»:
 
-- un **nome** è fatto di `a-z`, `0-9`, `.` e `_`, da 1 a 64 byte;
+- a **name** is made of `a-z`, `0-9`, `.` and `_`, from 1 to 64 bytes;
 
-> ### ⛔⭐ Il trattino basso è del 10 agosto 2026, e l'ha trovato **il validatore**
+> ### ⛔⭐ The underscore is from 10 Aug 2026, and it was found by **the validator**
 >
-> Questa riga diceva *«`a-z`, `0-9` e `.`»* — e tre righe sotto la tabella definisce
-> **`video.misura_massima`**, che quel carattere lo contiene. ⛔ **La specifica si contraddiceva
-> da sola**: un'implementazione che avesse applicato la regola alla lettera avrebbe chiuso con
-> `ERRORE_PROTOCOLLO` una capacità **definita da questo stesso documento**, e il sintomo — *«il
-> client cade appena manda `CIAO`»* — non avrebbe nominato né la regola né il nome.
+> This line said *«`a-z`, `0-9` e `.`»* — and three lines below, the table defines
+> **`video.misura_massima`**, which contains that character. ⛔ **The specification contradicted
+> itself**: an implementation that had applied the rule to the letter would have closed with
+> `ERRORE_PROTOCOLLO` a capability **defined by this very document**, and the symptom — *«il
+> client cade appena manda `CIAO`»* — would have named neither the rule nor the name.
 >
-> ⭐ **L'ha trovata `banchi/01-b4-validatore.py` alla sua prima esecuzione**, cioè un programma
-> scritto leggendo solo questo file, prima che esistesse un byte di server. È precisamente il
-> mestiere che §11 gli assegna: *«client e server non si collaudano l'uno contro l'altro»*.
+> ⭐ **It was found by `banchi/01-b4-validatore.py` on its first run**, that is a program
+> written by reading only this file, before a byte of server existed. It is precisely the
+> job §11 assigns to it: *«client e server non si collaudano l'uno contro l'altro»*.
 >
-> ⚠ **Delle due cure si è scelta questa**, ed è 🔸 derivata: ammettere `_` invece di rinominare la
-> capacità. Rinominare toccherebbe un nome già citato in `STUDI.md` §web e in `SPECIFICHE.md`, e il
-> trattino basso è la convenzione che il resto del documento usa nei nomi di campo
+> ⚠ **Of the two cures this one was chosen**, and it is 🔸 derived: admitting `_` instead of renaming the
+> capability. Renaming would touch a name already cited in `STUDI.md` §web and in `SPECIFICHE.md`, and the
+> underscore is the convention the rest of the document uses in field names
 > (`tela_larghezza`, `max_idle_timeout`).
-- un **valore** è testo UTF-8 stampabile, al massimo 256 byte;
-- un **elenco** dentro un valore si scrive separato da virgole, senza spazi: `hevc,av1`;
-- ⛔ **un nome ripetuto due volte è `ERRORE_PROTOCOLLO`.** «Vince l'ultimo» e «vince il primo» sono
-  due implementazioni diverse dello stesso documento, che è precisamente ciò che questo documento
-  esiste per impedire;
-- ⛔ un valore **vuoto** è `ERRORE_PROTOCOLLO`: chi non ha niente da dire non manda la capacità;
-- ⛔ **una voce sconosciuta DENTRO un elenco si scarta**, come si scarta un nome sconosciuto: un
-  `video.codec` che vale `hevc,vp9` si legge come `hevc`. È la stessa eccezione di §3, ed è il
-  meccanismo con cui un client di domani parlerà a un server di oggi. ⚠ Ma se **dopo lo scarto
-  l'elenco resta vuoto**, si congeda con `NIENTE_IN_COMUNE`;
-- ⛔ **una capacità mandata dal lato sbagliato** — `video.misura_massima` che arriva dal server — è
-  `ERRORE_PROTOCOLLO`: il nome è conosciuto, quindi l'eccezione dei nomi non la copre;
-- ⛔ e chi **non dichiara** `pcm` o `8`, che §4.3 impone a entrambi, si congeda con
-  `NIENTE_IN_COMUNE`, non con `ERRORE_PROTOCOLLO`: non ha sbagliato a scrivere, non ha di che
-  parlare.
+- a **value** is printable UTF-8 text, at most 256 bytes;
+- a **list** inside a value is written separated by commas, without spaces: `hevc,av1`;
+- ⛔ **a name repeated twice is `ERRORE_PROTOCOLLO`.** «Vince l'ultimo» and «vince il primo» are
+  two different implementations of the same document, which is precisely what this document
+  exists to prevent;
+- ⛔ an **empty** value is `ERRORE_PROTOCOLLO`: whoever has nothing to say does not send the capability;
+- ⛔ **an unknown entry INSIDE a list is discarded**, as an unknown name is discarded: a
+  `video.codec` that is `hevc,vp9` is read as `hevc`. It is the same exception of §3, and it is the
+  mechanism by which a client of tomorrow will speak to a server of today. ⚠ But if **after discarding
+  the list remains empty**, the farewell is `NIENTE_IN_COMUNE`;
+- ⛔ **a capability sent by the wrong side** — `video.misura_massima` arriving from the server — is
+  `ERRORE_PROTOCOLLO`: the name is known, so the exception for names does not cover it;
+- ⛔ and whoever **does not declare** `pcm` or `8`, which §4.3 imposes on both, gets the farewell
+  `NIENTE_IN_COMUNE`, not `ERRORE_PROTOCOLLO`: it did not write wrongly, it has nothing to
+  speak about.
 
-> ⚠ *Le ultime tre righe sono della sera del 9 agosto 2026, rilievo **R1.12**.* La regola diceva
-> «un **nome** sconosciuto si ignora» e taceva su tutto il resto: un valore sconosciuto dentro un
-> nome conosciuto aveva **due letture entrambe difendibili** — si scarta, oppure è un campo fuori
-> intervallo e la connessione cade — e le due producono **byte diversi sul filo per lo stesso
-> ingresso**. Il giorno in cui esisterà un RCP/2 che parla un codec nuovo, il server vecchio o
-> continua o cade, e il documento non diceva quale.
+> ⚠ *The last three lines are from the evening of 9 Aug 2026, finding **R1.12**.* The rule said
+> «un **nome** sconosciuto si ignora» and was silent on everything else: an unknown value inside a
+> known name had **two readings both defensible** — it is discarded, or it is a field out of
+> range and the connection drops — and the two produce **different bytes on the wire for the same
+> input**. The day an RCP/2 exists that speaks a new codec, the old server either
+> carries on or drops, and the document did not say which.
 
-⛔ Se l'intersezione di `video.codec` è **vuota**, il server **DEVE** congedare con
-`NIENTE_IN_COMUNE`. NON DEVE ripiegare su un codec non dichiarato. Lo stesso vale per
-`video.profondita` e per `audio.codec`.
+⛔ If the intersection of `video.codec` is **empty**, the server **MUST** send the farewell
+`NIENTE_IN_COMUNE`. It MUST NOT fall back on an undeclared codec. The same holds for
+`video.profondita` and for `audio.codec`.
 
-⚠ `pcm` **DEVE** essere dichiarato da entrambi: è la base sempre disponibile, e serve da controllo
-positivo quando Opus non si negozia. Allo stesso modo `8` **DEVE** comparire in
-`video.profondita` di entrambi.
+⚠ `pcm` **MUST** be declared by both: it is the base always available, and it serves as positive
+control when Opus is not negotiated. In the same way `8` **MUST** appear in
+`video.profondita` of both.
 
-⛔ **Chi sceglie è il server**, dentro l'intersezione, seguendo l'ordine di preferenza **del
-client**. La scelta **DEVE** essere scritta nel registro del server: una negoziazione riuscita con
-dentro il contrario di quel che si voleva è la trappola 4 di `LEZIONI.md` §4, e si vede solo se
-qualcuno la scrive.
+⛔ **The one who chooses is the server**, inside the intersection, following the order of preference **of the
+client**. The choice **MUST** be written in the server log: a successful negotiation with
+the opposite of what was wanted inside is trap 4 of `LEZIONI.md` §4, and it shows only if
+someone writes it.
 
-⚠ `video.misura_massima` **non** cambia la tela: è un tetto che il server **DEVE** rispettare
-quando concede la tela (§4.5). Esiste perché il decodificatore di un telefono ha limiti che il suo
-schermo non dichiara.
+⚠ `video.misura_massima` does **not** change the canvas: it is a ceiling the server **MUST** respect
+when it grants the canvas (§4.5). It exists because a phone's decoder has limits that its
+screen does not declare.
 
-### 4.4 Le credenziali
+### 4.4 The credentials
 
-Un solo messaggio `CREDENZIALI` con utente e parola d'ordine. Il server le passa a PAM.
+A single `CREDENZIALI` message with user and password. The server passes them to PAM.
 
 ```
 CREDENZIALI
- ├── stringa utente         da 1 a 256 byte    ⛔ vuota = ERRORE_PROTOCOLLO
- └── stringa parola         da 1 a 1024 byte   ⛔ vuota = ERRORE_PROTOCOLLO
+ ├── stringa utente         from 1 to 256 bytes     ⛔ empty = ERRORE_PROTOCOLLO
+ └── stringa parola         from 1 to 1024 bytes    ⛔ empty = ERRORE_PROTOCOLLO
 
-AMMESSO      corpo vuoto
+AMMESSO      empty body
 RESPINTO
- └── u8      motivo         (dallo spazio dei motivi di §8.2)
+ └── u8      motivo         (from the reason space of §8.2)
 ```
 
-| Esito | Messaggio |
+| Outcome | Message |
 |---|---|
-| ammesso | `AMMESSO` |
-| respinto | `RESPINTO` con motivo |
+| admitted | `AMMESSO` |
+| rejected | `RESPINTO` with reason |
 
-⛔ Il server **NON DEVE** distinguere nel motivo fra «utente inesistente» e «parola d'ordine
-sbagliata»: entrambi sono `CREDENZIALI_ERRATE`. E **DEVE** applicare **il ban dell'indirizzo**
-prima di rispondere (§4.4-bis). ⚠ *Questa riga diceva «la **limitazione della frequenza** dei
-tentativi», che era la forma sostituita il 10 agosto 2026 da `DECISIONI.md` §1.9: dal ban non si
-esce aspettando qualche secondo, e chiamarlo frequenza faceva scrivere un'attesa dove va scritto un
-rifiuto. Allineata la notte del 10 agosto, come §8.2 riga `0x08` lo era già.*
+⛔ The server **MUST NOT** distinguish in the reason between «utente inesistente» and «parola d'ordine
+sbagliata»: both are `CREDENZIALI_ERRATE`. And it **MUST** apply **the address ban**
+before answering (§4.4-bis). ⚠ *This line said «la **limitazione della frequenza** dei
+tentativi», which was the form replaced on 10 Aug 2026 by `DECISIONI.md` §1.9: one does not get out of the ban
+by waiting a few seconds, and calling it rate made people write a wait where a
+refusal must be written. Aligned on the night of 10 Aug, as §8.2 row `0x08` already was.*
 
-⛔ **`RESPINTO` è il congedo dell'autenticazione.** Dopo averlo mandato il server **DEVE** chiudere
-la **sessione WebTransport** come dice §3.1 — con lo stesso motivo nel **codice d'errore
-applicativo della chiusura**, non in un `CONNECTION_CLOSE` di trasporto — e **NON DEVE** mandare
-anche `CONGEDO`. Il client **NON DEVE** riprovare sulla stessa connessione: per un secondo
-tentativo se ne apre una nuova.
+⛔ **`RESPINTO` is the farewell of authentication.** After sending it the server **MUST** close
+the **WebTransport session** as §3.1 says — with the same reason in the **application error
+code of the closing**, not in a transport `CONNECTION_CLOSE` — and **MUST NOT** send
+`CONGEDO` as well. The client **MUST NOT** retry on the same connection: for a second
+attempt a new one is opened.
 
-⛔ **E dopo `RESPINTO` al client resta una cosa sola che può dire: `CONGEDO`.** Il divieto di §4.4
-è di **riprovare**, non di congedarsi. Se il server sbaglia *dopo* aver mandato `RESPINTO` — un
-altro messaggio sullo stesso canale di controllo — il client applica §3 e chiude, e §8.1 gli
-**IMPONE** di dire perché: quel `CONGEDO` è **conforme**, anche se per il server la sessione era già
-finita. ⛔ Qualunque **altro** messaggio, e in particolare un secondo `CREDENZIALI`, è la violazione
-che §4.4 vieta.
+⛔ **And after `RESPINTO` the client has only one thing left it may say: `CONGEDO`.** The prohibition of §4.4
+is on **retrying**, not on saying farewell. If the server errs *after* having sent `RESPINTO` — another
+message on the same control channel — the client applies §3 and closes, and §8.1
+**REQUIRES** it to say why: that `CONGEDO` is **conforming**, even if for the server the session was already
+over. ⛔ Any **other** message, and in particular a second `CREDENZIALI`, is the violation
+§4.4 forbids.
 
-> ⛔ 🔸 *Chiarita il 10 agosto 2026 dal banco **B11**, e la forma è mia: si corregge senza
-> discussione.* La regola era già decidibile leggendo §4.4 e §8.1 insieme — ma il **server** non la
-> leggeva così: contava come «byte spediti dopo la fine» **tutto** quel che arrivava, e il caso
-> `respinto-poi-congedo` ha messo un rosso addosso alla pagina **mentre faceva quel che §8.1 le
-> impone**. ⚠ Il canale di controllo non aveva nessun `FIN`: §4.2 non era in gioco, e la sola regola
-> che lo era parla di **tentativi**, non di commiati. ⭐ Adesso il server nomina le due cose
-> separatamente, e B11 pretende il congedo **una volta per motore** invece di limitarsi a non
-> trovare byte di troppo — *un'assenza non è una prova* (`LEZIONI.md` §1.9).
+> ⛔ 🔸 *Clarified on 10 Aug 2026 by bench **B11**, and the form is mine: it is corrected without
+> discussion.* The rule was already decidable by reading §4.4 and §8.1 together — but the **server** did not
+> read it that way: it counted as «byte spediti dopo la fine» **everything** that arrived, and the case
+> `respinto-poi-congedo` put a red on the page **while it was doing what §8.1
+> requires of it**. ⚠ The control channel had no `FIN`: §4.2 was not in play, and the only rule
+> that was speaks of **attempts**, not of leave-takings. ⭐ Now the server names the two things
+> separately, and B11 demands the farewell **once per engine** instead of merely not
+> finding excess bytes — *an absence is not a proof* (`LEZIONI.md` §1.9).
 
-> ⚠ *Chiarita il 9 agosto 2026.* La prima stesura aveva `RESPINTO(motivo)` in §4.4 e
-> `CREDENZIALI_ERRATE` fra i motivi di congedo di §8.2, senza dire se dopo il primo arrivasse anche
-> il secondo. Due implementazioni potevano indovinare diverso — o, peggio, **indovinare uguale
-> perché scritte dalla stessa mano**, che è il difetto muto contro cui questo documento esiste.
+> ⚠ *Clarified on 9 Aug 2026.* The first draft had `RESPINTO(motivo)` in §4.4 and
+> `CREDENZIALI_ERRATE` among the farewell reasons of §8.2, without saying whether after the first the
+> second arrived too. Two implementations could guess differently — or, worse, **guess the same
+> because written by the same hand**, which is the silent defect against which this document exists.
 
-> ⚠ *Gli intervalli sono della sera del 9 agosto 2026, rilievo **R1.28**: §6.0 dichiara legale la
-> stringa vuota, quindi `CREDENZIALI` con utente e parola di zero byte era **conforme**. Le due
-> letture — «si passa a PAM e si consuma un tentativo» contro «è errore di protocollo e la
-> connessione cade» — danno due profili di robustezza diversi, perché nella seconda un attaccante
-> che manda credenziali vuote **non incrementa il conto** di §4.4-bis. ⚠ *Diceva «nessuno dei due
-> contatori», ed erano i due della forma precedente: dal 10 agosto 2026 il conto è **uno solo**, sul
-> solo indirizzo. Il ragionamento non cambia — cambia il numero.*
+> ⚠ *The ranges are from the evening of 9 Aug 2026, finding **R1.28**: §6.0 declares the empty string
+> lawful, so `CREDENZIALI` with user and password of zero bytes was **conforming**. The two
+> readings — «si passa a PAM e si consuma un tentativo» against «è errore di protocollo e la
+> connessione cade» — give two different robustness profiles, because in the second an attacker
+> who sends empty credentials **does not increment the count** of §4.4-bis. ⚠ *It said «nessuno dei due
+> contatori», and they were the two of the previous form: since 10 Aug 2026 the count is **only one**, on the
+> address alone. The reasoning does not change — the number does.*
 
-⚠ **Una nota che non è normativa e che vale il tempo di scriverla**: la parola d'ordine sta in
-chiaro nella memoria di chi la riceve. Va azzerata appena PAM ha risposto, e **non** deve comparire
-in nessun registro a nessun livello — nemmeno in `traccia`, che in v1 è un registratore di battitura
+⚠ **A note that is not normative and that is worth the time of writing it**: the password is in
+cleartext in the memory of whoever receives it. It must be zeroed as soon as PAM has answered, and **must not** appear
+in any log at any level — not even in `traccia`, which in v1 is a keystroke recorder
 (`fondamenta/remotix-c/src/registro.h`).
 
-### 4.4-bis ✅ Il ban dell'indirizzo — tre tentativi, poi dodici ore
+### 4.4-bis ✅ The address ban — three attempts, then twelve hours
 
-*Deciso dall'utente il 10 agosto 2026, in due passaggi. Prima: «se l'utente sbaglia la password per
-3 volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban)». Poi, più
-stretta: «3 tentativi di connessione fallita (perché user sbagliato o perché password sbagliata)
+*Decided by the user on 10 Aug 2026, in two steps. First: «se l'utente sbaglia la password per
+3 volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban)». Then, stricter:
+«3 tentativi di connessione fallita (perché user sbagliato o perché password sbagliata)
 causano il ban di quell'IP».*
 
-> ⛔ **Sostituisce per intero la forma precedente**, che era 🔸 mia e non pronunciata da nessuno: 5
-> tentativi in 5 minuti, poi una finestra da 30 secondi che raddoppiava fino a 15 minuti, con **due**
-> contatori — uno per nome utente e uno per indirizzo — e l'azzeramento su un accesso riuscito.
-> Il contatore **per nome utente non esiste più**: il conto guarda l'indirizzo e nient'altro.
+> ⛔ **It entirely replaces the previous form**, which was 🔸 mine and pronounced by nobody: 5
+> attempts in 5 minutes, then a 30-second window that doubled up to 15 minutes, with **two**
+> counters — one per user name and one per address — and reset on a successful login.
+> The **per-user-name** counter no longer exists: the count looks at the address and nothing else.
 >
-> ⭐ **E il filo non cambia di un byte**: `TROPPI_TENTATIVI` (`0x08`) esiste già in §8.2, nessun tipo
-> nuovo, nessuna deroga alla regola di §9.
+> ⭐ **And the wire does not change by one byte**: `TROPPI_TENTATIVI` (`0x08`) already exists in §8.2, no new
+> type, no exception to the rule of §9.
 
 | | |
 |---|---|
-| **il conto** | **tre** autenticazioni fallite dallo stesso **indirizzo di provenienza**, ⛔ **dentro una finestra di 5 minuti**. Fuori dai cinque minuti il ban non scatta: chi sbaglia a digitare ogni tanto non è chi prova parole d'ordine. ⛔ E il nome utente **non conta**: tre nomi diversi contano tre |
-| **la conseguenza** | quell'indirizzo è **bannato per 12 ore** |
-| **che cosa azzera il conto** | un'autenticazione **riuscita** da quell'indirizzo — e il passare del tempo: ⚠ la finestra è **scorrevole**, cioè si guarda l'ora degli **ultimi tre** fallimenti, non si riparte da capo al primo. Ancorandola al primo, tre fallimenti a 0:00 · 4:59 · 5:01 farebbero ripartire il conto da uno, e chi prova a un ritmo appena più lento della finestra non verrebbe **mai** fermato |
-| ⛔ **la chiave del conto** | **il solo indirizzo, senza la porta.** ⚠ È il difetto che il banco **B5** ha trovato nella forma precedente: la chiave conteneva la porta, e siccome §4.4 ammette **un solo tentativo per connessione** la porta cambia a ogni tentativo — quel contatore valeva **sempre 1**. Codice presente, che si leggeva bene, e che non faceva niente |
+| **the count** | **three** failed authentications from the same **source address**, ⛔ **within a 5-minute window**. Outside the five minutes the ban does not trip: whoever mistypes now and then is not whoever is trying passwords. ⛔ And the user name **does not count**: three different names count three |
+| **the consequence** | that address is **banned for 12 hours** |
+| **what resets the count** | a **successful** authentication from that address — and the passing of time: ⚠ the window is **sliding**, that is one looks at the time of the **last three** failures, one does not start over at the first. Anchoring it to the first, three failures at 0:00 · 4:59 · 5:01 would restart the count from one, and whoever tries at a pace just slower than the window would **never** be stopped |
+| ⛔ **the key of the count** | **the address alone, without the port.** ⚠ It is the defect bench **B5** found in the previous form: the key contained the port, and since §4.4 admits **only one attempt per connection** the port changes at each attempt — that counter was **always 1**. Code present, that read well, and that did nothing |
 
-⛔ **Che cosa conta come tentativo fallito, e che cosa no.** Conta **soltanto** l'autenticazione: un
-`CREDENZIALI` a cui il server risponde `RESPINTO(CREDENZIALI_ERRATE)`. ⭐ E si noti che il conto
-**non sa** se il nome non esistesse o se la parola fosse sbagliata — §4.4 vieta al server di
-distinguerle — che è esattamente la cosa che questa regola ha deciso di contare come una sola.
+⛔ **What counts as a failed attempt, and what does not.** **Only** authentication counts: a
+`CREDENZIALI` to which the server answers `RESPINTO(CREDENZIALI_ERRATE)`. ⭐ And note that the count
+**does not know** whether the name did not exist or the password was wrong — §4.4 forbids the server to
+distinguish them — which is exactly the thing this rule has decided to count as one.
 
-**NON contano**, e l'elenco è normativo perché ciascuno di questi bannerebbe qualcuno che non ha
-sbagliato niente:
+**They do NOT count**, and the list is normative because each of these would ban someone who has not
+done anything wrong:
 
 | | |
 |---|---|
-| `ERRORE_PROTOCOLLO` · `VERSIONE_INCOMPATIBILE` · `NIENTE_IN_COMUNE` | sono guasti dei **byte**, e possono nascere da un difetto **nostro** o da una scheda rimasta aperta su una versione vecchia (§13 di `PIANO.md`). Un difetto del server che bannasse l'utente per dodici ore sarebbe la peggiore diagnosi che questo progetto possa produrre |
-| `TEMPO_SCADUTO` · le connessioni che cadono a metà stretta di mano | misurano una rete lenta o una persona che digita piano (§4.6), non un tentativo |
-| ⛔ **`GIA_ATTIVA_REMOTA`** (`0x0F`) | è quel che riceve il **secondo dispositivo dello stesso utente** (§8.2): contarlo vorrebbe dire che chi prova a riattaccarsi tre volte dal telefono **si banna da sé**, mentre la sua sessione è viva |
+| `ERRORE_PROTOCOLLO` · `VERSIONE_INCOMPATIBILE` · `NIENTE_IN_COMUNE` | they are faults of the **bytes**, and can arise from a defect **of ours** or from a tab left open on an old version (§13 of `PIANO.md`). A server defect that banned the user for twelve hours would be the worst diagnosis this project could produce |
+| `TEMPO_SCADUTO` · connections that drop halfway through the handshake | they measure a slow network or a person who types slowly (§4.6), not an attempt |
+| ⛔ **`GIA_ATTIVA_REMOTA`** (`0x0F`) | it is what the **second device of the same user** receives (§8.2): counting it would mean that whoever tries to reattach three times from the phone **bans themselves**, while their session is alive |
 
-⛔ **Che cosa vede un indirizzo bannato** *(deciso dall'utente: «viene visualizzata una pagina di
+⛔ **What a banned address sees** *(decided by the user: «viene visualizzata una pagina di
 login rifiutato»)*:
 
-1. **la pagina si serve lo stesso**, e mostra il rifiuto — *«tentativi esauriti»*. ⛔ Non un errore di
-   rete, non un silenzio: chi è stato bannato per errore è quasi sempre il proprietario, e deve
-   poter capire che cosa gli è successo invece di trovarsi davanti un server che sembra morto per
-   mezza giornata;
-2. **la sessione WebTransport si rifiuta**, con `TROPPI_TENTATIVI` nel codice d'errore applicativo
-   della chiusura (§3.1 punto 3). ⚠ Serve alla **scheda già aperta**, che non ricarica la pagina e
-   altrimenti resterebbe ad aspettare;
-3. 🔸 la pagina dice anche **quante ore mancano**. *Derivata, correggibile senza discussione*: è la
-   differenza fra un'informazione e mezza giornata di mistero.
+1. **the page is served all the same**, and shows the refusal — *«tentativi esauriti»*. ⛔ Not a network
+   error, not a silence: whoever has been banned by mistake is almost always the owner, and must
+   be able to understand what happened to them instead of facing a server that looks dead for
+   half a day;
+2. **the WebTransport session is refused**, with `TROPPI_TENTATIVI` in the application error code
+   of the closing (§3.1 point 3). ⚠ It serves the **tab already open**, which does not reload the page and
+   would otherwise remain waiting;
+3. 🔸 the page also says **how many hours are left**. *Derived, correctable without discussion*: it is the
+   difference between a piece of information and half a day of mystery.
 
-⛔ **Il ban sopravvive al riavvio del server** *(deciso dall'utente)*: indirizzo e ora di scadenza su
-file. Un ban che si azzera riavviando è una protezione che **si perde da sé** — invariante **I7** — e
-chi riavvia il server per un altro motivo non saprebbe di averla tolta.
+⛔ **The ban survives a server restart** *(decided by the user)*: address and expiry time on
+file. A ban that resets on restart is a protection that **gets lost by itself** — invariant **I7** — and
+whoever restarts the server for another reason would not know they had removed it.
 
-⛔ **E si esce in due modi, non uno** *(deciso dall'utente: «comando di sblocco oppure il trascorrere
-delle 12 ore»)*: la scadenza naturale, oppure un **comando di sblocco sul server**. Quest'ultimo è la
-via d'uscita di chi si banna dal proprio telefono, e chiede l'unica chiave che quel caso ammette —
-l'accesso alla macchina. ⛔ **Ogni sblocco si scrive nel registro**, o un ban tolto e un ban mai
-scattato hanno lo stesso aspetto.
+⛔ **And there are two ways out, not one** *(decided by the user: «comando di sblocco oppure il trascorrere
+delle 12 ore»)*: the natural expiry, or an **unlock command on the server**. The latter is the
+way out for whoever bans themselves from their own phone, and it asks for the only key that case admits —
+access to the machine. ⛔ **Every unlock is written in the log**, or a ban removed and a ban that never
+tripped look the same.
 
-> ⚠ **Il comando di sblocco NON è di RCP, e va detto qui perché non lo si cerchi sul filo.** Non
-> passa un byte della sessione: è un meccanismo del server, e questo documento ne detta soltanto
-> *che esista*, *che risponda distinguendo «tolto» da «non era bannato»* e *che scriva nel registro*.
-> ⛔ **La forma non è indifferente, ed è stata pagata**: `remotix --sblocca IND` come **secondo
-> processo** non funziona — il ban vive nella memoria del processo che serve, un secondo processo può
-> solo riscrivere il file, il server continuerebbe a rispondere `TROPPI_TENTATIVI` fino al riavvio, e
-> **chi ha dato il comando lo vede uscire con zero**. Dalla notte del 10 agosto 2026 le due
-> implementazioni parlano lo stesso protocollo di **una riga su un socket Unix `0600`** — `SBLOCCA
-> <indirizzo>` → `TOLTO` / `NON-BANNATO`, e `PING` → `PONG` per dire *«il comando c'è»*. Il racconto
-> per esteso sta in `FASI.md` §01-filo-nudo («Che cosa NON ha funzionato»), non qui.
+> ⚠ **The unlock command is NOT part of RCP, and it must be said here so that nobody looks for it on the wire.** Not
+> one byte of the session passes: it is a mechanism of the server, and this document only dictates
+> *that it exists*, *that it answers distinguishing «tolto» from «non era bannato»* and *that it writes in the log*.
+> ⛔ **The form is not indifferent, and it has been paid for**: `remotix --sblocca IND` as a **second
+> process** does not work — the ban lives in the memory of the serving process, a second process can
+> only rewrite the file, the server would keep answering `TROPPI_TENTATIVI` until the restart, and
+> **whoever gave the command sees it exit with zero**. Since the night of 10 Aug 2026 the two
+> implementations speak the same protocol of **one line on a Unix socket `0600`** — `SBLOCCA
+> <indirizzo>` → `TOLTO` / `NON-BANNATO`, and `PING` → `PONG` to say *«il comando c'è»*. The full
+> account is in `FASI.md` §01-filo-nudo («Che cosa NON ha funzionato»), not here.
 
-⭐ **Il ritardo fisso resta, e non è ridondante rispetto al ban.** Il server **NON DEVE** rispondere a
-`CREDENZIALI` prima che sia passato **un secondo** dalla ricezione, **anche quando la risposta è
-`AMMESSO`**. Il ban toglie di mezzo chi indovina; il secondo fisso toglie il **tempismo** come
-canale — senza, «utente inesistente» risponde in un millisecondo e «parola sbagliata» in cinquanta,
-e la distinzione che §4.4 vieta di scrivere nel motivo la si legge col cronometro.
+⭐ **The fixed delay stays, and it is not redundant with the ban.** The server **MUST NOT** answer
+`CREDENZIALI` before **one second** has passed since reception, **even when the answer is
+`AMMESSO`**. The ban removes whoever guesses; the fixed second removes **timing** as a
+channel — without it, «utente inesistente» answers in a millisecond and «parola sbagliata» in fifty,
+and the distinction that §4.4 forbids writing in the reason can be read with a stopwatch.
 
-> ⚠ **E su questo c'è una misura che non torna, dichiarata invece che nascosta.** `[M]` 10 agosto
-> 2026, banco **B8**: la mediana dei tentativi respinti è **2636 ms** su 42 campioni, dove questa
-> riga vuole ~1000. ⛔ A governare i tempi non è il nostro ritardo: è **PAM**. Finché quel ritardo
-> non è costante, il secondo fisso **non nasconde quel che dichiara di nascondere** — cioè se un
-> nome utente esista. Resta `[?]`, e **il ban non la chiude**: sono due proprietà diverse.
+> ⚠ **And on this there is a measurement that does not add up, declared instead of hidden.** `[M]` 10 Aug
+> 2026, bench **B8**: the median of the rejected attempts is **2636 ms** over 42 samples, where this
+> line wants ~1000. ⛔ What governs the times is not our delay: it is **PAM**. As long as that delay
+> is not constant, the fixed second **does not hide what it declares it hides** — that is whether a
+> user name exists. It stays `[?]`, and **the ban does not close it**: they are two different properties.
 
-⛔ **E il rifiuto di un indirizzo bannato parte anch'esso NON PRIMA DI UN SECONDO.** La *decisione* si
-prende senza interrogare PAM — guarda solo l'indirizzo, e nessun segreto ci entra — ma **la risposta
-aspetta come tutte le altre**: `RESPINTO(TROPPI_TENTATIVI)` sul canale di controllo, dopo il secondo
-fisso.
+⛔ **And the refusal of a banned address also leaves NOT BEFORE ONE SECOND.** The *decision* is
+taken without querying PAM — it looks only at the address, and no secret enters it — but **the answer
+waits like all the others**: `RESPINTO(TROPPI_TENTATIVI)` on the control channel, after the fixed
+second.
 
-> ⛔ *Corretto la notte del 10 agosto 2026, e l'ha trovato il banco **B8** mentre lo si riscriveva.*
-> Questo paragrafo diceva *«il rifiuto di un indirizzo bannato **non passa** dal secondo fisso: si
-> decide **prima** di `CREDENZIALI`»*. ⛔ **Sono due righe incompatibili nella stessa sezione**: un
-> rifiuto deciso *prima* di `CREDENZIALI` non ha nessun `RESPINTO` da mandare, perché `RESPINTO` è la
-> risposta a un messaggio che non è ancora arrivato — e §8.2 fa viaggiare `TROPPI_TENTATIVI` proprio
-> dentro un `RESPINTO`.
+> ⛔ *Corrected on the night of 10 Aug 2026, and bench **B8** found it while it was being rewritten.*
+> This paragraph said *«il rifiuto di un indirizzo bannato **non passa** dal secondo fisso: si
+> decide **prima** di `CREDENZIALI`»*. ⛔ **They are two incompatible lines in the same section**: a
+> refusal decided *before* `CREDENZIALI` has no `RESPINTO` to send, because `RESPINTO` is the
+> answer to a message that has not yet arrived — and §8.2 has `TROPPI_TENTATIVI` travel precisely
+> inside a `RESPINTO`.
 >
-> ⛔ **E riapriva una contraddizione che il rilievo R11.10 aveva chiuso quello stesso giorno**, per la
-> ragione che vale ancora: *«un rifiuto immediato dentro la finestra e uno ritardato fuori rimettono
-> il **tempismo** come canale, dal lato opposto a quello che il ritardo fisso toglie»*. Un indirizzo
-> che riceve la risposta in un millisecondo sa di essere bannato prima ancora di leggere il motivo.
+> ⛔ **And it reopened a contradiction that finding R11.10 had closed that same day**, for the
+> reason that still holds: *«un rifiuto immediato dentro la finestra e uno ritardato fuori rimettono
+> il **tempismo** come canale, dal lato opposto a quello che il ritardo fisso toglie»*. An address
+> that receives the answer in a millisecond knows it is banned before even reading the reason.
 >
-> ⚠ È la forma che questo progetto paga più spesso — **una cura applicata in un posto solo** — e
-> stavolta l'ha commessa chi scriveva la regola nuova, poche ore dopo averne curata una uguale.
+> ⚠ It is the form this project pays most often — **a cure applied in one place only** — and
+> this time it was committed by whoever wrote the new rule, a few hours after having cured an identical one.
 
-⛔ **La pagina del rifiuto si serve con stato HTTP `200`**, non con un 4xx. ⚠ *Scelto la notte del 10
-agosto 2026, 🔸 derivato:* con uno stato d'errore un intermediario o il browser stesso possono
-**sostituire il corpo** con la propria pagina d'errore, e la frase che il proprietario **deve**
-leggere — *«tentativi esauriti, restano N ore»* — sparirebbe proprio nel caso per cui esiste.
+⛔ **The refusal page is served with HTTP status `200`**, not with a 4xx. ⚠ *Chosen on the night of 10
+Aug 2026, 🔸 derived:* with an error status an intermediary or the browser itself can
+**replace the body** with its own error page, and the sentence the owner **must**
+read — *«tentativi esauriti, restano N ore»* — would disappear precisely in the case it exists for.
 
-⚠ **E la chiave del conto ha una forma canonica**, che va detta perché sta in un solo posto del
-codice e nessun documento la dichiarava: l'indirizzo viaggia fra **parentesi quadre anche quando è
-IPv4** — `[192.168.0.2]` — perché è così che lo scrive chi ospita. ⛔ Chi digita `192.168.0.2` al
-comando di sblocco **deve arrivare alla stessa chiave**: la normalizzazione è del server, non di chi
-comanda. Senza, il comando risponde *«non era bannato»* a ogni indirizzo, **per sempre e senza
-sintomo**.
+⚠ **And the key of the count has a canonical form**, which must be stated because it is in a single place of the
+code and no document declared it: the address travels between **square brackets even when it is
+IPv4** — `[192.168.0.2]` — because that is how the host writes it. ⛔ Whoever types `192.168.0.2` to the
+unlock command **must arrive at the same key**: normalisation is the server's job, not the
+commander's. Without it, the command answers *«non era bannato»* for every address, **forever and without
+symptom**.
 
-⚠ **Il prezzo, dichiarato — e non lo paga chi indovina:**
+⚠ **The price, declared — and it is not paid by whoever guesses:**
 
 | | |
 |---|---|
-| **dietro un NAT gli indirizzi si condividono** | tre errori di **una** persona chiudono la porta a tutti gli altri per dodici ore. Il contatore per nome utente della forma precedente esisteva proprio per questo, ed **è stato tolto sapendolo**: la scelta è dare all'indirizzo tre tentativi soli invece di distinguere chi sbaglia |
-| **il primo a inciamparci è il proprietario** | parola lunga, tastiera di un telefono, maiuscole automatiche. È da qui che vengono l'obbligo della pagina che **dice** che cos'è successo e il comando di sblocco: senza quei due, la regola sarebbe indistinguibile da un guasto |
-| ⛔ **e la parola d'ordine resta l'unica chiave** | tre tentativi **per indirizzo** alzano molto il costo di chi indovina, e non chiudono la partita: una rete di diecimila indirizzi ottiene comunque trentamila tentativi su un conto solo. Quella la chiude l'autenticazione forte rinviata a fine progetto (`DECISIONI.md` §1.7) |
+| **behind a NAT addresses are shared** | three mistakes by **one** person close the door to all the others for twelve hours. The per-user-name counter of the previous form existed precisely for this, and **it was removed knowing it**: the choice is to give the address only three attempts instead of distinguishing who makes mistakes |
+| **the first to trip on it is the owner** | long password, phone keyboard, automatic capitals. This is where the obligation comes from of the page that **says** what happened and of the unlock command: without those two, the rule would be indistinguishable from a fault |
+| ⛔ **and the password remains the only key** | three attempts **per address** raise the cost for whoever guesses a lot, and do not close the game: a network of ten thousand addresses still gets thirty thousand attempts on a single account. That one is closed by the strong authentication postponed to the end of the project (`DECISIONI.md` §1.7) |
 
-⭐ **E una cosa che questa regola non può fare**, scritta perché nessuno gliela attribuisca: nessuno
-può far bannare l'indirizzo **di qualcun altro**. Per arrivare a `CREDENZIALI` bisogna aver
-completato la stretta di mano QUIC, che pretende che i pacchetti tornino davvero a quell'indirizzo:
-il mittente non si falsifica. Il ban colpisce solo chi ha bussato per davvero.
+⭐ **And one thing this rule cannot do**, written so that nobody attributes it to it: nobody
+can get **someone else's** address banned. To reach `CREDENZIALI` one must have
+completed the QUIC handshake, which demands that the packets really come back to that address:
+the sender cannot be forged. The ban hits only whoever has really knocked.
 
-⚠ **E una conseguenza sul collaudo, che morde subito**: i banchi partono **tutti dallo stesso
-indirizzo**, e quello che prova questa regola fallisce di proposito. Con dodici ore, «si aspetta la
-scadenza» non è una cura — il banco si serve del comando di sblocco, e il banco del limitatore **non
-lo chiama dentro il proprio giro**, o non prova più niente. Il dettaglio sta in
-`FASI.md` §01-filo-nudo, regola **B0.3** e banco **B8**.
+⚠ **And a consequence on acceptance testing, which bites at once**: the benches all start **from the same
+address**, and the one that tests this rule fails on purpose. With twelve hours, «si aspetta la
+scadenza» is not a cure — the bench uses the unlock command, and the limiter bench **does not
+call it within its own run**, or it no longer tests anything. The detail is in
+`FASI.md` §01-filo-nudo, rule **B0.3** and bench **B8**.
 
 ### 4.5 `ATTACCA`
 
@@ -998,180 +999,180 @@ ATTACCA
  ├── u32     tela_altezza
  ├── u32     vista_larghezza
  ├── u32     vista_altezza
- └── stringa disposizione        (≤ 64 byte)
+ └── stringa disposizione        (≤ 64 bytes)
 ```
 
-| Campo | | |
+| Field | | |
 |---|---|---|
-| `tela_larghezza`, `tela_altezza` | pixel | la misura che il client chiede |
-| `disposizione` | stringa | la disposizione di tastiera, es. `it` |
-| `vista_larghezza`, `vista_altezza` | pixel | la misura in cui il client disegnerà |
+| `tela_larghezza`, `tela_altezza` | pixels | the size the client asks for |
+| `disposizione` | string | the keyboard layout, e.g. `it` |
+| `vista_larghezza`, `vista_altezza` | pixels | the size at which the client will draw |
 
-⛔ **I limiti, e sono normativi**: larghezza e altezza della tela **concessa** **DEVONO** stare fra
-**320×240** e **4096×2304**, ed **entrambe DEVONO essere pari**.
+⛔ **The limits, and they are normative**: width and height of the **granted** canvas **MUST** be between
+**320×240** and **4096×2304**, and **both MUST be even**.
 
-- **Sotto il minimo**, o con un lato **dispari**, la tela chiesta in `ATTACCA` è `ERRORE_PROTOCOLLO`
-  (in `ADATTA_TELA`, sotto il minimo, `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` — §7.1).
-- ⛔ **Sopra il massimo NON è un errore**: il server **DEVE** concedere la tela col lato che sfora
-  portato **al massimo** e l'altro invariato (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), e
-  **DEVE** scriverlo nel registro. Vale identico in `ATTACCA` e in `ADATTA_TELA` (che risponde
-  `TELA(ADATTATA)` con la misura ridotta). È un caso della regola qui sotto — *la tela concessa può
-  essere diversa da quella chiesta* — e il client **DEVE** adattarsi impaginando con le bande
-  (`SPECIFICHE.md` §6.2), senza deformare. ⭐ Un client **DOVREBBE** comunque non chiedere oltre il
-  massimo: la nostra pagina porta già lei il lato al massimo (`tela_da_chiedere()`), con la stessa
-  regola, così server e client arrivano allo stesso numero.
+- **Below the minimum**, or with an **odd** side, the canvas asked for in `ATTACCA` is `ERRORE_PROTOCOLLO`
+  (in `ADATTA_TELA`, below the minimum, `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` — §7.1).
+- ⛔ **Above the maximum it is NOT an error**: the server **MUST** grant the canvas with the side that exceeds
+  brought **to the maximum** and the other unchanged (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), and
+  **MUST** write it in the log. It holds identically in `ATTACCA` and in `ADATTA_TELA` (which answers
+  `TELA(ADATTATA)` with the reduced size). It is a case of the rule below — *the granted canvas can
+  be different from the one asked for* — and the client **MUST** adapt by laying out with bars
+  (`SPECIFICHE.md` §6.2), without distorting. ⭐ A client **SHOULD** all the same not ask beyond the
+  maximum: our page already brings the side to the maximum itself (`tela_da_chiedere()`), with the same
+  rule, so server and client arrive at the same number.
 
-> ⛔ *Fino al 1 ottobre 2026 il massimo era **7680×4320**, e oltre era `ERRORE_PROTOCOLLO`.* Abbassato
-> per decisione dell'utente (fase 19: *«4096 max di larghezza va benissimo, non ho mai preteso di
-> più»*). ⚠ **La ragione è il video, non la cattura**: `[M]` 22 agosto 2026 H.264 sulla scheda Intel
-> (VA-API, `EncSliceLP`) accetta **32–4096 px per lato** (4096×2160 sì, 4112×2160 no), e Firefox su
-> Linux riceve solo H.264 — una tela più larga aveva video solo in HEVC, cioè solo su Chrome.
-> **2304** è il 16:9 a 4096 (il DCI 4096×2160 ci sta), e 4096×2304 sono **36 864 macroblocchi**, il
-> `MaxFS` esatto dei livelli H.264 5.1 e 5.2 — oltre servirebbe il livello 6. ⭐ Il cambio è
-> **compatibile**: nessun numero nuovo né riusato, e un client che chiedeva fino a 7680×4320 riceve
-> una tela più piccola — cosa che §4.5 gli imponeva già di saper ricevere.
+> ⛔ *Until 1 Oct 2026 the maximum was **7680×4320**, and beyond it was `ERRORE_PROTOCOLLO`.* Lowered
+> by the user's decision (phase 19: *«4096 max di larghezza va benissimo, non ho mai preteso di
+> più»*). ⚠ **The reason is video, not capture**: `[M]` 22 Aug 2026 H.264 on the Intel card
+> (VA-API, `EncSliceLP`) accepts **32–4096 px per side** (4096×2160 yes, 4112×2160 no), and Firefox on
+> Linux receives only H.264 — a wider canvas had video only in HEVC, that is only on Chrome.
+> **2304** is 16:9 at 4096 (DCI 4096×2160 fits), and 4096×2304 is **36 864 macroblocks**, the
+> exact `MaxFS` of H.264 levels 5.1 and 5.2 — beyond that level 6 would be needed. ⭐ The change is
+> **compatible**: no new or reused number, and a client that asked for up to 7680×4320 receives
+> a smaller canvas — something §4.5 already required it to be able to receive.
 
-⭐ **Il vincolo dei numeri pari non è pignoleria**: i codificatori video lavorano su blocchi, e una
-misura dispari viene arrotondata **da chi codifica, in silenzio** — due misure diverse sotto la
-stessa etichetta, cioè la forma d'errore **E2** di `REVIEWER.md`. Meglio rifiutarla qui, dove si
-può dire perché.
+⭐ **The even-number constraint is not pedantry**: video encoders work on blocks, and an
+odd size is rounded **by whoever encodes, in silence** — two different sizes under the
+same label, that is error form **E2** of `REVIEWER.md`. Better to refuse it here, where one
+can say why.
 
-⚠ La `disposizione` **DEVE** essere un nome di disposizione XKB, eventualmente con la variante fra
-parentesi: `it`, `us`, `de(neo)`. Il server **DEVE** rifiutare con `ERRORE_PROTOCOLLO` una stringa
-che non ha questa forma, e **DEVE** congedare con `SESSIONE_NON_SERVIBILE` una disposizione ben
-formata che il sistema non conosce — sono due guasti diversi, e vanno distinti.
+⚠ The `disposizione` **MUST** be an XKB layout name, optionally with the variant in
+parentheses: `it`, `us`, `de(neo)`. The server **MUST** refuse with `ERRORE_PROTOCOLLO` a string
+that does not have this form, and **MUST** send the farewell `SESSIONE_NON_SERVIBILE` for a well-
+formed layout the system does not know — they are two different faults, and must be distinguished.
 
-⚠ **La forma, per esteso**: `[A-Za-z0-9_-]+` eventualmente seguito da `(` `[A-Za-z0-9_-]+` `)`.
-⛔ Le **maiuscole** e il **trattino basso** ci stanno perché il sistema li usa davvero — `[M]`
-21 agosto 2026, chiesto al sistema *attraverso il prodotto*: su **589** coppie disposizione/variante
-che una macchina Debian compila, **9 hanno una maiuscola** (`de(T3)`, `jp(OADG109A)`, `ua(macOS)`,
-`ru(phonetic_YAZHERTY)`, `ie(CloGaelach)`…) e **102 un trattino basso**. Un alfabeto più stretto le
-rifiuterebbe con `ERRORE_PROTOCOLLO`, cioè **accusando il client di un guasto della macchina** — che
-è peggio di un congedo, perché manda a cercare il difetto dall'altra parte del filo.
-⛔ E la **variante vuota** — `it()` — è **fuori forma**: `ERRORE_PROTOCOLLO`, non
+⚠ **The form, in full**: `[A-Za-z0-9_-]+` optionally followed by `(` `[A-Za-z0-9_-]+` `)`.
+⛔ **Capitals** and the **underscore** are in it because the system really uses them — `[M]`
+21 Aug 2026, asked of the system *through the product*: of **589** layout/variant pairs
+that a Debian machine compiles, **9 have a capital** (`de(T3)`, `jp(OADG109A)`, `ua(macOS)`,
+`ru(phonetic_YAZHERTY)`, `ie(CloGaelach)`…) and **102 an underscore**. A narrower alphabet would
+refuse them with `ERRORE_PROTOCOLLO`, that is **accusing the client of a fault of the machine** — which
+is worse than a farewell, because it sends people looking for the defect on the other side of the wire.
+⛔ And the **empty variant** — `it()` — is **out of form**: `ERRORE_PROTOCOLLO`, not
 `SESSIONE_NON_SERVIBILE`.
 
-Il server risponde `SESSIONE`:
+The server answers `SESSIONE`:
 
 ```
 SESSIONE
  ├── u8      stato               1 = NUOVA, 2 = RIPRESA
- ├── u32     tela_larghezza      ⚠ la tela CONCESSA
+ ├── u32     tela_larghezza      ⚠ the GRANTED canvas
  ├── u32     tela_altezza
- └── stringa desktop             uno fra: gnome · kde · xfce · lxqt · cinnamon · sconosciuto
+ └── stringa desktop             one of: gnome · kde · xfce · lxqt · cinnamon · sconosciuto
 ```
 
-⭐ **La tela concessa può essere diversa da quella chiesta**, ed è il caso del ripiego su KDE
-< 6.8 (`SPECIFICHE.md` §6.3): la sessione era già viva con un'altra misura e non può cambiarla. Il
-client **DEVE** adattarsi riscalando, e il server **DEVE** aver scritto il ripiego nel registro.
+⭐ **The granted canvas can be different from the one asked for**, and it is the case of the fallback on KDE
+< 6.8 (`SPECIFICHE.md` §6.3): the session was already alive with another size and cannot change it. The
+client **MUST** adapt by rescaling, and the server **MUST** have written the fallback in the log.
 
-⛔⛔ **E la seconda ragione è quella comune, non l'eccezione: la tela SOPRAVVIVE alla sessione.**
-Il palco resta alla misura in cui l'ha lasciato il client precedente, e `SESSIONE` concede
-**quella**, non quella chiesta in `ATTACCA`. ⇒ Un client che si attacca dopo un altro **dello stesso
-utente** — la sessione grafica è una per utente, e il multi-tenant non esiste — riceve una tela
-che non ha chiesto e di cui **non conosce l'origine**, e non ha nessun modo di distinguerla da un
-ripiego. ⚠ **Non è «la finestra di un altro»**: è la misura che ha lasciato la propria connessione
-precedente (`DECISIONI.md` §5.0-septies, dove la frase sbagliata è raccontata).
+⛔⛔ **And the second reason is the common one, not the exception: the canvas OUTLIVES the session.**
+The stage stays at the size at which the previous client left it, and `SESSIONE` grants
+**that one**, not the one asked for in `ATTACCA`. ⇒ A client that attaches after another **of the same
+user** — the graphical session is one per user, and multi-tenant does not exist — receives a canvas
+it did not ask for and whose **origin it does not know**, and has no way to tell it apart from a
+fallback. ⚠ **It is not «la finestra di un altro»**: it is the size its own previous connection
+left (`DECISIONI.md` §5.0-septies, where the wrong sentence is recounted).
 
-⚠ **Chiedere una tela in `ATTACCA` non la ottiene**: `tela_larghezza`/`tela_altezza` sono una
-**preferenza**, e l'unico messaggio che cambia la tela è `ADATTA_TELA` (§7.1). ⇒ Un client che vuole
-la propria misura **DEVE** mandare un `ADATTA_TELA` dopo `SESSIONE` — ed è quel che
-`DECISIONI.md` §5.0-sexies gli fa già fare a ogni attacco.
+⚠ **Asking for a canvas in `ATTACCA` does not obtain it**: `tela_larghezza`/`tela_altezza` are a
+**preference**, and the only message that changes the canvas is `ADATTA_TELA` (§7.1). ⇒ A client that wants
+its own size **MUST** send an `ADATTA_TELA` after `SESSIONE` — and it is what
+`DECISIONI.md` §5.0-sexies already makes it do at every attach.
 
-`[M]` 21 agosto 2026, prodotto vero: tre attacchi di fila con `ATTACCA(1920×1080)` hanno ricevuto
-`SESSIONE` con **1920×1080**, **1264×800** e **1600×900** — cioè, ogni volta, **quel che il giro
-prima aveva lasciato**.
+`[M]` 21 Aug 2026, real product: three attaches in a row with `ATTACCA(1920×1080)` received
+`SESSIONE` with **1920×1080**, **1264×800** and **1600×900** — that is, each time, **what the run
+before had left**.
 
-⛔ **E questa riga non allenta niente**: la tela concessa resta soggetta ai limiti, alla parità e a
-`video.misura_massima`. Dice soltanto **da dove viene** quando il client non l'ha chiesta.
+⛔ **And this line loosens nothing**: the granted canvas stays subject to the limits, to evenness and to
+`video.misura_massima`. It only says **where it comes from** when the client did not ask for it.
 
-⚠ La tela concessa **DEVE** rispettare `video.misura_massima` se il client l'ha dichiarata, e
-rispettare comunque i limiti e la parità di sopra. Il campo `desktop` è per la diagnosi: il client
-**NON DEVE** cambiare comportamento in base al suo valore, o si scrive una compatibilità per
-desktop che nessuno ha chiesto e che nessun banco prova.
+⚠ The granted canvas **MUST** respect `video.misura_massima` if the client declared it, and
+respect in any case the limits and the evenness above. The `desktop` field is for diagnosis: the client
+**MUST NOT** change behaviour based on its value, or a per-desktop compatibility gets written that nobody asked
+for and no bench tests.
 
-Se l'attacco non si può servire, il server congeda con uno dei motivi di §8.2 — mai con un
-silenzio, mai con una sessione a metà.
+If the attach cannot be served, the server sends a farewell with one of the reasons of §8.2 — never with a
+silence, never with a half session.
 
-### 4.6 ⛔ I tempi della stretta di mano
+### 4.6 ⛔ The handshake deadlines
 
-*Aggiunta il 9 agosto 2026: una connessione che si ferma a metà stretta di mano tiene un posto e
-non lo dichiara a nessuno.*
+*Added on 9 Aug 2026: a connection that stops halfway through the handshake holds a slot and
+declares it to nobody.*
 
-| Da | A | Tetto |
+| From | To | Ceiling |
 |---|---|---|
-| ⭐ **apertura del canale di controllo** *(il primo stream bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |
-| `ECCOMI` spedito | `CREDENZIALI` ricevute | **60 s** — è il tempo in cui una persona digita la parola d'ordine |
-| `AMMESSO` spedito | `ATTACCA` ricevuto | **10 s** |
-| ⭐ **apertura della sessione WebTransport** | **apertura del canale di controllo** | **5 s** — ✅ deciso l'11 agosto 2026, `DECISIONI.md` §7.17 |
+| ⭐ **opening of the control channel** *(the first bidirectional stream of the session)* | `CIAO` received | **5 s** |
+| `ECCOMI` sent | `CREDENZIALI` received | **60 s** — it is the time in which a person types the password |
+| `AMMESSO` sent | `ATTACCA` received | **10 s** |
+| ⭐ **opening of the WebTransport session** | **opening of the control channel** | **5 s** — ✅ decided on 11 Aug 2026, `DECISIONI.md` §7.17 |
 
-> ### ⭐ La riga che mancava, e l'ha trovata una misura — ✅ 11 agosto 2026
+> ### ⭐ The row that was missing, and a measurement found it — ✅ 11 Aug 2026
 >
-> *La tabella cominciava da `CIAO`, e prima del `CIAO` c'era uno stato in cui il server non contava
-> niente: chi apriva la sessione e non apriva mai il canale **non aveva addosso nessun tetto**.
-> Trovato dal banco **B6** (rilievo **R12-A.25**), deciso dall'utente lo stesso giorno.*
+> *The table started from `CIAO`, and before `CIAO` there was a state in which the server counted
+> nothing: whoever opened the session and never opened the channel **had no ceiling on them at all**.
+> Found by bench **B6** (finding **R12-A.25**), decided by the user the same day.*
 >
-> ⛔ **Scaduti i 5 s, il server chiude con `TEMPO_SCADUTO`** `0x0D`. ⚠ Il canale di controllo non
-> esiste, quindi il `CONGEDO` **non si manda** (§8.1, la condizione decisa in `DECISIONI.md` §7.15):
-> il motivo viaggia **solo** nel codice d'errore applicativo della chiusura della sessione (§3.1
-> punto 3). ⭐ Ed è il primo posto in cui le decisioni dell'11 agosto si incastrano: senza §7.15
-> questa riga imporrebbe un byte su un canale che non è mai nato.
+> ⛔ **When the 5 s expire, the server closes with `TEMPO_SCADUTO`** `0x0D`. ⚠ The control channel does not
+> exist, so the `CONGEDO` **is not sent** (§8.1, the condition decided in `DECISIONI.md` §7.15):
+> the reason travels **only** in the application error code of the closing of the session (§3.1
+> point 3). ⭐ And it is the first place where the decisions of 11 Aug fit together: without §7.15
+> this line would impose a byte on a channel that was never born.
 >
-> ⭐ **Perché 5 s, cioè lo stesso numero della riga sotto**: aprire il canale di controllo è il
-> **primo atto obbligatorio** della sessione (§2.5), non dipende da quanto è veloce a digitare una
-> persona e non dipende dalla rete più di quanto ne dipenda il `CIAO`.
+> ⭐ **Why 5 s, that is the same number as the row below**: opening the control channel is the
+> **first mandatory act** of the session (§2.5), it does not depend on how fast a person
+> types and does not depend on the network more than `CIAO` does.
 >
-> ⛔ **E che cosa chiude davvero**: era l'ultimo modo, in questa fase, di **occupare un posto senza
-> dire chi si è**. Il tempo di inattività di QUIC non lo copriva: quello conta il **silenzio**, e
-> una sessione che scrive su un altro stream non è silenziosa — teneva il posto a tempo
-> indeterminato.
+> ⛔ **And what it really closes**: it was the last way, in this phase, to **occupy a slot without
+> saying who one is**. The QUIC idle timeout did not cover it: that one counts **silence**, and
+> a session that writes on another stream is not silent — it held the slot
+> indefinitely.
 >
-> ⚠ **Non serve nessun tipo di messaggio nuovo**, e conta: la finestra di §9 è chiusa dal 10 agosto
-> 2026. `TEMPO_SCADUTO` c'era già.
+> ⚠ **No new message type is needed**, and it matters: the window of §9 has been closed since 10 Aug
+> 2026. `TEMPO_SCADUTO` was already there.
 
-> ### ⭐ La prima riga è cambiata di una parola, e la seconda risposta dice che non basta
+> ### ⭐ The first row changed by one word, and the second answer says it is not enough
 >
-> ⚠ *La prima riga diceva* **«stretta di mano TLS finita»** *dal 9 agosto 2026. Era la `[?]` **R3.27**
-> — «"stretta di mano TLS finita" non è un istante che i due lati condividono»: in WebTransport la
-> connessione HTTP/3 e la sessione sono due cose separate, e fra i due istanti passa almeno un giro
-> di rete. Corretta l'11 agosto 2026 su una misura del banco **B6**, rilievi **R12C.11** e
+> ⚠ *The first row said* **«stretta di mano TLS finita»** *since 9 Aug 2026. It was `[?]` **R3.27**
+> — «"stretta di mano TLS finita" non è un istante che i due lati condividono»: in WebTransport the
+> HTTP/3 connection and the session are two separate things, and between the two instants at least one network
+> round trip passes. Corrected on 11 Aug 2026 on a measurement of bench **B6**, findings **R12C.11** and
 > **R12-A.25**.*
 >
-> **La prima risposta di B6, e cambia una parola.** Il cronometro del primo tetto parte
-> dall'**apertura del canale di controllo**: è l'istante che il server osserva davvero, ed è quel che
-> `src/rcp.c` fa (la sessione RCP nasce quando il canale si apre, e il tetto si conta da lì). ⛔ La
-> fine del TLS **non** è utilizzabile: una seconda sessione su una connessione riusata partirebbe
-> **col budget già consumato**, cioè si vedrebbe congedare per un tempo che non ha avuto.
+> **The first answer of B6, and it changes one word.** The stopwatch of the first ceiling starts
+> from the **opening of the control channel**: it is the instant the server really observes, and it is what
+> `src/rcp.c` does (the RCP session is born when the channel opens, and the ceiling is counted from there). ⛔ The
+> end of TLS is **not** usable: a second session on a reused connection would start
+> **with the budget already consumed**, that is it would see itself sent a farewell for a time it did not have.
 >
-> ⛔ **E la seconda risposta di B6 è più grave, perché dice che curare la parola NON CHIUDE il
-> buco.** Se il cronometro parte dall'apertura del canale, chi apre la **sessione** WebTransport e
-> **non apre mai il canale** non ha addosso **nessun tetto**: resta lì, viva e senza scadenza — cioè
-> esattamente la connessione che *«tiene un posto e non lo dichiara a nessuno»*, che è la prima riga
-> di questa sezione. La tabella comincia da `CIAO`, e **prima del `CIAO` c'è uno stato in cui il
-> server non conta niente**.
+> ⛔ **And the second answer of B6 is more serious, because it says that curing the word DOES NOT CLOSE the
+> hole.** If the stopwatch starts from the opening of the channel, whoever opens the WebTransport **session** and
+> **never opens the channel** has **no ceiling** on them: it stays there, alive and without expiry — that is
+> exactly the connection that *«tiene un posto e non lo dichiara a nessuno»*, which is the first line
+> of this section. The table starts from `CIAO`, and **before `CIAO` there is a state in which the
+> server counts nothing**.
 >
-> ⚠ **Che cosa lo copre oggi, e perché non basta**: solo il tempo di inattività di QUIC, che è **30
-> secondi di silenzio** — ma chi tiene aperta la sessione mandando qualunque cosa su un altro stream
-> non è silenzioso, e non scade mai. ⛔ **Quale sia il tetto giusto, e da che istante, è una domanda
-> aperta e non una svista**: sta in `DECISIONI.md` §7.17, con le due letture e il caso concreto. Qui
-> si dichiara il buco invece di riempirlo con un numero che nessuno ha scelto.
+> ⚠ **What covers it today, and why it is not enough**: only the QUIC idle timeout, which is **30
+> seconds of silence** — but whoever keeps the session open by sending anything on another stream
+> is not silent, and never expires. ⛔ **What the right ceiling is, and from what instant, is an open
+> question and not an oversight**: it is in `DECISIONI.md` §7.17, with the two readings and the concrete case. Here
+> the hole is declared instead of being filled with a number nobody chose.
 
-⛔ Scaduto un tetto, il server **DEVE** congedare con `TEMPO_SCADUTO`. **NON DEVE** aspettare i 30
-secondi del tempo di inattività di QUIC: quello misura il **silenzio della rete**, questo misura un
-**client che non fa il suo mestiere**, e confonderli fa sembrare un difetto nostro una rete lenta.
+⛔ When a ceiling expires, the server **MUST** send the farewell `TEMPO_SCADUTO`. It **MUST NOT** wait for the 30
+seconds of the QUIC idle timeout: that one measures the **silence of the network**, this one measures a
+**client that does not do its job**, and confusing them makes a slow network look like a defect of ours.
 
-> ⛔ **E i 60 secondi della parola d'ordine erano irraggiungibili** — rilievo **R1.8**. Mentre
-> l'utente digita, sul filo non passa **niente**: §2.2 vieta un battito applicativo e non c'è
-> nessun altro canale attivo prima dell'attacco. Al trentesimo secondo scatta il tempo di
-> inattività di QUIC e **la connessione muore in silenzio**, senza motivo, prima che il tetto dei
-> 60 possa mai scadere. Il banco di §11 avrebbe misurato 30 dove il documento dice 60, e il
-> programmatore avrebbe dato la colpa al banco.
+> ⛔ **And the 60 seconds of the password were unreachable** — finding **R1.8**. While
+> the user types, **nothing** passes on the wire: §2.2 forbids an application heartbeat and there is
+> no other active channel before the attach. At the thirtieth second the QUIC idle timeout
+> trips and **the connection dies in silence**, without reason, before the ceiling of
+> 60 can ever expire. The bench of §11 would have measured 30 where the document says 60, and the
+> programmer would have blamed the bench.
 >
-> ⛔ **La cura, ed è del server**: finché aspetta le credenziali, il server **DEVE** tenere viva la
-> connessione con i **PING del trasporto**, che non sono un battito applicativo — non portano
-> informazione, non hanno una risposta da interpretare, e non creano una seconda verità sul silenzio
-> (§2.2). ⚠ Senza questa riga un'implementazione li manda e l'altra no, e la seconda **perde gli
-> utenti che digitano piano**: difetto intermittente, il peggiore da diagnosticare.
+> ⛔ **The cure, and it is the server's**: while it waits for the credentials, the server **MUST** keep the
+> connection alive with the **transport PINGs**, which are not an application heartbeat — they carry no
+> information, have no answer to interpret, and do not create a second truth about silence
+> (§2.2). ⚠ Without this line one implementation sends them and the other does not, and the second **loses the
+> users who type slowly**: an intermittent defect, the worst to diagnose.
 
 ---
 
