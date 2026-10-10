@@ -6406,3 +6406,282 @@ può contestare**, ed è più utile di dieci nei nostri file di esiti.
 >
 > ⇒ ⚠ *Il costo di saltare il punto 0 di `LEZIONI.md` §9 non è il tempo dello studio: è il codice
 > scritto nel frattempo, e la fiducia spesa a difenderlo.*
+
+
+---
+
+## REMOTIX «autonomo»? Inventario dei componenti di terzi
+
+*Studio di sola lettura, 10 ottobre 2026. Fonti: il deposito sul ramo `full-english` (commit `e24c303`), il
+binario costruito sul server (`/media/REMOTIX/src/full-english-uscite/server-c/nuovo/src/remotix`, letto con
+`ldd`), i pacchetti in `packaging/`, l'installatore in `installatore/vendor/`.*
+
+---
+
+### In mezza pagina: cosa decidere
+
+**Un REMOTIX senza componenti di terzi non può esistere.** REMOTIX mostra nel browser un desktop che non è suo
+(GNOME, KDE, XFCE, LXQt), lo cattura con una scheda video che parla solo attraverso i suoi driver, e lo consegna
+a un browser che non è suo. Questi tre pezzi restano di altri per sempre. Quello che si può scegliere è **quanti
+pezzi di altri portiamo dentro noi**, e **quanti ne chiediamo alla distribuzione**.
+
+**Dove siamo oggi** (il quadro è già buono):
+- Dentro quello che distribuiamo ci sono **solo pezzi con licenze permissive** (MIT, BSD, Apache), più **un
+  piccolo pezzo LGPL** (la descrizione di un protocollo di KDE). **Nessuna GPL.** L'unico obbligo è
+  **allegare i testi delle licenze**, e lo script che li raccoglie esiste già.
+- Tutto il resto (una trentina di librerie, i desktop, i driver, systemd, PipeWire, i browser) lo dà la
+  distribuzione o l'utente: **nessun obbligo legale per noi**.
+
+**Raccomandazione:**
+1. ⛔ **Non sostituire nessun componente grande con codice nostro.** I candidati «grossi» (il trasporto QUIC,
+   la crittografia, il login di sistema, PipeWire, i driver) sono proprio quelli dove un errore nostro diventa
+   una falla raggiungibile da Internet, e dove oggi ci proteggono migliaia di occhi altrui. Per la regola
+   *complessità = vulnerabilità*, rifarli in casa **aumenta** il rischio, non lo toglie.
+2. ✅ **Una cosa da fare subito, piccola (ore, non settimane)**: rimettere nel `.run` il file con i testi delle
+   licenze (oggi non c'è: `packaging/rilascio.sh` lo segna come punto aperto) e **completarlo** con tre voci
+   che oggi mancano: la libreria audio dentro la pagina, le descrizioni dei protocolli Wayland, i pezzi di
+   emscripten. La licenza di REMOTIX (§8) **promette già** che quei testi accompagnano il prodotto: oggi la
+   promessa non è mantenuta.
+3. 🔸 **Una sostituzione possibile ma non urgente**: GLib (usata solo per parlare via D-Bus con GNOME, KDE e
+   systemd). Toglierla leverebbe ~9 librerie indirette. Costa 2-4 settimane e una suite completa sui 4 desktop;
+   non porta nulla di legale né di sicurezza. Da tenere nel cassetto, non da fare.
+4. Correggere una frase delle SPECIFICHE (§11.4): dice «tutte le librerie del server sono permissive», ma
+   alcune della distribuzione sono **LGPL** (glibc, GLib, e altre). È **lecito** (collegate dinamicamente,
+   l'LGPL lo permette), ma la frase va resa vera: «nessuna GPL; le LGPL della distribuzione, collegate
+   dinamicamente, sono ammesse».
+
+**In una riga**: l'autonomia **legale** è a portata di qualche ora di lavoro; quella **tecnica** non si compra
+riscrivendo, si compra scegliendo pochi fornitori solidi (già fatto); quella **di distribuzione** è una scelta
+di prodotto, e il suo prezzo è portarsi dietro gli aggiornamenti di sicurezza.
+
+---
+
+### 1. L'inventario completo
+
+Legenda dell'ultima colonna: **sì** = la licenza ci chiede qualcosa (di solito allegare il testo e il nome
+degli autori); **no** = è un pezzo che installa la distribuzione o l'utente, coi suoi testi.
+
+### 1a. Incorporati in ciò che distribuiamo
+
+Sono i pezzi di altri che finiscono **dentro i nostri file**: nel programma `remotix`, nella pagina web che il
+programma serve, nell'installatore `remotix-install`.
+
+| componente | a cosa serve in REMOTIX | licenza | chi lo mantiene | obbligo nostro |
+|---|---|---|---|---|
+| **ngtcp2** 1.25.0 | il **QUIC**: il «tubo» di rete veloce su cui viaggiano immagini, audio e comandi verso il browser | MIT | progetto ngtcp2 (Tatsuhiro Tsujikawa e contributori; lo stesso autore di nghttp2, usato da curl) | **sì** — testo MIT. Già in `debian/copyright` e in `licenze.py` |
+| **nghttp3** 1.18.0 | l'**HTTP/3** sopra QUIC, su cui poggia WebTransport | MIT | stesso progetto | **sì** — come sopra |
+| **libopus** 1.5.2, compilata in WebAssembly **dentro la pagina** (`src/opus-wasm/`) | **decodifica l'audio nel browser**. Scelta misurata (D-006, 25 set): il decodificatore di Firefox, sotto carico video, faceva 3-5 buchi al minuto; questo zero | BSD-3 | Xiph.Org | **sì** — testo BSD. ⚠ **Oggi non è nel file delle licenze** (`licenze.py` non la conosce) |
+| **pezzi della libreria C di emscripten** dentro lo stesso `opus.wasm` (la memoria, le copie: lo strumento li mette per far girare libopus nel browser) | nessuno visibile: servono a libopus | MIT / UIUC (emscripten), MIT (musl) | progetto Emscripten | **sì**, a rigore. ⚠ **Non elencati** |
+| **8 descrizioni di protocolli Wayland** (`src/protocolli/*.xml`): da queste si genera codice che entra nel binario | sono i «moduli» per parlare con i compositori: catturare lo schermo (wlroots, KDE), tastiera e puntatore virtuali, appunti, misura del monitor | 7 MIT o simili (wlroots, Collabora, Purism, Simon Ser); **1 LGPL-2.1+**: `zkde-screencast` (KDE) | freedesktop / wlroots / KDE | **sì**. ⚠ **Non elencati**. Il pezzo LGPL vedi §2 |
+| **Go** (il linguaggio: runtime e libreria standard) | il motore dell'installatore | BSD-3 | Google | **sì** — già in `licenze.py` |
+| **golang.org/x/sys, x/text, x/exp** | chiamate di sistema, testo | BSD-3 | Google (progetto Go) | **sì** — già |
+| **Charm**: bubbletea, lipgloss, x/ansi, x/term, x/cellbuf, colorprofile | la **TUI** dell'installatore (finestre, colori, tasti nel terminale) | MIT | Charmbracelet Inc. (azienda, molto usata) | **sì** — già |
+| **godbus/dbus** | l'installatore interroga systemd e il sistema via D-Bus | BSD-2 | volontari (Georg Reinke e altri) | **sì** — già |
+| muesli/termenv, ansi, cancelreader · mattn/go-isatty, go-runewidth, go-localereader · rivo/uniseg · lucasb-eyer/go-colorful · xo/terminfo · aymanbagabas/go-osc52 · erikgeiser/coninput | pezzi di supporto alla TUI: larghezza dei caratteri, colori, capacità del terminale | tutti MIT | singoli volontari | **sì** — già (go-localereader con l'eccezione scritta in `licenze.py`) |
+
+*Nota: il binario di sviluppo sul server collega ngtcp2 e nghttp3 **dinamicamente** (da `rete11/prodotto/lib`);
+nei pacchetti di rilascio sono **statici**, dentro il binario (DECISIONI §10.6, D2). Per la licenza conta il
+rilascio.*
+
+*Nota: il resto della pagina web è tutto nostro: nessuna libreria JavaScript, nessun font incorporato (si usano
+quelli del sistema), le icone sono SVG scritti a mano.*
+
+### 1b. Librerie della distribuzione collegate al programma
+
+Dall'`ldd` del binario costruito (10 ott) e dalle dipendenze dei pacchetti `.deb`, `.rpm`, Arch. Le installa il
+gestore dei pacchetti; i testi delle licenze li porta la distribuzione.
+
+| libreria | a cosa serve in REMOTIX | licenza | chi la mantiene | obbligo |
+|---|---|---|---|---|
+| **OpenSSL 3** (libssl, libcrypto) ≥ 3.5 | la **cifratura**: il TLS dentro QUIC, i certificati, la pagina in HTTPS | Apache-2.0 | OpenSSL Foundation | no |
+| **Linux-PAM** (libpam) | il **login**: controlla nome e parola d'ordine esattamente come la macchina (blocchi, SELinux, LDAP compresi: DECISIONI §10.18) | BSD-3 (o GPL, a scelta: noi usiamo la BSD) | Linux-PAM (volontari, Red Hat) | no |
+| **GLib / GIO / GObject** | parlare via **D-Bus** con GNOME (Mutter), KDE, logind, appunti di KDE | LGPL-2.1+ | GNOME | no (collegata dinamicamente: l'LGPL lo permette) |
+| **libpipewire** | ricevere lo **schermo** da GNOME e KDE, e l'**audio** di tutti i desktop | MIT | PipeWire (Collabora, Red Hat) | no |
+| **libva**, libva-drm | **codifica video sulla scheda** Intel (e AMD dove serve) | MIT | Intel | no |
+| **libvulkan** (il caricatore Khronos) | **codifica video sulla scheda** AMD e NVIDIA (Vulkan Video, fase 19) | Apache-2.0 | Khronos / LunarG | no |
+| **libei** | **tastiera e mouse** su GNOME e KDE | MIT | freedesktop (Red Hat) | no |
+| **libxkbcommon** | le **mappe della tastiera** (italiana, americana…) | MIT | freedesktop | no |
+| **libwayland-client** | parlare con i **compositori** (wlroots, labwc, KWin) | MIT | freedesktop | no |
+| **libgbm** (Mesa), **libdrm** | i **fogli di memoria della scheda** (la «copia zero») | MIT | Mesa / freedesktop | no |
+| **libopus** | **codifica dell'audio** sul server | BSD-3 | Xiph.Org | no |
+| **glibc** (libc, libm) | la base di ogni programma C | LGPL-2.1+ | GNU | no |
+| indirette (le tira dentro GLib, PAM, ecc.): zlib, zstd, pcre2, expat, libffi, libselinux, libcap-ng, libaudit, libmount, libblkid, libgmodule, libatomic | nessuno diretto | zlib, BSD/GPLv2 a scelta, BSD-3, MIT, MIT, pubblico dominio, LGPL-2.1, LGPL-2.1, LGPL-2.1+, LGPL-2.1+, LGPL-2.1+, GPL-3 **con l'eccezione** che la rende libera per qualsiasi programma | vari | no |
+
+### 1c. Programmi e servizi usati mentre REMOTIX gira
+
+Non sono collegati al nostro programma: REMOTIX li **avvia** o ci **parla**. Tra programmi separati la licenza
+dell'uno non tocca l'altro. **Nessun obbligo.**
+
+| programma / servizio | a cosa serve | licenza | chi lo mantiene |
+|---|---|---|---|
+| **kernel Linux** | la scheda video (DRM), la memoria condivisa, la rete | GPL-2 (le chiamate al kernel non contano come «opera derivata») | Linux Foundation e tutti |
+| **systemd** (logind, gestore delle sessioni utente, tmpfiles), `loginctl`, `systemctl` | aprire e chiudere le sessioni degli utenti | LGPL-2.1+ | systemd (Red Hat e altri) |
+| moduli PAM `pam_systemd`, `pam_listfile`, `pam_selinux`; `usermod` | il login completo, la lista degli utenti negati | vari permissivi / GPL | distribuzione |
+| **D-Bus** (bus di sistema e dell'utente) | il canale per parlare con desktop e systemd | AFL/GPL | freedesktop |
+| **GNOME**: gnome-shell, Mutter, gnome-session | il desktop GNOME; Mutter dà schermo e input a REMOTIX | GPL | GNOME |
+| **KDE Plasma**: KWin, startplasma-wayland | il desktop KDE | GPL | KDE |
+| **XFCE** (xfce4-session), **LXQt** | i due desktop «leggeri» | GPL / LGPL | XFCE, LXQt |
+| **labwc** | il compositore sotto cui REMOTIX fa girare XFCE e LXQt | GPL-2 | volontari (Johan Malm e altri) |
+| **wlr-randr**, **Xwayland**, un font scalabile | misura/taglia del monitor su XFCE e LXQt; i programmi X11 (pannello di XFCE) | MIT, MIT, vari | volontari, freedesktop |
+| **PipeWire** (il servizio), **WirePlumber**, pipewire-pulse | il flusso dello schermo (GNOME, KDE) e dell'audio | MIT | PipeWire (Collabora, Red Hat) |
+| **driver della scheda**: Intel `intel-media-driver`, Mesa (radeonsi, RADV), NVIDIA proprietario | fanno davvero la codifica H.264/HEVC | MIT/BSD; NVIDIA chiuso | Intel, Mesa, NVIDIA |
+| **gestori dei pacchetti**: apt, dpkg, dnf, rpm, zypper, pacman | l'installatore li comanda | GPL (programmi separati) | distribuzioni |
+| **ufw / firewalld**, **SELinux** (modulo `remotix-selinux`) | aprire la porta, permettere il passaggio all'utente | GPL | distribuzioni |
+| **attrezzi di costruzione** (non arrivano all'utente): gcc, Go, emscripten, podman, wayland-scanner, glslang | compilare | vari | vari |
+
+### 1d. I browser
+
+| browser | cosa usa REMOTIX | licenza | chi lo mantiene |
+|---|---|---|---|
+| **Chrome / Chromium** (e Edge) | **WebTransport** (il tubo QUIC lato browser), **WebCodecs** `VideoDecoder` (decodifica H.264/HEVC con la scheda del cliente), WebAssembly (l'audio), la tela `bitmaprenderer` | BSD-3 (Chromium) | Google |
+| **Firefox** | le stesse cose, solo H.264 su Linux | MPL-2.0 | Mozilla |
+| Safari | mai provato | — | Apple |
+
+Nessun obbligo: il browser è dell'utente. Ma è la dipendenza **più forte** di tutte: WebTransport è ancora una
+bozza in evoluzione, e quando i browser la cambiano, REMOTIX deve seguirli (lo fa oggi tramite ngtcp2/nghttp3 e
+le nostre 9 000 righe di `webtransport.c`).
+
+---
+
+### 2. Sostituirli con codice nostro: cosa costerebbe, cosa rischierebbe
+
+Il criterio è la regola del progetto: **ogni pezzo di codice nostro in più deve dimostrare che cosa protegge**.
+Un componente sostituito vale la pena se toglie un **rischio vero** (legale, di sicurezza, di abbandono) più
+grande del rischio che aggiunge il nostro codice nuovo.
+
+### Il precedente: ffmpeg, tolto nella fase 18 (30 settembre)
+
+È l'unico caso già fatto, e insegna molto.
+- **Perché**: ffmpeg (libavcodec) nelle distribuzioni è **GPL**, incompatibile con una licenza non commerciale
+  (DECISIONI §10.22, §10.25). Un rischio **legale vero**, non teorico.
+- **Che cosa è costato**: ~2 250 righe nostre nuove (`vadiretta.c` 1 782: parlare con la scheda e **scrivere a
+  mano le intestazioni H.264/HEVC bit per bit**; `scrittore_bit.c` 132; `colori709.c` 330), una giornata
+  intensa di lavoro in parallelo, la suite completa sulle 4 scatole (673 prove, 135 minuti), e misure di
+  confronto vecchio/nuovo. Una regressione trovata a metà strada (la conversione dei colori «dalla memoria» era
+  peggiorata, fino a −6 dB sulla Radeon) e corretta prima di chiudere.
+- **Che cosa ha reso**: la licenza è libera; meno librerie; la preparazione delle immagini «dalla memoria» è
+  diventata **due volte più veloce**.
+- **E la lezione**: ffmpeg **non è stato sostituito da codice nostro e basta**: è stato sostituito da **libva**,
+  un altro componente di terzi, più sottile e permissivo. Abbiamo scritto noi la parte facile e stabile (le
+  intestazioni del flusso, che sono uno standard fisso), e lasciato ad altri quella difficile (parlare con ogni
+  scheda). Questa è la forma buona di «autonomia». Il prezzo che resta: le 2 250 righe sono ora **nostre da
+  mantenere** — se un browser o una scheda si aspetta un dettaglio diverso nelle intestazioni, il guasto è nostro.
+
+### Componente per componente
+
+**Fattibilità**: *impossibile* = non si può fare senza cambiare cosa è REMOTIX; *irragionevole* = si può, ma il
+costo o il rischio sono sproporzionati; *possibile* = si può con uno sforzo misurabile.
+
+| componente | fattibilità | sforzo grossolano | rischio se lo facciamo noi | verdetto |
+|---|---|---|---|---|
+| **ngtcp2 + nghttp3** (QUIC, HTTP/3) | irragionevole | 6-12 mesi di un esperto; poi **per sempre** (i browser cambiano WebTransport) | ⛔ **il più alto di tutti**: è il primo codice che legge i pacchetti di **chiunque** su Internet, **prima** del login. ngtcp2 è controllato di continuo da strumenti automatici di ricerca di difetti (OSS-Fuzz) e usato da curl; il nostro non lo sarebbe. Una falla qui è una porta aperta sul server | ⛔ **mai** |
+| ↳ alternativa: il QUIC che **OpenSSL 3.5** ha già dentro | da verificare | un banco di prova, giorni | toglierebbe ngtcp2 ma non nghttp3; per quanto ne so non gestisce i «datagram» QUIC che REMOTIX usa (81 punti in `webtransport.c`), e la scelta §6.4 l'ha già vagliata contro 4 candidate | non ora; solo se ngtcp2 fosse abbandonato |
+| **OpenSSL** (crittografia) | irragionevole | anni | ⛔ «mai scrivere la propria crittografia» è la regola più vecchia della sicurezza | ⛔ **mai** |
+| **PAM** (login) | impossibile | — | ⛔ leggere da soli le parole d'ordine di sistema significherebbe **perdere** blocchi dei conti, SELinux, LDAP, e aggirare la politica della macchina (§10.18 dice il contrario: REMOTIX **rispecchia** il sistema) | ⛔ **mai** |
+| **GLib/GIO** (solo per D-Bus) | possibile | 2-4 settimane (un piccolo client D-Bus nostro, o `sd-bus` di systemd, che è comunque di terzi) + suite sui 4 desktop | medio: il D-Bus è locale (non arriva da Internet), ma è un formato con trappole; sbagliarlo rompe GNOME o KDE. Guadagno: −1 libreria diretta e ~9 indirette, nessun guadagno legale | 🔸 nel cassetto |
+| **libpipewire** | irragionevole | mesi, e da rifare a ogni versione | il protocollo interno di PipeWire **non è stabile**: un client nostro si romperebbe a ogni aggiornamento della distro. È l'unica porta per lo schermo di GNOME e KDE | ⛔ no |
+| **libva** | impossibile | — | sotto libva c'è il driver di ogni scheda: sostituirla vorrebbe dire scrivere driver | ⛔ no |
+| **caricatore Vulkan** | possibile | giorni | si potrebbe aprire direttamente il driver; si perde la gestione di più schede e degli strati. Guadagno zero | ⛔ no |
+| **libei, libxkbcommon, libwayland-client, libgbm, libdrm** | irragionevole | settimane ciascuna | protocolli e formati che cambiano coi desktop; xkbcommon da sola è un compilatore di mappe di tastiera. Guadagno zero (sono in ogni distro, MIT) | ⛔ no |
+| **libopus** (server) | irragionevole | un codificatore audio di qualità = anni di ricerca | qualità audio peggiore, garantito | ⛔ no |
+| **libopus nella pagina** (WebAssembly) | possibile tornare al decodificatore **del browser** | ore | ⛔ ritornano i buchi audio misurati su Firefox (D-006). Il pezzo c'è **per una misura**, cioè dimostra cosa protegge | ⛔ no: si allega il testo BSD e basta |
+| **descrizioni dei protocolli Wayland** | impossibile | — | sono il «contratto» col compositore: devono essere identiche alle sue | si rispetta la licenza (vedi sotto) |
+| **Go** e moduli **x/** | impossibile / irragionevole | — | è il linguaggio | no |
+| **Charm** (TUI) e i 12 moduli di supporto | possibile | 3-6 settimane per una TUI nostra «curata» (§10.31) | medio-basso: i terminali sono un campo minato (larghezze dei caratteri, colori, tasti, Unicode). Oggi i moduli sono **copiati nel deposito e bloccati alla versione** (`vendor/`): il rischio «un aggiornamento malevolo arriva da solo» è già nullo | ⛔ no: guadagno solo estetico sull'elenco delle licenze |
+| **godbus** | possibile | 1 settimana | basso, ma nessun guadagno | ⛔ no |
+| **desktop, labwc, PipeWire servizio, systemd, D-Bus, kernel, driver** | impossibile | — | sono l'**oggetto** del prodotto. Un compositore nostro al posto di labwc violerebbe anche la regola «niente eccezioni per compositore» | ⛔ no. (Togliere labwc/wlr-randr/Xwayland si può solo **togliendo XFCE e LXQt**: è una decisione di prodotto, non di autonomia) |
+| **browser** | impossibile | — | il browser come cliente è la scelta fondante (§1.6); l'alternativa è un programma nostro da installare sui PC e telefoni, cioè **più** dipendenze, non meno | ⛔ no |
+
+### Il pezzo LGPL: `zkde-screencast` (KDE)
+
+È l'unica descrizione di protocollo con licenza LGPL-2.1+ (le altre 7 sono MIT o simili). Dal suo file si genera
+una piccola tabella (i nomi delle funzioni del protocollo) che entra nel nostro binario. L'LGPL in un programma
+non libero chiede due cose: **allegare il testo** e **non impedire** a chi riceve il programma di modificare e
+rimettere insieme quel pezzo. La nostra licenza (§10.39) vieta le modifiche, **ma** il suo §8 dice già che *«nulla
+in questa licenza limita i diritti che le licenze dei componenti di terzi danno»*, e il sorgente è pubblico e
+compilabile. Quindi, a mio giudizio da non avvocato, **basta allegare il testo LGPL con la nota** di quale pezzo
+riguarda. Non serve sostituirlo (e non si potrebbe: è il contratto con KWin). ⚠ È l'unico punto del documento
+che merita un «da verificare» sul piano legale.
+
+---
+
+### 3. Che cosa vuol dire davvero «autonomo»
+
+Sono tre cose diverse, e ognuna ha il suo prezzo.
+
+### Autonomia legale — «non dover allegare testi di licenza di altri»
+
+- **Che cosa la ottiene, al 100%**: non avere **nessun** pezzo di altri dentro i nostri file. Cioè riscrivere
+  QUIC, HTTP/3, il decodificatore Opus della pagina, la TUI dell'installatore, e rinunciare a Go. ⛔ Impossibile
+  a costo ragionevole (vedi §2).
+- **Che cosa la ottiene, nella sostanza (consigliato)**: avere **solo licenze permissive** (già così, salvo il
+  pezzo LGPL che si risolve allegando il testo) e un **file delle licenze completo e automatico** dentro ogni
+  rilascio. Allegare un file di testo **non limita nulla**: nessuna di queste licenze chiede di aprire il nostro
+  codice, né di permettere la redistribuzione, né di cambiare la nostra licenza. MIT, BSD e Apache chiedono solo
+  «cita chi l'ha scritto».
+- **Prezzo**: qualche ora per completare `licenze.py` (libopus-wasm, emscripten, protocolli Wayland, testo LGPL)
+  e rimetterlo nel `.run`. Poi zero: lo genera la macchina a ogni rilascio, e se manca un testo il rilascio si
+  ferma (lo script già esce con errore).
+- ⚠ Il file `licenze.py` ha ancora nell'intestazione «PolyForm Noncommercial (§10.22)»: va aggiornato alla
+  licenza di §10.39.
+
+### Autonomia tecnica — «non dipendere da progetti che possono cambiare o morire»
+
+- **La verità**: le dipendenze che **possono** davvero cambiare sotto i piedi (i desktop, PipeWire, i driver, i
+  browser e WebTransport) sono proprio quelle **impossibili** da sostituire. Quelle sostituibili (TUI, godbus,
+  GLib) sono anche le più stabili e meno rischiose.
+- **Che cosa la ottiene davvero**:
+  1. **pochi fornitori, solidi e permissivi** — già fatto: ffmpeg fuori, OpenH264 e SVT-AV1 fuori, libyuv mai
+     entrata;
+  2. **versioni bloccate** dove portiamo noi il pezzo (ngtcp2/nghttp3 a versione fissa con impronta controllata;
+     moduli Go nel deposito) — già fatto;
+  3. **banchi che si accorgono subito** quando un fornitore cambia (es. il banco che riprova la riscrittura delle
+     impostazioni di nghttp3 a ogni aggiornamento, DECISIONI §6.4) — già fatto in parte;
+  4. **sapere quale alternativa c'è** se un fornitore muore: per QUIC sono documentate quiche, lsquic, OpenSSL.
+- **Prezzo**: basso, è manutenzione. Il prezzo **alto** sarebbe l'opposto: ogni riga che scriviamo al posto di
+  una libreria la dobbiamo seguire **noi**, per sempre, da soli.
+
+### Autonomia di distribuzione — «non dipendere da quello che la distro ha o non ha»
+
+- **Che cosa la ottiene**: portare dentro il nostro pacchetto (statiche, come ngtcp2) le librerie che servono,
+  invece di chiederle alla distribuzione. È già la regola di DECISIONI §10.6: *se la distro non l'ha, o l'ha
+  troppo vecchia, la porta REMOTIX*.
+- **Prezzo**: ogni libreria portata dentro è una libreria i cui **aggiornamenti di sicurezza diventano nostri**.
+  Se esce una falla in ngtcp2, la distribuzione non ci salva: dobbiamo ricostruire e pubblicare noi. Portare
+  dentro OpenSSL, GLib o PipeWire vorrebbe dire inseguire le loro falle (OpenSSL ne ha diverse all'anno) e
+  rischiare di **non combaciare** con la versione che usa il desktop (PipeWire e libei devono parlare la stessa
+  lingua del servizio installato).
+- **Limite insuperabile**: i desktop, i driver con i codec (brevetti: §10.6 vieta di distribuirli) e il servizio
+  PipeWire **non si possono portare dentro**. Quindi l'autonomia di distribuzione non arriva mai al 100%.
+- **Raccomandazione**: restare dove siamo — dentro solo ciò che manca davvero (oggi ngtcp2 e nghttp3); tutto il
+  resto dalla distribuzione, che lo aggiorna gratis per noi.
+
+---
+
+### 4. Raccomandazione
+
+**Da fare (convengono):**
+1. **Il file delle licenze, completo, dentro ogni `.run`** — ore. Aggiungere: libopus 1.5.2 in WebAssembly
+   (BSD-3), i pezzi di emscripten (MIT), le 8 descrizioni dei protocolli Wayland (7 MIT/simili + 1 LGPL-2.1 col
+   suo testo), aggiornare l'intestazione alla licenza §10.39. Mantiene la promessa del §8 della nostra licenza.
+2. **Correggere SPECIFICHE §11.4**: «nessuna GPL; le LGPL della distribuzione collegate dinamicamente sono
+   ammesse». Oggi la frase «tutte permissive» non è vera, e una regola falsa prima o poi fa prendere una
+   decisione sbagliata.
+3. **Tenere viva la sorveglianza** su ngtcp2/nghttp3: sono gli unici due pezzi con aggiornamenti di sicurezza a
+   carico nostro. Serve un modo di accorgersi delle loro uscite di sicurezza (anche solo seguire i loro avvisi su
+   GitHub) e il banco che riprova la riscrittura delle impostazioni.
+
+**Possibile più avanti, non ora:**
+4. GLib → un piccolo client D-Bus (2-4 settimane). Solo se un giorno GLib desse problemi concreti.
+
+**Da non fare mai:**
+- riscrivere **QUIC/HTTP/3**, la **crittografia**, il **login (PAM)**: sono le difese del server, e lì il
+  codice nostro sarebbe il punto più debole di tutto il prodotto;
+- riscrivere il client **PipeWire**, i **driver** (via libva/Vulkan), le librerie di **input e tastiera**:
+  sono contratti con altri progetti che cambiano, e rincorrerli è un lavoro senza fine;
+- togliere il **decodificatore Opus della pagina**: c'è per una misura, e dimostra cosa protegge;
+- portare dentro i nostri pacchetti **OpenSSL, GLib, PipeWire**: le loro falle diventerebbero nostre.
+
+**In sintesi**: REMOTIX è già «autonomo» nel senso che conta — nessuna licenza di altri impone nulla al nostro
+codice, e i fornitori sono pochi, solidi e permissivi. Il resto delle dipendenze non è un debito: è il lavoro di
+migliaia di persone che ci difende gratis.
