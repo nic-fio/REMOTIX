@@ -1,0 +1,34 @@
+{"file": "installatore/motore/preflight.go", "prima": "ID e ID_LIKE", "dopo": "ID and ID_LIKE"}
+{"file": "installatore/motore/azione_servizio.go", "prima": " tcp e udp in ascolto", "dopo": " tcp and udp listening"}
+{"file": "installatore/motore/azione_servizio.go", "prima": "attivo ma ", "dopo": "active but "}
+{"file": "installatore/motore/compatibilita.go", "prima": " (decisione ", "dopo": " (decision "}
+{"file": "installatore/motore/disinstalla.go", "prima": "disfatto: ", "dopo": "undone: "}
+{"file": "installatore/motore/gestore.go", "prima": "doppio: ", "dopo": "duplicate: "}
+{"file": "installatore/motore/operazione.go", "prima": "era ", "dopo": "was "}
+{"file": "installatore/motore/operazione.go", "prima": "%s (sequenza %d)", "dopo": "%s (sequence %d)"}
+{"file": "installatore/motore/preflight.go", "prima": "] spento", "dopo": "] disabled"}
+{"file": "installatore/motore/preflight.go", "prima": "cartelle dri", "dopo": "dri folders"}
+{"file": "installatore/motore/preflight.go", "prima": "D-Bus systemd: nftables.service attiva", "dopo": "D-Bus systemd: nftables.service active"}
+{"file": "installatore/motore/preflight.go", "prima": "famiglia ", "dopo": "family "}
+{"file": "installatore/motore/strade.go", "prima": "strade.go (fase 19)", "dopo": "strade.go (phase 19)"}
+{"file": "installatore/prove/impronta/main.go", "prima": "%s ERRORE %v\n", "dopo": "%s ERROR %v\n"}
+{"file": "installatore/prove/impronta/main.go", "prima": " illeggibile", "dopo": " unreadable"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "== 1. installazione di prova, CONFERMATA attesa", "dopo": "== 1. trial installation, CONFERMATA expected"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "applica: uscita $?", "dopo": "apply: exit $?"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "-- visto da fuori:", "dopo": "-- seen from outside:"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "unità: $(systemctl is-enabled remotix-engine-test.service)", "dopo": "unit: $(systemctl is-enabled remotix-engine-test.service)"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "programmi lanciati (registro):", "dopo": "programs launched (log):"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "== 2. un passo fallisce a metà (utente inesistente, dopo file e unità): ANNULLATA attesa, /etc com'era", "dopo": "== 2. a step fails halfway (non-existent user, after files and unit): ANNULLATA expected, /etc as it was"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "/etc: identica a prima (contenuti, permessi, proprietari; non le ore delle cartelle)", "dopo": "/etc: identical to before (contents, permissions, owners; not the times of the folders)"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "/etc: DIVERSA", "dopo": "/etc: DIFFERENT"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "unità: $(systemctl is-enabled remotix-engine-test.service 2>&1)", "dopo": "unit: $(systemctl is-enabled remotix-engine-test.service 2>&1)"}
+{"file": "installatore/prove/systemd-giro.sh", "prima": "sistema: $s", "dopo": "system: $s"}
+{"file": "installatore/prove/r1-contenitori.sh", "prima": "verifica: uscita $?", "dopo": "check: exit $?"}
+{"file": "installatore/prove/r1-contenitori.sh", "prima": "verifica --json: uscita $?", "dopo": "check --json: exit $?"}
+{"file": "installatore/prove/r1-contenitori.sh", "prima": "R1 PASS: /etc identica ($(grep -c . /tmp/prima) voci)", "dopo": "R1 PASS: /etc identical ($(grep -c . /tmp/prima) entries)"}
+{"file": "installatore/prove/r1-contenitori.sh", "prima": "---- verifica (testo)", "dopo": "---- check (text)"}
+{"file": "installatore/prove/r1-contenitori.sh", "prima": "esiti completi in $esiti/", "dopo": "full results in $esiti/"}
+{"file": "installatore/prove/gruppi-desktop.sh", "prima": "fedora44 $g si", "dopo": "fedora44 $g yes"}
+{"file": "installatore/prove/gruppi-desktop.sh", "prima": "alma10 $g si", "dopo": "alma10 $g yes"}
+{"file": "installatore/prove/gruppi-desktop.sh", "prima": "tumbleweed $g si", "dopo": "tumbleweed $g yes"}
+{"file": "installatore/prove/gruppi-desktop.sh", "prima": "arch $g si ($n)", "dopo": "arch $g yes ($n)"}

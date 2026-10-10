@@ -1,0 +1,892 @@
+nome	name	
+guasto	fault	glossario
+esito	outcome	
+riga	line	? anche «linea» → line: collisione possibile
+sessione	session	
+fuori	out	FUORI = cartella d'uscita; fuori_posto = out_of_place
+visto	seen	
+tela	canvas	glossario
+registro	log	glossario: register, log
+righe	lines	
+di	of	
+utente	user	
+stato	state	? anche participio «stato» (e_stato_ammesso = has been admitted)
+porta	port	
+chi	who	
+non	not	
+scena	scene	
+prima	before	? anche aggettivo «prima» = first (prima_volta, prima_chiave)
+reg	log	abbreviazione di registro (REG_FIGLIO, reg(s, …)); nel Vulkan vendorizzato reg è inglese
+il	-	
+testo	text	
+prova	test	
+perche	why	? spesso è il buffer del motivo (char *perche): reason sarebbe più chiaro, ma collide con motivo
+la	-	
+giro	round	glossario/manuale: round
+atteso	expected	
+dentro	inside	DENTRO = percorso nel contenitore
+da	from	
+quanti	how_many	
+dice	says	
+dopo	after	
+percorso	path	
+tipo	type	
+esiti	outcomes	
+errore	error	
+corpo	body	
+caso	case	
+tetto	cap	glossario: ceiling, cap
+palco	stage	glossario
+qui	here	
+chiave	key	glossario: key (keyframe); anche chiave di dizionario e chiave del ban; collide con tasto → key
+dati	data	
+parola	word	
+appunti	clipboard	glossario
+cattura	capture	glossario
+attesa	wait	
+larghezza	width	
+misura	measure	? a volte «dimensione» (misura_vista)
+uscita	output	? anche exit (codice d'uscita); prevale wl_output e file d'uscita
+che	that	
+si	-	pronome riflessivo (ComeSiFa)
+leggi	read	
+altezza	height	
+guai	troubles	
+va	-	? quasi sempre VA-API (inglese): da NON tradurre; «va» italiano raro
+fine	end	? anche aggettivo «fine» (deriva_fine_ms = fine drift)
+secondi	seconds	
+ora	now	ora_ms = now_ms; raro «hour»; collide con adesso → now
+per	per	? «per» italiano = for/per; per_nome sarebbe by_name, ma per va bene quasi ovunque
+passo	step	? anche stride delle righe pixel (passo_y, passo_uv)
+pagina	page	
+giudica	judge	
+del	of	? attenzione: «del» è parola chiave di Python, la sostituzione deve toccare solo gli identificatori composti
+dove	where	
+ultimo	last	
+un	-	
+coda	queue	
+con	with	
+senza	without	
+su	on	
+codice	code	
+verde	green	
+scrivi	write	
+schermo	screen	
+marca	mark	glossario
+motivo	reason	
+media	mean	? anche inglese media (MediaSource, mediaCapabilities, SPA_MEDIA): tradurre solo dove è la media aritmetica
+sbaglio	mistake	
+apri	open	
+sano	healthy	
+rosso	red	
+figlio	child	glossario
+le	-	
+primo	first	
+guasti	faults	
+nomi	names	
+casi	cases	
+manda	send	
+mio	my	
+motore	engine	glossario
+sonda	probe	
+come	as	? anche «how» (ComeSiFa, come_si_chiama); prevale come_utente = as_user
+rete	network	
+conti	counts	
+finestra	window	
+scheda	card	
+rossi	red	plurale: in inglese l'aggettivo non cambia
+vista	view	glossario
+flusso	stream	
+nodo	node	
+comando	command	
+modo	mode	
+cliente	client	
+chiudi	close	
+formato	format	
+controllo	check	
+bene	well	
+banco	bench	glossario
+giri	rounds	
+nota	note	
+scatola	box	glossario
+certifica	certify	glossario
+verdetto	verdict	glossario
+fermo	stopped	
+una	-	
+cartella	folder	
+impronta	fingerprint	glossario
+codificatore	encoder	glossario
+passa	pass	
+ha	has	
+profilo	profile	
+muto	mute	
+soglia	threshold	
+campioni	samples	
+unita	unit	
+vero	true	
+tastiera	keyboard	glossario
+quante	how_many	
+voce	entry	
+accendi	turn_on	
+al	to	? spesso «al secondo» = per second (fotogrammi_al_secondo)
+etichetta	label	
+fotogrammi	frames	
+solo	only	? «solo» inglese compare nei banchi (cont contro solo)
+conto	count	
+visti	seen	
+quale	which	
+albero	tree	
+colore	color	
+blocco	block	
+durata	duration	
+testa	head	
+cod	enc	abbreviazione di codificatore (audio_cod, larg_cod)
+puntatore	pointer	
+amb	env	abbreviazione di ambiente
+tutti	all	
+versione	version	
+tot	total	
+strada	route	glossario
+ritmo	rate	glossario
+detto	said	
+ritardo	delay	
+gruppi	groups	
+dettaglio	detail	
+indirizzo	address	
+ferma	stop	
+nuovo	new	
+niente	nothing	
+serve	needs	? serve_chiave = needs_key; «serve» inglese solo in serve_forever (libreria)
+chiama	call	
+macchina	machine	
+spegni	turn_off	
+numero	number	
+lo	-	? pronome (chi_lo_dice); «lo» inglese = low nel codice SIMD/Wayland (tv_sec_lo): da non toccare lì
+radice	root	
+io	i	IO_SONO = I_AM; G_IO_ERROR e BytesIO sono inglesi
+pezzi	pieces	
+resta	stays	
+foto	photo	
+due	two	
+carico	load	
+banchi	benches	glossario
+livello	level	
+prodotto	product	
+piano	plan	glossario
+ancora	still	? anche àncora = anchor (a.ancora, PORTA_ANCORA, anc_a)
+forma	shape	glossario
+dal	from	
+lavoro	work	
+filo	wire	manuale: tetto_filo (wire)
+misure	measures	
+fase	phase	
+finto	fake	
+contesto	context	
+adesso	now	collide con ora → now
+segno	sign	
+chiesta	requested	
+prof	profile	abbreviazione di profilo (c_prof, prof_disp)
+lung	len	abbreviazione di lunghezza
+istante	instant	
+gira	runs	
+vivo	alive	
+alt	height	? abbreviazione di altezza (alt_cod, ALT_CONT); attenzione ad AltGr e al tasto Alt
+canale	channel	
+fotogramma	frame	
+nuova	new	
+profondita	depth	
+ind	addr	abbreviazione di indirizzo (char ind[64])
+azione	action	
+della	of	
+cieco	blind	
+sorgente	source	collide con fonte → source
+scala	scale	
+fatto	done	
+carica	load	
+elenco	list	
+attendi	wait	
+voci	entries	
+tutto	all	
+codifica	encoding	
+valore	value	
+stampa	print	
+cella	cell	
+disposizione	layout	glossario
+inizio	start	
+ultima	last	
+viva	alive	
+aspetta	wait	
+alb	tree	abbreviazione di albero (ALB = ALBERO, DENTRO_ALB)
+immagine	image	
+quando	when	
+fatti	done	
+muti	mute	
+conta	count	
+protocollo	protocol	
+libera	free	
+gestore	handler	
+metti	put	
+chiesto	requested	
+acceso	on	
+porte	ports	
+orologio	clock	
+pezzo	piece	
+celle	cells	
+sono	are	IO_SONO = I_AM
+posto	slot	glossario: attach slot
+tocco	touch	
+col	with	? preposizione «col» (esito_col_guasto); «col» = column nel Go del TUI: da non toccare lì
+lucchetto	lock	
+cosa	what	
+letto	read	
+intestazione	header	
+guarda	look	
+richiesta	request	
+ne	-	? pronome; «ne» è anche un contatore nel C (int na, ne)
+letti	read	
+minimo	minimum	
+se	if	
+tasti	keys	collide con chiavi → keys
+chiavi	keys	collide con tasti → keys
+figli	children	
+ciclo	cycle	
+uno	one	
+copia	copy	
+scadenza	expiry	
+blocchi	blocks	
+cursore	cursor	
+grigio	gray	
+tasto	key	collide con chiave → key
+esegui	run	
+regola	rule	
+passi	steps	
+principale	main	
+fa	does	? anche «fa» = ago (giorni_fa)
+ogni	every	
+falliti	failed	
+buono	good	
+ammesso	admitted	
+errori	errors	
+ordine	order	
+avvio	startup	
+att	expected	abbreviazione di attesi
+consegna	delivery	
+prove	tests	
+volo	flight	
+congeda	dismiss	glossario: CONGEDO = farewell
+registra	log	
+rotto	broken	
+grezzo	raw	collide con crudo → raw
+suo	its	
+minima	minimum	
+dimmi	tell_me	
+risposta	response	
+rif	ref	
+gancio	hook	glossario
+bersaglio	target	
+massimo	maximum	
+via	away	? anche inglese «via»; nel codice è italiano (figli_via, scena_via, registro_via)
+gruppo	group	
+salva	save	
+capacita	capabilities	chiedi_capacita, capacità del browser
+quanto	how_much	
+pronto	ready	
+nel	in	
+fab	make	abbreviazione di fabbrica (_fab_giornale fabbrica un giornale finto)
+lar	width	abbreviazione di larghezza
+misurato	measured	
+campi	fields	
+congedo	farewell	glossario
+serie	serial	nel codice Wayland è il «serial» del protocollo (sup_configura(…, serie))
+entra	enter	
+campo	field	
+tentativi	attempts	
+frazione	fraction	
+eco	echo	
+pacchetti	packets	? vedi pacchetto
+lettore	reader	
+gia	already	
+punti	points	
+sessioni	sessions	
+margine	margin	
+finta	fake	
+spedisci	ship	scelto per non collidere con manda → send
+resto	rest	
+valuta	evaluate	
+punto	point	
+frase	sentence	
+bloccata	blocked	
+silenzio	silence	
+note	notes	? anche inglese «note»: tradurre solo dove è il plurale di nota
+attesi	expected	
+vuoto	empty	
+pieno	full	
+indice	index	
+interfaccia	interface	
+ambiente	environment	
+eventi	events	
+terreno	terrain	glossario
+verso	towards	
+det	detail	abbreviazione di dettaglio
+azzera	reset	
+evidenze	evidence	
+corrente	current	
+verifica	verify	
+chiusura	closing	
+costruisci	build	
+secondo	second	? anche «secondo» = according to
+usc	output	abbreviazione di uscita (usc_modo, usc_geometria: wl_output)
+vecchio	old	
+voluta	intended	
+uscite	outputs	
+gesto	gesture	
+chiedi	ask	
+binario	binary	
+utenti	users	
+ascolto	listen	
+verbale	record	
+sotto	below	
+opzioni	options	
+buoni	good	
+giu	down	
+parametri	parameters	
+piu	more	
+scelta	choice	
+fetta	slice	
+tutte	all	
+sul	on	
+numeri	numbers	
+prefisso	prefix	
+superficie	surface	
+chiuso	closed	
+adatta	fit	
+tolleranza	tolerance	
+dispositivo	device	
+sigla	tag	sigla di banco o di scena (b12, B0)
+trova	find	
+ist	instant	abbreviazione di istante (ist_us)
+avvia	start	
+nostro	our	
+metro	meter	lo strumento di misura (02-giudizio-metro)
+sfratto	eviction	glossario
+restano	remain	
+sgombra	clear_out	glossario: clear out
+scarto	gap	? scarto_us = scostamento fra orologi; «scarto» = scartato altrove
+prepara	prepare	
+linea	line	? collide con riga → line (linea morta = dead line)
+alto	tall	? usato in coppia con largo come altezza (largo, alto; LARGOxALTO)
+vecchia	old	
+provenienza	provenance	non collide con origine/sorgente
+cura	fix	
+totale	total	
+origine	origin	
+titolo	title	
+modulo	module	
+nucleo	core	
+disegno	drawing	
+manca	missing	
+dx	right	? destra (taglio_dx, cornice_dx); dx = delta x altrove (convenzione inglese)
+ma	but	
+ponte	bridge	glossario
+qualita	quality	
+motivi	reasons	
+finita	finished	
+vivi	alive	
+massima	maximum	
+largo	wide	? in coppia con alto = larghezza
+gr	groups	abbreviazione di gruppi (guai_gr, quanti_gr)
+giallo	yellow	
+certificati	certificates	? anche participio «certified»
+buone	good	
+camp	samples	abbreviazione di campioni
+sequenza	sequence	
+argomenti	arguments	
+tipi	types	
+scrittore	writer	
+guardia	guard	
+memoria	memory	
+togli	remove	
+usciti	exited	
+morta	dead	
+spediti	shipped	
+colori	colors	
+era	was	
+intero	whole	? anche «integer» (leggi_intero); schermo_intero = full screen
+buchi	holes	
+banda	bandwidth	
+posizione	position	
+danno	damage	
+nella	in	
+nascita	birth	
+altro	other	
+dett	detail	abbreviazione di dettaglio
+dell	of	
+famiglia	family	
+dillo	tell	
+cerca	search	
+aperta	open	
+locale	local	
+peggio	worse	
+pulsante	button	collide con bottone → button
+vera	true	feminile di vero; collide con reale → real? no: reale → real
+evento	event	
+giornale	journal	
+maglia	mesh	glossario
+modello	model	
+ci	-	? pronome; «ci» è anche CreateInfo nel Vulkan
+flussi	streams	
+regole	rules	
+regime	steady_state	a_regime = at steady state
+fondo	background	? anche fondo scala (FONDO_SCALA) e «in fondo» = bottom; collide poco con sfondo → wallpaper
+disegni	drawings	
+attivo	active	
+prec	prev	abbreviazione di precedente
+attiva	active	? anche verbo «attiva» = activate
+regge	holds	
+dipingi	paint	
+suono	sound	glossario
+vive	alive	
+mot	reason	abbreviazione di motivo
+veri	true	
+miei	my	
+caduta	drop	
+luc	lock	abbreviazione di lucchetto
+passati	passed	
+nuove	new	
+imp	fingerprint	abbreviazione di impronta; nel Vulkan imp = import (inglese)
+magia	magic	
+questa	this	
+credito	credit	
+servizio	service	
+ciao	hello	
+male	bad	
+tempo	time	
+corto	short	
+prendi	take	
+giudizio	judgment	
+conforme	compliant	
+prossimo	next	
+dalla	from	
+par	paren	abbreviazione di parentesi (strchr(nome, '('))
+quel	that	
+tono	tone	
+stesso	same	
+parti	parts	
+inquadra	wrap	inquadra(tipo, corpo) avvolge il messaggio; non frame per non collidere con fotogramma
+letta	read	
+messaggio	message	
+gradini	rungs	? gradino della salita; step è già di passo
+stallo	stall	
+scatole	boxes	glossario
+raccogli	collect	
+controlli	checks	
+fino	until	
+catalogo	catalog	glossario: catalogue; scelto lo spelling americano come color
+rilievo	survey	dir_rilievo, la raccolta dei fotogrammi
+sistema	system	
+perc	path	abbreviazione di percorso
+lettera	letter	
+fonte	source	collide con sorgente → source
+ingresso	ingress	scelto per non collidere con input e con entrata → entry
+disp	avail	? incerto: prof_disp = profili disponibili; altrove forse disposizione
+mancanti	missing	
+testimone	witness	glossario
+clic	click	
+finestre	windows	
+movimento	motion	
+attese	waits	? anche «attese» = expected (celle_attese, chiavi_attese); i due sensi sono vicini di frequenza
+riassunto	summary	
+aperto	open	
+canali	channels	
+lato	side	
+pausa	pause	
+processi	processes	
+mai	never	
+traccia	trace	
+casa	home	
+libero	free	
+verificato	verified	
+vigore	effect	in_vigore → in_effect
+saltati	skipped	
+ascolta	listen	
+segna	mark	? collide con marca → mark
+preso	taken	
+larg	width	abbreviazione di larghezza
+sx	left	? sinistra (taglio_sx, SHIFT_SX); sx0/sx1 forse coordinate
+rit	delay	abbreviazione di ritardo
+stringa	string	
+guardiano	guardian	
+inquilino	tenant	glossario
+confronta	compare	
+pag	page	abbreviazione di pagina
+lettura	reading	
+esci	exit	
+dichiarato	declared	
+valori	values	
+letture	readings	
+rap	report	? abbreviazione di rapporto: s.rap è un report, rap_dis è un ratio
+diario	diary	glossario
+riferimento	reference	
+domanda	question	
+accesso	access	
+amm	admitted	abbreviazione di ammessi
+compositore	compositor	
+controlla	check	
+fot	frame	abbreviazione di fotogramma (fot_s, byte_per_fot)
+livelli	levels	
+osservato	observed	
+presa	take	CATTURA_PRESA_FATTA, cattura_prendi: la presa del fotogramma
+avuta	got	
+fam	family	abbreviazione di famiglia
+noto	known	
+giudice	judge	
+scatto	shot	
+somma	sum	
+clienti	clients	
+fra	between	? anche «fra» = in (scade fra N giorni)
+comune	common	
+nero	black	
+altri	others	
+deve	must	
+diagnosi	diagnosis	
+premuto	pressed	
+persi	lost	
+gli	-	
+fuoco	focus	
+dei	of	
+sopra	above	
+coppie	pairs	
+nuovi	new	
+rumore	noise	
+torna	returns	torna_a_parlare = speaks again
+classe	class	
+ripiego	fallback	
+sulla	on	
+funzioni	functions	
+remoto	remote	
+mette	puts	
+buona	good	
+applica	apply	
+opz	opt	abbreviazione di opzione
+monta	mount	
+crudo	raw	collide con grezzo → raw
+migliore	best	
+catena	chain	
+costo	cost	
+perdita	loss	
+li	-	? pronome; «li» è anche una lista nei banchi
+tabella	table	
+spazio	space	
+chiusa	closed	
+tempi	times	
+riserva	reserve	glossario
+azioni	actions	
+nessuno	none	
+segnale	signal	
+attacca	attach	
+messaggi	messages	
+arriva	arrives	
+busta	envelope	
+pil	pilot	abbreviazione di Pilota
+vetro	glass	
+questo	this	
+gradino	rung	? vedi gradini
+colonne	columns	
+fermi	stopped	
+trasporto	transport	
+credenziali	credentials	
+ris	result	abbreviazione di risultato
+muovi	move	
+barra	bar	
+crea	create	
+impostazioni	settings	
+pacchetto	package	? due sensi: package dell'installatore (pacchetto unico, glossario) e packet di rete (byte_per_pacchetto)
+rotella	wheel	
+tre	three	
+alla	to	
+spento	off	
+scartati	discarded	
+tit	title	abbreviazione di titolo
+peggiore	worst	
+viola	violates	? viola_input/viola_appunti = violates; forse «viola» colore in etichetta_viola
+quadro	refresh	? quadro del browser (requestAnimationFrame): frame collide con fotogramma
+processo	process	
+accesa	on	
+regione	region	
+disegna	draw	
+dich	declared	abbreviazione di dichiarazione (v->dich.livello_idc)
+riquadro	rect	non box, che è già di scatola
+geometria	geometry	
+topo	mouse	
+codici	codes	
+agosto	august	
+mano	hand	a_mano = by_hand
+posti	slots	
+quiete	quiet	
+sfondo	wallpaper	dipingi_sfondo; non background, che è di fondo
+diversi	different	
+arrivati	arrived	
+vuota	empty	
+tentativo	attempt	
+rilascia	release	
+occhio	eye	
+trovati	found	
+sveglia	wake	
+silenzioso	silent	
+mancano	missing	
+condizioni	conditions	
+ferme	stopped	
+spiega	explain	
+parte	part	? anche verbo «parte» = starts (M_NON_PARTE_PULSANTE)
+scarti	discards	
+uso	use	
+dilo	tell	refuso di dillo
+tratti	stretches	
+frequenza	frequency	
+scaduto	expired	
+apre	opens	
+sblocca	unblock	glossario
+corri	run	
+fatte	done	
+quali	which	
+taglia	trim	taglio → cut
+tele	canvases	
+pulisci	clean	
+scelto	chosen	
+tara	calibrate	
+componente	component	
+anc	anchor	abbreviazione di àncora (anc_a)
+dichiarata	declared	
+avuto	got	
+salita	climb	glossario
+vai	go	
+proprieta	property	
+arrivo	arrival	
+muori	die	
+ritela	recanvas	ri- + tela: nuova tela
+mappa	map	
+dorme	sleeps	
+anche	also	
+lunghezza	length	
+rimetti	restore	
+rapporto	report	? anche ratio nei banchi (rapporto_disegno, rapporto_pixel); report prevale nell'installatore
+cornice	border	bordo → edge
+batti	beat	
+scatti	shots	
+esiste	exists	
+decodifica	decoding	
+risveglio	wakeup	
+viste	views	
+scritti	written	
+ricevi	receive	
+buco	hole	
+corrette	correct	
+delle	of	
+ignoti	unknown	
+metodo	method	
+palchi	stages	
+fallisci	fail	
+presenti	present	
+lascia	leave	
+ganci	hooks	
+pari	peer	? anche «pari» = even/equal (vista_pari, alPari); dgram_tetto_del_pari = peer
+stessa	same	
+marche	marks	
+connessione	connection	
+ospite	guest	
+avviso	warning	
+dichiara	declare	
+modi	modes	
+taglio	cut	
+vede	sees	
+guardati	watched	
+comuni	common	
+bannato	banned	
+classifica	ranking	
+negoziata	negotiated	
+fai	do	
+falsi	false	
+confermata	confirmed	
+lastra	slab	glossario
+scrive	writes	
+contenitore	container	
+eccomi	here_i_am	
+seme	seed	
+dipinti	painted	
+riquadri	rects	
+diretta	direct	
+quella	that	
+trovato	found	
+battito	heartbeat	
+premi	press	
+vietata	forbidden	
+eta	age	
+descrizione	description	
+sentinella	sentinel	glossario
+quattro	four	
+orfani	orphans	
+grazia	grace	
+tenuto	kept	
+salta	skip	
+cadenza	cadence	
+liv	level	abbreviazione di livello
+ritardi	delays	
+sped	shipped	abbreviazione di spediti
+ricetta	recipe	
+ciechi	blind	
+usato	used	
+campione	sample	
+finito	finished	
+positivo	positive	
+uguali	equal	
+grande	large	
+stati	states	
+salto	jump	
+ridimensiona	resize	
+mediana	median	
+riempi	fill	
+giorni	days	
+nato	born	
+violazione	violation	
+respinto	rejected	
+nessun	no	
+nudo	bare	
+sana	healthy	
+dip	painted	? abbreviazione di dipinto (t_dip); nel Go var dip = dipendenze
+trasf	transform	abbreviazione di trasformazione
+tratto	stretch	
+incolla	paste	
+spedita	shipped	
+aggiungi	add	
+insieme	together	? anche sostantivo «insieme» = set
+consegnati	delivered	
+ult	last	abbreviazione di ultimo
+sonde	probes	
+oggetto	object	
+attrezzi	tools	
+cambio	change	
+ottenuto	obtained	
+carattere	character	
+tel	phone	abbreviazione di telefono (tel.seriale)
+offerta	offer	
+deposito	repository	
+assente	absent	
+pavimento	floor	
+cure	fixes	
+mie	my	
+vecchi	old	
+distinti	distinct	
+versioni	versions	
+riduci	reduce	
+dirupo	cliff	
+codif	enc	abbreviazione di codifica
+morto	dead	
+abbandono	abandonment	
+chiamata	call	
+testi	texts	
+capsula	capsule	
+richieste	requests	
+raffica	burst	
+riprova	retry	
+parlantina	chatter	glossario
+mostra	show	
+sempre	always	
+basso	low	
+minuti	minutes	
+fatta	done	
+dis	draw	abbreviazione di disegno (rap_dis, NODO_DIS)
+zona	zone	
+cambia	change	
+motori	engines	
+vuole	wants	
+verdi	green	
+variante	variant	
+modificatore	modifier	
+padre	parent	
+aiutante	helper	glossario
+fermati	stop	
+aggiorna	update	
+schermi	screens	
+cioe	that_is	
+rotta	broken	
+falle	leaks	
+entrata	entry	
+caduto	dropped	
+intestazioni	headers	
+chiamate	calls	
+quello	that	
+stretta	tight	
+rifiuto	refusal	
+continua	continue	
+precedente	previous	
+piccola	small	
+identita	identity	
+provanic	provanic	? nome di utente Unix sulle macchine di prova (prova + nic): tradurlo cambia gli utenti veri; suggerisco di lasciarlo
+sgombera	clear_out	variante di sgombra
+bonifica	sanitize	
+cambi	changes	
+consegnato	delivered	
+lingua	language	
+bloccante	blocking	
+impronte	fingerprints	
+coppia	pair	
+voluto	wanted	
+bottone	button	collide con pulsante → button
+soglie	thresholds	
+reale	real	
+iniettato	injected	
+copione	script	
+offerti	offered	
+bloc	lock	BlocMaiusc = CapsLock; collide con luc/lucchetto → lock
+altra	other	
+parole	words	
+dire	say	
+manifesto	manifest	
+arma	arm	
+dieci	ten	
+potenza	power	
+alta	high	
+fotografa	snapshot	
+termina	terminate	
+medie	means	
+fallita	failed	
+volta	time	prima_volta = first_time; una_volta = once
+sorg	src	abbreviazione di sorgente
+programma	program	
+ripulisci	clean_up	
+bassa	low	
+ragione	reason	collide con motivo → reason
+rotti	broken	
+gemello	twin	glossario
+raccolta	collection	
+orecchio	ear	
+schede	cards	
+allinea	align	
+storia	history	
+prodotti	products	? anche participio «prodotti» = produced
+negati	denied	
+scade	expires	
+telefono	phone	
+picco	peak	
+vicini	neighbors	
+difetto	defect	
+nessuna	none	
+mancati	missed	
+scostamento	deviation	
+modificatori	modifiers	
+annullata	cancelled	
+pacco	bundle	
+piena	full	
+bottoni	buttons	
+bordo	edge	
+partito	started	
+sta	is	? anche «sta» = fits/stays (ci sta, dove_sta)
+sequenze	sequences	
+dai	from	? anche imperativo «dai» = give (gruppi_scheda_dai_a)
+presi	taken	
+trovata	found	
+passata	passed	
+costruttore	builder	
+oro	gold	
+cal	calibration	abbreviazione di calibrazione (B.calibra)
+generazione	generation	

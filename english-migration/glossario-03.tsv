@@ -1,0 +1,624 @@
+diviso	divided	
+generatori	generators	
+marchio	brand	
+estesa	extended	
+seguito	followed	? anche «di seguito» = below/next; prevale il participio
+oppure	or	
+riscrive	rewrites	
+accumula	accumulates	
+arrivava	arrived	
+vieta	forbids	
+mettere	put	
+dura	lasts	? nel codice è sia verbo «dura» (lasts) sia aggettivo «dura» (hard: cqp_dura); prevale il verbo
+riconosce	recognizes	
+respingi	reject	
+passate	past	? anche participio «passed»; prevale «past» (righe passate)
+alti	high	
+chiudere	close	
+direttamente	directly	
+scadenze	deadlines	
+possono	can	
+propria	own	
+dedotta	inferred	coerente con dedotto
+reggono	hold	
+uscire	exit	
+potrebbe	could	
+protezione	protection	
+gialla	yellow	
+escl	excl	abbreviazione di «esclusi» (ESCL)
+esistenza	existence	
+sblocchi	unblocks	SBLOCCA = unblock nel glossario
+persistenza	persistence	
+attribuzione	attribution	
+crude	raw	nel codice è l'italiano «crude» (righe crude), non l'inglese crude
+ricorsivo	recursive	
+rappresenta	represents	
+decadimento	decay	
+succede	happens	
+dif	dflt	abbreviazione di «difetto» nel senso di valore predefinito (opz(nome, dif))
+puro	pure	
+uniche	unique	
+parametro	parameter	
+targa	plate	? id «targa» nella pagina del banco S7 = cartellino/etichetta; «label» sarebbe più chiaro ma collide con etichetta
+innestati	injected	? gli innesti sono guasti iniettati di proposito (guasti_innestati); alternativa «grafted»
+studi	studies	
+fondamenta	foundations	
+venditore	vendor	
+interroga	queries	
+imposto	imposed	
+coi	with_the	? articolo contratto «con i»; spesso «-» va meglio (letto_coi_pezzi → read_with_pieces); scelto with_the per non perdere senso
+emergenza	emergency	
+emulazione	emulation	
+scrivania	desktop	
+grossolano	coarse	
+corretto	correct	
+difficile	difficult	
+fraintendimento	misunderstanding	
+chiamato	called	
+interessanti	interesting	
+cadere	drop	? «deve_cadere» = deve essere scartato/cadere; drop è il senso tecnico
+cambiare	change	
+trasformazione	transform	
+opaca	opaque	
+mente	lies	? negli identificatori è il verbo «mentire» (g_p6_mente = il banco mente); nei commenti «a mente» = mind
+portanti	load_bearing	PALCO_PORTANTI
+etic	lbl	abbreviazione di «etichetta»
+dipingono	paint	
+pieghe	folds	
+abilitato	enabled	
+intatto	intact	
+ricompra	reacquire	ricompra_lock: riprende il lock
+piatt	plat	abbreviazione di «piattaforma» (vista.go)
+concede	grants	
+tasso	rate	
+ottenuta	obtained	
+ril	rel	abbreviazione di «rilascio» (ril4a = rilascio al distacco 4a) = release
+disposizioni	layouts	glossario: disposizione = layout (keyboard)
+spaiate	unpaired	
+battuti	typed	? battuti/battute = tasti battuti (typed); resize_battuti = colpi/ondate (hits) — prevale typed
+larghezze	widths	
+confronti	comparisons	
+sforati	exceeded	
+tagliato	cut	
+sopravvissute	survived	
+specchio	mirror	
+tanti	many	
+contendente	contender	
+ognuna	each	
+provav	testv	? è parte del nome dell'utente di prova provav7 (account vero sul server): tradurre cambia un nome di account; forse da lasciare
+provar	testr	? come provav: utente provar7
+riscalda	warms_up	
+verit	truth	troncamento di «verità» (accento perso)
+paga	pays	
+commenti	comments	
+manc	miss	abbreviazione di «mancanti»
+seno	sine	
+lente	slow	(chiamate lente, macchine lente)
+traiettoria	trajectory	
+elastico	elastic	
+bidone	bin	
+serviva	needed	
+trascurabile	negligible	
+appaia	appears	
+criteri	criteria	
+confrontabili	comparable	
+spontanei	spontaneous	
+grasso	fat	
+proporzionale	proportional	
+strappi	tears	? strappi = strappi dell'immagine (tearing); tears/tearing
+dat	dgram	abbreviazione di «datagrammi» (long long dat)
+undicesimo	eleventh	
+esterna	external	
+invariata	unchanged	
+frizzo	frozen	? frizzo = utente col contatore fermo («congelato»); forse gergo
+ripassi	passes	? ripassa = ripercorre/torna a guardare; «revisit» alternativa
+sigilla	seals	
+cita	cites	
+culmine	peak	
+sigillo	seal	
+ceduto	yielded	? «ceduto» = ceduto/arreso; nei banchi anche «gave way»
+misurate	measured	
+rimontaggi	remounts	
+avvenuto	happened	
+dormienti	sleeping	
+tvuoto	tempty	t + vuoto (risposta vuota)
+rinascita	rebirth	
+parallelo	parallel	
+cit	cited	f_cit = file citato
+lampeggio	blink	
+scura	dark	
+asta	bar	? asta orizzontale/verticale del cursore; «stem» alternativa
+grig	grow	g + rig(he): conteggio per riga, accanto a gcol
+prevista	expected	
+rinasce	reborn	? verbo: «is reborn»/respawns
+percorsi	paths	
+posa	places	? verbo «posa» = posa/imposta (il nome si posa; posa_scena); alternativa «sets»
+temporanei	temporary	
+sforato	exceeded	
+condividono	share	
+mancava	was_missing	
+importante	important	
+identico	identical	
+divergessero	diverged	
+incremento	increment	glossario
+messi	placed	
+degeneri	degenerate	
+interprete	interpreter	
+cresciuti	grown	
+mescolate	mixed	
+voti	votes	
+sforanti	exceeding	
+riparatrici	repairing	chiavi_riparatrici = repair keys
+ricaricata	reloaded	
+ritrovata	found_again	glossario: ritrovo/ritrovati = finding again/found again
+disturbano	disturb	
+interne	internal	
+significativo	significant	
+campagne	campaigns	
+bollo	stamp	
+correggi	fix	
+scopri	discover	
+candidato	candidate	
+scrivibile	writable	
+virgole	commas	
+credenziale	credential	
+anteprime	previews	
+sistemo	fix	? sistemo = «aggiusto»; collide con correggi → fix
+irreversibili	irreversible	
+disabilita	disable	
+princ	primary	abbreviazione di «principale» (gruppo principale = primary nel JSON)
+fornitori	vendors	coerente con venditore = vendor
+consensi	consents	
+fermate	stopped	? anche sostantivo «fermate» (stops); prevale il participio
+transizioni	transitions	
+trattino	dash	
+decisa	decided	
+oggetti	objects	
+impacchettato	packaged	
+inoltrare	forward	
+riprovare	retry	
+scalata	scaled	
+lamentata	complained	
+nrisposta	nresponse	n + risposta (lunghezza della risposta)
+ncorpo	nbody	n + corpo
+piede	foot	(.piede nella pagina = footer)
+carne	payload	? carne = le NAL «vere» (non SPS/PPS); letterale «meat»
+storiche	historical	
+tardive	late	
+programmato	scheduled	
+ripiegato	fallback	? orologio_ripiegato = orologio di ripiego; letterale «folded»
+rifocalizza	refocus	
+idsano	idsafe	id + sano: identità ripulita
+casuale	random	
+importazioni	imports	
+inizializzata	initialized	
+regolatore	regulator	glossario: rate regulator
+ngiudizi	njudgments	n + giudizi
+capgiudizi	capjudgments	cap + giudizi
+nbloccati	nblocked	
+nrichieste	nrequests	
+caprichieste	caprequests	
+verticale	vertical	
+orizzontale	horizontal	
+esegue	runs	
+memorie	memories	? memorie_sessione = memoria della sessione (memory)
+venti	twenty	
+sintomo	symptom	
+strumenta	instruments	
+recente	recent	
+unite	joined	
+dodici	twelve	
+finiva	ended	
+credere	believe	
+sostituisce	replaces	
+distinte	distinct	
+escludi	exclude	
+obb	req	abbreviazione di «obbligatorie»
+incerta	uncertain	
+avanzati	advanced	
+applicativo	application	
+isolamento	isolation	
+provabile	testable	
+larghi	wide	
+gialli	yellow	
+tra	between	
+processa	processes	
+restituisce	returns	
+sconosciuta	unknown	
+chiunque	anyone	
+ciascuno	each	
+arrivare	arrive	
+buttano	discard	? buttare = scartare; coda_butta = queue drop
+poteva	could	
+superato	exceeded	
+permette	allows	
+ascoltatore	listener	
+inudibili	inaudible	
+riferisci	report	
+denominatori	denominators	
+registrato	registered	
+somiglia	resembles	
+esistere	exist	
+impone	imposes	
+esistono	exist	
+aggiunge	adds	
+specifiche	specs	? aggettivo «specifiche» (specific) o sostantivo «le specifiche» (specs); prevale specs
+fallire	fail	
+consumata	consumed	
+classificati	classified	
+esclusione	exclusion	
+bannati	banned	
+azzeramento	reset	
+magri	lean	
+esadecimale	hex	
+scollegate	disconnected	
+positivi	positives	
+dedotto	inferred	
+strumentazione	instrumentation	
+contato	counted	
+lasciarlo	leave_it	
+pilota	driver	? pilota = driver (della scheda); anche «pilot»
+dichiarando	declaring	
+segnala	signals	? anche «reports»; prevale signals
+battute	typed	? vedi battuti: battute_finora = tasti battuti; anche «battute» del banco
+diventare	become	
+sostenuto	sustained	
+abbia	has	
+conferme	confirmations	
+dispatcia	dispatches	italianizzazione di dispatch
+erre	r	nome della lettera R (lista «erre» accanto a gi, bi)
+svuotato	emptied	
+avvertimenti	warnings	
+sottocampiona	subsamples	
+graffiato	scratched	
+storpiature	mangles	? storpiature_rifiutate = nomi storpiati; alternativa «garbles»
+magazzino	store	
+salito	climbed	glossario: salita = climb
+riordina	reorders	
+riemp	fill	abbreviazione di «riempimento»
+rispetta	respects	
+dichiarabili	declarable	
+disegnato	drawn	
+penna	pen	
+preme	presses	
+passerebbe	would_pass	
+classificatore	classifier	
+ufficiale	official	
+sbilanciati	unbalanced	
+controlettura	readback	contro-lettura di verifica
+daccesso	access	«d'accesso» (unita_daccesso = access unit)
+uccide	kills	
+separati	separate	
+righello	ruler	
+sbaglia	errs	? «sbaglia» = è sbagliato / sbaglia; alternativa wrong
+descrizioni	descriptions	
+interpolato	interpolated	
+tchi	twho	t + chi (trattenuto: tempo e chi)
+travasa	transfers	? travasa = trasferisce per copia (decanta)
+inventato	invented	
+abbondante	generous	? «abbondante» = ampio; collide con generoso → generous
+bufferizza	buffers	
+dialogo	dialog	
+spostata	moved	
+coperto	covered	
+monotonico	monotonic	
+anonimo	anonymous	
+sincronizzato	synchronized	
+rifresco	refresh	
+indicatori	indicators	
+spazza	sweep	
+salite	climbs	glossario
+intrusi	intruders	
+vgiu	vdown	v + giù
+vsu	vup	v + su
+metadati	metadata	
+intoccabili	untouchable	
+colpevoli	culprits	
+concordate	agreed	
+seduto	seated	
+fotog	frm	abbreviazione di «fotogrammi»
+mirino	crosshair	
+sparisce	disappears	
+girando	running	
+provat	testt	? come provav: utente provat6 (account vero)
+canarini	canaries	
+orfana	orphan	
+mezzi	halves	? mezzi = metà (mezzi pixel); anche «means»
+impreviste	unexpected	coerente con inattesi
+inlinea	inline	
+dirotta	redirects	
+risvegliata	woken	
+incatenati	chained	
+catene	chains	
+perch	why	troncamento di «perché» (solo nei commenti)
+bottoncini	buttons	
+caldi	hot	
+audiofili	audiophiles	
+fondoscala	full_scale	
+distinta	distinct	
+scoppiettii	crackles	
+bruc	burn	abbreviazione di «bruciatori» (lista di processi che bruciano CPU)
+cel	cell	abbreviazione di «cella»
+effetti	effects	
+alzate	raised	
+trasformate	transformed	
+chiusi	closed	
+brucia	burns	
+coincide	matches	
+degrada	degrades	
+mas	mx	abbreviazione di «massimo» (deriva_max)
+mezzanotte	midnight	
+trascrive	transcribes	
+sfarfallio	flicker	
+perduti	lost	
+scaletta	ladder	? scaletta = scala a gradini del segnale / successione dei blocchi audio (schedule); prevale ladder
+interr	sw	abbreviazione di «interruttore» (switch)
+mescola	mixes	
+ripetibilita	repeatability	
+forbici	scissors	
+grandezze	quantities	
+spariscono	disappear	
+riq	rect	abbreviazione di «riquadro»; «box» è già di scatola
+percento	percent	
+cieche	blind	
+asincrona	asynchronous	
+censimento	census	
+fond	floor	? FOND_MIN_FOT: «fondo» minimo di fotogrammi; senso incerto
+datagrammi	datagrams	
+scarno	bare	
+marchi	brands	
+reso	rendered	? «reso» = restituito o reso (rendered); prevale rendered
+morsi	bitten	non_morsi = tentativi non arrivati ad ATTACCA
+trecento	three_hundred	
+seicento	six_hundred	
+permissivo	permissive	
+duro	hard	(tetto_duro = hard cap)
+obiettivo	target	
+svegli	awake	
+estranee	foreign	
+onesto	honest	
+segnalato	reported	
+contr	ctrl	? g_contr / n_contr: «controllo» probabile; non verificato fino in fondo
+ceduti	yielded	
+esposto	exposed	
+confuso	confused	
+possesso	ownership	
+scassino	burglar	
+innocenti	innocent	
+titolare	holder	
+disconnesso	disconnected	
+maturo	mature	
+esserci	be_there	? deve_esserci = must exist; alternativa «exist» (collide con esistere)
+lanci	launches	
+superata	exceeded	
+otten	got	abbreviazione di «ottenuto»
+futuri	future	
+giudicanti	judging	
+ripulita	cleaned	
+iscritto	enrolled	
+rimasta	left	
+quasinero	almost_black	
+giunti	joints	? «giunti» = giunzioni (joints) o participio «arrivati»; non verificato
+vada	go	? aspetta_che_il_cliente_se_ne_vada = leaves; «go» se meccanico
+animazione	animation	
+centri	centers	
+sopravvivenza	survival	
+immobili	still	
+troppe	too_many	
+comporta	entails	
+dichiarano	declare	
+inchiodata	pinned	
+comodita	convenience	
+incomparabile	incomparable	
+pochi	few	
+accorgersi	notice	
+attaccarsi	attach	glossario: ATTACCA = attach
+ereditate	inherited	
+funzionava	worked	
+mesi	months	
+copiano	copy	
+dicendolo	saying_it	
+povero	poor	
+rettangoli	rectangles	
+occhi	eyes	
+crescere	grow	
+parecchie	several	
+centinaia	hundreds	
+ricette	recipes	
+varrebbe	would_be_worth	
+cercare	search	
+disegnerebbe	would_draw	
+pestare	step_on	
+capitata	happened	
+nascosta	hidden	
+generoso	generous	
+creare	create	
+previsto	expected	
+revisori	reviewers	
+credendo	believing	
+inchioda	pins	
+inchiodare	pin	
+combatte	fights	
+eramo	we_were	forma dialettale di «eravamo» (ERAMO)
+scriverla	write_it	
+riparazione	repair	
+riavvii	restarts	
+sincrono	synchronous	
+incassa	absorbs	? «incassa» = assorbe il colpo; alternativa «takes»
+risultavano	appeared	
+allargando	widening	
+togliendo	removing	
+novantasette	ninety_seven	
+millesimi	thousandths	
+risorgere	resurrect	
+andava	went	
+normali	normal	
+provi	try	
+dellospite	of_the_host	«dell'ospite»
+avviasse	started	
+comoda	handy	
+togliendolo	removing_it	
+incollare	paste	
+demone	daemon	
+impazzire	go_haywire	
+inseriscilo	insert_it	
+pestano	step_on	
+avviato	started	
+trasparenti	transparent	
+opachi	opaque	
+caricate	loaded	
+linee	lines	? linee_morte: glossario «linea morta» = dead line; attenzione: righe → lines già usato
+strozza	throttles	
+restati	remained	
+saliti	climbed	
+raggio	radius	
+devastate	devastated	
+appunto	precisely	? «appunto» avverbio (exactly); non è «appunti» (clipboard)
+foglia	leaf	
+titoli	titles	
+cattive	bad	
+probabile	probable	
+allineate	aligned	
+candidata	candidate	
+cas	cell	abbreviazione di «casella»
+tut	tot	abbreviazione di «tutto» (totale jiffies)
+segnate	marked	
+segnaposti	placeholders	
+riempiti	filled	
+piccoli	small	
+glifo	glyph	
+aggiramento	bypass	
+espongono	expose	
+aggiornata	updated	
+lasciata	left	
+settimane	weeks	
+dovrebbe	should	
+collegati	connected	
+drena	drains	
+fermando	stopping	
+mancanza	lack	? anche «missing» (conMancanza, etichettaMancanza); prevale missing? scelto lack
+possibile	possible	
+interruzione	interruption	
+nipote	grandchild	figlio = child nel glossario
+conclusivo	conclusive	
+aggiunto	added	
+lanciate	launched	
+restanti	remaining	
+matr	matrix	abbreviazione di «matrice»
+arretrata	backlogged	? appunti_offerta_arretrata = offerta rimasta indietro (pending)
+priorita	priority	
+spedizione	dispatch	? spedizione = invio (send); us_spedizione = tempo di invio
+guarigioni	recoveries	
+ripassa	revisits	? vedi ripassi; ripassa_sessioni_locali = scan local sessions
+nfigli	nchildren	n + figli (glossario: figlio = child)
+diagnostica	diagnostics	
+fretta	hurry	? MSE_FRETTA: modalità «in fretta» (rush)
+veglia	vigil	? mse_veglia = sorveglianza/attesa del primo fotogramma (watch); alternativa «watch»
+posiziona	positions	
+dichiarabile	declarable	
+proprietaria	owner	? aggettivo «proprietaria» (proprietary) o «owner»; prevale owner (utente proprietario)
+riscontro	check	? riscontro_fatto = verifica fatta; alternativa «feedback»
+superstite	survivor	
+rilette	reread	
+sistemati	fixed	
+volumi	volumes	
+slega	unbinds	
+diretto	direct	
+riprogrammare	reprogram	
+sarebbero	would_be	
+toccato	touched	
+legato	bound	
+registrazioni	recordings	? anche «registrations»; prevale recordings
+generatore	generator	
+binari	binaries	
+conservata	kept	
+agenti	agents	
+progetto	project	
+molteplicita	multiplicity	
+nonletterale	nonliteral	
+rimette	puts_back	
+tenitori	holders	
+obbligatorie	mandatory	
+ricevente	receiver	
+lanciatori	launchers	
+raggiunto	reached	
+sugli	on_the	? preposizione articolata «su gli»; spesso «on» basta
+chiamante	caller	
+guardando	watching	
+riconoscere	recognize	
+chiasso	noise	
+cifrata	encrypted	
+uniti	joined	
+nomecert	certname	
+nominata	named	
+bastano	suffice	
+lezioni	lessons	
+aspettare	wait	
+riconosciuto	recognized	
+produrre	produce	
+soppresse	suppressed	
+biglietto	ticket	session ticket TLS
+ceco	czech	? lista «ceco» in un banco audio: forse il campione di parlato ceco; non verificato
+accendere	turn_on	
+partirebbe	would_start	
+percorre	traverses	
+accendono	turn_on	
+mettera	will_put	
+leggono	read	
+renderebbe	would_make	
+emesso	emitted	
+perduto	lost	
+portare	bring	
+millisecondi	milliseconds	
+accettabile	acceptable	
+statica	static	
+sembra	seems	
+servito	served	
+contrario	opposite	
+ammette	admits	
+scoperti	uncovered	
+ammetti	admit	
+giudicati	judged	
+provocabili	provokable	
+spegn	poweroff	abbreviazione di «spegnimento» (ESITO_SPEGN)
+concorda	agrees	
+inattesi	unexpected	
+bannate	banned	
+respinti	rejected	
+irraggiungibile	unreachable	
+rossa	red	
+cancellato	deleted	
+battere	type	? battere (tasti) = type; anche «beat»
+accedi	log_in	
+residue	residual	
+ritiri	withdrawals	
+calore	heat	
+significa	means	
+concedi	grant	
+memorizzata	stored	
+apparirebbe	would_appear	
+saper	know	
+diritto	right	? «diritto» = right (entitlement) o «straight»; prevale right
+latenza	latency	
+eseguire	run	
+distinguere	distinguish	
+copiare	copy	
+usare	use	
+rifatto	redone	
+muovono	move	
+lume	lumas	plurale «lume» di luma (lista dei luma)
+sfumature	gradients	? FASCIA_SFUMATURE: bande di sfumature (shades/gradients)
+ridimensionamento	resize	
+riprovo	retry	
+promossi	promoted	
+leggendo	reading	
+costante	constant	
+svuotare	empty	? svuotare = svuotare (to empty); alternativa «drain» (collide con drena)
+trattiene	holds_back	
+sovrascrittura	overwrite	
+peg	worst	abbreviazione di «peggiore» (pagina.html)
+pan	panel	? in banchi pan = PANNELLO; in vendor/ffmpeg «Pan» è inglese
+sbl	unb	abbreviazione di «sblocca» (SBLOCCA = unblock)
+fsi	fyes	? falsi_si abbreviato (accanto a fno); tradotto false-yes
+pav	floor	abbreviazione di «pavimento» (pav_qp)
+recinti	enclosures	? i tre «recinti» delle risorse nei banchi stress (gruppi di processi/cgroup); alternativa «pens»

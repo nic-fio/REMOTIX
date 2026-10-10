@@ -1,0 +1,75 @@
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "⛔ podman non c'e'", "dopo": "⛔ podman is missing"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "== $b: l'immagine non c'e', la costruisco", "dopo": "== $b: the image is missing, building it"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "== $b: sorgenti", "dopo": "== $b: sources"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "$b pacchetto=NO remotix-firewalld.xml non e' XML valido", "dopo": "$b pacchetto=NO remotix-firewalld.xml is not valid XML"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "strumenti: ", "dopo": "tools: "}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "## Requires (automatiche + scritte)", "dopo": "## Requires (automatic + written)"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "$b pacchetto=NO (vedi rpmbuild.log)", "dopo": "$b pacchetto=NO (see rpmbuild.log)"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "\\n== riassunto (%s/rpm)\\n", "dopo": "\\n== summary (%s/rpm)\\n"}
+{"file": "packaging/rpm/costruisci-rpm.sh", "prima": "$b (nessun esito)", "dopo": "$b (no outcome)"}
+{"file": "packaging/arch/PKGBUILD", "prima": "⛔ ci sono .so di ngtcp2/nghttp3: il binario le userebbe", "dopo": "⛔ there are ngtcp2/nghttp3 .so files: the binary would use them"}
+{"file": "packaging/arch/PKGBUILD", "prima": "⛔ il binario chiede ngtcp2/nghttp3 dinamiche, o librerie che mancano", "dopo": "⛔ the binary asks for dynamic ngtcp2/nghttp3, or for missing libraries"}
+{"file": "packaging/arch/costruisci.sh", "prima": "⛔ makepkg fallito (vedi $LAV/makepkg.log)", "dopo": "⛔ makepkg failed (see $LAV/makepkg.log)"}
+{"file": "packaging/arch/costruisci.sh", "prima": "== R14: file dei banchi nel pacchetto?", "dopo": "== R14: bench files in the package?"}
+{"file": "packaging/arch/costruisci.sh", "prima": "⛔ R14 ROSSO", "dopo": "⛔ R14 RED"}
+{"file": "packaging/arch/costruisci.sh", "prima": "R14 verde: $(grep -vc '/$' \"$LAV/elenco.txt\") voci, nessuna della lista nera", "dopo": "R14 green: $(grep -vc '/$' \"$LAV/elenco.txt\") entries, none on the blacklist"}
+{"file": "packaging/arch/costruisci.sh", "prima": "== pronto: $USCITA/$PKG", "dopo": "== ready: $USCITA/$PKG"}
+{"file": "packaging/arch/remotix.install", "prima": ":: REMOTIX: installati i pezzi, SPENTI.  Il pacchetto da solo non accende\n   niente: il servizio, i gruppi della scheda, le tre cinture e il firewall\n   li monta l'installatore di REMOTIX (DECISIONI.md §10.12).", "dopo": ":: REMOTIX: pieces installed, OFF.  The package alone switches on\n   nothing: the service, the GPU groups, the three belts and the firewall\n   are set up by the REMOTIX installer (DECISIONI.md §10.12)."}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "RX_VERSIONE: la versione del rilascio", "dopo": "RX_VERSIONE: the release version"}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "⛔ il motore $MOTORE dice $vm, il rilascio è $V", "dopo": "⛔ the engine $MOTORE says $vm, the release is $V"}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "== il motore $V-$R ($(sha256sum \"$L/remotix-install\" | cut -c1-16)…)", "dopo": "== the engine $V-$R ($(sha256sum \"$L/remotix-install\" | cut -c1-16)…)"}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "== .deb del motore", "dopo": "== engine .deb"}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "== .rpm del motore (fedora:44)", "dopo": "== engine .rpm (fedora:44)"}
+{"file": "packaging/motore/pacchetti-motore.sh", "prima": "== pacchetto Arch del motore", "dopo": "== engine Arch package"}
+{"file": "packaging/debian/remotix.service", "prima": "Description=REMOTIX, il desktop nel browser", "dopo": "Description=REMOTIX, the desktop in the browser"}
+{"file": "packaging/debian/remotix.postrm", "prima": "postrm chiamato con un argomento sconosciuto: $1", "dopo": "postrm called with an unknown argument: $1"}
+{"file": "packaging/debian/rules", "prima": "⛔ src/rcp.c: BANCO_ACCESO non e' 0 — non si impacchetta (R13)", "dopo": "⛔ src/rcp.c: BANCO_ACCESO is not 0 — not packaging (R13)"}
+{"file": "packaging/archivio/licenze.py", "prima": "   licenza: {licenza}", "dopo": "   licence: {licenza}"}
+{"file": "packaging/archivio/licenze.py", "prima": "ngtcp2/nghttp3: nessuno SBOM nell'archivio", "dopo": "ngtcp2/nghttp3: no SBOM in the archive"}
+{"file": "packaging/archivio/licenze.py", "prima": "(testo non scaricato: ", "dopo": "(text not downloaded: "}
+{"file": "packaging/archivio/licenze.py", "prima": "collegata STATICA nel binario di remotix (", "dopo": "linked STATICALLY into the remotix binary ("}
+{"file": "packaging/archivio/licenze.py", "prima": "Go (libreria standard e runtime)", "dopo": "Go (standard library and runtime)"}
+{"file": "packaging/archivio/licenze.py", "prima": "dentro il binario statico di remotix-install", "dopo": "inside the static remotix-install binary"}
+{"file": "packaging/archivio/licenze.py", "prima": "la licenza di Go (il file dal contenitore di costruzione)", "dopo": "the Go licence (the file from the build container)"}
+{"file": "packaging/archivio/licenze.py", "prima": "il README al tag v0.0.1 dice «MIT»; il testo è il LICENSE che il progetto ha aggiunto dopo", "dopo": "the README at tag v0.0.1 says «MIT»; the text is the LICENSE the project added later"}
+{"file": "packaging/archivio/licenze.py", "prima": "modulo Go nel binario di remotix-install", "dopo": "Go module in the remotix-install binary"}
+{"file": "packaging/archivio/licenze.py", "prima": "{mod} {ver}: nessun LICENSE nel vendor", "dopo": "{mod} {ver}: no LICENSE in the vendor tree"}
+{"file": "packaging/archivio/licenze.py", "prima": "(nessun testo di licenza nel vendor: da verificare sul progetto)", "dopo": "(no licence text in the vendor tree: to be checked on the project)"}
+{"file": "packaging/archivio/licenze.py", "prima": "{mod} {ver}: licenza non riconosciuta", "dopo": "{mod} {ver}: licence not recognised"}
+{"file": "packaging/archivio/licenze.py", "prima": "   (nessuna: lo SBOM non ne elenca)", "dopo": "   (none: the SBOM lists none)"}
+{"file": "packaging/archivio/licenze.py", "prima": "REMOTIX — le licenze dei componenti (generato da packaging/archivio/licenze.py)", "dopo": "REMOTIX — component licences (generated by packaging/archivio/licenze.py)"}
+{"file": "packaging/archivio/sbom.py", "prima": "   SBOM {b}: SALTATO — il pacchetto non ha incorporate.json (costruito prima di T8)", "dopo": "   SBOM {b}: SKIPPED — the package has no incorporate.json (built before T8)"}
+{"file": "packaging/archivio/sbom.py", "prima": "{lib}: versione collegata ASSENTE", "dopo": "{lib}: linked version MISSING"}
+{"file": "packaging/archivio/sbom.py", "prima": "{lib}: collegata {v}, dichiarata {dich[lib]}", "dopo": "{lib}: linked {v}, declared {dich[lib]}"}
+{"file": "packaging/archivio/sbom.py", "prima": "collegata STATICA nel binario (", "dopo": "linked STATICALLY into the binary ("}
+{"file": "packaging/archivio/sbom.py", "prima": "; dichiarata dal pacchetto: {dich[lib]}", "dopo": "; declared by the package: {dich[lib]}"}
+{"file": "packaging/archivio/sbom.py", "prima": "dipendenza della distribuzione, collegata dinamica o usata a tempo di esecuzione", "dopo": "distribution dependency, linked dynamically or used at run time"}
+{"file": "packaging/archivio/sbom.py", "prima": "(dichiarate: {dich or 'nessun campo'})", "dopo": "(declared: {dich or 'no field'})"}
+{"file": "packaging/rilascio.sh", "prima": "1. l'albero ($VERSIONE, bersagli: $BERSAGLI)", "dopo": "1. the tree ($VERSIONE, targets: $BERSAGLI)"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ modifiche non committate:", "dopo": "⛔ uncommitted changes:"}
+{"file": "packaging/rilascio.sh", "prima": "⚠ RX_SPORCO=1: albero con modifiche non committate (solo per prova)", "dopo": "⚠ RX_SPORCO=1: tree with uncommitted changes (for testing only)"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ $RUN c'è già: serve una revisione nuova", "dopo": "⛔ $RUN already exists: a new revision is needed"}
+{"file": "packaging/rilascio.sh", "prima": "2. il motore: le prove e la costruzione ($V)", "dopo": "2. the engine: tests and build ($V)"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ le prove del motore", "dopo": "⛔ the engine tests"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ il motore non dice $V", "dopo": "⛔ the engine does not report $V"}
+{"file": "packaging/rilascio.sh", "prima": "3. i pacchetti del prodotto", "dopo": "3. the product packages"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ bersaglio sconosciuto: $b", "dopo": "⛔ unknown target: $b"}
+{"file": "packaging/rilascio.sh", "prima": "4. i pacchetti del motore", "dopo": "4. the engine packages"}
+{"file": "packaging/rilascio.sh", "prima": "5. il .run ($RUN)", "dopo": "5. the .run ($RUN)"}
+{"file": "packaging/rilascio.sh", "prima": "⛔ l'intestazione non ha preso lo sha256", "dopo": "⛔ the header did not take the sha256"}
+{"file": "packaging/rilascio.sh", "prima": "6. il riassunto", "dopo": "6. the summary"}
+{"file": "packaging/rilascio.sh", "prima": "REMOTIX $VERSIONE — pronto: $RUN", "dopo": "REMOTIX $VERSIONE — ready: $RUN"}
+{"file": "packaging/rilascio.sh", "prima": "  sha256 (da pubblicare sul sito, in HTTPS, accanto al file):", "dopo": "  sha256 (to be published on the website, over HTTPS, next to the file):"}
+{"file": "packaging/rilascio.sh", "prima": "  si installa con:  sudo sh ", "dopo": "  install with:  sudo sh "}
+{"file": "packaging/rilascio.sh", "prima": "  il giornale del rilascio: $REG", "dopo": "  the release log: $REG"}
+{"file": "packaging/rpm/remotix.spec", "prima": "⛔ $l: manca (si costruisce nei contenitori di src/costruzione/)", "dopo": "⛔ $l: missing (it is built in the containers of src/costruzione/)"}
+{"file": "packaging/rpm/remotix.spec", "prima": "⛔ ngtcp2 $(pkg-config --modversion libngtcp2), dichiarata %{ngtcp2_ver}", "dopo": "⛔ ngtcp2 $(pkg-config --modversion libngtcp2), declared %{ngtcp2_ver}"}
+{"file": "packaging/rpm/remotix.spec", "prima": "⛔ nghttp3 $(pkg-config --modversion libnghttp3), dichiarata %{nghttp3_ver}", "dopo": "⛔ nghttp3 $(pkg-config --modversion libnghttp3), declared %{nghttp3_ver}"}
+{"file": "packaging/rpm/remotix.spec", "prima": "pkg-config delle .a collegate", "dopo": "pkg-config of the linked .a files"}
+{"file": "packaging/rpm/remotix.spec", "prima": "Il desktop di questa macchina nel browser", "dopo": "This machine's desktop in the browser"}
+{"file": "packaging/rpm/remotix.spec", "prima": "Il modulo SELinux di REMOTIX", "dopo": "The REMOTIX SELinux module"}
+{"file": "packaging/rpm/remotix.service", "prima": "REMOTIX, il desktop nel browser", "dopo": "REMOTIX, the desktop in the browser"}
+{"file": "packaging/rpm/org.kde.remotix.desktop", "prima": "Il desktop nel browser", "dopo": "The desktop in the browser"}
+{"file": "packaging/rpm/remotix-firewalld.xml", "prima": "REMOTIX: il desktop di questa macchina nel browser (HTTPS e QUIC/WebTransport).", "dopo": "REMOTIX: this machine's desktop in the browser (HTTPS and QUIC/WebTransport)."}
+{"file": "packaging/debian/rules", "prima": "pkg-config delle .a collegate", "dopo": "pkg-config of the linked .a files"}
+{"file": "packaging/arch/PKGBUILD", "prima": "pkg-config delle .a collegate", "dopo": "pkg-config of the linked .a files"}

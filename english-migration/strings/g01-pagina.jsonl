@@ -1,0 +1,679 @@
+{"file": "src/pagina.html", "prima": "Terminare la sessione?<br>\n      Tutti i programmi aperti nel desktop verranno chiusi.", "dopo": "End the session?<br>\n      All programs open on the desktop will be closed."}
+{"file": "src/pagina.html", "prima": "Termina la sessione", "dopo": "End session"}
+{"file": "src/pagina.html", "prima": "Annulla", "dopo": "Cancel"}
+{"file": "src/pagina.html", "prima": "Fase 2: il primo fotogramma. Un'immagine ferma — niente tastiera, ancora.", "dopo": "Phase 2: the first frame. A still image — no keyboard, yet."}
+{"file": "src/pagina.html", "prima": " · schermo ", "dopo": " · screen "}
+{"file": "src/pagina.html", "prima": "NON c'e'", "dopo": "missing"}
+{"file": "src/pagina.html", "prima": "c'e'", "dopo": "present"}
+{"file": "src/pagina.html", "prima": "sw-fluido", "dopo": "sw-smooth"}
+{"file": "src/pagina.html", "prima": "guasto", "dopo": "fault"}
+{"file": "src/pagina.html", "prima": "MARCA senza-webcodecs: sicuro=", "dopo": "MARCA senza-webcodecs: secure="}
+{"file": "src/pagina.html", "prima": "si", "dopo": "yes"}
+{"file": "src/pagina.html", "prima": "(non dichiarata)", "dopo": "(not declared)"}
+{"file": "src/pagina.html", "prima": "(non dichiarato)", "dopo": "(not declared)"}
+{"file": "src/pagina.html", "prima": "(non dichiarati)", "dopo": "(not declared)"}
+{"file": "src/pagina.html", "prima": "userAgentData NEGATO", "dopo": "userAgentData DENIED"}
+{"file": "src/pagina.html", "prima": "Da questo indirizzo i tentativi di accesso sono esauriti: vedi l'avviso qui sopra.", "dopo": "Sign-in attempts from this address are used up: see the notice above."}
+{"file": "src/pagina.html", "prima": "la sessione e' stata chiusa dall'utente", "dopo": "the session was closed by the user"}
+{"file": "src/pagina.html", "prima": "sei stato mezz'ora senza toccare niente: per rientrare servi tu, ", "dopo": "you went half an hour without touching anything: getting back in needs you, "}
+{"file": "src/pagina.html", "prima": "con la tua parola d'ordine — i programmi sono rimasti aperti", "dopo": "with your password — the programs stayed open"}
+{"file": "src/pagina.html", "prima": "la sessione e' stata abbandonata", "dopo": "the session was abandoned"}
+{"file": "src/pagina.html", "prima": "ha prevalso la sessione locale su quella macchina", "dopo": "the local session on that machine took precedence"}
+{"file": "src/pagina.html", "prima": "quell'utente e' gia' collegato localmente", "dopo": "that user is already signed in locally"}
+{"file": "src/pagina.html", "prima": "questo server non ha piu' capacita' per un altro desktop: le sessioni gia' aperte continuano, e un posto si libera appena qualcuno esce — riprova fra un momento, e se si ripete chiedi a chi amministra il server", "dopo": "this server has no capacity left for another desktop: sessions already open carry on, and a slot frees up as soon as someone leaves — try again in a moment, and if it happens again ask whoever administers the server"}
+{"file": "src/pagina.html", "prima": "utente o parola d'ordine non corretti", "dopo": "incorrect username or password"}
+{"file": "src/pagina.html", "prima": "i tentativi da questo indirizzo sono esauriti: ricarica la pagina per sapere quanto manca, o sblocca l'indirizzo dal server", "dopo": "the attempts from this address are used up: reload the page to see how long is left, or unblock the address from the server"}
+{"file": "src/pagina.html", "prima": "il server e questa pagina non hanno niente in comune da parlare", "dopo": "the server and this page have nothing in common to speak"}
+{"file": "src/pagina.html", "prima": "versione del protocollo incompatibile", "dopo": "incompatible protocol version"}
+{"file": "src/pagina.html", "prima": "errore di protocollo", "dopo": "protocol error"}
+{"file": "src/pagina.html", "prima": "il server si sta spegnendo", "dopo": "the server is shutting down"}
+{"file": "src/pagina.html", "prima": "tempo scaduto durante la stretta di mano", "dopo": "timed out during the handshake"}
+{"file": "src/pagina.html", "prima": "il server non ha potuto aprirti la sessione, e non e' un tuo errore: riprova fra un momento, e se si ripete chiedi a chi amministra il server — il perche' preciso e' nel suo registro", "dopo": "the server could not open your session, and it is not your mistake: try again in a moment, and if it happens again ask whoever administers the server — the precise reason is in its log"}
+{"file": "src/pagina.html", "prima": "il posto di questa sessione risulta occupato da un altro client — se eri tu e sei appena caduto, riprova fra qualche secondo", "dopo": "this session's slot shows as taken by another client — if it was you and you just dropped, try again in a few seconds"}
+{"file": "src/pagina.html", "prima": "la sessione e' terminata: i programmi sono stati chiusi", "dopo": "the session has ended: the programs were closed"}
+{"file": "src/pagina.html", "prima": "messaggio oltre 1 MiB: il server viola §6.1", "dopo": "message over 1 MiB: the server violates §6.1"}
+{"file": "src/pagina.html", "prima": "niente contesto 2d", "dopo": "no 2d context"}
+{"file": "src/pagina.html", "prima": "nessun fotogramma entro 2,5 s", "dopo": "no frame within 2.5 s"}
+{"file": "src/pagina.html", "prima": "il fotogramma e' uscito ma i pixel non ", "dopo": "the frame came out but the pixels are not "}
+{"file": "src/pagina.html", "prima": "sono quelli della sonda (sinistra ", "dopo": "those of the probe (left "}
+{"file": "src/pagina.html", "prima": ", destra ", "dopo": ", right "}
+{"file": "src/pagina.html", "prima": "assente", "dopo": "absent"}
+{"file": "src/pagina.html", "prima": "questo browser non ha MediaSource", "dopo": "this browser has no MediaSource"}
+{"file": "src/pagina.html", "prima": "MSE non accetta «", "dopo": "MSE does not accept «"}
+{"file": "src/pagina.html", "prima": "MSE non ha dipinto in 5 s", "dopo": "MSE did not paint within 5 s"}
+{"file": "src/pagina.html", "prima": "la sonda non porta un SPS e un PPS: non si puo' costruire ", "dopo": "the probe carries no SPS and PPS: the start of the MP4 "}
+{"file": "src/pagina.html", "prima": "l'inizio del MP4", "dopo": "cannot be built"}
+{"file": "src/pagina.html", "prima": "il `<video>` non aveva ancora presentato niente: la ", "dopo": "the `<video>` had not presented anything yet: the "}
+{"file": "src/pagina.html", "prima": "tela e' tornata nera", "dopo": "canvas came back black"}
+{"file": "src/pagina.html", "prima": "il `<video>` ha caricato ma i pixel non sono quelli ", "dopo": "the `<video>` loaded but the pixels are not those "}
+{"file": "src/pagina.html", "prima": "della sonda (sinistra ", "dopo": "of the probe (left "}
+{"file": "src/pagina.html", "prima": "lettura: ", "dopo": "read: "}
+{"file": "src/pagina.html", "prima": "il `<video>` ha rifiutato il flusso", "dopo": "the `<video>` refused the stream"}
+{"file": "src/pagina.html", "prima": "la forma del cursore non e' diventata una regola CSS: ", "dopo": "the cursor shape did not become a CSS rule: "}
+{"file": "src/pagina.html", "prima": "puntatore: modo «", "dopo": "pointer: mode «"}
+{"file": "src/pagina.html", "prima": " ⚠ nessuna forma ancora ricevuta: il cursore resta quello di sistema", "dopo": " ⚠ no shape received yet: the cursor stays the system one"}
+{"file": "src/pagina.html", "prima": "questo motore non ha `requestPointerLock`: il puntatore segue la posizione assoluta del mouse dentro la tela, e ai bordi si ferma", "dopo": "this engine has no `requestPointerLock`: the pointer follows the mouse's absolute position inside the canvas, and stops at the edges"}
+{"file": "src/pagina.html", "prima": "`unadjustedMovement` rifiutato: gli spostamenti arrivano con l'accelerazione del sistema gia' applicata (§7.4)", "dopo": "`unadjustedMovement` refused: the movements arrive with the system's acceleration already applied (§7.4)"}
+{"file": "src/pagina.html", "prima": "questo motore non torna una promessa da `requestPointerLock`: se il movimento sia grezzo o accelerato non e' leggibile", "dopo": "this engine does not return a promise from `requestPointerLock`: whether movement is raw or accelerated cannot be read"}
+{"file": "src/pagina.html", "prima": "modo classico: `Pointer Lock` rilasciato — il puntatore torna a seguire la posizione assoluta del mouse dentro la tela", "dopo": "classic mode: `Pointer Lock` released — the pointer goes back to following the mouse's absolute position inside the canvas"}
+{"file": "src/pagina.html", "prima": "modo classico: `Pointer Lock` agganciato", "dopo": "classic mode: `Pointer Lock` engaged"}
+{"file": "src/pagina.html", "prima": " (movimento grezzo)", "dopo": " (raw movement)"}
+{"file": "src/pagina.html", "prima": "il browser ha negato `Pointer Lock` (serve un gesto dell'utente, e a schermo intero uscito con `F11` alcuni motori lo negano sempre)", "dopo": "the browser denied `Pointer Lock` (a user gesture is needed, and with full screen exited with `F11` some engines always deny it)"}
+{"file": "src/pagina.html", "prima": "modo classico: pointerdown tipo=", "dopo": "classic mode: pointerdown type="}
+{"file": "src/pagina.html", "prima": "MARCA modo classico: l'hover non arriva (", "dopo": "MARCA classic mode: hover does not arrive ("}
+{"file": "src/pagina.html", "prima": " passaggi a tasti alzati, l'ultimo a ", "dopo": " passes with buttons up, the last at "}
+{"file": "src/pagina.html", "prima": " e il clic a ", "dopo": " and the click at "}
+{"file": "src/pagina.html", "prima": ") — la cattura del puntatore si accende da sola", "dopo": ") — pointer capture turns on by itself"}
+{"file": "src/pagina.html", "prima": "MARCA modo classico: spinto oltre il bordo — la cattura si rilascia", "dopo": "MARCA classic mode: pushed past the edge — capture is released"}
+{"file": "src/pagina.html", "prima": "modo classico: pointercancel — rilasciati i pulsanti premuti", "dopo": "classic mode: pointercancel — pressed buttons released"}
+{"file": "src/pagina.html", "prima": "modo classico: i movimenti arrivano da `pointermove` ", "dopo": "classic mode: movements arrive from `pointermove` "}
+{"file": "src/pagina.html", "prima": " volte e da `mousemove` ", "dopo": " times and from `mousemove` "}
+{"file": "src/pagina.html", "prima": " ⛔ — questo motore NON consegna gli eventi di compatibilita' del mouse: senza `pointermove` il puntatore sarebbe fermo", "dopo": " ⛔ — this engine does NOT deliver the mouse compatibility events: without `pointermove` the pointer would be still"}
+{"file": "src/pagina.html", "prima": "MARCA modo classico: primo movimento dopo la cattura scartato (", "dopo": "MARCA classic mode: first movement after capture discarded ("}
+{"file": "src/pagina.html", "prima": " px): e' il salto del cursore di sistema", "dopo": " px): it is the system cursor's jump"}
+{"file": "src/pagina.html", "prima": "la geometria della tela e' degenere (vx=", "dopo": "the canvas geometry is degenerate (vx="}
+{"file": "src/pagina.html", "prima": "): il movimento NON si converte e si perde — detto invece che falsificato", "dopo": "): the movement is NOT converted and is lost — said instead of faked"}
+{"file": "src/pagina.html", "prima": "modo classico: pulsante ", "dopo": "classic mode: button "}
+{"file": "src/pagina.html", "prima": " senza codice evdev noto: NON si spedisce (§7.3 vuole i codici di evdev, e inventarne uno premerebbe un altro pulsante sul desktop dell'utente)", "dopo": " without a known evdev code: NOT sent (§7.3 wants the evdev codes, and inventing one would press another button on the user's desktop)"}
+{"file": "src/pagina.html", "prima": "`deltaMode` a PAGINE: si contano 3 scatti per pagina, ed e' un `[?]`", "dopo": "`deltaMode` in PAGES: 3 notches are counted per page, and it is a `[?]`"}
+{"file": "src/pagina.html", "prima": "una battuta in composizione (IME o tasto morto) non produce niente: serve un elemento modificabile col fuoco, e `STUDI.md` §web §1.2 C dice che cosa costa", "dopo": "a keystroke being composed (IME or dead key) produces nothing: an editable focused element is needed, and `STUDI.md` §web §1.2 C says what it costs"}
+{"file": "src/pagina.html", "prima": "modo classico: la posizione «", "dopo": "classic mode: the position «"}
+{"file": "src/pagina.html", "prima": "» non ha un codice evdev in tabella: NON si spedisce (§7.3), e la battuta si perde — detto invece che falsificato", "dopo": "» has no evdev code in the table: NOT sent (§7.3), and the keystroke is lost — said instead of faked"}
+{"file": "src/pagina.html", "prima": "un tasto morto non produce da solo nessun carattere: vedi «composizione»", "dopo": "a dead key produces no character by itself: see «composizione»"}
+{"file": "src/pagina.html", "prima": "nessun annuncio in ", "dopo": "no announcement in "}
+{"file": "src/pagina.html", "prima": "Ctrl+V dopo una copia remota: la V aspetta l'annuncio", "dopo": "Ctrl+V after a remote copy: the V waits for the announcement"}
+{"file": "src/pagina.html", "prima": "V lasciata dopo ", "dopo": "V released after "}
+{"file": "src/pagina.html", "prima": " ms, con ", "dopo": " ms, with "}
+{"file": "src/pagina.html", "prima": " tasti in fila — ", "dopo": " keys queued — "}
+{"file": "src/pagina.html", "prima": "modo classico: rilasciati ", "dopo": "classic mode: released "}
+{"file": "src/pagina.html", "prima": " fra tasti e pulsanti — ", "dopo": " keys and buttons — "}
+{"file": "src/pagina.html", "prima": "la pagina ha perso il fuoco (la Keyboard Lock si spegne da sola proprio qui — `SPECIFICHE.md` §7.3-bis, O10)", "dopo": "the page lost focus (Keyboard Lock turns itself off right here — `SPECIFICHE.md` §7.3-bis, O10)"}
+{"file": "src/pagina.html", "prima": "la pagina e' stata nascosta", "dopo": "the page was hidden"}
+{"file": "src/pagina.html", "prima": "la pagina se ne va", "dopo": "the page is going away"}
+{"file": "src/pagina.html", "prima": "modo classico in vigore", "dopo": "classic mode in force"}
+{"file": "src/pagina.html", "prima": "modo classico · finestra ", "dopo": "classic mode · window "}
+{"file": "src/pagina.html", "prima": " CSS · tela sul vetro ", "dopo": " CSS · canvas on the glass "}
+{"file": "src/pagina.html", "prima": " a (", "dopo": " at ("}
+{"file": "src/pagina.html", "prima": " · fattore del vetro ", "dopo": " · glass factor "}
+{"file": "src/pagina.html", "prima": " · ingrandimento ", "dopo": " · zoom "}
+{"file": "src/pagina.html", "prima": " ⛔ LA TELA ESCE DALLA FINESTRA: col mouse una parte del desktop NON si raggiunge", "dopo": " ⛔ THE CANVAS GOES OUT OF THE WINDOW: with the mouse part of the desktop CANNOT be reached"}
+{"file": "src/pagina.html", "prima": " — la tela ci sta nella finestra", "dopo": " — the canvas fits in the window"}
+{"file": "src/pagina.html", "prima": "⚠ la geometria non si e' potuta dichiarare: ", "dopo": "⚠ the geometry could not be declared: "}
+{"file": "src/pagina.html", "prima": "si esce dalla disposizione classica", "dopo": "leaving the classic layout"}
+{"file": "src/pagina.html", "prima": "⛔ il canale di input ha rifiutato un messaggio del tocco: ", "dopo": "⛔ the input channel refused a touch message: "}
+{"file": "src/pagina.html", "prima": "⚠ RIPIEGO: il puntatore del tocco e' un elemento SOPRA la tela — `STUDI.md` §web S4 — perche' `REMOTIX_PUNTATORE` non c'e' ancora", "dopo": "⚠ FALLBACK: the touch pointer is an element ABOVE the canvas — `STUDI.md` §web S4 — because `REMOTIX_PUNTATORE` does not exist yet"}
+{"file": "src/pagina.html", "prima": "⛔ CUCITURA ROTTA: `REMOTIX_PUNTATORE.muovi()` non rende visibile il puntatore in disposizione a tocco (manca `cl_noto = true` in `muovi`, ancora `F4-INPUT-CLASSICO`) — si ripiega sul puntatore di questa ancora", "dopo": "⛔ BROKEN SEAM: `REMOTIX_PUNTATORE.muovi()` does not make the pointer visible in touch layout (`cl_noto = true` is missing in `muovi`, anchor `F4-INPUT-CLASSICO`) — falling back to this anchor's pointer"}
+{"file": "src/pagina.html", "prima": "⚠ tocco: ", "dopo": "⚠ touch: "}
+{"file": "src/pagina.html", "prima": " dita insieme — nessun gesto della tabella dei sette, ignorato", "dopo": " fingers together — no gesture of the table of seven, ignored"}
+{"file": "src/pagina.html", "prima": "tocco: rilasciato il sinistro tenuto giu' — ", "dopo": "touch: released the left button held down — "}
+{"file": "src/pagina.html", "prima": "⚠ RIPIEGO: `event.timeStamp` non e' sulla base di `performance.now()` (", "dopo": "⚠ FALLBACK: `event.timeStamp` is not on the base of `performance.now()` ("}
+{"file": "src/pagina.html", "prima": " contro ", "dopo": " against "}
+{"file": "src/pagina.html", "prima": ") — le soglie dei gesti si misurano sull'istante del gestore, non su quello dell'evento", "dopo": ") — the gesture thresholds are measured on the handler's instant, not the event's"}
+{"file": "src/pagina.html", "prima": "il sistema ha annullato il tocco", "dopo": "the system cancelled the touch"}
+{"file": "src/pagina.html", "prima": "forzata da `?disposizione=", "dopo": "forced by `?disposizione="}
+{"file": "src/pagina.html", "prima": "` — via di servizio, non un'impostazione", "dopo": "` — service route, not a setting"}
+{"file": "src/pagina.html", "prima": "l'utente ha appena usato un puntatore fine (`pointerType=", "dopo": "the user has just used a fine pointer (`pointerType="}
+{"file": "src/pagina.html", "prima": "l'utente ha appena usato un dito (`pointerType=touch`)", "dopo": "the user has just used a finger (`pointerType=touch`)"}
+{"file": "src/pagina.html", "prima": "`(any-pointer: fine)` — c'e' un puntatore fine attaccato", "dopo": "`(any-pointer: fine)` — a fine pointer is attached"}
+{"file": "src/pagina.html", "prima": "`(pointer: coarse)` e nessun puntatore fine — un dito e basta", "dopo": "`(pointer: coarse)` and no fine pointer — just a finger"}
+{"file": "src/pagina.html", "prima": "⚠ RIPIEGO: `matchMedia` non risponde alle query sul puntatore, si guarda la larghezza (", "dopo": "⚠ FALLBACK: `matchMedia` does not answer the pointer queries, looking at the width ("}
+{"file": "src/pagina.html", "prima": " px CSS contro ", "dopo": " CSS px against "}
+{"file": "src/pagina.html", "prima": "nessun puntatore grosso dichiarato", "dopo": "no coarse pointer declared"}
+{"file": "src/pagina.html", "prima": "⚠ RIPIEGO: la disposizione classica e' in vigore ma `REMOTIX_CLASSICO` non c'e' — l'ancora `F4-INPUT-CLASSICO` non e' stata cucita", "dopo": "⚠ FALLBACK: the classic layout is in force but `REMOTIX_CLASSICO` is missing — the `F4-INPUT-CLASSICO` anchor has not been stitched"}
+{"file": "src/pagina.html", "prima": "tastiera a schermo APERTA — ", "dopo": "on-screen keyboard OPEN — "}
+{"file": "src/pagina.html", "prima": "tastiera a schermo chiusa — ", "dopo": "on-screen keyboard closed — "}
+{"file": "src/pagina.html", "prima": "Tastiera", "dopo": "Keyboard"}
+{"file": "src/pagina.html", "prima": "comando ⌨ toccato", "dopo": "⌨ control touched"}
+{"file": "src/pagina.html", "prima": "comando ⌨ premuto", "dopo": "⌨ control pressed"}
+{"file": "src/pagina.html", "prima": "chiusa da Android (indietro)", "dopo": "closed by Android (back)"}
+{"file": "src/pagina.html", "prima": "si esce dalla disposizione a tocco", "dopo": "leaving the touch layout"}
+{"file": "src/pagina.html", "prima": "tocco: ingrandimento ", "dopo": "touch: zoom "}
+{"file": "src/pagina.html", "prima": "× azzerato uscendo dal tocco — col mouse non si panorama, e quel che resta fuori dalla finestra sarebbe irraggiungibile", "dopo": "× reset on leaving touch — with the mouse one does not pan, and what stays outside the window would be unreachable"}
+{"file": "src/pagina.html", "prima": "disposizione: **", "dopo": "layout: **"}
+{"file": "src/pagina.html", "prima": "la pagina ha perso il fuoco", "dopo": "the page lost focus"}
+{"file": "src/pagina.html", "prima": "⚠ scorciatoie, RIPIEGO «", "dopo": "⚠ shortcuts, FALLBACK «"}
+{"file": "src/pagina.html", "prima": "nessun ferro Apple sul banco del 14 agosto 2026", "dopo": "no Apple hardware on the bench of 14 Aug 2026"}
+{"file": "src/pagina.html", "prima": "nessun telefono e nessun DeX collegati", "dopo": "no phone and no DeX connected"}
+{"file": "src/pagina.html", "prima": "sul banco c'era Firefox 140 ESR, che la lock non ce l'ha", "dopo": "the bench had Firefox 140 ESR, which does not have the lock"}
+{"file": "src/pagina.html", "prima": "non ancora chiesta", "dopo": "not asked for yet"}
+{"file": "src/pagina.html", "prima": "lo schermo intero e' stato aperto con F11: la Keyboard Lock non esiste li' dentro, e il browser non lo dice", "dopo": "full screen was opened with F11: Keyboard Lock does not exist in there, and the browser does not say so"}
+{"file": "src/pagina.html", "prima": " ⇒ le scorciatoie del browser restano tutte sue.  Per riaverle: uscire con F11 e rientrare dal bottone.", "dopo": " ⇒ the browser's shortcuts stay all its own.  To get them back: leave with F11 and come back in from the button."}
+{"file": "src/pagina.html", "prima": "⛔ lo schermo intero e' stato rifiutato: ", "dopo": "⛔ full screen was refused: "}
+{"file": "src/pagina.html", "prima": " — senza schermo intero NON c'e' Keyboard Lock, e le scorciatoie restano tutte del browser", "dopo": " — without full screen there is NO Keyboard Lock, and the shortcuts stay all the browser's"}
+{"file": "src/pagina.html", "prima": "schermo intero rifiutato: ", "dopo": "full screen refused: "}
+{"file": "src/pagina.html", "prima": "requestFullscreen({keyboardLock:'browser'}) — la forma WHATWG", "dopo": "requestFullscreen({keyboardLock:'browser'}) — the WHATWG form"}
+{"file": "src/pagina.html", "prima": "⭐ Keyboard Lock ottenuta nella forma nuova.", "dopo": "⭐ Keyboard Lock obtained in the new form."}
+{"file": "src/pagina.html", "prima": "navigator.keyboard.lock() — la forma di Chrome ed Edge", "dopo": "navigator.keyboard.lock() — the Chrome and Edge form"}
+{"file": "src/pagina.html", "prima": "⭐ Keyboard Lock ottenuta nella forma vecchia.", "dopo": "⭐ Keyboard Lock obtained in the old form."}
+{"file": "src/pagina.html", "prima": "navigator.keyboard.lock() ha rifiutato: ", "dopo": "navigator.keyboard.lock() refused: "}
+{"file": "src/pagina.html", "prima": "questo motore non ha NESSUNA delle due forme della Keyboard Lock", "dopo": "this engine has NEITHER of the two forms of Keyboard Lock"}
+{"file": "src/pagina.html", "prima": " ⇒ si va a schermo intero lo stesso, e le scorciatoie che il browser si tiene restano sue. Sono elencate qui sotto: non si finge che arrivino.", "dopo": " ⇒ going full screen anyway, and the shortcuts the browser keeps stay its own. They are listed below: we do not pretend they arrive."}
+{"file": "src/pagina.html", "prima": "uscita dallo schermo intero", "dopo": "left full screen"}
+{"file": "src/pagina.html", "prima": "la pagina ha perso il fuoco: la Keyboard Lock si e' spenta da sola (O10) — si ricompra al ritorno", "dopo": "the page lost focus: Keyboard Lock turned itself off (O10) — it is bought again on return"}
+{"file": "src/pagina.html", "prima": "il fuoco e' tornato ma lo schermo intero non c'e' piu': niente da ricomprare", "dopo": "focus came back but full screen is gone: nothing to buy back"}
+{"file": "src/pagina.html", "prima": "ricomprata al ritorno del fuoco", "dopo": "bought again on focus return"}
+{"file": "src/pagina.html", "prima": "⭐ Keyboard Lock ricomprata al ritorno del fuoco.", "dopo": "⭐ Keyboard Lock bought again on focus return."}
+{"file": "src/pagina.html", "prima": "la ricompra della lock e' fallita: ", "dopo": "buying the lock again failed: "}
+{"file": "src/pagina.html", "prima": "la lock era nella forma nuova: si ricompra solo uscendo e rientrando a schermo intero — e non lo si fa di nascosto", "dopo": "the lock was in the new form: it is bought again only by leaving and re-entering full screen — and that is not done behind their back"}
+{"file": "src/pagina.html", "prima": "lo schermo intero e' finito: con lui la lock", "dopo": "full screen ended: and with it the lock"}
+{"file": "src/pagina.html", "prima": "su questo motore le scorciatoie NON sono state misurate: non si sa che cosa si perde, e non lo si deduce dagli altri", "dopo": "on this engine the shortcuts have NOT been measured: what is lost is not known, and it is not deduced from the others"}
+{"file": "src/pagina.html", "prima": "[M] 14 agosto 2026", "dopo": "[M] 14 Aug 2026"}
+{"file": "src/pagina.html", "prima": "nessun browser la lascia passare, e nessuno la lascera' mai: la prende il sistema operativo del CLIENT prima del browser", "dopo": "no browser lets it through, and none ever will: the CLIENT's operating system takes it before the browser"}
+{"file": "src/pagina.html", "prima": "il browser chiude la scheda", "dopo": "the browser closes the tab"}
+{"file": "src/pagina.html", "prima": "il browser apre una scheda", "dopo": "the browser opens a tab"}
+{"file": "src/pagina.html", "prima": "la prende il compositore del client", "dopo": "the client's compositor takes it"}
+{"file": "src/pagina.html", "prima": "la prende il compositore del client (e su Android/DeX ogni combinazione con Meta, per regola AOSP)", "dopo": "the client's compositor takes it (and on Android/DeX every combination with Meta, by AOSP rule)"}
+{"file": "src/pagina.html", "prima": "» NON e' partita: il modo classico non e' cucito (manca `cl_spedisci`).  Il bottone non ha fatto niente, e questa riga esiste perche' non sembri che l'abbia fatto.", "dopo": "» did NOT leave: classic mode is not stitched (`cl_spedisci` is missing).  The button did nothing, and this line exists so that it does not look as if it did."}
+{"file": "src/pagina.html", "prima": "» non e' partita: la posizione «", "dopo": "» did not leave: the position «"}
+{"file": "src/pagina.html", "prima": "» non e' in tabella", "dopo": "» is not in the table"}
+{"file": "src/pagina.html", "prima": "» mandata dal bottone come posizioni: ", "dopo": "» sent from the button as positions: "}
+{"file": "src/pagina.html", "prima": "quali tasti non arrivano al desktop?", "dopo": "which keys do not reach the desktop?"}
+{"file": "src/pagina.html", "prima": "Tastiera: ", "dopo": "Keyboard: "}
+{"file": "src/pagina.html", "prima": "viva (", "dopo": "live ("}
+{"file": "src/pagina.html", "prima": "Puntatore: schermo (", "dopo": "Pointer: screen ("}
+{"file": "src/pagina.html", "prima": "Ritardo del giro (comando → fotogramma che lo contiene, arrivato — senza decodifica e disegno): ", "dopo": "Round-trip latency (command → frame containing it, arrived — without decoding and drawing): "}
+{"file": "src/pagina.html", "prima": "nessuna misura ancora", "dopo": "no measurement yet"}
+{"file": "src/pagina.html", "prima": "Prima di noi (evento → nostro gestore, nessuna rete dentro): tasti ", "dopo": "Before us (event → our handler, no network inside): keys "}
+{"file": "src/pagina.html", "prima": "Scena — immagine vecchia, misurata NELL'ISTANTE del movimento: ", "dopo": "Scene — old image, measured AT THE INSTANT of the movement: "}
+{"file": "src/pagina.html", "prima": "Puntatore (A/B): ", "dopo": "Pointer (A/B): "}
+{"file": "src/pagina.html", "prima": "Cattura del puntatore: ", "dopo": "Pointer capture: "}
+{"file": "src/pagina.html", "prima": "▸ accesa — premi Esc per uscire", "dopo": "▸ on — press Esc to leave"}
+{"file": "src/pagina.html", "prima": "spenta — accendi", "dopo": "off — turn on"}
+{"file": "src/pagina.html", "prima": "⛔ il canale di input non e' cucito: i bottoni qui sotto NON mandano niente.", "dopo": "⛔ the input channel is not stitched: the buttons below send NOTHING."}
+{"file": "src/pagina.html", "prima": "quali tasti non arrivano al desktop? (non misurato su questo motore)", "dopo": "which keys do not reach the desktop? (not measured on this engine)"}
+{"file": "src/pagina.html", "prima": "quali tasti non arrivano al desktop? — ne risultano ", "dopo": "which keys do not reach the desktop? — count: "}
+{"file": "src/pagina.html", "prima": "nessun tasto perso su questo motore e in questo palco", "dopo": "no key lost on this engine and on this stage"}
+{"file": "src/pagina.html", "prima": " su questo motore e in questo palco non risulta persa nessuna delle combinazioni provate.", "dopo": " on this engine and on this stage none of the combinations tried is lost."}
+{"file": "src/pagina.html", "prima": " — quel che il browser si tiene, e che quindi NON comanda il desktop remoto:", "dopo": " — what the browser keeps, and which therefore does NOT control the remote desktop:"}
+{"file": "src/pagina.html", "prima": " — misurata senza la cura che questa pagina applica: potrebbe non perdersi affatto, e non lo do per buono", "dopo": " — measured without the cure this page applies: it may not be lost at all, and I do not take it for granted"}
+{"file": "src/pagina.html", "prima": " — arriva al desktop remoto MA il browser esegue anche il suo comando", "dopo": " — reaches the remote desktop BUT the browser also executes its own command"}
+{"file": "src/pagina.html", "prima": " — non arriva affatto", "dopo": " — does not arrive at all"}
+{"file": "src/pagina.html", "prima": ": non provato — ", "dopo": ": not tried — "}
+{"file": "src/pagina.html", "prima": "quali tasti non arrivano al desktop remoto", "dopo": "which keys do not reach the remote desktop"}
+{"file": "src/pagina.html", "prima": "⌨ scorciatoie: non misurate su questo motore — ", "dopo": "⌨ shortcuts: not measured on this engine — "}
+{"file": "src/pagina.html", "prima": ".  Il bottoncino in basso a sinistra apre l'elenco.", "dopo": ".  The little button at the bottom left opens the list."}
+{"file": "src/pagina.html", "prima": " su questo browser e in questo palco non risulta persa nessuna delle combinazioni provate.", "dopo": " on this browser and on this stage none of the combinations tried is lost."}
+{"file": "src/pagina.html", "prima": " su questo browser NON comandano il desktop ", "dopo": " on this browser the remote desktop is NOT "}
+{"file": "src/pagina.html", "prima": "remoto ", "dopo": "controlled by "}
+{"file": "src/pagina.html", "prima": " combinazioni (fra cui Super, Alt+Tab, Alt+F4): le tiene il TUO computer.  Il bottoncino in basso a sinistra apre l'elenco, e c'e' un bottone per Ctrl+Alt+Canc.", "dopo": " combinations (among them Super, Alt+Tab, Alt+F4): YOUR computer keeps them.  The little button at the bottom left opens the list, and there is a button for Ctrl+Alt+Del."}
+{"file": "src/pagina.html", "prima": "questa pagina non porta una sonda per ", "dopo": "this page carries no probe for "}
+{"file": "src/pagina.html", "prima": " a ", "dopo": " at "}
+{"file": "src/pagina.html", "prima": "questo browser non ha WebCodecs, e l'altra strada (MSE) porta il solo H.264", "dopo": "this browser has no WebCodecs, and the other route (MSE) carries H.264 only"}
+{"file": "src/pagina.html", "prima": "si sta misurando la strada MSE, che porta il solo H.264", "dopo": "the MSE route is being measured, which carries H.264 only"}
+{"file": "src/pagina.html", "prima": "DICHIARATO, non dipinto: su questa strada la sonda non puo' far ", "dopo": "DECLARED, not painted: on this route the probe cannot get a frame "}
+{"file": "src/pagina.html", "prima": "presentare un fotogramma (vedi il riquadro).  Il controllo e' sul ", "dopo": "presented (see the comment box).  The check is on the real "}
+{"file": "src/pagina.html", "prima": "`<video>` vero, e se non presenta lo si legge nel registro", "dopo": "`<video>`, and if it does not present, the log says so"}
+{"file": "src/pagina.html", "prima": "eccezione: ", "dopo": "exception: "}
+{"file": "src/pagina.html", "prima": "isConfigSupported ha detto no a tutte le stringhe provate: ", "dopo": "isConfigSupported said no to all the strings tried: "}
+{"file": "src/pagina.html", "prima": "ha dipinto, ma il fotogramma misura ", "dopo": "it painted, but the frame measures "}
+{"file": "src/pagina.html", "prima": " invece di ", "dopo": " instead of "}
+{"file": "src/pagina.html", "prima": "⚠ §4.3: `video.misura_massima` si OMETTE — su questa ", "dopo": "⚠ §4.3: `video.misura_massima` is OMITTED — on this "}
+{"file": "src/pagina.html", "prima": "strada la scala non si puo' misurare (la sonda dei gradini ", "dopo": "route the ladder cannot be measured (the rung probe "}
+{"file": "src/pagina.html", "prima": "vuole WebCodecs, che qui non c'e').  Il tetto vero lo pone ", "dopo": "needs WebCodecs, which is missing here).  The real "}
+{"file": "src/pagina.html", "prima": "il decodificatore del sistema, e non si dichiara quel che ", "dopo": "ceiling is set by the system decoder, and what has not "}
+{"file": "src/pagina.html", "prima": "non si e' misurato", "dopo": "been measured is not declared"}
+{"file": "src/pagina.html", "prima": " non ha dipinto nemmeno alla tela minima ", "dopo": " did not paint even at the minimum canvas "}
+{"file": "src/pagina.html", "prima": "di §4.5 (", "dopo": "of §4.5 ("}
+{"file": "src/pagina.html", "prima": ": arriva al pixel (", "dopo": ": reaches the pixel ("}
+{"file": "src/pagina.html", "prima": " e ", "dopo": " and "}
+{"file": "src/pagina.html", "prima": ": NON arriva al pixel su questo ", "dopo": ": does NOT reach the pixel on this "}
+{"file": "src/pagina.html", "prima": "browser — ", "dopo": "browser — "}
+{"file": "src/pagina.html", "prima": "non provato", "dopo": "not tried"}
+{"file": "src/pagina.html", "prima": "misura ", "dopo": "size "}
+{"file": "src/pagina.html", "prima": ": fino a ", "dopo": ": up to "}
+{"file": "src/pagina.html", "prima": "NIENTE", "dopo": "NOTHING"}
+{"file": "src/pagina.html", "prima": " gradini, ", "dopo": " rungs, "}
+{"file": "src/pagina.html", "prima": "; fermata a ", "dopo": "; stopped at "}
+{"file": "src/pagina.html", "prima": "; scala finita", "dopo": "; ladder finished"}
+{"file": "src/pagina.html", "prima": "⭐ video.misura_massima MISURATA: ", "dopo": "⭐ video.misura_massima MEASURED: "}
+{"file": "src/pagina.html", "prima": "nessuna — la ", "dopo": "none — the "}
+{"file": "src/pagina.html", "prima": "capacita' si OMETTE (§4.3 vieta il valore vuoto)", "dopo": "capability is OMITTED (§4.3 forbids the empty value)"}
+{"file": "src/pagina.html", "prima": " — e' il tetto del DECODIFICATORE (§4.3), non la misura dello schermo, ", "dopo": " — it is the DECODER's ceiling (§4.3), not the screen size, "}
+{"file": "src/pagina.html", "prima": "che vale ", "dopo": "which is "}
+{"file": "src/pagina.html", "prima": " e viaggia in ATTACCA come «vista» · scala in ", "dopo": " and travels in ATTACCA as «vista» · ladder in "}
+{"file": "src/pagina.html", "prima": "sonda video · ", "dopo": "video probe · "}
+{"file": "src/pagina.html", "prima": "Questo browser non ha WebCodecs, cioè l'unico modo che REMOTIX ha di disegnare il desktop: non è una questione di codec — né HEVC né H.264 c'entrano. Oggi succede su **Firefox per Android**, dove Mozilla non lo ha ancora acceso, e su quel browser REMOTIX è dichiarato NON SUPPORTATO: una strada alternativa esiste, è stata provata, e dà un desktop dal disegno irregolare e dall'input imprevedibile — meno di quel che questo prodotto promette. ⇒ Su quel telefono si usa Chrome, che ha tutto quel che serve.", "dopo": "This browser has no WebCodecs, which is the only way REMOTIX has to draw the desktop: it is not a codec question — neither HEVC nor H.264 has anything to do with it. Today it happens on **Firefox for Android**, where Mozilla has not turned it on yet, and on that browser REMOTIX is declared NOT SUPPORTED: an alternative route exists, it has been tried, and it gives a desktop with irregular drawing and unpredictable input — less than what this product promises. ⇒ On that phone use Chrome, which has everything needed."}
+{"file": "src/pagina.html", "prima": "Questo browser ha WebCodecs ma non porta nessuno dei due codec video fino ai pixel: né HEVC né H.264. La sessione può aprirsi, ma non ci sarà immagine. Su Linux il decodificatore HEVC di Chrome è quello della scheda grafica, e senza scheda grafica non c'è; Firefox non fa HEVC affatto — e H.264, che dovrebbe esserci ovunque, qui non è arrivato al pixel.", "dopo": "This browser has WebCodecs but brings neither of the two video codecs all the way to the pixels: neither HEVC nor H.264. The session may open, but there will be no image. On Linux Chrome's HEVC decoder is the graphics card's, and without a graphics card there is none; Firefox does not do HEVC at all — and H.264, which should be everywhere, did not reach the pixel here."}
+{"file": "src/pagina.html", "prima": "Questo browser non decodifica HEVC: si usa H.264, che è il ripiego previsto ed è quello supportato ovunque. L'immagine c'è; il consumo di banda a parità di qualità è più alto.", "dopo": "This browser does not decode HEVC: H.264 is used, which is the planned fallback and the one supported everywhere. The image is there; bandwidth use at equal quality is higher."}
+{"file": "src/pagina.html", "prima": "Il server ha scelto H.264 anche se questo browser decodifica HEVC.", "dopo": "The server chose H.264 even though this browser decodes HEVC."}
+{"file": "src/pagina.html", "prima": "E questo browser non ha dipinto nemmeno alla misura minima prevista dal protocollo (320×240): l'immagine potrebbe non arrivare affatto.", "dopo": "And this browser did not paint even at the minimum size the protocol allows (320×240): the image may not arrive at all."}
+{"file": "src/pagina.html", "prima": "Collegato. Il desktop sta arrivando…\nSe è il primo accesso dopo un riavvio o dopo un'uscita, la sessione grafica sta nascendo adesso e ci mette qualche secondo: comparirà da sé.", "dopo": "Connected. The desktop is on its way…\nIf this is the first sign-in after a restart or after signing out, the graphical session is starting now and takes a few seconds: it will appear by itself."}
+{"file": "src/pagina.html", "prima": "Nessun fotogramma", "dopo": "No frame"}
+{"file": "src/pagina.html", "prima": "Collegato.", "dopo": "Connected."}
+{"file": "src/pagina.html", "prima": "Nessun fotogramma è arrivato in ", "dopo": "No frame has arrived in "}
+{"file": "src/pagina.html", "prima": " secondi. La sessione è aperta e il codec video negoziato è ", "dopo": " seconds. The session is open and the negotiated video codec is "}
+{"file": "src/pagina.html", "prima": ", ma il server non ha ancora spedito nessuna immagine.\n", "dopo": ", but the server has not sent any image yet.\n"}
+{"file": "src/pagina.html", "prima": "La causa più probabile è la tela: ne sono stati chiesti ", "dopo": "The most likely cause is the canvas: "}
+{"file": "src/pagina.html", "prima": " e il server ne ha concessi ", "dopo": " was requested and the server granted "}
+{"file": "src/pagina.html", "prima": ". Un server che cattura lo schermo a una misura fissa non può spedire un fotogramma che non corrisponda alla tela in vigore, e non lo spedisce: lo scrive nel proprio registro. ⇒ Quel che manca è l'immagine, e quel che la trattiene è la differenza fra queste due misure.", "dopo": ". A server that captures the screen at a fixed size cannot send a frame that does not match the canvas in force, and does not send it: it writes so in its own log. ⇒ What is missing is the image, and what holds it back is the difference between these two sizes."}
+{"file": "src/pagina.html", "prima": "La tela concessa è quella chiesta (", "dopo": "The granted canvas is the one requested ("}
+{"file": "src/pagina.html", "prima": "), quindi non è la tela a trattenerla.\n", "dopo": "), so it is not the canvas holding it back.\n"}
+{"file": "src/pagina.html", "prima": "Se è il primo accesso dopo un riavvio della macchina, la sessione grafica sta nascendo adesso: ci mette una trentina di secondi, e il desktop comparirà da sé senza toccare niente. Se l'attesa va molto oltre, il motivo è dalla parte del server e sta nel suo registro: questa pagina non lo può leggere, e non lo indovina.", "dopo": "If this is the first sign-in after a machine restart, the graphical session is starting now: it takes about thirty seconds, and the desktop will appear by itself without touching anything. If the wait goes far beyond that, the reason is on the server's side and is in its log: this page cannot read it, and does not guess it."}
+{"file": "src/pagina.html", "prima": "⛔ RIPIEGO: `?tela=gl` chiesta ma ", "dopo": "⛔ FALLBACK: `?tela=gl` requested but "}
+{"file": "src/pagina.html", "prima": " — si dipinge sulla strada di serie", "dopo": " — painting on the default route"}
+{"file": "src/pagina.html", "prima": "MISURA tela gl · ⚠ `?tela=gl`: STRADA CANDIDATA a richiesta ", "dopo": "MISURA tela gl · ⚠ `?tela=gl`: CANDIDATE ROUTE on request "}
+{"file": "src/pagina.html", "prima": "(WebGL2 `texImage2D(VideoFrame)`, anomalia A1) — NON e' la ", "dopo": "(WebGL2 `texImage2D(VideoFrame)`, anomaly A1) — it is NOT the "}
+{"file": "src/pagina.html", "prima": "strada di serie, e serve a misurare", "dopo": "default route, and it serves to measure"}
+{"file": "src/pagina.html", "prima": "⭐ la tela si dipinge con `bitmaprenderer` (§5.4): niente magazzino 2D", "dopo": "⭐ the canvas is painted with `bitmaprenderer` (§5.4): no 2D store"}
+{"file": "src/pagina.html", "prima": "⚠ `?tela=2d`: STRADA VECCHIA a richiesta — e' quella su cui gli ", "dopo": "⚠ `?tela=2d`: OLD ROUTE on request — it is the one on which the "}
+{"file": "src/pagina.html", "prima": "artefatti si vedono, e serve solo a confrontare", "dopo": "artefacts show, and it serves only to compare"}
+{"file": "src/pagina.html", "prima": "⛔ RIPIEGO: questo browser non ha `bitmaprenderer` o ", "dopo": "⛔ FALLBACK: this browser has no `bitmaprenderer` or "}
+{"file": "src/pagina.html", "prima": "`createImageBitmap`, quindi si dipinge sulla tela 2D — la strada ", "dopo": "`createImageBitmap`, so painting is on the 2D canvas — the route "}
+{"file": "src/pagina.html", "prima": "su cui §5.4 ha misurato i blocchi.  Non e' una scelta: e' una ", "dopo": "on which §5.4 measured the blocks.  It is not a choice: it is a "}
+{"file": "src/pagina.html", "prima": "capacita' che manca", "dopo": "capability that is missing"}
+{"file": "src/pagina.html", "prima": "buco: ", "dopo": "gap: "}
+{"file": "src/pagina.html", "prima": " — la chiave chiesta non e' arrivata in ", "dopo": " — the requested keyframe did not arrive within "}
+{"file": "src/pagina.html", "prima": "1 s: la RICHIEDO (§5.2)", "dopo": "1 s: REQUESTING it again (§5.2)"}
+{"file": "src/pagina.html", "prima": " — e ce n'e' gia' uno aperto: la chiave e' ", "dopo": " — and one is already open: the keyframe has "}
+{"file": "src/pagina.html", "prima": "gia' stata chiesta, non se ne chiede una seconda (§5.2)", "dopo": "already been requested, a second one is not requested (§5.2)"}
+{"file": "src/pagina.html", "prima": " ⇒ RICHIEDI_CHIAVE, e fino alla chiave si ", "dopo": " ⇒ RICHIEDI_CHIAVE, and until the keyframe the "}
+{"file": "src/pagina.html", "prima": "tiene l'ultimo fotogramma buono (§5.2)", "dopo": "last good frame is kept (§5.2)"}
+{"file": "src/pagina.html", "prima": "la tela concessa", "dopo": "the granted canvas"}
+{"file": "src/pagina.html", "prima": "negoziato: codec ", "dopo": "negotiated: codec "}
+{"file": "src/pagina.html", "prima": " bit, tela ", "dopo": " bit, canvas "}
+{"file": "src/pagina.html", "prima": "nessuna", "dopo": "none"}
+{"file": "src/pagina.html", "prima": "vista ", "dopo": "view "}
+{"file": "src/pagina.html", "prima": " pixel fisici (", "dopo": " physical pixels ("}
+{"file": "src/pagina.html", "prima": " CSS, fattore ", "dopo": " CSS, factor "}
+{"file": "src/pagina.html", "prima": "): la TELA resta ", "dopo": "): the CANVAS stays "}
+{"file": "src/pagina.html", "prima": " — cornice ", "dopo": " — frame "}
+{"file": "src/pagina.html", "prima": " a scala ", "dopo": " at scale "}
+{"file": "src/pagina.html", "prima": ", bande FUORI dal buffer", "dopo": ", bands OUTSIDE the buffer"}
+{"file": "src/pagina.html", "prima": " — nessun fotogramma ancora: cornice non calcolabile", "dopo": " — no frame yet: frame cannot be computed"}
+{"file": "src/pagina.html", "prima": "⚠ la vista misurata e' cambiata fra la prima e la seconda ", "dopo": "⚠ the measured view changed between the first and the second "}
+{"file": "src/pagina.html", "prima": "passata (", "dopo": "pass ("}
+{"file": "src/pagina.html", "prima": "): era una barra di ", "dopo": "): it was a scrollbar "}
+{"file": "src/pagina.html", "prima": "scorrimento che la tela stessa faceva comparire", "dopo": "the canvas itself made appear"}
+{"file": "src/pagina.html", "prima": "⛔ drawImage ha lanciato: ", "dopo": "⛔ drawImage threw: "}
+{"file": "src/pagina.html", "prima": "⛔ il fotogramma non e' diventato un'immagine: ", "dopo": "⛔ the frame did not become an image: "}
+{"file": "src/pagina.html", "prima": "questo browser non da' WebGL2", "dopo": "this browser does not provide WebGL2"}
+{"file": "src/pagina.html", "prima": "il programma WebGL non si prepara — la tela resta ", "dopo": "the WebGL program does not set up — the canvas stays "}
+{"file": "src/pagina.html", "prima": "NERA, ricaricare senza `?tela=gl`", "dopo": "BLACK, reload without `?tela=gl`"}
+{"file": "src/pagina.html", "prima": "⛔ tela gl: contesto WebGL PERSO — i fotogrammi si chiudono ", "dopo": "⛔ tela gl: WebGL context LOST — frames are closed "}
+{"file": "src/pagina.html", "prima": "e si contano in `bmp_falliti` finche' non torna", "dopo": "and counted in `bmp_falliti` until it comes back"}
+{"file": "src/pagina.html", "prima": "⛔ RIPIEGO: il contesto WebGL non e' tornato in 3 s — ", "dopo": "⛔ FALLBACK: the WebGL context did not come back within 3 s — "}
+{"file": "src/pagina.html", "prima": "a sessione aperta la strada di serie non si puo' ", "dopo": "with the session open the default route cannot be "}
+{"file": "src/pagina.html", "prima": "riprendere: ricaricare la pagina SENZA `?tela=gl`", "dopo": "resumed: reload the page WITHOUT `?tela=gl`"}
+{"file": "src/pagina.html", "prima": "⛔ tela gl: contesto tornato ma il programma non si rifa' — tela NERA", "dopo": "⛔ tela gl: context back but the program cannot be rebuilt — canvas BLACK"}
+{"file": "src/pagina.html", "prima": "MISURA tela gl: contesto WebGL TORNATO, si riprende a dipingere", "dopo": "MISURA tela gl: WebGL context BACK, painting resumes"}
+{"file": "src/pagina.html", "prima": "⛔ tela gl: fotogrammi NON dipinti — ", "dopo": "⛔ tela gl: frames NOT painted — "}
+{"file": "src/pagina.html", "prima": "programma rotto", "dopo": "program broken"}
+{"file": "src/pagina.html", "prima": "contesto perso", "dopo": "context lost"}
+{"file": "src/pagina.html", "prima": "possibile", "dopo": "possible"}
+{"file": "src/pagina.html", "prima": "ESCLUSA (visibile ", "dopo": "EXCLUDED (visible "}
+{"file": "src/pagina.html", "prima": " ≠ codificato ", "dopo": " ≠ coded "}
+{"file": "src/pagina.html", "prima": "MISURA tela gl · via veloce ", "dopo": "MISURA tela gl · fast path "}
+{"file": "src/pagina.html", "prima": " · formato ", "dopo": " · format "}
+{"file": "src/pagina.html", "prima": "⛔ tela gl: il fotogramma non si carica: ", "dopo": "⛔ tela gl: the frame does not upload: "}
+{"file": "src/pagina.html", "prima": "MISURA tela gl · caricamento med ", "dopo": "MISURA tela gl · upload med "}
+{"file": "src/pagina.html", "prima": " ms · vetro med ", "dopo": " ms · glass med "}
+{"file": "src/pagina.html", "prima": " ms · disegno med ", "dopo": " ms · draw med "}
+{"file": "src/pagina.html", "prima": ") · dipinti ", "dopo": ") · painted "}
+{"file": "src/pagina.html", "prima": " fuori ", "dopo": " out "}
+{"file": "src/pagina.html", "prima": " · errore GL ", "dopo": " · GL error "}
+{"file": "src/pagina.html", "prima": "nessuno", "dopo": "none"}
+{"file": "src/pagina.html", "prima": "in vigore quando la coda ha cominciato a svuotarsi", "dopo": "in force when the queue started to drain"}
+{"file": "src/pagina.html", "prima": "in vigore dentro la finestra del cambio", "dopo": "in force within the change window"}
+{"file": "src/pagina.html", "prima": "la tela in vigore", "dopo": "the canvas in force"}
+{"file": "src/pagina.html", "prima": ": il decodificatore NON si tocca; si riconfigurera' sulla prima ", "dopo": ": the decoder is NOT touched; it will be reconfigured on the first "}
+{"file": "src/pagina.html", "prima": "CHIAVE alla misura nuova (§5.2).  Tollerate adesso: ", "dopo": "KEYFRAME at the new size (§5.2).  Tolerated now: "}
+{"file": "src/pagina.html", "prima": "uno stream video chiuso con FIN dopo ", "dopo": "a video stream closed with FIN after "}
+{"file": "src/pagina.html", "prima": " byte: §6.2 vuole 28 byte d'intestazione, e questo non e' un ", "dopo": " bytes: §6.2 wants 28 header bytes, and this is not a "}
+{"file": "src/pagina.html", "prima": "fotogramma corto — e' una lunghezza che non torna", "dopo": "short frame — it is a length that does not add up"}
+{"file": "src/pagina.html", "prima": "uno stream video prima di SESSIONE: §2.5 ", "dopo": "a video stream before SESSIONE: §2.5 "}
+{"file": "src/pagina.html", "prima": "lo vieta, ed e' l'invariante I3 sul filo — chi non passa dal ", "dopo": "forbids it, and it is invariant I3 on the wire — whoever does not "}
+{"file": "src/pagina.html", "prima": "validatore non riceve un pixel", "dopo": "pass the validator does not receive a pixel"}
+{"file": "src/pagina.html", "prima": "/* ⛔ §6.2: uno stream AZZERATO", "dopo": "/* ⛔ §6.2: a RESET stream"}
+{"file": "src/pagina.html", "prima": "stream azzerato (RESET_STREAM) dopo ", "dopo": "stream reset (RESET_STREAM) after "}
+{"file": "src/pagina.html", "prima": " byte: buttato, NON consegnato al decodificatore (§6.2)", "dopo": " bytes: thrown away, NOT delivered to the decoder (§6.2)"}
+{"file": "src/pagina.html", "prima": "un fotogramma abbandonato dal server", "dopo": "a frame abandoned by the server"}
+{"file": "src/pagina.html", "prima": "tipo di fotogramma 0x", "dopo": "frame type 0x"}
+{"file": "src/pagina.html", "prima": ": §6.2 ammette 0x0301 (chiave) e 0x0302 (delta)", "dopo": ": §6.2 allows 0x0301 (keyframe) and 0x0302 (delta)"}
+{"file": "src/pagina.html", "prima": "il fotogramma porta codec ", "dopo": "the frame carries codec "}
+{"file": "src/pagina.html", "prima": " e il negoziato e' ", "dopo": " and the negotiated one is "}
+{"file": "src/pagina.html", "prima": "un fotogramma con numero 0, che §6.2 ", "dopo": "a frame with number 0, which §6.2 "}
+{"file": "src/pagina.html", "prima": "riserva al significato «nessun fotogramma»", "dopo": "reserves for the meaning «no frame»"}
+{"file": "src/pagina.html", "prima": "fotogramma ", "dopo": "frame "}
+{"file": "src/pagina.html", "prima": " scartato per ORDINE (l'ultimo ", "dopo": " discarded by ORDER (the last "}
+{"file": "src/pagina.html", "prima": "consegnato e' ", "dopo": "delivered is "}
+{"file": "src/pagina.html", "prima": "): la sua misura ", "dopo": "): its size "}
+{"file": "src/pagina.html", "prima": " non si guarda nemmeno (§6.2)", "dopo": " is not even looked at (§6.2)"}
+{"file": "src/pagina.html", "prima": " alla misura ", "dopo": " at size "}
+{"file": "src/pagina.html", "prima": ", che e' stata in vigore ma non lo e' piu': la tolleranza si e' ", "dopo": ", which was in force but is no longer: the tolerance "}
+{"file": "src/pagina.html", "prima": "chiusa sulla prima chiave alla misura nuova, la tela in vigore e' ", "dopo": "closed on the first keyframe at the new size, the canvas in force is "}
+{"file": "src/pagina.html", "prima": " e NESSUNA ADATTA_TELA e' senza risposta (§6.2)", "dopo": " and NO ADATTA_TELA is unanswered (§6.2)"}
+{"file": "src/pagina.html", "prima": ", che non e' la tela in vigore (", "dopo": ", which is not the canvas in force ("}
+{"file": "src/pagina.html", "prima": ") ma e' ", "dopo": ") but is "}
+{"file": "src/pagina.html", "prima": ": accettato e dipinto riscalato ", "dopo": ": accepted and painted rescaled "}
+{"file": "src/pagina.html", "prima": "alla vista (§6.2)", "dopo": "to the view (§6.2)"}
+{"file": "src/pagina.html", "prima": "mancano i fotogrammi da ", "dopo": "frames missing from "}
+{"file": "src/pagina.html", "prima": " a ", "dopo": " to "}
+{"file": "src/pagina.html", "prima": " non consegnato: c'e' un buco aperto e ", "dopo": " not delivered: there is a gap open and "}
+{"file": "src/pagina.html", "prima": "si aspetta una chiave (§5.2)", "dopo": "a keyframe is awaited (§5.2)"}
+{"file": "src/pagina.html", "prima": " buttato: il decodificatore e' configurato per ", "dopo": " thrown away: the decoder is configured for "}
+{"file": "src/pagina.html", "prima": " e questo non e' una chiave alla tela in vigore (§5.2)", "dopo": " and this is not a keyframe at the canvas in force (§5.2)"}
+{"file": "src/pagina.html", "prima": "una misura che il decodificatore non puo' decodificare", "dopo": "a size the decoder cannot decode"}
+{"file": "src/pagina.html", "prima": "⛔ decode ha rifiutato il fotogramma ", "dopo": "⛔ decode refused frame "}
+{"file": "src/pagina.html", "prima": "il decodificatore ha rifiutato un fotogramma", "dopo": "the decoder refused a frame"}
+{"file": "src/pagina.html", "prima": "prima CHIAVE alla misura nuova (", "dopo": "first KEYFRAME at the new size ("}
+{"file": "src/pagina.html", "prima": "): la finestra della tolleranza si chiude, e da qui una misura vecchia e' ERRORE_PROTOCOLLO (§6.2)", "dopo": "): the tolerance window closes, and from here an old size is ERRORE_PROTOCOLLO (§6.2)"}
+{"file": "src/pagina.html", "prima": ", che non e' mai stata in vigore, mentre la tela in vigore e' ", "dopo": ", which has never been in force, while the canvas in force is "}
+{"file": "src/pagina.html", "prima": " e nessuna ADATTA_TELA e' senza risposta: non c'e' nessun TELA che possa concederla, quindi non e' una corsa fra due stream (§6.2)", "dopo": " and no ADATTA_TELA is unanswered: there is no TELA that could grant it, so it is not a race between two streams (§6.2)"}
+{"file": "src/pagina.html", "prima": ", che non e' mai stata annunciata: TRATTENUTO (", "dopo": ", which was never announced: HELD BACK ("}
+{"file": "src/pagina.html", "prima": " in mano, ", "dopo": " in hand, "}
+{"file": "src/pagina.html", "prima": " ADATTA_TELA senza risposta) invece di chiudere la sessione — il TELA che la annuncia puo' essere ancora in volo sul canale di controllo (§6.2)", "dopo": " ADATTA_TELA unanswered) instead of closing the session — the TELA announcing it may still be in flight on the control channel (§6.2)"}
+{"file": "src/pagina.html", "prima": "ADATTA_TELA spedita: le richieste senza risposta sono adesso ", "dopo": "ADATTA_TELA sent: the unanswered requests are now "}
+{"file": "src/pagina.html", "prima": " — da qui una misura mai annunciata si trattiene invece di chiudere (§6.2)", "dopo": " — from here a never-announced size is held back instead of closing (§6.2)"}
+{"file": "src/pagina.html", "prima": "⚠ un TELA senza nessuna ADATTA_TELA in attesa: il conto resta a zero (§7.1 dice che ogni TELA risponde a una ADATTA_TELA, e questa non c'e' mai stata)", "dopo": "⚠ a TELA with no ADATTA_TELA pending: the count stays at zero (§7.1 says every TELA answers an ADATTA_TELA, and this one never existed)"}
+{"file": "src/pagina.html", "prima": "TELA(RIFIUTATA): l'attesa si chiude lo stesso, e i ", "dopo": "TELA(RIFIUTATA): the wait closes anyway, and the "}
+{"file": "src/pagina.html", "prima": " fotogrammi trattenuti si rigiudicano contro la tela rimasta in vigore (", "dopo": " held-back frames are re-judged against the canvas left in force ("}
+{"file": "src/pagina.html", "prima": "⚠ questo motore non ha `requestVideoFrameCallback`: i fotogrammi dipinti non si possono contare su questa strada", "dopo": "⚠ this engine has no `requestVideoFrameCallback`: the painted frames cannot be counted on this route"}
+{"file": "src/pagina.html", "prima": "⛔ MSE non accetta «", "dopo": "⛔ MSE does not accept «"}
+{"file": "src/pagina.html", "prima": "»: su questa strada non si puo' dipingere", "dopo": "»: on this route nothing can be painted"}
+{"file": "src/pagina.html", "prima": "⛔ la sorgente non ha accettato «", "dopo": "⛔ the source did not accept «"}
+{"file": "src/pagina.html", "prima": "⛔ MSE non si e' aperta: ", "dopo": "⛔ MSE did not open: "}
+{"file": "src/pagina.html", "prima": "⚠ §7.18: si dipinge con MSE e un `<video>` (", "dopo": "⚠ §7.18: painting with MSE and a `<video>` ("}
+{"file": "src/pagina.html", "prima": "»), perche' questo browser non ha WebCodecs. Il ritardo su questa strada e' piu' alto, ed e' dichiarato", "dopo": "»), because this browser has no WebCodecs. Latency on this route is higher, and it is declared"}
+{"file": "src/pagina.html", "prima": "⛔ §7.18: sono arrivati ", "dopo": "⛔ §7.18: "}
+{"file": "src/pagina.html", "prima": " fotogrammi e il `<video>` non ne ha presentato NEMMENO UNO", "dopo": " frames arrived and the `<video>` presented NOT EVEN ONE"}
+{"file": "src/pagina.html", "prima": " (misura ", "dopo": " (size "}
+{"file": "src/pagina.html", "prima": ", fermo=", "dopo": ", paused="}
+{"file": "src/pagina.html", "prima": ", pronto=", "dopo": ", ready="}
+{"file": "src/pagina.html", "prima": ", errore=", "dopo": ", error="}
+{"file": "src/pagina.html", "prima": ", tempo=", "dopo": ", time="}
+{"file": "src/pagina.html", "prima": ".  ⚠ Questo browser accetta il flusso e non lo mostra: e' il caso che la sonda di questa strada non puo' prevedere", "dopo": ".  ⚠ This browser accepts the stream and does not show it: it is the case the probe of this route cannot foresee"}
+{"file": "src/pagina.html", "prima": "⚠ il buffer del `<video>` ha rifiutato un pezzo (", "dopo": "⚠ the `<video>` buffer refused a piece ("}
+{"file": "src/pagina.html", "prima": "): butto quel che e' gia' passato", "dopo": "): throwing away what has already passed"}
+{"file": "src/pagina.html", "prima": "MISURA §7.18 MSE: consegnati ", "dopo": "MISURA §7.18 MSE: delivered "}
+{"file": "src/pagina.html", "prima": " · dipinti ", "dopo": " · painted "}
+{"file": "src/pagina.html", "prima": " · fermo=", "dopo": " · paused="}
+{"file": "src/pagina.html", "prima": " cerca=", "dopo": " seeking="}
+{"file": "src/pagina.html", "prima": " pronto=", "dopo": " ready="}
+{"file": "src/pagina.html", "prima": " tempo=", "dopo": " time="}
+{"file": "src/pagina.html", "prima": " salti=", "dopo": " jumps="}
+{"file": "src/pagina.html", "prima": " errore=", "dopo": " error="}
+{"file": "src/pagina.html", "prima": "il decodificatore era chiuso (un errore lo ha chiuso): se ne fa uno nuovo, invece di riconfigurare quello morto", "dopo": "the decoder was closed (an error closed it): making a new one, instead of reconfiguring the dead one"}
+{"file": "src/pagina.html", "prima": "⛔ il decodificatore ha detto: ", "dopo": "⛔ the decoder said: "}
+{"file": "src/pagina.html", "prima": "il decodificatore ha fallito", "dopo": "the decoder failed"}
+{"file": "src/pagina.html", "prima": ") ha lanciato: ", "dopo": ") threw: "}
+{"file": "src/pagina.html", "prima": "decodificatore configurato per ", "dopo": "decoder configured for "}
+{"file": "src/pagina.html", "prima": " con «", "dopo": " with «"}
+{"file": "src/pagina.html", "prima": "» (riconfigurazione n. ", "dopo": "» (reconfiguration no. "}
+{"file": "src/pagina.html", "prima": "MISURA fotogramma · codificato ", "dopo": "MISURA fotogramma · coded "}
+{"file": "src/pagina.html", "prima": " · mostrato ", "dopo": " · shown "}
+{"file": "src/pagina.html", "prima": " · tela in vigore ", "dopo": " · canvas in force "}
+{"file": "src/pagina.html", "prima": "⛔ il fotogramma non e' entrato nel deposito: ", "dopo": "⛔ the frame did not enter the deposit: "}
+{"file": "src/pagina.html", "prima": "stato ", "dopo": "status "}
+{"file": "src/pagina.html", "prima": "impronta: il certificato e' stato ruotato da quando questa pagina e' stata servita — si usa quella nuova", "dopo": "fingerprint: the certificate has been rotated since this page was served — using the new one"}
+{"file": "src/pagina.html", "prima": "impronta: /impronta rifiutata dalla rete (", "dopo": "fingerprint: /impronta refused by the network ("}
+{"file": "src/pagina.html", "prima": "): il server non c'e' — non apro WebTransport (D-009)", "dopo": "): the server is not there — not opening WebTransport (D-009)"}
+{"file": "src/pagina.html", "prima": "impronta: /impronta non risponde (", "dopo": "fingerprint: /impronta does not answer ("}
+{"file": "src/pagina.html", "prima": "): si usa quella servita con la pagina", "dopo": "): using the one served with the page"}
+{"file": "src/pagina.html", "prima": "la scheda e' stata chiusa", "dopo": "the tab was closed"}
+{"file": "src/pagina.html", "prima": "Questo browser non ha WebTransport: serve Chrome/Edge, Firefox o Safari 26+.", "dopo": "This browser has no WebTransport: you need Chrome/Edge, Firefox or Safari 26+."}
+{"file": "src/pagina.html", "prima": "il server non risponde: è spento o non raggiungibile", "dopo": "the server does not answer: it is off or unreachable"}
+{"file": "src/pagina.html", "prima": "apro ", "dopo": "opening "}
+{"file": "src/pagina.html", "prima": "il collegamento con il server si e' interrotto: per rientrare scrivi di nuovo la parola d'ordine", "dopo": "the connection to the server was interrupted: to get back in, type your password again"}
+{"file": "src/pagina.html", "prima": "la sessione si e' chiusa per un errore: per rientrare scrivi di nuovo la parola d'ordine — il perche' preciso e' nel registro", "dopo": "the session closed because of an error: to get back in type your password again — the precise reason is in the log"}
+{"file": "src/pagina.html", "prima": "sessione chiusa da questa pagina: codice 0x", "dopo": "session closed by this page: code 0x"}
+{"file": "src/pagina.html", "prima": "sessione chiusa dal server: codice ", "dopo": "session closed by the server: code "}
+{"file": "src/pagina.html", "prima": "sessione chiusa con errore: ", "dopo": "session closed with error: "}
+{"file": "src/pagina.html", "prima": "sessione WebTransport aperta", "dopo": "WebTransport session open"}
+{"file": "src/pagina.html", "prima": "⭐ §7.3-bis: questa pagina non si tiene NESSUNA combinazione di tasti — arrivano tutte al desktop remoto.  Per uscire: «Esci…» dal menu di sistema del desktop, come su una macchina vera", "dopo": "⭐ §7.3-bis: this page keeps NO key combination — they all reach the remote desktop.  To leave: «Log Out…» from the desktop's system menu, as on a real machine"}
+{"file": "src/pagina.html", "prima": " — ⛔ MUTO: il server ha gia' chiuso il canale, §4.2 vieta di spedirci sopra (DECISIONI.md §7.14).  Il motivo viaggia solo nel codice di chiusura (§3.1 punto 3)", "dopo": " — ⛔ MUTE: the server has already closed the channel, §4.2 forbids sending on it (DECISIONI.md §7.14).  The reason travels only in the close code (§3.1 point 3)"}
+{"file": "src/pagina.html", "prima": "la sessione non si e' chiusa col codice: ", "dopo": "the session did not close with the code: "}
+{"file": "src/pagina.html", "prima": "il CONGEDO non e' potuto uscire sul canale (", "dopo": "the CONGEDO could not go out on the channel ("}
+{"file": "src/pagina.html", "prima": "): il motivo viaggia solo nel codice di chiusura (§3.1, seconda strada)", "dopo": "): the reason travels only in the close code (§3.1, second route)"}
+{"file": "src/pagina.html", "prima": "⛔ nessun codec video arriva al pixel: `video.codec` NON si manda (§4.3 vieta il valore vuoto), e il server congedera' con NIENTE_IN_COMUNE", "dopo": "⛔ no video codec reaches the pixel: `video.codec` is NOT sent (§4.3 forbids the empty value), and the server will dismiss with NIENTE_IN_COMUNE"}
+{"file": "src/pagina.html", "prima": "Nessuno dei due codec video (HEVC, AV1) arriva ai pixel su questo browser: la sessione non avrebbe immagine. Vedi il riquadro qui sopra.", "dopo": "Neither of the two video codecs (HEVC, AV1) reaches the pixels on this browser: the session would have no image. See the box above."}
+{"file": "src/pagina.html", "prima": "⚠ niente WebAssembly: l'Opus passera' da `AudioDecoder` (ripiego; su Firefox col video rende i blocchi in ritardo, D-006)", "dopo": "⚠ no WebAssembly: Opus will go through `AudioDecoder` (fallback; on Firefox with video it renders the blocks late, D-006)"}
+{"file": "src/pagina.html", "prima": "⚠ questo motore non decodifica Opus: `audio.codec` dichiara il solo «pcm» (§4.3 lo impone a entrambi ed e' la base sempre disponibile).  ⛔ Dichiarare «opus» avrebbe OBBLIGATO il server a sceglierlo, e non si sarebbe sentito niente", "dopo": "⚠ this engine does not decode Opus: `audio.codec` declares only «pcm» (§4.3 imposes it on both and it is the base always available).  ⛔ Declaring «opus» would have OBLIGED the server to choose it, and nothing would have been heard"}
+{"file": "src/pagina.html", "prima": "⚠ questo motore non ha ne' WebAssembly ne' `AudioDecoder`: `audio.codec` dichiara il solo «pcm»", "dopo": "⚠ this engine has neither WebAssembly nor `AudioDecoder`: `audio.codec` declares only «pcm»"}
+{"file": "src/pagina.html", "prima": "capacita' «", "dopo": "capability «"}
+{"file": "src/pagina.html", "prima": "» OMESSA perche' non ha nessun valore (§4.3 vieta il valore vuoto)", "dopo": "» OMITTED because it has no value (§4.3 forbids the empty value)"}
+{"file": "src/pagina.html", "prima": "CIAO mandato (", "dopo": "CIAO sent ("}
+{"file": "src/pagina.html", "prima": " capacita', video.codec = «", "dopo": " capabilities, video.codec = «"}
+{"file": "src/pagina.html", "prima": "NESSUNA", "dopo": "NONE"}
+{"file": "src/pagina.html", "prima": "Il server ha chiuso il canale senza rispondere.", "dopo": "The server closed the channel without answering."}
+{"file": "src/pagina.html", "prima": "il canale di controllo si e' chiuso senza un ECCOMI", "dopo": "the control channel closed without an ECCOMI"}
+{"file": "src/pagina.html", "prima": "congedato", "dopo": "dismissed"}
+{"file": "src/pagina.html", "prima": "Il server ha risposto 0x", "dopo": "The server answered 0x"}
+{"file": "src/pagina.html", "prima": " invece di ECCOMI.", "dopo": " instead of ECCOMI."}
+{"file": "src/pagina.html", "prima": "atteso ECCOMI, arrivato il tipo 0x", "dopo": "expected ECCOMI, received type 0x"}
+{"file": "src/pagina.html", "prima": "Il server parla la versione ", "dopo": "The server speaks version "}
+{"file": "src/pagina.html", "prima": " di RCP, questa pagina la ", "dopo": " of RCP, this page speaks "}
+{"file": "src/pagina.html", "prima": "ECCOMI dichiara la versione ", "dopo": "ECCOMI declares version "}
+{"file": "src/pagina.html", "prima": ", il CIAO chiedeva la ", "dopo": ", the CIAO asked for "}
+{"file": "src/pagina.html", "prima": "ECCOMI: versione ", "dopo": "ECCOMI: version "}
+{"file": "src/pagina.html", "prima": "CREDENZIALI mandate (la parola non compare in nessun registro)", "dopo": "CREDENZIALI sent (the password appears in no log)"}
+{"file": "src/pagina.html", "prima": "Il server ha chiuso il canale senza rispondere alle credenziali.", "dopo": "The server closed the channel without answering the credentials."}
+{"file": "src/pagina.html", "prima": "il canale si e' chiuso senza rispondere a CREDENZIALI", "dopo": "the channel closed without answering CREDENZIALI"}
+{"file": "src/pagina.html", "prima": "respinto, motivo 0x", "dopo": "refused, reason 0x"}
+{"file": "src/pagina.html", "prima": " invece di AMMESSO.", "dopo": " instead of AMMESSO."}
+{"file": "src/pagina.html", "prima": "atteso AMMESSO o RESPINTO, arrivato il tipo 0x", "dopo": "expected AMMESSO or RESPINTO, received type 0x"}
+{"file": "src/pagina.html", "prima": "ATTACCA: tela ", "dopo": "ATTACCA: canvas "}
+{"file": "src/pagina.html", "prima": ", vista ", "dopo": ", view "}
+{"file": "src/pagina.html", "prima": ", disposizione «", "dopo": ", layout «"}
+{"file": "src/pagina.html", "prima": "Il server ha chiuso il canale senza rispondere ad ATTACCA.", "dopo": "The server closed the channel without answering ATTACCA."}
+{"file": "src/pagina.html", "prima": "il canale si e' chiuso senza rispondere ad ATTACCA", "dopo": "the channel closed without answering ATTACCA"}
+{"file": "src/pagina.html", "prima": " invece di SESSIONE.", "dopo": " instead of SESSIONE."}
+{"file": "src/pagina.html", "prima": "attesa SESSIONE, arrivato il tipo 0x", "dopo": "expected SESSIONE, received type 0x"}
+{"file": "src/pagina.html", "prima": "⚠ la tela CONCESSA (", "dopo": "⚠ the GRANTED canvas ("}
+{"file": "src/pagina.html", "prima": ") non e' quella chiesta (", "dopo": ") is not the one asked for ("}
+{"file": "src/pagina.html", "prima": "): §4.5 lo permette, e il motivo sta nel registro del server — di solito e' video.misura_massima", "dopo": "): §4.5 allows it, and the reason is in the server log — usually it is video.misura_massima"}
+{"file": "src/pagina.html", "prima": "Il server ha concesso una tela di ", "dopo": "The server granted a canvas of "}
+{"file": "src/pagina.html", "prima": " invece dei ", "dopo": " instead of the "}
+{"file": "src/pagina.html", "prima": " chiesti: il protocollo glielo permette (§4.5) e questa pagina si adatta riscalando.", "dopo": " requested: the protocol allows it (§4.5) and this page adapts by rescaling."}
+{"file": "src/pagina.html", "prima": "Ammesso, sessione ", "dopo": "Admitted, "}
+{"file": "src/pagina.html", "prima": "nuova", "dopo": "new"}
+{"file": "src/pagina.html", "prima": "ripresa", "dopo": "resumed"}
+{"file": "src/pagina.html", "prima": ", tela ", "dopo": " session, canvas "}
+{"file": "src/pagina.html", "prima": "il canale di input non ha accettato un messaggio: ", "dopo": "the input channel did not accept a message: "}
+{"file": "src/pagina.html", "prima": "⭐ canale di input aperto (§2.5: uno solo, e questo e' quello)", "dopo": "⭐ input channel open (§2.5: only one, and this is it)"}
+{"file": "src/pagina.html", "prima": "⛔ il canale di input NON si e' aperto (", "dopo": "⛔ the input channel did NOT open ("}
+{"file": "src/pagina.html", "prima": "): questa sessione si GUARDA e non si comanda", "dopo": "): this session can be WATCHED but not controlled"}
+{"file": "src/pagina.html", "prima": "il server non ha dichiarato video.codec: questa sessione non ha video, e uno stream 0x03 che arrivasse sarebbe ERRORE_PROTOCOLLO", "dopo": "the server did not declare video.codec: this session has no video, and a 0x03 stream arriving would be ERRORE_PROTOCOLLO"}
+{"file": "src/pagina.html", "prima": "il server ha scelto video.codec=«", "dopo": "the server chose video.codec=«"}
+{"file": "src/pagina.html", "prima": "» e questa pagina dipinge « ", "dopo": "» and this page paints « "}
+{"file": "src/pagina.html", "prima": "niente", "dopo": "nothing"}
+{"file": "src/pagina.html", "prima": "Il server ha scelto un codec video che questo browser non porta ai pixel: ", "dopo": "The server chose a video codec this browser does not bring to the pixels: "}
+{"file": "src/pagina.html", "prima": "la RICHIEDI_CHIAVE non e' potuta uscire: ", "dopo": "the RICHIEDI_CHIAVE could not go out: "}
+{"file": "src/pagina.html", "prima": "La sessione si è chiusa: il server ha mandato qualcosa che non torna con RCP.", "dopo": "The session closed: the server sent something that does not add up with RCP."}
+{"file": "src/pagina.html", "prima": "«adatta il desktop» e' SPENTA (il compositore ha risposto COMPOSITORE_INCAPACE): non chiedo ", "dopo": "«fit the desktop» is OFF (the compositor answered COMPOSITORE_INCAPACE): not asking for "}
+{"file": "src/pagina.html", "prima": ". La tela resta ", "dopo": ". The canvas stays "}
+{"file": "src/pagina.html", "prima": " e questa pagina riscala (SPECIFICHE.md §6.3)", "dopo": " and this page rescales (SPECIFICHE.md §6.3)"}
+{"file": "src/pagina.html", "prima": "la tela ", "dopo": "the canvas "}
+{"file": "src/pagina.html", "prima": " e' gia' quella ", "dopo": " is already the one "}
+{"file": "src/pagina.html", "prima": "CHIESTA e in attesa di risposta", "dopo": "REQUESTED and awaiting an answer"}
+{"file": "src/pagina.html", "prima": "in vigore", "dopo": "in force"}
+{"file": "src/pagina.html", "prima": "): nessuna ADATTA_TELA da mandare", "dopo": "): no ADATTA_TELA to send"}
+{"file": "src/pagina.html", "prima": " spedita (", "dopo": " sent ("}
+{"file": "src/pagina.html", "prima": "): la tela del server prende la misura di questa finestra, cosi' la scala vale 1 e le bande spariscono (DECISIONI.md §5.0-sexies)", "dopo": "): the server's canvas takes the size of this window, so the scale is 1 and the bands disappear (DECISIONI.md §5.0-sexies)"}
+{"file": "src/pagina.html", "prima": "⛔ l'ADATTA_TELA non e' potuta uscire: ", "dopo": "⛔ the ADATTA_TELA could not go out: "}
+{"file": "src/pagina.html", "prima": "⚠ `?adatta=no`: questa pagina NON chiede la tela della propria misura.  E' il comportamento di prima del 15 agosto 2026 — bande ai lati, testo interpolato — e sta qui per il confronto", "dopo": "⚠ `?adatta=no`: this page does NOT ask for the canvas of its own size.  It is the behaviour from before 15 Aug 2026 — bands at the sides, interpolated text — and it is here for the comparison"}
+{"file": "src/pagina.html", "prima": "l'attacco", "dopo": "the attach"}
+{"file": "src/pagina.html", "prima": "il canale di controllo si e' rotto: ", "dopo": "the control channel broke: "}
+{"file": "src/pagina.html", "prima": "il server ha chiuso il canale di controllo (FIN)", "dopo": "the server closed the control channel (FIN)"}
+{"file": "src/pagina.html", "prima": "congedato, motivo 0x", "dopo": "dismissed, reason 0x"}
+{"file": "src/pagina.html", "prima": "TELA(RIFIUTATA, motivo ", "dopo": "TELA(RIFIUTATA, reason "}
+{"file": "src/pagina.html", "prima": "): la tela resta ", "dopo": "): the canvas stays "}
+{"file": "src/pagina.html", "prima": ", e la voce «adatta il desktop» va mostrata spenta", "dopo": ", and the «fit the desktop» entry must be shown off"}
+{"file": "src/pagina.html", "prima": "Questo desktop non sa cambiare misura: l'immagine viene adattata alla finestra dal browser. (Il compositore ha risposto COMPOSITORE_INCAPACE.)", "dopo": "This desktop cannot change size: the browser fits the image to the window. (The compositor answered COMPOSITORE_INCAPACE.)"}
+{"file": "src/pagina.html", "prima": "⇒ «adatta il desktop» SPENTA per questa sessione: non manderò altre ADATTA_TELA (RCP.md §7.1)", "dopo": "⇒ «fit the desktop» OFF for this session: no more ADATTA_TELA will be sent (RCP.md §7.1)"}
+{"file": "src/pagina.html", "prima": "⚠ e il TELA(RIFIUTATA) dichiara la tela in vigore ", "dopo": "⚠ and the TELA(RIFIUTATA) declares the canvas in force "}
+{"file": "src/pagina.html", "prima": " mentre questa pagina credeva ", "dopo": " while this page believed "}
+{"file": "src/pagina.html", "prima": ": vince il server (§7.1), e mi adeguo", "dopo": ": the server wins (§7.1), and I adjust"}
+{"file": "src/pagina.html", "prima": "il NON_ORA poteva essere un «non ancora»", "dopo": "the NON_ORA might have been a «not yet»"}
+{"file": "src/pagina.html", "prima": "CURSORE_FORMA non torna: ", "dopo": "CURSORE_FORMA does not add up: "}
+{"file": "src/pagina.html", "prima": " vuole ", "dopo": " wants "}
+{"file": "src/pagina.html", "prima": "⚠ il decodificatore Opus in WebAssembly non parte (", "dopo": "⚠ the Opus decoder in WebAssembly does not start ("}
+{"file": "src/pagina.html", "prima": "⚠ datagram audio scartato (", "dopo": "⚠ audio datagram discarded ("}
+{"file": "src/pagina.html", "prima": ") — in tutto ", "dopo": ") — "}
+{"file": "src/pagina.html", "prima": " (§6.3: si scarta, non si chiude)", "dopo": " in all (§6.3: discard, do not close)"}
+{"file": "src/pagina.html", "prima": "(nessuno)", "dopo": "(none)"}
+{"file": "src/pagina.html", "prima": " byte e ne sono ", "dopo": " bytes, and the bytes "}
+{"file": "src/pagina.html", "prima": "arrivati ", "dopo": "that arrived are "}
+{"file": "src/pagina.html", "prima": "sul canale di controllo e' arrivato ", "dopo": "on the control channel there arrived "}
+{"file": "src/pagina.html", "prima": "il tipo 0x", "dopo": "type 0x"}
+{"file": "src/pagina.html", "prima": ", che questa pagina non aspetta ", "dopo": ", which this page does not expect "}
+{"file": "src/pagina.html", "prima": "dopo SESSIONE", "dopo": "after SESSIONE"}
+{"file": "src/pagina.html", "prima": "⛔ questo motore non ha i datagram: niente audio", "dopo": "⛔ this engine has no datagrams: no audio"}
+{"file": "src/pagina.html", "prima": "⚠ il contesto audio nasce sospeso (nessun gesto dell'utente ancora): il suono parte al primo clic sulla pagina", "dopo": "⚠ the audio context is born suspended (no user gesture yet): the sound starts at the first click on the page"}
+{"file": "src/pagina.html", "prima": "⭐ il contesto audio si e' svegliato al gesto numero ", "dopo": "⭐ the audio context woke up at gesture number "}
+{"file": "src/pagina.html", "prima": ": da qui in poi si sente", "dopo": ": from here on it can be heard"}
+{"file": "src/pagina.html", "prima": "⚠ il contesto audio e' «", "dopo": "⚠ the audio context is «"}
+{"file": "src/pagina.html", "prima": "»: il suo orologio e' fermo e i blocchi si buttano invece di accumularli — in tutto ", "dopo": "»: its clock is stopped and the blocks are thrown away instead of accumulated — "}
+{"file": "src/pagina.html", "prima": ".  ⛔ Il suono parte al primo clic sulla pagina", "dopo": " in all.  ⛔ The sound starts at the first click on the page"}
+{"file": "src/pagina.html", "prima": "⚠ un blocco audio e' arrivato senza `istante` (§6.3): si ripiega sulla successione degli arrivi, e con quel ripiego ogni datagram perduto accorcia il cuscino per sempre", "dopo": "⚠ an audio block arrived without `istante` (§6.3): falling back to the succession of arrivals, and with that fallback every lost datagram shortens the cushion forever"}
+{"file": "src/pagina.html", "prima": "sorpassato, e il suo posto e' passato mentre lo decodificavamo: si butta lui e l'ancora resta dov'e'", "dopo": "overtaken, and its place passed while we were decoding it: it is thrown away and the anchor stays where it is"}
+{"file": "src/pagina.html", "prima": "⚠ la coda audio ha superato ", "dopo": "⚠ the audio queue exceeded "}
+{"file": "src/pagina.html", "prima": " ms: si ferma quel che e' in volo e si riparte dal presente (§6.3)", "dopo": " ms: what is in flight is stopped and playback restarts from the present (§6.3)"}
+{"file": "src/pagina.html", "prima": "⛔ il filo dice che mancano ", "dopo": "⛔ the wire says "}
+{"file": "src/pagina.html", "prima": " datagram, ma l'`istante` che esce dal decodificatore non ha nessun salto: su questo motore il timestamp e' RICOSTRUITO, non riportato ⇒ l'ancora vale quanto la scaletta di prima, e il cuscino torna a essere un serbatoio a senso unico", "dopo": " datagrams are missing, but the `istante` coming out of the decoder has no jump: on this engine the timestamp is RECONSTRUCTED, not carried over ⇒ the anchor is worth as much as the previous schedule, and the cushion goes back to being a one-way reservoir"}
+{"file": "src/pagina.html", "prima": "⛔ decodificatore Opus: ", "dopo": "⛔ Opus decoder: "}
+{"file": "src/pagina.html", "prima": "⛔ il decodificatore Opus non si configura su questo motore (", "dopo": "⛔ the Opus decoder cannot be configured on this engine ("}
+{"file": "src/pagina.html", "prima": "): questa sessione resta senza audio.  ⚠ Il video continua", "dopo": "): this session stays without audio.  ⚠ The video carries on"}
+{"file": "src/pagina.html", "prima": "niente datagram in lettura: ", "dopo": "no datagrams to read: "}
+{"file": "src/pagina.html", "prima": "i datagram si sono fermati: ", "dopo": "the datagrams stopped: "}
+{"file": "src/pagina.html", "prima": "⚠ datagram piu' corto di 12 byte: scartato (§6.3).  ⛔ Non chiude la connessione — sarebbe punire la rete, non il mittente", "dopo": "⚠ datagram shorter than 12 bytes: discarded (§6.3).  ⛔ It does not close the connection — that would be punishing the network, not the sender"}
+{"file": "src/pagina.html", "prima": "⚠ datagram con tipo 0x", "dopo": "⚠ datagram with type 0x"}
+{"file": "src/pagina.html", "prima": ": RCP/1 ne definisce uno solo, 0x0401.  Scartato (§6.3)", "dopo": ": RCP/1 defines only one, 0x0401.  Discarded (§6.3)"}
+{"file": "src/pagina.html", "prima": "lo stesso `istante` due volte: non e' un riordino, e suonarlo due volte raddoppierebbe il segnale", "dopo": "the same `istante` twice: it is not a reordering, and playing it twice would double the signal"}
+{"file": "src/pagina.html", "prima": "il suo posto nel tempo e' gia' passato (§6.3): questo si', e' consumato davvero", "dopo": "its place in time has already passed (§6.3): this one really is consumed"}
+{"file": "src/pagina.html", "prima": " datagram audio non sono ARRIVATI (salto di ", "dopo": " audio datagrams did NOT ARRIVE (jump of "}
+{"file": "src/pagina.html", "prima": " ms fra due `istante`) — in tutto ", "dopo": " ms between two `istante`) — "}
+{"file": "src/pagina.html", "prima": " volte.  ⛔ Non sono scartati da noi: non sono mai arrivati", "dopo": " times.  ⛔ They were not discarded by us: they never arrived"}
+{"file": "src/pagina.html", "prima": " in ", "dopo": " in all in "}
+{"file": "src/pagina.html", "prima": "⭐ FASE 7: audio in arrivo — codec ", "dopo": "⭐ PHASE 7: audio arriving — codec "}
+{"file": "src/pagina.html", "prima": " (⛔ ignoto)", "dopo": " (⛔ unknown)"}
+{"file": "src/pagina.html", "prima": ", 48 000 Hz, 2 canali", "dopo": ", 48 000 Hz, 2 channels"}
+{"file": "src/pagina.html", "prima": "⛔ il decodificatore Opus ha rifiutato il pacchetto (", "dopo": "⛔ the Opus decoder refused the packet ("}
+{"file": "src/pagina.html", "prima": "⛔ il server manda Opus e questo motore non ha `AudioDecoder`: §4.3 dice che non poteva sceglierlo", "dopo": "⛔ the server sends Opus and this engine has no `AudioDecoder`: §4.3 says it could not choose it"}
+{"file": "src/pagina.html", "prima": ", che RCP/1 non definisce", "dopo": ", which RCP/1 does not define"}
+{"file": "src/pagina.html", "prima": "⛔ il lettore dei datagram si e' fermato per un'eccezione (", "dopo": "⛔ the datagram reader stopped because of an exception ("}
+{"file": "src/pagina.html", "prima": "): da qui in poi questa sessione NON ha audio.  ⚠ Il video continua — e' un ripiego dichiarato, non un guasto taciuto", "dopo": "): from here on this session has NO audio.  ⚠ The video carries on — it is a declared fallback, not a fault kept quiet"}
+{"file": "src/pagina.html", "prima": "appunti · ", "dopo": "clipboard · "}
+{"file": "src/pagina.html", "prima": "⛔ appunti: il messaggio 0x", "dopo": "⛔ clipboard: message 0x"}
+{"file": "src/pagina.html", "prima": " non e' partito (", "dopo": " did not leave ("}
+{"file": "src/pagina.html", "prima": "⛔ §9: questo browser non ha `navigator.clipboard.writeText`: quel che si copia nel desktop remoto NON arrivera' negli appunti di questo dispositivo.  Non e' un guasto, e' una funzione che non c'e'", "dopo": "⛔ §9: this browser has no `navigator.clipboard.writeText`: what is copied in the remote desktop will NOT reach the clipboard of this device.  It is not a fault, it is a feature that does not exist"}
+{"file": "src/pagina.html", "prima": "⭐ appunti: ", "dopo": "⭐ clipboard: "}
+{"file": "src/pagina.html", "prima": " caratteri dal desktop remoto sono adesso negli appunti di questo dispositivo", "dopo": " characters from the remote desktop are now in this device's clipboard"}
+{"file": "src/pagina.html", "prima": "⚠ §9: il browser non concede di scrivere negli appunti adesso (", "dopo": "⚠ §9: the browser does not allow writing to the clipboard now ("}
+{"file": "src/pagina.html", "prima": ").  ⭐ Il testo NON e' perduto: e' messo da parte e ci va al primo clic o tasto su questa pagina", "dopo": ").  ⭐ The text is NOT lost: it is set aside and goes there at the first click or key on this page"}
+{"file": "src/pagina.html", "prima": "annuncio saltato: ", "dopo": "announcement skipped: "}
+{"file": "src/pagina.html", "prima": "non e' testo", "dopo": "it is not text"}
+{"file": "src/pagina.html", "prima": "appunti spenti", "dopo": "clipboard off"}
+{"file": "src/pagina.html", "prima": "annuncio saltato: identico all'ultimo (eco o copia ripetuta)", "dopo": "announcement skipped: identical to the last one (echo or repeated copy)"}
+{"file": "src/pagina.html", "prima": "gli appunti non sono cambiati", "dopo": "the clipboard has not changed"}
+{"file": "src/pagina.html", "prima": " byte negli appunti, oltre il tetto di ", "dopo": " bytes in the clipboard, beyond the cap of "}
+{"file": "src/pagina.html", "prima": ": NON si annunciano al desktop remoto, e non si tagliano.  Un testo troncato e' peggio di un testo mancante", "dopo": ": they are NOT announced to the remote desktop, and are not cut.  A truncated text is worse than a missing text"}
+{"file": "src/pagina.html", "prima": "testo oltre il tetto, non annunciato", "dopo": "text beyond the cap, not announced"}
+{"file": "src/pagina.html", "prima": "l'annuncio ", "dopo": "announcement "}
+{"file": "src/pagina.html", "prima": " e' partito", "dopo": " has left"}
+{"file": "src/pagina.html", "prima": "⭐ ANNUNCIATO il trasferimento ", "dopo": "⭐ ANNOUNCED transfer "}
+{"file": "src/pagina.html", "prima": "⛔ l'annuncio ", "dopo": "⛔ announcement "}
+{"file": "src/pagina.html", "prima": " NON e' partito sul filo", "dopo": " did NOT leave on the wire"}
+{"file": "src/pagina.html", "prima": "rilettura saltata: l'evento `paste` ha consegnato ", "dopo": "re-read skipped: the `paste` event delivered "}
+{"file": "src/pagina.html", "prima": " ms fa — la strada gratis basta, e niente bottoncino", "dopo": " ms ago — the free route is enough, and no little button"}
+{"file": "src/pagina.html", "prima": "rilettura saltata: questo browser non ha `readText`", "dopo": "re-read skipped: this browser has no `readText`"}
+{"file": "src/pagina.html", "prima": "rilettura: gli appunti sono quelli che avevo gia'", "dopo": "re-read: the clipboard is what I already had"}
+{"file": "src/pagina.html", "prima": "rilettura: ", "dopo": "re-read: "}
+{"file": "src/pagina.html", "prima": " caratteri, diversi da quelli che avevo — annuncio e servo i NUOVI", "dopo": " characters, different from those I had — announcing and serving the NEW ones"}
+{"file": "src/pagina.html", "prima": "⚠ rilettura negata (", "dopo": "⚠ re-read denied ("}
+{"file": "src/pagina.html", "prima": ") · attivazione=", "dopo": ") · activation="}
+{"file": "src/pagina.html", "prima": "sconosciuta", "dopo": "unknown"}
+{"file": "src/pagina.html", "prima": ": servo quel che ho", "dopo": ": serving what I have"}
+{"file": "src/pagina.html", "prima": "niente suggerimento: nessun gesto dell'utente da ", "dopo": "no hint: no user gesture for "}
+{"file": "src/pagina.html", "prima": " ms — a incollare e' il desktop da solo", "dopo": " ms — the desktop is pasting by itself"}
+{"file": "src/pagina.html", "prima": "Per incollare qui quello che hai copiato sul tuo computer, premi Ctrl+V su questa pagina: il tuo browser lascia leggere gli appunti solo in quel momento.", "dopo": "To paste here what you copied on your computer, press Ctrl+V on this page: your browser only allows reading the clipboard at that moment."}
+{"file": "src/pagina.html", "prima": "suggerito all'utente il Ctrl+V (la lettura e' negata e non ho testo da servire)", "dopo": "Ctrl+V hint shown to the user (reading is denied and I have no text to serve)"}
+{"file": "src/pagina.html", "prima": "⚠ §9: il desktop remoto sta incollando e il browser non ha ancora dato gli appunti — su Firefox il bottoncino «Incolla» aspetta un clic.  Servo quel che ho, e il resto arriva alla prossima incollata", "dopo": "⚠ §9: the remote desktop is pasting and the browser has not yet given the clipboard — on Firefox the little «Paste» button waits for a click.  Serving what I have, and the rest arrives at the next paste"}
+{"file": "src/pagina.html", "prima": "⚠ appunti: uno stream azzerato a meta': il trasferimento si butta", "dopo": "⚠ clipboard: a stream reset halfway: the transfer is thrown away"}
+{"file": "src/pagina.html", "prima": "uno stream di appunti con ", "dopo": "a clipboard stream with "}
+{"file": "src/pagina.html", "prima": " byte: §6.1 vuole almeno i sei dell'inquadratura", "dopo": " bytes: §6.1 wants at least the six of the framing"}
+{"file": "src/pagina.html", "prima": "un messaggio di appunti dichiara ", "dopo": "a clipboard message declares "}
+{"file": "src/pagina.html", "prima": " byte di corpo e ne sono arrivati ", "dopo": " bytes of body and what arrived is "}
+{"file": "src/pagina.html", "prima": "APPUNTI_ANNUNCIO con ", "dopo": "APPUNTI_ANNUNCIO with "}
+{"file": "src/pagina.html", "prima": " byte di corpo: §7.4 ne vuole 8", "dopo": " bytes of body: §7.4 wants 8"}
+{"file": "src/pagina.html", "prima": "APPUNTI_ANNUNCIO di ", "dopo": "APPUNTI_ANNUNCIO of "}
+{"file": "src/pagina.html", "prima": " byte: §5.4 si ferma a ", "dopo": " bytes: §5.4 stops at "}
+{"file": "src/pagina.html", "prima": "APPUNTI_CHIEDI con ", "dopo": "APPUNTI_CHIEDI with "}
+{"file": "src/pagina.html", "prima": " byte di corpo: §7.4 ne vuole 4", "dopo": " bytes of body: §7.4 wants 4"}
+{"file": "src/pagina.html", "prima": "APPUNTI_CHIEDI per il trasferimento ", "dopo": "APPUNTI_CHIEDI for transfer "}
+{"file": "src/pagina.html", "prima": ", che non corrisponde a nessuno dei ", "dopo": ", which does not match any of the "}
+{"file": "src/pagina.html", "prima": " che ho annunciato (§7.4)", "dopo": " I announced (§7.4)"}
+{"file": "src/pagina.html", "prima": "⚠ §7.4: il desktop remoto chiede il trasferimento ", "dopo": "⚠ §7.4: the remote desktop asks for transfer "}
+{"file": "src/pagina.html", "prima": ", superato dal ", "dopo": ", superseded by "}
+{"file": "src/pagina.html", "prima": ": lo servo col testo ATTUALE", "dopo": ": serving it with the CURRENT text"}
+{"file": "src/pagina.html", "prima": " byte spediti al desktop remoto (trasferimento ", "dopo": " bytes sent to the remote desktop (transfer "}
+{"file": "src/pagina.html", "prima": ") — qualcuno di la' sta incollando", "dopo": ") — someone over there is pasting"}
+{"file": "src/pagina.html", "prima": "APPUNTI_TESTO con ", "dopo": "APPUNTI_TESTO with "}
+{"file": "src/pagina.html", "prima": " byte di corpo: §7.4 ne vuole almeno 4", "dopo": " bytes of body: §7.4 wants at least 4"}
+{"file": "src/pagina.html", "prima": "APPUNTI_TESTO per il trasferimento ", "dopo": "APPUNTI_TESTO for transfer "}
+{"file": "src/pagina.html", "prima": ", che NON ho mai chiesto (l'annuncio vivo e' il ", "dopo": ", which I NEVER asked for (the live announcement is "}
+{"file": "src/pagina.html", "prima": "): §7.4 dice che gli appunti si tirano, non si spingono", "dopo": "): §7.4 says the clipboard is pulled, not pushed"}
+{"file": "src/pagina.html", "prima": "⚠ §7.4: il testo del trasferimento ", "dopo": "⚠ §7.4: the text of transfer "}
+{"file": "src/pagina.html", "prima": " arriva quando l'annuncio vivo e' il ", "dopo": " arrives when the live announcement is "}
+{"file": "src/pagina.html", "prima": ": e' la corsa normale fra due che copiano, e il testo e' quello ATTUALE", "dopo": ": it is the normal race between two people copying, and the text is the CURRENT one"}
+{"file": "src/pagina.html", "prima": "APPUNTI_TESTO porta ", "dopo": "APPUNTI_TESTO carries "}
+{"file": "src/pagina.html", "prima": " byte e l'annuncio ne dichiarava ", "dopo": " bytes and the announcement declared "}
+{"file": "src/pagina.html", "prima": "APPUNTI_TESTO non e' UTF-8 valido, e §5.4 lo pretende", "dopo": "APPUNTI_TESTO is not valid UTF-8, and §5.4 demands it"}
+{"file": "src/pagina.html", "prima": "tipo 0x", "dopo": "type 0x"}
+{"file": "src/pagina.html", "prima": " sul canale appunti: §7.4 ne definisce TRE — 0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO", "dopo": " on the clipboard channel: §7.4 defines THREE — 0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO"}
+{"file": "src/pagina.html", "prima": "MARCA il campo dell'incolla porta ", "dopo": "MARCA the paste field carries "}
+{"file": "src/pagina.html", "prima": " caratteri dopo ", "dopo": " characters after "}
+{"file": "src/pagina.html", "prima": " ms: strada del CAMPO", "dopo": " ms: FIELD route"}
+{"file": "src/pagina.html", "prima": "Ctrl+V visto, ma gli appunti NON sono accesi", "dopo": "Ctrl+V seen, but the clipboard is NOT on"}
+{"file": "src/pagina.html", "prima": "Ctrl+V visto · sorveglianza=«", "dopo": "Ctrl+V seen · watch=«"}
+{"file": "src/pagina.html", "prima": "sorveglianza accesa: non chiedo niente, il testo arriva da se'", "dopo": "watch on: not asking anything, the text arrives by itself"}
+{"file": "src/pagina.html", "prima": "l'evento `paste` e' arrivato: strada gratis, nessun permesso", "dopo": "the `paste` event arrived: free route, no permission"}
+{"file": "src/pagina.html", "prima": "nessun `paste` in ", "dopo": "no `paste` in "}
+{"file": "src/pagina.html", "prima": " ms: chiedo `readText()` (§9, il prezzo dichiarato)", "dopo": " ms: asking for `readText()` (§9, the declared price)"}
+{"file": "src/pagina.html", "prima": "⚠ §9: questo browser non consegna l'evento `paste` e non ha `readText`: quel che copi qui NON puo' arrivare al desktop remoto.  Non e' un guasto, e' una funzione che non c'e'", "dopo": "⚠ §9: this browser does not deliver the `paste` event and has no `readText`: what you copy here CANNOT reach the remote desktop.  It is not a fault, it is a feature that does not exist"}
+{"file": "src/pagina.html", "prima": "MARCA ⚠ §9: Firefox chiede il PERMESSO per leggere i tuoi appunti e aspetta: cerca il bottoncino «Incolla» comparso vicino al puntatore e cliccalo.  ⭐ Finche' non lo fai, quel che hai copiato qui NON arriva al desktop remoto — e non e' un guasto nostro", "dopo": "MARCA ⚠ §9: Firefox asks for PERMISSION to read your clipboard and waits: look for the little «Paste» button that appeared near the pointer and click it.  ⭐ Until you do, what you copied here does NOT reach the remote desktop — and it is not our fault"}
+{"file": "src/pagina.html", "prima": "`readText()` ha dato ", "dopo": "`readText()` gave "}
+{"file": "src/pagina.html", "prima": " caratteri", "dopo": " characters"}
+{"file": "src/pagina.html", "prima": "⛔ `readText()` NEGATO (", "dopo": "⛔ `readText()` DENIED ("}
+{"file": "src/pagina.html", "prima": "): quel che hai copiato qui non arriva al desktop remoto", "dopo": "): what you copied here does not reach the remote desktop"}
+{"file": "src/pagina.html", "prima": "⛔ appunti: il messaggio dal server ha fatto eccezione (", "dopo": "⛔ clipboard: the message from the server threw an exception ("}
+{"file": "src/pagina.html", "prima": "SPENTI: il server non ha dichiarato `appunti.testo` (§4.3)", "dopo": "OFF: the server did not declare `appunti.testo` (§4.3)"}
+{"file": "src/pagina.html", "prima": "ACCESI (§4.3 negoziata)", "dopo": "ON (§4.3 negotiated)"}
+{"file": "src/pagina.html", "prima": "⚠ appunti: la clipboard e' cambiata e non si e' potuta leggere (", "dopo": "⚠ clipboard: the clipboard changed and could not be read ("}
+{"file": "src/pagina.html", "prima": "): resta la strada del `Ctrl+V`", "dopo": "): the `Ctrl+V` route remains"}
+{"file": "src/pagina.html", "prima": "evento `paste` arrivato · ", "dopo": "`paste` event arrived · "}
+{"file": "src/pagina.html", "prima": "c'e' un testo che aspetta un gesto, ma il gesto e' un `Ctrl+", "dopo": "there is a text waiting for a gesture, but the gesture is a `Ctrl+"}
+{"file": "src/pagina.html", "prima": "`: NON glielo scrivo sopra — in questo istante gli appunti sono dell'utente", "dopo": "`: NOT writing it over — at this instant the clipboard belongs to the user"}
+{"file": "src/pagina.html", "prima": "l'utente ha copiato qualcosa di suo: BUTTO il testo che veniva dal desktop remoto e aspettava un gesto — i suoi appunti valgono di piu'", "dopo": "the user copied something of their own: THROWING AWAY the text that came from the remote desktop and was waiting for a gesture — their clipboard is worth more"}
+{"file": "src/pagina.html", "prima": "⭐ appunti accesi, solo testo, nei due versi (§7.4).  ", "dopo": "⭐ clipboard on, text only, in both directions (§7.4).  "}
+{"file": "src/pagina.html", "prima": "⭐ Questo browser sorveglia la clipboard: `clipboardchange` sta su `", "dopo": "⭐ This browser watches the clipboard: `clipboardchange` sits on `"}
+{"file": "src/pagina.html", "prima": "` — quel che copi qui arriva al desktop remoto da solo", "dopo": "` — what you copy here reaches the remote desktop by itself"}
+{"file": "src/pagina.html", "prima": "⚠ Questo browser NON sorveglia la clipboard: quel che copi qui arriva al desktop remoto quando batti `Ctrl+V` su questa pagina (§9 — su Firefox e Safari `clipboardchange` non esiste)", "dopo": "⚠ This browser does NOT watch the clipboard: what you copy here reaches the remote desktop when you type `Ctrl+V` on this page (§9 — on Firefox and Safari `clipboardchange` does not exist)"}
+{"file": "src/pagina.html", "prima": "niente stream unidirezionali: ", "dopo": "no unidirectional streams: "}
+{"file": "src/pagina.html", "prima": "gli stream unidirezionali si sono fermati: ", "dopo": "the unidirectional streams stopped: "}
+{"file": "src/pagina.html", "prima": "⛔ la lettura di uno stream del video e' fallita: ", "dopo": "⛔ reading a video stream failed: "}
+{"file": "src/pagina.html", "prima": "uno stream video oltre i 16 MiB che §6.2 concede: si chiude invece di continuare ad accumulare", "dopo": "a video stream beyond the 16 MiB §6.2 allows: closing instead of continuing to accumulate"}
+{"file": "src/pagina.html", "prima": "uno stream unidirezionale azzerato prima dei due byte del tipo: buttato", "dopo": "a unidirectional stream reset before the two bytes of the type: thrown away"}
+{"file": "src/pagina.html", "prima": "uno stream unidirezionale chiuso con FIN dopo ", "dopo": "a unidirectional stream closed with FIN after "}
+{"file": "src/pagina.html", "prima": " byte: non c'e' nemmeno il campo `tipo` di §2.5", "dopo": " bytes: there is not even the §2.5 `tipo` field"}
+{"file": "src/pagina.html", "prima": "uno stream unidirezionale del server col byte alto 0x", "dopo": "a unidirectional stream from the server with high byte 0x"}
+{"file": "src/pagina.html", "prima": ": §2.5 ammette 0x03 (video) e 0x02 (appunti), e il canale non si riconosce dal numero dello stream", "dopo": ": §2.5 allows 0x03 (video) and 0x02 (clipboard), and the channel is not recognised by the stream number"}
+{"file": "src/pagina.html", "prima": "⛔ il percorso del video nel worker si e' rotto, e da qui in poi NON dipinge piu' niente: ", "dopo": "⛔ the video path in the worker broke, and from here on it paints NOTHING more: "}
+{"file": "src/pagina.html", "prima": " — questa riga si scrive una volta sola", "dopo": " — this line is written only once"}
+{"file": "src/pagina.html", "prima": "/* generato da pagina.html — `STUDI.md` §web §6.1 */", "dopo": "/* generated by pagina.html — `STUDI.md` §web §6.1 */"}
+{"file": "src/pagina.html", "prima": "⛔ MISURA: il worker ha ricevuto ", "dopo": "⛔ MISURA: the worker received "}
+{"file": "src/pagina.html", "prima": " stream del video e non ha dipinto NIENTE.  ⇒ `?video=worker` su questo motore non funziona: si torna a `/` senza la stringa di ricerca.", "dopo": " video streams and painted NOTHING.  ⇒ `?video=worker` on this engine does not work: go back to `/` without the query string."}
+{"file": "src/pagina.html", "prima": "⛔ lo stream del video non si e' potuto trasferire al worker (", "dopo": "⛔ the video stream could not be transferred to the worker ("}
+{"file": "src/pagina.html", "prima": "): il video di questa sessione NON arriva.  ⚠ E non ripiego sul thread principale: sarebbe misurare una cosa e chiamarla un'altra.", "dopo": "): this session's video does NOT arrive.  ⚠ And I do not fall back to the main thread: that would be measuring one thing and calling it another."}
+{"file": "src/pagina.html", "prima": "⛔ il worker del video e' morto: ", "dopo": "⛔ the video worker died: "}
+{"file": "src/pagina.html", "prima": "⛔ `?video=worker` e `?disegno=mse` insieme NON si possono: il confezionatore MP4 non attraversa il confine del worker.  ⇒ Tengo MSE (senza, su un motore senza WebCodecs non si disegna niente) e LASCIO il worker spento.", "dopo": "⛔ `?video=worker` and `?disegno=mse` together are NOT possible: the MP4 packer does not cross the worker boundary.  ⇒ Keeping MSE (without it, on an engine without WebCodecs nothing is drawn) and LEAVING the worker off."}
+{"file": "src/pagina.html", "prima": "§7.6: la sessione e' terminata — la pagina e' tornata al modulo di accesso, e il prossimo accesso aprira' una sessione NUOVA", "dopo": "§7.6: the session has ended — the page has gone back to the sign-in form, and the next sign-in will open a NEW session"}
+{"file": "src/pagina.html", "prima": "§7.6: TERMINA_SESSIONE spedito — la sessione grafica finira' e i programmi aperti verranno chiusi", "dopo": "§7.6: TERMINA_SESSIONE sent — the graphical session will end and the open programs will be closed"}
+{"file": "src/pagina.html", "prima": "⛔ nessun canale di controllo: la richiesta di uscire NON e' partita", "dopo": "⛔ no control channel: the request to leave did NOT go out"}
+{"file": "src/pagina.html", "prima": "⛔ TERMINA_SESSIONE non e' partito: ", "dopo": "⛔ TERMINA_SESSIONE did not go out: "}
+{"file": "src/pagina.html", "prima": "Non si e' potuto uscire: ", "dopo": "Could not sign out: "}
+{"file": "src/pagina.html", "prima": "Non si collega: ", "dopo": "Cannot connect: "}
+{"file": "src/pagina.html", "prima": "nemmeno il congedo e' potuto uscire: ", "dopo": "not even the farewell could go out: "}
+{"file": "src/pagina.html", "prima": "⚠ modo classico, RIPIEGO «", "dopo": "⚠ classic mode, FALLBACK «"}
+{"file": "src/pagina.html", "prima": "⛔ il canale di input ha rifiutato un messaggio del modo classico: ", "dopo": "⛔ the input channel refused a classic-mode message: "}
+{"file": "src/pagina.html", "prima": "`REMOTIX_INPUT` non e' cucito: i messaggi si costruiscono e NON partono (restano in `REMOTIX.input_classico.spediti`)", "dopo": "`REMOTIX_INPUT` is not stitched: the messages are built and do NOT leave (they stay in `REMOTIX.input_classico.spediti`)"}
+{"file": "src/pagina.html", "prima": "blink su Android / DeX", "dopo": "blink on Android / DeX"}

@@ -1,0 +1,472 @@
+{"file": "src/input.c", "prima": "⚠ codice di tasto 0x%X fuori dal massimo di Mutter (0x%X): Mutter lo scarterebbe in SILENZIO, quindi lo rifiuto io e lo dico", "dopo": "⚠ key code 0x%X beyond Mutter's maximum (0x%X): Mutter would discard it SILENTLY, so I refuse it myself and say so"}
+{"file": "src/input.c", "prima": "⛔⛔ il rilascio del tasto%s NON PARTE: era premuto su una tastiera che il compositore ha gia' tolto (ricambio n. %u), e `handle_key` scarta in silenzio un rilascio sul dispositivo nuovo (`meta-eis-client.c:638-645`).  ⛔ Un modificatore che resta giu' rende il desktop inservibile (`RCP.md` §11): la cura e' rilasciare PRIMA del ricambio", "dopo": "⛔⛔ the release of key%s DOES NOT LEAVE: it was pressed on a keyboard that the compositor has already removed (replacement n. %u), and `handle_key` silently discards a release on the new device (`meta-eis-client.c:638-645`).  ⛔ A modifier that stays down makes the desktop unusable (`RCP.md` §11): the cure is to release BEFORE the replacement"}
+{"file": "src/input.c", "prima": "⚠ codice di pulsante 0x%X fuori dal massimo: rifiutato", "dopo": "⚠ button code 0x%X beyond the maximum: refused"}
+{"file": "src/input.c", "prima": "⛔⛔ il rilascio del pulsante 0x%X NON PARTE: era premuto su un dispositivo che il compositore ha gia' tolto (ricambio n. %u), e Mutter scarta in silenzio un rilascio sul dispositivo nuovo (`meta-eis-client.c:612-621`).  ⛔ Il POSTO lo conta ancora giu' (`meta-seat-impl.c:899-908`) e da adesso NESSUN clic arriva piu': la cura e' rilasciare PRIMA di chiedere il ridimensionamento — `figlio.c:3964`, prima di `cattura_ridimensiona()`", "dopo": "⛔⛔ the release of button 0x%X DOES NOT LEAVE: it was pressed on a device the compositor has already removed (replacement n. %u), and Mutter silently discards a release on the new device (`meta-eis-client.c:612-621`).  ⛔ The SEAT still counts it down (`meta-seat-impl.c:899-908`) and from now on NO click arrives any more: the cure is to release BEFORE asking for the resize — `figlio.c:3964`, before `cattura_ridimensiona()`"}
+{"file": "src/input.c", "prima": "regione %zu: %u,%u %ux%u (mapping-id «%s»)", "dopo": "region %zu: %u,%u %ux%u (mapping-id «%s»)"}
+{"file": "src/input.c", "prima": "assente", "dopo": "absent"}
+{"file": "src/input.c", "prima": "chiave", "dopo": "key"}
+{"file": "src/input.c", "prima": "geometria", "dopo": "geometry"}
+{"file": "src/input.c", "prima": "unica", "dopo": "only"}
+{"file": "src/input.c", "prima": "⛔ NESSUNA regione riconosciuta fra le %zu annunciate (chiave «%s», tela %ux%u): il puntatore NON si muove, e non tiro a indovinare quale sia", "dopo": "⛔ NO region recognised among the %zu announced (key «%s», canvas %ux%u): the pointer does NOT move, and I do not guess which one it is"}
+{"file": "src/input.c", "prima": "ignota", "dopo": "unknown"}
+{"file": "src/input.c", "prima": "regione del puntatore per %s: %.0f,%.0f %.0fx%.0f (di %zu, mapping-id «%s»)", "dopo": "pointer region by %s: %.0f,%.0f %.0fx%.0f (of %zu, mapping-id «%s»)"}
+{"file": "src/input.c", "prima": "assente", "dopo": "absent"}
+{"file": "src/input.c", "prima": "⚠ il dispositivo tastiera non porta nessuna keymap: le LETTERE restano spente (le POSIZIONI no)", "dopo": "⚠ the keyboard device carries no keymap: LETTERS stay off (KEY POSITIONS do not)"}
+{"file": "src/input.c", "prima": "⚠ keymap di tipo sconosciuto (%d): ignorata", "dopo": "⚠ keymap of unknown type (%d): ignored"}
+{"file": "src/input.c", "prima": "⚠ la keymap non si legge: %s", "dopo": "⚠ the keymap cannot be read: %s"}
+{"file": "src/input.c", "prima": "%zu byte, impronta %08x", "dopo": "%zu bytes, fingerprint %08x"}
+{"file": "src/input.c", "prima": "⚠ la keymap consegnata da libei non si apre (%s): %s", "dopo": "⚠ the keymap handed over by libei does not open (%s): %s"}
+{"file": "src/input.c", "prima": "senza motivo dichiarato", "dopo": "no reason declared"}
+{"file": "src/input.c", "prima": "tengo quella di prima", "dopo": "keeping the previous one"}
+{"file": "src/input.c", "prima": "le LETTERE restano spente", "dopo": "LETTERS stay off"}
+{"file": "src/input.c", "prima": "KEYMAP CAMBIATA: %s (era: %s) → disposizione «%s»", "dopo": "KEYMAP CHANGED: %s (was: %s) → layout «%s»"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "keymap invariata: %s", "dopo": "keymap unchanged: %s"}
+{"file": "src/input.c", "prima": "⚠ KWin ha messo «%s» e non la negoziata «%s»: la RICHIEDO (%d di 3)", "dopo": "⚠ KWin set «%s» and not the negotiated «%s»: REQUESTING it again (%d of 3)"}
+{"file": "src/input.c", "prima": "⚠ KWin ha messo «%s» e non «%s», e richiederla non riesce: %s", "dopo": "⚠ KWin set «%s» and not «%s», and requesting it does not succeed: %s"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "dispositivo «%s»: assoluto=%d scorrimento=%d bottoni=%d tastiera=%d", "dopo": "device «%s»: absolute=%d scroll=%d buttons=%d keyboard=%d"}
+{"file": "src/input.c", "prima": "⛔⛔ %u %s erano PREMUTI sul dispositivo che il compositore ha appena tolto: il loro rilascio non arrivera' a NESSUNO, e il posto li conta ancora giu'.  ⇒ Da adesso quel che passa da loro e' rotto finche' non cade il canale EIS.  La cura e' rilasciare PRIMA di chiedere il ridimensionamento (`figlio.c:3964`)", "dopo": "⛔⛔ %u %s were PRESSED on the device the compositor has just removed: their release will reach NOBODY, and the seat still counts them down.  ⇒ From now on what passes through them is broken until the EIS channel drops.  The cure is to release BEFORE asking for the resize (`figlio.c:3964`)"}
+{"file": "src/input.c", "prima": "pulsanti", "dopo": "buttons"}
+{"file": "src/input.c", "prima": "il puntatore e' stato TOLTO dal compositore (ricambio n. %u)", "dopo": "the pointer was REMOVED by the compositor (replacement n. %u)"}
+{"file": "src/input.c", "prima": "tasti", "dopo": "keys"}
+{"file": "src/input.c", "prima": "la tastiera e' stata TOLTA dal compositore (ricambio n. %u)", "dopo": "the keyboard was REMOVED by the compositor (replacement n. %u)"}
+{"file": "src/input.c", "prima": "la stretta di mano di libei e' ARRIVATA dopo %.1f ms: da adesso il canale si puo' chiudere per la strada normale", "dopo": "libei's handshake has ARRIVED after %.1f ms: from now on the channel can be closed the normal way"}
+{"file": "src/input.c", "prima": "posto «%s»: capacita' chieste", "dopo": "seat «%s»: capabilities requested"}
+{"file": "src/input.c", "prima": "dispositivo «%s» pronto (sequenza %u)", "dopo": "device «%s» ready (sequence %u)"}
+{"file": "src/input.c", "prima": "⛔ il compositore ha CHIUSO il canale di input", "dopo": "⛔ the compositor CLOSED the input channel"}
+{"file": "src/input.c", "prima": "nessuna sessione di Mutter: il canale di input non ha a chi parlare", "dopo": "no Mutter session: the input channel has nobody to talk to"}
+{"file": "src/input.c", "prima": "tela degenere %ux%u: le coordinate assolute non avrebbero un intervallo", "dopo": "degenerate canvas %ux%u: the absolute coordinates would have no range"}
+{"file": "src/input.c", "prima": "KWin non ha concesso il canale di input (connectToEIS): %s", "dopo": "KWin did not grant the input channel (connectToEIS): %s"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "ConnectToEIS non ha dato un descrittore (il registro dell'area «cattura» dice perche'): nessun input puo' arrivare al desktop", "dopo": "ConnectToEIS gave no descriptor (the log of the «cattura» area says why): no input can reach the desktop"}
+{"file": "src/input.c", "prima": "contesto libei non creato", "dopo": "libei context not created"}
+{"file": "src/input.c", "prima": "il descrittore di ConnectToEIS non e' stato accettato da libei", "dopo": "ConnectToEIS's descriptor was not accepted by libei"}
+{"file": "src/input.c", "prima": "canale di input aperto verso il compositore (libei), tela %ux%u", "dopo": "input channel open to the compositor (libei), canvas %ux%u"}
+{"file": "src/input.c", "prima": "nessun palco KWin: il canale di input non ha a chi parlare", "dopo": "no KWin stage: the input channel has nobody to talk to"}
+{"file": "src/input.c", "prima": "canale di input staccato da «%s»: stretta arrivata dopo %.1f ms, vissuto %.1f ms, chiusura VERA (ei_disconnect + ei_unref)", "dopo": "input channel detached by «%s»: handshake arrived after %.1f ms, lived %.1f ms, REAL close (ei_disconnect + ei_unref)"}
+{"file": "src/input.c", "prima": "⛔ canale di input ABBANDONATO da «%s» dopo %.1f ms: la stretta di mano di libei non era mai arrivata, e disconnettere (o liberare) un contesto cosi' fa cadere la libreria.  ⇒ Si chiudono i descrittori e si perde il contesto (abbandoni finora: %u).  ⚠ Nessun dispositivo virtuale resta appeso: a questo punto non ne era ancora nato nessuno", "dopo": "⛔ input channel ABANDONED by «%s» after %.1f ms: libei's handshake had never arrived, and disconnecting (or freeing) such a context makes the library crash.  ⇒ The descriptors are closed and the context is lost (abandonments so far: %u).  ⚠ No virtual device is left hanging: at this point none had been born yet"}
+{"file": "src/input.c", "prima": "⭐⭐ GUARIGIONE (n. %u): rifaccio il canale EIS.  Il posto conta ancora giu' %u fra tasti e pulsanti orfani, e dal lato del cliente NON si recupera (`meta-eis-client.c:612-621` ingoia il rilascio sul dispositivo nuovo).  ⛔ Il prezzo: il trascinamento in corso viene TAGLIATO — ma era gia' morto", "dopo": "⭐⭐ HEALING (n. %u): redoing the EIS channel.  The seat still counts down %u orphan keys and buttons, and from the client side it is NOT recovered (`meta-eis-client.c:612-621` swallows the release on the new device).  ⛔ The price: the drag in progress is CUT — but it was already dead"}
+{"file": "src/input.c", "prima": "guarigione", "dopo": "healing"}
+{"file": "src/input.c", "prima": "⛔⛔ la guarigione NON e' riuscita (%s): il canale di input non c'e' piu'. ⚠ Il posto e' comunque sbloccato — la chiusura l'ha gia' fatto — ma da adesso l'utente GUARDA e non comanda", "dopo": "⛔⛔ the healing did NOT succeed (%s): the input channel is gone. ⚠ The seat is unblocked anyway — the closing already did it — but from now on the user WATCHES and does not control"}
+{"file": "src/input.c", "prima": "senza motivo dichiarato", "dopo": "no reason declared"}
+{"file": "src/input.c", "prima": "⛔⛔ contesto libei non ricreato: il canale di input e' finito", "dopo": "⛔⛔ libei context not recreated: the input channel is over"}
+{"file": "src/input.c", "prima": "⛔⛔ il descrittore nuovo non e' stato accettato da libei: il canale di input e' finito", "dopo": "⛔⛔ the new descriptor was not accepted by libei: the input channel is over"}
+{"file": "src/input.c", "prima": "⭐⭐ canale EIS RIFATTO (guarigione n. %u): i dispositivi rinascono e il conto del posto e' tornato a zero.  ⚠ Keymap e regione si rileggono al prossimo `DEVICE_ADDED`, come sempre.  ⛔ La sessione, il monitor e il flusso NON sono stati toccati", "dopo": "⭐⭐ EIS channel REDONE (healing n. %u): the devices are reborn and the seat's count is back to zero.  ⚠ Keymap and region are reread at the next `DEVICE_ADDED`, as always.  ⛔ The session, the monitor and the stream were NOT touched"}
+{"file": "src/input.c", "prima": "⛔⛔ il compositore ha chiuso il canale EIS PRIMA della stretta di mano (dopo %.1f ms): NON lo dispaccio, perche' libei cadrebbe dentro il suo stesso ei_disconnect().  ⚠ Da adesso l'utente GUARDA e non comanda, e il palco si smonta per la strada normale", "dopo": "⛔⛔ the compositor closed the EIS channel BEFORE the handshake (after %.1f ms): NOT dispatching it, because libei would crash inside its own ei_disconnect().  ⚠ From now on the user WATCHES and does not control, and the stage is torn down the normal way"}
+{"file": "src/input.c", "prima": "caduta prima della stretta", "dopo": "drop before the handshake"}
+{"file": "src/input.c", "prima": "⚠ la regione (%.0fx%.0f) NON e' grande come la tela (%ux%u): scalo le coordinate, ed e' una decisione che questo modulo non dovrebbe prendere — RCP.md §4.5, la tela concessa", "dopo": "⚠ the region (%.0fx%.0f) is NOT as large as the canvas (%ux%u): scaling the coordinates, and it is a decision this module should not take — RCP.md §4.5, the granted canvas"}
+{"file": "src/input.c", "prima": "⛔ tela degenere %ux%u rifiutata: tengo %ux%u", "dopo": "⛔ degenerate canvas %ux%u refused: keeping %ux%u"}
+{"file": "src/input.c", "prima": "la tela cambia: %ux%u → %ux%u", "dopo": "the canvas changes: %ux%u → %ux%u"}
+{"file": "src/input.c", "prima": "⛔ D-007: la scorciatoia «riporta dentro» (%s) NON e' partita: le finestre grandi possono restare in parte fuori dallo schermo %ux%u", "dopo": "⛔ D-007: the «bring back inside» shortcut (%s) did NOT leave: large windows may stay partly outside the screen %ux%u"}
+{"file": "src/input.c", "prima": "⭐ D-007: battuta la scorciatoia «riporta dentro» (%s) — labwc riporta le finestre dentro lo schermo %ux%u", "dopo": "⭐ D-007: typed the «bring back inside» shortcut (%s) — labwc brings the windows back inside the screen %ux%u"}
+{"file": "src/input.c", "prima": "disposizione «%s»: la sessione la ha GIA' (verificato sulla keymap, non sulla memoria), non la richiedo", "dopo": "layout «%s»: the session ALREADY has it (verified on the keymap, not on memory), not requesting it"}
+{"file": "src/input.c", "prima": "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata chiesta a KWin (%s) — la sessione tiene «%s».  ⛔ Le lettere che quella disposizione non ha NON escono, e le SCORCIATOIE vanno sui tasti di quella (RCP.md §7.3)", "dopo": "⚠ FALLBACK DECLARED: layout «%s» was NOT requested from KWin (%s) — the session keeps «%s».  ⛔ The letters that layout does not have do NOT come out, and the SHORTCUTS go on the keys of that one (RCP.md §7.3)"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "disposizione «%s» CHIESTA a KWin (kxkbrc della sessione + reloadConfig + kconfig ConfigChanged) — §5-bis.7. ⚠ chiesta, non ancora in vigore: lo dira' «KEYMAP CAMBIATA»", "dopo": "layout «%s» REQUESTED from KWin (the session's kxkbrc + reloadConfig + kconfig ConfigChanged) — §5-bis.7. ⚠ requested, not yet in force: «KEYMAP CHANGED» will say so"}
+{"file": "src/input.c", "prima": "⚠ RIPIEGO DICHIARATO: lo schema «org.gnome.desktop.input-sources» non c'e' su questa macchina — la disposizione «%s» NON si applica, e la sessione tiene la sua. ⛔ Le lettere che quella non ha NON escono (D-008: la frase di prima, «usciranno giuste lo stesso», era falsa), e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)", "dopo": "⚠ FALLBACK DECLARED: the schema «org.gnome.desktop.input-sources» is not on this machine — layout «%s» is NOT applied, and the session keeps its own. ⛔ The letters that one does not have do NOT come out (D-008: the earlier sentence, «they will come out right anyway», was false), and the SHORTCUTS go on its keys (RCP.md §7.3)"}
+{"file": "src/input.c", "prima": "⚠ RIPIEGO DICHIARATO: il dconf della sessione non e' in vigore — la disposizione «%s» NON si scrive (finirebbe nelle impostazioni dell'UTENTE, D-015), e la sessione tiene «%s».  ⛔ Le lettere che quella non ha NON escono, e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)", "dopo": "⚠ FALLBACK DECLARED: the session's dconf is not in force — layout «%s» is NOT written (it would end up in the USER's settings, D-015), and the session keeps «%s».  ⛔ The letters that one does not have do NOT come out, and the SHORTCUTS go on its keys (RCP.md §7.3)"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "⚠ la disposizione «%s» NON e' stata scritta in input-sources", "dopo": "⚠ layout «%s» was NOT written into input-sources"}
+{"file": "src/input.c", "prima": "disposizione «%s» CHIESTA alla sessione (input-sources = %s, nel dconf della SESSIONE: quello dell'utente non si tocca, D-015) — §5-bis.7. ⚠ chiesta, non ancora in vigore: lo dira' «KEYMAP CAMBIATA»", "dopo": "layout «%s» REQUESTED from the session (input-sources = %s, in the SESSION's dconf: the user's is not touched, D-015) — §5-bis.7. ⚠ requested, not yet in force: «KEYMAP CHANGED» will say so"}
+{"file": "src/input.c", "prima": "⚠ LETTERA non mandata: nessuna disposizione (libei non ha ancora consegnato una keymap)", "dopo": "⚠ LETTER not sent: no layout (libei has not yet handed over a keymap)"}
+{"file": "src/input.c", "prima": "rilascio al distacco: %d fra tasti e pulsanti (restano segnati %u tasti e %u pulsanti)%s", "dopo": "release at detach: %d keys and buttons (still marked: %u keys and %u buttons)%s"}
+{"file": "src/input.c", "prima": " — ⛔ e vedi la riga sugli ORFANI qui sopra", "dopo": " — ⛔ and see the line about the ORPHANS above"}
+{"file": "src/input.c", "prima": "⛔⛔ %d fra tasti e pulsanti NON si sono potuti rilasciare: erano premuti su dispositivi che il compositore ha tolto.  Il posto li conta ancora giu' e li' restano finche' non cade il canale EIS", "dopo": "⛔⛔ %d keys and buttons could NOT be released: they were pressed on devices the compositor removed.  The seat still counts them down and there they stay until the EIS channel drops"}
+{"file": "src/input.c", "prima": "⛔ chiusura con %u tasti e %u pulsanti ANCORA PREMUTI: chi cuce non ha chiamato input_rilascia_tutto()", "dopo": "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not call input_rilascia_tutto()"}
+{"file": "src/input.c", "prima": "chiusura", "dopo": "closing"}
+{"file": "src/input.c", "prima": "%zu byte, impronta %08x", "dopo": "%zu bytes, fingerprint %08x"}
+{"file": "src/input.c", "prima": "⚠ la keymap della tastiera virtuale non si apre per le lettere (%s): %s", "dopo": "⚠ the virtual keyboard's keymap does not open for letters (%s): %s"}
+{"file": "src/input.c", "prima": "senza motivo dichiarato", "dopo": "no reason declared"}
+{"file": "src/input.c", "prima": "tengo quella di prima", "dopo": "keeping the previous one"}
+{"file": "src/input.c", "prima": "le LETTERE restano spente", "dopo": "LETTERS stay off"}
+{"file": "src/input.c", "prima": "KEYMAP CAMBIATA: %s (era: %s) → disposizione «%s», dalla %s (wlroots)", "dopo": "KEYMAP CHANGED: %s (was: %s) → layout «%s», from %s (wlroots)"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "tela degenere %ux%u: le coordinate assolute non avrebbero un intervallo", "dopo": "degenerate canvas %ux%u: the absolute coordinates would have no range"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "canale di input aperto verso il compositore (wlroots: tastiera e puntatore virtuali), tela %ux%u", "dopo": "input channel open to the compositor (wlroots: virtual keyboard and pointer), canvas %ux%u"}
+{"file": "src/input.c", "prima": "⚠ LETTERA non mandata: nessuna disposizione (la keymap della tastiera virtuale non si e' aperta)", "dopo": "⚠ LETTER not sent: no layout (the virtual keyboard's keymap did not open)"}
+{"file": "src/input.c", "prima": "disposizione «%s»: la tastiera virtuale la ha GIA' (verificato sulla keymap), non la rimando", "dopo": "layout «%s»: the virtual keyboard ALREADY has it (verified on the keymap), not sending it again"}
+{"file": "src/input.c", "prima": "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata mandata alla tastiera virtuale (%s) — resta «%s».  ⛔ Le lettere che quella non ha NON escono, e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)", "dopo": "⚠ FALLBACK DECLARED: layout «%s» was NOT sent to the virtual keyboard (%s) — «%s» stays.  ⛔ The letters that one does not have do NOT come out, and the SHORTCUTS go on its keys (RCP.md §7.3)"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/input.c", "prima": "disposizione «%s» MANDATA al compositore come keymap della tastiera virtuale — §5-bis.7 su wlroots, senza toccare le impostazioni della sessione", "dopo": "layout «%s» SENT to the compositor as the virtual keyboard's keymap — §5-bis.7 on wlroots, without touching the session's settings"}
+{"file": "src/input.c", "prima": "⛔ wlroots: il riattacco dell'input non riesce (%s) — riprovo ogni secondo, e questa riga non si ripete.  ⚠ Intanto il desktop si VEDE e non si COMANDA", "dopo": "⛔ wlroots: the input reattach does not succeed (%s) — retrying every second, and this line does not repeat.  ⚠ Meanwhile the desktop can be SEEN and not CONTROLLED"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "⚠ al riattacco la disposizione «%s» non si rimette (%s)", "dopo": "⚠ at reattach layout «%s» is not put back (%s)"}
+{"file": "src/input.c", "prima": "senza motivo", "dopo": "no reason"}
+{"file": "src/input.c", "prima": "⭐ wlroots: input RIATTACCATO (n. %u).  %u pulsanti rimasti giu' rilasciati dal dispositivo nuovo (`[?]` non misurato che il seat li accetti), %u tasti gia' rilasciati dal compositore alla caduta", "dopo": "⭐ wlroots: input REATTACHED (n. %u).  %u buttons left down released by the new device (`[?]` not measured that the seat accepts them), %u keys already released by the compositor at the drop"}
+{"file": "src/input.c", "prima": "⛔ chiusura con %u tasti e %u pulsanti ANCORA PREMUTI: chi cuce non ha chiamato input_rilascia_tutto()", "dopo": "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not call input_rilascia_tutto()"}
+{"file": "src/wlr_input.c", "prima": "⛔⛔ wlroots: il compositore ha CHIUSO la connessione dell'input per un ERRORE DI PROTOCOLLO nostro (%s, oggetto %s@%u, codice %u) — è un difetto di REMOTIX, non del desktop.  ⚠ Da adesso i tasti rimasti giù li rilascia il compositore, i PULSANTI no (§7.2 n.5)", "dopo": "⛔⛔ wlroots: the compositor CLOSED the input connection for a PROTOCOL ERROR of ours (%s, object %s@%u, code %u) — it is a REMOTIX defect, not the desktop's.  ⚠ From now on keys left down are released by the compositor, BUTTONS are not (§7.2 n.5)"}
+{"file": "src/wlr_input.c", "prima": "⛔ wlroots: la connessione dell'input è CADUTA (%s: %s) — il compositore se n'è andato o ha chiuso il socket", "dopo": "⛔ wlroots: the input connection has DROPPED (%s: %s) — the compositor has gone away or closed the socket"}
+{"file": "src/wlr_input.c", "prima": "senza errore dichiarato", "dopo": "no error declared"}
+{"file": "src/wlr_input.c", "prima": "la connessione dell'input è caduta: la keymap non ha dove andare", "dopo": "the input connection has dropped: the keymap has nowhere to go"}
+{"file": "src/wlr_input.c", "prima": "xkbcommon non ha serializzato la keymap «%s»", "dopo": "xkbcommon did not serialise keymap «%s»"}
+{"file": "src/wlr_input.c", "prima": "la keymap non si scrive nel memfd: %s", "dopo": "the keymap does not write into the memfd: %s"}
+{"file": "src/wlr_input.c", "prima": "«%.64s» non è un nome di disposizione XKB (RCP.md §4.5)", "dopo": "«%.64s» is not an XKB layout name (RCP.md §4.5)"}
+{"file": "src/wlr_input.c", "prima": "xkbcommon non compila la disposizione «%s»", "dopo": "xkbcommon does not compile layout «%s»"}
+{"file": "src/wlr_input.c", "prima": "la keymap «%s» non si compila", "dopo": "keymap «%s» does not compile"}
+{"file": "src/wlr_input.c", "prima": "nessuna", "dopo": "none"}
+{"file": "src/wlr_input.c", "prima": "nessun compositore Wayland raggiungibile in XDG_RUNTIME_DIR=%s", "dopo": "no Wayland compositor reachable in XDG_RUNTIME_DIR=%s"}
+{"file": "src/wlr_input.c", "prima": "(non impostata)", "dopo": "(not set)"}
+{"file": "src/wlr_input.c", "prima": "contesto xkbcommon non creato", "dopo": "xkbcommon context not created"}
+{"file": "src/wlr_input.c", "prima": "il compositore non ha risposto all'elenco dei global entro %d s", "dopo": "the compositor did not answer the list of globals within %d s"}
+{"file": "src/wlr_input.c", "prima": "il compositore non annuncia %s%s%s: su questo desktop l'input non passa di qui", "dopo": "the compositor does not announce %s%s%s: on this desktop input does not pass through here"}
+{"file": "src/wlr_input.c", "prima": "sessione", "dopo": "session"}
+{"file": "src/wlr_input.c", "prima": "⚠ wlroots: la keymap della sessione non si usa (%s)", "dopo": "⚠ wlroots: the session's keymap is not used (%s)"}
+{"file": "src/wlr_input.c", "prima": "ambiente", "dopo": "environment"}
+{"file": "src/wlr_input.c", "prima": "nessuna keymap da presentare alla tastiera virtuale (%s): senza, il primo tasto chiuderebbe la connessione (no_keymap)", "dopo": "no keymap to present to the virtual keyboard (%s): without one, the first key would close the connection (no_keymap)"}
+{"file": "src/wlr_input.c", "prima": "xkbcommon non compone nemmeno quella dell'ambiente", "dopo": "xkbcommon does not compose even the environment's one"}
+{"file": "src/wlr_input.c", "prima": "⚠ RIPIEGO DICHIARATO: la sessione non ha consegnato la sua keymap — presento quella dell'AMBIENTE (disposizione «%s»).  ⛔ Può non essere quella della sessione: la corregge la disposizione negoziata col client", "dopo": "⚠ FALLBACK DECLARED: the session did not hand over its keymap — presenting the ENVIRONMENT's (layout «%s»).  ⛔ It may not be the session's: the layout negotiated with the client corrects it"}
+{"file": "src/wlr_input.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/wlr_input.c", "prima": "il compositore non ha accettato i dispositivi virtuali (il registro dice perché)", "dopo": "the compositor did not accept the virtual devices (the log says why)"}
+{"file": "src/wlr_input.c", "prima": "⭐ wlroots: tastiera e puntatore virtuali creati (puntatore v%u%s), keymap dalla %s, %zu byte", "dopo": "⭐ wlroots: virtual keyboard and pointer created (pointer v%u%s), keymap from %s, %zu bytes"}
+{"file": "src/wlr_input.c", "prima": ", legato all'uscita", "dopo": ", bound to the output"}
+{"file": "src/tastiera.c", "prima": "xkbcommon (avviso): %s", "dopo": "xkbcommon (warning): %s"}
+{"file": "src/tastiera.c", "prima": "modificatore %d: si preferisce il tasto %u a %u (una tastiera vera ha il primo)", "dopo": "modifier %d: key %u is preferred to %u (a real keyboard has the first)"}
+{"file": "src/tastiera.c", "prima": "(quella della sessione)", "dopo": "(the session's own)"}
+{"file": "src/tastiera.c", "prima": "disposizione mal formata, rifiutata senza nemmeno provarci: %.64s", "dopo": "malformed layout, refused without even trying: %.64s"}
+{"file": "src/tastiera.c", "prima": "forma: non e' un nome di disposizione XKB (RCP.md §4.5)", "dopo": "form: not an XKB layout name (RCP.md §4.5)"}
+{"file": "src/tastiera.c", "prima": "contesto xkbcommon non creato", "dopo": "xkbcommon context not created"}
+{"file": "src/tastiera.c", "prima": "xkbcommon: contesto non creato", "dopo": "xkbcommon: context not created"}
+{"file": "src/tastiera.c", "prima": "xkbcommon non ha detto perche'", "dopo": "xkbcommon did not say why"}
+{"file": "src/tastiera.c", "prima": "disposizione «%s» NON caricata, e non si ripiega su nessun'altra: %s", "dopo": "layout «%s» NOT loaded, and no fallback to any other: %s"}
+{"file": "src/tastiera.c", "prima": "sconosciuta: la disposizione «%s» non si compila (%s)", "dopo": "unknown: layout «%s» does not compile (%s)"}
+{"file": "src/tastiera.c", "prima": "predefinita", "dopo": "default"}
+{"file": "src/tastiera.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/tastiera.c", "prima": "disposizione «%s»: la sessione ne porta %u, si usa SOLO la prima", "dopo": "layout «%s»: the session carries %u, ONLY the first is used"}
+{"file": "src/tastiera.c", "prima": "disposizione in vigore: %s", "dopo": "layout in force: %s"}
+{"file": "src/tastiera.c", "prima": "la sessione non ha consegnato nessuna disposizione: le LETTERE non si possono scrivere", "dopo": "the session handed over no layout: LETTERS cannot be typed"}
+{"file": "src/tastiera.c", "prima": "sessione: nessuna keymap consegnata da libei", "dopo": "session: no keymap handed over by libei"}
+{"file": "src/tastiera.c", "prima": "contesto xkbcommon non creato", "dopo": "xkbcommon context not created"}
+{"file": "src/tastiera.c", "prima": "xkbcommon: contesto non creato", "dopo": "xkbcommon: context not created"}
+{"file": "src/tastiera.c", "prima": "xkbcommon non ha detto perche'", "dopo": "xkbcommon did not say why"}
+{"file": "src/tastiera.c", "prima": "la disposizione consegnata dalla sessione (%zu byte) non si compila: %s", "dopo": "the layout handed over by the session (%zu bytes) does not compile: %s"}
+{"file": "src/tastiera.c", "prima": "sessione: la keymap di libei non si compila (%s)", "dopo": "session: libei's keymap does not compile (%s)"}
+{"file": "src/tastiera.c", "prima": "della sessione", "dopo": "the session's"}
+{"file": "src/tastiera.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/tastiera.c", "prima": "la sessione porta %u disposizioni: si usa SOLO la prima (%s)", "dopo": "the session carries %u layouts: ONLY the first is used (%s)"}
+{"file": "src/tastiera.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/tastiera.c", "prima": "⚠ il client ha negoziato «%s», che questo sistema non conosce: si usa quella della sessione (%s)", "dopo": "⚠ the client negotiated «%s», which this system does not know: the session's is used (%s)"}
+{"file": "src/tastiera.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/tastiera.c", "prima": "⛔ RIPIEGO DICHIARATO: il client ha negoziato «%s», la sessione ha un'ALTRA disposizione (%s) e si usa QUELLA — con l'altra uscirebbero lettere sbagliate. Qualche carattere restera' irraggiungibile (DECISIONI.md §5-bis.7)", "dopo": "⛔ FALLBACK DECLARED: the client negotiated «%s», the session has ANOTHER layout (%s) and THAT one is used — with the other, wrong letters would come out. Some characters will stay unreachable (DECISIONI.md §5-bis.7)"}
+{"file": "src/tastiera.c", "prima": "senza nome", "dopo": "unnamed"}
+{"file": "src/tastiera.c", "prima": "la sessione ha proprio «%s»: niente da dichiarare", "dopo": "the session really has «%s»: nothing to declare"}
+{"file": "src/tastiera.c", "prima": "disposizione in vigore (consegnata dalla sessione): %s", "dopo": "layout in force (handed over by the session): %s"}
+{"file": "src/tastiera.c", "prima": "carattere fuori dai valori scalari Unicode: rifiutato", "dopo": "character outside the Unicode scalar values: refused"}
+{"file": "src/tastiera.c", "prima": "un carattere non e' producibile con la disposizione %s: NON mandato niente (RCP.md §7.3; quale, non si scrive — fase 16 §12)", "dopo": "a character is not producible with layout %s: NOTHING sent (RCP.md §7.3; which one, is not written — phase 16 §12)"}
+{"file": "src/tastiera.c", "prima": "un carattere ⇒ %zu posizioni", "dopo": "a character ⇒ %zu key positions"}
+{"file": "src/appunti.c", "prima": "chi doveva consegnare gli appunti non ha scritto niente per %d ms", "dopo": "whoever had to deliver the clipboard wrote nothing for %d ms"}
+{"file": "src/appunti.c", "prima": "lettura degli appunti fallita: %s", "dopo": "clipboard read failed: %s"}
+{"file": "src/appunti.c", "prima": "appunti oltre il tetto di %u byte (§5.4): lasciati dove sono, e NON troncati", "dopo": "clipboard over the ceiling of %u bytes (§5.4): left where it is, and NOT truncated"}
+{"file": "src/appunti.c", "prima": "«%s» non si legge dalla sessione (%s): provo il prossimo tipo", "dopo": "«%s» cannot be read from the session (%s): trying the next type"}
+{"file": "src/appunti.c", "prima": "senza dettaglio", "dopo": "no detail"}
+{"file": "src/appunti.c", "prima": "⛔ «%s»: la lettura non e' riuscita — %s", "dopo": "⛔ «%s»: the read did not succeed — %s"}
+{"file": "src/appunti.c", "prima": "senza dettaglio", "dopo": "no detail"}
+{"file": "src/appunti.c", "prima": "«%s» ha consegnato zero byte: la clipboard e' vuota, non guasta", "dopo": "«%s» delivered zero bytes: the clipboard is empty, not broken"}
+{"file": "src/appunti.c", "prima": "⛔ «%s» ha consegnato %zu byte che NON sono UTF-8 valido: non si annuncia (§5.4).  ⚠ Non e' un difetto nostro ne' del client — e' un programma che tiene negli appunti byte che RCP/1 non sa portare", "dopo": "⛔ «%s» delivered %zu bytes that are NOT valid UTF-8: not announced (§5.4).  ⚠ It is not a defect of ours nor of the client — it is a program that keeps bytes in the clipboard that RCP/1 cannot carry"}
+{"file": "src/appunti.c", "prima": "⛔ «%s»: %zu byte con uno zero in mezzo — non si annuncia.  Troncare qui darebbe un testo piu' corto dell'annuncio, cioe' un annuncio che mente", "dopo": "⛔ «%s»: %zu bytes with a zero in the middle — not announced.  Truncating here would give a text shorter than the announcement, that is an announcement that lies"}
+{"file": "src/appunti.c", "prima": "letti %zu byte di «%s» dalla sessione", "dopo": "read %zu bytes of «%s» from the session"}
+{"file": "src/appunti.c", "prima": "e' il ritorno della nostra offerta, non una copia nuova: non si annuncia", "dopo": "it is the return of our own offer, not a new copy: not announced"}
+{"file": "src/appunti.c", "prima": "⛔ la sessione ha annunciato una copia senza tipi leggibili: ne' `as` ne' `(as)`.  ⚠ Se e' una forma terza, gli appunti da qui in poi vanno in un verso solo e questa riga e' l'unico posto in cui si vede", "dopo": "⛔ the session announced a copy without readable types: neither `as` nor `(as)`.  ⚠ If it is a third form, the clipboard from here on goes one way only and this line is the only place where it shows"}
+{"file": "src/appunti.c", "prima": "la sessione ha copiato qualcosa che non e' testo (%s): non si annuncia.  ⚠ `DECISIONI.md` §5-ter.1 — solo testo, ed e' una decisione, non un limite tecnico", "dopo": "the session copied something that is not text (%s): not announced.  ⚠ `DECISIONI.md` §5-ter.1 — text only, and it is a decision, not a technical limit"}
+{"file": "src/appunti.c", "prima": "nessun tipo", "dopo": "no type"}
+{"file": "src/appunti.c", "prima": "⛔ la sessione ha copiato del testo ma non se n'e' potuto leggere nessun tipo: niente annuncio al client", "dopo": "⛔ the session copied some text but no type of it could be read: no announcement to the client"}
+{"file": "src/appunti.c", "prima": "la sessione non aveva appunti da darci al momento dell'accensione: non e' un guasto", "dopo": "the session had no clipboard to give us at the time of switching on: it is not a fault"}
+{"file": "src/appunti.c", "prima": "⭐ la clipboard che c'era GIA' nella sessione: %zu byte, letti all'accensione.  ⚠ Chi si collega non deve perdere quel che aveva copiato", "dopo": "⭐ the clipboard that was ALREADY in the session: %zu bytes, read at switch-on.  ⚠ Whoever connects must not lose what they had copied"}
+{"file": "src/appunti.c", "prima": "la sessione vuole incollare «%s» (richiesta %u)", "dopo": "the session wants to paste «%s» (request %u)"}
+{"file": "src/appunti.c", "prima": "gli appunti vogliono un bus e la sessione di controllo", "dopo": "the clipboard wants a bus and the control session"}
+{"file": "src/appunti.c", "prima": "Mutter non concede la clipboard: ", "dopo": "Mutter does not grant the clipboard: "}
+{"file": "src/appunti.c", "prima": "⭐ appunti della sessione accesi (solo testo, nei due versi) su %s", "dopo": "⭐ session clipboard switched on (text only, in both directions) on %s"}
+{"file": "src/appunti.c", "prima": "offerto alla sessione il testo del client (%d tipi)", "dopo": "offered the client's text to the session (%d types)"}
+{"file": "src/appunti.c", "prima": "⭐ il client non ha appunti da dare per la richiesta %u: rendo alla sessione i %zu byte che aveva LEI.  ⚠ Collegarsi non deve cancellare la clipboard del desktop", "dopo": "⭐ the client has no clipboard to give for request %u: giving back to the session the %zu bytes IT had.  ⚠ Connecting must not erase the desktop clipboard"}
+{"file": "src/appunti.c", "prima": "⛔ SelectionWriteDone(no) per la richiesta %u non e' riuscita (%s): chi incolla puo' restare appeso", "dopo": "⛔ SelectionWriteDone(no) for request %u did not succeed (%s): whoever pastes may stay hung"}
+{"file": "src/appunti.c", "prima": "richiesta %u chiusa con «non ce l'ho»", "dopo": "request %u closed with «I do not have it»"}
+{"file": "src/appunti.c", "prima": "⛔ SelectionWrite per la richiesta %u e' stata rifiutata (%s)", "dopo": "⛔ SelectionWrite for request %u was refused (%s)"}
+{"file": "src/appunti.c", "prima": "⛔ scrittura verso la sessione fallita a %zu di %zu byte: %s", "dopo": "⛔ write to the session failed at %zu of %zu bytes: %s"}
+{"file": "src/appunti.c", "prima": "consegnati %zu byte alla sessione (richiesta %u)", "dopo": "delivered %zu bytes to the session (request %u)"}
+{"file": "src/appunti.c", "prima": "⛔ SelectionWriteDone per la richiesta %u non e' riuscita: %s", "dopo": "⛔ SelectionWriteDone for request %u did not succeed: %s"}
+{"file": "src/appunti_kde.c", "prima": "annuncio di ritorno dopo la nostra copia: ignorato", "dopo": "return announcement after our own copy: ignored"}
+{"file": "src/appunti_kde.c", "prima": "⛔ %s ha chiuso il canale degli appunti: niente piu' copia-incolla in questa sessione", "dopo": "⛔ %s closed the clipboard channel: no more copy-paste in this session"}
+{"file": "src/appunti_kde.c", "prima": "pipe non creata", "dopo": "pipe not created"}
+{"file": "src/appunti_kde.c", "prima": "chi possiede gli appunti non ha scritto niente per 5 s", "dopo": "whoever owns the clipboard wrote nothing for 5 s"}
+{"file": "src/appunti_kde.c", "prima": "appunti oltre il tetto (§5.4): lasciati dove sono, NON troncati", "dopo": "clipboard over the ceiling (§5.4): left where it is, NOT truncated"}
+{"file": "src/appunti_kde.c", "prima": "la sessione non ha niente negli appunti", "dopo": "the session has nothing in the clipboard"}
+{"file": "src/appunti_kde.c", "prima": "⛔ «%s» non si legge: %s", "dopo": "⛔ «%s» cannot be read: %s"}
+{"file": "src/appunti_kde.c", "prima": "⛔ «%s» non e' UTF-8 valido (%zu byte): lo salto", "dopo": "⛔ «%s» is not valid UTF-8 (%zu bytes): skipping it"}
+{"file": "src/appunti_kde.c", "prima": "letti %zu byte di «%s» dalla sessione", "dopo": "read %zu bytes of «%s» from the session"}
+{"file": "src/appunti_kde.c", "prima": "la sessione ha copiato qualcosa che non e' testo (%s): non si annuncia.  ⚠ `DECISIONI.md` §5-ter.1 — solo testo", "dopo": "the session copied something that is not text (%s): not announced.  ⚠ `DECISIONI.md` §5-ter.1 — text only"}
+{"file": "src/appunti_kde.c", "prima": "⭐ la sessione ha copiato %zu byte di testo", "dopo": "⭐ the session copied %zu bytes of text"}
+{"file": "src/appunti_kde.c", "prima": "la connessione Wayland degli appunti si e' chiusa", "dopo": "the clipboard's Wayland connection closed"}
+{"file": "src/appunti_kde.c", "prima": "nessun compositore Wayland raggiungibile per gli appunti", "dopo": "no Wayland compositor reachable for the clipboard"}
+{"file": "src/appunti_kde.c", "prima": "%s non espone ne' zwlr_data_control_manager_v1 ne' ext_data_control_manager_v1", "dopo": "%s exposes neither zwlr_data_control_manager_v1 nor ext_data_control_manager_v1"}
+{"file": "src/appunti_kde.c", "prima": "nessun wl_seat: senza, non c'e' clipboard da chiedere", "dopo": "no wl_seat: without it, there is no clipboard to ask for"}
+{"file": "src/appunti_kde.c", "prima": "⭐ appunti agganciati a %s sul socket «%s» con %s v%u", "dopo": "⭐ clipboard hooked to %s on socket «%s» with %s v%u"}
+{"file": "src/appunti_kde.c", "prima": "la sessione non aveva appunti da darci al momento dell'accensione: non e' un guasto", "dopo": "the session had no clipboard to give us at the time of switching on: it is not a fault"}
+{"file": "src/appunti_kde.c", "prima": "⭐ la sessione aveva gia' %zu byte negli appunti: li annuncio al client", "dopo": "⭐ the session already had %zu bytes in the clipboard: announcing them to the client"}
+{"file": "src/appunti_kde.c", "prima": "appunti non aperti", "dopo": "clipboard not open"}
+{"file": "src/appunti_kde.c", "prima": "offerto alla sessione il testo del client (%d tipi)", "dopo": "offered the client's text to the session (%d types)"}
+{"file": "src/appunti_kde.c", "prima": "⚠ risposta a una richiesta di appunti che non esiste (serial %u)", "dopo": "⚠ answer to a clipboard request that does not exist (serial %u)"}
+{"file": "src/appunti_kde.c", "prima": "⭐ il client non ha appunti per la richiesta %u: rendo alla sessione i %zu byte che aveva LEI", "dopo": "⭐ the client has no clipboard for request %u: giving back to the session the %zu bytes IT had"}
+{"file": "src/appunti_kde.c", "prima": "⛔ chi sta incollando non legge: %zu byte su %zu, poi rinuncio", "dopo": "⛔ whoever is pasting does not read: %zu bytes of %zu, then I give up"}
+{"file": "src/appunti_kde.c", "prima": "consegnati %zu byte alla sessione (richiesta %u)", "dopo": "delivered %zu bytes to the session (request %u)"}
+{"file": "src/appunti_kde.c", "prima": "richiesta %u chiusa con «non ce l'ho»", "dopo": "request %u closed with «I do not have it»"}
+{"file": "src/suono.c", "prima": "⛔ il sink audio della sessione e' stato RIMOSSO: niente piu' suono (nodo %u)", "dopo": "⛔ the session's audio sink was REMOVED: no more sound (node %u)"}
+{"file": "src/suono.c", "prima": "⛔ il sink audio non e' stato creato: %s (%d, %s)", "dopo": "⛔ the audio sink was not created: %s (%d, %s)"}
+{"file": "src/suono.c", "prima": "senza spiegazione", "dopo": "no explanation"}
+{"file": "src/suono.c", "prima": "stato della cattura audio: %s → %s%s%s", "dopo": "audio capture state: %s → %s%s%s"}
+{"file": "src/suono.c", "prima": "⛔ la cattura audio si e' staccata (%s)%s%s", "dopo": "⛔ the audio capture detached (%s)%s%s"}
+{"file": "src/suono.c", "prima": "formato audio negoziato con PipeWire: %s (SPA %u), %u Hz, %u canali%s", "dopo": "audio format negotiated with PipeWire: %s (SPA %u), %u Hz, %u channels%s"}
+{"file": "src/suono.c", "prima": "SENZA NOME", "dopo": "NO NAME"}
+{"file": "src/suono.c", "prima": "  ⛔ NON E' QUEL CHE SI E' CHIESTO", "dopo": "  ⛔ IT IS NOT WHAT WAS ASKED"}
+{"file": "src/suono.c", "prima": "⛔ §5.3 vuole S16 a %d Hz su %d canali: i campioni verrebbero letti male e l'audio sarebbe RUMORE, non un errore.  Spengo la consegna", "dopo": "⛔ §5.3 wants S16 at %d Hz on %d channels: the samples would be read wrong and the audio would be NOISE, not an error.  Switching off delivery"}
+{"file": "src/suono.c", "prima": "⛔ formato audio non interpretabile: spengo la consegna invece di leggere campioni di cui non so niente", "dopo": "⛔ audio format not interpretable: switching off delivery instead of reading samples I know nothing about"}
+{"file": "src/suono.c", "prima": "volume del sink: massimo CHIESTO al nodo %u (seq %d) — chiesto, non verificato", "dopo": "sink volume: maximum ASKED of node %u (seq %d) — asked, not verified"}
+{"file": "src/suono.c", "prima": "⛔ proprieta' del sink non allocate", "dopo": "⛔ sink properties not allocated"}
+{"file": "src/suono.c", "prima": "⛔ PipeWire non ha creato il sink virtuale «%s»", "dopo": "⛔ PipeWire did not create the virtual sink «%s»"}
+{"file": "src/suono.c", "prima": "⛔ il sink virtuale non e' stato registrato entro %d ms", "dopo": "⛔ the virtual sink was not registered within %d ms"}
+{"file": "src/suono.c", "prima": "⛔ ciclo PipeWire non creato", "dopo": "⛔ PipeWire loop not created"}
+{"file": "src/suono.c", "prima": "⛔ contesto PipeWire non creato", "dopo": "⛔ PipeWire context not created"}
+{"file": "src/suono.c", "prima": "⛔ thread di PipeWire non avviato", "dopo": "⛔ PipeWire thread not started"}
+{"file": "src/suono.c", "prima": "⛔ connessione a PipeWire fallita: si guarda XDG_RUNTIME_DIR e se il servizio gira nella sessione", "dopo": "⛔ connection to PipeWire failed: check XDG_RUNTIME_DIR and whether the service runs in the session"}
+{"file": "src/suono.c", "prima": "⭐ sink audio «%s» montato nella sessione: nodo %u, %d Hz, %d canali — e' della SESSIONE, sopravvive al distacco (I4)", "dopo": "⭐ audio sink «%s» mounted in the session: node %u, %d Hz, %d channels — it belongs to the SESSION, it survives detach (I4)"}
+{"file": "src/suono.c", "prima": "⛔ la cattura audio e' gia' accesa: la seconda non si apre", "dopo": "⛔ the audio capture is already on: the second one does not open"}
+{"file": "src/suono.c", "prima": "⛔ flusso PipeWire non creato", "dopo": "⛔ PipeWire stream not created"}
+{"file": "src/suono.c", "prima": "⛔ aggancio al monitor del sink «%s» fallito", "dopo": "⛔ attaching to the monitor of sink «%s» failed"}
+{"file": "src/suono.c", "prima": "⛔ cattura audio rifiutata: %s", "dopo": "⛔ audio capture refused: %s"}
+{"file": "src/suono.c", "prima": "senza spiegazione", "dopo": "no explanation"}
+{"file": "src/suono.c", "prima": "⛔ la cattura audio non ha dato segno di vita entro %d ms", "dopo": "⛔ the audio capture gave no sign of life within %d ms"}
+{"file": "src/suono.c", "prima": "⭐ cattura audio avviata dal monitor di «%s»: %d Hz, %d canali, s16, quanto %s — ⚠ i blocchi hanno misura VARIABILE, chi ascolta accumula (suono.h)", "dopo": "⭐ audio capture started from the monitor of «%s»: %d Hz, %d channels, s16, quantum %s — ⚠ blocks have VARIABLE size, the listener accumulates (suono.h)"}
+{"file": "src/suono.c", "prima": "⛔⛔ il thread di tempo reale non e' uscito dal richiamo entro %d ms: NON liberare il contesto dell'ascolto — PipeWire e' bloccato", "dopo": "⛔⛔ the realtime thread did not leave the callback within %d ms: do NOT free the listening context — PipeWire is blocked"}
+{"file": "src/suono.c", "prima": "cattura audio fermata: %llu blocchi, %llu fotogrammi consegnati (%llu s di suono), %llu fotogrammi scartati, PICCO %llu su 32767", "dopo": "audio capture stopped: %llu blocks, %llu frames delivered (%llu s of sound), %llu frames discarded, PEAK %llu of 32767"}
+{"file": "src/audio.c", "prima": "⛔ opus_encoder_create: %s.  ⚠ Non si ripiega su PCM da qui: il codec e' negoziato (§4.3), e spedire PCM a chi aspetta Opus produce RUMORE invece di un errore", "dopo": "⛔ opus_encoder_create: %s.  ⚠ No fallback to PCM from here: the codec is negotiated (§4.3), and sending PCM to someone expecting Opus produces NOISE instead of an error"}
+{"file": "src/audio.c", "prima": "⛔ libopus tiene %d bit/s, e ne abbiamo chiesti %d.  Non si adatta in silenzio: si dichiara", "dopo": "⛔ libopus holds %d bit/s, and we asked for %d.  It does not adapt silently: it is declared"}
+{"file": "src/audio.c", "prima": "⭐ Opus aperto: 48 000 Hz, 2 canali, blocchi da %d fotogrammi (20 ms), %d bit/s VBR libero, complessita' 10, pre-skip %d campioni — «libopus» %s diretta, senza libavcodec", "dopo": "⭐ Opus opened: 48 000 Hz, 2 channels, blocks of %d frames (20 ms), %d bit/s free VBR, complexity 10, pre-skip %d samples — «libopus» %s directly, without libavcodec"}
+{"file": "src/audio.c", "prima": "cura del silenzio digitale: %s", "dopo": "digital silence cure: %s"}
+{"file": "src/audio.c", "prima": "⭐ ACCESA — i blocchi tutti a zero non si spediscono.  E' il PREDEFINITO dal 24 agosto 2026 (decisione dell'utente).  `[M]` 09-b84: 102,1 volte meno traffico a schermo fermo (557,6 → 5,5 kbit/s), 1 248 blocchi taciuti su 1 248.  ⚠ Il prezzo: i «mancati» del cliente salgono di 2 su 5 000.  ⛔ Si spegne con `--niente-audio-silenzio`", "dopo": "⭐ ON — blocks that are all zero are not sent.  It is the DEFAULT since 24 August 2026 (the user's decision).  `[M]` 09-b84: 102.1 times less traffic with the screen still (557.6 → 5.5 kbit/s), 1 248 blocks muted of 1 248.  ⚠ The price: the client's «mancati» rise by 2 in 5 000.  ⛔ Switched off with `--niente-audio-silenzio`"}
+{"file": "src/audio.c", "prima": "⛔ SPENTA a mano (`--niente-audio-silenzio`) — si spedisce anche il silenzio, cioe' il prodotto fino al 23 agosto 2026.  ⚠ E NON e' il predefinito: dal 24 agosto nasce ACCESA", "dopo": "⛔ OFF by hand (`--niente-audio-silenzio`) — silence is sent too, that is the product until 23 August 2026.  ⚠ And it is NOT the default: since 24 August it is born ON"}
+{"file": "src/audio.c", "prima": "⭐ PCM aperto: 48 000 Hz, 2 canali, s16 little-endian, blocchi da %u fotogrammi (5 ms) = %u byte (§5.3)", "dopo": "⭐ PCM opened: 48 000 Hz, 2 channels, s16 little-endian, blocks of %u frames (5 ms) = %u bytes (§5.3)"}
+{"file": "src/audio.c", "prima": "⛔ codec audio %u sconosciuto: RCP/1 ne definisce due, 1 = Opus e 2 = PCM (§6.3)", "dopo": "⛔ unknown audio codec %u: RCP/1 defines two, 1 = Opus and 2 = PCM (§6.3)"}
+{"file": "src/audio.c", "prima": "conto della cura del silenzio (%s): %llu blocchi taciuti su %llu entrati, %llu usciti sul filo — codec %u", "dopo": "silence cure count (%s): %llu blocks muted of %llu in, %llu out on the wire — codec %u"}
+{"file": "src/audio.c", "prima": "ACCESA, ed e' il predefinito dal 24 ago 2026", "dopo": "ON, and it is the default since 24 Aug 2026"}
+{"file": "src/audio.c", "prima": "SPENTA a mano, --niente-audio-silenzio", "dopo": "OFF by hand, --niente-audio-silenzio"}
+{"file": "src/audio.c", "prima": "⭐ silenzio DIGITALE: %llu blocchi non spediti su %llu entrati (I6, cura accesa).  ⚠ Chi riceve vedra' un salto di `istante` e lo contera' fra i «mancati»: e' un buco VOLUTO, non una perdita", "dopo": "⭐ DIGITAL silence: %llu blocks not sent of %llu in (I6, cure on).  ⚠ The receiver will see a jump in `istante` and will count it among the «mancati»: it is a WANTED gap, not a loss"}
+{"file": "src/audio.c", "prima": "⛔ pacchetto Opus di %d byte, oltre il tetto di %d — buttato invece che troncato", "dopo": "⛔ Opus packet of %d bytes, over the ceiling of %d — dropped instead of truncated"}
+{"file": "src/opus-wasm/prova/riferimento.c", "prima": "%d pacchetti, libopus %s\\n", "dopo": "%d packets, libopus %s\\n"}
+{"file": "src/Makefile", "prima": "  ⛔ GEMELLO=nessuno: NON ho confrontato src/ con banchi/rcp/.\\n", "dopo": "  ⛔ GEMELLO=nessuno: I did NOT compare src/ with banchi/rcp/.\\n"}
+{"file": "src/Makefile", "prima": "     Non e «le copie combaciano»: e «non ho guardato», e chi\\n", "dopo": "     It is not «the copies match»: it is «I did not look», and whoever\\n"}
+{"file": "src/Makefile", "prima": "     costruisce lo ha DICHIARATO (rilievo R12.3).\\n", "dopo": "     builds has DECLARED it (finding R12.3).\\n"}
+{"file": "src/Makefile", "prima": "  ⛔ la copia gemella «%s» NON CE: non posso dimostrare che\\n", "dopo": "  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\\n"}
+{"file": "src/Makefile", "prima": "     src/rcp.c e banchi/rcp/rcp.c sono lo stesso modulo — e sono\\n", "dopo": "     src/rcp.c and banchi/rcp/rcp.c are the same module — and they are\\n"}
+{"file": "src/Makefile", "prima": "     lo stesso modulo montato su due ospiti (R12.3).\\n", "dopo": "     the same module mounted on two hosts (R12.3).\\n"}
+{"file": "src/Makefile", "prima": "     Si passa GEMELLO=<percorso>, oppure GEMELLO=nessuno per\\n", "dopo": "     Pass GEMELLO=<path>, or GEMELLO=nessuno to\\n"}
+{"file": "src/Makefile", "prima": "     DICHIARARE di costruire senza il confronto.\\n", "dopo": "     DECLARE building without the comparison.\\n"}
+{"file": "src/Makefile", "prima": "  ⛔ %s/%s non esiste\\n", "dopo": "  ⛔ %s/%s does not exist\\n"}
+{"file": "src/Makefile", "prima": "  OK  %-18s identico a %s  (%s)\\n", "dopo": "  OK  %-18s identical to %s  (%s)\\n"}
+{"file": "src/Makefile", "prima": "  ⛔ %s DIVERGE da %s/%s:\\n", "dopo": "  ⛔ %s DIVERGES from %s/%s:\\n"}
+{"file": "src/Makefile", "prima": "  ⛔ le due copie dello STESSO modulo non combaciano: non compilo.\\n", "dopo": "  ⛔ the two copies of the SAME module do not match: not compiling.\\n"}
+{"file": "src/Makefile", "prima": "     Se il cambiamento e voluto, va portato in tutte e due — o il\\n", "dopo": "     If the change is intended, it must be carried into both — or the\\n"}
+{"file": "src/Makefile", "prima": "     prodotto e il banco misureranno due codici diversi (R12.3).\\n", "dopo": "     product and the bench will measure two different codes (R12.3).\\n"}
+{"file": "src/Makefile", "prima": "nessun minimo", "dopo": "no minimum"}
+{"file": "src/Makefile", "prima": "  ??  %-24s pkg-config non la conosce (%s)\\n", "dopo": "  ??  %-24s pkg-config does not know it (%s)\\n"}
+{"file": "src/Makefile", "prima": "  NO  %-24s %s: TROPPO VECCHIA, serve >= %s\\n", "dopo": "  NO  %-24s %s: TOO OLD, >= %s needed\\n"}
+{"file": "src/provisiona.sh", "prima": "⛔ vuole root", "dopo": "⛔ root needed"}
+{"file": "src/provisiona.sh", "prima": "Gli utenti di prova, coi gruppi che l'headless ci fa perdere", "dopo": "The test users, with the groups headless makes us lose"}
+{"file": "src/provisiona.sh", "prima": "⛔ nessun gruppo leggibile dai nodi /dev/dri: gli inquilini nasceranno CIECHI", "dopo": "⛔ no group readable from the /dev/dri nodes: the tenants will be born BLIND"}
+{"file": "src/provisiona.sh", "prima": "prova e prova2, nei gruppi LETTI DAI NODI: ${GRUPPI_SCHEDA:-nessuno}", "dopo": "prova and prova2, in the groups READ FROM THE NODES: ${GRUPPI_SCHEDA:-none}"}
+{"file": "src/provisiona.sh", "prima": "persone della macchina nei gruppi della scheda: $QUANTI (uid ${MIN:-1000}..${MAX:-60000}, con shell vera)", "dopo": "people of the machine in the card's groups: $QUANTI (uid ${MIN:-1000}..${MAX:-60000}, with a real shell)"}
+{"file": "src/provisiona.sh", "prima": "⚠ chi verra' creato dopo lo iscrive il prodotto alla PRIMA connessione", "dopo": "⚠ whoever is created later is enrolled by the product at the FIRST connection"}
+{"file": "src/provisiona.sh", "prima": "⚠ $u aveva ~/.cache come collegamento: rifatta cartella vera", "dopo": "⚠ $u had ~/.cache as a link: remade as a real folder"}
+{"file": "src/provisiona.sh", "prima": "~/.cache e' una cartella di ciascun utente: il browser puo' fare il suo profilo", "dopo": "~/.cache is a folder of each user: the browser can make its profile"}
+{"file": "src/provisiona.sh", "prima": "linger acceso: il gestore d'utente resta caldo fra un login e l'altro", "dopo": "linger on: the user manager stays warm between one login and the next"}
+{"file": "src/provisiona.sh", "prima": "⚠ i gruppi arrivano al compositore solo quando RINASCE il gestore", "dopo": "⚠ the groups reach the compositor only when the user manager is"}
+{"file": "src/provisiona.sh", "prima": "   d'utente: se cambi i gruppi a sessione viva, fermala prima", "dopo": "   REBORN: if you change the groups with the session alive, stop it first"}
+{"file": "src/provisiona.sh", "prima": "Il drop-in di v1 col monitor di troppo", "dopo": "v1's drop-in with the extra monitor"}
+{"file": "src/provisiona.sh", "prima": "tolto $f: v2 scrive il suo, senza --virtual-monitor", "dopo": "removed $f: v2 writes its own, without --virtual-monitor"}
+{"file": "src/provisiona.sh", "prima": "non c'era", "dopo": "it was not there"}
+{"file": "src/provisiona.sh", "prima": "Nessuno spegne il server (DECISIONI.md §4.7)", "dopo": "Nobody switches the server off (DECISIONI.md §4.7)"}
+{"file": "src/provisiona.sh", "prima": "polkit (12 azioni), logind (tasti), sleep.conf", "dopo": "polkit (12 actions), logind (keys), sleep.conf"}
+{"file": "src/provisiona.sh", "prima": "Il servizio PAM", "dopo": "The PAM service"}
+{"file": "src/provisiona.sh", "prima": "I banchi guidano il servizio senza password", "dopo": "The benches drive the service without a password"}
+{"file": "src/provisiona.sh", "prima": "$UTENTE_BANCHI: quattro comandi senza password", "dopo": "$UTENTE_BANCHI: four commands without a password"}
+{"file": "src/provisiona.sh", "prima": "regola sudoers non valida: tolta", "dopo": "sudoers rule not valid: removed"}
+{"file": "src/provisiona.sh", "prima": "La scheda: si esclude la discreta", "dopo": "The card: the discrete one is excluded"}
+{"file": "src/provisiona.sh", "prima": "discreta: $drv a $pci", "dopo": "discrete: $drv at $pci"}
+{"file": "src/provisiona.sh", "prima": "integrata: $drv a $pci", "dopo": "integrated: $drv at $pci"}
+{"file": "src/provisiona.sh", "prima": "esclusa $DISCRETA: si misura sull'integrata", "dopo": "excluded $DISCRETA: measurements on the integrated one"}
+{"file": "src/provisiona.sh", "prima": "la regola udev non e' entrata", "dopo": "the udev rule did not go in"}
+{"file": "src/provisiona.sh", "prima": "una scheda sola: niente da escludere", "dopo": "a single card: nothing to exclude"}
+{"file": "src/provisiona.sh", "prima": "manca /media/REMOTIX/gpu-udev.sh", "dopo": "/media/REMOTIX/gpu-udev.sh is missing"}
+{"file": "src/provisiona.sh", "prima": "I tre requisiti del multi-tenant (27 ago 2026)", "dopo": "The three requirements of multi-tenancy (27 Aug 2026)"}
+{"file": "src/provisiona.sh", "prima": "drop-in zz-remotix-root.conf scritto (era User=$QUALE)", "dopo": "drop-in zz-remotix-root.conf written (it was User=$QUALE)"}
+{"file": "src/provisiona.sh", "prima": "⚠ il servizio NON e' stato riavviato: entra in vigore al prossimo riavvio del servizio", "dopo": "⚠ the service was NOT restarted: it takes effect at the next restart of the service"}
+{"file": "src/provisiona.sh", "prima": "remotix.service gira gia' da root", "dopo": "remotix.service already runs as root"}
+{"file": "src/provisiona.sh", "prima": "remotix.service non e' installato su questa macchina: niente da correggere", "dopo": "remotix.service is not installed on this machine: nothing to correct"}
+{"file": "src/provisiona.sh", "prima": "# ⛔ `LD_LIBRARY_PATH` non arriva al figlio (execve con ambiente da\\n#    zero): le librerie del prodotto si registrano qui.\\n%s\\n", "dopo": "# ⛔ `LD_LIBRARY_PATH` does not reach the child (execve with an environment from\\n#    scratch): the libraries of the product are registered here.\\n%s\\n"}
+{"file": "src/provisiona.sh", "prima": "librerie del prodotto registrate: $LIBRERIE (ldconfig fatto)", "dopo": "product libraries registered: $LIBRERIE (ldconfig done)"}
+{"file": "src/provisiona.sh", "prima": "nessuna cartella di librerie del prodotto da registrare", "dopo": "no product library folder to register"}
+{"file": "src/provisiona.sh", "prima": "La verifica", "dopo": "The check"}
+{"file": "src/provisiona.sh", "prima": "remotix.service gira da root: PAM puo' verificare la parola di CHIUNQUE", "dopo": "remotix.service runs as root: PAM can verify ANYONE's password"}
+{"file": "src/provisiona.sh", "prima": "⛔⛔ remotix.service gira come «$QUALE»: PAM potra' verificare SOLO quell'utente, e ogni altro inquilino prendera' 0x07 CREDENZIALI_ERRATE", "dopo": "⛔⛔ remotix.service runs as «$QUALE»: PAM will be able to verify ONLY that user, and every other tenant will get 0x07 CREDENZIALI_ERRATE"}
+{"file": "src/provisiona.sh", "prima": "remotix.service non e' installato: il requisito «da root» resta a chi lo lancia a mano", "dopo": "remotix.service is not installed: the «as root» requirement is left to whoever launches it by hand"}
+{"file": "src/provisiona.sh", "prima": "⛔ nessun nodo /dev/dri: non si puo' dire se $n vedra'", "dopo": "⛔ no /dev/dri node: it cannot be said whether $n will see"}
+{"file": "src/provisiona.sh", "prima": "$n e' in TUTTI i gruppi dei nodi della scheda (${GRUPPI_SCHEDA})", "dopo": "$n is in ALL the groups of the card's nodes (${GRUPPI_SCHEDA})"}
+{"file": "src/provisiona.sh", "prima": "⛔⛔ $n NON e' nei gruppi della scheda: $MANCA — la sua sessione NASCERA' CIECA (0 su 4 [M], 27 ago 2026, fase 10 §7.4)", "dopo": "⛔⛔ $n is NOT in the card's groups: $MANCA — their session WILL BE BORN BLIND (0 of 4 [M], 27 Aug 2026, phase 10 §7.4)"}
+{"file": "src/provisiona.sh", "prima": "   cura: usermod -aG ${GRUPPI_SCHEDA} $n  &&  loginctl terminate-user $n", "dopo": "   cure: usermod -aG ${GRUPPI_SCHEDA} $n  &&  loginctl terminate-user $n"}
+{"file": "src/provisiona.sh", "prima": "$n ha il linger: il gestore d'utente non rinasce a ogni login", "dopo": "$n has linger: the user manager is not reborn at every login"}
+{"file": "src/provisiona.sh", "prima": "$n NON ha il linger: ogni login paghera' 2,6 s di gestore d'utente che nasce", "dopo": "$n does NOT have linger: every login will pay 2.6 s of user manager being born"}
+{"file": "src/provisiona.sh", "prima": "⛔ $n ha ~/.cache come COLLEGAMENTO a $(readlink ", "dopo": "⛔ $n has ~/.cache as a LINK to $(readlink "}
+{"file": "src/provisiona.sh", "prima": "): il browser non fara' il profilo", "dopo": "): the browser will not make its profile"}
+{"file": "src/provisiona.sh", "prima": "$n puo' scrivere nella sua ~/.cache (il profilo del browser ci sta)", "dopo": "$n can write in their ~/.cache (the browser profile fits there)"}
+{"file": "src/provisiona.sh", "prima": "⛔ $n NON puo' scrivere nella sua ~/.cache: il browser dira' «Profile Missing»", "dopo": "⛔ $n can NOT write in their ~/.cache: the browser will say «Profile Missing»"}
+{"file": "src/provisiona.sh", "prima": "⚠ $BINARIO non c'e': la prova del caricatore per $n non si puo' fare", "dopo": "⚠ $BINARIO is not there: the loader test for $n cannot be done"}
+{"file": "src/provisiona.sh", "prima": "⛔⛔ a $n MANCANO delle librerie ($(printf '%s' ", "dopo": "⛔⛔ $n is MISSING some libraries ($(printf '%s' "}
+{"file": "src/provisiona.sh", "prima": " | grep -c 'not found')): il figlio uscira' con 127.  ⚠ LD_LIBRARY_PATH NON lo raggiunge: la cura e' /etc/ld.so.conf.d + ldconfig", "dopo": " | grep -c 'not found')): the child will exit with 127.  ⚠ LD_LIBRARY_PATH does NOT reach it: the cure is /etc/ld.so.conf.d + ldconfig"}
+{"file": "src/provisiona.sh", "prima": "⛔⛔ $n NON puo' eseguire $BINARIO: il figlio uscira' con 37.  ⚠ Guarda i modi delle cartelle sul percorso — una home 0700 ferma tutto", "dopo": "⛔⛔ $n can NOT execute $BINARIO: the child will exit with 37.  ⚠ Look at the modes of the folders on the path — a 0700 home stops everything"}
+{"file": "src/provisiona.sh", "prima": "$n esegue $BINARIO e ne risolve le librerie con l'ambiente A ZERO (come il figlio)", "dopo": "$n executes $BINARIO and resolves its libraries with the environment AT ZERO (like the child)"}
+{"file": "src/provisiona.sh", "prima": "/etc/pam.d/remotix c'e'", "dopo": "/etc/pam.d/remotix is there"}
+{"file": "src/provisiona.sh", "prima": "/etc/pam.d/remotix manca", "dopo": "/etc/pam.d/remotix is missing"}
+{"file": "src/provisiona.sh", "prima": "root e' negato (/etc/remotix/utenti-negati)", "dopo": "root is denied (/etc/remotix/utenti-negati)"}
+{"file": "src/provisiona.sh", "prima": "⛔ /etc/remotix/utenti-negati manca o non nega root", "dopo": "⛔ /etc/remotix/utenti-negati is missing or does not deny root"}
+{"file": "src/provisiona.sh", "prima": "i banchi guidano il servizio senza password", "dopo": "the benches drive the service without a password"}
+{"file": "src/provisiona.sh", "prima": "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo", "dopo": "⛔ /etc/sudoers.d/remotix-banchi is missing: the remote hook will stop at the first sudo"}
+{"file": "src/provisiona.sh", "prima": "e arriva a pam_systemd", "dopo": "and it reaches pam_systemd"}
+{"file": "src/provisiona.sh", "prima": "⛔ NON arriva a pam_systemd: senza, la sessione logind non nasce e il compositore non parte", "dopo": "⛔ it does NOT reach pam_systemd: without it, the logind session is not born and the compositor does not start"}
+{"file": "src/provisiona.sh", "prima": "la regola polkit c'e'", "dopo": "the polkit rule is there"}
+{"file": "src/provisiona.sh", "prima": "la regola polkit manca", "dopo": "the polkit rule is missing"}
+{"file": "src/provisiona.sh", "prima": "e copre le *-multiple-sessions (il caso multi-utente)", "dopo": "and it covers the *-multiple-sessions (the multi-user case)"}
+{"file": "src/provisiona.sh", "prima": "⛔ NON copre le *-multiple-sessions: fallisce proprio col multi-utente", "dopo": "⛔ it does NOT cover the *-multiple-sessions: it fails precisely with multiple users"}
+{"file": "src/provisiona.sh", "prima": "il tasto di accensione e' ignorato", "dopo": "the power key is ignored"}
+{"file": "src/provisiona.sh", "prima": "il tasto di accensione spegne ancora la macchina", "dopo": "the power key still switches the machine off"}
+{"file": "src/provisiona.sh", "prima": "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor:$V1", "dopo": "⛔ v1's drop-in with --virtual-monitor is still there:$V1"}
+{"file": "src/provisiona.sh", "prima": "nessun drop-in di v1", "dopo": "no v1 drop-in"}
+{"file": "src/provisiona.sh", "prima": "⭐ la macchina e' nello stato che il prodotto si aspetta.", "dopo": "⭐ the machine is in the state the product expects."}
+{"file": "src/provisiona.sh", "prima": "⛔ qualcosa non e' a posto: leggi i NO qui sopra.", "dopo": "⛔ something is not right: read the NOs above."}
+{"file": "src/riavvia-7700.sh", "prima": "⛔ NON parto: ngtcp2/nghttp3 non verrebbero da $B2 —", "dopo": "⛔ NOT starting: ngtcp2/nghttp3 would not come from $B2 —"}
+{"file": "src/riavvia-7700.sh", "prima": "fermo il server $VECCHIO (avvio vecchio stile)", "dopo": "stopping server $VECCHIO (old-style start)"}
+{"file": "src/riavvia-7700.sh", "prima": "non si ferma: lo forzo", "dopo": "it does not stop: forcing it"}
+{"file": "src/riavvia-7700.sh", "prima": "REMOTIX, banco della porta 7700", "dopo": "REMOTIX, port 7700 bench"}
+{"file": "src/riavvia-7700.sh", "prima": "⛔ il server non e' partito — le ultime righe del registro:", "dopo": "⛔ the server did not start — the last lines of the log:"}
+{"file": "src/riavvia-7700.sh", "prima": "server $NUOVO, unita' $UNITA.service", "dopo": "server $NUOVO, unit $UNITA.service"}
+{"file": "src/riavvia-7700.sh", "prima": "librerie che il processo VIVO ha davvero aperto:", "dopo": "libraries the LIVE process has really opened:"}
+{"file": "src/riavvia-7700.sh", "prima": "⛔ NON le vedo mappate dopo 5 s: il processo non e' quello che credo", "dopo": "⛔ I do NOT see them mapped after 5 s: the process is not the one I think"}
+{"file": "src/riavvia-7700.sh", "prima": "⛔ NON sono quelle di $B2", "dopo": "⛔ they are NOT those of $B2"}
+{"file": "src/riavvia-7700.sh", "prima": "⭐ sono quelle di $B2: si puo' provare", "dopo": "⭐ they are those of $B2: testing can start"}
+{"file": "src/riavvia-7700.sh", "prima": "⛔⛔ IL SERVER STA DENTRO UNA SESSIONE UTENTE (A6 di SESSIONE.md):", "dopo": "⛔⛔ THE SERVER IS INSIDE A USER SESSION (A6 of SESSIONE.md):"}
+{"file": "src/riavvia-7700.sh", "prima": "    ⇒ pam_systemd non creera' la sessione dei figli, e il desktop non partira'.", "dopo": "    ⇒ pam_systemd will not create the children's session, and the desktop will not start."}
+{"file": "src/riavvia-7700.sh", "prima": "⭐ VERIFICATO: il server e' fuori da ogni sessione utente ($CG)", "dopo": "⭐ VERIFIED: the server is outside any user session ($CG)"}
+{"file": "src/riavvia-7900.sh", "prima": "⛔ NON parto: ngtcp2/nghttp3 non verrebbero da $B2 —", "dopo": "⛔ NOT starting: ngtcp2/nghttp3 would not come from $B2 —"}
+{"file": "src/riavvia-7900.sh", "prima": "fermo il server $VECCHIO (avvio vecchio stile)", "dopo": "stopping server $VECCHIO (old-style start)"}
+{"file": "src/riavvia-7900.sh", "prima": "non si ferma: lo forzo", "dopo": "it does not stop: forcing it"}
+{"file": "src/riavvia-7900.sh", "prima": "REMOTIX, banco della porta 7900 — fase 9", "dopo": "REMOTIX, port 7900 bench — phase 9"}
+{"file": "src/riavvia-7900.sh", "prima": "⛔ il server non e' partito — le ultime righe del registro:", "dopo": "⛔ the server did not start — the last lines of the log:"}
+{"file": "src/riavvia-7900.sh", "prima": "server $NUOVO, unita' $UNITA.service", "dopo": "server $NUOVO, unit $UNITA.service"}
+{"file": "src/riavvia-7900.sh", "prima": "librerie che il processo VIVO ha davvero aperto:", "dopo": "libraries the LIVE process has really opened:"}
+{"file": "src/riavvia-7900.sh", "prima": "⛔ NON le vedo mappate dopo 5 s: il processo non e' quello che credo", "dopo": "⛔ I do NOT see them mapped after 5 s: the process is not the one I think"}
+{"file": "src/riavvia-7900.sh", "prima": "⛔ NON sono quelle di $B2", "dopo": "⛔ they are NOT those of $B2"}
+{"file": "src/riavvia-7900.sh", "prima": "⭐ sono quelle di $B2: si puo' provare", "dopo": "⭐ they are those of $B2: testing can start"}
+{"file": "src/riavvia-7900.sh", "prima": "⛔⛔ IL SERVER STA DENTRO UNA SESSIONE UTENTE (A6 di SESSIONE.md):", "dopo": "⛔⛔ THE SERVER IS INSIDE A USER SESSION (A6 of SESSIONE.md):"}
+{"file": "src/riavvia-7900.sh", "prima": "    ⇒ pam_systemd non creera' la sessione dei figli, e il desktop non partira'.", "dopo": "    ⇒ pam_systemd will not create the children's session, and the desktop will not start."}
+{"file": "src/riavvia-7900.sh", "prima": "⭐ VERIFICATO: il server e' fuori da ogni sessione utente ($CG)", "dopo": "⭐ VERIFIED: the server is outside any user session ($CG)"}
+{"file": "src/costruisci.sh", "prima": "Le dipendenze costruite dai sorgenti", "dopo": "The dependencies built from source"}
+{"file": "src/costruisci.sh", "prima": "    --  ho guardato in:\\n", "dopo": "    --  I looked in:\\n"}
+{"file": "src/costruisci.sh", "prima": "    --  intestazioni: %s\\n", "dopo": "    --  headers:      %s\\n"}
+{"file": "src/costruisci.sh", "prima": "${INC:-(nessuna)}", "dopo": "${INC:-(none)}"}
+{"file": "src/costruisci.sh", "prima": "    --  librerie:     %s\\n", "dopo": "    --  libraries:    %s\\n"}
+{"file": "src/costruisci.sh", "prima": "${LIB:-(nessuna)}", "dopo": "${LIB:-(none)}"}
+{"file": "src/costruisci.sh", "prima": "nessuna intestazione trovata", "dopo": "no header found"}
+{"file": "src/costruisci.sh", "prima": "nessuna libreria trovata", "dopo": "no library found"}
+{"file": "src/costruisci.sh", "prima": "percorsi composti", "dopo": "paths composed"}
+{"file": "src/costruisci.sh", "prima": "3.5 o piu': c'e' l'API QUIC nativa", "dopo": "3.5 or later: the native QUIC API is there"}
+{"file": "src/costruisci.sh", "prima": "serve OpenSSL >= 3.5 per ngtcp2_crypto_ossl", "dopo": "OpenSSL >= 3.5 is needed for ngtcp2_crypto_ossl"}
+{"file": "src/costruisci.sh", "prima": "Si butta il binario vecchio PRIMA di costruire", "dopo": "The old binary is thrown away BEFORE building"}
+{"file": "src/costruisci.sh", "prima": "il binario vecchio non si cancella: non si distinguerebbe dal nuovo", "dopo": "the old binary cannot be deleted: it could not be told apart from the new one"}
+{"file": "src/costruisci.sh", "prima": "via il vecchio", "dopo": "old one gone"}
+{"file": "src/costruisci.sh", "prima": "La copia gemella di rcp.c", "dopo": "The twin copy of rcp.c"}
+{"file": "src/costruisci.sh", "prima": "⛔ nessuna copia gemella trovata: ho guardato in", "dopo": "⛔ no twin copy found: I looked in"}
+{"file": "src/costruisci.sh", "prima": "   NON e' «le copie combaciano»: e' «non ho potuto guardare».  Si", "dopo": "   It is NOT «the copies match»: it is «I could not look».  We"}
+{"file": "src/costruisci.sh", "prima": "   costruisce lo stesso, e questa riga e' la dichiarazione (R12.3).", "dopo": "   build anyway, and this line is the declaration (R12.3)."}
+{"file": "src/costruisci.sh", "prima": "confronto contro «$GEMELLO»", "dopo": "comparing against «$GEMELLO»"}
+{"file": "src/costruisci.sh", "prima": "⛔ la compilazione e' FALLITA (uscita $ESITO).  Il binario NON e' stato", "dopo": "⛔ the build has FAILED (exit $ESITO).  The binary was NOT"}
+{"file": "src/costruisci.sh", "prima": "   costruito, e quel che eventualmente c'e' sul disco non e' di adesso.", "dopo": "   built, and whatever may be on disk is not from now."}
+{"file": "src/costruisci.sh", "prima": "make e' uscito 0", "dopo": "make exited 0"}
+{"file": "src/costruisci.sh", "prima": "La marca dentro il binario", "dopo": "The mark inside the binary"}
+{"file": "src/costruisci.sh", "prima": "make e' uscito 0 e il binario non c'e': qualcosa non torna", "dopo": "make exited 0 and the binary is not there: something does not add up"}
+{"file": "src/costruisci.sh", "prima": "«$marca» c'e' nel binario", "dopo": "«$marca» is in the binary"}
+{"file": "src/costruisci.sh", "prima": "«$marca» NON c'e' nel binario", "dopo": "«$marca» is NOT in the binary"}
+{"file": "src/costruisci.sh", "prima": "«$segno» c'e' in pagina.html", "dopo": "«$segno» is in pagina.html"}
+{"file": "src/costruisci.sh", "prima": "«$segno» NON c'e' in pagina.html: il server rifiutera' di partire", "dopo": "«$segno» is NOT in pagina.html: the server will refuse to start"}
+{"file": "src/costruisci.sh", "prima": "controllo positivo: lo strumento sa trovare quel che c'e' di sicuro", "dopo": "positive control: the tool can find what is certainly there"}
+{"file": "src/costruisci.sh", "prima": "⛔ lo strumento NON trova nemmeno la marca del compilatore: i NO qui", "dopo": "⛔ the tool does NOT even find the compiler's mark: the NOs"}
+{"file": "src/costruisci.sh", "prima": "   sopra non valgono niente", "dopo": "   above are worth nothing"}
+{"file": "src/costruisci.sh", "prima": "Il servizio PAM", "dopo": "The PAM service"}
+{"file": "src/costruisci.sh", "prima": "/etc/remotix/utenti-negati c'e' gia' (non lo tocco)", "dopo": "/etc/remotix/utenti-negati is already there (not touching it)"}
+{"file": "src/costruisci.sh", "prima": "scritto /etc/remotix/utenti-negati: root", "dopo": "written /etc/remotix/utenti-negati: root"}
+{"file": "src/costruisci.sh", "prima": "⛔ /etc/remotix/utenti-negati NON c'e' e non l'ho potuto scrivere (serve root):", "dopo": "⛔ /etc/remotix/utenti-negati is NOT there and I could not write it (root needed):"}
+{"file": "src/costruisci.sh", "prima": "   con il PAM nuovo non entrera' NESSUNO.  A mano:  echo root > /etc/remotix/utenti-negati", "dopo": "   with the new PAM NOBODY will get in.  By hand:  echo root > /etc/remotix/utenti-negati"}
+{"file": "src/costruisci.sh", "prima": "/etc/pam.d/remotix c'e' gia' (non lo tocco)", "dopo": "/etc/pam.d/remotix is already there (not touching it)"}
+{"file": "src/costruisci.sh", "prima": "installato /etc/pam.d/remotix da $QUI/remotix.pam", "dopo": "installed /etc/pam.d/remotix from $QUI/remotix.pam"}
+{"file": "src/costruisci.sh", "prima": "⛔ /etc/pam.d/remotix NON c'e' e non l'ho potuto installare (serve root).", "dopo": "⛔ /etc/pam.d/remotix is NOT there and I could not install it (root needed)."}
+{"file": "src/costruisci.sh", "prima": "   Il server partira' e RIFIUTERA' ogni parola d'ordine, dicendo che e'", "dopo": "   The server will start and will REFUSE every password, saying it is"}
+{"file": "src/costruisci.sh", "prima": "   sbagliata.  Si copia a mano:  cp $QUI/remotix.pam /etc/pam.d/remotix", "dopo": "   wrong.  Copy it by hand:  cp $QUI/remotix.pam /etc/pam.d/remotix"}
+{"file": "src/costruisci.sh", "prima": "Le librerie da cui dipende davvero", "dopo": "The libraries it really depends on"}
+{"file": "src/costruisci.sh", "prima": "⭐ costruito: $QUI/remotix", "dopo": "⭐ built: $QUI/remotix"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "⛔ podman non c%s: e il contenitore e l unica strada che costruisce.\\n", "dopo": "⛔ podman is not there%s: and the container is the only way that builds.\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "⛔ l immagine «%s» non c e ancora.  Si costruisce una volta sola:\\n\\n", "dopo": "⛔ image «%s» is not there yet.  It is built once only:\\n\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "   (~4 minuti: ci dentro si costruiscono nghttp3 e ngtcp2 dai sorgenti,\\n", "dopo": "   (~4 minutes: nghttp3 and ngtcp2 are built from source inside it,\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "    perche% i pacchetti di Debian sono 1.8 e 1.11 e il ponte\\n", "dopo": "    because%s Debian packages are 1.8 and 1.11 and the\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "    ngtcp2_crypto_ossl nei pacchetti NON C E affatto.)\\n", "dopo": "    ngtcp2_crypto_ossl bridge is NOT in the packages at all.)\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "== costruzione dentro «%s» — albero %s\\n", "dopo": "== build inside «%s» — tree %s\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "\\n⭐ costruito: %s\\n", "dopo": "\\n⭐ built: %s\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "⭐ 04-b31 (la tela, %s):%s\\n", "dopo": "⭐ 04-b31 (the canvas, %s):%s\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "\\n⛔ 04-b31 E ROSSO:%s\\n", "dopo": "\\n⛔ 04-b31 IS RED:%s\\n"}
+{"file": "src/costruisci-in-contenitore.sh", "prima": "   lo rilanci con:  gcc -O1 -std=gnu11 -w -D_GNU_SOURCE \\\\\\n", "dopo": "   rerun it with:  gcc -O1 -std=gnu11 -w -D_GNU_SOURCE \\\\\\n"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "⛔ podman non c'e'", "dopo": "⛔ podman is not there"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "⚠ l'albero ha modifiche non committate in src/ packaging/ banchi/rcp/:", "dopo": "⚠ the tree has uncommitted changes in src/ packaging/ banchi/rcp/:"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "  la versione porta «$SPORCO» e il pacchetto NON corrisponde a $HASH", "dopo": "  the version carries «$SPORCO» and the package does NOT match $HASH"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "⛔ $b: non e' un bersaglio .deb", "dopo": "⛔ $b: not a .deb target"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "== %s: immagine\\n", "dopo": "== %s: image\\n"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "⛔ $b: immagine (vedi $u/immagine.log)", "dopo": "⛔ $b: image (see $u/immagine.log)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "== %s: pacchetto\\n", "dopo": "== %s: package\\n"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "⛔ $b: dpkg-buildpackage fallito (vedi $u/costruzione.log)", "dopo": "⛔ $b: dpkg-buildpackage failed (see $u/costruzione.log)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "== %s: lintian e controlli\\n", "dopo": "== %s: lintian and checks\\n"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R13 banco-nel-binario $r (pacchetto: $n, controllo positivo rcp.o con BANCO_ACCESO 1: $p)", "dopo": "R13 banco-nel-binario $r (package: $n, positive control rcp.o with BANCO_ACCESO 1: $p)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R13 opzioni-di-banco-nell-unita SI (nessuna)", "dopo": "R13 opzioni-di-banco-nell-unita SI (none)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R14 file-del-banco SI (nessuno)", "dopo": "R14 file-del-banco SI (none)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R4 ldd NO (ngtcp2/nghttp3 dinamiche)", "dopo": "R4 ldd NO (dynamic ngtcp2/nghttp3)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": " | wc -l) librerie, nessuna mancante)", "dopo": " | wc -l) libraries, none missing)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "Statiche:   $(dpkg-deb -f /u/'", "dopo": "Static:     $(dpkg-deb -f /u/'"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "== %s: seconda costruzione (R23)\\n", "dopo": "== %s: second build (R23)\\n"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": " | cut -c1-16)… uguale in due copie pulite)", "dopo": " | cut -c1-16)… identical in two clean copies)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R23 riproducibile NO (i due .deb differiscono)", "dopo": "R23 riproducibile NO (the two .deb files differ)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "R23 riproducibile NO (seconda costruzione fallita)", "dopo": "R23 riproducibile NO (second build failed)"}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "   lintian: %s righe (E=… W=…)", "dopo": "   lintian: %s lines (E=… W=…)"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "⛔ podman non c'e'", "dopo": "⛔ podman is not there"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "⛔ $b: manca Contenitore.$b", "dopo": "⛔ $b: Contenitore.$b is missing"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "== %s: immagine\\n", "dopo": "== %s: image\\n"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "$b compila=no immagine=NO (vedi immagine.log)", "dopo": "$b compila=no immagine=NO (see immagine.log)"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "$(pkg-config --modversion libngtcp2 2>&1) (nostra, statica)", "dopo": "$(pkg-config --modversion libngtcp2 2>&1) (ours, static)"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "$(pkg-config --modversion libnghttp3 2>&1) (nostra, statica)", "dopo": "$(pkg-config --modversion libnghttp3 2>&1) (ours, static)"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "== %s: compilazione\\n", "dopo": "== %s: build\\n"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": " errori: $(grep -cE 'error:|Error [0-9]' ", "dopo": " errors: $(grep -cE 'error:|Error [0-9]' "}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": ") righe (vedi compilazione.log)", "dopo": ") lines (see compilazione.log)"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "\\n== riassunto (%s)\\n", "dopo": "\\n== summary (%s)\\n"}
+{"file": "src/costruzione/costruisci-tutti.sh", "prima": "$b (nessun esito)", "dopo": "$b (no outcome)"}
+{"file": "src/costruzione/quic-statiche.sh", "prima": "⛔ ci sono .so di ngtcp2/nghttp3 in /usr/local/lib: il binario le userebbe", "dopo": "⛔ there are ngtcp2/nghttp3 .so files in /usr/local/lib: the binary would use them"}
+{"file": "src/opus-wasm/costruisci.sh", "prima": "⛔ i segni OPUS_WASM non ci sono in ", "dopo": "⛔ the OPUS_WASM markers are not in "}
+{"file": "src/opus-wasm/costruisci.sh", "prima": "⭐ la pagina porta esattamente opus.wasm (%d byte, %d in base64)", "dopo": "⭐ the page carries exactly opus.wasm (%d bytes, %d in base64)"}
+{"file": "src/opus-wasm/costruisci.sh", "prima": "⛔ la pagina NON porta opus.wasm (%d byte, %d in base64)", "dopo": "⛔ the page does NOT carry opus.wasm (%d bytes, %d in base64)"}
+{"file": "src/opus-wasm/costruisci.sh", "prima": "⭐ incastonato: %d byte di wasm, %d di base64", "dopo": "⭐ embedded: %d bytes of wasm, %d of base64"}
+{"file": "src/opus-wasm/costruisci.sh", "prima": ") byte, sha256 $(cut -d' ' -f1 ", "dopo": ") bytes, sha256 $(cut -d' ' -f1 "}
+{"file": "src/opus-wasm/prova/confronta.mjs", "prima": "⛔ la pagina non porta il wasm", "dopo": "⛔ the page does not carry the wasm"}
+{"file": "src/opus-wasm/prova/confronta.mjs", "prima": "⛔ pacchetto ", "dopo": "⛔ packet "}
+{"file": "src/costruzione/costruisci-deb.sh", "prima": "  * Costruito da $HASH$SPORCO (fase 17, T3).", "dopo": "  * Built from $HASH$SPORCO (phase 17, T3)."}
+{"file": "src/provisiona.sh", "prima": "# ⛔ La cintura piu' forte delle tre: qui rifiuta SYSTEMD, non polkit, e vale", "dopo": "# ⛔ The strongest belt of the three: here SYSTEMD refuses, not polkit, and it holds"}
+{"file": "src/provisiona.sh", "prima": "#    anche per root — `[M]` 15 ago 2026, `CanSuspend=\"no\"` anche da root.", "dopo": "#    for root too — `[M]` 15 Aug 2026, `CanSuspend=\"no\"` even from root."}
+{"file": "src/provisiona.sh", "prima": "# ⛔⛔ IL SERVER GIRA DA ROOT, e non e' una comodita': e' la condizione del", "dopo": "# ⛔⛔ THE SERVER RUNS AS ROOT, and it is not a convenience: it is the condition of"}
+{"file": "src/provisiona.sh", "prima": "#     multi-tenant.  `[M]` 27 ago 2026: con `User=` non root, PAM puo'", "dopo": "#     multi-tenancy.  `[M]` 27 Aug 2026: with a non-root `User=`, PAM can"}
+{"file": "src/provisiona.sh", "prima": "#     verificare la parola SOLO dell'utente del servizio, e ogni altro", "dopo": "#     verify the password ONLY of the service's user, and every other"}
+{"file": "src/provisiona.sh", "prima": "#     inquilino si prende `0x07 CREDENZIALI_ERRATE`.", "dopo": "#     tenant gets `0x07 CREDENZIALI_ERRATE`."}

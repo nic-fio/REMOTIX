@@ -1,0 +1,765 @@
+riconoscimento	recognition	
+facoltativa	optional	
+fallimento	failure	
+indistinguibile	indistinguishable	
+raccoglie	collects	
+sostenuta	sustained	
+aggiornato	updated	
+decodificare	decode	
+occupata	busy	CPU occupata = busy
+rinuncia	gives_up	nome (palco_rinuncia) e verbo; «waiver» scartato
+verrebbe	would_be	
+grigia	gray	
+attraverso	through	
+innestabili	injectable	innestare = inject (guasti innestati = injected faults)
+vicina	near	
+ambigua	ambiguous	
+confusi	confused	
+esaminati	examined	
+bugiardi	lying	
+persiste	persists	
+statistiche	statistics	
+rinegoziazione	renegotiation	
+azzerate	zeroed	
+ritardati	delayed	
+rompe	breaks	
+esclusiva	exclusive	
+confuse	confused	? anche inglese «confuse»; nel codice CONFUSE è italiano (plurale femminile)
+fronte	front	FRONTE = fronte del testo (edge orizzontale)
+intatta	intact	
+accusato	charged	accusato_al_byte = accounted/charged per byte
+girato	run	? «girare» nel progetto = far girare (run); in rcp.c «girato dall'altra parte» = turned
+sessanta	sixty	
+malformati	malformed	
+visibili	visible	
+tondi	round	
+inceppi	jams	
+scendono	go_down	
+allontana	moves_away	
+punta	peak	? due sensi: PUNTA = picco (byte_in_volo), «punta a» = points to, punta_e_clicca = point; prevale peak nei nomi
+prem	pressed	abbreviazione di premuto
+movimenti	movements	
+provai	testi	? nome utente di sistema (provai6); tradurlo cambia l'account sul server
+pmuto	pmute	p + muto
+mediano	median	
+girati	run	vedi girato
+grigie	gray	
+ripetute	repeated	
+mutazioni	mutations	
+mutato	mutated	
+dtatteso	dtexpected	dt + atteso
+differisce	differs	
+concedibile	grantable	
+disturba	disturbs	
+lavorare	work	
+montati	mounted	
+scherm	screen	troncato di schermo
+incollatore	paster	
+svegliabile	wakeable	
+partite	started	«sonde partite» = probes sent/started
+interpola	interpolates	
+matrici	matrices	
+gest	handler	abbreviazione di gestore (HTTP handler)
+apici	quotes	
+daconti	from_counts	
+tprima	t_before	
+flu	strm	troncato di flusso (stream)
+metrica	metric	
+identiche	identical	
+sconosciuti	unknown	
+giudicabile	judgeable	
+verbali	reports	verbale = record/report di certificazione
+monchi	truncated	
+scappa	escapes	
+premessa	premise	
+pidi	pids	plurale italianizzato di pid
+duplicazione	duplication	
+duplicati	duplicates	
+bucata	holed	
+buttane	drop_n	«buttane n» = scartane alcuni
+sottofondo	background	
+guardie	guards	
+esatte	exact	
+permutazione	permutation	
+indici	indices	
+simulazioni	simulations	
+binomiale	binomial	
+rifiutare	refuse	
+cede	gives_way	
+ricorda	remembers	
+sfalso	offset	sfalso di rete = sfasamento/offset (skew)
+trascinate	dragged	
+lucnetem	locknetem	lucchetto + netem
+sniffa	sniffs	
+gemelle	twins	glossario: gemello = twin
+nega	denies	
+sfuggita	escaped	
+scoppiato	burst	
+microsecondi	microseconds	
+ginocchi	knees	
+pareggio	tie	
+scenabin	scenebin	
+occupazione	occupancy	
+freni	brakes	
+ingr	inp	troncato di ingresso (input)
+sballato	off	? sballato = sbagliato/fuori misura; «off» o «wrong»
+vicinanza	closeness	
+ingenuo	naive	
+provamt	testmt	? nome utente di sistema (provamt1..42); tradurlo cambia gli account
+nso	nunk	n + «non so» (unknown)
+vinto	won	
+crollati	collapsed	
+confermano	confirm	
+assunto	assumed	
+verificate	verified	
+sfrattate	evicted	glossario: sfratto = eviction
+turno	turn	
+corridore	runner	
+sfor	over	troncato di sforamento (overrun)
+connesso	connected	
+anonime	anonymous	
+cru	raw	troncato di crudo
+minuscolo	lowercase	
+stalla	stall	
+suffissi	suffixes	
+divergono	diverge	
+giudicabili	judgeable	
+smentisci	refute	
+nascondi	hide	
+nere	black	
+assesta	settles	
+alterna	alternates	
+sanissima	very_healthy	
+simm	symm	troncato di simmetria
+xbordo	xedge	x + bordo
+cubo	cube	
+rinate	reborn	
+estratti	extracts	
+ripetendo	repeating	
+arnese	tool	
+comeche	anyhow	? «come che sia»; usato una volta in 11-c8 per un messaggio
+disegnare	draw	
+tana	lair	? variabile locale in 11-gancio.sh (cartella-rifugio); «den» possibile
+nonso	unknown	NONSO = esito «non so»
+crescera	will_grow	
+comportamento	behavior	
+ripete	repeats	
+sfum	gradient	troncato di sfumatura
+misti	mixed	
+lunghi	long	
+concesso	granted	
+adottata	adopted	
+caldo	hot	«a caldo» = hot (cambio a caldo)
+protetto	protected	
+puntino	dot	
+anonimi	anonymous	
+saltabili	skippable	
+lrif	lref	l + rif (riferimento)
+cuori	hearts	
+rin	-	? sigla locale (esito/ragione input) in 15-f026; meglio lasciare
+bloccatori	blockers	
+esami	exams	esame di un quadro = examination
+orienta	orients	
+diversita	diversity	
+lentezza	slowness	
+allineati	aligned	
+paragrafi	paragraphs	
+sez	sect	troncato di sezioni
+degr	degr	troncato di degraded, già inglese
+riclassifica	reclassify	
+categoria	category	
+annotato	annotated	
+nativo	native	
+mancata	missed	chiave_mancata = missed key
+tocc	touch	troncato di toccato
+chiusure	closures	
+abbandonata	abandoned	
+prevalsa	prevailed	SESSIONE_LOCALE_PREVALSA
+anteprima	preview	
+cartellino	tag	cartellino colorato di riga TUI
+aggiornati	updated	
+irreversibile	irreversible	
+esecutore	executor	
+riparabile	repairable	
+riprovabile	retryable	
+recuperabile	recoverable	
+vocabolario	vocabulary	
+dinamiche	dynamic	
+estratto	extracted	
+pamsorgente	pamsource	PAM + sorgente
+generati	generated	
+rilancia	relaunches	
+tupla	tuple	
+mandate	sent	
+segnalata	reported	
+sovrascritti	overwritten	
+rimbalzo	bounce	
+incoerente	inconsistent	
+inizializzato	initialized	
+tornate	returned	
+esacap	hexcap	esa + cap
+assurdo	absurd	
+codificate	encoded	
+inoltro	forwarding	
+cercato	searched	
+nmessi	nplaced	n + messi
+ennesimo	nth	
+ricontrolla	rechecks	
+producibili	producible	
+nascendo	being_born	sta_nascendo = starting up; «nascita» nel glossario = birth
+incoerenti	inconsistent	
+inibisci	inhibit	
+incastona	embeds	
+suggerimento	hint	
+ripetuta	repeated	
+centra	centers	
+centroide	centroid	
+lamentato	complained	
+commuta	toggles	
+maiuscolo	uppercase	
+inattiva	inactive	
+ostinati	stubborn	
+salvaschermo	screensaver	
+alza	raises	
+riscontrato	acked	riscontro = ACK (wt_dgram_riscontrato)
+ripunta	repoint	
+riscontrati	acked	
+rimandati	resent	
+nfuori	nout	n + fuori (nfuori_ordine = out of order)
+svuotamento	draining	
+avevo	had	
+mandare	send	
+congedate	dismissed	CONGEDO = farewell nel glossario; congedate = closed with farewell
+secca	plain	? due sensi: «risposta secca» = curt/plain; «non secca» = non scatta/fails? prevalente plain
+mandata	sent	
+implicita	implicit	
+parlano	speak	
+saprebbe	would_know	
+scrivono	write	
+risolvere	resolve	
+compilazione	compilation	
+poter	be_able	
+coordinatore	coordinator	
+rifanno	redo	
+costruiti	built	
+privata	private	
+compresa	included	
+archivi	archives	
+grandi	large	
+assegnato	assigned	
+ritiro	withdrawal	
+innestatori	injectors	
+caricati	loaded	
+logiche	logical	
+guadagna	gains	
+perdere	lose	
+assegnazione	assignment	
+guardava	watched	
+mandato	sent	? nome «mandato» (mandate) in commenti; nei nomi ultimo_mandato = last sent
+tagliare	cut	
+virgoletta	quote	
+veda	sees	
+scendere	go_down	
+interrogata	queried	
+applicati	applied	
+ripulito	cleaned	
+proposito	purpose	
+ingoia	swallows	
+completezza	completeness	
+contando	counting	
+chiudendo	closing	
+coincidano	match	
+pubblicata	published	
+leggeri	light	
+oscurate	obscured	
+pianta	hangs	? due sensi: «si pianta» = hangs; pianta_parola = pianta (plants) la parola; prevale hang
+stretti	tight	
+dritto	straight	
+alberi	trees	
+metterebbe	would_put	
+partono	start	
+leggerebbe	would_read	
+contarli	count_them	
+decidere	decide	
+ricevuta	received	
+segnata	marked	
+arretrati	backlog	glossario: arretrato = backlog (ritmo)
+cusc	cushion	troncato di cuscino (AUDIO_CUSCINO)
+nient	nothing	
+andra	will_go	
+appeso	hung	
+armava	armed	
+scadere	expire	
+spegnerlo	turn_off	
+lasciava	left	
+queste	these	
+venga	be	
+distrazione	distraction	
+simili	similar	
+continuare	continue	
+quattordici	fourteen	
+maturare	mature	
+unidirezionali	unidirectional	
+pretendere	demand	
+spesso	often	
+troverebbe	would_find	
+spediva	sent	
+rimandato	resent	
+usciva	exited	
+viaggia	travels	
+potevano	could	
+ricevono	receive	
+nasconderlo	hide_it	
+comprato	bought	
+buttare	drop	
+quadre	brackets	
+scriva	writes	
+riscrivere	rewrite	
+soprattutto	above_all	
+agisce	acts	
+raggiungibile	reachable	
+distinguono	distinguish	
+averla	have_it	
+sopravvissuta	survived	
+telate	canvases	conteggio delle risposte TELA (canvas)
+limitatore	limiter	
+silenziosa	silent	
+esigenze	needs	
+cronometri	timers	
+monocategoria	single_category	
+abitate	inhabited	
+limitati	limited	
+divergenti	divergent	
+bugiarda	lying	
+smemorato	forgetful	
+scollato	detached	
+calcolata	computed	
+compilare	compile	
+puntato	pointed	
+stesse	same	
+cambierebbe	would_change	
+vietati	forbidden	
+servite	served	
+aspettano	wait	
+saturazione	saturation	
+congelamento	freeze	
+guardano	watch	
+poggia	rests	
+cominciare	begin	
+assenza	absence	
+rischiosa	risky	
+chiudono	close	
+valgono	hold	
+risolta	resolved	
+intende	means	
+alzare	raise	
+misurarlo	measure_it	
+prendere	take	
+garantito	guaranteed	
+dica	says	
+scavalca	overrides	
+concessione	grant	
+esserlo	be_it	
+vederlo	see_it	
+sensibilita	sensitivity	
+probabilmente	probably	
+rendono	render	? «rendere» = make/return/render secondo la frase; nei commenti prevale «make»
+dipendono	depend	
+pero	but	
+innocuo	harmless	
+debba	must	
+impedisce	prevents	
+sordo	deaf	
+differire	differ	
+qualche	some	
+trovare	find	
+tornare	return	
+tornata	returned	
+convenzione	convention	
+muoversi	move	
+falsa	false	
+troncato	truncated	
+ridipinge	repaints	
+stampata	printed	
+esistente	existing	
+sara	will_be	
+importato	imported	
+inferiore	lower	
+dira	will_say	
+sceglie	chooses	
+incompleto	incomplete	
+conformi	compliant	
+impacchetta	packs	
+applicabile	applicable	
+isoluma	isoluminant	COLORI_ISOLUMA
+dichiarava	declared	
+misurabile	measurable	
+possa	can	
+promuove	promotes	
+certezza	certainty	
+tale	such	
+somigli	resembles	
+scambiato	swapped	
+indovina	guesses	
+mascherato	masked	
+rileggibile	rereadable	
+certfinto	certfake	
+ornamento	ornament	
+scher	scr	troncato di schermo (scher_str)
+saperlo	know_it	
+necessario	necessary	
+sufficiente	sufficient	
+classificazione	classification	
+vengono	come	
+accorto	noticed	
+legga	reads	
+avra	will_have	
+sguscia	slips	
+costruttori	builders	
+verdettore	verdict_maker	? neologismo: chi emette il verdetto (glossario verdetto = verdict)
+applicate	applied	
+accorgersene	notice_it	
+solleva	raises	
+fallirebbe	would_fail	
+segnaposto	placeholder	
+ammazza	kills	
+cronometrata	timed	
+tranquillo	quiet	
+cavallo	straddle	«a cavallo di» = straddling
+giudici	judges	
+eguardia	eguard	e + guardia
+persistente	persistent	
+precedenza	precedence	
+tappo	stub	TAPPO al posto di numpy = stub; altrove «cap»
+notevoli	notable	
+preludio	prelude	
+interessati	affected	
+esaurito	exhausted	
+misuranti	measuring	
+esigi	require	
+solitudine	solitude	criterio di solitudine (scena da sola)
+pittori	painters	
+crescenti	increasing	
+riattaccato	reattached	glossario: attacca = attach
+accentata	accented	
+illegali	illegal	
+riaggancia	reattaches	
+riposa	rests	
+manico	handle	
+credibile	credible	
+lunghezze	lengths	
+scomodo	awkward	
+coordinata	coordinate	
+sintetizza	synthesizes	
+precondizioni	preconditions	
+rimisura	remeasure	
+stimato	estimated	
+espirazioni	expirations	
+termine	end	? «al termine» = end; altrove «term»; prevale end
+mil	milli	troncato di millesimi
+guarito	healed	
+invio	send	? due sensi: tasto Invio = Enter, chiesto_invio = send request; prevale send
+sfora	overruns	
+fis	phys	troncato di fisico (barra_fis)
+ecc	etc	
+sollecitata	stressed	
+magie	tricks	
+spanne	roughly	«a spanne» = roughly
+spezzata	broken	
+compone	composes	
+composizione	composition	
+codata	tailed	con coda (distribuzione)
+dilatazione	dilation	
+ripropone	reproposes	
+misuro	measure	
+insicuri	insecure	
+superblocchi	superblocks	
+interruttori	switches	
+entrambi	both	
+ritaglio	crop	
+funzionare	work	
+rispetto	respect	? «rispetto a» = compared to; prevale compared
+riproduzione	playback	
+ovvia	obvious	
+mandarli	send_them	
+successione	sequence	
+tirata	pulled	
+scadono	expire	
+tardivo	late	
+moltiplica	multiplies	
+metodi	methods	
+rifwav	refwav	rif + wav
+panoramica	overview	
+buttabile	droppable	
+sfasati	out_of_phase	
+provab	testb	? nome utente di sistema (provab8)
+salgono	rise	
+dovuto	due	
+copriva	covered	
+plausibile	plausible	
+malato	sick	
+scese	went_down	
+verbi	verbs	
+interruttore	switch	
+serrate	tight	
+banfile	banfile	ban + file, già inglese
+cercati	searched	
+nuvola	cloud	
+contratto	contract	
+fiacco	sluggish	
+strettissima	very_tight	
+preparati	prepare	imperativo riflessivo «preparati()» = get ready
+configurazioni	configurations	
+riaccensione	restart	
+terra	ground	TERRA_DI_MEZZO = middle ground
+ranghi	ranks	
+prestato	lent	
+singolo	single	
+raccogl	collect	troncato di raccogli
+nonmie	notmine	
+osservatore	observer	
+modelli	models	
+taglie	sizes	
+tac	ticks	troncato di tacche
+spediscono	send	
+ina	idle	troncato di inattivo
+uidi	uids	plurale italianizzato di uid
+impazzito	crazy	
+temperatura	temperature	
+freno	brake	
+dedotti	inferred	
+assaggio	sample	
+magg	major	troncato di maggiore (versione)
+mino	minor	troncato di minore (versione)
+estr	extr	? troncato (estratti/estremi), variabile locale in 10-b95
+presenta	presents	
+ricontr	recheck	troncato di ricontrollato
+ambigue	ambiguous	
+riacceso	restarted	
+desta	awake	
+tras	transp	troncato di trasporto
+travasata	transferred	
+sostituiti	replaced	
+ricodifica	reencode	
+zer	zero	troncato di zeri
+aggregato	aggregate	
+sog	thr	troncato di soglia (threshold)
+graduale	gradual	
+collegarsi	connect	
+morse	bites	? «morse» = morsi (sum guardia True); forse «caught»
+definisci	define	
+bussa	knocks	
+alimenta	feeds	
+quaranta	forty	
+registrando	logging	glossario: registro = log
+usano	use	
+raffronto	comparison	
+fantasmi	ghosts	
+legarsi	bind	
+confrontate	compared	
+ripr	resume	troncato di riprende (DA QUI SI RIPRENDE)
+scusati	excused	
+riconoscibile	recognizable	
+girano	run	
+scarterebbe	would_discard	
+ammissioni	admissions	
+ucciso	killed	
+parta	starts	
+rinato	reborn	
+quantita	amount	
+periodico	periodic	
+tornerebbe	would_return	
+catturati	captured	
+sagoma	silhouette	
+faccio	make	
+arrivino	arrive	
+macchiolina	speck	
+potrebbero	could	
+stampate	printed	
+ripreso	resumed	
+eseguibili	executables	
+appoggia	leans	
+arbitri	arbiters	
+invisibile	invisible	
+legata	bound	
+scongela	unfreezes	
+cuciti	stitched	glossario: cucitura = seam
+sveglio	awake	
+completatore	completer	
+sbavata	smeared	
+congelamenti	freezes	
+firme	signatures	
+rango	rank	
+devastata	devastated	
+vittime	victims	
+esente	exempt	
+rinata	reborn	
+avvolta	wrapped	
+ricaricare	reload	
+diti	fingers	
+permesse	allowed	
+sorvegliate	watched	
+pungolo	prod	
+pungola	prods	
+passeggero	transient	
+discendenti	descendants	
+corte	short	
+computer	computer	? parola uguale in inglese; resta
+sgomberato	cleared	glossario: sgombra = clear out
+programmate	scheduled	
+cadute	drops	
+pendenza	slope	
+preventivo	estimate	
+ridotti	reduced	
+padri	parents	
+brevi	short	
+antenato	ancestor	
+proteggi	protect	
+riarma	rearms	
+raccomandati	recommended	
+automatica	automatic	
+generalizza	generalizes	
+tengono	hold	
+leggimi	readme	
+formanti	formants	
+rinomina	renames	
+dripiego	dfallback	-D + ripiego (DRIPIEGO_BANCO)
+telefoni	phones	
+collegare	connect	
+rxbanco	rxbench	nome utente di sistema? (rxbanco) — tradurlo cambia l'account
+aggiornate	updated	
+dichiarante	declarer	
+facoltativo	optional	
+esclusa	excluded	
+scalabile	scalable	
+approvato	approved	
+archi	arcs	
+problemi	problems	
+solvibile	solvable	
+identificativo	identifier	
+inglese	english	
+approva	approves	
+vincolanti	binding	
+annotati	annotated	
+fissi	pinned	pacchettiFissi = pinned packages; altrove «fixed»
+collegamenti	links	
+grassetto	bold	
+iscrive	enrolls	
+spenti	off	
+collegate	linked	
+staticamente	statically	
+girava	ran	
+supportate	supported	
+compreso	included	
+allarme	alarm	
+smistatore	dispatcher	glossario: aiutante = dispatcher started at boot
+consuma	consumes	
+bevi	drink	bevi_tutto = drain all; «drain» possibile
+primaria	primary	
+rovescia	flips	
+abbassa	lowers	
+risali	raise	risali_qualita = raise quality back
+calmi	calm	
+coefficienti	coefficients	
+uniformita	uniformity	
+sviluppo	development	
+restino	remain	
+spegniti	shut_down	MSG_SPEGNITI
+avute	received	chiavi_avute
+combaciano	match	
+scadi	expire	
+briglia	rein	
+colorato	colored	
+guarisci	heal	
+trascorsi	elapsed	
+respira	breathes	
+impianto	setup	
+scuote	shakes	
+ripeti	repeat	
+ricomposizioni	recompositions	
+vegliato	watched	
+suggerisci	suggest	
+pizzico	pinch	
+scavalcando	overriding	
+conseguenza	consequence	
+lanciato	launched	
+sede	location	? ritrovo.c: sede di un desktop ritrovato; «seat» sarebbe ambiguo con logind
+inizializza	initializes	
+nego	nego	nego_versione = negotiate, già abbreviazione inglese
+rimozione	removal	
+logico	logical	
+incerto	uncertain	
+ripartenza	restart	
+frena	brakes	
+cera	was_there	c'era (cera = l->bo || l->buffer)
+durato	lasted	
+vivono	live	
+risulta	results	
+modificato	modified	
+aggiungono	add	
+correggono	fix	
+finirebbe	would_end	
+risolverebbe	would_solve	
+buttando	dropping	
+cloni	clones	
+progetti	projects	
+versionati	versioned	
+ricreano	recreate	
+conservare	keep	
+artefatti	artifacts	
+crede	believes	
+lanciare	launch	
+guastate	broken	glossario: guasto = fault
+fabbricano	build	
+innestarci	inject_into	
+rifarle	redo_them	
+committano	commit	
+rivedere	review	
+mangiare	eat	
+derivati	derived	
+rifa	redoes	
+pesano	weigh	
+lavoravano	worked	
+committa	commits	
+derivato	derived	
+stanti	standing	
+distratto	distracted	
+infila	threads	
+versionata	versioned	
+invecchia	ages	
+compilati	compiled	
+legati	bound	
+lasciamo	leave	
+ricompila	recompiles	
+nascevano	were_born	
+chiamano	call	
+fermava	stopped	
+leggerla	read_it	
+fermarsi	stop	
+scioglie	dissolves	
+inventarla	invent_it	
+sciogliendo	dissolving	
+riempiva	filled	
+prosa	prose	
+posizionale	positional	
+spettava	was_due	
+fabbricata	built	
+assegnate	assigned	
+toglieva	removed	
+chiedersi	wonder	
+venisse	were	
+sciolto	dissolved	
+sembravano	seemed	
+dubbi	doubts	
+prudenza	caution	
+mettono	put	
+lanciano	launch	
+cercava	searched	
+cinquantadue	fifty_two	
+rispettate	respected	
+aperture	openings	aperture_dentro_la_fetta: italiano (plurale di apertura), non l'inglese «aperture»
+sill	syl	troncato di sillaba (18-a1, int sill)
+ecom	ecmd	e + com(ando) (02-sessione-guardia.sh)
+pure	also	? nei nomi è italiano (rispecchia_pure = «anche»); ma «pure» inglese = puri (giudici puri, PURE) nel glossario: tradurre solo dove è italiano
+deduce	deduces	? parola uguale in inglese, usata in italiano nei commenti: la traduzione non cambia nulla
+conclude	concludes	? come deduce: uguale in inglese

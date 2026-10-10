@@ -1,0 +1,1066 @@
+abbandona	abandon	
+abbandonare	abandon	
+abbandonato	abandoned	
+abbandoni	abandonments	
+abbastanza	enough	
+abilita	enable	
+accelerazione	acceleration	
+accento	accent	
+accesi	on	accesi/spente
+accettati	accepted	
+accoda	enqueue	
+accorciato	shortened	
+accorge	notices	
+accusati	accused	guasti_accusati
+accuse	accusations	
+acod	aenc	abbreviazione di «codificatore audio»
+acquisita	acquired	
+adattate	adapted	
+adattivo	adaptive	
+addormentato	asleep	
+addosso	on	guasti_rimasti_addosso
+adis	hdis	altezza disegnata (a = altezza → h)
+affamate	starved	
+affatto	at_all	
+agente	agent	
+agganciati	latched	? aggancio → latch; «hook» è già di gancio
+aggancio	latch	? ATTESA_AGGANCIO_MS: aggancio del cliente; «hook» è già di gancio
+aggiunte	added	
+aggiunti	added	
+agito	acted	
+agli	to	agli = a + gli: «to the» → «to»
+alfabeto	alphabet	
+allarga	widen	
+allargare	widen	
+alle	to	alle = a + le: «to the» → «to»
+allineato	aligned	
+allo	to	allo = a + lo: «to the» → «to»
+alloca	allocate	
+allocazione	allocation	
+allora	then	
+allunga	lengthen	
+alzato	raised	
+ambigui	ambiguous	
+ambra	amber	
+ammin	admin	abbreviazione di «amministrativo» (mot_ammin)
+amministratore	administrator	
+annidato	nested	
+annotata	annotated	
+annullo	undo	differenzeDopoAnnullo
+annunci	announcements	
+annunciati	announced	
+anomali	anomalous	
+apparecchia	set_up	apparecchia/sparecchia un giro
+appartiene	belongs	
+appena	just	
+applicazioni	applications	
+approvata	approved	
+aprire	open	
+arbitro	arbiter	
+archivio	archive	
+argomento	argument	
+aria	air	solo nei commenti («con l'aria di»), non in un identificatore
+arita	arity	
+aritmetica	arithmetic	
+armata	armed	
+armate	armed	
+arricchisci	enrich	
+aspettava	expected	? aspettava_l_annuncio = was waiting for: «waited»
+assoluto	absolute	
+assorbito	absorbed	
+astenute	abstained	
+atomico	atomic	
+attacchi	attaches	ATTACCA = attach (RCP)
+atti	acts	
+attive	active	
+attivi	active	
+attore	actor	glossario
+attraversa	crosses	
+attributo	attribute	
+autentica	authenticate	
+autoprova	selftest	
+aver	have	
+avere	have	
+averne	have_any	
+avesse	had	
+avrebbe	would_have	
+avviata	started	
+avvii	starts	
+avvisi	warnings	
+azzerata	reset	
+bandiera	flag	
+bannata	banned	
+barre	bars	
+barriere	barriers	
+basi	bases	
+bassi	low	
+bastante	sufficient	
+battiti	beats	
+ben	well	disposizione_ben_formata
+bianco	white	
+biglietti	tickets	session tickets TLS
+bisogno	need	
+bocciati	rejected	? come respinte
+bordi	borders	
+bott	btn	abbreviazione di «bottone»
+bottoncino	little_button	
+bozza	draft	
+bozze	drafts	
+bracchettato	bracketed	
+brutale	brutal	
+brutte	ugly	
+brutti	ugly	
+bugia	lie	
+bugiardo	liar	
+buttato	discarded	
+calcola	compute	
+calcolato	computed	
+calibra	calibrate	
+cambiata	changed	
+cambiate	changed	
+cammina	walk	
+canarino	canary	
+cancella	delete	
+canonica	canonical	
+canonico	canonical	
+capace	capable	
+capcoda	queue_head	? «capo coda»
+capsalta	caps_skip	byte di una capsula troppo grande da buttare
+caratteri	characters	
+caricato	loaded	
+carichi	loads	
+caro	expensive	
+carte	cards	
+cassetta	box	? «una cassetta per ogni pezzo» nel deposito; scatola = box nel glossario: forse «slot»
+catt	capt	abbreviazione di «cattura»
+cattiva	bad	
+cattivi	bad	
+catturato	captured	
+cavo	cable	
+ceduta	yielded	
+censo	census	
+cento	hundred	per_cento → per_hundred: «per_cento» → «percent» a mano
+centrale	central	
+certi	certain	
+certificata	certified	
+certificazione	certification	
+chiaro	clear	
+chiedere	ask	
+chiedeva	asked	
+chiudeva	closed	
+cia	cyan	abbreviazione di «ciano»
+cifra	digit	
+cima	top	
+cintura	belt	glossario: cinture = belts
+cio	that	ciò
+citato	cited	
+cla	clap	abbreviazione di «claquette» (09-b85-claquette.py)
+classi	classes	
+clicca	click	
+codificatori	encoders	codificatore = encoder (glossario)
+codifiche	encodings	
+coerente	consistent	
+coincidono	coincide	
+collegamento	connection	
+collegato	connected	
+collo	bottleneck	«i clienti non sono il collo»
+colonna	column	
+colpi	shots	colpo → shot; colpi_buoni = strappi riusciti
+colpiti	hit	
+colpo	shot	
+combacia	matches	
+comeutente	asuser	
+comincia	starts	
+commento	comment	
+comodo	convenience	tela_di_comodo, ritardo_comodo_ms
+compatibile	compatible	
+compilato	compiled	
+complessivo	overall	
+componenti	components	
+composto	composed	
+comunque	anyway	
+concorrente	concurrent	
+condivisa	shared	
+confermati	confirmed	
+confeziona	package	
+configurata	configured	
+configurato	configured	
+configurazione	configuration	
+confini	boundaries	
+conflitti	conflicts	
+conflitto	conflict	
+congedi	farewells	CONGEDO = farewell (glossario)
+congelata	frozen	
+connessioni	connections	
+conosce	knows	
+conosciuta	known	
+consecutivi	consecutive	
+consegnate	delivered	
+consenso	consent	
+contano	count	
+contati	counted	
+contendenti	contenders	
+contiene	contains	
+continuita	continuity	
+continuo	continuous	
+contorno	outline	
+contraddicono	contradict	
+contraddizione	contradiction	
+contrasto	contrast	
+convalida	validate	
+conversazione	conversation	
+converti	convert	
+coordinate	coordinates	
+cop	cov	abbreviazione di «copertura»
+coperti	covered	
+copiato	copied	
+cor	frame	abbreviazione di «cornice»
+corpi	bodies	
+corredo	kit	il corredo dei banchi della fase 3
+corretta	correct	
+corretti	correct	
+corta	short	
+costi	costs	
+costr	constr	abbreviazione di «costruzione»
+costruisce	builds	
+costruiscono	build	
+costruito	built	
+creano	create	
+creati	created	
+creazione	creation	
+cresc	growth	abbreviazione di «crescita»
+crescita	growth	
+criterio	criterion	
+crolla	collapses	
+cronometro	stopwatch	
+cucito	stitched	filo_cucito, puntatore_cucito: il pezzo cucito al resto (cucitura = seam)
+culmini	peaks	? come picchi
+curata	cured	cura = cure nel progetto (CURA_ARMATA)
+curato	cured	
+curva	curve	
+dallo	from	dallo = da + lo: «from the» → «from»
+dammi	give_me	
+danneggia	damages	
+darebbe	would_give	
+decide	decides	? «decide» è anche inglese; nel codice è il verbo italiano (non_decide)
+decimi	tenths	
+decodificati	decoded	
+depositi	repositories	
+derivata	derivative	
+derivate	derived	
+descrivi	describe	
+desincronizzata	desynced	
+dette	said	
+diceva	said	
+dichiarare	declare	
+dicibile	speakable	tasto_dicibile: tasto che si può nominare nel registro
+dicono	say	
+diffondi	broadcast	
+diffusi	broadcast	wt_video_diffondi: diffondi → broadcast
+digita	type	
+dimensiona	size	
+dimentica	forget	
+dimostrato	proven	
+dipendenza	dependency	
+dipinge	paints	
+dipinta	painted	
+dipinte	painted	
+direbbe	would_say	
+direzione	direction	
+dirlo	say_it	
+dirottato	hijacked	
+disco	disk	
+discreta	discrete	scheda discreta
+discreto	discrete	
+discrimina	discriminates	
+disinstalla	uninstall	
+disinstallazione	uninstallation	
+dispari	odd	
+dispersione	spread	
+disponibili	available	
+dispositivi	devices	
+distingue	distinguishes	
+distruggi	destroy	
+distruttiva	destructive	
+diventa	becomes	
+diventano	become	
+divergente	divergent	
+dividi	split	
+documenti	documents	
+dominio	domain	
+donatore	donor	
+dop	dup	abbreviazione di «doppioni»
+doppi	duplicates	
+doppie	duplicate	
+doppio	double	
+dormi	sleep	
+dov	where	dov' = dove
+dovuta	due	
+dovuti	due	
+dubbio	doubtful	
+duri	hard	
+eccezione	exception	
+eccezioni	exceptions	
+effettivo	effective	
+effetto	effect	
+elementi	elements	
+energia	energy	
+entrano	enter	
+entrare	enter	
+entrate	entries	scena_entrate_e_uscite
+entrava	entered	
+entrera	will_enter	
+eredita	inherit	
+esamina	examine	
+esaminata	examined	
+esaminate	examined	
+esatta	exact	
+esattamente	exactly	
+esatto	exact	
+esauriti	exhausted	
+esca	bait	? ESCA/esca_vista/trovata_esca = parola esca; nei commenti anche congiuntivo di «uscire»
+escluse	excluded	
+escono	exit	
+ese	exe	abbreviazione di «eseguibile»
+esec	exec	
+eseguibile	executable	
+eseguiti	executed	
+eseguito	executed	
+esigibile	due	congedo_esigibile
+esisteva	existed	
+esotiche	exotic	
+esplicita	explicit	
+esplicito	explicit	
+estendi	extend	
+esterne	external	
+esterno	external	
+esteso	extended	
+estrai	extract	
+estranea	stray	
+estranei	stray	processi/clienti estranei alla misura
+estrapola	extrapolate	
+etich	label	abbreviazione di «etichetta»
+faceva	did	
+facile	easy	
+fallite	failed	
+fanno	do	
+fantasma	ghost	
+fatale	fatal	
+fatt	factor	abbreviazione di «fattore»
+fermare	stop	
+fermato	stopped	
+fiacchi	sluggish	
+fianco	side	
+fidata	trusted	
+fidati	trusted	
+fidato	trusted	
+filtrato	filtered	
+filtri	filters	
+finali	final	
+finche	until	
+finge	fakes	
+fini	ends	
+finisca	finish	
+finisci	finish	
+fisica	physical	
+fissa	fixed	
+formata	formed	
+forzata	forced	
+forzato	forced	
+fosse	were	
+freschezza	freshness	
+fresco	fresh	
+frm	fmt	abbreviazione di «formato» (FRM = FORMATO)
+fronti	edges	fronti nella barra = fronti di salita/discesa
+fumo	smoke	prova di fumo = smoke test
+funzionale	functional	
+fuochi	focuses	fuoco = focus (della finestra)
+gambe	legs	gambe di una misura/pagina
+gemellati	twinned	glossario: gemello = twin
+gemelli	twins	gemello = twin (glossario)
+generato	generated	
+gentilezza	courtesy	
+gestisci	handle	
+getto	blast	il getto di banda nota (10-b90-getto)
+giudicata	judged	
+giudicato	judged	
+gius	downs	plurale di «giu» (mio_giu)
+grafico	graphical	ProcessoGrafico
+grandezza	quantity	? grandezza = grandezza fisica (quantity), sessione_come_grandezza; anche «size»
+granularita	granularity	
+grassa	fat	
+grazie	thanks	
+grigi	grays	
+grossa	coarse	_g_grana_grossa, soglia_grossa
+grosso	big	
+gua	flt	abbreviazione di «guasto» (guasto = fault)
+guardata	watched	? collide con sorvegliata → watched: forse «looked_at»
+guastati	faulted	guasto = fault
+guaste	faulty	guasto = fault
+icone	icons	
+identici	identical	
+identificatore	identifier	
+ifaccia	iface	
+ignora	ignore	
+immutabile	immutable	
+impara	learn	
+impiega	takes	
+importabile	importable	
+impossibile	impossible	
+impostazione	setting	
+impulso	pulse	
+inatt	idle	abbreviazione di «inattività» (orologi logind)
+incatenate	chained	
+incerti	uncertain	
+inchiostro	ink	
+incognite	unknowns	
+incorso	inprogress	INCORSO = «in corso»
+indagare	investigate	
+indipendente	independent	
+indipendenti	independent	
+indirette	indirect	
+indizi	clues	
+inesistenti	nonexistent	
+ingiusto	unfair	
+ingrandisci	zoom_in	
+inietta	inject	
+iniziale	initial	
+innesco	trigger	
+innestate	patched	
+innesti	patches	gli innesti a ngtcp2/quiche: patch applicate al sorgente
+inquadratura	framing	
+inquinato	polluted	
+insegui	chase	
+installata	installed	
+integrata	integrated	
+integrazione	integration	
+integro	intact	
+interfacce	interfaces	
+interi	integers	? danno_interi: anche «interi» = whole
+intermedia	intermediate	
+interpreta	interpret	
+interrotta	interrupted	
+intorno	around	
+intrecci	interleavings	righe intrecciate di processi diversi
+intreccia	interleave	
+invariante	invariant	
+invasore	intruder	
+inventate	invented	
+inverti	invert	
+invertita	inverted	
+invii	sends	
+inviluppo	envelope	
+ipotesi	hypothesis	? singolare e plurale uguali in italiano; nei nomi è singolare (ipotesi_dichiarata)
+iscrivi	enroll	iscrivi_ai_gruppi
+iscrizioni	enrollments	
+istanza	instance	
+istogramma	histogram	
+lampeggia	flashes	
+lampi	flashes	
+lampo	flash	
+lancio	launch	
+larga	wide	
+largh	width	abbreviazione di «larghezza»
+lavh	workh	LAVH = lavoro visto dall'host (LAV = lavoro)
+lavori	jobs	
+ldis	wdis	larghezza disegnata (l = larghezza → w)
+leale	fair	
+leciti	allowed	
+lecito	allowed	
+lega	bind	lega_ext_se_serve, cid_lega
+legale	legal	
+legame	bond	
+legami	bonds	? legame/legami = legame misurato (LEGAME_MS) fra due eventi: «link» è già di anello
+leggero	lightweight	
+leggibile	readable	
+lei	her	
+lenta	slow	
+lento	slow	
+lett	letter	? g_lett = input_lettera (letter), ma «lett = csv.DictReader» = lettore (reader)
+lettori	readers	
+libreria	library	
+licenza	license	
+limita	limit	
+lineare	linear	
+liscio	smooth	
+lmx	dlx	? lmx = «linea morta» di prova: dead line → dl
+logici	logical	
+lontananza	farness	? lontananza(a, b) = distanza; «distance» se non collide con distanza
+lorda	gross	
+lucchetti	locks	
+luce	light	
+luci	highlights	b_luci/d_luci accanto a ombre: luci e ombre dell'immagine
+luminanza	luminance	
+luminanze	luminances	
+lun	len	abbreviazione di «lunghezza»
+lunghe	long	
+macchine	machines	
+magra	lean	errori_magra/errori_grassa
+magre	lean	
+magro	lean	
+maiuscole	uppercase	
+malati	sick	
+malformate	malformed	
+mancate	missed	
+mappe	maps	
+marcate	marked	
+marcatore	marker	
+marcatori	markers	
+maschere	masks	
+massa	mass	
+mecc	mech	
+meccanismo	mechanism	
+mediane	medians	
+messa	placed	
+mez	half	? mez_l/mez_a = metà della tela; «mez» in un banco = epoch della mezzanotte
+miniatura	thumbnail	
+minime	minimum	
+minuto	minute	
+miscela	mix	
+misto	mixed	
+misurerebbe	would_measure	
+mittente	sender	
+modifica	modify	
+modifiche	changes	
+molte	many	
+molto	much	
+moneta	currency	la moneta del budget
+monotona	monotonic	
+monotonica	monotonic	
+monte	upstream	«a monte»
+moriva	died	
+morti	dead	
+mosaico	mosaic	
+mostrata	shown	
+mucchio	heap	
+multipli	multiples	
+naiuto	nhelp	
+nanosecondi	nanoseconds	
+nascere	born	fai_nascere = make born → spawn
+nasceva	was_born	
+nasci	born	
+nascite	births	
+nascondere	hide	
+nascoste	hidden	
+nascosti	hidden	
+nate	born	
+nati	born	
+naviga	navigate	
+ncomando	ncommand	
+negata	denied	
+negativi	negatives	
+negato	denied	
+negli	in	negli = in + gli: «in the» → «in»
+negoziazioni	negotiations	
+nelle	in	nelle = in + le: «in the» → «in»
+nello	in	nello = in + lo: «in the» → «in»
+nemmeno	not_even	
+netta	net	
+netto	net	
+nfot	nframes	
+noi	us	
+nominale	nominal	
+nominato	named	
+normalizza	normalize	
+notte	night	
+novita	news	
+npagina	npage	
+nrichiesta	nrequest	
+nuclei	cores	
+nudi	bare	QUIC nudo
+nulla	nothing	
+nvisti	nseen	
+obbedienza	obedience	
+obbedito	obeyed	
+obbligate	forced	
+obbligatori	mandatory	
+obbligatorio	mandatory	
+occupante	occupant	
+occupatore	occupier	
+offerto	offered	
+ognuno	each	
+ombre	shadows	
+opposto	opposite	
+opzione	option	
+oracolo	oracle	
+orario	schedule	in_orario = on time
+ordina	sort	
+ordinata	sorted	
+originali	originals	
+origini	origins	
+orisposta	oresponse	
+orol	clk	abbreviazione di «orologio»
+oscura	obscure	
+oscurato	obscured	
+osp	host	abbreviazione di «ospite» (scope dell'ospite)
+osservati	observed	
+osservazione	observation	
+ottenuti	obtained	
+pac	pkt	? tx_pac/rx_pac = pacchetti di rete; ma «pac=$PACCHETTO» = pacchetto d'installazione
+pagata	paid	
+pannelli	panels	
+parentesi	parentheses	
+parlare	speak	
+parlato	spoken	
+partiva	started	
+passano	pass	
+passare	pass	
+pavimenti	floors	
+pazienza	patience	
+peggiora	worsens	
+peggiori	worst	
+pena	penalty	
+penale	penalty	? collide con pena → penalty
+pendenti	pending	
+perdute	lost	
+permanenti	permanent	
+permutazioni	permutations	
+perse	lost	
+perso	lost	
+persone	people	
+pesante	heavy	
+pesca	fish	_pesca: il muxer «pesca» SPS/PPS = picks
+peso	weight	
+pianificata	planned	
+piatta	flat	
+piattaforme	platforms	
+piatto	flat	
+picchi	peaks	
+piedi	feet	? quasi sempre «in_piedi» (rimetti_in_piedi, ATTESA_IN_PIEDI_S) = up: meglio «in_piedi» → «up» a mano
+piene	full	
+pile	stacks	
+piscina	pool	wl_shm_pool
+pitone	python	
+platea	audience	la platea dei clienti DRM
+poco	little	risalito_da_poco = recently risen: «da_poco» → «recently» starebbe meglio a mano
+poni	set	
+portatore	carrier	
+portava	carried	
+posato	settled	registro_posato
+posiz	pos	
+posizionali	positional	
+possibili	possible	
+pozzo	sink	il pozzo audio = sink (suono: «virtual sink»)
+pratico	practical	
+precede	precedes	? «precede» è anche inglese
+precisamente	precisely	
+preciso	precise	
+predicati	predicates	
+preferenza	preference	
+preferita	preferred	
+preferito	preferred	
+prefissi	prefixes	
+presenza	presence	glossario
+presta	lends	
+prestata	lent	impronta_prestata_da, guida_prestata
+prestito	loan	LDFLAGS_PRESTITO, certifica_prestito
+presto	early	
+pretende	demands	
+previeni	prevent	
+previsioni	predictions	
+previsti	expected	
+prezzo	price	
+primari	primaries	primari di colore
+pristino	restore	ripristino troncato
+produce	produces	
+producibile	producible	
+programmi	programs	
+prole	offspring	l'insieme dei figli (figli *prole)
+promessa	promise	
+promette	promises	
+promozione	promotion	promozione 8→10 bit
+pronte	ready	
+propone	proposes	
+proposte	proposals	
+proprietario	owner	
+provata	tested	
+provenienze	sources	
+proverebbe	would_test	
+prudente	cautious	
+pubblica	publish	? stato_pubblica: verbo; anche aggettivo femminile «public»
+pubblicato	published	
+pubblico	public	
+pulizia	cleanup	
+puls	btn	abbreviazione di «pulsante» (g_puls = input_pulsante)
+pulsa	pulses	
+pulsazioni	pulses	
+purezze	purities	
+quarta	fourth	
+quei	those	
+questi	these	
+raccolto	collected	
+racconta	tells	
+racconto	account	? racconto/racconta = resoconto di MSE (mse_racconto): «report» possibile ma rapporto→report
+radici	roots	
+raffiche	bursts	
+ragioni	reasons	
+rami	branches	
+reali	real	
+recenti	recent	
+recuperati	recovered	
+registratore	recorder	
+regressione	regression	
+relitto	wreck	
+rende	makes	
+rendi	release	? rendi_ritenuta, ritenuti_resi: restituire un buffer trattenuto
+requisiti	requirements	
+requisito	requirement	
+residuo	residual	
+respinte	rejected	
+restare	stay	
+restava	remained	
+restavano	remained	
+restituisci	return	
+restituito	returned	
+revisione	revision	
+riaperto	reopened	
+riaperture	reopenings	
+riapre	reopens	
+riapri	reopen	
+riarmi	rearms	
+riarmo	rearm	
+riass	summ	abbreviazione di «riassunto»
+riassumi	summarize	
+riattaccandosi	reattaching	
+riattacchi	reattaches	
+ricambio	turnover	la platea cambia, il ricambio è mio
+riceve	receives	
+richiama	recall	
+richiede	requires	
+richiesti	requested	
+richiesto	requested	
+riconfig	reconfig	
+riconfigura	reconfigure	
+riconfigurazioni	reconfigurations	
+riconosci	recognize	
+riconosciuta	recognized	
+riconosciuti	recognized	
+ricontrollo	recheck	
+ricostruisce	rebuilds	
+ricostruisci	rebuild	
+ricostruita	rebuilt	
+ridimensionare	resize	
+riduzione	reduction	
+riempie	fills	
+rientrava	reentered	
+riepilogo	summary	? come sommario
+riesce	manages	
+rifatta	redone	
+riferimenti	references	
+rigenera	regenerate	
+riguarda	concerns	
+rilegge	rereads	
+rileggere	reread	
+rileva	detect	
+rimanda	resends	il figlio rimanda lo stesso fotogramma; rimando → resend
+rimando	resend	? anche «DOVE_RIMANDO» = dove rinvio (riferimento): prevale reinvio
+rimane	remains	
+rimaste	left	
+rimasto	left	
+rimasuglio	leftover	
+rimessa	restored	
+rimessi	restored	
+rimesso	restored	
+rimonta	remount	il palco si rimonta; rimontaggio → remount
+rimontaggio	remount	
+rimpicciolisci	zoom_out	
+rinegozia	renegotiate	
+riordinata	reordered	
+ripara	repair	
+riparte	restarts	
+ripartenze	restarts	
+ripetibile	repeatable	
+ripetizione	repetition	
+ripetizioni	repetitions	
+ripetuti	repeated	
+ripiega	falls_back	
+ripiegare	fall_back	
+riprese	resumed	? riprese = ripartenze/resumptions o «ripresi»; un solo uso
+riprodotto	reproduced	
+riprove	retries	
+risalito	risen	
+risana	heals	risana/risanati: torna sano
+risanati	healed	
+risano	heal	
+riscaldamento	warmup	
+riscaldo	warmup	
+riscrivi	rewrite	
+riscuoti	collect	appunti_riscuoti
+riservata	reserved	
+riso	reson	abbreviazione di «risonatore» (filtro a due poli), non «riso»
+risorsa	resource	
+risp	resp	abbreviazione di «risposta»
+rispecchia	mirrors	
+rispondere	respond	
+risponderebbe	would_respond	
+risposto	responded	
+risultare	result	
+risveglia	wake	
+risvegliato	woken	
+ritarda	delays	
+ritardatore	delayer	RitardatoreUdp
+ritenta	retry	
+ritenuti	retained	
+ritira	fetches	la pagina «ritira» l'impronta da /impronta
+ritr	refound	? abbreviazione di «ritrovati» (found_again): abbreviato perché found_again non si accorcia bene
+ritrova	finds_again	coerente con ritrovato = found_again
+ritrovato	found_again	glossario: ritrovo/ritrovati = finding again/found again
+riusa	reuse	
+riuscita	succeeded	
+riuscito	succeeded	
+rivaluta	reevaluate	
+rivelatore	detector	
+robusta	robust	
+rompi	break	
+rotazioni	rotations	
+ruoli	roles	
+ruota	rotate	
+sale	rises	? «sale» italiano = sale/aumenta; parola inglese omografa
+saltare	skip	
+saltate	skipped	
+saltato	skipped	
+saluto	greeting	
+salvataggio	save	
+salvate	saved	
+salvato	saved	
+sapere	know	
+saturo	saturated	
+sbagli	mistakes	
+sbagliare	err	
+sbloccato	unlocked	
+sblocco	unlock	SBLOCCA = unblock nel glossario (ban); qui sblocco dello schermo
+scaduta	expired	
+scalda	warm_up	
+scambi	swaps	
+scambia	swap	
+scambiate	swapped	
+scansiona	scan	
+scartate	discarded	
+scat	box	abbreviazione di «scatola» (box)
+scattare	trigger	
+scattate	triggered	
+scattato	triggered	
+scenari	scenarios	
+scheletro	skeleton	
+schermata	screen	
+scorre	scrolls	? «un terminale che scorre» (scroll) e «si scorre l'indice» (iterate): prevale scroll
+scorta	spare	buffer di scorta per getpwnam_r
+scost	offs	abbreviazione di «scostamento»
+scrittura	write	
+scritture	writes	
+scriverlo	write_it	
+segmento	segment	
+segreto	secret	
+segui	follow	
+seguire	follow	
+seguono	follow	
+selezione	selection	
+sembrava	seemed	
+semino	seed	? diminutivo di seme; se seme → seed altrove, nessun conflitto (non convivono)
+senso	sense	
+separa	separate	
+separazione	separation	
+servente	server	
+servire	serve	
+sette	seven	
+settembre	september	
+sezioni	sections	
+sfalsi	skews	scarti fra lampo e click
+sfoglia	browse	
+sforamento	overrun	
+sforo	overrun	come sforamento
+sfr	evic	abbreviazione di «sfratto» (eviction)
+sfratta	evict	glossario: sfratto = eviction
+sfrattato	evicted	
+sfregia	scar	sfregia_ripetendo
+sfumato	blurred	
+sgomberava	cleared_out	glossario: sgombra = clear out
+sia	is	? congiuntivo di essere; anche «sia… sia» = both
+sicurezza	security	
+sicuro	safe	
+sigilli	seals	
+sigle	acronyms	
+simboli	symbols	
+simbolo	symbol	
+simulacro	simulacrum	
+simulato	simulated	
+simulatore	simulator	
+sincrona	synchronous	
+sincronia	sync	
+sintassi	syntax	
+slegati	unbound	
+smentite	refuted	
+smette	stops	
+smetti	stop	? anche fermare/fermato → stop: «smetti_risveglio» = stop wakeup
+smista	dispatch	
+soffitto	ceiling	? collide con tetto («Ceiling, cap» nel glossario): se tetto → cap, nessun conflitto
+sollecitazione	stimulus	
+soltanto	only	
+som	sum	abbreviazione di «somma»
+sommario	summary	
+somme	sums	
+son	snd	abbreviazione di «suono» (il sink della sessione)
+sorda	deaf	
+sorpassi	overtakes	
+sorveglia	watches	
+sorveglianza	watch	
+sorvegliata	watched	sorveglia → watches, sorveglianza → watch
+sostegno	support	? come supporto
+sostituisci	replace	
+sottotipo	subtype	
+sovr	overlap	abbreviazione di «sovrapposte»
+spaiati	unpaired	
+spara	fire	spara(palco, metodo): invia un comando CDP
+sparito	vanished	
+spazi	spaces	
+spazzatura	garbage	
+spe	sent	abbreviazione di «spedite»
+specie	kind	
+spedire	send	
+spedisce	sends	
+spente	off	accese/spente
+spesa	cost	SPESA_ACCESSO, SPESA_INQUILINO
+speso	spent	
+spessore	thickness	
+spiegato	explained	
+spingi	push	
+spoglia	strip	spoglia_ivf
+sporca	dirty	
+sporchi	dirty	
+spost	shift	abbreviazione di «spostamento»
+spostamento	displacement	
+spostati	moved	
+spostato	moved	
+stacca	detach	
+staccata	detached	
+stampabile	printable	
+stantio	stale	
+statistica	statistics	
+stessi	same	
+stesura	draft	? collide con bozza → draft: forse «drafting»
+stile	style	
+storpia	mangle	
+storpiata	mangled	
+storta	wrong	
+storti	wrong	storto/storta/storti = andato storto
+storto	wrong	
+strappo	jerk	? strappi di input (STRAPPO_QUIETE, STRAPPO_ACCENSIONE)
+strascichi	aftermath	
+strette	tight	? «stretta_B» è una misura (ms_stretta_B), «non_strette» = non strette; anche «strette di mano» (handshakes) nei commenti
+stretto	tight	
+stringhe	strings	
+strisce	stripes	
+stroz	throttle	abbreviazione di «strozzatura»
+strozzati	throttled	
+strozzato	throttled	
+strumenti	tools	
+successo	success	
+sue	its	
+suff	enough	? abbreviazione di «sufficiente»
+sugg	hints	struct addrinfo sugg = hints
+suggerimenti	hints	
+sui	on	sui = su + i: «on the» → «on»
+sull	on	sull' = su + lo: «on the» → «on»
+sulle	on	sulle = su + le: «on the» → «on»
+sunto	digest	? come riassunto/riepilogo
+suoi	its	
+supera	exceeds	
+supportato	supported	
+supporto	support	
+sus	ups	plurale di «su» (mio_su), come gius → downs
+svegliate	woken	
+sveglie	wakeups	
+tacche	ticks	tacche di CPU (clock ticks)
+tagliate	cut	
+tagliati	cut	
+tappa	leg	tappa_c1…c4: tappa di un percorso; tappe → legs
+tappe	legs	
+tardivi	late	
+tardo	late	
+tav	pal	abbreviazione di «tavolozza»
+tavolozza	palette	
+tenace	persistent	
+teneva	held	
+tenute	kept	
+terminata	terminated	
+terna	triple	
+terne	triples	
+terza	third	
+terzo	third	
+tesi	thesis	
+tessere	tiles	
+teste	heads	
+tienila	keep_it	tienila_viva = keep it alive
+tirate	pulled	
+toccano	touch	
+toccare	touch	
+toccati	touched	
+toglie	removes	
+togliere	remove	
+tollerata	tolerated	
+tollerate	tolerated	
+tollerati	tolerated	
+tollerato	tolerated	
+tolta	removed	
+tolte	removed	
+toppe	patches	? collide con innesti → patches; FASCIA_TOPPE = toppe d'immagine: forse «blotches»
+tornano	return	
+tornati	returned	
+tornato	returned	
+torto	wrongly	a_torto
+traboccati	overflowed	
+traboccato	overflowed	
+tracce	traces	
+tranne	except	
+trascina	drag	
+trascorso	elapsed	
+trattieni	hold	incolla_trattieni, sveglia_e_trattieni
+travestita	disguised	
+travestito	disguised	
+tronca	truncate	
+troncate	truncated	
+tst	wit	abbreviazione di «testimone» (witness)
+uccisi	killed	
+udibile	audible	
+udibili	audible	
+umano	human	
+unici	unique	
+usate	used	
+usi	uses	
+ute	usr	abbreviazione di «utente»
+vaglio	screening	VaglioAudio
+valide	valid	
+validi	valid	
+valigia	suitcase	la valigia dei .deb preparata prima del noleggio
+valle	downstream	a valle
+valutata	evaluated	
+vanno	go	
+varchi	windows	? varchi = finestre di tempo (mio_giu per varco); «gates» se letterale
+varia	varies	
+variabili	variables	
+varianti	variants	
+vedere	see	
+vedeva	saw	
+vedi	see	
+vedrebbe	would_see	
+velocita	speed	
+veniva	came	
+verificata	verified	
+verifiche	checks	
+verita	truth	
+versi	directions	verso = direzione (scrivania/android)
+vesti	dress	cmd_vesti
+vetrina	showcase	? --vetrina cage|xvfb: dove gira il browser da guardare; «display» se più chiaro
+vietato	forbidden	
+vig	inforce	? VIG/vig = «in vigore» (in force); conteggio di righe in vigore
+vince	wins	
+virgolette	quotes	
+virtuale	virtual	
+visita	visit	
+vitalita	liveness	
+vogliono	want	
+vorrebbe	would_want	
+vuol	means	«vuol dire»
+zavorra	ballast	
+zitti	silent	
+zittisci	silence	

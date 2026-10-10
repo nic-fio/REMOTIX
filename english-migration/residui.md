@@ -1,0 +1,40 @@
+# Dati italiani da rinominare in modo coordinato (passo 3)
+- packaging/archivio/licenze.py «DA VERIFICARE» (confrontata, finisce in THIRD-PARTY-LICENSES)
+- esito.txt: pacchetto=si, immagine=, rpmbuild-esito= (rilascio.sh, costruisci-rpm.sh)
+- «FUNZIONE DI BANCO e' ACCESA»: src/rcp.c + rpm/costruisci-rpm.sh:88 (grep nel binario)
+- chiavi JSON formato/fonte, remotix-incorporate/1 (debian/rules, spec, PKGBUILD) + sbom.py
+- arch/costruisci.sh chiavi di sorgente.txt
+- arch/PKGBUILD:94 cita log «contesto PipeWire non creato…» → allineare al nuovo testo
+- banchi/11-scatole/11-accendi.sh:632 Comment=Il desktop nel browser; debian/rules commento kwin_scrivi_permesso superato
+- vadiretta.c:92 «(il driver non dice il suo nome)» e :516 testo del SEI (va nel flusso video) → tradurre
+- codificatore: nomi «(nessuno)»→«(none)» ecc. arrivano nel JSON di --prova-codifica: verificare chi li confronta (installatore? banchi?)
+- vocabolario banda: tetto=ceiling/cap, punto=operating point, filo=wire, serbatoio=reservoir → unificare
+- commenti «Intel UHD 730» → 770 (codificatore.c, budget.h, main.c, webtransport.c, wlroots.c, DECISIONI)
+- colori709.h rimanda a riquadro inesistente in codificatore.c
+- installatore: «nessuno» valore scritto dal binario (operazione.go:820, strade.go:68,106) ↔ figlio.c --prova-codifica → rinominare insieme
+- installatore: punti d'interruzione «dopo-fatta», «prima-intenzione» (operazione.go + test) → li prende il programma (token)
+- installatore: chiavi dei testi manca.carattere ecc. → token, ok col programma
+- RESTANO VOLUTI: gestore.go:391,431 uscite italiane di dnf/zypper; inglese_test.go/lingua_test.go rilevatore dell'italiano
+- sessione.c:4987,5102 motivazioni delle inibizioni (mostrate da powerdevil/gnome-session) → TRADURRE (full english)
+- sessione.c:3134 gruppi "prima"/"assenti" di gestore-prima → token, programma
+- sessione_marca(): parole nuove HEALTHY, BLACK: ZERO MONITORS… → banchi/02-sessione-stato.py deve usare le stesse
+- quando g04-rcp finisce: cp src/rcp.c src/rcp.h banchi/rcp/ (GEMELLATI)
+- citazioni storiche di log italiane nei commenti (main.c:763,2202,2913, registro.c:152, trasporto.c:1154, pagina.c:356, sessione.c:85): tradurre anche quelle (full english)
+- (fatto) gemelli rcp.c rcp.h autenticazione.c ricopiati in banchi/rcp/ — da RIFARE dopo ogni modifica a src/
+- ⭐ FRASI SUL FILO: dettagli del CONGEDO (rcp.c congeda/viola_input/viola_appunti/snprintf d), corpi del budget, "sconosciuto" → tradurre, controllando che la pagina e i banchi non li confrontino
+- NOMI_STATO, nome_input(), ACCETTATA/RIFIUTATA, chiavi utente=/motivo= → token, programma (verificare che "attesa-ciao" kebab venga tradotto)
+- citazioni incrociate fra file (ritmo di…, conto finale, §4.3 LIVELLO, rilascio al distacco) → allineare dopo
+- regola unica: numeri decimali col PUNTO in inglese (wlroots.c ha lasciato la virgola) → passata finale
+- guillemets «%s» nei log → valutare "…" (passata finale, coordinata coi banchi)
+- termini nuovi da fissare: sonda=probe, ripiego=fallback, riquadro=box?(scatola=box! conflitto → rect), scheda=card/GPU, fermo=held frame, gettone=token, guarigione=recovery
+- figlio.c: "da":"REMOTIX alla prima connessione" in gruppi-iscritti.jsonl ↔ installatore (disinstalla.go) → tradurre insieme; DIRETTA/PREESISTENTE → token
+- figlio.c motivo di --prova-codifica tradotto: verificare che installatore non lo confronti
+- 16-classifica.py & co. leggono «⭐ NOSTRO»/TRATTO → ora OURS/STRETCH (jsonl)
+- figlio.c:1410 "ZERO MONITOR" vs sessione.c ora "BLACK: ZERO MONITORS" → allineare
+- webtransport.c frasi sul filo nel CONGEDO (6328, 7487-7503, 7676) → con le altre frasi sul filo
+- webtransport.c "linea morta" motivo chiusura QUIC, causa=silenzio/stallo, "n/d", "finita"/"attiva" → token/dati, programma o passata dati
+- banchi 09-b79, 09-b81, 04-b25 leggono contratti di testo → jsonl
+- pagina: banchi che innestano guasti sostituendo testo/commenti della pagina (03-b16-dipinti.py, 01-p5-ff-strumenta.py, 04-b28-gesti.py ancore) → jsonl g01 (contiene anche commenti-ancora)
+- pagina: "Ctrl+Alt+Canc" → "Ctrl+Alt+Del" (etichetta visibile, ma è anche dato in SC_BOTTONI)
+- pagina: riga diario audio «ricevuti … suonati … BUCHI … fuoco si/NO» letta a regex da 09-b74 → token col programma + banchi
+- pagina: CONGEDO dalla pagina tradotti (solo log server) ok

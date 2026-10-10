@@ -1,0 +1,997 @@
+operazione	operation	
+tiene	holds	
+legge	law	? negli identificatori è «legge» = law (legge_del_costo, livello_legge, legge_rampa); nei commenti è quasi sempre «reads»
+filtro	filter	
+noti	known	
+spia	spy	la wl_keyboard «spia», la spia sul ClientHello: un osservatore
+ric	recv	abbreviazione di ricevuti/ricevitore (ric.recvfrom)
+esce	exits	
+disaccordo	mismatch	tela_disaccordo = canvas mismatch
+importa	import	
+scegli	choose	
+mossa	move	? due sensi: la mossa (move, prevalente negli identificatori) e «scena mossa» = moving scene
+fila	streak	? «di fila» = in a row (errori_di_fila → errors_streak), fila_massima = longest streak; in qualche banco «fila = []» è una coda
+matrice	matrix	
+fabbrica	factory	
+fattore	factor	
+pulita	clean	
+guida	driver	? GuidaFirefox, accendi_guida = il driver del browser (prevalente); GUIDA della sessione logind = session leader (solo commenti)
+cui	which	
+decodificatore	decoder	
+fonti	sources	
+chiesti	requested	
+purezza	purity	
+mestiere	job	
+toll	tol	abbreviazione di tolleranza
+rilievi	findings	rilievi di revisione (R9.8)
+mia	my	
+completi	complete	
+prossima	next	
+installa	install	
+ciano	cyan	
+copie	copies	
+puo	can	
+arrivato	arrived	
+certificato	certificate	
+pratica	case	? numero di pratica della connessione (uint64 *pratica): un identificativo di caso/ticket
+fallito	failed	
+tinta	tint	
+rientro	reentry	? prevalente il rientro (giudica_rientro, TETTO_RIENTRO_S); in tui.go è il rientro del testo = indent
+tenue	faint	token CSS del colore attenuato
+innesto	graft	
+carta	paper	token CSS --carta (superficie)
+agg	add	? nel banco b94 agg() = aggiungi; RX-AGG nei codici = aggiornamento (update)
+giudicare	judge	
+dall	from	
+valido	valid	
+est	ext	estensione (file e Vulkan)
+striscia	strip	
+pannello	panel	
+annulla	rollback	? nel motore IN_ANNULLAMENTO = ROLLING_BACK e ComeSiAnnulla = come si torna indietro; nella TUI (EvIntenzioneAnnulla) è cancel. disfa = undo (tipo «undo»)
+ed	and	
+aperti	open	
+autorita	authority	
+distanza	distance	
+muta	mute	
+conteggi	counts	
+lunga	long	
+anello	ring	? il glossario dice link (anello della catena, nei commenti); negli identificatori è il buffer circolare (audio_anello, dgram_anello, AUDIO_ANELLO_FOTOGRAMMI)
+vadiretta	vadirect	nome del modulo vadiretta.c (VA-API diretta)
+strato	layer	
+buttati	dropped	
+scatta	fires	
+visibile	visible	
+detta	said	
+indirizzi	addresses	
+unico	single	pacchetto unico = single package
+risanato	healed	
+scritto	written	
+arrivi	arrivals	
+ricevuto	received	
+adattata	adapted	
+tocca	touches	
+negoziato	negotiated	
+sani	healthy	
+fasi	phases	
+esige	demands	
+confronto	comparison	
+chieste	requested	
+orologi	clocks	
+enne	n	nome della lettera N (B_ENNE)
+staccato	detached	
+involo	inflight	in volo
+tema	theme	
+installazione	installation	
+preesistente	preexisting	
+altrui	others	
+strumento	instrument	
+oggi	today	
+vittima	victim	
+cade	falls	
+salti	jumps	salti dell'audio e della luma
+cons	deliv	abbreviazione di consegnati
+testimoni	witnesses	
+locali	local	
+destra	right	
+invece	instead	
+ignoto	unknown	
+giusta	correct	
+totali	totals	
+annota	annotate	
+spenta	off	
+completo	complete	
+pulito	clean	
+conversione	conversion	
+utili	useful	
+mis	meas	abbreviazione di misura
+usati	used	
+nodi	nodes	
+scaldata	warmup	il giro di riscaldamento
+braccio	arm	
+ferro	hardware	il «ferro» = la macchina fisica
+probl	prob	abbreviazione di problema
+quaderno	notebook	
+innesta	graft	
+decisioni	decisions	
+pila	stack	
+limite	limit	
+serbatoio	reservoir	
+sinistra	left	
+molla	release	luc.molla = lascia il lucchetto
+mosse	moves	
+premuti	pressed	
+uscito	exited	
+sposta	move	
+ritrovati	found_again	glossario: found again
+attaccate	attached	
+davvero	really	
+sbagliata	wrong	
+lista	list	
+cambiato	changed	
+quasi	nearly	
+sua	its	
+tieni	keep	
+spedito	sent	
+posizioni	positions	
+stacco	detach	? giudica_stacco, «prima dello stacco»; canale_stacco è invece il distacco fra canali (gap)
+taratura	calibration	
+dirliv	dirlevel	cartella del livello (dir + livello)
+condiviso	shared	
+qua	here	
+ses	sess	abbreviazione di sessioni
+valida	valid	
+attaccata	attached	
+prov	orig	abbreviazione di provenienza
+morde	bites	
+partenza	start	
+fascia	band	
+montaggio	mount	
+domande	questions	
+riattacco	reattach	
+asse	axis	
+rifiuti	refusals	
+statiche	static	
+finiti	finished	
+sorgenti	sources	
+trovate	found	
+esempi	examples	
+fiducia	trust	
+cong	frz	? abbreviazione di Congelatore (cong = Congelatore(...)); CONG_A/CONG_B non verificati
+dipendenze	dependencies	
+confessione	confession	
+fornitore	vendor	
+attributi	attributes	
+deriva	drift	
+mani	hands	
+sporco	dirty	
+gesti	gestures	
+impulsi	pulses	
+remota	remote	
+profili	profiles	
+giusto	correct	
+forme	shapes	
+strade	routes	
+guasta	broken	
+pennello	brush	
+spezza	split	
+avuti	got	
+globale	global	
+satura	saturated	
+parete	wall	orologio a parete = wall clock
+ripresa	resumed	sessione_ripresa
+accenti	accents	
+vicine	near	
+globali	global	
+riletta	reread	
+uccidi	kill	
+apposta	deliberately	
+sole	only	? «sole regole» = only rules; non verificati tutti gli usi
+causa	cause	
+accettata	accepted	
+predefinito	default	
+padrone	owner	
+malformata	malformed	
+rifiutato	refused	
+dipinto	painted	
+zeri	zeros	
+presentazione	presentation	
+segue	follows	
+installato	installed	
+tecnico	technical	
+rett	rect	abbreviazione di rettangolo
+offri	offer	
+operazioni	operations	
+chiude	closes	
+provati	tried	
+diverse	different	
+subito	immediately	
+apertura	opening	
+primi	first	
+risposte	replies	
+servita	served	
+elenca	list	
+accettato	accepted	
+bande	bands	
+importate	imported	
+giusti	correct	
+ridim	resize	abbreviazione di ridimensiona
+periodo	period	
+pulsanti	buttons	
+applicazione	application	
+calo	drop	calo_di_ritmo
+inattivita	inactivity	
+calcolo	compute	coda/fence/pool di calcolo Vulkan
+blu	blue	
+unisci	merge	
+ultimi	last	
+condizione	condition	
+osserva	observe	
+zitto	quiet	
+consegnata	delivered	
+uniforme	uniform	
+differenze	differences	
+vicino	near	
+accensione	startup	
+rifiutati	refused	
+congelato	frozen	
+parla	speaks	
+tetti	caps	
+fotografia	photo	
+uguale	equal	
+corti	short	
+servitore	server	
+essere	be	
+centro	center	
+descrittori	descriptors	
+contro	against	
+azzerati	zeroed	
+confine	boundary	
+annunciato	announced	
+affitto	lease	
+taciuti	silenced	
+morso	bitten	
+ripasso	sweep	
+inq	ten	abbreviazione di inquilini
+vita	life	
+resti	remainders	
+dichiarate	declared	
+volte	times	
+dello	of	
+primario	primary	
+dichiarazione	declaration	
+tinte	tints	
+lette	read	
+fette	slices	
+deposita	deposit	
+quadri	frames	? collide con fotogrammi (frame); i quadri sono fotogrammi/immagini contati nei banchi
+occupati	taken	posti_occupati
+sature	saturated	
+provvista	provisioning	
+lastre	slabs	
+sarebbe	would_be	
+usa	uses	
+quelli	those	
+troppo	too	
+aperte	open	
+combinazione	combination	
+tolto	removed	
+verdetti	verdicts	
+griglia	grid	
+riordino	reorder	
+risale	rises	
+piattaforma	platform	
+gettone	token	
+ricambi	replacements	
+abbandonati	abandoned	
+dato	given	
+innestato	grafted	
+funzione	function	
+registri	logs	
+spegnimento	shutdown	
+scrivere	write	
+ho	have	
+indietro	behind	
+interno	internal	
+nostra	our	
+distacco	detachment	
+coperte	covered	
+seriale	serial	
+guscio	shell	xdg_wm_base, il guscio del worker
+scomponi	decompose	
+componi	compose	
+guaio	trouble	
+nascosto	hidden	
+messo	set	
+gravita	severity	
+oltre	beyond	
+butta	drop	
+copertura	coverage	
+loro	their	
+sane	healthy	
+arrivano	arrive	
+presente	present	
+fisso	fixed	
+chiede	asks	
+riempimento	fill	
+finte	fake	
+arrivata	arrived	
+tratta	handle	tratta_attacca = handle_attach
+firma	signature	
+dichiarati	declared	
+ruolo	role	
+consumo	consumption	
+rifiutata	refused	
+trattenuto	held	
+sintetico	synthetic	
+metadato	metadata	
+breve	brief	
+terzi	third_party	
+fraz	frac	abbreviazione di frazione
+assestamento	settling	
+inquilini	tenants	
+creato	created	
+matricola	serial	? collide con seriale; matricola = numero di serie (serial_number dell'uscita wlroots)
+ancore	anchors	
+lungo	long	
+risponde	replies	
+simula	simulate	
+casella	cell	
+caselle	cells	
+pronta	ready	
+rosse	red	
+fili	threads	server_fili, RIPIEGO_H264_FILI: i fili di esecuzione
+sondaggio	poll	
+provato	tried	
+dita	fingers	
+tubo	pipe	
+guadagno	gain	
+predefiniti	default	
+scansione	scan	
+cart	dir	abbreviazione di cartella
+prevedi	predict	
+grafica	graphical	
+ritrovo	finding_again	glossario: finding again
+collega	connect	
+costruzione	build	
+analizza	analyze	
+finale	final	
+hanno	have	
+approvati	approved	
+cuscino	cushion	
+istanti	instants	
+ore	hours	
+riavvio	restart	
+comanda	command	
+misurata	measured	
+inizi	starts	
+trattenuti	held	
+degenere	degenerate	
+mettestr	putstr	metti + str
+entrati	entered	
+cartelle	dirs	
+sola	alone	
+sera	evening	
+bersagli	targets	
+ad	to	fino_ad_ammesso
+risultato	result	
+imputato	accused	
+guardate	viewed	
+sinistro	left	
+validatore	validator	
+risultati	results	
+scarica	download	? scarica_registro = download; mse_scarica forse «svuota» (drain)
+corso	progress	in_corso = in progress
+bandiere	flags	
+istantanee	snapshots	
+predica	predicate	? _predica(voci, etichetta, esito) nel banco b81: verifica di un predicato
+attori	actors	
+vale	worth	
+davanti	front	
+sbagliate	wrong	
+prime	first	
+seconda	second	
+quarto	fourth	
+dietro	behind	
+avanti	forward	
+mancante	missing	
+entrato	entered	
+congela	freeze	
+iniettore	injector	
+resa	yield	? resa_campioni, RESA_MINIMA, CRF_RESA: il rendimento (qualità ottenuta); a volte «resa» = render
+piani	plans	
+scelte	choices	
+dettagli	details	
+rilascio	release	
+affanno	strain	
+varco	gap	
+immagini	images	
+veste	guise	? «una veste nuova» = forma; leggi_veste, cl_veste: la forma visibile
+cinque	five	
+lancia	launch	
+lui	him	
+violazioni	violations	
+riletto	reread	
+impbuf	setbuf	buffer delle impostazioni HTTP/3 (SETTINGS)
+consumati	consumed	
+diverso	different	
+ricevuti	received	
+corsa	run	corsa a vuoto = dry run
+servibile	servable	
+morte	death	linee_morte = dead lines
+scad	exp	abbreviazione di scadenza
+risalita	rise	
+vincoli	constraints	
+aggancia	hook	come gancio = hook
+corse	runs	
+occupato	taken	posto_occupato
+strati	layers	
+bracci	arms	
+ammissione	admission	
+contenuti	contents	
+imposta	set	
+nostri	our	
+moduli	modules	
+appiglio	foothold	
+ignota	unknown	
+variabile	variable	
+espressione	expression	
+predefinita	default	
+originale	original	
+vuote	empty	
+decidi	decide	
+contatore	counter	
+giuste	correct	
+intervallo	interval	
+completa	complete	
+segnali	signals	
+dipende	depends	
+rampa	ramp	
+diversa	different	
+superfici	surfaces	
+dichiarazioni	declarations	
+debito	debt	
+istantanea	snapshot	
+macchia	blot	
+storte	skewed	
+lontano	far	
+ripieghi	fallbacks	ripiego = fallback
+garantisci	ensure	
+sgombero	clearout	glossario: sgombra = clear out
+adattatore	adapter	
+rilevato	detected	
+risolvi	resolve	
+autenticazione	authentication	
+tolti	removed	
+racc	coll	abbreviazione di raccoglitore (PID_RACC)
+quindi	so	
+aiuto	help	
+minore	less	
+entro	within	
+blocca	block	
+bloccati	blocked	
+conferma	confirm	
+riposo	rest	
+piccolo	small	
+pretesa	claim	
+connettore	connector	
+giud	judge	abbreviazione di giudice/giudizio
+richiamo	callback	? «il richiamo del decodificatore» = callback; RCP_TELA_RICHIAMO_MAX_MS non verificato (forse recall)
+minimi	min	
+presentato	presented	
+tavola	table	
+terminale	terminal	
+orfane	orphan	
+ammesse	allowed	
+aree	areas	
+collauda	test	
+ricarica	reload	
+involucro	wrapper	
+cosi	so	GIA_COSI = already so
+nei	in	
+costa	costs	
+differenza	difference	
+mezzo	half	? mezzo_pixel = half; TERRA_DI_MEZZO = middle
+bloccato	blocked	
+avanzo	surplus	
+muove	moves	
+grana	grain	
+sospesi	pending	
+sbagliati	wrong	
+nata	born	
+riattacca	reattach	
+misurati	measured	
+finti	fake	
+famiglie	families	
+retta	line	? la retta per due punti (fit lineare); collide con riga = line
+voglio	want	
+forte	strong	
+difetti	defects	
+meno	minus	
+illeggibili	unreadable	
+nasce	born	
+giudizi	judgments	
+falso	false	
+altre	other	
+sospeso	pending	
+regioni	regions	
+maschera	mask	
+arretrato	backlog	
+ampiezza	amplitude	
+durate	durations	
+risorse	resources	
+rientra	reenter	
+distribuzione	distribution	
+bloccate	blocked	
+sportello	endpoint	lo sportello /tastiera del telefono
+artefatto	artifact	
+qualcuno	someone	
+mentre	while	
+scritte	written	
+illeggibile	unreadable	
+ramo	branch	
+scarta	discard	
+cose	things	
+rimasti	remaining	
+sei	are	? MSG_CHI_SEI = who are you; ma SEI è anche l'acronimo H.264 (h264_sei, PREFIX_SEI) e «sei» = six: va lasciato dove è SEI
+scritta	written	
+prende	takes	
+monotono	monotonic	
+servi	serve	
+registrazione	recording	
+pretendi	require	
+appigli	footholds	
+fare	do	
+tagli	cuts	
+rifai	redo	
+faccia	face	
+ricerca	search	
+attacco	attach	
+scorri	scroll	
+tira	pull	
+spirale	spiral	
+alfa	alpha	
+accese	on	
+inn	graft	abbreviazione di innesto (remotix-cura-inn)
+estraneo	foreign	
+giornali	journals	
+fisico	physical	
+speciali	special	
+approvazione	approval	
+annullamento	rollback	IN_ANNULLAMENTO = "ROLLING_BACK"
+agganciato	hooked	
+erano	were	
+otto	eight	
+cambiati	changed	
+oscurati	obscured	
+nuda	bare	
+troppi	too_many	
+ass	abs	abbreviazione di assoluto
+pieni	full	
+bilancio	balance	
+maiusc	shift	
+scorrimento	scroll	
+copre	covers	
+mira	aim	
+sondato	probed	
+configura	configure	
+buio	darkness	
+sch	scr	abbreviazione di schermo
+annuncio	announcement	
+incorporato	embedded	
+mandati	sent	
+provadec	testdec	prova + dec(odifica)
+campionatore	sampler	
+contenuto	content	
+tenta	try	
+ott	oct	ottobre
+utilizzabile	usable	
+caduti	fallen	
+congedato	dismissed	glossario: CONGEDO = farewell; congedato = chiuso con un congedo
+svuota	empty	
+cieca	blind	
+doppioni	duplicates	
+dava	gave	
+scartato	discarded	
+persa	lost	
+verbo	verb	
+attribuisci	attribute	
+sfumatura	gradient	
+sporche	dirty	
+croma	chroma	
+richiedi	request	
+scuro	dark	
+iscrizione	enrollment	
+salvo	unless	? nei commenti «salvo che» = unless; SALVO come identificatore non verificato
+iniezione	injection	
+ritratto	portrait	
+ritorno	return	
+normale	normal	
+disarma	disarm	
+roba	stuff	
+cambiano	change	
+codificata	encoded	
+sospensione	suspend	
+mestieri	jobs	
+esa	hex	abbreviazione di esadecimale (impronta_esa)
+aggiornamento	update	
+temi	themes	
+tondo	round	
+intz	intent	abbreviazione di intenzione (installatore)
+leggere	read	
+poi	then	
+altrove	elsewhere	
+muore	dies	
+trappola	trap	
+genera	generate	
+compositori	compositors	
+scorciatoie	shortcuts	
+guardato	watched	
+sostituto	substitute	
+scaduti	expired	
+sconosciuto	unknown	
+arrivate	arrived	
+passato	past	
+tardi	late	
+sbagliato	wrong	
+pagine	pages	
+provate	tried	
+segni	signs	
+attrezzo	tool	
+smonta	unmount	palco_smonta: lo smontaggio del palco (contrario di montaggio = mount)
+ingressi	inputs	
+nomefile	filename	
+rettangolo	rectangle	
+andata	outbound	ritardo_andata = ritardo di andata
+rientri	reentries	
+crescente	increasing	
+forza	force	
+sfratti	evictions	
+campagna	campaign	
+fiato	breath	
+cifre	digits	
+ammessi	allowed	
+sal	climb	abbreviazione di salita (sal = Salita(o))
+dare	give	
+portatile	laptop	
+riavvia	restart	
+degli	of	
+momento	moment	
+orf	orph	abbreviazione di orfane
+ordinate	sorted	
+sullo	on	
+intenzione	intent	
+guardare	watch	
+fuso	merged	g_key_file «fuso» = file di chiavi fuso (merged); non fuso orario
+fallisce	fails	
+limiti	limits	
+ripetuto	repeated	
+dimensione	size	
+pretese	claims	
+nera	black	
+comprimi	compress	
+conteggio	count	
+detti	said	
+pinza	clamp	
+ritmi	rates	
+pronti	ready	
+punt	ptr	abbreviazione di puntatore
+risvegli	wakeups	
+contesa	contention	
+scelti	chosen	
+capi	ends	«dai due capi» = from both ends
+consigliato	recommended	
+cresciuta	grown	
+leva	lever	
+pista	track	
+secco	dry	a_secco
+onda	wave	
+riprendi	resume	
+membro	member	
+taci	hush	
+rispondi	reply	
+decisione	decision	
+servono	needed	
+giorno	day	
+rifiuta	refuse	
+comandi	commands	
+sconosciute	unknown	
+funziona	works	
+raccoglitore	collector	
+gamba	leg	
+trasferimento	transfer	
+partita	started	«SESSIONE è partita»
+provocato	caused	
+epoca	epoch	
+ultime	last	
+rinnova	renew	
+accetta	accept	
+lettere	letters	
+supportata	supported	
+isolata	isolated	
+rileggi	reread	
+passaggio	pass	
+dito	finger	
+bers	tgt	abbreviazione di bersagli
+scarico	drain	
+secchio	bucket	
+avv	warn	abbreviazione di avviso
+membri	members	
+spinta	push	
+cinture	belts	glossario
+cuore	heart	
+reversibilita	reversibility	
+disfa	undo	registraTipo("undo", nuovaDisfa)
+pompa	pump	
+ricostruite	rebuilt	
+tutt	both	? viene da «tutt'e due» (tutt_e_due); tradotto parte per parte darebbe both_and_two: meglio sostituire l'intero tutt_e_due con both
+assenti	absent	
+finisce	ends	
+aspetto	appearance	
+almeno	at_least	
+unica	single	
+vecchie	old	
+annuncia	announce	
+spegne	turns_off	
+potuto	could	
+intera	whole	
+veloce	fast	
+crono	chrono	
+tenuta	hold	
+canarina	canary	
+pericolose	dangerous	
+sito	site	
+boh	dunno	? interiezione
+cala	decreases	
+campiona	sample	
+rilettura	rereading	
+rilasciato	released	
+discordi	discordant	
+assicura	ensure	
+stabile	stable	
+liberi	free	
+accoppia	pair	
+incornicia	border	? «incornicia» = mette in cornice; non frame per non collidere con fotogramma
+rig	ln	abbreviazione di riga (ultima_rig)
+medio	avg	
+iniettati	injected	
+destinazione	destination	
+politica	policy	
+vissuto	lived	
+abb	aband	abbreviazione di abbandoni
+combaciare	match	
+ins	set	abbreviazione di insieme (DigestInsieme ins)
+serratura	lock	
+servizi	services	
+sincronizza	sync	
+esempio	example	
+virgola	comma	
+liste	lists	
+classico	classic	
+ncoda	nqueue	n + coda
+tenuti	kept	
+nell	in	
+protocolli	protocols	
+documento	document	
+prese	taken	
+etichette	labels	
+cucitura	seam	glossario
+dimostra	prove	
+unione	union	
+dagli	from	
+genere	kind	
+accanto	beside	
+combinazioni	combinations	
+grezza	raw	
+ing	in	abbreviazione di ingresso
+eti	lbl	abbreviazione di etichetta
+candidati	candidates	
+sottoscrizione	subscription	
+compila	compile	
+decodificato	decoded	
+descrittore	descriptor	
+concessa	granted	
+disaccordi	mismatches	
+disponibile	available	
+servo	serve	classe Servo(BaseHTTPRequestHandler): «io servo»
+qualcosa	something	
+maggiore	greater	
+ascoltatori	listeners	
+crollo	collapse	
+proposta	proposal	
+loquace	chatty	vicino a parlantina = chatter; verboso = verbose
+salt	jump	abbreviazione di salti (_salt)
+tas	kbd	abbreviazione di tastiera (tas_keymap, tas_entra)
+vuoti	empty	
+fig	child	abbreviazione di figlio (FIG_VIVO)
+grafo	graph	
+stima	estimate	
+capienza	capacity	
+lavora	works	
+contesti	contexts	
+capo	head	DA_CAPO = from the start
+installati	installed	
+congelatore	freezer	
+toccata	touched	
+installatore	installer	
+ngruppi	ngroups	n + gruppi
+deciso	decided	
+letterale	literal	
+previsione	prediction	
+nostre	our	
+lasciato	released	? «lasciato» = lasciato andare (quando_lasciato); left collide con sinistra
+estensione	extension	
+parziale	partial	
+inesistente	nonexistent	
+ambiguo	ambiguous	
+estremi	extremes	
+vietate	forbidden	
+ricodifiche	reencodes	
+dic	decl	abbreviazione di dichiarato (v["dich"].add(dic))
+scambio	swap	
+usata	used	
+cattivo	bad	
+formati	formats	
+ritaglia	crop	
+resi	returned	
+cursori	cursors	
+destro	right	
+pul	btn	abbreviazione di pulsante
+pun	ptr	abbreviazione di puntatore (pun_entra, pun_muove)
+respiro	respite	
+girata	forwarded	«richiesta girata al palco»
+suona	plays	
+spiegazione	explanation	
+fermata	stopped	
+avanza	advances	
+pend	slope	abbreviazione di pendenza
+residui	leftovers	
+accessi	accesses	
+dalle	from	
+peggior	worst	
+obbedisce	obeys	
+svegliano	wake	
+escluso	excluded	
+po	bit	«un po'» (muovi_un_po)
+preferenze	preferences	
+scrivibili	writable	
+inattivit	inactivity	parola troncata (INATTIVIT)
+italiano	italian	
+intatte	intact	
+interna	internal	
+sfrattata	evicted	
+intest	hdr	abbreviazione di intestazione
+avanzamento	progress	
+ritenuta	withheld	
+importazione	import	
+grezzi	raw	
+sost	subst	abbreviazione di sostituisci/sostituto
+grezze	raw	
+perde	loses	
+proprio	own	
+basta	enough	
+tutta	whole	
+aveva	had	
+permessi	permissions	
+vere	real	
+esclusi	excluded	
+doppia	double	
+nomina	names	
+riaccendi	turn_on_again	
+misurare	measure	
+cammino	path	
+provare	try	
+quelle	those	
+dico	say	
+spedite	sent	
+prologo	prologue	
+riparti	restart	
+negozia	negotiate	
+riporta	brings_back	
+aghi	needles	
+verboso	verbose	
+cresce	grows	
+crudi	raw	? collide con grezzi (raw): ultimi_crudi, crudi_voluti
+stringi	tighten	
+protette	protected	
+interrotto	interrupted	
+elemento	element	
+guarigione	healing	
+innesca	trigger	
+predicato	predicate	
+frammento	fragment	
+tarato	calibrated	
+durante	during	
+riaccese	turned_on_again	
+frazioni	fractions	
+rapidi	quick	
+permanente	permanent	
+nvolo	nflight	n + (in) volo
+maglie	meshes	glossario
+rilasci	releases	
+cicli	cycles	
+devono	must	
+serviti	served	
+incompatibile	incompatible	
+riunito	rejoined	
+esecuzione	execution	
+errate	wrong	
+accende	turns_on	
+battuta	keystroke	
+giudicate	judged	
+soli	only	
+rapporti	reports	? nei banchi i rapporti sono i resoconti; «rapporto» può essere anche ratio (rapporto_utile)
+negativo	negative	
+appoggio	staging	il giro/buffer d'appoggio
+massime	max	
+allineamento	alignment	
+entropia	entropy	
+attaccato	attached	
+intervalli	intervals	
+buttate	dropped	
+scavalcati	overtaken	
+pesi	weights	
+toccate	touched	
+presentati	presented	
+migliori	best	
+chiuse	closed	
+ripristina	restore	
+cresciuto	grown	
+tent	tries	abbreviazione di tentativi
+ammessa	allowed	
+cancello	gate	
+vit	life	abbreviazione di vita (VIT_BUONA, VIT_MORTA)
+scattata	fired	
+mosso	moved	
+suonati	played	
+esenti	exempt	
+spie	spies	
+secchi	buckets	
+fasce	bands	
+gemella	twin	glossario gemello
+spariti	vanished	
+caricamento	loading	
+mista	mixed	
+sfregiato	scarred	
+permesso	permission	
+espr	expr	abbreviazione di espressione
+ridotta	reduced	
+tocchi	touches	
+forn	vendor	abbreviazione di fornitore
+accumulo	accumulation	
+scartare	discard	
+rimedio	remedy	
+grafici	graphical	
+barriera	barrier	
+remotolen	remotelen	remoto + len
+scesi	lowered	ritmo_scesi
+ninvolo	ninflight	n + in volo
+librerie	libraries	
+rifare	redo	
+stanno	fit	? non_ci_stanno = don't fit; altrove «stanno» = are
+dizionario	dictionary	
+rotte	broken	
+utile	useful	
+ignote	unknown	
+meglio	better	
+denominatore	denominator	
+esporta	export	
+applicata	applied	
+uscendo	exiting	
+rifiutate	refused	
+aggiunta	added	
+stata	been	
+qualunque	any	
+ordinati	sorted	
+tace	silent	
+armato	armed	
+viene	comes	
+frasi	sentences	
+risoluzione	resolution	
+sezione	section	
+voluti	wanted	
+portata	reach	
+scende	descends	
+produttore	producer	
+azzerato	zeroed	
+natura	nature	
+rcpreg	rcplog	rcp + reg(istro): registro = log nel server

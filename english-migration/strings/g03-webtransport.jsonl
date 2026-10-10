@@ -1,0 +1,414 @@
+{"file": "src/webtransport.c", "prima": "⛔ la coda d'uscita ha toccato il tetto (%zu byte in ", "dopo": "⛔ the output queue has touched the cap (%zu bytes in "}
+{"file": "src/webtransport.c", "prima": "coda + %zu, tetto %u): non accodo", "dopo": "queue + %zu, cap %u): not enqueuing"}
+{"file": "src/webtransport.c", "prima": "⛔⛔ %zu byte per lo stream %ld NON entrano in coda: la ", "dopo": "⛔⛔ %zu bytes for stream %ld do NOT enter the queue: the "}
+{"file": "src/webtransport.c", "prima": "sessione NON prosegue.  Un canale affidabile non butta i ", "dopo": "session does NOT go on.  A reliable channel does not throw away "}
+{"file": "src/webtransport.c", "prima": "byte, e mezzo messaggio sul filo sarebbe una violazione ", "dopo": "bytes, and half a message on the wire would be a violation "}
+{"file": "src/webtransport.c", "prima": "fabbricata dal server (§6.1)", "dopo": "fabricated by the server (§6.1)"}
+{"file": "src/webtransport.c", "prima": "(nessuna)", "dopo": "(none)"}
+{"file": "src/webtransport.c", "prima": "(nessuna sessione)", "dopo": "(no session)"}
+{"file": "src/webtransport.c", "prima": "capsula di chiusura in attesa E coda non vuota", "dopo": "closing capsule pending AND queue not empty"}
+{"file": "src/webtransport.c", "prima": "capsula di chiusura non ancora matura (coda vuota) — ", "dopo": "closing capsule not mature yet (queue empty) — "}
+{"file": "src/webtransport.c", "prima": "chiusura=%#04x · chiusura_da=%s · mancano %lld ms · ", "dopo": "chiusura=%#04x · chiusura_da=%s · %lld ms left · "}
+{"file": "src/webtransport.c", "prima": "battito fra %lld ms", "dopo": "heartbeat in %lld ms"}
+{"file": "src/webtransport.c", "prima": "armato", "dopo": "armed"}
+{"file": "src/webtransport.c", "prima": "⛔ MAI ARMATO", "dopo": "⛔ NEVER ARMED"}
+{"file": "src/webtransport.c", "prima": "coda d'uscita non vuota", "dopo": "output queue not empty"}
+{"file": "src/webtransport.c", "prima": "niente", "dopo": "nothing"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: blocco d'audio di %zu byte oltre il tetto di %u — ", "dopo": "⛔ %s: audio block of %zu bytes beyond the cap of %u — "}
+{"file": "src/webtransport.c", "prima": "BUTTATO.  ⚠ Se questa riga compare, il tetto e' stato ", "dopo": "DROPPED.  ⚠ If this line appears, the cap has been "}
+{"file": "src/webtransport.c", "prima": "controllato in due posti e uno dei due sbaglia", "dopo": "checked in two places and one of the two is wrong"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: datagram di %zu byte NON scritto (%s) — il blocco ", "dopo": "⛔ %s: datagram of %zu bytes NOT written (%s) — the block "}
+{"file": "src/webtransport.c", "prima": "si BUTTA (§6.3: nessuna ritrasmissione).  Spediti %llu, ", "dopo": "is DROPPED (§6.3: no retransmission).  Sent %llu, "}
+{"file": "src/webtransport.c", "prima": "buttati %llu", "dopo": "dropped %llu"}
+{"file": "src/webtransport.c", "prima": "⚠ %s: datagram di %zu byte NON messo nel pacchetto ", "dopo": "⚠ %s: datagram of %zu bytes NOT put in the packet "}
+{"file": "src/webtransport.c", "prima": "(destlen %zu) — buttato perche' non esce un datagram da ", "dopo": "(destlen %zu) — dropped because no datagram has gone out for "}
+{"file": "src/webtransport.c", "prima": "%llu ms, e il tetto e' %u (§6.3).  ⚠ e il blocco che ", "dopo": "%llu ms, and the cap is %u (§6.3).  ⚠ and the block I "}
+{"file": "src/webtransport.c", "prima": "butto ne ha %llu, di ms: se i due numeri divergono, la ", "dopo": "drop is %llu ms old: if the two numbers diverge, the "}
+{"file": "src/webtransport.c", "prima": "coda non si sta rinfrescando.  Rifiutati %llu.  ", "dopo": "queue is not refreshing.  Refused %llu.  "}
+{"file": "src/webtransport.c", "prima": "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s", "dopo": "⛔ cwnd_left = %llu bytes, pacer quantum = %zu%s"}
+{"file": "src/webtransport.c", "prima": " ⇒ E' LA CONGESTIONE: il blocco non ci sta ADESSO", "dopo": " ⇒ IT IS CONGESTION: the block does not fit NOW"}
+{"file": "src/webtransport.c", "prima": " ⇒ NON e' la congestione: guarda il quanto", "dopo": " ⇒ it is NOT congestion: look at the quantum"}
+{"file": "src/webtransport.c", "prima": "⛔ il SETTINGS di nghttp3 e' piu' lungo di ", "dopo": "⛔ nghttp3's SETTINGS is longer than "}
+{"file": "src/webtransport.c", "prima": "%zu byte: non lo riscrivo", "dopo": "%zu bytes: not rewriting it"}
+{"file": "src/webtransport.c", "prima": "⛔ lo stream di controllo non comincia per 0x00 (e' ", "dopo": "⛔ the control stream does not start with 0x00 (it is "}
+{"file": "src/webtransport.c", "prima": "%llu): non tocco niente", "dopo": "%llu): touching nothing"}
+{"file": "src/webtransport.c", "prima": "⛔ il primo frame non e' SETTINGS (e' %llu)", "dopo": "⛔ the first frame is not SETTINGS (it is %llu)"}
+{"file": "src/webtransport.c", "prima": "⛔ SETTINGS non e' tutto qui (%zu + %llu != %zu)", "dopo": "⛔ SETTINGS is not all here (%zu + %llu != %zu)"}
+{"file": "src/webtransport.c", "prima": "⛔ SETTINGS troppo grande per il buffer", "dopo": "⛔ SETTINGS too big for the buffer"}
+{"file": "src/webtransport.c", "prima": "⭐ SETTINGS riscritto — %zu byte di nghttp3 + %zu nostri ", "dopo": "⭐ SETTINGS rewritten — %zu bytes of nghttp3 + %zu of ours "}
+{"file": "src/webtransport.c", "prima": "(ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)", "dopo": "(ENABLE_WEBTRANSPORT and WT_MAX_SESSIONS)"}
+{"file": "src/webtransport.c", "prima": "nessuno stream unidirezionale per il fotogramma: il ", "dopo": "no unidirectional stream for the frame: the "}
+{"file": "src/webtransport.c", "prima": "client ne concede ancora %llu (§2.5 ne vuole uno PER ", "dopo": "client still grants %llu (§2.5 wants one PER "}
+{"file": "src/webtransport.c", "prima": "fotogramma).  ⚠ La riga che decide — delta si butta, ", "dopo": "frame).  ⚠ The line that decides — delta is dropped, "}
+{"file": "src/webtransport.c", "prima": "chiave si aspetta — la scrive `rcp.c` (§2.3)", "dopo": "keyframe waits — is written by `rcp.c` (§2.3)"}
+{"file": "src/webtransport.c", "prima": "stream uni %ld aperto per un fotogramma; ngtcp2 dice che ", "dopo": "uni stream %ld opened for a frame; ngtcp2 says "}
+{"file": "src/webtransport.c", "prima": "ne restano %llu", "dopo": "%llu are left"}
+{"file": "src/webtransport.c", "prima": "⛔ il preambolo di WebTransport (%zu byte) non entra in ", "dopo": "⛔ the WebTransport preamble (%zu bytes) does not fit in the "}
+{"file": "src/webtransport.c", "prima": "coda: stream %ld azzerato, nessun fotogramma", "dopo": "queue: stream %ld reset, no frame"}
+{"file": "src/webtransport.c", "prima": "⛔ il FIN dello stream %ld non entra in coda: il ", "dopo": "⛔ the FIN of stream %ld does not fit in the queue: the "}
+{"file": "src/webtransport.c", "prima": "fotogramma e' uscito ma non e' dichiarato completo", "dopo": "frame has gone out but is not declared complete"}
+{"file": "src/webtransport.c", "prima": "nessuno stream unidirezionale per gli appunti: il ", "dopo": "no unidirectional stream for the clipboard: the "}
+{"file": "src/webtransport.c", "prima": "client ne concede ancora %llu (§2.5 ne vuole uno per ", "dopo": "client still grants %llu (§2.5 wants one per "}
+{"file": "src/webtransport.c", "prima": "trasferimento)", "dopo": "transfer)"}
+{"file": "src/webtransport.c", "prima": "⛔ il preambolo di WebTransport (%zu byte) non entra in ", "dopo": "⛔ the WebTransport preamble (%zu bytes) does not fit in the "}
+{"file": "src/webtransport.c", "prima": "coda: stream %ld azzerato, nessun trasferimento di appunti", "dopo": "queue: stream %ld reset, no clipboard transfer"}
+{"file": "src/webtransport.c", "prima": "⛔ il FIN dello stream %ld degli appunti non entra in ", "dopo": "⛔ the FIN of clipboard stream %ld does not fit in the "}
+{"file": "src/webtransport.c", "prima": "coda: il messaggio e' uscito e lo stream resta aperto", "dopo": "queue: the message has gone out and the stream stays open"}
+{"file": "src/webtransport.c", "prima": "⭐ PING del trasporto ACCESI ogni %llu s con %s: il segno ", "dopo": "⭐ transport PINGs ON every %llu s with %s: the sign "}
+{"file": "src/webtransport.c", "prima": "di vita di §5.3 lo produciamo NOI, non il keep-alive del ", "dopo": "of life of §5.3 is produced by US, not by the browser's "}
+{"file": "src/webtransport.c", "prima": "browser (che dava 15 s su 30 di tetto)%s", "dopo": "keep-alive (which gave 15 s out of a 30 cap)%s"}
+{"file": "src/webtransport.c", "prima": ".  ⚠ Sono la META' della soglia del silenzio della ", "dopo": ".  ⚠ They are HALF the silence threshold of the "}
+{"file": "src/webtransport.c", "prima": "linea morta: quando scade, le domande senza risposta ", "dopo": "dead line: when it expires, the unanswered questions "}
+{"file": "src/webtransport.c", "prima": "sono due", "dopo": "are two"}
+{"file": "src/webtransport.c", "prima": "PING del trasporto spenti con %s: la sessione e' finita, ", "dopo": "transport PINGs off with %s: the session is over, "}
+{"file": "src/webtransport.c", "prima": "non c'e' piu' niente da tenere vivo", "dopo": "there is nothing left to keep alive"}
+{"file": "src/webtransport.c", "prima": "il client si e' congedato", "dopo": "the client said farewell"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 9, soglia della coda video (§5.1): %llu ms — ", "dopo": "⭐ PHASE 9, video queue threshold (§5.1): %llu ms — "}
+{"file": "src/webtransport.c", "prima": "ACCESA: sopra la soglia un delta fermo si abbandona, sotto ", "dopo": "ON: above the threshold a stuck delta is abandoned, below "}
+{"file": "src/webtransport.c", "prima": "si TIENE.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 ", "dopo": "it is KEPT.  ⭐ It is the DEFAULT since 24 Aug 2026 "}
+{"file": "src/webtransport.c", "prima": "(decisione dell'utente: le cure della fase 9 si accendono ", "dopo": "(the user's decision: the phase 9 cures are switched on "}
+{"file": "src/webtransport.c", "prima": "nel prodotto; l'ha guardate sul desktop vero, §19.6 e ", "dopo": "in the product; the user looked at them on the real desktop, §19.6 and "}
+{"file": "src/webtransport.c", "prima": "§20.3).  ⚠ Il prezzo, `[M]` 09-b79: fino a +160 ms di ", "dopo": "§20.3).  ⚠ The price, `[M]` 09-b79: up to +160 ms of "}
+{"file": "src/webtransport.c", "prima": "deriva su rete cattiva, ZERO sulla linea sana (39,85 / ", "dopo": "drift on a bad network, ZERO on the healthy line (39.85 / "}
+{"file": "src/webtransport.c", "prima": "40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre i ", "dopo": "40.19 / 39.63 frames/s, zero keyframes in all three "}
+{"file": "src/webtransport.c", "prima": "bracci).  ⛔ Si SPEGNE con `--sgombra-soglia-ms 0`, ed e' ", "dopo": "arms).  ⛔ It is SWITCHED OFF with `--sgombra-soglia-ms 0`, and that is "}
+{"file": "src/webtransport.c", "prima": "l'unica strada.  Impostata da: %s", "dopo": "the only way.  Set by: %s"}
+{"file": "src/webtransport.c", "prima": "⛔ FASE 9, soglia della coda video (§5.1): 0 ms — SPENTA: ", "dopo": "⛔ PHASE 9, video queue threshold (§5.1): 0 ms — OFF: "}
+{"file": "src/webtransport.c", "prima": "si abbandona a ogni fotogramma piu' recente, cioe' il ", "dopo": "it abandons at every more recent frame, that is the "}
+{"file": "src/webtransport.c", "prima": "prodotto fino al 23 agosto 2026 byte per byte.  ⚠ E NON E' ", "dopo": "product up to 23 Aug 2026 byte for byte.  ⚠ And it is NOT "}
+{"file": "src/webtransport.c", "prima": "il predefinito: dal 24 agosto nasce ACCESA a %u ms, quindi ", "dopo": "the default: since 24 August it is born ON at %u ms, so "}
+{"file": "src/webtransport.c", "prima": "qualcuno ha battuto `--sgombra-soglia-ms 0` apposta.  ", "dopo": "someone typed `--sgombra-soglia-ms 0` on purpose.  "}
+{"file": "src/webtransport.c", "prima": "Impostata da: %s", "dopo": "Set by: %s"}
+{"file": "src/webtransport.c", "prima": "main.c, dalla riga di comando (--sgombra-soglia-ms; ", "dopo": "main.c, from the command line (--sgombra-soglia-ms; "}
+{"file": "src/webtransport.c", "prima": "il predefinito e' 100, e 0 la spegne)", "dopo": "the default is 100, and 0 switches it off)"}
+{"file": "src/webtransport.c", "prima": "⛔ il regolatore del ritmo e' SPENTO da chi ha lanciato il ", "dopo": "⛔ the rate regulator is OFF by whoever launched the "}
+{"file": "src/webtransport.c", "prima": "server (`--niente-ritmo-adattivo`): nessun fotogramma ", "dopo": "server (`--niente-ritmo-adattivo`): no frame "}
+{"file": "src/webtransport.c", "prima": "verra' mai saltato per la linea, cioe' il prodotto fino al ", "dopo": "will ever be skipped because of the line, that is the product up to "}
+{"file": "src/webtransport.c", "prima": "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: ", "dopo": "23 Aug 2026 byte for byte.  ⚠ And it is NOT the default: "}
+{"file": "src/webtransport.c", "prima": "dal 24 agosto nasce ACCESO (decisione dell'utente), quindi ", "dopo": "since 24 August it is born ON (the user's decision), so "}
+{"file": "src/webtransport.c", "prima": "qualcuno l'ha spento apposta.  ⚠ E questa riga E' il ", "dopo": "someone switched it off on purpose.  ⚠ And this line IS the "}
+{"file": "src/webtransport.c", "prima": "perche' — non e' che non ha dovuto scattare", "dopo": "reason — it is not that it never had to fire"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 9: il regolatore del ritmo e' ACCESO — un fotogramma ", "dopo": "⭐ PHASE 9: the rate regulator is ON — a frame "}
+{"file": "src/webtransport.c", "prima": "NON parte quando %u delta in volo hanno ancora byte nella mia ", "dopo": "does NOT leave when %u deltas in flight still have bytes in my "}
+{"file": "src/webtransport.c", "prima": "coda d'uscita.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 ", "dopo": "output queue.  ⭐ It is the DEFAULT since 24 Aug 2026 "}
+{"file": "src/webtransport.c", "prima": "(decisione dell'utente: le cure della fase 9 si accendono nel ", "dopo": "(the user's decision: the phase 9 cures are switched on in the "}
+{"file": "src/webtransport.c", "prima": "prodotto; l'ha guardate sul desktop vero, §19.6 e §20.3).  ⚠ Il ", "dopo": "product; the user looked at them on the real desktop, §19.6 and §20.3).  ⚠ The "}
+{"file": "src/webtransport.c", "prima": "prezzo, `[M]` 09-b79: soglia piu' regolatore costano fino a ", "dopo": "price, `[M]` 09-b79: threshold plus regulator cost up to "}
+{"file": "src/webtransport.c", "prima": "+160 ms di deriva su rete cattiva, ZERO sulla linea sana ", "dopo": "+160 ms of drift on a bad network, ZERO on the healthy line "}
+{"file": "src/webtransport.c", "prima": "(39,85 / 40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre ", "dopo": "(39.85 / 40.19 / 39.63 frames/s, zero keyframes in all three "}
+{"file": "src/webtransport.c", "prima": "i bracci).  ⛔ Si SPEGNE con `--niente-ritmo-adattivo`, ed e' ", "dopo": "arms).  ⛔ It is SWITCHED OFF with `--niente-ritmo-adattivo`, and that is "}
+{"file": "src/webtransport.c", "prima": "l'unica strada — il nome vecchio `--ritmo-adattivo` non esiste ", "dopo": "the only way — the old name `--ritmo-adattivo` no longer "}
+{"file": "src/webtransport.c", "prima": "piu'.  ⚠ Ogni discesa finisce nel registro (I1), e non c'e' ", "dopo": "exists.  ⚠ Every drop ends up in the log (I1), and there is "}
+{"file": "src/webtransport.c", "prima": "nessuna risalita da ricordare: `arretrato` si rilegge a ogni ", "dopo": "no rise to remember: `arretrato` is reread at every "}
+{"file": "src/webtransport.c", "prima": "fotogramma", "dopo": "frame"}
+{"file": "src/webtransport.c", "prima": "⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA ", "dopo": "⛔⛔ BUT THE VIDEO QUEUE THRESHOLD IS OFF "}
+{"file": "src/webtransport.c", "prima": "(`--sgombra-soglia-ms 0`), e allora questo regolatore NON ", "dopo": "(`--sgombra-soglia-ms 0`), and then this regulator WILL NEVER "}
+{"file": "src/webtransport.c", "prima": "SCATTERA' MAI: `video_sgombra()` svuota la coda dei delta a ", "dopo": "FIRE: `video_sgombra()` empties the delta queue at "}
+{"file": "src/webtransport.c", "prima": "ogni fotogramma, quindi `arretrato` non puo' superare 1 e i ", "dopo": "every frame, so `arretrato` cannot exceed 1 and the "}
+{"file": "src/webtransport.c", "prima": "posti sono %u.  ⚠ Un banco fatto cosi' misura ZERO discese e ", "dopo": "slots are %u.  ⚠ A bench made like this measures ZERO drops and "}
+{"file": "src/webtransport.c", "prima": "sembra dire «la linea porta»: sono due fatti con la stessa ", "dopo": "seems to say «the line carries»: they are two facts with the same "}
+{"file": "src/webtransport.c", "prima": "faccia.  ⇒ Coi predefiniti del 24 agosto 2026 nascono accesi ", "dopo": "face.  ⇒ With the defaults of 24 Aug 2026 BOTH are born "}
+{"file": "src/webtransport.c", "prima": "TUTT'E DUE: chi vede questa riga ha spento la soglia a mano ", "dopo": "on: whoever sees this line switched the threshold off by hand "}
+{"file": "src/webtransport.c", "prima": "e ha lasciato acceso il regolatore, che e' la combinazione ", "dopo": "and left the regulator on, which is the combination "}
+{"file": "src/webtransport.c", "prima": "che non misura niente", "dopo": "that measures nothing"}
+{"file": "src/webtransport.c", "prima": "⭐ e la soglia della coda video e' accesa a %llu ms: e' il ", "dopo": "⭐ and the video queue threshold is on at %llu ms: it is its "}
+{"file": "src/webtransport.c", "prima": "suo prerequisito — e' lei che lascia salire `arretrato` a ", "dopo": "prerequisite — it is what lets `arretrato` rise to "}
+{"file": "src/webtransport.c", "prima": "2-3, cioe' nell'intervallo in cui i %u posti discriminano", "dopo": "2-3, that is into the range in which the %u slots discriminate"}
+{"file": "src/webtransport.c", "prima": "⛔ la LINEA MORTA e' SPENTA da chi ha lanciato il server ", "dopo": "⛔ the DEAD LINE is OFF by whoever launched the server "}
+{"file": "src/webtransport.c", "prima": "(`--niente-linea-morta`): nessuna sessione verra' mai ", "dopo": "(`--niente-linea-morta`): no session will ever be "}
+{"file": "src/webtransport.c", "prima": "chiusa per stallo dell'uscita ne' per silenzio del client ", "dopo": "closed for output stall or for client silence "}
+{"file": "src/webtransport.c", "prima": "prima dei 30 s di QUIC (§5.3) — cioe' il prodotto fino al ", "dopo": "before QUIC's 30 s (§5.3) — that is the product up to "}
+{"file": "src/webtransport.c", "prima": "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: ", "dopo": "23 Aug 2026 byte for byte.  ⚠ And it is NOT the default: "}
+{"file": "src/webtransport.c", "prima": "dal 24 agosto nasce ACCESA (decisione dell'utente), quindi ", "dopo": "since 24 August it is born ON (the user's decision), so "}
+{"file": "src/webtransport.c", "prima": "qualcuno l'ha spenta apposta.  ⚠ E questa riga E' il ", "dopo": "someone switched it off on purpose.  ⚠ And this line IS the "}
+{"file": "src/webtransport.c", "prima": "perche' — non e' che non ha dovuto scattare", "dopo": "reason — it is not that it never had to fire"}
+{"file": "src/webtransport.c", "prima": "⛔⭐ FASE 9: la LINEA MORTA e' ACCESA — il ", "dopo": "⛔⭐ PHASE 9: the DEAD LINE is ON — the "}
+{"file": "src/webtransport.c", "prima": "filo cade e l'utente rientra A MANO (decisione dell'utente, 23 ", "dopo": "wire drops and the user comes back in BY HAND (the user's decision, 23 "}
+{"file": "src/webtransport.c", "prima": "agosto 2026).  ⭐ E' il PREDEFINITO dal 24 agosto 2026, e si ", "dopo": "Aug 2026).  ⭐ It is the DEFAULT since 24 Aug 2026, and it is "}
+{"file": "src/webtransport.c", "prima": "SPEGNE con `--niente-linea-morta` (unica strada; il nome ", "dopo": "SWITCHED OFF with `--niente-linea-morta` (only way; the old "}
+{"file": "src/webtransport.c", "prima": "vecchio `--linea-morta` non esiste piu').  ⛔⛔ E' LA CURA CHE ", "dopo": "name `--linea-morta` no longer exists).  ⛔⛔ IT IS THE CURE THAT "}
+{"file": "src/webtransport.c", "prima": "CHIUDE UNA SESSIONE: se la soglia fosse tarata male butterebbe ", "dopo": "CLOSES A SESSION: if the threshold were badly tuned it would throw "}
+{"file": "src/webtransport.c", "prima": "fuori chi sta lavorando — `[M]` 23-24 ago il margine e' >10x ", "dopo": "out someone who is working — `[M]` 23-24 Aug the margin is >10x "}
+{"file": "src/webtransport.c", "prima": "sopra `casa-cattiva`, la linea PEGGIORE che regge (stallo ", "dopo": "above `casa-cattiva`, the WORST line that holds (largest "}
+{"file": "src/webtransport.c", "prima": "massimo < 500 ms su dieci minuti, zero scatti), e 2,9x sotto i ", "dopo": "stall < 500 ms over ten minutes, zero firings), and 2.9x below the "}
+{"file": "src/webtransport.c", "prima": "14,26 s di `raffica-forte`, che non serve nessuno.  DUE cause, ", "dopo": "14.26 s of `raffica-forte`, which serves nobody.  TWO causes, "}
+{"file": "src/webtransport.c", "prima": "e ognuna scrive la sua riga ", "dopo": "and each writes its own "}
+{"file": "src/webtransport.c", "prima": "`linea-morta` col conto su cui ha deciso (I1):  (1) STALLO: ", "dopo": "`linea-morta` line with the count it decided on (I1):  (1) STALL: "}
+{"file": "src/webtransport.c", "prima": "%llu ms senza che esca un byte di video mentre ne avevamo da ", "dopo": "%llu ms without a video byte leaving while we had some to "}
+{"file": "src/webtransport.c", "prima": "mandare — e «avevo da mandare» vuol dire byte di fotogrammi ", "dopo": "send — and «I had some to send» means frame bytes "}
+{"file": "src/webtransport.c", "prima": "ancora in coda OPPURE un fotogramma nuovo dal palco: a scena ", "dopo": "still in the queue OR a new frame from the stage: on a still "}
+{"file": "src/webtransport.c", "prima": "ferma il conto non parte nemmeno;  (2) SILENZIO: %llu s senza ", "dopo": "scene the count does not even start;  (2) SILENCE: %llu s without "}
+{"file": "src/webtransport.c", "prima": "un pacchetto dal client con almeno %u pacchetti nostri usciti ", "dopo": "a packet from the client with at least %u of our packets sent "}
+{"file": "src/webtransport.c", "prima": "nel frattempo.  ⚠ Margini della soglia dello stallo, `[M]` 23 ", "dopo": "in the meantime.  ⚠ Margins of the stall threshold, `[M]` 23 "}
+{"file": "src/webtransport.c", "prima": "ago: 5,0× sopra il secondo intero vuoto di `raffica-1` (che ", "dopo": "Aug: 5.0× above the empty whole second of `raffica-1` (which "}
+{"file": "src/webtransport.c", "prima": "REGGE, 23,94 fotogrammi/s) e 2,9× sotto i 14,26 s di ", "dopo": "HOLDS, 23.94 frames/s) and 2.9× below the 14.26 s of "}
+{"file": "src/webtransport.c", "prima": "`raffica-forte` (che non serve nessuno).  ⛔⛔ E LA FRAZIONE DI ", "dopo": "`raffica-forte` (which serves nobody).  ⛔⛔ AND THE LOSS "}
+{"file": "src/webtransport.c", "prima": "PERDITA NON GIUDICA PIU': `permille=` resta nella riga come ", "dopo": "FRACTION NO LONGER JUDGES: `permille=` stays in the line as a "}
+{"file": "src/webtransport.c", "prima": "TESTIMONE del riordino — `casa-cattiva` ne dichiarava 512‰ e ", "dopo": "WITNESS of reordering — `casa-cattiva` declared 512‰ and "}
+{"file": "src/webtransport.c", "prima": "REGGEVA dieci minuti, `raffica-forte` 123‰ e non reggeva", "dopo": "HELD for ten minutes, `raffica-forte` 123‰ and did not hold"}
+{"file": "src/webtransport.c", "prima": "⚠ ma la soglia dello STALLO e' a 0 ms: resta il solo ", "dopo": "⚠ but the STALL threshold is at 0 ms: silence alone "}
+{"file": "src/webtransport.c", "prima": "silenzio.  Un'immagine ferma non chiudera' niente", "dopo": "remains.  A frozen image will close nothing"}
+{"file": "src/webtransport.c", "prima": "⚠ ma la soglia del SILENZIO e' a 0 s: resta la sola ", "dopo": "⚠ but the SILENCE threshold is at 0 s: loss alone "}
+{"file": "src/webtransport.c", "prima": "perdita, e un client che tace aspetta i 30 s di QUIC ", "dopo": "remains, and a client that goes quiet waits for QUIC's 30 s "}
+{"file": "src/webtransport.c", "prima": "(§5.3) come sempre", "dopo": "(§5.3) as always"}
+{"file": "src/webtransport.c", "prima": "la coda del video e' vuota", "dopo": "the video queue is empty"}
+{"file": "src/webtransport.c", "prima": "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra, si assume ", "dopo": "fallback: ngtcp2 has neither rtt nor window yet, the "}
+{"file": "src/webtransport.c", "prima": "il pavimento dichiarato di 20 Mbit/s (DECISIONI.md §3.1-bis)", "dopo": "declared floor of 20 Mbit/s is assumed (DECISIONI.md §3.1-bis)"}
+{"file": "src/webtransport.c", "prima": "dalla banda misurata (cwnd/rtt)", "dopo": "from the measured bandwidth (cwnd/rtt)"}
+{"file": "src/webtransport.c", "prima": "la soglia e' a 0 (spenta a mano: dal 24 ago 2026 il predefinito e' 100 ms)", "dopo": "the threshold is at 0 (switched off by hand: since 24 Aug 2026 the default is 100 ms)"}
+{"file": "src/webtransport.c", "prima": "⭐ %s: la coda del video e' sopra la soglia ", "dopo": "⭐ %s: the video queue is above the threshold "}
+{"file": "src/webtransport.c", "prima": "(%zu byte = %llu ms, soglia %llu ms) ma c'e' ", "dopo": "(%zu bytes = %llu ms, threshold %llu ms) but there is "}
+{"file": "src/webtransport.c", "prima": "la CHIAVE %u davanti: i %u delta dietro di ", "dopo": "KEYFRAME %u ahead: the %u deltas behind "}
+{"file": "src/webtransport.c", "prima": "lei si TENGONO — abbandonarli aprirebbe un ", "dopo": "it are KEPT — abandoning them would open a "}
+{"file": "src/webtransport.c", "prima": "buco e chiederebbe un'altra chiave (la ", "dopo": "hole and ask for another keyframe (the "}
+{"file": "src/webtransport.c", "prima": "spirale di RCP.md §5.2)", "dopo": "spiral of RCP.md §5.2)"}
+{"file": "src/webtransport.c", "prima": "⭐ %s: la coda del video torna SOTTO la soglia ", "dopo": "⭐ %s: the video queue goes back BELOW the threshold "}
+{"file": "src/webtransport.c", "prima": "(%zu byte = %llu ms, soglia %llu ms, %s): i %u ", "dopo": "(%zu bytes = %llu ms, threshold %llu ms, %s): the %u "}
+{"file": "src/webtransport.c", "prima": "delta arretrati si TENGONO — §5.1 dice PUO', non ", "dopo": "backlogged deltas are KEPT — §5.1 says MAY, not "}
+{"file": "src/webtransport.c", "prima": "DEVE", "dopo": "MUST"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: la coda del video passa SOPRA la soglia (%zu ", "dopo": "⛔ %s: the video queue goes ABOVE the threshold (%zu "}
+{"file": "src/webtransport.c", "prima": "byte = %llu ms, soglia %llu ms, %s), arretrato %u ", "dopo": "bytes = %llu ms, threshold %llu ms, %s), backlog %u "}
+{"file": "src/webtransport.c", "prima": "delta: da qui i piu' vecchi si abbandonano (§5.1), ", "dopo": "deltas: from here the oldest are abandoned (§5.1), "}
+{"file": "src/webtransport.c", "prima": "il minimo per rientrare", "dopo": "the minimum needed to get back"}
+{"file": "src/webtransport.c", "prima": "⚠ %s: la CHIAVE %u tiene ancora %zu byte in coda ", "dopo": "⚠ %s: KEYFRAME %u still holds %zu bytes in the queue "}
+{"file": "src/webtransport.c", "prima": "e §5.2 vieta di abbandonarla: si ASPETTA.  ⭐ E i ", "dopo": "and §5.2 forbids abandoning it: WAITING.  ⭐ And the "}
+{"file": "src/webtransport.c", "prima": "delta che vengono dopo non sono bloccati da lei — ", "dopo": "deltas coming after are not blocked by it — "}
+{"file": "src/webtransport.c", "prima": "gli stream sono indipendenti (§5.1)", "dopo": "streams are independent (§5.1)"}
+{"file": "src/webtransport.c", "prima": "%s — e la coda del video non si svuota in tempo: %zu byte = ", "dopo": "%s — and the video queue does not empty in time: %zu bytes = "}
+{"file": "src/webtransport.c", "prima": "%llu ms (%s), soglia %llu ms, arretrato %u delta", "dopo": "%llu ms (%s), threshold %llu ms, backlog %u deltas"}
+{"file": "src/webtransport.c", "prima": "⚠ %s: %u fotogrammi gia' in volo: il %u non entra ", "dopo": "⚠ %s: %u frames already in flight: frame %u does not enter "}
+{"file": "src/webtransport.c", "prima": "nell'elenco e NON potra' essere abbandonato (§5.1)", "dopo": "the list and can NOT be abandoned (§5.1)"}
+{"file": "src/webtransport.c", "prima": "ripiego: non c'e' connessione", "dopo": "fallback: there is no connection"}
+{"file": "src/webtransport.c", "prima": "🔸 la CHIAVE precedente non e' ancora uscita (byte in coda)", "dopo": "🔸 the previous KEYFRAME has not gone out yet (bytes in the queue)"}
+{"file": "src/webtransport.c", "prima": "ripiego: nessuna CHIAVE ancora spedita, la sua misura non esiste", "dopo": "fallback: no KEYFRAME sent yet, its size does not exist"}
+{"file": "src/webtransport.c", "prima": "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra", "dopo": "fallback: ngtcp2 has neither rtt nor window yet"}
+{"file": "src/webtransport.c", "prima": "la banda misurata basta: resta il fondo di 150 ms", "dopo": "the measured bandwidth is enough: the 150 ms backstop remains"}
+{"file": "src/webtransport.c", "prima": "⛔ la banda non basterebbe nemmeno per il tetto: fermo a 2 s, ", "dopo": "⛔ the bandwidth would not be enough even for the cap: held at 2 s, "}
+{"file": "src/webtransport.c", "prima": "e l'immagine resta rotta piu' a lungo", "dopo": "and the image stays broken longer"}
+{"file": "src/webtransport.c", "prima": "🔸 dalla banda misurata (cwnd/rtt)", "dopo": "🔸 from the measured bandwidth (cwnd/rtt)"}
+{"file": "src/webtransport.c", "prima": "🔸 %s: la CHIAVE si potra' richiedere ogni %llu ms invece ", "dopo": "🔸 %s: the KEYFRAME can be requested every %llu ms instead "}
+{"file": "src/webtransport.c", "prima": "di %u — l'ultima misurava %llu byte e la banda MISURATA e' ", "dopo": "of %u — the last one measured %llu bytes and the MEASURED bandwidth is "}
+{"file": "src/webtransport.c", "prima": "%llu kbit/s (cwnd %llu byte / rtt %llu ms, i due numeri ", "dopo": "%llu kbit/s (cwnd %llu bytes / rtt %llu ms, the two numbers "}
+{"file": "src/webtransport.c", "prima": "che ngtcp2 usa per decidere quanto spedire).  ⛔ IL PREZZO: ", "dopo": "ngtcp2 uses to decide how much to send).  ⛔ THE PRICE: "}
+{"file": "src/webtransport.c", "prima": "su linea stretta l'immagine resta rotta piu' a lungo dopo ", "dopo": "on a narrow line the image stays broken longer after "}
+{"file": "src/webtransport.c", "prima": "una perdita.  ⭐ In cambio l'audio passa: chiedere la ", "dopo": "a loss.  ⭐ In exchange audio gets through: asking for the "}
+{"file": "src/webtransport.c", "prima": "chiave nuova prima che la vecchia sia uscita teneva ", "dopo": "new keyframe before the old one had gone out kept "}
+{"file": "src/webtransport.c", "prima": "`cwnd_left` a zero e distruggeva i datagram (banco 07-b65)", "dopo": "`cwnd_left` at zero and destroyed the datagrams (bench 07-b65)"}
+{"file": "src/webtransport.c", "prima": "%s: nessun codec audio negoziato (§4.3) — questa ", "dopo": "%s: no audio codec negotiated (§4.3) — this "}
+{"file": "src/webtransport.c", "prima": "sessione non ha audio", "dopo": "session has no audio"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 7: canale audio ACCESO per «%s» da %s — codec %u (%s), ", "dopo": "⭐ PHASE 7: audio channel ON for «%s» from %s — codec %u (%s), "}
+{"file": "src/webtransport.c", "prima": "48 000 Hz, 2 canali (§5.3).  Il pari accetta datagram di %llu ", "dopo": "48 000 Hz, 2 channels (§5.3).  The peer accepts datagrams of %llu "}
+{"file": "src/webtransport.c", "prima": "byte%s", "dopo": "bytes%s"}
+{"file": "src/webtransport.c", "prima": "  ⚠⚠ E QUEL CHE SI SENTIRA' E' IL TONO DI PROVA, non il ", "dopo": "  ⚠⚠ AND WHAT WILL BE HEARD IS THE TEST TONE, not the "}
+{"file": "src/webtransport.c", "prima": "desktop: `--audio-prova` e' acceso (funzione di banco, I6)", "dopo": "desktop: `--audio-prova` is on (bench function, I6)"}
+{"file": "src/webtransport.c", "prima": "%s: nessun codec negoziato (§4.3) — questa sessione ", "dopo": "%s: no codec negotiated (§4.3) — this session "}
+{"file": "src/webtransport.c", "prima": "non ha video, ed e' quel che la fase 1 faceva", "dopo": "has no video, and it is what phase 1 did"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 3: canale video %s per «%s» da %s — codec %u, ", "dopo": "⭐ PHASE 3: video channel %s for «%s» from %s — codec %u, "}
+{"file": "src/webtransport.c", "prima": "tela %ux%u.  Chiedo al palco di catturare di continuo, e ", "dopo": "canvas %ux%u.  Asking the stage to capture continuously, and "}
+{"file": "src/webtransport.c", "prima": "§5.2 vuole che il PRIMO sia una CHIAVE", "dopo": "§5.2 wants the FIRST to be a KEYFRAME"}
+{"file": "src/webtransport.c", "prima": "RIACCESO (il ciclo era fermo: non lo ", "dopo": "SWITCHED BACK ON (the loop was stopped: nobody was "}
+{"file": "src/webtransport.c", "prima": "guardava piu' nessuno)", "dopo": "watching it any more)"}
+{"file": "src/webtransport.c", "prima": "ACCESO", "dopo": "ON"}
+{"file": "src/webtransport.c", "prima": "%s: §5.2 vuole una CHIAVE — richiesta girata al ", "dopo": "%s: §5.2 wants a KEYFRAME — request forwarded to the "}
+{"file": "src/webtransport.c", "prima": "palco di «%s» (codec %u), dopo %llu ms di attesa ", "dopo": "stage of «%s» (codec %u), after %llu ms of waiting "}
+{"file": "src/webtransport.c", "prima": "⛔ %s: il debito della CHIAVE (§5.2) e' acceso da %llu ms ", "dopo": "⛔ %s: the KEYFRAME debt (§5.2) has been on for %llu ms "}
+{"file": "src/webtransport.c", "prima": "e nessuna chiave e' arrivata — ogni delta viene rifiutato, ", "dopo": "and no keyframe has arrived — every delta is refused, "}
+{"file": "src/webtransport.c", "prima": "cioe' lo SCHERMO E' FERMO.  ⭐ Richiedo la chiave al palco ", "dopo": "that is the SCREEN IS FROZEN.  ⭐ Requesting the keyframe from the stage "}
+{"file": "src/webtransport.c", "prima": "di qui, senza aspettare il battito: e' la seconda cintura ", "dopo": "from here, without waiting for the heartbeat: it is the second belt "}
+{"file": "src/webtransport.c", "prima": "del 23 set 2026, e la prima (`batti_fra()`) evidentemente ", "dopo": "of 23 Sep 2026, and the first (`batti_fra()`) evidently "}
+{"file": "src/webtransport.c", "prima": "non e' bastata", "dopo": "was not enough"}
+{"file": "src/webtransport.c", "prima": "%llu ms di coda dentro la rete (rtt %llu - min %llu)", "dopo": "%llu ms of queue inside the network (rtt %llu - min %llu)"}
+{"file": "src/webtransport.c", "prima": "coda dentro la rete NON ANCORA NOTA (min_rtt manca)", "dopo": "queue inside the network NOT YET KNOWN (min_rtt missing)"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: il ritmo SCENDE — arretrato %u delta contro %u ", "dopo": "⛔ %s: the rate DROPS — backlog %u deltas against %u "}
+{"file": "src/webtransport.c", "prima": "posti, %zu byte fermi nella coda del video (%zu in ", "dopo": "slots, %zu bytes stuck in the video queue (%zu in "}
+{"file": "src/webtransport.c", "prima": "tutto).  cwnd %llu, cwnd_left %llu, in volo per ngtcp2 ", "dopo": "total).  cwnd %llu, cwnd_left %llu, in flight for ngtcp2 "}
+{"file": "src/webtransport.c", "prima": "%llu, miei consegnati e non riscontrati %zu, rtt %llu ", "dopo": "%llu, mine handed over and not acknowledged %zu, rtt %llu "}
+{"file": "src/webtransport.c", "prima": "ms, %s.  ⭐ Non e' prudenza e non e' un orologio: e' la ", "dopo": "ms, %s.  ⭐ It is not caution and it is not a clock: it is the "}
+{"file": "src/webtransport.c", "prima": "coda che non si svuota (I1).  ⚠ Se cwnd_left e' ALTO ", "dopo": "queue that does not empty (I1).  ⚠ If cwnd_left is HIGH "}
+{"file": "src/webtransport.c", "prima": "non e' la linea, e' la finestra del browser", "dopo": "it is not the line, it is the browser's window"}
+{"file": "src/webtransport.c", "prima": "il regolatore del ritmo lo ha frenato (fase 9: l'arretrato ha ", "dopo": "the rate regulator braked it (phase 9: the backlog has "}
+{"file": "src/webtransport.c", "prima": "raggiunto i posti) — ma il figlio lo aveva gia' CODIFICATO, e i ", "dopo": "reached the slots) — but the child had already ENCODED it, and the "}
+{"file": "src/webtransport.c", "prima": "riferimenti del codificatore sono andati avanti senza di lui", "dopo": "encoder's references moved on without it"}
+{"file": "src/webtransport.c", "prima": "⭐ %s: il ritmo RISALE — l'episodio e' durato %llu ms e sono ", "dopo": "⭐ %s: the rate RISES — the episode lasted %llu ms and "}
+{"file": "src/webtransport.c", "prima": "restati indietro %u fotogrammi.  ⚠ Non l'ha deciso nessuno: ", "dopo": "%u frames were left behind.  ⚠ Nobody decided it: "}
+{"file": "src/webtransport.c", "prima": "la coda si e' svuotata e l'arretrato e' zero", "dopo": "the queue emptied and the backlog is zero"}
+{"file": "src/webtransport.c", "prima": "ritmo di %s: arretrato LETTO %u volte in quest'ultimo secondo, ", "dopo": "rate of %s: arretrato READ %u times in the last second, "}
+{"file": "src/webtransport.c", "prima": "massimo %u, ultimo %u, posti %u — %u fotogrammi non partiti in ", "dopo": "maximum %u, last %u, slots %u — %u frames not sent in "}
+{"file": "src/webtransport.c", "prima": "questo secondo, %u in tutto.  ⚠ ZERO LETTURE = il palco non ha ", "dopo": "this second, %u in total.  ⚠ ZERO READS = the stage delivered "}
+{"file": "src/webtransport.c", "prima": "consegnato niente (scena ferma), e NON «arretrato zero»", "dopo": "nothing (still scene), and NOT «arretrato zero»"}
+{"file": "src/webtransport.c", "prima": "⚠ %s: il ciclo del padre e' rimasto indietro di %llu ms ", "dopo": "⚠ %s: the parent's loop fell behind by %llu ms "}
+{"file": "src/webtransport.c", "prima": "(%llu buchi in tutto, il peggiore %llu ms): la linea morta ", "dopo": "(%llu gaps in total, the worst %llu ms): the dead line "}
+{"file": "src/webtransport.c", "prima": "NON giudica questo giro e i suoi conti ripartono.  ⛔ In ", "dopo": "does NOT judge this round and its counts restart.  ⛔ In "}
+{"file": "src/webtransport.c", "prima": "quel tempo nessun byte poteva uscire e nessun pacchetto del ", "dopo": "that time no byte could go out and no client packet "}
+{"file": "src/webtransport.c", "prima": "client poteva essere LETTO: contarlo come silenzio suo ", "dopo": "could be READ: counting it as its silence "}
+{"file": "src/webtransport.c", "prima": "vorrebbe dire accusare la sua rete di una cecita' nostra ", "dopo": "would mean blaming its network for a blindness of ours "}
+{"file": "src/webtransport.c", "prima": "(saltati %llu volte da questa sessione)", "dopo": "(skipped %llu times by this session)"}
+{"file": "src/webtransport.c", "prima": "⛔ la linea e' MORTA: il client non fa vedere un pacchetto da ", "dopo": "⛔ the line is DEAD: the client has not shown a packet for "}
+{"file": "src/webtransport.c", "prima": "troppo tempo e le domande che gli abbiamo fatto nel frattempo ", "dopo": "too long and the questions we asked it meanwhile "}
+{"file": "src/webtransport.c", "prima": "sono rimaste tutte senza risposta.  Il filo cade, e per ", "dopo": "have all remained unanswered.  The wire drops, and to "}
+{"file": "src/webtransport.c", "prima": "tornare bisogna rientrare a mano (decisione dell'utente, 23 ", "dopo": "come back one has to reconnect by hand (the user's decision, 23 "}
+{"file": "src/webtransport.c", "prima": "agosto 2026)", "dopo": "Aug 2026)"}
+{"file": "src/webtransport.c", "prima": "⛔ la linea e' MORTA: da troppo tempo non esce un fotogramma pur ", "dopo": "⛔ the line is DEAD: for too long no frame has gone out while "}
+{"file": "src/webtransport.c", "prima": "avendone da mandare — l'immagine dell'utente e' FERMA, e a questo ", "dopo": "having some to send — the user's image is FROZEN, and at this "}
+{"file": "src/webtransport.c", "prima": "punto il prodotto o la congela o la mostra con secondi di ritardo ", "dopo": "point the product either freezes it or shows it seconds late "}
+{"file": "src/webtransport.c", "prima": "(`[M]` 23 agosto 2026: fino a 30,06 s di buco su `raffica-forte`).  ", "dopo": "(`[M]` 23 Aug 2026: up to 30.06 s of gap on `raffica-forte`).  "}
+{"file": "src/webtransport.c", "prima": "Nessuno dei due va servito: il filo cade, e per tornare bisogna ", "dopo": "Neither of the two is to be served: the wire drops, and to come back one has to "}
+{"file": "src/webtransport.c", "prima": "rientrare a mano (decisione dell'utente)", "dopo": "reconnect by hand (the user's decision)"}
+{"file": "src/webtransport.c", "prima": "⛔ la linea perde", "dopo": "⛔ the line is losing"}
+{"file": "src/webtransport.c", "prima": "⚠ la finestra e' chiusa", "dopo": "⚠ the window is closed"}
+{"file": "src/webtransport.c", "prima": "-- niente da segnalare", "dopo": "-- nothing to report"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato ", "dopo": "⛔ %s: canvas in force %ux%u but the captured frame "}
+{"file": "src/webtransport.c", "prima": "e' %ux%u — NON lo spedisco (§6.2): l'intestazione ", "dopo": "is %ux%u — NOT sending it (§6.2): the header "}
+{"file": "src/webtransport.c", "prima": "direbbe una misura e i pixel ne porterebbero un'altra.  ", "dopo": "would say one size and the pixels would carry another.  "}
+{"file": "src/webtransport.c", "prima": "⚠ Al palco si sta richiedendo la tela in vigore", "dopo": "⚠ The canvas in force is being requested from the stage"}
+{"file": "src/webtransport.c", "prima": "il fotogramma catturato non porta la tela in vigore (§6.2) — ma ", "dopo": "the captured frame does not carry the canvas in force (§6.2) — but "}
+{"file": "src/webtransport.c", "prima": "era gia' CODIFICATO, e i riferimenti del codificatore sono andati ", "dopo": "it was already ENCODED, and the encoder's references moved "}
+{"file": "src/webtransport.c", "prima": "avanti senza di lui", "dopo": "on without it"}
+{"file": "src/webtransport.c", "prima": "ne e' partito uno piu' recente (§5.1)", "dopo": "a more recent one has left (§5.1)"}
+{"file": "src/webtransport.c", "prima": "⚠ RIPIEGO DICHIARATO: la tabella delle tele dei palchi ", "dopo": "⚠ DECLARED FALLBACK: the table of stage canvases "}
+{"file": "src/webtransport.c", "prima": "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la ", "dopo": "is full (%d): «%s» does not fit, and on its reattach the "}
+{"file": "src/webtransport.c", "prima": "tela verra' concessa come la chiede il client invece ", "dopo": "canvas will be granted as the client asks for it instead "}
+{"file": "src/webtransport.c", "prima": "che come il palco ce l'ha", "dopo": "of as the stage has it"}
+{"file": "src/webtransport.c", "prima": "la tela del palco di «%s» (%ux%u) si dimentica: quel palco ", "dopo": "the canvas of the stage of «%s» (%ux%u) is forgotten: that stage "}
+{"file": "src/webtransport.c", "prima": "non c'e' piu', e un numero vecchio spacciato per fatto e' ", "dopo": "is gone, and an old number passed off as a fact is "}
+{"file": "src/webtransport.c", "prima": "peggio di nessun numero", "dopo": "worse than no number"}
+{"file": "src/webtransport.c", "prima": "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la ", "dopo": "⛔ «%s» has opened a LOCAL graphical session (%s): the "}
+{"file": "src/webtransport.c", "prima": "sessione remota viene chiusa — §5.1, motivo 0x04", "dopo": "remote session is being closed — §5.1, reason 0x04"}
+{"file": "src/webtransport.c", "prima": "senza dettaglio", "dopo": "no detail"}
+{"file": "src/webtransport.c", "prima": "⛔ fotogramma con codec %u BUTTATO: §6.2 ne definisce ", "dopo": "⛔ frame with codec %u DROPPED: §6.2 defines "}
+{"file": "src/webtransport.c", "prima": "%u (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ La riga si ", "dopo": "%u of them (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ The line is "}
+{"file": "src/webtransport.c", "prima": "scrive una volta per numero, non una per fotogramma", "dopo": "written once per number, not once per frame"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: il pari NON accetta datagram ", "dopo": "⛔ %s: the peer does NOT accept datagrams "}
+{"file": "src/webtransport.c", "prima": "(`max_datagram_frame_size` = 0) — questa sessione non ", "dopo": "(`max_datagram_frame_size` = 0) — this session will not "}
+{"file": "src/webtransport.c", "prima": "avra' audio.  ⚠ `RCP.md` §2.2 li PRETENDE, ma §6.3 ", "dopo": "have audio.  ⚠ `RCP.md` §2.2 DEMANDS them, but §6.3 "}
+{"file": "src/webtransport.c", "prima": "vieta di chiudere per un fatto dei datagram: si ", "dopo": "forbids closing over a datagram fact: it is "}
+{"file": "src/webtransport.c", "prima": "dichiara e si tace", "dopo": "declared and then kept quiet"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: blocco d'audio di %zu byte troppo grande ", "dopo": "⛔ %s: audio block of %zu bytes too big "}
+{"file": "src/webtransport.c", "prima": "(prefisso %zu + 12 + %zu, tetto del pari %llu) — ", "dopo": "(prefix %zu + 12 + %zu, peer's cap %llu) — "}
+{"file": "src/webtransport.c", "prima": "buttato.  Buttati %llu", "dopo": "dropped.  Dropped %llu"}
+{"file": "src/webtransport.c", "prima": "⚠ TONO DI PROVA ACCESO a %u Hz — ogni sessione ammessa ", "dopo": "⚠ TEST TONE ON at %u Hz — every admitted session "}
+{"file": "src/webtransport.c", "prima": "sentira' un tono invece del desktop.  ⛔ E' una funzione ", "dopo": "will hear a tone instead of the desktop.  ⛔ It is a bench "}
+{"file": "src/webtransport.c", "prima": "di banco (I6): in un'installazione normale non si accende", "dopo": "function (I6): in a normal installation it is not switched on"}
+{"file": "src/webtransport.c", "prima": "%s e non ascolta piu' nessuno «%s»: la cattura ", "dopo": "%s and nobody listens to «%s» any more: audio "}
+{"file": "src/webtransport.c", "prima": "dell'audio si ferma (il sink resta, e' l'invariante ", "dopo": "capture stops (the sink stays, it is invariant "}
+{"file": "src/webtransport.c", "prima": "%s e non guarda piu' nessuno «%s»: il palco smette ", "dopo": "%s and nobody watches «%s» any more: the stage stops "}
+{"file": "src/webtransport.c", "prima": "di catturare (il figlio resta, e' l'invariante I4)", "dopo": "capturing (the child stays, it is invariant I4)"}
+{"file": "src/webtransport.c", "prima": "canale di controllo = stream %ld", "dopo": "control channel = stream %ld"}
+{"file": "src/webtransport.c", "prima": "⛔ la capsula di chiusura non entra in coda", "dopo": "⛔ the closing capsule does not fit in the queue"}
+{"file": "src/webtransport.c", "prima": "chiusa la sessione WebTransport, codice 0x%02x (%zu byte: ", "dopo": "closed the WebTransport session, code 0x%02x (%zu bytes: "}
+{"file": "src/webtransport.c", "prima": "2 di frame DATA + 7 di capsula)", "dopo": "2 of DATA frame + 7 of capsule)"}
+{"file": "src/webtransport.c", "prima": "chiusura della sessione RIMANDATA, codice 0x%02x (in coda: ", "dopo": "session closure DEFERRED, code 0x%02x (in the queue: "}
+{"file": "src/webtransport.c", "prima": "%zu elementi ancora da spedire)", "dopo": "%zu elements still to send)"}
+{"file": "src/webtransport.c", "prima": "⛔ %zu byte BUTTATI dallo stream %ld: non e' il canale ", "dopo": "⛔ %zu bytes DROPPED from stream %ld: it is not the control "}
+{"file": "src/webtransport.c", "prima": "di controllo (§2.5, la violazione e' gia' a verbale) — ", "dopo": "channel (§2.5, the violation is already on record) — "}
+{"file": "src/webtransport.c", "prima": "%llu blocchi, %llu byte in tutto, e il credito NON si ", "dopo": "%llu blocks, %llu bytes in total, and the credit is NOT "}
+{"file": "src/webtransport.c", "prima": "riapre", "dopo": "reopened"}
+{"file": "src/webtransport.c", "prima": "⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione ", "dopo": "⛔ VIOLATION §3.1 — the page closed the session "}
+{"file": "src/webtransport.c", "prima": "col codice 0x%x, che non e' un motivo di §8.2 ", "dopo": "with code 0x%x, which is not a reason of §8.2 "}
+{"file": "src/webtransport.c", "prima": "(0 = «senza motivo», ed e' vietato).  A verbale va ", "dopo": "(0 = «without reason», and it is forbidden).  On record goes "}
+{"file": "src/webtransport.c", "prima": "⭐ il motivo e' arrivato per la seconda strada di ", "dopo": "⭐ the reason arrived by the second road of "}
+{"file": "src/webtransport.c", "prima": "§3.1 (il codice di chiusura): 0x%02x — i byte sul ", "dopo": "§3.1 (the close code): 0x%02x — the bytes on the "}
+{"file": "src/webtransport.c", "prima": "canale non erano piu' spedibili", "dopo": "channel could no longer be sent"}
+{"file": "src/webtransport.c", "prima": "capsula 0x%llx lunga %llu byte, oltre il ", "dopo": "capsule 0x%llx %llu bytes long, beyond the "}
+{"file": "src/webtransport.c", "prima": "tetto di %d: si SALTA senza tenerla (RFC ", "dopo": "cap of %d: SKIPPED without keeping it (RFC "}
+{"file": "src/webtransport.c", "prima": "la pagina ha CHIUSO la sessione ", "dopo": "the page CLOSED the "}
+{"file": "src/webtransport.c", "prima": "WebTransport: codice 0x%x", "dopo": "WebTransport session: code 0x%x"}
+{"file": "src/webtransport.c", "prima": "⛔ FIN del CLIENT sul canale di controllo (stream %ld): ", "dopo": "⛔ CLIENT FIN on the control channel (stream %ld): "}
+{"file": "src/webtransport.c", "prima": "§4.2, la sessione e' finita", "dopo": "§4.2, the session is over"}
+{"file": "src/webtransport.c", "prima": "stream unidirezionale %ld del client, sessione %llu, tipo ", "dopo": "client unidirectional stream %ld, session %llu, type "}
+{"file": "src/webtransport.c", "prima": "0x%04x, canale 0x%02x — %s", "dopo": "0x%04x, channel 0x%02x — %s"}
+{"file": "src/webtransport.c", "prima": "VIOLAZIONE", "dopo": "VIOLATION"}
+{"file": "src/webtransport.c", "prima": "⭐ INPUT, e da oggi si SERVE: i byte vanno a ", "dopo": "⭐ INPUT, and from today it is SERVED: the bytes go to "}
+{"file": "src/webtransport.c", "prima": "⭐ APPUNTI, e dalla fase 7 si SERVONO: i byte vanno ", "dopo": "⭐ CLIPBOARD, and since phase 7 it is SERVED: the bytes go "}
+{"file": "src/webtransport.c", "prima": "a rcp_ricevi_appunti() (§7.4).  ⚠ Uno stream per ", "dopo": "to rcp_ricevi_appunti() (§7.4).  ⚠ One stream per "}
+{"file": "src/webtransport.c", "prima": "trasferimento, quindi di questi ce n'e' piu' d'uno", "dopo": "transfer, so of these there is more than one"}
+{"file": "src/webtransport.c", "prima": "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i ", "dopo": "lawful (§2.5).  ⚠ But this phase does not serve it: the "}
+{"file": "src/webtransport.c", "prima": "byte si contano nel credito e si scartano, e ", "dopo": "bytes are counted against the credit and discarded, and "}
+{"file": "src/webtransport.c", "prima": "questa riga e' la tolleranza dichiarata (§3)", "dopo": "this line is the declared tolerance (§3)"}
+{"file": "src/webtransport.c", "prima": "⚠ nessun canale di controllo: il motivo ", "dopo": "⚠ no control channel: the reason "}
+{"file": "src/webtransport.c", "prima": "viaggia solo nella chiusura della sessione", "dopo": "travels only in the session closure"}
+{"file": "src/webtransport.c", "prima": "⛔ due stream bidirezionali dal client dentro ", "dopo": "⛔ two bidirectional streams from the client inside "}
+{"file": "src/webtransport.c", "prima": "la sessione: %ld e %ld — e il PRIMO APERTO ", "dopo": "the session: %ld and %ld — and the FIRST OPENED "}
+{"file": "src/webtransport.c", "prima": "era il %ld, arrivato per secondo: il canale ", "dopo": "was %ld, which arrived second: the control "}
+{"file": "src/webtransport.c", "prima": "di controllo e' stato eletto per ordine ", "dopo": "channel was elected by order of "}
+{"file": "src/webtransport.c", "prima": "d'arrivo, non per numero", "dopo": "arrival, not by number"}
+{"file": "src/webtransport.c", "prima": "⛔ due stream bidirezionali dal client dentro ", "dopo": "⛔ two bidirectional streams from the client inside "}
+{"file": "src/webtransport.c", "prima": "la sessione: il controllo e' il %ld, e il %ld ", "dopo": "the session: control is %ld, and %ld "}
+{"file": "src/webtransport.c", "prima": "e' di troppo", "dopo": "is one too many"}
+{"file": "src/webtransport.c", "prima": "stream %ld e' WebTransport, sessione %llu", "dopo": "stream %ld is WebTransport, session %llu"}
+{"file": "src/webtransport.c", "prima": "⛔ sessione WebTransport RIFIUTATA, percorso «%s» ", "dopo": "⛔ WebTransport session REFUSED, path «%s» "}
+{"file": "src/webtransport.c", "prima": "(atteso /rcp/1 — §2.2): 404", "dopo": "(expected /rcp/1 — §2.2): 404"}
+{"file": "src/webtransport.c", "prima": "⭐ sessione WebTransport APERTA su %s (stream %ld) — ", "dopo": "⭐ WebTransport session OPENED on %s (stream %ld) — "}
+{"file": "src/webtransport.c", "prima": "il canale di controllo va aperto entro %llu ms (§4.6, ", "dopo": "the control channel must be opened within %llu ms (§4.6, "}
+{"file": "src/webtransport.c", "prima": "richiesta HTTP/3 %s %s sullo stream %ld: 404 (su UDP si ", "dopo": "HTTP/3 request %s %s on stream %ld: 404 (over UDP only "}
+{"file": "src/webtransport.c", "prima": "serve solo la sessione WebTransport)", "dopo": "the WebTransport session is served)"}
+{"file": "src/webtransport.c", "prima": "⛔ il client non concede nemmeno 3 stream ", "dopo": "⛔ the client does not grant even 3 "}
+{"file": "src/webtransport.c", "prima": "unidirezionali: HTTP/3 non si apre", "dopo": "unidirectional streams: HTTP/3 does not open"}
+{"file": "src/webtransport.c", "prima": "⛔ non apro i tre stream di servizio di HTTP/3", "dopo": "⛔ cannot open the three HTTP/3 service streams"}
+{"file": "src/webtransport.c", "prima": "⛔ non lego gli stream di servizio a nghttp3", "dopo": "⛔ cannot bind the service streams to nghttp3"}
+{"file": "src/webtransport.c", "prima": "HTTP/3 aperto: controllo=%ld qpack=%ld/%ld", "dopo": "HTTP/3 open: control=%ld qpack=%ld/%ld"}
+{"file": "src/webtransport.c", "prima": "audio di %s, conto finale: %llu blocchi spediti, %llu ", "dopo": "audio of %s, final count: %llu blocks sent, %llu "}
+{"file": "src/webtransport.c", "prima": "buttati (coda piena o troppo grandi), %llu rifiutati da ", "dopo": "dropped (queue full or too big), %llu refused by "}
+{"file": "src/webtransport.c", "prima": "ngtcp2, %llu RIMANDATI dal pacer e poi partiti, %zu ", "dopo": "ngtcp2, %llu DEFERRED by the pacer and then sent, %zu "}
+{"file": "src/webtransport.c", "prima": "ancora in coda — codec %u", "dopo": "still in the queue — codec %u"}
+{"file": "src/webtransport.c", "prima": "video di %s, conto finale: %u fotogrammi consegnati a ", "dopo": "video of %s, final count: %u frames delivered to "}
+{"file": "src/webtransport.c", "prima": "RCP, %u NON SPEDITI (tela che non combacia + credito ", "dopo": "RCP, %u NOT SENT (canvas mismatch + credit "}
+{"file": "src/webtransport.c", "prima": "finito + rifiuto di rcp), %u spediti sul filo, %u ", "dopo": "exhausted + refusal by rcp), %u sent on the wire, %u "}
+{"file": "src/webtransport.c", "prima": "abbandonati a valle (§5.1) — ⚠ e %u ANNUNCI di tela ", "dopo": "abandoned downstream (§5.1) — ⚠ and %u ANNOUNCEMENTS of mismatched "}
+{"file": "src/webtransport.c", "prima": "discorde, che e' un NUMERO DIVERSO dai non spediti: il ", "dopo": "canvas, which is a DIFFERENT NUMBER from the not sent: the "}
+{"file": "src/webtransport.c", "prima": "registro ne scrive uno per ogni misura nuova, non uno ", "dopo": "log writes one for every new size, not one "}
+{"file": "src/webtransport.c", "prima": "per fotogramma (§E2, B2 22 ago 2026) — codec %u", "dopo": "per frame (§E2, B2 22 Aug 2026) — codec %u"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — ", "dopo": "⭐ PHASE 9, the video queue threshold: %s (%llu ms) — "}
+{"file": "src/webtransport.c", "prima": "delta TENUTI %u, abbandonati per soglia %u, e NON ", "dopo": "deltas KEPT %u, abandoned by threshold %u, and NOT "}
+{"file": "src/webtransport.c", "prima": "ACCETTATI per credito mancato %u (§2.3, causa 4: la ", "dopo": "ACCEPTED for missing credit %u (§2.3, cause 4: the "}
+{"file": "src/webtransport.c", "prima": "forma che il ricevente non vede) — dei tenuti, %u ", "dopo": "shape the receiver does not see) — of the kept, %u "}
+{"file": "src/webtransport.c", "prima": "dietro una CHIAVE ancora in coda", "dopo": "behind a KEYFRAME still in the queue"}
+{"file": "src/webtransport.c", "prima": "ACCESA (predefinito dal 24 ago 2026)", "dopo": "ON (default since 24 Aug 2026)"}
+{"file": "src/webtransport.c", "prima": "SPENTA a mano (--sgombra-soglia-ms 0)", "dopo": "OFF by hand (--sgombra-soglia-ms 0)"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 9, il regolatore del ritmo: %s — %u fotogrammi NON ", "dopo": "⭐ PHASE 9, the rate regulator: %s — %u frames that did NOT "}
+{"file": "src/webtransport.c", "prima": "PARTITI perche' l'arretrato aveva raggiunto i %u posti, su ", "dopo": "LEAVE because the backlog had reached the %u slots, out of "}
+{"file": "src/webtransport.c", "prima": "%u consegnati a RCP.  ⚠ E' un numero SUO: non e' fra i «non ", "dopo": "%u delivered to RCP.  ⚠ It is a number OF ITS OWN: it is not among the «not "}
+{"file": "src/webtransport.c", "prima": "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p ", "dopo": "sent» above.  ⛔ Declared bottom of the scale: 480p "}
+{"file": "src/webtransport.c", "prima": "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un ", "dopo": "25/s on 20 Mbit/s (DECISIONI.md §2.1) — below that it is a "}
+{"file": "src/webtransport.c", "prima": "DIFETTO da guardare, non una degradazione riuscita", "dopo": "DEFECT to look at, not a successful degradation"}
+{"file": "src/webtransport.c", "prima": "ACCESO (predefinito dal 24 ago 2026)", "dopo": "ON (default since 24 Aug 2026)"}
+{"file": "src/webtransport.c", "prima": "SPENTO a mano (--niente-ritmo-adattivo)", "dopo": "OFF by hand (--niente-ritmo-adattivo)"}
+{"file": "src/webtransport.c", "prima": "⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di ", "dopo": "⭐ PHASE 9, the bytes HELD for retransmission (contract of "}
+{"file": "src/webtransport.c", "prima": "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla ", "dopo": "ngtcp2_conn_writev_stream): peak %zu bytes, residue at "}
+{"file": "src/webtransport.c", "prima": "chiusura %zu, e %zu byte ancora da spedire in coda", "dopo": "closure %zu, and %zu bytes still to send in the queue"}
+{"file": "src/webtransport.c", "prima": "la connessione se ne va senza un congedo", "dopo": "the connection is going away without a farewell"}
+{"file": "src/webtransport.c", "prima": "codificatore audio di %s: %llu blocchi entrati, %llu ", "dopo": "audio encoder of %s: %llu blocks in, %llu "}
+{"file": "src/webtransport.c", "prima": "usciti%s", "dopo": "out%s"}
+{"file": "src/webtransport.c", "prima": " — ⭐ uno per uno: l'`istante` di §6.3 appartiene ", "dopo": " — ⭐ one for one: the `istante` of §6.3 belongs "}
+{"file": "src/webtransport.c", "prima": "al blocco che parte", "dopo": "to the block that leaves"}
+{"file": "src/webtransport.c", "prima": " — ⛔ NON uno per uno: l'`istante` scritto sul filo ", "dopo": " — ⛔ NOT one for one: the `istante` written on the wire "}
+{"file": "src/webtransport.c", "prima": "puo' non essere quello del blocco spedito", "dopo": "may not be that of the block sent"}
+{"file": "src/webtransport.c", "prima": "chiuso lo stream %ld: la sessione e' finita, il posto ", "dopo": "closed stream %ld: the session is over, the slot "}
+{"file": "src/webtransport.c", "prima": "si libera", "dopo": "is freed"}
+{"file": "src/webtransport.c", "prima": "il client ha chiuso il canale di controllo", "dopo": "the client closed the control channel"}
+{"file": "src/webtransport.c", "prima": "⚠ %s: nessuna sessione RCP viva, il motivo %#04x ", "dopo": "⚠ %s: no live RCP session, reason %#04x "}
+{"file": "src/webtransport.c", "prima": "viaggia solo nel codice di chiusura della sessione ", "dopo": "travels only in the session close code "}
+{"file": "src/webtransport.c", "prima": "(§3.1, seconda strada)", "dopo": "(§3.1, second road)"}
+{"file": "src/webtransport.c", "prima": "⛔ %s: sessione WebTransport aperta e canale di ", "dopo": "⛔ %s: WebTransport session open and control "}
+{"file": "src/webtransport.c", "prima": "controllo MAI aperto entro %llu ms — congedo ", "dopo": "channel NEVER opened within %llu ms — farewell "}
+{"file": "src/webtransport.c", "prima": "⚠ nessun CONGEDO sul canale: il canale non esiste, ", "dopo": "⚠ no CONGEDO on the channel: the channel does not exist, "}
+{"file": "src/webtransport.c", "prima": "il motivo viaggia nel codice di chiusura (§3.1 punto ", "dopo": "the reason travels in the close code (§3.1 point "}
+{"file": "src/webtransport.c", "prima": "3, e §7.15 lo consente)", "dopo": "3, and §7.15 allows it)"}
+{"file": "src/webtransport.c", "prima": "⛔ la coda d'uscita non si e' svuotata in 3 s ", "dopo": "⛔ the output queue did not empty in 3 s "}
+{"file": "src/webtransport.c", "prima": "(%zu elementi da spedire, %zu byte; e %zu byte ", "dopo": "(%zu elements to send, %zu bytes; and %zu bytes "}
+{"file": "src/webtransport.c", "prima": "consegnati a ngtcp2 in attesa di riscontro): la ", "dopo": "handed to ngtcp2 awaiting acknowledgement): the "}
+{"file": "src/webtransport.c", "prima": "capsula di chiusura parte LO STESSO col codice ", "dopo": "closing capsule leaves ALL THE SAME with code "}
+{"file": "src/webtransport.c", "prima": "0x%02x — §3.1 punto 3 e' il motivo che salva le ", "dopo": "0x%02x — §3.1 point 3 is the reason that saves the "}
+{"file": "src/webtransport.c", "prima": "diagnosi, e aspettare per sempre vuol dire non ", "dopo": "diagnoses, and waiting forever means never "}
+{"file": "src/webtransport.c", "prima": "eseguirlo mai", "dopo": "executing it"}
+{"file": "src/webtransport.c", "prima": "stream %ld bloccato: %zu byte RESTANO in ", "dopo": "stream %ld blocked: %zu bytes STAY in the "}
+{"file": "src/webtransport.c", "prima": "coda (%zu gia' usciti) — ⭐ gli ALTRI stream ", "dopo": "queue (%zu already gone out) — ⭐ the OTHER streams "}
+{"file": "src/webtransport.c", "prima": "continuano (§5.1)", "dopo": "go on (§5.1)"}
+{"file": "src/webtransport.c", "prima": "⚠ %u stream bloccati nella stessa ", "dopo": "⚠ %u streams blocked in the same "}
+{"file": "src/webtransport.c", "prima": "passata: la coda si ferma qui.  Non ", "dopo": "pass: the queue stops here.  It is "}
+{"file": "src/webtransport.c", "prima": "e' §5.1 che non vale, e' il tetto ", "dopo": "not §5.1 that does not hold, it is the cap "}
+{"file": "src/webtransport.c", "prima": "di WT_BLOCCATI_MAX", "dopo": "of WT_BLOCCATI_MAX"}
+{"file": "src/webtransport.c", "prima": "⛔ impostazioni, conto impossibile ", "dopo": "⛔ settings, impossible count "}
+{"file": "src/webtransport.c", "prima": "(%llu presi su %zu offerti)", "dopo": "(%llu taken out of %zu offered)"}
+{"file": "src/webtransport.c", "prima": "impostazioni, %zu byte su %zu — il resto ", "dopo": "settings, %zu bytes out of %zu — the rest "}
+{"file": "src/webtransport.c", "prima": "alla passata dopo", "dopo": "at the next pass"}
