@@ -327,8 +327,8 @@ def a_col_tono_tace_solo_il_primo(tetto=2):
         `[M]` 24 August 2026.  The predicate asked for `taciuti == 0` and gave
         RED with `taciuti = 1`.  The log says which:
 
-          09:10:25.701  ⭐ PCM aperto …
-          09:10:25.731  ⭐ silenzio DIGITALE: 1 blocchi non spediti su 1 entrati
+          09:10:25.701  ⭐ PCM opened …
+          09:10:25.731  ⭐ DIGITAL silence: 1 blocks not sent of 1 in
 
         ⇒ It is the **first block of the session**, thirty milliseconds after the
         encoder opened and before the tone's samples had

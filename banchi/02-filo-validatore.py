@@ -21,8 +21,8 @@ conforming bytes, but only those»*.
 ⛔ **And today it does not see the video.**  `01-b4-validatore.py`, line 521:
 
     if canale != 0x00:
-        print(f"   blocco {nb}: canale {CANALI[canale]} dal {chi}, "
-              f"{lung} byte — non giudicato da questo validatore")
+        print(f"   block {nb}: channel {CANALI[canale]} from the {chi}, "
+              f"{lung} bytes — not judged by this validator")
         continue
 
 ⚠ It is an honest line — it **declares** it does not judge, which is the opposite of

@@ -1,0 +1,4 @@
+{"file": "banchi/04-b25-tastiera.c", "prima": "%ld log lines, «FALLBACK DECLARED» %s", "dopo": "%ld log lines, «DECLARED FALLBACK» %s"}
+{"file": "banchi/04-b25-tastiera.c", "prima": "FALLBACK DECLARED", "dopo": "DECLARED FALLBACK"}
+{"file": "banchi/02-filo-validatore.py", "prima": "   blocco {nb}: canale {CANALI[canale]} dal {chi}, {lung} byte — non giudicato da questo validatore", "dopo": "   block {nb}: channel {CANALI[canale]} from the {chi}, {lung} bytes — not judged by this validator"}
+{"file": "banchi/06-b33-risveglio-certifica.sh", "prima": "results: $ESITI", "dopo": "results: $LAV/esiti-<label>.jsonl (one per round)"}

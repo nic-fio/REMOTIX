@@ -64,7 +64,7 @@
       delivered everything» while half the timeline is silence, one of the
       two would be lying and it would show.
 
-⛔⛔ THE `[M]` «purezza 0,175» OF `pagina.html` LINE 6474 **IS NOT THE TERM OF
+⛔⛔ THE `[M]` «purity 0.175» OF `pagina.html` LINE 6474 **IS NOT THE TERM OF
      COMPARISON**, and this bench does not lean on it: its definition is not
      known, and comparing a number whose definition is unknown with one
      whose definition is known is the most polite way of manufacturing a triumph.
@@ -170,7 +170,7 @@ def inf(t):  print("    --  %s" % t)
 #           second leg, independent of the client's arithmetic, and on a
 #           profile with loss **it cannot go back to 1**.
 #
-# ⛔⛔ AND THE `[M]` «purezza 0,175» OF `pagina.html` LINE 6474 **IS NOT A
+# ⛔⛔ AND THE `[M]` «purity 0.175» OF `pagina.html` LINE 6474 **IS NOT A
 #      REFERENCE**: its definition is not known (with the denominator the page
 #      benches use — `suonati/ricevuti`, `09-b74:300` — that ratio
 #      is ~1.000 with both rules, because the discard does `continue`

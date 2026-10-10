@@ -1537,10 +1537,17 @@ def p6_i_predefiniti_non_cambiano_niente(lm, sf, stato, n, nome_profilo):
 #                              a row: the stall is a continuous duration.
 #     ⭐ And five came in: `stallo_ms` `soglia_stallo_ms` `offerti`
 #        `usciti_byte` `coda_video` (plus `cwnd_left`).
+# ⛔ AND IT CHANGED AGAIN ON 25 AUGUST 2026 (phase 10 cures, c808342): seven
+#    fields came in between `srtt_us` and `giudizio` — `fermo_ms` `giri_fermi`
+#    `saltati` `ritmo_giu` `ritmo_arretrato` `ritmo_posti` `ritmo_scesi`.  This
+#    bench reads none of them, but step 0 rereads the order and gave red until
+#    they were written here too.
 CAMPI_LM = ["causa", "stallo_ms", "soglia_stallo_ms", "offerti", "usciti_byte",
             "coda_video", "silenzio_ms", "soglia_silenzio_ms", "prove",
             "minimo_prove", "persi", "spediti", "permille", "finestra_ms",
-            "minimo_pacchetti", "cwnd", "cwnd_left", "srtt_us", "giudizio"]
+            "minimo_pacchetti", "cwnd", "cwnd_left", "srtt_us", "fermo_ms",
+            "giri_fermi", "saltati", "ritmo_giu", "ritmo_arretrato", "ritmo_posti",
+            "ritmo_scesi", "giudizio"]
 
 
 def _fab_lm(ora="21:14:02.123", causa="stallo", stallo_ms=5004,
@@ -1551,12 +1558,16 @@ def _fab_lm(ora="21:14:02.123", causa="stallo", stallo_ms=5004,
                      "having some to send"):
     """A `linea-morta` line as the product writes it FROM TODAY, field by
        field and in order.  ⛔ `soglia_permille=` and `finestre=N/M` are no longer
-       there: if they reappeared, `_certifica_contratto()` would give red."""
+       there: if they reappeared, `_certifica_contratto()` would give red.
+       The seven fields of 25 Aug (`fermo_ms` … `ritmo_scesi`) are written with
+       neutral values: no predicate of this bench reads them."""
     return ("%s wt      linea-morta [192.168.0.2]:50875 causa=%s stallo_ms=%d "
             "soglia_stallo_ms=%d offerti=%d usciti_byte=%d coda_video=%d "
             "silenzio_ms=%d soglia_silenzio_ms=%d prove=%d minimo_prove=%d "
             "persi=%d spediti=%d permille=%d finestra_ms=%d "
-            "minimo_pacchetti=%d cwnd=%d cwnd_left=%d srtt_us=%d giudizio=%s"
+            "minimo_pacchetti=%d cwnd=%d cwnd_left=%d srtt_us=%d fermo_ms=0 "
+            "giri_fermi=0 saltati=0 ritmo_giu=0 ritmo_arretrato=0 ritmo_posti=0 "
+            "ritmo_scesi=0 giudizio=%s"
             % (ora, causa, stallo_ms, soglia_stallo, offerti, usciti,
                coda_video, silenzio_ms, LM_SILENZIO_S * 1000, prove,
                LM_MIN_PROVE, persi, spediti, permille, finestra_ms,

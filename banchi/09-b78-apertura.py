@@ -119,10 +119,10 @@ WHAT CAME OUT — `[M]` 23 August 2026, port 7932, Intel UHD 730
 2. The exact form of `07-b64` — the real client, PCM, with the tone on,
    `--resta 20` — at **10 %**:
 
-       SESSIONE aperta: True
-       [audio] ricevuti **3235** · 3 105 600 byte · codec 2
-       SERVER: spediti 3607 · buttati 0 · **rifiutati 391** · rimandati 293 718
-       giudizio: resa_campioni **0,810** · purezza 0,182 · scoppiettii 19,1/s
+       SESSIONE open: True
+       [audio] received **3235** · 3 105 600 bytes · codec 2
+       SERVER: sent 3607 · dropped 0 · **refused 391** · deferred 293 718
+       judgement: resa_campioni **0.810** · purity 0.182 · scoppiettii 19.1/s
 
    ⇒ 3235/3607 = **89.7 % arrived on the wire**, which is exactly the 10 %
      removed once.  ⚠ And `resa_campioni` drops to 0.810 because it also
