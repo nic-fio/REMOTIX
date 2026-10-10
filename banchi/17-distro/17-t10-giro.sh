@@ -7,6 +7,10 @@
 #     senza argomenti: tutta la matrice (26 «cliente» + 6 «iso»)
 #
 # Ogni macchina scrive in t10/esiti/<m>/ e una riga in t10/giro.log; qui in fondo il riepilogo.
+# I due rilasci: t10/run-N.run e run-N1.run (packaging/rilascio.sh), coi loro .sha256 (17-t10.sh).
+# ⚠ 10 ott 2026 (DECISIONI §10.36, fase 19): REMOTIX vuole una scheda che codifica; in VM il
+#   controllo preliminare la rifiuta (RX-GPU-*): il giro vero si fa in SCATOLA con la scheda del
+#   server (<macchina>:scatola), e le scatole per tutte le combinazioni sono da preparare.
 set -uo pipefail
 T10=${T10:-/media/REMOTIX/vm17/t10}
 P=${PARALLELE:-4}
@@ -26,7 +30,7 @@ echo "== giro T10 $(date -u +%FT%TZ), $P alla volta: $(echo $MATRICE | wc -w) ma
 # shellcheck disable=SC2086
 printf '%s\n' $MATRICE | xargs -P "$P" -I{} bash -c '
 	x={}; m=${x%%:*}; s=${x#*:}; [ "$s" = "$x" ] && s=cliente
-	nome=$m; [ "$s" = iso ] && nome=$m-iso
+	nome=$m; [ "$s" = iso ] && nome=$m-iso; [ "$s" = scatola ] && nome=$m-scatola
 	bash '"$T10"'/17-t10.sh "$m" "$s" >'"$T10"'/esiti/"$nome".log 2>&1
 	tail -1 '"$T10"'/esiti/"$nome".log' 2>/dev/null
 echo "== fine in $(( ($(date +%s) - T0) / 60 )) min" | tee -a "$T10/giro.log"

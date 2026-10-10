@@ -1,5 +1,11 @@
 #!/bin/bash
 #
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
+#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
+#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
+#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
+#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
+#
 # 17-t4-motore.sh — fase 17, T4-T5: il giro COMPLETO del motore su una VM «cliente».
 #
 #   (sul server, come nicfio)

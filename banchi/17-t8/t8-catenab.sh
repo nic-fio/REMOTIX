@@ -1,4 +1,10 @@
 #!/bin/bash
+#
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
+#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
+#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
+#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
+#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
 # t8-catenab.sh — fase 17, T8, R17: la catena B (i pacchetti e i metadati dell'archivio, GPG) la
 # verifica il GESTORE DI PACCHETTI. Per ogni guasto (t8-guasta.sh): un byte cambiato nei metadati,
 # i metadati firmati da una chiave ESTRANEA, un byte cambiato nel pacchetto N+1 — il gestore deve

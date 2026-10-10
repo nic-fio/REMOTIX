@@ -1,4 +1,10 @@
 #!/bin/bash
+#
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
+#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
+#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
+#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
+#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
 # t8-guasta.sh — fase 17, T8: guasti APPOSTA nell'archivio servito (sul server), e il ripristino.
 #
 #   bash t8-guasta.sh <guasto>      prima di ogni guasto si salva l'archivio com'è (una volta sola)

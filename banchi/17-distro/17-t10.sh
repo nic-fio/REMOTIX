@@ -1,7 +1,9 @@
 #!/bin/bash
 #
-# 17-t10.sh — fase 17, T10: il giro INTERO di §7.3 su una macchina della matrice, dall'archivio di
-# un rilascio vero (packaging/rilascio.sh), con install.sh come lo userebbe l'amministratore.
+# 17-t10.sh — fase 17, T10: il giro INTERO di §7.3 su una macchina della matrice, col pacchetto
+# unico di un rilascio vero (packaging/rilascio.sh: remotix-X.Y.Z-R.run), come lo userebbe
+# l'amministratore. Rifatto il 10 ott 2026 per l'installatore di DECISIONI §10.36: niente archivio,
+# niente file di risposte; REMOTIX non modifica il sistema e quel che manca lo mette l'amministratore.
 #
 #   (sul server, come nicfio)   sg kvm -c 'bash 17-t10.sh <macchina> [cliente|iso|scatola]'
 #     es. bash 17-t10.sh fedora44-kde            (foto «cliente», la macchina <distro>-<desktop>)
@@ -9,38 +11,34 @@
 #         bash 17-t10.sh debian13-kde scatola    (la SCATOLA con la scheda vera: scatole/17-scatola.sh,
 #                                                 con sudo valido; la macchina <distro>-<desktop>-scatola)
 #
-# ⭐ «scatola» (1 ott 2026): per le due macchine che in VM non hanno lo screencast di KWin senza 3D
-#   (debian13-kde, leap16-kde) lo STESSO copione gira in un contenitore con la scheda del server
-#   (§7.5); cambia solo chi accende la macchina (scatole/17-scatola.sh, gli stessi verbi di 17-vm.sh),
-#   e il passo 4 e' il riavvio DEL CONTENITORE, dichiarato: il riavvio vero e' verde sulle altre 30.
-#   REMOTIX ascolta sulla porta della scatola (porta = … nel file di risposte: --network=host).
+# ⭐ «scatola» (1 ott 2026): lo STESSO copione gira in un contenitore con la scheda del server (§7.5);
+#   cambia solo chi accende la macchina (scatole/17-scatola.sh, gli stessi verbi di 17-vm.sh), e il
+#   passo 4 e' il riavvio DEL CONTENITORE, dichiarato. ⚠ Dalla fase 19 REMOTIX vuole una scheda che
+#   codifica: in VM il controllo preliminare la rifiuta (RX-GPU-*), quindi il giro vero è in scatola.
+#
+# I due rilasci: $T10/run-N.run e run-N1.run (col loro .sha256 accanto), copiati nella macchina.
 #
 # Il copione (fasi/17 §7.3), un passo dopo l'altro, e ogni passo con la sua evidenza:
 #   0. foto; accensione; la persona «prova» (già nel gruppo del nodo card: R33), la sua chiave ssh;
-#   1. impronta «prima» (17-t3-impronta*.sh della famiglia);
-#   2. INSTALLA come l'amministratore: install.sh e il suo sha256 dall'archivio, `sha256sum -c`,
-#      poi `sh install.sh --archivio … --risposte …` (senza domande: consensi D5 e D6 nel file);
-#      ⇒ operazione CONFERMATA (o A CONDIZIONI, dichiarate), `remotix-install certifica`, il
-#      servizio in ascolto; librerie viste con l'uid di «prova» (R4);
-#   3. un browser VERO (Chrome) entra e vede il desktop (17-t1c-guarda.sh, Full HD, ripiego software);
+#      il .run N dentro, `sha256sum -c`, `sh remotix-N.run check` (che cosa manca: si scrive), poi
+#      L'AMMINISTRATORE prepara la macchina (17-amministratore.sh: archivi di terzi, driver, pezzi del
+#      desktop, porta nel firewall), e `check` di nuovo: non deve mancare più niente;
+#   1. impronta «prima» (17-t3-impronta*.sh della famiglia) — DOPO la preparazione dell'amministratore;
+#   2. INSTALLA: `sudo sh remotix-N.run install --port … --users prova`, e alla domanda «Proceed?»
+#      risponde «y» dallo stdin, come una persona ⇒ operazione CONFIRMED, `remotix-install status`
+#      GREEN, il servizio in ascolto; librerie viste con l'uid di «prova» (R4);
+#   3. un browser VERO (Chrome) entra e vede il desktop (17-t1c-guarda.sh);
 #   4. RIAVVIO vero della macchina (boot_id), e si rientra col browser (R15);
-#   5. AGGIORNA a N+1: l'archivio della macchina passa a quello con N+1 (il collegamento simbolico
-#      t10/arch/<macchina>), un browser resta collegato (t8-browser.py) e l'AGGIORNAMENTO DEL
-#      SISTEMA (apt-get upgrade · dnf upgrade · zypper up · pacman -Syu) porta REMOTIX a N+1
-#      (DECISIONI §10.23, R39); il palco (pid) prima e dopo deve combaciare (R7), il browser rientra
-#      e rivede il desktop (R10), la versione è N+1, certifica di nuovo;
-#   6. DISINSTALLA (--purge) con una sessione ssh di «prova» che scrive l'ora ogni secondo (R43);
-#      impronta «dopo» e confronto con «prima» (R6): si guardano solo le righe che nominano
-#      REMOTIX e i gruppi di «prova»; e ~/.local/state/remotix/sessione.log, che c'era dopo il
-#      browser, NON c'e' piu' in nessuna casa (decisione dell'utente, 1 ott 2026);
+#   5. AGGIORNA a N+1: il .run N+1 rilanciato (sh remotix-N1.run install, «y»), un browser resta
+#      collegato (t8-browser.py); il palco (pid) prima e dopo deve combaciare (R7), il browser
+#      rientra e rivede il desktop (R10), la versione è N+1, status di nuovo;
+#   6. DISINSTALLA (uninstall --purge, «y») con una sessione ssh di «prova» che scrive l'ora ogni
+#      secondo (R43); impronta «dopo» e confronto con «prima» (R6): si guardano solo le righe che
+#      nominano REMOTIX e i gruppi di «prova»; e ~/.local/state/remotix/sessione.log, che c'era dopo
+#      il browser, NON c'e' piu' in nessuna casa (decisione dell'utente, 1 ott 2026);
 #   7. spegne e rimette la foto (anche se la prova cade).
 # Esito: una riga `T10 <macchina> <stato> PASS|FAIL passi…` in fondo a esiti/<m>/esito.txt e in
 # t10/giro.log. Evidenze in /media/REMOTIX/vm17/t10/esiti/<macchina>[-iso]/.
-#
-# L'archivio: /media/REMOTIX/vm17/t10/archivio-N e archivio-N1 (i due rilasci), serviti da UN
-# http.server su 127.0.0.1:8737 dalla cartella t10/arch/, dove <macchina> è un collegamento
-# simbolico a uno dei due: dalla VM http://10.0.2.2:8737/<macchina>/ — così ogni macchina vede
-# il suo archivio, e il passo 5 lo fa «crescere» da N a N+1 senza toccare le altre.
 # ⛔ Al massimo 4 VM accese in tutto; non tocca una macchina già accesa da altri. Ogni macchina ha
 #   il SUO labwc per il browser (T1C=t10/t1c/<macchina>): quattro giri insieme non si coprono.
 set -uo pipefail
@@ -50,14 +48,13 @@ case $stato in cliente) m=$m0; foto=cliente ;; iso) m=$m0-iso; foto=iso ;; scato
 R=/media/REMOTIX/vm17
 T10=${T10:-$R/t10}
 E=$T10/esiti/$m
-PORTA_ARCH=${PORTA_ARCH:-8737}
+QUI=$(cd "$(dirname "$0")" && pwd)
+RUN_N=${RUN_N:-$T10/run-N.run}; RUN_N1=${RUN_N1:-$T10/run-N1.run}
 if [ -n "$SCATOLA" ]; then
 	# la scatola: i verbi di 17-vm.sh da scatole/17-scatola.sh, la macchina si chiama come in VM
-	V="bash ${SCATOLE:-$(cd "$(dirname "$0")" && pwd)/scatole}/17-scatola.sh"; MV=$m0
-	ARCH=http://127.0.0.1:$PORTA_ARCH/$m   # --network=host: l'archivio e' sull'ospite stesso
+	V="bash ${SCATOLE:-$QUI/scatole}/17-scatola.sh"; MV=$m0
 else
 	V="bash $R/17-vm.sh"; MV=$m
-	ARCH=http://10.0.2.2:$PORTA_ARCH/$m
 fi
 PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
 IMPRONTA=17-t3-impronta.sh; FAM=debian
@@ -95,24 +92,28 @@ fine() {
 	fi
 	say "==> spengo e rimetto la foto «$foto»"
 	$V ferma "$MV" >/dev/null 2>&1; $V torna "$MV" "$foto" >/dev/null 2>&1
-	# la macchina torna a vedere l'archivio N (per un giro successivo)
-	ln -sfn "$T10/archivio-N" "$T10/arch/$m"
 	riga="T10 $m $stato $FINALE$PASSI"
 	echo "$riga" | tee -a "$E/esito.txt" >>"$T10/giro.log"
 	echo "$riga"
 }
 
-rm -rf "$E"; mkdir -p "$E" "$T10/arch" "$T10/t1c"; : >"$E/giro.log"
+rm -rf "$E"; mkdir -p "$E" "$T10/t1c"; : >"$E/giro.log"
 T1C=$T10/t1c/$m; mkdir -p "$T1C"
 if [ -z "$SCATOLA" ]; then
 	if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m e' gia' accesa: la usa qualcun altro"; exit 2; fi
 	[ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ gia' 4 VM accese"; exit 2; }
 fi
-[ -d "$T10/archivio-N" ] && [ -d "$T10/archivio-N1" ] || { echo "⛔ mancano $T10/archivio-N e archivio-N1"; exit 2; }
-ln -sfn "$T10/archivio-N" "$T10/arch/$m"
+for x in "$RUN_N" "$RUN_N1"; do
+	[ -s "$x" ] && [ -s "$x.sha256" ] || { echo "⛔ manca $x (o il suo .sha256): i due .run di packaging/rilascio.sh"; exit 2; }
+done
 trap fine EXIT
+# porta: il .run e il suo sha256 dentro la macchina, col nome del rilascio (sha256sum -c lo vuole)
+porta_run() {
+	local n; n=$(awk '{print $2}' "$1.sha256")
+	vm "cat > /tmp/$n" <"$1" && vm "cat > /tmp/$n.sha256" <"$1.sha256" && echo "$n"
+}
 
-say "==> 0. $m: foto «$foto», accensione (ssh :$PSSH, REMOTIX :$PRX${SCATOLA:+ — SCATOLA con la scheda vera}, archivio $ARCH)"
+say "==> 0. $m: foto «$foto», accensione (ssh :$PSSH, REMOTIX :$PRX${SCATOLA:+ — SCATOLA con la scheda vera})"
 $V torna "$MV" "$foto" >/dev/null || exit 1
 $V avvia "$MV" >"$E/avvia.log" 2>&1 || { tail -5 "$E/avvia.log"; exit 1; }
 vm "id -u prova >/dev/null 2>&1 || sudo useradd -m -s /bin/bash prova
@@ -122,43 +123,45 @@ G=\$(for x in /dev/dri/card[0-9]*; do [ -e \$x ] && getent group \$(stat -c %g \
 sudo install -d -m 700 -o prova -g prova ~prova/.ssh
 sudo install -m 600 -o prova -g prova ~/.ssh/authorized_keys ~prova/.ssh/authorized_keys
 . /etc/os-release; echo \"\$PRETTY_NAME · \$(uname -r) · selinux: \$(getenforce 2>/dev/null || echo -)\"
-ls -l /dev/dri/ | grep -c card; id prova
-if command -v curl >/dev/null 2>&1; then curl -s -m 8 -o /dev/null -w 'archivio: HTTP %{http_code}\n' $ARCH/install.sh.sha256 || echo 'archivio: NON raggiungibile'
-elif wget -q -T 8 -O /dev/null $ARCH/install.sh.sha256; then echo 'archivio: HTTP 200 (wget)'
-else echo 'archivio: NON raggiungibile'; fi" >"$E/macchina.txt" 2>&1
+ls -l /dev/dri/ | grep -c card; id prova" >"$E/macchina.txt" 2>&1
 sed 's/^/   /' "$E/macchina.txt" | tee -a "$E/giro.log"
-grep -q 'HTTP 200' "$E/macchina.txt" || { say "⛔ l'archivio non si raggiunge dalla VM"; exit 1; }
-# ⚠ le iso desktop apt hanno wget ma NON curl: install.sh usa l'uno o l'altro (§6.6.12), il
-#   pre-controllo qui sopra pure
+RN=$(porta_run "$RUN_N") || { say "⛔ il .run N non entra nella macchina"; exit 1; }
+vm "cd /tmp && sha256sum -c $RN.sha256 && sh $RN version" >"$E/run-N.txt" 2>&1 || { cat "$E/run-N.txt" | tee -a "$E/giro.log"; exit 1; }
+say "   $(tail -1 "$E/run-N.txt")"
+vm "cd /tmp && sh $RN check" >"$E/check-prima.txt" 2>&1
+say "   check prima della preparazione: uscita $?; manca: $(sed -n '/^MISSING/,/^$/p' "$E/check-prima.txt" | grep -oE 'RX-[A-Z]+-[0-9]+[^[]*' | tr '\n' ' ' | cut -c1-300)"
+say "==> 0b. l'AMMINISTRATORE prepara la macchina (17-amministratore.sh: §10.36, REMOTIX non lo fa)"
+vm "sudo bash -s $m0 $PG" <"$QUI/17-amministratore.sh" >"$E/amministratore.txt" 2>&1
+grep -E '^\+ ' "$E/amministratore.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
+vm "cd /tmp && sh $RN check" >"$E/check-dopo.txt" 2>&1; u=$?
+if [ $u = 0 ] && ! grep -q '^MISSING' "$E/check-dopo.txt"; then
+	esito_passo prepara PASS
+else
+	say "   check dopo la preparazione: uscita $u"; sed -n '/^MISSING/,/^$/p' "$E/check-dopo.txt" | sed 's/^/   /' | tee -a "$E/giro.log"
+	esito_passo prepara FAIL; exit 1
+fi
 
 say "==> 1. impronta «prima»"
 impronta prima
 vm "id prova" >"$E/gruppi-prima.txt"
 
-say "==> 2. installa come l'amministratore: install.sh + sha256, --answers"
-vm "printf 'format = remotix-answers/2\nport = $PG\nusers = prova\nconsent.firewall = yes\nconsent.repo.epel = yes\nconsent.repo.openh264 = yes\nconsent.repo.packman = yes\nconsent.repo.rpmfusion = yes\n' | sudo tee /root/risposte.conf >/dev/null
-cd /tmp && rm -f install.sh install.sh.sha256
-if command -v curl >/dev/null 2>&1; then curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
-else wget -q -O install.sh $ARCH/install.sh && wget -q -O install.sh.sha256 $ARCH/install.sh.sha256; fi   # le iso desktop apt hanno wget, non curl (install.sh usa l'uno o l'altro)
-sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh | cut -c1-40" >"$E/installa.txt" 2>&1
-say "   $(grep -E 'install.sh: ' "$E/installa.txt" | head -1)"
+say "==> 2. installa come l'amministratore: sudo sh $RN install, e «y» alla domanda"
 T0=$(date +%s)
-vm "cd /tmp && sudo sh install.sh --archive $ARCH --answers /root/risposte.conf" >>"$E/installa.txt" 2>&1
+vm "cd /tmp && printf 'y\\n' | sudo sh $RN install --port $PG --users prova" >"$E/installa.txt" 2>&1
 u=$?
-OP=$(grep -E '^operation '"$E/installa.txt" | tail -1)
-say "   install.sh: uscita $u in $(( $(date +%s) - T0 )) s — $OP"
-grep -E 'FAILED|BLOCKED|REFUSED|RX-|no effect|NOT give|C-' "$E/installa.txt" | head -12 | cut -c1-240 | sed 's/^/   /' | tee -a "$E/giro.log"
-vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install remotix-archive-keyring 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
+OP=$(grep -E '^operation ' "$E/installa.txt" | tail -1)
+say "   install: uscita $u in $(( $(date +%s) - T0 )) s — $OP"
+grep -E 'FAILED|BLOCKED|REFUSED|RX-|MISSING|C-' "$E/installa.txt" | head -12 | cut -c1-240 | sed 's/^/   /' | tee -a "$E/giro.log"
+vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remotix 2>&1) · pid \$(systemctl show -p MainPID --value remotix) · in ascolto $PG: \$(sudo ss -Htulpn | grep -c ':$PG ')\"
 id prova
 B=\$(ls /usr/libexec/remotix/remotix /usr/lib/remotix/remotix 2>/dev/null | head -1); echo \"R4 librerie non trovate (uid prova): \$(sudo -u prova ldd \$B 2>&1 | grep -c 'not found') · libav nel binario: \$(ldd \$B | grep -c 'libav\|libswscale')\"
-echo --- certifica:; sudo /usr/bin/remotix-install certify 2>&1; echo \"certifica: uscita \$?\"
+echo --- status:; sudo /usr/bin/remotix-install status 2>&1; echo \"certifica: uscita \$?\"
 echo --- registro d avvio:; sudo journalctl -u remotix.service --no-pager -b 2>/dev/null | grep -aE 'codec offerti|OpenH264|pronto|RX-|⛔' | tail -6 | cut -c1-200" >"$E/installato.txt" 2>&1
 sed 's/^/   /' "$E/installato.txt" | tee -a "$E/giro.log" >/dev/null
 grep -E 'pacchetti:|servizio:|R4 |Certification|certifica: uscita|codec offerti' "$E/installato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
-# nella VM non c'è la scheda: la certificazione attesa è A_CONDIZIONI con la sola C-RIPIEGO (R35),
-# oppure VERDE; ogni controllo PASS
-certifica_va() { grep -q 'Certification of' "$1" && ! grep -qE '^  (FAIL|UNKNOWN) ' "$1" && ! { grep -E '^  C-' "$1" | grep -vq 'C-RIPIEGO'; }; }
+# con la scheda vera la certificazione attesa è GREEN: ogni controllo PASS, nessuna condizione
+certifica_va() { grep -q 'Certification of .*: GREEN' "$1" && ! grep -qE '^  (FAIL|UNKNOWN) ' "$1" && ! grep -qE '^  C-' "$1"; }
 if [ $u = 0 ] && echo "$OP" | grep -qE 'CONFIRMED' && certifica_va "$E/installato.txt" && grep -q 'servizio: enabled active' "$E/installato.txt" && grep -q "in ascolto $PG: [1-9]" "$E/installato.txt" && grep -q 'non trovate (uid prova): 0' "$E/installato.txt"; then
 	esito_passo installa PASS
 else
@@ -179,8 +182,8 @@ T1C=$T1C T1C_EVIDENZE=$E/browser-2 bash "$R/t1c/17-t1c-guarda.sh" "$m" "$PRX" ch
 say "   uscita $? — $(grep -E '^T1C ' "$E/browser-2.log" | cut -c1-300)"
 if grep -E '^T1C ' "$E/browser-2.log" | grep -q '"esito": *"PASS"'; then esito_passo riavvio PASS; else esito_passo riavvio FAIL; vm "sudo journalctl -u remotix --no-pager -b | tail -40" >"$E/journal-browser-2.txt" 2>&1; exit 1; fi
 
-say "==> 5. aggiorna a N+1: l'archivio cresce, un browser resta collegato, l'aggiornamento DEL SISTEMA"
-ln -sfn "$T10/archivio-N1" "$T10/arch/$m"
+say "==> 5. aggiorna a N+1: il .run N+1 rilanciato, un browser resta collegato"
+RN1=$(porta_run "$RUN_N1") || { say "⛔ il .run N+1 non entra nella macchina"; esito_passo aggiorna FAIL; exit 1; }
 rm -rf "$E/browser-agg"; mkdir -p "$E/browser-agg"
 T1C=$T1C T1C_PROGRAMMA=$R/t8/t8-browser.py T1C_EVIDENZE=$E/browser-agg \
 	setsid nohup bash "$R/t1c/17-t1c-guarda.sh" "$m" "$PRX" chrome >"$E/browser-agg.log" 2>&1 </dev/null &
@@ -190,17 +193,11 @@ if [ -f "$E/browser-agg/pronto" ]; then say "   collegato: il desktop si vede"; 
 palco() { vm "for p in gnome-shell kwin_wayland plasmashell labwc xfce4-session lxqt-session; do for x in \$(pgrep -u prova -x \$p); do echo \"\$p \$x\"; done; done | sort"; }
 palco >"$E/palco-prima.txt"
 say "   palco prima: $(tr '\n' ' ' <"$E/palco-prima.txt")"
-case $FAM in
-debian) AGG="sudo apt-get update -q && sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -q" ;;
-fedora) AGG="sudo dnf upgrade -y --refresh" ;;
-suse)   AGG="sudo zypper --non-interactive refresh && sudo zypper --non-interactive up" ;;
-arch)   AGG="sudo pacman -Syu --noconfirm" ;;
-esac
 T0=$(date +%s)
-vm "$AGG; echo \"aggiornamento: uscita \$?\"
+vm "cd /tmp && sha256sum -c $RN1.sha256 && printf 'y\\n' | sudo sh $RN1 install; echo \"aggiornamento: uscita \$?\"
 echo --- remotix.service dal journal:
 sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix 2>/dev/null | grep -aE 'RITROVAT|pronto|Stopp|Start|Reload|RX-' | tail -12 | cut -c1-200" >"$E/aggiorna.txt" 2>&1
-say "   aggiornamento del sistema in $(( $(date +%s) - T0 )) s: $(grep -E 'aggiornamento: uscita' "$E/aggiorna.txt")"
+say "   aggiornamento col .run N+1 in $(( $(date +%s) - T0 )) s: $(grep -E 'aggiornamento: uscita' "$E/aggiorna.txt")"
 grep -aE 'remotix|RITROVAT' "$E/aggiorna.txt" | tail -8 | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
 palco >"$E/palco-dopo.txt"
 say "   palco dopo:  $(tr '\n' ' ' <"$E/palco-dopo.txt")"
@@ -210,8 +207,8 @@ BROWSER=
 say "   $(grep '^T8 ' "$E/browser-agg.log" | cut -c1-400)"
 vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-active remotix 2>&1) · pid \$(systemctl show -p MainPID --value remotix)\"
-sudo /usr/bin/remotix-install version; sudo /usr/bin/remotix-install status 2>&1 | head -12
-sudo sh -c '/usr/bin/remotix-install certify >/tmp/c.txt 2>&1'; echo \"certifica: uscita \$?\"; sudo cat /tmp/c.txt" >"$E/aggiornato.txt" 2>&1
+sudo /usr/bin/remotix-install version
+sudo sh -c '/usr/bin/remotix-install status >/tmp/c.txt 2>&1'; echo \"certifica: uscita \$?\"; sudo cat /tmp/c.txt" >"$E/aggiornato.txt" 2>&1
 grep -E 'pacchetti:|servizio:|Certification|certifica: uscita' "$E/aggiornato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
 if grep -q 'aggiornamento: uscita 0' "$E/aggiorna.txt" && grep -E '^T8 ' "$E/browser-agg.log" | grep -q '"esito": *"PASS"' && cmp -s "$E/palco-prima.txt" "$E/palco-dopo.txt" && [ -s "$E/palco-prima.txt" ] && grep -q "pacchetti:.*${VERSIONE_N1:-NON_DATA}" "$E/aggiornato.txt" && certifica_va "$E/aggiornato.txt"; then
 	esito_passo aggiorna PASS
@@ -230,7 +227,7 @@ vm "loginctl list-sessions --no-legend" >"$E/sessioni-prima.txt" 2>&1
 vm "sudo find /root /home -path '*/.local/state/remotix*' 2>/dev/null | sort" >"$E/registri-prima.txt" 2>&1
 say "   registri di sessione nelle case prima: $(tr '\n' ' ' <"$E/registri-prima.txt")"
 T0=$(date +%s)
-vm "sudo sh -c '/usr/bin/remotix-install uninstall --purge --output /root/d.json >/tmp/d.txt 2>&1' && sudo /usr/bin/remotix-install apply /root/d.json --approve" >"$E/disinstalla.txt" 2>&1
+vm "printf 'y\\n' | sudo /usr/bin/remotix-install uninstall --purge" >"$E/disinstalla.txt" 2>&1
 u=$?
 OPD=$(grep -E '^operation '"$E/disinstalla.txt" | tail -1)
 say "   disinstalla: uscita $u in $(( $(date +%s) - T0 )) s — $OPD"
@@ -242,7 +239,7 @@ vm "a=\$(sudo tail -1 ~prova/orologio.txt); sleep 3; b=\$(sudo tail -1 ~prova/or
 echo \"sessioni: \$(loginctl list-sessions --no-legend | grep -c prova) di prova · desktop di prova: \$(pgrep -u prova -c -x 'gnome-shell|kwin_wayland|labwc|plasmashell|lxqt-panel|xfce4-panel')\"
 echo \"pacchetti rimasti: \$( (dpkg-query -W -f='\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null; pacman -Qq 2>/dev/null | grep remotix) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-active remotix 2>&1) · in ascolto $PG: \$(sudo ss -Htulpn | grep -c ':$PG ') · /var/lib/remotix: \$(sudo ls -A /var/lib/remotix 2>&1 | tr '\n' ' ')\"
-echo \"archivi: \$(ls /etc/apt/sources.list.d /etc/yum.repos.d /etc/zypp/repos.d 2>/dev/null | grep -ci remotix) · pacman.conf: \$(grep -c remotix /etc/pacman.conf 2>/dev/null)\"
+echo \"archivi di remotix (devono essere 0: §10.36): \$(ls /etc/apt/sources.list.d /etc/yum.repos.d /etc/zypp/repos.d 2>/dev/null | grep -ci remotix) · pacman.conf: \$(grep -c remotix /etc/pacman.conf 2>/dev/null)\"
 id prova" >"$E/dopo.txt" 2>&1
 sed 's/^/   /' "$E/dopo.txt" | tee -a "$E/giro.log"
 kill "$OROLOGIO" 2>/dev/null; OROLOGIO=

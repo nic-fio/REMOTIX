@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): usa i comandi plan/approve/apply e il piano di prova del
+#   motore, che dalla riga di comando non ci sono più. Le stesse azioni (D-Bus, gpasswd) le provano
+#   go test e il giro vero (banchi/17-distro/17-t10.sh). Non si lancia.
 # Il giro del motore DAL VERO in una Fedora 44 con systemd acceso (prove/Contenitore.systemd): le
 # azioni che parlano sul D-Bus (systemd1: GetUnitFileState, EnableUnitFiles, DisableUnitFiles,
 # Reload) e gpasswd dall'elenco chiuso. (firewalld nel contenitore senza root non parte: vedi

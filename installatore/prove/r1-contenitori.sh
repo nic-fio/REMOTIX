@@ -1,8 +1,8 @@
 #!/bin/sh
 # R1 (fasi/17 §8) nei contenitori, una famiglia per volta: l'impronta di /etc prima e dopo
 # «remotix-install verifica» (testo e --json) deve essere IDENTICA — nomi, permessi, proprietari,
-# dimensioni, ore di modifica, contenuti. In più, a R1 finita, il giro di prova del motore da root
-# (piano → approva → applica) per vedere dal vero gpasswd e systemctl della famiglia.
+# dimensioni, ore di modifica, contenuti. (Il giro di prova piano → approva → applica che seguiva è
+# stato tolto il 10 ott 2026: quei comandi non ci sono più, DECISIONI §10.36.)
 #
 #   prove/r1-contenitori.sh [immagine...]
 #
@@ -26,17 +26,8 @@ for img in $immagini; do
 		/opt/rx/impronta /etc > /tmp/dopo
 		if /opt/rx/impronta -confronta /tmp/prima /tmp/dopo > /tmp/diff; then echo "R1 PASS: /etc identica ($(grep -c . /tmp/prima) voci)"; else echo "R1 FAIL"; head -20 /tmp/diff; fi
 		echo "---- verifica (testo)"; cat /tmp/verifica.txt
-		echo "---- giro di prova del motore (da root, dopo R1)"
-		useradd -M provamotore 2>/dev/null || true
-		cd /tmp
-		/opt/rx/remotix-install plan --users provamotore --state-dir /tmp/op >/dev/null && echo "piano: fatto"
-		/opt/rx/remotix-install approve plan-engine-test.json
-		/opt/rx/remotix-install apply plan-engine-test.json --state-dir /tmp/op; echo "applica: uscita $?"
-		/opt/rx/remotix-install status --state-dir /tmp/op
-		cat /tmp/op/*/certificate.txt 2>/dev/null | sed -n "1,40p"
-		/opt/rx/remotix-install apply plan-engine-test.json --state-dir /tmp/op >/dev/null 2>&1; echo "applica di nuovo (piano vecchio): uscita $? — atteso 1, impronta cambiata"
 	' > "$esiti/$nome.txt" 2>&1 || true
-	grep -E '^(R1|verifica|applica|piano)' "$esiti/$nome.txt" | sed 's/^/   /'
+	grep -E '^(R1|verifica)' "$esiti/$nome.txt" | sed 's/^/   /'
 	grep -q '^R1 PASS' "$esiti/$nome.txt" || rosso=1
 done
 echo "esiti completi in $esiti/"

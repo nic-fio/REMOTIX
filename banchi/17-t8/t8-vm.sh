@@ -1,5 +1,11 @@
 #!/bin/bash
 #
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
+#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
+#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
+#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
+#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
+#
 # t8-vm.sh — fase 17, T8: REMOTIX dall'ARCHIVIO firmato, su una VM «cliente», un passo per chiamata.
 #
 #   (sul server, come nicfio)   sg kvm -c 'bash t8-vm.sh <macchina> <passo> [argomenti]'

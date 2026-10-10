@@ -500,14 +500,18 @@ remotix() {
 	"$ri" check --json > "$EVID/installatore-verifica.json" 2>&1
 	grep -o -E 'RX-[A-Z0-9]+-[0-9]+' "$EVID/installatore-verifica.txt" | sort -u | tr '\n' ' ' > "$LAVORO/codici-verifica"
 	ok "verifica: codici $(cat "$LAVORO/codici-verifica")"
-	if "$ri" plan --install --package "$deb" --port "$PORTA" --users "$UTENTE_BANCO" \
-		--output "$LAVORO/piano.json" > "$EVID/installatore-piano.txt" 2>&1 \
-		&& "$ri" apply "$LAVORO/piano.json" --approve > "$EVID/installatore-applica.txt" 2>&1; then
+	# il pacchetto unico in piccolo (DECISIONI §10.36): la cartella packages/<bersaglio>/ col .deb, e
+	# `install` che risponde «y» alla domanda come una persona
+	local bers
+	case $fam in debian) bers=debian13 ;; ubuntu) bers=ubuntu2604 ;; esac
+	rm -rf "$LAVORO/bundle"; mkdir -p "$LAVORO/bundle/$bers"; cp "$deb" "$LAVORO/bundle/$bers/"
+	if printf 'y\n' | "$ri" install --bundle "$LAVORO/bundle" --port "$PORTA" --users "$UTENTE_BANCO" \
+		> "$EVID/installatore-applica.txt" 2>&1; then
 		ok "l'installatore ha installato REMOTIX"
 		echo installatore > "$LAVORO/come-installato"
 	else
 		e=$?
-		ko "l'installatore NON ha installato (uscita $e): $(tail -n 3 "$EVID/installatore-applica.txt" "$EVID/installatore-piano.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
+		ko "l'installatore NON ha installato (uscita $e): $(tail -n 3 "$EVID/installatore-applica.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
 		avviso "⇒ il rifiuto e' un risultato (evidenze installatore-*); per andare avanti coi passi c-e il pacchetto si mette col gestore"
 		"${APT[@]}" install "$deb" > "$EVID/remotix-apt.txt" 2>&1 \
 			|| { ko "nemmeno apt lo installa (remotix-apt.txt)"; esito remotix ROSSO "non installato"; return 1; }
@@ -536,7 +540,7 @@ remotix() {
 		esito remotix ROSSO "non ascolta"; return 1
 	fi
 	grep -a -E 'strada|QUESTO SERVER NON SA|ECCOMI|offerti|⛔' "$LAVORO/registro.log" | head -20 > "$EVID/server-avvio.txt"
-	"$ri" certify > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
+	"$ri" status > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
 	ok "certifica: uscita $c"
 	esito remotix VERDE "$(cat "$LAVORO/come-installato") · verifica: $(cat "$LAVORO/codici-verifica") · certifica $c"
 	return 0
@@ -746,8 +750,7 @@ pulisci() {
 	if [ -x /usr/bin/remotix-install ] || [ -x "$VALIGIA/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install
 		[ -x $ri ] || ri=$VALIGIA/bin/remotix-install
-		if $ri uninstall --purge --output "$LAVORO/disinstalla.json" > "$LAVORO/disinstalla.txt" 2>&1 \
-			&& $ri apply "$LAVORO/disinstalla.json" --approve >> "$LAVORO/disinstalla.txt" 2>&1; then
+		if printf 'y\n' | $ri uninstall --purge > "$LAVORO/disinstalla.txt" 2>&1; then
 			ok "REMOTIX disinstallato dall'installatore"
 		else
 			avviso "l'installatore non ha disinstallato (disinstalla.txt): tolgo col gestore"

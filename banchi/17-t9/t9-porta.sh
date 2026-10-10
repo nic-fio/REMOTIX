@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
+#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
+#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
+#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
+#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
 # t9-porta.sh — fase 17, T9: il motore nuovo e lo script d'ingresso, con i loro sha256 (D11
 # semplificata, DECISIONI §10.21: niente firme sue), in un archivio di prova SUO sul server, e il
 # banco di T9. (Un rilascio vero lo fa packaging/rilascio.sh.)
