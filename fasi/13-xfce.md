@@ -1,489 +1,489 @@
-# Fase 13 — XFCE
+# Phase 13 — XFCE
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without a card and colour conversion with swscale; those of encoding on the card and of audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-*Aperta il **20 settembre 2026**. Chiusa il —*
+*Opened on **20 Sep 2026**. Closed on —*
 
-## Che cosa deve produrre
+## What it must produce
 
-Il terzo desktop: **la stessa cosa su XFCE** (`PIANO.md` fase 13). L'utente apre il browser e vede
-il suo desktop XFCE, come oggi vede GNOME e Plasma.
+The third desktop: **the same thing on XFCE** (`PIANO.md` phase 13). The user opens the browser and sees
+their XFCE desktop, as today they see GNOME and Plasma.
 
-⛔ **La regola della fase, dell'utente, 20 settembre 2026**: *«aggiungere XFCE a REMOTIX senza
-perdere nessuna capacità già certificata di GNOME e KDE»*. ⇒ **Da oggi il baseline protetto sono
-due**: una regressione di KDE vale quanto una di GNOME. KDE esce dal cantiere ed entra nel
-guardiano.
+⛔ **The rule of the phase, the user's, 20 Sep 2026**: *«aggiungere XFCE a REMOTIX senza
+perdere nessuna capacità già certificata di GNOME e KDE»*. ⇒ **From today the protected baselines are
+two**: a KDE regression counts as much as a GNOME one. KDE leaves the building site and enters the
+guardian.
 
-Si procede per **incrementi**, e ogni incremento attraversa gli stessi cancelli della fase 12:
+We proceed by **increments**, and every increment goes through the same gates as phase 12:
 
 | | |
 |---|---|
-| **CP0** | la baseline: rete completa sulle **quattro** scatole, stesso binario ovunque |
-| **CP1** | l'incremento è definito: obiettivo, invariante, moduli, prova XFCE, prova client, regressioni GNOME **e KDE** da guardare, criterio |
-| **CP2** | GNOME, KDE e XFCE **osservati** sul punto dell'incremento, e la differenza scritta — niente dedotto |
-| **CP3** | la modifica minima progettata: file, perché, che cosa di GNOME e di KDE resta com'è |
-| **CP4** | la prova XFCE fatta davvero, sulla scena dichiarata |
-| **client** | Chrome e Firefox su Linux, Chrome sull'emulatore Android — quando l'incremento tocca il percorso |
-| **rete** | la rete completa, GNOME **e KDE** invariati, i guasti innestati ancora presi |
-| **checkpoint** | un commit che si può riprendere |
+| **CP0** | the baseline: complete net on the **four** boxes, the same binary everywhere |
+| **CP1** | the increment is defined: goal, invariant, modules, XFCE test, client test, GNOME **and KDE** regressions to watch, criterion |
+| **CP2** | GNOME, KDE and XFCE **observed** at the point of the increment, and the difference written — nothing deduced |
+| **CP3** | the minimal change designed: files, why, what of GNOME and of KDE stays as it is |
+| **CP4** | the XFCE test done for real, on the declared scene |
+| **client** | Chrome and Firefox on Linux, Chrome on the Android emulator — when the increment touches the path |
+| **net** | the complete net, GNOME **and KDE** unchanged, the injected faults still caught |
+| **checkpoint** | a commit that can be resumed |
 
-⇒ Un rosso su GNOME o su KDE è **una regressione finché non è dimostrato il contrario**, e si
-classifica: A regressione vera · B assunzione di un desktop nel codice comune · C difetto del banco
-· D invariante sbagliato (⛔ mai come scorciatoia).
+⇒ A red on GNOME or on KDE is **a regression until proved otherwise**, and it is
+classified: A real regression · B assumption of one desktop in the common code · C bench defect
+· D wrong invariant (⛔ never as a shortcut).
 
 ---
 
-## ⭐ La differenza che cambia la forma della fase
+## ⭐ The difference that changes the shape of the phase
 
-GNOME ha Mutter, KDE ha KWin. ⛔ **XFCE non ha un compositore proprio**: su Wayland si appoggia a
-**labwc**, che è **wlroots** — la terza e ultima famiglia. ⇒ La fase 13 non è «un terzo ramo come il
-secondo»: due pezzi del prodotto **non si riusano affatto**.
+GNOME has Mutter, KDE has KWin. ⛔ **XFCE has no compositor of its own**: on Wayland it relies on
+**labwc**, which is **wlroots** — the third and last family. ⇒ Phase 13 is not "a third branch like the
+second": two pieces of the product **are not reused at all**.
 
-| pezzo | GNOME e KDE, oggi | XFCE (wlroots) | costo |
+| piece | GNOME and KDE, today | XFCE (wlroots) | cost |
 |---|---|---|---|
-| **appunti** | `src/appunti_kde.c`, `zwlr_data_control` | ⭐ **quasi gratis**: quel file si chiama «kde» ma parla **già** il protocollo di wlroots (`src/appunti_kde.h:6-10`) | piccolo |
-| **riconoscimento** | `riconosci_desktop()`, `src/sessione.c:275-303` | terzo valore dell'enum, in **coda** (viaggia come `uint32_t` fra figlio e padre) | piccolo |
-| **sessione** | due rami in `sessione.c` | ~14 punti; ⛔ e `scrivi_dropin()` **non ha oggetto**: su XFCE il compositore non è un'unità systemd | medio |
-| **cattura** | PipeWire che **spinge** i fotogrammi | ⛔ `zwlr_screencopy_manager_v1`, modello **a tiro**: un fotogramma per richiesta, niente PipeWire, niente D-Bus | grosso |
-| **input** | **libei** (`ConnectToEIS`) | ⛔ libei **non esiste** su wlroots (`STUDI.md` §xfce §7, verifica per assenza con controllo positivo). `zwp_virtual_keyboard` + `zwlr_virtual_pointer`, e i **modificatori** vanno scritti da zero | il più grosso |
+| **clipboard** | `src/appunti_kde.c`, `zwlr_data_control` | ⭐ **almost free**: that file is called "kde" but **already** speaks the wlroots protocol (`src/appunti_kde.h:6-10`) | small |
+| **recognition** | `riconosci_desktop()`, `src/sessione.c:275-303` | third value of the enum, at the **end** (it travels as `uint32_t` between child and parent) | small |
+| **session** | two branches in `sessione.c` | ~14 points; ⛔ and `scrivi_dropin()` **has no object**: on XFCE the compositor is not a systemd unit | medium |
+| **capture** | PipeWire that **pushes** the frames | ⛔ `zwlr_screencopy_manager_v1`, a **pull** model: one frame per request, no PipeWire, no D-Bus | big |
+| **input** | **libei** (`ConnectToEIS`) | ⛔ libei **does not exist** on wlroots (`STUDI.md` §xfce §7, verified by absence with a positive check). `zwp_virtual_keyboard` + `zwlr_virtual_pointer`, and the **modifiers** must be written from scratch | the biggest |
 
-⭐ **E lo studio è già fatto**: `STUDI.md`, sezione «XFCE, labwc e wlroots» (857 righe, §1-§15), con
-le quattordici domande di `LEZIONI.md` §3 già riempite, undici misure d'apertura (M1-M11) e cinque
-scelte da mettere davanti all'utente. ⛔ Si legge **prima** di riaprirne una.
+⭐ **And the study is already done**: `STUDI.md`, section "XFCE, labwc e wlroots" (857 lines, §1-§15), with
+the fourteen questions of `LEZIONI.md` §3 already filled in, eleven opening measurements (M1-M11) and five
+choices to put before the user. ⛔ It is read **before** reopening one.
 
 ---
 
-## Le decisioni prodotte
+## The decisions produced
 
-- **20 settembre 2026, dell'utente**: *«allo stato attuale remotix e' destinato a sistemi con un
+- **20 Sep 2026, the user's**: *«allo stato attuale remotix e' destinato a sistemi con un
   solo DE installato. I sistemi con DE multipli installato sono per il momento fuori scope»* ⇒
-  `DECISIONI.md` **§0.6**, che allarga §4.6-duodetricies. ⭐ Il riconoscimento resta semplice: si
-  cerca il desktop che c'è, non si arbitra fra desktop che convivono, e ⛔ l'opzione `--compositore`
-  di v1 **non si rimette**.
-- **20 settembre 2026, dell'utente**: la fase si lavora *«in silenzio»*, con un aggiornamento
-  indicativamente ogni mezz'ora, e si interrompe solo per checkpoint, regressione, blocco,
-  decisione o milestone.
-- ⇒ **Cade la decisione del 19 settembre** *«togli XFCE e LXQt»* (`fasi/12-kde.md:45-48`): le quattro
-  scatole rientrano nei giri. ⭐ Non c'è niente da cambiare nel gancio per ottenerlo — il predefinito
-  è **già** `DESKTOP_NOTI="gnome kde xfce lxqt"` (`11-gancio.sh:240`) e il `pre-push` non passa
-  `--scatola`: bastava smettere di passarlo a mano.
-- **LXQt resta fuori dal cantiere**, e può restare rossa per le capacità non implementate. ⚠ Ma è
-  della **stessa famiglia** di XFCE (labwc/wlroots, `adattatore.lxqt.sh` è identico a quello xfce)
-  ⇒ quasi tutto quel che si scrive qui la serve, e la fase 14 sarà corta.
+  `DECISIONI.md` **§0.6**, which widens §4.6-duodetricies. ⭐ Recognition stays simple: we
+  look for the desktop that is there, we do not arbitrate between desktops that coexist, and ⛔ v1's
+  `--compositore` option **is not put back**.
+- **20 Sep 2026, the user's**: the phase is worked *«in silenzio»*, with an update
+  roughly every half hour, and it is interrupted only for a checkpoint, regression, block,
+  decision or milestone.
+- ⇒ **The decision of 19 September falls** *«togli XFCE e LXQt»* (`fasi/12-kde.md:45-48`): the four
+  boxes come back into the rounds. ⭐ Nothing needs changing in the hook to get this — the default
+  is **already** `DESKTOP_NOTI="gnome kde xfce lxqt"` (`11-gancio.sh:240`) and the `pre-push` does not pass
+  `--scatola`: it was enough to stop passing it by hand.
+- **LXQt stays out of the building site**, and may stay red for the unimplemented capabilities. ⚠ But it is
+  of the **same family** as XFCE (labwc/wlroots, `adattatore.lxqt.sh` is identical to the xfce one)
+  ⇒ almost everything written here serves it too, and phase 14 will be short.
 
 ---
 
-## Il banco — che cosa va toccato, e si dichiara prima di toccarlo
+## The bench — what must be touched, declared before touching it
 
-Il banco è **la rete della fase 11** (`banchi/11-scatole/`), puntata sulla scatola `xfce`. Il segno
-che XFCE è servito è quello già scritto: **`C1(xfce)` diventa verde**, e dopo di lei C2, C3, C4, C6,
-C7, C8b, C9, C17 sulla stessa scatola.
+The bench is **the net of phase 11** (`banchi/11-scatole/`), pointed at the `xfce` box. The sign
+that XFCE is served is the one already written: **`C1(xfce)` turns green**, and after it C2, C3, C4, C6,
+C7, C8b, C9, C17 on the same box.
 
-Letture del 20 settembre 2026, `[R]`:
+Readings of 20 Sep 2026, `[R]`:
 
-1. ⛔ **Il cancello a due nomi**, `11-gancio.sh:809-813` (`le_cinque_nuove`): *«il prodotto sa
-   avviare solo GNOME e KDE»*. ⚠ Salta **15 esecuzioni**, non cinque — C2×3, C3×4, C4×3, C6×2,
-   C8b×2 **e C17×2**, perché le due chiamate di C17 (`:863-864`) stanno **dopo** il `return`. ⇒ E
-   C17 viene saltata **senza essere nominata** nel registro: la riga si chiama ancora
-   `"C2($d) C3 C4 C6 C8b"`. Il commento di `:856-862` — *«Nessun cancello per desktop QUI»* — è
-   falso per quel punto di chiamata.
-2. ⛔ **Il gemello disallineato**, `11-accendi.sh:557-560`: stessa whitelist, ma copre **solo C8b**.
-   ⇒ Due posti da aprire; aprendone uno solo, C8b(xfce) resta muta a 3.
-3. ⛔ **La scatola `xfce` non contiene XFCE**: `Contenitore.xfce` installa `labwc xfce4-session
-   xwayland`, ⛔ ma **né `xfce4-panel` né `xfdesktop`** — una sessione che nasce lì dentro non ha
-   pannello né scrivania. ⇒ La scatola cresce, come `Contenitore.kde` è cresciuta (R5).
-4. ⛔ **E l'adattatore non avvia una sessione XFCE**: `adattatore.xfce.sh:32-43` lancia `labwc`
-   **nudo** — niente `--session xfce4-session`, niente `XFCE4_SESSION_COMPOSITOR`. ⇒ Oggi quel banco
-   misura **un compositore**, non un desktop, e in particolare non può far scattare la trappola del
-   logout (§9.2 dello studio).
-5. ⛔ **Gli attrezzi degli appunti mancano** nella scatola xfce (e lxqt): niente `wl-clipboard`,
-   niente `python3-gi gir1.2-gtk-4.0` — che kde e gnome hanno. ⚠ E ⛔ **il banco non lo dice**:
-   `11-c17:150` prende `stdout` senza guardare il codice d'uscita, quindi `wl-paste: command not
-   found` diventa `""`, la guardia di `:242` (che controlla `None`) non scatta, e la maglia stampa
-   **ROSSO** invece di «non ho potuto guardare». ⛔ Un attrezzo che manca deve dare 3.
-6. ~~⚠ **C1 dice la causa sbagliata**: su xfce esce *«nata CIECA»* mentre il fatto è *«mai nata,
-   perché il prodotto cercava `gnome-session`»*.~~ ✅ **CHIUSA dall'incremento 1, e senza toccare
-   il banco.** ⭐ La diagnosi era falsa perché lo era il prodotto: adesso la sessione **nasce
-   davvero** e l'immagine non c'è, quindi *«nata cieca»* è esatta alla lettera. ⇒ Era un difetto
-   del prodotto travestito da difetto del banco — e il modo di scoprirlo è stato curare il
-   prodotto, non ritarare la maglia.
-7. ⚠ **C7(xfce) oggi è verde in parte a vuoto**, e il banco lo stampa (`11-c7:1184-1204`): la voce
-   `/dev/dri` è vuota in tutt'e tre le impronte *«perché senza compositore nessuno apre la scheda»*.
-   ⇒ Il giorno che XFCE si accende, C7 diventa **più severa** — e può diventare rossa per ragioni
-   vere.
-8. ⚠ **C11 non vedrebbe** l'aggiunta di `wl-clipboard`/`python3-gi` alla sola xfce: non sono nella
-   sua lista di pacchetti. ⇒ O si mettono in **tutte e quattro**, o si aggiungono alla lista.
-9. ⚠ **La famiglia `desktop-nuovo` non scatterà mai da sola** per xfce: `decidi_famiglia`
-   (`11-gancio.sh:345-357`) riconosce un desktop nuovo solo da un `Contenitore.*` **non presente**
-   in `DESKTOP_NOTI`, e xfce c'è già. ⇒ Va chiesta per nome.
-10. ⚠ **Dieci commenti scaduti** dicono ancora *«solo gnome»* o *«il prodotto ne sa accendere UNO»*
+1. ⛔ **The two-name gate**, `11-gancio.sh:809-813` (`le_cinque_nuove`): *«il prodotto sa
+   avviare solo GNOME e KDE»*. ⚠ It skips **15 runs**, not five — C2×3, C3×4, C4×3, C6×2,
+   C8b×2 **and C17×2**, because the two calls of C17 (`:863-864`) are **after** the `return`. ⇒ And
+   C17 is skipped **without being named** in the log: the line is still called
+   `"C2($d) C3 C4 C6 C8b"`. The comment at `:856-862` — *«Nessun cancello per desktop QUI»* — is
+   false for that call site.
+2. ⛔ **The misaligned twin**, `11-accendi.sh:557-560`: same whitelist, but it covers **only C8b**.
+   ⇒ Two places to open; opening only one, C8b(xfce) stays mute at 3.
+3. ⛔ **The `xfce` box does not contain XFCE**: `Contenitore.xfce` installs `labwc xfce4-session
+   xwayland`, ⛔ but **neither `xfce4-panel` nor `xfdesktop`** — a session born in there has no
+   panel nor desktop. ⇒ The box grows, as `Contenitore.kde` grew (R5).
+4. ⛔ **And the adapter does not start an XFCE session**: `adattatore.xfce.sh:32-43` launches `labwc`
+   **bare** — no `--session xfce4-session`, no `XFCE4_SESSION_COMPOSITOR`. ⇒ Today that bench
+   measures **a compositor**, not a desktop, and in particular it cannot spring the logout
+   trap (§9.2 of the study).
+5. ⛔ **The clipboard tools are missing** in the xfce box (and lxqt): no `wl-clipboard`,
+   no `python3-gi gir1.2-gtk-4.0` — which kde and gnome have. ⚠ And ⛔ **the bench does not say so**:
+   `11-c17:150` takes `stdout` without looking at the exit code, so `wl-paste: command not
+   found` becomes `""`, the guard at `:242` (which checks `None`) does not fire, and the mesh prints
+   **ROSSO** instead of "I could not look". ⛔ A missing tool must give 3.
+6. ~~⚠ **C1 states the wrong cause**: on xfce it outputs *«nata CIECA»* while the fact is *«mai nata,
+   perché il prodotto cercava `gnome-session`»*.~~ ✅ **CLOSED by increment 1, and without touching
+   the bench.** ⭐ The diagnosis was false because the product was: now the session **is really
+   born** and the image is not there, so *«nata cieca»* is literally exact. ⇒ It was a product defect
+   disguised as a bench defect — and the way to find it out was to cure the
+   product, not to retune the mesh.
+7. ⚠ **C7(xfce) today is green partly on empty**, and the bench prints it (`11-c7:1184-1204`): the
+   `/dev/dri` entry is empty in all three fingerprints *«perché senza compositore nessuno apre la scheda»*.
+   ⇒ The day XFCE turns on, C7 becomes **stricter** — and may turn red for real
+   reasons.
+8. ⚠ **C11 would not see** the addition of `wl-clipboard`/`python3-gi` to xfce alone: they are not in
+   its package list. ⇒ Either they go into **all four**, or they are added to the list.
+9. ⚠ **The `desktop-nuovo` family will never fire by itself** for xfce: `decidi_famiglia`
+   (`11-gancio.sh:345-357`) recognises a new desktop only from a `Contenitore.*` **not present**
+   in `DESKTOP_NOTI`, and xfce is already there. ⇒ It must be asked for by name.
+10. ⚠ **Ten stale comments** still say *«solo gnome»* or *«il prodotto ne sa accendere UNO»*
     (`11-gancio.sh:203-205`, `:1300-1307`, `:774` · `11-accendi.sh:23-24`, `:498`, `:511`, `:522`,
-    `:533` · `11-c8b:56-59` · `11-c15:114-116`). ⛔ Sono quelli che uno legge **prima** di provare
-    su xfce.
-11. ⭐ **Un guasto di XFCE, inventato e fatto girare** (`fasi/11-…` §3.6): oggi non esiste, come non
-    esisteva quello di KDE.
+    `:533` · `11-c8b:56-59` · `11-c15:114-116`). ⛔ They are the ones one reads **before** testing
+    on xfce.
+11. ⭐ **An XFCE fault, invented and run** (`fasi/11-…` §3.6): today it does not exist, as KDE's
+    did not.
 
-⛔ **Aprire i cancelli non ammorbidisce nessun giudizio**: è la condizione perché le maglie guardino
-XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventare verde, non prima.
+⛔ **Opening the gates softens no verdict**: it is the condition for the meshes to look at
+XFCE. They are opened in the increment in which the corresponding mesh **can** turn green, not before.
 
 ---
 
-## Gli incrementi
+## The increments
 
-| # | obiettivo | maglia che lo prova | stato |
+| # | goal | mesh that tests it | status |
 |---|---|---|---|
-| **0** | la baseline sulle **quattro** scatole | la rete intera | ✅ **PASS** 20 set — 32 guasti su 32 |
-| **1** | la sessione XFCE **nasce** per un utente nuovo | nessuna ancora verde: C1(xfce) resta rossa (manca la cattura) — si prova con la misura di I1 | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · rete intera |
-| **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ✅ C1(xfce) VERDE, 530 fotogrammi · ⛔ **colori scambiati** trovati dal revisore e curati · ⏳ prova dei colori (C2) e rete |
-| **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | 🔧 scritto (agente, 21 set), `[M]` **provato sul portatile** contro labwc 0.8.3 — ⏳ sulla macchina |
-| **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | 🔧 cancelli aperti per capacità (`11-capacita-del-prodotto.sh`), C17 dà 3 e non rosso — ⏳ sulla macchina |
-| **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | 🔧 scritto e costruito, **non provato** (21 set) |
-| **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | 🔧 `zwlr_output_manager` v4 scritto dentro l'incremento 2 — ⏳ sulla macchina |
-| — | energia, blocco, voci pericolose (decisione dell'utente del 21 set) | la prova degli 11 minuti | 🔧 scritto (agente) — ⏳ sulla macchina |
-| — | la strada della SCHEDA per la cattura (copia zero, `gbm`) | tratto e CPU di labwc | 🔧 scritto (agente), `[M]` sul portatile: CPU di labwc **dimezzata** — ⚠ **da portare a mano** sopra il `wlroots.c` riscritto |
+| **0** | the baseline on the **four** boxes | the whole net | ✅ **PASS** 20 Sep — 32 faults out of 32 |
+| **1** | the XFCE session **is born** for a new user | none green yet: C1(xfce) stays red (capture missing) — tested with the I1 measurement | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · whole net |
+| **2** | XFCE's image reaches the browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ✅ C1(xfce) GREEN, 530 frames · ⛔ **swapped colours** found by the reviewer and cured · ⏳ colour test (C2) and net |
+| **3** | mouse and keyboard reach XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, and C3 · C6 on xfce | 🔧 written (agent, 21 Sep), `[M]` **tested on the laptop** against labwc 0.8.3 — ⏳ on the machine |
+| **4** | the bench looks at XFCE like GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | 🔧 gates opened per capability (`11-capacita-del-prodotto.sh`), C17 gives 3 and not red — ⏳ on the machine |
+| **5** | the clipboard on XFCE | ⭐ **C17(xfce)** | 🔧 written and built, **not tested** (21 Sep) |
+| **6** | ⭐ the screen changes size with the session alive (`set_custom_mode`) — ⛔ **it can be done**, here: it is the fallback KDE had forced on us | to be defined | 🔧 `zwlr_output_manager` v4 written inside increment 2 — ⏳ on the machine |
+| — | power, lock, dangerous entries (the user's decision of 21 Sep) | the 11-minute test | 🔧 written (agent) — ⏳ on the machine |
+| — | the CARD route for capture (zero-copy, `gbm`) | stroke and CPU of labwc | 🔧 written (agent), `[M]` on the laptop: labwc's CPU **halved** — ⚠ **to be carried over by hand** on top of the rewritten `wlroots.c` |
 
-⚠ **L'ordine 2-3 può invertirsi**, e la ragione va scritta il giorno che si decide: su KDE la
-cattura è venuta prima dell'input perché era la più piccola; qui sono **tutte e due grosse**, e la
-cattura è quella che rende verde una maglia.
+⚠ **The order 2-3 may be reversed**, and the reason must be written the day it is decided: on KDE
+capture came before input because it was the smallest; here they are **both big**, and
+capture is the one that turns a mesh green.
 
-### Incremento 1 — la sessione XFCE nasce *(CP1 abbozzato il 20 set; CP2 non ancora fatto)*
+### Increment 1 — the XFCE session is born *(CP1 sketched on 20 Sep; CP2 not yet done)*
 
 | | |
 |---|---|
-| **OBIETTIVO** | un utente che si collega per la prima volta, su una macchina che ha **solo** XFCE, ottiene dal prodotto una sessione XFCE **sua**, senza schermo fisico, e il prodotto la **riconosce viva**. ⛔ Niente cattura, niente input, niente appunti. ⛔⛔ E **niente misura**: su wlroots l'output non nasce della misura chiesta — il ridimensionamento è l'incremento 6, e questo si scrive nell'obiettivo invece di scoprirlo |
-| **INVARIANTE** | su GNOME e su KDE **nulla cambia**: stesso desktop riconosciuto, stesso drop-in, stesso comando, stessi tempi. Su XFCE nessuna seconda sessione, nessun residuo dopo la chiusura (C7). ⚠ Le macchine con più desktop sono fuori scopo (`DECISIONI.md` §0.6) e restano come oggi |
-| **MODULI** | `src/sessione.c` + `src/sessione.h` · `banchi/11-scatole/Contenitore.xfce` · `banchi/11-scatole/adattatore.xfce.sh` |
+| **GOAL** | a user who connects for the first time, on a machine that has **only** XFCE, gets from the product an XFCE session **of their own**, without a physical screen, and the product **recognises it alive**. ⛔ No capture, no input, no clipboard. ⛔⛔ And **no size**: on wlroots the output is not born at the requested size — resizing is increment 6, and this is written in the goal instead of being discovered |
+| **INVARIANT** | on GNOME and on KDE **nothing changes**: same desktop recognised, same drop-in, same command, same times. On XFCE no second session, no leftovers after closing (C7). ⚠ Machines with several desktops are out of scope (`DECISIONI.md` §0.6) and stay as today |
+| **MODULES** | `src/sessione.c` + `src/sessione.h` · `banchi/11-scatole/Contenitore.xfce` · `banchi/11-scatole/adattatore.xfce.sh` |
 
-#### ⭐⭐ La cura non è «aggiungere XFCE all'elenco»: è **togliere il ripiego**
+#### ⭐⭐ The cure is not "add XFCE to the list": it is **remove the fallback**
 
-⛔ Oggi `riconosci_desktop()` ha un quarto caso (`src/sessione.c:295-299`): nessun desktop
-conosciuto ⇒ **GNOME per ripiego, in silenzio**. È lì che cade una macchina solo-XFCE.
+⛔ Today `riconosci_desktop()` has a fourth case (`src/sessione.c:295-299`): no known
+desktop ⇒ **GNOME as a fallback, silently**. That is where an XFCE-only machine falls.
 
-⚠ E il guasto **non arriva dove si crede**: `scrivi_dropin()` (`src/sessione.c:1175-1189`) rilegge
-l'`ExecStart` di `org.gnome.Shell@wayland.service`, unità che non esiste, ottiene una risposta
-vuota e scrive *«un altro drop-in vince sul mio»*. ⛔ **Il sintomo accusa un drop-in altrui; la
-causa è che GNOME non c'è.** `[?]` da confermare in CP2.
+⚠ And the fault **does not show up where one thinks**: `scrivi_dropin()` (`src/sessione.c:1175-1189`) rereads
+the `ExecStart` of `org.gnome.Shell@wayland.service`, a unit that does not exist, gets an empty
+answer and writes *«un altro drop-in vince sul mio»*. ⛔ **The symptom blames someone else's drop-in; the
+cause is that GNOME is not there.** `[?]` to be confirmed in CP2.
 
-⇒ Con «un desktop per macchina» (§0.6) quel ramo è **l'unico posto in cui il prodotto può
-sbagliare desktop, e sbaglia in silenzio**. Se l'incremento 1 aggiungesse XFCE lasciandolo lì, il
-giorno di LXQt si ripeterebbe identico. ⇒ Dopo la cura il quarto caso dice **«non riconosco nessun
-desktop»** e non fa nascere niente. ⚠ È un cambiamento di comportamento su una macchina senza
-desktop, ed è dichiarato.
+⇒ With "one desktop per machine" (§0.6) that branch is **the only place where the product can
+get the desktop wrong, and it gets it wrong silently**. If increment 1 added XFCE leaving it there, the
+day of LXQt would repeat identically. ⇒ After the cure the fourth case says **"I recognise no
+desktop"** and starts nothing. ⚠ It is a change of behaviour on a machine without a
+desktop, and it is declared.
 
-#### ⛔ I tre pericoli che il sopralluogo ha trovato, e che non sono rami da aggiungere
+#### ⛔ The three dangers the survey found, which are not branches to add
 
-1. ⛔⛔ **Una guardia che evapora, senza una riga di registro.** `unita_inattiva()`
-   (in `src/sessione.c`) protegge dalla seconda sessione chiedendo a systemd se l'unità del
-   compositore è ferma; `unita_ferma()` (`:1290-1300`) accetta `unknown` ⇒ **risponde vero per
-   un'unità che non esiste**. Su XFCE, dove unità non ce n'è, la protezione pagata il 16 agosto 2026
-   **non fallirebbe: sparirebbe**. Serve un fatto vero (nome assente dal bus **e** nessun `labwc`
-   dell'utente).
-2. ⛔ **`scrivi_dropin()` non ha oggetto su XFCE**: esiste perché il compositore è un'unità systemd
-   d'utente — vero per GNOME e KDE, **falso qui**. Non è un ramo da aggiungere: è una funzione che
-   su questo desktop non ha di che parlare, e il ramo deve **dichiararlo nel registro**, non far
-   finta di aver scritto.
-3. ⛔ **Tredici negazioni implicite.** Non esiste nessun `!e_kde()` letterale in `src/`: la
-   negazione è sempre un `else` o una caduta in fondo — `:345`, `:550`, `:908`, `:1084`, `:1406`,
-   `:1537`, `:1751`. ⚠ Aggiungere un terzo valore all'enum le trasforma **tutte insieme** da
-   «GNOME» in «GNOME **o** XFCE», ⛔ **senza un avviso del compilatore**. Dimenticarne una sola non
-   dà un errore: dà una sessione XFCE che nasce con l'ambiente di GNOME.
+1. ⛔⛔ **A guard that evaporates, without a log line.** `unita_inattiva()`
+   (in `src/sessione.c`) protects from the second session by asking systemd whether the compositor's
+   unit is stopped; `unita_ferma()` (`:1290-1300`) accepts `unknown` ⇒ **it answers true for
+   a unit that does not exist**. On XFCE, where there is no unit, the protection paid for on 16 Aug 2026
+   **would not fail: it would vanish**. A real fact is needed (name absent from the bus **and** no `labwc`
+   of the user).
+2. ⛔ **`scrivi_dropin()` has no object on XFCE**: it exists because the compositor is a systemd user
+   unit — true for GNOME and KDE, **false here**. It is not a branch to add: it is a function that
+   on this desktop has nothing to talk about, and the branch must **declare it in the log**, not pretend
+   to have written.
+3. ⛔ **Thirteen implicit negations.** There is no literal `!e_kde()` in `src/`: the
+   negation is always an `else` or a fall-through at the end — `:345`, `:550`, `:908`, `:1084`, `:1406`,
+   `:1537`, `:1751`. ⚠ Adding a third value to the enum turns them **all together** from
+   "GNOME" into "GNOME **or** XFCE", ⛔ **without a compiler warning**. Forgetting a single one does not
+   give an error: it gives an XFCE session that is born with GNOME's environment.
 
-⚠ E un quarto, che non si cura qui ma si dichiara: `sessione_assicura()` (`:1891-2086`) è **codice
-morto** (nessun chiamante), ⛔ ma il suo `case SESSIONE_SANA` (`:1902-1931`) butterebbe giù una
-sessione XFCE sana. Non si tocca, si scrive.
+⚠ And a fourth, not cured here but declared: `sessione_assicura()` (`:1891-2086`) is **dead
+code** (no caller), ⛔ but its `case SESSIONE_SANA` (`:1902-1931`) would bring down a
+healthy XFCE session. It is not touched, it is written down.
 
-#### CP2 — osservato, non dedotto (`[M]` 20 set 2026, dentro `rete11-xfce`)
+#### CP2 — observed, not deduced (`[M]` 20 Sep 2026, inside `rete11-xfce`)
 
-**(1) Che cosa fa oggi il prodotto su una macchina solo-XFCE.** ⭐ La riga d'avvio **dice la verità**:
+**(1) What the product does today on an XFCE-only machine.** ⭐ The start-up line **tells the truth**:
 
 > `il desktop di questa macchina: GNOME per ripiego — ⛔ non trovo NE' gnome-session NE'
 > startplasma-wayland: nessuna sessione grafica potra' nascere`
 
-⛔ **Ma poi il guasto accusa due innocenti**, e l'ipotesi del sopralluogo è confermata alla lettera:
+⛔ **But then the fault blames two innocents**, and the survey's hypothesis is confirmed to the letter:
 
-| `[M]` la riga | che cosa fa credere |
+| `[M]` the line | what it makes one believe |
 |---|---|
-| `⚠ «gnome-shell» non e' nel PATH: ripiego dichiarato su /usr/bin/gnome-shell` | onesta |
-| ⛔ `ho scritto «--headless --no-x11» e il gestore dice un'altra cosa: un altro drop-in vince sul mio. ExecStart in vigore:` *(vuoto)* | ⛔ **accusa un drop-in altrui**; la causa è che GNOME non c'è |
-| ⛔ `senza il drop-in in vigore non la faccio nascere` | conseguenza della precedente |
-| ⛔ `nessun monitor virtuale da catturare: ScreenCast: Mutter non espone RemoteDesktop (la sessione grafica e' avviata?)` | ⛔ **accusa Mutter**, che su quella macchina non esiste |
+| `⚠ «gnome-shell» non e' nel PATH: ripiego dichiarato su /usr/bin/gnome-shell` | honest |
+| ⛔ `ho scritto «--headless --no-x11» e il gestore dice un'altra cosa: un altro drop-in vince sul mio. ExecStart in vigore:` *(empty)* | ⛔ **blames someone else's drop-in**; the cause is that GNOME is not there |
+| ⛔ `senza il drop-in in vigore non la faccio nascere` | consequence of the previous one |
+| ⛔ `nessun monitor virtuale da catturare: ScreenCast: Mutter non espone RemoteDesktop (la sessione grafica e' avviata?)` | ⛔ **blames Mutter**, which does not exist on that machine |
 
-⇒ E C1 legge **solo la fetta dell'inquilino**, dove la riga vera non c'è: perciò dice *«nata
-CIECA»* invece di *«il prodotto cercava gnome-session»*. Due diagnosi, una faccia sola.
+⇒ And C1 reads **only the tenant's slice**, where the true line is not: that is why it says *«nata
+CIECA»* instead of *«il prodotto cercava gnome-session»*. Two diagnoses, one face.
 
-**(2) ⛔ Il pericolo della guardia che evapora è CONFERMATO.** `[M]` Dentro la scatola, a un'unità
-che **non esiste**: `systemctl --user is-active org.gnome.Shell@wayland.service` → **`inactive`**,
-codice 4. ⇒ `unita_ferma()` (`src/sessione.c:1290-1300`) accetta `inactive` e risponde **vero**: su
-XFCE la guardia contro la seconda sessione non fallirebbe, **sparirebbe**.
+**(2) ⛔ The danger of the evaporating guard is CONFIRMED.** `[M]` Inside the box, for a unit
+that **does not exist**: `systemctl --user is-active org.gnome.Shell@wayland.service` → **`inactive`**,
+code 4. ⇒ `unita_ferma()` (`src/sessione.c:1290-1300`) accepts `inactive` and answers **true**: on
+XFCE the guard against the second session would not fail, **it would vanish**.
 
-**(3) ⭐⭐ La sessione XFCE headless nasce, e nasce intera.** `[M]` Ricetta a mano dentro la scatola
-— `labwc --session xfce4-session` con l'ambiente di `STUDI.md` §xfce §9.3 — vivi insieme:
+**(3) ⭐⭐ The headless XFCE session is born, and it is born whole.** `[M]` Recipe by hand inside the box
+— `labwc --session xfce4-session` with the environment of `STUDI.md` §xfce §9.3 — alive together:
 `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar`.
-⭐ E `org.xfce.SessionManager` compare sul **bus D'UTENTE**, non su uno privato: ⇒ eseguendo
-`labwc` direttamente (senza passare da `startxfce4 --wayland`, che porta `dbus-run-session`) la
-**decisione 4 si scioglie da sé** — il prodotto vede la vitalità della sessione con il codice che ha
-già.
+⭐ And `org.xfce.SessionManager` appears on the **USER bus**, not on a private one: ⇒ running
+`labwc` directly (without going through `startxfce4 --wayland`, which brings `dbus-run-session`)
+**decision 4 resolves itself** — the product sees the session's liveness with the code it already
+has.
 
-**(4) ⛔ L'output nasce 1280×720, e non lo decide il cliente.** `[M]` `HEADLESS-1, 1280×720,
-refresh 0.000 Hz`. ⇒ Su wlroots la misura **non entra nella nascita**: si dà dopo, col protocollo.
-⚠ E questo pesa sull'ordine degli incrementi — un'immagine consegnata a 1280×720 mentre il cliente
-ne chiede 1920×1080 non è utile, quindi l'incremento 6 potrebbe dover salire accanto al 2.
+**(4) ⛔ The output is born 1280×720, and the client does not decide it.** `[M]` `HEADLESS-1, 1280×720,
+refresh 0.000 Hz`. ⇒ On wlroots the size **does not enter the birth**: it is given afterwards, with the protocol.
+⚠ And this weighs on the order of the increments — an image delivered at 1280×720 while the client
+asks for 1920×1080 is not useful, so increment 6 may have to move up next to 2.
 
-**(5) ⭐⭐ I protocolli ci sono TUTTI — 47 global annunciati, e questi sono quelli che contano:**
+**(5) ⭐⭐ The protocols are ALL there — 47 globals announced, and these are the ones that count:**
 
-| serve a | protocollo | `[M]` |
+| serves | protocol | `[M]` |
 |---|---|---|
-| **cattura** | `zwlr_screencopy_manager_v1` | **v3** |
-| cattura, l'altra strada | `zwlr_export_dmabuf_manager_v1` | v1 — ⭐ esportazione DMA-BUF diretta, che `STUDI.md` non aveva pesato |
-| **tastiera** | `zwp_virtual_keyboard_manager_v1` | v1 |
+| **capture** | `zwlr_screencopy_manager_v1` | **v3** |
+| capture, the other route | `zwlr_export_dmabuf_manager_v1` | v1 — ⭐ direct DMA-BUF export, which `STUDI.md` had not weighed |
+| **keyboard** | `zwp_virtual_keyboard_manager_v1` | v1 |
 | **mouse** | `zwlr_virtual_pointer_manager_v1` | v2 |
-| **appunti** | `zwlr_data_control_manager_v1` | **v2** — ⭐ è esattamente quello che `src/appunti_kde.c` già parla |
-| **misura dell'output** | `zwlr_output_manager_v1` | **v4** — ⇒ il ridimensionamento a caldo **si può** |
-| energia (chi spegne l'output) | `zwlr_output_power_manager_v1` | v1 |
-| il pannello e la scrivania | `zwlr_layer_shell_v1` | v4 |
-| buffer | `zwp_linux_dmabuf_v1` v4 · `wp_presentation` v1 | |
+| **clipboard** | `zwlr_data_control_manager_v1` | **v2** — ⭐ it is exactly the one `src/appunti_kde.c` already speaks |
+| **output size** | `zwlr_output_manager_v1` | **v4** — ⇒ hot resizing **can be done** |
+| power (who turns the output off) | `zwlr_output_power_manager_v1` | v1 |
+| the panel and the desktop | `zwlr_layer_shell_v1` | v4 |
+| buffers | `zwp_linux_dmabuf_v1` v4 · `wp_presentation` v1 | |
 
-⛔ **Assenti, e va saputo prima di scrivere**: `ext_image_copy_capture_manager_v1` (il successore di
-screencopy: ⇒ si scrive contro `zwlr_screencopy`, non contro di lui) e
-`wp_linux_drm_syncobj_manager_v1` (le fence esplicite: ⇒ la sincronizzazione va risolta
-diversamente). ⚠ E `ext_data_control_manager_v1` non c'è — come su KWin, e come `STUDI.md` prevedeva:
-la strada resta `zwlr_data_control`.
+⛔ **Absent, and it must be known before writing**: `ext_image_copy_capture_manager_v1` (screencopy's
+successor: ⇒ we write against `zwlr_screencopy`, not against it) and
+`wp_linux_drm_syncobj_manager_v1` (explicit fences: ⇒ synchronisation must be solved
+differently). ⚠ And `ext_data_control_manager_v1` is not there — as on KWin, and as `STUDI.md` predicted:
+the route stays `zwlr_data_control`.
 
-**(6) La scatola è cresciuta**, e la ricetta lo dichiara (R6): `xfce4-panel`, `xfdesktop4`,
-`xfce4-terminal`, `thunar`, `nano`. ⛔ Non è estetica: senza `xfdesktop` e `xfce4-panel` due dei modi
-in cui la nascita fallisce — `exit(1)` senza layer-shell, e l'uscita muta con `n_monitors == 0` —
-**non si possono nemmeno vedere**.
+**(6) The box has grown**, and the recipe declares it (R6): `xfce4-panel`, `xfdesktop4`,
+`xfce4-terminal`, `thunar`, `nano`. ⛔ It is not cosmetic: without `xfdesktop` and `xfce4-panel` two of the ways
+in which the birth fails — `exit(1)` without layer-shell, and the silent exit with `n_monitors == 0` —
+**cannot even be seen**.
 
-#### ⭐ La prova, e il controllo negativo che vale più della prova
+#### ⭐ The test, and the negative check that is worth more than the test
 
-- **controllo negativo del ripiego**: stessa scatola, **binario di oggi** ⇒ la riga d'avvio dice
-  *«GNOME per ripiego»* e la sessione non nasce; **binario curato** ⇒ dice *«XFCE»* e nasce. È la
-  prova che la cura ha colpito il ramo giusto e non un altro.
-- ⭐ **la prova della trappola del logout** (non ha analogo su KDE): se la riga del compositore non
-  contiene **sia** `labwc` **sia** `--session`, al logout `xfce4-session` esegue `loginctl
-  terminate-session ''` — cioè **ammazza la sessione logind di REMOTIX**, non solo il desktop.
-  ⛔ `STUDI.md` §xfce §9.2 dice di provarla **sul banco e mai sull'utente**.
-- ⚠ **il tetto dell'attesa va giustificato**, non copiato da KDE: su Wayland nessun client di XFCE
-  si registra e ogni gruppo di priorità si sblocca a scadenza — `STARTUP_TIMEOUT_WAYLAND` = **8 s
-  per gruppo**, strutturali e non accorciabili.
-- ⚠ **le cinture xfconf si rileggono**: `xfconf-query` esce con zero anche quando il demone ha
-  rifiutato e ripristinato il valore. Una scrittura riuscita non è una configurazione applicata.
+- **negative check of the fallback**: same box, **today's binary** ⇒ the start-up line says
+  *«GNOME per ripiego»* and the session is not born; **cured binary** ⇒ it says *«XFCE»* and it is born. It is the
+  proof that the cure hit the right branch and not another.
+- ⭐ **the test of the logout trap** (no analogue on KDE): if the compositor's line does not
+  contain **both** `labwc` **and** `--session`, at logout `xfce4-session` runs `loginctl
+  terminate-session ''` — that is, it **kills REMOTIX's logind session**, not only the desktop.
+  ⛔ `STUDI.md` §xfce §9.2 says to test it **on the bench and never on the user**.
+- ⚠ **the waiting cap must be justified**, not copied from KDE: on Wayland no XFCE client
+  registers and every priority group unblocks at timeout — `STARTUP_TIMEOUT_WAYLAND` = **8 s
+  per group**, structural and not shortenable.
+- ⚠ **the xfconf belts are reread**: `xfconf-query` exits with zero even when the daemon has
+  refused and restored the value. A successful write is not an applied configuration.
 
-#### CP3 — la modifica minima (`src/sessione.c`, `src/sessione.h`)
+#### CP3 — the minimal change (`src/sessione.c`, `src/sessione.h`)
 
-⭐ **Due file, e nessun ramo di GNOME o di KDE toccato**: ogni blocco nuovo sta **prima** di quello
-di GNOME e torna con `goto la_coda` o `return`, così i rami vecchi restano testualmente quelli.
+⭐ **Two files, and no GNOME or KDE branch touched**: every new block sits **before** GNOME's
+and returns with `goto la_coda` or `return`, so the old branches stay textually the same.
 
-| # | dove | che cosa |
+| # | where | what |
 |---|---|---|
-| 1 | `sessione.h` | `SESSIONE_RIGA_XFCE` / `SESSIONE_COMANDO_XFCE` — ⭐ **la riga si scrive una volta e si usa due** (comando, e `XFCE4_SESSION_COMPOSITOR`): scriverla due volte vorrebbe dire poterle far divergere, e divergendo scatterebbe la trappola del logout senza una riga che lo dica |
-| 2 | `sessione.h` | enum: `SESSIONE_DESKTOP_XFCE = 2`, `SESSIONE_DESKTOP_NESSUNO = 3` — ⚠ **in coda**, perché il numero viaggia come `uint32_t` fra padre e figlio |
-| 3 | `riconosci_desktop()` | il ramo `xfce4-session`, **dopo** GNOME e KDE; ⛔ e il ripiego **tolto**: chi non riconosce nessuno adesso lo dice |
-| 4 | `e_xfce()` · `e_nessuno()` | ⛔ e mai un `!e_kde()`: le tredici negazioni implicite sono il pericolo, e il modo di non caderci è scritto sopra le due funzioni |
-| 5 | `nodo_della_scheda()` | il nodo si **apre**, non si inchioda: `renderD128` e `renderD129` si scambiano fra due avvii, e se l'apertura fallisce wlroots ripiega su pixman **in silenzio** |
-| 6 | `sessione_viva()` · `sessione_stato()` | il nome `org.xfce.SessionManager` sul bus d'utente, con dichiarato che «viva» **non** vuol dire «della misura giusta» |
-| 7 | `componi_ambiente()` | dieci variabili, ciascuna con la sua ragione — ⭐ e la colonna «da togliere» era già gratis: la funzione costruisce da zero |
-| 8 | `scrivi_dropin()` | ⛔ su XFCE **non ha oggetto**, e lo dice invece di tornare `TRUE` in silenzio |
-| 9 | `avvia()` | il comando a tre vie, non un ternario annidato |
-| 10 | `unita_inattiva()` | ⛔ la guardia che sarebbe **sparita**: si guardano due fatti (`/proc` e il nome sul bus) invece di chiedere a systemd di un'unità che non c'è |
-| 11 | `sessione_termina()` | `Logout`, poi **SIGTERM a labwc** — qui la forza non è systemd. ⚠ `SIGTERM` e non `SIGKILL`: labwc chiude i suoi client, e un `SIGKILL` lascerebbe dietro proprio quel che C7 cerca |
-| 12 | `sessione_impostazioni()` | la cintura `WaylandLogoutCommand=/bin/true`, ⭐ **riletta**; la cache delle sessioni salvate cancellata; il resto dichiarato rimandato |
-| 13 | `sessione_inibisci()` | ⛔ **no-op dichiarato**: `xfce4-session` non consulta l'inibitore, quindi chiedere darebbe un ⛔ falso e zero protezione |
-| 14 | `sessione_fai_nascere()` | il rifiuto onesto quando non c'è nessun desktop — ⭐ **nella fetta dell'inquilino**, dove il banco la legge |
-| 15 | `nome_desktop()` | ⚠ `LEZIONI.md` §1.9: il tema del cursore, scritto per KWin e riusato da labwc, annunciava «⭐ **Plasma**» dentro una sessione XFCE. La riga non si duplica: si fa dire il nome giusto |
+| 1 | `sessione.h` | `SESSIONE_RIGA_XFCE` / `SESSIONE_COMANDO_XFCE` — ⭐ **the line is written once and used twice** (command, and `XFCE4_SESSION_COMPOSITOR`): writing it twice would mean they could diverge, and diverging would spring the logout trap without a line saying so |
+| 2 | `sessione.h` | enum: `SESSIONE_DESKTOP_XFCE = 2`, `SESSIONE_DESKTOP_NESSUNO = 3` — ⚠ **at the end**, because the number travels as `uint32_t` between parent and child |
+| 3 | `riconosci_desktop()` | the `xfce4-session` branch, **after** GNOME and KDE; ⛔ and the fallback **removed**: whoever recognises nothing now says so |
+| 4 | `e_xfce()` · `e_nessuno()` | ⛔ and never a `!e_kde()`: the thirteen implicit negations are the danger, and the way not to fall into it is written above the two functions |
+| 5 | `nodo_della_scheda()` | the node is **opened**, not hard-wired: `renderD128` and `renderD129` swap between two boots, and if the opening fails wlroots falls back to pixman **silently** |
+| 6 | `sessione_viva()` · `sessione_stato()` | the name `org.xfce.SessionManager` on the user bus, with it declared that "alive" does **not** mean "of the right size" |
+| 7 | `componi_ambiente()` | ten variables, each with its reason — ⭐ and the "to remove" column was already free: the function builds from scratch |
+| 8 | `scrivi_dropin()` | ⛔ on XFCE it **has no object**, and it says so instead of returning `TRUE` silently |
+| 9 | `avvia()` | the three-way command, not a nested ternary |
+| 10 | `unita_inattiva()` | ⛔ the guard that would have **vanished**: two facts are looked at (`/proc` and the name on the bus) instead of asking systemd about a unit that is not there |
+| 11 | `sessione_termina()` | `Logout`, then **SIGTERM to labwc** — here the force is not systemd. ⚠ `SIGTERM` and not `SIGKILL`: labwc closes its clients, and a `SIGKILL` would leave behind precisely what C7 looks for |
+| 12 | `sessione_impostazioni()` | the belt `WaylandLogoutCommand=/bin/true`, ⭐ **reread**; the cache of saved sessions deleted; the rest declared postponed |
+| 13 | `sessione_inibisci()` | ⛔ **declared no-op**: `xfce4-session` does not consult the inhibitor, so asking would give a ⛔ false one and zero protection |
+| 14 | `sessione_fai_nascere()` | the honest refusal when there is no desktop — ⭐ **in the tenant's slice**, where the bench reads it |
+| 15 | `nome_desktop()` | ⚠ `LEZIONI.md` §1.9: the cursor theme, written for KWin and reused by labwc, announced "⭐ **Plasma**" inside an XFCE session. The line is not duplicated: it is made to say the right name |
 
-#### CP4 — la prova (`[M]` 20 set 2026, binario `48c87296`)
+#### CP4 — the test (`[M]` 20 Sep 2026, binary `48c87296`)
 
-| che cosa | atteso | misurato |
+| what | expected | measured |
 |---|---|---|
-| il desktop riconosciuto, nelle quattro scatole | quattro risposte diverse e giuste | ⭐ gnome → *GNOME* · kde → *KDE Plasma* · xfce → ⭐ *XFCE (c'è xfce4-session, e labwc per farlo girare)* · lxqt → ⛔ *NESSUN DESKTOP RICONOSCIUTO* |
-| **la sessione XFCE nasce** per un inquilino nuovo | labwc + xfce4-session vivi | ⭐ **e nasce intera**: `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar` · `wrapper-2.0` |
-| il prodotto la **riconosce viva** | il nome sul bus d'utente | ⭐ *«il gestore di sessione XFCE c'è sul bus: la sessione è viva»* |
-| quanto ci mette | ≥ 8 s (gruppi di priorità) | `[M]` **17,0 s** dal «la faccio nascere» al nome sul bus (giro pulito delle 21:40). ⚠ Un secondo giro ha dato 0,4 s e **non lo conto**: il registro non era stato ritroncato, e due misure che non si possono separare non si mediano — `[?]` da rifare pulita prima di tarare il tetto del banco |
-| la cintura del logout | scritta **e riletta** | ⭐ *«WaylandLogoutCommand = /bin/true, RILETTA»* |
-| la scheda data a wlroots | aperta, non dedotta | ⭐ *«la scheda che do a wlroots è /dev/dri/renderD128 (aperta, non dedotta)»* |
-| il drop-in | dichiarato assente, non finto | ⭐ *«nessun drop-in da scrivere … E la tela chiesta (1920x1080) NON entra nella nascita»* |
-| **C7(xfce)** — si chiude e non resta niente | verde | ⭐ **VERDE**, 1,15 s. ⚠ E il banco dichiara da sé che una voce (`/dev/dri`) passa ancora **a vuoto**: la sessione non apre la scheda finché non c'è la cattura |
-| **C1(xfce)** | ⛔ **rosso, e per un motivo NUOVO** | ⛔ rosso: *«nate CIECHE»*. ⭐ E adesso è vero alla lettera — la sessione c'è, l'immagine no: è l'incremento 2 |
-| **C1(gnome)** · **C1(kde)** | verdi, invariati | ⭐ **verdi tutt'e due**, 2 sessioni su 2 ciascuna |
+| the desktop recognised, in the four boxes | four different and right answers | ⭐ gnome → *GNOME* · kde → *KDE Plasma* · xfce → ⭐ *XFCE (c'è xfce4-session, e labwc per farlo girare)* · lxqt → ⛔ *NESSUN DESKTOP RICONOSCIUTO* |
+| **the XFCE session is born** for a new tenant | labwc + xfce4-session alive | ⭐ **and it is born whole**: `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar` · `wrapper-2.0` |
+| the product **recognises it alive** | the name on the user bus | ⭐ *«il gestore di sessione XFCE c'è sul bus: la sessione è viva»* |
+| how long it takes | ≥ 8 s (priority groups) | `[M]` **17.0 s** from «la faccio nascere» to the name on the bus (clean round at 21:40). ⚠ A second round gave 0.4 s and **I do not count it**: the log had not been truncated again, and two measurements that cannot be separated are not averaged — `[?]` to be redone clean before tuning the bench's cap |
+| the logout belt | written **and reread** | ⭐ *«WaylandLogoutCommand = /bin/true, RILETTA»* |
+| the card given to wlroots | opened, not deduced | ⭐ *«la scheda che do a wlroots è /dev/dri/renderD128 (aperta, non dedotta)»* |
+| the drop-in | declared absent, not faked | ⭐ *«nessun drop-in da scrivere … E la tela chiesta (1920x1080) NON entra nella nascita»* |
+| **C7(xfce)** — it closes and nothing remains | green | ⭐ **GREEN**, 1.15 s. ⚠ And the bench declares by itself that one entry (`/dev/dri`) still passes **on empty**: the session does not open the card until there is capture |
+| **C1(xfce)** | ⛔ **red, and for a NEW reason** | ⛔ red: *«nate CIECHE»*. ⭐ And now it is literally true — the session is there, the image is not: that is increment 2 |
+| **C1(gnome)** · **C1(kde)** | green, unchanged | ⭐ **both green**, 2 sessions out of 2 each |
 
-⚠ **Quel che resta storto e si dichiara**, perché è l'incremento dopo a curarlo: su XFCE la cattura
-cade ancora nel ramo di Mutter e scrive *«Mutter non espone RemoteDesktop»* — ⛔ una riga che accusa
-un innocente. È lo stesso punto in cui si fermò l'incremento 1 di KDE, ed è il primo che
-l'incremento 2 toglie di mezzo.
+⚠ **What remains crooked and is declared**, because the next increment cures it: on XFCE capture
+still falls into Mutter's branch and writes *«Mutter non espone RemoteDesktop»* — ⛔ a line that blames
+an innocent. It is the same point where KDE's increment 1 stopped, and it is the first thing that
+increment 2 removes.
 
-#### La rete intera (`[M]` 20→21 set 2026, 23:48→03:00, binario `48c87296`, 11 460 s)
+#### The whole net (`[M]` 20→21 Sep 2026, 23:48→03:00, binary `48c87296`, 11 460 s)
 
 | | |
 |---|---|
-| **GNOME** | ⭐ **tutto verde**, C17 compresa — identico al CP0 |
-| **KDE** | ⭐ **tutto verde**, e ⭐⭐ **C2(kde) è tornata a giudicare**: 0 · 0 · 0 dove al CP0 dava 3 · 3 · 3. La cura del «prima» (240→900) regge, e i suoi **due guasti innestati sono visti** |
-| **xfce** | passo0, C5, C7, C8, C9 verdi coi guasti · ⛔ **C1 rosso** — ed è l'incremento 2, dichiarato |
-| **lxqt** | uguale a xfce — ⚠ e il suo C1 rosso adesso ha una causa **nuova e giusta**: il prodotto le dice in faccia che **non riconosce nessun desktop** |
-| la rete | C11 verde (stesso binario nelle quattro) · C13 verde · C14 verde, 786 s |
-| ⭐ **guasti innestati** | **34 su 34 visti** — due in piu' del CP0, e sono proprio i due di C2(kde) che il CP0 non aveva potuto certificare |
-| rossi | **2**, e sono i due dichiarati |
+| **GNOME** | ⭐ **all green**, C17 included — identical to CP0 |
+| **KDE** | ⭐ **all green**, and ⭐⭐ **C2(kde) is judging again**: 0 · 0 · 0 where at CP0 it gave 3 · 3 · 3. The cure of the "before" (240→900) holds, and its **two injected faults are seen** |
+| **xfce** | passo0, C5, C7, C8, C9 green with the faults · ⛔ **C1 red** — and that is increment 2, declared |
+| **lxqt** | the same as xfce — ⚠ and its red C1 now has a **new and right** cause: the product tells it to its face that it **recognises no desktop** |
+| the net | C11 green (same binary in the four) · C13 green · C14 green, 786 s |
+| ⭐ **injected faults** | **34 out of 34 seen** — two more than CP0, and they are precisely the two of C2(kde) that CP0 had not been able to certify |
+| reds | **2**, and they are the two declared |
 
-⇒ ⭐ **L'incremento 1 passa il cancello**: XFCE ha guadagnato la nascita della sessione, GNOME e KDE
-non hanno perso niente, e la rete sa ancora dare rosso.
+⇒ ⭐ **Increment 1 passes the gate**: XFCE gained the birth of the session, GNOME and KDE
+lost nothing, and the net can still give red.
 
 ---
 
-### Incremento 2 — l'immagine di XFCE arriva al browser *(CP1, 21 set 2026 — non ancora cominciato)*
+### Increment 2 — XFCE's image reaches the browser *(CP1, 21 Sep 2026 — not yet started)*
 
 | | |
 |---|---|
-| **OBIETTIVO** | un cliente attaccato alla sessione XFCE **vede il desktop**: fotogrammi veri, che cambiano. La maglia che lo prova è **C1(xfce)**, la stessa che lo provò per Plasma |
-| **INVARIANTE** | su GNOME e su KDE **nulla cambia**: stessa strada (PipeWire), stessi numeri, stesso libro del danno. ⛔ E il consumatore del DMA-BUF delle fasi 8-9 **si riusa, non si riscrive** |
-| **LA DECISIONE CHE LO GOVERNA** | ✅ cattura **diretta** (`zwlr_screencopy_manager_v1` v3), dell'utente, 20 set 2026 |
+| **GOAL** | a client attached to the XFCE session **sees the desktop**: real frames, that change. The mesh that tests it is **C1(xfce)**, the same that tested it for Plasma |
+| **INVARIANT** | on GNOME and on KDE **nothing changes**: same route (PipeWire), same numbers, same damage book. ⛔ And the DMA-BUF consumer of phases 8-9 **is reused, not rewritten** |
+| **THE DECISION THAT GOVERNS IT** | ✅ **direct** capture (`zwlr_screencopy_manager_v1` v3), the user's, 20 Sep 2026 |
 
-#### ⛔ La differenza che fa il lavoro, e non è il protocollo: è il verso
+#### ⛔ The difference that does the work, and it is not the protocol: it is the direction
 
-Su GNOME e su KDE il compositore **spinge**: monta un flusso PipeWire e i fotogrammi arrivano da
-soli. Tutto `src/cattura.c` (2 348 righe) è costruito su quel verso, e `figlio.c` lo usa in **35
-punti** attraverso dieci funzioni (`cattura_avvia` ×7, `cattura_prendi` ×5, `cattura_fermo_libera`
+On GNOME and on KDE the compositor **pushes**: it mounts a PipeWire stream and the frames arrive by
+themselves. All of `src/cattura.c` (2 348 lines) is built on that direction, and `figlio.c` uses it at **35
+points** through ten functions (`cattura_avvia` ×7, `cattura_prendi` ×5, `cattura_fermo_libera`
 ×7, `cattura_ridimensiona` ×3, `cattura_risveglia` ×3, …).
 
-⛔ Su wlroots si **tira**: `capture_output → frame → copy → ready`, **una richiesta per
-fotogramma**, e nessun nodo PipeWire da nessuna parte. ⇒ Il ritmo non è una proprietà del
-compositore: **è il nostro ciclo** — che è precisamente quel che la decisione dell'utente ha
-comprato.
+⛔ On wlroots one **pulls**: `capture_output → frame → copy → ready`, **one request per
+frame**, and no PipeWire node anywhere. ⇒ The rate is not a property of the
+compositor: **it is our loop** — which is precisely what the user's decision
+bought.
 
-⚠ **E la domanda di progetto da sciogliere in CP3** è una sola, e va posta bene: la seconda sorgente
-entra **accanto** a `Cattura` (una sorgente che si sceglie, e i trentacinque punti di `figlio.c`
-restano dove sono) oppure **sotto** di lei? ⛔ La risposta non si sceglie per gusto: la si sceglie
-misurando quante delle dieci funzioni hanno senso sul verso a tiro. `cattura_ridimensiona`, per
-esempio, su wlroots **non è la stessa cosa**: lì la misura si cambia sull'output, non sul flusso.
+⚠ **And the design question to be resolved in CP3** is only one, and it must be posed well: does the second source
+go **next to** `Cattura` (a source that is chosen, and the thirty-five points of `figlio.c`
+stay where they are) or **under** it? ⛔ The answer is not chosen by taste: it is chosen by
+measuring how many of the ten functions make sense in the pull direction. `cattura_ridimensiona`, for
+example, on wlroots **is not the same thing**: there the size is changed on the output, not on the stream.
 
-#### Quel che è già stato misurato, e non va rimisurato
+#### What has already been measured, and must not be measured again
 
-| | `[M]` 20 set 2026, dentro `rete11-xfce` |
+| | `[M]` 20 Sep 2026, inside `rete11-xfce` |
 |---|---|
-| il protocollo | `zwlr_screencopy_manager_v1` **v3** — e c'è anche `zwlr_export_dmabuf_manager_v1` v1, una seconda strada che `STUDI.md` non aveva pesato |
-| il permesso | ✅ **non esiste**: nessun `.desktop`, nessun portale, nessun dialogo |
-| il buffer della scheda | `zwp_linux_dmabuf_v1` **v4** |
-| ⛔ le fence esplicite | **assenti** (`wp_linux_drm_syncobj_manager_v1` non c'è) ⇒ la sincronizzazione va risolta per un'altra strada, e va misurata |
-| ⛔ il successore | `ext_image_copy_capture_manager_v1` **assente** su Trixie ⇒ si scrive contro screencopy, sapendolo |
-| ⛔ la misura dell'uscita | nasce **1280×720** cablata, e il cliente ne chiede 1920×1080 |
+| the protocol | `zwlr_screencopy_manager_v1` **v3** — and there is also `zwlr_export_dmabuf_manager_v1` v1, a second route that `STUDI.md` had not weighed |
+| the permission | ✅ **does not exist**: no `.desktop`, no portal, no dialog |
+| the card's buffer | `zwp_linux_dmabuf_v1` **v4** |
+| ⛔ explicit fences | **absent** (`wp_linux_drm_syncobj_manager_v1` is not there) ⇒ synchronisation must be solved another way, and measured |
+| ⛔ the successor | `ext_image_copy_capture_manager_v1` **absent** on Trixie ⇒ we write against screencopy, knowing it |
+| ⛔ the output size | it is born **1280×720** hard-wired, and the client asks for 1920×1080 |
 
-#### CP2/CP4 del primo passo — `[M]` 21 set 2026: **i pixel arrivano**
+#### CP2/CP4 of the first step — `[M]` 21 Sep 2026: **the pixels arrive**
 
-⭐⭐ Il modulo `src/wlroots.c` + `src/wlroots.h` esiste, e il banco
-`banchi/13-w1-un-fotogramma.c` lo prova dentro una sessione XFCE viva.
+⭐⭐ The module `src/wlroots.c` + `src/wlroots.h` exists, and the bench
+`banchi/13-w1-un-fotogramma.c` tests it inside a live XFCE session.
 
-| che cosa | misurato |
+| what | measured |
 |---|---|
-| fotogrammi tirati | ⭐ **10 su 10**, poi 3 su 3 — nessun fallito, nessuno scaduto |
-| l'uscita | `HEADLESS-1`, **1280×720**, stride 5120 |
-| il formato | **XB24** (`XBGR8888`) — ⚠ **non** quello che si sarebbe dato per scontato |
-| il contenuto | **199-201 colori distinti**, 6,1 % dei campioni non nero ⇒ è un desktop vero, non uno schermo spento |
-| il tempo per fotogramma | `[M]` **8,8-14,9 ms** in media, 16,5 ms il peggiore — ⚠ ed è il giro INTERO col copiamento in memoria, su Intel UHD 730 |
-| il puntatore | **dentro l'immagine** (`overlay_cursor = 1`), come previsto: su questa famiglia non c'è un canale per la sua forma |
+| frames pulled | ⭐ **10 out of 10**, then 3 out of 3 — none failed, none timed out |
+| the output | `HEADLESS-1`, **1280×720**, stride 5120 |
+| the format | **XB24** (`XBGR8888`) — ⚠ **not** the one that would have been taken for granted |
+| the content | **199-201 distinct colours**, 6.1 % of the samples non-black ⇒ it is a real desktop, not a switched-off screen |
+| the time per frame | `[M]` **8.8-14.9 ms** on average, 16.5 ms the worst — ⚠ and it is the WHOLE round with the copy to memory, on Intel UHD 730 |
+| the pointer | **inside the image** (`overlay_cursor = 1`), as expected: on this family there is no channel for its shape |
 
-#### ⛔⛔ E una trappola pagata subito, che vale piu' del fotogramma
+#### ⛔⛔ And a trap paid for at once, which is worth more than the frame
 
-`[M]` La prima stesura del banco scriveva i canali nell'ordine di `XRGB8888`.
-L'immagine è uscita **con le cartelle arancioni** — e sembrava giusta: un desktop
-Xfce con le icone color zucca è perfettamente plausibile. ⛔ Ma labwc dichiara
-**XBGR8888**, che in memoria è `R G B X`: erano **R e B scambiati**, e le cartelle
-vere di Adwaita sono **blu**.
+`[M]` The first draft of the bench wrote the channels in the order of `XRGB8888`.
+The image came out **with orange folders** — and it looked right: an Xfce
+desktop with pumpkin-coloured icons is perfectly plausible. ⛔ But labwc declares
+**XBGR8888**, which in memory is `R G B X`: **R and B were swapped**, and the real
+Adwaita folders are **blue**.
 
-⇒ ⭐ È `LEZIONI.md` §1.9 nella sua forma peggiore: **un controllo che dà un
-risultato plausibile non è un controllo**. Il fatto si chiede al formato — che lo
-dice — invece di dedurlo da come appare. ⚠ E se fosse arrivato fino al
-codificatore, l'utente avrebbe visto un desktop blu senza che una riga lo
-spiegasse.
+⇒ ⭐ It is `LEZIONI.md` §1.9 in its worst form: **a check that gives a
+plausible result is not a check**. The fact is asked of the format — which
+says it — instead of being deduced from how it looks. ⚠ And had it reached the
+encoder, the user would have seen a blue desktop without a line
+explaining it.
 
-#### CP3/CP4 — `[M]` 21 set 2026: **C1(xfce) è VERDE**
+#### CP3/CP4 — `[M]` 21 Sep 2026: **C1(xfce) is GREEN**
 
-⭐⭐ **La seconda sorgente entra SOTTO la porta della cattura, non accanto.** Come gli appunti, che
-in casa hanno già due costruttori dietro una porta sola. ⇒ `figlio.c` usa quell'interfaccia in **35
-punti e non ne cambia nessuno**: GNOME e KDE restano testualmente quelli di prima.
+⭐⭐ **The second source goes UNDER the capture's door, not next to it.** Like the clipboard, which
+already has two constructors behind a single door at home. ⇒ `figlio.c` uses that interface at **35
+points and changes none of them**: GNOME and KDE stay textually as they were.
 
-| file | che cosa |
+| file | what |
 |---|---|
-| `src/wlroots.c` · `.h` | il client Wayland: `zwlr_screencopy` v3 (i fotogrammi) e `zwlr_output_manager` v4 (la misura) |
-| `src/cattura.h` | `cattura_avvia_wlr()`: il costruttore dell'altro verso |
-| `src/cattura.c` | il campo `wlr` in cima a `struct Cattura`, e una guardia in cima a ogni funzione pubblica |
-| `src/figlio.c` | il terzo ramo del palco: su XFCE **non c'è niente da aprire**, la sorgente è la cattura |
-| `banchi/13-w1-un-fotogramma.c` | il banco, che lega **gli stessi oggetti del prodotto** (R12.3) |
+| `src/wlroots.c` · `.h` | the Wayland client: `zwlr_screencopy` v3 (the frames) and `zwlr_output_manager` v4 (the size) |
+| `src/cattura.h` | `cattura_avvia_wlr()`: the constructor of the other direction |
+| `src/cattura.c` | the `wlr` field at the top of `struct Cattura`, and a guard at the top of every public function |
+| `src/figlio.c` | the third branch of the stage: on XFCE **there is nothing to open**, the source is the capture |
+| `banchi/13-w1-un-fotogramma.c` | the bench, which links **the same objects as the product** (R12.3) |
 
-| la prova | misurato |
+| the test | measured |
 |---|---|
-| **C1(xfce)** | ⭐⭐ **VERDE**, 3 sessioni su 3 |
-| C1(gnome) · C1(kde) | ⭐ verdi, 3 su 3 ciascuna |
-| i fotogrammi **veri** | ⭐ **530 consegnati, 19 chiavi, 0 guasti** |
+| **C1(xfce)** | ⭐⭐ **GREEN**, 3 sessions out of 3 |
+| C1(gnome) · C1(kde) | ⭐ green, 3 out of 3 each |
+| the **real** frames | ⭐ **530 delivered, 19 keyframes, 0 faults** |
 
-⛔ **E quell'ultima riga è quella che conta**: C1 legge una riga di registro, e una riga si può
-scrivere. I fotogrammi no. ⇒ Si contano apposta, perché il verde di una maglia che guarda il
-registro non vale finché non si è visto passare il traffico.
+⛔ **And that last row is the one that counts**: C1 reads a log line, and a line can be
+written. Frames cannot. ⇒ They are counted on purpose, because the green of a mesh that looks at the
+log is not worth anything until the traffic has been seen to pass.
 
-#### ⛔⛔ Tre difetti trovati PROVANDO, e due RILEGGENDO
+#### ⛔⛔ Three defects found by TESTING, and two by REREADING
 
-Provando:
-1. `mutter_monitor_cerca(NULL)` — un'asserzione fallita nel registro. Rumore che somiglia a un
-   guasto: su wlroots il monitor è l'uscita del compositore, e non c'è nessuna sessione di Mutter.
-2. Il testimone *«formato negoziato: LxA»* lo scriveva la richiamata di PipeWire, che qui non
-   esiste. ⇒ Senza, la maglia avrebbe detto *«nata cieca»* di una sessione che si vede benissimo.
-3. La divergenza fra tela **chiesta** (1920×1080) e uscita **vera** (1280×720): adesso si dichiara
-   alla prima riga.
+By testing:
+1. `mutter_monitor_cerca(NULL)` — a failed assertion in the log. Noise that looks like a
+   fault: on wlroots the monitor is the compositor's output, and there is no Mutter session.
+2. The witness *«formato negoziato: LxA»* was written by PipeWire's callback, which does not
+   exist here. ⇒ Without it, the mesh would have said *«nata cieca»* of a session that is perfectly visible.
+3. The divergence between the **requested** canvas (1920×1080) and the **real** output (1280×720): now it is declared
+   on the first line.
 
-⭐ Rileggendo il proprio codice, **prima che si vedessero**:
+⭐ By rereading one's own code, **before they were seen**:
 
-4. **Il buffer riusato dopo una copia abbandonata.** Mollato un fotogramma dopo aver mandato `copy`,
-   il compositore può scriverci dentro **più tardi**: riusarlo dà un fotogramma vecchio in mezzo ai
-   nuovi — ⛔ non un errore, uno **sfarfallio**. È `LEZIONI.md` §8 (non era *acquire*, era
-   *release*). ⇒ Chi abbandona dopo `copy` marca il buffer.
-5. ⛔⛔ **Il canale scambiato, arrivato fino al codificatore.** `figlio.c` dichiara
-   `CODIFICATORE_PIXEL_BGRX` — `B G R x` in memoria, inchiodato dalla fase 2 — e labwc offre per
-   primo **XBGR8888**, che è `R G B x`. ⇒ **L'utente avrebbe visto il desktop con il rosso e il blu
-   scambiati**, senza una riga che lo spiegasse.
-   ⭐ E la cura non è insegnare un formato nuovo al codificatore, che GNOME e KDE usano: è
-   **chiedere quello che si sa già leggere**. Su screencopy v3 il compositore ne offre più d'uno
-   apposta, e `buffer_done` esiste per questo. ⚠ E l'elenco offerto finisce nel registro, perché il
-   giorno che i canali escono storti la prima domanda è *«che cosa offriva il compositore?»*.
+4. **The buffer reused after an abandoned copy.** Once a frame is dropped after sending `copy`,
+   the compositor may write into it **later**: reusing it gives an old frame among the
+   new ones — ⛔ not an error, a **flicker**. It is `LEZIONI.md` §8 (it was not *acquire*, it was
+   *release*). ⇒ Whoever abandons after `copy` marks the buffer.
+5. ⛔⛔ **The swapped channel, all the way to the encoder.** `figlio.c` declares
+   `CODIFICATORE_PIXEL_BGRX` — `B G R x` in memory, fixed since phase 2 — and labwc offers
+   **XBGR8888** first, which is `R G B x`. ⇒ **The user would have seen the desktop with red and blue
+   swapped**, without a line explaining it.
+   ⭐ And the cure is not teaching a new format to the encoder, which GNOME and KDE use: it is
+   **asking for the one we already know how to read**. On screencopy v3 the compositor offers more than one
+   on purpose, and `buffer_done` exists for this. ⚠ And the offered list ends up in the log, because the
+   day the channels come out crooked the first question is *«che cosa offriva il compositore?»*.
 
-⭐ **La stessa trappola, due volte in un giorno, e la seconda non è arrivata all'utente.** La prima
-l'aveva pagata il banco (cartelle **arancioni** che sembravano giuste, e invece erano blu). ⇒ È
-`LEZIONI.md` §1.9 nella forma peggiore: **un risultato plausibile non è una conferma**.
+⭐ **The same trap, twice in one day, and the second did not reach the user.** The first
+had been paid for by the bench (**orange** folders that looked right, and were blue instead). ⇒ It is
+`LEZIONI.md` §1.9 in the worst form: **a plausible result is not a confirmation**.
 
-#### ⚠ E l'ordine con l'incremento 6 va deciso qui, non subito
+#### ⚠ And the order with increment 6 must be decided here, not at once
 
-Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1920×1080** non è
-«l'immagine che arriva»: è un'immagine sbagliata. ⇒ O l'incremento 2 si prende anche
-`zwlr_output_manager_v1` (che c'è, v4), o C1(xfce) resterà rossa per una ragione che non è la
-cattura. **Si decide col primo fotogramma in mano**, non prima.
+An image delivered at **1280×720** while the client asked for one at **1920×1080** is not
+"the image that arrives": it is a wrong image. ⇒ Either increment 2 also takes
+`zwlr_output_manager_v1` (which is there, v4), or C1(xfce) will stay red for a reason that is not the
+capture. **It is decided with the first frame in hand**, not before.
 
 ---
 
-### Incremento 5 — gli appunti su XFCE *(scritto e costruito il 21 set 2026; C17(xfce) non ancora girata)*
+### Increment 5 — the clipboard on XFCE *(written and built on 21 Sep 2026; C17(xfce) not yet run)*
 
-⭐ **Il modulo c'era già**: `src/appunti_kde.c` parla `zwlr_data_control_manager_v1`, che è di
-wlroots. La modifica è di cinque file e non tocca il protocollo:
+⭐ **The module was already there**: `src/appunti_kde.c` speaks `zwlr_data_control_manager_v1`, which is
+wlroots'. The change is five files and does not touch the protocol:
 
-- `appunti_kde.c`: l'apertura diventa `apri_su(compositore)`, con due porte —
-  `appunti_kde_apri()` («KWin») e `appunti_kde_apri_wlroots()` («labwc»). Il nome serve **solo** alle
-  tre righe di registro; su KDE escono uguali lettera per lettera;
-- `src/appunti.c` e `src/appunti.h`: `appunti_apri_wlroots()`, lo stesso involucro di `appunti_apri_kde()`;
-- `figlio.c`: se `sessione_desktop() == SESSIONE_DESKTOP_XFCE` si apre quella, **prima**; il ramo
-  KWin/Mutter di sotto è quello di prima.
+- `appunti_kde.c`: the opening becomes `apri_su(compositore)`, with two doors —
+  `appunti_kde_apri()` («KWin») and `appunti_kde_apri_wlroots()` («labwc»). The name serves **only** the
+  three log lines; on KDE they come out identical letter for letter;
+- `src/appunti.c` and `src/appunti.h`: `appunti_apri_wlroots()`, the same wrapper as `appunti_apri_kde()`;
+- `figlio.c`: if `sessione_desktop() == SESSIONE_DESKTOP_XFCE` that one is opened, **first**; the
+  KWin/Mutter branch below is the one from before.
 
-⚠ **`kwin_display_apri()` resta**, dichiarato: prende `WAYLAND_DISPLAY` o il primo `wayland-0..9` che
-risponde, senza guardare chi c'è dietro `[R]` (`kwin.c`). Spostarlo in un file neutro vorrebbe dire
-toccare `kwin.c`, che porta il video di KDE, per guadagnare solo un nome. ⇒ La riserva 1 di
-`STUDI.md` §xfce §8 è **chiusa**.
+⚠ **`kwin_display_apri()` stays**, declared: it takes `WAYLAND_DISPLAY` or the first `wayland-0..9` that
+answers, without looking at who is behind it `[R]` (`kwin.c`). Moving it into a neutral file would mean
+touching `kwin.c`, which carries KDE's video, to gain only a name. ⇒ Reservation 1 of
+`STUDI.md` §xfce §8 is **closed**.
 
-**Le altre riserve, rilette sul sorgente di wlroots 0.18.2** (`sources.debian.org`, 21 set 2026):
+**The other reservations, reread on the wlroots 0.18.2 source** (`sources.debian.org`, 21 Sep 2026):
 
-| riserva | esito |
+| reservation | outcome |
 |---|---|
-| l'eco | ⭐ **certa, e la guardia regge** `[R]`: ogni device è iscritto a `set_selection` senza filtro (`wlr_data_control_v1.c:459-468`); `wlr_seat_set_selection` distrugge la sorgente vecchia (⇒ `cancelled`, `:145`) **prima** di emettere il segnale, e le due notizie viaggiano sulla stessa connessione |
-| MIME duplicati ⇒ ciclo | ⭐ **non può scattare** `[R]`: wlroots scarta solo i duplicati `strcmp`-uguali (`:38-45`), e noi offriamo sempre e solo i tre tipi di `TIPI_TESTO`, tutti diversi. Era un rischio di v1, che rigirava l'elenco del client. ⚠ E se la guardia saltasse non ci sarebbe comunque un ciclo: la lettura della nostra sorgente dalla pompa che la serve scade in 5 s senza consegnare niente |
-| `onlyReplaceEmpty` | ⭐ **nessun danno** `[R]`: non lo offriamo e non lo leggiamo mai |
-| la selezione che muore con chi ha copiato | ⚠ **vera, e non è nostra**: in XFCE su Wayland non c'è gestore. Arriva `selection(NULL)` ⇒ al client non si manda niente, e il client tiene l'ultimo testo. La **nostra** sorgente (il testo del client) vive quanto il figlio |
+| the echo | ⭐ **certain, and the guard holds** `[R]`: every device is subscribed to `set_selection` without a filter (`wlr_data_control_v1.c:459-468`); `wlr_seat_set_selection` destroys the old source (⇒ `cancelled`, `:145`) **before** emitting the signal, and the two notices travel on the same connection |
+| duplicate MIME ⇒ loop | ⭐ **cannot fire** `[R]`: wlroots discards only `strcmp`-equal duplicates (`:38-45`), and we always offer only the three types of `TIPI_TESTO`, all different. It was a risk of v1, which passed on the client's list. ⚠ And if the guard broke there would still be no loop: reading our own source from the pump that serves it times out in 5 s without delivering anything |
+| `onlyReplaceEmpty` | ⭐ **no harm** `[R]`: we never offer it and never read it |
+| the selection that dies with whoever copied | ⚠ **true, and not ours**: in XFCE on Wayland there is no manager. `selection(NULL)` arrives ⇒ nothing is sent to the client, and the client keeps the last text. **Our** source (the client's text) lives as long as the child |
 
-⛔ **Per provarlo** (C17 su xfce) la scatola deve avere gli attrezzi degli appunti — vedi il punto 5
-del banco qui sopra: senza `wl-clipboard` la maglia legge `""` e non lo dice.
+⛔ **To test it** (C17 on xfce) the box must have the clipboard tools — see point 5
+of the bench above: without `wl-clipboard` the mesh reads `""` and does not say so.
 
 ## 🔸 Le scelte che aspettano l'utente
 
