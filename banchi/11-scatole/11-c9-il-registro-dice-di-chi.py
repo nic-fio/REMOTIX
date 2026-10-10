@@ -104,7 +104,7 @@ And the two convenient answers are both wrong, each in its own way:
     eight real lines, taken from the slice of the official round — ⭐ and they read
     by themselves (the product's text of the time; 10 Oct 2026, in English):
 
-       20:19:47.887 rcp      [c9u1] rate of [127.0.0.1]:40258: arretrato…
+       20:19:47.887 rcp      [c9u1] rate of [127.0.0.1]:40258: backlog…
        20:19:47.895 tastiera modifier 7: key 100 is preferred to 84…
        20:19:47.895 tastiera layout in force: it [Italian]
        20:19:47.895 rcp      [c9u1] slot TAKEN by c9u1 via […]:40258 (1)
@@ -652,7 +652,7 @@ def certifica():
     # ⚠ The bodies follow the English text of the product (10 Oct 2026); the judge
     #   does not read them except for the names, so the verdicts do not change.
     sano = (
-        "20:07:42.262 rcp     [c9u1] ammesso utente=c9u1 da=[127.0.0.1]:58048\n"
+        "20:07:42.262 rcp     [c9u1] admitted utente=c9u1 da=[127.0.0.1]:58048\n"
         "20:07:44.294 figlio  [c9u1] entering the stage mounting (canvas 1920x1080)\n"
         "20:07:44.301 figlio  [c9u2] entering the stage mounting (canvas 1920x1080)\n"
         "20:07:45.100 sessione [c9u1] monitor 1/1: connettore «Meta-0»\n"

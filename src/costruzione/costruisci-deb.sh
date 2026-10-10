@@ -113,7 +113,7 @@ uno() {
 		set -u
 		d=$(mktemp -d); dpkg-deb -x /u/'"$deb"' "$d"
 		bin=$d/usr/libexec/remotix/remotix
-		frase="FUNZIONE DI BANCO e'"'"' ACCESA"
+		frase="the BENCH FUNCTION is ON"
 		n=$(strings "$bin" | grep -c "$frase")
 		p=$(strings /c/positivo/rcp.o 2>/dev/null | grep -c "$frase")
 		[ "$n" = 0 ] && [ "$p" -ge 1 ] && r=SI || r=NO

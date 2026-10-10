@@ -91,8 +91,8 @@ depends=(
 	wlr-randr
 	# ⭐ AUDIO: the sink and the sound capture live in the user's PipeWire
 	#    daemon, and Arch's xfce4 group does NOT bring it.  `[M]` 29 Sep,
-	#    arch-xfce with package -1: «contesto PipeWire non creato … questa
-	#    sessione resta SENZA SUONO».  pipewire-pulse because programs
+	#    arch-xfce with package -1: «PipeWire context not created … this
+	#    session stays WITHOUT SOUND» (in today's words).  pipewire-pulse because programs
 	#    (Firefox, players) play through the PulseAudio API: without it, the sink
 	#    is there and stays mute.  (Plasma already brings all three.)
 	#    ⚠ pipewire-pulse conflicts with `pulseaudio`: on a machine that

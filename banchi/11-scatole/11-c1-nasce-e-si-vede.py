@@ -635,7 +635,7 @@ def verdetto_giro(n):
 #     reds, this case would turn red and say so.
 #   (10 Oct 2026: the lines follow the English text of the product, `english-migration/`.)
 SANO = (
-    "20:07:42.262 rcp     [c1u1] ammesso utente=c1u1 da=[127.0.0.1]:58048\n"
+    "20:07:42.262 rcp     [c1u1] admitted utente=c1u1 da=[127.0.0.1]:58048\n"
     "20:07:43.100 figlio  [c1u1] entering the stage mounting (canvas 1920x1080): "
     "telling the parent to wait\n"
     "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive: it is the "
@@ -653,7 +653,7 @@ SANO = (
 #    ⚠ `(0 before, 2 after)` is the famous «third state»: ⛔ a count with
 #      nothing underneath (`0x0`), which for months was read as «two monitors».
 CIECO = (
-    "22:42:14.100 rcp     [c1u1] ammesso utente=c1u1 da=[127.0.0.1]:58048\n"
+    "22:42:14.100 rcp     [c1u1] admitted utente=c1u1 da=[127.0.0.1]:58048\n"
     "22:42:15.826 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive: it is the "
     "«alive, complete and BLACK» session of STUDI.md §gnome §3.1\n"
     "22:42:18.145 figlio  ⛔ the stage of «c1u1»: bus OPEN, session 1, grab 0, "
