@@ -2453,177 +2453,177 @@ that the one of the two of the bench function was *«l'ultima occasione»*.
 
 ---
 
-## 11. Come si collauda contro questa specifica
+## 11. How to test against this specification
 
-Il punto che rende utile tutto il resto. **Client e server NON si collaudano l'uno contro
-l'altro**: si collaudano contro questo documento.
+The point that makes all the rest useful. **Client and server are NOT tested against each
+other**: they are tested against this document.
 
-| Banco | Che cosa prova |
+| Bench | What it tests |
 |---|---|
-| **il validatore del filo** | un terzo programma che legge una registrazione della connessione e dice quale byte non è conforme. È l'unico arbitro esterno che avremo |
-| **la stretta di mano su due connessioni** | ⛔ **due, mai una**: in v1 un certificato condiviso uccideva il server **alla seconda** connessione, e una prova a connessione singola resta verde per sempre (`LEZIONI.md` §2.1) |
-| **il congedo** | verificato **dal lato che riceve**, per ciascuno dei motivi **che viaggiano in un `CONGEDO`** — e per ciascuno si verifica **anche il codice nella chiusura della sessione** (§3.1). ⚠ *Diceva «per ciascuno dei quattordici»: ma `CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in `RESPINTO`, che §4.4 vieta di far seguire da un congedo — il banco sarebbe fallito su due motivi per costruzione, e chi lo scriveva avrebbe pensato di aver sbagliato lui (rilievo **R1.18**)* |
-| ⭐ **il rilascio dei tasti al distacco** | si stacca una connessione **con un tasto premuto** e si riattacca a verificare che non sia rimasto giù (§7.3). ⛔ **È la regola con il rapporto danno/costo più alto del documento**: un Ctrl rimasto premuto rende inservibile una sessione che sopravvive al client, e nessuno collega le due cose |
-| ⭐ **l'audio, ascoltato** | si apre un datagram e si guardano i byte: frequenza, canali, ordine dei byte del PCM. ⛔ Un server che spedisse 44 100 Hz, o PCM big-endian, resterebbe **verde su tutti gli altri banchi** — e il sintomo, come in v1, «sembra un difetto di rete» (`LEZIONI.md` §2.2) |
-| ⭐ **gli appunti** | i tre messaggi, l'identificatore di trasferimento, e **due trasferimenti aperti insieme nei due versi**: è il caso in cui senza identificatore i testi si scambiavano |
-| ⭐ **il secondo fisso** | si cronometra la risposta a `CREDENZIALI` — **anche quella riuscita** (§4.4-bis). È una proprietà di sicurezza che nessun altro banco vede, e una regressione che la togliesse non farebbe fallire niente |
-| ⭐ **il ban dell'indirizzo** | tre autenticazioni fallite, e ⛔ **il quarto tentativo è rifiutato anche con la parola d'ordine GIUSTA** (§4.4-bis) — che è la prova che distingue un ban da un contatore. ⛔ E con **tre nomi utente diversi**, o non si sta provando la regola decisa ma quella vecchia. ⚠ Poi tre controlli che dicono *no*: un **altro** indirizzo entra lo stesso · un accesso **riuscito** azzera il conto (due falliti, uno riuscito, due falliti: il terzo **non** banna) · e il ban **sopravvive al riavvio** del server |
-| **l'anello del ritardo** | il client manda un input che cambia colore allo schermo e guarda i fotogrammi decodificati finché non lo vede (`DECISIONI.md` §2.6) |
-| ⭐ **il ritardo noto** | si chiede `BANCO_MARCA` con `ritardo_ms = N` e **la mediana DEVE salire di esattamente N** (§7.5). ⛔ *È il controllo che rende credibile ogni numero di ritardo di questo progetto: un banco che non lo fa non sa di misurare* |
-| ⭐ **la funzione di banco spenta** | ⛔ con `banco.marca = no`, un `BANCO_MARCA` **DEVE** ricevere `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — **non un silenzio e non una chiusura**. ⚠ E si verifica **dal lato che riceve**: un server che tace lascia il banco ad aspettare per sempre, e il sintomo è «il banco si è piantato» |
-| **il rigore** | si manda di proposito un tipo sconosciuto, una lunghezza sbagliata, un messaggio nello stato sbagliato: ⛔ **la connessione deve cadere ogni volta**. Un banco che non prova a violare il protocollo non prova il protocollo |
-| ⭐ **il fotogramma abbandonato** | si abbandona un delta di proposito e si verifica che **arrivi una chiave** e che il client non mostri niente di rotto nel frattempo (§5.2). ⚠ Senza questo banco l'abbandono si prova solo su una rete cattiva, cioè quando non lo si sta guardando |
-| ⭐ **il credito degli stream** | si tiene una sessione viva **oltre i primi 256 fotogrammi** — cioè oltre i primi quattro secondi — e si verifica che il video non si fermi (§2.3) |
-| ⭐ **i tempi della stretta di mano** | si apre una connessione e si tace, per ciascuno dei tre tetti di §4.6 |
+| **the wire validator** | a third program that reads a recording of the connection and says which byte is not conforming. It is the only external referee we will have |
+| **the handshake on two connections** | ⛔ **two, never one**: in v1 a shared certificate killed the server **at the second** connection, and a single-connection test stays green forever (`LEZIONI.md` §2.1) |
+| **the farewell** | checked **from the receiving side**, for each of the reasons **that travel in a `CONGEDO`** — and for each one **the code in the closing of the session** is checked **too** (§3.1). ⚠ *It said «per ciascuno dei quattordici»: but `CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI` travel in `RESPINTO`, which §4.4 forbids to be followed by a farewell — the bench would have failed on two reasons by construction, and whoever wrote it would have thought they had made the mistake (finding **R1.18**)* |
+| ⭐ **releasing the keys on detach** | a connection is detached **with a key pressed** and reattached to check it has not stayed down (§7.3). ⛔ **It is the rule with the highest damage/cost ratio in the document**: a Ctrl left pressed makes unusable a session that outlives the client, and nobody connects the two things |
+| ⭐ **audio, listened to** | a datagram is opened and the bytes are looked at: sample rate, channels, byte order of the PCM. ⛔ A server that sent 44 100 Hz, or big-endian PCM, would stay **green on all the other benches** — and the symptom, as in v1, «sembra un difetto di rete» (`LEZIONI.md` §2.2) |
+| ⭐ **the clipboard** | the three messages, the transfer identifier, and **two transfers open together in the two directions**: it is the case in which without an identifier the texts got swapped |
+| ⭐ **the fixed second** | the answer to `CREDENZIALI` is timed — **even the successful one** (§4.4-bis). It is a security property no other bench sees, and a regression that removed it would make nothing fail |
+| ⭐ **the address ban** | three failed authentications, and ⛔ **the fourth attempt is refused even with the RIGHT password** (§4.4-bis) — which is the test that tells a ban from a counter. ⛔ And with **three different user names**, or one is not testing the decided rule but the old one. ⚠ Then three controls that say *no*: **another** address gets in all the same · a **successful** login resets the count (two failed, one successful, two failed: the third does **not** ban) · and the ban **survives the restart** of the server |
+| **the delay loop** | the client sends an input that changes the colour of the screen and watches the decoded frames until it sees it (`DECISIONI.md` §2.6) |
+| ⭐ **the known delay** | `BANCO_MARCA` is asked with `ritardo_ms = N` and **the median MUST rise by exactly N** (§7.5). ⛔ *It is the control that makes every delay number of this project credible: a bench that does not do it does not know it is measuring* |
+| ⭐ **the bench function off** | ⛔ with `banco.marca = no`, a `BANCO_MARCA` **MUST** receive `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — **not a silence and not a closing**. ⚠ And it is checked **from the receiving side**: a server that keeps silent leaves the bench waiting forever, and the symptom is «il banco si è piantato» |
+| **rigor** | an unknown type, a wrong length, a message in the wrong state are sent on purpose: ⛔ **the connection must drop every time**. A bench that does not try to violate the protocol does not test the protocol |
+| ⭐ **the abandoned frame** | a delta is abandoned on purpose and one checks that **a keyframe arrives** and that the client shows nothing broken meanwhile (§5.2). ⚠ Without this bench abandonment is tested only on a bad network, that is when nobody is watching it |
+| ⭐ **stream credit** | a session is kept alive **beyond the first 256 frames** — that is beyond the first four seconds — and one checks that the video does not stop (§2.3) |
+| ⭐ **the handshake deadlines** | a connection is opened and kept silent, for each of the three ceilings of §4.6 |
 
-⚠ **E il controllo positivo, che qui è facile da dimenticare**: prima di concludere che il
-validatore non trova errori, gli si dà una registrazione **con un errore dentro** e si verifica che
-lo veda. Uno strumento che non ha mai trovato niente non è uno strumento pulito: è uno strumento
-non certificato (`LEZIONI.md` §1.9).
+⚠ **And the positive control, which here is easy to forget**: before concluding that the
+validator finds no errors, it is given a recording **with an error inside** and one checks that
+it sees it. An instrument that has never found anything is not a clean instrument: it is an
+uncertified instrument (`LEZIONI.md` §1.9).
 
-### 11.1 ⛔ Il formato della registrazione
+### 11.1 ⛔ The recording format
 
-*Scritto il 10 agosto 2026, **prima** del registratore — rilievo R3.6. Il formato è **uno solo**:
-due registratori, uno nel C e uno nella pagina, che scrivessero lo stesso fatto in due modi
-sarebbero il difetto muto contro cui §0 è stato scritto.*
+*Written on 10 Aug 2026, **before** the recorder — finding R3.6. The format is **only one**:
+two recorders, one in the C and one in the page, that wrote the same fact in two ways
+would be the silent defect against which §0 was written.*
 
-⛔ **Il problema che questo formato risolve.** Registrare i byte com'erano metterebbe la parola
-d'ordine in chiaro in un file, che §4.4 vieta *«a nessun livello»*. Sostituirla lasciando la
-`lunghezza` darebbe un corpo che non combacia più, cioè **un falso rosso perpetuo** su ogni traccia
-con una stretta di mano riuscita. Sostituirla **e** riscrivere la lunghezza farebbe convalidare al
-validatore un documento riscritto dal banco — e allora non è più un arbitro.
+⛔ **The problem this format solves.** Recording the bytes as they were would put the
+password in cleartext in a file, which §4.4 forbids *«a nessun livello»*. Replacing it while leaving the
+`lunghezza` would give a body that no longer matches, that is **a perpetual false red** on every trace
+with a successful handshake. Replacing it **and** rewriting the length would make the
+validator validate a document rewritten by the bench — and then it is no longer a referee.
 
-⭐ **La quarta strada**: si registra **la lunghezza vera**, si sostituiscono i soli byte segreti con
-altrettanti byte di riempimento, e il formato **dichiara quali intervalli sono oscurati**, con
-l'impronta di quel che c'era. La lunghezza torna, il validatore sa dove non deve guardare, la
-parola non c'è.
+⭐ **The fourth road**: one records **the true length**, replaces only the secret bytes with
+as many filler bytes, and the format **declares which ranges are redacted**, with
+the fingerprint of what was there. The length adds up, the validator knows where it must not look, the
+password is not there.
 
 ```
-intestazione (16 byte)
- ├── 8 byte   magia          "RCPREG" 0x00 0x03
+header (16 bytes)
+ ├── 8 bytes  magia          "RCPREG" 0x00 0x03
  ├── u32      quanti_blocchi
- ├── u8       orologio       1 = i tempi sono del CLIENT, 2 = del SERVER
- └── u8[3]    riservato      DEVE essere 0
+ ├── u8       orologio       1 = the times are the CLIENT's, 2 = the SERVER's
+ └── u8[3]    riservato      MUST be 0
 
-poi `quanti_blocchi` blocchi, ciascuno:
+then `quanti_blocchi` blocks, each:
  ├── u8       verso          1 = client → server, 2 = server → client
- ├── u8       canale         il byte alto di `tipo` (§2.5)
- ├── u8       fine           ⛔ come si è chiuso lo stream DOPO questo blocco:
- │                             0 = continua · 1 = FIN · 2 = RESET_STREAM
- ├── u32      istante_ms     ⛔ millisecondi dal PRIMO blocco, dall'orologio
- │                             MONOTONO di chi registra. Il primo blocco vale 0.
- │                             ⛔ Mai un'ora del mondo: §4.4 vieta i segreti nel
- │                             file, e una data assoluta dice QUANDO e DA DOVE
- │                             un utente si è collegato
- ├── u64      stream         l'identificatore dello stream QUIC
- ├── u32      lunghezza      quanti byte di carico seguono — ⛔ la lunghezza VERA
+ ├── u8       canale         the high byte of `tipo` (§2.5)
+ ├── u8       fine           ⛔ how the stream was closed AFTER this block:
+ │                             0 = continues · 1 = FIN · 2 = RESET_STREAM
+ ├── u32      istante_ms     ⛔ milliseconds from the FIRST block, from the
+ │                             MONOTONIC clock of whoever records. The first block is 0.
+ │                             ⛔ Never a wall-clock time: §4.4 forbids secrets in the
+ │                             file, and an absolute date says WHEN and FROM WHERE
+ │                             a user connected
+ ├── u64      stream         the identifier of the QUIC stream
+ ├── u32      lunghezza      how many payload bytes follow — ⛔ the TRUE length
  ├── u16      quanti_oscurati
- │     per ciascuno:
- │       ├── u32   inizio        scostamento dentro il carico di questo blocco
- │       ├── u32   quanti        ⛔ la lunghezza VERA dei byte sostituiti
- │       └── 32 B  impronta      SHA-256 dei byte veri
- └── `lunghezza` byte di carico
+ │     for each:
+ │       ├── u32   inizio        offset inside the payload of this block
+ │       ├── u32   quanti        ⛔ the TRUE length of the replaced bytes
+ │       └── 32 B  impronta      SHA-256 of the true bytes
+ └── `lunghezza` bytes of payload
 ```
 
-### ⛔ Il tempo registrato è di CHI REGISTRA, e la regola del secondo è del SERVER
+### ⛔ The recorded time belongs to WHOEVER RECORDS, and the rule of the second belongs to the SERVER
 
-*Il campo `istante_ms` è entrato il 21 agosto 2026 con la magia `0x03`, e senza questo capoverso
-farebbe più danno del buco che chiude.*
+*The `istante_ms` field came in on 21 Aug 2026 with magic `0x03`, and without this paragraph
+it would do more damage than the hole it closes.*
 
-Una registrazione presa **al client** vede *«quando è arrivato il `TELA`»* e *«quando è partito il
-`PUNTATORE`»*: un intervallo **più corto** di quello che il server ha misurato, di mezzo giro di rete
-per lato. ⇒ Il validatore può concludere **in un verso solo**:
+A recording taken **at the client** sees *«quando è arrivato il `TELA`»* and *«quando è partito il
+`PUNTATORE`»*: an interval **shorter** than the one the server measured, by half a network round trip
+per side. ⇒ The validator can conclude **in one direction only**:
 
-- se `istante_ms(PUNTATORE) − istante_ms(TELA) > 1000` con `orologio = 1`, l'intervallo del server
-  era **anche più lungo** ⇒ il server **DEVE** aver rifiutato, e se non l'ha fatto è `NON CONFORME`;
-- se è `≤ 1000`, **non si conclude niente**, e il validatore lo **DICE**: *«non giudicabile da questa
+- if `istante_ms(PUNTATORE) − istante_ms(TELA) > 1000` with `orologio = 1`, the server's interval
+  was **even longer** ⇒ the server **MUST** have refused, and if it did not it is `NON CONFORME`;
+- if it is `≤ 1000`, **nothing is concluded**, and the validator **SAYS** so: *«non giudicabile da questa
   registrazione»*.
 
-⭐ Il verso che si guadagna è quello che conta: **un server indulgente**, che accetta per sempre le
-coordinate vecchie. ⚠ E un arbitro che tace su quel che non sa è un arbitro che **assolve**: la
-frase «non giudicabile» è obbligatoria, non gentile.
+⭐ The direction gained is the one that matters: **a lenient server**, which accepts the old
+coordinates forever. ⚠ And a referee that keeps silent about what it does not know is a referee that **acquits**: the
+sentence «non giudicabile» is mandatory, not polite.
 
-⛔ **E la magia cambia perché il blocco cresce**: un validatore vecchio davanti a un file nuovo
-**DEVE rifiutare**, non leggere di traverso. `[M]` 21 agosto, nei due sensi: l'arbitro di oggi
-davanti al file del 12 agosto esce **2**; l'arbitro di ieri — fabbricato apposta rimettendo una copia
-a `0x02` — davanti al file di oggi esce **2**. ⚠ È il difetto `0x01`/`0x02` del 12 agosto, che
-**nessuno dei due file mostrava da solo**: qui il cambio si è fatto in **un commit solo**, con tutti
-e quattro i lettori e scrittori insieme.
+⛔ **And the magic changes because the block grows**: an old validator in front of a new file
+**MUST refuse**, not read it askew. `[M]` 21 Aug, in both directions: today's referee
+in front of the file of 12 Aug exits **2**; yesterday's referee — built on purpose by putting a copy back
+at `0x02` — in front of today's file exits **2**. ⚠ It is the `0x01`/`0x02` defect of 12 Aug, which
+**neither of the two files showed on its own**: here the change was made in **a single commit**, with all
+four readers and writers together.
 
-⚠ **Tre banchi sono in ritardo dichiarato** su questo formato — `banchi/02-filo-cliente.py`,
-`banchi/02-filo-validatore.py`, `banchi/04-b20-desktop-vero.py`. Oggi sono un'**isola coerente**
-(scrivono e leggono fra loro), ⛔ ma finché restano a `0x02` l'albero porta **due formati vivi sotto
-una specifica sola**, che è la condizione del difetto del 12 agosto in grande.
+⚠ **Three benches are declared late** on this format — `banchi/02-filo-cliente.py`,
+`banchi/02-filo-validatore.py`, `banchi/04-b20-desktop-vero.py`. Today they are a **coherent island**
+(they write and read among themselves), ⛔ but as long as they stay at `0x02` the tree carries **two live formats under
+a single specification**, which is the condition of the defect of 12 Aug writ large.
 
-### T4 — un `TELA(ADATTATA)` a cui nessun fotogramma obbedisce
+### T4 — a `TELA(ADATTATA)` that no frame obeys
 
-*È la presa dell'arbitro su «conforme non è funziona», e senza `istante_ms` non esisteva.*
+*It is the referee's grip on «conforme non è funziona», and without `istante_ms` it did not exist.*
 
-Dopo un `TELA(ADATTATA, LxA)`, §5.2 vuole che il primo fotogramma alla misura nuova sia una
-**chiave**, e §6.2 lega i 28 byte alla tela in vigore. ⇒ Se passano fotogrammi per più di un tetto in
-**tempo** e **nessuno** porta la misura concessa, il server ha risposto **senza toccare il palco**.
+After a `TELA(ADATTATA, LxA)`, §5.2 wants the first frame at the new size to be a
+**keyframe**, and §6.2 binds the 28 bytes to the canvas in force. ⇒ If frames pass for more than a ceiling in
+**time** and **none** carries the granted size, the server answered **without touching the stage**.
 
-⛔ **Non «il primo»**: §6.2 ammette il fotogramma già in volo alla misura vecchia. ⇒ Serve un tetto in
-tempo, non un conteggio — ⭐ e la differenza è **provata, non affermata**: la mutazione
-*«conta invece di cronometrare»* sopravviveva finché il caso che doveva ucciderla aveva la finestra
-troppo corta.
+⛔ **Not «il primo»**: §6.2 admits the frame already in flight at the old size. ⇒ A ceiling in
+time is needed, not a count — ⭐ and the difference is **proved, not asserted**: the mutation
+*«conta invece di cronometrare»* survived as long as the case that was to kill it had a window
+too short.
 
-⭐ `[M]` 21 agosto, sul **prodotto vero** (porta 7721, cinque giri su cinque): dopo
-`TELA(ADATTATA, 1264x800)` il fotogramma **dichiara 1264x800**. Il palco è stato toccato, e adesso lo
-dice un arbitro invece di un ragionamento.
+⭐ `[M]` 21 Aug, on the **real product** (port 7721, five runs out of five): after
+`TELA(ADATTATA, 1264x800)` the frame **declares 1264x800**. The stage was touched, and now a
+referee says so instead of a line of reasoning.
 
-> ### ⛔ Il campo `fine` non è un lusso — aggiunto il **12 agosto 2026**, proposta **P7** di F2.4
+> ### ⛔ The `fine` field is not a luxury — added on **12 Aug 2026**, proposal **P7** of F2.4
 >
-> *E non l'ha trovato una rilettura: l'ha trovato `banchi/02-filo-validatore.py` **provando a
-> giudicare una registrazione conforme**, e non riuscendo a dire se il fotogramma fosse completo.*
+> *And it was not found by a rereading: it was found by `banchi/02-filo-validatore.py` **trying to
+> judge a conforming recording**, and not managing to say whether the frame was complete.*
 >
-> Senza `fine`, un fotogramma **abbandonato** (§5.1, legale — il client butta e chiede una chiave) e
-> uno **troncato per errore** (§3 — la connessione cade) hanno lo **stesso aspetto** nella
-> registrazione: il validatore non può applicare la riga che §6.2 ha aggiunto apposta il 9 agosto
-> 2026 — *«ma solo se lo stream è finito con un FIN»*, rilievo **R1.7** — ed è la forma **E8**
-> rientrata dalla finestra. `[M]` sulla registrazione di prova conforme l'arbitro dichiarava *«di 1
+> Without `fine`, an **abandoned** frame (§5.1, lawful — the client throws it away and asks for a keyframe) and
+> one **truncated by mistake** (§3 — the connection drops) **look the same** in the
+> recording: the validator cannot apply the line §6.2 added on purpose on 9 Aug
+> 2026 — *«ma solo se lo stream è finito con un FIN»*, finding **R1.7** — and it is form **E8**
+> back in through the window. `[M]` on the conforming test recording the referee declared *«di 1
 > su 1 NON si è potuta giudicare la completezza»*.
 >
-> ⚠ **La magia passa a `0x00 0x02`** perché il blocco cambia misura: un validatore vecchio deve
-> **rifiutare** il formato nuovo, non leggerlo di traverso.
+> ⚠ **The magic goes to `0x00 0x02`** because the block changes size: an old validator must
+> **refuse** the new format, not read it askew.
 >
-> ⭐ **E non tocca §9**: un blocco di registrazione **non è un messaggio**, e il formato porta già la
-> propria versione nella magia.
+> ⭐ **And it does not touch §9**: a recording block **is not a message**, and the format already carries its
+> own version in the magic.
 
-⛔ **Gli intervalli oscurati contengono `0x2A` ripetuto**, non zeri: uno zero è un valore che i
-campi possono avere davvero, e un intervallo di zeri che «per caso» combacia con un corpo legittimo
-è un modo di non accorgersi che l'oscuramento c'è.
+⛔ **The redacted ranges contain `0x2A` repeated**, not zeros: a zero is a value the
+fields can really have, and a range of zeros that «per caso» matches a legitimate body
+is a way of not noticing that the redaction is there.
 
-⛔ **Il validatore NON DEVE leggere dentro un intervallo oscurato**, e **DEVE** rifiutare una
-registrazione in cui un intervallo oscurato cade fuori dal carico o si sovrappone a un altro: una
-registrazione malformata e un filo non conforme sono due cose diverse, e vanno dette con due frasi
-diverse.
+⛔ **The validator MUST NOT read inside a redacted range**, and **MUST** refuse a
+recording in which a redacted range falls outside the payload or overlaps another: a
+malformed recording and a non-conforming wire are two different things, and must be said with two different
+sentences.
 
-⛔ **E il validatore riferisce lo scostamento del byte offensivo in due modi**: assoluto nel file, e
-relativo al carico del blocco. Il primo serve a chi guarda il file con un editor, il secondo a chi
-legge questa specifica.
+⛔ **And the validator reports the offset of the offending byte in two ways**: absolute in the file, and
+relative to the payload of the block. The first serves whoever looks at the file with an editor, the second whoever
+reads this specification.
 
 ---
 
-## 12. ⏳ Quel che RCP/1 lascia aperto, dichiarato
+## 12. ⏳ What RCP/1 leaves open, declared
 
-*Non sono buchi: sono cose che non si chiudono adesso, e il motivo per cui non si chiudono.*
+*They are not holes: they are things that are not closed now, and the reason why they are not closed.*
 
-⛔ **E una riga di stato, perché cambia che cosa si può ancora fare qui dentro**: dal **10 agosto
-2026** — primo byte di codice — la clausola di §9 è **consumata**. Quel che non è chiuso in RCP/1
-resta aperto **fino a RCP/2**, o si chiude senza aggiungere tipi di messaggio (§0-bis, §9).
+⛔ **And a status line, because it changes what can still be done in here**: since **10 Aug
+2026** — first byte of code — the clause of §9 is **spent**. What is not closed in RCP/1
+stays open **until RCP/2**, or is closed without adding message types (§0-bis, §9).
 
-| | Perché non ora | Quando |
+| | Why not now | When |
 |---|---|---|
-| ⭐ ~~**il tetto della sessione senza canale di controllo**~~ — ✅ **CHIUSA** | **cinque secondi**, decisi dall'utente l'**11 agosto 2026**: `DECISIONI.md` §7.17, e la riga normativa sta in **§4.6**. ⚠ *Questa casella diceva ancora* «❓ aperta … quando l'utente avrà risposto» *mentre §4.6 dello stesso file porta la riga con il ✅ e la data: **due sezioni dell'arbitro davano due stati diversi alla stessa domanda**, e chi si fosse fidato di §12 avrebbe scritto un server senza quel tetto restando convinto di essere conforme. Corretta la sera dell'11 agosto 2026, alla rilettura d'apertura* | ⛔ **resta da MISURARE**: `B6` vuole un quarto caso — apri la sessione, non aprire il canale, e verifica che a 5 s arrivi `0x0D` **nel codice di chiusura**, non sul canale. *Decisa ≠ misurata.* ⭐ Nessun tipo nuovo: `TEMPO_SCADUTO` c'era già |
-| **il microfono** | il verso è previsto, il formato no. Chiuderlo adesso significherebbe scrivere una negoziazione che nessuno esercita | quando `SPECIFICHE.md` §10 smetterà di dirlo «non urgente» — e sarà una **versione maggiore nuova**, perché è un canale in più (§9) |
-| **il puntatore relativo** | serve alle applicazioni remote che **catturano** il puntatore, e quel caso lo segnala il server. Non è il caso di `Pointer Capture` su Android, che è già coperto (`DECISIONI.md` §5-bis.8) | quando si presenta un'applicazione che lo chiede |
-| **il tocco multi-dito** | `input.tocco` esiste e vale `no`. Un posto riservato costa niente; una definizione mai esercitata costa un vincolo | fase A4, se il tocco nativo servirà davvero |
-| **il 4:4:4** | è una capacità in più (`video.sottocampionamento`), e la decisione di prodotto è `[?]` (`DECISIONI.md` §2.3) | quando l'utente avrà guardato le due immagini |
-| **più schermi** | la tela è una sola. La forma del multi-monitor è «due viste sulla stessa tela», che il protocollo già regge per la tela; mancherebbe solo dire **dove** sta ciascuna vista | mai, finché resta fuori scope |
-| `[?]` **la registrazione IANA della porta** | §2.4 | se e quando servirà un numero registrato |
-| ~~la funzione di banco dell'anello del ritardo~~ | ⭐ **chiusa la notte del 9 agosto 2026, poche ore dopo essere stata aperta** dal rilievo **R3.4**: è **§7.5**, due tipi nuovi — `BANCO_MARCA` e `BANCO_ESITO` | ⭐ *È entrata sotto la clausola di §9 — «oggi non esiste nessuna implementazione» — e **quella era l'ultima occasione**: dal primo byte di codice in poi sarebbe stata una deroga, cioè il primo strappo fatto da noi a una regola nostra* |
+| ⭐ ~~**the ceiling of the session without control channel**~~ — ✅ **CLOSED** | **five seconds**, decided by the user on **11 Aug 2026**: `DECISIONI.md` §7.17, and the normative line is in **§4.6**. ⚠ *This cell still said* «❓ aperta … quando l'utente avrà risposto» *while §4.6 of the same file carries the line with the ✅ and the date: **two sections of the referee gave two different states to the same question**, and whoever had trusted §12 would have written a server without that ceiling while remaining convinced of being conforming. Corrected on the evening of 11 Aug 2026, at the opening reread* | ⛔ **it remains to be MEASURED**: `B6` wants a fourth case — open the session, do not open the channel, and check that at 5 s `0x0D` arrives **in the closing code**, not on the channel. *Decided ≠ measured.* ⭐ No new type: `TEMPO_SCADUTO` was already there |
+| **the microphone** | the direction is foreseen, the format is not. Closing it now would mean writing a negotiation nobody exercises | when `SPECIFICHE.md` §10 stops calling it «non urgente» — and it will be a **new major version**, because it is one more channel (§9) |
+| **the relative pointer** | it serves remote applications that **capture** the pointer, and that case is signalled by the server. It is not the case of `Pointer Capture` on Android, which is already covered (`DECISIONI.md` §5-bis.8) | when an application turns up that asks for it |
+| **multi-finger touch** | `input.tocco` exists and is `no`. A reserved slot costs nothing; a definition never exercised costs a constraint | phase A4, if native touch is really needed |
+| **4:4:4** | it is one more capability (`video.sottocampionamento`), and the product decision is `[?]` (`DECISIONI.md` §2.3) | when the user has looked at the two pictures |
+| **more screens** | the canvas is only one. The form of multi-monitor is «due viste sulla stessa tela», which the protocol already supports for the canvas; it would only be missing to say **where** each view is | never, as long as it stays out of scope |
+| `[?]` **the IANA registration of the port** | §2.4 | if and when a registered number is needed |
+| ~~the bench function of the delay loop~~ | ⭐ **closed on the night of 9 Aug 2026, a few hours after being opened** by finding **R3.4**: it is **§7.5**, two new types — `BANCO_MARCA` and `BANCO_ESITO` | ⭐ *It came in under the clause of §9 — «oggi non esiste nessuna implementazione» — and **that was the last opportunity**: from the first byte of code on it would have been an exception, that is the first breach made by us to a rule of ours* |
 
-⛔ **E una cosa che non è aperta e va detta perché non venga riaperta per distrazione**: il
-**battito applicativo** non manca, è **vietato** (§2.2). Chi lo trova assente e pensa di aggiungerlo
-sta per creare due verità sullo stesso fatto.
+⛔ **And one thing that is not open and must be said so that it is not reopened by distraction**: the
+**application heartbeat** is not missing, it is **forbidden** (§2.2). Whoever finds it absent and thinks of adding it
+is about to create two truths about the same fact.
