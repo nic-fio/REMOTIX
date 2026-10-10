@@ -387,7 +387,7 @@ def classifica(rec, caso):
 #    and it was not there.
 #
 #    The three markers looked for below — `data-bannato="(si|no)"`,
-#    `data-restano-ms="(\d+)"` and the exact substring `tentativi esauriti` —
+#    `data-restano-ms="(\d+)"` and the exact substring `attempts exhausted` —
 #    are produced **only by the graft**, `01-b3-rcp-innesta.py:1105-1139`.  ⛔ The
 #    product server in `src/` says the same thing in another way:
 #
@@ -1087,7 +1087,7 @@ def leggi_registro(percorso):
                         d["respinti"].append(n)
                     else:
                         d["senza_pam"].append(n)
-                elif " da=" in riga and ("respinto motivo" in riga or "ammesso utente" in riga):
+                elif " da=" in riga and ("respinto motivo" in riga or "admitted utente" in riga):
                     # ⛔ AND NOT EVEN THIS ONE IS READ FROM THE END.  It was
                     #    `riga.rsplit(" da=", 1)[1].strip().rsplit(":", 1)[0]`,
                     #    that is «the address is the last thing on the line»: the
@@ -2209,7 +2209,7 @@ def certifica(a):
 
     def _allunga_da(r):
         # the address stops being the last thing on the line
-        if " da=" in r and ("respinto motivo" in r or "ammesso utente" in r):
+        if " da=" in r and ("respinto motivo" in r or "admitted utente" in r):
             return r.rstrip("\n") + " · request=7 · via=async\n"
         return r
 
