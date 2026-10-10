@@ -2199,7 +2199,7 @@ int main(int argc, char **argv)
 		char offerti[32], spiega[1024];
 		registro_dice(REG_AVVIO,
 		              "⭐ phase 18 — encoding test at startup, in a separate process: the "
-		              "«aperto: …» lines at 256x256 below are its own, not a session's");
+		              "«opened: …» lines at 256x256 below are its own, not a session's");
 		bool qualcosa = figlio_capacita_video(offerti, sizeof offerti, spiega, sizeof spiega);
 		rcp_video_codec_imposta(offerti);
 		if (qualcosa)

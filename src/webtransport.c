@@ -5076,10 +5076,10 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 		return;
 	w->ritmo_detto_ms = ora_ms;
 	registro_dice_di(REG_RCP, wt_chi(w),
-	                 "rate of %s: arretrato READ %u times in the last second, "
+	                 "rate of %s: backlog READ %u times in the last second, "
 	                 "maximum %u, last %u, slots %u — %u frames not sent in "
 	                 "this second, %u in total.  ⚠ ZERO READS = the stage delivered "
-	                 "nothing (still scene), and NOT «arretrato zero»",
+	                 "nothing (still scene), and NOT «backlog zero»",
 	                 w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
 	                 (unsigned)WT_RITMO_POSTI,
 	                 w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);

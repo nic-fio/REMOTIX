@@ -85,7 +85,7 @@ costruisci_uno()
 		# R13: the bench-function sentence NOT in the package binary, and YES
 		# in an rcp.o with BANCO_ACCESO 1 (the positive check: without it, «not
 		# found» could mean «I cannot search») — like the .deb line.
-		frase="FUNZIONE DI BANCO e'"'"' ACCESA"
+		frase="the BENCH FUNCTION is ON"
 		n=$(strings usr/libexec/remotix/remotix | grep -c "$frase")
 		rm -rf /lavoro/positivo; mkdir /lavoro/positivo; cd /lavoro/positivo
 		tar xzf /lavoro/SOURCES/remotix-*.tar.gz --strip-components=1

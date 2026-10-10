@@ -81,7 +81,7 @@ Recommends: va-driver-all | va-driver,
             wlr-randr,
             xwayland
 Static-Built-Using: ngtcp2 (= 1.25.0), nghttp3 (= 1.18.0)
-Description: the Linux desktop in the browser, for several users
+Description: Linux desktop in the browser, for several users
  REMOTIX shows a user's desktop (GNOME, KDE Plasma, Xfce, LXQt) in a
  browser, with video and audio over HTTP/3 and WebTransport.  Whoever connects
  logs in with the machine's user name and password (PAM, service «remotix»; root

@@ -2202,7 +2202,7 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		/* ⛔ A capability from the wrong side is ERRORE_PROTOCOLLO: the name is
 		 * known, so the exception for unknown names does not cover it. */
 		if (strcmp(nome, "banco.marca") == 0) {
-			congeda(s, RCP_ERRORE_PROTOCOLLO, "banco.marca non arriva dal client");
+			congeda(s, RCP_ERRORE_PROTOCOLLO, "banco.marca does not come from the client");
 			return false;
 		}
 		if (strcmp(nome, "video.codec") == 0)
@@ -2360,9 +2360,9 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		/* ⛔ Phase 18-19: the server cannot encode anything, and says so with
 		 *    the name of the cause — the startup log carries the reason. */
 		congeda(s, RCP_NIENTE_IN_COMUNE,
-		        "questo server non sa codificare video: nessuna scheda capace, "
-		        "nessun codec nell'ECCOMI (REMOTIX codifica solo sulla scheda — "
-		        "vedi il registro dell'avvio)");
+		        "this server cannot encode video: no capable card, "
+		        "no codec in ECCOMI (REMOTIX encodes only on the card — "
+		        "see the startup log)");
 		return false;
 	}
 	if (!prima_comune(c_codec, nostro_codec, s->codec, sizeof s->codec,
@@ -4293,7 +4293,7 @@ void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
 	 * ⛔ AND THE COUNT IS NOT LOST: how many frames were thrown away is
 	 *    already known by the counters of `webtransport.c` — `video_ritmo_scesi`
 	 *    for the regulator and `video_saltati` for the canvas — and they are
-	 *    written by the «ritmo di …» line (one per second) and by the session's
+	 *    written by the «rate of …» line (one per second) and by the session's
 	 *    «conto finale».
 	 *    ⇒ Here the line carries the CAUSE, which is not there; the number is
 	 *      there, which does not fit here. */
@@ -4306,7 +4306,7 @@ void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
 		       "KEYFRAME debt is switched on here, or the image stays broken "
 		       "forever.  ⚠ One line per debt EPISODE: how many were "
 		       "thrown away is said by `video_ritmo_scesi` and `video_saltati` "
-		       "in the «ritmo di …» line and in the final count",
+		       "in the «rate of …» line and in the final count",
 		    chiave ? "KEYFRAME" : "delta", perche ? perche : "undeclared",
 		    s->video_numero);
 	/* ⛔ AND THE DEBT IS ALWAYS SWITCHED ON, line or no line: it is a boolean, it
@@ -7945,7 +7945,7 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 			manda_messaggio(s, T_AMMESSO, NULL, 0);
 			s->stato = S_ATTESA_ATTACCA;
 			s->da_quando = ora;
-			reg(s, "ammesso utente=%s da=%s", s->utente, s->provenienza);
+			reg(s, "admitted utente=%s da=%s", s->utente, s->provenienza);
 			return true;
 		}
 		/* ⛔⭐ AND ON THE WIRE THE REASON IS THE SAME, but not in the log — it is

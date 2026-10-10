@@ -180,11 +180,11 @@ MANCA=0
 # ⚠ The last three marks are from the night of 10 August 2026, and each answers
 #   a question a successful `make` does NOT answer:
 #     NON-BANNATO         the unblock command on the socket really is there (R12.1)
-#     PING del trasporto  the cure of §4.6 is inside this binary (B-2)
+#     transport PINGs ON  the cure of §4.6 is inside this binary (B-2)
 #     pam.d/remotix       the PAM service is that of SPECIFICHE.md §4.2 (B-11)
-for marca in "REMOTIX — fase 1" "Cross-Origin-Embedder-Policy" \
+for marca in "REMOTIX — phase 1, the bare wire" "Cross-Origin-Embedder-Policy" \
              "Cross-Origin-Opener-Policy" "/rcp/1" "/impronta" \
-             "NON-BANNATO" "PING del trasporto" "/etc/pam.d/remotix"; do
+             "NON-BANNATO" "transport PINGs ON" "/etc/pam.d/remotix"; do
 	if cerca "$QUI/remotix" "$marca"; then
 		ok "«$marca» is in the binary"
 	else

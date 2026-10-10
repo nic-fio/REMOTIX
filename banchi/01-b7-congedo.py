@@ -1385,9 +1385,9 @@ async def principale(a):
         # ⭐ The positive control of the log READER, on the line that must
         #    surely be there — and the negative one on one that is not.
         trovata, perche = await registro.attendi(
-            marca, f"ammesso utente={a.utente}", entro=6)
+            marca, f"admitted utente={a.utente}", entro=6)
         riga(trovata, "⭐ the log reader finds",
-             f"«ammesso utente={a.utente}»" if trovata else perche)
+             f"«admitted utente={a.utente}»" if trovata else perche)
         guasti_cert += 0 if trovata else 1
         testo_finestra = registro.da(marca) or ""
         finta = "congedo motivo=0xff" not in testo_finestra
