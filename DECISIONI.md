@@ -5918,7 +5918,7 @@ pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includer
 - ⛔ **Il confine: i desktop.** Un desktop che la distribuzione non ha (XFCE e LXQt su Alma/RHEL) non lo
   porta REMOTIX: quella combinazione resta fuori dalla matrice.
 
-### 10.7 ✅ Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
+### 10.7 ⛔ *(superata da §10.36)* Senza desktop: o lo si installa (col consenso), o REMOTIX non si installa
 
 Proposta dell'utente (29 set 2026), adottata: *«se REMOTIX non trova nessun desktop installato, o chiede di
 installarlo all'utente oppure REMOTIX non si installa»*. Il desktop viene dagli archivi della
@@ -6564,6 +6564,49 @@ dei sysadmin, non agli utenti normali»*.
   `remotix-answers/2`. Restano i codici `RX-…` e `C-…` (identificativi), il formato del catalogo e quel che scrive
   il prodotto in C. ⚠ Il comando del prodotto `remotix` ha ancora le opzioni in italiano (`--porta`,
   `--indirizzo`, `--certificati`, `--prova-codifica`…): un lavoro a sé.
+
+### 10.36 ✅ L'installatore semplice, e REMOTIX che non modifica il sistema (10 ott 2026)
+
+Decisioni dell'utente prese in sequenza il 10 ottobre, con le sue parole. Supera §10.7 (il desktop installato da
+REMOTIX) e le parti di §10.12, §10.21 e §10.23 che contraddicono quel che segue. ⏳ Il lavoro non è ancora fatto:
+`fasi/17-l-installatore.md` dirà quando.
+
+- ⭐ **Il principio**: *«la chiave di tutto è che remotix non modifica i sistemi su cui viene installato: dice cosa
+  gli serve e poi sta all'admin provvedere»*; *«remotix dice semplicemente cosa manca. Il cosa installare e il come è
+  una decisione non di remotix»*. ⇒ Escono dal motore: archivi di terzi (RPM Fusion, EPEL, Packman), driver della
+  scheda e driver Vulkan, componenti dei desktop (labwc, caratteri…), il desktop (*«se manca il desktop non sarà
+  certo remotix a installarlo»*), l'apertura del firewall, le cinture di sistema (polkit, logind, sleep). `check` dice
+  cosa manca, **senza suggerire pacchetti o comandi**. Le voci tolte dai menu dentro le sessioni restano: sono il
+  comportamento delle sessioni di REMOTIX, non il sistema.
+- ⭐ **L'eccezione voluta**: l'iscrizione ai gruppi della scheda resta **automatica** (installazione e prima
+  connessione, §7.21): *«non si installano pacchetti senza autorizzazione ma si fa in modo che gli utenti possano
+  accedere»*. ⚠ Solo `render`, se non impedisce l'uso del desktop né peggiora le prestazioni (da provare sui
+  quattro desktop): `video` dà anche `/dev/fb*` e le webcam (visto sul tablet). Poi un gruppo apposito `remotix`;
+  le ACL solo se servono e misurate (logind riscrive le ACL `uaccess` di `renderD*`).
+- **Comandi**: da 14 a 5 + `tui` — `check`, `install` (mostra il piano coi pacchetti esatti dalla simulazione del
+  gestore, poi *«Proceed? [y/N]»* dallo stdin, come apt), `uninstall`, `status` (stato + verifiche),
+  `prepare-offline`. Via piano/approva/applica, dry-run, resume/rollback come comandi (*«cerchiamo di semplificare
+  la vita»*).
+- **Niente modalità senza domande** (via il file di risposte): *«chi installa su molte macchine si prepara uno
+  script bash»*.
+- **Installazione interrotta**: si annulla e si rifà da capo, mai ripresa a metà (*«non mi piace l'idea di lasciare
+  un sistema a metà»*); prima si sistema il gestore (es. `dpkg --configure -a`); nessun ritentare automatico. Una
+  disinstallazione interrotta si porta a termine.
+- **Non reinventare il gestore** (*«non reinventare la ruota duplicando funzioni già supportate dai gestori dei
+  pacchetti»*): risoluzione, firme, dipendenze e autoremove li fa il gestore; il motore non ha cache né sha256 propri
+  dei pacchetti.
+- **Il pacchetto unico, niente archivio da aggiungere** (*«sono più orientato all'idea del pacchetto di
+  installazione unico. Questo evita che l'admin debba aggiungere fonti esterne che è sempre un gesto mal visto»*):
+  un file solo (es. `remotix-<versione>.run`, sha256 pubblicato) con l'installatore e i pacchetti di tutte le
+  distribuzioni; il gestore installa da una cartella locale. Aggiornare = scaricare il `.run` nuovo e rilanciarlo.
+  Supera la parte di §10.23 sull'aggiornamento con `apt upgrade` da un archivio nostro.
+- **Le distribuzioni ad aggiornamento continuo restano** (Arch, Tumbleweed; e Fedora): *«chi usa arch è consapevole
+  che in qualunque momento la macchina potrebbe avere problemi. Quello che noi possiamo fare al massimo è fare in
+  modo che remotix usi librerie piuttosto stabili, ma non possiamo garantire la stabilità su sistemi per loro natura
+  soggetti a problemi di affidabilità»*. ⇒ Nel manuale: certificate per la produzione Debian, Ubuntu LTS, Alma (Rocky
+  e RHEL compatibili), Leap; Fedora, Arch, Tumbleweed provate a ogni campagna ma senza garanzia sugli
+  aggiornamenti del sistema. Da fare: le librerie fragili dentro il binario (come ngtcp2/nghttp3), e il servizio che
+  all'avvio prova la codifica e lo dice chiaro in `remotix status` se un aggiornamento l'ha rotta.
 
 ---
 
